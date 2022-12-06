@@ -126,9 +126,9 @@ static FLAC__StreamDecoderReadStatus on_read(const FLAC__StreamDecoder *decoder,
 
 static void on_error(const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data)
 {
-	(void)status;
-	(void)decoder;
-	(void)client_data;
+	(void)decoder, (void)client_data;
+
+	log_appendf(4, "Error loading FLAC: %s", FLAC__StreamDecoderErrorStatusString[status]);
 }
 
 static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 *const buffer[], void *client_data) {
@@ -140,9 +140,8 @@ static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decode
 	if (flac_file->streaminfo.channels > 2)
 		return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 
-	/* ew... */
-	if (!(flac_file->streaminfo.bits_per_sample == 8) && !(flac_file->streaminfo.bits_per_sample == 12) && !(flac_file->streaminfo.bits_per_sample == 16)
-		&& !(flac_file->streaminfo.bits_per_sample == 20 && !(flac_file->streaminfo.bits_per_sample == 24)))
+	if (!(flac_file->streaminfo.bits_per_sample == 8 || flac_file->streaminfo.bits_per_sample == 12 || flac_file->streaminfo.bits_per_sample == 16
+		|| flac_file->streaminfo.bits_per_sample == 20 || flac_file->streaminfo.bits_per_sample == 24 || flac_file->streaminfo.bits_per_sample == 32))
 		return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 
 	if (frame->header.number.sample_number == 0)
@@ -188,7 +187,7 @@ static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decode
 		}
 		/* here we just make everything 16-bit, we don't support
 		   24-bit anyway */
-		case 20: case 24: {
+		case 20: case 24: case 32: {
 			int16_t *buf_ptr = (int16_t*)flac_file->uncomp_buf + samples_decoded;
 			uint32_t bit_shift = flac_file->streaminfo.bits_per_sample - 16;
 			for (i = 0, j = 0; i < block_size; j++) {
@@ -277,7 +276,8 @@ int fmt_flac_load_sample(const uint8_t *data, size_t len, song_sample_t *smp) {
 	case 12:
 	case 16:
 	case 20:
-	case 24: flags |= SF_16; break;
+	case 24:
+	case 32: flags |= SF_16; break;
 	default:
 		free(flac_file.uncomp_buf);
 		return 0;
@@ -315,6 +315,7 @@ int fmt_flac_read_info(dmoz_file_t *file, const uint8_t *data, size_t len)
 		case 16:
 		case 20:
 		case 24:
+		case 32:
 			file->smp_flags |= CHN_16BIT;
 		case 8:
 			break;
