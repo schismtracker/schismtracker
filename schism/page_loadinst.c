@@ -502,7 +502,7 @@ void load_instrument_load_page(struct page *page)
 	page->total_widgets = 1;
 	page->widgets = widgets_loadinst;
 	page->help_index = HELP_GLOBAL;
-	create_other(widgets_loadinst + 0, 0, file_list_handle_key, file_list_draw);
+	create_other(widgets_loadinst + 0, 0, file_list_handle_key, NULL, file_list_draw);
 	widgets_loadinst[0].accept_text = 1;
 }
 

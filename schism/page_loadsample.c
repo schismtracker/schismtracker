@@ -906,7 +906,9 @@ void load_sample_load_page(struct page *page)
 
 
 	create_other(widgets_loadsample + 0, 0,
-				file_list_handle_key, file_list_draw);
+				file_list_handle_key,
+				NULL,
+				file_list_draw);
 	widgets_loadsample[0].accept_text = 1;
 	widgets_loadsample[0].next.tab = 1;
 

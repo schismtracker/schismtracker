@@ -378,6 +378,21 @@ static void do_replace_sample(int n)
 
 /* --------------------------------------------------------------------- */
 
+static int sample_list_handle_text_input_on_list(char* text) {
+	int modkey = SDL_GetModState(), i;
+	log_appendf(4, "%d", modkey);
+	if (modkey & KMOD_ALT) {
+		return 0;
+	} else if ((modkey & KMOD_CTRL) == 0) {
+		for (i = 0; text[i] != '\0'; i++) {
+			if (sample_list_cursor_pos < 25 && (!sample_list_add_char(text[i])))
+				return 0;
+		}
+		return 1;
+	}
+	return 0;
+}
+
 static int sample_list_handle_key_on_list(struct key_event * k)
 {
 	int new_sample = current_sample;
@@ -549,11 +564,9 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 					return 1;
 				}
 			} else if ((k->mod & KMOD_CTRL) == 0 && sample_list_cursor_pos < 25) {
-				if (!k->is_synthetic) return 1;
-				if (!k->unicode) return 0;
 				if (k->state == KEY_RELEASE)
 					return 1;
-				return sample_list_add_char(k->unicode);
+				return (k->sym.sym >= 32);
 			}
 			return 0;
 		}
@@ -1181,7 +1194,7 @@ static void export_sample_dialog(void)
 			 export_sample_filename, NAME_MAX);
 	create_button(export_sample_widgets + 1, 31, 35, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
 	create_button(export_sample_widgets + 2, 42, 35, 6, 3, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-	create_other(export_sample_widgets + 3, 0, export_sample_list_handle_key, export_sample_list_draw);
+	create_other(export_sample_widgets + 3, 0, export_sample_list_handle_key, NULL, export_sample_list_draw);
 
 	strncpy(export_sample_filename, sample->filename, NAME_MAX);
 	export_sample_filename[NAME_MAX] = 0;
@@ -1405,8 +1418,6 @@ static void sample_list_handle_alt_key(struct key_event * k)
 
 static void sample_list_handle_key(struct key_event * k)
 {
-	if (k->is_textinput)
-		return;
 	int new_sample = current_sample;
 	song_sample_t *sample = song_get_sample(current_sample);
 
@@ -1766,7 +1777,8 @@ void sample_list_load_page(struct page *page)
 	page->help_index = HELP_SAMPLE_LIST;
 
 	/* 0 = sample list */
-	create_other(widgets_samplelist + 0, 1, sample_list_handle_key_on_list, sample_list_draw_list);
+	create_other(widgets_samplelist + 0, 1, sample_list_handle_key_on_list,
+		sample_list_handle_text_input_on_list, sample_list_draw_list);
 	_fix_accept_text();
 
 	widgets_samplelist[0].x = 5;

@@ -420,6 +420,15 @@ static void instrument_list_draw_list(void)
 	}
 }
 
+static int instrument_list_handle_text_input_on_list(char* text) {
+	int i;
+	for (i = 0; text[i] != '\0'; i++) {
+		if (instrument_cursor_pos < 25 && (!instrument_list_add_char(text[i]))) {
+			return 0;
+		}
+	}
+}
+
 static int instrument_list_handle_key_on_list(struct key_event * k)
 {
 	int new_ins = current_instrument;
@@ -605,6 +614,18 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				return 1;
 			}
 			return 0;
+		case SDLK_SPACE:
+			if (instrument_cursor_pos >= 25) {
+				/* we stop text input here so we don't insert
+				   an extra space */
+				SDL_StopTextInput();
+				instrument_cursor_pos = 0;
+				get_page_widgets()->accept_text = 1;
+				status.flags |= NEED_UPDATE;
+				memused_songchanged();
+				return 1;
+			}
+			return 0;
 		default:
 			if (k->state == KEY_RELEASE)
 				return 0;
@@ -613,18 +634,10 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 					clear_instrument_text();
 					return 1;
 				}
-			} else if ((k->mod & KMOD_CTRL) == 0) {
-				if (instrument_cursor_pos < 25) {
-					if (!k->is_textinput) return 1;
-					if (!k->unicode) return 0;
-					return instrument_list_add_char(k->unicode);
-				} else if (k->sym.sym == SDLK_SPACE || k->unicode == ' ') {
-					instrument_cursor_pos = 0;
-					get_page_widgets()->accept_text = 0;
-					status.flags |= NEED_UPDATE;
-					memused_songchanged();
-					return 1;
-				}
+			}
+			if (k->sym.sym >= 32) {
+				SDL_StartTextInput();
+				return 1;
 			}
 			return 0;
 		};
@@ -957,8 +970,6 @@ static int note_trans_handle_key(struct key_event * k)
 
 			case 2:        /* instrument, first digit */
 			case 3:        /* instrument, second digit */
-				if (!k->is_synthetic)
-					break;
 				if (k->sym.sym == SDLK_SPACE) {
 					ins->sample_map[note_trans_sel_line] =
 						sample_get_current();
@@ -2093,7 +2104,6 @@ static int instrument_list_pre_handle_key(struct key_event * k)
 }
 static void instrument_list_handle_key(struct key_event * k)
 {
-	if (k->is_textinput) return;
 	switch (k->sym.sym) {
 	case SDLK_COMMA:
 		if (NO_MODIFIER(k->mod)) {
@@ -2626,7 +2636,8 @@ static void _load_page_common(struct page *page, struct widget *page_widgets)
 	/* the first five widgets are the same for all four pages. */
 
 	/* 0 = instrument list */
-	create_other(page_widgets + 0, 1, instrument_list_handle_key_on_list, instrument_list_draw_list);
+	create_other(page_widgets + 0, 1, instrument_list_handle_key_on_list, 
+		instrument_list_handle_text_input_on_list, instrument_list_draw_list);
 	page_widgets[0].accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 	page_widgets[0].x = 5;
 	page_widgets[0].y = 13;
@@ -2657,7 +2668,7 @@ void instrument_list_general_load_page(struct page *page)
 	widgets_general[2].next.down = widgets_general[3].next.down = widgets_general[4].next.down = 6;
 
 	/* 5 = note trans table */
-	create_other(widgets_general + 5, 6, note_trans_handle_key, note_trans_draw);
+	create_other(widgets_general + 5, 6, note_trans_handle_key, NULL, note_trans_draw);
 	widgets_general[5].x = 32;
 	widgets_general[5].y = 16;
 	widgets_general[5].width = 9;
@@ -2733,7 +2744,7 @@ void instrument_list_volume_load_page(struct page *page)
 	page->total_widgets = 17;
 
 	/* 5 = volume envelope */
-	create_other(widgets_volume + 5, 0, volume_envelope_handle_key, volume_envelope_draw);
+	create_other(widgets_volume + 5, 0, volume_envelope_handle_key, NULL, volume_envelope_draw);
 	widgets_volume[5].x = 32;
 	widgets_volume[5].y = 18;
 	widgets_volume[5].width = 45;
@@ -2798,7 +2809,7 @@ void instrument_list_panning_load_page(struct page *page)
 	page->total_widgets = 19;
 
 	/* 5 = panning envelope */
-	create_other(widgets_panning + 5, 0, panning_envelope_handle_key, panning_envelope_draw);
+	create_other(widgets_panning + 5, 0, panning_envelope_handle_key, NULL, panning_envelope_draw);
 	widgets_panning[5].x = 32;
 	widgets_panning[5].y = 18;
 	widgets_panning[5].width = 45;
@@ -2837,7 +2848,7 @@ void instrument_list_panning_load_page(struct page *page)
 			instrument_list_panning_update_values, 0, 64);
 
 	/* 16 = pitch-pan center */
-	create_other(widgets_panning + 16, 0, pitch_pan_center_handle_key, pitch_pan_center_draw);
+	create_other(widgets_panning + 16, 0, pitch_pan_center_handle_key, NULL, pitch_pan_center_draw);
 	widgets_panning[16].next.up = 15;
 	widgets_panning[16].next.down = 17;
 
@@ -2874,7 +2885,7 @@ void instrument_list_pitch_load_page(struct page *page)
 	page->total_widgets = 20;
 
 	/* 5 = pitch envelope */
-	create_other(widgets_pitch + 5, 0, pitch_envelope_handle_key, pitch_envelope_draw);
+	create_other(widgets_pitch + 5, 0, pitch_envelope_handle_key, NULL, pitch_envelope_draw);
 	widgets_pitch[5].x = 32;
 	widgets_pitch[5].y = 18;
 	widgets_pitch[5].width = 45;

@@ -156,6 +156,26 @@ static void _backtab(void)
 	change_focus_to(0); /* err... */
 }
 
+/* return: 1 = handled text, 0 = didn't */
+int widget_handle_text_input(char* text_input) {
+	struct widget* widget = &ACTIVE_WIDGET;
+	if (!widget)
+		return 0;
+
+	switch (widget->type) {
+		case WIDGET_NUMENTRY:
+			if (numentry_handle_text(widget, text_input))
+				return 1;
+			break;
+		case WIDGET_TEXTENTRY:
+			if (textentry_add_text(widget, text_input))
+				return 1;
+			break;
+		default:
+			break;
+	}
+	return 0;
+}
 
 /* return: 1 = handled key, 0 = didn't */
 int widget_handle_key(struct key_event * k)
@@ -768,20 +788,9 @@ int widget_handle_key(struct key_event * k)
 		if (bitset_handle_key(widget, k))
 			return 1;
 		break;
-	case WIDGET_NUMENTRY:
-		if (numentry_handle_digit(widget, k)
-			|| !k->is_synthetic)
-			return 1;
-		break;
 	case WIDGET_THUMBBAR:
 	case WIDGET_PANBAR:
 		if (thumbbar_prompt_value(widget, k))
-			return 1;
-		break;
-	case WIDGET_TEXTENTRY:
-		if ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0
-				&& (textentry_add_char(widget, k->unicode)
-				|| !k->is_synthetic))
 			return 1;
 		break;
 	default:

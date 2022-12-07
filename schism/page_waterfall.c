@@ -556,5 +556,5 @@ void waterfall_load_page(struct page *page)
 	page->set_page = waterfall_set_page;
 	page->total_widgets = 1;
 	page->widgets = waterfall_widget_hack;
-	create_other(waterfall_widget_hack, 0, waterfall_handle_key, do_nil);
+	create_other(waterfall_widget_hack, 0, waterfall_handle_key, NULL, do_nil);
 }

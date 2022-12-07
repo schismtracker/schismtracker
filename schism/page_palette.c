@@ -310,7 +310,7 @@ void palette_load_page(struct page *page)
 	}
 	update_thumbbars();
 
-	create_other(widgets_palette + 48, 0, palette_list_handle_key_on_list, palette_list_draw);
+	create_other(widgets_palette + 48, 0, palette_list_handle_key_on_list, NULL, palette_list_draw);
 	widgets_palette[48].x = 56;
 	widgets_palette[48].y = 27;
 	widgets_palette[48].width = 20;

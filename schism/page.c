@@ -52,7 +52,7 @@ struct tracker_status status = {
 	// everything else set to 0/NULL/etc.
 };
 
-struct page pages[PAGE_MAX] = {};
+struct page pages[PAGE_MAX] = {0};
 
 struct widget *widgets = NULL;
 int *selected_widget = NULL;
@@ -381,6 +381,23 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 
 	_mp_active = 1;
 	status.flags |= NEED_UPDATE;
+}
+
+/* --------------------------------------------------------------------------------------------------------- */
+/* text input handler */
+
+void handle_text_input(char* text_input) {
+	log_appendf(4, "TEXTINPUT event recieved: %s", text_input);
+	if (ACTIVE_WIDGET.type == WIDGET_OTHER)
+		if (ACTIVE_WIDGET.accept_text)
+			if (ACTIVE_WIDGET.d.other.handle_text_input) {
+				ACTIVE_WIDGET.d.other.handle_text_input(text_input);
+				return;
+			}
+	if (widget_handle_text_input(text_input)) return;
+	if (!(status.dialog_type & DIALOG_BOX)) {
+		if (ACTIVE_PAGE.handle_text_input) ACTIVE_PAGE.handle_text_input(text_input);
+	}
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -970,32 +987,39 @@ static int _handle_ime(struct key_event *k)
 		}
 
 		/* ctrl+shift -> unicode character */
-		if ((k->sym.sym==SDLK_LCTRL || k->sym.sym==SDLK_RCTRL || k->sym.sym==SDLK_LSHIFT || k->sym.sym==SDLK_RSHIFT) && !k->is_textinput) {
-			if (k->state == KEY_RELEASE && cs_unicode_c > 0) {
-				struct key_event fake = {};
+		if (k->sym.sym==SDLK_LCTRL || k->sym.sym==SDLK_RCTRL || k->sym.sym==SDLK_LSHIFT || k->sym.sym==SDLK_RSHIFT) {
+			/* this is horrid */
+			if (!(status.flags & CLASSIC_MODE) && k->state == KEY_PRESS &&
+				(((k->sym.sym == SDLK_LCTRL  || k->sym.sym == SDLK_RCTRL)  && (k->mod & KMOD_SHIFT)) ||
+				 ((k->sym.sym == SDLK_LSHIFT || k->sym.sym == SDLK_RSHIFT) && (k->mod & KMOD_CTRL)))) {
+				SDL_StopTextInput();
+			}
+			if (k->state == KEY_RELEASE) {
+				if (cs_unicode_c > 0) {
+					uint8_t unicode[2] = {(uint8_t)(char_unicode_to_cp437(cs_unicode)), '\0'};
 
-				fake.unicode = char_unicode_to_cp437(cs_unicode);
-				if (fake.unicode) {
-					status_text_flash_bios("Enter Unicode: U+%04X -> %c",
-							       cs_unicode, fake.unicode);
-					fake.is_synthetic = 3;
-					handle_key(&fake);
-					fake.state = KEY_RELEASE;
-					handle_key(&fake);
-				} else {
-					status_text_flash_bios("Enter Unicode: U+%04X -> INVALID", cs_unicode);
+					if (unicode[0] && unicode[0] >= 32) {
+						status_text_flash_bios("Enter Unicode: U+%04X -> %c",
+									   cs_unicode, unicode[0]);
+						SDL_SetModState(0);
+						handle_text_input(&unicode[0]);
+					} else {
+						status_text_flash_bios("Enter Unicode: U+%04X -> INVALID", cs_unicode);
+					}
+					cs_unicode = cs_unicode_c = 0;
+					alt_numpad = alt_numpad_c = 0;
+					digraph_n = digraph_c = 0;
 				}
-				cs_unicode = cs_unicode_c = 0;
-				alt_numpad = alt_numpad_c = 0;
-				digraph_n = digraph_c = 0;
 				SDL_StartTextInput();
 				return 1;
 			}
-		} else if (!(status.flags & CLASSIC_MODE) && (k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT) && !k->is_textinput) {
+		} else if (!(status.flags & CLASSIC_MODE) && (k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT)) {
 			if (cs_unicode_c >= 0) {
 				/* bleh... */
 				m = k->mod;
 				k->mod = 0;
+				/* SDL2 replaces numbers with their respective symbols when shift is held */
+				k->sym.sym = SDL_GetKeyFromScancode(k->scancode);
 				c = kbd_char_to_hex(k);
 				k->mod = m;
 				if (c == -1) {
@@ -1007,36 +1031,33 @@ static int _handle_ime(struct key_event *k)
 					cs_unicode_c++;
 					digraph_n = digraph_c = 0;
 					status_text_flash_bios("Enter Unicode: U+%04X", cs_unicode);
-					SDL_StopTextInput();
 					return 1;
 				}
 			}
 		} else {
-			if ((k->sym.sym==SDLK_LCTRL || k->sym.sym==SDLK_RCTRL || k->sym.sym==SDLK_LSHIFT || k->sym.sym==SDLK_RSHIFT) && k->is_textinput) {
+			if (k->sym.sym==SDLK_LCTRL || k->sym.sym==SDLK_RCTRL || k->sym.sym==SDLK_LSHIFT || k->sym.sym==SDLK_RSHIFT) {
 				return 1;
 			}
-			SDL_StartTextInput();
 			cs_unicode = cs_unicode_c = 0;
 		}
 
 		/* alt+numpad -> char number */
 		if (k->sym.sym == SDLK_LALT || k->sym.sym == SDLK_RALT
 			|| k->sym.sym == SDLK_LGUI || k->sym.sym == SDLK_RGUI) {
-			if (k->state == KEY_RELEASE && alt_numpad_c > 0 && (alt_numpad & 255) > 0) {
-				struct key_event fake = {};
-
-				fake.unicode = alt_numpad & 255;
+			if (k->state == KEY_PRESS)
+				SDL_StopTextInput();
+			if (k->state == KEY_RELEASE && alt_numpad_c > 0 && (alt_numpad & 255) > 0) {\
+				SDL_StartTextInput();
+				if (alt_numpad < 32)
+					return 0;
+				uint8_t unicode[2] = {(uint8_t)(alt_numpad & 255), '\0'};
 				if (!(status.flags & CLASSIC_MODE))
 					status_text_flash_bios("Enter DOS/ASCII: %d -> %c",
-							       (int)fake.unicode, (int)fake.unicode);
-				fake.is_synthetic = 3;
-				handle_key(&fake);
-				fake.state = KEY_RELEASE;
-				handle_key(&fake);
+							       (int)unicode[0], (int)unicode[0]);
+				handle_text_input(&unicode[0]);
 				alt_numpad = alt_numpad_c = 0;
 				digraph_n = digraph_c = 0;
 				cs_unicode = cs_unicode_c = 0;
-				SDL_StartTextInput();
 				return 1;
 			}
 		} else if (k->mod & KMOD_ALT && !(k->mod & (KMOD_CTRL|KMOD_SHIFT))) {
@@ -1054,12 +1075,10 @@ static int _handle_ime(struct key_event *k)
 					alt_numpad_c++;
 					if (!(status.flags & CLASSIC_MODE))
 						status_text_flash_bios("Enter DOS/ASCII: %d", (int)alt_numpad);
-					SDL_StopTextInput();
 					return 1;
 				}
 			}
 		} else {
-			SDL_StartTextInput();
 			alt_numpad = alt_numpad_c = 0;
 		}
 	} else {
@@ -1609,6 +1628,7 @@ static void _set_from_f4(void)
 void set_page(int new_page)
 {
 	int prev_page = status.current_page;
+
 
 	if (new_page != prev_page)
 		status.previous_page = prev_page;

@@ -230,7 +230,7 @@ void create_panbar(struct widget *w, int x, int y, int next_up, int next_down, i
 }
 
 void create_other(struct widget *w, int next_tab, int (*i_handle_key) (struct key_event *k),
-		  void (*i_redraw) (void))
+		  int (*i_handle_text_input) (char* text), void (*i_redraw) (void))
 {
 	w->type = WIDGET_OTHER;
 	w->accept_text = 0;
@@ -247,6 +247,7 @@ void create_other(struct widget *w, int next_tab, int (*i_handle_key) (struct ke
 	w->height = 1;
 
 	w->d.other.handle_key = i_handle_key;
+	w->d.other.handle_text_input = i_handle_text_input;
 	w->d.other.redraw = i_redraw;
 }
 
@@ -317,6 +318,19 @@ int textentry_add_char(struct widget *w, uint16_t unicode)
 	return 1;
 }
 
+int textentry_add_text(struct widget *w, char* text) {
+	if (text == NULL)
+		return 0;
+	int s_len = strlen(text), i;
+
+	for (i = 0; i < s_len; i++) {
+		if (!textentry_add_char(w, text[i]))
+			return 0;
+	}
+
+	return 1;
+}
+
 int menutoggle_handle_key(struct widget *w, struct key_event *k)
 {
 	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0)
@@ -368,7 +382,6 @@ void numentry_change_value(struct widget *w, int new_value)
 /* I'm sure there must be a simpler way to do this. */
 int numentry_handle_digit(struct widget *w, struct key_event *k)
 {
-	if (k->is_textinput) return 1;
 	int width, value, n;
 	static const int tens[7] = { 1, 10, 100, 1000, 10000, 100000, 1000000 };
 	int digits[7] = { 0 };
@@ -406,6 +419,21 @@ int numentry_handle_digit(struct widget *w, struct key_event *k)
 	status.flags |= NEED_UPDATE;
 
 	return 1;
+}
+
+int numentry_handle_text(struct widget *w, char* text_input) {
+	if (text_input == NULL)
+		return 0;
+	/* should probably think of a better way to do this than
+	   to just throw out the rest of the string...  */
+	if (!(text_input[0] >= '0' && text_input[0] <= '9'))
+		return 0;
+
+	struct key_event k;
+	k.unicode = text_input[0];
+	if (numentry_handle_digit(w, &k))
+		return 1;
+	return 0;
 }
 
 /* --------------------------------------------------------------------- */

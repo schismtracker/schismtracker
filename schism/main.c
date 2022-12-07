@@ -496,22 +496,6 @@ static void check_update(void)
 {
 	static unsigned long next = 0;
 
-	switch (ACTIVE_WIDGET.type) {
-		case WIDGET_TEXTENTRY:
-		case WIDGET_NUMENTRY:
-		case WIDGET_OTHER:
-			if (!(status.flags & ACCEPTING_INPUT)) {
-				status.flags |= (ACCEPTING_INPUT);
-				SDL_StartTextInput();
-			}
-			break;
-		default:
-			if (status.flags & ACCEPTING_INPUT) {
-				status.flags &= ~(ACCEPTING_INPUT);
-				SDL_StopTextInput();
-			}
-			break;
-	}
 	/* is there any reason why we'd want to redraw
 	   the screen when it's not even visible? */
 	if ((status.flags & (NEED_UPDATE | IS_VISIBLE)) == (NEED_UPDATE | IS_VISIBLE)) {
@@ -534,7 +518,7 @@ static void check_update(void)
 	}
 }
 
-static void _synthetic_paste(const char *cbptr, int is_textinput)
+static void _synthetic_paste(const char *cbptr)
 {
 	struct key_event kk;
 	int isy = 2;
@@ -555,13 +539,11 @@ static void _synthetic_paste(const char *cbptr, int is_textinput)
 		} else {
 			kk.unicode = *cbptr;
 		}
-		kk.mod = is_textinput ? SDL_GetModState() : 0;
 		kk.is_repeat = 0;
 		if (cbptr[1])
 			kk.is_synthetic = isy;
 		else
 			kk.is_synthetic = 3;
-		kk.is_textinput = is_textinput;
 		kk.state = KEY_PRESS;
 		handle_key(&kk);
 		kk.state = KEY_RELEASE;
@@ -569,6 +551,7 @@ static void _synthetic_paste(const char *cbptr, int is_textinput)
 		isy = 1;
 	}
 }
+
 static void _do_clipboard_paste_op(SDL_Event *e)
 {
 	if (ACTIVE_PAGE.clipboard_paste
@@ -577,7 +560,7 @@ static void _do_clipboard_paste_op(SDL_Event *e)
 	if (ACTIVE_WIDGET.clipboard_paste
 	&& ACTIVE_WIDGET.clipboard_paste(e->user.code,
 				e->user.data1)) return;
-	_synthetic_paste((const char *)e->user.data1, 0);
+	_synthetic_paste((const char *)e->user.data1);
 }
 
 static void key_event_reset(struct key_event *kk, int start_x, int start_y)
@@ -667,8 +650,8 @@ static void event_loop(void)
 		case SDL_TEXTINPUT: {
 			char* input_text = str_unicode_to_cp437(event.text.text);
 			if (input_text != NULL) {
-				if (input_text[0] != '\0' && (status.flags & ACCEPTING_INPUT))
-					_synthetic_paste(input_text, 1);
+				if (input_text[0] != '\0')
+					handle_text_input(input_text);
 				free(input_text);
 			}
 			break;

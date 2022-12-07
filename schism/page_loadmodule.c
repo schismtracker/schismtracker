@@ -678,6 +678,19 @@ static void show_selected_song_length(void)
 	csf_free(song);
 }
 
+static int file_list_handle_text_input(char* text) {
+	int i;
+	if (SDL_GetModState() & KMOD_ALT) {
+		return 1;
+	} else {
+		for (i = 0; text[i] != '\0'; i++) {
+			if (!search_text_add_char(text[i]))
+				return 0;
+		}
+		return 1;
+	}
+}
+
 static int file_list_handle_key(struct key_event * k)
 {
 	int new_file = current_file;
@@ -732,9 +745,7 @@ static int file_list_handle_key(struct key_event * k)
 		} /* else fall through */
 	default:
 		if (k->mouse == MOUSE_NONE) {
-			if (k->state == KEY_RELEASE)
-				return 0;
-			return search_text_add_char(k->unicode);
+			return 0;
 		}
 	}
 
@@ -804,6 +815,22 @@ static void dir_list_draw(void)
 
 	/* bleh */
 	search_redraw();
+}
+
+static int dir_list_handle_text_input(char* text) {
+	int i;
+	for (i = 0; text[i] != '\0'; i++) {
+		if (text[i] < 32)
+			return 0;
+		if (search_text_length >= NAME_MAX)
+			return 1;
+
+		search_text[search_text_length++] = text[i];
+		search_text[search_text_length] = 0;
+	}
+	search_update();
+
+	return 1;
 }
 
 static int dir_list_handle_key(struct key_event * k)
@@ -896,9 +923,7 @@ static int dir_list_handle_key(struct key_event * k)
 		break;
 	default:
 		if (k->mouse == MOUSE_NONE) {
-			if (k->state == KEY_RELEASE)
-				return 0;
-			return search_text_add_char(k->unicode);
+			return 0;
 		}
 	}
 
@@ -1024,7 +1049,8 @@ void load_module_load_page(struct page *page)
 	page->pre_handle_key = _load_cachefree_hack;
 #endif
 
-	create_other(widgets_loadmodule + 0, 1, file_list_handle_key, file_list_draw);
+	create_other(widgets_loadmodule + 0, 1, file_list_handle_key,
+		file_list_handle_text_input, file_list_draw);
 	widgets_loadmodule[0].accept_text = 1;
 	widgets_loadmodule[0].x = 3;
 	widgets_loadmodule[0].y = 13;
@@ -1032,7 +1058,8 @@ void load_module_load_page(struct page *page)
 	widgets_loadmodule[0].height = 30;
 	widgets_loadmodule[0].next.left = widgets_loadmodule[0].next.right = 1;
 
-	create_other(widgets_loadmodule + 1, 2, dir_list_handle_key, dir_list_draw);
+	create_other(widgets_loadmodule + 1, 2, dir_list_handle_key,
+		dir_list_handle_text_input, dir_list_draw);
 	widgets_loadmodule[1].accept_text = 1;
 	widgets_loadmodule[1].x = 50;
 	widgets_loadmodule[1].y = 13;
@@ -1096,11 +1123,13 @@ void save_module_load_page(struct page *page, int do_export)
 #endif
 	page->song_changed_cb = loadsave_song_changed;
 
-	create_other(widgets_exportsave + 0, 1, file_list_handle_key, file_list_draw);
+	create_other(widgets_exportsave + 0, 1, file_list_handle_key,
+		file_list_handle_text_input, file_list_draw);
 	widgets_exportsave[0].accept_text = 1;
 	widgets_exportsave[0].next.left = 4;
 	widgets_exportsave[0].next.right = widgets_exportsave[0].next.tab = 1;
-	create_other(widgets_exportsave + 1, 2, dir_list_handle_key, dir_list_draw);
+	create_other(widgets_exportsave + 1, 2, dir_list_handle_key,
+		dir_list_handle_text_input, dir_list_draw);
 	widgets_exportsave[1].accept_text = 1;
 	widgets_exportsave[1].next.right = widgets_exportsave[1].next.tab = 5;
 	widgets_exportsave[1].next.left = 0;
