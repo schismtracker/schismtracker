@@ -220,6 +220,13 @@ files_macosx = \
 cflags_macosx=
 endif
 
+if USE_FLAC
+files_flac = \
+	fmt/flac.c
+cflags_flac=-DUSE_FLAC
+libs_flac=-lFLAC
+endif
+
 if USE_NETWORK
 cflags_network=-DUSE_NETWORK
 endif
@@ -354,7 +361,8 @@ schismtracker_SOURCES = \
 	$(files_stdlib)			\
 	$(files_mmap)			\
 	$(files_wii)			\
-	$(files_windres)
+	$(files_windres)		\
+	$(files_flac)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
@@ -365,8 +373,8 @@ AM_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE -I$(srcdir)/include -I.
 AM_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
 	$(cflags_version) $(cflags_win32) $(cflags_wii) \
-	$(cflags_macosx)
+	$(cflags_macosx) $(cflags_flac)
 AM_OBJCFLAGS = $(AM_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(lib_asound) $(lib_win32) $(SDL_LIBS) $(LIBM)
+schismtracker_LDADD = $(lib_asound) $(lib_win32) $(libs_flac) $(SDL_LIBS) $(LIBM)
