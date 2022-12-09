@@ -361,6 +361,7 @@ static int orderlist_handle_char(char sym)
 			c = sym - '0';
 		else
 			return 0;
+		log_appendf(4, "Hai :3");
 
 		status.flags |= SONG_NEEDS_SAVE;
 		cur_pattern = current_song->orderlist[current_order];
@@ -395,7 +396,7 @@ static int orderlist_handle_char(char sym)
 static int orderlist_handle_text_input_on_list(char* text) {
 	int modkey = SDL_GetModState(), i;
 	if ((modkey & (KMOD_CTRL | KMOD_ALT))==0) {
-		for (i = 0; i != '\0'; i++) {
+		for (i = 0; text[i] != '\0'; i++) {
 			if (!orderlist_handle_char(text[i])) {
 				return 0;
 			}
@@ -677,8 +678,11 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		sample_set(sample_get_current()+1);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	default:
+	default: {
+		if (kbd_char_to_hex(k) == -1)
+			return 0;
 		return 1;
+	}
 	}
 
 	if (new_cursor_pos < 0)
@@ -901,7 +905,7 @@ void orderpan_load_page(struct page *page)
 	/* 0 = order list */
 	create_other(widgets_orderpan + 0, 1, orderlist_handle_key_on_list,
 		orderlist_handle_text_input_on_list, orderlist_draw);
-	widgets_orderpan[0].accept_text = 0;
+	widgets_orderpan[0].accept_text = 1;
 	widgets_orderpan[0].x = 6;
 	widgets_orderpan[0].y = 15;
 	widgets_orderpan[0].width = 3;
@@ -934,7 +938,7 @@ void ordervol_load_page(struct page *page)
 	/* 0 = order list */
 	create_other(widgets_ordervol + 0, 1, orderlist_handle_key_on_list,
 		orderlist_handle_text_input_on_list, orderlist_draw);
-	widgets_ordervol[0].accept_text = 0;
+	widgets_ordervol[0].accept_text = 1;
 	widgets_ordervol[0].x = 6;
 	widgets_ordervol[0].y = 15;
 	widgets_ordervol[0].width = 3;
