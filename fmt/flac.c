@@ -35,6 +35,8 @@
 struct flac_file {
 	FLAC__StreamMetadata_StreamInfo streaminfo;
 	struct {
+		char *name;
+		int32_t sample_rate;
 		uint8_t pan;
 		uint8_t vol;
 		struct {
@@ -54,9 +56,29 @@ static size_t total_size = 0;
 
 static void on_meta(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data) {
 	struct flac_file* flac_file = (struct flac_file*)client_data;
+	int32_t loop_start = -1, loop_length = -1;
 	switch (metadata->type) {
 		case FLAC__METADATA_TYPE_STREAMINFO:
 			flac_file->streaminfo = metadata->data.stream_info;
+			break;
+		case FLAC__METADATA_TYPE_VORBIS_COMMENT:
+			for (FLAC__uint32 i = 0; i < metadata->data.vorbis_comment.num_comments; i++) {
+				const char *tag = (const char*)metadata->data.vorbis_comment.comments[i].entry;
+				const FLAC__uint32 length = metadata->data.vorbis_comment.comments[i].length;
+				if (length > 6 && !strncasecmp(tag, "TITLE=", 6) && flac_file->flags.name)
+					strncpy(flac_file->flags.name, tag + 6, 32);
+				else if (length > 11 && !strncasecmp(tag, "SAMPLERATE=", 11))
+					flac_file->flags.sample_rate = strtol(tag + 11, NULL, 10);
+				else if (length > 10 && !strncasecmp(tag, "LOOPSTART=", 10))
+					loop_start = strtol(tag + 10, NULL, 10);
+				else if (length > 11 && !strncasecmp(tag, "LOOPLENGTH=", 11))
+					loop_length = strtol(tag + 11, NULL, 10);
+			}
+			if (loop_start > 0 && loop_length > 1) {
+				flac_file->flags.loop.type = 0;
+				flac_file->flags.loop.start = loop_start;
+				flac_file->flags.loop.end = loop_start + loop_length - 1;
+			}
 			break;
 		case FLAC__METADATA_TYPE_APPLICATION: {
 			const uint8_t *data = (const uint8_t *)metadata->data.application.data;
@@ -256,6 +278,8 @@ int fmt_flac_load_sample(const uint8_t *data, size_t len, song_sample_t *smp) {
 	struct flac_file flac_file;
 	flac_file.raw_data.data = data;
 	flac_file.raw_data.len = len;
+	flac_file.flags.name = smp->name;
+	flac_file.flags.sample_rate = -1;
 	flac_file.flags.loop.type = -1;
 	if (!flac_load(&flac_file, len, 0))
 		return 0;
@@ -268,6 +292,9 @@ int fmt_flac_load_sample(const uint8_t *data, size_t len, song_sample_t *smp) {
 		smp->loop_start    = flac_file.flags.loop.start;
 		smp->loop_end      = flac_file.flags.loop.end+1;
 		smp->flags |= (flac_file.flags.loop.type ? (CHN_LOOP | CHN_PINGPONGLOOP) : CHN_LOOP);
+	}
+	if (flac_file.flags.sample_rate > 0) {
+		smp->c5speed = flac_file.flags.sample_rate;
 	}
 
 	// endianness
@@ -302,6 +329,7 @@ int fmt_flac_read_info(dmoz_file_t *file, const uint8_t *data, size_t len)
 	struct flac_file flac_file;
 	flac_file.raw_data.data = data;
 	flac_file.raw_data.len = len;
+	flac_file.flags.name = NULL;
 	flac_file.flags.loop.type = -1;
 	if (!flac_load(&flac_file, len, 1)) {
 		return 0;
@@ -336,6 +364,9 @@ int fmt_flac_read_info(dmoz_file_t *file, const uint8_t *data, size_t len)
 		file->smp_loop_start = flac_file.flags.loop.start;
 		file->smp_loop_end   = flac_file.flags.loop.end+1;
 		file->smp_flags    |= (flac_file.flags.loop.type ? (CHN_LOOP | CHN_PINGPONGLOOP) : CHN_LOOP);
+	}
+	if (flac_file.flags.sample_rate > 0) {
+		file->smp_speed = flac_file.flags.sample_rate;
 	}
 
 	file->description  = "FLAC Audio File";
