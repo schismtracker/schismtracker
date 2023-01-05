@@ -360,8 +360,9 @@ char *get_note_string(int note, char *buf)
 		break;
 	default:
 		note--;
-		snprintf(buf, 4, "%.2s%.1d", note_names[note % 12],
-			 note / 12);
+		buf[0] = note_names[note % 12][0];
+		buf[1] = note_names[note % 12][1];
+		buf[2] = note / 12 + '0'; 
 	}
 	buf[3] = 0;
 	return buf;
