@@ -1176,6 +1176,10 @@ int csf_read_note(song_t *csf)
 			if (!(chan->flags & CHN_NOTEFADE))
 				rn_gen_key(csf, chan, cn, frequency, vol);
 
+			if (chan->flags & CHN_NEWNOTE) {
+				setup_channel_filter(chan, 1, 256, csf->mix_frequency);
+			}
+
 			// Filter Envelope: controls cutoff frequency
 			if (chan && chan->ptr_instrument && chan->ptr_instrument->flags & ENV_FILTER) {
 				setup_channel_filter(chan,
