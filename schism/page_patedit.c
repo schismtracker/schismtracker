@@ -2960,23 +2960,29 @@ static int patedit_record_note(song_note_t *cur_note, int channel, UNUSED int ro
 static int pattern_editor_insert_midi(struct key_event *k)
 {
 	song_note_t *pattern, *cur_note = NULL;
-	int n, v = 0, pd, speed, tick;
-	int r = current_row, c = current_channel;
+	int n, v = 0, pd, speed, tick, offset = 0;
+	int r = current_row, c = current_channel, p = current_pattern;
 	int first_note = 0;
 	int quantize_next_row = 0;
+	int ins = KEYJAZZ_NOINST, smp = KEYJAZZ_NOINST;
+
+	if (song_is_instrument_mode()) {
+		ins = instrument_get_current();
+	} else {
+		smp = sample_get_current();
+	}
 
 	status.flags |= SONG_NEEDS_SAVE;
-	song_get_pattern(current_pattern, &pattern);
 
 	if (midi_start_record && !SONG_PLAYING) {
 		switch (midi_start_record) {
 		case 1: /* pattern loop */
-			song_loop_pattern(current_pattern, r);
+			song_loop_pattern(p, r);
 			midi_playback_tracing = playback_tracing;
 			playback_tracing = 1;
 			break;
 		case 2: /* song play */
-			song_start_at_pattern(current_pattern, r);
+			song_start_at_pattern(p, r);
 			midi_playback_tracing = playback_tracing;
 			playback_tracing = 1;
 			break;
@@ -2985,16 +2991,18 @@ static int pattern_editor_insert_midi(struct key_event *k)
 		first_note = 1;
 	}
 
-	speed = song_get_current_speed();
-	tick = song_get_current_tick();
-
 	/* correct late notes to the next row */
 	/* tick + 1 because processing the keydown itself takes another tick */
 	if (midi_flags & MIDI_TICK_QUANTIZE && SONG_PLAYING && !first_note
 			&& tick + 1 < speed / 2) {
-		r = (r + 1) % song_get_rows_in_pattern(current_pattern);
+		// r = (r + 1) % song_get_rows_in_pattern(p);
+		offset++;
 		quantize_next_row = 1;
 	}
+
+	song_get_pattern_offset(&p, &pattern, &r, offset);
+	speed = song_get_current_speed();
+	tick = song_get_current_tick();
 
 	if (k->midi_note == -1) {
 		/* nada */
@@ -3025,7 +3033,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 		n = k->midi_note;
 
 		if (!quantize_next_row) {
-			c = song_keydown(KEYJAZZ_NOINST, KEYJAZZ_NOINST, n, v, c);
+			c = song_keydown(smp, ins, n, v, c);
 		}
 
 		cur_note = pattern + 64 * r + (c-1);
