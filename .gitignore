@@ -26,3 +26,4 @@
 /stamp-h1
 configure~
 .vscode/*
+.git-blame-ignore-revs
