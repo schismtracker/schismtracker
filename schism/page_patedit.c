@@ -2962,7 +2962,6 @@ static int pattern_editor_insert_midi(struct key_event *k)
 	song_note_t *pattern, *cur_note = NULL;
 	int n, v = 0, pd, speed, tick, offset = 0;
 	int r = current_row, c = current_channel, p = current_pattern;
-	int first_note = 0;
 	int quantize_next_row = 0;
 	int ins = KEYJAZZ_NOINST, smp = KEYJAZZ_NOINST;
 
@@ -2987,15 +2986,10 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			playback_tracing = 1;
 			break;
 		};
-
-		first_note = 1;
-	}
-
-	/* correct late notes to the next row */
-	/* tick + 1 because processing the keydown itself takes another tick */
-	if (midi_flags & MIDI_TICK_QUANTIZE && SONG_PLAYING && !first_note
+	} else if (midi_flags & MIDI_TICK_QUANTIZE && SONG_PLAYING
 			&& tick + 1 < speed / 2) {
-		// r = (r + 1) % song_get_rows_in_pattern(p);
+		/* correct late notes to the next row */
+		/* tick + 1 because processing the keydown itself takes another tick */
 		offset++;
 		quantize_next_row = 1;
 	}
