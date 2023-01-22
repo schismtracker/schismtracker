@@ -387,7 +387,6 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 /* text input handler */
 
 void handle_text_input(char* text_input) {
-	log_appendf(4, "TEXTINPUT event recieved: %s", text_input);
 	if (ACTIVE_WIDGET.type == WIDGET_OTHER)
 		if (ACTIVE_WIDGET.accept_text)
 			if (ACTIVE_WIDGET.d.other.handle_text_input) {
