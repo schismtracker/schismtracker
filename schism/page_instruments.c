@@ -633,11 +633,9 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 					clear_instrument_text();
 					return 1;
 				}
-			}
-			if (k->sym.sym >= 32) {
+			} else if (k->sym.sym >= 32) {
 				if (instrument_cursor_pos < 25)
 					get_page_widgets()->accept_text = 1;
-				SDL_StartTextInput();
 				return 1;
 			}
 			return 0;
