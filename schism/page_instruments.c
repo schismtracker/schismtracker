@@ -618,9 +618,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			if (instrument_cursor_pos >= 25) {
 				/* we stop text input here so we don't insert
 				   an extra space */
-				SDL_StopTextInput();
 				instrument_cursor_pos = 0;
-				get_page_widgets()->accept_text = 1;
+				get_page_widgets()->accept_text = 0;
 				status.flags |= NEED_UPDATE;
 				memused_songchanged();
 				return 1;
@@ -636,6 +635,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				}
 			}
 			if (k->sym.sym >= 32) {
+				if (instrument_cursor_pos < 25)
+					get_page_widgets()->accept_text = 1;
 				SDL_StartTextInput();
 				return 1;
 			}
