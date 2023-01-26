@@ -1236,6 +1236,8 @@ int csf_read_note(song_t *csf)
 			chan->left_volume = chan->right_volume = 0;
 			chan->length = 0;
 		}
+
+		chan->flags &= ~CHN_NEWNOTE;
 	}
 
 	// Checking Max Mix Channels reached: ordering by volume
