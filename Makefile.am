@@ -227,6 +227,17 @@ cflags_flac=-DUSE_FLAC
 libs_flac=-lFLAC
 endif
 
+if USE_ROCKET
+files_rocket = \
+	rocket/lib/base.h		\
+	rocket/lib/device.c		\
+	rocket/lib/device.h		\
+	rocket/lib/sync.h		\
+	rocket/lib/track.c		\
+	rocket/lib/track.h
+cflags_rocket=-DUSE_ROCKET
+endif
+
 if USE_NETWORK
 cflags_network=-DUSE_NETWORK
 endif
@@ -362,7 +373,8 @@ schismtracker_SOURCES = \
 	$(files_mmap)			\
 	$(files_wii)			\
 	$(files_windres)		\
-	$(files_flac)
+	$(files_flac)			\
+	$(files_rocket)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
@@ -373,7 +385,7 @@ AM_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE -I$(srcdir)/include -I.
 AM_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
 	$(cflags_version) $(cflags_win32) $(cflags_wii) \
-	$(cflags_macosx) $(cflags_flac)
+	$(cflags_macosx) $(cflags_flac) $(cflags_rocket)
 AM_OBJCFLAGS = $(AM_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
