@@ -183,6 +183,8 @@ int widget_handle_key(struct key_event * k)
 	struct widget *widget = &ACTIVE_WIDGET;
 	if (!widget)
 		return 0;
+	if (!widget->accept_text) /* hack */
+		widget->accept_text = 1;
 
 	int n, onw, wx, fmin, fmax, pad;
 	void (*changed)(void);
