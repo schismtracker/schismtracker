@@ -123,7 +123,7 @@ static int check_time(void)
 			if (last_o == order && last_r == row) {
 				timep = last_timep;
 			} else {
-				last_timep = timep = song_get_length_to(order, row);
+				last_timep = timep = (song_get_length_to_ms(order, row) + 500) / 1000;
 				last_o = order;
 				last_r = row;
 			}
@@ -1802,7 +1802,7 @@ static void _timejump_ok(UNUSED void *ign)
 	int no, np, nr;
 	sec = (_timejump_widgets[0].d.numentry.value * 60)
 		+ _timejump_widgets[1].d.numentry.value;
-	song_get_at_time(sec, &no, &nr);
+	song_get_at_time(sec * 1000, &no, &nr);
 	set_current_order(no);
 	np = current_song->orderlist[no];
 	if (np < 200) {
@@ -1841,7 +1841,7 @@ void show_length_dialog(const char *label, unsigned int length)
 
 void show_song_length(void)
 {
-	show_length_dialog("Total song time", csf_get_length(current_song));
+	show_length_dialog("Total song time", csf_get_length_secs(current_song));
 }
 
 /* FIXME this is an illogical place to put this but whatever, i just want

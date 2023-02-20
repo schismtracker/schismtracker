@@ -674,7 +674,7 @@ static void show_selected_song_length(void)
 		log_appendf(4, "%s: %s", ptr, fmt_strerror(errno));
 		return;
 	}
-	show_length_dialog(get_basename(ptr), csf_get_length(song));
+	show_length_dialog(get_basename(ptr), csf_get_length_secs(song));
 	csf_free(song);
 }
 

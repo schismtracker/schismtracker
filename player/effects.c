@@ -996,7 +996,7 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 # error csf_get_length assumes 64 channels
 #endif
 
-unsigned int csf_get_length(song_t *csf)
+unsigned int csf_get_length_ms(song_t *csf)
 {
 	uint32_t elapsed = 0, row = 0, next_row = 0, cur_order = 0, next_order = 0, pat = csf->orderlist[0],
 		speed = csf->initial_speed, tempo = csf->initial_tempo, psize, n;
@@ -1047,9 +1047,9 @@ unsigned int csf_get_length(song_t *csf)
 		if (csf->stop_at_order > -1 && csf->stop_at_row > -1) {
 			if (csf->stop_at_order <= (signed) cur_order && csf->stop_at_row <= (signed) row)
 				break;
-			if (csf->stop_at_time > 0) {
+			if (csf->stop_at_time_ms > 0) {
 				/* stupid api decision */
-				if (((elapsed + 500) / 1000) >= csf->stop_at_time) {
+				if (elapsed >= csf->stop_at_time_ms) {
 					csf->stop_at_order = cur_order;
 					csf->stop_at_row = row;
 					break;
@@ -1130,9 +1130,13 @@ unsigned int csf_get_length(song_t *csf)
 		elapsed += (speed + speed_count) * 2500 / tempo;
 	}
 
-	return (elapsed + 500) / 1000;
+	return elapsed;
 }
 
+unsigned int csf_get_length_secs(song_t *csf)
+{
+	return (csf_get_length_ms(csf) + 500) / 1000;
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Effects
