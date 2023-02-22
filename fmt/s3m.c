@@ -441,7 +441,9 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			ver_decode_cwtv(trkvers, reserved, song->tracker_id + strlen(song->tracker_id));
 			break;
 		case 5:
-			if (trkvers >= 0x5129 && reserved)
+			if (trkvers == 0x5447)
+				strcpy(song->tracker_id, "Graoumf Tracker");
+			else if (trkvers >= 0x5129 && reserved)
 				sprintf(song->tracker_id, "OpenMPT %d.%02x.%02x.%02x", (trkvers & 0xf00) >> 8, trkvers & 0xff, (reserved >> 8) & 0xff, reserved & 0xff);
 			else
 				tid = "OpenMPT %d.%02x";
