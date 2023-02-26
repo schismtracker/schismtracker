@@ -594,7 +594,6 @@ static void key_event_reset(struct key_event *kk, int start_x, int start_y)
 	kk->sy = start_y;
 }
 
-static void event_loop(void) NORETURN;
 static void event_loop(void)
 {
 	SDL_Event event;
