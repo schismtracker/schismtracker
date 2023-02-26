@@ -228,7 +228,12 @@ libs_flac=-lFLAC
 endif
 
 if USE_ROCKET
+# TODO: it's fragile to be intimately grabbing rocket/lib/*.[ch] stuff here,
+# and if we continue doing that we need to DTRT regarding os-specific defines
+# like USE_NODELAY
 files_rocket = \
+	include/rocket.h		\
+	schism/rocket.c			\
 	rocket/lib/base.h		\
 	rocket/lib/device.c		\
 	rocket/lib/device.h		\

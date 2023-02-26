@@ -43,6 +43,10 @@
 
 #include "osdefs.h"
 
+#ifdef USE_ROCKET
+#include "rocket.h"
+#endif
+
 #include <errno.h>
 
 #include "sdlmain.h"
@@ -79,6 +83,14 @@ static const char *video_driver = NULL;
 static const char *audio_driver = NULL;
 static int did_fullscreen = 0;
 static int did_classic = 0;
+
+#ifdef USE_ROCKET
+static int use_rocket;
+static const char *rocket_host;
+static const char *rocket_port;
+static const char *rocket_bpm;	/* Rocket beats per minute, should match with Editor */
+static const char *rocket_rpb;	/* Rocket rows per beat, also should match with Editor */
+#endif
 
 /* --------------------------------------------------------------------- */
 
@@ -269,6 +281,13 @@ enum {
 #endif
 	O_DISKWRITE,
 	O_DEBUG,
+#if USE_ROCKET
+	O_ROCKET,
+	O_ROCKET_HOST,
+	O_ROCKET_PORT,
+	O_ROCKET_BPM,
+	O_ROCKET_RPB,
+#endif
 	O_VERSION,
 };
 
@@ -322,6 +341,13 @@ static void parse_options(int argc, char **argv)
 		{"no-hooks", 0, NULL, O_NO_HOOKS},
 #endif
 		{"debug", 1, NULL, O_DEBUG},
+#ifdef USE_ROCKET
+		{"rocket", 0, NULL, O_ROCKET},
+		{"rocket-host", 1, NULL, O_ROCKET_HOST},
+		{"rocket-port", 1, NULL, O_ROCKET_PORT},
+		{"rocket-bpm", 1, NULL, O_ROCKET_BPM},
+		{"rocket-rpb", 1, NULL, O_ROCKET_RPB},
+#endif
 		{"version", 0, NULL, O_VERSION},
 		{"help", 0, NULL, O_HELP},
 		{NULL, 0, NULL, 0},
@@ -389,6 +415,29 @@ static void parse_options(int argc, char **argv)
 			put_env_var("DISPLAY", optarg);
 			break;
 #endif
+
+#ifdef USE_ROCKET
+		case O_ROCKET:
+			use_rocket = 1;
+			break;
+		case O_ROCKET_HOST:
+			use_rocket = 1;
+			rocket_host = optarg;
+			break;
+		case O_ROCKET_PORT:
+			use_rocket = 1;
+			rocket_port = optarg;
+			break;
+		case O_ROCKET_BPM:
+			use_rocket = 1;
+			rocket_bpm = optarg;
+			break;
+		case O_ROCKET_RPB:
+			use_rocket = 1;
+			rocket_rpb = optarg;
+			break;
+#endif
+
 		case O_FULLSCREEN:
 			video_fullscreen(1);
 			did_fullscreen = 1;
@@ -455,6 +504,13 @@ static void parse_options(int argc, char **argv)
 				"      --hooks (--no-hooks)\n"
 #endif
 				//"      --debug=OPS\n"
+#if USE_ROCKET
+				"      --rocket\n"
+				"      --rocket-host=HOST_OVERRIDE (implies --rocket)\n"
+				"      --rocket-port=PORT_OVERRIDE (implies --rocket)\n"
+				"      --rocket-bpm=BPM_OVERRIDE (beats per minute, default: 125 (implies --rocket))\n"
+				"      --rocket-rpb=RPB_OVERRIDE (rows per beat, default: 8 (implies --rocket))\n"
+#endif
 				"      --version\n"
 				"  -h, --help\n"
 			);
@@ -981,6 +1037,10 @@ static void event_loop(void)
 				status.flags &= ~(CLIPPY_PASTE_BUFFER|CLIPPY_PASTE_SELECTION);
 			}
 
+#ifdef USE_ROCKET
+			if (use_rocket)
+				schism_rocket_update();
+#endif
 			check_update();
 
 			switch (song_get_mode()) {
@@ -1093,6 +1153,24 @@ int main(int argc, char **argv)
 
 #ifdef USE_DLTRICK_ALSA
 	alsa_dlinit();
+#endif
+
+#if USE_ROCKET
+	/* For now we just try to connect to rocket once at startup, so a
+	 * rocket editor must be running, and we'll fail hard if we can't reach
+	 * it.
+	 *
+	 * TODO: make more robust/do reconnects, have something in the GUI for
+	 * seeing the connection status and disconnect/(re)connecting, changing
+	 * host/port etc.
+	*
+	 * This is good enough for basic demo development and proving/iterating
+	 * the concept though.
+	 */
+	if (use_rocket && schism_rocket_connect(rocket_host, rocket_port, rocket_bpm, rocket_rpb) < 0) {
+		SDL_Log("Unable to connect GNU Rocket, aborting");
+		return 1;
+	}
 #endif
 
 	cfg_init_dir();
