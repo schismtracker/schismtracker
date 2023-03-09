@@ -1350,7 +1350,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 	if (NOTE_IS_CONTROL(note)) {
 		// hax: keep random sample numbers from triggering notes (see csf_instrument_change)
 		// NOTE_OFF is a completely arbitrary choice - this could be anything above NOTE_LAST
-		chan->new_note = NOTE_OFF;
+		chan->note = chan->new_note = NOTE_OFF;
 		switch (note) {
 		case NOTE_OFF:
 			fx_key_off(csf, nchan);
