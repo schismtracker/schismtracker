@@ -1178,7 +1178,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	uint32_t note = chan->new_note;
 
 	if (note == NOTE_NONE) {
-		/* nothing to see here */
+		return;
 	} else if (NOTE_IS_CONTROL(note)) {
 		/* nothing here either */
 	} else if (penv) {
@@ -2140,9 +2140,11 @@ void csf_process_effects(song_t *csf, int firsttick)
 						csf->instruments[instr]->midi_bank,
 						csf->instruments[instr]->midi_channel_mask);
 
-				chan->new_instrument = 0;
-				if (NOTE_IS_NOTE(note) && psmp != chan->ptr_sample) {
-					chan->position = chan->position_frac = 0;
+				if (NOTE_IS_NOTE(note)) {
+					chan->new_instrument = 0;
+					if (psmp != chan->ptr_sample) {
+						chan->position = chan->position_frac = 0;
+					}
 				}
 			}
 			// New Note ?
