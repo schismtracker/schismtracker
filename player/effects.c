@@ -2095,6 +2095,15 @@ void csf_process_effects(song_t *csf, int firsttick)
 					if (instr < MAX_SAMPLES)
 						chan->volume = csf->samples[instr].volume;
 				}
+
+				if (csf->flags & SONG_INSTRUMENTMODE) {
+					if (instr < MAX_INSTRUMENTS && (chan->ptr_instrument != csf->instruments[instr] || !chan->increment))
+						note = chan->note;
+				} else
+				{
+					if (instr < MAX_SAMPLES && (chan->ptr_sample != &csf->samples[instr] || !chan->increment))
+						note = chan->note;
+				}
 			}
 			// Invalid Instrument ?
 			if (instr >= MAX_INSTRUMENTS) instr = 0;
