@@ -1092,6 +1092,8 @@ static int _handle_ime(struct key_event *k)
 /* this is the important one */
 void handle_key(struct key_event *k)
 {
+	SDL_StartTextInput(); /* for dialogs */
+
 	if (_handle_ime(k))
 		return;
 
