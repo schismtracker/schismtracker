@@ -62,7 +62,7 @@
 #define CHN_PANENV              0x400000 // pan envelope is active
 #define CHN_PITCHENV            0x800000 // pitch/filter envelope is active
 #define CHN_FASTVOLRAMP         0x1000000 // ramp volume very fast (XXX this is a dumb flag)
-//#define CHN_EXTRALOUD         0x2000000
+#define CHN_NEWNOTE             0x2000000 // note was triggered, reset filter
 //#define CHN_REVERB            0x4000000
 //#define CHN_NOREVERB          0x8000000
 #define CHN_NNAMUTE             0x10000000 // turn off mute, but have it reset later

@@ -54,6 +54,10 @@ If asked to "enter a selection", hit Enter to go with the default.
 Also, you need the following specific dependency:
 
 	pacman -S mingw-w64-x86_64-SDL2
+
+For FLAC sample loading, you'll also need the following dependency:
+
+	pacman -S mingw-w64-x86_64-flac
 	
 Once you have installed these packages, close all your MSYS2 windows 
 before continuing with the instructions.

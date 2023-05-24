@@ -73,14 +73,14 @@ int macosx_did_finderlaunch;
 
 #define KEQ_FN(n) [NSString stringWithFormat:@"%C", NSF##n##FunctionKey]
 
-@interface SDLApplication : NSApplication
+@interface SDL_SchismTracker : NSApplication
 @end
 
 @interface NSApplication(OtherMacOSXExtensions)
 -(void)setAppleMenu:(NSMenu*)m;
 @end
 
-@implementation SDLApplication
+@implementation SDL_SchismTracker
 /* Invoked from the Quit menu item */
 - (void)terminate:(id)sender
 {
@@ -410,7 +410,7 @@ static void CustomApplicationMain (int argc, char **argv)
         CPSProcessSerNum PSN;
 
         /* Ensure the application object is initialised */
-        [SDLApplication sharedApplication];
+        [SDL_SchismTracker sharedApplication];
 
         /* Tell the dock about us */
         if (!CPSGetCurrentProcess(&PSN)) {
@@ -419,7 +419,7 @@ static void CustomApplicationMain (int argc, char **argv)
                 }
                 if (!CPSEnableForegroundOperation(&PSN,0x03,0x3C,0x2C,0x1103))
                         if (!CPSSetFrontProcess(&PSN))
-                                [SDLApplication sharedApplication];
+                                [SDL_SchismTracker sharedApplication];
         }
 
         /* Set up the menubar */
@@ -447,7 +447,7 @@ static void CustomApplicationMain (int argc, char **argv)
         [self setupWorkingDirectory:gFinderLaunch];
 
         /* Hand off to main application code */
-        status = SDL_Init (gArgv);
+        status = SDL_main (gArgc, gArgv);
 
         /* We're done, thank you for playing */
         exit(status);
@@ -502,8 +502,7 @@ static void CustomApplicationMain (int argc, char **argv)
 
 
 /* Main entry point to executable - should *not* be SDL_main! */
-/* JK LOL... SDL2 */
-int SDL_main (int argc, char **argv)
+int main (int argc, char **argv)
 {
         /* Copy the arguments into a global variable */
         /* This is passed if we are launched by double-clicking */
@@ -546,6 +545,23 @@ void macosx_clippy_put(const char *buf)
         NSPasteboard *pb = [NSPasteboard generalPasteboard];
         [pb declareTypes:[NSArray arrayWithObject:NSStringPboardType] owner:nil];
         [pb setString:contents forType:NSStringPboardType];
+}
+// ktt appears to be 1/60th of a second?
+unsigned int key_repeat_rate(void)
+{
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        int ktt = [defaults integerForKey:@"KeyRepeat"];
+        if (!ktt || ktt < 0) ktt = 4; // eh?
+        ktt = (ktt * 1000) / 60;
+        return (unsigned)ktt;
+}
+unsigned int key_repeat_delay(void)
+{
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        int ktt = [defaults integerForKey:@"InitialKeyRepeat"];
+        if (!ktt || ktt < 0) ktt = 35;
+        ktt = (ktt * 1000) / 60;
+        return (unsigned)ktt;
 }
 int key_scancode_lookup(int k, int def)
 {

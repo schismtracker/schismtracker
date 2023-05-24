@@ -63,12 +63,10 @@ AC_C_BIGENDIAN
 dnl Check for SDL libs
 AC_CHECK_TOOL([SDL_CONFIG], [sdl2-config])
 AC_SUBST(SDL_CONFIG)
-if test "x$SDL_CONFIG" == "x"; then
+if test "x$SDL_CONFIG" = "x"; then
         AC_MSG_ERROR([*** sdl2-config not found.])
 fi
-if $SDL_CONFIG --version | grep -qE "^2\.0\.[0-9]+|[5-9]"; then
-        AC_MSG_ERROR([*** SDL version >= 2.0.5 not found.])
-fi
+AS_VERSION_COMPARE([$($SDL_CONFIG --version)], [2.0.5], [AC_MSG_ERROR([*** SDL version >= 2.0.5 not found.])])
 SDL_CFLAGS=$($SDL_CONFIG --cflags)
 SDL_LIBS=$($SDL_CONFIG --libs)
 
@@ -303,6 +301,11 @@ AC_ARG_ENABLE(fortify-source,
         ADD_FORTIFY=$enableval,
         ADD_FORTIFY=no)
 
+AC_ARG_WITH([flac],
+		[AS_HELP_STRING([--without-flac],[Build without FLAC support @<:@default=no@:>@])],
+		[],
+		[with_flac=yes])
+
 dnl fortify needs -O; do this early so ADD_OPT can override with higher -O level
 if test x$ADD_FORTIFY \!= xno; then
         CFLAGS="$CFLAGS -O -D_FORTIFY_SOURCE=2"
@@ -321,6 +324,14 @@ fi
 if test x$ADD_LUDICROUS \!= xno; then
         ADD_WARN=yes
         CFLAGS="$CFLAGS -Werror"
+fi
+
+AM_CONDITIONAL([USE_FLAC], false)
+if test "x$with_flac" = "xyes"; then
+		AC_CHECK_HEADER(FLAC/stream_decoder.h, libflac_found=yes, libflac_found=no)
+		if test x"$libflac_found" = "xyes"; then
+				AM_CONDITIONAL([USE_FLAC], true)
+		fi
 fi
 
 dnl ... but put the warnings first, to make it possible to quiet certain

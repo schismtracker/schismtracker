@@ -107,6 +107,7 @@ int midi_playback_tracing = 0;
 static int panning_mode = 0;            /* for the volume column */
 int midi_bend_hit[64];
 int midi_last_bend_hit[64];
+int midi_last_note[64];
 
 /* blah; other forwards */
 static void pated_save(const char *descr);
@@ -3002,6 +3003,11 @@ static int pattern_editor_insert_midi(struct key_event *k)
 	if (k->midi_note == -1) {
 		/* nada */
 	} else if (k->state == KEY_RELEASE) {
+		/* don't record noteoffs of non-matching notes */
+		if (k->midi_note != midi_last_note[c]) {
+			return 0;
+		}
+
 		c = song_keyup(KEYJAZZ_NOINST, KEYJAZZ_NOINST, k->midi_note);
 
 		/* don't record noteoffs for no good reason... */
@@ -3025,7 +3031,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 		if (!((song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP)) && playback_tracing)) {
 			tick = 0;
 		}
-		n = k->midi_note;
+		midi_last_note[c] = n = k->midi_note;
 
 		if (!quantize_next_row) {
 			c = song_keydown(smp, ins, n, v, c);
