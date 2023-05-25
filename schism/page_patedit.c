@@ -2991,7 +2991,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			break;
 		};
 	} else if (midi_flags & MIDI_TICK_QUANTIZE && SONG_PLAYING
-			&& tick + 1 < speed / 2) {
+			&& tick > 0 && tick <= speed / 2 + 1) {
 		/* correct late notes to the next row */
 		/* tick + 1 because processing the keydown itself takes another tick */
 		offset++;
