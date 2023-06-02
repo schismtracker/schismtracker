@@ -2984,6 +2984,10 @@ static int pattern_editor_insert_midi(struct key_event *k)
 		/* nada */
 	} else if (k->state == KEY_RELEASE) {
 		c = song_keyup(KEYJAZZ_NOINST, KEYJAZZ_NOINST, k->midi_note);
+		if (c <= 0) {
+			/* song_keyup didn't find find note off channel, abort */
+			return 0;
+		}
 
 		/* don't record noteoffs for no good reason... */
 		if (!((midi_flags & MIDI_RECORD_NOTEOFF)
