@@ -251,7 +251,7 @@ This will break if the same note was keydown'd twice without a keyup, but I thin
 fairly unlikely scenario that you'd have to TRY to bring about. */
 static int keyjazz_note_to_chan[128];
 /* last note played by channel tracking */
-static int keyjazz_chan_to_note[MAX_CHANNELS+1];
+static int keyjazz_chan_to_note[257];
 
 /* **** chan ranges from 1 to 64   */
 static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int effect, int param)
