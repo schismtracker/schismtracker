@@ -2965,6 +2965,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 	int r = current_row, c = current_channel, p = current_pattern;
 	int quantize_next_row = 0;
 	int ins = KEYJAZZ_NOINST, smp = KEYJAZZ_NOINST;
+	int song_was_playing = SONG_PLAYING;
 
 	if (song_is_instrument_mode()) {
 		ins = instrument_get_current();
@@ -2990,8 +2991,13 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			playback_tracing = 1;
 			break;
 		};
-	} else if (midi_flags & MIDI_TICK_QUANTIZE && SONG_PLAYING
-			&& tick > 0 && tick <= speed / 2 + 1) {
+	}
+
+	// this is a long one
+	if (midi_flags & MIDI_TICK_QUANTIZE             // if quantize is on
+			&& song_was_playing                     // and the song was playing
+			&& playback_tracing                     // and we are following the song
+			&& tick > 0 && tick <= speed / 2 + 1) { // and the note is too late
 		/* correct late notes to the next row */
 		/* tick + 1 because processing the keydown itself takes another tick */
 		offset++;
