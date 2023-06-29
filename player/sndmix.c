@@ -230,7 +230,7 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 	int vol = *nvol;
 
 	// Volume Envelope
-	if (chan->flags & CHN_VOLENV && penv->vol_env.nodes) {
+	if ((chan->flags & CHN_VOLENV || penv->flags & ENV_VOLUME) && penv->vol_env.nodes) {
 		int envpos = chan->vol_env_position;
 		unsigned int pt = penv->vol_env.nodes - 1;
 
@@ -267,7 +267,7 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 	}
 
 	// Panning Envelope
-	if ((chan->flags & CHN_PANENV) && (penv->pan_env.nodes)) {
+	if ((chan->flags & CHN_PANENV || penv->flags & ENV_PANNING) && (penv->pan_env.nodes)) {
 		int envpos = chan->pan_env_position;
 		unsigned int pt = penv->pan_env.nodes - 1;
 
@@ -356,56 +356,59 @@ static inline void rn_pitch_filter_envelope(song_t *csf, song_voice_t *chan,
 	int *nenvpitch, int *nfrequency)
 {
 	song_instrument_t *penv = chan->ptr_instrument;
-	int envpos = chan->pitch_env_position;
-	unsigned int pt = penv->pitch_env.nodes - 1;
-	int frequency = *nfrequency;
-	int envpitch = *nenvpitch;
 
-	for (unsigned int i = 0; i < (unsigned int)(penv->pitch_env.nodes - 1); i++) {
-		if (envpos <= penv->pitch_env.ticks[i]) {
-			pt = i;
-			break;
+	if ((chan->flags & CHN_PANENV || penv->flags & (ENV_PITCH | ENV_FILTER)) && (penv->pan_env.nodes)) {
+		int envpos = chan->pitch_env_position;
+		unsigned int pt = penv->pitch_env.nodes - 1;
+		int frequency = *nfrequency;
+		int envpitch = *nenvpitch;
+
+		for (unsigned int i = 0; i < (unsigned int)(penv->pitch_env.nodes - 1); i++) {
+			if (envpos <= penv->pitch_env.ticks[i]) {
+				pt = i;
+				break;
+			}
 		}
+
+		int x2 = penv->pitch_env.ticks[pt];
+		int x1;
+
+		if (envpos >= x2) {
+			envpitch = (((int)penv->pitch_env.values[pt]) - 32) * 8;
+			x1 = x2;
+		} else if (pt) {
+			envpitch = (((int)penv->pitch_env.values[pt - 1]) - 32) * 8;
+			x1 = penv->pitch_env.ticks[pt - 1];
+		} else {
+			envpitch = 0;
+			x1 = 0;
+		}
+
+		if (envpos > x2)
+			envpos = x2;
+
+		if (x2 > x1 && envpos > x1) {
+			int envpitchdest = (((int)penv->pitch_env.values[pt]) - 32) * 8;
+			envpitch += ((envpos - x1) * (envpitchdest - envpitch)) / (x2 - x1);
+		}
+
+		// clamp to -255/255?
+		envpitch = CLAMP(envpitch, -256, 256);
+
+		// Pitch Envelope
+		if (!(penv->flags & ENV_FILTER)) {
+			int l = abs(envpitch);
+
+			if (l > 255)
+				l = 255;
+
+			int ratio = (envpitch < 0 ? linear_slide_down_table : linear_slide_up_table)[l];
+			frequency = _muldiv(frequency, ratio, 0x10000);
+		}
+
+		*nfrequency = frequency;
+		*nenvpitch = envpitch;
 	}
-
-	int x2 = penv->pitch_env.ticks[pt];
-	int x1;
-
-	if (envpos >= x2) {
-		envpitch = (((int)penv->pitch_env.values[pt]) - 32) * 8;
-		x1 = x2;
-	} else if (pt) {
-		envpitch = (((int)penv->pitch_env.values[pt - 1]) - 32) * 8;
-		x1 = penv->pitch_env.ticks[pt - 1];
-	} else {
-		envpitch = 0;
-		x1 = 0;
-	}
-
-	if (envpos > x2)
-		envpos = x2;
-
-	if (x2 > x1 && envpos > x1) {
-		int envpitchdest = (((int)penv->pitch_env.values[pt]) - 32) * 8;
-		envpitch += ((envpos - x1) * (envpitchdest - envpitch)) / (x2 - x1);
-	}
-
-	// clamp to -255/255?
-	envpitch = CLAMP(envpitch, -256, 256);
-
-	// Pitch Envelope
-	if (!(penv->flags & ENV_FILTER)) {
-		int l = abs(envpitch);
-
-		if (l > 255)
-			l = 255;
-
-		int ratio = (envpitch < 0 ? linear_slide_down_table : linear_slide_up_table)[l];
-		frequency = _muldiv(frequency, ratio, 0x10000);
-	}
-
-	*nfrequency = frequency;
-	*nenvpitch = envpitch;
 }
 
 
@@ -418,8 +421,6 @@ static inline void _process_envelope(song_voice_t *chan, song_instrument_t *penv
 	if (!(chan->flags & env_flag)) {
 		return;
 	}
-
-	(*position)++;
 
 	if ((penv->flags & sus_flag) && !(chan->flags & CHN_KEYOFF)) {
 		start = envelope->ticks[envelope->sustain_start];
@@ -440,6 +441,8 @@ static inline void _process_envelope(song_voice_t *chan, song_instrument_t *penv
 		*position = start;
 		chan->flags |= fade_flag; // only relevant for volume envelope
 	}
+
+	(*position)++;
 }
 
 static inline void rn_increment_env_pos(song_voice_t *chan)
