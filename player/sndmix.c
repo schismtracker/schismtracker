@@ -224,12 +224,10 @@ static inline int rn_sample_vibrato(song_t *csf, song_voice_t *chan, int frequen
 }
 
 
-static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
-{
+static inline void rn_process_vol_env(song_voice_t* chan, int *nvol) {
 	song_instrument_t *penv = chan->ptr_instrument;
 	int vol = *nvol;
 
-	// Volume Envelope
 	if ((chan->flags & CHN_VOLENV || penv->flags & ENV_VOLUME) && penv->vol_env.nodes) {
 		int envpos = chan->vol_env_position - 1;
 		unsigned int pt = penv->vol_env.nodes - 1;
@@ -268,8 +266,15 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 		envvol = CLAMP(envvol, 0, 256);
 		vol = (vol * envvol) >> 8;
 	}
+	
+	*nvol = vol;
+}
 
-	// Panning Envelope
+
+static inline void rn_process_pan_env(song_voice_t* chan, int *nvol) {
+	song_instrument_t *penv = chan->ptr_instrument;
+	int vol = *nvol;
+
 	if ((chan->flags & CHN_PANENV || penv->flags & ENV_PANNING) && (penv->pan_env.nodes)) {
 		int envpos = chan->pan_env_position - 1;
 		unsigned int pt = penv->pan_env.nodes - 1;
@@ -314,8 +319,15 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 
 		chan->final_panning = pan;
 	}
+	
+	*nvol = vol;
+}
 
-	// FadeOut volume
+
+static inline void rn_process_ins_fade(song_voice_t *chan, int *nvol) {
+	song_instrument_t *penv = chan->ptr_instrument;
+	int vol = *nvol;
+
 	if (chan->flags & CHN_NOTEFADE) {
 		unsigned int fadeout = penv->fadeout;
 
@@ -330,8 +342,21 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 			vol = 0;
 		}
 	}
-
+	
 	*nvol = vol;
+}
+
+
+static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
+{
+	// Volume Envelope
+	rn_process_vol_env(chan, nvol);
+
+	// Panning Envelope
+	rn_process_pan_env(chan, nvol);
+
+	// FadeOut volume
+	rn_process_ins_fade(chan, nvol);
 }
 
 
@@ -1138,6 +1163,8 @@ int csf_read_note(song_t *csf)
 
 			// Process Envelopes
 			if ((csf->flags & SONG_INSTRUMENTMODE) && chan->ptr_instrument) {
+				/* OpenMPT test cases s77.it and EnvLoops.it */
+				rn_increment_env_pos(chan);
 				rn_process_envelope(chan, &vol);
 			} else {
 				// No Envelope: key off => note cut
@@ -1213,10 +1240,6 @@ int csf_read_note(song_t *csf)
 
 			chan->increment = (ninc + 1) & ~3;
 		}
-
-		// Increment envelope position
-		if (csf->flags & SONG_INSTRUMENTMODE && chan->ptr_instrument)
-			rn_increment_env_pos(chan);
 
 		chan->final_panning = CLAMP(chan->final_panning, 0, 256);
 
