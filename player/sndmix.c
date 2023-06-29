@@ -231,8 +231,11 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 
 	// Volume Envelope
 	if ((chan->flags & CHN_VOLENV || penv->flags & ENV_VOLUME) && penv->vol_env.nodes) {
-		int envpos = chan->vol_env_position;
+		int envpos = chan->vol_env_position - 1;
 		unsigned int pt = penv->vol_env.nodes - 1;
+
+		if (chan->vol_env_position == 0)
+			return;
 
 		for (unsigned int i = 0; i < (unsigned int)(penv->vol_env.nodes - 1); i++) {
 			if (envpos <= penv->vol_env.ticks[i]) {
@@ -268,8 +271,11 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 
 	// Panning Envelope
 	if ((chan->flags & CHN_PANENV || penv->flags & ENV_PANNING) && (penv->pan_env.nodes)) {
-		int envpos = chan->pan_env_position;
+		int envpos = chan->pan_env_position - 1;
 		unsigned int pt = penv->pan_env.nodes - 1;
+
+		if (chan->pan_env_position == 0)
+			return;
 
 		for (unsigned int i=0; i<(unsigned int)(penv->pan_env.nodes-1); i++) {
 			if (envpos <= penv->pan_env.ticks[i]) {
@@ -358,10 +364,13 @@ static inline void rn_pitch_filter_envelope(song_t *csf, song_voice_t *chan,
 	song_instrument_t *penv = chan->ptr_instrument;
 
 	if ((chan->flags & CHN_PANENV || penv->flags & (ENV_PITCH | ENV_FILTER)) && (penv->pan_env.nodes)) {
-		int envpos = chan->pitch_env_position;
+		int envpos = chan->pitch_env_position - 1;
 		unsigned int pt = penv->pitch_env.nodes - 1;
 		int frequency = *nfrequency;
 		int envpitch = *nenvpitch;
+
+		if (chan->pitch_env_position == 0)
+			return;
 
 		for (unsigned int i = 0; i < (unsigned int)(penv->pitch_env.nodes - 1); i++) {
 			if (envpos <= penv->pitch_env.ticks[i]) {
