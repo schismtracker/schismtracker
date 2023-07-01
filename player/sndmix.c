@@ -339,7 +339,6 @@ static inline void rn_process_ins_fade(song_voice_t *chan, int *nvol) {
 			vol = 0;
 		}
 	}
-	
 	*nvol = vol;
 }
 
