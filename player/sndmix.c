@@ -224,15 +224,16 @@ static inline int rn_sample_vibrato(song_t *csf, song_voice_t *chan, int frequen
 }
 
 
-static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
-{
+static inline void rn_process_vol_env(song_voice_t* chan, int *nvol) {
 	song_instrument_t *penv = chan->ptr_instrument;
 	int vol = *nvol;
 
-	// Volume Envelope
-	if (chan->flags & CHN_VOLENV && penv->vol_env.nodes) {
-		int envpos = chan->vol_env_position;
+	if ((chan->flags & CHN_VOLENV || penv->flags & ENV_VOLUME) && penv->vol_env.nodes) {
+		int envpos = chan->vol_env_position - 1;
 		unsigned int pt = penv->vol_env.nodes - 1;
+
+		if (chan->vol_env_position == 0)
+			return;
 
 		for (unsigned int i = 0; i < (unsigned int)(penv->vol_env.nodes - 1); i++) {
 			if (envpos <= penv->vol_env.ticks[i]) {
@@ -265,11 +266,20 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 		envvol = CLAMP(envvol, 0, 256);
 		vol = (vol * envvol) >> 8;
 	}
+	
+	*nvol = vol;
+}
 
-	// Panning Envelope
-	if ((chan->flags & CHN_PANENV) && (penv->pan_env.nodes)) {
-		int envpos = chan->pan_env_position;
+
+static inline void rn_process_pan_env(song_voice_t* chan) {
+	song_instrument_t *penv = chan->ptr_instrument;
+
+	if ((chan->flags & CHN_PANENV || penv->flags & ENV_PANNING) && (penv->pan_env.nodes)) {
+		int envpos = chan->pan_env_position - 1;
 		unsigned int pt = penv->pan_env.nodes - 1;
+
+		if (chan->pan_env_position == 0)
+			return;
 
 		for (unsigned int i=0; i<(unsigned int)(penv->pan_env.nodes-1); i++) {
 			if (envpos <= penv->pan_env.ticks[i]) {
@@ -308,8 +318,13 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 
 		chan->final_panning = pan;
 	}
+}
 
-	// FadeOut volume
+
+static inline void rn_process_ins_fade(song_voice_t *chan, int *nvol) {
+	song_instrument_t *penv = chan->ptr_instrument;
+	int vol = *nvol;
+
 	if (chan->flags & CHN_NOTEFADE) {
 		unsigned int fadeout = penv->fadeout;
 
@@ -324,8 +339,20 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 			vol = 0;
 		}
 	}
-
 	*nvol = vol;
+}
+
+
+static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
+{
+	// Volume Envelope
+	rn_process_vol_env(chan, nvol);
+
+	// Panning Envelope
+	rn_process_pan_env(chan);
+
+	// FadeOut volume
+	rn_process_ins_fade(chan, nvol);
 }
 
 
@@ -356,56 +383,62 @@ static inline void rn_pitch_filter_envelope(song_t *csf, song_voice_t *chan,
 	int *nenvpitch, int *nfrequency)
 {
 	song_instrument_t *penv = chan->ptr_instrument;
-	int envpos = chan->pitch_env_position;
-	unsigned int pt = penv->pitch_env.nodes - 1;
-	int frequency = *nfrequency;
-	int envpitch = *nenvpitch;
 
-	for (unsigned int i = 0; i < (unsigned int)(penv->pitch_env.nodes - 1); i++) {
-		if (envpos <= penv->pitch_env.ticks[i]) {
-			pt = i;
-			break;
+	if ((chan->flags & CHN_PANENV || penv->flags & (ENV_PITCH | ENV_FILTER)) && (penv->pan_env.nodes)) {
+		int envpos = chan->pitch_env_position - 1;
+		unsigned int pt = penv->pitch_env.nodes - 1;
+		int frequency = *nfrequency;
+		int envpitch = *nenvpitch;
+
+		if (chan->pitch_env_position == 0)
+			return;
+
+		for (unsigned int i = 0; i < (unsigned int)(penv->pitch_env.nodes - 1); i++) {
+			if (envpos <= penv->pitch_env.ticks[i]) {
+				pt = i;
+				break;
+			}
 		}
+
+		int x2 = penv->pitch_env.ticks[pt];
+		int x1;
+
+		if (envpos >= x2) {
+			envpitch = (((int)penv->pitch_env.values[pt]) - 32) * 8;
+			x1 = x2;
+		} else if (pt) {
+			envpitch = (((int)penv->pitch_env.values[pt - 1]) - 32) * 8;
+			x1 = penv->pitch_env.ticks[pt - 1];
+		} else {
+			envpitch = 0;
+			x1 = 0;
+		}
+
+		if (envpos > x2)
+			envpos = x2;
+
+		if (x2 > x1 && envpos > x1) {
+			int envpitchdest = (((int)penv->pitch_env.values[pt]) - 32) * 8;
+			envpitch += ((envpos - x1) * (envpitchdest - envpitch)) / (x2 - x1);
+		}
+
+		// clamp to -255/255?
+		envpitch = CLAMP(envpitch, -256, 256);
+
+		// Pitch Envelope
+		if (!(penv->flags & ENV_FILTER)) {
+			int l = abs(envpitch);
+
+			if (l > 255)
+				l = 255;
+
+			int ratio = (envpitch < 0 ? linear_slide_down_table : linear_slide_up_table)[l];
+			frequency = _muldiv(frequency, ratio, 0x10000);
+		}
+
+		*nfrequency = frequency;
+		*nenvpitch = envpitch;
 	}
-
-	int x2 = penv->pitch_env.ticks[pt];
-	int x1;
-
-	if (envpos >= x2) {
-		envpitch = (((int)penv->pitch_env.values[pt]) - 32) * 8;
-		x1 = x2;
-	} else if (pt) {
-		envpitch = (((int)penv->pitch_env.values[pt - 1]) - 32) * 8;
-		x1 = penv->pitch_env.ticks[pt - 1];
-	} else {
-		envpitch = 0;
-		x1 = 0;
-	}
-
-	if (envpos > x2)
-		envpos = x2;
-
-	if (x2 > x1 && envpos > x1) {
-		int envpitchdest = (((int)penv->pitch_env.values[pt]) - 32) * 8;
-		envpitch += ((envpos - x1) * (envpitchdest - envpitch)) / (x2 - x1);
-	}
-
-	// clamp to -255/255?
-	envpitch = CLAMP(envpitch, -256, 256);
-
-	// Pitch Envelope
-	if (!(penv->flags & ENV_FILTER)) {
-		int l = abs(envpitch);
-
-		if (l > 255)
-			l = 255;
-
-		int ratio = (envpitch < 0 ? linear_slide_down_table : linear_slide_up_table)[l];
-		frequency = _muldiv(frequency, ratio, 0x10000);
-	}
-
-	*nfrequency = frequency;
-	*nenvpitch = envpitch;
 }
 
 
@@ -418,8 +451,6 @@ static inline void _process_envelope(song_voice_t *chan, song_instrument_t *penv
 	if (!(chan->flags & env_flag)) {
 		return;
 	}
-
-	(*position)++;
 
 	if ((penv->flags & sus_flag) && !(chan->flags & CHN_KEYOFF)) {
 		start = envelope->ticks[envelope->sustain_start];
@@ -440,6 +471,8 @@ static inline void _process_envelope(song_voice_t *chan, song_instrument_t *penv
 		*position = start;
 		chan->flags |= fade_flag; // only relevant for volume envelope
 	}
+
+	(*position)++;
 }
 
 static inline void rn_increment_env_pos(song_voice_t *chan)
@@ -1126,6 +1159,8 @@ int csf_read_note(song_t *csf)
 
 			// Process Envelopes
 			if ((csf->flags & SONG_INSTRUMENTMODE) && chan->ptr_instrument) {
+				/* OpenMPT test cases s77.it and EnvLoops.it */
+				rn_increment_env_pos(chan);
 				rn_process_envelope(chan, &vol);
 			} else {
 				// No Envelope: key off => note cut
@@ -1201,10 +1236,6 @@ int csf_read_note(song_t *csf)
 
 			chan->increment = (ninc + 1) & ~3;
 		}
-
-		// Increment envelope position
-		if (csf->flags & SONG_INSTRUMENTMODE && chan->ptr_instrument)
-			rn_increment_env_pos(chan);
 
 		chan->final_panning = CLAMP(chan->final_panning, 0, 256);
 
