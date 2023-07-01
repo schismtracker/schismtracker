@@ -271,9 +271,8 @@ static inline void rn_process_vol_env(song_voice_t* chan, int *nvol) {
 }
 
 
-static inline void rn_process_pan_env(song_voice_t* chan, int *nvol) {
+static inline void rn_process_pan_env(song_voice_t* chan) {
 	song_instrument_t *penv = chan->ptr_instrument;
-	int vol = *nvol;
 
 	if ((chan->flags & CHN_PANENV || penv->flags & ENV_PANNING) && (penv->pan_env.nodes)) {
 		int envpos = chan->pan_env_position - 1;
@@ -319,8 +318,6 @@ static inline void rn_process_pan_env(song_voice_t* chan, int *nvol) {
 
 		chan->final_panning = pan;
 	}
-	
-	*nvol = vol;
 }
 
 
@@ -353,7 +350,7 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 	rn_process_vol_env(chan, nvol);
 
 	// Panning Envelope
-	rn_process_pan_env(chan, nvol);
+	rn_process_pan_env(chan);
 
 	// FadeOut volume
 	rn_process_ins_fade(chan, nvol);
