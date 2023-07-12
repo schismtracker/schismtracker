@@ -250,6 +250,10 @@ void video_startup(void)
 
 	video_setup(cfg_video_interpolation);
 
+#ifndef SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR
+/* older SDL2 versions don't define this, don't fail the build for it */
+#define SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR "SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"
+#endif
 	SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
 
 	video.x = SDL_WINDOWPOS_CENTERED;
