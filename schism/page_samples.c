@@ -380,7 +380,6 @@ static void do_replace_sample(int n)
 
 static int sample_list_handle_text_input_on_list(char* text) {
 	int modkey = SDL_GetModState(), i;
-	log_appendf(4, "%d", modkey);
 	if (modkey & KMOD_ALT) {
 		return 0;
 	} else if ((modkey & KMOD_CTRL) == 0) {

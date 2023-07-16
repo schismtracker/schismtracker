@@ -361,7 +361,6 @@ static int orderlist_handle_char(char sym)
 			c = sym - '0';
 		else
 			return 0;
-		log_appendf(4, "Hai :3");
 
 		status.flags |= SONG_NEEDS_SAVE;
 		cur_pattern = current_song->orderlist[current_order];
