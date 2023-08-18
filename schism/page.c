@@ -1092,7 +1092,10 @@ static int _handle_ime(struct key_event *k)
 /* this is the important one */
 void handle_key(struct key_event *k)
 {
-	SDL_StartTextInput(); /* for dialogs */
+	/* in page.h it says these should be different if there is
+	   a dialog */
+	if ((&ACTIVE_WIDGET != &ACTIVE_PAGE_WIDGET) && !SDL_IsTextInputActive())
+		SDL_StartTextInput();
 
 	if (_handle_ime(k))
 		return;
