@@ -1394,12 +1394,39 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 	csf_free(library);
 
 	const char *base = get_basename(path);
-	library = song_create_load(path);
-	if (!library) {
-		/* FIXME: try loading as an instrument before giving up */
-		log_appendf(4, "%s: %s", base, fmt_strerror(errno));
-		errno = ENOTDIR;
-		return -1;
+	dmoz_file_t info_file;
+	info_file.path = str_dup(path);
+	info_file.filesize = 0;
+	dmoz_fill_ext_data(&info_file);
+
+	/* free extra data we don't need */
+	free(info_file.path);
+	free(info_file.base);
+	if (info_file.smp_filename != info_file.base &&
+	    info_file.smp_filename != info_file.title) {
+		free(info_file.smp_filename);
+	}
+	if (info_file.type & TYPE_EXT_DATA_MASK) {
+		if (info_file.artist)
+			free(info_file.artist);
+		free(info_file.title);
+	}
+
+	if (info_file.type & TYPE_MODULE_MASK) {
+		library = song_create_load(path);
+	} else if (info_file.type & TYPE_INST_MASK) {
+		/* This code stinks. */
+		song_t* orig_song = current_song;
+		current_song = library = csf_allocate();
+		int ret;
+		if (!(ret = song_load_instrument(1, path))) {
+			log_appendf(4, "song_load_instrument: %s failed with %d", path, ret);
+			current_song = orig_song;
+			return 0;
+		}
+		current_song = orig_song;
+	} else {
+		return 0;
 	}
 
 	for (int n = 1; n < MAX_SAMPLES; n++) {
