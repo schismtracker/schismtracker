@@ -1401,11 +1401,6 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 
 	/* free extra data we don't need */
 	free(info_file.path);
-	free(info_file.base);
-	if (info_file.smp_filename != info_file.base &&
-	    info_file.smp_filename != info_file.title) {
-		free(info_file.smp_filename);
-	}
 	if (info_file.type & TYPE_EXT_DATA_MASK) {
 		if (info_file.artist)
 			free(info_file.artist);
