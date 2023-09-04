@@ -190,6 +190,10 @@ void video_shutdown(void)
 void video_setup(const char* quality)
 {
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
+
+	// Needed as of SDL2 so Ctrl-D SDL_SetWindowGrab will grab keyboard too,
+	// not just mouse.
+	SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
 }
 
 static void set_icon(void)
