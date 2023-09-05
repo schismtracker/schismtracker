@@ -73,23 +73,33 @@ static void _draw_sample_data_8(struct vgamem_overlay *r,
 		xs = 0;
 		ys = (np - 1) - level;
 		ys = CLAMP(ys, 0, r->height - 1);
-		do {
+
+
+		if (length == 1) {
+			// When we only have one sample to draw, we need to just draw a
+			// horizontal line of whatever that value is, because we don't have
+			// a second sample to draw a line between in the loop below.
+			vgamem_ovl_drawline(r, 0, ys, r->width - 1, ys, SAMPLE_DATA_COLOR);
+		} else {
 			pos += step;
-			co = 0;
-			level=0;
-			do {
-				level+=ceil(data[(pos * inputchans) + cc+co] * nh / (SCHAR_MAX - SCHAR_MIN + 1));
-			} while (co++ < inputchans-outputchans);
-			xe = pos * r->width / length;
-			ye = (np - 1) - level;
-			xe = CLAMP(xe, 0, r->width - 1);
-			ye = CLAMP(ye, 0, r->height - 1);
-			// 'ye' is more or less useless for small samples, but this is much cleaner
-			// code than writing nearly the same loop four different times :P
-			vgamem_ovl_drawline(r, xs, ys, xe, chip ? ys : ye, SAMPLE_DATA_COLOR);
-			xs = xe;
-			ys = ye;
-		} while (pos < length);
+			while (pos < length) {
+				co = 0;
+				level = 0;
+				do {
+					level += ceil(data[(pos * inputchans) + cc + co] * nh / (SCHAR_MAX - SCHAR_MIN + 1));
+				} while (co++ < inputchans - outputchans);
+				xe = pos * r->width / length;
+				ye = (np - 1) - level;
+				xe = CLAMP(xe, 0, r->width - 1);
+				ye = CLAMP(ye, 0, r->height - 1);
+				// 'ye' is more or less useless for small samples, but this is much cleaner
+				// code than writing nearly the same loop four different times :P
+				vgamem_ovl_drawline(r, xs, ys, xe, chip ? ys : ye, SAMPLE_DATA_COLOR);
+				xs = xe;
+				ys = ye;
+				pos += step;
+			}
+		}
 		np -= nh;
 	}
 }
@@ -120,21 +130,30 @@ static void _draw_sample_data_16(struct vgamem_overlay *r,
 		xs = 0;
 		ys = (np - 1) - level;
 		ys = CLAMP(ys, 0, r->height - 1);
-		do {
+
+		if (length == 1) {
+			// When we only have one sample to draw, we need to just draw a
+			// horizontal line of whatever that value is, because we don't have
+			// a second sample to draw a line between in the loop below.
+			vgamem_ovl_drawline(r, 0, ys, r->width - 1, ys, SAMPLE_DATA_COLOR);
+		} else {
 			pos += step;
-			co = 0;
-			level = 0;
-			do {
-				level = ceil(data[(pos * inputchans) + cc+co] * nh / (float)(SHRT_MAX - SHRT_MIN + 1));
-			} while (co++ < inputchans-outputchans);
-			xe = pos * r->width / length;
-			ye = (np - 1) - level;
-			xe = CLAMP(xe, 0, r->width - 1);
-			ye = CLAMP(ye, 0, r->height - 1);
-			vgamem_ovl_drawline(r, xs, ys, xe, chip ? ys : ye, SAMPLE_DATA_COLOR);
-			xs = xe;
-			ys = ye;
-		} while (pos < length);
+			while (pos < length) {
+				co = 0;
+				level = 0;
+				do {
+					level = ceil(data[(pos * inputchans) + cc + co] * nh / (float) (SHRT_MAX - SHRT_MIN + 1));
+				} while (co++ < inputchans - outputchans);
+				xe = pos * r->width / length;
+				ye = (np - 1) - level;
+				xe = CLAMP(xe, 0, r->width - 1);
+				ye = CLAMP(ye, 0, r->height - 1);
+				vgamem_ovl_drawline(r, xs, ys, xe, chip ? ys : ye, SAMPLE_DATA_COLOR);
+				xs = xe;
+				ys = ye;
+				pos += step;
+			}
+		}
 		np -= nh;
 	}
 }
