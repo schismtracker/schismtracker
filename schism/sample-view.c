@@ -50,46 +50,32 @@ input channels = number of channels in data
 static void _draw_sample_data_8(struct vgamem_overlay *r,
 	signed char *data, unsigned long length, unsigned int inputchans, unsigned int outputchans)
 {
+	length /= inputchans;
+	const int nh = r->height / outputchans;
+	const int step = MAX(1, (length / r->width) >> 8);
+
 	unsigned long pos;
 	unsigned int cc, co;
-	int level, xs, ys, xe, ye, step;
-	int nh, np;
-	int chip;
-
-	nh = (r->height / outputchans);
-	np = r->height - (nh / 2);
-
-	length /= inputchans;
-	chip = (length < (unsigned int) r->width * 2);
+	int level, xs, ys, xe, ye;
+	int np = r->height - nh / 2;
 
 	for (cc = 0; cc < outputchans; cc++) {
 		pos = 0;
-		co = 0;
-		step = MAX(1, (length / r->width) >> 8);
-		level=0;
-		do {
-			level+=ceil(data[(pos * inputchans) + cc+co] * nh / (float)(SCHAR_MAX - SCHAR_MIN + 1));
-		} while (co++ < inputchans-outputchans);
 		xs = 0;
-		ys = (np - 1) - level;
-		ys = CLAMP(ys, 0, r->height - 1);
+		ys = 0;
 		do {
-			pos += step;
 			co = 0;
-			level=0;
+			level = 0;
 			do {
-				level+=ceil(data[(pos * inputchans) + cc+co] * nh / (SCHAR_MAX - SCHAR_MIN + 1));
+				level += ceil(data[(pos * inputchans) + cc+co] * nh / (float)UCHAR_MAX);
 			} while (co++ < inputchans-outputchans);
-			xe = pos * r->width / length;
-			ye = (np - 1) - level;
-			xe = CLAMP(xe, 0, r->width - 1);
-			ye = CLAMP(ye, 0, r->height - 1);
-			// 'ye' is more or less useless for small samples, but this is much cleaner
-			// code than writing nearly the same loop four different times :P
-			vgamem_ovl_drawline(r, xs, ys, xe, chip ? ys : ye, SAMPLE_DATA_COLOR);
+			xe = CLAMP(pos * r->width / length, 0, r->width - 1);
+			ye = CLAMP((np - 1) - level, 0, r->height - 1);
+			vgamem_ovl_drawline(r, xs, ys, xe, ye, SAMPLE_DATA_COLOR);
 			xs = xe;
 			ys = ye;
-		} while (pos < length);
+			pos += step;
+		} while (pos < MAX(2, length));
 		np -= nh;
 	}
 }
@@ -97,44 +83,32 @@ static void _draw_sample_data_8(struct vgamem_overlay *r,
 static void _draw_sample_data_16(struct vgamem_overlay *r,
 	 signed short *data, unsigned long length, unsigned int inputchans, unsigned int outputchans)
 {
+	length /= inputchans;
+	const int nh = r->height / outputchans;
+	const int step = MAX(1, (length / r->width) >> 8);
+
 	unsigned long pos;
 	unsigned int cc, co;
-	int level, xs, ys, xe, ye, step;
-	int nh, np;
-	int chip;
-
-	nh = (r->height / outputchans);
-	np = r->height - (nh / 2);
-
-	length /= inputchans;
-	chip = (length < (unsigned int) r->width * 2);
+	int level, xs, ys, xe, ye;
+	int np = r->height - nh / 2;
 
 	for (cc = 0; cc < outputchans; cc++) {
 		pos = 0;
-		co = 0;
-		step = MAX(1, (length / r->width) >> 8);
-		level=0;
-		do {
-			level += ceil(data[(pos * inputchans) + cc+co] * nh / (float)(SHRT_MAX - SHRT_MIN + 1));
-		} while(co++ < inputchans-outputchans);
 		xs = 0;
-		ys = (np - 1) - level;
-		ys = CLAMP(ys, 0, r->height - 1);
+		ys = 0;
 		do {
-			pos += step;
 			co = 0;
 			level = 0;
 			do {
-				level = ceil(data[(pos * inputchans) + cc+co] * nh / (float)(SHRT_MAX - SHRT_MIN + 1));
+				level += ceil(data[(pos * inputchans) + cc+co] * nh / (float)USHRT_MAX);
 			} while (co++ < inputchans-outputchans);
-			xe = pos * r->width / length;
-			ye = (np - 1) - level;
-			xe = CLAMP(xe, 0, r->width - 1);
-			ye = CLAMP(ye, 0, r->height - 1);
-			vgamem_ovl_drawline(r, xs, ys, xe, chip ? ys : ye, SAMPLE_DATA_COLOR);
+			xe = CLAMP(pos * r->width / length, 0, r->width - 1);
+			ye = CLAMP((np - 1) - level, 0, r->height - 1);
+			vgamem_ovl_drawline(r, xs, ys, xe, ye, SAMPLE_DATA_COLOR);
 			xs = xe;
 			ys = ye;
-		} while (pos < length);
+			pos += step;
+		} while (pos < MAX(2, length));
 		np -= nh;
 	}
 }
