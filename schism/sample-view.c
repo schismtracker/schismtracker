@@ -71,11 +71,11 @@ static void _draw_sample_data_8(struct vgamem_overlay *r,
 			} while (co++ < inputchans-outputchans);
 			xe = CLAMP(pos * r->width / length, 0, r->width - 1);
 			ye = CLAMP((np - 1) - level, 0, r->height - 1);
-			vgamem_ovl_drawline(r, xs, ys, xe, ye, SAMPLE_DATA_COLOR);
+			vgamem_ovl_drawline(r, xs, !pos ? ye : ys, xe, ye, SAMPLE_DATA_COLOR);
 			xs = xe;
 			ys = ye;
 			pos += step;
-		} while (pos < MAX(2, length));
+		} while (pos < length);
 		np -= nh;
 	}
 }
@@ -104,11 +104,11 @@ static void _draw_sample_data_16(struct vgamem_overlay *r,
 			} while (co++ < inputchans-outputchans);
 			xe = CLAMP(pos * r->width / length, 0, r->width - 1);
 			ye = CLAMP((np - 1) - level, 0, r->height - 1);
-			vgamem_ovl_drawline(r, xs, ys, xe, ye, SAMPLE_DATA_COLOR);
+			vgamem_ovl_drawline(r, xs, !pos ? ye : ys, xe, ye, SAMPLE_DATA_COLOR);
 			xs = xe;
 			ys = ye;
 			pos += step;
-		} while (pos < MAX(2, length));
+		} while (pos < length);
 		np -= nh;
 	}
 }
