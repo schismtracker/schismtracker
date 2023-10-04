@@ -292,7 +292,6 @@ uint8_t char_unicode_to_cp437(unsigned int c)
 	case 0x0387: return 250;// GREEK ANO TELEIA
 	case 0x221A: return 251;// SQUARE ROOT
 	case 0x00B2: return 253;// SUPERSCRIPT TWO
-	case 0x25A0:
 	case 0x220E: return 254;// QED
 	case 0x00A0: return 255;
 	default: return '?';
