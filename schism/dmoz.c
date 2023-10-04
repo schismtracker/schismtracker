@@ -861,10 +861,11 @@ static int file_info_get(dmoz_file_t *file)
 	slurp_t *t;
 	const fmt_read_info_func *func;
 
-	t = slurp(file->path, NULL, 0);
+	if (file->filesize == 0)
+		return FINF_EMPTY;
+	t = slurp(file->path, NULL, file->filesize);
 	if (t == NULL)
 		return FINF_ERRNO;
-	file->filesize = t->length;
 	file->artist = NULL;
 	file->title = NULL;
 	file->smp_defvol = 64;

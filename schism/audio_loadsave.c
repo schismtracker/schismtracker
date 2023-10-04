@@ -1397,7 +1397,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 
 	dmoz_file_t info_file = {0};
 	info_file.path = str_dup(path);
-	info_file.filesize = 0;
+	info_file.filesize = -1;
 	dmoz_fill_ext_data(&info_file);
 
 	/* free extra data we don't need */
@@ -1418,12 +1418,10 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 	if (info_file.type & TYPE_MODULE_MASK) {
 		library = song_create_load(path);
 	} else if (info_file.type & TYPE_INST_MASK) {
-		/* we have to switch the current song for a tiny bit of code,
-		   because the instrument loading code is dependent on that
-		   variable to function correctly */
+		/* temporarily set the current song to the library */
 		song_t* tmp_ptr = current_song;
-
 		library = current_song = csf_allocate();
+
 		int ret = song_load_instrument(1, path);
 		current_song = tmp_ptr;
 		if (!ret) {
@@ -1444,7 +1442,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 			dmoz_file_t *file = dmoz_add_file(flist, str_dup(path), str_dup(base), NULL, n);
 			file->type = TYPE_SAMPLE_EXTD;
 			file->description = "Impulse Tracker Sample"; /* FIXME: this lies for XI and PAT */
-			file->filesize = library->samples[n].length;
+			file->filesize = library->samples[n].length*((library->samples[n].flags & CHN_STEREO) + 1)*((library->samples[n].flags & CHN_16BIT) + 1);
 			file->smp_speed = library->samples[n].c5speed;
 			file->smp_loop_start = library->samples[n].loop_start;
 			file->smp_loop_end = library->samples[n].loop_end;
