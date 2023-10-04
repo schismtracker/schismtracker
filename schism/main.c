@@ -649,11 +649,10 @@ static void event_loop(void)
 #endif
 		case SDL_TEXTINPUT: {
 			char* input_text = str_utf8_to_cp437(event.text.text);
-			if (input_text != NULL) {
-				if (input_text[0] != '\0')
-					handle_text_input(input_text);
-				free(input_text);
-			}
+			if (input_text == NULL || *input_text == '\0')
+				break;
+			handle_text_input(input_text);
+			free(input_text);
 			break;
 		}
 		case SDL_KEYUP:
