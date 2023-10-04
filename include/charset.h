@@ -25,6 +25,7 @@
 
 int char_digraph(int k1, int k2);
 int char_unicode_to_cp437(unsigned int c);
-char* str_unicode_to_cp437(const char* s);
+uint8_t* str_unicode_to_cp437(const char* s);
+uint8_t* str_utf8_to_cp437(const char* s);
 
 #endif

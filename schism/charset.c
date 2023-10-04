@@ -110,20 +110,6 @@ int char_digraph(int k1, int k2)
 #undef DG
 	return 0;
 }
-char* str_unicode_to_cp437(const char* s)
-{
-	if (s == NULL)
-		return NULL;
-
-	int s_len = strlen(s), i;
-	char* out = calloc(s_len + 1, sizeof(char));
-
-	for ( i = 0 ; i < s_len ; i++ ) {
-		out[i] = char_unicode_to_cp437(s[i]);
-	}
-
-	return out;
-}
 
 int char_unicode_to_cp437(unsigned int c)
 {
@@ -274,4 +260,89 @@ int char_unicode_to_cp437(unsigned int c)
 	case 0x220E: return 254;// QED
 	};
 	return c;
+}
+
+uint8_t* str_unicode_to_cp437(const char* s)
+{
+	if (s == NULL)
+		return NULL;
+
+	int s_len = strlen(s), i;
+	char* out = calloc(s_len + 1, sizeof(char));
+
+	for ( i = 0 ; i < s_len ; i++ ) {
+		out[i] = char_unicode_to_cp437(s[i]);
+	}
+
+	return out;
+}
+
+// Copyright (c) 2008-2009 Bjoern Hoehrmann <bjoern@hoehrmann.de>
+// See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
+
+#define UTF8_ACCEPT 0
+#define UTF8_REJECT 1
+
+static const uint8_t utf8d[] = {
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 00..1f
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 20..3f
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 40..5f
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 60..7f
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9, // 80..9f
+	7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7, // a0..bf
+	8,8,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, // c0..df
+	0xa,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x4,0x3,0x3, // e0..ef
+	0xb,0x6,0x6,0x6,0x5,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8, // f0..ff
+	0x0,0x1,0x2,0x3,0x5,0x8,0x7,0x1,0x1,0x1,0x4,0x6,0x1,0x1,0x1,0x1, // s0..s0
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1,1, // s1..s2
+	1,2,1,1,1,1,1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1, // s3..s4
+	1,2,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,3,1,3,1,1,1,1,1,1, // s5..s6
+	1,3,1,1,1,1,1,3,1,3,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1, // s7..s8
+};
+
+static uint32_t utf8_decode(uint32_t* state, uint32_t* codep, uint32_t byte) {
+	uint32_t type = utf8d[byte];
+
+	*codep = (*state != UTF8_ACCEPT) ?
+		(byte & 0x3fu) | (*codep << 6) :
+		(0xff >> type) & (byte);
+
+	*state = utf8d[256 + *state * 16 + type];
+	return *state;
+}
+
+static int get_length_of_utf8(const char* s) {
+	uint32_t codepoint = 0, state = 0, length = 0;
+	char* ptr = (char*)s;
+
+	for (; *ptr; ptr++) {
+		utf8_decode(&state, &codepoint, *ptr);
+		length++;
+		if (!state)
+			break;
+	}
+
+	return length;
+}
+
+uint8_t* str_utf8_to_cp437(const char* s) {
+	int length = get_length_of_utf8(s);
+	if (!length)
+		return NULL;
+
+	char* ptr = (char*)s;
+	uint8_t* cp437_out = calloc(length + 1, sizeof(uint8_t));
+
+	for (int i = 0; *ptr; ptr++, i++) {
+		uint32_t codepoint = 0, state = 0;
+
+		utf8_decode(&state, &codepoint, *ptr);
+
+		cp437_out[i] = char_unicode_to_cp437(codepoint);
+
+		if (!state)
+			break;
+	}
+
+	return cp437_out;
 }
