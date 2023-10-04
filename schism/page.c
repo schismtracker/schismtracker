@@ -27,6 +27,7 @@
 #include "it.h"
 #include "song.h"
 #include "page.h"
+#include "charset.h"
 #include "util.h"
 #include "midi.h"
 #include "version.h"

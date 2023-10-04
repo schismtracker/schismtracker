@@ -519,10 +519,6 @@ int menu_handle_key(struct key_event * k);
 /* status.c */
 void status_text_redraw(void);
 
-/* charset.c (this is slightly out of place...) */
-int char_digraph(int k1, int k2);
-int char_unicode_to_cp437(unsigned int c);
-
 // page_message.c
 void message_reset_selection(void);
 

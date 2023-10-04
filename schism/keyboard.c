@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "charset.h"
 #include "song.h"
 #include "page.h"
 #include "osdefs.h"
