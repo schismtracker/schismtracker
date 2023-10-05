@@ -1395,10 +1395,18 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 
 	const char *base = get_basename(path);
 
+	slurp_t* s = slurp(path, NULL, 0);
+	if (!s) {
+		log_perror(path);
+		return -1;
+	}
+
 	dmoz_file_t info_file = {0};
 	info_file.path = str_dup(path);
-	info_file.filesize = -1;
+	info_file.filesize = s->length;
 	dmoz_fill_ext_data(&info_file);
+
+	unslurp(s);
 
 	/* free extra data we don't need */
 	if (info_file.smp_filename != info_file.base &&
