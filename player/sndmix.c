@@ -452,7 +452,8 @@ static inline void _process_envelope(song_voice_t *chan, song_instrument_t *penv
 		return;
 	}
 
-	if ((penv->flags & sus_flag) && !(chan->flags & CHN_KEYOFF)) {
+	/* OpenMPT test case EnvOffLength.it */
+	if ((penv->flags & sus_flag) && !(chan->old_flags & CHN_KEYOFF)) {
 		start = envelope->ticks[envelope->sustain_start];
 		end = envelope->ticks[envelope->sustain_end] + 1;
 		fade_flag = 0;
@@ -1268,6 +1269,7 @@ int csf_read_note(song_t *csf)
 			chan->length = 0;
 		}
 
+		chan->old_flags = chan->flags;
 		chan->flags &= ~CHN_NEWNOTE;
 	}
 

@@ -413,6 +413,7 @@ typedef struct song_voice {
 	// 2nd cache line
 	uint32_t length; // only to the end of the loop
 	uint32_t flags;
+	uint32_t old_flags;
 	uint32_t loop_start; // loop or sustain, whichever is active
 	uint32_t loop_end;
 	int32_t right_ramp_volume; // ?
