@@ -1173,24 +1173,33 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 
 	if (instr >= MAX_INSTRUMENTS) return;
 	song_instrument_t *penv = (csf->flags & SONG_INSTRUMENTMODE) ? csf->instruments[instr] : NULL;
-	song_sample_t *psmp = chan->ptr_sample;
+	song_sample_t *psmp = &csf->samples[instr];
 	const song_sample_t *oldsmp = chan->ptr_sample;
 	uint32_t note = chan->new_note;
 
-	if (note == NOTE_NONE) {
+	if (note == NOTE_NONE)
 		return;
-	} else if (NOTE_IS_CONTROL(note)) {
-		/* nothing here either */
-	} else if (penv) {
-		if (NOTE_IS_CONTROL(penv->note_map[note-1]))
+
+	if (penv && NOTE_IS_NOTE(note)) {
+		/* OpenMPT test case emptyslot.it */
+		if (penv->sample_map[note - 1] == 0) {
+			chan->ptr_instrument = penv;
 			return;
-		if (!penv->sample_map[note - 1])
-			return;
-		if (!(porta && (csf->flags & SONG_COMPATGXX) && penv == chan->ptr_instrument && chan->ptr_sample && chan->current_sample_data))
-			psmp = csf_translate_keyboard(csf, penv, note, NULL);
+		}
+
+		if (penv->note_map[note - 1] > NOTE_LAST) return;
+		uint32_t n = penv->sample_map[note - 1];
+		psmp = csf_translate_keyboard(csf, penv, note, NULL);
 		chan->flags &= ~CHN_SUSTAINLOOP; // turn off sustain
-	} else {
-		psmp = csf->samples + instr;
+	} else if (csf->flags & SONG_INSTRUMENTMODE) {
+		if (!NOTE_IS_CONTROL(note)) return;
+		if (!penv) {
+			/* OpenMPT test case emptyslot.it */
+			chan->ptr_instrument = NULL;
+			chan->new_instrument = 0;
+			return;
+		}
+		psmp = NULL;
 	}
 
 	// Update Volume
@@ -1203,12 +1212,12 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 
 	// Instrument adjust
 	chan->new_instrument = 0;
+
 	if (psmp) {
 		psmp->played = 1;
 		if (penv) {
 			penv->played = 1;
 			chan->instrument_volume = (psmp->global_volume * penv->global_volume) >> 7;
-			chan->nna = penv->nna;
 		} else {
 			chan->instrument_volume = psmp->global_volume;
 		}
@@ -1428,8 +1437,10 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 		chan->panning = CLAMP(chan->panning + delta, 0, 256);
 	}
 
-	if (!porta)
+	if (!porta) {
+		chan->nna = penv->nna;
 		env_reset(chan, 0);
+	}
 
 	chan->flags &= ~CHN_KEYOFF;
 	// Enable Ramping
@@ -1543,20 +1554,15 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 	}
 	if (instr >= MAX_INSTRUMENTS) instr = 0;
 	data = chan->current_sample_data;
-	ptr_instrument = chan->ptr_instrument;
-	if (instr && note) {
-		ptr_instrument = (csf->flags & SONG_INSTRUMENTMODE) ? csf->instruments[instr] : NULL;
-		if (ptr_instrument) {
-			uint32_t n = 0;
-			if (!NOTE_IS_CONTROL(note)) {
-				n = ptr_instrument->sample_map[note-1];
-				note = ptr_instrument->note_map[note-1];
-				if (n && n < MAX_SAMPLES)
-					data = csf->samples[n].data;
-			}
-		} else {
-			data = NULL;
-		}
+	/* OpenMPT test case DNA-NoInstr.it */
+	ptr_instrument = instr > 0 ? csf->instruments[instr] : chan->ptr_instrument;
+	if (ptr_instrument != NULL) {
+        uint32_t n = ptr_instrument->sample_map[note - 1];
+        note = ptr_instrument->note_map[note - 1];
+        if (n && n < MAX_SAMPLES)
+        	data = csf->samples[n].data;
+        else /* OpenMPT test case emptyslot.it */
+        	return;
 	}
 	if (!penv) return;
 	p = chan;
@@ -2138,7 +2144,9 @@ void csf_process_effects(song_t *csf, int firsttick)
 			}
 			// Instrument Change ?
 			if (instr) {
-				song_sample_t *psmp = chan->ptr_sample;
+				const song_sample_t *psmp = chan->ptr_sample;
+				const song_instrument_t *penv = chan->ptr_instrument;
+
 				csf_instrument_change(csf, chan, instr, porta, 1);
 				if (csf->samples[instr].flags & CHN_ADLIB) {
 					OPL_Patch(nchan, csf->samples[instr].adlib_bytes);
