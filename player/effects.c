@@ -1438,7 +1438,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 	}
 
 	if (!porta) {
-		chan->nna = penv->nna;
+		if (penv) chan->nna = penv->nna;
 		env_reset(chan, 0);
 	}
 
