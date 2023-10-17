@@ -855,63 +855,75 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 
 	for (int read_pos = 0; read_pos <= 32 && macro[read_pos]; read_pos++) {
 		int data, is_nibble = 0;
-		if (macro[read_pos] >= '0' && macro[read_pos] <= '9') {
-			data = macro[read_pos] - '0';
-			is_nibble = 1;
-		} else if (macro[read_pos] >= 'A' && macro[read_pos] <= 'F') {
-			data = (macro[read_pos] - 'A') + 10;
-			is_nibble = 1;
-		} else if (macro[read_pos] == 'c') {
-			data = midi_channel;
-			is_nibble = 1;
-			saw_c = 1;
-		} else if (macro[read_pos] == 'n') {
-			data = (note-1);
-		} else if (macro[read_pos] == 'v') {
-			data = velocity;
-		} else if (macro[read_pos] == 'u') {
-			data = (chan->volume >> 1);
-			if (data > 127) data = 127;
-		} else if (macro[read_pos] == 'x') {
-			data = chan->panning;
-			if (data > 127) data = 127;
-		} else if (macro[read_pos] == 'y') {
-			data = chan->final_panning;
-			if (data > 127) data = 127;
-		} else if (macro[read_pos] == 'a') {
-			/* MIDI Bank (high byte) */
-			if (!penv || penv->midi_bank == -1)
-				data = 0;
-			else
-				data = (penv->midi_bank >> 7) & 127;
-		} else if (macro[read_pos] == 'b') {
-			/* MIDI Bank (low byte) */
-			if (!penv || penv->midi_bank == -1)
-				data = 0;
-			else
-				data = penv->midi_bank & 127;
-		} else if (macro[read_pos] == 'p') {
-			/* MIDI Program */
-			if (!penv || penv->midi_program == -1)
-				data = 0;
-			else
-				data = penv->midi_program & 127;
-		} else if (macro[read_pos] == 'z') {
-			/* Zxx Param */
-			data = param & 0x7F;
-		} else if (macro[read_pos] == 'h') {
-			/* Host channel */
-			data = nchan & 0x7F;
-		} else if (macro[read_pos] == 'm') {
-			/* Loop direction (judging from the macro letter, this was supposed to be
-			   loop mode instead, but a wrong offset into the channel structure was used in IT.) */
-			data = (chan->flags & CHN_PINGPONGFLAG) ? 1 : 0;
-		} else if (macro[read_pos] == 'o') {
-			/* Sample offset */
-			data = (chan->mem_offset >> 8) & 0x7F;
-		} else {
-			continue;
+		switch (macro[read_pos]) {
+			case '0' ... '9':
+				data = macro[read_pos] - '0';
+				is_nibble = 1;
+				break;
+			case 'A' ... 'F':
+				data = (macro[read_pos] - 'A') + 10;
+				is_nibble = 1;
+				break;
+			case 'c':
+				data = midi_channel;
+				is_nibble = 1;
+				saw_c = 1;
+				break;
+			case 'n':
+				data = (note-1);
+				break;
+			case 'v':
+				data = velocity;
+				break;
+			case 'u':
+				data = MIN(chan->volume >> 1, 127);
+				break;
+			case 'x':
+				data = MIN(chan->panning, 127);
+				break;
+			case 'y':
+				data = MIN(chan->final_panning, 127);
+				break;
+			case 'a':
+				/* MIDI Bank (high byte) */
+				if (!penv || penv->midi_bank == -1)
+					data = 0;
+				else
+					data = (penv->midi_bank >> 7) & 127;
+				break;
+			case 'b':
+				/* MIDI Bank (low byte) */
+				if (!penv || penv->midi_bank == -1)
+					data = 0;
+				else
+					data = penv->midi_bank & 127;
+				break;
+			case 'p':
+				/* MIDI Program */
+				if (!penv || penv->midi_program == -1)
+					data = 0;
+				else
+					data = penv->midi_program & 127;
+				break;
+			case 'z':
+				/* Zxx Param */
+				data = param;
+				break;
+			case 'h':
+				/* Host channel */
+				data = nchan & 0x7F;
+				break;
+			case 'm':
+				/* Loop direction (judging from the macro letter, this was supposed to be
+				   loop mode instead, but a wrong offset into the channel structure was used in IT.) */
+				data = (chan->flags & CHN_PINGPONGFLAG) ? 1 : 0;
+				break;
+			case 'o':
+				data = (chan->mem_offset >> 8) & 0x7F;
+			default:
+				continue;
 		}
+
 		if (is_nibble == 1) {
 			if(nibble_pos == 0) {
 				outbuffer[write_pos] = data;
@@ -1370,7 +1382,8 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 			break;
 		case NOTE_FADE:
 		default: // Impulse Tracker handles all unknown notes as fade internally
-			chan->flags |= CHN_NOTEFADE;
+			if (have_inst)
+				chan->flags |= CHN_NOTEFADE;
 			break;
 		}
 		return;
@@ -1898,7 +1911,7 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		} else {
 			csf_process_midi_macro(csf, nchan,
 				csf->midi_config.zxx[param & 0x7F],
-				0, 0, 0, 0);
+				param, 0, 0, 0);
 		}
 		break;
 
