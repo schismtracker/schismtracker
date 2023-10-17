@@ -972,7 +972,7 @@ int csf_process_tick(song_t *csf)
 		/* [-- Yes --] */
 
 		/* [Tick counter = Tick counter set (the current 'speed')] */
-		csf->tick_count = csf->current_speed;
+		csf->tick_count = csf->current_speed + csf->frame_delay;
 
 		/* [Decrease row counter. Is row counter 0?] */
 		if (--csf->row_count <= 0) {
@@ -999,11 +999,12 @@ int csf_process_tick(song_t *csf)
 			/* [Update Pattern Variables]
 			(this is handled along with update effects) */
 			csf->flags |= SONG_FIRSTTICK;
+			csf->frame_delay = 0;
+			csf->tick_count = csf->current_speed;
 		} else {
 			/* [-- No --] */
 			/* Call update-effects for each channel. */
 		}
-
 
 		// Reset channel values
 		song_voice_t *chan = csf->voices;
@@ -1048,6 +1049,10 @@ int csf_process_tick(song_t *csf)
 			}
 		}
 
+		if (!(csf->tick_count % (csf->current_speed + csf->frame_delay))) {
+			csf->flags |= SONG_FIRSTTICK;
+		}
+
 		csf_process_effects(csf, 0);
 	}
 
@@ -1075,7 +1080,6 @@ int csf_read_note(song_t *csf)
 			csf->tick_count = csf->current_speed;
 			if (--csf->row_count <= 0) {
 				csf->row_count = 0;
-				//csf->flags |= SONG_FIRSTTICK;
 			}
 			// clear channel values (similar to csf_process_tick)
 			for (cn = 0, chan = csf->voices; cn < MAX_CHANNELS; cn++, chan++) {

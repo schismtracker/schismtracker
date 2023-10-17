@@ -567,6 +567,7 @@ typedef struct song {
 	uint32_t mix_stat; // number of channels being mixed (not really used)
 	uint32_t buffer_count; // number of samples to mix per tick
 	uint32_t tick_count;
+	uint32_t frame_delay;
 	int32_t row_count; /* IMPORTANT needs to be signed */
 	uint32_t current_speed;
 	uint32_t current_tempo;

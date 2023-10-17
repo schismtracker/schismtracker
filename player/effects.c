@@ -655,12 +655,15 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 		break;
 	// S5x: Set Panbrello WaveForm
 	case 0x50:
-		chan->panbrello_type = param;
+		/* some mpt compat thing */
+		chan->panbrello_type = (param < 0x04) ? param : 0;
 		break;
 	// S6x: Pattern Delay for x ticks
 	case 0x60:
-		if (csf->flags & SONG_FIRSTTICK)
+		if (csf->flags & SONG_FIRSTTICK) {
+			csf->frame_delay += param;
 			csf->tick_count += param;
+		}
 		break;
 	// S7x: Envelope Control
 	case 0x70:
