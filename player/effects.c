@@ -1570,10 +1570,12 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 	data = chan->current_sample_data;
 	/* OpenMPT test case DNA-NoInstr.it */
 	ptr_instrument = instr > 0 ? csf->instruments[instr] : chan->ptr_instrument;
+	int dna_note = note;
 	if (ptr_instrument != NULL) {
         uint32_t n = ptr_instrument->sample_map[note - 1];
-        note = ptr_instrument->note_map[note - 1];
-        if (n && n < MAX_SAMPLES)
+        /* MPT test case dct_smp_note_test.it */
+        dna_note = ptr_instrument->note_map[note - 1];
+        if (n > 0 && n < MAX_SAMPLES)
         	data = csf->samples[n].data;
         else /* OpenMPT test case emptyslot.it */
         	return;
@@ -1582,24 +1584,25 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 	p = chan;
 	for (uint32_t i=nchan; i<MAX_VOICES; p++, i++) {
 		if (!((i >= MAX_CHANNELS || p == chan)
-		      && ((p->master_channel == nchan+1 || p == chan)
+		      && ((p->master_channel == nchan + 1 || p == chan)
 			  && p->ptr_instrument)))
 			continue;
-		int ok = 0;
+		int apply_dna = 0;
 		// Duplicate Check Type
 		switch (p->ptr_instrument->dct) {
 		case DCT_NOTE:
-			ok = (NOTE_IS_NOTE(note) && (int) p->note == note && ptr_instrument == p->ptr_instrument);
+			apply_dna = (NOTE_IS_NOTE(note) && (int) p->note == note && ptr_instrument == p->ptr_instrument);
 			break;
 		case DCT_SAMPLE:
-			ok = (data && data == p->current_sample_data);
+			apply_dna = (data && data == p->current_sample_data && ptr_instrument == p->ptr_instrument);
 			break;
 		case DCT_INSTRUMENT:
-			ok = (ptr_instrument == p->ptr_instrument);
+			apply_dna = (ptr_instrument == p->ptr_instrument);
 			break;
 		}
+
 		// Duplicate Note Action
-		if (ok) {
+		if (apply_dna) {
 			switch(p->ptr_instrument->dca) {
 			case DCA_NOTECUT:
 				fx_note_cut(csf, i, 1);
@@ -2107,6 +2110,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 		// Handles note/instrument/volume changes
 		if (start_note) {
 			uint32_t note = chan->row_note;
+			/* MPT test case InstrumentNumberChange.it */
 			if (instr < MAX_INSTRUMENTS && !csf->instruments[instr] && (NOTE_IS_NOTE(note) || note == NOTE_NONE)) {
 				int instrcheck = instr ? instr : chan->last_instrument;
 				if (instrcheck && (instrcheck < MAX_INSTRUMENTS || csf->instruments[instrcheck] == NULL)) {
