@@ -358,24 +358,23 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 
 static inline int rn_arpeggio(song_t *csf, song_voice_t *chan, int frequency)
 {
-	int a;
+	int a = 0;
 
-	switch ((csf->current_speed - csf->tick_count) % 3) {
+	const uint32_t real_tick_count = (csf->current_speed + csf->frame_delay) - csf->tick_count;
+	const uint32_t tick = real_tick_count % (csf->current_speed + csf->frame_delay);
+	switch (tick % 3) {
 	case 1:
 		a = chan->mem_arpeggio >> 4;
 		break;
 	case 2:
 		a = chan->mem_arpeggio & 0xf;
 		break;
-	default:
-		a = 0;
 	}
 
 	if (!a)
 		return frequency;
 
-	a = linear_slide_up_table[a * 16];
-	return _muldiv(frequency, a, 65536);
+	return _muldiv(frequency, linear_slide_up_table[a * 16], 65536);
 }
 
 
