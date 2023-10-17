@@ -2107,9 +2107,9 @@ void csf_process_effects(song_t *csf, int firsttick)
 		if (start_note) {
 			uint32_t note = chan->row_note;
 			/* MPT test case InstrumentNumberChange.it */
-			if (instr < MAX_INSTRUMENTS && !csf->instruments[instr] && (NOTE_IS_NOTE(note) || note == NOTE_NONE)) {
+			if (csf_get_num_instruments(csf) && (NOTE_IS_NOTE(note) || note == NOTE_NONE)) {
 				int instrcheck = instr ? instr : chan->last_instrument;
-				if (instrcheck && (instrcheck < MAX_INSTRUMENTS || csf->instruments[instrcheck] == NULL)) {
+				if (instrcheck && (instrcheck > csf_get_num_instruments(csf) || csf->instruments[instrcheck] == NULL)) {
 					note = NOTE_NONE;
 					instr = 0;
 				}
