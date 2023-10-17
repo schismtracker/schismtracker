@@ -761,15 +761,15 @@ void csf_midi_send(song_t *csf, const unsigned char *data, unsigned int len, uin
 {
 	song_voice_t *chan = &csf->voices[nchan];
 
-	if (len >= 1 && (data[0] == 0xFA || data[0] == 0xFC || data[0] == 0xFF)) {
+	if (len == 1 && (data[0] == 0xFA || data[0] == 0xFC || data[0] == 0xFF)) {
 		// Start Song, Stop Song, MIDI Reset
 		for (uint32_t c = 0; c < MAX_VOICES; c++) {
 			csf->voices[c].cutoff = 0x7F;
-			csf->voices[c].resonance = 0;
+			csf->voices[c].resonance = 0x00;
 		}
 	}
 
-	if (len >= 4 && data[0] == 0xF0 && data[1] == 0xF0) {
+	if (len == 4 && data[0] == 0xF0 && data[1] == 0xF0) {
 		// impulse tracker filter control (mfg. 0xF0)
 		switch (data[2]) {
 		case 0x00: // set cutoff
@@ -854,7 +854,7 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 	}
 
 	for (int read_pos = 0; read_pos <= 32 && macro[read_pos]; read_pos++) {
-		int data, is_nibble = 0;
+		int data = 0, is_nibble = 0;
 		switch (macro[read_pos]) {
 			case '0' ... '9':
 				data = macro[read_pos] - '0';
@@ -870,14 +870,20 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 				saw_c = 1;
 				break;
 			case 'n':
-				data = (note-1);
+				/* FIXME: is this right? */
+				if (NOTE_IS_NOTE(chan->note))
+					data = chan->note - 1;
 				break;
-			case 'v':
-				data = velocity;
+			case 'v': {
+				const int vol = _muldiv((chan->volume + chan->vol_swing) * csf->current_global_volume, chan->global_volume * chan->instrument_volume, 1 << 20);
+				data = CLAMP(vol / 2, 1, 127);
 				break;
-			case 'u':
-				data = MIN(chan->volume >> 1, 127);
+			}
+			case 'u': {
+				const int vol = _muldiv(chan->calculated_volume * csf->current_global_volume, chan->global_volume * chan->instrument_volume, 1 << 26);
+				data = CLAMP(vol / 2, 1, 127);
 				break;
+			}
 			case 'x':
 				data = MIN(chan->panning, 127);
 				break;
@@ -886,23 +892,17 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 				break;
 			case 'a':
 				/* MIDI Bank (high byte) */
-				if (!penv || penv->midi_bank == -1)
-					data = 0;
-				else
+				if (penv && penv->midi_bank)
 					data = (penv->midi_bank >> 7) & 127;
 				break;
 			case 'b':
 				/* MIDI Bank (low byte) */
-				if (!penv || penv->midi_bank == -1)
-					data = 0;
-				else
+				if (penv && penv->midi_bank)
 					data = penv->midi_bank & 127;
 				break;
 			case 'p':
 				/* MIDI Program */
-				if (!penv || penv->midi_program == -1)
-					data = 0;
-				else
+				if (penv && penv->midi_program)
 					data = penv->midi_program & 127;
 				break;
 			case 'z':
@@ -925,7 +925,7 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 		}
 
 		if (is_nibble == 1) {
-			if(nibble_pos == 0) {
+			if (nibble_pos == 0) {
 				outbuffer[write_pos] = data;
 				nibble_pos = 1;
 			} else {
@@ -934,7 +934,7 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 				nibble_pos = 0;
 			}
 		} else {
-			if(nibble_pos == 1) {
+			if (nibble_pos == 1) {
 				write_pos++;
 				nibble_pos = 0;
 			}
@@ -954,12 +954,10 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 		uint32_t send_length = 0;
 		if (outbuffer[send_pos] == 0xF0) {
 			// SysEx start
-			if ((write_pos - send_pos >= 4) && outbuffer[send_pos + 1] == 0xF0)
-			{
+			if ((write_pos - send_pos >= 4) && outbuffer[send_pos + 1] == 0xF0) {
 				// Internal macro, 4 bytes long
 				send_length = 4;
-			} else
-			{
+			} else {
 				// SysEx message, find end of message
 				for (uint32_t i = send_pos + 1; i < write_pos; i++) {
 					if (outbuffer[i] == 0xF7) {
@@ -974,10 +972,9 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 					send_length = write_pos - send_pos;
 				}
 			}
-		} else if (!(outbuffer[send_pos] & 0x80))
-		{
+		} else if (!(outbuffer[send_pos] & 0x80)) {
 			// Missing status byte? Try inserting running status
-			if (running_status != 0) {
+			if (running_status) {
 				send_pos--;
 				outbuffer[send_pos] = running_status;
 			} else {
@@ -991,9 +988,8 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 			send_length = MIN(midi_event_length(outbuffer[send_pos]), write_pos - send_pos);
 		}
 
-		if (send_length == 0) {
+		if (send_length == 0)
 			break;
-		}
 
 		if (outbuffer[send_pos] < 0xF0) {
 			running_status = outbuffer[send_pos];
