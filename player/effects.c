@@ -2107,6 +2107,13 @@ void csf_process_effects(song_t *csf, int firsttick)
 		// Handles note/instrument/volume changes
 		if (start_note) {
 			uint32_t note = chan->row_note;
+			if (instr < MAX_INSTRUMENTS && !csf->instruments[instr] && (NOTE_IS_NOTE(note) || note == NOTE_NONE)) {
+				int instrcheck = instr ? instr : chan->last_instrument;
+				if (instrcheck && (instrcheck < MAX_INSTRUMENTS || csf->instruments[instrcheck] == NULL)) {
+					note = NOTE_NONE;
+					instr = 0;
+				}
+			}
 			if (instr && note == NOTE_NONE) {
 				if (csf->flags & SONG_INSTRUMENTMODE) {
 					if (chan->ptr_sample)
