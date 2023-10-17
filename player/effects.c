@@ -1302,8 +1302,6 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 			chan->flags |= CHN_PANENV;
 		if (penv->flags & ENV_PITCH)
 			chan->flags |= CHN_PITCHENV;
-		if ((penv->flags & ENV_PITCH) && (penv->flags & ENV_FILTER) && !chan->cutoff)
-			chan->cutoff = 0x7F;
 		if (penv->ifc & 0x80)
 			chan->cutoff = penv->ifc & 0x7F;
 		if (penv->ifr & 0x80)
