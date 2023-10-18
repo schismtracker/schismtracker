@@ -599,6 +599,8 @@ typedef struct song {
 	uint32_t mix_flags; // SNDMIX_*
 	uint32_t mix_frequency, mix_bits_per_sample, mix_channels;
 
+	int patloop; // effects.c: need this for stupid pattern break compatibility
+
 	// noise reduction filter
 	int32_t left_nr, right_nr;
 

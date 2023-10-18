@@ -620,6 +620,7 @@ static void fx_pattern_loop(song_t *csf, song_voice_t *chan, uint32_t param)
 				//     ... .. .. SB1
 				// it still doesn't work right in a few strange cases, but oh well :P
 				chan->patloop_row = csf->row + 1;
+				csf->patloop = 0;
 				return; // don't loop!
 			}
 		} else {
@@ -627,6 +628,7 @@ static void fx_pattern_loop(song_t *csf, song_voice_t *chan, uint32_t param)
 		}
 		csf->process_row = chan->patloop_row - 1;
 	} else {
+		csf->patloop = 1;
 		chan->patloop_row = csf->row;
 	}
 }
@@ -1894,7 +1896,7 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		break;
 
 	case FX_PATTERNBREAK:
-		if (csf->flags & SONG_FIRSTTICK) {
+		if (csf->flags & SONG_FIRSTTICK && !csf->patloop) {
 			csf->break_row = param;
 			csf->process_row = PROCESS_NEXT_ORDER;
 		}
