@@ -1296,6 +1296,10 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 		chan->instrument_volume = 0;
 		return;
 	}
+
+	if (porta && !chan->length)
+		chan->increment = 0;
+
 	if (psmp == chan->ptr_sample && chan->current_sample_data && chan->length)
 		return;
 
@@ -1394,6 +1398,9 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 
 	if(!porta && pins)
 		chan->c5speed = pins->c5speed;
+
+	if (porta && !chan->increment)
+		porta = 0;
 
 	note = CLAMP(note, NOTE_FIRST, NOTE_LAST);
 	chan->note = CLAMP(truenote, NOTE_FIRST, NOTE_LAST);
