@@ -90,12 +90,14 @@ void fx_note_cut(song_t *csf, uint32_t nchan, int clear_note)
 	song_voice_t *chan = &csf->voices[nchan];
 	// stop the current note:
 	chan->flags |= CHN_FASTVOLRAMP;
-	chan->length = 0;
+	//if (chan->ptr_instrument) chan->volume = 0;
+	chan->increment = 0;
 	if (clear_note) {
 		// keep instrument numbers from picking up old notes
 		// (SCx doesn't do this)
 		chan->frequency = 0;
 	}
+
 	if (chan->flags & CHN_ADLIB) {
 		//Do this only if really an adlib chan. Important!
 		OPL_NoteOff(nchan);
@@ -1454,7 +1456,10 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 		env_reset(chan, 0);
 	}
 
-	chan->flags &= ~CHN_KEYOFF;
+	/* OpenMPT test cases Off-Porta.it, Off-Porta-CompatGxx.it */
+	if (porta && (csf->flags & SONG_COMPATGXX && chan->row_instr))
+		chan->flags &= ~CHN_KEYOFF;
+
 	// Enable Ramping
 	if (!porta) {
 		chan->vu_meter = 0x0;
@@ -2116,6 +2121,14 @@ void csf_process_effects(song_t *csf, int firsttick)
 					instr = 0;
 				}
 			}
+			if (csf_get_num_instruments(csf) && instr && !NOTE_IS_NOTE(note)) {
+				if ((porta && csf->flags & SONG_COMPATGXX)
+					|| (!porta && csf->flags & SONG_ITOLDEFFECTS)) {
+					env_reset(chan, 1);
+					chan->flags |= CHN_FASTVOLRAMP;
+					chan->fadeout_volume = 65536;
+				}
+			}
 			if (instr && note == NOTE_NONE) {
 				if (csf->flags & SONG_INSTRUMENTMODE) {
 					if (chan->ptr_sample)
@@ -2138,15 +2151,18 @@ void csf_process_effects(song_t *csf, int firsttick)
 			if (instr >= MAX_INSTRUMENTS) instr = 0;
 			// Note Cut/Off => ignore instrument
 			if ((NOTE_IS_CONTROL(note)) || (note != NOTE_NONE && !porta)) {
-				/* This is required when the instrument changes (KeyOff is not called) */
-				/* Possibly a better bugfix could be devised. --Bisqwit */
-				if (chan->flags & CHN_ADLIB) {
-					//Do this only if really an adlib chan. Important!
-					OPL_NoteOff(nchan);
-					OPL_Touch(nchan, 0);
+				if (instr) {
+					int smp = instr;
+					if (csf->flags & SONG_INSTRUMENTMODE) {
+						smp = 0;
+						if (csf->instruments[instr] && NOTE_IS_NOTE(note))
+							smp = csf->instruments[instr]->sample_map[chan->note];
+					}
+					if (smp > 0 && smp < MAX_SAMPLES)
+						chan->volume = csf->samples[smp].volume;
 				}
-				GM_KeyOff(nchan);
-				GM_Touch(nchan, 0);
+				if (!(csf->flags & SONG_ITOLDEFFECTS))
+					instr = 0;
 			}
 
 			if (NOTE_IS_CONTROL(note)) {
