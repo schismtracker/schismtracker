@@ -384,11 +384,22 @@ static void fx_panbrello(song_voice_t *chan, uint32_t param)
 		pdelta = square_table[panpos];
 		break;
 	case VIB_RANDOM:
-		pdelta = 128 * ((double) rand() / RAND_MAX) - 64;
+		pdelta = (rand() & 0x7F) - 0x40;
 		break;
 	}
 
-	chan->panbrello_position += chan->panbrello_speed;
+	/* OpenMPT test case RandomWaveform.it:
+	   Speed for random panbrello says how many ticks the value should be used */
+	if (chan->panbrello_type == VIB_RANDOM) {
+		if (!chan->panbrello_position || chan->panbrello_position >= chan->panbrello_speed) {
+			chan->panbrello_position = 0;
+			chan->panbrello_delta = pdelta;
+		}
+		chan->panbrello_position++;
+		pdelta = chan->panbrello_delta;
+	} else {
+		chan->panbrello_position += chan->panbrello_speed;
+	}
 	pdelta = ((pdelta * (int)chan->panbrello_depth) + 2) >> 3;
 	chan->panbrello_delta = pdelta;
 }
