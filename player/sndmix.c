@@ -972,7 +972,6 @@ int csf_process_tick(song_t *csf)
 
 		/* [Tick counter = Tick counter set (the current 'speed')] */
 		csf->tick_count = csf->current_speed + csf->frame_delay;
-		csf->flags |= SONG_FIRSTTICK;
 
 		/* [Decrease row counter. Is row counter 0?] */
 		if (--csf->row_count <= 0) {
@@ -1000,11 +999,10 @@ int csf_process_tick(song_t *csf)
 			(this is handled along with update effects) */
 			csf->frame_delay = 0;
 			csf->tick_count = csf->current_speed;
+			csf->flags |= SONG_FIRSTTICK;
 		} else {
 			/* [-- No --] */
 			/* Call update-effects for each channel. */
-
-
 		}
 
 		// Reset channel values

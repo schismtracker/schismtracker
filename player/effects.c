@@ -1834,7 +1834,7 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		break;
 
 	case FX_GLOBALVOLUME:
-		if (!(csf->flags & SONG_FIRSTTICK))
+		if (!firsttick)
 			break;
 		if (param <= 128)
 			csf->current_global_volume = param;
@@ -2039,7 +2039,7 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
 		break;
 
 	case VOLFX_FINEVOLUP: // Ax
-		if (firsttick) {
+		if (csf->flags & SONG_FIRSTTICK) {
 			if (vol)
 				chan->mem_vc_volslide = vol;
 			else
@@ -2049,7 +2049,7 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
 		break;
 
 	case VOLFX_FINEVOLDOWN: // Bx
-		if (firsttick) {
+		if (csf->flags & SONG_FIRSTTICK) {
 			if (vol)
 				chan->mem_vc_volslide = vol;
 			else
