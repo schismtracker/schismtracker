@@ -2228,9 +2228,10 @@ void csf_process_effects(song_t *csf, int firsttick)
 					chan->channel_panning = 0;
 				}
 
-				// New Note Action ? (not when paused!!!)
-				if (!porta)
-					csf_check_nna(csf, nchan, instr, note, 0);
+				/* New Note Action
+				   OpenMPT test case NoteOffInstr.it
+				   is this correct? */
+				csf_check_nna(csf, nchan, instr, note, 0);
 			}
 			// Instrument Change ?
 			if (instr) {
