@@ -428,7 +428,6 @@ typedef struct song_voice {
 	// Information not used in the mixer
 	int32_t right_volume_new, left_volume_new; // ?
 	int32_t final_volume; // range 0-16384 (?), accounting for sample+channel+global+etc. volumes
-	int32_t calculated_volume; // calculated volume. for MIDI macros
 	int32_t final_panning; // range 0-256 (but can temporarily exceed that range during calculations)
 	int32_t volume, panning; // range 0-256 (?); these are the current values set for the channel
 	int32_t fadeout_volume;

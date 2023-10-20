@@ -871,38 +871,50 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 	for (int read_pos = 0; read_pos <= 32 && macro[read_pos]; read_pos++) {
 		int data = 0, is_nibble = 0;
 		switch (macro[read_pos]) {
-			case '0' ... '9':
+			case '0': case '1': case '2':
+			case '3': case '4': case '5':
+			case '6': case '7': case '8':
+			case '9':
 				data = macro[read_pos] - '0';
 				is_nibble = 1;
 				break;
-			case 'A' ... 'F':
+			case 'A': case 'B': case 'C':
+			case 'D': case 'E': case 'F':
 				data = (macro[read_pos] - 'A') + 10;
 				is_nibble = 1;
 				break;
 			case 'c':
+				/* Channel */
 				data = midi_channel;
 				is_nibble = 1;
 				saw_c = 1;
 				break;
 			case 'n':
-				/* FIXME: is this right? */
+				/* Note */
 				if (NOTE_IS_NOTE(chan->note))
 					data = chan->note - 1;
 				break;
 			case 'v': {
-				const int vol = _muldiv((chan->volume + chan->vol_swing) * csf->current_global_volume, chan->global_volume * chan->instrument_volume, 1 << 20);
-				data = CLAMP(vol / 2, 1, 127);
+				/* Velocity (Global Volume)
+				     8bitbubsy's it2play loosely used as a reference */
+				if (!(chan->flags & CHN_MUTE) && chan->ptr_sample) {
+					uint32_t vol = _muldiv(chan->volume * csf->current_global_volume * chan->global_volume, chan->ptr_sample->global_volume * 2, 1 << 19);
+					data = CLAMP(vol >> 2, 1, 127);
+				}
 				break;
 			}
 			case 'u': {
-				const int vol = _muldiv(chan->calculated_volume * csf->current_global_volume, chan->global_volume * chan->instrument_volume, 1 << 26);
-				data = CLAMP(vol / 2, 1, 127);
+				/* Volume */
+				if (!(chan->flags & CHN_MUTE))
+					data = CLAMP(chan->final_volume >> 7, 1, 127);
 				break;
 			}
 			case 'x':
+				/* Panning */
 				data = MIN(chan->panning, 127);
 				break;
 			case 'y':
+				/* Final Panning (????) */
 				data = MIN(chan->final_panning, 127);
 				break;
 			case 'a':
