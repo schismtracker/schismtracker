@@ -2195,8 +2195,9 @@ void csf_process_effects(song_t *csf, int firsttick)
 			// Invalid Instrument ?
 			if (instr >= MAX_INSTRUMENTS)
 				instr = 0;
+
 			// Note Cut/Off/Fade => ignore instrument
-			if ((NOTE_IS_CONTROL(note)) || (note != NOTE_NONE && !porta)) {
+			if (NOTE_IS_CONTROL(note)) {
 				if (instr) {
 					const int smp = instr;
 					if (smp > 0 && smp < MAX_SAMPLES && csf->samples[smp].volume)
@@ -2204,6 +2205,17 @@ void csf_process_effects(song_t *csf, int firsttick)
 				}
 				if (!(csf->flags & SONG_ITOLDEFFECTS))
 					instr = 0;
+			}
+			if (NOTE_IS_CONTROL(note) || (note != NOTE_NONE && !porta)) {
+				/* This is required when the instrument changes (KeyOff is not called) */
+				/* Possibly a better bugfix could be devised. --Bisqwit */
+				if (chan->flags & CHN_ADLIB) {
+					//Do this only if really an adlib chan. Important!
+					OPL_NoteOff(nchan);
+					OPL_Touch(nchan, 0);
+				}
+				GM_KeyOff(nchan);
+				GM_Touch(nchan, 0);
 			}
 
 			if (NOTE_IS_NOTE(note)) {
