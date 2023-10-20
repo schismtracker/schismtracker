@@ -1242,6 +1242,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 
 	// Update Volume
 	if (inst_column && psmp) chan->volume = psmp->volume;
+
 	// inst_changed is used for IT carry-on env option
 	if (penv != chan->ptr_instrument || !chan->current_sample_data) {
 		inst_changed = 1;
@@ -1261,9 +1262,14 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 		}
 	}
 
-	if (penv && !inst_changed && psmp != oldsmp && chan->current_sample_data && !NOTE_IS_NOTE(note)) {
+	/* OpenMPT test case InstrAfterMultisamplePorta.it:
+	   C#5 01 ... <- maps to sample 1
+	   C-5 .. G02 <- maps to sample 2
+	   ... 01 ... <- plays sample 1 with the volume and panning attributes of sample 2
+	*/
+	if (penv && !inst_changed && psmp != oldsmp && chan->ptr_sample && !NOTE_IS_NOTE(chan->row_note))
 		return;
-	}
+
 	if (!penv && psmp != oldsmp && porta) {
 		chan->flags |= CHN_NEWNOTE;
 	}
