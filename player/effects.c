@@ -1201,7 +1201,6 @@ static void env_reset(song_voice_t *chan, int always)
 	}
 
 	// this was migrated from csf_note_change, should it be here?
-	chan->flags &= ~CHN_NOTEFADE;
 	chan->fadeout_volume = 65536;
 }
 
@@ -1292,8 +1291,8 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 			&& (csf->flags & SONG_COMPATGXX)
 		) || (
 			inst_column
-			&& !porta
-			&& (chan->flags & (CHN_NOTEFADE|CHN_KEYOFF))
+			&& (!porta && (chan->flags & (CHN_NOTEFADE|CHN_KEYOFF))
+				|| note == NOTE_OFF)
 			&& (csf->flags & SONG_ITOLDEFFECTS)
 		)) {
 			env_reset(chan, inst_changed || (chan->flags & CHN_KEYOFF));
@@ -1328,6 +1327,14 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 
 	if (porta && !chan->length)
 		chan->increment = 0;
+
+	if (note == NOTE_OFF && csf->flags & SONG_ITOLDEFFECTS && psmp != oldsmp) {
+		if (chan->ptr_sample)
+			chan->flags |= chan->ptr_sample->flags & CHN_SAMPLE_FLAGS;
+		if (psmp->flags & CHN_PANNING)
+			chan->panning = psmp->panning;
+		return;
+	}
 
 	if (psmp == chan->ptr_sample && chan->current_sample_data && chan->length)
 		return;
@@ -1409,6 +1416,8 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 		switch (note) {
 		case NOTE_OFF:
 			fx_key_off(csf, nchan);
+			if (!porta && (csf->flags & SONG_ITOLDEFFECTS) && chan->row_instr)
+				chan->flags &= ~(CHN_NOTEFADE | CHN_KEYOFF | CHN_SUSTAINLOOP);
 			break;
 		case NOTE_CUT:
 			fx_note_cut(csf, nchan, 1);
@@ -2150,14 +2159,14 @@ void csf_process_effects(song_t *csf, int firsttick)
 		if (start_note) {
 			uint32_t note = chan->row_note;
 			/* MPT test case InstrumentNumberChange.it */
-			if (csf_get_num_instruments(csf) && (NOTE_IS_NOTE(note) || note == NOTE_NONE)) {
+			if (csf->flags & SONG_INSTRUMENTMODE && (NOTE_IS_NOTE(note) || note == NOTE_NONE)) {
 				int instrcheck = instr ? instr : chan->last_instrument;
-				if (instrcheck && (instrcheck > csf_get_num_instruments(csf) || csf->instruments[instrcheck] == NULL)) {
+				if (instrcheck && (instrcheck < 0 || instrcheck > MAX_INSTRUMENTS || csf->instruments[instrcheck] == NULL)) {
 					note = NOTE_NONE;
 					instr = 0;
 				}
 			}
-			if (csf_get_num_instruments(csf) && instr && !NOTE_IS_NOTE(note)) {
+			if (csf->flags & SONG_INSTRUMENTMODE && instr && !NOTE_IS_NOTE(note)) {
 				if ((porta && csf->flags & SONG_COMPATGXX)
 					|| (!porta && csf->flags & SONG_ITOLDEFFECTS)) {
 					env_reset(chan, 1);
@@ -2184,26 +2193,20 @@ void csf_process_effects(song_t *csf, int firsttick)
 				}
 			}
 			// Invalid Instrument ?
-			if (instr >= MAX_INSTRUMENTS) instr = 0;
-			// Note Cut/Off => ignore instrument
+			if (instr >= MAX_INSTRUMENTS)
+				instr = 0;
+			// Note Cut/Off/Fade => ignore instrument
 			if ((NOTE_IS_CONTROL(note)) || (note != NOTE_NONE && !porta)) {
 				if (instr) {
-					int smp = instr;
-					if (csf->flags & SONG_INSTRUMENTMODE) {
-						smp = 0;
-						if (csf->instruments[instr] && NOTE_IS_NOTE(note))
-							smp = csf->instruments[instr]->sample_map[chan->note];
-					}
-					if (smp > 0 && smp < MAX_SAMPLES)
+					const int smp = instr;
+					if (smp > 0 && smp < MAX_SAMPLES && csf->samples[smp].volume)
 						chan->volume = csf->samples[smp].volume;
 				}
 				if (!(csf->flags & SONG_ITOLDEFFECTS))
 					instr = 0;
 			}
 
-			if (NOTE_IS_CONTROL(note)) {
-				instr = 0;
-			} else if (NOTE_IS_NOTE(note)) {
+			if (NOTE_IS_NOTE(note)) {
 				chan->new_note = note;
 				if (chan->channel_panning > 0)
 				{
