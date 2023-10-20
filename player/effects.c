@@ -2231,7 +2231,8 @@ void csf_process_effects(song_t *csf, int firsttick)
 				/* New Note Action
 				   OpenMPT test case NoteOffInstr.it
 				   is this correct? */
-				csf_check_nna(csf, nchan, instr, note, 0);
+				if (!porta || !chan->increment)
+					csf_check_nna(csf, nchan, instr, note, 0);
 			}
 			// Instrument Change ?
 			if (instr) {
