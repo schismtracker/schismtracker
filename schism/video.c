@@ -157,7 +157,7 @@ void video_update(void)
 
 const char * video_driver_name(void)
 {
-	return "SDL2";
+	return SDL_GetCurrentVideoDriver();
 }
 
 void video_report(void)
