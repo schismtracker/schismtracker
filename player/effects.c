@@ -753,7 +753,7 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 		if (csf->flags & SONG_FIRSTTICK)
 			chan->cd_note_cut = param ?: 1;
 		else if (--chan->cd_note_cut == 0)
-			fx_note_cut(csf, nchan, 0);
+			fx_note_cut(csf, nchan, 1);
 		break;
 	// SDx: Note Delay
 	// SEx: Pattern Delay for x rows
@@ -2188,11 +2188,11 @@ void csf_process_effects(song_t *csf, int firsttick)
 				}
 
 				if (csf->flags & SONG_INSTRUMENTMODE) {
-					if (instr < MAX_INSTRUMENTS && (chan->ptr_instrument != csf->instruments[instr] || !chan->increment))
+					if (instr < MAX_INSTRUMENTS && (chan->ptr_instrument != csf->instruments[instr] || !chan->current_sample_data))
 						note = chan->note;
 				} else
 				{
-					if (instr < MAX_SAMPLES && (chan->ptr_sample != &csf->samples[instr] || !chan->increment))
+					if (instr < MAX_SAMPLES && (chan->ptr_sample != &csf->samples[instr] || !chan->current_sample_data))
 						note = chan->note;
 				}
 			}
