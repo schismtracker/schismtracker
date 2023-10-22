@@ -869,76 +869,77 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 	}
 
 	for (int read_pos = 0; read_pos <= 32 && macro[read_pos]; read_pos++) {
-		int data = 0, is_nibble = 0;
+		unsigned char data = 0;
+		int is_nibble = 0;
 		switch (macro[read_pos]) {
 			case '0': case '1': case '2':
 			case '3': case '4': case '5':
 			case '6': case '7': case '8':
 			case '9':
-				data = macro[read_pos] - '0';
+				data = (unsigned char)(macro[read_pos] - '0');
 				is_nibble = 1;
 				break;
 			case 'A': case 'B': case 'C':
 			case 'D': case 'E': case 'F':
-				data = (macro[read_pos] - 'A') + 10;
+				data = (unsigned char)((macro[read_pos] - 'A') + 0x0A);
 				is_nibble = 1;
 				break;
 			case 'c':
 				/* Channel */
-				data = midi_channel;
+				data = (unsigned char)midi_channel;
 				is_nibble = 1;
 				saw_c = 1;
 				break;
 			case 'n':
 				/* Note */
 				if (NOTE_IS_NOTE(chan->note))
-					data = chan->note - 1;
+					data = (unsigned char)(chan->note - 1);
 				break;
 			case 'v': {
 				/* Velocity (Global Volume)
 				     8bitbubsy's it2play loosely used as a reference */
 				if (!(chan->flags & CHN_MUTE) && chan->ptr_sample) {
 					uint32_t vol = _muldiv(chan->volume * csf->current_global_volume * chan->global_volume, chan->ptr_sample->global_volume * 2, 1 << 19);
-					data = CLAMP(vol >> 2, 1, 127);
+					data = (unsigned char)CLAMP(vol >> 2, 0x01, 0x7F);
 				}
 				break;
 			}
 			case 'u': {
 				/* Volume */
 				if (!(chan->flags & CHN_MUTE))
-					data = CLAMP(chan->final_volume >> 7, 1, 127);
+					data = (unsigned char)CLAMP(chan->final_volume >> 7, 0x01, 0x7F);
 				break;
 			}
 			case 'x':
 				/* Panning */
-				data = MIN(chan->panning, 127);
+				data = (unsigned char)MIN(chan->panning, 0x7F);
 				break;
 			case 'y':
-				/* Final Panning (????) */
-				data = MIN(chan->final_panning, 127);
+				/* Final Panning */
+				data = (unsigned char)MIN(chan->final_panning, 0x7F);
 				break;
 			case 'a':
 				/* MIDI Bank (high byte) */
 				if (penv && penv->midi_bank)
-					data = (penv->midi_bank >> 7) & 127;
+					data = (unsigned char)((penv->midi_bank >> 7) & 0x7F);
 				break;
 			case 'b':
 				/* MIDI Bank (low byte) */
 				if (penv && penv->midi_bank)
-					data = penv->midi_bank & 127;
+					data = (unsigned char)(penv->midi_bank & 0x7F);
 				break;
 			case 'p':
 				/* MIDI Program */
 				if (penv && penv->midi_program)
-					data = penv->midi_program & 127;
+					data = (unsigned char)(penv->midi_program & 0x7F);
 				break;
 			case 'z':
 				/* Zxx Param */
-				data = param;
+				data = (unsigned char)(param);
 				break;
 			case 'h':
 				/* Host channel */
-				data = nchan & 0x7F;
+				data = (unsigned char)(nchan & 0x7F);
 				break;
 			case 'm':
 				/* Loop direction (judging from the macro letter, this was supposed to be
@@ -946,7 +947,10 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 				data = (chan->flags & CHN_PINGPONGFLAG) ? 1 : 0;
 				break;
 			case 'o':
-				data = (chan->mem_offset >> 8) & 0x7F;
+				/* OpenMPT test case ZxxSecrets.it:
+				   offsets are NOT clamped! also SAx doesn't count :) */
+				data = (unsigned char)((chan->mem_offset >> 8) & 0xFF);
+				break;
 			default:
 				continue;
 		}
