@@ -166,7 +166,7 @@ static inline int rn_vibrato(song_t *csf, song_voice_t *chan, int frequency)
 static inline int rn_sample_vibrato(song_t *csf, song_voice_t *chan, int frequency)
 {
 	unsigned int vibpos = chan->autovib_position & 0xFF;
-	int vdelta, adepth;
+	int vdelta, adepth = 1;
 	song_sample_t *pins = chan->ptr_sample;
 
 	/*
@@ -177,15 +177,19 @@ static inline int rn_sample_vibrato(song_t *csf, song_voice_t *chan, int frequen
 	5) Mov [SomeVariableNameRelatingToVibrato], AX  ; For the next cycle.
 	*/
 
-	adepth = chan->autovib_depth; // (1)
-	adepth += pins->vib_rate & 0xff; // (2 & 3)
-	/* need this cast -- if adepth is unsigned, large autovib will crash the mixer (why? I don't know!)
-	but if vib_depth is changed to signed, that screws up other parts of the code. ugh. */
-	adepth = MIN(adepth, (int) (pins->vib_depth << 8));
-	chan->autovib_depth = adepth; // (5)
-	adepth >>= 8; // (4)
+	/* OpenMPT test case VibratoSweep0.it:
+	   don't calculate autovibrato if the speed is 0 */
+	if (pins->vib_speed) {
+		adepth = chan->autovib_depth; // (1)
+		adepth += pins->vib_rate & 0xff; // (2 & 3)
+		/* need this cast -- if adepth is unsigned, large autovib will crash the mixer (why? I don't know!)
+		but if vib_depth is changed to signed, that screws up other parts of the code. ugh. */
+		adepth = MIN(adepth, (int) (pins->vib_depth << 8));
+		chan->autovib_depth = adepth; // (5)
+		adepth >>= 8; // (4)
 
-	chan->autovib_position += pins->vib_speed;
+		chan->autovib_position += pins->vib_speed;
+	}
 
 	switch(pins->vib_type) {
 	case VIB_SINE:
