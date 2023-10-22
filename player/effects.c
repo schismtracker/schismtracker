@@ -1212,6 +1212,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	song_instrument_t *penv = (csf->flags & SONG_INSTRUMENTMODE) ? csf->instruments[instr] : NULL;
 	song_sample_t *psmp = &csf->samples[instr];
 	const song_sample_t *oldsmp = chan->ptr_sample;
+	const int old_instrument_volume = chan->instrument_volume;
 	uint32_t note = chan->new_note;
 
 	if (note == NOTE_NONE)
@@ -1227,9 +1228,9 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 		if (penv->note_map[note - 1] > NOTE_LAST) return;
 		uint32_t n = penv->sample_map[note - 1];
 		psmp = csf_translate_keyboard(csf, penv, note, NULL);
-		chan->flags &= ~CHN_SUSTAINLOOP; // turn off sustain
 	} else if (csf->flags & SONG_INSTRUMENTMODE) {
-		if (!NOTE_IS_CONTROL(note)) return;
+		if (!NOTE_IS_CONTROL(note))
+			return;
 		if (!penv) {
 			/* OpenMPT test case emptyslot.it */
 			chan->ptr_instrument = NULL;
@@ -1291,13 +1292,14 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 			&& (csf->flags & SONG_COMPATGXX)
 		) || (
 			inst_column
-			&& (!porta && (chan->flags & (CHN_NOTEFADE|CHN_KEYOFF))
-				|| note == NOTE_OFF)
+			&& !porta
+			&& (chan->flags & (CHN_NOTEFADE|CHN_KEYOFF))
 			&& (csf->flags & SONG_ITOLDEFFECTS)
 		)) {
 			env_reset(chan, inst_changed || (chan->flags & CHN_KEYOFF));
 		} else if (!(penv->flags & ENV_VOLUME)) {
 			// XXX why is this being done?
+			// I'm pretty sure this is just some stupid IT thing with portamentos
 			chan->vol_env_position = 0;
 		}
 
@@ -1325,31 +1327,14 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 		return;
 	}
 
-	if (porta && !chan->length)
-		chan->increment = 0;
-
-	if (note == NOTE_OFF && csf->flags & SONG_ITOLDEFFECTS && psmp != oldsmp) {
-		if (chan->ptr_sample)
-			chan->flags |= chan->ptr_sample->flags & CHN_SAMPLE_FLAGS;
-		if (psmp->flags & CHN_PANNING)
-			chan->panning = psmp->panning;
-		return;
-	}
-
 	if (psmp == chan->ptr_sample && chan->current_sample_data && chan->length)
 		return;
 
-	// sample change: reset sample vibrato
-	chan->autovib_depth = 0;
-	chan->autovib_position = 0;
+	if (porta && !chan->length)
+		chan->increment = 0;
 
-	if ((chan->flags & (CHN_KEYOFF | CHN_NOTEFADE)) && inst_column) {
-		// Don't start new notes after ===/~~~
-		chan->frequency = 0;
-	}
 	chan->flags &= ~(CHN_SAMPLE_FLAGS | CHN_KEYOFF | CHN_NOTEFADE
 			   | CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
-	chan->flags |= psmp->flags & CHN_SAMPLE_FLAGS;
 	if (penv) {
 		if (penv->flags & ENV_VOLUME)
 			chan->flags |= CHN_VOLENV;
@@ -1362,6 +1347,27 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 		if (penv->ifr & 0x80)
 			chan->resonance = penv->ifr & 0x7F;
 	}
+
+	if (chan->row_note == NOTE_OFF && (csf->flags & SONG_ITOLDEFFECTS) && psmp != oldsmp) {
+		if (chan->ptr_sample)
+			chan->flags |= chan->ptr_sample->flags & CHN_SAMPLE_FLAGS;
+		if (psmp->flags & CHN_PANNING)
+			chan->panning = psmp->panning;
+		chan->instrument_volume = old_instrument_volume;
+		chan->volume = psmp->volume;
+		chan->position = 0;
+		return;
+	}
+
+	// sample change: reset sample vibrato
+	chan->autovib_depth = 0;
+	chan->autovib_position = 0;
+
+	if ((chan->flags & (CHN_KEYOFF | CHN_NOTEFADE)) && inst_column) {
+		// Don't start new notes after ===/~~~
+		chan->frequency = 0;
+	}
+	chan->flags |= psmp->flags & CHN_SAMPLE_FLAGS;
 
 	chan->ptr_sample = psmp;
 	chan->length = psmp->length;
@@ -1406,7 +1412,6 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 		if (!(have_inst && porta && pins))
 			pins = csf_translate_keyboard(csf, penv, note, pins);
 		note = penv->note_map[note - 1];
-		chan->flags &= ~CHN_SUSTAINLOOP; // turn off sustain
 	}
 
 	if (NOTE_IS_CONTROL(note)) {
@@ -1417,14 +1422,14 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 		case NOTE_OFF:
 			fx_key_off(csf, nchan);
 			if (!porta && (csf->flags & SONG_ITOLDEFFECTS) && chan->row_instr)
-				chan->flags &= ~(CHN_NOTEFADE | CHN_KEYOFF | CHN_SUSTAINLOOP);
+				chan->flags &= ~(CHN_NOTEFADE | CHN_KEYOFF);
 			break;
 		case NOTE_CUT:
 			fx_note_cut(csf, nchan, 1);
 			break;
 		case NOTE_FADE:
 		default: // Impulse Tracker handles all unknown notes as fade internally
-			if (have_inst)
+			if (csf->flags & SONG_INSTRUMENTMODE)
 				chan->flags |= CHN_NOTEFADE;
 			break;
 		}
@@ -2170,7 +2175,6 @@ void csf_process_effects(song_t *csf, int firsttick)
 				if ((porta && csf->flags & SONG_COMPATGXX)
 					|| (!porta && csf->flags & SONG_ITOLDEFFECTS)) {
 					env_reset(chan, 1);
-					chan->flags |= CHN_FASTVOLRAMP;
 					chan->fadeout_volume = 65536;
 				}
 			}
