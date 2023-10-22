@@ -1208,8 +1208,14 @@ int csf_read_note(song_t *csf)
 				rn_pitch_filter_envelope(csf, chan, &envpitch, &frequency);
 
 			// Vibrato
-			if (chan->flags & CHN_VIBRATO)
+			if (chan->flags & CHN_VIBRATO) {
+				/* OpenMPT test case VibratoDouble.it:
+				   vibrato is applied twice if vibrato is applied in the volume and effect columns */
+				if (chan->row_voleffect == VOLFX_VIBRATODEPTH
+					&& (chan->row_effect == FX_VIBRATO || chan->row_effect == FX_VIBRATOVOL || chan->row_effect == FX_FINEVIBRATO))
+					frequency = rn_vibrato(csf, chan, frequency);
 				frequency = rn_vibrato(csf, chan, frequency);
+			}
 
 			// Sample Auto-Vibrato
 			if (chan->ptr_sample && chan->ptr_sample->vib_depth) {
