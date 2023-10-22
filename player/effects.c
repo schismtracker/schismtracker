@@ -2020,7 +2020,7 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
 		break;
 
 	case VOLFX_PORTAUP: // Fx
-		if (firsttick) {
+		if (start_note) {
 			if (vol)
 				chan->mem_pitchslide = 4 * vol;
 			if (!(csf->flags & SONG_COMPATGXX))
@@ -2031,7 +2031,7 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
 		break;
 
 	case VOLFX_PORTADOWN: // Ex
-		if (firsttick) {
+		if (start_note) {
 			if (vol)
 				chan->mem_pitchslide = 4 * vol;
 			if (!(csf->flags & SONG_COMPATGXX))
@@ -2042,18 +2042,18 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
 		break;
 
 	case VOLFX_TONEPORTAMENTO: // Gx
-		if (firsttick) {
+		if (start_note) {
 			if (vol)
 				chan->mem_portanote = vc_portamento_table[vol & 0x0F];
 			if (!(csf->flags & SONG_COMPATGXX))
 				chan->mem_pitchslide = chan->mem_portanote;
+		} else {
+			fx_tone_portamento(csf->flags, chan, vc_portamento_table[vol & 0x0F]);
 		}
-		fx_tone_portamento(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan,
-			vc_portamento_table[vol & 0x0F]);
 		break;
 
 	case VOLFX_VOLSLIDEUP: // Cx
-		if (firsttick) {
+		if (start_note) {
 			if (vol)
 				chan->mem_vc_volslide = vol;
 		} else {
@@ -2062,7 +2062,7 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
 		break;
 
 	case VOLFX_VOLSLIDEDOWN: // Dx
-		if (firsttick) {
+		if (start_note) {
 			if (vol)
 				chan->mem_vc_volslide = vol;
 		} else {
@@ -2071,7 +2071,7 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
 		break;
 
 	case VOLFX_FINEVOLUP: // Ax
-		if (csf->flags & SONG_FIRSTTICK) {
+		if (start_note) {
 			if (vol)
 				chan->mem_vc_volslide = vol;
 			else
@@ -2081,7 +2081,7 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
 		break;
 
 	case VOLFX_FINEVOLDOWN: // Bx
-		if (csf->flags & SONG_FIRSTTICK) {
+		if (start_note) {
 			if (vol)
 				chan->mem_vc_volslide = vol;
 			else
