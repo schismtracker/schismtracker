@@ -306,6 +306,11 @@ AC_ARG_WITH([flac],
 		[],
 		[with_flac=yes])
 
+AC_ARG_WITH([rocket],
+		[AS_HELP_STRING([--with-rocket],[Build with GNU Rocket support @<:@default=no@:>@])],
+		[with_rocket=yes],
+		[])
+
 dnl fortify needs -O; do this early so ADD_OPT can override with higher -O level
 if test x$ADD_FORTIFY \!= xno; then
         CFLAGS="$CFLAGS -O -D_FORTIFY_SOURCE=2"
@@ -332,6 +337,11 @@ if test "x$with_flac" = "xyes"; then
 		if test x"$libflac_found" = "xyes"; then
 				AM_CONDITIONAL([USE_FLAC], true)
 		fi
+fi
+
+AM_CONDITIONAL([USE_ROCKET], false)
+if test "x$with_rocket" = "xyes"; then
+	AM_CONDITIONAL([USE_ROCKET], true)
 fi
 
 dnl ... but put the warnings first, to make it possible to quiet certain

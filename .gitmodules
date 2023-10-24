@@ -1,0 +1,3 @@
+[submodule "gnurocket"]
+	path = rocket
+	url = https://github.com/rocket/rocket

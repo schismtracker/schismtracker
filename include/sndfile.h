@@ -606,7 +606,7 @@ typedef struct song {
 	// chaseback
 	int stop_at_order;
 	int stop_at_row;
-	unsigned int stop_at_time;
+	unsigned int stop_at_time_ms;
 
 	// multi-write stuff -- NULL if no multi-write is in progress, else array of one struct per channel
 	struct multi_write *multi_write;
@@ -667,7 +667,8 @@ int csf_process_tick(song_t *csf);
 int csf_read_note(song_t *csf);
 
 // snd_fx
-unsigned int csf_get_length(song_t *csf); // (in seconds)
+unsigned int csf_get_length_ms(song_t *csf);
+unsigned int csf_get_length_secs(song_t *csf);
 void csf_instrument_change(song_t *csf, song_voice_t *chn, uint32_t instr, int porta, int instr_column);
 void csf_note_change(song_t *csf, uint32_t chan, int note, int porta, int retrig, int have_inst);
 uint32_t csf_get_nna_channel(song_t *csf, uint32_t chan);

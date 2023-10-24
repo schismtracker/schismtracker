@@ -201,7 +201,7 @@ POST_EVENT:
 
 /* this should be in page.c; the audio handling code doesn't need to know what
    a page is, much less be talking to them */
-static void main_song_mode_changed_cb(void)
+void main_song_mode_changed_cb(void)
 {
 	int n;
 	for (n = 0; n < PAGE_MAX; n++) {
@@ -630,6 +630,12 @@ void song_loop_pattern(int pattern, int row)
 
 	song_reset_play_state();
 
+	/* Since this plays an arbitrary pattern irrespective of current order,
+	 * which may not even be part of an order list at all - there isn't an
+	 * clear "play time" to bootstrap from (we don't have an order to give
+	 * song_get_length_to_ms()).
+	 */
+
 	max_channels_used = 0;
 	csf_loop_pattern(current_song, pattern, row);
 
@@ -646,6 +652,16 @@ void song_start_at_order(int order, int row)
 	song_lock_audio();
 
 	song_reset_play_state();
+	/* Try approximate how many samples would have been played
+	 * up to this [order,row], so Time: can reflect in-song time
+	 * had it been played from the start to this [order,row].
+	 *
+	 * This is particularly relevant for Rocket integration where during
+	 * playback the current Rocket row is derived from samples_played, and
+	 * it's useful for 'F7' plays from arbitrary rows to keep Rocket in
+	 * sync.
+	 */
+	samples_played = ((double)song_get_length_to_ms(order, row) * .001) * current_song->mix_frequency;
 
 	csf_set_current_order(current_song, order);
 	current_song->break_row = row;

@@ -736,7 +736,7 @@ int disko_export_song(const char *filename, const struct save_format *format)
 	export_format = format;
 	status.flags |= DISKWRITER_ACTIVE; /* tell main to care about us */
 
-	disko_dialog_setup((csf_get_length(&export_dwsong) * export_dwsong.mix_frequency) ?: 1);
+	disko_dialog_setup((csf_get_length_secs(&export_dwsong) * export_dwsong.mix_frequency) ?: 1);
 
 	return DW_OK;
 }

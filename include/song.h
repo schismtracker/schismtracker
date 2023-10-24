@@ -141,9 +141,9 @@ const char *song_get_tracker_id(void);
 char *song_get_title(void);     // editable
 char *song_get_message(void);   // editable
 
-// returned value = seconds
-unsigned int song_get_length_to(int order, int row);
-void song_get_at_time(unsigned int seconds, int *order, int *row);
+// returned value = milliseconds
+unsigned int song_get_length_to_ms(int order, int row);
+void song_get_at_time(unsigned int ms, int *order, int *row);
 
 // gee. can't just use malloc/free... no, that would be too simple.
 signed char *song_sample_allocate(int bytes);
@@ -254,6 +254,7 @@ const char *song_audio_driver(void);
 void song_toggle_multichannel_mode(void);
 int song_is_multichannel_mode(void);
 void song_change_current_play_channel(int relative, int wraparound);
+void main_song_mode_changed_cb(void);
 int song_get_current_play_channel(void);
 
 /* These return the channel that was used for the note.

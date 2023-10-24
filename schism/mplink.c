@@ -40,33 +40,34 @@ song_t *current_song = NULL;
 // ------------------------------------------------------------------------
 // song information
 
-unsigned int song_get_length_to(int order, int row)
+unsigned int song_get_length_to_ms(int order, int row)
 {
 	unsigned int t;
 
 	song_lock_audio();
 	current_song->stop_at_order = order;
 	current_song->stop_at_row = row;
-	t = csf_get_length(current_song);
+	t = csf_get_length_ms(current_song);
 	current_song->stop_at_order = current_song->stop_at_row = -1;
 	song_unlock_audio();
 	return t;
 }
-void song_get_at_time(unsigned int seconds, int *order, int *row)
+
+void song_get_at_time(unsigned int ms, int *order, int *row)
 {
-	if (!seconds) {
+	if (!ms) {
 		if (order) *order = 0;
 		if (row) *row = 0;
 	} else {
 		song_lock_audio();
 		current_song->stop_at_order = MAX_ORDERS;
 		current_song->stop_at_row = 255; /* unpossible */
-		current_song->stop_at_time = seconds;
-		csf_get_length(current_song);
+		current_song->stop_at_time_ms = ms;
+		(void) csf_get_length_ms(current_song);
 		if (order) *order = current_song->stop_at_order;
 		if (row) *row = current_song->stop_at_row;
 		current_song->stop_at_order = current_song->stop_at_row = -1;
-		current_song->stop_at_time = 0;
+		current_song->stop_at_time_ms = 0;
 		song_unlock_audio();
 	}
 }
