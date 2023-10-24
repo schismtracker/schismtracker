@@ -600,6 +600,7 @@ static void event_loop(void)
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
 	uint32_t last_mouse_down, ticker;
 	SDL_Keysym last_key = {};
+	SDL_Keysym last_keyup = {};
 	int modkey;
 	time_t startdown;
 #ifdef USE_X11
@@ -748,7 +749,8 @@ static void event_loop(void)
 						(int)event.key.keysym.scancode,
 						kk.sym.sym, kk.unicode);
 			}
-			if (event.type == SDL_KEYDOWN && last_key.sym == kk.sym.sym) {
+			if (event.type == SDL_KEYDOWN && last_key.sym == kk.sym.sym ||
+				event.type == SDL_KEYUP && last_keyup.sym == kk.sym.sym) {
 				sawrep = kk.is_repeat = 1;
 			} else {
 				kk.is_repeat = 0;
@@ -757,8 +759,8 @@ static void event_loop(void)
 				kk.unicode = '\r';
 			handle_key(&kk);
 			if (event.type == SDL_KEYUP) {
-				status.last_keysym.sym = kk.sym.sym;
-				last_key.sym = 0;
+				status.last_keyupsym.sym = kk.sym.sym;
+				last_keyup.sym = 0;
 			} else {
 				status.last_keysym.sym = 0;
 				last_key.sym = kk.sym.sym;

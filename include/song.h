@@ -268,6 +268,7 @@ select sample #0. (note: this is a hack to work around another hack) */
 int song_keydown(int samp, int ins, int note, int vol, int chan);
 int song_keyrecord(int samp, int ins, int note, int vol, int chan, int effect, int param);
 int song_keyup(int samp, int ins, int note);
+int song_keyup_channel(int samp, int ins, int note, int chan);
 
 void song_start(void);
 void song_start_once(void);
