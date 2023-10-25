@@ -290,26 +290,12 @@ static void parse_options(int argc, char **argv)
 		{"audio-driver", 1, NULL, O_SDL_AUDIODRIVER},
 		{"video-driver", 1, NULL, O_SDL_VIDEODRIVER},
 
-		{"video-yuvlayout", 1, NULL, O_VIDEO_YUVLAYOUT},
-		{"video-size", 1, NULL, O_VIDEO_RESOLUTION},
-		{"video-stretch", 0, NULL, O_VIDEO_STRETCH},
-		{"no-video-stretch", 0, NULL, O_NO_VIDEO_STRETCH},
-#if USE_OPENGL
-		{"video-gl-path", 1, NULL, O_VIDEO_GLPATH},
-#endif
-		{"video-depth", 1, NULL, O_VIDEO_DEPTH},
-#if HAVE_SYS_KD_H
-		{"video-fb-device", 1, NULL, O_VIDEO_FBDEV},
-#endif
 #if USE_NETWORK
 		{"network", 0, NULL, O_NETWORK},
 		{"no-network", 0, NULL, O_NO_NETWORK},
 #endif
 		{"classic", 0, NULL, O_CLASSIC_MODE},
 		{"no-classic", 0, NULL, O_NO_CLASSIC_MODE},
-#ifdef USE_X11
-		{"display", 1, NULL, O_DISPLAY},
-#endif
 		{"fullscreen", 0, NULL, O_FULLSCREEN},
 		{"no-fullscreen", 0, NULL, O_NO_FULLSCREEN},
 		{"play", 0, NULL, O_PLAY},
@@ -321,7 +307,6 @@ static void parse_options(int argc, char **argv)
 		{"hooks", 0, NULL, O_HOOKS},
 		{"no-hooks", 0, NULL, O_NO_HOOKS},
 #endif
-		{"debug", 1, NULL, O_DEBUG},
 		{"version", 0, NULL, O_VERSION},
 		{"help", 0, NULL, O_HELP},
 		{NULL, 0, NULL, 0},
@@ -336,34 +321,7 @@ static void parse_options(int argc, char **argv)
 		case O_SDL_VIDEODRIVER:
 			video_driver = str_dup(optarg);
 			break;
-
 		// FIXME remove all these env vars, and put these things into a global struct or something instead
-
-		case O_VIDEO_YUVLAYOUT:
-			put_env_var("SCHISM_YUVLAYOUT", optarg);
-			break;
-		case O_VIDEO_RESOLUTION:
-			put_env_var("SCHISM_VIDEO_RESOLUTION", optarg);
-			break;
-		case O_VIDEO_STRETCH:
-			put_env_var("SCHISM_VIDEO_ASPECT", "full");
-			break;
-		case O_NO_VIDEO_STRETCH:
-			put_env_var("SCHISM_VIDEO_ASPECT", "fixed");
-			break;
-#if USE_OPENGL
-		case O_VIDEO_GLPATH:
-			put_env_var("SDL_VIDEO_GL_DRIVER", optarg);
-			break;
-#endif
-		case O_VIDEO_DEPTH:
-			put_env_var("SCHISM_VIDEO_DEPTH", optarg);
-			break;
-#if HAVE_SYS_KD_H
-		case O_VIDEO_FBDEV:
-			put_env_var("SDL_FBDEV", optarg);
-			break;
-#endif
 #if USE_NETWORK
 		case O_NETWORK:
 			startup_flags |= SF_NETWORK;
@@ -380,15 +338,6 @@ static void parse_options(int argc, char **argv)
 			startup_flags &= ~SF_CLASSIC;
 			did_classic = 1;
 			break;
-
-		case O_DEBUG:
-			put_env_var("SCHISM_DEBUG", optarg);
-			break;
-#ifdef USE_X11
-		case O_DISPLAY:
-			put_env_var("DISPLAY", optarg);
-			break;
-#endif
 		case O_FULLSCREEN:
 			video_fullscreen(1);
 			did_fullscreen = 1;
@@ -430,19 +379,6 @@ static void parse_options(int argc, char **argv)
 			printf(
 				"  -a, --audio-driver=DRIVER\n"
 				"  -v, --video-driver=DRIVER\n"
-				"      --video-yuvlayout=LAYOUT\n"
-				"      --video-size=WIDTHxHEIGHT\n"
-				"      --video-stretch (--no-video-stretch)\n"
-#if USE_OPENGL
-				"      --video-gl-path=/path/to/opengl.so\n"
-#endif
-				"      --video-depth=DEPTH\n"
-#if HAVE_SYS_KD_H
-				"      --video-fb-device=/dev/fb0\n"
-#endif
-#if USE_NETWORK
-				"      --network (--no-network)\n"
-#endif
 				"      --classic (--no-classic)\n"
 #ifdef USE_X11
 				"      --display=DISPLAYNAME\n"
@@ -454,7 +390,6 @@ static void parse_options(int argc, char **argv)
 #if ENABLE_HOOKS
 				"      --hooks (--no-hooks)\n"
 #endif
-				//"      --debug=OPS\n"
 				"      --version\n"
 				"  -h, --help\n"
 			);
@@ -609,13 +544,10 @@ static void event_loop(void)
 	int wheel_x;
 	int wheel_y;
 	int sawrep;
-	char *debug_s;
 	int fix_numlock_key;
 	struct key_event kk;
 
 	fix_numlock_key = status.fix_numlock_setting;
-
-	debug_s = getenv("SCHISM_DEBUG");
 
 	downtrip = 0;
 	last_mouse_down = 0;
@@ -733,21 +665,7 @@ static void event_loop(void)
 
 			kk.mod = modkey;
 			kk.mouse = MOUSE_NONE;
-			if (debug_s && strstr(debug_s, "key")) {
-				log_appendf(12, "[DEBUG] Key%s sym=%d scancode=%d",
-						(event.type == SDL_KEYDOWN) ? "Down" : "Up",
-						(int)event.key.keysym.sym,
-						(int)event.key.keysym.scancode);
-			}
 			key_translate(&kk);
-			if (debug_s && strstr(debug_s, "translate")
-					&& kk.orig_sym.sym != kk.sym.sym) {
-				log_appendf(12, "[DEBUG] Translate Key%s sym=%d scancode=%d -> %d (%c)",
-						(event.type == SDL_KEYDOWN) ? "Down" : "Up",
-						(int)event.key.keysym.sym,
-						(int)event.key.keysym.scancode,
-						kk.sym.sym, kk.unicode);
-			}
 			if (event.type == SDL_KEYDOWN && last_key.sym == kk.sym.sym) {
 				sawrep = kk.is_repeat = 1;
 			} else {
@@ -816,13 +734,6 @@ static void event_loop(void)
 				kk.sy = kk.y;
 			}
 			if (startdown) startdown = 0;
-			if (debug_s && strstr(debug_s, "mouse")) {
-				log_appendf(12, "[DEBUG] Mouse%s button=%d x=%d y=%d",
-					(event.type == SDL_MOUSEBUTTONDOWN) ? "Down" : "Up",
-						(int)event.button.button,
-						(int)event.button.x,
-						(int)event.button.y);
-			}
 
 			switch (event.button.button) {
 			case SDL_BUTTON_RIGHT:
