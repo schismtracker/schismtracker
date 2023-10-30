@@ -39,7 +39,7 @@ pruned up some here :) -mrsb
 
 extern char *initial_song;
 
-#include <SDL.h> /* necessary here */
+#include <SDL2/SDL.h> /* necessary here */
 #include "event.h"
 #include "osdefs.h"
 
