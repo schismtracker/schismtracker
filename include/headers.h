@@ -113,12 +113,6 @@ char *strchr(), *strrchr();
 # endif
 #endif
 
-/* dumb workaround for dumb devkitppc bug */
-#ifdef GEKKO
-# undef NAME_MAX
-# undef PATH_MAX
-#endif
-
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
 #endif

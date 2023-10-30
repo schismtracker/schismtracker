@@ -45,8 +45,6 @@ extraneous libraries (i.e. GLib). */
 # define FALLBACK_DIR "." /* not used... */
 #elif defined(WIN32)
 # define FALLBACK_DIR "C:\\"
-#elif defined(GEKKO)
-# define FALLBACK_DIR "isfs:/" // always exists, seldom useful
 #else /* POSIX? */
 # define FALLBACK_DIR "/"
 #endif
@@ -767,12 +765,6 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	SetCurrentDirectory(buf);
 	chdir(buf);
 	if (r == 0) return 1;
-	return 0;
-#elif defined(GEKKO)
-	// help how do I operating system
-	(void) dir;
-	(void) name;
-	(void) maybe_arg;
 	return 0;
 #else
 	char *tmp;

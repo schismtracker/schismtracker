@@ -49,11 +49,6 @@ A return value of 0 indicates that the event should NOT be processed by the main
 */
 #if defined(MACOSX)
 # define os_sdlevent macosx_sdlevent
-#elif defined(GEKKO)
-# define os_sysinit wii_sysinit
-# define os_sdlinit wii_sdlinit
-# define os_sysexit wii_sysexit
-# define os_sdlevent wii_sdlevent
 #elif defined(WIN32)
 # define os_sysinit win32_sysinit
 #endif

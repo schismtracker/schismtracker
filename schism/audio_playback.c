@@ -51,11 +51,7 @@
 // Default audio configuration
 // (XXX: Can DEF_SAMPLE_RATE be defined to 48000 everywhere?
 // Does any sound card NOT support 48khz decently nowadays?)
-#ifdef GEKKO
-# define DEF_SAMPLE_RATE 48000
-#else
-# define DEF_SAMPLE_RATE 44100
-#endif
+#define DEF_SAMPLE_RATE 48000
 #ifdef WIN32
 # define DEF_BUFFER_SIZE 2048
 #else

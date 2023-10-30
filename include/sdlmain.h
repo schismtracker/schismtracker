@@ -14,12 +14,12 @@
 #    endif
 #  endif
 
-#  include <SDL.h>
-#  include <SDL_thread.h>
+#  include <SDL2/SDL.h>
+#  include <SDL2/SDL_thread.h>
 #  ifndef __cplusplus
-#    include <SDL_syswm.h>
+#    include <SDL2/SDL_syswm.h>
 #    ifdef USE_OPENGL
-#      include <SDL_opengl.h>
+#      include <SDL2/SDL_opengl.h>
 #    endif
 #  endif
 

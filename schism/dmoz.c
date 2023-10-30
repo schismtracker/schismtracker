@@ -52,16 +52,6 @@
 #include <winbase.h>
 #endif
 
-#ifdef GEKKO
-#include <sys/dir.h>
-// isfs is pretty much useless, but it might be interesting to browse it I guess
-static const char *devices[] = {
-	"sd:/",
-	"isfs:/",
-	NULL
-};
-#endif
-
 /* --------------------------------------------------------------------------------------------------------- */
 /* constants */
 
@@ -316,10 +306,6 @@ int dmoz_path_is_absolute(const char *path)
 	char *colon = strchr(path, ':'), *slash = strchr(path, '/');
 	if (colon && (colon < slash || (colon && !slash && colon[1] == '\0')))
 		return colon - path + 1;
-#elif defined(GEKKO)
-	char *colon = strchr(path, ':'), *slash = strchr(path, '/');
-	if (colon + 1 == slash)
-		return slash - path + 1;
 #endif
 	/* presumably, /foo (or \foo) is an absolute path on all platforms */
 	if (!IS_DIR_SEPARATOR(path[0]))
@@ -718,15 +704,6 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 		i++;
 	}
 	em = SetErrorMode(em);
-#elif defined(GEKKO)
-	int i;
-	for (i = 0; devices[i]; i++) {
-		DIR_ITER *dir = diropen(devices[i]);
-		if (!dir)
-			continue;
-		dirclose(dir);
-		dmoz_add_file_or_dir(flist, dlist, str_dup(devices[i]), str_dup(devices[i]), NULL, -(1024 - i));
-	}
 #else /* assume POSIX */
 /*      char *home;
 	home = get_home_directory();*/
@@ -763,18 +740,6 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 		path = FAILSAFE_PATH;
 	pathlen = strlen(path);
 
-#ifdef GEKKO
-	/* awful hack: libfat's file reads bail if a device is given without a slash. */
-	if (strchr(path, ':') != NULL && strchr(path, '/') == NULL) {
-		int i;
-		for (i = 0; devices[i]; i++) {
-			if (strncmp(path, devices[i], pathlen) == 0) {
-				path = devices[i];
-				break;
-			}
-		}
-	}
-#endif
 	dir = opendir(path);
 	if (dir) {
 		while ((ent = readdir(dir)) != NULL) {

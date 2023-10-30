@@ -103,7 +103,7 @@ dnl (this is stupid, and only needed because the x11 check is dysfunctional)
 defaultx11=yes
 
 
-dnl CoreMIDI (Mac OS X)
+dnl OS checks
 AC_MSG_CHECKING(for Darwin host OS)
 case "${host_os}" in
 	darwin*)
@@ -124,8 +124,6 @@ case "${host_os}" in
 		;;
 esac
 
-
-
 dnl winmm testing...
 AC_CHECK_HEADERS(winsock.h winsock2.h windows.h)
 if test "X$ac_cv_header_windows_h" = "Xyes"; then
@@ -135,27 +133,6 @@ if test "X$ac_cv_header_windows_h" = "Xyes"; then
         defaultx11=no
 else
         AM_CONDITIONAL([USE_WIN32], false)
-fi
-
-
-dnl Wii crap
-AC_CHECK_LIB(ogc, IOS_ReloadIOS, libogc_found=yes, libogc_found=no, [-mrvl -L${DEVKITPRO}/libogc/lib/wii])
-if test x"$libogc_found" = "xyes"; then
-        AM_CONDITIONAL([USE_WII], true)
-        wii_machdep="-DGEKKO -mrvl -mcpu=750 -meabi -mhard-float"
-        CFLAGS="$CFLAGS $wii_machdep -I${DEVKITPRO}/libogc/include"
-        LIBS="$LIBS $wii_machdep -L${DEVKITPRO}/libogc/lib/wii"
-        SDL_CFLAGS="$SDL_CFLAGS -I${DEVKITPRO}/libogc/include/SDL"
-        SDL_LIBS="$SDL_LIBS -lSDL -lfat -lwiiuse -lbte -logc -lm -lwiikeyboard"
-        AC_SUBST(CFLAGS)
-        AC_SUBST(LIBS)
-        AC_SUBST(SDL_CFLAGS)
-        AC_SUBST(SDL_LIBS)
-        EXEEXT=.elf
-        AC_SUBST(EXEEXT)
-        defaultx11=no
-else
-        AM_CONDITIONAL([USE_WII], false)
 fi
 
 
@@ -229,7 +206,6 @@ AC_SEARCH_LIBS(socket, socket network)
 LIBS="$saved_LIBS"
 if test "x$ac_cv_search_socket" = "xno"; then
         dnl Windows sucks (I don't even know what this is about, but it apparently works)
-        AC_CHECK_HEADERS(winsock.h winsock2.h)
         if test "x$ac_cv_header_winsock_h" = "xyes"; then
                 socketlib="-lwsock32"
         elif test "x$ac_cv_header_winsock2_h" = "xyes"; then
@@ -251,8 +227,6 @@ else
         AC_SUBST(SDL_LIBS)
         AM_CONDITIONAL([USE_NETWORK], true)
 fi
-
-#AC_CHECK_LIB(kernel32, GetConsoleMode, SDL_LIBS="$SDL_LIBS -Wl,--subsystem,console")
 
 dnl wee...
 dnl this completely sucks...

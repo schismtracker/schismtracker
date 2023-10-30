@@ -58,7 +58,7 @@
 
 #include <getopt.h>
 
-#if !defined(__amigaos4__) && !defined(GEKKO)
+#if !defined(__amigaos4__)
 # define ENABLE_HOOKS 1
 #endif
 

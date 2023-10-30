@@ -61,8 +61,6 @@ sysfiles = \
 	sys/macosx/Schism_Tracker.app/Contents/Resources/appIcon.icns		\
 	sys/macosx/Schism_Tracker.app/Contents/Resources/moduleIcon.icns	\
 	sys/win32/schism.nsis		\
-	sys/wii/schismtracker/icon.png	\
-	sys/wii/schismtracker/meta.xml	\
 	sys/sdl/README
 scripts = \
 	scripts/bin2h.sh		\
@@ -122,11 +120,7 @@ noinst_HEADERS = \
 	include/util.h			\
 	include/version.h		\
 	include/vgamem-scanner.h	\
-	include/video.h			\
-	sys/wii/isfs.h			\
-	sys/wii/certs_bin.h		\
-	sys/wii/su_tik_bin.h		\
-	sys/wii/su_tmd_bin.h
+	include/video.h
 
 dist_man_MANS = sys/posix/schismtracker.1
 
@@ -205,11 +199,6 @@ WRCFLAGS = --use-temp-file -I. -I$(srcdir) $(cflags_version) $(wrcflags_version)
 files_windres=sys/win32/schismres.rc
 sys/win32/schismres.$(OBJEXT): icons/schismres.ico config.h Makefile.am
 endif HAVE_WINDRES
-
-if USE_WII
-files_wii=sys/wii/isfs.c sys/wii/osdefs.c
-cflags_wii=-I$(srcdir)/sys/wii
-endif
 
 if USE_MACOSX
 files_macosx = \
@@ -360,7 +349,6 @@ schismtracker_SOURCES = \
 	$(files_x11)			\
 	$(files_stdlib)			\
 	$(files_mmap)			\
-	$(files_wii)			\
 	$(files_windres)		\
 	$(files_flac)
 
@@ -372,8 +360,8 @@ cflags_fmopl=-DHAS_YM3812=1 -DHAS_Y8950=0 -DHAS_YM3526=0
 AM_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE -I$(srcdir)/include -I.
 AM_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
-	$(cflags_version) $(cflags_win32) $(cflags_wii) \
-	$(cflags_macosx) $(cflags_flac)
+	$(cflags_version) $(cflags_win32) $(cflags_macosx) \
+	$(cflags_flac)
 AM_OBJCFLAGS = $(AM_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
