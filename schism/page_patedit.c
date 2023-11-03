@@ -3195,7 +3195,13 @@ static int pattern_editor_insert(struct key_event *k)
 			return 1;
 
 
+		#ifdef MACOSX
+		/* SDL2 caps lock behavior is different under macOS
+		https://github.com/libsdl-org/SDL/issues/1123 */
+		int writenote = !(SDL_GetModState() & KMOD_CAPS);
+		#else
 		int writenote = !(status.flags & CAPS_PRESSED);
+		#endif
 		if (writenote && !patedit_record_note(cur_note, current_channel, current_row, n, 1)) {
 			// there was a template error, don't advance the cursor and so on
 			writenote = 0;
