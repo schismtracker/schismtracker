@@ -115,6 +115,7 @@ numbers smartly e.g. `5.it` will be listed above `10.it`).
     keyjazz_noteoff=1
     keyjazz_write_noteoff=0
     keyjazz_repeat=0
+	keyjazz_capslock=0
 
 If `keyjazz_noteoff` is 1, letting go of a key in the pattern editor will cause
 a note-off. If using this, you might also want to consider setting
@@ -123,6 +124,10 @@ down keys.
 
 If `keyjazz_write_noteoff` is 1, letting go of a key in the pattern editor will
 also write a note off *if* playback tracing (Ctrl+F) is enabled.
+
+If `keyjazz_capslock` is 1, keyjazz will be enabled if Caps Lock is toggled, not if
+the key is pressed. This is particularly useful for macOS users where SDL doesn't
+send proper key events for the Caps Lock key, see issue #385.
 
 #### Pattern editor behavior tweaks
 
