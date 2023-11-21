@@ -3198,7 +3198,7 @@ static int pattern_editor_insert(struct key_event *k)
 			return 1;
 
 
-		int writenote = (keyjazz_capslock) ? !(SDL_GetModState() & KMOD_CAPS) : !(status.flags & CAPS_PRESSED);
+		int writenote = (keyjazz_capslock) ? !(k->mod & KMOD_CAPS) : !(status.flags & CAPS_PRESSED);
 		if (writenote && !patedit_record_note(cur_note, current_channel, current_row, n, 1)) {
 			// there was a template error, don't advance the cursor and so on
 			writenote = 0;
