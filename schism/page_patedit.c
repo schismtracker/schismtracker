@@ -86,6 +86,7 @@ static int current_row = 0;
 static int keyjazz_noteoff = 0;       /* issue noteoffs when releasing note */
 static int keyjazz_write_noteoff = 0; /* write noteoffs when releasing note */
 static int keyjazz_repeat = 1;        /* insert multiple notes on key repeat */
+static int keyjazz_capslock = 0;      /* keyjazz when capslock is on, not while it is down */
 
 /* this is, of course, what the current pattern is */
 static int current_pattern = 0;
@@ -1043,6 +1044,7 @@ void cfg_save_patedit(cfg_file_t *cfg)
 	CFG_SET_PE(keyjazz_noteoff);
 	CFG_SET_PE(keyjazz_write_noteoff);
 	CFG_SET_PE(keyjazz_repeat);
+	CFG_SET_PE(keyjazz_capslock);
 	CFG_SET_PE(mask_copy_search_mode);
 	CFG_SET_PE(invert_home_end);
 
@@ -1075,6 +1077,7 @@ void cfg_load_patedit(cfg_file_t *cfg)
 	CFG_GET_PE(keyjazz_noteoff, 0);
 	CFG_GET_PE(keyjazz_write_noteoff, 0);
 	CFG_GET_PE(keyjazz_repeat, 1);
+	CFG_GET_PE(keyjazz_capslock, 0);
 	CFG_GET_PE(mask_copy_search_mode, 0);
 	CFG_GET_PE(invert_home_end, 0);
 
@@ -3195,7 +3198,7 @@ static int pattern_editor_insert(struct key_event *k)
 			return 1;
 
 
-		int writenote = !(status.flags & CAPS_PRESSED);
+		int writenote = (keyjazz_capslock) ? !(SDL_GetModState() & KMOD_CAPS) : !(status.flags & CAPS_PRESSED);
 		if (writenote && !patedit_record_note(cur_note, current_channel, current_row, n, 1)) {
 			// there was a template error, don't advance the cursor and so on
 			writenote = 0;
