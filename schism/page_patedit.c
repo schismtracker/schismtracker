@@ -3461,6 +3461,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SDLK_BACKSPACE:
 		if (k->state == KEY_PRESS)
 			return 1;
+		pated_save("Undo revert pattern data (Alt-BkSpace)");
 		snap_paste(&fast_save, 0, 0, 0);
 		return 1;
 
