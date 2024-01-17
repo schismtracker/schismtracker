@@ -1947,15 +1947,13 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		break;
 
 	case FX_POSITIONJUMP:
-		if (csf->flags & SONG_FIRSTTICK) {
-			if (!(csf->mix_flags & SNDMIX_NOBACKWARDJUMPS) || csf->process_order < param)
-				csf->process_order = param - 1;
-			csf->process_row = PROCESS_NEXT_ORDER;
-		}
+		if (!(csf->mix_flags & SNDMIX_NOBACKWARDJUMPS) || csf->process_order < param)
+			csf->process_order = param - 1;
+		csf->process_row = PROCESS_NEXT_ORDER;
 		break;
 
 	case FX_PATTERNBREAK:
-		if (csf->flags & SONG_FIRSTTICK && !csf->patloop) {
+		if (!csf->patloop) {
 			csf->break_row = param;
 			csf->process_row = PROCESS_NEXT_ORDER;
 		}
