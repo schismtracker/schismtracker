@@ -293,7 +293,7 @@ static inline void draw_itfmap(void)
 	uint8_t *ptr;
 
 	if (itfmap_pos < 0 || itfmap_chars[itfmap_pos] != current_char) {
-		ptr = (unsigned char *) strchr((char *) itfmap_chars, current_char);
+		ptr = (unsigned char *) memchr((char *) itfmap_chars, current_char, sizeof(itfmap_chars));
 		if (ptr == NULL)
 			itfmap_pos = -1;
 		else
