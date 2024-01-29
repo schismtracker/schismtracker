@@ -187,7 +187,6 @@ files_win32 = \
 	sys/win32/localtime_r.c
 cflags_win32=-I$(srcdir)/sys/win32
 lib_win32=-lwinmm
-endif
 
 if HAVE_WINDRES
 
@@ -196,7 +195,7 @@ if HAVE_GIT
 wrcflags_version = -DWRC_VERSION=0,`echo '$(PACKAGE_VERSION)' | sed 's/\(....\)\(..\)\(..\).*/\1,\2,\3/'`
 else
 wrcflags_version = -DWRC_VERSION=0,`date +%Y%m%d | sed 's/\(....\)\(..\)\(..\).*/\1,\2,\3/'`
-endif
+endif # HAVE_GIT
 
 ## --use-temp-file is needed to work around stupid bugs
 WRCFLAGS = --use-temp-file -I. -I$(srcdir) $(cflags_version) $(wrcflags_version)
@@ -204,7 +203,9 @@ WRCFLAGS = --use-temp-file -I. -I$(srcdir) $(cflags_version) $(wrcflags_version)
 	$(WINDRES) $(WRCFLAGS) -i $< -o $@
 files_windres=sys/win32/schismres.rc
 sys/win32/schismres.$(OBJEXT): icons/schismres.ico config.h Makefile.am
-endif HAVE_WINDRES
+endif # HAVE_WINDRES
+
+endif # USE_WIN32
 
 if USE_WII
 files_wii=sys/wii/isfs.c sys/wii/osdefs.c
