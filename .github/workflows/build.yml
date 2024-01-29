@@ -36,7 +36,7 @@ jobs:
       with:
         msystem: ${{ matrix.sys }}
         update: true
-        install: git mingw-w64-${{ matrix.env }}-toolchain mingw-w64-${{ matrix.env }}-flac libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL2 zip dos2unix
+        install: git mingw-w64-${{ matrix.env }}-toolchain mingw-w64-${{ matrix.env }}-flac libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL2 zip dos2unix wget
   
     - name: 'Get current date'
       id: date
@@ -61,7 +61,8 @@ jobs:
         cp /${{ matrix.sys }}/bin/libFLAC.dll .
         cp /${{ matrix.sys }}/bin/libogg-0.dll .
         cp docs/configuration.md .
-        unix2dos COPYING README.md configuration.md
+        wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
+        unix2dos COPYING.Xiph COPYING README.md configuration.md
 
     - name: 'Upload artifact (win32)'
       if: matrix.win == 'win32'
@@ -76,6 +77,7 @@ jobs:
           libgcc_s_dw2-1.dll
           libwinpthread-1.dll
           COPYING
+          COPYING.Xiph
           README.md
           configuration.md
 
@@ -90,6 +92,7 @@ jobs:
           libFLAC.dll
           libogg-0.dll
           COPYING
+          COPYING.Xiph
           README.md
           configuration.md
 
@@ -97,6 +100,7 @@ jobs:
     runs-on: macos-11
     env:
       MACOSX_DEPLOYMENT_TARGET: 10.9
+      SDL_VERSION: 2.28.5
     
     steps:
       - name: 'Get current date'
@@ -126,7 +130,7 @@ jobs:
 
       - name: 'Install dependencies'
         run: |
-          brew install automake zip cmake
+          brew install automake zip cmake wget
 
       - name: 'Checkout'
         uses: actions/checkout@v4
@@ -134,11 +138,11 @@ jobs:
         # Since Homebrew doesn't provide binaries for old versions, we have to compile our own:
       - name: 'Download SDL2 sources'
         run: |
-          curl https://www.libsdl.org/release/SDL2-2.28.5.tar.gz | tar xvf -
+          curl https://www.libsdl.org/release/SDL2-$SDL_VERSION.tar.gz | tar xvf -
 
       - name: 'Build SDL2'
         run: |
-          cd SDL2-2.26.1
+          cd SDL2-$SDL_VERSION
           ./configure CC="sh ../scripts/build-uni.sh"
           make
           make install
@@ -196,7 +200,8 @@ jobs:
           cd ../../../../..
           cp -r sys/macosx/Schism_Tracker.app Schism\ Tracker.app
           cp docs/configuration.md .
-          zip -r schismtracker.zip configuration.md COPYING README.md Schism\ Tracker.app
+          wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
+          zip -r schismtracker.zip configuration.md COPYING COPYING.Xiph README.md Schism\ Tracker.app
 
       - name: 'Upload artifact'
         uses: actions/upload-artifact@v4
@@ -211,7 +216,7 @@ jobs:
       - name: 'Install dependencies'
         run: |
           sudo apt-get update
-          sudo apt-get install --fix-missing build-essential automake autoconf autoconf-archive libx11-dev libxext-dev libxv-dev libxxf86vm-dev libsdl2-dev libasound2-dev libflac-dev git libtool zip
+          sudo apt-get install --fix-missing build-essential automake autoconf autoconf-archive libx11-dev libxext-dev libxv-dev libxxf86vm-dev libsdl2-dev libasound2-dev libflac-dev git libtool zip wget
 
       - name: 'Checkout'
         uses: actions/checkout@v4
@@ -245,7 +250,9 @@ jobs:
           cp build/schismtracker .
           cp docs/configuration.md .
           cp sys/posix/schismtracker.1 .
-          zip schismtracker.zip configuration.md COPYING README.md schismtracker.1 schismtracker
+          cp /usr/lib/x86_64-linux-gnu/libFLAC.so.8 /usr/lib/x86_64-linux-gnu/libogg.so.0 .
+          wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
+          zip schismtracker.zip configuration.md COPYING COPYING.Xiph README.md schismtracker.1 schismtracker libFLAC.so.8 libogg.so.0
 
       - name: 'Upload artifact'
         uses: actions/upload-artifact@v4
