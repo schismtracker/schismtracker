@@ -516,7 +516,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	song->title[25] = 0;
 	rtrim_string(song->title);
 
-	if (hdr.cwtv < 0x0214)
+	if (hdr.cmwt < 0x0214)
 		ignoremidi = 1;
 	if (hdr.special & 4) {
 		/* "reserved" bit, experimentally determined to indicate presence of otherwise-documented row
