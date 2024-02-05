@@ -614,7 +614,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 	if (ignoremidi) {
 		if (hdr.special & 8) {
-			log_appendf(4, " Warning: ignoring embedded MIDI data (CWTV is too old)");
+			log_appendf(4, " Warning: ignoring embedded MIDI data (CMWT is too old)");
 			slurp_seek(fp, sizeof(midi_config_t), SEEK_CUR);
 		}
 		memset(&song->midi_config, 0, sizeof(midi_config_t));
