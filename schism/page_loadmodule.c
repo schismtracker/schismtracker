@@ -678,17 +678,15 @@ static void show_selected_song_length(void)
 	csf_free(song);
 }
 
-static int file_list_handle_text_input(char* text) {
-	int i;
-	if (SDL_GetModState() & KMOD_ALT) {
+static int file_list_handle_text_input(const char* text) {
+	if (SDL_GetModState() & KMOD_ALT)
 		return 1;
-	} else {
-		for (i = 0; text[i] != '\0'; i++) {
-			if (!search_text_add_char(text[i]))
-				return 0;
-		}
-		return 1;
-	}
+
+	for (; *text; text++)
+		if (!search_text_add_char(*text))
+			return 0;
+
+	return 1;
 }
 
 static int file_list_handle_key(struct key_event * k)
@@ -817,16 +815,13 @@ static void dir_list_draw(void)
 	search_redraw();
 }
 
-static int dir_list_handle_text_input(char* text) {
-	int i;
-	for (i = 0; text[i] != '\0'; i++) {
-		if (text[i] < 32)
+static int dir_list_handle_text_input(const char* text) {
+	for (; *text && search_text_length < NAME_MAX; text++) {
+		if (*text < 32)
 			return 0;
-		if (search_text_length >= NAME_MAX)
-			return 1;
 
-		search_text[search_text_length++] = text[i];
-		search_text[search_text_length] = 0;
+		search_text[search_text_length++] = *text;
+		search_text[search_text_length] = '\0';
 	}
 	search_update();
 

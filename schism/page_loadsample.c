@@ -632,7 +632,7 @@ static int file_list_handle_key(struct key_event * k)
 {
 	dmoz_file_t *f;
 	int new_file = current_file;
-	int c = unicode_to_ascii(k->unicode);
+	int c = k->sym.sym;
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 

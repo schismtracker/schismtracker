@@ -518,40 +518,6 @@ static void check_update(void)
 	}
 }
 
-static void _synthetic_paste(const char *cbptr)
-{
-	struct key_event kk;
-	int isy = 2;
-	memset(&kk, 0, sizeof(kk));
-	kk.midi_volume = -1;
-	kk.midi_note = -1;
-	kk.mouse = MOUSE_NONE;
-	for (; cbptr && *cbptr; cbptr++) {
-		/* Win32 will have \r\n, everyone else \n */
-		if (*cbptr == '\r') continue;
-		/* simulate paste */
-		kk.scancode = -1;
-		kk.sym.sym = kk.orig_sym.sym = 0;
-		if (*cbptr == '\n') {
-			/* special attention to newlines */
-			kk.unicode = '\r';
-			kk.sym.sym = SDLK_RETURN;
-		} else {
-			kk.unicode = *cbptr;
-		}
-		kk.is_repeat = 0;
-		if (cbptr[1])
-			kk.is_synthetic = isy;
-		else
-			kk.is_synthetic = 3;
-		kk.state = KEY_PRESS;
-		handle_key(&kk);
-		kk.state = KEY_RELEASE;
-		handle_key(&kk);
-		isy = 1;
-	}
-}
-
 static void _do_clipboard_paste_op(SDL_Event *e)
 {
 	if (ACTIVE_PAGE.clipboard_paste
@@ -560,7 +526,7 @@ static void _do_clipboard_paste_op(SDL_Event *e)
 	if (ACTIVE_WIDGET.clipboard_paste
 	&& ACTIVE_WIDGET.clipboard_paste(e->user.code,
 				e->user.data1)) return;
-	_synthetic_paste((const char *)e->user.data1);
+	handle_text_input((char *)e->user.data1);
 }
 
 static void key_event_reset(struct key_event *kk, int start_x, int start_y)
@@ -633,7 +599,6 @@ static void event_loop(void)
 			if (event.key.keysym.sym == 0) {
 				// XXX when does this happen?
 				kk.mouse = MOUSE_NONE;
-				kk.unicode = 0;
 				kk.is_repeat = 0;
 			}
 		}
@@ -729,15 +694,13 @@ static void event_loop(void)
 						(event.type == SDL_KEYDOWN) ? "Down" : "Up",
 						(int)event.key.keysym.sym,
 						(int)event.key.keysym.scancode,
-						kk.sym.sym, kk.unicode);
+						kk.sym.sym, kk.sym.sym);
 			}
 			if (event.type == SDL_KEYDOWN && last_key.sym == kk.sym.sym) {
 				sawrep = kk.is_repeat = 1;
 			} else {
 				kk.is_repeat = 0;
 			}
-			if (kk.sym.sym == SDLK_RETURN)
-				kk.unicode = '\r';
 			handle_key(&kk);
 			if (event.type == SDL_KEYUP) {
 				status.last_keysym.sym = kk.sym.sym;

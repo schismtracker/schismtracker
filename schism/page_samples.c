@@ -378,18 +378,16 @@ static void do_replace_sample(int n)
 
 /* --------------------------------------------------------------------- */
 
-static int sample_list_handle_text_input_on_list(char* text) {
-	int modkey = SDL_GetModState(), i;
-	if (modkey & KMOD_ALT) {
+static int sample_list_handle_text_input_on_list(const char* text) {
+	int modkey = SDL_GetModState();
+	if (modkey & KMOD_ALT || modkey & KMOD_CTRL)
 		return 0;
-	} else if ((modkey & KMOD_CTRL) == 0) {
-		for (i = 0; text[i] != '\0'; i++) {
-			if (sample_list_cursor_pos < 25 && (!sample_list_add_char(text[i])))
-				return 0;
-		}
-		return 1;
-	}
-	return 0;
+
+	for (; *text; text++)
+		if (sample_list_cursor_pos < 25 && (!sample_list_add_char(*text)))
+			return 0;
+
+	return 1;
 }
 
 static int sample_list_handle_key_on_list(struct key_event * k)

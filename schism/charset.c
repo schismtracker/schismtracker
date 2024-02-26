@@ -298,21 +298,6 @@ uint8_t char_unicode_to_cp437(unsigned int c)
 	};
 }
 
-uint8_t* str_unicode_to_cp437(const char* s)
-{
-	if (s == NULL)
-		return NULL;
-
-	int s_len = strlen(s), i;
-	char* out = calloc(s_len + 1, sizeof(char));
-
-	for ( i = 0 ; i < s_len ; i++ ) {
-		out[i] = char_unicode_to_cp437(s[i]);
-	}
-
-	return out;
-}
-
 // Copyright (c) 2008-2009 Bjoern Hoehrmann <bjoern@hoehrmann.de>
 // See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
 
@@ -336,7 +321,7 @@ static const uint8_t utf8d[] = {
 	1,3,1,1,1,1,1,3,1,3,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1, // s7..s8
 };
 
-static uint32_t utf8_decode(uint32_t* state, uint32_t* codep, uint32_t byte) {
+static uint32_t utf8_decode(uint32_t* restrict state, uint32_t* restrict codep, uint32_t byte) {
 	uint32_t type = utf8d[byte];
 
 	*codep = (*state != UTF8_ACCEPT) ?
@@ -347,38 +332,27 @@ static uint32_t utf8_decode(uint32_t* state, uint32_t* codep, uint32_t byte) {
 	return *state;
 }
 
-static int get_length_of_utf8(const char* s) {
+static int get_length_of_utf8(const uint8_t* restrict utf8) {
 	uint32_t codepoint = 0, state = 0, length = 0;
-	char* ptr = (char*)s;
 
-	for (; *ptr; ptr++) {
-		utf8_decode(&state, &codepoint, *ptr);
-		length++;
-		if (!state)
-			break;
-	}
+	for (; *utf8; utf8++)
+		if (!utf8_decode(&state, &codepoint, *utf8))
+			length++;
 
 	return length;
 }
 
-uint8_t* str_utf8_to_cp437(const char* s) {
-	int length = get_length_of_utf8(s);
+uint8_t* str_utf8_to_cp437(const uint8_t* restrict utf8) {
+	int length = get_length_of_utf8(utf8);
 	if (!length)
 		return NULL;
 
-	char* ptr = (char*)s;
-	uint8_t* cp437_out = calloc(length + 1, sizeof(uint8_t));
+	uint8_t* cp437 = calloc(length + 1, sizeof(uint8_t));
 
-	for (int i = 0; *ptr; ptr++, i++) {
-		uint32_t codepoint = 0, state = 0;
+	uint32_t codepoint = 0, state = 0, i = 0;
+	for (; *utf8 && i < length; utf8++)
+		if (!utf8_decode(&state, &codepoint, *utf8))
+			cp437[i++] = char_unicode_to_cp437(codepoint);
 
-		utf8_decode(&state, &codepoint, *ptr);
-
-		cp437_out[i] = char_unicode_to_cp437(codepoint);
-
-		if (!state)
-			break;
-	}
-
-	return cp437_out;
+	return cp437;
 }

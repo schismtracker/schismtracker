@@ -392,16 +392,15 @@ static int orderlist_handle_char(char sym)
 	return 1;
 }
 
-static int orderlist_handle_text_input_on_list(char* text) {
-	int modkey = SDL_GetModState(), i;
-	if ((modkey & (KMOD_CTRL | KMOD_ALT))==0) {
-		for (i = 0; text[i] != '\0'; i++) {
-			if (!orderlist_handle_char(text[i])) {
-				return 0;
-			}
-		}
-		return 1;
-	}
+static int orderlist_handle_text_input_on_list(const char* text) {
+	int modkey = SDL_GetModState(), success = 0;
+
+	if (!(modkey & (KMOD_CTRL | KMOD_ALT)))
+		for (; *text; text++)
+			if (!orderlist_handle_char(*text))
+				success = 1;
+
+	return success;
 }
 
 static int orderlist_handle_key_on_list(struct key_event * k)

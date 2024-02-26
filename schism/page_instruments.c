@@ -420,13 +420,12 @@ static void instrument_list_draw_list(void)
 	}
 }
 
-static int instrument_list_handle_text_input_on_list(char* text) {
-	int i;
-	for (i = 0; text[i] != '\0'; i++) {
-		if (instrument_cursor_pos < 25 && (!instrument_list_add_char(text[i]))) {
-			return 0;
-		}
-	}
+static int instrument_list_handle_text_input_on_list(const char* text) {
+	int success = 0;
+	for (; *text; text++)
+		if (instrument_cursor_pos < 25 && (!instrument_list_add_char(*text)))
+			success = 1;
+	return success;
 }
 
 static int instrument_list_handle_key_on_list(struct key_event * k)

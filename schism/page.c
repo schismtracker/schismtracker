@@ -387,7 +387,7 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 /* --------------------------------------------------------------------------------------------------------- */
 /* text input handler */
 
-void handle_text_input(char* text_input) {
+void handle_text_input(const char* text_input) {
 	if (ACTIVE_WIDGET.type == WIDGET_OTHER)
 		if (ACTIVE_WIDGET.accept_text)
 			if (ACTIVE_WIDGET.d.other.handle_text_input) {
@@ -951,7 +951,7 @@ static int _handle_ime(struct key_event *k)
 			}
 		} else if (k->sym.sym == SDLK_LSHIFT || k->sym.sym == SDLK_RSHIFT) {
 			/* do nothing */
-		} else if (!NO_MODIFIER((k->mod&~KMOD_SHIFT)) || (c=k->unicode) == 0 || digraph_n < 2) {
+		} else if (!NO_MODIFIER((k->mod&~KMOD_SHIFT)) || (c=k->sym.sym) == 0 || digraph_n < 2) {
 			if (k->state == KEY_PRESS && k->mouse == MOUSE_NONE) {
 				if (digraph_n > 0) status_text_flash(" ");
 				digraph_n = -1;
@@ -963,21 +963,16 @@ static int _handle_ime(struct key_event *k)
 				digraph_c = c;
 				status_text_flash_bios("Enter digraph: %c", c);
 			} else {
-				struct key_event fake = {};
-
-				fake.unicode = char_digraph(digraph_c, c);
-				if (fake.unicode) {
+				unsigned char digraph_input[2] = {char_digraph(digraph_c, c), '\0'};
+				if (digraph_input[0]) {
 					status_text_flash_bios("Enter digraph: %c%c -> %c",
-							       digraph_c, c, fake.unicode);
+							       digraph_c, c, digraph_input[0]);
 				} else {
 					status_text_flash_bios("Enter digraph: %c%c -> INVALID", digraph_c, c);
 				}
 				digraph_n = digraph_c = 0;
-				if (fake.unicode) {
-					fake.is_synthetic = 3;
-					handle_key(&fake);
-					fake.state = KEY_RELEASE;
-					handle_key(&fake);
+				if (digraph_input[0]) {
+					handle_text_input((const char*)digraph_input);
 				}
 			}
 			return 1;
@@ -998,7 +993,7 @@ static int _handle_ime(struct key_event *k)
 				if (cs_unicode_c > 0) {
 					uint8_t unicode[2] = {(uint8_t)(char_unicode_to_cp437(cs_unicode)), '\0'};
 
-					if (unicode[0] && unicode[0] >= 32) {
+					if (unicode[0] >= 32) {
 						status_text_flash_bios("Enter Unicode: U+%04X -> %c",
 									   cs_unicode, unicode[0]);
 						SDL_SetModState(0);
@@ -1018,7 +1013,7 @@ static int _handle_ime(struct key_event *k)
 				/* bleh... */
 				m = k->mod;
 				k->mod = 0;
-				/* SDL2 replaces numbers with their respective symbols when shift is held */
+				/* HACK: SDL2 replaces numbers with their respective symbols when shift is held */
 				k->sym.sym = SDL_GetKeyFromScancode(k->scancode);
 				c = kbd_char_to_hex(k);
 				k->mod = m;
@@ -1093,8 +1088,7 @@ static int _handle_ime(struct key_event *k)
 /* this is the important one */
 void handle_key(struct key_event *k)
 {
-	/* in page.h it says these should be different if there is
-	   a dialog */
+	/* stupid hack to ignore text input when opening a dialog via keybind */
 	if ((&ACTIVE_WIDGET != &ACTIVE_PAGE_WIDGET) && !SDL_IsTextInputActive())
 		SDL_StartTextInput();
 
