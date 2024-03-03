@@ -300,7 +300,7 @@ void help_load_page(struct page *page)
 	page->widgets = widgets_help;
 	page->pre_handle_key = help_handle_key;
 
-	create_other(widgets_help + 0, 0, help_handle_key, help_redraw);
+	create_other(widgets_help + 0, 0, help_handle_key, NULL, help_redraw);
 	create_button(widgets_help + 1, 35,47,8, 0, 1, 1,1, 0,
 			_help_close, "Done", 3);
 }

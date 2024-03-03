@@ -63,6 +63,7 @@ static int message_extfont = 1;
 /* --------------------------------------------------------------------- */
 
 static int message_handle_key_editmode(struct key_event * k);
+static int message_handle_text_input_editmode(const char* text);
 static int message_handle_key_viewmode(struct key_event * k);
 
 /* --------------------------------------------------------------------- */
@@ -321,6 +322,7 @@ static inline void message_set_editmode(void)
 	widgets_message[0].accept_text = 1;
 	top_line = cursor_line = cursor_char = cursor_pos = 0;
 	widgets_message[0].d.other.handle_key = message_handle_key_editmode;
+	widgets_message[0].d.other.handle_text_input = message_handle_text_input_editmode;
 
 	status.flags |= NEED_UPDATE;
 }
@@ -330,6 +332,7 @@ static inline void message_set_viewmode(void)
 	edit_mode = 0;
 	widgets_message[0].accept_text = 0;
 	widgets_message[0].d.other.handle_key = message_handle_key_viewmode;
+	widgets_message[0].d.other.handle_text_input = NULL;
 
 	status.flags |= NEED_UPDATE;
 }
@@ -554,6 +557,21 @@ static void _delete_selection(void)
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
+static int message_handle_text_input_editmode(const char* text) {
+	int modkey = SDL_GetModState();
+	if (modkey & KMOD_CTRL || modkey & KMOD_ALT)
+		return 0;
+
+	for (; *text; text++) {
+		if (*text == '\n' || *text == '\t' || *text >= 32) {
+			if (clippy_owner(CLIPPY_SELECT) == widgets_message)
+				_delete_selection();
+			message_insert_char(*text);
+		} else return 0;
+	}
+	return 1;
+}
+
 static int message_handle_key_editmode(struct key_event * k)
 {
 	int line_len, num_lines = -1;
@@ -702,22 +720,6 @@ static int message_handle_key_editmode(struct key_event * k)
 				prompt_message_clear();
 				return 1;
 			}
-		} else if (k->mouse == MOUSE_NONE) {
-			if (k->unicode == '\r' || k->unicode == '\t'
-			|| k->unicode >= 32) {
-				if (k->state == KEY_RELEASE)
-					return 1;
-				if (k->sym.sym && clippy_owner(CLIPPY_SELECT) == widgets_message) {
-					_delete_selection();
-				}
-				if (k->mod & (KMOD_SHIFT|KMOD_CAPS)) {
-					message_insert_char(toupper((unsigned int)k->unicode));
-				} else {
-					message_insert_char(k->unicode);
-				}
-				return 1;
-			}
-			return 0;
 		}
 
 		if (k->mouse != MOUSE_CLICK)
@@ -728,6 +730,7 @@ static int message_handle_key_editmode(struct key_event * k)
 		if (!doing_drag) {
 			clippy_select(NULL, NULL, 0);
 		}
+		break;
 	}
 
 	if (new_cursor_line != cursor_line) {
@@ -831,7 +834,7 @@ void message_load_page(struct page *page)
 	page->widgets = widgets_message;
 	page->help_index = HELP_MESSAGE_EDITOR;
 
-	create_other(widgets_message + 0, 0, message_handle_key_viewmode, message_draw);
+	create_other(widgets_message + 0, 0, message_handle_key_viewmode, NULL, message_draw);
 	widgets_message[0].accept_text = edit_mode;
 }
 

@@ -23,8 +23,10 @@
 #ifndef __charset_h
 #define __charset_h
 
+#include <stdint.h>
+
 int char_digraph(int k1, int k2);
-int char_unicode_to_cp437(unsigned int c);
-char* str_unicode_to_cp437(const char* s);
+uint8_t char_unicode_to_cp437(unsigned int c);
+uint8_t* str_utf8_to_cp437(const uint8_t* utf8);
 
 #endif

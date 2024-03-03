@@ -230,7 +230,7 @@ void create_panbar(struct widget *w, int x, int y, int next_up, int next_down, i
 }
 
 void create_other(struct widget *w, int next_tab, int (*i_handle_key) (struct key_event *k),
-		  void (*i_redraw) (void))
+		  int (*i_handle_text_input) (const char* text), void (*i_redraw) (void))
 {
 	w->type = WIDGET_OTHER;
 	w->accept_text = 0;
@@ -247,6 +247,7 @@ void create_other(struct widget *w, int next_tab, int (*i_handle_key) (struct ke
 	w->height = 1;
 
 	w->d.other.handle_key = i_handle_key;
+	w->d.other.handle_text_input = i_handle_text_input;
 	w->d.other.redraw = i_redraw;
 }
 
@@ -317,20 +318,29 @@ int textentry_add_char(struct widget *w, uint16_t unicode)
 	return 1;
 }
 
+int textentry_add_text(struct widget *w, const char* text) {
+	if (text == NULL)
+		return 0;
+
+	for (; *text; text++)
+		if (!textentry_add_char(w, *text))
+			return 0;
+
+	return 1;
+}
+
 int menutoggle_handle_key(struct widget *w, struct key_event *k)
 {
 	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0)
-	   && w->d.menutoggle.activation_keys)
-	{
-	    const char* m = w->d.menutoggle.activation_keys;
-	    const char* p = strchr(m, (char)k->unicode);
-	    if(p && *p)
-	    {
-		w->d.menutoggle.state = p - m;
-		if(w->changed) w->changed();
-		status.flags |= NEED_UPDATE;
-		return 1;
-	    }
+	   && w->d.menutoggle.activation_keys) {
+		const char* m = w->d.menutoggle.activation_keys;
+		const char* p = strchr(m, (char)k->sym.sym);
+		if (p && *p) {
+			w->d.menutoggle.state = p - m;
+			if(w->changed) w->changed();
+			status.flags |= NEED_UPDATE;
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -338,18 +348,16 @@ int menutoggle_handle_key(struct widget *w, struct key_event *k)
 int bitset_handle_key(struct widget *w, struct key_event *k)
 {
 	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0)
-	   && w->d.bitset.activation_keys)
-	{
-	    const char* m = w->d.bitset.activation_keys;
-	    const char* p = strchr(m, (char)k->unicode);
-	    if(p && *p)
-	    {
-		int bit_index = p-m;
-		w->d.bitset.value ^= (1 << bit_index);
-		if(w->changed) w->changed();
-		status.flags |= NEED_UPDATE;
-		return 1;
-	    }
+	   && w->d.bitset.activation_keys) {
+		const char* m = w->d.bitset.activation_keys;
+		const char* p = strchr(m, (char)k->sym.sym);
+		if (p && *p) {
+			int bit_index = p-m;
+			w->d.bitset.value ^= (1 << bit_index);
+			if(w->changed) w->changed();
+			status.flags |= NEED_UPDATE;
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -365,45 +373,46 @@ void numentry_change_value(struct widget *w, int new_value)
 	status.flags |= NEED_UPDATE;
 }
 
-/* I'm sure there must be a simpler way to do this. */
-int numentry_handle_digit(struct widget *w, struct key_event *k)
-{
-	if (k->is_textinput) return 1;
-	int width, value, n;
-	static const int tens[7] = { 1, 10, 100, 1000, 10000, 100000, 1000000 };
-	int digits[7] = { 0 };
-	int c;
+static inline int fast_pow10(int n) {
+	static const int tens[] = { 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000 };
 
-	c = numeric_key_event(k, 0);
-	if (c == -1) {
-		if (w->d.numentry.handle_unknown_key) {
-			return w->d.numentry.handle_unknown_key(k);
-		}
+	/* use our cache if we can to avoid buffer overrun */
+	return (n < (sizeof(tens)/sizeof(tens[0]))) ? tens[n] : pow(10, n);
+}
+
+int numentry_handle_text(struct widget *w, const char* text_input) {
+	if (text_input == NULL)
 		return 0;
-	}
-	if (w->d.numentry.reverse) {
-		w->d.numentry.value *= 10;
-		w->d.numentry.value += c;
-		if (w->changed) w->changed();
-		status.flags |= NEED_UPDATE;
+
+	char valid_digits[] = "0123456789";
+	int len = strspn(text_input, valid_digits);
+	if (len < 1)
 		return 1;
+
+	int value = w->d.numentry.value;
+
+	if (w->d.numentry.reverse) {
+		for (int i = 0; i < len; i++) {
+			value *= 10;
+			value += text_input[0] - '0';
+		}
+	} else {
+		int pos = *(w->d.numentry.cursor_pos), n = 0;
+
+		for (; n < len && pos < w->width; n++, pos++) {
+			int pow10_of_pos = fast_pow10(w->width - 1 - pos);
+
+			/* isolate our digit and subtract it */
+			value -= value % (pow10_of_pos * 10) / pow10_of_pos * pow10_of_pos;
+			/* add our digit in its place */
+			value += (text_input[n] - '0') * pow10_of_pos;
+		}
+	
+		*(w->d.numentry.cursor_pos) = CLAMP(pos, 0, w->width - 1);
 	}
 
-	width = w->width;
-	value = w->d.numentry.value;
-	for (n = width - 1; n >= 0; n--)
-		digits[n] = value / tens[n] % 10;
-	digits[width - *(w->d.numentry.cursor_pos) - 1] = c;
-	value = 0;
-	for (n = width - 1; n >= 0; n--)
-		value += digits[n] * tens[n];
-	value = CLAMP(value, w->d.numentry.min, w->d.numentry.max);
-	w->d.numentry.value = value;
-	if (*(w->d.numentry.cursor_pos) < w->width - 1)
-		(*(w->d.numentry.cursor_pos))++;
-
-	if (w->changed) w->changed();
-	status.flags |= NEED_UPDATE;
+	/* notify that our value changed */
+	numentry_change_value(w, value);
 
 	return 1;
 }
@@ -422,10 +431,8 @@ void togglebutton_set(struct widget *p_widgets, int widget, int do_callback)
 		p_widgets[group[i]].d.togglebutton.state = 0;
 	p_widgets[widget].d.togglebutton.state = 1;
 
-	if (do_callback) {
-		if (p_widgets[widget].changed)
-			p_widgets[widget].changed();
-	}
+	if (do_callback && p_widgets[widget].changed)
+		p_widgets[widget].changed();
 
 	status.flags |= NEED_UPDATE;
 }
@@ -439,8 +446,8 @@ void draw_widget(struct widget *w, int selected)
 	const char *ptr, *endptr;       /* for the menutoggle */
 	char *str;
 	int n;
-	int tfg = selected ? 0 : 2;
-	int tbg = selected ? 3 : 0;
+	const int tfg = selected ? 0 : 2;
+	const int tbg = selected ? 3 : 0;
 	int drew_cursor = 0;
 	int fg,bg;
 

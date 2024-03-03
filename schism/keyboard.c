@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "charset.h"
 #include "song.h"
 #include "page.h"
 #include "osdefs.h"
@@ -231,18 +232,6 @@ void key_translate(struct key_event *k)
 			break;
 		};
 	}
-
-	if (k->sym.sym == k->orig_sym.sym) {
-		switch (k->sym.sym) {
-		case SDLK_RETURN: k->unicode = '\r'; break;
-		default:
-			if (k->is_synthetic != 3) {
-				/* "un" unicode it */
-				k->unicode = char_unicode_to_cp437(k->unicode);
-			}
-		};
-		return;
-	}
 }
 
 int numeric_key_event(struct key_event *k, int kponly)
@@ -264,9 +253,6 @@ int numeric_key_event(struct key_event *k, int kponly)
 		};
 		return -1;
 	}
-
-	if (k->unicode >= '0' && k->unicode <= '9')
-		return k->unicode - '0';
 
 	switch (k->orig_sym.sym) {
 	case SDLK_0: case SDLK_KP_0: return 0;
@@ -424,7 +410,7 @@ inline int kbd_char_to_99(struct key_event *k)
 	int c;
 	if (!NO_CAM_MODS(k->mod)) return -1;
 
-	c = tolower(k->unicode ?: k->sym.sym);
+	c = tolower(k->sym.sym);
 	if (c >= 'h' && c <= 'z')
 		return 10 + c - 'h';
 
@@ -434,23 +420,6 @@ inline int kbd_char_to_99(struct key_event *k)
 int kbd_char_to_hex(struct key_event *k)
 {
 	if (!NO_CAM_MODS(k->mod)) return -1;
-
-	if (k->unicode == '0') return 0;
-	if (k->unicode == '1') return 1;
-	if (k->unicode == '2') return 2;
-	if (k->unicode == '3') return 3;
-	if (k->unicode == '4') return 4;
-	if (k->unicode == '5') return 5;
-	if (k->unicode == '6') return 6;
-	if (k->unicode == '7') return 7;
-	if (k->unicode == '8') return 8;
-	if (k->unicode == '9') return 9;
-	if (k->unicode == 'a' || k->unicode == 'A') return 10;
-	if (k->unicode == 'b' || k->unicode == 'B') return 11;
-	if (k->unicode == 'c' || k->unicode == 'C') return 12;
-	if (k->unicode == 'd' || k->unicode == 'D') return 13;
-	if (k->unicode == 'e' || k->unicode == 'E') return 14;
-	if (k->unicode == 'f' || k->unicode == 'F') return 15;
 
 	switch (k->sym.sym) {
 	case SDLK_KP_0: if (!(k->mod & KMOD_NUM)) return -1;

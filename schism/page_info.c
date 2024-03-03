@@ -1333,5 +1333,5 @@ void info_load_page(struct page *page)
 	page->widgets = widgets_info;
 	page->help_index = HELP_INFO_PAGE;
 
-	create_other(widgets_info + 0, 0, info_page_handle_key, info_page_redraw);
+	create_other(widgets_info + 0, 0, info_page_handle_key, NULL, info_page_redraw);
 }

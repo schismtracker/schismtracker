@@ -34,7 +34,6 @@
 struct key_event {
 	SDL_Keysym sym, orig_sym;
 	SDL_Keymod mod;
-	uint16_t unicode;
 	int scancode;
 
 	enum { KEY_PRESS=0, KEY_RELEASE } state;
@@ -53,7 +52,6 @@ struct key_event {
 	int is_repeat;
 	int on_target;
 	int is_synthetic; /* 1 came from paste */
-	int is_textinput; /* SDL_TEXTINPUT, 1 if true, 0 if not */
 };
 
 /* --------------------------------------------------------------------- */
@@ -214,6 +212,7 @@ struct widget_other {
 	 * this MUST be set to a valid function.
 	 * return value is 1 if the key was handled, 0 if not. */
 	int (*handle_key) (struct key_event * k);
+	int (*handle_text_input) (const char* text_input);
 
 	/* also the widget drawing function can't possibly know how to
 	 * draw a custom widget, so it calls this instead.
@@ -295,6 +294,8 @@ struct page {
 	int (*pre_handle_key) (struct key_event * k);
 	/* this catches any keys that the main handler doesn't deal with */
 	void (*handle_key) (struct key_event * k);
+	/* handle any text input events from SDL */
+	void (*handle_text_input) (const char* text_input);
 	/* called when the page is set. this is for reloading the
 	 * directory in the file browsers. */
 	void (*set_page) (void);
@@ -452,14 +453,16 @@ void create_panbar(struct widget *w, int x, int y, int next_up,
 		   int channel);
 void create_other(struct widget *w, int next_tab,
 		  int (*w_handle_key) (struct key_event * k),
+		  int (*w_handle_text_input) (const char* text),
 		  void (*w_redraw) (void));
 
 /* --------------------------------------------------------------------- */
 
 /* widget.c */
 int textentry_add_char(struct widget *widget, uint16_t unicode);
+int textentry_add_text(struct widget *widget, const char* text);
 void numentry_change_value(struct widget *widget, int new_value);
-int numentry_handle_digit(struct widget *widget, struct key_event *k);
+int numentry_handle_text(struct widget *w, const char* text_input);
 int menutoggle_handle_key(struct widget *widget, struct key_event *k);
 int bitset_handle_key(struct widget *widget, struct key_event *k);
 
@@ -472,6 +475,7 @@ void draw_widget(struct widget *w, int selected);
 
 /* widget-keyhandler.c
  * [note: this always uses the current widget] */
+int widget_handle_text_input(const char* text_input);
 int widget_handle_key(struct key_event * k);
 
 /* draw-misc.c */
@@ -512,10 +516,6 @@ int menu_handle_key(struct key_event * k);
 
 /* status.c */
 void status_text_redraw(void);
-
-/* charset.c (this is slightly out of place...) */
-int char_digraph(int k1, int k2);
-int char_unicode_to_cp437(unsigned int c);
 
 // page_message.c
 void message_reset_selection(void);

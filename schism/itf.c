@@ -832,6 +832,9 @@ static void handle_mouse(struct key_event * k)
 	status.flags |= NEED_UPDATE;
 }
 
+static int fontedit_handle_text_input(UNUSED char* text_input) {
+	return 0;
+}
 
 static int fontedit_handle_key(struct key_event * k)
 {
@@ -1105,5 +1108,5 @@ void fontedit_load_page(struct page *page)
 	page->total_widgets = 1;
 	page->pre_handle_key = fontedit_key_hack;
 	page->widgets = fontedit_widget_hack;
-	create_other(fontedit_widget_hack, 0, fontedit_handle_key, do_nil);
+	create_other(fontedit_widget_hack, 0, fontedit_handle_key, NULL, do_nil);
 }

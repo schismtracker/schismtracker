@@ -476,6 +476,7 @@ void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue)
 	create_textentry(numprompt_widgets + 0, entryx, y, 4, 0, 0, 0, NULL, numprompt_buf, 3);
 	numprompt_widgets[0].activate = numprompt_value;
 	numprompt_widgets[0].d.textentry.cursor_pos = initvalue ? 1 : 0;
+	SDL_StopTextInput();
 	numprompt_finish = finish;
 	dialog_create_custom(dlgx, y - 2, dlgwidth, 5, numprompt_widgets, 1, 0, numprompt_draw_const, NULL);
 }

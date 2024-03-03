@@ -431,22 +431,6 @@ static void check_update(void)
 {
 	static unsigned long next = 0;
 
-	switch (ACTIVE_WIDGET.type) {
-		case WIDGET_TEXTENTRY:
-		case WIDGET_NUMENTRY:
-		case WIDGET_OTHER:
-			if (!(status.flags & ACCEPTING_INPUT)) {
-				status.flags |= (ACCEPTING_INPUT);
-				SDL_StartTextInput();
-			}
-			break;
-		default:
-			if (status.flags & ACCEPTING_INPUT) {
-				status.flags &= ~(ACCEPTING_INPUT);
-				SDL_StopTextInput();
-			}
-			break;
-	}
 	/* is there any reason why we'd want to redraw
 	   the screen when it's not even visible? */
 	if ((status.flags & (NEED_UPDATE | IS_VISIBLE)) == (NEED_UPDATE | IS_VISIBLE)) {
@@ -469,41 +453,6 @@ static void check_update(void)
 	}
 }
 
-static void _synthetic_paste(const char *cbptr, int is_textinput)
-{
-	struct key_event kk;
-	int isy = 2;
-	memset(&kk, 0, sizeof(kk));
-	kk.midi_volume = -1;
-	kk.midi_note = -1;
-	kk.mouse = MOUSE_NONE;
-	for (; cbptr && *cbptr; cbptr++) {
-		/* Win32 will have \r\n, everyone else \n */
-		if (*cbptr == '\r') continue;
-		/* simulate paste */
-		kk.scancode = -1;
-		kk.sym.sym = kk.orig_sym.sym = 0;
-		if (*cbptr == '\n') {
-			/* special attention to newlines */
-			kk.unicode = '\r';
-			kk.sym.sym = SDLK_RETURN;
-		} else {
-			kk.unicode = *cbptr;
-		}
-		kk.mod = is_textinput ? SDL_GetModState() : 0;
-		kk.is_repeat = 0;
-		if (cbptr[1])
-			kk.is_synthetic = isy;
-		else
-			kk.is_synthetic = 3;
-		kk.is_textinput = is_textinput;
-		kk.state = KEY_PRESS;
-		handle_key(&kk);
-		kk.state = KEY_RELEASE;
-		handle_key(&kk);
-		isy = 1;
-	}
-}
 static void _do_clipboard_paste_op(SDL_Event *e)
 {
 	if (ACTIVE_PAGE.clipboard_paste
@@ -512,7 +461,7 @@ static void _do_clipboard_paste_op(SDL_Event *e)
 	if (ACTIVE_WIDGET.clipboard_paste
 	&& ACTIVE_WIDGET.clipboard_paste(e->user.code,
 				e->user.data1)) return;
-	_synthetic_paste((const char *)e->user.data1, 0);
+	handle_text_input((char *)e->user.data1);
 }
 
 static void key_event_reset(struct key_event *kk, int start_x, int start_y)
@@ -581,7 +530,6 @@ static void event_loop(void)
 			if (event.key.keysym.sym == 0) {
 				// XXX when does this happen?
 				kk.mouse = MOUSE_NONE;
-				kk.unicode = 0;
 				kk.is_repeat = 0;
 			}
 		}
@@ -596,12 +544,11 @@ static void event_loop(void)
 #define _ALTTRACKED_KMOD        0
 #endif
 		case SDL_TEXTINPUT: {
-			char* input_text = str_unicode_to_cp437(event.text.text);
-			if (input_text != NULL) {
-				if (input_text[0] != '\0' && (status.flags & ACCEPTING_INPUT))
-					_synthetic_paste(input_text, 1);
-				free(input_text);
-			}
+			char* input_text = str_utf8_to_cp437(event.text.text);
+			if (input_text == NULL || *input_text == '\0')
+				break;
+			handle_text_input(input_text);
+			free(input_text);
 			break;
 		}
 		case SDL_KEYUP:
@@ -671,8 +618,6 @@ static void event_loop(void)
 			} else {
 				kk.is_repeat = 0;
 			}
-			if (kk.sym.sym == SDLK_RETURN)
-				kk.unicode = '\r';
 			handle_key(&kk);
 			if (event.type == SDL_KEYUP) {
 				status.last_keysym.sym = kk.sym.sym;

@@ -632,7 +632,7 @@ static int file_list_handle_key(struct key_event * k)
 {
 	dmoz_file_t *f;
 	int new_file = current_file;
-	int c = unicode_to_ascii(k->unicode);
+	int c = k->sym.sym;
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 
@@ -906,7 +906,9 @@ void load_sample_load_page(struct page *page)
 
 
 	create_other(widgets_loadsample + 0, 0,
-				file_list_handle_key, file_list_draw);
+				file_list_handle_key,
+				NULL,
+				file_list_draw);
 	widgets_loadsample[0].accept_text = 1;
 	widgets_loadsample[0].next.tab = 1;
 

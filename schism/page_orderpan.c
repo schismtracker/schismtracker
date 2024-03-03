@@ -336,7 +336,7 @@ static void orderlist_reorder(void)
 	song_unlock_audio();
 }
 
-static int orderlist_handle_char(struct key_event *k)
+static int orderlist_handle_char(char sym)
 {
 	int c;
 	int cur_pattern;
@@ -344,28 +344,23 @@ static int orderlist_handle_char(struct key_event *k)
 	song_note_t *tmp;
 	int n[3] = { 0 };
 
-	switch (k->sym.sym) {
-	case SDLK_PLUS:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	switch (sym) {
+	case '+':
 		status.flags |= SONG_NEEDS_SAVE;
 		current_song->orderlist[current_order] = ORDER_SKIP;
 		orderlist_cursor_pos = 2;
 		break;
-	case SDLK_PERIOD:
-	case SDLK_MINUS:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	case '.':
+	case '-':
 		status.flags |= SONG_NEEDS_SAVE;
 		current_song->orderlist[current_order] = ORDER_LAST;
 		orderlist_cursor_pos = 2;
 		break;
 	default:
-		c = numeric_key_event(k, 0);
-		if (c == -1) return 0;
-		if (k->state == KEY_RELEASE
-		    || k->is_synthetic)
-			return 1;
+		if (sym >= '0' && sym <= '9')
+			c = sym - '0';
+		else
+			return 0;
 
 		status.flags |= SONG_NEEDS_SAVE;
 		cur_pattern = current_song->orderlist[current_order];
@@ -395,6 +390,17 @@ static int orderlist_handle_char(struct key_event *k)
 	status.flags |= NEED_UPDATE;
 
 	return 1;
+}
+
+static int orderlist_handle_text_input_on_list(const char* text) {
+	int modkey = SDL_GetModState(), success = 0;
+
+	if (!(modkey & (KMOD_CTRL | KMOD_ALT)))
+		for (; *text; text++)
+			if (!orderlist_handle_char(*text))
+				success = 1;
+
+	return success;
 }
 
 static int orderlist_handle_key_on_list(struct key_event * k)
@@ -670,13 +676,11 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		sample_set(sample_get_current()+1);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	default:
-		if (k->mouse == MOUSE_NONE) {
-			if ((k->mod & (KMOD_CTRL | KMOD_ALT))==0) {
-				return orderlist_handle_char(k);
-			}
+	default: {
+		if (kbd_char_to_hex(k) == -1)
 			return 0;
-		}
+		return 1;
+	}
 	}
 
 	if (new_cursor_pos < 0)
@@ -897,8 +901,9 @@ void orderpan_load_page(struct page *page)
 	page->help_index = HELP_ORDERLIST_PANNING;
 
 	/* 0 = order list */
-	create_other(widgets_orderpan + 0, 1, orderlist_handle_key_on_list, orderlist_draw);
-	widgets_orderpan[0].accept_text = 0;
+	create_other(widgets_orderpan + 0, 1, orderlist_handle_key_on_list,
+		orderlist_handle_text_input_on_list, orderlist_draw);
+	widgets_orderpan[0].accept_text = 1;
 	widgets_orderpan[0].x = 6;
 	widgets_orderpan[0].y = 15;
 	widgets_orderpan[0].width = 3;
@@ -929,8 +934,9 @@ void ordervol_load_page(struct page *page)
 	page->help_index = HELP_ORDERLIST_VOLUME;
 
 	/* 0 = order list */
-	create_other(widgets_ordervol + 0, 1, orderlist_handle_key_on_list, orderlist_draw);
-	widgets_ordervol[0].accept_text = 0;
+	create_other(widgets_ordervol + 0, 1, orderlist_handle_key_on_list,
+		orderlist_handle_text_input_on_list, orderlist_draw);
+	widgets_ordervol[0].accept_text = 1;
 	widgets_ordervol[0].x = 6;
 	widgets_ordervol[0].y = 15;
 	widgets_ordervol[0].width = 3;

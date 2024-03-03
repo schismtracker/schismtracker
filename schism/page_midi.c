@@ -323,7 +323,7 @@ void midi_load_page(struct page *page)
 	page->widgets = widgets_midi;
 	page->help_index = HELP_GLOBAL;
 
-	create_other(widgets_midi + 0, 0, midi_page_handle_key, midi_page_draw_portlist);
+	create_other(widgets_midi + 0, 0, midi_page_handle_key, NULL, midi_page_draw_portlist);
 	widgets_midi[0].x = 2;
 	widgets_midi[0].y = 14;
 	widgets_midi[0].width = 75;

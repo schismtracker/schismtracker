@@ -110,22 +110,8 @@ int char_digraph(int k1, int k2)
 #undef DG
 	return 0;
 }
-char* str_unicode_to_cp437(const char* s)
-{
-	if (s == NULL)
-		return NULL;
 
-	int s_len = strlen(s), i;
-	char* out = calloc(s_len + 1, sizeof(char));
-
-	for ( i = 0 ; i < s_len ; i++ ) {
-		out[i] = char_unicode_to_cp437(s[i]);
-	}
-
-	return out;
-}
-
-int char_unicode_to_cp437(unsigned int c)
+uint8_t char_unicode_to_cp437(unsigned int c)
 {
 	if (c >= 32 && c <= 127) return c;
 	switch (c) {
@@ -150,31 +136,72 @@ int char_unicode_to_cp437(unsigned int c)
 	case 0x2640: return 12; // FEMALE / VENUS
 	case 0x266A: return 13; // EIGHTH NOTE
 	case 0x266B: return 14; // BEAMED EIGHTH NOTES
-
+	case 0x263C: return 15;
+	case 0x25BA: return 16;
+	case 0x25C4: return 17;
 	case 0x2195: return 18; // UP DOWN ARROW
 	case 0x203C: return 19; // DOUBLE EXCLAMATION MARK
 	case 0x00B6: return 20; // PILCROW SIGN
 	case 0x00A7: return 21; // SECTION SIGN
-
+	case 0x25AC: return 22;
 	case 0x21A8: return 23; // UP DOWN ARROW WITH BASE
 	case 0x2191: return 24; // UPWARD ARROW
 	case 0x2193: return 25; // DOWNWARD ARROW
 	case 0x2192: return 26; // RIGHTWARD ARROW
 	case 0x2190: return 27; // LEFTWARD ARROW
-
+	case 0x221F: return 28;
 	case 0x2194: return 29; // LEFT RIGHT ARROW
-
+	case 0x25B2: return 30;
+	case 0x25BC: return 31;
+	/* 32-126 is ASCII */
 	case 0x266F: return '#';// MUSIC SHARP SIGN
 	case 0x00A6: return 124;
 	case 0x0394:
 	case 0x2302: return 127;// HOUSE
-
+	// DIACRITICS
+	case 0x00C7: return 128;
+	case 0x00FC: return 129;
+	case 0x00E9: return 130;
+	case 0x00E2: return 131;
+	case 0x00E4: return 132;
+	case 0x00E0: return 133;
+	case 0x00E5: return 134;
+	case 0x00E7: return 135;
+	case 0x00EA: return 136;
+	case 0x00EB: return 137;
+	case 0x00E8: return 138;
+	case 0x00EF: return 139;
+	case 0x00EE: return 140;
+	case 0x00EC: return 141;
+	case 0x00C4: return 142;
+	case 0x00C5: return 143;
+	case 0x00C9: return 144;
+	case 0x00E6: return 145;
+	case 0x00C6: return 146;
+	case 0x00F4: return 147;
+	case 0x00F6: return 148;
+	case 0x00F2: return 149;
+	case 0x00FB: return 150;
+	case 0x00F9: return 151;
+	case 0x00FF: return 152;
+	case 0x00D6: return 153;
+	case 0x00DC: return 154;
 	case 0x20B5:
 	case 0x20B2:
 	case 0x00A2: return 155;// CENT SIGN
 	case 0x00A3: return 156;// POUND SIGN
 	case 0x00A5: return 157;// YEN SIGN
-
+	case 0x20A7: return 158;
+	case 0x0192: return 159;
+	case 0x00E1: return 160;
+	case 0x00ED: return 161;
+	case 0x00F3: return 162;
+	case 0x00FA: return 163;
+	case 0x00F1: return 164;
+	case 0x00D1: return 165;
+	case 0x00AA: return 166;
+	case 0x00BA: return 167;
+	case 0x00BF: return 168;
 	case 0x2310: return 169;// REVERSED NOT SIGN
 	case 0x00AC: return 170;// NOT SIGN
 	case 0x00BD: return 171;// 1/2
@@ -182,11 +209,9 @@ int char_unicode_to_cp437(unsigned int c)
 	case 0x00A1: return 173;// INVERTED EXCLAMATION MARK
 	case 0x00AB: return 174;// <<
 	case 0x00BB: return 175;// >>
-
 	case 0x2591: return 176;// LIGHT SHADE
 	case 0x2592: return 177;// MEDIUM SHADE
 	case 0x2593: return 178;// DARK SHADE
-
 	// BOX DRAWING
 	case 0x2502: return 179;
 	case 0x2524: return 180;
@@ -233,7 +258,6 @@ int char_unicode_to_cp437(unsigned int c)
 	case 0x258C: return 221;// LEFT HALF BLOCK
 	case 0x2590: return 222;// RIGHT HALF BLOCK
 	case 0x2580: return 223;// UPPER HALF BLOCK
-
 	case 0x03B1: return 224;// GREEK SMALL LETTER ALPHA
 	case 0x03B2: return 225;// GREEK SMALL LETTER BETA
 	case 0x0393: return 226;// GREEK CAPITAL LETTER GAMMA
@@ -245,11 +269,9 @@ int char_unicode_to_cp437(unsigned int c)
 	case 0x00b5: return 230;// GREEK SMALL LETTER MU
 	case 0x03C4:
 	case 0x03D2: return 231;// GREEK UPSILON+HOOK
-
 	case 0x03B8: return 233;// GREEK SMALL LETTER THETA
 	case 0x03A9: return 234;// GREEK CAPITAL LETTER OMEGA
 	case 0x03B4: return 235;// GREEK SMALL LETTER DELTA
-
 	case 0x221E: return 236;// INFINITY
 	case 0x00D8:
 	case 0x00F8: return 237;// LATIN ... LETTER O WITH STROKE
@@ -269,9 +291,68 @@ int char_unicode_to_cp437(unsigned int c)
 	case 0x2219:
 	case 0x0387: return 250;// GREEK ANO TELEIA
 	case 0x221A: return 251;// SQUARE ROOT
-	// NO UNICODE ALLOCATION?
 	case 0x00B2: return 253;// SUPERSCRIPT TWO
 	case 0x220E: return 254;// QED
+	case 0x00A0: return 255;
+	default: return '?';
 	};
-	return c;
+}
+
+// Copyright (c) 2008-2009 Bjoern Hoehrmann <bjoern@hoehrmann.de>
+// See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
+
+#define UTF8_ACCEPT 0
+#define UTF8_REJECT 1
+
+static const uint8_t utf8d[] = {
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 00..1f
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 20..3f
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 40..5f
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 60..7f
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9, // 80..9f
+	7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7, // a0..bf
+	8,8,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, // c0..df
+	0xa,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x4,0x3,0x3, // e0..ef
+	0xb,0x6,0x6,0x6,0x5,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8, // f0..ff
+	0x0,0x1,0x2,0x3,0x5,0x8,0x7,0x1,0x1,0x1,0x4,0x6,0x1,0x1,0x1,0x1, // s0..s0
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1,1, // s1..s2
+	1,2,1,1,1,1,1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1, // s3..s4
+	1,2,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,3,1,3,1,1,1,1,1,1, // s5..s6
+	1,3,1,1,1,1,1,3,1,3,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1, // s7..s8
+};
+
+static uint32_t utf8_decode(uint32_t* restrict state, uint32_t* restrict codep, uint32_t byte) {
+	uint32_t type = utf8d[byte];
+
+	*codep = (*state != UTF8_ACCEPT) ?
+		(byte & 0x3fu) | (*codep << 6) :
+		(0xff >> type) & (byte);
+
+	*state = utf8d[256 + *state * 16 + type];
+	return *state;
+}
+
+static int get_length_of_utf8(const uint8_t* restrict utf8) {
+	uint32_t codepoint = 0, state = 0, length = 0;
+
+	for (; *utf8; utf8++)
+		if (!utf8_decode(&state, &codepoint, *utf8))
+			length++;
+
+	return length;
+}
+
+uint8_t* str_utf8_to_cp437(const uint8_t* restrict utf8) {
+	int length = get_length_of_utf8(utf8);
+	if (!length)
+		return NULL;
+
+	uint8_t* cp437 = calloc(length + 1, sizeof(uint8_t));
+
+	uint32_t codepoint = 0, state = 0, i = 0;
+	for (; *utf8 && i < length; utf8++)
+		if (!utf8_decode(&state, &codepoint, *utf8))
+			cp437[i++] = char_unicode_to_cp437(codepoint);
+
+	return cp437;
 }

@@ -874,7 +874,7 @@ static void pattern_editor_display_history(void)
 {
 	struct dialog *dialog;
 
-	create_other(undo_widgets + 0, 0, history_handle_key, NULL);
+	create_other(undo_widgets + 0, 0, history_handle_key, NULL, NULL);
 	dialog = dialog_create_custom(17, 21, 47, 16, undo_widgets, 1, 0,
 				      history_draw_const, NULL);
 	dialog->action_yes = history_close;
@@ -2782,8 +2782,6 @@ static int handle_volume(song_note_t * note, struct key_event *k, int pos)
 	int vp = panning_mode ? VOLFX_PANNING : VOLFX_VOLUME;
 	int q;
 
-	if (k->is_synthetic)
-		return 1;
 	if (pos == 0) {
 		q = kbd_char_to_hex(k);
 		if (q >= 0 && q <= 9) {
@@ -3956,8 +3954,6 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 static int mute_toggle_hack[64]; /* mrsbrisby: please explain this one, i don't get why it's necessary... */
 static int pattern_editor_handle_key_default(struct key_event * k)
 {
-	if (k->is_synthetic)
-		return 1;
 	/* bleah */
 	if (k->sym.sym == SDLK_LESS || k->sym.sym == SDLK_COLON || k->sym.sym == SDLK_SEMICOLON) {
 		if (k->state == KEY_RELEASE)
@@ -4537,6 +4533,6 @@ void pattern_editor_load_page(struct page *page)
 	page->widgets = widgets_pattern;
 	page->help_index = HELP_PATTERN_EDITOR;
 
-	create_other(widgets_pattern + 0, 0, pattern_editor_handle_key_cb, pattern_editor_redraw);
+	create_other(widgets_pattern + 0, 0, pattern_editor_handle_key_cb, NULL, pattern_editor_redraw);
 }
 
