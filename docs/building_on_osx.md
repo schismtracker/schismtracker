@@ -15,6 +15,9 @@ instead:
 
     sudo port install automake autoconf libtool libsdl2 git
 
+For FLAC sample loading support, you will also need development versions of the
+`flac` and `libogg` libraries.
+
 In this case, you may have to open a new terminal shell, or else you may get
 warnings about the version of autoconf/automake you're using.
 

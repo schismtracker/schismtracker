@@ -1,8 +1,10 @@
 *.swp
 *.o
+.cache/
 .deps/
 .dirstamp
 .vs/
+.vscode/
 /Makefile
 /Makefile.in
 /aclocal.m4

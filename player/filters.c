@@ -82,14 +82,17 @@ void setup_channel_filter(song_voice_t *chan, int reset, int flt_modifier, int f
 	if (resonance > 255)
 		resonance = 255;
 
-        // TODO: The enabling/disabling of channel filter is a bit more complex.
-        // More info in snd_flt.cpp in OpenMPT and filter-reset.it, filter-reset-carry.it
-        // and filter-nna.it from https://wiki.openmpt.org/Development:_Test_Cases/IT
-	// Should be 255, but Zxx cutoff is limited to 127, so...
-	if (cutoff < 254)
-		chan->flags |= CHN_FILTER;
-	else
-		cutoff = 255;
+	if (resonance == 0 && cutoff >= 254)
+	{
+		if (chan->flags & CHN_NEWNOTE)
+		{
+			// Z7F next to a note disables the filter, however in other cases this should not happen.
+			// Test cases: filter-reset.it, filter-reset-carry.it, filter-reset-envelope.it, filter-nna.it, FilterResetPatDelay.it, FilterPortaSmpChange.it, FilterPortaSmpChange-InsMode.it
+			chan->flags &= ~CHN_FILTER;
+		}
+		return;
+	}
+	chan->flags |= CHN_FILTER;
 
 	// 2 ^ (i / 24 * 256)
 	frequency = 110.0 * powf(2.0, (float) cutoff * FREQ_PARAM_MULT + 0.25);

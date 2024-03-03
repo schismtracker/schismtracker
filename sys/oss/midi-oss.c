@@ -21,6 +21,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <config.h>
 
 #include "headers.h"
 
@@ -34,7 +35,12 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/soundcard.h>
-#include <sys/poll.h>
+
+#ifdef HAVE_POLL_H
+# include <poll.h>
+#elif HAVE_SYS_POLL_H
+# include <sys/poll.h>
+#endif
 
 #include <errno.h>
 #include <fcntl.h>

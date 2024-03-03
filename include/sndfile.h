@@ -62,7 +62,7 @@
 #define CHN_PANENV              0x400000 // pan envelope is active
 #define CHN_PITCHENV            0x800000 // pitch/filter envelope is active
 #define CHN_FASTVOLRAMP         0x1000000 // ramp volume very fast (XXX this is a dumb flag)
-//#define CHN_EXTRALOUD         0x2000000
+#define CHN_NEWNOTE             0x2000000 // note was triggered, reset filter
 //#define CHN_REVERB            0x4000000
 //#define CHN_NOREVERB          0x8000000
 #define CHN_NNAMUTE             0x10000000 // turn off mute, but have it reset later
@@ -413,6 +413,7 @@ typedef struct song_voice {
 	// 2nd cache line
 	uint32_t length; // only to the end of the loop
 	uint32_t flags;
+	uint32_t old_flags;
 	uint32_t loop_start; // loop or sustain, whichever is active
 	uint32_t loop_end;
 	int32_t right_ramp_volume; // ?
@@ -566,6 +567,7 @@ typedef struct song {
 	uint32_t mix_stat; // number of channels being mixed (not really used)
 	uint32_t buffer_count; // number of samples to mix per tick
 	uint32_t tick_count;
+	uint32_t frame_delay;
 	int32_t row_count; /* IMPORTANT needs to be signed */
 	uint32_t current_speed;
 	uint32_t current_tempo;
@@ -595,6 +597,8 @@ typedef struct song {
 	// mixer stuff
 	uint32_t mix_flags; // SNDMIX_*
 	uint32_t mix_frequency, mix_bits_per_sample, mix_channels;
+
+	int patloop; // effects.c: need this for stupid pattern break compatibility
 
 	// noise reduction filter
 	int32_t left_nr, right_nr;

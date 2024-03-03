@@ -117,7 +117,7 @@ struct imf_sample {
 	uint8_t unused3[5];
 	uint16_t ems;           /* Reserved for internal usage */
 	uint32_t dram;          /* Reserved for internal usage */
-	char is10[4];           /* 'IS10' */
+	char is10[4];           /* 'IS10' or 'IW10' */
 };
 #pragma pack(pop)
 
@@ -541,12 +541,6 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 			uint32_t blen, sflags = SF_LE | SF_M | SF_PCMS;
 
 			slurp_read(fp, &imfsmp, sizeof(imfsmp));
-
-			if (memcmp(imfsmp.is10, "IS10", 4) != 0) {
-				//printf("is10 says %02x %02x %02x %02x!\n",
-				//      imfsmp.is10[0], imfsmp.is10[1], imfsmp.is10[2], imfsmp.is10[3]);
-				return LOAD_FORMAT_ERROR;
-			}
 
 			strncpy(sample->filename, imfsmp.name, 12);
 			sample->filename[12] = 0;

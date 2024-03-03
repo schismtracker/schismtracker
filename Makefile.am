@@ -187,7 +187,6 @@ files_win32 = \
 	sys/win32/localtime_r.c
 cflags_win32=-I$(srcdir)/sys/win32
 lib_win32=-lwinmm
-endif
 
 if HAVE_WINDRES
 
@@ -196,7 +195,7 @@ if HAVE_GIT
 wrcflags_version = -DWRC_VERSION=0,`echo '$(PACKAGE_VERSION)' | sed 's/\(....\)\(..\)\(..\).*/\1,\2,\3/'`
 else
 wrcflags_version = -DWRC_VERSION=0,`date +%Y%m%d | sed 's/\(....\)\(..\)\(..\).*/\1,\2,\3/'`
-endif
+endif # HAVE_GIT
 
 ## --use-temp-file is needed to work around stupid bugs
 WRCFLAGS = --use-temp-file -I. -I$(srcdir) $(cflags_version) $(wrcflags_version)
@@ -204,7 +203,9 @@ WRCFLAGS = --use-temp-file -I. -I$(srcdir) $(cflags_version) $(wrcflags_version)
 	$(WINDRES) $(WRCFLAGS) -i $< -o $@
 files_windres=sys/win32/schismres.rc
 sys/win32/schismres.$(OBJEXT): icons/schismres.ico config.h Makefile.am
-endif HAVE_WINDRES
+endif # HAVE_WINDRES
+
+endif # USE_WIN32
 
 if USE_WII
 files_wii=sys/wii/isfs.c sys/wii/osdefs.c
@@ -218,6 +219,13 @@ files_macosx = \
 	sys/macosx/midi-macosx.c	\
 	sys/macosx/osdefs.c
 cflags_macosx=
+endif
+
+if USE_FLAC
+files_flac = \
+	fmt/flac.c
+cflags_flac=-DUSE_FLAC
+libs_flac=-lFLAC
 endif
 
 if USE_NETWORK
@@ -354,7 +362,8 @@ schismtracker_SOURCES = \
 	$(files_stdlib)			\
 	$(files_mmap)			\
 	$(files_wii)			\
-	$(files_windres)
+	$(files_windres)		\
+	$(files_flac)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
@@ -365,8 +374,8 @@ AM_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE -I$(srcdir)/include -I.
 AM_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
 	$(cflags_version) $(cflags_win32) $(cflags_wii) \
-	$(cflags_macosx)
+	$(cflags_macosx) $(cflags_flac)
 AM_OBJCFLAGS = $(AM_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(lib_asound) $(lib_win32) $(SDL_LIBS) $(LIBM)
+schismtracker_LDADD = $(lib_asound) $(lib_win32) $(libs_flac) $(SDL_LIBS) $(LIBM)

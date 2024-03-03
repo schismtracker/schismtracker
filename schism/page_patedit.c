@@ -86,6 +86,7 @@ static int current_row = 0;
 static int keyjazz_noteoff = 0;       /* issue noteoffs when releasing note */
 static int keyjazz_write_noteoff = 0; /* write noteoffs when releasing note */
 static int keyjazz_repeat = 1;        /* insert multiple notes on key repeat */
+static int keyjazz_capslock = 0;      /* keyjazz when capslock is on, not while it is down */
 
 /* this is, of course, what the current pattern is */
 static int current_pattern = 0;
@@ -105,6 +106,7 @@ int midi_playback_tracing = 0;
 static int panning_mode = 0;            /* for the volume column */
 int midi_bend_hit[64];
 int midi_last_bend_hit[64];
+int midi_last_note[64];
 
 /* blah; other forwards */
 static void pated_save(const char *descr);
@@ -1042,6 +1044,7 @@ void cfg_save_patedit(cfg_file_t *cfg)
 	CFG_SET_PE(keyjazz_noteoff);
 	CFG_SET_PE(keyjazz_write_noteoff);
 	CFG_SET_PE(keyjazz_repeat);
+	CFG_SET_PE(keyjazz_capslock);
 	CFG_SET_PE(mask_copy_search_mode);
 	CFG_SET_PE(invert_home_end);
 
@@ -1074,6 +1077,7 @@ void cfg_load_patedit(cfg_file_t *cfg)
 	CFG_GET_PE(keyjazz_noteoff, 0);
 	CFG_GET_PE(keyjazz_write_noteoff, 0);
 	CFG_GET_PE(keyjazz_repeat, 1);
+	CFG_GET_PE(keyjazz_capslock, 0);
 	CFG_GET_PE(mask_copy_search_mode, 0);
 	CFG_GET_PE(invert_home_end, 0);
 
@@ -2981,6 +2985,11 @@ static int pattern_editor_insert_midi(struct key_event *k)
 	if (k->midi_note == -1) {
 		/* nada */
 	} else if (k->state == KEY_RELEASE) {
+		/* don't record noteoffs of non-matching notes */
+		if (k->midi_note != midi_last_note[c]) {
+			return 0;
+		}
+
 		c = song_keyup(KEYJAZZ_NOINST, KEYJAZZ_NOINST, k->midi_note);
 
 		/* don't record noteoffs for no good reason... */
@@ -3004,7 +3013,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 		if (!((song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP)) && playback_tracing)) {
 			tick = 0;
 		}
-		n = k->midi_note;
+		midi_last_note[c] = n = k->midi_note;
 		c = song_keydown(KEYJAZZ_NOINST, KEYJAZZ_NOINST, n, v, current_channel);
 		cur_note = pattern + 64 * current_row + (c-1);
 		patedit_record_note(cur_note, c, current_row, n, 0);
@@ -3187,7 +3196,7 @@ static int pattern_editor_insert(struct key_event *k)
 			return 1;
 
 
-		int writenote = !(status.flags & CAPS_PRESSED);
+		int writenote = (keyjazz_capslock) ? !(k->mod & KMOD_CAPS) : !(status.flags & CAPS_PRESSED);
 		if (writenote && !patedit_record_note(cur_note, current_channel, current_row, n, 1)) {
 			// there was a template error, don't advance the cursor and so on
 			writenote = 0;
@@ -3450,6 +3459,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SDLK_BACKSPACE:
 		if (k->state == KEY_PRESS)
 			return 1;
+		pated_save("Undo revert pattern data (Alt-BkSpace)");
 		snap_paste(&fast_save, 0, 0, 0);
 		return 1;
 

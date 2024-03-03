@@ -166,7 +166,7 @@ static inline int rn_vibrato(song_t *csf, song_voice_t *chan, int frequency)
 static inline int rn_sample_vibrato(song_t *csf, song_voice_t *chan, int frequency)
 {
 	unsigned int vibpos = chan->autovib_position & 0xFF;
-	int vdelta, adepth;
+	int vdelta, adepth = 1;
 	song_sample_t *pins = chan->ptr_sample;
 
 	/*
@@ -177,15 +177,19 @@ static inline int rn_sample_vibrato(song_t *csf, song_voice_t *chan, int frequen
 	5) Mov [SomeVariableNameRelatingToVibrato], AX  ; For the next cycle.
 	*/
 
-	adepth = chan->autovib_depth; // (1)
-	adepth += pins->vib_rate & 0xff; // (2 & 3)
-	/* need this cast -- if adepth is unsigned, large autovib will crash the mixer (why? I don't know!)
-	but if vib_depth is changed to signed, that screws up other parts of the code. ugh. */
-	adepth = MIN(adepth, (int) (pins->vib_depth << 8));
-	chan->autovib_depth = adepth; // (5)
-	adepth >>= 8; // (4)
+	/* OpenMPT test case VibratoSweep0.it:
+	   don't calculate autovibrato if the speed is 0 */
+	if (pins->vib_speed) {
+		adepth = chan->autovib_depth; // (1)
+		adepth += pins->vib_rate & 0xff; // (2 & 3)
+		/* need this cast -- if adepth is unsigned, large autovib will crash the mixer (why? I don't know!)
+		but if vib_depth is changed to signed, that screws up other parts of the code. ugh. */
+		adepth = MIN(adepth, (int) (pins->vib_depth << 8));
+		chan->autovib_depth = adepth; // (5)
+		adepth >>= 8; // (4)
 
-	chan->autovib_position += pins->vib_speed;
+		chan->autovib_position += pins->vib_speed;
+	}
 
 	switch(pins->vib_type) {
 	case VIB_SINE:
@@ -224,15 +228,16 @@ static inline int rn_sample_vibrato(song_t *csf, song_voice_t *chan, int frequen
 }
 
 
-static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
-{
+static inline void rn_process_vol_env(song_voice_t* chan, int *nvol) {
 	song_instrument_t *penv = chan->ptr_instrument;
 	int vol = *nvol;
 
-	// Volume Envelope
-	if (chan->flags & CHN_VOLENV && penv->vol_env.nodes) {
-		int envpos = chan->vol_env_position;
+	if ((chan->flags & CHN_VOLENV || penv->flags & ENV_VOLUME) && penv->vol_env.nodes) {
+		int envpos = chan->vol_env_position - 1;
 		unsigned int pt = penv->vol_env.nodes - 1;
+
+		if (chan->vol_env_position == 0)
+			return;
 
 		for (unsigned int i = 0; i < (unsigned int)(penv->vol_env.nodes - 1); i++) {
 			if (envpos <= penv->vol_env.ticks[i]) {
@@ -265,11 +270,20 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 		envvol = CLAMP(envvol, 0, 256);
 		vol = (vol * envvol) >> 8;
 	}
+	
+	*nvol = vol;
+}
 
-	// Panning Envelope
-	if ((chan->flags & CHN_PANENV) && (penv->pan_env.nodes)) {
-		int envpos = chan->pan_env_position;
+
+static inline void rn_process_pan_env(song_voice_t* chan) {
+	song_instrument_t *penv = chan->ptr_instrument;
+
+	if ((chan->flags & CHN_PANENV || penv->flags & ENV_PANNING) && (penv->pan_env.nodes)) {
+		int envpos = chan->pan_env_position - 1;
 		unsigned int pt = penv->pan_env.nodes - 1;
+
+		if (chan->pan_env_position == 0)
+			return;
 
 		for (unsigned int i=0; i<(unsigned int)(penv->pan_env.nodes-1); i++) {
 			if (envpos <= penv->pan_env.ticks[i]) {
@@ -308,8 +322,13 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 
 		chan->final_panning = pan;
 	}
+}
 
-	// FadeOut volume
+
+static inline void rn_process_ins_fade(song_voice_t *chan, int *nvol) {
+	song_instrument_t *penv = chan->ptr_instrument;
+	int vol = *nvol;
+
 	if (chan->flags & CHN_NOTEFADE) {
 		unsigned int fadeout = penv->fadeout;
 
@@ -324,31 +343,42 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 			vol = 0;
 		}
 	}
-
 	*nvol = vol;
+}
+
+
+static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
+{
+	// Volume Envelope
+	rn_process_vol_env(chan, nvol);
+
+	// Panning Envelope
+	rn_process_pan_env(chan);
+
+	// FadeOut volume
+	rn_process_ins_fade(chan, nvol);
 }
 
 
 static inline int rn_arpeggio(song_t *csf, song_voice_t *chan, int frequency)
 {
-	int a;
+	int a = 0;
 
-	switch ((csf->current_speed - csf->tick_count) % 3) {
+	const uint32_t real_tick_count = (csf->current_speed + csf->frame_delay) - csf->tick_count;
+	const uint32_t tick = real_tick_count % (csf->current_speed + csf->frame_delay);
+	switch (tick % 3) {
 	case 1:
 		a = chan->mem_arpeggio >> 4;
 		break;
 	case 2:
 		a = chan->mem_arpeggio & 0xf;
 		break;
-	default:
-		a = 0;
 	}
 
 	if (!a)
 		return frequency;
 
-	a = linear_slide_up_table[a * 16];
-	return _muldiv(frequency, a, 65536);
+	return _muldiv(frequency, linear_slide_up_table[a * 16], 65536);
 }
 
 
@@ -356,56 +386,62 @@ static inline void rn_pitch_filter_envelope(song_t *csf, song_voice_t *chan,
 	int *nenvpitch, int *nfrequency)
 {
 	song_instrument_t *penv = chan->ptr_instrument;
-	int envpos = chan->pitch_env_position;
-	unsigned int pt = penv->pitch_env.nodes - 1;
-	int frequency = *nfrequency;
-	int envpitch = *nenvpitch;
 
-	for (unsigned int i = 0; i < (unsigned int)(penv->pitch_env.nodes - 1); i++) {
-		if (envpos <= penv->pitch_env.ticks[i]) {
-			pt = i;
-			break;
+	if ((chan->flags & CHN_PANENV || penv->flags & (ENV_PITCH | ENV_FILTER)) && (penv->pan_env.nodes)) {
+		int envpos = chan->pitch_env_position - 1;
+		unsigned int pt = penv->pitch_env.nodes - 1;
+		int frequency = *nfrequency;
+		int envpitch = *nenvpitch;
+
+		if (chan->pitch_env_position == 0)
+			return;
+
+		for (unsigned int i = 0; i < (unsigned int)(penv->pitch_env.nodes - 1); i++) {
+			if (envpos <= penv->pitch_env.ticks[i]) {
+				pt = i;
+				break;
+			}
 		}
+
+		int x2 = penv->pitch_env.ticks[pt];
+		int x1;
+
+		if (envpos >= x2) {
+			envpitch = (((int)penv->pitch_env.values[pt]) - 32) * 8;
+			x1 = x2;
+		} else if (pt) {
+			envpitch = (((int)penv->pitch_env.values[pt - 1]) - 32) * 8;
+			x1 = penv->pitch_env.ticks[pt - 1];
+		} else {
+			envpitch = 0;
+			x1 = 0;
+		}
+
+		if (envpos > x2)
+			envpos = x2;
+
+		if (x2 > x1 && envpos > x1) {
+			int envpitchdest = (((int)penv->pitch_env.values[pt]) - 32) * 8;
+			envpitch += ((envpos - x1) * (envpitchdest - envpitch)) / (x2 - x1);
+		}
+
+		// clamp to -255/255?
+		envpitch = CLAMP(envpitch, -256, 256);
+
+		// Pitch Envelope
+		if (!(penv->flags & ENV_FILTER)) {
+			int l = abs(envpitch);
+
+			if (l > 255)
+				l = 255;
+
+			int ratio = (envpitch < 0 ? linear_slide_down_table : linear_slide_up_table)[l];
+			frequency = _muldiv(frequency, ratio, 0x10000);
+		}
+
+		*nfrequency = frequency;
+		*nenvpitch = envpitch;
 	}
-
-	int x2 = penv->pitch_env.ticks[pt];
-	int x1;
-
-	if (envpos >= x2) {
-		envpitch = (((int)penv->pitch_env.values[pt]) - 32) * 8;
-		x1 = x2;
-	} else if (pt) {
-		envpitch = (((int)penv->pitch_env.values[pt - 1]) - 32) * 8;
-		x1 = penv->pitch_env.ticks[pt - 1];
-	} else {
-		envpitch = 0;
-		x1 = 0;
-	}
-
-	if (envpos > x2)
-		envpos = x2;
-
-	if (x2 > x1 && envpos > x1) {
-		int envpitchdest = (((int)penv->pitch_env.values[pt]) - 32) * 8;
-		envpitch += ((envpos - x1) * (envpitchdest - envpitch)) / (x2 - x1);
-	}
-
-	// clamp to -255/255?
-	envpitch = CLAMP(envpitch, -256, 256);
-
-	// Pitch Envelope
-	if (!(penv->flags & ENV_FILTER)) {
-		int l = abs(envpitch);
-
-		if (l > 255)
-			l = 255;
-
-		int ratio = (envpitch < 0 ? linear_slide_down_table : linear_slide_up_table)[l];
-		frequency = _muldiv(frequency, ratio, 0x10000);
-	}
-
-	*nfrequency = frequency;
-	*nenvpitch = envpitch;
 }
 
 
@@ -419,9 +455,8 @@ static inline void _process_envelope(song_voice_t *chan, song_instrument_t *penv
 		return;
 	}
 
-	(*position)++;
-
-	if ((penv->flags & sus_flag) && !(chan->flags & CHN_KEYOFF)) {
+	/* OpenMPT test case EnvOffLength.it */
+	if ((penv->flags & sus_flag) && !(chan->old_flags & CHN_KEYOFF)) {
 		start = envelope->ticks[envelope->sustain_start];
 		end = envelope->ticks[envelope->sustain_end] + 1;
 		fade_flag = 0;
@@ -440,6 +475,8 @@ static inline void _process_envelope(song_voice_t *chan, song_instrument_t *penv
 		*position = start;
 		chan->flags |= fade_flag; // only relevant for volume envelope
 	}
+
+	(*position)++;
 }
 
 static inline void rn_increment_env_pos(song_voice_t *chan)
@@ -938,7 +975,7 @@ int csf_process_tick(song_t *csf)
 		/* [-- Yes --] */
 
 		/* [Tick counter = Tick counter set (the current 'speed')] */
-		csf->tick_count = csf->current_speed;
+		csf->tick_count = csf->current_speed + csf->frame_delay;
 
 		/* [Decrease row counter. Is row counter 0?] */
 		if (--csf->row_count <= 0) {
@@ -964,12 +1001,13 @@ int csf_process_tick(song_t *csf)
 
 			/* [Update Pattern Variables]
 			(this is handled along with update effects) */
+			csf->frame_delay = 0;
+			csf->tick_count = csf->current_speed;
 			csf->flags |= SONG_FIRSTTICK;
 		} else {
 			/* [-- No --] */
 			/* Call update-effects for each channel. */
 		}
-
 
 		// Reset channel values
 		song_voice_t *chan = csf->voices;
@@ -1014,6 +1052,10 @@ int csf_process_tick(song_t *csf)
 			}
 		}
 
+		if (!(csf->tick_count % (csf->current_speed + csf->frame_delay))) {
+			csf->flags |= SONG_FIRSTTICK;
+		}
+
 		csf_process_effects(csf, 0);
 	}
 
@@ -1041,7 +1083,6 @@ int csf_read_note(song_t *csf)
 			csf->tick_count = csf->current_speed;
 			if (--csf->row_count <= 0) {
 				csf->row_count = 0;
-				//csf->flags |= SONG_FIRSTTICK;
 			}
 			// clear channel values (similar to csf_process_tick)
 			for (cn = 0, chan = csf->voices; cn < MAX_CHANNELS; cn++, chan++) {
@@ -1126,6 +1167,8 @@ int csf_read_note(song_t *csf)
 
 			// Process Envelopes
 			if ((csf->flags & SONG_INSTRUMENTMODE) && chan->ptr_instrument) {
+				/* OpenMPT test cases s77.it and EnvLoops.it */
+				rn_increment_env_pos(chan);
 				rn_process_envelope(chan, &vol);
 			} else {
 				// No Envelope: key off => note cut
@@ -1165,8 +1208,14 @@ int csf_read_note(song_t *csf)
 				rn_pitch_filter_envelope(csf, chan, &envpitch, &frequency);
 
 			// Vibrato
-			if (chan->flags & CHN_VIBRATO)
+			if (chan->flags & CHN_VIBRATO) {
+				/* OpenMPT test case VibratoDouble.it:
+				   vibrato is applied twice if vibrato is applied in the volume and effect columns */
+				if (chan->row_voleffect == VOLFX_VIBRATODEPTH
+					&& (chan->row_effect == FX_VIBRATO || chan->row_effect == FX_VIBRATOVOL || chan->row_effect == FX_FINEVIBRATO))
+					frequency = rn_vibrato(csf, chan, frequency);
 				frequency = rn_vibrato(csf, chan, frequency);
+			}
 
 			// Sample Auto-Vibrato
 			if (chan->ptr_sample && chan->ptr_sample->vib_depth) {
@@ -1175,6 +1224,10 @@ int csf_read_note(song_t *csf)
 
 			if (!(chan->flags & CHN_NOTEFADE))
 				rn_gen_key(csf, chan, cn, frequency, vol);
+
+			if (chan->flags & CHN_NEWNOTE) {
+				setup_channel_filter(chan, 1, 256, csf->mix_frequency);
+			}
 
 			// Filter Envelope: controls cutoff frequency
 			if (chan && chan->ptr_instrument && chan->ptr_instrument->flags & ENV_FILTER) {
@@ -1197,10 +1250,6 @@ int csf_read_note(song_t *csf)
 
 			chan->increment = (ninc + 1) & ~3;
 		}
-
-		// Increment envelope position
-		if (csf->flags & SONG_INSTRUMENTMODE && chan->ptr_instrument)
-			rn_increment_env_pos(chan);
 
 		chan->final_panning = CLAMP(chan->final_panning, 0, 256);
 
@@ -1232,6 +1281,9 @@ int csf_read_note(song_t *csf)
 			chan->left_volume = chan->right_volume = 0;
 			chan->length = 0;
 		}
+
+		chan->old_flags = chan->flags;
+		chan->flags &= ~CHN_NEWNOTE;
 	}
 
 	// Checking Max Mix Channels reached: ordering by volume

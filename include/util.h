@@ -53,9 +53,6 @@
 # ifndef UNUSED
 #  define UNUSED __attribute__((unused))
 # endif
-# ifndef NORETURN
-#  define NORETURN __attribute__((noreturn))
-# endif
 # ifndef PACKED
 #  define PACKED __attribute__((packed))
 # endif
@@ -68,9 +65,6 @@
 # endif
 # ifndef PACKED
 #  define PACKED
-# endif
-# ifndef NORETURN
-#  define NORETURN
 # endif
 # ifndef LIKELY
 #  define LIKELY(x)

@@ -157,7 +157,7 @@ void video_update(void)
 
 const char * video_driver_name(void)
 {
-	return "SDL2";
+	return SDL_GetCurrentVideoDriver();
 }
 
 void video_report(void)
@@ -190,6 +190,10 @@ void video_shutdown(void)
 void video_setup(const char* quality)
 {
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
+
+	// Needed as of SDL2 so Ctrl-D SDL_SetWindowGrab will grab keyboard too,
+	// not just mouse.
+	SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
 }
 
 static void set_icon(void)
@@ -250,6 +254,10 @@ void video_startup(void)
 
 	video_setup(cfg_video_interpolation);
 
+#ifndef SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR
+/* older SDL2 versions don't define this, don't fail the build for it */
+#define SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR "SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"
+#endif
 	SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
 
 	video.x = SDL_WINDOWPOS_CENTERED;

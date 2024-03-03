@@ -95,7 +95,7 @@ static void cfg_load_palette(cfg_file_t *cfg)
 
 	cfg_get_string(cfg, "General", "palette_cur", palette_text, 48, "");
 	for (n = 0; n < 48; n++) {
-		if (palette_text[n] == '\0' || (ptr = strchr(palette_trans, palette_text[n])) == NULL)
+		if (palette_text[n] == '\0' || (ptr = memchr(palette_trans, palette_text[n], sizeof(palette_trans))) == NULL)
 			return;
 		colors[n] = ptr - palette_trans;
 	}

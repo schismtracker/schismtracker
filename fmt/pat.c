@@ -176,7 +176,7 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
 		memcpy(&gfsamp, data + pos, sizeof(gfsamp));
 		pos += sizeof(gfsamp);
 
-		n = instrument_loader_sample(&ii, i + 1) - 1;
+		n = instrument_loader_sample(&ii, i + 1);
 		smp = song_get_sample(n);
 
 		gfsamp.samplesize = bswapLE32(gfsamp.samplesize);
@@ -232,8 +232,7 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
 		smp->vib_rate = gfsamp.vib_rate;
 		smp->vib_depth = gfsamp.vib_depth;
 
-		pos += csf_read_sample(current_song->samples + n, rs, data + pos, length - pos);
+		pos += csf_read_sample(smp, rs, data + pos, length - pos);
 	}
 	return 1;
 }
-

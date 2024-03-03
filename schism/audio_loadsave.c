@@ -1394,12 +1394,50 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 	csf_free(library);
 
 	const char *base = get_basename(path);
-	library = song_create_load(path);
-	if (!library) {
-		/* FIXME: try loading as an instrument before giving up */
-		log_appendf(4, "%s: %s", base, fmt_strerror(errno));
-		errno = ENOTDIR;
+
+	slurp_t* s = slurp(path, NULL, 0);
+	if (!s) {
+		log_perror(path);
 		return -1;
+	}
+
+	dmoz_file_t info_file = {0};
+	info_file.path = str_dup(path);
+	info_file.filesize = s->length;
+	dmoz_fill_ext_data(&info_file);
+
+	unslurp(s);
+
+	/* free extra data we don't need */
+	if (info_file.smp_filename != info_file.base &&
+	    info_file.smp_filename != info_file.title) {
+		free(info_file.smp_filename);
+	}
+
+	free(info_file.path);
+	free(info_file.base);
+
+	if (info_file.type & TYPE_EXT_DATA_MASK) {
+		if (info_file.artist)
+			free(info_file.artist);
+		free(info_file.title);
+	}
+
+	if (info_file.type & TYPE_MODULE_MASK) {
+		library = song_create_load(path);
+	} else if (info_file.type & TYPE_INST_MASK) {
+		/* temporarily set the current song to the library */
+		song_t* tmp_ptr = current_song;
+		library = current_song = csf_allocate();
+
+		int ret = song_load_instrument(1, path);
+		current_song = tmp_ptr;
+		if (!ret) {
+			log_appendf(4, "song_load_instrument: %s failed with %d", path, ret);
+			return 1;
+		}
+	} else {
+		return 0;
 	}
 
 	for (int n = 1; n < MAX_SAMPLES; n++) {
@@ -1411,7 +1449,8 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 			}
 			dmoz_file_t *file = dmoz_add_file(flist, str_dup(path), str_dup(base), NULL, n);
 			file->type = TYPE_SAMPLE_EXTD;
-			file->description = "Fishcakes"; // FIXME - what does IT say?
+			file->description = "Impulse Tracker Sample"; /* FIXME: this lies for XI and PAT */
+			file->filesize = library->samples[n].length*((library->samples[n].flags & CHN_STEREO) + 1)*((library->samples[n].flags & CHN_16BIT) + 1);
 			file->smp_speed = library->samples[n].c5speed;
 			file->smp_loop_start = library->samples[n].loop_start;
 			file->smp_loop_end = library->samples[n].loop_end;
