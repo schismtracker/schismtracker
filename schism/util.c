@@ -69,36 +69,9 @@ void ms_sleep(unsigned int ms)
 #endif
 }
 
-char *str_dup(const char *s)
-{
-	char *q;
-	q = strdup(s);
-	if (!q) {
-		/* throw out of memory exception */
-		perror("strdup");
-		exit(255);
-	}
-	return q;
-}
-
-char *strn_dup(const char *s, size_t n)
-{
-	char *q;
-	q = malloc(n + 1);
-	if (!q) {
-		/* throw out of memory exception */
-		perror("strndup");
-		exit(255);
-	}
-	memcpy(q, s, n);
-	q[n] = '\0';
-	return q;
-}
-
 void *mem_alloc(size_t amount)
 {
-	void *q;
-	q = malloc(amount);
+	void *q = malloc(amount);
 	if (!q) {
 		/* throw out of memory exception */
 		perror("malloc");
@@ -132,64 +105,77 @@ void *mem_realloc(void *orig, size_t amount)
 	return q;
 }
 
+char *strn_dup(const char *s, size_t n)
+{
+	char *q = mem_alloc((n + 1) * sizeof(char));
+	memcpy(q, s, n * sizeof(char));
+	q[n] = '\0';
+	return q;
+}
+
+char *str_dup(const char *s)
+{
+	return strn_dup(s, strlen(s));
+}
 
 /* --------------------------------------------------------------------- */
 /* CONVERSION FUNCTIONS */
 
-/* linear -> deciBell */
+/* linear -> decibel */
 /* amplitude normalized to 1.0f. */
-float dB(float amplitude)
+double dB(double amplitude)
 {
-	return 20.0f * log10f(amplitude);
+	return 20.0 * log10(amplitude);
 }
 
-/* deciBell -> linear */
-float dB2_amp(float db)
+/* decibel -> linear */
+double dB2_amp(double db)
 {
-	return powf(10.0f, db / 20.0f);
+	return pow(10.0, db / 20.0);
 }
 
-/* linear -> deciBell */
+/* linear -> decibel */
 /* power normalized to 1.0f. */
-float pdB(float power)
+double pdB(double power)
 {
-	return 10.0f * log10f(power);
+	return 10.0 * log10(power);
 }
 
-/* deciBell -> linear */
-float dB2_power(float db)
+/* decibel -> linear */
+double dB2_power(double db)
 {
-	return powf(10.0f, db / 10.0f);
+	return pow(10.0, db / 10.0);
 }
-/* linear -> deciBell */
-/* amplitude normalized to 1.0f. */
-/* Output scaled (and clipped) to 128 lines with noisefloor range. */
-/* ([0..128] = [-noisefloor..0dB]) */
-/* correction_dBs corrects the dB after converted, but before scaling.*/
-short dB_s(int noisefloor, float amplitude, float correction_dBs)
+/* linear -> decibel
+ * amplitude normalized to 1.0f.
+ * Output scaled (and clipped) to 128 lines with noisefloor range.
+ * ([0..128] = [-noisefloor..0dB])
+ * correction_dBs corrects the dB after converted, but before scaling.
+*/
+short dB_s(int noisefloor, double amplitude, double correction_dBs)
 {
-	float db = dB(amplitude) + correction_dBs;
-	return CLAMP((int)(128.f*(db+noisefloor))/noisefloor, 0, 127);
+	double db = dB(amplitude) + correction_dBs;
+	return CLAMP((int)(128.0*(db+noisefloor))/noisefloor, 0, 127);
 }
 
-/* deciBell -> linear */
+/* decibel -> linear */
 /* Input scaled to 128 lines with noisefloor range. */
 /* ([0..128] = [-noisefloor..0dB]) */
 /* amplitude normalized to 1.0f. */
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-short dB2_amp_s(int noisefloor, int db, float correction_dBs)
+short dB2_amp_s(int noisefloor, int db, double correction_dBs)
 {
-	return dB2_amp((db*noisefloor/128.f)-noisefloor-correction_dBs);
+	return dB2_amp((db*noisefloor/128.0)-noisefloor-correction_dBs);
 }
-/* linear -> deciBell */
+/* linear -> decibel */
 /* power normalized to 1.0f. */
 /* Output scaled (and clipped) to 128 lines with noisefloor range. */
 /* ([0..128] = [-noisefloor..0dB]) */
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-short pdB_s(int noisefloor, float power, float correction_dBs)
+short pdB_s(int noisefloor, double power, double correction_dBs)
 {
 	float db = pdB(power)+correction_dBs;
-	return CLAMP((int)(128.f*(db+noisefloor))/noisefloor, 0, 127);
+	return CLAMP((int)(128.0*(db+noisefloor))/noisefloor, 0, 127);
 }
 
 /* deciBell -> linear */
@@ -294,7 +280,8 @@ const char *get_basename(const char *filename)
 		/* skip the slash */
 		base++;
 	}
-	if (!(base && *base)) {
+
+	if (!base || !*base) {
 		/* well, there isn't one, so just return the filename */
 		base = filename;
 	}
@@ -317,24 +304,31 @@ const char *get_extension(const char *filename)
 
 char *get_parent_directory(const char *dirname)
 {
-	char *ret, *pos;
+	const char *pos;
+	char *ret;
 	int n;
 
 	if (!dirname || !dirname[0])
 		return NULL;
 
-	ret = str_dup(dirname);
-	if (!ret)
+	n = strlen(dirname) - 1;
+	if (dirname[n] == DIR_SEPARATOR)
+		n--;
+
+	if (n < 0)
 		return NULL;
-	n = strlen(ret) - 1;
-	if (ret[n] == DIR_SEPARATOR)
-		ret[n] = 0;
-	pos = strrchr(ret, DIR_SEPARATOR);
-	if (!pos) {
-		free(ret);
-		return NULL;
-	}
-	pos[1] = 0;
+
+	pos = dirname + (n * sizeof(char));
+	do {
+		if (*(--pos) == DIR_SEPARATOR)
+			break;
+	} while (--n);
+
+	/* copy the resulting value */
+	ret = mem_alloc((n * sizeof(char)) + sizeof(char));
+	memcpy(ret, dirname, n * sizeof(char));
+	ret[n] = '\0';
+
 	return ret;
 }
 
@@ -352,12 +346,11 @@ inline int ltrim_string(char *s)
 
 inline int rtrim_string(char *s)
 {
-	int len = strlen(s) - 1;
+	int len = strlen(s);
 
-	while (len > 0 && strchr(whitespace, s[len]))
-		len--;
-	len++;
-	s[len] = '\0';
+	while (--len > 0 && strchr(whitespace, s[len]));
+
+	s[++len] = '\0';
 	return len;
 }
 
@@ -619,11 +612,81 @@ int make_backup_file(const char *filename, int numbered)
 	}
 }
 
-long file_size(const char *filename)
-{
+int utf8_to_wchar(wchar_t** wchar, const char* utf8) {
+#ifdef WIN32
+	int needed = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
+	if (!needed)
+		return 0;
+
+	*wchar = mem_calloc(needed + 1, sizeof(wchar_t));
+	needed = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, *wchar, needed);
+
+	return needed;
+#else
+	/* this is unnecessary on other platforms, just assume UTF-8 */
+	return 0;
+#endif
+}
+
+int wchar_to_utf8(char** utf8, const wchar_t* wchar) {
+#ifdef WIN32
+	int needed = WideCharToMultiByte(CP_UTF8, 0, wchar, -1, NULL, 0, NULL, NULL);
+	if (!needed)
+		return 0;
+
+	*utf8 = mem_alloc(needed, sizeof(char));
+	needed = WideCharToMultiByte(CP_UTF8, 0, wchar, -1, *wchar, needed, NULL, NULL);
+
+	return needed;
+#else
+	/* see above comment for other platforms */
+	return 0;
+#endif
+}
+
+#ifdef WIN32
+int win32_wstat(const wchar_t* path, struct stat* st) {
+	struct __stat mstat;
+
+	int ws = _wstat(fullpath, &mstat);
+	if (ws < 0)
+		return ws;
+
+	/* copy all the values */
+	st->st_gid = mstat.st_gid;
+	st->st_atime = mstat.st_atime;
+	st->st_ctime = mstat.st_ctime
+	st->st_dev = mstat.st_dev;
+	st->st_ino = mstat.st_ino;
+	st->st_mode = mstat.st_mode;
+	st->st_mtime = mstat.st_mtime;
+	st->st_nlink = mstat.st_nlink;
+	st->st_rdev = mstat.st_rdev;
+	st->st_size = mstat.st_size;
+	st->st_uid = mstat.st_uid;
+
+	return ws;
+}
+
+int win32_stat(const char* path, struct stat* st) {
+	wchar_t* wc = NULL;
+	if (!utf8_to_wchar(&wc, path))
+		return -1;
+
+	int ret = win32_wstat(wc, st);
+	free(wc);
+	return ret;
+}
+#endif
+
+unsigned long long file_size(const char *filename) {
 	struct stat buf;
 
+#ifdef WIN32
+	if (win32_stat(filename, &buf) < 0) {
+#else
 	if (stat(filename, &buf) < 0) {
+#endif
 		return EOF;
 	}
 	if (S_ISDIR(buf.st_mode)) {
@@ -640,7 +703,11 @@ int is_directory(const char *filename)
 {
 	struct stat buf;
 
+#ifdef WIN32
+	if (win32_stat(filename, &buf) == -1) {
+#else
 	if (stat(filename, &buf) == -1) {
+#endif
 		/* Well, at least we tried. */
 		return 0;
 	}
@@ -650,24 +717,30 @@ int is_directory(const char *filename)
 
 char *get_current_directory(void)
 {
-	char buf[PATH_MAX + 1];
+#ifdef WIN32
+	wchar buf[PATH_MAX + 1] = {L'\0'};
+
+	if (_wgetcwd(buf, PATH_MAX))
+		return wchar_to_utf8(buf);
+#else
+	char buf[PATH_MAX + 1] = {'\0'};
 
 	/* hmm. fall back to the current dir */
 	if (getcwd(buf, PATH_MAX))
 		return str_dup(buf);
+#endif
 	return str_dup(".");
 }
 
 /* this function is horrible */
 char *get_home_directory(void)
 {
-	char buf[PATH_MAX + 1];
-
 #if defined(__amigaos4__)
 	return str_dup("PROGDIR:");
 #elif defined(WIN32)
-	if (SHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, buf) == ERROR_SUCCESS)
-		return strdup(buf);
+	wchar buf[PATH_MAX + 1] = {L'\0'};
+	if (SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == ERROR_SUCCESS)
+		return wchar_to_utf8(buf);
 #else
 	char *ptr = getenv("HOME");
 	if (ptr)
@@ -675,8 +748,11 @@ char *get_home_directory(void)
 #endif
 
 	/* hmm. fall back to the current dir */
-	if (getcwd(buf, PATH_MAX))
-		return str_dup(buf);
+	char* path = get_current_directory();
+	if (!strcmp(path, "."))
+		return path;
+
+	free(path);
 
 	/* still don't have a directory? sheesh. */
 	return str_dup(FALLBACK_DIR);
@@ -685,9 +761,9 @@ char *get_home_directory(void)
 char *get_dot_directory(void)
 {
 #ifdef WIN32
-	char buf[PATH_MAX + 1];
-	if (SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, buf) == ERROR_SUCCESS)
-		return strdup(buf);
+	wchar_t buf[PATH_MAX + 1] = {L'\0'};
+	if (SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) == ERROR_SUCCESS)
+		return wchar_to_utf8(buf);
 	// else fall back to home (but if this ever happens, things are really screwed...)
 #endif
 	return get_home_directory();
@@ -749,23 +825,51 @@ unsigned int i_sqrt(unsigned int r)
 int run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
 #ifdef WIN32
-	char buf[PATH_MAX];
-	const char *ptr;
-	char buf2[PATH_MAX];
-	struct stat sb;
+	wchar_t cwd[PATH_MAX] = {L'\0'};
+	const wchar_t *cmd = NULL;
+	wchar_t batch_file[PATH_MAX] = {L'\0'};
+	struct stat sb = {0};
 	int r;
 
-	if (!GetCurrentDirectory(PATH_MAX-1,buf)) return 0;
-	snprintf(buf2, PATH_MAX-2, "%s.bat", name);
-	if (chdir(dir) == -1) return 0;
-	if (stat(buf2, &sb) == -1) {
+	if (!GetCurrentDirectoryW(PATH_MAX-1, cwd))
+		return 0;
+
+	wchar_t* name_w = NULL;
+	int name_len = utf8_to_wchar(&name_w, name);
+	if (!name_len || name_len + 4 > PATH_MAX)
+		return 0;
+
+	
+	wcsncpy(batch_file, name_w, name_len);
+	wcscpy(&batch_file[name_len], L".bat");
+
+	free(name_w);
+
+	wchar_t* dir_w = NULL;
+	if (!utf8_to_wchar(&dir_w, dir))
+		return 0;
+
+	if (_wchdir(dir_w) == -1) {
+		free(dir_w);
+		return 0;
+	}
+
+	free(dir_w);
+
+	wchar_t* maybe_arg_w = NULL;
+	if (!utf8_to_wchar(&maybe_arg_w, name))
+		return 0;
+
+	if (win32_stat(batch_file, &sb) == -1) {
 		r = 0;
 	} else {
-		ptr = getenv("COMSPEC") ?: "command.com";
-		r = _spawnlp(_P_WAIT, ptr, ptr, "/c", buf2, maybe_arg, 0);
+		cmd = _wgetenv(L"COMSPEC") ?: L"command.com";
+		r = _wspawnlp(_P_WAIT, cmd, cmd, "/c", batch_file, maybe_arg_w, 0);
 	}
-	SetCurrentDirectory(buf);
-	chdir(buf);
+
+	free(maybe_arg_w);
+
+	_wchdir(cwd);
 	if (r == 0) return 1;
 	return 0;
 #elif defined(GEKKO)
@@ -841,9 +945,17 @@ int rename_file(const char *old, const char *new, int overwrite)
 		return _rename_nodestroy(old, new);
 
 #ifdef WIN32
-	UINT em;
-	em = SetErrorMode(0);
-	if (MoveFile(old, new)) {
+	wchar_t* old_w = NULL, new_w = NULL;
+	if (!utf8_to_wchar(old_w) || !utf8_to_wchar(new_w)) {
+		free(old_w);
+		free(new_w);
+		return -1;
+	}
+	UINT em = SetErrorMode(0);
+
+	if (MoveFileW(old_w, new_w)) {
+		free(old_w);
+		free(new_w);
 		win32_filecreated_callback(new);
 		return 0;
 	}
@@ -853,36 +965,46 @@ int rename_file(const char *old, const char *new, int overwrite)
 		break;
 	default:
 		/* eh... */
+		free(new_w);
+		free(old_w);
 		SetErrorMode(em);
 		return -1;
 	};
 
-	if (MoveFileEx(old, new, MOVEFILE_REPLACE_EXISTING)) {
+	if (MoveFileExW(old_w, new_w, MOVEFILE_REPLACE_EXISTING)) {
 		/* yay */
+		free(new_w);
+		free(old_w);
 		SetErrorMode(em);
 		return 0;
 	}
 	/* this sometimes work with win95 and novell shares */
-	chmod(new, 0777);
-	chmod(old, 0777);
+	chmod(new_w, 0777);
+	chmod(old_w, 0777);
 	/* more junk */
-	SetFileAttributesA(new, FILE_ATTRIBUTE_NORMAL);
-	SetFileAttributesA(new, FILE_ATTRIBUTE_TEMPORARY);
+	SetFileAttributesW(new_w, FILE_ATTRIBUTE_NORMAL);
+	SetFileAttributesW(new_w, FILE_ATTRIBUTE_TEMPORARY);
 
-	if (MoveFile(old, new)) {
+	if (MoveFileW(old_w, new_w)) {
 		/* err.. yay! */
+		free(new_w);
+		free(old_w);
 		win32_filecreated_callback(new);
 		SetErrorMode(em);
 		return 0;
 	}
 	/* okay, let's try again */
-	if (!DeleteFileA(new)) {
+	if (!DeleteFileW(new_w)) {
 		/* no chance! */
+		free(new_w);
+		free(old_w);
 		SetErrorMode(em);
 		return -1;
 	}
-	if (MoveFile(old, new)) {
+	if (MoveFileW(old_w, new_w)) {
 		/* .... */
+		free(new_w);
+		free(old_w);
 		win32_filecreated_callback(new);
 		SetErrorMode(em);
 		return 0;
@@ -890,6 +1012,8 @@ int rename_file(const char *old, const char *new, int overwrite)
 	/* alright, thems the breaks. win95 eats your files,
 	and not a damn thing I can do about it.
 	*/
+	free(new_w);
+	free(old_w);
 	SetErrorMode(em);
 	return -1;
 #else

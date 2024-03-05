@@ -319,7 +319,7 @@ int textentry_add_char(struct widget *w, uint16_t unicode)
 }
 
 int textentry_add_text(struct widget *w, const char* text) {
-	if (text == NULL)
+	if (!text)
 		return 0;
 
 	for (; *text; text++)

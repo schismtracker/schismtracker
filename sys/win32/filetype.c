@@ -29,7 +29,12 @@
 
 void win32_filecreated_callback(const char *filename)
 {
+	wchar_t* wc = NULL;
+	int m = utf8_to_wchar(&wc, filename);
+	if (!m)
+		return;
+
 	/* let explorer know when we create a file. */
-	SHChangeNotify(SHCNE_CREATE, SHCNF_PATH|SHCNF_FLUSHNOWAIT, filename, NULL);
-	SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATH|SHCNF_FLUSHNOWAIT, filename, NULL);
+	SHChangeNotify(SHCNE_CREATE, SHCNF_PATH|SHCNF_FLUSHNOWAIT, wc, NULL);
+	SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATH|SHCNF_FLUSHNOWAIT, wc, NULL);
 }
