@@ -110,18 +110,13 @@ static void set_absolute_position(char *text, int pos, int *line, int *ch)
 			(*line) = (*line) - 1;
 			if (*line < 0) *line = 0;
 			len = get_nth_line(text, *line, &ptr);
-			if (len < 0) {
-				*ch = 0;
-			} else {
-				*ch = len;
-			}
+			*ch = (len < 0) ? 0 : len;
 			pos = 0;
-
 		} else if (len >= pos) {
 			*ch = pos;
 			pos = 0;
 		} else {
-			pos -= (len+1); /* EOC */
+			pos -= (len + 1); /* EOC */
 			(*line) = (*line) + 1;
 		}
 	}
@@ -563,11 +558,10 @@ static int message_handle_text_input_editmode(const char* text) {
 		return 0;
 
 	for (; *text; text++) {
-		if (*text == '\n' || *text == '\t' || *text >= 32) {
-			if (clippy_owner(CLIPPY_SELECT) == widgets_message)
-				_delete_selection();
-			message_insert_char(*text);
-		} else return 0;
+		if (clippy_owner(CLIPPY_SELECT) == widgets_message)
+			_delete_selection();
+
+		message_insert_char(*text);
 	}
 	return 1;
 }
@@ -695,16 +689,32 @@ static int message_handle_key_editmode(struct key_event * k)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->sym.sym && clippy_owner(CLIPPY_SELECT) == widgets_message) {
+
+		if (clippy_owner(CLIPPY_SELECT) == widgets_message)
 			_delete_selection();
-		} else {
+		else
 			message_delete_next_char();
-		}
+
 		return 1;
+	case SDLK_RETURN:
+		if (NO_MODIFIER(k->mod)) {
+			if (k->state == KEY_RELEASE)
+				return 1;
+
+			if (clippy_owner(CLIPPY_SELECT) == widgets_message)
+				_delete_selection();
+
+			message_insert_char('\r');
+
+			return 1;
+		}
+		return 0;
 	default:
+		/* keybinds... */
 		if (k->mod & KMOD_CTRL) {
 			if (k->state == KEY_RELEASE)
 				return 1;
+
 			if (k->sym.sym == SDLK_t) {
 				message_extfont = !message_extfont;
 				break;
@@ -716,6 +726,7 @@ static int message_handle_key_editmode(struct key_event * k)
 		} else if (k->mod & KMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
+
 			if (k->sym.sym == SDLK_c) {
 				prompt_message_clear();
 				return 1;
