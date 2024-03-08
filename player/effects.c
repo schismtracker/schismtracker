@@ -1677,10 +1677,12 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 			}
 		}
 	}
+
 	if (chan->flags & CHN_MUTE)
 		return;
+
 	// New Note Action
-	if (chan->volume && chan->length) {
+	if (chan->increment && chan->length) {
 		uint32_t n = csf_get_nna_channel(csf, nchan);
 		if (n) {
 			p = &csf->voices[n];
@@ -2180,20 +2182,19 @@ void csf_process_effects(song_t *csf, int firsttick)
 					chan->fadeout_volume = 65536;
 				}
 			}
+
 			if (instr && note == NOTE_NONE) {
 				if (csf->flags & SONG_INSTRUMENTMODE) {
 					if (chan->ptr_sample)
 						chan->volume = chan->ptr_sample->volume;
-				} else {
-					if (instr < MAX_SAMPLES)
-						chan->volume = csf->samples[instr].volume;
+				} else if (instr < MAX_SAMPLES) {
+					chan->volume = csf->samples[instr].volume;
 				}
 
 				if (csf->flags & SONG_INSTRUMENTMODE) {
 					if (instr < MAX_INSTRUMENTS && (chan->ptr_instrument != csf->instruments[instr] || !chan->current_sample_data))
 						note = chan->note;
-				} else
-				{
+				} else {
 					if (instr < MAX_SAMPLES && (chan->ptr_sample != &csf->samples[instr] || !chan->current_sample_data))
 						note = chan->note;
 				}
@@ -2202,16 +2203,24 @@ void csf_process_effects(song_t *csf, int firsttick)
 			if (instr >= MAX_INSTRUMENTS)
 				instr = 0;
 
-			// Note Cut/Off/Fade => ignore instrument
-			if (NOTE_IS_CONTROL(note) || (note != NOTE_NONE && !porta)) {
+			if (NOTE_IS_CONTROL(note)) {
 				if (instr) {
-					const int smp = instr;
-					if (smp > 0 && smp < MAX_SAMPLES && csf->samples[smp].volume)
+					int smp = instr;
+					if (csf->flags & SONG_INSTRUMENTMODE) {
+						smp = 0;
+						if (csf->instruments[instr])
+							smp = csf->instruments[instr]->sample_map[chan->note];
+					}
+					if (smp > 0 && smp < MAX_SAMPLES)
 						chan->volume = csf->samples[smp].volume;
 				}
+
 				if (!(csf->flags & SONG_ITOLDEFFECTS))
 					instr = 0;
+			}
 
+			// Note Cut/Off/Fade => ignore instrument
+			if (NOTE_IS_CONTROL(note) || (note != NOTE_NONE && !porta)) {
 				/* This is required when the instrument changes (KeyOff is not called) */
 				/* Possibly a better bugfix could be devised. --Bisqwit */
 				if (chan->flags & CHN_ADLIB) {
@@ -2225,8 +2234,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 
 			if (NOTE_IS_NOTE(note)) {
 				chan->new_note = note;
-				if (chan->channel_panning > 0)
-				{
+				if (chan->channel_panning > 0) {
 					chan->panning = (chan->channel_panning & 0x7FFF) - 1;
 					if (chan->channel_panning & 0x8000)
 						chan->flags |= CHN_SURROUND;
@@ -2234,9 +2242,9 @@ void csf_process_effects(song_t *csf, int firsttick)
 				}
 
 				/* New Note Action
-				   OpenMPT test case NoteOffInstr.it
-				   is this correct? */
-				if (!porta || !chan->increment)
+				 * OpenMPT test case NoteOffInstr.it
+				 * is this correct? */
+				if (!porta)
 					csf_check_nna(csf, nchan, instr, note, 0);
 			}
 			// Instrument Change ?
