@@ -104,9 +104,9 @@ jobs:
       LIBOGG_VERSION: 1.3.5
     
     steps:
-      - name: 'Get date of latest commit'
-        id: date
-        run: echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
+      - name: 'Install dependencies'
+        run: |
+          brew install automake zip cmake wget
 
       - name: 'chown SDK directory'
         id: chown
@@ -129,12 +129,12 @@ jobs:
             sudo tar -xJf MacOSX10.9.sdk.tar.xz -C /Library/Developer/CommandLineTools/SDKs/
           fi
 
-      - name: 'Install dependencies'
-        run: |
-          brew install automake zip cmake wget
-
       - name: 'Checkout'
         uses: actions/checkout@v4
+
+      - name: 'Get date of latest commit'
+        id: date
+        run: echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
 
         # Since Homebrew doesn't provide binaries for old versions, we have to compile our own:
       - name: 'Download SDL2 sources'
