@@ -1145,7 +1145,12 @@ int csf_read_note(song_t *csf)
 		// Reset channel data
 		chan->increment = 0;
 		chan->final_volume = 0;
-		chan->final_panning = chan->panning + chan->pan_swing + chan->panbrello_delta;
+		chan->final_panning = chan->panning + chan->pan_swing;
+
+		/* Add panbrello delta */
+		if (chan->panbrello_delta)
+			chan->final_panning += (((chan->panbrello_delta * (int)chan->panbrello_depth) + 2) >> 3);
+
 		chan->ramp_length = 0;
 
 		// Calc Frequency
