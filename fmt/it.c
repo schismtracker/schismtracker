@@ -505,8 +505,8 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	hdr.reserved = bswapLE32(hdr.reserved);
 
 	// Screwy limits?
-	if (hdr.ordnum > MAX_ORDERS || hdr.insnum > MAX_INSTRUMENTS
-	    || hdr.smpnum > MAX_SAMPLES || hdr.patnum > MAX_PATTERNS) {
+	if (hdr.insnum > MAX_INSTRUMENTS || hdr.smpnum > MAX_SAMPLES
+		|| hdr.patnum > MAX_PATTERNS) {
 		return LOAD_FORMAT_ERROR;
 	}
 
@@ -571,7 +571,28 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		channel->volume = MIN(hdr.chan_vol[n], 64);
 	}
 
-	slurp_read(fp, song->orderlist, hdr.ordnum);
+	/* only read what we can and ignore the rest */
+	slurp_read(fp, song->orderlist, MIN(hdr.ordnum, MAX_ORDERS));
+
+	/* show a warning in the message log if there's too many orders */
+	if (hdr.ordnum > MAX_ORDERS) {
+		const int lostord = hdr.ordnum - MAX_ORDERS;
+		int show_warning = 1;
+
+		/* special exception: ordnum == 257 is valid ONLY if the final order is ORDER_LAST */
+		if (lostord == 1) {
+			uint8_t ord;
+			slurp_read(fp, &ord, sizeof(ord));
+
+			show_warning = (ord != ORDER_LAST);
+		} else {
+			slurp_seek(fp, SEEK_CUR, lostord);
+		}
+
+		if (show_warning)
+			log_appendf(4, " Warning: Too many orders in the order list (%d skipped)", lostord);
+	}
+
 	slurp_read(fp, para_ins, 4 * hdr.insnum);
 	slurp_read(fp, para_smp, 4 * hdr.smpnum);
 	slurp_read(fp, para_pat, 4 * hdr.patnum);
