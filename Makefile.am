@@ -3,6 +3,11 @@
 AUTOMAKE_OPTIONS = foreign dist-bzip2 no-dist-gzip
 
 ## NOTE: helptexts should be in the same order as the enum in page.h
+docs = \
+	docs/building_on_linux.md	\
+	docs/building_on_osx.md		\
+	docs/building_on_windows.md	\
+	docs/configuration.md
 helptexts = \
 	helptext/global-keys		\
 	helptext/copyright		\
@@ -53,7 +58,6 @@ icons = \
 	icons/schismres.ico
 sysfiles = \
 	sys/fd.org/autopackage.apspec	\
-	sys/fd.org/itf.desktop		\
 	sys/fd.org/schism.desktop	\
 	sys/macosx/Schism_Tracker.app/Contents/Info.plist			\
 	sys/macosx/Schism_Tracker.app/Contents/PkgInfo				\
@@ -77,6 +81,7 @@ scripts = \
 
 EXTRA_DIST = \
 	include/auto/README		\
+	$(docs)	\
 	$(helptexts)			\
 	$(fonts)			\
 	$(icons)			\
@@ -89,6 +94,7 @@ noinst_HEADERS = \
 	include/auto/logoit.h		\
 	include/auto/logoschism.h	\
 	include/auto/schismico.h	\
+	include/auto/schismico_hires.h	\
 	include/charset.h		\
 	include/clippy.h		\
 	include/cmixer.h		\

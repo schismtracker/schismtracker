@@ -21,93 +21,92 @@ jobs:
     env:
       MINGW_ARCH: ${{ matrix.sys }}
     steps:
+      - name: 'git config'
+        run: git config --global core.autocrlf input
+        shell: bash
 
-    - name: 'git config'
-      run: git config --global core.autocrlf input
-      shell: bash
+      - name: 'Checkout'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: 'Checkout'
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: 'Setup MSYS2'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.sys }}
+          update: true
+          install: git mingw-w64-${{ matrix.env }}-toolchain mingw-w64-${{ matrix.env }}-flac libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL2 zip dos2unix wget
+    
+      - name: 'Get date of latest commit'
+        id: date
+        run: echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
 
-    - name: 'Setup MSYS2'
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: ${{ matrix.sys }}
-        update: true
-        install: git mingw-w64-${{ matrix.env }}-toolchain mingw-w64-${{ matrix.env }}-flac libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL2 zip dos2unix wget
-  
-    - name: 'Get current date'
-      id: date
-      run: echo "date=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
+      - name: 'Build package'
+        run: |
+          autoreconf -i
+          mkdir build
+          cd build
+          ../configure
+          make
+          strip -g schismtracker.exe
+          cp schismtracker.exe ..
+          cd ..
+          if [ ${{ matrix.win }} == "win32" ]
+          then
+            cp /mingw32/bin/libgcc_s_dw2-1.dll .
+            cp /mingw32/bin/libwinpthread-1.dll .
+          fi
+          cp /${{ matrix.sys }}/bin/SDL2.dll .
+          cp /${{ matrix.sys }}/bin/libFLAC.dll .
+          cp /${{ matrix.sys }}/bin/libogg-0.dll .
+          cp docs/configuration.md .
+          wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
+          unix2dos COPYING.Xiph COPYING README.md configuration.md
 
-    - name: 'Build package'
-      run: |
-        autoreconf -i
-        mkdir build
-        cd build
-        ../configure
-        make
-        strip -g schismtracker.exe
-        cp schismtracker.exe ..
-        cd ..
-        if [ ${{ matrix.win }} == "win32" ]
-        then
-          cp /mingw32/bin/libgcc_s_dw2-1.dll .
-          cp /mingw32/bin/libwinpthread-1.dll .
-        fi
-        cp /${{ matrix.sys }}/bin/SDL2.dll .
-        cp /${{ matrix.sys }}/bin/libFLAC.dll .
-        cp /${{ matrix.sys }}/bin/libogg-0.dll .
-        cp docs/configuration.md .
-        wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
-        unix2dos COPYING.Xiph COPYING README.md configuration.md
+      - name: 'Upload artifact (win32)'
+        if: matrix.win == 'win32'
+        uses: actions/upload-artifact@v4
+        with:
+          name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
+          path: |
+            schismtracker.exe
+            SDL2.dll
+            libFLAC.dll
+            libogg-0.dll
+            libgcc_s_dw2-1.dll
+            libwinpthread-1.dll
+            COPYING
+            COPYING.Xiph
+            README.md
+            configuration.md
 
-    - name: 'Upload artifact (win32)'
-      if: matrix.win == 'win32'
-      uses: actions/upload-artifact@v4
-      with:
-        name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
-        path: |
-          schismtracker.exe
-          SDL2.dll
-          libFLAC.dll
-          libogg-0.dll
-          libgcc_s_dw2-1.dll
-          libwinpthread-1.dll
-          COPYING
-          COPYING.Xiph
-          README.md
-          configuration.md
-
-    - name: 'Upload artifact (win64)'
-      if: matrix.win == 'win64'
-      uses: actions/upload-artifact@v4
-      with:
-        name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
-        path: |
-          schismtracker.exe
-          SDL2.dll
-          libFLAC.dll
-          libogg-0.dll
-          COPYING
-          COPYING.Xiph
-          README.md
-          configuration.md
+      - name: 'Upload artifact (win64)'
+        if: matrix.win == 'win64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
+          path: |
+            schismtracker.exe
+            SDL2.dll
+            libFLAC.dll
+            libogg-0.dll
+            COPYING
+            COPYING.Xiph
+            README.md
+            configuration.md
 
   build-macos:
     runs-on: macos-11
     env:
       MACOSX_DEPLOYMENT_TARGET: 10.9
-      SDL_VERSION: 2.28.5
+      SDL_VERSION: 2.30.1
       FLAC_VERSION: 1.4.3
       LIBOGG_VERSION: 1.3.5
     
     steps:
-      - name: 'Get current date'
-        id: date
-        run: echo "date=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
+      - name: 'Install dependencies'
+        run: |
+          brew install automake zip cmake wget
 
       - name: 'chown SDK directory'
         id: chown
@@ -130,12 +129,12 @@ jobs:
             sudo tar -xJf MacOSX10.9.sdk.tar.xz -C /Library/Developer/CommandLineTools/SDKs/
           fi
 
-      - name: 'Install dependencies'
-        run: |
-          brew install automake zip cmake wget
-
       - name: 'Checkout'
         uses: actions/checkout@v4
+
+      - name: 'Get date of latest commit'
+        id: date
+        run: echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
 
         # Since Homebrew doesn't provide binaries for old versions, we have to compile our own:
       - name: 'Download SDL2 sources'
@@ -223,23 +222,12 @@ jobs:
       - name: 'Checkout'
         uses: actions/checkout@v4
 
-      - name: 'Get current date'
+      - name: 'Get date of latest commit'
         id: date
-        run: echo "date=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
+        run: echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
 
       - name: 'autoreconf -i'
         run: autoreconf -i
-        
-      - name: 'Create source tarball'
-        run: |
-          touch schismtracker-${{ steps.date.outputs.date }}.source.tar.gz
-          tar --exclude=schismtracker-${{ steps.date.outputs.date }}.source.tar.gz --exclude-vcs -zcvf schismtracker-${{ steps.date.outputs.date }}.source.tar.gz *
-
-      - name: 'Upload source tarball'
-        uses: actions/upload-artifact@v4
-        with:
-          name: schismtracker-${{ steps.date.outputs.date }}.source
-          path: schismtracker-${{ steps.date.outputs.date }}.source.tar.gz
 
       - name: 'Build package'
         run: |
@@ -261,3 +249,15 @@ jobs:
         with:
           name: schismtracker-${{ steps.date.outputs.date }}-linux
           path: schismtracker.zip
+
+      - name: 'Create source tarball'
+        run: |
+          cd build
+          make dist-gzip
+          mv *.tar.gz ..
+
+      - name: 'Upload source tarball'
+        uses: actions/upload-artifact@v4
+        with:
+          name: schismtracker-${{ steps.date.outputs.date }}.source
+          path: schismtracker-${{ steps.date.outputs.date }}.tar.gz
