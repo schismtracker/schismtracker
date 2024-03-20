@@ -52,6 +52,8 @@ int cfg_video_width, cfg_video_height;
 # define DOT_SCHISM "Library/Application Support/Schism Tracker"
 #elif defined(GEKKO)
 # define DOT_SCHISM "."
+#elif defined(__HAIKU__)
+# define DOT_SCHISM "config/settings/schism"
 #else
 # define DOT_SCHISM ".schism"
 #endif
