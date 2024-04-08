@@ -230,8 +230,8 @@ endif
 if USE_FLAC
 files_flac = \
 	fmt/flac.c
-cflags_flac=-DUSE_FLAC
-libs_flac=-lFLAC
+cflags_flac=-DUSE_FLAC $(FLAC_CFLAGS)
+libs_flac=-lFLAC $(FLAC_LIBS)
 endif
 
 if USE_NETWORK

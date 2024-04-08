@@ -261,3 +261,90 @@ jobs:
         with:
           name: schismtracker-${{ steps.date.outputs.date }}.source
           path: schismtracker-${{ steps.date.outputs.date }}.tar.gz
+
+  build-wii:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitppc:latest
+    env:
+      FLAC_VERSION: 1.4.3
+      LIBOGG_VERSION: 1.3.5
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v4
+        with:
+          path: schismtracker
+
+      - name: 'Install build dependencies'
+        run: |
+          apt-get update
+          apt-get install -y ninja-build autoconf automake libtool
+
+      - name: 'Build libogg'
+        run: |
+          wget http://downloads.xiph.org/releases/ogg/libogg-${LIBOGG_VERSION}.tar.xz
+          tar axvf "libogg-${LIBOGG_VERSION}.tar.xz"
+          cd "libogg-${LIBOGG_VERSION}"
+          mkdir build
+          cd build
+          export PATH="${DEVKITPRO}/portlibs/wii/bin:${DEVKITPPC}/bin:$PATH"
+          ../configure --prefix="${DEVKITPRO}/portlibs/wii" --host=powerpc-eabi
+          make
+          make install
+          cd ../..
+
+      - name: 'Build libflac'
+        run: |
+          wget http://downloads.xiph.org/releases/flac/flac-${FLAC_VERSION}.tar.xz
+          tar axvf "flac-${FLAC_VERSION}.tar.xz"
+          cd "flac-${FLAC_VERSION}"
+          mkdir build
+          cd build
+          export PATH="${DEVKITPRO}/portlibs/wii/bin:${DEVKITPPC}/bin:$PATH"
+          # we don't need programs or examples
+          ../configure --prefix="${DEVKITPRO}/portlibs/wii" --host=powerpc-eabi --disable-programs --disable-examples
+          make
+          make install
+          cd ../..
+
+      # This uses my own fork of SDL until my keyboard patches get merged
+      - name: 'Checkout SDL2'
+        uses: actions/checkout@v4
+        with:
+          repository: 'mrpapersonic/SDL'
+          ref: 'ogc-sdl-2.28'
+          path: SDL
+
+      - name: 'Build SDL2'
+        run: |
+          cd SDL
+          export PATH="${DEVKITPRO}/portlibs/wii/bin:${DEVKITPPC}/bin:$PATH"
+          powerpc-eabi-cmake -S . -B build -G Ninja
+          cmake --build build --verbose
+          cmake --install build
+          cd ..
+
+      - name: 'Get date of latest commit'
+        id: date
+        run: |
+          cd schismtracker
+          echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
+          cd ..
+
+      - name: 'Build Schism'
+        run: |
+          cd schismtracker
+          autoreconf -i
+          mkdir build
+          cd build
+          export PATH="${DEVKITPRO}/portlibs/wii/bin:${DEVKITPPC}/bin:$PATH"
+          # if we don't build with FLAC support it's an error
+          ../configure --host=powerpc-eabi --with-flac
+          make
+          powerpc-eabi-strip -S schismtracker.elf
+
+      - name: 'Upload binary'
+        uses: actions/upload-artifact@v4
+        with:
+          name: schismtracker-${{ steps.date.outputs.date }}-wii
+          path: schismtracker/build/schismtracker.elf

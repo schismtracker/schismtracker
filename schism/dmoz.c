@@ -721,10 +721,10 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 #elif defined(GEKKO)
 	int i;
 	for (i = 0; devices[i]; i++) {
-		DIR_ITER *dir = diropen(devices[i]);
+		DIR *dir = opendir(devices[i]);
 		if (!dir)
 			continue;
-		dirclose(dir);
+		closedir(dir);
 		dmoz_add_file_or_dir(flist, dlist, str_dup(devices[i]), str_dup(devices[i]), NULL, -(1024 - i));
 	}
 #else /* assume POSIX */

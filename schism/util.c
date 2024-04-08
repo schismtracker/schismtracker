@@ -748,7 +748,7 @@ unsigned int i_sqrt(unsigned int r)
 
 int run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
-#ifdef WIN32
+#if defined(WIN32)
 	char buf[PATH_MAX];
 	const char *ptr;
 	char buf2[PATH_MAX];

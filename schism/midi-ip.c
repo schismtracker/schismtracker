@@ -39,6 +39,7 @@
 #include <netinet/in.h>
 #include <sys/select.h>
 #include <fcntl.h>
+#include <arpa/inet.h>
 #endif
 
 #include <errno.h>

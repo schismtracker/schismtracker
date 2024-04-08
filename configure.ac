@@ -87,8 +87,8 @@ dnl Headers, typedef crap, et al.
 AC_HEADER_DIRENT
 AC_CHECK_HEADERS_ONCE([sys/time.h])
 
-AC_CHECK_HEADERS(inttypes.h fcntl.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/kd.h linux/fb.h byteswap.h sys/soundcard.h poll.h sys/poll.h)
-AM_CONDITIONAL([USE_OSS], [test "$ac_cv_header_sys_soundcard_h" = yes])
+AC_CHECK_HEADERS(inttypes.h fcntl.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/kd.h linux/fb.h byteswap.h sys/socket.h sys/soundcard.h poll.h sys/poll.h)
+AM_CONDITIONAL([USE_OSS], [test "x$ac_cv_header_sys_soundcard_h" = "xyes"])
 
 AC_C_CONST
 AC_C_INLINE
@@ -128,7 +128,7 @@ esac
 
 
 dnl winmm testing...
-AC_CHECK_HEADERS(winsock.h winsock2.h windows.h)
+AC_CHECK_HEADERS(windows.h)
 if test "X$ac_cv_header_windows_h" = "Xyes"; then
         AM_CONDITIONAL([USE_WIN32], true)
         SDL_LIBS="$SDL_LIBS -lwinmm"
@@ -144,10 +144,10 @@ AC_CHECK_LIB(ogc, IOS_ReloadIOS, libogc_found=yes, libogc_found=no, [-mrvl -L${D
 if test x"$libogc_found" = "xyes"; then
         AM_CONDITIONAL([USE_WII], true)
         wii_machdep="-DGEKKO -mrvl -mcpu=750 -meabi -mhard-float"
-        CFLAGS="$CFLAGS $wii_machdep -I${DEVKITPRO}/libogc/include"
-        LIBS="$LIBS $wii_machdep -L${DEVKITPRO}/libogc/lib/wii"
-        SDL_CFLAGS="$SDL_CFLAGS -I${DEVKITPRO}/libogc/include/SDL"
-        SDL_LIBS="$SDL_LIBS -lSDL -lfat -lwiiuse -lbte -logc -lm -lwiikeyboard"
+        CFLAGS="$CFLAGS $wii_machdep -I${DEVKITPRO}/libogc/include -I${DEVKITPPC}/powerpc-eabi/include"
+        LIBS="$LIBS $wii_machdep -L${DEVKITPRO}/libogc/lib/wii -L{DEVKITPPC}/powerpc-eabi/lib"
+        SDL_CFLAGS="$SDL_CFLAGS"
+        SDL_LIBS="$SDL_LIBS"
         AC_SUBST(CFLAGS)
         AC_SUBST(LIBS)
         AC_SUBST(SDL_CFLAGS)
@@ -204,15 +204,15 @@ else
         dnl autoconf reported it as nonexistent -- weird!)
         AC_CHECK_HEADERS(X11/Xlib.h X11/XKBlib.h)
         AC_CHECK_LIB(Xv, XvQueryExtension,,,-lX11 -lXext)
-        if test "$ac_cv_lib_Xv_XvQueryExtension" = "yes"; then
+        if test "x$ac_cv_lib_Xv_XvQueryExtension" = "xyes"; then
                 AC_CHECK_HEADERS(X11/extensions/Xvlib.h,,,[[
 #include <X11/Xlib.h>
                 ]])
-                if test "$ac_cv_header_X11_extensions_xvlib_h" = "yes"; then
+                if test "x$ac_cv_header_X11_extensions_xvlib_h" = "xyes"; then
                         SDL_LIBS="$SDL_LIBS -lXv -lXext"
                         AC_SUBST(SDL_LIBS)
                         AM_CONDITIONAL([USE_XV], [true])
-                elif test "$ac_cv_header_X11_extensions_Xvlib_h" = "yes"; then
+                elif test "x$ac_cv_header_X11_extensions_Xvlib_h" = "xyes"; then
                         SDL_LIBS="$SDL_LIBS -lXv -lXext"
                         AC_SUBST(SDL_LIBS)
                         AM_CONDITIONAL([USE_XV], [true])
@@ -229,31 +229,35 @@ saved_LIBS="$LIBS"
 AC_SEARCH_LIBS(socket, socket network)
 LIBS="$saved_LIBS"
 if test "x$ac_cv_search_socket" = "xno"; then
-        dnl Windows sucks (I don't even know what this is about, but it apparently works)
-        AC_CHECK_HEADERS(winsock.h winsock2.h)
+        dnl windows!
+        AC_CHECK_HEADERS([winsock.h winsock2.h])
         if test "x$ac_cv_header_winsock_h" = "xyes"; then
-                socketlib="-lwsock32"
-        elif test "x$ac_cv_header_winsock2_h" = "xyes"; then
-                socketlib="-lws2_32"
-        fi
-        if test "x$socketlib" = "x"; then
-                echo "*** No sockets for you!"
-                AM_CONDITIONAL([USE_NETWORK], false)
-        else
                 AM_CONDITIONAL([USE_NETWORK], true)
-                SDL_LIBS="$SDL_LIBS $socketlib"
-                AC_SUBST(SDL_LIBS)
+                SDL_LIBS="$SDL_LIBS -lws2_32"
+                AC_SUBST([SDL_LIBS])
+        elif test "x$ac_cv_header_winsock2_h" = "xyes"; then
+                AM_CONDITIONAL([USE_NETWORK], true)
+                SDL_LIBS="$SDL_LIBS -lsock32"
+                AC_SUBST([SDL_LIBS])
+        else
+                AM_CONDITIONAL([USE_NETWORK], false)
+                AC_MSG_RESULT([*** No valid socket library found\!])
         fi
 elif test "x$ac_cv_search_socket" = "xnone required"; then
-        dnl free networking
-        AM_CONDITIONAL([USE_NETWORK], true)
+        dnl sys/socket.h isn't present in devkitPPC but
+        dnl the symbols are defined. ugh.
+
+        if test "x$ac_cv_header_sys_socket_h" = "xyes"; then
+                dnl free networking
+                AM_CONDITIONAL([USE_NETWORK], true)
+        else
+                AM_CONDITIONAL([USE_NETWORK], false)
+        fi
 else
         SDL_LIBS="$SDL_LIBS $ac_cv_search_socket"
         AC_SUBST(SDL_LIBS)
         AM_CONDITIONAL([USE_NETWORK], true)
 fi
-
-#AC_CHECK_LIB(kernel32, GetConsoleMode, SDL_LIBS="$SDL_LIBS -Wl,--subsystem,console")
 
 dnl wee...
 dnl this completely sucks...
@@ -297,9 +301,9 @@ AC_ARG_ENABLE(fortify-source,
         ADD_FORTIFY=no)
 
 AC_ARG_WITH([flac],
-		[AS_HELP_STRING([--without-flac],[Build without FLAC support @<:@default=no@:>@])],
-		[],
-		[with_flac=yes])
+	[AS_HELP_STRING([--with-flac],[Build with FLAC support @<:@default=check@:>@])],
+	[],
+	[with_flac=check])
 
 dnl fortify needs -O; do this early so ADD_OPT can override with higher -O level
 if test x$ADD_FORTIFY \!= xno; then
@@ -322,11 +326,16 @@ if test x$ADD_LUDICROUS \!= xno; then
 fi
 
 AM_CONDITIONAL([USE_FLAC], false)
-if test "x$with_flac" = "xyes"; then
-		AC_CHECK_HEADER(FLAC/stream_decoder.h, libflac_found=yes, libflac_found=no)
-		if test x"$libflac_found" = "xyes"; then
-				AM_CONDITIONAL([USE_FLAC], true)
-		fi
+if test "x$with_flac" = "xcheck" || test "x$with_flac" = "xyes"; then
+        dnl use pkg-config, it'll deal with everything for us
+        PKG_CHECK_MODULES([FLAC], [flac], [libflac_found=yes], [libflac_found=no])
+	if test "x$libflac_found" = "xyes"; then
+                AC_SUBST([FLAC_CFLAGS])
+                AC_SUBST([FLAC_LIBS])
+		AM_CONDITIONAL([USE_FLAC], true)
+        elif test "x$with_flac" = "xyes"; then
+                AC_MSG_ERROR([*** Failed to find libFLAC])
+	fi
 fi
 
 dnl ... but put the warnings first, to make it possible to quiet certain
