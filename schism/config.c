@@ -41,6 +41,8 @@ char cfg_dir_modules[PATH_MAX + 1], cfg_dir_samples[PATH_MAX + 1], cfg_dir_instr
 char cfg_video_interpolation[8];
 int cfg_video_fullscreen = 0;
 int cfg_video_want_fixed = 0;
+int cfg_video_want_fixed_width = 0;
+int cfg_video_want_fixed_height = 0;
 int cfg_video_mousecursor = MOUSE_EMULATED;
 int cfg_video_width, cfg_video_height;
 
@@ -138,6 +140,8 @@ void cfg_load(void)
 	cfg_video_height = cfg_get_number(&cfg, "Video", "height", 400);
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);
 	cfg_video_want_fixed = cfg_get_number(&cfg, "Video", "want_fixed", 0);
+	cfg_video_want_fixed_width = cfg_get_number(&cfg, "Video", "want_fixed_width", 640 * 5);
+	cfg_video_want_fixed_height = cfg_get_number(&cfg, "Video", "want_fixed_height", 400 * 6);
 	cfg_video_mousecursor = cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
 	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_MAX_STATE);
 	ptr = cfg_get_string(&cfg, "Video", "aspect", NULL, 0, NULL);

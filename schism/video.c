@@ -20,8 +20,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#define NATIVE_SCREEN_WIDTH             640
-#define NATIVE_SCREEN_HEIGHT            400
+#define NATIVE_SCREEN_WIDTH		640
+#define NATIVE_SCREEN_HEIGHT	400
 #define WINDOW_TITLE			"Schism Tracker"
 
 /* should be the native res of the display (set once and never again)
@@ -105,17 +105,10 @@ struct video_cf {
 	SDL_Window *window;
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
-	SDL_DisplayMode display;
 	unsigned char *framebuf;
+
 	unsigned int width;
 	unsigned int height;
-	int x;
-	int y;
-
-	struct {
-		unsigned int width;
-		unsigned int height;
-	} prev;
 
 	struct {
 		unsigned int x;
@@ -123,11 +116,7 @@ struct video_cf {
 		int visible;
 	} mouse;
 
-	struct {
-		unsigned int width;
-		unsigned int height;
-		int fullscreen;
-	} fullscreen;
+	int fullscreen;
 
 	unsigned int pal[256];
 
@@ -137,7 +126,7 @@ static struct video_cf video;
 
 int video_is_fullscreen(void)
 {
-	return video.fullscreen.fullscreen;
+	return video.fullscreen;
 }
 
 int video_width(void)
@@ -152,7 +141,7 @@ int video_height(void)
 
 void video_update(void)
 {
-	SDL_GetWindowPosition(video.window, &video.x, &video.y);
+	SDL_GetWindowSize(video.window, &video.width, &video.height);
 }
 
 const char * video_driver_name(void)
@@ -162,15 +151,17 @@ const char * video_driver_name(void)
 
 void video_report(void)
 {
+	SDL_DisplayMode display = {0};
+
 	Uint32 format;
 	SDL_QueryTexture(video.texture, &format, NULL, NULL, NULL);
 
 	log_appendf(5, " Using driver '%s'", SDL_GetCurrentVideoDriver());
 
 	log_appendf(5, " Display format: %d bits/pixel", SDL_BITSPERPIXEL(format));
-	if (video.fullscreen.fullscreen) {
-		log_appendf(5, " Display dimensions: %dx%d", video.display.w, video.display.h);
-	}
+
+	if (!SDL_GetCurrentDisplayMode(0, &display) && video.fullscreen)
+		log_appendf(5, " Display dimensions: %dx%d", display.w, display.h);
 }
 
 void video_redraw_texture(void)
@@ -181,7 +172,6 @@ void video_redraw_texture(void)
 
 void video_shutdown(void)
 {
-	SDL_GetWindowPosition(video.window, &video.x, &video.y);
 	SDL_DestroyRenderer(video.renderer);
 	SDL_DestroyWindow(video.window);
 	SDL_DestroyTexture(video.texture);
@@ -190,14 +180,11 @@ void video_shutdown(void)
 void video_setup(const char* quality)
 {
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
-
-	// Needed as of SDL2 so Ctrl-D SDL_SetWindowGrab will grab keyboard too,
-	// not just mouse.
-	SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
 }
 
 static void set_icon(void)
 {
+	/* FIXME: is this really necessary? */
 	SDL_SetWindowTitle(video.window, WINDOW_TITLE);
 #ifndef MACOSX
 /* apple/macs use a bundle; this overrides their nice pretty icon */
@@ -214,37 +201,17 @@ static void set_icon(void)
 
 void video_fullscreen(int new_fs_flag)
 {
-	/**
-	 * new_fs_flag has three values:
-	 * >0 being fullscreen,
-	 *  0 being windowed, and
-	 * <0 meaning to switch.
-	**/
-	if (new_fs_flag > 0) {
-		video.fullscreen.fullscreen = 1;
-	} else if (new_fs_flag < 0){
-		if (video.fullscreen.fullscreen > 0) {
-			video.fullscreen.fullscreen = 0;
-		} else {
-			video.fullscreen.fullscreen = 1;
-		}
-	} else {
-		video.fullscreen.fullscreen = 0;
-	}
-	if (video.fullscreen.fullscreen) {
-		SDL_SetWindowSize(video.window, video.display.w, video.display.h);
-		video_resize(video.display.w, video.display.h);
+	/* positive new_fs_flag == set, negative == toggle */
+	video.fullscreen = (new_fs_flag >= 0) ? !!new_fs_flag : !video.fullscreen;
+
+	if (video.fullscreen) {
 		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		SDL_SetWindowResizable(video.window, SDL_FALSE);
 	} else {
 		SDL_SetWindowFullscreen(video.window, 0);
-		video_resize(video.fullscreen.width, video.fullscreen.height);
-		SDL_SetWindowSize(video.window, video.fullscreen.width, video.fullscreen.height);
 		SDL_SetWindowResizable(video.window, SDL_TRUE);
 		set_icon();
 	}
-	video.fullscreen.width = video.prev.width;
-	video.fullscreen.height = video.prev.height;
 }
 
 void video_startup(void)
@@ -260,18 +227,18 @@ void video_startup(void)
 #endif
 	SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
 
-	video.x = SDL_WINDOWPOS_CENTERED;
-	video.y = SDL_WINDOWPOS_CENTERED;
-	video.fullscreen.width = video.prev.width = video.width = cfg_video_width;
-	video.fullscreen.height = video.prev.height = video.height = cfg_video_height;
+	video.width = cfg_video_width;
+	video.height = cfg_video_height;
 
-	SDL_CreateWindowAndRenderer(video.width, video.height, SDL_WINDOW_RESIZABLE, &video.window, &video.renderer);
-	video_resize(video.width, video.height);
+	video.window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width, video.height, SDL_WINDOW_RESIZABLE);
+	video.renderer = SDL_CreateRenderer(video.window, -1, 0);
 	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
 	video.framebuf = calloc(NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT, sizeof(Uint32));
 
-	SDL_SetWindowPosition(video.window, video.x, video.y);
-	SDL_GetCurrentDisplayMode(0, &video.display);
+	/* Aspect ratio correction if it's wanted */
+	if (cfg_video_want_fixed)
+		SDL_RenderSetLogicalSize(video.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height);
+
 	video_fullscreen(cfg_video_fullscreen);
 
 	/* okay, i think we're ready */
@@ -281,15 +248,6 @@ void video_startup(void)
 
 void video_resize(unsigned int width, unsigned int height)
 {
-	/* Aspect ratio correction if it's wanted */
-	if (cfg_video_want_fixed)
-		SDL_RenderSetLogicalSize(video.renderer,
-					 NATIVE_SCREEN_WIDTH * 5, NATIVE_SCREEN_HEIGHT * 6); // 4:3
-	else 
-		SDL_RenderSetLogicalSize(video.renderer, width, height);
-
-	video.prev.width = video.width;
-	video.prev.height = video.height;
 	video.width = width;
 	video.height = height;
 	status.flags |= (NEED_UPDATE);
@@ -380,6 +338,13 @@ static void _blit11(unsigned char *pixels, unsigned int pitch, unsigned int *tpa
 
 void video_blit(void)
 {
+	SDL_Rect dstrect = {
+		.x = 0,
+		.y = 0,
+		.w = cfg_video_want_fixed_width,
+		.h = cfg_video_want_fixed_height
+	};
+
 	unsigned char *pixels = video.framebuf;
 	unsigned int pitch = NATIVE_SCREEN_WIDTH * sizeof(Uint32);
 
@@ -387,7 +352,7 @@ void video_blit(void)
 
 	SDL_RenderClear(video.renderer);
 	SDL_UpdateTexture(video.texture, NULL, pixels, pitch);
-	SDL_RenderCopy(video.renderer, video.texture, NULL, NULL);
+	SDL_RenderCopy(video.renderer, video.texture, NULL, (cfg_video_want_fixed) ? &dstrect : NULL);
 	SDL_RenderPresent(video.renderer);
 }
 
@@ -444,11 +409,11 @@ void video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned
 
 	vx *= NATIVE_SCREEN_WIDTH;
 	vy *= NATIVE_SCREEN_HEIGHT;
-	vx /= (video.width - (video.width - video.prev.width));
-	vy /= (video.height - (video.height - video.prev.height));
+	vx /= (cfg_video_want_fixed) ? cfg_video_want_fixed_width  : video.width;
+	vy /= (cfg_video_want_fixed) ? cfg_video_want_fixed_height : video.height;
 
-	*x = (vx < 640) ? (video.mouse.x = vx) : video.mouse.x;
-	*y = (vy < 640) ? (video.mouse.y = vy) : video.mouse.y;
+	*x = (vx < NATIVE_SCREEN_WIDTH)  ? (video.mouse.x = vx) : video.mouse.x;
+	*y = (vy < NATIVE_SCREEN_HEIGHT) ? (video.mouse.y = vy) : video.mouse.y;
 }
 
 SDL_Window * video_window(void)

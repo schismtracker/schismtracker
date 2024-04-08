@@ -59,8 +59,6 @@ struct widget *widgets = NULL;
 int *selected_widget = NULL;
 int *total_widgets = NULL;
 
-static int currently_grabbed = SDL_FALSE;
-
 static int fontedit_return_page = PAGE_PATTERN_EDITOR;
 
 /* --------------------------------------------------------------------- */
@@ -508,10 +506,9 @@ static int handle_key_global(struct key_event * k)
 		if (k->mod & KMOD_CTRL) {
 			if (k->state == KEY_RELEASE)
 				return 1; /* argh */
-			i = SDL_GetWindowGrab(video_window());
-			currently_grabbed = i = (i != SDL_TRUE ? SDL_TRUE : SDL_FALSE);
-			SDL_SetWindowGrab(video_window(), i);
-			status_text_flash(i
+			const SDL_bool grabbed = !SDL_GetWindowGrab(video_window());
+			SDL_SetWindowGrab(video_window(), grabbed);
+			status_text_flash(grabbed
 				? "Mouse and keyboard grabbed, press Ctrl+D to release"
 				: "Mouse and keyboard released");
 			return 1;

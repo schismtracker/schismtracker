@@ -38,6 +38,8 @@ To enable any of these, find the `[section]` in the config file, look for the
     width=640
     height=400
     want_fixed=0
+    want_fixed_width=3200
+    want_fixed_height=2400
 
 `lazy_redraw` slows down the framerate when the program isn't focused. This
 used to be kind of useful when the GUI rendering sucked, and maybe it still is
@@ -47,8 +49,7 @@ you also want to have a huge window that isn't active.
 `width` and `height` are the initial dimensions to use for the window, and the
 dimensions to return to when toggling fullscreen off.
 
-If `want_fixed` is set to 1, Schism will be displayed with a 4:3 aspect ratio
-regardless of the actual window size.
+If `want_fixed` is set to 1, Schism will be displayed with a constant width and height regardless of the window size. Those values are retrieved from `want_fixed_width` and `want_fixed_height` which correspond to a 4:3 aspect ratio by default.
 
 #### Backups
 

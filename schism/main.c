@@ -161,14 +161,11 @@ static void handle_window_event(SDL_WindowEvent *w)
 		SDL_ShowCursor(SDL_ENABLE);
 		break;
 	case SDL_WINDOWEVENT_RESIZED:
-	case SDL_WINDOWEVENT_SIZE_CHANGED:  // tiling window managers
-		video_resize(w->data1, w->data2);
-		/* fall through */
+	case SDL_WINDOWEVENT_SIZE_CHANGED: /* tiling window managers */
+		video_update();
+		/* fallthrough */
 	case SDL_WINDOWEVENT_EXPOSED:
 		status.flags |= (NEED_UPDATE);
-		break;
-	case SDL_WINDOWEVENT_MOVED:
-		video_update();
 		break;
 	default:
 #if 0
@@ -919,13 +916,14 @@ void schism_exit(int status)
 
 extern void vis_init(void);
 
+/* wart */
 #ifdef MACOSX
 int SDL_main(int argc, char** argv)
 #else
 int main(int argc, char **argv)
 #endif
 {
-	if (! SDL_VERSION_ATLEAST(2,0,5)) {
+	if (!SDL_VERSION_ATLEAST(2,0,5)) {
 		SDL_Log("SDL_VERSION %i.%i.%i less than required!", SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL);
 		return 1;
 	}
@@ -987,6 +985,8 @@ int main(int argc, char **argv)
 	shutdown_process |= EXIT_SAVECFG;
 
 	sdl_init();
+	/* make SDL_SetWindowGrab grab the keyboard too */
+	SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
 	shutdown_process |= EXIT_SDLQUIT;
 	os_sdlinit();
 
