@@ -231,7 +231,7 @@ if USE_FLAC
 files_flac = \
 	fmt/flac.c
 cflags_flac=-DUSE_FLAC $(FLAC_CFLAGS)
-libs_flac=-lFLAC $(FLAC_LIBS)
+libs_flac=$(FLAC_LIBS)
 endif
 
 if USE_NETWORK
