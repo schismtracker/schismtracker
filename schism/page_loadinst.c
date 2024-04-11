@@ -112,7 +112,7 @@ static void read_directory(void)
 
 	clear_directory();
 
-	if (stat(inst_cwd, &st) < 0)
+	if (os_stat(inst_cwd, &st) < 0)
 		directory_mtime = 0;
 	else
 		directory_mtime = st.st_mtime;
@@ -138,10 +138,9 @@ static int change_dir(const char *dir)
 
 	dmoz_cache_update(inst_cwd, &flist, NULL);
 
-	if (stat(ptr, &buf) == 0 && S_ISDIR(buf.st_mode)) {
+	if (os_stat(ptr, &buf) == 0 && S_ISDIR(buf.st_mode)) {
 		strncpy(cfg_dir_instruments, ptr, PATH_MAX);
 		cfg_dir_instruments[PATH_MAX] = 0;
-
 	}
 	strncpy(inst_cwd, ptr, PATH_MAX);
 	inst_cwd[PATH_MAX] = 0;
@@ -174,7 +173,7 @@ static void _common_set_page(void)
 	/* if we have a list, the directory didn't change, and the mtime is the same, we're set */
 	if (flist.num_files > 0
 	    && (status.flags & DIR_SAMPLES_CHANGED) == 0
-	    && stat(inst_cwd, &st) == 0
+		&& os_stat(inst_cwd, &st) == 0
 	    && st.st_mtime == directory_mtime) {
 		return;
 	}

@@ -1048,7 +1048,7 @@ static void sample_save(const char *filename, const char *format)
 	struct stat buf;
 	int tmp;
 
-	if (stat(cfg_dir_samples, &buf) == -1) {
+	if (os_stat(cfg_dir_samples, &buf) == -1) {
 		status_text_flash("Sample directory \"%s\" unreachable", filename);
 		return;
 	}
@@ -1072,7 +1072,7 @@ static void sample_save(const char *filename, const char *format)
 	data->path = ptr;
 	data->format = format;
 
-	if (filename && *filename && stat(ptr, &buf) == 0) {
+	if (filename && *filename && os_stat(ptr, &buf) == 0) {
 		if (S_ISREG(buf.st_mode)) {
 			dialog_create(DIALOG_OK_CANCEL, "Overwrite file?",
 				      do_save_sample, save_sample_free_data, 1, data);

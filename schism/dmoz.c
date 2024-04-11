@@ -701,12 +701,12 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 #elif defined(WIN32)
 	const DWORD x = GetLogicalDrives();
 	UINT em = SetErrorMode(0);
-	char sbuf[] = {'A', ':', '\\', '\0'};
+	char sbuf[] = "A:\\";
 
 	for (; x && sbuf[0] <= 'Z'; sbuf[0]++) {
 		if ((x >> (sbuf[0] - 'A')) & 1) {
 				dmoz_add_file_or_dir(flist, dlist, str_dup(sbuf),
-						str_dup(sbuf), NULL, -(1024-i));
+						str_dup(sbuf), NULL, -(1024 - 'A' - sbuf[0]));
 		}
 	}
 	em = SetErrorMode(em);
@@ -746,26 +746,34 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 		int (*load_library)(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist))
 {
 #ifdef WIN32
+	char* searchpath = dmoz_path_concat_len(path, "*", strlen(path), 1);
 	wchar_t* path_w = NULL;
-	if (!utf8_to_wchar(&path_w, path))
+	if (!utf8_to_wchar(&path_w, searchpath)) {
+		free(searchpath);
 		return -1;
+	}
+	free(searchpath);
 
-	DWORD attrib = GetFileAttributes(path_w);
+	DWORD attrib = GetFileAttributesW(path_w);
 	if (attrib & FILE_ATTRIBUTE_DIRECTORY) {
 		WIN32_FIND_DATAW ffd = {0};
-		HANDLE find = FindFirstFile(path_w, &ffd);
+		HANDLE find = FindFirstFileW(path_w, &ffd);
 		
 		if (find == INVALID_HANDLE_VALUE) {
 			log_appendf(4, "dmoz_read: FindFirstFile failed!");
 			return -1;
 		}
-	
+
+		/* do-while to process the first file... */
 		do {
+			if (!wcscmp(ffd.cFileName, L".") || !wcscmp(ffd.cFileName, L".."))
+				continue;
+
 			char* filename = NULL;
 			int filename_len = wchar_to_utf8(&filename, ffd.cFileName);
 			if (!filename_len)
 				continue;
-	
+
 			char* fullpath = dmoz_path_concat_len(path, filename, strlen(path), filename_len - 1);
 	
 			if (ffd.dwFileAttributes & (FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_SYSTEM)) {
@@ -775,7 +783,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 			}
 	
 			struct stat st;
-			if (win32_wide_stat(fullpath, &st) < 0) {
+			if (os_stat(fullpath, &st) < 0) {
 				/* doesn't exist? */
 				log_perror(fullpath);
 				free(fullpath);
@@ -784,15 +792,17 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 	
 			st.st_mtime = MIN(0, st.st_mtime);
 	
-			if (ffd.dwFileAttribute & FILE_ATTRIBUTE_DIRECTORY)
+			if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
 				dmoz_add_dir(dlist, fullpath, filename, 0);
-			else if (ffd.dwFileAttribute & FILE_ATTRIBUTE_NORMAL)
-				dmoz_add_file(flist, fullpath, filename, &st, 1);
-			else {
+			} else if (ffd.dwFileAttributes == INVALID_FILE_ATTRIBUTES) {
 				free(fullpath);
 				free(filename);
+			} else {
+				dmoz_add_file(flist, fullpath, filename, &st, 1);
 			}
-		} while (FindNextFile(find, &ffd));
+		} while (FindNextFileW(find, &ffd));
+
+		FindClose(find);
 		
 		DWORD err = GetLastError();
 		if (err != ERROR_NO_MORE_FILES)
@@ -854,14 +864,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 
 			ptr = dmoz_path_concat_len(path, ent->d_name, pathlen, namlen);
 
-#if defined(WIN32)
-			if (GetFileAttributes(ptr) & (FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_SYSTEM)) {
-				free(ptr);
-				continue;
-			}
-#endif
-
-			if (stat(ptr, &st) < 0) {
+			if (os_stat(ptr, &st) < 0) {
 				/* doesn't exist? */
 				log_perror(ptr);
 				free(ptr);

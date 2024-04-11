@@ -260,7 +260,7 @@ int cfg_read(cfg_file_t *cfg)
 
 	/* have to do our own stat, because we're going to fiddle with the size. (this is to be sure the
 	buffer ends with a '\0', which makes it much easier to handle with normal string operations) */
-	if (stat(cfg->filename, &buf) < 0)
+	if (os_stat(cfg->filename, &buf) < 0)
 		return -1;
 	if (S_ISDIR(buf.st_mode)) {
 		errno = EISDIR;

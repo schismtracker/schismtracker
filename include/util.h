@@ -110,45 +110,45 @@ extern void mem_free(void *);
 /*Conversion*/
 /* linear -> deciBell*/
 /* amplitude normalized to 1.0f.*/
-extern float dB(float amplitude);
+extern double dB(double amplitude);
 
 /// deciBell -> linear*/
-extern float dB2_amp(float db);
+extern double dB2_amp(double db);
 
 /* linear -> deciBell*/
 /* power normalized to 1.0f.*/
-extern float pdB(float power);
+extern double pdB(double power);
 
 /* deciBell -> linear*/
-extern float dB2_power(float db);
+extern double dB2_power(double db);
 
 /* linear -> deciBell*/
 /* amplitude normalized to 1.0f.*/
 /* Output scaled (and clipped) to 128 lines with noisefloor range.*/
 /* ([0..128] = [-noisefloor..0dB])*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-extern short dB_s(int noisefloor, float amplitude, float correction_dBs);
+extern short dB_s(int noisefloor, double amplitude, double correction_dBs);
 
 /* deciBell -> linear*/
 /* Input scaled to 128 lines with noisefloor range.*/
 /* ([0..128] = [-noisefloor..0dB])*/
 /* amplitude normalized to 1.0f.*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-extern short dB2_amp_s(int noisefloor, int db, float correction_dBs);
+extern short dB2_amp_s(int noisefloor, int db, double correction_dBs);
 
 /* linear -> deciBell*/
 /* power normalized to 1.0f.*/
 /* Output scaled (and clipped) to 128 lines with noisefloor range.*/
 /* ([0..128] = [-noisefloor..0dB])*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-extern short pdB_s(int noisefloor, float power, float correction_dBs);
+extern short pdB_s(int noisefloor, double power, double correction_dBs);
 
 /* deciBell -> linear*/
 /* Input scaled to 128 lines with noisefloor range.*/
 /* ([0..128] = [-noisefloor..0dB])*/
 /* power normalized to 1.0f.*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-extern short dB2_power_s(int noisefloor, int db, float correction_dBs);
+extern short dB2_power_s(int noisefloor, int db, double correction_dBs);
 
 /* formatting */
 /* for get_{time,date}_string, buf should be (at least) 27 chars; anything past that isn't used. */
@@ -186,9 +186,16 @@ char *get_current_directory(void); /* just a getcwd() wrapper */
 int utf8_to_wchar(wchar_t** wchar, const char* utf8);
 int wchar_to_utf8(char** utf8, const wchar_t* wchar);
 
+/* wrappers around stat for Unicode support */
 #ifdef WIN32
+int win32_open(const char* path, int flags);
 int win32_wstat(const wchar_t* path, struct stat* st);
 int win32_stat(const char* path, struct stat* st);
+# define os_stat win32_stat
+# define os_open win32_open
+#else
+# define os_stat stat
+# define os_open open
 #endif
 
 void put_env_var(const char *key, const char *value);

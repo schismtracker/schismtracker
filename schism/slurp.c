@@ -214,20 +214,7 @@ static slurp_t *_slurp_open(const char *filename, struct stat * buf, size_t size
 	};
 #endif
 
-#ifdef WIN32
-	{
-		/* filenames are stored as UTF-8 in memory */
-		wchar_t* wc;
-		if (!utf8_to_wchar(&wc, filename)) {
-			free(t);
-			return NULL;
-		}
-		fd = _wopen(wc, O_RDONLY | O_BINARY);
-		free(wc);
-	}
-#else
-	fd = open(filename, O_RDONLY | O_BINARY);
-#endif
+	fd = os_open(filename, O_RDONLY | O_BINARY);
 
 	if (fd < 0) {
 		free(t);

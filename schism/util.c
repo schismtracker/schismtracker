@@ -183,7 +183,7 @@ short pdB_s(int noisefloor, double power, double correction_dBs)
 /* ([0..128] = [-noisefloor..0dB]) */
 /* power normalized to 1.0f. */
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-short dB2_power_s(int noisefloor, int db, float correction_dBs)
+short dB2_power_s(int noisefloor, int db, double correction_dBs)
 {
 	return dB2_power((db*noisefloor/128.f)-noisefloor-correction_dBs);
 }
@@ -634,8 +634,8 @@ int wchar_to_utf8(char** utf8, const wchar_t* wchar) {
 	if (!needed)
 		return 0;
 
-	*utf8 = mem_alloc(needed, sizeof(char));
-	needed = WideCharToMultiByte(CP_UTF8, 0, wchar, -1, *wchar, needed, NULL, NULL);
+	*utf8 = mem_alloc(needed * sizeof(char));
+	needed = WideCharToMultiByte(CP_UTF8, 0, wchar, -1, *utf8, needed, NULL, NULL);
 
 	return needed;
 #else
@@ -646,16 +646,16 @@ int wchar_to_utf8(char** utf8, const wchar_t* wchar) {
 
 #ifdef WIN32
 int win32_wstat(const wchar_t* path, struct stat* st) {
-	struct __stat mstat;
+	struct _stat mstat;
 
-	int ws = _wstat(fullpath, &mstat);
+	int ws = _wstat(path, &mstat);
 	if (ws < 0)
 		return ws;
 
 	/* copy all the values */
 	st->st_gid = mstat.st_gid;
 	st->st_atime = mstat.st_atime;
-	st->st_ctime = mstat.st_ctime
+	st->st_ctime = mstat.st_ctime;
 	st->st_dev = mstat.st_dev;
 	st->st_ino = mstat.st_ino;
 	st->st_mode = mstat.st_mode;
@@ -677,16 +677,22 @@ int win32_stat(const char* path, struct stat* st) {
 	free(wc);
 	return ret;
 }
+
+int win32_open(const char* path, int flags) {
+	wchar_t* wc = NULL;
+	if (!utf8_to_wchar(&wc, path))
+		return -1;
+
+	int ret = _wopen(wc, flags);
+	free(wc);
+	return ret;
+}
 #endif
 
 unsigned long long file_size(const char *filename) {
 	struct stat buf;
 
-#ifdef WIN32
-	if (win32_stat(filename, &buf) < 0) {
-#else
-	if (stat(filename, &buf) < 0) {
-#endif
+	if (os_stat(filename, &buf) < 0) {
 		return EOF;
 	}
 	if (S_ISDIR(buf.st_mode)) {
@@ -703,11 +709,7 @@ int is_directory(const char *filename)
 {
 	struct stat buf;
 
-#ifdef WIN32
-	if (win32_stat(filename, &buf) == -1) {
-#else
-	if (stat(filename, &buf) == -1) {
-#endif
+	if (os_stat(filename, &buf) == -1) {
 		/* Well, at least we tried. */
 		return 0;
 	}
@@ -718,10 +720,16 @@ int is_directory(const char *filename)
 char *get_current_directory(void)
 {
 #ifdef WIN32
-	wchar buf[PATH_MAX + 1] = {L'\0'};
+	wchar_t buf[PATH_MAX + 1] = {L'\0'};
+	char* buf_utf8 = NULL;
 
-	if (_wgetcwd(buf, PATH_MAX))
-		return wchar_to_utf8(buf);
+	if (!_wgetcwd(buf, PATH_MAX))
+		return NULL;
+
+	if (!wchar_to_utf8(&buf_utf8, buf))
+		return NULL;
+
+	return buf_utf8;
 #else
 	char buf[PATH_MAX + 1] = {'\0'};
 
@@ -738,9 +746,16 @@ char *get_home_directory(void)
 #if defined(__amigaos4__)
 	return str_dup("PROGDIR:");
 #elif defined(WIN32)
-	wchar buf[PATH_MAX + 1] = {L'\0'};
-	if (SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == ERROR_SUCCESS)
-		return wchar_to_utf8(buf);
+	wchar_t buf[PATH_MAX + 1] = {L'\0'};
+	char* buf_utf8 = NULL;
+	
+	if (!SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == ERROR_SUCCESS)
+		return NULL;
+
+	if (!wchar_to_utf8(&buf_utf8, buf))
+		return NULL;
+
+	return buf_utf8;
 #else
 	char *ptr = getenv("HOME");
 	if (ptr)
@@ -762,8 +777,14 @@ char *get_dot_directory(void)
 {
 #ifdef WIN32
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
-	if (SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) == ERROR_SUCCESS)
-		return wchar_to_utf8(buf);
+	char* buf_utf8 = NULL;
+	if (!SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) == ERROR_SUCCESS)
+		return NULL;
+
+	if (!wchar_to_utf8(&buf_utf8, buf))
+		return NULL;
+
+	return buf_utf8;
 	// else fall back to home (but if this ever happens, things are really screwed...)
 #endif
 	return get_home_directory();
@@ -839,7 +860,6 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	if (!name_len || name_len + 4 > PATH_MAX)
 		return 0;
 
-	
 	wcsncpy(batch_file, name_w, name_len);
 	wcscpy(&batch_file[name_len], L".bat");
 
@@ -860,7 +880,7 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	if (!utf8_to_wchar(&maybe_arg_w, name))
 		return 0;
 
-	if (win32_stat(batch_file, &sb) == -1) {
+	if (win32_wstat(batch_file, &sb) == -1) {
 		r = 0;
 	} else {
 		cmd = _wgetenv(L"COMSPEC") ?: L"command.com";
@@ -945,8 +965,8 @@ int rename_file(const char *old, const char *new, int overwrite)
 		return _rename_nodestroy(old, new);
 
 #ifdef WIN32
-	wchar_t* old_w = NULL, new_w = NULL;
-	if (!utf8_to_wchar(old_w) || !utf8_to_wchar(new_w)) {
+	wchar_t* old_w = NULL, *new_w = NULL;
+	if (!utf8_to_wchar(&old_w, old) || !utf8_to_wchar(&new_w, new)) {
 		free(old_w);
 		free(new_w);
 		return -1;
@@ -979,8 +999,8 @@ int rename_file(const char *old, const char *new, int overwrite)
 		return 0;
 	}
 	/* this sometimes work with win95 and novell shares */
-	chmod(new_w, 0777);
-	chmod(old_w, 0777);
+	_wchmod(new_w, 0777);
+	_wchmod(old_w, 0777);
 	/* more junk */
 	SetFileAttributesW(new_w, FILE_ATTRIBUTE_NORMAL);
 	SetFileAttributesW(new_w, FILE_ATTRIBUTE_TEMPORARY);

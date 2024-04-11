@@ -176,7 +176,7 @@ static void read_directory(void)
 	struct stat st;
 
 	clear_directory();
-	if (stat(cfg_dir_samples, &st) < 0)
+	if (os_stat(cfg_dir_samples, &st) < 0)
 		directory_mtime = 0;
 	else
 		directory_mtime = st.st_mtime;
@@ -323,7 +323,7 @@ static void _common_set_page(void)
 	/* if we have a list, the directory didn't change, and the mtime is the same, we're set */
 	if (flist.num_files > 0
 	    && (status.flags & DIR_SAMPLES_CHANGED) == 0
-	    && stat(cfg_dir_samples, &st) == 0
+	    && os_stat(cfg_dir_samples, &st) == 0
 	    && st.st_mtime == directory_mtime) {
 		return;
 	}

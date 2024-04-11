@@ -1988,7 +1988,7 @@ static void instrument_save(void)
 	char *ptr = (char *) dmoz_path_concat(cfg_dir_instruments, ins->filename);
 	struct stat buf;
 
-	if (stat(ptr, &buf) == 0) {
+	if (os_stat(ptr, &buf) == 0) {
 		if (S_ISDIR(buf.st_mode)) {
 			status_text_flash("%s is a directory", ins->filename);
 			return;
