@@ -26,6 +26,7 @@
 
 #include <sys/stat.h> /* roundabout way to get time_t */
 #include <sys/types.h>
+#include <stddef.h> /* wchar_t */
 
 /* --------------------------------------------------------------------- */
 
