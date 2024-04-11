@@ -122,6 +122,7 @@ TODO: scroller hack on selected filename
 #define GLOB_CLASSIC "*.it; *.xm; *.s3m; *.mtm; *.669; *.mod"
 #define GLOB_DEFAULT GLOB_CLASSIC "; *.mdl; *.mt2; *.stm; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf; *.imf; *.sfx; *.mus; *.mid"
 
+/* These are stored as raw Unicode codepoints for ease in conversion and stuff */
 static char filename_entry[PATH_MAX + 1] = "";
 static char dirname_entry[PATH_MAX + 1] = "";
 
@@ -187,7 +188,7 @@ static void handle_file_entered_L(const char *ptr)
 	struct stat sb;
 
 	/* these shenanigans force the file to take another trip... */
-	if (stat(ptr, &sb) == -1)
+	if (os_stat(ptr, &sb) == -1)
 		return;
 
 	dmoz_add_file(&tmp, str_dup(ptr), str_dup(ptr), &sb, 0);
@@ -276,14 +277,15 @@ static void do_save_song_overwrite(void *ptr)
 		return;
 	}
 
-	if (stat(cfg_dir_modules, &st) == -1 || directory_mtime != st.st_mtime) {
+	if (os_stat(cfg_dir_modules, &st) == -1
+		|| directory_mtime != st.st_mtime) {
 		status.flags |= DIR_MODULES_CHANGED;
 	}
 
 	do_save_song(ptr);
 
 	/* this is wrong, sadly... */
-	if (stat(cfg_dir_modules, &st) == 0) {
+	if (os_stat(cfg_dir_modules, &st) == 0) {
 		directory_mtime = st.st_mtime;
 	}
 }
@@ -292,7 +294,7 @@ static void handle_file_entered_S(const char *name)
 {
 	struct stat buf;
 
-	if (stat(name, &buf) < 0) {
+	if (os_stat(name, &buf) < 0) {
 		if (errno == ENOENT) {
 			do_save_song(str_dup(name));
 		} else {
@@ -388,7 +390,7 @@ static void read_directory(void)
 
 	clear_directory();
 
-	if (stat(cfg_dir_modules, &st) < 0)
+	if (os_stat(cfg_dir_modules, &st) < 0)
 		directory_mtime = 0;
 	else
 		directory_mtime = st.st_mtime;
@@ -975,7 +977,7 @@ static int update_directory(void)
 
 	/* if we have a list, the directory didn't change, and the mtime is the same, we're set. */
 	if ((status.flags & DIR_MODULES_CHANGED) == 0
-	    && stat(cfg_dir_modules, &st) == 0
+		&& os_stat(cfg_dir_modules, &st) == 0
 	    && st.st_mtime == directory_mtime) {
 		return 0;
 	}

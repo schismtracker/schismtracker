@@ -241,13 +241,31 @@ disko_t *disko_open(const char *filename)
 	strcpy(ds->tempname, filename);
 	strcat(ds->tempname, "XXXXXX");
 
+#ifdef WIN32
+	{
+		/* avoid having ANSI shenanigans on Windows */
+		wchar_t* tempname = NULL;
+		int m = utf8_to_wchar(&tempname, ds->tempname);
+		if (!m) {
+			free(ds);
+			return NULL;
+		}
+		_wmktemp(tempname);
+		ds->file = _wfopen(tempname, L"wb");
+		free(tempname);
+		if (!ds->file) {
+			free(ds);
+			return NULL;
+		}
+	}
+#else
 	fd = mkstemp(ds->tempname);
 	if (fd == -1) {
 		free(ds);
 		return NULL;
 	}
 	ds->file = fdopen(fd, "wb");
-	if (ds->file == NULL) {
+	if (!ds->file) {
 		err = errno;
 		close(fd);
 		unlink(ds->tempname);
@@ -255,6 +273,7 @@ disko_t *disko_open(const char *filename)
 		errno = err;
 		return NULL;
 	}
+#endif
 
 	setvbuf(ds->file, NULL, _IOFBF, DW_BUFFER_SIZE);
 
@@ -277,7 +296,7 @@ int disko_close(disko_t *ds, int backup)
 		// preserve file mode, or set it sanely -- mkstemp() sets file mode to 0600
 #ifndef GEKKO /* FIXME - autoconf check for this instead */
 		struct stat st;
-		if (stat(ds->filename, &st) < 0) {
+		if (os_stat(ds->filename, &st) < 0) {
 			/* Probably didn't exist already, let's make something up.
 			0777 is "safer" than 0, so we don't end up throwing around world-writable
 			files in case something weird happens.

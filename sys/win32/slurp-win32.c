@@ -34,26 +34,27 @@
 
 #include "log.h"
 #include "slurp.h"
+#include "util.h"
 
 // indices for 'h' (handles)
 enum { FILE_HANDLE = 0, MAPPING_HANDLE = 1 };
 
 static void _win32_unmap(slurp_t *slurp)
 {
-        if (slurp->data != NULL) {
-                UnmapViewOfFile(slurp->data);
-                slurp->data = NULL;
-        }
+	if (slurp->data != NULL) {
+		UnmapViewOfFile(slurp->data);
+		slurp->data = NULL;
+	}
 
-        HANDLE *h = slurp->bextra;
-        if (h[FILE_HANDLE] != INVALID_HANDLE_VALUE) {
-                CloseHandle(h[FILE_HANDLE]);
-        }
-        if (h[MAPPING_HANDLE] != NULL) {
-                CloseHandle(h[MAPPING_HANDLE]);
-        }
-        free(h);
-        slurp->bextra = NULL;
+	HANDLE *h = slurp->bextra;
+	if (h[FILE_HANDLE] != INVALID_HANDLE_VALUE) {
+		CloseHandle(h[FILE_HANDLE]);
+	}
+	if (h[MAPPING_HANDLE] != NULL) {
+		CloseHandle(h[MAPPING_HANDLE]);
+	}
+	free(h);
+	slurp->bextra = NULL;
 }
 
 // This reader used to return -1 sometimes, which is kind of a hack to tell the
@@ -66,37 +67,45 @@ static void _win32_unmap(slurp_t *slurp)
 
 static int _win32_error_unmap(slurp_t *slurp, const char *filename, const char *function)
 {
-        DWORD err = GetLastError();
-        LPTSTR errmsg;
-        FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
-                      err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), errmsg, 0, NULL);
-        // I don't particularly want to split this stuff onto two lines, but
-        // it's the only way to make the error message readable in some cases
-        // (though no matter what, the message is still probably going to be
-        // truncated because Windows is excessively verbose)
-        log_appendf(4, "%s: %s: error %lu:", filename, function, err);
-        log_appendf(4, "  %s", errmsg);
-        LocalFree(errmsg);
-        _win32_unmap(slurp);
-        return 0;
+	DWORD err = GetLastError();
+	LPTSTR errmsg;
+	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+		      err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), errmsg, 0, NULL);
+	// I don't particularly want to split this stuff onto two lines, but
+	// it's the only way to make the error message readable in some cases
+	// (though no matter what, the message is still probably going to be
+	// truncated because Windows is excessively verbose)
+	log_appendf(4, "%s: %s: error %lu:", filename, function, err);
+	log_appendf(4, "  %s", errmsg);
+	LocalFree(errmsg);
+	_win32_unmap(slurp);
+	return 0;
 }
 
 int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
 {
-        LPVOID addr;
-        HANDLE *h = slurp->bextra = mem_alloc(sizeof(HANDLE) * 2);
+	LPVOID addr;
+	HANDLE *h = slurp->bextra = mem_alloc(sizeof(HANDLE) * 2);
 
-        if ((h[FILE_HANDLE] = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
-                                         FILE_ATTRIBUTE_NORMAL, NULL)) == INVALID_HANDLE_VALUE) {
-                return _win32_error_unmap(slurp, filename, "CreateFile");
-        }
-        if ((h[MAPPING_HANDLE] = CreateFileMapping(h[FILE_HANDLE], NULL, PAGE_READONLY, 0, 0, NULL)) == NULL) {
-                return _win32_error_unmap(slurp, filename, "CreateFileMapping");
-        }
-        if ((slurp->data = MapViewOfFile(h[MAPPING_HANDLE], FILE_MAP_READ, 0, 0, 0)) == NULL) {
-                return _win32_error_unmap(slurp, filename, "MapViewOfFile");
-        }
-        slurp->length = st;
-        slurp->closure = _win32_unmap;
-        return 1;
+	wchar_t* filename_w = NULL;
+	int m = utf8_to_wchar(&filename_w, filename);
+	if (!m)
+		return _win32_error_unmap(slurp, filename, "MultiByteToWideChar");
+
+	h[FILE_HANDLE] = CreateFileW(filename_w, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	free(filename_w);
+	if (h[FILE_HANDLE] == INVALID_HANDLE_VALUE)
+		return _win32_error_unmap(slurp, filename, "CreateFileW");
+
+	h[MAPPING_HANDLE] = CreateFileMapping(h[FILE_HANDLE], NULL, PAGE_READONLY, 0, 0, NULL);
+	if (!h[MAPPING_HANDLE])
+		return _win32_error_unmap(slurp, filename, "CreateFileMapping");
+
+	slurp->data = MapViewOfFile(h[MAPPING_HANDLE], FILE_MAP_READ, 0, 0, 0);
+	if (!slurp->data)
+		return _win32_error_unmap(slurp, filename, "MapViewOfFile");
+
+	slurp->length = st;
+	slurp->closure = _win32_unmap;
+	return 1;
 }

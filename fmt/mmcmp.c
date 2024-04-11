@@ -12,7 +12,7 @@
 #define NEED_BYTESWAP
 #include "headers.h"
 
-#include "slurp.h" // for definition of mmcmp_unpack
+#include "slurp.h" // for declaration of mmcmp_unpack
 
 #pragma pack(push, 1)
 typedef struct mm_header {

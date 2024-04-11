@@ -699,23 +699,15 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 		IDOS->UnLockDosList(LDF_VOLUMES);
 	}
 #elif defined(WIN32)
-	char sbuf[32];
-	DWORD x;
-	UINT em;
-	int i;
+	const DWORD x = GetLogicalDrives();
+	UINT em = SetErrorMode(0);
+	char sbuf[] = "A:\\";
 
-	em = SetErrorMode(0);
-	x = GetLogicalDrives();
-	strcpy(sbuf, "A:\\");
-	i = 0;
-	while (x && i < 26) {
-		if (x & 1) {
-			sbuf[0] = i + 'A';
-			dmoz_add_file_or_dir(flist, dlist, str_dup(sbuf),
-						str_dup(sbuf), NULL, -(1024-i));
+	for (; x && sbuf[0] <= 'Z'; sbuf[0]++) {
+		if ((x >> (sbuf[0] - 'A')) & 1) {
+				dmoz_add_file_or_dir(flist, dlist, str_dup(sbuf),
+						str_dup(sbuf), NULL, -(1024 - 'A' - sbuf[0]));
 		}
-		x >>= 1;
-		i++;
 	}
 	em = SetErrorMode(em);
 #elif defined(GEKKO)
@@ -753,6 +745,88 @@ wrong, it adds a 'stub' entry for the root directory, and returns -1. */
 int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 		int (*load_library)(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist))
 {
+#ifdef WIN32
+	char* searchpath = dmoz_path_concat_len(path, "*", strlen(path), 1);
+	wchar_t* path_w = NULL;
+	if (!utf8_to_wchar(&path_w, searchpath)) {
+		free(searchpath);
+		return -1;
+	}
+	free(searchpath);
+
+	DWORD attrib = GetFileAttributesW(path_w);
+	if (attrib & FILE_ATTRIBUTE_DIRECTORY) {
+		WIN32_FIND_DATAW ffd = {0};
+		HANDLE find = FindFirstFileW(path_w, &ffd);
+		
+		if (find == INVALID_HANDLE_VALUE) {
+			log_appendf(4, "dmoz_read: FindFirstFile failed!");
+			return -1;
+		}
+
+		/* do-while to process the first file... */
+		do {
+			if (!wcscmp(ffd.cFileName, L".") || !wcscmp(ffd.cFileName, L".."))
+				continue;
+
+			char* filename = NULL;
+			int filename_len = wchar_to_utf8(&filename, ffd.cFileName);
+			if (!filename_len)
+				continue;
+
+			char* fullpath = dmoz_path_concat_len(path, filename, strlen(path), filename_len - 1);
+	
+			if (ffd.dwFileAttributes & (FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_SYSTEM)) {
+				free(fullpath);
+				free(filename);
+				continue;
+			}
+	
+			struct stat st;
+			if (os_stat(fullpath, &st) < 0) {
+				/* doesn't exist? */
+				log_perror(fullpath);
+				free(fullpath);
+				continue; /* better luck next time */
+			}
+	
+			st.st_mtime = MIN(0, st.st_mtime);
+	
+			if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+				dmoz_add_dir(dlist, fullpath, filename, 0);
+			} else if (ffd.dwFileAttributes == INVALID_FILE_ATTRIBUTES) {
+				free(fullpath);
+				free(filename);
+			} else {
+				dmoz_add_file(flist, fullpath, filename, &st, 1);
+			}
+		} while (FindNextFileW(find, &ffd));
+
+		FindClose(find);
+		
+		DWORD err = GetLastError();
+		if (err != ERROR_NO_MORE_FILES)
+			return -1;
+
+		add_platform_dirs(path, flist, dlist);
+	} else if (attrib == INVALID_FILE_ATTRIBUTES) {
+		return -1;
+	} else {
+		/* file? probably.
+		 * make sure when editing this code to keep it in sync
+		 * with the below code for non-Windows platforms */
+		if (!load_library || !load_library(path, flist, dlist)) {
+			char* ptr = get_parent_directory(path);
+			if (ptr)
+				dmoz_add_file_or_dir(flist, dlist, ptr, str_dup("."), NULL, -10);
+		}
+	}
+
+	/* sort */
+	dmoz_sort(flist, dlist);
+
+	return 0;
+#else
 	DIR *dir;
 	struct dirent *ent;
 	char *ptr;
@@ -781,27 +855,16 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 			namlen = _D_EXACT_NAMLEN(ent);
 			/* ignore hidden/backup files (TODO: make this code more portable;
 			some OSes have different ideas of whether a file is hidden) */
-#if defined(WIN32)
-			/* hide these, windows makes its later */
-			if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
-				continue;
-#else
+
 			if (ent->d_name[0] == '.')
 				continue;
-#endif
+
 			if (ent->d_name[namlen - 1] == '~')
 				continue;
 
 			ptr = dmoz_path_concat_len(path, ent->d_name, pathlen, namlen);
 
-#if defined(WIN32)
-			if (GetFileAttributes(ptr) & (FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_SYSTEM)) {
-				free(ptr);
-				continue;
-			}
-#endif
-
-			if (stat(ptr, &st) < 0) {
+			if (os_stat(ptr, &st) < 0) {
 				/* doesn't exist? */
 				log_perror(ptr);
 				free(ptr);
@@ -845,6 +908,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 	} else {
 		return 0;
 	}
+#endif
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

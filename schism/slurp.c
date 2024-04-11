@@ -214,7 +214,7 @@ static slurp_t *_slurp_open(const char *filename, struct stat * buf, size_t size
 	};
 #endif
 
-	fd = open(filename, O_RDONLY | O_BINARY);
+	fd = os_open(filename, O_RDONLY | O_BINARY);
 
 	if (fd < 0) {
 		free(t);
