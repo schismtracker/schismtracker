@@ -430,6 +430,7 @@ static int instrument_list_handle_text_input_on_list(const char* text) {
 
 static int instrument_list_handle_key_on_list(struct key_event * k)
 {
+	static int enable_text = 0; /* stupid dirty hack */
 	int new_ins = current_instrument;
 
 	if (k->state == KEY_PRESS && k->mouse != MOUSE_NONE && k->y >= 13 && k->y <= 47 && k->x >= 5 && k->x <= 30) {
@@ -616,11 +617,12 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 		case SDLK_SPACE:
 			if (instrument_cursor_pos >= 25) {
 				/* we stop text input here so we don't insert
-				   an extra space */
+				 * an extra space */
 				instrument_cursor_pos = 0;
 				get_page_widgets()->accept_text = 0;
 				status.flags |= NEED_UPDATE;
 				memused_songchanged();
+				enable_text = 1;
 				return 1;
 			}
 			return 0;
@@ -633,9 +635,11 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 					return 1;
 				}
 			} else if (k->sym.sym >= 32) {
-				if (instrument_cursor_pos < 25)
+				if (instrument_cursor_pos < 25 && enable_text) {
 					get_page_widgets()->accept_text = 1;
-				return 1;
+					return 1;
+				}
+				return !get_page_widgets()->accept_text;
 			}
 			return 0;
 		};
