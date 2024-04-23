@@ -629,6 +629,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 		default:
 			if (k->state == KEY_RELEASE)
 				return 0;
+
 			if (k->mod & KMOD_ALT) {
 				if (k->sym.sym == SDLK_c) {
 					clear_instrument_text();
@@ -641,6 +642,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				}
 				return !get_page_widgets()->accept_text;
 			}
+
 			return 0;
 		};
 	}
@@ -1449,13 +1451,20 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 		status.flags |= NEED_UPDATE;
 		return 1 | 2;
 	case SDLK_SPACE:
-		if (k->state == KEY_RELEASE)
-			return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
-		song_keyup(KEYJAZZ_NOINST, current_instrument, last_note);
-		song_keydown(KEYJAZZ_NOINST, current_instrument, last_note, 64, KEYJAZZ_CHAN_CURRENT);
-		return 1;
+		if (k->is_repeat)
+			return 1;
+
+		if (k->state == KEY_PRESS) {
+			song_keydown(KEYJAZZ_NOINST, current_instrument, last_note, 64, KEYJAZZ_CHAN_CURRENT);
+			return 1;
+		} else if (k->state == KEY_RELEASE) {
+			song_keyup(KEYJAZZ_NOINST, current_instrument, last_note);
+			return 1;
+		}
+
+		return 0;
 	case SDLK_RETURN:
 		if (k->state == KEY_PRESS)
 			return 0;
