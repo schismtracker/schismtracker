@@ -2237,18 +2237,16 @@ void csf_process_effects(song_t *csf, int firsttick)
 
 			if (NOTE_IS_NOTE(note)) {
 				chan->new_note = note;
+
+				if (!porta)
+					csf_check_nna(csf, nchan, instr, note, 0);
+
 				if (chan->channel_panning > 0) {
 					chan->panning = (chan->channel_panning & 0x7FFF) - 1;
 					if (chan->channel_panning & 0x8000)
 						chan->flags |= CHN_SURROUND;
 					chan->channel_panning = 0;
 				}
-
-				/* New Note Action
-				 * OpenMPT test case NoteOffInstr.it
-				 * is this correct? */
-				if (!porta)
-					csf_check_nna(csf, nchan, instr, note, 0);
 			}
 			// Instrument Change ?
 			if (instr) {
