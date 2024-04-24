@@ -90,7 +90,6 @@ static int int_vasprintf(char **result, const char *format, va_list *args)
 	return vsprintf (*result, format, *args);
 }
 
-int vasprintf(char **result, const char *format, va_list args);
 int vasprintf(char **result, const char *format, va_list args)
 {
 	return int_vasprintf (result, format, &args);
