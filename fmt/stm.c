@@ -119,6 +119,13 @@ static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 				// I don't get it.
 				note->param >>= 4;
 				break;
+			case FX_VOLUMESLIDE:
+				// Scream Tracker 2 checks for the lower nibble first for some reason...
+				if (note->param & 0x0f && note->param >> 4)
+					note->param &= 0x0f;
+				if (!note->param)
+					note->effect = FX_NONE;
+				break;
 			case FX_PATTERNBREAK:
 				note->param = (note->param & 0xf0) * 10 + (note->param & 0xf);
 				break;
