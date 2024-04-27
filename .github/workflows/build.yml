@@ -279,50 +279,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y ninja-build autoconf automake libtool
-
-      - name: 'Build libogg'
-        run: |
-          wget http://downloads.xiph.org/releases/ogg/libogg-${LIBOGG_VERSION}.tar.xz
-          tar axvf "libogg-${LIBOGG_VERSION}.tar.xz"
-          cd "libogg-${LIBOGG_VERSION}"
-          mkdir build
-          cd build
-          export PATH="${DEVKITPRO}/portlibs/wii/bin:${DEVKITPPC}/bin:$PATH"
-          ../configure --prefix="${DEVKITPRO}/portlibs/wii" --host=powerpc-eabi
-          make
-          make install
-          cd ../..
-
-      - name: 'Build libflac'
-        run: |
-          wget http://downloads.xiph.org/releases/flac/flac-${FLAC_VERSION}.tar.xz
-          tar axvf "flac-${FLAC_VERSION}.tar.xz"
-          cd "flac-${FLAC_VERSION}"
-          mkdir build
-          cd build
-          export PATH="${DEVKITPRO}/portlibs/wii/bin:${DEVKITPPC}/bin:$PATH"
-          # we don't need programs or examples
-          ../configure --prefix="${DEVKITPRO}/portlibs/wii" --host=powerpc-eabi --disable-programs --disable-examples
-          make
-          make install
-          cd ../..
-
-      # This uses my own fork of SDL until my keyboard patches get merged
-      - name: 'Checkout SDL2'
-        uses: actions/checkout@v4
-        with:
-          repository: 'mrpapersonic/SDL'
-          ref: 'ogc-sdl-2.28'
-          path: SDL
-
-      - name: 'Build SDL2'
-        run: |
-          cd SDL
-          export PATH="${DEVKITPRO}/portlibs/wii/bin:${DEVKITPPC}/bin:$PATH"
-          powerpc-eabi-cmake -S . -B build -G Ninja
-          cmake --build build --verbose
-          cmake --install build
-          cd ..
+          dkp-pacman -S ppc-libogg ppc-flac wii-sdl2
 
       - name: 'Get date of latest commit'
         id: date
