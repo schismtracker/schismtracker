@@ -279,7 +279,6 @@ jobs:
         run: |
           apt-get update
           apt-get install -y ninja-build autoconf automake libtool
-          dkp-pacman -S --noconfirm ppc-libogg ppc-flac wii-sdl2
 
       - name: 'Get date of latest commit'
         id: date
