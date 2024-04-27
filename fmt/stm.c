@@ -55,7 +55,7 @@ struct stm_sample {
 	char name[12];
 	uint8_t zero;
 	uint8_t inst_disk; // lol disks
-	uint16_t reserved;
+	uint16_t pcmpara; // in the official documentation, this is misleadingly labelled reserved...
 	uint16_t length, loop_start, loop_end;
 	uint8_t volume;
 	uint8_t reserved2;
@@ -119,6 +119,13 @@ static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 				// I don't get it.
 				note->param >>= 4;
 				break;
+			case FX_VOLUMESLIDE:
+				// Scream Tracker 2 checks for the lower nibble first for some reason...
+				if (note->param & 0x0f && note->param >> 4)
+					note->param &= 0x0f;
+				if (!note->param)
+					note->effect = FX_NONE;
+				break;
 			case FX_PATTERNBREAK:
 				note->param = (note->param & 0xf0) * 10 + (note->param & 0xf);
 				break;
@@ -153,6 +160,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	char id[8];
 	uint8_t tmp[4];
 	int npat, n;
+	uint16_t para_sdata[MAX_SAMPLES] = { 0 };
 
 	slurp_seek(fp, 20, SEEK_SET);
 	slurp_read(fp, id, 8);
@@ -209,6 +217,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			sample->flags |= CHN_LOOP;
 			sample->loop_end = CLAMP(sample->loop_end, sample->loop_start, blen);
 		}
+		para_sdata[n] = bswapLE16(stmsmp.pcmpara);
 	}
 
 	slurp_read(fp, song->orderlist, 128);
@@ -230,16 +239,15 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (n = 1; n <= 31; n++) {
 			song_sample_t *sample = song->samples + n;
-			int align = (sample->length + 15) & ~15;
 
 			if (sample->length < 3) {
 				// Garbage?
 				sample->length = 0;
 			} else {
+				slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
 				csf_read_sample(sample, SF_LE | SF_PCMS | SF_8 | SF_M,
 					(const char *) (fp->data + fp->pos), sample->length);
 			}
-			slurp_seek(fp, align, SEEK_CUR);
 		}
 	}
 
@@ -248,7 +256,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	for (; n < 64; n++)
 		song->channels[n].flags |= CHN_MUTE;
 	song->pan_separation = 64;
-	song->flags = SONG_ITOLDEFFECTS | SONG_COMPATGXX;
+	song->flags = SONG_ITOLDEFFECTS | SONG_COMPATGXX | SONG_NOSTEREO;
 
 	return LOAD_SUCCESS;
 }
