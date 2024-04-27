@@ -72,7 +72,7 @@ void setup_channel_filter(song_voice_t *chan, int reset, int flt_modifier, int f
 {
 	int cutoff = chan->cutoff;
 	int resonance = chan->resonance;
-	double frequency, r, d, e, fg, fb0, fb1;
+	float frequency, r, d, e, fg, fb0, fb1;
 
 	cutoff = cutoff * (flt_modifier + 256) / 256;
 
@@ -95,7 +95,7 @@ void setup_channel_filter(song_voice_t *chan, int reset, int flt_modifier, int f
 	chan->flags |= CHN_FILTER;
 
 	// 2 ^ (i / 24 * 256)
-	frequency = 110.0 * powf(2.0, (double) cutoff * FREQ_PARAM_MULT + 0.25);
+	frequency = 110.0 * powf(2.0, (float)cutoff * FREQ_PARAM_MULT + 0.25);
 	if (frequency > freq / 2.0)
 		frequency = freq / 2.0;
 	r = freq / (2.0 * M_PI * frequency);
