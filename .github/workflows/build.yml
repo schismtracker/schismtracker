@@ -298,9 +298,14 @@ jobs:
           ../configure --host=powerpc-eabi --with-flac
           make
           powerpc-eabi-strip -S schismtracker.elf
+          mkdir -p up/apps
+          cp -r ../sys/wii/schismtracker up/apps
+          mv schismtracker.elf up/apps/schismtracker/boot.elf
+          wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
+          cp ../docs/configuration.md ../README.md ../COPYING COPYING.Xiph up/apps/schismtracker
 
       - name: 'Upload binary'
         uses: actions/upload-artifact@v4
         with:
           name: schismtracker-${{ steps.date.outputs.date }}-wii
-          path: schismtracker/build/schismtracker.elf
+          path: schismtracker/build/up
