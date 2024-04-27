@@ -4,11 +4,12 @@
 #include "sndfile.h"
 
 // Stuff moved from sndfile.h
+
 #define MIXING_ATTENUATION      5
 #define MIXING_CLIPMIN          (-0x04000000)
 #define MIXING_CLIPMAX          (0x03FFFFFF)
 #define VOLUMERAMPPRECISION     12
-#define FILTERPRECISION         13
+#define FILTERPRECISION         ((sizeof(int32_t) * 8) - 8) /* faithfully stolen from openmpt */
 
 
 void init_mix_buffer(int *, unsigned int);

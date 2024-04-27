@@ -371,6 +371,8 @@
 ///////////////////////////////////////////////////
 // Resonant Filters
 
+#define MUL_32_TO_64(x, y) \
+    ((int64_t)(x) * (y))
 #define FILT_CLIP(i) CLAMP(i, -65536, 65534)
 
 // Mono
@@ -386,7 +388,7 @@
 
 
 #define SNDMIX_PROCESSFILTER \
-    ta = (vol * chan->filter_a0 + FILT_CLIP(fy1) * chan->filter_b0 + FILT_CLIP(fy2) * chan->filter_b1 \
+    ta = (MUL_32_TO_64(vol, chan->filter_a0) + MUL_32_TO_64(FILT_CLIP(fy1), chan->filter_b0) + MUL_32_TO_64(FILT_CLIP(fy2), chan->filter_b1) \
 	+ (1 << (FILTERPRECISION - 1))) >> FILTERPRECISION; \
     fy2 = fy1; \
     fy1 = ta; \
@@ -410,9 +412,9 @@
 
 
 #define SNDMIX_PROCESSSTEREOFILTER \
-    ta = (vol_l * chan->filter_a0 + FILT_CLIP(fy1) * chan->filter_b0 + FILT_CLIP(fy2) * chan->filter_b1 \
+    ta = (MUL_32_TO_64(vol_l, chan->filter_a0) + MUL_32_TO_64(FILT_CLIP(fy1), chan->filter_b0) + MUL_32_TO_64(FILT_CLIP(fy2), chan->filter_b1) \
 	+ (1 << (FILTERPRECISION - 1))) >> FILTERPRECISION; \
-    tb = (vol_r * chan->filter_a0 + FILT_CLIP(fy3) * chan->filter_b0 + FILT_CLIP(fy4) * chan->filter_b1 \
+    tb = (MUL_32_TO_64(vol_r, chan->filter_a0) + MUL_32_TO_64(FILT_CLIP(fy3), chan->filter_b0) + MUL_32_TO_64(FILT_CLIP(fy4), chan->filter_b1) \
 	+ (1 << (FILTERPRECISION - 1))) >> FILTERPRECISION; \
     fy2 = fy1; fy1 = ta; vol_l = ta; \
     fy4 = fy3; fy3 = tb; vol_r = tb;
