@@ -181,16 +181,21 @@ char *get_current_directory(void); /* just a getcwd() wrapper */
 int utf8_to_wchar(wchar_t** wchar, const char* utf8);
 int wchar_to_utf8(char** utf8, const wchar_t* wchar);
 
-/* wrappers around stat for Unicode support */
+/* wrappers around functions for Unicode support */
 #ifdef WIN32
+#include <stdio.h> /* FILE */
 int win32_open(const char* path, int flags);
 int win32_wstat(const wchar_t* path, struct stat* st);
 int win32_stat(const char* path, struct stat* st);
-# define os_stat win32_stat
-# define os_open win32_open
+int win32_mktemp(char* template, size_t size);
+FILE* win32_fopen(const char* path, const char* flags);
+# define os_fopen win32_fopen
+# define os_stat  win32_stat
+# define os_open  win32_open
 #else
-# define os_stat stat
-# define os_open open
+# define os_fopen fopen
+# define os_stat  stat
+# define os_open  open
 #endif
 
 void put_env_var(const char *key, const char *value);

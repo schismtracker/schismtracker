@@ -235,24 +235,18 @@ disko_t *disko_open(const char *filename)
 	if (!ds)
 		return NULL;
 
-	// This might seem a bit redundant, but allows for flexibility later
-	// (e.g. putting temp files elsewhere, or mangling the filename in some other way)
-	strcpy(ds->filename, filename);
-	strcpy(ds->tempname, filename);
-	strcat(ds->tempname, "XXXXXX");
+	memcpy(ds->filename, filename, len * sizeof(char));
+	memcpy(ds->tempname, filename, len * sizeof(char));
+	memcpy(ds->tempname + len, "XXXXXX", 6 * sizeof(char));
 
 #ifdef WIN32
 	{
-		/* avoid having ANSI shenanigans on Windows */
-		wchar_t* tempname = NULL;
-		int m = utf8_to_wchar(&tempname, ds->tempname);
-		if (!m) {
+		if (win32_mktemp(ds->tempname, sizeof(ds->tempname)/sizeof(ds->tempname[0]))) {
 			free(ds);
 			return NULL;
 		}
-		_wmktemp(tempname);
-		ds->file = _wfopen(tempname, L"wb");
-		free(tempname);
+
+		ds->file = win32_fopen(ds->tempname, "wb");
 		if (!ds->file) {
 			free(ds);
 			return NULL;

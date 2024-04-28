@@ -62,6 +62,7 @@ the banks are:
 
 #include "it.h"
 #include "dmoz.h" /* for dmoz_path_concat */
+#include "util.h"
 
 #include "sdlmain.h"
 
@@ -257,7 +258,7 @@ int font_load(const char *filename)
 	font_file = dmoz_path_concat(font_dir, filename);
 	free(font_dir);
 
-	fp = fopen(font_file, "rb");
+	fp = os_fopen(font_file, "rb");
 	if (fp == NULL) {
 		SDL_SetError("%s: %s", font_file, strerror(errno));
 		free(font_file);
@@ -333,7 +334,7 @@ int font_save(const char *filename)
 	font_file = dmoz_path_concat(font_dir, filename);
 	free(font_dir);
 
-	fp = fopen(font_file, "wb");
+	fp = os_fopen(font_file, "wb");
 	if (fp == NULL) {
 		SDL_SetError("%s: %s", font_file, strerror(errno));
 		free(font_file);

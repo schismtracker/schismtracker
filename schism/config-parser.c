@@ -350,7 +350,7 @@ int cfg_write(cfg_file_t *cfg)
 
 	make_backup_file(cfg->filename, 0);
 
-	fp = fopen(cfg->filename, "wb");
+	fp = os_fopen(cfg->filename, "wb");
 	if (!fp) {
 		/* FIXME: don't print a message here! */
 		perror(cfg->filename);

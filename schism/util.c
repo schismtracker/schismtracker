@@ -668,6 +668,31 @@ int win32_wstat(const wchar_t* path, struct stat* st) {
 	return ws;
 }
 
+/* you may wonder: why is this needed? can't we just use
+ * _mktemp() even on UTF-8 encoded strings?
+ *
+ * well, you *can*, but it will bite you in the ass once
+ * you get a string that has a mysterious "X" stored somewhere
+ * in the filename; better to just give it as a wide string */
+int win32_mktemp(char* template, size_t size) {
+	wchar_t* wc = NULL;
+	if (!utf8_to_wchar(&wc, template))
+		return -1;
+
+	if (!_wmktemp(wc)) {
+		free(wc);
+		return -1;
+	}
+
+	if (!WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wc, -1, template, size, NULL, NULL)) {
+		free(wc);
+		return -1;
+	}
+
+	free(wc);
+	return 0;
+}
+
 int win32_stat(const char* path, struct stat* st) {
 	wchar_t* wc = NULL;
 	if (!utf8_to_wchar(&wc, path))
@@ -685,6 +710,17 @@ int win32_open(const char* path, int flags) {
 
 	int ret = _wopen(wc, flags);
 	free(wc);
+	return ret;
+}
+
+FILE* win32_fopen(const char* path, const char* flags) {
+	wchar_t* wc = NULL, *wc_flags = NULL;
+	if (!utf8_to_wchar(&wc, path) || !utf8_to_wchar(&wc_flags, flags))
+		return NULL;
+
+	FILE* ret = _wfopen(wc, wc_flags);
+	free(wc);
+	free(wc_flags);
 	return ret;
 }
 #endif
@@ -926,21 +962,8 @@ static int _rename_nodestroy(const char *old, const char *new)
 {
 /* XXX does __amigaos4__ have a special need for this? */
 #ifdef WIN32
-	/* is this code not finished? it never returns success */
-	UINT em = SetErrorMode(0);
-	if (!MoveFile(old, new)) {
-		switch (GetLastError()) {
-		case ERROR_ALREADY_EXISTS:
-		case ERROR_FILE_EXISTS:
-			SetErrorMode(em);
-			errno = EEXIST;
-			return -1;
-		};
-		SetErrorMode(em);
-		return -1;
-	}
-	SetErrorMode(em);
-	return 0;
+	/* do nothing; this is already handled in rename_file */
+	return -1;
 #else
 	if (link(old, new) == -1) {
 		return -1;
@@ -971,70 +994,17 @@ int rename_file(const char *old, const char *new, int overwrite)
 		free(new_w);
 		return -1;
 	}
-	UINT em = SetErrorMode(0);
 
-	if (MoveFileW(old_w, new_w)) {
-		free(old_w);
-		free(new_w);
-		win32_filecreated_callback(new);
-		return 0;
-	}
-	switch (GetLastError()) {
-	case ERROR_ALREADY_EXISTS:
-	case ERROR_FILE_EXISTS:
-		break;
-	default:
-		/* eh... */
-		free(new_w);
-		free(old_w);
-		SetErrorMode(em);
-		return -1;
-	};
-
-	if (MoveFileExW(old_w, new_w, MOVEFILE_REPLACE_EXISTING)) {
+	if (MoveFileExW(old_w, new_w, overwrite ? MOVEFILE_REPLACE_EXISTING : 0)) {
 		/* yay */
 		free(new_w);
 		free(old_w);
-		SetErrorMode(em);
 		return 0;
 	}
-	/* this sometimes work with win95 and novell shares */
-	_wchmod(new_w, 0777);
-	_wchmod(old_w, 0777);
-	/* more junk */
-	SetFileAttributesW(new_w, FILE_ATTRIBUTE_NORMAL);
-	SetFileAttributesW(new_w, FILE_ATTRIBUTE_TEMPORARY);
 
-	if (MoveFileW(old_w, new_w)) {
-		/* err.. yay! */
-		free(new_w);
-		free(old_w);
-		win32_filecreated_callback(new);
-		SetErrorMode(em);
-		return 0;
-	}
-	/* okay, let's try again */
-	if (!DeleteFileW(new_w)) {
-		/* no chance! */
-		free(new_w);
-		free(old_w);
-		SetErrorMode(em);
-		return -1;
-	}
-	if (MoveFileW(old_w, new_w)) {
-		/* .... */
-		free(new_w);
-		free(old_w);
-		win32_filecreated_callback(new);
-		SetErrorMode(em);
-		return 0;
-	}
-	/* alright, thems the breaks. win95 eats your files,
-	and not a damn thing I can do about it.
-	*/
 	free(new_w);
 	free(old_w);
-	SetErrorMode(em);
+
 	return -1;
 #else
 	int r = rename(old, new);
