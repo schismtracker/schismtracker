@@ -30,13 +30,11 @@
 #define CLIPPY_BUFFER   1       /* reflects the yank/cut buffer */
 
 /* called when schism needs a paste operation; cb is CLIPPY_SELECT if the middle button is
-used to paste, otherwise if the "paste key" is pressed, this uses CLIPPY_BUFFER
-*/
+used to paste, otherwise if the "paste key" is pressed, this uses CLIPPY_BUFFER */
 void clippy_paste(int cb);
 
 /* updates the clipboard selection; called by various widgets that perform a copy operation;
-stops at the first null, so setting len to <0 means we get the next utf8 or asciiz string
-*/
+stops at the first null, so setting len to <0 means we get the next utf8 or asciiz string */
 void clippy_select(struct widget *w, char *addr, int len);
 struct widget *clippy_owner(int cb);
 

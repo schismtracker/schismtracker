@@ -35,50 +35,47 @@ static char *_current_selection = NULL;
 static char *_current_clipboard = NULL;
 static struct widget *_widget_owner[16] = {NULL};
 
-static void _clippy_copy_to_sys(int do_sel)
+static void _clippy_copy_to_sys(int cb)
 {
-	int j = 0;
-	char *tmp = NULL;
-	char *dst = NULL;
-	char *freeme = NULL;
+	char* freeme = NULL;
 
-	if (!_current_selection) {
-		dst = NULL;
-		j = 0;
-	} else
-#if defined(WIN32)
-	{
-		int i;
+	if (_current_selection) {
+		char* dst = NULL;
+		int i = 0;
+#ifdef WIN32
 		/* need twice the space since newlines are replaced with \r\n */
-		freeme = tmp = malloc(strlen(_current_selection)*2 + 1);
-		if (!tmp) return;
-		for (i = j = 0; _current_selection[i]; i++) {
-			if (_current_selection[i] == '\r' || _current_selection[i] == '\n') {
-				tmp[j++] = '\r';
-				tmp[j++] = '\n';
-			} else {
-				tmp[j++] = _current_selection[i];
-			}
-		}
-		tmp[j] = '\0';
-	}
+		freeme = dst = malloc(strlen(_current_selection) * 2) + 1;
 #else
-	{
-		int i;
-		/* convert to local */
-		freeme = dst = malloc(strlen(_current_selection)+4);
-		if (!dst) return;
-		for (i = j = 0; _current_selection[i]; i++) {
-			dst[j] = _current_selection[i];
-			if (dst[j] == '\r') dst[j] = '\n';
-			j++;
-		}
-		dst[j] = '\0';
-	}
+		/* XXX what's 4?? */
+		freeme = dst = malloc(strlen(_current_selection) + 4);
 #endif
+		if (!freeme) return;
+		for (i = 0; _current_selection[i]; i++) {
+#ifdef WIN32
+			if (_current_selection[i] == '\r' || _current_selection[i] == '\n') {
+				*(dst++) = '\r';
+				*(dst++) = '\n';
+			} else {
+				*(dst++) = _current_selection[i];
+			}
+#else
+			*(dst++) = (_current_selection[i] == '\r') ? '\n' : _current_selection[i];
+#endif
+		}
+		(*dst++) = '\0';
+	}
 
-	if (!do_sel)
-		SDL_SetClipboardText(_current_clipboard);
+	switch (cb) {
+		case CLIPPY_SELECT:
+#if SDL_VERSION_ATLEAST(2, 26, 0)
+			SDL_SetPrimarySelectionText(freeme);
+#endif
+			break;
+		default:
+		case CLIPPY_BUFFER:
+			SDL_SetClipboardText(freeme);
+			break;
+	}
 
 	if (freeme)
 		free(freeme);
@@ -99,10 +96,34 @@ static char *_internal_clippy_paste(int cb)
 {
 	switch (cb) {
 		case CLIPPY_SELECT:
+#if SDL_VERSION_ATLEAST(2, 26, 0)
+			/* is this even remotely useful? */
+			if (SDL_HasPrimarySelectionText()) {
+				if (_current_selection)
+					free(_current_selection);
+
+				/* See below for why we do this. */
+				char* sel = SDL_GetPrimarySelectionText();
+				_current_selection = str_dup(sel);
+				SDL_free(sel);
+				return _current_selection;
+			}
+#endif
+
 			return _current_selection;
 		case CLIPPY_BUFFER:
-			if (SDL_HasClipboardText())
-				return _current_clipboard = SDL_GetClipboardText();
+			if (SDL_HasClipboardText()) {
+				if (_current_clipboard)
+					free(_current_clipboard);
+
+				/* SDL docs explicitly says we have to call SDL_free,
+			 	 * while our own code uses regular malloc. Just copy
+				 * the buffer... */
+				char* cb = SDL_GetClipboardText();
+				_current_clipboard = str_dup(cb);
+				SDL_free(cb);
+				return _current_clipboard;
+			}
 
 			return _current_clipboard;
 		default: break;
@@ -122,28 +143,23 @@ void clippy_select(struct widget *w, char *addr, int len)
 {
 	int i;
 
-	if (_current_selection != _current_clipboard) {
+	if (_current_selection != _current_clipboard)
 		free(_current_selection);
-	}
+
 	if (!addr) {
 		_current_selection = NULL;
 		_widget_owner[CLIPPY_SELECT] = NULL;
 	} else {
-		for (i = 0; addr[i] && (len < 0 || i < len); i++) {
-			/* nothing */
-		}
-		_current_selection = strn_dup(addr, i);
+		_current_selection = (len < 0) ? str_dup(addr) : strn_dup(addr, len);
 		_widget_owner[CLIPPY_SELECT] = w;
 
-		/* update x11 Select (for xterms and stuff) */
-		_clippy_copy_to_sys(1);
+		/* notify SDL about our selection change */
+		_clippy_copy_to_sys(CLIPPY_SELECT);
 	}
 }
 struct widget *clippy_owner(int cb)
 {
-	if (cb == CLIPPY_SELECT || cb == CLIPPY_BUFFER)
-		return _widget_owner[cb];
-	return NULL;
+	return (cb == CLIPPY_SELECT || cb == CLIPPY_BUFFER) ? _widget_owner[cb] : NULL;
 }
 
 void clippy_yank(void)
@@ -156,6 +172,6 @@ void clippy_yank(void)
 
 	if (_current_selection && strlen(_current_selection) > 0) {
 		status_text_flash("Copied to selection buffer");
-		_clippy_copy_to_sys(0);
+		_clippy_copy_to_sys(CLIPPY_BUFFER);
 	}
 }
