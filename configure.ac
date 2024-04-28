@@ -176,13 +176,12 @@ case "${host_os}" in
                 AC_CHECK_HEADERS([winsock.h winsock2.h])
                 if test "x$ac_cv_header_winsock2_h" = "xyes"; then
                         AC_SUBST([NETWORK_LIBS], [-lws2_32])
-                        network_found=yes
+                        use_network=yes
                 elif test "x$ac_cv_header_winsock_h" = "xyes"; then
                         AC_SUBST([NETWORK_LIBS], [-lsock32])
-                        network_found=yes
+                        use_network=yes
                 else
-                        AC_MSG_RESULT([*** Couldn't find winsock\! (how\?)])
-                        network_found=no
+                        AC_MSG_ERROR([*** Couldn't find winsock\! (how\?)])
                 fi
 
                 use_win32=yes
