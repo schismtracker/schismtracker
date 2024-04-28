@@ -160,7 +160,7 @@ use_alsa=no
 use_alsa_dltrick=no
 use_network=no
 
-case "${target_os}" in
+case "${host_os}" in
 	darwin*)
                 AC_MSG_RESULT([found Darwin host])
 
