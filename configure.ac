@@ -87,7 +87,7 @@ dnl Headers, typedef crap, et al.
 AC_HEADER_DIRENT
 AC_CHECK_HEADERS_ONCE([sys/time.h])
 
-AC_CHECK_HEADERS(inttypes.h fcntl.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/kd.h linux/fb.h byteswap.h sys/socket.h sys/soundcard.h poll.h sys/poll.h)
+AC_CHECK_HEADERS(inttypes.h fcntl.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h byteswap.h sys/socket.h sys/soundcard.h poll.h sys/poll.h)
 AM_CONDITIONAL([USE_OSS], [test "x$ac_cv_header_sys_soundcard_h" = "xyes"])
 
 AC_C_CONST

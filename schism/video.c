@@ -24,51 +24,16 @@
 #define NATIVE_SCREEN_HEIGHT	400
 #define WINDOW_TITLE			"Schism Tracker"
 
-/* should be the native res of the display (set once and never again)
- * assumes the user starts schism from the desktop and that the desktop
- * is the native res (or at least something with square pixels) */
-static int display_native_x = -1;
-static int display_native_y = -1;
-
 #include "headers.h"
 #include "it.h"
-#include "osdefs.h"
-
-/* bugs
- * ... in sdl. not in this file :)
- *
- *  - take special care to call SDL_SetVideoMode _exactly_ once
- *    when on a console (video.desktop.fb_hacks)
- *
- */
-
-#if HAVE_SYS_KD_H
-# include <sys/kd.h>
-#endif
-#if HAVE_LINUX_FB_H
-# include <linux/fb.h>
-#endif
-#include <sys/types.h>
-#include <sys/stat.h>
-#if HAVE_SYS_IOCTL_H
-# include <sys/ioctl.h>
-#endif
-#if HAVE_SIGNAL_H
-#include <signal.h>
-#endif
+#include "sdlmain.h"
+#include "video.h"
 
 /* for memcpy */
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <stdio.h>
-
-#include "sdlmain.h"
-
-#include <unistd.h>
-#include <fcntl.h>
-
-#include "video.h"
 
 #ifndef MACOSX
 #ifdef WIN32
@@ -77,8 +42,6 @@ static int display_native_y = -1;
 #include "auto/schismico_hires.h"
 #endif
 #endif
-
-extern int macosx_did_finderlaunch;
 
 /* leeto drawing skills */
 #define MOUSE_HEIGHT    14
@@ -210,7 +173,7 @@ void video_fullscreen(int new_fs_flag)
 	} else {
 		SDL_SetWindowFullscreen(video.window, 0);
 		SDL_SetWindowResizable(video.window, SDL_TRUE);
-		set_icon();
+		set_icon(); /* XXX is this necessary */
 	}
 }
 
@@ -268,18 +231,15 @@ static void _gl_pal(int i, int rgb[3])
 
 void video_colors(unsigned char palette[16][3])
 {
-	void (*fun)(int i,int rgb[3]);
 	const int lastmap[] = { 0,1,2,3,5 };
 	int rgb[3], i, j, p;
-
-	fun = _gl_pal;
 
 	/* make our "base" space */
 	for (i = 0; i < 16; i++) {
 		rgb[0]=palette[i][0];
 		rgb[1]=palette[i][1];
 		rgb[2]=palette[i][2];
-		fun(i, rgb);
+		_gl_pal(i, rgb);
 		_bgr32_pal(i, rgb);
 	}
 	/* make our "gradient" space */
@@ -292,7 +252,7 @@ void video_colors(unsigned char palette[16][3])
 			(((int)(palette[p+1][1] - palette[p][1]) * (j&31)) /32);
 		rgb[2] = (int)palette[p][2] +
 			(((int)(palette[p+1][2] - palette[p][2]) * (j&31)) /32);
-		fun(i, rgb);
+		_gl_pal(i, rgb);
 		_bgr32_pal(i, rgb);
 	}
 }
