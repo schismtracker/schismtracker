@@ -33,9 +33,9 @@
 #include <CoreMIDI/MIDIServices.h>
 #include <CoreAudio/HostTime.h>
 
-static MIDIClientRef    client = NULL;
-static MIDIPortRef      portIn = NULL;
-static MIDIPortRef      portOut = NULL;
+static MIDIClientRef    client = 0;
+static MIDIPortRef      portIn = 0;
+static MIDIPortRef      portOut = 0;
 
 static int max_outputs = 0;
 static int max_inputs = 0;
