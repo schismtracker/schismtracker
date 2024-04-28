@@ -30,11 +30,6 @@ and possibly other files as well. Only one osdefs.c should be in use at a time. 
 #include "headers.h"
 #include "event.h"
 
-// This is defined in osdefs.c but not used anywhere.
-// Currently, its only purpose is to prevent erroneous linking of multiple osdefs.o files in the same build.
-extern const char *osname;
-
-
 /*
 os_sysinit: any platform-dependent setup that needs to occur directly upon startup.
 This code is processed right as soon as main() starts.
@@ -47,9 +42,7 @@ This is used to hack in system-dependent input methods (e.g. F16 and other scanc
 etc.) If defined, this function will be called after capturing an SDL event.
 A return value of 0 indicates that the event should NOT be processed by the main event handler.
 */
-#if defined(MACOSX)
-# define os_sdlevent macosx_sdlevent
-#elif defined(GEKKO)
+#if defined(GEKKO)
 # define os_sysinit wii_sysinit
 # define os_sdlinit wii_sdlinit
 # define os_sysexit wii_sysexit
@@ -71,27 +64,11 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_sysexit()
 #endif
 
-/* os_screensaver_deactivate: whatever is needed to keep the screensaver away.
-Leave this *undefined* if no implementation exists. */
-#if defined(USE_X11)
-# define os_screensaver_deactivate x11_screensaver_deactivate
-#else
-# undef os_screensaver_deactivate
-#endif
-
-/* os_yuvlayout: return the best YUV layout. */
-#if defined(USE_XV)
-#  define os_yuvlayout xv_yuvlayout
-#elif defined(USE_X11)
-# define os_yuvlayout() VIDEO_YUV_NONE
-#else
-# define os_yuvlayout() VIDEO_YUV_YUY2
-#endif
-
+/* this alias is kept for compatibility */
+#define os_screensaver_deactivate SDL_DisableScreenSaver
 
 // Implementations for the above, and more.
 
-int macosx_sdlevent(SDL_Event *event); // patch up osx scancodes for printscreen et al; numlock hack?
 int macosx_ibook_fnswitch(int setting);
 
 void wii_sysinit(int *pargc, char ***pargv); // set up filesystem
@@ -99,23 +76,9 @@ void wii_sysexit(void); // close filesystem
 void wii_sdlinit(void); // set up wiimote
 int wii_sdlevent(SDL_Event *event); // add unicode values; wiimote hack to allow simple playback
 
-void x11_screensaver_deactivate(void);
-unsigned int xv_yuvlayout(void);
-
 void win32_sysinit(int *pargc, char ***pargv);
 void win32_get_modkey(int *m);
 void win32_filecreated_callback(const char *filename);
-
-// migrated from xkb.c
-#if defined(HAVE_X11_XKBLIB_H)
-# define USE_XKB 1
-#endif
-
-#if defined(USE_XKB) || defined(WIN32) || defined(MACOSX)
-int key_scancode_lookup(int k, int def);
-#else
-#define key_scancode_lookup(k, def) def
-#endif
 
 // Nasty alsa crap
 void alsa_dlinit(void);

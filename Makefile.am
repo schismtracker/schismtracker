@@ -156,15 +156,6 @@ auto/default-font.c: Makefile.am scripts/bin2h.sh scripts/build-font.sh $(fonts)
 auto/helptext.c: Makefile.am scripts/genhelp.py $(helptexts)
 	$(PYTHON) $(srcdir)/scripts/genhelp.py $(srcdir) $(helptexts) >$@
 
-if USE_X11
-files_x11 = sys/x11/xscreensaver.c sys/x11/xkb.c
-cflags_x11 = -DUSE_X11
-if USE_XV
-files_x11 += sys/x11/xv.c
-cflags_x11 += -DUSE_XV
-endif
-endif
-
 if USE_ALSA
 files_alsa = sys/alsa/init.c sys/alsa/midi-alsa.c
 if USE_ALSA_DLTRICK
@@ -215,7 +206,9 @@ endif # USE_WIN32
 
 if USE_WII
 files_wii=sys/wii/isfs.c sys/wii/osdefs.c
-cflags_wii=-I$(srcdir)/sys/wii
+cflags_wii=-DGEKKO -mrvl -mcpu=750 -meabi -mhard-float
+cppflags_wii=-I$(srcdir)/sys/wii $(WII_CPPFLAGS)
+libs_wii=$(wii_machdep) $(WII_LDFLAGS)
 endif
 
 if USE_MACOSX
@@ -236,6 +229,7 @@ endif
 
 if USE_NETWORK
 cflags_network=-DUSE_NETWORK
+libs_network=$(NETWORK_LIBS)
 endif
 
 
@@ -376,12 +370,12 @@ schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_
 
 cflags_fmopl=-DHAS_YM3812=1 -DHAS_Y8950=0 -DHAS_YM3526=0
 
-AM_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE -I$(srcdir)/include -I.
-AM_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
+schismtracker_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE -I$(srcdir)/include -I. $(cppflags_wii)
+schismtracker_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
 	$(cflags_version) $(cflags_win32) $(cflags_wii) \
 	$(cflags_macosx) $(cflags_flac)
-AM_OBJCFLAGS = $(AM_CFLAGS)
+schismtracker_OBJCFLAGS = $(schismtracker_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(lib_asound) $(lib_win32) $(libs_flac) $(SDL_LIBS) $(LIBM)
+schismtracker_LDADD = $(LIB_MATH) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(SDL_LIBS)

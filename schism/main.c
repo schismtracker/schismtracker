@@ -481,7 +481,7 @@ static void event_loop(void)
 	SDL_Keysym last_key = {};
 	int modkey;
 	time_t startdown;
-#ifdef USE_X11
+#ifdef os_screensaver_deactivate
 	time_t last_ss;
 #endif
 	int downtrip;

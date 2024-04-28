@@ -107,7 +107,6 @@ Editor's note: currently there's an explicit directive for the build to fail if
 USE_DLTRICK_ALSA isn't defined. Doesn't say why.
 */
 
-
 #include <dlfcn.h>
 
 extern void *_dltrick_handle;

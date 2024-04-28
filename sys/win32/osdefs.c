@@ -48,22 +48,9 @@ void win32_get_modkey(int *mk)
 		| ((ks[VK_CAPITAL]&1) ? KMOD_CAPS : 0);
 }
 
-static HKL default_keymap;
-static HKL us_keymap;
-
-static void win32_setup_keymap(void)
-{
-	default_keymap = GetKeyboardLayout(0);
-	us_keymap = LoadKeyboardLayout("00000409", KLF_ACTIVATE|KLF_REPLACELANG|KLF_NOTELLSHELL);
-	ActivateKeyboardLayout(default_keymap,0);
-}
-
-
 void win32_sysinit(UNUSED int *pargc, UNUSED char ***pargv)
 {
 	static WSADATA ignored = {};
-
-	win32_setup_keymap();
 
 	if (WSAStartup(0x202, &ignored) == SOCKET_ERROR) {
 		WSACleanup(); /* ? */

@@ -26,9 +26,6 @@
 #include "event.h"
 #include "song.h"
 
-const char *osname = "macosx";
-
-
 int macosx_sdlevent(SDL_Event *event)
 {
 	if (event->type == SDL_KEYDOWN || event->type == SDL_KEYUP) {

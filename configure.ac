@@ -34,6 +34,43 @@ AC_CANONICAL_HOST
 
 dnl -----------------------------------------------------------------------
 
+AC_ARG_ENABLE(extra-opt,
+        AS_HELP_STRING([--enable-extra-opt], [Add extra, system-dependent optimizations (do not use this together with debug or even profiling)]),
+        ADD_OPT=$enableval,
+        ADD_OPT=no)
+
+AC_ARG_ENABLE(all-warnings,
+        AS_HELP_STRING([--enable-all-warnings], [Enable ridiculous compiler warnings]),
+        ADD_WARN=$enableval,
+        ADD_WARN=no)
+
+AC_ARG_ENABLE(debug,
+        AS_HELP_STRING([--enable-debug], [Enable debug flags]),
+        ADD_DEBUG=$enableval,
+        ADD_DEBUG=no)
+
+AC_ARG_ENABLE(profiling,
+        AS_HELP_STRING([--enable-profiling], [Enable profiling flags (slows things down), debugging (--enable-debug) is also enabled by this]),
+        ADD_PROFILING=$enableval,
+        ADD_PROFILING=no)
+
+AC_ARG_ENABLE(ludicrous-mode,
+        AS_HELP_STRING([--enable-ludicrous-mode], [Enable all warnings, and treat as errors]),
+        ADD_LUDICROUS=$enableval,
+        ADD_LUDICROUS=no)
+
+AC_ARG_ENABLE(fortify-source,
+        AS_HELP_STRING([--enable-fortify-source], [Build with FORTIFY_SOURCE]),
+        ADD_FORTIFY=$enableval,
+        ADD_FORTIFY=no)
+
+AC_ARG_WITH([flac],
+        [AS_HELP_STRING([--with-flac],[Build with FLAC support @<:@default=check@:>@])],
+        [],
+        [with_flac=check])
+
+dnl ------------------------------------------------------------------------
+
 dnl Check for standard programs
 AC_PROG_CC
 AM_PROG_CC_C_O
@@ -67,8 +104,11 @@ if test "x$SDL_CONFIG" = "x"; then
         AC_MSG_ERROR([*** sdl2-config not found.])
 fi
 AS_VERSION_COMPARE([$($SDL_CONFIG --version)], [2.0.5], [AC_MSG_ERROR([*** SDL version >= 2.0.5 not found.])])
-SDL_CFLAGS=$($SDL_CONFIG --cflags)
-SDL_LIBS=$($SDL_CONFIG --libs)
+
+SDL_CFLAGS="$($SDL_CONFIG --cflags)"
+SDL_LIBS="$($SDL_CONFIG --libs)"
+AC_SUBST([SDL_CFLAGS])
+AC_SUBST([SDL_LIBS])
 
 dnl Libs
 AC_CHECK_LIB([dl], [dlopen])
@@ -95,215 +135,141 @@ AC_C_INLINE
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 AC_STRUCT_TM
-AC_SEARCH_LIBS([powf], [m])
 
 dnl -----------------------------------------------------------------------
 
-dnl Always use x11 by default unless overriden later per-platform
-dnl (this is stupid, and only needed because the x11 check is dysfunctional)
-defaultx11=yes
+dnl -lm
 
+saved_LIBS="$LIBS"
+AC_SEARCH_LIBS([powf], [m])
+LIBS="$saved_LIBS"
+if test "x$ac_cv_search_powf" = "xno"; then
+        AC_MSG_ERROR([*** Couldn't find a standard math library.])
+elif ! test "x$ac_cv_search_powf" = "xnone required"; then
+        AC_SUBST([LIB_MATH], ["$ac_cv_search_powf"])
+fi
 
-dnl CoreMIDI (Mac OS X)
-AC_MSG_CHECKING(for Darwin host OS)
-case "${host_os}" in
+dnl -----------------------------------------------------------------------
+
+dnl Platform-specific behavior
+AC_MSG_CHECKING([host platform])
+use_macosx=no
+use_win32=no
+use_wii=no
+use_alsa=no
+use_alsa_dltrick=no
+use_network=no
+
+case "${target_os}" in
 	darwin*)
-		AC_MSG_RESULT(found)
-		dnl frameworks aren't part of sdl... should be a separate variable
+                AC_MSG_RESULT([found Darwin host])
 
-		SDL_LIBS="$SDL_LIBS -lSDL2main -framework Cocoa -framework CoreAudio -framework CoreMIDI -framework IOKit"
-		AC_SUBST(SDL_LIBS)
+                AC_SUBST([OSX_LIBS], [-SDL2main])
+                AC_SUBST([OSX_LDFLAGS], [-framework Cocoa -framework CoreAudio -framework CoreMIDI -framework IOKit])
 
-		AM_CONDITIONAL([USE_MACOSX], true)
-		AM_CONDITIONAL([am__fastdepOBJC], true)
-		defaultx11=no
+		use_macosx=yes
 		;;
+        cygwin*|mingw*)
+                AC_MSG_RESULT([found Windows host])
+                WIN32_LIBS="-lwinmm"
+
+                AC_CHECK_HEADERS([winsock.h winsock2.h])
+                if test "x$ac_cv_header_winsock2_h" = "xyes"; then
+                        AC_SUBST([NETWORK_LIBS], [-lws2_32])
+                        network_found=yes
+                elif test "x$ac_cv_header_winsock_h" = "xyes"; then
+                        AC_SUBST([NETWORK_LIBS], [-lsock32])
+                        network_found=yes
+                else
+                        AC_MSG_RESULT([*** Couldn't find winsock\! (how\?)])
+                        network_found=no
+                fi
+
+                use_win32=yes
+                ;;
 	*)
-		AC_MSG_RESULT(not found)
-		AM_CONDITIONAL([USE_MACOSX], false)
-		AM_CONDITIONAL([am__fastdepOBJC], false)
+                AC_MSG_RESULT([nothing to do here])
+
+                dnl now check for other stuff
+                AC_CHECK_LIB([ogc], [IOS_ReloadIOS], [libogc_found=yes], [libogc_found=no], [-mrvl -L${DEVKITPRO}/libogc/lib/wii])
+                AC_CHECK_LIB([asound], [snd_seq_open], [alsa_found=yes], [alsa_found=no])
+
+                if test "x$libogc_found" = "xyes"; then
+                        WII_CPPFLAGS="-I${DEVKITPRO}/libogc/include -I${DEVKITPPC}/powerpc-eabi/include"
+                        WII_LDFLAGS="-L${DEVKITPRO}/libogc/lib/wii -L${DEVKITPPC}/powerpc-eabi/lib"
+                        AC_SUBST([WII_CPPFLAGS])
+                        AC_SUBST([WII_LDFLAGS])
+
+                        EXEEXT=.elf
+                        AC_SUBST([EXEEXT])
+
+                        use_wii=yes
+                else
+                        if test "x$alsa_found" = "xyes"; then
+                                if test "$ac_cv_header_sys_soundcard_h" = "yes"; then
+                                        alsadltrick=yes
+                                        LIBS=$saved_libs
+                                fi
+                        fi
+                fi
+
+                dnl Networking...
+
+                saved_LIBS="$LIBS"
+                AC_SEARCH_LIBS([socket], [socket network])
+                LIBS="$saved_LIBS"
+
+                if test "x$ac_cv_search_socket" = "xno"; then
+                        AC_MSG_WARN([*** Couldn't find a proper sockets library])
+                elif test "x$ac_cv_search_socket" = "xnone required"; then
+                        if test "x$ac_cv_header_sys_socket_h" = "xyes"; then
+                                dnl free networking
+                                use_network=yes
+                        else
+                                use_network=no
+                        fi
+                else
+                        AC_SUBST([NETWORK_LIBS], [$ac_cv_search_socket])
+                        use_network=yes
+                fi
+
 		;;
 esac
 
-
-
-dnl winmm testing...
-AC_CHECK_HEADERS(windows.h)
-if test "X$ac_cv_header_windows_h" = "Xyes"; then
-        AM_CONDITIONAL([USE_WIN32], true)
-        SDL_LIBS="$SDL_LIBS -lwinmm"
-        AC_SUBST(SDL_LIBS)
-        defaultx11=no
+if test "x$use_macosx" = "xyes"; then
+        AC_PROG_OBJC
 else
-        AM_CONDITIONAL([USE_WIN32], false)
+        dnl stupid hack to make Objective-C optional
+        AM_CONDITIONAL([am__fastdepOBJC], [false])
+        OBJC="$CC"
 fi
 
+AM_CONDITIONAL([USE_WIN32], [test "x$use_win32" = "xyes"])
+AM_CONDITIONAL([USE_WII], [test "x$use_wii" = "xyes"])
+AM_CONDITIONAL([USE_MACOSX], [test "x$use_macosx" = "xyes"])
+AM_CONDITIONAL([am__fastdepOBJC], [test "x$use_macosx" = "xyes"])
+AM_CONDITIONAL([USE_ALSA], [test "x$use_alsa" = "xyes"])
+AM_CONDITIONAL([USE_ALSA_DLTRICK], [test "x$use_alsadltrick" = "xyes"])
+AM_CONDITIONAL([USE_NETWORK], [test "x$use_network" = "xyes"])
 
-dnl Wii crap
-AC_CHECK_LIB(ogc, IOS_ReloadIOS, libogc_found=yes, libogc_found=no, [-mrvl -L${DEVKITPRO}/libogc/lib/wii])
-if test x"$libogc_found" = "xyes"; then
-        AM_CONDITIONAL([USE_WII], true)
-        wii_machdep="-DGEKKO -mrvl -mcpu=750 -meabi -mhard-float"
-        CFLAGS="$CFLAGS $wii_machdep -I${DEVKITPRO}/libogc/include -I${DEVKITPPC}/powerpc-eabi/include"
-        LIBS="$LIBS $wii_machdep -L${DEVKITPRO}/libogc/lib/wii -L{DEVKITPPC}/powerpc-eabi/lib"
-        SDL_CFLAGS="$SDL_CFLAGS"
-        SDL_LIBS="$SDL_LIBS"
-        AC_SUBST(CFLAGS)
-        AC_SUBST(LIBS)
-        AC_SUBST(SDL_CFLAGS)
-        AC_SUBST(SDL_LIBS)
-        EXEEXT=.elf
-        AC_SUBST(EXEEXT)
-        defaultx11=no
-else
-        AM_CONDITIONAL([USE_WII], false)
-fi
+dnl --------------------------------------------------------------------------
 
+dnl FLAC stuff.
 
-dnl should probably have some AC_MSG_CHECKING here, but meh
-if test "x$defaultx11" = "xno"; then
-        if test "x$with_x" = "x"; then
-                AC_MSG_NOTICE([X11 disabled by default; use --with-x if you really want it])
-                dnl (you don't want it, because it's probably broken anyway)
-                with_x=no
+AM_CONDITIONAL([USE_FLAC], false)
+if test "x$with_flac" = "xcheck" || test "x$with_flac" = "xyes"; then
+        dnl use pkg-config, it'll deal with everything for us
+        PKG_CHECK_MODULES([FLAC], [flac], [libflac_found=yes], [libflac_found=no])
+        if test "x$libflac_found" = "xyes"; then
+                AC_SUBST([FLAC_CFLAGS])
+                AC_SUBST([FLAC_LIBS])
+                AM_CONDITIONAL([USE_FLAC], true)
+        elif test "x$with_flac" = "xyes"; then
+                AC_MSG_ERROR([*** Failed to find libFLAC])
         fi
 fi
 
-dnl -----------------------------------------------------------------------
-
-saved_libs=$LIBS
-alsa=no
-AC_CHECK_LIB(asound, snd_seq_open,[alsa=yes])
-alsadltrick=no
-if test "$alsa" = "yes"; then
-        if test "$ac_cv_header_sys_soundcard_h" = "yes"; then
-                alsadltrick=yes
-                LIBS=$saved_libs
-        fi
-fi
-AM_CONDITIONAL([USE_ALSA], [test "$alsa" = yes])
-AM_CONDITIONAL([USE_ALSA_DLTRICK], [test "$alsadltrick" = yes])
-
-
-AC_PATH_XTRA()
-if test "$no_x" = "yes"; then
-        dnl no X11
-        AM_CONDITIONAL([USE_X11], [false])
-        AM_CONDITIONAL([USE_XV], [false])
-else
-        AM_CONDITIONAL([USE_X11], [true])
-
-        SDL_LIBS="$SDL_LIBS -lX11 -lXext"
-        AC_SUBST(SDL_LIBS)
-
-        LIBS="$LIBS $X_LIBS"
-        AC_SUBST(LIBS)
-
-        dnl this previously checked X11/extensions/XKB.h, but nothing
-        dnl ever used it (xkb.c still included X11/XKBlib.h even when
-        dnl autoconf reported it as nonexistent -- weird!)
-        AC_CHECK_HEADERS(X11/Xlib.h X11/XKBlib.h)
-        AC_CHECK_LIB(Xv, XvQueryExtension,,,-lX11 -lXext)
-        if test "x$ac_cv_lib_Xv_XvQueryExtension" = "xyes"; then
-                AC_CHECK_HEADERS(X11/extensions/Xvlib.h,,,[[
-#include <X11/Xlib.h>
-                ]])
-                if test "x$ac_cv_header_X11_extensions_xvlib_h" = "xyes"; then
-                        SDL_LIBS="$SDL_LIBS -lXv -lXext"
-                        AC_SUBST(SDL_LIBS)
-                        AM_CONDITIONAL([USE_XV], [true])
-                elif test "x$ac_cv_header_X11_extensions_Xvlib_h" = "xyes"; then
-                        SDL_LIBS="$SDL_LIBS -lXv -lXext"
-                        AC_SUBST(SDL_LIBS)
-                        AM_CONDITIONAL([USE_XV], [true])
-                else
-                        AM_CONDITIONAL([USE_XV], [false])
-                fi
-        else
-                AM_CONDITIONAL([USE_XV], [false])
-        fi
-fi
-
-dnl asdjklfjklasdfaskdfjklads
-saved_LIBS="$LIBS"
-AC_SEARCH_LIBS(socket, socket network)
-LIBS="$saved_LIBS"
-if test "x$ac_cv_search_socket" = "xno"; then
-        dnl windows!
-        AC_CHECK_HEADERS([winsock.h winsock2.h])
-        if test "x$ac_cv_header_winsock_h" = "xyes"; then
-                AM_CONDITIONAL([USE_NETWORK], true)
-                SDL_LIBS="$SDL_LIBS -lws2_32"
-                AC_SUBST([SDL_LIBS])
-        elif test "x$ac_cv_header_winsock2_h" = "xyes"; then
-                AM_CONDITIONAL([USE_NETWORK], true)
-                SDL_LIBS="$SDL_LIBS -lsock32"
-                AC_SUBST([SDL_LIBS])
-        else
-                AM_CONDITIONAL([USE_NETWORK], false)
-                AC_MSG_RESULT([*** No valid socket library found\!])
-        fi
-elif test "x$ac_cv_search_socket" = "xnone required"; then
-        dnl sys/socket.h isn't present in devkitPPC but
-        dnl the symbols are defined. ugh.
-
-        if test "x$ac_cv_header_sys_socket_h" = "xyes"; then
-                dnl free networking
-                AM_CONDITIONAL([USE_NETWORK], true)
-        else
-                AM_CONDITIONAL([USE_NETWORK], false)
-        fi
-else
-        SDL_LIBS="$SDL_LIBS $ac_cv_search_socket"
-        AC_SUBST(SDL_LIBS)
-        AM_CONDITIONAL([USE_NETWORK], true)
-fi
-
-dnl wee...
-dnl this completely sucks...
-OBJC=$CC
-OBJCFLAGS=$CFLAGS
-AC_SUBST(OBJC)
-AC_SUBST(OBJCFLAGS)
-
-dnl -----------------------------------------------------------------------
-dnl (This ought to be above AC_PROG_CC, but that causes configure to fail
-dnl when all the insane warnings are are enabled.)
-
-AC_ARG_ENABLE(extra-opt,
-        AS_HELP_STRING([--enable-extra-opt], [Add extra, system-dependent optimizations (do not use this together with debug or even profiling)]),
-        ADD_OPT=$enableval,
-        ADD_OPT=no)
-
-AC_ARG_ENABLE(all-warnings,
-        AS_HELP_STRING([--enable-all-warnings], [Enable ridiculous compiler warnings]),
-        ADD_WARN=$enableval,
-        ADD_WARN=no)
-
-AC_ARG_ENABLE(debug,
-        AS_HELP_STRING([--enable-debug], [Enable debug flags]),
-        ADD_DEBUG=$enableval,
-        ADD_DEBUG=no)
-
-AC_ARG_ENABLE(profiling,
-        AS_HELP_STRING([--enable-profiling], [Enable profiling flags (slows things down), debugging (--enable-debug) is also enabled by this]),
-        ADD_PROFILING=$enableval,
-        ADD_PROFILING=no)
-
-AC_ARG_ENABLE(ludicrous-mode,
-        AS_HELP_STRING([--enable-ludicrous-mode], [Enable all warnings, and treat as errors]),
-        ADD_LUDICROUS=$enableval,
-        ADD_LUDICROUS=no)
-
-AC_ARG_ENABLE(fortify-source,
-        AS_HELP_STRING([--enable-fortify-source], [Build with FORTIFY_SOURCE]),
-        ADD_FORTIFY=$enableval,
-        ADD_FORTIFY=no)
-
-AC_ARG_WITH([flac],
-	[AS_HELP_STRING([--with-flac],[Build with FLAC support @<:@default=check@:>@])],
-	[],
-	[with_flac=check])
+dnl --------------------------------------------------------------------------
 
 dnl fortify needs -O; do this early so ADD_OPT can override with higher -O level
 if test x$ADD_FORTIFY \!= xno; then
@@ -323,19 +289,6 @@ fi
 if test x$ADD_LUDICROUS \!= xno; then
         ADD_WARN=yes
         CFLAGS="$CFLAGS -Werror"
-fi
-
-AM_CONDITIONAL([USE_FLAC], false)
-if test "x$with_flac" = "xcheck" || test "x$with_flac" = "xyes"; then
-        dnl use pkg-config, it'll deal with everything for us
-        PKG_CHECK_MODULES([FLAC], [flac], [libflac_found=yes], [libflac_found=no])
-	if test "x$libflac_found" = "xyes"; then
-                AC_SUBST([FLAC_CFLAGS])
-                AC_SUBST([FLAC_LIBS])
-		AM_CONDITIONAL([USE_FLAC], true)
-        elif test "x$with_flac" = "xyes"; then
-                AC_MSG_ERROR([*** Failed to find libFLAC])
-	fi
 fi
 
 dnl ... but put the warnings first, to make it possible to quiet certain
@@ -359,7 +312,7 @@ if test x$ADD_PROFILING \!= xno; then
         AC_SUBST(SDL_LIBS)
 fi
 
-dnl - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+dnl --------------------------------------------------------------------------
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

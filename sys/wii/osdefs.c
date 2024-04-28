@@ -86,8 +86,6 @@ static u32 _check_ahbprot(void) {
 	return 0;
 }
 
-const char *osname = "wii";
-
 void wii_sysinit(int *pargc, char ***pargv)
 {
 	char *ptr = NULL;

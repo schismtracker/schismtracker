@@ -23,8 +23,6 @@
 #include "headers.h"
 #include "util.h"
 
-int macosx_ibook_fnswitch(int setting); /* FIXME: ugliness */
-
 #ifdef MACOSX
 
 #include <IOKit/IOKitLib.h>
@@ -42,8 +40,12 @@ int macosx_ibook_fnswitch(int setting); /* FIXME: ugliness */
 #define kIOHIDFKeyModeKey    "HIDFKeyMode"
 #endif
 
+#endif /* defined(MACOSX) */
+
 int macosx_ibook_fnswitch(int setting)
 {
+#if MACOSX
+	/* XXX can this be removed? */
 	kern_return_t kr;
 	mach_port_t mp;
 	io_service_t so;
@@ -92,12 +94,7 @@ int macosx_ibook_fnswitch(int setting)
 	IOServiceClose(dp);
 	/* old setting... */
 	return res;
-}
-
-#else
-
-int macosx_ibook_fnswitch(UNUSED int setting)
-{
-	return 0;
-}
+#else /* !defined(MACOSX) */
+	return -1;
 #endif
+}
