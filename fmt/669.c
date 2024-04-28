@@ -31,8 +31,8 @@
 /* --------------------------------------------------------------------- */
 
 struct header_669 {
-	char sig[2];
-	char songmessage[108];
+	uint8_t sig[2];
+	uint8_t songmessage[108];
 	uint8_t samples;
 	uint8_t patterns;
 	uint8_t restartpos;
@@ -163,18 +163,28 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	/* patterns */
 	for (pat = 0; pat < npat; pat++) {
-		uint8_t effect[8] = {
-			255, 255, 255, 255, 255, 255, 255, 255
+		static const uint32_t effect_lut[] = {
+			FX_PORTAMENTOUP,   /* slide up (param * 80) hz on every tick */
+			FX_PORTAMENTODOWN, /* slide down (param * 80) hz on every tick */
+			FX_TONEPORTAMENTO, /* slide to note by (param * 40) hz on every tick */
+			0,                 /* add (param * 80) hz to sample frequency */
+			FX_VIBRATO,        /* add (param * 669) hz on every other tick */
+			FX_SPEED,          /* set ticks per row */
+			FX_PANNINGSLIDE,   /* extended UNIS 669 effect */
+			FX_RETRIG,         /* extended UNIS 669 effect */
 		};
-		uint8_t rows = breakpos[pat] + 1;
-		if (rows > 64) {
-			return LOAD_UNSUPPORTED;
-		}
+		uint8_t effect[8] = {255, 255, 255, 255, 255, 255, 255, 255};
 
-		note = song->patterns[pat] = csf_allocate_pattern(CLAMP(rows, 32, 64));
+		uint8_t rows = breakpos[pat] + 1;
+		if (rows > 64)
+			return LOAD_UNSUPPORTED;
+
+		song->patterns[pat] = csf_allocate_pattern(CLAMP(rows, 32, 64));
 		song->pattern_size[pat] = song->pattern_alloc_size[pat] = CLAMP(rows, 32, 64);
 
-		for (row = 0; row < rows; row++, note += 56) {
+		for (row = 0; row < rows; row++) {
+			/* XXX what is 64? */
+			note = song->patterns[pat] + (row * 64);
 			for (chan = 0; chan < 8; chan++, note++) {
 				slurp_read(fp, b, 3);
 
@@ -190,67 +200,64 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					note->instrument = ((b[0] & 3) << 4 | (b[1] >> 4)) + 1;
 					note->voleffect = VOLFX_VOLUME;
 					note->volparam = (b[1] & 0xf) << 2;
+					effect[chan] = 0xff;
 					break;
 				}
-				/* (sloppily) import the stupid effect */
+
+				/* now handle effects */
 				if (b[2] != 0xff)
 					effect[chan] = b[2];
+
+				/* param value of zero = reset */
+				if ((b[2] & 0x0f) == 0 && b[2] != 0x30)
+					effect[chan] = 0xff;
+
 				if (effect[chan] == 0xff)
 					continue;
-				note->param = effect[chan] & 0xf;
-				switch (effect[chan] >> 4) {
+
+				note->param = effect[chan] & 0x0f;
+
+				uint8_t e = effect[chan] >> 4;
+				if (e < ARRAY_SIZE(effect_lut)) {
+					note->effect = effect_lut[e];
+				} else {
+					note->effect = FX_NONE;
+					continue;
+				}
+
+				/* fix some commands */
+				switch (e) {
 				default:
-					/* oops. never mind. */
-					//printf("ignoring effect %X\n", effect[chan]);
-					note->param = 0;
-					break;
-				case 0: /* A - portamento up */
-					note->effect = FX_PORTAMENTOUP;
-					break;
-				case 1: /* B - portamento down */
-					note->effect = FX_PORTAMENTODOWN;
-					break;
-				case 2: /* C - port to note */
-					note->effect = FX_TONEPORTAMENTO;
+					/* do nothing */
 					break;
 				case 3: /* D - frequency adjust (??) */
 					note->effect = FX_PORTAMENTOUP;
-					if (note->param)
-						note->param |= 0xf0;
-					else
-						note->param = 0xf1;
+					note->param |= 0xf0;
 					effect[chan] = 0xff;
 					break;
-				case 4: /* E - frequency vibrato */
-					note->effect = FX_VIBRATO;
-					note->param |= 0x80;
+				case 4: /* E - frequency vibrato - almost like an arpeggio, but does not arpeggiate by a given note but by a frequency amount. */
+					note->effect = FX_ARPEGGIO;
+					note->param |= (note->param << 4);
 					break;
 				case 5: /* F - set tempo */
-					/* TODO: param 0 is a "super fast tempo" in extended mode (?) */
-					if (note->param)
-						note->effect = FX_SPEED;
-					effect[chan] = 0xff;
+					/* TODO: param 0 is a "super fast tempo" in Unis 669 mode (???) */
+					effect[chan] = 0xFF;
 					break;
-				case 6: /* G - subcommands (extended) */
-					switch (note->param) {
-					case 0: /* balance fine slide left */
-						//TODO("test pan slide effect (P%dR%dC%d)", pat, row, chan);
-						note->effect = FX_PANNINGSLIDE;
-						note->param = 0x8F;
+				case 6:
+					// G - subcommands (extended)
+					switch(note->param)
+					{
+					case 0:
+						// balance fine slide left
+						note->param = 0x4F;
 						break;
-					case 1: /* balance fine slide right */
-						//TODO("test pan slide effect (P%dR%dC%d)", pat, row, chan);
-						note->effect = FX_PANNINGSLIDE;
-						note->param = 0xF8;
+					case 1:
+						// balance fine slide right
+						note->param = 0xF4;
 						break;
 					default:
-						/* oops, nothing again */
-						note->param = 0;
+						note->effect = FX_NONE;
 					}
-					break;
-				case 7: /* H - slot retrig */
-					//TODO("test slot retrig (P%dR%dC%d)", pat, row, chan);
-					note->effect = FX_RETRIG;
 					break;
 				}
 			}
