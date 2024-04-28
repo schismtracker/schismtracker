@@ -218,6 +218,7 @@ files_macosx = \
 	sys/macosx/midi-macosx.c	\
 	sys/macosx/osdefs.c
 cflags_macosx=
+libs_macosx=$(OSX_LDADD)
 endif
 
 if USE_FLAC
@@ -378,4 +379,4 @@ schismtracker_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 schismtracker_OBJCFLAGS = $(schismtracker_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(LIB_MATH) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(SDL_LIBS)
+schismtracker_LDADD = $(LIB_MATH) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(SDL_LIBS)

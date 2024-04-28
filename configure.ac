@@ -164,8 +164,7 @@ case "${host_os}" in
 	darwin*)
                 AC_MSG_RESULT([found Darwin host])
 
-                AC_SUBST([OSX_LIBS], [-SDL2main])
-                AC_SUBST([OSX_LDFLAGS], [-framework Cocoa -framework CoreAudio -framework CoreMIDI -framework IOKit])
+                AC_SUBST([OSX_LDADD], [-lSDL2main -framework Cocoa -framework CoreAudio -framework CoreMIDI -framework IOKit])
 
 		use_macosx=yes
 		;;
