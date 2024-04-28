@@ -126,8 +126,6 @@ static void display_init(void)
 		status.flags |= WM_AVAILABLE;
 	}
 
-	clippy_init();
-
 	display_print_info();
 	SDL_StartTextInput();
 }
@@ -905,7 +903,7 @@ void schism_exit(int status)
 		segfault when MESA runs on Wayland or KMS/DRM: Never call SDL_Quit()
 		inside an atexit handler.
 		You're probably still on X11 if this has not bitten you yet.
-		See long-standing bug: https://github.com/libsdl-org/SDL/issues/3184	
+		See long-standing bug: https://github.com/libsdl-org/SDL/issues/3184
 			/ Vanfanel
 		*/
 		SDL_Quit();
@@ -1062,4 +1060,3 @@ int main(int argc, char **argv)
 	event_loop();
 	return 0; /* blah */
 }
-

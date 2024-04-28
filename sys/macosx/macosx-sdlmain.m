@@ -522,30 +522,6 @@ int main (int argc, char **argv)
         return 0;
 }
 
-/* these routines provide clipboard encapsulation */
-const char *macosx_clippy_get(void)
-{
-        NSPasteboard *pb = [NSPasteboard generalPasteboard];
-        NSString *type = [pb availableTypeFromArray:[NSArray
-                                        arrayWithObject:NSStringPboardType]];
-        NSString *contents;
-        const char *po;
-
-        if (type == nil) return "";
-
-        contents = [pb stringForType:type];
-        if (contents == nil) return "";
-        po = [contents UTF8String];
-        if (!po) return "";
-        return po;
-}
-void macosx_clippy_put(const char *buf)
-{
-        NSString *contents = [NSString stringWithUTF8String:buf];
-        NSPasteboard *pb = [NSPasteboard generalPasteboard];
-        [pb declareTypes:[NSArray arrayWithObject:NSStringPboardType] owner:nil];
-        [pb setString:contents forType:NSStringPboardType];
-}
 // ktt appears to be 1/60th of a second?
 unsigned int key_repeat_rate(void)
 {

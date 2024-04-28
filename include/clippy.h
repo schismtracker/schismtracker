@@ -43,7 +43,4 @@ struct widget *clippy_owner(int cb);
 /* copies the selection to the yank buffer (0 -> 1) */
 void clippy_yank(void);
 
-/* initializes clipboard */
-void clippy_init(void);
-
 #endif
