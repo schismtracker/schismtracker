@@ -35,39 +35,39 @@ AC_CANONICAL_HOST
 dnl -----------------------------------------------------------------------
 
 AC_ARG_ENABLE(extra-opt,
-        AS_HELP_STRING([--enable-extra-opt], [Add extra, system-dependent optimizations (do not use this together with debug or even profiling)]),
-        ADD_OPT=$enableval,
-        ADD_OPT=no)
+	AS_HELP_STRING([--enable-extra-opt], [Add extra, system-dependent optimizations (do not use this together with debug or even profiling)]),
+	ADD_OPT=$enableval,
+	ADD_OPT=no)
 
 AC_ARG_ENABLE(all-warnings,
-        AS_HELP_STRING([--enable-all-warnings], [Enable ridiculous compiler warnings]),
-        ADD_WARN=$enableval,
-        ADD_WARN=no)
+	AS_HELP_STRING([--enable-all-warnings], [Enable ridiculous compiler warnings]),
+	ADD_WARN=$enableval,
+	ADD_WARN=no)
 
 AC_ARG_ENABLE(debug,
-        AS_HELP_STRING([--enable-debug], [Enable debug flags]),
-        ADD_DEBUG=$enableval,
-        ADD_DEBUG=no)
+	AS_HELP_STRING([--enable-debug], [Enable debug flags]),
+	ADD_DEBUG=$enableval,
+	ADD_DEBUG=no)
 
 AC_ARG_ENABLE(profiling,
-        AS_HELP_STRING([--enable-profiling], [Enable profiling flags (slows things down), debugging (--enable-debug) is also enabled by this]),
-        ADD_PROFILING=$enableval,
-        ADD_PROFILING=no)
+	AS_HELP_STRING([--enable-profiling], [Enable profiling flags (slows things down), debugging (--enable-debug) is also enabled by this]),
+	ADD_PROFILING=$enableval,
+	ADD_PROFILING=no)
 
 AC_ARG_ENABLE(ludicrous-mode,
-        AS_HELP_STRING([--enable-ludicrous-mode], [Enable all warnings, and treat as errors]),
-        ADD_LUDICROUS=$enableval,
-        ADD_LUDICROUS=no)
+	AS_HELP_STRING([--enable-ludicrous-mode], [Enable all warnings, and treat as errors]),
+	ADD_LUDICROUS=$enableval,
+	ADD_LUDICROUS=no)
 
 AC_ARG_ENABLE(fortify-source,
-        AS_HELP_STRING([--enable-fortify-source], [Build with FORTIFY_SOURCE]),
-        ADD_FORTIFY=$enableval,
-        ADD_FORTIFY=no)
+	AS_HELP_STRING([--enable-fortify-source], [Build with FORTIFY_SOURCE]),
+	ADD_FORTIFY=$enableval,
+	ADD_FORTIFY=no)
 
 AC_ARG_WITH([flac],
-        [AS_HELP_STRING([--with-flac],[Build with FLAC support @<:@default=check@:>@])],
-        [],
-        [with_flac=check])
+	[AS_HELP_STRING([--with-flac],[Build with FLAC support @<:@default=check@:>@])],
+	[],
+	[with_flac=check])
 
 dnl ------------------------------------------------------------------------
 
@@ -101,7 +101,7 @@ dnl Check for SDL libs
 AC_CHECK_TOOL([SDL_CONFIG], [sdl2-config])
 AC_SUBST(SDL_CONFIG)
 if test "x$SDL_CONFIG" = "x"; then
-        AC_MSG_ERROR([*** sdl2-config not found.])
+	AC_MSG_ERROR([*** sdl2-config not found.])
 fi
 AS_VERSION_COMPARE([$($SDL_CONFIG --version)], [2.0.5], [AC_MSG_ERROR([*** SDL version >= 2.0.5 not found.])])
 
@@ -144,9 +144,9 @@ saved_LIBS="$LIBS"
 AC_SEARCH_LIBS([powf], [m])
 LIBS="$saved_LIBS"
 if test "x$ac_cv_search_powf" = "xno"; then
-        AC_MSG_ERROR([*** Couldn't find a standard math library.])
+	AC_MSG_ERROR([*** Couldn't find a standard math library.])
 elif ! test "x$ac_cv_search_powf" = "xnone required"; then
-        AC_SUBST([LIB_MATH], ["$ac_cv_search_powf"])
+	AC_SUBST([LIB_MATH], ["$ac_cv_search_powf"])
 fi
 
 dnl -----------------------------------------------------------------------
@@ -162,84 +162,84 @@ use_network=no
 
 case "${host_os}" in
 	darwin*)
-                AC_MSG_RESULT([found Darwin host])
+		AC_MSG_RESULT([found Darwin host])
 
-                AC_SUBST([OSX_LDADD], ["-lSDL2main -framework Cocoa -framework CoreAudio -framework CoreMIDI -framework IOKit"])
+		AC_SUBST([OSX_LDADD], ["-lSDL2main -framework Cocoa -framework CoreAudio -framework CoreMIDI -framework IOKit"])
 
 		use_macosx=yes
 		;;
-        cygwin*|mingw*)
-                AC_MSG_RESULT([found Windows host])
-                WIN32_LIBS="-lwinmm"
+	cygwin*|mingw*)
+		AC_MSG_RESULT([found Windows host])
+		WIN32_LIBS="-lwinmm"
 
-                AC_CHECK_HEADERS([winsock.h winsock2.h])
-                if test "x$ac_cv_header_winsock2_h" = "xyes"; then
-                        AC_SUBST([NETWORK_LIBS], [-lws2_32])
-                        use_network=yes
-                elif test "x$ac_cv_header_winsock_h" = "xyes"; then
-                        AC_SUBST([NETWORK_LIBS], [-lsock32])
-                        use_network=yes
-                else
-                        AC_MSG_ERROR([*** Couldn't find winsock\! (how\?)])
-                fi
+		AC_CHECK_HEADERS([winsock.h winsock2.h])
+		if test "x$ac_cv_header_winsock2_h" = "xyes"; then
+			AC_SUBST([NETWORK_LIBS], [-lws2_32])
+			use_network=yes
+		elif test "x$ac_cv_header_winsock_h" = "xyes"; then
+			AC_SUBST([NETWORK_LIBS], [-lsock32])
+			use_network=yes
+		else
+			AC_MSG_ERROR([*** Couldn't find winsock\! (how\?)])
+		fi
 
-                use_win32=yes
-                ;;
+		use_win32=yes
+		;;
 	*)
-                AC_MSG_RESULT([nothing to do here])
+		AC_MSG_RESULT([nothing to do here])
 
-                dnl now check for other stuff
-                AC_CHECK_LIB([ogc], [IOS_ReloadIOS], [libogc_found=yes], [libogc_found=no], [-mrvl -L${DEVKITPRO}/libogc/lib/wii])
-                AC_CHECK_LIB([asound], [snd_seq_open], [alsa_found=yes], [alsa_found=no])
+		dnl now check for other stuff
+		AC_CHECK_LIB([ogc], [IOS_ReloadIOS], [libogc_found=yes], [libogc_found=no], [-mrvl -L${DEVKITPRO}/libogc/lib/wii])
+		AC_CHECK_LIB([asound], [snd_seq_open], [alsa_found=yes], [alsa_found=no])
 
-                if test "x$libogc_found" = "xyes"; then
-                        WII_CPPFLAGS="-I${DEVKITPRO}/libogc/include -I${DEVKITPPC}/powerpc-eabi/include"
-                        WII_LDFLAGS="-L${DEVKITPRO}/libogc/lib/wii -L${DEVKITPPC}/powerpc-eabi/lib"
-                        AC_SUBST([WII_CPPFLAGS])
-                        AC_SUBST([WII_LDFLAGS])
+		if test "x$libogc_found" = "xyes"; then
+			WII_CPPFLAGS="-I${DEVKITPRO}/libogc/include -I${DEVKITPPC}/powerpc-eabi/include"
+			WII_LDFLAGS="-L${DEVKITPRO}/libogc/lib/wii -L${DEVKITPPC}/powerpc-eabi/lib"
+			AC_SUBST([WII_CPPFLAGS])
+			AC_SUBST([WII_LDFLAGS])
 
-                        EXEEXT=.elf
-                        AC_SUBST([EXEEXT])
+			EXEEXT=.elf
+			AC_SUBST([EXEEXT])
 
-                        use_wii=yes
-                else
-                        if test "x$alsa_found" = "xyes"; then
-                                if test "$ac_cv_header_sys_soundcard_h" = "yes"; then
-                                        alsadltrick=yes
-                                        LIBS=$saved_libs
-                                fi
-                        fi
-                fi
+			use_wii=yes
+		else
+			if test "x$alsa_found" = "xyes"; then
+				if test "$ac_cv_header_sys_soundcard_h" = "yes"; then
+					alsadltrick=yes
+					LIBS=$saved_libs
+				fi
+			fi
+		fi
 
-                dnl Networking...
+		dnl Networking...
 
-                saved_LIBS="$LIBS"
-                AC_SEARCH_LIBS([socket], [socket network])
-                LIBS="$saved_LIBS"
+		saved_LIBS="$LIBS"
+		AC_SEARCH_LIBS([socket], [socket network])
+		LIBS="$saved_LIBS"
 
-                if test "x$ac_cv_search_socket" = "xno"; then
-                        AC_MSG_WARN([*** Couldn't find a proper sockets library])
-                elif test "x$ac_cv_search_socket" = "xnone required"; then
-                        if test "x$ac_cv_header_sys_socket_h" = "xyes"; then
-                                dnl free networking
-                                use_network=yes
-                        else
-                                use_network=no
-                        fi
-                else
-                        AC_SUBST([NETWORK_LIBS], [$ac_cv_search_socket])
-                        use_network=yes
-                fi
+		if test "x$ac_cv_search_socket" = "xno"; then
+			AC_MSG_WARN([*** Couldn't find a proper sockets library])
+		elif test "x$ac_cv_search_socket" = "xnone required"; then
+			if test "x$ac_cv_header_sys_socket_h" = "xyes"; then
+				dnl free networking
+				use_network=yes
+			else
+				use_network=no
+			fi
+		else
+			AC_SUBST([NETWORK_LIBS], [$ac_cv_search_socket])
+			use_network=yes
+		fi
 
 		;;
 esac
 
 if test "x$use_macosx" = "xyes"; then
-        AC_PROG_OBJC
+	AC_PROG_OBJC
 else
-        dnl stupid hack to make Objective-C optional
-        AM_CONDITIONAL([am__fastdepOBJC], [false])
-        OBJC="$CC"
+	dnl stupid hack to make Objective-C optional
+	AM_CONDITIONAL([am__fastdepOBJC], [false])
+	OBJC="$CC"
 fi
 
 AM_CONDITIONAL([USE_WIN32], [test "x$use_win32" = "xyes"])
@@ -256,58 +256,58 @@ dnl FLAC stuff.
 
 AM_CONDITIONAL([USE_FLAC], false)
 if test "x$with_flac" = "xcheck" || test "x$with_flac" = "xyes"; then
-        dnl use pkg-config, it'll deal with everything for us
-        PKG_CHECK_MODULES([FLAC], [flac], [libflac_found=yes], [libflac_found=no])
-        if test "x$libflac_found" = "xyes"; then
-                AC_SUBST([FLAC_CFLAGS])
-                AC_SUBST([FLAC_LIBS])
-                AM_CONDITIONAL([USE_FLAC], true)
-        elif test "x$with_flac" = "xyes"; then
-                AC_MSG_ERROR([*** Failed to find libFLAC])
-        fi
+	dnl use pkg-config, it'll deal with everything for us
+	PKG_CHECK_MODULES([FLAC], [flac], [libflac_found=yes], [libflac_found=no])
+	if test "x$libflac_found" = "xyes"; then
+		AC_SUBST([FLAC_CFLAGS])
+		AC_SUBST([FLAC_LIBS])
+		AM_CONDITIONAL([USE_FLAC], true)
+	elif test "x$with_flac" = "xyes"; then
+		AC_MSG_ERROR([*** Failed to find libFLAC])
+	fi
 fi
 
 dnl --------------------------------------------------------------------------
 
 dnl fortify needs -O; do this early so ADD_OPT can override with higher -O level
 if test x$ADD_FORTIFY \!= xno; then
-        CFLAGS="$CFLAGS -O -D_FORTIFY_SOURCE=2"
+	CFLAGS="$CFLAGS -O -D_FORTIFY_SOURCE=2"
 fi
 
 dnl place extra optimizations after existing cflags so that they can override
 dnl override whatever flags might exist by default (-g -O2 usually)
 if test x$ADD_OPT \!= xno; then
-        if test x$ADD_DEBUG \!= xno || test x$ADD_PROFILING \!= xno; then
-                AC_MSG_NOTICE([You aren't supposed to use --enable-debug or --enable-profiling together with --enable-extra-opt!!])
-        fi
-        ADD_OPT="-Ofast -g0 -s -fno-exceptions -march=native"
-        CFLAGS="$CFLAGS $ADD_OPT"
+	if test x$ADD_DEBUG \!= xno || test x$ADD_PROFILING \!= xno; then
+		AC_MSG_NOTICE([You aren't supposed to use --enable-debug or --enable-profiling together with --enable-extra-opt!!])
+	fi
+	ADD_OPT="-Ofast -g0 -s -fno-exceptions -march=native"
+	CFLAGS="$CFLAGS $ADD_OPT"
 fi
 
 if test x$ADD_LUDICROUS \!= xno; then
-        ADD_WARN=yes
-        CFLAGS="$CFLAGS -Werror"
+	ADD_WARN=yes
+	CFLAGS="$CFLAGS -Werror"
 fi
 
 dnl ... but put the warnings first, to make it possible to quiet certain
 dnl warnings if necessary, while still providing most of the benefit
 if test x$ADD_WARN \!= xno; then
-        ADD_WARN="-Wall -Wextra -Winline -Wshadow -Wwrite-strings -Waggregate-return -Wpacked"
-        ADD_WARN="$ADD_WARN -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wnested-externs"
-        CFLAGS="$ADD_WARN $CFLAGS"
+	ADD_WARN="-Wall -Wextra -Winline -Wshadow -Wwrite-strings -Waggregate-return -Wpacked"
+	ADD_WARN="$ADD_WARN -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wnested-externs"
+	CFLAGS="$ADD_WARN $CFLAGS"
 fi
 
 if test x$ADD_PROFILING \!= xno || test x$ADD_DEBUG \!= xno; then
-        CFLAGS="$CFLAGS -g -O0"
-        OBJCFLAGS="$OBJCFLAGS -g -O0"
-        SDL_LIBS="$SDL_LIBS -g -O0"
-        AC_SUBST(SDL_LIBS)
+	CFLAGS="$CFLAGS -g -O0"
+	OBJCFLAGS="$OBJCFLAGS -g -O0"
+	SDL_LIBS="$SDL_LIBS -g -O0"
+	AC_SUBST(SDL_LIBS)
 fi
 if test x$ADD_PROFILING \!= xno; then
-        CFLAGS="$CFLAGS -pg"
-        OBJCFLAGS="$OBJCFLAGS -pg"
-        SDL_LIBS="$SDL_LIBS -pg"
-        AC_SUBST(SDL_LIBS)
+	CFLAGS="$CFLAGS -pg"
+	OBJCFLAGS="$OBJCFLAGS -pg"
+	SDL_LIBS="$SDL_LIBS -pg"
+	AC_SUBST(SDL_LIBS)
 fi
 
 dnl --------------------------------------------------------------------------
