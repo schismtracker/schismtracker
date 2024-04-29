@@ -55,55 +55,23 @@ static SDL_cond *midi_play_cond = NULL;
 
 static struct midi_provider *port_providers = NULL;
 
-
-/* all this just for usleep?! (maybe we should have sys/win32/usleep.c) */
 #ifdef WIN32
 #include <windows.h>
 
-static void (*__win32_usleep)(unsigned int usec) = NULL;
-static void __win32_old_usleep(unsigned int u)
+static void win32_usleep_(int64_t usec)
 {
-	/* bah, only Win95 and "earlier" actually needs this... */
-	SleepEx(u/1000,FALSE);
+	HANDLE timer = CreateWaitableTimer(NULL, TRUE, NULL);
+	LARGE_INTEGER ft;
+
+	/* 100 ns interval, negate to indicate relative time */
+	ft.QuadPart = -(10 * usec);
+
+	SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0); 
+	WaitForSingleObject(timer, INFINITE); 
+	CloseHandle(timer); 
 }
 
-static FARPROC __ihatewindows_f1 = NULL;
-static FARPROC __ihatewindows_f2 = NULL;
-static FARPROC __ihatewindows_f3 = NULL;
-static HANDLE __midi_timer = NULL;
-
-static void __win32_new_usleep(unsigned int u)
-{
-	LARGE_INTEGER due;
-	due.QuadPart = -(10 * (__int64)u);
-	__ihatewindows_f2(__midi_timer, &due, 0, NULL, NULL, 0);
-	__ihatewindows_f3(__midi_timer, INFINITE);
-}
-
-static void __win32_pick_usleep(void)
-{
-	HINSTANCE k32;
-
-	k32 = GetModuleHandle("KERNEL32.DLL");
-	if (!k32) k32 = LoadLibrary("KERNEL32.DLL");
-	if (!k32) k32 = GetModuleHandle("KERNEL32.DLL");
-	if (!k32) goto FAIL;
-	__ihatewindows_f1 = (FARPROC)GetProcAddress(k32,"CreateWaitableTimer");
-	__ihatewindows_f2 = (FARPROC)GetProcAddress(k32,"SetWaitableTimer");
-	__ihatewindows_f3 = (FARPROC)GetProcAddress(k32,"WaitForSingleObject");
-	if (!__ihatewindows_f1 || !__ihatewindows_f2 || !__ihatewindows_f3)
-		goto FAIL;
-	__midi_timer = (HANDLE)__ihatewindows_f1(NULL,TRUE,NULL);
-	if (!__midi_timer) goto FAIL;
-
-	/* grumble */
-	__win32_usleep = __win32_new_usleep;
-	return;
-FAIL:
-	__win32_usleep = __win32_old_usleep;
-}
-
-#define SLEEP_FUNC(x)   __win32_usleep(x)
+#define SLEEP_FUNC(x)   win32_usleep_(x)
 
 #else
 
