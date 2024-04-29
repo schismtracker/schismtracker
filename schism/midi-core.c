@@ -90,6 +90,7 @@ int midi_c5note = 60;
 
 #define CFG_GET_MI(v,d) midi_ ## v = cfg_get_number(cfg, "MIDI", #v, d)
 
+
 static void _cfg_load_midi_part_locked(struct midi_port *q)
 {
 	struct cfg_section *c;
@@ -586,7 +587,7 @@ struct qent {
 	unsigned char b[391];
 };
 static struct qent *qq = NULL;
-static int midims, ms10s, qlen;
+static unsigned int midims = 0, ms10s = 0, qlen = 0;
 
 void midi_queue_alloc(int my_audio_buffer_samples, int sample_size, int samples_per_second)
 {
@@ -627,7 +628,6 @@ static int _midi_queue_run(UNUSED void *xtop)
 	int i;
 
 #ifdef WIN32
-	__win32_pick_usleep();
 	SetPriorityClass(GetCurrentProcess(),HIGH_PRIORITY_CLASS);
 	SetThreadPriority(GetCurrentThread(),THREAD_PRIORITY_TIME_CRITICAL);
 	/*SetThreadPriority(GetCurrentThread(),THREAD_PRIORITY_HIGHEST);*/
@@ -726,20 +726,28 @@ void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int 
 		status.flags |= NEED_UPDATE;
 	}
 
-	/* pos is still in miliseconds */
+	/* pos is still in milliseconds */
 	if (midims != 0 && _midi_send_unlocked(data, len, pos/midims, 2)) {
 		/* grr, we need a timer */
 
 		/* calculate pos in buffer */
 		pos /= ms10s;
-		assert(((unsigned)pos) < ((unsigned)qlen));
 
-		if ((len + qq[pos].used) > sizeof(qq[pos].b)) {
-			len = sizeof(qq[pos].b) - qq[pos].used;
-			/* okay, we're going to lose data here */
+		/* what? we don't have anything to do?
+		 * do nothing then! */
+		if (pos < qlen) {
+			if ((len + qq[pos].used) > sizeof(qq[pos].b)) {
+				len = sizeof(qq[pos].b) - qq[pos].used;
+				/* okay, we're going to lose data here */
+			}
+			memcpy(qq[pos].b+qq[pos].used, data, len);
+			qq[pos].used += len;
 		}
-		memcpy(qq[pos].b+qq[pos].used, data, len);
-		qq[pos].used += len;
+#ifdef SCHISM_MIDI_DEBUG
+		else {
+			printf("MIDI: midi_send_buffer with pos %d and qlen %d out of bounds!", pos, qlen);
+		}
+#endif
 	}
 
 	SDL_UnlockMutex(midi_record_mutex);

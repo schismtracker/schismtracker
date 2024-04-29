@@ -1193,17 +1193,18 @@ printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 }
 static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, unsigned int pos)
 {
-#if 0
-	i = (8000*(audio_buffer_samples - delay));
-	i /= (current_song->mix_frequency);
-#endif
-#if 0
+#ifdef SCHISM_MIDI_DEBUG
+	/* prints all of the raw midi messages into the terminal; useful for debugging output */
+	int i = (8000*(audio_buffer_samples)) / (current_song->mix_frequency);
+
 	for (int i=0; i < len; i++) {
 		printf("%02x ",data[i]);
-	}puts("");
+	}
+	puts(""); /* newline */
 #endif
 
-	if (!_disko_writemidi(data,len,pos)) midi_send_buffer(data,len,pos);
+	if (!_disko_writemidi(data,len,pos))
+		midi_send_buffer(data,len,pos);
 }
 
 
