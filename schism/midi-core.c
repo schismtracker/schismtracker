@@ -608,6 +608,9 @@ void midi_queue_alloc(int my_audio_buffer_samples, int sample_size, int samples_
 
 	if (ms10s > buffer_size) {
 		/* okay, there's not even 10msec of audio data; midi queueing will be impossible */
+		log_nl();
+		log_append(4, 0, "WARNING: Not enough space to queue MIDI data!");
+		log_append(4, 0, "Hint: Increase the audio buffer size or lower your mixing rate.");
 		qlen = 0;
 		return;
 	}
@@ -745,7 +748,7 @@ void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int 
 		}
 #ifdef SCHISM_MIDI_DEBUG
 		else {
-			printf("MIDI: midi_send_buffer with pos %d and qlen %d out of bounds!", pos, qlen);
+			printf("MIDI: midi_send_buffer with pos %d and qlen %d out of bounds!\n", pos, qlen);
 		}
 #endif
 	}
