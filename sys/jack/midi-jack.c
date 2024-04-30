@@ -49,8 +49,6 @@ static int load_jack_syms(void);
 
 #ifdef JACK_DYNAMIC_LOAD
 
-#include <dlfcn.h>
-
 void *jack_dltrick_handle_;
 
 static void jack_dlend(void) {
@@ -92,7 +90,7 @@ static int load_jack_sym(const char *fn, void **addr) {
 
 #define SCHISM_JACK_SYM(x) JACK_##x = x
 
-int jack_dlinit(void) {
+static int jack_dlinit(void) {
 	load_jack_syms();
 	return 0;
 }
@@ -172,9 +170,9 @@ int jack_midi_setup(void)
 
 #ifdef JACK_DYNAMIC_LOAD
 	if (!jack_dltrick_handle_)
+#endif
 		if (jack_dlinit())
 			return 0;
-#endif
 
 	if (client)
 		return 0; /* don't init this twice */

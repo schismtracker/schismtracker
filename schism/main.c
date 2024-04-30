@@ -943,10 +943,6 @@ int main(int argc, char **argv)
 	srand(time(NULL));
 	parse_options(argc, argv); /* shouldn't this be like, first? */
 
-#ifdef USE_DLTRICK_ALSA
-	alsa_dlinit();
-#endif
-
 	cfg_init_dir();
 
 #if ENABLE_HOOKS

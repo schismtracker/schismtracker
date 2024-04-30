@@ -69,6 +69,11 @@ AC_ARG_ENABLE(jack-linking,
 	JACK_LINKING=$enableval,
 	JACK_LINKING=no)
 
+AC_ARG_ENABLE(alsa-linking,
+	AS_HELP_STRING([--enable-alsa-linking], [Link to ALSA rather than loading at runtime]),
+	ALSA_LINKING=$enableval,
+	ALSA_LINKING=no)
+
 AC_ARG_WITH([flac],
 	[AS_HELP_STRING([--with-flac],[Build with FLAC support @<:@default=check@:>@])],
 	[],
@@ -78,6 +83,11 @@ AC_ARG_WITH([jack],
 	[AS_HELP_STRING([--with-jack],[Build with JACK support @<:@default=check@:>@])],
 	[],
 	[with_jack=check])
+
+AC_ARG_WITH([alsa],
+	[AS_HELP_STRING([--with-alsa],[Build with ALSA support @<:@default=check@:>@])],
+	[],
+	[with_alsa=check])
 
 dnl ------------------------------------------------------------------------
 
@@ -283,13 +293,18 @@ fi
 
 dnl ALSA
 AM_CONDITIONAL([USE_ALSA], false)
-AM_CONDITIONAL([USE_ALSA_DLTRICK], false)
-AC_CHECK_LIB([asound], [snd_seq_open], [alsa_found=yes], [alsa_found=no])
-if test "x$alsa_found" = "xyes"; then
-	AM_CONDITIONAL([USE_ALSA], true)
-	if test "$ac_cv_header_sys_soundcard_h" = "yes"; then
-		AM_CONDITIONAL([USE_ALSA_DLTRICK], true)
-		LIBS=$saved_libs
+AM_CONDITIONAL([LINK_TO_ALSA], false)
+if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then
+	AC_CHECK_LIB([asound], [snd_seq_open], [alsa_found=yes], [alsa_found=no])
+	if test "x$alsa_found" = "xyes"; then
+		AM_CONDITIONAL([USE_ALSA], true)
+		if test "$ALSA_LINKING" = "yes"; then
+			AM_CONDITIONAL([LINK_TO_ALSA], true)
+		else
+			LIBS=$saved_libs
+		fi
+	elif test "x$with_alsa" = "xyes"; then
+		AC_MSG_ERROR([*** Failed to find ALSA])
 	fi
 fi
 
