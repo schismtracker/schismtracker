@@ -80,9 +80,5 @@ void win32_sysinit(int *pargc, char ***pargv);
 void win32_get_modkey(int *m);
 void win32_filecreated_callback(const char *filename);
 
-// Nasty alsa crap
-void alsa_dlinit(void);
-
-
 #endif /* ! OSDEFS_H */
 

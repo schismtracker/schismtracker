@@ -157,14 +157,15 @@ auto/helptext.c: Makefile.am scripts/genhelp.py $(helptexts)
 	$(PYTHON) $(srcdir)/scripts/genhelp.py $(srcdir) $(helptexts) >$@
 
 if USE_ALSA
-if USE_ALSA_DLTRICK
-files_alsa = sys/alsa/init.c sys/alsa/midi-alsa.c
-cflags_alsa=-DUSE_ALSA -DUSE_DLTRICK_ALSA
-else
 files_alsa = sys/alsa/midi-alsa.c
+
+if LINK_TO_ALSA
 cflags_alsa=-DUSE_ALSA
 lib_asound=-lasound
+else
+cflags_alsa=-DUSE_ALSA -DALSA_DYNAMIC_LOAD
 endif
+
 endif
 
 if USE_OSS
@@ -232,8 +233,15 @@ endif
 if USE_JACK
 files_jack = \
 	sys/jack/midi-jack.c
+
+if LINK_TO_JACK
 cflags_jack=-DUSE_JACK $(JACK_CFLAGS)
 libs_jack=$(JACK_LIBS)
+else
+cflags_jack=-DUSE_JACK -DJACK_DYNAMIC_LOAD $(JACK_CFLAGS)
+libs_jack=
+endif
+
 endif
 
 if USE_NETWORK
