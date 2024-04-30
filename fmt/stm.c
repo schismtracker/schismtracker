@@ -36,7 +36,8 @@ int fmt_stm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	int i;
 
 	/* data[29] is the type: 1 = song, 2 = module (with samples) */
-	if (!(length > 28 && data[28] == 0x1a && (data[29] == 1 || data[29] == 2)))
+	if (!(length > 28 && (data[28] == 0x1a || data[28] == 0x02) && (data[29] == 1 || data[29] == 2)
+		&& data[30] == 2))
 		return 0;
 
 	memcpy(id, data + 20, 8);
@@ -172,8 +173,10 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	slurp_read(fp, tmp, 4);
 
 	if (!(
-		// this byte is guaranteed to be 0x1a, always...
-		tmp[0] == 0x1a
+		// this byte is *usually* guaranteed to be 0x1a,
+		// however putup10.stm and putup11.stm are outliers
+		// for some reason?...
+		(tmp[0] == 0x1a || tmp[0] == 0x02)
 		// from the doc:
 		//      1 - song (contains no samples)
 		//      2 - module (contains samples)
