@@ -193,7 +193,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			return LOAD_FORMAT_ERROR;
 
 	// and the next two bytes are the tracker version.
-	sprintf(song->tracker_id, "Scream Tracker %d.%02x", tmp[2], tmp[3]);
+	sprintf(song->tracker_id, "Scream Tracker %d.%02d", tmp[2], tmp[3]);
 
 	slurp_seek(fp, 0, SEEK_SET);
 	slurp_read(fp, song->title, 20);
