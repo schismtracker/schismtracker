@@ -30,14 +30,19 @@
 
 /* --------------------------------------------------------------------- */
 
-/* TODO: get more stm's and test this... one file's not good enough */
-
 int fmt_stm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
+	char id[8];
+	int i;
+
 	/* data[29] is the type: 1 = song, 2 = module (with samples) */
-	if (!(length > 28 && data[28] == 0x1a && (data[29] == 1 || data[29] == 2)
-	      && (memcmp(data + 14, "!Scream!", 8) || memcmp(data + 14, "BMOD2STM", 8))))
+	if (!(length > 28 && data[28] == 0x1a && (data[29] == 1 || data[29] == 2)))
 		return 0;
+
+	memcpy(id, data + 20, 8);
+	for (i = 0; i < 8; i++)
+		if (id[i] < ' ' || id[i] > '~')
+			return 0;
 
 	/* I used to check whether it was a 'song' or 'module' and set the description
 	accordingly, but it's fairly pointless information :) */
@@ -174,13 +179,17 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		//      2 - module (contains samples)
 		// I'm not going to care about "songs".
 		&& tmp[1] == 2
-		// and check the file tag -- but god knows why, it's case insensitive
-		&& (strncasecmp(id, "!Scream!", 8) == 0 || strncasecmp(id, "BMOD2STM", 8) == 0)
+		// do version 1 STM's even exist?...
+		&& tmp[2] == 2
 	)) {
 		return LOAD_UNSUPPORTED;
 	}
+	// check the file tag for printable ASCII
+	for (n = 0; n < 8; n++)
+		if (id[n] < ' ' || id[n] > '~')
+			return LOAD_FORMAT_ERROR;
+
 	// and the next two bytes are the tracker version.
-	// (XXX should this care about BMOD2STM? what is that anyway?)
 	sprintf(song->tracker_id, "Scream Tracker %d.%02x", tmp[2], tmp[3]);
 
 	slurp_seek(fp, 0, SEEK_SET);
