@@ -29,22 +29,13 @@
 
 #if defined(USE_DLTRICK_ALSA)
 # include <dlfcn.h>
-void *_dltrick_handle = NULL;
-static void *_alsaless_sdl_hack = NULL;
+void *alsa_dltrick_handle_ = NULL;
 #else
 # error You are in a maze of twisty little passages, all alike.
 #endif
 
 /* --------------------------------------------------------------------- */
 
-void alsa_dlinit(void)
-{
-	/* okay, this is how this works:
-	 * to operate the alsa mixer and alsa midi, we need functions in
-	 * libasound.so -- if we can do that, *AND* libSDL has the
-	 * ALSA_bootstrap routine- then SDL was built with alsa-support-
-	 * which means schism can probably use ALSA - so we set that as the
-	 * default here.
-	 */
-	_dltrick_handle = dlopen("libasound.so", RTLD_NOW);
+void alsa_dlinit(void) {
+	alsa_dltrick_handle_ = SDL_LoadObject("libasound.so");
 }

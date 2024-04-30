@@ -64,6 +64,11 @@ AC_ARG_ENABLE(fortify-source,
 	ADD_FORTIFY=$enableval,
 	ADD_FORTIFY=no)
 
+AC_ARG_ENABLE(jack-linking,
+	AS_HELP_STRING([--enable-jack-linking], [Link to JACK rather than loading at runtime]),
+	JACK_LINKING=$enableval,
+	JACK_LINKING=no)
+
 AC_ARG_WITH([flac],
 	[AS_HELP_STRING([--with-flac],[Build with FLAC support @<:@default=check@:>@])],
 	[],
@@ -261,12 +266,16 @@ if test "x$with_flac" = "xcheck" || test "x$with_flac" = "xyes"; then
 fi
 
 AM_CONDITIONAL([USE_JACK], false)
+AM_CONDITIONAL([LINK_TO_JACK], false)
 if test "x$with_jack" = "xcheck" || test "x$with_jack" = "xyes"; then
 	PKG_CHECK_MODULES([JACK], [jack], [jack_found=yes], [jack_found=no])
 	if test "x$jack_found" = "xyes"; then
 		AC_SUBST([JACK_CFLAGS])
-		AC_SUBST([JACK_LIBS])
 		AM_CONDITIONAL([USE_JACK], true)
+		if test "x$JACK_LINKING" = "xyes"; then
+			AC_SUBST([JACK_LIBS])
+			AM_CONDITIONAL([LINK_TO_JACK], true)
+		fi
 	elif test "x$with_jack" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find JACK])
 	fi

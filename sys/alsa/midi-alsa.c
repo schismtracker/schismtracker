@@ -109,15 +109,15 @@ USE_DLTRICK_ALSA isn't defined. Doesn't say why.
 
 #include <dlfcn.h>
 
-extern void *_dltrick_handle;
+extern void *alsa_dltrick_handle_;
 
 /* don't try this at home... */
 #define _void_dltrick(a,b,c) static void (*_dltrick_ ## a)b = NULL; \
-void a b { if (!_dltrick_##a) _dltrick_##a = dlsym(_dltrick_handle, #a); \
+void a b { if (!_dltrick_##a) _dltrick_##a = SDL_LoadFunction(alsa_dltrick_handle_, #a); \
 if (!_dltrick_##a) abort(); _dltrick_ ## a c; }
 
 #define _any_dltrick(r,a,b,c) static r (*_dltrick_ ## a)b = NULL; \
-r a b { if (!_dltrick_##a) _dltrick_##a = dlsym(_dltrick_handle, #a); \
+r a b { if (!_dltrick_##a) _dltrick_##a = SDL_LoadFunction(alsa_dltrick_handle_, #a); \
 if (!_dltrick_##a) abort(); return _dltrick_ ## a c; }
 
 
@@ -448,7 +448,7 @@ int alsa_midi_setup(void)
 		return 0;
 
 #ifdef USE_DLTRICK_ALSA
-	if (!dlsym(_dltrick_handle, "snd_seq_open"))
+	if (!SDL_LoadFunction(alsa_dltrick_handle_, "snd_seq_open"))
 		return 0;
 #endif
 	driver.poll = _alsa_poll;

@@ -232,8 +232,13 @@ endif
 if USE_JACK
 files_jack = \
 	sys/jack/midi-jack.c
+if LINK_TO_JACK
 cflags_jack=-DUSE_JACK $(JACK_CFLAGS)
 libs_jack=$(JACK_LIBS)
+else
+cflags_jack=-DUSE_JACK -DJACK_DYNAMIC_LOAD $(JACK_CFLAGS)
+libs_jack=
+endif
 endif
 
 if USE_NETWORK
