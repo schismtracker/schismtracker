@@ -69,6 +69,11 @@ AC_ARG_WITH([flac],
 	[],
 	[with_flac=check])
 
+AC_ARG_WITH([jack],
+	[AS_HELP_STRING([--with-jack],[Build with JACK support @<:@default=check@:>@])],
+	[],
+	[with_jack=check])
+
 dnl ------------------------------------------------------------------------
 
 dnl Check for standard programs
@@ -156,8 +161,6 @@ AC_MSG_CHECKING([host platform])
 use_macosx=no
 use_win32=no
 use_wii=no
-use_alsa=no
-use_alsa_dltrick=no
 use_network=no
 
 case "${host_os}" in
@@ -190,7 +193,6 @@ case "${host_os}" in
 
 		dnl now check for other stuff
 		AC_CHECK_LIB([ogc], [IOS_ReloadIOS], [libogc_found=yes], [libogc_found=no], [-mrvl -L${DEVKITPRO}/libogc/lib/wii])
-		AC_CHECK_LIB([asound], [snd_seq_open], [alsa_found=yes], [alsa_found=no])
 
 		if test "x$libogc_found" = "xyes"; then
 			WII_CPPFLAGS="-I${DEVKITPRO}/libogc/include -I${DEVKITPPC}/powerpc-eabi/include"
@@ -202,13 +204,6 @@ case "${host_os}" in
 			AC_SUBST([EXEEXT])
 
 			use_wii=yes
-		else
-			if test "x$alsa_found" = "xyes"; then
-				if test "$ac_cv_header_sys_soundcard_h" = "yes"; then
-					alsadltrick=yes
-					LIBS=$saved_libs
-				fi
-			fi
 		fi
 
 		dnl Networking...
@@ -246,13 +241,11 @@ AM_CONDITIONAL([USE_WIN32], [test "x$use_win32" = "xyes"])
 AM_CONDITIONAL([USE_WII], [test "x$use_wii" = "xyes"])
 AM_CONDITIONAL([USE_MACOSX], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([am__fastdepOBJC], [test "x$use_macosx" = "xyes"])
-AM_CONDITIONAL([USE_ALSA], [test "x$use_alsa" = "xyes"])
-AM_CONDITIONAL([USE_ALSA_DLTRICK], [test "x$use_alsadltrick" = "xyes"])
 AM_CONDITIONAL([USE_NETWORK], [test "x$use_network" = "xyes"])
 
 dnl --------------------------------------------------------------------------
 
-dnl FLAC stuff.
+dnl configure flags, optional dependencies
 
 AM_CONDITIONAL([USE_FLAC], false)
 if test "x$with_flac" = "xcheck" || test "x$with_flac" = "xyes"; then
@@ -264,6 +257,30 @@ if test "x$with_flac" = "xcheck" || test "x$with_flac" = "xyes"; then
 		AM_CONDITIONAL([USE_FLAC], true)
 	elif test "x$with_flac" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find libFLAC])
+	fi
+fi
+
+AM_CONDITIONAL([USE_JACK], false)
+if test "x$with_jack" = "xcheck" || test "x$with_jack" = "xyes"; then
+	PKG_CHECK_MODULES([JACK], [jack], [jack_found=yes], [jack_found=no])
+	if test "x$jack_found" = "xyes"; then
+		AC_SUBST([JACK_CFLAGS])
+		AC_SUBST([JACK_LIBS])
+		AM_CONDITIONAL([USE_JACK], true)
+	elif test "x$with_jack" = "xyes"; then
+		AC_MSG_ERROR([*** Failed to find JACK])
+	fi
+fi
+
+dnl ALSA
+AM_CONDITIONAL([USE_ALSA], false)
+AM_CONDITIONAL([USE_ALSA_DLTRICK], false)
+AC_CHECK_LIB([asound], [snd_seq_open], [alsa_found=yes], [alsa_found=no])
+if test "x$alsa_found" = "xyes"; then
+	AM_CONDITIONAL([USE_ALSA], true)
+	if test "$ac_cv_header_sys_soundcard_h" = "yes"; then
+		AM_CONDITIONAL([USE_ALSA_DLTRICK], true)
+		LIBS=$saved_libs
 	fi
 fi
 

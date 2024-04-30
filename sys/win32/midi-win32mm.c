@@ -303,4 +303,3 @@ int win32mm_midi_setup(void)
 
 	return 1;
 }
-

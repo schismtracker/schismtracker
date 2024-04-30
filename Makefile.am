@@ -157,10 +157,11 @@ auto/helptext.c: Makefile.am scripts/genhelp.py $(helptexts)
 	$(PYTHON) $(srcdir)/scripts/genhelp.py $(srcdir) $(helptexts) >$@
 
 if USE_ALSA
-files_alsa = sys/alsa/init.c sys/alsa/midi-alsa.c
 if USE_ALSA_DLTRICK
+files_alsa = sys/alsa/init.c sys/alsa/midi-alsa.c
 cflags_alsa=-DUSE_ALSA -DUSE_DLTRICK_ALSA
 else
+files_alsa = sys/alsa/midi-alsa.c
 cflags_alsa=-DUSE_ALSA
 lib_asound=-lasound
 endif
@@ -226,6 +227,13 @@ files_flac = \
 	fmt/flac.c
 cflags_flac=-DUSE_FLAC $(FLAC_CFLAGS)
 libs_flac=$(FLAC_LIBS)
+endif
+
+if USE_JACK
+files_jack = \
+	sys/jack/midi-jack.c
+cflags_jack=-DUSE_JACK $(JACK_CFLAGS)
+libs_jack=$(JACK_LIBS)
 endif
 
 if USE_NETWORK
@@ -364,7 +372,8 @@ schismtracker_SOURCES = \
 	$(files_mmap)			\
 	$(files_wii)			\
 	$(files_windres)		\
-	$(files_flac)
+	$(files_flac)			\
+	$(files_jack)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
@@ -375,8 +384,8 @@ schismtracker_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE -I$(srcdir)/include -I. $
 schismtracker_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
 	$(cflags_version) $(cflags_win32) $(cflags_wii) \
-	$(cflags_macosx) $(cflags_flac)
+	$(cflags_macosx) $(cflags_flac) $(cflags_jack)
 schismtracker_OBJCFLAGS = $(schismtracker_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(LIB_MATH) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(SDL_LIBS)
+schismtracker_LDADD = $(LIB_MATH) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(SDL_LIBS)
