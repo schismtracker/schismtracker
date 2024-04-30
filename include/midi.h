@@ -144,6 +144,7 @@ int ip_midi_getports(void);     // USE_NETWORK
 
 int oss_midi_setup(void);       // USE_OSS
 int alsa_midi_setup(void);      // USE_ALSA
+int jack_midi_setup(void);      // USE_JACK
 int win32mm_midi_setup(void);   // WIN32
 int macosx_midi_setup(void);    // MACOSX
 

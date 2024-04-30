@@ -272,6 +272,9 @@ static void _midi_engine_connect(void)
 #ifdef USE_NETWORK
 	ip_midi_setup();
 #endif
+#ifdef USE_JACK
+	jack_midi_setup();
+#endif
 //Prefer ALSA MIDI over OSS, but do not enable both since ALSA's OSS emulation can cause conflicts
 #if defined(USE_ALSA) && defined(USE_OSS)
 	if (!alsa_midi_setup())

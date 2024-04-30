@@ -447,9 +447,9 @@ int alsa_midi_setup(void)
 	if (stat("/dev/snd/seq", &sbuf) != 0)
 		return 0;
 
-
 #ifdef USE_DLTRICK_ALSA
-	if (!dlsym(_dltrick_handle,"snd_seq_open")) return 0;
+	if (!dlsym(_dltrick_handle, "snd_seq_open"))
+		return 0;
 #endif
 	driver.poll = _alsa_poll;
 	driver.thread = _alsa_thread;
