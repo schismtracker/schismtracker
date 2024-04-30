@@ -46,7 +46,7 @@ jobs:
           autoreconf -i
           mkdir build
           cd build
-          ../configure
+          ../configure --with-flac
           make
           strip -g schismtracker.exe
           cp schismtracker.exe ..
@@ -176,11 +176,11 @@ jobs:
           autoreconf -i
           mkdir -p build
           cd build
-          ../configure
+          ../configure --with-flac
           make CFLAGS="-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk -I/usr/local/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk/System/Library/Frameworks/Tk.framework/Versions/8.5/Headers"
           mkdir -p ../buildarm
           cd ../buildarm
-          ../configure
+          ../configure --with-flac
           make LDFLAGS="-arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk" CFLAGS="-arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk -I/usr/local/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk/System/Library/Frameworks/Tk.framework/Versions/8.5/Headers" OBJCFLAGS="-arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk -I/Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk/System/Library/Frameworks/Tk.framework/Versions/8.5/Headers"
           cd ..
           lipo -create -o schismtracker buildarm/schismtracker build/schismtracker
@@ -217,7 +217,7 @@ jobs:
       - name: 'Install dependencies'
         run: |
           sudo apt-get update
-          sudo apt-get install --fix-missing build-essential automake autoconf autoconf-archive libx11-dev libxext-dev libxv-dev libxxf86vm-dev libsdl2-dev libasound2-dev libflac-dev git libtool zip wget
+          sudo apt-get install --fix-missing libjack-jackd2-dev build-essential automake autoconf autoconf-archive libx11-dev libxext-dev libxv-dev libxxf86vm-dev libsdl2-dev libasound2-dev libflac-dev git libtool zip wget
 
       - name: 'Checkout'
         uses: actions/checkout@v4
@@ -233,7 +233,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          ../configure
+          ../configure --with-flac --with-alsa --with-jack --disable-alsa-linking --disable-jack-linking
           make
           strip -S schismtracker
           cd ..
