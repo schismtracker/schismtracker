@@ -432,6 +432,21 @@ struct midi_provider *midi_provider_register(const char *name,
 	return n;
 }
 
+void midi_provider_unregister(struct midi_provider* p) {
+	struct midi_provider* n;
+
+	SDL_LockMutex(midi_mutex);
+
+	for (n = port_providers; n; n = n->next) {
+		if (n == p && n->next) {
+			n = n->next;
+			free(n);
+		}
+	}
+
+	SDL_UnlockMutex(midi_mutex);
+}
+
 /* midi engines list ports this way */
 int midi_port_register(struct midi_provider *pv, int inout, const char *name,
 void *userdata, int free_userdata)
