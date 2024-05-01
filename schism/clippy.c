@@ -23,6 +23,7 @@
 
 #include "headers.h" /* always include this one first, kthx */
 
+#include "charset.h"
 #include "clippy.h"
 #include "event.h"
 
@@ -67,6 +68,7 @@ static void _clippy_copy_to_sys(int cb)
 
 	switch (cb) {
 		case CLIPPY_SELECT:
+			/* TODO: convert to UTF-8 */
 #if SDL_VERSION_ATLEAST(2, 26, 0)
 			SDL_SetPrimarySelectionText(freeme);
 #endif
@@ -104,7 +106,7 @@ static char *_internal_clippy_paste(int cb)
 
 				/* See below for why we do this. */
 				char* sel = SDL_GetPrimarySelectionText();
-				_current_selection = str_dup(sel);
+				_current_selection = str_utf8_to_cp437(sel);
 				SDL_free(sel);
 				return _current_selection;
 			}
@@ -120,7 +122,7 @@ static char *_internal_clippy_paste(int cb)
 			 	 * while our own code uses regular malloc. Just copy
 				 * the buffer... */
 				char* cb = SDL_GetClipboardText();
-				_current_clipboard = str_dup(cb);
+				_current_clipboard = str_utf8_to_cp437(cb);
 				SDL_free(cb);
 				return _current_clipboard;
 			}
