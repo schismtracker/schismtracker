@@ -42,7 +42,7 @@ int fmt_stm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 	memcpy(id, data + 20, 8);
 	for (i = 0; i < 8; i++)
-		if (id[i] < ' ' || id[i] > '~')
+		if (id[i] < 0x20 || id[i] > 0x7E)
 			return 0;
 
 	/* I used to check whether it was a 'song' or 'module' and set the description
@@ -189,7 +189,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 	// check the file tag for printable ASCII
 	for (n = 0; n < 8; n++)
-		if (id[n] < ' ' || id[n] > '~')
+		if (id[n] < 0x20 || id[n] > 0x7E)
 			return LOAD_FORMAT_ERROR;
 
 	// and the next two bytes are the tracker version.
