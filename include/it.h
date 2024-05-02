@@ -158,6 +158,8 @@ enum tracker_vis_style {
 	VIS_OFF, VIS_FAKEMEM, VIS_OSCILLOSCOPE, VIS_VU_METER, VIS_MONOSCOPE, VIS_FFT, VIS_SENTINEL
 };
 
+struct midi_port; /* midi.h */
+
 struct tracker_status {
 	int current_page;
 	int previous_page;
@@ -172,7 +174,7 @@ struct tracker_status {
 	unsigned char last_midi_event[64];
 	unsigned int last_midi_len;
 	unsigned int last_midi_real_len;
-	void *last_midi_port; /* really a struct midi_port * */
+	struct midi_port *last_midi_port; /* really a struct midi_port * */
 
 	/* clock is driven from the main/event thread */
 	time_t now;

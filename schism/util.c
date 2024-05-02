@@ -468,7 +468,7 @@ char *str_unescape(const char *s)
 {
 	const char *end;
 	int hex;
-	char *dest = calloc(strlen(s) + 1, sizeof(char));
+	char *dest = mem_calloc(strlen(s) + 1, sizeof(char));
 	char *d = dest;
 
 	while (*s) {

@@ -288,7 +288,7 @@ static void midi_page_draw_portlist(void)
 		if (status.flags & MIDI_EVENT_CHANGED
 		    && (time(NULL) - status.last_midi_time) < 3
 		    && ((!status.last_midi_port && p->io & MIDI_OUTPUT)
-		    || p == (struct midi_port *) status.last_midi_port)) {
+		    || p == status.last_midi_port)) {
 			for (j = n = 0; j < 21 && j < status.last_midi_len; j++) { /* 21 is approx 64/3 */
 				sprintf(buffer + n, "%02X ", status.last_midi_event[j]);
 				n += 3;
