@@ -1265,6 +1265,13 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 		}
 	}
 
+	/* samples should not change on instrument number in compatible Gxx mode.
+	 *
+	 * OpenMPT test cases:
+	 * PortaInsNumCompat.it, PortaSampleCompat.it, PortaCutCompat.it */
+	if (chan->ptr_sample && psmp != chan->ptr_sample && porta && chan->increment && csf->flags & SONG_COMPATGXX)
+		psmp = chan->ptr_sample;
+
 	/* OpenMPT test case InstrAfterMultisamplePorta.it:
 	   C#5 01 ... <- maps to sample 1
 	   C-5 .. G02 <- maps to sample 2
