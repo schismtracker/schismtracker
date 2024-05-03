@@ -22,6 +22,7 @@
  */
 #include "headers.h"
 #include "osdefs.h"
+#include "util.h"
 
 #include <shlobj.h>
 #include <windows.h>
