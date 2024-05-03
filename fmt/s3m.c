@@ -83,6 +83,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint16_t reserved;
 	uint32_t adlib = 0; // bitset
 	uint16_t gus_addresses = 0;
+	uint8_t mix_volume; /* detect very old modplug tracker */
 	char any_samples = 0;
 	int uc;
 	const char *tid = NULL;
@@ -132,7 +133,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		// (Yes, 32 is ignored by Scream Tracker.)
 		song->initial_tempo = 125;
 	}
-	song->mixing_volume = slurp_getc(fp);
+	mix_volume = song->mixing_volume = slurp_getc(fp);
 	if (song->mixing_volume & 0x80) {
 		song->mixing_volume ^= 0x80;
 	} else {
@@ -210,9 +211,9 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	/* default pannings */
 	if (misc & S3M_CHANPAN) {
 		for (n = 0; n < 32; n++) {
-			c = slurp_getc(fp);
-			if ((c & 0x20) && (!(adlib & (1 << n)) || trkvers > 0x1320))
-				song->channels[n].panning = ((c & 0xf) << 2) + 2;
+			int pan = slurp_getc(fp);
+			if ((pan & 0x20) && (!(adlib & (1 << n)) || trkvers > 0x1320))
+				song->channels[n].panning = ((pan & 0xf) * 64) / 15;
 		}
 	}
 
@@ -406,7 +407,12 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (trkvers == 0x1320) {
 		if (special == 0 && uc == 0 && (flags & ~0x50) == 0
 		    && misc == (S3M_UNSIGNED | S3M_CHANPAN) && (nord % 16) == 0) {
-			tid = "Modplug Tracker";
+			/* from OpenMPT:
+			 * MPT 1.0 alpha5 doesn't set the stereo flag, but MPT 1.0 alpha6 does. */
+
+			tid = ((mix_volume & 0x80) != 0)
+				? "ModPlug Tracker / OpenMPT 1.17"
+				: "ModPlug Tracker 1.0 alpha";
 		} else if (special == 0 && uc == 0 && flags == 0 && misc == (S3M_UNSIGNED)) {
 			tid = "Velvet Studio";
 		} else if (uc != 16 && uc != 24 && uc != 32) {
@@ -414,15 +420,20 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			tid = "Unknown tracker";
 		}
 	}
+
 	if (!tid) {
 		switch (trkvers >> 12) {
+		case 0:
+			if (trkvers == 0x0208)
+				strcpy(song->tracker_id, "Akord");
+			break;
 		case 1:
 			if (gus_addresses > 1)
 				tid = "Scream Tracker %d.%02x (GUS)";
 			else if (gus_addresses == 1 || !any_samples || trkvers == 0x1300)
 				tid = "Scream Tracker %d.%02x (SB)"; // could also be a GUS file with a single sample
 			else
-				tid = "Unknown tracker";
+				strcpy(song->tracker_id, "Unknown tracker");
 			break;
 		case 2:
 			tid = "Imago Orpheus %d.%02x";
@@ -436,9 +447,12 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			}
 			break;
 		case 4:
-			tid = NULL;
-			strcpy(song->tracker_id, "Schism Tracker ");
-			ver_decode_cwtv(trkvers, reserved, song->tracker_id + strlen(song->tracker_id));
+			if (trkvers == 0x4100) {
+				strcpy(song->tracker_id, "BeRoTracker");
+			} else {
+				strcpy(song->tracker_id, "Schism Tracker ");
+				ver_decode_cwtv(trkvers, reserved, song->tracker_id + strlen(song->tracker_id));
+			}
 			break;
 		case 5:
 			if (trkvers == 0x5447)
@@ -447,6 +461,18 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				sprintf(song->tracker_id, "OpenMPT %d.%02x.%02x.%02x", (trkvers & 0xf00) >> 8, trkvers & 0xff, (reserved >> 8) & 0xff, reserved & 0xff);
 			else
 				tid = "OpenMPT %d.%02x";
+			break;
+		case 6:
+			strcpy(song->tracker_id, "BeRoTracker");
+			break;
+		case 7:
+			strcpy(song->tracker_id, "CreamTracker");
+			break;
+		case 12:
+			if (trkvers == 0xCA00)
+				strcpy(song->tracker_id, "Camoto");
+			break;
+		default:
 			break;
 		}
 	}
@@ -1029,7 +1055,7 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 
 		//mphack: channel panning range
 		b = ((chantypes[n] & 0x7f) < 0x20)
-			? (0x20 | (((MAX((ch->panning / 4), 2) - 2) >> 2) & 0xf))
+			? ((ch->panning * 15) / 64)
 			: 0;
 		disko_putc(fp, b);
 	}
