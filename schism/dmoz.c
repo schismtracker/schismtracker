@@ -799,7 +799,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 			st.st_mtime = MIN(0, st.st_mtime);
 	
 			if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-				dmoz_add_dir(dlist, fullpath, filename, 0);
+				dmoz_add_file_or_dir(flist, dlist, fullpath, filename, &st, 0);
 			} else if (ffd.dwFileAttributes == INVALID_FILE_ATTRIBUTES) {
 				free(fullpath);
 				free(filename);
