@@ -129,83 +129,92 @@ I wonder if this is interesting at all. */
 
 static void handle_stm_tempo_pattern(song_note_t *note, size_t tempo)
 {
-	int chan = 0;
-	song_note_t *t;
-	do {
-		t = note + chan;
+	song_note_t *t = note;
+	int i;
+	for (i = 0; i < 5; i++, t++) {
 		if (t->effect == FX_NONE) {
 			t->effect = FX_TEMPO;
 			t->param = handle_tempo(tempo);
+			break;
 		}
-	} while (++chan < 5);
+	}
 }
 
 static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 {
-	int row, chan;
-	uint8_t v[4];
-	int tempo;
+    int row, chan;
+    uint8_t v[4];
 
-	for (row = 0; row < 64; row++, note += 64 - 4) {
-		for (chan = 0; chan < 4; chan++, note++) {
-			slurp_read(fp, v, 4);
+    for (row = 0; row < 64; row++, note += 64 - 4) {
+        for (chan = 0; chan < 4; chan++) {
+            song_note_t* chan_note = note + chan;
+            slurp_read(fp, v, 4);
 
-			// mostly copied from modplug...
-			if (v[0] < 251)
-				note->note = (v[0] >> 4) * 12 + (v[0] & 0xf) + 37;
-			note->instrument = v[1] >> 3;
-			if (note->instrument > 31)
-				note->instrument = 0; // oops never mind, that was crap
-			note->volparam = (v[1] & 0x7) + ((v[2] & 0xf0) >> 1);
-			if (note->volparam <= 64)
-				note->voleffect = VOLFX_VOLUME;
-			else
-				note->volparam = 0;
-			note->param = v[3]; // easy!
+            // mostly copied from modplug...
+            if (v[0] < 251)
+                chan_note->note = (v[0] >> 4) * 12 + (v[0] & 0xf) + 37;
+            chan_note->instrument = v[1] >> 3;
+            if (chan_note->instrument > 31)
+                chan_note->instrument = 0; // oops never mind, that was crap
+            chan_note->volparam = (v[1] & 0x7) + ((v[2] & 0xf0) >> 1);
+            if (chan_note->volparam <= 64)
+                chan_note->voleffect = VOLFX_VOLUME;
+            else
+                chan_note->volparam = 0;
+            chan_note->param = v[3]; // easy!
 
-			note->effect = stm_effects[v[2] & 0xf];
-			// patch a couple effects up
-			switch (note->effect) {
-			case FX_SPEED:
-				// TODO: handle tempo changes in patterns
-				tempo = note->param;
-				handle_stm_tempo_pattern(note, tempo);
-				note->param = tempo >> 4;
-				break;
-			case FX_VOLUMESLIDE:
-				// Scream Tracker 2 checks for the lower nibble first for some reason...
-				if (note->param & 0x0f && note->param >> 4)
-					note->param &= 0x0f;
-				if (!note->param)
-					note->effect = FX_NONE;
-				break;
-			case FX_PATTERNBREAK:
-				note->param = (note->param & 0xf0) * 10 + (note->param & 0xf);
-				break;
-			case FX_POSITIONJUMP:
-				// This effect is also very weird.
-				// Bxx doesn't appear to cause an immediate break -- it merely
-				// sets the next order for when the pattern ends (either by
-				// playing it all the way through, or via Cxx effect)
-				// I guess I'll "fix" it later...
-				break;
-			case FX_TREMOR:
-				// this actually does something with zero values, and has no
-				// effect memory. which makes SENSE for old-effects tremor,
-				// but ST3 went and screwed it all up by adding an effect
-				// memory and IT followed that, and those are much more popular
-				// than STM so we kind of have to live with this effect being
-				// broken... oh well. not a big loss.
-				break;
-			default:
-				// Anything not listed above is a no-op if there's no value.
-				// (ST2 doesn't have effect memory)
-				if (!note->param)
-					note->effect = FX_NONE;
-				break;
-			}
-		}
-	}
+            chan_note->effect = stm_effects[v[2] & 0xf];
+            // patch a couple effects up
+            switch (chan_note->effect) {
+            case FX_SPEED:
+                /* do nothing */
+                break;
+            case FX_VOLUMESLIDE:
+                // Scream Tracker 2 checks for the lower nibble first for some reason...
+                if (chan_note->param & 0x0f && chan_note->param >> 4)
+                    chan_note->param &= 0x0f;
+                if (!chan_note->param)
+                    chan_note->effect = FX_NONE;
+                break;
+            case FX_PATTERNBREAK:
+                chan_note->param = (chan_note->param & 0xf0) * 10 + (chan_note->param & 0xf);
+                break;
+            case FX_POSITIONJUMP:
+                // This effect is also very weird.
+                // Bxx doesn't appear to cause an immediate break -- it merely
+                // sets the next order for when the pattern ends (either by
+                // playing it all the way through, or via Cxx effect)
+                // I guess I'll "fix" it later...
+                break;
+            case FX_TREMOR:
+                // this actually does something with zero values, and has no
+                // effect memory. which makes SENSE for old-effects tremor,
+                // but ST3 went and screwed it all up by adding an effect
+                // memory and IT followed that, and those are much more popular
+                // than STM so we kind of have to live with this effect being
+                // broken... oh well. not a big loss.
+                break;
+            default:
+                // Anything not listed above is a no-op if there's no value.
+                // (ST2 doesn't have effect memory)
+                if (!chan_note->param)
+                    chan_note->effect = FX_NONE;
+                break;
+            }
+        }
+
+        for (chan = 0; chan < 4; chan++) {
+            song_note_t* chan_note = note + chan;
+            if (chan_note->effect == FX_SPEED) {
+                uint32_t tempo = chan_note->param;
+                chan_note->param >>= 4;
+                /* don't need the `chan` parameter anymore... */
+                handle_stm_tempo_pattern(note, tempo);
+            }
+        }
+
+        note += chan;
+    }
 }
 
 int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
