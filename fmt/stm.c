@@ -130,9 +130,9 @@ I wonder if this is interesting at all. */
 static void handle_stm_tempo_pattern(song_note_t *note, size_t tempo)
 {
 	for (int i = 0; i < 5; i++, note++) {
-		if (t->effect == FX_NONE) {
-			t->effect = FX_TEMPO;
-			t->param = handle_tempo(tempo);
+		if (note->effect == FX_NONE) {
+			note->effect = FX_TEMPO;
+			note->param = handle_tempo(tempo);
 			break;
 		}
 	}
