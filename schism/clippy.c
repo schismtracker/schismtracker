@@ -66,21 +66,22 @@ static void _clippy_copy_to_sys(int cb)
 		(*dst++) = '\0';
 	}
 
-	switch (cb) {
-		case CLIPPY_SELECT:
-			/* TODO: convert to UTF-8 */
+	if (freeme) {
+		switch (cb) {
+			case CLIPPY_SELECT:
+				/* TODO: convert to UTF-8 */
 #if SDL_VERSION_ATLEAST(2, 26, 0)
-			SDL_SetPrimarySelectionText(freeme);
-#endif
-			break;
-		default:
-		case CLIPPY_BUFFER:
-			SDL_SetClipboardText(freeme);
-			break;
-	}
+				SDL_SetPrimarySelectionText(freeme);
+#endif	
+				break;
+			default:
+			case CLIPPY_BUFFER:
+				SDL_SetClipboardText(freeme);
+				break;
+		}
 
-	if (freeme)
 		free(freeme);
+	}
 }
 
 static void _string_paste(UNUSED int cb, const char *cbptr)
