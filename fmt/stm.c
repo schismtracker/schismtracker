@@ -127,11 +127,24 @@ static uint8_t handle_tempo(size_t tempo)
 "Remark: the user ID is encoded in over ten places around the file!"
 I wonder if this is interesting at all. */
 
+static void handle_stm_tempo_pattern(song_note_t *note, size_t tempo)
+{
+	int chan = 0;
+	song_note_t *t;
+	do {
+		t = note + chan;
+		if (t->effect == FX_NONE) {
+			t->effect = FX_TEMPO;
+			t->param = handle_tempo(tempo);
+		}
+	} while (++chan < 5);
+}
 
 static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 {
 	int row, chan;
 	uint8_t v[4];
+	int tempo;
 
 	for (row = 0; row < 64; row++, note += 64 - 4) {
 		for (chan = 0; chan < 4; chan++, note++) {
@@ -155,7 +168,9 @@ static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 			switch (note->effect) {
 			case FX_SPEED:
 				// TODO: handle tempo changes in patterns
-				note->param >>= 4;
+				tempo = note->param;
+				handle_stm_tempo_pattern(note, tempo);
+				note->param = tempo >> 4;
 				break;
 			case FX_VOLUMESLIDE:
 				// Scream Tracker 2 checks for the lower nibble first for some reason...
