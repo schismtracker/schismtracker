@@ -125,6 +125,7 @@ READ_INFO(s3i)  LOAD_SAMPLE(s3i)  SAVE_SAMPLE(s3i) /* FIXME should this be moved
 "reserved" field, Not sure about this positioning, but these are kind of rare formats anyway. */
 READ_INFO(imf) LOAD_SONG(imf)
 READ_INFO(sfx) LOAD_SONG(sfx)
+READ_INFO(stx) LOAD_SONG(stx)
 
 /* bleh */
 #if defined(USE_NON_TRACKED_TYPES) && defined(HAVE_VORBIS)
