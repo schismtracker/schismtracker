@@ -129,9 +129,7 @@ I wonder if this is interesting at all. */
 
 static void handle_stm_tempo_pattern(song_note_t *note, size_t tempo)
 {
-	song_note_t *t = note;
-	int i;
-	for (i = 0; i < 5; i++, t++) {
+	for (int i = 0; i < 5; i++, note++) {
 		if (t->effect == FX_NONE) {
 			t->effect = FX_TEMPO;
 			t->param = handle_tempo(tempo);
@@ -167,7 +165,7 @@ static void load_stm_pattern(song_note_t *note, slurp_t *fp)
             // patch a couple effects up
             switch (chan_note->effect) {
             case FX_SPEED:
-                /* do nothing */
+                /* do nothing; this is handled later */
                 break;
             case FX_VOLUMESLIDE:
                 // Scream Tracker 2 checks for the lower nibble first for some reason...
@@ -208,7 +206,6 @@ static void load_stm_pattern(song_note_t *note, slurp_t *fp)
             if (chan_note->effect == FX_SPEED) {
                 uint32_t tempo = chan_note->param;
                 chan_note->param >>= 4;
-                /* don't need the `chan` parameter anymore... */
                 handle_stm_tempo_pattern(note, tempo);
             }
         }
