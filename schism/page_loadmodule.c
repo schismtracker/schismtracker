@@ -123,7 +123,7 @@ TODO: scroller hack on selected filename
 */
 
 #define GLOB_CLASSIC "*.it; *.xm; *.s3m; *.mtm; *.669; *.mod"
-#define GLOB_DEFAULT GLOB_CLASSIC "; *.mdl; *.mt2; *.stm; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf; *.imf; *.sfx; *.mus; *.mid"
+#define GLOB_DEFAULT GLOB_CLASSIC "; *.mdl; *.mt2; *.stm; *.stx; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf; *.imf; *.sfx; *.mus; *.mid"
 
 /* These are stored as CP437 */
 static uint8_t filename_entry[PATH_MAX + 1] = "";
