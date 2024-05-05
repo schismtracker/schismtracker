@@ -56,6 +56,34 @@ int fmt_stx_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
+// STX uses the same tempo system as STM,
+// check fmt/stm.c for the calculation.
+static unsigned int tempo_table[15][16] = {
+	{ 125,  117,  110,  102,   95,   87,   80,   72,   62,   55,   47,   40,   32,   25,   17,   10, },
+	{ 125,  122,  117,  115,  110,  107,  102,  100,   95,   90,   87,   82,   80,   75,   72,   67, },
+	{ 125,  125,  122,  120,  117,  115,  112,  110,  107,  105,  102,  100,   97,   95,   92,   90, },
+	{ 125,  125,  122,  122,  120,  117,  117,  115,  112,  112,  110,  110,  107,  105,  105,  102, },
+	{ 125,  125,  125,  122,  122,  120,  120,  117,  117,  117,  115,  115,  112,  112,  110,  110, },
+	{ 125,  125,  125,  122,  122,  122,  120,  120,  117,  117,  117,  115,  115,  115,  112,  112, },
+	{ 125,  125,  125,  125,  122,  122,  122,  122,  120,  120,  120,  120,  117,  117,  117,  117, },
+	{ 125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  120,  120,  120,  120,  120, },
+	{ 125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  120,  120,  120,  120,  120, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125, },
+};
+
+static uint8_t handle_tempo(size_t tempo)
+{
+	size_t tpr = (tempo >> 4) ?: 1;
+	size_t scale = (tempo & 15);
+
+	return tempo_table[tpr - 1][scale];
+}
+
 enum {
 	S3I_TYPE_NONE = 0,
 	S3I_TYPE_PCM = 1,
@@ -75,6 +103,17 @@ static uint8_t stm_effects[16] = {
 	FX_ARPEGGIO,           // J
 	// KLMNO can be entered in the editor but don't do anything
 };
+
+static void handle_stm_tempo_pattern(song_note_t *note, size_t tempo)
+{
+	for (int i = 0; i < 32; i++, note++) {
+		if (note->effect == FX_NONE) {
+			note->effect = FX_TEMPO;
+			note->param = handle_tempo(tempo);
+			break;
+		}
+	}
+}
 
 int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
@@ -132,7 +171,9 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	slurp_seek(fp, 4, SEEK_CUR);
 	song->initial_global_volume = slurp_getc(fp) << 1;
-	song->initial_speed = slurp_getc(fp) >> 4 ?: 6;
+	int tempo = slurp_getc(fp);
+	song->initial_speed = tempo >> 4 ?: 6;
+	song->initial_tempo = handle_tempo(tempo);
 	slurp_seek(fp, 4, SEEK_CUR);
 
 	slurp_read(fp, &npat, 2);
@@ -291,13 +332,7 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					note->param = slurp_getc(fp);
 					switch (note->effect) {
 					case FX_SPEED:
-						// I don't know how Axx really works, but I do know that this
-						// isn't it. It does all sorts of mindbogglingly screwy things:
-						//      01 - very fast,
-						//      0F - very slow.
-						//      10 - fast again!
-						// I don't get it.
-						note->param >>= 4;
+						/* do nothing; this is handled later */
 						break;
 					case FX_VOLUMESLIDE:
 						// Scream Tracker 2 checks for the lower nibble first for some reason...
@@ -330,6 +365,15 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						if (!note->param)
 							note->effect = FX_NONE;
 						break;
+					}
+				}
+
+				for (chn = 0; chn < 32; chn++) {
+					song_note_t* chan_note = note + chn;
+					if (chan_note->effect == FX_SPEED) {
+						uint32_t tempo = chan_note->param;
+						chan_note->param >>= 4;
+						handle_stm_tempo_pattern(note, tempo);
 					}
 				}
 				/* ... next note, same row */
