@@ -38,49 +38,20 @@ static struct widget *_widget_owner[16] = {NULL};
 
 static void _clippy_copy_to_sys(int cb)
 {
-	char* freeme = NULL;
+	if (!_current_selection)
+		return;
 
-	if (_current_selection) {
-		char* dst = NULL;
-		int i = 0;
-#ifdef WIN32
-		/* need twice the space since newlines are replaced with \r\n */
-		freeme = dst = malloc(strlen(_current_selection) * 2) + 1;
-#else
-		/* XXX what's 4?? */
-		freeme = dst = malloc(strlen(_current_selection) + 4);
-#endif
-		if (!freeme) return;
-		for (i = 0; _current_selection[i]; i++) {
-#ifdef WIN32
-			if (_current_selection[i] == '\r' || _current_selection[i] == '\n') {
-				*(dst++) = '\r';
-				*(dst++) = '\n';
-			} else {
-				*(dst++) = _current_selection[i];
-			}
-#else
-			*(dst++) = (_current_selection[i] == '\r') ? '\n' : _current_selection[i];
-#endif
-		}
-		(*dst++) = '\0';
-	}
-
-	if (freeme) {
-		switch (cb) {
-			case CLIPPY_SELECT:
-				/* TODO: convert to UTF-8 */
+	switch (cb) {
+		case CLIPPY_SELECT:
+			/* TODO: convert to UTF-8 */
 #if SDL_VERSION_ATLEAST(2, 26, 0)
-				SDL_SetPrimarySelectionText(freeme);
+			SDL_SetPrimarySelectionText(_current_selection);
 #endif	
-				break;
-			default:
-			case CLIPPY_BUFFER:
-				SDL_SetClipboardText(freeme);
-				break;
-		}
-
-		free(freeme);
+			break;
+		default:
+		case CLIPPY_BUFFER:
+			SDL_SetClipboardText(_current_selection);
+			break;
 	}
 }
 
