@@ -140,12 +140,21 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 					note->param = slurp_getc(fp);
 				}
 				// translate everything
-				if (note->note > 0 && note->note < 97)
+				if (note->note > 0 && note->note < 97) {
 					note->note += 12;
-				else if (note->note == 97)
+				} else if (note->note == 97) {
+					/* filter out instruments on noteoff;
+					 * this is what IT's importer does, because
+					 * hanging the note is *definitely* not
+					 * intended behavior
+					 *
+					 * see: MPT test case noteoff3.it */
 					note->note = NOTE_OFF;
-				else
+					note->instrument = 0;
+				} else {
 					note->note = NOTE_NONE;
+				}
+
 				if (note->effect || note->param)
 					csf_import_mod_effect(note, 1);
 				if (note->instrument == 0xff)

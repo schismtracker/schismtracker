@@ -746,19 +746,25 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 		int (*load_library)(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist))
 {
 #ifdef WIN32
-	char* searchpath = dmoz_path_concat_len(path, "*", strlen(path), 1);
 	wchar_t* path_w = NULL;
-	if (!utf8_to_wchar(&path_w, searchpath)) {
-		free(searchpath);
+	if (!utf8_to_wchar(&path_w, path))
 		return -1;
-	}
-	free(searchpath);
 
 	DWORD attrib = GetFileAttributesW(path_w);
 	if (attrib & FILE_ATTRIBUTE_DIRECTORY) {
+		free(path_w); /* don't need this anymore */
+
+		char* searchpath = dmoz_path_concat_len(path, "*", strlen(path), 1);
+		wchar_t* searchpath_w = NULL;
+		if (!utf8_to_wchar(&searchpath_w, searchpath)) {
+			free(searchpath);
+			return -1;
+		}
+		free(searchpath);
+
 		WIN32_FIND_DATAW ffd = {0};
-		HANDLE find = FindFirstFileW(path_w, &ffd);
-		
+		HANDLE find = FindFirstFileW(searchpath_w, &ffd);
+
 		if (find == INVALID_HANDLE_VALUE) {
 			log_appendf(4, "dmoz_read: FindFirstFile failed!");
 			return -1;
@@ -810,8 +816,10 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 
 		add_platform_dirs(path, flist, dlist);
 	} else if (attrib == INVALID_FILE_ATTRIBUTES) {
+		free(path_w);
 		return -1;
 	} else {
+		free(path_w);
 		/* file? probably.
 		 * make sure when editing this code to keep it in sync
 		 * with the below code for non-Windows platforms */
