@@ -56,6 +56,35 @@ int fmt_stm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* --------------------------------------------------------------------- */
 
+// calculated using this formula from OpenMPT
+// (i range 1-15, j range 0-15);
+// unsigned int st2MixingRate = 23863;
+// const unsigned char tempo_table[18] = {140, 50, 25, 15, 10, 7, 6, 4, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1};
+// long double samplesPerTick = (double) st2MixingRate / ((long double) 50 - ((tempo_table[high_nibble] * low_nibble) / 16));
+// st2MixingRate *= 5; // normally multiplied by the precision beyond the decimal point, however there's no decimal place here. :P
+// st2MixingRate += samplesPerTick;
+// st2MixingRate = (st2MixingRate >= 0)
+//                 ? (int32_t) (st2MixingRate / (samplesPerTick * 2))
+//                 : (int32_t)((st2MixingRate - ((samplesPerTick * 2) - 1)) / (samplesPerTick * 2));
+static unsigned int tempo_table[15][16] = {
+	{ 125,  117,  110,  102,   95,   87,   80,   72,   62,   55,   47,   40,   32,   25,   17,   10, },
+	{ 125,  122,  117,  115,  110,  107,  102,  100,   95,   90,   87,   82,   80,   75,   72,   67, },
+	{ 125,  125,  122,  120,  117,  115,  112,  110,  107,  105,  102,  100,   97,   95,   92,   90, },
+	{ 125,  125,  122,  122,  120,  117,  117,  115,  112,  112,  110,  110,  107,  105,  105,  102, },
+	{ 125,  125,  125,  122,  122,  120,  120,  117,  117,  117,  115,  115,  112,  112,  110,  110, },
+	{ 125,  125,  125,  122,  122,  122,  120,  120,  117,  117,  117,  115,  115,  115,  112,  112, },
+	{ 125,  125,  125,  125,  122,  122,  122,  122,  120,  120,  120,  120,  117,  117,  117,  117, },
+	{ 125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  120,  120,  120,  120,  120, },
+	{ 125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  120,  120,  120,  120,  120, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125, },
+};
+
+
 #pragma pack(push, 1)
 struct stm_sample {
 	char name[12];
@@ -86,79 +115,106 @@ static uint8_t stm_effects[16] = {
 	// KLMNO can be entered in the editor but don't do anything
 };
 
+static uint8_t handle_tempo(size_t tempo)
+{
+	size_t tpr = (tempo >> 4) ?: 1;
+	size_t scale = (tempo & 15);
+
+	return tempo_table[tpr - 1][scale];
+}
+
 /* ST2 says at startup:
 "Remark: the user ID is encoded in over ten places around the file!"
 I wonder if this is interesting at all. */
 
+static void handle_stm_tempo_pattern(song_note_t *note, size_t tempo)
+{
+	song_note_t *t = note;
+	int i;
+	for (i = 0; i < 5; i++, t++) {
+		if (t->effect == FX_NONE) {
+			t->effect = FX_TEMPO;
+			t->param = handle_tempo(tempo);
+			break;
+		}
+	}
+}
 
 static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 {
-	int row, chan;
-	uint8_t v[4];
+    int row, chan;
+    uint8_t v[4];
 
-	for (row = 0; row < 64; row++, note += 64 - 4) {
-		for (chan = 0; chan < 4; chan++, note++) {
-			slurp_read(fp, v, 4);
+    for (row = 0; row < 64; row++, note += 64 - 4) {
+        for (chan = 0; chan < 4; chan++) {
+            song_note_t* chan_note = note + chan;
+            slurp_read(fp, v, 4);
 
-			// mostly copied from modplug...
-			if (v[0] < 251)
-				note->note = (v[0] >> 4) * 12 + (v[0] & 0xf) + 37;
-			note->instrument = v[1] >> 3;
-			if (note->instrument > 31)
-				note->instrument = 0; // oops never mind, that was crap
-			note->volparam = (v[1] & 0x7) + ((v[2] & 0xf0) >> 1);
-			if (note->volparam <= 64)
-				note->voleffect = VOLFX_VOLUME;
-			else
-				note->volparam = 0;
-			note->param = v[3]; // easy!
+            // mostly copied from modplug...
+            if (v[0] < 251)
+                chan_note->note = (v[0] >> 4) * 12 + (v[0] & 0xf) + 37;
+            chan_note->instrument = v[1] >> 3;
+            if (chan_note->instrument > 31)
+                chan_note->instrument = 0; // oops never mind, that was crap
+            chan_note->volparam = (v[1] & 0x7) + ((v[2] & 0xf0) >> 1);
+            if (chan_note->volparam <= 64)
+                chan_note->voleffect = VOLFX_VOLUME;
+            else
+                chan_note->volparam = 0;
+            chan_note->param = v[3]; // easy!
 
-			note->effect = stm_effects[v[2] & 0xf];
-			// patch a couple effects up
-			switch (note->effect) {
-			case FX_SPEED:
-				// I don't know how Axx really works, but I do know that this
-				// isn't it. It does all sorts of mindbogglingly screwy things:
-				//      01 - very fast,
-				//      0F - very slow.
-				//      10 - fast again!
-				// I don't get it.
-				note->param >>= 4;
-				break;
-			case FX_VOLUMESLIDE:
-				// Scream Tracker 2 checks for the lower nibble first for some reason...
-				if (note->param & 0x0f && note->param >> 4)
-					note->param &= 0x0f;
-				if (!note->param)
-					note->effect = FX_NONE;
-				break;
-			case FX_PATTERNBREAK:
-				note->param = (note->param & 0xf0) * 10 + (note->param & 0xf);
-				break;
-			case FX_POSITIONJUMP:
-				// This effect is also very weird.
-				// Bxx doesn't appear to cause an immediate break -- it merely
-				// sets the next order for when the pattern ends (either by
-				// playing it all the way through, or via Cxx effect)
-				// I guess I'll "fix" it later...
-				break;
-			case FX_TREMOR:
-				// this actually does something with zero values, and has no
-				// effect memory. which makes SENSE for old-effects tremor,
-				// but ST3 went and screwed it all up by adding an effect
-				// memory and IT followed that, and those are much more popular
-				// than STM so we kind of have to live with this effect being
-				// broken... oh well. not a big loss.
-				break;
-			default:
-				// Anything not listed above is a no-op if there's no value.
-				// (ST2 doesn't have effect memory)
-				if (!note->param)
-					note->effect = FX_NONE;
-				break;
-			}
-		}
-	}
+            chan_note->effect = stm_effects[v[2] & 0xf];
+            // patch a couple effects up
+            switch (chan_note->effect) {
+            case FX_SPEED:
+                /* do nothing */
+                break;
+            case FX_VOLUMESLIDE:
+                // Scream Tracker 2 checks for the lower nibble first for some reason...
+                if (chan_note->param & 0x0f && chan_note->param >> 4)
+                    chan_note->param &= 0x0f;
+                if (!chan_note->param)
+                    chan_note->effect = FX_NONE;
+                break;
+            case FX_PATTERNBREAK:
+                chan_note->param = (chan_note->param & 0xf0) * 10 + (chan_note->param & 0xf);
+                break;
+            case FX_POSITIONJUMP:
+                // This effect is also very weird.
+                // Bxx doesn't appear to cause an immediate break -- it merely
+                // sets the next order for when the pattern ends (either by
+                // playing it all the way through, or via Cxx effect)
+                // I guess I'll "fix" it later...
+                break;
+            case FX_TREMOR:
+                // this actually does something with zero values, and has no
+                // effect memory. which makes SENSE for old-effects tremor,
+                // but ST3 went and screwed it all up by adding an effect
+                // memory and IT followed that, and those are much more popular
+                // than STM so we kind of have to live with this effect being
+                // broken... oh well. not a big loss.
+                break;
+            default:
+                // Anything not listed above is a no-op if there's no value.
+                // (ST2 doesn't have effect memory)
+                if (!chan_note->param)
+                    chan_note->effect = FX_NONE;
+                break;
+            }
+        }
+
+        for (chan = 0; chan < 4; chan++) {
+            song_note_t* chan_note = note + chan;
+            if (chan_note->effect == FX_SPEED) {
+                uint32_t tempo = chan_note->param;
+                chan_note->param >>= 4;
+                /* don't need the `chan` parameter anymore... */
+                handle_stm_tempo_pattern(note, tempo);
+            }
+        }
+
+        note += chan;
+    }
 }
 
 int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
@@ -167,6 +223,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint8_t tmp[4];
 	int npat, n;
 	uint16_t para_sdata[MAX_SAMPLES] = { 0 };
+        uint16_t file_version;
 
 	slurp_seek(fp, 20, SEEK_SET);
 	slurp_read(fp, id, 8);
@@ -192,6 +249,8 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		if (id[n] < 0x20 || id[n] > 0x7E)
 			return LOAD_FORMAT_ERROR;
 
+        file_version = (100 * tmp[2]) | tmp[3];
+
 	// and the next two bytes are the tracker version.
 	sprintf(song->tracker_id, "Scream Tracker %d.%02d", tmp[2], tmp[3]);
 
@@ -200,7 +259,15 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	song->title[20] = '\0';
 	slurp_seek(fp, 12, SEEK_CUR); // skip the tag and stuff
 
-	song->initial_speed = (slurp_getc(fp) >> 4) ?: 1;
+	size_t tempo = slurp_getc(fp);
+
+	if (file_version < 221) {
+		tempo = ((tempo / 10) << 4) + tempo % 10;
+	}
+
+        song->initial_speed = (tempo >> 4) ?: 1;
+	song->initial_tempo = handle_tempo(tempo);
+
 	npat = slurp_getc(fp);
 	song->initial_global_volume = 2 * slurp_getc(fp);
 	slurp_seek(fp, 13, SEEK_CUR); // junk
@@ -232,8 +299,10 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		para_sdata[n] = bswapLE16(stmsmp.pcmpara);
 	}
 
-	slurp_read(fp, song->orderlist, 128);
-	for (n = 0; n < 128; n++) {
+	size_t orderlist_size = (file_version != 200) ? 128 : 64;
+
+	slurp_read(fp, song->orderlist, orderlist_size);
+	for (n = 0; n < orderlist_size; n++) {
 		if (song->orderlist[n] >= 64)
 			song->orderlist[n] = ORDER_LAST;
 	}
