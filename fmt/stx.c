@@ -132,7 +132,6 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint16_t para_smp[MAX_SAMPLES];
 	uint16_t para_pat[MAX_PATTERNS];
 	uint32_t para_sdata[MAX_SAMPLES] = { 0 };
-	uint32_t smp_flags[MAX_SAMPLES] = { 0 };
 	song_sample_t *sample;
 	int subversion = 1;
 	uint16_t first_pattern_size;
@@ -229,7 +228,6 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			c = slurp_getc(fp);  /* flags */
 			if (c & 1)
 				sample->flags |= CHN_LOOP;
-			smp_flags[n] = SF_LE | SF_PCMS | SF_8 | SF_M;
 			if (sample->length)
 				any_samples = 1;
 			break;
@@ -387,7 +385,7 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			if (sample->length < 3)
 				continue;
 			slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
-			csf_read_sample(sample, smp_flags[n], fp->data + fp->pos, fp->length - fp->pos);
+			csf_read_sample(sample, SF_LE | SF_PCMS | SF_8 | SF_M, fp->data + fp->pos, fp->length - fp->pos);
 		}
 	}
 
