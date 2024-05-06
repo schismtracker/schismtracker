@@ -191,7 +191,7 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	/* orderlist */
 	for (n = 0; n < nord; n++) {
 		slurp_read(fp, &song->orderlist[n], 1);
-		slurp_seek(fp, 4, SEEK_CUR);		
+		slurp_seek(fp, 4, SEEK_CUR);
 	}
 
 	memset(song->orderlist + nord, ORDER_LAST, MAX_ORDERS - nord);
@@ -223,8 +223,7 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			slurp_read(fp, &tmplong, 4);
 			sample->loop_end = bswapLE32(tmplong);
 			sample->volume = slurp_getc(fp) * 4; //mphack
-			slurp_getc(fp);      /* unused byte */
-			slurp_getc(fp);      /* packing info (never used) */
+			slurp_seek(fp, 2, SEEK_CUR);
 			c = slurp_getc(fp);  /* flags */
 			if (c & 1)
 				sample->flags |= CHN_LOOP;
@@ -269,7 +268,6 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (!(lflags & LOAD_NOPATTERNS)) {
 		for (n = 0; n < npat; n++) {
 			int row = 0;
-			long end;
 
 			para_pat[n] = bswapLE16(para_pat[n]);
 			if (!para_pat[n])
@@ -340,7 +338,7 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 							note->effect = FX_NONE;
 						break;
 					case FX_PATTERNBREAK:
-						note->param = (note->param & 0xf0) * 10 + (note->param & 0xf);
+						note->param = 0;
 						break;
 					case FX_POSITIONJUMP:
 						// This effect is also very weird.
