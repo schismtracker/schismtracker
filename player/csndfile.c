@@ -1495,12 +1495,7 @@ void csf_import_s3m_effect(song_note_t *m, int from_it)
 	case 'P':       effect = FX_PANNINGSLIDE; break;
 	case 'Q':       effect = FX_RETRIG; break;
 	case 'R':       effect = FX_TREMOLO; break;
-	case 'S':
-		effect = FX_SPECIAL;
-		// convert old SAx to S8x
-		if (!from_it && ((param & 0xf0) == 0xa0))
-			param = 0x80 | ((param & 0xf) ^ 8);
-		break;
+	case 'S':       effect = FX_SPECIAL; break;
 	case 'T':       effect = FX_TEMPO; break;
 	case 'U':       effect = FX_FINEVIBRATO; break;
 	case 'V':

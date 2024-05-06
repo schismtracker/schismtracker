@@ -71,6 +71,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint8_t c;
 	uint32_t tmplong;
 	uint8_t b[4];
+	uint8_t channel_types[32];
 	/* parapointers */
 	uint16_t para_smp[MAX_SAMPLES];
 	uint16_t para_pat[MAX_PATTERNS];
@@ -153,6 +154,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	special = bswapLE16(special);
 
 	/* channel settings */
+	slurp_read(fp, channel_types, 32);
 	for (n = 0; n < 32; n++) {
 		/* Channel 'type': 0xFF is a disabled channel, which shows up as (--) in ST3.
 		Any channel with the high bit set is muted.
@@ -166,7 +168,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		Values past 2F seem to display bits of the UI like the copyright and help, strange!
 		These out-of-range channel types will almost certainly hang or crash ST3 or
 		produce other strange behavior. Simply put, don't do it. :) */
-		c = slurp_getc(fp);
+		c = channel_types[n];
 		if (c & 0x80) {
 			song->channels[n].flags |= CHN_MUTE;
 			// ST3 doesn't even play effects in muted channels -- throw them out?
@@ -390,6 +392,19 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						} else if (note->param == 0xc0) {
 							note->effect = FX_NONE;
 							note->param = 0;
+						} else if ((note->param & 0xf0) == 0xa0) {
+							// Convert the old messy SoundBlaster stereo control command (or an approximation of it, anyway)
+							uint8_t ctype = channel_types[chn] & 0x7f;
+							if (gus_addresses > 1 || ctype >= 0x10)
+								note->effect = FX_NONE;
+							else if (note->param == 0xa0 || note->param == 0xa2)  // Normal panning
+								note->param = (ctype & 8) ? 0x8c : 0x83;
+							else if (note->param == 0xa1 || note->param == 0xa3)  // Swap left / right channel
+								note->param = (ctype & 8) ? 0x83 : 0x8c;
+							else if (note->param <= 0xa7)  // Center
+								note->param = 0x88;
+							else
+								note->effect = FX_NONE;
 						}
 					}
 				}
