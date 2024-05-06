@@ -220,7 +220,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint8_t tmp[4];
 	int npat, n;
 	uint16_t para_sdata[MAX_SAMPLES] = { 0 };
-		uint16_t file_version;
+	uint16_t file_version;
 
 	slurp_seek(fp, 20, SEEK_SET);
 	slurp_read(fp, id, 8);
@@ -246,10 +246,6 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		if (id[n] < 0x20 || id[n] > 0x7E)
 			return LOAD_FORMAT_ERROR;
 
-
-	file_version = (100 * tmp[2]) + tmp[3];
-
-
 	// and the next two bytes are the tracker version.
 	sprintf(song->tracker_id, "Scream Tracker %d.%02d", tmp[2], tmp[3]);
 
@@ -260,11 +256,11 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	size_t tempo = slurp_getc(fp);
 
-	if (file_version < 221) {
+	if (tmp[3] < 21) {
 		tempo = ((tempo / 10) << 4) + tempo % 10;
 	}
 
-		song->initial_speed = (tempo >> 4) ?: 1;
+	song->initial_speed = (tempo >> 4) ?: 1;
 	song->initial_tempo = handle_tempo(tempo);
 
 	npat = slurp_getc(fp);
