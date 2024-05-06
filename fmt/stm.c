@@ -140,78 +140,78 @@ static void handle_stm_tempo_pattern(song_note_t *note, size_t tempo)
 
 static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 {
-    int row, chan;
-    uint8_t v[4];
+	int row, chan;
+	uint8_t v[4];
 
-    for (row = 0; row < 64; row++, note += 64 - 4) {
-        for (chan = 0; chan < 4; chan++) {
-            song_note_t* chan_note = note + chan;
-            slurp_read(fp, v, 4);
+	for (row = 0; row < 64; row++, note += 64 - 4) {
+		for (chan = 0; chan < 4; chan++) {
+			song_note_t* chan_note = note + chan;
+			slurp_read(fp, v, 4);
 
-            // mostly copied from modplug...
-            if (v[0] < 251)
-                chan_note->note = (v[0] >> 4) * 12 + (v[0] & 0xf) + 37;
-            chan_note->instrument = v[1] >> 3;
-            if (chan_note->instrument > 31)
-                chan_note->instrument = 0; // oops never mind, that was crap
-            chan_note->volparam = (v[1] & 0x7) + ((v[2] & 0xf0) >> 1);
-            if (chan_note->volparam <= 64)
-                chan_note->voleffect = VOLFX_VOLUME;
-            else
-                chan_note->volparam = 0;
-            chan_note->param = v[3]; // easy!
+			// mostly copied from modplug...
+			if (v[0] < 251)
+				chan_note->note = (v[0] >> 4) * 12 + (v[0] & 0xf) + 37;
+			chan_note->instrument = v[1] >> 3;
+			if (chan_note->instrument > 31)
+				chan_note->instrument = 0; // oops never mind, that was crap
+			chan_note->volparam = (v[1] & 0x7) + ((v[2] & 0xf0) >> 1);
+			if (chan_note->volparam <= 64)
+				chan_note->voleffect = VOLFX_VOLUME;
+			else
+				chan_note->volparam = 0;
+			chan_note->param = v[3]; // easy!
 
-            chan_note->effect = stm_effects[v[2] & 0xf];
-            // patch a couple effects up
-            switch (chan_note->effect) {
-            case FX_SPEED:
-                /* do nothing; this is handled later */
-                break;
-            case FX_VOLUMESLIDE:
-                // Scream Tracker 2 checks for the lower nibble first for some reason...
-                if (chan_note->param & 0x0f && chan_note->param >> 4)
-                    chan_note->param &= 0x0f;
-                if (!chan_note->param)
-                    chan_note->effect = FX_NONE;
-                break;
-            case FX_PATTERNBREAK:
-                chan_note->param = (chan_note->param & 0xf0) * 10 + (chan_note->param & 0xf);
-                break;
-            case FX_POSITIONJUMP:
-                // This effect is also very weird.
-                // Bxx doesn't appear to cause an immediate break -- it merely
-                // sets the next order for when the pattern ends (either by
-                // playing it all the way through, or via Cxx effect)
-                // I guess I'll "fix" it later...
-                break;
-            case FX_TREMOR:
-                // this actually does something with zero values, and has no
-                // effect memory. which makes SENSE for old-effects tremor,
-                // but ST3 went and screwed it all up by adding an effect
-                // memory and IT followed that, and those are much more popular
-                // than STM so we kind of have to live with this effect being
-                // broken... oh well. not a big loss.
-                break;
-            default:
-                // Anything not listed above is a no-op if there's no value.
-                // (ST2 doesn't have effect memory)
-                if (!chan_note->param)
-                    chan_note->effect = FX_NONE;
-                break;
-            }
-        }
+			chan_note->effect = stm_effects[v[2] & 0xf];
+			// patch a couple effects up
+			switch (chan_note->effect) {
+			case FX_SPEED:
+				/* do nothing; this is handled later */
+				break;
+			case FX_VOLUMESLIDE:
+				// Scream Tracker 2 checks for the lower nibble first for some reason...
+				if (chan_note->param & 0x0f && chan_note->param >> 4)
+					chan_note->param &= 0x0f;
+				if (!chan_note->param)
+					chan_note->effect = FX_NONE;
+				break;
+			case FX_PATTERNBREAK:
+				chan_note->param = (chan_note->param & 0xf0) * 10 + (chan_note->param & 0xf);
+				break;
+			case FX_POSITIONJUMP:
+				// This effect is also very weird.
+				// Bxx doesn't appear to cause an immediate break -- it merely
+				// sets the next order for when the pattern ends (either by
+				// playing it all the way through, or via Cxx effect)
+				// I guess I'll "fix" it later...
+				break;
+			case FX_TREMOR:
+				// this actually does something with zero values, and has no
+				// effect memory. which makes SENSE for old-effects tremor,
+				// but ST3 went and screwed it all up by adding an effect
+				// memory and IT followed that, and those are much more popular
+				// than STM so we kind of have to live with this effect being
+				// broken... oh well. not a big loss.
+				break;
+			default:
+				// Anything not listed above is a no-op if there's no value.
+				// (ST2 doesn't have effect memory)
+				if (!chan_note->param)
+					chan_note->effect = FX_NONE;
+				break;
+			}
+		}
 
-        for (chan = 0; chan < 4; chan++) {
-            song_note_t* chan_note = note + chan;
-            if (chan_note->effect == FX_SPEED) {
-                uint32_t tempo = chan_note->param;
-                chan_note->param >>= 4;
-                handle_stm_tempo_pattern(note, tempo);
-            }
-        }
+		for (chan = 0; chan < 4; chan++) {
+			song_note_t* chan_note = note + chan;
+			if (chan_note->effect == FX_SPEED) {
+				uint32_t tempo = chan_note->param;
+				chan_note->param >>= 4;
+				handle_stm_tempo_pattern(note, tempo);
+			}
+		}
 
-        note += chan;
-    }
+		note += chan;
+	}
 }
 
 int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
@@ -220,7 +220,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint8_t tmp[4];
 	int npat, n;
 	uint16_t para_sdata[MAX_SAMPLES] = { 0 };
-        uint16_t file_version;
+		uint16_t file_version;
 
 	slurp_seek(fp, 20, SEEK_SET);
 	slurp_read(fp, id, 8);
@@ -246,7 +246,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		if (id[n] < 0x20 || id[n] > 0x7E)
 			return LOAD_FORMAT_ERROR;
 
-        file_version = (100 * tmp[2]) | tmp[3];
+		file_version = (100 * tmp[2]) | tmp[3];
 
 	// and the next two bytes are the tracker version.
 	sprintf(song->tracker_id, "Scream Tracker %d.%02d", tmp[2], tmp[3]);
@@ -262,7 +262,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		tempo = ((tempo / 10) << 4) + tempo % 10;
 	}
 
-        song->initial_speed = (tempo >> 4) ?: 1;
+		song->initial_speed = (tempo >> 4) ?: 1;
 	song->initial_tempo = handle_tempo(tempo);
 
 	npat = slurp_getc(fp);
@@ -288,8 +288,8 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		sample->c5speed = bswapLE16(stmsmp.c5speed);
 		sample->volume = stmsmp.volume * 4; //mphack
 		if (sample->loop_start < blen
-		    && sample->loop_end != 0xffff
-		    && sample->loop_start < sample->loop_end) {
+			&& sample->loop_end != 0xffff
+			&& sample->loop_start < sample->loop_end) {
 			sample->flags |= CHN_LOOP;
 			sample->loop_end = CLAMP(sample->loop_end, sample->loop_start, blen);
 		}
