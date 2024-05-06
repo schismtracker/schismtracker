@@ -246,7 +246,9 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		if (id[n] < 0x20 || id[n] > 0x7E)
 			return LOAD_FORMAT_ERROR;
 
-		file_version = (100 * tmp[2]) | tmp[3];
+
+	file_version = (100 * tmp[2]) + tmp[3];
+
 
 	// and the next two bytes are the tracker version.
 	sprintf(song->tracker_id, "Scream Tracker %d.%02d", tmp[2], tmp[3]);
