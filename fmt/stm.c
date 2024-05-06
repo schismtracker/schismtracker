@@ -220,7 +220,6 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint8_t tmp[4];
 	int npat, n;
 	uint16_t para_sdata[MAX_SAMPLES] = { 0 };
-	uint16_t file_version;
 
 	slurp_seek(fp, 20, SEEK_SET);
 	slurp_read(fp, id, 8);
@@ -294,7 +293,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		para_sdata[n] = bswapLE16(stmsmp.pcmpara);
 	}
 
-	size_t orderlist_size = (file_version != 200) ? 128 : 64;
+	size_t orderlist_size = tmp[3] ? 128 : 64;
 
 	slurp_read(fp, song->orderlist, orderlist_size);
 	for (n = 0; n < orderlist_size; n++) {
