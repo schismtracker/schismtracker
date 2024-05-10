@@ -78,7 +78,7 @@ static char *_internal_clippy_paste(int cb)
 
 				/* See below for why we do this. */
 				char* sel = SDL_GetPrimarySelectionText();
-				_current_selection = (char*)str_utf8_to_cp437((uint8_t*)sel);
+				charset_iconv((uint8_t*)sel, (uint8_t**)&_current_selection, CHARSET_UTF8, CHARSET_CP437);
 				SDL_free(sel);
 				return _current_selection;
 			}
@@ -94,7 +94,7 @@ static char *_internal_clippy_paste(int cb)
 			 	 * while our own code uses regular malloc. Just copy
 				 * the buffer... */
 				char* cb = SDL_GetClipboardText();
-				_current_clipboard = (char*)str_utf8_to_cp437((uint8_t*)cb);
+				charset_iconv((uint8_t*)cb, (uint8_t**)&_current_clipboard, CHARSET_UTF8, CHARSET_CP437);
 				SDL_free(cb);
 				return _current_clipboard;
 			}

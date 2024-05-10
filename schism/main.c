@@ -522,8 +522,8 @@ static void event_loop(void)
 #define _ALTTRACKED_KMOD        0
 #endif
 		case SDL_TEXTINPUT: {
-			uint8_t* input_text = str_utf8_to_cp437((uint8_t*)event.text.text);
-			if (!input_text)
+			uint8_t* input_text = NULL;
+			if (charset_iconv((uint8_t*)event.text.text, &input_text, CHARSET_UTF8, CHARSET_CP437) || !input_text)
 				break;
 
 			if (input_text[0])

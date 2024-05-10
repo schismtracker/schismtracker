@@ -24,9 +24,7 @@
 #include "headers.h"
 
 #include "charset.h"
-
-/* real character set stuff will occur here eventually... */
-
+#include "util.h"
 
 int char_digraph(int k1, int k2)
 {
@@ -291,15 +289,47 @@ uint8_t char_unicode_to_cp437(unsigned int c)
 	case 0x2219:
 	case 0x0387: return 250;// GREEK ANO TELEIA
 	case 0x221A: return 251;// SQUARE ROOT
+	case 0x207F: return 252;// SUPERSCRIPT SMALL LETTER N
 	case 0x00B2: return 253;// SUPERSCRIPT TWO
+	case 0x25A0:
 	case 0x220E: return 254;// QED
 	case 0x00A0: return 255;
 	default: return '?';
 	};
 }
 
+/* From GNU libiconv */
+static const unsigned short cp437_2uni[128] = {
+	/* 0x80 */
+	0x00c7, 0x00fc, 0x00e9, 0x00e2, 0x00e4, 0x00e0, 0x00e5, 0x00e7,
+	0x00ea, 0x00eb, 0x00e8, 0x00ef, 0x00ee, 0x00ec, 0x00c4, 0x00c5,
+	/* 0x90 */
+	0x00c9, 0x00e6, 0x00c6, 0x00f4, 0x00f6, 0x00f2, 0x00fb, 0x00f9,
+	0x00ff, 0x00d6, 0x00dc, 0x00a2, 0x00a3, 0x00a5, 0x20a7, 0x0192,
+	/* 0xa0 */
+	0x00e1, 0x00ed, 0x00f3, 0x00fa, 0x00f1, 0x00d1, 0x00aa, 0x00ba,
+	0x00bf, 0x2310, 0x00ac, 0x00bd, 0x00bc, 0x00a1, 0x00ab, 0x00bb,
+	/* 0xb0 */
+	0x2591, 0x2592, 0x2593, 0x2502, 0x2524, 0x2561, 0x2562, 0x2556,
+	0x2555, 0x2563, 0x2551, 0x2557, 0x255d, 0x255c, 0x255b, 0x2510,
+	/* 0xc0 */
+	0x2514, 0x2534, 0x252c, 0x251c, 0x2500, 0x253c, 0x255e, 0x255f,
+	0x255a, 0x2554, 0x2569, 0x2566, 0x2560, 0x2550, 0x256c, 0x2567,
+	/* 0xd0 */
+	0x2568, 0x2564, 0x2565, 0x2559, 0x2558, 0x2552, 0x2553, 0x256b,
+	0x256a, 0x2518, 0x250c, 0x2588, 0x2584, 0x258c, 0x2590, 0x2580,
+	/* 0xe0 */
+	0x03b1, 0x00df, 0x0393, 0x03c0, 0x03a3, 0x03c3, 0x00b5, 0x03c4,
+	0x03a6, 0x0398, 0x03a9, 0x03b4, 0x221e, 0x03c6, 0x03b5, 0x2229,
+	/* 0xf0 */
+	0x2261, 0x00b1, 0x2265, 0x2264, 0x2320, 0x2321, 0x00f7, 0x2248,
+	0x00b0, 0x2219, 0x00b7, 0x221a, 0x207f, 0x00b2, 0x25a0, 0x00a0
+};
+
 // Copyright (c) 2008-2009 Bjoern Hoehrmann <bjoern@hoehrmann.de>
 // See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
+
+/* Unicode stuff begins here */
 
 #define UTF8_ACCEPT 0
 #define UTF8_REJECT 1
@@ -321,7 +351,7 @@ static const uint8_t utf8d[] = {
 	1,3,1,1,1,1,1,3,1,3,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1, // s7..s8
 };
 
-static uint32_t utf8_decode(uint32_t* restrict state, uint32_t* restrict codep, uint32_t byte) {
+static uint32_t utf8_decode(uint32_t* state, uint32_t* codep, uint32_t byte) {
 	uint32_t type = utf8d[byte];
 
 	*codep = (*state != UTF8_ACCEPT) ?
@@ -332,27 +362,141 @@ static uint32_t utf8_decode(uint32_t* restrict state, uint32_t* restrict codep, 
 	return *state;
 }
 
-static int get_length_of_utf8(const uint8_t* restrict utf8) {
-	uint32_t codepoint = 0, state = 0, length = 0;
+/* for these functions:
+ * out can be NULL, and this means to just return the needed length
+ * of the output string WITHOUT the null terminating character */
+static size_t utf8_to_ucs4(const uint8_t* in, uint32_t* out) {
+	uint32_t state = 0, codepoint = 0;
+	size_t len = 0;
 
-	for (; *utf8; utf8++)
-		if (!utf8_decode(&state, &codepoint, *utf8))
-			length++;
+	for (; *in; in++, len++) {
+		if (utf8_decode(&state, &codepoint, *in))
+			continue;
 
-	return length;
+		out[len] = codepoint;
+	}
+
+	return len;
 }
 
-uint8_t* str_utf8_to_cp437(const uint8_t* restrict utf8) {
-	int length = get_length_of_utf8(utf8);
-	if (!length)
-		return NULL;
+static size_t cp437_to_ucs4(const uint8_t* in, uint32_t* out) {
+	size_t len = 0;
 
-	uint8_t* cp437 = calloc(length + 1, sizeof(uint8_t));
+	for (; *in; in++, len++) {
+		uint8_t c = *in;
 
-	uint32_t codepoint = 0, state = 0, i = 0;
-	for (; *utf8 && i < length; utf8++)
-		if (!utf8_decode(&state, &codepoint, *utf8))
-			cp437[i++] = char_unicode_to_cp437(codepoint);
+		out[len] = (c < 0x80) ? c : cp437_2uni[c - 0x80];
+	}
 
-	return cp437;
+	return len;
+}
+
+static size_t ucs4_to_utf8(const uint32_t* in, uint8_t* out) {
+	size_t len = 0;
+
+	for (; *in; in++) {
+		const uint32_t ch = *in;
+
+		if (out) {
+			if (ch < 0x80) {
+				out[len++] = (uint8_t)ch;
+			} else if (ch < 0x800) {
+				out[len++] = (uint8_t)((ch >> 6) | 0xC0);
+				out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
+			} else if (ch < 0x10000) {
+				out[len++] = (uint8_t)((ch >> 12) | 0xE0);
+				out[len++] = (uint8_t)(((ch >> 6) & 0x3F) | 0x80);
+				out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
+			} else if (ch < 0x110000) {
+				out[len++] = (uint8_t)((ch >> 18) | 0xF0);
+				out[len++] = (uint8_t)(((ch >> 12) & 0x3F) | 0x80);
+				out[len++] = (uint8_t)(((ch >> 6) & 0x3F) | 0x80);
+				out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
+			}
+		} else {
+			if (ch < 0x80)
+				len += 1;
+			else if (ch < 0x800)
+				len += 2;
+			else if (ch < 0x10000)
+				len += 3;
+			else if (ch < 0x110000)
+				len += 4;
+		}
+	}
+}
+
+static size_t ucs4_to_cp437(const uint32_t* in, uint8_t* out) {
+	size_t len = 0;
+
+	for (; *in; in++, len++)
+		if (out)
+			out[len] = char_unicode_to_cp437(*in);
+
+	return len;
+}
+
+/* function LUT here */
+typedef size_t (*charset_conv_to_ucs4_func)(const uint8_t*, uint32_t*);
+typedef size_t (*charset_conv_from_ucs4_func)(const uint32_t*, uint8_t*);
+
+static charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
+	[CHARSET_UTF8] = utf8_to_ucs4,
+	[CHARSET_CP437] = cp437_to_ucs4
+};
+
+static charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
+	[CHARSET_UTF8] = ucs4_to_utf8,
+	[CHARSET_CP437] = ucs4_to_cp437
+};
+
+/* our version of iconv; eventually this can be edited to use the local
+ * iconv() for things like converting to and from the current C locale
+ *
+ * all input is expected to be NULL-terminated.
+ *
+ * example usage:
+ *     uint8_t *cp437 = some_buf, *utf8 = NULL;
+ *     charset_iconv(cp437, &utf8, CHARSET_CP437, CHARSET_UTF8);
+ * 
+ * [out] must be free'd by the caller */
+charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset) {
+	size_t in_length = 0;
+	size_t out_length = 0;
+	uint32_t* ucs4_buf = NULL;
+
+	if (inset == outset) {
+		perror("charset_iconv: inset == outset, refusing to convert to the same charset. fix your code");
+		return CHARSET_ERROR_INPUTISOUTPUT;
+	}
+
+	charset_conv_to_ucs4_func conv_to_ucs4_func = conv_to_ucs4_funcs[inset];
+	if (!conv_to_ucs4_func)
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	in_length = conv_to_ucs4_func(in, NULL);
+
+	ucs4_buf = mem_calloc(in_length + 1, sizeof(uint32_t));
+
+	conv_to_ucs4_func(in, ucs4_buf);
+
+	if (outset == CHARSET_UCS4) {
+		/* we're done here */
+		*out = (uint8_t*)ucs4_buf;
+		return 0;
+	}
+
+	charset_conv_from_ucs4_func conv_from_ucs4_func = conv_from_ucs4_funcs[outset];
+	if (!conv_from_ucs4_func)
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	out_length = conv_from_ucs4_func(ucs4_buf, NULL);
+
+	*out = mem_calloc(out_length + 1, sizeof(uint8_t));
+
+	conv_from_ucs4_func(ucs4_buf, *out);
+
+	free(ucs4_buf);
+
+	return CHARSET_ERROR_SUCCESS;
 }
