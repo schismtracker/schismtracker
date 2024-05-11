@@ -777,7 +777,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 				continue;
 
 			char* filename = NULL;
-			if (charset_iconv((uint8_t*)ffd.cFileName, &filename, CHARSET_WCHAR_T, CHARSET_UTF8))
+			if (charset_iconv((uint8_t*)ffd.cFileName, (uint8_t**)&filename, CHARSET_WCHAR_T, CHARSET_UTF8))
 				continue;
 
 			char* fullpath = dmoz_path_concat_len(path, filename, strlen(path), strlen(filename));

@@ -570,8 +570,11 @@ const char* charset_iconv_error_lookup(charset_error_t err) {
 	}
 }
 
-/* our version of iconv; eventually this can be edited to use the local
- * iconv() for things like converting to and from the current C locale
+/* our version of iconv; this has a much simpler API than the regular
+ * iconv() because much of it isn't very necessary.
+ *
+ * XXX: this currently uses an in-between buffer of UCS-4, when it's
+ * probably better to just convert one character at a time.
  *
  * all input is expected to be NULL-terminated.
  *
@@ -609,7 +612,9 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
 	ucs4_buf = mem_calloc(in_length + 1, sizeof(uint32_t));
 
 	conv_to_ucs4_func(in, ucs4_buf);
-	ucs4_buf[in_length] = '\0';
+
+	/* add NUL character */
+	ucs4_buf[in_length] = 0;
 
 	if (outset == CHARSET_UCS4) {
 		/* we're done here */

@@ -667,6 +667,7 @@ int win32_mktemp(char* template, size_t size) {
 		return -1;
 	}
 
+	/* still have to WideCharToMultiByte here */
 	if (!WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wc, -1, template, size, NULL, NULL)) {
 		free(wc);
 		return -1;
@@ -699,7 +700,7 @@ int win32_open(const char* path, int flags) {
 FILE* win32_fopen(const char* path, const char* flags) {
 	wchar_t* wc = NULL, *wc_flags = NULL;
 	if (charset_iconv(path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T)
-		|| charset_iconv(path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
+		|| charset_iconv(flags, (uint8_t**)&wc_flags, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return NULL;
 
 	FILE* ret = _wfopen(wc, wc_flags);
@@ -775,7 +776,7 @@ char *get_home_directory(void)
 #elif defined(WIN32)
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
 	char* buf_utf8 = NULL;
-	
+
 	if (SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK && !charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
 		return buf_utf8;
 #else
