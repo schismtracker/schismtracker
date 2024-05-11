@@ -44,7 +44,9 @@ typedef enum {
 typedef enum {
 	CHARSET_ERROR_SUCCESS = 0,
 	CHARSET_ERROR_UNIMPLEMENTED = -1,
-	CHARSET_ERROR_INPUTISOUTPUT = -2
+	CHARSET_ERROR_INPUTISOUTPUT = -2,
+	CHARSET_ERROR_NULLINPUT = -3,
+	CHARSET_ERROR_NULLOUTPUT = -4
 } charset_error_t;
 
 int char_digraph(int k1, int k2);

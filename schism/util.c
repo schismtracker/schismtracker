@@ -878,6 +878,7 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	if (charset_iconv(name, (uint8_t**)&name_w, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return 0;
 
+	size_t name_len = wcslen(name_w);
 	wcsncpy(batch_file, name_w, name_len);
 	wcscpy(&batch_file[name_len], L".bat");
 

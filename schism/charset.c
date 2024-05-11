@@ -363,16 +363,20 @@ static uint32_t utf8_decode(uint32_t* state, uint32_t* codep, uint32_t byte) {
 
 /* for these functions:
  * out can be NULL, and this means to just return the needed length
- * of the output string WITHOUT the null terminating character */
+ * of the output string WITHOUT the null terminating character.
+ *
+ * the NUL char is added on in charset_iconv() */
 static size_t utf8_to_ucs4(const uint8_t* in, uint32_t* out) {
 	uint32_t state = 0, codepoint = 0;
 	size_t len = 0;
 
-	for (; *in; in++, len++) {
+	for (; *in; in++) {
 		if (utf8_decode(&state, &codepoint, *in))
 			continue;
 
-		out[len] = codepoint;
+		if (out)
+			out[len] = codepoint;
+		len++;
 	}
 
 	return len;
@@ -425,6 +429,9 @@ static size_t cp437_to_ucs4(const uint8_t* in, uint32_t* out) {
 	return len;
 }
 
+/* These conversion functions DO include the NUL byte because
+ * we're dealing with essentially raw output data here; we don't
+ * know how big each character is... */
 static size_t ucs4_to_utf8(const uint32_t* in, uint8_t* out) {
 	size_t len = 0;
 
@@ -458,6 +465,12 @@ static size_t ucs4_to_utf8(const uint32_t* in, uint8_t* out) {
 				len += 4;
 		}
 	}
+
+	if (out)
+		out[len] = '\0';
+	len++;
+
+	return len;
 }
 
 static size_t ucs4_to_cp437(const uint32_t* in, uint8_t* out) {
@@ -467,13 +480,17 @@ static size_t ucs4_to_cp437(const uint32_t* in, uint8_t* out) {
 		if (out)
 			out[len] = char_unicode_to_cp437(*in);
 
+	if (out)
+		out[len] = '\0';
+	len++;
+
 	return len;
 }
 
 static size_t ucs4_to_utf16le(const uint32_t* in, uint8_t* out) {
 	size_t len = 0;
 
-	for (; *in; in++, len++) {
+	for (; *in; in++) {
 		const uint32_t ch = *in;
 
 		if (out) {
@@ -492,8 +509,15 @@ static size_t ucs4_to_utf16le(const uint32_t* in, uint8_t* out) {
 				out[len++] = (uint8_t)(w2 >> 8);
 			}
 		} else {
-			len += (ch < 0x10000) ? 1 : 2;
+			len += (ch < 0x10000) ? 2 : 4;
 		}
+	}
+
+	if (out) {
+		out[len++] = '\0';
+		out[len++] = '\0';
+	} else {
+		len += 2;
 	}
 
 	return len;
@@ -530,6 +554,22 @@ static charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 #endif
 };
 
+/* for debugging */
+const char* charset_iconv_error_lookup(charset_error_t err) {
+	switch (err) {
+		case CHARSET_ERROR_SUCCESS:
+			return "Success";
+		case CHARSET_ERROR_UNIMPLEMENTED:
+			return "Conversion unimplemented";
+		case CHARSET_ERROR_NULLINPUT:
+			return "Input pointer is NULL";
+		case CHARSET_ERROR_NULLOUTPUT:
+			return "Output pointer is NULL";
+		case CHARSET_ERROR_INPUTISOUTPUT:
+			return "Input and output charsets are the same";
+	}
+}
+
 /* our version of iconv; eventually this can be edited to use the local
  * iconv() for things like converting to and from the current C locale
  *
@@ -541,6 +581,12 @@ static charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
  * 
  * [out] must be free'd by the caller */
 charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset) {
+	if (!in)
+		return CHARSET_ERROR_NULLINPUT;
+
+	if (!out)
+		return CHARSET_ERROR_NULLOUTPUT;
+
 	size_t in_length = 0;
 	size_t out_length = 0;
 	uint32_t* ucs4_buf = NULL;
@@ -563,23 +609,21 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
 	ucs4_buf = mem_calloc(in_length + 1, sizeof(uint32_t));
 
 	conv_to_ucs4_func(in, ucs4_buf);
+	ucs4_buf[in_length] = '\0';
 
 	if (outset == CHARSET_UCS4) {
 		/* we're done here */
 		*out = (uint8_t*)ucs4_buf;
-		return 0;
+		return CHARSET_ERROR_SUCCESS;
 	}
 
 	out_length = conv_from_ucs4_func(ucs4_buf, NULL);
 
-	*out = mem_calloc(out_length + 1, sizeof(uint8_t));
+	*out = mem_calloc(out_length, sizeof(uint8_t));
 
 	conv_from_ucs4_func(ucs4_buf, *out);
 
 	free(ucs4_buf);
-
-	/* ensure NUL termination */
-	(*out)[out_length] = '\0';
 
 	return CHARSET_ERROR_SUCCESS;
 }

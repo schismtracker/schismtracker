@@ -22,7 +22,7 @@
  */
 #include "headers.h"
 #include "osdefs.h"
-#include "util.h"
+#include "charset.h"
 
 #include <shlobj.h>
 #include <windows.h>

@@ -305,7 +305,6 @@ static void parse_options(int argc, char **argv)
 		case O_SDL_VIDEODRIVER:
 			video_driver = str_dup(optarg);
 			break;
-		// FIXME remove all these env vars, and put these things into a global struct or something instead
 #if USE_NETWORK
 		case O_NETWORK:
 			startup_flags |= SF_NETWORK;
@@ -389,6 +388,7 @@ static void parse_options(int argc, char **argv)
 	}
 
 	char *cwd = get_current_directory();
+	perror(cwd);
 	for (; optind < argc; optind++) {
 		char *arg = argv[optind];
 		char *tmp = dmoz_path_concat(cwd, arg);

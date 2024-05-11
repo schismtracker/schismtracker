@@ -34,7 +34,7 @@
 
 #include "log.h"
 #include "slurp.h"
-#include "util.h"
+#include "charset.h"
 
 // indices for 'h' (handles)
 enum { FILE_HANDLE = 0, MAPPING_HANDLE = 1 };
