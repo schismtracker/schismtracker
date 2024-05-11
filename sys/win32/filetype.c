@@ -31,8 +31,7 @@
 void win32_filecreated_callback(const char *filename)
 {
 	wchar_t* wc = NULL;
-	int m = utf8_to_wchar(&wc, filename);
-	if (!m)
+	if (charset_iconv(filename, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return;
 
 	/* let explorer know when we create a file. */

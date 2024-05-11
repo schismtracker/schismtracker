@@ -29,9 +29,16 @@
  * It should only be used as sort of an in-between from UTF-8 to CP437 for use
  * where the strings can be edited, e.g. in the file selector */
 typedef enum {
+	/* Unicode */
 	CHARSET_UCS4,
 	CHARSET_UTF8,
-	CHARSET_CP437
+	CHARSET_UTF16LE,
+
+	/* European languages */
+	CHARSET_CP437,
+
+	/* Built-in C types */
+	CHARSET_WCHAR_T
 } charset_t;
 
 typedef enum {

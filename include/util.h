@@ -178,10 +178,6 @@ char *get_home_directory(void); /* "default" directory for user files, i.e. $HOM
 char *get_dot_directory(void); /* where settings files go (%AppData% on Windows, same as $HOME elsewhere) */
 char *get_current_directory(void); /* just a getcwd() wrapper */
 
-/* windows sucks */
-int utf8_to_wchar(wchar_t** wchar, const char* utf8);
-int wchar_to_utf8(char** utf8, const wchar_t* wchar);
-
 /* wrappers around functions for Unicode support */
 #ifdef WIN32
 #include <stdio.h> /* FILE */

@@ -291,7 +291,6 @@ uint8_t char_unicode_to_cp437(unsigned int c)
 	case 0x221A: return 251;// SQUARE ROOT
 	case 0x207F: return 252;// SUPERSCRIPT SMALL LETTER N
 	case 0x00B2: return 253;// SUPERSCRIPT TWO
-	case 0x25A0:
 	case 0x220E: return 254;// QED
 	case 0x00A0: return 255;
 	default: return '?';
@@ -379,6 +378,41 @@ static size_t utf8_to_ucs4(const uint8_t* in, uint32_t* out) {
 	return len;
 }
 
+static size_t utf16le_to_ucs4(const uint8_t* in, uint32_t* out) {
+	const uint16_t* tmp_in = (const uint16_t*)in;
+	size_t len = 0;
+
+	/* ignore a BOM, if any */
+	if (tmp_in[0] == 0xFEFF || tmp_in[0] == 0xFFEF)
+		tmp_in++;
+
+	for (; *tmp_in; tmp_in) {
+		uint16_t wc = *(tmp_in++);
+		wc = bswapLE16(wc);
+
+		if (wc < 0xD800 || wc > 0xDFFF) {
+			if (out)
+				out[len] = wc;
+			len++;
+		} else if (wc >= 0xD800 && wc <= 0xDBFF) {
+			uint16_t wc2 = *(tmp_in++);
+			wc2 = bswapLE16(wc2);
+
+			if (!(wc2 >= 0xDC00 && wc2 <= 0xDFFF))
+				return 0;
+
+			if (out)
+				out[len] = 0x10000 + ((wc - 0xD800) << 10) + (wc2 - 0xDC00);
+			len++;
+		} else {
+			/* error? */
+			return 0;
+		}
+	}
+
+	return len;
+}
+
 static size_t cp437_to_ucs4(const uint8_t* in, uint32_t* out) {
 	size_t len = 0;
 
@@ -436,18 +470,64 @@ static size_t ucs4_to_cp437(const uint32_t* in, uint8_t* out) {
 	return len;
 }
 
+static size_t ucs4_to_utf16le(const uint32_t* in, uint8_t* out) {
+	size_t len = 0;
+
+	for (; *in; in++, len++) {
+		const uint32_t ch = *in;
+
+		if (out) {
+			if (ch < 0x10000) {
+				out[len++] = (uint8_t)(ch);
+				out[len++] = (uint8_t)(ch >> 8);
+			} else {
+				uint16_t w1 = 0xD800 + ((ch - 0x10000) >> 10);
+				w1 = bswapLE16(w1);
+				uint16_t w2 = 0xDC00 + ((ch - 0x10000) & 0x3FF);
+				w2 = bswapLE16(w2);
+
+				out[len++] = (uint8_t)(w1);
+				out[len++] = (uint8_t)(w1 >> 8);
+				out[len++] = (uint8_t)(w2);
+				out[len++] = (uint8_t)(w2 >> 8);
+			}
+		} else {
+			len += (ch < 0x10000) ? 1 : 2;
+		}
+	}
+
+	return len;
+}
+
 /* function LUT here */
 typedef size_t (*charset_conv_to_ucs4_func)(const uint8_t*, uint32_t*);
 typedef size_t (*charset_conv_from_ucs4_func)(const uint32_t*, uint8_t*);
 
 static charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 	[CHARSET_UTF8] = utf8_to_ucs4,
-	[CHARSET_CP437] = cp437_to_ucs4
+	[CHARSET_UTF16LE] = utf16le_to_ucs4,
+
+	[CHARSET_CP437] = cp437_to_ucs4,
+
+#ifdef WIN32
+	[CHARSET_WCHAR_T] = utf16le_to_ucs4,
+#else
+	/* unimplemented */
+	[CHARSET_WCHAR_T] = NULL,
+#endif
 };
 
 static charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 	[CHARSET_UTF8] = ucs4_to_utf8,
-	[CHARSET_CP437] = ucs4_to_cp437
+	[CHARSET_UTF16LE] = ucs4_to_utf16le,
+	[CHARSET_CP437] = ucs4_to_cp437,
+
+#ifdef WIN32
+	[CHARSET_WCHAR_T] = ucs4_to_utf16le,
+#else
+	/* unimplemented */
+	[CHARSET_WCHAR_T] = NULL,
+#endif
 };
 
 /* our version of iconv; eventually this can be edited to use the local
@@ -474,6 +554,10 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
 	if (!conv_to_ucs4_func)
 		return CHARSET_ERROR_UNIMPLEMENTED;
 
+	charset_conv_from_ucs4_func conv_from_ucs4_func = conv_from_ucs4_funcs[outset];
+	if (!conv_from_ucs4_func)
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
 	in_length = conv_to_ucs4_func(in, NULL);
 
 	ucs4_buf = mem_calloc(in_length + 1, sizeof(uint32_t));
@@ -486,10 +570,6 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
 		return 0;
 	}
 
-	charset_conv_from_ucs4_func conv_from_ucs4_func = conv_from_ucs4_funcs[outset];
-	if (!conv_from_ucs4_func)
-		return CHARSET_ERROR_UNIMPLEMENTED;
-
 	out_length = conv_from_ucs4_func(ucs4_buf, NULL);
 
 	*out = mem_calloc(out_length + 1, sizeof(uint8_t));
@@ -497,6 +577,9 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
 	conv_from_ucs4_func(ucs4_buf, *out);
 
 	free(ucs4_buf);
+
+	/* ensure NUL termination */
+	(*out)[out_length] = '\0';
 
 	return CHARSET_ERROR_SUCCESS;
 }

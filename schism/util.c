@@ -30,6 +30,7 @@ extraneous libraries (i.e. GLib). */
 #include "headers.h"
 
 #include "util.h"
+#include "charset.h"
 #include "osdefs.h" /* need this for win32_filecreated_callback */
 
 #include <sys/types.h>
@@ -626,38 +627,6 @@ int make_backup_file(const char *filename, int numbered)
 	}
 }
 
-int utf8_to_wchar(wchar_t** wchar, const char* utf8) {
-#ifdef WIN32
-	int needed = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
-	if (!needed)
-		return 0;
-
-	*wchar = mem_calloc(needed + 1, sizeof(wchar_t));
-	needed = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, *wchar, needed);
-
-	return needed;
-#else
-	/* this is unnecessary on other platforms, just assume UTF-8 */
-	return 0;
-#endif
-}
-
-int wchar_to_utf8(char** utf8, const wchar_t* wchar) {
-#ifdef WIN32
-	int needed = WideCharToMultiByte(CP_UTF8, 0, wchar, -1, NULL, 0, NULL, NULL);
-	if (!needed)
-		return 0;
-
-	*utf8 = mem_alloc(needed * sizeof(char));
-	needed = WideCharToMultiByte(CP_UTF8, 0, wchar, -1, *utf8, needed, NULL, NULL);
-
-	return needed;
-#else
-	/* see above comment for other platforms */
-	return 0;
-#endif
-}
-
 #ifdef WIN32
 int win32_wstat(const wchar_t* path, struct stat* st) {
 	struct _stat mstat;
@@ -690,7 +659,7 @@ int win32_wstat(const wchar_t* path, struct stat* st) {
  * in the filename; better to just give it as a wide string */
 int win32_mktemp(char* template, size_t size) {
 	wchar_t* wc = NULL;
-	if (!utf8_to_wchar(&wc, template))
+	if (charset_iconv(template, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return -1;
 
 	if (!_wmktemp(wc)) {
@@ -709,7 +678,7 @@ int win32_mktemp(char* template, size_t size) {
 
 int win32_stat(const char* path, struct stat* st) {
 	wchar_t* wc = NULL;
-	if (!utf8_to_wchar(&wc, path))
+	if (charset_iconv(path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return -1;
 
 	int ret = win32_wstat(wc, st);
@@ -719,7 +688,7 @@ int win32_stat(const char* path, struct stat* st) {
 
 int win32_open(const char* path, int flags) {
 	wchar_t* wc = NULL;
-	if (!utf8_to_wchar(&wc, path))
+	if (charset_iconv(path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return -1;
 
 	int ret = _wopen(wc, flags);
@@ -729,7 +698,8 @@ int win32_open(const char* path, int flags) {
 
 FILE* win32_fopen(const char* path, const char* flags) {
 	wchar_t* wc = NULL, *wc_flags = NULL;
-	if (!utf8_to_wchar(&wc, path) || !utf8_to_wchar(&wc_flags, flags))
+	if (charset_iconv(path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T)
+		|| charset_iconv(path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return NULL;
 
 	FILE* ret = _wfopen(wc, wc_flags);
@@ -785,7 +755,7 @@ char *get_current_directory(void)
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
 	char* buf_utf8 = NULL;
 
-	if (_wgetcwd(buf, PATH_MAX) && wchar_to_utf8(&buf_utf8, buf))
+	if (_wgetcwd(buf, PATH_MAX) && !charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
 		return buf_utf8;
 #else
 	char buf[PATH_MAX + 1] = {'\0'};
@@ -806,7 +776,7 @@ char *get_home_directory(void)
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
 	char* buf_utf8 = NULL;
 	
-	if (SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK && wchar_to_utf8(&buf_utf8, buf))
+	if (SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK && !charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
 		return buf_utf8;
 #else
 	char *ptr = getenv("HOME");
@@ -830,7 +800,8 @@ char *get_dot_directory(void)
 #ifdef WIN32
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
 	char* buf_utf8 = NULL;
-	if (SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) == S_OK && wchar_to_utf8(&buf_utf8, buf))
+	if (SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) == S_OK
+		&& charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
 		return buf_utf8;
 
 	// else fall back to home (but if this ever happens, things are really screwed...)
@@ -904,8 +875,7 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 		return 0;
 
 	wchar_t* name_w = NULL;
-	int name_len = utf8_to_wchar(&name_w, name);
-	if (!name_len || name_len + 4 > PATH_MAX)
+	if (charset_iconv(name, (uint8_t**)&name_w, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return 0;
 
 	wcsncpy(batch_file, name_w, name_len);
@@ -914,7 +884,7 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	free(name_w);
 
 	wchar_t* dir_w = NULL;
-	if (!utf8_to_wchar(&dir_w, dir))
+	if (charset_iconv(dir, (uint8_t**)&dir_w, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return 0;
 
 	if (_wchdir(dir_w) == -1) {
@@ -925,7 +895,7 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	free(dir_w);
 
 	wchar_t* maybe_arg_w = NULL;
-	if (!utf8_to_wchar(&maybe_arg_w, name))
+	if (charset_iconv(maybe_arg, (uint8_t**)&maybe_arg_w, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return 0;
 
 	if (win32_wstat(batch_file, &sb) == -1) {
@@ -1004,7 +974,8 @@ int rename_file(const char *old, const char *new, int overwrite)
 
 #ifdef WIN32
 	wchar_t* old_w = NULL, *new_w = NULL;
-	if (!utf8_to_wchar(&old_w, old) || !utf8_to_wchar(&new_w, new)) {
+	if (charset_iconv(new, (uint8_t**)&new_w, CHARSET_UTF8, CHARSET_WCHAR_T)
+		|| charset_iconv(old, (uint8_t**)&old_w, CHARSET_UTF8, CHARSET_WCHAR_T)) {
 		free(old_w);
 		free(new_w);
 		return -1;
