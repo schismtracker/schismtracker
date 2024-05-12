@@ -1337,8 +1337,14 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 		return;
 	}
 
-	if (psmp == chan->ptr_sample && chan->current_sample_data && chan->length)
+	const int was_key_off = (chan->flags & CHN_KEYOFF) != 0;
+
+	if (psmp == chan->ptr_sample && chan->current_sample_data && chan->length) {
+		if (porta && inst_changed && penv) {
+			chan->flags &= ~(CHN_KEYOFF | CHN_NOTEFADE);
+		}
 		return;
+	}
 
 	if (porta && !chan->length)
 		chan->increment = 0;
@@ -1387,7 +1393,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	chan->current_sample_data = psmp->data;
 	chan->position = 0;
 
-	if (chan->flags & CHN_SUSTAINLOOP) {
+	if ((chan->flags & CHN_SUSTAINLOOP) && (!porta || (penv && !was_key_off))) {
 		chan->loop_start = psmp->sustain_start;
 		chan->loop_end = psmp->sustain_end;
 		chan->flags |= CHN_LOOP;
