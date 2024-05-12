@@ -2264,6 +2264,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 				GM_Touch(nchan, 0);
 			}
 
+			const int previous_new_note = chan->new_note; 
 			if (NOTE_IS_NOTE(note)) {
 				chan->new_note = note;
 
@@ -2302,7 +2303,11 @@ void csf_process_effects(song_t *csf, int firsttick)
 			// New Note ?
 			if (note != NOTE_NONE) {
 				if (!instr && chan->new_instrument && NOTE_IS_NOTE(note)) {
+					if (NOTE_IS_NOTE(previous_new_note)) {
+						chan->new_note = previous_new_note;
+					}
 					csf_instrument_change(csf, chan, chan->new_instrument, porta, 0);
+					chan->new_note = note;
 					if ((csf->flags & SONG_INSTRUMENTMODE)
 					    && chan->new_instrument < MAX_INSTRUMENTS
 					    && csf->instruments[chan->new_instrument]) {
