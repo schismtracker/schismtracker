@@ -388,7 +388,6 @@ static void parse_options(int argc, char **argv)
 	}
 
 	char *cwd = get_current_directory();
-	perror(cwd);
 	for (; optind < argc; optind++) {
 		char *arg = argv[optind];
 		char *tmp = dmoz_path_concat(cwd, arg);

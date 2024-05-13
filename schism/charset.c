@@ -386,9 +386,9 @@ static size_t utf16le_to_ucs4(const uint8_t* in, uint32_t* out) {
 	const uint16_t* tmp_in = (const uint16_t*)in;
 	size_t len = 0;
 
-	/* ignore a BOM, if any */
-	if (tmp_in[0] == 0xFEFF || tmp_in[0] == 0xFFEF)
-		tmp_in++;
+	/* don't translate a BOM */
+	if (in[0] == 0xFF && in[1] == 0xFE)
+		len++;
 
 	for (; *tmp_in; tmp_in) {
 		uint16_t wc = *(tmp_in++);
@@ -409,7 +409,42 @@ static size_t utf16le_to_ucs4(const uint8_t* in, uint32_t* out) {
 				out[len] = 0x10000 + ((wc - 0xD800) << 10) + (wc2 - 0xDC00);
 			len++;
 		} else {
-			/* error? */
+			/* this should never happen, and things
+			 * have gone very wrong if it does */
+			return 0;
+		}
+	}
+
+	return len;
+}
+
+static size_t utf16be_to_ucs4(const uint8_t* in, uint32_t* out) {
+	const uint16_t* tmp_in = (const uint16_t*)in;
+	size_t len = 0;
+
+	/* don't translate a BOM */
+	if (in[0] == 0xFE && in[1] == 0xFF)
+		tmp_in++;
+
+	for (; *tmp_in; tmp_in) {
+		uint16_t wc = *(tmp_in++);
+		wc = bswapBE16(wc);
+
+		if (wc < 0xD800 || wc > 0xDFFF) {
+			if (out)
+				out[len] = wc;
+			len++;
+		} else if (wc >= 0xD800 && wc <= 0xDBFF) {
+			uint16_t wc2 = *(tmp_in++);
+			wc2 = bswapBE16(wc2);
+
+			if (!(wc2 >= 0xDC00 && wc2 <= 0xDFFF))
+				return 0;
+
+			if (out)
+				out[len] = 0x10000 + ((wc - 0xD800) << 10) + (wc2 - 0xDC00);
+			len++;
+		} else {
 			return 0;
 		}
 	}
@@ -430,7 +465,7 @@ static size_t cp437_to_ucs4(const uint8_t* in, uint32_t* out) {
 }
 
 /* These conversion functions DO include the NUL byte because
- * we're dealing with essentially raw output data here; we don't
+ * we're dealing with essentially raw output data here: we don't
  * know how big each character is... */
 static size_t ucs4_to_utf8(const uint32_t* in, uint8_t* out) {
 	size_t len = 0;
@@ -453,7 +488,7 @@ static size_t ucs4_to_utf8(const uint32_t* in, uint8_t* out) {
 				out[len++] = (uint8_t)(((ch >> 12) & 0x3F) | 0x80);
 				out[len++] = (uint8_t)(((ch >> 6) & 0x3F) | 0x80);
 				out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
-			}
+			} else return 0; /* ZOMG NO WAY */
 		} else {
 			if (ch < 0x80)
 				len += 1;
@@ -463,6 +498,8 @@ static size_t ucs4_to_utf8(const uint32_t* in, uint8_t* out) {
 				len += 3;
 			else if (ch < 0x110000)
 				len += 4;
+			else
+				return 0;
 		}
 	}
 
@@ -499,14 +536,46 @@ static size_t ucs4_to_utf16le(const uint32_t* in, uint8_t* out) {
 				out[len++] = (uint8_t)(ch >> 8);
 			} else {
 				uint16_t w1 = 0xD800 + ((ch - 0x10000) >> 10);
-				w1 = bswapLE16(w1);
 				uint16_t w2 = 0xDC00 + ((ch - 0x10000) & 0x3FF);
-				w2 = bswapLE16(w2);
 
 				out[len++] = (uint8_t)(w1);
 				out[len++] = (uint8_t)(w1 >> 8);
 				out[len++] = (uint8_t)(w2);
 				out[len++] = (uint8_t)(w2 >> 8);
+			}
+		} else {
+			len += (ch < 0x10000) ? 2 : 4;
+		}
+	}
+
+	if (out) {
+		out[len++] = '\0';
+		out[len++] = '\0';
+	} else {
+		len += 2;
+	}
+
+	return len;
+}
+
+static size_t ucs4_to_utf16be(const uint32_t* in, uint8_t* out) {
+	size_t len = 0;
+
+	for (; *in; in++) {
+		const uint32_t ch = *in;
+
+		if (out) {
+			if (ch < 0x10000) {
+				out[len++] = (uint8_t)(ch >> 8);
+				out[len++] = (uint8_t)(ch);
+			} else {
+				uint16_t w1 = 0xD800 + ((ch - 0x10000) >> 10);
+				uint16_t w2 = 0xDC00 + ((ch - 0x10000) & 0x3FF);
+
+				out[len++] = (uint8_t)(w1 >> 8);
+				out[len++] = (uint8_t)(w1);
+				out[len++] = (uint8_t)(w2 >> 8);
+				out[len++] = (uint8_t)(w2);
 			}
 		} else {
 			len += (ch < 0x10000) ? 2 : 4;
@@ -530,11 +599,22 @@ typedef size_t (*charset_conv_from_ucs4_func)(const uint32_t*, uint8_t*);
 static charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 	[CHARSET_UTF8] = utf8_to_ucs4,
 	[CHARSET_UTF16LE] = utf16le_to_ucs4,
+	[CHARSET_UTF16BE] = utf16be_to_ucs4,
+#if WORDS_BIGENDIAN
+	/* no point in duplicating code here */
+	[CHARSET_UTF16] = utf16be_to_ucs4,
+#else
+	[CHARSET_UTF16] = utf16le_to_ucs4,
+#endif
 
 	[CHARSET_CP437] = cp437_to_ucs4,
 
 #ifdef WIN32
+# if WORDS_BIGENDIAN
+	[CHARSET_WCHAR_T] = utf16be_to_ucs4,
+# else
 	[CHARSET_WCHAR_T] = utf16le_to_ucs4,
+# endif
 #else
 	/* unimplemented */
 	[CHARSET_WCHAR_T] = NULL,
@@ -544,10 +624,21 @@ static charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 static charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 	[CHARSET_UTF8] = ucs4_to_utf8,
 	[CHARSET_UTF16LE] = ucs4_to_utf16le,
+	[CHARSET_UTF16BE] = ucs4_to_utf16be,
+#if WORDS_BIGENDIAN
+	[CHARSET_UTF16] = ucs4_to_utf16be,
+#else
+	[CHARSET_UTF16] = ucs4_to_utf16le,
+#endif
+
 	[CHARSET_CP437] = ucs4_to_cp437,
 
 #ifdef WIN32
+# if WORDS_BIGENDIAN
+	[CHARSET_WCHAR_T] = ucs4_to_utf16be,
+# else
 	[CHARSET_WCHAR_T] = ucs4_to_utf16le,
+# endif
 #else
 	/* unimplemented */
 	[CHARSET_WCHAR_T] = NULL,
@@ -571,12 +662,12 @@ const char* charset_iconv_error_lookup(charset_error_t err) {
 }
 
 /* our version of iconv; this has a much simpler API than the regular
- * iconv() because much of it isn't very necessary.
+ * iconv() because much of it isn't very necessary for our purposes
  *
  * XXX: this currently uses an in-between buffer of UCS-4, when it's
- * probably better to just convert one character at a time.
+ * probably better to just convert one character at a time
  *
- * all input is expected to be NULL-terminated.
+ * all input is expected to be NULL-terminated
  *
  * example usage:
  *     uint8_t *cp437 = some_buf, *utf8 = NULL;
@@ -595,7 +686,7 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
 	uint32_t* ucs4_buf = NULL;
 
 	if (inset == outset) {
-		perror("charset_iconv: inset == outset, refusing to convert to the same charset. fix your code");
+		fprintf(stderr, "charset_iconv: inset == outset, refusing to convert to the same charset. fix your code");
 		return CHARSET_ERROR_INPUTISOUTPUT;
 	}
 
