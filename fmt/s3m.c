@@ -429,7 +429,10 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				? "ModPlug Tracker / OpenMPT 1.17"
 				: "ModPlug Tracker 1.0 alpha";
 		} else if (special == 0 && uc == 0 && flags == 0 && misc == (S3M_UNSIGNED)) {
-			tid = "Velvet Studio";
+			if (initial_global_volume == 128 && mix_volume == 48)
+				tid = "PlayerPRO";
+			else  // Always stereo
+				tid = "Velvet Studio";
 		} else if (uc != 16 && uc != 24 && uc != 32) {
 			// sure isn't scream tracker
 			tid = "Unknown tracker";
@@ -451,7 +454,10 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				strcpy(song->tracker_id, "Unknown tracker");
 			break;
 		case 2:
-			tid = "Imago Orpheus %d.%02x";
+			if (trkvers == 0x2013) // PlayerPRO on Intel forgets to byte-swap the tracker ID bytes 
+				strcpy(song->tracker_id, "PlayerPRO");
+			else
+				tid = "Imago Orpheus %d.%02x";
 			break;
 		case 3:
 			if (trkvers <= 0x3214) {
