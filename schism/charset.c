@@ -388,7 +388,7 @@ static size_t utf16le_to_ucs4(const uint8_t* in, uint32_t* out) {
 
 	/* don't translate a BOM */
 	if (in[0] == 0xFF && in[1] == 0xFE)
-		len++;
+		tmp_in++;
 
 	for (; *tmp_in; tmp_in) {
 		uint16_t wc = *(tmp_in++);
