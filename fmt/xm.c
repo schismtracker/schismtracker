@@ -466,17 +466,9 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 			 * say it's either FT2 or a compatible tracker */
 			strcpy(song->tracker_id + 12, "2 or compatible");
 		} else if (strncmp(song->tracker_id + 12, "v 2.00  ", 8) == 0) {
+			/* alpha and beta are handled later */
 			detected = ID_OLDMODPLUG | ID_CONFIRMED;
-			if (hdr->headersz == 245) {
-				/* ModPlug Tracker Alpha */
-				strcpy(song->tracker_id, "ModPlug Tracker 1.0 alpha");
-			} else if (hdr->headersz == 263) {
-				/* ModPlug Tracker Beta (Beta 1 still behaves like Alpha, but Beta 3.3 does it this way) */
-				strcpy(song->tracker_id, "ModPlug Tracker 1.0 beta");
-			} else {
-				/* WTF? */
-				detected = ID_UNKNOWN;
-			}
+			strcpy(song->tracker_id, "ModPlug Tracker 1.0");
 		} else {
 			// definitely NOT FastTracker, so let's clear up that misconception
 			detected = ID_UNKNOWN;
