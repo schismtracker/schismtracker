@@ -466,9 +466,17 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 			 * say it's either FT2 or a compatible tracker */
 			strcpy(song->tracker_id + 12, "2 or compatible");
 		} else if (strncmp(song->tracker_id + 12, "v 2.00  ", 8) == 0) {
-			/* alpha and beta are handled later */
 			detected = ID_OLDMODPLUG | ID_CONFIRMED;
-			strcpy(song->tracker_id, "ModPlug Tracker 1.0");
+			if (hdr->headersz == 245) {
+				/* ModPlug Tracker Alpha */
+				strcpy(song->tracker_id, "ModPlug Tracker 1.0 alpha");
+			} else if (hdr->headersz == 263) {
+				/* ModPlug Tracker Beta (Beta 1 still behaves like Alpha, but Beta 3.3 does it this way) */
+				strcpy(song->tracker_id, "ModPlug Tracker 1.0 beta");
+			} else {
+				/* WTF? */
+				detected = ID_UNKNOWN;
+			}
 		} else {
 			// definitely NOT FastTracker, so let's clear up that misconception
 			detected = ID_UNKNOWN;
@@ -611,7 +619,9 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		vtype = autovib_import[slurp_getc(fp) & 0x7];
 		vsweep = slurp_getc(fp);
 		vdepth = slurp_getc(fp);
-		vrate = slurp_getc(fp) / 4;
+		vdepth = MIN(vdepth, 32);
+		vrate = slurp_getc(fp);
+		vrate = MIN(vrate, 64);
 
 		slurp_read(fp, &w, 2);
 		ins->fadeout = bswapLE16(w);
