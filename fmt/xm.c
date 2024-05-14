@@ -432,14 +432,14 @@ static void fix_xm_envelope_loop(song_envelope_t *s_env, int sustain_flag)
 }
 
 enum {
-	ID_CONFIRMED = 1, // confirmed with inst/sample header sizes
-	ID_FT2GENERIC = 2, // "FastTracker v2.00", but fasttracker has NOT been ruled out
-	ID_OLDMODPLUG = 4, // "FastTracker v 2.00"
-	ID_OTHER = 8, // something we don't know, testing for digitrakker.
-	ID_FT2CLONE = 16, // NOT FT2: itype changed between instruments, or \0 found in song title
-	ID_MAYBEMODPLUG = 32, // some FT2-ish thing, possibly MPT.
-	ID_DIGITRAK = 64, // probably digitrakker
-	ID_UNKNOWN = 128 | ID_CONFIRMED, // ?????
+	ID_CONFIRMED = 0x01, // confirmed with inst/sample header sizes
+	ID_FT2GENERIC = 0x02, // "FastTracker v2.00", but fasttracker has NOT been ruled out
+	ID_OLDMODPLUG = 0x04, // "FastTracker v 2.00"
+	ID_OTHER = 0x08, // something we don't know, testing for digitrakker.
+	ID_FT2CLONE = 0x10, // NOT FT2: itype changed between instruments, or \0 found in song title
+	ID_MAYBEMODPLUG = 0x20, // some FT2-ish thing, possibly MPT.
+	ID_DIGITRAK = 0x40, // probably digitrakker
+	ID_UNKNOWN = 0x80 | ID_CONFIRMED, // ?????
 };
 
 // TODO: try to identify packers (boobiesqueezer?)
@@ -460,19 +460,23 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 
 	if (strncmp(song->tracker_id, "FastTracker ", 12) == 0) {
 		if (hdr->headersz == 276 && strncmp(song->tracker_id + 12, "v2.00   ", 8) == 0) {
-			// TODO: is it at all possible to tell the precise FT2 version? that'd be a neat trick.
-			// (Answer: unlikely. After some testing, I can't identify any differences between 2.04
-			// and 2.09. Doesn't mean for certain that they're identical, but I would be surprised
-			// if anything did change.)
 			detected = ID_FT2GENERIC | ID_MAYBEMODPLUG;
-			// replace the "v2.00" with just a 2, since it's probably not actually v2.00
-			strcpy(song->tracker_id + 12, "2");
+			/* there is very little change between different versions of FT2, making it
+			 * very difficult (maybe even impossible) to detect them, so here we just
+			 * say it's either FT2 or a compatible tracker */
+			strcpy(song->tracker_id + 12, "2 or compatible");
 		} else if (strncmp(song->tracker_id + 12, "v 2.00  ", 8) == 0) {
-			// Old MPT:
-			// - 1.00a5 (ihdr=245)
-			// - beta 3.3 (ihdr=263)
-			strcpy(song->tracker_id, "Modplug Tracker 1.0");
-			detected = ID_OLDMODPLUG;
+			detected = ID_OLDMODPLUG | ID_CONFIRMED;
+			if (hdr->headersz == 245) {
+				/* ModPlug Tracker Alpha */
+				strcpy(song->tracker_id, "ModPlug Tracker 1.0 alpha");
+			} else if (hdr->headersz == 263) {
+				/* ModPlug Tracker Beta (Beta 1 still behaves like Alpha, but Beta 3.3 does it this way) */
+				strcpy(song->tracker_id, "ModPlug Tracker 1.0 beta");
+			} else {
+				/* WTF? */
+				detected = ID_UNKNOWN;
+			}
 		} else {
 			// definitely NOT FastTracker, so let's clear up that misconception
 			detected = ID_UNKNOWN;
