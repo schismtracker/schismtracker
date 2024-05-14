@@ -429,7 +429,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				? "ModPlug Tracker / OpenMPT 1.17"
 				: "ModPlug Tracker 1.0 alpha";
 		} else if (special == 0 && uc == 0 && flags == 0 && misc == (S3M_UNSIGNED)) {
-			if (initial_global_volume == 128 && mix_volume == 48)
+			if (song->initial_global_volume == 128 && mix_volume == 48)
 				tid = "PlayerPRO";
 			else  // Always stereo
 				tid = "Velvet Studio";
