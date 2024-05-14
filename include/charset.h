@@ -53,6 +53,8 @@ typedef enum {
 
 int char_digraph(int k1, int k2);
 uint8_t char_unicode_to_cp437(unsigned int c);
+
+const char* charset_iconv_error_lookup(charset_error_t err);
 charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset);
 
 #endif

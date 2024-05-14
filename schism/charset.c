@@ -458,7 +458,8 @@ static size_t cp437_to_ucs4(const uint8_t* in, uint32_t* out) {
 	for (; *in; in++, len++) {
 		uint8_t c = *in;
 
-		out[len] = (c < 0x80) ? c : cp437_2uni[c - 0x80];
+		if (out)
+			out[len] = (c < 0x80) ? c : cp437_2uni[c - 0x80];
 	}
 
 	return len;

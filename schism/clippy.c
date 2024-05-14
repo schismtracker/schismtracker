@@ -41,18 +41,47 @@ static void _clippy_copy_to_sys(int cb)
 	if (!_current_selection)
 		return;
 
+	/* use calloc() here because we aren't guaranteed to actually
+	 * fill the whole buffer */
+	size_t sel_len = strlen(_current_selection);
+	uint8_t* out = mem_alloc((sel_len + 1) * sizeof(char));
+
+	/* normalize line breaks */
+	size_t i = 0, j = 0;
+	for (; i < sel_len && j < sel_len; i++, j++) {
+		if (_current_selection[i] == '\r' && _current_selection[i + 1] == '\n') {
+			/* CRLF -> LF */
+			out[j] = '\n';
+			i++;
+		} else if (_current_selection[i] == '\r') {
+			/* CR -> LF */
+			out[j] = '\n';
+		} else {
+			/* we're good */
+			out[j] = _current_selection[i];
+		}
+	}
+	out[j] = 0;
+
+	uint8_t* out_utf8 = NULL;
+	if (charset_iconv(out, &out_utf8, CHARSET_CP437, CHARSET_UTF8))
+		return;
+
+	free(out);
+
 	switch (cb) {
 		case CLIPPY_SELECT:
-			/* TODO: convert to UTF-8 */
 #if SDL_VERSION_ATLEAST(2, 26, 0)
-			SDL_SetPrimarySelectionText(_current_selection);
-#endif	
+			SDL_SetPrimarySelectionText((char*)out_utf8);
+#endif
 			break;
 		default:
 		case CLIPPY_BUFFER:
-			SDL_SetClipboardText(_current_selection);
+			SDL_SetClipboardText((char*)out_utf8);
 			break;
 	}
+
+	free(out_utf8);
 }
 
 static void _string_paste(UNUSED int cb, const char *cbptr)
@@ -76,9 +105,13 @@ static char *_internal_clippy_paste(int cb)
 				if (_current_selection)
 					free(_current_selection);
 
-				/* See below for why we do this. */
 				char* sel = SDL_GetPrimarySelectionText();
-				charset_iconv((uint8_t*)sel, (uint8_t**)&_current_selection, CHARSET_UTF8, CHARSET_CP437);
+
+				if (charset_iconv((uint8_t*)sel, (uint8_t**)&_current_selection, CHARSET_UTF8, CHARSET_CP437)) {
+					SDL_free(sel);
+					return (_current_selection = NULL);
+				}
+
 				SDL_free(sel);
 				return _current_selection;
 			}
@@ -90,11 +123,13 @@ static char *_internal_clippy_paste(int cb)
 				if (_current_clipboard)
 					free(_current_clipboard);
 
-				/* SDL docs explicitly says we have to call SDL_free,
-			 	 * while our own code uses regular malloc. Just copy
-				 * the buffer... */
 				char* cb = SDL_GetClipboardText();
-				charset_iconv((uint8_t*)cb, (uint8_t**)&_current_clipboard, CHARSET_UTF8, CHARSET_CP437);
+
+				if (charset_iconv((uint8_t*)cb, (uint8_t**)&_current_clipboard, CHARSET_UTF8, CHARSET_CP437)) {
+					SDL_free(cb);
+					return (_current_clipboard = NULL);
+				}
+
 				SDL_free(cb);
 				return _current_clipboard;
 			}
