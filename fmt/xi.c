@@ -257,9 +257,16 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
 		smp->panning = xmss.pan;
 		smp->flags |= CHN_PANNING;
 		smp->vib_type = xmsh.vibtype;
-		smp->vib_speed = xmsh.vibsweep;
-		smp->vib_depth = xmsh.vibdepth;
-		smp->vib_rate = xmsh.vibrate / 4; // XXX xm.c does not divide here, which is wrong?
+		smp->vib_speed = MIN(xmsh.vibrate, 64);
+		smp->vib_depth = MIN(xmsh.vibdepth, 32);
+		if (xmsh.vibrate | xmsh.vibdepth) {
+			if (xmsh.vibsweep) {
+				int s = _muldivr(vdepth, 256, vsweep);
+				vsweep = CLAMP(s, 0, 255);
+			} else {
+				smp->vib_rate = 255;
+			}
+		}
 
 		smp->c5speed = transpose_to_frequency(xmss.relnote, xmss.finetune);
 		sampledata += csf_read_sample(current_song->samples + n, rs, sampledata, (end-sampledata));
