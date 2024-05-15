@@ -261,8 +261,8 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
 		smp->vib_depth = MIN(xmsh.vibdepth, 32);
 		if (xmsh.vibrate | xmsh.vibdepth) {
 			if (xmsh.vibsweep) {
-				int s = _muldivr(vdepth, 256, vsweep);
-				vsweep = CLAMP(s, 0, 255);
+				int s = _muldivr(smp->vib_depth, 256, xmsh.vibsweep);
+				smp->vib_rate = CLAMP(s, 0, 255);
 			} else {
 				smp->vib_rate = 255;
 			}
