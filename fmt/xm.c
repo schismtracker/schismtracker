@@ -615,6 +615,16 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		vrate = slurp_getc(fp);
 		vrate = MIN(vrate, 64);
 
+		/* translate the sweep value */
+		if (vrate | vdepth) {
+			if (vsweep) {
+				int s = _muldivr(vdepth, 256, vsweep);
+				vsweep = CLAMP(s, 0, 255);
+			} else {
+				vsweep = 255;
+			}
+		}
+
 		slurp_read(fp, &w, 2);
 		ins->fadeout = bswapLE16(w);
 
