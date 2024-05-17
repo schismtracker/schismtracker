@@ -2153,7 +2153,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 		// This is probably the single biggest WTF replayer bug in Impulse Tracker.
 		// In instrument mode, when an note + instrument is triggered that does not map to any sample, the entire cell (including potentially present global effects!)
 		// is ignored. Even better, if on a following row another instrument number (this time without a note) is encountered, we end up in the same situation!
-		if (instr > 0 && instr < MAX_INSTRUMENTS && csf->instruments[instr] != NULL)
+		if (csf->flags & SONG_INSTRUMENTMODE && instr > 0 && instr < MAX_INSTRUMENTS && csf->instruments[instr] != NULL)
 		{
 			uint8_t note = (chan->row_note != NOTE_NONE) ? chan->row_note : chan->new_note;
 			if (NOTE_IS_NOTE(note) && csf->instruments[instr]->sample_map[note - NOTE_FIRST] == 0)
