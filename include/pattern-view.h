@@ -35,14 +35,14 @@ typedef void (*draw_mask_func) (int x, int y, int mask, int cursor_pos, int fg, 
 	void draw_note_##n(int x, int y, const song_note_t *note, int cursor_pos, int fg, int bg); \
 	void draw_mask_##n(int x, int y, int mask, int cursor_pos, int fg, int bg);
 
-PATTERN_VIEW(13);
-PATTERN_VIEW(10);
-PATTERN_VIEW(8); // note: not usable for editing as instrument numbers are not shown (thus no draw_mask)
-PATTERN_VIEW(7);
-PATTERN_VIEW(6);
-PATTERN_VIEW(3);
-PATTERN_VIEW(2);
-PATTERN_VIEW(1);
+PATTERN_VIEW(13)
+PATTERN_VIEW(10)
+PATTERN_VIEW(8) /* note: not usable for editing as instrument numbers are not shown (thus no draw_mask) */
+PATTERN_VIEW(7)
+PATTERN_VIEW(6)
+PATTERN_VIEW(3)
+PATTERN_VIEW(2)
+PATTERN_VIEW(1)
 
 #undef PATTERN_VIEW
 
