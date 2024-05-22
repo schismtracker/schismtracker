@@ -74,7 +74,7 @@ static void on_meta(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetada
 				const char *tag = (const char*)metadata->data.vorbis_comment.comments[i].entry;
 				const FLAC__uint32 length = metadata->data.vorbis_comment.comments[i].length;
 
-				if (length > 6 && !strncasecmp(tag, "TITLE=", 6) && flac_file->flags.name)
+				if (length > 6 && !strncasecmp(tag, "TITLE=", 6))
 					strncpy(flac_file->flags.name, tag + 6, 32);
 				else if (length > 11 && !strncasecmp(tag, "SAMPLERATE=", 11))
 					flac_file->flags.sample_rate = strtol(tag + 11, NULL, 10);
