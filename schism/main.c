@@ -539,10 +539,10 @@ static void event_loop(void)
 #define _ALTTRACKED_KMOD        0
 #endif
 		case SDL_TEXTINPUT: {
-			char* input_text = str_utf8_to_cp437(event.text.text);
+			uint8_t* input_text = str_utf8_to_cp437((uint8_t*)event.text.text);
 			if (input_text == NULL || *input_text == '\0')
 				break;
-			handle_text_input(input_text);
+			handle_text_input((const char*)input_text);
 			free(input_text);
 			break;
 		}
