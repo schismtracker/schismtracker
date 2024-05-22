@@ -67,7 +67,7 @@ int fmt_669_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 		if (header->breaks[i] > 0x3f)
 			return 0;
 
-	file->title = strn_dup(header->songmessage, 36);
+	file->title = strn_dup((char*)header->songmessage, 36);
 	file->description = desc;
 	/*file->extension = str_dup("669");*/
 	file->type = TYPE_MODULE_S3M;
