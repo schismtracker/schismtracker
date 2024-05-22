@@ -81,8 +81,8 @@ static void do_wake_midi(void)
 
 static int _get_fd(int pb, int isout)
 {
-	struct ip_mreq mreq = {};
-	struct sockaddr_in asin = {};
+	struct ip_mreq mreq = {0};
+	struct sockaddr_in asin = {0};
 	unsigned char *ipcopy;
 	int fd, opt;
 
@@ -352,7 +352,7 @@ static int _ip_stop(struct midi_port *p)
 static void _ip_send(struct midi_port *p, const unsigned char *data, unsigned int len,
 				UNUSED unsigned int delay)
 {
-	struct sockaddr_in asin = {};
+	struct sockaddr_in asin = {0};
 	unsigned char *ipcopy;
 	int n = INT_SHAPED_PTR(p->userdata);
 	int ss;

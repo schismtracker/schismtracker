@@ -184,7 +184,7 @@ idea for return codes:
 
 static void handle_file_entered_L(const char *ptr)
 {
-	dmoz_filelist_t tmp = {};
+	dmoz_filelist_t tmp = {0};
 	struct stat sb;
 
 	/* these shenanigans force the file to take another trip... */

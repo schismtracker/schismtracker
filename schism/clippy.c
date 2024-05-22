@@ -57,7 +57,7 @@ static void _clippy_copy_to_sys(int cb)
 
 static void _string_paste(UNUSED int cb, const char *cbptr)
 {
-	SDL_Event event = {};
+	SDL_Event event = {0};
 
 	event.user.type = SCHISM_EVENT_PASTE;
 	event.user.data1 = str_dup(cbptr); /* current_clipboard... is it safe? */

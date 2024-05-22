@@ -299,7 +299,7 @@ static void orderlist_reorder(void)
 {
 	/* err, I hope this is going to be done correctly...
 	*/
-	song_note_t *np[256] = {};
+	song_note_t *np[256] = {0};
 	int nplen[256];
 	unsigned char mapol[256];
 	int i, j;

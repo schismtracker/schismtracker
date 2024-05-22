@@ -97,7 +97,7 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 		uint8_t note; // the last note played in this channel
 		uint8_t instrument; // 1 -> 128
 		uint8_t volume; // 0 -> 64
-	} chanstate[16] = {};
+	} chanstate[16] = {0};
 	uint8_t prevspeed = 1;
 	uint8_t patch_samples[128] = {0};
 	uint8_t patch_percussion[128] = {0};

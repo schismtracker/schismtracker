@@ -602,7 +602,7 @@ static int pattern_selection_system_paste(UNUSED int cb, const void *data)
 	copyin_x = copyin_y = 0;
 	/* okay, let's start parsing */
 	while (*str) {
-		song_note_t n = {};
+		song_note_t n = {0};
 
 		if (!str[0] || !str[1] || !str[2]) break;
 		switch (*str) {

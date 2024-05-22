@@ -50,7 +50,7 @@ void win32_get_modkey(int *mk)
 
 void win32_sysinit(UNUSED int *pargc, UNUSED char ***pargv)
 {
-	static WSADATA ignored = {};
+	static WSADATA ignored = {0};
 
 	if (WSAStartup(0x202, &ignored) == SOCKET_ERROR) {
 		WSACleanup(); /* ? */

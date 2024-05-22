@@ -168,7 +168,7 @@ static int fontgrep(dmoz_file_t *f)
 static void load_fontlist(void)
 {
 	char *font_dir, *p;
-	struct stat st = {};
+	struct stat st = {0};
 
 	dmoz_free(&flist, NULL);
 

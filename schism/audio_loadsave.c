@@ -338,7 +338,7 @@ static void _save_it_instrument(int n, disko_t *fp, int iti_file)
 {
 	n++; // FIXME: this is dumb; really all the numbering should be one-based to make it simple
 
-	struct it_instrument iti = {};
+	struct it_instrument iti = {0};
 	song_instrument_t *i = current_song->instruments[n];
 
 	if (!i)
@@ -495,8 +495,8 @@ static void _save_it_instrument(int n, disko_t *fp, int iti_file)
 static void _save_it_pattern(disko_t *fp, song_note_t *pat, int patsize)
 {
 	song_note_t *noteptr = pat;
-	song_note_t lastnote[64] = {};
-	uint8_t initmask[64] = {};
+	song_note_t lastnote[64] = {0};
+	uint8_t initmask[64] = {0};
 	uint8_t lastmask[64];
 	unsigned short pos = 0;
 	uint8_t data[65536];
@@ -603,7 +603,7 @@ static void _save_it_pattern(disko_t *fp, song_note_t *pat, int patsize)
 // why on earth isn't this using the 'song' parameter? will finding this out hurt my head?
 static int _save_it(disko_t *fp, UNUSED song_t *song)
 {
-	struct it_file hdr = {};
+	struct it_file hdr = {0};
 	int n;
 	int nord, nins, nsmp, npat;
 	int msglen = strlen(current_song->message);
@@ -1096,7 +1096,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 
 	/* 0. delete old samples */
 	if (current_song->instruments[target]) {
-		int sampmap[MAX_SAMPLES] = {};
+		int sampmap[MAX_SAMPLES] = {0};
 
 		/* init... */
 		for (unsigned int j = 0; j < 128; j++) {
@@ -1126,7 +1126,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 	}
 
 	if (libf) { /* file is ignored */
-		int sampmap[MAX_SAMPLES] = {};
+		int sampmap[MAX_SAMPLES] = {0};
 
 		song_t *xl = song_create_load(libf);
 		if (!xl) {
@@ -1224,7 +1224,7 @@ int song_preload_sample(dmoz_file_t *file)
 int song_load_sample(int n, const char *file)
 {
 	fmt_load_sample_func *load;
-	song_sample_t smp = {};
+	song_sample_t smp = {0};
 
 	const char *base = get_basename(file);
 	slurp_t *s = slurp(file, NULL, 0);
@@ -1362,7 +1362,7 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 			str_dup(path), str_dup(base), NULL, n);
 		file->title = str_dup(library->instruments[n]->name);
 
-		int count[128] = {};
+		int count[128] = {0};
 
 		file->sampsize = 0;
 		file->filesize = 0;

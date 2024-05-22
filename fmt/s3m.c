@@ -603,7 +603,7 @@ struct s3i_header {
 
 static void write_s3i_header(disko_t *fp, song_sample_t *smp, uint32_t sdata)
 {
-	struct s3i_header hdr = {};
+	struct s3i_header hdr = {0};
 	int n;
 
 	if (smp->flags & CHN_ADLIB) {
@@ -911,7 +911,7 @@ static int fixup_chantypes(song_channel_t *channels, uint8_t *chantypes)
 
 int fmt_s3m_save_song(disko_t *fp, song_t *song)
 {
-	struct s3m_header hdr = {};
+	struct s3m_header hdr = {0};
 	int nord, nsmp, npat;
 	int n;
 	song_sample_t *smp;
