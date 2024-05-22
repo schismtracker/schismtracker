@@ -1066,7 +1066,7 @@ static void sample_save(const char *filename, const char *format)
 		q = NULL;
 	}
 
-	ptr = dmoz_path_concat(cfg_dir_samples, filename ? : sample->filename);
+	ptr = dmoz_path_concat(cfg_dir_samples, filename ? filename : sample->filename);
 	if (q) q[1] = tmp;
 
 	data->path = ptr;

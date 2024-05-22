@@ -3495,7 +3495,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			// emulate some weird impulse tracker behavior here:
 			// with row highlight set to zero, alt-d selects the whole channel
 			// if the cursor is at the top, and clears the selection otherwise
-			block_double_size = current_song->row_highlight_major ?: (current_row ? 0 : 65536);
+			block_double_size = current_song->row_highlight_major ? current_song->row_highlight_major : (current_row ? 0 : 65536);
 			selection.first_channel = selection.last_channel = current_channel;
 			selection.first_row = current_row;
 		}
@@ -4217,9 +4217,9 @@ static int pattern_editor_handle_key(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 0;
 		{
-			int rh = current_song->row_highlight_major ?: 16;
+			int rh = current_song->row_highlight_major ? current_song->row_highlight_major : 16;
 			if (current_row == total_rows)
-				current_row -= (current_row % rh) ?: rh;
+				current_row -= (current_row % rh) ? (current_row % rh) : rh;
 			else
 				current_row -= rh;
 		}
@@ -4227,7 +4227,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 	case SDLK_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		current_row += current_song->row_highlight_major ?: 16;
+		current_row += current_song->row_highlight_major ? current_song->row_highlight_major : 16;
 		return -1;
 	case SDLK_HOME:
 		if (k->state == KEY_RELEASE)

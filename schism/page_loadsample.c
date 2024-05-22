@@ -373,9 +373,9 @@ static void file_list_draw(void)
 			bg = 0;
 		}
 		draw_text(numtostr(3, n+1, buf), 2, pos, 0, 2);
-		draw_text_len(file->title ?: "", 25, 6, pos, fg, bg);
+		draw_text_len(file->title ? file->title : "", 25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
-		draw_text_len(file->base ?: "", 18, 32, pos, fg, bg);
+		draw_text_len(file->base ? file->base : "", 18, 32, pos, fg, bg);
 		if (file->base && search_pos > -1) {
 			if (strncasecmp(file->base,search_str,search_pos) == 0) {
 				for (i = 0 ; i < search_pos; i++) {

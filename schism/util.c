@@ -919,7 +919,10 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	if (win32_wstat(batch_file, &sb) == -1) {
 		r = 0;
 	} else {
-		cmd = _wgetenv(L"COMSPEC") ?: L"command.com";
+		cmd = _wgetenv(L"COMSPEC")
+		if (!cmd)
+			cmd = L"command.com";
+
 		r = _wspawnlp(_P_WAIT, cmd, cmd, "/c", batch_file, maybe_arg_w, 0);
 	}
 

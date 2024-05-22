@@ -295,7 +295,7 @@ int song_get_rows_in_pattern(int pattern)
 {
 	if (pattern > MAX_PATTERNS)
 		return 0;
-	return (current_song->pattern_size[pattern] ? : 64) - 1;
+	return (current_song->pattern_size[pattern] ? current_song->pattern_size[pattern] : 64) - 1;
 }
 
 // ------------------------------------------------------------------------

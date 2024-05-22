@@ -52,7 +52,7 @@ int fmt_it_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	/*file->extension = str_dup("it");*/
 	file->title = mem_alloc(26);
 	for (int n = 0; n < 25; n++) {
-		file->title[n] = data[4 + n] ?: 32;
+		file->title[n] = data[4 + n] ? data[4 + n] : 32;
 	}
 	file->title[25] = 0;
 	rtrim_string(file->title);
@@ -511,7 +511,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 
 	for (n = 0; n < 25; n++) {
-		song->title[n] = hdr.title[n] ?: 32;
+		song->title[n] = hdr.title[n] ? hdr.title[n] : 32;
 	}
 	song->title[25] = 0;
 	rtrim_string(song->title);
@@ -551,7 +551,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	song->initial_global_volume = MIN(hdr.gv, 128);
 	song->mixing_volume = MIN(hdr.mv, 128);
-	song->initial_speed = hdr.is ?: 6;
+	song->initial_speed = hdr.is ? hdr.is : 6;
 	song->initial_tempo = MAX(hdr.it, 31);
 	song->pan_separation = hdr.sep;
 

@@ -750,7 +750,7 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 	// SCx: Note Cut
 	case 0xC0:
 		if (csf->flags & SONG_FIRSTTICK)
-			chan->cd_note_cut = param ?: 1;
+			chan->cd_note_cut = param ? param : 1;
 		else if (--chan->cd_note_cut == 0)
 			fx_note_cut(csf, nchan, 1);
 		break;
@@ -847,7 +847,7 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 	song_voice_t *chan = &csf->voices[nchan];
 	song_instrument_t *penv = ((csf->flags & SONG_INSTRUMENTMODE)
 				   && chan->last_instrument < MAX_INSTRUMENTS)
-			? csf->instruments[use_instr ?: chan->last_instrument]
+			? csf->instruments[use_instr ? use_instr : chan->last_instrument]
 			: NULL;
 	unsigned char outbuffer[64];
 	int midi_channel, fake_midi_channel = 0;
@@ -2187,7 +2187,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 			if (param >> 4 == 0xd) {
 				// Ideally this would use SONG_FIRSTTICK, but Impulse Tracker has a bug here :)
 				if (firsttick) {
-					chan->cd_note_delay = (param & 0xf) ?: 1;
+					chan->cd_note_delay = (param & 0xf) ? (param & 0xf) : 1;
 					continue; // notes never play on the first tick with SDx, go away
 				}
 				if (--chan->cd_note_delay > 0)

@@ -627,7 +627,9 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
 	nsmp = csf_get_num_samples(current_song);
 
 	// IT always saves at least one pattern.
-	npat = csf_get_num_patterns(current_song) ?: 1;
+	npat = csf_get_num_patterns(current_song);
+	if (!npat)
+		npat = 1;
 
 	hdr.id = bswapLE32(0x4D504D49); // IMPM
 	strncpy((char *) hdr.songname, current_song->title, 25);

@@ -363,7 +363,7 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						y = MIN(vlen, 4);
 						slurp_read(fp, buf + (4 - y), y);
 						bpm = buf[0] << 24 | (buf[1] << 16) | (buf[2] << 8) | buf[3];
-						bpm = CLAMP(60000000 / (bpm ?: 1), 0x20, 0xff);
+						bpm = CLAMP(60000000 / (bpm ? bpm : 1), 0x20, 0xff);
 						note = (song_note_t) {.effect = FX_TEMPO, .param = bpm};
 						vlen -= y;
 						break;

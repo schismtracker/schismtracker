@@ -763,7 +763,7 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 			// no idea how to identify it elsewise.
 			strcpy(song->tracker_id, "FastTracker clone");
 		}
-	} else if ((detected & ID_DIGITRAK) && srsvd_or == 0 && (itype ?: -1) == -1) {
+	} else if ((detected & ID_DIGITRAK) && srsvd_or == 0 && (itype ? itype : -1) == -1) {
 		strcpy(song->tracker_id, "Digitrakker");
 	} else if (detected == ID_UNKNOWN) {
 		strcpy(song->tracker_id, "Unknown tracker");
@@ -800,8 +800,13 @@ int fmt_xm_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 
 	if (hdr.flags & 1)
 		song->flags |= SONG_LINEARSLIDES;
+
 	song->flags |= SONG_ITOLDEFFECTS | SONG_COMPATGXX | SONG_INSTRUMENTMODE;
-	song->initial_speed = MIN(hdr.tempo, 255) ?: 255;
+
+	song->initial_speed = MIN(hdr.tempo, 255);
+	if (!song->initial_speed)
+		song->initial_speed = 255;
+
 	song->initial_tempo = CLAMP(hdr.bpm, 31, 255);
 	song->initial_global_volume = 128;
 	song->mixing_volume = 48;

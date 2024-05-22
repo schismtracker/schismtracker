@@ -205,7 +205,7 @@ long disko_tell(disko_t *ds)
 void disko_seterror(disko_t *ds, int err)
 {
 	// Don't set an error if one already exists, and don't allow clearing an error value
-	ds->error = errno = ds->error ?: err ?: EINVAL;
+	ds->error = errno = ds->error ? ds->error : err ? err : EINVAL;
 }
 
 // ---------------------------------------------------------------------------
@@ -491,13 +491,13 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 	csf_loop_pattern(&dwsong, pattern, 0);
 	dwsong.multi_write = calloc(MAX_CHANNELS, sizeof(struct multi_write));
 	if (!dwsong.multi_write)
-		err = errno ?: ENOMEM;
+		err = errno ? errno : ENOMEM;
 
 	if (!err) {
 		for (n = 0; n < MAX_CHANNELS; n++) {
 			ds[n] = disko_memopen();
 			if (!ds[n]) {
-				err = errno ?: EINVAL;
+				err = errno ? errno : EINVAL;
 				break;
 			}
 		}
@@ -507,7 +507,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 		/* you might think this code is insane, and you might be correct ;)
 		but it's structured like this to keep all the early-termination handling HERE. */
 		_export_teardown();
-		err = err ?: errno;
+		err = err ? err : errno;
 		free(dwsong.multi_write);
 		for (n = 0; n < MAX_CHANNELS; n++)
 			disko_memclose(ds[n], 0);
@@ -705,7 +705,7 @@ int disko_export_song(const char *filename, const struct save_format *format)
 	if (numfiles > 1) {
 		export_dwsong.multi_write = calloc(numfiles, sizeof(struct multi_write));
 		if (!export_dwsong.multi_write)
-			err = errno ?: ENOMEM;
+			err = errno ? errno : ENOMEM;
 	}
 
 	memset(export_ds, 0, sizeof(export_ds));
@@ -721,7 +721,7 @@ int disko_export_song(const char *filename, const struct save_format *format)
 		}
 		if (!(export_ds[n] && format->f.export.head(export_ds[n], export_dwsong.mix_bits_per_sample,
 				export_dwsong.mix_channels, export_dwsong.mix_frequency) == DW_OK)) {
-			err = errno ?: EINVAL;
+			err = errno ? errno : EINVAL;
 			break;
 		}
 	}
@@ -733,7 +733,7 @@ int disko_export_song(const char *filename, const struct save_format *format)
 			disko_seterror(export_ds[n], err); /* keep from writing a bunch of useless files */
 			disko_close(export_ds[n], 0);
 		}
-		errno = err ?: EINVAL;
+		errno = err ? err : EINVAL;
 		log_perror(filename);
 		return DW_ERROR;
 	}
@@ -753,7 +753,8 @@ int disko_export_song(const char *filename, const struct save_format *format)
 	export_format = format;
 	status.flags |= DISKWRITER_ACTIVE; /* tell main to care about us */
 
-	disko_dialog_setup((csf_get_length(&export_dwsong) * export_dwsong.mix_frequency) ?: 1);
+	uint32_t s = (csf_get_length(&export_dwsong) * export_dwsong.mix_frequency);
+	disko_dialog_setup(s ? s : 1);
 
 	return DW_OK;
 }
@@ -923,7 +924,10 @@ void song_pattern_to_sample(int pattern, int split, int bind)
 
 	ps = mem_alloc(sizeof(struct pat2smp));
 	ps->pattern = pattern;
-	ps->sample = sample_get_current() ?: 1;
+
+	int samp = sample_get_current();
+	ps->sample = samp ? samp : 1;
+
 	ps->bind = bind;
 
 	if (split) {

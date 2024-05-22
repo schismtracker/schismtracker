@@ -434,7 +434,7 @@ static int mdl_read_info(song_t *song, slurp_t *fp)
 	song->title[25] = '\0';
 
 	song->initial_global_volume = (info.globalvol + 1) >> 1;
-	song->initial_speed = info.speed ?: 1;
+	song->initial_speed = info.speed ? info.speed : 1;
 	song->initial_tempo = MAX(info.tempo, 31); // MDL tempo range is actually 4-255
 
 	// channel pannings

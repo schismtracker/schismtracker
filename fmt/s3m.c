@@ -128,7 +128,10 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	song->initial_global_volume = slurp_getc(fp) << 1;
 	// In the case of invalid data, ST3 uses the speed/tempo value that's set in the player prior to
 	// loading the song, but that's just crazy.
-	song->initial_speed = slurp_getc(fp) ?: 6;
+	song->initial_speed = slurp_getc(fp);
+	if (!song->initial_speed)
+		song->initial_speed = 6;
+
 	song->initial_tempo = slurp_getc(fp);
 	if (song->initial_tempo <= 32) {
 		// (Yes, 32 is ignored by Scream Tracker.)
@@ -631,10 +634,10 @@ static void write_s3i_header(disko_t *fp, song_sample_t *smp, uint32_t sdata)
 	hdr.c5speed = bswapLE32(smp->c5speed);
 
 	for (n = 25; n >= 0; n--)
-		if ((smp->name[n] ?: 32) != 32)
+		if ((smp->name[n] ? smp->name[n] : 32) != 32)
 			break;
 	for (; n >= 0; n--)
-		hdr.name[n] = smp->name[n] ?: 32;
+		hdr.name[n] = smp->name[n] ? smp->name[n] : 32;
 
 	disko_write(fp, &hdr, sizeof(hdr));
 }
@@ -939,13 +942,19 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 	// see note in IT writer -- shouldn't clamp here, but can't save more than we're willing to load
 	nord = CLAMP(nord, 2, MAX_ORDERS);
 
-	nsmp = csf_get_num_samples(song) ?: 1; // ST3 always saves one sample
+	nsmp = csf_get_num_samples(song); // ST3 always saves one sample
+	if (!nsmp)
+		nsmp = 1;
+
 	if (nsmp > 99) {
 		nsmp = 99;
 		warn |= 1 << WARN_MAXSAMPLES;
 	}
 
-	npat = csf_get_num_patterns(song) ?: 1; // ST3 always saves one pattern
+	npat = csf_get_num_patterns(song); // ST3 always saves one pattern
+	if (!npat)
+		npat = 1;
+
 	if (npat > 100) {
 		npat = 100;
 		warn |= 1 << WARN_MAXPATTERNS;

@@ -687,7 +687,7 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
 		/* 31 = f#2, 103 = f#8. (i hope ;) */
 		if (!(voice->ptr_sample && voice->note >= 31 && voice->note <= 103))
 			continue;
-		pos = voice->master_channel ?: (1 + current_song->voice_mix[n]);
+		pos = voice->master_channel ? voice->master_channel : (1 + current_song->voice_mix[n]);
 		if (pos < first_channel)
 			continue;
 		pos -= first_channel;
@@ -708,7 +708,7 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
 
 	for (c = first_channel, pos = 0; pos < height - 2; pos++, c++) {
 		for (n = 0; n < 73; n++) {
-			d = dot_field[n][pos] ?: 0x06;
+			d = dot_field[n][pos] ? dot_field[n][pos] : 0x06;
 
 			fg = d & 0xf;
 			v = d >> 4;
