@@ -589,7 +589,7 @@ struct s3i_header {
 			uint8_t zero[3];
 			uint8_t data[12];
 		} admel;
-	};
+	} spec;
 	uint8_t vol;
 	uint8_t x; // "dsk" for adlib
 	uint8_t pack; // 0
@@ -611,16 +611,16 @@ static void write_s3i_header(disko_t *fp, song_sample_t *smp, uint32_t sdata)
 
 	if (smp->flags & CHN_ADLIB) {
 		hdr.type = S3I_TYPE_ADMEL;
-		memcpy(hdr.admel.data, smp->adlib_bytes, 11);
+		memcpy(hdr.spec.admel.data, smp->adlib_bytes, 11);
 		memcpy(hdr.tag, "SCRI", 4);
 	} else if (smp->data != NULL) {
 		hdr.type = S3I_TYPE_PCM;
-		hdr.pcm.memseg[0] = (sdata >> 20) & 0xff;
-		hdr.pcm.memseg[1] = (sdata >> 4) & 0xff;
-		hdr.pcm.memseg[2] = (sdata >> 12) & 0xff;
-		hdr.pcm.length = bswapLE32(smp->length);
-		hdr.pcm.loop_start = bswapLE32(smp->loop_start);
-		hdr.pcm.loop_end = bswapLE32(smp->loop_end);
+		hdr.spec.pcm.memseg[0] = (sdata >> 20) & 0xff;
+		hdr.spec.pcm.memseg[1] = (sdata >> 4) & 0xff;
+		hdr.spec.pcm.memseg[2] = (sdata >> 12) & 0xff;
+		hdr.spec.pcm.length = bswapLE32(smp->length);
+		hdr.spec.pcm.loop_start = bswapLE32(smp->loop_start);
+		hdr.spec.pcm.loop_end = bswapLE32(smp->loop_end);
 		hdr.flags = ((smp->flags & CHN_LOOP) ? 1 : 0)
 			| ((smp->flags & CHN_STEREO) ? 2 : 0)
 			| ((smp->flags & CHN_16BIT) ? 4 : 0);
@@ -694,30 +694,24 @@ static int write_s3m_pattern(disko_t *fp, song_t *song, int pat, uint8_t *chanty
 				}
 			}
 
-			switch (out.note) {
-			case 1 ... 12:
-			case 109 ... 120:
+			/* Translate notes */
+			if (out.note <= 12 || (out.note >= 109 && out.note <= 120)) {
 				// Octave 0/9 (or higher?)
 				warn |= 1 << WARN_NOTERANGE;
 				out.note = 255;
-				break;
-			case 13 ... 108:
+			} else if (out.note > 12 && out.note < 109) {
 				// C-1 through B-8
 				out.note -= 13;
 				out.note = (out.note % 12) + ((out.note / 12) << 4);
 				b |= 32;
-				break;
-			case NOTE_CUT:
-			case NOTE_OFF:
+			} else if (out.note == NOTE_CUT || out.note == NOTE_OFF) {
 				// IT translates === to ^^^ when writing S3M files
 				// (and more importantly, we load ^^^ as === in adlib-channels)
 				out.note = 254;
 				b |= 32;
-				break;
-			default:
+			} else {
 				// Nothing (or garbage values)
 				out.note = 255;
-				break;
 			}
 
 			if (out.instrument != 0) {
