@@ -187,20 +187,23 @@ void csf_free_pattern(void *pat)
 	free(pat);
 }
 
-/* Note: this function will appear in valgrind to be a sieve for memory leaks.
-It isn't; it's just being confused by the adjusted pointer being stored. */
+/* I THINK what this does is forces alignment to four bytes,
+ * which may or may not call for better performance on some
+ * architectures (many such cases on RISC microprocessors).
+ *
+ * as for the 16 byte offset, no idea what that's about.
+ * consider it magic
+ *
+ *   - paper */
 signed char *csf_allocate_sample(uint32_t nbytes)
 {
-	signed char *p = mem_calloc(1, (nbytes + 39) & ~7); // magic
-	if (p)
-		p += 16;
-	return p;
+	return (signed char*)mem_calloc(1, (nbytes + 39) & -0x8) + 16;
 }
 
 void csf_free_sample(void *p)
 {
 	if (p)
-		free(p - 16);
+		free((signed char*)p - 16);
 }
 
 void csf_forget_history(song_t *csf)
@@ -538,7 +541,7 @@ void csf_loop_pattern(song_t *csf, int pat, int row)
 /* --------------------------------------------------------------------------------------------------------- */
 
 #define SF_FAIL(name, n) \
-	({ log_appendf(4, "%s: internal error: unsupported %s %d", __FUNCTION__, name, n); return 0; })
+	do { log_appendf(4, "%s: internal error: unsupported %s %d", __func__, name, n); return 0; } while (0);
 
 uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, uint32_t maxlengthmask)
 {
