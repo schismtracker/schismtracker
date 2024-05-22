@@ -62,10 +62,10 @@
 # endif
 #else
 # ifndef LIKELY
-#  define LIKELY(x) (!!(x))
+#  define LIKELY(x) (x)
 # endif
 # ifndef UNLIKELY
-#  define UNLIKELY(x) (!(x))
+#  define UNLIKELY(x) (x)
 # endif
 # ifndef UNUSED
 #  define UNUSED
