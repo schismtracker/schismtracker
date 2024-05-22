@@ -220,7 +220,7 @@ char *get_time_string(time_t when, char *buf)
 	struct tm tmr;
 
 	localtime_r(&when, &tmr);
-	snprintf(buf, 27, "%d:%02d%s", tmr.tm_hour % 12 ? : 12, tmr.tm_min, tmr.tm_hour < 12 ? "am" : "pm");
+	snprintf(buf, 27, "%d:%02d%s", (tmr.tm_hour % 12) ? (tmr.tm_hour % 12) : 12, tmr.tm_min, tmr.tm_hour < 12 ? "am" : "pm");
 	return buf;
 }
 
@@ -453,10 +453,22 @@ static inline int readhex(const char *s, int w)
 	while (w--) {
 		o <<= 4;
 		switch (*s) {
-			case '0'...'9': o |= *s - '0';      break;
-			case 'a'...'f': o |= *s - 'a' + 10; break;
-			case 'A'...'F': o |= *s - 'A' + 10; break;
-			default: return -1;
+			case '0': case '1': case '2':
+			case '3': case '4': case '5':
+			case '6': case '7': case '8':
+			case '9':
+				o |= *s - '0';
+				break;
+			case 'a': case 'b': case 'c':
+			case 'd': case 'e': case 'f':
+				o |= *s - 'a' + 10;
+				break;
+			case 'A': case 'B': case 'C':
+			case 'D': case 'E': case 'F':
+				o |= *s - 'A' + 10;
+				break;
+			default:
+				return -1;
 		}
 		s++;
 	}
@@ -475,7 +487,9 @@ char *str_unescape(const char *s)
 		if (*s == '\\') {
 			s++;
 			switch (*s) {
-			case '0'...'7':
+			case '0': case '1': case '2':
+			case '3': case '4': case '5':
+			case '6': case '7':
 				*d = 0;
 				end = s + 3;
 				while (s < end && *s >= '0' && *s <= '7') {
