@@ -61,6 +61,7 @@ static int (*JACK_jack_disconnect)(jack_client_t *, const char *, const char *);
 static const char ** (*JACK_jack_get_ports)(jack_client_t *, const char *, const char *, unsigned long);
 static int (*JACK_jack_port_is_mine)(const jack_client_t *, const jack_port_t *);
 static void (*JACK_jack_midi_clear_buffer)(void *);
+static void (*JACK_jack_on_shutdown)(jack_client_t *, JackShutdownCallback, void *);
 
 static int load_jack_syms(void);
 
@@ -140,6 +141,7 @@ static int load_jack_syms(void) {
 	SCHISM_JACK_SYM(jack_get_ports);
 	SCHISM_JACK_SYM(jack_port_is_mine);
 	SCHISM_JACK_SYM(jack_midi_clear_buffer);
+	SCHISM_JACK_SYM(jack_on_shutdown);
 
 	return 0;
 }
@@ -150,6 +152,9 @@ static int load_jack_syms(void) {
 
 #define JACK_RINGBUFFER_SIZE 16384
 
+/* need a mutex because JACK tells us about server disconnection
+ * in a separate thread */
+static SDL_mutex* client_mutex = NULL;
 static jack_client_t* client = NULL;
 static jack_port_t* midi_in_port = NULL;
 static jack_port_t* midi_out_port = NULL;
@@ -197,12 +202,11 @@ static int _jack_stop(struct midi_port *p) {
 }
 
 /* gets called by JACK in a separate thread */
-int _jack_process(jack_nframes_t nframes, void* user_data) {
+static int _jack_process(jack_nframes_t nframes, void* user_data) {
 	struct midi_provider* p = (struct midi_provider*)user_data;
 
-	/* huh? */
 	if (p->cancelled)
-		return 0;
+		return 1;
 
 	/* handle midi in */
 	void* midi_in_buffer = JACK_jack_port_get_buffer(midi_in_port, nframes);
@@ -296,10 +300,76 @@ static void _jack_enumerate_ports(const char** port_names, struct midi_provider*
 	}
 }
 
+static void _jack_shutdown_callback(void* arg) {
+	/* we don't need extra info, the building is being demolished */
+	SDL_LockMutex(client_mutex);
+	client = NULL;
+	SDL_UnlockMutex(client_mutex);
+}
+
+static int _jack_attempt_connect(struct midi_provider* jack_provider_) {
+	SDL_LockMutex(client_mutex);
+
+	if (client) {
+		SDL_UnlockMutex(client_mutex);
+		return 1;
+	}
+
+	/* create our client */
+	client = JACK_jack_client_open(PORT_NAME, JackNoStartServer, NULL);
+	if (!client) {
+		SDL_UnlockMutex(client_mutex);
+		return 0;
+	}
+
+	JACK_jack_on_shutdown(client, _jack_shutdown_callback, NULL);
+
+	midi_in_port = JACK_jack_port_register(client, "MIDI In", JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
+	if (!midi_in_port) {
+		JACK_jack_client_close(client);
+		client = NULL;
+		SDL_UnlockMutex(client_mutex);
+		return 0;
+	}
+
+	midi_out_port = JACK_jack_port_register(client, "MIDI Out", JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+	if (!midi_out_port) {
+		JACK_jack_port_unregister(client, midi_in_port);
+		JACK_jack_client_close(client);
+		client = NULL;
+		SDL_UnlockMutex(client_mutex);
+		return 0;
+	}
+
+	/* hand this over to JACK */
+	if (JACK_jack_set_process_callback(client, _jack_process, (void*)jack_provider_)) {
+		JACK_jack_port_unregister(client, midi_in_port);
+		JACK_jack_port_unregister(client, midi_out_port);
+		JACK_jack_client_close(client);
+		client = NULL;
+		SDL_UnlockMutex(client_mutex);
+		return 0;
+	}
+
+	if (JACK_jack_activate(client)) {
+		JACK_jack_port_unregister(client, midi_in_port);
+		JACK_jack_port_unregister(client, midi_out_port);
+		JACK_jack_client_close(client);
+		client = NULL;
+		SDL_UnlockMutex(client_mutex);
+		return 0;
+	}
+
+	SDL_UnlockMutex(client_mutex);
+	return 1;
+}
+
 static void _jack_poll(struct midi_provider* jack_provider_)
 {
-	if (!client)
+	if (!_jack_attempt_connect(jack_provider_))
 		return;
+
+	SDL_LockMutex(client_mutex);
 
 	const char** ports = NULL;
 
@@ -310,6 +380,8 @@ static void _jack_poll(struct midi_provider* jack_provider_)
 	ports = JACK_jack_get_ports(client, NULL, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput);
 	_jack_enumerate_ports(ports, jack_provider_, MIDI_OUTPUT);
 	free(ports);
+
+	SDL_UnlockMutex(client_mutex);
 }
 
 int jack_midi_setup(void)
@@ -322,43 +394,17 @@ int jack_midi_setup(void)
 		if (jack_dlinit())
 			return 0;
 
-	if (client)
-		return 0; /* don't init this twice */
-
 	driver.poll = _jack_poll;
 	driver.thread = NULL;
 	driver.enable = _jack_start;
 	driver.disable = _jack_stop;
 	driver.send = _jack_send;
 
-	/* create our client */
-	client = JACK_jack_client_open(PORT_NAME, JackNullOption, NULL);
-	if (!client)
-		return 0; /* welp */
-
-	midi_in_port = JACK_jack_port_register(client, "MIDI In", JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
-	if (!midi_in_port) {
-		JACK_jack_client_close(client);
-		client = NULL;
-		return 0;
-	}
-
-	midi_out_port = JACK_jack_port_register(client, "MIDI Out", JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
-	if (!midi_out_port) {
-		JACK_jack_port_unregister(client, midi_in_port);
-		JACK_jack_client_close(client);
-		client = NULL;
-		return 0;
-	}
+	client_mutex = SDL_CreateMutex();
 
 	ringbuffer = JACK_jack_ringbuffer_create(JACK_RINGBUFFER_SIZE);
-	if (!ringbuffer) {
-		JACK_jack_port_unregister(client, midi_in_port);
-		JACK_jack_port_unregister(client, midi_out_port);
-		JACK_jack_client_close(client);
-		client = NULL;
+	if (!ringbuffer)
 		return 0;
-	}
 
 	ringbuffer_max_write = JACK_jack_ringbuffer_write_space(ringbuffer);
 
@@ -366,31 +412,6 @@ int jack_midi_setup(void)
 	if (!p) {
 		/* how? can this check be removed? */
 		JACK_jack_ringbuffer_free(ringbuffer);
-		JACK_jack_port_unregister(client, midi_in_port);
-		JACK_jack_port_unregister(client, midi_out_port);
-		JACK_jack_client_close(client);
-		client = NULL;
-		return 0;
-	}
-
-	/* hand this over to JACK */
-	if (JACK_jack_set_process_callback(client, _jack_process, (void*)p)) {
-		midi_provider_unregister(p);
-		JACK_jack_ringbuffer_free(ringbuffer);
-		JACK_jack_port_unregister(client, midi_in_port);
-		JACK_jack_port_unregister(client, midi_out_port);
-		JACK_jack_client_close(client);
-		client = NULL;
-		return 0;
-	}
-
-	if (JACK_jack_activate(client)) {
-		midi_provider_unregister(p);
-		JACK_jack_ringbuffer_free(ringbuffer);
-		JACK_jack_port_unregister(client, midi_in_port);
-		JACK_jack_port_unregister(client, midi_out_port);
-		JACK_jack_client_close(client);
-		client = NULL;
 		return 0;
 	}
 
