@@ -994,7 +994,7 @@ static int _handle_ime(struct key_event *k)
 						status_text_flash_bios("Enter Unicode: U+%04X -> %c",
 									   cs_unicode, unicode[0]);
 						SDL_SetModState(0);
-						handle_text_input(&unicode[0]);
+						handle_text_input((const char*)unicode);
 					} else {
 						status_text_flash_bios("Enter Unicode: U+%04X -> INVALID", cs_unicode);
 					}
@@ -1046,7 +1046,7 @@ static int _handle_ime(struct key_event *k)
 				if (!(status.flags & CLASSIC_MODE))
 					status_text_flash_bios("Enter DOS/ASCII: %d -> %c",
 							       (int)unicode[0], (int)unicode[0]);
-				handle_text_input(&unicode[0]);
+				handle_text_input((const char*)unicode);
 				alt_numpad = alt_numpad_c = 0;
 				digraph_n = digraph_c = 0;
 				cs_unicode = cs_unicode_c = 0;
@@ -1837,7 +1837,7 @@ void show_song_timejump(void)
 	_timejump_widgets[0].d.numentry.handle_unknown_key = _timejump_keyh;
 	_timejump_widgets[0].d.numentry.reverse = 1;
 	_timejump_widgets[1].d.numentry.reverse = 1;
-	create_button(_timejump_widgets+2, 30, 29, 8, 0, 2, 2, 3, 3, (void *) _timejump_ok, "OK", 4);
+	create_button(_timejump_widgets+2, 30, 29, 8, 0, 2, 2, 3, 3, (void(*)(void))_timejump_ok, "OK", 4);
 	create_button(_timejump_widgets+3, 42, 29, 8, 1, 3, 3, 3, 0, dialog_cancel_NULL, "Cancel", 2);
 	d = dialog_create_custom(26, 24, 30, 8, _timejump_widgets, 4, 0, _timejump_draw, NULL);
 	d->handle_key = _timejump_keyh;

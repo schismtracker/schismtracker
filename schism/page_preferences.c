@@ -238,7 +238,6 @@ void preferences_load_page(struct page *page)
 	create_button(widgets_preferences+i+12,
 			2, 44, 27,
 			i+10, i+12, i+12, i+13, i+13,
-			(void *) save_config_now,
+			(void (*)(void)) save_config_now,
 			"Save Output Configuration", 2);
 }
-
