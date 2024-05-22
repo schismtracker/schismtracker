@@ -36,7 +36,7 @@
  * if a dialog is not active. */
 #ifndef NDEBUG
 # define ENSURE_DIALOG(q) do { if (!(status.dialog_type & DIALOG_BOX)) { \
-		fprintf(stderr, "%s called with no dialog\n", __FUNCTION__);\
+		fprintf(stderr, "%s called with no dialog\n", __func__);\
 		q; \
 	} \
 } while(0)
@@ -491,12 +491,16 @@ static int strtonum99(const char *s)
 	if (s[1]) {
 		// two chars
 		int c = tolower(*s);
-		switch (c) {
-			case '0' ... '9': n = c - '0'; break;
-			case 'a' ... 'g': n = c - 'a' + 10; break;
-			case 'h' ... 'z': n = c - 'h' + 10; break;
-			default: return -1;
-		}
+
+		if (c >= '0' && c <= '9')
+			n = c - '0';
+		else if (c >= 'a' && c <= 'g')
+			n = c - 'a' + 10;
+		else if (c >= 'h' && c <= 'z')
+			n = c - 'h' + 10;
+		else
+			return -1;
+
 		n *= 10;
 		s++;
 	}
