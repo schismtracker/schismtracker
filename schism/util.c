@@ -334,7 +334,7 @@ char *get_parent_directory(const char *dirname)
 
 static const char *whitespace = " \t\v\r\n";
 
-inline int ltrim_string(char *s)
+int ltrim_string(char *s)
 {
 	int ws = strspn(s, whitespace);
 	int len = strlen(s) - ws;
@@ -344,7 +344,7 @@ inline int ltrim_string(char *s)
 	return len;
 }
 
-inline int rtrim_string(char *s)
+int rtrim_string(char *s)
 {
 	int len = strlen(s);
 
@@ -799,7 +799,7 @@ char *get_home_directory(void)
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
 	char* buf_utf8 = NULL;
 	
-	if (!SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == ERROR_SUCCESS)
+	if (SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK)
 		return NULL;
 
 	if (!wchar_to_utf8(&buf_utf8, buf))
@@ -828,7 +828,7 @@ char *get_dot_directory(void)
 #ifdef WIN32
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
 	char* buf_utf8 = NULL;
-	if (!SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) == ERROR_SUCCESS)
+	if (SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) == S_OK)
 		return NULL;
 
 	if (!wchar_to_utf8(&buf_utf8, buf))
@@ -933,7 +933,7 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	if (win32_wstat(batch_file, &sb) == -1) {
 		r = 0;
 	} else {
-		cmd = _wgetenv(L"COMSPEC")
+		cmd = _wgetenv(L"COMSPEC");
 		if (!cmd)
 			cmd = L"command.com";
 

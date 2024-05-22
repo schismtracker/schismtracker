@@ -94,6 +94,7 @@ dnl ------------------------------------------------------------------------
 dnl Check for standard programs
 AC_PROG_CC
 AM_PROG_CC_C_O
+AC_PROG_CC_C99
 AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
@@ -202,6 +203,7 @@ case "${host_os}" in
 		fi
 
 		use_win32=yes
+		AC_DEFINE([WIN32], [], [Windows])
 		;;
 	*)
 		AC_MSG_RESULT([nothing to do here])

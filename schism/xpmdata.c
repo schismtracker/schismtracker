@@ -25,6 +25,7 @@
 
 #include "sdlmain.h"
 #include "video.h" /* for declaration of xpmdata */
+#include "util.h"
 
 #include <ctype.h>
 
@@ -77,8 +78,6 @@ static int string_equal(const char *a, const char *b, int n)
 	return *a == *b;
 }
 
-#define ARRAYSIZE(a) (int)(sizeof(a) / sizeof((a)[0]))
-
 /*
  * convert colour spec to RGB (in 0xrrggbb format).
  * return 1 if successful.
@@ -122,7 +121,7 @@ static int color_to_rgb(const char *spec, int speclen, uint32_t *rgb)
 		return 1;
 	} else {
 		int i;
-		for(i = 0; i < ARRAYSIZE(known); i++)
+		for(i = 0; i < ARRAY_SIZE(known); i++)
 			if(string_equal(known[i].name, spec, speclen)) {
 				*rgb = known[i].rgb;
 				return 1;
