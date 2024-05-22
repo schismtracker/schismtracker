@@ -927,7 +927,7 @@ void midi_event_tick(void)
 void midi_event_sysex(const unsigned char *data, unsigned int len)
 {
 	size_t packet_len = len + sizeof(len);
-	void *packet = mem_alloc(packet_len);
+	uint8_t *packet = mem_alloc(packet_len);
 
 	memcpy(packet, &len, sizeof(len));
 	memcpy(packet + sizeof(len), data, len);
