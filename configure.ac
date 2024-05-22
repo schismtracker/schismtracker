@@ -93,8 +93,10 @@ dnl ------------------------------------------------------------------------
 
 dnl Check for standard programs
 AC_PROG_CC
+if test "x$ac_cv_prog_cc_c11" = "xno" && test "x$ac_cv_prog_cc_c99" = "xno"; then
+	AC_MSG_ERROR([*** Failed to find a proper C99 compiler])
+fi
 AM_PROG_CC_C_O
-AC_PROG_CC_C99
 AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
