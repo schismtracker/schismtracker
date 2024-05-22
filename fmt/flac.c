@@ -188,35 +188,29 @@ static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decode
 		block_size = samples_allocated - flac_file->uncompressed.samples_decoded;
 
 	if (flac_file->streaminfo.bits_per_sample <= 8) {
-		int8_t* buf_ptr = flac_file->uncompressed.data + flac_file->uncompressed.samples_decoded;
+		int8_t* buf_ptr = (int8_t*)flac_file->uncompressed.data + flac_file->uncompressed.samples_decoded;
 		uint32_t bit_shift = 8 - flac_file->streaminfo.bits_per_sample;
 
-		size_t i, j;
-		for (i = 0, j = 0; i < block_size; j++) {
-			buf_ptr[i++] = (int8_t)(buffer[0][j] << bit_shift);
-			if (flac_file->streaminfo.channels == 2)
-				buf_ptr[i++] = (int8_t)(buffer[1][j] << bit_shift);
-		}
+		size_t i, j, c;
+		for (i = 0, j = 0; i < block_size; j++)
+			for (c = 0; c < flac_file->streaminfo.channels; c++)
+				buf_ptr[i++] = buffer[c][j] << bit_shift;
 	} else if (flac_file->streaminfo.bits_per_sample <= 16) {
 		int16_t* buf_ptr = (int16_t*)flac_file->uncompressed.data + flac_file->uncompressed.samples_decoded;
 		uint32_t bit_shift = 16 - flac_file->streaminfo.bits_per_sample;
 
-		size_t i, j;
-		for (i = 0, j = 0; i < block_size; j++) {
-			buf_ptr[i++] = buffer[0][j] << bit_shift;
-			if (flac_file->streaminfo.channels == 2)
-				buf_ptr[i++] = buffer[1][j] << bit_shift;
-		}
+		size_t i, j, c;
+		for (i = 0, j = 0; i < block_size; j++)
+			for (c = 0; c < flac_file->streaminfo.channels; c++)
+				buf_ptr[i++] = buffer[c][j] << bit_shift;
 	} else { /* >= 16 */
 		int16_t* buf_ptr = (int16_t*)flac_file->uncompressed.data + flac_file->uncompressed.samples_decoded;
 		uint32_t bit_shift = flac_file->streaminfo.bits_per_sample - 16;
 
-		size_t i, j;
-		for (i = 0, j = 0; i < block_size; j++) {
-			buf_ptr[i++] = buffer[0][j] >> bit_shift;
-			if (flac_file->streaminfo.channels == 2)
-				buf_ptr[i++] = buffer[1][j] >> bit_shift;
-		}
+		size_t i, j, c;
+		for (i = 0, j = 0; i < block_size; j++)
+			for (c = 0; c < flac_file->streaminfo.channels; c++)
+				buf_ptr[i++] = buffer[c][j] >> bit_shift;
 	}
 
 	flac_file->uncompressed.samples_decoded += block_size;
