@@ -166,7 +166,7 @@ void song_set_channel_mute(int channel, int muted)
 
 // I don't think this is useful besides undoing a channel solo (a few lines
 // below), but I'm making it extern anyway for symmetry.
-inline void song_restore_channel_states(void)
+void song_restore_channel_states(void)
 {
 	int n = 64;
 

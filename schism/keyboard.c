@@ -466,7 +466,7 @@ int kbd_char_to_hex(struct key_event *k)
  *         and for you people who might say 'hey, IT doesn't do that':
  *         yes it does. read the documentation. it's not in the editor,
  *         but it's in the player. */
-inline int kbd_get_note(struct key_event *k)
+int kbd_get_note(struct key_event *k)
 {
 	int note;
 
