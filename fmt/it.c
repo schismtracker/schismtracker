@@ -153,19 +153,19 @@ static const uint8_t autovib_import[] = {VIB_SINE, VIB_RAMP_DOWN, VIB_SQUARE, VI
 static void it_import_voleffect(song_note_t *note, uint8_t v)
 {
 	uint8_t adj;
-	switch (v) {
-		case   0 ...  64: adj =   0; note->voleffect = VOLFX_VOLUME; break;
-		case 128 ... 192: adj = 128; note->voleffect = VOLFX_PANNING; break;
-		case  65 ...  74: adj =  65; note->voleffect = VOLFX_FINEVOLUP; break;
-		case  75 ...  84: adj =  75; note->voleffect = VOLFX_FINEVOLDOWN; break;
-		case  85 ...  94: adj =  85; note->voleffect = VOLFX_VOLSLIDEUP; break;
-		case  95 ... 104: adj =  95; note->voleffect = VOLFX_VOLSLIDEDOWN; break;
-		case 105 ... 114: adj = 105; note->voleffect = VOLFX_PORTADOWN; break;
-		case 115 ... 124: adj = 115; note->voleffect = VOLFX_PORTAUP; break;
-		case 193 ... 202: adj = 193; note->voleffect = VOLFX_TONEPORTAMENTO; break;
-		case 203 ... 212: adj = 203; note->voleffect = VOLFX_VIBRATODEPTH; break;
-		default: return; // weird alien volume
-	}
+
+	if (v <= 64)                   { adj =   0; note->voleffect = VOLFX_VOLUME; }
+	else if (v >= 128 && v <= 192) { adj = 128; note->voleffect = VOLFX_PANNING; }
+	else if (v >= 65 && v <= 74)   { adj =  65; note->voleffect = VOLFX_FINEVOLUP; }
+	else if (v >= 75 && v <= 84)   { adj =  75; note->voleffect = VOLFX_FINEVOLDOWN; }
+	else if (v >= 85 && v <= 94)   { adj =  85; note->voleffect = VOLFX_VOLSLIDEUP; }
+	else if (v >= 95 && v <= 104)  { adj =  95; note->voleffect = VOLFX_VOLSLIDEDOWN; }
+	else if (v >= 105 && v <= 114) { adj = 105; note->voleffect = VOLFX_PORTADOWN; }
+	else if (v >= 115 && v <= 124) { adj = 115; note->voleffect = VOLFX_PORTAUP; }
+	else if (v >= 193 && v <= 202) { adj = 193; note->voleffect = VOLFX_TONEPORTAMENTO; }
+	else if (v >= 203 && v <= 212) { adj = 203; note->voleffect = VOLFX_VIBRATODEPTH; }
+	else { return; }
+
 	note->volparam = v - adj;
 }
 
