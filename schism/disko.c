@@ -518,8 +518,8 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 	for (n = 0; n < MAX_CHANNELS; n++) {
 		dwsong.multi_write[n].data = ds[n];
 		/* Dumb casts. (written this way to make the definition of song_t independent of disko) */
-		dwsong.multi_write[n].write = (void *) disko_write;
-		dwsong.multi_write[n].silence = (void *) disko_seekcur;
+		dwsong.multi_write[n].write = (void(*)(void*, const uint8_t*, size_t))disko_write;
+		dwsong.multi_write[n].silence = (void(*)(void*, long))disko_seekcur;
 	}
 
 	do {
@@ -653,11 +653,15 @@ static void disko_dialog_setup(size_t len)
 	canceled = 0; /* stupid */
 
 	est_len = len;
-	switch ((rand() >> 8) & 63) { /* :) */
-		case  0 ...  7: prgh = 6; break;
-		case  8 ... 18: prgh = 3; break;
-		case 19 ... 31: prgh = 5; break;
-		default: prgh = 4; break;
+	uint32_t r = (rand() >> 8) & 63;
+	if (r <= 7) {
+		prgh = 6;
+	} else if (r <= 18) {
+		prgh = 3;
+	} else if (r <= 31) {
+		prgh = 5;
+	} else {
+		prgh = 4;
 	}
 }
 
@@ -738,8 +742,8 @@ int disko_export_song(const char *filename, const struct save_format *format)
 		for (n = 0; n < numfiles; n++) {
 			export_dwsong.multi_write[n].data = export_ds[n];
 			/* Dumb casts, again */
-			export_dwsong.multi_write[n].write = (void *) format->f.export.body;
-			export_dwsong.multi_write[n].silence = (void *) format->f.export.silence;
+			export_dwsong.multi_write[n].write = (void(*)(void*, const uint8_t*, size_t))format->f.export.body;
+			export_dwsong.multi_write[n].silence = (void(*)(void*, long))format->f.export.silence;
 		}
 	}
 
