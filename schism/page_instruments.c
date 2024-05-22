@@ -635,11 +635,13 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 					clear_instrument_text();
 					return 1;
 				}
-			} else if (k->sym.sym >= 32) {
-				if (instrument_cursor_pos < 25 && enable_text) {
-					get_page_widgets()->accept_text = 1;
+			} else if (k->sym.sym >= SDLK_a) {
+				if (instrument_cursor_pos < 25) {
 					return 1;
+				} else if (enable_text) {
+					get_page_widgets()->accept_text = 1;
 				}
+
 				return !get_page_widgets()->accept_text;
 			}
 
