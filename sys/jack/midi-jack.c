@@ -170,8 +170,8 @@ static void _jack_send(UNUSED struct midi_port *p, const unsigned char *data, un
 
 	while (JACK_jack_ringbuffer_write_space(ringbuffer) < len + sizeof(len));
 
-	JACK_jack_ringbuffer_write(ringbuffer, (char*)&len, sizeof(len));
-	JACK_jack_ringbuffer_write(ringbuffer, data, len);
+	JACK_jack_ringbuffer_write(ringbuffer, (const char*)&len, sizeof(len));
+	JACK_jack_ringbuffer_write(ringbuffer, (const char*)data, len);
 }
 
 static int _jack_start(struct midi_port *p) {
@@ -235,7 +235,7 @@ int _jack_process(jack_nframes_t nframes, void* user_data) {
 		 * so it's definitely how it's *supposed* to work.
 		 *
 		 * I digress... */
-		if (data) return (JACK_jack_ringbuffer_read(ringbuffer, data, size) != size);
+		if (data) return (JACK_jack_ringbuffer_read(ringbuffer, (char*)data, size) != size);
 		else JACK_jack_ringbuffer_read_advance(ringbuffer, size);
 	}
 
