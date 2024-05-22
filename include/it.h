@@ -143,8 +143,6 @@ enum {
 	/* if true, don't stop playing on load, and start playing new song afterward
 	(but only if the last song was already playing before loading) */
 	PLAY_AFTER_LOAD = (1 << 30),
-
-	ACCEPTING_INPUT = (1 << 31),
 };
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
