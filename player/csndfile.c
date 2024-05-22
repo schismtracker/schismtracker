@@ -187,17 +187,13 @@ void csf_free_pattern(void *pat)
 	free(pat);
 }
 
-/* I THINK what this does is forces alignment to four bytes,
- * which may or may not call for better performance on some
- * architectures (many such cases on RISC microprocessors).
- *
- * as for the 16 byte offset, no idea what that's about.
- * consider it magic
- *
- *   - paper */
 signed char *csf_allocate_sample(uint32_t nbytes)
 {
-	return (signed char*)mem_calloc(1, (nbytes + 39) & -0x8) + 16;
+	/* Sinc interpolation can look forwards or backwards
+	 * 4 samples; the maximum sample size for Schism is
+	 * 4 bytes per sample (16-bit stereo, 2 * 2). 4 * 4 = 16,
+	 * so allocate 16 extra bytes before and after the buffer */
+	return (signed char*)mem_calloc(1, nbytes + 32) + 16;
 }
 
 void csf_free_sample(void *p)
