@@ -70,8 +70,8 @@ struct video_cf {
 	SDL_Texture *texture;
 	unsigned char *framebuf;
 
-	unsigned int width;
-	unsigned int height;
+	int width;
+	int height;
 
 	struct {
 		unsigned int x;
