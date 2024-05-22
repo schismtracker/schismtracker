@@ -191,10 +191,10 @@ static void _readin(struct midi_provider *p, int en, int fd)
 	struct midi_port *ptr, *src;
 	static unsigned char buffer[65536];
 	static struct sockaddr_in asin;
-	unsigned slen = sizeof(asin);
+	socklen_t slen = sizeof(asin);
 	int r;
 
-	r = recvfrom(fd, buffer, sizeof(buffer), 0,
+	r = recvfrom(fd, (char*)buffer, sizeof(buffer), 0,
 		(struct sockaddr *)&asin, &slen);
 	if (r > 0) {
 		ptr = src = NULL;
@@ -367,7 +367,7 @@ static void _ip_send(struct midi_port *p, const unsigned char *data, unsigned in
 
 	while (len) {
 		ss = (len > MAX_DGRAM_SIZE) ?  MAX_DGRAM_SIZE : len;
-		if (sendto(out_fd, data, ss, 0,
+		if (sendto(out_fd, (const char*)data, ss, 0,
 				(struct sockaddr *)&asin,sizeof(asin)) < 0) {
 			state[n] &= (~2); /* turn off output */
 			break;
