@@ -858,7 +858,9 @@ static int fontedit_handle_key(struct key_event * k)
 			return 1;
 		k->sym.sym += 10;
 		/* fall through */
-	case SDLK_KP_1...SDLK_KP_9:
+	case SDLK_KP_1: case SDLK_KP_2: case SDLK_KP_3:
+	case SDLK_KP_4: case SDLK_KP_5: case SDLK_KP_6:
+	case SDLK_KP_7: case SDLK_KP_8: case SDLK_KP_9:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		n = k->sym.sym - SDLK_KP_1;
@@ -878,7 +880,9 @@ static int fontedit_handle_key(struct key_event * k)
 			return 1;
 		k->sym.sym += 10;
 		/* fall through */
-	case '1'...'9':
+	case '1': case '2': case '3':
+	case '4': case '5': case '6':
+	case '7': case '8': case '9':
 		if (k->state == KEY_RELEASE)
 			return 1;
 		n = k->sym.sym - '1';
@@ -1086,7 +1090,10 @@ static int fontedit_key_hack(struct key_event *k)
 	case SDLK_c: case SDLK_p: case SDLK_m:
 	case SDLK_z: case SDLK_v: case SDLK_h:
 	case SDLK_i: case SDLK_q: case SDLK_w:
-	case SDLK_F1...SDLK_F12:
+	case SDLK_F1: case SDLK_F2: case SDLK_F3:
+	case SDLK_F4: case SDLK_F5: case SDLK_F6:
+	case SDLK_F7: case SDLK_F8: case SDLK_F9:
+	case SDLK_F10: case SDLK_F11: case SDLK_F12:
 		return fontedit_handle_key(k);
 	case SDLK_RETURN:
 		if (status.dialog_type & (DIALOG_MENU|DIALOG_BOX)) return 0;

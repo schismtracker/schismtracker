@@ -124,22 +124,25 @@ uint8_t *font_data = font_normal; /* this only needs to be global for itf */
 
 static inline int _pack_halfw(int c)
 {
-	switch (c) {
-		case  32 ... 127: return c - 32; /* 0 ... 95 */
-		case 173 ... 205: return 96 + c - 173; /* 96 ... 127 */
-		default:
-			abort();
-			return '?';
+	if (c >= 32 && c <= 127) {
+		return c - 32; /* 0 ... 95 */
+	} else if (c >= 173 && c <= 205) {
+		return 96 + c - 173; /* 96 ... 127 */
 	}
+
+	abort();
+	return '?';
 }
 
 static inline int _unpack_halfw(int c)
 {
-	switch (c) {
-		case  0 ...  95: return c + 32;
-		case 96 ... 127: return 96 - c + 173;
-		default: return '?'; /* should never happen */
+	if (c >= 0 && c <= 95) {
+		return c + 32;
+	} else if (c >= 96 && c <= 127) {
+		return 96 - c + 173;
 	}
+
+	return '?'; /* should never happen */
 }
 
 /* --------------------------------------------------------------------- */

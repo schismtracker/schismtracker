@@ -538,8 +538,21 @@ int kbd_get_alnum(struct key_event *k)
 	if (k->mod & KMOD_SHIFT) {
 		const char shifted_digits[] = ")!@#$%^&*("; // comical profanity
 		switch (k->sym.sym) {
-			case 'a'...'z': return toupper(k->sym.sym);
-			case '0'...'9': return shifted_digits[k->sym.sym - '0'];
+			case 'a': case 'b': case 'c':
+			case 'd': case 'e': case 'f':
+			case 'g': case 'h': case 'i':
+			case 'j': case 'k': case 'l':
+			case 'm': case 'n': case 'o':
+			case 'p': case 'q': case 'r':
+			case 's': case 't': case 'u':
+			case 'v': case 'w': case 'x':
+			case 'y': case 'z':
+				return toupper(k->sym.sym);
+			case '0': case '1': case '2':
+			case '3': case '4': case '5':
+			case '6': case '7': case '8':
+			case '9':
+				return shifted_digits[k->sym.sym - '0'];
 			case '[': return '{';
 			case ']': return '}';
 			case ';': return ':';

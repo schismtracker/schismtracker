@@ -384,10 +384,17 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					}
 					slurp_seek(fp, vlen, SEEK_CUR);
 					break;
-				case 0x0: // sysex
-				case 0x1 ... 0x7: // syscommon
+				/* sysex */
+				case 0x0:
+				/* syscommon */
+				case 0x1: case 0x2: case 0x3:
+				case 0x4: case 0x5: case 0x6:
+				case 0x7:
 					rs = 0; // clear running status
-				case 0x8 ... 0xe: // sysrt
+				/* sysrt */
+				case 0x8: case 0x9: case 0xa:
+				case 0xb: case 0xc: case 0xd:
+				case 0xe:
 					// 0xf0 - sysex
 					// 0xf1-0xf7 - common
 					// 0xf8-0xff - sysrt

@@ -177,7 +177,8 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 				switch (note->volparam >> 4) {
 				case 5: // 0x50 = volume 64, 51-5F = nothing
 					if (note->volparam == 0x50) {
-				case 1 ... 4: // Set volume Value-$10
+				case 1: case 2:
+				case 3: case 4: // Set volume Value-$10
 						note->voleffect = FX_VOLUME;
 						note->volparam -= 0x10;
 						break;
