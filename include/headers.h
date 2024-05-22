@@ -238,7 +238,7 @@ int mkstemp(char *template);
 #endif
 
 #define INT_SHAPED_PTR(v)               ((intptr_t)(((void*)(v))))
-#define PTR_SHAPED_INT(i)               ((void*)i)
+#define PTR_SHAPED_INT(i)               ((void*)(i))
 
 #endif
 
