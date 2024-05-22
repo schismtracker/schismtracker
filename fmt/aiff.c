@@ -45,7 +45,7 @@ static double ConvertFromIeeeExtended(const unsigned char *bytes);
 typedef union chunkdata {
 	struct {
 		uint32_t filetype; // AIFF, 8SVX, etc.
-		uint8_t data[0]; // rest of file is encapsulated in here, also chunked
+		uint8_t data[]; // rest of file is encapsulated in here, also chunked
 	} FORM;
 
 	// 8SVX
@@ -66,8 +66,6 @@ typedef union chunkdata {
 		uint16_t sample_size;
 		uint8_t sample_rate[80]; // IEEE-extended
 	} COMM;
-
-	uint8_t bytes[0];
 } chunkdata_t;
 #pragma pack(pop)
 
@@ -174,10 +172,11 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 		if (!name.id) name = auth;
 		if (!name.id) name = anno;
 		if (name.id) {
-			if (file) file->title = strn_dup((const char *)name.data->bytes, name.size);
+
+			if (file) file->title = strn_dup((const char *)name.data, name.size);
 			if (smp) {
 				int len = MIN(25, name.size);
-				memcpy(smp->name, name.data->bytes, len);
+				memcpy(smp->name, name.data, len);
 				smp->name[len] = 0;
 			}
 		}
@@ -186,7 +185,7 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 			smp->c5speed = bswapBE16(vhdr.data->VHDR.smp_per_sec);
 			smp->length = body.size;
 
-			csf_read_sample(smp, SF_BE | SF_PCMS | SF_8 | SF_M, body.data->bytes, body.size);
+			csf_read_sample(smp, SF_BE | SF_PCMS | SF_8 | SF_M, (uint8_t*)body.data, body.size);
 
 			smp->volume = 64*4;
 			smp->global_volume = 64;
@@ -233,10 +232,10 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 		if (!name.id) name = auth;
 		if (!name.id) name = anno;
 		if (name.id) {
-			if (file) file->title = strn_dup((const char *)name.data->bytes, name.size);
+			if (file) file->title = strn_dup((const char *)name.data, name.size);
 			if (smp) {
 				int len = MIN(25, name.size);
-				memcpy(smp->name, name.data->bytes, len);
+				memcpy(smp->name, name.data, len);
 				smp->name[len] = 0;
 			}
 		}
@@ -278,7 +277,7 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 
 			// the audio data starts 8 bytes into the chunk
 			// (don't care about the block alignment stuff)
-			csf_read_sample(smp, flags, ssnd.data->bytes + 8, ssnd.size - 8);
+			csf_read_sample(smp, flags, (uint8_t*)ssnd.data + 8, ssnd.size - 8);
 		}
 
 		return 1;
