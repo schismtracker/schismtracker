@@ -37,7 +37,7 @@
 #ifndef NDEBUG
 # define ENSURE_MENU(q) do {\
 	if ((status.dialog_type & DIALOG_MENU) == 0) {\
-		fprintf(stderr, "%s called with no menu\n", __FUNCTION__);\
+		fprintf(stderr, "%s called with no menu\n", __func__);\
 		q;\
 	}\
 } while(0)
