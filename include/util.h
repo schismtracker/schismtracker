@@ -61,17 +61,17 @@
 #  define MALLOC __attribute__ ((malloc))
 # endif
 #else
+# ifndef LIKELY
+#  define LIKELY(x) (!!(x))
+# endif
+# ifndef UNLIKELY
+#  define UNLIKELY(x) (!(x))
+# endif
 # ifndef UNUSED
 #  define UNUSED
 # endif
 # ifndef PACKED
 #  define PACKED
-# endif
-# ifndef LIKELY
-#  define LIKELY(x)
-# endif
-# ifndef UNLIKELY
-#  define UNLIKELY(x)
 # endif
 # ifndef MALLOC
 #  define MALLOC
