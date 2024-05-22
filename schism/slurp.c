@@ -314,7 +314,7 @@ size_t slurp_peek(slurp_t *t, void *ptr, size_t count)
 		// short read -- fill in any extra bytes with zeroes
 		size_t tail = count - bytesleft;
 		count = bytesleft;
-		memset(ptr + count, 0, tail);
+		memset((uint8_t*)ptr + count, 0, tail);
 	}
 	if (count)
 		memcpy(ptr, t->data + t->pos, count);
