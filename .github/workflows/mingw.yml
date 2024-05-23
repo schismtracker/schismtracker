@@ -1,4 +1,4 @@
-name: llvm-mingw (i686/x86_64/armv7/aarch64)
+name: Windows (i686/x86_64/armv7/aarch64)
 
 on:
   push:
