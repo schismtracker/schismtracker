@@ -32,6 +32,8 @@
 #include <jack/midiport.h>
 #include <jack/ringbuffer.h>
 
+#include <sched.h>
+
 #define PORT_NAME "Schism Tracker"
 
 /* shamelessly ripped off SDL_jackaudio.c here */
@@ -61,13 +63,12 @@ static int (*JACK_jack_disconnect)(jack_client_t *, const char *, const char *);
 static const char ** (*JACK_jack_get_ports)(jack_client_t *, const char *, const char *, unsigned long);
 static int (*JACK_jack_port_is_mine)(const jack_client_t *, const jack_port_t *);
 static void (*JACK_jack_midi_clear_buffer)(void *);
-static void (*JACK_jack_on_shutdown)(jack_client_t *, JackShutdownCallback, void *);
 
 static int load_jack_syms(void);
 
 #ifdef JACK_DYNAMIC_LOAD
 
-void *jack_dltrick_handle_;
+void *jack_dltrick_handle_ = NULL;
 
 static void jack_dlend(void) {
 	if (jack_dltrick_handle_) {
@@ -141,7 +142,6 @@ static int load_jack_syms(void) {
 	SCHISM_JACK_SYM(jack_get_ports);
 	SCHISM_JACK_SYM(jack_port_is_mine);
 	SCHISM_JACK_SYM(jack_midi_clear_buffer);
-	SCHISM_JACK_SYM(jack_on_shutdown);
 
 	return 0;
 }
@@ -152,9 +152,6 @@ static int load_jack_syms(void) {
 
 #define JACK_RINGBUFFER_SIZE 16384
 
-/* need a mutex because JACK tells us about server disconnection
- * in a separate thread */
-static SDL_mutex* client_mutex = NULL;
 static jack_client_t* client = NULL;
 static jack_port_t* midi_in_port = NULL;
 static jack_port_t* midi_out_port = NULL;
@@ -163,17 +160,11 @@ static jack_ringbuffer_t* ringbuffer = NULL;
 static size_t ringbuffer_max_write = 0;
 
 static void _jack_send(UNUSED struct midi_port *p, const unsigned char *data, unsigned int len, unsigned int delay) {
-	/* from JACK docs:
-	 * Clients must write normalised MIDI data to the port - no
-	 * running status and no (1-byte) realtime messages interspersed
-	 * with other messages. */
-	if (len == 1)
-		return;
-
 	if (len + sizeof(len) > ringbuffer_max_write)
 		return;
 
-	while (JACK_jack_ringbuffer_write_space(ringbuffer) < len + sizeof(len));
+	while (JACK_jack_ringbuffer_write_space(ringbuffer) < len + sizeof(len))
+		sched_yield();
 
 	JACK_jack_ringbuffer_write(ringbuffer, (const char*)&len, sizeof(len));
 	JACK_jack_ringbuffer_write(ringbuffer, (const char*)data, len);
@@ -235,10 +226,6 @@ static int _jack_process(jack_nframes_t nframes, void* user_data) {
 
 		jack_midi_data_t* data = JACK_jack_midi_event_reserve(midi_out_buffer, 0, size);
 
-		/* XXX this doesn't fucking work and I don't know why. This is what RtMidi does
-		 * so it's definitely how it's *supposed* to work.
-		 *
-		 * I digress... */
 		if (data) return (JACK_jack_ringbuffer_read(ringbuffer, (char*)data, size) != size);
 		else JACK_jack_ringbuffer_read_advance(ringbuffer, size);
 	}
@@ -278,6 +265,15 @@ static const char* _jack_is_port_in_name_list(const char** names, struct midi_po
 }
 
 static void _jack_enumerate_ports(const char** port_names, struct midi_provider* p, int inout) {
+	if (!client) {
+		/* remove any existing ports */
+		struct midi_port* ptr = NULL;
+		while (midi_port_foreach(p, &ptr))
+			midi_port_unregister(ptr->num);
+
+		return;
+	}
+
 	struct midi_port* ptr = NULL;
 	while (midi_port_foreach(p, &ptr))
 		if ((ptr->iocap & inout) && !_jack_is_port_in_name_list(port_names, ptr, inout))
@@ -300,35 +296,20 @@ static void _jack_enumerate_ports(const char** port_names, struct midi_provider*
 	}
 }
 
-static void _jack_shutdown_callback(void* arg) {
-	/* we don't need extra info, the building is being demolished */
-	SDL_LockMutex(client_mutex);
-	client = NULL;
-	SDL_UnlockMutex(client_mutex);
-}
-
 static int _jack_attempt_connect(struct midi_provider* jack_provider_) {
-	SDL_LockMutex(client_mutex);
-
-	if (client) {
-		SDL_UnlockMutex(client_mutex);
+	/* already connected? */
+	if (client)
 		return 1;
-	}
 
 	/* create our client */
 	client = JACK_jack_client_open(PORT_NAME, JackNoStartServer, NULL);
-	if (!client) {
-		SDL_UnlockMutex(client_mutex);
+	if (!client)
 		return 0;
-	}
-
-	JACK_jack_on_shutdown(client, _jack_shutdown_callback, NULL);
 
 	midi_in_port = JACK_jack_port_register(client, "MIDI In", JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
 	if (!midi_in_port) {
 		JACK_jack_client_close(client);
 		client = NULL;
-		SDL_UnlockMutex(client_mutex);
 		return 0;
 	}
 
@@ -337,7 +318,6 @@ static int _jack_attempt_connect(struct midi_provider* jack_provider_) {
 		JACK_jack_port_unregister(client, midi_in_port);
 		JACK_jack_client_close(client);
 		client = NULL;
-		SDL_UnlockMutex(client_mutex);
 		return 0;
 	}
 
@@ -347,7 +327,6 @@ static int _jack_attempt_connect(struct midi_provider* jack_provider_) {
 		JACK_jack_port_unregister(client, midi_out_port);
 		JACK_jack_client_close(client);
 		client = NULL;
-		SDL_UnlockMutex(client_mutex);
 		return 0;
 	}
 
@@ -356,11 +335,9 @@ static int _jack_attempt_connect(struct midi_provider* jack_provider_) {
 		JACK_jack_port_unregister(client, midi_out_port);
 		JACK_jack_client_close(client);
 		client = NULL;
-		SDL_UnlockMutex(client_mutex);
 		return 0;
 	}
 
-	SDL_UnlockMutex(client_mutex);
 	return 1;
 }
 
@@ -368,8 +345,6 @@ static void _jack_poll(struct midi_provider* jack_provider_)
 {
 	if (!_jack_attempt_connect(jack_provider_))
 		return;
-
-	SDL_LockMutex(client_mutex);
 
 	const char** ports = NULL;
 
@@ -380,8 +355,6 @@ static void _jack_poll(struct midi_provider* jack_provider_)
 	ports = JACK_jack_get_ports(client, NULL, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput);
 	_jack_enumerate_ports(ports, jack_provider_, MIDI_OUTPUT);
 	free(ports);
-
-	SDL_UnlockMutex(client_mutex);
 }
 
 int jack_midi_setup(void)
@@ -399,8 +372,6 @@ int jack_midi_setup(void)
 	driver.enable = _jack_start;
 	driver.disable = _jack_stop;
 	driver.send = _jack_send;
-
-	client_mutex = SDL_CreateMutex();
 
 	ringbuffer = JACK_jack_ringbuffer_create(JACK_RINGBUFFER_SIZE);
 	if (!ringbuffer)
