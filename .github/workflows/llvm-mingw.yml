@@ -32,7 +32,7 @@ jobs:
 
       - name: 'Grab llvm-mingw'
         run: |
-          curl "https://github.com/mstorsjo/llvm-mingw/releases/download/$LLVM_MINGW_VERSION/llvm-mingw-$LLVM_MINGW_VERSION-msvcrt-ubuntu-20.04-x86_64.tar.xz" | tar axvf - -C "$HOME"
+          curl -L "https://github.com/mstorsjo/llvm-mingw/releases/download/$LLVM_MINGW_VERSION/llvm-mingw-$LLVM_MINGW_VERSION-msvcrt-ubuntu-20.04-x86_64.tar.xz" | tar xJvf - -C "$HOME"
           mv "$HOME/llvm-mingw-$LLVM_MINGW_VERSION-msvcrt-ubuntu-20.04-x86_64" "$HOME/llvm-mingw"
         
       - name: 'Grab SDL2'
