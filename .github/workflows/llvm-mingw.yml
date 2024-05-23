@@ -29,6 +29,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: schism
+      
+      - name: 'Install unix2dos'
+        run: |
+          apt-get install -y dos2unix
 
       - name: 'Grab llvm-mingw'
         run: |
