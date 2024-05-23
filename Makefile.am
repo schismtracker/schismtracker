@@ -249,6 +249,9 @@ cflags_network=-DUSE_NETWORK
 libs_network=$(NETWORK_LIBS)
 endif
 
+if USE_ICONV
+libs_iconv=$(LIBICONV)
+endif
 
 ## Replacement functions for crappy systems
 files_stdlib =
@@ -396,4 +399,4 @@ schismtracker_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 schismtracker_OBJCFLAGS = $(schismtracker_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(LIB_MATH) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(SDL_LIBS)
+schismtracker_LDADD = $(LIB_MATH) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(libs_iconv) $(SDL_LIBS)

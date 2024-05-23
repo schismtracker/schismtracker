@@ -89,6 +89,11 @@ AC_ARG_WITH([alsa],
 	[],
 	[with_alsa=check])
 
+AC_ARG_WITH([iconv],
+	[AS_HELP_STRING([--with-iconv],[Build with support for the system iconv @<:@default=check@:>@])]
+	[],
+	[with_iconv=check])
+
 dnl ------------------------------------------------------------------------
 
 dnl Check for standard programs
@@ -137,8 +142,6 @@ AM_CONDITIONAL([NEED_STRPTIME], [test "$ac_cv_func_strptime" = "no"])
 AM_CONDITIONAL([NEED_MKSTEMP], [test "$ac_cv_func_mkstemp" = "no"])
 
 AM_CONDITIONAL([USE_MMAP], [test "$ac_cv_func_mmap" = "yes"])
-
-AM_ICONV
 
 dnl Headers, typedef crap, et al.
 AC_HEADER_DIRENT
@@ -288,7 +291,6 @@ if test "x$with_jack" = "xcheck" || test "x$with_jack" = "xyes"; then
 	fi
 fi
 
-dnl ALSA
 AM_CONDITIONAL([USE_ALSA], false)
 AM_CONDITIONAL([LINK_TO_ALSA], false)
 if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then
@@ -302,6 +304,17 @@ if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then
 		fi
 	elif test "x$with_alsa" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find ALSA])
+	fi
+fi
+
+AM_CONDITIONAL([USE_ICONV], false)
+if test "x$with_iconv" = "xcheck" || test "x$with_iconv" = "xyes"; then
+	AM_ICONV
+	if test "x$am_cv_func_iconv" = "xyes"; then
+		AM_CONDITIONAL([USE_ICONV], true)
+		AC_SUBST([LIBICONV])
+	elif test "x$with_iconv" = "xyes"; then
+		AC_MSG_ERROR([*** Failed to find system iconv])
 	fi
 fi
 
