@@ -83,14 +83,14 @@ jobs:
           export PATH="$HOME/llvm-mingw/bin:$PATH"
           export PKG_CONFIG_PATH="$HOME/$TARGET/lib/pkgconfig"
           cd schism
-          autoreconf -i
+          autoreconf -I"$HOME/$TARGET/share/aclocal" -i
           mkdir build
           cd build
           ../configure --host="$TARGET-w64-$SYS" --prefix="$HOME/$TARGET" --with-sdl-prefix="$HOME/$TARGET" --with-flac
           make
           strip -g schismtracker.exe
-          cp schismtracker.exe ..
-          cd ..
+          cp schismtracker.exe ../..
+          cd ../..
           cp "$HOME/$TARGET/bin/SDL2.dll" .
           cp "$HOME/$TARGET/bin/libFLAC-12.dll" .
           cp "$HOME/$TARGET/bin/libogg-0.dll" .
