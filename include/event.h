@@ -23,7 +23,7 @@
 #ifndef _schismevent_h
 #define _schismevent_h
 
-#include "sdlmain.h"
+#include <SDL.h>
 
 #define SCHISM_EVENT_UPDATE_IPMIDI      SDL_USEREVENT+0
 #define SCHISM_EVENT_MIDI               SDL_USEREVENT+1
