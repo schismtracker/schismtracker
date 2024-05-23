@@ -601,12 +601,6 @@ static charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 	[CHARSET_UTF8] = utf8_to_ucs4,
 	[CHARSET_UTF16LE] = utf16le_to_ucs4,
 	[CHARSET_UTF16BE] = utf16be_to_ucs4,
-#if WORDS_BIGENDIAN
-	/* no point in duplicating code here */
-	[CHARSET_UTF16] = utf16be_to_ucs4,
-#else
-	[CHARSET_UTF16] = utf16le_to_ucs4,
-#endif
 
 	[CHARSET_CP437] = cp437_to_ucs4,
 
@@ -626,11 +620,6 @@ static charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 	[CHARSET_UTF8] = ucs4_to_utf8,
 	[CHARSET_UTF16LE] = ucs4_to_utf16le,
 	[CHARSET_UTF16BE] = ucs4_to_utf16be,
-#if WORDS_BIGENDIAN
-	[CHARSET_UTF16] = ucs4_to_utf16be,
-#else
-	[CHARSET_UTF16] = ucs4_to_utf16le,
-#endif
 
 	[CHARSET_CP437] = ucs4_to_cp437,
 
@@ -665,8 +654,8 @@ const char* charset_iconv_error_lookup(charset_error_t err) {
 /* our version of iconv; this has a much simpler API than the regular
  * iconv() because much of it isn't very necessary for our purposes
  *
- * XXX: this currently uses an in-between buffer of UCS-4, when it's
- * probably better to just convert one character at a time
+ * note: do NOT put huge buffers into here, it will likely waste
+ * lots of memory due to using a buffer of UCS4 inbetween
  *
  * all input is expected to be NULL-terminated
  *
@@ -690,6 +679,9 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
 		fprintf(stderr, "charset_iconv: inset == outset, refusing to convert to the same charset. fix your code");
 		return CHARSET_ERROR_INPUTISOUTPUT;
 	}
+
+	if (inset >= ARRAY_SIZE(conv_to_ucs4_funcs) || outset >= ARRAY_SIZE(conv_from_ucs4_funcs))
+		return CHARSET_ERROR_UNIMPLEMENTED;
 
 	charset_conv_to_ucs4_func conv_to_ucs4_func = conv_to_ucs4_funcs[inset];
 	if (!conv_to_ucs4_func)

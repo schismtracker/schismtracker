@@ -32,7 +32,6 @@ typedef enum {
 	/* Unicode */
 	CHARSET_UCS4,
 	CHARSET_UTF8,
-	CHARSET_UTF16,
 	CHARSET_UTF16LE,
 	CHARSET_UTF16BE,
 
