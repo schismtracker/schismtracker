@@ -27,6 +27,7 @@
 #include "it.h"
 #include "song.h"
 #include "page.h"
+#include "osdefs.h"
 
 #include "sdlmain.h"
 
@@ -67,7 +68,10 @@ static const char *const midi_modes[] = {
 };
 
 static const int video_fs_group[] = { 9, 10, -1 };
-static int video_group[] = { 11, 12, 13, 14, -1 };
+#ifdef WIN32
+static const int video_menu_bar_group[] = { 14, 15, -1 };
+#endif
+static int video_group[] = { 11, 12, 13, -1 };
 
 static void change_mixer_limits(void)
 {
@@ -205,6 +209,13 @@ static void change_video_settings(void)
 	font_init();
 }
 
+#ifdef WIN32
+static void change_menu_bar_settings(void) {
+	cfg_video_want_menu_bar = widgets_config[14].d.togglebutton.state;
+	win32_refresh_menu(video_window(), !video_is_fullscreen());
+}
+#endif
+
 /* --------------------------------------------------------------------- */
 
 static void config_draw_const(void)
@@ -225,6 +236,9 @@ static void config_draw_const(void)
 
 	draw_text("Video Scaling:", 2, 28, 0, 2);
 	draw_text("Full Screen:", 38, 28, 0, 2);
+#ifdef WIN32
+	draw_text("Menu Bar:", 38, 32, 0, 2);
+#endif
 
 	draw_fill_chars(18, 15, 34, 25, 0);
 	draw_box(17,14,35,26, BOX_THIN | BOX_INNER | BOX_INSET);
@@ -256,6 +270,11 @@ static void config_set_page(void)
 	widgets_config[11].d.togglebutton.state = (!hint || *hint == '0' || SDL_strcasecmp(hint, "nearest") == 0);
 	widgets_config[12].d.togglebutton.state = (!hint || *hint == '1' || SDL_strcasecmp(hint, "linear") == 0);
 	widgets_config[13].d.togglebutton.state = (!hint || *hint == '2' || SDL_strcasecmp(hint, "best") == 0);
+
+#ifdef WIN32
+	widgets_config[14].d.togglebutton.state = !!cfg_video_want_menu_bar;
+	widgets_config[15].d.togglebutton.state = !cfg_video_want_menu_bar;
+#endif
 }
 
 /* --------------------------------------------------------------------- */
@@ -264,7 +283,11 @@ void config_load_page(struct page *page)
 	page->title = "System Configuration (Ctrl-F1)";
 	page->draw_const = config_draw_const;
 	page->set_page = config_set_page;
+#ifdef WIN32
+	page->total_widgets = 16;
+#else
 	page->total_widgets = 14;
+#endif
 	page->widgets = widgets_config;
 	page->help_index = HELP_GLOBAL;
 
@@ -348,5 +371,18 @@ void config_load_page(struct page *page)
 			change_video_settings,
 			"Best",
 			2, video_group);
-
+#ifdef WIN32
+	create_togglebutton(widgets_config+14,
+			44, 34, 5,
+			8,9,11,10,10,
+			change_menu_bar_settings,
+			"Yes",
+			2, video_menu_bar_group);
+	create_togglebutton(widgets_config+15,
+			54, 34, 5,
+			10,10,9,10,0,
+			change_menu_bar_settings,
+			"No",
+			2, video_menu_bar_group);
+#endif
 }

@@ -265,16 +265,20 @@ void win32_create_menu(void) {
 	}
 }
 
-void win32_toggle_menu(SDL_Window* window, int yes) {
+void win32_refresh_menu(SDL_Window* window, int yes) {
 	/* Get the HWND */
 	SDL_SysWMinfo wm_info;
 	SDL_VERSION(&wm_info.version);
 	if (!SDL_GetWindowWMInfo(window, &wm_info))
 		return;
 
+	SetMenu(wm_info.info.win.window, (cfg_video_want_menu_bar && yes) ? menu : NULL);
+	DrawMenuBar(wm_info.info.win.window);
+}
+
+void win32_toggle_menu(SDL_Window* window, int yes) {
 	if (!menu)
 		win32_create_menu();
 
-	SetMenu(wm_info.info.win.window, yes ? menu : NULL);
-	DrawMenuBar(wm_info.info.win.window);
+	win32_refresh_menu(window, yes);
 }

@@ -45,6 +45,9 @@ int cfg_video_want_fixed_width = 0;
 int cfg_video_want_fixed_height = 0;
 int cfg_video_mousecursor = MOUSE_EMULATED;
 int cfg_video_width, cfg_video_height;
+#ifdef WIN32
+int cfg_video_want_menu_bar = 1;
+#endif
 
 /* --------------------------------------------------------------------- */
 
@@ -144,9 +147,9 @@ void cfg_load(void)
 	cfg_video_want_fixed_height = cfg_get_number(&cfg, "Video", "want_fixed_height", 400 * 6);
 	cfg_video_mousecursor = cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
 	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_MAX_STATE);
-	ptr = cfg_get_string(&cfg, "Video", "aspect", NULL, 0, NULL);
-	if (ptr && *ptr)
-		put_env_var("SCHISM_VIDEO_ASPECT", ptr);
+#ifdef WIN32
+	cfg_video_want_menu_bar = cfg_get_number(&cfg, "Video", "want_menu_bar", 1);
+#endif
 
 	tmp = get_home_directory();
 	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, tmp);
@@ -309,6 +312,9 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "Video", "fullscreen", !!(video_is_fullscreen()));
 	cfg_set_number(&cfg, "Video", "mouse_cursor", video_mousecursor_visible());
 	cfg_set_number(&cfg, "Video", "lazy_redraw", !!(status.flags & LAZY_REDRAW));
+#ifdef WIN32
+	cfg_set_number(&cfg, "Video", "want_menu_bar", !!cfg_video_want_menu_bar);
+#endif
 
 	cfg_set_number(&cfg, "General", "vis_style", status.vis_style);
 	cfg_set_number(&cfg, "General", "time_display", status.time_display);
