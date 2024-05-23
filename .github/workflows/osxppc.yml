@@ -105,6 +105,7 @@ jobs:
           cp $HOME/ppcprefix/lib/libSDL2-2.0.0.dylib Resources
           cp $HOME/ppcprefix/lib/libFLAC.12.dylib Resources
           cp $HOME/ppcprefix/lib/libogg.0.dylib Resources
+          # no strip needed here, we explicitly disable `-g` because it breaks builds somehow
           $HOME/ppc/usr/bin/install_name_tool -change $HOME/ppcprefix/lib/libogg.0.dylib @loader_path/../Resources/libogg.0.dylib Resources/libFLAC.12.dylib
           cd MacOS
           $HOME/ppc/usr/bin/install_name_tool -change $HOME/ppcprefix/lib/libSDL2-2.0.0.dylib @executable_path/../Resources/libSDL2-2.0.0.dylib schismtracker

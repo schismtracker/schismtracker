@@ -104,6 +104,9 @@ jobs:
           cp /usr/local/lib/libSDL2-2.0.0.dylib Resources
           cp /usr/local/lib/libFLAC.12.dylib Resources
           cp /usr/local/lib/libogg.0.dylib Resources
+          strip -S Resources/libSDL2-2.0.0.dylib
+          strip -S Resources/libFLAC.12.dylib
+          strip -S Resources/libogg.0.dylib
           install_name_tool -change /usr/local/lib/libogg.0.dylib @loader_path/../Resources/libogg.0.dylib Resources/libFLAC.12.dylib
           cd MacOS
           install_name_tool -change /usr/local/lib/libSDL2-2.0.0.dylib @executable_path/../Resources/libSDL2-2.0.0.dylib schismtracker
