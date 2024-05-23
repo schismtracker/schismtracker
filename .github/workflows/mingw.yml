@@ -1,0 +1,96 @@
+name: MinGW-w64
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { sys: mingw32, env: i686, win: win32 }
+          - { sys: mingw64, env: x86_64, win: win64 }
+    name: ${{ matrix.env }}
+    defaults:
+      run:
+        shell: msys2 {0}
+    env:
+      MINGW_ARCH: ${{ matrix.sys }}
+    steps:
+      - name: 'git config'
+        run: git config --global core.autocrlf input
+        shell: bash
+
+      - name: 'Checkout'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 'Setup MSYS2'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.sys }}
+          update: true
+          install: git mingw-w64-${{ matrix.env }}-toolchain mingw-w64-${{ matrix.env }}-flac libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL2 zip dos2unix wget
+    
+      - name: 'Get date of latest commit'
+        id: date
+        run: echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
+
+      - name: 'Build package'
+        run: |
+          autoreconf -i
+          mkdir build
+          cd build
+          ../configure --with-flac
+          make
+          strip -g schismtracker.exe
+          cp schismtracker.exe ..
+          cd ..
+          if [ ${{ matrix.win }} == "win32" ]
+          then
+            cp /mingw32/bin/libgcc_s_dw2-1.dll .
+            cp /mingw32/bin/libwinpthread-1.dll .
+          fi
+          cp /${{ matrix.sys }}/bin/SDL2.dll .
+          cp /${{ matrix.sys }}/bin/libFLAC.dll .
+          cp /${{ matrix.sys }}/bin/libogg-0.dll .
+          cp docs/configuration.md .
+          wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
+          unix2dos COPYING.Xiph COPYING README.md configuration.md
+
+      - name: 'Upload artifact (win32)'
+        if: matrix.win == 'win32'
+        uses: actions/upload-artifact@v4
+        with:
+          name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
+          path: |
+            schismtracker.exe
+            SDL2.dll
+            libFLAC.dll
+            libogg-0.dll
+            libgcc_s_dw2-1.dll
+            libwinpthread-1.dll
+            COPYING
+            COPYING.Xiph
+            README.md
+            configuration.md
+
+      - name: 'Upload artifact (win64)'
+        if: matrix.win == 'win64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.win }}
+          path: |
+            schismtracker.exe
+            SDL2.dll
+            libFLAC.dll
+            libogg-0.dll
+            COPYING
+            COPYING.Xiph
+            README.md
+            configuration.md
