@@ -94,7 +94,7 @@ jobs:
           cp "$HOME/$TARGET/bin/SDL2.dll" .
           cp "$HOME/$TARGET/bin/libFLAC-12.dll" .
           cp "$HOME/$TARGET/bin/libogg-0.dll" .
-          cp docs/configuration.md .
+          cp schism/docs/configuration.md .
           wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
           unix2dos COPYING.Xiph COPYING README.md configuration.md
 
