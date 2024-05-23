@@ -76,11 +76,13 @@ jobs:
         run: |
           cd schism
           echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
+          cd ..
 
       - name: 'Build package'
         run: |
           export PATH="$HOME/llvm-mingw/bin:$PATH"
           export PKG_CONFIG_PATH="$HOME/$TARGET/lib/pkgconfig"
+          cd schism
           autoreconf -i
           mkdir build
           cd build
