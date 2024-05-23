@@ -30,6 +30,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #include "slurp.h"
 
@@ -46,6 +47,7 @@ int slurp_mmap(slurp_t *useme, const char *filename, size_t st)
 
 	fd = open(filename, O_RDONLY);
 	if (fd == -1) return 0;
+
 	addr = mmap(NULL, st, PROT_READ, MAP_SHARED
 #if defined(MAP_POPULATE) && defined(MAP_NONBLOCK)
 		| MAP_POPULATE | MAP_NONBLOCK
@@ -54,10 +56,12 @@ int slurp_mmap(slurp_t *useme, const char *filename, size_t st)
 		| MAP_NORESERVE
 #endif
 		, fd, 0);
-	if (!addr || addr == ((void*)-1)) {
+
+	if (addr == MAP_FAILED) {
 		(void)close(fd);
-		return -1;
+		return (errno == ENOMEM) ? 0 : -1;
 	}
+
 	useme->closure = _munmap_slurp;
 	useme->length = st;
 	useme->data = addr;
