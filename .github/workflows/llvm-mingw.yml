@@ -98,6 +98,9 @@ jobs:
           cp "$HOME/$TARGET/bin/SDL2.dll" .
           cp "$HOME/$TARGET/bin/libFLAC-12.dll" .
           cp "$HOME/$TARGET/bin/libogg-0.dll" .
+          "$TARGET-w64-$SYS-strip" -g "SDL2.dll"
+          "$TARGET-w64-$SYS-strip" -g "libFLAC-12.dll"
+          "$TARGET-w64-$SYS-strip" -g "libogg-0.dll"
           cp schism/docs/configuration.md schism/README.md schism/COPYING .
           wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
           unix2dos COPYING.Xiph COPYING README.md configuration.md
