@@ -169,10 +169,8 @@ void video_fullscreen(int new_fs_flag)
 
 	if (video.fullscreen) {
 		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-		SDL_SetWindowResizable(video.window, SDL_FALSE);
 	} else {
 		SDL_SetWindowFullscreen(video.window, 0);
-		SDL_SetWindowResizable(video.window, SDL_TRUE);
 		set_icon(); /* XXX is this necessary */
 	}
 }

@@ -43,9 +43,16 @@ extern char *initial_song;
 #include "event.h"
 #include "osdefs.h"
 
-#define Cursor AppleCursor
+/* Old versions of SDL define "vector" as a GCC
+ * builtin; this causes importing Cocoa to fail,
+ * as one struct Cocoa needs is named "vector".
+ *
+ * This only happens on PowerPC. */
+#ifdef vector
+#undef vector
+#endif
+
 #import <Cocoa/Cocoa.h>
-#undef Cursor
 
 @interface SDLMain : NSObject
 - (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)filename;
