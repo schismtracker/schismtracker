@@ -88,7 +88,7 @@ jobs:
           cd build
           ../configure --host="$TARGET-w64-$SYS" --prefix="$HOME/$TARGET" --with-sdl-prefix="$HOME/$TARGET" --with-flac
           make
-          strip -g schismtracker.exe
+          "$TARGET-w64-$SYS-strip" -g schismtracker.exe
           cp schismtracker.exe ../..
           cd ../..
           cp "$HOME/$TARGET/bin/SDL2.dll" .
