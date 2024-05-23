@@ -176,7 +176,9 @@ void video_fullscreen(int new_fs_flag)
 	video.fullscreen = (new_fs_flag >= 0) ? !!new_fs_flag : !video.fullscreen;
 
 	if (video.fullscreen) {
+#ifdef WIN32
 		SDL_GetWindowSize(video.window, &video.saved.width, &video.saved.height);
+#endif
 		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 #ifdef WIN32
 		win32_toggle_menu(video.window, 0);
