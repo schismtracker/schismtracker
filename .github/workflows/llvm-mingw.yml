@@ -41,7 +41,7 @@ jobs:
       
       - name: 'Build SDL2'
         run: |
-          export PATH="$HOME/llvm-mingw:$PATH"
+          export PATH="$HOME/llvm-mingw/bin:$PATH"
           cd SDL2-$SDL_VERSION
           ./configure --host="$TARGET-w64-$SYS" --prefix="$HOME/$TARGET"
           make
@@ -56,7 +56,7 @@ jobs:
 
       - name: 'Build libflac'
         run: |
-          export PATH="$HOME/llvm-mingw:$PATH"
+          export PATH="$HOME/llvm-mingw/bin:$PATH"
           cd libogg-$LIBOGG_VERSION
           mkdir build
           cd build
@@ -79,7 +79,7 @@ jobs:
 
       - name: 'Build package'
         run: |
-          export PATH="$HOME/llvm-mingw:$PATH"
+          export PATH="$HOME/llvm-mingw/bin:$PATH"
           export PKG_CONFIG_PATH="$HOME/$TARGET/lib/pkgconfig"
           autoreconf -i
           mkdir build
