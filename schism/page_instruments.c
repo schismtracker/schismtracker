@@ -636,13 +636,15 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 					return 1;
 				}
 			} else if (k->sym.sym >= SDLK_a) {
-				if (instrument_cursor_pos < 25) {
+				if (instrument_cursor_pos < 25)
 					return 1;
-				} else if (enable_text) {
+
+				if (enable_text) {
 					get_page_widgets()->accept_text = 1;
+					enable_text = 0;
 				}
 
-				return !get_page_widgets()->accept_text;
+				return 0;
 			}
 
 			return 0;
