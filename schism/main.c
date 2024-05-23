@@ -749,7 +749,8 @@ static void event_loop(void)
 					song_load(event.user.data1);
 					break;
 				case SCHISM_EVENT_NATIVE_SCRIPT:
-					/* TODO: hash the string's value and do a switch() on it */
+					/* destroy any active dialog before changing pages */
+					dialog_destroy();
 					if (strcasecmp(event.user.data1, "new") == 0) {
 						new_song_dialog();
 					} else if (strcasecmp(event.user.data1, "save") == 0) {

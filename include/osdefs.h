@@ -48,6 +48,8 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_sysexit wii_sysexit
 # define os_sdlevent wii_sdlevent
 #elif defined(WIN32)
+# define os_sdlevent win32_sdlevent
+# define os_sdlinit win32_sdlinit
 # define os_sysinit win32_sysinit
 #endif
 
@@ -76,9 +78,12 @@ void wii_sysexit(void); // close filesystem
 void wii_sdlinit(void); // set up wiimote
 int wii_sdlevent(SDL_Event *event); // add unicode values; wiimote hack to allow simple playback
 
+int win32_sdlevent(SDL_Event* event);
 void win32_sysinit(int *pargc, char ***pargv);
+void win32_sdlinit(void);
 void win32_get_modkey(int *m);
 void win32_filecreated_callback(const char *filename);
+void win32_toggle_menu(SDL_Window* window, int yes);
 
 #endif /* ! OSDEFS_H */
 

@@ -28,6 +28,7 @@
 #include "it.h"
 #include "sdlmain.h"
 #include "video.h"
+#include "osdefs.h"
 
 /* for memcpy */
 #include <string.h>
@@ -78,6 +79,13 @@ struct video_cf {
 		unsigned int y;
 		int visible;
 	} mouse;
+
+#ifdef WIN32
+	struct {
+		int width;
+		int height;
+	} saved;
+#endif
 
 	int fullscreen;
 
@@ -168,9 +176,17 @@ void video_fullscreen(int new_fs_flag)
 	video.fullscreen = (new_fs_flag >= 0) ? !!new_fs_flag : !video.fullscreen;
 
 	if (video.fullscreen) {
+		SDL_GetWindowSize(video.window, &video.saved.width, &video.saved.height);
 		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+#ifdef WIN32
+		win32_toggle_menu(video.window, 0);
+#endif
 	} else {
 		SDL_SetWindowFullscreen(video.window, 0);
+#ifdef WIN32
+		win32_toggle_menu(video.window, 1);
+		SDL_SetWindowSize(video.window, video.saved.width, video.saved.height);
+#endif
 		set_icon(); /* XXX is this necessary */
 	}
 }
@@ -201,6 +217,10 @@ void video_startup(void)
 		SDL_RenderSetLogicalSize(video.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height);
 
 	video_fullscreen(cfg_video_fullscreen);
+#ifdef WIN32
+	if (!video.fullscreen)
+		SDL_SetWindowSize(video.window, video.width, video.height);
+#endif
 
 	/* okay, i think we're ready */
 	SDL_ShowCursor(SDL_DISABLE);
