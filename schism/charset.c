@@ -390,7 +390,7 @@ static size_t utf16le_to_ucs4(const uint8_t* in, uint32_t* out) {
 	if (in[0] == 0xFF && in[1] == 0xFE)
 		tmp_in++;
 
-	for (; *tmp_in; tmp_in) {
+	while (*tmp_in) {
 		uint16_t wc = *(tmp_in++);
 		wc = bswapLE16(wc);
 
@@ -426,7 +426,7 @@ static size_t utf16be_to_ucs4(const uint8_t* in, uint32_t* out) {
 	if (in[0] == 0xFE && in[1] == 0xFF)
 		tmp_in++;
 
-	for (; *tmp_in; tmp_in) {
+	while (*tmp_in) {
 		uint16_t wc = *(tmp_in++);
 		wc = bswapBE16(wc);
 
