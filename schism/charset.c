@@ -26,6 +26,11 @@
 #include "charset.h"
 #include "util.h"
 
+#if HAVE_ICONV
+#include <iconv.h>
+#include <errno.h>
+#endif
+
 int char_digraph(int k1, int k2)
 {
 	//int c;
@@ -639,6 +644,7 @@ static charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 const char* charset_iconv_error_lookup(charset_error_t err) {
 	switch (err) {
 		case CHARSET_ERROR_SUCCESS:
+		default:
 			return "Success";
 		case CHARSET_ERROR_UNIMPLEMENTED:
 			return "Conversion unimplemented";
@@ -664,31 +670,18 @@ const char* charset_iconv_error_lookup(charset_error_t err) {
  *     charset_iconv(cp437, &utf8, CHARSET_CP437, CHARSET_UTF8);
  * 
  * [out] must be free'd by the caller */
-charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset) {
-	if (!in)
-		return CHARSET_ERROR_NULLINPUT;
-
-	if (!out)
-		return CHARSET_ERROR_NULLOUTPUT;
-
+static charset_error_t charset_iconv_internal_(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset) {
 	size_t in_length = 0;
 	size_t out_length = 0;
 	uint32_t* ucs4_buf = NULL;
 
-	if (inset == outset) {
-		fprintf(stderr, "charset_iconv: inset == outset, refusing to convert to the same charset. fix your code");
-		return CHARSET_ERROR_INPUTISOUTPUT;
-	}
-
 	if (inset >= ARRAY_SIZE(conv_to_ucs4_funcs) || outset >= ARRAY_SIZE(conv_from_ucs4_funcs))
 		return CHARSET_ERROR_UNIMPLEMENTED;
 
-	charset_conv_to_ucs4_func conv_to_ucs4_func = conv_to_ucs4_funcs[inset];
-	if (!conv_to_ucs4_func)
-		return CHARSET_ERROR_UNIMPLEMENTED;
-
+	charset_conv_to_ucs4_func   conv_to_ucs4_func   = conv_to_ucs4_funcs[inset];
 	charset_conv_from_ucs4_func conv_from_ucs4_func = conv_from_ucs4_funcs[outset];
-	if (!conv_from_ucs4_func)
+
+	if (!conv_to_ucs4_func || !conv_from_ucs4_func)
 		return CHARSET_ERROR_UNIMPLEMENTED;
 
 	in_length = conv_to_ucs4_func(in, NULL);
@@ -715,4 +708,80 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
 	free(ucs4_buf);
 
 	return CHARSET_ERROR_SUCCESS;
+}
+
+#ifdef HAVE_ICONV
+
+static const char* charset_iconv_system_lookup[] = {
+	[CHARSET_UTF8] = "UTF-8",
+	[CHARSET_UTF16BE] = "UTF-16BE",
+	[CHARSET_UTF16LE] = "UTF-16LE",
+	[CHARSET_UCS4] = "UCS-4",
+
+	[CHARSET_CP437] = "437",
+
+	[CHARSET_CHAR] = "char",
+	[CHARSET_WCHAR_T] = "wchar_t"
+};
+
+static charset_error_t charset_iconv_system_(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset) {
+	size_t src_size = strlen(in);
+	if (src_size <= 0)
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	if (inset >= ARRAY_SIZE(charset_iconv_system_lookup) || outset >= ARRAY_SIZE(charset_iconv_system_lookup))
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	iconv_t cd = iconv_open(charset_iconv_system_lookup[inset], charset_iconv_system_lookup[outset]);
+	if (cd == (iconv_t)-1)
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	size_t out_size = src_size;
+
+	char* in_ = (char*)in;
+	char* out_ = NULL;
+	size_t in_bytes_left = src_size;
+	size_t out_bytes_left = out_size;
+
+	while (in_bytes_left) {
+		out_ = (char*)(*out = mem_calloc(out_size + 4, sizeof(uint8_t)));
+
+		int32_t rc = iconv(cd, (ICONV_CONST char **)&in_, &in_bytes_left, &out_, &out_bytes_left);
+		if (rc == -1 && errno == E2BIG) {
+			in_bytes_left = src_size;
+			out_bytes_left = (out_size *= 2);
+			free(*out);
+			continue;
+		}
+
+		break;
+	}
+
+	iconv(cd, NULL, NULL, &out_, &out_bytes_left); /* flush buffer */
+	iconv_close(cd);
+
+	return CHARSET_ERROR_SUCCESS;
+}
+
+#endif
+
+charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset) {
+	if (!in)
+		return CHARSET_ERROR_NULLINPUT;
+
+	if (!out)
+		return CHARSET_ERROR_NULLOUTPUT;
+
+	if (inset == outset)
+		return CHARSET_ERROR_INPUTISOUTPUT;
+
+	if (charset_iconv_internal_(in, out, inset, outset) == CHARSET_ERROR_SUCCESS)
+		return CHARSET_ERROR_SUCCESS;
+
+#if HAVE_ICONV
+	if (charset_iconv_system_(in, out, inset, outset) == CHARSET_ERROR_SUCCESS)
+		return CHARSET_ERROR_SUCCESS;
+#endif
+
+	return CHARSET_ERROR_UNIMPLEMENTED;
 }

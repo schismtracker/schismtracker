@@ -39,6 +39,7 @@ typedef enum {
 	CHARSET_CP437,
 
 	/* Built-in C types */
+	CHARSET_CHAR,
 	CHARSET_WCHAR_T
 } charset_t;
 

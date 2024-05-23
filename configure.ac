@@ -138,6 +138,8 @@ AM_CONDITIONAL([NEED_MKSTEMP], [test "$ac_cv_func_mkstemp" = "no"])
 
 AM_CONDITIONAL([USE_MMAP], [test "$ac_cv_func_mmap" = "yes"])
 
+AM_ICONV
+
 dnl Headers, typedef crap, et al.
 AC_HEADER_DIRENT
 AC_CHECK_HEADERS_ONCE([sys/time.h])
