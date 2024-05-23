@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: 'Install dependencies'
         run: |
-          brew install automake zip cmake wget
+          brew install automake zip cmake wget gettext
 
       - name: 'chown SDK directory'
         id: chown

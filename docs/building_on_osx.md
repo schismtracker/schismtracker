@@ -8,7 +8,7 @@ in the following command:
 After Homebrew has been successfully installed, you need to install `automake`,
 `autoconf`, `sdl2` and `git`.
 
-    brew install automake autoconf sdl2 git
+    brew install automake autoconf gettext sdl2 git
 
 Alternatively, if you have MacPorts installed, you can use this command
 instead:

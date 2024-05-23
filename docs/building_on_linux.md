@@ -11,13 +11,13 @@ on 64-bit Linux, you can also download a pre-built binary from the release page
 On Ubuntu, run:
 
     sudo apt update
-	sudo apt install build-essential automake autoconf-archive libsdl2-dev \
-	                 git libtool libflac-dev
+	sudo apt install build-essential automake autoconf-archive gettext \
+                     libsdl2-dev git libtool libflac-dev
 
 On Arch Linux:
 
 	sudo pacman -Syu
-	sudo pacman -S base-devel git sdl2 alsa-lib libxv libxxf86vm flac
+	sudo pacman -S base-devel git sdl2 alsa-lib libxv libxxf86vm flac gettext
 
 Git is not strictly required, but if you don't need it you'll need to download
 a tarball manually, and your build won't have a proper version string.

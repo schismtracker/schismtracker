@@ -32,7 +32,7 @@ jobs:
       
       - name: 'Install unix2dos'
         run: |
-          sudo apt-get install -y dos2unix
+          sudo apt-get install -y dos2unix gettext
 
       - name: 'Grab llvm-mingw'
         run: |
