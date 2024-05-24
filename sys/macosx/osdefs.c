@@ -29,22 +29,21 @@
 int macosx_sdlevent(SDL_Event *event)
 {
 	if (event->type == SDL_KEYDOWN || event->type == SDL_KEYUP) {
-		if (event->key.keysym.sym == 0) {
-			switch (event->key.keysym.scancode) {
-			case 106: // mac F16 key
-				event->key.keysym.sym = SDLK_PRINTSCREEN;
-				event->key.keysym.mod = KMOD_CTRL;
-				return 1;
-			case 234: // XXX what key is this?
-				if (event->type == SDL_KEYDOWN)
-					song_set_current_order(song_get_current_order() - 1);
-				return 0;
-			case 233: // XXX what key is this?
-				if (event->type == SDL_KEYUP)
-					song_set_current_order(song_get_current_order() + 1);
-				return 0;
-			};
-		}
+		switch (event->key.keysym.scancode) {
+		case SDL_SCANCODE_KP_ENTER:
+			/* On portables, the regular Insert key
+			 * isn't available. This is equivalent to
+			 * pressing Fn-Return, which just so happens
+			 * to be a "de facto" Insert in mac land.
+			 * However, on external keyboards this causes
+			 * a real keypad enter to get eaten by this
+			 * function as well. IMO it's more important
+			 * for now that portable users can actually
+			 * have an Insert key.
+			 *
+			 *   - paper */
+			event->key.keysym.sym = SDLK_INSERT;
+		};
 	}
 	return 1;
 }

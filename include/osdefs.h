@@ -51,6 +51,8 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_sdlevent win32_sdlevent
 # define os_sdlinit win32_sdlinit
 # define os_sysinit win32_sysinit
+#elif defined(MACOSX)
+# define os_sdlevent macosx_sdlevent
 #endif
 
 #ifndef os_sdlevent
@@ -85,6 +87,8 @@ void win32_get_modkey(int *m);
 void win32_filecreated_callback(const char *filename);
 void win32_toggle_menu(SDL_Window* window, int yes);
 void win32_refresh_menu(SDL_Window* window, int yes);
+
+int macosx_sdlevent(SDL_Event* event);
 
 #endif /* ! OSDEFS_H */
 
