@@ -173,10 +173,6 @@ static void set_icon(void)
 
 void video_fullscreen(int new_fs_flag)
 {
-	/* nothing needed here */
-	if (new_fs_flag >= 0 && !!new_fs_flag == video.fullscreen)
-		return;
-
 	/* positive new_fs_flag == set, negative == toggle */
 	video.fullscreen = (new_fs_flag >= 0) ? !!new_fs_flag : !video.fullscreen;
 

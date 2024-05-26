@@ -148,7 +148,7 @@ void cfg_load(void)
 	cfg_video_mousecursor = cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
 	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_MAX_STATE);
 #ifdef WIN32
-	cfg_video_want_menu_bar = cfg_get_number(&cfg, "Video", "want_menu_bar", 1);
+	cfg_video_want_menu_bar = !!cfg_get_number(&cfg, "Video", "want_menu_bar", 1);
 #endif
 
 	tmp = get_home_directory();
