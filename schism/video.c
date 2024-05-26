@@ -173,6 +173,10 @@ static void set_icon(void)
 
 void video_fullscreen(int new_fs_flag)
 {
+	/* nothing needed here */
+	if (new_fs_flag >= 0 && !!new_fs_flag == video.fullscreen)
+		return;
+
 	/* positive new_fs_flag == set, negative == toggle */
 	video.fullscreen = (new_fs_flag >= 0) ? !!new_fs_flag : !video.fullscreen;
 
@@ -210,11 +214,14 @@ void video_startup(void)
 
 	video.width = cfg_video_width;
 	video.height = cfg_video_height;
+#ifdef WIN32
+	video.saved.x = video.saved.y = SDL_WINDOWPOS_CENTERED;
+#endif
 
 	video.window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width, video.height, SDL_WINDOW_RESIZABLE);
 	video.renderer = SDL_CreateRenderer(video.window, -1, 0);
 	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
-	video.framebuf = calloc(NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT, sizeof(Uint32));
+	video.framebuf = calloc(NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT, sizeof(uint32_t));
 
 	/* Aspect ratio correction if it's wanted */
 	if (cfg_video_want_fixed)
@@ -222,8 +229,10 @@ void video_startup(void)
 
 	video_fullscreen(cfg_video_fullscreen);
 #ifdef WIN32
-	if (!video.fullscreen)
+	if (!video.fullscreen) {
 		SDL_SetWindowSize(video.window, video.width, video.height);
+		SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
+	}
 #endif
 
 	/* okay, i think we're ready */
