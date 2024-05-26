@@ -773,13 +773,8 @@ char *get_current_directory(void)
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
 	char* buf_utf8 = NULL;
 
-	if (!_wgetcwd(buf, PATH_MAX))
-		return NULL;
-
-	if (!wchar_to_utf8(&buf_utf8, buf))
-		return NULL;
-
-	return buf_utf8;
+	if (_wgetcwd(buf, PATH_MAX) && wchar_to_utf8(&buf_utf8, buf))
+		return buf_utf8;
 #else
 	char buf[PATH_MAX + 1] = {'\0'};
 
@@ -799,13 +794,8 @@ char *get_home_directory(void)
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
 	char* buf_utf8 = NULL;
 	
-	if (SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) != S_OK)
-		return NULL;
-
-	if (!wchar_to_utf8(&buf_utf8, buf))
-		return NULL;
-
-	return buf_utf8;
+	if (SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK && wchar_to_utf8(&buf_utf8, buf))
+		return buf_utf8;
 #else
 	char *ptr = getenv("HOME");
 	if (ptr)
@@ -828,13 +818,9 @@ char *get_dot_directory(void)
 #ifdef WIN32
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
 	char* buf_utf8 = NULL;
-	if (SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) != S_OK)
-		return NULL;
+	if (SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) == S_OK && wchar_to_utf8(&buf_utf8, buf))
+		return buf_utf8;
 
-	if (!wchar_to_utf8(&buf_utf8, buf))
-		return NULL;
-
-	return buf_utf8;
 	// else fall back to home (but if this ever happens, things are really screwed...)
 #endif
 	return get_home_directory();
