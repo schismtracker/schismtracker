@@ -529,9 +529,6 @@ static void event_loop(void)
 			}
 		}
 		switch (event.type) {
-		case SDL_SYSWMEVENT:
-			/* todo... */
-			break;
 #if defined(WIN32)
 #define _ALTTRACKED_KMOD        (KMOD_NUM|KMOD_CAPS)
 #else
@@ -539,9 +536,12 @@ static void event_loop(void)
 #endif
 		case SDL_TEXTINPUT: {
 			uint8_t* input_text = str_utf8_to_cp437((uint8_t*)event.text.text);
-			if (input_text == NULL || *input_text == '\0')
+			if (!input_text)
 				break;
-			handle_text_input((const char*)input_text);
+
+			if (input_text[0])
+				handle_text_input((const char*)input_text);
+
 			free(input_text);
 			break;
 		}
