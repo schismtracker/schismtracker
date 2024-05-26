@@ -78,7 +78,7 @@ static char  **gArgv;
 static BOOL   gFinderLaunch;
 int macosx_did_finderlaunch;
 
-#define KEQ_FN(n) [NSString stringWithFormat:@"%C", NSF##n##FunctionKey]
+#define KEQ_FN(n) [NSString stringWithFormat:@"%C", (unichar)(NSF##n##FunctionKey)]
 
 @interface SDL_SchismTracker : NSApplication
 @end
