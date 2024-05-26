@@ -70,11 +70,8 @@ void cfg_init_dir(void)
 
 	cur_dir = get_current_directory();
 	portable_file = dmoz_path_concat(cur_dir, "portable.txt");
-	int is_portable_mode = is_file(portable_file);
-	free(cur_dir);
-	free(portable_file);
 
-	if(is_portable_mode) {
+	if(is_file(portable_file)) {
 		printf("In portable mode.\n");
 
 		strncpy(cfg_dir_dotschism, cur_dir, PATH_MAX);
@@ -98,6 +95,9 @@ void cfg_init_dir(void)
 			}
 		}
 	}
+
+	free(cur_dir);
+	free(portable_file);
 #endif
 }
 
