@@ -66,23 +66,38 @@ void cfg_init_dir(void)
 #if defined(__amigaos4__)
 	strcpy(cfg_dir_dotschism, "PROGDIR:");
 #else
-	char *dot_dir, *ptr;
+	char *cur_dir, *portable_file;
 
-	dot_dir = get_dot_directory();
-	ptr = dmoz_path_concat(dot_dir, DOT_SCHISM);
-	strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
-	cfg_dir_dotschism[PATH_MAX] = 0;
-	free(dot_dir);
-	free(ptr);
+	cur_dir = get_current_directory();
+	portable_file = dmoz_path_concat(cur_dir, "portable.txt");
 
-	if (!is_directory(cfg_dir_dotschism)) {
-		printf("Creating directory %s\n", cfg_dir_dotschism);
-		printf("Schism Tracker uses this directory to store your settings.\n");
-		if (mkdir(cfg_dir_dotschism, 0777) != 0) {
-			perror("Error creating directory");
-			fprintf(stderr, "Everything will still work, but preferences will not be saved.\n");
+	if(is_file(portable_file)) {
+		printf("In portable mode.\n");
+
+		strncpy(cfg_dir_dotschism, cur_dir, PATH_MAX);
+		cfg_dir_dotschism[PATH_MAX] = 0;
+	} else {
+		char *dot_dir, *ptr;
+
+		dot_dir = get_dot_directory();
+		ptr = dmoz_path_concat(dot_dir, DOT_SCHISM);
+		strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
+		cfg_dir_dotschism[PATH_MAX] = 0;
+		free(dot_dir);
+		free(ptr);
+
+		if (!is_directory(cfg_dir_dotschism)) {
+			printf("Creating directory %s\n", cfg_dir_dotschism);
+			printf("Schism Tracker uses this directory to store your settings.\n");
+			if (mkdir(cfg_dir_dotschism, 0777) != 0) {
+				perror("Error creating directory");
+				fprintf(stderr, "Everything will still work, but preferences will not be saved.\n");
+			}
 		}
 	}
+
+	free(cur_dir);
+	free(portable_file);
 #endif
 }
 
