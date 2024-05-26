@@ -197,7 +197,6 @@ case "${host_os}" in
 		fi
 
 		use_win32=yes
-		AC_DEFINE([WIN32], [], [Windows])
 		;;
 	*)
 		AC_MSG_RESULT([nothing to do here])
