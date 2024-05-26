@@ -199,7 +199,7 @@ static void setApplicationMenu(void)
         [menuItem setRepresentedObject: @"orders"];
         menuItem = (NSMenuItem*)[appleMenu addItemWithTitle:@"Variables"
                                         action:@selector(_menu_callback:)
-                                 keyEquivalent:[NSString stringWithFormat:@"%C", NSF12FunctionKey]];
+                                 keyEquivalent:KEQ_FN(12)];
         [menuItem setKeyEquivalentModifierMask:0];
         [menuItem setRepresentedObject: @"variables"];
         menuItem = (NSMenuItem*)[appleMenu addItemWithTitle:@"Message Editor"
@@ -359,7 +359,8 @@ static void setApplicationMenu(void)
         [menuItem setRepresentedObject: @"palette_page"];
         menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Font Editor"
                                 action:@selector(_menu_callback:)
-                                keyEquivalent:@""];
+                                keyEquivalent:KEQ_FN(12)];
+		[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
         [menuItem setRepresentedObject: @"font_editor"];
         menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"System Configuration"
                                 action:@selector(_menu_callback:)
