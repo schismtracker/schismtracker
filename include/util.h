@@ -171,6 +171,7 @@ char *str_concat(const char *s, ...);
 /* filesystem */
 int make_backup_file(const char *filename, int numbered);
 unsigned long long file_size(const char *filename);
+int is_file(const char *filename);
 int is_directory(const char *filename);
 /* following functions should free() the resulting strings */
 char *get_home_directory(void); /* "default" directory for user files, i.e. $HOME, My Documents, etc. */
