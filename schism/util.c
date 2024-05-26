@@ -755,6 +755,18 @@ unsigned long long file_size(const char *filename) {
 /* --------------------------------------------------------------------- */
 /* FILESYSTEM FUNCTIONS */
 
+int is_file(const char *filename)
+{
+	struct stat buf;
+
+	if (os_stat(filename, &buf) == -1) {
+		/* Well, at least we tried. */
+		return 0;
+	}
+
+	return S_ISREG(buf.st_mode);
+}
+
 int is_directory(const char *filename)
 {
 	struct stat buf;
