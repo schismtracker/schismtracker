@@ -71,19 +71,20 @@ struct video_cf {
 	SDL_Texture *texture;
 	unsigned char *framebuf;
 
-	int width;
-	int height;
+	int width, height;
 
 	struct {
-		unsigned int x;
-		unsigned int y;
+		unsigned int x, y;
 		int visible;
 	} mouse;
 
 #ifdef WIN32
 	struct {
-		int width;
-		int height;
+		/* TODO: need to save the state of the menu bar or else
+		 * these will be wrong if it's toggled while in fullscreen */
+		int width, height;
+
+		int x, y;
 	} saved;
 #endif
 
@@ -178,16 +179,17 @@ void video_fullscreen(int new_fs_flag)
 	if (video.fullscreen) {
 #ifdef WIN32
 		SDL_GetWindowSize(video.window, &video.saved.width, &video.saved.height);
-#endif
-		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-#ifdef WIN32
+		SDL_GetWindowPosition(video.window, &video.saved.x, &video.saved.y);
 		win32_toggle_menu(video.window, 0);
 #endif
+		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 	} else {
 		SDL_SetWindowFullscreen(video.window, 0);
 #ifdef WIN32
+		/* the menu must be toggled first here */
 		win32_toggle_menu(video.window, 1);
 		SDL_SetWindowSize(video.window, video.saved.width, video.saved.height);
+		SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
 #endif
 		set_icon(); /* XXX is this necessary */
 	}
