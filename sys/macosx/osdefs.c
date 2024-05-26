@@ -43,6 +43,9 @@ int macosx_sdlevent(SDL_Event *event)
 			 *
 			 *   - paper */
 			event->key.keysym.sym = SDLK_INSERT;
+			break;
+		default:
+			break;
 		};
 	}
 	return 1;
