@@ -206,13 +206,10 @@ static void run_exit_hook(void)
 
 /* filename of song to load on startup, or NULL for none */
 #ifdef MACOSX
+/* this gets written to by the custom main function on macosx */
 char *initial_song = NULL;
 #else
 static char *initial_song = NULL;
-#endif
-
-#ifdef MACOSX
-static int ibook_helper = -1;
 #endif
 
 /* initial module directory */
@@ -266,14 +263,6 @@ enum {
 	O_DEBUG,
 	O_VERSION,
 };
-
-#if defined(WIN32)
-# define OPENGL_PATH "\\path\\to\\opengl.dll"
-#elif defined(MACOSX)
-# define OPENGL_PATH "/path/to/opengl.dylib"
-#else
-# define OPENGL_PATH "/path/to/opengl.so"
-#endif
 
 #define USAGE "Usage: %s [OPTIONS] [DIRECTORY] [FILE]\n"
 
@@ -582,19 +571,7 @@ static void event_loop(void)
 
 			switch (fix_numlock_key) {
 			case NUMLOCK_GUESS:
-#ifdef MACOSX
-				// FIXME can this be moved to macosx_sdlevent?
-				if (ibook_helper != -1) {
-					if (ACTIVE_PAGE.selected_widget > -1
-					    && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
-					    && ACTIVE_PAGE_WIDGET.accept_text) {
-						/* text is more likely? */
-						modkey |= KMOD_NUM;
-					} else {
-						modkey &= ~KMOD_NUM;
-					}
-				} /* otherwise honor it */
-#endif
+				/* should be handled per OS */
 				break;
 			case NUMLOCK_ALWAYS_OFF:
 				modkey &= ~KMOD_NUM;
@@ -885,10 +862,6 @@ void schism_exit(int status)
 	if (shutdown_process & EXIT_SAVECFG)
 		cfg_atexit_save();
 
-#ifdef MACOSX
-	if (ibook_helper != -1)
-		macosx_ibook_fnswitch(ibook_helper);
-#endif
 	if (shutdown_process & EXIT_SDLQUIT) {
 		song_lock_audio();
 		song_stop_unlocked(1);
@@ -928,9 +901,6 @@ int main(int argc, char **argv)
 	(but we don't do that at all yet, anyway) */
 	ver_init();
 
-	/* FIXME: make a config option for this, and stop abusing frickin' environment variables! */
-	put_env_var("SCHISM_VIDEO_ASPECT", "full");
-
 	vis_init();
 
 	video_fullscreen(0);
@@ -946,9 +916,6 @@ int main(int argc, char **argv)
 		run_startup_hook();
 		shutdown_process |= EXIT_HOOK;
 	}
-#endif
-#ifdef MACOSX
-	ibook_helper = macosx_ibook_fnswitch(1);
 #endif
 
 	/* Eh. */

@@ -53,6 +53,8 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_sysinit win32_sysinit
 #elif defined(MACOSX)
 # define os_sdlevent macosx_sdlevent
+# define os_sysexit macosx_sysexit
+# define os_sysinit macosx_sysinit
 #endif
 
 #ifndef os_sdlevent
@@ -89,6 +91,8 @@ void win32_toggle_menu(SDL_Window* window, int yes);
 void win32_refresh_menu(SDL_Window* window, int yes);
 
 int macosx_sdlevent(SDL_Event* event);
+void macosx_sysexit(void);
+void macosx_sysinit(int *pargc, char ***pargv); /* set up ibook helper */
 
 #endif /* ! OSDEFS_H */
 

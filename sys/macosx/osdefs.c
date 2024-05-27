@@ -22,13 +22,50 @@
  */
 
 #include "headers.h"
+
+#include "it.h"
 #include "osdefs.h"
 #include "event.h"
 #include "song.h"
+#include "page.h"
+
+/* this gets stored at startup as the initial value of fnswitch before
+ * we tamper with it, so we can restore it on shutdown */
+static int ibook_helper = -1;
 
 int macosx_sdlevent(SDL_Event *event)
 {
-	if (event->type == SDL_KEYDOWN || event->type == SDL_KEYUP) {
+	switch (event->type) {
+	case SDL_WINDOWEVENT:
+		switch (event->window.event) {
+		case SDL_WINDOWEVENT_FOCUS_GAINED:
+		case SDL_WINDOWEVENT_FOCUS_LOST:
+			macosx_ibook_fnswitch((event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED) ? 1 : 0);
+		default:
+			break;
+		}
+		return 1;
+	case SDL_KEYDOWN:
+	case SDL_KEYUP:
+		switch (status.fix_numlock_setting) {
+		case NUMLOCK_GUESS:
+			/* why is this checking for ibook_helper? */
+			if (ibook_helper != -1) {
+				if (ACTIVE_PAGE.selected_widget > -1
+				    && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
+				    && ACTIVE_PAGE_WIDGET.accept_text) {
+					/* text is more likely? */
+					event->key.keysym.mod |= KMOD_NUM;
+				} else {
+					event->key.keysym.mod &= ~KMOD_NUM;
+				}
+			} /* otherwise honor it */
+			break;
+		default:
+			/* other cases are handled in schism/main.c */
+			break;
+		}
+
 		switch (event->key.keysym.scancode) {
 		case SDL_SCANCODE_KP_ENTER:
 			/* On portables, the regular Insert key
@@ -47,7 +84,20 @@ int macosx_sdlevent(SDL_Event *event)
 		default:
 			break;
 		};
+		return 1;
+	default:
+		break;
 	}
 	return 1;
 }
 
+void macosx_sysexit(void) {
+	/* return back to default */
+	if (ibook_helper != -1)
+		macosx_ibook_fnswitch(ibook_helper);
+}
+
+void macosx_sysinit(UNUSED int *pargc, UNUSED char ***pargv) {
+	/* macosx_ibook_fnswitch only sets the value if it's one of (0, 1) */
+	ibook_helper = macosx_ibook_fnswitch(-1);
+}
