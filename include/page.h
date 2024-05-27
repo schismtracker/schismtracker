@@ -246,7 +246,7 @@ struct widget {
 
 	/* these next 5 fields specify what widget gets selected next */
 	struct {
-		int up, down, left, right, tab;
+		int up, down, left, right, tab, backtab;
 	} next;
 
 	/* called whenever the value is changed... duh ;) */

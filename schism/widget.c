@@ -41,6 +41,7 @@ void create_toggle(struct widget *w, int x, int y, int next_up, int next_down,
 	w->next.down = next_down;
 	w->next.right = next_right;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->activate = NULL;
 	w->depressed = 0;
@@ -70,6 +71,7 @@ void create_menutoggle(struct widget *w, int x, int y, int next_up, int next_dow
 	w->next.down = next_down;
 	w->next.right = next_right;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->d.menutoggle.choices = choices;
 	w->d.menutoggle.num_choices = n;
@@ -92,6 +94,7 @@ void create_button(struct widget *w, int x, int y, int width, int next_up, int n
 	w->next.down = next_down;
 	w->next.right = next_right;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->d.button.text = text;
 	w->d.button.padding = padding;
@@ -114,6 +117,7 @@ void create_togglebutton(struct widget *w, int x, int y, int width, int next_up,
 	w->next.down = next_down;
 	w->next.right = next_right;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->d.togglebutton.text = text;
 	w->d.togglebutton.padding = padding;
@@ -135,6 +139,7 @@ void create_textentry(struct widget *w, int x, int y, int width, int next_up, in
 	w->next.down = next_down;
 	w->next.right = -1;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->d.textentry.text = text;
 	w->d.textentry.max_length = max_length;
@@ -157,6 +162,7 @@ void create_numentry(struct widget *w, int x, int y, int width, int next_up, int
 	w->next.down = next_down;
 	w->next.right = -1;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->d.numentry.min = min;
 	w->d.numentry.max = max;
@@ -180,6 +186,7 @@ void create_thumbbar(struct widget *w, int x, int y, int width, int next_up, int
 	w->next.down = next_down;
 	w->next.right = -1;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->d.thumbbar.min = min;
 	w->d.thumbbar.max = max;
@@ -204,6 +211,7 @@ void create_bitset(struct widget *w, int x, int y, int width, int next_up, int n
 	w->next.down = next_down;
 	w->next.right = -1;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->d.numentry.reverse = 0;
 	w->d.bitset.nbits = nbits;
@@ -226,6 +234,7 @@ void create_panbar(struct widget *w, int x, int y, int next_up, int next_down, i
 	w->next.down = next_down;
 	w->next.right = -1;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->d.numentry.reverse = 0;
 	w->d.panbar.min = 0;
@@ -241,6 +250,7 @@ void create_other(struct widget *w, int next_tab, int (*i_handle_key) (struct ke
 	w->accept_text = 0;
 	w->next.up = w->next.down = w->next.left = w->next.right = 0;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	/* w->changed = NULL; ??? */
 	w->depressed = 0;
 	w->activate = NULL;

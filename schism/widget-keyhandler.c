@@ -147,6 +147,12 @@ int find_backtab(int selected)
 	int current = selected;
 
 	for(int i = 0; i < *total_widgets; i++) {
+		int widget_backtab = widgets[current].next.backtab;
+
+		if(widget_backtab > -1) {
+			return widget_backtab;
+		}
+
 		int tab_to = find_tab_to(current);
 
 		if(tab_to > -1) {
