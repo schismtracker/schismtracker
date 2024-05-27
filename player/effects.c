@@ -840,6 +840,8 @@ static uint8_t midi_event_length(uint8_t first_byte)
 	}
 }
 
+
+
 void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uint32_t param,
 			uint32_t note, uint32_t velocity, uint32_t use_instr)
 {
@@ -894,16 +896,12 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 				data = (note - 1);
 				break;
 			case 'v': {
-				/* Velocity (Global Volume)
-				     8bitbubsy's it2play loosely used as a reference */
-				if (!(chan->flags & CHN_MUTE) && chan->ptr_sample) {
-					uint32_t vol = _muldiv(chan->volume * csf->current_global_volume * chan->global_volume, chan->ptr_sample->global_volume * 2, 1 << 19);
-					data = (unsigned char)CLAMP(vol >> 2, 0x01, 0x7F);
-				}
+				data = (unsigned char)CLAMP(velocity, 0x01, 0x7F);
 				break;
 			}
 			case 'u': {
 				/* Volume */
+				/* this will definitely be wrong when processing MIDI out */
 				if (!(chan->flags & CHN_MUTE))
 					data = (unsigned char)CLAMP(chan->final_volume >> 7, 0x01, 0x7F);
 				break;
@@ -1976,19 +1974,26 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		}
 		break;
 
-	case FX_MIDI:
+	case FX_MIDI: {
 		if (!(csf->flags & SONG_FIRSTTICK))
 			break;
-		if (param < 0x80) {
-			csf_process_midi_macro(csf, nchan,
-				csf->midi_config.sfx[chan->active_macro],
-				param, 0, 0, 0);
-		} else {
-			csf_process_midi_macro(csf, nchan,
-				csf->midi_config.zxx[param & 0x7F],
-				param, 0, 0, 0);
-		}
+
+		/* this is wrong; see OpenMPT's soundlib/Snd_fx.cpp:
+		 *
+		 *     This is "almost" how IT does it - apparently, IT seems to lag one row
+		 *     behind on global volume or channel volume changes.
+		 *
+		 * OpenMPT also doesn't entirely support IT's version of this macro, which is
+		 * just another demotivator for actually implementing it correctly *sigh* */
+		const uint32_t vel = _muldiv(chan->volume * csf->current_global_volume * chan->global_volume,
+			chan->ptr_sample->global_volume * 2,
+			1 << 21);
+
+		csf_process_midi_macro(csf, nchan,
+			(param < 0x80) ? csf->midi_config.sfx[chan->active_macro] : csf->midi_config.zxx[param & 0x7F],
+			param, chan->note, vel, 0);
 		break;
+	}
 
 	case FX_NOTESLIDEUP:
 		fx_note_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param, 1);
