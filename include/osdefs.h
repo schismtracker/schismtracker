@@ -51,10 +51,12 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_sdlevent win32_sdlevent
 # define os_sdlinit win32_sdlinit
 # define os_sysinit win32_sysinit
+# define os_get_modkey win32_get_modkey
 #elif defined(MACOSX)
 # define os_sdlevent macosx_sdlevent
 # define os_sysexit macosx_sysexit
 # define os_sysinit macosx_sysinit
+# define os_get_modkey macosx_get_modkey
 #endif
 
 #ifndef os_sdlevent
@@ -68,6 +70,9 @@ A return value of 0 indicates that the event should NOT be processed by the main
 #endif
 #ifndef os_sysexit
 # define os_sysexit()
+#endif
+#ifndef os_get_modkey
+#define os_get_modkey(m)
 #endif
 
 /* this alias is kept for compatibility */
@@ -93,6 +98,6 @@ void win32_refresh_menu(SDL_Window* window, int yes);
 int macosx_sdlevent(SDL_Event* event);
 void macosx_sysexit(void);
 void macosx_sysinit(int *pargc, char ***pargv); /* set up ibook helper */
+void macosx_get_modkey(int *m);
 
 #endif /* ! OSDEFS_H */
-

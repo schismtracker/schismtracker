@@ -488,9 +488,7 @@ static void event_loop(void)
 	status.last_keysym.sym = 0;
 
 	modkey = SDL_GetModState();
-#if defined(WIN32)
-	win32_get_modkey(&modkey);
-#endif
+	os_get_modkey(&modkey);
 	SDL_SetModState(modkey);
 
 #ifdef USE_X11
@@ -563,9 +561,9 @@ static void event_loop(void)
 					& ~(_ALTTRACKED_KMOD))
 					| (modkey & _ALTTRACKED_KMOD);
 			}
-#if defined(WIN32)
-			win32_get_modkey(&modkey);
-#endif
+
+			os_get_modkey(&modkey);
+
 			kk.sym.sym = event.key.keysym.sym;
 			kk.scancode = event.key.keysym.scancode;
 
@@ -604,9 +602,7 @@ static void event_loop(void)
 		case SDL_WINDOWEVENT:
 			/* reset this... */
 			modkey = SDL_GetModState();
-#if defined(WIN32)
-			win32_get_modkey(&modkey);
-#endif
+			os_get_modkey(&modkey);
 			SDL_SetModState(modkey);
 
 			handle_window_event(&event.window);
@@ -621,9 +617,7 @@ static void event_loop(void)
 		case SDL_MOUSEBUTTONUP:
 			if (kk.state == KEY_PRESS) {
 				modkey = SDL_GetModState();
-#if defined(WIN32)
-				win32_get_modkey(&modkey);
-#endif
+				os_get_modkey(&modkey);
 			}
 
 			kk.sym.sym = 0;
