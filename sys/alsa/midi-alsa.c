@@ -454,6 +454,7 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 			}
 
 			midi_port_register(_alsa_provider, io, buffer, data, 1);
+			free(buffer);
 		}
 	}
 
