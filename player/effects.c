@@ -1831,12 +1831,8 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 			break;
 		if (param)
 			chan->mem_offset = (chan->mem_offset & ~0xff00) | (param << 8);
-		if (NOTE_IS_NOTE(chan->row_note)) {
-			// when would position *not* be zero if there's a note but no portamento?
-			if (porta)
-				chan->position = chan->mem_offset;
-			else
-				chan->position += chan->mem_offset;
+		if (NOTE_IS_NOTE(chan->row_instr ? chan->new_note : chan->row_note)) {
+			chan->position = chan->mem_offset;
 			if (chan->position > chan->length) {
 				chan->position = (csf->flags & SONG_ITOLDEFFECTS) ? chan->length : 0;
 			}
