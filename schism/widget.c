@@ -133,6 +133,7 @@ void create_textentry(struct widget *w, int x, int y, int width, int next_up, in
 	w->height = 1;
 	w->next.up = next_up;
 	w->next.down = next_down;
+	w->next.right = -1;
 	w->next.tab = next_tab;
 	w->changed = changed;
 	w->d.textentry.text = text;
@@ -154,6 +155,7 @@ void create_numentry(struct widget *w, int x, int y, int width, int next_up, int
 	w->height = 1;
 	w->next.up = next_up;
 	w->next.down = next_down;
+	w->next.right = -1;
 	w->next.tab = next_tab;
 	w->changed = changed;
 	w->d.numentry.min = min;
@@ -176,6 +178,7 @@ void create_thumbbar(struct widget *w, int x, int y, int width, int next_up, int
 	w->height = 1;
 	w->next.up = next_up;
 	w->next.down = next_down;
+	w->next.right = -1;
 	w->next.tab = next_tab;
 	w->changed = changed;
 	w->d.thumbbar.min = min;
@@ -199,6 +202,7 @@ void create_bitset(struct widget *w, int x, int y, int width, int next_up, int n
 	w->height = 1;
 	w->next.up = next_up;
 	w->next.down = next_down;
+	w->next.right = -1;
 	w->next.tab = next_tab;
 	w->changed = changed;
 	w->d.numentry.reverse = 0;
@@ -220,6 +224,7 @@ void create_panbar(struct widget *w, int x, int y, int next_up, int next_down, i
 	w->height = 1;
 	w->next.up = next_up;
 	w->next.down = next_down;
+	w->next.right = -1;
 	w->next.tab = next_tab;
 	w->changed = changed;
 	w->d.numentry.reverse = 0;
@@ -407,7 +412,7 @@ int numentry_handle_text(struct widget *w, const char* text_input) {
 			/* add our digit in its place */
 			value += (text_input[n] - '0') * pow10_of_pos;
 		}
-	
+
 		*(w->d.numentry.cursor_pos) = CLAMP(pos, 0, w->width - 1);
 	}
 
@@ -603,6 +608,10 @@ void draw_widget(struct widget *w, int selected)
 
 void change_focus_to(int new_widget_index)
 {
+	if(new_widget_index == -1) {
+		return;
+	}
+
 	if (*selected_widget != new_widget_index) {
 		if (ACTIVE_WIDGET.depressed) ACTIVE_WIDGET.depressed = 0;
 

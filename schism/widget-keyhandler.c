@@ -98,62 +98,107 @@ static int thumbbar_prompt_value(struct widget *widget, struct key_event *k)
 }
 
 /* --------------------------------------------------------------------- */
-/* This function is completely disgustipated. */
+/* Find backtabs. */
 
+int find_tab_to(int target)
+{
+	struct widget *w;
+
+	for (int i = 0; i < *total_widgets; i++) {
+		w = &widgets[i];
+		if (w->next.tab == target && i != target) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+int find_down_to(int target)
+{
+	struct widget *w;
+
+	for (int i = 0; i < *total_widgets; i++) {
+		w = &widgets[i];
+		if (w->next.down == target && i != target) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+int find_right_to(int target)
+{
+	struct widget *w;
+
+	for (int i = 0; i < *total_widgets; i++) {
+		w = &widgets[i];
+		if (w->next.right == target && i != target) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+int find_backtab(int selected)
+{
+	int current = selected;
+
+	for(int i = 0; i < *total_widgets; i++) {
+		int tab_to = find_tab_to(current);
+
+		if(tab_to > -1) {
+			return tab_to;
+		}
+
+		if (status.flags & CLASSIC_MODE) {
+			int right_to = find_right_to(current);
+
+			if(right_to > -1 && right_to != selected) {
+				current = right_to;
+				continue;
+			}
+
+			int down_to = find_down_to(current);
+
+			if(down_to > -1 && down_to != selected) {
+				current = down_to;
+				continue;
+			}
+		} else {
+			int down_to = find_down_to(current);
+
+			if(down_to > -1 && down_to != selected) {
+				current = down_to;
+				continue;
+			}
+
+			int right_to = find_right_to(current);
+
+			if(right_to > -1 && right_to != selected) {
+				current = right_to;
+				continue;
+			}
+		}
+
+		return -1;
+	}
+
+	return -1;
+}
 
 static void _backtab(void)
 {
-	struct widget *w;
-	int i;
-
 	/* hunt for a widget that leads back to this one */
 	if (!total_widgets || !selected_widget) return;
 
-	for (i = 0; i < *total_widgets; i++) {
-		w = &widgets[i];
-		if (w->next.tab == *selected_widget) {
-			/* found backtab */
-			change_focus_to(i);
-			return;
-		}
+	int backtab = find_backtab(*selected_widget);
 
+	if(backtab > -1) {
+		change_focus_to(backtab);
 	}
-	if (status.flags & CLASSIC_MODE) {
-		for (i = 0; i < *total_widgets; i++) {
-			w = &widgets[i];
-			if (w->next.right == *selected_widget) {
-				/* simulate backtab */
-				change_focus_to(i);
-				return;
-			}
-		}
-		for (i = 0; i < *total_widgets; i++) {
-			w = &widgets[i];
-			if (w->next.down == *selected_widget) {
-				/* simulate backtab */
-				change_focus_to(i);
-				return;
-			}
-		}
-	} else {
-		for (i = 0; i < *total_widgets; i++) {
-			w = &widgets[i];
-			if (w->next.down == *selected_widget) {
-				/* simulate backtab */
-				change_focus_to(i);
-				return;
-			}
-		}
-		for (i = 0; i < *total_widgets; i++) {
-			w = &widgets[i];
-			if (w->next.right == *selected_widget) {
-				/* simulate backtab */
-				change_focus_to(i);
-				return;
-			}
-		}
-	}
-	change_focus_to(0); /* err... */
 }
 
 /* return: 1 = handled text, 0 = didn't */
