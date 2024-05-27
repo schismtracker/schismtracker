@@ -63,6 +63,9 @@ static int (*JACK_jack_disconnect)(jack_client_t *, const char *, const char *);
 static const char ** (*JACK_jack_get_ports)(jack_client_t *, const char *, const char *, unsigned long);
 static int (*JACK_jack_port_is_mine)(const jack_client_t *, const jack_port_t *);
 static void (*JACK_jack_midi_clear_buffer)(void *);
+static jack_time_t (*JACK_jack_frames_to_time)(const jack_client_t *client, jack_nframes_t);
+static jack_nframes_t (*JACK_jack_time_to_frames)(const jack_client_t *, jack_time_t);
+static jack_time_t (*JACK_jack_get_time)(void);
 
 static int load_jack_syms(void);
 
@@ -142,6 +145,9 @@ static int load_jack_syms(void) {
 	SCHISM_JACK_SYM(jack_get_ports);
 	SCHISM_JACK_SYM(jack_port_is_mine);
 	SCHISM_JACK_SYM(jack_midi_clear_buffer);
+	SCHISM_JACK_SYM(jack_get_time);
+	SCHISM_JACK_SYM(jack_time_to_frames);
+	SCHISM_JACK_SYM(jack_frames_to_time);
 
 	return 0;
 }
@@ -159,35 +165,49 @@ static jack_port_t* midi_out_port = NULL;
 static jack_ringbuffer_t* ringbuffer = NULL;
 static size_t ringbuffer_max_write = 0;
 
+struct jack_midi {
+	jack_port_t* port;
+	int mark;
+};
+
 static void _jack_send(UNUSED struct midi_port *p, const unsigned char *data, unsigned int len, unsigned int delay) {
+	/* This is technically non-portable; jack time isn't necessarily linear, but it likely always is,
+	 * so who cares. */
+	jack_time_t absolute_delay = JACK_jack_frames_to_time(client, JACK_jack_get_time() + (delay * 1000));
+
 	if (len + sizeof(len) > ringbuffer_max_write)
 		return;
 
-	while (JACK_jack_ringbuffer_write_space(ringbuffer) < len + sizeof(len))
+	while (JACK_jack_ringbuffer_write_space(ringbuffer) < len + sizeof(len) + sizeof(absolute_delay))
 		sched_yield();
 
 	JACK_jack_ringbuffer_write(ringbuffer, (const char*)&len, sizeof(len));
+	JACK_jack_ringbuffer_write(ringbuffer, (const char*)&absolute_delay, sizeof(absolute_delay));
 	JACK_jack_ringbuffer_write(ringbuffer, (const char*)data, len);
 }
 
+static void _jack_drain(UNUSED struct midi_port* p) {
+	/* do nothing; _jack_process handles this */
+}
+
 static int _jack_start(struct midi_port *p) {
-	jack_port_t* jack_port = (jack_port_t*)p->userdata;
+	struct jack_midi* m = (struct jack_midi*)p->userdata;
 
 	if (p->io & MIDI_INPUT)
-		return !JACK_jack_connect(client, JACK_jack_port_name(jack_port), JACK_jack_port_name(midi_in_port));
+		return !JACK_jack_connect(client, JACK_jack_port_name(m->port), JACK_jack_port_name(midi_in_port));
 	else if (p->io & MIDI_OUTPUT)
-		return !JACK_jack_connect(client, JACK_jack_port_name(midi_out_port), JACK_jack_port_name(jack_port));
+		return !JACK_jack_connect(client, JACK_jack_port_name(midi_out_port), JACK_jack_port_name(m->port));
 
 	return 1;
 }
 
 static int _jack_stop(struct midi_port *p) {
-	jack_port_t* jack_port = (jack_port_t*)p->userdata;
+	struct jack_midi* m = (struct jack_midi*)p->userdata;
 
 	if (p->io & MIDI_INPUT)
-		return !JACK_jack_disconnect(client, JACK_jack_port_name(jack_port), JACK_jack_port_name(midi_in_port));
+		return !JACK_jack_disconnect(client, JACK_jack_port_name(m->port), JACK_jack_port_name(midi_in_port));
 	else if (p->io & MIDI_OUTPUT)
-		return !JACK_jack_disconnect(client, JACK_jack_port_name(midi_out_port), JACK_jack_port_name(jack_port));
+		return !JACK_jack_disconnect(client, JACK_jack_port_name(midi_out_port), JACK_jack_port_name(m->port));
 
 	return 1;
 }
@@ -219,12 +239,15 @@ static int _jack_process(jack_nframes_t nframes, void* user_data) {
 	JACK_jack_midi_clear_buffer(midi_out_buffer);
 
 	unsigned int size = 0;
+	jack_time_t time_delay = 0;
 
 	while (JACK_jack_ringbuffer_peek(ringbuffer, (char*)&size, sizeof(size)) == sizeof(size)
-	       && JACK_jack_ringbuffer_read_space(ringbuffer) >= sizeof(size) + size) {
+	       && JACK_jack_ringbuffer_read_space(ringbuffer) >= sizeof(size) + sizeof(time_delay) + size) {
 		JACK_jack_ringbuffer_read_advance(ringbuffer, sizeof(size));
 
-		jack_midi_data_t* data = JACK_jack_midi_event_reserve(midi_out_buffer, 0, size);
+		JACK_jack_ringbuffer_read(ringbuffer, (char*)&time_delay, sizeof(time_delay));
+
+		jack_midi_data_t* data = JACK_jack_midi_event_reserve(midi_out_buffer, JACK_jack_time_to_frames(client, time_delay), size);
 
 		if (data) return (JACK_jack_ringbuffer_read(ringbuffer, (char*)data, size) != size);
 		else JACK_jack_ringbuffer_read_advance(ringbuffer, size);
@@ -235,64 +258,41 @@ static int _jack_process(jack_nframes_t nframes, void* user_data) {
 
 /* inout for these functions should be EITHER MIDI_INPUT or MIDI_OUTPUT, never both.
  * jack has no concept of duplex ports */
-static struct midi_port* _jack_is_name_in_midi_ports(struct midi_provider* p, const char* name, int inout) {
-	struct midi_port* ptr = NULL;
-	while (midi_port_foreach(p, &ptr)) {
-		if (!(ptr->iocap & inout))
-			continue;
-
-		jack_port_t* port = (jack_port_t*)ptr->userdata;
-
-		if (JACK_jack_port_by_name(client, name) == port)
-			return ptr;
-	}
-
-	return NULL;
-}
-
-static const char* _jack_is_port_in_name_list(const char** names, struct midi_port* ptr, int inout) {
-	jack_port_t* m = (jack_port_t*)ptr->userdata;
-	const char** name;
-
-	if (!(ptr->iocap & inout))
-		return NULL;
-
-	for (name = names; *name; name++)
-		if (JACK_jack_port_by_name(client, *name) == m)
-			return *name;
-
-	return NULL;
-}
-
 static void _jack_enumerate_ports(const char** port_names, struct midi_provider* p, int inout) {
-	if (!client) {
-		/* remove any existing ports */
-		struct midi_port* ptr = NULL;
-		while (midi_port_foreach(p, &ptr))
-			midi_port_unregister(ptr->num);
+	struct midi_port* ptr;
+	struct jack_midi* m;
+	int ok;
 
-		return;
-	}
-
-	struct midi_port* ptr = NULL;
-	while (midi_port_foreach(p, &ptr))
-		if ((ptr->iocap & inout) && !_jack_is_port_in_name_list(port_names, ptr, inout))
-			midi_port_unregister(ptr->num);
-
-	const char** port_name = NULL;
-
-	/* THEN search for new ports to insert */
+	/* search for new ports to insert */
+	const char** port_name;
 	for (port_name = port_names; *port_name; port_name++) {
 		jack_port_t* port = JACK_jack_port_by_name(client, *port_name);
-		if (_jack_is_name_in_midi_ports(p, *port_name, inout)
-			|| JACK_jack_port_is_mine(client, port))
+
+		if (JACK_jack_port_is_mine(client, port))
+			continue;
+
+		ptr = NULL;
+		ok = 0;
+		while (midi_port_foreach(p, &ptr)) {
+			m = (struct jack_midi*)ptr->userdata;
+			if (ptr->iocap == inout && m->port == port) {
+				m->mark = 1;
+				ok = 1;
+			}
+		}
+
+		if (ok)
 			continue;
 
 		/* create the UI name... */
 		char ptr[55];
 		snprintf(ptr, 55, " %-*.*s (JACK)", 55 - 9, 55 - 9, *port_name);
 
-		midi_port_register(p, inout, ptr, port, 0);
+		m = mem_alloc(sizeof(*m));
+		m->port = port;
+		m->mark = 1;
+
+		midi_port_register(p, inout, ptr, m, 1);
 	}
 }
 
@@ -343,8 +343,16 @@ static int _jack_attempt_connect(struct midi_provider* jack_provider_) {
 
 static void _jack_poll(struct midi_provider* jack_provider_)
 {
+	struct midi_port* ptr;
+	struct jack_midi* m;
 	if (!_jack_attempt_connect(jack_provider_))
 		return;
+
+	ptr = NULL;
+	while (midi_port_foreach(jack_provider_, &ptr)) {
+		m = (struct jack_midi*)ptr->userdata;
+		m->mark = 0;
+	}
 
 	const char** ports = NULL;
 
@@ -355,6 +363,11 @@ static void _jack_poll(struct midi_provider* jack_provider_)
 	ports = JACK_jack_get_ports(client, NULL, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput);
 	_jack_enumerate_ports(ports, jack_provider_, MIDI_OUTPUT);
 	free(ports);
+
+	while (midi_port_foreach(jack_provider_, &ptr)) {
+		m = (struct jack_midi*)ptr->userdata;
+		if (!m->mark) midi_port_unregister(ptr->num);
+	}
 }
 
 int jack_midi_setup(void)
@@ -368,10 +381,12 @@ int jack_midi_setup(void)
 			return 0;
 
 	driver.poll = _jack_poll;
+	driver.flags = MIDI_PORT_CAN_SCHEDULE;
 	driver.thread = NULL;
 	driver.enable = _jack_start;
 	driver.disable = _jack_stop;
 	driver.send = _jack_send;
+	driver.drain = _jack_drain;
 
 	ringbuffer = JACK_jack_ringbuffer_create(JACK_RINGBUFFER_SIZE);
 	if (!ringbuffer)
