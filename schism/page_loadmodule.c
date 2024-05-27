@@ -1149,7 +1149,7 @@ void save_module_load_page(struct page *page, int do_export)
 				formats[n].label,
 				(5 - strlen(formats[n].label)) / 2 + 1,
 				filetype_saves);
-		// struct widget *w = widgets_exportsave + 4 + n;
+
 		widgets_exportsave[4 + n].next.backtab = 1;
 	}
 	widgets_exportsave[4 + n - 1].next.down = 2;
