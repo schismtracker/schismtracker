@@ -382,7 +382,7 @@ struct midi_port *midi_engine_port(int n, const char **name)
 	SDL_LockMutex(midi_port_mutex);
 	if (n >= 0 && n < port_count) {
 		pv = port_top[n];
-		if (name) *name = pv->name;
+		if (name && pv) *name = pv->name;
 	}
 	SDL_UnlockMutex(midi_port_mutex);
 	return pv;
@@ -422,10 +422,8 @@ struct midi_provider *midi_provider_register(const char *name,
 	n->next = port_providers;
 	port_providers = n;
 
-	if (driver->thread) {
-		// FIXME this cast is stupid
+	if (driver->thread)
 		n->thread = SDL_CreateThread((int (*)(void*))driver->thread, NULL, n);
-	}
 
 	SDL_UnlockMutex(midi_mutex);
 
@@ -515,11 +513,13 @@ int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor)
 			i = ((*cursor)->num) + 1;
 			while (i < port_alloc && !port_top[i]) i++;
 		}
+
 		if (i >= port_alloc) {
 			*cursor = NULL;
 			SDL_UnlockMutex(midi_port_mutex);
 			return 0;
 		}
+
 		*cursor = port_top[i];
 	} while (p && (*cursor)->provider != p);
 	SDL_UnlockMutex(midi_port_mutex);
@@ -791,8 +791,11 @@ void midi_port_unregister(int num)
 			if (q->free_userdata) free(q->userdata);
 			free(q);
 
-			port_top[i] = NULL;
 			port_count--;
+			memmove(port_top + i, port_top + i + 1, sizeof(*port_top) * (port_count - i));
+
+			/* something probably requires this to be NULL */
+			port_top[port_count] = NULL;
 			break;
 		}
 	}

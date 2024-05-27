@@ -254,19 +254,25 @@ static void midi_page_draw_portlist(void)
 	char buffer[64];
 	int i, n, ct, fg, bg;
 	unsigned long j;
-	time_t now;
+	time_t now = time(NULL);
 
 	draw_fill_chars(3, 15, 76, 28, 0);
-	draw_text("Midi ports:", 2, 13, 0, 2);
+	draw_text("MIDI ports:", 2, 13, 0, 2);
 	draw_box(2,14,77,28, BOX_THIN|BOX_INNER|BOX_INSET);
 
-	time(&now);
-	if ((now - last_midi_poll) > 10) {
+	if (difftime(now, last_midi_poll) > 10) {
 		last_midi_poll = now;
 		midi_engine_poll_ports();
 	}
 
 	ct = midi_engine_port_count();
+
+	/* make sure this stuff doesn't overflow! */
+	if (ct > 13 && top_midi_port + 13 >= ct)
+		top_midi_port = ct - 13;
+
+	current_port = MIN(current_port, ct - 1);
+
 	for (i = 0; i < 13; i++) {
 		draw_char(168, 12, i + 15, 2, 0);
 
@@ -284,9 +290,8 @@ static void midi_page_draw_portlist(void)
 		}
 		draw_text_len(name, 64, 13, 15+i, 5, 0);
 
-		/* portability: should use difftime */
 		if (status.flags & MIDI_EVENT_CHANGED
-		    && (time(NULL) - status.last_midi_time) < 3
+		    && difftime(now, status.last_midi_time) < 3
 		    && ((!status.last_midi_port && p->io & MIDI_OUTPUT)
 		    || p == status.last_midi_port)) {
 			for (j = n = 0; j < 21 && j < status.last_midi_len; j++) { /* 21 is approx 64/3 */
@@ -312,7 +317,7 @@ static void midi_page_draw_portlist(void)
 
 void midi_load_page(struct page *page)
 {
-	page->title = "Midi Screen (Shift-F1)";
+	page->title = "MIDI Screen (Shift-F1)";
 	page->draw_const = midi_page_redraw;
 	page->song_changed_cb = NULL;
 	page->predraw_hook = NULL;
