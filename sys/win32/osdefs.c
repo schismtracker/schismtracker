@@ -106,7 +106,7 @@ int win32_sdlevent(SDL_Event* event) {
 		e.user.code = SCHISM_EVENT_NATIVE_SCRIPT;
 		switch (LOWORD(event->syswm.msg->msg.win.wParam)) {
 			case IDM_FILE_NEW:
-                e.user.data1 = "new";
+				e.user.data1 = "new";
 				break;
 			case IDM_FILE_LOAD:
 				e.user.data1 = "load";
@@ -219,9 +219,10 @@ void win32_create_menu(void) {
 		AppendMenuW(menu, MF_POPUP, (uintptr_t)file, L"&File");
 	}
 	{
-		/* this is mostly equivalent to the "Schism Tracker" menu on Mac OS X */
+		/* this is equivalent to the "Schism Tracker" menu on Mac OS X */
 		HMENU view = CreatePopupMenu();
 		AppendMenuW(view, MF_STRING, IDM_VIEW_HELP, L"Help\tF1");
+		AppendMenuW(view, MF_SEPARATOR, 0, NULL);
 		AppendMenuW(view, MF_STRING, IDM_VIEW_VIEW_PATTERNS, L"View Patterns\tF2");
 		AppendMenuW(view, MF_STRING, IDM_VIEW_ORDERS_PANNING, L"Orders/Panning\tF11");
 		AppendMenuW(view, MF_STRING, IDM_VIEW_VARIABLES, L"Variables\tF12");
