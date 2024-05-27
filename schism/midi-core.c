@@ -789,6 +789,7 @@ void midi_port_unregister(int num)
 			q = port_top[i];
 			if (q->disable) q->disable(q);
 			if (q->free_userdata) free(q->userdata);
+			if (q->name) free(q->name);
 			free(q);
 
 			port_count--;
