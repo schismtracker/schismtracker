@@ -39,8 +39,11 @@ int macosx_sdlevent(SDL_Event *event)
 	case SDL_WINDOWEVENT:
 		switch (event->window.event) {
 		case SDL_WINDOWEVENT_FOCUS_GAINED:
+			macosx_ibook_fnswitch(1);
+			break;
 		case SDL_WINDOWEVENT_FOCUS_LOST:
-			macosx_ibook_fnswitch((event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED) ? 1 : 0);
+			macosx_ibook_fnswitch(ibook_helper);
+			break;
 		default:
 			break;
 		}
