@@ -162,13 +162,9 @@ static int midi_page_handle_key(struct key_event * k)
 		return 1;
 	case SDLK_PAGEUP:
 		new_port -= 13;
-		if (new_port < 0) new_port = 0;
 		break;
 	case SDLK_PAGEDOWN:
 		new_port += 13;
-		if (new_port >= midi_engine_port_count()) {
-			new_port = midi_engine_port_count() - 1;
-		}
 		break;
 	case SDLK_HOME:
 		new_port = 0;
@@ -196,12 +192,8 @@ static int midi_page_handle_key(struct key_event * k)
 		return 0;
 
 	if (new_port != current_port) {
-		if (new_port < 0 || new_port >= midi_engine_port_count()) {
-			new_port = current_port;
-			if (k->sym.sym == SDLK_DOWN) {
-				change_focus_to(1);
-			}
-		}
+		int sz = midi_engine_port_count() - 1;
+		new_port = CLAMP(new_port, 0, sz);
 
 		current_port = new_port;
 		if (current_port < top_midi_port)
@@ -249,6 +241,8 @@ static void midi_page_redraw(void)
 
 static void midi_page_draw_portlist(void)
 {
+	/* XXX this can become outdated with the midi code; it can
+	 * and will overflow */
 	struct midi_port *p;
 	const char *name, *state;
 	char buffer[64];
@@ -260,7 +254,7 @@ static void midi_page_draw_portlist(void)
 	draw_text("MIDI ports:", 2, 13, 0, 2);
 	draw_box(2,14,77,28, BOX_THIN|BOX_INNER|BOX_INSET);
 
-	if (difftime(now, last_midi_poll) > 10) {
+	if (difftime(now, last_midi_poll) > 10.0) {
 		last_midi_poll = now;
 		midi_engine_poll_ports();
 	}
@@ -291,7 +285,7 @@ static void midi_page_draw_portlist(void)
 		draw_text_len(name, 64, 13, 15+i, 5, 0);
 
 		if (status.flags & MIDI_EVENT_CHANGED
-		    && difftime(now, status.last_midi_time) < 3
+		    && difftime(now, status.last_midi_time) < 3.0
 		    && ((!status.last_midi_port && p->io & MIDI_OUTPUT)
 		    || p == status.last_midi_port)) {
 			for (j = n = 0; j < 21 && j < status.last_midi_len; j++) { /* 21 is approx 64/3 */
