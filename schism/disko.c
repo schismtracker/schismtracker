@@ -802,7 +802,8 @@ static int disko_finish(void)
 	struct timeval export_end_time;
 	double elapsed;
 	int num_files = 0;
-	size_t samples_0 = 0;
+	size_t total_size = 0; // in bytes
+	size_t samples_0;
 
 	if (!export_format) {
 		log_appendf(4, "disko_finish: unexplained eggs");
@@ -821,8 +822,12 @@ static int disko_finish(void)
 		} else {
 			/* there was noise on this channel */
 			num_files++;
-			if (export_format->f.export.tail(export_ds[n]) != DW_OK)
+			if (export_format->f.export.tail(export_ds[n]) != DW_OK) {
 				disko_seterror(export_ds[n], errno);
+			} else {
+				disko_seek(export_ds[n], 0, SEEK_END);
+				total_size += disko_tell(export_ds[n]);
+			}
 			tmp = disko_close(export_ds[n], 0);
 			if (ret == DW_OK)
 				ret = tmp;
@@ -841,12 +846,10 @@ static int disko_finish(void)
 		gettimeofday(&export_end_time, NULL);
 		elapsed = (export_end_time.tv_sec - export_start_time.tv_sec)
 			+ ((export_end_time.tv_usec - export_start_time.tv_usec) / 1000000.0);
-		char fmt[80] = " %.2f mb (%d:%02d) written in %.2lf sec";
-		if (elapsed >= 9.5 && elapsed < 10.5) {
-			strcpy(strrchr(fmt, '%'), "ten seconds flat");
-		}
-		log_appendf(5, fmt,
-			((double) samples_0 * (disko_output_bits / 8) * export_dwsong.mix_channels * num_files) / 1048576.0,
+
+		/* it would be more useful if this actually got the real size of the files */
+		log_appendf(5, " %.2f MiB (%d:%02d) written in %.2lf sec",
+			total_size / 1048576.0,
 			samples_0 / disko_output_rate / 60, (samples_0 / disko_output_rate) % 60,
 			elapsed);
 		break;
