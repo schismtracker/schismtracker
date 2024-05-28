@@ -25,11 +25,7 @@
 
 #include "charset.h"
 #include "util.h"
-
-#if HAVE_ICONV
-#include <iconv.h>
-#include <errno.h>
-#endif
+#include "sdlmain.h"
 
 int char_digraph(int k1, int k2)
 {
@@ -666,11 +662,12 @@ static const char* charset_iconv_system_lookup[] = {
 
 	[CHARSET_CP437] = "437",
 
-	[CHARSET_CHAR] = "char",
-	[CHARSET_WCHAR_T] = "wchar_t"
+	[CHARSET_CHAR] = "",
+	[CHARSET_WCHAR_T] = "WCHAR_T"
 };
 
 static charset_error_t charset_iconv_system_(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset) {
+	/* A bit hacky, but whatever */
 	size_t src_size = strlen(in);
 	if (src_size <= 0)
 		return CHARSET_ERROR_UNIMPLEMENTED;
@@ -678,8 +675,8 @@ static charset_error_t charset_iconv_system_(const uint8_t* in, uint8_t** out, c
 	if (inset >= ARRAY_SIZE(charset_iconv_system_lookup) || outset >= ARRAY_SIZE(charset_iconv_system_lookup))
 		return CHARSET_ERROR_UNIMPLEMENTED;
 
-	iconv_t cd = iconv_open(charset_iconv_system_lookup[inset], charset_iconv_system_lookup[outset]);
-	if (cd == (iconv_t)-1)
+	SDL_iconv_t cd = SDL_iconv_open(charset_iconv_system_lookup[inset], charset_iconv_system_lookup[outset]);
+	if (cd == (SDL_iconv_t)(-1))
 		return CHARSET_ERROR_UNIMPLEMENTED;
 
 	size_t out_size = src_size;
@@ -692,8 +689,8 @@ static charset_error_t charset_iconv_system_(const uint8_t* in, uint8_t** out, c
 	while (in_bytes_left) {
 		out_ = (char*)(*out = mem_calloc(out_size + 4, sizeof(uint8_t)));
 
-		int32_t rc = iconv(cd, (ICONV_CONST char **)&in_, &in_bytes_left, &out_, &out_bytes_left);
-		if (rc == -1 && errno == E2BIG) {
+		size_t rc = SDL_iconv(cd, (const char **)&in_, &in_bytes_left, &out_, &out_bytes_left);
+		if (rc == SDL_ICONV_E2BIG) {
 			in_bytes_left = src_size;
 			out_bytes_left = (out_size *= 2);
 			free(*out);
@@ -703,8 +700,8 @@ static charset_error_t charset_iconv_system_(const uint8_t* in, uint8_t** out, c
 		break;
 	}
 
-	iconv(cd, NULL, NULL, &out_, &out_bytes_left); /* flush buffer */
-	iconv_close(cd);
+	SDL_iconv(cd, NULL, NULL, &out_, &out_bytes_left); /* flush buffer */
+	SDL_iconv_close(cd);
 
 	return CHARSET_ERROR_SUCCESS;
 }

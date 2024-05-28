@@ -13,7 +13,7 @@ jobs:
       - name: 'Install dependencies'
         run: |
           sudo apt-get update
-          sudo apt-get install --fix-missing gettext libjack-jackd2-dev build-essential automake autoconf autoconf-archive libxxf86vm-dev libsdl2-dev libasound2-dev libflac-dev git libtool zip wget
+          sudo apt-get install --fix-missing libjack-jackd2-dev build-essential automake autoconf autoconf-archive libxxf86vm-dev libsdl2-dev libasound2-dev libflac-dev git libtool zip wget
 
       - name: 'Checkout'
         uses: actions/checkout@v4

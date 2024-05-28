@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: 'Install wget'
         run: |
-          brew install automake zip wget gettext
+          brew install automake zip wget
 
       - name: 'Grab needed binaries'
         run: |

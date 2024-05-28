@@ -19,7 +19,7 @@ jobs:
       - name: 'Install build dependencies'
         run: |
           apt-get update
-          apt-get install -y ninja-build autoconf automake libtool libsdl2-dev gettext
+          apt-get install -y ninja-build autoconf automake libtool libsdl2-dev
 
       - name: 'Get date of latest commit'
         id: date

@@ -89,11 +89,6 @@ AC_ARG_WITH([alsa],
 	[],
 	[with_alsa=check])
 
-AC_ARG_WITH([iconv],
-	[AS_HELP_STRING([--with-iconv],[Build with support for the system iconv @<:@default=check@:>@])]
-	[],
-	[with_iconv=check])
-
 dnl ------------------------------------------------------------------------
 
 dnl Check for standard programs
@@ -304,17 +299,6 @@ if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then
 		fi
 	elif test "x$with_alsa" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find ALSA])
-	fi
-fi
-
-AM_CONDITIONAL([USE_ICONV], false)
-if test "x$with_iconv" = "xcheck" || test "x$with_iconv" = "xyes"; then
-	AM_ICONV
-	if test "x$am_cv_func_iconv" = "xyes"; then
-		AM_CONDITIONAL([USE_ICONV], true)
-		AC_SUBST([LIBICONV])
-	elif test "x$with_iconv" = "xyes"; then
-		AC_MSG_ERROR([*** Failed to find system iconv])
 	fi
 fi
 
