@@ -652,8 +652,6 @@ static charset_error_t charset_iconv_internal_(const uint8_t* in, uint8_t** out,
 	return CHARSET_ERROR_SUCCESS;
 }
 
-#ifdef HAVE_ICONV
-
 static const char* charset_iconv_system_lookup[] = {
 	[CHARSET_UTF8] = "UTF-8",
 	[CHARSET_UTF16BE] = "UTF-16BE",
@@ -705,8 +703,6 @@ static charset_error_t charset_iconv_system_(const uint8_t* in, uint8_t** out, c
 
 	return CHARSET_ERROR_SUCCESS;
 }
-
-#endif
 
 charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset) {
 	if (!in)
