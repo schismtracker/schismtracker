@@ -23,6 +23,8 @@
 
 /* No, this has nothing whatsoever to do with dmoz.org, except for the 'directory' part. :) */
 
+#define _GNU_SOURCE /* strverscmp */
+
 #include "headers.h"
 
 #include "it.h"

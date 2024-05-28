@@ -49,7 +49,12 @@ at http://compressionratings.com/d_archiver_template.html
 and fuglified to add FNM_CASEFOLD|FNM_PERIOD behavior */
 
 #if HAVE_FNMATCH
+# define _GNU_SOURCE /* FNM_CASEFOLD|FNM_PERIOD */
 # include <fnmatch.h>
+/* GNU extension, ignore */
+# ifndef FNM_CASEFOLD
+#  define FNM_CASEFOLD 0
+# endif
 #else
 # define FNM_CASEFOLD 0
 # define FNM_PERIOD 0

@@ -888,11 +888,6 @@ int main(int argc, char **argv)
 {
 	os_sysinit(&argc, &argv);
 
-	/* this needs to be done very early, because the version is used in the help text etc.
-	Also, this needs to happen before any locale stuff is initialized
-	(but we don't do that at all yet, anyway) */
-	ver_init();
-
 	vis_init();
 
 	video_fullscreen(0);

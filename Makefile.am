@@ -103,8 +103,7 @@ noinst_HEADERS = \
 	include/dmoz.h			\
 	include/draw-char.h		\
 	include/event.h			\
-	include/fmopl2.h			\
-	include/fmopl3.h			\
+	include/fmopl.h			\
 	include/fmt.h			\
 	include/fmt-types.h		\
 	include/headers.h		\
@@ -243,6 +242,12 @@ cflags_network=
 libs_network=$(NETWORK_LIBS)
 endif
 
+if USE_OPL2
+files_opl = player/fmopl2.c
+else
+files_opl = player/fmopl3.c
+endif
+
 ## Replacement functions for crappy systems
 files_stdlib =
 if NEED_ASPRINTF
@@ -355,8 +360,6 @@ schismtracker_SOURCES = \
 	player/equalizer.c		\
 	player/mixer.c			\
 	player/filters.c		\
-	player/fmopl2.c			\
-	player/fmopl3.c			\
 	player/fmpatches.c		\
 	player/sndmix.c			\
 	player/opl-util.c		\
@@ -374,7 +377,8 @@ schismtracker_SOURCES = \
 	$(files_wii)			\
 	$(files_windres)		\
 	$(files_flac)			\
-	$(files_jack)
+	$(files_jack)			\
+	$(files_opl)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)

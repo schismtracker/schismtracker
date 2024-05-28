@@ -23,7 +23,9 @@ dnl Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 dnl PACKAGE_VERSION will be either "" if not using git, or date of the last git commit in the form YYYYMMDD
 m4_define([last_git_commit], patsubst(m4_esyscmd([git log -n 1 --date=short --format=format:%cd]), [[^0-9]]))
-AC_INIT([schismtracker],[last_git_commit])
+AC_INIT([schismtracker], [last_git_commit])
+
+last_commit_date=[last_git_commit]
 
 AC_CONFIG_SRCDIR([schism/main.c])
 
@@ -31,6 +33,10 @@ AM_INIT_AUTOMAKE([-Wall subdir-objects])
 AC_CONFIG_HEADERS([config.h])
 
 AC_CANONICAL_HOST
+
+if test "x$last_commit_date" = "x"; then
+	AC_DEFINE([EMPTY_VERSION], [], [Empty version number (okay if you don't have Git)])
+fi
 
 dnl -----------------------------------------------------------------------
 
@@ -73,6 +79,11 @@ AC_ARG_ENABLE(alsa-linking,
 	AS_HELP_STRING([--enable-alsa-linking], [Link to ALSA rather than loading at runtime]),
 	ALSA_LINKING=$enableval,
 	ALSA_LINKING=no)
+
+AC_ARG_ENABLE(opl2,
+	AS_HELP_STRING([--enable-opl2], [Use OPL2 instead of OPL3]),
+	USE_OPL2=$enableval,
+	USE_OPL2=no)
 
 AC_ARG_WITH([flac],
 	[AS_HELP_STRING([--with-flac],[Build with FLAC support @<:@default=check@:>@])],
@@ -307,7 +318,7 @@ if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then
 	if test "x$alsa_found" = "xyes"; then
 		AM_CONDITIONAL([USE_ALSA], true)
 		AC_DEFINE([USE_ALSA], [1], [ALSA MIDI support])
-		if test "$ALSA_LINKING" = "yes"; then
+		if test "x$ALSA_LINKING" = "xyes"; then
 			AM_CONDITIONAL([LINK_TO_ALSA], true)
 		else
 			LIBS=$saved_libs
@@ -316,6 +327,14 @@ if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then
 	elif test "x$with_alsa" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find ALSA])
 	fi
+fi
+
+if test "x$USE_OPL2" = "xyes"; then
+	AC_DEFINE([OPLSOURCE], [2], [Which OPL chip to emulate])
+	AM_CONDITIONAL([USE_OPL2], [true])
+else
+	AC_DEFINE([OPLSOURCE], [3], [Which OPL chip to emulate])
+	AM_CONDITIONAL([USE_OPL2], [false])
 fi
 
 dnl --------------------------------------------------------------------------
