@@ -100,7 +100,7 @@ char *strchr(), *strrchr();
 #endif
 
 /* dumb workaround for dumb devkitppc bug */
-#ifdef GEKKO
+#ifdef SCHISM_WII
 # undef NAME_MAX
 # undef PATH_MAX
 #endif
@@ -139,12 +139,6 @@ char *strchr(), *strrchr();
 	} while (0)
 #endif
 
-#ifdef REALLY_BIG_ENDIAN
-#ifndef WORDS_BIGENDIAN
-#define WORDS_BIGENDIAN 1
-#endif
-#endif
-
 #if HAVE_BYTESWAP_H
 /* byteswap.h uses inline assembly if possible (faster than bit-shifting) */
 # include <byteswap.h>
@@ -155,7 +149,7 @@ char *strchr(), *strrchr();
 # define bswap_16(x) (((((unsigned short)x) >> 8) & 0xFF) | ((((unsigned short)x) << 8) & 0xFF00))
 #endif
 /* define the endian-related byte swapping (taken from libmodplug sndfile.h, glibc, and sdl) */
-#if defined(ARM) && defined(_WIN32_WCE)
+#if defined(ARM) && defined(_SCHISM_WIN32_WCE)
 /* I have no idea what this does, but okay :) */
 
 /* This forces integer operations to only occur on aligned
@@ -202,7 +196,7 @@ int vasprintf(char **strp, const char *fmt, va_list ap);
 char *strptime(const char *buf, const char *fmt, struct tm *tm);
 #endif
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 struct tm *localtime_r(const time_t *timep, struct tm *result);
 #endif
 
@@ -210,12 +204,7 @@ struct tm *localtime_r(const time_t *timep, struct tm *result);
 int mkstemp(char *template);
 #endif
 
-#ifdef __APPLE_CC__
-#define MACOSX  1
-#endif
-
 #define INT_SHAPED_PTR(v)               ((intptr_t)(((void*)(v))))
 #define PTR_SHAPED_INT(i)               ((void*)(i))
 
 #endif
-

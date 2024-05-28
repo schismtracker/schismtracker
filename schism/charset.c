@@ -547,7 +547,7 @@ static charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 
 	[CHARSET_CP437] = cp437_to_ucs4,
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 # if WORDS_BIGENDIAN
 	[CHARSET_WCHAR_T] = utf16BE_to_ucs4,
 # else
@@ -566,7 +566,7 @@ static charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 
 	[CHARSET_CP437] = ucs4_to_cp437,
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 # if WORDS_BIGENDIAN
 	[CHARSET_WCHAR_T] = ucs4_to_utf16BE,
 # else
@@ -721,10 +721,8 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
 	if (charset_iconv_internal_(in, out, inset, outset) == CHARSET_ERROR_SUCCESS)
 		return CHARSET_ERROR_SUCCESS;
 
-#if HAVE_ICONV
 	if (charset_iconv_system_(in, out, inset, outset) == CHARSET_ERROR_SUCCESS)
 		return CHARSET_ERROR_SUCCESS;
-#endif
 
 	return CHARSET_ERROR_UNIMPLEMENTED;
 }

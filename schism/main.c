@@ -51,13 +51,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#ifndef WIN32
+#ifndef SCHISM_WIN32
 # include <signal.h>
 #endif
 
 #include <getopt.h>
 
-#if !defined(__amigaos4__) && !defined(GEKKO)
+#if !defined(__amigaos4__) && !defined(SCHISM_WII)
 # define ENABLE_HOOKS 1
 #endif
 
@@ -204,7 +204,7 @@ static void run_exit_hook(void)
 /* arg parsing */
 
 /* filename of song to load on startup, or NULL for none */
-#ifdef MACOSX
+#ifdef SCHISM_MACOSX
 /* this gets written to by the custom main function on macosx */
 char *initial_song = NULL;
 #else
@@ -514,7 +514,7 @@ static void event_loop(void)
 			}
 		}
 		switch (event.type) {
-#if defined(WIN32)
+#if defined(SCHISM_WIN32)
 #define _ALTTRACKED_KMOD        (KMOD_NUM|KMOD_CAPS)
 #else
 #define _ALTTRACKED_KMOD        0
@@ -880,7 +880,7 @@ void schism_exit(int status)
 extern void vis_init(void);
 
 /* wart */
-#ifdef MACOSX
+#ifdef SCHISM_MACOSX
 int SDL_main(int argc, char** argv)
 #else
 int main(int argc, char **argv)
@@ -947,7 +947,7 @@ int main(int argc, char **argv)
 	audio_init(audio_driver);
 	song_init_modplug();
 
-#ifndef WIN32
+#ifndef SCHISM_WIN32
 	signal(SIGINT, exit);
 	signal(SIGQUIT, exit);
 	signal(SIGTERM, exit);

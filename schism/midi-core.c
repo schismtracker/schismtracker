@@ -54,7 +54,7 @@ static SDL_cond *midi_play_cond = NULL;
 
 static struct midi_provider *port_providers = NULL;
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 #include <windows.h>
 
 static void win32_usleep_(int64_t usec)
@@ -283,10 +283,10 @@ static void _midi_engine_connect(void)
 #elif defined(USE_ALSA) && !defined(USE_OSS)
 	alsa_midi_setup();
 #endif
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	win32mm_midi_setup();
 #endif
-#ifdef MACOSX
+#ifdef SCHISM_MACOSX
 	macosx_midi_setup();
 #endif
 }
@@ -647,7 +647,7 @@ static int _midi_queue_run(UNUSED void *xtop)
 {
 	int i;
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	SetPriorityClass(GetCurrentProcess(),HIGH_PRIORITY_CLASS);
 	SetThreadPriority(GetCurrentThread(),THREAD_PRIORITY_TIME_CRITICAL);
 	/*SetThreadPriority(GetCurrentThread(),THREAD_PRIORITY_HIGHEST);*/

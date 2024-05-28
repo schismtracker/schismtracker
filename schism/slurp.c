@@ -200,7 +200,7 @@ static slurp_t *_slurp_open(const char *filename, struct stat * buf, size_t size
 		size = (buf ? buf->st_size : file_size(filename));
 	}
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	switch (slurp_win32(t, filename, size)) {
 	case 0: free(t); return NULL;
 	case 1: return t;

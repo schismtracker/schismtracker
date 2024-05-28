@@ -80,7 +80,7 @@
 #endif
 
 /* Path stuff that differs by platform */
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 # define DIR_SEPARATOR '\\'
 # define DIR_SEPARATOR_STR "\\"
 # define IS_DIR_SEPARATOR(c) ((c) == '/' || (c) == '\\')
@@ -180,7 +180,7 @@ char *get_dot_directory(void); /* where settings files go (%AppData% on Windows,
 char *get_current_directory(void); /* just a getcwd() wrapper */
 
 /* wrappers around functions for Unicode support */
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 #include <stdio.h> /* FILE */
 int win32_open(const char* path, int flags);
 int win32_wstat(const wchar_t* path, struct stat* st);

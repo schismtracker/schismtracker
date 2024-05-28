@@ -33,7 +33,7 @@
 #include <mmsystem.h>
 #include <stdio.h>
 
-#ifndef WIN32
+#ifndef SCHISM_WIN32
 # error You have no winmm. Why are you trying to build this file?
 #endif
 

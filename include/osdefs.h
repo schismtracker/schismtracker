@@ -42,17 +42,17 @@ This is used to hack in system-dependent input methods (e.g. F16 and other scanc
 etc.) If defined, this function will be called after capturing an SDL event.
 A return value of 0 indicates that the event should NOT be processed by the main event handler.
 */
-#if defined(GEKKO)
+#if defined(SCHISM_WII)
 # define os_sysinit wii_sysinit
 # define os_sdlinit wii_sdlinit
 # define os_sysexit wii_sysexit
 # define os_sdlevent wii_sdlevent
-#elif defined(WIN32)
+#elif defined(SCHISM_WIN32)
 # define os_sdlevent win32_sdlevent
 # define os_sdlinit win32_sdlinit
 # define os_sysinit win32_sysinit
 # define os_get_modkey win32_get_modkey
-#elif defined(MACOSX)
+#elif defined(SCHISM_MACOSX)
 # define os_sdlevent macosx_sdlevent
 # define os_sysexit macosx_sysexit
 # define os_sysinit macosx_sysinit

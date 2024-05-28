@@ -22,7 +22,7 @@
  */
 
 #include "config.h"
-#ifndef WIN32
+#ifndef SCHISM_WIN32
 # error You are not on Windows. What are you doing?
 #endif
 

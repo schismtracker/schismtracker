@@ -143,7 +143,12 @@ AC_HEADER_DIRENT
 AC_CHECK_HEADERS_ONCE([sys/time.h])
 
 AC_CHECK_HEADERS(inttypes.h fcntl.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h byteswap.h sys/socket.h sys/soundcard.h poll.h sys/poll.h)
-AM_CONDITIONAL([USE_OSS], [test "x$ac_cv_header_sys_soundcard_h" = "xyes"])
+
+AM_CONDITIONAL([USE_OSS], [false])
+if test "x$ac_cv_header_sys_soundcard_h" = "xyes"; then
+	AM_CONDITIONAL([USE_OSS], [true])
+	AC_DEFINE([USE_OSS], [1], [Open Sound System MIDI support])
+fi
 
 AC_C_CONST
 AC_C_INLINE
@@ -180,6 +185,7 @@ case "${host_os}" in
 		AC_SUBST([OSX_LDADD], ["-lSDL2main -framework Cocoa -framework CoreAudio -framework CoreMIDI -framework IOKit"])
 
 		use_macosx=yes
+		AC_DEFINE([SCHISM_MACOSX], [1], [Mac OS X])
 		;;
 	cygwin*|mingw*)
 		AC_MSG_RESULT([found Windows host])
@@ -197,6 +203,7 @@ case "${host_os}" in
 		fi
 
 		use_win32=yes
+		AC_DEFINE([SCHISM_WIN32], [1], [Windows])
 		;;
 	*)
 		AC_MSG_RESULT([nothing to do here])
@@ -214,6 +221,7 @@ case "${host_os}" in
 			AC_SUBST([EXEEXT])
 
 			use_wii=yes
+			AC_DEFINE([SCHISM_WII], [1], [Wii])
 		fi
 
 		dnl Networking...
@@ -227,12 +235,14 @@ case "${host_os}" in
 		elif test "x$ac_cv_search_socket" = "xnone required"; then
 			if test "x$ac_cv_header_sys_socket_h" = "xyes"; then
 				dnl free networking
+				AC_DEFINE([USE_NETWORK], [1], [Networking])
 				use_network=yes
 			else
 				use_network=no
 			fi
 		else
 			AC_SUBST([NETWORK_LIBS], [$ac_cv_search_socket])
+			AC_DEFINE([USE_NETWORK], [1], [Networking])
 			use_network=yes
 		fi
 
@@ -264,6 +274,7 @@ if test "x$with_flac" = "xcheck" || test "x$with_flac" = "xyes"; then
 	if test "x$libflac_found" = "xyes"; then
 		AC_SUBST([FLAC_CFLAGS])
 		AC_SUBST([FLAC_LIBS])
+		AC_DEFINE([USE_FLAC], [1], [FLAC support])
 		AM_CONDITIONAL([USE_FLAC], true)
 	elif test "x$with_flac" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find libFLAC])
@@ -277,9 +288,12 @@ if test "x$with_jack" = "xcheck" || test "x$with_jack" = "xyes"; then
 	if test "x$jack_found" = "xyes"; then
 		AC_SUBST([JACK_CFLAGS])
 		AM_CONDITIONAL([USE_JACK], true)
+		AC_DEFINE([USE_JACK], [1], [JACK MIDI support])
 		if test "x$JACK_LINKING" = "xyes"; then
 			AC_SUBST([JACK_LIBS])
 			AM_CONDITIONAL([LINK_TO_JACK], true)
+		else
+			AC_DEFINE([JACK_DYNAMIC_LOAD], [1], [Dynamically load JACK symbols])
 		fi
 	elif test "x$with_jack" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find JACK])
@@ -292,10 +306,12 @@ if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then
 	AC_CHECK_LIB([asound], [snd_seq_open], [alsa_found=yes], [alsa_found=no])
 	if test "x$alsa_found" = "xyes"; then
 		AM_CONDITIONAL([USE_ALSA], true)
+		AC_DEFINE([USE_ALSA], [1], [ALSA MIDI support])
 		if test "$ALSA_LINKING" = "yes"; then
 			AM_CONDITIONAL([LINK_TO_ALSA], true)
 		else
 			LIBS=$saved_libs
+			AC_DEFINE([ALSA_DYNAMIC_LOAD], [1], [Dynamically load ALSA symbols])
 		fi
 	elif test "x$with_alsa" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find ALSA])

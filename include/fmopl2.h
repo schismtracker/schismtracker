@@ -7,10 +7,10 @@ extern "C" {
 
 #define logerror(...) /**/
 
-/* --- select emulation chips --- */
-#define BUILD_YM3812 (HAS_YM3812)
-#define BUILD_YM3526 (HAS_YM3526)
-#define BUILD_Y8950  (HAS_Y8950)
+/* selecting emulated chips; we only use OPL2 */
+#define BUILD_YM3812 1
+#define BUILD_YM3526 0
+#define BUILD_Y8950  0
 
 /* select output bits size of output : 8 or 16 */
 #define OPL_SAMPLE_BITS 16

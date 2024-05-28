@@ -27,7 +27,7 @@
 
 #include "util.h"
 
-#ifdef MACOSX
+#ifdef SCHISM_MACOSX
 
 #include <CoreServices/CoreServices.h>
 #include <CoreMIDI/MIDIServices.h>

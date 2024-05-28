@@ -42,15 +42,15 @@ extraneous libraries (i.e. GLib). */
 
 #if defined(__amigaos4__)
 # define FALLBACK_DIR "." /* not used... */
-#elif defined(WIN32)
+#elif defined(SCHISM_WIN32)
 # define FALLBACK_DIR "C:\\"
-#elif defined(GEKKO)
+#elif defined(SCHISM_WII)
 # define FALLBACK_DIR "isfs:/" // always exists, seldom useful
 #else /* POSIX? */
 # define FALLBACK_DIR "/"
 #endif
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 #include <windows.h>
 #include <process.h>
 #include <shlobj.h>
@@ -61,7 +61,7 @@ extraneous libraries (i.e. GLib). */
 
 void ms_sleep(unsigned int ms)
 {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	SleepEx(ms,FALSE);
 #else
 	usleep(ms*1000);
@@ -625,7 +625,7 @@ int make_backup_file(const char *filename, int numbered)
 	}
 }
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 int win32_wstat(const wchar_t* path, struct stat* st) {
 	struct _stat mstat;
 
@@ -760,7 +760,7 @@ int is_directory(const char *filename)
 
 char *get_current_directory(void)
 {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
 	char* buf_utf8 = NULL;
 
@@ -781,7 +781,7 @@ char *get_home_directory(void)
 {
 #if defined(__amigaos4__)
 	return str_dup("PROGDIR:");
-#elif defined(WIN32)
+#elif defined(SCHISM_WIN32)
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
 	char* buf_utf8 = NULL;
 
@@ -806,7 +806,7 @@ char *get_home_directory(void)
 
 char *get_dot_directory(void)
 {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
 	char* buf_utf8 = NULL;
 	if (SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) == S_OK
@@ -873,7 +873,7 @@ unsigned int i_sqrt(unsigned int r)
 
 int run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	wchar_t cwd[PATH_MAX] = {L'\0'};
 	const wchar_t *cmd = NULL;
 	wchar_t batch_file[PATH_MAX] = {L'\0'};
@@ -923,7 +923,7 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	_wchdir(cwd);
 	if (r == 0) return 1;
 	return 0;
-#elif defined(GEKKO)
+#elif defined(SCHISM_WII)
 	// help how do I operating system
 	(void) dir;
 	(void) name;
@@ -956,7 +956,7 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 static int _rename_nodestroy(const char *old, const char *new)
 {
 /* XXX does __amigaos4__ have a special need for this? */
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	/* do nothing; this is already handled in rename_file */
 	return -1;
 #else
@@ -982,7 +982,7 @@ int rename_file(const char *old, const char *new, int overwrite)
 	if (!overwrite)
 		return _rename_nodestroy(old, new);
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	wchar_t* old_w = NULL, *new_w = NULL;
 	if (charset_iconv(new, (uint8_t**)&new_w, CHARSET_UTF8, CHARSET_WCHAR_T)
 		|| charset_iconv(old, (uint8_t**)&old_w, CHARSET_UTF8, CHARSET_WCHAR_T)) {

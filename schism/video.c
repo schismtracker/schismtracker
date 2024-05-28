@@ -36,8 +36,8 @@
 #include <errno.h>
 #include <stdio.h>
 
-#ifndef MACOSX
-#ifdef WIN32
+#ifndef SCHISM_MACOSX
+#ifdef SCHISM_WIN32
 #include "auto/schismico.h"
 #else
 #include "auto/schismico_hires.h"
@@ -78,7 +78,7 @@ struct video_cf {
 		int visible;
 	} mouse;
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	struct {
 		/* TODO: need to save the state of the menu bar or else
 		 * these will be wrong if it's toggled while in fullscreen */
@@ -158,9 +158,9 @@ static void set_icon(void)
 {
 	/* FIXME: is this really necessary? */
 	SDL_SetWindowTitle(video.window, WINDOW_TITLE);
-#ifndef MACOSX
+#ifndef SCHISM_MACOSX
 /* apple/macs use a bundle; this overrides their nice pretty icon */
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 /* win32 icons must be 32x32 according to SDL 1.2 doc */
 	SDL_Surface *icon = xpmdata(_schism_icon_xpm);
 #else
@@ -177,7 +177,7 @@ void video_fullscreen(int new_fs_flag)
 	video.fullscreen = (new_fs_flag >= 0) ? !!new_fs_flag : !video.fullscreen;
 
 	if (video.fullscreen) {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 		SDL_GetWindowSize(video.window, &video.saved.width, &video.saved.height);
 		SDL_GetWindowPosition(video.window, &video.saved.x, &video.saved.y);
 		win32_toggle_menu(video.window, 0);
@@ -185,7 +185,7 @@ void video_fullscreen(int new_fs_flag)
 		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 	} else {
 		SDL_SetWindowFullscreen(video.window, 0);
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 		/* the menu must be toggled first here */
 		win32_toggle_menu(video.window, 1);
 		SDL_SetWindowSize(video.window, video.saved.width, video.saved.height);
@@ -210,7 +210,7 @@ void video_startup(void)
 
 	video.width = cfg_video_width;
 	video.height = cfg_video_height;
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	video.saved.x = video.saved.y = SDL_WINDOWPOS_CENTERED;
 #endif
 
@@ -224,7 +224,7 @@ void video_startup(void)
 		SDL_RenderSetLogicalSize(video.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height);
 
 	video_fullscreen(cfg_video_fullscreen);
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	if (!video.fullscreen) {
 		SDL_SetWindowSize(video.window, video.width, video.height);
 		SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);

@@ -28,7 +28,7 @@
 #include "song.h"
 #include "log.h"
 
-#ifndef WIN32
+#ifndef SCHISM_WIN32
 #endif
 
 #include "it_defs.h"

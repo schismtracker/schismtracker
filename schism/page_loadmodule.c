@@ -902,7 +902,7 @@ static int dir_list_handle_key(struct key_event * k)
 			search_text_delete_char();
 		return 1;
 	case SDLK_SLASH:
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	case SDLK_BACKSLASH:
 #endif
 		if (k->state == KEY_RELEASE)
