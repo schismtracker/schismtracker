@@ -9,7 +9,6 @@
  * Modified again by Storlek to de-xmp-ify it.
  */
 
-#define NEED_BYTESWAP
 #include "headers.h"
 
 #include "slurp.h" // for declaration of mmcmp_unpack

@@ -36,7 +36,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define NEED_TIME
 #include "headers.h"
 #include <ctype.h>
 

@@ -23,7 +23,6 @@
 
 /* --------------------------------------------------------------------- */
 
-#define NEED_BYTESWAP
 #include "headers.h"
 #include "log.h"
 #include "fmt.h"

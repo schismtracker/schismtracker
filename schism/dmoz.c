@@ -23,8 +23,6 @@
 
 /* No, this has nothing whatsoever to do with dmoz.org, except for the 'directory' part. :) */
 
-#define NEED_DIRENT
-#define NEED_TIME
 #include "headers.h"
 
 #include "it.h"

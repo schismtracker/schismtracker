@@ -29,18 +29,6 @@
 # include <config.h>
 #endif
 
-/* Some stuff was conditionally included only for files that need it, but really it's not like defining
-bswapLE32 or including sys/time.h adversely affects compilation time. This isn't some xboxhueg project
-that takes hours to build, these are little silly overoptimizations, and it's just troublesome to try
-to work out what order headers are supposed to be processed so that all the other files pick up the bits
-of headers.h that they need (song_t, I'm looking at you)
-Eventually I'll do some housekeeping with the headers and get rid of all these silly NEED_*'s, but this
-will do for now. */
-#define NEED_BYTESWAP
-#define NEED_TIME
-#define NEED_DIRENT
-
-
 #include <stdio.h>
 
 #ifdef HAVE_STDLIB_H
@@ -90,26 +78,24 @@ char *strchr(), *strrchr();
 #endif
 
 
-#ifdef NEED_DIRENT
-# if HAVE_DIRENT_H
-#  include <dirent.h>
-#  ifndef _D_EXACT_NAMLEN
-#   define _D_EXACT_NAMLEN(dirent) strlen((dirent)->d_name)
-#  endif
-# else
-#  define dirent direct
-#  ifndef _D_EXACT_NAMLEN
-#   define _D_EXACT_NAMLEN(dirent) strlen((dirent)->d_name)
-#  endif
-#  if HAVE_SYS_NDIR_H
-#   include <sys/ndir.h>
-#  endif
-#  if HAVE_SYS_DIR_H
-#   include <sys/dir.h>
-#  endif
-#  if HAVE_NDIR_H
-#   include <ndir.h>
-#  endif
+#if HAVE_DIRENT_H
+# include <dirent.h>
+# ifndef _D_EXACT_NAMLEN
+#  define _D_EXACT_NAMLEN(dirent) strlen((dirent)->d_name)
+# endif
+#else
+# define dirent direct
+# ifndef _D_EXACT_NAMLEN
+#  define _D_EXACT_NAMLEN(dirent) strlen((dirent)->d_name)
+# endif
+# if HAVE_SYS_NDIR_H
+#  include <sys/ndir.h>
+# endif
+# if HAVE_SYS_DIR_H
+#  include <sys/dir.h>
+# endif
+# if HAVE_NDIR_H
+#  include <ndir.h>
 # endif
 #endif
 
@@ -136,14 +122,13 @@ char *strchr(), *strrchr();
 #endif
 
 
-#ifdef NEED_TIME
-# if HAVE_SYS_TIME_H
-#  include <sys/time.h>
-# endif
-# include <time.h>
-# ifndef timersub
+#if HAVE_SYS_TIME_H
+# include <sys/time.h>
+#endif
+#include <time.h>
+#ifndef timersub
 // from FreeBSD
-#  define timersub(tvp, uvp, vvp)                                       \
+# define timersub(tvp, uvp, vvp)                                       \
 	do {                                                            \
 		(vvp)->tv_sec = (tvp)->tv_sec - (uvp)->tv_sec;          \
 		(vvp)->tv_usec = (tvp)->tv_usec - (uvp)->tv_usec;       \
@@ -152,7 +137,6 @@ char *strchr(), *strrchr();
 			(vvp)->tv_usec += 1000000;                      \
 		}                                                       \
 	} while (0)
-# endif
 #endif
 
 #ifdef REALLY_BIG_ENDIAN
@@ -161,49 +145,47 @@ char *strchr(), *strrchr();
 #endif
 #endif
 
-#ifdef NEED_BYTESWAP
-# if HAVE_BYTESWAP_H
+#if HAVE_BYTESWAP_H
 /* byteswap.h uses inline assembly if possible (faster than bit-shifting) */
-#  include <byteswap.h>
-# else
-#  define bswap_32(x) (((((unsigned int)x) & 0xFF) << 24) | ((((unsigned int)x) & 0xFF00) << 8) \
+# include <byteswap.h>
+#else
+# define bswap_32(x) (((((unsigned int)x) & 0xFF) << 24) | ((((unsigned int)x) & 0xFF00) << 8) \
 		       | (((((unsigned int)x) & 0xFF0000) >> 8) & 0xFF00) \
 		       | ((((((unsigned int)x) & 0xFF000000) >> 24)) & 0xFF))
-#  define bswap_16(x) (((((unsigned short)x) >> 8) & 0xFF) | ((((unsigned short)x) << 8) & 0xFF00))
-# endif
+# define bswap_16(x) (((((unsigned short)x) >> 8) & 0xFF) | ((((unsigned short)x) << 8) & 0xFF00))
+#endif
 /* define the endian-related byte swapping (taken from libmodplug sndfile.h, glibc, and sdl) */
-# if defined(ARM) && defined(_WIN32_WCE)
+#if defined(ARM) && defined(_WIN32_WCE)
 /* I have no idea what this does, but okay :) */
 
 /* This forces integer operations to only occur on aligned
    addresses. -mrsb */
-static inline unsigned short int ARM_get16(const void *data)
+static inline uint16_t ARM_get16(const void *data)
 {
-	unsigned short int s;
+	uint16_t s;
 	memcpy(&s,data,sizeof(s));
 	return s;
 }
-static inline unsigned int ARM_get32(const void *data)
+static inline uint32_t ARM_get32(const void *data)
 {
-	unsigned int s;
+	uint32_t s;
 	memcpy(&s,data,sizeof(s));
 	return s;
 }
-#  define bswapLE16(x) ARM_get16(&(x))
-#  define bswapLE32(x) ARM_get32(&(x))
-#  define bswapBE16(x) bswap_16(ARM_get16(&(x)))
-#  define bswapBE32(x) bswap_32(ARM_get32(&(x)))
-# elif WORDS_BIGENDIAN
-#  define bswapLE16(x) bswap_16(x)
-#  define bswapLE32(x) bswap_32(x)
-#  define bswapBE16(x) (x)
-#  define bswapBE32(x) (x)
-# else
-#  define bswapBE16(x) bswap_16(x)
-#  define bswapBE32(x) bswap_32(x)
-#  define bswapLE16(x) (x)
-#  define bswapLE32(x) (x)
-# endif
+# define bswapLE16(x) ARM_get16(&(x))
+# define bswapLE32(x) ARM_get32(&(x))
+# define bswapBE16(x) bswap_16(ARM_get16(&(x)))
+# define bswapBE32(x) bswap_32(ARM_get32(&(x)))
+#elif WORDS_BIGENDIAN
+# define bswapLE16(x) bswap_16(x)
+# define bswapLE32(x) bswap_32(x)
+# define bswapBE16(x) (x)
+# define bswapBE32(x) (x)
+#else
+# define bswapBE16(x) bswap_16(x)
+# define bswapBE32(x) bswap_32(x)
+# define bswapLE16(x) (x)
+# define bswapLE32(x) (x)
 #endif
 
 /* Prototypes for replacement functions */
@@ -211,17 +193,19 @@ static inline unsigned int ARM_get32(const void *data)
 #ifndef HAVE_ASPRINTF
 int asprintf(char **strp, const char *fmt, ...);
 #endif
+
 #ifndef HAVE_VASPRINTF
 int vasprintf(char **strp, const char *fmt, va_list ap);
 #endif
-#ifdef NEED_TIME
-# ifndef HAVE_STRPTIME
+
+#ifndef HAVE_STRPTIME
 char *strptime(const char *buf, const char *fmt, struct tm *tm);
-# endif
-# ifdef WIN32
-struct tm *localtime_r(const time_t *timep, struct tm *result);
-# endif
 #endif
+
+#ifdef WIN32
+struct tm *localtime_r(const time_t *timep, struct tm *result);
+#endif
+
 #ifndef HAVE_MKSTEMP
 int mkstemp(char *template);
 #endif

@@ -25,8 +25,6 @@
 extraneous libraries (i.e. GLib). */
 
 
-#define NEED_DIRENT
-#define NEED_TIME
 #include "headers.h"
 
 #include "util.h"
