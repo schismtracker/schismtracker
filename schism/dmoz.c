@@ -28,6 +28,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "charset.h"
 #include "song.h"
 #include "dmoz.h"
 #include "slurp.h"
@@ -747,7 +748,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 {
 #ifdef WIN32
 	wchar_t* path_w = NULL;
-	if (!utf8_to_wchar(&path_w, path))
+	if (charset_iconv(path, (uint8_t**)&path_w, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return -1;
 
 	DWORD attrib = GetFileAttributesW(path_w);
@@ -756,7 +757,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 
 		char* searchpath = dmoz_path_concat_len(path, "*", strlen(path), 1);
 		wchar_t* searchpath_w = NULL;
-		if (!utf8_to_wchar(&searchpath_w, searchpath)) {
+		if (charset_iconv(searchpath, (uint8_t**)&searchpath_w, CHARSET_UTF8, CHARSET_WCHAR_T)) {
 			free(searchpath);
 			return -1;
 		}
@@ -776,11 +777,10 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 				continue;
 
 			char* filename = NULL;
-			int filename_len = wchar_to_utf8(&filename, ffd.cFileName);
-			if (!filename_len)
+			if (charset_iconv((uint8_t*)ffd.cFileName, (uint8_t**)&filename, CHARSET_WCHAR_T, CHARSET_UTF8))
 				continue;
 
-			char* fullpath = dmoz_path_concat_len(path, filename, strlen(path), filename_len - 1);
+			char* fullpath = dmoz_path_concat_len(path, filename, strlen(path), strlen(filename));
 	
 			if (ffd.dwFileAttributes & (FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_SYSTEM)) {
 				free(fullpath);

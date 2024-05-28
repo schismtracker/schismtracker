@@ -286,7 +286,6 @@ if test "x$with_jack" = "xcheck" || test "x$with_jack" = "xyes"; then
 	fi
 fi
 
-dnl ALSA
 AM_CONDITIONAL([USE_ALSA], false)
 AM_CONDITIONAL([LINK_TO_ALSA], false)
 if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then

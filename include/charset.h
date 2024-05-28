@@ -25,8 +25,38 @@
 
 #include <stdint.h>
 
+/* UCS4 shouldn't ever be used externally; the output depends on endianness.
+ * It should only be used as sort of an in-between from UTF-8 to CP437 for use
+ * where the strings can be edited, e.g. in the file selector */
+typedef enum {
+	/* Unicode */
+	CHARSET_UCS4,
+	CHARSET_UTF8,
+	CHARSET_UTF16LE,
+	CHARSET_UTF16BE,
+
+	/* European languages */
+	CHARSET_CP437,
+
+	/* Built-in C types */
+	CHARSET_CHAR,
+	CHARSET_WCHAR_T
+} charset_t;
+
+typedef enum {
+	CHARSET_ERROR_SUCCESS = 0,
+	CHARSET_ERROR_UNIMPLEMENTED = -1,
+	CHARSET_ERROR_INPUTISOUTPUT = -2,
+	CHARSET_ERROR_NULLINPUT = -3,
+	CHARSET_ERROR_NULLOUTPUT = -4,
+	CHARSET_ERROR_DECODE = -5,
+	CHARSET_ERROR_ENCODE = -6
+} charset_error_t;
+
 int char_digraph(int k1, int k2);
 uint8_t char_unicode_to_cp437(unsigned int c);
-uint8_t* str_utf8_to_cp437(const uint8_t* utf8);
+
+const char* charset_iconv_error_lookup(charset_error_t err);
+charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset);
 
 #endif

@@ -11,8 +11,8 @@ on 64-bit Linux, you can also download a pre-built binary from the release page
 On Ubuntu, run:
 
     sudo apt update
-	sudo apt install build-essential automake autoconf-archive libsdl2-dev \
-	                 git libtool libflac-dev
+	sudo apt install build-essential automake autoconf-archive \
+                     libsdl2-dev git libtool libflac-dev
 
 On Arch Linux:
 

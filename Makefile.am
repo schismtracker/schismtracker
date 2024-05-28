@@ -249,7 +249,6 @@ cflags_network=-DUSE_NETWORK
 libs_network=$(NETWORK_LIBS)
 endif
 
-
 ## Replacement functions for crappy systems
 files_stdlib =
 if NEED_ASPRINTF

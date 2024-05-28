@@ -34,7 +34,7 @@
 
 #include "log.h"
 #include "slurp.h"
-#include "util.h"
+#include "charset.h"
 
 // indices for 'h' (handles)
 enum { FILE_HANDLE = 0, MAPPING_HANDLE = 1 };
@@ -88,8 +88,7 @@ int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
 	HANDLE *h = slurp->bextra = mem_alloc(sizeof(HANDLE) * 2);
 
 	wchar_t* filename_w = NULL;
-	int m = utf8_to_wchar(&filename_w, filename);
-	if (!m)
+	if (charset_iconv(filename, (uint8_t**)&filename_w, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return _win32_error_unmap(slurp, filename, "MultiByteToWideChar");
 
 	h[FILE_HANDLE] = CreateFileW(filename_w, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
