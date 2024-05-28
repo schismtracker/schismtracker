@@ -403,8 +403,8 @@ static int utf8_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_nex
 	uint32_t state = 0, codepoint = 0;
 	size_t len;
 
-	for (len = 0; in[len];) {
-		if (utf8_decode(&state, &codepoint, in[len++]) == UTF8_REJECT)
+	for (len = 0; in[len]; len++) {
+		if (utf8_decode(&state, &codepoint, in[len]) == UTF8_REJECT)
 			continue;
 
 		/* unexpected bytes? */
@@ -412,7 +412,7 @@ static int utf8_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_nex
 			return DECODER_ERROR;
 
 		*out = codepoint;
-		*size_until_next = len;
+		*size_until_next = len + 1;
 		return DECODER_NEED_MORE;
 	}
 
@@ -432,24 +432,19 @@ static int utf8_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_nex
 	\
 		if (wc < 0xD800 || wc > 0xDFFF) { \
 			*out = wc; \
-			len++; \
+			len += 2; \
 		} else if (wc >= 0xD800 && wc <= 0xDBFF) { \
 			uint16_t wc2 = *(tmp_in++); \
 			wc2 = bswap##x##16(wc2); \
 	\
-			if (!(wc2 >= 0xDC00 && wc2 <= 0xDFFF)) \
-				return DECODER_ERROR; \
-	\
-			*out = 0x10000 + ((wc - 0xD800) << 10) + (wc2 - 0xDC00); \
-			len += 2; \
-		} else { \
-			/* this should never happen, and things \
-			 * have gone very wrong if it does */ \
-			return DECODER_ERROR; \
+			if (wc2 >= 0xDC00 && wc2 <= 0xDFFF) { \
+				*out = 0x10000 + ((wc - 0xD800) << 10) + (wc2 - 0xDC00); \
+				len += 4; \
+			} \
 		} \
 	\
 		*size_until_next = len; \
-		return (wc ? DECODER_NEED_MORE : DECODER_DONE); \
+		return (*out ? DECODER_NEED_MORE : DECODER_DONE); \
 	}
 
 UTF16_ENCODER(LE)
@@ -485,13 +480,13 @@ static size_t ucs4_to_utf8(uint32_t ch, uint8_t* out) {
 			out[len++] = (uint8_t)(((ch >> 12) & 0x3F) | 0x80);
 			out[len++] = (uint8_t)(((ch >> 6) & 0x3F) | 0x80);
 			out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
-		} else return DECODER_ERROR; /* ZOMG NO WAY */
+		} else return 0; /* ZOMG NO WAY */
 	} else {
 		if (ch < 0x80)			len += 1;
 		else if (ch < 0x800)	len += 2;
 		else if (ch < 0x10000)	len += 3;
 		else if (ch < 0x110000)	len += 4;
-		else return DECODER_ERROR;
+		else return 0;
 	}
 
 	return len;
@@ -507,39 +502,39 @@ static size_t ucs4_to_cp437(uint32_t ch, uint8_t* out) {
 #define ENCODE_UTF16_VARIANT(x) \
 	static size_t ucs4_to_utf16##x(uint32_t ch, uint8_t* out) { \
 		size_t len = 0; \
-		\
+	\
 		if (out) { \
 			if (ch < 0x10000) { \
-				ENC_CHAR(ch); \
+				APPEND_CHAR(ch); \
 			} else { \
 				uint16_t w1 = 0xD800 + ((ch - 0x10000) >> 10); \
 				uint16_t w2 = 0xDC00 + ((ch - 0x10000) & 0x3FF); \
-		\
-				ENC_CHAR(w1); \
-				ENC_CHAR(w2); \
+	\
+				APPEND_CHAR(w1); \
+				APPEND_CHAR(w2); \
 			} \
 		} else { \
 			len += (ch < 0x10000) ? 2 : 4; \
 		} \
-		\
+	\
 		return len; \
 	}
 
-#define ENC_CHAR(x) \
-	out[len++] = (uint8_t)(ch >> 8); \
-	out[len++] = (uint8_t)(ch)
+#define APPEND_CHAR(x) \
+	out[len++] = (uint8_t)(ch); \
+	out[len++] = (uint8_t)(ch >> 8)
 
 ENCODE_UTF16_VARIANT(LE)
 
-#undef ENC_CHAR
+#undef APPEND_CHAR
 
-#define ENC_CHAR(x) \
-	out[len++] = (uint8_t)(ch); \
-	out[len++] = (uint8_t)(ch >> 8);
+#define APPEND_CHAR(x) \
+	out[len++] = (uint8_t)(ch >> 8); \
+	out[len++] = (uint8_t)(ch);
 
 ENCODE_UTF16_VARIANT(BE)
 
-#undef ENC_CHAR
+#undef APPEND_CHAR
 
 #undef ENCODE_UTF16_VARIANT
 
@@ -601,11 +596,11 @@ const char* charset_iconv_error_lookup(charset_error_t err) {
 			return "Output pointer is NULL";
 		case CHARSET_ERROR_INPUTISOUTPUT:
 			return "Input and output charsets are the same";
+		case CHARSET_ERROR_DECODE:
+			return "An error occurred when decoding";
+		case CHARSET_ERROR_ENCODE:
+			return "An error occurred when encoding";
 	}
-}
-
-static int charset_realloc_out_buffer_(uint8_t** out, size_t alloc) {
-	*out = realloc(*out, alloc);
 }
 
 /* our version of iconv; this has a much simpler API than the regular
@@ -643,9 +638,11 @@ static charset_error_t charset_iconv_internal_(const uint8_t* in, uint8_t** out,
 
 		c = conv_to_ucs4_func(in, &ch, &in_needed);
 		if (c == DECODER_ERROR)
-			return CHARSET_ERROR_UNIMPLEMENTED;
+			return CHARSET_ERROR_DECODE;
 
 		size_t out_needed = conv_from_ucs4_func(ch, NULL);
+		if (!out_needed)
+			return CHARSET_ERROR_ENCODE;
 
 		if (out_length + out_needed >= out_alloc)
 			*out = mem_realloc(*out, (out_alloc *= 2) * sizeof(uint8_t));
@@ -653,7 +650,6 @@ static charset_error_t charset_iconv_internal_(const uint8_t* in, uint8_t** out,
 		conv_from_ucs4_func(ch, *out + out_length);
 
 		out_length += out_needed;
-
 		in += in_needed;
 	} while (c == DECODER_NEED_MORE);
 
