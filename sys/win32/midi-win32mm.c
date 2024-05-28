@@ -33,11 +33,6 @@
 #include <mmsystem.h>
 #include <stdio.h>
 
-#ifndef SCHISM_WIN32
-# error You have no winmm. Why are you trying to build this file?
-#endif
-
-
 struct win32mm_midi {
 	DWORD id;
 

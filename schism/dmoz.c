@@ -763,7 +763,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 		}
 		free(searchpath);
 
-		SCHISM_WIN32_FIND_DATAW ffd = {0};
+		WIN32_FIND_DATAW ffd = {0};
 		HANDLE find = FindFirstFileW(searchpath_w, &ffd);
 
 		if (find == INVALID_HANDLE_VALUE) {
