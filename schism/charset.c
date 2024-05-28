@@ -118,6 +118,7 @@ uint8_t char_unicode_to_cp437(unsigned int c)
 {
 	if (c >= 32 && c <= 127) return c;
 	switch (c) {
+	case 0x0000: return 0;  // NUL
 	case 0x263A: return 1;  // WHITE SMILING FACE
 	case 0x263B: return 2;  // BLACK SMILING FACE
 	case 0x2661:
@@ -330,8 +331,31 @@ static const unsigned short cp437_2uni[128] = {
 	0x00b0, 0x2219, 0x00b7, 0x221a, 0x207f, 0x00b2, 0x25a0, 0x00a0
 };
 
-// Copyright (c) 2008-2009 Bjoern Hoehrmann <bjoern@hoehrmann.de>
-// See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
+/* ----------------------------------------------------------------------------- */
+
+/*
+ * This UTF-8 code is licensed under the MIT license:
+ * 
+ * Copyright (c) 2008-2009 Bjoern Hoehrmann <bjoern@hoehrmann.de>
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+*/
 
 /* Unicode stuff begins here */
 
@@ -366,254 +390,177 @@ static uint32_t utf8_decode(uint32_t* state, uint32_t* codep, uint32_t byte) {
 	return *state;
 }
 
-/* for these functions:
- * out can be NULL, and this means to just return the needed length
- * of the output string WITHOUT the null terminating character.
- *
- * the NUL char is added on in charset_iconv() */
-static size_t utf8_to_ucs4(const uint8_t* in, uint32_t* out) {
-	uint32_t state = 0, codepoint = 0;
-	size_t len = 0;
+/* ----------------------------------------------------------------------------- */
 
-	for (; *in; in++) {
-		if (utf8_decode(&state, &codepoint, *in))
+#define DECODER_ERROR		(-1)
+#define DECODER_NEED_MORE	(0)
+#define DECODER_DONE		(1)
+
+/* these encode ONE character each time they are ran, and they must each
+ * return a byte offset of which to append to "in" to start with the next
+ * character. */
+static int utf8_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_next) {
+	uint32_t state = 0, codepoint = 0;
+	size_t len;
+
+	for (len = 0; in[len];) {
+		if (utf8_decode(&state, &codepoint, in[len++]) == UTF8_REJECT)
 			continue;
 
-		if (out)
-			out[len] = codepoint;
-		len++;
+		/* unexpected bytes? */
+		if (state != UTF8_ACCEPT)
+			return DECODER_ERROR;
+
+		*out = codepoint;
+		*size_until_next = len;
+		return DECODER_NEED_MORE;
 	}
 
-	return len;
+	*out = 0;
+	*size_until_next = 0;
+	return DECODER_DONE;
 }
 
-static size_t utf16le_to_ucs4(const uint8_t* in, uint32_t* out) {
-	const uint16_t* tmp_in = (const uint16_t*)in;
-	size_t len = 0;
-
-	/* don't translate a BOM */
-	if (in[0] == 0xFF && in[1] == 0xFE)
-		tmp_in++;
-
-	while (*tmp_in) {
-		uint16_t wc = *(tmp_in++);
-		wc = bswapLE16(wc);
-
-		if (wc < 0xD800 || wc > 0xDFFF) {
-			if (out)
-				out[len] = wc;
-			len++;
-		} else if (wc >= 0xD800 && wc <= 0xDBFF) {
-			uint16_t wc2 = *(tmp_in++);
-			wc2 = bswapLE16(wc2);
-
-			if (!(wc2 >= 0xDC00 && wc2 <= 0xDFFF))
-				return 0;
-
-			if (out)
-				out[len] = 0x10000 + ((wc - 0xD800) << 10) + (wc2 - 0xDC00);
-			len++;
-		} else {
-			/* this should never happen, and things
-			 * have gone very wrong if it does */
-			return 0;
-		}
+/* this is here so that when the UTF-16 code changes nothing gets lost between these two */
+#define UTF16_ENCODER(x) \
+	static int utf16##x##_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_next) { \
+		const uint16_t* tmp_in = (const uint16_t*)in; \
+		size_t len = 0; \
+	\
+		uint16_t wc = *(tmp_in++); \
+		wc = bswap##x##16(wc); \
+	\
+		if (wc < 0xD800 || wc > 0xDFFF) { \
+			*out = wc; \
+			len++; \
+		} else if (wc >= 0xD800 && wc <= 0xDBFF) { \
+			uint16_t wc2 = *(tmp_in++); \
+			wc2 = bswap##x##16(wc2); \
+	\
+			if (!(wc2 >= 0xDC00 && wc2 <= 0xDFFF)) \
+				return DECODER_ERROR; \
+	\
+			*out = 0x10000 + ((wc - 0xD800) << 10) + (wc2 - 0xDC00); \
+			len += 2; \
+		} else { \
+			/* this should never happen, and things \
+			 * have gone very wrong if it does */ \
+			return DECODER_ERROR; \
+		} \
+	\
+		*size_until_next = len; \
+		return (wc ? DECODER_NEED_MORE : DECODER_DONE); \
 	}
 
-	return len;
+UTF16_ENCODER(LE)
+UTF16_ENCODER(BE)
+
+#undef UTF16_ENCODER
+
+static int cp437_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_next) {
+	uint8_t c = *in;
+	*out = (c < 0x80) ? c : cp437_2uni[c - 0x80];
+
+	*size_until_next = 1;
+	return (c) ? DECODER_NEED_MORE : DECODER_DONE;
 }
 
-static size_t utf16be_to_ucs4(const uint8_t* in, uint32_t* out) {
-	const uint16_t* tmp_in = (const uint16_t*)in;
+/* ----------------------------------------------------- */
+
+static size_t ucs4_to_utf8(uint32_t ch, uint8_t* out) {
 	size_t len = 0;
-
-	/* don't translate a BOM */
-	if (in[0] == 0xFE && in[1] == 0xFF)
-		tmp_in++;
-
-	while (*tmp_in) {
-		uint16_t wc = *(tmp_in++);
-		wc = bswapBE16(wc);
-
-		if (wc < 0xD800 || wc > 0xDFFF) {
-			if (out)
-				out[len] = wc;
-			len++;
-		} else if (wc >= 0xD800 && wc <= 0xDBFF) {
-			uint16_t wc2 = *(tmp_in++);
-			wc2 = bswapBE16(wc2);
-
-			if (!(wc2 >= 0xDC00 && wc2 <= 0xDFFF))
-				return 0;
-
-			if (out)
-				out[len] = 0x10000 + ((wc - 0xD800) << 10) + (wc2 - 0xDC00);
-			len++;
-		} else {
-			return 0;
-		}
-	}
-
-	return len;
-}
-
-static size_t cp437_to_ucs4(const uint8_t* in, uint32_t* out) {
-	size_t len = 0;
-
-	for (; *in; in++, len++) {
-		uint8_t c = *in;
-
-		if (out)
-			out[len] = (c < 0x80) ? c : cp437_2uni[c - 0x80];
-	}
-
-	return len;
-}
-
-/* These conversion functions DO include the NUL byte because
- * we're dealing with essentially raw output data here: we don't
- * know how big each character is... */
-static size_t ucs4_to_utf8(const uint32_t* in, uint8_t* out) {
-	size_t len = 0;
-
-	for (; *in; in++) {
-		const uint32_t ch = *in;
-
-		if (out) {
-			if (ch < 0x80) {
-				out[len++] = (uint8_t)ch;
-			} else if (ch < 0x800) {
-				out[len++] = (uint8_t)((ch >> 6) | 0xC0);
-				out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
-			} else if (ch < 0x10000) {
-				out[len++] = (uint8_t)((ch >> 12) | 0xE0);
-				out[len++] = (uint8_t)(((ch >> 6) & 0x3F) | 0x80);
-				out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
-			} else if (ch < 0x110000) {
-				out[len++] = (uint8_t)((ch >> 18) | 0xF0);
-				out[len++] = (uint8_t)(((ch >> 12) & 0x3F) | 0x80);
-				out[len++] = (uint8_t)(((ch >> 6) & 0x3F) | 0x80);
-				out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
-			} else return 0; /* ZOMG NO WAY */
-		} else {
-			if (ch < 0x80)
-				len += 1;
-			else if (ch < 0x800)
-				len += 2;
-			else if (ch < 0x10000)
-				len += 3;
-			else if (ch < 0x110000)
-				len += 4;
-			else
-				return 0;
-		}
-	}
-
-	if (out)
-		out[len] = '\0';
-	len++;
-
-	return len;
-}
-
-static size_t ucs4_to_cp437(const uint32_t* in, uint8_t* out) {
-	size_t len = 0;
-
-	for (; *in; in++, len++)
-		if (out)
-			out[len] = char_unicode_to_cp437(*in);
-
-	if (out)
-		out[len] = '\0';
-	len++;
-
-	return len;
-}
-
-static size_t ucs4_to_utf16le(const uint32_t* in, uint8_t* out) {
-	size_t len = 0;
-
-	for (; *in; in++) {
-		const uint32_t ch = *in;
-
-		if (out) {
-			if (ch < 0x10000) {
-				out[len++] = (uint8_t)(ch);
-				out[len++] = (uint8_t)(ch >> 8);
-			} else {
-				uint16_t w1 = 0xD800 + ((ch - 0x10000) >> 10);
-				uint16_t w2 = 0xDC00 + ((ch - 0x10000) & 0x3FF);
-
-				out[len++] = (uint8_t)(w1);
-				out[len++] = (uint8_t)(w1 >> 8);
-				out[len++] = (uint8_t)(w2);
-				out[len++] = (uint8_t)(w2 >> 8);
-			}
-		} else {
-			len += (ch < 0x10000) ? 2 : 4;
-		}
-	}
 
 	if (out) {
-		out[len++] = '\0';
-		out[len++] = '\0';
+		if (ch < 0x80) {
+			out[len++] = (uint8_t)ch;
+		} else if (ch < 0x800) {
+			out[len++] = (uint8_t)((ch >> 6) | 0xC0);
+			out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
+		} else if (ch < 0x10000) {
+			out[len++] = (uint8_t)((ch >> 12) | 0xE0);
+			out[len++] = (uint8_t)(((ch >> 6) & 0x3F) | 0x80);
+			out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
+		} else if (ch < 0x110000) {
+			out[len++] = (uint8_t)((ch >> 18) | 0xF0);
+			out[len++] = (uint8_t)(((ch >> 12) & 0x3F) | 0x80);
+			out[len++] = (uint8_t)(((ch >> 6) & 0x3F) | 0x80);
+			out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
+		} else return DECODER_ERROR; /* ZOMG NO WAY */
 	} else {
-		len += 2;
+		if (ch < 0x80)			len += 1;
+		else if (ch < 0x800)	len += 2;
+		else if (ch < 0x10000)	len += 3;
+		else if (ch < 0x110000)	len += 4;
+		else return DECODER_ERROR;
 	}
 
 	return len;
 }
 
-static size_t ucs4_to_utf16be(const uint32_t* in, uint8_t* out) {
-	size_t len = 0;
+static size_t ucs4_to_cp437(uint32_t ch, uint8_t* out) {
+	if (out)
+		*out = char_unicode_to_cp437(ch);
 
-	for (; *in; in++) {
-		const uint32_t ch = *in;
-
-		if (out) {
-			if (ch < 0x10000) {
-				out[len++] = (uint8_t)(ch >> 8);
-				out[len++] = (uint8_t)(ch);
-			} else {
-				uint16_t w1 = 0xD800 + ((ch - 0x10000) >> 10);
-				uint16_t w2 = 0xDC00 + ((ch - 0x10000) & 0x3FF);
-
-				out[len++] = (uint8_t)(w1 >> 8);
-				out[len++] = (uint8_t)(w1);
-				out[len++] = (uint8_t)(w2 >> 8);
-				out[len++] = (uint8_t)(w2);
-			}
-		} else {
-			len += (ch < 0x10000) ? 2 : 4;
-		}
-	}
-
-	if (out) {
-		out[len++] = '\0';
-		out[len++] = '\0';
-	} else {
-		len += 2;
-	}
-
-	return len;
+	return 1;
 }
+
+#define ENCODE_UTF16_VARIANT(x) \
+	static size_t ucs4_to_utf16##x(uint32_t ch, uint8_t* out) { \
+		size_t len = 0; \
+		\
+		if (out) { \
+			if (ch < 0x10000) { \
+				ENC_CHAR(ch); \
+			} else { \
+				uint16_t w1 = 0xD800 + ((ch - 0x10000) >> 10); \
+				uint16_t w2 = 0xDC00 + ((ch - 0x10000) & 0x3FF); \
+		\
+				ENC_CHAR(w1); \
+				ENC_CHAR(w2); \
+			} \
+		} else { \
+			len += (ch < 0x10000) ? 2 : 4; \
+		} \
+		\
+		return len; \
+	}
+
+#define ENC_CHAR(x) \
+	out[len++] = (uint8_t)(ch >> 8); \
+	out[len++] = (uint8_t)(ch)
+
+ENCODE_UTF16_VARIANT(LE)
+
+#undef ENC_CHAR
+
+#define ENC_CHAR(x) \
+	out[len++] = (uint8_t)(ch); \
+	out[len++] = (uint8_t)(ch >> 8);
+
+ENCODE_UTF16_VARIANT(BE)
+
+#undef ENC_CHAR
+
+#undef ENCODE_UTF16_VARIANT
 
 /* function LUT here */
-typedef size_t (*charset_conv_to_ucs4_func)(const uint8_t*, uint32_t*);
-typedef size_t (*charset_conv_from_ucs4_func)(const uint32_t*, uint8_t*);
+typedef int (*charset_conv_to_ucs4_func)(const uint8_t*, uint32_t*, size_t*);
+typedef size_t (*charset_conv_from_ucs4_func)(uint32_t, uint8_t*);
 
 static charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 	[CHARSET_UTF8] = utf8_to_ucs4,
-	[CHARSET_UTF16LE] = utf16le_to_ucs4,
-	[CHARSET_UTF16BE] = utf16be_to_ucs4,
+
+	/* primarily used on Windows */
+	[CHARSET_UTF16LE] = utf16LE_to_ucs4,
+	[CHARSET_UTF16BE] = utf16BE_to_ucs4,
 
 	[CHARSET_CP437] = cp437_to_ucs4,
 
 #ifdef WIN32
 # if WORDS_BIGENDIAN
-	[CHARSET_WCHAR_T] = utf16be_to_ucs4,
+	[CHARSET_WCHAR_T] = utf16BE_to_ucs4,
 # else
-	[CHARSET_WCHAR_T] = utf16le_to_ucs4,
+	[CHARSET_WCHAR_T] = utf16LE_to_ucs4,
 # endif
 #else
 	/* unimplemented */
@@ -623,16 +570,16 @@ static charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 
 static charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 	[CHARSET_UTF8] = ucs4_to_utf8,
-	[CHARSET_UTF16LE] = ucs4_to_utf16le,
-	[CHARSET_UTF16BE] = ucs4_to_utf16be,
+	[CHARSET_UTF16LE] = ucs4_to_utf16LE,
+	[CHARSET_UTF16BE] = ucs4_to_utf16BE,
 
 	[CHARSET_CP437] = ucs4_to_cp437,
 
 #ifdef WIN32
 # if WORDS_BIGENDIAN
-	[CHARSET_WCHAR_T] = ucs4_to_utf16be,
+	[CHARSET_WCHAR_T] = ucs4_to_utf16BE,
 # else
-	[CHARSET_WCHAR_T] = ucs4_to_utf16le,
+	[CHARSET_WCHAR_T] = ucs4_to_utf16LE,
 # endif
 #else
 	/* unimplemented */
@@ -657,6 +604,10 @@ const char* charset_iconv_error_lookup(charset_error_t err) {
 	}
 }
 
+static int charset_realloc_out_buffer_(uint8_t** out, size_t alloc) {
+	*out = realloc(*out, alloc);
+}
+
 /* our version of iconv; this has a much simpler API than the regular
  * iconv() because much of it isn't very necessary for our purposes
  *
@@ -671,9 +622,9 @@ const char* charset_iconv_error_lookup(charset_error_t err) {
  * 
  * [out] must be free'd by the caller */
 static charset_error_t charset_iconv_internal_(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset) {
-	size_t in_length = 0;
 	size_t out_length = 0;
-	uint32_t* ucs4_buf = NULL;
+	size_t out_alloc = 16; /* most strings passed through here shouldn't be too big */
+	int c;
 
 	if (inset >= ARRAY_SIZE(conv_to_ucs4_funcs) || outset >= ARRAY_SIZE(conv_from_ucs4_funcs))
 		return CHARSET_ERROR_UNIMPLEMENTED;
@@ -684,28 +635,27 @@ static charset_error_t charset_iconv_internal_(const uint8_t* in, uint8_t** out,
 	if (!conv_to_ucs4_func || !conv_from_ucs4_func)
 		return CHARSET_ERROR_UNIMPLEMENTED;
 
-	in_length = conv_to_ucs4_func(in, NULL);
+	*out = mem_alloc((out_alloc) * sizeof(uint8_t));
 
-	ucs4_buf = mem_calloc(in_length + 1, sizeof(uint32_t));
+	do {
+		uint32_t ch = 0;
+		size_t in_needed = 0;
 
-	conv_to_ucs4_func(in, ucs4_buf);
+		c = conv_to_ucs4_func(in, &ch, &in_needed);
+		if (c == DECODER_ERROR)
+			return CHARSET_ERROR_UNIMPLEMENTED;
 
-	/* add NUL character */
-	ucs4_buf[in_length] = 0;
+		size_t out_needed = conv_from_ucs4_func(ch, NULL);
 
-	if (outset == CHARSET_UCS4) {
-		/* we're done here */
-		*out = (uint8_t*)ucs4_buf;
-		return CHARSET_ERROR_SUCCESS;
-	}
+		if (out_length + out_needed >= out_alloc)
+			*out = mem_realloc(*out, (out_alloc *= 2) * sizeof(uint8_t));
 
-	out_length = conv_from_ucs4_func(ucs4_buf, NULL);
+		conv_from_ucs4_func(ch, *out + out_length);
 
-	*out = mem_calloc(out_length, sizeof(uint8_t));
+		out_length += out_needed;
 
-	conv_from_ucs4_func(ucs4_buf, *out);
-
-	free(ucs4_buf);
+		in += in_needed;
+	} while (c == DECODER_NEED_MORE);
 
 	return CHARSET_ERROR_SUCCESS;
 }
