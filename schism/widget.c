@@ -618,23 +618,21 @@ void draw_widget(struct widget *w, int selected)
 
 void change_focus_to(int new_widget_index)
 {
-	if(new_widget_index == -1) {
+	if(new_widget_index == *selected_widget || new_widget_index < 0 || new_widget_index >= *total_widgets) {
 		return;
 	}
 
-	if (*selected_widget != new_widget_index) {
-		if (ACTIVE_WIDGET.depressed) ACTIVE_WIDGET.depressed = 0;
+	if (ACTIVE_WIDGET.depressed) ACTIVE_WIDGET.depressed = 0;
 
-		*selected_widget = new_widget_index;
+	*selected_widget = new_widget_index;
 
-		ACTIVE_WIDGET.depressed = 0;
+	ACTIVE_WIDGET.depressed = 0;
 
-		if (ACTIVE_WIDGET.type == WIDGET_TEXTENTRY)
-			ACTIVE_WIDGET.d.textentry.cursor_pos
-					= strlen(ACTIVE_WIDGET.d.textentry.text);
+	if (ACTIVE_WIDGET.type == WIDGET_TEXTENTRY)
+		ACTIVE_WIDGET.d.textentry.cursor_pos
+				= strlen(ACTIVE_WIDGET.d.textentry.text);
 
-		status.flags |= NEED_UPDATE;
-	}
+	status.flags |= NEED_UPDATE;
 }
 
 static int _find_widget_xy(int x, int y)
