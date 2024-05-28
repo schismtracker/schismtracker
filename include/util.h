@@ -44,38 +44,39 @@
 # define CLAMP(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
 #endif
 
-#ifdef __GNUC__
-# ifndef LIKELY
-#  define LIKELY(x) __builtin_expect(!!(x),1)
-# endif
-# ifndef UNLIKELY
-#  define UNLIKELY(x) __builtin_expect(!!(x),0)
-# endif
-# ifndef UNUSED
+#if defined(__has_attribute)
+# if __has_attribute (unused)
 #  define UNUSED __attribute__((unused))
 # endif
-# ifndef PACKED
+# if __has_attribute (packed)
 #  define PACKED __attribute__((packed))
 # endif
-# ifndef MALLOC
-#  define MALLOC __attribute__ ((malloc))
+# if __has_attribute (packed)
+#  define MALLOC __attribute__((malloc))
 # endif
-#else
-# ifndef LIKELY
-#  define LIKELY(x) (x)
+#endif
+
+#if defined(__has_builtin)
+# if __has_builtin (__builtin_expect)
+#  define LIKELY(x)   __builtin_expect(!!(x), 1)
+#  define UNLIKELY(x) __builtin_expect(!(x),  1)
 # endif
-# ifndef UNLIKELY
-#  define UNLIKELY(x) (x)
-# endif
-# ifndef UNUSED
-#  define UNUSED
-# endif
-# ifndef PACKED
-#  define PACKED
-# endif
-# ifndef MALLOC
-#  define MALLOC
-# endif
+#endif
+
+#ifndef LIKELY
+# define LIKELY(x) (x)
+#endif
+#ifndef UNLIKELY
+# define UNLIKELY(x) (x)
+#endif
+#ifndef UNUSED
+# define UNUSED
+#endif
+#ifndef PACKED
+# define PACKED
+#endif
+#ifndef MALLOC
+# define MALLOC
 #endif
 
 /* Path stuff that differs by platform */
