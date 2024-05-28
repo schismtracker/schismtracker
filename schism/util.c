@@ -305,22 +305,19 @@ const char *get_extension(const char *filename)
 
 char *get_parent_directory(const char *dirname)
 {
-	if (!dirname || strlen(dirname) == 0)
+	if (!dirname || !dirname[0])
 		return NULL;
 
 	int n = strlen(dirname) - 1;
 
-	if (dirname[n] == DIR_SEPARATOR) {
+	if (dirname[n] == DIR_SEPARATOR)
 		n--;
-	}
 
 	if (n <= 0) return NULL;
 
-	for(; n > 0; n--) {
-		if(dirname[n - 1] == DIR_SEPARATOR) {
-			n--;
+	while (n > 0) {
+		if (dirname[--n] == DIR_SEPARATOR)
 			break;
-		}
 	}
 
 	char *ret = mem_alloc((n + 1) * sizeof(char));
@@ -328,7 +325,7 @@ char *get_parent_directory(const char *dirname)
 	ret[n] = '\0';
 
 	if(strcmp(dirname, ret) == 0) return NULL;
-	if(strlen(ret) == 0) return NULL;
+	if(!ret[0]) return NULL;
 
 	return ret;
 }
