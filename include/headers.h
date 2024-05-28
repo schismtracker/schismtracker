@@ -25,6 +25,8 @@
 #define __headers_h
 /* This is probably overkill, but it's consistent this way. */
 
+#define _GNU_SOURCE /* need this for <stdlib.h> to give us some functions */
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
