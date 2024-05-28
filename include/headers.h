@@ -189,10 +189,10 @@ static inline unsigned int ARM_get32(const void *data)
 	memcpy(&s,data,sizeof(s));
 	return s;
 }
-#  define bswapLE16(x) ARM_get16(&x)
-#  define bswapLE32(x) ARM_get32(&x)
-#  define bswapBE16(x) bswap_16(ARM_get16(&x))
-#  define bswapBE32(x) bswap_32(ARM_get32(&x))
+#  define bswapLE16(x) ARM_get16(&(x))
+#  define bswapLE32(x) ARM_get32(&(x))
+#  define bswapBE16(x) bswap_16(ARM_get16(&(x)))
+#  define bswapBE32(x) bswap_32(ARM_get32(&(x)))
 # elif WORDS_BIGENDIAN
 #  define bswapLE16(x) bswap_16(x)
 #  define bswapLE32(x) bswap_32(x)
