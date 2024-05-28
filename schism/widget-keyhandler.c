@@ -102,11 +102,8 @@ static int thumbbar_prompt_value(struct widget *widget, struct key_event *k)
 
 int find_tab_to(int target)
 {
-	struct widget *w;
-
 	for (int i = 0; i < *total_widgets; i++) {
-		w = &widgets[i];
-		if (w->next.tab == target && i != target) {
+		if (widgets[i].next.tab == target && i != target) {
 			return i;
 		}
 	}
@@ -116,11 +113,8 @@ int find_tab_to(int target)
 
 int find_down_to(int target)
 {
-	struct widget *w;
-
 	for (int i = 0; i < *total_widgets; i++) {
-		w = &widgets[i];
-		if (w->next.down == target && i != target) {
+		if (widgets[i].next.down == target && i != target) {
 			return i;
 		}
 	}
@@ -130,11 +124,8 @@ int find_down_to(int target)
 
 int find_right_to(int target)
 {
-	struct widget *w;
-
 	for (int i = 0; i < *total_widgets; i++) {
-		w = &widgets[i];
-		if (w->next.right == target && i != target) {
+		if (widgets[i].next.right == target && i != target) {
 			return i;
 		}
 	}
@@ -165,6 +156,8 @@ int find_right_or_down_to(int target, int checkNotEqual)
 		if(right_to > -1 && right_to != checkNotEqual)
 			return right_to;
 	}
+
+	return -1;
 }
 
 int find_tab_to_recursive(int target)
