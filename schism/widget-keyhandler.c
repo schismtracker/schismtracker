@@ -142,51 +142,47 @@ int find_right_to(int target)
 	return -1;
 }
 
-int find_backtab(int selected)
+int find_right_or_down_to(int target, int checkNotEqual)
 {
-	int current = selected;
+	if (status.flags & CLASSIC_MODE) {
+		int right_to = find_right_to(target);
+
+		if(right_to > -1 && right_to != checkNotEqual)
+			return right_to;
+
+		int down_to = find_down_to(target);
+
+		if(down_to > -1 && down_to != checkNotEqual)
+			return down_to;
+	} else {
+		int down_to = find_down_to(target);
+
+		if(down_to > -1 && down_to != checkNotEqual)
+			return down_to;
+
+		int right_to = find_right_to(target);
+
+		if(right_to > -1 && right_to != checkNotEqual)
+			return right_to;
+	}
+}
+
+int find_tab_to_recursive(int target)
+{
+	int current = target;
 
 	for(int i = 0; i < *total_widgets; i++) {
 		int widget_backtab = widgets[current].next.backtab;
-
-		if(widget_backtab > -1) {
-			return widget_backtab;
-		}
+		if(widget_backtab > -1) return widget_backtab;
 
 		int tab_to = find_tab_to(current);
+		if(tab_to > -1) return tab_to;
 
-		if(tab_to > -1) {
-			return tab_to;
-		}
+		int right_or_down_to = find_right_or_down_to(current, target);
 
-		if (status.flags & CLASSIC_MODE) {
-			int right_to = find_right_to(current);
-
-			if(right_to > -1 && right_to != selected) {
-				current = right_to;
-				continue;
-			}
-
-			int down_to = find_down_to(current);
-
-			if(down_to > -1 && down_to != selected) {
-				current = down_to;
-				continue;
-			}
-		} else {
-			int down_to = find_down_to(current);
-
-			if(down_to > -1 && down_to != selected) {
-				current = down_to;
-				continue;
-			}
-
-			int right_to = find_right_to(current);
-
-			if(right_to > -1 && right_to != selected) {
-				current = right_to;
-				continue;
-			}
+		if(right_or_down_to > -1) {
+			current = right_or_down_to;
+			continue;
 		}
 
 		return -1;
@@ -200,11 +196,16 @@ static void _backtab(void)
 	/* hunt for a widget that leads back to this one */
 	if (!total_widgets || !selected_widget) return;
 
-	int backtab = find_backtab(*selected_widget);
+	int selected = *selected_widget;
+	int backtab = find_tab_to_recursive(selected);
 
 	if(backtab > -1) {
 		change_focus_to(backtab);
+		return;
 	}
+
+	int right_or_down_to = find_right_or_down_to(selected, selected);
+	if(right_or_down_to > -1) change_focus_to(right_or_down_to);
 }
 
 /* return: 1 = handled text, 0 = didn't */
