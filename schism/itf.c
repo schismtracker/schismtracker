@@ -30,6 +30,7 @@
 #include "page.h"
 #include "version.h"
 #include "log.h"
+#include "util.h"
 
 #include "sdlmain.h"
 #include <string.h>
@@ -175,7 +176,7 @@ static void load_fontlist(void)
 	top_font = cur_font = 0;
 
 	font_dir = dmoz_path_concat_len(cfg_dir_dotschism, "fonts", strlen(cfg_dir_dotschism), 5);
-	mkdir(font_dir, 0755);
+	os_mkdir(font_dir, 0755);
 	p = dmoz_path_concat_len(font_dir, "font.cfg", strlen(font_dir), 8);
 	dmoz_add_file(&flist, p, str_dup("font.cfg"), &st, -100); /* put it on top */
 	if (dmoz_read(font_dir, &flist, NULL, NULL) < 0)

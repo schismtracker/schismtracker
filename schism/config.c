@@ -25,6 +25,7 @@
 
 #include "it.h"
 #include "video.h" /* shouldn't need this */
+#include "util.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -89,7 +90,7 @@ void cfg_init_dir(void)
 		if (!is_directory(cfg_dir_dotschism)) {
 			printf("Creating directory %s\n", cfg_dir_dotschism);
 			printf("Schism Tracker uses this directory to store your settings.\n");
-			if (mkdir(cfg_dir_dotschism, 0777) != 0) {
+			if (os_mkdir(cfg_dir_dotschism, 0777) != 0) {
 				perror("Error creating directory");
 				fprintf(stderr, "Everything will still work, but preferences will not be saved.\n");
 			}

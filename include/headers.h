@@ -230,13 +230,6 @@ int mkstemp(char *template);
 #define MACOSX  1
 #endif
 
-/* Various other stuff */
-#ifdef WIN32
-# define mkdir(path,mode) mkdir(path)
-# define setenv(a,b,c) /* stupid windows */
-# define fsync _commit
-#endif
-
 #define INT_SHAPED_PTR(v)               ((intptr_t)(((void*)(v))))
 #define PTR_SHAPED_INT(i)               ((void*)(i))
 

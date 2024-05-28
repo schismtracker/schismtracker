@@ -708,6 +708,16 @@ FILE* win32_fopen(const char* path, const char* flags) {
 	free(wc_flags);
 	return ret;
 }
+
+int win32_mkdir(const char *path, UNUSED mode_t mode) {
+	wchar_t* wc = NULL;
+	if (charset_iconv(path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
+		return -1;
+
+	int ret = _wmkdir(wc);
+	free(wc);
+	return ret;
+}
 #endif
 
 unsigned long long file_size(const char *filename) {

@@ -185,14 +185,18 @@ int win32_open(const char* path, int flags);
 int win32_wstat(const wchar_t* path, struct stat* st);
 int win32_stat(const char* path, struct stat* st);
 int win32_mktemp(char* template, size_t size);
+int win32_mkdir(const char* path, mode_t mode);
 FILE* win32_fopen(const char* path, const char* flags);
+# define win32_wmkdir(path, mode) _wmkdir(path)
 # define os_fopen win32_fopen
 # define os_stat  win32_stat
 # define os_open  win32_open
+# define os_mkdir win32_mkdir
 #else
 # define os_fopen fopen
 # define os_stat  stat
 # define os_open  open
+# define os_mkdir mkdir
 #endif
 
 void put_env_var(const char *key, const char *value);
