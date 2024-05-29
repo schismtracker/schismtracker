@@ -994,12 +994,17 @@ static int _handle_ime(struct key_event *k)
 		} else if (!(status.flags & CLASSIC_MODE) && (k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT)) {
 			if (cs_unicode_c >= 0) {
 				/* bleh... */
+				SDL_Keysym sym = k->sym;
 				m = k->mod;
+
+				k->sym = k->orig_sym;
 				k->mod = 0;
-				/* HACK: SDL2 replaces numbers with their respective symbols when shift is held */
-				k->sym.sym = SDL_GetKeyFromScancode(k->scancode);
+
 				c = kbd_char_to_hex(k);
+
+				k->sym = sym;
 				k->mod = m;
+
 				if (c == -1) {
 					cs_unicode = cs_unicode_c = -1;
 				} else {
