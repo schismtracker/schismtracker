@@ -92,17 +92,7 @@ static void palette_list_draw(void)
 
 	draw_fill_chars(55, 26, 76, 40, 0);
 
-	fg = 6;
-	bg = 0;
-	if (focused && -1 == selected_palette) {
-		fg = 0;
-		bg = 3;
-	} else if (-1 == selected_palette) {
-		bg = 14;
-	}
-
-	draw_text_len("User Defined", 22, 55, 26, fg, bg);
-	for (n = 0; n < 16 && palettes[n].name[0]; n++) {
+	for (n = -1; n < 14; n++) {
 		fg = 6;
 		bg = 0;
 		if (focused && n == selected_palette) {
@@ -111,7 +101,16 @@ static void palette_list_draw(void)
 		} else if (n == selected_palette) {
 			bg = 14;
 		}
-		draw_text_len(palettes[n].name, 22, 55, 27 + n, fg, bg);
+
+		if(n == current_palette_index)
+			draw_text_len("*", 1, 55, 27 + n, fg, bg);
+		else
+			draw_text_len(" ", 1, 55, 27 + n, fg, bg);
+
+		if(n == -1)
+			draw_text_len("User Defined", 21, 56, 26, fg, bg);
+		else
+			draw_text_len(palettes[n].name, 21, 56, 27 + n, fg, bg);
 	}
 	max_palette = n;
 }
@@ -126,6 +125,12 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 			return 0;
 		if (k->x < 55 || k->y < 26 || k->y > 40 || k->x > 76) return 0;
 		new_palette = (k->y - 27);
+		selected_palette = new_palette;
+		palette_load_preset(selected_palette);
+		palette_apply();
+		update_thumbbars();
+		status.flags |= NEED_UPDATE;
+		return 1;
 	} else if (k->mouse == MOUSE_CLICK) {
 		if (k->state == KEY_PRESS)
 			return 0;
@@ -152,7 +157,11 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 	case SDLK_DOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
-		new_palette++;
+		// new_palette++;
+		if (++new_palette > 13) {
+			change_focus_to(49);
+			return 1;
+		}
 		break;
 	case SDLK_HOME:
 		if (!NO_MODIFIER(k->mod))
@@ -179,7 +188,14 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 		new_palette += 16;
 		break;
 	case SDLK_RETURN:
-		return 0;
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		// if (selected_palette == -1) return 1;
+		palette_load_preset(selected_palette);
+		palette_apply();
+		update_thumbbars();
+		status.flags |= NEED_UPDATE;
+		return 1;
 	case SDLK_RIGHT:
 	case SDLK_TAB:
 		if (k->mod & KMOD_SHIFT) {
@@ -204,9 +220,6 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 	else if (new_palette >= (max_palette-1)) new_palette = (max_palette-1);
 	if (new_palette != selected_palette) {
 		selected_palette = new_palette;
-		palette_load_preset(selected_palette);
-		palette_apply();
-		update_thumbbars();
 		status.flags |= NEED_UPDATE;
 	}
 
@@ -384,6 +397,15 @@ void palette_load_page(struct page *page)
 	widgets_palette[48].width = 20;
 	widgets_palette[48].height = 15;
 
-	create_button(widgets_palette + 49, 55, 43, 20, 48, 50, 48, 50, 50, palette_copy_to_clipboard, "Copy To Clipboard", 3);
-	create_button(widgets_palette + 50, 55, 46, 20, 48, 50, 48, 50, 50, palette_paste_from_clipboard, "Paste From Clipboard", 1);
+	for(int i = 6; i < 18; i++) {
+		widgets_palette[i].next.backtab = 48;
+	}
+
+	create_button(widgets_palette + 49, 55, 43, 20, 48, 50, 39, 18, 18, palette_copy_to_clipboard, "Copy To Clipboard", 3);
+	create_button(widgets_palette + 50, 55, 46, 20, 49, 0, 39, 18, 18, palette_paste_from_clipboard, "Paste From Clipboard", 1);
+
+	widgets_palette[0].next.up = 50;
+	widgets_palette[39].next.tab = 49;
+	widgets_palette[40].next.tab = 49;
+	widgets_palette[41].next.tab = 49;
 }
