@@ -504,7 +504,7 @@ int fmt_flac_save_sample(disko_t *fp, song_sample_t *smp)
 	size_t offset;
 	for (offset = 0; offset < smp->length; offset += SAMPLE_BUFFER_LENGTH) {
 		size_t needed = smp->length - offset;
-		fmt_flac_export_body(fp, smp->data + offset, MIN(needed, SAMPLE_BUFFER_LENGTH));
+		fmt_flac_export_body(fp, (uint8_t*)smp->data + offset, MIN(needed, SAMPLE_BUFFER_LENGTH));
 	}
 
 	fmt_flac_export_tail(fp);

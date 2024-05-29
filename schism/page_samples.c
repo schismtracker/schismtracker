@@ -292,7 +292,7 @@ static void sample_list_predraw_hook(void)
 
 /* --------------------------------------------------------------------- */
 
-static int sample_list_add_char(char c)
+static int sample_list_add_char(uint8_t c)
 {
 	song_sample_t *smp;
 
@@ -378,7 +378,7 @@ static void do_replace_sample(int n)
 
 /* --------------------------------------------------------------------- */
 
-static int sample_list_handle_text_input_on_list(const char* text) {
+static int sample_list_handle_text_input_on_list(const uint8_t* text) {
 	int success = 0;
 
 	for (; *text; text++)

@@ -384,7 +384,7 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 /* --------------------------------------------------------------------------------------------------------- */
 /* text input handler */
 
-void handle_text_input(const char* text_input) {
+void handle_text_input(const uint8_t* text_input) {
 	if (widget_handle_text_input(text_input)) return;
 
 	if (!(status.dialog_type & DIALOG_BOX) && ACTIVE_PAGE.handle_text_input)
@@ -953,7 +953,7 @@ static int _handle_ime(struct key_event *k)
 				digraph_c = c;
 				status_text_flash_bios("Enter digraph: %c", c);
 			} else {
-				unsigned char digraph_input[2] = {char_digraph(digraph_c, c), '\0'};
+				uint8_t digraph_input[2] = {char_digraph(digraph_c, c), '\0'};
 				if (digraph_input[0]) {
 					status_text_flash_bios("Enter digraph: %c%c -> %c",
 							       digraph_c, c, digraph_input[0]);
@@ -962,7 +962,7 @@ static int _handle_ime(struct key_event *k)
 				}
 				digraph_n = digraph_c = 0;
 				if (digraph_input[0]) {
-					handle_text_input((const char*)digraph_input);
+					handle_text_input((const uint8_t*)digraph_input);
 				}
 			}
 			return 1;
@@ -987,7 +987,7 @@ static int _handle_ime(struct key_event *k)
 						status_text_flash_bios("Enter Unicode: U+%04X -> %c",
 									   cs_unicode, unicode[0]);
 						SDL_SetModState(0);
-						handle_text_input((const char*)unicode);
+						handle_text_input((const uint8_t*)unicode);
 					} else {
 						status_text_flash_bios("Enter Unicode: U+%04X -> INVALID", cs_unicode);
 					}
@@ -1039,7 +1039,7 @@ static int _handle_ime(struct key_event *k)
 				if (!(status.flags & CLASSIC_MODE))
 					status_text_flash_bios("Enter DOS/ASCII: %d -> %c",
 							       (int)unicode[0], (int)unicode[0]);
-				handle_text_input((const char*)unicode);
+				handle_text_input((const uint8_t*)unicode);
 				alt_numpad = alt_numpad_c = 0;
 				digraph_n = digraph_c = 0;
 				cs_unicode = cs_unicode_c = 0;

@@ -420,7 +420,7 @@ static void instrument_list_draw_list(void)
 	}
 }
 
-static int instrument_list_handle_text_input_on_list(const char* text) {
+static int instrument_list_handle_text_input_on_list(const uint8_t* text) {
 	int success = 0;
 	for (; *text; text++)
 		if (instrument_cursor_pos < 25 && instrument_list_add_char(*text))

@@ -626,7 +626,7 @@ static void do_delete_file(UNUSED void *data)
 	file_list_reposition();
 }
 
-static int file_list_handle_text_input(const char* text) {
+static int file_list_handle_text_input(const uint8_t* text) {
 	dmoz_file_t* f = flist.files[current_file];
 	for (; *text; text++) {
 		if (*text >= 32 && (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY)))) {

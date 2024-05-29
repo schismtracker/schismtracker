@@ -682,7 +682,7 @@ static void show_selected_song_length(void)
 	csf_free(song);
 }
 
-static int file_list_handle_text_input(const char* text) {
+static int file_list_handle_text_input(const uint8_t* text) {
 	int success = 0;
 
 	for (; *text; text++)
@@ -821,7 +821,7 @@ static void dir_list_draw(void)
 	search_redraw();
 }
 
-static int dir_list_handle_text_input(const char* text) {
+static int dir_list_handle_text_input(const uint8_t* text) {
 	for (; *text && search_text_length < NAME_MAX; text++) {
 		if (*text < 32)
 			return 0;

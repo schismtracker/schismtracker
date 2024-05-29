@@ -649,7 +649,7 @@ CHARSET_VARIATION(sdl) {
 	};
 
 	/* A bit hacky, but whatever */
-	size_t src_size = strlen(in);
+	size_t src_size = strlen((const char*)in);
 	size_t out_size = src_size;
 
 	if (src_size <= 0)
@@ -667,7 +667,7 @@ CHARSET_VARIATION(sdl) {
 		return CHARSET_ERROR_NOMEM;
 
 	/* now onto the real conversion */
-	char* in_ = (char*)in;
+	const char* in_ = (char*)in;
 	char* out_ = (char*)(*out);
 	size_t in_bytes_left = src_size;
 	size_t out_bytes_left = out_size;
@@ -677,7 +677,7 @@ CHARSET_VARIATION(sdl) {
 	while (in_bytes_left) {
 		const size_t old_in_bytes_left = in_bytes_left;
 
-		size_t rc = SDL_iconv(cd, (const char **)&in_, &in_bytes_left, &out_, &out_bytes_left);
+		size_t rc = SDL_iconv(cd, &in_, &in_bytes_left, &out_, &out_bytes_left);
 		switch (rc) {
 		case SDL_ICONV_E2BIG: {
 			const ptrdiff_t diff = (ptrdiff_t)((uint8_t*)out_ - *out);
@@ -692,7 +692,7 @@ CHARSET_VARIATION(sdl) {
 				return CHARSET_ERROR_NOMEM;
 			}
 
-			out_ = *out + diff;
+			out_ = (char*)(*out + diff);
 			out_bytes_left = out_size - diff;
 
 			continue;

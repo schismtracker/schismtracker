@@ -295,7 +295,7 @@ void cfg_save_dmoz(cfg_file_t *cfg);
 /* text functions */
 
 /* these are sort of for single-line text entries. */
-void text_add_char(char *text, char c, int *cursor_pos, int max_length);
+void text_add_char(char *text, uint8_t c, int *cursor_pos, int max_length);
 void text_delete_char(char *text, int *cursor_pos, int max_length);
 void text_delete_next_char(char *text, int *cursor_pos, int max_length);
 
@@ -340,7 +340,7 @@ void load_pages(void);  /* called once at start of program */
 void playback_update(void);     /* once per cycle */
 struct key_event;
 void handle_key(struct key_event * k);        /* whenever there's a keypress ;) */
-void handle_text_input(const char* text_input);
+void handle_text_input(const uint8_t* text_input);
 void key_translate(struct key_event *k);
 
 /* this should only be called from main.

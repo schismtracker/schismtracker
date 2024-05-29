@@ -244,7 +244,7 @@ void create_panbar(struct widget *w, int x, int y, int next_up, int next_down, i
 }
 
 void create_other(struct widget *w, int next_tab, int (*i_handle_key) (struct key_event *k),
-		  int (*i_handle_text_input) (const char* text), void (*i_redraw) (void))
+		  int (*i_handle_text_input) (const uint8_t* text), void (*i_redraw) (void))
 {
 	w->type = WIDGET_OTHER;
 	w->accept_text = 0;
@@ -269,7 +269,7 @@ void create_other(struct widget *w, int next_tab, int (*i_handle_key) (struct ke
 /* --------------------------------------------------------------------- */
 /* generic text stuff */
 
-void text_add_char(char *text, char c, int *cursor_pos, int max_length)
+void text_add_char(char *text, uint8_t c, int *cursor_pos, int max_length)
 {
 	int len;
 
@@ -333,7 +333,7 @@ int textentry_add_char(struct widget *w, uint16_t unicode)
 	return 1;
 }
 
-int textentry_add_text(struct widget *w, const char* text) {
+int textentry_add_text(struct widget *w, const uint8_t* text) {
 	if (!text)
 		return 0;
 
@@ -395,12 +395,12 @@ static inline int fast_pow10(int n) {
 	return (n < (sizeof(tens)/sizeof(tens[0]))) ? tens[n] : pow(10, n);
 }
 
-int numentry_handle_text(struct widget *w, const char* text_input) {
+int numentry_handle_text(struct widget *w, const uint8_t* text_input) {
 	if (text_input == NULL)
 		return 0;
 
 	char valid_digits[] = "0123456789";
-	int len = strspn(text_input, valid_digits);
+	int len = strspn((const char*)text_input, valid_digits);
 	if (len < 1)
 		return 1;
 

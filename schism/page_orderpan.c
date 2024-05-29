@@ -392,13 +392,12 @@ static int orderlist_handle_char(char sym)
 	return 1;
 }
 
-static int orderlist_handle_text_input_on_list(const char* text) {
-	int modkey = SDL_GetModState(), success = 0;
+static int orderlist_handle_text_input_on_list(const uint8_t* text) {
+	int success = 0;
 
-	if (!(modkey & (KMOD_CTRL | KMOD_ALT)))
-		for (; *text; text++)
-			if (!orderlist_handle_char(*text))
-				success = 1;
+	for (; *text; text++)
+		if (!orderlist_handle_char(*text))
+			success = 1;
 
 	return success;
 }

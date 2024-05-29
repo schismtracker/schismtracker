@@ -746,7 +746,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 {
 #ifdef SCHISM_WIN32
 	wchar_t* path_w = NULL;
-	if (charset_iconv(path, (uint8_t**)&path_w, CHARSET_UTF8, CHARSET_WCHAR_T))
+	if (charset_iconv((uint8_t*)path, (uint8_t**)&path_w, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return -1;
 
 	DWORD attrib = GetFileAttributesW(path_w);
@@ -755,7 +755,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 
 		char* searchpath = dmoz_path_concat_len(path, "*", strlen(path), 1);
 		wchar_t* searchpath_w = NULL;
-		if (charset_iconv(searchpath, (uint8_t**)&searchpath_w, CHARSET_UTF8, CHARSET_WCHAR_T)) {
+		if (charset_iconv((uint8_t*)searchpath, (uint8_t**)&searchpath_w, CHARSET_UTF8, CHARSET_WCHAR_T)) {
 			free(searchpath);
 			return -1;
 		}

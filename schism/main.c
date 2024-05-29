@@ -443,7 +443,7 @@ static void _do_clipboard_paste_op(SDL_Event *e)
 	if (ACTIVE_WIDGET.clipboard_paste
 	&& ACTIVE_WIDGET.clipboard_paste(e->user.code,
 				e->user.data1)) return;
-	handle_text_input((char *)e->user.data1);
+	handle_text_input((uint8_t*)e->user.data1);
 }
 
 static void key_event_reset(struct key_event *kk, int start_x, int start_y)
@@ -479,7 +479,7 @@ static void push_pending_keydown_event(struct key_event* kk) {
 	}
 }
 
-static void pop_pending_keydown_event(const char* text) {
+static void pop_pending_keydown_event(const uint8_t* text) {
 	/* text can and will be NULL here. when it is not NULL, it
 	 * should be in CP437 */
 	if (have_pending_keydown) {
