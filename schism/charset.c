@@ -327,124 +327,87 @@ static const unsigned short cp437_2uni[128] = {
 	0x00b0, 0x2219, 0x00b7, 0x221a, 0x207f, 0x00b2, 0x25a0, 0x00a0
 };
 
-/* ----------------------------------------------------------------------------- */
-
-/*
- * This UTF-8 code is licensed under the MIT license:
- * 
- * Copyright (c) 2008-2009 Bjoern Hoehrmann <bjoern@hoehrmann.de>
- * 
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is furnished to do
- * so, subject to the following conditions:
- * 
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
-*/
-
-/* Unicode stuff begins here */
-
-#define UTF8_ACCEPT 0
-#define UTF8_REJECT 1
-
-static const uint8_t utf8d[] = {
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 00..1f
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 20..3f
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 40..5f
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 60..7f
-	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9, // 80..9f
-	7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7, // a0..bf
-	8,8,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, // c0..df
-	0xa,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x4,0x3,0x3, // e0..ef
-	0xb,0x6,0x6,0x6,0x5,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8, // f0..ff
-	0x0,0x1,0x2,0x3,0x5,0x8,0x7,0x1,0x1,0x1,0x4,0x6,0x1,0x1,0x1,0x1, // s0..s0
-	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1,1, // s1..s2
-	1,2,1,1,1,1,1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1, // s3..s4
-	1,2,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,3,1,3,1,1,1,1,1,1, // s5..s6
-	1,3,1,1,1,1,1,3,1,3,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1, // s7..s8
-};
-
-static uint32_t utf8_decode(uint32_t* state, uint32_t* codep, uint32_t byte) {
-	uint32_t type = utf8d[byte];
-
-	*codep = (*state != UTF8_ACCEPT) ?
-		(byte & 0x3fu) | (*codep << 6) :
-		(0xff >> type) & (byte);
-
-	*state = utf8d[256 + *state * 16 + type];
-	return *state;
-}
-
-/* ----------------------------------------------------------------------------- */
-
-#define DECODER_ERROR		(-1)
-#define DECODER_NEED_MORE	(0)
-#define DECODER_DONE		(1)
-
-/* these encode ONE character each time they are ran, and they must each
+/* -----------------------------------------------------------------------------
+ *
+ * these encode ONE character each time they are ran, and they must each
  * return a byte offset of which to append to "in" to start with the next
  * character. */
+
+#define DECODER_ERROR   (-1)
+#define DECODER_NEED_MORE (0)
+#define DECODER_DONE    (1)
+
 static int utf8_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_next) {
-	uint32_t state = 0, codepoint = 0;
-	size_t len;
+	uint8_t c = *in;
 
-	for (len = 0; in[len]; len++) {
-		if (utf8_decode(&state, &codepoint, in[len]) == UTF8_REJECT)
-			continue;
-
-		/* unexpected bytes? */
-		if (state != UTF8_ACCEPT)
+	if (c == 0x00) {
+		return DECODER_DONE;
+	} else if (c < 0x80) {
+		*out = c;
+		*size_until_next = 1;
+	} else if (c < 0xC2) {
+		return DECODER_ERROR;
+	} else if (c < 0xE0) {
+		if (!((in[1] ^ 0x80) < 0x40))
 			return DECODER_ERROR;
 
-		*out = codepoint;
-		*size_until_next = len + 1;
-		return DECODER_NEED_MORE;
-	}
+		*out = ((uint32_t) (c & 0x1f) << 6)
+					 | (uint32_t) (in[1] ^ 0x80);
 
-	*out = 0;
-	*size_until_next = 0;
-	return DECODER_DONE;
+		*size_until_next = 2;
+	} else if (c < 0xf0) {
+		if (!((in[1] ^ 0x80) < 0x40 && (in[2] ^ 0x80) < 0x40
+					&& (c >= 0xE1 || in[1] >= 0xA0)
+					&& (c != 0xED || in[1] < 0xA0)))
+			return DECODER_ERROR;
+
+		*out = ((uint32_t) (c & 0x0f) << 12)
+					 | ((uint32_t) (in[1] ^ 0x80) << 6)
+					 | (uint32_t) (in[2] ^ 0x80);
+
+		*size_until_next = 3;
+	} else if (c < 0xf8) {
+		if (!((in[1] ^ 0x80) < 0x40 && (in[2] ^ 0x80) < 0x40
+					&& (in[3] ^ 0x80) < 0x40
+					&& (c >= 0xf1 || in[1] >= 0x90)
+					&& (c < 0xf4 || (c == 0xf4 && in[1] < 0x90))))
+			return DECODER_ERROR;
+
+		*out = ((uint32_t) (c & 0x07) << 18)
+					 | ((uint32_t) (in[1] ^ 0x80) << 12)
+					 | ((uint32_t) (in[2] ^ 0x80) << 6)
+					 | (uint32_t) (in[3] ^ 0x80);
+
+		*size_until_next = 4;
+	} else return DECODER_ERROR;
+
+	return DECODER_NEED_MORE;
 }
 
 /* this is here so that when the UTF-16 code changes nothing gets lost between these two */
 #define DECODE_UTF16_VARIANT(x) \
 	static int utf16##x##_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_next) { \
 		const uint16_t* tmp_in = (const uint16_t*)in; \
-		size_t len = 0; \
 	\
 		uint16_t wc = *(tmp_in++); \
 		wc = bswap##x##16(wc); \
 	\
-		if (wc < 0xD800 || wc > 0xDFFF) { \
+		if (wc == 0x0000) {\
+			return DECODER_DONE; \
+		} else if (wc < 0xD800 || wc > 0xDFFF) { \
 			*out = wc; \
-			len += 2; \
+			*size_until_next = 2; \
 		} else if (wc >= 0xD800 && wc <= 0xDBFF) { \
 			uint16_t wc2 = *(tmp_in++); \
 			wc2 = bswap##x##16(wc2); \
 	\
 			if (wc2 >= 0xDC00 && wc2 <= 0xDFFF) { \
 				*out = 0x10000 + ((wc - 0xD800) << 10) + (wc2 - 0xDC00); \
-				len += 4; \
-			} else { \
-				return DECODER_ERROR; \
-			}\
-		} else { \
-			return DECODER_ERROR; \
-		}\
+				*size_until_next = 4; \
+			} else return DECODER_ERROR; \
+		} \
 	\
-		*size_until_next = len; \
-		return (*out ? DECODER_NEED_MORE : DECODER_DONE); \
+		return DECODER_NEED_MORE; \
 	}
 
 DECODE_UTF16_VARIANT(LE)
@@ -483,10 +446,10 @@ static size_t ucs4_to_utf8(uint32_t ch, uint8_t* out) {
 			out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
 		} else return 0; /* ZOMG NO WAY */
 	} else {
-		if (ch < 0x80)			len += 1;
-		else if (ch < 0x800)	len += 2;
-		else if (ch < 0x10000)	len += 3;
-		else if (ch < 0x110000)	len += 4;
+		if (ch < 0x80)      len += 1;
+		else if (ch < 0x800)  len += 2;
+		else if (ch < 0x10000)  len += 3;
+		else if (ch < 0x110000) len += 4;
 		else return 0;
 	}
 
@@ -647,6 +610,8 @@ CHARSET_VARIATION(internal) {
 		c = conv_to_ucs4_func(in, &ch, &in_needed);
 		if (c == DECODER_ERROR)
 			return CHARSET_ERROR_DECODE;
+
+		printf("result: %d, U+%04x, %zu\n", c, ch, in_needed);
 
 		size_t out_needed = conv_from_ucs4_func(ch, NULL);
 		if (!out_needed)
