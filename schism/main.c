@@ -901,8 +901,7 @@ static void event_loop(void)
 		/* when using a real keyboard SDL will send a keydown first
 		 * and text input after it; if a text input event is NOT sent,
 		 * we should just send the keydown as is */
-		if (have_pending_keydown)
-			pop_pending_keydown_event(NULL);
+		pop_pending_keydown_event(NULL);
 
 		/* what SDL uses internally for SDL_WaitEvent() */
 		SDL_Delay(1);
