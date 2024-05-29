@@ -301,29 +301,48 @@ const char *get_extension(const char *filename)
 	return extension;
 }
 
+/* this function should output as you expect
+ * e.g. if input is / it returns NULL,
+ *      if input is /home it returns / and
+ *      if input is /home/ it returns /
+ *
+ * the equivalent windows paths also work here
+*/
 char *get_parent_directory(const char *dirname)
 {
 	if (!dirname || !dirname[0])
 		return NULL;
 
-	int n = strlen(dirname) - 1;
+	/* need the root path, including the separator */
+	const char* root = strchr(dirname, DIR_SEPARATOR);
+	if (!root)
+		return NULL;
+    root++;
 
-	if (dirname[n] == DIR_SEPARATOR)
-		n--;
+	/* okay, now we need to find the final token */
+	const char* pos = root + strlen(root) - 1;
+	if (*pos == DIR_SEPARATOR) /* strip off an excess separator, if any */
+		pos--;
 
-	if (n <= 0) return NULL;
-
-	while (n > 0) {
-		if (dirname[--n] == DIR_SEPARATOR)
+	while (--pos > root) {
+		if (*pos == DIR_SEPARATOR)
 			break;
 	}
+
+	ptrdiff_t n = pos - dirname;
+
+	/* sanity check */
+	if (n <= 0)
+		return NULL;
 
 	char *ret = mem_alloc((n + 1) * sizeof(char));
 	memcpy(ret, dirname, n * sizeof(char));
 	ret[n] = '\0';
 
-	if(strcmp(dirname, ret) == 0) return NULL;
-	if(!ret[0]) return NULL;
+	if (!strcmp(dirname, ret) || !ret[0]) {
+		free(ret);
+		return NULL;
+	}
 
 	return ret;
 }
