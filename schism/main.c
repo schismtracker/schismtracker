@@ -521,8 +521,15 @@ static void event_loop(void)
 #endif
 		case SDL_TEXTINPUT: {
 			uint8_t* input_text = NULL;
-			if (charset_iconv((uint8_t*)event.text.text, &input_text, CHARSET_UTF8, CHARSET_CP437) || !input_text)
+
+			charset_error_t err = charset_iconv((uint8_t*)event.text.text, &input_text, CHARSET_UTF8, CHARSET_CP437);
+			if (err || !input_text) {
+				log_appendf(4, " [ERROR] failed to convert SDL text input event");
+				log_appendf(4, "  %s", event.text.text);
+				log_appendf(4, " into CP437 with error %s.", charset_iconv_error_lookup(err));
+				log_appendf(4, " please report this on the github!");
 				break;
+			}
 
 			if (input_text[0])
 				handle_text_input((const char*)input_text);

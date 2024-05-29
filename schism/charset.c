@@ -741,7 +741,9 @@ CHARSET_VARIATION(sdl) {
 		case SDL_ICONV_ERROR:
 			/* t'was a good run */
 			in_bytes_left = 0;
-			break;
+			memset(out_, 0, sizeof(uint32_t));
+			SDL_iconv_close(cd);
+			return CHARSET_ERROR_UNIMPLEMENTED;
 		default:
 			break;
 		}
@@ -772,7 +774,7 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
 
 #define TRY_VARIATION(name) \
 	state = charset_iconv_##name##_(in, out, inset, outset); \
-	if (state != CHARSET_ERROR_SUCCESS && state != CHARSET_ERROR_UNIMPLEMENTED) \
+	if (state == CHARSET_ERROR_SUCCESS || state == CHARSET_ERROR_NOMEM) \
 		return state;
 
 	TRY_VARIATION(internal);
