@@ -385,7 +385,7 @@ static FLAC__StreamEncoderTellStatus write_on_tell(const FLAC__StreamEncoder *en
 	return FLAC__STREAM_ENCODER_TELL_STATUS_OK;
 }
 
-static int flac_save_init(disko_t *fp, int bits, int channels, int rate, int estimate)
+static int flac_save_init(disko_t *fp, int bits, int channels, int rate, int estimate_num_samples)
 {
 	struct flac_writedata *fwd = malloc(sizeof(*fwd));
 	if (!fwd)
@@ -410,7 +410,7 @@ static int flac_save_init(disko_t *fp, int bits, int channels, int rate, int est
 	if (!FLAC__stream_encoder_set_compression_level(fwd->encoder, 5))
 		return -5;
 
-	if (!FLAC__stream_encoder_set_total_samples_estimate(fwd->encoder, estimate / (channels * bits)))
+	if (!FLAC__stream_encoder_set_total_samples_estimate(fwd->encoder, estimate_num_samples))
 		return -6;
 
 	if (!FLAC__stream_encoder_set_verify(fwd->encoder, false))
@@ -502,8 +502,9 @@ int fmt_flac_save_sample(disko_t *fp, song_sample_t *smp)
 	/* need to buffer this or else we'll make a HUGE array when
 	 * saving huge samples */
 	size_t offset;
-	for (offset = 0; offset < smp->length; offset += SAMPLE_BUFFER_LENGTH) {
-		size_t needed = smp->length - offset;
+	size_t total_bytes = smp->length * ((smp->flags & CHN_16BIT) ? 2 : 1) * ((smp->flags & CHN_STEREO) ? 2 : 1);
+	for (offset = 0; offset < total_bytes; offset += SAMPLE_BUFFER_LENGTH) {
+		size_t needed = total_bytes - offset;
 		fmt_flac_export_body(fp, (uint8_t*)smp->data + offset, MIN(needed, SAMPLE_BUFFER_LENGTH));
 	}
 
