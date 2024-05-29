@@ -611,7 +611,7 @@ CHARSET_VARIATION(internal) {
 		if (c == DECODER_ERROR)
 			return CHARSET_ERROR_DECODE;
 
-		printf("result: %d, U+%04x, %zu\n", c, ch, in_needed);
+		/* printf("result: %d, U+%04x, %zu\n", c, ch, in_needed); */
 
 		size_t out_needed = conv_from_ucs4_func(ch, NULL);
 		if (!out_needed)
