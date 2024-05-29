@@ -418,7 +418,7 @@ static int utf8_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_nex
 }
 
 /* this is here so that when the UTF-16 code changes nothing gets lost between these two */
-#define UTF16_ENCODER(x) \
+#define DECODE_UTF16_VARIANT(x) \
 	static int utf16##x##_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_next) { \
 		const uint16_t* tmp_in = (const uint16_t*)in; \
 		size_t len = 0; \
@@ -436,17 +436,21 @@ static int utf8_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_nex
 			if (wc2 >= 0xDC00 && wc2 <= 0xDFFF) { \
 				*out = 0x10000 + ((wc - 0xD800) << 10) + (wc2 - 0xDC00); \
 				len += 4; \
-			} \
-		} \
+			} else { \
+				return DECODER_ERROR; \
+			}\
+		} else { \
+			return DECODER_ERROR; \
+		}\
 	\
 		*size_until_next = len; \
 		return (*out ? DECODER_NEED_MORE : DECODER_DONE); \
 	}
 
-UTF16_ENCODER(LE)
-UTF16_ENCODER(BE)
+DECODE_UTF16_VARIANT(LE)
+DECODE_UTF16_VARIANT(BE)
 
-#undef UTF16_ENCODER
+#undef UTF16_DECODER
 
 static int cp437_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_next) {
 	uint8_t c = *in;
@@ -457,6 +461,7 @@ static int cp437_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_ne
 }
 
 /* ----------------------------------------------------- */
+/* for these functions, 0 indicates an error in encoding */
 
 static size_t ucs4_to_utf8(uint32_t ch, uint8_t* out) {
 	size_t len = 0;
@@ -596,8 +601,13 @@ const char* charset_iconv_error_lookup(charset_error_t err) {
 			return "An error occurred when decoding";
 		case CHARSET_ERROR_ENCODE:
 			return "An error occurred when encoding";
+		case CHARSET_ERROR_NOMEM:
+			return "Out of memory";
 	}
 }
+
+#define CHARSET_VARIATION(name) \
+	static charset_error_t charset_iconv_##name##_(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset)
 
 /* our version of iconv; this has a much simpler API than the regular
  * iconv() because much of it isn't very necessary for our purposes
@@ -612,9 +622,9 @@ const char* charset_iconv_error_lookup(charset_error_t err) {
  *     charset_iconv(cp437, &utf8, CHARSET_CP437, CHARSET_UTF8);
  * 
  * [out] must be free'd by the caller */
-static charset_error_t charset_iconv_internal_(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset) {
+CHARSET_VARIATION(internal) {
 	size_t out_length = 0;
-	size_t out_alloc = 16; /* most strings passed through here shouldn't be too big */
+	size_t out_alloc = 16; /* estimate */
 	int c;
 
 	if (inset >= ARRAY_SIZE(conv_to_ucs4_funcs) || outset >= ARRAY_SIZE(conv_from_ucs4_funcs))
@@ -626,7 +636,9 @@ static charset_error_t charset_iconv_internal_(const uint8_t* in, uint8_t** out,
 	if (!conv_to_ucs4_func || !conv_from_ucs4_func)
 		return CHARSET_ERROR_UNIMPLEMENTED;
 
-	*out = mem_alloc((out_alloc) * sizeof(uint8_t));
+	*out = malloc((out_alloc) * sizeof(uint8_t));
+	if (!*out)
+		return CHARSET_ERROR_NOMEM;
 
 	do {
 		uint32_t ch = 0;
@@ -640,8 +652,14 @@ static charset_error_t charset_iconv_internal_(const uint8_t* in, uint8_t** out,
 		if (!out_needed)
 			return CHARSET_ERROR_ENCODE;
 
-		if (out_length + out_needed >= out_alloc)
+		if (out_length + out_needed >= out_alloc) {
+			uint8_t* old_out = *out;
 			*out = mem_realloc(*out, (out_alloc *= 2) * sizeof(uint8_t));
+			if (!*out) {
+				free(old_out);
+				return CHARSET_ERROR_NOMEM;
+			}
+		}
 
 		conv_from_ucs4_func(ch, *out + out_length);
 
@@ -652,21 +670,23 @@ static charset_error_t charset_iconv_internal_(const uint8_t* in, uint8_t** out,
 	return CHARSET_ERROR_SUCCESS;
 }
 
-static const char* charset_iconv_system_lookup[] = {
-	[CHARSET_UTF8] = "UTF-8",
-	[CHARSET_UTF16BE] = "UTF-16BE",
-	[CHARSET_UTF16LE] = "UTF-16LE",
-	[CHARSET_UCS4] = "UCS-4",
+CHARSET_VARIATION(sdl) {
+	static const char* charset_iconv_system_lookup[] = {
+		[CHARSET_UTF8] = "UTF-8",
+		[CHARSET_UTF16BE] = "UTF-16BE",
+		[CHARSET_UTF16LE] = "UTF-16LE",
+		[CHARSET_UCS4] = "UCS-4",
 
-	[CHARSET_CP437] = "437",
+		[CHARSET_CP437] = "437",
 
-	[CHARSET_CHAR] = "",
-	[CHARSET_WCHAR_T] = "WCHAR_T"
-};
+		[CHARSET_CHAR] = "",
+		[CHARSET_WCHAR_T] = "WCHAR_T"
+	};
 
-static charset_error_t charset_iconv_system_(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset) {
 	/* A bit hacky, but whatever */
 	size_t src_size = strlen(in);
+	size_t out_size = src_size;
+
 	if (src_size <= 0)
 		return CHARSET_ERROR_UNIMPLEMENTED;
 
@@ -677,34 +697,70 @@ static charset_error_t charset_iconv_system_(const uint8_t* in, uint8_t** out, c
 	if (cd == (SDL_iconv_t)(-1))
 		return CHARSET_ERROR_UNIMPLEMENTED;
 
-	size_t out_size = src_size;
+	*out = malloc(out_size + sizeof(uint32_t));
+	if (!*out)
+		return CHARSET_ERROR_NOMEM;
 
+	/* now onto the real conversion */
 	char* in_ = (char*)in;
-	char* out_ = NULL;
+	char* out_ = (char*)(*out);
 	size_t in_bytes_left = src_size;
 	size_t out_bytes_left = out_size;
 
+	memset(out_, 0, sizeof(uint32_t));
+
 	while (in_bytes_left) {
-		out_ = (char*)(*out = mem_calloc(out_size + 4, sizeof(uint8_t)));
+		const size_t old_in_bytes_left = in_bytes_left;
 
 		size_t rc = SDL_iconv(cd, (const char **)&in_, &in_bytes_left, &out_, &out_bytes_left);
-		if (rc == SDL_ICONV_E2BIG) {
-			in_bytes_left = src_size;
-			out_bytes_left = (out_size *= 2);
-			free(*out);
+		switch (rc) {
+		case SDL_ICONV_E2BIG: {
+			const ptrdiff_t diff = (ptrdiff_t)((uint8_t*)out_ - *out);
+
+			uint8_t* old_out = *out;
+
+			out_size *= 2;
+			*out = realloc(old_out, out_size + sizeof(uint32_t));
+			if (!*out) {
+				free(old_out);
+				SDL_iconv_close(cd);
+				return CHARSET_ERROR_NOMEM;
+			}
+
+			out_ = *out + diff;
+			out_bytes_left = out_size - diff;
+
 			continue;
 		}
+		case SDL_ICONV_EILSEQ:
+			/* try skipping? */
+			in_++;
+			in_bytes_left--;
+			break;
+		case SDL_ICONV_EINVAL:
+		case SDL_ICONV_ERROR:
+			/* t'was a good run */
+			in_bytes_left = 0;
+			break;
+		default:
+			break;
+		}
 
-		break;
+		/* avoid infinite loops */
+		if (old_in_bytes_left == in_bytes_left)
+			break;
 	}
 
-	SDL_iconv(cd, NULL, NULL, &out_, &out_bytes_left); /* flush buffer */
+	memset(out_, 0, sizeof(uint32_t));
+
 	SDL_iconv_close(cd);
 
 	return CHARSET_ERROR_SUCCESS;
 }
 
+/* XXX need to change this to take length in as well */
 charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset) {
+	charset_error_t state;
 	if (!in)
 		return CHARSET_ERROR_NULLINPUT;
 
@@ -714,11 +770,15 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
 	if (inset == outset)
 		return CHARSET_ERROR_INPUTISOUTPUT;
 
-	if (charset_iconv_internal_(in, out, inset, outset) == CHARSET_ERROR_SUCCESS)
-		return CHARSET_ERROR_SUCCESS;
+#define TRY_VARIATION(name) \
+	state = charset_iconv_##name##_(in, out, inset, outset); \
+	if (state != CHARSET_ERROR_SUCCESS && state != CHARSET_ERROR_UNIMPLEMENTED) \
+		return state;
 
-	if (charset_iconv_system_(in, out, inset, outset) == CHARSET_ERROR_SUCCESS)
-		return CHARSET_ERROR_SUCCESS;
+	TRY_VARIATION(internal);
+	TRY_VARIATION(sdl);
+
+#undef TRY_VARIATION
 
 	return CHARSET_ERROR_UNIMPLEMENTED;
 }

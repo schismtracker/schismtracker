@@ -50,7 +50,8 @@ typedef enum {
 	CHARSET_ERROR_NULLINPUT = -3,
 	CHARSET_ERROR_NULLOUTPUT = -4,
 	CHARSET_ERROR_DECODE = -5,
-	CHARSET_ERROR_ENCODE = -6
+	CHARSET_ERROR_ENCODE = -6,
+	CHARSET_ERROR_NOMEM = -7,
 } charset_error_t;
 
 int char_digraph(int k1, int k2);
