@@ -57,7 +57,7 @@ void F1(unsigned int ry, unsigned SIZE *out, unsigned int tc[16], unsigned int m
 			dg = hf[ _unpack_halfw((*bp >> 7) & 127) << 2];
 			if (!(ry & 1))
 				dg = (dg >> 4);
-			dg ^= mouseline[x];
+			dg ^= mouseline[x] >> 4;
 
 			*out++ = tc[(dg & 0x8) ? fg : bg];
 			*out++ = tc[(dg & 0x4) ? fg : bg];
