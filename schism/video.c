@@ -416,7 +416,7 @@ void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
 		/* Alternative for older SDL versions. MIGHT work with high DPI */
 		float scale_x = 1, scale_y = 1;
 
-		SDL_RenderGetScale(renderer, &scale_x, &scale_y);
+		SDL_RenderGetScale(video.renderer, &scale_x, &scale_y);
 
 		xx = x - (video.width / 2) - (((float)cfg_video_want_fixed_width * scale_x) / 2);
 		yy = y - (video.height / 2) - (((float)cfg_video_want_fixed_height * scale_y) / 2);
