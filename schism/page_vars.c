@@ -215,6 +215,7 @@ void song_vars_load_page(struct page *page)
 	/* 8-13 = switches */
 	create_togglebutton(widgets_vars + 8, 17, 30, 11, 7, 10, 9, 9, 9, maybe_init_instruments,
 			    "Instruments", 1, group_control);
+	widgets_vars[8].next.backtab = 9;
 	create_togglebutton(widgets_vars + 9, 32, 30, 11, 7, 11, 8, 8, 8, update_values_in_song,
 			    "Samples", 1, group_control);
 	create_togglebutton(widgets_vars + 10, 17, 33, 11, 8, 12, 11, 11, 11, update_values_in_song,
@@ -234,5 +235,6 @@ void song_vars_load_page(struct page *page)
 			 cfg_dir_instruments, PATH_MAX);
 	/* 17 = save all preferences */
 	create_button(widgets_vars + 17, 28, 47, 22, 16, 17, 17, 17, 17, cfg_save, "Save all Preferences", 2);
+	widgets_vars[17].next.backtab = 17;
 }
 

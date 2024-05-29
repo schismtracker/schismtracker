@@ -98,62 +98,107 @@ static int thumbbar_prompt_value(struct widget *widget, struct key_event *k)
 }
 
 /* --------------------------------------------------------------------- */
-/* This function is completely disgustipated. */
+/* Find backtabs. */
 
+int find_tab_to(int target)
+{
+	for (int i = 0; i < *total_widgets; i++) {
+		if (widgets[i].next.tab == target && i != target) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+int find_down_to(int target)
+{
+	for (int i = 0; i < *total_widgets; i++) {
+		if (widgets[i].next.down == target && i != target) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+int find_right_to(int target)
+{
+	for (int i = 0; i < *total_widgets; i++) {
+		if (widgets[i].next.right == target && i != target) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+int find_right_or_down_to(int target, int checkNotEqual)
+{
+	if (status.flags & CLASSIC_MODE) {
+		int right_to = find_right_to(target);
+
+		if(right_to > -1 && right_to != checkNotEqual)
+			return right_to;
+
+		int down_to = find_down_to(target);
+
+		if(down_to > -1 && down_to != checkNotEqual)
+			return down_to;
+	} else {
+		int down_to = find_down_to(target);
+
+		if(down_to > -1 && down_to != checkNotEqual)
+			return down_to;
+
+		int right_to = find_right_to(target);
+
+		if(right_to > -1 && right_to != checkNotEqual)
+			return right_to;
+	}
+
+	return -1;
+}
+
+int find_tab_to_recursive(int target)
+{
+	int current = target;
+
+	for(int i = 0; i < *total_widgets; i++) {
+		int widget_backtab = widgets[current].next.backtab;
+		if(widget_backtab > -1) return widget_backtab;
+
+		int tab_to = find_tab_to(current);
+		if(tab_to > -1) return tab_to;
+
+		int right_or_down_to = find_right_or_down_to(current, target);
+
+		if(right_or_down_to > -1) {
+			current = right_or_down_to;
+			continue;
+		}
+
+		return -1;
+	}
+
+	return -1;
+}
 
 static void _backtab(void)
 {
-	struct widget *w;
-	int i;
-
 	/* hunt for a widget that leads back to this one */
 	if (!total_widgets || !selected_widget) return;
 
-	for (i = 0; i < *total_widgets; i++) {
-		w = &widgets[i];
-		if (w->next.tab == *selected_widget) {
-			/* found backtab */
-			change_focus_to(i);
-			return;
-		}
+	int selected = *selected_widget;
+	int backtab = find_tab_to_recursive(selected);
 
+	if(backtab > -1) {
+		change_focus_to(backtab);
+		return;
 	}
-	if (status.flags & CLASSIC_MODE) {
-		for (i = 0; i < *total_widgets; i++) {
-			w = &widgets[i];
-			if (w->next.right == *selected_widget) {
-				/* simulate backtab */
-				change_focus_to(i);
-				return;
-			}
-		}
-		for (i = 0; i < *total_widgets; i++) {
-			w = &widgets[i];
-			if (w->next.down == *selected_widget) {
-				/* simulate backtab */
-				change_focus_to(i);
-				return;
-			}
-		}
-	} else {
-		for (i = 0; i < *total_widgets; i++) {
-			w = &widgets[i];
-			if (w->next.down == *selected_widget) {
-				/* simulate backtab */
-				change_focus_to(i);
-				return;
-			}
-		}
-		for (i = 0; i < *total_widgets; i++) {
-			w = &widgets[i];
-			if (w->next.right == *selected_widget) {
-				/* simulate backtab */
-				change_focus_to(i);
-				return;
-			}
-		}
-	}
-	change_focus_to(0); /* err... */
+
+	int right_or_down_to = find_right_or_down_to(selected, selected);
+	if(right_or_down_to > -1) change_focus_to(right_or_down_to);
 }
 
 /* return: 1 = handled text, 0 = didn't */

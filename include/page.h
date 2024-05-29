@@ -235,10 +235,11 @@ union _widget_data_union {
 	struct widget_other other;
 	struct widget_bitset bitset;
 };
+
 struct widget {
 	enum widget_type type;
 
-	union _widget_data_union        d;
+	union _widget_data_union d;
 
 	/* for redrawing */
 	int x, y, width, height, depressed;
@@ -246,7 +247,7 @@ struct widget {
 
 	/* these next 5 fields specify what widget gets selected next */
 	struct {
-		int up, down, left, right, tab;
+		int up, down, left, right, tab, backtab;
 	} next;
 
 	/* called whenever the value is changed... duh ;) */

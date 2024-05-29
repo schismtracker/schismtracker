@@ -2651,7 +2651,7 @@ static void _load_page_common(struct page *page, struct widget *page_widgets)
 	/* the first five widgets are the same for all four pages. */
 
 	/* 0 = instrument list */
-	create_other(page_widgets + 0, 1, instrument_list_handle_key_on_list, 
+	create_other(page_widgets + 0, 1, instrument_list_handle_key_on_list,
 		instrument_list_handle_text_input_on_list, instrument_list_draw_list);
 	page_widgets[0].accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 	page_widgets[0].x = 5;
@@ -2688,6 +2688,7 @@ void instrument_list_general_load_page(struct page *page)
 	widgets_general[5].y = 16;
 	widgets_general[5].width = 9;
 	widgets_general[5].height = 31;
+	widgets_general[5].next.down = 6;
 
 	/* 6-9 = nna toggles */
 	create_togglebutton(widgets_general + 6, 46, 19, 29, 2, 7, 5, 0, 0,
@@ -2764,6 +2765,7 @@ void instrument_list_volume_load_page(struct page *page)
 	widgets_volume[5].y = 18;
 	widgets_volume[5].width = 45;
 	widgets_volume[5].height = 8;
+	widgets_volume[5].next.down = 6;
 
 	/* 6-7 = envelope switches */
 	create_toggle(widgets_volume + 6, 54, 28, 5, 7, 0, 0, 0,
@@ -2829,6 +2831,7 @@ void instrument_list_panning_load_page(struct page *page)
 	widgets_panning[5].y = 18;
 	widgets_panning[5].width = 45;
 	widgets_panning[5].height = 8;
+	widgets_panning[5].next.down = 6;
 
 	/* 6-7 = envelope switches */
 	create_toggle(widgets_panning + 6, 54, 28, 5, 7, 0, 0, 0,
@@ -2905,6 +2908,7 @@ void instrument_list_pitch_load_page(struct page *page)
 	widgets_pitch[5].y = 18;
 	widgets_pitch[5].width = 45;
 	widgets_pitch[5].height = 8;
+	widgets_pitch[5].next.down = 6;
 
 	/* 6-7 = envelope switches */
 	create_menutoggle(widgets_pitch + 6, 54, 28, 5, 7, 0, 0, 0,

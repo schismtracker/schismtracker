@@ -1140,7 +1140,6 @@ void save_module_load_page(struct page *page, int do_export)
 
 	widgets_exportsave[4].d.togglebutton.state = 1;
 
-
 	const struct save_format *formats = (do_export ? song_export_formats : song_save_formats);
 	for (n = 0; formats[n].label; n++) {
 		create_togglebutton(widgets_exportsave + 4 + n,
@@ -1152,8 +1151,9 @@ void save_module_load_page(struct page *page, int do_export)
 				formats[n].label,
 				(5 - strlen(formats[n].label)) / 2 + 1,
 				filetype_saves);
+
+		widgets_exportsave[4 + n].next.backtab = 1;
 	}
 	widgets_exportsave[4 + n - 1].next.down = 2;
 	page->total_widgets += n;
 }
-
