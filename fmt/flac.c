@@ -404,6 +404,13 @@ static int flac_save_init(disko_t *fp, int bits, int channels, int rate, int est
 	if (!FLAC__stream_encoder_set_bits_per_sample(fwd->encoder, bits))
 		return -3;
 
+	if (rate > FLAC__MAX_SAMPLE_RATE)
+		rate = FLAC__MAX_SAMPLE_RATE;
+
+	// FLAC only supports 10 Hz granularity for frequencies above 65535 Hz if the streamable subset is chosen, and only a maximum frequency of 655350 Hz.
+	if (!FLAC__format_sample_rate_is_subset(rate))
+		FLAC__stream_encoder_set_streamable_subset(fwd->encoder, false);
+
 	if (!FLAC__stream_encoder_set_sample_rate(fwd->encoder, rate))
 		return -4;
 
