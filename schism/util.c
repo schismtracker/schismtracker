@@ -303,30 +303,27 @@ const char *get_extension(const char *filename)
 
 char *get_parent_directory(const char *dirname)
 {
-	const char *pos;
-	char *ret;
-	int n;
-
 	if (!dirname || !dirname[0])
 		return NULL;
 
-	n = strlen(dirname) - 1;
+	int n = strlen(dirname) - 1;
+
 	if (dirname[n] == DIR_SEPARATOR)
 		n--;
 
-	if (n < 0)
-		return NULL;
+	if (n <= 0) return NULL;
 
-	pos = dirname + (n * sizeof(char));
-	do {
-		if (*(--pos) == DIR_SEPARATOR)
+	while (n > 0) {
+		if (dirname[--n] == DIR_SEPARATOR)
 			break;
-	} while (--n);
+	}
 
-	/* copy the resulting value */
-	ret = mem_alloc((n * sizeof(char)) + sizeof(char));
+	char *ret = mem_alloc((n + 1) * sizeof(char));
 	memcpy(ret, dirname, n * sizeof(char));
 	ret[n] = '\0';
+
+	if(strcmp(dirname, ret) == 0) return NULL;
+	if(!ret[0]) return NULL;
 
 	return ret;
 }
