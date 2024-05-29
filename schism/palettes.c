@@ -378,3 +378,26 @@ void palette_load_preset(int palette_index)
 
 	cfg_save();
 }
+
+static const char palette_trans[64] = ".0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+
+void palette_to_string(char *str_out) {
+	for (int n = 0; n < 48; n++)
+		str_out[n] = palette_trans[current_palette[n / 3][n % 3]];
+
+	str_out[48] = '\0';
+}
+
+int set_palette_from_string(const char *str_in) {
+	uint8_t colors[48];
+	const char *ptr;
+
+	for (int n = 0; n < 48; n++) {
+		if (str_in[n] == '\0' || (ptr = memchr(palette_trans, str_in[n], sizeof(palette_trans))) == NULL)
+			return 0;
+		colors[n] = ptr - palette_trans;
+	}
+
+	memcpy(user_palette, colors, sizeof(current_palette));
+	return 1;
+}

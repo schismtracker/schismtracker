@@ -30,7 +30,7 @@
 
 /* --------------------------------------------------------------------- */
 
-static struct widget widgets_palette[49];
+static struct widget widgets_palette[51];
 
 static int selected_palette, max_palette = 0;
 
@@ -48,7 +48,7 @@ static void palette_draw_const(void)
 {
 	int n;
 
-	draw_text("Predefined Palettes", 57, 25, 0, 2);
+	draw_text("Predefined Palettes", 56, 24, 0, 2);
 
 	for (n = 0; n < 7; n++) {
 		draw_box(2, 13 + (5 * n), 8, 17 + (5 * n), BOX_THICK | BOX_INNER | BOX_INSET);
@@ -63,7 +63,7 @@ static void palette_draw_const(void)
 	draw_box(63, 13, 73, 17, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(56, 18, 62, 22, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(63, 18, 73, 22, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_box(55, 26, 77, 47, BOX_THICK | BOX_INNER | BOX_INSET);
+	draw_box(54, 25, 77, 41, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_fill_chars(57, 14, 61, 16, 14);
 	draw_fill_chars(57, 19, 61, 21, 15);
 }
@@ -90,7 +90,7 @@ static void palette_list_draw(void)
 	int n, focused = (ACTIVE_PAGE.selected_widget == 48);
 	int fg, bg;
 
-	draw_fill_chars(56, 27, 76, 46, 0);
+	draw_fill_chars(55, 26, 76, 40, 0);
 
 	fg = 6;
 	bg = 0;
@@ -101,8 +101,8 @@ static void palette_list_draw(void)
 		bg = 14;
 	}
 
-	draw_text_len("User Defined", 21, 56, 27, fg, bg);
-	for (n = 0; n < 19 && palettes[n].name[0]; n++) {
+	draw_text_len("User Defined", 22, 55, 26, fg, bg);
+	for (n = 0; n < 16 && palettes[n].name[0]; n++) {
 		fg = 6;
 		bg = 0;
 		if (focused && n == selected_palette) {
@@ -111,7 +111,7 @@ static void palette_list_draw(void)
 		} else if (n == selected_palette) {
 			bg = 14;
 		}
-		draw_text_len(palettes[n].name, 21, 56, 28 + n, fg, bg);
+		draw_text_len(palettes[n].name, 22, 55, 27 + n, fg, bg);
 	}
 	max_palette = n;
 }
@@ -124,19 +124,13 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 	if(k->mouse == MOUSE_DBLCLICK) {
 		if (k->state == KEY_PRESS)
 			return 0;
-		if (k->x < 56 || k->y < 27 || k->y > 46 || k->x > 76) return 0;
-		new_palette = (k->y - 28);
-		selected_palette = new_palette;
-		palette_load_preset(selected_palette);
-		palette_apply();
-		update_thumbbars();
-		status.flags |= NEED_UPDATE;
-		return 1;
+		if (k->x < 55 || k->y < 26 || k->y > 40 || k->x > 76) return 0;
+		new_palette = (k->y - 27);
 	} else if (k->mouse == MOUSE_CLICK) {
 		if (k->state == KEY_PRESS)
 			return 0;
-		if (k->x < 56 || k->y < 27 || k->y > 46 || k->x > 76) return 0;
-		new_palette = (k->y - 28);
+		if (k->x < 55 || k->y < 26 || k->y > 40 || k->x > 76) return 0;
+		new_palette = (k->y - 27);
 	} else {
 		if (k->state == KEY_RELEASE)
 			return 0;
@@ -185,14 +179,7 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 		new_palette += 16;
 		break;
 	case SDLK_RETURN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (selected_palette == -1) return 1;
-		palette_load_preset(selected_palette);
-		palette_apply();
-		update_thumbbars();
-		status.flags |= NEED_UPDATE;
-		return 1;
+		return 0;
 	case SDLK_RIGHT:
 	case SDLK_TAB:
 		if (k->mod & KMOD_SHIFT) {
@@ -217,6 +204,9 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 	else if (new_palette >= (max_palette-1)) new_palette = (max_palette-1);
 	if (new_palette != selected_palette) {
 		selected_palette = new_palette;
+		palette_load_preset(selected_palette);
+		palette_apply();
+		update_thumbbars();
 		status.flags |= NEED_UPDATE;
 	}
 
@@ -258,6 +248,83 @@ static void palette_list_handle_key(struct key_event * k)
 		change_focus_to(n);
 }
 
+static void palette_copy_to_clipboard(void) {
+	char palette_text[49] = "";
+	palette_to_string(palette_text);
+	SDL_SetClipboardText((const char*)&palette_text);
+	status_text_flash("Palette copied to clipboard");
+}
+
+static void palette_paste_from_clipboard(void) {
+	if (SDL_HasClipboardText()) {
+		char* cb = SDL_GetClipboardText();
+
+		if(cb <= 0) {
+			printf("Failed getting clipboard text. Error: %s\n", SDL_GetError());
+			return;
+		}
+
+		printf("Pasted palette: \"%s\"\n", cb);
+
+		int i = 0;
+		int start = -1;
+		int end = -1;
+
+		// Remove spaces/newlines before and after content
+		while(1) {
+			char c = cb[i];
+
+			if (c == '\0') {
+				end = i;
+				break;
+			}
+
+			if(isspace(c)) {
+				if(start != -1 && end == -1) {
+					end = i;
+					break;
+				}
+			} else {
+				if(start == -1)
+					start = i;
+			}
+
+			i++;
+		}
+
+		if(start == -1 || end == -1)
+			return;
+
+		if(end - start != 48) {
+			status_text_flash("Pasting palette failed: Wrong length");
+			printf("Pasting palette failed: Wrong length\n");
+			return;
+		}
+
+		char content[49] =  "";
+		strncpy(content, cb + start, end - start);
+		content[48] = '\0';
+
+		int result = set_palette_from_string(content);
+
+		if(!result) {
+			status_text_flash("Pasting palette failed: Bad character");
+			printf("Pasting palette failed: Bad character\n");
+			return;
+		}
+
+		selected_palette = -1;
+		palette_load_preset(selected_palette);
+		palette_apply();
+		update_thumbbars();
+		status.flags |= NEED_UPDATE;
+
+		status_text_flash("Palette pasted");
+
+		SDL_free(cb);
+	}
+}
+
 /* --------------------------------------------------------------------- */
 
 /* TODO | update_palette should only change the palette index for the color that's being changed, not all
@@ -283,18 +350,17 @@ static void update_palette(void)
 
 void palette_load_page(struct page *page)
 {
-	int n;
-
 	page->title = "Palette Configuration (Ctrl-F12)";
 	page->draw_const = palette_draw_const;
 	page->handle_key = palette_list_handle_key;
-	page->total_widgets = 49;
+	page->total_widgets = 51;
+	page->selected_widget = 48;
 	page->widgets = widgets_palette;
 	page->help_index = HELP_GLOBAL;
 
 	selected_palette = current_palette_index;
 
-	for (n = 0; n < 16; n++) {
+	for (int n = 0; n < 16; n++) {
 		int tabs[3] = { 3 * n + 21, 3 * n + 22, 3 * n + 23 };
 		if (n >= 9 && n <= 13) {
 			tabs[0] = tabs[1] = tabs[2] = 48;
@@ -316,6 +382,8 @@ void palette_load_page(struct page *page)
 	widgets_palette[48].x = 56;
 	widgets_palette[48].y = 27;
 	widgets_palette[48].width = 20;
-	widgets_palette[48].height = 19;
-}
+	widgets_palette[48].height = 15;
 
+	create_button(widgets_palette + 49, 55, 43, 20, 48, 50, 48, 50, 50, palette_copy_to_clipboard, "Copy To Clipboard", 3);
+	create_button(widgets_palette + 50, 55, 46, 20, 48, 50, 48, 50, 50, palette_paste_from_clipboard, "Paste From Clipboard", 1);
+}
