@@ -66,7 +66,7 @@ struct it_palette palettes[] = {
 		/* 14 */ {18, 16, 15},
 		/* 15 */ {12, 11, 10},
 	}},
-	{"Camouflage", {
+	{"Camouflage (default)", {
 		/*  0 */ { 0,  0,  0},
 		/*  1 */ {31, 22, 17},
 		/*  2 */ {45, 37, 30},
