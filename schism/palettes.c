@@ -348,5 +348,6 @@ void palette_load_preset(int palette_index)
 	current_palette_index = palette_index;
 	if (palette_index == -1) return;
 	memcpy(current_palette, palettes[palette_index].colors, sizeof(current_palette));
+	cfg_save();
 }
 
