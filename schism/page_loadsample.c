@@ -639,6 +639,7 @@ static int file_list_handle_text_input(const uint8_t* text) {
 			return 1;
 		}
 	}
+	return 0;
 }
 
 static int file_list_handle_key(struct key_event * k)
