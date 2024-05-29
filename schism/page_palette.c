@@ -118,6 +118,7 @@ static void palette_list_draw(void)
 static int palette_list_handle_key_on_list(struct key_event * k)
 {
 	int new_palette = selected_palette;
+	int load_selected_palette = 0;
 	const int focus_offsets[] = { 0, 1, 1, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7, 8, 9, 9, 10, 10, 11, 12 };
 
 	if(k->mouse == MOUSE_DBLCLICK) {
@@ -125,17 +126,14 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 			return 0;
 		if (k->x < 55 || k->y < 26 || k->y > 40 || k->x > 76) return 0;
 		new_palette = (k->y - 27);
-		selected_palette = new_palette;
-		palette_load_preset(selected_palette);
-		palette_apply();
-		update_thumbbars();
-		status.flags |= NEED_UPDATE;
-		return 1;
+		load_selected_palette = 1;
 	} else if (k->mouse == MOUSE_CLICK) {
 		if (k->state == KEY_PRESS)
 			return 0;
 		if (k->x < 55 || k->y < 26 || k->y > 40 || k->x > 76) return 0;
 		new_palette = (k->y - 27);
+		if(new_palette == selected_palette)
+			load_selected_palette = 1;
 	} else {
 		if (k->state == KEY_RELEASE)
 			return 0;
@@ -221,8 +219,15 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 	else if (new_palette >= (max_palette-1))
 		new_palette = (max_palette-1);
 
-	if (new_palette != selected_palette) {
+	if (new_palette != selected_palette || load_selected_palette) {
 		selected_palette = new_palette;
+
+		if(load_selected_palette) {
+			palette_load_preset(selected_palette);
+			palette_apply();
+			update_thumbbars();
+		}
+
 		status.flags |= NEED_UPDATE;
 	}
 
