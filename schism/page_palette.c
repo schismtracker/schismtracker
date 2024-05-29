@@ -216,8 +216,11 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 			return 0;
 	}
 
-	if (new_palette < -1) new_palette = -1;
-	else if (new_palette >= (max_palette-1)) new_palette = (max_palette-1);
+	if (new_palette < -1)
+		new_palette = -1;
+	else if (new_palette >= (max_palette-1))
+		new_palette = (max_palette-1);
+
 	if (new_palette != selected_palette) {
 		selected_palette = new_palette;
 		status.flags |= NEED_UPDATE;
@@ -393,7 +396,7 @@ void palette_load_page(struct page *page)
 
 	create_other(widgets_palette + 48, 0, palette_list_handle_key_on_list, NULL, palette_list_draw);
 	widgets_palette[48].x = 56;
-	widgets_palette[48].y = 27;
+	widgets_palette[48].y = 26;
 	widgets_palette[48].width = 20;
 	widgets_palette[48].height = 15;
 
