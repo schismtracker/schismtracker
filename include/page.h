@@ -35,6 +35,7 @@ struct key_event {
 	SDL_Keysym sym, orig_sym;
 	SDL_Keymod mod;
 	int scancode;
+	const char* text;
 
 	enum { KEY_PRESS=0, KEY_RELEASE } state;
 	enum { MOUSE_NONE=0, MOUSE_CLICK, MOUSE_SCROLL_UP, MOUSE_SCROLL_DOWN, MOUSE_DBLCLICK } mouse;

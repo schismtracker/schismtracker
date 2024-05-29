@@ -683,14 +683,13 @@ static void show_selected_song_length(void)
 }
 
 static int file_list_handle_text_input(const char* text) {
-	if (SDL_GetModState() & KMOD_ALT)
-		return 1;
+	int success = 0;
 
 	for (; *text; text++)
-		if (!search_text_add_char(*text))
-			return 0;
+		if (search_text_add_char(*text))
+			success = 1;
 
-	return 1;
+	return success;
 }
 
 static int file_list_handle_key(struct key_event * k)
@@ -747,6 +746,9 @@ static int file_list_handle_key(struct key_event * k)
 		} /* else fall through */
 	default:
 		if (k->mouse == MOUSE_NONE) {
+			if (k->text)
+				return file_list_handle_text_input(k->text);
+
 			return 0;
 		}
 	}
@@ -922,6 +924,9 @@ static int dir_list_handle_key(struct key_event * k)
 		break;
 	default:
 		if (k->mouse == MOUSE_NONE) {
+			if (k->text)
+				return dir_list_handle_text_input(k->text);
+
 			return 0;
 		}
 	}

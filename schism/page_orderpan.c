@@ -676,11 +676,13 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		sample_set(sample_get_current()+1);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	default: {
-		if (kbd_char_to_hex(k) == -1)
+	default:
+		if (k->mouse == MOUSE_NONE) {
+			if (!(k->mod & (KMOD_CTRL | KMOD_ALT)) && k->text)
+				return orderlist_handle_text_input_on_list(k->text);
+
 			return 0;
-		return 1;
-	}
+		}
 	}
 
 	if (new_cursor_pos < 0)

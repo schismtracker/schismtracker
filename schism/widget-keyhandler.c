@@ -849,11 +849,11 @@ int widget_handle_key(struct key_event * k)
 		break;
 	case WIDGET_TEXTENTRY:
 		if ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0 &&
-			unicode_to_ascii(k->sym.sym))
+			k->text && textentry_add_text(widget, k->text))
 			return 1;
 		break;
 	case WIDGET_NUMENTRY:
-		if (numeric_key_event(k, 0) == -1)
+		if (k->text && numentry_handle_text(widget, k->text))
 			return 1;
 		break;
 	default:

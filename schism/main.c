@@ -460,6 +460,37 @@ static void key_event_reset(struct key_event *kk, int start_x, int start_y)
 	kk->sy = start_y;
 }
 
+/* -------------------------------------------------- */
+
+/* These are here for linking text input to keyboard inputs.
+ * If no keyboard input can be found, then the text will
+ * be sent to the already existing handlers written for the
+ * original port to SDL2.
+ *
+ * - paper */
+
+static struct key_event pending_keydown;
+static int have_pending_keydown = 0;
+
+static void push_pending_keydown_event(struct key_event* kk) {
+	if (!have_pending_keydown) {
+		pending_keydown = *kk;
+		have_pending_keydown = 1;
+	}
+}
+
+static void pop_pending_keydown_event(const char* text) {
+	/* text can and will be NULL here. when it is not NULL, it
+	 * should be in CP437 */
+	if (have_pending_keydown) {
+		pending_keydown.text = text;
+		handle_key(&pending_keydown);
+		have_pending_keydown = 0;
+	}
+}
+
+/* -------------------------------------------- */
+
 static void event_loop(void)
 {
 	SDL_Event event;
@@ -494,366 +525,387 @@ static void event_loop(void)
 #endif
 	time(&status.now);
 	localtime_r(&status.now, &status.tmnow);
-	while (SDL_WaitEvent(&event)) {
-		if (!os_sdlevent(&event))
-			continue;
+	for (;;) {
+		while (SDL_PollEvent(&event)) {
+			if (!os_sdlevent(&event))
+				continue;
 
-		key_event_reset(&kk, kk.sx, kk.sy);
+			key_event_reset(&kk, kk.sx, kk.sy);
 
-		sawrep = 0;
-		if (event.type == SDL_KEYDOWN || event.type == SDL_MOUSEBUTTONDOWN) {
-			kk.state = KEY_PRESS;
-		} else if (event.type == SDL_KEYUP || event.type == SDL_MOUSEBUTTONUP) {
-			kk.state = KEY_RELEASE;
-		}
-		if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
-			if (event.key.keysym.sym == 0) {
-				// XXX when does this happen?
-				kk.mouse = MOUSE_NONE;
-				kk.is_repeat = 0;
+			sawrep = 0;
+			if (event.type == SDL_KEYDOWN || event.type == SDL_MOUSEBUTTONDOWN) {
+				kk.state = KEY_PRESS;
+			} else if (event.type == SDL_KEYUP || event.type == SDL_MOUSEBUTTONUP) {
+				kk.state = KEY_RELEASE;
 			}
-		}
-		switch (event.type) {
+			if (event.type == SDL_KEYDOWN || event.type == SDL_TEXTINPUT || event.type == SDL_KEYUP) {
+				if (event.key.keysym.sym == 0) {
+					// XXX when does this happen?
+					kk.mouse = MOUSE_NONE;
+					kk.is_repeat = 0;
+				}
+			}
+			switch (event.type) {
 #if defined(SCHISM_WIN32)
 #define _ALTTRACKED_KMOD        (KMOD_NUM|KMOD_CAPS)
 #else
 #define _ALTTRACKED_KMOD        0
 #endif
-		case SDL_TEXTINPUT: {
-			uint8_t* input_text = NULL;
+			case SDL_TEXTINPUT: {
+				uint8_t* input_text = NULL;
 
-			charset_error_t err = charset_iconv((uint8_t*)event.text.text, &input_text, CHARSET_UTF8, CHARSET_CP437);
-			if (err || !input_text) {
-				log_appendf(4, " [ERROR] failed to convert SDL text input event");
-				log_appendf(4, "  %s", event.text.text);
-				log_appendf(4, " into CP437 with error %s.", charset_iconv_error_lookup(err));
-				log_appendf(4, " please report this on the github!");
-				break;
-			}
-
-			if (input_text[0])
-				handle_text_input((const char*)input_text);
-
-			free(input_text);
-			break;
-		}
-		case SDL_KEYUP:
-		case SDL_KEYDOWN:
-			switch (event.key.keysym.sym) {
-			case SDLK_NUMLOCKCLEAR:
-				modkey ^= KMOD_NUM;
-				break;
-			case SDLK_CAPSLOCK:
-				if (event.type == SDL_KEYDOWN) {
-					status.flags |= CAPS_PRESSED;
-				} else {
-					status.flags &= ~CAPS_PRESSED;
+				charset_error_t err = charset_iconv((uint8_t*)event.text.text, &input_text, CHARSET_UTF8, CHARSET_CP437);
+				if (err || !input_text) {
+					log_appendf(4, " [ERROR] failed to convert SDL text input event");
+					log_appendf(4, "  %s", event.text.text);
+					log_appendf(4, " into CP437 with error %s.", charset_iconv_error_lookup(err));
+					log_appendf(4, " please report this on the github!");
+					break;
 				}
-				modkey ^= KMOD_CAPS;
-				break;
-			case SDLK_LSHIFT: case SDLK_RSHIFT:
-				if (event.type == SDL_KEYDOWN)
-					status.flags |= SHIFT_KEY_DOWN;
-				else
-					status.flags &= ~SHIFT_KEY_DOWN;
-				break;
-			default:
-				break;
-			};
 
-			if (kk.state == KEY_PRESS) {
-				modkey = (event.key.keysym.mod
-					& ~(_ALTTRACKED_KMOD))
-					| (modkey & _ALTTRACKED_KMOD);
+				if (have_pending_keydown) {
+					pop_pending_keydown_event(input_text);
+				} else {
+					/* wtf? whatever, send it to the text input
+					 * handlers I guess, don't throw it out! */
+					handle_text_input(input_text);
+				}
+
+				free(input_text);
+				break;
 			}
+			case SDL_KEYDOWN:
+			case SDL_KEYUP:
+				pop_pending_keydown_event(NULL);
 
-			os_get_modkey(&modkey);
+				switch (event.key.keysym.sym) {
+				case SDLK_NUMLOCKCLEAR:
+					modkey ^= KMOD_NUM;
+					break;
+				case SDLK_CAPSLOCK:
+					if (event.type == SDL_KEYDOWN) {
+						status.flags |= CAPS_PRESSED;
+					} else {
+						status.flags &= ~CAPS_PRESSED;
+					}
+					modkey ^= KMOD_CAPS;
+					break;
+				case SDLK_LSHIFT: case SDLK_RSHIFT:
+					if (event.type == SDL_KEYDOWN)
+						status.flags |= SHIFT_KEY_DOWN;
+					else
+						status.flags &= ~SHIFT_KEY_DOWN;
+					break;
+				default:
+					break;
+				};
 
-			kk.sym.sym = event.key.keysym.sym;
-			kk.scancode = event.key.keysym.scancode;
+				if (kk.state == KEY_PRESS) {
+					modkey = (event.key.keysym.mod
+						& ~(_ALTTRACKED_KMOD))
+						| (modkey & _ALTTRACKED_KMOD);
+				}
 
-			switch (fix_numlock_key) {
-			case NUMLOCK_GUESS:
-				/* should be handled per OS */
+				os_get_modkey(&modkey);
+
+				kk.sym.sym = event.key.keysym.sym;
+				kk.scancode = event.key.keysym.scancode;
+
+				switch (fix_numlock_key) {
+				case NUMLOCK_GUESS:
+					/* should be handled per OS */
+					break;
+				case NUMLOCK_ALWAYS_OFF:
+					modkey &= ~KMOD_NUM;
+					break;
+				case NUMLOCK_ALWAYS_ON:
+					modkey |= KMOD_NUM;
+					break;
+				};
+
+				kk.mod = modkey;
+				kk.mouse = MOUSE_NONE;
+				key_translate(&kk);
+
+				if (event.type == SDL_KEYDOWN && last_key.sym == kk.sym.sym) {
+					sawrep = kk.is_repeat = 1;
+				} else {
+					kk.is_repeat = 0;
+				}
+
+				if (event.type == SDL_KEYUP) {
+					handle_key(&kk);
+					status.last_keysym.sym = kk.sym.sym;
+					last_key.sym = 0;
+				} else {
+					push_pending_keydown_event(&kk);
+					status.last_keysym.sym = 0;
+					last_key.sym = kk.sym.sym;
+				}
 				break;
-			case NUMLOCK_ALWAYS_OFF:
-				modkey &= ~KMOD_NUM;
+			case SDL_QUIT:
+				show_exit_prompt();
 				break;
-			case NUMLOCK_ALWAYS_ON:
-				modkey |= KMOD_NUM;
-				break;
-			};
-
-			kk.mod = modkey;
-			kk.mouse = MOUSE_NONE;
-			key_translate(&kk);
-			if (event.type == SDL_KEYDOWN && last_key.sym == kk.sym.sym) {
-				sawrep = kk.is_repeat = 1;
-			} else {
-				kk.is_repeat = 0;
-			}
-			handle_key(&kk);
-			if (event.type == SDL_KEYUP) {
-				status.last_keysym.sym = kk.sym.sym;
-				last_key.sym = 0;
-			} else {
-				status.last_keysym.sym = 0;
-				last_key.sym = kk.sym.sym;
-			}
-			break;
-		case SDL_QUIT:
-			show_exit_prompt();
-			break;
-		case SDL_WINDOWEVENT:
-			/* reset this... */
-			modkey = SDL_GetModState();
-			os_get_modkey(&modkey);
-			SDL_SetModState(modkey);
-
-			handle_window_event(&event.window);
-			break;
-		case SDL_MOUSEWHEEL:
-			kk.state = -1;  /* neither KEY_PRESS nor KEY_RELEASE */
-#if SDL_VERSION_ATLEAST(2, 26, 0)
-			/* SDL just sends this to us anyway, don't ask for it again */
-			wheel_x = event.wheel.mouseX;
-			wheel_y = event.wheel.mouseY;
-#else
-			SDL_GetMouseState(&wheel_x, &wheel_y);
-			video_get_logical_coordinates(wheel_x, wheel_y, &wheel_x, &wheel_y);
-#endif
-			video_translate(wheel_x, wheel_y, &kk.fx, &kk.fy);
-			kk.mouse = (event.wheel.y > 0) ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN;
-		case SDL_MOUSEMOTION:
-		case SDL_MOUSEBUTTONDOWN:
-		case SDL_MOUSEBUTTONUP:
-			if (kk.state == KEY_PRESS) {
+			case SDL_WINDOWEVENT:
+				/* reset this... */
 				modkey = SDL_GetModState();
 				os_get_modkey(&modkey);
-			}
+				SDL_SetModState(modkey);
 
-			kk.sym.sym = 0;
-			kk.mod = 0;
-
-			if (event.type != SDL_MOUSEWHEEL)
-				video_translate(event.button.x, event.button.y, &kk.fx, &kk.fy);
-
-			/* character resolution */
-			kk.x = kk.fx / kk.rx;
-			/* half-character selection */
-			if ((kk.fx / (kk.rx/2)) % 2 == 0) {
-				kk.hx = 0;
-			} else {
-				kk.hx = 1;
-			}
-			kk.y = kk.fy / kk.ry;
-			if (event.type == SDL_MOUSEWHEEL) {
-				handle_key(&kk);
-				break; /* nothing else to do here */
-			}
-			if (event.type == SDL_MOUSEBUTTONDOWN) {
-				kk.sx = kk.x;
-				kk.sy = kk.y;
-			}
-			if (startdown) startdown = 0;
-
-			switch (event.button.button) {
-			case SDL_BUTTON_RIGHT:
-			case SDL_BUTTON_MIDDLE:
-			case SDL_BUTTON_LEFT:
-				if ((modkey & KMOD_CTRL)
-				|| event.button.button == SDL_BUTTON_RIGHT) {
-					kk.mouse_button = MOUSE_BUTTON_RIGHT;
-				} else if ((modkey & (KMOD_ALT|KMOD_GUI))
-				|| event.button.button == SDL_BUTTON_MIDDLE) {
-					kk.mouse_button = MOUSE_BUTTON_MIDDLE;
-				} else {
-					kk.mouse_button = MOUSE_BUTTON_LEFT;
+				handle_window_event(&event.window);
+				break;
+			case SDL_MOUSEWHEEL:
+				kk.state = -1;  /* neither KEY_PRESS nor KEY_RELEASE */
+#if SDL_VERSION_ATLEAST(2, 26, 0)
+				/* SDL just sends this to us anyway, don't ask for it again */
+				wheel_x = event.wheel.mouseX;
+				wheel_y = event.wheel.mouseY;
+#else
+				SDL_GetMouseState(&wheel_x, &wheel_y);
+				video_get_logical_coordinates(wheel_x, wheel_y, &wheel_x, &wheel_y);
+#endif
+				video_translate(wheel_x, wheel_y, &kk.fx, &kk.fy);
+				kk.mouse = (event.wheel.y > 0) ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN;
+			case SDL_MOUSEMOTION:
+			case SDL_MOUSEBUTTONDOWN:
+			case SDL_MOUSEBUTTONUP:
+				if (kk.state == KEY_PRESS) {
+					modkey = SDL_GetModState();
+					os_get_modkey(&modkey);
 				}
-				if (kk.state == KEY_RELEASE) {
-					ticker = SDL_GetTicks();
-					if (lx == kk.x
-					&& ly == kk.y
-					&& (ticker - last_mouse_down) < 300) {
-						last_mouse_down = 0;
-						kk.mouse = MOUSE_DBLCLICK;
+
+				kk.sym.sym = 0;
+				kk.mod = 0;
+
+				if (event.type != SDL_MOUSEWHEEL)
+					video_translate(event.button.x, event.button.y, &kk.fx, &kk.fy);
+
+				/* character resolution */
+				kk.x = kk.fx / kk.rx;
+				/* half-character selection */
+				if ((kk.fx / (kk.rx/2)) % 2 == 0) {
+					kk.hx = 0;
+				} else {
+					kk.hx = 1;
+				}
+				kk.y = kk.fy / kk.ry;
+				if (event.type == SDL_MOUSEWHEEL) {
+					handle_key(&kk);
+					break; /* nothing else to do here */
+				}
+				if (event.type == SDL_MOUSEBUTTONDOWN) {
+					kk.sx = kk.x;
+					kk.sy = kk.y;
+				}
+				if (startdown) startdown = 0;
+
+				switch (event.button.button) {
+				case SDL_BUTTON_RIGHT:
+				case SDL_BUTTON_MIDDLE:
+				case SDL_BUTTON_LEFT:
+					if ((modkey & KMOD_CTRL)
+					|| event.button.button == SDL_BUTTON_RIGHT) {
+						kk.mouse_button = MOUSE_BUTTON_RIGHT;
+					} else if ((modkey & (KMOD_ALT|KMOD_GUI))
+					|| event.button.button == SDL_BUTTON_MIDDLE) {
+						kk.mouse_button = MOUSE_BUTTON_MIDDLE;
 					} else {
-						last_mouse_down = ticker;
+						kk.mouse_button = MOUSE_BUTTON_LEFT;
+					}
+					if (kk.state == KEY_RELEASE) {
+						ticker = SDL_GetTicks();
+						if (lx == kk.x
+						&& ly == kk.y
+						&& (ticker - last_mouse_down) < 300) {
+							last_mouse_down = 0;
+							kk.mouse = MOUSE_DBLCLICK;
+						} else {
+							last_mouse_down = ticker;
+							kk.mouse = MOUSE_CLICK;
+						}
+						lx = kk.x;
+						ly = kk.y;
+					} else {
 						kk.mouse = MOUSE_CLICK;
 					}
-					lx = kk.x;
-					ly = kk.y;
+					if (status.dialog_type == DIALOG_NONE) {
+						if (kk.y <= 9 && status.current_page != PAGE_FONT_EDIT) {
+							if (kk.state == KEY_RELEASE && kk.mouse_button == MOUSE_BUTTON_RIGHT) {
+								menu_show();
+								break;
+							} else if (kk.state == KEY_PRESS && kk.mouse_button == MOUSE_BUTTON_LEFT) {
+								time(&startdown);
+							}
+						}
+					}
+					if (change_focus_to_xy(kk.x, kk.y)) {
+						kk.on_target = 1;
+					} else {
+						kk.on_target = 0;
+					}
+					if (event.type == SDL_MOUSEBUTTONUP && downtrip) {
+						downtrip = 0;
+						break;
+					}
+					handle_key(&kk);
+					break;
+				};
+				break;
+			default:
+				if (event.type == SCHISM_EVENT_MIDI) {
+					midi_engine_handle_event(&event);
+				} else if (event.type == SCHISM_EVENT_UPDATE_IPMIDI) {
+					status.flags |= (NEED_UPDATE);
+					midi_engine_poll_ports();
+				} else if (event.type == SCHISM_EVENT_PLAYBACK) {
+					/* this is the sound thread */
+					midi_send_flush();
+					if (!(status.flags & (DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN))) {
+						playback_update();
+					}
+				} else if (event.type == SCHISM_EVENT_PASTE) {
+					/* handle clipboard events */
+					_do_clipboard_paste_op(&event);
+					free(event.user.data1);
+				} else if (event.type == SCHISM_EVENT_NATIVE) {
+					/* used by native system scripting */
+					switch (event.user.code) {
+					case SCHISM_EVENT_NATIVE_OPEN: /* open song */
+						song_load(event.user.data1);
+						break;
+					case SCHISM_EVENT_NATIVE_SCRIPT:
+						/* destroy any active dialog before changing pages */
+						dialog_destroy();
+						if (strcasecmp(event.user.data1, "new") == 0) {
+							new_song_dialog();
+						} else if (strcasecmp(event.user.data1, "save") == 0) {
+							save_song_or_save_as();
+						} else if (strcasecmp(event.user.data1, "save_as") == 0) {
+							set_page(PAGE_SAVE_MODULE);
+						} else if (strcasecmp(event.user.data1, "export_song") == 0) {
+							set_page(PAGE_EXPORT_MODULE);
+						} else if (strcasecmp(event.user.data1, "logviewer") == 0) {
+							set_page(PAGE_LOG);
+						} else if (strcasecmp(event.user.data1, "font_editor") == 0) {
+							set_page(PAGE_FONT_EDIT);
+						} else if (strcasecmp(event.user.data1, "load") == 0) {
+							set_page(PAGE_LOAD_MODULE);
+						} else if (strcasecmp(event.user.data1, "help") == 0) {
+							set_page(PAGE_HELP);
+						} else if (strcasecmp(event.user.data1, "pattern") == 0) {
+							set_page(PAGE_PATTERN_EDITOR);
+						} else if (strcasecmp(event.user.data1, "orders") == 0) {
+							set_page(PAGE_ORDERLIST_PANNING);
+						} else if (strcasecmp(event.user.data1, "variables") == 0) {
+							set_page(PAGE_SONG_VARIABLES);
+						} else if (strcasecmp(event.user.data1, "message_edit") == 0) {
+							set_page(PAGE_MESSAGE);
+						} else if (strcasecmp(event.user.data1, "info") == 0) {
+							set_page(PAGE_INFO);
+						} else if (strcasecmp(event.user.data1, "play") == 0) {
+							song_start();
+						} else if (strcasecmp(event.user.data1, "play_pattern") == 0) {
+							song_loop_pattern(get_current_pattern(), 0);
+						} else if (strcasecmp(event.user.data1, "play_order") == 0) {
+							song_start_at_order(get_current_order(), 0);
+						} else if (strcasecmp(event.user.data1, "play_mark") == 0) {
+							play_song_from_mark();
+						} else if (strcasecmp(event.user.data1, "stop") == 0) {
+							song_stop();
+						} else if (strcasecmp(event.user.data1, "calc_length") == 0) {
+							show_song_length();
+						} else if (strcasecmp(event.user.data1, "sample_page") == 0) {
+							set_page(PAGE_SAMPLE_LIST);
+						} else if (strcasecmp(event.user.data1, "sample_library") == 0) {
+							set_page(PAGE_LIBRARY_SAMPLE);
+						} else if (strcasecmp(event.user.data1, "init_sound") == 0) {
+							/* does nothing :) */
+						} else if (strcasecmp(event.user.data1, "inst_page") == 0) {
+							set_page(PAGE_INSTRUMENT_LIST);
+						} else if (strcasecmp(event.user.data1, "inst_library") == 0) {
+							set_page(PAGE_LIBRARY_INSTRUMENT);
+						} else if (strcasecmp(event.user.data1, "preferences") == 0) {
+							set_page(PAGE_PREFERENCES);
+						} else if (strcasecmp(event.user.data1, "system_config") == 0) {
+							set_page(PAGE_CONFIG);
+						} else if (strcasecmp(event.user.data1, "midi_config") == 0) {
+							set_page(PAGE_MIDI);
+						} else if (strcasecmp(event.user.data1, "palette_page") == 0) {
+							set_page(PAGE_PALETTE_EDITOR);
+						} else if (strcasecmp(event.user.data1, "fullscreen") == 0) {
+							toggle_display_fullscreen();
+						}
+					};
 				} else {
-					kk.mouse = MOUSE_CLICK;
+					printf("received unknown event %x\n", event.type);
 				}
-				if (status.dialog_type == DIALOG_NONE) {
-					if (kk.y <= 9 && status.current_page != PAGE_FONT_EDIT) {
-						if (kk.state == KEY_RELEASE && kk.mouse_button == MOUSE_BUTTON_RIGHT) {
-							menu_show();
-							break;
-						} else if (kk.state == KEY_PRESS && kk.mouse_button == MOUSE_BUTTON_LEFT) {
-							time(&startdown);
+				break;
+			}
+
+			if (sawrep || !SDL_PollEvent(NULL)) {
+				time(&status.now);
+				localtime_r(&status.now, &status.tmnow);
+
+				if (status.dialog_type == DIALOG_NONE
+				    && startdown && (status.now - startdown) > 1) {
+					menu_show();
+					startdown = 0;
+					downtrip = 1;
+				}
+				if (status.flags & (CLIPPY_PASTE_SELECTION|CLIPPY_PASTE_BUFFER)) {
+					clippy_paste((status.flags & CLIPPY_PASTE_BUFFER)
+						     ? CLIPPY_BUFFER : CLIPPY_SELECT);
+					status.flags &= ~(CLIPPY_PASTE_BUFFER|CLIPPY_PASTE_SELECTION);
+				}
+
+				check_update();
+
+				switch (song_get_mode()) {
+				case MODE_PLAYING:
+				case MODE_PATTERN_LOOP:
+#ifdef os_screensaver_deactivate
+					if ((status.now-last_ss) > 14) {
+						last_ss=status.now;
+						os_screensaver_deactivate();
+					}
+#endif
+					break;
+				default:
+					break;
+				};
+
+				if (status.flags & DISKWRITER_ACTIVE) {
+					int q = disko_sync();
+					while (q == DW_SYNC_MORE && !SDL_PollEvent(NULL)) {
+						check_update();
+						q = disko_sync();
+					}
+					if (q == DW_SYNC_DONE) {
+#ifdef ENABLE_HOOKS
+						run_disko_complete_hook();
+#endif
+						if (diskwrite_to) {
+							printf("Diskwrite complete, exiting...\n");
+							schism_exit(0);
 						}
 					}
 				}
-				if (change_focus_to_xy(kk.x, kk.y)) {
-					kk.on_target = 1;
-				} else {
-					kk.on_target = 0;
-				}
-				if (event.type == SDL_MOUSEBUTTONUP && downtrip) {
-					downtrip = 0;
-					break;
-				}
-				handle_key(&kk);
-				break;
-			};
-			break;
-		default:
-			if (event.type == SCHISM_EVENT_MIDI) {
-				midi_engine_handle_event(&event);
-			} else if (event.type == SCHISM_EVENT_UPDATE_IPMIDI) {
-				status.flags |= (NEED_UPDATE);
-				midi_engine_poll_ports();
-			} else if (event.type == SCHISM_EVENT_PLAYBACK) {
-				/* this is the sound thread */
-				midi_send_flush();
-				if (!(status.flags & (DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN))) {
-					playback_update();
-				}
-			} else if (event.type == SCHISM_EVENT_PASTE) {
-				/* handle clipboard events */
-				_do_clipboard_paste_op(&event);
-				free(event.user.data1);
-			} else if (event.type == SCHISM_EVENT_NATIVE) {
-				/* used by native system scripting */
-				switch (event.user.code) {
-				case SCHISM_EVENT_NATIVE_OPEN: /* open song */
-					song_load(event.user.data1);
-					break;
-				case SCHISM_EVENT_NATIVE_SCRIPT:
-					/* destroy any active dialog before changing pages */
-					dialog_destroy();
-					if (strcasecmp(event.user.data1, "new") == 0) {
-						new_song_dialog();
-					} else if (strcasecmp(event.user.data1, "save") == 0) {
-						save_song_or_save_as();
-					} else if (strcasecmp(event.user.data1, "save_as") == 0) {
-						set_page(PAGE_SAVE_MODULE);
-					} else if (strcasecmp(event.user.data1, "export_song") == 0) {
-						set_page(PAGE_EXPORT_MODULE);
-					} else if (strcasecmp(event.user.data1, "logviewer") == 0) {
-						set_page(PAGE_LOG);
-					} else if (strcasecmp(event.user.data1, "font_editor") == 0) {
-						set_page(PAGE_FONT_EDIT);
-					} else if (strcasecmp(event.user.data1, "load") == 0) {
-						set_page(PAGE_LOAD_MODULE);
-					} else if (strcasecmp(event.user.data1, "help") == 0) {
-						set_page(PAGE_HELP);
-					} else if (strcasecmp(event.user.data1, "pattern") == 0) {
-						set_page(PAGE_PATTERN_EDITOR);
-					} else if (strcasecmp(event.user.data1, "orders") == 0) {
-						set_page(PAGE_ORDERLIST_PANNING);
-					} else if (strcasecmp(event.user.data1, "variables") == 0) {
-						set_page(PAGE_SONG_VARIABLES);
-					} else if (strcasecmp(event.user.data1, "message_edit") == 0) {
-						set_page(PAGE_MESSAGE);
-					} else if (strcasecmp(event.user.data1, "info") == 0) {
-						set_page(PAGE_INFO);
-					} else if (strcasecmp(event.user.data1, "play") == 0) {
-						song_start();
-					} else if (strcasecmp(event.user.data1, "play_pattern") == 0) {
-						song_loop_pattern(get_current_pattern(), 0);
-					} else if (strcasecmp(event.user.data1, "play_order") == 0) {
-						song_start_at_order(get_current_order(), 0);
-					} else if (strcasecmp(event.user.data1, "play_mark") == 0) {
-						play_song_from_mark();
-					} else if (strcasecmp(event.user.data1, "stop") == 0) {
-						song_stop();
-					} else if (strcasecmp(event.user.data1, "calc_length") == 0) {
-						show_song_length();
-					} else if (strcasecmp(event.user.data1, "sample_page") == 0) {
-						set_page(PAGE_SAMPLE_LIST);
-					} else if (strcasecmp(event.user.data1, "sample_library") == 0) {
-						set_page(PAGE_LIBRARY_SAMPLE);
-					} else if (strcasecmp(event.user.data1, "init_sound") == 0) {
-						/* does nothing :) */
-					} else if (strcasecmp(event.user.data1, "inst_page") == 0) {
-						set_page(PAGE_INSTRUMENT_LIST);
-					} else if (strcasecmp(event.user.data1, "inst_library") == 0) {
-						set_page(PAGE_LIBRARY_INSTRUMENT);
-					} else if (strcasecmp(event.user.data1, "preferences") == 0) {
-						set_page(PAGE_PREFERENCES);
-					} else if (strcasecmp(event.user.data1, "system_config") == 0) {
-						set_page(PAGE_CONFIG);
-					} else if (strcasecmp(event.user.data1, "midi_config") == 0) {
-						set_page(PAGE_MIDI);
-					} else if (strcasecmp(event.user.data1, "palette_page") == 0) {
-						set_page(PAGE_PALETTE_EDITOR);
-					} else if (strcasecmp(event.user.data1, "fullscreen") == 0) {
-						toggle_display_fullscreen();
-					}
-				};
-			} else {
-				printf("received unknown event %x\n", event.type);
+
+				/* let dmoz build directory lists, etc
+				as long as there's no user-event going on...
+				*/
+				while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(NULL));
 			}
-			break;
 		}
-		if (sawrep || !SDL_PollEvent(NULL)) {
-			time(&status.now);
-			localtime_r(&status.now, &status.tmnow);
 
-			if (status.dialog_type == DIALOG_NONE
-			    && startdown && (status.now - startdown) > 1) {
-				menu_show();
-				startdown = 0;
-				downtrip = 1;
-			}
-			if (status.flags & (CLIPPY_PASTE_SELECTION|CLIPPY_PASTE_BUFFER)) {
-				clippy_paste((status.flags & CLIPPY_PASTE_BUFFER)
-					     ? CLIPPY_BUFFER : CLIPPY_SELECT);
-				status.flags &= ~(CLIPPY_PASTE_BUFFER|CLIPPY_PASTE_SELECTION);
-			}
+		/* when using a real keyboard SDL will send a keydown first
+		 * and text input after it; if a text input event is NOT sent,
+		 * we should just send the keydown as is */
+		if (have_pending_keydown)
+			pop_pending_keydown_event(NULL);
 
-			check_update();
-
-			switch (song_get_mode()) {
-			case MODE_PLAYING:
-			case MODE_PATTERN_LOOP:
-#ifdef os_screensaver_deactivate
-				if ((status.now-last_ss) > 14) {
-					last_ss=status.now;
-					os_screensaver_deactivate();
-				}
-#endif
-				break;
-			default:
-				break;
-			};
-
-			if (status.flags & DISKWRITER_ACTIVE) {
-				int q = disko_sync();
-				while (q == DW_SYNC_MORE && !SDL_PollEvent(NULL)) {
-					check_update();
-					q = disko_sync();
-				}
-				if (q == DW_SYNC_DONE) {
-#ifdef ENABLE_HOOKS
-					run_disko_complete_hook();
-#endif
-					if (diskwrite_to) {
-						printf("Diskwrite complete, exiting...\n");
-						schism_exit(0);
-					}
-				}
-			}
-
-			/* let dmoz build directory lists, etc
-			as long as there's no user-event going on...
-			*/
-			while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(NULL))
-				/* nothing */;
-		}
+		/* what SDL uses internally for SDL_WaitEvent() */
+		SDL_Delay(1);
 	}
 	schism_exit(0);
 }
@@ -865,6 +917,7 @@ void schism_exit(int status)
 	if (shutdown_process & EXIT_HOOK)
 		run_exit_hook();
 #endif
+
 	if (shutdown_process & EXIT_SAVECFG)
 		cfg_atexit_save();
 

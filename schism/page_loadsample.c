@@ -626,11 +626,24 @@ static void do_delete_file(UNUSED void *data)
 	file_list_reposition();
 }
 
+static int file_list_handle_text_input(const char* text) {
+	dmoz_file_t* f = flist.files[current_file];
+	for (; *text; text++) {
+		if (*text >= 32 && (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
+			if (search_pos < 0) search_pos = 0;
+			if (search_pos < PATH_MAX) {
+				search_str[search_pos++] = *text;
+				reposition_at_slash_search();
+				status.flags |= NEED_UPDATE;
+			}
+			return 1;
+		}
+	}
+}
+
 static int file_list_handle_key(struct key_event * k)
 {
-	dmoz_file_t *f;
 	int new_file = current_file;
-	int c = k->sym.sym;
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 
@@ -708,18 +721,9 @@ static int file_list_handle_key(struct key_event * k)
 			return 0;
 		} /* else fall through */
 	default:
-		f = flist.files[current_file];
-		if (c >= 32 && (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-			if (search_pos < 0) search_pos = 0;
-			if (search_pos < PATH_MAX) {
-				search_str[search_pos++] = c;
-				reposition_at_slash_search();
-				status.flags |= NEED_UPDATE;
-			}
-			return 1;
-		}
+		if (k->text)
+			file_list_handle_text_input(k->text);
+
 		if (!k->mouse) return 0;
 	}
 
@@ -905,7 +909,7 @@ void load_sample_load_page(struct page *page)
 
 	create_other(widgets_loadsample + 0, 0,
 				file_list_handle_key,
-				NULL,
+				file_list_handle_text_input,
 				file_list_draw);
 	widgets_loadsample[0].accept_text = 1;
 	widgets_loadsample[0].next.tab = 1;

@@ -423,14 +423,13 @@ static void instrument_list_draw_list(void)
 static int instrument_list_handle_text_input_on_list(const char* text) {
 	int success = 0;
 	for (; *text; text++)
-		if (instrument_cursor_pos < 25 && (!instrument_list_add_char(*text)))
+		if (instrument_cursor_pos < 25 && instrument_list_add_char(*text))
 			success = 1;
 	return success;
 }
 
 static int instrument_list_handle_key_on_list(struct key_event * k)
 {
-	static int enable_text = 0; /* stupid dirty hack */
 	int new_ins = current_instrument;
 
 	if (k->state == KEY_PRESS && k->mouse != MOUSE_NONE && k->y >= 13 && k->y <= 47 && k->x >= 5 && k->x <= 30) {
@@ -614,18 +613,6 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				return 1;
 			}
 			return 0;
-		case SDLK_SPACE:
-			if (instrument_cursor_pos >= 25) {
-				/* we stop text input here so we don't insert
-				 * an extra space */
-				instrument_cursor_pos = 0;
-				get_page_widgets()->accept_text = 0;
-				status.flags |= NEED_UPDATE;
-				memused_songchanged();
-				enable_text = 1;
-				return 1;
-			}
-			return 0;
 		default:
 			if (k->state == KEY_RELEASE)
 				return 0;
@@ -635,16 +622,17 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 					clear_instrument_text();
 					return 1;
 				}
-			} else if (k->sym.sym >= SDLK_a) {
-				if (instrument_cursor_pos < 25)
+			} else if ((k->mod & KMOD_CTRL) == 0) {
+				if (instrument_cursor_pos < 25) {
+					if (k->text)
+						return instrument_list_handle_text_input_on_list(k->text);
+				} else if (k->sym.sym == SDLK_SPACE) {
+					instrument_cursor_pos = 0;
+					get_page_widgets()->accept_text = 0;
+					status.flags |= NEED_UPDATE;
+					memused_songchanged();
 					return 1;
-
-				if (enable_text) {
-					get_page_widgets()->accept_text = 1;
-					enable_text = 0;
 				}
-
-				return 0;
 			}
 
 			return 0;

@@ -553,16 +553,12 @@ static void _delete_selection(void)
 }
 
 static int message_handle_text_input_editmode(const char* text) {
-	int modkey = SDL_GetModState();
-	if (modkey & KMOD_CTRL || modkey & KMOD_ALT)
-		return 0;
+	if (clippy_owner(CLIPPY_SELECT) == widgets_message)
+		_delete_selection();
 
-	for (; *text; text++) {
-		if (clippy_owner(CLIPPY_SELECT) == widgets_message)
-			_delete_selection();
-
+	for (; *text; text++)
 		message_insert_char(*text);
-	}
+
 	return 1;
 }
 
@@ -731,6 +727,11 @@ static int message_handle_key_editmode(struct key_event * k)
 				prompt_message_clear();
 				return 1;
 			}
+		} else if (k->mouse == MOUSE_NONE) {
+			if (k->text)
+				return message_handle_text_input_editmode(k->text);
+
+			return 0;
 		}
 
 		if (k->mouse != MOUSE_CLICK)
