@@ -822,8 +822,10 @@ const struct save_format song_export_formats[] = {
 	{"MWAV", "WAV multi-write", ".wav", {.export = {EXPORT_FUNCS(wav), 1}}},
 	{"AIFF", "Audio IFF", ".aiff", {.export = {EXPORT_FUNCS(aiff), 0}}},
 	{"MAIFF", "Audio IFF multi-write", ".aiff", {.export = {EXPORT_FUNCS(aiff), 1}}},
+#ifdef USE_FLAC
 	{"FLAC", "Free Lossless Audio Codec", ".flac", {.export = {EXPORT_FUNCS(flac), 0}}},
 	{"MFLAC", "Free Lossless Audio Codec multi-write", ".flac", {.export = {EXPORT_FUNCS(flac), 1}}},
+#endif
 	{.label = NULL}
 };
 // <distance> and maiff sounds like something you'd want to hug
@@ -835,7 +837,9 @@ const struct save_format sample_save_formats[] = {
 	{"AIFF", "Audio IFF", ".aiff", {.save_sample = fmt_aiff_save_sample}},
 	{"AU", "Sun/NeXT", ".au", {.save_sample = fmt_au_save_sample}},
 	{"WAV", "WAV", ".wav", {.save_sample = fmt_wav_save_sample}},
+#ifdef USE_FLAC
 	{"FLAC", "Free Lossless Audio Codec", ".flac", {.save_sample = fmt_flac_save_sample}},
+#endif
 	{"RAW", "Raw", ".raw", {.save_sample = fmt_raw_save_sample}},
 	{.label = NULL}
 };
