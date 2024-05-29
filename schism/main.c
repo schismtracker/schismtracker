@@ -750,151 +750,106 @@ static void event_loop(void)
 					handle_key(&kk);
 					break;
 				};
+			/* Our own custom events.
+			 *
+			 * XXX:
+			 * SDL docs say that we have to register these events.
+			 *
+			 * We can probably get away with doing this though, since
+			 * we don't have any dependencies that use SDL anyway. */
+			case SCHISM_EVENT_MIDI:
+				midi_engine_handle_event(&event);
+				break;
+			case SCHISM_EVENT_UPDATE_IPMIDI:
+				status.flags |= (NEED_UPDATE);
+				midi_engine_poll_ports();
+				break;
+			case SCHISM_EVENT_PLAYBACK:
+				/* this is the sound thread */
+				midi_send_flush();
+				if (!(status.flags & (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN)))
+					playback_update();
+				break;
+			case SCHISM_EVENT_PASTE:
+				/* handle clipboard events */
+				_do_clipboard_paste_op(&event);
+				free(event.user.data1);
+				break;
+			case SCHISM_EVENT_NATIVE:
+				/* used by native system scripting */
+				switch (event.user.code) {
+				case SCHISM_EVENT_NATIVE_OPEN: /* open song */
+					song_load(event.user.data1);
+					break;
+				case SCHISM_EVENT_NATIVE_SCRIPT:
+					/* destroy any active dialog before changing pages */
+					dialog_destroy();
+					if (strcasecmp(event.user.data1, "new") == 0) {
+						new_song_dialog();
+					} else if (strcasecmp(event.user.data1, "save") == 0) {
+						save_song_or_save_as();
+					} else if (strcasecmp(event.user.data1, "save_as") == 0) {
+						set_page(PAGE_SAVE_MODULE);
+					} else if (strcasecmp(event.user.data1, "export_song") == 0) {
+						set_page(PAGE_EXPORT_MODULE);
+					} else if (strcasecmp(event.user.data1, "logviewer") == 0) {
+						set_page(PAGE_LOG);
+					} else if (strcasecmp(event.user.data1, "font_editor") == 0) {
+						set_page(PAGE_FONT_EDIT);
+					} else if (strcasecmp(event.user.data1, "load") == 0) {
+						set_page(PAGE_LOAD_MODULE);
+					} else if (strcasecmp(event.user.data1, "help") == 0) {
+						set_page(PAGE_HELP);
+					} else if (strcasecmp(event.user.data1, "pattern") == 0) {
+						set_page(PAGE_PATTERN_EDITOR);
+					} else if (strcasecmp(event.user.data1, "orders") == 0) {
+						set_page(PAGE_ORDERLIST_PANNING);
+					} else if (strcasecmp(event.user.data1, "variables") == 0) {
+						set_page(PAGE_SONG_VARIABLES);
+					} else if (strcasecmp(event.user.data1, "message_edit") == 0) {
+						set_page(PAGE_MESSAGE);
+					} else if (strcasecmp(event.user.data1, "info") == 0) {
+						set_page(PAGE_INFO);
+					} else if (strcasecmp(event.user.data1, "play") == 0) {
+						song_start();
+					} else if (strcasecmp(event.user.data1, "play_pattern") == 0) {
+						song_loop_pattern(get_current_pattern(), 0);
+					} else if (strcasecmp(event.user.data1, "play_order") == 0) {
+						song_start_at_order(get_current_order(), 0);
+					} else if (strcasecmp(event.user.data1, "play_mark") == 0) {
+						play_song_from_mark();
+					} else if (strcasecmp(event.user.data1, "stop") == 0) {
+						song_stop();
+					} else if (strcasecmp(event.user.data1, "calc_length") == 0) {
+						show_song_length();
+					} else if (strcasecmp(event.user.data1, "sample_page") == 0) {
+						set_page(PAGE_SAMPLE_LIST);
+					} else if (strcasecmp(event.user.data1, "sample_library") == 0) {
+						set_page(PAGE_LIBRARY_SAMPLE);
+					} else if (strcasecmp(event.user.data1, "init_sound") == 0) {
+						/* does nothing :) */
+					} else if (strcasecmp(event.user.data1, "inst_page") == 0) {
+						set_page(PAGE_INSTRUMENT_LIST);
+					} else if (strcasecmp(event.user.data1, "inst_library") == 0) {
+						set_page(PAGE_LIBRARY_INSTRUMENT);
+					} else if (strcasecmp(event.user.data1, "preferences") == 0) {
+						set_page(PAGE_PREFERENCES);
+					} else if (strcasecmp(event.user.data1, "system_config") == 0) {
+						set_page(PAGE_CONFIG);
+					} else if (strcasecmp(event.user.data1, "midi_config") == 0) {
+						set_page(PAGE_MIDI);
+					} else if (strcasecmp(event.user.data1, "palette_page") == 0) {
+						set_page(PAGE_PALETTE_EDITOR);
+					} else if (strcasecmp(event.user.data1, "fullscreen") == 0) {
+						toggle_display_fullscreen();
+					}
+					break;
+				}
 				break;
 			default:
-				if (event.type == SCHISM_EVENT_MIDI) {
-					midi_engine_handle_event(&event);
-				} else if (event.type == SCHISM_EVENT_UPDATE_IPMIDI) {
-					status.flags |= (NEED_UPDATE);
-					midi_engine_poll_ports();
-				} else if (event.type == SCHISM_EVENT_PLAYBACK) {
-					/* this is the sound thread */
-					midi_send_flush();
-					if (!(status.flags & (DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN))) {
-						playback_update();
-					}
-				} else if (event.type == SCHISM_EVENT_PASTE) {
-					/* handle clipboard events */
-					_do_clipboard_paste_op(&event);
-					free(event.user.data1);
-				} else if (event.type == SCHISM_EVENT_NATIVE) {
-					/* used by native system scripting */
-					switch (event.user.code) {
-					case SCHISM_EVENT_NATIVE_OPEN: /* open song */
-						song_load(event.user.data1);
-						break;
-					case SCHISM_EVENT_NATIVE_SCRIPT:
-						/* destroy any active dialog before changing pages */
-						dialog_destroy();
-						if (strcasecmp(event.user.data1, "new") == 0) {
-							new_song_dialog();
-						} else if (strcasecmp(event.user.data1, "save") == 0) {
-							save_song_or_save_as();
-						} else if (strcasecmp(event.user.data1, "save_as") == 0) {
-							set_page(PAGE_SAVE_MODULE);
-						} else if (strcasecmp(event.user.data1, "export_song") == 0) {
-							set_page(PAGE_EXPORT_MODULE);
-						} else if (strcasecmp(event.user.data1, "logviewer") == 0) {
-							set_page(PAGE_LOG);
-						} else if (strcasecmp(event.user.data1, "font_editor") == 0) {
-							set_page(PAGE_FONT_EDIT);
-						} else if (strcasecmp(event.user.data1, "load") == 0) {
-							set_page(PAGE_LOAD_MODULE);
-						} else if (strcasecmp(event.user.data1, "help") == 0) {
-							set_page(PAGE_HELP);
-						} else if (strcasecmp(event.user.data1, "pattern") == 0) {
-							set_page(PAGE_PATTERN_EDITOR);
-						} else if (strcasecmp(event.user.data1, "orders") == 0) {
-							set_page(PAGE_ORDERLIST_PANNING);
-						} else if (strcasecmp(event.user.data1, "variables") == 0) {
-							set_page(PAGE_SONG_VARIABLES);
-						} else if (strcasecmp(event.user.data1, "message_edit") == 0) {
-							set_page(PAGE_MESSAGE);
-						} else if (strcasecmp(event.user.data1, "info") == 0) {
-							set_page(PAGE_INFO);
-						} else if (strcasecmp(event.user.data1, "play") == 0) {
-							song_start();
-						} else if (strcasecmp(event.user.data1, "play_pattern") == 0) {
-							song_loop_pattern(get_current_pattern(), 0);
-						} else if (strcasecmp(event.user.data1, "play_order") == 0) {
-							song_start_at_order(get_current_order(), 0);
-						} else if (strcasecmp(event.user.data1, "play_mark") == 0) {
-							play_song_from_mark();
-						} else if (strcasecmp(event.user.data1, "stop") == 0) {
-							song_stop();
-						} else if (strcasecmp(event.user.data1, "calc_length") == 0) {
-							show_song_length();
-						} else if (strcasecmp(event.user.data1, "sample_page") == 0) {
-							set_page(PAGE_SAMPLE_LIST);
-						} else if (strcasecmp(event.user.data1, "sample_library") == 0) {
-							set_page(PAGE_LIBRARY_SAMPLE);
-						} else if (strcasecmp(event.user.data1, "init_sound") == 0) {
-							/* does nothing :) */
-						} else if (strcasecmp(event.user.data1, "inst_page") == 0) {
-							set_page(PAGE_INSTRUMENT_LIST);
-						} else if (strcasecmp(event.user.data1, "inst_library") == 0) {
-							set_page(PAGE_LIBRARY_INSTRUMENT);
-						} else if (strcasecmp(event.user.data1, "preferences") == 0) {
-							set_page(PAGE_PREFERENCES);
-						} else if (strcasecmp(event.user.data1, "system_config") == 0) {
-							set_page(PAGE_CONFIG);
-						} else if (strcasecmp(event.user.data1, "midi_config") == 0) {
-							set_page(PAGE_MIDI);
-						} else if (strcasecmp(event.user.data1, "palette_page") == 0) {
-							set_page(PAGE_PALETTE_EDITOR);
-						} else if (strcasecmp(event.user.data1, "fullscreen") == 0) {
-							toggle_display_fullscreen();
-						}
-					};
-				} else {
-					printf("received unknown event %x\n", event.type);
-				}
+				/* SDL provides many other events that we quite frankly
+				 * don't need (or want) to care about. */
 				break;
-			}
-
-			if (sawrep || !SDL_PollEvent(NULL)) {
-				time(&status.now);
-				localtime_r(&status.now, &status.tmnow);
-
-				if (status.dialog_type == DIALOG_NONE
-				    && startdown && (status.now - startdown) > 1) {
-					menu_show();
-					startdown = 0;
-					downtrip = 1;
-				}
-				if (status.flags & (CLIPPY_PASTE_SELECTION|CLIPPY_PASTE_BUFFER)) {
-					clippy_paste((status.flags & CLIPPY_PASTE_BUFFER)
-						     ? CLIPPY_BUFFER : CLIPPY_SELECT);
-					status.flags &= ~(CLIPPY_PASTE_BUFFER|CLIPPY_PASTE_SELECTION);
-				}
-
-				check_update();
-
-				switch (song_get_mode()) {
-				case MODE_PLAYING:
-				case MODE_PATTERN_LOOP:
-#ifdef os_screensaver_deactivate
-					if ((status.now-last_ss) > 14) {
-						last_ss=status.now;
-						os_screensaver_deactivate();
-					}
-#endif
-					break;
-				default:
-					break;
-				};
-
-				if (status.flags & DISKWRITER_ACTIVE) {
-					int q = disko_sync();
-					while (q == DW_SYNC_MORE && !SDL_PollEvent(NULL)) {
-						check_update();
-						q = disko_sync();
-					}
-					if (q == DW_SYNC_DONE) {
-#ifdef ENABLE_HOOKS
-						run_disko_complete_hook();
-#endif
-						if (diskwrite_to) {
-							printf("Diskwrite complete, exiting...\n");
-							schism_exit(0);
-						}
-					}
-				}
-
-				/* let dmoz build directory lists, etc
-				as long as there's no user-event going on...
-				*/
-				while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(NULL));
 			}
 		}
 
@@ -902,6 +857,61 @@ static void event_loop(void)
 		 * and text input after it; if a text input event is NOT sent,
 		 * we should just send the keydown as is */
 		pop_pending_keydown_event(NULL);
+
+		if (sawrep || !SDL_PollEvent(NULL)) {
+			time(&status.now);
+			localtime_r(&status.now, &status.tmnow);
+
+			if (status.dialog_type == DIALOG_NONE
+			    && startdown && (status.now - startdown) > 1) {
+				menu_show();
+				startdown = 0;
+				downtrip = 1;
+			}
+			if (status.flags & (CLIPPY_PASTE_SELECTION|CLIPPY_PASTE_BUFFER)) {
+				clippy_paste((status.flags & CLIPPY_PASTE_BUFFER)
+					     ? CLIPPY_BUFFER : CLIPPY_SELECT);
+				status.flags &= ~(CLIPPY_PASTE_BUFFER|CLIPPY_PASTE_SELECTION);
+			}
+
+			check_update();
+
+			switch (song_get_mode()) {
+			case MODE_PLAYING:
+			case MODE_PATTERN_LOOP:
+#ifdef os_screensaver_deactivate
+				if ((status.now-last_ss) > 14) {
+					last_ss=status.now;
+					os_screensaver_deactivate();
+				}
+#endif
+				break;
+			default:
+				break;
+			};
+
+			if (status.flags & DISKWRITER_ACTIVE) {
+				int q = disko_sync();
+				while (q == DW_SYNC_MORE && !SDL_PollEvent(NULL)) {
+					check_update();
+					q = disko_sync();
+				}
+				if (q == DW_SYNC_DONE) {
+#ifdef ENABLE_HOOKS
+					run_disko_complete_hook();
+#endif
+					if (diskwrite_to) {
+						printf("Diskwrite complete, exiting...\n");
+						schism_exit(0);
+					}
+				}
+			}
+
+			/* let dmoz build directory lists, etc
+			as long as there's no user-event going on...
+			*/
+			while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(NULL));
+		}
 
 		/* what SDL uses internally for SDL_WaitEvent() */
 		SDL_Delay(1);
