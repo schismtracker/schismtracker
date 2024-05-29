@@ -121,20 +121,22 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 	int new_palette = selected_palette;
 	const int focus_offsets[] = { 0, 1, 1, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7, 8, 9, 9, 10, 10, 11, 12 };
 
-	if (k->mouse == MOUSE_CLICK) {
+	if(k->mouse == MOUSE_DBLCLICK) {
 		if (k->state == KEY_PRESS)
 			return 0;
 		if (k->x < 56 || k->y < 27 || k->y > 46 || k->x > 76) return 0;
 		new_palette = (k->y - 28);
-		if (new_palette == selected_palette) {
-			// alright
-			if (selected_palette == -1) return 1;
-			palette_load_preset(selected_palette);
-			palette_apply();
-			update_thumbbars();
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
+		selected_palette = new_palette;
+		palette_load_preset(selected_palette);
+		palette_apply();
+		update_thumbbars();
+		status.flags |= NEED_UPDATE;
+		return 1;
+	} else if (k->mouse == MOUSE_CLICK) {
+		if (k->state == KEY_PRESS)
+			return 0;
+		if (k->x < 56 || k->y < 27 || k->y > 46 || k->x > 76) return 0;
+		new_palette = (k->y - 28);
 	} else {
 		if (k->state == KEY_RELEASE)
 			return 0;
