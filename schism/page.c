@@ -941,7 +941,7 @@ static int _handle_ime(struct key_event *k)
 			}
 		} else if (k->sym.sym == SDLK_LSHIFT || k->sym.sym == SDLK_RSHIFT) {
 			/* do nothing */
-		} else if (!NO_MODIFIER((k->mod&~KMOD_SHIFT)) || (c=k->sym.sym) == 0 || digraph_n < 2) {
+		} else if (!NO_MODIFIER((k->mod&~KMOD_SHIFT)) || (c=(k->text) ? *k->text : k->sym.sym) == 0 || digraph_n < 2) {
 			if (k->state == KEY_PRESS && k->mouse == MOUSE_NONE) {
 				if (digraph_n > 0) status_text_flash(" ");
 				digraph_n = -1;
