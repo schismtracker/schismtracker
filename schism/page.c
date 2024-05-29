@@ -973,12 +973,6 @@ static int _handle_ime(struct key_event *k)
 
 		/* ctrl+shift -> unicode character */
 		if (k->sym.sym==SDLK_LCTRL || k->sym.sym==SDLK_RCTRL || k->sym.sym==SDLK_LSHIFT || k->sym.sym==SDLK_RSHIFT) {
-			/* this is horrid */
-			if (!(status.flags & CLASSIC_MODE) && k->state == KEY_PRESS &&
-				(((k->sym.sym == SDLK_LCTRL  || k->sym.sym == SDLK_RCTRL)  && (k->mod & KMOD_SHIFT)) ||
-				 ((k->sym.sym == SDLK_LSHIFT || k->sym.sym == SDLK_RSHIFT) && (k->mod & KMOD_CTRL)))) {
-				SDL_StopTextInput();
-			}
 			if (k->state == KEY_RELEASE) {
 				if (cs_unicode_c > 0) {
 					uint8_t unicode[2] = {(uint8_t)(char_unicode_to_cp437(cs_unicode)), '\0'};
@@ -995,7 +989,6 @@ static int _handle_ime(struct key_event *k)
 					alt_numpad = alt_numpad_c = 0;
 					digraph_n = digraph_c = 0;
 				}
-				SDL_StartTextInput();
 				return 1;
 			}
 		} else if (!(status.flags & CLASSIC_MODE) && (k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT)) {
@@ -1029,10 +1022,7 @@ static int _handle_ime(struct key_event *k)
 		/* alt+numpad -> char number */
 		if (k->sym.sym == SDLK_LALT || k->sym.sym == SDLK_RALT
 			|| k->sym.sym == SDLK_LGUI || k->sym.sym == SDLK_RGUI) {
-			if (k->state == KEY_PRESS)
-				SDL_StopTextInput();
 			if (k->state == KEY_RELEASE && alt_numpad_c > 0 && (alt_numpad & 255) > 0) {\
-				SDL_StartTextInput();
 				if (alt_numpad < 32)
 					return 0;
 				uint8_t unicode[2] = {(uint8_t)(alt_numpad & 255), '\0'};
