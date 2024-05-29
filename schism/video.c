@@ -296,9 +296,9 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 
 	memset(mouseline, 0, 80*sizeof(unsigned int));
 	if (video.mouse.visible != MOUSE_EMULATED
-	    || !(status.flags & IS_FOCUSED)
-	    || y < video.mouse.y
-	    || y >= video.mouse.y+MOUSE_HEIGHT) {
+		|| !(status.flags & IS_FOCUSED)
+		|| y < video.mouse.y
+		|| y >= video.mouse.y+MOUSE_HEIGHT) {
 		return;
 	}
 
@@ -401,6 +401,32 @@ void video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned
 
 	*x = (vx < NATIVE_SCREEN_WIDTH)  ? (video.mouse.x = vx) : video.mouse.x;
 	*y = (vy < NATIVE_SCREEN_HEIGHT) ? (video.mouse.y = vy) : video.mouse.y;
+}
+
+void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
+{
+	if (!cfg_video_want_fixed) {
+		*trans_x = x;
+		*trans_y = y;
+	} else {
+		float xx, yy;
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+		SDL_RenderWindowToLogical(video.renderer, x, y, &xx, &yy);
+#else
+		/* Alternative for older SDL versions. MIGHT work with high DPI */
+		float scale_x = 1, scale_y = 1;
+
+		SDL_RenderGetScale(renderer, &scale_x, &scale_y);
+
+		xx = x - (video.width / 2) - (((float)cfg_video_want_fixed_width * scale_x) / 2);
+		yy = y - (video.height / 2) - (((float)cfg_video_want_fixed_height * scale_y) / 2);
+
+		xx /= (float)video.width * cfg_video_want_fixed_width;
+		yy /= (float)video.height * cfg_video_want_fixed_height;
+#endif
+		*trans_x = (int)xx;
+		*trans_y = (int)yy;
+	}
 }
 
 SDL_Window * video_window(void)

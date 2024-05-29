@@ -614,7 +614,14 @@ static void event_loop(void)
 			break;
 		case SDL_MOUSEWHEEL:
 			kk.state = -1;  /* neither KEY_PRESS nor KEY_RELEASE */
+#if SDL_VERSION_ATLEAST(2, 26, 0)
+			/* SDL just sends this to us anyway, don't ask for it again */
+			wheel_x = event.wheel.mouseX;
+			wheel_y = event.wheel.mouseY;
+#else
 			SDL_GetMouseState(&wheel_x, &wheel_y);
+			video_get_logical_coordinates(wheel_x, wheel_y, &wheel_x, &wheel_y);
+#endif
 			video_translate(wheel_x, wheel_y, &kk.fx, &kk.fy);
 			kk.mouse = (event.wheel.y > 0) ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN;
 		case SDL_MOUSEMOTION:

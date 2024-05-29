@@ -76,6 +76,8 @@ int video_width(void);
 int video_height(void);
 SDL_Window * video_window(void);
 
+void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y);
+
 SDL_Surface *xpmdata(const char *xpmdata[]);
 
 #if USE_X11
