@@ -227,6 +227,7 @@ extern struct tracker_status status;
 extern uint8_t *font_data; /* ... which is 2048 bytes */
 extern struct it_palette palettes[];
 extern uint8_t current_palette[16][3];
+extern uint8_t user_palette[16][3];
 extern int current_palette_index;
 
 extern int playback_tracing, midi_playback_tracing;

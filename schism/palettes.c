@@ -314,10 +314,30 @@ uint8_t current_palette[16][3] = {
 	/* 14 */ {63, 63, 21},
 	/* 15 */ {63, 63, 63},
 };
+
+uint8_t user_palette[16][3] = {
+	/* Defaults to Camouflage */
+	/*  0 */ { 0,  0,  0},
+	/*  1 */ {31, 22, 17},
+	/*  2 */ {45, 37, 30},
+	/*  3 */ {58, 58, 50},
+	/*  4 */ {44,  0, 21},
+	/*  5 */ {63, 63, 21},
+	/*  6 */ {17, 38, 18},
+	/*  7 */ {19,  3,  6},
+	/*  8 */ { 8, 21,  0},
+	/*  9 */ { 6, 29, 11},
+	/* 10 */ {14, 39, 29},
+	/* 11 */ {55, 58, 56},
+	/* 12 */ {40, 40, 40},
+	/* 13 */ {35,  5, 21},
+	/* 14 */ {22, 16, 15},
+	/* 15 */ {13, 12, 11},
+};
+
 /* this should be changed only with palette_load_preset() (which doesn't call
 palette_apply() automatically, so do that as well) */
-int current_palette_index;
-
+int current_palette_index = -2;
 
 void palette_apply(void)
 {
@@ -342,12 +362,19 @@ void palette_apply(void)
 
 void palette_load_preset(int palette_index)
 {
-	if (palette_index < -1 || palette_index >= NUM_PALETTES)
+	if (palette_index < -1 || palette_index >= NUM_PALETTES || palette_index == current_palette_index)
 		return;
 
+	if (current_palette_index == -1)
+		memcpy(user_palette, current_palette, sizeof(current_palette));
+
 	current_palette_index = palette_index;
-	if (palette_index == -1) return;
-	memcpy(current_palette, palettes[palette_index].colors, sizeof(current_palette));
+
+	if (palette_index == -1) {
+		memcpy(current_palette, user_palette, sizeof(current_palette));
+	} else {
+		memcpy(current_palette, palettes[palette_index].colors, sizeof(current_palette));
+	}
+
 	cfg_save();
 }
-
