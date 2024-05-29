@@ -208,6 +208,11 @@ int widget_handle_text_input(const char* text_input) {
 		return 0;
 
 	switch (widget->type) {
+		case WIDGET_OTHER:
+			if (widget->accept_text && widget->d.other.handle_text_input
+				&& ACTIVE_WIDGET.d.other.handle_text_input(text_input))
+				return 1;
+			break;
 		case WIDGET_NUMENTRY:
 			if (numentry_handle_text(widget, text_input))
 				return 1;
@@ -228,6 +233,8 @@ int widget_handle_key(struct key_event * k)
 	struct widget *widget = &ACTIVE_WIDGET;
 	if (!widget)
 		return 0;
+
+	/* XXX can this be removed? */
 	if (!widget->accept_text) /* hack */
 		widget->accept_text = 1;
 
