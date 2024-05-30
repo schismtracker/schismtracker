@@ -25,6 +25,7 @@
 
 #include "it.h"
 #include "page.h"
+#include "clippy.h"
 
 #include "sdlmain.h"
 
@@ -272,78 +273,35 @@ static void palette_list_handle_key(struct key_event * k)
 static void palette_copy_to_clipboard(void) {
 	char palette_text[49] = "";
 	palette_to_string(palette_text);
-	SDL_SetClipboardText((const char*)&palette_text);
-	status_text_flash("Palette copied to clipboard");
+	clippy_select(widgets_palette + 49, palette_text, 49);
+	clippy_yank();
 }
 
 static void palette_paste_from_clipboard(void) {
-	if (SDL_HasClipboardText()) {
-		char* cb = SDL_GetClipboardText();
+	clippy_paste(CLIPPY_BUFFER);
+}
 
-		if(cb <= 0) {
-			printf("Failed getting clipboard text. Error: %s\n", SDL_GetError());
-			return;
-		}
+static int palette_paste_callback(UNUSED int cb, const void *data)
+{
+	if (!data) return 0;
+	const char* str = (const char *)data;
 
-		printf("Pasted palette: \"%s\"\n", cb);
+	int result = set_palette_from_string(data);
 
-		int i = 0;
-		int start = -1;
-		int end = -1;
-
-		// Remove spaces/newlines before and after content
-		while(1) {
-			char c = cb[i];
-
-			if (c == '\0') {
-				end = i;
-				break;
-			}
-
-			if(isspace(c)) {
-				if(start != -1 && end == -1) {
-					end = i;
-					break;
-				}
-			} else {
-				if(start == -1)
-					start = i;
-			}
-
-			i++;
-		}
-
-		if(start == -1 || end == -1)
-			return;
-
-		if(end - start != 48) {
-			status_text_flash("Pasting palette failed: Wrong length");
-			printf("Pasting palette failed: Wrong length\n");
-			return;
-		}
-
-		char content[49] =  "";
-		strncpy(content, cb + start, end - start);
-		content[48] = '\0';
-
-		int result = set_palette_from_string(content);
-
-		if(!result) {
-			status_text_flash("Pasting palette failed: Bad character");
-			printf("Pasting palette failed: Bad character\n");
-			return;
-		}
-
-		selected_palette = -1;
-		palette_load_preset(selected_palette);
-		palette_apply();
-		update_thumbbars();
-		status.flags |= NEED_UPDATE;
-
-		status_text_flash("Palette pasted");
-
-		SDL_free(cb);
+	if(!result) {
+		status_text_flash("Bad character or wrong length");
+		printf("Pasting palette failed: Bad character or wrong length\n");
+		return 0;
 	}
+
+	selected_palette = -1;
+	palette_load_preset(selected_palette);
+	palette_apply();
+	update_thumbbars();
+	status.flags |= NEED_UPDATE;
+	status_text_flash("Palette pasted");
+	printf("Got palette paste: %s\n", str);
+	return 1;
 }
 
 /* --------------------------------------------------------------------- */
@@ -378,6 +336,7 @@ void palette_load_page(struct page *page)
 	page->selected_widget = 48;
 	page->widgets = widgets_palette;
 	page->help_index = HELP_GLOBAL;
+	page->clipboard_paste = palette_paste_callback;
 
 	selected_palette = current_palette_index;
 

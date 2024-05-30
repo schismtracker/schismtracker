@@ -379,7 +379,7 @@ void palette_load_preset(int palette_index)
 	cfg_save();
 }
 
-static const char palette_trans[64] = ".0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+static const char palette_trans[65] = ".0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 
 void palette_to_string(char *str_out) {
 	for (int n = 0; n < 48; n++)
@@ -391,6 +391,10 @@ void palette_to_string(char *str_out) {
 int set_palette_from_string(const char *str_in) {
 	uint8_t colors[48];
 	const char *ptr;
+
+	// Remove bad characters from beginning (spaces etc.).
+	str_in = strpbrk(str_in, palette_trans);
+	if(!str_in) return 0;
 
 	for (int n = 0; n < 48; n++) {
 		if (str_in[n] == '\0' || (ptr = memchr(palette_trans, str_in[n], sizeof(palette_trans))) == NULL)
