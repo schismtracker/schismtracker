@@ -29,11 +29,13 @@
 
 #include "sdlmain.h"
 
+#define NUM_PALETTES 15
+
 /* --------------------------------------------------------------------- */
 
 static struct widget widgets_palette[51];
 
-static int selected_palette, max_palette = 0;
+static int selected_palette;
 
 /* --------------------------------------------------------------------- */
 /*
@@ -93,7 +95,7 @@ static void palette_list_draw(void)
 
 	draw_fill_chars(55, 26, 76, 40, 0);
 
-	for (n = -1; n < 14; n++) {
+	for (n = 0; n < NUM_PALETTES; n++) {
 		fg = 6;
 		bg = 0;
 		if (focused && n == selected_palette) {
@@ -104,16 +106,12 @@ static void palette_list_draw(void)
 		}
 
 		if(n == current_palette_index)
-			draw_text_len("*", 1, 55, 27 + n, fg, bg);
+			draw_text_len("*", 1, 55, 26 + n, fg, bg);
 		else
-			draw_text_len(" ", 1, 55, 27 + n, fg, bg);
+			draw_text_len(" ", 1, 55, 26 + n, fg, bg);
 
-		if(n == -1)
-			draw_text_len("User Defined", 21, 56, 26, fg, bg);
-		else
-			draw_text_len(palettes[n].name, 21, 56, 27 + n, fg, bg);
+		draw_text_len(palettes[n].name, 21, 56, 26 + n, fg, bg);
 	}
-	max_palette = n;
 }
 
 static int palette_list_handle_key_on_list(struct key_event * k)
@@ -126,13 +124,13 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 		if (k->state == KEY_PRESS)
 			return 0;
 		if (k->x < 55 || k->y < 26 || k->y > 40 || k->x > 76) return 0;
-		new_palette = (k->y - 27);
+		new_palette = (k->y - 26);
 		load_selected_palette = 1;
 	} else if (k->mouse == MOUSE_CLICK) {
 		if (k->state == KEY_PRESS)
 			return 0;
 		if (k->x < 55 || k->y < 26 || k->y > 40 || k->x > 76) return 0;
-		new_palette = (k->y - 27);
+		new_palette = (k->y - 26);
 		if(new_palette == selected_palette)
 			load_selected_palette = 1;
 	} else {
@@ -148,7 +146,7 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 	case SDLK_UP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
-		if (--new_palette < -1) {
+		if (--new_palette < 0) {
 			change_focus_to(47);
 			return 1;
 		}
@@ -157,7 +155,7 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		// new_palette++;
-		if (++new_palette > 13) {
+		if (++new_palette >= NUM_PALETTES) {
 			change_focus_to(49);
 			return 1;
 		}
@@ -170,7 +168,7 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 	case SDLK_PAGEUP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
-		if (new_palette == -1) {
+		if (new_palette == 0) {
 			change_focus_to(45);
 			return 1;
 		}
@@ -179,7 +177,7 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 	case SDLK_END:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
-		new_palette = max_palette - 1;
+		new_palette = NUM_PALETTES - 1;
 		break;
 	case SDLK_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
@@ -217,8 +215,8 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 
 	if (new_palette < -1)
 		new_palette = -1;
-	else if (new_palette >= (max_palette-1))
-		new_palette = (max_palette-1);
+	else if (new_palette >= (NUM_PALETTES - 1))
+		new_palette = (NUM_PALETTES - 1);
 
 	if (new_palette != selected_palette || load_selected_palette) {
 		selected_palette = new_palette;
@@ -294,13 +292,15 @@ static int palette_paste_callback(UNUSED int cb, const void *data)
 		return 0;
 	}
 
-	selected_palette = -1;
+	selected_palette = 0;
 	palette_load_preset(selected_palette);
 	palette_apply();
 	update_thumbbars();
 	status.flags |= NEED_UPDATE;
+
 	status_text_flash("Palette pasted");
 	printf("Got palette paste: %s\n", str);
+
 	return 1;
 }
 
@@ -319,7 +319,7 @@ static void update_palette(void)
 		current_palette[n][1] = widgets_palette[3 * n + 1].d.thumbbar.value;
 		current_palette[n][2] = widgets_palette[3 * n + 2].d.thumbbar.value;
 	}
-	selected_palette = current_palette_index = -1;
+	selected_palette = current_palette_index = 0;
 	palette_apply();
 	cfg_save();
 	status.flags |= NEED_UPDATE;

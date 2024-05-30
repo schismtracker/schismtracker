@@ -30,6 +30,24 @@
 /* --------------------------------------------------------------------- */
 
 struct it_palette palettes[] = {
+	{"User Defined", {
+		/*  0 */ { 0,  0,  0},
+		/*  1 */ {31, 22, 17},
+		/*  2 */ {45, 37, 30},
+		/*  3 */ {58, 58, 50},
+		/*  4 */ {44,  0, 21},
+		/*  5 */ {63, 63, 21},
+		/*  6 */ {17, 38, 18},
+		/*  7 */ {19,  3,  6},
+		/*  8 */ { 8, 21,  0},
+		/*  9 */ { 6, 29, 11},
+		/* 10 */ {14, 39, 29},
+		/* 11 */ {55, 58, 56},
+		/* 12 */ {40, 40, 40},
+		/* 13 */ {35,  5, 21},
+		/* 14 */ {22, 16, 15},
+		/* 15 */ {13, 12, 11},
+	}},
 	{"Light Blue", {
 		/*  0 */ { 0,  0,  0},
 		/*  1 */ {10, 25, 45},
@@ -45,24 +63,6 @@ struct it_palette palettes[] = {
 		/* 11 */ {51, 58, 63},
 		/* 12 */ {44, 44, 44},
 		/* 13 */ {21, 63, 21},
-		/* 14 */ {18, 16, 15},
-		/* 15 */ {12, 11, 10},
-	}},
-	{"Gold", { /* hey, this is the ST3 palette! (sort of) */
-		/*  0 */ { 0,  0,  0},
-		/*  1 */ {20, 17, 10},
-		/*  2 */ {41, 36, 21},
-		/*  3 */ {63, 55, 33},
-		/*  4 */ {63, 21, 21},
-		/*  5 */ {18, 53, 18},
-		/*  6 */ {38, 37, 36},
-		/*  7 */ {22, 22, 22},
-		/*  8 */ { 0,  0, 32},
-		/*  9 */ { 0,  0, 42},
-		/* 10 */ {41, 36, 21},
-		/* 11 */ {48, 49, 46},
-		/* 12 */ {44, 44, 44},
-		/* 13 */ {21, 50, 21},
 		/* 14 */ {18, 16, 15},
 		/* 15 */ {12, 11, 10},
 	}},
@@ -83,6 +83,24 @@ struct it_palette palettes[] = {
 		/* 13 */ {35,  5, 21},
 		/* 14 */ {22, 16, 15},
 		/* 15 */ {13, 12, 11},
+	}},
+	{"Gold", { /* hey, this is the ST3 palette! (sort of) */
+		/*  0 */ { 0,  0,  0},
+		/*  1 */ {20, 17, 10},
+		/*  2 */ {41, 36, 21},
+		/*  3 */ {63, 55, 33},
+		/*  4 */ {63, 21, 21},
+		/*  5 */ {18, 53, 18},
+		/*  6 */ {38, 37, 36},
+		/*  7 */ {22, 22, 22},
+		/*  8 */ { 0,  0, 32},
+		/*  9 */ { 0,  0, 42},
+		/* 10 */ {41, 36, 21},
+		/* 11 */ {48, 49, 46},
+		/* 12 */ {44, 44, 44},
+		/* 13 */ {21, 50, 21},
+		/* 14 */ {18, 16, 15},
+		/* 15 */ {12, 11, 10},
 	}},
 	{"Midnight Tracking", {
 		/*  0 */ { 0,  0,  0},
@@ -315,29 +333,31 @@ uint8_t current_palette[16][3] = {
 	/* 15 */ {63, 63, 63},
 };
 
-uint8_t user_palette[16][3] = {
-	/* Defaults to Camouflage */
-	/*  0 */ { 0,  0,  0},
-	/*  1 */ {31, 22, 17},
-	/*  2 */ {45, 37, 30},
-	/*  3 */ {58, 58, 50},
-	/*  4 */ {44,  0, 21},
-	/*  5 */ {63, 63, 21},
-	/*  6 */ {17, 38, 18},
-	/*  7 */ {19,  3,  6},
-	/*  8 */ { 8, 21,  0},
-	/*  9 */ { 6, 29, 11},
-	/* 10 */ {14, 39, 29},
-	/* 11 */ {55, 58, 56},
-	/* 12 */ {40, 40, 40},
-	/* 13 */ {35,  5, 21},
-	/* 14 */ {22, 16, 15},
-	/* 15 */ {13, 12, 11},
-};
+#define USER_PALETTE (&palettes[0].colors)
+
+// uint8_t user_palette[16][3] = {
+// 	/* Defaults to Camouflage */
+// 	/*  0 */ { 0,  0,  0},
+// 	/*  1 */ {31, 22, 17},
+// 	/*  2 */ {45, 37, 30},
+// 	/*  3 */ {58, 58, 50},
+// 	/*  4 */ {44,  0, 21},
+// 	/*  5 */ {63, 63, 21},
+// 	/*  6 */ {17, 38, 18},
+// 	/*  7 */ {19,  3,  6},
+// 	/*  8 */ { 8, 21,  0},
+// 	/*  9 */ { 6, 29, 11},
+// 	/* 10 */ {14, 39, 29},
+// 	/* 11 */ {55, 58, 56},
+// 	/* 12 */ {40, 40, 40},
+// 	/* 13 */ {35,  5, 21},
+// 	/* 14 */ {22, 16, 15},
+// 	/* 15 */ {13, 12, 11},
+// };
 
 /* this should be changed only with palette_load_preset() (which doesn't call
 palette_apply() automatically, so do that as well) */
-int current_palette_index = -2;
+int current_palette_index = -1;
 
 void palette_apply(void)
 {
@@ -362,19 +382,11 @@ void palette_apply(void)
 
 void palette_load_preset(int palette_index)
 {
-	if (palette_index < -1 || palette_index >= NUM_PALETTES || palette_index == current_palette_index)
+	if (palette_index < 0 || palette_index >= NUM_PALETTES)
 		return;
 
-	if (current_palette_index == -1)
-		memcpy(user_palette, current_palette, sizeof(current_palette));
-
 	current_palette_index = palette_index;
-
-	if (palette_index == -1) {
-		memcpy(current_palette, user_palette, sizeof(current_palette));
-	} else {
-		memcpy(current_palette, palettes[palette_index].colors, sizeof(current_palette));
-	}
+	memcpy(current_palette, palettes[palette_index].colors, sizeof(current_palette));
 
 	cfg_save();
 }
@@ -402,6 +414,6 @@ int set_palette_from_string(const char *str_in) {
 		colors[n] = ptr - palette_trans;
 	}
 
-	memcpy(user_palette, colors, sizeof(current_palette));
+	memcpy(USER_PALETTE, colors, sizeof(colors));
 	return 1;
 }
