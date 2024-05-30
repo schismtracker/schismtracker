@@ -486,7 +486,8 @@ static void event_loop(void)
 	SDL_Event event;
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
 	uint32_t last_mouse_down, ticker;
-	SDL_Keysym last_key = {0};
+	SDL_Keycode last_key = 0;
+	SDL_Keycode last_keyup = 0;
 	int modkey;
 	time_t startdown;
 #ifdef os_screensaver_deactivate
@@ -618,7 +619,8 @@ static void event_loop(void)
 				kk.mouse = MOUSE_NONE;
 				key_translate(&kk);
 
-				if (event.type == SDL_KEYDOWN && last_key.sym == kk.sym) {
+				if ((event.type == SDL_KEYDOWN && last_key == kk.sym) ||
+					(event.type == SDL_KEYUP && last_keyup == kk.sym)) {
 					sawrep = kk.is_repeat = 1;
 				} else {
 					kk.is_repeat = 0;
@@ -626,12 +628,12 @@ static void event_loop(void)
 
 				if (event.type == SDL_KEYUP) {
 					handle_key(&kk);
-					status.last_keysym = kk.sym;
-					last_key.sym = 0;
+					status.last_keyupsym = kk.sym;
+					last_keyup = 0;
 				} else {
 					push_pending_keydown_event(&kk);
 					status.last_keysym = 0;
-					last_key.sym = kk.sym;
+					last_key = kk.sym;
 				}
 				break;
 			case SDL_QUIT:

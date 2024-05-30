@@ -246,10 +246,12 @@ int song_is_multichannel_mode(void)
 
 
 /* Channel corresponding to each note played.
-That is, keydown_channels[66] will indicate in which channel F-5 was played most recently.
+That is, keyjazz_note_to_chan[66] will indicate in which channel F-5 was played most recently.
 This will break if the same note was keydown'd twice without a keyup, but I think that's a
 fairly unlikely scenario that you'd have to TRY to bring about. */
-static int keyjazz_channels[128];
+static int keyjazz_note_to_chan[128];
+/* last note played by channel tracking */
+static int keyjazz_chan_to_note[257];
 
 /* **** chan ranges from 1 to 64   */
 static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int effect, int param)
@@ -277,7 +279,13 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 
 	if (NOTE_IS_NOTE(note)) {
 		// keep track of what channel this note was played in so we can note-off properly later
-		keyjazz_channels[note] = chan;
+		if (keyjazz_chan_to_note[chan]) {
+			// reset note-off pending state for last note in channel
+			keyjazz_note_to_chan[keyjazz_chan_to_note[chan]] = 0;
+		}
+
+		keyjazz_note_to_chan[note] = chan;
+		keyjazz_chan_to_note[chan] = note;
 
 		// handle blank instrument values and "fake" sample #0 (used by sample loader)
 		if (samp == 0)
@@ -428,7 +436,21 @@ int song_keyrecord(int samp, int ins, int note, int vol, int chan, int effect, i
 
 int song_keyup(int samp, int ins, int note)
 {
-	return song_keydown_ex(samp, ins, NOTE_OFF, KEYJAZZ_DEFAULTVOL, keyjazz_channels[note], 0, 0);
+	int chan = keyjazz_note_to_chan[note];
+	if (!chan) {
+		// could not find channel, drop.
+		return -1;
+	};
+	return song_keyup_channel(samp, ins, note, chan);
+}
+
+int song_keyup_channel(int samp, int ins, int note, int chan) {
+	if (keyjazz_chan_to_note[chan] != note) {
+		return -1;
+	}
+	keyjazz_chan_to_note[chan] = 0;
+	keyjazz_note_to_chan[note] = 0;
+	return song_keydown_ex(samp, ins, NOTE_OFF, KEYJAZZ_DEFAULTVOL, chan, 0, 0);
 }
 
 void song_single_step(int patno, int row)
@@ -476,7 +498,8 @@ static void song_reset_play_state(void)
 {
 	memset(midi_bend_hit, 0, sizeof(midi_bend_hit));
 	memset(midi_last_bend_hit, 0, sizeof(midi_last_bend_hit));
-	memset(keyjazz_channels, 0, sizeof(keyjazz_channels));
+	memset(keyjazz_note_to_chan, 0, sizeof(keyjazz_note_to_chan));
+	memset(keyjazz_chan_to_note, 0, sizeof(keyjazz_chan_to_note));
 
 	// turn this crap off
 	current_song->mix_flags &= ~(SNDMIX_NOBACKWARDJUMPS | SNDMIX_DIRECTTODISK);
