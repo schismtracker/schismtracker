@@ -249,9 +249,9 @@ int song_is_multichannel_mode(void)
 That is, keyjazz_note_to_chan[66] will indicate in which channel F-5 was played most recently.
 This will break if the same note was keydown'd twice without a keyup, but I think that's a
 fairly unlikely scenario that you'd have to TRY to bring about. */
-static int keyjazz_note_to_chan[128];
+static int keyjazz_note_to_chan[NOTE_LAST + 1];
 /* last note played by channel tracking */
-static int keyjazz_chan_to_note[257];
+static int keyjazz_chan_to_note[MAX_CHANNELS + 1];
 
 /* **** chan ranges from 1 to 64   */
 static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int effect, int param)
