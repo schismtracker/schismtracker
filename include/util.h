@@ -51,8 +51,11 @@
 # if __has_attribute (packed)
 #  define PACKED __attribute__((packed))
 # endif
-# if __has_attribute (packed)
+# if __has_attribute (malloc)
 #  define MALLOC __attribute__((malloc))
+# endif
+# if __has_attribute (pure)
+#  define PURE __attribute__((pure))
 # endif
 #endif
 

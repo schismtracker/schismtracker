@@ -240,18 +240,9 @@ enum {
 	O_VIDEO_YUVLAYOUT = 256,
 	O_VIDEO_RESOLUTION,
 	O_VIDEO_STRETCH, O_NO_VIDEO_STRETCH,
-#if USE_OPENGL
-	O_VIDEO_GLPATH,
-#endif
 	O_VIDEO_DEPTH,
-#if HAVE_SYS_KD_H
-	O_VIDEO_FBDEV,
-#endif
 #if USE_NETWORK
 	O_NETWORK, O_NO_NETWORK,
-#endif
-#ifdef USE_X11
-	O_DISPLAY,
 #endif
 	O_CLASSIC_MODE, O_NO_CLASSIC_MODE,
 	O_FONTEDIT, O_NO_FONTEDIT,
@@ -362,9 +353,6 @@ static void parse_options(int argc, char **argv)
 				"  -a, --audio-driver=DRIVER\n"
 				"  -v, --video-driver=DRIVER\n"
 				"      --classic (--no-classic)\n"
-#ifdef USE_X11
-				"      --display=DISPLAYNAME\n"
-#endif
 				"  -f, --fullscreen (-F, --no-fullscreen)\n"
 				"  -p, --play (-P, --no-play)\n"
 				"      --diskwrite=FILENAME\n"
@@ -489,6 +477,8 @@ static void pop_pending_keydown_event(const uint8_t* text) {
 	}
 }
 
+
+
 /* -------------------------------------------- */
 
 static void event_loop(void)
@@ -520,7 +510,7 @@ static void event_loop(void)
 	os_get_modkey(&modkey);
 	SDL_SetModState(modkey);
 
-#ifdef USE_X11
+#ifdef os_screensaver_deactivate
 	time(&last_ss);
 #endif
 	time(&status.now);
