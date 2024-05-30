@@ -187,12 +187,11 @@ struct widget *clippy_owner(int cb)
 
 void clippy_yank(void)
 {
-	_free_current_clipboard();
-	_current_clipboard = _current_selection;
-	_widget_owner[CLIPPY_BUFFER] = _widget_owner[CLIPPY_SELECT];
-
 	if (_current_selection && strlen(_current_selection) > 0) {
-		status_text_flash("Copied to selection buffer");
+		_free_current_clipboard();
+		_current_clipboard = str_dup(_current_selection);
+		_widget_owner[CLIPPY_BUFFER] = _widget_owner[CLIPPY_SELECT];
 		_clippy_copy_to_sys(CLIPPY_BUFFER);
+		status_text_flash("Copied to selection buffer");
 	}
 }
