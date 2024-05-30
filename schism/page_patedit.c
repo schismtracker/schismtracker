@@ -3036,7 +3036,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 		if (!((song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP)) && playback_tracing)) {
 			tick = 0;
 		}
-		midi_last_note[c] = n = k->midi_note;
+		n = k->midi_note;
 
 		if (!quantize_next_row) {
 			c = song_keydown(smp, ins, n, v, c);
