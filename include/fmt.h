@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef FMT_H
-#define FMT_H
+#ifndef SCHISM_FMT_H_
+#define SCHISM_FMT_H_
 
 #include <stdint.h>
 #include "dmoz.h"
@@ -171,5 +171,5 @@ void read_lined_message(char *msg, slurp_t *fp, int len, int linelen);
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#endif /* ! FMT_H */
+#endif /* SCHISM_FMT_H_ */
 

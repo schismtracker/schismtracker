@@ -20,8 +20,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef __video_h
-#define __video_h
+#ifndef SCHISM_VIDEO_H_
+#define SCHISM_VIDEO_H_
 
 /* the vgamem implementation lives in draw-char.c
 it needs access to the fonts, and it shrank recently :)
@@ -80,4 +80,4 @@ void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y);
 
 SDL_Surface *xpmdata(const char *xpmdata[]);
 
-#endif
+#endif /* SCHISM_VIDEO_H_ */

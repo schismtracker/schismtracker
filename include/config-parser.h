@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef CONFIG_PARSER_H
-#define CONFIG_PARSER_H
+#ifndef SCHISM_CONFIG_PARSER_H_
+#define SCHISM_CONFIG_PARSER_H_
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -88,4 +88,4 @@ void cfg_free(cfg_file_t *cfg);
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#endif /* CONFIG_PARSER_H */
+#endif /* SCHISM_CONFIG_PARSER_H_ */

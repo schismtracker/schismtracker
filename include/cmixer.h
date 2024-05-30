@@ -1,5 +1,5 @@
-#ifndef MODPLUG_MIXER_H
-#define MODPLUG_MIXER_H
+#ifndef SCHISM_CMIXER_H_
+#define SCHISM_CMIXER_H_
 
 #include "sndfile.h"
 
@@ -50,5 +50,5 @@ void ResampleMono16BitFirFilter(signed short *oldbuf, signed short *newbuf, unsi
 void ResampleStereo8BitFirFilter(signed char *oldbuf, signed char *newbuf, unsigned long oldlen, unsigned long newlen);
 void ResampleStereo16BitFirFilter(signed short *oldbuf, signed short *newbuf, unsigned long oldlen, unsigned long newlen);
 
-#endif
+#endif /* SCHISM_CMIXER_H_ */
 

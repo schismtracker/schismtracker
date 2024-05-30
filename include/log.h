@@ -20,8 +20,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef SCHISM_LOG_H
-#define SCHISM_LOG_H
+#ifndef SCHISM_LOG_H_
+#define SCHISM_LOG_H_
 
 void log_nl(void);
 void log_append(int color, int must_free, const char *text);
@@ -37,5 +37,4 @@ void status_text_flash(const char *format, ...)
 void status_text_flash_bios(const char *format, ...)
 	__attribute__ ((format(printf, 1, 2)));
 
-#endif
-
+#endif /* SCHISM_LOG_H_ */

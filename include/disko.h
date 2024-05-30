@@ -20,8 +20,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef __disko_h
-#define __disko_h
+#ifndef SCHISM_DISKO_H_
+#define SCHISM_DISKO_H_
 
 #include <sys/types.h>
 
@@ -136,5 +136,5 @@ void disko_seterror(disko_t *ds, int err);
 /* this call is used by audio/loadsave to send midi data */
 int _disko_writemidi(const void *data, unsigned int len, unsigned int delay);
 
-#endif
+#endif /* SCHISM_DISKO_H_ */
 

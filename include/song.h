@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SONG_H
-#define SONG_H
+#ifndef SCHISM_SONG_H_
+#define SCHISM_SONG_H_
 
 #include <stdint.h>
 
@@ -388,5 +388,5 @@ void song_set_pan_scheme(int scheme);
 
 /* --------------------------------------------------------------------- */
 
-#endif /* ! SONG_H */
+#endif /* SCHISM_SONG_H_ */
 

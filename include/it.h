@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef IT_H
-#define IT_H
+#ifndef SCHISM_IT_H_
+#define SCHISM_IT_H_
 
 #include "sdlmain.h"
 
@@ -469,5 +469,5 @@ void schism_exit(int status);
 
 /* --------------------------------------------------------------------- */
 
-#endif /* ! IT_H */
+#endif /* SCHISM_IT_H_ */
 

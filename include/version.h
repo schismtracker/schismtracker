@@ -20,8 +20,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef SCHISM_VERSION_H
-#define SCHISM_VERSION_H
+#ifndef SCHISM_VERSION_H_
+#define SCHISM_VERSION_H_
 
 #include "util.h" // PURE
 
@@ -36,5 +36,5 @@ PURE extern const char *schism_banner(int classic);
 /* get yyyy-mm-dd or 0.nn version from cwtv + reserved (buf should be >=11 chars) */
 void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char *buf);
 
-#endif
+#endif /* SCHISM_VERSION_H_ */
 

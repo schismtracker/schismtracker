@@ -20,8 +20,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef __charset_h
-#define __charset_h
+#ifndef SCHISM_CHARSET_H_
+#define SCHISM_CHARSET_H_
 
 #include <stdint.h>
 
@@ -91,4 +91,4 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
 #define CHARSET_EASY_MODE(in, inset, outset, x) CHARSET_EASY_MODE_EX(, in, inset, outset, x)
 #define CHARSET_EASY_MODE_CONST(in, inset, outset, x) CHARSET_EASY_MODE_EX(const, in, inset, outset, x)
 
-#endif
+#endif /* SCHISM_CHARSET_H_ */

@@ -20,16 +20,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef _schismevent_h
-#define _schismevent_h
+#ifndef SCHISM_EVENT_H_
+#define SCHISM_EVENT_H_
 
 #include <SDL.h>
 
-#define SCHISM_EVENT_UPDATE_IPMIDI      SDL_USEREVENT+0
-#define SCHISM_EVENT_MIDI               SDL_USEREVENT+1
-#define SCHISM_EVENT_PLAYBACK           SDL_USEREVENT+2
-#define SCHISM_EVENT_NATIVE             SDL_USEREVENT+3
-#define SCHISM_EVENT_PASTE              SDL_USEREVENT+4
+#define SCHISM_EVENT_UPDATE_IPMIDI      (SDL_USEREVENT+0)
+#define SCHISM_EVENT_MIDI               (SDL_USEREVENT+1)
+#define SCHISM_EVENT_PLAYBACK           (SDL_USEREVENT+2)
+#define SCHISM_EVENT_NATIVE             (SDL_USEREVENT+3)
+#define SCHISM_EVENT_PASTE              (SDL_USEREVENT+4)
 
 #define SCHISM_EVENT_MIDI_NOTE          1
 #define SCHISM_EVENT_MIDI_CONTROLLER    2
@@ -43,4 +43,4 @@
 #define SCHISM_EVENT_NATIVE_OPEN        1
 #define SCHISM_EVENT_NATIVE_SCRIPT      16
 
-#endif
+#endif /* SCHISM_EVENT_H_ */

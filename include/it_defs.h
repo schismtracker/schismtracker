@@ -1,5 +1,5 @@
-#ifndef _ITDEFS_H_
-#define _ITDEFS_H_
+#ifndef SCHISM_IT_DEFS_H_
+#define SCHISM_IT_DEFS_H_
 
 #pragma pack(push, 1)
 
@@ -125,4 +125,4 @@ struct it_sample {
 #pragma pack(pop)
 
 
-#endif
+#endif /* SCHISM_IT_DEFS_H_ */

@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef DRAW_CHAR_H
-#define DRAW_CHAR_H
+#ifndef SCHISM_DRAW_CHAR_H_
+#define SCHISM_DRAW_CHAR_H_
 
 #include <stdint.h>
 
@@ -87,5 +87,5 @@ void draw_box(int xs, int ys, int xe, int ye, int flags);
 /* .... */
 void toggle_display_fullscreen(void); /* FIXME why on earth is this in this header? */
 
-#endif /* ! DRAW_CHAR_H */
+#endif /* SCHISM_DRAW_CHAR_H_ */
 

@@ -4,8 +4,8 @@
  * Authors: Olivier Lapicque <olivierl@jps.net>,
  *          Adam Goode       <adam@evdebs.org> (endian and char fixes for PPC)
 */
-#ifndef __SNDFILE_H
-#define __SNDFILE_H
+#ifndef SCHISM_SNDFILE_H_
+#define SCHISM_SNDFILE_H_
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -728,5 +728,5 @@ static inline int _muldivr(int a, int b, int c)
 }
 
 
-#endif
+#endif /* SCHISM_SNDFILE_H_ */
 

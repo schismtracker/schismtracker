@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SAMPLE_EDIT_H
-#define SAMPLE_EDIT_H
+#ifndef SCHISM_SAMPLE_EDIT_H_
+#define SCHISM_SAMPLE_EDIT_H_
 
 void sample_sign_convert(song_sample_t * sample);
 void sample_reverse(song_sample_t * sample);
@@ -55,4 +55,4 @@ void sample_mono_left(song_sample_t * sample);
 void sample_mono_right(song_sample_t * sample);
 
 
-#endif /* ! SAMPLE_EDIT_H */
+#endif /* SCHISM_SAMPLE_EDIT_H_ */

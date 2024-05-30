@@ -24,8 +24,8 @@
 /* OS-dependent code implementations are defined here; the files for each target OS exist in sys/blah/osdefs.c,
 and possibly other files as well. Only one osdefs.c should be in use at a time. */
 
-#ifndef OSDEFS_H
-#define OSDEFS_H
+#ifndef SCHISM_OSDEFS_H_
+#define SCHISM_OSDEFS_H_
 
 #include "headers.h"
 #include "event.h"
@@ -100,4 +100,4 @@ void macosx_sysexit(void);
 void macosx_sysinit(int *pargc, char ***pargv); /* set up ibook helper */
 void macosx_get_modkey(int *m);
 
-#endif /* ! OSDEFS_H */
+#endif /* SCHISM_OSDEFS_H_ */

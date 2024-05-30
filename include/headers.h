@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __headers_h
-#define __headers_h
+#ifndef SCHISM_HEADERS_H_
+#define SCHISM_HEADERS_H_
 /* This is probably overkill, but it's consistent this way. */
 
 #define _GNU_SOURCE /* need this for <stdlib.h> to give us some functions */
@@ -209,4 +209,4 @@ int mkstemp(char *template);
 #define INT_SHAPED_PTR(v)               ((intptr_t)(((void*)(v))))
 #define PTR_SHAPED_INT(i)               ((void*)(i))
 
-#endif
+#endif /* SCHISM_HEADERS_H_ */
