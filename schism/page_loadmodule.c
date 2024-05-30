@@ -616,7 +616,7 @@ static void file_list_draw(void)
 				bg = 0;
 			}
 
-			CHARSET_EASY_MODE(file->base, CHARSET_CHAR, CHARSET_CP437, {
+			CHARSET_EASY_MODE(file->base ? file->base : "", CHARSET_CHAR, CHARSET_CP437, {
 				draw_text_bios_len(out, 20, 3, pos, fg1, bg);
 			});
 
