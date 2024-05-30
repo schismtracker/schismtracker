@@ -81,6 +81,9 @@
 #ifndef MALLOC
 # define MALLOC
 #endif
+#ifndef PURE
+# define PURE
+#endif
 
 /* Path stuff that differs by platform */
 #ifdef SCHISM_WIN32
