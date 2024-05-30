@@ -213,10 +213,7 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 			return 0;
 	}
 
-	if (new_palette < -1)
-		new_palette = -1;
-	else if (new_palette >= (NUM_PALETTES - 1))
-		new_palette = (NUM_PALETTES - 1);
+	new_palette = CLAMP(new_palette, 0, NUM_PALETTES - 1);
 
 	if (new_palette != selected_palette || load_selected_palette) {
 		selected_palette = new_palette;
