@@ -222,6 +222,34 @@ int song_find_last_channel(void)
 
 // ------------------------------------------------------------------------
 
+// calculates row of offset from passed row.
+// sets actual pattern number, row and optional pattern buffer.
+// returns length of selected patter, or 0 on error.
+// if song mode is pattern loop (MODE_PATTERN_LOOP), offset is mod calculated
+// in current pattern.
+int song_get_pattern_offset(int * n, song_note_t ** buf, int * row, int offset)
+{
+	int len, tot;
+	if (song_get_mode() & MODE_PATTERN_LOOP) {
+		// just wrap around current rows
+		*row = (*row + offset) % song_get_rows_in_pattern(*n);
+		return song_get_pattern(*n, buf);
+	}
+
+	tot = song_get_rows_in_pattern(*n);
+	while (offset + *row > tot) {
+		offset -= tot;
+		*n++;
+		tot = song_get_rows_in_pattern(*n);
+		if (!tot) {
+			return 0;
+		}
+	}
+
+	*row += offset;
+	return song_get_pattern(*n, buf);
+}
+
 // returns length of the pattern, or 0 on error. (this can be used to
 // get a pattern's length by passing NULL for buf.)
 int song_get_pattern(int n, song_note_t ** buf)
