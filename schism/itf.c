@@ -30,6 +30,7 @@
 #include "page.h"
 #include "version.h"
 #include "log.h"
+#include "util.h"
 
 #include "sdlmain.h"
 #include <string.h>
@@ -168,14 +169,14 @@ static int fontgrep(dmoz_file_t *f)
 static void load_fontlist(void)
 {
 	char *font_dir, *p;
-	struct stat st = {};
+	struct stat st = {0};
 
 	dmoz_free(&flist, NULL);
 
 	top_font = cur_font = 0;
 
 	font_dir = dmoz_path_concat_len(cfg_dir_dotschism, "fonts", strlen(cfg_dir_dotschism), 5);
-	mkdir(font_dir, 0755);
+	os_mkdir(font_dir, 0755);
 	p = dmoz_path_concat_len(font_dir, "font.cfg", strlen(font_dir), 8);
 	dmoz_add_file(&flist, p, str_dup("font.cfg"), &st, -100); /* put it on top */
 	if (dmoz_read(font_dir, &flist, NULL, NULL) < 0)
@@ -461,7 +462,7 @@ static void handle_key_editbox(struct key_event * k)
 	int n, bit;
 	uint8_t *ptr = font_data + ci;
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_UP:
 		if (k->mod & KMOD_SHIFT) {
 			int s = ptr[0];
@@ -562,7 +563,7 @@ static void handle_key_editbox(struct key_event * k)
 
 static void handle_key_charmap(struct key_event * k)
 {
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_UP:
 		current_char -= 16;
 		break;
@@ -589,7 +590,7 @@ static void handle_key_charmap(struct key_event * k)
 
 static void handle_key_itfmap(struct key_event * k)
 {
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_UP:
 		if (itfmap_pos < 0) {
 			itfmap_pos = 224;
@@ -649,7 +650,7 @@ static void handle_key_fontlist(struct key_event * k)
 {
 	int new_font = cur_font;
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_HOME:
 		new_font = 0;
 		break;
@@ -852,16 +853,18 @@ static int fontedit_handle_key(struct key_event * k)
 	}
 
 	/* kp is special */
-	switch (k->orig_sym.sym) {
+	switch (k->orig_sym) {
 	case SDLK_KP_0:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		k->sym.sym += 10;
+		k->sym += 10;
 		/* fall through */
-	case SDLK_KP_1...SDLK_KP_9:
+	case SDLK_KP_1: case SDLK_KP_2: case SDLK_KP_3:
+	case SDLK_KP_4: case SDLK_KP_5: case SDLK_KP_6:
+	case SDLK_KP_7: case SDLK_KP_8: case SDLK_KP_9:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		n = k->sym.sym - SDLK_KP_1;
+		n = k->sym - SDLK_KP_1;
 		if (k->mod & KMOD_SHIFT)
 			n += 10;
 		palette_load_preset(n);
@@ -872,16 +875,18 @@ static int fontedit_handle_key(struct key_event * k)
 		break;
 	};
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case '0':
 		if (k->state == KEY_RELEASE)
 			return 1;
-		k->sym.sym += 10;
+		k->sym += 10;
 		/* fall through */
-	case '1'...'9':
+	case '1': case '2': case '3':
+	case '4': case '5': case '6':
+	case '7': case '8': case '9':
 		if (k->state == KEY_RELEASE)
 			return 1;
-		n = k->sym.sym - '1';
+		n = k->sym - '1';
 		if (k->mod & KMOD_SHIFT)
 			n += 10;
 		palette_load_preset(n);
@@ -1081,12 +1086,15 @@ static struct widget fontedit_widget_hack[1];
 
 static int fontedit_key_hack(struct key_event *k)
 {
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_r: case SDLK_l: case SDLK_s:
 	case SDLK_c: case SDLK_p: case SDLK_m:
 	case SDLK_z: case SDLK_v: case SDLK_h:
 	case SDLK_i: case SDLK_q: case SDLK_w:
-	case SDLK_F1...SDLK_F12:
+	case SDLK_F1: case SDLK_F2: case SDLK_F3:
+	case SDLK_F4: case SDLK_F5: case SDLK_F6:
+	case SDLK_F7: case SDLK_F8: case SDLK_F9:
+	case SDLK_F10: case SDLK_F11: case SDLK_F12:
 		return fontedit_handle_key(k);
 	case SDLK_RETURN:
 		if (status.dialog_type & (DIALOG_MENU|DIALOG_BOX)) return 0;

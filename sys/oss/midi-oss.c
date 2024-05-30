@@ -48,9 +48,8 @@
 /* this is stupid; oss doesn't have a concept of ports... */
 #define MAX_OSS_MIDI    64
 
-#define MAX_MIDI_PORTS  MAX_OSS_MIDI+2
+#define MAX_MIDI_PORTS  (MAX_OSS_MIDI + 2)
 static int opened[MAX_MIDI_PORTS];
-
 
 static void _oss_send(struct midi_port *p, const unsigned char *data, unsigned int len,
 	UNUSED unsigned int delay)
@@ -74,9 +73,7 @@ static void _oss_send(struct midi_port *p, const unsigned char *data, unsigned i
 	}
 }
 
-static int _oss_start(UNUSED struct midi_port *p) { return 1; /* do nothing */ }
-static int _oss_stop(UNUSED struct midi_port *p) { return 1; /* do nothing */ }
-
+static int _oss_start_stop(UNUSED struct midi_port *p) { return 1; /* do nothing */ }
 
 static int _oss_thread(struct midi_provider *p)
 {
@@ -122,32 +119,31 @@ static int _oss_thread(struct midi_provider *p)
 }
 
 
-static void _tryopen(int n, const char *name, struct midi_provider *_oss_provider)
+static int _tryopen(int n, const char *name, struct midi_provider *_oss_provider)
 {
 	int io;
 	char *ptr;
 
-	if (opened[n+1] != -1) return;
-	opened[n+1] = open(name, O_RDWR|O_NOCTTY|O_NONBLOCK);
-	if (opened[n+1] == -1) {
-		opened[n+1] = open(name, O_RDONLY|O_NOCTTY|O_NONBLOCK);
-		if (opened[n+1] == -1) {
-			opened[n+1] = open(name, O_WRONLY|O_NOCTTY|O_NONBLOCK);
-			if (opened[n+1] == -1) return;
-			io = MIDI_OUTPUT;
-		} else {
-			io = MIDI_INPUT;
-		}
-	} else {
+	if (opened[n] != -1)
+		return 1;
+
+	if ((opened[n] = open(name, O_RDWR|O_NOCTTY|O_NONBLOCK)) != -1) {
 		io = MIDI_INPUT | MIDI_OUTPUT;
+	} else if ((opened[n] = open(name, O_RDONLY|O_NOCTTY|O_NONBLOCK)) != -1) {
+		io = MIDI_INPUT;
+	} else if ((opened[n] = open(name, O_WRONLY|O_NOCTTY|O_NONBLOCK)) != -1) {
+		io = MIDI_OUTPUT;
+	} else {
+		return 2;
 	}
 
 	ptr = NULL;
-	if (asprintf(&ptr, " %-16s (OSS)", name) == -1) {
-		return;
-	}
-	midi_port_register(_oss_provider, io, ptr, PTR_SHAPED_INT((long)n+1), 0);
+	if (asprintf(&ptr, " %-16s (OSS)", name) == -1)
+		return 3;
+
+	midi_port_register(_oss_provider, io, ptr, PTR_SHAPED_INT((long)n), 0);
 	free(ptr);
+	return 0;
 }
 
 static void _oss_poll(struct midi_provider *_oss_provider)
@@ -155,13 +151,15 @@ static void _oss_poll(struct midi_provider *_oss_provider)
 	char sbuf[64];
 	int i;
 
-	_tryopen(-1, "/dev/midi", _oss_provider);
+	_tryopen(0, "/dev/midi", _oss_provider);
 	for (i = 0; i < MAX_OSS_MIDI; i++) {
 		sprintf(sbuf, "/dev/midi%d", i);
-		_tryopen(i, sbuf, _oss_provider);
+		if (!_tryopen(i + 1, sbuf, _oss_provider))
+			continue;
 
 		sprintf(sbuf, "/dev/midi%02d", i);
-		_tryopen(i, sbuf, _oss_provider);
+		if (!_tryopen(i + 1, sbuf, _oss_provider))
+			continue;
 	}
 }
 int oss_midi_setup(void)
@@ -172,8 +170,8 @@ int oss_midi_setup(void)
 	driver.flags = 0;
 	driver.poll = _oss_poll;
 	driver.thread = _oss_thread;
-	driver.enable = _oss_start;
-	driver.disable = _oss_stop;
+	driver.enable = _oss_start_stop;
+	driver.disable = _oss_start_stop;
 	driver.send = _oss_send;
 
 	for (i = 0; i < MAX_MIDI_PORTS; i++) opened[i] = -1;

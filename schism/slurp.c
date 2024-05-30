@@ -200,7 +200,7 @@ static slurp_t *_slurp_open(const char *filename, struct stat * buf, size_t size
 		size = (buf ? buf->st_size : file_size(filename));
 	}
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	switch (slurp_win32(t, filename, size)) {
 	case 0: free(t); return NULL;
 	case 1: return t;
@@ -314,7 +314,7 @@ size_t slurp_peek(slurp_t *t, void *ptr, size_t count)
 		// short read -- fill in any extra bytes with zeroes
 		size_t tail = count - bytesleft;
 		count = bytesleft;
-		memset(ptr + count, 0, tail);
+		memset((uint8_t*)ptr + count, 0, tail);
 	}
 	if (count)
 		memcpy(ptr, t->data + t->pos, count);

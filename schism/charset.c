@@ -24,9 +24,8 @@
 #include "headers.h"
 
 #include "charset.h"
-
-/* real character set stuff will occur here eventually... */
-
+#include "util.h"
+#include "sdlmain.h"
 
 int char_digraph(int k1, int k2)
 {
@@ -115,6 +114,7 @@ uint8_t char_unicode_to_cp437(unsigned int c)
 {
 	if (c >= 32 && c <= 127) return c;
 	switch (c) {
+	case 0x0000: return 0;  // NUL
 	case 0x263A: return 1;  // WHITE SMILING FACE
 	case 0x263B: return 2;  // BLACK SMILING FACE
 	case 0x2661:
@@ -291,6 +291,7 @@ uint8_t char_unicode_to_cp437(unsigned int c)
 	case 0x2219:
 	case 0x0387: return 250;// GREEK ANO TELEIA
 	case 0x221A: return 251;// SQUARE ROOT
+	case 0x207F: return 252;// SUPERSCRIPT SMALL LETTER N
 	case 0x00B2: return 253;// SUPERSCRIPT TWO
 	case 0x220E: return 254;// QED
 	case 0x00A0: return 255;
@@ -298,61 +299,453 @@ uint8_t char_unicode_to_cp437(unsigned int c)
 	};
 }
 
-// Copyright (c) 2008-2009 Bjoern Hoehrmann <bjoern@hoehrmann.de>
-// See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
-
-#define UTF8_ACCEPT 0
-#define UTF8_REJECT 1
-
-static const uint8_t utf8d[] = {
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 00..1f
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 20..3f
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 40..5f
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 60..7f
-	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9, // 80..9f
-	7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7, // a0..bf
-	8,8,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, // c0..df
-	0xa,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x3,0x4,0x3,0x3, // e0..ef
-	0xb,0x6,0x6,0x6,0x5,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8,0x8, // f0..ff
-	0x0,0x1,0x2,0x3,0x5,0x8,0x7,0x1,0x1,0x1,0x4,0x6,0x1,0x1,0x1,0x1, // s0..s0
-	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1,1, // s1..s2
-	1,2,1,1,1,1,1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1, // s3..s4
-	1,2,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,3,1,3,1,1,1,1,1,1, // s5..s6
-	1,3,1,1,1,1,1,3,1,3,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1, // s7..s8
+/* From GNU libiconv */
+static const unsigned short cp437_2uni[128] = {
+	/* 0x80 */
+	0x00c7, 0x00fc, 0x00e9, 0x00e2, 0x00e4, 0x00e0, 0x00e5, 0x00e7,
+	0x00ea, 0x00eb, 0x00e8, 0x00ef, 0x00ee, 0x00ec, 0x00c4, 0x00c5,
+	/* 0x90 */
+	0x00c9, 0x00e6, 0x00c6, 0x00f4, 0x00f6, 0x00f2, 0x00fb, 0x00f9,
+	0x00ff, 0x00d6, 0x00dc, 0x00a2, 0x00a3, 0x00a5, 0x20a7, 0x0192,
+	/* 0xa0 */
+	0x00e1, 0x00ed, 0x00f3, 0x00fa, 0x00f1, 0x00d1, 0x00aa, 0x00ba,
+	0x00bf, 0x2310, 0x00ac, 0x00bd, 0x00bc, 0x00a1, 0x00ab, 0x00bb,
+	/* 0xb0 */
+	0x2591, 0x2592, 0x2593, 0x2502, 0x2524, 0x2561, 0x2562, 0x2556,
+	0x2555, 0x2563, 0x2551, 0x2557, 0x255d, 0x255c, 0x255b, 0x2510,
+	/* 0xc0 */
+	0x2514, 0x2534, 0x252c, 0x251c, 0x2500, 0x253c, 0x255e, 0x255f,
+	0x255a, 0x2554, 0x2569, 0x2566, 0x2560, 0x2550, 0x256c, 0x2567,
+	/* 0xd0 */
+	0x2568, 0x2564, 0x2565, 0x2559, 0x2558, 0x2552, 0x2553, 0x256b,
+	0x256a, 0x2518, 0x250c, 0x2588, 0x2584, 0x258c, 0x2590, 0x2580,
+	/* 0xe0 */
+	0x03b1, 0x00df, 0x0393, 0x03c0, 0x03a3, 0x03c3, 0x00b5, 0x03c4,
+	0x03a6, 0x0398, 0x03a9, 0x03b4, 0x221e, 0x03c6, 0x03b5, 0x2229,
+	/* 0xf0 */
+	0x2261, 0x00b1, 0x2265, 0x2264, 0x2320, 0x2321, 0x00f7, 0x2248,
+	0x00b0, 0x2219, 0x00b7, 0x221a, 0x207f, 0x00b2, 0x25a0, 0x00a0
 };
 
-static uint32_t utf8_decode(uint32_t* restrict state, uint32_t* restrict codep, uint32_t byte) {
-	uint32_t type = utf8d[byte];
+/* -----------------------------------------------------------------------------
+ *
+ * these encode ONE character each time they are ran, and they must each
+ * return a byte offset of which to append to "in" to start with the next
+ * character. */
 
-	*codep = (*state != UTF8_ACCEPT) ?
-		(byte & 0x3fu) | (*codep << 6) :
-		(0xff >> type) & (byte);
+#define DECODER_ERROR   (-1)
+#define DECODER_NEED_MORE (0)
+#define DECODER_DONE    (1)
 
-	*state = utf8d[256 + *state * 16 + type];
-	return *state;
+static int utf8_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_next) {
+	uint8_t c = *in;
+
+	if (c == 0x00) {
+		return DECODER_DONE;
+	} else if (c < 0x80) {
+		*out = c;
+		*size_until_next = 1;
+	} else if (c < 0xC2) {
+		return DECODER_ERROR;
+	} else if (c < 0xE0) {
+		if (!((in[1] ^ 0x80) < 0x40))
+			return DECODER_ERROR;
+
+		*out = ((uint32_t) (c & 0x1f) << 6)
+					 | (uint32_t) (in[1] ^ 0x80);
+
+		*size_until_next = 2;
+	} else if (c < 0xf0) {
+		if (!((in[1] ^ 0x80) < 0x40 && (in[2] ^ 0x80) < 0x40
+					&& (c >= 0xE1 || in[1] >= 0xA0)
+					&& (c != 0xED || in[1] < 0xA0)))
+			return DECODER_ERROR;
+
+		*out = ((uint32_t) (c & 0x0f) << 12)
+					 | ((uint32_t) (in[1] ^ 0x80) << 6)
+					 | (uint32_t) (in[2] ^ 0x80);
+
+		*size_until_next = 3;
+	} else if (c < 0xf8) {
+		if (!((in[1] ^ 0x80) < 0x40 && (in[2] ^ 0x80) < 0x40
+					&& (in[3] ^ 0x80) < 0x40
+					&& (c >= 0xf1 || in[1] >= 0x90)
+					&& (c < 0xf4 || (c == 0xf4 && in[1] < 0x90))))
+			return DECODER_ERROR;
+
+		*out = ((uint32_t) (c & 0x07) << 18)
+					 | ((uint32_t) (in[1] ^ 0x80) << 12)
+					 | ((uint32_t) (in[2] ^ 0x80) << 6)
+					 | (uint32_t) (in[3] ^ 0x80);
+
+		*size_until_next = 4;
+	} else return DECODER_ERROR;
+
+	return DECODER_NEED_MORE;
 }
 
-static int get_length_of_utf8(const uint8_t* restrict utf8) {
-	uint32_t codepoint = 0, state = 0, length = 0;
+/* this is here so that when the UTF-16 code changes nothing gets lost between these two */
+#define DECODE_UTF16_VARIANT(x) \
+	static int utf16##x##_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_next) { \
+		const uint16_t* tmp_in = (const uint16_t*)in; \
+	\
+		uint16_t wc = *(tmp_in++); \
+		wc = bswap##x##16(wc); \
+	\
+		if (wc == 0x0000) {\
+			return DECODER_DONE; \
+		} else if (wc < 0xD800 || wc > 0xDFFF) { \
+			*out = wc; \
+			*size_until_next = 2; \
+		} else if (wc >= 0xD800 && wc <= 0xDBFF) { \
+			uint16_t wc2 = *(tmp_in++); \
+			wc2 = bswap##x##16(wc2); \
+	\
+			if (wc2 >= 0xDC00 && wc2 <= 0xDFFF) { \
+				*out = 0x10000 + ((wc - 0xD800) << 10) + (wc2 - 0xDC00); \
+				*size_until_next = 4; \
+			} else return DECODER_ERROR; \
+		} \
+	\
+		return DECODER_NEED_MORE; \
+	}
 
-	for (; *utf8; utf8++)
-		if (!utf8_decode(&state, &codepoint, *utf8))
-			length++;
+DECODE_UTF16_VARIANT(LE)
+DECODE_UTF16_VARIANT(BE)
 
-	return length;
+#undef UTF16_DECODER
+
+static int cp437_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_next) {
+	uint8_t c = *in;
+	*out = (c < 0x80) ? c : cp437_2uni[c - 0x80];
+
+	*size_until_next = 1;
+	return (c) ? DECODER_NEED_MORE : DECODER_DONE;
 }
 
-uint8_t* str_utf8_to_cp437(const uint8_t* restrict utf8) {
-	int length = get_length_of_utf8(utf8);
-	if (!length)
-		return NULL;
+/* ----------------------------------------------------- */
+/* for these functions, 0 indicates an error in encoding */
 
-	uint8_t* cp437 = calloc(length + 1, sizeof(uint8_t));
+static size_t ucs4_to_utf8(uint32_t ch, uint8_t* out) {
+	size_t len = 0;
 
-	uint32_t codepoint = 0, state = 0, i = 0;
-	for (; *utf8 && i < length; utf8++)
-		if (!utf8_decode(&state, &codepoint, *utf8))
-			cp437[i++] = char_unicode_to_cp437(codepoint);
+	if (out) {
+		if (ch < 0x80) {
+			out[len++] = (uint8_t)ch;
+		} else if (ch < 0x800) {
+			out[len++] = (uint8_t)((ch >> 6) | 0xC0);
+			out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
+		} else if (ch < 0x10000) {
+			out[len++] = (uint8_t)((ch >> 12) | 0xE0);
+			out[len++] = (uint8_t)(((ch >> 6) & 0x3F) | 0x80);
+			out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
+		} else if (ch < 0x110000) {
+			out[len++] = (uint8_t)((ch >> 18) | 0xF0);
+			out[len++] = (uint8_t)(((ch >> 12) & 0x3F) | 0x80);
+			out[len++] = (uint8_t)(((ch >> 6) & 0x3F) | 0x80);
+			out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
+		} else return 0; /* ZOMG NO WAY */
+	} else {
+		if (ch < 0x80)      len += 1;
+		else if (ch < 0x800)  len += 2;
+		else if (ch < 0x10000)  len += 3;
+		else if (ch < 0x110000) len += 4;
+		else return 0;
+	}
 
-	return cp437;
+	return len;
+}
+
+static size_t ucs4_to_cp437(uint32_t ch, uint8_t* out) {
+	if (out)
+		*out = char_unicode_to_cp437(ch);
+
+	return 1;
+}
+
+#define ENCODE_UTF16_VARIANT(x) \
+	static size_t ucs4_to_utf16##x(uint32_t ch, uint8_t* out) { \
+		size_t len = 0; \
+	\
+		if (out) { \
+			if (ch < 0x10000) { \
+				APPEND_CHAR(ch); \
+			} else { \
+				uint16_t w1 = 0xD800 + ((ch - 0x10000) >> 10); \
+				uint16_t w2 = 0xDC00 + ((ch - 0x10000) & 0x3FF); \
+	\
+				APPEND_CHAR(w1); \
+				APPEND_CHAR(w2); \
+			} \
+		} else { \
+			len += (ch < 0x10000) ? 2 : 4; \
+		} \
+	\
+		return len; \
+	}
+
+#define APPEND_CHAR(x) \
+	out[len++] = (uint8_t)(ch); \
+	out[len++] = (uint8_t)(ch >> 8)
+
+ENCODE_UTF16_VARIANT(LE)
+
+#undef APPEND_CHAR
+
+#define APPEND_CHAR(x) \
+	out[len++] = (uint8_t)(ch >> 8); \
+	out[len++] = (uint8_t)(ch);
+
+ENCODE_UTF16_VARIANT(BE)
+
+#undef APPEND_CHAR
+
+#undef ENCODE_UTF16_VARIANT
+
+/* function LUT here */
+typedef int (*charset_conv_to_ucs4_func)(const uint8_t*, uint32_t*, size_t*);
+typedef size_t (*charset_conv_from_ucs4_func)(uint32_t, uint8_t*);
+
+static charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
+	[CHARSET_UTF8] = utf8_to_ucs4,
+
+	/* primarily used on Windows */
+	[CHARSET_UTF16LE] = utf16LE_to_ucs4,
+	[CHARSET_UTF16BE] = utf16BE_to_ucs4,
+
+	[CHARSET_CP437] = cp437_to_ucs4,
+
+#ifdef SCHISM_WIN32
+# if WORDS_BIGENDIAN
+	[CHARSET_WCHAR_T] = utf16BE_to_ucs4,
+# else
+	[CHARSET_WCHAR_T] = utf16LE_to_ucs4,
+# endif
+#else
+	/* unimplemented */
+	[CHARSET_WCHAR_T] = NULL,
+#endif
+};
+
+static charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
+	[CHARSET_UTF8] = ucs4_to_utf8,
+	[CHARSET_UTF16LE] = ucs4_to_utf16LE,
+	[CHARSET_UTF16BE] = ucs4_to_utf16BE,
+
+	[CHARSET_CP437] = ucs4_to_cp437,
+
+#ifdef SCHISM_WIN32
+# if WORDS_BIGENDIAN
+	[CHARSET_WCHAR_T] = ucs4_to_utf16BE,
+# else
+	[CHARSET_WCHAR_T] = ucs4_to_utf16LE,
+# endif
+#else
+	/* unimplemented */
+	[CHARSET_WCHAR_T] = NULL,
+#endif
+};
+
+/* for debugging */
+const char* charset_iconv_error_lookup(charset_error_t err) {
+	switch (err) {
+		case CHARSET_ERROR_SUCCESS:
+		default:
+			return "Success";
+		case CHARSET_ERROR_UNIMPLEMENTED:
+			return "Conversion unimplemented";
+		case CHARSET_ERROR_NULLINPUT:
+			return "Input pointer is NULL";
+		case CHARSET_ERROR_NULLOUTPUT:
+			return "Output pointer is NULL";
+		case CHARSET_ERROR_INPUTISOUTPUT:
+			return "Input and output charsets are the same";
+		case CHARSET_ERROR_DECODE:
+			return "An error occurred when decoding";
+		case CHARSET_ERROR_ENCODE:
+			return "An error occurred when encoding";
+		case CHARSET_ERROR_NOMEM:
+			return "Out of memory";
+	}
+}
+
+#define CHARSET_VARIATION(name) \
+	static charset_error_t charset_iconv_##name##_(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset)
+
+/* our version of iconv; this has a much simpler API than the regular
+ * iconv() because much of it isn't very necessary for our purposes
+ *
+ * note: do NOT put huge buffers into here, it will likely waste
+ * lots of memory due to using a buffer of UCS4 inbetween
+ *
+ * all input is expected to be NULL-terminated
+ *
+ * example usage:
+ *     uint8_t *cp437 = some_buf, *utf8 = NULL;
+ *     charset_iconv(cp437, &utf8, CHARSET_CP437, CHARSET_UTF8);
+ * 
+ * [out] must be free'd by the caller */
+CHARSET_VARIATION(internal) {
+	size_t out_length = 0;
+	size_t out_alloc = 16; /* estimate */
+	int c;
+
+	if (inset >= ARRAY_SIZE(conv_to_ucs4_funcs) || outset >= ARRAY_SIZE(conv_from_ucs4_funcs))
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	charset_conv_to_ucs4_func   conv_to_ucs4_func   = conv_to_ucs4_funcs[inset];
+	charset_conv_from_ucs4_func conv_from_ucs4_func = conv_from_ucs4_funcs[outset];
+
+	if (!conv_to_ucs4_func || !conv_from_ucs4_func)
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	*out = malloc((out_alloc) * sizeof(uint8_t));
+	if (!*out)
+		return CHARSET_ERROR_NOMEM;
+
+	do {
+		uint32_t ch = 0;
+		size_t in_needed = 0;
+
+		c = conv_to_ucs4_func(in, &ch, &in_needed);
+		if (c == DECODER_ERROR)
+			return CHARSET_ERROR_DECODE;
+
+		/* printf("result: %d, U+%04x, %zu\n", c, ch, in_needed); */
+
+		size_t out_needed = conv_from_ucs4_func(ch, NULL);
+		if (!out_needed)
+			return CHARSET_ERROR_ENCODE;
+
+		if (out_length + out_needed >= out_alloc) {
+			uint8_t* old_out = *out;
+			*out = mem_realloc(*out, (out_alloc *= 2) * sizeof(uint8_t));
+			if (!*out) {
+				free(old_out);
+				return CHARSET_ERROR_NOMEM;
+			}
+		}
+
+		conv_from_ucs4_func(ch, *out + out_length);
+
+		out_length += out_needed;
+		in += in_needed;
+	} while (c == DECODER_NEED_MORE);
+
+	return CHARSET_ERROR_SUCCESS;
+}
+
+CHARSET_VARIATION(sdl) {
+	static const char* charset_iconv_system_lookup[] = {
+		[CHARSET_UTF8] = "UTF-8",
+		[CHARSET_UTF16BE] = "UTF-16BE",
+		[CHARSET_UTF16LE] = "UTF-16LE",
+		[CHARSET_UCS4] = "UCS-4",
+
+		[CHARSET_CP437] = "437",
+
+		[CHARSET_CHAR] = "",
+		[CHARSET_WCHAR_T] = "WCHAR_T"
+	};
+
+	/* A bit hacky, but whatever */
+	size_t src_size = strlen((const char*)in);
+	size_t out_size = src_size;
+
+	if (src_size <= 0)
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	if (inset >= ARRAY_SIZE(charset_iconv_system_lookup) || outset >= ARRAY_SIZE(charset_iconv_system_lookup))
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	SDL_iconv_t cd = SDL_iconv_open(charset_iconv_system_lookup[inset], charset_iconv_system_lookup[outset]);
+	if (cd == (SDL_iconv_t)(-1))
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	*out = malloc(out_size + sizeof(uint32_t));
+	if (!*out)
+		return CHARSET_ERROR_NOMEM;
+
+	/* now onto the real conversion */
+	const char* in_ = (char*)in;
+	char* out_ = (char*)(*out);
+	size_t in_bytes_left = src_size;
+	size_t out_bytes_left = out_size;
+
+	memset(out_, 0, sizeof(uint32_t));
+
+	while (in_bytes_left) {
+		const size_t old_in_bytes_left = in_bytes_left;
+
+		size_t rc = SDL_iconv(cd, &in_, &in_bytes_left, &out_, &out_bytes_left);
+		switch (rc) {
+		case SDL_ICONV_E2BIG: {
+			const ptrdiff_t diff = (ptrdiff_t)((uint8_t*)out_ - *out);
+
+			uint8_t* old_out = *out;
+
+			out_size *= 2;
+			*out = realloc(old_out, out_size + sizeof(uint32_t));
+			if (!*out) {
+				free(old_out);
+				SDL_iconv_close(cd);
+				return CHARSET_ERROR_NOMEM;
+			}
+
+			out_ = (char*)(*out + diff);
+			out_bytes_left = out_size - diff;
+
+			continue;
+		}
+		case SDL_ICONV_EILSEQ:
+			/* try skipping? */
+			in_++;
+			in_bytes_left--;
+			break;
+		case SDL_ICONV_EINVAL:
+		case SDL_ICONV_ERROR:
+			/* t'was a good run */
+			in_bytes_left = 0;
+			memset(out_, 0, sizeof(uint32_t));
+			SDL_iconv_close(cd);
+			return CHARSET_ERROR_UNIMPLEMENTED;
+		default:
+			break;
+		}
+
+		/* avoid infinite loops */
+		if (old_in_bytes_left == in_bytes_left)
+			break;
+	}
+
+	memset(out_, 0, sizeof(uint32_t));
+
+	SDL_iconv_close(cd);
+
+	return CHARSET_ERROR_SUCCESS;
+}
+
+/* XXX need to change this to take length in as well */
+charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset) {
+	charset_error_t state;
+	if (!in)
+		return CHARSET_ERROR_NULLINPUT;
+
+	if (!out)
+		return CHARSET_ERROR_NULLOUTPUT;
+
+	if (inset == outset)
+		return CHARSET_ERROR_INPUTISOUTPUT;
+
+#define TRY_VARIATION(name) \
+	state = charset_iconv_##name##_(in, out, inset, outset); \
+	if (state == CHARSET_ERROR_SUCCESS || state == CHARSET_ERROR_NOMEM) \
+		return state;
+
+	TRY_VARIATION(internal);
+	TRY_VARIATION(sdl);
+
+#undef TRY_VARIATION
+
+	return CHARSET_ERROR_UNIMPLEMENTED;
 }

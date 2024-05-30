@@ -21,7 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
 #include "headers.h"
 #include "slurp.h"
 #include "fmt.h"
@@ -363,7 +362,7 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						y = MIN(vlen, 4);
 						slurp_read(fp, buf + (4 - y), y);
 						bpm = buf[0] << 24 | (buf[1] << 16) | (buf[2] << 8) | buf[3];
-						bpm = CLAMP(60000000 / (bpm ?: 1), 0x20, 0xff);
+						bpm = CLAMP(60000000 / (bpm ? bpm : 1), 0x20, 0xff);
 						note = (song_note_t) {.effect = FX_TEMPO, .param = bpm};
 						vlen -= y;
 						break;
@@ -384,10 +383,17 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					}
 					slurp_seek(fp, vlen, SEEK_CUR);
 					break;
-				case 0x0: // sysex
-				case 0x1 ... 0x7: // syscommon
+				/* sysex */
+				case 0x0:
+				/* syscommon */
+				case 0x1: case 0x2: case 0x3:
+				case 0x4: case 0x5: case 0x6:
+				case 0x7:
 					rs = 0; // clear running status
-				case 0x8 ... 0xe: // sysrt
+				/* sysrt */
+				case 0x8: case 0x9: case 0xa:
+				case 0xb: case 0xc: case 0xd:
+				case 0xe:
 					// 0xf0 - sysex
 					// 0xf1-0xf7 - common
 					// 0xf8-0xff - sysrt

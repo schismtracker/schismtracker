@@ -361,7 +361,6 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 	snd_seq_port_info_t *pinfo;
 
 	if (local_port == -1) {
-
 		local_port = ALSA_snd_seq_create_simple_port(seq,
 				PORT_NAME,
 				SND_SEQ_PORT_CAP_READ
@@ -379,9 +378,6 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 			|       SND_SEQ_PORT_TYPE_MIDI_GS
 			|       SND_SEQ_PORT_TYPE_MIDI_XG
 			|       SND_SEQ_PORT_TYPE_MIDI_MT32);
-	} else {
-		/* XXX check to see if changes have been made */
-		return;
 	}
 
 	ptr = NULL;
@@ -390,8 +386,10 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 		data->mark = 0;
 	}
 
+	/* believe it or not this is the RIGHT way to do this */
 	ALSA_snd_seq_client_info_alloca(&cinfo);
 	ALSA_snd_seq_port_info_alloca(&pinfo);
+
 	ALSA_snd_seq_client_info_set_client(cinfo, -1);
 	while (ALSA_snd_seq_query_next_client(seq, cinfo) >= 0) {
 		int cn = ALSA_snd_seq_client_info_get_client(cinfo);
@@ -399,17 +397,21 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 		ALSA_snd_seq_port_info_set_port(pinfo, -1);
 		while (ALSA_snd_seq_query_next_port(seq, pinfo) >= 0) {
 			io = 0;
+
 			if ((ALSA_snd_seq_port_info_get_capability(pinfo)
 			 & (SND_SEQ_PORT_CAP_READ|SND_SEQ_PORT_CAP_SUBS_READ))
 			== (SND_SEQ_PORT_CAP_READ|SND_SEQ_PORT_CAP_SUBS_READ))
 				io |= MIDI_INPUT;
+
 			if ((ALSA_snd_seq_port_info_get_capability(pinfo)
 			 & (SND_SEQ_PORT_CAP_WRITE|SND_SEQ_PORT_CAP_SUBS_WRITE))
 			== (SND_SEQ_PORT_CAP_WRITE|SND_SEQ_PORT_CAP_SUBS_WRITE))
 				io |= MIDI_OUTPUT;
 
-			if (!io) continue;
+			if (!io)
+				continue;
 
+			/* Now get clients and ports */
 			c = ALSA_snd_seq_port_info_get_client(pinfo);
 			if (c == SND_SEQ_CLIENT_SYSTEM) continue;
 
@@ -423,7 +425,9 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 					ok = 1;
 				}
 			}
-			if (ok) continue;
+			if (ok)
+				continue;
+
 			ctext = ALSA_snd_seq_client_info_get_name(cinfo);
 			ptext = ALSA_snd_seq_port_info_get_name(pinfo);
 			if (strcmp(ctext, PORT_NAME) == 0
@@ -450,6 +454,7 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 			}
 
 			midi_port_register(_alsa_provider, io, buffer, data, 1);
+			free(buffer);
 		}
 	}
 

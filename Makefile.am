@@ -103,8 +103,7 @@ noinst_HEADERS = \
 	include/dmoz.h			\
 	include/draw-char.h		\
 	include/event.h			\
-	include/fmopl2.h			\
-	include/fmopl3.h			\
+	include/fmopl.h			\
 	include/fmt.h			\
 	include/fmt-types.h		\
 	include/headers.h		\
@@ -160,17 +159,13 @@ if USE_ALSA
 files_alsa = sys/alsa/midi-alsa.c
 
 if LINK_TO_ALSA
-cflags_alsa=-DUSE_ALSA
 lib_asound=-lasound
-else
-cflags_alsa=-DUSE_ALSA -DALSA_DYNAMIC_LOAD
 endif
 
 endif
 
 if USE_OSS
 files_oss = sys/oss/midi-oss.c
-cflags_oss=-DUSE_OSS
 endif
 
 if USE_MMAP
@@ -208,7 +203,7 @@ endif # USE_WIN32
 
 if USE_WII
 files_wii=sys/wii/isfs.c sys/wii/osdefs.c
-cflags_wii=-DGEKKO -mrvl -mcpu=750 -meabi -mhard-float
+cflags_wii=-mrvl -mcpu=750 -meabi -mhard-float
 cppflags_wii=-I$(srcdir)/sys/wii $(WII_CPPFLAGS)
 libs_wii=$(wii_machdep) $(WII_LDFLAGS)
 endif
@@ -226,7 +221,7 @@ endif
 if USE_FLAC
 files_flac = \
 	fmt/flac.c
-cflags_flac=-DUSE_FLAC $(FLAC_CFLAGS)
+cflags_flac=$(FLAC_CFLAGS)
 libs_flac=$(FLAC_LIBS)
 endif
 
@@ -234,21 +229,24 @@ if USE_JACK
 files_jack = \
 	sys/jack/midi-jack.c
 
+cflags_jack=$(JACK_CFLAGS)
+
 if LINK_TO_JACK
-cflags_jack=-DUSE_JACK $(JACK_CFLAGS)
 libs_jack=$(JACK_LIBS)
-else
-cflags_jack=-DUSE_JACK -DJACK_DYNAMIC_LOAD $(JACK_CFLAGS)
-libs_jack=
 endif
 
 endif
 
 if USE_NETWORK
-cflags_network=-DUSE_NETWORK
+cflags_network=
 libs_network=$(NETWORK_LIBS)
 endif
 
+if USE_OPL2
+files_opl = player/fmopl2.c
+else
+files_opl = player/fmopl3.c
+endif
 
 ## Replacement functions for crappy systems
 files_stdlib =
@@ -363,8 +361,6 @@ schismtracker_SOURCES = \
 	player/equalizer.c		\
 	player/mixer.c			\
 	player/filters.c		\
-	player/fmopl2.c			\
-	player/fmopl3.c			\
 	player/fmpatches.c		\
 	player/sndmix.c			\
 	player/opl-util.c		\
@@ -382,14 +378,13 @@ schismtracker_SOURCES = \
 	$(files_wii)			\
 	$(files_windres)		\
 	$(files_flac)			\
-	$(files_jack)
+	$(files_jack)			\
+	$(files_opl)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
 
-cflags_fmopl=-DHAS_YM3812=1 -DHAS_Y8950=0 -DHAS_YM3526=0
-
-schismtracker_CPPFLAGS = -D_USE_AUTOCONF -D_GNU_SOURCE -I$(srcdir)/include -I. $(cppflags_wii)
+schismtracker_CPPFLAGS = -I$(srcdir)/include -I. $(cppflags_wii)
 schismtracker_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
 	$(cflags_version) $(cflags_win32) $(cflags_wii) \

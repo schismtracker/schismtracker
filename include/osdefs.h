@@ -42,13 +42,21 @@ This is used to hack in system-dependent input methods (e.g. F16 and other scanc
 etc.) If defined, this function will be called after capturing an SDL event.
 A return value of 0 indicates that the event should NOT be processed by the main event handler.
 */
-#if defined(GEKKO)
+#if defined(SCHISM_WII)
 # define os_sysinit wii_sysinit
 # define os_sdlinit wii_sdlinit
 # define os_sysexit wii_sysexit
 # define os_sdlevent wii_sdlevent
-#elif defined(WIN32)
+#elif defined(SCHISM_WIN32)
+# define os_sdlevent win32_sdlevent
+# define os_sdlinit win32_sdlinit
 # define os_sysinit win32_sysinit
+# define os_get_modkey win32_get_modkey
+#elif defined(SCHISM_MACOSX)
+# define os_sdlevent macosx_sdlevent
+# define os_sysexit macosx_sysexit
+# define os_sysinit macosx_sysinit
+# define os_get_modkey macosx_get_modkey
 #endif
 
 #ifndef os_sdlevent
@@ -63,6 +71,9 @@ A return value of 0 indicates that the event should NOT be processed by the main
 #ifndef os_sysexit
 # define os_sysexit()
 #endif
+#ifndef os_get_modkey
+#define os_get_modkey(m)
+#endif
 
 /* this alias is kept for compatibility */
 #define os_screensaver_deactivate SDL_DisableScreenSaver
@@ -76,9 +87,17 @@ void wii_sysexit(void); // close filesystem
 void wii_sdlinit(void); // set up wiimote
 int wii_sdlevent(SDL_Event *event); // add unicode values; wiimote hack to allow simple playback
 
+int win32_sdlevent(SDL_Event* event);
 void win32_sysinit(int *pargc, char ***pargv);
+void win32_sdlinit(void);
 void win32_get_modkey(int *m);
 void win32_filecreated_callback(const char *filename);
+void win32_toggle_menu(SDL_Window* window, int yes);
+void win32_refresh_menu(SDL_Window* window, int yes);
+
+int macosx_sdlevent(SDL_Event* event);
+void macosx_sysexit(void);
+void macosx_sysinit(int *pargc, char ***pargv); /* set up ibook helper */
+void macosx_get_modkey(int *m);
 
 #endif /* ! OSDEFS_H */
-

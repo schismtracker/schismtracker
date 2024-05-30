@@ -67,7 +67,7 @@ static void log_draw_const(void)
 
 static int log_handle_key(struct key_event * k)
 {
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_UP:
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -151,7 +151,7 @@ void log_load_page(struct page *page)
 
 /* --------------------------------------------------------------------- */
 
-inline void log_append2(int bios_font, int color, int must_free, const char *text)
+void log_append2(int bios_font, int color, int must_free, const char *text)
 {
 	if (last_line < NUM_LINES - 1) {
 		last_line++;
@@ -169,11 +169,11 @@ inline void log_append2(int bios_font, int color, int must_free, const char *tex
 	if (status.current_page == PAGE_LOG)
 		status.flags |= NEED_UPDATE;
 }
-inline void log_append(int color, int must_free, const char *text)
+void log_append(int color, int must_free, const char *text)
 {
 	log_append2(0, color, must_free, text);
 }
-inline void log_nl(void)
+void log_nl(void)
 {
 	log_append(0,0,"");
 }

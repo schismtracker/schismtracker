@@ -103,7 +103,7 @@ static void help_redraw(void)
 	int n, pos, x;
 	int lp;
 	const char **ptr;
-	const char graphic_chars[] = {0, 0x89, 0x8f, 0x96, 0x84, 0, 0x91, 0x8b, 0x86, 0x8a};
+	const uint8_t graphic_chars[] = {0, 0x89, 0x8f, 0x96, 0x84, 0, 0x91, 0x8b, 0x86, 0x8a};
 	char ch;
 
 	draw_fill_chars(2, 13, 77, 44, 0);
@@ -158,7 +158,7 @@ static int help_handle_key(struct key_event * k)
 	} else if (k->mouse != MOUSE_NONE) {
 		return 0;
 	}
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_ESCAPE:
 		if (k->state == KEY_RELEASE)
 			return 1;

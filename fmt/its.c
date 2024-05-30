@@ -21,7 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
 #include "headers.h"
 #include "fmt.h"
 
@@ -169,7 +168,7 @@ int fmt_its_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 
 void save_its_header(disko_t *fp, song_sample_t *smp)
 {
-	struct it_sample its = {};
+	struct it_sample its = {0};
 
 	its.id = bswapLE32(0x53504D49); // IMPS
 	strncpy((char *) its.filename, smp->filename, 12);

@@ -21,6 +21,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "headers.h"
+
+#include "fmopl.h"
 #include "snd_fm.h"
 #include "log.h"
 #include "util.h" /* for clamp */
@@ -31,11 +34,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-// Choose OPL emulator source code (OPL2 or OPL3)
-#define OPLSOURCE 3
+#define OPLRATEBASE 49716 // It's not a good idea to deviate from this.
 
 #if OPLSOURCE == 2
- #include "fmopl2.h"
     #define OPLNew(x,r)  ym3812_init(x, r)
     #define OPLResetChip ym3812_reset_chip
     #define OPLWrite     ym3812_write
@@ -43,10 +44,8 @@
     #define OPLUpdateOne ym3812_update_one
     #define OPLCloseChip     ym3812_shutdown
     // OPL2 = 3579552Hz
-    #define OPLRATEBASE 49716 // It's not a good idea to deviate from this.
     #define OPLRATEDIVISOR 72
-#else
- #include "fmopl3.h"
+#elif OPLSOURCE == 3
     #define OPLNew(x,r)  ymf262_init(x, r)
     #define OPLResetChip ymf262_reset_chip
     #define OPLWrite     ymf262_write
@@ -54,8 +53,9 @@
     #define OPLUpdateOne ymf262_update_one
     #define OPLCloseChip     ymf262_shutdown
     // OPL3 = 14318208Hz
-    #define OPLRATEBASE 49716 // It's not a good idea to deviate from this.
     #define OPLRATEDIVISOR 288
+#else
+# error "The current value of OPLSOURCE isn't supported! Check config.h."
 #endif
 
 /* Schismtracker output buffer works in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]
@@ -78,9 +78,9 @@ static const int oplbase = 0x388;
 
 // OPL info
 static struct OPL* opl = NULL;
-static UINT32 oplretval = 0,
+static uint32_t oplretval = 0,
 	   oplregno = 0;
-static UINT32 fm_active = 0;
+static uint32_t fm_active = 0;
 
 extern int fnumToMilliHertz(unsigned int fnum, unsigned int block,
 	unsigned int conversionFactor);

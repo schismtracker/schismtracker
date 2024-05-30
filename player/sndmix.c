@@ -1073,9 +1073,9 @@ int csf_read_note(song_t *csf)
 	// Checking end of row ?
 	if (csf->flags & SONG_PAUSED) {
 		if (!csf->current_speed)
-			csf->current_speed = csf->initial_speed ?: 6;
+			csf->current_speed = csf->initial_speed ? csf->initial_speed : 6;
 		if (!csf->current_tempo)
-			csf->current_tempo = csf->initial_tempo ?: 125;
+			csf->current_tempo = csf->initial_tempo ? csf->initial_speed : 125;
 
 		csf->flags &= ~SONG_FIRSTTICK;
 

@@ -63,7 +63,7 @@ static int message_extfont = 1;
 /* --------------------------------------------------------------------- */
 
 static int message_handle_key_editmode(struct key_event * k);
-static int message_handle_text_input_editmode(const char* text);
+static int message_handle_text_input_editmode(const uint8_t* text);
 static int message_handle_key_viewmode(struct key_event * k);
 
 /* --------------------------------------------------------------------- */
@@ -473,7 +473,7 @@ static int message_handle_key_viewmode(struct key_event * k)
 		}
 	}
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_UP:
 		if (k->state == KEY_RELEASE)
 			return 0;
@@ -552,17 +552,13 @@ static void _delete_selection(void)
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
-static int message_handle_text_input_editmode(const char* text) {
-	int modkey = SDL_GetModState();
-	if (modkey & KMOD_CTRL || modkey & KMOD_ALT)
-		return 0;
+static int message_handle_text_input_editmode(const uint8_t* text) {
+	if (clippy_owner(CLIPPY_SELECT) == widgets_message)
+		_delete_selection();
 
-	for (; *text; text++) {
-		if (clippy_owner(CLIPPY_SELECT) == widgets_message)
-			_delete_selection();
-
+	for (; *text; text++)
 		message_insert_char(*text);
-	}
+
 	return 1;
 }
 
@@ -604,7 +600,7 @@ static int message_handle_key_editmode(struct key_event * k)
 	line_len = get_nth_line(current_song->message, cursor_line, &ptr);
 
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_UP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
@@ -678,7 +674,7 @@ static int message_handle_key_editmode(struct key_event * k)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->sym.sym && clippy_owner(CLIPPY_SELECT) == widgets_message) {
+		if (k->sym && clippy_owner(CLIPPY_SELECT) == widgets_message) {
 			_delete_selection();
 		} else {
 			message_delete_char();
@@ -715,10 +711,10 @@ static int message_handle_key_editmode(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 1;
 
-			if (k->sym.sym == SDLK_t) {
+			if (k->sym == SDLK_t) {
 				message_extfont = !message_extfont;
 				break;
-			} else if (k->sym.sym == SDLK_y) {
+			} else if (k->sym == SDLK_y) {
 				clippy_select(NULL, NULL, 0);
 				message_delete_line();
 				break;
@@ -727,10 +723,15 @@ static int message_handle_key_editmode(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 1;
 
-			if (k->sym.sym == SDLK_c) {
+			if (k->sym == SDLK_c) {
 				prompt_message_clear();
 				return 1;
 			}
+		} else if (k->mouse == MOUSE_NONE) {
+			if (k->text)
+				return message_handle_text_input_editmode(k->text);
+
+			return 0;
 		}
 
 		if (k->mouse != MOUSE_CLICK)

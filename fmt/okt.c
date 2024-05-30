@@ -21,7 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
 #include "headers.h"
 #include "slurp.h"
 #include "fmt.h"
@@ -284,7 +283,8 @@ static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 						break;
 					}
 					// 0x40 is set volume -- fall through
-				case 0 ... 3:
+				case 0: case 1:
+				case 2: case 3:
 					note->voleffect = VOLFX_VOLUME;
 					note->volparam = note->param;
 					note->effect = FX_NONE;

@@ -44,42 +44,43 @@
 # define CLAMP(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
 #endif
 
-#ifdef __GNUC__
-# ifndef LIKELY
-#  define LIKELY(x) __builtin_expect(!!(x),1)
-# endif
-# ifndef UNLIKELY
-#  define UNLIKELY(x) __builtin_expect(!!(x),0)
-# endif
-# ifndef UNUSED
+#if defined(__has_attribute)
+# if __has_attribute (unused)
 #  define UNUSED __attribute__((unused))
 # endif
-# ifndef PACKED
+# if __has_attribute (packed)
 #  define PACKED __attribute__((packed))
 # endif
-# ifndef MALLOC
-#  define MALLOC __attribute__ ((malloc))
-# endif
-#else
-# ifndef UNUSED
-#  define UNUSED
-# endif
-# ifndef PACKED
-#  define PACKED
-# endif
-# ifndef LIKELY
-#  define LIKELY(x)
-# endif
-# ifndef UNLIKELY
-#  define UNLIKELY(x)
-# endif
-# ifndef MALLOC
-#  define MALLOC
+# if __has_attribute (packed)
+#  define MALLOC __attribute__((malloc))
 # endif
 #endif
 
+#if defined(__has_builtin)
+# if __has_builtin (__builtin_expect)
+#  define LIKELY(x)   __builtin_expect(!!(x), 1)
+#  define UNLIKELY(x) __builtin_expect(!(x),  1)
+# endif
+#endif
+
+#ifndef LIKELY
+# define LIKELY(x) (x)
+#endif
+#ifndef UNLIKELY
+# define UNLIKELY(x) (x)
+#endif
+#ifndef UNUSED
+# define UNUSED
+#endif
+#ifndef PACKED
+# define PACKED
+#endif
+#ifndef MALLOC
+# define MALLOC
+#endif
+
 /* Path stuff that differs by platform */
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 # define DIR_SEPARATOR '\\'
 # define DIR_SEPARATOR_STR "\\"
 # define IS_DIR_SEPARATOR(c) ((c) == '/' || (c) == '\\')
@@ -171,31 +172,32 @@ char *str_concat(const char *s, ...);
 /* filesystem */
 int make_backup_file(const char *filename, int numbered);
 unsigned long long file_size(const char *filename);
+int is_file(const char *filename);
 int is_directory(const char *filename);
 /* following functions should free() the resulting strings */
 char *get_home_directory(void); /* "default" directory for user files, i.e. $HOME, My Documents, etc. */
 char *get_dot_directory(void); /* where settings files go (%AppData% on Windows, same as $HOME elsewhere) */
 char *get_current_directory(void); /* just a getcwd() wrapper */
 
-/* windows sucks */
-int utf8_to_wchar(wchar_t** wchar, const char* utf8);
-int wchar_to_utf8(char** utf8, const wchar_t* wchar);
-
 /* wrappers around functions for Unicode support */
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 #include <stdio.h> /* FILE */
 int win32_open(const char* path, int flags);
 int win32_wstat(const wchar_t* path, struct stat* st);
 int win32_stat(const char* path, struct stat* st);
 int win32_mktemp(char* template, size_t size);
+int win32_mkdir(const char* path, mode_t mode);
 FILE* win32_fopen(const char* path, const char* flags);
+# define win32_wmkdir(path, mode) _wmkdir(path)
 # define os_fopen win32_fopen
 # define os_stat  win32_stat
 # define os_open  win32_open
+# define os_mkdir win32_mkdir
 #else
 # define os_fopen fopen
 # define os_stat  stat
 # define os_open  open
+# define os_mkdir mkdir
 #endif
 
 void put_env_var(const char *key, const char *value);

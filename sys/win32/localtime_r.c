@@ -20,7 +20,6 @@
  * (Modified slightly to build with Schism Tracker)
  */
 
-#define NEED_TIME
 #include "headers.h"
 
 #include <windows.h>

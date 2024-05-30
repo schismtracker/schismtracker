@@ -21,9 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef USE_FLAC
-#include <FLAC/stream_decoder.h>
-#define NEED_BYTESWAP
 #include "headers.h"
 #include "fmt.h"
 #include "it.h"
@@ -31,6 +28,10 @@
 #include "sndfile.h"
 #include "log.h"
 #include "util.h"
+
+#include <FLAC/stream_decoder.h>
+#include <FLAC/stream_encoder.h>
+
 #include <stdint.h>
 
 struct flac_file {
@@ -74,7 +75,7 @@ static void on_meta(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetada
 				const char *tag = (const char*)metadata->data.vorbis_comment.comments[i].entry;
 				const FLAC__uint32 length = metadata->data.vorbis_comment.comments[i].length;
 
-				if (length > 6 && !strncasecmp(tag, "TITLE=", 6) && flac_file->flags.name)
+				if (length > 6 && !strncasecmp(tag, "TITLE=", 6))
 					strncpy(flac_file->flags.name, tag + 6, 32);
 				else if (length > 11 && !strncasecmp(tag, "SAMPLERATE=", 11))
 					flac_file->flags.sample_rate = strtol(tag + 11, NULL, 10);
@@ -188,35 +189,29 @@ static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decode
 		block_size = samples_allocated - flac_file->uncompressed.samples_decoded;
 
 	if (flac_file->streaminfo.bits_per_sample <= 8) {
-		int8_t* buf_ptr = flac_file->uncompressed.data + flac_file->uncompressed.samples_decoded;
+		int8_t* buf_ptr = (int8_t*)flac_file->uncompressed.data + flac_file->uncompressed.samples_decoded;
 		uint32_t bit_shift = 8 - flac_file->streaminfo.bits_per_sample;
 
-		size_t i, j;
-		for (i = 0, j = 0; i < block_size; j++) {
-			buf_ptr[i++] = (int8_t)(buffer[0][j] << bit_shift);
-			if (flac_file->streaminfo.channels == 2)
-				buf_ptr[i++] = (int8_t)(buffer[1][j] << bit_shift);
-		}
+		size_t i, j, c;
+		for (i = 0, j = 0; i < block_size; j++)
+			for (c = 0; c < flac_file->streaminfo.channels; c++)
+				buf_ptr[i++] = buffer[c][j] << bit_shift;
 	} else if (flac_file->streaminfo.bits_per_sample <= 16) {
 		int16_t* buf_ptr = (int16_t*)flac_file->uncompressed.data + flac_file->uncompressed.samples_decoded;
 		uint32_t bit_shift = 16 - flac_file->streaminfo.bits_per_sample;
 
-		size_t i, j;
-		for (i = 0, j = 0; i < block_size; j++) {
-			buf_ptr[i++] = buffer[0][j] << bit_shift;
-			if (flac_file->streaminfo.channels == 2)
-				buf_ptr[i++] = buffer[1][j] << bit_shift;
-		}
+		size_t i, j, c;
+		for (i = 0, j = 0; i < block_size; j++)
+			for (c = 0; c < flac_file->streaminfo.channels; c++)
+				buf_ptr[i++] = buffer[c][j] << bit_shift;
 	} else { /* >= 16 */
 		int16_t* buf_ptr = (int16_t*)flac_file->uncompressed.data + flac_file->uncompressed.samples_decoded;
 		uint32_t bit_shift = flac_file->streaminfo.bits_per_sample - 16;
 
-		size_t i, j;
-		for (i = 0, j = 0; i < block_size; j++) {
-			buf_ptr[i++] = buffer[0][j] >> bit_shift;
-			if (flac_file->streaminfo.channels == 2)
-				buf_ptr[i++] = buffer[1][j] >> bit_shift;
-		}
+		size_t i, j, c;
+		for (i = 0, j = 0; i < block_size; j++)
+			for (c = 0; c < flac_file->streaminfo.channels; c++)
+				buf_ptr[i++] = buffer[c][j] >> bit_shift;
 	}
 
 	flac_file->uncompressed.samples_decoded += block_size;
@@ -353,4 +348,174 @@ int fmt_flac_read_info(dmoz_file_t *file, const uint8_t *data, size_t len)
 
 	return 1;
 }
-#endif
+
+/* ------------------------------------------------------------------------ */
+/* Now onto the writing stuff */
+
+struct flac_writedata {
+	FLAC__StreamEncoder *encoder;
+
+	int bits;
+	int channels;
+};
+
+static FLAC__StreamEncoderWriteStatus write_on_write(const FLAC__StreamEncoder *encoder, const FLAC__byte buffer[],
+	size_t bytes, uint32_t samples, uint32_t current_frame, void *client_data) {
+	disko_t* fp = (disko_t*)client_data;
+
+	disko_write(fp, buffer, bytes);
+	return FLAC__STREAM_ENCODER_WRITE_STATUS_OK;
+}
+
+static FLAC__StreamEncoderSeekStatus write_on_seek(const FLAC__StreamEncoder *encoder, FLAC__uint64 absolute_byte_offset, void *client_data) {
+	disko_t* fp = (disko_t*)client_data;
+
+	disko_seek(fp, absolute_byte_offset, SEEK_SET);
+	return FLAC__STREAM_ENCODER_SEEK_STATUS_OK;
+}
+
+static FLAC__StreamEncoderTellStatus write_on_tell(const FLAC__StreamEncoder *encoder, FLAC__uint64 *absolute_byte_offset, void *client_data) {
+	disko_t* fp = (disko_t*)client_data;
+
+	long b = disko_tell(fp);
+	if (b < 0)
+		return FLAC__STREAM_ENCODER_TELL_STATUS_ERROR;
+
+	if (absolute_byte_offset) *absolute_byte_offset = (FLAC__uint64)b;
+	return FLAC__STREAM_ENCODER_TELL_STATUS_OK;
+}
+
+static int flac_save_init(disko_t *fp, int bits, int channels, int rate, int estimate_num_samples)
+{
+	struct flac_writedata *fwd = malloc(sizeof(*fwd));
+	if (!fwd)
+		return -8;
+
+	fwd->channels = channels;
+	fwd->bits = bits;
+
+	fwd->encoder = FLAC__stream_encoder_new();
+	if (!fwd->encoder)
+		return -1;
+
+	if (!FLAC__stream_encoder_set_channels(fwd->encoder, channels))
+		return -2;
+
+	if (!FLAC__stream_encoder_set_bits_per_sample(fwd->encoder, bits))
+		return -3;
+
+	if (rate > FLAC__MAX_SAMPLE_RATE)
+		rate = FLAC__MAX_SAMPLE_RATE;
+
+	// FLAC only supports 10 Hz granularity for frequencies above 65535 Hz if the streamable subset is chosen, and only a maximum frequency of 655350 Hz.
+	if (!FLAC__format_sample_rate_is_subset(rate))
+		FLAC__stream_encoder_set_streamable_subset(fwd->encoder, false);
+
+	if (!FLAC__stream_encoder_set_sample_rate(fwd->encoder, rate))
+		return -4;
+
+	if (!FLAC__stream_encoder_set_compression_level(fwd->encoder, 5))
+		return -5;
+
+	if (!FLAC__stream_encoder_set_total_samples_estimate(fwd->encoder, estimate_num_samples))
+		return -6;
+
+	if (!FLAC__stream_encoder_set_verify(fwd->encoder, false))
+		return -7;
+
+	FLAC__StreamEncoderInitStatus init_status = FLAC__stream_encoder_init_stream(
+		fwd->encoder,
+		write_on_write,
+		write_on_seek,
+		write_on_tell,
+		NULL,
+		fp
+	);
+
+	if (init_status != FLAC__STREAM_ENCODER_INIT_STATUS_OK) {
+		log_appendf(4, "ERROR: initializing FLAC encoder: %s\n", FLAC__StreamEncoderInitStatusString[init_status]);
+		fprintf(stderr, "ERROR: initializing FLAC encoder: %s\n", FLAC__StreamEncoderInitStatusString[init_status]);
+		return -8;
+	}
+
+	fp->userdata = fwd;
+
+	return 0;
+}
+
+int fmt_flac_export_head(disko_t *fp, int bits, int channels, int rate)
+{
+	if (flac_save_init(fp, bits, channels, rate, 0))
+		return DW_ERROR;
+
+	return DW_OK;
+}
+
+int fmt_flac_export_body(disko_t *fp, const uint8_t *data, size_t length)
+{
+	struct flac_writedata *fwd = fp->userdata;
+	const int bytes_per_sample = (fwd->bits / 8);
+
+	FLAC__int32 pcm[length / bytes_per_sample];
+
+	/* 8-bit/16-bit PCM -> 32-bit PCM */
+	size_t i;
+	for (i = 0; i < length / bytes_per_sample; i++) {
+		if (bytes_per_sample == 2)
+			pcm[i] = (FLAC__int32)(((const int16_t*)data)[i]);
+		else if (bytes_per_sample == 1)
+			pcm[i] = (FLAC__int32)(((const int8_t*)data)[i]);
+		else
+			return DW_ERROR;
+	}
+
+	if (!FLAC__stream_encoder_process_interleaved(fwd->encoder, pcm, length / (bytes_per_sample * fwd->channels)))
+		return DW_ERROR;
+
+	return DW_OK;
+}
+
+int fmt_flac_export_silence(disko_t *fp, long bytes)
+{
+	/* actually have to generate silence here */
+	uint8_t silence[bytes];
+	memset(silence, 0, sizeof(silence));
+
+	return fmt_flac_export_body(fp, silence, bytes);
+}
+
+int fmt_flac_export_tail(disko_t *fp)
+{
+	struct flac_writedata *fwd = fp->userdata;
+
+	FLAC__stream_encoder_finish(fwd->encoder);
+	FLAC__stream_encoder_delete(fwd->encoder);
+
+	free(fwd);
+
+	return DW_OK;
+}
+
+/* need this because convering huge buffers in memory is KIND OF bad.
+ * currently this is the same size as */
+#define SAMPLE_BUFFER_LENGTH 65536
+
+int fmt_flac_save_sample(disko_t *fp, song_sample_t *smp)
+{
+	/* I'm assuming this is supposed to block... */
+	if (flac_save_init(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1, smp->c5speed, smp->length))
+		return SAVE_INTERNAL_ERROR;
+
+	/* need to buffer this or else we'll make a HUGE array when
+	 * saving huge samples */
+	size_t offset;
+	size_t total_bytes = smp->length * ((smp->flags & CHN_16BIT) ? 2 : 1) * ((smp->flags & CHN_STEREO) ? 2 : 1);
+	for (offset = 0; offset < total_bytes; offset += SAMPLE_BUFFER_LENGTH) {
+		size_t needed = total_bytes - offset;
+		fmt_flac_export_body(fp, (uint8_t*)smp->data + offset, MIN(needed, SAMPLE_BUFFER_LENGTH));
+	}
+
+	fmt_flac_export_tail(fp);
+
+	return SAVE_SUCCESS;
+}

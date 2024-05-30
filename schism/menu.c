@@ -37,7 +37,7 @@
 #ifndef NDEBUG
 # define ENSURE_MENU(q) do {\
 	if ((status.dialog_type & DIALOG_MENU) == 0) {\
-		fprintf(stderr, "%s called with no menu\n", __FUNCTION__);\
+		fprintf(stderr, "%s called with no menu\n", __func__);\
 		q;\
 	}\
 } while(0)
@@ -479,7 +479,7 @@ int menu_handle_key(struct key_event *k)
 		return 1;
 	}
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_ESCAPE:
 		if (k->state == KEY_RELEASE)
 			return 1;

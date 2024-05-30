@@ -36,7 +36,7 @@
  * if a dialog is not active. */
 #ifndef NDEBUG
 # define ENSURE_DIALOG(q) do { if (!(status.dialog_type & DIALOG_BOX)) { \
-		fprintf(stderr, "%s called with no dialog\n", __FUNCTION__);\
+		fprintf(stderr, "%s called with no dialog\n", __func__);\
 		q; \
 	} \
 } while(0)
@@ -190,7 +190,7 @@ int dialog_handle_key(struct key_event * k)
 
 	/* this SHOULD be handling on k->state press but the widget key handler is stealing that key. */
 	if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod)) {
-		switch (k->sym.sym) {
+		switch (k->sym) {
 		case SDLK_y:
 			switch (status.dialog_type) {
 			case DIALOG_YES_NO:
@@ -476,7 +476,6 @@ void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue)
 	create_textentry(numprompt_widgets + 0, entryx, y, 4, 0, 0, 0, NULL, numprompt_buf, 3);
 	numprompt_widgets[0].activate = numprompt_value;
 	numprompt_widgets[0].d.textentry.cursor_pos = initvalue ? 1 : 0;
-	SDL_StopTextInput();
 	numprompt_finish = finish;
 	dialog_create_custom(dlgx, y - 2, dlgwidth, 5, numprompt_widgets, 1, 0, numprompt_draw_const, NULL);
 }
@@ -491,12 +490,16 @@ static int strtonum99(const char *s)
 	if (s[1]) {
 		// two chars
 		int c = tolower(*s);
-		switch (c) {
-			case '0' ... '9': n = c - '0'; break;
-			case 'a' ... 'g': n = c - 'a' + 10; break;
-			case 'h' ... 'z': n = c - 'h' + 10; break;
-			default: return -1;
-		}
+
+		if (c >= '0' && c <= '9')
+			n = c - '0';
+		else if (c >= 'a' && c <= 'g')
+			n = c - 'a' + 10;
+		else if (c >= 'h' && c <= 'z')
+			n = c - 'h' + 10;
+		else
+			return -1;
+
 		n *= 10;
 		s++;
 	}

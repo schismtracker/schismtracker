@@ -27,7 +27,7 @@
 
 #include "util.h"
 
-#ifdef MACOSX
+#ifdef SCHISM_MACOSX
 
 #include <CoreServices/CoreServices.h>
 #include <CoreMIDI/MIDIServices.h>
@@ -37,15 +37,13 @@ static MIDIClientRef    client = 0;
 static MIDIPortRef      portIn = 0;
 static MIDIPortRef      portOut = 0;
 
-static int max_outputs = 0;
-static int max_inputs = 0;
-
 struct macosx_midi {
-	char *name;
 	MIDIEndpointRef ep;
 	unsigned char packet[1024];
 	MIDIPacketList *pl;
 	MIDIPacket *x;
+
+	int mark; /* used in polling */
 };
 
 static void readProc(const MIDIPacketList *np, UNUSED void *rc, void *crc)
@@ -67,17 +65,15 @@ static void readProc(const MIDIPacketList *np, UNUSED void *rc, void *crc)
 static void _macosx_send(struct midi_port *p, const unsigned char *data,
 				unsigned int len, unsigned int delay)
 {
-	struct macosx_midi *m;
+	struct macosx_midi *m = (struct macosx_midi *)p->userdata;
 
-	m = (struct macosx_midi *)p->userdata;
-	if (!m->x) {
+	if (!m->x)
 		m->x = MIDIPacketListInit(m->pl);
-	}
 
 	/* msec to nsec? */
 	m->x = MIDIPacketListAdd(m->pl, sizeof(m->packet),
 			m->x, (MIDITimeStamp)AudioConvertNanosToHostTime(
-			AudioConvertHostTimeToNanos(AudioGetCurrentHostTime()) + (1000000*delay)),
+			AudioConvertHostTimeToNanos(AudioGetCurrentHostTime()) + (1000000 * delay)),
 			len, data);
 }
 static void _macosx_drain(struct midi_port *p)
@@ -92,22 +88,17 @@ static void _macosx_drain(struct midi_port *p)
 }
 
 /* lifted from portmidi */
-static char *get_ep_name(MIDIEndpointRef ep)
+static void get_ep_name(MIDIEndpointRef ep, char* buf, size_t buf_len)
 {
 	MIDIEntityRef entity;
 	MIDIDeviceRef device;
 	CFStringRef endpointName = NULL, deviceName = NULL, fullName = NULL;
-	CFStringEncoding defaultEncoding;
-	char* newName;
-
-	/* get the default string encoding */
-	defaultEncoding = CFStringGetSystemEncoding();
 
 	/* get the entity and device info */
 	MIDIEndpointGetEntity(ep, &entity);
 	MIDIEntityGetDevice(entity, &device);
 
-	/* create the nicely formated name */
+	/* create the nicely formatted name */
 	MIDIObjectGetStringProperty(ep, kMIDIPropertyName, &endpointName);
 	MIDIObjectGetStringProperty(device, kMIDIPropertyName, &deviceName);
 	if (deviceName != NULL) {
@@ -117,15 +108,11 @@ static char *get_ep_name(MIDIEndpointRef ep)
 		fullName = endpointName;
 	}
 
-	/* copy the string into our buffer */
-	newName = (char*)mem_alloc(CFStringGetLength(fullName) + 1);
-	CFStringGetCString(fullName, newName, CFStringGetLength(fullName) + 1,
-			defaultEncoding);
+	/* copy the string into our buffer as DOS Latin US (CP437) */
+	CFStringGetCString(fullName, buf, buf_len, kCFStringEncodingDOSLatinUS);
 
 	/* clean up */
 	if (fullName && !deviceName) CFRelease(fullName);
-
-	return newName;
 }
 
 static int _macosx_start(struct midi_port *p)
@@ -155,38 +142,85 @@ static int _macosx_stop(struct midi_port *p)
 	return 1;
 }
 
+static struct midi_port* _macosx_find_port(struct midi_provider* p, MIDIEndpointRef ep, int inout) {
+	struct macosx_midi* m;
+	struct midi_port* ptr = NULL;
+
+	while (midi_port_foreach(p, &ptr)) {
+		m = (struct macosx_midi*)ptr->userdata;
+		if (m->ep == ep && ptr->iocap == inout)
+			return ptr;
+	}
+
+	return NULL;
+}
+
+static void _macosx_add_port(struct midi_provider *p, MIDIEndpointRef ep, int inout) {
+	struct macosx_midi* m;
+	struct midi_port* ptr;
+
+	ptr = NULL;
+	while (midi_port_foreach(p, &ptr)) {
+		m = (struct macosx_midi*)ptr->userdata;
+		if (m->ep == ep && ptr->iocap == inout) {
+			m->mark = 1;
+			return;
+		}
+	}
+
+	m = mem_alloc(sizeof(struct macosx_midi));
+	m->ep = ep;
+	m->mark = 1;
+
+	/* 55 is the maximum size for the MIDI page */
+	char name[55];
+	get_ep_name(m->ep, name, 55);
+
+	midi_port_register(p, inout, name, m, 1);
+}
+
 static void _macosx_poll(struct midi_provider *p)
 {
-	struct macosx_midi *data;
+	struct midi_port* ptr;
+	struct macosx_midi* m;
 	MIDIEndpointRef ep;
-	int i;
+	ItemCount i;
 
-	int num_out, num_in;
+	ItemCount num_out, num_in;
 
 	num_out = MIDIGetNumberOfDestinations();
 	num_in = MIDIGetNumberOfSources();
 
-	for (i = max_outputs; i < num_out; i++) {
+	if (!num_out || !num_in)
+		return;
+
+	ptr = NULL;
+	while (midi_port_foreach(p, &ptr)) {
+		m = (struct macosx_midi*)ptr->userdata;
+		m->mark = 0;
+	}
+
+	for (i = 0; i < num_out; i++) {
 		ep = MIDIGetDestination(i);
-		if (!ep) continue;
-		data = mem_alloc(sizeof(struct macosx_midi));
-		memcpy(&data->ep, &ep, sizeof(ep));
-		data->name = get_ep_name(ep);
-		midi_port_register(p, MIDI_OUTPUT, data->name, data, 1);
+		if (!ep)
+			continue;
+
+		_macosx_add_port(p, ep, MIDI_OUTPUT);
 	}
-	max_outputs = i;
 
-
-	for (i = max_inputs; i < num_in; i++) {
+	for (i = 0; i < num_in; i++) {
 		ep = MIDIGetSource(i);
-		if (!ep) continue;
-		data = mem_alloc(sizeof(struct macosx_midi));
-		memcpy(&data->ep, &ep, sizeof(ep));
-		data->name = get_ep_name(ep);
-		midi_port_register(p, MIDI_INPUT, data->name, data, 1);
-	}
-	max_inputs = i;
+		if (!ep)
+			continue;
 
+		_macosx_add_port(p, ep, MIDI_INPUT);
+	}
+
+	ptr = NULL;
+	while (midi_port_foreach(p, &ptr)) {
+		m = (struct macosx_midi*)ptr->userdata;
+		if (!m->mark) midi_port_unregister(ptr->num);
+	}
 }
 
 int macosx_midi_setup(void)
@@ -202,15 +236,14 @@ int macosx_midi_setup(void)
 	driver.send = _macosx_send;
 	driver.drain = _macosx_drain;
 
-	if (MIDIClientCreate(CFSTR("Schism Tracker"), NULL, NULL, &client) != noErr) {
+	if (MIDIClientCreate(CFSTR("Schism Tracker"), NULL, NULL, &client) != noErr)
 		return 0;
-	}
-	if (MIDIInputPortCreate(client, CFSTR("Input port"), readProc, NULL, &portIn) != noErr) {
+
+	if (MIDIInputPortCreate(client, CFSTR("Input port"), readProc, NULL, &portIn) != noErr)
 		return 0;
-	}
-	if (MIDIOutputPortCreate(client, CFSTR("Output port"), &portOut) != noErr) {
+
+	if (MIDIOutputPortCreate(client, CFSTR("Output port"), &portOut) != noErr)
 		return 0;
-	}
 
 	if (!midi_provider_register("Mac OS X", &driver)) return 0;
 

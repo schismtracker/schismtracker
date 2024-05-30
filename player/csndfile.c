@@ -21,8 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
-#define NEED_TIME
 #include "headers.h"
 
 #include <math.h>
@@ -187,20 +185,19 @@ void csf_free_pattern(void *pat)
 	free(pat);
 }
 
-/* Note: this function will appear in valgrind to be a sieve for memory leaks.
-It isn't; it's just being confused by the adjusted pointer being stored. */
 signed char *csf_allocate_sample(uint32_t nbytes)
 {
-	signed char *p = mem_calloc(1, (nbytes + 39) & ~7); // magic
-	if (p)
-		p += 16;
-	return p;
+	/* Sinc interpolation can look forwards or backwards
+	 * 4 samples; the maximum sample size for Schism is
+	 * 4 bytes per sample (16-bit stereo, 2 * 2). 4 * 4 = 16,
+	 * so allocate 16 extra bytes before and after the buffer */
+	return (signed char*)mem_calloc(1, nbytes + 32) + 16;
 }
 
 void csf_free_sample(void *p)
 {
 	if (p)
-		free(p - 16);
+		free((signed char*)p - 16);
 }
 
 void csf_forget_history(song_t *csf)
@@ -538,7 +535,7 @@ void csf_loop_pattern(song_t *csf, int pat, int row)
 /* --------------------------------------------------------------------------------------------------------- */
 
 #define SF_FAIL(name, n) \
-	({ log_appendf(4, "%s: internal error: unsupported %s %d", __FUNCTION__, name, n); return 0; })
+	do { log_appendf(4, "%s: internal error: unsupported %s %d", __func__, name, n); return 0; } while (0);
 
 uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, uint32_t maxlengthmask)
 {

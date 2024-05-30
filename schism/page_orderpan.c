@@ -299,7 +299,7 @@ static void orderlist_reorder(void)
 {
 	/* err, I hope this is going to be done correctly...
 	*/
-	song_note_t *np[256] = {};
+	song_note_t *np[256] = {0};
 	int nplen[256];
 	unsigned char mapol[256];
 	int i, j;
@@ -392,13 +392,12 @@ static int orderlist_handle_char(char sym)
 	return 1;
 }
 
-static int orderlist_handle_text_input_on_list(const char* text) {
-	int modkey = SDL_GetModState(), success = 0;
+static int orderlist_handle_text_input_on_list(const uint8_t* text) {
+	int success = 0;
 
-	if (!(modkey & (KMOD_CTRL | KMOD_ALT)))
-		for (; *text; text++)
-			if (!orderlist_handle_char(*text))
-				success = 1;
+	for (; *text; text++)
+		if (!orderlist_handle_char(*text))
+			success = 1;
 
 	return success;
 }
@@ -433,7 +432,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		}
 	}
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_BACKSPACE:
 		if (status.flags & CLASSIC_MODE) return 0;
 		if (!(k->mod & KMOD_ALT)) return 0;
@@ -655,7 +654,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_pattern_to_sample(current_song->orderlist[current_order],
-				!!(k->mod & KMOD_SHIFT), !!(k->sym.sym == SDLK_b));
+				!!(k->mod & KMOD_SHIFT), !!(k->sym == SDLK_b));
 		return 1;
 
 	case SDLK_LESS:
@@ -676,11 +675,13 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		sample_set(sample_get_current()+1);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	default: {
-		if (kbd_char_to_hex(k) == -1)
+	default:
+		if (k->mouse == MOUSE_NONE) {
+			if (!(k->mod & (KMOD_CTRL | KMOD_ALT)) && k->text)
+				return orderlist_handle_text_input_on_list(k->text);
+
 			return 0;
-		return 1;
-	}
+		}
 	}
 
 	if (new_cursor_pos < 0)
@@ -842,7 +843,7 @@ static void order_pan_vol_handle_key(struct key_event * k)
 	if (!NO_MODIFIER(k->mod))
 		return;
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_PAGEDOWN:
 		n += 8;
 		break;
@@ -867,7 +868,7 @@ static int order_pre_key(struct key_event *k)
 			= ACTIVE_PAGE.selected_widget;
 	}
 
-	if (k->sym.sym == SDLK_F7) {
+	if (k->sym == SDLK_F7) {
 		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;

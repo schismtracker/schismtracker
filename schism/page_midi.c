@@ -21,7 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_TIME
 #include "headers.h"
 
 #include "it.h"
@@ -154,7 +153,7 @@ static int midi_page_handle_key(struct key_event * k)
 		}
 	}
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_SPACE:
 		if (k->state == KEY_PRESS)
 			return 1;
@@ -162,13 +161,9 @@ static int midi_page_handle_key(struct key_event * k)
 		return 1;
 	case SDLK_PAGEUP:
 		new_port -= 13;
-		if (new_port < 0) new_port = 0;
 		break;
 	case SDLK_PAGEDOWN:
 		new_port += 13;
-		if (new_port >= midi_engine_port_count()) {
-			new_port = midi_engine_port_count() - 1;
-		}
 		break;
 	case SDLK_HOME:
 		new_port = 0;
@@ -196,12 +191,8 @@ static int midi_page_handle_key(struct key_event * k)
 		return 0;
 
 	if (new_port != current_port) {
-		if (new_port < 0 || new_port >= midi_engine_port_count()) {
-			new_port = current_port;
-			if (k->sym.sym == SDLK_DOWN) {
-				change_focus_to(1);
-			}
-		}
+		int sz = midi_engine_port_count() - 1;
+		new_port = CLAMP(new_port, 0, sz);
 
 		current_port = new_port;
 		if (current_port < top_midi_port)
@@ -249,24 +240,32 @@ static void midi_page_redraw(void)
 
 static void midi_page_draw_portlist(void)
 {
+	/* XXX this can become outdated with the midi code; it can
+	 * and will overflow */
 	struct midi_port *p;
 	const char *name, *state;
 	char buffer[64];
 	int i, n, ct, fg, bg;
 	unsigned long j;
-	time_t now;
+	time_t now = time(NULL);
 
 	draw_fill_chars(3, 15, 76, 28, 0);
-	draw_text("Midi ports:", 2, 13, 0, 2);
+	draw_text("MIDI ports:", 2, 13, 0, 2);
 	draw_box(2,14,77,28, BOX_THIN|BOX_INNER|BOX_INSET);
 
-	time(&now);
-	if ((now - last_midi_poll) > 10) {
+	if (difftime(now, last_midi_poll) > 10.0) {
 		last_midi_poll = now;
 		midi_engine_poll_ports();
 	}
 
 	ct = midi_engine_port_count();
+
+	/* make sure this stuff doesn't overflow! */
+	if (ct > 13 && top_midi_port + 13 >= ct)
+		top_midi_port = ct - 13;
+
+	current_port = MIN(current_port, ct - 1);
+
 	for (i = 0; i < 13; i++) {
 		draw_char(168, 12, i + 15, 2, 0);
 
@@ -284,9 +283,8 @@ static void midi_page_draw_portlist(void)
 		}
 		draw_text_len(name, 64, 13, 15+i, 5, 0);
 
-		/* portability: should use difftime */
 		if (status.flags & MIDI_EVENT_CHANGED
-		    && (time(NULL) - status.last_midi_time) < 3
+		    && difftime(now, status.last_midi_time) < 3.0
 		    && ((!status.last_midi_port && p->io & MIDI_OUTPUT)
 		    || p == status.last_midi_port)) {
 			for (j = n = 0; j < 21 && j < status.last_midi_len; j++) { /* 21 is approx 64/3 */
@@ -312,7 +310,7 @@ static void midi_page_draw_portlist(void)
 
 void midi_load_page(struct page *page)
 {
-	page->title = "Midi Screen (Shift-F1)";
+	page->title = "MIDI Screen (Shift-F1)";
 	page->draw_const = midi_page_redraw;
 	page->song_changed_cb = NULL;
 	page->predraw_hook = NULL;

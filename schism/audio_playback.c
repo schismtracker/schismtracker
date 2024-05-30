@@ -51,12 +51,12 @@
 // Default audio configuration
 // (XXX: Can DEF_SAMPLE_RATE be defined to 48000 everywhere?
 // Does any sound card NOT support 48khz decently nowadays?)
-#ifdef GEKKO
+#ifdef SCHISM_WII
 # define DEF_SAMPLE_RATE 48000
 #else
 # define DEF_SAMPLE_RATE 44100
 #endif
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 # define DEF_BUFFER_SIZE 2048
 #else
 # define DEF_BUFFER_SIZE 1024

@@ -20,7 +20,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#define NEED_BYTESWAP
 
 #include "headers.h"
 #include "fmt.h"
@@ -29,7 +28,7 @@
 #include "song.h"
 #include "log.h"
 
-#ifndef WIN32
+#ifndef SCHISM_WIN32
 #endif
 
 #include "it_defs.h"

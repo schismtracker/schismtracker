@@ -129,7 +129,7 @@ int get_effect_number(char effect)
 int kbd_get_effect_number(struct key_event *k)
 {
 	if (!NO_CAM_MODS(k->mod)) return -1;
-	switch (k->sym.sym) {
+	switch (k->sym) {
 #define QZA(n) case SDLK_ ## n : return get_effect_number(#n [0])
 QZA(a);QZA(b);QZA(c);QZA(d);QZA(e);QZA(f);QZA(g);QZA(h);QZA(i);QZA(j);QZA(k);
 QZA(l);QZA(m);QZA(n);QZA(o);QZA(p);QZA(q);QZA(r);QZA(s);QZA(t);QZA(u);QZA(v);
@@ -159,17 +159,18 @@ QZA(w);QZA(x);QZA(y);QZA(z);
 
 void key_translate(struct key_event *k)
 {
-	k->orig_sym.sym = k->sym.sym;
+	/* FIXME: this assumes a US keyboard layout */
+	k->orig_sym = k->sym;
 	if (k->mod & KMOD_SHIFT) {
-		switch (k->sym.sym) {
-		case SDLK_COMMA: k->sym.sym = SDLK_LESS; break;
-		case SDLK_PERIOD: k->sym.sym = SDLK_GREATER; break;
-		case SDLK_4: k->sym.sym = SDLK_DOLLAR; break;
+		switch (k->sym) {
+		case SDLK_COMMA: k->sym = SDLK_LESS; break;
+		case SDLK_PERIOD: k->sym = SDLK_GREATER; break;
+		case SDLK_4: k->sym = SDLK_DOLLAR; break;
 
-		case SDLK_EQUALS: k->sym.sym = SDLK_PLUS; break;
-		case SDLK_SEMICOLON: k->sym.sym = SDLK_COLON; break;
+		case SDLK_EQUALS: k->sym = SDLK_PLUS; break;
+		case SDLK_SEMICOLON: k->sym = SDLK_COLON; break;
 
-		case SDLK_8: k->sym.sym = SDLK_ASTERISK; break;
+		case SDLK_8: k->sym = SDLK_ASTERISK; break;
 		default:
 			break;
 		};
@@ -184,49 +185,49 @@ void key_translate(struct key_event *k)
 		k->mod = ((k->mod & ~KMOD_MODE) | KMOD_ALT);
 	}
 	if (k->mod & KMOD_NUM) {
-		switch (k->sym.sym) {
-		case SDLK_KP_0: k->sym.sym = SDLK_0; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_1: k->sym.sym = SDLK_1; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_2: k->sym.sym = SDLK_2; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_3: k->sym.sym = SDLK_3; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_4: k->sym.sym = SDLK_4; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_5: k->sym.sym = SDLK_5; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_6: k->sym.sym = SDLK_6; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_7: k->sym.sym = SDLK_7; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_8: k->sym.sym = SDLK_8; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_9: k->sym.sym = SDLK_9; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_PERIOD: k->sym.sym = SDLK_PERIOD; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_DIVIDE: k->sym.sym = SDLK_SLASH; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_MULTIPLY: k->sym.sym = SDLK_ASTERISK; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_MINUS: k->sym.sym = SDLK_MINUS; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_PLUS: k->sym.sym = SDLK_PLUS; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_ENTER: k->sym.sym = SDLK_RETURN; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_EQUALS: k->sym.sym = SDLK_EQUALS; k->mod &= ~KMOD_NUM; break;
+		switch (k->sym) {
+		case SDLK_KP_0: k->sym = SDLK_0; k->mod &= ~KMOD_NUM; break;
+		case SDLK_KP_1: k->sym = SDLK_1; k->mod &= ~KMOD_NUM; break;
+		case SDLK_KP_2: k->sym = SDLK_2; k->mod &= ~KMOD_NUM; break;
+		case SDLK_KP_3: k->sym = SDLK_3; k->mod &= ~KMOD_NUM; break;
+		case SDLK_KP_4: k->sym = SDLK_4; k->mod &= ~KMOD_NUM; break;
+		case SDLK_KP_5: k->sym = SDLK_5; k->mod &= ~KMOD_NUM; break;
+		case SDLK_KP_6: k->sym = SDLK_6; k->mod &= ~KMOD_NUM; break;
+		case SDLK_KP_7: k->sym = SDLK_7; k->mod &= ~KMOD_NUM; break;
+		case SDLK_KP_8: k->sym = SDLK_8; k->mod &= ~KMOD_NUM; break;
+		case SDLK_KP_9: k->sym = SDLK_9; k->mod &= ~KMOD_NUM; break;
+		case SDLK_KP_PERIOD: k->sym = SDLK_PERIOD; k->mod &= ~KMOD_NUM; break;
+		case SDLK_KP_DIVIDE: k->sym = SDLK_SLASH; k->mod &= ~KMOD_NUM; break;
+		case SDLK_KP_MULTIPLY: k->sym = SDLK_ASTERISK; k->mod &= ~KMOD_NUM; break;
+		case SDLK_KP_MINUS: k->sym = SDLK_MINUS; k->mod &= ~KMOD_NUM; break;
+		case SDLK_KP_PLUS: k->sym = SDLK_PLUS; k->mod &= ~KMOD_NUM; break;
+		case SDLK_KP_ENTER: k->sym = SDLK_RETURN; k->mod &= ~KMOD_NUM; break;
+		case SDLK_KP_EQUALS: k->sym = SDLK_EQUALS; k->mod &= ~KMOD_NUM; break;
 		default:
 			break;
 		};
 	} else {
-		switch (k->sym.sym) {
-		case SDLK_KP_0: k->sym.sym = SDLK_INSERT; break;
-		case SDLK_KP_4: k->sym.sym = SDLK_LEFT; break;
-		case SDLK_KP_6: k->sym.sym = SDLK_RIGHT; break;
-		case SDLK_KP_2: k->sym.sym = SDLK_DOWN; break;
-		case SDLK_KP_8: k->sym.sym = SDLK_UP; break;
+		switch (k->sym) {
+		case SDLK_KP_0: k->sym = SDLK_INSERT; break;
+		case SDLK_KP_4: k->sym = SDLK_LEFT; break;
+		case SDLK_KP_6: k->sym = SDLK_RIGHT; break;
+		case SDLK_KP_2: k->sym = SDLK_DOWN; break;
+		case SDLK_KP_8: k->sym = SDLK_UP; break;
 
-		case SDLK_KP_9: k->sym.sym = SDLK_PAGEUP; break;
-		case SDLK_KP_3: k->sym.sym = SDLK_PAGEDOWN; break;
+		case SDLK_KP_9: k->sym = SDLK_PAGEUP; break;
+		case SDLK_KP_3: k->sym = SDLK_PAGEDOWN; break;
 
-		case SDLK_KP_7: k->sym.sym = SDLK_HOME; break;
-		case SDLK_KP_1: k->sym.sym = SDLK_END; break;
+		case SDLK_KP_7: k->sym = SDLK_HOME; break;
+		case SDLK_KP_1: k->sym = SDLK_END; break;
 
-		case SDLK_KP_PERIOD: k->sym.sym = SDLK_DELETE; break;
+		case SDLK_KP_PERIOD: k->sym = SDLK_DELETE; break;
 
-		case SDLK_KP_DIVIDE: k->sym.sym = SDLK_SLASH; break;
-		case SDLK_KP_MULTIPLY: k->sym.sym = SDLK_ASTERISK; break;
-		case SDLK_KP_MINUS: k->sym.sym = SDLK_MINUS; break;
-		case SDLK_KP_PLUS: k->sym.sym = SDLK_PLUS; break;
-		case SDLK_KP_ENTER: k->sym.sym = SDLK_RETURN; break;
-		case SDLK_KP_EQUALS: k->sym.sym = SDLK_EQUALS; break;
+		case SDLK_KP_DIVIDE: k->sym = SDLK_SLASH; break;
+		case SDLK_KP_MULTIPLY: k->sym = SDLK_ASTERISK; break;
+		case SDLK_KP_MINUS: k->sym = SDLK_MINUS; break;
+		case SDLK_KP_PLUS: k->sym = SDLK_PLUS; break;
+		case SDLK_KP_ENTER: k->sym = SDLK_RETURN; break;
+		case SDLK_KP_EQUALS: k->sym = SDLK_EQUALS; break;
 
 		default:
 			break;
@@ -237,7 +238,7 @@ void key_translate(struct key_event *k)
 int numeric_key_event(struct key_event *k, int kponly)
 {
 	if (kponly) {
-		switch (k->orig_sym.sym) {
+		switch (k->orig_sym) {
 		case SDLK_KP_0: return 0;
 		case SDLK_KP_1: return 1;
 		case SDLK_KP_2: return 2;
@@ -254,7 +255,7 @@ int numeric_key_event(struct key_event *k, int kponly)
 		return -1;
 	}
 
-	switch (k->orig_sym.sym) {
+	switch (k->orig_sym) {
 	case SDLK_0: case SDLK_KP_0: return 0;
 	case SDLK_1: case SDLK_KP_1: return 1;
 	case SDLK_2: case SDLK_KP_2: return 2;
@@ -410,7 +411,7 @@ inline int kbd_char_to_99(struct key_event *k)
 	int c;
 	if (!NO_CAM_MODS(k->mod)) return -1;
 
-	c = tolower(k->sym.sym);
+	c = tolower(k->sym);
 	if (c >= 'h' && c <= 'z')
 		return 10 + c - 'h';
 
@@ -421,7 +422,7 @@ int kbd_char_to_hex(struct key_event *k)
 {
 	if (!NO_CAM_MODS(k->mod)) return -1;
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_KP_0: if (!(k->mod & KMOD_NUM)) return -1;
 	case SDLK_0: return 0;
 	case SDLK_KP_1: if (!(k->mod & KMOD_NUM)) return -1;
@@ -466,13 +467,13 @@ int kbd_char_to_hex(struct key_event *k)
  *         and for you people who might say 'hey, IT doesn't do that':
  *         yes it does. read the documentation. it's not in the editor,
  *         but it's in the player. */
-inline int kbd_get_note(struct key_event *k)
+int kbd_get_note(struct key_event *k)
 {
 	int note;
 
 	if (!NO_CAM_MODS(k->mod)) return -1;
 
-	if (k->orig_sym.sym == SDLK_KP_PERIOD && k->sym.sym == SDLK_PERIOD) {
+	if (k->orig_sym == SDLK_KP_PERIOD && k->sym == SDLK_PERIOD) {
 		/* lots of systems map an outside scancode for these;
 		 * we may need to simply ignore scancodes > 256
 		 * but i want a narrow change for this for now
@@ -481,7 +482,7 @@ inline int kbd_get_note(struct key_event *k)
 		return 0;
 	}
 
-	if (k->sym.sym == SDLK_KP_1 || k->sym.sym == SDLK_KP_PERIOD)
+	if (k->sym == SDLK_KP_1 || k->sym == SDLK_KP_PERIOD)
 		if (!(k->mod & KMOD_NUM)) return -1;
 
 	switch (k->scancode) {
@@ -533,13 +534,26 @@ inline int kbd_get_note(struct key_event *k)
 
 int kbd_get_alnum(struct key_event *k)
 {
-	if (k->sym.sym >= 127)
+	if (k->sym >= 127)
 		return 0;
 	if (k->mod & KMOD_SHIFT) {
 		const char shifted_digits[] = ")!@#$%^&*("; // comical profanity
-		switch (k->sym.sym) {
-			case 'a'...'z': return toupper(k->sym.sym);
-			case '0'...'9': return shifted_digits[k->sym.sym - '0'];
+		switch (k->sym) {
+			case 'a': case 'b': case 'c':
+			case 'd': case 'e': case 'f':
+			case 'g': case 'h': case 'i':
+			case 'j': case 'k': case 'l':
+			case 'm': case 'n': case 'o':
+			case 'p': case 'q': case 'r':
+			case 's': case 't': case 'u':
+			case 'v': case 'w': case 'x':
+			case 'y': case 'z':
+				return toupper(k->sym);
+			case '0': case '1': case '2':
+			case '3': case '4': case '5':
+			case '6': case '7': case '8':
+			case '9':
+				return shifted_digits[k->sym - '0'];
 			case '[': return '{';
 			case ']': return '}';
 			case ';': return ':';
@@ -551,8 +565,8 @@ int kbd_get_alnum(struct key_event *k)
 			case '/': return '?';
 			case '\\': return '|';
 			case '\'': return '"';
-			default: return k->sym.sym; // shift + some weird key = ???
+			default: return k->sym; // shift + some weird key = ???
 		}
 	}
-	return k->sym.sym;
+	return k->sym;
 }

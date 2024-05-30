@@ -21,7 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
 #include "headers.h"
 #include "slurp.h"
 #include "fmt.h"
@@ -128,7 +127,10 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	song->initial_global_volume = slurp_getc(fp) << 1;
 	// In the case of invalid data, ST3 uses the speed/tempo value that's set in the player prior to
 	// loading the song, but that's just crazy.
-	song->initial_speed = slurp_getc(fp) ?: 6;
+	song->initial_speed = slurp_getc(fp);
+	if (!song->initial_speed)
+		song->initial_speed = 6;
+
 	song->initial_tempo = slurp_getc(fp);
 	if (song->initial_tempo <= 32) {
 		// (Yes, 32 is ignored by Scream Tracker.)
@@ -429,7 +431,10 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				? "ModPlug Tracker / OpenMPT 1.17"
 				: "ModPlug Tracker 1.0 alpha";
 		} else if (special == 0 && uc == 0 && flags == 0 && misc == (S3M_UNSIGNED)) {
-			tid = "Velvet Studio";
+			if (song->initial_global_volume == 128 && mix_volume == 48)
+				tid = "PlayerPRO";
+			else  // Always stereo
+				tid = "Velvet Studio";
 		} else if (uc != 16 && uc != 24 && uc != 32) {
 			// sure isn't scream tracker
 			tid = "Unknown tracker";
@@ -451,7 +456,10 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				strcpy(song->tracker_id, "Unknown tracker");
 			break;
 		case 2:
-			tid = "Imago Orpheus %d.%02x";
+			if (trkvers == 0x2013) // PlayerPRO on Intel forgets to byte-swap the tracker ID bytes 
+				strcpy(song->tracker_id, "PlayerPRO");
+			else
+				tid = "Imago Orpheus %d.%02x";
 			break;
 		case 3:
 			if (trkvers <= 0x3214) {
@@ -580,7 +588,7 @@ struct s3i_header {
 			uint8_t zero[3];
 			uint8_t data[12];
 		} admel;
-	};
+	} spec;
 	uint8_t vol;
 	uint8_t x; // "dsk" for adlib
 	uint8_t pack; // 0
@@ -597,21 +605,21 @@ struct s3i_header {
 
 static void write_s3i_header(disko_t *fp, song_sample_t *smp, uint32_t sdata)
 {
-	struct s3i_header hdr = {};
+	struct s3i_header hdr = {0};
 	int n;
 
 	if (smp->flags & CHN_ADLIB) {
 		hdr.type = S3I_TYPE_ADMEL;
-		memcpy(hdr.admel.data, smp->adlib_bytes, 11);
+		memcpy(hdr.spec.admel.data, smp->adlib_bytes, 11);
 		memcpy(hdr.tag, "SCRI", 4);
 	} else if (smp->data != NULL) {
 		hdr.type = S3I_TYPE_PCM;
-		hdr.pcm.memseg[0] = (sdata >> 20) & 0xff;
-		hdr.pcm.memseg[1] = (sdata >> 4) & 0xff;
-		hdr.pcm.memseg[2] = (sdata >> 12) & 0xff;
-		hdr.pcm.length = bswapLE32(smp->length);
-		hdr.pcm.loop_start = bswapLE32(smp->loop_start);
-		hdr.pcm.loop_end = bswapLE32(smp->loop_end);
+		hdr.spec.pcm.memseg[0] = (sdata >> 20) & 0xff;
+		hdr.spec.pcm.memseg[1] = (sdata >> 4) & 0xff;
+		hdr.spec.pcm.memseg[2] = (sdata >> 12) & 0xff;
+		hdr.spec.pcm.length = bswapLE32(smp->length);
+		hdr.spec.pcm.loop_start = bswapLE32(smp->loop_start);
+		hdr.spec.pcm.loop_end = bswapLE32(smp->loop_end);
 		hdr.flags = ((smp->flags & CHN_LOOP) ? 1 : 0)
 			| ((smp->flags & CHN_STEREO) ? 2 : 0)
 			| ((smp->flags & CHN_16BIT) ? 4 : 0);
@@ -625,10 +633,10 @@ static void write_s3i_header(disko_t *fp, song_sample_t *smp, uint32_t sdata)
 	hdr.c5speed = bswapLE32(smp->c5speed);
 
 	for (n = 25; n >= 0; n--)
-		if ((smp->name[n] ?: 32) != 32)
+		if ((smp->name[n] ? smp->name[n] : 32) != 32)
 			break;
 	for (; n >= 0; n--)
-		hdr.name[n] = smp->name[n] ?: 32;
+		hdr.name[n] = smp->name[n] ? smp->name[n] : 32;
 
 	disko_write(fp, &hdr, sizeof(hdr));
 }
@@ -685,30 +693,24 @@ static int write_s3m_pattern(disko_t *fp, song_t *song, int pat, uint8_t *chanty
 				}
 			}
 
-			switch (out.note) {
-			case 1 ... 12:
-			case 109 ... 120:
+			/* Translate notes */
+			if (out.note <= 12 || (out.note >= 109 && out.note <= 120)) {
 				// Octave 0/9 (or higher?)
 				warn |= 1 << WARN_NOTERANGE;
 				out.note = 255;
-				break;
-			case 13 ... 108:
+			} else if (out.note > 12 && out.note < 109) {
 				// C-1 through B-8
 				out.note -= 13;
 				out.note = (out.note % 12) + ((out.note / 12) << 4);
 				b |= 32;
-				break;
-			case NOTE_CUT:
-			case NOTE_OFF:
+			} else if (out.note == NOTE_CUT || out.note == NOTE_OFF) {
 				// IT translates === to ^^^ when writing S3M files
 				// (and more importantly, we load ^^^ as === in adlib-channels)
 				out.note = 254;
 				b |= 32;
-				break;
-			default:
+			} else {
 				// Nothing (or garbage values)
 				out.note = 255;
-				break;
 			}
 
 			if (out.instrument != 0) {
@@ -905,7 +907,7 @@ static int fixup_chantypes(song_channel_t *channels, uint8_t *chantypes)
 
 int fmt_s3m_save_song(disko_t *fp, song_t *song)
 {
-	struct s3m_header hdr = {};
+	struct s3m_header hdr = {0};
 	int nord, nsmp, npat;
 	int n;
 	song_sample_t *smp;
@@ -933,13 +935,19 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 	// see note in IT writer -- shouldn't clamp here, but can't save more than we're willing to load
 	nord = CLAMP(nord, 2, MAX_ORDERS);
 
-	nsmp = csf_get_num_samples(song) ?: 1; // ST3 always saves one sample
+	nsmp = csf_get_num_samples(song); // ST3 always saves one sample
+	if (!nsmp)
+		nsmp = 1;
+
 	if (nsmp > 99) {
 		nsmp = 99;
 		warn |= 1 << WARN_MAXSAMPLES;
 	}
 
-	npat = csf_get_num_patterns(song) ?: 1; // ST3 always saves one pattern
+	npat = csf_get_num_patterns(song); // ST3 always saves one pattern
+	if (!npat)
+		npat = 1;
+
 	if (npat > 100) {
 		npat = 100;
 		warn |= 1 << WARN_MAXPATTERNS;

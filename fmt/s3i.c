@@ -23,7 +23,6 @@
 
 /* FIXME this file is redundant and needs to go away -- s3m.c already does all of this */
 
-#define NEED_BYTESWAP
 #include "headers.h"
 #include "fmt.h"
 

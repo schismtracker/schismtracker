@@ -412,7 +412,7 @@ static int waterfall_handle_key(struct key_event *k)
 			}
 			if (k->state == KEY_RELEASE) {
 				song_keyup(KEYJAZZ_NOINST, ii, n);
-				status.last_keysym.sym = 0;
+				status.last_keysym = 0;
 			} else if (!k->is_repeat) {
 				song_keydown(KEYJAZZ_NOINST, ii, n, v, KEYJAZZ_CHAN_CURRENT);
 			}
@@ -420,7 +420,7 @@ static int waterfall_handle_key(struct key_event *k)
 		}
 	}
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_s:
 		if (k->mod & KMOD_ALT) {
 			if (k->state == KEY_RELEASE)

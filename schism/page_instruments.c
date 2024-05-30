@@ -420,17 +420,16 @@ static void instrument_list_draw_list(void)
 	}
 }
 
-static int instrument_list_handle_text_input_on_list(const char* text) {
+static int instrument_list_handle_text_input_on_list(const uint8_t* text) {
 	int success = 0;
 	for (; *text; text++)
-		if (instrument_cursor_pos < 25 && (!instrument_list_add_char(*text)))
+		if (instrument_cursor_pos < 25 && instrument_list_add_char(*text))
 			success = 1;
 	return success;
 }
 
 static int instrument_list_handle_key_on_list(struct key_event * k)
 {
-	static int enable_text = 0; /* stupid dirty hack */
 	int new_ins = current_instrument;
 
 	if (k->state == KEY_PRESS && k->mouse != MOUSE_NONE && k->y >= 13 && k->y <= 47 && k->x >= 5 && k->x <= 30) {
@@ -463,7 +462,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			return 1;
 		}
 	} else {
-		switch (k->sym.sym) {
+		switch (k->sym) {
 		case SDLK_UP:
 			if (k->state == KEY_RELEASE)
 				return 0;
@@ -484,7 +483,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			if (k->mod & KMOD_ALT) {
 				// restrict position to the "old" value of _last_vis_inst()
 				// (this is entirely for aesthetic reasons)
-				if (status.last_keysym.sym != SDLK_DOWN && !k->is_repeat)
+				if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
 					_altswap_lastvis = _last_vis_inst();
 				if (current_instrument < _altswap_lastvis) {
 					new_ins = current_instrument + 1;
@@ -614,33 +613,26 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				return 1;
 			}
 			return 0;
-		case SDLK_SPACE:
-			if (instrument_cursor_pos >= 25) {
-				/* we stop text input here so we don't insert
-				 * an extra space */
-				instrument_cursor_pos = 0;
-				get_page_widgets()->accept_text = 0;
-				status.flags |= NEED_UPDATE;
-				memused_songchanged();
-				enable_text = 1;
-				return 1;
-			}
-			return 0;
 		default:
 			if (k->state == KEY_RELEASE)
 				return 0;
 
 			if (k->mod & KMOD_ALT) {
-				if (k->sym.sym == SDLK_c) {
+				if (k->sym == SDLK_c) {
 					clear_instrument_text();
 					return 1;
 				}
-			} else if (k->sym.sym >= 32) {
-				if (instrument_cursor_pos < 25 && enable_text) {
-					get_page_widgets()->accept_text = 1;
+			} else if ((k->mod & KMOD_CTRL) == 0) {
+				if (instrument_cursor_pos < 25) {
+					if (k->text)
+						return instrument_list_handle_text_input_on_list(k->text);
+				} else if (k->sym == SDLK_SPACE) {
+					instrument_cursor_pos = 0;
+					get_page_widgets()->accept_text = 0;
+					status.flags |= NEED_UPDATE;
+					memused_songchanged();
 					return 1;
 				}
-				return !get_page_widgets()->accept_text;
 			}
 
 			return 0;
@@ -814,7 +806,7 @@ static int note_trans_handle_key(struct key_event * k)
 	} else if (k->mod & KMOD_ALT) {
 		if (k->state == KEY_RELEASE)
 			return 0;
-		switch (k->sym.sym) {
+		switch (k->sym) {
 		case SDLK_UP:
 			instrument_note_trans_transpose(ins, 1);
 			break;
@@ -856,7 +848,7 @@ static int note_trans_handle_key(struct key_event * k)
 			return 0;
 		}
 	} else {
-		switch (k->sym.sym) {
+		switch (k->sym) {
 		case SDLK_UP:
 			if (k->state == KEY_RELEASE)
 				return 0;
@@ -974,19 +966,19 @@ static int note_trans_handle_key(struct key_event * k)
 
 			case 2:        /* instrument, first digit */
 			case 3:        /* instrument, second digit */
-				if (k->sym.sym == SDLK_SPACE) {
+				if (k->sym == SDLK_SPACE) {
 					ins->sample_map[note_trans_sel_line] =
 						sample_get_current();
 					new_line++;
 					break;
 				}
 
-				if ((k->sym.sym == SDLK_PERIOD && NO_MODIFIER(k->mod)) || k->sym.sym == SDLK_DELETE) {
+				if ((k->sym == SDLK_PERIOD && NO_MODIFIER(k->mod)) || k->sym == SDLK_DELETE) {
 					ins->sample_map[note_trans_sel_line] = 0;
-					new_line += (k->sym.sym == SDLK_PERIOD) ? 1 : 0;
+					new_line += (k->sym == SDLK_PERIOD) ? 1 : 0;
 					break;
 				}
-				if (k->sym.sym == SDLK_COMMA && NO_MODIFIER(k->mod)) {
+				if (k->sym == SDLK_COMMA && NO_MODIFIER(k->mod)) {
 					note_sample_mask = note_sample_mask ? 0 : 1;
 					break;
 				}
@@ -1409,7 +1401,7 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 	int new_node = *current_node;
 	int n;
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_UP:
 		if (k->state == KEY_RELEASE)
 			return 0;
@@ -1688,7 +1680,7 @@ static int _env_handle_key_editmode(struct key_event *k, song_envelope_t *env, i
 
 	/* TODO: when does adding/removing a node alter loop points? */
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_UP:
 		if (k->state == KEY_RELEASE)
 			return 0;
@@ -1944,7 +1936,7 @@ static int pitch_pan_center_handle_key(struct key_event *k)
 
 	if (k->state == KEY_RELEASE)
 		return 0;
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_LEFT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
@@ -2038,7 +2030,7 @@ static void instrument_list_handle_alt_key(struct key_event *k)
 
 	if (k->state == KEY_RELEASE)
 		return;
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_n:
 		song_toggle_multichannel_mode();
 		return;
@@ -2082,7 +2074,7 @@ static void instrument_list_handle_alt_key(struct key_event *k)
 static int instrument_list_pre_handle_key(struct key_event * k)
 {
 	// Only handle plain F4 key when no dialog is active.
-	if (status.dialog_type != DIALOG_NONE || k->sym.sym != SDLK_F4 || (k->mod & (KMOD_CTRL | KMOD_ALT)))
+	if (status.dialog_type != DIALOG_NONE || k->sym != SDLK_F4 || (k->mod & (KMOD_CTRL | KMOD_ALT)))
 		return 0;
 	if (k->state == KEY_RELEASE)
 		return 1;
@@ -2115,7 +2107,7 @@ static int instrument_list_pre_handle_key(struct key_event * k)
 }
 static void instrument_list_handle_key(struct key_event * k)
 {
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_COMMA:
 		if (NO_MODIFIER(k->mod)) {
 			if (!(status.flags & CLASSIC_MODE)
@@ -2180,7 +2172,7 @@ static void instrument_list_handle_key(struct key_event * k)
 
 			if (k->state == KEY_RELEASE) {
 				song_keyup(0, current_instrument, n);
-				status.last_keysym.sym = 0;
+				status.last_keysym = 0;
 			} else if (!k->is_repeat) {
 				song_keydown(KEYJAZZ_NOINST, current_instrument, n, v, KEYJAZZ_CHAN_CURRENT);
 			}
@@ -2647,7 +2639,7 @@ static void _load_page_common(struct page *page, struct widget *page_widgets)
 	/* the first five widgets are the same for all four pages. */
 
 	/* 0 = instrument list */
-	create_other(page_widgets + 0, 1, instrument_list_handle_key_on_list, 
+	create_other(page_widgets + 0, 1, instrument_list_handle_key_on_list,
 		instrument_list_handle_text_input_on_list, instrument_list_draw_list);
 	page_widgets[0].accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 	page_widgets[0].x = 5;
@@ -2684,6 +2676,7 @@ void instrument_list_general_load_page(struct page *page)
 	widgets_general[5].y = 16;
 	widgets_general[5].width = 9;
 	widgets_general[5].height = 31;
+	widgets_general[5].next.down = 6;
 
 	/* 6-9 = nna toggles */
 	create_togglebutton(widgets_general + 6, 46, 19, 29, 2, 7, 5, 0, 0,
@@ -2739,7 +2732,7 @@ static int _fixup_mouse_instpage_volume(struct key_event *k)
 			return 1;
 		}
 	}
-	if ((k->sym.sym == SDLK_l || k->sym.sym == SDLK_b) && (k->mod & KMOD_ALT)) {
+	if ((k->sym == SDLK_l || k->sym == SDLK_b) && (k->mod & KMOD_ALT)) {
 		return _env_handle_key_viewmode(k, &ins->vol_env, &current_node_vol, ENV_VOLUME);
 	}
 	return instrument_list_pre_handle_key(k);
@@ -2760,6 +2753,7 @@ void instrument_list_volume_load_page(struct page *page)
 	widgets_volume[5].y = 18;
 	widgets_volume[5].width = 45;
 	widgets_volume[5].height = 8;
+	widgets_volume[5].next.down = 6;
 
 	/* 6-7 = envelope switches */
 	create_toggle(widgets_volume + 6, 54, 28, 5, 7, 0, 0, 0,
@@ -2805,7 +2799,7 @@ static int _fixup_mouse_instpage_panning(struct key_event *k)
 			return 1;
 		}
 	}
-	if ((k->sym.sym == SDLK_l || k->sym.sym == SDLK_b) && (k->mod & KMOD_ALT)) {
+	if ((k->sym == SDLK_l || k->sym == SDLK_b) && (k->mod & KMOD_ALT)) {
 		return _env_handle_key_viewmode(k, &ins->pan_env, &current_node_pan, ENV_PANNING);
 	}
 	return instrument_list_pre_handle_key(k);
@@ -2825,6 +2819,7 @@ void instrument_list_panning_load_page(struct page *page)
 	widgets_panning[5].y = 18;
 	widgets_panning[5].width = 45;
 	widgets_panning[5].height = 8;
+	widgets_panning[5].next.down = 6;
 
 	/* 6-7 = envelope switches */
 	create_toggle(widgets_panning + 6, 54, 28, 5, 7, 0, 0, 0,
@@ -2879,7 +2874,7 @@ static int _fixup_mouse_instpage_pitch(struct key_event *k)
 			return 1;
 		}
 	}
-	if ((k->sym.sym == SDLK_l || k->sym.sym == SDLK_b) && (k->mod & KMOD_ALT)) {
+	if ((k->sym == SDLK_l || k->sym == SDLK_b) && (k->mod & KMOD_ALT)) {
 		return _env_handle_key_viewmode(k, &ins->pitch_env, &current_node_pitch, ENV_PITCH);
 	}
 	return instrument_list_pre_handle_key(k);
@@ -2901,6 +2896,7 @@ void instrument_list_pitch_load_page(struct page *page)
 	widgets_pitch[5].y = 18;
 	widgets_pitch[5].width = 45;
 	widgets_pitch[5].height = 8;
+	widgets_pitch[5].next.down = 6;
 
 	/* 6-7 = envelope switches */
 	create_menutoggle(widgets_pitch + 6, 54, 28, 5, 7, 0, 0, 0,

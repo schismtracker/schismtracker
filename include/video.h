@@ -74,10 +74,10 @@ int video_mousecursor_visible(void);
 int video_is_fullscreen(void);
 int video_width(void);
 int video_height(void);
-typedef struct SDL_Window SDL_Window;
 SDL_Window * video_window(void);
 
-typedef struct SDL_Surface SDL_Surface;
+void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y);
+
 SDL_Surface *xpmdata(const char *xpmdata[]);
 
 #if USE_X11

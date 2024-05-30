@@ -21,8 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_DIRENT
-#define NEED_TIME
 #include "headers.h"
 
 #include "it.h"
@@ -373,9 +371,9 @@ static void file_list_draw(void)
 			bg = 0;
 		}
 		draw_text(numtostr(3, n+1, buf), 2, pos, 0, 2);
-		draw_text_len(file->title ?: "", 25, 6, pos, fg, bg);
+		draw_text_len(file->title ? file->title : "", 25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
-		draw_text_len(file->base ?: "", 18, 32, pos, fg, bg);
+		draw_text_len(file->base ? file->base : "", 18, 32, pos, fg, bg);
 		if (file->base && search_pos > -1) {
 			if (strncasecmp(file->base,search_str,search_pos) == 0) {
 				for (i = 0 ; i < search_pos; i++) {
@@ -474,7 +472,7 @@ static int stereo_cvt_hk(struct key_event *k)
 		return 0;
 
 	/* trap the default dialog keys - we don't want to escape this dialog without running something */
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_RETURN:
 		printf("why am I here\n");
 	case SDLK_ESCAPE: case SDLK_o: case SDLK_c:
@@ -628,15 +626,29 @@ static void do_delete_file(UNUSED void *data)
 	file_list_reposition();
 }
 
+static int file_list_handle_text_input(const uint8_t* text) {
+	dmoz_file_t* f = flist.files[current_file];
+	for (; *text; text++) {
+		if (*text >= 32 && (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
+			if (search_pos < 0) search_pos = 0;
+			if (search_pos < PATH_MAX) {
+				search_str[search_pos++] = *text;
+				reposition_at_slash_search();
+				status.flags |= NEED_UPDATE;
+			}
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static int file_list_handle_key(struct key_event * k)
 {
-	dmoz_file_t *f;
 	int new_file = current_file;
-	int c = k->sym.sym;
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 
-	if (!(status.flags & CLASSIC_MODE) && k->sym.sym == SDLK_n && (k->mod & KMOD_ALT)) {
+	if (!(status.flags & CLASSIC_MODE) && k->sym == SDLK_n && (k->mod & KMOD_ALT)) {
 		if (k->state == KEY_RELEASE)
 			song_toggle_multichannel_mode();
 		return 1;
@@ -654,7 +666,7 @@ static int file_list_handle_key(struct key_event * k)
 			}
 		}
 	}
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_UP:           new_file--; search_pos = -1; break;
 	case SDLK_DOWN:         new_file++; search_pos = -1; break;
 	case SDLK_PAGEUP:       new_file -= 35; search_pos = -1; break;
@@ -700,7 +712,7 @@ static int file_list_handle_key(struct key_event * k)
 		}
 	case SDLK_SLASH:
 		if (search_pos < 0) {
-			if (k->orig_sym.sym == SDLK_SLASH) {
+			if (k->orig_sym == SDLK_SLASH) {
 				if (k->state == KEY_PRESS)
 					return 0;
 				search_pos = 0;
@@ -710,18 +722,9 @@ static int file_list_handle_key(struct key_event * k)
 			return 0;
 		} /* else fall through */
 	default:
-		f = flist.files[current_file];
-		if (c >= 32 && (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-			if (search_pos < 0) search_pos = 0;
-			if (search_pos < PATH_MAX) {
-				search_str[search_pos++] = c;
-				reposition_at_slash_search();
-				status.flags |= NEED_UPDATE;
-			}
-			return 1;
-		}
+		if (k->text)
+			file_list_handle_text_input(k->text);
+
 		if (!k->mouse) return 0;
 	}
 
@@ -765,7 +768,7 @@ static void load_sample_handle_key(struct key_event * k)
 {
 	int n, v;
 
-	if (k->state == KEY_PRESS && k->sym.sym == SDLK_ESCAPE && NO_MODIFIER(k->mod)) {
+	if (k->state == KEY_PRESS && k->sym == SDLK_ESCAPE && NO_MODIFIER(k->mod)) {
 		set_page(PAGE_SAMPLE_LIST);
 		return;
 	}
@@ -907,7 +910,7 @@ void load_sample_load_page(struct page *page)
 
 	create_other(widgets_loadsample + 0, 0,
 				file_list_handle_key,
-				NULL,
+				file_list_handle_text_input,
 				file_list_draw);
 	widgets_loadsample[0].accept_text = 1;
 	widgets_loadsample[0].next.tab = 1;

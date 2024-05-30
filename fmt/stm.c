@@ -21,7 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
 #include "headers.h"
 #include "slurp.h"
 #include "fmt.h"
@@ -117,7 +116,7 @@ static uint8_t stm_effects[16] = {
 
 static uint8_t handle_tempo(size_t tempo)
 {
-	size_t tpr = (tempo >> 4) ?: 1;
+	size_t tpr = (tempo >> 4) ? (tempo >> 4) : 1;
 	size_t scale = (tempo & 15);
 
 	return tempo_table[tpr - 1][scale];
@@ -259,7 +258,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		tempo = ((tempo / 10) << 4) + tempo % 10;
 	}
 
-	song->initial_speed = (tempo >> 4) ?: 1;
+	song->initial_speed = (tempo >> 4) ? (tempo >> 4) : 1;
 	song->initial_tempo = handle_tempo(tempo);
 
 	npat = slurp_getc(fp);

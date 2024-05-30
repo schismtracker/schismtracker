@@ -28,6 +28,7 @@
 #include "it.h"
 #include "sdlmain.h"
 #include "video.h"
+#include "osdefs.h"
 
 /* for memcpy */
 #include <string.h>
@@ -35,8 +36,8 @@
 #include <errno.h>
 #include <stdio.h>
 
-#ifndef MACOSX
-#ifdef WIN32
+#ifndef SCHISM_MACOSX
+#ifdef SCHISM_WIN32
 #include "auto/schismico.h"
 #else
 #include "auto/schismico_hires.h"
@@ -70,14 +71,22 @@ struct video_cf {
 	SDL_Texture *texture;
 	unsigned char *framebuf;
 
-	unsigned int width;
-	unsigned int height;
+	int width, height;
 
 	struct {
-		unsigned int x;
-		unsigned int y;
+		unsigned int x, y;
 		int visible;
 	} mouse;
+
+#ifdef SCHISM_WIN32
+	struct {
+		/* TODO: need to save the state of the menu bar or else
+		 * these will be wrong if it's toggled while in fullscreen */
+		int width, height;
+
+		int x, y;
+	} saved;
+#endif
 
 	int fullscreen;
 
@@ -149,9 +158,9 @@ static void set_icon(void)
 {
 	/* FIXME: is this really necessary? */
 	SDL_SetWindowTitle(video.window, WINDOW_TITLE);
-#ifndef MACOSX
+#ifndef SCHISM_MACOSX
 /* apple/macs use a bundle; this overrides their nice pretty icon */
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 /* win32 icons must be 32x32 according to SDL 1.2 doc */
 	SDL_Surface *icon = xpmdata(_schism_icon_xpm);
 #else
@@ -168,11 +177,20 @@ void video_fullscreen(int new_fs_flag)
 	video.fullscreen = (new_fs_flag >= 0) ? !!new_fs_flag : !video.fullscreen;
 
 	if (video.fullscreen) {
+#ifdef SCHISM_WIN32
+		SDL_GetWindowSize(video.window, &video.saved.width, &video.saved.height);
+		SDL_GetWindowPosition(video.window, &video.saved.x, &video.saved.y);
+		win32_toggle_menu(video.window, 0);
+#endif
 		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-		SDL_SetWindowResizable(video.window, SDL_FALSE);
 	} else {
 		SDL_SetWindowFullscreen(video.window, 0);
-		SDL_SetWindowResizable(video.window, SDL_TRUE);
+#ifdef SCHISM_WIN32
+		/* the menu must be toggled first here */
+		win32_toggle_menu(video.window, 1);
+		SDL_SetWindowSize(video.window, video.saved.width, video.saved.height);
+		SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
+#endif
 		set_icon(); /* XXX is this necessary */
 	}
 }
@@ -192,17 +210,26 @@ void video_startup(void)
 
 	video.width = cfg_video_width;
 	video.height = cfg_video_height;
+#ifdef SCHISM_WIN32
+	video.saved.x = video.saved.y = SDL_WINDOWPOS_CENTERED;
+#endif
 
 	video.window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width, video.height, SDL_WINDOW_RESIZABLE);
 	video.renderer = SDL_CreateRenderer(video.window, -1, 0);
 	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
-	video.framebuf = calloc(NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT, sizeof(Uint32));
+	video.framebuf = calloc(NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT, sizeof(uint32_t));
 
 	/* Aspect ratio correction if it's wanted */
 	if (cfg_video_want_fixed)
 		SDL_RenderSetLogicalSize(video.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height);
 
 	video_fullscreen(cfg_video_fullscreen);
+#ifdef SCHISM_WIN32
+	if (!video.fullscreen) {
+		SDL_SetWindowSize(video.window, video.width, video.height);
+		SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
+	}
+#endif
 
 	/* okay, i think we're ready */
 	SDL_ShowCursor(SDL_DISABLE);
@@ -269,9 +296,9 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 
 	memset(mouseline, 0, 80*sizeof(unsigned int));
 	if (video.mouse.visible != MOUSE_EMULATED
-	    || !(status.flags & IS_FOCUSED)
-	    || y < video.mouse.y
-	    || y >= video.mouse.y+MOUSE_HEIGHT) {
+		|| !(status.flags & IS_FOCUSED)
+		|| y < video.mouse.y
+		|| y >= video.mouse.y+MOUSE_HEIGHT) {
 		return;
 	}
 
@@ -374,6 +401,32 @@ void video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned
 
 	*x = (vx < NATIVE_SCREEN_WIDTH)  ? (video.mouse.x = vx) : video.mouse.x;
 	*y = (vy < NATIVE_SCREEN_HEIGHT) ? (video.mouse.y = vy) : video.mouse.y;
+}
+
+void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
+{
+	if (!cfg_video_want_fixed) {
+		*trans_x = x;
+		*trans_y = y;
+	} else {
+		float xx, yy;
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+		SDL_RenderWindowToLogical(video.renderer, x, y, &xx, &yy);
+#else
+		/* Alternative for older SDL versions. MIGHT work with high DPI */
+		float scale_x = 1, scale_y = 1;
+
+		SDL_RenderGetScale(video.renderer, &scale_x, &scale_y);
+
+		xx = x - (video.width / 2) - (((float)cfg_video_want_fixed_width * scale_x) / 2);
+		yy = y - (video.height / 2) - (((float)cfg_video_want_fixed_height * scale_y) / 2);
+
+		xx /= (float)video.width * cfg_video_want_fixed_width;
+		yy /= (float)video.height * cfg_video_want_fixed_height;
+#endif
+		*trans_x = (int)xx;
+		*trans_y = (int)yy;
+	}
 }
 
 SDL_Window * video_window(void)

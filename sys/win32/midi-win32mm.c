@@ -33,11 +33,6 @@
 #include <mmsystem.h>
 #include <stdio.h>
 
-#ifndef WIN32
-# error You have no winmm. Why are you trying to build this file?
-#endif
-
-
 struct win32mm_midi {
 	DWORD id;
 
@@ -273,7 +268,7 @@ static void _win32mm_poll(struct midi_provider *p)
 
 int win32mm_midi_setup(void)
 {
-	static struct midi_driver driver = {};
+	static struct midi_driver driver = {0};
 
 	TIMECAPS caps;
 

@@ -23,7 +23,7 @@
 #include "headers.h"
 #include "util.h"
 
-#ifdef MACOSX
+#ifdef SCHISM_MACOSX
 
 #include <IOKit/IOKitLib.h>
 #include <IOKit/IOReturn.h>
@@ -40,11 +40,11 @@
 #define kIOHIDFKeyModeKey    "HIDFKeyMode"
 #endif
 
-#endif /* defined(MACOSX) */
+#endif /* defined(SCHISM_MACOSX) */
 
 int macosx_ibook_fnswitch(int setting)
 {
-#if MACOSX
+#if SCHISM_MACOSX
 	/* XXX can this be removed? */
 	kern_return_t kr;
 	mach_port_t mp;
@@ -94,7 +94,7 @@ int macosx_ibook_fnswitch(int setting)
 	IOServiceClose(dp);
 	/* old setting... */
 	return res;
-#else /* !defined(MACOSX) */
+#else /* !defined(SCHISM_MACOSX) */
 	return -1;
 #endif
 }

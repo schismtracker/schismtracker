@@ -25,11 +25,10 @@
 extraneous libraries (i.e. GLib). */
 
 
-#define NEED_DIRENT
-#define NEED_TIME
 #include "headers.h"
 
 #include "util.h"
+#include "charset.h"
 #include "osdefs.h" /* need this for win32_filecreated_callback */
 
 #include <sys/types.h>
@@ -43,15 +42,15 @@ extraneous libraries (i.e. GLib). */
 
 #if defined(__amigaos4__)
 # define FALLBACK_DIR "." /* not used... */
-#elif defined(WIN32)
+#elif defined(SCHISM_WIN32)
 # define FALLBACK_DIR "C:\\"
-#elif defined(GEKKO)
+#elif defined(SCHISM_WII)
 # define FALLBACK_DIR "isfs:/" // always exists, seldom useful
 #else /* POSIX? */
 # define FALLBACK_DIR "/"
 #endif
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 #include <windows.h>
 #include <process.h>
 #include <shlobj.h>
@@ -62,7 +61,7 @@ extraneous libraries (i.e. GLib). */
 
 void ms_sleep(unsigned int ms)
 {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	SleepEx(ms,FALSE);
 #else
 	usleep(ms*1000);
@@ -220,7 +219,7 @@ char *get_time_string(time_t when, char *buf)
 	struct tm tmr;
 
 	localtime_r(&when, &tmr);
-	snprintf(buf, 27, "%d:%02d%s", tmr.tm_hour % 12 ? : 12, tmr.tm_min, tmr.tm_hour < 12 ? "am" : "pm");
+	snprintf(buf, 27, "%d:%02d%s", (tmr.tm_hour % 12) ? (tmr.tm_hour % 12) : 12, tmr.tm_min, tmr.tm_hour < 12 ? "am" : "pm");
 	return buf;
 }
 
@@ -302,39 +301,55 @@ const char *get_extension(const char *filename)
 	return extension;
 }
 
+/* this function should output as you expect
+ * e.g. if input is / it returns NULL,
+ *      if input is /home it returns / and
+ *      if input is /home/ it returns /
+ *
+ * the equivalent windows paths also work here
+*/
 char *get_parent_directory(const char *dirname)
 {
-	const char *pos;
-	char *ret;
-	int n;
-
 	if (!dirname || !dirname[0])
 		return NULL;
 
-	n = strlen(dirname) - 1;
-	if (dirname[n] == DIR_SEPARATOR)
-		n--;
+	/* need the root path, including the separator */
+	const char* root = strchr(dirname, DIR_SEPARATOR);
+	if (!root)
+		return NULL;
+    root++;
 
-	if (n < 0)
+	/* okay, now we need to find the final token */
+	const char* pos = root + strlen(root) - 1;
+	if (*pos == DIR_SEPARATOR) /* strip off an excess separator, if any */
+		pos--;
+
+	while (--pos > root) {
+		if (*pos == DIR_SEPARATOR)
+			break;
+	}
+
+	ptrdiff_t n = pos - dirname;
+
+	/* sanity check */
+	if (n <= 0)
 		return NULL;
 
-	pos = dirname + (n * sizeof(char));
-	do {
-		if (*(--pos) == DIR_SEPARATOR)
-			break;
-	} while (--n);
-
-	/* copy the resulting value */
-	ret = mem_alloc((n * sizeof(char)) + sizeof(char));
+	char *ret = mem_alloc((n + 1) * sizeof(char));
 	memcpy(ret, dirname, n * sizeof(char));
 	ret[n] = '\0';
+
+	if (!strcmp(dirname, ret) || !ret[0]) {
+		free(ret);
+		return NULL;
+	}
 
 	return ret;
 }
 
 static const char *whitespace = " \t\v\r\n";
 
-inline int ltrim_string(char *s)
+int ltrim_string(char *s)
 {
 	int ws = strspn(s, whitespace);
 	int len = strlen(s) - ws;
@@ -344,7 +359,7 @@ inline int ltrim_string(char *s)
 	return len;
 }
 
-inline int rtrim_string(char *s)
+int rtrim_string(char *s)
 {
 	int len = strlen(s);
 
@@ -453,10 +468,22 @@ static inline int readhex(const char *s, int w)
 	while (w--) {
 		o <<= 4;
 		switch (*s) {
-			case '0'...'9': o |= *s - '0';      break;
-			case 'a'...'f': o |= *s - 'a' + 10; break;
-			case 'A'...'F': o |= *s - 'A' + 10; break;
-			default: return -1;
+			case '0': case '1': case '2':
+			case '3': case '4': case '5':
+			case '6': case '7': case '8':
+			case '9':
+				o |= *s - '0';
+				break;
+			case 'a': case 'b': case 'c':
+			case 'd': case 'e': case 'f':
+				o |= *s - 'a' + 10;
+				break;
+			case 'A': case 'B': case 'C':
+			case 'D': case 'E': case 'F':
+				o |= *s - 'A' + 10;
+				break;
+			default:
+				return -1;
 		}
 		s++;
 	}
@@ -475,7 +502,9 @@ char *str_unescape(const char *s)
 		if (*s == '\\') {
 			s++;
 			switch (*s) {
-			case '0'...'7':
+			case '0': case '1': case '2':
+			case '3': case '4': case '5':
+			case '6': case '7':
 				*d = 0;
 				end = s + 3;
 				while (s < end && *s >= '0' && *s <= '7') {
@@ -612,39 +641,7 @@ int make_backup_file(const char *filename, int numbered)
 	}
 }
 
-int utf8_to_wchar(wchar_t** wchar, const char* utf8) {
-#ifdef WIN32
-	int needed = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
-	if (!needed)
-		return 0;
-
-	*wchar = mem_calloc(needed + 1, sizeof(wchar_t));
-	needed = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, *wchar, needed);
-
-	return needed;
-#else
-	/* this is unnecessary on other platforms, just assume UTF-8 */
-	return 0;
-#endif
-}
-
-int wchar_to_utf8(char** utf8, const wchar_t* wchar) {
-#ifdef WIN32
-	int needed = WideCharToMultiByte(CP_UTF8, 0, wchar, -1, NULL, 0, NULL, NULL);
-	if (!needed)
-		return 0;
-
-	*utf8 = mem_alloc(needed * sizeof(char));
-	needed = WideCharToMultiByte(CP_UTF8, 0, wchar, -1, *utf8, needed, NULL, NULL);
-
-	return needed;
-#else
-	/* see above comment for other platforms */
-	return 0;
-#endif
-}
-
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 int win32_wstat(const wchar_t* path, struct stat* st) {
 	struct _stat mstat;
 
@@ -676,7 +673,7 @@ int win32_wstat(const wchar_t* path, struct stat* st) {
  * in the filename; better to just give it as a wide string */
 int win32_mktemp(char* template, size_t size) {
 	wchar_t* wc = NULL;
-	if (!utf8_to_wchar(&wc, template))
+	if (charset_iconv((const uint8_t*)template, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return -1;
 
 	if (!_wmktemp(wc)) {
@@ -684,6 +681,7 @@ int win32_mktemp(char* template, size_t size) {
 		return -1;
 	}
 
+	/* still have to WideCharToMultiByte here */
 	if (!WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wc, -1, template, size, NULL, NULL)) {
 		free(wc);
 		return -1;
@@ -695,7 +693,7 @@ int win32_mktemp(char* template, size_t size) {
 
 int win32_stat(const char* path, struct stat* st) {
 	wchar_t* wc = NULL;
-	if (!utf8_to_wchar(&wc, path))
+	if (charset_iconv((const uint8_t*)path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return -1;
 
 	int ret = win32_wstat(wc, st);
@@ -705,7 +703,7 @@ int win32_stat(const char* path, struct stat* st) {
 
 int win32_open(const char* path, int flags) {
 	wchar_t* wc = NULL;
-	if (!utf8_to_wchar(&wc, path))
+	if (charset_iconv((const uint8_t*)path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return -1;
 
 	int ret = _wopen(wc, flags);
@@ -715,12 +713,23 @@ int win32_open(const char* path, int flags) {
 
 FILE* win32_fopen(const char* path, const char* flags) {
 	wchar_t* wc = NULL, *wc_flags = NULL;
-	if (!utf8_to_wchar(&wc, path) || !utf8_to_wchar(&wc_flags, flags))
+	if (charset_iconv((const uint8_t*)path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T)
+		|| charset_iconv((const uint8_t*)flags, (uint8_t**)&wc_flags, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return NULL;
 
 	FILE* ret = _wfopen(wc, wc_flags);
 	free(wc);
 	free(wc_flags);
+	return ret;
+}
+
+int win32_mkdir(const char *path, UNUSED mode_t mode) {
+	wchar_t* wc = NULL;
+	if (charset_iconv((const uint8_t*)path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
+		return -1;
+
+	int ret = _wmkdir(wc);
+	free(wc);
 	return ret;
 }
 #endif
@@ -741,6 +750,18 @@ unsigned long long file_size(const char *filename) {
 /* --------------------------------------------------------------------- */
 /* FILESYSTEM FUNCTIONS */
 
+int is_file(const char *filename)
+{
+	struct stat buf;
+
+	if (os_stat(filename, &buf) == -1) {
+		/* Well, at least we tried. */
+		return 0;
+	}
+
+	return S_ISREG(buf.st_mode);
+}
+
 int is_directory(const char *filename)
 {
 	struct stat buf;
@@ -755,17 +776,12 @@ int is_directory(const char *filename)
 
 char *get_current_directory(void)
 {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
-	char* buf_utf8 = NULL;
+	uint8_t* buf_utf8 = NULL;
 
-	if (!_wgetcwd(buf, PATH_MAX))
-		return NULL;
-
-	if (!wchar_to_utf8(&buf_utf8, buf))
-		return NULL;
-
-	return buf_utf8;
+	if (_wgetcwd(buf, PATH_MAX) && !charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
+		return (char*)buf_utf8;
 #else
 	char buf[PATH_MAX + 1] = {'\0'};
 
@@ -781,17 +797,12 @@ char *get_home_directory(void)
 {
 #if defined(__amigaos4__)
 	return str_dup("PROGDIR:");
-#elif defined(WIN32)
+#elif defined(SCHISM_WIN32)
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
-	char* buf_utf8 = NULL;
-	
-	if (!SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == ERROR_SUCCESS)
-		return NULL;
+	uint8_t* buf_utf8 = NULL;
 
-	if (!wchar_to_utf8(&buf_utf8, buf))
-		return NULL;
-
-	return buf_utf8;
+	if (SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK && !charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
+		return (char*)buf_utf8;
 #else
 	char *ptr = getenv("HOME");
 	if (ptr)
@@ -811,16 +822,13 @@ char *get_home_directory(void)
 
 char *get_dot_directory(void)
 {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
-	char* buf_utf8 = NULL;
-	if (!SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) == ERROR_SUCCESS)
-		return NULL;
+	uint8_t* buf_utf8 = NULL;
+	if (SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) == S_OK
+		&& charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
+		return (char*)buf_utf8;
 
-	if (!wchar_to_utf8(&buf_utf8, buf))
-		return NULL;
-
-	return buf_utf8;
 	// else fall back to home (but if this ever happens, things are really screwed...)
 #endif
 	return get_home_directory();
@@ -881,7 +889,7 @@ unsigned int i_sqrt(unsigned int r)
 
 int run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	wchar_t cwd[PATH_MAX] = {L'\0'};
 	const wchar_t *cmd = NULL;
 	wchar_t batch_file[PATH_MAX] = {L'\0'};
@@ -892,17 +900,17 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 		return 0;
 
 	wchar_t* name_w = NULL;
-	int name_len = utf8_to_wchar(&name_w, name);
-	if (!name_len || name_len + 4 > PATH_MAX)
+	if (charset_iconv((const uint8_t*)name, (uint8_t**)&name_w, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return 0;
 
+	size_t name_len = wcslen(name_w);
 	wcsncpy(batch_file, name_w, name_len);
 	wcscpy(&batch_file[name_len], L".bat");
 
 	free(name_w);
 
 	wchar_t* dir_w = NULL;
-	if (!utf8_to_wchar(&dir_w, dir))
+	if (charset_iconv((const uint8_t*)dir, (uint8_t**)&dir_w, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return 0;
 
 	if (_wchdir(dir_w) == -1) {
@@ -913,13 +921,16 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	free(dir_w);
 
 	wchar_t* maybe_arg_w = NULL;
-	if (!utf8_to_wchar(&maybe_arg_w, name))
+	if (charset_iconv((const uint8_t*)maybe_arg, (uint8_t**)&maybe_arg_w, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return 0;
 
 	if (win32_wstat(batch_file, &sb) == -1) {
 		r = 0;
 	} else {
-		cmd = _wgetenv(L"COMSPEC") ?: L"command.com";
+		cmd = _wgetenv(L"COMSPEC");
+		if (!cmd)
+			cmd = L"command.com";
+
 		r = _wspawnlp(_P_WAIT, cmd, cmd, "/c", batch_file, maybe_arg_w, 0);
 	}
 
@@ -928,7 +939,7 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	_wchdir(cwd);
 	if (r == 0) return 1;
 	return 0;
-#elif defined(GEKKO)
+#elif defined(SCHISM_WII)
 	// help how do I operating system
 	(void) dir;
 	(void) name;
@@ -961,7 +972,7 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 static int _rename_nodestroy(const char *old, const char *new)
 {
 /* XXX does __amigaos4__ have a special need for this? */
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	/* do nothing; this is already handled in rename_file */
 	return -1;
 #else
@@ -987,9 +998,10 @@ int rename_file(const char *old, const char *new, int overwrite)
 	if (!overwrite)
 		return _rename_nodestroy(old, new);
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	wchar_t* old_w = NULL, *new_w = NULL;
-	if (!utf8_to_wchar(&old_w, old) || !utf8_to_wchar(&new_w, new)) {
+	if (charset_iconv((const uint8_t*)new, (uint8_t**)&new_w, CHARSET_UTF8, CHARSET_WCHAR_T)
+		|| charset_iconv((const uint8_t*)old, (uint8_t**)&old_w, CHARSET_UTF8, CHARSET_WCHAR_T)) {
 		free(old_w);
 		free(new_w);
 		return -1;

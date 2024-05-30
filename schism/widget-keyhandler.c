@@ -81,7 +81,7 @@ static int thumbbar_prompt_value(struct widget *widget, struct key_event *k)
 		/* annoying */
 		return 0;
 	}
-	if (k->sym.sym == SDLK_MINUS) {
+	if (k->sym == SDLK_MINUS) {
 		if (widget->d.thumbbar.min >= 0)
 			return 0;
 		c = '-';
@@ -98,71 +98,121 @@ static int thumbbar_prompt_value(struct widget *widget, struct key_event *k)
 }
 
 /* --------------------------------------------------------------------- */
-/* This function is completely disgustipated. */
+/* Find backtabs. */
 
+int find_tab_to(int target)
+{
+	for (int i = 0; i < *total_widgets; i++) {
+		if (widgets[i].next.tab == target && i != target) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+int find_down_to(int target)
+{
+	for (int i = 0; i < *total_widgets; i++) {
+		if (widgets[i].next.down == target && i != target) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+int find_right_to(int target)
+{
+	for (int i = 0; i < *total_widgets; i++) {
+		if (widgets[i].next.right == target && i != target) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+int find_right_or_down_to(int target, int checkNotEqual)
+{
+	if (status.flags & CLASSIC_MODE) {
+		int right_to = find_right_to(target);
+
+		if(right_to > -1 && right_to != checkNotEqual)
+			return right_to;
+
+		int down_to = find_down_to(target);
+
+		if(down_to > -1 && down_to != checkNotEqual)
+			return down_to;
+	} else {
+		int down_to = find_down_to(target);
+
+		if(down_to > -1 && down_to != checkNotEqual)
+			return down_to;
+
+		int right_to = find_right_to(target);
+
+		if(right_to > -1 && right_to != checkNotEqual)
+			return right_to;
+	}
+
+	return -1;
+}
+
+int find_tab_to_recursive(int target)
+{
+	int current = target;
+
+	for(int i = 0; i < *total_widgets; i++) {
+		int widget_backtab = widgets[current].next.backtab;
+		if(widget_backtab > -1) return widget_backtab;
+
+		int tab_to = find_tab_to(current);
+		if(tab_to > -1) return tab_to;
+
+		int right_or_down_to = find_right_or_down_to(current, target);
+
+		if(right_or_down_to > -1) {
+			current = right_or_down_to;
+			continue;
+		}
+
+		return -1;
+	}
+
+	return -1;
+}
 
 static void _backtab(void)
 {
-	struct widget *w;
-	int i;
-
 	/* hunt for a widget that leads back to this one */
 	if (!total_widgets || !selected_widget) return;
 
-	for (i = 0; i < *total_widgets; i++) {
-		w = &widgets[i];
-		if (w->next.tab == *selected_widget) {
-			/* found backtab */
-			change_focus_to(i);
-			return;
-		}
+	int selected = *selected_widget;
+	int backtab = find_tab_to_recursive(selected);
 
+	if(backtab > -1) {
+		change_focus_to(backtab);
+		return;
 	}
-	if (status.flags & CLASSIC_MODE) {
-		for (i = 0; i < *total_widgets; i++) {
-			w = &widgets[i];
-			if (w->next.right == *selected_widget) {
-				/* simulate backtab */
-				change_focus_to(i);
-				return;
-			}
-		}
-		for (i = 0; i < *total_widgets; i++) {
-			w = &widgets[i];
-			if (w->next.down == *selected_widget) {
-				/* simulate backtab */
-				change_focus_to(i);
-				return;
-			}
-		}
-	} else {
-		for (i = 0; i < *total_widgets; i++) {
-			w = &widgets[i];
-			if (w->next.down == *selected_widget) {
-				/* simulate backtab */
-				change_focus_to(i);
-				return;
-			}
-		}
-		for (i = 0; i < *total_widgets; i++) {
-			w = &widgets[i];
-			if (w->next.right == *selected_widget) {
-				/* simulate backtab */
-				change_focus_to(i);
-				return;
-			}
-		}
-	}
-	change_focus_to(0); /* err... */
+
+	int right_or_down_to = find_right_or_down_to(selected, selected);
+	if(right_or_down_to > -1) change_focus_to(right_or_down_to);
 }
 
 /* return: 1 = handled text, 0 = didn't */
-int widget_handle_text_input(const char* text_input) {
+int widget_handle_text_input(const uint8_t* text_input) {
 	struct widget* widget = &ACTIVE_WIDGET;
 	if (!widget)
 		return 0;
 
 	switch (widget->type) {
+		case WIDGET_OTHER:
+			if (widget->accept_text && widget->d.other.handle_text_input
+				&& ACTIVE_WIDGET.d.other.handle_text_input(text_input))
+				return 1;
+			break;
 		case WIDGET_NUMENTRY:
 			if (numentry_handle_text(widget, text_input))
 				return 1;
@@ -183,6 +233,8 @@ int widget_handle_key(struct key_event * k)
 	struct widget *widget = &ACTIVE_WIDGET;
 	if (!widget)
 		return 0;
+
+	/* XXX can this be removed? */
 	if (!widget->accept_text) /* hack */
 		widget->accept_text = 1;
 
@@ -200,10 +252,10 @@ int widget_handle_key(struct key_event * k)
 		switch(current_type) {
 		case WIDGET_NUMENTRY:
 			if (k->mouse_button == MOUSE_BUTTON_LEFT) {
-				k->sym.sym = SDLK_MINUS;
+				k->sym = SDLK_MINUS;
 				k->mouse = MOUSE_NONE;
 			} else if (k->mouse_button == MOUSE_BUTTON_RIGHT) {
-				k->sym.sym = SDLK_PLUS;
+				k->sym = SDLK_PLUS;
 				k->mouse = MOUSE_NONE;
 			}
 			break;
@@ -250,7 +302,7 @@ int widget_handle_key(struct key_event * k)
 	}
 
 	if (k->mouse == MOUSE_CLICK
-	    || (k->mouse == MOUSE_NONE && k->sym.sym == SDLK_RETURN)) {
+	    || (k->mouse == MOUSE_NONE && k->sym == SDLK_RETURN)) {
 #if 0
 		if (k->mouse && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
 			if (status.flags & DISKWRITER_ACTIVE) return 0;
@@ -409,12 +461,12 @@ int widget_handle_key(struct key_event * k)
 		return 0;
 
 	if (k->mouse == MOUSE_SCROLL_UP && current_type == WIDGET_NUMENTRY) {
-		k->sym.sym = SDLK_MINUS;
+		k->sym = SDLK_MINUS;
 	} else if (k->mouse == MOUSE_SCROLL_DOWN && current_type == WIDGET_NUMENTRY) {
-		k->sym.sym = SDLK_PLUS;
+		k->sym = SDLK_PLUS;
 	}
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_ESCAPE:
 		/* this is to keep the text entries from taking the key hostage and inserting '<-'
 		characters instead of showing the menu */
@@ -797,11 +849,11 @@ int widget_handle_key(struct key_event * k)
 		break;
 	case WIDGET_TEXTENTRY:
 		if ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0 &&
-			unicode_to_ascii(k->sym.sym))
+			k->text && textentry_add_text(widget, k->text))
 			return 1;
 		break;
 	case WIDGET_NUMENTRY:
-		if (numeric_key_event(k, 0) == -1)
+		if (k->text && numentry_handle_text(widget, k->text))
 			return 1;
 		break;
 	default:

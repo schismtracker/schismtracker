@@ -23,11 +23,10 @@
 
 /* No, this has nothing whatsoever to do with dmoz.org, except for the 'directory' part. :) */
 
-#define NEED_DIRENT
-#define NEED_TIME
 #include "headers.h"
 
 #include "it.h"
+#include "charset.h"
 #include "song.h"
 #include "dmoz.h"
 #include "slurp.h"
@@ -47,12 +46,12 @@
 # include <proto/dos.h>
 #endif
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 #include <windows.h>
 #include <winbase.h>
 #endif
 
-#ifdef GEKKO
+#ifdef SCHISM_WII
 #include <sys/dir.h>
 // isfs is pretty much useless, but it might be interesting to browse it I guess
 static const char *devices[] = {
@@ -248,7 +247,7 @@ char *dmoz_path_normal(const char *path)
 	base = result + rooted;
 	stub_char = rooted ? DIR_SEPARATOR : '.';
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	/* Stupid hack -- fix up any initial slashes in the absolute part of the path.
 	(The rest of them will be handled as the path components are processed.) */
 	for (q = result; q < base; q++)
@@ -308,7 +307,7 @@ int dmoz_path_is_absolute(const char *path)
 {
 	if (!path || !*path)
 		return 0;
-#if defined(WIN32)
+#if defined(SCHISM_WIN32)
 	if (isalpha(path[0]) && path[1] == ':')
 		return IS_DIR_SEPARATOR(path[2]) ? 3 : 2;
 #elif defined(__amigaos4__)
@@ -316,7 +315,7 @@ int dmoz_path_is_absolute(const char *path)
 	char *colon = strchr(path, ':'), *slash = strchr(path, '/');
 	if (colon && (colon < slash || (colon && !slash && colon[1] == '\0')))
 		return colon - path + 1;
-#elif defined(GEKKO)
+#elif defined(SCHISM_WII)
 	char *colon = strchr(path, ':'), *slash = strchr(path, '/');
 	if (colon + 1 == slash)
 		return slash - path + 1;
@@ -698,7 +697,7 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 		}
 		IDOS->UnLockDosList(LDF_VOLUMES);
 	}
-#elif defined(WIN32)
+#elif defined(SCHISM_WIN32)
 	const DWORD x = GetLogicalDrives();
 	UINT em = SetErrorMode(0);
 	char sbuf[] = "A:\\";
@@ -710,7 +709,7 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 		}
 	}
 	em = SetErrorMode(em);
-#elif defined(GEKKO)
+#elif defined(SCHISM_WII)
 	int i;
 	for (i = 0; devices[i]; i++) {
 		DIR *dir = opendir(devices[i]);
@@ -734,7 +733,7 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#if defined(WIN32)
+#if defined(SCHISM_WIN32)
 # define FAILSAFE_PATH "C:\\" /* hopefully! */
 #else
 # define FAILSAFE_PATH "/"
@@ -745,9 +744,9 @@ wrong, it adds a 'stub' entry for the root directory, and returns -1. */
 int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 		int (*load_library)(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist))
 {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	wchar_t* path_w = NULL;
-	if (!utf8_to_wchar(&path_w, path))
+	if (charset_iconv((uint8_t*)path, (uint8_t**)&path_w, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return -1;
 
 	DWORD attrib = GetFileAttributesW(path_w);
@@ -756,7 +755,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 
 		char* searchpath = dmoz_path_concat_len(path, "*", strlen(path), 1);
 		wchar_t* searchpath_w = NULL;
-		if (!utf8_to_wchar(&searchpath_w, searchpath)) {
+		if (charset_iconv((uint8_t*)searchpath, (uint8_t**)&searchpath_w, CHARSET_UTF8, CHARSET_WCHAR_T)) {
 			free(searchpath);
 			return -1;
 		}
@@ -776,11 +775,10 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 				continue;
 
 			char* filename = NULL;
-			int filename_len = wchar_to_utf8(&filename, ffd.cFileName);
-			if (!filename_len)
+			if (charset_iconv((uint8_t*)ffd.cFileName, (uint8_t**)&filename, CHARSET_WCHAR_T, CHARSET_UTF8))
 				continue;
 
-			char* fullpath = dmoz_path_concat_len(path, filename, strlen(path), filename_len - 1);
+			char* fullpath = dmoz_path_concat_len(path, filename, strlen(path), strlen(filename));
 	
 			if (ffd.dwFileAttributes & (FILE_ATTRIBUTE_HIDDEN|FILE_ATTRIBUTE_SYSTEM)) {
 				free(fullpath);
@@ -845,7 +843,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 		path = FAILSAFE_PATH;
 	pathlen = strlen(path);
 
-#ifdef GEKKO
+#ifdef SCHISM_WII
 	/* awful hack: libfat's file reads bail if a device is given without a slash. */
 	if (strchr(path, ':') != NULL && strchr(path, '/') == NULL) {
 		int i;

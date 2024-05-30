@@ -21,7 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_TIME
 #include "headers.h"
 #include "it.h"
 #include "sdlmain.h"
@@ -30,8 +29,32 @@
 
 #define TOP_BANNER_CLASSIC "Impulse Tracker v2.14 Copyright (C) 1995-1998 Jeffrey Lim"
 
-/* written by ver_init */
-static char top_banner_normal[80];
+/*
+Information at our disposal:
+
+	VERSION
+		"" or "YYYYMMDD"
+		A date here is the date of the last commit from git
+		empty string will happen if git isn't installed, or no .git
+
+	__DATE__        "Jun  3 2009"
+	__TIME__        "23:39:19"
+	__TIMESTAMP__   "Wed Jun  3 23:39:19 2009"
+		These are annoying to manipulate because of the month being in text format -- but at
+		least I don't think they're ever localized, which would make it much more annoying.
+		Should always exist, especially considering that we require gcc/clang. However, it is a
+		poor indicator of the age of the *code*, since it depends on the clock of the computer
+		that's building the code, and also there is the possibility that someone was hanging
+		onto the code for a really long time before building it.
+
+*/
+static const char* top_banner_normal =
+#if !defined(EMPTY_VERSION)
+	"Schism Tracker " VERSION
+#else
+	"Schism Tracker built " __DATE__ " " __TIME__
+#endif
+	;
 
 /*
 Lower 12 bits of the CWTV field in IT and S3M files.
@@ -64,80 +87,11 @@ const char *ver_short_based_on =
 
 static time_t epoch_sec;
 
-
 const char *schism_banner(int classic)
 {
 	return (classic
 		? TOP_BANNER_CLASSIC
 		: top_banner_normal);
-}
-
-/*
-Information at our disposal:
-
-	VERSION
-		"" or "YYYYMMDD"
-		A date here is the date of the last commit from git
-		empty string will happen if git isn't installed, or no .git
-
-	__DATE__        "Jun  3 2009"
-	__TIME__        "23:39:19"
-	__TIMESTAMP__   "Wed Jun  3 23:39:19 2009"
-		These are annoying to manipulate beacuse of the month being in text format -- but at
-		least I don't think they're ever localized, which would make it much more annoying.
-		Should always exist, especially considering that we require gcc. However, it is a
-		poor indicator of the age of the *code*, since it depends on the clock of the computer
-		that's building the code, and also there is the possibility that someone was hanging
-		onto the code for a really long time before building it.
-
-*/
-
-static int get_version_tm(struct tm *version)
-{
-	char *ret;
-
-	memset(version, 0, sizeof(*version));
-	ret = strptime(VERSION, "%Y %m %d", version);
-	if (ret && !*ret)
-		return 1;
-	/* Argh. */
-	memset(version, 0, sizeof(*version));
-	ret = strptime(__DATE__, "%b %e %Y", version);
-	if (ret && !*ret)
-		return 1;
-	/* Give up; we don't know anything. */
-	return 0;
-}
-
-void ver_init(void)
-{
-	struct tm version, epoch = { .tm_year = 109, .tm_mon = 9, .tm_mday = 31 }; /* 2009-10-31 */
-	time_t version_sec;
-	char ver[32] = VERSION;
-
-	if (get_version_tm(&version)) {
-		version_sec = mktime(&version);
-	} else {
-		printf("help, I am very confused about myself\n");
-		version_sec = epoch_sec;
-	}
-
-	epoch_sec = mktime(&epoch);
-	version_sec = mktime(&version);
-	ver_cwtv = 0x050 + (version_sec - epoch_sec) / 86400;
-	ver_reserved = ver_cwtv < 0xfff ? 0 : (ver_cwtv - 0x050);
-	ver_cwtv = CLAMP(ver_cwtv, 0x050, 0xfff);
-
-	/* show build date if we don't know last commit date (no git) */
-	if (ver[0]) {
-		snprintf(top_banner_normal, sizeof(top_banner_normal) - 1,
-			"Schism Tracker %s", ver);
-	} else {
-		snprintf(top_banner_normal, sizeof(top_banner_normal) - 1,
-			"Schism Tracker built %s %s", __DATE__, __TIME__);
-	}
-
-	top_banner_normal[sizeof(top_banner_normal) - 1] = '\0'; /* to be sure */
 }
 
 void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char *buf)

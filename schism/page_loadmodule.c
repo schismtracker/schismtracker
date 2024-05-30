@@ -21,8 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_DIRENT
-#define NEED_TIME
 #include "headers.h"
 
 #include "it.h"
@@ -52,6 +50,10 @@ and fuglified to add FNM_CASEFOLD|FNM_PERIOD behavior */
 
 #if HAVE_FNMATCH
 # include <fnmatch.h>
+/* GNU extension, ignore */
+# ifndef FNM_CASEFOLD
+#  define FNM_CASEFOLD 0
+# endif
 #else
 # define FNM_CASEFOLD 0
 # define FNM_PERIOD 0
@@ -184,7 +186,7 @@ idea for return codes:
 
 static void handle_file_entered_L(const char *ptr)
 {
-	dmoz_filelist_t tmp = {};
+	dmoz_filelist_t tmp = {0};
 	struct stat sb;
 
 	/* these shenanigans force the file to take another trip... */
@@ -225,7 +227,7 @@ static void loadsave_song_changed(void)
 static void do_save_song(char *ptr)
 {
 	int ret, export = (status.current_page == PAGE_EXPORT_MODULE);
-	const char *filename = ptr ?: song_get_filename();
+	const char *filename = ptr ? ptr : song_get_filename();
 	const char *seltype = NULL;
 	struct widget *widget;
 
@@ -600,13 +602,13 @@ static void file_list_draw(void)
 
 			draw_text_len(file->base, 18, 3, pos, fg1, bg);
 			draw_char(168, 21, pos, 2, bg);
-			draw_text_len(file->title ?: "", 25, 22, pos, fg2, bg);
+			draw_text_len(file->title ? file->title : "", 25, 22, pos, fg2, bg);
 		}
 
 		/* info for the current file */
 		if (current_file >= 0 && current_file < flist.num_files) {
 			file = flist.files[current_file];
-			draw_text_len(file->description ?: "", 26, 51, 40, 5, 0);
+			draw_text_len(file->description ? file->description : "", 26, 51, 40, 5, 0);
 			sprintf(buf, "%09lu", (unsigned long)file->filesize);
 			draw_text_len(buf, 26, 51, 41, 5, 0);
 			draw_text_len(get_date_string(file->timestamp, buf), 26, 51, 42, 5, 0);
@@ -680,22 +682,21 @@ static void show_selected_song_length(void)
 	csf_free(song);
 }
 
-static int file_list_handle_text_input(const char* text) {
-	if (SDL_GetModState() & KMOD_ALT)
-		return 1;
+static int file_list_handle_text_input(const uint8_t* text) {
+	int success = 0;
 
 	for (; *text; text++)
-		if (!search_text_add_char(*text))
-			return 0;
+		if (search_text_add_char(*text))
+			success = 1;
 
-	return 1;
+	return success;
 }
 
 static int file_list_handle_key(struct key_event * k)
 {
 	int new_file = current_file;
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_UP:
 		new_file--;
 		break;
@@ -745,6 +746,9 @@ static int file_list_handle_key(struct key_event * k)
 		} /* else fall through */
 	default:
 		if (k->mouse == MOUSE_NONE) {
+			if (k->text)
+				return file_list_handle_text_input(k->text);
+
 			return 0;
 		}
 	}
@@ -817,7 +821,7 @@ static void dir_list_draw(void)
 	search_redraw();
 }
 
-static int dir_list_handle_text_input(const char* text) {
+static int dir_list_handle_text_input(const uint8_t* text) {
 	for (; *text && search_text_length < NAME_MAX; text++) {
 		if (*text < 32)
 			return 0;
@@ -864,7 +868,7 @@ static int dir_list_handle_key(struct key_event * k)
 		}
 	}
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_UP:
 		new_dir--;
 		break;
@@ -904,7 +908,7 @@ static int dir_list_handle_key(struct key_event * k)
 			search_text_delete_char();
 		return 1;
 	case SDLK_SLASH:
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	case SDLK_BACKSLASH:
 #endif
 		if (k->state == KEY_RELEASE)
@@ -920,6 +924,9 @@ static int dir_list_handle_key(struct key_event * k)
 		break;
 	default:
 		if (k->mouse == MOUSE_NONE) {
+			if (k->text)
+				return dir_list_handle_text_input(k->text);
+
 			return 0;
 		}
 	}
@@ -997,18 +1004,18 @@ static int update_directory(void)
 #if CACHEFREE
 static int _save_cachefree_hack(struct key_event *k)
 {
-	if ((k->sym.sym == SDLK_F10 && NO_MODIFIER(k->mod))
-	|| (k->sym.sym == SDLK_w && (k->mod & KMOD_CTRL))
-	|| (k->sym.sym == SDLK_s && (k->mod & KMOD_CTRL))) {
+	if ((k->sym == SDLK_F10 && NO_MODIFIER(k->mod))
+	|| (k->sym == SDLK_w && (k->mod & KMOD_CTRL))
+	|| (k->sym == SDLK_s && (k->mod & KMOD_CTRL))) {
 		status.flags |= DIR_MODULES_CHANGED;
 	}
 	return 0;
 }
 static int _load_cachefree_hack(struct key_event *k)
 {
-	if ((k->sym.sym == SDLK_F9 && NO_MODIFIER(k->mod))
-	|| (k->sym.sym == SDLK_l && (k->mod & KMOD_CTRL))
-	|| (k->sym.sym == SDLK_r && (k->mod & KMOD_CTRL))) {
+	if ((k->sym == SDLK_F9 && NO_MODIFIER(k->mod))
+	|| (k->sym == SDLK_l && (k->mod & KMOD_CTRL))
+	|| (k->sym == SDLK_r && (k->mod & KMOD_CTRL))) {
 		status.flags |= DIR_MODULES_CHANGED;
 	}
 	return 0;
@@ -1138,7 +1145,6 @@ void save_module_load_page(struct page *page, int do_export)
 
 	widgets_exportsave[4].d.togglebutton.state = 1;
 
-
 	const struct save_format *formats = (do_export ? song_export_formats : song_save_formats);
 	for (n = 0; formats[n].label; n++) {
 		create_togglebutton(widgets_exportsave + 4 + n,
@@ -1150,8 +1156,9 @@ void save_module_load_page(struct page *page, int do_export)
 				formats[n].label,
 				(5 - strlen(formats[n].label)) / 2 + 1,
 				filetype_saves);
+
+		widgets_exportsave[4 + n].next.backtab = 1;
 	}
 	widgets_exportsave[4 + n - 1].next.down = 2;
 	page->total_widgets += n;
 }
-

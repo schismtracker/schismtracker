@@ -21,7 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_TIME
 #include "headers.h"
 
 #include "it.h"
@@ -46,7 +45,7 @@ struct tracker_status status = {
 	.previous_page = PAGE_BLANK,
 	.current_help_index = HELP_GLOBAL,
 	.dialog_type = DIALOG_NONE,
-	.flags = IS_FOCUSED | IS_VISIBLE | ACCEPTING_INPUT,
+	.flags = IS_FOCUSED | IS_VISIBLE,
 	.time_display = TIME_PLAY_ELAPSED,
 	.vis_style = VIS_VU_METER,
 	.last_midi_event = "",
@@ -234,7 +233,7 @@ inline int page_is_instrument_list(int page)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-static struct widget new_song_widgets[10] = {};
+static struct widget new_song_widgets[10] = {0};
 static const int new_song_groups[4][3] = { {0, 1, -1}, {2, 3, -1}, {4, 5, -1}, {6, 7, -1} };
 
 static void new_song_ok(UNUSED void *data)
@@ -385,17 +384,11 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 /* --------------------------------------------------------------------------------------------------------- */
 /* text input handler */
 
-void handle_text_input(const char* text_input) {
-	if (ACTIVE_WIDGET.type == WIDGET_OTHER)
-		if (ACTIVE_WIDGET.accept_text)
-			if (ACTIVE_WIDGET.d.other.handle_text_input) {
-				ACTIVE_WIDGET.d.other.handle_text_input(text_input);
-				return;
-			}
+void handle_text_input(const uint8_t* text_input) {
 	if (widget_handle_text_input(text_input)) return;
-	if (!(status.dialog_type & DIALOG_BOX)) {
-		if (ACTIVE_PAGE.handle_text_input) ACTIVE_PAGE.handle_text_input(text_input);
-	}
+
+	if (!(status.dialog_type & DIALOG_BOX) && ACTIVE_PAGE.handle_text_input)
+		ACTIVE_PAGE.handle_text_input(text_input);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -484,7 +477,7 @@ static int handle_key_global(struct key_event * k)
 
 	/* first, check the truly global keys (the ones that still work if
 	 * a dialog's open) */
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_RETURN:
 		if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
 			if (k->state == KEY_PRESS)
@@ -555,7 +548,7 @@ static int handle_key_global(struct key_event * k)
 	/* next, if there's no dialog, check the rest of the keys */
 	if (status.flags & DISKWRITER_ACTIVE) return 0;
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_q:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
@@ -899,7 +892,7 @@ static int handle_key_global(struct key_event * k)
 	}
 
 	/* got a bit ugly here, sorry */
-	i = k->sym.sym;
+	i = k->sym;
 	if (k->mod & KMOD_ALT) {
 		switch (i) {
 		case SDLK_F1: i = 0; break;
@@ -940,15 +933,15 @@ static int _handle_ime(struct key_event *k)
 		if (digraph_n == -1 && k->state == KEY_RELEASE) {
 			digraph_n = 0;
 
-		} else if (!(status.flags & CLASSIC_MODE) && (k->sym.sym == SDLK_LCTRL || k->sym.sym == SDLK_RCTRL)) {
+		} else if (!(status.flags & CLASSIC_MODE) && (k->sym == SDLK_LCTRL || k->sym == SDLK_RCTRL)) {
 			if (k->state == KEY_RELEASE && digraph_n >= 0) {
 				digraph_n++;
 				if (digraph_n >= 2)
 					status_text_flash_bios("Enter digraph:");
 			}
-		} else if (k->sym.sym == SDLK_LSHIFT || k->sym.sym == SDLK_RSHIFT) {
+		} else if (k->sym == SDLK_LSHIFT || k->sym == SDLK_RSHIFT) {
 			/* do nothing */
-		} else if (!NO_MODIFIER((k->mod&~KMOD_SHIFT)) || (c=k->sym.sym) == 0 || digraph_n < 2) {
+		} else if (!NO_MODIFIER((k->mod&~KMOD_SHIFT)) || (c=(k->text) ? *k->text : k->sym) == 0 || digraph_n < 2) {
 			if (k->state == KEY_PRESS && k->mouse == MOUSE_NONE) {
 				if (digraph_n > 0) status_text_flash(" ");
 				digraph_n = -1;
@@ -960,7 +953,7 @@ static int _handle_ime(struct key_event *k)
 				digraph_c = c;
 				status_text_flash_bios("Enter digraph: %c", c);
 			} else {
-				unsigned char digraph_input[2] = {char_digraph(digraph_c, c), '\0'};
+				uint8_t digraph_input[2] = {char_digraph(digraph_c, c), '\0'};
 				if (digraph_input[0]) {
 					status_text_flash_bios("Enter digraph: %c%c -> %c",
 							       digraph_c, c, digraph_input[0]);
@@ -969,7 +962,7 @@ static int _handle_ime(struct key_event *k)
 				}
 				digraph_n = digraph_c = 0;
 				if (digraph_input[0]) {
-					handle_text_input((const char*)digraph_input);
+					handle_text_input((const uint8_t*)digraph_input);
 				}
 			}
 			return 1;
@@ -979,13 +972,7 @@ static int _handle_ime(struct key_event *k)
 		}
 
 		/* ctrl+shift -> unicode character */
-		if (k->sym.sym==SDLK_LCTRL || k->sym.sym==SDLK_RCTRL || k->sym.sym==SDLK_LSHIFT || k->sym.sym==SDLK_RSHIFT) {
-			/* this is horrid */
-			if (!(status.flags & CLASSIC_MODE) && k->state == KEY_PRESS &&
-				(((k->sym.sym == SDLK_LCTRL  || k->sym.sym == SDLK_RCTRL)  && (k->mod & KMOD_SHIFT)) ||
-				 ((k->sym.sym == SDLK_LSHIFT || k->sym.sym == SDLK_RSHIFT) && (k->mod & KMOD_CTRL)))) {
-				SDL_StopTextInput();
-			}
+		if (k->sym==SDLK_LCTRL || k->sym==SDLK_RCTRL || k->sym==SDLK_LSHIFT || k->sym==SDLK_RSHIFT) {
 			if (k->state == KEY_RELEASE) {
 				if (cs_unicode_c > 0) {
 					uint8_t unicode[2] = {(uint8_t)(char_unicode_to_cp437(cs_unicode)), '\0'};
@@ -994,7 +981,7 @@ static int _handle_ime(struct key_event *k)
 						status_text_flash_bios("Enter Unicode: U+%04X -> %c",
 									   cs_unicode, unicode[0]);
 						SDL_SetModState(0);
-						handle_text_input(&unicode[0]);
+						handle_text_input((const uint8_t*)unicode);
 					} else {
 						status_text_flash_bios("Enter Unicode: U+%04X -> INVALID", cs_unicode);
 					}
@@ -1002,18 +989,22 @@ static int _handle_ime(struct key_event *k)
 					alt_numpad = alt_numpad_c = 0;
 					digraph_n = digraph_c = 0;
 				}
-				SDL_StartTextInput();
 				return 1;
 			}
 		} else if (!(status.flags & CLASSIC_MODE) && (k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT)) {
 			if (cs_unicode_c >= 0) {
 				/* bleh... */
+				SDL_Keycode sym = k->sym;
 				m = k->mod;
+
+				k->sym = k->orig_sym;
 				k->mod = 0;
-				/* HACK: SDL2 replaces numbers with their respective symbols when shift is held */
-				k->sym.sym = SDL_GetKeyFromScancode(k->scancode);
+
 				c = kbd_char_to_hex(k);
+
+				k->sym = sym;
 				k->mod = m;
+
 				if (c == -1) {
 					cs_unicode = cs_unicode_c = -1;
 				} else {
@@ -1027,26 +1018,23 @@ static int _handle_ime(struct key_event *k)
 				}
 			}
 		} else {
-			if (k->sym.sym==SDLK_LCTRL || k->sym.sym==SDLK_RCTRL || k->sym.sym==SDLK_LSHIFT || k->sym.sym==SDLK_RSHIFT) {
+			if (k->sym==SDLK_LCTRL || k->sym==SDLK_RCTRL || k->sym==SDLK_LSHIFT || k->sym==SDLK_RSHIFT) {
 				return 1;
 			}
 			cs_unicode = cs_unicode_c = 0;
 		}
 
 		/* alt+numpad -> char number */
-		if (k->sym.sym == SDLK_LALT || k->sym.sym == SDLK_RALT
-			|| k->sym.sym == SDLK_LGUI || k->sym.sym == SDLK_RGUI) {
-			if (k->state == KEY_PRESS)
-				SDL_StopTextInput();
+		if (k->sym == SDLK_LALT || k->sym == SDLK_RALT
+			|| k->sym == SDLK_LGUI || k->sym == SDLK_RGUI) {
 			if (k->state == KEY_RELEASE && alt_numpad_c > 0 && (alt_numpad & 255) > 0) {\
-				SDL_StartTextInput();
 				if (alt_numpad < 32)
 					return 0;
 				uint8_t unicode[2] = {(uint8_t)(alt_numpad & 255), '\0'};
 				if (!(status.flags & CLASSIC_MODE))
 					status_text_flash_bios("Enter DOS/ASCII: %d -> %c",
 							       (int)unicode[0], (int)unicode[0]);
-				handle_text_input(&unicode[0]);
+				handle_text_input((const uint8_t*)unicode);
 				alt_numpad = alt_numpad_c = 0;
 				digraph_n = digraph_c = 0;
 				cs_unicode = cs_unicode_c = 0;
@@ -1085,10 +1073,6 @@ static int _handle_ime(struct key_event *k)
 /* this is the important one */
 void handle_key(struct key_event *k)
 {
-	/* stupid hack to ignore text input when opening a dialog via keybind */
-	if ((&ACTIVE_WIDGET != &ACTIVE_PAGE_WIDGET) && !SDL_IsTextInputActive())
-		SDL_StartTextInput();
-
 	if (_handle_ime(k))
 		return;
 
@@ -1102,7 +1086,7 @@ void handle_key(struct key_event *k)
 	if (widget_handle_key(k)) return;
 
 	/* now check a couple other keys. */
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_LEFT:
 		if (k->state == KEY_RELEASE) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
@@ -1144,14 +1128,14 @@ void handle_key(struct key_event *k)
 	case SDLK_SLASH:
 		if (k->state == KEY_RELEASE) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
-		if (k->orig_sym.sym == SDLK_KP_DIVIDE) {
+		if (k->orig_sym == SDLK_KP_DIVIDE) {
 			kbd_set_current_octave(kbd_get_current_octave() - 1);
 		}
 		return;
 	case SDLK_ASTERISK:
 		if (k->state == KEY_RELEASE) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
-		if (k->orig_sym.sym == SDLK_KP_MULTIPLY) {
+		if (k->orig_sym == SDLK_KP_MULTIPLY) {
 			kbd_set_current_octave(kbd_get_current_octave() + 1);
 		}
 		return;
@@ -1787,13 +1771,13 @@ static int _tj_num1 = 0, _tj_num2 = 0;
 
 static int _timejump_keyh(struct key_event *k)
 {
-	if (k->sym.sym == SDLK_BACKSPACE) {
+	if (k->sym == SDLK_BACKSPACE) {
 		if (*selected_widget == 1 && _timejump_widgets[1].d.numentry.value == 0) {
 			if (k->state == KEY_RELEASE) change_focus_to(0);
 			return 1;
 		}
 	}
-	if (k->sym.sym == SDLK_COLON || k->sym.sym == SDLK_SEMICOLON) {
+	if (k->sym == SDLK_COLON || k->sym == SDLK_SEMICOLON) {
 		if (k->state == KEY_RELEASE) {
 			if (*selected_widget == 0) {
 				change_focus_to(1);
@@ -1837,7 +1821,7 @@ void show_song_timejump(void)
 	_timejump_widgets[0].d.numentry.handle_unknown_key = _timejump_keyh;
 	_timejump_widgets[0].d.numentry.reverse = 1;
 	_timejump_widgets[1].d.numentry.reverse = 1;
-	create_button(_timejump_widgets+2, 30, 29, 8, 0, 2, 2, 3, 3, (void *) _timejump_ok, "OK", 4);
+	create_button(_timejump_widgets+2, 30, 29, 8, 0, 2, 2, 3, 3, (void(*)(void))_timejump_ok, "OK", 4);
 	create_button(_timejump_widgets+3, 42, 29, 8, 1, 3, 3, 3, 0, dialog_cancel_NULL, "Cancel", 2);
 	d = dialog_create_custom(26, 24, 30, 8, _timejump_widgets, 4, 0, _timejump_draw, NULL);
 	d->handle_key = _timejump_keyh;

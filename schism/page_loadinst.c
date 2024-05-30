@@ -21,8 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_DIRENT
-#define NEED_TIME
 #include "headers.h"
 
 #include "it.h"
@@ -368,11 +366,26 @@ static void do_delete_file(UNUSED void *data)
 	file_list_reposition();
 }
 
+static int file_list_handle_text_input(const uint8_t* text) {
+	dmoz_file_t* f = flist.files[current_file];
+
+	for (; *text; text++) {
+		if (*text >= 32 && (slash_search_mode > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
+			if (slash_search_mode < 0) slash_search_mode = 0;
+			if (slash_search_mode < PATH_MAX) {
+				slash_search_str[slash_search_mode++] = *text;
+				reposition_at_slash_search();
+				status.flags |= NEED_UPDATE;
+			}
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static int file_list_handle_key(struct key_event * k)
 {
-	dmoz_file_t *f;
 	int new_file = current_file;
-	int c = k->sym.sym;
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 
@@ -388,7 +401,7 @@ static int file_list_handle_key(struct key_event * k)
 			}
 		}
 	}
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_UP:           new_file--; slash_search_mode = -1; break;
 	case SDLK_DOWN:         new_file++; slash_search_mode = -1; break;
 	case SDLK_PAGEUP:       new_file -= 35; slash_search_mode = -1; break;
@@ -434,7 +447,7 @@ static int file_list_handle_key(struct key_event * k)
 		}
 	case SDLK_SLASH:
 		if (slash_search_mode < 0) {
-			if (k->orig_sym.sym == SDLK_SLASH) {
+			if (k->orig_sym == SDLK_SLASH) {
 				if (k->state == KEY_PRESS)
 					return 0;
 				slash_search_mode = 0;
@@ -444,18 +457,9 @@ static int file_list_handle_key(struct key_event * k)
 			return 0;
 		} /* else fall through */
 	default:
-		f = flist.files[current_file];
-		if (c >= 32 && (slash_search_mode > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-			if (slash_search_mode < 0) slash_search_mode = 0;
-			if (slash_search_mode < PATH_MAX) {
-				slash_search_str[slash_search_mode++] = c;
-				reposition_at_slash_search();
-				status.flags |= NEED_UPDATE;
-			}
-			return 1;
-		}
+		if (k->text)
+			return file_list_handle_text_input(k->text);
+
 		if (!k->mouse) return 0;
 	}
 
@@ -484,7 +488,7 @@ static void load_instrument_handle_key(struct key_event * k)
 {
 	if (k->state == KEY_RELEASE)
 		return;
-	if (k->sym.sym == SDLK_ESCAPE && NO_MODIFIER(k->mod))
+	if (k->sym == SDLK_ESCAPE && NO_MODIFIER(k->mod))
 		set_page(PAGE_INSTRUMENT_LIST);
 }
 
@@ -501,7 +505,7 @@ void load_instrument_load_page(struct page *page)
 	page->total_widgets = 1;
 	page->widgets = widgets_loadinst;
 	page->help_index = HELP_GLOBAL;
-	create_other(widgets_loadinst + 0, 0, file_list_handle_key, NULL, file_list_draw);
+	create_other(widgets_loadinst + 0, 0, file_list_handle_key, file_list_handle_text_input, file_list_draw);
 	widgets_loadinst[0].accept_text = 1;
 }
 

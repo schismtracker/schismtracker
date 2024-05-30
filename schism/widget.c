@@ -41,6 +41,7 @@ void create_toggle(struct widget *w, int x, int y, int next_up, int next_down,
 	w->next.down = next_down;
 	w->next.right = next_right;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->activate = NULL;
 	w->depressed = 0;
@@ -70,6 +71,7 @@ void create_menutoggle(struct widget *w, int x, int y, int next_up, int next_dow
 	w->next.down = next_down;
 	w->next.right = next_right;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->d.menutoggle.choices = choices;
 	w->d.menutoggle.num_choices = n;
@@ -92,6 +94,7 @@ void create_button(struct widget *w, int x, int y, int width, int next_up, int n
 	w->next.down = next_down;
 	w->next.right = next_right;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->d.button.text = text;
 	w->d.button.padding = padding;
@@ -114,6 +117,7 @@ void create_togglebutton(struct widget *w, int x, int y, int width, int next_up,
 	w->next.down = next_down;
 	w->next.right = next_right;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->d.togglebutton.text = text;
 	w->d.togglebutton.padding = padding;
@@ -133,7 +137,9 @@ void create_textentry(struct widget *w, int x, int y, int width, int next_up, in
 	w->height = 1;
 	w->next.up = next_up;
 	w->next.down = next_down;
+	w->next.right = -1;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->d.textentry.text = text;
 	w->d.textentry.max_length = max_length;
@@ -154,7 +160,9 @@ void create_numentry(struct widget *w, int x, int y, int width, int next_up, int
 	w->height = 1;
 	w->next.up = next_up;
 	w->next.down = next_down;
+	w->next.right = -1;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->d.numentry.min = min;
 	w->d.numentry.max = max;
@@ -176,7 +184,9 @@ void create_thumbbar(struct widget *w, int x, int y, int width, int next_up, int
 	w->height = 1;
 	w->next.up = next_up;
 	w->next.down = next_down;
+	w->next.right = -1;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->d.thumbbar.min = min;
 	w->d.thumbbar.max = max;
@@ -199,7 +209,9 @@ void create_bitset(struct widget *w, int x, int y, int width, int next_up, int n
 	w->height = 1;
 	w->next.up = next_up;
 	w->next.down = next_down;
+	w->next.right = -1;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->d.numentry.reverse = 0;
 	w->d.bitset.nbits = nbits;
@@ -220,7 +232,9 @@ void create_panbar(struct widget *w, int x, int y, int next_up, int next_down, i
 	w->height = 1;
 	w->next.up = next_up;
 	w->next.down = next_down;
+	w->next.right = -1;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	w->changed = changed;
 	w->d.numentry.reverse = 0;
 	w->d.panbar.min = 0;
@@ -230,12 +244,13 @@ void create_panbar(struct widget *w, int x, int y, int next_up, int next_down, i
 }
 
 void create_other(struct widget *w, int next_tab, int (*i_handle_key) (struct key_event *k),
-		  int (*i_handle_text_input) (const char* text), void (*i_redraw) (void))
+		  int (*i_handle_text_input) (const uint8_t* text), void (*i_redraw) (void))
 {
 	w->type = WIDGET_OTHER;
 	w->accept_text = 0;
 	w->next.up = w->next.down = w->next.left = w->next.right = 0;
 	w->next.tab = next_tab;
+	w->next.backtab = -1;
 	/* w->changed = NULL; ??? */
 	w->depressed = 0;
 	w->activate = NULL;
@@ -254,7 +269,7 @@ void create_other(struct widget *w, int next_tab, int (*i_handle_key) (struct ke
 /* --------------------------------------------------------------------- */
 /* generic text stuff */
 
-void text_add_char(char *text, char c, int *cursor_pos, int max_length)
+void text_add_char(char *text, uint8_t c, int *cursor_pos, int max_length)
 {
 	int len;
 
@@ -318,7 +333,7 @@ int textentry_add_char(struct widget *w, uint16_t unicode)
 	return 1;
 }
 
-int textentry_add_text(struct widget *w, const char* text) {
+int textentry_add_text(struct widget *w, const uint8_t* text) {
 	if (!text)
 		return 0;
 
@@ -334,7 +349,7 @@ int menutoggle_handle_key(struct widget *w, struct key_event *k)
 	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0)
 	   && w->d.menutoggle.activation_keys) {
 		const char* m = w->d.menutoggle.activation_keys;
-		const char* p = strchr(m, (char)k->sym.sym);
+		const char* p = strchr(m, (char)k->sym);
 		if (p && *p) {
 			w->d.menutoggle.state = p - m;
 			if(w->changed) w->changed();
@@ -350,7 +365,7 @@ int bitset_handle_key(struct widget *w, struct key_event *k)
 	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0)
 	   && w->d.bitset.activation_keys) {
 		const char* m = w->d.bitset.activation_keys;
-		const char* p = strchr(m, (char)k->sym.sym);
+		const char* p = strchr(m, (char)k->sym);
 		if (p && *p) {
 			int bit_index = p-m;
 			w->d.bitset.value ^= (1 << bit_index);
@@ -380,12 +395,12 @@ static inline int fast_pow10(int n) {
 	return (n < (sizeof(tens)/sizeof(tens[0]))) ? tens[n] : pow(10, n);
 }
 
-int numentry_handle_text(struct widget *w, const char* text_input) {
+int numentry_handle_text(struct widget *w, const uint8_t* text_input) {
 	if (text_input == NULL)
 		return 0;
 
 	char valid_digits[] = "0123456789";
-	int len = strspn(text_input, valid_digits);
+	int len = strspn((const char*)text_input, valid_digits);
 	if (len < 1)
 		return 1;
 
@@ -407,7 +422,7 @@ int numentry_handle_text(struct widget *w, const char* text_input) {
 			/* add our digit in its place */
 			value += (text_input[n] - '0') * pow10_of_pos;
 		}
-	
+
 		*(w->d.numentry.cursor_pos) = CLAMP(pos, 0, w->width - 1);
 	}
 
@@ -603,19 +618,21 @@ void draw_widget(struct widget *w, int selected)
 
 void change_focus_to(int new_widget_index)
 {
-	if (*selected_widget != new_widget_index) {
-		if (ACTIVE_WIDGET.depressed) ACTIVE_WIDGET.depressed = 0;
-
-		*selected_widget = new_widget_index;
-
-		ACTIVE_WIDGET.depressed = 0;
-
-		if (ACTIVE_WIDGET.type == WIDGET_TEXTENTRY)
-			ACTIVE_WIDGET.d.textentry.cursor_pos
-					= strlen(ACTIVE_WIDGET.d.textentry.text);
-
-		status.flags |= NEED_UPDATE;
+	if(new_widget_index == *selected_widget || new_widget_index < 0 || new_widget_index >= *total_widgets) {
+		return;
 	}
+
+	if (ACTIVE_WIDGET.depressed) ACTIVE_WIDGET.depressed = 0;
+
+	*selected_widget = new_widget_index;
+
+	ACTIVE_WIDGET.depressed = 0;
+
+	if (ACTIVE_WIDGET.type == WIDGET_TEXTENTRY)
+		ACTIVE_WIDGET.d.textentry.cursor_pos
+				= strlen(ACTIVE_WIDGET.d.textentry.text);
+
+	status.flags |= NEED_UPDATE;
 }
 
 static int _find_widget_xy(int x, int y)

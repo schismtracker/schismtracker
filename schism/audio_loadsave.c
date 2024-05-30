@@ -21,8 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
-#define NEED_TIME
 #include "headers.h"
 
 #include "it.h"
@@ -338,7 +336,7 @@ static void _save_it_instrument(int n, disko_t *fp, int iti_file)
 {
 	n++; // FIXME: this is dumb; really all the numbering should be one-based to make it simple
 
-	struct it_instrument iti = {};
+	struct it_instrument iti = {0};
 	song_instrument_t *i = current_song->instruments[n];
 
 	if (!i)
@@ -495,8 +493,8 @@ static void _save_it_instrument(int n, disko_t *fp, int iti_file)
 static void _save_it_pattern(disko_t *fp, song_note_t *pat, int patsize)
 {
 	song_note_t *noteptr = pat;
-	song_note_t lastnote[64] = {};
-	uint8_t initmask[64] = {};
+	song_note_t lastnote[64] = {0};
+	uint8_t initmask[64] = {0};
 	uint8_t lastmask[64];
 	unsigned short pos = 0;
 	uint8_t data[65536];
@@ -603,7 +601,7 @@ static void _save_it_pattern(disko_t *fp, song_note_t *pat, int patsize)
 // why on earth isn't this using the 'song' parameter? will finding this out hurt my head?
 static int _save_it(disko_t *fp, UNUSED song_t *song)
 {
-	struct it_file hdr = {};
+	struct it_file hdr = {0};
 	int n;
 	int nord, nins, nsmp, npat;
 	int msglen = strlen(current_song->message);
@@ -627,7 +625,9 @@ static int _save_it(disko_t *fp, UNUSED song_t *song)
 	nsmp = csf_get_num_samples(current_song);
 
 	// IT always saves at least one pattern.
-	npat = csf_get_num_patterns(current_song) ?: 1;
+	npat = csf_get_num_patterns(current_song);
+	if (!npat)
+		npat = 1;
 
 	hdr.id = bswapLE32(0x4D504D49); // IMPM
 	strncpy((char *) hdr.songname, current_song->title, 25);
@@ -822,6 +822,10 @@ const struct save_format song_export_formats[] = {
 	{"MWAV", "WAV multi-write", ".wav", {.export = {EXPORT_FUNCS(wav), 1}}},
 	{"AIFF", "Audio IFF", ".aiff", {.export = {EXPORT_FUNCS(aiff), 0}}},
 	{"MAIFF", "Audio IFF multi-write", ".aiff", {.export = {EXPORT_FUNCS(aiff), 1}}},
+#ifdef USE_FLAC
+	{"FLAC", "Free Lossless Audio Codec", ".flac", {.export = {EXPORT_FUNCS(flac), 0}}},
+	{"MFLAC", "Free Lossless Audio Codec multi-write", ".flac", {.export = {EXPORT_FUNCS(flac), 1}}},
+#endif
 	{.label = NULL}
 };
 // <distance> and maiff sounds like something you'd want to hug
@@ -833,6 +837,9 @@ const struct save_format sample_save_formats[] = {
 	{"AIFF", "Audio IFF", ".aiff", {.save_sample = fmt_aiff_save_sample}},
 	{"AU", "Sun/NeXT", ".au", {.save_sample = fmt_au_save_sample}},
 	{"WAV", "WAV", ".wav", {.save_sample = fmt_wav_save_sample}},
+#ifdef USE_FLAC
+	{"FLAC", "Free Lossless Audio Codec", ".flac", {.save_sample = fmt_flac_save_sample}},
+#endif
 	{"RAW", "Raw", ".raw", {.save_sample = fmt_raw_save_sample}},
 	{.label = NULL}
 };
@@ -1096,7 +1103,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 
 	/* 0. delete old samples */
 	if (current_song->instruments[target]) {
-		int sampmap[MAX_SAMPLES] = {};
+		int sampmap[MAX_SAMPLES] = {0};
 
 		/* init... */
 		for (unsigned int j = 0; j < 128; j++) {
@@ -1126,7 +1133,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 	}
 
 	if (libf) { /* file is ignored */
-		int sampmap[MAX_SAMPLES] = {};
+		int sampmap[MAX_SAMPLES] = {0};
 
 		song_t *xl = song_create_load(libf);
 		if (!xl) {
@@ -1224,7 +1231,7 @@ int song_preload_sample(dmoz_file_t *file)
 int song_load_sample(int n, const char *file)
 {
 	fmt_load_sample_func *load;
-	song_sample_t smp = {};
+	song_sample_t smp = {0};
 
 	const char *base = get_basename(file);
 	slurp_t *s = slurp(file, NULL, 0);
@@ -1362,7 +1369,7 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 			str_dup(path), str_dup(base), NULL, n);
 		file->title = str_dup(library->instruments[n]->name);
 
-		int count[128] = {};
+		int count[128] = {0};
 
 		file->sampsize = 0;
 		file->filesize = 0;

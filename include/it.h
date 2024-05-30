@@ -143,8 +143,6 @@ enum {
 	/* if true, don't stop playing on load, and start playing new song afterward
 	(but only if the last song was already playing before loading) */
 	PLAY_AFTER_LOAD = (1 << 30),
-
-	ACCEPTING_INPUT = (1 << 31),
 };
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
@@ -168,7 +166,7 @@ struct tracker_status {
 	int flags;
 	enum tracker_time_display time_display;
 	enum tracker_vis_style vis_style;
-	SDL_Keysym last_keysym;
+	SDL_Keycode last_keysym;
 
 	time_t last_midi_time;
 	unsigned char last_midi_event[64];
@@ -253,6 +251,9 @@ extern int cfg_video_want_fixed_width;
 extern int cfg_video_want_fixed_height;
 extern int cfg_video_mousecursor;
 extern int cfg_video_width, cfg_video_height;
+#ifdef SCHISM_WIN32
+extern int cfg_video_want_menu_bar;
+#endif
 
 extern char cfg_dir_modules[], cfg_dir_samples[], cfg_dir_instruments[];
 extern char cfg_dir_dotschism[]; /* the full path to ~/.schism */
@@ -294,7 +295,7 @@ void cfg_save_dmoz(cfg_file_t *cfg);
 /* text functions */
 
 /* these are sort of for single-line text entries. */
-void text_add_char(char *text, char c, int *cursor_pos, int max_length);
+void text_add_char(char *text, uint8_t c, int *cursor_pos, int max_length);
 void text_delete_char(char *text, int *cursor_pos, int max_length);
 void text_delete_next_char(char *text, int *cursor_pos, int max_length);
 
@@ -339,7 +340,7 @@ void load_pages(void);  /* called once at start of program */
 void playback_update(void);     /* once per cycle */
 struct key_event;
 void handle_key(struct key_event * k);        /* whenever there's a keypress ;) */
-void handle_text_input(const char* text_input);
+void handle_text_input(const uint8_t* text_input);
 void key_translate(struct key_event *k);
 
 /* this should only be called from main.

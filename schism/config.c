@@ -25,6 +25,7 @@
 
 #include "it.h"
 #include "video.h" /* shouldn't need this */
+#include "util.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -45,14 +46,17 @@ int cfg_video_want_fixed_width = 0;
 int cfg_video_want_fixed_height = 0;
 int cfg_video_mousecursor = MOUSE_EMULATED;
 int cfg_video_width, cfg_video_height;
+#ifdef SCHISM_WIN32
+int cfg_video_want_menu_bar = 1;
+#endif
 
 /* --------------------------------------------------------------------- */
 
-#if defined(WIN32)
+#if defined(SCHISM_WIN32)
 # define DOT_SCHISM "Schism Tracker"
-#elif defined(MACOSX)
+#elif defined(SCHISM_MACOSX)
 # define DOT_SCHISM "Library/Application Support/Schism Tracker"
-#elif defined(GEKKO)
+#elif defined(SCHISM_WII)
 # define DOT_SCHISM "."
 #else
 # define DOT_SCHISM ".schism"
@@ -63,23 +67,38 @@ void cfg_init_dir(void)
 #if defined(__amigaos4__)
 	strcpy(cfg_dir_dotschism, "PROGDIR:");
 #else
-	char *dot_dir, *ptr;
+	char *cur_dir, *portable_file;
 
-	dot_dir = get_dot_directory();
-	ptr = dmoz_path_concat(dot_dir, DOT_SCHISM);
-	strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
-	cfg_dir_dotschism[PATH_MAX] = 0;
-	free(dot_dir);
-	free(ptr);
+	cur_dir = get_current_directory();
+	portable_file = dmoz_path_concat(cur_dir, "portable.txt");
 
-	if (!is_directory(cfg_dir_dotschism)) {
-		printf("Creating directory %s\n", cfg_dir_dotschism);
-		printf("Schism Tracker uses this directory to store your settings.\n");
-		if (mkdir(cfg_dir_dotschism, 0777) != 0) {
-			perror("Error creating directory");
-			fprintf(stderr, "Everything will still work, but preferences will not be saved.\n");
+	if(is_file(portable_file)) {
+		printf("In portable mode.\n");
+
+		strncpy(cfg_dir_dotschism, cur_dir, PATH_MAX);
+		cfg_dir_dotschism[PATH_MAX] = 0;
+	} else {
+		char *dot_dir, *ptr;
+
+		dot_dir = get_dot_directory();
+		ptr = dmoz_path_concat(dot_dir, DOT_SCHISM);
+		strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
+		cfg_dir_dotschism[PATH_MAX] = 0;
+		free(dot_dir);
+		free(ptr);
+
+		if (!is_directory(cfg_dir_dotschism)) {
+			printf("Creating directory %s\n", cfg_dir_dotschism);
+			printf("Schism Tracker uses this directory to store your settings.\n");
+			if (os_mkdir(cfg_dir_dotschism, 0777) != 0) {
+				perror("Error creating directory");
+				fprintf(stderr, "Everything will still work, but preferences will not be saved.\n");
+			}
 		}
 	}
+
+	free(cur_dir);
+	free(portable_file);
 #endif
 }
 
@@ -144,9 +163,9 @@ void cfg_load(void)
 	cfg_video_want_fixed_height = cfg_get_number(&cfg, "Video", "want_fixed_height", 400 * 6);
 	cfg_video_mousecursor = cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
 	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_MAX_STATE);
-	ptr = cfg_get_string(&cfg, "Video", "aspect", NULL, 0, NULL);
-	if (ptr && *ptr)
-		put_env_var("SCHISM_VIDEO_ASPECT", ptr);
+#ifdef SCHISM_WIN32
+	cfg_video_want_menu_bar = !!cfg_get_number(&cfg, "Video", "want_menu_bar", 1);
+#endif
 
 	tmp = get_home_directory();
 	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, tmp);
@@ -214,7 +233,7 @@ void cfg_load(void)
 
 	kbd_sharp_flat_toggle(cfg_get_number(&cfg, "General", "accidentals_as_flats", 0) == 1);
 
-#ifdef MACOSX
+#ifdef SCHISM_MACOSX
 # define DEFAULT_META 1
 #else
 # define DEFAULT_META 0
@@ -309,6 +328,9 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "Video", "fullscreen", !!(video_is_fullscreen()));
 	cfg_set_number(&cfg, "Video", "mouse_cursor", video_mousecursor_visible());
 	cfg_set_number(&cfg, "Video", "lazy_redraw", !!(status.flags & LAZY_REDRAW));
+#ifdef SCHISM_WIN32
+	cfg_set_number(&cfg, "Video", "want_menu_bar", !!cfg_video_want_menu_bar);
+#endif
 
 	cfg_set_number(&cfg, "General", "vis_style", status.vis_style);
 	cfg_set_number(&cfg, "General", "time_display", status.time_display);
