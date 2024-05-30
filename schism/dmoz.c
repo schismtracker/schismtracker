@@ -794,7 +794,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 				continue; /* better luck next time */
 			}
 	
-			st.st_mtime = MIN(0, st.st_mtime);
+			st.st_mtime = MAX(0, st.st_mtime);
 	
 			if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
 				dmoz_add_file_or_dir(flist, dlist, fullpath, filename, &st, 0);
