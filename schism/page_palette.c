@@ -285,7 +285,6 @@ static int palette_paste_callback(UNUSED int cb, const void *data)
 
 	if(!result) {
 		status_text_flash("Bad character or wrong length");
-		printf("Pasting palette failed: Bad character or wrong length\n");
 		return 0;
 	}
 
@@ -296,7 +295,6 @@ static int palette_paste_callback(UNUSED int cb, const void *data)
 	status.flags |= NEED_UPDATE;
 
 	status_text_flash("Palette pasted");
-	printf("Got palette paste: %s\n", str);
 
 	return 1;
 }
