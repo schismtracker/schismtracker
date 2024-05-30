@@ -38,7 +38,11 @@ typedef enum {
 	/* European languages */
 	CHARSET_CP437,
 
-	/* Built-in C types */
+	/* CHARSET_CHAR is special; it first tries UTF-8
+	 * in our internal decoder, then we hand it off
+	 * to SDL, which may or may not actually handle
+	 * it correctly, depending on whether it uses
+	 * the system iconv or its own. */
 	CHARSET_CHAR,
 	CHARSET_WCHAR_T
 } charset_t;
