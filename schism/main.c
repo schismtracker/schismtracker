@@ -527,6 +527,7 @@ static void event_loop(void)
 	localtime_r(&status.now, &status.tmnow);
 	for (;;) {
 		while (SDL_PollEvent(&event)) {
+			/* handle the current event queue */
 			if (!os_sdlevent(&event))
 				continue;
 
@@ -858,63 +859,64 @@ static void event_loop(void)
 		 * we should just send the keydown as is */
 		pop_pending_keydown_event(NULL);
 
-		if (sawrep || !SDL_PollEvent(NULL)) {
-			time(&status.now);
-			localtime_r(&status.now, &status.tmnow);
+		/* now we can do whatever we need to do */
+		time(&status.now);
+		localtime_r(&status.now, &status.tmnow);
 
-			if (status.dialog_type == DIALOG_NONE
-			    && startdown && (status.now - startdown) > 1) {
-				menu_show();
-				startdown = 0;
-				downtrip = 1;
-			}
-			if (status.flags & (CLIPPY_PASTE_SELECTION|CLIPPY_PASTE_BUFFER)) {
-				clippy_paste((status.flags & CLIPPY_PASTE_BUFFER)
-					     ? CLIPPY_BUFFER : CLIPPY_SELECT);
-				status.flags &= ~(CLIPPY_PASTE_BUFFER|CLIPPY_PASTE_SELECTION);
-			}
-
-			check_update();
-
-			switch (song_get_mode()) {
-			case MODE_PLAYING:
-			case MODE_PATTERN_LOOP:
-#ifdef os_screensaver_deactivate
-				if ((status.now-last_ss) > 14) {
-					last_ss=status.now;
-					os_screensaver_deactivate();
-				}
-#endif
-				break;
-			default:
-				break;
-			};
-
-			if (status.flags & DISKWRITER_ACTIVE) {
-				int q = disko_sync();
-				while (q == DW_SYNC_MORE && !SDL_PollEvent(NULL)) {
-					check_update();
-					q = disko_sync();
-				}
-				if (q == DW_SYNC_DONE) {
-#ifdef ENABLE_HOOKS
-					run_disko_complete_hook();
-#endif
-					if (diskwrite_to) {
-						printf("Diskwrite complete, exiting...\n");
-						schism_exit(0);
-					}
-				}
-			}
-
-			/* let dmoz build directory lists, etc
-			as long as there's no user-event going on...
-			*/
-			while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(NULL));
+		if (status.dialog_type == DIALOG_NONE
+		    && startdown && (status.now - startdown) > 1) {
+			menu_show();
+			startdown = 0;
+			downtrip = 1;
+		}
+		if (status.flags & (CLIPPY_PASTE_SELECTION|CLIPPY_PASTE_BUFFER)) {
+			clippy_paste((status.flags & CLIPPY_PASTE_BUFFER)
+				     ? CLIPPY_BUFFER : CLIPPY_SELECT);
+			status.flags &= ~(CLIPPY_PASTE_BUFFER|CLIPPY_PASTE_SELECTION);
 		}
 
-		/* what SDL uses internally for SDL_WaitEvent() */
-		SDL_Delay(1);
+		check_update();
+
+		switch (song_get_mode()) {
+		case MODE_PLAYING:
+		case MODE_PATTERN_LOOP:
+#ifdef os_screensaver_deactivate
+			if ((status.now-last_ss) > 14) {
+				last_ss=status.now;
+				os_screensaver_deactivate();
+			}
+#endif
+			break;
+		default:
+			break;
+		};
+
+		if (status.flags & DISKWRITER_ACTIVE) {
+			int q = disko_sync();
+			while (q == DW_SYNC_MORE && !SDL_PollEvent(NULL)) {
+				check_update();
+				q = disko_sync();
+			}
+			if (q == DW_SYNC_DONE) {
+#ifdef ENABLE_HOOKS
+				run_disko_complete_hook();
+#endif
+				if (diskwrite_to) {
+					printf("Diskwrite complete, exiting...\n");
+					schism_exit(0);
+				}
+			}
+		}
+
+		/* let dmoz build directory lists, etc
+		 *
+		 * as long as there's no user-event going on... */
+		while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(NULL));
+
+		/* delay until there's an event OR 10 ms have passed */
+		int t;
+		for (t = 0; t < 10 && !SDL_PollEvent(NULL); t++)
+			SDL_Delay(1);
 	}
 	schism_exit(0);
 }
