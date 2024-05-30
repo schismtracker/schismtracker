@@ -822,7 +822,7 @@ static int file_list_handle_key(struct key_event * k)
 
 static void dir_list_draw(void)
 {
-	int n, pos;
+	int n, pos, fg, bg;
 
 	draw_fill_chars(51, 13, 76, 34, 0);
 
@@ -830,10 +830,18 @@ static void dir_list_draw(void)
 		if (n < 0) continue; /* er... */
 		if (n >= dlist.num_dirs)
 			break;
-		if (n == current_dir && ACTIVE_PAGE.selected_widget == 1)
-			draw_text_len(dlist.dirs[n]->base, 77 - 51, 51, pos, 0, 3);
-		else
-			draw_text_len(dlist.dirs[n]->base, 77 - 51, 51, pos, 5, 0);
+
+		if (n == current_dir && ACTIVE_PAGE.selected_widget == 1) {
+			fg = 0;
+			bg = 3;
+		} else {
+			fg = 5;
+			bg = 0;
+		}
+
+		CHARSET_EASY_MODE(dlist.dirs[n]->base, CHARSET_CHAR, CHARSET_CP437, {
+			draw_text_bios_len(out, 77 - 51, 51, pos, fg, bg);
+		});
 	}
 
 	/* bleh */
