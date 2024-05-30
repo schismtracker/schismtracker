@@ -107,36 +107,25 @@ void cfg_init_dir(void)
 static const char palette_trans[64] = ".0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 static void cfg_load_palette(cfg_file_t *cfg)
 {
-	uint8_t colors[48];
-	int n;
 	char palette_text[49] = "";
-	const char *ptr;
+	cfg_get_string(cfg, "General", "palette_cur", palette_text, 48, "");
+
+	if(palette_text[0]) {
+		set_palette_from_string(palette_text);
+	}
 
 	palette_load_preset(cfg_get_number(cfg, "General", "palette", 2));
-
-	cfg_get_string(cfg, "General", "palette_cur", palette_text, 48, "");
-	for (n = 0; n < 48; n++) {
-		if (palette_text[n] == '\0' || (ptr = memchr(palette_trans, palette_text[n], sizeof(palette_trans))) == NULL)
-			return;
-		colors[n] = ptr - palette_trans;
-	}
-	memcpy(current_palette, colors, sizeof(current_palette));
 }
 
 static void cfg_save_palette(cfg_file_t *cfg)
 {
-	int n;
-	char palette_text[49] = "";
-
 	cfg_set_number(cfg, "General", "palette", current_palette_index);
 
-	for (n = 0; n < 48; n++) {
-		/* Changed older implementation for this, since it is not vital
-		to have speed here and the compiler printed a warning */
-		palette_text[n] = palette_trans[current_palette[n/3][n%3]];
+	if(current_palette_index == 0) {
+		char palette_text[49] = "";
+		palette_to_string(palette_text);
+		cfg_set_string(cfg, "General", "palette_cur", palette_text);
 	}
-	palette_text[48] = '\0';
-	cfg_set_string(cfg, "General", "palette_cur", palette_text);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

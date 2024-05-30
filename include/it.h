@@ -356,6 +356,8 @@ void main_song_changed_cb(void);
 int font_load(const char *filename);
 void palette_apply(void);
 void palette_load_preset(int palette_index);
+void palette_to_string(char *str_out);
+int set_palette_from_string(const char *str_in);
 
 /* mostly for the itf editor */
 int font_save(const char *filename);

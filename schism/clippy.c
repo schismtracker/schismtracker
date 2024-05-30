@@ -32,9 +32,23 @@
 #include "sdlmain.h"
 #include "video.h"
 
-static char *_current_selection = NULL;
-static char *_current_clipboard = NULL;
-static struct widget *_widget_owner[16] = {NULL};
+static char* _current_selection = NULL;
+static char* _current_clipboard = NULL;
+static struct widget* _widget_owner[16] = {NULL};
+
+static void _free_current_selection(void) {
+	if (_current_selection) {
+		free(_current_selection);
+		_current_selection = NULL;
+	}
+}
+
+static void _free_current_clipboard(void) {
+	if (_current_clipboard) {
+		free(_current_clipboard);
+		_current_clipboard = NULL;
+	}
+}
 
 static void _clippy_copy_to_sys(int cb)
 {
@@ -91,8 +105,10 @@ static void _string_paste(UNUSED int cb, const char *cbptr)
 	event.user.type = SCHISM_EVENT_PASTE;
 	event.user.data1 = str_dup(cbptr); /* current_clipboard... is it safe? */
 	if (!event.user.data1) return; /* eh... */
-	if (SDL_PushEvent(&event) == -1)
+	if (SDL_PushEvent(&event) == -1) {
 		free(event.user.data1);
+		event.user.data1 = NULL;
+	}
 }
 
 static char *_internal_clippy_paste(int cb)
@@ -102,14 +118,14 @@ static char *_internal_clippy_paste(int cb)
 #if SDL_VERSION_ATLEAST(2, 26, 0)
 			/* is this even remotely useful? */
 			if (SDL_HasPrimarySelectionText()) {
-				if (_current_selection)
-					free(_current_selection);
+				_free_current_selection();
 
 				char* sel = SDL_GetPrimarySelectionText();
 
 				if (charset_iconv((uint8_t*)sel, (uint8_t**)&_current_selection, CHARSET_UTF8, CHARSET_CP437)) {
 					SDL_free(sel);
-					return (_current_selection = NULL);
+					_free_current_selection();
+					return NULL;
 				}
 
 				SDL_free(sel);
@@ -120,14 +136,14 @@ static char *_internal_clippy_paste(int cb)
 			return _current_selection;
 		case CLIPPY_BUFFER:
 			if (SDL_HasClipboardText()) {
-				if (_current_clipboard)
-					free(_current_clipboard);
+				_free_current_clipboard();
 
 				char* cb = SDL_GetClipboardText();
 
 				if (charset_iconv((uint8_t*)cb, (uint8_t**)&_current_clipboard, CHARSET_UTF8, CHARSET_CP437)) {
 					SDL_free(cb);
-					return (_current_clipboard = NULL);
+					_free_current_clipboard();
+					return NULL;
 				}
 
 				SDL_free(cb);
@@ -151,12 +167,9 @@ void clippy_paste(int cb)
 void clippy_select(struct widget *w, char *addr, int len)
 {
 	int i;
-
-	if (_current_selection != _current_clipboard)
-		free(_current_selection);
+	_free_current_selection();
 
 	if (!addr) {
-		_current_selection = NULL;
 		_widget_owner[CLIPPY_SELECT] = NULL;
 	} else {
 		_current_selection = (len < 0) ? str_dup(addr) : strn_dup(addr, len);
@@ -166,6 +179,7 @@ void clippy_select(struct widget *w, char *addr, int len)
 		_clippy_copy_to_sys(CLIPPY_SELECT);
 	}
 }
+
 struct widget *clippy_owner(int cb)
 {
 	return (cb == CLIPPY_SELECT || cb == CLIPPY_BUFFER) ? _widget_owner[cb] : NULL;
@@ -173,14 +187,11 @@ struct widget *clippy_owner(int cb)
 
 void clippy_yank(void)
 {
-	if (_current_selection != _current_clipboard)
-		free(_current_clipboard);
-
-	_current_clipboard = _current_selection;
-	_widget_owner[CLIPPY_BUFFER] = _widget_owner[CLIPPY_SELECT];
-
 	if (_current_selection && strlen(_current_selection) > 0) {
-		status_text_flash("Copied to selection buffer");
+		_free_current_clipboard();
+		_current_clipboard = str_dup(_current_selection);
+		_widget_owner[CLIPPY_BUFFER] = _widget_owner[CLIPPY_SELECT];
 		_clippy_copy_to_sys(CLIPPY_BUFFER);
+		status_text_flash("Copied to selection buffer");
 	}
 }
