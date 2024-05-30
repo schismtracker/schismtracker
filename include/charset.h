@@ -64,4 +64,21 @@ uint8_t char_unicode_to_cp437(unsigned int c);
 const char* charset_iconv_error_lookup(charset_error_t err);
 charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset);
 
+/* macros! */
+#define CHARSET_EASY_MODE_EX(MOD, in, inset, outset, x) \
+	do { \
+		MOD uint8_t* out; \
+		charset_error_t err = charset_iconv(in, (uint8_t**)&out, inset, outset); \
+		if (err) \
+			out = in; \
+	\
+		x \
+	\
+		if (!err) \
+			free((uint8_t*)out); \
+	} while (0)
+
+#define CHARSET_EASY_MODE(in, inset, outset, x) CHARSET_EASY_MODE_EX(, in, inset, outset, x)
+#define CHARSET_EASY_MODE_CONST(in, inset, outset, x) CHARSET_EASY_MODE_EX(const, in, inset, outset, x)
+
 #endif
