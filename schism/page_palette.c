@@ -144,7 +144,7 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 			new_palette += MOUSE_SCROLL_LINES;
 	}
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_UP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
@@ -233,7 +233,7 @@ static void palette_list_handle_key(struct key_event * k)
 	if (k->state == KEY_RELEASE)
 		return;
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_PAGEUP:
 		n -= 3;
 		break;

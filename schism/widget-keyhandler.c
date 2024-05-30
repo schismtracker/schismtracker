@@ -81,7 +81,7 @@ static int thumbbar_prompt_value(struct widget *widget, struct key_event *k)
 		/* annoying */
 		return 0;
 	}
-	if (k->sym.sym == SDLK_MINUS) {
+	if (k->sym == SDLK_MINUS) {
 		if (widget->d.thumbbar.min >= 0)
 			return 0;
 		c = '-';
@@ -252,10 +252,10 @@ int widget_handle_key(struct key_event * k)
 		switch(current_type) {
 		case WIDGET_NUMENTRY:
 			if (k->mouse_button == MOUSE_BUTTON_LEFT) {
-				k->sym.sym = SDLK_MINUS;
+				k->sym = SDLK_MINUS;
 				k->mouse = MOUSE_NONE;
 			} else if (k->mouse_button == MOUSE_BUTTON_RIGHT) {
-				k->sym.sym = SDLK_PLUS;
+				k->sym = SDLK_PLUS;
 				k->mouse = MOUSE_NONE;
 			}
 			break;
@@ -302,7 +302,7 @@ int widget_handle_key(struct key_event * k)
 	}
 
 	if (k->mouse == MOUSE_CLICK
-	    || (k->mouse == MOUSE_NONE && k->sym.sym == SDLK_RETURN)) {
+	    || (k->mouse == MOUSE_NONE && k->sym == SDLK_RETURN)) {
 #if 0
 		if (k->mouse && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
 			if (status.flags & DISKWRITER_ACTIVE) return 0;
@@ -461,12 +461,12 @@ int widget_handle_key(struct key_event * k)
 		return 0;
 
 	if (k->mouse == MOUSE_SCROLL_UP && current_type == WIDGET_NUMENTRY) {
-		k->sym.sym = SDLK_MINUS;
+		k->sym = SDLK_MINUS;
 	} else if (k->mouse == MOUSE_SCROLL_DOWN && current_type == WIDGET_NUMENTRY) {
-		k->sym.sym = SDLK_PLUS;
+		k->sym = SDLK_PLUS;
 	}
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_ESCAPE:
 		/* this is to keep the text entries from taking the key hostage and inserting '<-'
 		characters instead of showing the menu */

@@ -443,7 +443,7 @@ static void multichannel_close(UNUSED void *data)
 }
 static int multichannel_handle_key(struct key_event *k)
 {
-	if (k->sym.sym == SDLK_n) {
+	if (k->sym == SDLK_n) {
 		if ((k->mod & KMOD_ALT) && k->state == KEY_PRESS)
 			dialog_yes(NULL);
 		else if (NO_MODIFIER(k->mod) && k->state == KEY_RELEASE)
@@ -827,7 +827,7 @@ static int history_handle_key(struct key_event *k)
 {
 	int i,j;
 	if (! NO_MODIFIER(k->mod)) return 0;
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_ESCAPE:
 		if (k->state == KEY_PRESS)
 			return 0;
@@ -962,7 +962,7 @@ static void volume_amplify_ok(UNUSED void *data)
 
 static int volume_amplify_jj(struct key_event *k)
 {
-	if (k->state == KEY_PRESS && (k->mod & KMOD_ALT) && (k->sym.sym == SDLK_j)) {
+	if (k->state == KEY_PRESS && (k->mod & KMOD_ALT) && (k->sym == SDLK_j)) {
 		dialog_yes(NULL);
 		return 1;
 	}
@@ -2787,39 +2787,39 @@ static int handle_volume(song_note_t * note, struct key_event *k, int pos)
 		if (q >= 0 && q <= 9) {
 			vol = q * 10 + vol % 10;
 			fx = vp;
-		} else if (k->sym.sym == SDLK_a) {
+		} else if (k->sym == SDLK_a) {
 			fx = VOLFX_FINEVOLUP;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_b) {
+		} else if (k->sym == SDLK_b) {
 			fx = VOLFX_FINEVOLDOWN;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_c) {
+		} else if (k->sym == SDLK_c) {
 			fx = VOLFX_VOLSLIDEUP;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_d) {
+		} else if (k->sym == SDLK_d) {
 			fx = VOLFX_VOLSLIDEDOWN;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_e) {
+		} else if (k->sym == SDLK_e) {
 			fx = VOLFX_PORTADOWN;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_f) {
+		} else if (k->sym == SDLK_f) {
 			fx = VOLFX_PORTAUP;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_g) {
+		} else if (k->sym == SDLK_g) {
 			fx = VOLFX_TONEPORTAMENTO;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_h) {
+		} else if (k->sym == SDLK_h) {
 			fx = VOLFX_VIBRATODEPTH;
 			vol %= 10;
 		} else if (status.flags & CLASSIC_MODE) {
 			return 0;
-		} else if (k->sym.sym == SDLK_DOLLAR) {
+		} else if (k->sym == SDLK_DOLLAR) {
 			fx = VOLFX_VIBRATOSPEED;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_LESS) {
+		} else if (k->sym == SDLK_LESS) {
 			fx = VOLFX_PANSLIDELEFT;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_GREATER) {
+		} else if (k->sym == SDLK_GREATER) {
 			fx = VOLFX_PANSLIDERIGHT;
 			vol %= 10;
 		} else {
@@ -3114,7 +3114,7 @@ static int pattern_editor_insert(struct key_event *k)
 			ins = KEYJAZZ_NOINST;
 		}
 
-		if (k->sym.sym == SDLK_4) {
+		if (k->sym == SDLK_4) {
 			if (k->state == KEY_RELEASE)
 				return 0;
 
@@ -3127,7 +3127,7 @@ static int pattern_editor_insert(struct key_event *k)
 				vol, current_channel, cur_note->effect, cur_note->param);
 			advance_cursor(!(k->mod & KMOD_SHIFT), 1);
 			return 1;
-		} else if (k->sym.sym == SDLK_8) {
+		} else if (k->sym == SDLK_8) {
 			/* note: Impulse Tracker doesn't skip multichannels when pressing "8"  -delt. */
 			if (k->state == KEY_RELEASE)
 				return 0;
@@ -3145,7 +3145,7 @@ static int pattern_editor_insert(struct key_event *k)
 		}
 
 
-		if (k->sym.sym == SDLK_SPACE) {
+		if (k->sym == SDLK_SPACE) {
 			/* copy mask to note */
 			n = mask_note.note;
 
@@ -3212,7 +3212,7 @@ static int pattern_editor_insert(struct key_event *k)
 
 		/* Never copy the instrument etc. from the mask when inserting control notes or when
 		erasing a note -- but DO write it when inserting a blank note with the space key. */
-		if (!(NOTE_IS_CONTROL(n) || (k->sym.sym != SDLK_SPACE && n == NOTE_NONE)) && !template_mode) {
+		if (!(NOTE_IS_CONTROL(n) || (k->sym != SDLK_SPACE && n == NOTE_NONE)) && !template_mode) {
 			if (edit_copy_mask & MASK_INSTRUMENT) {
 				if (song_is_instrument_mode())
 					cur_note->instrument = instrument_get_current();
@@ -3267,7 +3267,7 @@ static int pattern_editor_insert(struct key_event *k)
 		break;
 	case 2:                 /* instrument, first digit */
 	case 3:                 /* instrument, second digit */
-		if (k->sym.sym == SDLK_SPACE) {
+		if (k->sym == SDLK_SPACE) {
 			if (song_is_instrument_mode())
 				n = instrument_get_current();
 			else
@@ -3333,7 +3333,7 @@ static int pattern_editor_insert(struct key_event *k)
 		break;
 	case 4:
 	case 5:                 /* volume */
-		if (k->sym.sym == SDLK_SPACE) {
+		if (k->sym == SDLK_SPACE) {
 			cur_note->volparam = mask_note.volparam;
 			cur_note->voleffect = mask_note.voleffect;
 			advance_cursor(1, 0);
@@ -3366,7 +3366,7 @@ static int pattern_editor_insert(struct key_event *k)
 		pattern_selection_system_copyout();
 		break;
 	case 6:                 /* effect */
-		if (k->sym.sym == SDLK_SPACE) {
+		if (k->sym == SDLK_SPACE) {
 			cur_note->effect = mask_note.effect;
 		} else {
 			n = kbd_get_effect_number(k);
@@ -3383,7 +3383,7 @@ static int pattern_editor_insert(struct key_event *k)
 		break;
 	case 7:                 /* param, high nibble */
 	case 8:                 /* param, low nibble */
-		if (k->sym.sym == SDLK_SPACE) {
+		if (k->sym == SDLK_SPACE) {
 			cur_note->param = mask_note.param;
 			current_position = link_effect_column ? 6 : 7;
 			advance_cursor(1, 0);
@@ -3434,10 +3434,10 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	int total_rows = song_get_rows_in_pattern(current_pattern);
 
 	/* hack to render this useful :) */
-	if (k->orig_sym.sym == SDLK_KP_9) {
-		k->sym.sym = SDLK_F9;
-	} else if (k->orig_sym.sym == SDLK_KP_0) {
-		k->sym.sym = SDLK_F10;
+	if (k->orig_sym == SDLK_KP_9) {
+		k->sym = SDLK_F9;
+	} else if (k->orig_sym == SDLK_KP_0) {
+		k->sym = SDLK_F10;
 	}
 
 	n = numeric_key_event(k, 0);
@@ -3449,7 +3449,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		return 1;
 	}
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_RETURN:
 		if (k->state == KEY_PRESS)
 			return 1;
@@ -3488,7 +3488,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SDLK_d:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym.sym == SDLK_d) {
+		if (status.last_keysym == SDLK_d) {
 			if (total_rows - (current_row - 1) > block_double_size)
 				block_double_size <<= 1;
 		} else {
@@ -3505,7 +3505,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SDLK_l:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym.sym == SDLK_l) {
+		if (status.last_keysym == SDLK_l) {
 			/* 3x alt-l re-selects the current channel */
 			if (selection.first_channel == selection.last_channel) {
 				selection.first_channel = 1;
@@ -3553,7 +3553,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SDLK_o:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym.sym == SDLK_o) {
+		if (status.last_keysym == SDLK_o) {
 			clipboard_paste_overwrite(0, 1);
 		} else {
 			clipboard_paste_overwrite(0, 0);
@@ -3567,7 +3567,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SDLK_m:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym.sym == SDLK_m) {
+		if (status.last_keysym == SDLK_m) {
 			clipboard_paste_mix_fields(0, 0);
 		} else {
 			clipboard_paste_mix_notes(0, 0);
@@ -3599,7 +3599,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			}
 		}
 
-		if (status.last_keysym.sym == SDLK_n) {
+		if (status.last_keysym == SDLK_n) {
 			pattern_editor_display_multichannel();
 		}
 		break;
@@ -3627,7 +3627,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SDLK_k:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym.sym == SDLK_k) {
+		if (status.last_keysym == SDLK_k) {
 			selection_wipe_volume(1);
 		} else {
 			selection_slide_volume();
@@ -3636,7 +3636,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SDLK_x:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym.sym == SDLK_x) {
+		if (status.last_keysym == SDLK_x) {
 			selection_wipe_effect();
 		} else {
 			selection_slide_effect();
@@ -3778,7 +3778,7 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	}
 
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_LEFT:
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -3912,7 +3912,7 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	case SDLK_o:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		song_pattern_to_sample(current_pattern, !!(k->mod & KMOD_SHIFT), !!(k->sym.sym == SDLK_b));
+		song_pattern_to_sample(current_pattern, !!(k->mod & KMOD_SHIFT), !!(k->sym == SDLK_b));
 		return 1;
 
 	case SDLK_v:
@@ -3955,7 +3955,7 @@ static int mute_toggle_hack[64]; /* mrsbrisby: please explain this one, i don't 
 static int pattern_editor_handle_key_default(struct key_event * k)
 {
 	/* bleah */
-	if (k->sym.sym == SDLK_LESS || k->sym.sym == SDLK_COLON || k->sym.sym == SDLK_SEMICOLON) {
+	if (k->sym == SDLK_LESS || k->sym == SDLK_COLON || k->sym == SDLK_SEMICOLON) {
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if ((status.flags & CLASSIC_MODE) || current_position != 4) {
@@ -3963,7 +3963,7 @@ static int pattern_editor_handle_key_default(struct key_event * k)
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
-	} else if (k->sym.sym == SDLK_GREATER || k->sym.sym == SDLK_QUOTE || k->sym.sym == SDLK_QUOTEDBL) {
+	} else if (k->sym == SDLK_GREATER || k->sym == SDLK_QUOTE || k->sym == SDLK_QUOTEDBL) {
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if ((status.flags & CLASSIC_MODE) || current_position != 4) {
@@ -3971,7 +3971,7 @@ static int pattern_editor_handle_key_default(struct key_event * k)
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
-	} else if (k->sym.sym == SDLK_COMMA) {
+	} else if (k->sym == SDLK_COMMA) {
 		if (k->state == KEY_RELEASE)
 			return 0;
 		switch (current_position) {
@@ -4155,7 +4155,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		return pattern_editor_insert_midi(k);
 	}
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_UP:
 		if (k->state == KEY_RELEASE)
 			return 0;
@@ -4319,7 +4319,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			};
 		}
 
-		if ((k->mod & KMOD_SHIFT) && k->orig_sym.sym == SDLK_KP_PLUS)
+		if ((k->mod & KMOD_SHIFT) && k->orig_sym == SDLK_KP_PLUS)
 			set_current_pattern(current_pattern + 4);
 		else
 			set_current_pattern(current_pattern + 1);
@@ -4411,7 +4411,7 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 	int total_rows = song_get_rows_in_pattern(current_pattern);
 
 	if (k->mod & KMOD_SHIFT) {
-		switch (k->sym.sym) {
+		switch (k->sym) {
 		case SDLK_LEFT:
 		case SDLK_RIGHT:
 		case SDLK_UP:
@@ -4506,7 +4506,7 @@ static void pated_song_changed(void)
 
 static int _fix_f7(struct key_event *k)
 {
-	if (k->sym.sym == SDLK_F7) {
+	if (k->sym == SDLK_F7) {
 		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;

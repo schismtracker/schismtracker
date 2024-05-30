@@ -153,7 +153,7 @@ static int midi_page_handle_key(struct key_event * k)
 		}
 	}
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case SDLK_SPACE:
 		if (k->state == KEY_PRESS)
 			return 1;

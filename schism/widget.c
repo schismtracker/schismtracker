@@ -349,7 +349,7 @@ int menutoggle_handle_key(struct widget *w, struct key_event *k)
 	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0)
 	   && w->d.menutoggle.activation_keys) {
 		const char* m = w->d.menutoggle.activation_keys;
-		const char* p = strchr(m, (char)k->sym.sym);
+		const char* p = strchr(m, (char)k->sym);
 		if (p && *p) {
 			w->d.menutoggle.state = p - m;
 			if(w->changed) w->changed();
@@ -365,7 +365,7 @@ int bitset_handle_key(struct widget *w, struct key_event *k)
 	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0)
 	   && w->d.bitset.activation_keys) {
 		const char* m = w->d.bitset.activation_keys;
-		const char* p = strchr(m, (char)k->sym.sym);
+		const char* p = strchr(m, (char)k->sym);
 		if (p && *p) {
 			int bit_index = p-m;
 			w->d.bitset.value ^= (1 << bit_index);

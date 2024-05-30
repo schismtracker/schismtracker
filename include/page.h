@@ -32,10 +32,11 @@
 #define MOUSE_SCROLL_LINES       3
 
 struct key_event {
-	SDL_Keysym sym, orig_sym;
-	SDL_Keymod mod;
-	int scancode;
-	const uint8_t* text;
+	SDL_Keycode sym; /* the translated keysym after keyboard.c warps it */
+	SDL_Keycode orig_sym; /* the original keysym from SDL */
+	SDL_Keymod mod; /* current key modifiers */
+	SDL_Scancode scancode; /* locale-independent key locations */
+	const char* text; /* text input, if any. can be null */
 
 	enum { KEY_PRESS=0, KEY_RELEASE } state;
 	enum { MOUSE_NONE=0, MOUSE_CLICK, MOUSE_SCROLL_UP, MOUSE_SCROLL_DOWN, MOUSE_DBLCLICK } mouse;

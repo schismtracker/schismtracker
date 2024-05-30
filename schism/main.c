@@ -514,7 +514,7 @@ static void event_loop(void)
 	downtrip = 0;
 	last_mouse_down = 0;
 	startdown = 0;
-	status.last_keysym.sym = 0;
+	status.last_keysym = 0;
 
 	modkey = SDL_GetModState();
 	os_get_modkey(&modkey);
@@ -608,7 +608,7 @@ static void event_loop(void)
 
 				os_get_modkey(&modkey);
 
-				kk.sym.sym = event.key.keysym.sym;
+				kk.sym = event.key.keysym.sym;
 				kk.scancode = event.key.keysym.scancode;
 
 				switch (fix_numlock_key) {
@@ -627,7 +627,7 @@ static void event_loop(void)
 				kk.mouse = MOUSE_NONE;
 				key_translate(&kk);
 
-				if (event.type == SDL_KEYDOWN && last_key.sym == kk.sym.sym) {
+				if (event.type == SDL_KEYDOWN && last_key.sym == kk.sym) {
 					sawrep = kk.is_repeat = 1;
 				} else {
 					kk.is_repeat = 0;
@@ -635,12 +635,12 @@ static void event_loop(void)
 
 				if (event.type == SDL_KEYUP) {
 					handle_key(&kk);
-					status.last_keysym.sym = kk.sym.sym;
+					status.last_keysym = kk.sym;
 					last_key.sym = 0;
 				} else {
 					push_pending_keydown_event(&kk);
-					status.last_keysym.sym = 0;
-					last_key.sym = kk.sym.sym;
+					status.last_keysym = 0;
+					last_key.sym = kk.sym;
 				}
 				break;
 			case SDL_QUIT:
@@ -674,7 +674,7 @@ static void event_loop(void)
 					os_get_modkey(&modkey);
 				}
 
-				kk.sym.sym = 0;
+				kk.sym = 0;
 				kk.mod = 0;
 
 				if (event.type != SDL_MOUSEWHEEL)
