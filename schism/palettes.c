@@ -391,7 +391,7 @@ void palette_load_preset(int palette_index)
 	cfg_save();
 }
 
-static const char palette_trans[65] = ".0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+static const char* palette_trans = ".0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 
 void palette_to_string(char *str_out) {
 	for (int n = 0; n < 48; n++)
