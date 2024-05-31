@@ -425,12 +425,14 @@ static void check_update(void)
 
 static void _do_clipboard_paste_op(SDL_Event *e)
 {
-	if (ACTIVE_PAGE.clipboard_paste
-	&& ACTIVE_PAGE.clipboard_paste(e->user.code,
-				e->user.data1)) return;
 	if (ACTIVE_WIDGET.clipboard_paste
 	&& ACTIVE_WIDGET.clipboard_paste(e->user.code,
 				e->user.data1)) return;
+
+	if (ACTIVE_PAGE.clipboard_paste
+	&& ACTIVE_PAGE.clipboard_paste(e->user.code,
+				e->user.data1)) return;
+
 	handle_text_input((uint8_t*)e->user.data1);
 }
 
