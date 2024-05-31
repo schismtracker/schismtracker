@@ -393,9 +393,9 @@ void palette_load_preset(int palette_index)
 
 static const char* palette_trans = ".0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 
-void palette_to_string(char *str_out) {
+void palette_to_string(int which, char *str_out) {
 	for (int n = 0; n < 48; n++)
-		str_out[n] = palette_trans[current_palette[n / 3][n % 3]];
+		str_out[n] = palette_trans[palettes[which].colors[n / 3][n % 3]];
 
 	str_out[48] = '\0';
 }

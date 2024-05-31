@@ -123,7 +123,7 @@ static void cfg_save_palette(cfg_file_t *cfg)
 
 	if(current_palette_index == 0) {
 		char palette_text[49] = "";
-		palette_to_string(palette_text);
+		palette_to_string(current_palette_index, palette_text);
 		cfg_set_string(cfg, "General", "palette_cur", palette_text);
 	}
 }

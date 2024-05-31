@@ -88,12 +88,16 @@ static void update_thumbbars(void)
 
 /* --------------------------------------------------------------------- */
 
-static void palette_copy_to_clipboard(void) {
-	char palette_text[49] = "";
-	palette_to_string(palette_text);
+static void palette_copy_palette_to_clipboard(int which) {
+	char palette_text[49];
+	palette_to_string(which, palette_text);
 
 	clippy_select(widgets_palette + 49, palette_text, 49);
 	clippy_yank();
+}
+
+static void palette_copy_current_to_clipboard(void) {
+	palette_copy_palette_to_clipboard(current_palette_index);
 }
 
 static void palette_paste_from_clipboard(void) {
@@ -245,14 +249,9 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 		change_focus_to(focus_offsets[selected_palette+1] + 29);
 		return 1;
 	case SDLK_c:
+		/* pasting is handled by the page */
 		if (k->mod & KMOD_CTRL) {
-			palette_copy_to_clipboard();
-			return 1;
-		}
-		return 0;
-	case SDLK_v:
-		if (k->mod & KMOD_CTRL) {
-			palette_paste_from_clipboard();
+			palette_copy_palette_to_clipboard(selected_palette);
 			return 1;
 		}
 		return 0;
@@ -284,18 +283,29 @@ static void palette_list_handle_key(struct key_event * k)
 {
 	int n = *selected_widget;
 
-	if (!NO_MODIFIER(k->mod))
-		return;
-
 	if (k->state == KEY_RELEASE)
 		return;
 
 	switch (k->sym) {
 	case SDLK_PAGEUP:
-		n -= 3;
+		if (!NO_MODIFIER(k->mod))
+			n -= 3;
 		break;
 	case SDLK_PAGEDOWN:
-		n += 3;
+		if (!NO_MODIFIER(k->mod))
+			n += 3;
+		break;
+	case SDLK_c:
+		if (k->mod & KMOD_CTRL) {
+			palette_copy_current_to_clipboard();
+			return;
+		}
+		break;
+	case SDLK_v:
+		if (k->mod & KMOD_CTRL) {
+			palette_paste_from_clipboard();
+			return;
+		}
 		break;
 	default:
 		return;
@@ -377,7 +387,7 @@ void palette_load_page(struct page *page)
 		widgets_palette[i].next.backtab = 48;
 	}
 
-	create_button(widgets_palette + 49, 55, 43, 20, 48, 50, 39, 18, 18, palette_copy_to_clipboard, "Copy To Clipboard", 3);
+	create_button(widgets_palette + 49, 55, 43, 20, 48, 50, 39, 18, 18, palette_copy_current_to_clipboard, "Copy To Clipboard", 3);
 	create_button(widgets_palette + 50, 55, 46, 20, 49, 0, 39, 18, 18, palette_paste_from_clipboard, "Paste From Clipboard", 1);
 
 	widgets_palette[0].next.up = 50;
