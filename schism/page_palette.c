@@ -103,11 +103,10 @@ static void palette_paste_from_clipboard(void) {
 static int palette_paste_callback(UNUSED int cb, const void *data)
 {
 	if (!data) return 0;
-	const char* str = (const char *)data;
 
-	int result = set_palette_from_string(data);
+	int result = set_palette_from_string((const char*)data);
 
-	if(!result) {
+	if (!result) {
 		status_text_flash("Bad character or wrong length");
 		return 0;
 	}
