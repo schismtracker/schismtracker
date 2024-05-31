@@ -60,7 +60,10 @@ static void _clippy_copy_to_sys(int cb)
 	size_t sel_len = strlen(_current_selection);
 	uint8_t* out = mem_alloc((sel_len + 1) * sizeof(char));
 
-	/* normalize line breaks */
+	/* normalize line breaks
+	 *
+	 * TODO: this needs to be done internally as well; every paste
+	 * handler ought to expect Unix LF format. */
 	size_t i = 0, j = 0;
 	for (; i < sel_len && j < sel_len; i++, j++) {
 		if (_current_selection[i] == '\r' && _current_selection[i + 1] == '\n') {
@@ -121,14 +124,15 @@ static char *_internal_clippy_paste(int cb)
 				_free_current_selection();
 
 				char* sel = SDL_GetPrimarySelectionText();
+				uint8_t* cp437_sel;
 
-				if (charset_iconv((uint8_t*)sel, (uint8_t**)&_current_selection, CHARSET_UTF8, CHARSET_CP437)) {
-					SDL_free(sel);
-					_free_current_selection();
-					return NULL;
-				}
+				if (!charset_iconv((uint8_t*)sel, (uint8_t**)&cp437_sel, CHARSET_UTF8, CHARSET_CP437))
+					_current_selection = cp437_sel;
+				else
+					_current_selection = str_dup(sel);
 
 				SDL_free(sel);
+
 				return _current_selection;
 			}
 #endif
@@ -139,14 +143,15 @@ static char *_internal_clippy_paste(int cb)
 				_free_current_clipboard();
 
 				char* cb = SDL_GetClipboardText();
+				uint8_t* cp437_cb;
 
-				if (charset_iconv((uint8_t*)cb, (uint8_t**)&_current_clipboard, CHARSET_UTF8, CHARSET_CP437)) {
-					SDL_free(cb);
-					_free_current_clipboard();
-					return NULL;
-				}
+				if (!charset_iconv((uint8_t*)cb, (uint8_t**)&cp437_cb, CHARSET_UTF8, CHARSET_CP437))
+					_current_clipboard = (char*)cp437_cb;
+				else
+					_current_clipboard = str_dup(cb);
 
 				SDL_free(cb);
+
 				return _current_clipboard;
 			}
 
