@@ -409,7 +409,7 @@ int set_palette_from_string(const char *str_in) {
 	if(!str_in) return 0;
 
 	for (int n = 0; n < 48; n++) {
-		if (str_in[n] == '\0' || (ptr = memchr(palette_trans, str_in[n], sizeof(palette_trans))) == NULL)
+		if (str_in[n] == '\0' || (ptr = strchr(palette_trans, str_in[n])) == NULL)
 			return 0;
 		colors[n] = ptr - palette_trans;
 	}
