@@ -88,6 +88,43 @@ static void update_thumbbars(void)
 
 /* --------------------------------------------------------------------- */
 
+static void palette_copy_to_clipboard(void) {
+	char palette_text[49] = "";
+	palette_to_string(palette_text);
+
+	clippy_select(widgets_palette + 49, palette_text, 49);
+	clippy_yank();
+}
+
+static void palette_paste_from_clipboard(void) {
+	clippy_paste(CLIPPY_BUFFER);
+}
+
+static int palette_paste_callback(UNUSED int cb, const void *data)
+{
+	if (!data) return 0;
+	const char* str = (const char *)data;
+
+	int result = set_palette_from_string(data);
+
+	if(!result) {
+		status_text_flash("Bad character or wrong length");
+		return 0;
+	}
+
+	selected_palette = 0;
+	palette_load_preset(selected_palette);
+	palette_apply();
+	update_thumbbars();
+	status.flags |= NEED_UPDATE;
+
+	status_text_flash("Palette pasted");
+
+	return 1;
+}
+
+/* --------------------------------------------------------------------- */
+
 static void palette_list_draw(void)
 {
 	int n, focused = (ACTIVE_PAGE.selected_widget == 48);
@@ -208,6 +245,18 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 			return 0;
 		change_focus_to(focus_offsets[selected_palette+1] + 29);
 		return 1;
+	case SDLK_c:
+		if (k->mod & KMOD_CTRL) {
+			palette_copy_to_clipboard();
+			return 1;
+		}
+		return 0;
+	case SDLK_v:
+		if (k->mod & KMOD_CTRL) {
+			palette_paste_from_clipboard();
+			return 1;
+		}
+		return 0;
 	default:
 		if (k->mouse == MOUSE_NONE)
 			return 0;
@@ -265,40 +314,6 @@ static void palette_list_handle_key(struct key_event * k)
 		change_focus_to(n);
 }
 
-static void palette_copy_to_clipboard(void) {
-	char palette_text[49] = "";
-	palette_to_string(palette_text);
-	clippy_select(widgets_palette + 49, palette_text, 49);
-	clippy_yank();
-}
-
-static void palette_paste_from_clipboard(void) {
-	clippy_paste(CLIPPY_BUFFER);
-}
-
-static int palette_paste_callback(UNUSED int cb, const void *data)
-{
-	if (!data) return 0;
-	const char* str = (const char *)data;
-
-	int result = set_palette_from_string(data);
-
-	if(!result) {
-		status_text_flash("Bad character or wrong length");
-		return 0;
-	}
-
-	selected_palette = 0;
-	palette_load_preset(selected_palette);
-	palette_apply();
-	update_thumbbars();
-	status.flags |= NEED_UPDATE;
-
-	status_text_flash("Palette pasted");
-
-	return 1;
-}
-
 /* --------------------------------------------------------------------- */
 
 /* TODO | update_palette should only change the palette index for the color that's being changed, not all
@@ -330,7 +345,7 @@ void palette_load_page(struct page *page)
 	page->total_widgets = 51;
 	page->selected_widget = 48;
 	page->widgets = widgets_palette;
-	page->help_index = HELP_GLOBAL;
+	page->help_index = HELP_PALETTES;
 	page->clipboard_paste = palette_paste_callback;
 
 	selected_palette = current_palette_index;

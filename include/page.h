@@ -72,6 +72,7 @@ enum {
 	HELP_PATTERN_EDITOR,
 	HELP_ADLIB_SAMPLE,
 	HELP_SAMPLE_LIST,
+	HELP_PALETTES,
 
 	HELP_NUM_ITEMS /* needs to be last! */
 };

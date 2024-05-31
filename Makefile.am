@@ -19,7 +19,8 @@ helptexts = \
 	helptext/orderlist-vol		\
 	helptext/pattern-editor		\
 	helptext/adlib-sample		\
-	helptext/sample-list
+	helptext/sample-list		\
+	helptext/palettes
 fonts = \
 	font/default-lower.fnt		\
 	font/default-upper-alt.fnt	\
