@@ -109,6 +109,7 @@ static void help_redraw(void)
 	draw_fill_chars(2, 13, 77, 44, 0);
 
 	ptr = lines + top_line;
+
 	for (pos = 13, n = top_line; pos < 45; pos++, n++) {
 		switch (**ptr) {
 		default:
@@ -239,8 +240,13 @@ static void help_set_page(void)
 		num_lines = global_lines + 2;
 	}
 
+	char* keybinds_help = keybinds_get_help_text(PAGE_ABOUT);
+	int keybinds_help_lines = str_count_occurences('\n', keybinds_help);
+	num_lines += keybinds_help_lines;
+
 	/* allocate the array */
 	lines = CURRENT_HELP_LINECACHE = mem_calloc(num_lines + 1, sizeof(char *));
+
 
 	/* page help text */
 	if (have_local_help) {
@@ -263,6 +269,16 @@ static void help_set_page(void)
 		lines[cur_line++] = separator_line;
 	}
 	lines[cur_line++] = blank_line;
+
+    char *strtok_ptr;
+    const char* delim = "\n";
+
+    for(int i = 0;; i++) {
+        const char* next = strtok_r(i == 0 ? keybinds_help : NULL, delim, &strtok_ptr);
+		if (next == NULL) break;
+		lines[cur_line] = strdup(next);
+		cur_line++;
+    }
 
 	/* global help text */
 	ptr = help_text[HELP_GLOBAL];
