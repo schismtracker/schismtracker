@@ -393,6 +393,32 @@ void handle_text_input(const uint8_t* text_input) {
 
 /* --------------------------------------------------------------------------------------------------------- */
 
+static int handle_key_truly_global(struct key_event * k) {
+	if (key_pressed(global, fullscreen))
+		toggle_display_fullscreen();
+	else if (key_pressed(global, mouse))
+		video_mousecursor(MOUSE_CYCLE_STATE);
+	else if (key_pressed(global, mouse_grab)) {
+		const SDL_bool grabbed = !SDL_GetWindowGrab(video_window());
+		SDL_SetWindowGrab(video_window(), grabbed);
+		status_text_flash(grabbed
+			? "Mouse and keyboard grabbed, press Ctrl+D to release"
+			: "Mouse and keyboard released");
+	} else if (key_pressed(global, audio_reset))
+		audio_reinit();
+	else if (key_pressed(global, display_reset)) {
+		font_init();
+		status.flags |= NEED_UPDATE;
+	} else if (key_pressed(global, octave_decrease))
+		kbd_set_current_octave(kbd_get_current_octave() - 1);
+	else if (key_pressed(global, octave_increase))
+		kbd_set_current_octave(kbd_get_current_octave() + 1);
+	else
+		return 0;
+
+	return 1;
+}
+
 /* returns 1 if the key was handled */
 static int handle_key_global(struct key_event * k)
 {
@@ -475,447 +501,175 @@ static int handle_key_global(struct key_event * k)
 		return 0;
 	}
 
-	/* first, check the truly global keys (the ones that still work if
-	 * a dialog's open) */
-	switch (k->sym) {
-	case SDLK_RETURN:
-		if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
-			if (k->state == KEY_PRESS)
-				return 1;
-			toggle_display_fullscreen();
-			return 1;
-		}
-		break;
-	case SDLK_m:
-		if (k->mod & KMOD_CTRL) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-			video_mousecursor(MOUSE_CYCLE_STATE);
-			return 1;
-		}
-		break;
-
-	case SDLK_d:
-		if (k->mod & KMOD_CTRL) {
-			if (k->state == KEY_RELEASE)
-				return 1; /* argh */
-			const SDL_bool grabbed = !SDL_GetWindowGrab(video_window());
-			SDL_SetWindowGrab(video_window(), grabbed);
-			status_text_flash(grabbed
-				? "Mouse and keyboard grabbed, press Ctrl+D to release"
-				: "Mouse and keyboard released");
-			return 1;
-		}
-		break;
-
-	case SDLK_i:
-		/* reset audio stuff? */
-		if (k->mod & KMOD_CTRL) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-			audio_reinit();
-			return 1;
-		}
-		break;
-	case SDLK_e:
-		/* This should reset everything display-related. */
-		if (k->mod & KMOD_CTRL) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-			font_init();
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
-		break;
-	case SDLK_HOME:
-		if (!(k->mod & KMOD_ALT)) break;
-		if (status.flags & DISKWRITER_ACTIVE) break;
-		if (k->state == KEY_RELEASE)
-			return 0;
-		kbd_set_current_octave(kbd_get_current_octave() - 1);
+	if(handle_key_truly_global(k))
 		return 1;
-	case SDLK_END:
-		if (!(k->mod & KMOD_ALT)) break;
-		if (status.flags & DISKWRITER_ACTIVE) break;
-		if (k->state == KEY_RELEASE)
-			return 0;
-		kbd_set_current_octave(kbd_get_current_octave() + 1);
-		return 1;
-	default:
-		break;
-	}
 
 	/* next, if there's no dialog, check the rest of the keys */
 	if (status.flags & DISKWRITER_ACTIVE) return 0;
+	if (status.dialog_type != DIALOG_NONE) return 0;
+	_mp_finish(NULL);
 
-	switch (k->sym) {
-	case SDLK_q:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if (k->mod & KMOD_CTRL) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS) {
-				if (k->mod & KMOD_SHIFT)
-					schism_exit(0);
-				show_exit_prompt();
+	if (key_pressed(global, quit)) {
+		show_exit_prompt();
+	} else if (key_pressed(global, quit_no_confirm)) {
+		schism_exit(0);
+	} else if (key_pressed(global, new_song)) {
+		new_song_dialog();
+	} else if (key_pressed(global, go_to_time)) {
+		show_song_timejump();
+	} else if (key_pressed(global, calculate_song_length)) {
+		show_song_length();
+	} else if(key_pressed(global, help)) {
+		set_page(PAGE_HELP);
+	} else if(key_pressed(global, midi)) {
+		set_page(status.current_page == PAGE_MIDI ? PAGE_MIDI_OUTPUT : PAGE_MIDI);
+	} else if(key_pressed(global, system_configure)) {
+		set_page(PAGE_CONFIG);
+	} else if(key_pressed(global, pattern_edit)) {
+		if (status.current_page == PAGE_PATTERN_EDITOR) {
+			if (status.dialog_type != DIALOG_NONE) {
+				dialog_yes_NULL();
+				status.flags |= NEED_UPDATE;
+			} else {
+				pattern_editor_display_options();
 			}
-			return 1;
-		}
-		break;
-	case SDLK_n:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if (k->mod & KMOD_CTRL) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				new_song_dialog();
-			return 1;
-		}
-		break;
-	case SDLK_g:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if (k->mod & KMOD_CTRL) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				show_song_timejump();
-			return 1;
-		}
-		break;
-	case SDLK_p:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if (k->mod & KMOD_CTRL) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				show_song_length();
-			return 1;
-		}
-		break;
-	case SDLK_F1:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if (k->mod & KMOD_CTRL) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_CONFIG);
-		} else if (k->mod & KMOD_SHIFT) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(status.current_page == PAGE_MIDI ? PAGE_MIDI_OUTPUT : PAGE_MIDI);
-		} else if (NO_MODIFIER(k->mod)) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_HELP);
 		} else {
-			break;
+			set_page(PAGE_PATTERN_EDITOR);
 		}
-		return 1;
-	case SDLK_F2:
-		if (k->mod & KMOD_CTRL) {
-			if (status.current_page == PAGE_PATTERN_EDITOR) {
-				_mp_finish(NULL);
-				if (k->state == KEY_PRESS && status.dialog_type == DIALOG_NONE) {
-					pattern_editor_length_edit();
+	} else if (key_pressed(global, pattern_edit_length)) {
+		if (status.current_page == PAGE_PATTERN_EDITOR) {
+			pattern_editor_length_edit();
+		}
+	} else if (key_pressed(global, sample_list)) {
+		set_page(PAGE_SAMPLE_LIST);
+	} else if (key_pressed(global, sample_library)) {
+		set_page(PAGE_LIBRARY_SAMPLE);
+	} else if (key_pressed(global, instrument_list)) {
+		set_page(PAGE_INSTRUMENT_LIST);
+	} else if (key_pressed(global, instrument_library)) {
+		set_page(PAGE_LIBRARY_INSTRUMENT);
+	} else if (key_pressed(global, play_information_or_play_song)) {
+		if (song_get_mode() == MODE_STOPPED ||
+			(song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO)
+		) {
+			song_start();
+		}
+		set_page(PAGE_INFO);
+	} else if (key_pressed(global, play_song)) {
+		song_start();
+	} else if (key_pressed(global, preferences)) {
+		set_page(PAGE_PREFERENCES);
+	} else if (key_pressed(global, play_current_pattern)) {
+		song_loop_pattern(get_current_pattern(), 0);
+	} else if (key_pressed(global, play_song_from_order)) {
+		song_start_at_order(get_current_order(), 0);
+	} else if (key_pressed(global, play_song_from_mark)) {
+		play_song_from_mark();
+	} else if (key_pressed(global, stop_playback)) {
+		song_stop();
+		status.flags |= NEED_UPDATE;
+	} else if (key_pressed(global, toggle_playback)) {
+		song_pause();
+	} else if (key_pressed(global, load_module)) {
+		set_page(PAGE_LOAD_MODULE);
+	} else if (key_pressed(global, message_editor)) {
+		set_page(PAGE_MESSAGE);
+	} else if (key_pressed(global, save)) {
+		save_song_or_save_as();
+	} else if (key_pressed(global, save_module)) {
+		set_page(PAGE_SAVE_MODULE);
+	} else if (key_pressed(global, export_module)) {
+		set_page(PAGE_EXPORT_MODULE);
+	} else if (key_pressed(global, order_list)) {
+		if (status.current_page == PAGE_ORDERLIST_PANNING)
+			set_page(PAGE_ORDERLIST_VOLUMES);
+		else
+			set_page(PAGE_ORDERLIST_PANNING);
+	} else if (key_pressed(global, schism_logging)) {
+		if (status.current_page == PAGE_LOG) {
+			show_about();
+		} else {
+			set_page(PAGE_LOG);
+		}
+	} else if (key_pressed(global, order_list_lock)) {
+		if (song_toggle_orderlist_locked())
+			status_text_flash("Order list locked");
+		else
+			status_text_flash("Order list unlocked");
+	} else if (key_pressed(global, song_variables)) {
+		set_page(PAGE_SONG_VARIABLES);
+	} else if (key_pressed(global, palette_config)) {
+		set_page(PAGE_PALETTE_EDITOR);
+	} else if (key_pressed(global, font_editor)) {
+		fontedit_return_page = status.current_page;
+		set_page(PAGE_FONT_EDIT);
+	} else if (key_pressed(global, waterfall)) {
+		set_page(PAGE_WATERFALL);
+	} else {
+		switch (k->sym) {
+		/* hack alert */
+		case SDLK_f:
+			if (!(k->mod & KMOD_CTRL))
+				return 0;
+			/* fall through */
+		case SDLK_SCROLLLOCK:
+			if (status.dialog_type != DIALOG_NONE)
+				return 0;
+			_mp_finish(NULL);
+			if (k->mod & KMOD_ALT) {
+				if (k->state == KEY_PRESS) {
+					midi_flags ^= (MIDI_DISABLE_RECORD);
+					status_text_flash("MIDI Input %s",
+						(midi_flags & MIDI_DISABLE_RECORD)
+						? "Disabled" : "Enabled");
+				}
+				return 1;
+			} else {
+				/* os x steals plain scroll lock for brightness,
+				* so catch ctrl+scroll lock here as well */
+				if (k->state == KEY_PRESS) {
+					midi_playback_tracing = (playback_tracing = !playback_tracing);
+					status_text_flash("Playback tracing %s",
+							(playback_tracing ? "enabled" : "disabled"));
 				}
 				return 1;
 			}
-			if (status.dialog_type != DIALOG_NONE)
-				return 0;
-		} else if (NO_MODIFIER(k->mod)) {
-			if (status.current_page == PAGE_PATTERN_EDITOR) {
-				if (k->state == KEY_PRESS) {
-					if (status.dialog_type & DIALOG_MENU) {
-						return 0;
-					} else if (status.dialog_type != DIALOG_NONE) {
-						dialog_yes_NULL();
-						status.flags |= NEED_UPDATE;
-					} else {
-						_mp_finish(NULL);
-						pattern_editor_display_options();
-					}
-				}
-			} else {
-				if (status.dialog_type != DIALOG_NONE)
-					return 0;
-				_mp_finish(NULL);
-				if (k->state == KEY_PRESS)
-					set_page(PAGE_PATTERN_EDITOR);
-			}
-			return 1;
-		}
-		break;
-	case SDLK_F3:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if (NO_MODIFIER(k->mod)) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_SAMPLE_LIST);
-		} else {
-			_mp_finish(NULL);
-			if (k->mod & KMOD_CTRL) set_page(PAGE_LIBRARY_SAMPLE);
-			break;
-		}
-		return 1;
-	case SDLK_F4:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if (NO_MODIFIER(k->mod)) {
-			if (status.current_page == PAGE_INSTRUMENT_LIST) return 0;
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_INSTRUMENT_LIST);
-		} else {
-			if (k->mod & KMOD_SHIFT) return 0;
-			_mp_finish(NULL);
-			if (k->mod & KMOD_CTRL) set_page(PAGE_LIBRARY_INSTRUMENT);
-			break;
-		}
-		return 1;
-	case SDLK_F5:
-		if (k->mod & KMOD_CTRL) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				song_start();
-		} else if (k->mod & KMOD_SHIFT) {
-			if (status.dialog_type != DIALOG_NONE)
-				return 0;
-			_mp_finish(NULL);
-			if (k->state == KEY_RELEASE)
-				set_page(PAGE_PREFERENCES);
-		} else if (NO_MODIFIER(k->mod)) {
-			if (song_get_mode() == MODE_STOPPED
-			|| (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO)) {
-				_mp_finish(NULL);
-				if (k->state == KEY_PRESS)
-					song_start();
-			}
-			if (k->state == KEY_PRESS) {
-				if (status.dialog_type != DIALOG_NONE)
-					return 0;
-				_mp_finish(NULL);
-				set_page(PAGE_INFO);
-			}
-		} else {
-			break;
-		}
-		return 1;
-	case SDLK_F6:
-		if (k->mod & KMOD_SHIFT) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				song_start_at_order(get_current_order(), 0);
-		} else if (NO_MODIFIER(k->mod)) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				song_loop_pattern(get_current_pattern(), 0);
-		} else {
-			break;
-		}
-		return 1;
-	case SDLK_F7:
-		if (NO_MODIFIER(k->mod)) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				play_song_from_mark();
-		} else {
-			break;
-		}
-		return 1;
-	case SDLK_F8:
-		if (k->mod & KMOD_SHIFT) {
-			if (k->state == KEY_PRESS)
-				song_pause();
-		} else if (NO_MODIFIER(k->mod)) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				song_stop();
-			status.flags |= NEED_UPDATE;
-		} else {
-			break;
-		}
-		return 1;
-	case SDLK_F9:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if (k->mod & KMOD_SHIFT) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_MESSAGE);
-		} else if (NO_MODIFIER(k->mod)) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_LOAD_MODULE);
-		} else {
-			break;
-		}
-		return 1;
-	case SDLK_l:
-	case SDLK_r:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if (k->mod & KMOD_CTRL) {
-			_mp_finish(NULL);
-			if (k->state == KEY_RELEASE)
-				set_page(PAGE_LOAD_MODULE);
-		} else {
-			break;
-		}
-		return 1;
-	case SDLK_s:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if (k->mod & KMOD_CTRL) {
-			_mp_finish(NULL);
-			if (k->state == KEY_RELEASE)
-				save_song_or_save_as();
-		} else {
-			break;
-		}
-		return 1;
-	case SDLK_w:
-		/* Ctrl-W _IS_ in IT, and hands don't leave home row :) */
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if (k->mod & KMOD_CTRL) {
-			_mp_finish(NULL);
-			if (k->state == KEY_RELEASE)
-				set_page(PAGE_SAVE_MODULE);
-		} else {
-			break;
-		}
-		return 1;
-	case SDLK_F10:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if (k->mod & KMOD_ALT) break;
-		if (k->mod & KMOD_CTRL) break;
-
-		_mp_finish(NULL);
-		if (k->mod & KMOD_SHIFT) {
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_EXPORT_MODULE);
-		} else {
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_SAVE_MODULE);
-		}
-		return 1;
-	case SDLK_F11:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if (NO_MODIFIER(k->mod)) {
-			_mp_finish(NULL);
-			if (status.current_page == PAGE_ORDERLIST_PANNING) {
-				if (k->state == KEY_PRESS)
-					set_page(PAGE_ORDERLIST_VOLUMES);
-			} else {
-				if (k->state == KEY_PRESS)
-					set_page(PAGE_ORDERLIST_PANNING);
-			}
-		} else if (k->mod & KMOD_CTRL) {
-			if (k->state == KEY_PRESS) {
-				_mp_finish(NULL);
-				if (status.current_page == PAGE_LOG) {
-					show_about();
-				} else {
-					set_page(PAGE_LOG);
-				}
-			}
-		} else if (k->state == KEY_PRESS && (k->mod & KMOD_ALT)) {
-			_mp_finish(NULL);
-			if (song_toggle_orderlist_locked())
-				status_text_flash("Order list locked");
-			else
-				status_text_flash("Order list unlocked");
-		} else {
-			break;
-		}
-		return 1;
-	case SDLK_F12:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if ((k->mod & KMOD_ALT) && status.current_page == PAGE_INFO) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_WATERFALL);
-		} else if (k->mod & KMOD_CTRL) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_PALETTE_EDITOR);
-		} else if (k->mod & KMOD_SHIFT) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS) {
-				fontedit_return_page = status.current_page;
-				set_page(PAGE_FONT_EDIT);
-			}
-
-		} else if (NO_MODIFIER(k->mod)) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_SONG_VARIABLES);
-		} else {
-			break;
-		}
-		return 1;
-	/* hack alert */
-	case SDLK_f:
-		if (!(k->mod & KMOD_CTRL))
-			return 0;
-		/* fall through */
-	case SDLK_SCROLLLOCK:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		_mp_finish(NULL);
-		if (k->mod & KMOD_ALT) {
-			if (k->state == KEY_PRESS) {
-				midi_flags ^= (MIDI_DISABLE_RECORD);
-				status_text_flash("MIDI Input %s",
-					(midi_flags & MIDI_DISABLE_RECORD)
-					? "Disabled" : "Enabled");
-			}
-			return 1;
-		} else {
-			/* os x steals plain scroll lock for brightness,
-			 * so catch ctrl+scroll lock here as well */
-			if (k->state == KEY_PRESS) {
-				midi_playback_tracing = (playback_tracing = !playback_tracing);
-				status_text_flash("Playback tracing %s",
-						  (playback_tracing ? "enabled" : "disabled"));
-			}
-			return 1;
-		}
-	default:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		break;
-	}
-
-	/* got a bit ugly here, sorry */
-	i = k->sym;
-	if (k->mod & KMOD_ALT) {
-		switch (i) {
-		case SDLK_F1: i = 0; break;
-		case SDLK_F2: i = 1; break;
-		case SDLK_F3: i = 2; break;
-		case SDLK_F4: i = 3; break;
-		case SDLK_F5: i = 4; break;
-		case SDLK_F6: i = 5; break;
-		case SDLK_F7: i = 6; break;
-		case SDLK_F8: i = 7; break;
 		default:
-			return 0;
-		};
-		if (k->state == KEY_RELEASE)
-			return 1;
-
-		song_toggle_channel_mute(i);
-		status.flags |= NEED_UPDATE;
-		return 1;
+			if (status.dialog_type != DIALOG_NONE)
+				return 0;
+			break;
+		}
 	}
 
-	/* oh well */
-	return 0;
+	if(key_pressed(global, toggle_channel_1)) {
+		song_toggle_channel_mute(0);
+		status.flags |= NEED_UPDATE;
+	} else if(key_pressed(global, toggle_channel_2)) {
+		song_toggle_channel_mute(1);
+		status.flags |= NEED_UPDATE;
+	} else if(key_pressed(global, toggle_channel_3)) {
+		song_toggle_channel_mute(2);
+		status.flags |= NEED_UPDATE;
+	} else if(key_pressed(global, toggle_channel_4)) {
+		song_toggle_channel_mute(3);
+		status.flags |= NEED_UPDATE;
+	} else if(key_pressed(global, toggle_channel_5)) {
+		song_toggle_channel_mute(4);
+		status.flags |= NEED_UPDATE;
+	} else if(key_pressed(global, toggle_channel_6)) {
+		song_toggle_channel_mute(5);
+		status.flags |= NEED_UPDATE;
+	} else if(key_pressed(global, toggle_channel_7)) {
+		song_toggle_channel_mute(6);
+		status.flags |= NEED_UPDATE;
+	} else if(key_pressed(global, toggle_channel_8)) {
+		song_toggle_channel_mute(7);
+		status.flags |= NEED_UPDATE;
+	} else {
+		return 0;
+	}
+
+	return 1;
 }
 
 static int _handle_ime(struct key_event *k)
