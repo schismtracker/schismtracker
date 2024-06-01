@@ -110,6 +110,7 @@ noinst_HEADERS = \
 	include/headers.h		\
 	include/it_defs.h		\
 	include/it.h			\
+	include/keybinds.h      \
 	include/log.h			\
 	include/midi.h			\
 	include/osdefs.h		\
@@ -346,6 +347,7 @@ schismtracker_SOURCES = \
 	schism/keyboard.c		\
 	schism/page_samples.c		\
 	schism/itf.c			\
+	schism/keybinds.c  \
 	schism/page_orderpan.c		\
 	schism/page_waterfall.c		\
 	schism/midi-core.c		\

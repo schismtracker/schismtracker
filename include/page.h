@@ -37,6 +37,7 @@ struct key_event {
 	SDL_Keymod mod; /* current key modifiers */
 	SDL_Scancode scancode; /* locale-independent key locations */
 	const char* text; /* text input, if any. can be null */
+	const char* orig_text;
 
 	enum { KEY_PRESS=0, KEY_RELEASE } state;
 	enum { MOUSE_NONE=0, MOUSE_CLICK, MOUSE_SCROLL_UP, MOUSE_SCROLL_DOWN, MOUSE_DBLCLICK } mouse;
@@ -386,7 +387,8 @@ enum page_numbers {
 
 	PAGE_WATERFALL,
 
-	PAGE_MAX
+	PAGE_MAX,
+	PAGE_ANY
 };
 
 /* --------------------------------------------------------------------- */

@@ -236,6 +236,7 @@ char *num99tostr(int n, char *buf)
 	return buf;
 
 }
+
 char *numtostr(int digits, unsigned int n, char *buf)
 {
 	if (digits > 0) {
@@ -250,6 +251,7 @@ char *numtostr(int digits, unsigned int n, char *buf)
 	}
 	return buf;
 }
+
 char *numtostr_signed(int digits, int n, char *buf)
 {
 	if (digits > 0) {
