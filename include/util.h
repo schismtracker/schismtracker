@@ -172,8 +172,30 @@ char *str_escape(const char *source, int space_hack);
 char *str_unescape(const char *source);
 char *pretty_name(const char *filename);
 int get_num_lines(const char *text);
-char *str_concat(const char *s, ...);
 
+/* Concat strings. Last argument must be NULL */
+// char* str_concat(const char* input_str, ...); // NOT WORKING
+
+/* Count how many times character is in str */
+int str_count_occurences(char character, const char* str);
+
+/* count is size of array. str_array is the array. If free_inputs is true free() will be called on the strings. */
+char* str_concat_array(int count, char** str_array, int free_inputs);
+
+char* str_concat_two(char* str1, char* str2, int free_inputs);
+char* str_concat_three(char* str1, char* str2, char* str3, int free_inputs);
+char* str_concat_four(char* str1, char* str2, char* str3, char* str4, int free_inputs);
+char* str_concat_five(char* str1, char* str2, char* str3, char* str4, char* str5, int free_inputs);
+char* str_concat_six(char* str1, char* str2, char* str3, char* str4, char* str5, char* str6, int free_inputs);
+
+/* count is size of array. str_array is the array. If free_inputs is true free() will be called on the strings. */
+char* str_concat_with_delim(int count, char** str_array, const char* delim, int free_inputs);
+
+/* pad will be placed between str1 and str2 until width is reached. If free_inputs is true free() will be called on the strings. */
+char* str_pad_between(char* str1, char* str2, char pad, int width, int min_padding, int free_inputs);
+
+/* Convert string to uppercase. The string will be modified */
+void str_to_upper(char *s);
 
 /* filesystem */
 int make_backup_file(const char *filename, int numbered);

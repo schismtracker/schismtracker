@@ -834,21 +834,171 @@ char *get_dot_directory(void)
 	return get_home_directory();
 }
 
-char *str_concat(const char *s, ...)
+int str_count_occurences(char character, const char* str)
 {
-	va_list ap;
-	char *out = NULL;
+	int count = 0;
+
+	for (int i = 0; str[i]; i++) {
+		if (str[i] == character)
+			count++;
+	}
+
+	return count;
+}
+
+// char* str_concat(const char* input_str, ...)
+// {
+// 	char* out = strdup(input_str);
+// 	int len = 0;
+
+// 	va_list ap;
+// 	va_start(ap, input_str);
+// 	while (1) {
+// 		const char* current_arg = va_arg(ap, const char*);
+// 		if (!current_arg || !current_arg[0]) break;
+// 		len += strlen(current_arg);
+// 		out = realloc(out, len + 1); // mem_realloc(out, len + 1);
+// 		strcat(out, current_arg);
+// 	}
+// 	va_end(ap);
+
+// 	return out;
+// }
+
+char* str_concat_array(int count, char** str_array, int free_inputs)
+{
 	int len = 0;
 
-	va_start(ap,s);
-	while (s) {
-		out = mem_realloc(out, (len += strlen(s)+1));
-		strcat(out, s);
-		s = va_arg(ap, const char *);
+	for(int i = 0; i < count; i++) {
+		if (!str_array[i] || !str_array[i][0]) continue;
+		len += strlen(str_array[i]);
 	}
-	va_end(ap);
-	return out;
 
+	if(len == 0) return "";
+
+	char* out = malloc((len + 1) * sizeof(char));
+	out[0] = '\0';
+
+	for(int i = 0; i < count; i++) {
+		if (!str_array[i] || !str_array[i][0]) continue;
+		strcat(out, str_array[i]);
+		if (free_inputs)
+			free(str_array[i]);
+	}
+
+	return out;
+}
+
+char* str_concat_two(char* str1, char* str2, int free_inputs) {
+	char* strings[2] = { str1, str2 };
+	return str_concat_array(2, strings, free_inputs);
+}
+
+char* str_concat_three(char* str1, char* str2, char* str3, int free_inputs) {
+	char* strings[3] = { str1, str2, str3 };
+	return str_concat_array(3, strings, free_inputs);
+}
+
+char* str_concat_four(char* str1, char* str2, char* str3, char* str4, int free_inputs) {
+	char* strings[4] = { str1, str2, str3, str4 };
+	return str_concat_array(4, strings, free_inputs);
+}
+
+char* str_concat_five(char* str1, char* str2, char* str3, char* str4, char* str5, int free_inputs) {
+	char* strings[5] = { str1, str2, str3, str4, str5 };
+	return str_concat_array(5, strings, free_inputs);
+}
+
+char* str_concat_six(char* str1, char* str2, char* str3, char* str4, char* str5, char* str6, int free_inputs) {
+	char* strings[6] = { str1, str2, str3, str4, str5, str6 };
+	return str_concat_array(6, strings, free_inputs);
+}
+
+char* str_concat_with_delim(int count, char** str_array, const char* delim, int free_inputs)
+{
+	int len = 0;
+	int delim_len = strlen(delim);
+	int actual_count = 0;
+
+	for (int i = 0; i < count; i++) {
+		if (!str_array[i] || !str_array[i][0]) continue;
+		len += strlen(str_array[i]);
+		actual_count++;
+	}
+
+	if (len == 0 || actual_count == 0) return "";
+
+	char* out = malloc((len + (actual_count - 1) * delim_len + 1) * sizeof(char));
+	out[0] = '\0';
+	int current_count = 0;
+
+	for (int i = 0; i < count; i++) {
+		if (!str_array[i] || !str_array[i][0]) continue;
+		strcat(out, str_array[i]);
+		current_count++;
+		if (current_count != actual_count)
+			strcat(out, delim);
+		if (free_inputs)
+			free(str_array[i]);
+	}
+
+	return out;
+}
+
+int utf8_length(const char* str)
+{
+	int count = 0;
+
+	for(int i = 0; str[i]; i++) {
+		if ((str[i] & 0x80) == 0 || (str[i] & 0xc0) == 0xc0)
+			count++;
+	}
+
+	return count;
+}
+
+char* str_pad_between(char* str1, char* str2, char pad, int width, int min_padding, int free_inputs)
+{
+	int len1 = strlen(str1);
+	int len2 = strlen(str2);
+	int len_both = len1 + len2;
+
+	int len1_utf8 = utf8_length(str1);
+	int len2_utf8 = utf8_length(str2);
+	int len_both_utf8 = len1_utf8 + len2_utf8;
+	int len_padding = width - len_both_utf8;
+
+	if (len_padding < 0) len_padding = 0;
+	if (len_padding < min_padding) len_padding = min_padding;
+
+	int len_out = len_both + len_padding;
+	char* out = malloc((len_out + 1) * sizeof(char));
+	out[0] = '\0';
+
+	strcat(out, str1);
+
+	int end_padding = len1 + len_padding;
+
+	for(int i = len1; i < len1 + len_padding; i++) {
+		out[i] = pad;
+	}
+
+	out[end_padding] = '\0';
+
+	strcat(out, str2);
+
+	if(free_inputs) {
+		free(str1);
+		free(str2);
+	}
+
+	return out;
+}
+
+void str_to_upper(char *s)
+{
+    for (int i = 0; s[i]; i++)
+        s[i] = toupper((unsigned char)s[i]);
 }
 
 void unset_env_var(const char *key)
