@@ -204,64 +204,77 @@ int win32_sdlevent(SDL_Event* event) {
 	return 1;
 }
 
-void win32_create_menu(void) {
+wchar_t* str_to_wchar(char* string, int free_inputs)
+{
+	int wchars_num = MultiByteToWideChar(CP_UTF8, 0, string, -1, NULL, 0);
+	wchar_t* wstr = malloc(wchars_num * sizeof(wchar_t));
+	MultiByteToWideChar(CP_UTF8, 0, string, -1, wstr, wchars_num);
+	return wstr;
+}
+
+#define append_menu(MENU, MENU_ITEM, NAME, KEYBIND_NAME) \
+	AppendMenuW(MENU, MF_STRING, MENU_ITEM, \
+		str_to_wchar(str_concat_two(("&" NAME "\t"), \
+			(char*)global_keybinds_list.global.KEYBIND_NAME.shortcut_text, 0), 1));
+
+void win32_create_menu_2(void) {
 	menu = CreateMenu();
 	{
 		HMENU file = CreatePopupMenu();
-		AppendMenuW(file, MF_STRING, IDM_FILE_NEW, L"&New\tCtrl+N");
-		AppendMenuW(file, MF_STRING, IDM_FILE_LOAD, L"&Load\tF9");
-		AppendMenuW(file, MF_STRING, IDM_FILE_SAVE_CURRENT, L"&Save Current\tCtrl+S");
-		AppendMenuW(file, MF_STRING, IDM_FILE_SAVE_AS, L"Save &As...\tF10");
-		AppendMenuW(file, MF_STRING, IDM_FILE_EXPORT, L"&Export...\tShift+F10");
-		AppendMenuW(file, MF_STRING, IDM_FILE_MESSAGE_LOG, L"&Message Log\tCtrl+F11");
-		AppendMenuW(file, MF_SEPARATOR, 0, NULL);
-		AppendMenuW(file, MF_STRING, IDM_FILE_QUIT, L"&Quit\tCtrl+Q");
+		append_menu(file, IDM_FILE_NEW, "New", new_song);
+		append_menu(file, IDM_FILE_LOAD, "Load", load_module);
+		append_menu(file, IDM_FILE_SAVE_CURRENT, "Save", save);
+		append_menu(file, IDM_FILE_SAVE_AS, "Save &As...", save_module);
+		append_menu(file, IDM_FILE_EXPORT, "Export...", export_module);
+		append_menu(file, IDM_FILE_MESSAGE_LOG, "Message Log", schism_logging);
+		AppendMenuA(file, MF_SEPARATOR, 0, NULL);
+		append_menu(file, IDM_FILE_QUIT, "Quit", quit);
 		AppendMenuW(menu, MF_POPUP, (uintptr_t)file, L"&File");
 	}
 	{
 		/* this is equivalent to the "Schism Tracker" menu on Mac OS X */
 		HMENU view = CreatePopupMenu();
-		AppendMenuW(view, MF_STRING, IDM_VIEW_HELP, L"Help\tF1");
+		append_menu(view, IDM_VIEW_HELP, "Help", help);
 		AppendMenuW(view, MF_SEPARATOR, 0, NULL);
-		AppendMenuW(view, MF_STRING, IDM_VIEW_VIEW_PATTERNS, L"View Patterns\tF2");
-		AppendMenuW(view, MF_STRING, IDM_VIEW_ORDERS_PANNING, L"Orders/Panning\tF11");
-		AppendMenuW(view, MF_STRING, IDM_VIEW_VARIABLES, L"Variables\tF12");
-		AppendMenuW(view, MF_STRING, IDM_VIEW_MESSAGE_EDITOR, L"Message Editor\tF9");
+		append_menu(view, IDM_VIEW_VIEW_PATTERNS, "View Patterns", pattern_edit);
+		append_menu(view, IDM_VIEW_ORDERS_PANNING, "Orders/Panning", order_list);
+		append_menu(view, IDM_VIEW_VARIABLES, "Variables", song_variables);
+		append_menu(view, IDM_VIEW_MESSAGE_EDITOR, "Message Editor", message_editor);
 		AppendMenuW(view, MF_SEPARATOR, 0, NULL);
-		AppendMenuW(view, MF_STRING, IDM_VIEW_TOGGLE_FULLSCREEN, L"Toggle Fullscreen\tCtrl+Alt+Return");
+		append_menu(view, IDM_VIEW_TOGGLE_FULLSCREEN, "Toggle Fullscreen", fullscreen);
 		AppendMenuW(menu, MF_POPUP, (uintptr_t)view, L"&View");
 	}
 	{
 		HMENU playback = CreatePopupMenu();
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_SHOW_INFOPAGE, L"Show Infopage\tF5");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_PLAY_SONG, L"Play Song\tCtrl+F5");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_PLAY_PATTERN, L"Play Pattern\tF6");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_PLAY_FROM_ORDER, L"Play from Order\tShift+F6");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR, L"Play from Mark/Cursor\tF7");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_STOP, L"Stop\tF8");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_CALCULATE_LENGTH, L"Calculate Length\tCtrl+P");
+		append_menu(playback, IDM_PLAYBACK_SHOW_INFOPAGE, "Show Infopage", play_information_or_play_song);
+		append_menu(playback, IDM_PLAYBACK_PLAY_SONG, "Play Song", play_song);
+		append_menu(playback, IDM_PLAYBACK_PLAY_PATTERN, "Play Pattern", play_current_pattern);
+		append_menu(playback, IDM_PLAYBACK_PLAY_FROM_ORDER, "Play From Order", play_song_from_order);
+		append_menu(playback, IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR, "Play From Mark / Cursor", play_song_from_mark);
+		append_menu(playback, IDM_PLAYBACK_STOP, "Stop", stop_playback);
+		append_menu(playback, IDM_PLAYBACK_CALCULATE_LENGTH, "Calculate Length", calculate_song_length);
 		AppendMenuW(menu, MF_POPUP, (uintptr_t)playback, L"&Playback");
 	}
 	{
 		HMENU samples = CreatePopupMenu();
-		AppendMenuW(samples, MF_STRING, IDM_SAMPLES_SAMPLE_LIST, L"&Sample List\tF3");
-		AppendMenuW(samples, MF_STRING, IDM_SAMPLES_SAMPLE_LIBRARY, L"Sample &Library\tShift+F3");
-		AppendMenuW(samples, MF_STRING, IDM_SAMPLES_RELOAD_SOUNDCARD, L"&Reload Soundcard\tCtrl+G");
+		append_menu(samples, IDM_SAMPLES_SAMPLE_LIST, "Sample List", sample_list);
+		append_menu(samples, IDM_SAMPLES_SAMPLE_LIBRARY, "Sample &Library", sample_library);
+		append_menu(samples, IDM_SAMPLES_RELOAD_SOUNDCARD, "Reload Soundcard", audio_reset);
 		AppendMenuW(menu, MF_POPUP, (uintptr_t)samples, L"&Samples");
 	}
 	{
 		HMENU instruments = CreatePopupMenu();
-		AppendMenuW(instruments, MF_STRING, IDM_INSTRUMENTS_INSTRUMENT_LIST, L"Instrument List\tF4");
-		AppendMenuW(instruments, MF_STRING, IDM_INSTRUMENTS_INSTRUMENT_LIBRARY, L"Instrument Library\tShift+F4");
+		append_menu(instruments, IDM_INSTRUMENTS_INSTRUMENT_LIST, "Instrument List", instrument_list);
+		append_menu(instruments, IDM_INSTRUMENTS_INSTRUMENT_LIBRARY, "Instrument Library", instrument_library);
 		AppendMenuW(menu, MF_POPUP, (uintptr_t)instruments, L"&Instruments");
 	}
 	{
 		HMENU settings = CreatePopupMenu();
-		AppendMenuW(settings, MF_STRING, IDM_SETTINGS_PREFERENCES, L"Preferences\tShift+F5");
-		AppendMenuW(settings, MF_STRING, IDM_SETTINGS_MIDI_CONFIGURATION, L"MIDI Configuration\tShift+F1");
-		AppendMenuW(settings, MF_STRING, IDM_SETTINGS_PALETTE_EDITOR, L"Palette Editor\tCtrl+F12");
-		AppendMenuW(settings, MF_STRING, IDM_SETTINGS_FONT_EDITOR, L"Font Editor\tShift+F12");
-		AppendMenuW(settings, MF_STRING, IDM_SETTINGS_SYSTEM_CONFIGURATION, L"System Configuration\tCtrl+F1");
+		append_menu(settings, IDM_SETTINGS_PREFERENCES, "Preferences", preferences);
+		append_menu(settings, IDM_SETTINGS_MIDI_CONFIGURATION, "MIDI Configuration", midi);
+		append_menu(settings, IDM_SETTINGS_PALETTE_EDITOR, "Palette Editor", palette_config);
+		append_menu(settings, IDM_SETTINGS_FONT_EDITOR, "Font Editor", font_editor);
+		append_menu(settings, IDM_SETTINGS_SYSTEM_CONFIGURATION, "System Configuration", system_configure);
 		AppendMenuW(menu, MF_POPUP, (uintptr_t)settings, L"S&ettings");
 	}
 }
@@ -273,13 +286,28 @@ void win32_refresh_menu(SDL_Window* window, int yes) {
 	if (!SDL_GetWindowWMInfo(window, &wm_info))
 		return;
 
-	SetMenu(wm_info.info.win.window, (cfg_video_want_menu_bar && yes) ? menu : NULL);
+	int show_menu = cfg_video_want_menu_bar && yes;
+
+	if (show_menu && !menu)
+		return;
+
+	SetMenu(wm_info.info.win.window, show_menu ? menu : NULL);
 	DrawMenuBar(wm_info.info.win.window);
 }
 
+SDL_Window* current_window;
+int menu_should_be_yes = 0;
+
 void win32_toggle_menu(SDL_Window* window, int yes) {
+	current_window = window;
 	if (!menu)
-		win32_create_menu();
+		menu_should_be_yes = yes;
 
 	win32_refresh_menu(window, yes);
+}
+
+void win32_create_menu(void) {
+	if (menu) return;
+	win32_create_menu_2();
+	win32_toggle_menu(current_window, menu_should_be_yes);
 }

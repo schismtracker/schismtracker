@@ -1008,6 +1008,10 @@ int main(int argc, char **argv)
 	os_sdlinit();
 	keybinds_init();
 
+#ifdef SCHISM_WIN32
+	win32_create_menu();
+#endif
+
 	display_init();
 	palette_apply();
 	font_init();
