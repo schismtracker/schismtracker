@@ -636,8 +636,8 @@ static void file_list_draw(void)
 	} else {
 		if (ACTIVE_PAGE.selected_widget == 0) {
 			draw_text("No files.", 3, 13, 0, 3);
-			draw_fill_chars(12, 13, 46, 13, 3);
-			draw_char(168, 21, 13, 2, 3);
+			draw_fill_chars(12, 13, 48, 13, 3);
+			draw_char(168, 23, 13, 2, 3);
 			pos = 14;
 		} else {
 			draw_text("No files.", 3, 13, 7, 0);
