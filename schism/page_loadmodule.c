@@ -1074,7 +1074,14 @@ void load_module_load_page(struct page *page)
 	dir_list_reposition();
 	file_list_reposition();
 
-	page->title = "Load Module (F9)";
+	char* shortcut_text = (char*)global_keybinds_list.global.load_module.shortcut_text;
+
+	if(shortcut_text[0]) {
+		page->title = str_concat_three("Load Module (", shortcut_text, ")", 0);
+	} else {
+		page->title = "Load Module";
+	}
+
 	page->draw_const = load_module_draw_const;
 	page->set_page = load_module_set_page;
 	page->total_widgets = 4;
@@ -1132,10 +1139,24 @@ void save_module_load_page(struct page *page, int do_export)
 	int n;
 
 	if (do_export) {
-		page->title = "Export Module (Shift-F10)";
+		char* shortcut_text = (char*)global_keybinds_list.global.export_module.shortcut_text;
+
+		if(shortcut_text[0]) {
+			page->title = str_concat_three("Export Module (", shortcut_text, ")", 0);
+		} else {
+			page->title = "Export Module";
+		}
+
 		page->widgets = widgets_exportmodule;
 	} else {
-		page->title = "Save Module (F10)";
+		char* shortcut_text = (char*)global_keybinds_list.global.save_module.shortcut_text;
+
+		if(shortcut_text[0]) {
+			page->title = str_concat_three("Save Module (", shortcut_text, ")", 0);
+		} else {
+			page->title = "Save Module";
+		}
+
 		page->widgets = widgets_savemodule;
 	}
 	widgets_exportsave = page->widgets;

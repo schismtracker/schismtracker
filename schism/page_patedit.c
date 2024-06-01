@@ -4551,7 +4551,15 @@ void pattern_editor_load_page(struct page *page)
 		undo_history[i].snap_op = "Empty";
 		undo_history[i].snap_op_allocated = 0;
 	}
-	page->title = "Pattern Editor (F2)";
+
+	char* shortcut_text = (char*)global_keybinds_list.global.pattern_edit.shortcut_text;
+
+	if(shortcut_text[0]) {
+		page->title = str_concat_three("Pattern Editor (", shortcut_text, ")", 0);
+	} else {
+		page->title = "Pattern Editor";
+	}
+
 	page->playback_update = pattern_editor_playback_update;
 	page->song_changed_cb = pated_song_changed;
 	page->pre_handle_key = _fix_f7;
@@ -4562,4 +4570,3 @@ void pattern_editor_load_page(struct page *page)
 
 	create_other(widgets_pattern + 0, 0, pattern_editor_handle_key_cb, NULL, pattern_editor_redraw);
 }
-

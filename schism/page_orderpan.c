@@ -888,8 +888,14 @@ static void order_pan_set_page(void)
 void orderpan_load_page(struct page *page)
 {
 	int n;
+	char* shortcut_text = (char*)global_keybinds_list.global.order_list.shortcut_text;
 
-	page->title = "Order List and Panning (F11)";
+	if(shortcut_text[0]) {
+		page->title = str_concat_three("Order List and Panning (", shortcut_text, ")", 0);
+	} else {
+		page->title = "Order List and Panning";
+	}
+
 	page->draw_const = orderpan_draw_const;
 	/* this does the work for both pages */
 	page->song_changed_cb = order_pan_vol_song_changed_cb;
@@ -924,8 +930,14 @@ void orderpan_load_page(struct page *page)
 void ordervol_load_page(struct page *page)
 {
 	int n;
+	char* shortcut_text = (char*)global_keybinds_list.global.order_list.shortcut_text;
 
-	page->title = "Order List and Channel Volume (F11)";
+	if(shortcut_text[0]) {
+		page->title = str_concat_three("Order List and Channel Volume (", shortcut_text, ")", 0);
+	} else {
+		page->title = "Order List and Channel Volume";
+	}
+
 	page->draw_const = ordervol_draw_const;
 	page->playback_update = order_pan_vol_playback_update;
 	page->pre_handle_key = order_pre_key;

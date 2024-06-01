@@ -1327,7 +1327,14 @@ static void info_page_playback_update(void)
 
 void info_load_page(struct page *page)
 {
-	page->title = "Info Page (F5)";
+	char* shortcut_text = (char*)global_keybinds_list.global.play_information_or_play_song.shortcut_text;
+
+	if(shortcut_text[0]) {
+		page->title = str_concat_three("Info Page (", shortcut_text, ")", 0);
+	} else {
+		page->title = "Info Page";
+	}
+
 	page->playback_update = info_page_playback_update;
 	page->total_widgets = 1;
 	page->widgets = widgets_info;

@@ -285,7 +285,14 @@ static void config_set_page(void)
 /* --------------------------------------------------------------------- */
 void config_load_page(struct page *page)
 {
-	page->title = "System Configuration (Ctrl-F1)";
+	char* shortcut_text = (char*)global_keybinds_list.global.system_configure.shortcut_text;
+
+	if(shortcut_text[0]) {
+		page->title = str_concat_three("System Configuration (", shortcut_text, ")", 0);
+	} else {
+		page->title = "System Configuration";
+	}
+
 	page->draw_const = config_draw_const;
 	page->set_page = config_set_page;
 #ifdef SCHISM_WIN32

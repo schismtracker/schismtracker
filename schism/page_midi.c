@@ -310,7 +310,14 @@ static void midi_page_draw_portlist(void)
 
 void midi_load_page(struct page *page)
 {
-	page->title = "MIDI Screen (Shift-F1)";
+	char* shortcut_text = (char*)global_keybinds_list.global.midi.shortcut_text;
+
+	if(shortcut_text[0]) {
+		page->title = str_concat_three("MIDI Screen (", shortcut_text, ")", 0);
+	} else {
+		page->title = "MIDI Screen";
+	}
+
 	page->draw_const = midi_page_redraw;
 	page->song_changed_cb = NULL;
 	page->predraw_hook = NULL;

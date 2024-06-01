@@ -293,7 +293,14 @@ static void help_set_page(void)
 
 void help_load_page(struct page *page)
 {
-	page->title = "Help";
+	char* shortcut_text = (char*)global_keybinds_list.global.help.shortcut_text;
+
+	if(shortcut_text[0]) {
+		page->title = str_concat_three("Help (", shortcut_text, ")", 0);
+	} else {
+		page->title = "Help";
+	}
+
 	page->draw_const = help_draw_const;
 	page->set_page = help_set_page;
 	page->total_widgets = 2;

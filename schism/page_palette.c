@@ -348,7 +348,14 @@ static void update_palette(void)
 
 void palette_load_page(struct page *page)
 {
-	page->title = "Palette Configuration (Ctrl-F12)";
+	char* shortcut_text = (char*)global_keybinds_list.global.palette_config.shortcut_text;
+
+	if(shortcut_text[0]) {
+		page->title = str_concat_three("Palette Configuration (", shortcut_text, ")", 0);
+	} else {
+		page->title = "Palette Configuration";
+	}
+
 	page->draw_const = palette_draw_const;
 	page->handle_key = palette_list_handle_key;
 	page->total_widgets = 51;
