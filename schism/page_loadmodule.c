@@ -1074,13 +1074,8 @@ void load_module_load_page(struct page *page)
 	dir_list_reposition();
 	file_list_reposition();
 
-	char* shortcut_text = (char*)global_keybinds_list.global.load_module.shortcut_text;
-
-	if(shortcut_text[0]) {
-		page->title = str_concat_three("Load Module (", shortcut_text, ")", 0);
-	} else {
-		page->title = "Load Module";
-	}
+	char* shortcut_text = (char*)global_keybinds_list.global.load_module.shortcut_text_parens;
+	page->title = str_concat_two("Load Module", shortcut_text, 0);
 
 	page->draw_const = load_module_draw_const;
 	page->set_page = load_module_set_page;
@@ -1139,24 +1134,12 @@ void save_module_load_page(struct page *page, int do_export)
 	int n;
 
 	if (do_export) {
-		char* shortcut_text = (char*)global_keybinds_list.global.export_module.shortcut_text;
-
-		if(shortcut_text[0]) {
-			page->title = str_concat_three("Export Module (", shortcut_text, ")", 0);
-		} else {
-			page->title = "Export Module";
-		}
-
+		char* shortcut_text = (char*)global_keybinds_list.global.export_module.shortcut_text_parens;
+		page->title = str_concat_two("Export Module", shortcut_text, 0);
 		page->widgets = widgets_exportmodule;
 	} else {
-		char* shortcut_text = (char*)global_keybinds_list.global.save_module.shortcut_text;
-
-		if(shortcut_text[0]) {
-			page->title = str_concat_three("Save Module (", shortcut_text, ")", 0);
-		} else {
-			page->title = "Save Module";
-		}
-
+		char* shortcut_text = (char*)global_keybinds_list.global.save_module.shortcut_text_parens;
+		page->title = str_concat_two("Save Module", shortcut_text, 0);
 		page->widgets = widgets_savemodule;
 	}
 	widgets_exportsave = page->widgets;

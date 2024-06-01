@@ -26,7 +26,10 @@ typedef struct keybind_bind
     keybind_shortcut* shortcuts; // This array size is MAX_SHORTCUTS
     int shortcuts_count; // This number is used to skip checking the entire array
     const char* description;
-    const char* shortcut_text;
+    const char* shortcut_text; // Contains all shortcuts with commas in-between, for example "F10, Ctrl-W"
+    const char* first_shortcut_text; // Contains only the first shortcut, for example "F10"
+    const char* shortcut_text_parens; // shortcut_text but with parenthesis around it. No parenthesis if there is no shortcut
+    const char* first_shortcut_text_parens;
     int pressed;
     int released;
     int repeated;

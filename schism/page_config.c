@@ -285,13 +285,8 @@ static void config_set_page(void)
 /* --------------------------------------------------------------------- */
 void config_load_page(struct page *page)
 {
-	char* shortcut_text = (char*)global_keybinds_list.global.system_configure.shortcut_text;
-
-	if(shortcut_text[0]) {
-		page->title = str_concat_three("System Configuration (", shortcut_text, ")", 0);
-	} else {
-		page->title = "System Configuration";
-	}
+	char* shortcut_text = (char*)global_keybinds_list.global.system_configure.shortcut_text_parens;
+	page->title = str_concat_two("System Configuration", shortcut_text, 0);
 
 	page->draw_const = config_draw_const;
 	page->set_page = config_set_page;

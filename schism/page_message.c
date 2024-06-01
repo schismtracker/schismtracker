@@ -839,13 +839,8 @@ static void song_changed_cb(void)
 
 void message_load_page(struct page *page)
 {
-	char* shortcut_text = (char*)global_keybinds_list.global.message_editor.shortcut_text;
-
-	if(shortcut_text[0]) {
-		page->title = str_concat_three("Message Editor (", shortcut_text, ")", 0);
-	} else {
-		page->title = "Message Editor";
-	}
+	char* shortcut_text = (char*)global_keybinds_list.global.message_editor.shortcut_text_parens;
+	page->title = str_concat_two("Message Editor", shortcut_text, 0);
 
 	page->draw_const = message_draw_const;
 	page->song_changed_cb = song_changed_cb;

@@ -310,13 +310,8 @@ static void midi_page_draw_portlist(void)
 
 void midi_load_page(struct page *page)
 {
-	char* shortcut_text = (char*)global_keybinds_list.global.midi.shortcut_text;
-
-	if(shortcut_text[0]) {
-		page->title = str_concat_three("MIDI Screen (", shortcut_text, ")", 0);
-	} else {
-		page->title = "MIDI Screen";
-	}
+	char* shortcut_text = (char*)global_keybinds_list.global.midi.shortcut_text_parens;
+	page->title = str_concat_two("MIDI Screen", shortcut_text, 0);
 
 	page->draw_const = midi_page_redraw;
 	page->song_changed_cb = NULL;

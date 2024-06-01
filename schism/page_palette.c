@@ -348,13 +348,8 @@ static void update_palette(void)
 
 void palette_load_page(struct page *page)
 {
-	char* shortcut_text = (char*)global_keybinds_list.global.palette_config.shortcut_text;
-
-	if(shortcut_text[0]) {
-		page->title = str_concat_three("Palette Configuration (", shortcut_text, ")", 0);
-	} else {
-		page->title = "Palette Configuration";
-	}
+	char* shortcut_text = (char*)global_keybinds_list.global.palette_config.shortcut_text_parens;
+	page->title = str_concat_two("Palette Configuration", shortcut_text, 0);
 
 	page->draw_const = palette_draw_const;
 	page->handle_key = palette_list_handle_key;

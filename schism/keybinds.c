@@ -198,9 +198,10 @@ static void init_section(keybind_section_info* section_info, const char* title, 
     section_info->page = page;
 }
 
-static const char* get_shortcut_text(keybind_bind* bind)
+static void set_shortcut_text(keybind_bind* bind)
 {
     char* out[MAX_SHORTCUTS];
+    int is_first_shortcut = 1;
 
     for(int i = 0; i < MAX_SHORTCUTS; i++) {
         out[i] = NULL;
@@ -240,10 +241,20 @@ static const char* get_shortcut_text(keybind_bind* bind)
         printf("next_out = %s\n", next_out);
 
         out[i] = next_out;
+
+        if(is_first_shortcut) {
+            is_first_shortcut = 0;
+            bind->first_shortcut_text = strdup(next_out);
+            bind->first_shortcut_text_parens = str_concat_three(" (", next_out, ")", 0);
+        }
+
         free(key_text);
     }
 
-    return str_concat_with_delim(MAX_SHORTCUTS, out, ", ", 1);
+    char* shortcut_text = str_concat_with_delim(MAX_SHORTCUTS, out, ", ", 1);
+    bind->shortcut_text = shortcut_text;
+    if(shortcut_text[0])
+        bind->shortcut_text_parens = str_concat_three(" (", shortcut_text, ")", 0);
 }
 
 static void init_bind(keybind_bind* bind, keybind_section_info* section_info, const char* description, const char* shortcut) //, SDL_Keycode keycode, SDL_Scancode scancode, SDL_Keymod modifier)
@@ -269,8 +280,13 @@ static void init_bind(keybind_bind* bind, keybind_section_info* section_info, co
     bind->shortcuts_count = 0;
     bind->section_info = section_info;
     bind->description = description;
+    bind->shortcut_text = "";
+    bind->first_shortcut_text = "";
+    bind->shortcut_text_parens = "";
+    bind->first_shortcut_text_parens = "";
+
     keybinds_parse_shortcut(bind, shortcut);
-    bind->shortcut_text = get_shortcut_text(bind);
+    set_shortcut_text(bind);
 }
 
 void keybinds_handle_event(struct key_event* event)

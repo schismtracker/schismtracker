@@ -520,13 +520,8 @@ void load_instrument_load_page(struct page *page)
 
 void library_instrument_load_page(struct page *page)
 {
-	char* shortcut_text = (char*)global_keybinds_list.global.instrument_library.shortcut_text;
-
-	if(shortcut_text[0]) {
-		page->title = str_concat_three("Instrument Library (", shortcut_text, ")", 0);
-	} else {
-		page->title = "Instrument Library";
-	}
+	char* shortcut_text = (char*)global_keybinds_list.global.instrument_library.shortcut_text_parens;
+	page->title = str_concat_two("Instrument Library", shortcut_text, 0);
 
 	page->draw_const = load_instrument_draw_const;
 	page->set_page = library_instrument_set_page;

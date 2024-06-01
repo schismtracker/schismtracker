@@ -4552,13 +4552,8 @@ void pattern_editor_load_page(struct page *page)
 		undo_history[i].snap_op_allocated = 0;
 	}
 
-	char* shortcut_text = (char*)global_keybinds_list.global.pattern_edit.shortcut_text;
-
-	if(shortcut_text[0]) {
-		page->title = str_concat_three("Pattern Editor (", shortcut_text, ")", 0);
-	} else {
-		page->title = "Pattern Editor";
-	}
+	char* shortcut_text = (char*)global_keybinds_list.global.pattern_edit.shortcut_text_parens;
+	page->title = str_concat_two("Pattern Editor", shortcut_text, 0);
 
 	page->playback_update = pattern_editor_playback_update;
 	page->song_changed_cb = pated_song_changed;
