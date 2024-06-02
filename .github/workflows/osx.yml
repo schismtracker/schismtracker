@@ -39,12 +39,16 @@ jobs:
           path: '/Users/runner/x86_64'
           key: mac-x86_64-files
 
+        # We can't actually cache the normal
+        # directory for powerpc because we
+        # also need to copy the assembler
+        # into Xcode
       - name: 'Cache PowerPC files'
         id: cache-powerpc-files
         uses: actions/cache@v4
         with:
-          path: '/Users/runner/ppc'
-          key: mac-powerpc-files
+          path: 'schism-macppc-bins'
+          key: mac-ppc-bins
 
       - name: 'Download 10.9 SDK for x86_64'
         id: chown
@@ -60,12 +64,12 @@ jobs:
       - name: 'Grab PowerPC cross compile binaries'
         if: steps.cache-powerpc-files.outputs.cache-hit != 'true'
         run: |
-          # annoyingly, zips can't be extracted from stdin because their
-          # header is actually a footer
           wget -O schism-macppc-bins.zip "https://www.dropbox.com/scl/fi/trq99fq51p13nh8tajpwa/schism-macppc-bins.zip?rlkey=xemvhpmm1ci0dnseawmanr749&st=g4qteuny&dl=1"
           unzip schism-macppc-bins.zip -d "schism-macppc-bins"
           rm schism-macppc-bins.zip
-          cd schism-macppc-bins
+
+      - name: 'Install PowerPC cross compile binaries'
+          pushd schism-macppc-bins
           mkdir "$HOME/ppc"
           tar -xvf "Xcode3as.tar.gz" -C "$HOME/ppc"
           tar -xvf "Xcode3gcc42.tar.gz" -C "$HOME/ppc"
@@ -74,7 +78,7 @@ jobs:
           tar -xvf "OSX108INT.tar.gz" -C "$HOME/ppc"
           mkdir "/Applications/Xcode_13.2.1.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc"
           cp "$HOME/ppc/usr/libexec/gcc/darwin/ppc/as" "/Applications/Xcode_13.2.1.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc/as"
-          cd ..
+          popd
 
       - name: 'Checkout'
         uses: actions/checkout@v4
