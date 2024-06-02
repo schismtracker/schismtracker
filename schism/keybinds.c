@@ -363,6 +363,7 @@ char* keybinds_get_help_text(enum page_numbers page)
 
 #define init_bind_macro(SECTION, BIND, DESCRIPTION, DEFAULT_KEYBIND) \
 	cfg_get_string(cfg, current_section_name, #BIND, current_shortcut, 255, DEFAULT_KEYBIND); \
+	cfg_set_string(cfg, current_section_name, #BIND, current_shortcut); \
     init_bind(&global_keybinds_list.SECTION.BIND, current_section_info, #BIND, DESCRIPTION, current_shortcut);
 
 keybind_section_info* current_section_info = NULL;
@@ -443,8 +444,9 @@ void init_keybinds(void)
 	char* path = dmoz_path_concat(cfg_dir_dotschism, "keybinds.ini");
 	cfg_file_t cfg;
 	cfg_init(&cfg, path);
-
     init_global_keybinds(&cfg);
+    cfg_write(&cfg);
+    cfg_free(&cfg);
 
     if(!has_init_problem)
         log_appendf(5, " No issues");
