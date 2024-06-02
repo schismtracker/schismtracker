@@ -153,7 +153,7 @@ static void keybinds_parse_shortcut_splitted(keybind_bind* bind, const char* sho
 {
     char* shortcut_dup = strdup(shortcut);
     char *strtok_ptr;
-    const char* delim = "-";
+    const char* delim = "+";
     char* trimmed = NULL;
     int has_problem = 0;
 
@@ -374,64 +374,64 @@ static void init_global_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(global, "Global Keys.", PAGE_ANY);
     init_bind_macro(global, help, "Help (Context Sensitive!)", "US_F1 ,US_DDD,sdf,b,c,d");
-    init_bind_macro(global, midi, "MIDI Screen", "Shift-US_F1");
-    init_bind_macro(global, system_configure, "System Configuration", "Ctrl-US_F1");
+    init_bind_macro(global, midi, "MIDI Screen", "Shift+US_F1");
+    init_bind_macro(global, system_configure, "System Configuration", "Ctrl+US_F1");
     init_bind_macro(global, pattern_edit, "Pattern Editor / Pattern Editor Options", "US_F2");
-    init_bind_macro(global, pattern_edit_length, "Edit Pattern Length", "Ctrl-US_F2");
+    init_bind_macro(global, pattern_edit_length, "Edit Pattern Length", "Ctrl+US_F2");
     init_bind_macro(global, sample_list, "Sample List", "US_F3");
-    init_bind_macro(global, sample_library, "Sample Library", "Ctrl-US_F3");
+    init_bind_macro(global, sample_library, "Sample Library", "Ctrl+US_F3");
     init_bind_macro(global, instrument_list, "Instrument List", "US_F4");
-    init_bind_macro(global, instrument_library, "Instrument Library", "Ctrl-US_F4");
+    init_bind_macro(global, instrument_library, "Instrument Library", "Ctrl+US_F4");
     init_bind_macro(global, play_information_or_play_song, "Play Information / Play Song", "US_F5");
-    init_bind_macro(global, play_song, "Play Song", "Ctrl-US_F5");
-    init_bind_macro(global, preferences, "Preferences", "Shift-US_F5");
+    init_bind_macro(global, play_song, "Play Song", "Ctrl+US_F5");
+    init_bind_macro(global, preferences, "Preferences", "Shift+US_F5");
     init_bind_macro(global, play_current_pattern, "Play Current Pattern", "US_F6");
-    init_bind_macro(global, play_song_from_order, "Play Song From Current Order", "Shift-US_F6");
+    init_bind_macro(global, play_song_from_order, "Play Song From Current Order", "Shift+US_F6");
     init_bind_macro(global, play_song_from_mark, "Play From Mark / Current Row", "US_F7");
     init_bind_macro(global, stop_playback, "Stop Playback", "US_F8");
-    init_bind_macro(global, toggle_playback, "Pause / Resume Playback", "Shift-US_F8");
-    init_bind_macro(global, load_module, "Load Module", "US_F9,Ctrl-US_L");
-    init_bind_macro(global, message_editor, "Message Editor", "Shift-US_F9");
-    init_bind_macro(global, save_module, "Save Module", "US_F10,Ctrl-W");
-    init_bind_macro(global, export_module, "Export Module (to WAV, AIFF)", "Shift-US_F10");
+    init_bind_macro(global, toggle_playback, "Pause / Resume Playback", "Shift+US_F8");
+    init_bind_macro(global, load_module, "Load Module", "US_F9,Ctrl+US_L");
+    init_bind_macro(global, message_editor, "Message Editor", "Shift+US_F9");
+    init_bind_macro(global, save_module, "Save Module", "US_F10,Ctrl+W");
+    init_bind_macro(global, export_module, "Export Module (to WAV, AIFF)", "Shift+US_F10");
     init_bind_macro(global, order_list, "Order List and Panning / Channel Volume", "US_F11");
-    init_bind_macro(global, schism_logging, "Schism Logging", "Ctrl-US_F11");
-    init_bind_macro(global, order_list_lock, "Schism Logging", "Alt-US_F11");
+    init_bind_macro(global, schism_logging, "Schism Logging", "Ctrl+US_F11");
+    init_bind_macro(global, order_list_lock, "Schism Logging", "Alt+US_F11");
     init_bind_macro(global, song_variables, "Song Variables & Directory Configuration", "US_F12");
-    init_bind_macro(global, palette_config, "Palette Configuration", "Ctrl-US_F12");
-    init_bind_macro(global, font_editor, "Font Editor", "Shift-US_F12");
-    init_bind_macro(global, waterfall, "Waterfall", "Alt-US_F12");
+    init_bind_macro(global, palette_config, "Palette Configuration", "Ctrl+US_F12");
+    init_bind_macro(global, font_editor, "Font Editor", "Shift+US_F12");
+    init_bind_macro(global, waterfall, "Waterfall", "Alt+US_F12");
 
     init_bind_macro(global, octave_decrease, "Decrease Octave", "US_HOME");
     init_bind_macro(global, octave_increase, "Increase Octave", "US_END");
-    init_bind_macro(global, decrease_playback_speed, "Decrease Playback Speed", "Shift-US_LEFTBRACKET");
-    init_bind_macro(global, decrease_playback_speed, "Increase Playback Speed", "Shift-US_RIGHTBRACKET");
-    init_bind_macro(global, decrease_playback_tempo, "Decrease Playback Tempo", "Ctrl-US_LEFTBRACKET");
-    init_bind_macro(global, increase_playback_tempo, "Increase Playback Tempo", "Ctrl-US_RIGHTBRACKET");
+    init_bind_macro(global, decrease_playback_speed, "Decrease Playback Speed", "Shift+US_LEFTBRACKET");
+    init_bind_macro(global, decrease_playback_speed, "Increase Playback Speed", "Shift+US_RIGHTBRACKET");
+    init_bind_macro(global, decrease_playback_tempo, "Decrease Playback Tempo", "Ctrl+US_LEFTBRACKET");
+    init_bind_macro(global, increase_playback_tempo, "Increase Playback Tempo", "Ctrl+US_RIGHTBRACKET");
     init_bind_macro(global, decrease_global_volume, "Decrease Global Volume", "US_LEFTBRACKET");
     init_bind_macro(global, increase_global_volume, "Increase Global Volume", "US_RIGHTBRACKET");
 
-    init_bind_macro(global, toggle_channel_1, "Toggle Channel 1", "Alt-US_F1");
-    init_bind_macro(global, toggle_channel_2, "Toggle Channel 2", "Alt-US_F2");
-    init_bind_macro(global, toggle_channel_3, "Toggle Channel 3", "Alt-US_F3");
-    init_bind_macro(global, toggle_channel_4, "Toggle Channel 4", "Alt-US_F4");
-    init_bind_macro(global, toggle_channel_5, "Toggle Channel 5", "Alt-US_F5");
-    init_bind_macro(global, toggle_channel_6, "Toggle Channel 6", "Alt-US_F6");
-    init_bind_macro(global, toggle_channel_7, "Toggle Channel 7", "Alt-US_F7");
-    init_bind_macro(global, toggle_channel_8, "Toggle Channel 8", "Alt-US_F8");
+    init_bind_macro(global, toggle_channel_1, "Toggle Channel 1", "Alt+US_F1");
+    init_bind_macro(global, toggle_channel_2, "Toggle Channel 2", "Alt+US_F2");
+    init_bind_macro(global, toggle_channel_3, "Toggle Channel 3", "Alt+US_F3");
+    init_bind_macro(global, toggle_channel_4, "Toggle Channel 4", "Alt+US_F4");
+    init_bind_macro(global, toggle_channel_5, "Toggle Channel 5", "Alt+US_F5");
+    init_bind_macro(global, toggle_channel_6, "Toggle Channel 6", "Alt+US_F6");
+    init_bind_macro(global, toggle_channel_7, "Toggle Channel 7", "Alt+US_F7");
+    init_bind_macro(global, toggle_channel_8, "Toggle Channel 8", "Alt+US_F8");
 
-    init_bind_macro(global, mouse_grab, "Toggle Mouse / Keyboard Grab", "Ctrl-US_D");
-    init_bind_macro(global, display_reset, "Refresh Screen And Reset Chache Identification", "Ctrl-US_E");
-    init_bind_macro(global, go_to_time, "Go To Order / Pattern / Row Given Time", "Ctrl-US_G");
-    init_bind_macro(global, audio_reset, "Reinitialize Sound Driver", "Ctrl-US_I");
-    init_bind_macro(global, mouse, "Toggle Mouse Cursor", "Ctrl-US_M");
-    init_bind_macro(global, new_song, "New Song", "Ctrl-US_N");
-    init_bind_macro(global, calculate_song_length, "Calculate Approximate Song Length", "Ctrl-US_P");
-    init_bind_macro(global, quit, "Quit Schism Tracker", "Ctrl-US_Q");
-    init_bind_macro(global, quit_no_confirm, "Quit Without Confirmation", "Ctrl-Shift-US_Q");
-    init_bind_macro(global, save, "Save Current Song", "Ctrl-US_S");
+    init_bind_macro(global, mouse_grab, "Toggle Mouse / Keyboard Grab", "Ctrl+US_D");
+    init_bind_macro(global, display_reset, "Refresh Screen And Reset Chache Identification", "Ctrl+US_E");
+    init_bind_macro(global, go_to_time, "Go To Order / Pattern / Row Given Time", "Ctrl+US_G");
+    init_bind_macro(global, audio_reset, "Reinitialize Sound Driver", "Ctrl+US_I");
+    init_bind_macro(global, mouse, "Toggle Mouse Cursor", "Ctrl+US_M");
+    init_bind_macro(global, new_song, "New Song", "Ctrl+US_N");
+    init_bind_macro(global, calculate_song_length, "Calculate Approximate Song Length", "Ctrl+US_P");
+    init_bind_macro(global, quit, "Quit Schism Tracker", "Ctrl+US_Q");
+    init_bind_macro(global, quit_no_confirm, "Quit Without Confirmation", "Ctrl+Shift+US_Q");
+    init_bind_macro(global, save, "Save Current Song", "Ctrl+US_S");
 
-    init_bind_macro(global, fullscreen, "Toggle Fullscreen", "Ctrl-Alt-US_ENTER");
+    init_bind_macro(global, fullscreen, "Toggle Fullscreen", "Ctrl+Alt+US_ENTER");
 }
 
 void init_keybinds(void)
