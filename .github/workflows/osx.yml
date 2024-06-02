@@ -69,6 +69,7 @@ jobs:
           rm schism-macppc-bins.zip
 
       - name: 'Install PowerPC cross compile binaries'
+        run: |
           pushd schism-macppc-bins
           mkdir "$HOME/ppc"
           tar -xvf "Xcode3as.tar.gz" -C "$HOME/ppc"
