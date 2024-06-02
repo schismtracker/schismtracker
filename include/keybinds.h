@@ -15,6 +15,7 @@ typedef struct keybind_shortcut
 
 typedef struct keybind_section_info
 {
+    const char* name;
     const char* title;
     int is_active;
     enum page_numbers page;
@@ -25,6 +26,7 @@ typedef struct keybind_bind
     keybind_section_info* section_info;
     keybind_shortcut* shortcuts; // This array size is MAX_SHORTCUTS
     int shortcuts_count; // This number is used to skip checking the entire array
+    const char* name;
     const char* description;
     const char* shortcut_text; // Contains all shortcuts with commas in-between, for example "F10, Ctrl-W"
     const char* first_shortcut_text; // Contains only the first shortcut, for example "F10"
