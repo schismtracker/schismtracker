@@ -515,6 +515,7 @@ int pattern_max_channels(int patno, int opt_bits[64]);
 void update_current_order(void);
 
 /* menu.c */
+void init_menu_keybinds(void);
 void menu_show(void);
 void menu_hide(void);
 void menu_draw(void);

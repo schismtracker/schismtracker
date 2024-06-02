@@ -105,7 +105,7 @@ typedef struct keybind_list
 
 char* keybinds_get_help_text(enum page_numbers page);
 void keybinds_handle_event(struct key_event* event);
-void keybinds_init(void);
+void init_keybinds(void);
 extern keybind_list global_keybinds_list;
 
 #define key_pressed(SECTION, NAME) global_keybinds_list.SECTION.NAME.pressed

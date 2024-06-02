@@ -61,7 +61,7 @@ struct menu {
 	unsigned int x, y, w;
 	const char *title;
 	int num_items;  /* meh... */
-	const char *items[14];  /* writing **items doesn't work here :( */
+	char *items[14];  /* writing **items doesn't work here :( */
 	int selected_item;      /* the highlighted item */
 	int active_item;        /* "pressed" menu item, for submenus */
 	void (*selected_cb) (void);     /* triggered by return key */
@@ -76,14 +76,14 @@ static struct menu main_menu = {
 	.items = {
 		"File Menu...",
 		"Playback Menu...",
-		"View Patterns        (F2)",
+		"View Patterns",
 		"Sample Menu...",
 		"Instrument Menu...",
-		"View Orders/Panning (F11)",
-		"View Variables      (F12)",
-		"Message Editor (Shift-F9)",
+		"View Orders/Panning",
+		"View Variables",
+		"Message Editor",
 		"Settings Menu...",
-		"Help!                (F1)",
+		"Help!",
 	},
 	.selected_item = 0,
 	.active_item = -1,
@@ -97,13 +97,13 @@ static struct menu file_menu = {
 	.title = "File Menu",
 	.num_items = 7,
 	.items = {
-		"Load...           (F9)",
-		"New...        (Ctrl-N)",
-		"Save Current  (Ctrl-S)",
-		"Save As...       (F10)",
-		"Export...  (Shift-F10)",
-		"Message Log (Ctrl-F11)",
-		"Quit          (Ctrl-Q)",
+		"Load...",
+		"New...",
+		"Save Current",
+		"Save As...",
+		"Export...",
+		"Message Log",
+		"Quit",
 	},
 	.selected_item = 0,
 	.active_item = -1,
@@ -117,15 +117,15 @@ static struct menu playback_menu = {
 	.title = " Playback Menu",
 	.num_items = 9,
 	.items = {
-		"Show Infopage          (F5)",
-		"Play Song         (Ctrl-F5)",
-		"Play Pattern           (F6)",
-		"Play from Order  (Shift-F6)",
-		"Play from Mark/Cursor  (F7)",
-		"Stop                   (F8)",
-		"Reinit Soundcard   (Ctrl-I)",
-		"Driver Screen    (Shift-F5)",
-		"Calculate Length   (Ctrl-P)",
+		"Show Infopage",
+		"Play Song",
+		"Play Pattern",
+		"Play from Order",
+		"Play from Mark/Cursor",
+		"Stop",
+		"Reinit Soundcard",
+		"Driver Screen",
+		"Calculate Length",
 	},
 	.selected_item = 0,
 	.active_item = -1,
@@ -139,8 +139,8 @@ static struct menu sample_menu = {
 	.title = "Sample Menu",
 	.num_items = 2,
 	.items = {
-		"Sample List          (F3)",
-		"Sample Library  (Ctrl-F3)",
+		"Sample List",
+		"Sample Library",
 	},
 	.selected_item = 0,
 	.active_item = -1,
@@ -154,8 +154,8 @@ static struct menu instrument_menu = {
 	.title = "Instrument Menu",
 	.num_items = 2,
 	.items = {
-		"Instrument List          (F4)",
-		"Instrument Library  (Ctrl-F4)",
+		"Instrument List",
+		"Instrument Library",
 	},
 	.selected_item = 0,
 	.active_item = -1,
@@ -171,12 +171,12 @@ static struct menu settings_menu = {
 	the toggle fullscreen item doesn't appear) */
 	.num_items = 6,
 	.items = {
-		"Preferences             (Shift-F5)",
-		"MIDI Configuration      (Shift-F1)",
-		"System Configuration     (Ctrl-F1)",
-		"Palette Editor          (Ctrl-F12)",
-		"Font Editor            (Shift-F12)",
-		"Toggle Fullscreen (Ctrl-Alt-Enter)",
+		"Preferences",
+		"MIDI Configuration",
+		"System Configuration",
+		"Palette Editor",
+		"Font Editor",
+		"Toggle Fullscreen",
 	},
 	.selected_item = 0,
 	.active_item = -1,
@@ -184,6 +184,51 @@ static struct menu settings_menu = {
 };
 
 /* *INDENT-ON* */
+
+#define set_menu_keybind(MENU, ITEM, BIND, WIDTH) \
+	MENU.items[ITEM] = str_pad_between(MENU.items[ITEM], \
+		(char*)global_keybinds_list.global.BIND.first_shortcut_text_parens, \
+		' ', WIDTH, 0, 0);
+
+/* Add first keybind shortcut to the end of menu strings */
+void init_menu_keybinds(void) {
+	set_menu_keybind(main_menu, 2, pattern_edit, 25);
+	set_menu_keybind(main_menu, 5, order_list, 25);
+	set_menu_keybind(main_menu, 6, song_variables, 25);
+	set_menu_keybind(main_menu, 7, message_editor, 25);
+	set_menu_keybind(main_menu, 9, help, 25);
+
+	set_menu_keybind(file_menu, 0, load_module, 22);
+	set_menu_keybind(file_menu, 1, new_song, 22);
+	set_menu_keybind(file_menu, 2, save, 22);
+	set_menu_keybind(file_menu, 3, save_module, 22);
+	set_menu_keybind(file_menu, 4, export_module, 22);
+	set_menu_keybind(file_menu, 5, schism_logging, 22);
+	set_menu_keybind(file_menu, 6, quit, 22);
+
+	set_menu_keybind(playback_menu, 0, play_information_or_play_song, 27);
+	set_menu_keybind(playback_menu, 1, play_song, 27);
+	set_menu_keybind(playback_menu, 2, play_current_pattern, 27);
+	set_menu_keybind(playback_menu, 3, play_song_from_order, 27);
+	set_menu_keybind(playback_menu, 4, play_song_from_mark, 27);
+	set_menu_keybind(playback_menu, 5, stop_playback, 27);
+	set_menu_keybind(playback_menu, 6, audio_reset, 27);
+	set_menu_keybind(playback_menu, 7, preferences, 27);
+	set_menu_keybind(playback_menu, 8, calculate_song_length, 27);
+
+	set_menu_keybind(sample_menu, 0, sample_list, 25);
+	set_menu_keybind(sample_menu, 1, sample_library, 25);
+
+	set_menu_keybind(instrument_menu, 0, instrument_list, 29);
+	set_menu_keybind(instrument_menu, 1, instrument_library, 29);
+
+	set_menu_keybind(settings_menu, 0, preferences, 34);
+	set_menu_keybind(settings_menu, 1, midi, 34);
+	set_menu_keybind(settings_menu, 2, system_configure, 34);
+	set_menu_keybind(settings_menu, 3, palette_config, 34);
+	set_menu_keybind(settings_menu, 4, font_editor, 34);
+	set_menu_keybind(settings_menu, 5, fullscreen, 34);
+}
 
 /* updated to whatever menu is currently active.
  * this generalises the key handling.

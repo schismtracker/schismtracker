@@ -433,7 +433,7 @@ static void init_global_keybinds(cfg_file_t* cfg)
     init_bind_macro(global, fullscreen, "Toggle Fullscreen", "Ctrl-Alt-US_ENTER");
 }
 
-void keybinds_init(void)
+void init_keybinds(void)
 {
     if (current_binds_count != 0) return;
 
