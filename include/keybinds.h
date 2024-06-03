@@ -40,7 +40,7 @@ typedef struct keybind_bind
 typedef struct keybind_list
 {
     keybind_section_info global_info;
-    struct global {
+    struct keybinds_global {
         keybind_bind help;
         keybind_bind midi;
         keybind_bind system_configure;
