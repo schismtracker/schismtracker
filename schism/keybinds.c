@@ -231,11 +231,16 @@ static void set_shortcut_text(keybind_bind* bind)
         if(sc->character[0]) {
             key_text = strdup(sc->character);
         } else if(sc->scancode != SDL_SCANCODE_UNKNOWN) {
-            if (sc->scancode == SDL_SCANCODE_RETURN) {
-                key_text = strdup("Enter");
-            } else {
-                SDL_Keycode code = SDL_GetKeyFromScancode(sc->scancode);
-                key_text = strdup(SDL_GetKeyName(code));
+            switch(sc->scancode) {
+                case SDL_SCANCODE_RETURN:
+                    key_text = strdup("Enter");
+                    break;
+                case SDL_SCANCODE_SPACE:
+                    key_text = strdup("Spacebar");
+                    break;
+                default:
+                    SDL_Keycode code = SDL_GetKeyFromScancode(sc->scancode);
+                    key_text = strdup(SDL_GetKeyName(code));
             }
         } else {
             continue;
