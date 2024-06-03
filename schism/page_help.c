@@ -240,7 +240,8 @@ static void help_set_page(void)
 		num_lines = global_lines + 2;
 	}
 
-	char* keybinds_help = keybinds_get_help_text(PAGE_ABOUT);
+	// previous_page because the current page is now PAGE_HELP :)
+	char* keybinds_help = keybinds_get_help_text(status.previous_page);
 	int keybinds_help_lines = str_count_occurences('\n', keybinds_help);
 	num_lines += keybinds_help_lines;
 
