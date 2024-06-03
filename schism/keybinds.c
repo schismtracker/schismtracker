@@ -345,9 +345,12 @@ char* keybinds_get_help_text(enum page_numbers page)
         char* strings[2] = { (char*)bind->description, (char*)bind->shortcut_text };
 
         if (current_title != bind_title) {
-            current_title = bind_title;
             char* prev_out = out;
-            out = str_concat_four(out, "\n  ", (char*)bind_title, "\n", 0);
+            if(current_title)
+                out = str_concat_four(out, "\n  ", (char*)bind_title, "\n", 0);
+            else
+                out = str_concat_four(out, "\n \n  ", (char*)bind_title, "\n", 0);
+            current_title = bind_title;
             free(prev_out);
         }
 
@@ -405,7 +408,7 @@ static void init_global_keybinds(cfg_file_t* cfg)
     init_bind_macro(global, song_variables, "Song Variables & Directory Configuration", "US_F12");
     init_bind_macro(global, palette_config, "Palette Configuration", "Ctrl+US_F12");
     init_bind_macro(global, font_editor, "Font Editor", "Shift+US_F12");
-    init_bind_macro(global, waterfall, "Waterfall", "Alt+US_F12");
+    init_bind_macro(global, waterfall, "Waterfall\n ", "Alt+US_F12");
 
     init_bind_macro(global, octave_decrease, "Decrease Octave", "US_HOME");
     init_bind_macro(global, octave_increase, "Increase Octave", "US_END");
@@ -414,7 +417,7 @@ static void init_global_keybinds(cfg_file_t* cfg)
     init_bind_macro(global, decrease_playback_tempo, "Decrease Playback Tempo", "Ctrl+US_LEFTBRACKET");
     init_bind_macro(global, increase_playback_tempo, "Increase Playback Tempo", "Ctrl+US_RIGHTBRACKET");
     init_bind_macro(global, decrease_global_volume, "Decrease Global Volume", "US_LEFTBRACKET");
-    init_bind_macro(global, increase_global_volume, "Increase Global Volume", "US_RIGHTBRACKET");
+    init_bind_macro(global, increase_global_volume, "Increase Global Volume\n ", "US_RIGHTBRACKET");
 
     init_bind_macro(global, toggle_channel_1, "Toggle Channel 1", "Alt+US_F1");
     init_bind_macro(global, toggle_channel_2, "Toggle Channel 2", "Alt+US_F2");
@@ -423,7 +426,7 @@ static void init_global_keybinds(cfg_file_t* cfg)
     init_bind_macro(global, toggle_channel_5, "Toggle Channel 5", "Alt+US_F5");
     init_bind_macro(global, toggle_channel_6, "Toggle Channel 6", "Alt+US_F6");
     init_bind_macro(global, toggle_channel_7, "Toggle Channel 7", "Alt+US_F7");
-    init_bind_macro(global, toggle_channel_8, "Toggle Channel 8", "Alt+US_F8");
+    init_bind_macro(global, toggle_channel_8, "Toggle Channel 8\n ", "Alt+US_F8");
 
     init_bind_macro(global, mouse_grab, "Toggle Mouse / Keyboard Grab", "Ctrl+US_D");
     init_bind_macro(global, display_reset, "Refresh Screen And Reset Chache Identification", "Ctrl+US_E");
@@ -434,9 +437,9 @@ static void init_global_keybinds(cfg_file_t* cfg)
     init_bind_macro(global, calculate_song_length, "Calculate Approximate Song Length", "Ctrl+US_P");
     init_bind_macro(global, quit, "Quit Schism Tracker", "Ctrl+US_Q");
     init_bind_macro(global, quit_no_confirm, "Quit Without Confirmation", "Ctrl+Shift+US_Q");
-    init_bind_macro(global, save, "Save Current Song", "Ctrl+US_S");
+    init_bind_macro(global, save, "Save Current Song\n ", "Ctrl+US_S");
 
-    init_bind_macro(global, fullscreen, "Toggle Fullscreen", "Ctrl+Alt+US_ENTER");
+    init_bind_macro(global, fullscreen, "Toggle Fullscreen\n ", "Ctrl+Alt+US_ENTER");
 }
 
 void init_keybinds(void)
