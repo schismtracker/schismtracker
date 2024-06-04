@@ -275,5 +275,9 @@ void init_keybinds(void);
 extern keybind_list global_keybinds_list;
 
 #define key_pressed(SECTION, NAME) global_keybinds_list.SECTION.NAME.pressed
+#define key_repeated(SECTION, NAME) global_keybinds_list.SECTION.NAME.repeated
+#define key_pressed_or_repeated(SECTION, NAME) \
+    global_keybinds_list.SECTION.NAME.pressed || \
+    global_keybinds_list.SECTION.NAME.repeated
 
 #endif /* KEYBINDS_H */
