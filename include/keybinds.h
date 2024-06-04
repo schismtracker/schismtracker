@@ -39,6 +39,57 @@ typedef struct keybind_bind
 
 typedef struct keybind_list
 {
+    /* *** SAMPLE LIST *** */
+
+    keybind_section_info sample_list_info;
+    struct keybinds_sample_list {
+        keybind_bind load_new_sample;
+        keybind_bind move_between_options;
+        keybind_bind move_up;
+        keybind_bind move_down;
+        keybind_bind convert_signed_unsigned;
+        keybind_bind pre_loop_cut;
+        keybind_bind clear_name_and_filename;
+        keybind_bind delete_sample;
+        keybind_bind downmix_to_mono;
+        keybind_bind resize_sample_with_interpolation;
+        keybind_bind resize_sample_without_interpolation;
+        keybind_bind reverse_sample;
+        keybind_bind centralise_sample;
+        keybind_bind invert_sample;
+        keybind_bind post_loop_cut;
+        keybind_bind sample_amplifier;
+        keybind_bind toggle_multichannel_playback;
+        keybind_bind save_sample_to_disk_it;
+        keybind_bind copy_sample;
+        keybind_bind toggle_sample_quality;
+        keybind_bind replace_current_sample;
+        keybind_bind swap_sample;
+        keybind_bind save_sample_to_disk_format_select;
+        keybind_bind save_sample_to_disk_raw;
+        keybind_bind exchange_sample;
+        keybind_bind text_to_sample;
+        keybind_bind edit_create_adlib_sample;
+        keybind_bind load_adlib_sample_by_midi_patch_number;
+
+        keybind_bind insert_sample_slot;
+        keybind_bind remove_sample_slot;
+        keybind_bind swap_sample_with_previous;
+        keybind_bind swap_sample_with_next;
+
+        keybind_bind toggle_current_sample;
+        keybind_bind solo_current_sample;
+
+        keybind_bind decrease_playback_channel;
+        keybind_bind increase_playback_channel;
+
+        keybind_bind increase_c5_frequency_1_octave;
+        keybind_bind decrease_c5_frequency_1_octave;
+
+        keybind_bind increase_c5_frequency_1_semitone;
+        keybind_bind decrease_c5_frequency_1_semitone;
+    } sample_list;
+
     /* *** PATTERN EDIT *** */
 
     keybind_section_info pattern_edit_info;

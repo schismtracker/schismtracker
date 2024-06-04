@@ -378,7 +378,57 @@ keybind_section_info* current_section_info = NULL;
 static const char* current_section_name = "";
 static char current_shortcut[256] = "";
 
-static void init_patter_edit_keybinds(cfg_file_t* cfg)
+static void init_sample_list_keybinds(cfg_file_t* cfg)
+{
+    init_section_macro(sample_list, "Sample List Keys.", PAGE_SAMPLE_LIST);
+    init_bind_macro(sample_list, load_new_sample, "Load new sample", "US_ENTER");
+    init_bind_macro(sample_list, move_between_options, "Move between options", "US_TAB");
+    init_bind_macro(sample_list, move_up, "Move up (when not on list)", "US_PAGEUP");
+    init_bind_macro(sample_list, move_down, "Move down (when not on list)\n ", "US_PAGEDOWN");
+
+    init_bind_macro(sample_list, convert_signed_unsigned, "Convert signed to/from unsigned samples", "Alt+US_A");
+    init_bind_macro(sample_list, pre_loop_cut, "Pre-loop cut sample", "Alt+US_B");
+    init_bind_macro(sample_list, clear_name_and_filename, "Clear sample name & filename (used in sample name window)", "Alt+US_C");
+    init_bind_macro(sample_list, delete_sample, "Delete sample", "Alt+US_D");
+    init_bind_macro(sample_list, downmix_to_mono, "Downmix stero sample to mono", "Alt+Shift+US_D");
+    init_bind_macro(sample_list, resize_sample_with_interpolation, "Resize sample (with interpolation)", "Alt+US_E");
+    init_bind_macro(sample_list, resize_sample_without_interpolation, "Resize sample (without interpolation)", "Alt+US_F");
+    init_bind_macro(sample_list, reverse_sample, "Reverse sample", "Alt+US_G");
+    init_bind_macro(sample_list, centralise_sample, "Centralise sample", "Alt+US_H");
+    init_bind_macro(sample_list, invert_sample, "Invert sample", "Alt+US_I");
+    init_bind_macro(sample_list, post_loop_cut, "Post-loop cut sample", "Alt+US_L");
+    init_bind_macro(sample_list, sample_amplifier, "Sample amplifier", "ALT+US_M");
+    init_bind_macro(sample_list, toggle_multichannel_playback, "Toggle multichannel playback", "Alt+US_N");
+    init_bind_macro(sample_list, save_sample_to_disk_it, "Save current sample to disk (IT format)", "Alt+US_O");
+    init_bind_macro(sample_list, copy_sample, "Copy sample", "Alt+US_P");
+    init_bind_macro(sample_list, toggle_sample_quality, "Toggle sample quality", "Alt+US_Q");
+    init_bind_macro(sample_list, replace_current_sample, "Replace current sample in song", "Alt+US_R");
+    init_bind_macro(sample_list, swap_sample, "Swap sample (in song also)", "Alt+US_S");
+    init_bind_macro(sample_list, save_sample_to_disk_format_select, "Save current sample to disk (Choose format)", "Alt+US_T");
+    init_bind_macro(sample_list, save_sample_to_disk_raw, "Save current sample to disk (RAW Format)", "Alt+US_W");
+    init_bind_macro(sample_list, exchange_sample, "Exchange sample (only in Sample List)", "Alt+US_X");
+    init_bind_macro(sample_list, text_to_sample, "Text to sample data", "Alt+US_Y");
+    init_bind_macro(sample_list, edit_create_adlib_sample, "Edit/create AdLib (FM) sample", "Alt+US_Z");
+    init_bind_macro(sample_list, load_adlib_sample_by_midi_patch_number, "Load predefined AdLib sample by MIDI patch number", "Alt+Shift+US_Z");
+
+    init_bind_macro(sample_list, insert_sample_slot, "Insert sample slot (updates pattern data)", "Alt+US_INSERT");
+    init_bind_macro(sample_list, remove_sample_slot, "Remove sample slot (updates pattern data)", "Alt+US_DELETE");
+    init_bind_macro(sample_list, swap_sample_with_previous, "Swap sample with previous", "Alt+US_UP");
+    init_bind_macro(sample_list, swap_sample_with_next, "Swap sample with next", "Alt+US_DOWN");
+
+    init_bind_macro(sample_list, toggle_current_sample, "Toggle current sample", "Alt+US_F9");
+    init_bind_macro(sample_list, solo_current_sample, "Solo current sample", "Alt+US_F10");
+
+    init_bind_macro(sample_list, decrease_playback_channel, "Decrease playback channel", "Alt+Shift+US_COMMA");
+    init_bind_macro(sample_list, increase_playback_channel, "Increase playback channel", "Alt+Shift+US_PERIOD");
+
+    init_bind_macro(sample_list, increase_c5_frequency_1_octave, "Increase C-5 frequency by 1 octave", "Alt+US_KP_PLUS");
+    init_bind_macro(sample_list, decrease_c5_frequency_1_octave, "Decrease C-5 frequency by 1 octave", "Alt+US_KP_MINUS");
+    init_bind_macro(sample_list, increase_c5_frequency_1_semitone, "Increase C-5 frequency by 1 semitone", "Ctrl+US_KP_PLUS");
+    init_bind_macro(sample_list, decrease_c5_frequency_1_semitone, "Decrease C-5 frequency by 1 semitone", "Ctrl+US_KP_MINUS");
+}
+
+static void init_pattern_edit_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(pattern_edit, "Pattern Edit Keys.", PAGE_PATTERN_EDITOR);
     init_bind_macro(pattern_edit, next_pattern, "Next pattern (*)", "US_KP_PLUS");
@@ -616,7 +666,8 @@ void init_keybinds(void)
 	char* path = dmoz_path_concat(cfg_dir_dotschism, "keybinds.ini");
 	cfg_file_t cfg;
 	cfg_init(&cfg, path);
-    init_patter_edit_keybinds(&cfg);
+    init_sample_list_keybinds(&cfg);
+    init_pattern_edit_keybinds(&cfg);
     init_global_keybinds(&cfg);
     cfg_write(&cfg);
     cfg_free(&cfg);
