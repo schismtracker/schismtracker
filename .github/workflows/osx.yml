@@ -39,16 +39,12 @@ jobs:
           path: '/Users/runner/x86_64'
           key: mac-x86_64-files
 
-        # We can't actually cache the normal
-        # directory for powerpc because we
-        # also need to copy the assembler
-        # into Xcode
-      - name: 'Cache PowerPC files'
-        id: cache-powerpc-files
-        uses: actions/cache@v4
+      - name: 'Restore cached PowerPC files'
+        id: cache-powerpc-restore
+        uses: actions/cache/restore@v4
         with:
           path: 'schism-macppc-bins'
-          key: mac-ppc-bins
+          key: mac-powerpc-bins
 
       - name: 'Download 10.9 SDK for x86_64'
         id: chown
@@ -62,11 +58,18 @@ jobs:
           popd
 
       - name: 'Grab PowerPC cross compile binaries'
-        if: steps.cache-powerpc-files.outputs.cache-hit != 'true'
+        if: steps.cache-powerpc-restore.outputs.cache-hit != 'true'
         run: |
           wget -O schism-macppc-bins.zip "https://www.dropbox.com/scl/fi/trq99fq51p13nh8tajpwa/schism-macppc-bins.zip?rlkey=xemvhpmm1ci0dnseawmanr749&st=g4qteuny&dl=1"
           unzip schism-macppc-bins.zip -d "schism-macppc-bins"
           rm schism-macppc-bins.zip
+
+      - name: 'Save PowerPC files in cache'
+        id: cache-powerpc-save
+        uses: actions/cache/save@v4
+        with:
+          path: 'schism-macppc-bins'
+          key: ${{ steps.cache-powerpc-restore.outputs.cache-primary-key }}
 
       - name: 'Install PowerPC cross compile binaries'
         run: |
