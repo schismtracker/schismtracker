@@ -400,6 +400,10 @@ int kbd_get_note(struct key_event *k);
 
 int kbd_get_alnum(struct key_event *k);
 
+void handle_key_repeat(void);
+void cache_key_repeat(struct key_event* kk);
+void empty_key_repeat(void);
+
 /* use 0 for delay to (re)set the default rate. */
 void set_key_repeat(int delay, int rate);
 

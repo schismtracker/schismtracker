@@ -475,11 +475,10 @@ static void pop_pending_keydown_event(const uint8_t* text) {
 	if (have_pending_keydown) {
 		pending_keydown.text = text;
 		handle_key(&pending_keydown);
+		cache_key_repeat(&pending_keydown);
 		have_pending_keydown = 0;
 	}
 }
-
-
 
 /* -------------------------------------------- */
 
@@ -568,9 +567,13 @@ static void event_loop(void)
 				break;
 			}
 			case SDL_KEYDOWN:
+				/* we have our own repeat handler now */
+				if (event.key.repeat)
+					break;
+
+				/* fallthrough */
 			case SDL_KEYUP:
 				pop_pending_keydown_event(NULL);
-
 				switch (event.key.keysym.sym) {
 				case SDLK_NUMLOCKCLEAR:
 					modkey ^= KMOD_NUM;
@@ -620,15 +623,18 @@ static void event_loop(void)
 				kk.mouse = MOUSE_NONE;
 				key_translate(&kk);
 
-				/* this historically meant
-				 *     status.last_keysym == kk.sym,
-				 * but that's totally useless. */
-				kk.is_repeat = event.key.repeat;
-
 				if (event.type == SDL_KEYUP) {
 					handle_key(&kk);
+
+					/* only empty the key repeat if
+					 * the last keydown is the same sym */
+					if (last_key == kk.sym)
+						empty_key_repeat();
 				} else {
 					push_pending_keydown_event(&kk);
+
+					/* reset key repeat regardless */
+					empty_key_repeat();
 
 					/* TODO this ought to be handled in
 					 * pop_pending_keydown_event() */
@@ -850,6 +856,9 @@ static void event_loop(void)
 		 * and text input after it; if a text input event is NOT sent,
 		 * we should just send the keydown as is */
 		pop_pending_keydown_event(NULL);
+
+		/* handle key repeats */
+		handle_key_repeat();
 
 		/* now we can do whatever we need to do */
 		time(&status.now);
