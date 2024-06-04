@@ -1981,7 +1981,8 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		 *
 		 * OpenMPT also doesn't entirely support IT's version of this macro, which is
 		 * just another demotivator for actually implementing it correctly *sigh* */
-		const uint32_t vel = _muldiv(chan->volume * csf->current_global_volume * chan->global_volume,
+		const uint32_t vel =
+		!chan->ptr_sample ? 0 : _muldiv(chan->volume * csf->current_global_volume * chan->global_volume,
 			chan->ptr_sample->global_volume * 2,
 			1 << 21);
 
