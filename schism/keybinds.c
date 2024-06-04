@@ -378,6 +378,170 @@ keybind_section_info* current_section_info = NULL;
 static const char* current_section_name = "";
 static char current_shortcut[256] = "";
 
+static void init_patter_edit_keybinds(cfg_file_t* cfg)
+{
+    init_section_macro(pattern_edit, "Pattern Edit Keys.", PAGE_PATTERN_EDITOR);
+    init_bind_macro(pattern_edit, next_pattern, "Next pattern (*)", "US_KP_PLUS");
+    init_bind_macro(pattern_edit, previous_pattern, "Previous pattern (*)", "US_KP_MINUS");
+    init_bind_macro(pattern_edit, next_4_pattern, "Next 4 pattern (*)", "Shift+US_KP_PLUS");
+    init_bind_macro(pattern_edit, previous_4_pattern, "Previous 4 pattern (*)", "Shift+US_KP_MINUS");
+    init_bind_macro(pattern_edit, next_order_pattern, "Next order's pattern (*)", "Ctrl+US_KP_PLUS");
+    init_bind_macro(pattern_edit, previous_order_pattern, "Previous order's pattern (*)", "Ctrl+US_KP_MINUS");
+    init_bind_macro(pattern_edit, use_last_value, "Use last note/instrument/volume/effect/effect value\n ", "US_SPACE");
+    // init_bind_macro(pattern_edit, preview_note, "Preview note", "US_CAPSLOCK");
+
+    init_bind_macro(pattern_edit, get_default_value, "Get default note/instrument/volume/effect", "US_ENTER");
+    init_bind_macro(pattern_edit, decrease_instrument, "Decrease instrument", "Shift+US_COMMA,Ctrl+US_UP");
+    init_bind_macro(pattern_edit, increase_instrument, "Increase instrument", "Shift+US_PERIOD,Ctrl+US_DOWN");
+    init_bind_macro(pattern_edit, decrease_octave, "Decrease octave", "US_KP_DIVIDE,Alt+US_HOME");
+    init_bind_macro(pattern_edit, increase_octave, "Increase octave", "US_KP_MULTIPLY,Alt+US_END");
+    init_bind_macro(pattern_edit, toggle_edit_mask, "Toggle edit mask for current field\n ", "US_COMMA");
+
+    init_bind_macro(pattern_edit, insert_row, "Insert a row to current channel", "US_INSERT");
+    init_bind_macro(pattern_edit, delete_row, "Delete a rom from current channel", "US_DELETE");
+    init_bind_macro(pattern_edit, insert_pattern_row, "Insert an entire row to pattern (*)", "Alt+US_INSERT");
+    init_bind_macro(pattern_edit, delete_pattern_row, "Delete an entire row from pattern (*)", "Alt+US_DELETE");
+    init_bind_macro(pattern_edit, up_by_skip, "Move up by the skip value (set with Alt 1-9)", "US_UP");
+    init_bind_macro(pattern_edit, down_by_skip, "Move down by the skip value", "US_DOWN");
+    init_bind_macro(pattern_edit, set_skip_1, "Set skip value to 1", "Alt+US_1");
+    init_bind_macro(pattern_edit, set_skip_2, "Set skip value to 2", "Alt+US_2");
+    init_bind_macro(pattern_edit, set_skip_3, "Set skip value to 3", "Alt+US_3");
+    init_bind_macro(pattern_edit, set_skip_4, "Set skip value to 4", "Alt+US_4");
+    init_bind_macro(pattern_edit, set_skip_5, "Set skip value to 5", "Alt+US_5");
+    init_bind_macro(pattern_edit, set_skip_6, "Set skip value to 6", "Alt+US_6");
+    init_bind_macro(pattern_edit, set_skip_7, "Set skip value to 7", "Alt+US_7");
+    init_bind_macro(pattern_edit, set_skip_8, "Set skip value to 8", "Alt+US_8");
+    init_bind_macro(pattern_edit, set_skip_9, "Set skip value to 9", "Alt+US_9");
+
+    init_bind_macro(pattern_edit, up_one_row, "Move up by 1 row", "Ctrl+US_HOME");
+    init_bind_macro(pattern_edit, down_one_row, "Move down by 1 row", "Ctrl+US_END");
+    init_bind_macro(pattern_edit, slide_pattern_up, "Slide pattern up by 1 row", "Alt+US_UP");
+    init_bind_macro(pattern_edit, slide_pattern_down, "Slide pattern down by 1 row", "Alt+US_DOWN");
+    init_bind_macro(pattern_edit, move_cursor_left, "Move cursor left", "US_LEFT");
+    init_bind_macro(pattern_edit, move_cursor_right, "Move cursor right", "US_RIGHT");
+    init_bind_macro(pattern_edit, move_forwards_channel, "Move forwards one channel", "Alt+US_RIGHT"); // Check correct?
+    init_bind_macro(pattern_edit, move_backwards_channel, "Move backwards one channel", "Alt+US_LEFT");
+    init_bind_macro(pattern_edit, move_forwards_note_column, "Move forwards to note column", "US_TAB");
+    init_bind_macro(pattern_edit, move_backwards_note_column, "Move backwards to note column", "Shift+US_TAB");
+    init_bind_macro(pattern_edit, move_up_n_lines, "Move up n lines (n=Row Hilight Major)", "US_PAGEUP");
+    init_bind_macro(pattern_edit, move_down_n_lines, "Move down n lines", "US_PAGEDOWN");
+    init_bind_macro(pattern_edit, move_pattern_top, "Move to top of pattern", "Ctrl+US_PAGEUP");
+    init_bind_macro(pattern_edit, move_pattern_bottom, "Move to bottom of pattern", "Ctrl+US_PAGEDOWN");
+    init_bind_macro(pattern_edit, move_start, "Move to start of column/start of line/start of pattern", "US_HOME");
+    init_bind_macro(pattern_edit, move_end, "Move to end of column/end of line/end of pattern", "US_END");
+    init_bind_macro(pattern_edit, move_previous_position, "Move to previous position (accounts for Multichannel)", "US_BACKSPACE");
+    init_bind_macro(pattern_edit, move_previous, "Move to previous note/instrument/volume/effect", "Shift+US_A");
+    init_bind_macro(pattern_edit, move_next, "Move to next note/instrument/volume/effect\n ", "Shift+US_F");
+
+    init_bind_macro(pattern_edit, toggle_multichannel,
+        "Toggle Multichannel mode for current channel\nPress 2x: Multichannel selection menu\n ", "Alt+US_N");
+
+    init_bind_macro(pattern_edit, store_pattern_data, "Store pattern data", "Alt+US_ENTER");
+    init_bind_macro(pattern_edit, revert_pattern_data, "Revert pattern data (*)", "Alt+US_BACKSPACE");
+    init_bind_macro(pattern_edit, undo, "Undo - any function with (*) can be undone\n ", "Ctrl+US_BACKSPACE");
+
+    init_bind_macro(pattern_edit, toggle_centralise_cursor, "Toggle centralise cursor", "Ctrl+US_C");
+    init_bind_macro(pattern_edit, toggle_highlight_row, "Toggle current row highlight", "Ctrl+US_H");
+    init_bind_macro(pattern_edit, toggle_volume_display, "Toggle default volume display\n ", "Ctrl+US_V");
+
+    init_bind_macro(pattern_edit, set_pattern_length, "Set pattern length", "Ctrl+US_F2");
+
+    init_section_macro(track_view, " Track View Functions.", PAGE_PATTERN_EDITOR);
+    init_bind_macro(track_view, cycle_view, "Cycle current track's view", "Alt+US_T");
+    init_bind_macro(track_view, clear_track_views, "Clear all track views", "Alt+US_R");
+    init_bind_macro(track_view, toggle_track_view_divisions, "Toggle track view divisions", "Alt+US_H");
+    init_bind_macro(track_view, deselect_track, "Deselect current track\n ", "Ctrl+US_0");
+
+    init_bind_macro(track_view, track_scheme_1, "View current track in scheme 1", "Ctrl+US_1");
+    init_bind_macro(track_view, track_scheme_2, "View current track in scheme 2", "Ctrl+US_2");
+    init_bind_macro(track_view, track_scheme_3, "View current track in scheme 3", "Ctrl+US_3");
+    init_bind_macro(track_view, track_scheme_4, "View current track in scheme 4", "Ctrl+US_4");
+    init_bind_macro(track_view, track_scheme_5, "View current track in scheme 5", "Ctrl+US_5");
+    init_bind_macro(track_view, track_scheme_6, "View current track in scheme 6\n ", "Ctrl+US_6");
+
+    init_bind_macro(track_view, move_column_left, "Move left between track view columns", "Ctrl+US_LEFT");
+    init_bind_macro(track_view, move_column_right, "Move right between track view columns\n ", "Ctrl+US_RIGHT");
+
+    // This doesn't work in previous version?
+    init_bind_macro(track_view, quick_view_scheme_1, "Quick view scheme setup 1", "Ctrl+Shift+US_1");
+    init_bind_macro(track_view, quick_view_scheme_2, "Quick view scheme setup 2", "Ctrl+Shift+US_2");
+    init_bind_macro(track_view, quick_view_scheme_3, "Quick view scheme setup 3", "Ctrl+Shift+US_3");
+    init_bind_macro(track_view, quick_view_scheme_4, "Quick view scheme setup 4", "Ctrl+Shift+US_4");
+    init_bind_macro(track_view, quick_view_scheme_5, "Quick view scheme setup 5", "Ctrl+Shift+US_5");
+    init_bind_macro(track_view, quick_view_scheme_6, "Quick view scheme setup 6\n ", "Ctrl+Shift+US_6");
+
+    init_bind_macro(track_view, toggle_cursor_tracking, "Toggle View-Channel cursor-tracking\n ", "Ctrl+US_T");
+
+    init_section_macro(block_functions, " Block Functions.", PAGE_PATTERN_EDITOR);
+    init_bind_macro(block_functions, mark_beginning_block, "Mark beginning of block", "Alt+US_B");
+    init_bind_macro(block_functions, mark_end_block, "Mark end of block", "Alt+US_E");
+    init_bind_macro(block_functions, quick_mark_lines, "Quick mark n/2n/4n/... lines (n=Row Highlight Major)", "Alt+US_D");
+    init_bind_macro(block_functions, mark_column_or_pattern, "Mark entire column/patter", "Alt+US_L");
+    init_bind_macro(block_functions, mark_block_left, "Mark block left", "Shift+US_LEFT");
+    init_bind_macro(block_functions, mark_block_right, "Mark block right", "Shift+US_RIGHT");
+    init_bind_macro(block_functions, mark_block_up, "Mark block up", "Shift+US_UP");
+    init_bind_macro(block_functions, mark_block_down, "Mark block down\n ", "Shift+US_DOWN");
+    init_bind_macro(block_functions, mark_block_start_row, "Mark block start of row/rows/pattern", "Shift+US_HOME");
+    init_bind_macro(block_functions, mark_block_end_row, "Mark block end of row/rows/pattern", "Shift+US_END");
+    init_bind_macro(block_functions, mark_block_page_up, "Mark block up one page", "Shift+US_PAGEUP");
+    init_bind_macro(block_functions, mark_block_page_down, "Mark block down one page\n ", "Shift+US_PAGEDOWN");
+
+    init_bind_macro(block_functions, unmark, "Unmark block/Release clipboard memory\n ", "Alt+US_U");
+
+    init_bind_macro(block_functions, raise_notes_semitone, "Raise notes by a semitone (*)", "Alt+US_Q");
+    init_bind_macro(block_functions, raise_notes_octave, "Raise notes by an octave (*)", "Alt+Shift+US_Q");
+    init_bind_macro(block_functions, lower_notes_semitone, "Lower notes by a semitone (*)", "Alt+US_A");
+    init_bind_macro(block_functions, lower_notes_octave, "Lower notes by an octave (*)", "Alt+Shift+US_A");
+    init_bind_macro(block_functions, set_instrument, "Set Instrument (*)", "Alt+US_S");
+    init_bind_macro(block_functions, set_volume_or_panning, "Set volume/panning (*)", "Alt+US_V");
+    init_bind_macro(block_functions, wipe_volume_or_panning, "Wipe vol/pan not associated with a note/instrument (*)", "Alt+US_W");
+    init_bind_macro(block_functions, slide_volume_or_panning,
+        "Slide volume/panning column (*)\nPress 2x: Wipe all volume/panning controls (*)", "Alt+US_K");
+    // init_bind_macro(block_functions, wipe_all_volume_or_panning, "Wipe all volume/panning controls (*)", "");
+    init_bind_macro(block_functions, volume_amplifier, "Volume amplifier (*) / Fast volume attenuate (*)", "Alt+US_J");
+    init_bind_macro(block_functions, cut_block, "Cut block (*)", "Alt+US_Z");
+    init_bind_macro(block_functions, swap_block, "Swap block (*)", "Alt+US_Y");
+    init_bind_macro(block_functions, slide_effect_value,
+        "Slide effect value (*)\nPress 2x: Wipe all effect data (*)\n ", "Alt+US_X");
+    // init_bind_macro(block_functions, wipe_all_effect_data, "", "");
+
+    init_bind_macro(block_functions, roll_block_down, "Roll block down", "Ctrl+US_INSERT");
+    init_bind_macro(block_functions, roll_block_up, "Roll block up", "Ctrl+US_DELETE");
+
+    init_bind_macro(block_functions, copy_block, "Copy block into clipboard", "Alt+US_C");
+    init_bind_macro(block_functions, copy_block_with_mute, "Copy block to clipboard honoring current mute-settings", "Shift+US_L");
+    init_bind_macro(block_functions, paste_data, "Paste data from clipboard (*)", "Alt+US_P");
+    init_bind_macro(block_functions, paste_and_overwrite,
+        "Overwrite with data from clipboard (*)\nPress 2x:Grow pattern to clipboard length", "Alt+US_O");
+    // init_bind_macro(block_functions, grow_pattern_from_clipboard_length, "", "");
+    init_bind_macro(block_functions, paste_and_mix,
+        "Mix each row from clipboard with pattern data (*)\nPress 2x: Mix each field from clipboard with pattern data\n ", "Alt+US_M");
+    // init_bind_macro(block_functions, paste_and_mix_field, "", "");
+
+    init_bind_macro(block_functions, double_block_length, "Double block length (*)", "Alt+US_F");
+    init_bind_macro(block_functions, halve_block_length, "Halve block length (*)", "Alt+US_G");
+
+    init_bind_macro(block_functions, select_template_mode, "Select template mode / Fast volume amplify (*)", "Alt+US_I");
+    init_bind_macro(block_functions, disable_template_mode, "Disable template mode", "Alt+Shift+US_I");
+    init_bind_macro(block_functions, toggle_fast_volume, "Toggle fast volume mode", "Ctrl+US_J");
+    init_bind_macro(block_functions, selection_volume_vary, "Selection volume vary / Fast volume vary (*)", "Ctrl+US_U");
+    init_bind_macro(block_functions, selection_panning_vary, "Selection panning vary / Fast panning vary (*)", "Ctrl+US_Y");
+    init_bind_macro(block_functions, selection_effect_vary, "Selection effect vary / Fast effect vary (*)", "Ctrl+US_K");
+
+    init_section_macro(block_functions, " Playback Functions.", PAGE_PATTERN_EDITOR);
+    init_bind_macro(playback_functions, play_note_cursor, "Play note under cursor", "US_4");
+    init_bind_macro(playback_functions, play_row, "Play row", "US_8");
+
+    init_bind_macro(playback_functions, play_from_row, "Play from current row", "Ctrl+US_F6");
+    init_bind_macro(playback_functions, toggle_playback_mark, "Set/Clear playback mark (for use with F7)", "Ctrl+US_F7");
+
+    init_bind_macro(playback_functions, toggle_current_channel, "Toggle current channel", "Alt+US_F9");
+    init_bind_macro(playback_functions, solo_current_channel, "Solo current channel", "Alt+US_F10");
+
+    init_bind_macro(playback_functions, toggle_playback_tracing, "Toggle playback tracing (also Ctrl-F)", "US_SCROLLLOCK");
+    init_bind_macro(playback_functions, toggle_midi_input, "Toggle MIDI input", "Alt+US_SCROLLLOCK");
+}
+
 static void init_global_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(global, "Global Keys.", PAGE_ANY);
@@ -452,6 +616,7 @@ void init_keybinds(void)
 	char* path = dmoz_path_concat(cfg_dir_dotschism, "keybinds.ini");
 	cfg_file_t cfg;
 	cfg_init(&cfg, path);
+    init_patter_edit_keybinds(&cfg);
     init_global_keybinds(&cfg);
     cfg_write(&cfg);
     cfg_free(&cfg);
