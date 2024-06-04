@@ -389,18 +389,21 @@ void video_mousecursor(int vis)
 	}
 }
 
-void video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y)
+void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
 {
 	if (video.mouse.visible && (video.mouse.x != vx || video.mouse.y != vy))
 		status.flags |= SOFTWARE_MOUSE_MOVED;
+
+	vx = CLAMP(vx, 0, NATIVE_SCREEN_WIDTH - 1);
+	vy = CLAMP(vy, 0, NATIVE_SCREEN_HEIGHT - 1);
 
 	vx *= NATIVE_SCREEN_WIDTH;
 	vy *= NATIVE_SCREEN_HEIGHT;
 	vx /= (cfg_video_want_fixed) ? cfg_video_want_fixed_width  : video.width;
 	vy /= (cfg_video_want_fixed) ? cfg_video_want_fixed_height : video.height;
 
-	*x = (vx < NATIVE_SCREEN_WIDTH)  ? (video.mouse.x = vx) : video.mouse.x;
-	*y = (vy < NATIVE_SCREEN_HEIGHT) ? (video.mouse.y = vy) : video.mouse.y;
+	*x = video.mouse.x = vx;
+	*y = video.mouse.y = vy;
 }
 
 void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
