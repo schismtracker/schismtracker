@@ -378,6 +378,64 @@ keybind_section_info* current_section_info = NULL;
 static const char* current_section_name = "";
 static char current_shortcut[256] = "";
 
+static void init_instrument_list_keybinds(cfg_file_t* cfg)
+{
+    init_section_macro(instrument_list, "Instrument List Keys.", PAGE_INSTRUMENT_LIST);
+    init_bind_macro(instrument_list, load_instrument, "Load new instrument", "US_ENTER");
+    init_bind_macro(instrument_list, move_instrument_up, "Move instrument up (when not on list)", "Ctrl+US_PAGEUP");
+    init_bind_macro(instrument_list, move_instrument_down, "Move instrument down", "Ctrl+US_PAGEDOWN");
+    init_bind_macro(instrument_list, clear_name_and_filename, "Clean instrument name & filename", "Alt+US_C");
+    init_bind_macro(instrument_list, wipe_data, "Wipe instrument data", "Alt+US_W");
+    init_bind_macro(instrument_list, edit_name, "Edit instrument name (ESC to exit)\n ", "US_SPACEBAR");
+
+    init_bind_macro(instrument_list, delete_instrument_and_samples, "Delete instrument & all related samples", "Alt+US_D");
+    init_bind_macro(instrument_list, delete_instrument_and_unused_samples, "Delete instrument & all related unused samples", "Alt+Shift+US_D");
+    init_bind_macro(instrument_list, post_loop_cut, "Post-loop cut envelope", "Alt+US_L");
+    init_bind_macro(instrument_list, toggle_multichannel, "Toggle multichannel playback", "Alt+US_N");
+    init_bind_macro(instrument_list, save_to_disk, "Save current instrument to disk", "Alt+US_O");
+    init_bind_macro(instrument_list, copy, "Copy instrument", "Alt+US_P");
+    init_bind_macro(instrument_list, replace_in_song, "Replace current instrument in song", "Alt+US_R");
+    init_bind_macro(instrument_list, swap, "Swap instruments (in song also)", "Alt+US_S");
+    init_bind_macro(instrument_list, update_pattern_data, "Update pattern data", "Alt+US_U");
+    init_bind_macro(instrument_list, exchange, "Exchange instruments (only in instrument list)\n ", "Alt+US_X");
+
+    init_bind_macro(instrument_list, insert_slot, "Insert instrument slot (updates pattern data)", "Alt+US_INSERT");
+    init_bind_macro(instrument_list, remove_slot, "Remove instrument slot (updates pattern data)", "Alt+US_DELETE");
+    init_bind_macro(instrument_list, increase_playback_channel, "Increase playback channel", "Shift+US_PERIOD");
+    init_bind_macro(instrument_list, decrease_playback_channel, "Decrease playback channel", "Shift+US_COMMA");
+
+    init_section_macro(instrument_note_translation, "Note Translation.", PAGE_INSTRUMENT_LIST);
+    init_bind_macro(instrument_note_translation, pickup_sample_number_and_default_play_note, "Pickup sample number & default play note", "US_ENTER");
+    init_bind_macro(instrument_note_translation, increase_sample_number, "Increase sample number", "Shift+US_PERIOD");
+    init_bind_macro(instrument_note_translation, decrease_sample_number, "Decrease sample number\n ", "Shift+US_COMMA");
+
+    init_bind_macro(instrument_note_translation, change_all_samples, "Change all samples", "Alt+US_A");
+    init_bind_macro(instrument_note_translation, enter_next_note, "Enter next note", "Alt+US_N");
+    init_bind_macro(instrument_note_translation, enter_previous_note, "Enter previous note", "Alt+US_P");
+    init_bind_macro(instrument_note_translation, transpose_all_notes_semitone_up, "Transpose all notes a semitone up", "Alt+US_UP");
+    init_bind_macro(instrument_note_translation, transpose_all_notes_semitone_down, "Transpose all notes a semitone down", "Alt+US_DOWN");
+    init_bind_macro(instrument_note_translation, insert_row_from_table, "Insert a row from the table", "Alt+US_INSERT");
+    init_bind_macro(instrument_note_translation, delete_row_from_table, "Delete a row from the table", "Alt+US_DELETE");
+    init_bind_macro(instrument_note_translation, toggle_edit_mask, "Toggle edit mask for current field", "US_COMMA");
+
+    init_section_macro(instrument_envelope, "Envelope Keys.", PAGE_INSTRUMENT_LIST);
+    init_bind_macro(instrument_envelope, pick_up_or_drop_current_node, "Pick up/drop current node", "US_ENTER");
+    init_bind_macro(instrument_envelope, add_node, "Add node", "US_INSERT");
+    init_bind_macro(instrument_envelope, delete_node, "Delete node", "US_DELETE");
+    init_bind_macro(instrument_envelope, move_node_left, "Move node left (fast)", "Alt+US_LEFT");
+    init_bind_macro(instrument_envelope, move_node_right, "Move node right (fast)", "Alt+US_RIGHT");
+    init_bind_macro(instrument_envelope, move_node_up, "Move node up (fast)", "Alt+US_UP");
+    init_bind_macro(instrument_envelope, move_node_down, "Move node down (fast)", "Alt+US_DOWN");
+    init_bind_macro(instrument_envelope, pre_loop_cut_envelope, "Pre-loop cut envelope", "Alt+US_B");
+    init_bind_macro(instrument_envelope, double_envelope_length, "Double envelope length", "Alt+US_F");
+    init_bind_macro(instrument_envelope, halve_envelope_length, "Halve envelope length", "Alt+US_G");
+    init_bind_macro(instrument_envelope, resize_envelope, "Resize envelope", "Alt+US_E");
+    init_bind_macro(instrument_envelope, generate_envelope_from_ADSR_values, "Generate envelope frome ADSR values\n ", "Alt+US_Z");
+
+    init_bind_macro(instrument_envelope, play_default_note, "Play default note", "US_SPACEBAR");
+    // init_bind_macro(instrument_envelope, note_off, "Note off command", "");
+}
+
 static void init_sample_list_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(sample_list, "Sample List Keys.", PAGE_SAMPLE_LIST);

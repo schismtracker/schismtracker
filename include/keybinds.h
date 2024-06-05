@@ -39,6 +39,70 @@ typedef struct keybind_bind
 
 typedef struct keybind_list
 {
+    /* *** INSTRUMENT LIST *** */
+
+    keybind_section_info instrument_list_info;
+    struct keybinds_instrument_list {
+        keybind_bind load_instrument;
+        keybind_bind move_instrument_up;
+        keybind_bind move_instrument_down;
+        keybind_bind clear_name_and_filename;
+        keybind_bind wipe_data;
+        keybind_bind edit_name;
+
+        keybind_bind delete_instrument_and_samples;
+        keybind_bind delete_instrument_and_unused_samples;
+        keybind_bind post_loop_cut;
+        keybind_bind toggle_multichannel;
+        keybind_bind save_to_disk;
+        keybind_bind copy;
+        keybind_bind replace_in_song;
+        keybind_bind swap;
+        keybind_bind update_pattern_data;
+        keybind_bind exchange;
+
+        keybind_bind insert_slot;
+        keybind_bind remove_slot;
+
+        keybind_bind increase_playback_channel;
+        keybind_bind decrease_playback_channel;
+    } instrument_list;
+
+    keybind_section_info instrument_note_translation_info;
+    struct keybinds_instrument_note_translation {
+        keybind_bind pickup_sample_number_and_default_play_note;
+        keybind_bind increase_sample_number;
+        keybind_bind decrease_sample_number;
+
+        keybind_bind change_all_samples;
+        keybind_bind enter_next_note;
+        keybind_bind enter_previous_note;
+        keybind_bind transpose_all_notes_semitone_up;
+        keybind_bind transpose_all_notes_semitone_down;
+        keybind_bind insert_row_from_table;
+        keybind_bind delete_row_from_table;
+        keybind_bind toggle_edit_mask;
+    } instrument_note_translation;
+
+    keybind_section_info instrument_envelope_info;
+    struct keybinds_instrument_envelope {
+        keybind_bind pick_up_or_drop_current_node;
+        keybind_bind add_node;
+        keybind_bind delete_node;
+        keybind_bind move_node_left;
+        keybind_bind move_node_right;
+        keybind_bind move_node_up;
+        keybind_bind move_node_down;
+        keybind_bind pre_loop_cut_envelope;
+        keybind_bind double_envelope_length;
+        keybind_bind halve_envelope_length;
+        keybind_bind resize_envelope;
+        keybind_bind generate_envelope_from_ADSR_values;
+
+        keybind_bind play_default_note;
+        // keybind_bind note_off;
+    } instrument_envelope;
+
     /* *** SAMPLE LIST *** */
 
     keybind_section_info sample_list_info;
