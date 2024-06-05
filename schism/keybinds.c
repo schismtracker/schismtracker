@@ -384,7 +384,8 @@ static void init_sample_list_keybinds(cfg_file_t* cfg)
     init_bind_macro(sample_list, load_new_sample, "Load new sample", "US_ENTER");
     init_bind_macro(sample_list, move_between_options, "Move between options", "US_TAB");
     init_bind_macro(sample_list, move_up, "Move up (when not on list)", "US_PAGEUP");
-    init_bind_macro(sample_list, move_down, "Move down (when not on list)\n ", "US_PAGEDOWN");
+    init_bind_macro(sample_list, move_down, "Move down (when not on list)", "US_PAGEDOWN");
+    init_bind_macro(sample_list, focus_sample_list, "Focus on sample list\n ", "Shift+US_ESCAPE");
 
     init_bind_macro(sample_list, convert_signed_unsigned, "Convert signed to/from unsigned samples", "Alt+US_A");
     init_bind_macro(sample_list, pre_loop_cut, "Pre-loop cut sample", "Alt+US_B");

@@ -47,6 +47,8 @@ typedef struct keybind_list
         keybind_bind move_between_options;
         keybind_bind move_up;
         keybind_bind move_down;
+        keybind_bind focus_sample_list;
+
         keybind_bind convert_signed_unsigned;
         keybind_bind pre_loop_cut;
         keybind_bind clear_name_and_filename;
