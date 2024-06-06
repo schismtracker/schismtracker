@@ -477,27 +477,27 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			set_page(PAGE_PATTERN_EDITOR);
 		}
 		return 1;
-	} else if(key_pressed(global, nav_tab)) {
+	} else if(key_pressed_or_repeated(global, nav_tab)) {
 		change_focus_to(1);
-	} else if(key_pressed(global, nav_backtab)) {
+	} else if(key_pressed_or_repeated(global, nav_backtab)) {
 		change_focus_to(33);
-	} else if(key_pressed(global, nav_left)) {
+	} else if(key_pressed_or_repeated(global, nav_left)) {
 		new_cursor_pos--;
-	} else if(key_pressed(global, nav_right)) {
+	} else if(key_pressed_or_repeated(global, nav_right)) {
 		new_cursor_pos++;
-	} else if(key_pressed(global, nav_up)) {
+	} else if(key_pressed_or_repeated(global, nav_up)) {
 		new_order--;
-	} else if(key_pressed(global, nav_down)) {
+	} else if(key_pressed_or_repeated(global, nav_down)) {
 		new_order++;
-	} else if(key_pressed(global, nav_home)) {
+	} else if(key_pressed_or_repeated(global, nav_home)) {
 		new_order = 0;
-	} else if(key_pressed(global, nav_end)) {
+	} else if(key_pressed_or_repeated(global, nav_end)) {
 		new_order = csf_last_order(current_song);
 		if (current_song->orderlist[new_order] != ORDER_LAST)
 			new_order++;
-	} else if(key_pressed(global, nav_page_up)) {
+	} else if(key_pressed_or_repeated(global, nav_page_up)) {
 		new_order -= 16;
-	} else if(key_pressed(global, nav_page_down)) {
+	} else if(key_pressed_or_repeated(global, nav_page_down)) {
 		new_order += 16;
 
 	// I'm not sure why this is here, but it is

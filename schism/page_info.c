@@ -1119,9 +1119,9 @@ static int info_page_handle_key(struct key_event * k)
 	} else if(key_pressed_or_repeated(global, nav_down) || key_pressed_or_repeated(global, nav_right)) {
 		if (selected_channel < 64)
 			selected_channel++;
-	} else if(key_pressed(global, nav_home)) {
+	} else if(key_pressed_or_repeated(global, nav_home)) {
 		selected_channel = 1;
-	} else if(key_pressed(global, nav_end)) {
+	} else if(key_pressed_or_repeated(global, nav_end)) {
 		selected_channel = song_find_last_channel();
 	} else if(key_pressed(info_page, add_window)) {
 		/* add a new window, unless there's already five (the maximum)

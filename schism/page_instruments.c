@@ -479,9 +479,9 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 		return 1;
 	}
 
-	if (key_pressed(global, nav_up)) {
+	if (key_pressed_or_repeated(global, nav_up)) {
 		instrument_set(current_instrument - 1);
-	} else if (key_pressed(global, nav_down)) {
+	} else if (key_pressed_or_repeated(global, nav_down)) {
 		instrument_set(current_instrument + 1);
 	} else if (key_pressed(instrument_envelope, move_node_up)) {
 		if (current_instrument > 1) {
@@ -500,26 +500,26 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			song_swap_instruments(current_instrument, new_ins);
 			instrument_set(new_ins);
 		}
-	} else if (key_pressed(global, nav_page_up)) {
+	} else if (key_pressed_or_repeated(global, nav_page_up)) {
 		instrument_set(current_instrument - 16);
-	} else if (key_pressed(global, nav_page_down)) {
+	} else if (key_pressed_or_repeated(global, nav_page_down)) {
 		instrument_set(current_instrument + 16);
-	} else if (key_pressed(global, nav_home)) {
+	} else if (key_pressed_or_repeated(global, nav_home)) {
 		if (instrument_cursor_pos < 25) {
 			instrument_cursor_pos = 0;
 			get_page_widgets()->accept_text = 1;
 		}
-	} else if (key_pressed(global, nav_end)) {
+	} else if (key_pressed_or_repeated(global, nav_end)) {
 		if (instrument_cursor_pos < 24) {
 			instrument_cursor_pos = 24;
 			get_page_widgets()->accept_text = 1;
 		}
-	} else if (key_pressed(global, nav_left)) {
+	} else if (key_pressed_or_repeated(global, nav_left)) {
 		if (instrument_cursor_pos < 25 && instrument_cursor_pos > 0) {
 			instrument_cursor_pos--;
 			get_page_widgets()->accept_text = 1;
 		}
-	} else if (key_pressed(global, nav_right)) {
+	} else if (key_pressed_or_repeated(global, nav_right)) {
 		if (instrument_cursor_pos == 25) {
 			get_page_widgets()->accept_text = 0;
 			change_focus_to(1);
@@ -527,7 +527,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			get_page_widgets()->accept_text = 1;
 			instrument_cursor_pos++;
 		}
-	} else if (key_pressed(global, nav_accept)) {
+	} else if (key_pressed_or_repeated(global, nav_accept)) {
 		if (instrument_cursor_pos < 25) {
 			instrument_cursor_pos = 25;
 			get_page_widgets()->accept_text = 0;
@@ -771,27 +771,27 @@ static int note_trans_handle_key(struct key_event * k)
 		sample_set(sample_get_current () + 1);
 	} else if (key_pressed(instrument_note_translation, decrease_sample_number)) {
 		sample_set(sample_get_current() - 1);
-	} else if (key_pressed(global, nav_left)) {
+	} else if (key_pressed_or_repeated(global, nav_left)) {
 		note_trans_cursor_pos_set(note_trans_cursor_pos - 1);
-	} else if (key_pressed(global, nav_right)) {
+	} else if (key_pressed_or_repeated(global, nav_right)) {
 		note_trans_cursor_pos_set(note_trans_cursor_pos + 1);
-	} else if (key_pressed(global, nav_up)) {
+	} else if (key_pressed_or_repeated(global, nav_up)) {
 		int new_line = note_trans_sel_line - 1;
 		note_trans_sel_line_set(new_line);
 		if (new_line < 0) {
 			change_focus_to(1);
 		}
-	} else if (key_pressed(global, nav_down)) {
+	} else if (key_pressed_or_repeated(global, nav_down)) {
 		note_trans_sel_line_set(note_trans_sel_line + 1);
-	} else if (key_pressed(global, nav_page_up)) {
+	} else if (key_pressed_or_repeated(global, nav_page_up)) {
 		note_trans_sel_line_set(note_trans_sel_line - 16);
-	} else if (key_pressed(global, nav_page_down)) {
+	} else if (key_pressed_or_repeated(global, nav_page_down)) {
 		note_trans_sel_line_set(note_trans_sel_line + 16);
-	} else if (key_pressed(global, nav_home)) {
+	} else if (key_pressed_or_repeated(global, nav_home)) {
 		note_trans_sel_line_set(0);
-	} else if (key_pressed(global, nav_end)) {
+	} else if (key_pressed_or_repeated(global, nav_end)) {
 		note_trans_sel_line_set(119);
-	} else if (key_pressed(global, nav_accept)) {
+	} else if (key_pressed_or_repeated(global, nav_accept)) {
 		sample_set(ins->sample_map[note_trans_sel_line]);
 		get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 	} else if (key_pressed(instrument_list, move_instrument_up)) {
@@ -1271,13 +1271,13 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 	int new_node = *current_node;
 	int n;
 
-	if (key_pressed(global, nav_up)) {
+	if (key_pressed_or_repeated(global, nav_up)) {
 		change_focus_to(1);
-	} else if (key_pressed(global, nav_down)) {
+	} else if (key_pressed_or_repeated(global, nav_down)) {
 		change_focus_to(6);
-	} else if (key_pressed(global, nav_left) || key_pressed(instrument_envelope, nav_node_left)) {
+	} else if (key_pressed_or_repeated(global, nav_left) || key_pressed(instrument_envelope, nav_node_left)) {
 		new_node--;
-	} else if (key_pressed(global, nav_right) || key_pressed(instrument_envelope, nav_node_right)) {
+	} else if (key_pressed_or_repeated(global, nav_right) || key_pressed(instrument_envelope, nav_node_right)) {
 		new_node++;
 	} else if (key_pressed(instrument_envelope, add_node)) {
 		*current_node = _env_node_add(env, *current_node, -1, -1);
