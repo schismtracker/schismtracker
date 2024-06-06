@@ -20,8 +20,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef __video_h
-#define __video_h
+#ifndef SCHISM_VIDEO_H_
+#define SCHISM_VIDEO_H_
 
 /* the vgamem implementation lives in draw-char.c
 it needs access to the fonts, and it shrank recently :)
@@ -65,8 +65,7 @@ void video_update(void);
 void video_colors(unsigned char palette[16][3]);
 void video_resize(unsigned int width, unsigned int height);
 void video_fullscreen(int new_fs_flag);
-void video_translate(unsigned int vx, unsigned int vy,
-			unsigned int *x, unsigned int *y);
+void video_translate(int vx, int vy, unsigned int *x, unsigned int *y);
 void video_blit(void);
 void video_mousecursor(int z);
 int video_mousecursor_visible(void);
@@ -80,22 +79,4 @@ void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y);
 
 SDL_Surface *xpmdata(const char *xpmdata[]);
 
-#if USE_X11
-unsigned int xv_yuvlayout(void);
-#endif
-
-#define VIDEO_YUV_UYVY          0x59565955
-#define VIDEO_YUV_YUY2          0x32595559
-#define VIDEO_YUV_YV12          0x32315659
-#define VIDEO_YUV_IYUV          0x56555949
-#define VIDEO_YUV_YVYU          0x55595659
-#define VIDEO_YUV_YV12_TV       (VIDEO_YUV_YV12 ^ 0xFFFFFFFF)
-#define VIDEO_YUV_IYUV_TV       (VIDEO_YUV_IYUV ^ 0xFFFFFFFF)
-#define VIDEO_YUV_RGBA          0x41424752
-#define VIDEO_YUV_RGBT          0x54424752
-#define VIDEO_YUV_RGB565        0x32424752
-#define VIDEO_YUV_RGB24         0x0
-#define VIDEO_YUV_RGB32         0x3
-#define VIDEO_YUV_NONE          0xFFFFFFFF
-
-#endif
+#endif /* SCHISM_VIDEO_H_ */

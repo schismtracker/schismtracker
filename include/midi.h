@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef MIDI_H
-#define MIDI_H
+#ifndef SCHISM_MIDI_H_
+#define SCHISM_MIDI_H_
 
 struct midi_provider;
 struct midi_port;
@@ -161,4 +161,4 @@ int macosx_midi_setup(void);    // SCHISM_MACOSX
 
 extern int midi_flags, midi_pitch_depth, midi_amplification, midi_c5note;
 
-#endif
+#endif /* SCHISM_MIDI_H_ */

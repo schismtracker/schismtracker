@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef PATTERN_VIEW_H
-#define PATTERN_VIEW_H
+#ifndef SCHISM_PATTERN_VIEW_H_
+#define SCHISM_PATTERN_VIEW_H_
 
 /* NOTE: these functions need to be called with the screen LOCKED */
 
@@ -52,5 +52,5 @@ PATTERN_VIEW(1)
 #define MASK_VOLUME     4
 #define MASK_EFFECT     8
 
-#endif /* ! PATTERN_VIEW_H */
+#endif /* SCHISM_PATTERN_VIEW_H_ */
 

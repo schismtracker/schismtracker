@@ -20,8 +20,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef clippy_h
-#define clippy_h
+#ifndef SCHISM_CLIPPY_H_
+#define SCHISM_CLIPPY_H_
 
 #include "it.h"
 #include "page.h"
@@ -41,4 +41,4 @@ struct widget *clippy_owner(int cb);
 /* copies the selection to the yank buffer (0 -> 1) */
 void clippy_yank(void);
 
-#endif
+#endif /* SCHISM_CLIPPY_H_ */

@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef IT_H
-#define IT_H
+#ifndef SCHISM_IT_H_
+#define SCHISM_IT_H_
 
 #include "sdlmain.h"
 
@@ -356,6 +356,8 @@ void main_song_changed_cb(void);
 int font_load(const char *filename);
 void palette_apply(void);
 void palette_load_preset(int palette_index);
+void palette_to_string(int which, char *str_out);
+int set_palette_from_string(const char *str_in);
 
 /* mostly for the itf editor */
 int font_save(const char *filename);
@@ -397,6 +399,10 @@ void kbd_set_current_octave(int new_octave);
 int kbd_get_note(struct key_event *k);
 
 int kbd_get_alnum(struct key_event *k);
+
+void handle_key_repeat(void);
+void cache_key_repeat(struct key_event* kk);
+void empty_key_repeat(void);
 
 /* use 0 for delay to (re)set the default rate. */
 void set_key_repeat(int delay, int rate);
@@ -467,5 +473,5 @@ void schism_exit(int status);
 
 /* --------------------------------------------------------------------- */
 
-#endif /* ! IT_H */
+#endif /* SCHISM_IT_H_ */
 

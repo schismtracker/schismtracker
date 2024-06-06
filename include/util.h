@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef SCHISM_UTIL_H_
+#define SCHISM_UTIL_H_
 
 #include <sys/stat.h> /* roundabout way to get time_t */
 #include <sys/types.h>
@@ -51,8 +51,11 @@
 # if __has_attribute (packed)
 #  define PACKED __attribute__((packed))
 # endif
-# if __has_attribute (packed)
+# if __has_attribute (malloc)
 #  define MALLOC __attribute__((malloc))
+# endif
+# if __has_attribute (pure)
+#  define PURE __attribute__((pure))
 # endif
 #endif
 
@@ -77,6 +80,9 @@
 #endif
 #ifndef MALLOC
 # define MALLOC
+#endif
+#ifndef PURE
+# define PURE
 #endif
 
 /* Path stuff that differs by platform */
@@ -216,5 +222,5 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg);
 If 'overwrite' is zero, attempts to rename over an existing file will fail with EEXIST. */
 int rename_file(const char *old, const char *newf, int overwrite);
 
-#endif /* ! UTIL_H */
+#endif /* SCHISM_UTIL_H_ */
 

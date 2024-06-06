@@ -20,8 +20,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef __charset_h
-#define __charset_h
+#ifndef SCHISM_CHARSET_H_
+#define SCHISM_CHARSET_H_
 
 #include <stdint.h>
 
@@ -38,7 +38,11 @@ typedef enum {
 	/* European languages */
 	CHARSET_CP437,
 
-	/* Built-in C types */
+	/* CHARSET_CHAR is special; it first tries UTF-8
+	 * in our internal decoder, then we hand it off
+	 * to SDL, which may or may not actually handle
+	 * it correctly, depending on whether it uses
+	 * the system iconv or its own. */
 	CHARSET_CHAR,
 	CHARSET_WCHAR_T
 } charset_t;
@@ -60,4 +64,31 @@ uint8_t char_unicode_to_cp437(unsigned int c);
 const char* charset_iconv_error_lookup(charset_error_t err);
 charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset);
 
-#endif
+/* This is a simple macro for easy charset conversion.
+ *
+ * Sample usage:
+ *    CHARSET_EASY_MODE(in, CHARSET_CHAR, CHARSET_CP437, {
+ *        do_something_with(out);
+ *    });
+ *
+ * The macro will handle freeing the result. It cannot
+ * be used outside of the block you feed to it.
+ * If you need that, call charset_iconv() directly.
+ */
+#define CHARSET_EASY_MODE_EX(MOD, in, inset, outset, x) \
+	do { \
+		MOD uint8_t* out; \
+		charset_error_t err = charset_iconv(in, (uint8_t**)&out, inset, outset); \
+		if (err) \
+			out = in; \
+	\
+		x \
+	\
+		if (!err) \
+			free((uint8_t*)out); \
+	} while (0)
+
+#define CHARSET_EASY_MODE(in, inset, outset, x) CHARSET_EASY_MODE_EX(, in, inset, outset, x)
+#define CHARSET_EASY_MODE_CONST(in, inset, outset, x) CHARSET_EASY_MODE_EX(const, in, inset, outset, x)
+
+#endif /* SCHISM_CHARSET_H_ */

@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SONG_H
-#define SONG_H
+#ifndef SCHISM_SONG_H_
+#define SCHISM_SONG_H_
 
 #include <stdint.h>
 
@@ -176,6 +176,7 @@ void song_restore_channel_states(void);
 int song_find_last_channel(void);
 
 int song_get_pattern(int n, song_note_t ** buf);  // return 0 -> error
+int song_get_pattern_offset(int * n, song_note_t ** buf, int * row, int offset);
 uint8_t *song_get_orderlist(void);
 
 int song_pattern_is_empty(int p);
@@ -268,6 +269,7 @@ select sample #0. (note: this is a hack to work around another hack) */
 int song_keydown(int samp, int ins, int note, int vol, int chan);
 int song_keyrecord(int samp, int ins, int note, int vol, int chan, int effect, int param);
 int song_keyup(int samp, int ins, int note);
+int song_keyup_channel(int samp, int ins, int note, int chan);
 
 void song_start(void);
 void song_start_once(void);
@@ -388,5 +390,5 @@ void song_set_pan_scheme(int scheme);
 
 /* --------------------------------------------------------------------- */
 
-#endif /* ! SONG_H */
+#endif /* SCHISM_SONG_H_ */
 

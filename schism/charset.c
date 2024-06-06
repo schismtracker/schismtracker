@@ -423,6 +423,12 @@ static int cp437_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_ne
 	return (c) ? DECODER_NEED_MORE : DECODER_DONE;
 }
 
+static int do_nothing_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_next) {
+	*out = *(uint32_t*)in;
+	*size_until_next = 4;
+	return (*out) ? DECODER_NEED_MORE : DECODER_DONE;
+}
+
 /* ----------------------------------------------------- */
 /* for these functions, 0 indicates an error in encoding */
 
@@ -502,6 +508,13 @@ ENCODE_UTF16_VARIANT(BE)
 
 #undef ENCODE_UTF16_VARIANT
 
+static size_t ucs4_do_nothing(uint32_t ch, uint8_t* out) {
+	if (out)
+		*(uint32_t*)out = ch;
+
+	return 4;
+}
+
 /* function LUT here */
 typedef int (*charset_conv_to_ucs4_func)(const uint8_t*, uint32_t*, size_t*);
 typedef size_t (*charset_conv_from_ucs4_func)(uint32_t, uint8_t*);
@@ -513,8 +526,11 @@ static charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 	[CHARSET_UTF16LE] = utf16LE_to_ucs4,
 	[CHARSET_UTF16BE] = utf16BE_to_ucs4,
 
+	[CHARSET_UCS4] = do_nothing_ucs4,
+
 	[CHARSET_CP437] = cp437_to_ucs4,
 
+	[CHARSET_CHAR] = utf8_to_ucs4,
 #ifdef SCHISM_WIN32
 # if WORDS_BIGENDIAN
 	[CHARSET_WCHAR_T] = utf16BE_to_ucs4,
@@ -531,9 +547,11 @@ static charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 	[CHARSET_UTF8] = ucs4_to_utf8,
 	[CHARSET_UTF16LE] = ucs4_to_utf16LE,
 	[CHARSET_UTF16BE] = ucs4_to_utf16BE,
+	[CHARSET_UCS4] = ucs4_do_nothing,
 
 	[CHARSET_CP437] = ucs4_to_cp437,
 
+	[CHARSET_CHAR] = ucs4_to_utf8,
 #ifdef SCHISM_WIN32
 # if WORDS_BIGENDIAN
 	[CHARSET_WCHAR_T] = ucs4_to_utf16BE,

@@ -826,7 +826,7 @@ char *get_dot_directory(void)
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
 	uint8_t* buf_utf8 = NULL;
 	if (SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) == S_OK
-		&& charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
+		&& !charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
 		return (char*)buf_utf8;
 
 	// else fall back to home (but if this ever happens, things are really screwed...)

@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SLURP_H
-#define SLURP_H
+#ifndef SCHISM_SLURP_H
+#define SCHISM_SLURP_H
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -81,5 +81,5 @@ int slurp_eof(slurp_t *t); /* 1 = end of file */
 /* used internally by slurp, nothing else should need this */
 int mmcmp_unpack(uint8_t **data, size_t *length);
 
-#endif /* ! SLURP_H */
+#endif /* SCHISM_SLURP_H */
 

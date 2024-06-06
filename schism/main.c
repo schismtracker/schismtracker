@@ -240,18 +240,9 @@ enum {
 	O_VIDEO_YUVLAYOUT = 256,
 	O_VIDEO_RESOLUTION,
 	O_VIDEO_STRETCH, O_NO_VIDEO_STRETCH,
-#if USE_OPENGL
-	O_VIDEO_GLPATH,
-#endif
 	O_VIDEO_DEPTH,
-#if HAVE_SYS_KD_H
-	O_VIDEO_FBDEV,
-#endif
 #if USE_NETWORK
 	O_NETWORK, O_NO_NETWORK,
-#endif
-#ifdef USE_X11
-	O_DISPLAY,
 #endif
 	O_CLASSIC_MODE, O_NO_CLASSIC_MODE,
 	O_FONTEDIT, O_NO_FONTEDIT,
@@ -362,9 +353,6 @@ static void parse_options(int argc, char **argv)
 				"  -a, --audio-driver=DRIVER\n"
 				"  -v, --video-driver=DRIVER\n"
 				"      --classic (--no-classic)\n"
-#ifdef USE_X11
-				"      --display=DISPLAYNAME\n"
-#endif
 				"  -f, --fullscreen (-F, --no-fullscreen)\n"
 				"  -p, --play (-P, --no-play)\n"
 				"      --diskwrite=FILENAME\n"
@@ -437,12 +425,14 @@ static void check_update(void)
 
 static void _do_clipboard_paste_op(SDL_Event *e)
 {
-	if (ACTIVE_PAGE.clipboard_paste
-	&& ACTIVE_PAGE.clipboard_paste(e->user.code,
-				e->user.data1)) return;
 	if (ACTIVE_WIDGET.clipboard_paste
 	&& ACTIVE_WIDGET.clipboard_paste(e->user.code,
 				e->user.data1)) return;
+
+	if (ACTIVE_PAGE.clipboard_paste
+	&& ACTIVE_PAGE.clipboard_paste(e->user.code,
+				e->user.data1)) return;
+
 	handle_text_input((uint8_t*)e->user.data1);
 }
 
@@ -485,6 +475,7 @@ static void pop_pending_keydown_event(const uint8_t* text) {
 	if (have_pending_keydown) {
 		pending_keydown.text = text;
 		handle_key(&pending_keydown);
+		cache_key_repeat(&pending_keydown);
 		have_pending_keydown = 0;
 	}
 }
@@ -496,7 +487,7 @@ static void event_loop(void)
 	SDL_Event event;
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
 	uint32_t last_mouse_down, ticker;
-	SDL_Keysym last_key = {0};
+	SDL_Keycode last_key = 0;
 	int modkey;
 	time_t startdown;
 #ifdef os_screensaver_deactivate
@@ -520,13 +511,14 @@ static void event_loop(void)
 	os_get_modkey(&modkey);
 	SDL_SetModState(modkey);
 
-#ifdef USE_X11
+#ifdef os_screensaver_deactivate
 	time(&last_ss);
 #endif
 	time(&status.now);
 	localtime_r(&status.now, &status.tmnow);
 	for (;;) {
 		while (SDL_PollEvent(&event)) {
+			/* handle the current event queue */
 			if (!os_sdlevent(&event))
 				continue;
 
@@ -575,9 +567,13 @@ static void event_loop(void)
 				break;
 			}
 			case SDL_KEYDOWN:
+				/* we have our own repeat handler now */
+				if (event.key.repeat)
+					break;
+
+				/* fallthrough */
 			case SDL_KEYUP:
 				pop_pending_keydown_event(NULL);
-
 				switch (event.key.keysym.sym) {
 				case SDLK_NUMLOCKCLEAR:
 					modkey ^= KMOD_NUM;
@@ -627,20 +623,23 @@ static void event_loop(void)
 				kk.mouse = MOUSE_NONE;
 				key_translate(&kk);
 
-				if (event.type == SDL_KEYDOWN && last_key.sym == kk.sym) {
-					sawrep = kk.is_repeat = 1;
-				} else {
-					kk.is_repeat = 0;
-				}
-
 				if (event.type == SDL_KEYUP) {
 					handle_key(&kk);
-					status.last_keysym = kk.sym;
-					last_key.sym = 0;
+
+					/* only empty the key repeat if
+					 * the last keydown is the same sym */
+					if (last_key == kk.sym)
+						empty_key_repeat();
 				} else {
 					push_pending_keydown_event(&kk);
-					status.last_keysym = 0;
-					last_key.sym = kk.sym;
+
+					/* reset key repeat regardless */
+					empty_key_repeat();
+
+					/* TODO this ought to be handled in
+					 * pop_pending_keydown_event() */
+					status.last_keysym = last_key;
+					last_key = kk.sym;
 				}
 				break;
 			case SDL_QUIT:
@@ -858,63 +857,67 @@ static void event_loop(void)
 		 * we should just send the keydown as is */
 		pop_pending_keydown_event(NULL);
 
-		if (sawrep || !SDL_PollEvent(NULL)) {
-			time(&status.now);
-			localtime_r(&status.now, &status.tmnow);
+		/* handle key repeats */
+		handle_key_repeat();
 
-			if (status.dialog_type == DIALOG_NONE
-			    && startdown && (status.now - startdown) > 1) {
-				menu_show();
-				startdown = 0;
-				downtrip = 1;
-			}
-			if (status.flags & (CLIPPY_PASTE_SELECTION|CLIPPY_PASTE_BUFFER)) {
-				clippy_paste((status.flags & CLIPPY_PASTE_BUFFER)
-					     ? CLIPPY_BUFFER : CLIPPY_SELECT);
-				status.flags &= ~(CLIPPY_PASTE_BUFFER|CLIPPY_PASTE_SELECTION);
-			}
+		/* now we can do whatever we need to do */
+		time(&status.now);
+		localtime_r(&status.now, &status.tmnow);
 
-			check_update();
-
-			switch (song_get_mode()) {
-			case MODE_PLAYING:
-			case MODE_PATTERN_LOOP:
-#ifdef os_screensaver_deactivate
-				if ((status.now-last_ss) > 14) {
-					last_ss=status.now;
-					os_screensaver_deactivate();
-				}
-#endif
-				break;
-			default:
-				break;
-			};
-
-			if (status.flags & DISKWRITER_ACTIVE) {
-				int q = disko_sync();
-				while (q == DW_SYNC_MORE && !SDL_PollEvent(NULL)) {
-					check_update();
-					q = disko_sync();
-				}
-				if (q == DW_SYNC_DONE) {
-#ifdef ENABLE_HOOKS
-					run_disko_complete_hook();
-#endif
-					if (diskwrite_to) {
-						printf("Diskwrite complete, exiting...\n");
-						schism_exit(0);
-					}
-				}
-			}
-
-			/* let dmoz build directory lists, etc
-			as long as there's no user-event going on...
-			*/
-			while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(NULL));
+		if (status.dialog_type == DIALOG_NONE
+		    && startdown && (status.now - startdown) > 1) {
+			menu_show();
+			startdown = 0;
+			downtrip = 1;
+		}
+		if (status.flags & (CLIPPY_PASTE_SELECTION|CLIPPY_PASTE_BUFFER)) {
+			clippy_paste((status.flags & CLIPPY_PASTE_BUFFER)
+				     ? CLIPPY_BUFFER : CLIPPY_SELECT);
+			status.flags &= ~(CLIPPY_PASTE_BUFFER|CLIPPY_PASTE_SELECTION);
 		}
 
-		/* what SDL uses internally for SDL_WaitEvent() */
-		SDL_Delay(1);
+		check_update();
+
+		switch (song_get_mode()) {
+		case MODE_PLAYING:
+		case MODE_PATTERN_LOOP:
+#ifdef os_screensaver_deactivate
+			if ((status.now-last_ss) > 14) {
+				last_ss=status.now;
+				os_screensaver_deactivate();
+			}
+#endif
+			break;
+		default:
+			break;
+		};
+
+		if (status.flags & DISKWRITER_ACTIVE) {
+			int q = disko_sync();
+			while (q == DW_SYNC_MORE && !SDL_PollEvent(NULL)) {
+				check_update();
+				q = disko_sync();
+			}
+			if (q == DW_SYNC_DONE) {
+#ifdef ENABLE_HOOKS
+				run_disko_complete_hook();
+#endif
+				if (diskwrite_to) {
+					printf("Diskwrite complete, exiting...\n");
+					schism_exit(0);
+				}
+			}
+		}
+
+		/* let dmoz build directory lists, etc
+		 *
+		 * as long as there's no user-event going on... */
+		while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(NULL));
+
+		/* delay until there's an event OR 10 ms have passed */
+		int t;
+		for (t = 0; t < 10 && !SDL_PollEvent(NULL); t++)
+			SDL_Delay(1);
 	}
 	schism_exit(0);
 }

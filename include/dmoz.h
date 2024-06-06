@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef DMOZ_H
-#define DMOZ_H
+#ifndef SCHISM_DMOZ_H_
+#define SCHISM_DMOZ_H_
 
 #include <stdint.h>
 #include "sndfile.h" /* for song_sample_t */
@@ -208,4 +208,4 @@ void dmoz_cache_update_names(const char *path, const char *filen, const char *di
 void dmoz_cache_update(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
 void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
 
-#endif /* ! DMOZ_H */
+#endif /* SCHISM_DMOZ_H_ */

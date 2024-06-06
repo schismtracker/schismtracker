@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "charset.h"
 #include "song.h"
 #include "page.h"
 #include "dmoz.h"
@@ -119,11 +120,11 @@ static void file_list_reposition(void)
 		f = flist.files[current_file];
 
 		if (f && f->smp_filename) {
-			strncpy(current_filename, f->smp_filename,
-					PATH_MAX-1);
+			strncpy(current_filename, f->smp_filename, PATH_MAX-1);
 		} else if (f && f->base) {
-			strncpy(current_filename, f->base,
-					PATH_MAX-1);
+			CHARSET_EASY_MODE(f->base, CHARSET_CHAR, CHARSET_CP437, {
+				strncpy(current_filename, out, PATH_MAX-1);
+			});
 		} else {
 			current_filename[0] = '\0';
 		}
@@ -200,7 +201,7 @@ static int change_dir(const char *dir)
 	dmoz_cache_update(cfg_dir_samples, &flist, NULL);
 
 	/* FIXME: need to make sure it exists, and that it's a directory */
-	strncpy(cfg_dir_samples, ptr, PATH_MAX);
+	strncpy(cfg_dir_samples, dir, PATH_MAX);
 	cfg_dir_samples[PATH_MAX] = 0;
 	free(ptr);
 
@@ -373,16 +374,19 @@ static void file_list_draw(void)
 		draw_text(numtostr(3, n+1, buf), 2, pos, 0, 2);
 		draw_text_len(file->title ? file->title : "", 25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
-		draw_text_len(file->base ? file->base : "", 18, 32, pos, fg, bg);
-		if (file->base && search_pos > -1) {
-			if (strncasecmp(file->base,search_str,search_pos) == 0) {
-				for (i = 0 ; i < search_pos; i++) {
-					if (tolower(file->base[i]) != tolower(search_str[i]))
-						break;
-					draw_char(file->base[i], 32+i, pos, 3,1);
+		CHARSET_EASY_MODE(file->base ? file->base : "", CHARSET_CHAR, CHARSET_CP437, {
+			draw_text_bios_len(out, 18, 32, pos, fg, bg);
+
+			if (file->base && search_pos > -1) {
+				if (strncasecmp(out,search_str,search_pos) == 0) {
+					for (i = 0 ; i < search_pos; i++) {
+						if (tolower(out[i]) != tolower(search_str[i]))
+							break;
+						draw_char(out[i], 32+i, pos, 3,1);
+					}
 				}
 			}
-		}
+		});
 	}
 
 	/* draw the info for the current file (or directory...) */
@@ -536,10 +540,14 @@ static void reposition_at_slash_search(void)
 	for (i = 0; i < flist.num_files; i++) {
 		f = flist.files[i];
 		if (!f || !f->base) continue;
-		for (j = 0; j < search_pos; j++) {
-			if (tolower(f->base[j]) != tolower(search_str[j]))
-				break;
-		}
+
+		CHARSET_EASY_MODE(f->base, CHARSET_CHAR, CHARSET_CP437, {
+			for (j = 0; j < search_pos; j++) {
+				if (tolower(out[j]) != tolower(search_str[j]))
+					break;
+			}
+		});
+
 		if (bl < j) {
 			bl = j;
 			b = i;
@@ -576,7 +584,9 @@ static void handle_enter_key(void)
 		song_copy_sample(cur, file->sample);
 		strncpy(smp->name, file->title, 25);
 		smp->name[25] = 0;
-		strncpy(smp->filename, file->base, 12);
+		CHARSET_EASY_MODE(file->base, CHARSET_CHAR, CHARSET_CP437, {
+			strncpy(smp->filename, out, 12);
+		});
 		smp->filename[12] = 0;
 		finish_load(cur);
 		memused_songchanged();

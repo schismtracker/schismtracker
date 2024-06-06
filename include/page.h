@@ -25,8 +25,8 @@
  * widgets on each page, etc. Since this information isn't useful outside
  * page*.c, it's not in the main header. */
 
-#ifndef PAGE_H
-#define PAGE_H
+#ifndef SCHISM_PAGE_H_
+#define SCHISM_PAGE_H_
 
 /* How much to scroll. */
 #define MOUSE_SCROLL_LINES       3
@@ -72,6 +72,7 @@ enum {
 	HELP_PATTERN_EDITOR,
 	HELP_ADLIB_SAMPLE,
 	HELP_SAMPLE_LIST,
+	HELP_PALETTES,
 
 	HELP_NUM_ITEMS /* needs to be last! */
 };
@@ -589,4 +590,4 @@ void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue)
 /* Ask for a sample / instrument number, like the "swap sample" dialog. */
 void smpprompt_create(const char *title, const char *prompt, void (*finish)(int n));
 
-#endif /* ! PAGE_H */
+#endif /* SCHISM_PAGE_H_ */
