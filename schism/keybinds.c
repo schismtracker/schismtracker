@@ -38,6 +38,8 @@ static void update_bind(keybind_bind* bind, SDL_KeyCode kcode, SDL_Scancode scod
 {
     keybind_shortcut* sc;
 
+    if (bind->section_info->page != status.current_page) return;
+
     for(int i = 0; i < bind->shortcuts_count; i++) {
         sc = &bind->shortcuts[i];
         int was_pressed = bind->pressed;
