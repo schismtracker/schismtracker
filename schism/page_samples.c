@@ -62,18 +62,6 @@ static int last_note = NOTE_MIDC;
 
 static int num_save_formats = 0;
 
-/* --------------------------------------------------------------------- */
-
-static void set_cursor_pos(int new_cursor_pos)
-{
-	if (new_cursor_pos == sample_list_cursor_pos) return;
-
-	new_cursor_pos = CLAMP(new_cursor_pos, 0, 25);
-	sample_list_cursor_pos = new_cursor_pos;
-	_fix_accept_text();
-	status.flags |= NEED_UPDATE;
-}
-
 /* woo */
 
 static int _is_magic_sample(int no)
@@ -113,6 +101,18 @@ static int _last_vis_sample(void)
 	while ((j + 34) > n) n += 34;
 	if (n >= MAX_SAMPLES) n = MAX_SAMPLES - 1;
 	return n;
+}
+
+/* --------------------------------------------------------------------- */
+
+static void set_cursor_pos(int new_cursor_pos)
+{
+	if (new_cursor_pos == sample_list_cursor_pos) return;
+
+	new_cursor_pos = CLAMP(new_cursor_pos, 0, 25);
+	sample_list_cursor_pos = new_cursor_pos;
+	_fix_accept_text();
+	status.flags |= NEED_UPDATE;
 }
 
 /* --------------------------------------------------------------------- */
