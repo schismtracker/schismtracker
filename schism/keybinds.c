@@ -42,7 +42,6 @@ static void update_bind(keybind_bind* bind, SDL_KeyCode kcode, SDL_Scancode scod
 
     for(int i = 0; i < bind->shortcuts_count; i++) {
         sc = &bind->shortcuts[i];
-        int was_pressed = bind->pressed;
         int mods_correct = 0;
         bind->pressed = 0;
         bind->released = 0;
@@ -69,7 +68,7 @@ static void update_bind(keybind_bind* bind, SDL_KeyCode kcode, SDL_Scancode scod
                 bind->repeated = is_repeat;
             }
         } else {
-            bind->released = was_pressed;
+            bind->released = 1;
         }
 
         return;
