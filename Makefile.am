@@ -144,17 +144,19 @@ appicon_DATA= icons/schism-icon-128.png
 
 noinst_SCRIPTS = $(scripts)
 
-nodist_schismtracker_SOURCES = \
-	auto/default-font.c		\
-	auto/helptext.c
 CLEANFILES = \
-	auto/default-font.c		\
+	auto/default-font.c	\
 	auto/helptext.c
 
 auto/default-font.c: Makefile.am scripts/bin2h.sh scripts/build-font.sh $(fonts)
 	sh $(srcdir)/scripts/build-font.sh $(srcdir) $(fonts) >$@
+
 auto/helptext.c: Makefile.am scripts/genhelp.py $(helptexts)
+if HAVE_PYTHON
 	$(PYTHON) $(srcdir)/scripts/genhelp.py $(srcdir) $(helptexts) >$@
+else
+	@echo "*** python is required to regenerate $(@) ***"; exit 1;
+endif
 
 if USE_ALSA
 files_alsa = sys/alsa/midi-alsa.c
@@ -368,6 +370,8 @@ schismtracker_SOURCES = \
 	player/effects.c		\
 	player/snd_gm.c			\
 	player/tables.c			\
+	auto/default-font.c		\
+	auto/helptext.c			\
 	$(files_macosx)			\
 	$(files_alsa)			\
 	$(files_oss)			\
