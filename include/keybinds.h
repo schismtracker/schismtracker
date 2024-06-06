@@ -39,6 +39,50 @@ typedef struct keybind_bind
 
 typedef struct keybind_list
 {
+    /* *** ORDER LIST *** */
+
+    keybind_section_info order_list_info;
+    struct keybinds_order_list {
+        keybind_bind goto_selected_pattern;
+        keybind_bind select_order_for_playback;
+        keybind_bind play_from_order;
+        keybind_bind insert_next_pattern;
+        keybind_bind duplicate_pattern;
+        keybind_bind mark_end_of_song;
+        keybind_bind skip_to_next_order_mark;
+        keybind_bind insert_pattern;
+        keybind_bind delete_pattern;
+        keybind_bind play_this_order_next;
+
+        keybind_bind toggle_order_list_locked;
+        keybind_bind sort_order_list;
+        keybind_bind find_unused_patterns;
+
+        keybind_bind link_pattern_to_sample;
+        keybind_bind copy_pattern_to_sample;
+        keybind_bind copy_pattern_to_sample_with_split;
+
+        keybind_bind continue_next_position_of_pattern;
+
+        keybind_bind save_order_list;
+        keybind_bind restore_order_list;
+    } order_list;
+
+    keybind_section_info order_list_panning_info;
+    struct keybinds_order_list_panning {
+        keybind_bind set_panning_left;
+        keybind_bind set_panning_middle;
+        keybind_bind set_panning_right;
+        keybind_bind set_panning_surround;
+        keybind_bind pan_unmuted_left;
+        keybind_bind pan_unmuted_middle;
+        keybind_bind pan_unmuted_right;
+        keybind_bind pan_unmuted_stereo;
+        keybind_bind pan_unmuted_amiga_stereo;
+        keybind_bind linear_panning_left_to_right;
+        keybind_bind linear_panning_right_to_left;
+    } order_list_panning;
+
     /* *** INFO PAGE *** */
 
     keybind_section_info info_page_info;
@@ -378,6 +422,8 @@ typedef struct keybind_list
         keybind_bind nav_cancel;
         keybind_bind nav_home;
         keybind_bind nav_end;
+        keybind_bind nav_tab;
+        keybind_bind nav_backtab;
 
         keybind_bind text_backspace;
         keybind_bind text_delete;

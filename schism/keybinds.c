@@ -379,6 +379,47 @@ keybind_section_info* current_section_info = NULL;
 static const char* current_section_name = "";
 static char current_shortcut[256] = "";
 
+static void init_order_list_keybinds(cfg_file_t* cfg)
+{
+    init_section_macro(order_list, "Order Keys.", PAGE_ORDERLIST_PANNING);
+    init_bind_macro(order_list, goto_selected_pattern, "Goto selected pattern", "US_ENTER,US_KP_ENTER,US_G");
+    init_bind_macro(order_list, play_from_order, "Play from order", "Shift+US_F6");
+    init_bind_macro(order_list, select_order_for_playback, "Select pattern for playback", "US_SPACEBAR");
+    init_bind_macro(order_list, insert_next_pattern, "Insert next pattern", "US_N");
+    init_bind_macro(order_list, duplicate_pattern, "Copy current pattern to new pattern, and insert order", "Shift+US_N");
+    init_bind_macro(order_list, mark_end_of_song, "End of song mark", "US_MINUS,US_KP_MINUS");
+    init_bind_macro(order_list, skip_to_next_order_mark, "Skip to next order mark", "Shift+US_EQUAL,US_KP_PLUS");
+    init_bind_macro(order_list, insert_pattern, "Insert a pattern", "US_INSERT");
+    init_bind_macro(order_list, delete_pattern, "Delete a pattern", "US_DELETE");
+    init_bind_macro(order_list, play_this_order_next, "Play this order next\n ", "Ctrl+US_F7");
+
+    init_bind_macro(order_list, toggle_order_list_locked, "Lock/unlock order list", "Alt+US_F11");
+    init_bind_macro(order_list, sort_order_list, "Sort order list", "Alt+US_R");
+    init_bind_macro(order_list, find_unused_patterns, "Search for unused patterns", "Alt+US_U");
+
+    init_bind_macro(order_list, link_pattern_to_sample, "Link (diskwriter) this pattern to the current sample", "Ctrl+US_B");
+    init_bind_macro(order_list, copy_pattern_to_sample, "Copy (diskwriter) this pattern to the current sample\n ", "Ctrl+US_O");
+    init_bind_macro(order_list, copy_pattern_to_sample_with_split, "Copy (diskwriter) this pattern to the current sample, with split(?)\n ", "Ctrl+Shift+US_O");
+
+    init_bind_macro(order_list, continue_next_position_of_pattern, "Continue to next position of current pattern\n ", "US_C");
+
+    init_bind_macro(order_list, save_order_list, "Save order list", "Alt+US_ENTER");
+    init_bind_macro(order_list, restore_order_list, "Swap order list with saved order list", "Alt+US_BACKSPACE");
+
+    init_section_macro(order_list_panning, "Panning Keys.", PAGE_ORDERLIST_PANNING);
+    init_bind_macro(order_list_panning, set_panning_left, "Set panning left", "US_L");
+    init_bind_macro(order_list_panning, set_panning_middle, "Set panning middle", "US_M");
+    init_bind_macro(order_list_panning, set_panning_right, "Set panning right", "US_R");
+    init_bind_macro(order_list_panning, set_panning_surround, "Set panning surround", "US_S");
+    init_bind_macro(order_list_panning, pan_unmuted_left, "Pan all unmuted channels left", "Alt+US_L");
+    init_bind_macro(order_list_panning, pan_unmuted_middle, "Pan all unmuted channels middle", "Alt+US_M");
+    init_bind_macro(order_list_panning, pan_unmuted_right, "Pan all unmuted channels right", "Alt+US_R");
+    init_bind_macro(order_list_panning, pan_unmuted_stereo, "Pan all unmuted channels stereo", "Alt+US_S");
+    init_bind_macro(order_list_panning, pan_unmuted_amiga_stereo, "Pan all unmuted channels amiga stereo", "Alt+US_A");
+    init_bind_macro(order_list_panning, linear_panning_left_to_right, "Linear panning (left to right)", "Alt+US_BACKSLASH");
+    init_bind_macro(order_list_panning, linear_panning_right_to_left, "Linear panning (right to left)", "Alt+US_SLASH");
+}
+
 static void init_info_page_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(info_page, "Info Page Keys.", PAGE_INFO);
@@ -704,6 +745,8 @@ static void init_global_keybinds(cfg_file_t* cfg)
     init_bind_macro(global, nav_cancel, "Navigate cancel", "US_ESCAPE");
     init_bind_macro(global, nav_home, "Navigate home (start of line/first in list)", "US_HOME");
     init_bind_macro(global, nav_end, "Navigate end (end of line/last in list)\n ", "US_END");
+    init_bind_macro(global, nav_tab, "Navigate to next item right", "US_TAB");
+    init_bind_macro(global, nav_backtab, "Navigate to next item left", "Shift+US_TAB");
 
     init_bind_macro(global, text_backspace, "Normal text backspace", "US_BACKSPACE");
     init_bind_macro(global, text_delete, "Normal text delete\n ", "US_DELETE");
@@ -779,6 +822,7 @@ void init_keybinds(void)
 	char* path = dmoz_path_concat(cfg_dir_dotschism, "keybinds.ini");
 	cfg_file_t cfg;
 	cfg_init(&cfg, path);
+    init_order_list_keybinds(&cfg);
     init_info_page_keybinds(&cfg);
     init_sample_list_keybinds(&cfg);
     init_pattern_edit_keybinds(&cfg);
