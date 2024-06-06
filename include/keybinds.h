@@ -44,6 +44,9 @@ typedef struct keybind_list
     keybind_section_info instrument_list_info;
     struct keybinds_instrument_list {
         keybind_bind load_instrument;
+        keybind_bind focus_list;
+        keybind_bind nav_first;
+        keybind_bind nav_last;
         keybind_bind move_instrument_up;
         keybind_bind move_instrument_down;
         keybind_bind clear_name_and_filename;
@@ -75,6 +78,7 @@ typedef struct keybind_list
         keybind_bind decrease_sample_number;
 
         keybind_bind change_all_samples;
+        keybind_bind change_all_samples_with_name;
         keybind_bind enter_next_note;
         keybind_bind enter_previous_note;
         keybind_bind transpose_all_notes_semitone_up;
@@ -89,10 +93,20 @@ typedef struct keybind_list
         keybind_bind pick_up_or_drop_current_node;
         keybind_bind add_node;
         keybind_bind delete_node;
+        keybind_bind nav_node_left;
+        keybind_bind nav_node_right;
+
         keybind_bind move_node_left;
         keybind_bind move_node_right;
+        keybind_bind move_node_left_fast;
+        keybind_bind move_node_right_fast;
+        keybind_bind move_node_left_max;
+        keybind_bind move_node_right_max;
         keybind_bind move_node_up;
         keybind_bind move_node_down;
+        keybind_bind move_node_up_fast;
+        keybind_bind move_node_down_fast;
+
         keybind_bind pre_loop_cut_envelope;
         keybind_bind double_envelope_length;
         keybind_bind halve_envelope_length;
@@ -324,6 +338,21 @@ typedef struct keybind_list
 
     keybind_section_info global_info;
     struct keybinds_global {
+        keybind_bind nav_left;
+        keybind_bind nav_right;
+        keybind_bind nav_up;
+        keybind_bind nav_down;
+        keybind_bind nav_page_up;
+        keybind_bind nav_page_down;
+        keybind_bind nav_accept;
+        keybind_bind nav_cancel;
+        keybind_bind nav_home;
+        keybind_bind nav_end;
+
+        keybind_bind text_backspace;
+        keybind_bind text_delete;
+        keybind_bind text_insert;
+
         keybind_bind help;
         keybind_bind midi;
         keybind_bind system_configure;
@@ -392,6 +421,7 @@ void init_keybinds(void);
 extern keybind_list global_keybinds_list;
 
 #define key_pressed(SECTION, NAME) global_keybinds_list.SECTION.NAME.pressed
+#define key_released(SECTION, NAME) global_keybinds_list.SECTION.NAME.released
 #define key_repeated(SECTION, NAME) global_keybinds_list.SECTION.NAME.repeated
 #define key_pressed_or_repeated(SECTION, NAME) \
     global_keybinds_list.SECTION.NAME.pressed || \

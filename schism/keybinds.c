@@ -383,6 +383,7 @@ static void init_instrument_list_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(instrument_list, "Instrument List Keys.", PAGE_INSTRUMENT_LIST);
     init_bind_macro(instrument_list, load_instrument, "Load new instrument", "US_ENTER");
+    init_bind_macro(instrument_list, focus_list, "Focus on list", "Shift+US_ESCAPE");
     init_bind_macro(instrument_list, move_instrument_up, "Move instrument up (when not on list)", "Ctrl+US_PAGEUP");
     init_bind_macro(instrument_list, move_instrument_down, "Move instrument down", "Ctrl+US_PAGEDOWN");
     init_bind_macro(instrument_list, clear_name_and_filename, "Clean instrument name & filename", "Alt+US_C");
@@ -407,10 +408,11 @@ static void init_instrument_list_keybinds(cfg_file_t* cfg)
 
     init_section_macro(instrument_note_translation, "Note Translation.", PAGE_INSTRUMENT_LIST);
     init_bind_macro(instrument_note_translation, pickup_sample_number_and_default_play_note, "Pickup sample number & default play note", "US_ENTER");
-    init_bind_macro(instrument_note_translation, increase_sample_number, "Increase sample number", "Shift+US_PERIOD");
-    init_bind_macro(instrument_note_translation, decrease_sample_number, "Decrease sample number\n ", "Shift+US_COMMA");
+    init_bind_macro(instrument_note_translation, increase_sample_number, "Increase sample number", "Shift+US_PERIOD,Ctrl+US_DOWN");
+    init_bind_macro(instrument_note_translation, decrease_sample_number, "Decrease sample number\n ", "Shift+US_COMMA,Ctrl+US_UP");
 
     init_bind_macro(instrument_note_translation, change_all_samples, "Change all samples", "Alt+US_A");
+    init_bind_macro(instrument_note_translation, change_all_samples_with_name, "Change all samples", "Alt+Shift+US_A");
     init_bind_macro(instrument_note_translation, enter_next_note, "Enter next note", "Alt+US_N");
     init_bind_macro(instrument_note_translation, enter_previous_note, "Enter previous note", "Alt+US_P");
     init_bind_macro(instrument_note_translation, transpose_all_notes_semitone_up, "Transpose all notes a semitone up", "Alt+US_UP");
@@ -423,10 +425,20 @@ static void init_instrument_list_keybinds(cfg_file_t* cfg)
     init_bind_macro(instrument_envelope, pick_up_or_drop_current_node, "Pick up/drop current node", "US_ENTER");
     init_bind_macro(instrument_envelope, add_node, "Add node", "US_INSERT");
     init_bind_macro(instrument_envelope, delete_node, "Delete node", "US_DELETE");
-    init_bind_macro(instrument_envelope, move_node_left, "Move node left (fast)", "Alt+US_LEFT");
-    init_bind_macro(instrument_envelope, move_node_right, "Move node right (fast)", "Alt+US_RIGHT");
-    init_bind_macro(instrument_envelope, move_node_up, "Move node up (fast)", "Alt+US_UP");
-    init_bind_macro(instrument_envelope, move_node_down, "Move node down (fast)", "Alt+US_DOWN");
+    init_bind_macro(instrument_envelope, nav_node_left, "Go to node left", "Ctrl+US_LEFT");
+    init_bind_macro(instrument_envelope, nav_node_right, "Go to node right\n ", "Ctrl+US_RIGHT");
+
+    init_bind_macro(instrument_envelope, move_node_left, "Move node left", "US_LEFT");
+    init_bind_macro(instrument_envelope, move_node_right, "Move node right", "US_RIGHT");
+    init_bind_macro(instrument_envelope, move_node_left_fast, "Move node left (fast)", "Alt+US_LEFT,US_TAB");
+    init_bind_macro(instrument_envelope, move_node_right_fast, "Move node right (fast)", "Alt+US_RIGHT,Shift+US_TAB");
+    init_bind_macro(instrument_envelope, move_node_left_max, "Move node left (max)", "US_HOME");
+    init_bind_macro(instrument_envelope, move_node_right_max, "Move node right (max)", "US_END");
+    init_bind_macro(instrument_envelope, move_node_up, "Move node up", "US_UP");
+    init_bind_macro(instrument_envelope, move_node_down, "Move node down", "US_DOWN");
+    init_bind_macro(instrument_envelope, move_node_up_fast, "Move node up (fast)", "Alt+US_UP,US_PAGEUP");
+    init_bind_macro(instrument_envelope, move_node_down_fast, "Move node down (fast)\n ", "Alt+US_DOWN,US_PAGEDOWN");
+
     init_bind_macro(instrument_envelope, pre_loop_cut_envelope, "Pre-loop cut envelope", "Alt+US_B");
     init_bind_macro(instrument_envelope, double_envelope_length, "Double envelope length", "Alt+US_F");
     init_bind_macro(instrument_envelope, halve_envelope_length, "Halve envelope length", "Alt+US_G");
@@ -655,7 +667,21 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
 static void init_global_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(global, "Global Keys.", PAGE_ANY);
-    init_bind_macro(global, help, "Help (Context Sensitive!)", "US_F1 ,US_DDD,sdf,b,c,d");
+    init_bind_macro(global, nav_left, "Navigate left", "US_LEFT");
+    init_bind_macro(global, nav_right, "Navigate right", "US_LEFT");
+    init_bind_macro(global, nav_up, "Navigate up", "US_UP");
+    init_bind_macro(global, nav_down, "Navigate down", "US_DOWN");
+    init_bind_macro(global, nav_page_up, "Navigate page up", "US_PAGE_UP");
+    init_bind_macro(global, nav_page_down, "Navigate page down", "US_PAGE_DOWN");
+    init_bind_macro(global, nav_accept, "Navigate accept", "US_ENTER");
+    init_bind_macro(global, nav_cancel, "Navigate cancel", "US_ESCAPE");
+    init_bind_macro(global, nav_home, "Navigate home (start of line/first in list)", "US_HOME");
+    init_bind_macro(global, nav_end, "Navigate end (end of line/last in list)\n ", "US_END");
+
+    init_bind_macro(global, text_backspace, "Normal text backspace", "US_BACKSPACE");
+    init_bind_macro(global, text_delete, "Normal text delete\n ", "US_DELETE");
+
+    init_bind_macro(global, help, "Help (Context Sensitive!)", "US_F1");
     init_bind_macro(global, midi, "MIDI Screen", "Shift+US_F1");
     init_bind_macro(global, system_configure, "System Configuration", "Ctrl+US_F1");
     init_bind_macro(global, pattern_edit, "Pattern Editor / Pattern Editor Options", "US_F2");
@@ -726,6 +752,7 @@ void init_keybinds(void)
 	char* path = dmoz_path_concat(cfg_dir_dotschism, "keybinds.ini");
 	cfg_file_t cfg;
 	cfg_init(&cfg, path);
+    init_info_page_keybinds(&cfg);
     init_sample_list_keybinds(&cfg);
     init_pattern_edit_keybinds(&cfg);
     init_global_keybinds(&cfg);
