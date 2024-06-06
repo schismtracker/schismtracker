@@ -39,6 +39,36 @@ typedef struct keybind_bind
 
 typedef struct keybind_list
 {
+    /* *** INFO PAGE *** */
+
+    keybind_section_info info_page_info;
+
+    struct keybinds_info_page {
+        keybind_bind add_window;
+        keybind_bind delete_window;
+        keybind_bind nav_next_window;
+        keybind_bind nav_previous_window;
+        keybind_bind change_window_type_up;
+        keybind_bind change_window_type_down;
+        keybind_bind move_window_base_up;
+        keybind_bind move_window_base_down;
+
+        keybind_bind toggle_volume_velocity_bars;
+        keybind_bind toggle_sample_instrument_names;
+
+        keybind_bind toggle_channel_mute;
+        keybind_bind toggle_channel_mute_and_go_next;
+        keybind_bind solo_channel;
+
+        keybind_bind goto_next_pattern;
+        keybind_bind goto_previous_pattern;
+
+        keybind_bind toggle_stereo_playback;
+        keybind_bind reverse_output_channels;
+
+        keybind_bind goto_playing_pattern;
+    } info_page;
+
     /* *** INSTRUMENT LIST *** */
 
     keybind_section_info instrument_list_info;

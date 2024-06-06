@@ -379,6 +379,33 @@ keybind_section_info* current_section_info = NULL;
 static const char* current_section_name = "";
 static char current_shortcut[256] = "";
 
+static void init_info_page_keybinds(cfg_file_t* cfg)
+{
+    init_section_macro(info_page, "Info Page Keys.", PAGE_INFO);
+    init_bind_macro(info_page, add_window, "Add a new window", "US_INSERT");
+    init_bind_macro(info_page, delete_window, "Delete current window", "US_DELETE");
+    init_bind_macro(info_page, nav_next_window, "Move to next window", "US_TAB");
+    init_bind_macro(info_page, nav_previous_window, "Move to previous window", "Shift+US_TAB");
+    init_bind_macro(info_page, change_window_type_up, "Change window type up", "US_PAGEUP");
+    init_bind_macro(info_page, change_window_type_down, "Change window type down", "US_PAGEDOWN");
+    init_bind_macro(info_page, move_window_base_up, "Move window base up", "Alt+US_UP");
+    init_bind_macro(info_page, move_window_base_down, "Move window base down", "Alt+US_DOWN");
+
+    init_bind_macro(info_page, toggle_volume_velocity_bars, "Toggle between volume/velocity bars", "US_V");
+    init_bind_macro(info_page, toggle_sample_instrument_names, "Toggle between sample/instrument names", "US_I");
+
+    init_bind_macro(info_page, toggle_channel_mute, "Mute/unmute current channel", "US_Q");
+    init_bind_macro(info_page, toggle_channel_mute_and_go_next, "Mute/unmute current channel and go to next", "US_SPACEBAR");
+    init_bind_macro(info_page, solo_channel, "Solo current channel", "US_S");
+    init_bind_macro(info_page, goto_next_pattern, "Move forwards one pattern in song", "US_KP_PLUS");
+    init_bind_macro(info_page, goto_previous_pattern, "Move backwards one pattern in song", "US_KP_MINUS");
+
+    init_bind_macro(info_page, toggle_stereo_playback, "Toggle stereo playback", "Alt+US_S");
+    init_bind_macro(info_page, reverse_output_channels, "Reverse output channels", "Alt+US_R");
+
+    init_bind_macro(info_page, goto_playing_pattern, "Goto pattern currently playing", "US_G");
+}
+
 static void init_instrument_list_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(instrument_list, "Instrument List Keys.", PAGE_INSTRUMENT_LIST);
