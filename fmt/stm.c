@@ -55,35 +55,6 @@ int fmt_stm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* --------------------------------------------------------------------- */
 
-// calculated using this formula from OpenMPT
-// (i range 1-15, j range 0-15);
-// unsigned int st2MixingRate = 23863;
-// const unsigned char tempo_table[18] = {140, 50, 25, 15, 10, 7, 6, 4, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1};
-// long double samplesPerTick = (double) st2MixingRate / ((long double) 50 - ((tempo_table[high_nibble] * low_nibble) / 16));
-// st2MixingRate *= 5; // normally multiplied by the precision beyond the decimal point, however there's no decimal place here. :P
-// st2MixingRate += samplesPerTick;
-// st2MixingRate = (st2MixingRate >= 0)
-//                 ? (int32_t) (st2MixingRate / (samplesPerTick * 2))
-//                 : (int32_t)((st2MixingRate - ((samplesPerTick * 2) - 1)) / (samplesPerTick * 2));
-static unsigned int tempo_table[15][16] = {
-	{ 125,  117,  110,  102,   95,   87,   80,   72,   62,   55,   47,   40,   32,   25,   17,   10, },
-	{ 125,  122,  117,  115,  110,  107,  102,  100,   95,   90,   87,   82,   80,   75,   72,   67, },
-	{ 125,  125,  122,  120,  117,  115,  112,  110,  107,  105,  102,  100,   97,   95,   92,   90, },
-	{ 125,  125,  122,  122,  120,  117,  117,  115,  112,  112,  110,  110,  107,  105,  105,  102, },
-	{ 125,  125,  125,  122,  122,  120,  120,  117,  117,  117,  115,  115,  112,  112,  110,  110, },
-	{ 125,  125,  125,  122,  122,  122,  120,  120,  117,  117,  117,  115,  115,  115,  112,  112, },
-	{ 125,  125,  125,  125,  122,  122,  122,  122,  120,  120,  120,  120,  117,  117,  117,  117, },
-	{ 125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  120,  120,  120,  120,  120, },
-	{ 125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  120,  120,  120,  120,  120, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125, },
-};
-
-
 #pragma pack(push, 1)
 struct stm_sample {
 	char name[12];
@@ -114,29 +85,9 @@ static uint8_t stm_effects[16] = {
 	// KLMNO can be entered in the editor but don't do anything
 };
 
-static uint8_t handle_tempo(size_t tempo)
-{
-	size_t tpr = (tempo >> 4) ? (tempo >> 4) : 1;
-	size_t scale = (tempo & 15);
-
-	return tempo_table[tpr - 1][scale];
-}
-
 /* ST2 says at startup:
 "Remark: the user ID is encoded in over ten places around the file!"
 I wonder if this is interesting at all. */
-
-static void handle_stm_tempo_pattern(song_note_t *note, size_t tempo)
-{
-	for (int i = 0; i < 5; i++, note++) {
-		if (note->effect == FX_NONE) {
-			note->effect = FX_TEMPO;
-			note->param = handle_tempo(tempo);
-			break;
-		}
-	}
-}
-
 static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 {
 	int row, chan;
@@ -259,7 +210,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 
 	song->initial_speed = (tempo >> 4) ? (tempo >> 4) : 1;
-	song->initial_tempo = handle_tempo(tempo);
+	song->initial_tempo = convert_stm_tempo_to_bpm(tempo);
 
 	npat = slurp_getc(fp);
 	song->initial_global_volume = 2 * slurp_getc(fp);
