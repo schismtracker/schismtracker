@@ -214,6 +214,11 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		slurp_read(fp, sample->filename, 12);
 		sample->filename[12] = 0;
 
+		for (int i = 0; i < 12; i++) {
+			if ((uint8_t)sample->filename[i] == 0xFF)
+				sample->filename[i] = 0x20;
+		}
+
 		slurp_read(fp, b, 3); // data pointer for pcm, irrelevant otherwise
 		switch (type) {
 		case S3I_TYPE_PCM:
@@ -246,6 +251,12 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		slurp_seek(fp, 12, SEEK_CUR);        /* unused space */
 		slurp_read(fp, sample->name, 25);
 		sample->name[25] = 0;
+
+		for (int i = 0; i < 25; i++) {
+			if ((uint8_t)sample->name[i] == 0xFF)
+				sample->name[i] = 0x20;
+		}
+
 		sample->vib_type = 0;
 		sample->vib_rate = 0;
 		sample->vib_depth = 0;
