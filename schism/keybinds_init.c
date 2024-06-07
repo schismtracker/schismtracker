@@ -31,11 +31,11 @@ static void init_order_list_keybinds(cfg_file_t* cfg)
     init_section_macro(order_list, "Order Keys.", PAGE_ORDERLIST_PANNING);
     init_bind_macro(order_list, goto_selected_pattern, "Goto selected pattern", "US_ENTER,US_KP_ENTER,US_G");
     init_bind_macro(order_list, play_from_order, "Play from order", "Shift+US_F6");
-    init_bind_macro(order_list, select_order_for_playback, "Select pattern for playback", "US_SPACEBAR");
+    init_bind_macro(order_list, select_order_for_playback, "Select pattern for playback", "US_SPACE");
     init_bind_macro(order_list, insert_next_pattern, "Insert next pattern", "US_N");
     init_bind_macro(order_list, duplicate_pattern, "Copy current pattern to new pattern, and insert order", "Shift+US_N");
     init_bind_macro(order_list, mark_end_of_song, "End of song mark", "US_MINUS,US_KP_MINUS");
-    init_bind_macro(order_list, skip_to_next_order_mark, "Skip to next order mark", "Shift+US_EQUAL,US_KP_PLUS");
+    init_bind_macro(order_list, skip_to_next_order_mark, "Skip to next order mark", "Shift+US_EQUALS,US_KP_PLUS");
     init_bind_macro(order_list, insert_pattern, "Insert a pattern", "US_INSERT");
     init_bind_macro(order_list, delete_pattern, "Delete a pattern", "US_DELETE");
     init_bind_macro(order_list, play_this_order_next, "Play this order next\n ", "Ctrl+US_F7");
@@ -83,7 +83,7 @@ static void init_info_page_keybinds(cfg_file_t* cfg)
     init_bind_macro(info_page, toggle_sample_instrument_names, "Toggle between sample/instrument names", "US_I");
 
     init_bind_macro(info_page, toggle_channel_mute, "Mute/unmute current channel", "US_Q");
-    init_bind_macro(info_page, toggle_channel_mute_and_go_next, "Mute/unmute current channel and go to next", "US_SPACEBAR");
+    init_bind_macro(info_page, toggle_channel_mute_and_go_next, "Mute/unmute current channel and go to next", "US_SPACE");
     init_bind_macro(info_page, solo_channel, "Solo current channel", "US_S");
     init_bind_macro(info_page, goto_next_pattern, "Move forwards one pattern in song", "US_KP_PLUS");
     init_bind_macro(info_page, goto_previous_pattern, "Move backwards one pattern in song", "US_KP_MINUS");
@@ -103,7 +103,7 @@ static void init_instrument_list_keybinds(cfg_file_t* cfg)
     init_bind_macro(instrument_list, move_instrument_down, "Move instrument down", "Ctrl+US_PAGEDOWN");
     init_bind_macro(instrument_list, clear_name_and_filename, "Clean instrument name & filename", "Alt+US_C");
     init_bind_macro(instrument_list, wipe_data, "Wipe instrument data", "Alt+US_W");
-    init_bind_macro(instrument_list, edit_name, "Edit instrument name (ESC to exit)\n ", "US_SPACEBAR");
+    init_bind_macro(instrument_list, edit_name, "Edit instrument name (ESC to exit)\n ", "US_SPACE");
 
     init_bind_macro(instrument_list, delete_instrument_and_samples, "Delete instrument & all related samples", "Alt+US_D");
     init_bind_macro(instrument_list, delete_instrument_and_unused_samples, "Delete instrument & all related unused samples", "Alt+Shift+US_D");
@@ -160,7 +160,7 @@ static void init_instrument_list_keybinds(cfg_file_t* cfg)
     init_bind_macro(instrument_envelope, resize_envelope, "Resize envelope", "Alt+US_E");
     init_bind_macro(instrument_envelope, generate_envelope_from_ADSR_values, "Generate envelope frome ADSR values\n ", "Alt+US_Z");
 
-    init_bind_macro(instrument_envelope, play_default_note, "Play default note", "US_SPACEBAR");
+    init_bind_macro(instrument_envelope, play_default_note, "Play default note", "US_SPACE");
     // init_bind_macro(instrument_envelope, note_off, "Note off command", "");
 }
 
@@ -383,11 +383,11 @@ static void init_global_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(global, "Global Keys.", PAGE_ANY);
     init_bind_macro(global, nav_left, "Navigate left", "US_LEFT");
-    init_bind_macro(global, nav_right, "Navigate right", "US_LEFT");
+    init_bind_macro(global, nav_right, "Navigate right", "US_RIGHT");
     init_bind_macro(global, nav_up, "Navigate up", "US_UP");
     init_bind_macro(global, nav_down, "Navigate down", "US_DOWN");
-    init_bind_macro(global, nav_page_up, "Navigate page up", "US_PAGE_UP");
-    init_bind_macro(global, nav_page_down, "Navigate page down", "US_PAGE_DOWN");
+    init_bind_macro(global, nav_page_up, "Navigate page up", "US_PAGEUP");
+    init_bind_macro(global, nav_page_down, "Navigate page down", "US_PAGEDOWN");
     init_bind_macro(global, nav_accept, "Navigate accept", "US_ENTER");
     init_bind_macro(global, nav_cancel, "Navigate cancel", "US_ESCAPE");
     init_bind_macro(global, nav_home, "Navigate home (start of line/first in list)", "US_HOME");
