@@ -37,6 +37,7 @@ typedef enum {
 
 	/* European languages */
 	CHARSET_CP437,
+	CHARSET_WINDOWS1252, /* thanks modplug! */
 
 	/* CHARSET_CHAR is special; it first tries UTF-8
 	 * in our internal decoder, then we hand it off
