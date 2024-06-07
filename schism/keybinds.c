@@ -130,6 +130,8 @@ static int parse_shortcut_scancode(keybind_bind* bind, const char* shortcut, SDL
 
     if(shortcut[0] == 'U' && shortcut[1] == 'S' && shortcut[2] == '_') {
         log_appendf(5, " %s/%s: Unknown code '%s'", bind->section_info->name, bind->name, shortcut);
+        printf("%s/%s: Unknown code '%s'\n", bind->section_info->name, bind->name, shortcut);
+        fflush(stdout);
         has_init_problem = 1;
         return -1;
     }
@@ -143,6 +145,8 @@ static int parse_shortcut_character(keybind_bind* bind, const char* shortcut, ch
 
     if(utf8_length(shortcut) > 1) {
         log_appendf(5, " %s/%s: Too many characters in '%s'", bind->section_info->name, bind->name, shortcut);
+        printf("%s/%s: Too many characters in '%s'\n", bind->section_info->name, bind->name, shortcut);
+        fflush(stdout);
         has_init_problem = 1;
         return -1;
     }
@@ -214,6 +218,8 @@ void keybinds_add_bind_shortcut(keybind_bind* bind, SDL_Keycode keycode, SDL_Sca
 {
     if(bind->shortcuts_count == MAX_SHORTCUTS) {
         log_appendf(5, " %s/%s: Trying to bind too many shortcuts. Max is %i.", bind->section_info->name, bind->name, MAX_SHORTCUTS);
+        printf("%s/%s: Trying to bind too many shortcuts. Max is %i.\n", bind->section_info->name, bind->name, MAX_SHORTCUTS);
+        fflush(stdout);
         has_init_problem = 1;
         return;
     }
