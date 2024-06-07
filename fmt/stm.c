@@ -274,6 +274,12 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		song_sample_t *sample = song->samples + n;
 
 		slurp_read(fp, &stmsmp, sizeof(stmsmp));
+
+		for (int i = 0; i < 12; i++) {
+			// this -1 should be 0xFF but this is char, could be signed...yay.....
+			if (stmsmp.name[i] == -1)
+				stmsmp.name[i] = 0x20;
+		}
 		// the strncpy here is intentional -- ST2 doesn't show the '3' after the \0 bytes in the first
 		// sample of pm_fract.stm, for example
 		strncpy(sample->filename, stmsmp.name, 12);
