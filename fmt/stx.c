@@ -58,7 +58,7 @@ int fmt_stx_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 // STX uses the same tempo system as STM,
 // check fmt/stm.c for the calculation.
-static unsigned int tempo_table[15][16] = {
+static uint8_t tempo_table[15][16] = {
 	{ 125,  117,  110,  102,   95,   87,   80,   72,   62,   55,   47,   40,   32,   25,   17,   10, },
 	{ 125,  122,  117,  115,  110,  107,  102,  100,   95,   90,   87,   82,   80,   75,   72,   67, },
 	{ 125,  125,  122,  120,  117,  115,  112,  110,  107,  105,  102,  100,   97,   95,   92,   90, },
@@ -101,7 +101,6 @@ static uint8_t stm_effects[16] = {
 	FX_VIBRATO,            // H
 	FX_TREMOR,             // I
 	FX_ARPEGGIO,           // J
-	// KLMNO can be entered in the editor but don't do anything
 };
 
 static void handle_stm_tempo_pattern(song_note_t *note, size_t tempo)
@@ -180,6 +179,11 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	slurp_read(fp, &nord, 2);
 	nord = bswapLE16(nord);
 	nsmp = bswapLE16(nsmp);
+
+	// STX 1.0 modules sometimes have bugged sample counts...
+	if (nsmp > 31)
+		nsmp = 31;
+
 	npat = bswapLE16(npat);
 
 	if (nord > MAX_ORDERS || nsmp > MAX_SAMPLES || npat > MAX_PATTERNS)
@@ -190,11 +194,9 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	slurp_seek(fp, (para_chnptr << 4) + 32, SEEK_SET);
 	/* orderlist */
 	for (n = 0; n < nord; n++) {
-		slurp_read(fp, &song->orderlist[n], 1);
+		song->orderlist[n] = slurp_getc(fp);
 		slurp_seek(fp, 4, SEEK_CUR);
 	}
-
-	memset(song->orderlist + nord, ORDER_LAST, MAX_ORDERS - nord);
 
 	/* load the parapointers */
 	slurp_seek(fp, para_smptr << 4, SEEK_SET);
