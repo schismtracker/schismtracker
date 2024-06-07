@@ -39,6 +39,14 @@ typedef struct keybind_bind
 
 typedef struct keybind_list
 {
+    /* *** PALETTE EDIT *** */
+
+    keybind_section_info palette_edit_info;
+    struct keybinds_palette_edit {
+        keybind_bind copy;
+        keybind_bind paste;
+    } palette_edit;
+
     /* *** ORDER LIST *** */
 
     keybind_section_info order_list_info;

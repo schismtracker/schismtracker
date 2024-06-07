@@ -19,6 +19,13 @@ static char current_shortcut[256] = "";
 static void init_section(keybind_section_info* section_info, const char* name, const char* title, enum page_numbers page);
 static void init_bind(keybind_bind* bind, keybind_section_info* section_info, const char* name, const char* description, const char* shortcut);
 
+static void init_palette_edit_keybinds(cfg_file_t* cfg)
+{
+    init_section_macro(palette_edit, "Palette Keys.", PAGE_PALETTE_EDITOR);
+    init_bind_macro(palette_edit, copy, "Copy current palette to the clipboard", "Ctrl+US_C");
+    init_bind_macro(palette_edit, paste, "Paste a palette from the clipboard", "Ctrl+US_V");
+}
+
 static void init_order_list_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(order_list, "Order Keys.", PAGE_ORDERLIST_PANNING);

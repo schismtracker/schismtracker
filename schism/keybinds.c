@@ -356,6 +356,7 @@ void init_keybinds(void)
 	cfg_init(&cfg, path);
 
     // Defined in keybinds_init.c
+    init_palette_edit_keybinds(&cfg);
     init_order_list_keybinds(&cfg);
     init_info_page_keybinds(&cfg);
     init_sample_list_keybinds(&cfg);
