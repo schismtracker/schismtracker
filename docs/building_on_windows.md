@@ -47,7 +47,7 @@ msys2\_shell.cmd)_ and update the rest with:
 Once you have the shell environment ready, it's time to get the compilers.
 Execute the following command:
 
-	pacman -S mingw-w64-x86_64-toolchain libtool autoconf automake make
+	pacman -S mingw-w64-x86_64-toolchain libtool autoconf automake make perl
 
 If asked to "enter a selection", hit Enter to go with the default.
 
