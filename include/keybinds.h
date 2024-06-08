@@ -421,23 +421,6 @@ typedef struct keybind_list
 
     keybind_section_info global_info;
     struct keybinds_global {
-        keybind_bind nav_left;
-        keybind_bind nav_right;
-        keybind_bind nav_up;
-        keybind_bind nav_down;
-        keybind_bind nav_page_up;
-        keybind_bind nav_page_down;
-        keybind_bind nav_accept;
-        keybind_bind nav_cancel;
-        keybind_bind nav_home;
-        keybind_bind nav_end;
-        keybind_bind nav_tab;
-        keybind_bind nav_backtab;
-
-        keybind_bind text_backspace;
-        keybind_bind text_delete;
-        keybind_bind text_insert;
-
         keybind_bind help;
         keybind_bind midi;
         keybind_bind system_configure;
@@ -497,7 +480,34 @@ typedef struct keybind_list
         keybind_bind save;
 
         keybind_bind fullscreen;
+
+        keybind_bind nav_left;
+        keybind_bind nav_right;
+        keybind_bind nav_up;
+        keybind_bind nav_down;
+        keybind_bind nav_page_up;
+        keybind_bind nav_page_down;
+        keybind_bind nav_accept;
+        keybind_bind nav_cancel;
+        keybind_bind nav_home;
+        keybind_bind nav_end;
+        keybind_bind nav_tab;
+        keybind_bind nav_backtab;
+
+        keybind_bind thumbbar_increase_value;
+        keybind_bind thumbbar_decrease_value;
+
     } global;
+
+    keybind_section_info dialog_info;
+    struct keybinds_dialog {
+        keybind_bind yes;
+        keybind_bind no;
+        keybind_bind answer_ok;
+        keybind_bind answer_cancel;
+        keybind_bind cancel;
+        keybind_bind accept;
+    } dialog;
 } keybind_list;
 
 char* keybinds_get_help_text(enum page_numbers page);

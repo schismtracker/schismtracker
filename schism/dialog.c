@@ -188,60 +188,47 @@ int dialog_handle_key(struct key_event * k)
 	if (d->handle_key && d->handle_key(k))
 		return 1;
 
-	/* this SHOULD be handling on k->state press but the widget key handler is stealing that key. */
-	if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod)) {
-		switch (k->sym) {
-		case SDLK_y:
-			switch (status.dialog_type) {
-			case DIALOG_YES_NO:
-			case DIALOG_OK_CANCEL:
-				dialog_yes(d->data);
-				return 1;
-			default:
-				break;
-			}
-			break;
-		case SDLK_n:
-			switch (status.dialog_type) {
-			case DIALOG_YES_NO:
-				/* in Impulse Tracker, 'n' means cancel, not "no"!
-				(results in different behavior on sample quality convert dialog) */
-				if (!(status.flags & CLASSIC_MODE)) {
-					dialog_no(d->data);
-					return 1;
-				} /* else fall through */
-			case DIALOG_OK_CANCEL:
-				dialog_cancel(d->data);
-				return 1;
-			default:
-				break;
-			}
-			break;
-		case SDLK_c:
-			switch (status.dialog_type) {
-			case DIALOG_YES_NO:
-			case DIALOG_OK_CANCEL:
-				break;
-			default:
-				return 0;
-			} /* and fall through */
-		case SDLK_ESCAPE:
-			dialog_cancel(d->data);
-			return 1;
-		case SDLK_o:
-			switch (status.dialog_type) {
-			case DIALOG_YES_NO:
-			case DIALOG_OK_CANCEL:
-				break;
-			default:
-				return 0;
-			} /* and fall through */
-		case SDLK_RETURN:
+	/* this SHOULD be handling on key_pressed but the widget key handler is stealing that key. */
+	if (key_released(dialog, yes)) {
+		switch (status.dialog_type) {
+		case DIALOG_YES_NO:
+		case DIALOG_OK_CANCEL:
 			dialog_yes(d->data);
 			return 1;
-		default:
-			break;
 		}
+	} else if (key_released(dialog, no)) {
+		switch (status.dialog_type) {
+		case DIALOG_YES_NO:
+			/* in Impulse Tracker, 'n' means cancel, not "no"!
+			(results in different behavior on sample quality convert dialog) */
+			if (!(status.flags & CLASSIC_MODE)) {
+				dialog_no(d->data);
+				return 1;
+			} /* else fall through */
+		case DIALOG_OK_CANCEL:
+			dialog_cancel(d->data);
+			return 1;
+		}
+	} else if (key_released(dialog, answer_ok)) {
+		switch (status.dialog_type) {
+		case DIALOG_YES_NO:
+		case DIALOG_OK_CANCEL:
+			dialog_yes(d->data);
+			return 1;
+		}
+	} else if (key_released(dialog, answer_cancel)) {
+		switch (status.dialog_type) {
+		case DIALOG_YES_NO:
+		case DIALOG_OK_CANCEL:
+			dialog_cancel(d->data);
+			return 1;
+		}
+	} else if (key_released(dialog, accept)) {
+		dialog_yes(d->data);
+		return 1;
+	} else if (key_released(dialog, cancel)) {
+		dialog_cancel(d->data);
+		return 1;
 	}
 
 	return 0;

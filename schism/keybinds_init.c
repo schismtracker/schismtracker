@@ -401,18 +401,6 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
 static void init_global_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(global, "Global Keys.", PAGE_ANY);
-    init_bind_macro(global, nav_left, "Navigate left", "US_LEFT");
-    init_bind_macro(global, nav_right, "Navigate right", "US_RIGHT");
-    init_bind_macro(global, nav_up, "Navigate up", "US_UP");
-    init_bind_macro(global, nav_down, "Navigate down", "US_DOWN");
-    init_bind_macro(global, nav_page_up, "Navigate page up", "US_PAGEUP");
-    init_bind_macro(global, nav_page_down, "Navigate page down", "US_PAGEDOWN");
-    init_bind_macro(global, nav_accept, "Navigate accept", "US_ENTER");
-    init_bind_macro(global, nav_cancel, "Navigate cancel", "US_ESCAPE");
-    init_bind_macro(global, nav_home, "Navigate home (start of line/first in list)", "US_HOME");
-    init_bind_macro(global, nav_end, "Navigate end (end of line/last in list)\n ", "US_END");
-    init_bind_macro(global, nav_tab, "Navigate to next item right", "US_TAB");
-    init_bind_macro(global, nav_backtab, "Navigate to next item left", "Shift+US_TAB");
 
     init_bind_macro(global, text_backspace, "Normal text backspace", "US_BACKSPACE");
     init_bind_macro(global, text_delete, "Normal text delete\n ", "US_DELETE");
@@ -476,4 +464,28 @@ static void init_global_keybinds(cfg_file_t* cfg)
     init_bind_macro(global, save, "Save Current Song\n ", "Ctrl+US_S");
 
     init_bind_macro(global, fullscreen, "Toggle Fullscreen\n ", "Ctrl+Alt+US_ENTER");
+
+    init_bind_macro(global, nav_left, "Navigate left", "US_LEFT");
+    init_bind_macro(global, nav_right, "Navigate right", "US_RIGHT");
+    init_bind_macro(global, nav_up, "Navigate up", "US_UP");
+    init_bind_macro(global, nav_down, "Navigate down", "US_DOWN");
+    init_bind_macro(global, nav_page_up, "Navigate page up", "US_PAGEUP");
+    init_bind_macro(global, nav_page_down, "Navigate page down", "US_PAGEDOWN");
+    init_bind_macro(global, nav_accept, "Navigate accept", "US_ENTER");
+    init_bind_macro(global, nav_cancel, "Navigate cancel", "US_ESCAPE");
+    init_bind_macro(global, nav_home, "Navigate home (start of line/first in list)", "US_HOME");
+    init_bind_macro(global, nav_end, "Navigate end (end of line/last in list)", "US_END");
+    init_bind_macro(global, nav_tab, "Navigate to next item right", "US_TAB");
+    init_bind_macro(global, nav_backtab, "Navigate to next item left\n ", "Shift+US_TAB");
+
+    init_bind_macro(global, thumbbar_increase_value, "Thumbbar increase value", "US_RIGHT");
+    init_bind_macro(global, thumbbar_decrease_value, "Thumbbar decrease value", "US_LEFT");
+
+    init_section_macro(dialog, "Dialog Keys.", PAGE_ANY);
+    init_bind_macro(dialog, yes, "Answer yes in yes/no dialog. (Also in ok/cancel)", "US_Y");
+    init_bind_macro(dialog, no, "Answer no in yes/no dialog. (Also in ok/cancel)", "US_N");
+    init_bind_macro(dialog, answer_ok, "Answer ok in ok/cancel dialog. (yes in yes/no dialog)", "US_O");
+    init_bind_macro(dialog, answer_cancel, "Answer cancel in ok/cancel dialog. (cancel in yes/no dialog)", "US_C");
+    init_bind_macro(dialog, cancel, "Dialog cancel.", "US_ESCAPE");
+    init_bind_macro(dialog, accept, "Dialog accept.", "US_ENTER");
 }
