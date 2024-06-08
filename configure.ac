@@ -123,8 +123,9 @@ AC_SUBST(WINDRES)
 AM_CONDITIONAL([HAVE_WINDRES], [test "x$WINDRES" != "x"])
 
 dnl Necessary for building the internal help.
-AM_PATH_PYTHON([2.4], [], [:])
-AM_CONDITIONAL([HAVE_PYTHON], [test "x$PYTHON" != "x:"])
+AC_CHECK_TOOL([PERL], [perl])
+AC_SUBST([PERL])
+AM_CONDITIONAL([HAVE_PERL], [test "x$PERL" != "x"])
 
 dnl We're using C
 AC_LANG([C])
@@ -388,13 +389,13 @@ AC_OUTPUT
 
 dnl --------------------------------------------------------------------------
 dnl These are shipped in the release tarball, so we don't want to regenerate
-dnl them after configure is run. Trick make into ignoring these.
+dnl them after configure is run.
 
 if test -e "auto/default-font.c"; then
 	touch "auto/default-font.c"
 fi
 
-if test "x$PYTHON" = "x:"; then
+if test "x$PERL" = "x"; then
 	if test -e "auto/helptext.c"; then
 		touch "auto/helptext.c"
 	fi

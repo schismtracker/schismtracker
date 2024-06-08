@@ -582,19 +582,26 @@ void dmoz_add_file_or_dir(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 /* --------------------------------------------------------------------------------------------------------- */
 /* sorting */
 
-#define _DEF_CMP(name)                                                                  \
+#define _DEF_CMP_CHARSET(name)                                                                  \
 	static int dmoz_fcmp_##name(const dmoz_file_t *a, const dmoz_file_t *b)         \
 	{                                                                               \
-		return name(a->base, b->base);                                          \
+		return charset_##name(a->base, CHARSET_CHAR, b->base, CHARSET_CHAR);                  \
 	}                                                                               \
 	static int dmoz_dcmp_##name(const dmoz_dir_t *a, const dmoz_dir_t *b)           \
 	{                                                                               \
-		return name(a->base, b->base);                                          \
+		return charset_##name(a->base, CHARSET_CHAR, b->base, CHARSET_CHAR);                  \
 	}
-_DEF_CMP(strcmp)
-_DEF_CMP(strcasecmp)
+_DEF_CMP_CHARSET(strcmp)
+_DEF_CMP_CHARSET(strcasecmp)
 #if HAVE_STRVERSCMP
-_DEF_CMP(strverscmp)
+static int dmoz_fcmp_strverscmp(const dmoz_file_t *a, const dmoz_file_t *b)
+{
+	return strverscmp(a->base, b->base);
+}
+static int dmoz_dcmp_strverscmp(const dmoz_dir_t *a, const dmoz_dir_t *b)
+{
+	return strverscmp(a->base, b->base);
+}
 #endif
 
 /* timestamp only works for files, so can't macro-def it */

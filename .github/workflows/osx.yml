@@ -94,8 +94,8 @@ jobs:
         # Since Homebrew doesn't provide binaries for old versions, we have to compile our own:
       - name: 'Download SDL2 sources'
         run: |
-          curl https://www.libsdl.org/release/SDL2-$SDL_VERSION.tar.gz | tar xvf -
-          curl https://www.libsdl.org/release/SDL2-$SDL_PPC_VERSION.tar.gz | tar xvf -
+          (curl https://www.libsdl.org/release/SDL2-$SDL_VERSION.tar.gz || curl -L https://github.com/libsdl-org/SDL/releases/download/release-$SDL_VERSION/SDL2-$SDL_VERSION.tar.gz) | tar xvf -
+          (curl https://www.libsdl.org/release/SDL2-$SDL_PPC_VERSION.tar.gz || curl -L https://master.dl.sourceforge.net/project/libsdl/SDL/$SDL_PPC_VERSION/SDL2-$SDL_PPC_VERSION.tar.gz) | tar xvf -
 
       - name: 'Patch SDL 2.0.3 for PowerPC building'
         run: |
@@ -111,8 +111,8 @@ jobs:
       
       - name: 'Download libflac and libogg sources'
         run: |
-          curl https://ftp.osuosl.org/pub/xiph/releases/flac/flac-$FLAC_VERSION.tar.xz | tar -xvf -
-          curl https://ftp.osuosl.org/pub/xiph/releases/ogg/libogg-$LIBOGG_VERSION.tar.gz | tar -xvf -
+          (curl https://ftp.osuosl.org/pub/xiph/releases/flac/flac-$FLAC_VERSION.tar.xz || curl -L https://github.com/xiph/flac/releases/download/$FLAC_VERSION/flac-$FLAC_VERSION.tar.xz) | tar xvf -
+          (curl https://ftp.osuosl.org/pub/xiph/releases/ogg/libogg-$LIBOGG_VERSION.tar.gz || curl -L https://github.com/xiph/ogg/releases/download/v$LIBOGG_VERSION/libogg-$LIBOGG_VERSION.tar.gz) | tar xvf -
 
       - name: 'Build libogg'
         run: |

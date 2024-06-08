@@ -37,6 +37,7 @@ typedef enum {
 
 	/* European languages */
 	CHARSET_CP437,
+	CHARSET_WINDOWS1252, /* thanks modplug! */
 
 	/* CHARSET_CHAR is special; it first tries UTF-8
 	 * in our internal decoder, then we hand it off
@@ -60,6 +61,13 @@ typedef enum {
 
 int char_digraph(int k1, int k2);
 uint8_t char_unicode_to_cp437(unsigned int c);
+
+/* stuff from charset_data.c */
+uint32_t charset_simple_case_fold(uint32_t codepoint);
+
+/* charset-aware replacements for C stdlib functions */
+int charset_strcmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set);
+int charset_strcasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set);
 
 const char* charset_iconv_error_lookup(charset_error_t err);
 charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset);

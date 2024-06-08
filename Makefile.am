@@ -72,7 +72,7 @@ sysfiles = \
 scripts = \
 	scripts/bin2h.sh		\
 	scripts/build-font.sh		\
-	scripts/genhelp.py		\
+	scripts/genhelp.pl		\
 	scripts/itf2half.py		\
 	scripts/half2itf.py		\
 	scripts/itcfg.py		\
@@ -151,9 +151,9 @@ CLEANFILES = \
 auto/default-font.c: Makefile.am scripts/bin2h.sh scripts/build-font.sh $(fonts)
 	sh $(srcdir)/scripts/build-font.sh $(srcdir) $(fonts) >$@
 
-auto/helptext.c: Makefile.am scripts/genhelp.py $(helptexts)
-if HAVE_PYTHON
-	$(PYTHON) $(srcdir)/scripts/genhelp.py $(srcdir) $(helptexts) >$@
+auto/helptext.c: Makefile.am scripts/genhelp.pl $(helptexts)
+if HAVE_PERL
+	$(PERL) $(srcdir)/scripts/genhelp.pl $(srcdir) $(helptexts) >$@
 else
 	@echo "*** python is required to regenerate $(@) ***"; exit 1;
 endif

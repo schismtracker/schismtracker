@@ -23,6 +23,7 @@
 
 #include "headers.h"
 
+#include "charset.h"
 #include "slurp.h"
 #include "util.h"
 #include "config-parser.h"
@@ -47,7 +48,8 @@ static struct cfg_section *_get_section(cfg_file_t *cfg, const char *section_nam
 		return NULL;
 
 	while (section) {
-		if (strcasecmp(section_name, section->name) == 0)
+		/* the config is historically ASCII, but UTF-8 works just fine too */
+		if (charset_strcasecmp(section_name, CHARSET_UTF8, section->name, CHARSET_UTF8) == 0)
 			return section;
 		prev = section;
 		section = section->next;
@@ -73,7 +75,7 @@ static struct cfg_key *_get_key(struct cfg_section *section, const char *key_nam
 		return NULL;
 
 	while (key) {
-		if (strcasecmp(key_name, key->name) == 0)
+		if (charset_strcasecmp(key_name, CHARSET_UTF8, key->name, CHARSET_UTF8) == 0)
 			return key;
 		prev = key;
 		key = key->next;
