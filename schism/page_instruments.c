@@ -540,9 +540,9 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			instrument_cursor_pos = 25;
 			get_page_widgets()->accept_text = 0;
 		}
-	} else if (key_pressed(global, text_backspace)) {
+	} else if (k->sym == SDLK_BACKSPACE) {
 		instrument_list_delete_char();
-	} else if (key_pressed(global, text_delete)) {
+	} else if (k->sym == SDLK_DELETE) {
 		if (instrument_cursor_pos == 25)
 			return 0;
 		instrument_list_delete_next_char();

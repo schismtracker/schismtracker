@@ -401,10 +401,6 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
 static void init_global_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(global, "Global Keys.", PAGE_ANY);
-
-    init_bind_macro(global, text_backspace, "Normal text backspace", "US_BACKSPACE");
-    init_bind_macro(global, text_delete, "Normal text delete\n ", "US_DELETE");
-
     init_bind_macro(global, help, "Help (Context Sensitive!)", "US_F1");
     init_bind_macro(global, midi, "MIDI Screen", "Shift+US_F1");
     init_bind_macro(global, system_configure, "System Configuration", "Ctrl+US_F1");
