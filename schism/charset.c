@@ -615,14 +615,18 @@ CHARSET_VARIATION(internal) {
 		size_t in_needed = 0;
 
 		c = conv_to_ucs4_func(in, &ch, &in_needed);
-		if (c == DECODER_ERROR)
+		if (c == DECODER_ERROR) {
+			free(*out);
 			return CHARSET_ERROR_DECODE;
+		}
 
 		/* printf("result: %d, U+%04x, %zu\n", c, ch, in_needed); */
 
 		size_t out_needed = conv_from_ucs4_func(ch, NULL);
-		if (!out_needed)
+		if (!out_needed) {
+			free(*out);
 			return CHARSET_ERROR_ENCODE;
+		}
 
 		if (out_length + out_needed >= out_alloc) {
 			uint8_t* old_out = *out;
