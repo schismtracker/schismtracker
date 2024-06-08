@@ -46,7 +46,7 @@ static void init_order_list_keybinds(cfg_file_t* cfg)
 
     init_bind_macro(order_list, link_pattern_to_sample, "Link (diskwriter) this pattern to the current sample", "Ctrl+US_B");
     init_bind_macro(order_list, copy_pattern_to_sample, "Copy (diskwriter) this pattern to the current sample\n ", "Ctrl+US_O");
-    init_bind_macro(order_list, copy_pattern_to_sample_with_split, "Copy (diskwriter) this pattern to the current sample, with split(?)\n ", "Ctrl+Shift+US_O");
+    init_bind_macro(order_list, copy_pattern_to_sample_with_split, "Copy (diskwriter) to the current sample, with split(?)\n ", "Ctrl+Shift+US_O");
 
     init_bind_macro(order_list, continue_next_position_of_pattern, "Continue to next position of current pattern\n ", "US_C");
 

@@ -66,7 +66,6 @@ the banks are:
 
 #include "sdlmain.h"
 
-#include <assert.h>
 #include <errno.h>
 
 #include "util.h"
@@ -552,14 +551,20 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 
 void draw_char_bios(unsigned char c, int x, int y, uint32_t fg, uint32_t bg)
 {
-    assert(x >= 0 && y >= 0 && x < 80 && y < 50);
-    vgamem[x + (y*80)] = c | (fg << 8) | (bg << 12) | 0x10000000;
+	if (x >= 0 && y >= 0 && x < 80 && y < 50) {
+		vgamem[x + (y*80)] = c | (fg << 8) | (bg << 12) | 0x10000000;
+	} else {
+		printf("draw_char_bios: Skipping char '%c', x or y out of range.\n", c);
+	}
 }
 
 void draw_char(unsigned char c, int x, int y, uint32_t fg, uint32_t bg)
 {
-    assert(x >= 0 && y >= 0 && x < 80 && y < 50);
-    vgamem[x + (y*80)] = c | (fg << 8) | (bg << 12);
+	if (x >= 0 && y >= 0 && x < 80 && y < 50) {
+		vgamem[x + (y*80)] = c | (fg << 8) | (bg << 12);
+	} else {
+		printf("draw_char: Skipping char '%c', x or y out of range.\n", c);
+	}
 }
 
 int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
@@ -632,13 +637,16 @@ int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, ui
 void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
 			   uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2)
 {
-	assert(x >= 0 && y >= 0 && x < 80 && y < 50);
-	vgamem[x + (y*80)] =
-		0x40000000
-		| (fg1 << 22) | (fg2 << 26)
-		| (bg1 << 18) | (bg2 << 14)
-		| (_pack_halfw(c1) << 7)
-		| (_pack_halfw(c2));
+	if(x >= 0 && y >= 0 && x < 80 && y < 50) {
+		vgamem[x + (y*80)] =
+			0x40000000
+			| (fg1 << 22) | (fg2 << 26)
+			| (bg1 << 18) | (bg2 << 14)
+			| (_pack_halfw(c1) << 7)
+			| (_pack_halfw(c2));
+	} else {
+		printf("draw_half_width_chars: Skipping char '%c' and '%c', x or y out of range.\n", c1, c2);
+	}
 }
 /* --------------------------------------------------------------------- */
 /* boxes */
