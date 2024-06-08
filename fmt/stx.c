@@ -37,13 +37,15 @@
 int fmt_stx_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	char id[8];
+	int i;
 
 	if (!(length > 48 && memcmp(data + 60, "SCRM", 4) == 0))
 		return 0;
 
 	memcpy(id, data + 20, 8);
-	if (check_string_for_ascii(id, 8) == 0)
-		return 0;
+	for (i = 0; i < 8; i++)
+		if (id[i] < 0x20 || id[i] > 0x7E)
+			return 0;
 
 	file->description = "ST Music Interface Kit";
 	/*file->extension = str_dup("stx");*/
@@ -87,8 +89,9 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	slurp_read(fp, b2, 8);
 	slurp_seek(fp, 60, SEEK_SET);
 	slurp_read(fp, b, 4);
-	if (check_string_for_ascii(b2, 8) == 0)
-		return LOAD_UNSUPPORTED;
+	for (n = 0; n < 8; n++)
+		if (b2[n] < 0x20 || b2[n] > 0x7E)
+			return LOAD_UNSUPPORTED;
 	if (memcmp(b, "SCRM", 4) != 0)
 		return LOAD_UNSUPPORTED;
 
@@ -158,7 +161,10 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		slurp_read(fp, sample->filename, 12);
 		sample->filename[12] = 0;
 
-		filter_nonbreaking_space(sample->filename, 12);
+		for (int i = 0; i < 12; i++) {
+			if ((uint8_t)sample->filename[i] == 0xFF)
+				sample->filename[i] = 0x20;
+		}
 
 		slurp_read(fp, b, 3); // data pointer for pcm, irrelevant otherwise
 		switch (type) {
@@ -193,7 +199,10 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		slurp_read(fp, sample->name, 25);
 		sample->name[25] = 0;
 
-		filter_nonbreaking_space(sample->name, 25);
+		for (int i = 0; i < 25; i++) {
+			if ((uint8_t)sample->name[i] == 0xFF)
+				sample->name[i] = 0x20;
+		}
 
 		sample->vib_type = 0;
 		sample->vib_rate = 0;

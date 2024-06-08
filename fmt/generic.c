@@ -283,8 +283,7 @@ uint8_t convert_stm_tempo_to_bpm(size_t tempo)
 
 void handle_stm_tempo_pattern(song_note_t *note, size_t tempo)
 {
-	int i = 0;
-	for (; i < 32; i++, note++) {
+	for (int i = 0; i < 32; i++, note++) {
 		if (note->effect == FX_NONE) {
 			note->effect = FX_TEMPO;
 			note->param = convert_stm_tempo_to_bpm(tempo);
@@ -348,22 +347,4 @@ void handle_stm_effects(song_note_t *chan_note) {
 			chan_note->effect = FX_NONE;
 		break;
 	}
-}
-
-int check_string_for_ascii(const char *str, int len) {
-	int i = 0;
-	do
-		if (str[i] < 0x20 || str[i] > 0x7E)
-			return 1;
-	while (i++ < len);
-
-	return 0;
-}
-
-void filter_nonbreaking_space(char *str, int len) {
-	int i = 0;
-	do
-		if ((uint8_t)str[i] == 0xFF)
-			str[i] = 0x20;
-	while (i++ < len);
 }
