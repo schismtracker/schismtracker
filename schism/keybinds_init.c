@@ -48,7 +48,8 @@ static void init_order_list_keybinds(cfg_file_t* cfg)
     init_bind_macro(order_list, delete_pattern, "Delete a pattern", "US_DELETE");
     init_bind_macro(order_list, play_this_order_next, "Play this order next\n ", "Ctrl+US_F7");
 
-    init_bind_macro(order_list, toggle_order_list_locked, "Lock/unlock order list", "Alt+US_F11");
+    // Is duplicate
+    // init_bind_macro(order_list, toggle_order_list_locked, "Lock/unlock order list", "Alt+US_F11");
     init_bind_macro(order_list, sort_order_list, "Sort order list", "Alt+US_R");
     init_bind_macro(order_list, find_unused_patterns, "Search for unused patterns", "Alt+US_U");
 
@@ -424,7 +425,7 @@ static void init_global_keybinds(cfg_file_t* cfg)
     init_bind_macro(global, export_module, "Export Module (to WAV, AIFF)", "Shift+US_F10");
     init_bind_macro(global, order_list, "Order List and Panning / Channel Volume", "US_F11");
     init_bind_macro(global, schism_logging, "Schism Logging", "Ctrl+US_F11");
-    init_bind_macro(global, order_list_lock, "Schism Logging", "Alt+US_F11");
+    init_bind_macro(global, order_list_lock, "Lock/unlock order list", "Alt+US_F11");
     init_bind_macro(global, song_variables, "Song Variables & Directory Configuration", "US_F12");
     init_bind_macro(global, palette_config, "Palette Configuration", "Ctrl+US_F12");
     init_bind_macro(global, font_editor, "Font Editor", "Shift+US_F12");

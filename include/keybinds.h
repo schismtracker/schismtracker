@@ -63,7 +63,8 @@ typedef struct keybind_list
         keybind_bind delete_pattern;
         keybind_bind play_this_order_next;
 
-        keybind_bind toggle_order_list_locked;
+        // Is duplicate
+        // keybind_bind toggle_order_list_locked;
         keybind_bind sort_order_list;
         keybind_bind find_unused_patterns;
 
