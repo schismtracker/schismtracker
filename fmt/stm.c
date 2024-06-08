@@ -32,7 +32,6 @@
 int fmt_stm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	char id[8];
-	int i;
 
 	/* data[29] is the type: 1 = song, 2 = module (with samples) */
 	if (!(length > 28 && (data[28] == 0x1a || data[28] == 0x02) && (data[29] == 1 || data[29] == 2)
@@ -40,9 +39,8 @@ int fmt_stm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 		return 0;
 
 	memcpy(id, data + 20, 8);
-	for (i = 0; i < 8; i++)
-		if (id[i] < 0x20 || id[i] > 0x7E)
-			return 0;
+	if (check_string_for_ascii(id, 8) == 0)
+		return 0;
 
 	/* I used to check whether it was a 'song' or 'module' and set the description
 	accordingly, but it's fairly pointless information :) */
@@ -141,9 +139,8 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		return LOAD_UNSUPPORTED;
 	}
 	// check the file tag for printable ASCII
-	for (n = 0; n < 8; n++)
-		if (id[n] < 0x20 || id[n] > 0x7E)
-			return LOAD_FORMAT_ERROR;
+	if (check_string_for_ascii(id, 8) == 0)
+		return LOAD_FORMAT_ERROR;
 
 	// and the next two bytes are the tracker version.
 	sprintf(song->tracker_id, "Scream Tracker %d.%02d", tmp[2], tmp[3]);
@@ -176,10 +173,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 		slurp_read(fp, &stmsmp, sizeof(stmsmp));
 
-		for (int i = 0; i < 12; i++) {
-			if ((uint8_t)stmsmp.name[i] == 0xFF)
-				stmsmp.name[i] = 0x20;
-		}
+		filter_nonbreaking_space(stmsmp.name, 12);
 		// the strncpy here is intentional -- ST2 doesn't show the '3' after the \0 bytes in the first
 		// sample of pm_fract.stm, for example
 		strncpy(sample->filename, stmsmp.name, 12);
