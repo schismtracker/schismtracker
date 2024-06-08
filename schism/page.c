@@ -827,6 +827,8 @@ static int _handle_ime(struct key_event *k)
 /* this is the important one */
 void handle_key(struct key_event *k)
 {
+	keybinds_handle_event(k);
+
 	if (_handle_ime(k))
 		return;
 
@@ -834,8 +836,6 @@ void handle_key(struct key_event *k)
 	if (!(status.flags & DISKWRITER_ACTIVE) && ACTIVE_PAGE.pre_handle_key) {
 		if (ACTIVE_PAGE.pre_handle_key(k)) return;
 	}
-
-	keybinds_handle_event(k);
 
 	if (handle_key_global(k)) return;
 	if (!(status.flags & DISKWRITER_ACTIVE) && menu_handle_key(k)) return;

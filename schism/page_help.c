@@ -155,47 +155,25 @@ static int help_handle_key(struct key_event * k)
 		new_line -= MOUSE_SCROLL_LINES;
 	} else if (k->mouse == MOUSE_SCROLL_DOWN) {
 		new_line += MOUSE_SCROLL_LINES;
-
 	} else if (k->mouse != MOUSE_NONE) {
 		return 0;
 	}
-	switch (k->sym) {
-	case SDLK_ESCAPE:
-		if (k->state == KEY_RELEASE)
-			return 1;
+
+	if (key_pressed(global, nav_cancel)) {
 		set_page(status.previous_page);
-		return 1;
-	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(key_pressed_or_repeated(global, nav_up)) {
 		new_line--;
-		break;
-	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(key_pressed_or_repeated(global, nav_down)) {
 		new_line++;
-		break;
-	case SDLK_PAGEUP:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(key_pressed_or_repeated(global, nav_page_up)) {
 		new_line -= 32;
-		break;
-	case SDLK_PAGEDOWN:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(key_pressed_or_repeated(global, nav_page_down)) {
 		new_line += 32;
-		break;
-	case SDLK_HOME:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(key_pressed_or_repeated(global, nav_home)) {
 		new_line = 0;
-		break;
-	case SDLK_END:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(key_pressed_or_repeated(global, nav_end)) {
 		new_line = num_lines - 32;
-		break;
-	default:
+	} else {
 		if (k->mouse != MOUSE_NONE) {
 			if (k->state == KEY_RELEASE)
 				return 1;
