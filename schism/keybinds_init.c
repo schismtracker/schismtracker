@@ -446,8 +446,8 @@ static void init_global_keybinds(cfg_file_t* cfg)
     init_bind_macro(global, font_editor, "Font Editor", "Shift+US_F12");
     init_bind_macro(global, waterfall, "Waterfall\n ", "Alt+US_F12");
 
-    init_bind_macro(global, octave_decrease, "Decrease Octave", "US_HOME");
-    init_bind_macro(global, octave_increase, "Increase Octave", "US_END");
+    init_bind_macro(global, octave_decrease, "Decrease Octave", "Alt+US_HOME");
+    init_bind_macro(global, octave_increase, "Increase Octave", "Alt+US_END");
     init_bind_macro(global, decrease_playback_speed, "Decrease Playback Speed", "Shift+US_LEFTBRACKET");
     init_bind_macro(global, decrease_playback_speed, "Increase Playback Speed", "Shift+US_RIGHTBRACKET");
     init_bind_macro(global, decrease_playback_tempo, "Decrease Playback Tempo", "Ctrl+US_LEFTBRACKET");

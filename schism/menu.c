@@ -524,10 +524,7 @@ int menu_handle_key(struct key_event *k)
 		return 1;
 	}
 
-	switch (k->sym) {
-	case SDLK_ESCAPE:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	if (key_pressed(global, nav_cancel)) {
 		current_menu[1] = NULL;
 		if (status.dialog_type == DIALOG_SUBMENU) {
 			status.dialog_type = DIALOG_MAIN_MENU;
@@ -535,43 +532,27 @@ int menu_handle_key(struct key_event *k)
 		} else {
 			menu_hide();
 		}
-		break;
-	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(key_pressed(global, nav_accept)) {
+		menu->active_item = menu->selected_item; // Press down item
+	} else if(key_released(global, nav_accept)) {
+		menu->selected_cb(); // Activate item
+	} else if(key_pressed_or_repeated(global, nav_up)) {
 		if (menu->selected_item > 0) {
 			menu->selected_item--;
-			break;
-		}
-		return 1;
-	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
+		} else {
 			return 1;
+		}
+	} else if(key_pressed_or_repeated(global, nav_down)) {
 		if (menu->selected_item < menu->num_items - 1) {
 			menu->selected_item++;
-			break;
-		}
-		return 1;
-		/* home/end are new here :) */
-	case SDLK_HOME:
-		if (k->state == KEY_RELEASE)
+		} else {
 			return 1;
+		}
+	} else if(key_pressed_or_repeated(global, nav_home)) {
 		menu->selected_item = 0;
-		break;
-	case SDLK_END:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(key_pressed_or_repeated(global, nav_end)) {
 		menu->selected_item = menu->num_items - 1;
-		break;
-	case SDLK_RETURN:
-		if (k->state == KEY_PRESS) {
-			menu->active_item = menu->selected_item;
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
-		menu->selected_cb();
-		return 1;
-	default:
+	} else {
 		return 1;
 	}
 
