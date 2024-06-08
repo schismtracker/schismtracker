@@ -45,8 +45,15 @@ static void update_bind(keybind_bind* bind, SDL_KeyCode kcode, SDL_Scancode scod
     if (bind->section_info->page != PAGE_ANY && bind->section_info->page != status.current_page) return;
 
     for(int i = 0; i < bind->shortcuts_count; i++) {
-        sc = &bind->shortcuts[i];
         int mods_correct = 0;
+
+        // If the same key is pressed twice, for some reason is_repeat is true.
+        // is_repeat should only be true if the key is held down.
+        if (bind->released && is_repeat) {
+            is_repeat = 0;
+        }
+
+        sc = &bind->shortcuts[i];
         bind->pressed = 0;
         bind->released = 0;
         bind->repeated = 0;
