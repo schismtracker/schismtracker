@@ -1,6 +1,7 @@
 
 #include "it.h"
 #include "keybinds.h"
+#include "page.h"
 
 #define init_section_macro(SECTION, TITLE, PAGE) \
     init_section(&global_keybinds_list.SECTION##_info, #SECTION, TITLE, PAGE); \
@@ -26,9 +27,16 @@ static void init_palette_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(palette_edit, paste, "Paste a palette from the clipboard", "Ctrl+US_V");
 }
 
+static int order_list_page_matcher(enum page_numbers page)
+{
+    return page == PAGE_ORDERLIST_PANNING || page == PAGE_ORDERLIST_VOLUMES;
+}
+
 static void init_order_list_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(order_list, "Order Keys.", PAGE_ORDERLIST_PANNING);
+    global_keybinds_list.order_list_info.page_matcher = order_list_page_matcher;
+
     init_bind_macro(order_list, goto_selected_pattern, "Goto selected pattern", "US_ENTER,US_KP_ENTER,US_G");
     init_bind_macro(order_list, play_from_order, "Play from order", "Shift+US_F6");
     init_bind_macro(order_list, select_order_for_playback, "Select pattern for playback", "US_SPACE");
@@ -94,9 +102,16 @@ static void init_info_page_keybinds(cfg_file_t* cfg)
     init_bind_macro(info_page, goto_playing_pattern, "Goto pattern currently playing", "US_G");
 }
 
+static int instrument_list_page_matcher(enum page_numbers page)
+{
+    return page == PAGE_INSTRUMENT_LIST_GENERAL || page == PAGE_INSTRUMENT_LIST_PANNING || page == PAGE_INSTRUMENT_LIST_PITCH || page == PAGE_INSTRUMENT_LIST_VOLUME;
+}
+
 static void init_instrument_list_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(instrument_list, "Instrument List Keys.", PAGE_INSTRUMENT_LIST);
+    global_keybinds_list.instrument_list_info.page_matcher = instrument_list_page_matcher;
+
     init_bind_macro(instrument_list, load_instrument, "Load new instrument", "US_ENTER");
     init_bind_macro(instrument_list, focus_list, "Focus on list", "Shift+US_ESCAPE");
     init_bind_macro(instrument_list, move_instrument_up, "Move instrument up (when not on list)", "Ctrl+US_PAGEUP");
@@ -122,6 +137,8 @@ static void init_instrument_list_keybinds(cfg_file_t* cfg)
     init_bind_macro(instrument_list, decrease_playback_channel, "Decrease playback channel", "Shift+US_COMMA");
 
     init_section_macro(instrument_note_translation, "Note Translation.", PAGE_INSTRUMENT_LIST);
+    global_keybinds_list.instrument_note_translation_info.page_matcher = instrument_list_page_matcher;
+
     init_bind_macro(instrument_note_translation, pickup_sample_number_and_default_play_note, "Pickup sample number & default play note", "US_ENTER");
     init_bind_macro(instrument_note_translation, increase_sample_number, "Increase sample number", "Shift+US_PERIOD,Ctrl+US_DOWN");
     init_bind_macro(instrument_note_translation, decrease_sample_number, "Decrease sample number\n ", "Shift+US_COMMA,Ctrl+US_UP");
@@ -137,6 +154,8 @@ static void init_instrument_list_keybinds(cfg_file_t* cfg)
     init_bind_macro(instrument_note_translation, toggle_edit_mask, "Toggle edit mask for current field", "US_COMMA");
 
     init_section_macro(instrument_envelope, "Envelope Keys.", PAGE_INSTRUMENT_LIST);
+    global_keybinds_list.instrument_envelope_info.page_matcher = instrument_list_page_matcher;
+
     init_bind_macro(instrument_envelope, pick_up_or_drop_current_node, "Pick up/drop current node", "US_ENTER");
     init_bind_macro(instrument_envelope, add_node, "Add node", "US_INSERT");
     init_bind_macro(instrument_envelope, delete_node, "Delete node", "US_DELETE");

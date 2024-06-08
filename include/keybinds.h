@@ -19,6 +19,7 @@ typedef struct keybind_section_info
     const char* title;
     int is_active;
     enum page_numbers page;
+    int (*page_matcher)(enum page_numbers);
 } keybind_section_info;
 
 typedef struct keybind_bind

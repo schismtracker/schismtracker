@@ -5,7 +5,7 @@
 #include "keybinds_codes.c"
 #include "keybinds_init.c"
 
-#define MAX_BINDS 300
+#define MAX_BINDS 350
 #define MAX_SHORTCUTS 3
 static int current_binds_count = 0;
 static keybind_bind* current_binds[MAX_BINDS];
@@ -42,7 +42,11 @@ static void update_bind(keybind_bind* bind, SDL_KeyCode kcode, SDL_Scancode scod
 {
     keybind_shortcut* sc;
 
-    if (bind->section_info->page != PAGE_ANY && bind->section_info->page != status.current_page) return;
+    if (bind->section_info->page_matcher) {
+        if (!bind->section_info->page_matcher(status.current_page)) return;
+    } else {
+        if (bind->section_info->page != PAGE_ANY && bind->section_info->page != status.current_page) return;
+    }
 
     for(int i = 0; i < bind->shortcuts_count; i++) {
         int mods_correct = 0;
@@ -250,6 +254,7 @@ static void init_section(keybind_section_info* section_info, const char* name, c
     section_info->name = name;
     section_info->title = title;
     section_info->page = page;
+    section_info->page_matcher = NULL;
 }
 
 static void set_shortcut_text(keybind_bind* bind)
@@ -367,6 +372,7 @@ void init_keybinds(void)
     init_order_list_keybinds(&cfg);
     init_info_page_keybinds(&cfg);
     init_sample_list_keybinds(&cfg);
+    init_instrument_list_keybinds(&cfg);
     init_pattern_edit_keybinds(&cfg);
     init_global_keybinds(&cfg);
 
@@ -396,8 +402,13 @@ char* keybinds_get_help_text(enum page_numbers page)
         const char* bind_title = bind->section_info->title;
         enum page_numbers bind_page = bind->section_info->page;
 
-        if (bind_page != PAGE_ANY && bind_page != page)
-            continue;
+        if (bind->section_info->page_matcher) {
+            if (!bind->section_info->page_matcher(page))
+                continue;
+        } else {
+            if (bind_page != PAGE_ANY && bind_page != page)
+                continue;
+        }
 
         char* strings[2] = { (char*)bind->description, (char*)bind->shortcut_text };
 
