@@ -969,6 +969,8 @@ int main(int argc, char **argv)
 
 	vis_init();
 
+	ver_init();
+
 	video_fullscreen(0);
 
 	tzset(); // localtime_r wants this
