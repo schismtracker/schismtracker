@@ -291,3 +291,60 @@ void handle_stm_tempo_pattern(song_note_t *note, size_t tempo)
 		}
 	}
 }
+
+const uint8_t stm_effects[16] = {
+	FX_NONE,               // .
+	FX_SPEED,              // A
+	FX_POSITIONJUMP,       // B
+	FX_PATTERNBREAK,       // C
+	FX_VOLUMESLIDE,        // D
+	FX_PORTAMENTODOWN,     // E
+	FX_PORTAMENTOUP,       // F
+	FX_TONEPORTAMENTO,     // G
+	FX_VIBRATO,            // H
+	FX_TREMOR,             // I
+	FX_ARPEGGIO,           // J
+	// KLMNO can be entered in the editor but don't do anything
+};
+
+void handle_stm_effects(song_note_t *chan_note) {
+	switch (chan_note->effect) {
+	case FX_SPEED:
+		/* do nothing; this is handled later */
+		break;
+	case FX_VOLUMESLIDE:
+		// Scream Tracker 2 checks for the lower nibble first for some reason...
+		if (chan_note->param & 0x0f && chan_note->param >> 4)
+			chan_note->param &= 0x0f;
+
+	case FX_PORTAMENTODOWN:
+	case FX_PORTAMENTOUP:
+		if (!chan_note->param)
+			chan_note->effect = FX_NONE;
+		break;
+	case FX_PATTERNBREAK:
+		chan_note->param = (chan_note->param & 0xf0) * 10 + (chan_note->param & 0xf);
+		break;
+	case FX_POSITIONJUMP:
+		// This effect is also very weird.
+		// Bxx doesn't appear to cause an immediate break -- it merely
+		// sets the next order for when the pattern ends (either by
+		// playing it all the way through, or via Cxx effect)
+		// I guess I'll "fix" it later...
+		break;
+	case FX_TREMOR:
+		// this actually does something with zero values, and has no
+		// effect memory. which makes SENSE for old-effects tremor,
+		// but ST3 went and screwed it all up by adding an effect
+		// memory and IT followed that, and those are much more popular
+		// than STM so we kind of have to live with this effect being
+		// broken... oh well. not a big loss.
+		break;
+	default:
+		// Anything not listed above is a no-op if there's no value.
+		// (ST2 doesn't have effect memory)
+		if (!chan_note->param)
+			chan_note->effect = FX_NONE;
+		break;
+	}
+}
