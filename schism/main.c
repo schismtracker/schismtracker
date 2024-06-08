@@ -783,63 +783,63 @@ static void event_loop(void)
 				case SCHISM_EVENT_NATIVE_SCRIPT:
 					/* destroy any active dialog before changing pages */
 					dialog_destroy();
-					if (strcasecmp(event.user.data1, "new") == 0) {
+					if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "new", CHARSET_UTF8) == 0) {
 						new_song_dialog();
-					} else if (strcasecmp(event.user.data1, "save") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "save", CHARSET_UTF8) == 0) {
 						save_song_or_save_as();
-					} else if (strcasecmp(event.user.data1, "save_as") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "save_as", CHARSET_UTF8) == 0) {
 						set_page(PAGE_SAVE_MODULE);
-					} else if (strcasecmp(event.user.data1, "export_song") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "export_song", CHARSET_UTF8) == 0) {
 						set_page(PAGE_EXPORT_MODULE);
-					} else if (strcasecmp(event.user.data1, "logviewer") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "logviewer", CHARSET_UTF8) == 0) {
 						set_page(PAGE_LOG);
-					} else if (strcasecmp(event.user.data1, "font_editor") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "font_editor", CHARSET_UTF8) == 0) {
 						set_page(PAGE_FONT_EDIT);
-					} else if (strcasecmp(event.user.data1, "load") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "load", CHARSET_UTF8) == 0) {
 						set_page(PAGE_LOAD_MODULE);
-					} else if (strcasecmp(event.user.data1, "help") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "help", CHARSET_UTF8) == 0) {
 						set_page(PAGE_HELP);
-					} else if (strcasecmp(event.user.data1, "pattern") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "pattern", CHARSET_UTF8) == 0) {
 						set_page(PAGE_PATTERN_EDITOR);
-					} else if (strcasecmp(event.user.data1, "orders") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "orders", CHARSET_UTF8) == 0) {
 						set_page(PAGE_ORDERLIST_PANNING);
-					} else if (strcasecmp(event.user.data1, "variables") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "variables", CHARSET_UTF8) == 0) {
 						set_page(PAGE_SONG_VARIABLES);
-					} else if (strcasecmp(event.user.data1, "message_edit") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "message_edit", CHARSET_UTF8) == 0) {
 						set_page(PAGE_MESSAGE);
-					} else if (strcasecmp(event.user.data1, "info") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "info", CHARSET_UTF8) == 0) {
 						set_page(PAGE_INFO);
-					} else if (strcasecmp(event.user.data1, "play") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "play", CHARSET_UTF8) == 0) {
 						song_start();
-					} else if (strcasecmp(event.user.data1, "play_pattern") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "play_pattern", CHARSET_UTF8) == 0) {
 						song_loop_pattern(get_current_pattern(), 0);
-					} else if (strcasecmp(event.user.data1, "play_order") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "play_order", CHARSET_UTF8) == 0) {
 						song_start_at_order(get_current_order(), 0);
-					} else if (strcasecmp(event.user.data1, "play_mark") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "play_mark", CHARSET_UTF8) == 0) {
 						play_song_from_mark();
-					} else if (strcasecmp(event.user.data1, "stop") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "stop", CHARSET_UTF8) == 0) {
 						song_stop();
-					} else if (strcasecmp(event.user.data1, "calc_length") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "calc_length", CHARSET_UTF8) == 0) {
 						show_song_length();
-					} else if (strcasecmp(event.user.data1, "sample_page") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "sample_page", CHARSET_UTF8) == 0) {
 						set_page(PAGE_SAMPLE_LIST);
-					} else if (strcasecmp(event.user.data1, "sample_library") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "sample_library", CHARSET_UTF8) == 0) {
 						set_page(PAGE_LIBRARY_SAMPLE);
-					} else if (strcasecmp(event.user.data1, "init_sound") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "init_sound", CHARSET_UTF8) == 0) {
 						/* does nothing :) */
-					} else if (strcasecmp(event.user.data1, "inst_page") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "inst_page", CHARSET_UTF8) == 0) {
 						set_page(PAGE_INSTRUMENT_LIST);
-					} else if (strcasecmp(event.user.data1, "inst_library") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "inst_library", CHARSET_UTF8) == 0) {
 						set_page(PAGE_LIBRARY_INSTRUMENT);
-					} else if (strcasecmp(event.user.data1, "preferences") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "preferences", CHARSET_UTF8) == 0) {
 						set_page(PAGE_PREFERENCES);
-					} else if (strcasecmp(event.user.data1, "system_config") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "system_config", CHARSET_UTF8) == 0) {
 						set_page(PAGE_CONFIG);
-					} else if (strcasecmp(event.user.data1, "midi_config") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "midi_config", CHARSET_UTF8) == 0) {
 						set_page(PAGE_MIDI);
-					} else if (strcasecmp(event.user.data1, "palette_page") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "palette_page", CHARSET_UTF8) == 0) {
 						set_page(PAGE_PALETTE_EDITOR);
-					} else if (strcasecmp(event.user.data1, "fullscreen") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "fullscreen", CHARSET_UTF8) == 0) {
 						toggle_display_fullscreen();
 					}
 					break;
