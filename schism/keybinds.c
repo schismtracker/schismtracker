@@ -415,9 +415,9 @@ char* keybinds_get_help_text(enum page_numbers page)
         if (current_title != bind_title) {
             char* prev_out = out;
             if(current_title)
-                out = str_concat_four(out, "\n  ", (char*)bind_title, "\n", 0);
-            else
                 out = str_concat_four(out, "\n \n  ", (char*)bind_title, "\n", 0);
+            else
+                out = str_concat_four(out, "\n  ", (char*)bind_title, "\n", 0);
             current_title = bind_title;
             free(prev_out);
         }
