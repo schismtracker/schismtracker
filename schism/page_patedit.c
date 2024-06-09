@@ -886,31 +886,10 @@ static void history_close(UNUSED void *data)
 static int history_handle_key(struct key_event *k)
 {
 	int i,j;
-	if (! NO_MODIFIER(k->mod)) return 0;
-	switch (k->sym) {
-	case SDLK_ESCAPE:
-		if (k->state == KEY_PRESS)
-			return 0;
+
+	if (key_pressed(global, nav_cancel)) {
 		dialog_cancel(NULL);
-		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		undo_selection--;
-		if (undo_selection < 0) undo_selection = 0;
-		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		undo_selection++;
-		if (undo_selection > 9) undo_selection = 9;
-		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_RETURN:
-		if (k->state == KEY_RELEASE)
-			return 0;
+	} else if (key_pressed(global, nav_accept)) {
 		j = undo_history_top;
 		for (i = 0; i < 10; i++) {
 			if (i == undo_selection) {
@@ -921,13 +900,18 @@ static int history_handle_key(struct key_event *k)
 			if (j < 0) j += 10;
 		}
 		dialog_cancel(NULL);
-		status.flags |= NEED_UPDATE;
-		return 1;
-	default:
-		break;
-	};
+	} else if (key_pressed_or_repeated(global, nav_up)) {
+		undo_selection--;
+		if (undo_selection < 0) undo_selection = 0;
+	} else if (key_pressed_or_repeated(global, nav_down)) {
+		undo_selection++;
+		if (undo_selection > 9) undo_selection = 9;
+	} else {
+		return 0;
+	}
 
-	return 0;
+	status.flags |= NEED_UPDATE;
+	return 1;
 }
 
 static void pattern_editor_display_history(void)
@@ -3501,14 +3485,6 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 {
 	int n;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
-
-	// TODO
-	/* hack to render this useful :) */
-	if (k->orig_sym == SDLK_KP_9) {
-		k->sym = SDLK_F9;
-	} else if (k->orig_sym == SDLK_KP_0) {
-		k->sym = SDLK_F10;
-	}
 
 	if (key_pressed(pattern_edit, set_skip_1)) {
 		set_skip_value(1);
