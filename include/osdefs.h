@@ -75,9 +75,6 @@ A return value of 0 indicates that the event should NOT be processed by the main
 #define os_get_modkey(m)
 #endif
 
-/* this alias is kept for compatibility */
-#define os_screensaver_deactivate SDL_DisableScreenSaver
-
 // Implementations for the above, and more.
 
 int macosx_ibook_fnswitch(int setting);
