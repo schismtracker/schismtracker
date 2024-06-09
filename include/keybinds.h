@@ -13,6 +13,9 @@ typedef struct keybind_shortcut
     SDL_Scancode scancode;
     const char* character;
     SDL_Keymod modifier;
+    int pressed;
+    int released;
+    int repeated;
 } keybind_shortcut;
 
 typedef struct keybind_section_info
