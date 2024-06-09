@@ -715,28 +715,19 @@ static int file_list_handle_key(struct key_event * k)
 {
 	int new_file = current_file;
 
-	switch (k->sym) {
-	case SDLK_UP:
+	if (key_pressed_or_repeated(global, nav_up)) {
 		new_file--;
-		break;
-	case SDLK_DOWN:
+	} else if (key_pressed_or_repeated(global, nav_down)) {
 		new_file++;
-		break;
-	case SDLK_PAGEUP:
+	} else if (key_pressed_or_repeated(global, nav_page_up)) {
 		new_file -= 31;
-		break;
-	case SDLK_PAGEDOWN:
+	} else if (key_pressed_or_repeated(global, nav_page_down)) {
 		new_file += 31;
-		break;
-	case SDLK_HOME:
+	} else if (key_pressed_or_repeated(global, nav_home)) {
 		new_file = 0;
-		break;
-	case SDLK_END:
+	} else if (key_pressed_or_repeated(global, nav_end)) {
 		new_file = flist.num_files - 1;
-		break;
-	case SDLK_RETURN:
-		if (k->state == KEY_PRESS)
-			return 1;
+	} else if (key_released(global, nav_accept)) {
 		if (current_file < flist.num_files) {
 			dmoz_cache_update(cfg_dir_modules, &flist, &dlist);
 			handle_file_entered(flist.files[current_file]->path);
@@ -744,31 +735,30 @@ static int file_list_handle_key(struct key_event * k)
 		search_text_clear();
 
 		return 1;
-	case SDLK_DELETE:
-		if (k->state == KEY_RELEASE)
-		    return 1;
+	} else if (key_pressed(file_list, delete)) {
 		if (flist.num_files > 0)
 			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
 		return 1;
-	case SDLK_BACKSPACE:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (k->mod & KMOD_CTRL)
-			search_text_clear();
-		else
-			search_text_delete_char();
+	} else if (key_pressed(load_module, show_song_length)) {
+		show_selected_song_length();
 		return 1;
-	case SDLK_p:
-		if ((k->mod & KMOD_ALT) && k->state == KEY_PRESS) {
-			show_selected_song_length();
+	} else if (key_pressed(load_module, clear_search_text)) {
+		search_text_clear();
+	} else {
+		switch (k->sym) {
+		case SDLK_BACKSPACE:
+			if (k->state == KEY_RELEASE)
+				return 1;
+			else
+				search_text_delete_char();
 			return 1;
-		} /* else fall through */
-	default:
-		if (k->mouse == MOUSE_NONE) {
-			if (k->text)
-				return file_list_handle_text_input(k->text);
+		default:
+			if (k->mouse == MOUSE_NONE) {
+				if (k->text)
+					return file_list_handle_text_input(k->text);
 
-			return 0;
+				return 0;
+			}
 		}
 	}
 
@@ -895,28 +885,19 @@ static int dir_list_handle_key(struct key_event * k)
 		}
 	}
 
-	switch (k->sym) {
-	case SDLK_UP:
+	if (key_pressed_or_repeated(global, nav_up)) {
 		new_dir--;
-		break;
-	case SDLK_DOWN:
+	} else if (key_pressed_or_repeated(global, nav_down)) {
 		new_dir++;
-		break;
-	case SDLK_PAGEUP:
+	} else if (key_pressed_or_repeated(global, nav_page_up)) {
 		new_dir -= 21;
-		break;
-	case SDLK_PAGEDOWN:
+	} else if (key_pressed_or_repeated(global, nav_page_down)) {
 		new_dir += 21;
-		break;
-	case SDLK_HOME:
+	} else if (key_pressed_or_repeated(global, nav_home)) {
 		new_dir = 0;
-		break;
-	case SDLK_END:
+	} else if (key_pressed_or_repeated(global, nav_end)) {
 		new_dir = dlist.num_dirs - 1;
-		break;
-	case SDLK_RETURN:
-		if (k->state == KEY_PRESS)
-			return 0;
+	} else if (key_released(global, nav_accept)) {
 		/* reset */
 		top_file = current_file = 0;
 		if (current_dir >= 0 && current_dir < dlist.num_dirs)
@@ -926,35 +907,37 @@ static int dir_list_handle_key(struct key_event * k)
 			*selected_widget = 0;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_BACKSPACE:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (k->mod & KMOD_CTRL)
-			search_text_clear();
-		else
+	} else if (key_pressed(load_module, clear_search_text)) {
+		search_text_clear();
+	} else {
+		switch (k->sym) {
+		case SDLK_BACKSPACE:
+			if (k->state == KEY_RELEASE)
+				return 0;
 			search_text_delete_char();
-		return 1;
-	case SDLK_SLASH:
-#ifdef SCHISM_WIN32
-	case SDLK_BACKSLASH:
-#endif
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (search_text_length == 0 && current_dir != 0) {
-			// slash -> go to top (root) dir
-			new_dir = 0;
-		} else if (current_dir > 0 && current_dir < dlist.num_dirs) {
-			change_dir(dlist.dirs[current_dir]->path);
-			status.flags |= NEED_UPDATE;
 			return 1;
-		}
-		break;
-	default:
-		if (k->mouse == MOUSE_NONE) {
-			if (k->text)
-				return dir_list_handle_text_input(k->text);
+		case SDLK_SLASH:
+#ifdef SCHISM_WIN32
+		case SDLK_BACKSLASH:
+#endif
+			if (k->state == KEY_RELEASE)
+				return 0;
+			if (search_text_length == 0 && current_dir != 0) {
+				// slash -> go to top (root) dir
+				new_dir = 0;
+			} else if (current_dir > 0 && current_dir < dlist.num_dirs) {
+				change_dir(dlist.dirs[current_dir]->path);
+				status.flags |= NEED_UPDATE;
+				return 1;
+			}
+			break;
+		default:
+			if (k->mouse == MOUSE_NONE) {
+				if (k->text)
+					return dir_list_handle_text_input(k->text);
 
-			return 0;
+				return 0;
+			}
 		}
 	}
 
@@ -965,6 +948,7 @@ static int dir_list_handle_key(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 0;
 	}
+
 	new_dir = CLAMP(new_dir, 0, dlist.num_dirs - 1);
 	if (new_dir != current_dir) {
 		current_dir = new_dir;

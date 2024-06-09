@@ -32,6 +32,14 @@ static void init_waterfall_keybinds(cfg_file_t* cfg)
     init_bind_macro(waterfall, goto_next_order, "Play next order (while playing)", "US_KP_PLUS");
     init_bind_macro(waterfall, goto_pattern_edit, "Go to current position in pattern editor", "Alt+US_G");
 }
+
+static void init_load_module_keybinds(cfg_file_t* cfg)
+{
+    init_section_macro(load_module, "Load Module Keys.", PAGE_LOAD_MODULE);
+    init_bind_macro(load_module, show_song_length, "Show song length", "Alt+US_P");
+    init_bind_macro(load_module, clear_search_text, "Clear search text", "Ctrl+US_BACKSPACE");
+}
+
 static void init_palette_edit_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(palette_edit, "Palette Keys.", PAGE_PALETTE_EDITOR);
@@ -411,6 +419,20 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(playback_functions, toggle_midi_input, "Toggle MIDI input", "Alt+US_SCROLLLOCK");
 }
 
+static int file_list_page_matcher(enum page_numbers page)
+{
+    return page == PAGE_LOAD_INSTRUMENT || page == PAGE_LOAD_MODULE;
+    return page == PAGE_LOAD_INSTRUMENT || page == PAGE_LOAD_MODULE || page == PAGE_LOAD_SAMPLE;
+}
+
+static void init_file_list_keybinds(cfg_file_t* cfg)
+{
+    init_section_macro(file_list, "File List Keys.", PAGE_ANY);
+    global_keybinds_list.file_list_info.page_matcher = file_list_page_matcher;
+
+    init_bind_macro(file_list, delete, "Delete file", "US_DELETE");
+}
+
 static void init_global_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(global, "Global Keys.", PAGE_ANY);
@@ -501,11 +523,13 @@ static void init_global_keybinds(cfg_file_t* cfg)
 
 static void init_all_keybinds(cfg_file_t* cfg) {
     init_waterfall_keybinds(cfg);
+    init_load_module_keybinds(cfg);
     init_palette_edit_keybinds(cfg);
     init_order_list_keybinds(cfg);
     init_info_page_keybinds(cfg);
     init_sample_list_keybinds(cfg);
     init_instrument_list_keybinds(cfg);
     init_pattern_edit_keybinds(cfg);
+    init_file_list_keybinds(cfg);
     init_global_keybinds(cfg);
 }

@@ -410,66 +410,76 @@ static int file_list_handle_key(struct key_event * k)
 			}
 		}
 	}
-	switch (k->sym) {
-	case SDLK_UP:           new_file--; slash_search_mode = -1; break;
-	case SDLK_DOWN:         new_file++; slash_search_mode = -1; break;
-	case SDLK_PAGEUP:       new_file -= 35; slash_search_mode = -1; break;
-	case SDLK_PAGEDOWN:     new_file += 35; slash_search_mode = -1; break;
-	case SDLK_HOME:         new_file = 0; slash_search_mode = -1; break;
-	case SDLK_END:          new_file = flist.num_files - 1; slash_search_mode = -1; break;
 
-	case SDLK_ESCAPE:
+	if (key_pressed_or_repeated(global, nav_up)) {
+		new_file--;
+		slash_search_mode = -1;
+	} else if (key_pressed_or_repeated(global, nav_down)) {
+		new_file++;
+		slash_search_mode = -1;
+	} else if (key_pressed_or_repeated(global, nav_page_up)) {
+		new_file -= 35;
+		slash_search_mode = -1;
+	} else if (key_pressed_or_repeated(global, nav_page_down)) {
+		new_file += 35;
+		slash_search_mode = -1;
+	} else if (key_pressed_or_repeated(global, nav_home)) {
+		new_file = 0;
+		slash_search_mode = -1;
+	} else if (key_pressed_or_repeated(global, nav_end)) {
+		new_file = flist.num_files - 1;
+		slash_search_mode = -1;
+	} else if (key_released(global, nav_cancel)) {
 		if (slash_search_mode < 0) {
-			if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod))
-				set_page(PAGE_SAMPLE_LIST);
-			return 1;
-		} /* else fall through */
-	case SDLK_RETURN:
+			set_page(PAGE_SAMPLE_LIST);
+		} else {
+			slash_search_mode = -1;
+			status.flags |= NEED_UPDATE;
+		}
+		return 1;
+	} else if (key_released(global, nav_accept)) {
 		if (slash_search_mode < 0) {
-			if (k->state == KEY_PRESS)
-				return 0;
 			handle_enter_key();
 			slash_search_mode = -1;
 		} else {
-			if (k->state == KEY_PRESS)
-				return 1;
 			slash_search_mode = -1;
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
 		return 1;
-	case SDLK_DELETE:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (key_pressed(file_list, delete)) {
 		slash_search_mode = -1;
 		if (flist.num_files > 0)
 			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
 		return 1;
-	case SDLK_BACKSPACE:
-		if (slash_search_mode > -1) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-			slash_search_mode--;
-			status.flags |= NEED_UPDATE;
-			reposition_at_slash_search();
-			return 1;
-		}
-	case SDLK_SLASH:
-		if (slash_search_mode < 0) {
-			if (k->orig_sym == SDLK_SLASH) {
-				if (k->state == KEY_PRESS)
-					return 0;
-				slash_search_mode = 0;
+	} else {
+		switch (k->sym) {
+		case SDLK_BACKSPACE:
+			if (slash_search_mode > -1) {
+				if (k->state == KEY_RELEASE)
+					return 1;
+				slash_search_mode--;
 				status.flags |= NEED_UPDATE;
+				reposition_at_slash_search();
 				return 1;
 			}
-			return 0;
-		} /* else fall through */
-	default:
-		if (k->text)
-			return file_list_handle_text_input(k->text);
+		case SDLK_SLASH:
+			if (slash_search_mode < 0) {
+				if (k->orig_sym == SDLK_SLASH) {
+					if (k->state == KEY_PRESS)
+						return 0;
+					slash_search_mode = 0;
+					status.flags |= NEED_UPDATE;
+					return 1;
+				}
+				return 0;
+			} /* else fall through */
+		default:
+			if (k->text)
+				return file_list_handle_text_input(k->text);
 
-		if (!k->mouse) return 0;
+			if (!k->mouse) return 0;
+		}
 	}
 
 	if (k->mouse == MOUSE_CLICK) {
@@ -497,7 +507,8 @@ static void load_instrument_handle_key(struct key_event * k)
 {
 	if (k->state == KEY_RELEASE)
 		return;
-	if (k->sym == SDLK_ESCAPE && NO_MODIFIER(k->mod))
+
+	if (key_pressed(global, nav_cancel))
 		set_page(PAGE_INSTRUMENT_LIST);
 }
 
@@ -530,4 +541,3 @@ void library_instrument_load_page(struct page *page)
 	page->widgets = widgets_loadinst;
 	page->help_index = HELP_GLOBAL;
 }
-

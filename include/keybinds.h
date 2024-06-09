@@ -60,6 +60,14 @@ typedef struct keybind_list
         keybind_bind goto_pattern_edit;
     } waterfall;
 
+    /* *** LOAD MODULE *** */
+
+    keybind_section_info load_module_info;
+    struct keybinds_load_module {
+        keybind_bind show_song_length;
+        keybind_bind clear_search_text;
+    } load_module;
+
     /* *** PALETTE EDIT *** */
 
     keybind_section_info palette_edit_info;
@@ -437,6 +445,13 @@ typedef struct keybind_list
         keybind_bind toggle_playback_tracing;
         keybind_bind toggle_midi_input;
     } playback_functions;
+
+    /* *** FILE LIST *** */
+
+    keybind_section_info file_list_info;
+    struct keybinds_file_list {
+        keybind_bind delete;
+    } file_list;
 
     /* *** GLOBAL *** */
 
