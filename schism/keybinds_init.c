@@ -526,10 +526,10 @@ static void init_global_keybinds(cfg_file_t* cfg)
     init_bind_macro(global, thumbbar_decrease_value, "Thumbbar decrease value", "US_LEFT");
 
     init_section_macro(dialog, "Dialog Keys.", PAGE_ANY);
-    init_bind_macro(dialog, yes, "Answer yes in yes/no dialog. (Also in ok/cancel)", "US_Y");
-    init_bind_macro(dialog, no, "Answer no in yes/no dialog. (Also in ok/cancel)", "US_N");
-    init_bind_macro(dialog, answer_ok, "Answer ok in ok/cancel dialog. (yes in yes/no dialog)", "US_O");
-    init_bind_macro(dialog, answer_cancel, "Answer cancel in ok/cancel dialog. (cancel in yes/no dialog)", "US_C");
+    init_bind_macro(dialog, yes, "Answer yes in yes/no dialog.", "US_Y");
+    init_bind_macro(dialog, no, "Answer no in yes/no dialog.", "US_N");
+    init_bind_macro(dialog, answer_ok, "Answer ok in ok/cancel dialog.", "US_O");
+    init_bind_macro(dialog, answer_cancel, "Answer cancel in ok/cancel dialog.", "US_C");
     init_bind_macro(dialog, cancel, "Dialog cancel.", "US_ESCAPE");
     init_bind_macro(dialog, accept, "Dialog accept.", "US_ENTER");
 }
