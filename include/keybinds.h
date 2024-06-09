@@ -44,6 +44,20 @@ typedef struct keybind_bind
 
 typedef struct keybind_list
 {
+    /* *** MESSAGE EDIT *** */
+
+    keybind_section_info message_edit_info;
+    struct keybinds_message_edit {
+        keybind_bind edit_message;
+        keybind_bind finished_editing;
+        keybind_bind toggle_extended_font;
+        keybind_bind delete_line;
+        keybind_bind clear_message;
+
+        keybind_bind goto_first_line;
+        keybind_bind goto_last_line;
+    } message_edit;
+
     /* *** WATERFALL *** */
 
     keybind_section_info waterfall_info;

@@ -20,6 +20,19 @@ static char current_shortcut[256] = "";
 static void init_section(keybind_section_info* section_info, const char* name, const char* title, enum page_numbers page);
 static void init_bind(keybind_bind* bind, keybind_section_info* section_info, const char* name, const char* description, const char* shortcut);
 
+static void init_message_edit_keybinds(cfg_file_t* cfg)
+{
+    init_section_macro(message_edit, "Editing Keys.", PAGE_MESSAGE);
+    init_bind_macro(message_edit, edit_message, "Edit message", "US_ENTER");
+    init_bind_macro(message_edit, finished_editing, "Finished editing", "US_ESCAPE");
+    init_bind_macro(message_edit, toggle_extended_font, "Toggle extended ASCII font", "Ctrl+US_T");
+    init_bind_macro(message_edit, delete_line, "Delete line", "Ctrl+US_Y");
+    init_bind_macro(message_edit, clear_message, "Clear message\n ", "Alt+US_C");
+
+    init_bind_macro(message_edit, goto_first_line, "Go to first line", "Ctrl+US_HOME");
+    init_bind_macro(message_edit, goto_last_line, "Go to last line", "Ctrl+US_END");
+}
+
 static void init_waterfall_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(waterfall, "Waterfall Keys.", PAGE_WATERFALL);
@@ -522,6 +535,7 @@ static void init_global_keybinds(cfg_file_t* cfg)
 }
 
 static void init_all_keybinds(cfg_file_t* cfg) {
+    init_message_edit_keybinds(cfg);
     init_waterfall_keybinds(cfg);
     init_load_module_keybinds(cfg);
     init_palette_edit_keybinds(cfg);

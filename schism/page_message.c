@@ -473,51 +473,23 @@ static int message_handle_key_viewmode(struct key_event * k)
 		}
 	}
 
-	switch (k->sym) {
-	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 0;
+	if (key_pressed_or_repeated(global, nav_up)) {
 		top_line--;
-		break;
-	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
-			return 0;
+	} else if (key_pressed_or_repeated(global, nav_down)) {
 		top_line++;
-		break;
-	case SDLK_PAGEUP:
-		if (k->state == KEY_RELEASE)
-			return 0;
+	} else if (key_pressed_or_repeated(global, nav_page_up)) {
 		top_line -= 35;
-		break;
-	case SDLK_PAGEDOWN:
-		if (k->state == KEY_RELEASE)
-			return 0;
+	} else if (key_pressed_or_repeated(global, nav_page_down)) {
 		top_line += 35;
-		break;
-	case SDLK_HOME:
-		if (k->state == KEY_RELEASE)
-			return 0;
+	} else if (key_pressed_or_repeated(global, nav_home)) {
 		top_line = 0;
-		break;
-	case SDLK_END:
-		if (k->state == KEY_RELEASE)
-			return 0;
+	} else if (key_pressed_or_repeated(global, nav_end)) {
 		top_line = get_num_lines(current_song->message) - 34;
-		break;
-	case SDLK_t:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (k->mod & KMOD_CTRL) {
-			message_extfont = !message_extfont;
-			break;
-		}
-		return 1;
-	case SDLK_RETURN:
-		if (k->state == KEY_PRESS)
-			return 0;
+	} else if (key_pressed(message_edit, toggle_extended_font)) {
+		message_extfont = !message_extfont;
+	} else if (key_released(message_edit, edit_message)) {
 		message_set_editmode();
-		return 1;
-	default:
+	} else {
 		return 0;
 	}
 
@@ -528,6 +500,7 @@ static int message_handle_key_viewmode(struct key_event * k)
 
 	return 1;
 }
+
 static void _delete_selection(void)
 {
 	int len = strlen(current_song->message);
@@ -599,150 +572,95 @@ static int message_handle_key_editmode(struct key_event * k)
 
 	line_len = get_nth_line(current_song->message, cursor_line, &ptr);
 
-
-	switch (k->sym) {
-	case SDLK_UP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+	if (key_pressed_or_repeated(global, nav_up)) {
 		new_cursor_line--;
-		break;
-	case SDLK_DOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (key_pressed_or_repeated(global, nav_down)) {
 		new_cursor_line++;
-		break;
-	case SDLK_LEFT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (key_pressed_or_repeated(global, nav_left)) {
 		new_cursor_char--;
-		break;
-	case SDLK_RIGHT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (key_pressed_or_repeated(global, nav_right)) {
 		new_cursor_char++;
-		break;
-	case SDLK_PAGEUP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (key_pressed_or_repeated(global, nav_page_up)) {
 		new_cursor_line -= 35;
-		break;
-	case SDLK_PAGEDOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (key_pressed_or_repeated(global, nav_page_down)) {
 		new_cursor_line += 35;
-		break;
-	case SDLK_HOME:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (k->mod & KMOD_CTRL)
+	} else if (key_pressed(global, nav_home)) {
+		new_cursor_char = 0;
+	} else if (key_pressed(message_edit, goto_first_line)) {
 			new_cursor_line = 0;
-		else
-			new_cursor_char = 0;
-		break;
-	case SDLK_END:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (k->mod & KMOD_CTRL) {
-			num_lines = get_num_lines(current_song->message);
-			new_cursor_line = num_lines;
-		} else {
-			new_cursor_char = line_len;
-		}
-		break;
-	case SDLK_ESCAPE:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (key_pressed(global, nav_end)) {
+		new_cursor_char = line_len;
+	} else if (key_pressed(message_edit, goto_last_line)) {
+		num_lines = get_num_lines(current_song->message);
+		new_cursor_line = num_lines;
+	} else if (key_pressed(message_edit, finished_editing)) {
 		message_set_viewmode();
 		memused_songchanged();
 		return 1;
-	case SDLK_BACKSPACE:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (k->sym && clippy_owner(CLIPPY_SELECT) == widgets_message) {
-			_delete_selection();
-		} else {
-			message_delete_char();
-		}
+	} else if (key_pressed(message_edit, toggle_extended_font)) {
+		message_extfont = !message_extfont;
+	} else if (key_pressed(message_edit, delete_line)) {
+		clippy_select(NULL, NULL, 0);
+		message_delete_line();
+	} else if (key_pressed(message_edit, clear_message)) {
+		prompt_message_clear();
 		return 1;
-	case SDLK_DELETE:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
+	} else {
+		switch (k->sym) {
+		case SDLK_BACKSPACE:
+			if (!NO_MODIFIER(k->mod))
+				return 0;
+			if (k->state == KEY_RELEASE)
+				return 1;
+			if (k->sym && clippy_owner(CLIPPY_SELECT) == widgets_message) {
+				_delete_selection();
+			} else {
+				message_delete_char();
+			}
 			return 1;
-
-		if (clippy_owner(CLIPPY_SELECT) == widgets_message)
-			_delete_selection();
-		else
-			message_delete_next_char();
-
-		return 1;
-	case SDLK_RETURN:
-		if (NO_MODIFIER(k->mod)) {
+		case SDLK_DELETE:
+			if (!NO_MODIFIER(k->mod))
+				return 0;
 			if (k->state == KEY_RELEASE)
 				return 1;
 
 			if (clippy_owner(CLIPPY_SELECT) == widgets_message)
 				_delete_selection();
-
-			message_insert_char('\r');
+			else
+				message_delete_next_char();
 
 			return 1;
-		}
-		return 0;
-	default:
-		/* keybinds... */
-		if (k->mod & KMOD_CTRL) {
+		case SDLK_RETURN:
+			if (NO_MODIFIER(k->mod)) {
+				if (k->state == KEY_RELEASE)
+					return 1;
+
+				if (clippy_owner(CLIPPY_SELECT) == widgets_message)
+					_delete_selection();
+
+				message_insert_char('\r');
+
+				return 1;
+			}
+			return 0;
+		default:
+			if (k->mouse == MOUSE_NONE) {
+				if (k->text)
+					return message_handle_text_input_editmode(k->text);
+
+				return 0;
+			}
+
+			if (k->mouse != MOUSE_CLICK)
+				return 0;
+
 			if (k->state == KEY_RELEASE)
 				return 1;
-
-			if (k->sym == SDLK_t) {
-				message_extfont = !message_extfont;
-				break;
-			} else if (k->sym == SDLK_y) {
+			if (!doing_drag) {
 				clippy_select(NULL, NULL, 0);
-				message_delete_line();
-				break;
 			}
-		} else if (k->mod & KMOD_ALT) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-
-			if (k->sym == SDLK_c) {
-				prompt_message_clear();
-				return 1;
-			}
-		} else if (k->mouse == MOUSE_NONE) {
-			if (k->text)
-				return message_handle_text_input_editmode(k->text);
-
-			return 0;
+			break;
 		}
-
-		if (k->mouse != MOUSE_CLICK)
-			return 0;
-
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (!doing_drag) {
-			clippy_select(NULL, NULL, 0);
-		}
-		break;
 	}
 
 	if (new_cursor_line != cursor_line) {
