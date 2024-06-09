@@ -5,6 +5,8 @@
 #include "SDL.h"
 #include "page.h"
 
+/* *** TYPES *** */
+
 typedef struct keybind_shortcut
 {
     SDL_Keycode keycode;
@@ -38,8 +40,26 @@ typedef struct keybind_bind
     int repeated;
 } keybind_bind;
 
+/* *** KEYBIND LIST *** */
+
 typedef struct keybind_list
 {
+    /* *** WATERFALL *** */
+
+    keybind_section_info waterfall_info;
+    struct keybinds_waterfall {
+        keybind_bind song_toggle_stereo;
+        keybind_bind song_flip_stereo;
+        keybind_bind view_toggle_mono;
+        keybind_bind decrease_sensitivity;
+        keybind_bind increase_sensitivity;
+
+        keybind_bind goto_next_order;
+        keybind_bind goto_previous_order;
+
+        keybind_bind goto_pattern_edit;
+    } waterfall;
+
     /* *** PALETTE EDIT *** */
 
     keybind_section_info palette_edit_info;
@@ -497,7 +517,6 @@ typedef struct keybind_list
 
         keybind_bind thumbbar_increase_value;
         keybind_bind thumbbar_decrease_value;
-
     } global;
 
     keybind_section_info dialog_info;

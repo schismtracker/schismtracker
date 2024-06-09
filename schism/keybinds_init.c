@@ -20,6 +20,18 @@ static char current_shortcut[256] = "";
 static void init_section(keybind_section_info* section_info, const char* name, const char* title, enum page_numbers page);
 static void init_bind(keybind_bind* bind, keybind_section_info* section_info, const char* name, const char* description, const char* shortcut);
 
+static void init_waterfall_keybinds(cfg_file_t* cfg)
+{
+    init_section_macro(waterfall, "Waterfall Keys.", PAGE_WATERFALL);
+    init_bind_macro(waterfall, song_toggle_stereo, "Toggle song stereo/mono", "Alt+US_S");
+    init_bind_macro(waterfall, song_flip_stereo, "Flip song left/right", "Alt+US_R");
+    init_bind_macro(waterfall, view_toggle_mono, "Toggle mono display", "Alt+US_M");
+    init_bind_macro(waterfall, decrease_sensitivity, "Decrease sensitivity", "US_LEFT");
+    init_bind_macro(waterfall, increase_sensitivity, "Increase sensitivity", "US_RIGHT");
+    init_bind_macro(waterfall, goto_previous_order, "Play previous order (while playing)", "US_KP_MINUS");
+    init_bind_macro(waterfall, goto_next_order, "Play next order (while playing)", "US_KP_PLUS");
+    init_bind_macro(waterfall, goto_pattern_edit, "Go to current position in pattern editor", "Alt+US_G");
+}
 static void init_palette_edit_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(palette_edit, "Palette Keys.", PAGE_PALETTE_EDITOR);
@@ -485,4 +497,15 @@ static void init_global_keybinds(cfg_file_t* cfg)
     init_bind_macro(dialog, answer_cancel, "Answer cancel in ok/cancel dialog. (cancel in yes/no dialog)", "US_C");
     init_bind_macro(dialog, cancel, "Dialog cancel.", "US_ESCAPE");
     init_bind_macro(dialog, accept, "Dialog accept.", "US_ENTER");
+}
+
+static void init_all_keybinds(cfg_file_t* cfg) {
+    init_waterfall_keybinds(cfg);
+    init_palette_edit_keybinds(cfg);
+    init_order_list_keybinds(cfg);
+    init_info_page_keybinds(cfg);
+    init_sample_list_keybinds(cfg);
+    init_instrument_list_keybinds(cfg);
+    init_pattern_edit_keybinds(cfg);
+    init_global_keybinds(cfg);
 }

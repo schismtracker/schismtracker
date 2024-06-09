@@ -5,7 +5,7 @@
 #include "keybinds_codes.c"
 #include "keybinds_init.c"
 
-#define MAX_BINDS 350
+#define MAX_BINDS 400
 #define MAX_SHORTCUTS 3
 static int current_binds_count = 0;
 static keybind_bind* current_binds[MAX_BINDS];
@@ -368,13 +368,7 @@ void init_keybinds(void)
 	cfg_init(&cfg, path);
 
     // Defined in keybinds_init.c
-    init_palette_edit_keybinds(&cfg);
-    init_order_list_keybinds(&cfg);
-    init_info_page_keybinds(&cfg);
-    init_sample_list_keybinds(&cfg);
-    init_instrument_list_keybinds(&cfg);
-    init_pattern_edit_keybinds(&cfg);
-    init_global_keybinds(&cfg);
+    init_all_keybinds(&cfg);
 
     cfg_write(&cfg);
     cfg_free(&cfg);
