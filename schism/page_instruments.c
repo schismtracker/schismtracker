@@ -1789,13 +1789,13 @@ static void instrument_list_handle_alt_key(struct key_event *k)
 
 static int instrument_list_pre_handle_key(struct key_event * k)
 {
-	// Only handle plain F4 key when no dialog is active.
-	// TODO: What the heck is this doing. The SDLK_F4 probably should be replaced.
-	if (status.dialog_type != DIALOG_NONE || k->sym != SDLK_F4 || (k->mod & (KMOD_CTRL | KMOD_ALT)))
+	// This changes the instrument list subpage
+
+	if (status.dialog_type != DIALOG_NONE ||
+		!(key_pressed(instrument_list, next_page) || key_pressed(instrument_list, previous_page))
+	) {
 		return 0;
-	// TODO END
-	if (k->state == KEY_RELEASE)
-		return 1;
+	}
 
 	if (song_is_instrument_mode()) {
 		int csamp = sample_get_current();
@@ -1804,7 +1804,7 @@ static int instrument_list_pre_handle_key(struct key_event * k)
 			return 0;
 	}
 
-	if (k->mod & KMOD_SHIFT) {
+	if (key_pressed(instrument_list, previous_page)) {
 		switch (status.current_page) {
 			default:
 			case PAGE_INSTRUMENT_LIST_VOLUME:  set_subpage(PAGE_INSTRUMENT_LIST_GENERAL); break;
@@ -1821,6 +1821,7 @@ static int instrument_list_pre_handle_key(struct key_event * k)
 			case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_PITCH);   break;
 		}
 	}
+
 	return 1;
 }
 

@@ -188,6 +188,9 @@ typedef struct keybind_list
 
     keybind_section_info instrument_list_info;
     struct keybinds_instrument_list {
+        keybind_bind next_page;
+        keybind_bind previous_page;
+
         keybind_bind load_instrument;
         keybind_bind focus_list;
         keybind_bind nav_first;

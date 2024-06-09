@@ -160,6 +160,9 @@ static void init_instrument_list_keybinds(cfg_file_t* cfg)
     init_section_macro(instrument_list, "Instrument List Keys.", PAGE_INSTRUMENT_LIST);
     global_keybinds_list.instrument_list_info.page_matcher = instrument_list_page_matcher;
 
+    init_bind_macro(instrument_list, next_page, "Next page", "US_F4");
+    init_bind_macro(instrument_list, previous_page, "Previous page", "Shift+US_F4");
+
     init_bind_macro(instrument_list, load_instrument, "Load new instrument", "US_ENTER");
     init_bind_macro(instrument_list, focus_list, "Focus on list", "Shift+US_ESCAPE");
     init_bind_macro(instrument_list, move_instrument_up, "Move instrument up (when not on list)", "Ctrl+US_PAGEUP");
