@@ -20,6 +20,12 @@ static char current_shortcut[256] = "";
 static void init_section(keybind_section_info* section_info, const char* name, const char* title, enum page_numbers page);
 static void init_bind(keybind_bind* bind, keybind_section_info* section_info, const char* name, const char* description, const char* shortcut);
 
+static void init_midi_keybinds(cfg_file_t* cfg)
+{
+    init_section_macro(midi, "Midi Keys.", PAGE_MIDI);
+    init_bind_macro(midi, toggle_port, "Toggle port", "US_SPACE");
+}
+
 static void init_load_sample_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(load_sample, "Load Sample Keys.", PAGE_LOAD_SAMPLE);

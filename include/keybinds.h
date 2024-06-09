@@ -47,6 +47,13 @@ typedef struct keybind_bind
 
 typedef struct keybind_list
 {
+    /* *** MIDI *** */
+
+    keybind_section_info midi_info;
+    struct keybinds_midi {
+        keybind_bind toggle_port;
+    } midi;
+
     /* *** LOAD SAMPLE *** */
 
     keybind_section_info load_sample_info;
