@@ -490,14 +490,12 @@ static void event_loop(void)
 	SDL_Keycode last_key = 0;
 	int modkey;
 	time_t startdown;
-#ifdef os_screensaver_deactivate
-	time_t last_ss;
-#endif
 	int downtrip;
 	int wheel_x;
 	int wheel_y;
 	int sawrep;
 	int fix_numlock_key;
+	int screensaver;
 	struct key_event kk;
 
 	fix_numlock_key = status.fix_numlock_setting;
@@ -511,9 +509,9 @@ static void event_loop(void)
 	os_get_modkey(&modkey);
 	SDL_SetModState(modkey);
 
-#ifdef os_screensaver_deactivate
-	time(&last_ss);
-#endif
+	SDL_EnableScreenSaver();
+	screensaver = 1;
+
 	time(&status.now);
 	localtime_r(&status.now, &status.tmnow);
 	for (;;) {
@@ -881,14 +879,16 @@ static void event_loop(void)
 		switch (song_get_mode()) {
 		case MODE_PLAYING:
 		case MODE_PATTERN_LOOP:
-#ifdef os_screensaver_deactivate
-			if ((status.now-last_ss) > 14) {
-				last_ss=status.now;
-				os_screensaver_deactivate();
+			if (screensaver) {
+				SDL_DisableScreenSaver();
+				screensaver = 0;
 			}
-#endif
 			break;
 		default:
+			if (!screensaver) {
+				SDL_EnableScreenSaver();
+				screensaver = 1;
+			}
 			break;
 		};
 
@@ -968,6 +968,8 @@ int main(int argc, char **argv)
 	os_sysinit(&argc, &argv);
 
 	vis_init();
+
+	ver_init();
 
 	video_fullscreen(0);
 

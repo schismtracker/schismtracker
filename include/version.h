@@ -33,6 +33,9 @@ extern unsigned short ver_reserved; /* full version number in case 12 bits are n
 
 PURE extern const char *schism_banner(int classic);
 
+/* need to call this at startup */
+void ver_init(void);
+
 /* get yyyy-mm-dd or 0.nn version from cwtv + reserved (buf should be >=11 chars) */
 void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char *buf);
 
