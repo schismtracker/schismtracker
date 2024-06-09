@@ -189,9 +189,9 @@ if HAVE_WINDRES
 
 ## use today's date if we didn't get a commit date from git
 if HAVE_GIT
-wrcflags_version = -DWRC_VERSION=0,`echo '$(PACKAGE_VERSION)' | sed 's/\(....\)\(..\)\(..\).*/\1,\2,\3/'`
+wrcflags_version = -DWRC_VERSION=0,`echo '$(PACKAGE_VERSION)' | sed 's/\(....\)\(..\)\(..\).*/\1,\2,\3/' | sed 's/,0\+/,/g'`
 else
-wrcflags_version = -DWRC_VERSION=0,`date +%Y%m%d | sed 's/\(....\)\(..\)\(..\).*/\1,\2,\3/'`
+wrcflags_version = -DWRC_VERSION=0,`date +%Y%m%d | sed 's/\(....\)\(..\)\(..\).*/\1,\2,\3/' | sed 's/,0\+/,/g'`
 endif # HAVE_GIT
 
 ## --use-temp-file is needed to work around stupid bugs
