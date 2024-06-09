@@ -20,6 +20,20 @@ static char current_shortcut[256] = "";
 static void init_section(keybind_section_info* section_info, const char* name, const char* title, enum page_numbers page);
 static void init_bind(keybind_bind* bind, keybind_section_info* section_info, const char* name, const char* description, const char* shortcut);
 
+static void init_load_sample_keybinds(cfg_file_t* cfg)
+{
+    init_section_macro(load_sample, "Load Sample Keys.", PAGE_LOAD_SAMPLE);
+    init_bind_macro(load_sample, toggle_multichannel, "Toggle multichannel mode", "Alt+US_N");
+}
+
+static void init_load_stereo_sample_dialog_keybinds(cfg_file_t* cfg)
+{
+    init_section_macro(load_stereo_sample_dialog, "Stereo Sample Dialog Keys.", PAGE_LOAD_SAMPLE);
+    init_bind_macro(load_stereo_sample_dialog, load_left, "Load left channel", "US_L");
+    init_bind_macro(load_stereo_sample_dialog, load_right, "Load right channel", "US_R");
+    init_bind_macro(load_stereo_sample_dialog, load_both, "Load both channels", "US_B,US_S");
+}
+
 static void init_message_edit_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(message_edit, "Editing Keys.", PAGE_MESSAGE);
@@ -535,6 +549,8 @@ static void init_global_keybinds(cfg_file_t* cfg)
 }
 
 static void init_all_keybinds(cfg_file_t* cfg) {
+    init_load_sample_keybinds(cfg);
+    init_load_stereo_sample_dialog_keybinds(cfg);
     init_message_edit_keybinds(cfg);
     init_waterfall_keybinds(cfg);
     init_load_module_keybinds(cfg);

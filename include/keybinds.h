@@ -44,6 +44,22 @@ typedef struct keybind_bind
 
 typedef struct keybind_list
 {
+    /* *** LOAD SAMPLE *** */
+
+    keybind_section_info load_sample_info;
+    struct keybinds_load_sample {
+        keybind_bind toggle_multichannel;
+    } load_sample;
+
+    /* *** LOAD STEREO SAMPLE DIALOG *** */
+
+    keybind_section_info load_stereo_sample_dialog_info;
+    struct keybinds_load_stereo_sample_dialog {
+        keybind_bind load_left;
+        keybind_bind load_right;
+        keybind_bind load_both;
+    } load_stereo_sample_dialog;
+
     /* *** MESSAGE EDIT *** */
 
     keybind_section_info message_edit_info;
@@ -564,11 +580,24 @@ void keybinds_handle_event(struct key_event* event);
 void init_keybinds(void);
 extern keybind_list global_keybinds_list;
 
+/* Key was pressed this event. Will not trigger on held down repeats. */
 #define key_pressed(SECTION, NAME) global_keybinds_list.SECTION.NAME.pressed
+
+/* Key was released this event. */
 #define key_released(SECTION, NAME) global_keybinds_list.SECTION.NAME.released
+
+/* Key was repeated this event. Will not trigger when key is first pressed. */
 #define key_repeated(SECTION, NAME) global_keybinds_list.SECTION.NAME.repeated
-#define key_pressed_or_repeated(SECTION, NAME) \
+
+/* Key was pressed or repeated this event. Will not trigger on key released. */
+#define key_pressed_or_repeated(SECTION, NAME) ( \
     global_keybinds_list.SECTION.NAME.pressed || \
-    global_keybinds_list.SECTION.NAME.repeated
+    global_keybinds_list.SECTION.NAME.repeated)
+
+/* Key was pressed, repeated, or released this event */
+#define key_active(SECTION, NAME) ( \
+    global_keybinds_list.SECTION.NAME.pressed || \
+    global_keybinds_list.SECTION.NAME.repeated || \
+    global_keybinds_list.SECTION.NAME.released)
 
 #endif /* KEYBINDS_H */
