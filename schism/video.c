@@ -394,13 +394,13 @@ void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
 	if (video.mouse.visible && (video.mouse.x != vx || video.mouse.y != vy))
 		status.flags |= SOFTWARE_MOUSE_MOVED;
 
-	vx = CLAMP(vx, 0, NATIVE_SCREEN_WIDTH - 1);
-	vy = CLAMP(vy, 0, NATIVE_SCREEN_HEIGHT - 1);
-
 	vx *= NATIVE_SCREEN_WIDTH;
 	vy *= NATIVE_SCREEN_HEIGHT;
 	vx /= (cfg_video_want_fixed) ? cfg_video_want_fixed_width  : video.width;
 	vy /= (cfg_video_want_fixed) ? cfg_video_want_fixed_height : video.height;
+
+	vx = CLAMP(vx, 0, NATIVE_SCREEN_WIDTH - 1);
+	vy = CLAMP(vy, 0, NATIVE_SCREEN_HEIGHT - 1);
 
 	*x = video.mouse.x = vx;
 	*y = video.mouse.y = vy;
