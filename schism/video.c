@@ -186,14 +186,16 @@ void video_fullscreen(int new_fs_flag)
 #ifdef SCHISM_WIN32
 		SDL_GetWindowSize(video.window, &video.saved.width, &video.saved.height);
 		SDL_GetWindowPosition(video.window, &video.saved.x, &video.saved.y);
-		win32_toggle_menu(video.window, 0);
 #endif
 		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+#ifdef SCHISM_WIN32
+		win32_toggle_menu(video.window);
+#endif
 	} else {
 		SDL_SetWindowFullscreen(video.window, 0);
 #ifdef SCHISM_WIN32
 		/* the menu must be toggled first here */
-		win32_toggle_menu(video.window, 1);
+		win32_toggle_menu(video.window);
 		SDL_SetWindowSize(video.window, video.saved.width, video.saved.height);
 		SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
 #endif

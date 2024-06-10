@@ -212,12 +212,7 @@ static void change_video_settings(void)
 static void change_menu_bar_settings(void) {
 	cfg_video_want_menu_bar = widgets_config[14].d.togglebutton.state;
 
-	if (!video_is_fullscreen()) {
-		int width, height;
-		SDL_GetWindowSize(video_window(), &width, &height);
-		win32_refresh_menu(video_window(), 1);
-		SDL_SetWindowSize(video_window(), width, height);
-	}
+	win32_toggle_menu(video_window());
 }
 #endif
 
