@@ -64,6 +64,12 @@
 #define NATIVE_SCREEN_WIDTH     640
 #define NATIVE_SCREEN_HEIGHT    400
 
+/* need to redefine these on SDL < 2.0.4 */
+#if !SDL_VERSION_ATLEAST(2, 0, 4)
+#define SDL_AUDIODEVICEADDED (0x1100)
+#define SDL_AUDIODEVICEREMOVED (0x1101)
+#endif
+
 /* --------------------------------------------------------------------- */
 /* globals */
 
@@ -538,6 +544,7 @@ static void event_loop(void)
 			}
 			switch (event.type) {
 			case SDL_AUDIODEVICEADDED:
+			case SDL_AUDIODEVICEREMOVED:
 				refresh_audio_device_list();
 				status.flags |= NEED_UPDATE;
 				break;
