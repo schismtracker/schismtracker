@@ -148,6 +148,7 @@ jobs:
           for i in SDL2-2.0.0 FLAC.12 ogg.0; do
             "$HOME/ppc/usr/bin/install_name_tool" -change "$HOME/ppcprefix/lib/lib${i}.dylib" @executable_path/../Resources/lib${i}.dylib build_powerpc/schismtracker
             install_name_tool -change "$HOME/x86_64prefix/lib/lib${i}.dylib" @executable_path/../Resources/lib${i}.dylib build_x86_64/schismtracker
+            install_name_tool -change "$HOME/arm64prefix/lib/lib${i}.dylib" @executable_path/../Resources/lib${i}.dylib build_arm64/schismtracker
           done
           "$HOME/ppc/usr/bin/install_name_tool" -change "$HOME/ppcprefix/lib/libogg.0.dylib" @loader_path/../Resources/libogg.0.dylib "$HOME/ppcprefix/lib/libFLAC.12.dylib"
           install_name_tool -change "$HOME/x86_64prefix/lib/libogg.0.dylib" @loader_path/../Resources/libogg.0.dylib "$HOME/x86_64prefix/lib/libFLAC.12.dylib"
