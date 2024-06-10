@@ -94,7 +94,13 @@ struct video_cf {
 
 	unsigned int tc_bgr32[256];
 };
-static struct video_cf video;
+
+/* don't stomp defaults */
+static struct video_cf video = {
+	.mouse = {
+		.visible = MOUSE_EMULATED
+	}
+};
 
 int video_is_fullscreen(void)
 {

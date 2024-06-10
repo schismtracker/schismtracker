@@ -246,7 +246,6 @@ void ver_init(void) {
 
 	if (get_version_tm(&version)) {
 		version_sec = version_mktime(version.tm_year + 1900, version.tm_mon, version.tm_mday);
-		printf("%d\n", version_sec);
 	} else {
 		puts("help, I am very confused about myself");
 		version_sec = 0;

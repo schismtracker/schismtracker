@@ -67,6 +67,14 @@ struct audio_settings {
 
 extern struct audio_settings audio_settings;
 
+struct audio_device {
+	int id;
+	char* name; /* UTF-8; must be free'd */
+};
+
+extern struct audio_device* audio_device_list;
+extern int audio_device_list_size;
+
 /* --------------------------------------------------------------------- */
 /* some enums */
 
@@ -224,22 +232,19 @@ void song_initialise(void);
 /* called later at startup, and also when the relevant settings are changed */
 void song_init_modplug(void);
 
-/* Called at startup.
-The 'driver_spec' parameter is formatted as driver[:device].
-	'driver' is the name of the SDL driver to use
-		example: "alsa", "dsound"
-		SDL_AUDIODRIVER is set to this value
-	'device' (optional) is the name of the device to use
-		example: "hw:2", "/dev/dsp"
-		SDL_PATH_DSP and AUDIODEV are set to this
+/* parses strings in the old "driver spec" format Schism used in the config
+ * and still uses in the command line */
+void audio_parse_driver_spec(const char* spec, char** driver, char** device);
 
-For the SDL driver, 'nosound' and 'none' are aliases for 'dummy', for
-compatibility with previous Schism Tracker versions, and 'oss' is an
-alias for 'dsp', because 'dsp' is a dumb name for an audio driver. */
-void audio_init(const char *driver_spec);
+/* Called at startup.
+ *
+ * 'nosound' and 'none' are aliases for 'dummy' for compatibility with previous
+ * schism versions, and 'oss' is an alias for 'dsp', because 'dsp' is a dumb name
+ * for an audio driver. */
+void audio_init(const char *driver, const char *device);
 
 /* Reconfigure the same device that was opened before. */
-void audio_reinit(void);
+void audio_reinit(const char *device);
 
 /* eq */
 void song_init_eq(int do_reset, uint32_t mix_freq);
@@ -250,7 +255,11 @@ void song_lock_audio(void);
 void song_unlock_audio(void);
 void song_stop_audio(void);
 void song_start_audio(void);
+
 const char *song_audio_driver(void);
+const char *song_audio_device(void);
+
+int refresh_audio_device_list(void);
 
 void song_toggle_multichannel_mode(void);
 int song_is_multichannel_mode(void);
