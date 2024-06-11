@@ -186,6 +186,11 @@ files_win32 = \
 cflags_win32=-I$(srcdir)/sys/win32
 lib_win32=-lwinmm
 
+if USE_MEDIAFOUNDATION
+files_mediafoundation=fmt/win32mf.c
+lib_mediafoundation=-lmf -lmfuuid -lmfplat -lpropsys -lole32 -lshlwapi
+endif
+
 if HAVE_WINDRES
 
 ## use today's date if we didn't get a commit date from git
@@ -384,7 +389,8 @@ schismtracker_SOURCES = \
 	$(files_windres)		\
 	$(files_flac)			\
 	$(files_jack)			\
-	$(files_opl)
+	$(files_opl)			\
+	$(files_mediafoundation)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
@@ -397,4 +403,4 @@ schismtracker_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 schismtracker_OBJCFLAGS = $(schismtracker_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(LIB_MATH) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(SDL_LIBS)
+schismtracker_LDADD = $(LIB_MATH) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(SDL_LIBS)

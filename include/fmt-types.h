@@ -141,6 +141,10 @@ at all. I might move this toward the top if I can figure out how to identify an 
 READ_INFO(mp3)
 #endif
 
+#if USE_MEDIAFOUNDATION
+READ_INFO(win32mf)
+#endif
+
 /* 15-sample mods have literally no identifying information */
 READ_INFO(mod) LOAD_SONG(mod15)
 

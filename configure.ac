@@ -100,6 +100,11 @@ AC_ARG_WITH([alsa],
 	[],
 	[with_alsa=check])
 
+AC_ARG_WITH([mediafoundation],
+	[AS_HELP_STRING([--with-mediafoundation],[Build with Microsoft Media Foundation support @<:@default=no@:>@])],
+	[],
+	[with_mediafoundation=no])
+
 dnl ------------------------------------------------------------------------
 
 dnl Check for standard programs
@@ -316,6 +321,7 @@ fi
 AM_CONDITIONAL([USE_ALSA], false)
 AM_CONDITIONAL([LINK_TO_ALSA], false)
 if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then
+	saved_LIBS="$LIBS"
 	AC_CHECK_LIB([asound], [snd_seq_open], [alsa_found=yes], [alsa_found=no])
 	if test "x$alsa_found" = "xyes"; then
 		AM_CONDITIONAL([USE_ALSA], true)
@@ -323,11 +329,25 @@ if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then
 		if test "x$ALSA_LINKING" = "xyes"; then
 			AM_CONDITIONAL([LINK_TO_ALSA], true)
 		else
-			LIBS=$saved_libs
+			LIBS="$saved_LIBS"
 			AC_DEFINE([ALSA_DYNAMIC_LOAD], [1], [Dynamically load ALSA symbols])
 		fi
 	elif test "x$with_alsa" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find ALSA])
+	fi
+fi
+
+AM_CONDITIONAL([USE_MEDIAFOUNDATION], false)
+if test "x$with_mediafoundation" = "xcheck" || test "x$with_mediafoundation" = "xyes"; then
+	dnl requires Windows 7 or newer
+	saved_LIBS="$LIBS"
+	AC_CHECK_LIB([mfplat], [MFCreateMFByteStreamOnStream], [mf_found=yes], [mf_found=no])
+	if test "x$mf_found" = "xyes"; then
+		AM_CONDITIONAL([USE_MEDIAFOUNDATION], true)
+		AC_DEFINE([USE_MEDIAFOUNDATION], [1], [Use Media Foundation sample loading])
+		LIBS="$saved_LIBS"
+	elif test "x$with_mediafoundation" = "xyes"; then
+		AC_MSG_ERROR([*** Failed to find Media Foundation with MFCreateMFByteStreamOnStream])
 	fi
 fi
 
