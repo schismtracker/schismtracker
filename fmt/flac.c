@@ -497,25 +497,26 @@ int fmt_flac_export_tail(disko_t *fp)
 }
 
 /* need this because convering huge buffers in memory is KIND OF bad.
- * currently this is the same size as */
+ * currently this is the same size as the buffer length in disko.c */
 #define SAMPLE_BUFFER_LENGTH 65536
 
 int fmt_flac_save_sample(disko_t *fp, song_sample_t *smp)
 {
-	/* I'm assuming this is supposed to block... */
 	if (flac_save_init(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1, smp->c5speed, smp->length))
 		return SAVE_INTERNAL_ERROR;
 
 	/* need to buffer this or else we'll make a HUGE array when
 	 * saving huge samples */
 	size_t offset;
-	size_t total_bytes = smp->length * ((smp->flags & CHN_16BIT) ? 2 : 1) * ((smp->flags & CHN_STEREO) ? 2 : 1);
+	const size_t total_bytes = smp->length * ((smp->flags & CHN_16BIT) ? 2 : 1) * ((smp->flags & CHN_STEREO) ? 2 : 1);
 	for (offset = 0; offset < total_bytes; offset += SAMPLE_BUFFER_LENGTH) {
 		size_t needed = total_bytes - offset;
-		fmt_flac_export_body(fp, (uint8_t*)smp->data + offset, MIN(needed, SAMPLE_BUFFER_LENGTH));
+		if (fmt_flac_export_body(fp, (uint8_t*)smp->data + offset, MIN(needed, SAMPLE_BUFFER_LENGTH)) != DW_OK)
+			return SAVE_INTERNAL_ERROR;
 	}
 
-	fmt_flac_export_tail(fp);
+	if (fmt_flac_export_tail(fp) != DW_OK)
+		return SAVE_INTERNAL_ERROR;
 
 	return SAVE_SUCCESS;
 }
