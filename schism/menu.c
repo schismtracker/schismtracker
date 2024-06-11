@@ -368,7 +368,7 @@ static void playback_menu_selected_cb(void)
 		song_stop();
 		break;
 	case 6: /* reinit soundcard */
-		audio_reinit();
+		audio_reinit(NULL);
 		break;
 	case 7: /* driver screen */
 		set_page(PAGE_PREFERENCES);

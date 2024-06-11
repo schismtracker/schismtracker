@@ -513,7 +513,7 @@ static int handle_key_global(struct key_event * k)
 		if (k->mod & KMOD_CTRL) {
 			if (k->state == KEY_RELEASE)
 				return 1;
-			audio_reinit();
+			audio_reinit(NULL);
 			return 1;
 		}
 		break;

@@ -82,6 +82,7 @@ scripts = \
 
 EXTRA_DIST = \
 	include/auto/README		\
+	schism/charset_data.c   \
 	$(docs)	\
 	$(helptexts)			\
 	$(fonts)			\

@@ -94,7 +94,13 @@ struct video_cf {
 
 	unsigned int tc_bgr32[256];
 };
-static struct video_cf video;
+
+/* don't stomp defaults */
+static struct video_cf video = {
+	.mouse = {
+		.visible = MOUSE_EMULATED
+	}
+};
 
 int video_is_fullscreen(void)
 {
@@ -180,14 +186,16 @@ void video_fullscreen(int new_fs_flag)
 #ifdef SCHISM_WIN32
 		SDL_GetWindowSize(video.window, &video.saved.width, &video.saved.height);
 		SDL_GetWindowPosition(video.window, &video.saved.x, &video.saved.y);
-		win32_toggle_menu(video.window, 0);
 #endif
 		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+#ifdef SCHISM_WIN32
+		win32_toggle_menu(video.window);
+#endif
 	} else {
 		SDL_SetWindowFullscreen(video.window, 0);
 #ifdef SCHISM_WIN32
 		/* the menu must be toggled first here */
-		win32_toggle_menu(video.window, 1);
+		win32_toggle_menu(video.window);
 		SDL_SetWindowSize(video.window, video.saved.width, video.saved.height);
 		SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
 #endif
@@ -394,13 +402,13 @@ void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
 	if (video.mouse.visible && (video.mouse.x != vx || video.mouse.y != vy))
 		status.flags |= SOFTWARE_MOUSE_MOVED;
 
-	vx = CLAMP(vx, 0, NATIVE_SCREEN_WIDTH - 1);
-	vy = CLAMP(vy, 0, NATIVE_SCREEN_HEIGHT - 1);
-
 	vx *= NATIVE_SCREEN_WIDTH;
 	vy *= NATIVE_SCREEN_HEIGHT;
 	vx /= (cfg_video_want_fixed) ? cfg_video_want_fixed_width  : video.width;
 	vy /= (cfg_video_want_fixed) ? cfg_video_want_fixed_height : video.height;
+
+	vx = CLAMP(vx, 0, NATIVE_SCREEN_WIDTH - 1);
+	vy = CLAMP(vy, 0, NATIVE_SCREEN_HEIGHT - 1);
 
 	*x = video.mouse.x = vx;
 	*y = video.mouse.y = vy;

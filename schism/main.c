@@ -64,6 +64,12 @@
 #define NATIVE_SCREEN_WIDTH     640
 #define NATIVE_SCREEN_HEIGHT    400
 
+/* need to redefine these on SDL < 2.0.4 */
+#if !SDL_VERSION_ATLEAST(2, 0, 4)
+#define SDL_AUDIODEVICEADDED (0x1100)
+#define SDL_AUDIODEVICEREMOVED (0x1101)
+#endif
+
 /* --------------------------------------------------------------------- */
 /* globals */
 
@@ -76,6 +82,7 @@ static int shutdown_process = 0;
 
 static const char *video_driver = NULL;
 static const char *audio_driver = NULL;
+static const char *audio_device = NULL;
 static int did_fullscreen = 0;
 static int did_classic = 0;
 
@@ -290,7 +297,7 @@ static void parse_options(int argc, char **argv)
 	while ((opt = getopt_long(argc, argv, SHORT_OPTIONS, long_options, NULL)) != -1) {
 		switch (opt) {
 		case O_SDL_AUDIODRIVER:
-			audio_driver = str_dup(optarg);
+			audio_parse_driver_spec(optarg, (char**)&audio_driver, (char**)&audio_device);
 			break;
 		case O_SDL_VIDEODRIVER:
 			video_driver = str_dup(optarg);
@@ -536,6 +543,11 @@ static void event_loop(void)
 				}
 			}
 			switch (event.type) {
+			case SDL_AUDIODEVICEADDED:
+			case SDL_AUDIODEVICEREMOVED:
+				refresh_audio_device_list();
+				status.flags |= NEED_UPDATE;
+				break;
 #if defined(SCHISM_WIN32)
 #define _ALTTRACKED_KMOD        (KMOD_NUM|KMOD_CAPS)
 #else
@@ -1020,7 +1032,7 @@ int main(int argc, char **argv)
 	font_init();
 	midi_engine_start();
 	log_nl();
-	audio_init(audio_driver);
+	audio_init(audio_driver, audio_device);
 	song_init_modplug();
 
 #ifndef SCHISM_WIN32
