@@ -236,15 +236,17 @@ void song_init_modplug(void);
  * and still uses in the command line */
 void audio_parse_driver_spec(const char* spec, char** driver, char** device);
 
+void audio_flash_reinitialized_text(int success);
+
 /* Called at startup.
  *
  * 'nosound' and 'none' are aliases for 'dummy' for compatibility with previous
  * schism versions, and 'oss' is an alias for 'dsp', because 'dsp' is a dumb name
  * for an audio driver. */
-void audio_init(const char *driver, const char *device);
+int audio_init(const char *driver, const char *device);
 
 /* Reconfigure the same device that was opened before. */
-void audio_reinit(const char *device);
+int audio_reinit(const char *device);
 
 /* eq */
 void song_init_eq(int do_reset, uint32_t mix_freq);
@@ -259,6 +261,7 @@ void song_start_audio(void);
 const char *song_audio_driver(void);
 const char *song_audio_device(void);
 
+void free_audio_device_list(void);
 int refresh_audio_device_list(void);
 
 void song_toggle_multichannel_mode(void);

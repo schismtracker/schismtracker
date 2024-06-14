@@ -57,12 +57,22 @@ static int ramp_group[] = { /* not const because it is modified */
 static int selected_audio_device = 0;
 static int top_audio_device = 0;
 
+static int selected_audio_driver = 0;
+static int top_audio_driver = 0;
+
 #define AUDIO_DEVICE_BOX_X 37
 #define AUDIO_DEVICE_BOX_Y 16
 #define AUDIO_DEVICE_BOX_WIDTH 41
-#define AUDIO_DEVICE_BOX_HEIGHT 7
+#define AUDIO_DEVICE_BOX_HEIGHT 6
 #define AUDIO_DEVICE_BOX_END_X (AUDIO_DEVICE_BOX_X+AUDIO_DEVICE_BOX_WIDTH-1)
 #define AUDIO_DEVICE_BOX_END_Y (AUDIO_DEVICE_BOX_Y+AUDIO_DEVICE_BOX_HEIGHT-1)
+
+#define AUDIO_DRIVER_BOX_X 37
+#define AUDIO_DRIVER_BOX_Y 25
+#define AUDIO_DRIVER_BOX_WIDTH 41
+#define AUDIO_DRIVER_BOX_HEIGHT 6
+#define AUDIO_DRIVER_BOX_END_X (AUDIO_DRIVER_BOX_X+AUDIO_DRIVER_BOX_WIDTH-1)
+#define AUDIO_DRIVER_BOX_END_Y (AUDIO_DRIVER_BOX_Y+AUDIO_DRIVER_BOX_HEIGHT-1)
 
 /* --------------------------------------------------------------------- */
 
@@ -80,6 +90,10 @@ static void preferences_draw_const(void)
 	draw_text("Available Audio Devices", AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y - 2, 0, 2);
 	draw_box(AUDIO_DEVICE_BOX_X - 1, AUDIO_DEVICE_BOX_Y - 1, AUDIO_DEVICE_BOX_END_X + 1,
 		AUDIO_DEVICE_BOX_END_Y + 1, BOX_THICK | BOX_INNER | BOX_INSET);
+
+	draw_text("Available Audio Drivers", AUDIO_DRIVER_BOX_X, AUDIO_DRIVER_BOX_Y - 2, 0, 2);
+	draw_box(AUDIO_DRIVER_BOX_X - 1, AUDIO_DRIVER_BOX_Y - 1, AUDIO_DRIVER_BOX_END_X + 1,
+		AUDIO_DRIVER_BOX_END_Y + 1, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	for (i = 0; interpolation_modes[i]; i++);
 
@@ -182,8 +196,6 @@ static void audio_device_list_draw() {
 	int fg, bg;
 	const char* current_audio_device = song_audio_device();
 
-	//draw_box(35, 15, 78, 26, BOX_THICK | BOX_INNER | BOX_INSET);
-
 	draw_fill_chars(AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y, AUDIO_DEVICE_BOX_END_X, AUDIO_DEVICE_BOX_END_Y, 0);
 
 	/* this macro expects the device name to be in UTF-8 */
@@ -222,7 +234,7 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 {
 	int new_device = selected_audio_device;
 	int load_selected_device = 0;
-	static const int focus_offsets[] = {1, 1, 2, 2, 2, 3, 3};
+	static const int focus_offsets[] = {1, 1, 2, 2, 2, 3};
 
 	switch (k->mouse) {
 	case MOUSE_DBLCLICK:
@@ -303,7 +315,6 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 
 		change_focus_to(focus_offsets[selected_audio_device]);
 		return 1;
-	/* XXX need better traversion on the keyboard, see page_palette.c */
 	default:
 		if (k->mouse == MOUSE_NONE)
 			return 0;
@@ -332,11 +343,161 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 
 /* --------------------------------------------------------------------- */
 
+static void audio_driver_list_draw() {
+	int interp_modes;
+	for (interp_modes = 0; interpolation_modes[interp_modes]; interp_modes++);
+
+	const int num_drivers = SDL_GetNumAudioDrivers();
+	int n, o = 0, focused = (ACTIVE_PAGE.selected_widget == 14 + interp_modes);
+	int fg, bg;
+	const char* current_audio_driver = song_audio_driver();
+
+	draw_fill_chars(AUDIO_DRIVER_BOX_X, AUDIO_DRIVER_BOX_Y, AUDIO_DRIVER_BOX_END_X, AUDIO_DRIVER_BOX_END_Y, 0);
+
+	for (n = top_audio_driver; n < num_drivers && o < AUDIO_DRIVER_BOX_HEIGHT; n++) {
+		const char* name = SDL_GetAudioDriver(n);
+
+		if ((o + top_audio_driver) == selected_audio_driver) {
+			if (focused) {
+				fg = 0;
+				bg = 3;
+			} else {
+				fg = 6;
+				bg = 14;
+			}
+		} else {
+			fg = 6;
+			bg = 0;
+		}
+
+		draw_text_bios_len(!strcmp(current_audio_driver, name) ? "*" : " ", 1, AUDIO_DRIVER_BOX_X, AUDIO_DRIVER_BOX_Y + o, fg, bg);
+		draw_text_bios_len(name, AUDIO_DRIVER_BOX_WIDTH - 1, AUDIO_DRIVER_BOX_X + 1, AUDIO_DRIVER_BOX_Y + o, fg, bg);
+		o++;
+	}
+}
+
+static int audio_driver_list_handle_key_on_list(struct key_event * k)
+{
+	int new_driver = selected_audio_driver;
+	int load_selected_driver = 0;
+	static const int focus_offsets[] = {4, 4, 4, 5, 5, 5};
+	const int num_drivers = SDL_GetNumAudioDrivers();
+
+	switch (k->mouse) {
+	case MOUSE_DBLCLICK:
+	case MOUSE_CLICK:
+		if (k->state == KEY_PRESS)
+			return 0;
+		if (k->x < AUDIO_DRIVER_BOX_X || k->y < AUDIO_DRIVER_BOX_Y || k->y > AUDIO_DRIVER_BOX_END_Y || k->x > AUDIO_DRIVER_BOX_END_X) return 0;
+		new_driver = top_audio_driver + (k->y - AUDIO_DRIVER_BOX_Y);
+		if (k->mouse == MOUSE_DBLCLICK || new_driver == selected_audio_driver)
+			load_selected_driver = 1;
+		break;
+	case MOUSE_SCROLL_UP:
+		new_driver -= MOUSE_SCROLL_LINES;
+		break;
+	case MOUSE_SCROLL_DOWN:
+		new_driver += MOUSE_SCROLL_LINES;
+		break;
+	default:
+		if (k->state == KEY_RELEASE)
+			return 0;
+	}
+
+	switch (k->sym) {
+	case SDLK_UP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		if (--new_driver < 0) {
+			change_focus_to(47);
+			return 1;
+		}
+		break;
+	case SDLK_DOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		if (++new_driver >= num_drivers + 1) {
+			//change_focus_to(49);
+			return 1;
+		}
+		break;
+	case SDLK_HOME:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		new_driver = 0;
+		break;
+	case SDLK_PAGEUP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+
+		if (new_driver == 0)
+			return 1;
+
+		new_driver -= 16;
+		break;
+	case SDLK_END:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		new_driver = num_drivers;
+		break;
+	case SDLK_PAGEDOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		new_driver += 16;
+		break;
+	case SDLK_RETURN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		load_selected_driver = 1;
+		break;
+	case SDLK_TAB:
+		if (!(k->mod & KMOD_SHIFT || NO_MODIFIER(k->mod)))
+			return 0;
+
+		change_focus_to(focus_offsets[selected_audio_driver]);
+		return 1;
+	case SDLK_LEFT: case SDLK_RIGHT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+
+		change_focus_to(focus_offsets[selected_audio_driver]);
+		return 1;
+	default:
+		if (k->mouse == MOUSE_NONE)
+			return 0;
+	}
+
+	new_driver = CLAMP(new_driver, 0, num_drivers - 1);
+
+	if (new_driver != selected_audio_driver) {
+		selected_audio_driver = new_driver;
+		status.flags |= NEED_UPDATE;
+
+		/* these HAVE to be done separately (and not as a CLAMP) because they aren't
+		 * really guaranteed to be ranges */
+		top_audio_driver = MIN(top_audio_driver, selected_audio_driver);
+		top_audio_driver = MAX(top_audio_driver, selected_audio_driver - AUDIO_DRIVER_BOX_HEIGHT + 1);
+
+		top_audio_driver = MIN(top_audio_driver, num_drivers - AUDIO_DRIVER_BOX_HEIGHT + 1);
+		top_audio_driver = MAX(top_audio_driver, 0);
+	}
+
+	if (load_selected_driver) {
+		audio_flash_reinitialized_text(audio_init(SDL_GetAudioDriver(selected_audio_driver), NULL));
+		status.flags |= NEED_UPDATE;
+	}
+
+	return 1;
+}
+
+/* --------------------------------------------------------------------- */
+
 static void save_config_now(UNUSED void *ign)
 {
 	/* TODO */
 	cfg_midipage_save(); /* what is this doing here? */
 	cfg_atexit_save();
+	cfg_save_output();
 	status_text_flash("Configuration saved");
 }
 
@@ -352,7 +513,7 @@ void preferences_load_page(struct page *page)
 	page->title = "Preferences (Shift-F5)";
 	page->draw_const = preferences_draw_const;
 	page->set_page = preferences_set_page;
-	page->total_widgets = 14 + interp_modes;
+	page->total_widgets = 15 + interp_modes;
 	page->widgets = widgets_preferences;
 	page->help_index = HELP_GLOBAL;
 
@@ -375,6 +536,12 @@ void preferences_load_page(struct page *page)
 					ptr,
 					2,
 					interp_group);
+		if (i < 1)
+			widgets_preferences[i+2].next.left = widgets_preferences[i+2].next.right =
+				interp_modes + 13;
+		else if (i < 4)
+			widgets_preferences[i+2].next.left = widgets_preferences[i+2].next.right =
+				interp_modes + 14;
 	}
 
 	for (j = 0; j < 4; j++) {
@@ -428,4 +595,10 @@ void preferences_load_page(struct page *page)
 	widgets_preferences[i+13].y = AUDIO_DEVICE_BOX_Y;
 	widgets_preferences[i+13].width = AUDIO_DEVICE_BOX_WIDTH;
 	widgets_preferences[i+13].height = AUDIO_DEVICE_BOX_HEIGHT;
+
+	create_other(widgets_preferences+i+14, 0, audio_driver_list_handle_key_on_list, NULL, audio_driver_list_draw);
+	widgets_preferences[i+14].x = AUDIO_DRIVER_BOX_X;
+	widgets_preferences[i+14].y = AUDIO_DRIVER_BOX_Y;
+	widgets_preferences[i+14].width = AUDIO_DRIVER_BOX_WIDTH;
+	widgets_preferences[i+14].height = AUDIO_DRIVER_BOX_HEIGHT;
 }

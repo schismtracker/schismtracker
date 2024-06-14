@@ -942,6 +942,8 @@ void schism_exit(int status)
 		run_exit_hook();
 #endif
 
+	free_audio_device_list();
+
 	if (shutdown_process & EXIT_SAVECFG)
 		cfg_atexit_save();
 

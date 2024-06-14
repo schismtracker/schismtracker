@@ -302,6 +302,21 @@ void cfg_save(void)
 	cfg_free(&cfg);
 }
 
+void cfg_save_output(void)
+{
+	char *ptr;
+	cfg_file_t cfg;
+
+	ptr = dmoz_path_concat(cfg_dir_dotschism, "config");
+	cfg_init(&cfg, ptr);
+	free(ptr);
+
+	cfg_save_audio_playback(&cfg);
+
+	cfg_write(&cfg);
+	cfg_free(&cfg);
+}
+
 void cfg_atexit_save(void)
 {
 	char *ptr;

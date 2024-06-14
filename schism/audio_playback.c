@@ -202,7 +202,7 @@ POST_EVENT:
 // ------------------------------------------------------------------------------------------------------------
 // audio device list
 
-static void free_audio_device_list(void) {
+void free_audio_device_list(void) {
 	for (int count = 0; count < audio_device_list_size; count++)
 		free(audio_device_list[count].name);
 
@@ -1108,6 +1108,12 @@ void cfg_atexit_save_audio(cfg_file_t *cfg)
 	cfg_set_number(cfg, "EQ High Band", "gain", audio_settings.eq_gain[3]);
 }
 
+void cfg_save_audio_playback(cfg_file_t *cfg)
+{
+	cfg_set_string(cfg, "Audio", "driver", driver_name);
+	cfg_set_string(cfg, "Audio", "device", device_name);
+}
+
 void cfg_save_audio(cfg_file_t *cfg)
 {
 	cfg_atexit_save_audio(cfg);
@@ -1430,7 +1436,7 @@ static int _audio_open_device(const char *device, int verbose)
 	};
 	SDL_AudioSpec obtained;
 
-#define SCHISM_CHANGE_ALLOWED (SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_FORMAT_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE)
+#define SCHISM_CHANGE_ALLOWED (SDL_AUDIO_ALLOW_FREQUENCY_CHANGE)
 
 	if (device && *device) {
 		current_audio_device = SDL_OpenAudioDevice(device, 0, &desired, &obtained, SCHISM_CHANGE_ALLOWED);
@@ -1472,7 +1478,7 @@ success:
 }
 
 // Configure a device. (called at startup)
-static void _audio_init_head(const char *driver, const char *device, int verbose)
+static int _audio_init_head(const char *driver, const char *device, int verbose)
 {
 	/* Use the driver from the config if it exists. */
 	if (!driver || !*driver)
@@ -1493,16 +1499,9 @@ static void _audio_init_head(const char *driver, const char *device, int verbose
 		goto fail;
 	}
 
-	return;
+	return 1;
 
 fail:
-	/* use the dummy device as a fallback */
-	if (!_audio_open_driver("dummy") || !_audio_open_device(NULL, verbose))
-		goto catastrophy;
-
-	return;
-
-catastrophy:
 	/* whoops! */
 	fputs("Couldn't initialize audio!\n", stderr);
 	const char* err = SDL_GetError();
@@ -1522,30 +1521,49 @@ static void _audio_init_tail(void)
 	song_start_audio();
 }
 
-/* driver == NULL || device == NULL is fine here */
-void audio_init(const char *driver, const char *device)
-{
-	_audio_init_head(driver, device, 1);
-	_audio_init_tail();
+void audio_flash_reinitialized_text(int success) {
+	if (success) {
+		status_text_flash((status.flags & CLASSIC_MODE)
+			? "Sound Blaster 16 reinitialised"
+			: "Audio output reinitialised");
+	} else {
+		/* ... */
+		status_text_flash("Failed to reinitialise audio!");
+	}
 }
 
-void audio_reinit(const char *device)
+/* driver == NULL || device == NULL is fine here */
+int audio_init(const char *driver, const char *device)
+{
+	int success;
+
+	if (status.flags & CLASSIC_MODE)
+		song_stop();
+
+	log_nl();
+	success = _audio_init_head(driver, device, 1);
+	_audio_init_tail();
+	return success;
+}
+
+int audio_reinit(const char *device)
 {
 	if (status.flags & (DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN)) {
 		/* never allowed */
-		return;
+		return 0;
 	}
 
 	int success;
 
-	song_stop();
+	if (status.flags & CLASSIC_MODE)
+		song_stop();
+
 	success = _audio_open_device(device, 0);
 	_audio_init_tail();
 
-	if (success)
-		status_text_flash((status.flags & CLASSIC_MODE)
-			? "Sound Blaster 16 reinitialised"
-			: "Audio output reinitialised");
+	audio_flash_reinitialized_text(success);
+
+	return success;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
