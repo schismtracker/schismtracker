@@ -201,7 +201,6 @@ POST_EVENT:
 
 // ------------------------------------------------------------------------------------------------------------
 // audio device list
-// TODO: provide a way to pick between audio drivers as well
 
 static void free_audio_device_list(void) {
 	for (int count = 0; count < audio_device_list_size; count++)
@@ -1487,6 +1486,8 @@ static void _audio_init_head(const char *driver, const char *device, int verbose
 		goto fail;
 	}
 
+	refresh_audio_device_list();
+
 	if (!_audio_open_device(device, verbose)) {
 		fputs("Failed to open audio device!\n", stderr);
 		goto fail;
@@ -1534,15 +1535,17 @@ void audio_reinit(const char *device)
 		/* never allowed */
 		return;
 	}
+
+	int success;
+
 	song_stop();
-	_audio_init_head(driver_name, device, 0);
+	success = _audio_open_device(device, 0);
 	_audio_init_tail();
 
-	if (status.flags & CLASSIC_MODE)
-		// FIXME: but we spontaneously report a GUS card sometimes...
-		status_text_flash("Sound Blaster 16 reinitialised");
-	else
-		status_text_flash("Audio output reinitialised");
+	if (success)
+		status_text_flash((status.flags & CLASSIC_MODE)
+			? "Sound Blaster 16 reinitialised"
+			: "Audio output reinitialised");
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

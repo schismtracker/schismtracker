@@ -55,13 +55,14 @@ static int ramp_group[] = { /* not const because it is modified */
 };
 
 static int selected_audio_device = 0;
+static int top_audio_device = 0;
 
 #define AUDIO_DEVICE_BOX_X 37
 #define AUDIO_DEVICE_BOX_Y 16
-#define AUDIO_DEVICE_BOX_WIDTH 40
-#define AUDIO_DEVICE_BOX_HEIGHT 6
-#define AUDIO_DEVICE_BOX_END_X (AUDIO_DEVICE_BOX_X+AUDIO_DEVICE_BOX_WIDTH)
-#define AUDIO_DEVICE_BOX_END_Y (AUDIO_DEVICE_BOX_Y+AUDIO_DEVICE_BOX_HEIGHT)
+#define AUDIO_DEVICE_BOX_WIDTH 41
+#define AUDIO_DEVICE_BOX_HEIGHT 7
+#define AUDIO_DEVICE_BOX_END_X (AUDIO_DEVICE_BOX_X+AUDIO_DEVICE_BOX_WIDTH-1)
+#define AUDIO_DEVICE_BOX_END_Y (AUDIO_DEVICE_BOX_Y+AUDIO_DEVICE_BOX_HEIGHT-1)
 
 /* --------------------------------------------------------------------- */
 
@@ -173,7 +174,6 @@ static void change_mixer(void)
 /* --------------------------------------------------------------------- */
 
 static void audio_device_list_draw() {
-	/* this sucks */
 	int interp_modes;
 
 	for (interp_modes = 0; interpolation_modes[interp_modes]; interp_modes++);
@@ -186,9 +186,10 @@ static void audio_device_list_draw() {
 
 	draw_fill_chars(AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y, AUDIO_DEVICE_BOX_END_X, AUDIO_DEVICE_BOX_END_Y, 0);
 
+	/* this macro expects the device name to be in UTF-8 */
 #define DRAW_DEVICE(name) \
 	do { \
-		if (o == selected_audio_device) { \
+		if ((o + top_audio_device) == selected_audio_device) { \
 			if (focused) { \
 				fg = 0; \
 				bg = 3; \
@@ -202,17 +203,17 @@ static void audio_device_list_draw() {
 		}\
 	\
 		draw_text_bios_len(!strcmp(current_audio_device, name) ? "*" : " ", 1, AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y + o, fg, bg); \
-		draw_text_bios_len(name, AUDIO_DEVICE_BOX_WIDTH, AUDIO_DEVICE_BOX_X + 1, AUDIO_DEVICE_BOX_Y + o, fg, bg); \
+		CHARSET_EASY_MODE(name, CHARSET_UTF8, CHARSET_CP437, { \
+			draw_text_bios_len(out, AUDIO_DEVICE_BOX_WIDTH - 1, AUDIO_DEVICE_BOX_X + 1, AUDIO_DEVICE_BOX_Y + o, fg, bg); \
+		}); \
 		o++; \
 	} while (0)
 
-	DRAW_DEVICE("default");
+	if (top_audio_device < 1)
+		DRAW_DEVICE("default");
 
-	for (n = 0; n < audio_device_list_size; n++) {
-		CHARSET_EASY_MODE(audio_device_list[n].name, CHARSET_UTF8, CHARSET_CP437, {
-			DRAW_DEVICE(out);
-		});
-	}
+	for (n = MAX(0, top_audio_device - 1); n < audio_device_list_size && o < AUDIO_DEVICE_BOX_HEIGHT; n++)
+		DRAW_DEVICE(audio_device_list[n].name);
 
 #undef DRAW_DEVICE
 }
@@ -221,6 +222,7 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 {
 	int new_device = selected_audio_device;
 	int load_selected_device = 0;
+	static const int focus_offsets[] = {1, 1, 2, 2, 2, 3, 3};
 
 	switch (k->mouse) {
 	case MOUSE_DBLCLICK:
@@ -228,7 +230,7 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 		if (k->state == KEY_PRESS)
 			return 0;
 		if (k->x < AUDIO_DEVICE_BOX_X || k->y < AUDIO_DEVICE_BOX_Y || k->y > AUDIO_DEVICE_BOX_END_Y || k->x > AUDIO_DEVICE_BOX_END_X) return 0;
-		new_device = (k->y - AUDIO_DEVICE_BOX_Y);
+		new_device = top_audio_device + (k->y - AUDIO_DEVICE_BOX_Y);
 		if (k->mouse == MOUSE_DBLCLICK || new_device == selected_audio_device)
 			load_selected_device = 1;
 		break;
@@ -289,6 +291,18 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 			return 0;
 		load_selected_device = 1;
 		break;
+	case SDLK_TAB:
+		if (!(k->mod & KMOD_SHIFT || NO_MODIFIER(k->mod)))
+			return 0;
+
+		change_focus_to(focus_offsets[selected_audio_device]);
+		return 1;
+	case SDLK_LEFT: case SDLK_RIGHT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+
+		change_focus_to(focus_offsets[selected_audio_device]);
+		return 1;
 	/* XXX need better traversion on the keyboard, see page_palette.c */
 	default:
 		if (k->mouse == MOUSE_NONE)
@@ -300,6 +314,14 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 	if (new_device != selected_audio_device) {
 		selected_audio_device = new_device;
 		status.flags |= NEED_UPDATE;
+
+		/* these HAVE to be done separately (and not as a CLAMP) because they aren't
+		 * really guaranteed to be ranges */
+		top_audio_device = MIN(top_audio_device, selected_audio_device);
+		top_audio_device = MAX(top_audio_device, selected_audio_device - AUDIO_DEVICE_BOX_HEIGHT + 1);
+
+		top_audio_device = MIN(top_audio_device, audio_device_list_size - AUDIO_DEVICE_BOX_HEIGHT + 1);
+		top_audio_device = MAX(top_audio_device, 0);
 	}
 
 	if (load_selected_device)
@@ -336,6 +358,12 @@ void preferences_load_page(struct page *page)
 
 	create_thumbbar(widgets_preferences + 0, 22, 14, 5, 0, 1, 1, change_volume, 0, VOLUME_SCALE);
 	create_thumbbar(widgets_preferences + 1, 22, 15, 5, 0, 2, 2, change_volume, 0, VOLUME_SCALE);
+	widgets_preferences[0].next.left = widgets_preferences[0].next.right =
+		widgets_preferences[0].next.tab = widgets_preferences[0].next.backtab =
+		widgets_preferences[1].next.left = widgets_preferences[1].next.right =
+		widgets_preferences[1].next.tab = widgets_preferences[1].next.backtab =
+			interp_modes + 13;
+
 
 	for (i = 0; interpolation_modes[i]; i++) {
 		sprintf(buf, "%d Bit, %s", audio_settings.bits, interpolation_modes[i]);
@@ -400,7 +428,4 @@ void preferences_load_page(struct page *page)
 	widgets_preferences[i+13].y = AUDIO_DEVICE_BOX_Y;
 	widgets_preferences[i+13].width = AUDIO_DEVICE_BOX_WIDTH;
 	widgets_preferences[i+13].height = AUDIO_DEVICE_BOX_HEIGHT;
-
-	widgets_preferences[i+13].next.tab = -1;
-	widgets_preferences[i+13].next.backtab = -1;
 }
