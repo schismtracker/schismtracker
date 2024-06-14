@@ -201,8 +201,8 @@ static void audio_device_list_draw() {
 			bg = 0; \
 		}\
 	\
-		draw_text_len(!strcmp(current_audio_device, name) ? "*" : " ", 1, AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y + o, fg, bg); \
-		draw_text_len(name, AUDIO_DEVICE_BOX_WIDTH, AUDIO_DEVICE_BOX_X + 1, AUDIO_DEVICE_BOX_Y + o, fg, bg); \
+		draw_text_bios_len(!strcmp(current_audio_device, name) ? "*" : " ", 1, AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y + o, fg, bg); \
+		draw_text_bios_len(name, AUDIO_DEVICE_BOX_WIDTH, AUDIO_DEVICE_BOX_X + 1, AUDIO_DEVICE_BOX_Y + o, fg, bg); \
 		o++; \
 	} while (0)
 
