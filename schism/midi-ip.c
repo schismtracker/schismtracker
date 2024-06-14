@@ -160,17 +160,17 @@ static int _get_fd(int pb, int isout)
 		int asdf = WSAGetLastError();
 		perror("binderror");
 		switch (asdf) {
-			case WSANOTINITIALISED: perror("WSANOTINITIALISED"); break;
-			case WSAENETDOWN: perror("WSAENETDOWN"); break;
-			case WSAEFAULT: perror("WSAEFAULT"); break;
-			case WSAEINVAL: perror("WSAEINVAL"); break;
-			case WSAEINPROGRESS: perror("WSAEINPROGRESS"); break;
-			case WSAENOTSOCK: perror("WSAENOTSOCK"); break;
-			case WSAEACCES: perror("WSAEACCES"); break;
-			case WSAEADDRINUSE: perror("WSAEADDRINUSE"); break;
-			case WSAEADDRNOTAVAIL: perror("WSAEADDRNOTAVAIL"); break;
-			case WSAENOBUFS: perror("WSAENOBUFS"); break;
-			default: perror("default"); break;
+		case WSANOTINITIALISED: perror("WSANOTINITIALISED"); break;
+		case WSAENETDOWN: perror("WSAENETDOWN"); break;
+		case WSAEFAULT: perror("WSAEFAULT"); break;
+		case WSAEINVAL: perror("WSAEINVAL"); break;
+		case WSAEINPROGRESS: perror("WSAEINPROGRESS"); break;
+		case WSAENOTSOCK: perror("WSAENOTSOCK"); break;
+		case WSAEACCES: perror("WSAEACCES"); break;
+		case WSAEADDRINUSE: perror("WSAEADDRINUSE"); break;
+		case WSAEADDRNOTAVAIL: perror("WSAEADDRNOTAVAIL"); break;
+		case WSAENOBUFS: perror("WSAENOBUFS"); break;
+		default: perror("default"); break;
 		}
 		closesocket(fd);
 # else
@@ -300,14 +300,14 @@ static int _ip_thread(struct midi_provider *p)
 				perror("selectError:");
 				int asdf = WSAGetLastError();
 				switch (asdf) {
-					case WSANOTINITIALISED: perror("WSANOTINITIALISED"); break;
-					case WSAEFAULT: perror("WSAEFAULT"); break;
-					case WSAENETDOWN: perror("WSAENETDOWN"); break;
-					case WSAEINVAL: perror("WSAEINVAL"); break;
-					case WSAEINTR: perror("WSAEINTR"); break;
-					case WSAEINPROGRESS: perror("WSAEINPROGRESS"); break;
-					case WSAENOTSOCK: perror("WSAENOTSOCK"); break;
-					default: perror("default"); break;
+				case WSANOTINITIALISED: perror("WSANOTINITIALISED"); break;
+				case WSAEFAULT: perror("WSAEFAULT"); break;
+				case WSAENETDOWN: perror("WSAENETDOWN"); break;
+				case WSAEINVAL: perror("WSAEINVAL"); break;
+				case WSAEINTR: perror("WSAEINTR"); break;
+				case WSAEINPROGRESS: perror("WSAEINPROGRESS"); break;
+				case WSAENOTSOCK: perror("WSAENOTSOCK"); break;
+				default: perror("default"); break;
 				}
 			}
 # endif

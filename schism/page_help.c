@@ -111,25 +111,25 @@ static void help_redraw(void)
 	ptr = lines + top_line;
 	for (pos = 13, n = top_line; pos < 45; pos++, n++) {
 		switch (**ptr) {
-			default:
-				lp = strcspn(*ptr + 1, "\015\012");
-				if (LINE_BIOS(*ptr)) {
-					draw_text_bios_len(*ptr + 1, lp, 2, pos, 6, 0);
-				} else {
-					draw_text_len(*ptr + 1, lp, 2, pos, **ptr == LTYPE_DISABLED ? 7 : 6, 0);
-				}
-				break;
-			case LTYPE_GRAPHIC:
-				lp = strcspn(*ptr + 1, "\015\012");
-				for (x = 1; x <= lp; x++) {
-					ch = ptr[0][x];
-					if (ch >= '1' && ch <= '9') ch = graphic_chars[ch - '0'];
-					draw_char(ch, x + 1, pos, 6, 0);
-				}
-				break;
-			case LTYPE_SEPARATOR:
-				for (x = 2; x < 78; x++) draw_char(154, x, pos, 6, 0);
-				break;
+		default:
+			lp = strcspn(*ptr + 1, "\015\012");
+			if (LINE_BIOS(*ptr)) {
+				draw_text_bios_len(*ptr + 1, lp, 2, pos, 6, 0);
+			} else {
+				draw_text_len(*ptr + 1, lp, 2, pos, **ptr == LTYPE_DISABLED ? 7 : 6, 0);
+			}
+			break;
+		case LTYPE_GRAPHIC:
+			lp = strcspn(*ptr + 1, "\015\012");
+			for (x = 1; x <= lp; x++) {
+				ch = ptr[0][x];
+				if (ch >= '1' && ch <= '9') ch = graphic_chars[ch - '0'];
+				draw_char(ch, x + 1, pos, 6, 0);
+			}
+			break;
+		case LTYPE_SEPARATOR:
+			for (x = 2; x < 78; x++) draw_char(154, x, pos, 6, 0);
+			break;
 		}
 		ptr++;
 	}
@@ -157,40 +157,40 @@ static int help_handle_key(struct key_event *k)
 		return 0;
 	}
 	switch (k->sym) {
-		case SDLK_ESCAPE:
+	case SDLK_ESCAPE:
+		if (k->state == KEY_RELEASE) return 1;
+		set_page(status.previous_page);
+		return 1;
+	case SDLK_UP:
+		if (k->state == KEY_RELEASE) return 1;
+		new_line--;
+		break;
+	case SDLK_DOWN:
+		if (k->state == KEY_RELEASE) return 1;
+		new_line++;
+		break;
+	case SDLK_PAGEUP:
+		if (k->state == KEY_RELEASE) return 1;
+		new_line -= 32;
+		break;
+	case SDLK_PAGEDOWN:
+		if (k->state == KEY_RELEASE) return 1;
+		new_line += 32;
+		break;
+	case SDLK_HOME:
+		if (k->state == KEY_RELEASE) return 1;
+		new_line = 0;
+		break;
+	case SDLK_END:
+		if (k->state == KEY_RELEASE) return 1;
+		new_line = num_lines - 32;
+		break;
+	default:
+		if (k->mouse != MOUSE_NONE) {
 			if (k->state == KEY_RELEASE) return 1;
-			set_page(status.previous_page);
-			return 1;
-		case SDLK_UP:
-			if (k->state == KEY_RELEASE) return 1;
-			new_line--;
-			break;
-		case SDLK_DOWN:
-			if (k->state == KEY_RELEASE) return 1;
-			new_line++;
-			break;
-		case SDLK_PAGEUP:
-			if (k->state == KEY_RELEASE) return 1;
-			new_line -= 32;
-			break;
-		case SDLK_PAGEDOWN:
-			if (k->state == KEY_RELEASE) return 1;
-			new_line += 32;
-			break;
-		case SDLK_HOME:
-			if (k->state == KEY_RELEASE) return 1;
-			new_line = 0;
-			break;
-		case SDLK_END:
-			if (k->state == KEY_RELEASE) return 1;
-			new_line = num_lines - 32;
-			break;
-		default:
-			if (k->mouse != MOUSE_NONE) {
-				if (k->state == KEY_RELEASE) return 1;
-			} else {
-				return 0;
-			}
+		} else {
+			return 0;
+		}
 	}
 
 	new_line = CLAMP(new_line, 0, num_lines - 32);

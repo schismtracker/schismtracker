@@ -175,32 +175,29 @@ float coef(int pc_nr, float p_ofs, float p_cut, int p_width, int p_type)
 	}
 
 	switch (p_type) {
-		case WFIR_HANN: wc = 0.50 - 0.50 * cos(idl * pos_u); break;
+	case WFIR_HANN: wc = 0.50 - 0.50 * cos(idl * pos_u); break;
 
-		case WFIR_HAMMING: wc = 0.54 - 0.46 * cos(idl * pos_u); break;
+	case WFIR_HAMMING: wc = 0.54 - 0.46 * cos(idl * pos_u); break;
 
-		case WFIR_BLACKMANEXACT: wc = 0.42 - 0.50 * cos(idl * pos_u) + 0.08 * cos(2.0 * idl * pos_u); break;
+	case WFIR_BLACKMANEXACT: wc = 0.42 - 0.50 * cos(idl * pos_u) + 0.08 * cos(2.0 * idl * pos_u); break;
 
-		case WFIR_BLACKMAN3T61: wc = 0.44959 - 0.49364 * cos(idl * pos_u) + 0.05677 * cos(2.0 * idl * pos_u); break;
+	case WFIR_BLACKMAN3T61: wc = 0.44959 - 0.49364 * cos(idl * pos_u) + 0.05677 * cos(2.0 * idl * pos_u); break;
 
-		case WFIR_BLACKMAN3T67: wc = 0.42323 - 0.49755 * cos(idl * pos_u) + 0.07922 * cos(2.0 * idl * pos_u); break;
+	case WFIR_BLACKMAN3T67: wc = 0.42323 - 0.49755 * cos(idl * pos_u) + 0.07922 * cos(2.0 * idl * pos_u); break;
 
-		case WFIR_BLACKMAN4T92:
-			wc = 0.35875 - 0.48829 * cos(idl * pos_u) + 0.14128 * cos(2.0 * idl * pos_u)
-				 - 0.01168 * cos(3.0 * idl * pos_u);
-			break;
+	case WFIR_BLACKMAN4T92:
+		wc = 0.35875 - 0.48829 * cos(idl * pos_u) + 0.14128 * cos(2.0 * idl * pos_u) - 0.01168 * cos(3.0 * idl * pos_u);
+		break;
 
-		case WFIR_BLACKMAN4T74:
-			wc = 0.40217 - 0.49703 * cos(idl * pos_u) + 0.09392 * cos(2.0 * idl * pos_u)
-				 - 0.00183 * cos(3.0 * idl * pos_u);
-			break;
+	case WFIR_BLACKMAN4T74:
+		wc = 0.40217 - 0.49703 * cos(idl * pos_u) + 0.09392 * cos(2.0 * idl * pos_u) - 0.00183 * cos(3.0 * idl * pos_u);
+		break;
 
-		case WFIR_KAISER4T:
-			wc = 0.40243 - 0.49804 * cos(idl * pos_u) + 0.09831 * cos(2.0 * idl * pos_u)
-				 - 0.00122 * cos(3.0 * idl * pos_u);
-			break;
+	case WFIR_KAISER4T:
+		wc = 0.40243 - 0.49804 * cos(idl * pos_u) + 0.09831 * cos(2.0 * idl * pos_u) - 0.00122 * cos(3.0 * idl * pos_u);
+		break;
 
-		default: wc = 1.0; break;
+	default: wc = 1.0; break;
 	}
 
 	pos *= M_zPI;

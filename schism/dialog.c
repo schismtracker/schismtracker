@@ -189,41 +189,41 @@ int dialog_handle_key(struct key_event *k)
 	/* this SHOULD be handling on k->state press but the widget key handler is stealing that key. */
 	if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod)) {
 		switch (k->sym) {
-			case SDLK_y:
-				switch (status.dialog_type) {
-					case DIALOG_YES_NO:
-					case DIALOG_OK_CANCEL: dialog_yes(d->data); return 1;
-					default: break;
-				}
-				break;
-			case SDLK_n:
-				switch (status.dialog_type) {
-					case DIALOG_YES_NO:
-						/* in Impulse Tracker, 'n' means cancel, not "no"!
-				(results in different behavior on sample quality convert dialog) */
-						if (!(status.flags & CLASSIC_MODE)) {
-							dialog_no(d->data);
-							return 1;
-						} /* else fall through */
-					case DIALOG_OK_CANCEL: dialog_cancel(d->data); return 1;
-					default: break;
-				}
-				break;
-			case SDLK_c:
-				switch (status.dialog_type) {
-					case DIALOG_YES_NO:
-					case DIALOG_OK_CANCEL: break;
-					default: return 0;
-				} /* and fall through */
-			case SDLK_ESCAPE: dialog_cancel(d->data); return 1;
-			case SDLK_o:
-				switch (status.dialog_type) {
-					case DIALOG_YES_NO:
-					case DIALOG_OK_CANCEL: break;
-					default: return 0;
-				} /* and fall through */
-			case SDLK_RETURN: dialog_yes(d->data); return 1;
+		case SDLK_y:
+			switch (status.dialog_type) {
+			case DIALOG_YES_NO:
+			case DIALOG_OK_CANCEL: dialog_yes(d->data); return 1;
 			default: break;
+			}
+			break;
+		case SDLK_n:
+			switch (status.dialog_type) {
+			case DIALOG_YES_NO:
+				/* in Impulse Tracker, 'n' means cancel, not "no"!
+				(results in different behavior on sample quality convert dialog) */
+				if (!(status.flags & CLASSIC_MODE)) {
+					dialog_no(d->data);
+					return 1;
+				} /* else fall through */
+			case DIALOG_OK_CANCEL: dialog_cancel(d->data); return 1;
+			default: break;
+			}
+			break;
+		case SDLK_c:
+			switch (status.dialog_type) {
+			case DIALOG_YES_NO:
+			case DIALOG_OK_CANCEL: break;
+			default: return 0;
+			} /* and fall through */
+		case SDLK_ESCAPE: dialog_cancel(d->data); return 1;
+		case SDLK_o:
+			switch (status.dialog_type) {
+			case DIALOG_YES_NO:
+			case DIALOG_OK_CANCEL: break;
+			default: return 0;
+			} /* and fall through */
+		case SDLK_RETURN: dialog_yes(d->data); return 1;
+		default: break;
 		}
 	}
 
@@ -333,16 +333,16 @@ struct dialog *dialog_create(
 	dialogs[d].handle_key = NULL;
 
 	switch (type) {
-		case DIALOG_OK: dialog_create_ok(textlen); break;
-		case DIALOG_OK_CANCEL: dialog_create_ok_cancel(textlen); break;
-		case DIALOG_YES_NO: dialog_create_yes_no(textlen); break;
-		default:
+	case DIALOG_OK: dialog_create_ok(textlen); break;
+	case DIALOG_OK_CANCEL: dialog_create_ok_cancel(textlen); break;
+	case DIALOG_YES_NO: dialog_create_yes_no(textlen); break;
+	default:
 #ifndef NDEBUG
-			fprintf(stderr, "this man should not be seen\n");
+		fprintf(stderr, "this man should not be seen\n");
 #endif
-			type = DIALOG_OK_CANCEL;
-			dialog_create_ok_cancel(textlen);
-			break;
+		type = DIALOG_OK_CANCEL;
+		dialog_create_ok_cancel(textlen);
+		break;
 	}
 
 	dialogs[d].type = type;

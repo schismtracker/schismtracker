@@ -51,32 +51,32 @@ static int _fixup_ignore_globals(struct key_event *k)
 {
 	if (k->mouse && k->y > 20) return 0;
 	switch (k->sym) {
-		case SDLK_LEFT:
-		case SDLK_RIGHT:
-		case SDLK_DOWN:
-		case SDLK_UP:
-		case SDLK_TAB:
-		case SDLK_RETURN:
-		case SDLK_ESCAPE:
-			/* use default handler */
-			return 0;
-		case SDLK_F2:
-		case SDLK_F5:
-		case SDLK_F9:
-		case SDLK_F10:
-			// Ctrl + these keys does not lead to a new screen
-			if (k->mod & KMOD_CTRL) break;
-			// Fall through.
-		case SDLK_F1:
-		case SDLK_F3:
-		case SDLK_F4:
-		case SDLK_F11:
-		case SDLK_F12:
-			// Ignore Alt and so on.
-			if (k->mod & (KMOD_ALT | KMOD_SHIFT)) break;
-			dialog_destroy();
-			return 0;
-		default: break;
+	case SDLK_LEFT:
+	case SDLK_RIGHT:
+	case SDLK_DOWN:
+	case SDLK_UP:
+	case SDLK_TAB:
+	case SDLK_RETURN:
+	case SDLK_ESCAPE:
+		/* use default handler */
+		return 0;
+	case SDLK_F2:
+	case SDLK_F5:
+	case SDLK_F9:
+	case SDLK_F10:
+		// Ctrl + these keys does not lead to a new screen
+		if (k->mod & KMOD_CTRL) break;
+		// Fall through.
+	case SDLK_F1:
+	case SDLK_F3:
+	case SDLK_F4:
+	case SDLK_F11:
+	case SDLK_F12:
+		// Ignore Alt and so on.
+		if (k->mod & (KMOD_ALT | KMOD_SHIFT)) break;
+		dialog_destroy();
+		return 0;
+	default: break;
 	}
 	/* this way, we can't pull up help here */
 	return 1;
@@ -122,21 +122,21 @@ static void about_draw_const(void)
 			draw_text("No sound card detected", 29, 28, 0, 2);
 		} else {
 			switch (fake_driver) {
-				case 0:
-					draw_text("Sound Blaster 16 detected", 26, 28, 0, 2);
-					draw_text("Port 220h, IRQ 7, DMA 5", 26, 29, 0, 2);
-					break;
-				case 1:
-					/* FIXME: The GUS driver displays the memory settings a bit
+			case 0:
+				draw_text("Sound Blaster 16 detected", 26, 28, 0, 2);
+				draw_text("Port 220h, IRQ 7, DMA 5", 26, 29, 0, 2);
+				break;
+			case 1:
+				/* FIXME: The GUS driver displays the memory settings a bit
 				differently from the SB. If we're "supporting" it, we should
 				probably keep the rest of the UI consistent with our choice.
 				(Also: no love for the AWE cards?)
 
 				Alternately, it would be totally awesome to probe the system
 				for the actual name and parameters of the card in use :) */
-					draw_text("Gravis UltraSound detected", 26, 28, 0, 2);
-					draw_text("Port 240h, IRQ 5, 1024k RAM", 26, 29, 0, 2);
-					break;
+				draw_text("Gravis UltraSound detected", 26, 28, 0, 2);
+				draw_text("Port 240h, IRQ 5, 1024k RAM", 26, 29, 0, 2);
+				break;
 			};
 		}
 	} else {

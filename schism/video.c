@@ -359,14 +359,14 @@ void video_mousecursor(int vis)
 	}
 
 	switch (vis) {
-		case MOUSE_CYCLE_STATE:
-			vis = (video.mouse.visible + 1) % MOUSE_CYCLE_STATE;
-			/* fall through */
-		case MOUSE_DISABLED:
-		case MOUSE_SYSTEM:
-		case MOUSE_EMULATED: video.mouse.visible = vis; status_text_flash("%s", state[video.mouse.visible]);
-		case MOUSE_RESET_STATE: break;
-		default: video.mouse.visible = MOUSE_EMULATED;
+	case MOUSE_CYCLE_STATE:
+		vis = (video.mouse.visible + 1) % MOUSE_CYCLE_STATE;
+		/* fall through */
+	case MOUSE_DISABLED:
+	case MOUSE_SYSTEM:
+	case MOUSE_EMULATED: video.mouse.visible = vis; status_text_flash("%s", state[video.mouse.visible]);
+	case MOUSE_RESET_STATE: break;
+	default: video.mouse.visible = MOUSE_EMULATED;
 	}
 
 	SDL_ShowCursor(video.mouse.visible == MOUSE_SYSTEM);

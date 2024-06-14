@@ -118,11 +118,11 @@ static inline int rn_vibrato(song_t *csf, song_voice_t *chan, int frequency)
 	unsigned int vdepth;
 
 	switch (chan->vib_type) {
-		case VIB_SINE:
-		default: vdelta = sine_table[vibpos]; break;
-		case VIB_RAMP_DOWN: vdelta = ramp_down_table[vibpos]; break;
-		case VIB_SQUARE: vdelta = square_table[vibpos]; break;
-		case VIB_RANDOM: vdelta = 128 * ((double)rand() / RAND_MAX) - 64; break;
+	case VIB_SINE:
+	default: vdelta = sine_table[vibpos]; break;
+	case VIB_RAMP_DOWN: vdelta = ramp_down_table[vibpos]; break;
+	case VIB_SQUARE: vdelta = square_table[vibpos]; break;
+	case VIB_RANDOM: vdelta = 128 * ((double)rand() / RAND_MAX) - 64; break;
 	}
 
 	if (csf->flags & SONG_ITOLDEFFECTS) {
@@ -172,11 +172,11 @@ static inline int rn_sample_vibrato(song_t *csf, song_voice_t *chan, int frequen
 	}
 
 	switch (pins->vib_type) {
-		case VIB_SINE:
-		default: vdelta = sine_table[vibpos]; break;
-		case VIB_RAMP_DOWN: vdelta = ramp_down_table[vibpos]; break;
-		case VIB_SQUARE: vdelta = square_table[vibpos]; break;
-		case VIB_RANDOM: vdelta = 128 * ((double)rand() / RAND_MAX) - 64; break;
+	case VIB_SINE:
+	default: vdelta = sine_table[vibpos]; break;
+	case VIB_RAMP_DOWN: vdelta = ramp_down_table[vibpos]; break;
+	case VIB_SQUARE: vdelta = square_table[vibpos]; break;
+	case VIB_RANDOM: vdelta = 128 * ((double)rand() / RAND_MAX) - 64; break;
 	}
 	vdelta = (vdelta * adepth) >> 6;
 
@@ -336,8 +336,8 @@ static inline int rn_arpeggio(song_t *csf, song_voice_t *chan, int frequency)
 	const uint32_t real_tick_count = (csf->current_speed + csf->frame_delay) - csf->tick_count;
 	const uint32_t tick = real_tick_count % (csf->current_speed + csf->frame_delay);
 	switch (tick % 3) {
-		case 1: a = chan->mem_arpeggio >> 4; break;
-		case 2: a = chan->mem_arpeggio & 0xf; break;
+	case 1: a = chan->mem_arpeggio >> 4; break;
+	case 2: a = chan->mem_arpeggio & 0xf; break;
 	}
 
 	if (!a) return frequency;

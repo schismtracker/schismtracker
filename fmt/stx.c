@@ -161,27 +161,27 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 		slurp_read(fp, b, 3); // data pointer for pcm, irrelevant otherwise
 		switch (type) {
-			case S3I_TYPE_PCM:
-				para_sdata[n] = b[1] | (b[2] << 8) | (b[0] << 16);
-				slurp_read(fp, &tmplong, 4);
-				sample->length = bswapLE32(tmplong);
-				slurp_read(fp, &tmplong, 4);
-				sample->loop_start = bswapLE32(tmplong);
-				slurp_read(fp, &tmplong, 4);
-				sample->loop_end = bswapLE32(tmplong);
-				sample->volume = slurp_getc(fp) * 4; //mphack
-				slurp_seek(fp, 2, SEEK_CUR);
-				c = slurp_getc(fp); /* flags */
-				if (c & 1) sample->flags |= CHN_LOOP;
-				if (sample->length) any_samples = 1;
-				break;
+		case S3I_TYPE_PCM:
+			para_sdata[n] = b[1] | (b[2] << 8) | (b[0] << 16);
+			slurp_read(fp, &tmplong, 4);
+			sample->length = bswapLE32(tmplong);
+			slurp_read(fp, &tmplong, 4);
+			sample->loop_start = bswapLE32(tmplong);
+			slurp_read(fp, &tmplong, 4);
+			sample->loop_end = bswapLE32(tmplong);
+			sample->volume = slurp_getc(fp) * 4; //mphack
+			slurp_seek(fp, 2, SEEK_CUR);
+			c = slurp_getc(fp); /* flags */
+			if (c & 1) sample->flags |= CHN_LOOP;
+			if (sample->length) any_samples = 1;
+			break;
 
-			default:
-			case S3I_TYPE_NONE:
-				slurp_seek(fp, 12, SEEK_CUR);
-				sample->volume = slurp_getc(fp) * 4; //mphack
-				slurp_seek(fp, 3, SEEK_CUR);
-				break;
+		default:
+		case S3I_TYPE_NONE:
+			slurp_seek(fp, 12, SEEK_CUR);
+			sample->volume = slurp_getc(fp) * 4; //mphack
+			slurp_seek(fp, 3, SEEK_CUR);
+			break;
 		}
 
 		slurp_read(fp, &tmplong, 4);
@@ -247,12 +247,12 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					//if (note->instrument > 99)
 					//      note->instrument = 0;
 					switch (note->note) {
-						default:
-							// Note; hi=oct, lo=note
-							note->note = ((note->note >> 4) + 2) * 12 + (note->note & 0xf) + 13;
-							break;
-						case 255: note->note = NOTE_NONE; break;
-						case 254: note->note = NOTE_CUT; break;
+					default:
+						// Note; hi=oct, lo=note
+						note->note = ((note->note >> 4) + 2) * 12 + (note->note & 0xf) + 13;
+						break;
+					case 255: note->note = NOTE_NONE; break;
+					case 254: note->note = NOTE_CUT; break;
 					}
 				}
 				if (mask & 64) {

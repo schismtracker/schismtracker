@@ -221,85 +221,85 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
 	*pe = mdl_efftrans[e];
 
 	switch (e) {
-		case 7: // tempo
-			// MDL supports any nonzero tempo value, but we don't
-			p = MAX(p, 0x20);
+	case 7: // tempo
+		// MDL supports any nonzero tempo value, but we don't
+		p = MAX(p, 0x20);
+		break;
+	case 8: // panning
+		p = MIN(p << 1, 0xff);
+		break;
+	case 0xd: // pattern break
+		// convert from stupid decimal-hex
+		p = 10 * (p >> 4) + (p & 0xf);
+		break;
+	case 0xe: // special
+		switch (p >> 4) {
+		case 0: // unused
+		case 3: // unused
+		case 5: // set finetune
+		case 8: // set samplestatus (what?)
+			*pe = FX_NONE;
 			break;
-		case 8: // panning
-			p = MIN(p << 1, 0xff);
+		case 1: // pan slide left
+			*pe = FX_PANNINGSLIDE;
+			p = (MAX(p & 0xf, 0xe) << 4) | 0xf;
 			break;
-		case 0xd: // pattern break
-			// convert from stupid decimal-hex
-			p = 10 * (p >> 4) + (p & 0xf);
+		case 2: // pan slide right
+			*pe = FX_PANNINGSLIDE;
+			p = 0xf0 | MAX(p & 0xf, 0xe);
 			break;
-		case 0xe: // special
-			switch (p >> 4) {
-				case 0: // unused
-				case 3: // unused
-				case 5: // set finetune
-				case 8: // set samplestatus (what?)
-					*pe = FX_NONE;
-					break;
-				case 1: // pan slide left
-					*pe = FX_PANNINGSLIDE;
-					p = (MAX(p & 0xf, 0xe) << 4) | 0xf;
-					break;
-				case 2: // pan slide right
-					*pe = FX_PANNINGSLIDE;
-					p = 0xf0 | MAX(p & 0xf, 0xe);
-					break;
-				case 4: // vibrato waveform
-					p = 0x30 | (p & 0xf);
-					break;
-				case 6: // pattern loop
-					p = 0xb0 | (p & 0xf);
-					break;
-				case 7: // tremolo waveform
-					p = 0x40 | (p & 0xf);
-					break;
-				case 9: // retrig
-					*pe = FX_RETRIG;
-					p &= 0xf;
-					break;
-				case 0xa: // global vol slide up
-					*pe = FX_GLOBALVOLSLIDE;
-					p = 0xf0 & (((p & 0xf) + 1) << 3);
-					break;
-				case 0xb: // global vol slide down
-					*pe = FX_GLOBALVOLSLIDE;
-					p = ((p & 0xf) + 1) >> 1;
-					break;
-				case 0xc: // note cut
-				case 0xd: // note delay
-				case 0xe: // pattern delay
-					// nothing to change here
-					break;
-				case 0xf: // offset -- further mangled later.
-					*pe = FX_OFFSET;
-					break;
-			}
+		case 4: // vibrato waveform
+			p = 0x30 | (p & 0xf);
 			break;
-		case 0x10:          // volslide up
-			if (p < 0xE0) { // Gxy -> Dz0 (z=(xy>>2))
-				p >>= 2;
-				if (p > 0x0F) p = 0x0F;
-				p <<= 4;
-			} else if (p < 0xF0) { // GEy -> DzF (z=(y>>2))
-				p = (((p & 0x0F) << 2) | 0x0F);
-			} else { // GFy -> DyF
-				p = ((p << 4) | 0x0F);
-			}
+		case 6: // pattern loop
+			p = 0xb0 | (p & 0xf);
 			break;
-		case 0x11:          // volslide down
-			if (p < 0xE0) { // Hxy -> D0z (z=(xy>>2))
-				p >>= 2;
-				if (p > 0x0F) p = 0x0F;
-			} else if (p < 0xF0) { // HEy -> DFz (z=(y>>2))
-				p = (((p & 0x0F) >> 2) | 0xF0);
-			} else { // HFy -> DFy
-					 // Nothing to do
-			}
+		case 7: // tremolo waveform
+			p = 0x40 | (p & 0xf);
 			break;
+		case 9: // retrig
+			*pe = FX_RETRIG;
+			p &= 0xf;
+			break;
+		case 0xa: // global vol slide up
+			*pe = FX_GLOBALVOLSLIDE;
+			p = 0xf0 & (((p & 0xf) + 1) << 3);
+			break;
+		case 0xb: // global vol slide down
+			*pe = FX_GLOBALVOLSLIDE;
+			p = ((p & 0xf) + 1) >> 1;
+			break;
+		case 0xc: // note cut
+		case 0xd: // note delay
+		case 0xe: // pattern delay
+			// nothing to change here
+			break;
+		case 0xf: // offset -- further mangled later.
+			*pe = FX_OFFSET;
+			break;
+		}
+		break;
+	case 0x10:          // volslide up
+		if (p < 0xE0) { // Gxy -> Dz0 (z=(xy>>2))
+			p >>= 2;
+			if (p > 0x0F) p = 0x0F;
+			p <<= 4;
+		} else if (p < 0xF0) { // GEy -> DzF (z=(y>>2))
+			p = (((p & 0x0F) << 2) | 0x0F);
+		} else { // GFy -> DyF
+			p = ((p << 4) | 0x0F);
+		}
+		break;
+	case 0x11:          // volslide down
+		if (p < 0xE0) { // Hxy -> D0z (z=(xy>>2))
+			p >>= 2;
+			if (p > 0x0F) p = 0x0F;
+		} else if (p < 0xF0) { // HEy -> DFz (z=(y>>2))
+			p = (((p & 0x0F) >> 2) | 0xF0);
+		} else { // HFy -> DFy
+				 // Nothing to do
+		}
+		break;
 	}
 
 	*pp = p;
@@ -552,46 +552,46 @@ static song_note_t **mdl_read_tracks(slurp_t *fp)
 			x = b >> 2;
 			y = b & 3;
 			switch (y) {
-				case 0: // (x+1) empty notes follow
-					row += x + 1;
-					break;
-				case 1: // Repeat previous note (x+1) times
-					if (row > 0) {
-						do {
-							tracks[trk][row] = tracks[trk][row - 1];
-						} while (++row < 256 && x--);
-					}
-					break;
-				case 2: // Copy note from row x
-					if (row > x) tracks[trk][row] = tracks[trk][x];
-					row++;
-					break;
-				case 3: // New note data
-					if (x & MDLNOTE_NOTE) {
-						b = slurp_getc(fp);
-						// convenient! :)
-						// (I don't know what DT does for out of range notes, might be worth
-						// checking some time)
-						tracks[trk][row].note = (b > 120) ? NOTE_OFF : b;
-					}
-					if (x & MDLNOTE_SAMPLE) {
-						b = slurp_getc(fp);
-						if (b >= MAX_INSTRUMENTS) b = 0;
-						tracks[trk][row].instrument = b;
-					}
-					vol = (x & MDLNOTE_VOLUME) ? slurp_getc(fp) : 0;
-					if (x & MDLNOTE_EFFECTS) {
-						b = slurp_getc(fp);
-						e1 = b & 0xf;
-						e2 = b >> 4;
-					} else {
-						e1 = e2 = 0;
-					}
-					p1 = (x & MDLNOTE_PARAM1) ? slurp_getc(fp) : 0;
-					p2 = (x & MDLNOTE_PARAM2) ? slurp_getc(fp) : 0;
-					lostfx += cram_mdl_effects(&tracks[trk][row], vol, e1, e2, p1, p2);
-					row++;
-					break;
+			case 0: // (x+1) empty notes follow
+				row += x + 1;
+				break;
+			case 1: // Repeat previous note (x+1) times
+				if (row > 0) {
+					do {
+						tracks[trk][row] = tracks[trk][row - 1];
+					} while (++row < 256 && x--);
+				}
+				break;
+			case 2: // Copy note from row x
+				if (row > x) tracks[trk][row] = tracks[trk][x];
+				row++;
+				break;
+			case 3: // New note data
+				if (x & MDLNOTE_NOTE) {
+					b = slurp_getc(fp);
+					// convenient! :)
+					// (I don't know what DT does for out of range notes, might be worth
+					// checking some time)
+					tracks[trk][row].note = (b > 120) ? NOTE_OFF : b;
+				}
+				if (x & MDLNOTE_SAMPLE) {
+					b = slurp_getc(fp);
+					if (b >= MAX_INSTRUMENTS) b = 0;
+					tracks[trk][row].instrument = b;
+				}
+				vol = (x & MDLNOTE_VOLUME) ? slurp_getc(fp) : 0;
+				if (x & MDLNOTE_EFFECTS) {
+					b = slurp_getc(fp);
+					e1 = b & 0xf;
+					e2 = b >> 4;
+				} else {
+					e1 = e2 = 0;
+				}
+				p1 = (x & MDLNOTE_PARAM1) ? slurp_getc(fp) : 0;
+				p2 = (x & MDLNOTE_PARAM2) ? slurp_getc(fp) : 0;
+				lostfx += cram_mdl_effects(&tracks[trk][row], vol, e1, e2, p1, p2);
+				row++;
+				break;
 			}
 		}
 		fp->length = reallen; // widen
@@ -855,79 +855,79 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 		nextpos = slurp_tell(fp) + blklen;
 
 		switch (MDL_BLOCK(tag[0], tag[1])) {
-			case MDL_BLK_INFO:
-				if (!(readflags & MDL_HAS_INFO)) {
-					readflags |= MDL_HAS_INFO;
-					restartpos = mdl_read_info(song, fp);
-				}
-				break;
-			case MDL_BLK_MESSAGE:
-				if (!(readflags & MDL_HAS_MESSAGE)) {
-					readflags |= MDL_HAS_MESSAGE;
-					mdl_read_message(song, fp, blklen);
-				}
-				break;
-			case MDL_BLK_PATTERNS:
-				if (!(readflags & MDL_HAS_PATTERNS)) {
-					readflags |= MDL_HAS_PATTERNS;
-					patptr = ((fmtver >> 4) ? mdl_read_patterns : mdl_read_patterns_v0)(song, fp);
-				}
-				break;
-			case MDL_BLK_TRACKS:
-				if (!(readflags & MDL_HAS_TRACKS)) {
-					readflags |= MDL_HAS_TRACKS;
-					tracks = mdl_read_tracks(fp);
-				}
-				break;
-			case MDL_BLK_INSTRUMENTS:
-				if (!(readflags & MDL_HAS_INSTRUMENTS)) {
-					readflags |= MDL_HAS_INSTRUMENTS;
-					mdl_read_instruments(song, fp);
-				}
-				break;
-			case MDL_BLK_VOLENVS:
-				if (!(readflags & MDL_HAS_VOLENVS)) {
-					readflags |= MDL_HAS_VOLENVS;
-					mdl_read_envelopes(fp, volenvs, ENV_VOLLOOP | ENV_VOLSUSTAIN);
-				}
-				break;
-			case MDL_BLK_PANENVS:
-				if (!(readflags & MDL_HAS_PANENVS)) {
-					readflags |= MDL_HAS_PANENVS;
-					mdl_read_envelopes(fp, panenvs, ENV_PANLOOP | ENV_PANSUSTAIN);
-				}
-				break;
-			case MDL_BLK_FREQENVS:
-				if (!(readflags & MDL_HAS_FREQENVS)) {
-					readflags |= MDL_HAS_FREQENVS;
-					mdl_read_envelopes(fp, freqenvs, ENV_PITCHLOOP | ENV_PITCHSUSTAIN);
-				}
-				break;
-			case MDL_BLK_SAMPLEINFO:
-				if (!(readflags & MDL_HAS_SAMPLEINFO)) {
-					readflags |= MDL_HAS_SAMPLEINFO;
-					((fmtver >> 4) ? mdl_read_sampleinfo : mdl_read_sampleinfo_v0)(song, fp, packtype);
-				}
-				break;
-			case MDL_BLK_SAMPLEDATA:
-				// Can't do anything until we have the sample info block loaded, since the sample
-				// lengths and packing information is stored there.
-				// Best we can do at the moment is to remember where this block was so we can jump
-				// back to it later.
-				if (!(readflags & MDL_HAS_SAMPLEDATA)) {
-					readflags |= MDL_HAS_SAMPLEDATA;
-					datapos = slurp_tell(fp);
-				}
-				break;
+		case MDL_BLK_INFO:
+			if (!(readflags & MDL_HAS_INFO)) {
+				readflags |= MDL_HAS_INFO;
+				restartpos = mdl_read_info(song, fp);
+			}
+			break;
+		case MDL_BLK_MESSAGE:
+			if (!(readflags & MDL_HAS_MESSAGE)) {
+				readflags |= MDL_HAS_MESSAGE;
+				mdl_read_message(song, fp, blklen);
+			}
+			break;
+		case MDL_BLK_PATTERNS:
+			if (!(readflags & MDL_HAS_PATTERNS)) {
+				readflags |= MDL_HAS_PATTERNS;
+				patptr = ((fmtver >> 4) ? mdl_read_patterns : mdl_read_patterns_v0)(song, fp);
+			}
+			break;
+		case MDL_BLK_TRACKS:
+			if (!(readflags & MDL_HAS_TRACKS)) {
+				readflags |= MDL_HAS_TRACKS;
+				tracks = mdl_read_tracks(fp);
+			}
+			break;
+		case MDL_BLK_INSTRUMENTS:
+			if (!(readflags & MDL_HAS_INSTRUMENTS)) {
+				readflags |= MDL_HAS_INSTRUMENTS;
+				mdl_read_instruments(song, fp);
+			}
+			break;
+		case MDL_BLK_VOLENVS:
+			if (!(readflags & MDL_HAS_VOLENVS)) {
+				readflags |= MDL_HAS_VOLENVS;
+				mdl_read_envelopes(fp, volenvs, ENV_VOLLOOP | ENV_VOLSUSTAIN);
+			}
+			break;
+		case MDL_BLK_PANENVS:
+			if (!(readflags & MDL_HAS_PANENVS)) {
+				readflags |= MDL_HAS_PANENVS;
+				mdl_read_envelopes(fp, panenvs, ENV_PANLOOP | ENV_PANSUSTAIN);
+			}
+			break;
+		case MDL_BLK_FREQENVS:
+			if (!(readflags & MDL_HAS_FREQENVS)) {
+				readflags |= MDL_HAS_FREQENVS;
+				mdl_read_envelopes(fp, freqenvs, ENV_PITCHLOOP | ENV_PITCHSUSTAIN);
+			}
+			break;
+		case MDL_BLK_SAMPLEINFO:
+			if (!(readflags & MDL_HAS_SAMPLEINFO)) {
+				readflags |= MDL_HAS_SAMPLEINFO;
+				((fmtver >> 4) ? mdl_read_sampleinfo : mdl_read_sampleinfo_v0)(song, fp, packtype);
+			}
+			break;
+		case MDL_BLK_SAMPLEDATA:
+			// Can't do anything until we have the sample info block loaded, since the sample
+			// lengths and packing information is stored there.
+			// Best we can do at the moment is to remember where this block was so we can jump
+			// back to it later.
+			if (!(readflags & MDL_HAS_SAMPLEDATA)) {
+				readflags |= MDL_HAS_SAMPLEDATA;
+				datapos = slurp_tell(fp);
+			}
+			break;
 
-			case MDL_BLK_PATTERNNAMES:
-				// don't care
-				break;
+		case MDL_BLK_PATTERNNAMES:
+			// don't care
+			break;
 
-			default:
-				//log_appendf(4, " Warning: Unknown block of type '%c%c' (0x%04X) at %ld",
-				//        tag[0], tag[1], MDL_BLOCK(tag[0], tag[1]), slurp_tell(fp));
-				break;
+		default:
+			//log_appendf(4, " Warning: Unknown block of type '%c%c' (0x%04X) at %ld",
+			//        tag[0], tag[1], MDL_BLOCK(tag[0], tag[1]), slurp_tell(fp));
+			break;
 		}
 
 		if (slurp_seek(fp, nextpos, SEEK_SET) != 0) {

@@ -199,11 +199,11 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 
 		if (song_is_instrument_mode()) {
 			switch (voice->nna) {
-				case NNA_NOTECUT: ptr = "Cut"; break;
-				case NNA_CONTINUE: ptr = "Con"; break;
-				case NNA_NOTEOFF: ptr = "Off"; break;
-				case NNA_NOTEFADE: ptr = "Fde"; break;
-				default: ptr = "???"; break;
+			case NNA_NOTECUT: ptr = "Cut"; break;
+			case NNA_CONTINUE: ptr = "Con"; break;
+			case NNA_NOTEOFF: ptr = "Off"; break;
+			case NNA_NOTEFADE: ptr = "Fde"; break;
+			default: ptr = "???"; break;
 			};
 			draw_text(ptr, 59, pos, 2, 0);
 		}
@@ -374,28 +374,28 @@ static void _draw_track_view(
 #endif
 
 	switch (song_get_mode()) {
-		case MODE_PATTERN_LOOP:
-			prev_pattern_rows = next_pattern_rows = cur_pattern_rows =
-				song_get_pattern(song_get_playing_pattern(), &cur_pattern);
-			prev_pattern = next_pattern = cur_pattern;
-			break;
-		case MODE_PLAYING:
-			if (current_song->orderlist[current_order] >= 200) {
-					/* this does, in fact, happen. just pretend that
+	case MODE_PATTERN_LOOP:
+		prev_pattern_rows = next_pattern_rows = cur_pattern_rows =
+			song_get_pattern(song_get_playing_pattern(), &cur_pattern);
+		prev_pattern = next_pattern = cur_pattern;
+		break;
+	case MODE_PLAYING:
+		if (current_song->orderlist[current_order] >= 200) {
+			/* this does, in fact, happen. just pretend that
 			 * it's stopped :P */
-				default:
-					/* stopped */
-					draw_fill_chars(5, base + 1, 4 + num_channels * channel_width - !!separator, base + height - 2, 0);
-					return;
-			}
-			cur_pattern_rows = song_get_pattern(current_song->orderlist[current_order], &cur_pattern);
-			if (current_order > 0 && current_song->orderlist[current_order - 1] < 200)
-				prev_pattern_rows = song_get_pattern(current_song->orderlist[current_order - 1], &prev_pattern);
-			else prev_pattern = NULL;
-			if (current_order < 255 && current_song->orderlist[current_order + 1] < 200)
-				next_pattern_rows = song_get_pattern(current_song->orderlist[current_order + 1], &next_pattern);
-			else next_pattern = NULL;
-			break;
+		default:
+			/* stopped */
+			draw_fill_chars(5, base + 1, 4 + num_channels * channel_width - !!separator, base + height - 2, 0);
+			return;
+		}
+		cur_pattern_rows = song_get_pattern(current_song->orderlist[current_order], &cur_pattern);
+		if (current_order > 0 && current_song->orderlist[current_order - 1] < 200)
+			prev_pattern_rows = song_get_pattern(current_song->orderlist[current_order - 1], &prev_pattern);
+		else prev_pattern = NULL;
+		if (current_order < 255 && current_song->orderlist[current_order + 1] < 200)
+			next_pattern_rows = song_get_pattern(current_song->orderlist[current_order + 1], &next_pattern);
+		else next_pattern = NULL;
+		break;
 	}
 
 	/* -2 for the top and bottom border, -1 because if there are an even number
@@ -691,13 +691,13 @@ static void click_chn_is_x(int x, UNUSED int y, int nc, int fc)
 	if (x < 5) return;
 	x -= 4;
 	switch (nc) {
-		case 5: click_chn_x(x, 13, 1, fc); break;
-		case 10: click_chn_x(x, 7, 0, fc); break;
-		case 12: click_chn_x(x, 6, 0, fc); break;
-		case 18: click_chn_x(x, 3, 1, fc); break;
-		case 24: click_chn_x(x, 3, 0, fc); break;
-		case 36: click_chn_x(x, 2, 0, fc); break;
-		case 64: click_chn_x(x, 1, 0, fc); break;
+	case 5: click_chn_x(x, 13, 1, fc); break;
+	case 10: click_chn_x(x, 7, 0, fc); break;
+	case 12: click_chn_x(x, 6, 0, fc); break;
+	case 18: click_chn_x(x, 3, 1, fc); break;
+	case 24: click_chn_x(x, 3, 0, fc); break;
+	case 36: click_chn_x(x, 2, 0, fc); break;
+	case 64: click_chn_x(x, 1, 0, fc); break;
 	};
 }
 
@@ -977,222 +977,222 @@ static int info_page_handle_key(struct key_event *k)
 	}
 
 	switch (k->sym) {
-		case SDLK_g:
-			if (k->state == KEY_PRESS) return 1;
+	case SDLK_g:
+		if (k->state == KEY_PRESS) return 1;
 
-			set_current_channel(selected_channel);
-			order = song_get_current_order();
+		set_current_channel(selected_channel);
+		order = song_get_current_order();
 
-			if (song_get_mode() == MODE_PLAYING) {
-				n = current_song->orderlist[order];
-			} else {
-				n = song_get_playing_pattern();
-			}
-			if (n < 200) {
-				set_current_order(order);
-				set_current_pattern(n);
-				set_current_row(song_get_current_row());
-				set_page(PAGE_PATTERN_EDITOR);
-			}
-			return 1;
-		case SDLK_v:
+		if (song_get_mode() == MODE_PLAYING) {
+			n = current_song->orderlist[order];
+		} else {
+			n = song_get_playing_pattern();
+		}
+		if (n < 200) {
+			set_current_order(order);
+			set_current_pattern(n);
+			set_current_row(song_get_current_row());
+			set_page(PAGE_PATTERN_EDITOR);
+		}
+		return 1;
+	case SDLK_v:
+		if (k->state == KEY_RELEASE) return 1;
+
+		velocity_mode = !velocity_mode;
+		status_text_flash("Using %s bars", (velocity_mode ? "velocity" : "volume"));
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_i:
+		if (k->state == KEY_RELEASE) return 1;
+
+		instrument_names = !instrument_names;
+		status_text_flash("Using %s names", (instrument_names ? "instrument" : "sample"));
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_r:
+		if (k->mod & KMOD_ALT) {
 			if (k->state == KEY_RELEASE) return 1;
 
-			velocity_mode = !velocity_mode;
-			status_text_flash("Using %s bars", (velocity_mode ? "velocity" : "volume"));
-			status.flags |= NEED_UPDATE;
+			song_flip_stereo();
+			status_text_flash("Left/right outputs reversed");
 			return 1;
-		case SDLK_i:
-			if (k->state == KEY_RELEASE) return 1;
+		}
+		return 0;
+	case SDLK_PLUS:
+		if (k->state == KEY_RELEASE) return 1;
+		if (song_get_mode() == MODE_PLAYING) {
+			song_set_current_order(song_get_current_order() + 1);
+		}
+		return 1;
+	case SDLK_MINUS:
+		if (k->state == KEY_RELEASE) return 1;
+		if (song_get_mode() == MODE_PLAYING) {
+			song_set_current_order(song_get_current_order() - 1);
+		}
+		return 1;
+	case SDLK_q:
+		if (k->state == KEY_RELEASE) return 1;
+		song_toggle_channel_mute(selected_channel - 1);
+		orderpan_recheck_muted_channels();
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_s:
+		if (k->state == KEY_RELEASE) return 1;
 
-			instrument_names = !instrument_names;
-			status_text_flash("Using %s names", (instrument_names ? "instrument" : "sample"));
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_r:
-			if (k->mod & KMOD_ALT) {
-				if (k->state == KEY_RELEASE) return 1;
-
-				song_flip_stereo();
-				status_text_flash("Left/right outputs reversed");
-				return 1;
-			}
-			return 0;
-		case SDLK_PLUS:
-			if (k->state == KEY_RELEASE) return 1;
-			if (song_get_mode() == MODE_PLAYING) {
-				song_set_current_order(song_get_current_order() + 1);
-			}
-			return 1;
-		case SDLK_MINUS:
-			if (k->state == KEY_RELEASE) return 1;
-			if (song_get_mode() == MODE_PLAYING) {
-				song_set_current_order(song_get_current_order() - 1);
-			}
-			return 1;
-		case SDLK_q:
-			if (k->state == KEY_RELEASE) return 1;
-			song_toggle_channel_mute(selected_channel - 1);
+		if (k->mod & KMOD_ALT) {
+			song_toggle_stereo();
+			status_text_flash("Stereo %s", song_is_stereo() ? "Enabled" : "Disabled");
+		} else {
+			song_handle_channel_solo(selected_channel - 1);
 			orderpan_recheck_muted_channels();
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_s:
-			if (k->state == KEY_RELEASE) return 1;
+		}
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_SPACE:
+		if (!NO_MODIFIER(k->mod)) return 0;
 
-			if (k->mod & KMOD_ALT) {
-				song_toggle_stereo();
-				status_text_flash("Stereo %s", song_is_stereo() ? "Enabled" : "Disabled");
-			} else {
-				song_handle_channel_solo(selected_channel - 1);
-				orderpan_recheck_muted_channels();
-			}
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_SPACE:
-			if (!NO_MODIFIER(k->mod)) return 0;
-
-			if (k->state == KEY_RELEASE) return 1;
-			song_toggle_channel_mute(selected_channel - 1);
-			if (selected_channel < 64) selected_channel++;
-			orderpan_recheck_muted_channels();
-			break;
-		case SDLK_UP:
-			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_ALT) {
-				/* make the current window one line shorter, and give the line to the next window
+		if (k->state == KEY_RELEASE) return 1;
+		song_toggle_channel_mute(selected_channel - 1);
+		if (selected_channel < 64) selected_channel++;
+		orderpan_recheck_muted_channels();
+		break;
+	case SDLK_UP:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_ALT) {
+			/* make the current window one line shorter, and give the line to the next window
 			below it. if the window is already as small as it can get (3 lines) or if it's
 			the last window, don't do anything. */
-				if (selected_window == num_windows - 1 || windows[selected_window].height == 3) {
-					return 1;
-				}
-				windows[selected_window].height--;
-				windows[selected_window + 1].height++;
-				break;
+			if (selected_window == num_windows - 1 || windows[selected_window].height == 3) {
+				return 1;
 			}
-			if (selected_channel > 1) selected_channel--;
+			windows[selected_window].height--;
+			windows[selected_window + 1].height++;
 			break;
-		case SDLK_LEFT:
-			if (!NO_MODIFIER(k->mod) && !(k->mod & KMOD_ALT)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			if (selected_channel > 1) selected_channel--;
-			break;
-		case SDLK_DOWN:
-			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_ALT) {
-				/* expand the current window, taking a line from
+		}
+		if (selected_channel > 1) selected_channel--;
+		break;
+	case SDLK_LEFT:
+		if (!NO_MODIFIER(k->mod) && !(k->mod & KMOD_ALT)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		if (selected_channel > 1) selected_channel--;
+		break;
+	case SDLK_DOWN:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_ALT) {
+			/* expand the current window, taking a line from
 			 * the next window down. BUT: don't do anything if
 			 * (a) this is the last window, or (b) the next
 			 * window is already as small as it can be (three
 			 * lines). */
-				if (selected_window == num_windows - 1 || windows[selected_window + 1].height == 3) {
-					return 1;
-				}
-				windows[selected_window].height++;
-				windows[selected_window + 1].height--;
-				break;
+			if (selected_window == num_windows - 1 || windows[selected_window + 1].height == 3) {
+				return 1;
 			}
-			if (selected_channel < 64) selected_channel++;
+			windows[selected_window].height++;
+			windows[selected_window + 1].height--;
 			break;
-		case SDLK_RIGHT:
-			if (!NO_MODIFIER(k->mod) && !(k->mod & KMOD_ALT)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			if (selected_channel < 64) selected_channel++;
-			break;
-		case SDLK_HOME:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			selected_channel = 1;
-			break;
-		case SDLK_END:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			selected_channel = song_find_last_channel();
-			break;
-		case SDLK_INSERT:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			/* add a new window, unless there's already five (the maximum)
+		}
+		if (selected_channel < 64) selected_channel++;
+		break;
+	case SDLK_RIGHT:
+		if (!NO_MODIFIER(k->mod) && !(k->mod & KMOD_ALT)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		if (selected_channel < 64) selected_channel++;
+		break;
+	case SDLK_HOME:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		selected_channel = 1;
+		break;
+	case SDLK_END:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		selected_channel = song_find_last_channel();
+		break;
+	case SDLK_INSERT:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		/* add a new window, unless there's already five (the maximum)
 		or if the current window isn't big enough to split in half. */
-			if (num_windows == MAX_WINDOWS || (windows[selected_window].height < 6)) {
-				return 1;
-			}
-
-			num_windows++;
-
-			/* shift the windows under the current one down */
-			memmove(
-				windows + selected_window + 1, windows + selected_window,
-				((num_windows - selected_window - 1) * sizeof(*windows)));
-
-			/* split the height between the two windows */
-			n = windows[selected_window].height;
-			windows[selected_window].height = n / 2;
-			windows[selected_window + 1].height = n / 2;
-			if ((n & 1) && num_windows != 2) {
-				/* odd number? compensate. (the selected window gets the extra line) */
-				windows[selected_window + 1].height++;
-			}
-			break;
-		case SDLK_DELETE:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			/* delete the current window and give the extra space to the next window down.
-		if this is the only window, well then don't delete it ;) */
-			if (num_windows == 1) return 1;
-
-			n = windows[selected_window].height + windows[selected_window + 1].height;
-
-			/* shift the windows under the current one up */
-			memmove(
-				windows + selected_window, windows + selected_window + 1,
-				((num_windows - selected_window - 1) * sizeof(*windows)));
-
-			/* fix the current window's height */
-			windows[selected_window].height = n;
-
-			num_windows--;
-			if (selected_window == num_windows) selected_window--;
-			break;
-		case SDLK_PAGEUP:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			n = windows[selected_window].type;
-			if (n == 0) n = NUM_WINDOW_TYPES;
-			n--;
-			windows[selected_window].type = n;
-			break;
-		case SDLK_PAGEDOWN:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			windows[selected_window].type = (windows[selected_window].type + 1) % NUM_WINDOW_TYPES;
-			break;
-		case SDLK_TAB:
-			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_SHIFT) {
-				if (selected_window == 0) selected_window = num_windows;
-				selected_window--;
-			} else {
-				selected_window = (selected_window + 1) % num_windows;
-			}
-			status.flags |= NEED_UPDATE;
+		if (num_windows == MAX_WINDOWS || (windows[selected_window].height < 6)) {
 			return 1;
-		case SDLK_F9:
+		}
+
+		num_windows++;
+
+		/* shift the windows under the current one down */
+		memmove(
+			windows + selected_window + 1, windows + selected_window,
+			((num_windows - selected_window - 1) * sizeof(*windows)));
+
+		/* split the height between the two windows */
+		n = windows[selected_window].height;
+		windows[selected_window].height = n / 2;
+		windows[selected_window + 1].height = n / 2;
+		if ((n & 1) && num_windows != 2) {
+			/* odd number? compensate. (the selected window gets the extra line) */
+			windows[selected_window + 1].height++;
+		}
+		break;
+	case SDLK_DELETE:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		/* delete the current window and give the extra space to the next window down.
+		if this is the only window, well then don't delete it ;) */
+		if (num_windows == 1) return 1;
+
+		n = windows[selected_window].height + windows[selected_window + 1].height;
+
+		/* shift the windows under the current one up */
+		memmove(
+			windows + selected_window, windows + selected_window + 1,
+			((num_windows - selected_window - 1) * sizeof(*windows)));
+
+		/* fix the current window's height */
+		windows[selected_window].height = n;
+
+		num_windows--;
+		if (selected_window == num_windows) selected_window--;
+		break;
+	case SDLK_PAGEUP:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		n = windows[selected_window].type;
+		if (n == 0) n = NUM_WINDOW_TYPES;
+		n--;
+		windows[selected_window].type = n;
+		break;
+	case SDLK_PAGEDOWN:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		windows[selected_window].type = (windows[selected_window].type + 1) % NUM_WINDOW_TYPES;
+		break;
+	case SDLK_TAB:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_SHIFT) {
+			if (selected_window == 0) selected_window = num_windows;
+			selected_window--;
+		} else {
+			selected_window = (selected_window + 1) % num_windows;
+		}
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_F9:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_ALT) {
+			song_toggle_channel_mute(selected_channel - 1);
+			orderpan_recheck_muted_channels();
+			return 1;
+		}
+		return 0;
+	case SDLK_F10:
+		if (k->mod & KMOD_ALT) {
 			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_ALT) {
-				song_toggle_channel_mute(selected_channel - 1);
-				orderpan_recheck_muted_channels();
-				return 1;
-			}
-			return 0;
-		case SDLK_F10:
-			if (k->mod & KMOD_ALT) {
-				if (k->state == KEY_RELEASE) return 1;
-				song_handle_channel_solo(selected_channel - 1);
-				orderpan_recheck_muted_channels();
-				return 1;
-			}
-			return 0;
-		default: return 0;
+			song_handle_channel_solo(selected_channel - 1);
+			orderpan_recheck_muted_channels();
+			return 1;
+		}
+		return 0;
+	default: return 0;
 	}
 
 	recalculate_windows();

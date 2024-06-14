@@ -221,62 +221,62 @@ static int audio_device_list_handle_key_on_list(struct key_event *k)
 	int load_selected_device = 0;
 
 	switch (k->mouse) {
-		case MOUSE_DBLCLICK:
-		case MOUSE_CLICK:
-			if (k->state == KEY_PRESS) return 0;
-			if (k->x < AUDIO_DEVICE_BOX_X || k->y < AUDIO_DEVICE_BOX_Y || k->y > AUDIO_DEVICE_BOX_END_Y
-				|| k->x > AUDIO_DEVICE_BOX_END_X)
-				return 0;
-			new_device = (k->y - AUDIO_DEVICE_BOX_Y);
-			if (k->mouse == MOUSE_DBLCLICK || new_device == selected_audio_device) load_selected_device = 1;
-			break;
-		case MOUSE_SCROLL_UP: new_device -= MOUSE_SCROLL_LINES; break;
-		case MOUSE_SCROLL_DOWN: new_device += MOUSE_SCROLL_LINES; break;
-		default:
-			if (k->state == KEY_RELEASE) return 0;
+	case MOUSE_DBLCLICK:
+	case MOUSE_CLICK:
+		if (k->state == KEY_PRESS) return 0;
+		if (k->x < AUDIO_DEVICE_BOX_X || k->y < AUDIO_DEVICE_BOX_Y || k->y > AUDIO_DEVICE_BOX_END_Y
+			|| k->x > AUDIO_DEVICE_BOX_END_X)
+			return 0;
+		new_device = (k->y - AUDIO_DEVICE_BOX_Y);
+		if (k->mouse == MOUSE_DBLCLICK || new_device == selected_audio_device) load_selected_device = 1;
+		break;
+	case MOUSE_SCROLL_UP: new_device -= MOUSE_SCROLL_LINES; break;
+	case MOUSE_SCROLL_DOWN: new_device += MOUSE_SCROLL_LINES; break;
+	default:
+		if (k->state == KEY_RELEASE) return 0;
 	}
 
 	switch (k->sym) {
-		case SDLK_UP:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (--new_device < 0) {
-				change_focus_to(47);
-				return 1;
-			}
-			break;
-		case SDLK_DOWN:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (++new_device >= audio_device_list_size + 1) {
-				//change_focus_to(49);
-				return 1;
-			}
-			break;
-		case SDLK_HOME:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			new_device = 0;
-			break;
-		case SDLK_PAGEUP:
-			if (!NO_MODIFIER(k->mod)) return 0;
+	case SDLK_UP:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (--new_device < 0) {
+			change_focus_to(47);
+			return 1;
+		}
+		break;
+	case SDLK_DOWN:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (++new_device >= audio_device_list_size + 1) {
+			//change_focus_to(49);
+			return 1;
+		}
+		break;
+	case SDLK_HOME:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		new_device = 0;
+		break;
+	case SDLK_PAGEUP:
+		if (!NO_MODIFIER(k->mod)) return 0;
 
-			if (new_device == 0) return 1;
+		if (new_device == 0) return 1;
 
-			new_device -= 16;
-			break;
-		case SDLK_END:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			new_device = audio_device_list_size;
-			break;
-		case SDLK_PAGEDOWN:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			new_device += 16;
-			break;
-		case SDLK_RETURN:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			load_selected_device = 1;
-			break;
-		/* XXX need better traversion on the keyboard, see page_palette.c */
-		default:
-			if (k->mouse == MOUSE_NONE) return 0;
+		new_device -= 16;
+		break;
+	case SDLK_END:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		new_device = audio_device_list_size;
+		break;
+	case SDLK_PAGEDOWN:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		new_device += 16;
+		break;
+	case SDLK_RETURN:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		load_selected_device = 1;
+		break;
+	/* XXX need better traversion on the keyboard, see page_palette.c */
+	default:
+		if (k->mouse == MOUSE_NONE) return 0;
 	}
 
 	new_device = CLAMP(new_device, 0, audio_device_list_size);

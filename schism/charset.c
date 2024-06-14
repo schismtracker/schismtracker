@@ -400,15 +400,15 @@ static charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 const char *charset_iconv_error_lookup(charset_error_t err)
 {
 	switch (err) {
-		case CHARSET_ERROR_SUCCESS:
-		default: return "Success";
-		case CHARSET_ERROR_UNIMPLEMENTED: return "Conversion unimplemented";
-		case CHARSET_ERROR_NULLINPUT: return "Input pointer is NULL";
-		case CHARSET_ERROR_NULLOUTPUT: return "Output pointer is NULL";
-		case CHARSET_ERROR_INPUTISOUTPUT: return "Input and output charsets are the same";
-		case CHARSET_ERROR_DECODE: return "An error occurred when decoding";
-		case CHARSET_ERROR_ENCODE: return "An error occurred when encoding";
-		case CHARSET_ERROR_NOMEM: return "Out of memory";
+	case CHARSET_ERROR_SUCCESS:
+	default: return "Success";
+	case CHARSET_ERROR_UNIMPLEMENTED: return "Conversion unimplemented";
+	case CHARSET_ERROR_NULLINPUT: return "Input pointer is NULL";
+	case CHARSET_ERROR_NULLOUTPUT: return "Output pointer is NULL";
+	case CHARSET_ERROR_INPUTISOUTPUT: return "Input and output charsets are the same";
+	case CHARSET_ERROR_DECODE: return "An error occurred when decoding";
+	case CHARSET_ERROR_ENCODE: return "An error occurred when encoding";
+	case CHARSET_ERROR_NOMEM: return "Out of memory";
 	}
 }
 
@@ -519,37 +519,37 @@ CHARSET_VARIATION(sdl)
 
 		size_t rc = SDL_iconv(cd, &in_, &in_bytes_left, &out_, &out_bytes_left);
 		switch (rc) {
-			case SDL_ICONV_E2BIG: {
-				const ptrdiff_t diff = (ptrdiff_t)((uint8_t *)out_ - *out);
+		case SDL_ICONV_E2BIG: {
+			const ptrdiff_t diff = (ptrdiff_t)((uint8_t *)out_ - *out);
 
-				uint8_t *old_out = *out;
+			uint8_t *old_out = *out;
 
-				out_size *= 2;
-				*out = realloc(old_out, out_size + sizeof(uint32_t));
-				if (!*out) {
-					free(old_out);
-					SDL_iconv_close(cd);
-					return CHARSET_ERROR_NOMEM;
-				}
-
-				out_ = (char *)(*out + diff);
-				out_bytes_left = out_size - diff;
-
-				continue;
-			}
-			case SDL_ICONV_EILSEQ:
-				/* try skipping? */
-				in_++;
-				in_bytes_left--;
-				break;
-			case SDL_ICONV_EINVAL:
-			case SDL_ICONV_ERROR:
-				/* t'was a good run */
-				in_bytes_left = 0;
-				memset(out_, 0, sizeof(uint32_t));
+			out_size *= 2;
+			*out = realloc(old_out, out_size + sizeof(uint32_t));
+			if (!*out) {
+				free(old_out);
 				SDL_iconv_close(cd);
-				return CHARSET_ERROR_UNIMPLEMENTED;
-			default: break;
+				return CHARSET_ERROR_NOMEM;
+			}
+
+			out_ = (char *)(*out + diff);
+			out_bytes_left = out_size - diff;
+
+			continue;
+		}
+		case SDL_ICONV_EILSEQ:
+			/* try skipping? */
+			in_++;
+			in_bytes_left--;
+			break;
+		case SDL_ICONV_EINVAL:
+		case SDL_ICONV_ERROR:
+			/* t'was a good run */
+			in_bytes_left = 0;
+			memset(out_, 0, sizeof(uint32_t));
+			SDL_iconv_close(cd);
+			return CHARSET_ERROR_UNIMPLEMENTED;
+		default: break;
 		}
 
 		/* avoid infinite loops */

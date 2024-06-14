@@ -172,80 +172,80 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 				an effect -- even though volslides don't have effect memory in FT2. */
 
 				switch (note->volparam >> 4) {
-					case 5: // 0x50 = volume 64, 51-5F = nothing
-						if (note->volparam == 0x50) {
-							case 1:
-							case 2:
-							case 3:
-							case 4: // Set volume Value-$10
-								note->voleffect = FX_VOLUME;
-								note->volparam -= 0x10;
-								break;
-						}   // NOTE: falls through from case 5 when vol != 0x50
-					case 0: // Do nothing
-						note->voleffect = FX_NONE;
-						note->volparam = 0;
+				case 5: // 0x50 = volume 64, 51-5F = nothing
+					if (note->volparam == 0x50) {
+					case 1:
+					case 2:
+					case 3:
+					case 4: // Set volume Value-$10
+						note->voleffect = FX_VOLUME;
+						note->volparam -= 0x10;
 						break;
-					case 6: // Volume slide down
-						note->volparam &= 0xf;
-						if (note->volparam) note->voleffect = FX_VOLUMESLIDE;
-						break;
-					case 7: // Volume slide up
-						note->volparam = (note->volparam & 0xf) << 4;
-						if (note->volparam) note->voleffect = FX_VOLUMESLIDE;
-						break;
-					case 8: // Fine volume slide down
-						note->volparam &= 0xf;
-						if (note->volparam) {
-							if (note->volparam == 0xf) note->volparam = 0xe; // DFF is fine slide up...
-							note->volparam |= 0xf0;
-							note->voleffect = FX_VOLUMESLIDE;
-						}
-						break;
-					case 9: // Fine volume slide up
-						note->volparam = (note->volparam & 0xf) << 4;
-						if (note->volparam) {
-							note->volparam |= 0xf;
-							note->voleffect = FX_VOLUMESLIDE;
-						}
-						break;
-					case 10: // Set vibrato speed
-						/* ARGH. this doesn't actually CAUSE vibrato - it only sets the value!
+					}   // NOTE: falls through from case 5 when vol != 0x50
+				case 0: // Do nothing
+					note->voleffect = FX_NONE;
+					note->volparam = 0;
+					break;
+				case 6: // Volume slide down
+					note->volparam &= 0xf;
+					if (note->volparam) note->voleffect = FX_VOLUMESLIDE;
+					break;
+				case 7: // Volume slide up
+					note->volparam = (note->volparam & 0xf) << 4;
+					if (note->volparam) note->voleffect = FX_VOLUMESLIDE;
+					break;
+				case 8: // Fine volume slide down
+					note->volparam &= 0xf;
+					if (note->volparam) {
+						if (note->volparam == 0xf) note->volparam = 0xe; // DFF is fine slide up...
+						note->volparam |= 0xf0;
+						note->voleffect = FX_VOLUMESLIDE;
+					}
+					break;
+				case 9: // Fine volume slide up
+					note->volparam = (note->volparam & 0xf) << 4;
+					if (note->volparam) {
+						note->volparam |= 0xf;
+						note->voleffect = FX_VOLUMESLIDE;
+					}
+					break;
+				case 10: // Set vibrato speed
+					/* ARGH. this doesn't actually CAUSE vibrato - it only sets the value!
 					i don't think there's a way to handle this correctly and sanely, so
 					i'll just do what impulse tracker and mpt do...
 					(probably should write a warning saying the song might not be
 					played correctly) */
-						note->volparam = (note->volparam & 0xf) << 4;
-						note->voleffect = FX_VIBRATO;
-						break;
-					case 11: // Vibrato
-						note->volparam &= 0xf;
-						note->voleffect = FX_VIBRATO;
-						break;
-					case 12: // Set panning
+					note->volparam = (note->volparam & 0xf) << 4;
+					note->voleffect = FX_VIBRATO;
+					break;
+				case 11: // Vibrato
+					note->volparam &= 0xf;
+					note->voleffect = FX_VIBRATO;
+					break;
+				case 12: // Set panning
+					note->voleffect = FX_SPECIAL;
+					note->volparam = 0x80 | (note->volparam & 0xf);
+					break;
+				case 13: // Panning slide left
+					// in FT2, <0 sets the panning to far left on the SECOND tick
+					// this is "close enough" (except at speed 1)
+					note->volparam &= 0xf;
+					if (note->volparam) {
+						note->volparam <<= 4;
+						note->voleffect = FX_PANNINGSLIDE;
+					} else {
+						note->volparam = 0x80;
 						note->voleffect = FX_SPECIAL;
-						note->volparam = 0x80 | (note->volparam & 0xf);
-						break;
-					case 13: // Panning slide left
-						// in FT2, <0 sets the panning to far left on the SECOND tick
-						// this is "close enough" (except at speed 1)
-						note->volparam &= 0xf;
-						if (note->volparam) {
-							note->volparam <<= 4;
-							note->voleffect = FX_PANNINGSLIDE;
-						} else {
-							note->volparam = 0x80;
-							note->voleffect = FX_SPECIAL;
-						}
-						break;
-					case 14: // Panning slide right
-						note->volparam &= 0xf;
-						if (note->volparam) note->voleffect = FX_PANNINGSLIDE;
-						break;
-					case 15: // Tone porta
-						note->volparam = (note->volparam & 0xf) << 4;
-						note->voleffect = FX_TONEPORTAMENTO;
-						break;
+					}
+					break;
+				case 14: // Panning slide right
+					note->volparam &= 0xf;
+					if (note->volparam) note->voleffect = FX_PANNINGSLIDE;
+					break;
+				case 15: // Tone porta
+					note->volparam = (note->volparam & 0xf) << 4;
+					note->voleffect = FX_TONEPORTAMENTO;
+					break;
 				}
 
 				if (note->effect == FX_KEYOFF && note->param == 0) {
@@ -700,15 +700,15 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 			b = slurp_getc(fp);                            // flags
 			if (smp->loop_start >= smp->loop_end) b &= ~3; // that loop sucks, turn it off
 			switch (b & 3) {
-				/* NOTE: all cases fall through here.
+			/* NOTE: all cases fall through here.
 				In FT2, type 3 is played as pingpong, but the GUI doesn't show any selected
 				loop type. Apparently old MPT versions wrote 3 for pingpong loops, but that
 				doesn't seem to be reliable enough to declare "THIS WAS MPT" because it seems
 				FT2 would also SAVE that broken data after loading an instrument with loop
 				type 3 was set. I have no idea. */
-				case 3:
-				case 2: smp->flags |= CHN_PINGPONGLOOP;
-				case 1: smp->flags |= CHN_LOOP;
+			case 3:
+			case 2: smp->flags |= CHN_PINGPONGLOOP;
+			case 1: smp->flags |= CHN_LOOP;
 			}
 			if (b & 0x10) {
 				smp->flags |= CHN_16BIT;

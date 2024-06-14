@@ -101,19 +101,19 @@ static void toggle_port(void)
 		if (p->disable)
 			if (!p->disable(p)) return;
 		switch (p->io) {
-			case 0:
-				if (p->iocap & MIDI_INPUT) p->io = MIDI_INPUT;
-				else if (p->iocap & MIDI_OUTPUT) p->io = MIDI_OUTPUT;
-				break;
-			case MIDI_INPUT:
-				if (p->iocap & MIDI_OUTPUT) p->io = MIDI_OUTPUT;
-				else p->io = 0;
-				break;
-			case MIDI_OUTPUT:
-				if (p->iocap & MIDI_INPUT) p->io |= MIDI_INPUT;
-				else p->io = 0;
-				break;
-			case MIDI_INPUT | MIDI_OUTPUT: p->io = 0; break;
+		case 0:
+			if (p->iocap & MIDI_INPUT) p->io = MIDI_INPUT;
+			else if (p->iocap & MIDI_OUTPUT) p->io = MIDI_OUTPUT;
+			break;
+		case MIDI_INPUT:
+			if (p->iocap & MIDI_OUTPUT) p->io = MIDI_OUTPUT;
+			else p->io = 0;
+			break;
+		case MIDI_OUTPUT:
+			if (p->iocap & MIDI_INPUT) p->io |= MIDI_INPUT;
+			else p->io = 0;
+			break;
+		case MIDI_INPUT | MIDI_OUTPUT: p->io = 0; break;
 		};
 
 		if (p->enable) {
@@ -148,24 +148,24 @@ static int midi_page_handle_key(struct key_event *k)
 	}
 
 	switch (k->sym) {
-		case SDLK_SPACE:
-			if (k->state == KEY_PRESS) return 1;
-			toggle_port();
-			return 1;
-		case SDLK_PAGEUP: new_port -= 13; break;
-		case SDLK_PAGEDOWN: new_port += 13; break;
-		case SDLK_HOME: new_port = 0; break;
-		case SDLK_END: new_port = midi_engine_port_count() - 1; break;
-		case SDLK_UP: new_port--; break;
-		case SDLK_DOWN: new_port++; break;
-		case SDLK_TAB:
-			if (k->state == KEY_RELEASE) return 1;
-			change_focus_to(1);
-			status.flags |= NEED_UPDATE;
-			return 1;
-		default:
-			if (!k->mouse) return 0;
-			break;
+	case SDLK_SPACE:
+		if (k->state == KEY_PRESS) return 1;
+		toggle_port();
+		return 1;
+	case SDLK_PAGEUP: new_port -= 13; break;
+	case SDLK_PAGEDOWN: new_port += 13; break;
+	case SDLK_HOME: new_port = 0; break;
+	case SDLK_END: new_port = midi_engine_port_count() - 1; break;
+	case SDLK_UP: new_port--; break;
+	case SDLK_DOWN: new_port++; break;
+	case SDLK_TAB:
+		if (k->state == KEY_RELEASE) return 1;
+		change_focus_to(1);
+		status.flags |= NEED_UPDATE;
+		return 1;
+	default:
+		if (!k->mouse) return 0;
+		break;
 	};
 	if (k->state == KEY_RELEASE) return 0;
 
@@ -268,11 +268,11 @@ static void midi_page_draw_portlist(void)
 		}
 
 		switch (p->io) {
-			case 0: state = "Disabled "; break;
-			case MIDI_INPUT: state = "   Input "; break;
-			case MIDI_OUTPUT: state = "  Output "; break;
-			case MIDI_INPUT | MIDI_OUTPUT: state = "  Duplex "; break;
-			default: state = " Enabled?"; break;
+		case 0: state = "Disabled "; break;
+		case MIDI_INPUT: state = "   Input "; break;
+		case MIDI_OUTPUT: state = "  Output "; break;
+		case MIDI_INPUT | MIDI_OUTPUT: state = "  Duplex "; break;
+		default: state = " Enabled?"; break;
 		}
 		draw_text(state, 3, 15 + i, fg, bg);
 	}

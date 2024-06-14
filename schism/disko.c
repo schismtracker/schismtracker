@@ -133,10 +133,10 @@ static void _dw_mem_seek(disko_t *ds, long offset, int whence)
 {
 	// mostly from slurp_seek
 	switch (whence) {
-		default:
-		case SEEK_SET: break;
-		case SEEK_CUR: offset += ds->pos; break;
-		case SEEK_END: offset += ds->length; break;
+	default:
+	case SEEK_SET: break;
+	case SEEK_CUR: offset += ds->pos; break;
+	case SEEK_END: offset += ds->length; break;
 	}
 	if (offset < 0) {
 		disko_seterror(ds, EINVAL);
@@ -809,22 +809,22 @@ static int disko_finish(void)
 	status.flags &= ~DISKWRITER_ACTIVE; /* please unsubscribe me from your mailing list */
 
 	switch (ret) {
-		case DW_OK:
-			gettimeofday(&export_end_time, NULL);
-			elapsed = (export_end_time.tv_sec - export_start_time.tv_sec)
-					  + ((export_end_time.tv_usec - export_start_time.tv_usec) / 1000000.0);
+	case DW_OK:
+		gettimeofday(&export_end_time, NULL);
+		elapsed = (export_end_time.tv_sec - export_start_time.tv_sec)
+				  + ((export_end_time.tv_usec - export_start_time.tv_usec) / 1000000.0);
 
-			/* it would be more useful if this actually got the real size of the files */
-			log_appendf(
-				5, " %.2f MiB (%d:%02d) written in %.2lf sec", total_size / 1048576.0,
-				samples_0 / disko_output_rate / 60, (samples_0 / disko_output_rate) % 60, elapsed);
-			break;
-		case DW_ERROR:
-			/* hey, what was the filename? oops */
-			if (canceled) log_appendf(5, " Canceled");
-			else log_perror(" Write error");
-			break;
-		default: log_appendf(5, " Internal error exporting song"); break;
+		/* it would be more useful if this actually got the real size of the files */
+		log_appendf(
+			5, " %.2f MiB (%d:%02d) written in %.2lf sec", total_size / 1048576.0, samples_0 / disko_output_rate / 60,
+			(samples_0 / disko_output_rate) % 60, elapsed);
+		break;
+	case DW_ERROR:
+		/* hey, what was the filename? oops */
+		if (canceled) log_appendf(5, " Canceled");
+		else log_perror(" Write error");
+		break;
+	default: log_appendf(5, " Internal error exporting song"); break;
 	}
 
 	return ret;

@@ -99,20 +99,20 @@ static int color_to_rgb(const char *spec, int speclen, uint32_t *rgb)
 	if (spec[0] == '#') {
 		char buf[7];
 		switch (speclen) {
-			case 4:
-				buf[0] = buf[1] = spec[1];
-				buf[2] = buf[3] = spec[2];
-				buf[4] = buf[5] = spec[3];
-				break;
-			case 7: memcpy(buf, spec + 1, 6); break;
-			case 13:
-				buf[0] = spec[1];
-				buf[1] = spec[2];
-				buf[2] = spec[5];
-				buf[3] = spec[6];
-				buf[4] = spec[9];
-				buf[5] = spec[10];
-				break;
+		case 4:
+			buf[0] = buf[1] = spec[1];
+			buf[2] = buf[3] = spec[2];
+			buf[4] = buf[5] = spec[3];
+			break;
+		case 7: memcpy(buf, spec + 1, 6); break;
+		case 13:
+			buf[0] = spec[1];
+			buf[1] = spec[2];
+			buf[2] = spec[5];
+			buf[3] = spec[6];
+			buf[4] = spec[9];
+			buf[5] = spec[10];
+			break;
 		}
 		buf[6] = '\0';
 		*rgb = strtol(buf, NULL, 16);

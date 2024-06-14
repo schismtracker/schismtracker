@@ -174,9 +174,9 @@ static fmt_load_song_func load_song_funcs[] = {
 const char *fmt_strerror(int n)
 {
 	switch (n) {
-		case -LOAD_UNSUPPORTED: return "Unrecognised file type";
-		case -LOAD_FORMAT_ERROR: return "File format error (corrupt?)";
-		default: return strerror(errno);
+	case -LOAD_UNSUPPORTED: return "Unrecognised file type";
+	case -LOAD_FORMAT_ERROR: return "File format error (corrupt?)";
+	default: return strerror(errno);
 	}
 }
 
@@ -215,13 +215,13 @@ song_t *song_create_load(const char *file)
 	for (func = load_song_funcs; *func && !ok; func++) {
 		slurp_rewind(s);
 		switch ((*func)(newsong, s, 0)) {
-			case LOAD_SUCCESS:
-				err = 0;
-				ok = 1;
-				break;
-			case LOAD_UNSUPPORTED: err = -LOAD_UNSUPPORTED; continue;
-			case LOAD_FORMAT_ERROR: err = -LOAD_FORMAT_ERROR; break;
-			case LOAD_FILE_ERROR: err = errno; break;
+		case LOAD_SUCCESS:
+			err = 0;
+			ok = 1;
+			break;
+		case LOAD_UNSUPPORTED: err = -LOAD_UNSUPPORTED; continue;
+		case LOAD_FORMAT_ERROR: err = -LOAD_FORMAT_ERROR; break;
+		case LOAD_FILE_ERROR: err = errno; break;
 		}
 		if (err) {
 			csf_free(newsong);
@@ -493,18 +493,18 @@ static void _save_it_pattern(disko_t *fp, song_note_t *pat, int patsize)
 			}
 			if (noteptr->instrument) m |= 2;
 			switch (noteptr->voleffect) {
-				default: break;
-				case VOLFX_VOLUME: vol = MIN(noteptr->volparam, 64); break;
-				case VOLFX_FINEVOLUP: vol = MIN(noteptr->volparam, 9) + 65; break;
-				case VOLFX_FINEVOLDOWN: vol = MIN(noteptr->volparam, 9) + 75; break;
-				case VOLFX_VOLSLIDEUP: vol = MIN(noteptr->volparam, 9) + 85; break;
-				case VOLFX_VOLSLIDEDOWN: vol = MIN(noteptr->volparam, 9) + 95; break;
-				case VOLFX_PORTADOWN: vol = MIN(noteptr->volparam, 9) + 105; break;
-				case VOLFX_PORTAUP: vol = MIN(noteptr->volparam, 9) + 115; break;
-				case VOLFX_PANNING: vol = MIN(noteptr->volparam, 64) + 128; break;
-				case VOLFX_VIBRATODEPTH: vol = MIN(noteptr->volparam, 9) + 203; break;
-				case VOLFX_VIBRATOSPEED: vol = 203; break;
-				case VOLFX_TONEPORTAMENTO: vol = MIN(noteptr->volparam, 9) + 193; break;
+			default: break;
+			case VOLFX_VOLUME: vol = MIN(noteptr->volparam, 64); break;
+			case VOLFX_FINEVOLUP: vol = MIN(noteptr->volparam, 9) + 65; break;
+			case VOLFX_FINEVOLDOWN: vol = MIN(noteptr->volparam, 9) + 75; break;
+			case VOLFX_VOLSLIDEUP: vol = MIN(noteptr->volparam, 9) + 85; break;
+			case VOLFX_VOLSLIDEDOWN: vol = MIN(noteptr->volparam, 9) + 95; break;
+			case VOLFX_PORTADOWN: vol = MIN(noteptr->volparam, 9) + 105; break;
+			case VOLFX_PORTAUP: vol = MIN(noteptr->volparam, 9) + 115; break;
+			case VOLFX_PANNING: vol = MIN(noteptr->volparam, 64) + 128; break;
+			case VOLFX_VIBRATODEPTH: vol = MIN(noteptr->volparam, 9) + 203; break;
+			case VOLFX_VIBRATOSPEED: vol = 203; break;
+			case VOLFX_TONEPORTAMENTO: vol = MIN(noteptr->volparam, 9) + 193; break;
 			}
 			if (vol != -1) m |= 4;
 			csf_export_s3m_effect(&effect, &param, 1);
@@ -880,9 +880,9 @@ int song_export(const char *filename, const char *type)
 	r = disko_export_song(mangle, format);
 	free(mangle);
 	switch (r) {
-		case DW_OK: return SAVE_SUCCESS;
-		case DW_ERROR: return SAVE_FILE_ERROR;
-		default: return SAVE_INTERNAL_ERROR;
+	case DW_OK: return SAVE_SUCCESS;
+	case DW_ERROR: return SAVE_FILE_ERROR;
+	default: return SAVE_INTERNAL_ERROR;
 	}
 }
 
@@ -943,16 +943,16 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
 	}
 
 	switch (ret) {
-		case SAVE_SUCCESS:
-			status.flags &= ~SONG_NEEDS_SAVE;
-			if (strcasecmp(song_filename, mangle)) song_set_filename(mangle);
-			log_appendf(5, " Done");
-			break;
-		case SAVE_FILE_ERROR: log_perror(mangle); break;
-		case SAVE_INTERNAL_ERROR:
-		default: // ???
-			log_appendf(4, " Internal error saving song");
-			break;
+	case SAVE_SUCCESS:
+		status.flags &= ~SONG_NEEDS_SAVE;
+		if (strcasecmp(song_filename, mangle)) song_set_filename(mangle);
+		log_appendf(5, " Done");
+		break;
+	case SAVE_FILE_ERROR: log_perror(mangle); break;
+	case SAVE_INTERNAL_ERROR:
+	default: // ???
+		log_appendf(4, " Internal error saving song");
+		break;
 	}
 
 	free(mangle);
@@ -984,16 +984,16 @@ int song_save_sample(const char *filename, const char *type, song_sample_t *smp,
 	}
 
 	switch (ret) {
-		case SAVE_SUCCESS: status_text_flash("%s sample saved (sample %d)", format->name, num); break;
-		case SAVE_FILE_ERROR:
-			status_text_flash("Error: Sample %d NOT saved! (%s)", num, "File Error");
-			log_perror(get_basename(filename));
-			break;
-		case SAVE_INTERNAL_ERROR:
-		default: // ???
-			status_text_flash("Error: Sample %d NOT saved! (%s)", num, "Internal error");
-			log_appendf(4, "Internal error saving sample");
-			break;
+	case SAVE_SUCCESS: status_text_flash("%s sample saved (sample %d)", format->name, num); break;
+	case SAVE_FILE_ERROR:
+		status_text_flash("Error: Sample %d NOT saved! (%s)", num, "File Error");
+		log_perror(get_basename(filename));
+		break;
+	case SAVE_INTERNAL_ERROR:
+	default: // ???
+		status_text_flash("Error: Sample %d NOT saved! (%s)", num, "Internal error");
+		log_appendf(4, "Internal error saving sample");
+		break;
 	}
 
 	return ret;

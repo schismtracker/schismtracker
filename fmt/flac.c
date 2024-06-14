@@ -68,75 +68,75 @@ static void on_meta(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetada
 	int32_t loop_start = -1, loop_length = -1;
 
 	switch (metadata->type) {
-		case FLAC__METADATA_TYPE_STREAMINFO:
-			memcpy(&flac_file->streaminfo, &metadata->data.stream_info, sizeof(flac_file->streaminfo));
-			break;
-		case FLAC__METADATA_TYPE_VORBIS_COMMENT:
-			for (size_t i = 0; i < metadata->data.vorbis_comment.num_comments; i++) {
-				const char *tag = (const char *)metadata->data.vorbis_comment.comments[i].entry;
-				const FLAC__uint32 length = metadata->data.vorbis_comment.comments[i].length;
+	case FLAC__METADATA_TYPE_STREAMINFO:
+		memcpy(&flac_file->streaminfo, &metadata->data.stream_info, sizeof(flac_file->streaminfo));
+		break;
+	case FLAC__METADATA_TYPE_VORBIS_COMMENT:
+		for (size_t i = 0; i < metadata->data.vorbis_comment.num_comments; i++) {
+			const char *tag = (const char *)metadata->data.vorbis_comment.comments[i].entry;
+			const FLAC__uint32 length = metadata->data.vorbis_comment.comments[i].length;
 
-				if (length > 6 && !strncasecmp(tag, "TITLE=", 6)) strncpy(flac_file->flags.name, tag + 6, 32);
-				else if (length > 11 && !strncasecmp(tag, "SAMPLERATE=", 11))
-					flac_file->flags.sample_rate = strtol(tag + 11, NULL, 10);
-				else if (length > 10 && !strncasecmp(tag, "LOOPSTART=", 10)) loop_start = strtol(tag + 10, NULL, 10);
-				else if (length > 11 && !strncasecmp(tag, "LOOPLENGTH=", 11)) loop_length = strtol(tag + 11, NULL, 10);
-			}
-
-			if (loop_start > 0 && loop_length > 1) {
-				flac_file->flags.loop.type = 0;
-				flac_file->flags.loop.start = loop_start;
-				flac_file->flags.loop.end = loop_start + loop_length - 1;
-			}
-
-			break;
-		case FLAC__METADATA_TYPE_APPLICATION: {
-			const uint8_t *data = (const uint8_t *)metadata->data.application.data;
-
-			uint32_t chunk_id = *(uint32_t *)data;
-			data += sizeof(uint32_t);
-			uint32_t chunk_len = *(uint32_t *)data;
-			data += sizeof(uint32_t);
-
-			if (chunk_id == 0x61727478 && chunk_len >= 8) { // "xtra"
-				uint32_t xtra_flags = *(uint32_t *)data;
-				data += sizeof(uint32_t);
-
-				// panning (0..256)
-				if (xtra_flags & 0x20) {
-					uint16_t tmp_pan = *(uint16_t *)data;
-					if (tmp_pan > 255) tmp_pan = 255;
-
-					flac_file->flags.pan = (uint8_t)tmp_pan;
-				}
-				data += sizeof(uint16_t);
-
-				// volume (0..256)
-				uint16_t tmp_vol = *(uint16_t *)data;
-				if (tmp_vol > 256) tmp_vol = 256;
-
-				flac_file->flags.vol = (uint8_t)((tmp_vol + 2) / 4); // 0..256 -> 0..64 (rounded)
-			}
-
-			if (chunk_id == 0x6C706D73 && chunk_len > 52) { // "smpl"
-				data += 28;                                 // seek to first wanted byte
-
-				uint32_t num_loops = *(uint32_t *)data;
-				data += sizeof(uint32_t);
-				if (num_loops == 1) {
-					data += 4 + 4; // skip "samplerData" and "identifier"
-
-					flac_file->flags.loop.type = *(uint32_t *)data;
-					data += sizeof(uint32_t);
-					flac_file->flags.loop.start = *(uint32_t *)data;
-					data += sizeof(uint32_t);
-					flac_file->flags.loop.end = *(uint32_t *)data;
-					data += sizeof(uint32_t);
-				}
-			}
-			break;
+			if (length > 6 && !strncasecmp(tag, "TITLE=", 6)) strncpy(flac_file->flags.name, tag + 6, 32);
+			else if (length > 11 && !strncasecmp(tag, "SAMPLERATE=", 11))
+				flac_file->flags.sample_rate = strtol(tag + 11, NULL, 10);
+			else if (length > 10 && !strncasecmp(tag, "LOOPSTART=", 10)) loop_start = strtol(tag + 10, NULL, 10);
+			else if (length > 11 && !strncasecmp(tag, "LOOPLENGTH=", 11)) loop_length = strtol(tag + 11, NULL, 10);
 		}
-		default: break;
+
+		if (loop_start > 0 && loop_length > 1) {
+			flac_file->flags.loop.type = 0;
+			flac_file->flags.loop.start = loop_start;
+			flac_file->flags.loop.end = loop_start + loop_length - 1;
+		}
+
+		break;
+	case FLAC__METADATA_TYPE_APPLICATION: {
+		const uint8_t *data = (const uint8_t *)metadata->data.application.data;
+
+		uint32_t chunk_id = *(uint32_t *)data;
+		data += sizeof(uint32_t);
+		uint32_t chunk_len = *(uint32_t *)data;
+		data += sizeof(uint32_t);
+
+		if (chunk_id == 0x61727478 && chunk_len >= 8) { // "xtra"
+			uint32_t xtra_flags = *(uint32_t *)data;
+			data += sizeof(uint32_t);
+
+			// panning (0..256)
+			if (xtra_flags & 0x20) {
+				uint16_t tmp_pan = *(uint16_t *)data;
+				if (tmp_pan > 255) tmp_pan = 255;
+
+				flac_file->flags.pan = (uint8_t)tmp_pan;
+			}
+			data += sizeof(uint16_t);
+
+			// volume (0..256)
+			uint16_t tmp_vol = *(uint16_t *)data;
+			if (tmp_vol > 256) tmp_vol = 256;
+
+			flac_file->flags.vol = (uint8_t)((tmp_vol + 2) / 4); // 0..256 -> 0..64 (rounded)
+		}
+
+		if (chunk_id == 0x6C706D73 && chunk_len > 52) { // "smpl"
+			data += 28;                                 // seek to first wanted byte
+
+			uint32_t num_loops = *(uint32_t *)data;
+			data += sizeof(uint32_t);
+			if (num_loops == 1) {
+				data += 4 + 4; // skip "samplerData" and "identifier"
+
+				flac_file->flags.loop.type = *(uint32_t *)data;
+				data += sizeof(uint32_t);
+				flac_file->flags.loop.start = *(uint32_t *)data;
+				data += sizeof(uint32_t);
+				flac_file->flags.loop.end = *(uint32_t *)data;
+				data += sizeof(uint32_t);
+			}
+		}
+		break;
+	}
+	default: break;
 	}
 
 	(void)decoder, (void)client_data;

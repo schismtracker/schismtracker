@@ -139,34 +139,34 @@ static int wav_load(wave_file_t *f, const uint8_t *data, size_t len)
 		}
 
 		switch (c.id) {
-			case IFFID_fmt: {
-				if (have_format) {
-					log_appendf(4, "Corrupt WAV file. Found multiple format headers.\n");
-					return 0;
-				}
-
-				have_format = 1;
-				memcpy(&f->fmt, data + offset, sizeof(wave_format_t));
-#if WORDS_BIGENDIAN
-				f->fmt.format = bswapLE16(f->fmt.format);
-				f->fmt.channels = bswapLE16(f->fmt.channels);
-				f->fmt.freqHz = bswapLE32(f->fmt.freqHz);
-				f->fmt.bytessec = bswapLE32(f->fmt.bytessec);
-				f->fmt.samplesize = bswapLE16(f->fmt.samplesize);
-				f->fmt.bitspersample = bswapLE16(f->fmt.bitspersample);
-#endif
-				break;
+		case IFFID_fmt: {
+			if (have_format) {
+				log_appendf(4, "Corrupt WAV file. Found multiple format headers.\n");
+				return 0;
 			}
 
-			case IFFID_data:
-				if (!have_format) {
-					log_appendf(4, "WAV file did not specify format before data\n");
-					return 0;
-				}
+			have_format = 1;
+			memcpy(&f->fmt, data + offset, sizeof(wave_format_t));
+#if WORDS_BIGENDIAN
+			f->fmt.format = bswapLE16(f->fmt.format);
+			f->fmt.channels = bswapLE16(f->fmt.channels);
+			f->fmt.freqHz = bswapLE32(f->fmt.freqHz);
+			f->fmt.bytessec = bswapLE32(f->fmt.bytessec);
+			f->fmt.samplesize = bswapLE16(f->fmt.samplesize);
+			f->fmt.bitspersample = bswapLE16(f->fmt.bitspersample);
+#endif
+			break;
+		}
 
-				memcpy(&f->data, &c, sizeof(wave_chunk_prefix_t));
-				f->buf = (uint8_t *)(data + offset);
-				return 1;
+		case IFFID_data:
+			if (!have_format) {
+				log_appendf(4, "WAV file did not specify format before data\n");
+				return 0;
+			}
+
+			memcpy(&f->data, &c, sizeof(wave_chunk_prefix_t));
+			f->buf = (uint8_t *)(data + offset);
+			return 1;
 		}
 
 		offset += c.length;
@@ -197,11 +197,11 @@ int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample_t *smp)
 	flags |= (f.fmt.channels == 2) ? SF_SI : SF_M; // interleaved stereo
 	// bit width
 	switch (f.fmt.bitspersample) {
-		case 8: flags |= SF_8; break;
-		case 16: flags |= SF_16; break;
-		case 24: flags |= SF_24; break;
-		case 32: flags |= SF_32; break;
-		default: return 0; // unsupported
+	case 8: flags |= SF_8; break;
+	case 16: flags |= SF_16; break;
+	case 24: flags |= SF_24; break;
+	case 32: flags |= SF_32; break;
+	default: return 0; // unsupported
 	}
 	// encoding (8-bit wav is unsigned, everything else is signed -- yeah, it's stupid)
 	flags |= (f.fmt.bitspersample == 8) ? SF_PCMU : SF_PCMS;

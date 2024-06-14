@@ -198,15 +198,15 @@ static slurp_t *_slurp_open(const char *filename, struct stat *buf, size_t size)
 
 #ifdef SCHISM_WIN32
 	switch (slurp_win32(t, filename, size)) {
-		case 0: free(t); return NULL;
-		case 1: return t;
+	case 0: free(t); return NULL;
+	case 1: return t;
 	};
 #endif
 
 #if HAVE_MMAP
 	switch (slurp_mmap(t, filename, size)) {
-		case 0: free(t); return NULL;
-		case 1: return t;
+	case 0: free(t); return NULL;
+	case 1: return t;
 	};
 #endif
 
@@ -274,10 +274,10 @@ void unslurp(slurp_t *t)
 int slurp_seek(slurp_t *t, long offset, int whence)
 {
 	switch (whence) {
-		default:
-		case SEEK_SET: break;
-		case SEEK_CUR: offset += t->pos; break;
-		case SEEK_END: offset += t->length; break;
+	default:
+	case SEEK_SET: break;
+	case SEEK_CUR: offset += t->pos; break;
+	case SEEK_END: offset += t->length; break;
 	}
 	if (offset < 0 || (size_t)offset > t->length) return -1;
 	t->pos = offset;

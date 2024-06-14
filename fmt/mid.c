@@ -221,14 +221,34 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			cn = lo; //or: trknum * CHANNELS_PER_TRACK + lo % CHANNELS_PER_TRACK;
 
 			switch (hi) {
-				case 0x8: // note off - x, y
-					rs = status;
-					x = slurp_getc(fp);                               // note
-					y = slurp_getc(fp);                               // release velocity
-					x = CLAMP(x + NOTE_FIRST, NOTE_FIRST, NOTE_LAST); // clamp is wrong, but whatever
-					// if the last note in the channel is the same as this note, just write ===
-					// otherwise, if there is a note playing, assume our note got backgrounded
-					// and write S71 (past note off)
+			case 0x8: // note off - x, y
+				rs = status;
+				x = slurp_getc(fp);                               // note
+				y = slurp_getc(fp);                               // release velocity
+				x = CLAMP(x + NOTE_FIRST, NOTE_FIRST, NOTE_LAST); // clamp is wrong, but whatever
+				// if the last note in the channel is the same as this note, just write ===
+				// otherwise, if there is a note playing, assume our note got backgrounded
+				// and write S71 (past note off)
+				if (midich[cn].fg_note == x) {
+					note = (song_note_t){.note = NOTE_OFF};
+					midich[cn].fg_note = NOTE_NONE;
+				} else {
+					// S71, past note off
+					note = (song_note_t){.effect = FX_SPECIAL, .param = 0x71};
+					midich[cn].bg_note = NOTE_NONE;
+				}
+				break;
+			case 0x9: // note on - x, y (velocity zero = note off)
+				rs = status;
+				x = slurp_getc(fp);                               // note
+				y = slurp_getc(fp);                               // attack velocity
+				x = CLAMP(x + NOTE_FIRST, NOTE_FIRST, NOTE_LAST); // see note off above.
+
+				if (lo == 9) {
+					// ignore percussion for now
+				} else if (y == 0) {
+					// this is actually another note-off, see above
+					// (maybe that stuff should be split into a function or blahblah)
 					if (midich[cn].fg_note == x) {
 						note = (song_note_t){.note = NOTE_OFF};
 						midich[cn].fg_note = NOTE_NONE;
@@ -237,176 +257,156 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						note = (song_note_t){.effect = FX_SPECIAL, .param = 0x71};
 						midich[cn].bg_note = NOTE_NONE;
 					}
-					break;
-				case 0x9: // note on - x, y (velocity zero = note off)
-					rs = status;
-					x = slurp_getc(fp);                               // note
-					y = slurp_getc(fp);                               // attack velocity
-					x = CLAMP(x + NOTE_FIRST, NOTE_FIRST, NOTE_LAST); // see note off above.
+				} else {
+					if (nsmp == 1 && !(lflags & LOAD_NOSAMPLES)) {
+						// no samples defined yet - fake a program change
+						patch_samples[0] = 1;
+						adlib_patch_apply(song->samples + 1, 0);
+						nsmp++;
+					}
 
-					if (lo == 9) {
-						// ignore percussion for now
-					} else if (y == 0) {
-						// this is actually another note-off, see above
-						// (maybe that stuff should be split into a function or blahblah)
-						if (midich[cn].fg_note == x) {
-							note = (song_note_t){.note = NOTE_OFF};
-							midich[cn].fg_note = NOTE_NONE;
-						} else {
-							// S71, past note off
-							note = (song_note_t){.effect = FX_SPECIAL, .param = 0x71};
-							midich[cn].bg_note = NOTE_NONE;
-						}
+					note = (song_note_t){
+						.note = x,
+						.instrument = patch_samples[midich[cn].instrument],
+						.voleffect = VOLFX_VOLUME,
+						.volparam = (y & 0x7f) * 64 / 127,
+					};
+					midich[cn].fg_note = x;
+					midich[cn].bg_note = midich[cn].fg_note;
+				}
+				break;
+			case 0xa: // polyphonic key pressure (aftertouch) - x, y
+				rs = status;
+				x = slurp_getc(fp);
+				y = slurp_getc(fp);
+				// TODO polyphonic aftertouch channel=lo note=x pressure=y
+				continue;
+			case 0xb: // controller OR channel mode - x, y
+				rs = status;
+				// controller if first data byte 0-119
+				// channel mode if first data byte 120-127
+				x = slurp_getc(fp);
+				y = slurp_getc(fp);
+				// TODO controller change channel=lo controller=x value=y
+				continue;
+			case 0xc: // program change - x (instrument/voice selection)
+				rs = status;
+				x = slurp_getc(fp);
+				midich[cn].instrument = x;
+				// look familiar? this was copied from the .mus loader
+				if (!patch_samples[x] && !(lflags & LOAD_NOSAMPLES)) {
+					if (nsmp < MAX_SAMPLES) {
+						// New sample!
+						patch_samples[x] = nsmp;
+						adlib_patch_apply(song->samples + nsmp, x);
+						nsmp++;
 					} else {
-						if (nsmp == 1 && !(lflags & LOAD_NOSAMPLES)) {
-							// no samples defined yet - fake a program change
-							patch_samples[0] = 1;
-							adlib_patch_apply(song->samples + 1, 0);
-							nsmp++;
+						log_appendf(4, " Warning: Too many samples");
+					}
+				}
+				note = (song_note_t){.instrument = patch_samples[x]};
+				break;
+			case 0xd: // channel pressure (aftertouch) - x
+				rs = status;
+				x = slurp_getc(fp);
+				// TODO channel aftertouch channel=lo pressure=x
+				continue;
+			case 0xe: // pitch bend - x, y
+				rs = status;
+				x = slurp_getc(fp);
+				y = slurp_getc(fp);
+				// TODO pitch bend channel=lo lsb=x msb=y
+				continue;
+			case 0xf: // system messages
+				switch (lo) {
+				case 0xf:                   // meta-event (text and stuff)
+					x = slurp_getc(fp);     // type
+					vlen = read_varlen(fp); // value length
+					switch (x) {
+					case 0x1: // text
+					case 0x2: // copyright
+					case 0x3: // track name
+					case 0x4: // instrument name
+					case 0x5: // lyric
+					case 0x6: // marker
+					case 0x7: // cue point
+						y = MIN(vlen, message_left ? message_left - 1 : 0);
+						slurp_read(fp, message_cur, y);
+						if (x == 3 && y && !song->title[0]) {
+							strncpy(song->title, message_cur, MIN(y, 25));
+							song->title[25] = '\0';
 						}
-
-						note = (song_note_t){
-							.note = x,
-							.instrument = patch_samples[midich[cn].instrument],
-							.voleffect = VOLFX_VOLUME,
-							.volparam = (y & 0x7f) * 64 / 127,
-						};
-						midich[cn].fg_note = x;
-						midich[cn].bg_note = midich[cn].fg_note;
-					}
-					break;
-				case 0xa: // polyphonic key pressure (aftertouch) - x, y
-					rs = status;
-					x = slurp_getc(fp);
-					y = slurp_getc(fp);
-					// TODO polyphonic aftertouch channel=lo note=x pressure=y
-					continue;
-				case 0xb: // controller OR channel mode - x, y
-					rs = status;
-					// controller if first data byte 0-119
-					// channel mode if first data byte 120-127
-					x = slurp_getc(fp);
-					y = slurp_getc(fp);
-					// TODO controller change channel=lo controller=x value=y
-					continue;
-				case 0xc: // program change - x (instrument/voice selection)
-					rs = status;
-					x = slurp_getc(fp);
-					midich[cn].instrument = x;
-					// look familiar? this was copied from the .mus loader
-					if (!patch_samples[x] && !(lflags & LOAD_NOSAMPLES)) {
-						if (nsmp < MAX_SAMPLES) {
-							// New sample!
-							patch_samples[x] = nsmp;
-							adlib_patch_apply(song->samples + nsmp, x);
-							nsmp++;
-						} else {
-							log_appendf(4, " Warning: Too many samples");
+						message_cur += y;
+						message_left -= y;
+						if (y && message_cur[-1] != '\n') {
+							*message_cur++ = '\n';
+							message_left--;
 						}
+						vlen -= y;
+						break;
+
+					case 0x20: // MIDI channel (FF 20 len* cc)
+							   // specifies which midi-channel sysexes are assigned to
+					case 0x21: // MIDI port (FF 21 len* pp)
+						// specifies which port/bus this track's events are routed to
+						break;
+
+					case 0x2f: found_end = 1; break;
+					case 0x51: // set tempo
+						// read another stupid kind of variable length number
+						// hopefully this fits into 4 bytes - if not, too bad!
+						// (what is this? friggin' magic?)
+						memset(buf, 0, 4);
+						y = MIN(vlen, 4);
+						slurp_read(fp, buf + (4 - y), y);
+						bpm = buf[0] << 24 | (buf[1] << 16) | (buf[2] << 8) | buf[3];
+						bpm = CLAMP(60000000 / (bpm ? bpm : 1), 0x20, 0xff);
+						note = (song_note_t){.effect = FX_TEMPO, .param = bpm};
+						vlen -= y;
+						break;
+					case 0x54: // SMPTE offset (what time in the song this track starts)
+						// (what?!)
+						break;
+					case 0x58: // time signature (FF 58 len* nn dd cc bb)
+					case 0x59: // key signature (FF 59 len* sf mi)
+						// TODO care? don't care?
+						break;
+					case 0x7f: // some proprietary crap
+						break;
+
+					default:
+						// some mystery crap
+						log_appendf(2, " Unknown meta-event FF %02X", x);
+						break;
 					}
-					note = (song_note_t){.instrument = patch_samples[x]};
+					slurp_seek(fp, vlen, SEEK_CUR);
 					break;
-				case 0xd: // channel pressure (aftertouch) - x
-					rs = status;
-					x = slurp_getc(fp);
-					// TODO channel aftertouch channel=lo pressure=x
+				/* sysex */
+				case 0x0:
+				/* syscommon */
+				case 0x1:
+				case 0x2:
+				case 0x3:
+				case 0x4:
+				case 0x5:
+				case 0x6:
+				case 0x7:
+					rs = 0; // clear running status
+				/* sysrt */
+				case 0x8:
+				case 0x9:
+				case 0xa:
+				case 0xb:
+				case 0xc:
+				case 0xd:
+				case 0xe:
+					// 0xf0 - sysex
+					// 0xf1-0xf7 - common
+					// 0xf8-0xff - sysrt
+					// sysex and common cancel running status
+					// TODO handle these, or at least skip them coherently
 					continue;
-				case 0xe: // pitch bend - x, y
-					rs = status;
-					x = slurp_getc(fp);
-					y = slurp_getc(fp);
-					// TODO pitch bend channel=lo lsb=x msb=y
-					continue;
-				case 0xf: // system messages
-					switch (lo) {
-						case 0xf:                   // meta-event (text and stuff)
-							x = slurp_getc(fp);     // type
-							vlen = read_varlen(fp); // value length
-							switch (x) {
-								case 0x1: // text
-								case 0x2: // copyright
-								case 0x3: // track name
-								case 0x4: // instrument name
-								case 0x5: // lyric
-								case 0x6: // marker
-								case 0x7: // cue point
-									y = MIN(vlen, message_left ? message_left - 1 : 0);
-									slurp_read(fp, message_cur, y);
-									if (x == 3 && y && !song->title[0]) {
-										strncpy(song->title, message_cur, MIN(y, 25));
-										song->title[25] = '\0';
-									}
-									message_cur += y;
-									message_left -= y;
-									if (y && message_cur[-1] != '\n') {
-										*message_cur++ = '\n';
-										message_left--;
-									}
-									vlen -= y;
-									break;
-
-								case 0x20: // MIDI channel (FF 20 len* cc)
-										   // specifies which midi-channel sysexes are assigned to
-								case 0x21: // MIDI port (FF 21 len* pp)
-									// specifies which port/bus this track's events are routed to
-									break;
-
-								case 0x2f: found_end = 1; break;
-								case 0x51: // set tempo
-									// read another stupid kind of variable length number
-									// hopefully this fits into 4 bytes - if not, too bad!
-									// (what is this? friggin' magic?)
-									memset(buf, 0, 4);
-									y = MIN(vlen, 4);
-									slurp_read(fp, buf + (4 - y), y);
-									bpm = buf[0] << 24 | (buf[1] << 16) | (buf[2] << 8) | buf[3];
-									bpm = CLAMP(60000000 / (bpm ? bpm : 1), 0x20, 0xff);
-									note = (song_note_t){.effect = FX_TEMPO, .param = bpm};
-									vlen -= y;
-									break;
-								case 0x54: // SMPTE offset (what time in the song this track starts)
-									// (what?!)
-									break;
-								case 0x58: // time signature (FF 58 len* nn dd cc bb)
-								case 0x59: // key signature (FF 59 len* sf mi)
-									// TODO care? don't care?
-									break;
-								case 0x7f: // some proprietary crap
-									break;
-
-								default:
-									// some mystery crap
-									log_appendf(2, " Unknown meta-event FF %02X", x);
-									break;
-							}
-							slurp_seek(fp, vlen, SEEK_CUR);
-							break;
-						/* sysex */
-						case 0x0:
-						/* syscommon */
-						case 0x1:
-						case 0x2:
-						case 0x3:
-						case 0x4:
-						case 0x5:
-						case 0x6:
-						case 0x7:
-							rs = 0; // clear running status
-						/* sysrt */
-						case 0x8:
-						case 0x9:
-						case 0xa:
-						case 0xb:
-						case 0xc:
-						case 0xd:
-						case 0xe:
-							// 0xf0 - sysex
-							// 0xf1-0xf7 - common
-							// 0xf8-0xff - sysrt
-							// sysex and common cancel running status
-							// TODO handle these, or at least skip them coherently
-							continue;
-					}
+				}
 			}
 
 			// skip past any events with a lower pulse count (from other channels)

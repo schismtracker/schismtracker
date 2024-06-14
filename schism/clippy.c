@@ -87,13 +87,13 @@ static void _clippy_copy_to_sys(int cb)
 	free(out);
 
 	switch (cb) {
-		case CLIPPY_SELECT:
+	case CLIPPY_SELECT:
 #if SDL_VERSION_ATLEAST(2, 26, 0)
-			SDL_SetPrimarySelectionText((char *)out_utf8);
+		SDL_SetPrimarySelectionText((char *)out_utf8);
 #endif
-			break;
-		default:
-		case CLIPPY_BUFFER: SDL_SetClipboardText((char *)out_utf8); break;
+		break;
+	default:
+	case CLIPPY_BUFFER: SDL_SetClipboardText((char *)out_utf8); break;
 	}
 
 	free(out_utf8);
@@ -115,44 +115,44 @@ static void _string_paste(UNUSED int cb, const char *cbptr)
 static char *_internal_clippy_paste(int cb)
 {
 	switch (cb) {
-		case CLIPPY_SELECT:
+	case CLIPPY_SELECT:
 #if SDL_VERSION_ATLEAST(2, 26, 0)
-			/* is this even remotely useful? */
-			if (SDL_HasPrimarySelectionText()) {
-				_free_current_selection();
+		/* is this even remotely useful? */
+		if (SDL_HasPrimarySelectionText()) {
+			_free_current_selection();
 
-				char *sel = SDL_GetPrimarySelectionText();
-				uint8_t *cp437_sel;
+			char *sel = SDL_GetPrimarySelectionText();
+			uint8_t *cp437_sel;
 
-				if (!charset_iconv((uint8_t *)sel, (uint8_t **)&cp437_sel, CHARSET_UTF8, CHARSET_CP437))
-					_current_selection = cp437_sel;
-				else _current_selection = str_dup(sel);
+			if (!charset_iconv((uint8_t *)sel, (uint8_t **)&cp437_sel, CHARSET_UTF8, CHARSET_CP437))
+				_current_selection = cp437_sel;
+			else _current_selection = str_dup(sel);
 
-				SDL_free(sel);
-
-				return _current_selection;
-			}
-#endif
+			SDL_free(sel);
 
 			return _current_selection;
-		case CLIPPY_BUFFER:
-			if (SDL_HasClipboardText()) {
-				_free_current_clipboard();
+		}
+#endif
 
-				char *cb = SDL_GetClipboardText();
-				uint8_t *cp437_cb;
+		return _current_selection;
+	case CLIPPY_BUFFER:
+		if (SDL_HasClipboardText()) {
+			_free_current_clipboard();
 
-				if (!charset_iconv((uint8_t *)cb, (uint8_t **)&cp437_cb, CHARSET_UTF8, CHARSET_CP437))
-					_current_clipboard = (char *)cp437_cb;
-				else _current_clipboard = str_dup(cb);
+			char *cb = SDL_GetClipboardText();
+			uint8_t *cp437_cb;
 
-				SDL_free(cb);
+			if (!charset_iconv((uint8_t *)cb, (uint8_t **)&cp437_cb, CHARSET_UTF8, CHARSET_CP437))
+				_current_clipboard = (char *)cp437_cb;
+			else _current_clipboard = str_dup(cb);
 
-				return _current_clipboard;
-			}
+			SDL_free(cb);
 
 			return _current_clipboard;
-		default: break;
+		}
+
+		return _current_clipboard;
+	default: break;
 	}
 
 	return NULL;

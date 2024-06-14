@@ -174,88 +174,88 @@ static void import_imf_effect(song_note_t *note)
 	uint8_t n;
 	// fix some of them
 	switch (note->effect) {
-		case 0xe: // fine volslide
-			// hackaround to get almost-right behavior for fine slides (i think!)
-			if (note->param == 0) /* nothing */;
-			else if (note->param == 0xf0) note->param = 0xef;
-			else if (note->param == 0x0f) note->param = 0xfe;
-			else if (note->param & 0xf0) note->param |= 0xf;
-			else note->param |= 0xf0;
-			break;
-		case 0xf: // set finetune
-			// we don't implement this, but let's at least import the value
-			note->param = 0x20 | MIN(note->param >> 4, 0xf);
-			break;
-		case 0x14: // fine slide up
-		case 0x15: // fine slide down
-			// this is about as close as we can do...
-			if (note->param >> 4) note->param = 0xf0 | MIN(note->param >> 4, 0xf);
-			else note->param |= 0xe0;
-			break;
-		case 0x16:                                 // filter
-			note->param = (255 - note->param) / 2; // TODO: cutoff range in IMF is 125...8000 Hz
-			break;
-		case 0x1f: // set global volume
-			note->param = MIN(note->param << 1, 0xff);
-			break;
-		case 0x21:
-			n = 0;
-			switch (note->param >> 4) {
-				case 0:
-					/* undefined, but since S0x does nothing in IT anyway, we won't care.
+	case 0xe: // fine volslide
+		// hackaround to get almost-right behavior for fine slides (i think!)
+		if (note->param == 0) /* nothing */;
+		else if (note->param == 0xf0) note->param = 0xef;
+		else if (note->param == 0x0f) note->param = 0xfe;
+		else if (note->param & 0xf0) note->param |= 0xf;
+		else note->param |= 0xf0;
+		break;
+	case 0xf: // set finetune
+		// we don't implement this, but let's at least import the value
+		note->param = 0x20 | MIN(note->param >> 4, 0xf);
+		break;
+	case 0x14: // fine slide up
+	case 0x15: // fine slide down
+		// this is about as close as we can do...
+		if (note->param >> 4) note->param = 0xf0 | MIN(note->param >> 4, 0xf);
+		else note->param |= 0xe0;
+		break;
+	case 0x16:                                 // filter
+		note->param = (255 - note->param) / 2; // TODO: cutoff range in IMF is 125...8000 Hz
+		break;
+	case 0x1f: // set global volume
+		note->param = MIN(note->param << 1, 0xff);
+		break;
+	case 0x21:
+		n = 0;
+		switch (note->param >> 4) {
+		case 0:
+			/* undefined, but since S0x does nothing in IT anyway, we won't care.
 			this is here to allow S00 to pick up the previous value (assuming IMF
 			even does that -- I haven't actually tried it) */
-					break;
-				default:  // undefined
-				case 0x1: // set filter
-				case 0xf: // invert loop
-					note->effect = 0;
-					break;
-				case 0x3: // glissando
-					n = 0x20;
-					break;
-				case 0x5: // vibrato waveform
-					n = 0x30;
-					break;
-				case 0x8: // tremolo waveform
-					n = 0x40;
-					break;
-				case 0xa: // pattern loop
-					n = 0xb0;
-					break;
-				case 0xb: // pattern delay
-					n = 0xe0;
-					break;
-				case 0xc: // note cut
-				case 0xd: // note delay
-					// no change
-					break;
-				case 0xe: // ignore envelope
-					switch (note->param & 0x0F) {
-							/* predicament: we can only disable one envelope at a time.
-				volume is probably most noticeable, so let's go with that. */
-						case 0:
-							note->param = 0x77;
-							break;
-							// Volume
-						case 1:
-							note->param = 0x77;
-							break;
-							// Panning
-						case 2:
-							note->param = 0x79;
-							break;
-							// Filter
-						case 3: note->param = 0x7B; break;
-					}
-					break;
-				case 0x18: // sample offset
-					// O00 doesn't pick up the previous value
-					if (!note->param) note->effect = 0;
-					break;
-			}
-			if (n) note->param = n | (note->param & 0xf);
 			break;
+		default:  // undefined
+		case 0x1: // set filter
+		case 0xf: // invert loop
+			note->effect = 0;
+			break;
+		case 0x3: // glissando
+			n = 0x20;
+			break;
+		case 0x5: // vibrato waveform
+			n = 0x30;
+			break;
+		case 0x8: // tremolo waveform
+			n = 0x40;
+			break;
+		case 0xa: // pattern loop
+			n = 0xb0;
+			break;
+		case 0xb: // pattern delay
+			n = 0xe0;
+			break;
+		case 0xc: // note cut
+		case 0xd: // note delay
+			// no change
+			break;
+		case 0xe: // ignore envelope
+			switch (note->param & 0x0F) {
+				/* predicament: we can only disable one envelope at a time.
+				volume is probably most noticeable, so let's go with that. */
+			case 0:
+				note->param = 0x77;
+				break;
+				// Volume
+			case 1:
+				note->param = 0x77;
+				break;
+				// Panning
+			case 2:
+				note->param = 0x79;
+				break;
+				// Filter
+			case 3: note->param = 0x7B; break;
+			}
+			break;
+		case 0x18: // sample offset
+			// O00 doesn't pick up the previous value
+			if (!note->param) note->effect = 0;
+			break;
+		}
+		if (n) note->param = n | (note->param & 0xf);
+		break;
 	}
 	note->effect = (note->effect < 0x24) ? imf_efftrans[note->effect] : FX_NONE;
 	if (note->effect == FX_VOLUME && note->voleffect == VOLFX_NONE) {
@@ -437,15 +437,15 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 		song->channels[n].panning *= 4; //mphack
 		/* TODO: reverb/chorus??? */
 		switch (hdr.channels[n].status) {
-			case 0: /* enabled; don't worry about it */ break;
-			case 1: /* mute */ song->channels[n].flags |= CHN_MUTE; break;
-			case 2: /* disabled */
-				song->channels[n].flags |= CHN_MUTE;
-				ignore_channels |= (1 << n);
-				break;
-			default: /* uhhhh.... freak out */
-				//fprintf(stderr, "imf: channel %d has unknown status %d\n", n, hdr.channels[n].status);
-				return LOAD_FORMAT_ERROR;
+		case 0: /* enabled; don't worry about it */ break;
+		case 1: /* mute */ song->channels[n].flags |= CHN_MUTE; break;
+		case 2: /* disabled */
+			song->channels[n].flags |= CHN_MUTE;
+			ignore_channels |= (1 << n);
+			break;
+		default: /* uhhhh.... freak out */
+			//fprintf(stderr, "imf: channel %d has unknown status %d\n", n, hdr.channels[n].status);
+			return LOAD_FORMAT_ERROR;
 		}
 	}
 	for (; n < MAX_CHANNELS; n++) song->channels[n].flags |= CHN_MUTE;

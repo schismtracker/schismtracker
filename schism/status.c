@@ -165,14 +165,14 @@ void status_text_redraw(void)
 		}
 	} else {
 		switch (song_get_mode()) {
-			case MODE_PLAYING: draw_song_playing_status(); break;
-			case MODE_PATTERN_LOOP: draw_pattern_playing_status(); break;
-			case MODE_SINGLE_STEP:
-				if (song_get_playing_channels() > 1) {
-					draw_playing_channels();
-					break;
-				}
-			default: break;
+		case MODE_PLAYING: draw_song_playing_status(); break;
+		case MODE_PATTERN_LOOP: draw_pattern_playing_status(); break;
+		case MODE_SINGLE_STEP:
+			if (song_get_playing_channels() > 1) {
+				draw_playing_channels();
+				break;
+			}
+		default: break;
 		}
 	}
 }

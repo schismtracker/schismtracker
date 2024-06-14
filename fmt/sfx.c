@@ -166,51 +166,51 @@ int fmt_sfx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						FF FC   pattern break   orbit wanderer.sfx2 */
 					if (p[0] == 0xff) {
 						switch (p[1]) {
-							case 0xfc:
-								note->note = NOTE_NONE;
-								note->instrument = 0;
-								// stuff a C00 in channel 5
-								note[4 - chan].effect = FX_PATTERNBREAK;
-								break;
-							case 0xfe:
-								note->note = NOTE_CUT;
-								note->instrument = 0;
-								break;
+						case 0xfc:
+							note->note = NOTE_NONE;
+							note->instrument = 0;
+							// stuff a C00 in channel 5
+							note[4 - chan].effect = FX_PATTERNBREAK;
+							break;
+						case 0xfe:
+							note->note = NOTE_CUT;
+							note->instrument = 0;
+							break;
 						}
 					}
 					switch (note->effect) {
-						case 0: break;
-						case 1: /* arpeggio */ note->effect = FX_ARPEGGIO; break;
-						case 2: /* pitch bend */
-							if (note->param >> 4) {
-								note->effect = FX_PORTAMENTODOWN;
-								note->param >>= 4;
-							} else if (note->param & 0xf) {
-								note->effect = FX_PORTAMENTOUP;
-								note->param &= 0xf;
-							} else {
-								note->effect = 0;
-							}
-							break;
-						case 5: /* volume up */
-							note->effect = FX_VOLUMESLIDE;
-							note->param = (note->param & 0xf) << 4;
-							break;
-						case 6: /* set volume */
-							if (note->param > 64) note->param = 64;
-							note->voleffect = VOLFX_VOLUME;
-							note->volparam = 64 - note->param;
+					case 0: break;
+					case 1: /* arpeggio */ note->effect = FX_ARPEGGIO; break;
+					case 2: /* pitch bend */
+						if (note->param >> 4) {
+							note->effect = FX_PORTAMENTODOWN;
+							note->param >>= 4;
+						} else if (note->param & 0xf) {
+							note->effect = FX_PORTAMENTOUP;
+							note->param &= 0xf;
+						} else {
 							note->effect = 0;
-							note->param = 0;
-							break;
-						case 3: /* LED on (wtf!) */
-						case 4: /* LED off (ditto) */
-						case 7: /* set step up */
-						case 8: /* set step down */
-						default:
-							effwarn |= (1 << note->effect);
-							note->effect = FX_UNIMPLEMENTED;
-							break;
+						}
+						break;
+					case 5: /* volume up */
+						note->effect = FX_VOLUMESLIDE;
+						note->param = (note->param & 0xf) << 4;
+						break;
+					case 6: /* set volume */
+						if (note->param > 64) note->param = 64;
+						note->voleffect = VOLFX_VOLUME;
+						note->volparam = 64 - note->param;
+						note->effect = 0;
+						note->param = 0;
+						break;
+					case 3: /* LED on (wtf!) */
+					case 4: /* LED off (ditto) */
+					case 7: /* set step up */
+					case 8: /* set step down */
+					default:
+						effwarn |= (1 << note->effect);
+						note->effect = FX_UNIMPLEMENTED;
+						break;
 					}
 				}
 			}

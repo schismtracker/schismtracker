@@ -212,9 +212,9 @@ static void draw_frame(const char *name, int x, int y, int inner_width, int inne
 	draw_char(137, x + len + 1, y + 1, c, 2);
 
 	switch (active) {
-		case 0: /* inactive */ n = 0; break;
-		case -1: /* disabled */ n = 1; break;
-		default: /* active */ n = 3; break;
+	case 0: /* inactive */ n = 0; break;
+	case -1: /* disabled */ n = 1; break;
+	default: /* active */ n = 3; break;
 	}
 	draw_text_len(name, len, x + 1, y + 1, n, 2);
 }
@@ -362,10 +362,10 @@ static inline void draw_helptext(void)
 
 	/* context sensitive stuff... oooh :) */
 	switch (selected_item) {
-		case EDITBOX: ptr = helptext_editbox; break;
-		case CHARMAP:
-		case ITFMAP: ptr = helptext_charmap; break;
-		case FONTLIST: ptr = helptext_fontlist; break;
+	case EDITBOX: ptr = helptext_editbox; break;
+	case CHARMAP:
+	case ITFMAP: ptr = helptext_charmap; break;
+	case FONTLIST: ptr = helptext_fontlist; break;
 	}
 	for (line = INNER_Y(HELPTEXT_Y); *ptr; line++) {
 		eol = (unsigned char *)strchr((char *)ptr, '\n');
@@ -398,15 +398,15 @@ static void draw_screen(void)
 	draw_itfmap();
 
 	switch (fontlist_mode) {
-		case MODE_LOAD:
-			draw_frame("Load/Browse", FONTLIST_X, FONTLIST_Y, 9, VISIBLE_FONTS, !!(selected_item == FONTLIST));
-			draw_fontlist();
-			break;
-		case MODE_SAVE:
-			draw_frame("Save As...", FONTLIST_X, FONTLIST_Y, 9, VISIBLE_FONTS, !!(selected_item == FONTLIST));
-			draw_fontlist();
-			break;
-		default: /* Off? (I sure hope so!) */ break;
+	case MODE_LOAD:
+		draw_frame("Load/Browse", FONTLIST_X, FONTLIST_Y, 9, VISIBLE_FONTS, !!(selected_item == FONTLIST));
+		draw_fontlist();
+		break;
+	case MODE_SAVE:
+		draw_frame("Save As...", FONTLIST_X, FONTLIST_Y, 9, VISIBLE_FONTS, !!(selected_item == FONTLIST));
+		draw_fontlist();
+		break;
+	default: /* Off? (I sure hope so!) */ break;
 	}
 
 	draw_frame("Quick Help", HELPTEXT_X, HELPTEXT_Y, 74, 12, -1);
@@ -422,74 +422,74 @@ static void handle_key_editbox(struct key_event *k)
 	uint8_t *ptr = font_data + ci;
 
 	switch (k->sym) {
-		case SDLK_UP:
-			if (k->mod & KMOD_SHIFT) {
-				int s = ptr[0];
-				for (n = 0; n < 7; n++) ptr[n] = ptr[n + 1];
-				ptr[7] = s;
-			} else {
-				if (--edit_y < 0) edit_y = 7;
-			}
-			break;
-		case SDLK_DOWN:
-			if (k->mod & KMOD_SHIFT) {
-				int s = ptr[7];
-				for (n = 7; n; n--) ptr[n] = ptr[n - 1];
-				ptr[0] = s;
-			} else {
-				edit_y = (edit_y + 1) % 8;
-			}
-			break;
-		case SDLK_LEFT:
-			if (k->mod & KMOD_SHIFT) {
-				for (n = 0; n < 8; n++, ptr++) *ptr = (*ptr >> 7) | (*ptr << 1);
-			} else {
-				if (--edit_x < 0) edit_x = 7;
-			}
-			break;
-		case SDLK_RIGHT:
-			if (k->mod & KMOD_SHIFT) {
-				for (n = 0; n < 8; n++, ptr++) *ptr = (*ptr << 7) | (*ptr >> 1);
-			} else {
-				edit_x = (edit_x + 1) % 8;
-			}
-			break;
-		case SDLK_HOME: edit_x = edit_y = 0; break;
-		case SDLK_END: edit_x = edit_y = 7; break;
-		case SDLK_SPACE: ptr[edit_y] ^= (128 >> edit_x); break;
-		case SDLK_INSERT:
-			if (k->mod & KMOD_SHIFT) {
-				for (n = 0; n < 8; n++) ptr[n] |= (128 >> edit_x);
-			} else {
-				ptr[edit_y] = 255;
-			}
-			break;
-		case SDLK_DELETE:
-			if (k->mod & KMOD_SHIFT) {
-				for (n = 0; n < 8; n++) ptr[n] &= ~(128 >> edit_x);
-			} else {
-				ptr[edit_y] = 0;
-			}
-			break;
-		case SDLK_LEFTBRACKET:
-			for (n = 0; n < 8; n++)
-				for (bit = 0; bit < 8; bit++)
-					if (ptr[n] & (1 << bit)) tmp[bit] |= 1 << (7 - n);
-			memcpy(ptr, tmp, 8);
-			break;
-		case SDLK_RIGHTBRACKET:
-			for (n = 0; n < 8; n++)
-				for (bit = 0; bit < 8; bit++)
-					if (ptr[n] & (1 << bit)) tmp[7 - bit] |= 1 << n;
-			memcpy(ptr, tmp, 8);
-			break;
-		case SDLK_PLUS:
-		case SDLK_EQUALS: current_char++; break;
-		case SDLK_MINUS:
-		case SDLK_UNDERSCORE: current_char--; break;
-		case SDLK_PAGEUP: current_char -= 16; break;
-		case SDLK_PAGEDOWN: current_char += 16; break;
-		default: return;
+	case SDLK_UP:
+		if (k->mod & KMOD_SHIFT) {
+			int s = ptr[0];
+			for (n = 0; n < 7; n++) ptr[n] = ptr[n + 1];
+			ptr[7] = s;
+		} else {
+			if (--edit_y < 0) edit_y = 7;
+		}
+		break;
+	case SDLK_DOWN:
+		if (k->mod & KMOD_SHIFT) {
+			int s = ptr[7];
+			for (n = 7; n; n--) ptr[n] = ptr[n - 1];
+			ptr[0] = s;
+		} else {
+			edit_y = (edit_y + 1) % 8;
+		}
+		break;
+	case SDLK_LEFT:
+		if (k->mod & KMOD_SHIFT) {
+			for (n = 0; n < 8; n++, ptr++) *ptr = (*ptr >> 7) | (*ptr << 1);
+		} else {
+			if (--edit_x < 0) edit_x = 7;
+		}
+		break;
+	case SDLK_RIGHT:
+		if (k->mod & KMOD_SHIFT) {
+			for (n = 0; n < 8; n++, ptr++) *ptr = (*ptr << 7) | (*ptr >> 1);
+		} else {
+			edit_x = (edit_x + 1) % 8;
+		}
+		break;
+	case SDLK_HOME: edit_x = edit_y = 0; break;
+	case SDLK_END: edit_x = edit_y = 7; break;
+	case SDLK_SPACE: ptr[edit_y] ^= (128 >> edit_x); break;
+	case SDLK_INSERT:
+		if (k->mod & KMOD_SHIFT) {
+			for (n = 0; n < 8; n++) ptr[n] |= (128 >> edit_x);
+		} else {
+			ptr[edit_y] = 255;
+		}
+		break;
+	case SDLK_DELETE:
+		if (k->mod & KMOD_SHIFT) {
+			for (n = 0; n < 8; n++) ptr[n] &= ~(128 >> edit_x);
+		} else {
+			ptr[edit_y] = 0;
+		}
+		break;
+	case SDLK_LEFTBRACKET:
+		for (n = 0; n < 8; n++)
+			for (bit = 0; bit < 8; bit++)
+				if (ptr[n] & (1 << bit)) tmp[bit] |= 1 << (7 - n);
+		memcpy(ptr, tmp, 8);
+		break;
+	case SDLK_RIGHTBRACKET:
+		for (n = 0; n < 8; n++)
+			for (bit = 0; bit < 8; bit++)
+				if (ptr[n] & (1 << bit)) tmp[7 - bit] |= 1 << n;
+		memcpy(ptr, tmp, 8);
+		break;
+	case SDLK_PLUS:
+	case SDLK_EQUALS: current_char++; break;
+	case SDLK_MINUS:
+	case SDLK_UNDERSCORE: current_char--; break;
+	case SDLK_PAGEUP: current_char -= 16; break;
+	case SDLK_PAGEDOWN: current_char += 16; break;
+	default: return;
 	}
 
 	status.flags |= NEED_UPDATE;
@@ -498,13 +498,13 @@ static void handle_key_editbox(struct key_event *k)
 static void handle_key_charmap(struct key_event *k)
 {
 	switch (k->sym) {
-		case SDLK_UP: current_char -= 16; break;
-		case SDLK_DOWN: current_char += 16; break;
-		case SDLK_LEFT: current_char = DECR_WRAPPED(current_char); break;
-		case SDLK_RIGHT: current_char = INCR_WRAPPED(current_char); break;
-		case SDLK_HOME: current_char = 0; break;
-		case SDLK_END: current_char = 255; break;
-		default: return;
+	case SDLK_UP: current_char -= 16; break;
+	case SDLK_DOWN: current_char += 16; break;
+	case SDLK_LEFT: current_char = DECR_WRAPPED(current_char); break;
+	case SDLK_RIGHT: current_char = INCR_WRAPPED(current_char); break;
+	case SDLK_HOME: current_char = 0; break;
+	case SDLK_END: current_char = 255; break;
+	default: return;
 	}
 	status.flags |= NEED_UPDATE;
 }
@@ -512,39 +512,39 @@ static void handle_key_charmap(struct key_event *k)
 static void handle_key_itfmap(struct key_event *k)
 {
 	switch (k->sym) {
-		case SDLK_UP:
-			if (itfmap_pos < 0) {
-				itfmap_pos = 224;
-			} else {
-				itfmap_pos -= 16;
-				if (itfmap_pos < 0) itfmap_pos += 240;
-			}
-			current_char = itfmap_chars[itfmap_pos];
-			break;
-		case SDLK_DOWN:
-			if (itfmap_pos < 0) itfmap_pos = 16;
-			else itfmap_pos = (itfmap_pos + 16) % 240;
-			current_char = itfmap_chars[itfmap_pos];
-			break;
-		case SDLK_LEFT:
-			if (itfmap_pos < 0) itfmap_pos = 15;
-			else itfmap_pos = DECR_WRAPPED(itfmap_pos);
-			current_char = itfmap_chars[itfmap_pos];
-			break;
-		case SDLK_RIGHT:
-			if (itfmap_pos < 0) itfmap_pos = 0;
-			else itfmap_pos = INCR_WRAPPED(itfmap_pos);
-			current_char = itfmap_chars[itfmap_pos];
-			break;
-		case SDLK_HOME:
-			current_char = itfmap_chars[0];
-			itfmap_pos = 0;
-			break;
-		case SDLK_END:
-			current_char = itfmap_chars[239];
-			itfmap_pos = 239;
-			break;
-		default: return;
+	case SDLK_UP:
+		if (itfmap_pos < 0) {
+			itfmap_pos = 224;
+		} else {
+			itfmap_pos -= 16;
+			if (itfmap_pos < 0) itfmap_pos += 240;
+		}
+		current_char = itfmap_chars[itfmap_pos];
+		break;
+	case SDLK_DOWN:
+		if (itfmap_pos < 0) itfmap_pos = 16;
+		else itfmap_pos = (itfmap_pos + 16) % 240;
+		current_char = itfmap_chars[itfmap_pos];
+		break;
+	case SDLK_LEFT:
+		if (itfmap_pos < 0) itfmap_pos = 15;
+		else itfmap_pos = DECR_WRAPPED(itfmap_pos);
+		current_char = itfmap_chars[itfmap_pos];
+		break;
+	case SDLK_RIGHT:
+		if (itfmap_pos < 0) itfmap_pos = 0;
+		else itfmap_pos = INCR_WRAPPED(itfmap_pos);
+		current_char = itfmap_chars[itfmap_pos];
+		break;
+	case SDLK_HOME:
+		current_char = itfmap_chars[0];
+		itfmap_pos = 0;
+		break;
+	case SDLK_END:
+		current_char = itfmap_chars[239];
+		itfmap_pos = 239;
+		break;
+	default: return;
 	}
 	status.flags |= NEED_UPDATE;
 }
@@ -564,45 +564,44 @@ static void handle_key_fontlist(struct key_event *k)
 	int new_font = cur_font;
 
 	switch (k->sym) {
-		case SDLK_HOME: new_font = 0; break;
-		case SDLK_END: new_font = flist.num_files - 1; break;
-		case SDLK_UP: new_font--; break;
-		case SDLK_DOWN: new_font++; break;
-		case SDLK_PAGEUP: new_font -= VISIBLE_FONTS; break;
-		case SDLK_PAGEDOWN: new_font += VISIBLE_FONTS; break;
-		case SDLK_ESCAPE:
-			selected_item = EDITBOX;
-			fontlist_mode = MODE_OFF;
-			break;
-		case SDLK_RETURN:
-			if (k->state == KEY_PRESS) return;
-			switch (fontlist_mode) {
-				case MODE_LOAD:
-					if (cur_font < flist.num_files && flist.files[cur_font]
-						&& font_load(flist.files[cur_font]->base) != 0) {
-						fprintf(stderr, "%s\n", SDL_GetError());
-						font_reset();
-					}
-					break;
-				case MODE_SAVE:
-					if (cur_font < flist.num_files && flist.files[cur_font]) {
-						if (strcasecmp(flist.files[cur_font]->base, "font.cfg") != 0) {
-							dialog_create(
-								DIALOG_OK_CANCEL, "Overwrite font file?", confirm_font_save_ok, NULL, 1,
-								flist.files[cur_font]->base);
-							return;
-						}
-						confirm_font_save_ok(flist.files[cur_font]->base);
-					}
-					selected_item = EDITBOX;
-					/* fontlist_mode = MODE_OFF; */
-					break;
-				default:
-					/* should never happen */
-					return;
+	case SDLK_HOME: new_font = 0; break;
+	case SDLK_END: new_font = flist.num_files - 1; break;
+	case SDLK_UP: new_font--; break;
+	case SDLK_DOWN: new_font++; break;
+	case SDLK_PAGEUP: new_font -= VISIBLE_FONTS; break;
+	case SDLK_PAGEDOWN: new_font += VISIBLE_FONTS; break;
+	case SDLK_ESCAPE:
+		selected_item = EDITBOX;
+		fontlist_mode = MODE_OFF;
+		break;
+	case SDLK_RETURN:
+		if (k->state == KEY_PRESS) return;
+		switch (fontlist_mode) {
+		case MODE_LOAD:
+			if (cur_font < flist.num_files && flist.files[cur_font] && font_load(flist.files[cur_font]->base) != 0) {
+				fprintf(stderr, "%s\n", SDL_GetError());
+				font_reset();
 			}
 			break;
-		default: return;
+		case MODE_SAVE:
+			if (cur_font < flist.num_files && flist.files[cur_font]) {
+				if (strcasecmp(flist.files[cur_font]->base, "font.cfg") != 0) {
+					dialog_create(
+						DIALOG_OK_CANCEL, "Overwrite font file?", confirm_font_save_ok, NULL, 1,
+						flist.files[cur_font]->base);
+					return;
+				}
+				confirm_font_save_ok(flist.files[cur_font]->base);
+			}
+			selected_item = EDITBOX;
+			/* fontlist_mode = MODE_OFF; */
+			break;
+		default:
+			/* should never happen */
+			return;
+		}
+		break;
+	default: return;
 	}
 
 	if (new_font != cur_font) {
@@ -628,50 +627,50 @@ static void handle_mouse_editbox(struct key_event *k)
 		edit_x = xrel - 1;
 		edit_y = yrel - 3;
 		switch (k->mouse_button) {
-			case MOUSE_BUTTON_LEFT: /* set */ ptr[edit_y] |= (128 >> edit_x); break;
-			case MOUSE_BUTTON_MIDDLE: /* invert */
-				if (k->state == KEY_RELEASE) return;
-				ptr[edit_y] ^= (128 >> edit_x);
-				break;
-			case MOUSE_BUTTON_RIGHT: /* clear */ ptr[edit_y] &= ~(128 >> edit_x); break;
+		case MOUSE_BUTTON_LEFT: /* set */ ptr[edit_y] |= (128 >> edit_x); break;
+		case MOUSE_BUTTON_MIDDLE: /* invert */
+			if (k->state == KEY_RELEASE) return;
+			ptr[edit_y] ^= (128 >> edit_x);
+			break;
+		case MOUSE_BUTTON_RIGHT: /* clear */ ptr[edit_y] &= ~(128 >> edit_x); break;
 		}
 	} else if (xrel == 0 && yrel == 2) {
 		/* clicking at the origin modifies the entire character */
 		switch (k->mouse_button) {
-			case MOUSE_BUTTON_LEFT: /* set */
-				for (n = 0; n < 8; n++) ptr[n] = 255;
-				break;
-			case MOUSE_BUTTON_MIDDLE: /* invert */
-				if (k->state == KEY_RELEASE) return;
-				for (n = 0; n < 8; n++) ptr[n] ^= 255;
-				break;
-			case MOUSE_BUTTON_RIGHT: /* clear */
-				for (n = 0; n < 8; n++) ptr[n] = 0;
-				break;
+		case MOUSE_BUTTON_LEFT: /* set */
+			for (n = 0; n < 8; n++) ptr[n] = 255;
+			break;
+		case MOUSE_BUTTON_MIDDLE: /* invert */
+			if (k->state == KEY_RELEASE) return;
+			for (n = 0; n < 8; n++) ptr[n] ^= 255;
+			break;
+		case MOUSE_BUTTON_RIGHT: /* clear */
+			for (n = 0; n < 8; n++) ptr[n] = 0;
+			break;
 		}
 	} else if (xrel == 0 && yrel > 2) {
 		edit_y = yrel - 3;
 		switch (k->mouse_button) {
-			case MOUSE_BUTTON_LEFT: /* set */ ptr[edit_y] = 255; break;
-			case MOUSE_BUTTON_MIDDLE: /* invert */
-				if (k->state == KEY_RELEASE) return;
-				ptr[edit_y] ^= 255;
-				break;
-			case MOUSE_BUTTON_RIGHT: /* clear */ ptr[edit_y] = 0; break;
+		case MOUSE_BUTTON_LEFT: /* set */ ptr[edit_y] = 255; break;
+		case MOUSE_BUTTON_MIDDLE: /* invert */
+			if (k->state == KEY_RELEASE) return;
+			ptr[edit_y] ^= 255;
+			break;
+		case MOUSE_BUTTON_RIGHT: /* clear */ ptr[edit_y] = 0; break;
 		}
 	} else if (yrel == 2 && xrel > 0) {
 		edit_x = xrel - 1;
 		switch (k->mouse_button) {
-			case MOUSE_BUTTON_LEFT: /* set */
-				for (n = 0; n < 8; n++) ptr[n] |= (128 >> edit_x);
-				break;
-			case MOUSE_BUTTON_MIDDLE: /* invert */
-				if (k->state == KEY_RELEASE) return;
-				for (n = 0; n < 8; n++) ptr[n] ^= (128 >> edit_x);
-				break;
-			case MOUSE_BUTTON_RIGHT: /* clear */
-				for (n = 0; n < 8; n++) ptr[n] &= ~(128 >> edit_x);
-				break;
+		case MOUSE_BUTTON_LEFT: /* set */
+			for (n = 0; n < 8; n++) ptr[n] |= (128 >> edit_x);
+			break;
+		case MOUSE_BUTTON_MIDDLE: /* invert */
+			if (k->state == KEY_RELEASE) return;
+			for (n = 0; n < 8; n++) ptr[n] ^= (128 >> edit_x);
+			break;
+		case MOUSE_BUTTON_RIGHT: /* clear */
+			for (n = 0; n < 8; n++) ptr[n] &= ~(128 >> edit_x);
+			break;
 		}
 	}
 }
@@ -732,202 +731,202 @@ static int fontedit_handle_key(struct key_event *k)
 
 	/* kp is special */
 	switch (k->orig_sym) {
-		case SDLK_KP_0:
-			if (k->state == KEY_RELEASE) return 1;
-			k->sym += 10;
-			/* fall through */
-		case SDLK_KP_1:
-		case SDLK_KP_2:
-		case SDLK_KP_3:
-		case SDLK_KP_4:
-		case SDLK_KP_5:
-		case SDLK_KP_6:
-		case SDLK_KP_7:
-		case SDLK_KP_8:
-		case SDLK_KP_9:
-			if (k->state == KEY_RELEASE) return 1;
-			n = k->sym - SDLK_KP_1;
-			if (k->mod & KMOD_SHIFT) n += 10;
-			palette_load_preset(n);
-			palette_apply();
-			status.flags |= NEED_UPDATE;
-			return 1;
-		default: break;
+	case SDLK_KP_0:
+		if (k->state == KEY_RELEASE) return 1;
+		k->sym += 10;
+		/* fall through */
+	case SDLK_KP_1:
+	case SDLK_KP_2:
+	case SDLK_KP_3:
+	case SDLK_KP_4:
+	case SDLK_KP_5:
+	case SDLK_KP_6:
+	case SDLK_KP_7:
+	case SDLK_KP_8:
+	case SDLK_KP_9:
+		if (k->state == KEY_RELEASE) return 1;
+		n = k->sym - SDLK_KP_1;
+		if (k->mod & KMOD_SHIFT) n += 10;
+		palette_load_preset(n);
+		palette_apply();
+		status.flags |= NEED_UPDATE;
+		return 1;
+	default: break;
 	};
 
 	switch (k->sym) {
-		case '0':
-			if (k->state == KEY_RELEASE) return 1;
-			k->sym += 10;
-			/* fall through */
-		case '1':
-		case '2':
-		case '3':
-		case '4':
-		case '5':
-		case '6':
-		case '7':
-		case '8':
-		case '9':
-			if (k->state == KEY_RELEASE) return 1;
-			n = k->sym - '1';
-			if (k->mod & KMOD_SHIFT) n += 10;
-			palette_load_preset(n);
-			palette_apply();
+	case '0':
+		if (k->state == KEY_RELEASE) return 1;
+		k->sym += 10;
+		/* fall through */
+	case '1':
+	case '2':
+	case '3':
+	case '4':
+	case '5':
+	case '6':
+	case '7':
+	case '8':
+	case '9':
+		if (k->state == KEY_RELEASE) return 1;
+		n = k->sym - '1';
+		if (k->mod & KMOD_SHIFT) n += 10;
+		palette_load_preset(n);
+		palette_apply();
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_F2:
+		if (k->state == KEY_RELEASE) return 1;
+		selected_item = EDITBOX;
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_F3:
+		if (k->state == KEY_RELEASE) return 1;
+		selected_item = CHARMAP;
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_F4:
+		if (k->state == KEY_RELEASE) return 1;
+		selected_item = ITFMAP;
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_TAB:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_SHIFT) {
+			if (selected_item == 0) selected_item = (fontlist_mode == MODE_OFF ? 2 : 3);
+			else selected_item--;
+		} else {
+			selected_item = (selected_item + 1) % (fontlist_mode == MODE_OFF ? 3 : 4);
+		}
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_c:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_ALT) {
+			memcpy(clipboard, ptr, 8);
+			return 1;
+		}
+		break;
+	case SDLK_p:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_ALT) {
+			memcpy(ptr, clipboard, 8);
 			status.flags |= NEED_UPDATE;
 			return 1;
-		case SDLK_F2:
-			if (k->state == KEY_RELEASE) return 1;
-			selected_item = EDITBOX;
+		}
+		break;
+	case SDLK_m:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_CTRL) {
+			SDL_ToggleCursor();
+			return 1;
+		} else if (k->mod & KMOD_ALT) {
+			for (n = 0; n < 8; n++) ptr[n] |= clipboard[n];
 			status.flags |= NEED_UPDATE;
 			return 1;
-		case SDLK_F3:
-			if (k->state == KEY_RELEASE) return 1;
-			selected_item = CHARMAP;
+		}
+		break;
+	case SDLK_z:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_ALT) {
+			memset(ptr, 0, 8);
 			status.flags |= NEED_UPDATE;
 			return 1;
-		case SDLK_F4:
-			if (k->state == KEY_RELEASE) return 1;
-			selected_item = ITFMAP;
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_TAB:
-			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_SHIFT) {
-				if (selected_item == 0) selected_item = (fontlist_mode == MODE_OFF ? 2 : 3);
-				else selected_item--;
-			} else {
-				selected_item = (selected_item + 1) % (fontlist_mode == MODE_OFF ? 3 : 4);
+		}
+		break;
+	case SDLK_h:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_ALT) {
+			for (n = 0; n < 8; n++) {
+				int r = ptr[n];
+				r = ((r >> 1) & 0x55) | ((r << 1) & 0xaa);
+				r = ((r >> 2) & 0x33) | ((r << 2) & 0xcc);
+				r = ((r >> 4) & 0x0f) | ((r << 4) & 0xf0);
+				ptr[n] = r;
 			}
 			status.flags |= NEED_UPDATE;
 			return 1;
-		case SDLK_c:
-			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_ALT) {
-				memcpy(clipboard, ptr, 8);
-				return 1;
+		}
+		break;
+	case SDLK_v:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_ALT) {
+			for (n = 0; n < 4; n++) {
+				uint8_t r = ptr[n];
+				ptr[n] = ptr[7 - n];
+				ptr[7 - n] = r;
 			}
-			break;
-		case SDLK_p:
-			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_ALT) {
-				memcpy(ptr, clipboard, 8);
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-			break;
-		case SDLK_m:
-			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_CTRL) {
-				SDL_ToggleCursor();
-				return 1;
-			} else if (k->mod & KMOD_ALT) {
-				for (n = 0; n < 8; n++) ptr[n] |= clipboard[n];
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-			break;
-		case SDLK_z:
-			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_ALT) {
-				memset(ptr, 0, 8);
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-			break;
-		case SDLK_h:
-			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_ALT) {
-				for (n = 0; n < 8; n++) {
-					int r = ptr[n];
-					r = ((r >> 1) & 0x55) | ((r << 1) & 0xaa);
-					r = ((r >> 2) & 0x33) | ((r << 2) & 0xcc);
-					r = ((r >> 4) & 0x0f) | ((r << 4) & 0xf0);
-					ptr[n] = r;
-				}
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-			break;
-		case SDLK_v:
-			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_ALT) {
-				for (n = 0; n < 4; n++) {
-					uint8_t r = ptr[n];
-					ptr[n] = ptr[7 - n];
-					ptr[7 - n] = r;
-				}
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-			break;
-		case SDLK_i:
-			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_ALT) {
-				for (n = 0; n < 8; n++) font_data[ci + n] ^= 255;
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-			break;
+			status.flags |= NEED_UPDATE;
+			return 1;
+		}
+		break;
+	case SDLK_i:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_ALT) {
+			for (n = 0; n < 8; n++) font_data[ci + n] ^= 255;
+			status.flags |= NEED_UPDATE;
+			return 1;
+		}
+		break;
 
-			/* ----------------------------------------------------- */
+		/* ----------------------------------------------------- */
 
-		case SDLK_l:
-		case SDLK_r:
-			if (k->state == KEY_RELEASE) return 1;
-			if (!(k->mod & KMOD_CTRL)) break;
-			/* fall through */
-		case SDLK_F9:
-			if (k->state == KEY_RELEASE) return 1;
-			load_fontlist();
-			fontlist_mode = MODE_LOAD;
-			selected_item = FONTLIST;
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_s:
-			if (k->state == KEY_RELEASE) return 1;
-			if (!(k->mod & KMOD_CTRL)) break;
-			/* fall through */
-		case SDLK_F10:
-			/* a bit weird, but this ensures that font.cfg
+	case SDLK_l:
+	case SDLK_r:
+		if (k->state == KEY_RELEASE) return 1;
+		if (!(k->mod & KMOD_CTRL)) break;
+		/* fall through */
+	case SDLK_F9:
+		if (k->state == KEY_RELEASE) return 1;
+		load_fontlist();
+		fontlist_mode = MODE_LOAD;
+		selected_item = FONTLIST;
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_s:
+		if (k->state == KEY_RELEASE) return 1;
+		if (!(k->mod & KMOD_CTRL)) break;
+		/* fall through */
+	case SDLK_F10:
+		/* a bit weird, but this ensures that font.cfg
 		 * is always the default font to save to, but
 		 * without the annoyance of moving the cursor
 		 * back to it every time f10 is pressed. */
-			if (fontlist_mode != MODE_SAVE) {
-				cur_font = top_font = 0;
-				load_fontlist();
-				fontlist_mode = MODE_SAVE;
-			}
-			selected_item = FONTLIST;
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_BACKSPACE:
-			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_CTRL) {
-				font_reset_bios();
-			} else if (k->mod & KMOD_ALT) {
-				font_reset_char(current_char);
-			} else {
-				font_reset_upper();
-			}
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_RETURN: return 0;
-		case SDLK_q:
-			if (k->mod & KMOD_CTRL) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			break;
-		default:
-			if (k->state == KEY_RELEASE) return 1;
-			break;
+		if (fontlist_mode != MODE_SAVE) {
+			cur_font = top_font = 0;
+			load_fontlist();
+			fontlist_mode = MODE_SAVE;
+		}
+		selected_item = FONTLIST;
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_BACKSPACE:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_CTRL) {
+			font_reset_bios();
+		} else if (k->mod & KMOD_ALT) {
+			font_reset_char(current_char);
+		} else {
+			font_reset_upper();
+		}
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_RETURN: return 0;
+	case SDLK_q:
+		if (k->mod & KMOD_CTRL) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		break;
+	default:
+		if (k->state == KEY_RELEASE) return 1;
+		break;
 	}
 
 	switch (selected_item) {
-		case EDITBOX: handle_key_editbox(k); break;
-		case CHARMAP: handle_key_charmap(k); break;
-		case ITFMAP: handle_key_itfmap(k); break;
-		case FONTLIST: handle_key_fontlist(k); break;
-		default: break;
+	case EDITBOX: handle_key_editbox(k); break;
+	case CHARMAP: handle_key_charmap(k); break;
+	case ITFMAP: handle_key_itfmap(k); break;
+	case FONTLIST: handle_key_fontlist(k); break;
+	default: break;
 	}
 	return 1;
 }
@@ -938,37 +937,37 @@ static struct widget fontedit_widget_hack[1];
 static int fontedit_key_hack(struct key_event *k)
 {
 	switch (k->sym) {
-		case SDLK_r:
-		case SDLK_l:
-		case SDLK_s:
-		case SDLK_c:
-		case SDLK_p:
-		case SDLK_m:
-		case SDLK_z:
-		case SDLK_v:
-		case SDLK_h:
-		case SDLK_i:
-		case SDLK_q:
-		case SDLK_w:
-		case SDLK_F1:
-		case SDLK_F2:
-		case SDLK_F3:
-		case SDLK_F4:
-		case SDLK_F5:
-		case SDLK_F6:
-		case SDLK_F7:
-		case SDLK_F8:
-		case SDLK_F9:
-		case SDLK_F10:
-		case SDLK_F11:
-		case SDLK_F12: return fontedit_handle_key(k);
-		case SDLK_RETURN:
-			if (status.dialog_type & (DIALOG_MENU | DIALOG_BOX)) return 0;
-			if (selected_item == FONTLIST) {
-				handle_key_fontlist(k);
-				return 1;
-			}
-		default: break;
+	case SDLK_r:
+	case SDLK_l:
+	case SDLK_s:
+	case SDLK_c:
+	case SDLK_p:
+	case SDLK_m:
+	case SDLK_z:
+	case SDLK_v:
+	case SDLK_h:
+	case SDLK_i:
+	case SDLK_q:
+	case SDLK_w:
+	case SDLK_F1:
+	case SDLK_F2:
+	case SDLK_F3:
+	case SDLK_F4:
+	case SDLK_F5:
+	case SDLK_F6:
+	case SDLK_F7:
+	case SDLK_F8:
+	case SDLK_F9:
+	case SDLK_F10:
+	case SDLK_F11:
+	case SDLK_F12: return fontedit_handle_key(k);
+	case SDLK_RETURN:
+		if (status.dialog_type & (DIALOG_MENU | DIALOG_BOX)) return 0;
+		if (selected_item == FONTLIST) {
+			handle_key_fontlist(k);
+			return 1;
+		}
+	default: break;
 	};
 	return 0;
 }

@@ -131,135 +131,135 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 	/* the header is already byteswapped, but anything in 'chunk' will need to be swapped as needed
 	because the structure is a const pointing into the data itself */
 	switch (bswapBE32(chunk.data->FORM.filetype)) {
-		case ID_8SVX:
-			// shut up, gcc
-			ZEROIZE(vhdr);
-			ZEROIZE(body);
-			ZEROIZE(name);
-			ZEROIZE(auth);
-			ZEROIZE(anno);
+	case ID_8SVX:
+		// shut up, gcc
+		ZEROIZE(vhdr);
+		ZEROIZE(body);
+		ZEROIZE(name);
+		ZEROIZE(auth);
+		ZEROIZE(anno);
 
-			while (iff_chunk_read(&chunk, data, length, &pos)) {
-				switch (chunk.id) {
-					case ID_VHDR: vhdr = chunk; break;
-					case ID_BODY: body = chunk; break;
-					case ID_NAME: name = chunk; break;
-					case ID_AUTH: auth = chunk; break;
-					case ID_ANNO: anno = chunk; break;
-					default: break;
-				}
+		while (iff_chunk_read(&chunk, data, length, &pos)) {
+			switch (chunk.id) {
+			case ID_VHDR: vhdr = chunk; break;
+			case ID_BODY: body = chunk; break;
+			case ID_NAME: name = chunk; break;
+			case ID_AUTH: auth = chunk; break;
+			case ID_ANNO: anno = chunk; break;
+			default: break;
 			}
-			if (!(vhdr.id && body.id)) return 0;
+		}
+		if (!(vhdr.id && body.id)) return 0;
 
-			if (vhdr.data->VHDR.compression) {
-				log_appendf(4, "error: compressed 8SVX files are unsupported");
-				return 0;
-			}
-			if (vhdr.data->VHDR.num_octaves != 1) {
-				log_appendf(4, "warning: 8SVX file contains %d octaves", vhdr.data->VHDR.num_octaves);
-			}
+		if (vhdr.data->VHDR.compression) {
+			log_appendf(4, "error: compressed 8SVX files are unsupported");
+			return 0;
+		}
+		if (vhdr.data->VHDR.num_octaves != 1) {
+			log_appendf(4, "warning: 8SVX file contains %d octaves", vhdr.data->VHDR.num_octaves);
+		}
 
-			if (file) {
-				file->description = "8SVX sample";
-				file->type = TYPE_SAMPLE_PLAIN;
-			}
-			if (!name.id) name = auth;
-			if (!name.id) name = anno;
-			if (name.id) {
-				if (file) file->title = strn_dup((const char *)name.data, name.size);
-				if (smp) {
-					int len = MIN(25, name.size);
-					memcpy(smp->name, name.data, len);
-					smp->name[len] = 0;
-				}
-			}
-
+		if (file) {
+			file->description = "8SVX sample";
+			file->type = TYPE_SAMPLE_PLAIN;
+		}
+		if (!name.id) name = auth;
+		if (!name.id) name = anno;
+		if (name.id) {
+			if (file) file->title = strn_dup((const char *)name.data, name.size);
 			if (smp) {
-				smp->c5speed = bswapBE16(vhdr.data->VHDR.smp_per_sec);
-				smp->length = body.size;
-
-				csf_read_sample(smp, SF_BE | SF_PCMS | SF_8 | SF_M, (uint8_t *)body.data, body.size);
-
-				smp->volume = 64 * 4;
-				smp->global_volume = 64;
-
-				// this is done kinda weird
-				smp->loop_end = bswapBE32(vhdr.data->VHDR.smp_highoct_repeat);
-				if (smp->loop_end) {
-					smp->loop_start = bswapBE32(vhdr.data->VHDR.smp_highoct_1shot);
-					smp->loop_end += smp->loop_start;
-					if (smp->loop_start > smp->length) smp->loop_start = 0;
-					if (smp->loop_end > smp->length) smp->loop_end = smp->length;
-					if (smp->loop_start + 2 < smp->loop_end) smp->flags |= CHN_LOOP;
-				}
-				// TODO vhdr.data->VHDR.volume ?
+				int len = MIN(25, name.size);
+				memcpy(smp->name, name.data, len);
+				smp->name[len] = 0;
 			}
+		}
 
-			return 1;
+		if (smp) {
+			smp->c5speed = bswapBE16(vhdr.data->VHDR.smp_per_sec);
+			smp->length = body.size;
 
-		case ID_AIFF:
-			ZEROIZE(comm);
-			ZEROIZE(ssnd);
-			ZEROIZE(name);
-			ZEROIZE(auth);
-			ZEROIZE(anno);
+			csf_read_sample(smp, SF_BE | SF_PCMS | SF_8 | SF_M, (uint8_t *)body.data, body.size);
 
-			while (iff_chunk_read(&chunk, data, length, &pos)) {
-				switch (chunk.id) {
-					case ID_COMM: comm = chunk; break;
-					case ID_SSND: ssnd = chunk; break;
-					case ID_NAME: name = chunk; break;
-					default: break;
-				}
+			smp->volume = 64 * 4;
+			smp->global_volume = 64;
+
+			// this is done kinda weird
+			smp->loop_end = bswapBE32(vhdr.data->VHDR.smp_highoct_repeat);
+			if (smp->loop_end) {
+				smp->loop_start = bswapBE32(vhdr.data->VHDR.smp_highoct_1shot);
+				smp->loop_end += smp->loop_start;
+				if (smp->loop_start > smp->length) smp->loop_start = 0;
+				if (smp->loop_end > smp->length) smp->loop_end = smp->length;
+				if (smp->loop_start + 2 < smp->loop_end) smp->flags |= CHN_LOOP;
 			}
-			if (!(comm.id && ssnd.id)) return 0;
+			// TODO vhdr.data->VHDR.volume ?
+		}
 
-			if (file) {
-				file->description = "Audio IFF sample";
-				file->type = TYPE_SAMPLE_PLAIN;
+		return 1;
+
+	case ID_AIFF:
+		ZEROIZE(comm);
+		ZEROIZE(ssnd);
+		ZEROIZE(name);
+		ZEROIZE(auth);
+		ZEROIZE(anno);
+
+		while (iff_chunk_read(&chunk, data, length, &pos)) {
+			switch (chunk.id) {
+			case ID_COMM: comm = chunk; break;
+			case ID_SSND: ssnd = chunk; break;
+			case ID_NAME: name = chunk; break;
+			default: break;
 			}
-			if (!name.id) name = auth;
-			if (!name.id) name = anno;
-			if (name.id) {
-				if (file) file->title = strn_dup((const char *)name.data, name.size);
-				if (smp) {
-					int len = MIN(25, name.size);
-					memcpy(smp->name, name.data, len);
-					smp->name[len] = 0;
-				}
-			}
+		}
+		if (!(comm.id && ssnd.id)) return 0;
 
-			/* TODO loop points */
-
+		if (file) {
+			file->description = "Audio IFF sample";
+			file->type = TYPE_SAMPLE_PLAIN;
+		}
+		if (!name.id) name = auth;
+		if (!name.id) name = anno;
+		if (name.id) {
+			if (file) file->title = strn_dup((const char *)name.data, name.size);
 			if (smp) {
-				uint32_t flags = SF_BE | SF_PCMS;
+				int len = MIN(25, name.size);
+				memcpy(smp->name, name.data, len);
+				smp->name[len] = 0;
+			}
+		}
 
-				switch (bswapBE16(comm.data->COMM.num_channels)) {
-					default: log_appendf(4, "warning: multichannel AIFF is unsupported");
-					case 1: flags |= SF_M; break;
-					case 2: flags |= SF_SI; break;
-				}
+		/* TODO loop points */
 
-				switch ((bswapBE16(comm.data->COMM.sample_size) + 7) & ~7) {
-					default: log_appendf(4, "warning: AIFF has unsupported bit-width");
-					case 8: flags |= SF_8; break;
-					case 16: flags |= SF_16; break;
-				}
+		if (smp) {
+			uint32_t flags = SF_BE | SF_PCMS;
 
-				// TODO: data checking; make sure sample count and byte size agree
-				// (and if not, cut to shorter of the two)
-
-				smp->c5speed = ConvertFromIeeeExtended(comm.data->COMM.sample_rate);
-				smp->length = bswapBE32(comm.data->COMM.num_frames);
-				smp->volume = 64 * 4;
-				smp->global_volume = 64;
-
-				// the audio data starts 8 bytes into the chunk
-				// (don't care about the block alignment stuff)
-				csf_read_sample(smp, flags, (uint8_t *)ssnd.data + 8, ssnd.size - 8);
+			switch (bswapBE16(comm.data->COMM.num_channels)) {
+			default: log_appendf(4, "warning: multichannel AIFF is unsupported");
+			case 1: flags |= SF_M; break;
+			case 2: flags |= SF_SI; break;
 			}
 
-			return 1;
+			switch ((bswapBE16(comm.data->COMM.sample_size) + 7) & ~7) {
+			default: log_appendf(4, "warning: AIFF has unsupported bit-width");
+			case 8: flags |= SF_8; break;
+			case 16: flags |= SF_16; break;
+			}
+
+			// TODO: data checking; make sure sample count and byte size agree
+			// (and if not, cut to shorter of the two)
+
+			smp->c5speed = ConvertFromIeeeExtended(comm.data->COMM.sample_rate);
+			smp->length = bswapBE32(comm.data->COMM.num_frames);
+			smp->volume = 64 * 4;
+			smp->global_volume = 64;
+
+			// the audio data starts 8 bytes into the chunk
+			// (don't care about the block alignment stuff)
+			csf_read_sample(smp, flags, (uint8_t *)ssnd.data + 8, ssnd.size - 8);
+		}
+
+		return 1;
 	}
 
 	return 0;

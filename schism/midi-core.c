@@ -836,15 +836,15 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int l
 		midi_event_pitchbend(data[0] & 15, data[1]);
 	} else if (cmd == 0xF) {
 		switch ((*data & 15)) {
-			case 0: /* sysex */
-				if (len <= 2) return;
-				midi_event_sysex(data + 1, len - 2);
-				break;
-			case 6: /* tick */ midi_event_tick(); break;
-			default:
-				/* something else */
-				midi_event_system((*data & 15), (data[1]) | (data[2] << 8) | (data[3] << 16));
-				break;
+		case 0: /* sysex */
+			if (len <= 2) return;
+			midi_event_sysex(data + 1, len - 2);
+			break;
+		case 6: /* tick */ midi_event_tick(); break;
+		default:
+			/* something else */
+			midi_event_system((*data & 15), (data[1]) | (data[2] << 8) | (data[3] << 16));
+			break;
 		}
 	}
 }
@@ -936,52 +936,52 @@ int midi_engine_handle_event(void *ev)
 	}
 
 	switch (e->user.code) {
-		case SCHISM_EVENT_MIDI_NOTE:
-			if (st[0] == MIDI_NOTEON) {
-				kk.state = KEY_PRESS;
-			} else {
-				if (!(midi_flags & MIDI_RECORD_NOTEOFF)) {
-					/* don't record noteoff? okay... */
-					break;
-				}
-				kk.state = KEY_RELEASE;
+	case SCHISM_EVENT_MIDI_NOTE:
+		if (st[0] == MIDI_NOTEON) {
+			kk.state = KEY_PRESS;
+		} else {
+			if (!(midi_flags & MIDI_RECORD_NOTEOFF)) {
+				/* don't record noteoff? okay... */
+				break;
 			}
-			kk.midi_channel = st[1] + 1;
-			kk.midi_note = (st[2] + 1 + midi_c5note) - 60;
-			if (midi_flags & MIDI_RECORD_VELOCITY) kk.midi_volume = st[3];
-			else kk.midi_volume = 128;
-			kk.midi_volume = (kk.midi_volume * midi_amplification) / 100;
-			handle_key(&kk);
+			kk.state = KEY_RELEASE;
+		}
+		kk.midi_channel = st[1] + 1;
+		kk.midi_note = (st[2] + 1 + midi_c5note) - 60;
+		if (midi_flags & MIDI_RECORD_VELOCITY) kk.midi_volume = st[3];
+		else kk.midi_volume = 128;
+		kk.midi_volume = (kk.midi_volume * midi_amplification) / 100;
+		handle_key(&kk);
+		break;
+	case SCHISM_EVENT_MIDI_PITCHBEND:
+		/* wheel */
+		kk.midi_channel = st[1] + 1;
+		kk.midi_volume = -1;
+		kk.midi_note = -1;
+		kk.midi_bend = st[0];
+		handle_key(&kk);
+		break;
+	case SCHISM_EVENT_MIDI_CONTROLLER:
+		/* controller events */
+		break;
+	case SCHISM_EVENT_MIDI_SYSTEM:
+		switch (st[0]) {
+		case 0x8: /* MIDI tick */ break;
+		case 0xA: /* MIDI start */
+		case 0xB: /* MIDI continue */ song_start(); break;
+		case 0xC: /* MIDI stop */
+		case 0xF: /* MIDI reset */
+			/* this is helpful when miditracking */
+			song_stop();
 			break;
-		case SCHISM_EVENT_MIDI_PITCHBEND:
-			/* wheel */
-			kk.midi_channel = st[1] + 1;
-			kk.midi_volume = -1;
-			kk.midi_note = -1;
-			kk.midi_bend = st[0];
-			handle_key(&kk);
-			break;
-		case SCHISM_EVENT_MIDI_CONTROLLER:
-			/* controller events */
-			break;
-		case SCHISM_EVENT_MIDI_SYSTEM:
-			switch (st[0]) {
-				case 0x8: /* MIDI tick */ break;
-				case 0xA: /* MIDI start */
-				case 0xB: /* MIDI continue */ song_start(); break;
-				case 0xC: /* MIDI stop */
-				case 0xF: /* MIDI reset */
-					/* this is helpful when miditracking */
-					song_stop();
-					break;
-			};
-		case SCHISM_EVENT_MIDI_SYSEX:
-			/* but missing the F0 and the stop byte (F7) */
-			//len = *((unsigned int *)e->user.data1);
-			//sysex = ((char *)e->user.data1)+sizeof(unsigned int);
-			break;
+		};
+	case SCHISM_EVENT_MIDI_SYSEX:
+		/* but missing the F0 and the stop byte (F7) */
+		//len = *((unsigned int *)e->user.data1);
+		//sysex = ((char *)e->user.data1)+sizeof(unsigned int);
+		break;
 
-		default: break;
+	default: break;
 	}
 	free(e->user.data1);
 

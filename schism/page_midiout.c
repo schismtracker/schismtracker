@@ -114,15 +114,15 @@ static int pre_handle_key(struct key_event *k)
 	}
 	if ((*selected_widget) >= 25) {
 		switch (k->sym) {
-			case SDLK_PAGEUP:
-				if (k->state == KEY_RELEASE) return 1;
-				zxx_setpos(zxx_top - 7);
-				return 1;
-			case SDLK_PAGEDOWN:
-				if (k->state == KEY_RELEASE) return 1;
-				zxx_setpos(zxx_top + 7);
-				return 1;
-			default: break;
+		case SDLK_PAGEUP:
+			if (k->state == KEY_RELEASE) return 1;
+			zxx_setpos(zxx_top - 7);
+			return 1;
+		case SDLK_PAGEDOWN:
+			if (k->state == KEY_RELEASE) return 1;
+			zxx_setpos(zxx_top + 7);
+			return 1;
+		default: break;
 		};
 	}
 	return 0;

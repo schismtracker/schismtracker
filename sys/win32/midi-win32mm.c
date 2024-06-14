@@ -130,25 +130,25 @@ static CALLBACK void _win32mm_inputcb(UNUSED HMIDIIN in, UINT wmsg, DWORD_PTR in
 	unsigned char c[4];
 
 	switch (wmsg) {
-		case MIM_OPEN: SDL_Delay(0); /* eh? */
-		case MIM_CLOSE: break;
-		case MIM_DATA:
-			c[0] = param1 & 255;
-			c[1] = (param1 >> 8) & 255;
-			c[2] = (param1 >> 16) & 255;
-			midi_received_cb(p, c, 3);
-			break;
-		case MIM_LONGDATA: {
-			MIDIHDR *hdr = (MIDIHDR *)param1;
-			if (hdr->dwBytesRecorded > 0) {
-				/* long data */
-				m = p->userdata;
-				midi_received_cb(p, (unsigned char *)m->hh.lpData, m->hh.dwBytesRecorded);
-				//TODO: The event for the midi sysex (midi-core.c SCHISM_EVENT_MIDI_SYSEX) should
-				// call us back so that we can add the buffer back with midiInAddBuffer().
-			}
-			break;
+	case MIM_OPEN: SDL_Delay(0); /* eh? */
+	case MIM_CLOSE: break;
+	case MIM_DATA:
+		c[0] = param1 & 255;
+		c[1] = (param1 >> 8) & 255;
+		c[2] = (param1 >> 16) & 255;
+		midi_received_cb(p, c, 3);
+		break;
+	case MIM_LONGDATA: {
+		MIDIHDR *hdr = (MIDIHDR *)param1;
+		if (hdr->dwBytesRecorded > 0) {
+			/* long data */
+			m = p->userdata;
+			midi_received_cb(p, (unsigned char *)m->hh.lpData, m->hh.dwBytesRecorded);
+			//TODO: The event for the midi sysex (midi-core.c SCHISM_EVENT_MIDI_SYSEX) should
+			// call us back so that we can add the buffer back with midiInAddBuffer().
 		}
+		break;
+	}
 	}
 }
 

@@ -100,24 +100,24 @@ static void far_import_note(song_note_t *note, const uint8_t data[4])
 	}
 	note->param = data[3] & 0xf;
 	switch (data[3] >> 4) {
-		case 3: // porta to note
-			note->param <<= 2;
-			break;
-		case 4:                                              // retrig
-			note->param = 6 / (1 + (note->param & 0xf)) + 1; // ugh?
-			break;
-		case 6:   // vibrato speed
-		case 7:   // volume slide up
-		case 0xb: // panning
-			note->param <<= 4;
-			break;
-		case 0xa: // volume-portamento (what!)
-			note->voleffect = VOLFX_VOLUME;
-			note->volparam = (note->param << 2) + 4;
-			break;
-		case 0xc: // note offset
-			note->param = 6 / (1 + (note->param & 0xf)) + 1;
-			note->param |= 0xd;
+	case 3: // porta to note
+		note->param <<= 2;
+		break;
+	case 4:                                              // retrig
+		note->param = 6 / (1 + (note->param & 0xf)) + 1; // ugh?
+		break;
+	case 6:   // vibrato speed
+	case 7:   // volume slide up
+	case 0xb: // panning
+		note->param <<= 4;
+		break;
+	case 0xa: // volume-portamento (what!)
+		note->voleffect = VOLFX_VOLUME;
+		note->volparam = (note->param << 2) + 4;
+		break;
+	case 0xc: // note offset
+		note->param = 6 / (1 + (note->param & 0xf)) + 1;
+		note->param |= 0xd;
 	}
 	note->effect = far_effects[data[3] >> 4];
 }

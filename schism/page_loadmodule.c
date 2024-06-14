@@ -327,12 +327,12 @@ static inline int get_type_color(int type)
 	   4 other
 	   7 sample */
 	switch (type) {
-		case TYPE_MODULE_MOD: return 2;
-		case TYPE_MODULE_S3M: return 5;
-		case TYPE_MODULE_XM: return 6;
-		case TYPE_MODULE_IT: return 3;
-		case TYPE_SAMPLE_COMPR: return 4; /* mp3/ogg 'sample'... i think */
-		default: return 7;
+	case TYPE_MODULE_MOD: return 2;
+	case TYPE_MODULE_S3M: return 5;
+	case TYPE_MODULE_XM: return 6;
+	case TYPE_MODULE_IT: return 3;
+	case TYPE_SAMPLE_COMPR: return 4; /* mp3/ogg 'sample'... i think */
+	default: return 7;
 	}
 }
 
@@ -684,71 +684,71 @@ static int file_list_handle_key(struct key_event *k)
 	int new_file = current_file;
 
 	switch (k->sym) {
-		case SDLK_UP: new_file--; break;
-		case SDLK_DOWN: new_file++; break;
-		case SDLK_PAGEUP: new_file -= 31; break;
-		case SDLK_PAGEDOWN: new_file += 31; break;
-		case SDLK_HOME: new_file = 0; break;
-		case SDLK_END: new_file = flist.num_files - 1; break;
-		case SDLK_RETURN:
-			if (k->state == KEY_PRESS) return 1;
-			if (current_file < flist.num_files) {
-				dmoz_cache_update(cfg_dir_modules, &flist, &dlist);
-				handle_file_entered(flist.files[current_file]->path);
-			}
-			search_text_clear();
+	case SDLK_UP: new_file--; break;
+	case SDLK_DOWN: new_file++; break;
+	case SDLK_PAGEUP: new_file -= 31; break;
+	case SDLK_PAGEDOWN: new_file += 31; break;
+	case SDLK_HOME: new_file = 0; break;
+	case SDLK_END: new_file = flist.num_files - 1; break;
+	case SDLK_RETURN:
+		if (k->state == KEY_PRESS) return 1;
+		if (current_file < flist.num_files) {
+			dmoz_cache_update(cfg_dir_modules, &flist, &dlist);
+			handle_file_entered(flist.files[current_file]->path);
+		}
+		search_text_clear();
 
+		return 1;
+	case SDLK_DELETE:
+		if (k->state == KEY_RELEASE) return 1;
+		if (flist.num_files > 0) dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
+		return 1;
+	case SDLK_BACKSPACE:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_CTRL) search_text_clear();
+		else search_text_delete_char();
+		return 1;
+	case SDLK_p:
+		if ((k->mod & KMOD_ALT) && k->state == KEY_PRESS) {
+			show_selected_song_length();
 			return 1;
-		case SDLK_DELETE:
-			if (k->state == KEY_RELEASE) return 1;
-			if (flist.num_files > 0) dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
-			return 1;
-		case SDLK_BACKSPACE:
-			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_CTRL) search_text_clear();
-			else search_text_delete_char();
-			return 1;
-		case SDLK_p:
-			if ((k->mod & KMOD_ALT) && k->state == KEY_PRESS) {
-				show_selected_song_length();
-				return 1;
-			} /* else fall through */
-		default:
-			if (k->mouse == MOUSE_NONE) {
-				if (k->text) return file_list_handle_text_input(k->text);
+		} /* else fall through */
+	default:
+		if (k->mouse == MOUSE_NONE) {
+			if (k->text) return file_list_handle_text_input(k->text);
 
-				return 0;
-			}
+			return 0;
+		}
 	}
 
 	if (k->mouse != MOUSE_NONE && !(k->x >= 3 && k->x <= 51 && k->y >= 13 && k->y <= 43)) return 0;
 	switch (k->mouse) {
-		case MOUSE_CLICK:
-			if (k->state == KEY_PRESS) return 0;
-			new_file = (k->y - 13) + top_file;
-			break;
-		case MOUSE_DBLCLICK:
-			if (current_file < flist.num_files) {
-				dmoz_cache_update(cfg_dir_modules, &flist, &dlist);
-				handle_file_entered(flist.files[current_file]->path);
-			}
-			search_text_clear();
-			return 1;
-		case MOUSE_SCROLL_UP:
-		case MOUSE_SCROLL_DOWN:
-			if (k->state == KEY_PRESS) return 0;
-			top_file += (k->mouse == MOUSE_SCROLL_UP) ? -MOUSE_SCROLL_LINES : MOUSE_SCROLL_LINES;
-			/* don't allow scrolling down past either end.
+	case MOUSE_CLICK:
+		if (k->state == KEY_PRESS) return 0;
+		new_file = (k->y - 13) + top_file;
+		break;
+	case MOUSE_DBLCLICK:
+		if (current_file < flist.num_files) {
+			dmoz_cache_update(cfg_dir_modules, &flist, &dlist);
+			handle_file_entered(flist.files[current_file]->path);
+		}
+		search_text_clear();
+		return 1;
+	case MOUSE_SCROLL_UP:
+	case MOUSE_SCROLL_DOWN:
+		if (k->state == KEY_PRESS) return 0;
+		top_file += (k->mouse == MOUSE_SCROLL_UP) ? -MOUSE_SCROLL_LINES : MOUSE_SCROLL_LINES;
+		/* don't allow scrolling down past either end.
 		   this can't be CLAMP'd because the first check might scroll
 		   too far back if the list is small.
 		   (hrm, should add a BOTTOM_FILE macro or something) */
-			if (top_file > flist.num_files - 31) top_file = flist.num_files - 31;
-			if (top_file < 0) top_file = 0;
-			status.flags |= NEED_UPDATE;
-			return 1;
-		default:
-			/* prevent moving the cursor twice from a single key press */
-			if (k->state == KEY_RELEASE) return 1;
+		if (top_file > flist.num_files - 31) top_file = flist.num_files - 31;
+		if (top_file < 0) top_file = 0;
+		status.flags |= NEED_UPDATE;
+		return 1;
+	default:
+		/* prevent moving the cursor twice from a single key press */
+		if (k->state == KEY_RELEASE) return 1;
 	}
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
@@ -809,22 +809,22 @@ static int dir_list_handle_key(struct key_event *k)
 	if (k->mouse != MOUSE_NONE) {
 		if (k->x >= 52 && k->x <= 77 && k->y >= 13 && k->y <= 34) {
 			switch (k->mouse) {
-				case MOUSE_CLICK: new_dir = (k->y - 13) + top_dir; break;
-				case MOUSE_DBLCLICK:
-					top_file = current_file = 0;
-					change_dir(dlist.dirs[current_dir]->path);
+			case MOUSE_CLICK: new_dir = (k->y - 13) + top_dir; break;
+			case MOUSE_DBLCLICK:
+				top_file = current_file = 0;
+				change_dir(dlist.dirs[current_dir]->path);
 
-					if (flist.num_files > 0) *selected_widget = 0;
-					status.flags |= NEED_UPDATE;
-					return 1;
-					break;
-				case MOUSE_SCROLL_UP:
-				case MOUSE_SCROLL_DOWN:
-					top_dir += (k->mouse == MOUSE_SCROLL_UP) ? -MOUSE_SCROLL_LINES : MOUSE_SCROLL_LINES;
-					if (top_dir > dlist.num_dirs - 21) top_dir = dlist.num_dirs - 21;
-					if (top_dir < 0) top_dir = 0;
-					status.flags |= NEED_UPDATE;
-					break;
+				if (flist.num_files > 0) *selected_widget = 0;
+				status.flags |= NEED_UPDATE;
+				return 1;
+				break;
+			case MOUSE_SCROLL_UP:
+			case MOUSE_SCROLL_DOWN:
+				top_dir += (k->mouse == MOUSE_SCROLL_UP) ? -MOUSE_SCROLL_LINES : MOUSE_SCROLL_LINES;
+				if (top_dir > dlist.num_dirs - 21) top_dir = dlist.num_dirs - 21;
+				if (top_dir < 0) top_dir = 0;
+				status.flags |= NEED_UPDATE;
+				break;
 			}
 		} else {
 			return 0;
@@ -832,46 +832,46 @@ static int dir_list_handle_key(struct key_event *k)
 	}
 
 	switch (k->sym) {
-		case SDLK_UP: new_dir--; break;
-		case SDLK_DOWN: new_dir++; break;
-		case SDLK_PAGEUP: new_dir -= 21; break;
-		case SDLK_PAGEDOWN: new_dir += 21; break;
-		case SDLK_HOME: new_dir = 0; break;
-		case SDLK_END: new_dir = dlist.num_dirs - 1; break;
-		case SDLK_RETURN:
-			if (k->state == KEY_PRESS) return 0;
-			/* reset */
-			top_file = current_file = 0;
-			if (current_dir >= 0 && current_dir < dlist.num_dirs) change_dir(dlist.dirs[current_dir]->path);
+	case SDLK_UP: new_dir--; break;
+	case SDLK_DOWN: new_dir++; break;
+	case SDLK_PAGEUP: new_dir -= 21; break;
+	case SDLK_PAGEDOWN: new_dir += 21; break;
+	case SDLK_HOME: new_dir = 0; break;
+	case SDLK_END: new_dir = dlist.num_dirs - 1; break;
+	case SDLK_RETURN:
+		if (k->state == KEY_PRESS) return 0;
+		/* reset */
+		top_file = current_file = 0;
+		if (current_dir >= 0 && current_dir < dlist.num_dirs) change_dir(dlist.dirs[current_dir]->path);
 
-			if (flist.num_files > 0) *selected_widget = 0;
+		if (flist.num_files > 0) *selected_widget = 0;
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_BACKSPACE:
+		if (k->state == KEY_RELEASE) return 0;
+		if (k->mod & KMOD_CTRL) search_text_clear();
+		else search_text_delete_char();
+		return 1;
+	case SDLK_SLASH:
+#ifdef SCHISM_WIN32
+	case SDLK_BACKSLASH:
+#endif
+		if (k->state == KEY_RELEASE) return 0;
+		if (search_text_length == 0 && current_dir != 0) {
+			// slash -> go to top (root) dir
+			new_dir = 0;
+		} else if (current_dir > 0 && current_dir < dlist.num_dirs) {
+			change_dir(dlist.dirs[current_dir]->path);
 			status.flags |= NEED_UPDATE;
 			return 1;
-		case SDLK_BACKSPACE:
-			if (k->state == KEY_RELEASE) return 0;
-			if (k->mod & KMOD_CTRL) search_text_clear();
-			else search_text_delete_char();
-			return 1;
-		case SDLK_SLASH:
-#ifdef SCHISM_WIN32
-		case SDLK_BACKSLASH:
-#endif
-			if (k->state == KEY_RELEASE) return 0;
-			if (search_text_length == 0 && current_dir != 0) {
-				// slash -> go to top (root) dir
-				new_dir = 0;
-			} else if (current_dir > 0 && current_dir < dlist.num_dirs) {
-				change_dir(dlist.dirs[current_dir]->path);
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-			break;
-		default:
-			if (k->mouse == MOUSE_NONE) {
-				if (k->text) return dir_list_handle_text_input(k->text);
+		}
+		break;
+	default:
+		if (k->mouse == MOUSE_NONE) {
+			if (k->text) return dir_list_handle_text_input(k->text);
 
-				return 0;
-			}
+			return 0;
+		}
 	}
 
 	if (k->mouse == MOUSE_CLICK) {

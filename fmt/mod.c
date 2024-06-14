@@ -576,72 +576,72 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 					mod_fx_val = m->volparam;
 				} else if (m->voleffect == VOLFX_NONE) {
 					switch (m->effect) {
-						case FX_NONE: mod_fx_val = 0; break;
-						case FX_ARPEGGIO: mod_fx = 0; break;
-						case FX_PORTAMENTOUP:
-							mod_fx = 1;
-							if ((mod_fx_val & 0xf0) == 0xe0) {
-								mod_fx = 0x0e;
-								mod_fx_val = 0x10 | ((mod_fx_val & 0xf) >> 2);
-							} else if ((mod_fx_val & 0xf0) == 0xf0) {
-								mod_fx = 0x0e;
-								mod_fx_val = 0x10 | (mod_fx_val & 0xf);
-							}
-							break;
-						case FX_PORTAMENTODOWN:
-							mod_fx = 2;
-							if ((mod_fx_val & 0xf0) == 0xe0) {
-								mod_fx = 0x0e;
-								mod_fx_val = 0x20 | ((mod_fx_val & 0xf) >> 2);
-							} else if ((mod_fx_val & 0xf0) == 0xf0) {
-								mod_fx = 0x0e;
-								mod_fx_val = 0x20 | (mod_fx_val & 0xf);
-							}
-							break;
-						case FX_TONEPORTAMENTO: mod_fx = 3; break;
-						case FX_VIBRATO: mod_fx = 4; break;
-						case FX_TONEPORTAVOL: mod_fx = 5; break;
-						case FX_VIBRATOVOL: mod_fx = 6; break;
-						case FX_TREMOLO: mod_fx = 7; break;
-						case FX_PANNING: mod_fx = 8; break;
-						case FX_OFFSET: mod_fx = 9; break;
-						case FX_VOLUMESLIDE:
-							mod_fx = 0x0a;
-							if ((mod_fx_val & 0xf0) && (mod_fx_val & 0x0f))
-								if ((mod_fx_val & 0xf0) == 0xf0) { // fine volslide down!
-									mod_fx = 0x0e;
-									mod_fx_val &= 0xbf;
-								} else if ((mod_fx_val & 0x0f) == 0x0f) { // fine volslide up!
-									mod_fx = 0x0e;
-									mod_fx_val = 0xa0 | (mod_fx_val >> 4);
-								}
-							break;
-						case FX_POSITIONJUMP: mod_fx = 0x0b; break;
-						case FX_VOLUME: mod_fx = 0x0c; break;
-						case FX_PATTERNBREAK:
-							mod_fx = 0x0d;
-							mod_fx_val = ((mod_fx_val / 10) << 4) | (mod_fx_val % 10);
-							break;
-						case FX_SPEED: mod_fx = 0x0f; break;
-						case FX_TEMPO: mod_fx = 0x0f; break;
-						case FX_SPECIAL:
+					case FX_NONE: mod_fx_val = 0; break;
+					case FX_ARPEGGIO: mod_fx = 0; break;
+					case FX_PORTAMENTOUP:
+						mod_fx = 1;
+						if ((mod_fx_val & 0xf0) == 0xe0) {
 							mod_fx = 0x0e;
-							switch (mod_fx_val & 0xf0) {
-								case 0x10: mod_fx_val = (mod_fx_val & 0x0f) | 0x30; break;
-								case 0x20:
-									mod_fx_val = (mod_fx_val & 0x0f) | 0x50;
-									break; // there is an error in Protracker 2.1 docs!
-								case 0x30: mod_fx_val = (mod_fx_val & 0x0f) | 0x40; break;
-								case 0x40: mod_fx_val = (mod_fx_val & 0x0f) | 0x70; break;
-								case 0xb0: mod_fx_val = (mod_fx_val & 0x0f) | 0x60; break;
-								default: break; // handling silently E0x,E6x,E8x,ECx,EDx,EEx,(?EFx)
-							}
-							break;
-						case FX_RETRIG:
+							mod_fx_val = 0x10 | ((mod_fx_val & 0xf) >> 2);
+						} else if ((mod_fx_val & 0xf0) == 0xf0) {
 							mod_fx = 0x0e;
-							mod_fx_val = 0x90 | (mod_fx_val & 0x0f);
-							break;
-						default: warn |= 1 << WARN_VOLEFFECTS; break;
+							mod_fx_val = 0x10 | (mod_fx_val & 0xf);
+						}
+						break;
+					case FX_PORTAMENTODOWN:
+						mod_fx = 2;
+						if ((mod_fx_val & 0xf0) == 0xe0) {
+							mod_fx = 0x0e;
+							mod_fx_val = 0x20 | ((mod_fx_val & 0xf) >> 2);
+						} else if ((mod_fx_val & 0xf0) == 0xf0) {
+							mod_fx = 0x0e;
+							mod_fx_val = 0x20 | (mod_fx_val & 0xf);
+						}
+						break;
+					case FX_TONEPORTAMENTO: mod_fx = 3; break;
+					case FX_VIBRATO: mod_fx = 4; break;
+					case FX_TONEPORTAVOL: mod_fx = 5; break;
+					case FX_VIBRATOVOL: mod_fx = 6; break;
+					case FX_TREMOLO: mod_fx = 7; break;
+					case FX_PANNING: mod_fx = 8; break;
+					case FX_OFFSET: mod_fx = 9; break;
+					case FX_VOLUMESLIDE:
+						mod_fx = 0x0a;
+						if ((mod_fx_val & 0xf0) && (mod_fx_val & 0x0f))
+							if ((mod_fx_val & 0xf0) == 0xf0) { // fine volslide down!
+								mod_fx = 0x0e;
+								mod_fx_val &= 0xbf;
+							} else if ((mod_fx_val & 0x0f) == 0x0f) { // fine volslide up!
+								mod_fx = 0x0e;
+								mod_fx_val = 0xa0 | (mod_fx_val >> 4);
+							}
+						break;
+					case FX_POSITIONJUMP: mod_fx = 0x0b; break;
+					case FX_VOLUME: mod_fx = 0x0c; break;
+					case FX_PATTERNBREAK:
+						mod_fx = 0x0d;
+						mod_fx_val = ((mod_fx_val / 10) << 4) | (mod_fx_val % 10);
+						break;
+					case FX_SPEED: mod_fx = 0x0f; break;
+					case FX_TEMPO: mod_fx = 0x0f; break;
+					case FX_SPECIAL:
+						mod_fx = 0x0e;
+						switch (mod_fx_val & 0xf0) {
+						case 0x10: mod_fx_val = (mod_fx_val & 0x0f) | 0x30; break;
+						case 0x20:
+							mod_fx_val = (mod_fx_val & 0x0f) | 0x50;
+							break; // there is an error in Protracker 2.1 docs!
+						case 0x30: mod_fx_val = (mod_fx_val & 0x0f) | 0x40; break;
+						case 0x40: mod_fx_val = (mod_fx_val & 0x0f) | 0x70; break;
+						case 0xb0: mod_fx_val = (mod_fx_val & 0x0f) | 0x60; break;
+						default: break; // handling silently E0x,E6x,E8x,ECx,EDx,EEx,(?EFx)
+						}
+						break;
+					case FX_RETRIG:
+						mod_fx = 0x0e;
+						mod_fx_val = 0x90 | (mod_fx_val & 0x0f);
+						break;
+					default: warn |= 1 << WARN_VOLEFFECTS; break;
 					}
 				} else {
 					warn |= 1 << WARN_VOLEFFECTS;

@@ -260,57 +260,57 @@ static void set_submenu(struct menu *menu)
 static void main_menu_selected_cb(void)
 {
 	switch (main_menu.selected_item) {
-		case 0: /* file menu... */ set_submenu(&file_menu); break;
-		case 1: /* playback menu... */ set_submenu(&playback_menu); break;
-		case 2: /* view patterns */ set_page(PAGE_PATTERN_EDITOR); break;
-		case 3: /* sample menu... */ set_submenu(&sample_menu); break;
-		case 4: /* instrument menu... */ set_submenu(&instrument_menu); break;
-		case 5: /* view orders/panning */ set_page(PAGE_ORDERLIST_PANNING); break;
-		case 6: /* view variables */ set_page(PAGE_SONG_VARIABLES); break;
-		case 7: /* message editor */ set_page(PAGE_MESSAGE); break;
-		case 8: /* settings menu */
-			/* fudge the menu to show/hide the fullscreen toggle as appropriate */
-			if (status.flags & WM_AVAILABLE) settings_menu.num_items = 6;
-			else settings_menu.num_items = 5;
-			set_submenu(&settings_menu);
-			break;
-		case 9: /* help! */ set_page(PAGE_HELP); break;
+	case 0: /* file menu... */ set_submenu(&file_menu); break;
+	case 1: /* playback menu... */ set_submenu(&playback_menu); break;
+	case 2: /* view patterns */ set_page(PAGE_PATTERN_EDITOR); break;
+	case 3: /* sample menu... */ set_submenu(&sample_menu); break;
+	case 4: /* instrument menu... */ set_submenu(&instrument_menu); break;
+	case 5: /* view orders/panning */ set_page(PAGE_ORDERLIST_PANNING); break;
+	case 6: /* view variables */ set_page(PAGE_SONG_VARIABLES); break;
+	case 7: /* message editor */ set_page(PAGE_MESSAGE); break;
+	case 8: /* settings menu */
+		/* fudge the menu to show/hide the fullscreen toggle as appropriate */
+		if (status.flags & WM_AVAILABLE) settings_menu.num_items = 6;
+		else settings_menu.num_items = 5;
+		set_submenu(&settings_menu);
+		break;
+	case 9: /* help! */ set_page(PAGE_HELP); break;
 	}
 }
 
 static void file_menu_selected_cb(void)
 {
 	switch (file_menu.selected_item) {
-		case 0: /* load... */ set_page(PAGE_LOAD_MODULE); break;
-		case 1: /* new... */ new_song_dialog(); break;
-		case 2: /* save current */ save_song_or_save_as(); break;
-		case 3: /* save as... */ set_page(PAGE_SAVE_MODULE); break;
-		case 4:
-			/* export ... */
-			set_page(PAGE_EXPORT_MODULE);
-			break;
-		case 5: /* message log */ set_page(PAGE_LOG); break;
-		case 6: /* quit */ show_exit_prompt(); break;
+	case 0: /* load... */ set_page(PAGE_LOAD_MODULE); break;
+	case 1: /* new... */ new_song_dialog(); break;
+	case 2: /* save current */ save_song_or_save_as(); break;
+	case 3: /* save as... */ set_page(PAGE_SAVE_MODULE); break;
+	case 4:
+		/* export ... */
+		set_page(PAGE_EXPORT_MODULE);
+		break;
+	case 5: /* message log */ set_page(PAGE_LOG); break;
+	case 6: /* quit */ show_exit_prompt(); break;
 	}
 }
 
 static void playback_menu_selected_cb(void)
 {
 	switch (playback_menu.selected_item) {
-		case 0: /* show infopage */
-			if (song_get_mode() == MODE_STOPPED
-				|| (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO))
-				song_start();
-			set_page(PAGE_INFO);
-			return;
-		case 1: /* play song */ song_start(); break;
-		case 2: /* play pattern */ song_loop_pattern(get_current_pattern(), 0); break;
-		case 3: /* play from order */ song_start_at_order(get_current_order(), 0); break;
-		case 4: /* play from mark/cursor */ play_song_from_mark(); break;
-		case 5: /* stop */ song_stop(); break;
-		case 6: /* reinit soundcard */ audio_reinit(NULL); break;
-		case 7: /* driver screen */ set_page(PAGE_PREFERENCES); return;
-		case 8: /* calculate length */ show_song_length(); return;
+	case 0: /* show infopage */
+		if (song_get_mode() == MODE_STOPPED
+			|| (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO))
+			song_start();
+		set_page(PAGE_INFO);
+		return;
+	case 1: /* play song */ song_start(); break;
+	case 2: /* play pattern */ song_loop_pattern(get_current_pattern(), 0); break;
+	case 3: /* play from order */ song_start_at_order(get_current_order(), 0); break;
+	case 4: /* play from mark/cursor */ play_song_from_mark(); break;
+	case 5: /* stop */ song_stop(); break;
+	case 6: /* reinit soundcard */ audio_reinit(NULL); break;
+	case 7: /* driver screen */ set_page(PAGE_PREFERENCES); return;
+	case 8: /* calculate length */ show_song_length(); return;
 	}
 
 	menu_hide();
@@ -320,28 +320,28 @@ static void playback_menu_selected_cb(void)
 static void sample_menu_selected_cb(void)
 {
 	switch (sample_menu.selected_item) {
-		case 0: /* sample list */ set_page(PAGE_SAMPLE_LIST); break;
-		case 1: /* sample library */ set_page(PAGE_LIBRARY_SAMPLE); break;
+	case 0: /* sample list */ set_page(PAGE_SAMPLE_LIST); break;
+	case 1: /* sample library */ set_page(PAGE_LIBRARY_SAMPLE); break;
 	}
 }
 
 static void instrument_menu_selected_cb(void)
 {
 	switch (instrument_menu.selected_item) {
-		case 0: /* instrument list */ set_page(PAGE_INSTRUMENT_LIST); break;
-		case 1: /* instrument library */ set_page(PAGE_LIBRARY_INSTRUMENT); break;
+	case 0: /* instrument list */ set_page(PAGE_INSTRUMENT_LIST); break;
+	case 1: /* instrument library */ set_page(PAGE_LIBRARY_INSTRUMENT); break;
 	}
 }
 
 static void settings_menu_selected_cb(void)
 {
 	switch (settings_menu.selected_item) {
-		case 0: /* preferences page */ set_page(PAGE_PREFERENCES); return;
-		case 1: /* midi configuration */ set_page(PAGE_MIDI); return;
-		case 2: /* config */ set_page(PAGE_CONFIG); return;
-		case 3: /* palette configuration */ set_page(PAGE_PALETTE_EDITOR); return;
-		case 4: /* font editor */ set_page(PAGE_FONT_EDIT); return;
-		case 5: /* toggle fullscreen */ toggle_display_fullscreen(); break;
+	case 0: /* preferences page */ set_page(PAGE_PREFERENCES); return;
+	case 1: /* midi configuration */ set_page(PAGE_MIDI); return;
+	case 2: /* config */ set_page(PAGE_CONFIG); return;
+	case 3: /* palette configuration */ set_page(PAGE_PALETTE_EDITOR); return;
+	case 4: /* font editor */ set_page(PAGE_FONT_EDIT); return;
+	case 5: /* toggle fullscreen */ toggle_display_fullscreen(); break;
 	}
 
 	menu_hide();
@@ -394,48 +394,48 @@ int menu_handle_key(struct key_event *k)
 	}
 
 	switch (k->sym) {
-		case SDLK_ESCAPE:
-			if (k->state == KEY_RELEASE) return 1;
-			current_menu[1] = NULL;
-			if (status.dialog_type == DIALOG_SUBMENU) {
-				status.dialog_type = DIALOG_MAIN_MENU;
-				main_menu.active_item = -1;
-			} else {
-				menu_hide();
-			}
+	case SDLK_ESCAPE:
+		if (k->state == KEY_RELEASE) return 1;
+		current_menu[1] = NULL;
+		if (status.dialog_type == DIALOG_SUBMENU) {
+			status.dialog_type = DIALOG_MAIN_MENU;
+			main_menu.active_item = -1;
+		} else {
+			menu_hide();
+		}
+		break;
+	case SDLK_UP:
+		if (k->state == KEY_RELEASE) return 1;
+		if (menu->selected_item > 0) {
+			menu->selected_item--;
 			break;
-		case SDLK_UP:
-			if (k->state == KEY_RELEASE) return 1;
-			if (menu->selected_item > 0) {
-				menu->selected_item--;
-				break;
-			}
-			return 1;
-		case SDLK_DOWN:
-			if (k->state == KEY_RELEASE) return 1;
-			if (menu->selected_item < menu->num_items - 1) {
-				menu->selected_item++;
-				break;
-			}
-			return 1;
-			/* home/end are new here :) */
-		case SDLK_HOME:
-			if (k->state == KEY_RELEASE) return 1;
-			menu->selected_item = 0;
+		}
+		return 1;
+	case SDLK_DOWN:
+		if (k->state == KEY_RELEASE) return 1;
+		if (menu->selected_item < menu->num_items - 1) {
+			menu->selected_item++;
 			break;
-		case SDLK_END:
-			if (k->state == KEY_RELEASE) return 1;
-			menu->selected_item = menu->num_items - 1;
-			break;
-		case SDLK_RETURN:
-			if (k->state == KEY_PRESS) {
-				menu->active_item = menu->selected_item;
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-			menu->selected_cb();
+		}
+		return 1;
+		/* home/end are new here :) */
+	case SDLK_HOME:
+		if (k->state == KEY_RELEASE) return 1;
+		menu->selected_item = 0;
+		break;
+	case SDLK_END:
+		if (k->state == KEY_RELEASE) return 1;
+		menu->selected_item = menu->num_items - 1;
+		break;
+	case SDLK_RETURN:
+		if (k->state == KEY_PRESS) {
+			menu->active_item = menu->selected_item;
+			status.flags |= NEED_UPDATE;
 			return 1;
-		default: return 1;
+		}
+		menu->selected_cb();
+		return 1;
+	default: return 1;
 	}
 
 	status.flags |= NEED_UPDATE;

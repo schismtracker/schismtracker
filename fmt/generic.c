@@ -99,102 +99,102 @@ void swap_effects(song_note_t *note)
 int convert_voleffect(uint8_t *e, uint8_t *p, int force)
 {
 	switch (*e) {
-		case FX_NONE: return 1;
-		case FX_VOLUME:
-			*e = VOLFX_VOLUME;
-			*p = MIN(*p, 64);
-			break;
-		case FX_PORTAMENTOUP:
-			/* if not force, reject when dividing causes loss of data in LSB, or if the final value is too
+	case FX_NONE: return 1;
+	case FX_VOLUME:
+		*e = VOLFX_VOLUME;
+		*p = MIN(*p, 64);
+		break;
+	case FX_PORTAMENTOUP:
+		/* if not force, reject when dividing causes loss of data in LSB, or if the final value is too
 		large to fit. (volume column Ex/Fx are four times stronger than effect column) */
-			if (!force && ((*p & 3) || *p > 9 * 4 + 3)) return 0;
-			*p = MIN(*p / 4, 9);
-			*e = VOLFX_PORTAUP;
-			break;
-		case FX_PORTAMENTODOWN:
-			if (!force && ((*p & 3) || *p > 9 * 4 + 3)) return 0;
-			*p = MIN(*p / 4, 9);
-			*e = VOLFX_PORTADOWN;
-			break;
-		case FX_TONEPORTAMENTO:
-			if (*p >= 0xf0) {
-				// hack for people who can't type F twice :)
+		if (!force && ((*p & 3) || *p > 9 * 4 + 3)) return 0;
+		*p = MIN(*p / 4, 9);
+		*e = VOLFX_PORTAUP;
+		break;
+	case FX_PORTAMENTODOWN:
+		if (!force && ((*p & 3) || *p > 9 * 4 + 3)) return 0;
+		*p = MIN(*p / 4, 9);
+		*e = VOLFX_PORTADOWN;
+		break;
+	case FX_TONEPORTAMENTO:
+		if (*p >= 0xf0) {
+			// hack for people who can't type F twice :)
+			*e = VOLFX_TONEPORTAMENTO;
+			*p = 0x9;
+			return 1;
+		}
+		for (int n = 0; n < 10; n++) {
+			if (force ? (*p <= vc_portamento_table[n]) : (*p == vc_portamento_table[n])) {
 				*e = VOLFX_TONEPORTAMENTO;
-				*p = 0x9;
+				*p = n;
 				return 1;
 			}
-			for (int n = 0; n < 10; n++) {
-				if (force ? (*p <= vc_portamento_table[n]) : (*p == vc_portamento_table[n])) {
-					*e = VOLFX_TONEPORTAMENTO;
-					*p = n;
-					return 1;
-				}
-			}
-			return 0;
-		case FX_VIBRATO:
+		}
+		return 0;
+	case FX_VIBRATO:
+		if (force) *p = MIN(*p, 9);
+		else if (*p > 9) return 0;
+		*e = VOLFX_VIBRATODEPTH;
+		break;
+	case FX_FINEVIBRATO:
+		if (force) *p = 0;
+		else if (*p) return 0;
+		*e = VOLFX_VIBRATODEPTH;
+		break;
+	case FX_PANNING:
+		*p = MIN(64, *p * 64 / 255);
+		*e = VOLFX_PANNING;
+		break;
+	case FX_VOLUMESLIDE:
+		// ugh
+		// (IT doesn't even attempt to do this, presumably since it'd screw up the effect memory)
+		if (*p == 0) return 0;
+		if ((*p & 0xf) == 0) { // Dx0 / Cx
+			if (force) *p = MIN(*p >> 4, 9);
+			else if ((*p >> 4) > 9) return 0;
+			else *p >>= 4;
+			*e = VOLFX_VOLSLIDEUP;
+		} else if ((*p & 0xf0) == 0) { // D0x / Dx
 			if (force) *p = MIN(*p, 9);
 			else if (*p > 9) return 0;
-			*e = VOLFX_VIBRATODEPTH;
-			break;
-		case FX_FINEVIBRATO:
-			if (force) *p = 0;
-			else if (*p) return 0;
-			*e = VOLFX_VIBRATODEPTH;
-			break;
-		case FX_PANNING:
-			*p = MIN(64, *p * 64 / 255);
-			*e = VOLFX_PANNING;
-			break;
-		case FX_VOLUMESLIDE:
-			// ugh
-			// (IT doesn't even attempt to do this, presumably since it'd screw up the effect memory)
-			if (*p == 0) return 0;
-			if ((*p & 0xf) == 0) { // Dx0 / Cx
-				if (force) *p = MIN(*p >> 4, 9);
-				else if ((*p >> 4) > 9) return 0;
-				else *p >>= 4;
-				*e = VOLFX_VOLSLIDEUP;
-			} else if ((*p & 0xf0) == 0) { // D0x / Dx
-				if (force) *p = MIN(*p, 9);
-				else if (*p > 9) return 0;
-				*e = VOLFX_VOLSLIDEDOWN;
-			} else if ((*p & 0xf) == 0xf) { // DxF / Ax
-				if (force) *p = MIN(*p >> 4, 9);
-				else if ((*p >> 4) > 9) return 0;
-				else *p >>= 4;
-				*e = VOLFX_FINEVOLUP;
-			} else if ((*p & 0xf0) == 0xf0) { // DFx / Bx
-				if (force) *p = MIN(*p, 9);
-				else if ((*p & 0xf) > 9) return 0;
-				else *p &= 0xf;
-				*e = VOLFX_FINEVOLDOWN;
-			} else { // ???
-				return 0;
-			}
-			break;
-		case FX_SPECIAL:
-			switch (*p >> 4) {
-				case 8:
-					/* Impulse Tracker imports XM volume-column panning very weirdly:
+			*e = VOLFX_VOLSLIDEDOWN;
+		} else if ((*p & 0xf) == 0xf) { // DxF / Ax
+			if (force) *p = MIN(*p >> 4, 9);
+			else if ((*p >> 4) > 9) return 0;
+			else *p >>= 4;
+			*e = VOLFX_FINEVOLUP;
+		} else if ((*p & 0xf0) == 0xf0) { // DFx / Bx
+			if (force) *p = MIN(*p, 9);
+			else if ((*p & 0xf) > 9) return 0;
+			else *p &= 0xf;
+			*e = VOLFX_FINEVOLDOWN;
+		} else { // ???
+			return 0;
+		}
+		break;
+	case FX_SPECIAL:
+		switch (*p >> 4) {
+		case 8:
+			/* Impulse Tracker imports XM volume-column panning very weirdly:
 				XM = P0 P1 P2 P3 P4 P5 P6 P7 P8 P9 PA PB PC PD PE PF
 				IT = 00 05 10 15 20 21 30 31 40 45 42 47 60 61 62 63
 			I'll be um, not duplicating that behavior. :) */
-					*e = VOLFX_PANNING;
-					*p = SHORT_PANNING(*p & 0xf);
-					return 1;
-				case 0:
-				case 1:
-				case 2:
-				case 0xf:
-					if (force) {
-						*e = *p = 0;
-						return 1;
-					}
-					break;
-				default: break;
+			*e = VOLFX_PANNING;
+			*p = SHORT_PANNING(*p & 0xf);
+			return 1;
+		case 0:
+		case 1:
+		case 2:
+		case 0xf:
+			if (force) {
+				*e = *p = 0;
+				return 1;
 			}
-			return 0;
-		default: return 0;
+			break;
+		default: break;
+		}
+		return 0;
+	default: return 0;
 	}
 	return 1;
 }
@@ -424,37 +424,37 @@ const uint8_t stm_effects[16] = {
 void handle_stm_effects(song_note_t *chan_note)
 {
 	switch (chan_note->effect) {
-		case FX_SPEED:
-			/* do nothing; this is handled later */
-			break;
-		case FX_VOLUMESLIDE:
-			// Scream Tracker 2 checks for the lower nibble first for some reason...
-			if (chan_note->param & 0x0f && chan_note->param >> 4) chan_note->param &= 0x0f;
+	case FX_SPEED:
+		/* do nothing; this is handled later */
+		break;
+	case FX_VOLUMESLIDE:
+		// Scream Tracker 2 checks for the lower nibble first for some reason...
+		if (chan_note->param & 0x0f && chan_note->param >> 4) chan_note->param &= 0x0f;
 
-		case FX_PORTAMENTODOWN:
-		case FX_PORTAMENTOUP:
-			if (!chan_note->param) chan_note->effect = FX_NONE;
-			break;
-		case FX_PATTERNBREAK: chan_note->param = (chan_note->param & 0xf0) * 10 + (chan_note->param & 0xf); break;
-		case FX_POSITIONJUMP:
-			// This effect is also very weird.
-			// Bxx doesn't appear to cause an immediate break -- it merely
-			// sets the next order for when the pattern ends (either by
-			// playing it all the way through, or via Cxx effect)
-			// I guess I'll "fix" it later...
-			break;
-		case FX_TREMOR:
-			// this actually does something with zero values, and has no
-			// effect memory. which makes SENSE for old-effects tremor,
-			// but ST3 went and screwed it all up by adding an effect
-			// memory and IT followed that, and those are much more popular
-			// than STM so we kind of have to live with this effect being
-			// broken... oh well. not a big loss.
-			break;
-		default:
-			// Anything not listed above is a no-op if there's no value.
-			// (ST2 doesn't have effect memory)
-			if (!chan_note->param) chan_note->effect = FX_NONE;
-			break;
+	case FX_PORTAMENTODOWN:
+	case FX_PORTAMENTOUP:
+		if (!chan_note->param) chan_note->effect = FX_NONE;
+		break;
+	case FX_PATTERNBREAK: chan_note->param = (chan_note->param & 0xf0) * 10 + (chan_note->param & 0xf); break;
+	case FX_POSITIONJUMP:
+		// This effect is also very weird.
+		// Bxx doesn't appear to cause an immediate break -- it merely
+		// sets the next order for when the pattern ends (either by
+		// playing it all the way through, or via Cxx effect)
+		// I guess I'll "fix" it later...
+		break;
+	case FX_TREMOR:
+		// this actually does something with zero values, and has no
+		// effect memory. which makes SENSE for old-effects tremor,
+		// but ST3 went and screwed it all up by adding an effect
+		// memory and IT followed that, and those are much more popular
+		// than STM so we kind of have to live with this effect being
+		// broken... oh well. not a big loss.
+		break;
+	default:
+		// Anything not listed above is a no-op if there's no value.
+		// (ST2 doesn't have effect memory)
+		if (!chan_note->param) chan_note->effect = FX_NONE;
+		break;
 	}
 }

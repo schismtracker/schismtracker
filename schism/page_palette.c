@@ -178,71 +178,71 @@ static int palette_list_handle_key_on_list(struct key_event *k)
 	}
 
 	switch (k->sym) {
-		case SDLK_UP:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (--new_palette < 0) {
-				change_focus_to(47);
-				return 1;
-			}
-			break;
-		case SDLK_DOWN:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			// new_palette++;
-			if (++new_palette >= NUM_PALETTES) {
-				change_focus_to(49);
-				return 1;
-			}
-			break;
-		case SDLK_HOME:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			new_palette = 0;
-			break;
-		case SDLK_PAGEUP:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (new_palette == 0) {
-				change_focus_to(45);
-				return 1;
-			}
-			new_palette -= 16;
-			break;
-		case SDLK_END:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			new_palette = NUM_PALETTES - 1;
-			break;
-		case SDLK_PAGEDOWN:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			new_palette += 16;
-			break;
-		case SDLK_RETURN:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			// if (selected_palette == -1) return 1;
-			palette_load_preset(selected_palette);
-			palette_apply();
-			update_thumbbars();
-			status.flags |= NEED_UPDATE;
+	case SDLK_UP:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (--new_palette < 0) {
+			change_focus_to(47);
 			return 1;
-		case SDLK_RIGHT:
-		case SDLK_TAB:
-			if (k->mod & KMOD_SHIFT) {
-				change_focus_to(focus_offsets[selected_palette + 1] + 29);
-				return 1;
-			}
-			if (!NO_MODIFIER(k->mod)) return 0;
-			change_focus_to(focus_offsets[selected_palette + 1] + 8);
+		}
+		break;
+	case SDLK_DOWN:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		// new_palette++;
+		if (++new_palette >= NUM_PALETTES) {
+			change_focus_to(49);
 			return 1;
-		case SDLK_LEFT:
-			if (!NO_MODIFIER(k->mod)) return 0;
+		}
+		break;
+	case SDLK_HOME:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		new_palette = 0;
+		break;
+	case SDLK_PAGEUP:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (new_palette == 0) {
+			change_focus_to(45);
+			return 1;
+		}
+		new_palette -= 16;
+		break;
+	case SDLK_END:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		new_palette = NUM_PALETTES - 1;
+		break;
+	case SDLK_PAGEDOWN:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		new_palette += 16;
+		break;
+	case SDLK_RETURN:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		// if (selected_palette == -1) return 1;
+		palette_load_preset(selected_palette);
+		palette_apply();
+		update_thumbbars();
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_RIGHT:
+	case SDLK_TAB:
+		if (k->mod & KMOD_SHIFT) {
 			change_focus_to(focus_offsets[selected_palette + 1] + 29);
 			return 1;
-		case SDLK_c:
-			/* pasting is handled by the page */
-			if (k->mod & KMOD_CTRL) {
-				palette_copy_palette_to_clipboard(selected_palette);
-				return 1;
-			}
-			return 0;
-		default:
-			if (k->mouse == MOUSE_NONE) return 0;
+		}
+		if (!NO_MODIFIER(k->mod)) return 0;
+		change_focus_to(focus_offsets[selected_palette + 1] + 8);
+		return 1;
+	case SDLK_LEFT:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		change_focus_to(focus_offsets[selected_palette + 1] + 29);
+		return 1;
+	case SDLK_c:
+		/* pasting is handled by the page */
+		if (k->mod & KMOD_CTRL) {
+			palette_copy_palette_to_clipboard(selected_palette);
+			return 1;
+		}
+		return 0;
+	default:
+		if (k->mouse == MOUSE_NONE) return 0;
 	}
 
 	new_palette = CLAMP(new_palette, 0, NUM_PALETTES - 1);
@@ -271,25 +271,25 @@ static void palette_list_handle_key(struct key_event *k)
 	if (k->state == KEY_RELEASE) return;
 
 	switch (k->sym) {
-		case SDLK_PAGEUP:
-			if (!NO_MODIFIER(k->mod)) n -= 3;
-			break;
-		case SDLK_PAGEDOWN:
-			if (!NO_MODIFIER(k->mod)) n += 3;
-			break;
-		case SDLK_c:
-			if (k->mod & KMOD_CTRL) {
-				palette_copy_current_to_clipboard();
-				return;
-			}
-			break;
-		case SDLK_v:
-			if (k->mod & KMOD_CTRL) {
-				palette_paste_from_clipboard();
-				return;
-			}
-			break;
-		default: return;
+	case SDLK_PAGEUP:
+		if (!NO_MODIFIER(k->mod)) n -= 3;
+		break;
+	case SDLK_PAGEDOWN:
+		if (!NO_MODIFIER(k->mod)) n += 3;
+		break;
+	case SDLK_c:
+		if (k->mod & KMOD_CTRL) {
+			palette_copy_current_to_clipboard();
+			return;
+		}
+		break;
+	case SDLK_v:
+		if (k->mod & KMOD_CTRL) {
+			palette_paste_from_clipboard();
+			return;
+		}
+		break;
+	default: return;
 	}
 
 	if (status.flags & CLASSIC_MODE) {

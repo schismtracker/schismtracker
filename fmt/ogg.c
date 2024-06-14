@@ -65,10 +65,10 @@ static int fake_seek(void *void_data, ogg_int64_t offset, int whence)
 	struct sheep *file_data = (struct sheep *)void_data;
 
 	switch (whence) {
-		case SEEK_SET: break;
-		case SEEK_CUR: offset += file_data->position; break;
-		case SEEK_END: offset += file_data->length; break;
-		default: return -1;
+	case SEEK_SET: break;
+	case SEEK_CUR: offset += file_data->position; break;
+	case SEEK_END: offset += file_data->length; break;
+	default: return -1;
 	}
 	if (offset < 0 || offset > file_data->length) return -1;
 	file_data->position = offset;

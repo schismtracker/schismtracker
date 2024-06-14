@@ -237,8 +237,8 @@ static void load_sample_draw_const(void)
 			draw_text_len(f->description, 18, 59, 44, 5, 0);
 		} else {
 			switch (f->type) {
-				case TYPE_DIRECTORY: draw_text("Directory", 59, 44, 5, 0); break;
-				default: draw_text("Unknown format", 59, 44, 5, 0); break;
+			case TYPE_DIRECTORY: draw_text("Directory", 59, 44, 5, 0); break;
+			default: draw_text("Unknown format", 59, 44, 5, 0); break;
 			};
 		}
 		sprintf(sbuf, "%07ld", (long)f->filesize);
@@ -439,21 +439,21 @@ static int stereo_cvt_hk(struct key_event *k)
 
 	/* trap the default dialog keys - we don't want to escape this dialog without running something */
 	switch (k->sym) {
-		case SDLK_RETURN: printf("why am I here\n");
-		case SDLK_ESCAPE:
-		case SDLK_o:
-		case SDLK_c: return 1;
-		case SDLK_l:
-			if (k->state == KEY_RELEASE) stereo_cvt_complete_left();
-			return 1;
-		case SDLK_r:
-			if (k->state == KEY_RELEASE) stereo_cvt_complete_right();
-			return 1;
-		case SDLK_s:
-		case SDLK_b:
-			if (k->state == KEY_RELEASE) stereo_cvt_complete_both();
-			return 1;
-		default: return 0;
+	case SDLK_RETURN: printf("why am I here\n");
+	case SDLK_ESCAPE:
+	case SDLK_o:
+	case SDLK_c: return 1;
+	case SDLK_l:
+		if (k->state == KEY_RELEASE) stereo_cvt_complete_left();
+		return 1;
+	case SDLK_r:
+		if (k->state == KEY_RELEASE) stereo_cvt_complete_right();
+		return 1;
+	case SDLK_s:
+	case SDLK_b:
+		if (k->state == KEY_RELEASE) stereo_cvt_complete_both();
+		return 1;
+	default: return 0;
 	}
 }
 
@@ -620,75 +620,75 @@ static int file_list_handle_key(struct key_event *k)
 		}
 	}
 	switch (k->sym) {
-		case SDLK_UP:
-			new_file--;
-			search_pos = -1;
-			break;
-		case SDLK_DOWN:
-			new_file++;
-			search_pos = -1;
-			break;
-		case SDLK_PAGEUP:
-			new_file -= 35;
-			search_pos = -1;
-			break;
-		case SDLK_PAGEDOWN:
-			new_file += 35;
-			search_pos = -1;
-			break;
-		case SDLK_HOME:
-			new_file = 0;
-			search_pos = -1;
-			break;
-		case SDLK_END:
-			new_file = flist.num_files - 1;
-			search_pos = -1;
-			break;
+	case SDLK_UP:
+		new_file--;
+		search_pos = -1;
+		break;
+	case SDLK_DOWN:
+		new_file++;
+		search_pos = -1;
+		break;
+	case SDLK_PAGEUP:
+		new_file -= 35;
+		search_pos = -1;
+		break;
+	case SDLK_PAGEDOWN:
+		new_file += 35;
+		search_pos = -1;
+		break;
+	case SDLK_HOME:
+		new_file = 0;
+		search_pos = -1;
+		break;
+	case SDLK_END:
+		new_file = flist.num_files - 1;
+		search_pos = -1;
+		break;
 
-		case SDLK_ESCAPE:
-			if (search_pos < 0) {
-				if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod)) set_page(PAGE_SAMPLE_LIST);
-				return 1;
-			} /* else fall through */
-		case SDLK_RETURN:
-			if (search_pos < 0) {
-				if (k->state == KEY_PRESS) return 0;
-				handle_enter_key();
-				search_pos = -1;
-			} else {
-				if (k->state == KEY_PRESS) return 1;
-				search_pos = -1;
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
+	case SDLK_ESCAPE:
+		if (search_pos < 0) {
+			if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod)) set_page(PAGE_SAMPLE_LIST);
 			return 1;
-		case SDLK_DELETE:
+		} /* else fall through */
+	case SDLK_RETURN:
+		if (search_pos < 0) {
+			if (k->state == KEY_PRESS) return 0;
+			handle_enter_key();
+			search_pos = -1;
+		} else {
+			if (k->state == KEY_PRESS) return 1;
+			search_pos = -1;
+			status.flags |= NEED_UPDATE;
+			return 1;
+		}
+		return 1;
+	case SDLK_DELETE:
+		if (k->state == KEY_RELEASE) return 1;
+		search_pos = -1;
+		if (flist.num_files > 0) dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
+		return 1;
+	case SDLK_BACKSPACE:
+		if (search_pos > -1) {
 			if (k->state == KEY_RELEASE) return 1;
-			search_pos = -1;
-			if (flist.num_files > 0) dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
+			search_pos--;
+			status.flags |= NEED_UPDATE;
+			reposition_at_slash_search();
 			return 1;
-		case SDLK_BACKSPACE:
-			if (search_pos > -1) {
-				if (k->state == KEY_RELEASE) return 1;
-				search_pos--;
+		}
+	case SDLK_SLASH:
+		if (search_pos < 0) {
+			if (k->orig_sym == SDLK_SLASH) {
+				if (k->state == KEY_PRESS) return 0;
+				search_pos = 0;
 				status.flags |= NEED_UPDATE;
-				reposition_at_slash_search();
 				return 1;
 			}
-		case SDLK_SLASH:
-			if (search_pos < 0) {
-				if (k->orig_sym == SDLK_SLASH) {
-					if (k->state == KEY_PRESS) return 0;
-					search_pos = 0;
-					status.flags |= NEED_UPDATE;
-					return 1;
-				}
-				return 0;
-			} /* else fall through */
-		default:
-			if (k->text) file_list_handle_text_input(k->text);
+			return 0;
+		} /* else fall through */
+	default:
+		if (k->text) file_list_handle_text_input(k->text);
 
-			if (!k->mouse) return 0;
+		if (!k->mouse) return 0;
 	}
 
 	if (k->mouse == MOUSE_CLICK) {
@@ -797,48 +797,48 @@ static void handle_load_copy(song_sample_t *s)
 	handle_load_copy_uint(widgets_loadsample[12].d.thumbbar.value, &s->vib_depth);
 	handle_load_copy_uint(widgets_loadsample[13].d.thumbbar.value, &s->vib_speed);
 	switch (widgets_loadsample[3].d.menutoggle.state) {
-		case 0:
-			if (s->flags & (CHN_LOOP | CHN_PINGPONGLOOP)) {
-				s->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP);
-				fake_slot_changed = 1;
-			}
-			break;
-		case 1:
-			if ((s->flags & (CHN_LOOP | CHN_PINGPONGLOOP)) == CHN_LOOP) {
-				s->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP);
-				s->flags |= (CHN_LOOP);
-				fake_slot_changed = 1;
-			}
-			break;
-		case 2:
-			if ((s->flags & (CHN_LOOP | CHN_PINGPONGLOOP)) == CHN_PINGPONGLOOP) {
-				s->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP);
-				s->flags |= (CHN_PINGPONGLOOP);
-				fake_slot_changed = 1;
-			}
-			break;
+	case 0:
+		if (s->flags & (CHN_LOOP | CHN_PINGPONGLOOP)) {
+			s->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP);
+			fake_slot_changed = 1;
+		}
+		break;
+	case 1:
+		if ((s->flags & (CHN_LOOP | CHN_PINGPONGLOOP)) == CHN_LOOP) {
+			s->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP);
+			s->flags |= (CHN_LOOP);
+			fake_slot_changed = 1;
+		}
+		break;
+	case 2:
+		if ((s->flags & (CHN_LOOP | CHN_PINGPONGLOOP)) == CHN_PINGPONGLOOP) {
+			s->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP);
+			s->flags |= (CHN_PINGPONGLOOP);
+			fake_slot_changed = 1;
+		}
+		break;
 	};
 	switch (widgets_loadsample[6].d.menutoggle.state) {
-		case 0:
-			if (s->flags & (CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN)) {
-				s->flags &= ~(CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
-				fake_slot_changed = 1;
-			}
-			break;
-		case 1:
-			if ((s->flags & (CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN)) == CHN_SUSTAINLOOP) {
-				s->flags &= ~(CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
-				s->flags |= (CHN_SUSTAINLOOP);
-				fake_slot_changed = 1;
-			}
-			break;
-		case 2:
-			if ((s->flags & (CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN)) == CHN_PINGPONGSUSTAIN) {
-				s->flags &= ~(CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
-				s->flags |= (CHN_PINGPONGSUSTAIN);
-				fake_slot_changed = 1;
-			}
-			break;
+	case 0:
+		if (s->flags & (CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN)) {
+			s->flags &= ~(CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
+			fake_slot_changed = 1;
+		}
+		break;
+	case 1:
+		if ((s->flags & (CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN)) == CHN_SUSTAINLOOP) {
+			s->flags &= ~(CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
+			s->flags |= (CHN_SUSTAINLOOP);
+			fake_slot_changed = 1;
+		}
+		break;
+	case 2:
+		if ((s->flags & (CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN)) == CHN_PINGPONGSUSTAIN) {
+			s->flags &= ~(CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
+			s->flags |= (CHN_PINGPONGSUSTAIN);
+			fake_slot_changed = 1;
+		}
+		break;
 	};
 }
 

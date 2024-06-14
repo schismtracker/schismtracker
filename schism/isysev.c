@@ -985,141 +985,140 @@ static void event_loop(void)
 		ev.ival = 0;
 
 		switch (sdlev.type) {
-			case SDL_KEYUP:
-				lastsym = 0;
-				ev.bits.release = 1;
-				// fall through
-			case SDL_KEYDOWN:
-				if (sdlev.key.which > SKDEV_ID_MAX) break;
+		case SDL_KEYUP:
+			lastsym = 0;
+			ev.bits.release = 1;
+			// fall through
+		case SDL_KEYDOWN:
+			if (sdlev.key.which > SKDEV_ID_MAX) break;
 
-				ev.bits.dev_type = SKDEV_TYPE_PCKEYBOARD;
-				ev.bits.dev_id = 1 + sdlev.key.which;
-				ev.bits.repeat = (sdlev.key.keysym.sym && sdlev.key.keysym.sym == lastsym);
-				if (sdlev.key.state == SDL_PRESSED) lastsym = sdlev.key.keysym.sym;
-				if (sdlev.key.keysym.unicode >= 32)
-					ev.bits.unicode = 1; // XXX need to save the unicode value somewhere...
+			ev.bits.dev_type = SKDEV_TYPE_PCKEYBOARD;
+			ev.bits.dev_id = 1 + sdlev.key.which;
+			ev.bits.repeat = (sdlev.key.keysym.sym && sdlev.key.keysym.sym == lastsym);
+			if (sdlev.key.state == SDL_PRESSED) lastsym = sdlev.key.keysym.sym;
+			if (sdlev.key.keysym.unicode >= 32) ev.bits.unicode = 1; // XXX need to save the unicode value somewhere...
 
-				// Scancodes are 8-bit values. Keysyms are 16-bit, but SDL only uses 9 bits of them.
-				// Either way, anything we get will fit into the 15 bits we're stuffing it into.
-				ev.bits.keycode = sdlev.key.keysym.sym ? (sdlev.key.keysym.sym & ~SKCODE_PCK_SCANCODE) :
-														 (sdlev.key.keysym.scancode | SKCODE_PCK_SCANCODE);
+			// Scancodes are 8-bit values. Keysyms are 16-bit, but SDL only uses 9 bits of them.
+			// Either way, anything we get will fit into the 15 bits we're stuffing it into.
+			ev.bits.keycode = sdlev.key.keysym.sym ? (sdlev.key.keysym.sym & ~SKCODE_PCK_SCANCODE) :
+													 (sdlev.key.keysym.scancode | SKCODE_PCK_SCANCODE);
 
-				if (sdlev.key.keysym.mod & KMOD_CTRL) ev.bits.modifier |= SKMODE_CTRL;
-				if (sdlev.key.keysym.mod & KMOD_ALT) ev.bits.modifier |= SKMODE_ALT;
-				if (sdlev.key.keysym.mod & KMOD_SHIFT) ev.bits.modifier |= SKMODE_SHIFT;
+			if (sdlev.key.keysym.mod & KMOD_CTRL) ev.bits.modifier |= SKMODE_CTRL;
+			if (sdlev.key.keysym.mod & KMOD_ALT) ev.bits.modifier |= SKMODE_ALT;
+			if (sdlev.key.keysym.mod & KMOD_SHIFT) ev.bits.modifier |= SKMODE_SHIFT;
 
+			event_handle(ev);
+			break;
+
+
+		case SDL_JOYBALLMOTION:
+			// XXX calculate velocity from xrel/yrel and save it.
+			// Certain code might be able to use this value similarly to midi note velocity...
+			if (sdlev.jball.which > SKDEV_ID_MAX || sdlev.jball.ball > MAX_JS_BALLS) break;
+
+			ev.bits.dev_type = SKDEV_TYPE_JOYSTICK;
+			ev.bits.dev_id = 1 + sdlev.jball.which;
+			if (sdlev.jball.xrel < -JS_BALL_THRESHOLD) {
+				ev.bits.keycode = JS_BALL_TO_KEYCODE(sdlev.jball.ball, JS_DIR_LEFT);
 				event_handle(ev);
-				break;
-
-
-			case SDL_JOYBALLMOTION:
-				// XXX calculate velocity from xrel/yrel and save it.
-				// Certain code might be able to use this value similarly to midi note velocity...
-				if (sdlev.jball.which > SKDEV_ID_MAX || sdlev.jball.ball > MAX_JS_BALLS) break;
-
-				ev.bits.dev_type = SKDEV_TYPE_JOYSTICK;
-				ev.bits.dev_id = 1 + sdlev.jball.which;
-				if (sdlev.jball.xrel < -JS_BALL_THRESHOLD) {
-					ev.bits.keycode = JS_BALL_TO_KEYCODE(sdlev.jball.ball, JS_DIR_LEFT);
-					event_handle(ev);
-				} else if (sdlev.jball.xrel > JS_BALL_THRESHOLD) {
-					ev.bits.keycode = JS_BALL_TO_KEYCODE(sdlev.jball.ball, JS_DIR_RIGHT);
-					event_handle(ev);
-				}
-				if (sdlev.jball.yrel < -JS_BALL_THRESHOLD) {
-					ev.bits.keycode = JS_BALL_TO_KEYCODE(sdlev.jball.ball, JS_DIR_UP);
-					event_handle(ev);
-				} else if (sdlev.jball.yrel > JS_BALL_THRESHOLD) {
-					ev.bits.keycode = JS_BALL_TO_KEYCODE(sdlev.jball.ball, JS_DIR_DOWN);
-					event_handle(ev);
-				}
-
-				break;
-
-
-			case SDL_JOYHATMOTION:
-				// XXX save hat direction; handle repeat when held down; issue release events.
-				if (sdlev.jhat.which > SKDEV_ID_MAX || sdlev.jhat.hat > MAX_JS_HATS) break;
-
-				ev.bits.dev_type = SKDEV_TYPE_JOYSTICK;
-				ev.bits.dev_id = 1 + sdlev.jhat.which;
-				switch (sdlev.jhat.value) {
-					default: break;
-					case SDL_HAT_LEFTUP:
-						ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_LEFT);
-						event_handle(ev);
-						// fall through
-					case SDL_HAT_UP:
-						ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_UP);
-						event_handle(ev);
-						break;
-					case SDL_HAT_RIGHTUP:
-						ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_UP);
-						event_handle(ev);
-						// fall through
-					case SDL_HAT_RIGHT:
-						ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_RIGHT);
-						event_handle(ev);
-						break;
-					case SDL_HAT_LEFTDOWN:
-						ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_DOWN);
-						event_handle(ev);
-						// fall through
-					case SDL_HAT_LEFT:
-						ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_LEFT);
-						event_handle(ev);
-						break;
-					case SDL_HAT_RIGHTDOWN:
-						ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_RIGHT);
-						event_handle(ev);
-						// fall through
-					case SDL_HAT_DOWN:
-						ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_DOWN);
-						event_handle(ev);
-						break;
-				}
-
-				break;
-
-
-			case SDL_JOYAXISMOTION:
-				// XXX save axis direction; handle repeat when held down; issue release events.
-				if (sdlev.jbutton.which > SKDEV_ID_MAX || sdlev.jaxis.axis > MAX_JS_AXES) break;
-
-				ev.bits.dev_type = SKDEV_TYPE_JOYSTICK;
-				ev.bits.dev_id = 1 + sdlev.jaxis.which;
-				//ev.bits.release = 0;
-				if (sdlev.jaxis.value < -JS_AXIS_THRESHOLD) {
-					ev.bits.keycode = JS_AXIS_TO_KEYCODE(sdlev.jaxis.axis, JS_AXIS_NEG);
-					event_handle(ev);
-				} else if (sdlev.jaxis.value > JS_AXIS_THRESHOLD) {
-					ev.bits.keycode = JS_AXIS_TO_KEYCODE(sdlev.jaxis.axis, JS_AXIS_POS);
-					event_handle(ev);
-				}
-
-				break;
-
-
-			case SDL_JOYBUTTONUP:
-				ev.bits.release = 1;
-				// fall through
-			case SDL_JOYBUTTONDOWN:
-				if (sdlev.jbutton.which > SKDEV_ID_MAX || sdlev.jbutton.button > MAX_JS_BUTTONS) break;
-
-				ev.bits.dev_type = SKDEV_TYPE_JOYSTICK;
-				ev.bits.dev_id = 1 + sdlev.jbutton.which;
-				ev.bits.keycode = JS_BUTTON_TO_KEYCODE(sdlev.jbutton.button);
+			} else if (sdlev.jball.xrel > JS_BALL_THRESHOLD) {
+				ev.bits.keycode = JS_BALL_TO_KEYCODE(sdlev.jball.ball, JS_DIR_RIGHT);
 				event_handle(ev);
+			}
+			if (sdlev.jball.yrel < -JS_BALL_THRESHOLD) {
+				ev.bits.keycode = JS_BALL_TO_KEYCODE(sdlev.jball.ball, JS_DIR_UP);
+				event_handle(ev);
+			} else if (sdlev.jball.yrel > JS_BALL_THRESHOLD) {
+				ev.bits.keycode = JS_BALL_TO_KEYCODE(sdlev.jball.ball, JS_DIR_DOWN);
+				event_handle(ev);
+			}
 
-				break;
+			break;
 
 
-				// Need to get midi-in events routed through here somehow.
+		case SDL_JOYHATMOTION:
+			// XXX save hat direction; handle repeat when held down; issue release events.
+			if (sdlev.jhat.which > SKDEV_ID_MAX || sdlev.jhat.hat > MAX_JS_HATS) break;
 
-
-			case SDL_QUIT: return;
-
+			ev.bits.dev_type = SKDEV_TYPE_JOYSTICK;
+			ev.bits.dev_id = 1 + sdlev.jhat.which;
+			switch (sdlev.jhat.value) {
 			default: break;
+			case SDL_HAT_LEFTUP:
+				ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_LEFT);
+				event_handle(ev);
+				// fall through
+			case SDL_HAT_UP:
+				ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_UP);
+				event_handle(ev);
+				break;
+			case SDL_HAT_RIGHTUP:
+				ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_UP);
+				event_handle(ev);
+				// fall through
+			case SDL_HAT_RIGHT:
+				ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_RIGHT);
+				event_handle(ev);
+				break;
+			case SDL_HAT_LEFTDOWN:
+				ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_DOWN);
+				event_handle(ev);
+				// fall through
+			case SDL_HAT_LEFT:
+				ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_LEFT);
+				event_handle(ev);
+				break;
+			case SDL_HAT_RIGHTDOWN:
+				ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_RIGHT);
+				event_handle(ev);
+				// fall through
+			case SDL_HAT_DOWN:
+				ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_DOWN);
+				event_handle(ev);
+				break;
+			}
+
+			break;
+
+
+		case SDL_JOYAXISMOTION:
+			// XXX save axis direction; handle repeat when held down; issue release events.
+			if (sdlev.jbutton.which > SKDEV_ID_MAX || sdlev.jaxis.axis > MAX_JS_AXES) break;
+
+			ev.bits.dev_type = SKDEV_TYPE_JOYSTICK;
+			ev.bits.dev_id = 1 + sdlev.jaxis.which;
+			//ev.bits.release = 0;
+			if (sdlev.jaxis.value < -JS_AXIS_THRESHOLD) {
+				ev.bits.keycode = JS_AXIS_TO_KEYCODE(sdlev.jaxis.axis, JS_AXIS_NEG);
+				event_handle(ev);
+			} else if (sdlev.jaxis.value > JS_AXIS_THRESHOLD) {
+				ev.bits.keycode = JS_AXIS_TO_KEYCODE(sdlev.jaxis.axis, JS_AXIS_POS);
+				event_handle(ev);
+			}
+
+			break;
+
+
+		case SDL_JOYBUTTONUP:
+			ev.bits.release = 1;
+			// fall through
+		case SDL_JOYBUTTONDOWN:
+			if (sdlev.jbutton.which > SKDEV_ID_MAX || sdlev.jbutton.button > MAX_JS_BUTTONS) break;
+
+			ev.bits.dev_type = SKDEV_TYPE_JOYSTICK;
+			ev.bits.dev_id = 1 + sdlev.jbutton.which;
+			ev.bits.keycode = JS_BUTTON_TO_KEYCODE(sdlev.jbutton.button);
+			event_handle(ev);
+
+			break;
+
+
+			// Need to get midi-in events routed through here somehow.
+
+
+		case SDL_QUIT: return;
+
+		default: break;
 		}
 	}
 }

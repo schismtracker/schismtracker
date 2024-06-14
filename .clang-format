@@ -56,7 +56,7 @@ IncludeIsMainRegex: '' # ???
 IncludeIsMainSourceRegex: '' # ???
 # IndentAccessModifiers
 IndentCaseBlocks: false
-IndentCaseLabels: true
+IndentCaseLabels: false
 # IndentExternBlock
 IndentGotoLabels: false
 IndentPPDirectives: AfterHash

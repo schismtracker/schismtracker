@@ -230,43 +230,43 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 		slurp_read(fp, b, 3); // data pointer for pcm, irrelevant otherwise
 		switch (type) {
-			case S3I_TYPE_PCM:
-				para_sdata[n] = b[1] | (b[2] << 8) | (b[0] << 16);
-				slurp_read(fp, &tmplong, 4);
-				sample->length = bswapLE32(tmplong);
-				slurp_read(fp, &tmplong, 4);
-				sample->loop_start = bswapLE32(tmplong);
-				slurp_read(fp, &tmplong, 4);
-				sample->loop_end = bswapLE32(tmplong);
-				sample->volume = slurp_getc(fp) * 4; //mphack
-				slurp_getc(fp);                      /* unused byte */
-				slurp_getc(fp);                      /* packing info (never used) */
-				c = slurp_getc(fp);                  /* flags */
-				if (c & 1) sample->flags |= CHN_LOOP;
-				smp_flags[n] =
-					(SF_LE | ((misc & S3M_UNSIGNED) ? SF_PCMU : SF_PCMS) | ((c & 4) ? SF_16 : SF_8)
-					 | ((c & 2) ? SF_SS : SF_M));
-				if (sample->length) any_samples = 1;
-				break;
+		case S3I_TYPE_PCM:
+			para_sdata[n] = b[1] | (b[2] << 8) | (b[0] << 16);
+			slurp_read(fp, &tmplong, 4);
+			sample->length = bswapLE32(tmplong);
+			slurp_read(fp, &tmplong, 4);
+			sample->loop_start = bswapLE32(tmplong);
+			slurp_read(fp, &tmplong, 4);
+			sample->loop_end = bswapLE32(tmplong);
+			sample->volume = slurp_getc(fp) * 4; //mphack
+			slurp_getc(fp);                      /* unused byte */
+			slurp_getc(fp);                      /* packing info (never used) */
+			c = slurp_getc(fp);                  /* flags */
+			if (c & 1) sample->flags |= CHN_LOOP;
+			smp_flags[n] =
+				(SF_LE | ((misc & S3M_UNSIGNED) ? SF_PCMU : SF_PCMS) | ((c & 4) ? SF_16 : SF_8)
+				 | ((c & 2) ? SF_SS : SF_M));
+			if (sample->length) any_samples = 1;
+			break;
 
-			default:
-				//printf("s3m: mystery-meat sample type %d\n", type);
-			case S3I_TYPE_NONE:
-				slurp_seek(fp, 12, SEEK_CUR);
-				sample->volume = slurp_getc(fp) * 4; //mphack
-				slurp_seek(fp, 3, SEEK_CUR);
-				break;
+		default:
+			//printf("s3m: mystery-meat sample type %d\n", type);
+		case S3I_TYPE_NONE:
+			slurp_seek(fp, 12, SEEK_CUR);
+			sample->volume = slurp_getc(fp) * 4; //mphack
+			slurp_seek(fp, 3, SEEK_CUR);
+			break;
 
-			case S3I_TYPE_ADMEL:
-				slurp_read(fp, sample->adlib_bytes, 12);
-				sample->volume = slurp_getc(fp) * 4; //mphack
-				// next byte is "dsk", what is that?
-				slurp_seek(fp, 3, SEEK_CUR);
-				sample->flags |= CHN_ADLIB;
-				// dumb hackaround that ought to some day be fixed:
-				sample->length = 1;
-				sample->data = csf_allocate_sample(1);
-				break;
+		case S3I_TYPE_ADMEL:
+			slurp_read(fp, sample->adlib_bytes, 12);
+			sample->volume = slurp_getc(fp) * 4; //mphack
+			// next byte is "dsk", what is that?
+			slurp_seek(fp, 3, SEEK_CUR);
+			sample->flags |= CHN_ADLIB;
+			// dumb hackaround that ought to some day be fixed:
+			sample->length = 1;
+			sample->data = csf_allocate_sample(1);
+			break;
 		}
 
 		slurp_read(fp, &tmplong, 4);
@@ -337,12 +337,12 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					//if (note->instrument > 99)
 					//      note->instrument = 0;
 					switch (note->note) {
-						default:
-							// Note; hi=oct, lo=note
-							note->note = (note->note >> 4) * 12 + (note->note & 0xf) + 13;
-							break;
-						case 255: note->note = NOTE_NONE; break;
-						case 254: note->note = (adlib & (1 << chn)) ? NOTE_OFF : NOTE_CUT; break;
+					default:
+						// Note; hi=oct, lo=note
+						note->note = (note->note >> 4) * 12 + (note->note & 0xf) + 13;
+						break;
+					case 255: note->note = NOTE_NONE; break;
+					case 254: note->note = (adlib & (1 << chn)) ? NOTE_OFF : NOTE_CUT; break;
 					}
 				}
 				if (mask & 64) {
@@ -421,50 +421,50 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	if (!tid) {
 		switch (trkvers >> 12) {
-			case 0:
-				if (trkvers == 0x0208) strcpy(song->tracker_id, "Akord");
-				break;
-			case 1:
-				if (gus_addresses > 1) tid = "Scream Tracker %d.%02x (GUS)";
-				else if (gus_addresses == 1 || !any_samples || trkvers == 0x1300)
-					tid = "Scream Tracker %d.%02x (SB)"; // could also be a GUS file with a single sample
-				else strcpy(song->tracker_id, "Unknown tracker");
-				break;
-			case 2:
-				if (trkvers == 0x2013) // PlayerPRO on Intel forgets to byte-swap the tracker ID bytes
-					strcpy(song->tracker_id, "PlayerPRO");
-				else tid = "Imago Orpheus %d.%02x";
-				break;
-			case 3:
-				if (trkvers <= 0x3214) {
-					tid = "Impulse Tracker %d.%02x";
-				} else {
-					tid = NULL;
-					sprintf(song->tracker_id, "Impulse Tracker 2.14p%d", trkvers - 0x3214);
-				}
-				break;
-			case 4:
-				if (trkvers == 0x4100) {
-					strcpy(song->tracker_id, "BeRoTracker");
-				} else {
-					strcpy(song->tracker_id, "Schism Tracker ");
-					ver_decode_cwtv(trkvers, reserved, song->tracker_id + strlen(song->tracker_id));
-				}
-				break;
-			case 5:
-				if (trkvers == 0x5447) strcpy(song->tracker_id, "Graoumf Tracker");
-				else if (trkvers >= 0x5129 && reserved)
-					sprintf(
-						song->tracker_id, "OpenMPT %d.%02x.%02x.%02x", (trkvers & 0xf00) >> 8, trkvers & 0xff,
-						(reserved >> 8) & 0xff, reserved & 0xff);
-				else tid = "OpenMPT %d.%02x";
-				break;
-			case 6: strcpy(song->tracker_id, "BeRoTracker"); break;
-			case 7: strcpy(song->tracker_id, "CreamTracker"); break;
-			case 12:
-				if (trkvers == 0xCA00) strcpy(song->tracker_id, "Camoto");
-				break;
-			default: break;
+		case 0:
+			if (trkvers == 0x0208) strcpy(song->tracker_id, "Akord");
+			break;
+		case 1:
+			if (gus_addresses > 1) tid = "Scream Tracker %d.%02x (GUS)";
+			else if (gus_addresses == 1 || !any_samples || trkvers == 0x1300)
+				tid = "Scream Tracker %d.%02x (SB)"; // could also be a GUS file with a single sample
+			else strcpy(song->tracker_id, "Unknown tracker");
+			break;
+		case 2:
+			if (trkvers == 0x2013) // PlayerPRO on Intel forgets to byte-swap the tracker ID bytes
+				strcpy(song->tracker_id, "PlayerPRO");
+			else tid = "Imago Orpheus %d.%02x";
+			break;
+		case 3:
+			if (trkvers <= 0x3214) {
+				tid = "Impulse Tracker %d.%02x";
+			} else {
+				tid = NULL;
+				sprintf(song->tracker_id, "Impulse Tracker 2.14p%d", trkvers - 0x3214);
+			}
+			break;
+		case 4:
+			if (trkvers == 0x4100) {
+				strcpy(song->tracker_id, "BeRoTracker");
+			} else {
+				strcpy(song->tracker_id, "Schism Tracker ");
+				ver_decode_cwtv(trkvers, reserved, song->tracker_id + strlen(song->tracker_id));
+			}
+			break;
+		case 5:
+			if (trkvers == 0x5447) strcpy(song->tracker_id, "Graoumf Tracker");
+			else if (trkvers >= 0x5129 && reserved)
+				sprintf(
+					song->tracker_id, "OpenMPT %d.%02x.%02x.%02x", (trkvers & 0xf00) >> 8, trkvers & 0xff,
+					(reserved >> 8) & 0xff, reserved & 0xff);
+			else tid = "OpenMPT %d.%02x";
+			break;
+		case 6: strcpy(song->tracker_id, "BeRoTracker"); break;
+		case 7: strcpy(song->tracker_id, "CreamTracker"); break;
+		case 12:
+			if (trkvers == 0xCA00) strcpy(song->tracker_id, "Camoto");
+			break;
+		default: break;
 		}
 	}
 	if (tid) sprintf(song->tracker_id, tid, (trkvers & 0xf00) >> 8, trkvers & 0xff);
@@ -691,9 +691,9 @@ static int write_s3m_pattern(disko_t *fp, song_t *song, int pat, uint8_t *chanty
 			}
 
 			switch (out.voleffect) {
-				case VOLFX_NONE: break;
-				case VOLFX_VOLUME: b |= 64; break;
-				default: warn |= 1 << WARN_VOLEFFECTS; break;
+			case VOLFX_NONE: break;
+			case VOLFX_VOLUME: b |= 64; break;
+			default: warn |= 1 << WARN_VOLEFFECTS; break;
 			}
 
 			csf_export_s3m_effect(&out.effect, &out.param, 0);
@@ -793,9 +793,9 @@ static int fixup_chantypes(song_channel_t *channels, uint8_t *chantypes)
 
 	for (n = 0; n < 32; n++) {
 		switch (chantypes[n]) {
-			case S3I_TYPE_PCM: npcm++; break;
-			case S3I_TYPE_ADMEL: nadmel++; break;
-			case S3I_TYPE_CONTROL: nctrl++; break;
+		case S3I_TYPE_PCM: npcm++; break;
+		case S3I_TYPE_ADMEL: nadmel++; break;
+		case S3I_TYPE_CONTROL: nctrl++; break;
 		}
 	}
 
@@ -810,34 +810,34 @@ static int fixup_chantypes(song_channel_t *channels, uint8_t *chantypes)
 
 	for (n = 0; n < 32; n++) {
 		switch (chantypes[n]) {
-			case S3I_TYPE_PCM:
-				if (pcm <= 0x0f) chantypes[n] = pcm++;
-				else chantypes[n] = junk++;
+		case S3I_TYPE_PCM:
+			if (pcm <= 0x0f) chantypes[n] = pcm++;
+			else chantypes[n] = junk++;
+			break;
+		case S3I_TYPE_ADMEL:
+			if (admel <= 0x18) chantypes[n] = admel++;
+			else chantypes[n] = junk++;
+			break;
+		case S3I_TYPE_NONE:
+			if (channels[n].flags & CHN_MUTE) {
+				chantypes[n] = 255; // (--)
 				break;
-			case S3I_TYPE_ADMEL:
-				if (admel <= 0x18) chantypes[n] = admel++;
-				else chantypes[n] = junk++;
-				break;
-			case S3I_TYPE_NONE:
-				if (channels[n].flags & CHN_MUTE) {
-					chantypes[n] = 255; // (--)
-					break;
-				}
-				// else fall through - attempt to honor unmuted channels.
-			default:
-				if (npcm < 16) {
-					chantypes[n] = ((pcm << 3) | (pcm >> 1)) & 0xf;
-					pcm++;
-					npcm++;
-				} else if (nadmel < 9) {
-					chantypes[n] = admel++;
-					nadmel++;
-				} else if (chantypes[n] == S3I_TYPE_NONE) {
-					chantypes[n] = 255; // (--)
-				} else {
-					chantypes[n] = junk++; // give up
-				}
-				break;
+			}
+			// else fall through - attempt to honor unmuted channels.
+		default:
+			if (npcm < 16) {
+				chantypes[n] = ((pcm << 3) | (pcm >> 1)) & 0xf;
+				pcm++;
+				npcm++;
+			} else if (nadmel < 9) {
+				chantypes[n] = admel++;
+				nadmel++;
+			} else if (chantypes[n] == S3I_TYPE_NONE) {
+				chantypes[n] = 255; // (--)
+			} else {
+				chantypes[n] = junk++; // give up
+			}
+			break;
 		}
 		if (junk > 0x2f) junk = 0x19; // "overflow" to the adlib drums
 	}

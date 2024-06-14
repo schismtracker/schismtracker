@@ -188,11 +188,11 @@ void save_its_header(disko_t *fp, song_sample_t *smp)
 	its.vir = smp->vib_rate;
 	its.vid = smp->vib_depth;
 	switch (smp->vib_type) {
-		case VIB_RANDOM: its.vit = 3; break;
-		case VIB_SQUARE: its.vit = 2; break;
-		case VIB_RAMP_DOWN: its.vit = 1; break;
-		default:
-		case VIB_SINE: its.vit = 0; break;
+	case VIB_RANDOM: its.vit = 3; break;
+	case VIB_SQUARE: its.vit = 2; break;
+	case VIB_RAMP_DOWN: its.vit = 1; break;
+	default:
+	case VIB_SINE: its.vit = 0; break;
 	}
 
 	disko_write(fp, &its, sizeof(its));

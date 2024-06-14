@@ -393,52 +393,52 @@ char *str_escape(const char *s, int space)
 
 	while (*s) {
 		switch (*s) {
-			case '\a':
-				*d++ = '\\';
-				*d++ = 'a';
-				break;
-			case '\b':
-				*d++ = '\\';
-				*d++ = 'b';
-				break;
-			case '\f':
-				*d++ = '\\';
-				*d++ = 'f';
-				break;
-			case '\n':
-				*d++ = '\\';
-				*d++ = 'n';
-				break;
-			case '\r':
-				*d++ = '\\';
-				*d++ = 'r';
-				break;
-			case '\t':
-				*d++ = '\\';
-				*d++ = 't';
-				break;
-			case '\v':
-				*d++ = '\\';
-				*d++ = 'v';
-				break;
-			case '\\':
-			case '"':
-				*d++ = '\\';
-				*d++ = *s;
-				break;
+		case '\a':
+			*d++ = '\\';
+			*d++ = 'a';
+			break;
+		case '\b':
+			*d++ = '\\';
+			*d++ = 'b';
+			break;
+		case '\f':
+			*d++ = '\\';
+			*d++ = 'f';
+			break;
+		case '\n':
+			*d++ = '\\';
+			*d++ = 'n';
+			break;
+		case '\r':
+			*d++ = '\\';
+			*d++ = 'r';
+			break;
+		case '\t':
+			*d++ = '\\';
+			*d++ = 't';
+			break;
+		case '\v':
+			*d++ = '\\';
+			*d++ = 'v';
+			break;
+		case '\\':
+		case '"':
+			*d++ = '\\';
+			*d++ = *s;
+			break;
 
-			default:
-				if (*s < ' ' || *s >= 127 || (space && *s == ' ' && s[1] == '\0')) {
-					case '#':
-					case ';':
-						*d++ = '\\';
-						*d++ = '0' + ((((uint8_t)*s) >> 6) & 7);
-						*d++ = '0' + ((((uint8_t)*s) >> 3) & 7);
-						*d++ = '0' + (((uint8_t)*s) & 7);
-				} else {
-					*d++ = *s;
-				}
-				break;
+		default:
+			if (*s < ' ' || *s >= 127 || (space && *s == ' ' && s[1] == '\0')) {
+			case '#':
+			case ';':
+				*d++ = '\\';
+				*d++ = '0' + ((((uint8_t)*s) >> 6) & 7);
+				*d++ = '0' + ((((uint8_t)*s) >> 3) & 7);
+				*d++ = '0' + (((uint8_t)*s) & 7);
+			} else {
+				*d++ = *s;
+			}
+			break;
 		}
 		s++;
 	}
@@ -454,29 +454,29 @@ static inline int readhex(const char *s, int w)
 	while (w--) {
 		o <<= 4;
 		switch (*s) {
-			case '0':
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9': o |= *s - '0'; break;
-			case 'a':
-			case 'b':
-			case 'c':
-			case 'd':
-			case 'e':
-			case 'f': o |= *s - 'a' + 10; break;
-			case 'A':
-			case 'B':
-			case 'C':
-			case 'D':
-			case 'E':
-			case 'F': o |= *s - 'A' + 10; break;
-			default: return -1;
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9': o |= *s - '0'; break;
+		case 'a':
+		case 'b':
+		case 'c':
+		case 'd':
+		case 'e':
+		case 'f': o |= *s - 'a' + 10; break;
+		case 'A':
+		case 'B':
+		case 'C':
+		case 'D':
+		case 'E':
+		case 'F': o |= *s - 'A' + 10; break;
+		default: return -1;
 		}
 		s++;
 	}
@@ -495,43 +495,43 @@ char *str_unescape(const char *s)
 		if (*s == '\\') {
 			s++;
 			switch (*s) {
-				case '0':
-				case '1':
-				case '2':
-				case '3':
-				case '4':
-				case '5':
-				case '6':
-				case '7':
-					*d = 0;
-					end = s + 3;
-					while (s < end && *s >= '0' && *s <= '7') {
-						*d = *d * 8 + *s - '0';
-						s++;
-					}
-					d++;
-					s--;
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+				*d = 0;
+				end = s + 3;
+				while (s < end && *s >= '0' && *s <= '7') {
+					*d = *d * 8 + *s - '0';
+					s++;
+				}
+				d++;
+				s--;
+				break;
+			case 'a': *d++ = '\a'; break;
+			case 'b': *d++ = '\b'; break;
+			case 'f': *d++ = '\f'; break;
+			case 'n': *d++ = '\n'; break;
+			case 'r': *d++ = '\r'; break;
+			case 't': *d++ = '\t'; break;
+			case 'v': *d++ = '\v'; break;
+			case '\0': // trailing backslash?
+				*d++ = '\\';
+				s--;
+				break;
+			case 'x':
+				hex = readhex(s + 1, 2);
+				if (hex >= 0) {
+					*d++ = hex;
+					s += 2;
 					break;
-				case 'a': *d++ = '\a'; break;
-				case 'b': *d++ = '\b'; break;
-				case 'f': *d++ = '\f'; break;
-				case 'n': *d++ = '\n'; break;
-				case 'r': *d++ = '\r'; break;
-				case 't': *d++ = '\t'; break;
-				case 'v': *d++ = '\v'; break;
-				case '\0': // trailing backslash?
-					*d++ = '\\';
-					s--;
-					break;
-				case 'x':
-					hex = readhex(s + 1, 2);
-					if (hex >= 0) {
-						*d++ = hex;
-						s += 2;
-						break;
-					}
-					/* fall through */
-				default: /* Also handles any other char, like \" \\ \; etc. */ *d++ = *s; break;
+				}
+				/* fall through */
+			default: /* Also handles any other char, like \" \\ \; etc. */ *d++ = *s; break;
 			}
 		} else {
 			*d++ = *s;
@@ -921,15 +921,15 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	int st;
 
 	switch (fork()) {
-		case -1: return 0;
-		case 0:
-			if (chdir(dir) == -1) _exit(255);
-			tmp = malloc(strlen(name) + 4);
-			if (!tmp) _exit(255);
-			sprintf(tmp, "./%s", name);
-			execl(tmp, tmp, maybe_arg, NULL);
-			free(tmp);
-			_exit(255);
+	case -1: return 0;
+	case 0:
+		if (chdir(dir) == -1) _exit(255);
+		tmp = malloc(strlen(name) + 4);
+		if (!tmp) _exit(255);
+		sprintf(tmp, "./%s", name);
+		execl(tmp, tmp, maybe_arg, NULL);
+		free(tmp);
+		_exit(255);
 	};
 	while (wait(&st) == -1) {}
 	if (WIFEXITED(st) && WEXITSTATUS(st) == 0) return 1;

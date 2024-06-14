@@ -1140,17 +1140,17 @@ printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 #endif
 	if (m->effect == FX_SPECIAL) {
 		switch (m->param & 0x80) {
-			case 0xC0: /* note cut */
-				if (tc == (((unsigned)m->param) & 15)) {
-					m_note = NOTE_CUT;
-				} else if (tc != 0) return;
-				break;
+		case 0xC0: /* note cut */
+			if (tc == (((unsigned)m->param) & 15)) {
+				m_note = NOTE_CUT;
+			} else if (tc != 0) return;
+			break;
 
-			case 0xD0: /* note delay */
-				if (tc != (((unsigned)m->param) & 15)) return;
-				break;
-			default:
-				if (tc != 0) return;
+		case 0xD0: /* note delay */
+			if (tc != (((unsigned)m->param) & 15)) return;
+			break;
+		default:
+			if (tc != 0) return;
 		};
 	} else {
 		if (tc != 0 && !starting_note) return;

@@ -907,22 +907,22 @@ int dmoz_filter_ext_data(dmoz_file_t *file)
 	}
 	ret = file_info_get(file);
 	switch (ret) {
-		case FINF_SUCCESS: return 1;
-		case FINF_UNSUPPORTED:
-			file->description = "Unsupported file format"; /* used to be "Unsupported module format" */
-			break;
-		case FINF_EMPTY: file->description = "Empty file"; break;
-		case FINF_ERRNO:
-			/* It would be nice to use the error string for the description, but there doesn't seem to be
+	case FINF_SUCCESS: return 1;
+	case FINF_UNSUPPORTED:
+		file->description = "Unsupported file format"; /* used to be "Unsupported module format" */
+		break;
+	case FINF_EMPTY: file->description = "Empty file"; break;
+	case FINF_ERRNO:
+		/* It would be nice to use the error string for the description, but there doesn't seem to be
 		any easy/portable way to do that without dynamically allocating it (since strerror might
 		return a static buffer), and str_dup'ing EVERY description is kind of a waste of memory. */
-			log_perror(file->base);
-			file->description = "File error";
-			break;
-		default:
-			/* shouldn't ever happen */
-			file->description = "Internal error";
-			break;
+		log_perror(file->base);
+		file->description = "File error";
+		break;
+	default:
+		/* shouldn't ever happen */
+		file->description = "Internal error";
+		break;
 	}
 	file->type = TYPE_UNKNOWN;
 	file->title = str_dup("");

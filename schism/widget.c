@@ -462,137 +462,135 @@ void draw_widget(struct widget *w, int selected)
 	int fg, bg;
 
 	switch (w->type) {
-		case WIDGET_TOGGLE:
-			draw_fill_chars(w->x, w->y, w->x + w->width - 1, w->y, 0);
-			draw_text((w->d.toggle.state ? "On" : "Off"), w->x, w->y, tfg, tbg);
-			break;
-		case WIDGET_MENUTOGGLE:
-			draw_fill_chars(w->x, w->y, w->x + w->width - 1, w->y, 0);
-			ptr = w->d.menutoggle.choices[w->d.menutoggle.state];
-			endptr = strchr(ptr, ' ');
-			if (endptr) {
-				n = endptr - ptr;
-				draw_text_len(ptr, n, w->x, w->y, tfg, tbg);
-				draw_text(endptr + 1, w->x + n + 1, w->y, 2, 0);
-			} else {
-				draw_text(ptr, w->x, w->y, tfg, tbg);
+	case WIDGET_TOGGLE:
+		draw_fill_chars(w->x, w->y, w->x + w->width - 1, w->y, 0);
+		draw_text((w->d.toggle.state ? "On" : "Off"), w->x, w->y, tfg, tbg);
+		break;
+	case WIDGET_MENUTOGGLE:
+		draw_fill_chars(w->x, w->y, w->x + w->width - 1, w->y, 0);
+		ptr = w->d.menutoggle.choices[w->d.menutoggle.state];
+		endptr = strchr(ptr, ' ');
+		if (endptr) {
+			n = endptr - ptr;
+			draw_text_len(ptr, n, w->x, w->y, tfg, tbg);
+			draw_text(endptr + 1, w->x + n + 1, w->y, 2, 0);
+		} else {
+			draw_text(ptr, w->x, w->y, tfg, tbg);
+		}
+		break;
+	case WIDGET_BUTTON:
+		draw_box(
+			w->x - 1, w->y - 1, w->x + w->width + 2, w->y + 1,
+			BOX_THIN | BOX_INNER | (w->depressed ? BOX_INSET : BOX_OUTSET));
+		draw_text(w->d.button.text, w->x + w->d.button.padding, w->y, selected ? 3 : 0, 2);
+		break;
+	case WIDGET_TOGGLEBUTTON:
+		draw_box(
+			w->x - 1, w->y - 1, w->x + w->width + 2, w->y + 1,
+			BOX_THIN | BOX_INNER | ((w->d.togglebutton.state || w->depressed) ? BOX_INSET : BOX_OUTSET));
+		draw_text(w->d.togglebutton.text, w->x + w->d.togglebutton.padding, w->y, selected ? 3 : 0, 2);
+		break;
+	case WIDGET_TEXTENTRY:
+		textentry_reposition(w);
+		draw_text_len(w->d.textentry.text + w->d.textentry.firstchar, w->width, w->x, w->y, 2, 0);
+		if (selected && !drew_cursor) {
+			n = w->d.textentry.cursor_pos - w->d.textentry.firstchar;
+			draw_char(
+				((n < (signed)strlen(w->d.textentry.text)) ? (w->d.textentry.text[w->d.textentry.cursor_pos]) : ' '),
+				w->x + n, w->y, 0, 3);
+		}
+		break;
+	case WIDGET_NUMENTRY:
+		if (w->d.numentry.reverse) {
+			str = numtostr(w->width, w->d.numentry.value, buf);
+			while (*str == '0') str++;
+			draw_text_len("", w->width, w->x, w->y, 2, 0);
+			if (*str) {
+				draw_text(str, (w->x + w->width) - strlen(str), w->y, 2, 0);
 			}
-			break;
-		case WIDGET_BUTTON:
-			draw_box(
-				w->x - 1, w->y - 1, w->x + w->width + 2, w->y + 1,
-				BOX_THIN | BOX_INNER | (w->depressed ? BOX_INSET : BOX_OUTSET));
-			draw_text(w->d.button.text, w->x + w->d.button.padding, w->y, selected ? 3 : 0, 2);
-			break;
-		case WIDGET_TOGGLEBUTTON:
-			draw_box(
-				w->x - 1, w->y - 1, w->x + w->width + 2, w->y + 1,
-				BOX_THIN | BOX_INNER | ((w->d.togglebutton.state || w->depressed) ? BOX_INSET : BOX_OUTSET));
-			draw_text(w->d.togglebutton.text, w->x + w->d.togglebutton.padding, w->y, selected ? 3 : 0, 2);
-			break;
-		case WIDGET_TEXTENTRY:
-			textentry_reposition(w);
-			draw_text_len(w->d.textentry.text + w->d.textentry.firstchar, w->width, w->x, w->y, 2, 0);
 			if (selected && !drew_cursor) {
-				n = w->d.textentry.cursor_pos - w->d.textentry.firstchar;
-				draw_char(
-					((n < (signed)strlen(w->d.textentry.text)) ? (w->d.textentry.text[w->d.textentry.cursor_pos]) :
-																 ' '),
-					w->x + n, w->y, 0, 3);
+				while (str[0] && str[1]) str++;
+				if (!str[0]) str[0] = ' ';
+				draw_char(str[0], w->x + (w->width - 1), w->y, 0, 3);
 			}
-			break;
-		case WIDGET_NUMENTRY:
-			if (w->d.numentry.reverse) {
-				str = numtostr(w->width, w->d.numentry.value, buf);
-				while (*str == '0') str++;
-				draw_text_len("", w->width, w->x, w->y, 2, 0);
-				if (*str) {
-					draw_text(str, (w->x + w->width) - strlen(str), w->y, 2, 0);
-				}
-				if (selected && !drew_cursor) {
-					while (str[0] && str[1]) str++;
-					if (!str[0]) str[0] = ' ';
-					draw_char(str[0], w->x + (w->width - 1), w->y, 0, 3);
-				}
+		} else {
+			if (w->d.numentry.min < 0 || w->d.numentry.max < 0) {
+				numtostr_signed(w->width, w->d.numentry.value, buf);
 			} else {
-				if (w->d.numentry.min < 0 || w->d.numentry.max < 0) {
-					numtostr_signed(w->width, w->d.numentry.value, buf);
-				} else {
-					numtostr(w->width, w->d.numentry.value, buf);
-				}
-				draw_text_len(buf, w->width, w->x, w->y, 2, 0);
-				if (selected && !drew_cursor) {
-					n = *(w->d.numentry.cursor_pos);
-					draw_char(buf[n], w->x + n, w->y, 0, 3);
-				}
+				numtostr(w->width, w->d.numentry.value, buf);
 			}
-			break;
-		case WIDGET_BITSET:
-			for (n = 0; n < w->d.bitset.nbits; ++n) {
-				int set = !!(w->d.bitset.value & (1 << n));
-				char label_c1 = set ? w->d.bitset.bits_on[n * 2 + 0] : w->d.bitset.bits_off[n * 2 + 0];
-				char label_c2 = set ? w->d.bitset.bits_on[n * 2 + 1] : w->d.bitset.bits_off[n * 2 + 1];
-				int is_focused = selected && n == *w->d.bitset.cursor_pos;
-				/* In textentries, cursor=0,3; normal=2,0 */
-				static const char fg_selection[4] = {
-					2, /* not cursor, not set */
-					3, /* not cursor, is  set */
-					0, /* has cursor, not set */
-					0  /* has cursor, is  set */
-				};
-				static const char bg_selection[4] = {
-					0, /* not cursor, not set */
-					0, /* not cursor, is  set */
-					2, /* has cursor, not set */
-					3  /* has cursor, is  set */
-				};
-				fg = fg_selection[set + is_focused * 2];
-				bg = bg_selection[set + is_focused * 2];
-				if (label_c2) draw_half_width_chars(label_c1, label_c2, w->x + n, w->y, fg, bg, fg, bg);
-				else draw_char(label_c1, w->x + n, w->y, fg, bg);
+			draw_text_len(buf, w->width, w->x, w->y, 2, 0);
+			if (selected && !drew_cursor) {
+				n = *(w->d.numentry.cursor_pos);
+				draw_char(buf[n], w->x + n, w->y, 0, 3);
 			}
-			break;
-		case WIDGET_THUMBBAR:
-			if (w->d.thumbbar.text_at_min && w->d.thumbbar.min == w->d.thumbbar.value) {
-				draw_text_len(w->d.thumbbar.text_at_min, w->width, w->x, w->y, selected ? 3 : 2, 0);
-			} else if (w->d.thumbbar.text_at_max && w->d.thumbbar.max == w->d.thumbbar.value) {
-				/* this will probably do Bad Things if the text is too long */
-				int len = strlen(w->d.thumbbar.text_at_max);
-				int pos = w->x + w->width - len;
+		}
+		break;
+	case WIDGET_BITSET:
+		for (n = 0; n < w->d.bitset.nbits; ++n) {
+			int set = !!(w->d.bitset.value & (1 << n));
+			char label_c1 = set ? w->d.bitset.bits_on[n * 2 + 0] : w->d.bitset.bits_off[n * 2 + 0];
+			char label_c2 = set ? w->d.bitset.bits_on[n * 2 + 1] : w->d.bitset.bits_off[n * 2 + 1];
+			int is_focused = selected && n == *w->d.bitset.cursor_pos;
+			/* In textentries, cursor=0,3; normal=2,0 */
+			static const char fg_selection[4] = {
+				2, /* not cursor, not set */
+				3, /* not cursor, is  set */
+				0, /* has cursor, not set */
+				0  /* has cursor, is  set */
+			};
+			static const char bg_selection[4] = {
+				0, /* not cursor, not set */
+				0, /* not cursor, is  set */
+				2, /* has cursor, not set */
+				3  /* has cursor, is  set */
+			};
+			fg = fg_selection[set + is_focused * 2];
+			bg = bg_selection[set + is_focused * 2];
+			if (label_c2) draw_half_width_chars(label_c1, label_c2, w->x + n, w->y, fg, bg, fg, bg);
+			else draw_char(label_c1, w->x + n, w->y, fg, bg);
+		}
+		break;
+	case WIDGET_THUMBBAR:
+		if (w->d.thumbbar.text_at_min && w->d.thumbbar.min == w->d.thumbbar.value) {
+			draw_text_len(w->d.thumbbar.text_at_min, w->width, w->x, w->y, selected ? 3 : 2, 0);
+		} else if (w->d.thumbbar.text_at_max && w->d.thumbbar.max == w->d.thumbbar.value) {
+			/* this will probably do Bad Things if the text is too long */
+			int len = strlen(w->d.thumbbar.text_at_max);
+			int pos = w->x + w->width - len;
 
-				draw_fill_chars(w->x, w->y, pos - 1, w->y, 0);
-				draw_text_len(w->d.thumbbar.text_at_max, len, pos, w->y, selected ? 3 : 2, 0);
-			} else {
-				draw_thumb_bar(
-					w->x, w->y, w->width, w->d.thumbbar.min, w->d.thumbbar.max, w->d.thumbbar.value, selected);
-			}
-			if (w->d.thumbbar.min < 0 || w->d.thumbbar.max < 0) {
-				numtostr_signed(3, w->d.thumbbar.value, buf);
-			} else {
-				numtostr(3, w->d.thumbbar.value, buf);
-			}
-			draw_text(buf, w->x + w->width + 1, w->y, 1, 2);
-			break;
-		case WIDGET_PANBAR:
-			numtostr(2, w->d.panbar.channel, buf + 8);
-			draw_text(buf, w->x, w->y, selected ? 3 : 0, 2);
-			if (w->d.panbar.muted) {
-				draw_text("  Muted  ", w->x + 11, w->y, selected ? 3 : 5, 0);
-				/* draw_fill_chars(w->x + 21, w->y, w->x + 23, w->y, 2); */
-			} else if (w->d.panbar.surround) {
-				draw_text("Surround ", w->x + 11, w->y, selected ? 3 : 5, 0);
-				/* draw_fill_chars(w->x + 21, w->y, w->x + 23, w->y, 2); */
-			} else {
-				draw_thumb_bar(w->x + 11, w->y, 9, 0, 64, w->d.panbar.value, selected);
-				draw_text(numtostr(3, w->d.thumbbar.value, buf), w->x + 21, w->y, 1, 2);
-			}
-			break;
-		case WIDGET_OTHER:
-			if (w->d.other.redraw) w->d.other.redraw();
-			break;
-		default:
-			/* shouldn't ever happen... */
-			break;
+			draw_fill_chars(w->x, w->y, pos - 1, w->y, 0);
+			draw_text_len(w->d.thumbbar.text_at_max, len, pos, w->y, selected ? 3 : 2, 0);
+		} else {
+			draw_thumb_bar(w->x, w->y, w->width, w->d.thumbbar.min, w->d.thumbbar.max, w->d.thumbbar.value, selected);
+		}
+		if (w->d.thumbbar.min < 0 || w->d.thumbbar.max < 0) {
+			numtostr_signed(3, w->d.thumbbar.value, buf);
+		} else {
+			numtostr(3, w->d.thumbbar.value, buf);
+		}
+		draw_text(buf, w->x + w->width + 1, w->y, 1, 2);
+		break;
+	case WIDGET_PANBAR:
+		numtostr(2, w->d.panbar.channel, buf + 8);
+		draw_text(buf, w->x, w->y, selected ? 3 : 0, 2);
+		if (w->d.panbar.muted) {
+			draw_text("  Muted  ", w->x + 11, w->y, selected ? 3 : 5, 0);
+			/* draw_fill_chars(w->x + 21, w->y, w->x + 23, w->y, 2); */
+		} else if (w->d.panbar.surround) {
+			draw_text("Surround ", w->x + 11, w->y, selected ? 3 : 5, 0);
+			/* draw_fill_chars(w->x + 21, w->y, w->x + 23, w->y, 2); */
+		} else {
+			draw_thumb_bar(w->x + 11, w->y, 9, 0, 64, w->d.panbar.value, selected);
+			draw_text(numtostr(3, w->d.thumbbar.value, buf), w->x + 21, w->y, 1, 2);
+		}
+		break;
+	case WIDGET_OTHER:
+		if (w->d.other.redraw) w->d.other.redraw();
+		break;
+	default:
+		/* shouldn't ever happen... */
+		break;
 	}
 }
 
@@ -626,9 +624,9 @@ static int _find_widget_xy(int x, int y)
 	for (i = 0; i < *total_widgets; i++) {
 		w = widgets + i;
 		switch (w->type) {
-			case WIDGET_BUTTON: pad = w->d.button.padding + 1; break;
-			case WIDGET_TOGGLEBUTTON: pad = w->d.togglebutton.padding + 1; break;
-			default: pad = 0;
+		case WIDGET_BUTTON: pad = w->d.button.padding + 1; break;
+		case WIDGET_TOGGLEBUTTON: pad = w->d.togglebutton.padding + 1; break;
+		default: pad = 0;
 		}
 		if (x >= w->x && x < w->x + w->width + pad && y >= w->y && y < w->y + w->height) {
 			return i;

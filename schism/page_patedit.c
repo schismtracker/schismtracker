@@ -587,31 +587,31 @@ static int pattern_selection_system_paste(UNUSED int cb, const void *data)
 
 		if (!str[0] || !str[1] || !str[2]) break;
 		switch (*str) {
-			case 'C':
-			case 'c': n.note = 1; break;
-			case 'D':
-			case 'd': n.note = 3; break;
-			case 'E':
-			case 'e': n.note = 5; break;
-			case 'F':
-			case 'f': n.note = 6; break;
-			case 'G':
-			case 'g': n.note = 8; break;
-			case 'A':
-			case 'a': n.note = 10; break;
-			case 'B':
-			case 'b': n.note = 12; break;
-			default: n.note = 0;
+		case 'C':
+		case 'c': n.note = 1; break;
+		case 'D':
+		case 'd': n.note = 3; break;
+		case 'E':
+		case 'e': n.note = 5; break;
+		case 'F':
+		case 'f': n.note = 6; break;
+		case 'G':
+		case 'g': n.note = 8; break;
+		case 'A':
+		case 'a': n.note = 10; break;
+		case 'B':
+		case 'b': n.note = 12; break;
+		default: n.note = 0;
 		};
 		/* XXX shouldn't this be note-- for flat? */
 		if (str[1] == '#' || str[1] == 'b') n.note++;
 		switch (*str) {
-			case '=': n.note = NOTE_OFF; break;
-			case '^': n.note = NOTE_CUT; break;
-			case '~': n.note = NOTE_FADE; break;
-			case ' ':
-			case '.': n.note = 0; break;
-			default: n.note += ((str[2] - '0') * 12); break;
+		case '=': n.note = NOTE_OFF; break;
+		case '^': n.note = NOTE_CUT; break;
+		case '~': n.note = NOTE_FADE; break;
+		case ' ':
+		case '.': n.note = 0; break;
+		default: n.note += ((str[2] - '0') * 12); break;
 		};
 		str += 3;
 		/* instrument number */
@@ -625,23 +625,23 @@ static int pattern_selection_system_paste(UNUSED int cb, const void *data)
 				if (sscanf(str + 1, "%02d", &scantmp) == 1) n.volparam = scantmp;
 				else n.volparam = 0;
 				switch (*str) {
-					case 'v': n.voleffect = VOLFX_VOLUME; break;
-					case 'p': n.voleffect = VOLFX_PANNING; break;
-					case 'c': n.voleffect = VOLFX_VOLSLIDEUP; break;
-					case 'd': n.voleffect = VOLFX_VOLSLIDEDOWN; break;
-					case 'a': n.voleffect = VOLFX_FINEVOLUP; break;
-					case 'b': n.voleffect = VOLFX_FINEVOLDOWN; break;
-					case 'u': n.voleffect = VOLFX_VIBRATOSPEED; break;
-					case 'h': n.voleffect = VOLFX_VIBRATODEPTH; break;
-					case 'l': n.voleffect = VOLFX_PANSLIDELEFT; break;
-					case 'r': n.voleffect = VOLFX_PANSLIDERIGHT; break;
-					case 'g': n.voleffect = VOLFX_TONEPORTAMENTO; break;
-					case 'f': n.voleffect = VOLFX_PORTAUP; break;
-					case 'e': n.voleffect = VOLFX_PORTADOWN; break;
-					default:
-						n.voleffect = VOLFX_NONE;
-						n.volparam = 0;
-						break;
+				case 'v': n.voleffect = VOLFX_VOLUME; break;
+				case 'p': n.voleffect = VOLFX_PANNING; break;
+				case 'c': n.voleffect = VOLFX_VOLSLIDEUP; break;
+				case 'd': n.voleffect = VOLFX_VOLSLIDEDOWN; break;
+				case 'a': n.voleffect = VOLFX_FINEVOLUP; break;
+				case 'b': n.voleffect = VOLFX_FINEVOLDOWN; break;
+				case 'u': n.voleffect = VOLFX_VIBRATOSPEED; break;
+				case 'h': n.voleffect = VOLFX_VIBRATODEPTH; break;
+				case 'l': n.voleffect = VOLFX_PANSLIDELEFT; break;
+				case 'r': n.voleffect = VOLFX_PANSLIDERIGHT; break;
+				case 'g': n.voleffect = VOLFX_TONEPORTAMENTO; break;
+				case 'f': n.voleffect = VOLFX_PORTAUP; break;
+				case 'e': n.voleffect = VOLFX_PORTADOWN; break;
+				default:
+					n.voleffect = VOLFX_NONE;
+					n.volparam = 0;
+					break;
 				};
 			} else {
 				n.effect = fx_map(*str);
@@ -724,24 +724,24 @@ static void pattern_selection_system_copyout(void)
 			else str[len] = str[len + 1] = '.';
 			sprintf(str + len + 3, "%02d", cur_note->volparam);
 			switch (cur_note->voleffect) {
-				case VOLFX_VOLUME: str[len + 2] = 'v'; break;
-				case VOLFX_PANNING: str[len + 2] = 'p'; break;
-				case VOLFX_VOLSLIDEUP: str[len + 2] = 'c'; break;
-				case VOLFX_VOLSLIDEDOWN: str[len + 2] = 'd'; break;
-				case VOLFX_FINEVOLUP: str[len + 2] = 'a'; break;
-				case VOLFX_FINEVOLDOWN: str[len + 2] = 'b'; break;
-				case VOLFX_VIBRATOSPEED: str[len + 2] = 'u'; break;
-				case VOLFX_VIBRATODEPTH: str[len + 2] = 'h'; break;
-				case VOLFX_PANSLIDELEFT: str[len + 2] = 'l'; break;
-				case VOLFX_PANSLIDERIGHT: str[len + 2] = 'r'; break;
-				case VOLFX_TONEPORTAMENTO: str[len + 2] = 'g'; break;
-				case VOLFX_PORTAUP: str[len + 2] = 'f'; break;
-				case VOLFX_PORTADOWN: str[len + 2] = 'e'; break;
-				default:
-					str[len + 2] = '.';
-					/* override above */
-					str[len + 3] = '.';
-					str[len + 4] = '.';
+			case VOLFX_VOLUME: str[len + 2] = 'v'; break;
+			case VOLFX_PANNING: str[len + 2] = 'p'; break;
+			case VOLFX_VOLSLIDEUP: str[len + 2] = 'c'; break;
+			case VOLFX_VOLSLIDEDOWN: str[len + 2] = 'd'; break;
+			case VOLFX_FINEVOLUP: str[len + 2] = 'a'; break;
+			case VOLFX_FINEVOLDOWN: str[len + 2] = 'b'; break;
+			case VOLFX_VIBRATOSPEED: str[len + 2] = 'u'; break;
+			case VOLFX_VIBRATODEPTH: str[len + 2] = 'h'; break;
+			case VOLFX_PANSLIDELEFT: str[len + 2] = 'l'; break;
+			case VOLFX_PANSLIDERIGHT: str[len + 2] = 'r'; break;
+			case VOLFX_TONEPORTAMENTO: str[len + 2] = 'g'; break;
+			case VOLFX_PORTAUP: str[len + 2] = 'f'; break;
+			case VOLFX_PORTADOWN: str[len + 2] = 'e'; break;
+			default:
+				str[len + 2] = '.';
+				/* override above */
+				str[len + 3] = '.';
+				str[len + 4] = '.';
 			};
 			len += 5;
 			sprintf(str + len, "%c%02X", get_effect_char(cur_note->effect), cur_note->param);
@@ -810,38 +810,38 @@ static int history_handle_key(struct key_event *k)
 	int i, j;
 	if (!NO_MODIFIER(k->mod)) return 0;
 	switch (k->sym) {
-		case SDLK_ESCAPE:
-			if (k->state == KEY_PRESS) return 0;
-			dialog_cancel(NULL);
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_UP:
-			if (k->state == KEY_RELEASE) return 0;
-			undo_selection--;
-			if (undo_selection < 0) undo_selection = 0;
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_DOWN:
-			if (k->state == KEY_RELEASE) return 0;
-			undo_selection++;
-			if (undo_selection > 9) undo_selection = 9;
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_RETURN:
-			if (k->state == KEY_RELEASE) return 0;
-			j = undo_history_top;
-			for (i = 0; i < 10; i++) {
-				if (i == undo_selection) {
-					pated_history_restore(j);
-					break;
-				}
-				j--;
-				if (j < 0) j += 10;
+	case SDLK_ESCAPE:
+		if (k->state == KEY_PRESS) return 0;
+		dialog_cancel(NULL);
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_UP:
+		if (k->state == KEY_RELEASE) return 0;
+		undo_selection--;
+		if (undo_selection < 0) undo_selection = 0;
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_DOWN:
+		if (k->state == KEY_RELEASE) return 0;
+		undo_selection++;
+		if (undo_selection > 9) undo_selection = 9;
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_RETURN:
+		if (k->state == KEY_RELEASE) return 0;
+		j = undo_history_top;
+		for (i = 0; i < 10; i++) {
+			if (i == undo_selection) {
+				pated_history_restore(j);
+				break;
 			}
-			dialog_cancel(NULL);
-			status.flags |= NEED_UPDATE;
-			return 1;
-		default: break;
+			j--;
+			if (j < 0) j += 10;
+		}
+		dialog_cancel(NULL);
+		status.flags |= NEED_UPDATE;
+		return 1;
+	default: break;
 	};
 
 	return 0;
@@ -1486,16 +1486,16 @@ static int vary_value(int ov, int limit, int depth)
 static int common_variable_group(int ch)
 {
 	switch (ch) {
-		case FX_PORTAMENTODOWN:
-		case FX_PORTAMENTOUP:
-		case FX_TONEPORTAMENTO: return FX_TONEPORTAMENTO;
-		case FX_VOLUMESLIDE:
-		case FX_TONEPORTAVOL:
-		case FX_VIBRATOVOL: return FX_VOLUMESLIDE;
-		case FX_PANNING:
-		case FX_PANNINGSLIDE:
-		case FX_PANBRELLO: return FX_PANNING;
-		default: return ch; /* err... */
+	case FX_PORTAMENTODOWN:
+	case FX_PORTAMENTOUP:
+	case FX_TONEPORTAMENTO: return FX_TONEPORTAMENTO;
+	case FX_VOLUMESLIDE:
+	case FX_TONEPORTAVOL:
+	case FX_VIBRATOVOL: return FX_VOLUMESLIDE;
+	case FX_PANNING:
+	case FX_PANNINGSLIDE:
+	case FX_PANBRELLO: return FX_PANNING;
+	default: return ch; /* err... */
 	};
 }
 
@@ -1509,44 +1509,44 @@ static void selection_vary(int fast, int depth, int how)
 
 	/* don't ever vary these things */
 	switch (how) {
-		default:
-			if (!FX_IS_EFFECT(how)) return;
-			break;
+	default:
+		if (!FX_IS_EFFECT(how)) return;
+		break;
 
-		case FX_NONE:
-		case FX_SPECIAL:
-		case FX_SPEED:
-		case FX_POSITIONJUMP:
-		case FX_PATTERNBREAK:
+	case FX_NONE:
+	case FX_SPECIAL:
+	case FX_SPEED:
+	case FX_POSITIONJUMP:
+	case FX_PATTERNBREAK:
 
-		case FX_KEYOFF:
-		case FX_SETENVPOSITION:
-		case FX_VOLUME:
-		case FX_NOTESLIDEUP:
-		case FX_NOTESLIDEDOWN: return;
+	case FX_KEYOFF:
+	case FX_SETENVPOSITION:
+	case FX_VOLUME:
+	case FX_NOTESLIDEUP:
+	case FX_NOTESLIDEDOWN: return;
 	}
 
 	CHECK_FOR_SELECTION(return);
 
 	status.flags |= SONG_NEEDS_SAVE;
 	switch (how) {
-		case FX_CHANNELVOLUME:
-		case FX_CHANNELVOLSLIDE:
-			vary_how = "Undo volume-channel vary      (Ctrl-U)";
-			if (fast) status_text_flash("Fast volume vary");
-			break;
-		case FX_PANNING:
-		case FX_PANNINGSLIDE:
-		case FX_PANBRELLO:
-			vary_how = "Undo panning vary             (Ctrl-Y)";
-			if (fast) status_text_flash("Fast panning vary");
-			break;
-		default:
-			sprintf(last_vary, "%-28s  (Ctrl-K)", "Undo Xxx effect-value vary");
-			last_vary[5] = common_variable_group(how);
-			if (fast) status_text_flash("Fast %-21s", last_vary + 5);
-			vary_how = last_vary;
-			break;
+	case FX_CHANNELVOLUME:
+	case FX_CHANNELVOLSLIDE:
+		vary_how = "Undo volume-channel vary      (Ctrl-U)";
+		if (fast) status_text_flash("Fast volume vary");
+		break;
+	case FX_PANNING:
+	case FX_PANNINGSLIDE:
+	case FX_PANBRELLO:
+		vary_how = "Undo panning vary             (Ctrl-Y)";
+		if (fast) status_text_flash("Fast panning vary");
+		break;
+	default:
+		sprintf(last_vary, "%-28s  (Ctrl-K)", "Undo Xxx effect-value vary");
+		last_vary[5] = common_variable_group(how);
+		if (fast) status_text_flash("Fast %-21s", last_vary + 5);
+		vary_how = last_vary;
+		break;
 	};
 
 	total_rows = song_get_pattern(current_pattern, &pattern);
@@ -1575,55 +1575,55 @@ static void selection_vary(int fast, int depth, int how)
 			if (!FX_IS_EFFECT(ch)) continue;
 			if (common_variable_group(ch) != common_variable_group(how)) continue;
 			switch (ch) {
-				/* these are .0 0. and .f f. values */
-				case FX_VOLUMESLIDE:
-				case FX_CHANNELVOLSLIDE:
-				case FX_PANNINGSLIDE:
-				case FX_GLOBALVOLSLIDE:
-				case FX_VIBRATOVOL:
-				case FX_TONEPORTAVOL:
-					if ((note->param & 15) == 15) continue;
-					if ((note->param & 0xF0) == (0xF0)) continue;
-					if ((note->param & 15) == 0) {
-						note->param = (1 + (vary_value(note->param >> 4, 15, depth))) << 4;
-					} else {
-						note->param = 1 + (vary_value(note->param & 15, 15, depth));
-					}
-					break;
-				/* tempo has a slide */
-				case FX_TEMPO:
-					if ((note->param & 15) == 15) continue;
-					if ((note->param & 0xF0) == (0xF0)) continue;
-					/* but otherwise it's absolute */
-					note->param = 1 + (vary_value(note->param, 255, depth));
-					break;
-				/* don't vary .E. and .F. values */
-				case FX_PORTAMENTODOWN:
-				case FX_PORTAMENTOUP:
-					if ((note->param & 15) == 15) continue;
-					if ((note->param & 15) == 14) continue;
-					if ((note->param & 0xF0) == (0xF0)) continue;
-					if ((note->param & 0xF0) == (0xE0)) continue;
-					note->param = 16 + (vary_value(note->param - 16, 224, depth));
-					break;
-				/* these are all "xx" commands */
-				// FIXME global/channel volume should be limited to 0-128 and 0-64, respectively
-				case FX_TONEPORTAMENTO:
-				case FX_CHANNELVOLUME:
-				case FX_OFFSET:
-				case FX_GLOBALVOLUME:
-				case FX_PANNING: note->param = 1 + (vary_value(note->param, 255, depth)); break;
-				/* these are all "xy" commands */
-				case FX_VIBRATO:
-				case FX_TREMOR:
-				case FX_ARPEGGIO:
-				case FX_RETRIG:
-				case FX_TREMOLO:
-				case FX_PANBRELLO:
-				case FX_FINEVIBRATO:
-					note->param = (1 + (vary_value(note->param & 15, 15, depth)))
-								  | ((1 + (vary_value((note->param >> 4) & 15, 15, depth))) << 4);
-					break;
+			/* these are .0 0. and .f f. values */
+			case FX_VOLUMESLIDE:
+			case FX_CHANNELVOLSLIDE:
+			case FX_PANNINGSLIDE:
+			case FX_GLOBALVOLSLIDE:
+			case FX_VIBRATOVOL:
+			case FX_TONEPORTAVOL:
+				if ((note->param & 15) == 15) continue;
+				if ((note->param & 0xF0) == (0xF0)) continue;
+				if ((note->param & 15) == 0) {
+					note->param = (1 + (vary_value(note->param >> 4, 15, depth))) << 4;
+				} else {
+					note->param = 1 + (vary_value(note->param & 15, 15, depth));
+				}
+				break;
+			/* tempo has a slide */
+			case FX_TEMPO:
+				if ((note->param & 15) == 15) continue;
+				if ((note->param & 0xF0) == (0xF0)) continue;
+				/* but otherwise it's absolute */
+				note->param = 1 + (vary_value(note->param, 255, depth));
+				break;
+			/* don't vary .E. and .F. values */
+			case FX_PORTAMENTODOWN:
+			case FX_PORTAMENTOUP:
+				if ((note->param & 15) == 15) continue;
+				if ((note->param & 15) == 14) continue;
+				if ((note->param & 0xF0) == (0xF0)) continue;
+				if ((note->param & 0xF0) == (0xE0)) continue;
+				note->param = 16 + (vary_value(note->param - 16, 224, depth));
+				break;
+			/* these are all "xx" commands */
+			// FIXME global/channel volume should be limited to 0-128 and 0-64, respectively
+			case FX_TONEPORTAMENTO:
+			case FX_CHANNELVOLUME:
+			case FX_OFFSET:
+			case FX_GLOBALVOLUME:
+			case FX_PANNING: note->param = 1 + (vary_value(note->param, 255, depth)); break;
+			/* these are all "xy" commands */
+			case FX_VIBRATO:
+			case FX_TREMOR:
+			case FX_ARPEGGIO:
+			case FX_RETRIG:
+			case FX_TREMOLO:
+			case FX_PANBRELLO:
+			case FX_FINEVIBRATO:
+				note->param = (1 + (vary_value(note->param & 15, 15, depth)))
+							  | ((1 + (vary_value((note->param >> 4) & 15, 15, depth))) << 4);
+				break;
 			};
 		}
 	}
@@ -2682,9 +2682,9 @@ static int handle_volume(song_note_t *note, struct key_event *k, int pos)
 		if (q >= 0 && q <= 9) {
 			vol = (vol / 10) * 10 + q;
 			switch (fx) {
-				case VOLFX_NONE:
-				case VOLFX_VOLUME:
-				case VOLFX_PANNING: fx = vp;
+			case VOLFX_NONE:
+			case VOLFX_VOLUME:
+			case VOLFX_PANNING: fx = vp;
 			}
 		} else {
 			return 0;
@@ -2706,17 +2706,17 @@ static int seek_done(void)
 	note = pattern + 64 * current_row + current_channel - 1;
 
 	switch (current_position) {
-		case 0:
-		case 1: return note->note != 0;
-		case 2:
-		case 3: return note->instrument != 0;
-		case 4:
-		case 5: return note->voleffect || note->volparam;
-		case 6:
-		case 7:
-		case 8:
-			// effect param columns intentionally check effect column instead
-			return note->effect != 0;
+	case 0:
+	case 1: return note->note != 0;
+	case 2:
+	case 3: return note->instrument != 0;
+	case 4:
+	case 5: return note->voleffect || note->volparam;
+	case 6:
+	case 7:
+	case 8:
+		// effect param columns intentionally check effect column instead
+		return note->effect != 0;
 	}
 	return 1; // please stop seeking because something is probably wrong
 }
@@ -2753,10 +2753,10 @@ static int patedit_record_note(song_note_t *cur_note, int channel, UNUSED int ro
 				i = note - q->note;
 
 				switch (template_mode) {
-					case TEMPLATE_OVERWRITE: snap_paste(&clipboard, current_channel - 1, current_row, i); break;
-					case TEMPLATE_MIX_PATTERN_PRECEDENCE: clipboard_paste_mix_fields(0, i); break;
-					case TEMPLATE_MIX_CLIPBOARD_PRECEDENCE: clipboard_paste_mix_fields(1, i); break;
-					case TEMPLATE_NOTES_ONLY: clipboard_paste_mix_notes(1, i); break;
+				case TEMPLATE_OVERWRITE: snap_paste(&clipboard, current_channel - 1, current_row, i); break;
+				case TEMPLATE_MIX_PATTERN_PRECEDENCE: clipboard_paste_mix_fields(0, i); break;
+				case TEMPLATE_MIX_CLIPBOARD_PRECEDENCE: clipboard_paste_mix_fields(1, i); break;
+				case TEMPLATE_NOTES_ONLY: clipboard_paste_mix_notes(1, i); break;
 				};
 			}
 		} else {
@@ -2812,16 +2812,16 @@ static int pattern_editor_insert_midi(struct key_event *k)
 
 	if (midi_start_record && !SONG_PLAYING) {
 		switch (midi_start_record) {
-			case 1: /* pattern loop */
-				song_loop_pattern(p, r);
-				midi_playback_tracing = playback_tracing;
-				playback_tracing = 1;
-				break;
-			case 2: /* song play */
-				song_start_at_pattern(p, r);
-				midi_playback_tracing = playback_tracing;
-				playback_tracing = 1;
-				break;
+		case 1: /* pattern loop */
+			song_loop_pattern(p, r);
+			midi_playback_tracing = playback_tracing;
+			playback_tracing = 1;
+			break;
+		case 2: /* song play */
+			song_start_at_pattern(p, r);
+			midi_playback_tracing = playback_tracing;
+			playback_tracing = 1;
+			break;
 		};
 	}
 
@@ -2956,292 +2956,292 @@ static int pattern_editor_insert(struct key_event *k)
 	cur_note = pattern + 64 * current_row + current_channel - 1;
 
 	switch (current_position) {
-		case 0: /* note */
-			// FIXME: this is actually quite wrong; instrument numbers should be independent for each
-			// channel and take effect when the instrument is played (e.g. with 4/8 or keyjazz input)
-			// also, this is fully idiotic
-			smp = ins = cur_note->instrument;
-			if (song_is_instrument_mode()) {
-				smp = KEYJAZZ_NOINST;
+	case 0: /* note */
+		// FIXME: this is actually quite wrong; instrument numbers should be independent for each
+		// channel and take effect when the instrument is played (e.g. with 4/8 or keyjazz input)
+		// also, this is fully idiotic
+		smp = ins = cur_note->instrument;
+		if (song_is_instrument_mode()) {
+			smp = KEYJAZZ_NOINST;
+		} else {
+			ins = KEYJAZZ_NOINST;
+		}
+
+		if (k->sym == SDLK_4) {
+			if (k->state == KEY_RELEASE) return 0;
+
+			if (cur_note->voleffect == VOLFX_VOLUME) {
+				vol = cur_note->volparam;
 			} else {
-				ins = KEYJAZZ_NOINST;
+				vol = KEYJAZZ_DEFAULTVOL;
 			}
+			song_keyrecord(smp, ins, cur_note->note, vol, current_channel, cur_note->effect, cur_note->param);
+			advance_cursor(!(k->mod & KMOD_SHIFT), 1);
+			return 1;
+		} else if (k->sym == SDLK_8) {
+			/* note: Impulse Tracker doesn't skip multichannels when pressing "8"  -delt. */
+			if (k->state == KEY_RELEASE) return 0;
+			song_single_step(current_pattern, current_row);
+			advance_cursor(!(k->mod & KMOD_SHIFT), 0);
+			return 1;
+		}
 
-			if (k->sym == SDLK_4) {
-				if (k->state == KEY_RELEASE) return 0;
+		if (song_is_instrument_mode()) {
+			if (edit_copy_mask & MASK_INSTRUMENT) ins = instrument_get_current();
+		} else {
+			if (edit_copy_mask & MASK_INSTRUMENT) smp = sample_get_current();
+		}
 
-				if (cur_note->voleffect == VOLFX_VOLUME) {
-					vol = cur_note->volparam;
-				} else {
-					vol = KEYJAZZ_DEFAULTVOL;
-				}
-				song_keyrecord(smp, ins, cur_note->note, vol, current_channel, cur_note->effect, cur_note->param);
-				advance_cursor(!(k->mod & KMOD_SHIFT), 1);
-				return 1;
-			} else if (k->sym == SDLK_8) {
-				/* note: Impulse Tracker doesn't skip multichannels when pressing "8"  -delt. */
-				if (k->state == KEY_RELEASE) return 0;
-				song_single_step(current_pattern, current_row);
-				advance_cursor(!(k->mod & KMOD_SHIFT), 0);
-				return 1;
-			}
 
-			if (song_is_instrument_mode()) {
-				if (edit_copy_mask & MASK_INSTRUMENT) ins = instrument_get_current();
+		if (k->sym == SDLK_SPACE) {
+			/* copy mask to note */
+			n = mask_note.note;
+
+			vol = ((edit_copy_mask & MASK_VOLUME) && cur_note->voleffect == VOLFX_VOLUME) ? mask_note.volparam :
+																							KEYJAZZ_DEFAULTVOL;
+		} else {
+			n = kbd_get_note(k);
+			if (n < 0) return 0;
+
+			if ((edit_copy_mask & MASK_VOLUME) && mask_note.voleffect == VOLFX_VOLUME) {
+				vol = mask_note.volparam;
+			} else if (cur_note->voleffect == VOLFX_VOLUME) {
+				vol = cur_note->volparam;
 			} else {
-				if (edit_copy_mask & MASK_INSTRUMENT) smp = sample_get_current();
+				vol = KEYJAZZ_DEFAULTVOL;
 			}
+		}
 
-
-			if (k->sym == SDLK_SPACE) {
-				/* copy mask to note */
-				n = mask_note.note;
-
-				vol = ((edit_copy_mask & MASK_VOLUME) && cur_note->voleffect == VOLFX_VOLUME) ? mask_note.volparam :
-																								KEYJAZZ_DEFAULTVOL;
-			} else {
-				n = kbd_get_note(k);
-				if (n < 0) return 0;
-
-				if ((edit_copy_mask & MASK_VOLUME) && mask_note.voleffect == VOLFX_VOLUME) {
-					vol = mask_note.volparam;
-				} else if (cur_note->voleffect == VOLFX_VOLUME) {
-					vol = cur_note->volparam;
-				} else {
-					vol = KEYJAZZ_DEFAULTVOL;
-				}
+		if (k->state == KEY_RELEASE) {
+			if (keyjazz_noteoff && NOTE_IS_NOTE(n)) {
+				/* coda mode */
+				song_keyup(smp, ins, n);
 			}
-
-			if (k->state == KEY_RELEASE) {
-				if (keyjazz_noteoff && NOTE_IS_NOTE(n)) {
-					/* coda mode */
-					song_keyup(smp, ins, n);
-				}
-				/* it would be weird to have this enabled and keyjazz_noteoff
+			/* it would be weird to have this enabled and keyjazz_noteoff
 			 * disabled, but it's possible, so handle it separately. */
-				if (keyjazz_write_noteoff && playback_tracing && NOTE_IS_NOTE(n)) {
-					/* go to the next row if a note off would overwrite a note
+			if (keyjazz_write_noteoff && playback_tracing && NOTE_IS_NOTE(n)) {
+				/* go to the next row if a note off would overwrite a note
 				 * you (likely) just entered */
-					if (cur_note->note) {
-						if (++current_row > song_get_rows_in_pattern(current_pattern)) {
-							return 1;
-						}
-						cur_note += 64;
-						/* give up if the next row has a note too */
-						if (cur_note->note) {
-							return 1;
-						}
+				if (cur_note->note) {
+					if (++current_row > song_get_rows_in_pattern(current_pattern)) {
+						return 1;
 					}
-					n = NOTE_OFF;
-				} else {
-					return 1;
+					cur_note += 64;
+					/* give up if the next row has a note too */
+					if (cur_note->note) {
+						return 1;
+					}
 				}
+				n = NOTE_OFF;
+			} else {
+				return 1;
 			}
-			if (k->is_repeat && !keyjazz_repeat) return 1;
+		}
+		if (k->is_repeat && !keyjazz_repeat) return 1;
 
 
-			int writenote = (keyjazz_capslock) ? !(k->mod & KMOD_CAPS) : !(status.flags & CAPS_PRESSED);
-			if (writenote && !patedit_record_note(cur_note, current_channel, current_row, n, 1)) {
-				// there was a template error, don't advance the cursor and so on
-				writenote = 0;
-				n = NOTE_NONE;
-			}
-			/* Be quiet when pasting templates.
+		int writenote = (keyjazz_capslock) ? !(k->mod & KMOD_CAPS) : !(status.flags & CAPS_PRESSED);
+		if (writenote && !patedit_record_note(cur_note, current_channel, current_row, n, 1)) {
+			// there was a template error, don't advance the cursor and so on
+			writenote = 0;
+			n = NOTE_NONE;
+		}
+		/* Be quiet when pasting templates.
 		It'd be nice to "play" a template when pasting it (maybe only for ones that are one row high)
 		so as to hear the chords being inserted etc., but that's a little complicated to do. */
-			if (NOTE_IS_NOTE(n) && !(template_mode && writenote)) song_keydown(smp, ins, n, vol, current_channel);
-			if (!writenote) break;
+		if (NOTE_IS_NOTE(n) && !(template_mode && writenote)) song_keydown(smp, ins, n, vol, current_channel);
+		if (!writenote) break;
 
-			/* Never copy the instrument etc. from the mask when inserting control notes or when
+		/* Never copy the instrument etc. from the mask when inserting control notes or when
 		erasing a note -- but DO write it when inserting a blank note with the space key. */
-			if (!(NOTE_IS_CONTROL(n) || (k->sym != SDLK_SPACE && n == NOTE_NONE)) && !template_mode) {
-				if (edit_copy_mask & MASK_INSTRUMENT) {
-					if (song_is_instrument_mode()) cur_note->instrument = instrument_get_current();
-					else cur_note->instrument = sample_get_current();
-				}
-				if (edit_copy_mask & MASK_VOLUME) {
-					cur_note->voleffect = mask_note.voleffect;
-					cur_note->volparam = mask_note.volparam;
-				}
-				if (edit_copy_mask & MASK_EFFECT) {
-					cur_note->effect = mask_note.effect;
-					cur_note->param = mask_note.param;
-				}
+		if (!(NOTE_IS_CONTROL(n) || (k->sym != SDLK_SPACE && n == NOTE_NONE)) && !template_mode) {
+			if (edit_copy_mask & MASK_INSTRUMENT) {
+				if (song_is_instrument_mode()) cur_note->instrument = instrument_get_current();
+				else cur_note->instrument = sample_get_current();
 			}
-
-			/* try again, now that we have the effect (this is a dumb way to do this...) */
-			if (NOTE_IS_NOTE(n) && !template_mode)
-				song_keyrecord(smp, ins, n, vol, current_channel, cur_note->effect, cur_note->param);
-
-			/* copy the note back to the mask */
-			mask_note.note = n;
-			pattern_selection_system_copyout();
-
-			n = cur_note->note;
-			if (NOTE_IS_NOTE(n) && cur_note->voleffect == VOLFX_VOLUME) vol = cur_note->volparam;
-			if (k->mod & KMOD_SHIFT) {
-				// advance horizontally, stopping at channel 64
-				// (I have no idea how IT does this, it might wrap)
-				if (current_channel < 64) {
-					shift_chord_channels++;
-					current_channel++;
-					pattern_editor_reposition();
-				}
-			} else {
-				advance_cursor(1, 1);
+			if (edit_copy_mask & MASK_VOLUME) {
+				cur_note->voleffect = mask_note.voleffect;
+				cur_note->volparam = mask_note.volparam;
 			}
+			if (edit_copy_mask & MASK_EFFECT) {
+				cur_note->effect = mask_note.effect;
+				cur_note->param = mask_note.param;
+			}
+		}
+
+		/* try again, now that we have the effect (this is a dumb way to do this...) */
+		if (NOTE_IS_NOTE(n) && !template_mode)
+			song_keyrecord(smp, ins, n, vol, current_channel, cur_note->effect, cur_note->param);
+
+		/* copy the note back to the mask */
+		mask_note.note = n;
+		pattern_selection_system_copyout();
+
+		n = cur_note->note;
+		if (NOTE_IS_NOTE(n) && cur_note->voleffect == VOLFX_VOLUME) vol = cur_note->volparam;
+		if (k->mod & KMOD_SHIFT) {
+			// advance horizontally, stopping at channel 64
+			// (I have no idea how IT does this, it might wrap)
+			if (current_channel < 64) {
+				shift_chord_channels++;
+				current_channel++;
+				pattern_editor_reposition();
+			}
+		} else {
+			advance_cursor(1, 1);
+		}
+		break;
+	case 1: /* octave */
+		j = kbd_char_to_hex(k);
+		if (j < 0 || j > 9) return 0;
+		n = cur_note->note;
+		if (n > 0 && n <= 120) {
+			/* Hehe... this was originally 7 lines :) */
+			n = ((n - 1) % 12) + (12 * j) + 1;
+			cur_note->note = n;
+		}
+		advance_cursor(1, 0);
+		status.flags |= SONG_NEEDS_SAVE;
+		pattern_selection_system_copyout();
+		break;
+	case 2: /* instrument, first digit */
+	case 3: /* instrument, second digit */
+		if (k->sym == SDLK_SPACE) {
+			if (song_is_instrument_mode()) n = instrument_get_current();
+			else n = sample_get_current();
+			if (n && !(status.flags & CLASSIC_MODE)) current_song->voices[current_channel - 1].last_instrument = n;
+			cur_note->instrument = n;
+			advance_cursor(1, 0);
+			status.flags |= SONG_NEEDS_SAVE;
 			break;
-		case 1: /* octave */
+		}
+		if (kbd_get_note(k) == 0) {
+			cur_note->instrument = 0;
+			if (song_is_instrument_mode()) instrument_set(0);
+			else sample_set(0);
+			advance_cursor(1, 0);
+			status.flags |= SONG_NEEDS_SAVE;
+			break;
+		}
+
+		if (current_position == 2) {
+			j = kbd_char_to_99(k);
+			if (j < 0) return 0;
+			n = (j * 10) + (cur_note->instrument % 10);
+			current_position++;
+		} else {
 			j = kbd_char_to_hex(k);
 			if (j < 0 || j > 9) return 0;
-			n = cur_note->note;
-			if (n > 0 && n <= 120) {
-				/* Hehe... this was originally 7 lines :) */
-				n = ((n - 1) % 12) + (12 * j) + 1;
-				cur_note->note = n;
+
+			n = ((cur_note->instrument / 10) * 10) + j;
+			current_position--;
+			advance_cursor(1, 0);
+		}
+
+		/* this is kind of ugly... */
+		if (song_is_instrument_mode()) {
+			j = instrument_get_current();
+			instrument_set(n);
+			if (n != instrument_get_current()) {
+				n = j;
 			}
+			instrument_set(j);
+		} else {
+			j = sample_get_current();
+			sample_set(n);
+			if (n != sample_get_current()) {
+				n = j;
+			}
+			sample_set(j);
+		}
+
+		if (n && !(status.flags & CLASSIC_MODE)) current_song->voices[current_channel - 1].last_instrument = n;
+		cur_note->instrument = n;
+		if (song_is_instrument_mode()) instrument_set(n);
+		else sample_set(n);
+		status.flags |= SONG_NEEDS_SAVE;
+		pattern_selection_system_copyout();
+		break;
+	case 4:
+	case 5: /* volume */
+		if (k->sym == SDLK_SPACE) {
+			cur_note->volparam = mask_note.volparam;
+			cur_note->voleffect = mask_note.voleffect;
+			advance_cursor(1, 0);
+			status.flags |= SONG_NEEDS_SAVE;
+			break;
+		}
+		if (kbd_get_note(k) == 0) {
+			cur_note->volparam = mask_note.volparam = 0;
+			cur_note->voleffect = mask_note.voleffect = VOLFX_NONE;
+			advance_cursor(1, 0);
+			status.flags |= SONG_NEEDS_SAVE;
+			break;
+		}
+		if (k->scancode == SDL_SCANCODE_GRAVE) {
+			panning_mode = !panning_mode;
+			status_text_flash("%s control set", (panning_mode ? "Panning" : "Volume"));
+			return 0;
+		}
+		if (!handle_volume(cur_note, k, current_position - 4)) return 0;
+		mask_note.volparam = cur_note->volparam;
+		mask_note.voleffect = cur_note->voleffect;
+		if (current_position == 4) {
+			current_position++;
+		} else {
+			current_position = 4;
+			advance_cursor(1, 0);
+		}
+		status.flags |= SONG_NEEDS_SAVE;
+		pattern_selection_system_copyout();
+		break;
+	case 6: /* effect */
+		if (k->sym == SDLK_SPACE) {
+			cur_note->effect = mask_note.effect;
+		} else {
+			n = kbd_get_effect_number(k);
+			if (n < 0) return 0;
+			cur_note->effect = mask_note.effect = n;
+		}
+		status.flags |= SONG_NEEDS_SAVE;
+		if (link_effect_column) current_position++;
+		else advance_cursor(1, 0);
+		pattern_selection_system_copyout();
+		break;
+	case 7: /* param, high nibble */
+	case 8: /* param, low nibble */
+		if (k->sym == SDLK_SPACE) {
+			cur_note->param = mask_note.param;
+			current_position = link_effect_column ? 6 : 7;
 			advance_cursor(1, 0);
 			status.flags |= SONG_NEEDS_SAVE;
 			pattern_selection_system_copyout();
 			break;
-		case 2: /* instrument, first digit */
-		case 3: /* instrument, second digit */
-			if (k->sym == SDLK_SPACE) {
-				if (song_is_instrument_mode()) n = instrument_get_current();
-				else n = sample_get_current();
-				if (n && !(status.flags & CLASSIC_MODE)) current_song->voices[current_channel - 1].last_instrument = n;
-				cur_note->instrument = n;
-				advance_cursor(1, 0);
-				status.flags |= SONG_NEEDS_SAVE;
-				break;
-			}
-			if (kbd_get_note(k) == 0) {
-				cur_note->instrument = 0;
-				if (song_is_instrument_mode()) instrument_set(0);
-				else sample_set(0);
-				advance_cursor(1, 0);
-				status.flags |= SONG_NEEDS_SAVE;
-				break;
-			}
-
-			if (current_position == 2) {
-				j = kbd_char_to_99(k);
-				if (j < 0) return 0;
-				n = (j * 10) + (cur_note->instrument % 10);
-				current_position++;
-			} else {
-				j = kbd_char_to_hex(k);
-				if (j < 0 || j > 9) return 0;
-
-				n = ((cur_note->instrument / 10) * 10) + j;
-				current_position--;
-				advance_cursor(1, 0);
-			}
-
-			/* this is kind of ugly... */
-			if (song_is_instrument_mode()) {
-				j = instrument_get_current();
-				instrument_set(n);
-				if (n != instrument_get_current()) {
-					n = j;
-				}
-				instrument_set(j);
-			} else {
-				j = sample_get_current();
-				sample_set(n);
-				if (n != sample_get_current()) {
-					n = j;
-				}
-				sample_set(j);
-			}
-
-			if (n && !(status.flags & CLASSIC_MODE)) current_song->voices[current_channel - 1].last_instrument = n;
-			cur_note->instrument = n;
-			if (song_is_instrument_mode()) instrument_set(n);
-			else sample_set(n);
+		} else if (kbd_get_note(k) == 0) {
+			cur_note->param = mask_note.param = 0;
+			current_position = link_effect_column ? 6 : 7;
+			advance_cursor(1, 0);
 			status.flags |= SONG_NEEDS_SAVE;
 			pattern_selection_system_copyout();
 			break;
-		case 4:
-		case 5: /* volume */
-			if (k->sym == SDLK_SPACE) {
-				cur_note->volparam = mask_note.volparam;
-				cur_note->voleffect = mask_note.voleffect;
-				advance_cursor(1, 0);
-				status.flags |= SONG_NEEDS_SAVE;
-				break;
-			}
-			if (kbd_get_note(k) == 0) {
-				cur_note->volparam = mask_note.volparam = 0;
-				cur_note->voleffect = mask_note.voleffect = VOLFX_NONE;
-				advance_cursor(1, 0);
-				status.flags |= SONG_NEEDS_SAVE;
-				break;
-			}
-			if (k->scancode == SDL_SCANCODE_GRAVE) {
-				panning_mode = !panning_mode;
-				status_text_flash("%s control set", (panning_mode ? "Panning" : "Volume"));
-				return 0;
-			}
-			if (!handle_volume(cur_note, k, current_position - 4)) return 0;
-			mask_note.volparam = cur_note->volparam;
-			mask_note.voleffect = cur_note->voleffect;
-			if (current_position == 4) {
-				current_position++;
-			} else {
-				current_position = 4;
-				advance_cursor(1, 0);
-			}
-			status.flags |= SONG_NEEDS_SAVE;
-			pattern_selection_system_copyout();
-			break;
-		case 6: /* effect */
-			if (k->sym == SDLK_SPACE) {
-				cur_note->effect = mask_note.effect;
-			} else {
-				n = kbd_get_effect_number(k);
-				if (n < 0) return 0;
-				cur_note->effect = mask_note.effect = n;
-			}
-			status.flags |= SONG_NEEDS_SAVE;
-			if (link_effect_column) current_position++;
-			else advance_cursor(1, 0);
-			pattern_selection_system_copyout();
-			break;
-		case 7: /* param, high nibble */
-		case 8: /* param, low nibble */
-			if (k->sym == SDLK_SPACE) {
-				cur_note->param = mask_note.param;
-				current_position = link_effect_column ? 6 : 7;
-				advance_cursor(1, 0);
-				status.flags |= SONG_NEEDS_SAVE;
-				pattern_selection_system_copyout();
-				break;
-			} else if (kbd_get_note(k) == 0) {
-				cur_note->param = mask_note.param = 0;
-				current_position = link_effect_column ? 6 : 7;
-				advance_cursor(1, 0);
-				status.flags |= SONG_NEEDS_SAVE;
-				pattern_selection_system_copyout();
-				break;
-			}
+		}
 
-			/* FIXME: honey roasted peanuts */
+		/* FIXME: honey roasted peanuts */
 
-			n = kbd_char_to_hex(k);
-			if (n < 0) return 0;
-			if (current_position == 7) {
-				cur_note->param = (n << 4) | (cur_note->param & 0xf);
-				current_position++;
-			} else /* current_position == 8 */ {
-				cur_note->param = (cur_note->param & 0xf0) | n;
-				current_position = link_effect_column ? 6 : 7;
-				advance_cursor(1, 0);
-			}
-			status.flags |= SONG_NEEDS_SAVE;
-			mask_note.param = cur_note->param;
-			pattern_selection_system_copyout();
-			break;
+		n = kbd_char_to_hex(k);
+		if (n < 0) return 0;
+		if (current_position == 7) {
+			cur_note->param = (n << 4) | (cur_note->param & 0xf);
+			current_position++;
+		} else /* current_position == 8 */ {
+			cur_note->param = (cur_note->param & 0xf0) | n;
+			current_position = link_effect_column ? 6 : 7;
+			advance_cursor(1, 0);
+		}
+		status.flags |= SONG_NEEDS_SAVE;
+		mask_note.param = cur_note->param;
+		pattern_selection_system_copyout();
+		break;
 	}
 
 	return 1;
@@ -3275,253 +3275,253 @@ static int pattern_editor_handle_alt_key(struct key_event *k)
 	}
 
 	switch (k->sym) {
-		case SDLK_RETURN:
-			if (k->state == KEY_PRESS) return 1;
-			fast_save_update();
-			return 1;
+	case SDLK_RETURN:
+		if (k->state == KEY_PRESS) return 1;
+		fast_save_update();
+		return 1;
 
-		case SDLK_BACKSPACE:
-			if (k->state == KEY_PRESS) return 1;
-			pated_save("Undo revert pattern data (Alt-BkSpace)");
-			snap_paste(&fast_save, 0, 0, 0);
-			return 1;
+	case SDLK_BACKSPACE:
+		if (k->state == KEY_PRESS) return 1;
+		pated_save("Undo revert pattern data (Alt-BkSpace)");
+		snap_paste(&fast_save, 0, 0, 0);
+		return 1;
 
-		case SDLK_b:
-			if (k->state == KEY_RELEASE) return 1;
-			if (!SELECTION_EXISTS) {
-				selection.last_channel = current_channel;
-				selection.last_row = current_row;
-			}
-			selection.first_channel = current_channel;
-			selection.first_row = current_row;
-			normalise_block_selection();
-			break;
-		case SDLK_e:
-			if (k->state == KEY_RELEASE) return 1;
-			if (!SELECTION_EXISTS) {
-				selection.first_channel = current_channel;
-				selection.first_row = current_row;
-			}
+	case SDLK_b:
+		if (k->state == KEY_RELEASE) return 1;
+		if (!SELECTION_EXISTS) {
 			selection.last_channel = current_channel;
 			selection.last_row = current_row;
-			normalise_block_selection();
-			break;
-		case SDLK_d:
-			if (k->state == KEY_RELEASE) return 1;
-			if (status.last_keysym == SDLK_d) {
-				if (total_rows - (current_row - 1) > block_double_size) block_double_size <<= 1;
+		}
+		selection.first_channel = current_channel;
+		selection.first_row = current_row;
+		normalise_block_selection();
+		break;
+	case SDLK_e:
+		if (k->state == KEY_RELEASE) return 1;
+		if (!SELECTION_EXISTS) {
+			selection.first_channel = current_channel;
+			selection.first_row = current_row;
+		}
+		selection.last_channel = current_channel;
+		selection.last_row = current_row;
+		normalise_block_selection();
+		break;
+	case SDLK_d:
+		if (k->state == KEY_RELEASE) return 1;
+		if (status.last_keysym == SDLK_d) {
+			if (total_rows - (current_row - 1) > block_double_size) block_double_size <<= 1;
+		} else {
+			// emulate some weird impulse tracker behavior here:
+			// with row highlight set to zero, alt-d selects the whole channel
+			// if the cursor is at the top, and clears the selection otherwise
+			block_double_size =
+				current_song->row_highlight_major ? current_song->row_highlight_major : (current_row ? 0 : 65536);
+			selection.first_channel = selection.last_channel = current_channel;
+			selection.first_row = current_row;
+		}
+		n = block_double_size + current_row - 1;
+		selection.last_row = MIN(n, total_rows);
+		break;
+	case SDLK_l:
+		if (k->state == KEY_RELEASE) return 1;
+		if (status.last_keysym == SDLK_l) {
+			/* 3x alt-l re-selects the current channel */
+			if (selection.first_channel == selection.last_channel) {
+				selection.first_channel = 1;
+				selection.last_channel = 64;
 			} else {
-				// emulate some weird impulse tracker behavior here:
-				// with row highlight set to zero, alt-d selects the whole channel
-				// if the cursor is at the top, and clears the selection otherwise
-				block_double_size =
-					current_song->row_highlight_major ? current_song->row_highlight_major : (current_row ? 0 : 65536);
 				selection.first_channel = selection.last_channel = current_channel;
-				selection.first_row = current_row;
 			}
-			n = block_double_size + current_row - 1;
-			selection.last_row = MIN(n, total_rows);
-			break;
-		case SDLK_l:
-			if (k->state == KEY_RELEASE) return 1;
-			if (status.last_keysym == SDLK_l) {
-				/* 3x alt-l re-selects the current channel */
-				if (selection.first_channel == selection.last_channel) {
-					selection.first_channel = 1;
-					selection.last_channel = 64;
-				} else {
-					selection.first_channel = selection.last_channel = current_channel;
-				}
-			} else {
-				selection.first_channel = selection.last_channel = current_channel;
-				selection.first_row = 0;
-				selection.last_row = total_rows;
-			}
-			pattern_selection_system_copyout();
-			break;
-		case SDLK_r:
-			if (k->state == KEY_RELEASE) return 1;
-			draw_divisions = 1;
-			set_view_scheme(0);
-			break;
-		case SDLK_s:
-			if (k->state == KEY_RELEASE) return 1;
-			selection_set_sample();
-			break;
-		case SDLK_u:
-			if (k->state == KEY_RELEASE) return 1;
-			if (SELECTION_EXISTS) {
-				selection_clear();
-			} else if (clipboard.data) {
-				clipboard_free();
+		} else {
+			selection.first_channel = selection.last_channel = current_channel;
+			selection.first_row = 0;
+			selection.last_row = total_rows;
+		}
+		pattern_selection_system_copyout();
+		break;
+	case SDLK_r:
+		if (k->state == KEY_RELEASE) return 1;
+		draw_divisions = 1;
+		set_view_scheme(0);
+		break;
+	case SDLK_s:
+		if (k->state == KEY_RELEASE) return 1;
+		selection_set_sample();
+		break;
+	case SDLK_u:
+		if (k->state == KEY_RELEASE) return 1;
+		if (SELECTION_EXISTS) {
+			selection_clear();
+		} else if (clipboard.data) {
+			clipboard_free();
 
-				clippy_select(NULL, NULL, 0);
-				clippy_yank();
-			} else {
-				dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
-			}
-			break;
-		case SDLK_c:
-			if (k->state == KEY_RELEASE) return 1;
-			clipboard_copy(0);
-			break;
-		case SDLK_o:
-			if (k->state == KEY_RELEASE) return 1;
-			if (status.last_keysym == SDLK_o) {
-				clipboard_paste_overwrite(0, 1);
-			} else {
-				clipboard_paste_overwrite(0, 0);
-			}
-			break;
-		case SDLK_p:
-			if (k->state == KEY_RELEASE) return 1;
-			clipboard_paste_insert();
-			break;
-		case SDLK_m:
-			if (k->state == KEY_RELEASE) return 1;
-			if (status.last_keysym == SDLK_m) {
-				clipboard_paste_mix_fields(0, 0);
-			} else {
-				clipboard_paste_mix_notes(0, 0);
-			}
-			break;
-		case SDLK_f:
-			if (k->state == KEY_RELEASE) return 1;
-			block_length_double();
-			break;
-		case SDLK_g:
-			if (k->state == KEY_RELEASE) return 1;
-			block_length_halve();
-			break;
-		case SDLK_n:
-			if (k->state == KEY_RELEASE) return 1;
-			channel_multi[current_channel - 1] ^= 1;
-			if (channel_multi[current_channel - 1]) {
-				channel_multi_enabled = 1;
-			} else {
-				channel_multi_enabled = 0;
-				for (n = 0; n < 64; n++) {
-					if (channel_multi[n]) {
-						channel_multi_enabled = 1;
-						break;
-					}
+			clippy_select(NULL, NULL, 0);
+			clippy_yank();
+		} else {
+			dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
+		}
+		break;
+	case SDLK_c:
+		if (k->state == KEY_RELEASE) return 1;
+		clipboard_copy(0);
+		break;
+	case SDLK_o:
+		if (k->state == KEY_RELEASE) return 1;
+		if (status.last_keysym == SDLK_o) {
+			clipboard_paste_overwrite(0, 1);
+		} else {
+			clipboard_paste_overwrite(0, 0);
+		}
+		break;
+	case SDLK_p:
+		if (k->state == KEY_RELEASE) return 1;
+		clipboard_paste_insert();
+		break;
+	case SDLK_m:
+		if (k->state == KEY_RELEASE) return 1;
+		if (status.last_keysym == SDLK_m) {
+			clipboard_paste_mix_fields(0, 0);
+		} else {
+			clipboard_paste_mix_notes(0, 0);
+		}
+		break;
+	case SDLK_f:
+		if (k->state == KEY_RELEASE) return 1;
+		block_length_double();
+		break;
+	case SDLK_g:
+		if (k->state == KEY_RELEASE) return 1;
+		block_length_halve();
+		break;
+	case SDLK_n:
+		if (k->state == KEY_RELEASE) return 1;
+		channel_multi[current_channel - 1] ^= 1;
+		if (channel_multi[current_channel - 1]) {
+			channel_multi_enabled = 1;
+		} else {
+			channel_multi_enabled = 0;
+			for (n = 0; n < 64; n++) {
+				if (channel_multi[n]) {
+					channel_multi_enabled = 1;
+					break;
 				}
 			}
+		}
 
-			if (status.last_keysym == SDLK_n) {
-				pattern_editor_display_multichannel();
-			}
-			break;
-		case SDLK_z:
-			if (k->state == KEY_RELEASE) return 1;
-			clipboard_copy(0);
-			selection_erase();
-			break;
-		case SDLK_y:
-			if (k->state == KEY_RELEASE) return 1;
-			selection_swap();
-			break;
-		case SDLK_v:
-			if (k->state == KEY_RELEASE) return 1;
-			selection_set_volume();
-			break;
-		case SDLK_w:
-			if (k->state == KEY_RELEASE) return 1;
-			selection_wipe_volume(0);
-			break;
-		case SDLK_k:
-			if (k->state == KEY_RELEASE) return 1;
-			if (status.last_keysym == SDLK_k) {
-				selection_wipe_volume(1);
-			} else {
-				selection_slide_volume();
-			}
-			break;
-		case SDLK_x:
-			if (k->state == KEY_RELEASE) return 1;
-			if (status.last_keysym == SDLK_x) {
-				selection_wipe_effect();
-			} else {
-				selection_slide_effect();
-			}
-			break;
-		case SDLK_h:
-			if (k->state == KEY_RELEASE) return 1;
-			draw_divisions = !draw_divisions;
-			recalculate_visible_area();
-			pattern_editor_reposition();
-			break;
-		case SDLK_q:
-			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_SHIFT) transpose_notes(12);
-			else transpose_notes(1);
-			break;
-		case SDLK_a:
-			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_SHIFT) transpose_notes(-12);
-			else transpose_notes(-1);
-			break;
-		case SDLK_i:
-			if (k->state == KEY_RELEASE) return 1;
-			if (k->mod & KMOD_SHIFT) template_mode = TEMPLATE_OFF;
-			else if (fast_volume_mode) fast_volume_amplify();
-			else template_mode = (template_mode + 1) % TEMPLATE_MODE_MAX; /* cycle */
-			break;
-		case SDLK_j:
-			if (k->state == KEY_RELEASE) return 1;
-			if (fast_volume_mode) fast_volume_attenuate();
-			else volume_amplify();
-			break;
-		case SDLK_t:
-			if (k->state == KEY_RELEASE) return 1;
-			n = current_channel - top_display_channel;
-			track_view_scheme[n] = ((track_view_scheme[n] + 1) % NUM_TRACK_VIEWS);
-			recalculate_visible_area();
-			pattern_editor_reposition();
-			break;
-		case SDLK_UP:
-			if (k->state == KEY_RELEASE) return 1;
-			if (top_display_row > 0) {
-				top_display_row--;
-				if (current_row > top_display_row + 31) current_row = top_display_row + 31;
-				return -1;
-			}
-			return 1;
-		case SDLK_DOWN:
-			if (k->state == KEY_RELEASE) return 1;
-			if (top_display_row + 31 < total_rows) {
-				top_display_row++;
-				if (current_row < top_display_row) current_row = top_display_row;
-				return -1;
-			}
-			return 1;
-		case SDLK_LEFT:
-			if (k->state == KEY_RELEASE) return 1;
-			current_channel--;
+		if (status.last_keysym == SDLK_n) {
+			pattern_editor_display_multichannel();
+		}
+		break;
+	case SDLK_z:
+		if (k->state == KEY_RELEASE) return 1;
+		clipboard_copy(0);
+		selection_erase();
+		break;
+	case SDLK_y:
+		if (k->state == KEY_RELEASE) return 1;
+		selection_swap();
+		break;
+	case SDLK_v:
+		if (k->state == KEY_RELEASE) return 1;
+		selection_set_volume();
+		break;
+	case SDLK_w:
+		if (k->state == KEY_RELEASE) return 1;
+		selection_wipe_volume(0);
+		break;
+	case SDLK_k:
+		if (k->state == KEY_RELEASE) return 1;
+		if (status.last_keysym == SDLK_k) {
+			selection_wipe_volume(1);
+		} else {
+			selection_slide_volume();
+		}
+		break;
+	case SDLK_x:
+		if (k->state == KEY_RELEASE) return 1;
+		if (status.last_keysym == SDLK_x) {
+			selection_wipe_effect();
+		} else {
+			selection_slide_effect();
+		}
+		break;
+	case SDLK_h:
+		if (k->state == KEY_RELEASE) return 1;
+		draw_divisions = !draw_divisions;
+		recalculate_visible_area();
+		pattern_editor_reposition();
+		break;
+	case SDLK_q:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_SHIFT) transpose_notes(12);
+		else transpose_notes(1);
+		break;
+	case SDLK_a:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_SHIFT) transpose_notes(-12);
+		else transpose_notes(-1);
+		break;
+	case SDLK_i:
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_SHIFT) template_mode = TEMPLATE_OFF;
+		else if (fast_volume_mode) fast_volume_amplify();
+		else template_mode = (template_mode + 1) % TEMPLATE_MODE_MAX; /* cycle */
+		break;
+	case SDLK_j:
+		if (k->state == KEY_RELEASE) return 1;
+		if (fast_volume_mode) fast_volume_attenuate();
+		else volume_amplify();
+		break;
+	case SDLK_t:
+		if (k->state == KEY_RELEASE) return 1;
+		n = current_channel - top_display_channel;
+		track_view_scheme[n] = ((track_view_scheme[n] + 1) % NUM_TRACK_VIEWS);
+		recalculate_visible_area();
+		pattern_editor_reposition();
+		break;
+	case SDLK_UP:
+		if (k->state == KEY_RELEASE) return 1;
+		if (top_display_row > 0) {
+			top_display_row--;
+			if (current_row > top_display_row + 31) current_row = top_display_row + 31;
 			return -1;
-		case SDLK_RIGHT:
-			if (k->state == KEY_RELEASE) return 1;
-			current_channel++;
+		}
+		return 1;
+	case SDLK_DOWN:
+		if (k->state == KEY_RELEASE) return 1;
+		if (top_display_row + 31 < total_rows) {
+			top_display_row++;
+			if (current_row < top_display_row) current_row = top_display_row;
 			return -1;
-		case SDLK_INSERT:
-			if (k->state == KEY_RELEASE) return 1;
-			pated_save("Remove inserted row(s)    (Alt-Insert)");
-			pattern_insert_rows(current_row, 1, 1, 64);
-			break;
-		case SDLK_DELETE:
-			if (k->state == KEY_RELEASE) return 1;
-			pated_save("Replace deleted row(s)    (Alt-Delete)");
-			pattern_delete_rows(current_row, 1, 1, 64);
-			break;
-		case SDLK_F9:
-			if (k->state == KEY_RELEASE) return 1;
-			song_toggle_channel_mute(current_channel - 1);
-			break;
-		case SDLK_F10:
-			if (k->state == KEY_RELEASE) return 1;
-			song_handle_channel_solo(current_channel - 1);
-			break;
-		default: return 0;
+		}
+		return 1;
+	case SDLK_LEFT:
+		if (k->state == KEY_RELEASE) return 1;
+		current_channel--;
+		return -1;
+	case SDLK_RIGHT:
+		if (k->state == KEY_RELEASE) return 1;
+		current_channel++;
+		return -1;
+	case SDLK_INSERT:
+		if (k->state == KEY_RELEASE) return 1;
+		pated_save("Remove inserted row(s)    (Alt-Insert)");
+		pattern_insert_rows(current_row, 1, 1, 64);
+		break;
+	case SDLK_DELETE:
+		if (k->state == KEY_RELEASE) return 1;
+		pated_save("Replace deleted row(s)    (Alt-Delete)");
+		pattern_delete_rows(current_row, 1, 1, 64);
+		break;
+	case SDLK_F9:
+		if (k->state == KEY_RELEASE) return 1;
+		song_toggle_channel_mute(current_channel - 1);
+		break;
+	case SDLK_F10:
+		if (k->state == KEY_RELEASE) return 1;
+		song_handle_channel_solo(current_channel - 1);
+		break;
+	default: return 0;
 	}
 
 	status.flags |= NEED_UPDATE;
@@ -3554,131 +3554,131 @@ static int pattern_editor_handle_ctrl_key(struct key_event *k)
 
 
 	switch (k->sym) {
-		case SDLK_LEFT:
-			if (k->state == KEY_RELEASE) return 1;
-			if (current_channel > top_display_channel) current_channel--;
-			return -1;
-		case SDLK_RIGHT:
-			if (k->state == KEY_RELEASE) return 1;
-			if (current_channel < top_display_channel + visible_channels - 1) current_channel++;
-			return -1;
-		case SDLK_F6:
-			if (k->state == KEY_RELEASE) return 1;
-			song_loop_pattern(current_pattern, current_row);
-			return 1;
-		case SDLK_F7:
-			if (k->state == KEY_RELEASE) return 1;
-			set_playback_mark();
-			return -1;
-		case SDLK_UP:
-			if (k->state == KEY_RELEASE) return 1;
-			set_previous_instrument();
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_DOWN:
-			if (k->state == KEY_RELEASE) return 1;
-			set_next_instrument();
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_PAGEUP:
-			if (k->state == KEY_RELEASE) return 1;
-			current_row = 0;
-			return -1;
-		case SDLK_PAGEDOWN:
-			if (k->state == KEY_RELEASE) return 1;
-			current_row = total_rows;
-			return -1;
-		case SDLK_HOME:
-			if (k->state == KEY_RELEASE) return 1;
-			current_row--;
-			return -1;
-		case SDLK_END:
-			if (k->state == KEY_RELEASE) return 1;
-			current_row++;
-			return -1;
-		case SDLK_INSERT:
-			if (k->state == KEY_RELEASE) return 1;
-			selection_roll(ROLL_DOWN);
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_DELETE:
-			if (k->state == KEY_RELEASE) return 1;
-			selection_roll(ROLL_UP);
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_MINUS:
-			if (k->state == KEY_RELEASE) return 1;
-			if (song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP) && playback_tracing) return 1;
-			prev_order_pattern();
-			return 1;
-		case SDLK_PLUS:
-			if (k->state == KEY_RELEASE) return 1;
-			if (song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP) && playback_tracing) return 1;
-			next_order_pattern();
-			return 1;
-		case SDLK_c:
-			if (k->state == KEY_RELEASE) return 1;
-			centralise_cursor = !centralise_cursor;
-			status_text_flash("Centralise cursor %s", (centralise_cursor ? "enabled" : "disabled"));
-			return -1;
-		case SDLK_h:
-			if (k->state == KEY_RELEASE) return 1;
-			highlight_current_row = !highlight_current_row;
-			status_text_flash("Row hilight %s", (highlight_current_row ? "enabled" : "disabled"));
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_j:
-			if (k->state == KEY_RELEASE) return 1;
-			fast_volume_toggle();
-			return 1;
-		case SDLK_u:
-			if (k->state == KEY_RELEASE) return 1;
-			if (fast_volume_mode) selection_vary(1, 100 - fast_volume_percent, FX_CHANNELVOLUME);
-			else vary_command(FX_CHANNELVOLUME);
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_y:
-			if (k->state == KEY_RELEASE) return 1;
-			if (fast_volume_mode) selection_vary(1, 100 - fast_volume_percent, FX_PANBRELLO);
-			else vary_command(FX_PANBRELLO);
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_k:
-			if (k->state == KEY_RELEASE) return 1;
-			if (fast_volume_mode) selection_vary(1, 100 - fast_volume_percent, current_effect());
-			else vary_command(current_effect());
-			status.flags |= NEED_UPDATE;
-			return 1;
+	case SDLK_LEFT:
+		if (k->state == KEY_RELEASE) return 1;
+		if (current_channel > top_display_channel) current_channel--;
+		return -1;
+	case SDLK_RIGHT:
+		if (k->state == KEY_RELEASE) return 1;
+		if (current_channel < top_display_channel + visible_channels - 1) current_channel++;
+		return -1;
+	case SDLK_F6:
+		if (k->state == KEY_RELEASE) return 1;
+		song_loop_pattern(current_pattern, current_row);
+		return 1;
+	case SDLK_F7:
+		if (k->state == KEY_RELEASE) return 1;
+		set_playback_mark();
+		return -1;
+	case SDLK_UP:
+		if (k->state == KEY_RELEASE) return 1;
+		set_previous_instrument();
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_DOWN:
+		if (k->state == KEY_RELEASE) return 1;
+		set_next_instrument();
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_PAGEUP:
+		if (k->state == KEY_RELEASE) return 1;
+		current_row = 0;
+		return -1;
+	case SDLK_PAGEDOWN:
+		if (k->state == KEY_RELEASE) return 1;
+		current_row = total_rows;
+		return -1;
+	case SDLK_HOME:
+		if (k->state == KEY_RELEASE) return 1;
+		current_row--;
+		return -1;
+	case SDLK_END:
+		if (k->state == KEY_RELEASE) return 1;
+		current_row++;
+		return -1;
+	case SDLK_INSERT:
+		if (k->state == KEY_RELEASE) return 1;
+		selection_roll(ROLL_DOWN);
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_DELETE:
+		if (k->state == KEY_RELEASE) return 1;
+		selection_roll(ROLL_UP);
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_MINUS:
+		if (k->state == KEY_RELEASE) return 1;
+		if (song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP) && playback_tracing) return 1;
+		prev_order_pattern();
+		return 1;
+	case SDLK_PLUS:
+		if (k->state == KEY_RELEASE) return 1;
+		if (song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP) && playback_tracing) return 1;
+		next_order_pattern();
+		return 1;
+	case SDLK_c:
+		if (k->state == KEY_RELEASE) return 1;
+		centralise_cursor = !centralise_cursor;
+		status_text_flash("Centralise cursor %s", (centralise_cursor ? "enabled" : "disabled"));
+		return -1;
+	case SDLK_h:
+		if (k->state == KEY_RELEASE) return 1;
+		highlight_current_row = !highlight_current_row;
+		status_text_flash("Row hilight %s", (highlight_current_row ? "enabled" : "disabled"));
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_j:
+		if (k->state == KEY_RELEASE) return 1;
+		fast_volume_toggle();
+		return 1;
+	case SDLK_u:
+		if (k->state == KEY_RELEASE) return 1;
+		if (fast_volume_mode) selection_vary(1, 100 - fast_volume_percent, FX_CHANNELVOLUME);
+		else vary_command(FX_CHANNELVOLUME);
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_y:
+		if (k->state == KEY_RELEASE) return 1;
+		if (fast_volume_mode) selection_vary(1, 100 - fast_volume_percent, FX_PANBRELLO);
+		else vary_command(FX_PANBRELLO);
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_k:
+		if (k->state == KEY_RELEASE) return 1;
+		if (fast_volume_mode) selection_vary(1, 100 - fast_volume_percent, current_effect());
+		else vary_command(current_effect());
+		status.flags |= NEED_UPDATE;
+		return 1;
 
-		case SDLK_b:
-			if (k->mod & KMOD_SHIFT) return 0;
-			/* fall through */
-		case SDLK_o:
-			if (k->state == KEY_RELEASE) return 1;
-			song_pattern_to_sample(current_pattern, !!(k->mod & KMOD_SHIFT), !!(k->sym == SDLK_b));
-			return 1;
+	case SDLK_b:
+		if (k->mod & KMOD_SHIFT) return 0;
+		/* fall through */
+	case SDLK_o:
+		if (k->state == KEY_RELEASE) return 1;
+		song_pattern_to_sample(current_pattern, !!(k->mod & KMOD_SHIFT), !!(k->sym == SDLK_b));
+		return 1;
 
-		case SDLK_v:
-			if (k->state == KEY_RELEASE) return 1;
-			show_default_volumes = !show_default_volumes;
-			status_text_flash("Default volumes %s", (show_default_volumes ? "enabled" : "disabled"));
-			return 1;
-		case SDLK_x:
-		case SDLK_z:
-			if (k->state == KEY_RELEASE) return 1;
-			midi_start_record++;
-			if (midi_start_record > 2) midi_start_record = 0;
-			switch (midi_start_record) {
-				case 0: status_text_flash("No MIDI Trigger"); break;
-				case 1: status_text_flash("Pattern MIDI Trigger"); break;
-				case 2: status_text_flash("Song MIDI Trigger"); break;
-			};
-			return 1;
-		case SDLK_BACKSPACE:
-			if (k->state == KEY_RELEASE) return 1;
-			pattern_editor_display_history();
-			return 1;
-		default: return 0;
+	case SDLK_v:
+		if (k->state == KEY_RELEASE) return 1;
+		show_default_volumes = !show_default_volumes;
+		status_text_flash("Default volumes %s", (show_default_volumes ? "enabled" : "disabled"));
+		return 1;
+	case SDLK_x:
+	case SDLK_z:
+		if (k->state == KEY_RELEASE) return 1;
+		midi_start_record++;
+		if (midi_start_record > 2) midi_start_record = 0;
+		switch (midi_start_record) {
+		case 0: status_text_flash("No MIDI Trigger"); break;
+		case 1: status_text_flash("Pattern MIDI Trigger"); break;
+		case 2: status_text_flash("Song MIDI Trigger"); break;
+		};
+		return 1;
+	case SDLK_BACKSPACE:
+		if (k->state == KEY_RELEASE) return 1;
+		pattern_editor_display_history();
+		return 1;
+	default: return 0;
 	}
 
 	return 0;
@@ -3705,13 +3705,13 @@ static int pattern_editor_handle_key_default(struct key_event *k)
 	} else if (k->sym == SDLK_COMMA) {
 		if (k->state == KEY_RELEASE) return 0;
 		switch (current_position) {
-			case 2:
-			case 3: edit_copy_mask ^= MASK_INSTRUMENT; break;
-			case 4:
-			case 5: edit_copy_mask ^= MASK_VOLUME; break;
-			case 6:
-			case 7:
-			case 8: edit_copy_mask ^= MASK_EFFECT; break;
+		case 2:
+		case 3: edit_copy_mask ^= MASK_INSTRUMENT; break;
+		case 4:
+		case 5: edit_copy_mask ^= MASK_VOLUME; break;
+		case 6:
+		case 7:
+		case 8: edit_copy_mask ^= MASK_EFFECT; break;
 		}
 		status.flags |= NEED_UPDATE;
 		return 1;
@@ -3795,55 +3795,55 @@ static int pattern_editor_handle_key(struct key_event *k)
 
 				v = k->x - basex;
 				switch (track_view_scheme[nx]) {
-					case 0: /* 5 channel view */
-						switch (v) {
-							case 0: np = 0; break;
-							case 2: np = 1; break;
-							case 4: np = 2; break;
-							case 5: np = 3; break;
-							case 7: np = 4; break;
-							case 8: np = 5; break;
-							case 10: np = 6; break;
-							case 11: np = 7; break;
-							case 12: np = 8; break;
-						};
-						break;
-					case 1: /* 6/7 channels */
-						switch (v) {
-							case 0: np = 0; break;
-							case 2: np = 1; break;
-							case 3: np = 2; break;
-							case 4: np = 3; break;
-							case 5: np = 4; break;
-							case 6: np = 5; break;
-							case 7: np = 6; break;
-							case 8: np = 7; break;
-							case 9: np = 8; break;
-						};
-						break;
-					case 2: /* 9/10 channels */
-						switch (v) {
-							case 0: np = 0; break;
-							case 2: np = 1; break;
-							case 3: np = 2 + k->hx; break;
-							case 4: np = 4 + k->hx; break;
-							case 5: np = 6; break;
-							case 6: np = 7 + k->hx; break;
-						};
-						break;
-					case 3: /* 18/24 channels */
-						switch (v) {
-							case 0: np = 0; break;
-							case 1: np = 1; break;
-							case 2: np = 2 + k->hx; break;
-							case 3: np = 4 + k->hx; break;
-							case 4: np = 6; break;
-							case 5: np = 7 + k->hx; break;
-						};
-						break;
-					case 4: /* now things get weird: 24/36 channels */
-					case 5: /* now things get weird: 36/64 channels */
-					case 6: /* no point doing anything here; reset */ np = 0; break;
+				case 0: /* 5 channel view */
+					switch (v) {
+					case 0: np = 0; break;
+					case 2: np = 1; break;
+					case 4: np = 2; break;
+					case 5: np = 3; break;
+					case 7: np = 4; break;
+					case 8: np = 5; break;
+					case 10: np = 6; break;
+					case 11: np = 7; break;
+					case 12: np = 8; break;
+					};
+					break;
+				case 1: /* 6/7 channels */
+					switch (v) {
+					case 0: np = 0; break;
+					case 2: np = 1; break;
+					case 3: np = 2; break;
+					case 4: np = 3; break;
+					case 5: np = 4; break;
+					case 6: np = 5; break;
+					case 7: np = 6; break;
+					case 8: np = 7; break;
+					case 9: np = 8; break;
+					};
+					break;
+				case 2: /* 9/10 channels */
+					switch (v) {
+					case 0: np = 0; break;
+					case 2: np = 1; break;
+					case 3: np = 2 + k->hx; break;
+					case 4: np = 4 + k->hx; break;
+					case 5: np = 6; break;
+					case 6: np = 7 + k->hx; break;
+					};
+					break;
+				case 3: /* 18/24 channels */
+					switch (v) {
+					case 0: np = 0; break;
+					case 1: np = 1; break;
+					case 2: np = 2 + k->hx; break;
+					case 3: np = 4 + k->hx; break;
+					case 4: np = 6; break;
+					case 5: np = 7 + k->hx; break;
+					};
+					break;
+				case 4: /* now things get weird: 24/36 channels */
+				case 5: /* now things get weird: 36/64 channels */
+				case 6: /* no point doing anything here; reset */ np = 0; break;
 				};
 				break;
 			}
@@ -3877,204 +3877,204 @@ static int pattern_editor_handle_key(struct key_event *k)
 	}
 
 	switch (k->sym) {
-		case SDLK_UP:
-			if (k->state == KEY_RELEASE) return 0;
-			if (skip_value) {
-				if (current_row - skip_value >= 0) current_row -= skip_value;
+	case SDLK_UP:
+		if (k->state == KEY_RELEASE) return 0;
+		if (skip_value) {
+			if (current_row - skip_value >= 0) current_row -= skip_value;
+		} else {
+			current_row--;
+		}
+		return -1;
+	case SDLK_DOWN:
+		if (k->state == KEY_RELEASE) return 0;
+		if (skip_value) {
+			if (current_row + skip_value <= total_rows) current_row += skip_value;
+		} else {
+			current_row++;
+		}
+		return -1;
+	case SDLK_LEFT:
+		if (k->state == KEY_RELEASE) return 0;
+		if (k->mod & KMOD_SHIFT) {
+			current_channel--;
+		} else if (link_effect_column && current_position == 0 && current_channel > 1) {
+			current_channel--;
+			current_position = current_effect() ? 8 : 6;
+		} else {
+			current_position--;
+		}
+		return -1;
+	case SDLK_RIGHT:
+		if (k->state == KEY_RELEASE) return 0;
+		if (k->mod & KMOD_SHIFT) {
+			current_channel++;
+		} else if (link_effect_column && current_position == 6 && current_channel < 64) {
+			current_position = current_effect() ? 7 : 10;
+		} else {
+			current_position++;
+		}
+		return -1;
+	case SDLK_TAB:
+		if (k->state == KEY_RELEASE) return 0;
+		if ((k->mod & KMOD_SHIFT) == 0) current_channel++;
+		else if (current_position == 0) current_channel--;
+		current_position = 0;
+
+		/* hack to keep shift-tab from changing the selection */
+		k->mod &= ~KMOD_SHIFT;
+		shift_selection_end();
+
+		return -1;
+	case SDLK_PAGEUP:
+		if (k->state == KEY_RELEASE) return 0;
+		{
+			int rh = current_song->row_highlight_major ? current_song->row_highlight_major : 16;
+			if (current_row == total_rows) current_row -= (current_row % rh) ? (current_row % rh) : rh;
+			else current_row -= rh;
+		}
+		return -1;
+	case SDLK_PAGEDOWN:
+		if (k->state == KEY_RELEASE) return 0;
+		current_row += current_song->row_highlight_major ? current_song->row_highlight_major : 16;
+		return -1;
+	case SDLK_HOME:
+		if (k->state == KEY_RELEASE) return 0;
+		if (current_position == 0) {
+			if (invert_home_end ? (current_row != 0) : (current_channel == 1)) {
+				current_row = 0;
 			} else {
-				current_row--;
+				current_channel = 1;
 			}
-			return -1;
-		case SDLK_DOWN:
-			if (k->state == KEY_RELEASE) return 0;
-			if (skip_value) {
-				if (current_row + skip_value <= total_rows) current_row += skip_value;
-			} else {
-				current_row++;
-			}
-			return -1;
-		case SDLK_LEFT:
-			if (k->state == KEY_RELEASE) return 0;
-			if (k->mod & KMOD_SHIFT) {
-				current_channel--;
-			} else if (link_effect_column && current_position == 0 && current_channel > 1) {
-				current_channel--;
-				current_position = current_effect() ? 8 : 6;
-			} else {
-				current_position--;
-			}
-			return -1;
-		case SDLK_RIGHT:
-			if (k->state == KEY_RELEASE) return 0;
-			if (k->mod & KMOD_SHIFT) {
-				current_channel++;
-			} else if (link_effect_column && current_position == 6 && current_channel < 64) {
-				current_position = current_effect() ? 7 : 10;
-			} else {
-				current_position++;
-			}
-			return -1;
-		case SDLK_TAB:
-			if (k->state == KEY_RELEASE) return 0;
-			if ((k->mod & KMOD_SHIFT) == 0) current_channel++;
-			else if (current_position == 0) current_channel--;
+		} else {
 			current_position = 0;
+		}
+		return -1;
+	case SDLK_END:
+		if (k->state == KEY_RELEASE) return 0;
+		n = song_find_last_channel();
+		if (current_position == 8) {
+			if (invert_home_end ? (current_row != total_rows) : (current_channel == n)) {
+				current_row = total_rows;
+			} else {
+				current_channel = n;
+			}
+		} else {
+			current_position = 8;
+		}
+		return -1;
+	case SDLK_INSERT:
+		if (k->state == KEY_RELEASE) return 0;
+		if (template_mode && clipboard.rows == 1) {
+			n = clipboard.channels;
+			if (n + current_channel > 64) {
+				n = 64 - current_channel;
+			}
+			pattern_insert_rows(current_row, 1, current_channel, n);
+		} else {
+			pattern_insert_rows(current_row, 1, current_channel, 1);
+		}
+		break;
+	case SDLK_DELETE:
+		if (k->state == KEY_RELEASE) return 0;
+		if (template_mode && clipboard.rows == 1) {
+			n = clipboard.channels;
+			if (n + current_channel > 64) {
+				n = 64 - current_channel;
+			}
+			pattern_delete_rows(current_row, 1, current_channel, n);
+		} else {
+			pattern_delete_rows(current_row, 1, current_channel, 1);
+		}
+		break;
+	case SDLK_MINUS:
+		if (k->state == KEY_RELEASE) return 0;
 
-			/* hack to keep shift-tab from changing the selection */
-			k->mod &= ~KMOD_SHIFT;
-			shift_selection_end();
+		if (playback_tracing) {
+			switch (song_get_mode()) {
+			case MODE_PATTERN_LOOP: return 1;
+			case MODE_PLAYING: song_set_current_order(song_get_current_order() - 1); return 1;
+			default: break;
+			};
+		}
 
-			return -1;
-		case SDLK_PAGEUP:
-			if (k->state == KEY_RELEASE) return 0;
-			{
-				int rh = current_song->row_highlight_major ? current_song->row_highlight_major : 16;
-				if (current_row == total_rows) current_row -= (current_row % rh) ? (current_row % rh) : rh;
-				else current_row -= rh;
-			}
-			return -1;
-		case SDLK_PAGEDOWN:
-			if (k->state == KEY_RELEASE) return 0;
-			current_row += current_song->row_highlight_major ? current_song->row_highlight_major : 16;
-			return -1;
-		case SDLK_HOME:
-			if (k->state == KEY_RELEASE) return 0;
-			if (current_position == 0) {
-				if (invert_home_end ? (current_row != 0) : (current_channel == 1)) {
-					current_row = 0;
-				} else {
-					current_channel = 1;
-				}
-			} else {
-				current_position = 0;
-			}
-			return -1;
-		case SDLK_END:
-			if (k->state == KEY_RELEASE) return 0;
-			n = song_find_last_channel();
-			if (current_position == 8) {
-				if (invert_home_end ? (current_row != total_rows) : (current_channel == n)) {
-					current_row = total_rows;
-				} else {
-					current_channel = n;
-				}
-			} else {
-				current_position = 8;
-			}
-			return -1;
-		case SDLK_INSERT:
-			if (k->state == KEY_RELEASE) return 0;
-			if (template_mode && clipboard.rows == 1) {
-				n = clipboard.channels;
-				if (n + current_channel > 64) {
-					n = 64 - current_channel;
-				}
-				pattern_insert_rows(current_row, 1, current_channel, n);
-			} else {
-				pattern_insert_rows(current_row, 1, current_channel, 1);
-			}
+		if (k->mod & KMOD_SHIFT) set_current_pattern(current_pattern - 4);
+		else set_current_pattern(current_pattern - 1);
+		return 1;
+	case SDLK_PLUS:
+		if (k->state == KEY_RELEASE) return 0;
+
+		if (playback_tracing) {
+			switch (song_get_mode()) {
+			case MODE_PATTERN_LOOP: return 1;
+			case MODE_PLAYING: song_set_current_order(song_get_current_order() + 1); return 1;
+			default: break;
+			};
+		}
+
+		if ((k->mod & KMOD_SHIFT) && k->orig_sym == SDLK_KP_PLUS) set_current_pattern(current_pattern + 4);
+		else set_current_pattern(current_pattern + 1);
+		return 1;
+	case SDLK_BACKSPACE:
+		if (k->state == KEY_RELEASE) return 0;
+		current_channel = multichannel_get_previous(current_channel);
+		if (skip_value) current_row -= skip_value;
+		else current_row--;
+		return -1;
+	case SDLK_RETURN:
+		if (k->state == KEY_RELEASE) return 0;
+		copy_note_to_mask();
+		if (template_mode != TEMPLATE_NOTES_ONLY) template_mode = TEMPLATE_OFF;
+		return 1;
+	case SDLK_l:
+		if (k->mod & KMOD_SHIFT) {
+			if (status.flags & CLASSIC_MODE) return 0;
+			if (k->state == KEY_RELEASE) return 1;
+			clipboard_copy(1);
 			break;
-		case SDLK_DELETE:
-			if (k->state == KEY_RELEASE) return 0;
-			if (template_mode && clipboard.rows == 1) {
-				n = clipboard.channels;
-				if (n + current_channel > 64) {
-					n = 64 - current_channel;
-				}
-				pattern_delete_rows(current_row, 1, current_channel, n);
-			} else {
-				pattern_delete_rows(current_row, 1, current_channel, 1);
+		}
+		return pattern_editor_handle_key_default(k);
+	case SDLK_a:
+		if (k->mod & KMOD_SHIFT && !(status.flags & CLASSIC_MODE)) {
+			if (k->state == KEY_RELEASE) {
+				return 0;
 			}
-			break;
-		case SDLK_MINUS:
-			if (k->state == KEY_RELEASE) return 0;
-
-			if (playback_tracing) {
-				switch (song_get_mode()) {
-					case MODE_PATTERN_LOOP: return 1;
-					case MODE_PLAYING: song_set_current_order(song_get_current_order() - 1); return 1;
-					default: break;
-				};
+			if (current_row == 0) {
+				return 1;
 			}
-
-			if (k->mod & KMOD_SHIFT) set_current_pattern(current_pattern - 4);
-			else set_current_pattern(current_pattern - 1);
-			return 1;
-		case SDLK_PLUS:
-			if (k->state == KEY_RELEASE) return 0;
-
-			if (playback_tracing) {
-				switch (song_get_mode()) {
-					case MODE_PATTERN_LOOP: return 1;
-					case MODE_PLAYING: song_set_current_order(song_get_current_order() + 1); return 1;
-					default: break;
-				};
-			}
-
-			if ((k->mod & KMOD_SHIFT) && k->orig_sym == SDLK_KP_PLUS) set_current_pattern(current_pattern + 4);
-			else set_current_pattern(current_pattern + 1);
-			return 1;
-		case SDLK_BACKSPACE:
-			if (k->state == KEY_RELEASE) return 0;
-			current_channel = multichannel_get_previous(current_channel);
-			if (skip_value) current_row -= skip_value;
-			else current_row--;
+			do {
+				current_row--;
+			} while (!seek_done() && current_row != 0);
 			return -1;
-		case SDLK_RETURN:
-			if (k->state == KEY_RELEASE) return 0;
-			copy_note_to_mask();
-			if (template_mode != TEMPLATE_NOTES_ONLY) template_mode = TEMPLATE_OFF;
-			return 1;
-		case SDLK_l:
-			if (k->mod & KMOD_SHIFT) {
-				if (status.flags & CLASSIC_MODE) return 0;
-				if (k->state == KEY_RELEASE) return 1;
-				clipboard_copy(1);
-				break;
+		}
+		return pattern_editor_handle_key_default(k);
+	case SDLK_f:
+		if (k->mod & KMOD_SHIFT && !(status.flags & CLASSIC_MODE)) {
+			if (k->state == KEY_RELEASE) {
+				return 0;
 			}
-			return pattern_editor_handle_key_default(k);
-		case SDLK_a:
-			if (k->mod & KMOD_SHIFT && !(status.flags & CLASSIC_MODE)) {
-				if (k->state == KEY_RELEASE) {
-					return 0;
-				}
-				if (current_row == 0) {
-					return 1;
-				}
-				do {
-					current_row--;
-				} while (!seek_done() && current_row != 0);
-				return -1;
+			if (current_row == total_rows) {
+				return 1;
 			}
-			return pattern_editor_handle_key_default(k);
-		case SDLK_f:
-			if (k->mod & KMOD_SHIFT && !(status.flags & CLASSIC_MODE)) {
-				if (k->state == KEY_RELEASE) {
-					return 0;
-				}
-				if (current_row == total_rows) {
-					return 1;
-				}
-				do {
-					current_row++;
-				} while (!seek_done() && current_row != total_rows);
-				return -1;
-			}
-			return pattern_editor_handle_key_default(k);
+			do {
+				current_row++;
+			} while (!seek_done() && current_row != total_rows);
+			return -1;
+		}
+		return pattern_editor_handle_key_default(k);
 
-		case SDLK_LSHIFT:
-		case SDLK_RSHIFT:
-			if (k->state == KEY_PRESS) {
-				if (shift_selection.in_progress) shift_selection_end();
-			} else if (shift_chord_channels) {
-				current_channel -= shift_chord_channels;
-				while (current_channel < 1) current_channel += 64;
-				advance_cursor(1, 1);
-				shift_chord_channels = 0;
-			}
-			return 1;
+	case SDLK_LSHIFT:
+	case SDLK_RSHIFT:
+		if (k->state == KEY_PRESS) {
+			if (shift_selection.in_progress) shift_selection_end();
+		} else if (shift_chord_channels) {
+			current_channel -= shift_chord_channels;
+			while (current_channel < 1) current_channel += 64;
+			advance_cursor(1, 1);
+			shift_chord_channels = 0;
+		}
+		return 1;
 
-		default: return pattern_editor_handle_key_default(k);
+	default: return pattern_editor_handle_key_default(k);
 	}
 
 	status.flags |= NEED_UPDATE;
@@ -4093,17 +4093,17 @@ static int pattern_editor_handle_key_cb(struct key_event *k)
 
 	if (k->mod & KMOD_SHIFT) {
 		switch (k->sym) {
-			case SDLK_LEFT:
-			case SDLK_RIGHT:
-			case SDLK_UP:
-			case SDLK_DOWN:
-			case SDLK_HOME:
-			case SDLK_END:
-			case SDLK_PAGEUP:
-			case SDLK_PAGEDOWN:
-				if (k->state == KEY_RELEASE) return 0;
-				if (!shift_selection.in_progress) shift_selection_begin();
-			default: break;
+		case SDLK_LEFT:
+		case SDLK_RIGHT:
+		case SDLK_UP:
+		case SDLK_DOWN:
+		case SDLK_HOME:
+		case SDLK_END:
+		case SDLK_PAGEUP:
+		case SDLK_PAGEDOWN:
+			if (k->state == KEY_RELEASE) return 0;
+			if (!shift_selection.in_progress) shift_selection_begin();
+		default: break;
 		};
 	}
 

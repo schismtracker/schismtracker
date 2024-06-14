@@ -145,36 +145,36 @@ static int ibook_helper = -1;
 int macosx_sdlevent(SDL_Event *event)
 {
 	switch (event->type) {
-		case SDL_WINDOWEVENT:
-			switch (event->window.event) {
-				case SDL_WINDOWEVENT_FOCUS_GAINED: macosx_ibook_fnswitch(1); break;
-				case SDL_WINDOWEVENT_FOCUS_LOST: macosx_ibook_fnswitch(ibook_helper); break;
-				default: break;
-			}
-			return 1;
-		case SDL_KEYDOWN:
-		case SDL_KEYUP:
-			switch (status.fix_numlock_setting) {
-				case NUMLOCK_GUESS:
-					/* why is this checking for ibook_helper? */
-					if (ibook_helper != -1) {
-						if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
-							&& ACTIVE_PAGE_WIDGET.accept_text) {
-							/* text is more likely? */
-							event->key.keysym.mod |= KMOD_NUM;
-						} else {
-							event->key.keysym.mod &= ~KMOD_NUM;
-						}
-					} /* otherwise honor it */
-					break;
-				default:
-					/* other cases are handled in schism/main.c */
-					break;
-			}
+	case SDL_WINDOWEVENT:
+		switch (event->window.event) {
+		case SDL_WINDOWEVENT_FOCUS_GAINED: macosx_ibook_fnswitch(1); break;
+		case SDL_WINDOWEVENT_FOCUS_LOST: macosx_ibook_fnswitch(ibook_helper); break;
+		default: break;
+		}
+		return 1;
+	case SDL_KEYDOWN:
+	case SDL_KEYUP:
+		switch (status.fix_numlock_setting) {
+		case NUMLOCK_GUESS:
+			/* why is this checking for ibook_helper? */
+			if (ibook_helper != -1) {
+				if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
+					&& ACTIVE_PAGE_WIDGET.accept_text) {
+					/* text is more likely? */
+					event->key.keysym.mod |= KMOD_NUM;
+				} else {
+					event->key.keysym.mod &= ~KMOD_NUM;
+				}
+			} /* otherwise honor it */
+			break;
+		default:
+			/* other cases are handled in schism/main.c */
+			break;
+		}
 
-			switch (event->key.keysym.scancode) {
-				case SDL_SCANCODE_KP_ENTER:
-					/* On portables, the regular Insert key
+		switch (event->key.keysym.scancode) {
+		case SDL_SCANCODE_KP_ENTER:
+			/* On portables, the regular Insert key
 			 * isn't available. This is equivalent to
 			 * pressing Fn-Return, which just so happens
 			 * to be a "de facto" Insert in mac land.
@@ -185,12 +185,12 @@ int macosx_sdlevent(SDL_Event *event)
 			 * have an Insert key.
 			 *
 			 *   - paper */
-					event->key.keysym.sym = SDLK_INSERT;
-					break;
-				default: break;
-			};
-			return 1;
+			event->key.keysym.sym = SDLK_INSERT;
+			break;
 		default: break;
+		};
+		return 1;
+	default: break;
 	}
 	return 1;
 }

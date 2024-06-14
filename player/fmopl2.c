@@ -746,59 +746,58 @@ static inline void advance(FM_OPL *OPL)
 
 			/* Envelope Generator */
 			switch (op->state) {
-				case EG_ATT: /* attack phase */
-					if (!(OPL->eg_cnt & ((1 << op->eg_sh_ar) - 1))) {
-						op->volume +=
-							(~op->volume * (eg_inc[op->eg_sel_ar + ((OPL->eg_cnt >> op->eg_sh_ar) & 7)])) >> 3;
+			case EG_ATT: /* attack phase */
+				if (!(OPL->eg_cnt & ((1 << op->eg_sh_ar) - 1))) {
+					op->volume += (~op->volume * (eg_inc[op->eg_sel_ar + ((OPL->eg_cnt >> op->eg_sh_ar) & 7)])) >> 3;
 
-						if (op->volume <= MIN_ATT_INDEX) {
-							op->volume = MIN_ATT_INDEX;
-							op->state = EG_DEC;
-						}
+					if (op->volume <= MIN_ATT_INDEX) {
+						op->volume = MIN_ATT_INDEX;
+						op->state = EG_DEC;
 					}
-					break;
+				}
+				break;
 
-				case EG_DEC: /* decay phase */
-					if (!(OPL->eg_cnt & ((1 << op->eg_sh_dr) - 1))) {
-						op->volume += eg_inc[op->eg_sel_dr + ((OPL->eg_cnt >> op->eg_sh_dr) & 7)];
+			case EG_DEC: /* decay phase */
+				if (!(OPL->eg_cnt & ((1 << op->eg_sh_dr) - 1))) {
+					op->volume += eg_inc[op->eg_sel_dr + ((OPL->eg_cnt >> op->eg_sh_dr) & 7)];
 
-						if ((uint32_t)op->volume >= op->sl) op->state = EG_SUS;
-					}
-					break;
+					if ((uint32_t)op->volume >= op->sl) op->state = EG_SUS;
+				}
+				break;
 
-				case EG_SUS: /* sustain phase */
+			case EG_SUS: /* sustain phase */
 
-					/* this is important behaviour:
+				/* this is important behaviour:
 				one can change percusive/non-percussive modes on the fly and
 				the chip will remain in sustain phase - verified on real YM3812 */
 
-					if (op->eg_type) /* non-percussive mode */
-					{
-						/* do nothing */
-					} else /* percussive mode */
-					{
-						/* during sustain phase chip adds Release Rate (in percussive mode) */
-						if (!(OPL->eg_cnt & ((1 << op->eg_sh_rr) - 1))) {
-							op->volume += eg_inc[op->eg_sel_rr + ((OPL->eg_cnt >> op->eg_sh_rr) & 7)];
-
-							if (op->volume >= MAX_ATT_INDEX) op->volume = MAX_ATT_INDEX;
-						}
-						/* else do nothing in sustain phase */
-					}
-					break;
-
-				case EG_REL: /* release phase */
+				if (op->eg_type) /* non-percussive mode */
+				{
+					/* do nothing */
+				} else /* percussive mode */
+				{
+					/* during sustain phase chip adds Release Rate (in percussive mode) */
 					if (!(OPL->eg_cnt & ((1 << op->eg_sh_rr) - 1))) {
 						op->volume += eg_inc[op->eg_sel_rr + ((OPL->eg_cnt >> op->eg_sh_rr) & 7)];
 
-						if (op->volume >= MAX_ATT_INDEX) {
-							op->volume = MAX_ATT_INDEX;
-							op->state = EG_OFF;
-						}
+						if (op->volume >= MAX_ATT_INDEX) op->volume = MAX_ATT_INDEX;
 					}
-					break;
+					/* else do nothing in sustain phase */
+				}
+				break;
 
-				default: break;
+			case EG_REL: /* release phase */
+				if (!(OPL->eg_cnt & ((1 << op->eg_sh_rr) - 1))) {
+					op->volume += eg_inc[op->eg_sel_rr + ((OPL->eg_cnt >> op->eg_sh_rr) & 7)];
+
+					if (op->volume >= MAX_ATT_INDEX) {
+						op->volume = MAX_ATT_INDEX;
+						op->state = EG_OFF;
+					}
+				}
+				break;
+
+			default: break;
 			}
 		}
 	}
@@ -1394,224 +1393,224 @@ static void OPLWriteReg(FM_OPL *OPL, int r, int v)
 	v &= 0xff;
 
 	switch (r & 0xe0) {
-		case 0x00: /* 00-1f:control */
-			switch (r & 0x1f) {
-				case 0x01: /* waveform select enable */
-					if (OPL->type & OPL_TYPE_WAVESEL) {
-						OPL->wavesel = v & 0x20;
-						/* do not change the waveform previously selected */
-					}
-					break;
-				case 0x02: /* Timer 1 */ OPL->T[0] = (256 - v) * 4; break;
-				case 0x03: /* Timer 2 */ OPL->T[1] = (256 - v) * 16; break;
-				case 0x04:          /* IRQ clear / mask and Timer enable */
-					if (v & 0x80) { /* IRQ flag clear */
-						/* don't reset BFRDY flag or we will have to call deltat module to set the flag */
-						OPL_STATUS_RESET(OPL, 0x7f - 0x08);
-					} else { /* set IRQ mask ,timer enable*/
-						uint8_t st1 = v & 1;
-						uint8_t st2 = (v >> 1) & 1;
-
-						/* IRQRST,T1MSK,t2MSK,EOSMSK,BRMSK,x,ST2,ST1 */
-						OPL_STATUS_RESET(OPL, v & (0x78 - 0x08));
-						OPL_STATUSMASK_SET(OPL, (~v) & 0x78);
-
-						/* timer 2 */
-						if (OPL->st[1] != st2) {
-							double period = st2 ? (OPL->TimerBase * OPL->T[1]) : 0.0;
-							OPL->st[1] = st2;
-							if (OPL->timer_handler) (OPL->timer_handler)(OPL->TimerParam, 1, period);
-						}
-						/* timer 1 */
-						if (OPL->st[0] != st1) {
-							double period = st1 ? (OPL->TimerBase * OPL->T[0]) : 0.0;
-							OPL->st[0] = st1;
-							if (OPL->timer_handler) (OPL->timer_handler)(OPL->TimerParam, 0, period);
-						}
-					}
-					break;
-#if BUILD_Y8950
-				case 0x06: /* Key Board OUT */
-					if (OPL->type & OPL_TYPE_KEYBOARD) {
-						if (OPL->keyboardhandler_w) OPL->keyboardhandler_w(OPL->keyboard_param, v);
-						else logerror("Y8950: write unmapped KEYBOARD port\n");
-					}
-					break;
-				case 0x07: /* DELTA-T control 1 : START,REC,MEMDATA,REPT,SPOFF,x,x,RST */
-					if (OPL->type & OPL_TYPE_ADPCM) YM_DELTAT_ADPCM_Write(OPL->deltat, r - 0x07, v);
-					break;
-#endif
-				case 0x08: /* MODE,DELTA-T control 2 : CSM,NOTESEL,x,x,smpl,da/ad,64k,rom */ OPL->mode = v;
-#if BUILD_Y8950
-					if (OPL->type & OPL_TYPE_ADPCM) {
-						/* mask 4 LSBs in register 08 for DELTA-T unit */
-						YM_DELTAT_ADPCM_Write(OPL->deltat, r - 0x07, v & 0x0f);
-					}
-#endif
-					break;
-
-#if BUILD_Y8950
-				case 0x09: /* START ADD */
-				case 0x0a:
-				case 0x0b: /* STOP ADD  */
-				case 0x0c:
-				case 0x0d: /* PRESCALE   */
-				case 0x0e:
-				case 0x0f: /* ADPCM data write */
-				case 0x10: /* DELTA-N    */
-				case 0x11: /* DELTA-N    */
-				case 0x12: /* ADPCM volume */
-					if (OPL->type & OPL_TYPE_ADPCM) YM_DELTAT_ADPCM_Write(OPL->deltat, r - 0x07, v);
-					break;
-
-				case 0x15: /* DAC data high 8 bits (F7,F6...F2) */
-				case 0x16: /* DAC data low 2 bits (F1, F0 in bits 7,6) */
-				case 0x17: /* DAC data shift (S2,S1,S0 in bits 2,1,0) */
-					logerror("FMOPL.C: DAC data register written, but not implemented reg=%02x val=%02x\n", r, v);
-					break;
-
-				case 0x18: /* I/O CTRL (Direction) */
-					if (OPL->type & OPL_TYPE_IO) OPL->portDirection = v & 0x0f;
-					break;
-				case 0x19: /* I/O DATA */
-					if (OPL->type & OPL_TYPE_IO) {
-						OPL->portLatch = v;
-						if (OPL->porthandler_w) OPL->porthandler_w(OPL->port_param, v & OPL->portDirection);
-					}
-					break;
-#endif
-				default:
-					/*logerror("FMOPL.C: write to unknown register: %02x\n",r);*/
-					break;
+	case 0x00: /* 00-1f:control */
+		switch (r & 0x1f) {
+		case 0x01: /* waveform select enable */
+			if (OPL->type & OPL_TYPE_WAVESEL) {
+				OPL->wavesel = v & 0x20;
+				/* do not change the waveform previously selected */
 			}
 			break;
-		case 0x20: /* am ON, vib ON, ksr, eg_type, mul */
-			slot = slot_array[r & 0x1f];
-			if (slot < 0) return;
-			set_mul(OPL, slot, v);
-			break;
-		case 0x40:
-			slot = slot_array[r & 0x1f];
-			if (slot < 0) return;
-			set_ksl_tl(OPL, slot, v);
-			break;
-		case 0x60:
-			slot = slot_array[r & 0x1f];
-			if (slot < 0) return;
-			set_ar_dr(OPL, slot, v);
-			break;
-		case 0x80:
-			slot = slot_array[r & 0x1f];
-			if (slot < 0) return;
-			set_sl_rr(OPL, slot, v);
-			break;
-		case 0xa0:
-			if (r == 0xbd) /* am depth, vibrato depth, r,bd,sd,tom,tc,hh */
-			{
-				OPL->lfo_am_depth = v & 0x80;
-				OPL->lfo_pm_depth_range = (v & 0x40) ? 8 : 0;
+		case 0x02: /* Timer 1 */ OPL->T[0] = (256 - v) * 4; break;
+		case 0x03: /* Timer 2 */ OPL->T[1] = (256 - v) * 16; break;
+		case 0x04:          /* IRQ clear / mask and Timer enable */
+			if (v & 0x80) { /* IRQ flag clear */
+				/* don't reset BFRDY flag or we will have to call deltat module to set the flag */
+				OPL_STATUS_RESET(OPL, 0x7f - 0x08);
+			} else { /* set IRQ mask ,timer enable*/
+				uint8_t st1 = v & 1;
+				uint8_t st2 = (v >> 1) & 1;
 
-				OPL->rhythm = v & 0x3f;
+				/* IRQRST,T1MSK,t2MSK,EOSMSK,BRMSK,x,ST2,ST1 */
+				OPL_STATUS_RESET(OPL, v & (0x78 - 0x08));
+				OPL_STATUSMASK_SET(OPL, (~v) & 0x78);
 
-				if (OPL->rhythm & 0x20) {
-					/* BD key on/off */
-					if (v & 0x10) {
-						FM_KEYON(&OPL->P_CH[6].SLOT[SLOT1], 2);
-						FM_KEYON(&OPL->P_CH[6].SLOT[SLOT2], 2);
-					} else {
-						FM_KEYOFF(&OPL->P_CH[6].SLOT[SLOT1], ~2);
-						FM_KEYOFF(&OPL->P_CH[6].SLOT[SLOT2], ~2);
-					}
-					/* HH key on/off */
-					if (v & 0x01) FM_KEYON(&OPL->P_CH[7].SLOT[SLOT1], 2);
-					else FM_KEYOFF(&OPL->P_CH[7].SLOT[SLOT1], ~2);
-					/* SD key on/off */
-					if (v & 0x08) FM_KEYON(&OPL->P_CH[7].SLOT[SLOT2], 2);
-					else FM_KEYOFF(&OPL->P_CH[7].SLOT[SLOT2], ~2);
-					/* TOM key on/off */
-					if (v & 0x04) FM_KEYON(&OPL->P_CH[8].SLOT[SLOT1], 2);
-					else FM_KEYOFF(&OPL->P_CH[8].SLOT[SLOT1], ~2);
-					/* TOP-CY key on/off */
-					if (v & 0x02) FM_KEYON(&OPL->P_CH[8].SLOT[SLOT2], 2);
-					else FM_KEYOFF(&OPL->P_CH[8].SLOT[SLOT2], ~2);
+				/* timer 2 */
+				if (OPL->st[1] != st2) {
+					double period = st2 ? (OPL->TimerBase * OPL->T[1]) : 0.0;
+					OPL->st[1] = st2;
+					if (OPL->timer_handler) (OPL->timer_handler)(OPL->TimerParam, 1, period);
+				}
+				/* timer 1 */
+				if (OPL->st[0] != st1) {
+					double period = st1 ? (OPL->TimerBase * OPL->T[0]) : 0.0;
+					OPL->st[0] = st1;
+					if (OPL->timer_handler) (OPL->timer_handler)(OPL->TimerParam, 0, period);
+				}
+			}
+			break;
+#if BUILD_Y8950
+		case 0x06: /* Key Board OUT */
+			if (OPL->type & OPL_TYPE_KEYBOARD) {
+				if (OPL->keyboardhandler_w) OPL->keyboardhandler_w(OPL->keyboard_param, v);
+				else logerror("Y8950: write unmapped KEYBOARD port\n");
+			}
+			break;
+		case 0x07: /* DELTA-T control 1 : START,REC,MEMDATA,REPT,SPOFF,x,x,RST */
+			if (OPL->type & OPL_TYPE_ADPCM) YM_DELTAT_ADPCM_Write(OPL->deltat, r - 0x07, v);
+			break;
+#endif
+		case 0x08: /* MODE,DELTA-T control 2 : CSM,NOTESEL,x,x,smpl,da/ad,64k,rom */ OPL->mode = v;
+#if BUILD_Y8950
+			if (OPL->type & OPL_TYPE_ADPCM) {
+				/* mask 4 LSBs in register 08 for DELTA-T unit */
+				YM_DELTAT_ADPCM_Write(OPL->deltat, r - 0x07, v & 0x0f);
+			}
+#endif
+			break;
+
+#if BUILD_Y8950
+		case 0x09: /* START ADD */
+		case 0x0a:
+		case 0x0b: /* STOP ADD  */
+		case 0x0c:
+		case 0x0d: /* PRESCALE   */
+		case 0x0e:
+		case 0x0f: /* ADPCM data write */
+		case 0x10: /* DELTA-N    */
+		case 0x11: /* DELTA-N    */
+		case 0x12: /* ADPCM volume */
+			if (OPL->type & OPL_TYPE_ADPCM) YM_DELTAT_ADPCM_Write(OPL->deltat, r - 0x07, v);
+			break;
+
+		case 0x15: /* DAC data high 8 bits (F7,F6...F2) */
+		case 0x16: /* DAC data low 2 bits (F1, F0 in bits 7,6) */
+		case 0x17: /* DAC data shift (S2,S1,S0 in bits 2,1,0) */
+			logerror("FMOPL.C: DAC data register written, but not implemented reg=%02x val=%02x\n", r, v);
+			break;
+
+		case 0x18: /* I/O CTRL (Direction) */
+			if (OPL->type & OPL_TYPE_IO) OPL->portDirection = v & 0x0f;
+			break;
+		case 0x19: /* I/O DATA */
+			if (OPL->type & OPL_TYPE_IO) {
+				OPL->portLatch = v;
+				if (OPL->porthandler_w) OPL->porthandler_w(OPL->port_param, v & OPL->portDirection);
+			}
+			break;
+#endif
+		default:
+			/*logerror("FMOPL.C: write to unknown register: %02x\n",r);*/
+			break;
+		}
+		break;
+	case 0x20: /* am ON, vib ON, ksr, eg_type, mul */
+		slot = slot_array[r & 0x1f];
+		if (slot < 0) return;
+		set_mul(OPL, slot, v);
+		break;
+	case 0x40:
+		slot = slot_array[r & 0x1f];
+		if (slot < 0) return;
+		set_ksl_tl(OPL, slot, v);
+		break;
+	case 0x60:
+		slot = slot_array[r & 0x1f];
+		if (slot < 0) return;
+		set_ar_dr(OPL, slot, v);
+		break;
+	case 0x80:
+		slot = slot_array[r & 0x1f];
+		if (slot < 0) return;
+		set_sl_rr(OPL, slot, v);
+		break;
+	case 0xa0:
+		if (r == 0xbd) /* am depth, vibrato depth, r,bd,sd,tom,tc,hh */
+		{
+			OPL->lfo_am_depth = v & 0x80;
+			OPL->lfo_pm_depth_range = (v & 0x40) ? 8 : 0;
+
+			OPL->rhythm = v & 0x3f;
+
+			if (OPL->rhythm & 0x20) {
+				/* BD key on/off */
+				if (v & 0x10) {
+					FM_KEYON(&OPL->P_CH[6].SLOT[SLOT1], 2);
+					FM_KEYON(&OPL->P_CH[6].SLOT[SLOT2], 2);
 				} else {
-					/* BD key off */
 					FM_KEYOFF(&OPL->P_CH[6].SLOT[SLOT1], ~2);
 					FM_KEYOFF(&OPL->P_CH[6].SLOT[SLOT2], ~2);
-					/* HH key off */
-					FM_KEYOFF(&OPL->P_CH[7].SLOT[SLOT1], ~2);
-					/* SD key off */
-					FM_KEYOFF(&OPL->P_CH[7].SLOT[SLOT2], ~2);
-					/* TOM key off */
-					FM_KEYOFF(&OPL->P_CH[8].SLOT[SLOT1], ~2);
-					/* TOP-CY off */
-					FM_KEYOFF(&OPL->P_CH[8].SLOT[SLOT2], ~2);
 				}
-				return;
+				/* HH key on/off */
+				if (v & 0x01) FM_KEYON(&OPL->P_CH[7].SLOT[SLOT1], 2);
+				else FM_KEYOFF(&OPL->P_CH[7].SLOT[SLOT1], ~2);
+				/* SD key on/off */
+				if (v & 0x08) FM_KEYON(&OPL->P_CH[7].SLOT[SLOT2], 2);
+				else FM_KEYOFF(&OPL->P_CH[7].SLOT[SLOT2], ~2);
+				/* TOM key on/off */
+				if (v & 0x04) FM_KEYON(&OPL->P_CH[8].SLOT[SLOT1], 2);
+				else FM_KEYOFF(&OPL->P_CH[8].SLOT[SLOT1], ~2);
+				/* TOP-CY key on/off */
+				if (v & 0x02) FM_KEYON(&OPL->P_CH[8].SLOT[SLOT2], 2);
+				else FM_KEYOFF(&OPL->P_CH[8].SLOT[SLOT2], ~2);
+			} else {
+				/* BD key off */
+				FM_KEYOFF(&OPL->P_CH[6].SLOT[SLOT1], ~2);
+				FM_KEYOFF(&OPL->P_CH[6].SLOT[SLOT2], ~2);
+				/* HH key off */
+				FM_KEYOFF(&OPL->P_CH[7].SLOT[SLOT1], ~2);
+				/* SD key off */
+				FM_KEYOFF(&OPL->P_CH[7].SLOT[SLOT2], ~2);
+				/* TOM key off */
+				FM_KEYOFF(&OPL->P_CH[8].SLOT[SLOT1], ~2);
+				/* TOP-CY off */
+				FM_KEYOFF(&OPL->P_CH[8].SLOT[SLOT2], ~2);
 			}
-			/* keyon,block,fnum */
-			if ((r & 0x0f) > 8) return;
-			CH = &OPL->P_CH[r & 0x0f];
-			if (!(r & 0x10)) { /* a0-a8 */
-				block_fnum = (CH->block_fnum & 0x1f00) | v;
-			} else { /* b0-b8 */
-				block_fnum = ((v & 0x1f) << 8) | (CH->block_fnum & 0xff);
+			return;
+		}
+		/* keyon,block,fnum */
+		if ((r & 0x0f) > 8) return;
+		CH = &OPL->P_CH[r & 0x0f];
+		if (!(r & 0x10)) { /* a0-a8 */
+			block_fnum = (CH->block_fnum & 0x1f00) | v;
+		} else { /* b0-b8 */
+			block_fnum = ((v & 0x1f) << 8) | (CH->block_fnum & 0xff);
 
-				if (v & 0x20) {
-					FM_KEYON(&CH->SLOT[SLOT1], 1);
-					FM_KEYON(&CH->SLOT[SLOT2], 1);
-				} else {
-					FM_KEYOFF(&CH->SLOT[SLOT1], ~1);
-					FM_KEYOFF(&CH->SLOT[SLOT2], ~1);
-				}
+			if (v & 0x20) {
+				FM_KEYON(&CH->SLOT[SLOT1], 1);
+				FM_KEYON(&CH->SLOT[SLOT2], 1);
+			} else {
+				FM_KEYOFF(&CH->SLOT[SLOT1], ~1);
+				FM_KEYOFF(&CH->SLOT[SLOT2], ~1);
 			}
-			/* update */
-			if (CH->block_fnum != block_fnum) {
-				uint8_t block = block_fnum >> 10;
+		}
+		/* update */
+		if (CH->block_fnum != block_fnum) {
+			uint8_t block = block_fnum >> 10;
 
-				CH->block_fnum = block_fnum;
+			CH->block_fnum = block_fnum;
 
-				CH->ksl_base = ksl_tab[block_fnum >> 6];
-				CH->fc = OPL->fn_tab[block_fnum & 0x03ff] >> (7 - block);
+			CH->ksl_base = ksl_tab[block_fnum >> 6];
+			CH->fc = OPL->fn_tab[block_fnum & 0x03ff] >> (7 - block);
 
-				/* BLK 2,1,0 bits -> bits 3,2,1 of kcode */
-				CH->kcode = (CH->block_fnum & 0x1c00) >> 9;
+			/* BLK 2,1,0 bits -> bits 3,2,1 of kcode */
+			CH->kcode = (CH->block_fnum & 0x1c00) >> 9;
 
-				/* the info below is actually opposite to what is stated in the Manuals
+			/* the info below is actually opposite to what is stated in the Manuals
 			 (verifed on real YM3812) */
-				/* if notesel == 0 -> lsb of kcode is bit 10 (MSB) of fnum  */
-				/* if notesel == 1 -> lsb of kcode is bit 9 (MSB-1) of fnum */
-				if (OPL->mode & 0x40) CH->kcode |= (CH->block_fnum & 0x100) >> 8; /* notesel == 1 */
-				else CH->kcode |= (CH->block_fnum & 0x200) >> 9;                  /* notesel == 0 */
+			/* if notesel == 0 -> lsb of kcode is bit 10 (MSB) of fnum  */
+			/* if notesel == 1 -> lsb of kcode is bit 9 (MSB-1) of fnum */
+			if (OPL->mode & 0x40) CH->kcode |= (CH->block_fnum & 0x100) >> 8; /* notesel == 1 */
+			else CH->kcode |= (CH->block_fnum & 0x200) >> 9;                  /* notesel == 0 */
 
-				/* refresh Total Level in both SLOTs of this channel */
-				CH->SLOT[SLOT1].TLL = CH->SLOT[SLOT1].TL + (CH->ksl_base >> CH->SLOT[SLOT1].ksl);
-				CH->SLOT[SLOT2].TLL = CH->SLOT[SLOT2].TL + (CH->ksl_base >> CH->SLOT[SLOT2].ksl);
+			/* refresh Total Level in both SLOTs of this channel */
+			CH->SLOT[SLOT1].TLL = CH->SLOT[SLOT1].TL + (CH->ksl_base >> CH->SLOT[SLOT1].ksl);
+			CH->SLOT[SLOT2].TLL = CH->SLOT[SLOT2].TL + (CH->ksl_base >> CH->SLOT[SLOT2].ksl);
 
-				/* refresh frequency counter in both SLOTs of this channel */
-				CALC_FCSLOT(CH, &CH->SLOT[SLOT1]);
-				CALC_FCSLOT(CH, &CH->SLOT[SLOT2]);
-			}
-			break;
-		case 0xc0:
-			/* FB,C */
-			if ((r & 0x0f) > 8) return;
-			CH = &OPL->P_CH[r & 0x0f];
-			CH->SLOT[SLOT1].FB = (v >> 1) & 7 ? ((v >> 1) & 7) + 7 : 0;
-			CH->SLOT[SLOT1].CON = v & 1;
-			CH->SLOT[SLOT1].connect1 = CH->SLOT[SLOT1].CON ? &OPL->output[0] : &OPL->phase_modulation;
-			break;
-		case 0xe0: /* waveform select */
-			/* simply ignore write to the waveform select register
+			/* refresh frequency counter in both SLOTs of this channel */
+			CALC_FCSLOT(CH, &CH->SLOT[SLOT1]);
+			CALC_FCSLOT(CH, &CH->SLOT[SLOT2]);
+		}
+		break;
+	case 0xc0:
+		/* FB,C */
+		if ((r & 0x0f) > 8) return;
+		CH = &OPL->P_CH[r & 0x0f];
+		CH->SLOT[SLOT1].FB = (v >> 1) & 7 ? ((v >> 1) & 7) + 7 : 0;
+		CH->SLOT[SLOT1].CON = v & 1;
+		CH->SLOT[SLOT1].connect1 = CH->SLOT[SLOT1].CON ? &OPL->output[0] : &OPL->phase_modulation;
+		break;
+	case 0xe0: /* waveform select */
+		/* simply ignore write to the waveform select register
 		if selecting not enabled in test register */
-			if (OPL->wavesel) {
-				slot = slot_array[r & 0x1f];
-				if (slot < 0) return;
-				CH = &OPL->P_CH[slot / 2];
+		if (OPL->wavesel) {
+			slot = slot_array[r & 0x1f];
+			if (slot < 0) return;
+			CH = &OPL->P_CH[slot / 2];
 
-				CH->SLOT[slot & 1].wavetable = (v & 0x03) * SIN_LEN;
-			}
-			break;
+			CH->SLOT[slot & 1].wavetable = (v & 0x03) * SIN_LEN;
+		}
+		break;
 	}
 }
 
@@ -1844,35 +1843,35 @@ static unsigned char OPLRead(FM_OPL *OPL, int a)
 #if BUILD_Y8950
 	/* data port */
 	switch (OPL->address) {
-		case 0x05: /* KeyBoard IN */
-			if (OPL->type & OPL_TYPE_KEYBOARD) {
-				if (OPL->keyboardhandler_r) return OPL->keyboardhandler_r(OPL->keyboard_param);
-				else logerror("Y8950: read unmapped KEYBOARD port\n");
-			}
-			return 0;
+	case 0x05: /* KeyBoard IN */
+		if (OPL->type & OPL_TYPE_KEYBOARD) {
+			if (OPL->keyboardhandler_r) return OPL->keyboardhandler_r(OPL->keyboard_param);
+			else logerror("Y8950: read unmapped KEYBOARD port\n");
+		}
+		return 0;
 
-		case 0x0f: /* ADPCM-DATA  */
-			if (OPL->type & OPL_TYPE_ADPCM) {
-				uint8_t val;
+	case 0x0f: /* ADPCM-DATA  */
+		if (OPL->type & OPL_TYPE_ADPCM) {
+			uint8_t val;
 
-				val = YM_DELTAT_ADPCM_Read(OPL->deltat);
-				/*logerror("Y8950: read ADPCM value read=%02x\n",val);*/
-				return val;
-			}
-			return 0;
+			val = YM_DELTAT_ADPCM_Read(OPL->deltat);
+			/*logerror("Y8950: read ADPCM value read=%02x\n",val);*/
+			return val;
+		}
+		return 0;
 
-		case 0x19: /* I/O DATA    */
-			if (OPL->type & OPL_TYPE_IO) {
-				if (OPL->porthandler_r) return OPL->porthandler_r(OPL->port_param);
-				else logerror("Y8950:read unmapped I/O port\n");
-			}
-			return 0;
-		case 0x1a: /* PCM-DATA    */
-			if (OPL->type & OPL_TYPE_ADPCM) {
-				logerror("Y8950 A/D conversion is accessed but not implemented !\n");
-				return 0x80; /* 2's complement PCM data - result from A/D conversion */
-			}
-			return 0;
+	case 0x19: /* I/O DATA    */
+		if (OPL->type & OPL_TYPE_IO) {
+			if (OPL->porthandler_r) return OPL->porthandler_r(OPL->port_param);
+			else logerror("Y8950:read unmapped I/O port\n");
+		}
+		return 0;
+	case 0x1a: /* PCM-DATA    */
+		if (OPL->type & OPL_TYPE_ADPCM) {
+			logerror("Y8950 A/D conversion is accessed but not implemented !\n");
+			return 0x80; /* 2's complement PCM data - result from A/D conversion */
+		}
+		return 0;
 	}
 #endif
 

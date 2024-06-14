@@ -99,60 +99,60 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
 	*pe = ult_efftrans[e];
 
 	switch (e) {
-		case 0:
-			if (!p) *pe = FX_NONE;
+	case 0:
+		if (!p) *pe = FX_NONE;
+		break;
+	case 3:
+		// 300 apparently stops sliding, which is totally weird
+		if (!p) p = 1; // close enough?
+		break;
+	case 0xa:
+		// blah, this sucks
+		if (p & 0xf0) p &= 0xf0;
+		break;
+	case 0xb:
+		// mikmod does this wrong, resulting in values 0-225 instead of 0-255
+		p = (p & 0xf) * 0x11;
+		break;
+	case 0xc: // volume
+		p >>= 2;
+		break;
+	case 0xd: // pattern break
+		p = 10 * (p >> 4) + (p & 0xf);
+		break;
+	case 0xe: // special
+		switch (p >> 4) {
+		case 1:
+			*pe = FX_PORTAMENTOUP;
+			p = 0xf0 | (p & 0xf);
 			break;
-		case 3:
-			// 300 apparently stops sliding, which is totally weird
-			if (!p) p = 1; // close enough?
+		case 2:
+			*pe = FX_PORTAMENTODOWN;
+			p = 0xf0 | (p & 0xf);
+			break;
+		case 8:
+			*pe = FX_SPECIAL;
+			p = 0x60 | (p & 0xf);
+			break;
+		case 9:
+			*pe = FX_RETRIG;
+			p &= 0xf;
 			break;
 		case 0xa:
-			// blah, this sucks
-			if (p & 0xf0) p &= 0xf0;
+			*pe = FX_VOLUMESLIDE;
+			p = ((p & 0xf) << 4) | 0xf;
 			break;
 		case 0xb:
-			// mikmod does this wrong, resulting in values 0-225 instead of 0-255
-			p = (p & 0xf) * 0x11;
+			*pe = FX_VOLUMESLIDE;
+			p = 0xf0 | (p & 0xf);
 			break;
-		case 0xc: // volume
-			p >>= 2;
-			break;
-		case 0xd: // pattern break
-			p = 10 * (p >> 4) + (p & 0xf);
-			break;
-		case 0xe: // special
-			switch (p >> 4) {
-				case 1:
-					*pe = FX_PORTAMENTOUP;
-					p = 0xf0 | (p & 0xf);
-					break;
-				case 2:
-					*pe = FX_PORTAMENTODOWN;
-					p = 0xf0 | (p & 0xf);
-					break;
-				case 8:
-					*pe = FX_SPECIAL;
-					p = 0x60 | (p & 0xf);
-					break;
-				case 9:
-					*pe = FX_RETRIG;
-					p &= 0xf;
-					break;
-				case 0xa:
-					*pe = FX_VOLUMESLIDE;
-					p = ((p & 0xf) << 4) | 0xf;
-					break;
-				case 0xb:
-					*pe = FX_VOLUMESLIDE;
-					p = 0xf0 | (p & 0xf);
-					break;
-				case 0xc:
-				case 0xd: *pe = FX_SPECIAL; break;
-			}
-			break;
-		case 0xf:
-			if (p > 0x2f) *pe = FX_TEMPO;
-			break;
+		case 0xc:
+		case 0xd: *pe = FX_SPECIAL; break;
+		}
+		break;
+	case 0xf:
+		if (p > 0x2f) *pe = FX_TEMPO;
+		break;
 	}
 
 	*pp = p;

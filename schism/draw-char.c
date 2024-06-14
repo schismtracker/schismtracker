@@ -728,11 +728,11 @@ void draw_box(int xs, int ys, int xe, int ye, int flags)
 	int br = colors[flags & BOX_SHADE_MASK][1];
 
 	switch (flags & (BOX_TYPE_MASK | BOX_THICKNESS_MASK)) {
-		case BOX_THIN | BOX_INNER: draw_thin_inner_box(xs, ys, xe, ye, tl, br); break;
-		case BOX_THICK | BOX_INNER: draw_thick_inner_box(xs, ys, xe, ye, tl, br); break;
-		case BOX_THIN | BOX_OUTER: draw_thin_outer_box(xs, ys, xe, ye, tl); break;
-		case BOX_THICK | BOX_OUTER: draw_thick_outer_box(xs, ys, xe, ye, tl); break;
-		case BOX_THIN | BOX_CORNER:
-		case BOX_THICK | BOX_CORNER: draw_thin_outer_cornered_box(xs, ys, xe, ye, flags & BOX_SHADE_MASK); break;
+	case BOX_THIN | BOX_INNER: draw_thin_inner_box(xs, ys, xe, ye, tl, br); break;
+	case BOX_THICK | BOX_INNER: draw_thick_inner_box(xs, ys, xe, ye, tl, br); break;
+	case BOX_THIN | BOX_OUTER: draw_thin_outer_box(xs, ys, xe, ye, tl); break;
+	case BOX_THICK | BOX_OUTER: draw_thick_outer_box(xs, ys, xe, ye, tl); break;
+	case BOX_THIN | BOX_CORNER:
+	case BOX_THICK | BOX_CORNER: draw_thin_outer_cornered_box(xs, ys, xe, ye, flags & BOX_SHADE_MASK); break;
 	}
 }

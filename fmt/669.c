@@ -87,13 +87,13 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	slurp_read(fp, &tmp, 2);
 	switch (bswapLE16(tmp)) {
-		case 0x6669: // 'if'
-			tid = "Composer 669";
-			break;
-		case 0x4e4a: // 'JN'
-			tid = "UNIS 669";
-			break;
-		default: return LOAD_UNSUPPORTED;
+	case 0x6669: // 'if'
+		tid = "Composer 669";
+		break;
+	case 0x4e4a: // 'JN'
+		tid = "UNIS 669";
+		break;
+	default: return LOAD_UNSUPPORTED;
 	}
 
 	/* The message is 108 bytes, split onto 3 lines of 36 bytes each.
@@ -177,18 +177,18 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				slurp_read(fp, b, 3);
 
 				switch (b[0]) {
-					case 0xfe: /* no note, only volume */
-						note->voleffect = VOLFX_VOLUME;
-						note->volparam = (b[1] & 0xf) << 2;
-						break;
-					case 0xff: /* no note or volume */ break;
-					default:
-						note->note = (b[0] >> 2) + 36 + 1;
-						note->instrument = ((b[0] & 3) << 4 | (b[1] >> 4)) + 1;
-						note->voleffect = VOLFX_VOLUME;
-						note->volparam = (b[1] & 0xf) << 2;
-						effect[chan] = 0xff;
-						break;
+				case 0xfe: /* no note, only volume */
+					note->voleffect = VOLFX_VOLUME;
+					note->volparam = (b[1] & 0xf) << 2;
+					break;
+				case 0xff: /* no note or volume */ break;
+				default:
+					note->note = (b[0] >> 2) + 36 + 1;
+					note->instrument = ((b[0] & 3) << 4 | (b[1] >> 4)) + 1;
+					note->voleffect = VOLFX_VOLUME;
+					note->volparam = (b[1] & 0xf) << 2;
+					effect[chan] = 0xff;
+					break;
 				}
 
 				/* now handle effects */
@@ -211,36 +211,36 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 				/* fix some commands */
 				switch (e) {
-					default:
-						/* do nothing */
+				default:
+					/* do nothing */
+					break;
+				case 3: /* D - frequency adjust (??) */
+					note->effect = FX_PORTAMENTOUP;
+					note->param |= 0xf0;
+					effect[chan] = 0xff;
+					break;
+				case 4: /* E - frequency vibrato - almost like an arpeggio, but does not arpeggiate by a given note but by a frequency amount. */
+					note->effect = FX_ARPEGGIO;
+					note->param |= (note->param << 4);
+					break;
+				case 5: /* F - set tempo */
+					/* TODO: param 0 is a "super fast tempo" in Unis 669 mode (???) */
+					effect[chan] = 0xFF;
+					break;
+				case 6:
+					// G - subcommands (extended)
+					switch (note->param) {
+					case 0:
+						// balance fine slide left
+						note->param = 0x4F;
 						break;
-					case 3: /* D - frequency adjust (??) */
-						note->effect = FX_PORTAMENTOUP;
-						note->param |= 0xf0;
-						effect[chan] = 0xff;
+					case 1:
+						// balance fine slide right
+						note->param = 0xF4;
 						break;
-					case 4: /* E - frequency vibrato - almost like an arpeggio, but does not arpeggiate by a given note but by a frequency amount. */
-						note->effect = FX_ARPEGGIO;
-						note->param |= (note->param << 4);
-						break;
-					case 5: /* F - set tempo */
-						/* TODO: param 0 is a "super fast tempo" in Unis 669 mode (???) */
-						effect[chan] = 0xFF;
-						break;
-					case 6:
-						// G - subcommands (extended)
-						switch (note->param) {
-							case 0:
-								// balance fine slide left
-								note->param = 0x4F;
-								break;
-							case 1:
-								// balance fine slide right
-								note->param = 0xF4;
-								break;
-							default: note->effect = FX_NONE;
-						}
-						break;
+					default: note->effect = FX_NONE;
+					}
+					break;
 				}
 			}
 		}

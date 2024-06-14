@@ -227,9 +227,9 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
 		if (smp->loop_end < smp->loop_start) smp->loop_end = smp->length;
 		if (smp->loop_start >= smp->loop_end) smp->loop_start = smp->loop_end = 0;
 		switch (xmss.type & 3) {
-			case 3:
-			case 2: smp->flags |= CHN_PINGPONGLOOP;
-			case 1: smp->flags |= CHN_LOOP;
+		case 3:
+		case 2: smp->flags |= CHN_PINGPONGLOOP;
+		case 1: smp->flags |= CHN_LOOP;
 		}
 		smp->volume = xmss.vol << 2;
 		if (smp->volume > 256) smp->volume = 256;

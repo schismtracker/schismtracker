@@ -322,12 +322,12 @@ void cfg_atexit_save(void)
 	include comments to the config by default listing what the numbers are, but that shouldn't
 	be necessary in most cases. */
 	switch (status.fix_numlock_setting) {
-		case NUMLOCK_ALWAYS_ON: cfg_set_string(&cfg, "General", "numlock_setting", "on"); break;
-		case NUMLOCK_ALWAYS_OFF: cfg_set_string(&cfg, "General", "numlock_setting", "off"); break;
-		case NUMLOCK_HONOR: cfg_set_string(&cfg, "General", "numlock_setting", "system"); break;
-		case NUMLOCK_GUESS:
-			/* leave empty */
-			break;
+	case NUMLOCK_ALWAYS_ON: cfg_set_string(&cfg, "General", "numlock_setting", "on"); break;
+	case NUMLOCK_ALWAYS_OFF: cfg_set_string(&cfg, "General", "numlock_setting", "off"); break;
+	case NUMLOCK_HONOR: cfg_set_string(&cfg, "General", "numlock_setting", "system"); break;
+	case NUMLOCK_GUESS:
+		/* leave empty */
+		break;
 	};
 
 	/* hm... most of the time probably nothing's different, so saving the

@@ -156,15 +156,15 @@ static void orderlist_cheater(void)
 static void get_pattern_string(unsigned char pattern, char *buf)
 {
 	switch (pattern) {
-		case ORDER_SKIP:
-			buf[0] = buf[1] = buf[2] = '+';
-			buf[3] = 0;
-			break;
-		case ORDER_LAST:
-			buf[0] = buf[1] = buf[2] = '-';
-			buf[3] = 0;
-			break;
-		default: numtostr(3, pattern, buf); break;
+	case ORDER_SKIP:
+		buf[0] = buf[1] = buf[2] = '+';
+		buf[3] = 0;
+		break;
+	case ORDER_LAST:
+		buf[0] = buf[1] = buf[2] = '-';
+		buf[3] = 0;
+		break;
+	default: numtostr(3, pattern, buf); break;
 	}
 }
 
@@ -328,35 +328,35 @@ static int orderlist_handle_char(char sym)
 	int n[3] = {0};
 
 	switch (sym) {
-		case '+':
-			status.flags |= SONG_NEEDS_SAVE;
-			current_song->orderlist[current_order] = ORDER_SKIP;
-			orderlist_cursor_pos = 2;
-			break;
-		case '.':
-		case '-':
-			status.flags |= SONG_NEEDS_SAVE;
-			current_song->orderlist[current_order] = ORDER_LAST;
-			orderlist_cursor_pos = 2;
-			break;
-		default:
-			if (sym >= '0' && sym <= '9') c = sym - '0';
-			else return 0;
+	case '+':
+		status.flags |= SONG_NEEDS_SAVE;
+		current_song->orderlist[current_order] = ORDER_SKIP;
+		orderlist_cursor_pos = 2;
+		break;
+	case '.':
+	case '-':
+		status.flags |= SONG_NEEDS_SAVE;
+		current_song->orderlist[current_order] = ORDER_LAST;
+		orderlist_cursor_pos = 2;
+		break;
+	default:
+		if (sym >= '0' && sym <= '9') c = sym - '0';
+		else return 0;
 
-			status.flags |= SONG_NEEDS_SAVE;
-			cur_pattern = current_song->orderlist[current_order];
-			if (cur_pattern < 200) {
-				n[0] = cur_pattern / 100;
-				n[1] = cur_pattern / 10 % 10;
-				n[2] = cur_pattern % 10;
-			}
+		status.flags |= SONG_NEEDS_SAVE;
+		cur_pattern = current_song->orderlist[current_order];
+		if (cur_pattern < 200) {
+			n[0] = cur_pattern / 100;
+			n[1] = cur_pattern / 10 % 10;
+			n[2] = cur_pattern % 10;
+		}
 
-			n[orderlist_cursor_pos] = c;
-			cur_pattern = n[0] * 100 + n[1] * 10 + n[2];
-			cur_pattern = CLAMP(cur_pattern, 0, 199);
-			song_get_pattern(cur_pattern, &tmp); /* make sure it exists */
-			current_song->orderlist[current_order] = cur_pattern;
-			break;
+		n[orderlist_cursor_pos] = c;
+		cur_pattern = n[0] * 100 + n[1] * 10 + n[2];
+		cur_pattern = CLAMP(cur_pattern, 0, 199);
+		song_get_pattern(cur_pattern, &tmp); /* make sure it exists */
+		current_song->orderlist[current_order] = cur_pattern;
+		break;
 	};
 
 	if (orderlist_cursor_pos == 2) {
@@ -412,210 +412,209 @@ static int orderlist_handle_key_on_list(struct key_event *k)
 	}
 
 	switch (k->sym) {
-		case SDLK_BACKSPACE:
-			if (status.flags & CLASSIC_MODE) return 0;
-			if (!(k->mod & KMOD_ALT)) return 0;
+	case SDLK_BACKSPACE:
+		if (status.flags & CLASSIC_MODE) return 0;
+		if (!(k->mod & KMOD_ALT)) return 0;
+		if (k->state == KEY_PRESS) return 1;
+		if (!_did_save_orderlist) return 1;
+		status_text_flash("Restored orderlist");
+		orderlist_restore();
+		return 1;
+
+	case SDLK_RETURN:
+	case SDLK_KP_ENTER:
+		if (status.flags & CLASSIC_MODE) return 0;
+		if (k->mod & KMOD_ALT) {
 			if (k->state == KEY_PRESS) return 1;
-			if (!_did_save_orderlist) return 1;
-			status_text_flash("Restored orderlist");
-			orderlist_restore();
+			status_text_flash("Saved orderlist");
+			orderlist_save();
 			return 1;
+		}
+		// else fall through
 
-		case SDLK_RETURN:
-		case SDLK_KP_ENTER:
+	case SDLK_g:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_PRESS) return 1;
+		n = current_song->orderlist[new_order];
+		while (n >= 200 && new_order > 0) n = current_song->orderlist[--new_order];
+		if (n < 200) {
+			set_current_pattern(n);
+			set_page(PAGE_PATTERN_EDITOR);
+		}
+		return 1;
+
+	case SDLK_TAB:
+		if (k->mod & KMOD_SHIFT) {
+			if (k->state == KEY_RELEASE) return 1;
+			change_focus_to(33);
+		} else {
+			if (!NO_MODIFIER(k->mod)) return 0;
+			if (k->state == KEY_RELEASE) return 1;
+			change_focus_to(1);
+		}
+		return 1;
+	case SDLK_LEFT:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		new_cursor_pos--;
+		break;
+	case SDLK_RIGHT:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		new_cursor_pos++;
+		break;
+	case SDLK_HOME:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		new_order = 0;
+		break;
+	case SDLK_END:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		new_order = csf_last_order(current_song);
+		if (current_song->orderlist[new_order] != ORDER_LAST) new_order++;
+		break;
+	case SDLK_UP:
+		if (k->mod & KMOD_CTRL) {
 			if (status.flags & CLASSIC_MODE) return 0;
-			if (k->mod & KMOD_ALT) {
-				if (k->state == KEY_PRESS) return 1;
-				status_text_flash("Saved orderlist");
-				orderlist_save();
-				return 1;
-			}
-			// else fall through
-
-		case SDLK_g:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_PRESS) return 1;
-			n = current_song->orderlist[new_order];
-			while (n >= 200 && new_order > 0) n = current_song->orderlist[--new_order];
-			if (n < 200) {
-				set_current_pattern(n);
-				set_page(PAGE_PATTERN_EDITOR);
-			}
+			if (k->state == KEY_RELEASE) return 1;
+			sample_set(sample_get_current() - 1);
+			status.flags |= NEED_UPDATE;
 			return 1;
-
-		case SDLK_TAB:
-			if (k->mod & KMOD_SHIFT) {
-				if (k->state == KEY_RELEASE) return 1;
-				change_focus_to(33);
-			} else {
-				if (!NO_MODIFIER(k->mod)) return 0;
-				if (k->state == KEY_RELEASE) return 1;
-				change_focus_to(1);
-			}
-			return 1;
-		case SDLK_LEFT:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			new_cursor_pos--;
-			break;
-		case SDLK_RIGHT:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			new_cursor_pos++;
-			break;
-		case SDLK_HOME:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			new_order = 0;
-			break;
-		case SDLK_END:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			new_order = csf_last_order(current_song);
-			if (current_song->orderlist[new_order] != ORDER_LAST) new_order++;
-			break;
-		case SDLK_UP:
-			if (k->mod & KMOD_CTRL) {
-				if (status.flags & CLASSIC_MODE) return 0;
-				if (k->state == KEY_RELEASE) return 1;
-				sample_set(sample_get_current() - 1);
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			new_order--;
-			break;
-		case SDLK_DOWN:
-			if (k->mod & KMOD_CTRL) {
-				if (status.flags & CLASSIC_MODE) return 0;
-				if (k->state == KEY_RELEASE) return 1;
-				sample_set(sample_get_current() + 1);
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			new_order++;
-			break;
-		case SDLK_PAGEUP:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			new_order -= 16;
-			break;
-		case SDLK_PAGEDOWN:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			new_order += 16;
-			break;
-		case SDLK_INSERT:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			orderlist_insert_pos();
-			return 1;
-		case SDLK_DELETE:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			orderlist_delete_pos();
-			return 1;
-		case SDLK_F7:
-			if (!(k->mod & KMOD_CTRL)) return 0;
-			/* fall through */
-		case SDLK_SPACE:
-			if (k->state == KEY_RELEASE) return 1;
-			song_set_next_order(current_order);
-			status_text_flash("Playing order %d next", current_order);
-			return 1;
-		case SDLK_F6:
-			if (k->mod & KMOD_SHIFT) {
-				if (k->state == KEY_RELEASE) return 1;
-				song_start_at_order(current_order, 0);
-				return 1;
-			}
-			return 0;
-
-		case SDLK_n:
-			if (k->mod & KMOD_SHIFT) {
-				if (k->state == KEY_PRESS) return 1;
-				orderlist_cheater();
-				return 1;
-			}
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			orderlist_insert_next();
-			return 1;
-		case SDLK_c:
-			if (!NO_MODIFIER(k->mod)) return 0;
+		}
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		new_order--;
+		break;
+	case SDLK_DOWN:
+		if (k->mod & KMOD_CTRL) {
 			if (status.flags & CLASSIC_MODE) return 0;
+			if (k->state == KEY_RELEASE) return 1;
+			sample_set(sample_get_current() + 1);
+			status.flags |= NEED_UPDATE;
+			return 1;
+		}
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		new_order++;
+		break;
+	case SDLK_PAGEUP:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		new_order -= 16;
+		break;
+	case SDLK_PAGEDOWN:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		new_order += 16;
+		break;
+	case SDLK_INSERT:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		orderlist_insert_pos();
+		return 1;
+	case SDLK_DELETE:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		orderlist_delete_pos();
+		return 1;
+	case SDLK_F7:
+		if (!(k->mod & KMOD_CTRL)) return 0;
+		/* fall through */
+	case SDLK_SPACE:
+		if (k->state == KEY_RELEASE) return 1;
+		song_set_next_order(current_order);
+		status_text_flash("Playing order %d next", current_order);
+		return 1;
+	case SDLK_F6:
+		if (k->mod & KMOD_SHIFT) {
+			if (k->state == KEY_RELEASE) return 1;
+			song_start_at_order(current_order, 0);
+			return 1;
+		}
+		return 0;
+
+	case SDLK_n:
+		if (k->mod & KMOD_SHIFT) {
 			if (k->state == KEY_PRESS) return 1;
-			p = get_current_pattern();
-			for (n = current_order + 1; n < 256; n++) {
+			orderlist_cheater();
+			return 1;
+		}
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		orderlist_insert_next();
+		return 1;
+	case SDLK_c:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (status.flags & CLASSIC_MODE) return 0;
+		if (k->state == KEY_PRESS) return 1;
+		p = get_current_pattern();
+		for (n = current_order + 1; n < 256; n++) {
+			if (current_song->orderlist[n] == p) {
+				new_order = n;
+				break;
+			}
+		}
+		if (n == 256) {
+			for (n = 0; n < current_order; n++) {
 				if (current_song->orderlist[n] == p) {
 					new_order = n;
 					break;
 				}
 			}
-			if (n == 256) {
-				for (n = 0; n < current_order; n++) {
-					if (current_song->orderlist[n] == p) {
-						new_order = n;
-						break;
-					}
-				}
-				if (n == current_order) {
-					status_text_flash("Pattern %d not on Order List", p);
-					return 1;
-				}
-			}
-			break;
-
-		case SDLK_r:
-			if (k->mod & KMOD_ALT) {
-				if (k->state == KEY_PRESS) return 1;
-				orderlist_reorder();
+			if (n == current_order) {
+				status_text_flash("Pattern %d not on Order List", p);
 				return 1;
 			}
+		}
+		break;
+
+	case SDLK_r:
+		if (k->mod & KMOD_ALT) {
+			if (k->state == KEY_PRESS) return 1;
+			orderlist_reorder();
+			return 1;
+		}
+		return 0;
+	case SDLK_u:
+		if (k->mod & KMOD_ALT) {
+			if (k->state == KEY_RELEASE) return 1;
+			orderlist_add_unused_patterns();
+			return 1;
+		}
+		return 0;
+
+	case SDLK_b:
+		if (k->mod & KMOD_SHIFT) return 0;
+		/* fall through */
+	case SDLK_o:
+		if (!(k->mod & KMOD_CTRL)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		song_pattern_to_sample(current_song->orderlist[current_order], !!(k->mod & KMOD_SHIFT), !!(k->sym == SDLK_b));
+		return 1;
+
+	case SDLK_LESS:
+	case SDLK_SEMICOLON:
+	case SDLK_COLON:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		sample_set(sample_get_current() - 1);
+		status.flags |= NEED_UPDATE;
+		return 1;
+	case SDLK_GREATER:
+	case SDLK_QUOTE:
+	case SDLK_QUOTEDBL:
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
+		sample_set(sample_get_current() + 1);
+		status.flags |= NEED_UPDATE;
+		return 1;
+	default:
+		if (k->mouse == MOUSE_NONE) {
+			if (!(k->mod & (KMOD_CTRL | KMOD_ALT)) && k->text) return orderlist_handle_text_input_on_list(k->text);
+
 			return 0;
-		case SDLK_u:
-			if (k->mod & KMOD_ALT) {
-				if (k->state == KEY_RELEASE) return 1;
-				orderlist_add_unused_patterns();
-				return 1;
-			}
-			return 0;
-
-		case SDLK_b:
-			if (k->mod & KMOD_SHIFT) return 0;
-			/* fall through */
-		case SDLK_o:
-			if (!(k->mod & KMOD_CTRL)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			song_pattern_to_sample(
-				current_song->orderlist[current_order], !!(k->mod & KMOD_SHIFT), !!(k->sym == SDLK_b));
-			return 1;
-
-		case SDLK_LESS:
-		case SDLK_SEMICOLON:
-		case SDLK_COLON:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			sample_set(sample_get_current() - 1);
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case SDLK_GREATER:
-		case SDLK_QUOTE:
-		case SDLK_QUOTEDBL:
-			if (!NO_MODIFIER(k->mod)) return 0;
-			if (k->state == KEY_RELEASE) return 1;
-			sample_set(sample_get_current() + 1);
-			status.flags |= NEED_UPDATE;
-			return 1;
-		default:
-			if (k->mouse == MOUSE_NONE) {
-				if (!(k->mod & (KMOD_CTRL | KMOD_ALT)) && k->text) return orderlist_handle_text_input_on_list(k->text);
-
-				return 0;
-			}
+		}
 	}
 
 	if (new_cursor_pos < 0) new_cursor_pos = 2;
@@ -769,9 +768,9 @@ static void order_pan_vol_handle_key(struct key_event *k)
 	if (!NO_MODIFIER(k->mod)) return;
 
 	switch (k->sym) {
-		case SDLK_PAGEDOWN: n += 8; break;
-		case SDLK_PAGEUP: n -= 8; break;
-		default: return;
+	case SDLK_PAGEDOWN: n += 8; break;
+	case SDLK_PAGEUP: n -= 8; break;
+	default: return;
 	}
 
 	n = CLAMP(n, 1, 64);
@@ -882,53 +881,53 @@ void song_set_pan_scheme(int scheme)
 
 	//mphack alert, all pan values multiplied by 4
 	switch (scheme) {
-		case PANS_STEREO:
-			for (n = 0; n < MAX_CHANNELS; n++) {
-				if (!(chn[n].flags & CHN_MUTE)) chn[n].panning = (n & 1) ? 256 : 0;
+	case PANS_STEREO:
+		for (n = 0; n < MAX_CHANNELS; n++) {
+			if (!(chn[n].flags & CHN_MUTE)) chn[n].panning = (n & 1) ? 256 : 0;
+		}
+		break;
+	case PANS_AMIGA:
+		for (n = 0; n < MAX_CHANNELS; n++) {
+			if (!(chn[n].flags & CHN_MUTE)) chn[n].panning = ((n + 1) & 2) ? 256 : 0;
+		}
+		break;
+	case PANS_LEFT:
+		for (n = 0; n < MAX_CHANNELS; n++) {
+			if (!(chn[n].flags & CHN_MUTE)) chn[n].panning = 0;
+		}
+		break;
+	case PANS_RIGHT:
+		for (n = 0; n < MAX_CHANNELS; n++) {
+			if (!(chn[n].flags & CHN_MUTE)) chn[n].panning = 256;
+		}
+		break;
+	case PANS_MONO:
+		for (n = 0; n < MAX_CHANNELS; n++) {
+			if (!(chn[n].flags & CHN_MUTE)) chn[n].panning = 128;
+		}
+		break;
+	case PANS_SLASH:
+		for (n = 0; n < MAX_CHANNELS; n++) {
+			if (!(chn[n].flags & CHN_MUTE)) active++;
+		}
+		for (n = 0, nc = 0; nc < active; n++) {
+			if (!(chn[n].flags & CHN_MUTE)) {
+				chn[n].panning = 256 - (256 * nc / (active - 1));
+				nc++;
 			}
-			break;
-		case PANS_AMIGA:
-			for (n = 0; n < MAX_CHANNELS; n++) {
-				if (!(chn[n].flags & CHN_MUTE)) chn[n].panning = ((n + 1) & 2) ? 256 : 0;
+		}
+		break;
+	case PANS_BACKSLASH:
+		for (n = 0; n < MAX_CHANNELS; n++) {
+			if (!(chn[n].flags & CHN_MUTE)) active++;
+		}
+		for (n = 0, nc = 0; nc < active; n++) {
+			if (!(chn[n].flags & CHN_MUTE)) {
+				chn[n].panning = (256 * nc / (active - 1));
+				nc++;
 			}
-			break;
-		case PANS_LEFT:
-			for (n = 0; n < MAX_CHANNELS; n++) {
-				if (!(chn[n].flags & CHN_MUTE)) chn[n].panning = 0;
-			}
-			break;
-		case PANS_RIGHT:
-			for (n = 0; n < MAX_CHANNELS; n++) {
-				if (!(chn[n].flags & CHN_MUTE)) chn[n].panning = 256;
-			}
-			break;
-		case PANS_MONO:
-			for (n = 0; n < MAX_CHANNELS; n++) {
-				if (!(chn[n].flags & CHN_MUTE)) chn[n].panning = 128;
-			}
-			break;
-		case PANS_SLASH:
-			for (n = 0; n < MAX_CHANNELS; n++) {
-				if (!(chn[n].flags & CHN_MUTE)) active++;
-			}
-			for (n = 0, nc = 0; nc < active; n++) {
-				if (!(chn[n].flags & CHN_MUTE)) {
-					chn[n].panning = 256 - (256 * nc / (active - 1));
-					nc++;
-				}
-			}
-			break;
-		case PANS_BACKSLASH:
-			for (n = 0; n < MAX_CHANNELS; n++) {
-				if (!(chn[n].flags & CHN_MUTE)) active++;
-			}
-			for (n = 0, nc = 0; nc < active; n++) {
-				if (!(chn[n].flags & CHN_MUTE)) {
-					chn[n].panning = (256 * nc / (active - 1));
-					nc++;
-				}
-			}
-			break;
+		}
+		break;
 #if 0
 	case PANS_CROSS:
 		for (n = 0; n < MAX_CHANNELS; n++) {
@@ -960,7 +959,7 @@ void song_set_pan_scheme(int scheme)
 		}
 		break;
 #endif
-		default: printf("oh i am confused\n");
+	default: printf("oh i am confused\n");
 	}
 	// get the values on the page to correspond to the song...
 	order_pan_vol_song_changed_cb();

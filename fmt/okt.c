@@ -188,18 +188,18 @@ static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 			if (e < 0) return effwarn;
 
 			switch (e) {
-				case 0: // Nothing
-					break;
+			case 0: // Nothing
+				break;
 
-				/* 1/2 apparently are backwards from .mod? */
-				case 1: // 1 Portamento Down (Period)
-					note->effect = FX_PORTAMENTODOWN;
-					note->param &= 0xf;
-					break;
-				case 2: // 2 Portamento Up (Period)
-					note->effect = FX_PORTAMENTOUP;
-					note->param &= 0xf;
-					break;
+			/* 1/2 apparently are backwards from .mod? */
+			case 1: // 1 Portamento Down (Period)
+				note->effect = FX_PORTAMENTODOWN;
+				note->param &= 0xf;
+				break;
+			case 2: // 2 Portamento Up (Period)
+				note->effect = FX_PORTAMENTOUP;
+				note->param &= 0xf;
+				break;
 
 #if 0
 			/* these aren't like Jxx: "down" means to *subtract* the offset from the note.
@@ -211,94 +211,94 @@ static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 				break;
 #endif
 
-				/* This one is close enough to "standard" arpeggio -- I think! */
-				case 12: // C Arpeggio 3 (up, up, orig)
-					if (note->param) note->effect = FX_ARPEGGIO;
-					break;
+			/* This one is close enough to "standard" arpeggio -- I think! */
+			case 12: // C Arpeggio 3 (up, up, orig)
+				if (note->param) note->effect = FX_ARPEGGIO;
+				break;
 
-				case 13: // D Slide Down (Notes)
-					if (note->param) {
-						note->effect = FX_NOTESLIDEDOWN;
-						note->param = 0x10 | MIN(0xf, note->param);
-					}
-					break;
+			case 13: // D Slide Down (Notes)
+				if (note->param) {
+					note->effect = FX_NOTESLIDEDOWN;
+					note->param = 0x10 | MIN(0xf, note->param);
+				}
+				break;
 
-				case 30: // U Slide Up (Notes)
-					if (note->param) {
-						note->effect = FX_NOTESLIDEUP;
-						note->param = 0x10 | MIN(0xf, note->param);
-					}
-					break;
+			case 30: // U Slide Up (Notes)
+				if (note->param) {
+					note->effect = FX_NOTESLIDEUP;
+					note->param = 0x10 | MIN(0xf, note->param);
+				}
+				break;
 
-				case 21: // L Slide Down Once (Notes)
-					/* We don't have fine note slide, but this is supposed to happen once
+			case 21: // L Slide Down Once (Notes)
+				/* We don't have fine note slide, but this is supposed to happen once
 				per row. Sliding every 5 (non-note) ticks kind of works (at least at
 				speed 6), but implementing fine slides would of course be better. */
-					if (note->param) {
-						note->effect = FX_NOTESLIDEDOWN;
-						note->param = 0x50 | MIN(0xf, note->param);
+				if (note->param) {
+					note->effect = FX_NOTESLIDEDOWN;
+					note->param = 0x50 | MIN(0xf, note->param);
+				}
+				break;
+
+			case 17: // H Slide Up Once (Notes)
+				if (note->param) {
+					note->effect = FX_NOTESLIDEUP;
+					note->param = 0x50 | MIN(0xf, note->param);
+				}
+				break;
+
+			case 15: // F Set Filter <>00:ON
+				// Not implemented, but let's import it anyway...
+				note->effect = FX_SPECIAL;
+				note->param = !!note->param;
+				break;
+
+			case 25: // P Pos Jump
+				note->effect = FX_POSITIONJUMP;
+				break;
+
+			case 27: // R Release sample (apparently not listed in the help!)
+				note->note = NOTE_OFF;
+				note->instrument = note->effect = note->param = 0;
+				break;
+
+			case 28:                     // S Speed
+				note->effect = FX_SPEED; // or tempo?
+				break;
+
+			case 31: // V Volume
+				note->effect = FX_VOLUMESLIDE;
+				switch (note->param >> 4) {
+				case 4:
+					if (note->param != 0x40) {
+						note->param &= 0xf; // D0x
+						break;
 					}
+					// 0x40 is set volume -- fall through
+				case 0:
+				case 1:
+				case 2:
+				case 3:
+					note->voleffect = VOLFX_VOLUME;
+					note->volparam = note->param;
+					note->effect = FX_NONE;
+					note->param = 0;
 					break;
-
-				case 17: // H Slide Up Once (Notes)
-					if (note->param) {
-						note->effect = FX_NOTESLIDEUP;
-						note->param = 0x50 | MIN(0xf, note->param);
-					}
+				case 5:
+					note->param = (note->param & 0xf) << 4; // Dx0
 					break;
-
-				case 15: // F Set Filter <>00:ON
-					// Not implemented, but let's import it anyway...
-					note->effect = FX_SPECIAL;
-					note->param = !!note->param;
+				case 6:
+					note->param = 0xf0 | MIN(note->param & 0xf, 0xe); // DFx
 					break;
-
-				case 25: // P Pos Jump
-					note->effect = FX_POSITIONJUMP;
+				case 7:
+					note->param = (MIN(note->param & 0xf, 0xe) << 4) | 0xf; // DxF
 					break;
-
-				case 27: // R Release sample (apparently not listed in the help!)
-					note->note = NOTE_OFF;
-					note->instrument = note->effect = note->param = 0;
+				default:
+					// Junk.
+					note->effect = note->param = 0;
 					break;
-
-				case 28:                     // S Speed
-					note->effect = FX_SPEED; // or tempo?
-					break;
-
-				case 31: // V Volume
-					note->effect = FX_VOLUMESLIDE;
-					switch (note->param >> 4) {
-						case 4:
-							if (note->param != 0x40) {
-								note->param &= 0xf; // D0x
-								break;
-							}
-							// 0x40 is set volume -- fall through
-						case 0:
-						case 1:
-						case 2:
-						case 3:
-							note->voleffect = VOLFX_VOLUME;
-							note->volparam = note->param;
-							note->effect = FX_NONE;
-							note->param = 0;
-							break;
-						case 5:
-							note->param = (note->param & 0xf) << 4; // Dx0
-							break;
-						case 6:
-							note->param = 0xf0 | MIN(note->param & 0xf, 0xe); // DFx
-							break;
-						case 7:
-							note->param = (MIN(note->param & 0xf, 0xe) << 4) | 0xf; // DxF
-							break;
-						default:
-							// Junk.
-							note->effect = note->param = 0;
-							break;
-					}
-					break;
+				}
+				break;
 
 #if 0
 			case 24: // O Old Volume
@@ -308,12 +308,12 @@ static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 				break;
 #endif
 
-				default:
-					//log_appendf(2, " Pattern %d, row %d: effect %d %02X",
-					//        pat, row, e, note->param);
-					effwarn |= (e > 32) ? 1 : (1 << (e - 1));
-					note->effect = FX_UNIMPLEMENTED;
-					break;
+			default:
+				//log_appendf(2, " Pattern %d, row %d: effect %d %02X",
+				//        pat, row, e, note->param);
+				effwarn |= (e > 32) ? 1 : (1 << (e - 1));
+				note->effect = FX_UNIMPLEMENTED;
+				break;
 			}
 		}
 	}
@@ -352,62 +352,62 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		nextpos = slurp_tell(fp) + blklen;
 
 		switch (OKT_BLOCK(tag[0], tag[1], tag[2], tag[3])) {
-			case OKT_BLK_CMOD:
-				if (!(readflags & OKT_HAS_CMOD)) {
-					readflags |= OKT_HAS_CMOD;
-					nchn = okt_read_cmod(song, fp);
-				}
-				break;
-			case OKT_BLK_SAMP:
-				if (!(readflags & OKT_HAS_SAMP)) {
-					readflags |= OKT_HAS_SAMP;
-					okt_read_samp(song, fp, blklen, smpflag);
-				}
-				break;
-			case OKT_BLK_SPEE:
-				if (!(readflags & OKT_HAS_SPEE)) {
-					readflags |= OKT_HAS_SPEE;
-					slurp_read(fp, &w, 2);
-					w = bswapBE16(w);
-					song->initial_speed = CLAMP(w, 1, 255);
-					song->initial_tempo = 125;
-				}
-				break;
-			case OKT_BLK_SLEN:
-				// Don't care.
-				break;
-			case OKT_BLK_PLEN:
-				if (!(readflags & OKT_HAS_PLEN)) {
-					readflags |= OKT_HAS_PLEN;
-					slurp_read(fp, &w, 2);
-					plen = bswapBE16(w);
-				}
-				break;
-			case OKT_BLK_PATT:
-				if (!(readflags & OKT_HAS_PATT)) {
-					readflags |= OKT_HAS_PATT;
-					slurp_read(fp, song->orderlist, MIN(blklen, MAX_ORDERS));
-				}
-				break;
-			case OKT_BLK_PBOD:
-				/* Need the channel count (in CMOD) in order to read these */
-				if (npat < MAX_PATTERNS) {
-					if (blklen > 0) patseek[npat] = slurp_tell(fp);
-					npat++;
-				}
-				break;
-			case OKT_BLK_SBOD:
-				if (nsmp < MAX_SAMPLES) {
-					smpseek[nsmp] = slurp_tell(fp);
-					smpsize[nsmp] = blklen;
-					if (smpsize[nsmp]) nsmp++;
-				}
-				break;
+		case OKT_BLK_CMOD:
+			if (!(readflags & OKT_HAS_CMOD)) {
+				readflags |= OKT_HAS_CMOD;
+				nchn = okt_read_cmod(song, fp);
+			}
+			break;
+		case OKT_BLK_SAMP:
+			if (!(readflags & OKT_HAS_SAMP)) {
+				readflags |= OKT_HAS_SAMP;
+				okt_read_samp(song, fp, blklen, smpflag);
+			}
+			break;
+		case OKT_BLK_SPEE:
+			if (!(readflags & OKT_HAS_SPEE)) {
+				readflags |= OKT_HAS_SPEE;
+				slurp_read(fp, &w, 2);
+				w = bswapBE16(w);
+				song->initial_speed = CLAMP(w, 1, 255);
+				song->initial_tempo = 125;
+			}
+			break;
+		case OKT_BLK_SLEN:
+			// Don't care.
+			break;
+		case OKT_BLK_PLEN:
+			if (!(readflags & OKT_HAS_PLEN)) {
+				readflags |= OKT_HAS_PLEN;
+				slurp_read(fp, &w, 2);
+				plen = bswapBE16(w);
+			}
+			break;
+		case OKT_BLK_PATT:
+			if (!(readflags & OKT_HAS_PATT)) {
+				readflags |= OKT_HAS_PATT;
+				slurp_read(fp, song->orderlist, MIN(blklen, MAX_ORDERS));
+			}
+			break;
+		case OKT_BLK_PBOD:
+			/* Need the channel count (in CMOD) in order to read these */
+			if (npat < MAX_PATTERNS) {
+				if (blklen > 0) patseek[npat] = slurp_tell(fp);
+				npat++;
+			}
+			break;
+		case OKT_BLK_SBOD:
+			if (nsmp < MAX_SAMPLES) {
+				smpseek[nsmp] = slurp_tell(fp);
+				smpsize[nsmp] = blklen;
+				if (smpsize[nsmp]) nsmp++;
+			}
+			break;
 
-			default:
-				//log_appendf(4, " Warning: Unknown block of type '%c%c%c%c' at 0x%lx",
-				//        tag[0], tag[1], tag[2], tag[3], fp->pos - 8);
-				break;
+		default:
+			//log_appendf(4, " Warning: Unknown block of type '%c%c%c%c' at 0x%lx",
+			//        tag[0], tag[1], tag[2], tag[3], fp->pos - 8);
+			break;
 		}
 
 		if (slurp_seek(fp, nextpos, SEEK_SET) != 0) {
