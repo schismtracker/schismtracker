@@ -44,7 +44,7 @@ struct sheep {
 
 static size_t fake_read(void *buf, size_t size, size_t nmemb, void *void_data)
 {
-	struct sheep *file_data = (struct sheep *) void_data;
+	struct sheep *file_data = (struct sheep *)void_data;
 
 	off_t length_left = file_data->length - file_data->position;
 	off_t read_size = nmemb * size;
@@ -62,22 +62,15 @@ static size_t fake_read(void *buf, size_t size, size_t nmemb, void *void_data)
 
 static int fake_seek(void *void_data, ogg_int64_t offset, int whence)
 {
-	struct sheep *file_data = (struct sheep *) void_data;
+	struct sheep *file_data = (struct sheep *)void_data;
 
 	switch (whence) {
-	case SEEK_SET:
-		break;
-	case SEEK_CUR:
-		offset += file_data->position;
-		break;
-	case SEEK_END:
-		offset += file_data->length;
-		break;
-	default:
-		return -1;
+	case SEEK_SET: break;
+	case SEEK_CUR: offset += file_data->position; break;
+	case SEEK_END: offset += file_data->length; break;
+	default: return -1;
 	}
-	if (offset < 0 || offset > file_data->length)
-		return -1;
+	if (offset < 0 || offset > file_data->length) return -1;
 	file_data->position = offset;
 	return 0;
 }
@@ -89,14 +82,14 @@ static int fake_close(UNUSED void *void_data)
 
 static long fake_tell(void *void_data)
 {
-	struct sheep *file_data = (struct sheep *) void_data;
+	struct sheep *file_data = (struct sheep *)void_data;
 
 	return file_data->position;
 }
 
 /* --------------------------------------------------------------------- */
 
-static void get_title_from_ogg(OggVorbis_File * vf, char **artist_ptr, char **title_ptr)
+static void get_title_from_ogg(OggVorbis_File *vf, char **artist_ptr, char **title_ptr)
 {
 	char *buf, *key, *value;
 	char **ptr = ov_comment(vf, -1)->user_comments;
@@ -114,12 +107,9 @@ static void get_title_from_ogg(OggVorbis_File * vf, char **artist_ptr, char **ti
 		*value = 0;
 		value = str_dup(value + 1);
 
-		if (strcmp(key, "artist") == 0)
-			*artist_ptr = value;
-		else if (strcmp(key, "title") == 0)
-			*title_ptr = value;
-		else
-			free(value);
+		if (strcmp(key, "artist") == 0) *artist_ptr = value;
+		else if (strcmp(key, "title") == 0) *title_ptr = value;
+		else free(value);
 		free(key);
 		ptr++;
 	}
@@ -142,8 +132,7 @@ int fmt_ogg_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	file_data.length = length;
 	file_data.position = 0;
 
-	if (ov_open_callbacks(&file_data, &vf, NULL, 0, cb) < 0)
-		return 0;
+	if (ov_open_callbacks(&file_data, &vf, NULL, 0, cb) < 0) return 0;
 
 	/* song_length = ov_time_total(&vf, -1); */
 

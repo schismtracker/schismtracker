@@ -41,26 +41,24 @@
 
 #define SDL_ToggleCursor() SDL_ShowCursor(!SDL_ShowCursor(-1))
 
-#define NO_MODIFIER(mod) \
-	(((mod) & (KMOD_CTRL | KMOD_ALT | KMOD_SHIFT)) == 0)
-#define NO_CAM_MODS(mod) \
-	(((mod) & (KMOD_CTRL | KMOD_ALT)) == 0)
+#define NO_MODIFIER(mod) (((mod) & (KMOD_CTRL | KMOD_ALT | KMOD_SHIFT)) == 0)
+#define NO_CAM_MODS(mod) (((mod) & (KMOD_CTRL | KMOD_ALT)) == 0)
 
 /* --------------------------------------------------------------------- */
 /* structs 'n enums */
 
 /* tracker_status dialog_types */
 enum {
-	DIALOG_NONE = (0),                              /* 0000 0000 */
-	DIALOG_MENU = (1 << 0),                         /* 0000 0001 */
-	DIALOG_MAIN_MENU = (DIALOG_MENU | (1 << 1)),    /* 0000 0011 */
-	DIALOG_SUBMENU = (DIALOG_MENU | (1 << 2)),      /* 0000 0101 */
-	DIALOG_BOX = (1 << 3),                          /* 0000 1000 */
-	DIALOG_OK = (DIALOG_BOX | (1 << 4)),            /* 0001 1000 */
-	DIALOG_OK_CANCEL = (DIALOG_BOX | (1 << 5)),     /* 0010 1000 */
+	DIALOG_NONE = (0),                           /* 0000 0000 */
+	DIALOG_MENU = (1 << 0),                      /* 0000 0001 */
+	DIALOG_MAIN_MENU = (DIALOG_MENU | (1 << 1)), /* 0000 0011 */
+	DIALOG_SUBMENU = (DIALOG_MENU | (1 << 2)),   /* 0000 0101 */
+	DIALOG_BOX = (1 << 3),                       /* 0000 1000 */
+	DIALOG_OK = (DIALOG_BOX | (1 << 4)),         /* 0001 1000 */
+	DIALOG_OK_CANCEL = (DIALOG_BOX | (1 << 5)),  /* 0010 1000 */
 	/* yes/no technically has a cancel as well, i.e. the escape key */
-	DIALOG_YES_NO = (DIALOG_BOX | (1 << 6)),        /* 0100 1000 */
-	DIALOG_CUSTOM = (DIALOG_BOX | (1 << 7)),        /* 1000 1000 */
+	DIALOG_YES_NO = (DIALOG_BOX | (1 << 6)), /* 0100 1000 */
+	DIALOG_CUSTOM = (DIALOG_BOX | (1 << 7)), /* 1000 1000 */
 };
 
 /* tracker_status flags
@@ -147,13 +145,25 @@ enum {
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
 enum tracker_time_display {
-	TIME_OFF, TIME_PLAY_ELAPSED, TIME_PLAY_CLOCK, TIME_PLAY_OFF,
-	TIME_ELAPSED, TIME_CLOCK, TIME_ABSOLUTE, TIME_PLAYBACK,
+	TIME_OFF,
+	TIME_PLAY_ELAPSED,
+	TIME_PLAY_CLOCK,
+	TIME_PLAY_OFF,
+	TIME_ELAPSED,
+	TIME_CLOCK,
+	TIME_ABSOLUTE,
+	TIME_PLAYBACK,
 };
 
 /* what should go in the little box on the top right? */
 enum tracker_vis_style {
-	VIS_OFF, VIS_FAKEMEM, VIS_OSCILLOSCOPE, VIS_VU_METER, VIS_MONOSCOPE, VIS_FFT, VIS_SENTINEL
+	VIS_OFF,
+	VIS_FAKEMEM,
+	VIS_OSCILLOSCOPE,
+	VIS_VU_METER,
+	VIS_MONOSCOPE,
+	VIS_FFT,
+	VIS_SENTINEL
 };
 
 struct midi_port; /* midi.h */
@@ -162,7 +172,7 @@ struct tracker_status {
 	int current_page;
 	int previous_page;
 	int current_help_index;
-	int dialog_type;        /* one of the DIALOG_* constants above */
+	int dialog_type; /* one of the DIALOG_* constants above */
 	int flags;
 	enum tracker_time_display time_display;
 	enum tracker_vis_style vis_style;
@@ -231,14 +241,14 @@ extern int current_palette_index;
 
 extern int playback_tracing, midi_playback_tracing;
 
-extern const char hexdigits[16];        /* in keyboard.c at the moment */
+extern const char hexdigits[16]; /* in keyboard.c at the moment */
 
 /* this used to just translate keys to notes, but it's sort of become the
  * keyboard map... perhaps i should rename it. */
-extern const char *note_trans;  /* keyboard.c */
+extern const char *note_trans; /* keyboard.c */
 
 
-extern int show_default_volumes;        /* pattern-view.c */
+extern int show_default_volumes; /* pattern-view.c */
 
 /* --------------------------------------------------------------------- */
 /* settings (config.c) */
@@ -302,7 +312,7 @@ void text_delete_next_char(char *text, int *cursor_pos, int max_length);
 static inline unsigned char unicode_to_ascii(uint16_t unicode)
 {
 	return unicode & 0xff;
-//        return ((unicode & 0xff80) ? 0 : (unicode & 0x7f));
+	//        return ((unicode & 0xff80) ? 0 : (unicode & 0x7f));
 }
 
 /* --------------------------------------------------------------------- */
@@ -317,10 +327,10 @@ void draw_sample_data(struct vgamem_overlay *r, struct song_sample *sample);
 /* this works like draw_sample_data, just without having to allocate a
  * song_sample structure, and without caching the waveform.
  * mostly it's just for the oscilloscope view. */
-void draw_sample_data_rect_16(struct vgamem_overlay *r, signed short *data, int length,
-	unsigned int inputchans, unsigned int outputchans);
-void draw_sample_data_rect_8(struct vgamem_overlay *r, signed char *data, int length,
-	unsigned int inputchans, unsigned int outputchans);
+void draw_sample_data_rect_16(
+	struct vgamem_overlay *r, signed short *data, int length, unsigned int inputchans, unsigned int outputchans);
+void draw_sample_data_rect_8(
+	struct vgamem_overlay *r, signed char *data, int length, unsigned int inputchans, unsigned int outputchans);
 
 /* these are in audio_playback.cc */
 extern signed short *audio_buffer;
@@ -336,11 +346,11 @@ void set_page(int new_page);
 /* (there's no get_page -- just use status.current_page) */
 
 /* these should only be called from main */
-void load_pages(void);  /* called once at start of program */
-void playback_update(void);     /* once per cycle */
+void load_pages(void);      /* called once at start of program */
+void playback_update(void); /* once per cycle */
 struct key_event;
-void handle_key(struct key_event * k);        /* whenever there's a keypress ;) */
-void handle_text_input(const uint8_t* text_input);
+void handle_key(struct key_event *k); /* whenever there's a keypress ;) */
+void handle_text_input(const uint8_t *text_input);
 void key_translate(struct key_event *k);
 
 /* this should only be called from main.
@@ -362,11 +372,11 @@ int set_palette_from_string(const char *str_in);
 /* mostly for the itf editor */
 int font_save(const char *filename);
 
-void font_reset_lower(void);    /* ascii chars (0-127) */
-void font_reset_upper(void);    /* itf chars (128-255) */
-void font_reset(void);  /* everything (0-255) */
-void font_reset_bios(void);     /* resets all chars to the alt font */
-void font_reset_char(int c);     /* resets just one char */
+void font_reset_lower(void); /* ascii chars (0-127) */
+void font_reset_upper(void); /* itf chars (128-255) */
+void font_reset(void);       /* everything (0-255) */
+void font_reset_bios(void);  /* resets all chars to the alt font */
+void font_reset_char(int c); /* resets just one char */
 
 /* this needs to be called before any char drawing.
  * it's pretty much the same as doing...
@@ -380,8 +390,8 @@ void font_init(void);
 
 int numeric_key_event(struct key_event *k, int kponly);
 
-char *get_note_string(int note, char *buf);     /* "C-5" or "G#4" */
-char *get_note_string_short(int note, char *buf);       /* "c5" or "G4" */
+char *get_note_string(int note, char *buf);       /* "C-5" or "G#4" */
+char *get_note_string_short(int note, char *buf); /* "c5" or "G4" */
 char *get_volume_string(int volume, int volume_effect, char *buf);
 char get_effect_char(int command);
 int get_effect_number(char effect);
@@ -401,7 +411,7 @@ int kbd_get_note(struct key_event *k);
 int kbd_get_alnum(struct key_event *k);
 
 void handle_key_repeat(void);
-void cache_key_repeat(struct key_event* kk);
+void cache_key_repeat(struct key_event *kk);
 void empty_key_repeat(void);
 
 /* use 0 for delay to (re)set the default rate. */
@@ -474,4 +484,3 @@ void schism_exit(int status);
 /* --------------------------------------------------------------------- */
 
 #endif /* SCHISM_IT_H_ */
-

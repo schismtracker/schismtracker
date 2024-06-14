@@ -5,7 +5,7 @@ void GM_Patch(int c, unsigned char p, int pref_chn_mask);
 void GM_DPatch(int ch, unsigned char GM, unsigned char bank, int pref_chn_mask);
 
 void GM_Bank(int c, unsigned char b);
-void GM_Touch(int c, unsigned char Vol); // range 0..127
+void GM_Touch(int c, unsigned char Vol);                    // range 0..127
 void GM_KeyOn(int c, unsigned char key, unsigned char Vol); // vol range 0..127
 void GM_KeyOff(int c);
 void GM_Bend(int c, unsigned Count);
@@ -26,7 +26,11 @@ void GM_Pan(int ch, signed char val); // param: -128..+127
 //
 // Note that vibrato etc. are emulated by issuing multiple SetFreqAndVol
 // commands; they are not translated into MIDI vibrato operator calls.
-typedef enum { MIDI_BEND_NORMAL, MIDI_BEND_DOWN, MIDI_BEND_UP } MidiBendMode;
+typedef enum {
+	MIDI_BEND_NORMAL,
+	MIDI_BEND_DOWN,
+	MIDI_BEND_UP
+} MidiBendMode;
 void GM_SetFreqAndVol(int channel, int Hertz, int Vol, MidiBendMode bend_mode, int keyoff);
 
 void GM_SendSongStartCode(void);

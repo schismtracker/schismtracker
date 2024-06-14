@@ -32,7 +32,7 @@ static void localtime_r_atexit(void)
 	DeleteCriticalSection(&localtime_r_cs);
 }
 
-struct tm * localtime_r(const time_t *timep, struct tm *result)
+struct tm *localtime_r(const time_t *timep, struct tm *result)
 {
 	static struct tm *local_tm;
 	static int initialized = 0;
@@ -49,4 +49,3 @@ struct tm * localtime_r(const time_t *timep, struct tm *result)
 	LeaveCriticalSection(&localtime_r_cs);
 	return result;
 }
-

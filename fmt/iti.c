@@ -37,7 +37,7 @@
 /* --------------------------------------------------------------------- */
 int fmt_iti_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	if (!(length > 554 && memcmp(data, "IMPI",4) == 0)) return 0;
+	if (!(length > 554 && memcmp(data, "IMPI", 4) == 0)) return 0;
 	file->description = "Impulse Tracker Instrument";
 	file->title = strn_dup((const char *)data + 32, 25);
 	file->type = TYPE_INST_ITI;
@@ -53,7 +53,7 @@ int fmt_iti_load_instrument(const uint8_t *data, size_t length, int slot)
 	song_sample_t *smp;
 	int j;
 
-	if (!(length > 554 && memcmp(data, "IMPI",4) == 0)) return 0;
+	if (!(length > 554 && memcmp(data, "IMPI", 4) == 0)) return 0;
 
 	memcpy(&iti, data, sizeof(iti));
 
@@ -79,15 +79,13 @@ int fmt_iti_load_instrument(const uint8_t *data, size_t length, int slot)
 	ins->name[25] = 0;
 	ins->ifc = iti.ifc;
 	ins->ifr = iti.ifr;
-	ins->midi_channel_mask = iti.mch > 16 ? (0x10000 + iti.mch)
-			     : iti.mch == 0 ? (0)
-			     :                (1 << (iti.mch-1));
+	ins->midi_channel_mask = iti.mch > 16 ? (0x10000 + iti.mch) : iti.mch == 0 ? (0) : (1 << (iti.mch - 1));
 	ins->midi_program = iti.mpr;
 	ins->midi_bank = bswapLE16(iti.mbank);
 
 	for (j = 0; j < 120; j++) {
-		ins->sample_map[j] = instrument_loader_sample(&ii, iti.keyboard[2*j + 1]);
-		ins->note_map[j] = iti.keyboard[2 * j]+1;
+		ins->sample_map[j] = instrument_loader_sample(&ii, iti.keyboard[2 * j + 1]);
+		ins->note_map[j] = iti.keyboard[2 * j] + 1;
 	}
 	if (iti.volenv.flags & 1) ins->flags |= ENV_VOLUME;
 	if (iti.volenv.flags & 2) ins->flags |= ENV_VOLLOOP;
@@ -120,22 +118,19 @@ int fmt_iti_load_instrument(const uint8_t *data, size_t length, int slot)
 
 	for (j = 0; j < 25; j++) {
 		ins->vol_env.values[j] = iti.volenv.data[3 * j];
-		ins->vol_env.ticks[j] = iti.volenv.data[3 * j + 1]
-			| (iti.volenv.data[3 * j + 2] << 8);
+		ins->vol_env.ticks[j] = iti.volenv.data[3 * j + 1] | (iti.volenv.data[3 * j + 2] << 8);
 
 		ins->pan_env.values[j] = iti.panenv.data[3 * j] + 32;
-		ins->pan_env.ticks[j] = iti.panenv.data[3 * j + 1]
-			| (iti.panenv.data[3 * j + 2] << 8);
+		ins->pan_env.ticks[j] = iti.panenv.data[3 * j + 1] | (iti.panenv.data[3 * j + 2] << 8);
 
 		ins->pitch_env.values[j] = iti.pitchenv.data[3 * j] + 32;
-		ins->pitch_env.ticks[j] = iti.pitchenv.data[3 * j + 1]
-			| (iti.pitchenv.data[3 * j + 2] << 8);
+		ins->pitch_env.ticks[j] = iti.pitchenv.data[3 * j + 1] | (iti.pitchenv.data[3 * j + 2] << 8);
 	}
 
 	/* okay, on to samples */
 	unsigned int pos = 554;
 	for (j = 0; j < ii.expect_samples; j++) {
-		smp = song_get_sample(ii.sample_map[j+1]);
+		smp = song_get_sample(ii.sample_map[j + 1]);
 		if (!smp) break;
 		if (!load_its_sample(data + pos, data, length, smp)) {
 			log_appendf(4, "Could not load sample %d from ITI file", j);

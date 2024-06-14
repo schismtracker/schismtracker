@@ -26,17 +26,17 @@
 #endif
 
 #if HAVE_MMAP
-#include <sys/types.h>
-#include <sys/mman.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
+# include <sys/types.h>
+# include <sys/mman.h>
+# include <unistd.h>
+# include <fcntl.h>
+# include <errno.h>
 
-#include "slurp.h"
+# include "slurp.h"
 
 static void _munmap_slurp(slurp_t *useme)
 {
-	(void)munmap((void*)useme->data, useme->length);
+	(void)munmap((void *)useme->data, useme->length);
 	(void)close(useme->extra);
 }
 
@@ -48,14 +48,17 @@ int slurp_mmap(slurp_t *useme, const char *filename, size_t st)
 	fd = open(filename, O_RDONLY);
 	if (fd == -1) return 0;
 
-	addr = mmap(NULL, st, PROT_READ, MAP_SHARED
-#if defined(MAP_POPULATE) && defined(MAP_NONBLOCK)
-		| MAP_POPULATE | MAP_NONBLOCK
-#endif
-#if defined(MAP_NORESERVE)
-		| MAP_NORESERVE
-#endif
-		, fd, 0);
+	addr = mmap(
+		NULL, st, PROT_READ,
+		MAP_SHARED
+# if defined(MAP_POPULATE) && defined(MAP_NONBLOCK)
+			| MAP_POPULATE | MAP_NONBLOCK
+# endif
+# if defined(MAP_NORESERVE)
+			| MAP_NORESERVE
+# endif
+		,
+		fd, 0);
 
 	if (addr == MAP_FAILED) {
 		(void)close(fd);

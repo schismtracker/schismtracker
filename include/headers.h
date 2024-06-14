@@ -34,13 +34,13 @@
 #include <stdio.h>
 
 #ifdef HAVE_STDLIB_H
-#include <stdlib.h>
+# include <stdlib.h>
 #endif
 
 #include <stdarg.h>
 
 #ifdef HAVE_SYS_PARAM_H
-#include <sys/param.h>
+# include <sys/param.h>
 #endif
 
 #include <stdint.h>
@@ -51,13 +51,13 @@
 # include <string.h>
 #else
 # ifndef HAVE_STRCHR
-#  define strchr index
+#  define strchr  index
 #  define strrchr rindex
 # endif
 char *strchr(), *strrchr();
 # ifndef HAVE_MEMMOVE
-#  define memcpy(d, s, n) bcopy ((s), (d), (n))
-#  define memmove(d, s, n) bcopy ((s), (d), (n))
+#  define memcpy(d, s, n)  bcopy((s), (d), (n))
+#  define memmove(d, s, n) bcopy((s), (d), (n))
 # endif
 #endif
 
@@ -108,7 +108,7 @@ char *strchr(), *strrchr();
 #endif
 
 #ifdef HAVE_LIMITS_H
-#include <limits.h>
+# include <limits.h>
 #endif
 
 #ifndef NAME_MAX
@@ -130,24 +130,24 @@ char *strchr(), *strrchr();
 #include <time.h>
 #ifndef timersub
 // from FreeBSD
-# define timersub(tvp, uvp, vvp)                                       \
-	do {                                                            \
-		(vvp)->tv_sec = (tvp)->tv_sec - (uvp)->tv_sec;          \
-		(vvp)->tv_usec = (tvp)->tv_usec - (uvp)->tv_usec;       \
-		if ((vvp)->tv_usec < 0) {                               \
-			(vvp)->tv_sec--;                                \
-			(vvp)->tv_usec += 1000000;                      \
-		}                                                       \
-	} while (0)
+# define timersub(tvp, uvp, vvp) \
+	 do { \
+		 (vvp)->tv_sec = (tvp)->tv_sec - (uvp)->tv_sec; \
+		 (vvp)->tv_usec = (tvp)->tv_usec - (uvp)->tv_usec; \
+		 if ((vvp)->tv_usec < 0) { \
+			 (vvp)->tv_sec--; \
+			 (vvp)->tv_usec += 1000000; \
+		 } \
+	 } while (0)
 #endif
 
 #if HAVE_BYTESWAP_H
 /* byteswap.h uses inline assembly if possible (faster than bit-shifting) */
 # include <byteswap.h>
 #else
-# define bswap_32(x) (((((unsigned int)x) & 0xFF) << 24) | ((((unsigned int)x) & 0xFF00) << 8) \
-		       | (((((unsigned int)x) & 0xFF0000) >> 8) & 0xFF00) \
-		       | ((((((unsigned int)x) & 0xFF000000) >> 24)) & 0xFF))
+# define bswap_32(x) \
+	 (((((unsigned int)x) & 0xFF) << 24) | ((((unsigned int)x) & 0xFF00) << 8) \
+	  | (((((unsigned int)x) & 0xFF0000) >> 8) & 0xFF00) | ((((((unsigned int)x) & 0xFF000000) >> 24)) & 0xFF))
 # define bswap_16(x) (((((unsigned short)x) >> 8) & 0xFF) | ((((unsigned short)x) << 8) & 0xFF00))
 #endif
 /* define the endian-related byte swapping (taken from libmodplug sndfile.h, glibc, and sdl) */
@@ -159,13 +159,13 @@ char *strchr(), *strrchr();
 static inline uint16_t ARM_get16(const void *data)
 {
 	uint16_t s;
-	memcpy(&s,data,sizeof(s));
+	memcpy(&s, data, sizeof(s));
 	return s;
 }
 static inline uint32_t ARM_get32(const void *data)
 {
 	uint32_t s;
-	memcpy(&s,data,sizeof(s));
+	memcpy(&s, data, sizeof(s));
 	return s;
 }
 # define bswapLE16(x) ARM_get16(&(x))
@@ -206,7 +206,7 @@ struct tm *localtime_r(const time_t *timep, struct tm *result);
 int mkstemp(char *template);
 #endif
 
-#define INT_SHAPED_PTR(v)               ((intptr_t)(((void*)(v))))
-#define PTR_SHAPED_INT(i)               ((void*)(i))
+#define INT_SHAPED_PTR(v) ((intptr_t)(((void *)(v))))
+#define PTR_SHAPED_INT(i) ((void *)(i))
 
 #endif /* SCHISM_HEADERS_H_ */

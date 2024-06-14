@@ -28,10 +28,10 @@
 typedef struct tree tree_t;
 
 /* This function should behave like strcmp. (i.e. return < 0, 0, or > 0 depending on how 'a' relates to 'b') */
-typedef int (*treecmp_t) (const void *a, const void *b);
+typedef int (*treecmp_t)(const void *a, const void *b);
 
 /* warning; don't change any part of value that would alter the return of treecmp! */
-typedef void (*treewalk_t) (void *value);
+typedef void (*treewalk_t)(void *value);
 
 
 /* Create a new tree. */
@@ -57,4 +57,3 @@ returns NULL. (Only the parts of 'value' relevant to 'cmp' need be filled in.) *
 void *tree_find(tree_t *tree, void *value);
 
 #endif /* SCHISM_TREE_H_ */
-

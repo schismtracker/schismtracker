@@ -36,12 +36,10 @@ int fmt_ams_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	uint8_t n;
 
-	if (!(length > 38 && memcmp(data, "AMShdr\x1a", 7) == 0))
-		return 0;
+	if (!(length > 38 && memcmp(data, "AMShdr\x1a", 7) == 0)) return 0;
 
 	n = data[7];
-	if (n > 30)
-		n = 30;
+	if (n > 30) n = 30;
 	file->description = "Velvet Studio";
 	/*file->extension = str_dup("ams");*/
 	file->title = strn_dup((const char *)data + 8, n);

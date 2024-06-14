@@ -33,8 +33,7 @@ int fmt_far_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	/* The magic for this format is truly weird (which I suppose is good, as the chance of it
 	being "accidentally" correct is pretty low) */
-	if (!(length > 47 && memcmp(data + 44, "\x0d\x0a\x1a", 3) == 0 && memcmp(data, "FAR\xfe", 4) == 0))
-		return 0;
+	if (!(length > 47 && memcmp(data + 44, "\x0d\x0a\x1a", 3) == 0 && memcmp(data, "FAR\xfe", 4) == 0)) return 0;
 
 	file->description = "Farandole Module";
 	/*file->extension = str_dup("far");*/
@@ -75,21 +74,17 @@ struct far_sample {
 #pragma pack(pop)
 
 static uint8_t far_effects[] = {
-	FX_NONE,
-	FX_PORTAMENTOUP,
-	FX_PORTAMENTODOWN,
-	FX_TONEPORTAMENTO,
-	FX_RETRIG,
-	FX_VIBRATO, // depth
-	FX_VIBRATO, // speed
+	FX_NONE,        FX_PORTAMENTOUP, FX_PORTAMENTODOWN, FX_TONEPORTAMENTO, FX_RETRIG,
+	FX_VIBRATO,     // depth
+	FX_VIBRATO,     // speed
 	FX_VOLUMESLIDE, // up
 	FX_VOLUMESLIDE, // down
-	FX_VIBRATO, // sustained (?)
-	FX_NONE, // actually slide-to-volume
+	FX_VIBRATO,     // sustained (?)
+	FX_NONE,        // actually slide-to-volume
 	FX_PANNING,
 	FX_SPECIAL, // note offset => note delay?
-	FX_NONE, // fine tempo down
-	FX_NONE, // fine tempo up
+	FX_NONE,    // fine tempo down
+	FX_NONE,    // fine tempo up
 	FX_SPEED,
 };
 
@@ -108,11 +103,11 @@ static void far_import_note(song_note_t *note, const uint8_t data[4])
 	case 3: // porta to note
 		note->param <<= 2;
 		break;
-	case 4: // retrig
+	case 4:                                              // retrig
 		note->param = 6 / (1 + (note->param & 0xf)) + 1; // ugh?
 		break;
-	case 6: // vibrato speed
-	case 7: // volume slide up
+	case 6:   // vibrato speed
+	case 7:   // volume slide up
 	case 0xb: // panning
 		note->param <<= 4;
 		break;
@@ -140,8 +135,7 @@ int fmt_far_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint8_t data[8];
 
 	slurp_read(fp, &fhdr, sizeof(fhdr));
-	if (memcmp(fhdr.magic, "FAR\xfe", 4) != 0 || memcmp(fhdr.eof, "\x0d\x0a\x1a", 3) != 0)
-		return LOAD_UNSUPPORTED;
+	if (memcmp(fhdr.magic, "FAR\xfe", 4) != 0 || memcmp(fhdr.eof, "\x0d\x0a\x1a", 3) != 0) return LOAD_UNSUPPORTED;
 
 	fhdr.title[25] = '\0';
 	strcpy(song->title, fhdr.title);
@@ -152,11 +146,9 @@ int fmt_far_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		/* WHAT A GREAT WAY TO STORE THIS INFORMATION */
 		song->channels[n].panning = SHORT_PANNING(fhdr.chn_panning[n] & 0xf);
 		song->channels[n].panning *= 4; //mphack
-		if (!fhdr.onoff[n])
-			song->channels[n].flags |= CHN_MUTE;
+		if (!fhdr.onoff[n]) song->channels[n].flags |= CHN_MUTE;
 	}
-	for (; n < 64; n++)
-		song->channels[n].flags |= CHN_MUTE;
+	for (; n < 64; n++) song->channels[n].flags |= CHN_MUTE;
 
 	song->initial_speed = fhdr.default_speed;
 	song->initial_tempo = 80;
@@ -171,8 +163,7 @@ int fmt_far_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	slurp_seek(fp, sizeof(fhdr) + fhdr.message_len, SEEK_SET);
 
-	if ((lflags & (LOAD_NOSAMPLES | LOAD_NOPATTERNS)) == (LOAD_NOSAMPLES | LOAD_NOPATTERNS))
-		return LOAD_SUCCESS;
+	if ((lflags & (LOAD_NOSAMPLES | LOAD_NOPATTERNS)) == (LOAD_NOSAMPLES | LOAD_NOPATTERNS)) return LOAD_SUCCESS;
 
 	slurp_read(fp, orderlist, 256);
 	slurp_getc(fp); // supposed to be "number of patterns stored in the file"; apparently that's wrong
@@ -200,8 +191,7 @@ int fmt_far_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		slurp_getc(fp); // apparently, this value is *not* used anymore!!! I will not support it!!
 
 		rows = (pattern_size[pat] - 2) / (16 * 4);
-		if (!rows)
-			continue;
+		if (!rows) continue;
 		note = song->patterns[pat] = csf_allocate_pattern(rows);
 		song->pattern_size[pat] = song->pattern_alloc_size[pat] = rows;
 		breakpos = breakpos && breakpos < rows - 2 ? breakpos + 1 : -1;
@@ -210,14 +200,12 @@ int fmt_far_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				slurp_read(fp, data, 4);
 				far_import_note(note, data);
 			}
-			if (row == breakpos)
-				note->effect = FX_PATTERNBREAK;
+			if (row == breakpos) note->effect = FX_PATTERNBREAK;
 		}
 	}
 	csf_insert_restart_pos(song, restartpos);
 
-	if (lflags & LOAD_NOSAMPLES)
-		return LOAD_SUCCESS;
+	if (lflags & LOAD_NOSAMPLES) return LOAD_SUCCESS;
 
 	slurp_read(fp, data, 8);
 	smp = song->samples + 1;
@@ -236,15 +224,13 @@ int fmt_far_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			smp->loop_start >>= 1;
 			smp->loop_end >>= 1;
 		}
-		if (smp->loop_end > smp->loop_start && (fsmp.loop & 8))
-			smp->flags |= CHN_LOOP;
+		if (smp->loop_end > smp->loop_start && (fsmp.loop & 8)) smp->flags |= CHN_LOOP;
 		smp->c5speed = 16726;
 		smp->global_volume = 64;
-		csf_read_sample(smp, SF_LE | SF_M | SF_PCMS | ((fsmp.type & 1) ? SF_16 : SF_8),
-			fp->data + fp->pos, fp->length - fp->pos);
+		csf_read_sample(
+			smp, SF_LE | SF_M | SF_PCMS | ((fsmp.type & 1) ? SF_16 : SF_8), fp->data + fp->pos, fp->length - fp->pos);
 		slurp_seek(fp, fsmp.length, SEEK_CUR);
 	}
 
 	return LOAD_SUCCESS;
 }
-

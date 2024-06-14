@@ -22,7 +22,7 @@
  */
 
 /* Target Windows 7 */
-#define WINVER 0x0601
+#define WINVER       0x0601
 #define _WIN32_WINNT 0x0601
 
 #include "headers.h"
@@ -42,13 +42,12 @@ HRESULT WINAPI MFCreateMFByteStreamOnStream(IStream *pStream, IMFByteStream **pp
 /* --------------------------------------------------------------------- */
 /* stupid COM stuff incoming */
 
-static char* get_media_type_description(IMFMediaType* media_type) {
-	if (!media_type)
-		goto unknown;
+static char *get_media_type_description(IMFMediaType *media_type)
+{
+	if (!media_type) goto unknown;
 
 	GUID major_type;
-	if (!SUCCEEDED(media_type->lpVtbl->GetMajorType(media_type, &major_type)))
-		goto unknown;
+	if (!SUCCEEDED(media_type->lpVtbl->GetMajorType(media_type, &major_type))) goto unknown;
 
 	/* eventually we can handle video, but this is a good start */
 	if (IsEqualGUID(&major_type, &MFMediaType_Audio)) {
@@ -62,11 +61,12 @@ unknown:
 	return "Unknown format";
 }
 
-static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t* file) {
+static int convert_media_foundation_metadata(IMFMediaSource *source, dmoz_file_t *file)
+{
 	/* this API is actually the worst */
-	IMFPresentationDescriptor* descriptor = NULL;
-	IMFMetadataProvider* provider = NULL;
-	IMFMetadata* metadata = NULL;
+	IMFPresentationDescriptor *descriptor = NULL;
+	IMFMetadataProvider *provider = NULL;
+	IMFMetadata *metadata = NULL;
 	PROPVARIANT propnames = {0};
 	DWORD streams = 0;
 	int found = 0;
@@ -74,30 +74,26 @@ static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t
 	/* do this before anything else... */
 	PropVariantInit(&propnames);
 
-	if (!SUCCEEDED(source->lpVtbl->CreatePresentationDescriptor(source, &descriptor)))
+	if (!SUCCEEDED(source->lpVtbl->CreatePresentationDescriptor(source, &descriptor))) goto cleanup;
+
+	if (!SUCCEEDED(MFGetService(
+			(IUnknown *)source, &MF_METADATA_PROVIDER_SERVICE, &IID_IMFMetadataProvider, (void **)&provider)))
 		goto cleanup;
 
-	if (!SUCCEEDED(MFGetService((IUnknown*)source, &MF_METADATA_PROVIDER_SERVICE, &IID_IMFMetadataProvider, (void**)&provider)))
-		goto cleanup;
+	if (!SUCCEEDED(provider->lpVtbl->GetMFMetadata(provider, descriptor, 0, 0, &metadata))) goto cleanup;
 
-	if (!SUCCEEDED(provider->lpVtbl->GetMFMetadata(provider, descriptor, 0, 0, &metadata)))
-		goto cleanup;
-
-	if (!SUCCEEDED(metadata->lpVtbl->GetAllPropertyNames(metadata, &propnames)))
-		goto cleanup;
+	if (!SUCCEEDED(metadata->lpVtbl->GetAllPropertyNames(metadata, &propnames))) goto cleanup;
 
 	for (DWORD prop_index = 0; prop_index < propnames.calpwstr.cElems; prop_index++) {
 		LPWSTR prop_name = propnames.calpwstr.pElems[prop_index];
-		if (!prop_name)
-			continue; /* ... */
+		if (!prop_name) continue; /* ... */
 
 		const int title = !wcscmp(prop_name, L"Title");
 		const int artist = !wcscmp(prop_name, L"Artist");
 
 		if (title || artist) {
 			PROPVARIANT propval = {0};
-			if (metadata->lpVtbl->GetProperty(metadata, prop_name, &propval) != S_OK)
-				continue; /* ... */
+			if (metadata->lpVtbl->GetProperty(metadata, prop_name, &propval) != S_OK) continue; /* ... */
 
 			LPWSTR prop_val_str = NULL;
 			if (!SUCCEEDED(PropVariantToStringAlloc(&propval, &prop_val_str))) {
@@ -107,10 +103,9 @@ static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t
 
 			found = 1;
 
-			if (title)
-				charset_iconv((uint8_t*)prop_val_str, (uint8_t**)file->title, CHARSET_WCHAR_T, CHARSET_CP437);
+			if (title) charset_iconv((uint8_t *)prop_val_str, (uint8_t **)file->title, CHARSET_WCHAR_T, CHARSET_CP437);
 			else if (artist)
-				charset_iconv((uint8_t*)prop_val_str, (uint8_t**)file->artist, CHARSET_WCHAR_T, CHARSET_CP437);
+				charset_iconv((uint8_t *)prop_val_str, (uint8_t **)file->artist, CHARSET_WCHAR_T, CHARSET_CP437);
 
 			CoTaskMemFree(prop_val_str);
 			PropVariantClear(&propval);
@@ -120,14 +115,11 @@ static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t
 cleanup:
 	PropVariantClear(&propnames);
 
-	if (descriptor)
-		descriptor->lpVtbl->Release(descriptor);
+	if (descriptor) descriptor->lpVtbl->Release(descriptor);
 
-	if (provider)
-		provider->lpVtbl->Release(provider);
+	if (provider) provider->lpVtbl->Release(provider);
 
-	if (metadata)
-		metadata->lpVtbl->Release(metadata);
+	if (metadata) metadata->lpVtbl->Release(metadata);
 
 	return found;
 }
@@ -135,40 +127,39 @@ cleanup:
 /* creates a byte stream. eventually this will be shared among the
  * read info and load sample functions */
 #define MEDIA_FOUNDATION_START(data, len) \
-	IStream* strm = NULL; \
-	IMFByteStream* bstrm = NULL; \
+	IStream *strm = NULL; \
+	IMFByteStream *bstrm = NULL; \
 	strm = SHCreateMemStream(data, len); \
-	if (!strm) \
-		goto cleanup; \
-	if (!SUCCEEDED(MFCreateMFByteStreamOnStream(strm, &bstrm))) \
-		goto cleanup;
+	if (!strm) goto cleanup; \
+	if (!SUCCEEDED(MFCreateMFByteStreamOnStream(strm, &bstrm))) goto cleanup;
 
 #define MEDIA_FOUNDATION_CLEANUP() \
-	if (strm) \
-		strm->lpVtbl->Release(strm); \
-	if (bstrm) \
-		bstrm->lpVtbl->Release(bstrm);
+	if (strm) strm->lpVtbl->Release(strm); \
+	if (bstrm) bstrm->lpVtbl->Release(bstrm);
 
 int fmt_win32mf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	int success = 0;
-	IMFSourceResolver* resolver = NULL;
+	IMFSourceResolver *resolver = NULL;
 	MF_OBJECT_TYPE object_type = MF_OBJECT_INVALID;
-	IUnknown* unknown_media_source = NULL;
-	IMFMediaSource* real_media_source = NULL;
+	IUnknown *unknown_media_source = NULL;
+	IMFMediaSource *real_media_source = NULL;
 
 	MEDIA_FOUNDATION_START(data, length);
 
-	if (!SUCCEEDED(MFCreateSourceResolver(&resolver)))
+	if (!SUCCEEDED(MFCreateSourceResolver(&resolver))) goto cleanup;
+
+	if (!SUCCEEDED(resolver->lpVtbl->CreateObjectFromByteStream(
+			resolver, bstrm, NULL,
+			MF_RESOLUTION_MEDIASOURCE | MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE
+				| MF_RESOLUTION_READ,
+			NULL, &object_type, &unknown_media_source)))
 		goto cleanup;
 
-	if (!SUCCEEDED(resolver->lpVtbl->CreateObjectFromByteStream(resolver, bstrm, NULL, MF_RESOLUTION_MEDIASOURCE | MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE | MF_RESOLUTION_READ, NULL, &object_type, &unknown_media_source)))
-		goto cleanup;
+	if (object_type != MF_OBJECT_MEDIASOURCE) goto cleanup;
 
-	if (object_type != MF_OBJECT_MEDIASOURCE)
-		goto cleanup;
-
-	if (!SUCCEEDED(unknown_media_source->lpVtbl->QueryInterface(unknown_media_source, &IID_IMFMediaSource, (void**)&real_media_source)))
+	if (!SUCCEEDED(unknown_media_source->lpVtbl->QueryInterface(
+			unknown_media_source, &IID_IMFMediaSource, (void **)&real_media_source)))
 		goto cleanup;
 
 	convert_media_foundation_metadata(real_media_source, file);
@@ -177,14 +168,11 @@ int fmt_win32mf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	success = 1;
 
 cleanup:
-	if (resolver)
-		resolver->lpVtbl->Release(resolver);
+	if (resolver) resolver->lpVtbl->Release(resolver);
 
-	if (unknown_media_source)
-		unknown_media_source->lpVtbl->Release(unknown_media_source);
+	if (unknown_media_source) unknown_media_source->lpVtbl->Release(unknown_media_source);
 
-	if (real_media_source)
-		real_media_source->lpVtbl->Release(real_media_source);
+	if (real_media_source) real_media_source->lpVtbl->Release(real_media_source);
 
 	MEDIA_FOUNDATION_CLEANUP();
 

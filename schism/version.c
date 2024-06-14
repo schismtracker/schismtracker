@@ -49,7 +49,7 @@ Information at our disposal:
 		onto the code for a really long time before building it.
 
 */
-static const char* top_banner_normal =
+static const char *top_banner_normal =
 #if !defined(EMPTY_VERSION)
 	"Schism Tracker " VERSION
 #else
@@ -69,15 +69,16 @@ static const char* top_banner_normal =
 typedef uint32_t version_time_t;
 
 /* macros ! */
-#define LEAP_YEAR(y) ((year) % 4 == 0 && (year) % 100 != 0)
-#define LEAP_YEARS_BEFORE(y) ((((y) - 1) / 4) - (((y) - 1) / 100) + (((y) - 1) / 400))
+#define LEAP_YEAR(y)                   ((year) % 4 == 0 && (year) % 100 != 0)
+#define LEAP_YEARS_BEFORE(y)           ((((y)-1) / 4) - (((y)-1) / 100) + (((y)-1) / 400))
 #define LEAP_YEARS_BETWEEN(start, end) (LEAP_YEARS_BEFORE(end) - LEAP_YEARS_BEFORE(start + 1))
 
-#define EPOCH_YEAR 2009
+#define EPOCH_YEAR  2009
 #define EPOCH_MONTH 9
-#define EPOCH_DAY 31
+#define EPOCH_DAY   31
 
-static version_time_t get_days_for_month(uint8_t month, uint16_t year) {
+static version_time_t get_days_for_month(uint8_t month, uint16_t year)
+{
 	static const version_time_t days_for_month[12] = {
 		31, /* January */
 		28, /* February */
@@ -95,8 +96,7 @@ static version_time_t get_days_for_month(uint8_t month, uint16_t year) {
 
 	int month_days = days_for_month[month];
 
-	if ((month == 1) && LEAP_YEAR(year))
-		month_days++;
+	if ((month == 1) && LEAP_YEAR(year)) month_days++;
 
 	return month_days;
 }
@@ -138,7 +138,8 @@ static version_time_t version_mktime(int y, int m, int d)
 	return ret;
 }
 
-static void version_time_format(char* buf, version_time_t ver) {
+static void version_time_format(char *buf, version_time_t ver)
+{
 	long long year = EPOCH_YEAR, month = EPOCH_MONTH, days = ver + EPOCH_DAY;
 	int days_in;
 
@@ -198,27 +199,21 @@ unsigned short ver_cwtv;
 unsigned short ver_reserved;
 
 /* these should be 50 characters or shorter, as they are used in the startup dialog */
-const char *ver_short_copyright =
-	"Copyright (c) 2003-2022 Storlek, Mrs. Brisby et al.";
-const char *ver_short_based_on =
-	"Based on Impulse Tracker by Jeffrey Lim aka Pulse";
+const char *ver_short_copyright = "Copyright (c) 2003-2022 Storlek, Mrs. Brisby et al.";
+const char *ver_short_based_on = "Based on Impulse Tracker by Jeffrey Lim aka Pulse";
 
 /* SEE ALSO: helptext/copyright (contains full copyright information, credits, and GPL boilerplate) */
 
 const char *schism_banner(int classic)
 {
-	return (classic
-		? TOP_BANNER_CLASSIC
-		: top_banner_normal);
+	return (classic ? TOP_BANNER_CLASSIC : top_banner_normal);
 }
 
 void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char *buf)
 {
 	cwtv &= 0xfff;
-	if (cwtv > 0x050)
-		version_time_format(buf, (cwtv < 0xfff) ? (cwtv - 0x050) : reserved);
-	else
-		sprintf(buf, "0.%x", cwtv);
+	if (cwtv > 0x050) version_time_format(buf, (cwtv < 0xfff) ? (cwtv - 0x050) : reserved);
+	else sprintf(buf, "0.%x", cwtv);
 }
 
 static int get_version_tm(struct tm *version)
@@ -227,20 +222,19 @@ static int get_version_tm(struct tm *version)
 
 	memset(version, 0, sizeof(*version));
 	ret = strptime(VERSION, "%Y %m %d", version);
-	if (ret && !*ret)
-		return 1;
+	if (ret && !*ret) return 1;
 
 	/* welp */
 	memset(version, 0, sizeof(*version));
 	ret = strptime(__DATE__, "%b %e %Y", version);
-	if (ret && !*ret)
-		return 1;
+	if (ret && !*ret) return 1;
 
 	/* give up; we don't know anything */
 	return 0;
 }
 
-void ver_init(void) {
+void ver_init(void)
+{
 	struct tm version;
 	version_time_t version_sec;
 

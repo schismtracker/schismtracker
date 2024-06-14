@@ -35,15 +35,14 @@
 #include <math.h> // for log
 
 
-#define LinearMidivol 1
+#define LinearMidivol   1
 #define PitchBendCenter 0x2000
 
 
-static const enum
-{
-    AlwaysHonor, /* Always honor midi_channel_mask in instruments */
-    TryHonor,    /* Honor midi_channel_mask in instruments when the channel is free */
-    Ignore       /* Ignore midi_channel_mask in instruments */
+static const enum {
+	AlwaysHonor, /* Always honor midi_channel_mask in instruments */
+	TryHonor,    /* Honor midi_channel_mask in instruments when the channel is free */
+	Ignore       /* Ignore midi_channel_mask in instruments */
 } PreferredChannelHandlingMode = AlwaysHonor;
 
 
@@ -120,10 +119,9 @@ static int resetting = 0; // boolean
 #endif
 
 
-static void MPU_SendCommand(const unsigned char* buf, unsigned nbytes, int c)
+static void MPU_SendCommand(const unsigned char *buf, unsigned nbytes, int c)
 {
-	if (!nbytes)
-		return;
+	if (!nbytes) return;
 
 	csf_midi_send(current_song, buf, nbytes, c, 0); // FIXME we should not know about 'current_song' here!
 }
@@ -131,8 +129,7 @@ static void MPU_SendCommand(const unsigned char* buf, unsigned nbytes, int c)
 
 static void MPU_Ctrl(int c, int i, int v)
 {
-	if (!(status.flags & MIDI_LIKE_TRACKER))
-		return;
+	if (!(status.flags & MIDI_LIKE_TRACKER)) return;
 
 	unsigned char buf[3] = {0xB0 + c, i, v};
 	MPU_SendCommand(buf, 3, c);
@@ -141,8 +138,7 @@ static void MPU_Ctrl(int c, int i, int v)
 
 static void MPU_Patch(int c, int p)
 {
-	if (!(status.flags & MIDI_LIKE_TRACKER))
-		return;
+	if (!(status.flags & MIDI_LIKE_TRACKER)) return;
 
 	unsigned char buf[2] = {0xC0 + c, p};
 	MPU_SendCommand(buf, 2, c);
@@ -151,8 +147,7 @@ static void MPU_Patch(int c, int p)
 
 static void MPU_Bend(int c, int w)
 {
-	if (!(status.flags & MIDI_LIKE_TRACKER))
-		return;
+	if (!(status.flags & MIDI_LIKE_TRACKER)) return;
 
 	unsigned char buf[3] = {0xE0 + c, w & 127, w >> 7};
 	MPU_SendCommand(buf, 3, c);
@@ -161,8 +156,7 @@ static void MPU_Bend(int c, int w)
 
 static void MPU_NoteOn(int c, int k, int v)
 {
-	if (!(status.flags & MIDI_LIKE_TRACKER))
-		return;
+	if (!(status.flags & MIDI_LIKE_TRACKER)) return;
 
 	unsigned char buf[3] = {0x90 + c, k, v};
 	MPU_SendCommand(buf, 3, c);
@@ -171,66 +165,60 @@ static void MPU_NoteOn(int c, int k, int v)
 
 static void MPU_NoteOff(int c, int k, int v)
 {
-	if (!(status.flags & MIDI_LIKE_TRACKER))
-		return;
+	if (!(status.flags & MIDI_LIKE_TRACKER)) return;
 
-	if (((unsigned char) RunningStatus) == 0x90 + c) {
+	if (((unsigned char)RunningStatus) == 0x90 + c) {
 		// send a zero-velocity keyoff instead for optimization
 		MPU_NoteOn(c, k, 0);
-	}
-	else {
-		unsigned char buf[3] = {0x80+c, k, v};
+	} else {
+		unsigned char buf[3] = {0x80 + c, k, v};
 		MPU_SendCommand(buf, 3, c);
 	}
 }
 
 
-static void MPU_SendPN(int ch,
-		       unsigned portindex,
-		       unsigned param, unsigned valuehi, unsigned valuelo)
+static void MPU_SendPN(int ch, unsigned portindex, unsigned param, unsigned valuehi, unsigned valuelo)
 {
-	MPU_Ctrl(ch, portindex+1, param>>7);
-	MPU_Ctrl(ch, portindex+0, param & 0x80);
+	MPU_Ctrl(ch, portindex + 1, param >> 7);
+	MPU_Ctrl(ch, portindex + 0, param & 0x80);
 
 	if (param != 0x4080) {
 		MPU_Ctrl(ch, 6, valuehi);
 
-		if (valuelo)
-			MPU_Ctrl(ch, 38, valuelo);
+		if (valuelo) MPU_Ctrl(ch, 38, valuelo);
 	}
 }
 
 
-#define MPU_SendNRPN(ch,param,hi,lo) MPU_SendPN(ch,98,param,hi,lo)
-#define MPU_SendRPN(ch,param,hi,lo) MPU_SendPN(ch,100,param,hi,lo)
-#define MPU_ResetPN(ch) MPU_SendRPN(ch,0x4080,0,0)
+#define MPU_SendNRPN(ch, param, hi, lo) MPU_SendPN(ch, 98, param, hi, lo)
+#define MPU_SendRPN(ch, param, hi, lo)  MPU_SendPN(ch, 100, param, hi, lo)
+#define MPU_ResetPN(ch)                 MPU_SendRPN(ch, 0x4080, 0, 0)
 
 
 typedef struct {
-    unsigned char note;  // Which note is playing in this channel (0 = nothing)
-    unsigned char patch; // Which patch was programmed on this channel (&0x80 = percussion)
-    unsigned char bank;  // Which bank was programmed on this channel
-    signed char pan;     // Which pan level was last selected
-    signed char chan;    // Which MIDI channel was allocated for this channel. -1 = none
-    int pref_chn_mask;   // Which MIDI channel was preferred
+	unsigned char note;  // Which note is playing in this channel (0 = nothing)
+	unsigned char patch; // Which patch was programmed on this channel (&0x80 = percussion)
+	unsigned char bank;  // Which bank was programmed on this channel
+	signed char pan;     // Which pan level was last selected
+	signed char chan;    // Which MIDI channel was allocated for this channel. -1 = none
+	int pref_chn_mask;   // Which MIDI channel was preferred
 } s3m_channel_info_t;
 
 
-#define s3m_active(ci) \
-    ((ci).note && (ci).chan >= 0)
+#define s3m_active(ci) ((ci).note && (ci).chan >= 0)
 
 // patch: definitely percussion
 // pref_chn_mask: to be played on P channel, so it's percussion
-#define s3m_percussion(ci) \
-    ((ci).patch & 0x80 || (ci).pref_chn_mask & (1 << 9))
+#define s3m_percussion(ci) ((ci).patch & 0x80 || (ci).pref_chn_mask & (1 << 9))
 
 
-static void s3m_reset(s3m_channel_info_t *ci) {
-	ci->note          = 0;
-	ci->patch         = 0;
-	ci->bank          = 0;
-	ci->pan           = 0;
-	ci->chan          = -1;
+static void s3m_reset(s3m_channel_info_t *ci)
+{
+	ci->note = 0;
+	ci->patch = 0;
+	ci->bank = 0;
+	ci->pan = 0;
+	ci->chan = -1;
 	ci->pref_chn_mask = -1;
 }
 
@@ -240,21 +228,21 @@ static s3m_channel_info_t s3m_chans[MAX_VOICES];
 
 
 typedef struct {
-    unsigned char volume; // Which volume has been configured for this channel
-    unsigned char patch;  // What is the latest patch configured on this channel
-    unsigned char bank;   // What is the latest bank configured on this channel
-    int bend;             // The latest pitchbend on this channel
-    signed char pan;      // Latest pan
+	unsigned char volume; // Which volume has been configured for this channel
+	unsigned char patch;  // What is the latest patch configured on this channel
+	unsigned char bank;   // What is the latest bank configured on this channel
+	int bend;             // The latest pitchbend on this channel
+	signed char pan;      // Latest pan
 } midi_state_t;
 
 
 static void msi_reset(midi_state_t *msi)
 {
 	msi->volume = 255;
-	msi->patch  = 255;
-	msi->bank   = 255;
-	msi->bend   = PitchBendCenter;
-	msi->pan    = 0;
+	msi->patch = 255;
+	msi->bank = 255;
+	msi->bend = PitchBendCenter;
+	msi->pan = 0;
 }
 
 #define msi_know_something(msi) ((msi).patch != 255)
@@ -295,8 +283,8 @@ static void msi_set_pitch_bend(midi_state_t *msi, int c, int value)
 static void msi_set_pan(midi_state_t *msi, int c, int value)
 {
 	if (msi->pan != value) {
-	    msi->pan = value;
-	    MPU_Ctrl(c, 10, (unsigned char)(value + 128) / 2);
+		msi->pan = value;
+		MPU_Ctrl(c, 10, (unsigned char)(value + 128) / 2);
 	}
 }
 
@@ -332,54 +320,40 @@ static int GM_AllocateMelodyChannel(int c, int patch, int bank, int key, int pre
 	int used_channels[16] = {0}; // channels having something playing
 
 	for (unsigned int a = 0; a < MAX_VOICES; ++a) {
-		if (s3m_active(s3m_chans[a]) &&
-		    !s3m_percussion(s3m_chans[a])) {
+		if (s3m_active(s3m_chans[a]) && !s3m_percussion(s3m_chans[a])) {
 			//fprintf(stderr, "S3M[%d] active at %d\n", a, s3m_chans[a].chan);
 			used_channels[s3m_chans[a].chan] = 1; // channel is active
 
-			if (s3m_chans[a].note == key)
-				bad_channels[s3m_chans[a].chan] = 1; // ...with the same key
+			if (s3m_chans[a].note == key) bad_channels[s3m_chans[a].chan] = 1; // ...with the same key
 		}
 	}
 
-	int best_mc = c % 16,
-	    best_score = -999;
+	int best_mc = c % 16, best_score = -999;
 
 	for (int mc = 0; mc < 16; ++mc) {
-		if (mc == 9)
-			continue; // percussion channel is never chosen for melody.
+		if (mc == 9) continue; // percussion channel is never chosen for melody.
 
 		int score = 0;
 
-		if (PreferredChannelHandlingMode != TryHonor &&
-		    msi_know_something(midi_chans[mc])) {
+		if (PreferredChannelHandlingMode != TryHonor && msi_know_something(midi_chans[mc])) {
 			if (midi_chans[mc].patch != patch) score -= 4; // different patch
-			if (midi_chans[mc].bank  !=  bank) score -= 6; // different bank
+			if (midi_chans[mc].bank != bank) score -= 6;   // different bank
 		}
 
 		if (PreferredChannelHandlingMode == TryHonor) {
-			if (pref_chn_mask & (1 << mc))
-				score += 1; // same channel number
-		}
-		else if (PreferredChannelHandlingMode == AlwaysHonor) {
+			if (pref_chn_mask & (1 << mc)) score += 1; // same channel number
+		} else if (PreferredChannelHandlingMode == AlwaysHonor) {
 			// disallow channels that are not allowed
 			if (pref_chn_mask >= 0x10000) {
-				if (mc != c % 16)
-					continue;
-			}
-			else if (!(pref_chn_mask & (1 << mc)))
-			       continue;
-		}
-		else {
-			if (c == mc)
-				score += 1; // same channel number
+				if (mc != c % 16) continue;
+			} else if (!(pref_chn_mask & (1 << mc))) continue;
+		} else {
+			if (c == mc) score += 1; // same channel number
 		}
 
-		if (bad_channels[mc])
-			score -= 9; // has same key on
+		if (bad_channels[mc]) score -= 9; // has same key on
 
-		if (!used_channels[mc])
-			score += 2; // channel is unused
+		if (!used_channels[mc]) score += 2; // channel is unused
 
 		//fprintf(stderr, "score %d for channel %d\n", score, mc);
 		if (score > best_score) {
@@ -395,18 +369,16 @@ static int GM_AllocateMelodyChannel(int c, int patch, int bank, int key, int pre
 
 void GM_Patch(int c, unsigned char p, int pref_chn_mask)
 {
-	if (c < 0 || ((unsigned int) c) >= MAX_VOICES)
-		return;
+	if (c < 0 || ((unsigned int)c) >= MAX_VOICES) return;
 
-	s3m_chans[c].patch         = p; // No actual data is sent.
+	s3m_chans[c].patch = p; // No actual data is sent.
 	s3m_chans[c].pref_chn_mask = pref_chn_mask;
 }
 
 
 void GM_Bank(int c, unsigned char b)
 {
-	if (c < 0 || ((unsigned int) c) >= MAX_VOICES)
-		return;
+	if (c < 0 || ((unsigned int)c) >= MAX_VOICES) return;
 
 	s3m_chans[c].bank = b; // No actual data is sent yet.
 }
@@ -414,13 +386,11 @@ void GM_Bank(int c, unsigned char b)
 
 void GM_Touch(int c, unsigned char vol)
 {
-	if (c < 0 || ((unsigned int) c) >= MAX_VOICES)
-		return;
+	if (c < 0 || ((unsigned int)c) >= MAX_VOICES) return;
 
 	/* This function must only be called when
 	 * a key has been played on the channel. */
-	if (!s3m_active(s3m_chans[c]))
-		return;
+	if (!s3m_active(s3m_chans[c])) return;
 
 	int mc = s3m_chans[c].chan;
 	msi_set_volume(&midi_chans[mc], mc, GM_volume(vol));
@@ -429,24 +399,21 @@ void GM_Touch(int c, unsigned char vol)
 
 void GM_KeyOn(int c, unsigned char key, unsigned char vol)
 {
-	if (c < 0 || ((unsigned int) c) >= MAX_VOICES)
-		return;
+	if (c < 0 || ((unsigned int)c) >= MAX_VOICES) return;
 
 	GM_KeyOff(c); // Ensure the previous key on this channel is off.
 
-	if (s3m_active(s3m_chans[c]))
-		return; // be sure the channel is deactivated.
+	if (s3m_active(s3m_chans[c])) return; // be sure the channel is deactivated.
 
 #ifdef GM_DEBUG
-	fprintf(stderr, "GM_KeyOn(%d, %d,%d)\n", c, key,vol);
+	fprintf(stderr, "GM_KeyOn(%d, %d,%d)\n", c, key, vol);
 #endif
 
 	if (s3m_percussion(s3m_chans[c])) {
 		// Percussion always uses channel 9.
 		int percu = key;
 
-		if (s3m_chans[c].patch & 0x80)
-			percu = s3m_chans[c].patch - 128;
+		if (s3m_chans[c].patch & 0x80) percu = s3m_chans[c].patch - 128;
 
 		int mc = s3m_chans[c].chan = 9;
 		// Percussion can have different banks too
@@ -455,14 +422,12 @@ void GM_KeyOn(int c, unsigned char key, unsigned char vol)
 		msi_set_volume(&midi_chans[mc], mc, GM_volume(vol));
 		s3m_chans[c].note = key;
 		MPU_NoteOn(mc, s3m_chans[c].note = percu, 127);
-	}
-	else {
+	} else {
 		// Allocate a MIDI channel for this key.
 		// Note: If you need to transpone the key, do it before allocating the channel.
 
-		int mc = s3m_chans[c].chan = GM_AllocateMelodyChannel(
-			c, s3m_chans[c].patch, s3m_chans[c].bank,
-			key, s3m_chans[c].pref_chn_mask);
+		int mc = s3m_chans[c].chan =
+			GM_AllocateMelodyChannel(c, s3m_chans[c].patch, s3m_chans[c].bank, key, s3m_chans[c].pref_chn_mask);
 
 		msi_set_patch_and_bank(&midi_chans[mc], mc, s3m_chans[c].patch, s3m_chans[c].bank);
 		msi_set_volume(&midi_chans[mc], mc, GM_volume(vol));
@@ -474,11 +439,9 @@ void GM_KeyOn(int c, unsigned char key, unsigned char vol)
 
 void GM_KeyOff(int c)
 {
-	if (c < 0 || ((unsigned int)c) >= MAX_VOICES)
-		return;
+	if (c < 0 || ((unsigned int)c) >= MAX_VOICES) return;
 
-	if (!s3m_active(s3m_chans[c]))
-		return; // nothing to do
+	if (!s3m_active(s3m_chans[c])) return; // nothing to do
 
 #ifdef GM_DEBUG
 	fprintf(stderr, "GM_KeyOff(%d)\n", c);
@@ -489,15 +452,14 @@ void GM_KeyOff(int c)
 	MPU_NoteOff(mc, s3m_chans[c].note, 0);
 	s3m_chans[c].chan = -1;
 	s3m_chans[c].note = 0;
-	s3m_chans[c].pan  = 0;
+	s3m_chans[c].pan = 0;
 	// Don't reset the pitch bend, it will make sustains sound bad
 }
 
 
 void GM_Bend(int c, unsigned count)
 {
-       if (c < 0 || ((unsigned int)c) >= MAX_VOICES)
-		return;
+	if (c < 0 || ((unsigned int)c) >= MAX_VOICES) return;
 
 	/* I hope nobody tries to bend hi-hat or something like that :-) */
 	/* 1998-10-03 01:50 Apparently that can happen too...
@@ -548,18 +510,17 @@ void GM_Reset(int quitting)
 		// XXX This might go wrong because the midi struct is already reset
 		// XXX  by the constructor in the C++ version.
 		// XXX
-		MPU_Ctrl(a, 120,  0);   // turn off all sounds
-		MPU_Ctrl(a, 123,  0);   // turn off all notes
-		MPU_Ctrl(a, 121, 0);    // reset vibrato, bend
-		msi_set_pan(&midi_chans[a], a, 0);           // reset pan position
-		msi_set_volume(&midi_chans[a], a, 127);      // set channel volume
+		MPU_Ctrl(a, 120, 0);                                    // turn off all sounds
+		MPU_Ctrl(a, 123, 0);                                    // turn off all notes
+		MPU_Ctrl(a, 121, 0);                                    // reset vibrato, bend
+		msi_set_pan(&midi_chans[a], a, 0);                      // reset pan position
+		msi_set_volume(&midi_chans[a], a, 127);                 // set channel volume
 		msi_set_pitch_bend(&midi_chans[a], a, PitchBendCenter); // reset pitch bends
 
 		msi_reset(&midi_chans[a]);
 
 		// Reprogram the pitch bending sensitivity to our desired depth.
-		MPU_SendRPN(a, 0, n_semitones_times_128 / 128,
-			  n_semitones_times_128 % 128);
+		MPU_SendRPN(a, 0, n_semitones_times_128 / 128, n_semitones_times_128 % 128);
 
 		MPU_ResetPN(a);
 	}
@@ -577,8 +538,7 @@ void GM_DPatch(int ch, unsigned char GM, unsigned char bank, int pref_chn_mask)
 	fprintf(stderr, "GM_DPatch(%d, %02X @ %d)\n", ch, GM, bank);
 #endif
 
-	if (ch < 0 || ((unsigned int)ch) >= MAX_VOICES)
-		return;
+	if (ch < 0 || ((unsigned int)ch) >= MAX_VOICES) return;
 
 	GM_Bank(ch, bank);
 	GM_Patch(ch, GM, pref_chn_mask);
@@ -588,8 +548,7 @@ void GM_DPatch(int ch, unsigned char GM, unsigned char bank, int pref_chn_mask)
 void GM_Pan(int c, signed char val)
 {
 	//fprintf(stderr, "GM_Pan(%d,%d)\n", c,val);
-	if (c < 0 || ((unsigned int)c) >= MAX_VOICES)
-		return;
+	if (c < 0 || ((unsigned int)c) >= MAX_VOICES) return;
 
 	s3m_chans[c].pan = val;
 
@@ -606,10 +565,9 @@ void GM_Pan(int c, signed char val)
 void GM_SetFreqAndVol(int c, int Hertz, int vol, MidiBendMode bend_mode, int keyoff)
 {
 #ifdef GM_DEBUG
-	fprintf(stderr, "GM_SetFreqAndVol(%d,%d,%d)\n", c,Hertz,vol);
+	fprintf(stderr, "GM_SetFreqAndVol(%d,%d,%d)\n", c, Hertz, vol);
 #endif
-	if (c < 0 || ((unsigned int)c) >= MAX_VOICES)
-		return;
+	if (c < 0 || ((unsigned int)c) >= MAX_VOICES) return;
 
 	/*
 	Figure out the note and bending corresponding to this Hertz reading.
@@ -638,11 +596,11 @@ void GM_SetFreqAndVol(int c, int Hertz, int vol, MidiBendMode bend_mode, int key
 	       point accuracy, but given the range of the numbers
 	       we work here with, that's hardly an issue.)
 	*/
-	double midinote = 69 + 12.0 * log(Hertz/440.0) / log(2.0);
+	double midinote = 69 + 12.0 * log(Hertz / 440.0) / log(2.0);
 
 	// Reduce by a couple of octaves... Apparently the hertz
 	// value that comes from SchismTracker is upscaled by some 2^5.
-	midinote -= 12*5;
+	midinote -= 12 * 5;
 
 	int note = s3m_chans[c].note; // what's playing on the channel right now?
 
@@ -656,15 +614,15 @@ void GM_SetFreqAndVol(int c, int Hertz, int vol, MidiBendMode bend_mode, int key
 		// If we are expecting a bend exclusively in either direction,
 		// prepare to utilize the full extent of available pitch bending.
 		if (bend_mode == MIDI_BEND_DOWN) note += (int)(0x2000 / semitone_bend_depth);
-		if (bend_mode == MIDI_BEND_UP)   note -= (int)(0x2000 / semitone_bend_depth);
+		if (bend_mode == MIDI_BEND_UP) note -= (int)(0x2000 / semitone_bend_depth);
 
 		if (note < 1) note = 1;
 		if (note > 127) note = 127;
 		GM_KeyOn(c, note, vol);
 	}
 
-	if (!s3m_percussion(s3m_chans[c])) { // give us a break, don't bend percussive instruments
-		double notediff = midinote-note; // The difference is our bend value
+	if (!s3m_percussion(s3m_chans[c])) {   // give us a break, don't bend percussive instruments
+		double notediff = midinote - note; // The difference is our bend value
 		int bend = (int)(notediff * semitone_bend_depth) + PitchBendCenter;
 
 		// Because the log2 calculation does not always give pure notes,
@@ -675,8 +633,8 @@ void GM_SetFreqAndVol(int c, int Hertz, int vol, MidiBendMode bend_mode, int key
 		//bend = (bend / bend_artificial_inaccuracy) * bend_artificial_inaccuracy;
 
 		// Clamp the bending value so that we won't break the protocol
-		if(bend < 0) bend = 0;
-		if(bend > 0x3FFF) bend = 0x3FFF;
+		if (bend < 0) bend = 0;
+		if (bend > 0x3FFF) bend = 0x3FFF;
 
 		GM_Bend(c, bend);
 	}
@@ -691,10 +649,29 @@ void GM_SetFreqAndVol(int c, int Hertz, int vol, MidiBendMode bend_mode, int key
 
 static double LastSongCounter = 0.0;
 
-void GM_SendSongStartCode(void)    { unsigned char c = 0xFA; MPU_SendCommand(&c, 1, 0); LastSongCounter = 0; }
-void GM_SendSongStopCode(void)     { unsigned char c = 0xFC; MPU_SendCommand(&c, 1, 0); LastSongCounter = 0; }
-void GM_SendSongContinueCode(void) { unsigned char c = 0xFB; MPU_SendCommand(&c, 1, 0); LastSongCounter = 0; }
-void GM_SendSongTickCode(void)     { unsigned char c = 0xF8; MPU_SendCommand(&c, 1, 0); }
+void GM_SendSongStartCode(void)
+{
+	unsigned char c = 0xFA;
+	MPU_SendCommand(&c, 1, 0);
+	LastSongCounter = 0;
+}
+void GM_SendSongStopCode(void)
+{
+	unsigned char c = 0xFC;
+	MPU_SendCommand(&c, 1, 0);
+	LastSongCounter = 0;
+}
+void GM_SendSongContinueCode(void)
+{
+	unsigned char c = 0xFB;
+	MPU_SendCommand(&c, 1, 0);
+	LastSongCounter = 0;
+}
+void GM_SendSongTickCode(void)
+{
+	unsigned char c = 0xF8;
+	MPU_SendCommand(&c, 1, 0);
+}
 
 
 void GM_SendSongPositionCode(unsigned note16pos)
@@ -720,7 +697,7 @@ void GM_IncrementSongCounter(int count)
 	int TickLengthInSamplesHi = 5 * current_song->mix_frequency;
 	int TickLengthInSamplesLo = 2 * current_song->current_tempo;
 
-	double TickLengthInSamples = TickLengthInSamplesHi / (double) TickLengthInSamplesLo;
+	double TickLengthInSamples = TickLengthInSamplesHi / (double)TickLengthInSamplesLo;
 
 	/* TODO: Use fraction arithmetics instead (note: cmdA, cmdT may change any time) */
 
@@ -729,10 +706,8 @@ void GM_IncrementSongCounter(int count)
 	int n_Ticks = (int)LastSongCounter;
 
 	if (n_Ticks) {
-		for (int a = 0; a < n_Ticks; ++a)
-			GM_SendSongTickCode();
+		for (int a = 0; a < n_Ticks; ++a) GM_SendSongTickCode();
 
 		LastSongCounter -= n_Ticks;
 	}
 }
-
