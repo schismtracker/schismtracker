@@ -61,8 +61,6 @@ typedef enum {
 
 int char_digraph(int k1, int k2);
 uint8_t char_unicode_to_cp437(unsigned int c);
-
-/* stuff from charset_data.c */
 uint32_t charset_simple_case_fold(uint32_t codepoint);
 
 /* charset-aware replacements for C stdlib functions */

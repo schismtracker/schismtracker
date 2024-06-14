@@ -82,7 +82,6 @@ scripts = \
 
 EXTRA_DIST = \
 	include/auto/README		\
-	schism/charset_data.c   \
 	$(docs)	\
 	$(helptexts)			\
 	$(fonts)			\
@@ -280,6 +279,7 @@ endif
 schismtracker_SOURCES = \
 	schism/page_blank.c		\
 	schism/charset.c		\
+	schism/charset_data.c   \
 	schism/sample-edit.c		\
 	schism/dmoz.c			\
 	schism/page_info.c		\

@@ -27,8 +27,6 @@
 #include "util.h"
 #include "sdlmain.h"
 
-#include "charset_data.c"
-
 int char_digraph(int k1, int k2)
 {
 #define DG(ax, eq) \

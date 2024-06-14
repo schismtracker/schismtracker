@@ -21,10 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/* This file is included by charset.c and shouldn't be compiled separately.
- *
- * The reason for this is because generally having huge switch statements
- * next to actually important functions isn't very useful at all. */
+#include "charset.h"
+#include "log.h"
 
 uint8_t char_unicode_to_cp437(uint32_t c)
 {
@@ -33,6 +31,7 @@ uint8_t char_unicode_to_cp437(uint32_t c)
 		return c;
 
 	switch (c) {
+	case 0x2019: return 39; // fancy apostrophe
 	case 0x00B3: return 51; // superscript three
 	case 0x266F: return '#';// MUSIC SHARP SIGN
 	case 0x00A6: return 124;
@@ -175,7 +174,11 @@ uint8_t char_unicode_to_cp437(uint32_t c)
 	case 0x00B2: return 253;// SUPERSCRIPT TWO
 	case 0x220E: return 254;// QED
 	case 0x00A0: return 255;
-	default: return '?';
+	default:
+#ifdef SCHISM_CHARSET_DEBUG
+		log_appendf(1, " charset: passed unknown character U+%4x", c);
+#endif
+		return '?';
 	};
 }
 
