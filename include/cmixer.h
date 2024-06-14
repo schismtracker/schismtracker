@@ -5,15 +5,15 @@
 
 // Stuff moved from sndfile.h
 
-#define MIXING_ATTENUATION      5
-#define MIXING_CLIPMIN          (-0x04000000)
-#define MIXING_CLIPMAX          (0x03FFFFFF)
-#define VOLUMERAMPPRECISION     12
-#define FILTERPRECISION         ((sizeof(int32_t) * 8) - 8) /* faithfully stolen from openmpt */
+#define MIXING_ATTENUATION  5
+#define MIXING_CLIPMIN      (-0x04000000)
+#define MIXING_CLIPMAX      (0x03FFFFFF)
+#define VOLUMERAMPPRECISION 12
+#define FILTERPRECISION     ((sizeof(int32_t) * 8) - 8) /* faithfully stolen from openmpt */
 
 
 void init_mix_buffer(int *, unsigned int);
-void stereo_fill(int *, unsigned int, int*, int *);
+void stereo_fill(int *, unsigned int, int *, int *);
 void end_channel_ofs(song_voice_t *, int *, unsigned int);
 void interleave_front_rear(int *, int *, unsigned int);
 void mono_from_stereo(int *, unsigned int);
@@ -48,7 +48,7 @@ extern int g_dry_lofs_vol;
 void ResampleMono8BitFirFilter(signed char *oldbuf, signed char *newbuf, unsigned long oldlen, unsigned long newlen);
 void ResampleMono16BitFirFilter(signed short *oldbuf, signed short *newbuf, unsigned long oldlen, unsigned long newlen);
 void ResampleStereo8BitFirFilter(signed char *oldbuf, signed char *newbuf, unsigned long oldlen, unsigned long newlen);
-void ResampleStereo16BitFirFilter(signed short *oldbuf, signed short *newbuf, unsigned long oldlen, unsigned long newlen);
+void ResampleStereo16BitFirFilter(
+	signed short *oldbuf, signed short *newbuf, unsigned long oldlen, unsigned long newlen);
 
 #endif /* SCHISM_CMIXER_H_ */
-

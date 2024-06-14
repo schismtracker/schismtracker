@@ -74,14 +74,14 @@ the banks are:
 
 /* preprocessor stuff */
 
-#define CHECK_INVERT(tl,br,n) \
-do {                                            \
-	if (status.flags & INVERTED_PALETTE) {  \
-		n = tl;                         \
-		tl = br;                        \
-		br = n;                         \
-	}                                       \
-} while(0)
+#define CHECK_INVERT(tl, br, n) \
+	do { \
+		if (status.flags & INVERTED_PALETTE) { \
+			n = tl; \
+			tl = br; \
+			br = n; \
+		} \
+	} while (0)
 
 /* This isn't defined in an .h file since it's only used here. (maybe I
 should make a header for declarations of all this auto-built stuff) */
@@ -156,31 +156,15 @@ static inline void make_half_width_middot(void)
 	 * together chars 173 and 184 of the half-width font will
 	 * produce the equivalent of 184 of the full-width font. */
 
-	font_half_data[173 * 4 + 0] =
-		(font_normal[184 * 8 + 0] & 0xf0) |
-		(font_normal[184 * 8 + 1] & 0xf0) >> 4;
-	font_half_data[173 * 4 + 1] =
-		(font_normal[184 * 8 + 2] & 0xf0) |
-		(font_normal[184 * 8 + 3] & 0xf0) >> 4;
-	font_half_data[173 * 4 + 2] =
-		(font_normal[184 * 8 + 4] & 0xf0) |
-		(font_normal[184 * 8 + 5] & 0xf0) >> 4;
-	font_half_data[173 * 4 + 3] =
-		(font_normal[184 * 8 + 6] & 0xf0) |
-		(font_normal[184 * 8 + 7] & 0xf0) >> 4;
+	font_half_data[173 * 4 + 0] = (font_normal[184 * 8 + 0] & 0xf0) | (font_normal[184 * 8 + 1] & 0xf0) >> 4;
+	font_half_data[173 * 4 + 1] = (font_normal[184 * 8 + 2] & 0xf0) | (font_normal[184 * 8 + 3] & 0xf0) >> 4;
+	font_half_data[173 * 4 + 2] = (font_normal[184 * 8 + 4] & 0xf0) | (font_normal[184 * 8 + 5] & 0xf0) >> 4;
+	font_half_data[173 * 4 + 3] = (font_normal[184 * 8 + 6] & 0xf0) | (font_normal[184 * 8 + 7] & 0xf0) >> 4;
 
-	font_half_data[184 * 4 + 0] =
-		(font_normal[184 * 8 + 0] & 0xf) << 4 |
-		(font_normal[184 * 8 + 1] & 0xf);
-	font_half_data[184 * 4 + 1] =
-		(font_normal[184 * 8 + 2] & 0xf) << 4 |
-		(font_normal[184 * 8 + 3] & 0xf);
-	font_half_data[184 * 4 + 2] =
-		(font_normal[184 * 8 + 4] & 0xf) << 4 |
-		(font_normal[184 * 8 + 5] & 0xf);
-	font_half_data[184 * 4 + 3] =
-		(font_normal[184 * 8 + 6] & 0xf) << 4 |
-		(font_normal[184 * 8 + 7] & 0xf);
+	font_half_data[184 * 4 + 0] = (font_normal[184 * 8 + 0] & 0xf) << 4 | (font_normal[184 * 8 + 1] & 0xf);
+	font_half_data[184 * 4 + 1] = (font_normal[184 * 8 + 2] & 0xf) << 4 | (font_normal[184 * 8 + 3] & 0xf);
+	font_half_data[184 * 4 + 2] = (font_normal[184 * 8 + 4] & 0xf) << 4 | (font_normal[184 * 8 + 5] & 0xf);
+	font_half_data[184 * 4 + 3] = (font_normal[184 * 8 + 6] & 0xf) << 4 | (font_normal[184 * 8 + 7] & 0xf);
 }
 
 /* just the non-itf chars */
@@ -221,10 +205,10 @@ void font_reset_char(int ch)
 	ch <<= 3;
 	cx = ch;
 	if (ch >= 1024) {
-		base = (uint8_t *) font_default_upper_itf;
+		base = (uint8_t *)font_default_upper_itf;
 		cx -= 1024;
 	} else {
-		base = (uint8_t *) font_default_lower;
+		base = (uint8_t *)font_default_lower;
 	}
 	/* update them both... */
 	memcpy(font_normal + ch, base + cx, 8);
@@ -235,16 +219,14 @@ void font_reset_char(int ch)
 
 /* --------------------------------------------------------------------- */
 
-static int squeeze_8x16_font(FILE * fp)
+static int squeeze_8x16_font(FILE *fp)
 {
 	uint8_t data_8x16[4096];
 	int n;
 
-	if (fread(data_8x16, 4096, 1, fp) != 1)
-		return -1;
+	if (fread(data_8x16, 4096, 1, fp) != 1) return -1;
 
-	for (n = 0; n < 2048; n++)
-		font_normal[n] = data_8x16[2 * n] | data_8x16[2 * n + 1];
+	for (n = 0; n < 2048; n++) font_normal[n] = data_8x16[2 * n] | data_8x16[2 * n + 1];
 
 	return 0;
 }
@@ -275,8 +257,7 @@ int font_load(const char *filename)
 
 		fseek(fp, -2, SEEK_CUR);
 		if (fread(data, 2, 1, fp) < 1) {
-			SDL_SetError("%s: %s", font_file,
-				     feof(fp) ? "Unexpected EOF on read" : strerror(errno));
+			SDL_SetError("%s: %s", font_file, feof(fp) ? "Unexpected EOF on read" : strerror(errno));
 			fclose(fp);
 			free(font_file);
 			return -1;
@@ -299,8 +280,7 @@ int font_load(const char *filename)
 			free(font_file);
 			return 0;
 		} else {
-			SDL_SetError("%s: %s", font_file,
-				     feof(fp) ? "Unexpected EOF on read" : strerror(errno));
+			SDL_SetError("%s: %s", font_file, feof(fp) ? "Unexpected EOF on read" : strerror(errno));
 			fclose(fp);
 			free(font_file);
 			return -1;
@@ -313,8 +293,7 @@ int font_load(const char *filename)
 	}
 
 	if (fread(font_normal, 2048, 1, fp) != 1) {
-		SDL_SetError("%s: %s", font_file,
-			     feof(fp) ? "Unexpected EOF on read" : strerror(errno));
+		SDL_SetError("%s: %s", font_file, feof(fp) ? "Unexpected EOF on read" : strerror(errno));
 		fclose(fp);
 		free(font_file);
 		return -1;
@@ -330,7 +309,7 @@ int font_load(const char *filename)
 int font_save(const char *filename)
 {
 	FILE *fp;
-	uint8_t ver[2] = { 0x12, 0x2 };
+	uint8_t ver[2] = {0x12, 0x2};
 	char *font_dir, *font_file;
 
 	font_dir = dmoz_path_concat(cfg_dir_dotschism, "fonts");
@@ -373,7 +352,7 @@ void font_init(void)
 static unsigned int vgamem[4000];
 static unsigned int vgamem_read[4000];
 
-static unsigned char ovl[640*400]; /* 256K */
+static unsigned char ovl[640 * 400]; /* 256K */
 
 void vgamem_flip(void)
 {
@@ -382,12 +361,12 @@ void vgamem_flip(void)
 
 void vgamem_clear(void)
 {
-	memset(vgamem,0,sizeof(vgamem));
+	memset(vgamem, 0, sizeof(vgamem));
 }
 
 void vgamem_ovl_alloc(struct vgamem_overlay *n)
 {
-	n->q = &ovl[ (n->x1*8) + (n->y1 * 5120) ];
+	n->q = &ovl[(n->x1 * 8) + (n->y1 * 5120)];
 	n->width = 8 * ((n->x2 - n->x1) + 1);
 	n->height = 8 * ((n->y2 - n->y1) + 1);
 	n->skip = (640 - n->width);
@@ -398,7 +377,7 @@ void vgamem_ovl_apply(struct vgamem_overlay *n)
 
 	for (y = n->y1; y <= n->y2; y++) {
 		for (x = n->x1; x <= n->x2; x++) {
-			vgamem[x + (y*80)] = 0x80000000;
+			vgamem[x + (y * 80)] = 0x80000000;
 		}
 	}
 }
@@ -417,10 +396,9 @@ void vgamem_ovl_clear(struct vgamem_overlay *n, int color)
 }
 void vgamem_ovl_drawpixel(struct vgamem_overlay *n, int x, int y, int color)
 {
-	n->q[ (640*y) + x ] = color;
+	n->q[(640 * y) + x] = color;
 }
-static inline void _draw_line_v(struct vgamem_overlay *n, int x,
-		int ys, int ye, int color)
+static inline void _draw_line_v(struct vgamem_overlay *n, int x, int ys, int ye, int color)
 {
 	unsigned char *q = n->q + x;
 	int y;
@@ -439,8 +417,7 @@ static inline void _draw_line_v(struct vgamem_overlay *n, int x,
 		}
 	}
 }
-static inline void _draw_line_h(struct vgamem_overlay *n, int xs,
-		int xe, int y, int color)
+static inline void _draw_line_h(struct vgamem_overlay *n, int xs, int xe, int y, int color)
 {
 	unsigned char *q = n->q + (y * 640);
 	int x;
@@ -462,11 +439,10 @@ static inline void _draw_line_h(struct vgamem_overlay *n, int xs,
 # define ABS(x) ((x) < 0 ? -(x) : (x))
 #endif
 #ifndef SGN
-# define SGN(x) ((x) < 0 ? -1 : 1)      /* hey, what about zero? */
+# define SGN(x) ((x) < 0 ? -1 : 1) /* hey, what about zero? */
 #endif
 
-void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
-	int ys, int xe, int ye, int color)
+void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs, int ys, int xe, int ye, int color)
 {
 	int d, x, y, ax, ay, sx, sy, dx, dy;
 
@@ -520,9 +496,9 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 
 
 /* write the vgamem routines */
-#define BPP 32
-#define F1 vgamem_scan32
-#define F2 scan32
+#define BPP  32
+#define F1   vgamem_scan32
+#define F2   scan32
 #define SIZE int
 #include "vgamem-scanner.h"
 #undef F2
@@ -530,20 +506,20 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 #undef SIZE
 #undef BPP
 
-#define BPP 16
+#define BPP  16
 #define SIZE short
-#define F1 vgamem_scan16
-#define F2 scan16
+#define F1   vgamem_scan16
+#define F2   scan16
 #include "vgamem-scanner.h"
 #undef F2
 #undef F1
 #undef SIZE
 #undef BPP
 
-#define BPP 8
+#define BPP  8
 #define SIZE char
-#define F1 vgamem_scan8
-#define F2 scan8
+#define F1   vgamem_scan8
+#define F2   scan8
 #include "vgamem-scanner.h"
 #undef F2
 #undef F1
@@ -552,17 +528,17 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 
 void draw_char_bios(unsigned char c, int x, int y, uint32_t fg, uint32_t bg)
 {
-    assert(x >= 0 && y >= 0 && x < 80 && y < 50);
-    vgamem[x + (y*80)] = c | (fg << 8) | (bg << 12) | 0x10000000;
+	assert(x >= 0 && y >= 0 && x < 80 && y < 50);
+	vgamem[x + (y * 80)] = c | (fg << 8) | (bg << 12) | 0x10000000;
 }
 
 void draw_char(unsigned char c, int x, int y, uint32_t fg, uint32_t bg)
 {
-    assert(x >= 0 && y >= 0 && x < 80 && y < 50);
-    vgamem[x + (y*80)] = c | (fg << 8) | (bg << 12);
+	assert(x >= 0 && y >= 0 && x < 80 && y < 50);
+	vgamem[x + (y * 80)] = c | (fg << 8) | (bg << 12);
 }
 
-int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
+int draw_text(const char *text, int x, int y, uint32_t fg, uint32_t bg)
 {
 	int n = 0;
 
@@ -574,7 +550,7 @@ int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 
 	return n;
 }
-int draw_text_bios(const char * text, int x, int y, uint32_t fg, uint32_t bg)
+int draw_text_bios(const char *text, int x, int y, uint32_t fg, uint32_t bg)
 {
 	int n = 0;
 
@@ -591,7 +567,7 @@ void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t color)
 	unsigned int *mm;
 	int x, len;
 	mm = &vgamem[(ys * 80) + xs];
-	len = (xe - xs)+1;
+	len = (xe - xs) + 1;
 	ye -= ys;
 	do {
 		for (x = 0; x < len; x++) {
@@ -602,7 +578,7 @@ void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t color)
 	} while (ye >= 0);
 }
 
-int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
+int draw_text_len(const char *text, int len, int x, int y, uint32_t fg, uint32_t bg)
 {
 	int n = 0;
 
@@ -614,7 +590,7 @@ int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_
 	draw_fill_chars(x + n, y, x + len - 1, y, bg);
 	return n;
 }
-int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
+int draw_text_bios_len(const char *text, int len, int x, int y, uint32_t fg, uint32_t bg)
 {
 	int n = 0;
 
@@ -629,28 +605,25 @@ int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, ui
 
 /* --------------------------------------------------------------------- */
 
-void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
-			   uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2)
+void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y, uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2)
 {
 	assert(x >= 0 && y >= 0 && x < 80 && y < 50);
-	vgamem[x + (y*80)] =
-		0x40000000
-		| (fg1 << 22) | (fg2 << 26)
-		| (bg1 << 18) | (bg2 << 14)
-		| (_pack_halfw(c1) << 7)
-		| (_pack_halfw(c2));
+	vgamem[x + (y * 80)] =
+		0x40000000 | (fg1 << 22) | (fg2 << 26) | (bg1 << 18) | (bg2 << 14) | (_pack_halfw(c1) << 7) | (_pack_halfw(c2));
 }
 /* --------------------------------------------------------------------- */
 /* boxes */
 
 enum box_type {
-	BOX_THIN_INNER = 0, BOX_THIN_OUTER, BOX_THICK_OUTER
+	BOX_THIN_INNER = 0,
+	BOX_THIN_OUTER,
+	BOX_THICK_OUTER
 };
 
 static const uint8_t boxes[4][8] = {
-	{139, 138, 137, 136, 134, 129, 132, 131},       /* thin inner */
-	{128, 130, 133, 135, 129, 134, 131, 132},       /* thin outer */
-	{142, 144, 147, 149, 143, 148, 145, 146},       /* thick outer */
+	{139, 138, 137, 136, 134, 129, 132, 131}, /* thin inner */
+	{128, 130, 133, 135, 129, 134, 131, 132}, /* thin outer */
+	{142, 144, 147, 149, 143, 148, 145, 146}, /* thick outer */
 };
 
 static void _draw_box_internal(int xs, int ys, int xe, int ye, uint32_t tl, uint32_t br, const uint8_t ch[8])
@@ -659,18 +632,18 @@ static void _draw_box_internal(int xs, int ys, int xe, int ye, uint32_t tl, uint
 
 	CHECK_INVERT(tl, br, n);
 
-	draw_char(ch[0], xs, ys, tl, 2);       /* TL corner */
-	draw_char(ch[1], xe, ys, br, 2);       /* TR corner */
-	draw_char(ch[2], xs, ye, br, 2);       /* BL corner */
-	draw_char(ch[3], xe, ye, br, 2);       /* BR corner */
+	draw_char(ch[0], xs, ys, tl, 2); /* TL corner */
+	draw_char(ch[1], xe, ys, br, 2); /* TR corner */
+	draw_char(ch[2], xs, ye, br, 2); /* BL corner */
+	draw_char(ch[3], xe, ye, br, 2); /* BR corner */
 
 	for (n = xs + 1; n < xe; n++) {
-		draw_char(ch[4], n, ys, tl, 2);        /* top */
-		draw_char(ch[5], n, ye, br, 2);        /* bottom */
+		draw_char(ch[4], n, ys, tl, 2); /* top */
+		draw_char(ch[5], n, ye, br, 2); /* bottom */
 	}
 	for (n = ys + 1; n < ye; n++) {
-		draw_char(ch[6], xs, n, tl, 2);        /* left */
-		draw_char(ch[7], xe, n, br, 2);        /* right */
+		draw_char(ch[6], xs, n, tl, 2); /* left */
+		draw_char(ch[7], xe, n, br, 2); /* right */
 	}
 }
 
@@ -694,12 +667,12 @@ void draw_thick_inner_box(int xs, int ys, int xe, int ye, uint32_t tl, uint32_t 
 	draw_char(150, xe, ye, br, 2); /* BR corner */
 
 	for (n = xs + 1; n < xe; n++) {
-		draw_char(148, n, ys, tl, 2);  /* top */
-		draw_char(143, n, ye, br, 2);  /* bottom */
+		draw_char(148, n, ys, tl, 2); /* top */
+		draw_char(143, n, ye, br, 2); /* bottom */
 	}
 	for (n = ys + 1; n < ye; n++) {
-		draw_char(146, xs, n, tl, 2);  /* left */
-		draw_char(145, xe, n, br, 2);  /* right */
+		draw_char(146, xs, n, tl, 2); /* left */
+		draw_char(145, xe, n, br, 2); /* right */
 	}
 }
 
@@ -710,7 +683,12 @@ void draw_thin_outer_box(int xs, int ys, int xe, int ye, uint32_t c)
 
 void draw_thin_outer_cornered_box(int xs, int ys, int xe, int ye, int flags)
 {
-	const int colors[4][2] = { {3, 1}, {1, 3}, {3, 3}, {1, 1} };
+	const int colors[4][2] = {
+		{3, 1},
+        {1, 3},
+        {3, 3},
+        {1, 1}
+    };
 	int tl = colors[flags & BOX_SHADE_MASK][0];
 	int br = colors[flags & BOX_SHADE_MASK][1];
 	int n;
@@ -723,13 +701,13 @@ void draw_thin_outer_cornered_box(int xs, int ys, int xe, int ye, int flags)
 	draw_char(135, xe, ye, br, 2); /* BR corner */
 
 	for (n = xs + 1; n < xe; n++) {
-		draw_char(129, n, ys, tl, 2);  /* top */
-		draw_char(134, n, ye, br, 2);  /* bottom */
+		draw_char(129, n, ys, tl, 2); /* top */
+		draw_char(134, n, ye, br, 2); /* bottom */
 	}
 
 	for (n = ys + 1; n < ye; n++) {
-		draw_char(131, xs, n, tl, 2);  /* left */
-		draw_char(132, xe, n, br, 2);  /* right */
+		draw_char(131, xs, n, tl, 2); /* left */
+		draw_char(132, xe, n, br, 2); /* right */
 	}
 }
 
@@ -740,27 +718,21 @@ void draw_thick_outer_box(int xs, int ys, int xe, int ye, uint32_t c)
 
 void draw_box(int xs, int ys, int xe, int ye, int flags)
 {
-	const int colors[4][2] = { {3, 1}, {1, 3}, {3, 3}, {1, 1} };
+	const int colors[4][2] = {
+		{3, 1},
+        {1, 3},
+        {3, 3},
+        {1, 1}
+    };
 	int tl = colors[flags & BOX_SHADE_MASK][0];
 	int br = colors[flags & BOX_SHADE_MASK][1];
 
 	switch (flags & (BOX_TYPE_MASK | BOX_THICKNESS_MASK)) {
-	case BOX_THIN | BOX_INNER:
-		draw_thin_inner_box(xs, ys, xe, ye, tl, br);
-		break;
-	case BOX_THICK | BOX_INNER:
-		draw_thick_inner_box(xs, ys, xe, ye, tl, br);
-		break;
-	case BOX_THIN | BOX_OUTER:
-		draw_thin_outer_box(xs, ys, xe, ye, tl);
-		break;
-	case BOX_THICK | BOX_OUTER:
-		draw_thick_outer_box(xs, ys, xe, ye, tl);
-		break;
-	case BOX_THIN | BOX_CORNER:
-	case BOX_THICK | BOX_CORNER:
-		draw_thin_outer_cornered_box(xs, ys, xe, ye, flags & BOX_SHADE_MASK);
-		break;
+		case BOX_THIN | BOX_INNER: draw_thin_inner_box(xs, ys, xe, ye, tl, br); break;
+		case BOX_THICK | BOX_INNER: draw_thick_inner_box(xs, ys, xe, ye, tl, br); break;
+		case BOX_THIN | BOX_OUTER: draw_thin_outer_box(xs, ys, xe, ye, tl); break;
+		case BOX_THICK | BOX_OUTER: draw_thick_outer_box(xs, ys, xe, ye, tl); break;
+		case BOX_THIN | BOX_CORNER:
+		case BOX_THICK | BOX_CORNER: draw_thin_outer_cornered_box(xs, ys, xe, ye, flags & BOX_SHADE_MASK); break;
 	}
 }
-

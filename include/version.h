@@ -28,7 +28,7 @@
 /* various boilerplate defined in version.c */
 extern const char *ver_short_copyright;
 extern const char *ver_short_based_on;
-extern unsigned short ver_cwtv; /* lower 12 bits of the IT/S3M cwtv field */
+extern unsigned short ver_cwtv;     /* lower 12 bits of the IT/S3M cwtv field */
 extern unsigned short ver_reserved; /* full version number in case 12 bits are not enough */
 
 PURE extern const char *schism_banner(int classic);
@@ -40,4 +40,3 @@ void ver_init(void);
 void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char *buf);
 
 #endif /* SCHISM_VERSION_H_ */
-

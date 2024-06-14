@@ -28,8 +28,7 @@
 
 int fmt_liq_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	if (!(length > 64 && data[64] == 0x1a && memcmp(data, "Liquid Module:", 14) == 0))
-		return 0;
+	if (!(length > 64 && data[64] == 0x1a && memcmp(data, "Liquid Module:", 14) == 0)) return 0;
 
 	file->description = "Liquid Tracker";
 	/*file->extension = str_dup("liq");*/

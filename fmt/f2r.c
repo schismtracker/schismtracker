@@ -30,8 +30,7 @@
 
 int fmt_f2r_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	if (!(length > 46 && memcmp(data, "F2R", 3) == 0))
-		return 0;
+	if (!(length > 46 && memcmp(data, "F2R", 3) == 0)) return 0;
 
 	file->description = "Farandole 2 (linear)";
 	/*file->extension = str_dup("f2r");*/

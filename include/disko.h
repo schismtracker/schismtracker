@@ -27,7 +27,7 @@
 
 // hurd doesn't have limits.h
 #ifdef __GNU__
-#define PATH_MAX 4096
+# define PATH_MAX 4096
 #endif
 
 typedef struct disko disko_t;
@@ -137,4 +137,3 @@ void disko_seterror(disko_t *ds, int err);
 int _disko_writemidi(const void *data, unsigned int len, unsigned int delay);
 
 #endif /* SCHISM_DISKO_H_ */
-

@@ -66,11 +66,11 @@ uint8_t char_unicode_to_cp437(unsigned int c);
 uint32_t charset_simple_case_fold(uint32_t codepoint);
 
 /* charset-aware replacements for C stdlib functions */
-int charset_strcmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set);
-int charset_strcasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set);
+int charset_strcmp(const uint8_t *in1, charset_t in1set, const uint8_t *in2, charset_t in2set);
+int charset_strcasecmp(const uint8_t *in1, charset_t in1set, const uint8_t *in2, charset_t in2set);
 
-const char* charset_iconv_error_lookup(charset_error_t err);
-charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset);
+const char *charset_iconv_error_lookup(charset_error_t err);
+charset_error_t charset_iconv(const uint8_t *in, uint8_t **out, charset_t inset, charset_t outset);
 
 /* This is a simple macro for easy charset conversion.
  *
@@ -85,18 +85,16 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
  */
 #define CHARSET_EASY_MODE_EX(MOD, in, inset, outset, x) \
 	do { \
-		MOD uint8_t* out; \
-		charset_error_t err = charset_iconv(in, (uint8_t**)&out, inset, outset); \
-		if (err) \
-			out = in; \
-	\
+		MOD uint8_t *out; \
+		charset_error_t err = charset_iconv(in, (uint8_t **)&out, inset, outset); \
+		if (err) out = in; \
+\
 		x \
-	\
-		if (!err) \
-			free((uint8_t*)out); \
+\
+			if (!err) free((uint8_t *)out); \
 	} while (0)
 
-#define CHARSET_EASY_MODE(in, inset, outset, x) CHARSET_EASY_MODE_EX(, in, inset, outset, x)
+#define CHARSET_EASY_MODE(in, inset, outset, x)       CHARSET_EASY_MODE_EX(, in, inset, outset, x)
 #define CHARSET_EASY_MODE_CONST(in, inset, outset, x) CHARSET_EASY_MODE_EX(const, in, inset, outset, x)
 
 #endif /* SCHISM_CHARSET_H_ */

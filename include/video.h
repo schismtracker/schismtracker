@@ -31,7 +31,7 @@ void vgamem_clear(void);
 struct vgamem_overlay {
 	unsigned int x1, y1, x2, y2; /* in character cells... */
 
-	unsigned char *q;               /* points inside ovl */
+	unsigned char *q; /* points inside ovl */
 	unsigned int skip;
 
 	int width, height; /* in pixels; signed to avoid bugs elsewhere */
@@ -47,9 +47,9 @@ void vgamem_ovl_drawpixel(struct vgamem_overlay *n, int x, int y, int color);
 void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs, int ys, int xe, int ye, int color);
 
 
-void vgamem_scan32(unsigned int y,unsigned int *out,unsigned int tc[16], unsigned int mouse_line[80]);
-void vgamem_scan16(unsigned int y,unsigned short *out,unsigned int tc[16], unsigned int mouse_line[80]);
-void vgamem_scan8(unsigned int y,unsigned char *out,unsigned int tc[16], unsigned int mouse_line[80]);
+void vgamem_scan32(unsigned int y, unsigned int *out, unsigned int tc[16], unsigned int mouse_line[80]);
+void vgamem_scan16(unsigned int y, unsigned short *out, unsigned int tc[16], unsigned int mouse_line[80]);
+void vgamem_scan8(unsigned int y, unsigned char *out, unsigned int tc[16], unsigned int mouse_line[80]);
 
 /* video output routines */
 const char *video_driver_name(void);
@@ -73,7 +73,7 @@ int video_mousecursor_visible(void);
 int video_is_fullscreen(void);
 int video_width(void);
 int video_height(void);
-SDL_Window * video_window(void);
+SDL_Window *video_window(void);
 
 void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y);
 

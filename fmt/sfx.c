@@ -40,10 +40,10 @@ static struct sfxfmt {
 	int dunno;
 	const char *id;
 } sfxfmts[] = {
-	{124, "SO31", 31, 4, "SoundFX 2"},
+	{124, "SO31", 31, 4, "SoundFX 2"    },
 	{124, "SONG", 31, 0, "SoundFX 2 (?)"},
-	{ 60, "SONG", 15, 0, "SoundFX"},
-	{  0, ""    ,  0, 0, NULL},
+	{60,  "SONG", 15, 0, "SoundFX"      },
+	{0,   "",     0,  0, NULL           },
 };
 
 
@@ -51,8 +51,7 @@ int fmt_sfx_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	int n;
 	for (n = 0; sfxfmts[n].nsmp; n++) {
-		if (length >= sfxfmts[n].tagpos + 4
-		    && memcmp(data + sfxfmts[n].tagpos, sfxfmts[n].tag, 4) == 0) {
+		if (length >= sfxfmts[n].tagpos + 4 && memcmp(data + sfxfmts[n].tagpos, sfxfmts[n].tag, 4) == 0) {
 			file->description = sfxfmts[n].id;
 			/*file->extension = str_dup("sfx");*/
 			file->title = strdup(""); // whatever
@@ -91,16 +90,14 @@ int fmt_sfx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		fmt++;
 	} while (fmt->nsmp);
 
-	if (!nsmp)
-		return LOAD_UNSUPPORTED;
+	if (!nsmp) return LOAD_UNSUPPORTED;
 
 
 	slurp_rewind(fp);
 	slurp_read(fp, smpsize, 4 * nsmp);
 	slurp_seek(fp, 4, SEEK_CUR); /* the tag again */
 	slurp_read(fp, &tmp, 2);
-	if (!tmp)
-		return LOAD_UNSUPPORTED; // erf
+	if (!tmp) return LOAD_UNSUPPORTED; // erf
 	tmp = 14565 * 122 / bswapBE16(tmp);
 	song->initial_tempo = CLAMP(tmp, 31, 255);
 
@@ -118,8 +115,7 @@ int fmt_sfx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 			song->samples[n].c5speed = MOD_FINETUNE(slurp_getc(fp)); // ?
 			sample->volume = slurp_getc(fp);
-			if (sample->volume > 64)
-				sample->volume = 64;
+			if (sample->volume > 64) sample->volume = 64;
 			sample->volume *= 4; //mphack
 			sample->global_volume = 64;
 			slurp_read(fp, &tmp, 2);
@@ -143,8 +139,7 @@ int fmt_sfx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	slurp_seek(fp, 128 - nord, SEEK_CUR);
 	npat = 0;
 	for (n = 0; n < nord; n++) {
-		if (song->orderlist[n] > npat)
-			npat = song->orderlist[n];
+		if (song->orderlist[n] > npat) npat = song->orderlist[n];
 	}
 	npat++;
 
@@ -171,66 +166,60 @@ int fmt_sfx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						FF FC   pattern break   orbit wanderer.sfx2 */
 					if (p[0] == 0xff) {
 						switch (p[1]) {
-						case 0xfc:
-							note->note = NOTE_NONE;
-							note->instrument = 0;
-							// stuff a C00 in channel 5
-							note[4 - chan].effect = FX_PATTERNBREAK;
-							break;
-						case 0xfe:
-							note->note = NOTE_CUT;
-							note->instrument = 0;
-							break;
+							case 0xfc:
+								note->note = NOTE_NONE;
+								note->instrument = 0;
+								// stuff a C00 in channel 5
+								note[4 - chan].effect = FX_PATTERNBREAK;
+								break;
+							case 0xfe:
+								note->note = NOTE_CUT;
+								note->instrument = 0;
+								break;
 						}
 					}
 					switch (note->effect) {
-					case 0:
-						break;
-					case 1: /* arpeggio */
-						note->effect = FX_ARPEGGIO;
-						break;
-					case 2: /* pitch bend */
-						if (note->param >> 4) {
-							note->effect = FX_PORTAMENTODOWN;
-							note->param >>= 4;
-						} else if (note->param & 0xf) {
-							note->effect = FX_PORTAMENTOUP;
-							note->param &= 0xf;
-						} else {
+						case 0: break;
+						case 1: /* arpeggio */ note->effect = FX_ARPEGGIO; break;
+						case 2: /* pitch bend */
+							if (note->param >> 4) {
+								note->effect = FX_PORTAMENTODOWN;
+								note->param >>= 4;
+							} else if (note->param & 0xf) {
+								note->effect = FX_PORTAMENTOUP;
+								note->param &= 0xf;
+							} else {
+								note->effect = 0;
+							}
+							break;
+						case 5: /* volume up */
+							note->effect = FX_VOLUMESLIDE;
+							note->param = (note->param & 0xf) << 4;
+							break;
+						case 6: /* set volume */
+							if (note->param > 64) note->param = 64;
+							note->voleffect = VOLFX_VOLUME;
+							note->volparam = 64 - note->param;
 							note->effect = 0;
-						}
-						break;
-					case 5: /* volume up */
-						note->effect = FX_VOLUMESLIDE;
-						note->param = (note->param & 0xf) << 4;
-						break;
-					case 6: /* set volume */
-						if (note->param > 64)
-							note->param = 64;
-						note->voleffect = VOLFX_VOLUME;
-						note->volparam = 64 - note->param;
-						note->effect = 0;
-						note->param = 0;
-						break;
-					case 3: /* LED on (wtf!) */
-					case 4: /* LED off (ditto) */
-					case 7: /* set step up */
-					case 8: /* set step down */
-					default:
-						effwarn |= (1 << note->effect);
-						note->effect = FX_UNIMPLEMENTED;
-						break;
+							note->param = 0;
+							break;
+						case 3: /* LED on (wtf!) */
+						case 4: /* LED off (ditto) */
+						case 7: /* set step up */
+						case 8: /* set step down */
+						default:
+							effwarn |= (1 << note->effect);
+							note->effect = FX_UNIMPLEMENTED;
+							break;
 					}
 				}
 			}
 		}
 		for (n = 0; n < 16; n++) {
-			if (effwarn & (1 << n))
-				log_appendf(4, " Warning: Unimplemented effect %Xxx", n);
+			if (effwarn & (1 << n)) log_appendf(4, " Warning: Unimplemented effect %Xxx", n);
 		}
 
-		if (restart < npat)
-			csf_insert_restart_pos(song, restart);
+		if (restart < npat) csf_insert_restart_pos(song, restart);
 	}
 
 	/* sample data */
@@ -238,27 +227,23 @@ int fmt_sfx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		for (n = 0, sample = song->samples + 1; n < fmt->nsmp; n++, sample++) {
 			uint32_t ssize;
 
-			if (sample->length <= 2)
-				continue;
-			ssize = csf_read_sample(sample, SF_8 | SF_LE | SF_PCMS | SF_M,
-				fp->data + fp->pos, fp->length - fp->pos);
+			if (sample->length <= 2) continue;
+			ssize = csf_read_sample(sample, SF_8 | SF_LE | SF_PCMS | SF_M, fp->data + fp->pos, fp->length - fp->pos);
 			slurp_seek(fp, ssize, SEEK_CUR);
 		}
 	}
 
 	/* more header info */
 	song->flags = SONG_ITOLDEFFECTS | SONG_COMPATGXX;
-	for (n = 0; n < 4; n++)
-		song->channels[n].panning = PROTRACKER_PANNING(n); /* ??? */
-	for (; n < MAX_CHANNELS; n++)
-		song->channels[n].flags = CHN_MUTE;
+	for (n = 0; n < 4; n++) song->channels[n].panning = PROTRACKER_PANNING(n); /* ??? */
+	for (; n < MAX_CHANNELS; n++) song->channels[n].flags = CHN_MUTE;
 
 	strcpy(song->tracker_id, fmt->id);
 	song->pan_separation = 64;
 
-//      if (ferror(fp)) {
-//              return LOAD_FILE_ERROR;
-//      }
+	//      if (ferror(fp)) {
+	//              return LOAD_FILE_ERROR;
+	//      }
 
 	/* done! */
 	return LOAD_SUCCESS;
@@ -281,4 +266,3 @@ most of modland's sfx files have all zeroes for those 14 "unknown" bytes, with t
 6e 74 20 73 6f 6e 67 00 00 00 00 00 00 00  nt song....... - unknown/sweety.sfx
 61 6c 6b 00 00 00 00 00 00 00 00 00 00 00  alk........... - unknown/thrust.sfx
 */
-

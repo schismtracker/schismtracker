@@ -35,8 +35,7 @@
 
 int fmt_ult_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	if (!(length > 48 && memcmp(data, "MAS_UTrack_V00", 14) == 0))
-		return 0;
+	if (!(length > 48 && memcmp(data, "MAS_UTrack_V00", 14) == 0)) return 0;
 
 	file->description = "UltraTracker Module";
 	file->type = TYPE_MODULE_S3M;
@@ -49,7 +48,7 @@ int fmt_ult_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 enum {
 	ULT_16BIT = 4,
-	ULT_LOOP  = 8,
+	ULT_LOOP = 8,
 	ULT_PINGPONGLOOP = 16,
 };
 
@@ -62,7 +61,7 @@ struct ult_sample {
 	uint32_t size_start;
 	uint32_t size_end;
 	uint8_t volume; // 0-255, apparently prior to 1.4 this was logarithmic?
-	uint8_t flags; // above
+	uint8_t flags;  // above
 	uint16_t speed; // only exists for 1.4+
 	int16_t finetune;
 };
@@ -86,20 +85,8 @@ much anywhere for that matter. I don't even think Ultra Tracker tries to
 convert them. */
 
 static const uint8_t ult_efftrans[] = {
-	FX_ARPEGGIO,
-	FX_PORTAMENTOUP,
-	FX_PORTAMENTODOWN,
-	FX_TONEPORTAMENTO,
-	FX_VIBRATO,
-	FX_NONE,
-	FX_NONE,
-	FX_TREMOLO,
-	FX_NONE,
-	FX_OFFSET,
-	FX_VOLUMESLIDE,
-	FX_PANNING,
-	FX_VOLUME,
-	FX_PATTERNBREAK,
+	FX_ARPEGGIO, FX_PORTAMENTOUP, FX_PORTAMENTODOWN, FX_TONEPORTAMENTO, FX_VIBRATO, FX_NONE,   FX_NONE,
+	FX_TREMOLO,  FX_NONE,         FX_OFFSET,         FX_VOLUMESLIDE,    FX_PANNING, FX_VOLUME, FX_PATTERNBREAK,
 	FX_NONE, // extended effects, processed separately
 	FX_SPEED,
 };
@@ -112,65 +99,60 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
 	*pe = ult_efftrans[e];
 
 	switch (e) {
-	case 0:
-		if (!p)
-			*pe = FX_NONE;
-		break;
-	case 3:
-		// 300 apparently stops sliding, which is totally weird
-		if (!p)
-			p = 1; // close enough?
-		break;
-	case 0xa:
-		// blah, this sucks
-		if (p & 0xf0)
-			p &= 0xf0;
-		break;
-	case 0xb:
-		// mikmod does this wrong, resulting in values 0-225 instead of 0-255
-		p = (p & 0xf) * 0x11;
-		break;
-	case 0xc: // volume
-		p >>= 2;
-		break;
-	case 0xd: // pattern break
-		p = 10 * (p >> 4) + (p & 0xf);
-		break;
-	case 0xe: // special
-		switch (p >> 4) {
-		case 1:
-			*pe = FX_PORTAMENTOUP;
-			p = 0xf0 | (p & 0xf);
+		case 0:
+			if (!p) *pe = FX_NONE;
 			break;
-		case 2:
-			*pe = FX_PORTAMENTODOWN;
-			p = 0xf0 | (p & 0xf);
-			break;
-		case 8:
-			*pe = FX_SPECIAL;
-			p = 0x60 | (p & 0xf);
-			break;
-		case 9:
-			*pe = FX_RETRIG;
-			p &= 0xf;
+		case 3:
+			// 300 apparently stops sliding, which is totally weird
+			if (!p) p = 1; // close enough?
 			break;
 		case 0xa:
-			*pe = FX_VOLUMESLIDE;
-			p = ((p & 0xf) << 4) | 0xf;
+			// blah, this sucks
+			if (p & 0xf0) p &= 0xf0;
 			break;
 		case 0xb:
-			*pe = FX_VOLUMESLIDE;
-			p = 0xf0 | (p & 0xf);
+			// mikmod does this wrong, resulting in values 0-225 instead of 0-255
+			p = (p & 0xf) * 0x11;
 			break;
-		case 0xc: case 0xd:
-			*pe = FX_SPECIAL;
+		case 0xc: // volume
+			p >>= 2;
 			break;
-		}
-		break;
-	case 0xf:
-		if (p > 0x2f)
-			*pe = FX_TEMPO;
-		break;
+		case 0xd: // pattern break
+			p = 10 * (p >> 4) + (p & 0xf);
+			break;
+		case 0xe: // special
+			switch (p >> 4) {
+				case 1:
+					*pe = FX_PORTAMENTOUP;
+					p = 0xf0 | (p & 0xf);
+					break;
+				case 2:
+					*pe = FX_PORTAMENTODOWN;
+					p = 0xf0 | (p & 0xf);
+					break;
+				case 8:
+					*pe = FX_SPECIAL;
+					p = 0x60 | (p & 0xf);
+					break;
+				case 9:
+					*pe = FX_RETRIG;
+					p &= 0xf;
+					break;
+				case 0xa:
+					*pe = FX_VOLUMESLIDE;
+					p = ((p & 0xf) << 4) | 0xf;
+					break;
+				case 0xb:
+					*pe = FX_VOLUMESLIDE;
+					p = 0xf0 | (p & 0xf);
+					break;
+				case 0xc:
+				case 0xd: *pe = FX_SPECIAL; break;
+			}
+			break;
+		case 0xf:
+			if (p > 0x2f) *pe = FX_TEMPO;
+			break;
 	}
 
 	*pp = p;
@@ -226,17 +208,14 @@ static int read_ult_event(slurp_t *fp, song_note_t *note, int *lostfx)
 		swap_effects(note);
 	}
 	if (n < 5) {
-		if (effect_weight[note->voleffect] > effect_weight[note->effect])
-			swap_effects(note);
+		if (effect_weight[note->voleffect] > effect_weight[note->effect]) swap_effects(note);
 		(*lostfx)++;
 		//log_appendf(4, "Effect dropped: %c%02X < %c%02X", get_effect_char(note->voleffect),
 		//        note->volparam, get_effect_char(note->effect), note->param);
 		note->voleffect = 0;
 	}
-	if (!note->voleffect)
-		note->volparam = 0;
-	if (!note->effect)
-		note->param = 0;
+	if (!note->voleffect) note->volparam = 0;
+	if (!note->effect) note->param = 0;
 	return repeat;
 }
 
@@ -254,11 +233,9 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	const char *verstr[] = {"<1.4", "1.4", "1.5", "1.6"};
 
 	slurp_read(fp, buf, 14);
-	if (memcmp(buf, "MAS_UTrack_V00", 14) != 0)
-		return LOAD_UNSUPPORTED;
+	if (memcmp(buf, "MAS_UTrack_V00", 14) != 0) return LOAD_UNSUPPORTED;
 	ver = slurp_getc(fp);
-	if (ver < '1' || ver > '4')
-		return LOAD_FORMAT_ERROR;
+	if (ver < '1' || ver > '4') return LOAD_FORMAT_ERROR;
 	ver -= '0';
 
 	slurp_read(fp, buf, 32);
@@ -292,8 +269,7 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		smp->name[25] = '\0';
 		strncpy(smp->filename, usmp.filename, 12);
 		smp->filename[12] = '\0';
-		if (usmp.size_end <= usmp.size_start)
-			continue;
+		if (usmp.size_end <= usmp.size_start) continue;
 		smp->length = usmp.size_end - usmp.size_start;
 		smp->loop_start = usmp.loop_start;
 		smp->loop_end = MIN(usmp.loop_end, smp->length);
@@ -302,13 +278,10 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 		/* mikmod does some weird integer math here, but it didn't really work for me */
 		smp->c5speed = usmp.speed;
-		if (usmp.finetune)
-			smp->c5speed *= pow(2, (usmp.finetune / (12.0 * 32768)));
+		if (usmp.finetune) smp->c5speed *= pow(2, (usmp.finetune / (12.0 * 32768)));
 
-		if (usmp.flags & ULT_LOOP)
-			smp->flags |= CHN_LOOP;
-		if (usmp.flags & ULT_PINGPONGLOOP)
-			smp->flags |= CHN_PINGPONGLOOP;
+		if (usmp.flags & ULT_LOOP) smp->flags |= CHN_LOOP;
+		if (usmp.flags & ULT_PINGPONGLOOP) smp->flags |= CHN_PINGPONGLOOP;
 		if (usmp.flags & ULT_16BIT) {
 			smp->flags |= CHN_16BIT;
 			smp->loop_start >>= 1;
@@ -322,26 +295,21 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	nchn = slurp_getc(fp) + 1;
 	npat = slurp_getc(fp) + 1;
 
-	if (nchn > 32 || npat > MAX_PATTERNS)
-		return LOAD_FORMAT_ERROR;
+	if (nchn > 32 || npat > MAX_PATTERNS) return LOAD_FORMAT_ERROR;
 
 	if (ver >= 3) {
-		for (n = 0; n < nchn; n++)
-			song->channels[n].panning = ((slurp_getc(fp) & 0xf) << 2) + 2;
+		for (n = 0; n < nchn; n++) song->channels[n].panning = ((slurp_getc(fp) & 0xf) << 2) + 2;
 	} else {
-		for (n = 0; n < nchn; n++)
-			song->channels[n].panning = (n & 1) ? 48 : 16;
+		for (n = 0; n < nchn; n++) song->channels[n].panning = (n & 1) ? 48 : 16;
 	}
 	for (; n < 64; n++) {
 		song->channels[n].panning = 32;
 		song->channels[n].flags = CHN_MUTE;
 	}
 	//mphack - fix the pannings
-	for (n = 0; n < 64; n++)
-		song->channels[n].panning *= 4;
+	for (n = 0; n < 64; n++) song->channels[n].panning *= 4;
 
-	if ((lflags & (LOAD_NOSAMPLES | LOAD_NOPATTERNS)) == (LOAD_NOSAMPLES | LOAD_NOPATTERNS))
-		return LOAD_SUCCESS;
+	if ((lflags & (LOAD_NOSAMPLES | LOAD_NOPATTERNS)) == (LOAD_NOSAMPLES | LOAD_NOPATTERNS)) return LOAD_SUCCESS;
 
 	for (pat = 0; pat < npat; pat++) {
 		song->pattern_size[pat] = song->pattern_alloc_size[pat] = 64;
@@ -357,12 +325,10 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			row = 0;
 			while (row < 64) {
 				repeat = read_ult_event(fp, &evnote, &lostfx);
-				if (evnote.effect == FX_TONEPORTAMENTO
-				    || evnote.voleffect == VOLFX_TONEPORTAMENTO) {
+				if (evnote.effect == FX_TONEPORTAMENTO || evnote.voleffect == VOLFX_TONEPORTAMENTO) {
 					gxx |= 1;
 				}
-				if (repeat + row > 64)
-					repeat = 64 - row;
+				if (repeat + row > 64) repeat = 64 - row;
 				while (repeat--) {
 					*note = evnote;
 					note += 64;
@@ -371,19 +337,16 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			}
 		}
 	}
-	if (gxx)
-		log_appendf(4, " Warning: Gxx effects may not be suitably imported");
-	if (lostfx)
-		log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
+	if (gxx) log_appendf(4, " Warning: Gxx effects may not be suitably imported");
+	if (lostfx) log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
 
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (n = 0, smp = song->samples + 1; n < nsmp; n++, smp++) {
-			uint32_t ssize = csf_read_sample(smp,
-				SF_LE | SF_M | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8),
-				fp->data + fp->pos, fp->length - fp->pos);
+			uint32_t ssize = csf_read_sample(
+				smp, SF_LE | SF_M | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8), fp->data + fp->pos,
+				fp->length - fp->pos);
 			slurp_seek(fp, ssize, SEEK_CUR);
 		}
 	}
 	return LOAD_SUCCESS;
 }
-

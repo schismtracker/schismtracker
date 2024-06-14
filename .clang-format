@@ -1,0 +1,146 @@
+# compatible w/ clang-format 14(?)
+# options that aren't relevant to [Objective-]C are commented
+
+# AccessModifierOffset
+AlignAfterOpenBracket: AlwaysBreak
+AlignArrayOfStructures: Left
+AlignConsecutiveAssignments: false
+AlignConsecutiveBitFields: false
+AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: true
+AlignEscapedNewlines: DontAlign
+AlignOperands: Align
+AlignTrailingComments: true  # this breaks code when set to "Leave"
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: true  # maybe?
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+# AllowShortLambdasOnASingleLine
+AllowShortLoopsOnASingleLine: true
+# AlwaysBreakAfterReturnType
+AlwaysBreakBeforeMultilineStrings: true
+# AlwaysBreakTemplateDeclarations
+AttributeMacros: ['UNUSED', 'PACKED', 'MALLOC', 'PURE']
+BinPackArguments: true
+BinPackParameters: true
+BitFieldColonSpacing: Both
+# BreakAfterAttributes
+# BreakAfterJavaFieldAnnotations
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Linux
+# BreakBeforeConceptDeclarations
+BreakBeforeTernaryOperators: false
+# BreakConstructorInitializers
+# BreakInheritanceList
+BreakStringLiterals: false
+ColumnLimit: 120
+CommentPragmas: ''
+CompactNamespaces: false
+# ConstructorInitializerAllOnOneLineOrOnePerLine
+# ConstructorInitializerIndentWidth
+ContinuationIndentWidth: 4
+Cpp11BracedListStyle: true
+DeriveLineEnding: false
+DerivePointerAlignment: false
+# EmptyLineAfterAccessModifier
+# EmptyLineBeforeAccessModifier
+# FixNamespaceComments
+ForEachMacros: []
+IfMacros: [] # XXX do we even have any?
+IncludeBlocks: Preserve
+IncludeCategories: [] # ...
+IncludeIsMainRegex: '' # ???
+IncludeIsMainSourceRegex: '' # ???
+# IndentAccessModifiers
+IndentCaseBlocks: false
+IndentCaseLabels: true
+# IndentExternBlock
+IndentGotoLabels: false
+IndentPPDirectives: AfterHash
+# IndentRequiresClause
+# BeforeHash
+IndentWidth: 4
+IndentWrappedFunctionNames: false
+InsertTrailingCommas: None
+# JavaImportGroups
+# JavaScriptQuotes
+# JavaScriptWrapImports
+KeepEmptyLinesAtTheStartOfBlocks: false
+# LambdaBodyIndentation
+# MacroBlockBegin
+# MacroBlockEnd
+MaxEmptyLinesToKeep: 5
+# NamespaceIndentation
+# NamespaceMacros
+ObjCBinPackProtocolList: Auto
+ObjCBlockIndentWidth: 4
+ObjCBreakBeforeNestedBlockParam: false
+ObjCSpaceAfterProperty: false # ???
+ObjCSpaceBeforeProtocolList: false
+# PackConstructorInitializers
+# PenaltyBreakAssignment
+# PenaltyBreakBeforeFirstCallParameter
+# PenaltyBreakComment
+# PenaltyBreakFirstLessLess
+# PenaltyBreakOpenParenthesis
+# PenaltyBreakString
+# PenaltyBreakTemplateDeclaration
+# PenaltyExcessCharacter
+# PenaltyIndentedWhitespace
+# PenaltyReturnTypeOnItsOwnLine
+PointerAlignment: Right
+PPIndentWidth: 1
+QualifierAlignment: Left
+# QualifierOrder: ['static', 'inline', 'volatile', 'const', 'restrict', 'type']
+# RawStringFormats
+# ReferenceAlignment
+ReflowComments: false
+RemoveBracesLLVM: false
+SeparateDefinitionBlocks: Leave
+# ShortNamespaceLines
+SortIncludes: false
+# SortJavaStaticImport
+# SortUsingDeclarations
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+# SpaceAfterTemplateKeyword
+SpaceAroundPointerQualifiers: Default
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+# SpaceBeforeCpp11BracedList
+# SpaceBeforeCtorInitializerColon
+# SpaceBeforeInheritanceColon
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+  AfterControlStatements: true
+  AfterForeachMacros: true
+  AfterFunctionDeclarationName: false
+  AfterFunctionDefinitionName: false
+  AfterIfMacros: true
+  AfterOverloadedOperator: false
+  # AfterRequiresInClause: false
+  # AfterRequiresInExpression: false
+  BeforeNonEmptyParentheses: false
+# SpaceBeforeRangeBasedForLoopColon
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+# SpacesInAngles
+SpacesInCStyleCastParentheses: false
+SpacesInConditionalStatement: false
+SpacesInContainerLiterals: false
+SpacesInLineCommentPrefix:
+  Minimum: 1
+  Maximum: 1
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+StatementAttributeLikeMacros: []
+StatementMacros: []
+TabWidth: 4
+TypenameMacros: []
+UseCRLF: false
+UseTab: ForContinuationAndIndentation

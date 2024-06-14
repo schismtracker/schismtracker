@@ -29,7 +29,7 @@
 #include "sndfile.h"
 
 
-#pragma pack(push,1)
+#pragma pack(push, 1)
 struct mus_header {
 	char id[4]; // MUS\x1a
 	uint16_t scorelen;
@@ -45,11 +45,11 @@ struct mus_header {
 
 int fmt_mus_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	struct mus_header *hdr = (struct mus_header *) data;
+	struct mus_header *hdr = (struct mus_header *)data;
 
 	/* cast necessary for big-endian systems */
 	if (!(length > sizeof(*hdr) && memcmp(hdr->id, "MUS\x1a", 4) == 0
-	      && (size_t) (bswapLE16(hdr->scorestart) + bswapLE16(hdr->scorelen)) <= length))
+		  && (size_t)(bswapLE16(hdr->scorestart) + bswapLE16(hdr->scorelen)) <= length))
 		return 0;
 
 	file->description = "Doom Music File";
@@ -74,9 +74,9 @@ Some things yet to tackle:
 
 
 #define MUS_ROWS_PER_PATTERN 200
-#define MUS_SPEED_CHANNEL 15 // where the speed adjustments go (counted from 0 -- 15 is the drum channel)
-#define MUS_BREAK_CHANNEL (MUS_SPEED_CHANNEL + 1)
-#define MUS_TICKADJ_CHANNEL (MUS_BREAK_CHANNEL + 1) // S6x tick adjustments go here *and subsequent channels!!*
+#define MUS_SPEED_CHANNEL    15 // where the speed adjustments go (counted from 0 -- 15 is the drum channel)
+#define MUS_BREAK_CHANNEL    (MUS_SPEED_CHANNEL + 1)
+#define MUS_TICKADJ_CHANNEL  (MUS_BREAK_CHANNEL + 1) // S6x tick adjustments go here *and subsequent channels!!*
 
 // Tick calculations are done in fixed point for better accuracy
 #define FRACBITS 12
@@ -93,9 +93,9 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	size_t reallen;
 	int tickfrac = 0; // fixed point
 	struct {
-		uint8_t note; // the last note played in this channel
+		uint8_t note;       // the last note played in this channel
 		uint8_t instrument; // 1 -> 128
-		uint8_t volume; // 0 -> 64
+		uint8_t volume;     // 0 -> 64
 	} chanstate[16] = {0};
 	uint8_t prevspeed = 1;
 	uint8_t patch_samples[128] = {0};
@@ -106,14 +106,11 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	hdr.scorelen = bswapLE16(hdr.scorelen);
 	hdr.scorestart = bswapLE16(hdr.scorestart);
 
-	if (memcmp(hdr.id, "MUS\x1a", 4) != 0)
-		return LOAD_UNSUPPORTED;
-	else if (hdr.scorestart + hdr.scorelen > fp->length)
-		return LOAD_FORMAT_ERROR;
+	if (memcmp(hdr.id, "MUS\x1a", 4) != 0) return LOAD_UNSUPPORTED;
+	else if (hdr.scorestart + hdr.scorelen > fp->length) return LOAD_FORMAT_ERROR;
 
 
-	for (n = 16; n < 64; n++)
-		song->channels[n].flags |= CHN_MUTE;
+	for (n = 16; n < 64; n++) song->channels[n].flags |= CHN_MUTE;
 
 	slurp_seek(fp, hdr.scorestart, SEEK_SET);
 
@@ -137,136 +134,134 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 		ch = event & 15;
 
 		switch (type) {
-		case 0: // Note off - figure out what channel the note was playing in and stick a === there.
-			b1 = slurp_getc(fp) & 127; // & 127 => note number
-			b1 = MIN((b1 & 127) + 1, NOTE_LAST);
-			if (chanstate[ch].note == b1) {
-				// Ok, we're actually playing that note
-				if (!NOTE_IS_NOTE(note[ch].note))
-					note[ch].note = NOTE_OFF;
-			}
-			break;
-		case 1: // Play note
-			b1 = slurp_getc(fp); // & 128 => volume follows, & 127 => note number
-			if (b1 & 128) {
-				chanstate[ch].volume = ((slurp_getc(fp) & 127) + 1) >> 1;
-				b1 &= 127;
-			}
-			chanstate[ch].note = MIN(b1 + 1, NOTE_LAST);
-			if (ch == 15) {
-				// Percussion
-				b1 = CLAMP(b1, 24, 84); // ?
-				if (!patch_percussion[b1]) {
-					if (nsmp < MAX_SAMPLES) {
-						// New sample!
-						patch_percussion[b1] = nsmp;
-						strncpy(song->samples[nsmp].name,
-							midi_percussion_names[b1 - 24], 25);
-						song->samples[nsmp].name[25] = '\0';
-						nsmp++;
-					} else {
-						// Phooey.
-						log_appendf(4, " Warning: Too many samples");
-						note[ch].note = NOTE_OFF;
-					}
+			case 0: // Note off - figure out what channel the note was playing in and stick a === there.
+				b1 = slurp_getc(fp) & 127; // & 127 => note number
+				b1 = MIN((b1 & 127) + 1, NOTE_LAST);
+				if (chanstate[ch].note == b1) {
+					// Ok, we're actually playing that note
+					if (!NOTE_IS_NOTE(note[ch].note)) note[ch].note = NOTE_OFF;
 				}
+				break;
+			case 1:                  // Play note
+				b1 = slurp_getc(fp); // & 128 => volume follows, & 127 => note number
+				if (b1 & 128) {
+					chanstate[ch].volume = ((slurp_getc(fp) & 127) + 1) >> 1;
+					b1 &= 127;
+				}
+				chanstate[ch].note = MIN(b1 + 1, NOTE_LAST);
+				if (ch == 15) {
+					// Percussion
+					b1 = CLAMP(b1, 24, 84); // ?
+					if (!patch_percussion[b1]) {
+						if (nsmp < MAX_SAMPLES) {
+							// New sample!
+							patch_percussion[b1] = nsmp;
+							strncpy(song->samples[nsmp].name, midi_percussion_names[b1 - 24], 25);
+							song->samples[nsmp].name[25] = '\0';
+							nsmp++;
+						} else {
+							// Phooey.
+							log_appendf(4, " Warning: Too many samples");
+							note[ch].note = NOTE_OFF;
+						}
+					}
 #if 0
 				note[ch].note = NOTE_MIDC;
 				note[ch].instrument = patch_percussion[b1];
 #else
-				/* adlib is broken currently: it kind of "folds" every 9th channel, but only
+					/* adlib is broken currently: it kind of "folds" every 9th channel, but only
 				for SOME events ... what this amounts to is attempting to play notes from
 				both of any two "folded" channels will cause everything to go haywire.
 				for the moment, ignore the drums. even if we could load them, the playback
 				would be completely awful.
 				also reset the channel state, so that random note-off events don't stick ===
 				into the channel, that's even enough to screw it up */
-				chanstate[ch].note = NOTE_NONE;
+					chanstate[ch].note = NOTE_NONE;
 #endif
-			} else {
-				if (chanstate[ch].instrument) {
-					note[ch].note = chanstate[ch].note;
-					note[ch].instrument = chanstate[ch].instrument;
-				}
-			}
-			note[ch].voleffect = VOLFX_VOLUME;
-			note[ch].volparam = chanstate[ch].volume;
-			break;
-		case 2: // Pitch wheel (TODO)
-			b1 = slurp_getc(fp);
-			break;
-		case 3: // System event
-			b1 = slurp_getc(fp) & 127;
-			switch (b1) {
-			case 10: // All sounds off
-				for (n = 0; n < 16; n++) {
-					note[ch].note = chanstate[ch].note = NOTE_CUT;
-					note[ch].instrument = 0;
-				}
-				break;
-			case 11: // All notes off
-				for (n = 0; n < 16; n++) {
-					note[ch].note = chanstate[ch].note = NOTE_OFF;
-					note[ch].instrument = 0;
-				}
-				break;
-			case 14: // Reset all controllers
-				// ?
-				memset(chanstate, 0, sizeof(chanstate));
-				break;
-			case 12: // Mono
-			case 13: // Poly
-				break;
-			}
-			break;
-		case 4: // Change controller
-			b1 = slurp_getc(fp) & 127; // controller
-			b2 = slurp_getc(fp) & 127; // new value
-			switch (b1) {
-			case 0: // Instrument number
-				if (ch == 15) {
-					// don't fall for this nasty trick, this is the percussion channel
-					break;
-				}
-				if (!patch_samples[b2]) {
-					if (nsmp < MAX_SAMPLES) {
-						// New sample!
-						patch_samples[b2] = nsmp;
-						adlib_patch_apply(song->samples + nsmp, b2);
-						nsmp++;
-					} else {
-						// Don't have a sample number for this patch, and never will.
-						log_appendf(4, " Warning: Too many samples");
-						note[ch].note = NOTE_OFF;
+				} else {
+					if (chanstate[ch].instrument) {
+						note[ch].note = chanstate[ch].note;
+						note[ch].instrument = chanstate[ch].instrument;
 					}
 				}
-				chanstate[ch].instrument = patch_samples[b2];
-				break;
-			case 3: // Volume
-				b2 = (b2 + 1) >> 1;
-				chanstate[ch].volume = b2;
 				note[ch].voleffect = VOLFX_VOLUME;
 				note[ch].volparam = chanstate[ch].volume;
 				break;
-			case 1: // Bank select
-			case 2: // Modulation pot
-			case 4: // Pan
-			case 5: // Expression pot
-			case 6: // Reverb depth
-			case 7: // Chorus depth
-			case 8: // Sustain pedal (hold)
-			case 9: // Soft pedal
-				// I have no idea
+			case 2: // Pitch wheel (TODO)
+				b1 = slurp_getc(fp);
 				break;
-			}
-			break;
-		case 6: // Score end
-			finished = 1;
-			break;
-		default: // Unknown (5 or 7)
-			// Hope it doesn't take any parameters, otherwise things are going to end up broken
-			log_appendf(4, " Warning: Unknown event type %d", type);
-			break;
+			case 3: // System event
+				b1 = slurp_getc(fp) & 127;
+				switch (b1) {
+					case 10: // All sounds off
+						for (n = 0; n < 16; n++) {
+							note[ch].note = chanstate[ch].note = NOTE_CUT;
+							note[ch].instrument = 0;
+						}
+						break;
+					case 11: // All notes off
+						for (n = 0; n < 16; n++) {
+							note[ch].note = chanstate[ch].note = NOTE_OFF;
+							note[ch].instrument = 0;
+						}
+						break;
+					case 14: // Reset all controllers
+						// ?
+						memset(chanstate, 0, sizeof(chanstate));
+						break;
+					case 12: // Mono
+					case 13: // Poly
+						break;
+				}
+				break;
+			case 4:                        // Change controller
+				b1 = slurp_getc(fp) & 127; // controller
+				b2 = slurp_getc(fp) & 127; // new value
+				switch (b1) {
+					case 0: // Instrument number
+						if (ch == 15) {
+							// don't fall for this nasty trick, this is the percussion channel
+							break;
+						}
+						if (!patch_samples[b2]) {
+							if (nsmp < MAX_SAMPLES) {
+								// New sample!
+								patch_samples[b2] = nsmp;
+								adlib_patch_apply(song->samples + nsmp, b2);
+								nsmp++;
+							} else {
+								// Don't have a sample number for this patch, and never will.
+								log_appendf(4, " Warning: Too many samples");
+								note[ch].note = NOTE_OFF;
+							}
+						}
+						chanstate[ch].instrument = patch_samples[b2];
+						break;
+					case 3: // Volume
+						b2 = (b2 + 1) >> 1;
+						chanstate[ch].volume = b2;
+						note[ch].voleffect = VOLFX_VOLUME;
+						note[ch].volparam = chanstate[ch].volume;
+						break;
+					case 1: // Bank select
+					case 2: // Modulation pot
+					case 4: // Pan
+					case 5: // Expression pot
+					case 6: // Reverb depth
+					case 7: // Chorus depth
+					case 8: // Sustain pedal (hold)
+					case 9: // Soft pedal
+						// I have no idea
+						break;
+				}
+				break;
+			case 6: // Score end
+				finished = 1;
+				break;
+			default: // Unknown (5 or 7)
+				// Hope it doesn't take any parameters, otherwise things are going to end up broken
+				log_appendf(4, " Warning: Unknown event type %d", type);
+				break;
 		}
 
 		if (finished) {
@@ -284,16 +279,15 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 			do {
 				b1 = slurp_getc(fp);
 				ticks = 128 * ticks + (b1 & 127);
-				if (ticks > 0xffff)
-					ticks = 0xffff;
+				if (ticks > 0xffff) ticks = 0xffff;
 			} while (b1 & 128);
 			ticks = MIN(ticks, (0x7fffffff / 255) >> 12); // protect against overflow
 
-			ticks <<= FRACBITS; // convert to fixed point
-			ticks = ticks * 255 / 350; // 140 ticks/sec * 125/50hz => tempo of 350 (scaled)
-			ticks += tickfrac; // plus whatever was leftover from the last row
+			ticks <<= FRACBITS;          // convert to fixed point
+			ticks = ticks * 255 / 350;   // 140 ticks/sec * 125/50hz => tempo of 350 (scaled)
+			ticks += tickfrac;           // plus whatever was leftover from the last row
 			tickfrac = ticks & FRACMASK; // save the fractional part
-			ticks >>= FRACBITS; // and back to a normal integer
+			ticks >>= FRACBITS;          // and back to a normal integer
 
 			if (ticks < 1) {
 #if 0
@@ -370,4 +364,3 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 
 	return LOAD_SUCCESS;
 }
-

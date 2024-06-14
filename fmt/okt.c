@@ -32,8 +32,7 @@
 
 int fmt_okt_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	if (!(length > 16 && memcmp(data, "OKTASONG", 8) == 0))
-		return 0;
+	if (!(length > 16 && memcmp(data, "OKTASONG", 8) == 0)) return 0;
 
 	file->description = "Amiga Oktalyzer";
 	/* okts don't have names? */
@@ -44,17 +43,17 @@ int fmt_okt_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#define OKT_BLOCK(a,b,c,d) (((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
-#define OKT_BLK_CMOD    OKT_BLOCK('C','M','O','D')
-#define OKT_BLK_SAMP    OKT_BLOCK('S','A','M','P')
-#define OKT_BLK_SPEE    OKT_BLOCK('S','P','E','E')
-#define OKT_BLK_SLEN    OKT_BLOCK('S','L','E','N')
-#define OKT_BLK_PLEN    OKT_BLOCK('P','L','E','N')
-#define OKT_BLK_PATT    OKT_BLOCK('P','A','T','T')
-#define OKT_BLK_PBOD    OKT_BLOCK('P','B','O','D')
-#define OKT_BLK_SBOD    OKT_BLOCK('S','B','O','D')
+#define OKT_BLOCK(a, b, c, d) (((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
+#define OKT_BLK_CMOD          OKT_BLOCK('C', 'M', 'O', 'D')
+#define OKT_BLK_SAMP          OKT_BLOCK('S', 'A', 'M', 'P')
+#define OKT_BLK_SPEE          OKT_BLOCK('S', 'P', 'E', 'E')
+#define OKT_BLK_SLEN          OKT_BLOCK('S', 'L', 'E', 'N')
+#define OKT_BLK_PLEN          OKT_BLOCK('P', 'L', 'E', 'N')
+#define OKT_BLK_PATT          OKT_BLOCK('P', 'A', 'T', 'T')
+#define OKT_BLK_PBOD          OKT_BLOCK('P', 'B', 'O', 'D')
+#define OKT_BLK_SBOD          OKT_BLOCK('S', 'B', 'O', 'D')
 
-#pragma pack(push,1)
+#pragma pack(push, 1)
 struct okt_sample {
 	char name[20];
 	uint32_t length;
@@ -81,12 +80,10 @@ static int okt_read_cmod(song_t *song, slurp_t *fp)
 	int t, cn = 0;
 
 	for (t = 0; t < 4; t++) {
-		if (slurp_getc(fp) || slurp_getc(fp))
-			cs[cn++].panning = PROTRACKER_PANNING(t);
+		if (slurp_getc(fp) || slurp_getc(fp)) cs[cn++].panning = PROTRACKER_PANNING(t);
 		cs[cn++].panning = PROTRACKER_PANNING(t);
 	}
-	for (t = cn; t < 64; t++)
-		cs[t].flags |= CHN_MUTE;
+	for (t = cn; t < 64; t++) cs[t].flags |= CHN_MUTE;
 	return cn;
 }
 
@@ -97,8 +94,7 @@ static void okt_read_samp(song_t *song, slurp_t *fp, uint32_t len, uint32_t smpf
 	struct okt_sample osmp;
 	song_sample_t *ssmp = song->samples + 1;
 
-	if (len % 32)
-		log_appendf(4, " Warning: Sample data is misaligned");
+	if (len % 32) log_appendf(4, " Warning: Sample data is misaligned");
 	len /= 32;
 	if (len >= MAX_SAMPLES) {
 		log_appendf(4, " Warning: Too many samples in file");
@@ -119,10 +115,8 @@ static void okt_read_samp(song_t *song, slurp_t *fp, uint32_t len, uint32_t smpf
 		if (osmp.loop_len > 2 && osmp.loop_len + osmp.loop_start < ssmp->length) {
 			ssmp->sustain_start = osmp.loop_start;
 			ssmp->sustain_end = osmp.loop_start + osmp.loop_len;
-			if (ssmp->sustain_start < ssmp->length && ssmp->sustain_end < ssmp->length)
-				ssmp->flags |= CHN_SUSTAINLOOP;
-			else
-				ssmp->sustain_start = 0;
+			if (ssmp->sustain_start < ssmp->length && ssmp->sustain_end < ssmp->length) ssmp->flags |= CHN_SUSTAINLOOP;
+			else ssmp->sustain_start = 0;
 		}
 		ssmp->loop_start *= 2;
 		ssmp->loop_end *= 2;
@@ -191,22 +185,21 @@ static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 			}
 
 			/* blah -- check for read error */
-			if (e < 0)
-				return effwarn;
+			if (e < 0) return effwarn;
 
 			switch (e) {
-			case 0: // Nothing
-				break;
+				case 0: // Nothing
+					break;
 
-			/* 1/2 apparently are backwards from .mod? */
-			case 1: // 1 Portamento Down (Period)
-				note->effect = FX_PORTAMENTODOWN;
-				note->param &= 0xf;
-				break;
-			case 2: // 2 Portamento Up (Period)
-				note->effect = FX_PORTAMENTOUP;
-				note->param &= 0xf;
-				break;
+				/* 1/2 apparently are backwards from .mod? */
+				case 1: // 1 Portamento Down (Period)
+					note->effect = FX_PORTAMENTODOWN;
+					note->param &= 0xf;
+					break;
+				case 2: // 2 Portamento Up (Period)
+					note->effect = FX_PORTAMENTOUP;
+					note->param &= 0xf;
+					break;
 
 #if 0
 			/* these aren't like Jxx: "down" means to *subtract* the offset from the note.
@@ -218,93 +211,94 @@ static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 				break;
 #endif
 
-			/* This one is close enough to "standard" arpeggio -- I think! */
-			case 12: // C Arpeggio 3 (up, up, orig)
-				if (note->param)
-					note->effect = FX_ARPEGGIO;
-				break;
+				/* This one is close enough to "standard" arpeggio -- I think! */
+				case 12: // C Arpeggio 3 (up, up, orig)
+					if (note->param) note->effect = FX_ARPEGGIO;
+					break;
 
-			case 13: // D Slide Down (Notes)
-				if (note->param) {
-					note->effect = FX_NOTESLIDEDOWN;
-					note->param = 0x10 | MIN(0xf, note->param);
-				}
-				break;
+				case 13: // D Slide Down (Notes)
+					if (note->param) {
+						note->effect = FX_NOTESLIDEDOWN;
+						note->param = 0x10 | MIN(0xf, note->param);
+					}
+					break;
 
-			case 30: // U Slide Up (Notes)
-				if (note->param) {
-					note->effect = FX_NOTESLIDEUP;
-					note->param = 0x10 | MIN(0xf, note->param);
-				}
-				break;
+				case 30: // U Slide Up (Notes)
+					if (note->param) {
+						note->effect = FX_NOTESLIDEUP;
+						note->param = 0x10 | MIN(0xf, note->param);
+					}
+					break;
 
-			case 21: // L Slide Down Once (Notes)
-				/* We don't have fine note slide, but this is supposed to happen once
+				case 21: // L Slide Down Once (Notes)
+					/* We don't have fine note slide, but this is supposed to happen once
 				per row. Sliding every 5 (non-note) ticks kind of works (at least at
 				speed 6), but implementing fine slides would of course be better. */
-				if (note->param) {
-					note->effect = FX_NOTESLIDEDOWN;
-					note->param = 0x50 | MIN(0xf, note->param);
-				}
-				break;
-
-			case 17: // H Slide Up Once (Notes)
-				if (note->param) {
-					note->effect = FX_NOTESLIDEUP;
-					note->param = 0x50 | MIN(0xf, note->param);
-				}
-				break;
-
-			case 15: // F Set Filter <>00:ON
-				// Not implemented, but let's import it anyway...
-				note->effect = FX_SPECIAL;
-				note->param = !!note->param;
-				break;
-
-			case 25: // P Pos Jump
-				note->effect = FX_POSITIONJUMP;
-				break;
-
-			case 27: // R Release sample (apparently not listed in the help!)
-				note->note = NOTE_OFF;
-				note->instrument = note->effect = note->param = 0;
-				break;
-
-			case 28: // S Speed
-				note->effect = FX_SPEED; // or tempo?
-				break;
-
-			case 31: // V Volume
-				note->effect = FX_VOLUMESLIDE;
-				switch (note->param >> 4) {
-				case 4:
-					if (note->param != 0x40) {
-						note->param &= 0xf; // D0x
-						break;
+					if (note->param) {
+						note->effect = FX_NOTESLIDEDOWN;
+						note->param = 0x50 | MIN(0xf, note->param);
 					}
-					// 0x40 is set volume -- fall through
-				case 0: case 1:
-				case 2: case 3:
-					note->voleffect = VOLFX_VOLUME;
-					note->volparam = note->param;
-					note->effect = FX_NONE;
-					note->param = 0;
 					break;
-				case 5:
-					note->param = (note->param & 0xf) << 4; // Dx0
+
+				case 17: // H Slide Up Once (Notes)
+					if (note->param) {
+						note->effect = FX_NOTESLIDEUP;
+						note->param = 0x50 | MIN(0xf, note->param);
+					}
 					break;
-				case 6:
-					note->param = 0xf0 | MIN(note->param & 0xf, 0xe); // DFx
+
+				case 15: // F Set Filter <>00:ON
+					// Not implemented, but let's import it anyway...
+					note->effect = FX_SPECIAL;
+					note->param = !!note->param;
 					break;
-				case 7:
-					note->param = (MIN(note->param & 0xf, 0xe) << 4) | 0xf; // DxF
+
+				case 25: // P Pos Jump
+					note->effect = FX_POSITIONJUMP;
 					break;
-				default:
-					// Junk.
-					note->effect = note->param = 0;
+
+				case 27: // R Release sample (apparently not listed in the help!)
+					note->note = NOTE_OFF;
+					note->instrument = note->effect = note->param = 0;
 					break;
-				}
-				break;
+
+				case 28:                     // S Speed
+					note->effect = FX_SPEED; // or tempo?
+					break;
+
+				case 31: // V Volume
+					note->effect = FX_VOLUMESLIDE;
+					switch (note->param >> 4) {
+						case 4:
+							if (note->param != 0x40) {
+								note->param &= 0xf; // D0x
+								break;
+							}
+							// 0x40 is set volume -- fall through
+						case 0:
+						case 1:
+						case 2:
+						case 3:
+							note->voleffect = VOLFX_VOLUME;
+							note->volparam = note->param;
+							note->effect = FX_NONE;
+							note->param = 0;
+							break;
+						case 5:
+							note->param = (note->param & 0xf) << 4; // Dx0
+							break;
+						case 6:
+							note->param = 0xf0 | MIN(note->param & 0xf, 0xe); // DFx
+							break;
+						case 7:
+							note->param = (MIN(note->param & 0xf, 0xe) << 4) | 0xf; // DxF
+							break;
+						default:
+							// Junk.
+							note->effect = note->param = 0;
+							break;
+					}
+					break;
 
 #if 0
 			case 24: // O Old Volume
@@ -314,12 +308,12 @@ static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 				break;
 #endif
 
-			default:
-				//log_appendf(2, " Pattern %d, row %d: effect %d %02X",
-				//        pat, row, e, note->param);
-				effwarn |= (e > 32) ? 1 : (1 << (e - 1));
-				note->effect = FX_UNIMPLEMENTED;
-				break;
+				default:
+					//log_appendf(2, " Pattern %d, row %d: effect %d %02X",
+					//        pat, row, e, note->param);
+					effwarn |= (e > 32) ? 1 : (1 << (e - 1));
+					note->effect = FX_UNIMPLEMENTED;
+					break;
 			}
 		}
 	}
@@ -333,25 +327,24 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
 	uint8_t tag[8];
 	unsigned int readflags = 0;
-	uint16_t w; // temp for reading
-	int plen = 0; // how many positions in the orderlist are valid
-	int npat = 0; // next pattern to read
-	int nsmp = 1; // next sample (data, not header)
+	uint16_t w;         // temp for reading
+	int plen = 0;       // how many positions in the orderlist are valid
+	int npat = 0;       // next pattern to read
+	int nsmp = 1;       // next sample (data, not header)
 	int pat, sh, sd, e; // iterators (pattern, sample header, sample data, effect warnings
-	int nchn = 0; // how many channels does this song use?
+	int nchn = 0;       // how many channels does this song use?
 	size_t patseek[MAX_PATTERNS] = {0};
-	size_t smpseek[MAX_SAMPLES + 1] = {0}; // where the sample's data starts
+	size_t smpseek[MAX_SAMPLES + 1] = {0};   // where the sample's data starts
 	uint32_t smpsize[MAX_SAMPLES + 2] = {0}; // data size (one element bigger to simplify loop condition)
 	uint32_t smpflag[MAX_SAMPLES + 1] = {0}; // bit width
-	uint32_t effwarn = 0; // effect warning mask
+	uint32_t effwarn = 0;                    // effect warning mask
 
 	slurp_read(fp, tag, 8);
-	if (memcmp(tag, "OKTASONG", 8) != 0)
-		return LOAD_UNSUPPORTED;
+	if (memcmp(tag, "OKTASONG", 8) != 0) return LOAD_UNSUPPORTED;
 
 	while (!slurp_eof(fp)) {
 		uint32_t blklen; // length of this block
-		size_t nextpos; // ... and start of next one
+		size_t nextpos;  // ... and start of next one
 
 		slurp_read(fp, tag, 4);
 		slurp_read(fp, &blklen, 4);
@@ -359,64 +352,62 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		nextpos = slurp_tell(fp) + blklen;
 
 		switch (OKT_BLOCK(tag[0], tag[1], tag[2], tag[3])) {
-		case OKT_BLK_CMOD:
-			if (!(readflags & OKT_HAS_CMOD)) {
-				readflags |= OKT_HAS_CMOD;
-				nchn = okt_read_cmod(song, fp);
-			}
-			break;
-		case OKT_BLK_SAMP:
-			if (!(readflags & OKT_HAS_SAMP)) {
-				readflags |= OKT_HAS_SAMP;
-				okt_read_samp(song, fp, blklen, smpflag);
-			}
-			break;
-		case OKT_BLK_SPEE:
-			if (!(readflags & OKT_HAS_SPEE)) {
-				readflags |= OKT_HAS_SPEE;
-				slurp_read(fp, &w, 2);
-				w = bswapBE16(w);
-				song->initial_speed = CLAMP(w, 1, 255);
-				song->initial_tempo = 125;
-			}
-			break;
-		case OKT_BLK_SLEN:
-			// Don't care.
-			break;
-		case OKT_BLK_PLEN:
-			if (!(readflags & OKT_HAS_PLEN)) {
-				readflags |= OKT_HAS_PLEN;
-				slurp_read(fp, &w, 2);
-				plen = bswapBE16(w);
-			}
-			break;
-		case OKT_BLK_PATT:
-			if (!(readflags & OKT_HAS_PATT)) {
-				readflags |= OKT_HAS_PATT;
-				slurp_read(fp, song->orderlist, MIN(blklen, MAX_ORDERS));
-			}
-			break;
-		case OKT_BLK_PBOD:
-			/* Need the channel count (in CMOD) in order to read these */
-			if (npat < MAX_PATTERNS) {
-				if (blklen > 0)
-					patseek[npat] = slurp_tell(fp);
-				npat++;
-			}
-			break;
-		case OKT_BLK_SBOD:
-			if (nsmp < MAX_SAMPLES) {
-				smpseek[nsmp] = slurp_tell(fp);
-				smpsize[nsmp] = blklen;
-				if (smpsize[nsmp])
-					nsmp++;
-			}
-			break;
+			case OKT_BLK_CMOD:
+				if (!(readflags & OKT_HAS_CMOD)) {
+					readflags |= OKT_HAS_CMOD;
+					nchn = okt_read_cmod(song, fp);
+				}
+				break;
+			case OKT_BLK_SAMP:
+				if (!(readflags & OKT_HAS_SAMP)) {
+					readflags |= OKT_HAS_SAMP;
+					okt_read_samp(song, fp, blklen, smpflag);
+				}
+				break;
+			case OKT_BLK_SPEE:
+				if (!(readflags & OKT_HAS_SPEE)) {
+					readflags |= OKT_HAS_SPEE;
+					slurp_read(fp, &w, 2);
+					w = bswapBE16(w);
+					song->initial_speed = CLAMP(w, 1, 255);
+					song->initial_tempo = 125;
+				}
+				break;
+			case OKT_BLK_SLEN:
+				// Don't care.
+				break;
+			case OKT_BLK_PLEN:
+				if (!(readflags & OKT_HAS_PLEN)) {
+					readflags |= OKT_HAS_PLEN;
+					slurp_read(fp, &w, 2);
+					plen = bswapBE16(w);
+				}
+				break;
+			case OKT_BLK_PATT:
+				if (!(readflags & OKT_HAS_PATT)) {
+					readflags |= OKT_HAS_PATT;
+					slurp_read(fp, song->orderlist, MIN(blklen, MAX_ORDERS));
+				}
+				break;
+			case OKT_BLK_PBOD:
+				/* Need the channel count (in CMOD) in order to read these */
+				if (npat < MAX_PATTERNS) {
+					if (blklen > 0) patseek[npat] = slurp_tell(fp);
+					npat++;
+				}
+				break;
+			case OKT_BLK_SBOD:
+				if (nsmp < MAX_SAMPLES) {
+					smpseek[nsmp] = slurp_tell(fp);
+					smpsize[nsmp] = blklen;
+					if (smpsize[nsmp]) nsmp++;
+				}
+				break;
 
-		default:
-			//log_appendf(4, " Warning: Unknown block of type '%c%c%c%c' at 0x%lx",
-			//        tag[0], tag[1], tag[2], tag[3], fp->pos - 8);
-			break;
+			default:
+				//log_appendf(4, " Warning: Unknown block of type '%c%c%c%c' at 0x%lx",
+				//        tag[0], tag[1], tag[2], tag[3], fp->pos - 8);
+				break;
 		}
 
 		if (slurp_seek(fp, nextpos, SEEK_SET) != 0) {
@@ -425,8 +416,7 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		}
 	}
 
-	if ((readflags & (OKT_HAS_CMOD | OKT_HAS_SPEE)) != (OKT_HAS_CMOD | OKT_HAS_SPEE))
-		return LOAD_FORMAT_ERROR;
+	if ((readflags & (OKT_HAS_CMOD | OKT_HAS_SPEE)) != (OKT_HAS_CMOD | OKT_HAS_SPEE)) return LOAD_FORMAT_ERROR;
 
 	if (!(lflags & LOAD_NOPATTERNS)) {
 		for (pat = 0; pat < npat; pat++) {
@@ -435,12 +425,10 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		}
 
 		if (effwarn) {
-			if (effwarn & 1)
-				log_appendf(4, " Warning: Out-of-range effects (junk data?)");
+			if (effwarn & 1) log_appendf(4, " Warning: Out-of-range effects (junk data?)");
 			for (e = 2; e <= 32; e++) {
 				if (effwarn & (1 << (e - 1))) {
-					log_appendf(4, " Warning: Unimplemented effect %cxx",
-						e + (e < 10 ? '0' : ('A' - 10)));
+					log_appendf(4, " Warning: Unimplemented effect %cxx", e + (e < 10 ? '0' : ('A' - 10)));
 				}
 			}
 		}
@@ -449,17 +437,14 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (sh = sd = 1; sh < MAX_SAMPLES && smpsize[sd]; sh++) {
 			song_sample_t *ssmp = song->samples + sh;
-			if (!ssmp->length)
-				continue;
+			if (!ssmp->length) continue;
 
 			if (ssmp->length != smpsize[sd]) {
-				log_appendf(4, " Warning: Sample %d: header/data size mismatch (%d/%d)", sh,
-					ssmp->length, smpsize[sd]);
+				log_appendf(4, " Warning: Sample %d: header/data size mismatch (%d/%d)", sh, ssmp->length, smpsize[sd]);
 				ssmp->length = MIN(smpsize[sd], ssmp->length);
 			}
 
-			csf_read_sample(ssmp, SF_BE | SF_M | SF_PCMS | smpflag[sd],
-					fp->data + smpseek[sd], ssmp->length);
+			csf_read_sample(ssmp, SF_BE | SF_M | SF_PCMS | smpflag[sd], fp->data + smpseek[sd], ssmp->length);
 			sd++;
 		}
 		// Make sure there's nothing weird going on
@@ -477,4 +462,3 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	return LOAD_SUCCESS;
 }
-

@@ -32,18 +32,18 @@ void draw_char(unsigned char c, int x, int y, uint32_t fg, uint32_t bg);
 void draw_char_bios(unsigned char c, int x, int y, uint32_t fg, uint32_t bg);
 
 /* return value is the number of characters drawn */
-int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg);
-int draw_text_bios(const char * text, int x, int y, uint32_t fg, uint32_t bg);
+int draw_text(const char *text, int x, int y, uint32_t fg, uint32_t bg);
+int draw_text_bios(const char *text, int x, int y, uint32_t fg, uint32_t bg);
 
 /* return value is the length of text drawn
  * (so len - return is the number of spaces) */
-int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
-int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
+int draw_text_len(const char *text, int len, int x, int y, uint32_t fg, uint32_t bg);
+int draw_text_bios_len(const char *text, int len, int x, int y, uint32_t fg, uint32_t bg);
 
 void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t color);
 
-void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
-			   uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2);
+void draw_half_width_chars(
+	uint8_t c1, uint8_t c2, int x, int y, uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2);
 
 /* --------------------------------------------------------------------- */
 /* boxes */
@@ -70,16 +70,16 @@ enum {
 #define BOX_SHADE_MASK 3
 
 enum {
-	BOX_INNER = (0 << 2),   /* 00 00 */
-	BOX_OUTER = (1 << 2),   /* 01 00 */
-	BOX_CORNER = (2 << 2),  /* 10 00 */
+	BOX_INNER = (0 << 2),  /* 00 00 */
+	BOX_OUTER = (1 << 2),  /* 01 00 */
+	BOX_CORNER = (2 << 2), /* 10 00 */
 };
 #define BOX_TYPE_MASK 12
 
 /* the thickness is ignored for corner boxes, which are always thin */
 enum {
-	BOX_THIN = (0 << 4),    /* 0 00 00 */
-	BOX_THICK = (1 << 4),   /* 1 00 00 */
+	BOX_THIN = (0 << 4),  /* 0 00 00 */
+	BOX_THICK = (1 << 4), /* 1 00 00 */
 };
 #define BOX_THICKNESS_MASK 16
 
@@ -88,4 +88,3 @@ void draw_box(int xs, int ys, int xe, int ye, int flags);
 void toggle_display_fullscreen(void); /* FIXME why on earth is this in this header? */
 
 #endif /* SCHISM_DRAW_CHAR_H_ */
-

@@ -21,10 +21,8 @@
 //Stripped down version for Schismtracker, in C.
 
 // this really should be in a header but it's only used in one other file
-int fnumToMilliHertz(unsigned int fnum, unsigned int block,
-		unsigned int conversionFactor);
-void milliHertzToFnum(unsigned int milliHertz,
-		unsigned int *fnum, unsigned int *block, unsigned int conversionFactor);
+int fnumToMilliHertz(unsigned int fnum, unsigned int block, unsigned int conversionFactor);
+void milliHertzToFnum(unsigned int milliHertz, unsigned int *fnum, unsigned int *block, unsigned int conversionFactor);
 
 
 /// Convert the given f-number and block into a note frequency.
@@ -42,8 +40,7 @@ void milliHertzToFnum(unsigned int milliHertz,
 *
 * @return The converted frequency in milliHertz.
 */
-int fnumToMilliHertz(unsigned int fnum, unsigned int block,
-		unsigned int conversionFactor)
+int fnumToMilliHertz(unsigned int fnum, unsigned int block, unsigned int conversionFactor)
 {
 	// Original formula
 	//return 1000 * conversionFactor * (double)fnum * pow(2, (double)((signed)block - 20));
@@ -77,8 +74,7 @@ int fnumToMilliHertz(unsigned int fnum, unsigned int block,
 * a value to fnum/block and back to milliHertz is not guaranteed to reproduce
 * the original value.
 */
-void milliHertzToFnum(unsigned int milliHertz,
-		unsigned int *fnum, unsigned int *block, unsigned int conversionFactor)
+void milliHertzToFnum(unsigned int milliHertz, unsigned int *fnum, unsigned int *block, unsigned int conversionFactor)
 {
 	// Special case to avoid divide by zero
 	if (milliHertz <= 0) {

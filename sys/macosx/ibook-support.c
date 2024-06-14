@@ -25,20 +25,20 @@
 
 #ifdef SCHISM_MACOSX
 
-#include <IOKit/IOKitLib.h>
-#include <IOKit/IOReturn.h>
-#include <ApplicationServices/ApplicationServices.h>
-#include <IOKit/hidsystem/IOHIDLib.h>
-#include <IOKit/hidsystem/IOHIDParameter.h>
+# include <IOKit/IOKitLib.h>
+# include <IOKit/IOReturn.h>
+# include <ApplicationServices/ApplicationServices.h>
+# include <IOKit/hidsystem/IOHIDLib.h>
+# include <IOKit/hidsystem/IOHIDParameter.h>
 
-#define kMyDriversKeyboardClassName     "AppleADBKeyboard"
-#define kfnSwitchError                  200
-#define kfnAppleMode            0
-#define kfntheOtherMode         1
+# define kMyDriversKeyboardClassName "AppleADBKeyboard"
+# define kfnSwitchError              200
+# define kfnAppleMode                0
+# define kfntheOtherMode             1
 
-#ifndef kIOHIDFKeyModeKey
-#define kIOHIDFKeyModeKey    "HIDFKeyMode"
-#endif
+# ifndef kIOHIDFKeyModeKey
+#  define kIOHIDFKeyModeKey "HIDFKeyMode"
+# endif
 
 #endif /* defined(SCHISM_MACOSX) */
 
@@ -74,8 +74,7 @@ int macosx_ibook_fnswitch(int setting)
 	kr = IOServiceOpen(so, mach_task_self(), kIOHIDParamConnectType, &dp);
 	if (kr != KERN_SUCCESS) return -1;
 
-	kr = IOHIDGetParameter(dp, CFSTR(kIOHIDFKeyModeKey), sizeof(res),
-						&res, (IOByteCount *) &dummy);
+	kr = IOHIDGetParameter(dp, CFSTR(kIOHIDFKeyModeKey), sizeof(res), &res, (IOByteCount *)&dummy);
 	if (kr != KERN_SUCCESS) {
 		IOServiceClose(dp);
 		return -1;
@@ -83,8 +82,7 @@ int macosx_ibook_fnswitch(int setting)
 
 	if (setting == kfnAppleMode || setting == kfntheOtherMode) {
 		dummy = setting;
-		kr = IOHIDSetParameter(dp, CFSTR(kIOHIDFKeyModeKey),
-					&dummy, sizeof(dummy));
+		kr = IOHIDSetParameter(dp, CFSTR(kIOHIDFKeyModeKey), &dummy, sizeof(dummy));
 		if (kr != KERN_SUCCESS) {
 			IOServiceClose(dp);
 			return -1;

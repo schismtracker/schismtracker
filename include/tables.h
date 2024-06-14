@@ -53,4 +53,3 @@ extern const char *midi_program_names[128];
 extern const char *midi_percussion_names[61];
 
 #endif /* SCHISM_TABLES_H_ */
-

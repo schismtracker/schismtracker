@@ -36,23 +36,18 @@ struct tree {
 	treenode_t *root;
 };
 
-typedef void (*nodewalk_t) (treenode_t *node);
+typedef void (*nodewalk_t)(treenode_t *node);
 
 
 static void _treenode_walk(treenode_t *node, treewalk_t tapply, nodewalk_t napply)
 {
 	// IF IF IF IF IF
 
-	if (!node)
-		return;
-	if (node->left)
-		_treenode_walk(node->left, tapply, napply);
-	if (node->right)
-		_treenode_walk(node->right, tapply, napply);
-	if (tapply)
-		tapply(node->value);
-	if (napply)
-		napply(node);
+	if (!node) return;
+	if (node->left) _treenode_walk(node->left, tapply, napply);
+	if (node->right) _treenode_walk(node->right, tapply, napply);
+	if (tapply) tapply(node->value);
+	if (napply) napply(node);
 }
 
 static void _treenode_free(treenode_t *node)
@@ -80,12 +75,9 @@ static treenode_t *_treenode_find(treenode_t *node, treecmp_t cmp, void *value)
 
 	while (node) {
 		r = cmp(value, node->value);
-		if (r == 0)
-			break;
-		else if (r < 0)
-			node = node->left;
-		else
-			node = node->right;
+		if (r == 0) break;
+		else if (r < 0) node = node->left;
+		else node = node->right;
 	}
 	return node;
 }
@@ -94,14 +86,11 @@ static treenode_t *_treenode_insert(treenode_t *node, treecmp_t cmp, treenode_t 
 {
 	int r;
 
-	if (!node)
-		return new;
+	if (!node) return new;
 
 	r = cmp(new->value, node->value);
-	if (r < 0)
-		node->left = _treenode_insert(node->left, cmp, new);
-	else
-		node->right = _treenode_insert(node->right, cmp, new);
+	if (r < 0) node->left = _treenode_insert(node->left, cmp, new);
+	else node->right = _treenode_insert(node->right, cmp, new);
 	return node;
 }
 
@@ -115,8 +104,7 @@ void *tree_insert(tree_t *tree, void *value)
 {
 	treenode_t *node = _treenode_find(tree->root, tree->cmp, value);
 
-	if (node)
-		return node->value;
+	if (node) return node->value;
 
 	node = mem_calloc(1, sizeof(treenode_t));
 	node->value = value;
@@ -151,8 +139,8 @@ void *tree_find(tree_t *tree, void *value)
 
 
 #ifdef TEST
-#include <stdio.h>
-#include <string.h>
+# include <stdio.h>
+# include <string.h>
 
 struct node {
 	char *k, *v;
@@ -160,8 +148,7 @@ struct node {
 
 int sncmp(const void *a, const void *b)
 {
-	return strcmp(((struct node *) a)->k,
-		      ((struct node *) b)->k);
+	return strcmp(((struct node *)a)->k, ((struct node *)b)->k);
 }
 
 struct node *snalloc(char *k, char *v)
@@ -176,15 +163,15 @@ int main(int argc, char **argv)
 {
 	// some random junk
 	struct node nodes[] = {
-		{"caches", "disgruntled"},
-		{"logician", "daemon"},
-		{"silence", "rinse"},
-		{"shipwreck", "formats"},
-		{"justifying", "gnash"},
-		{"gadgetry", "ever"},
-		{"silence", "oxidized"}, // note: duplicate key
-		{"plumbing", "rickshaw"},
-		{NULL, NULL},
+		{"caches",     "disgruntled"},
+        {"logician",   "daemon"     },
+        {"silence",    "rinse"      },
+        {"shipwreck",  "formats"    },
+		{"justifying", "gnash"      },
+        {"gadgetry",   "ever"       },
+        {"silence",    "oxidized"   }, // note: duplicate key
+		{"plumbing",   "rickshaw"   },
+        {NULL,         NULL         },
 	};
 	struct node find;
 	struct node *p;
@@ -224,4 +211,3 @@ int main(int argc, char **argv)
 	return 0;
 }
 #endif /* TEST */
-
