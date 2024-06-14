@@ -597,8 +597,13 @@ void handle_key_repeat(void) {
 
 	const uint64_t now = SCHISM_GET_TICKS();
 	if (SCHISM_TICKS_PASSED(now, key_repeat_next_tick)) {
+		/* handle key functions have the ability to
+		 * change the values of the key_event structure.
+		 *
+		 * see: issue #465 */
+		struct key_event kk = cached_key_event;
+		handle_key(&kk);
 		key_repeat_next_tick = now + key_repeat_rate;
-		handle_key(&cached_key_event);
 	}
 }
 

@@ -481,8 +481,8 @@ static void pop_pending_keydown_event(const uint8_t* text) {
 	 * should be in CP437 */
 	if (have_pending_keydown) {
 		pending_keydown.text = text;
-		handle_key(&pending_keydown);
 		cache_key_repeat(&pending_keydown);
+		handle_key(&pending_keydown);
 		have_pending_keydown = 0;
 	}
 }
