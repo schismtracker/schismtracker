@@ -208,8 +208,11 @@ static void audio_device_list_draw() {
 
 	DRAW_DEVICE("default");
 
-	for (n = 0; n < audio_device_list_size; n++)
-		DRAW_DEVICE(audio_device_list[n].name);
+	for (n = 0; n < audio_device_list_size; n++) {
+		CHARSET_EASY_MODE(audio_device_list[n].name, CHARSET_UTF8, CHARSET_CP437, {
+			DRAW_DEVICE(out);
+		});
+	}
 
 #undef DRAW_DEVICE
 }
