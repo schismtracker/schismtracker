@@ -176,5 +176,8 @@ extern const uint8_t stm_effects[16];
 
 /* --------------------------------------------------------------------------------------------------------- */
 
+int win32mf_init(void);
+void win32mf_quit(void);
+
 #endif /* SCHISM_FMT_H_ */
 

@@ -27,6 +27,7 @@
 #include "sdlmain.h"
 #include "it.h"
 #include "osdefs.h"
+#include "fmt.h"
 
 #include <windows.h>
 #include <ws2tcpip.h>
@@ -150,13 +151,26 @@ void win32_sysinit(UNUSED int *pargc, UNUSED char ***pargv)
 		AppendMenuW(settings, MF_STRING, IDM_SETTINGS_SYSTEM_CONFIGURATION, L"System Configuration\tCtrl+F1");
 		AppendMenuW(menu, MF_POPUP, (uintptr_t)settings, L"S&ettings");
 	}
+
+#ifdef USE_MEDIAFOUNDATION
+	win32mf_init();
+#endif
 }
 
-void win32_sdlinit(void) {
+void win32_sysexit(void)
+{
+#ifdef USE_MEDIAFOUNDATION
+	win32mf_quit();
+#endif
+}
+
+void win32_sdlinit(void)
+{
 	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 }
 
-int win32_sdlevent(SDL_Event* event) {
+int win32_sdlevent(SDL_Event* event)
+{
 	if (event->type != SDL_SYSWMEVENT)
 		return 1;
 
@@ -264,7 +278,8 @@ int win32_sdlevent(SDL_Event* event) {
 	return 1;
 }
 
-void win32_toggle_menu(SDL_Window* window) {
+void win32_toggle_menu(SDL_Window* window)
+{
 	const int flags = SDL_GetWindowFlags(window);
 	int width, height;
 

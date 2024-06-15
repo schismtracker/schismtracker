@@ -143,7 +143,7 @@ READ_INFO(mp3)
 #endif
 
 #if USE_MEDIAFOUNDATION
-READ_INFO(win32mf)
+READ_INFO(win32mf) LOAD_SAMPLE(win32mf)
 #endif
 
 /* 15-sample mods have literally no identifying information */

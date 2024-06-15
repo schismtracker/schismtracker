@@ -101,9 +101,9 @@ AC_ARG_WITH([alsa],
 	[with_alsa=check])
 
 AC_ARG_WITH([mediafoundation],
-	[AS_HELP_STRING([--with-mediafoundation],[Build with Microsoft Media Foundation support @<:@default=no@:>@])],
+	[AS_HELP_STRING([--with-mediafoundation],[Build with Microsoft Media Foundation support @<:@default=check@:>@])],
 	[],
-	[with_mediafoundation=no])
+	[with_mediafoundation=check])
 
 dnl ------------------------------------------------------------------------
 
@@ -339,13 +339,11 @@ fi
 
 AM_CONDITIONAL([USE_MEDIAFOUNDATION], false)
 if test "x$with_mediafoundation" = "xcheck" || test "x$with_mediafoundation" = "xyes"; then
-	dnl requires Windows 7 or newer
-	saved_LIBS="$LIBS"
-	AC_CHECK_LIB([mfplat], [MFCreateMFByteStreamOnStream], [mf_found=yes], [mf_found=no])
-	if test "x$mf_found" = "xyes"; then
+	dnl requires Windows 7 or newer, but doesn't link to the libraries to keep
+	dnl XP/Vista also working
+	if test "x$use_win32" = "xyes"; then
 		AM_CONDITIONAL([USE_MEDIAFOUNDATION], true)
 		AC_DEFINE([USE_MEDIAFOUNDATION], [1], [Use Media Foundation sample loading])
-		LIBS="$saved_LIBS"
 	elif test "x$with_mediafoundation" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find Media Foundation with MFCreateMFByteStreamOnStream])
 	fi

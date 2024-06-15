@@ -51,6 +51,7 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_sdlevent win32_sdlevent
 # define os_sdlinit win32_sdlinit
 # define os_sysinit win32_sysinit
+# define os_sysexit win32_sysexit
 # define os_get_modkey win32_get_modkey
 #elif defined(SCHISM_MACOSX)
 # define os_sdlevent macosx_sdlevent
@@ -86,6 +87,7 @@ int wii_sdlevent(SDL_Event *event); // add unicode values; wiimote hack to allow
 
 int win32_sdlevent(SDL_Event* event);
 void win32_sysinit(int *pargc, char ***pargv);
+void win32_sysexit(void);
 void win32_sdlinit(void);
 void win32_get_modkey(int *m);
 void win32_filecreated_callback(const char *filename);
