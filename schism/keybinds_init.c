@@ -274,9 +274,9 @@ static void init_sample_list_keybinds(cfg_file_t* cfg)
     init_bind_macro(sample_list, toggle_sample_quality, "Toggle sample quality", "Alt+US_Q");
     init_bind_macro(sample_list, replace_current_sample, "Replace current sample in song", "Alt+US_R");
     init_bind_macro(sample_list, swap_sample, "Swap sample (in song also)", "Alt+US_S");
-    init_bind_macro(sample_list, save_sample_to_disk_format_select, "Save current sample to disk (Choose format)", "Alt+US_T");
-    init_bind_macro(sample_list, save_sample_to_disk_raw, "Save current sample to disk (RAW Format)", "Alt+US_W");
-    init_bind_macro(sample_list, exchange_sample, "Exchange sample (only in Sample List)", "Alt+US_X");
+    init_bind_macro(sample_list, save_sample_to_disk_format_select, "Save current sample to disk (choose format)", "Alt+US_T");
+    init_bind_macro(sample_list, save_sample_to_disk_raw, "Save current sample to disk (RAW format)", "Alt+US_W");
+    init_bind_macro(sample_list, exchange_sample, "Exchange sample (only in sample list)", "Alt+US_X");
     init_bind_macro(sample_list, text_to_sample, "Text to sample data", "Alt+US_Y");
     init_bind_macro(sample_list, edit_create_adlib_sample, "Edit/create AdLib (FM) sample", "Alt+US_Z");
     init_bind_macro(sample_list, load_adlib_sample_by_midi_patch_number, "Load predefined AdLib sample by MIDI patch number", "Alt+Shift+US_Z");
@@ -345,18 +345,18 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(pattern_edit, move_backwards_channel, "Move backwards one channel", "Alt+US_LEFT");
     init_bind_macro(pattern_edit, move_forwards_note_column, "Move forwards to note column", "US_TAB");
     init_bind_macro(pattern_edit, move_backwards_note_column, "Move backwards to note column", "Shift+US_TAB");
-    init_bind_macro(pattern_edit, move_up_n_lines, "Move up n lines (n=Row Hilight Major)", "US_PAGEUP");
+    init_bind_macro(pattern_edit, move_up_n_lines, "Move up n lines (n=row highlight major)", "US_PAGEUP");
     init_bind_macro(pattern_edit, move_down_n_lines, "Move down n lines", "US_PAGEDOWN");
     init_bind_macro(pattern_edit, move_pattern_top, "Move to top of pattern", "Ctrl+US_PAGEUP");
     init_bind_macro(pattern_edit, move_pattern_bottom, "Move to bottom of pattern", "Ctrl+US_PAGEDOWN");
     init_bind_macro(pattern_edit, move_start, "Move to start of column/start of line/start of pattern", "US_HOME");
     init_bind_macro(pattern_edit, move_end, "Move to end of column/end of line/end of pattern", "US_END");
-    init_bind_macro(pattern_edit, move_previous_position, "Move to previous position (accounts for Multichannel)", "US_BACKSPACE");
+    init_bind_macro(pattern_edit, move_previous_position, "Move to previous position (accounts for multichannel)", "US_BACKSPACE");
     init_bind_macro(pattern_edit, move_previous, "Move to previous note/instrument/volume/effect", "Shift+US_A");
     init_bind_macro(pattern_edit, move_next, "Move to next note/instrument/volume/effect\n ", "Shift+US_F");
 
     init_bind_macro(pattern_edit, toggle_multichannel,
-        "Toggle Multichannel mode for current channel\n" DESCRIPTION_SPACER
+        "Toggle multichannel mode for current channel\n" DESCRIPTION_SPACER
         "2x: Multichannel selection menu\n ", "Alt+US_N");
 
     init_bind_macro(pattern_edit, store_pattern_data, "Store pattern data", "Alt+US_ENTER");
@@ -400,7 +400,7 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_section_macro(block_functions, " Block Functions.", PAGE_PATTERN_EDITOR);
     init_bind_macro(block_functions, mark_beginning_block, "Mark beginning of block", "Alt+US_B");
     init_bind_macro(block_functions, mark_end_block, "Mark end of block", "Alt+US_E");
-    init_bind_macro(block_functions, quick_mark_lines, "Quick mark n/2n/4n/... lines (n=Row Highlight Major)", "Alt+US_D");
+    init_bind_macro(block_functions, quick_mark_lines, "Quick mark n/2n/4n/... lines (n=row highlight major)", "Alt+US_D");
     init_bind_macro(block_functions, mark_column_or_pattern, "Mark entire column/patter", "Alt+US_L");
     init_bind_macro(block_functions, mark_block_left, "Mark block left", "Shift+US_LEFT");
     init_bind_macro(block_functions, mark_block_right, "Mark block right", "Shift+US_RIGHT");
@@ -411,7 +411,7 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(block_functions, mark_block_page_up, "Mark block up one page", "Shift+US_PAGEUP");
     init_bind_macro(block_functions, mark_block_page_down, "Mark block down one page\n ", "Shift+US_PAGEDOWN");
 
-    init_bind_macro(block_functions, unmark, "Unmark block/Release clipboard memory\n ", "Alt+US_U");
+    init_bind_macro(block_functions, unmark, "Unmark block/release clipboard memory\n ", "Alt+US_U");
 
     init_bind_macro(block_functions, raise_notes_semitone, "Raise notes by a semitone (*)", "Alt+US_Q");
     init_bind_macro(block_functions, raise_notes_octave, "Raise notes by an octave (*)", "Alt+Shift+US_Q");
@@ -424,7 +424,7 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
         "Slide volume/panning column (*)\n" DESCRIPTION_SPACER
         "2x: Wipe all volume/panning controls (*)", "Alt+US_K");
     // init_bind_macro(block_functions, wipe_all_volume_or_panning, "Wipe all volume/panning controls (*)", "");
-    init_bind_macro(block_functions, volume_amplifier, "Volume amplifier (*) / Fast volume attenuate (*)", "Alt+US_J");
+    init_bind_macro(block_functions, volume_amplifier, "Volume amplifier (*) / fast volume attenuate (*)", "Alt+US_J");
     init_bind_macro(block_functions, cut_block, "Cut block (*)", "Alt+US_Z");
     init_bind_macro(block_functions, swap_block, "Swap block (*)", "Alt+US_Y");
     init_bind_macro(block_functions, slide_effect_value,
@@ -440,7 +440,7 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(block_functions, paste_data, "Paste data from clipboard (*)", "Alt+US_P");
     init_bind_macro(block_functions, paste_and_overwrite,
         "Overwrite with data from clipboard (*)\n" DESCRIPTION_SPACER
-        "2x:Grow pattern to clipboard length", "Alt+US_O");
+        "2x: Grow pattern to clipboard length", "Alt+US_O");
     // init_bind_macro(block_functions, grow_pattern_from_clipboard_length, "", "");
     init_bind_macro(block_functions, paste_and_mix,
         "Mix each row from clipboard with pattern data (*)\n" DESCRIPTION_SPACER
@@ -450,19 +450,19 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(block_functions, double_block_length, "Double block length (*)", "Alt+US_F");
     init_bind_macro(block_functions, halve_block_length, "Halve block length (*)", "Alt+US_G");
 
-    init_bind_macro(block_functions, select_template_mode, "Select template mode / Fast volume amplify (*)", "Alt+US_I");
+    init_bind_macro(block_functions, select_template_mode, "Select template mode / fast volume amplify (*)", "Alt+US_I");
     init_bind_macro(block_functions, disable_template_mode, "Disable template mode", "Alt+Shift+US_I");
     init_bind_macro(block_functions, toggle_fast_volume, "Toggle fast volume mode", "Ctrl+US_J");
-    init_bind_macro(block_functions, selection_volume_vary, "Selection volume vary / Fast volume vary (*)", "Ctrl+US_U");
-    init_bind_macro(block_functions, selection_panning_vary, "Selection panning vary / Fast panning vary (*)", "Ctrl+US_Y");
-    init_bind_macro(block_functions, selection_effect_vary, "Selection effect vary / Fast effect vary (*)", "Ctrl+US_K");
+    init_bind_macro(block_functions, selection_volume_vary, "Selection volume vary / fast volume vary (*)", "Ctrl+US_U");
+    init_bind_macro(block_functions, selection_panning_vary, "Selection panning vary / fast panning vary (*)", "Ctrl+US_Y");
+    init_bind_macro(block_functions, selection_effect_vary, "Selection effect vary / fast effect vary (*)", "Ctrl+US_K");
 
     init_section_macro(playback_functions, " Playback Functions.", PAGE_PATTERN_EDITOR);
     init_bind_macro(playback_functions, play_note_cursor, "Play note under cursor", "US_4");
     init_bind_macro(playback_functions, play_row, "Play row", "US_8");
 
     init_bind_macro(playback_functions, play_from_row, "Play from current row", "Ctrl+US_F6");
-    init_bind_macro(playback_functions, toggle_playback_mark, "Set/Clear playback mark (for use with F7)", "Ctrl+US_F7");
+    init_bind_macro(playback_functions, toggle_playback_mark, "Set/clear playback mark (for use with F7)", "Ctrl+US_F7");
 
     init_bind_macro(playback_functions, toggle_current_channel, "Toggle current channel", "Alt+US_F9");
     init_bind_macro(playback_functions, solo_current_channel, "Solo current channel", "Alt+US_F10");
@@ -485,75 +485,75 @@ static void init_file_list_keybinds(cfg_file_t* cfg)
 static void init_global_keybinds(cfg_file_t* cfg)
 {
     init_section_macro(global, "Global Keys.", PAGE_ANY);
-    init_bind_macro(global, help, "Help (Context Sensitive!)", "US_F1");
-    init_bind_macro(global, midi, "MIDI Screen", "Shift+US_F1");
-    init_bind_macro(global, system_configure, "System Configuration", "Ctrl+US_F1");
-    init_bind_macro(global, pattern_edit, "Pattern Editor / Pattern Editor Options", "US_F2");
-    init_bind_macro(global, sample_list, "Sample List", "US_F3");
-    init_bind_macro(global, sample_library, "Sample Library", "Ctrl+US_F3");
-    init_bind_macro(global, instrument_list, "Instrument List", "US_F4");
-    init_bind_macro(global, instrument_library, "Instrument Library", "Ctrl+US_F4");
-    init_bind_macro(global, play_information_or_play_song, "Play Information / Play Song", "US_F5");
-    init_bind_macro(global, play_song, "Play Song", "Ctrl+US_F5");
+    init_bind_macro(global, help, "Help (context sensitive!)", "US_F1");
+    init_bind_macro(global, midi, "MIDI screen", "Shift+US_F1");
+    init_bind_macro(global, system_configure, "System configuration", "Ctrl+US_F1");
+    init_bind_macro(global, pattern_edit, "Pattern editor / pattern editor options", "US_F2");
+    init_bind_macro(global, sample_list, "Sample list", "US_F3");
+    init_bind_macro(global, sample_library, "Sample library", "Ctrl+US_F3");
+    init_bind_macro(global, instrument_list, "Instrument list", "US_F4");
+    init_bind_macro(global, instrument_library, "Instrument library", "Ctrl+US_F4");
+    init_bind_macro(global, play_information_or_play_song, "Play information / play song", "US_F5");
+    init_bind_macro(global, play_song, "Play song", "Ctrl+US_F5");
     init_bind_macro(global, preferences, "Preferences", "Shift+US_F5");
-    init_bind_macro(global, play_current_pattern, "Play Current Pattern", "US_F6");
-    init_bind_macro(global, play_song_from_order, "Play Song From Current Order", "Shift+US_F6");
-    init_bind_macro(global, play_song_from_mark, "Play From Mark / Current Row", "US_F7");
-    init_bind_macro(global, toggle_playback, "Pause / Resume Playback", "Shift+US_F8");
-    init_bind_macro(global, stop_playback, "Stop Playback", "US_F8");
+    init_bind_macro(global, play_current_pattern, "Play current pattern", "US_F6");
+    init_bind_macro(global, play_song_from_order, "Play song from current order", "Shift+US_F6");
+    init_bind_macro(global, play_song_from_mark, "Play from mark / current row", "US_F7");
+    init_bind_macro(global, toggle_playback, "Pause / resume playback", "Shift+US_F8");
+    init_bind_macro(global, stop_playback, "Stop playback", "US_F8");
 
     /* os x steals plain scroll lock for brightness,
     * so catch ctrl+scroll lock here as well */
     init_bind_macro(global, toggle_playback_tracing, "Toggle playback tracing", "US_SCROLLLOCK,Ctrl+US_SCROLLLOCK,Ctrl+US_F");
     init_bind_macro(global, toggle_midi_input, "Toggle MIDI input\n ", "Alt+US_SCROLLLOCK");
 
-    init_bind_macro(global, load_module, "Load Module", "US_F9,Ctrl+US_L");
-    init_bind_macro(global, message_editor, "Message Editor", "Shift+US_F9");
-    init_bind_macro(global, save_module, "Save Module", "US_F10,Ctrl+W");
-    init_bind_macro(global, export_module, "Export Module (to WAV, AIFF)", "Shift+US_F10");
+    init_bind_macro(global, load_module, "Load module", "US_F9,Ctrl+US_L");
+    init_bind_macro(global, message_editor, "Message editor", "Shift+US_F9");
+    init_bind_macro(global, save_module, "Save module", "US_F10,Ctrl+W");
+    init_bind_macro(global, export_module, "Export module (to WAV, AIFF)", "Shift+US_F10");
     init_bind_macro(global, order_list,
-        "Order List and Panning\n" DESCRIPTION_SPACER
+        "Order list and panning\n" DESCRIPTION_SPACER
         "2x: Order list and channel volume", "US_F11");
-    init_bind_macro(global, schism_logging, "Schism Logging", "Ctrl+US_F11");
+    init_bind_macro(global, schism_logging, "Schism logging", "Ctrl+US_F11");
     init_bind_macro(global, order_list_lock, "Lock/unlock order list", "Alt+US_F11");
-    init_bind_macro(global, song_variables, "Song Variables & Directory Configuration", "US_F12");
-    init_bind_macro(global, palette_config, "Palette Configuration", "Ctrl+US_F12");
-    init_bind_macro(global, font_editor, "Font Editor", "Shift+US_F12");
+    init_bind_macro(global, song_variables, "Song variables & directory configuration", "US_F12");
+    init_bind_macro(global, palette_config, "Palette configuration", "Ctrl+US_F12");
+    init_bind_macro(global, font_editor, "Font editor", "Shift+US_F12");
     init_bind_macro(global, waterfall, "Waterfall\n ", "Alt+US_F12");
 
-    init_bind_macro(global, octave_decrease, "Decrease Octave", "US_KP_DIVIDE,Alt+US_HOME");
-    init_bind_macro(global, octave_increase, "Increase Octave", "US_KP_MULTIPLY,Alt+US_END");
-    init_bind_macro(global, decrease_playback_speed, "Decrease Playback Speed", "Shift+US_LEFTBRACKET");
-    init_bind_macro(global, increase_playback_speed, "Increase Playback Speed", "Shift+US_RIGHTBRACKET");
-    init_bind_macro(global, decrease_playback_tempo, "Decrease Playback Tempo", "Ctrl+US_LEFTBRACKET");
-    init_bind_macro(global, increase_playback_tempo, "Increase Playback Tempo", "Ctrl+US_RIGHTBRACKET");
-    init_bind_macro(global, decrease_global_volume, "Decrease Global Volume", "US_LEFTBRACKET");
-    init_bind_macro(global, increase_global_volume, "Increase Global Volume\n ", "US_RIGHTBRACKET");
+    init_bind_macro(global, octave_decrease, "Decrease octave", "US_KP_DIVIDE,Alt+US_HOME");
+    init_bind_macro(global, octave_increase, "Increase octave", "US_KP_MULTIPLY,Alt+US_END");
+    init_bind_macro(global, decrease_playback_speed, "Decrease playback speed", "Shift+US_LEFTBRACKET");
+    init_bind_macro(global, increase_playback_speed, "Increase playback speed", "Shift+US_RIGHTBRACKET");
+    init_bind_macro(global, decrease_playback_tempo, "Decrease playback tempo", "Ctrl+US_LEFTBRACKET");
+    init_bind_macro(global, increase_playback_tempo, "Increase playback tempo", "Ctrl+US_RIGHTBRACKET");
+    init_bind_macro(global, decrease_global_volume, "Decrease global volume", "US_LEFTBRACKET");
+    init_bind_macro(global, increase_global_volume, "Increase global volume\n ", "US_RIGHTBRACKET");
 
-    init_bind_macro(global, toggle_channel_1, "Toggle Channel 1", "Alt+US_F1");
-    init_bind_macro(global, toggle_channel_2, "Toggle Channel 2", "Alt+US_F2");
-    init_bind_macro(global, toggle_channel_3, "Toggle Channel 3", "Alt+US_F3");
-    init_bind_macro(global, toggle_channel_4, "Toggle Channel 4", "Alt+US_F4");
-    init_bind_macro(global, toggle_channel_5, "Toggle Channel 5", "Alt+US_F5");
-    init_bind_macro(global, toggle_channel_6, "Toggle Channel 6", "Alt+US_F6");
-    init_bind_macro(global, toggle_channel_7, "Toggle Channel 7", "Alt+US_F7");
-    init_bind_macro(global, toggle_channel_8, "Toggle Channel 8\n ", "Alt+US_F8");
+    init_bind_macro(global, toggle_channel_1, "Toggle channel 1", "Alt+US_F1");
+    init_bind_macro(global, toggle_channel_2, "Toggle channel 2", "Alt+US_F2");
+    init_bind_macro(global, toggle_channel_3, "Toggle channel 3", "Alt+US_F3");
+    init_bind_macro(global, toggle_channel_4, "Toggle channel 4", "Alt+US_F4");
+    init_bind_macro(global, toggle_channel_5, "Toggle channel 5", "Alt+US_F5");
+    init_bind_macro(global, toggle_channel_6, "Toggle channel 6", "Alt+US_F6");
+    init_bind_macro(global, toggle_channel_7, "Toggle channel 7", "Alt+US_F7");
+    init_bind_macro(global, toggle_channel_8, "Toggle channel 8\n ", "Alt+US_F8");
 
-    init_bind_macro(global, mouse_grab, "Toggle Mouse / Keyboard Grab", "Ctrl+US_D");
-    init_bind_macro(global, display_reset, "Refresh Screen And Reset Chache Identification", "Ctrl+US_E");
-    init_bind_macro(global, go_to_time, "Go To Order / Pattern / Row Given Time", "Ctrl+US_G");
-    init_bind_macro(global, audio_reset, "Reinitialize Sound Driver", "Ctrl+US_I");
-    init_bind_macro(global, mouse, "Toggle Mouse Cursor", "Ctrl+US_M");
-    init_bind_macro(global, new_song, "New Song", "Ctrl+US_N");
-    init_bind_macro(global, calculate_song_length, "Calculate Approximate Song Length", "Ctrl+US_P");
-    init_bind_macro(global, quit, "Quit Schism Tracker", "Ctrl+US_Q");
-    init_bind_macro(global, quit_no_confirm, "Quit Without Confirmation", "Ctrl+Shift+US_Q");
-    init_bind_macro(global, save, "Save Current Song\n ", "Ctrl+US_S");
+    init_bind_macro(global, mouse_grab, "Toggle mouse / keyboard grab", "Ctrl+US_D");
+    init_bind_macro(global, display_reset, "Refresh screen and reset cache identification", "Ctrl+US_E");
+    init_bind_macro(global, go_to_time, "Go to order / pattern / row given time", "Ctrl+US_G");
+    init_bind_macro(global, audio_reset, "Reinitialize sound driver", "Ctrl+US_I");
+    init_bind_macro(global, mouse, "Toggle mouse cursor", "Ctrl+US_M");
+    init_bind_macro(global, new_song, "New song", "Ctrl+US_N");
+    init_bind_macro(global, calculate_song_length, "Calculate approximate song length", "Ctrl+US_P");
+    init_bind_macro(global, quit, "Quit schism tracker", "Ctrl+US_Q");
+    init_bind_macro(global, quit_no_confirm, "Quit without confirmation", "Ctrl+Shift+US_Q");
+    init_bind_macro(global, save, "Save current song\n ", "Ctrl+US_S");
 
     init_bind_macro(global, previous_order, "Previous order (while playing, not on pattern edit)", "Ctrl+US_LEFT");
     init_bind_macro(global, next_order, "Next order (while playing, not on pattern edit)\n ", "Ctrl+US_RIGHT");
 
-    init_bind_macro(global, fullscreen, "Toggle Fullscreen\n ", "Ctrl+Alt+US_ENTER");
+    init_bind_macro(global, fullscreen, "Toggle fullscreen\n ", "Ctrl+Alt+US_ENTER");
 
     init_bind_macro(global, open_menu, "Open menu", "US_ESCAPE");
     init_bind_macro(global, nav_left, "Navigate left", "US_LEFT");
