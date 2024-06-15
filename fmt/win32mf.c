@@ -44,6 +44,7 @@ typedef HRESULT WINAPI (*MF_MFShutdownSpec)(void);
 typedef HRESULT WINAPI (*MF_MFCreateSourceResolverSpec)(IMFSourceResolver **ppISourceResolver);
 typedef HRESULT WINAPI (*MF_MFGetServiceSpec)(IUnknown *punkObject, REFGUID guidService, REFIID riid, LPVOID *ppvObject);
 typedef HRESULT WINAPI (*MF_PropVariantToStringAllocSpec)(REFPROPVARIANT propvar, PWSTR *ppszOut);
+typedef HRESULT WINAPI (*MF_PropVariantToUInt64Spec)(REFPROPVARIANT propvar, ULONGLONG *pullRet);
 typedef HRESULT WINAPI (*MF_MFCreateSourceReaderFromMediaSourceSpec)(IMFMediaSource *pMediaSource, IMFAttributes *pAttributes, IMFSourceReader **ppSourceReader);
 typedef HRESULT WINAPI (*MF_MFCreateMFByteStreamOnStreamSpec)(IStream *pStream, IMFByteStream **ppByteStream);
 typedef HRESULT WINAPI (*MF_MFCreateMediaTypeSpec)(IMFMediaType **ppMFType);
@@ -55,6 +56,7 @@ static MF_MFShutdownSpec MF_MFShutdown;
 static MF_MFCreateSourceResolverSpec MF_MFCreateSourceResolver;
 static MF_MFGetServiceSpec MF_MFGetService;
 static MF_PropVariantToStringAllocSpec MF_PropVariantToStringAlloc;
+static MF_PropVariantToUInt64Spec MF_PropVariantToUInt64;
 static MF_MFCreateSourceReaderFromMediaSourceSpec MF_MFCreateSourceReaderFromMediaSource;
 static MF_MFCreateMFByteStreamOnStreamSpec MF_MFCreateMFByteStreamOnStream;
 static MF_MFCreateMediaTypeSpec MF_MFCreateMediaType;
@@ -113,41 +115,45 @@ static const char* get_media_type_description(IMFMediaType* media_type)
 
 static int get_source_reader_information(IMFSourceReader *reader, dmoz_file_t *file) {
 	IMFMediaType *media_type = NULL;
+	PROPVARIANT duration = {0};
+	uint64_t length = 0;
 	BOOL compressed = FALSE;
 
-	if (FAILED(reader->lpVtbl->GetNativeMediaType(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, MF_SOURCE_READER_CURRENT_TYPE_INDEX, &media_type)))
-		goto fail;
+	PropVariantInit(&duration);
 
-	file->type = (SUCCEEDED(media_type->lpVtbl->IsCompressedFormat(media_type, &compressed)) && compressed)
-		? TYPE_SAMPLE_COMPR
-		: TYPE_SAMPLE_PLAIN;
+	if (SUCCEEDED(reader->lpVtbl->GetNativeMediaType(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, MF_SOURCE_READER_CURRENT_TYPE_INDEX, &media_type))) {
+		file->type = (SUCCEEDED(media_type->lpVtbl->IsCompressedFormat(media_type, &compressed)) && compressed)
+			? TYPE_SAMPLE_COMPR
+			: TYPE_SAMPLE_PLAIN;
 
-	file->description = get_media_type_description(media_type);
+		file->description = get_media_type_description(media_type);
+
+		media_type->lpVtbl->Release(media_type);
+	}
+
+	PropVariantClear(&duration);
 
 	return 1;
-
-fail:
-	if (media_type)
-		media_type->lpVtbl->Release(media_type);
-
-	return 0;
 }
 
 static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t* file)
 {
-	/* this API is actually the worst */
 	IMFPresentationDescriptor* descriptor = NULL;
 	IMFMetadataProvider* provider = NULL;
 	IMFMetadata* metadata = NULL;
 	PROPVARIANT propnames = {0};
 	DWORD streams = 0;
 	int found = 0;
+	uint64_t duration = 0;
 
 	/* do this before anything else... */
 	PropVariantInit(&propnames);
 
 	if (FAILED(source->lpVtbl->CreatePresentationDescriptor(source, &descriptor)))
 		goto cleanup;
+
+	if (SUCCEEDED(descriptor->lpVtbl->GetUINT64(descriptor, &MF_PD_DURATION, &duration)))
+		file->smp_length = (double)duration * file->smp_speed / (10.0 * 1000.0 * 1000.0);
 
 	if (FAILED(MF_MFGetService((IUnknown*)source, &MF_METADATA_PROVIDER_SERVICE, &IID_IMFMetadataProvider, (void**)&provider)))
 		goto cleanup;
@@ -266,6 +272,7 @@ int win32mf_init(void)
 	LOAD_MF_LIBRARY(propsys);
 
 	LOAD_MF_OBJECT(propsys, PropVariantToStringAlloc);
+	LOAD_MF_OBJECT(propsys, PropVariantToUInt64);
 
 	/* MFSTARTUP_LITE == no sockets */
 	media_foundation_initialized = SUCCEEDED(MF_MFStartup(MF_VERSION, MFSTARTUP_LITE));
@@ -311,6 +318,8 @@ void win32mf_quit(void)
 	IMFSourceReader* reader = NULL; \
 	IStream *stream = NULL; \
 	IMFByteStream *byte_stream = NULL; \
+	uint32_t channels = 0, sps = 0, bps = 0, flags; \
+	IMFMediaType *uncompressed_type = NULL; \
 \
 	if (FAILED(MF_MFCreateSourceResolver(&resolver))) \
 		goto cleanup; \
@@ -332,7 +341,50 @@ void win32mf_quit(void)
 		goto cleanup; \
 \
 	if (FAILED(MF_MFCreateSourceReaderFromMediaSource(real_media_source, NULL, &reader))) \
-		goto cleanup;
+		goto cleanup; \
+\
+	if (FAILED(MF_MFCreateMediaType(&uncompressed_type))) \
+		goto cleanup; \
+\
+	if (FAILED(uncompressed_type->lpVtbl->SetGUID(uncompressed_type, &MF_MT_MAJOR_TYPE, &MFMediaType_Audio))) \
+		goto cleanup; \
+\
+	if (FAILED(uncompressed_type->lpVtbl->SetGUID(uncompressed_type, &MF_MT_SUBTYPE, &MFAudioFormat_PCM))) \
+		goto cleanup; \
+\
+	if (FAILED(reader->lpVtbl->SetCurrentMediaType(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, NULL, uncompressed_type))) \
+		goto cleanup; \
+\
+	uncompressed_type->lpVtbl->Release(uncompressed_type); \
+\
+	if (FAILED(reader->lpVtbl->GetCurrentMediaType(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, &uncompressed_type))) \
+		goto cleanup; \
+\
+	if (FAILED(reader->lpVtbl->SetStreamSelection(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, TRUE))) \
+		goto cleanup; \
+\
+	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_NUM_CHANNELS, &channels))) \
+		goto cleanup; \
+\
+	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_SAMPLES_PER_SECOND, &sps))) \
+		goto cleanup; \
+\
+	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_BITS_PER_SAMPLE, &bps))) \
+		goto cleanup; \
+\
+	if (channels <= 0 || channels > 2) \
+		goto cleanup; \
+\
+	if (sps <= 0) \
+		goto cleanup; \
+\
+	if (bps != 8 && bps != 16) \
+		goto cleanup; \
+\
+	flags = SF_LE; \
+	flags |= (channels == 2) ? SF_SI : SF_M; \
+	flags |= (bps <= 8) ? SF_8 : SF_16; \
+	flags |= SF_PCMS;
 
 #define MEDIA_FOUNDATION_END() \
 	if (resolver) \
@@ -351,7 +403,10 @@ void win32mf_quit(void)
 		stream->lpVtbl->Release(stream); \
 \
 	if (byte_stream) \
-		byte_stream->lpVtbl->Release(byte_stream);
+		byte_stream->lpVtbl->Release(byte_stream); \
+\
+	if (uncompressed_type) \
+		uncompressed_type->lpVtbl->Release(uncompressed_type);
 
 int fmt_win32mf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
@@ -366,8 +421,12 @@ int fmt_win32mf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 	MEDIA_FOUNDATION_START(data, length, url, cleanup)
 
+	file->smp_flags = flags;
+	file->smp_speed = sps;
+
 	convert_media_foundation_metadata(real_media_source, file);
 	get_source_reader_information(reader, file);
+
 	success = 1;
 
 cleanup:
@@ -377,7 +436,7 @@ cleanup:
 }
 
 enum {
-	READER_LOAD_DONE = 0,
+	READER_LOAD_DONE,
 	READER_LOAD_ERROR,
 	READER_LOAD_MORE
 };
@@ -452,50 +511,10 @@ int fmt_win32mf_load_sample(const uint8_t *data, size_t len, song_sample_t *smp)
 		return 0;
 
 	int success = 0;
-	uint32_t channels = 0, sps = 0, bps = 0, flags;
 	uint8_t *uncompressed = NULL;
 	size_t uncompressed_size = 0, sample_length = 0;
-	IMFMediaType *uncompressed_type = NULL;
 
 	MEDIA_FOUNDATION_START(data, len, NULL, cleanup)
-
-	if (FAILED(MF_MFCreateMediaType(&uncompressed_type)))
-		goto cleanup;
-
-	if (FAILED(uncompressed_type->lpVtbl->SetGUID(uncompressed_type, &MF_MT_MAJOR_TYPE, &MFMediaType_Audio)))
-		goto cleanup;
-
-	if (FAILED(uncompressed_type->lpVtbl->SetGUID(uncompressed_type, &MF_MT_SUBTYPE, &MFAudioFormat_PCM)))
-		goto cleanup;
-
-	if (FAILED(reader->lpVtbl->SetCurrentMediaType(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, NULL, uncompressed_type)))
-		goto cleanup;
-
-	uncompressed_type->lpVtbl->Release(uncompressed_type);
-
-	if (FAILED(reader->lpVtbl->GetCurrentMediaType(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, &uncompressed_type)))
-		goto cleanup;
-
-	if (FAILED(reader->lpVtbl->SetStreamSelection(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, TRUE)))
-		goto cleanup;
-
-	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_NUM_CHANNELS, &channels)))
-		goto cleanup;
-
-	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_SAMPLES_PER_SECOND, &sps)))
-		goto cleanup;
-
-	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_BITS_PER_SAMPLE, &bps)))
-		goto cleanup;
-
-	if (channels <= 0 || channels > 2)
-		goto cleanup;
-
-	if (sps <= 0)
-		goto cleanup;
-
-	if (bps != 8 && bps != 16)
-		goto cleanup;
 
 	for (;;) {
 		int loop_success = reader_load_sample(reader, &uncompressed, &uncompressed_size);
@@ -518,18 +537,10 @@ int fmt_win32mf_load_sample(const uint8_t *data, size_t len, song_sample_t *smp)
 	smp->c5speed       = sps;
 	smp->length        = sample_length;
 
-	flags = SF_LE;
-	flags |= (channels == 2) ? SF_SI : SF_M;
-	flags |= (bps <= 8) ? SF_8 : SF_16;
-	flags |= SF_PCMS;
-
 	success = csf_read_sample(smp, flags, uncompressed, uncompressed_size);
 
 cleanup:
 	MEDIA_FOUNDATION_END()
-
-	if (uncompressed_type)
-		uncompressed_type->lpVtbl->Release(uncompressed_type);
 
 	if (uncompressed)
 		free(uncompressed);
