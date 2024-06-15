@@ -535,6 +535,16 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			get_page_widgets()->accept_text = 1;
 			set_page(PAGE_LOAD_INSTRUMENT);
 		}
+	} else if (
+		key_active(instrument_list, focus_list) ||
+		(instrument_cursor_pos < 25 && key_active(global, nav_cancel))
+	) {
+		if (k->state == KEY_RELEASE)
+			return 1;
+		instrument_cursor_pos = 25;
+		get_page_widgets()->accept_text = 0;
+		status.flags |= NEED_UPDATE;
+		return 1;
 	} else if (key_pressed(sample_list, focus_sample_list)) {
 		if (instrument_cursor_pos < 25) {
 			instrument_cursor_pos = 25;
@@ -552,17 +562,17 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 		song_remove_instrument_slot(current_instrument);
 	} else if (key_pressed(instrument_list, clear_name_and_filename)) {
 		clear_instrument_text();
+	} else if (key_pressed(instrument_list, edit_name)) {
+		instrument_cursor_pos = 0;
+		get_page_widgets()->accept_text = 0;
+		status.flags |= NEED_UPDATE;
+		memused_songchanged();
+		return 1;
 	} else {
 		if ((k->state != KEY_RELEASE) && (k->mod & KMOD_CTRL) == 0 && (k->mod & KMOD_ALT) == 0) {
 			if (instrument_cursor_pos < 25) {
 				if (k->text)
 					return instrument_list_handle_text_input_on_list(k->text);
-			} else if (k->sym == SDLK_SPACE) {
-				instrument_cursor_pos = 0;
-				get_page_widgets()->accept_text = 0;
-				status.flags |= NEED_UPDATE;
-				memused_songchanged();
-				return 1;
 			}
 		}
 
@@ -791,7 +801,7 @@ static int note_trans_handle_key(struct key_event * k)
 		note_trans_sel_line_set(0);
 	} else if (key_pressed_or_repeated(global, nav_end)) {
 		note_trans_sel_line_set(119);
-	} else if (key_pressed_or_repeated(global, nav_accept)) {
+	} else if (key_pressed_or_repeated(instrument_note_translation, pickup_sample_number_and_default_play_note)) {
 		sample_set(ins->sample_map[note_trans_sel_line]);
 		get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 	} else if (key_pressed(instrument_list, move_instrument_up)) {
@@ -826,6 +836,8 @@ static int note_trans_handle_key(struct key_event * k)
 		case 2:        /* instrument, first digit */
 		case 3:        /* instrument, second digit */
 			if (k->sym == SDLK_SPACE) {
+				printf("B\n");
+				fflush(stdout);
 				ins->sample_map[note_trans_sel_line] =
 					sample_get_current();
 				note_trans_sel_line_set(note_trans_sel_line + 1);
@@ -1847,11 +1859,17 @@ static void instrument_list_handle_key(struct key_event * k)
 		instrument_set(current_instrument - 1);
 	} else if (key_pressed(instrument_list, move_instrument_down)) {
 		instrument_set(current_instrument + 1);
-	} else if (key_pressed(instrument_list, focus_list)) {
+	} else if (
+		key_active(instrument_list, focus_list) ||
+		(instrument_cursor_pos < 25 && key_active(global, nav_cancel))
+	) {
+		if (k->state == KEY_RELEASE)
+				return;
 		instrument_cursor_pos = 25;
 		get_page_widgets()->accept_text = 0;
 		change_focus_to(0);
 		status.flags |= NEED_UPDATE;
+		return;
 	} else {
 		if (k->mod & (KMOD_ALT)) {
 			instrument_list_handle_alt_key(k);

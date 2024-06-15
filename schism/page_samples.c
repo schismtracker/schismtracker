@@ -440,144 +440,101 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			}
 		}
 	} else {
-		switch (k->sym) {
-		case SDLK_LEFT:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+		if (key_pressed_or_repeated(global, nav_left)) {
 			set_cursor_pos(sample_list_cursor_pos - 1);
-			break;
-		case SDLK_RIGHT:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+		} else if (key_pressed_or_repeated(global, nav_right)) {
 			set_cursor_pos(sample_list_cursor_pos + 1);
-			break;
-		case SDLK_HOME:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+		} else if (key_pressed_or_repeated(global, nav_up)) {
+			sample_set(current_sample - 1);
+		} else if (key_pressed(global, nav_home)) {
 			set_cursor_pos(0);
-			break;
-		case SDLK_END:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+		} else if (key_pressed(global, nav_end)) {
 			set_cursor_pos(25);
-			break;
-		case SDLK_UP:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (k->mod & KMOD_ALT) {
-				if (current_sample > 1) {
-					int new_sample = current_sample - 1;
-					song_swap_samples(current_sample, new_sample);
-					sample_set(new_sample);
-				}
-			} else if (!NO_MODIFIER(k->mod)) {
-				return 0;
-			} else {
-				sample_set(current_sample - 1);
+		} else if (key_pressed_or_repeated(sample_list, swap_sample_with_previous)) {
+			if (current_sample > 1) {
+				int new_sample = current_sample - 1;
+				song_swap_samples(current_sample, new_sample);
+				sample_set(new_sample);
 			}
-			break;
-		case SDLK_DOWN:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (k->mod & KMOD_ALT) {
-				// restrict position to the "old" value of _last_vis_sample()
-				// (this is entirely for aesthetic reasons)
-				if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
-					_altswap_lastvis = _last_vis_sample();
-				if (current_sample < _altswap_lastvis) {
-					int new_sample = current_sample + 1;
-					song_swap_samples(current_sample, new_sample);
-					sample_set(new_sample);
-				}
-			} else if (!NO_MODIFIER(k->mod)) {
-				return 0;
-			} else {
-				sample_set(current_sample + 1);
+		} else if (key_pressed_or_repeated(sample_list, swap_sample_with_next)) {
+			// restrict position to the "old" value of _last_vis_sample()
+			// (this is entirely for aesthetic reasons)
+			// TODO: Fix this
+			if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
+				_altswap_lastvis = _last_vis_sample();
+			// TODO END
+			if (current_sample < _altswap_lastvis) {
+				int new_sample = current_sample + 1;
+				song_swap_samples(current_sample, new_sample);
+				sample_set(new_sample);
 			}
-			break;
-		case SDLK_PAGEUP:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (k->mod & KMOD_CTRL) {
-				sample_set(1);
-			} else {
-				sample_set(current_sample - 16);
-			}
-			break;
-		case SDLK_PAGEDOWN:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (k->mod & KMOD_CTRL) {
-				sample_set(_last_vis_sample());
-			} else {
-				sample_set(current_sample + 16);
-			}
-			break;
-		case SDLK_RETURN:
-			if (k->state == KEY_PRESS)
-				return 0;
+		} else if (key_pressed_or_repeated(global, nav_page_up)) {
+			sample_set(current_sample - 16);
+		} else if (key_pressed_or_repeated(global, nav_page_down)) {
+			sample_set(current_sample + 16);
+		// TODO: instrument_list won't work here.....
+		} else if (key_pressed(instrument_list, goto_first_sample)) {
+			sample_set(1);
+		} else if (key_pressed(instrument_list, goto_last_sample)) {
+			sample_set(_last_vis_sample());
+		// TODO END
+		} else if (key_released(global, nav_accept)) {
 			set_page(PAGE_LOAD_SAMPLE);
-			break;
-		case SDLK_BACKSPACE:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) {
-				if (sample_list_cursor_pos < 25) {
-					sample_list_delete_char();
-				}
-				return 1;
-			} else if (k->mod & KMOD_CTRL) {
-				/* just for compatibility with every weird thing
-				 * Impulse Tracker does ^_^ */
-				if (sample_list_cursor_pos < 25) {
-					sample_list_add_char(127);
-				}
-				return 1;
+		} else if (key_pressed(sample_list, clear_name_and_filename)) {
+			clear_sample_text();
+			return 1;
+		} else if (key_pressed(sample_list, insert_arrow_up)) {
+			/* just for compatibility with every weird thing
+			* Impulse Tracker does ^_^ */
+			if (sample_list_cursor_pos < 25) {
+				sample_list_add_char(127);
 			}
-			return 0;
-		case SDLK_DELETE:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) {
-				if (sample_list_cursor_pos < 25) {
-					sample_list_delete_next_char();
-				}
-				return 1;
-			}
-			return 0;
-		case SDLK_ESCAPE:
-			if (k->mod & KMOD_SHIFT) {
+			return 1;
+		} else {
+			switch (k->sym) {
+			case SDLK_BACKSPACE:
 				if (k->state == KEY_RELEASE)
-					return 1;
-				set_cursor_pos(25);
-				break;
-			}
-			return 0;
-		default:
-			if (k->mod & KMOD_ALT) {
-				if (k->sym == SDLK_c) {
-					clear_sample_text();
+					return 0;
+				if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) {
+					if (sample_list_cursor_pos < 25) {
+						sample_list_delete_char();
+					}
 					return 1;
 				}
-			} else if ((k->mod & KMOD_CTRL) == 0 && sample_list_cursor_pos < 25) {
+				return 0;
+			case SDLK_DELETE:
 				if (k->state == KEY_RELEASE)
+					return 0;
+				if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) {
+					if (sample_list_cursor_pos < 25) {
+						sample_list_delete_next_char();
+					}
 					return 1;
+				}
+				return 0;
+			case SDLK_ESCAPE:
+				if (k->mod & KMOD_SHIFT) {
+					if (k->state == KEY_RELEASE)
+						return 1;
+					set_cursor_pos(25);
+					break;
+				}
+				return 0;
+			default:
+				if ((k->mod & KMOD_ALT) == 0 &&
+					(k->mod & KMOD_CTRL) == 0 && sample_list_cursor_pos < 25
+				) {
+					if (k->state == KEY_RELEASE)
+						return 1;
 
-				if (k->text)
-					return sample_list_handle_text_input_on_list(k->text);
+					if (k->text)
+						return sample_list_handle_text_input_on_list(k->text);
 
-				/* ...uhhhhhh */
+					/* ...uhhhhhh */
+					return 0;
+				}
 				return 0;
 			}
-			return 0;
 		}
 	}
 
@@ -922,15 +879,14 @@ static void sample_adlibconfig_draw_const(void)
 
 static int do_adlib_handlekey(struct key_event *kk)
 {
-	if (kk->sym == SDLK_F1) {
-		if (kk->state == KEY_PRESS)
-			return 1;
+	if (key_released(global, help)) {
 		status.current_help_index = HELP_ADLIB_SAMPLE;
 		dialog_f1_hack = 1;
 		dialog_destroy_all();
 		set_page(PAGE_HELP);
 		return 1;
 	}
+
 	return 0;
 }
 
@@ -1123,42 +1079,22 @@ static int export_sample_list_handle_key(struct key_event * k)
 
 	if (k->state == KEY_RELEASE)
 		return 0;
-	switch (k->sym) {
-	case SDLK_UP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+
+	if (key_pressed_or_repeated(global, nav_up)) {
 		new_format--;
-		break;
-	case SDLK_DOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if(key_pressed_or_repeated(global, nav_down)) {
 		new_format++;
-		break;
-	case SDLK_PAGEUP:
-	case SDLK_HOME:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if(key_pressed(global, nav_home) || key_pressed(global, nav_page_up)) {
 		new_format = 0;
-		break;
-	case SDLK_PAGEDOWN:
-	case SDLK_END:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if(key_pressed(global, nav_end) || key_pressed(global, nav_page_down)) {
 		new_format = num_save_formats - 1;
-		break;
-	case SDLK_TAB:
-		if (k->mod & KMOD_SHIFT) {
-			change_focus_to(0);
-			return 1;
-		}
-		/* fall through */
-	case SDLK_LEFT:
-	case SDLK_RIGHT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if(key_pressed(global, nav_tab) || key_pressed(global, nav_left) || key_pressed(global, nav_right)) {
 		change_focus_to(0); /* should focus 0/1/2 depending on what's closest */
 		return 1;
-	default:
+	} else if(key_pressed(global, nav_backtab)) {
+		change_focus_to(0);
+		return 1;
+	} else {
 		return 0;
 	}
 
@@ -1359,11 +1295,18 @@ static int sample_list_handle_alt_key(struct key_event * k)
 		smpprompt_create("Exchange sample with:", "Sample", do_exchange_sample);
 	} else if (key_pressed(sample_list, text_to_sample)) {
 		txtsynth_dialog();
+	} else if (key_pressed(sample_list, load_adlib_sample_by_midi_patch_number)) {
+		// uguu~
+		void (*dlg)(void *) = sample_adlibpatch_dialog;
+		if (canmod) {
+			dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample.",
+						dlg, NULL, 1, NULL);
+		} else {
+			dlg(NULL);
+		}
 	} else if (key_pressed(sample_list, edit_create_adlib_sample)) {
 		// uguu~
-		void (*dlg)(void *) = (k->mod & KMOD_SHIFT)
-			? sample_adlibpatch_dialog
-			: sample_adlibconfig_dialog;
+		void (*dlg)(void *) = sample_adlibconfig_dialog;
 		if (canmod) {
 			dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample.",
 						dlg, NULL, 1, NULL);

@@ -345,17 +345,6 @@ static int orderlist_handle_char(char sym)
 	int n[3] = { 0 };
 
 	switch (sym) {
-	case '+':
-		status.flags |= SONG_NEEDS_SAVE;
-		current_song->orderlist[current_order] = ORDER_SKIP;
-		orderlist_cursor_pos = 2;
-		break;
-	case '.':
-	case '-':
-		status.flags |= SONG_NEEDS_SAVE;
-		current_song->orderlist[current_order] = ORDER_LAST;
-		orderlist_cursor_pos = 2;
-		break;
 	default:
 		if (sym >= '0' && sym <= '9')
 			c = sym - '0';
@@ -559,6 +548,14 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		song_pattern_to_sample(current_song->orderlist[current_order], 0, 0);
 	} else if(key_pressed(order_list, copy_pattern_to_sample_with_split)) {
 		song_pattern_to_sample(current_song->orderlist[current_order], 1, 0);
+	} else if(key_pressed(order_list, mark_end_of_song)) {
+		status.flags |= SONG_NEEDS_SAVE;
+		current_song->orderlist[current_order] = ORDER_LAST;
+		new_order++;
+	} else if(key_pressed(order_list, skip_to_next_order_mark)) {
+		status.flags |= SONG_NEEDS_SAVE;
+		current_song->orderlist[current_order] = ORDER_SKIP;
+		new_order++;
 	} else {
 		if (k->mouse == MOUSE_NONE) {
 			if (!(k->mod & (KMOD_CTRL | KMOD_ALT)) && k->text)

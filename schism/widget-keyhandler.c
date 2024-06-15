@@ -227,6 +227,112 @@ int widget_handle_text_input(const uint8_t* text_input) {
 	return 0;
 }
 
+static int thumbbar_panbar_handle_key(struct key_event * k)
+{
+	struct widget *widget = &ACTIVE_WIDGET;
+
+	if (widget->type != WIDGET_THUMBBAR && widget->type != WIDGET_PANBAR)
+		return 0;
+
+	if (status.flags & DISKWRITER_ACTIVE)
+		return 0;
+
+	if (widget->type == WIDGET_PANBAR) {
+		widget->d.panbar.muted = 0;
+		widget->d.panbar.surround = 0;
+	}
+
+	if (key_pressed_or_repeated(global, thumbbar_increase_value)) {
+		numentry_change_value(widget, widget->d.numentry.value + 1);
+	} else if (key_pressed_or_repeated(global, thumbbar_increase_value_2x)) {
+		numentry_change_value(widget, widget->d.numentry.value + 2);
+	} else if (key_pressed_or_repeated(global, thumbbar_increase_value_4x)) {
+		numentry_change_value(widget, widget->d.numentry.value + 4);
+	} else if (key_pressed_or_repeated(global, thumbbar_increase_value_8x)) {
+		numentry_change_value(widget, widget->d.numentry.value + 8);
+	} else if (key_pressed_or_repeated(global, thumbbar_decrease_value)) {
+		numentry_change_value(widget, widget->d.numentry.value - 1);
+	} else if (key_pressed_or_repeated(global, thumbbar_decrease_value_2x)) {
+		numentry_change_value(widget, widget->d.numentry.value - 2);
+	} else if (key_pressed_or_repeated(global, thumbbar_decrease_value_4x)) {
+		numentry_change_value(widget, widget->d.numentry.value - 4);
+	} else if (key_pressed_or_repeated(global, thumbbar_decrease_value_8x)) {
+		numentry_change_value(widget, widget->d.numentry.value - 8);
+	} else if (key_pressed_or_repeated(global, thumbbar_min_value)) {
+		numentry_change_value(widget, widget->d.thumbbar.min);
+	} else if (key_pressed_or_repeated(global, thumbbar_max_value)) {
+		numentry_change_value(widget, widget->d.thumbbar.max);
+	} else {
+		return 0;
+	}
+
+	return 1;
+}
+
+static int panbar_handle_key(struct key_event * k)
+{
+	struct widget *widget = &ACTIVE_WIDGET;
+
+	if (widget->type != WIDGET_PANBAR)
+		return 0;
+
+	if (status.flags & DISKWRITER_ACTIVE)
+		return 0;
+
+	if (key_pressed(order_list_panning, toggle_channel_mute)) {
+		widget->d.panbar.muted = !widget->d.panbar.muted;
+		change_focus_to(widget->next.down);
+		if (widget->changed) widget->changed();
+		return 1;
+	} else if (key_pressed(order_list_panning, pan_unmuted_left)) {
+		song_set_pan_scheme(PANS_LEFT);
+	} else if (key_pressed(order_list_panning, set_panning_left)) {
+		widget->d.panbar.muted = 0;
+		widget->d.panbar.surround = 0;
+		numentry_change_value(widget, 0);
+	} else if (key_pressed(order_list_panning, pan_unmuted_middle)) {
+		song_set_pan_scheme(PANS_MONO);
+	} else if (key_pressed(order_list_panning, set_panning_middle)) {
+		widget->d.panbar.muted = 0;
+		widget->d.panbar.surround = 0;
+		numentry_change_value(widget, 32);
+	} else if (key_pressed(order_list_panning, pan_unmuted_right)) {
+		song_set_pan_scheme(PANS_RIGHT);
+	} else if (key_pressed(order_list_panning, set_panning_right)) {
+		widget->d.panbar.muted = 0;
+		widget->d.panbar.surround = 0;
+		numentry_change_value(widget, 64);
+	} else if (key_pressed(order_list_panning, pan_unmuted_stereo)) {
+		song_set_pan_scheme(PANS_STEREO);
+	} else if (key_pressed(order_list_panning, set_panning_surround)) {
+		widget->d.panbar.muted = 0;
+		widget->d.panbar.surround = 1;
+		if (widget->changed) widget->changed();
+		status.flags |= NEED_UPDATE;
+	} else if (key_pressed(order_list_panning, pan_unmuted_amiga_stereo)) {
+		song_set_pan_scheme(PANS_AMIGA);
+	} else if (key_pressed(order_list_panning, linear_panning_right_to_left)) {
+		song_set_pan_scheme(PANS_SLASH);
+	} else if (key_pressed(order_list_panning, linear_panning_left_to_right)) {
+		song_set_pan_scheme(PANS_BACKSLASH);
+	} else {
+		return 0;
+	}
+
+	// This was next to previous panning code
+#if 0
+	case SDLK_x:
+		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (current_type == WIDGET_PANBAR && (k->mod & KMOD_ALT)) {
+			song_set_pan_scheme(PANS_CROSS);
+			return 1;
+		}
+		break;
+#endif
+
+	return 1;
+}
+
 /* return: 1 = handled key, 0 = didn't */
 int widget_handle_key(struct key_event * k)
 {
@@ -466,33 +572,39 @@ int widget_handle_key(struct key_event * k)
 		k->sym = SDLK_PLUS;
 	}
 
-	switch (k->sym) {
-	case SDLK_ESCAPE:
+	if (thumbbar_panbar_handle_key(k)) {
+		return 1;
+	} else if (panbar_handle_key(k)) {
+		return 1;
+	} else if (key_active(global, open_menu)) {
 		/* this is to keep the text entries from taking the key hostage and inserting '<-'
 		characters instead of showing the menu */
 		return 0;
-	case SDLK_UP:
+	} else if (key_active(global, nav_up)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (!NO_MODIFIER(k->mod))
-			return 0;
 		change_focus_to(widget->next.up);
 		return 1;
-	case SDLK_DOWN:
+	} else if (key_active(global, nav_down)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (!NO_MODIFIER(k->mod))
-			return 0;
 		change_focus_to(widget->next.down);
 		return 1;
-	case SDLK_TAB:
+	} else if (key_active(global, nav_left)) {
+		change_focus_to(widget->next.left);
+		return 1;
+	} else if (key_active(global, nav_right)) {
+		change_focus_to(widget->next.right);
+		return 1;
+	} else if (key_active(global, nav_tab)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (k->mod & KMOD_SHIFT) {
-			_backtab();
-			return 1;
-		}
-		if (!NO_MODIFIER(k->mod))
-			return 0;
 		change_focus_to(widget->next.tab);
 		return 1;
+	} else if (key_active(global, nav_backtab)) {
+		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		_backtab();
+		return 1;
+	}
+
+	switch (k->sym) {
 	case SDLK_LEFT:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		switch (current_type) {
@@ -511,28 +623,6 @@ int widget_handle_key(struct key_event * k)
 				return 0;
 			}
 			textentry_move_cursor(widget, -1);
-			return 1;
-		case WIDGET_PANBAR:
-			widget->d.panbar.muted = 0;
-			widget->d.panbar.surround = 0;
-			/* fall through */
-		case WIDGET_THUMBBAR:
-			/* I'm handling the key modifiers differently than Impulse Tracker, but only
-			because I think this is much more useful. :) */
-			n = 1;
-			if (k->mod & (KMOD_ALT | KMOD_GUI))
-				n *= 8;
-			if (k->mod & KMOD_SHIFT)
-				n *= 4;
-			if (k->mod & KMOD_CTRL)
-				n *= 2;
-			n = widget->d.numentry.value - n;
-			numentry_change_value(widget, n);
-			return 1;
-		default:
-			if (!NO_MODIFIER(k->mod))
-				return 0;
-			change_focus_to(widget->next.left);
 			return 1;
 		}
 		break;
@@ -557,26 +647,6 @@ int widget_handle_key(struct key_event * k)
 			}
 			textentry_move_cursor(widget, 1);
 			return 1;
-		case WIDGET_PANBAR:
-			widget->d.panbar.muted = 0;
-			widget->d.panbar.surround = 0;
-			/* fall through */
-		case WIDGET_THUMBBAR:
-			n = 1;
-			if (k->mod & (KMOD_ALT | KMOD_GUI))
-				n *= 8;
-			if (k->mod & KMOD_SHIFT)
-				n *= 4;
-			if (k->mod & KMOD_CTRL)
-				n *= 2;
-			n = widget->d.numentry.value + n;
-			numentry_change_value(widget, n);
-			return 1;
-		default:
-			if (!NO_MODIFIER(k->mod))
-				return 0;
-			change_focus_to(widget->next.right);
-			return 1;
 		}
 		break;
 	case SDLK_HOME:
@@ -596,14 +666,6 @@ int widget_handle_key(struct key_event * k)
 			widget->d.textentry.cursor_pos = 0;
 			status.flags |= NEED_UPDATE;
 			return 1;
-		case WIDGET_PANBAR:
-			widget->d.panbar.muted = 0;
-			widget->d.panbar.surround = 0;
-			/* fall through */
-		case WIDGET_THUMBBAR:
-			n = widget->d.thumbbar.min;
-			numentry_change_value(widget, n);
-			return 1;
 		default:
 			break;
 		}
@@ -622,14 +684,6 @@ int widget_handle_key(struct key_event * k)
 				return 0;
 			widget->d.textentry.cursor_pos = strlen(widget->d.textentry.text);
 			status.flags |= NEED_UPDATE;
-			return 1;
-		case WIDGET_PANBAR:
-			widget->d.panbar.muted = 0;
-			widget->d.panbar.surround = 0;
-			/* fall through */
-		case WIDGET_THUMBBAR:
-			n = widget->d.thumbbar.max;
-			numentry_change_value(widget, n);
 			return 1;
 		default:
 			break;
@@ -659,14 +713,6 @@ int widget_handle_key(struct key_event * k)
 				% widget->d.menutoggle.num_choices;
 			if (widget->changed) widget->changed();
 			status.flags |= NEED_UPDATE;
-			return 1;
-		case WIDGET_PANBAR:
-			if (!NO_MODIFIER(k->mod))
-				return 0;
-			widget->d.panbar.muted = !widget->d.panbar.muted;
-			changed = widget->changed;
-			change_focus_to(widget->next.down);
-			if (changed) changed();
 			return 1;
 		default:
 			break;
@@ -734,94 +780,6 @@ int widget_handle_key(struct key_event * k)
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_NUMENTRY && NO_MODIFIER(k->mod)) {
 			numentry_change_value(widget, widget->d.numentry.value - 1);
-			return 1;
-		}
-		break;
-	case SDLK_l:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type == WIDGET_PANBAR) {
-			if (k->mod & KMOD_ALT) {
-				song_set_pan_scheme(PANS_LEFT);
-				return 1;
-			} else if (NO_MODIFIER(k->mod)) {
-				widget->d.panbar.muted = 0;
-				widget->d.panbar.surround = 0;
-				numentry_change_value(widget, 0);
-				return 1;
-			}
-		}
-		break;
-	case SDLK_m:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type == WIDGET_PANBAR) {
-			if (k->mod & KMOD_ALT) {
-				song_set_pan_scheme(PANS_MONO);
-				return 1;
-			} else if (NO_MODIFIER(k->mod)) {
-				widget->d.panbar.muted = 0;
-				widget->d.panbar.surround = 0;
-				numentry_change_value(widget, 32);
-				return 1;
-			}
-		}
-		break;
-	case SDLK_r:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type == WIDGET_PANBAR) {
-			if (k->mod & KMOD_ALT) {
-				song_set_pan_scheme(PANS_RIGHT);
-				return 1;
-			} else if (NO_MODIFIER(k->mod)) {
-				widget->d.panbar.muted = 0;
-				widget->d.panbar.surround = 0;
-				numentry_change_value(widget, 64);
-				return 1;
-			}
-		}
-		break;
-	case SDLK_s:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type == WIDGET_PANBAR) {
-			if (k->mod & KMOD_ALT) {
-				song_set_pan_scheme(PANS_STEREO);
-				return 1;
-			} else if(NO_MODIFIER(k->mod)) {
-				widget->d.panbar.muted = 0;
-				widget->d.panbar.surround = 1;
-				if (widget->changed) widget->changed();
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-		}
-		break;
-	case SDLK_a:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type == WIDGET_PANBAR && (k->mod & KMOD_ALT)) {
-			song_set_pan_scheme(PANS_AMIGA);
-			return 1;
-		}
-		break;
-#if 0
-	case SDLK_x:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type == WIDGET_PANBAR && (k->mod & KMOD_ALT)) {
-			song_set_pan_scheme(PANS_CROSS);
-			return 1;
-		}
-		break;
-#endif
-	case SDLK_SLASH:
-	case SDLK_KP_DIVIDE:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type == WIDGET_PANBAR && (k->mod & KMOD_ALT)) {
-			song_set_pan_scheme(PANS_SLASH);
-			return 1;
-		}
-		break;
-	case SDLK_BACKSLASH:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type == WIDGET_PANBAR && (k->mod & KMOD_ALT)) {
-			song_set_pan_scheme(PANS_BACKSLASH);
 			return 1;
 		}
 		break;

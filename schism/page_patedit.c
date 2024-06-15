@@ -3698,7 +3698,9 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	int n;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
 
-	if(key_pressed(track_view, track_scheme_1)) {
+	if(key_pressed(track_view, track_scheme_default)) {
+		set_view_scheme(0);
+	} else if(key_pressed(track_view, track_scheme_1)) {
 		set_view_scheme(1);
 	} else if(key_pressed(track_view, track_scheme_2)) {
 		set_view_scheme(2);
@@ -3859,7 +3861,7 @@ static int pattern_editor_handle_key_default(struct key_event * k)
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
-	} else if (k->sym == SDLK_COMMA) {
+	} else if (key_active(pattern_edit, toggle_edit_mask)) {
 		if (k->state == KEY_RELEASE)
 			return 0;
 		switch (current_position) {
@@ -4210,6 +4212,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 				set_current_row(current_row + 1);
 			} while (!seek_done() && current_row != total_rows);
 		}
+	} else if (key_pressed_or_repeated(pattern_edit, set_pattern_length)) {
+		pattern_editor_length_edit();
 	} else {
 		return 0;
 	}

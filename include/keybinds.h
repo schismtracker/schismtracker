@@ -129,7 +129,6 @@ typedef struct keybind_list
         keybind_bind skip_to_next_order_mark;
         keybind_bind insert_pattern;
         keybind_bind delete_pattern;
-        keybind_bind play_this_order_next;
 
         // Is duplicate
         // keybind_bind toggle_order_list_locked;
@@ -148,6 +147,7 @@ typedef struct keybind_list
 
     keybind_section_info order_list_panning_info;
     struct keybinds_order_list_panning {
+        keybind_bind toggle_channel_mute;
         keybind_bind set_panning_left;
         keybind_bind set_panning_middle;
         keybind_bind set_panning_right;
@@ -198,10 +198,11 @@ typedef struct keybind_list
         keybind_bind next_page;
         keybind_bind previous_page;
 
-        keybind_bind load_instrument;
+        keybind_bind goto_first_sample;
+        keybind_bind goto_last_sample;
+
+        // keybind_bind load_instrument;
         keybind_bind focus_list;
-        keybind_bind nav_first;
-        keybind_bind nav_last;
         keybind_bind move_instrument_up;
         keybind_bind move_instrument_down;
         keybind_bind clear_name_and_filename;
@@ -216,7 +217,9 @@ typedef struct keybind_list
         keybind_bind copy;
         keybind_bind replace_in_song;
         keybind_bind swap;
-        keybind_bind update_pattern_data;
+
+        // Can't find this and can't figure out in previous version
+        // keybind_bind update_pattern_data;
         keybind_bind exchange;
 
         keybind_bind insert_slot;
@@ -276,8 +279,8 @@ typedef struct keybind_list
 
     keybind_section_info sample_list_info;
     struct keybinds_sample_list {
-        keybind_bind load_new_sample;
-        keybind_bind move_between_options;
+        // keybind_bind load_new_sample;
+        // keybind_bind move_between_options;
         keybind_bind move_up;
         keybind_bind move_down;
         keybind_bind focus_sample_list;
@@ -323,6 +326,8 @@ typedef struct keybind_list
 
         keybind_bind increase_c5_frequency_1_semitone;
         keybind_bind decrease_c5_frequency_1_semitone;
+
+        keybind_bind insert_arrow_up;
     } sample_list;
 
     /* *** PATTERN EDIT *** */
@@ -341,8 +346,9 @@ typedef struct keybind_list
         keybind_bind get_default_value;
         keybind_bind decrease_instrument;
         keybind_bind increase_instrument;
-        keybind_bind decrease_octave;
-        keybind_bind increase_octave;
+        // These are listed on pattern edit help but are actually global
+        // keybind_bind decrease_octave;
+        // keybind_bind increase_octave;
         keybind_bind toggle_edit_mask;
 
         keybind_bind insert_row;
@@ -400,7 +406,9 @@ typedef struct keybind_list
         keybind_bind cycle_view;
         keybind_bind clear_track_views;
         keybind_bind toggle_track_view_divisions;
-        keybind_bind deselect_track;
+        // I can't find this in the code and can't get it to work in previous version
+        // keybind_bind deselect_track;
+        keybind_bind track_scheme_default;
         keybind_bind track_scheme_1;
         keybind_bind track_scheme_2;
         keybind_bind track_scheme_3;
@@ -417,7 +425,8 @@ typedef struct keybind_list
         keybind_bind quick_view_scheme_5;
         keybind_bind quick_view_scheme_6;
 
-        keybind_bind toggle_cursor_tracking;
+        // Can't find this and can't figure out in previous version
+        // keybind_bind toggle_cursor_tracking;
     } track_view;
 
     keybind_section_info block_functions_info;
@@ -484,9 +493,6 @@ typedef struct keybind_list
 
         keybind_bind toggle_current_channel;
         keybind_bind solo_current_channel;
-
-        keybind_bind toggle_playback_tracing;
-        keybind_bind toggle_midi_input;
     } playback_functions;
 
     /* *** FILE LIST *** */
@@ -504,7 +510,6 @@ typedef struct keybind_list
         keybind_bind midi;
         keybind_bind system_configure;
         keybind_bind pattern_edit;
-        keybind_bind pattern_edit_length;
         keybind_bind sample_list;
         keybind_bind sample_library;
         keybind_bind instrument_list;
@@ -517,6 +522,10 @@ typedef struct keybind_list
         keybind_bind play_song_from_mark;
         keybind_bind toggle_playback;
         keybind_bind stop_playback;
+
+        keybind_bind toggle_playback_tracing;
+        keybind_bind toggle_midi_input;
+
         keybind_bind load_module;
         keybind_bind message_editor;
         keybind_bind save_module;
@@ -558,7 +567,12 @@ typedef struct keybind_list
         keybind_bind quit_no_confirm;
         keybind_bind save;
 
+        keybind_bind previous_order;
+        keybind_bind next_order;
+
         keybind_bind fullscreen;
+
+        keybind_bind open_menu;
 
         keybind_bind nav_left;
         keybind_bind nav_right;
@@ -573,8 +587,16 @@ typedef struct keybind_list
         keybind_bind nav_tab;
         keybind_bind nav_backtab;
 
+        keybind_bind thumbbar_min_value;
+        keybind_bind thumbbar_max_value;
         keybind_bind thumbbar_increase_value;
+        keybind_bind thumbbar_increase_value_2x;
+        keybind_bind thumbbar_increase_value_4x;
+        keybind_bind thumbbar_increase_value_8x;
         keybind_bind thumbbar_decrease_value;
+        keybind_bind thumbbar_decrease_value_2x;
+        keybind_bind thumbbar_decrease_value_4x;
+        keybind_bind thumbbar_decrease_value_8x;
     } global;
 
     keybind_section_info dialog_info;

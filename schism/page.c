@@ -536,10 +536,6 @@ static int handle_key_global(struct key_event * k)
 		} else {
 			set_page(PAGE_PATTERN_EDITOR);
 		}
-	} else if (key_pressed(global, pattern_edit_length)) {
-		if (status.current_page == PAGE_PATTERN_EDITOR) {
-			pattern_editor_length_edit();
-		}
 	} else if (key_pressed(global, sample_list)) {
 		set_page(PAGE_SAMPLE_LIST);
 	} else if (key_pressed(global, sample_library)) {
@@ -605,40 +601,26 @@ static int handle_key_global(struct key_event * k)
 		set_page(PAGE_FONT_EDIT);
 	} else if (key_pressed(global, waterfall)) {
 		set_page(PAGE_WATERFALL);
+	} else if (key_pressed(global, toggle_playback_tracing)) {
+		if (status.dialog_type != DIALOG_NONE)
+			return 0;
+		_mp_finish(NULL);
+		midi_playback_tracing = (playback_tracing = !playback_tracing);
+		status_text_flash("Playback tracing %s",
+				(playback_tracing ? "enabled" : "disabled"));
+		return 1;
+	} else if (key_pressed(global, toggle_midi_input)) {
+		if (status.dialog_type != DIALOG_NONE)
+			return 0;
+		_mp_finish(NULL);
+		midi_flags ^= (MIDI_DISABLE_RECORD);
+		status_text_flash("MIDI Input %s",
+			(midi_flags & MIDI_DISABLE_RECORD)
+			? "Disabled" : "Enabled");
+		return 1;
 	} else {
-		switch (k->sym) {
-		/* hack alert */
-		case SDLK_f:
-			if (!(k->mod & KMOD_CTRL))
-				return 0;
-			/* fall through */
-		case SDLK_SCROLLLOCK:
-			if (status.dialog_type != DIALOG_NONE)
-				return 0;
-			_mp_finish(NULL);
-			if (k->mod & KMOD_ALT) {
-				if (k->state == KEY_PRESS) {
-					midi_flags ^= (MIDI_DISABLE_RECORD);
-					status_text_flash("MIDI Input %s",
-						(midi_flags & MIDI_DISABLE_RECORD)
-						? "Disabled" : "Enabled");
-				}
-				return 1;
-			} else {
-				/* os x steals plain scroll lock for brightness,
-				* so catch ctrl+scroll lock here as well */
-				if (k->state == KEY_PRESS) {
-					midi_playback_tracing = (playback_tracing = !playback_tracing);
-					status_text_flash("Playback tracing %s",
-							(playback_tracing ? "enabled" : "disabled"));
-				}
-				return 1;
-			}
-		default:
-			if (status.dialog_type != DIALOG_NONE)
-				return 0;
-			break;
-		}
+		if (status.dialog_type != DIALOG_NONE)
+			return 0;
 	}
 
 	if(key_pressed(global, toggle_channel_1)) {
@@ -841,38 +823,75 @@ void handle_key(struct key_event *k)
 	if (!(status.flags & DISKWRITER_ACTIVE) && menu_handle_key(k)) return;
 	if (widget_handle_key(k)) return;
 
-	/* now check a couple other keys. */
-	switch (k->sym) {
-	case SDLK_LEFT:
-		if (k->state == KEY_RELEASE) return;
+	if (key_pressed_or_repeated(global, decrease_playback_speed)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
-		if ((k->mod & KMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
-			_mp_finish(NULL);
-			if (song_get_mode() == MODE_PLAYING)
-				song_set_current_order(song_get_current_order() - 1);
-			return;
+		song_set_current_speed(song_get_current_speed() - 1);
+		status_text_flash("Speed set to %d frames per row", song_get_current_speed());
+		if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
+			song_set_initial_speed(song_get_current_speed());
 		}
-		break;
-	case SDLK_RIGHT:
-		if (k->state == KEY_RELEASE) return;
+		return;
+	} else if (key_pressed_or_repeated(global, increase_playback_speed)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
-		if ((k->mod & KMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
-			_mp_finish(NULL);
-			if (song_get_mode() == MODE_PLAYING)
-				song_set_current_order(song_get_current_order() + 1);
-			return;
+		song_set_current_speed(song_get_current_speed() + 1);
+		status_text_flash("Speed set to %d frames per row", song_get_current_speed());
+		if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
+			song_set_initial_speed(song_get_current_speed());
 		}
-		break;
-	case SDLK_ESCAPE:
+		return;
+	} else if (key_pressed_or_repeated(global, decrease_playback_tempo) && !(status.flags & CLASSIC_MODE)) {
+		if (status.flags & DISKWRITER_ACTIVE) return;
+		song_set_current_tempo(song_get_current_tempo() - 1);
+		status_text_flash("Tempo set to %d frames per row", song_get_current_tempo());
+		if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
+			song_set_initial_tempo(song_get_current_tempo());
+		}
+		return;
+	} else if (key_pressed_or_repeated(global, increase_playback_tempo) && !(status.flags & CLASSIC_MODE)) {
+		if (status.flags & DISKWRITER_ACTIVE) return;
+		song_set_current_tempo(song_get_current_tempo() + 1);
+		status_text_flash("Tempo set to %d frames per row", song_get_current_tempo());
+		if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
+			song_set_initial_tempo(song_get_current_tempo());
+		}
+		return;
+	} else if (key_pressed_or_repeated(global, decrease_global_volume)) {
+		if (status.flags & DISKWRITER_ACTIVE) return;
+		song_set_current_global_volume(song_get_current_global_volume() - 1);
+		status_text_flash("Global volume set to %d", song_get_current_global_volume());
+		if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
+			song_set_initial_global_volume(song_get_current_global_volume());
+		}
+		return;
+	} else if (key_pressed_or_repeated(global, increase_global_volume)) {
+		if (status.flags & DISKWRITER_ACTIVE) return;
+		song_set_current_global_volume(song_get_current_global_volume() + 1);
+		status_text_flash("Global volume set to %d", song_get_current_global_volume());
+		if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
+			song_set_initial_global_volume(song_get_current_global_volume());
+		}
+		return;
+	} else if(key_pressed_or_repeated(global, previous_order)) {
+		if (status.flags & DISKWRITER_ACTIVE) return;
+		_mp_finish(NULL);
+		if (song_get_mode() == MODE_PLAYING)
+			song_set_current_order(song_get_current_order() - 1);
+		return;
+	} else if(key_pressed_or_repeated(global, next_order)) {
+		if (status.flags & DISKWRITER_ACTIVE) return;
+		_mp_finish(NULL);
+		if (song_get_mode() == MODE_PLAYING)
+			song_set_current_order(song_get_current_order() + 1);
+		return;
+	} else if(key_pressed(global, open_menu)) {
 		/* TODO | Page key handlers should return true/false depending on if the key was handled
 		   TODO | (same as with other handlers), and the escape key check should go *after* the
 		   TODO | page gets a chance to grab it. This way, the load sample page can switch back
 		   TODO | to the sample list on escape like it's supposed to. (The status.current_page
 		   TODO | checks above won't be necessary, either.) */
-		if (NO_MODIFIER(k->mod) && status.dialog_type == DIALOG_NONE
+		if (status.dialog_type == DIALOG_NONE
 		    && status.current_page != PAGE_LOAD_SAMPLE
 		    && status.current_page != PAGE_LOAD_INSTRUMENT) {
-			if (k->state == KEY_RELEASE) return;
 			if (_mp_active) {
 				_mp_finish(NULL);
 				return;
@@ -880,70 +899,14 @@ void handle_key(struct key_event *k)
 			menu_show();
 			return;
 		}
-		break;
-	case SDLK_SLASH:
-		if (k->state == KEY_RELEASE) return;
+	// TODO: Remove pattern edit octave keys
+	} else if(key_pressed_or_repeated(global, octave_decrease)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
-		if (k->orig_sym == SDLK_KP_DIVIDE) {
-			kbd_set_current_octave(kbd_get_current_octave() - 1);
-		}
-		return;
-	case SDLK_ASTERISK:
-		if (k->state == KEY_RELEASE) return;
+		kbd_set_current_octave(kbd_get_current_octave() - 1);
+	} else if(key_pressed_or_repeated(global, octave_increase)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
-		if (k->orig_sym == SDLK_KP_MULTIPLY) {
-			kbd_set_current_octave(kbd_get_current_octave() + 1);
-		}
-		return;
-	case SDLK_LEFTBRACKET:
-		if (k->state == KEY_RELEASE) break;
-		if (status.flags & DISKWRITER_ACTIVE) return;
-		if (k->mod & KMOD_SHIFT) {
-			song_set_current_speed(song_get_current_speed() - 1);
-			status_text_flash("Speed set to %d frames per row", song_get_current_speed());
-			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
-				song_set_initial_speed(song_get_current_speed());
-			}
-		} else if ((k->mod & KMOD_CTRL) && !(status.flags & CLASSIC_MODE)) {
-			song_set_current_tempo(song_get_current_tempo() - 1);
-			status_text_flash("Tempo set to %d frames per row", song_get_current_tempo());
-			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
-				song_set_initial_tempo(song_get_current_tempo());
-			}
-		} else if (NO_MODIFIER(k->mod)) {
-			song_set_current_global_volume(song_get_current_global_volume() - 1);
-			status_text_flash("Global volume set to %d", song_get_current_global_volume());
-			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
-				song_set_initial_global_volume(song_get_current_global_volume());
-			}
-		}
-		return;
-	case SDLK_RIGHTBRACKET:
-		if (k->state == KEY_RELEASE) break;
-		if (status.flags & DISKWRITER_ACTIVE) return;
-		if (k->mod & KMOD_SHIFT) {
-			song_set_current_speed(song_get_current_speed() + 1);
-			status_text_flash("Speed set to %d frames per row", song_get_current_speed());
-			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
-				song_set_initial_speed(song_get_current_speed());
-			}
-		} else if ((k->mod & KMOD_CTRL) && !(status.flags & CLASSIC_MODE)) {
-			song_set_current_tempo(song_get_current_tempo() + 1);
-			status_text_flash("Tempo set to %d frames per row", song_get_current_tempo());
-			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
-				song_set_initial_tempo(song_get_current_tempo());
-			}
-		} else if (NO_MODIFIER(k->mod)) {
-			song_set_current_global_volume(song_get_current_global_volume() + 1);
-			status_text_flash("Global volume set to %d", song_get_current_global_volume());
-			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
-				song_set_initial_global_volume(song_get_current_global_volume());
-			}
-		}
-		return;
-
-	default:
-		break;
+		kbd_set_current_octave(kbd_get_current_octave() + 1);
+	// TODO END
 	}
 
 	/* and if we STILL didn't handle the key, pass it to the page.
