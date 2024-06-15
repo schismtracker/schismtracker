@@ -3,6 +3,8 @@
 #include "keybinds.h"
 #include "page.h"
 
+#define DESCRIPTION_SPACER "                  "
+
 #define init_section_macro(SECTION, TITLE, PAGE) \
     init_section(&global_keybinds_list.SECTION##_info, #SECTION, TITLE, PAGE); \
     current_section_name = #SECTION; \
@@ -354,7 +356,8 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(pattern_edit, move_next, "Move to next note/instrument/volume/effect\n ", "Shift+US_F");
 
     init_bind_macro(pattern_edit, toggle_multichannel,
-        "Toggle Multichannel mode for current channel\nPress 2x: Multichannel selection menu\n ", "Alt+US_N");
+        "Toggle Multichannel mode for current channel\n" DESCRIPTION_SPACER
+        "2x: Multichannel selection menu\n ", "Alt+US_N");
 
     init_bind_macro(pattern_edit, store_pattern_data, "Store pattern data", "Alt+US_ENTER");
     init_bind_macro(pattern_edit, revert_pattern_data, "Revert pattern data (*)", "Alt+US_BACKSPACE");
@@ -418,13 +421,15 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(block_functions, set_volume_or_panning, "Set volume/panning (*)", "Alt+US_V");
     init_bind_macro(block_functions, wipe_volume_or_panning, "Wipe vol/pan not associated with a note/instrument (*)", "Alt+US_W");
     init_bind_macro(block_functions, slide_volume_or_panning,
-        "Slide volume/panning column (*)\nPress 2x: Wipe all volume/panning controls (*)", "Alt+US_K");
+        "Slide volume/panning column (*)\n" DESCRIPTION_SPACER
+        "2x: Wipe all volume/panning controls (*)", "Alt+US_K");
     // init_bind_macro(block_functions, wipe_all_volume_or_panning, "Wipe all volume/panning controls (*)", "");
     init_bind_macro(block_functions, volume_amplifier, "Volume amplifier (*) / Fast volume attenuate (*)", "Alt+US_J");
     init_bind_macro(block_functions, cut_block, "Cut block (*)", "Alt+US_Z");
     init_bind_macro(block_functions, swap_block, "Swap block (*)", "Alt+US_Y");
     init_bind_macro(block_functions, slide_effect_value,
-        "Slide effect value (*)\nPress 2x: Wipe all effect data (*)\n ", "Alt+US_X");
+        "Slide effect value (*)\n" DESCRIPTION_SPACER
+        "2x: Wipe all effect data (*)\n ", "Alt+US_X");
     // init_bind_macro(block_functions, wipe_all_effect_data, "", "");
 
     init_bind_macro(block_functions, roll_block_down, "Roll block down", "Ctrl+US_INSERT");
@@ -434,10 +439,12 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(block_functions, copy_block_with_mute, "Copy block to clipboard honoring current mute-settings", "Shift+US_L");
     init_bind_macro(block_functions, paste_data, "Paste data from clipboard (*)", "Alt+US_P");
     init_bind_macro(block_functions, paste_and_overwrite,
-        "Overwrite with data from clipboard (*)\nPress 2x:Grow pattern to clipboard length", "Alt+US_O");
+        "Overwrite with data from clipboard (*)\n" DESCRIPTION_SPACER
+        "2x:Grow pattern to clipboard length", "Alt+US_O");
     // init_bind_macro(block_functions, grow_pattern_from_clipboard_length, "", "");
     init_bind_macro(block_functions, paste_and_mix,
-        "Mix each row from clipboard with pattern data (*)\nPress 2x: Mix each field from clipboard with pattern data\n ", "Alt+US_M");
+        "Mix each row from clipboard with pattern data (*)\n" DESCRIPTION_SPACER
+        "2x: Mix each field from clipboard with pattern data\n ", "Alt+US_M");
     // init_bind_macro(block_functions, paste_and_mix_field, "", "");
 
     init_bind_macro(block_functions, double_block_length, "Double block length (*)", "Alt+US_F");
@@ -504,7 +511,9 @@ static void init_global_keybinds(cfg_file_t* cfg)
     init_bind_macro(global, message_editor, "Message Editor", "Shift+US_F9");
     init_bind_macro(global, save_module, "Save Module", "US_F10,Ctrl+W");
     init_bind_macro(global, export_module, "Export Module (to WAV, AIFF)", "Shift+US_F10");
-    init_bind_macro(global, order_list, "Order List and Panning / Channel Volume", "US_F11");
+    init_bind_macro(global, order_list,
+        "Order List and Panning\n" DESCRIPTION_SPACER
+        "2x: Order list and channel volume", "US_F11");
     init_bind_macro(global, schism_logging, "Schism Logging", "Ctrl+US_F11");
     init_bind_macro(global, order_list_lock, "Lock/unlock order list", "Alt+US_F11");
     init_bind_macro(global, song_variables, "Song Variables & Directory Configuration", "US_F12");
