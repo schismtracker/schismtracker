@@ -177,7 +177,9 @@ static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decode
 	if (frame->header.number.sample_number == 0) {
 		/* allocate our buffer */
 		flac_file->uncompressed.len = (size_t)(flac_file->streaminfo.total_samples * flac_file->streaminfo.channels * flac_file->streaminfo.bits_per_sample/8);
-		flac_file->uncompressed.data = (uint8_t*)mem_alloc(flac_file->uncompressed.len * ((flac_file->streaminfo.bits_per_sample == 8) ? sizeof(int8_t) : sizeof(int16_t)));
+		flac_file->uncompressed.data = (uint8_t*)malloc(flac_file->uncompressed.len * ((flac_file->streaminfo.bits_per_sample == 8) ? sizeof(int8_t) : sizeof(int16_t)));
+		if (!flac_file->uncompressed.data)
+			return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 
 		flac_file->uncompressed.samples_decoded = 0;
 	}
