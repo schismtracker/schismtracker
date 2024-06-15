@@ -387,8 +387,8 @@ enum page_numbers {
 
 	PAGE_WATERFALL,
 
-	PAGE_MAX,
-	PAGE_ANY
+	PAGE_ANY,
+	PAGE_MAX
 };
 
 /* --------------------------------------------------------------------- */

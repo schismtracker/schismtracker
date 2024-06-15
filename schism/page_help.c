@@ -84,7 +84,8 @@ static int top_line = 0;
 static const char blank_line[] = {LTYPE_NORMAL, '\0'};
 static const char separator_line[] = {LTYPE_SEPARATOR, '\0'};
 
-static int help_text_lastpos[HELP_NUM_ITEMS] = {0};
+static int help_text_current_page = PAGE_ANY;
+static int help_text_lastpos[PAGE_MAX] = {0};
 
 /* This isn't defined in an .h file since it's only used here. */
 extern const char *help_text[];
@@ -185,7 +186,7 @@ static int help_handle_key(struct key_event * k)
 	new_line = CLAMP(new_line, 0, num_lines - 32);
 	if (new_line != top_line) {
 		top_line = new_line;
-		help_text_lastpos[status.current_help_index] = top_line;
+		help_text_lastpos[help_text_current_page] = top_line;
 		status.flags |= NEED_UPDATE;
 	}
 
@@ -196,18 +197,20 @@ static int help_handle_key(struct key_event * k)
 
 static void help_set_page(void)
 {
+	int new_page = status.previous_page;
+
+	if (new_page == help_text_current_page) {
+		return;
+	}
+
+	help_text_current_page = new_page;
+
 	const char *ptr;
 	int local_lines = 0, global_lines = 0, cur_line = 0;
 	int have_local_help = (status.current_help_index != HELP_GLOBAL);
 
 	change_focus_to(1);
-	top_line = help_text_lastpos[status.current_help_index];
-
-	lines = CURRENT_HELP_LINECACHE;
-	if (lines) {
-		num_lines = CURRENT_HELP_LINECOUNT;
-		return;
-	}
+	top_line = help_text_lastpos[help_text_current_page];
 
 	/* how many lines? */
 	global_lines = get_num_lines(help_text[HELP_GLOBAL]);
@@ -225,7 +228,6 @@ static void help_set_page(void)
 
 	/* allocate the array */
 	lines = CURRENT_HELP_LINECACHE = mem_calloc(num_lines + 1, sizeof(char *));
-
 
 	/* page help text */
 	if (have_local_help) {
