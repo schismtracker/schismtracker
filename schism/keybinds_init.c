@@ -109,7 +109,7 @@ static void init_order_list_keybinds(cfg_file_t* cfg)
 
     init_bind_macro(order_list, link_pattern_to_sample, "Link (diskwriter) this pattern to the current sample", "Ctrl+US_B");
     init_bind_macro(order_list, copy_pattern_to_sample, "Copy (diskwriter) this pattern to the current sample", "Ctrl+US_O");
-    init_bind_macro(order_list, copy_pattern_to_sample_with_split, "Copy (diskwriter) to the current sample, with split(?)\n ", "Ctrl+Shift+US_O");
+    init_bind_macro(order_list, copy_pattern_to_sample_with_split, "Copy (diskwriter) to the current sample, with split\n ", "Ctrl+Shift+US_O");
 
     init_bind_macro(order_list, continue_next_position_of_pattern, "Continue to next position of current pattern\n ", "US_C");
 
@@ -260,7 +260,7 @@ static void init_sample_list_keybinds(cfg_file_t* cfg)
 
     init_bind_macro(sample_list, convert_signed_unsigned, "Convert signed to/from unsigned samples", "Alt+US_A");
     init_bind_macro(sample_list, pre_loop_cut, "Pre-loop cut sample", "Alt+US_B");
-    init_bind_macro(sample_list, clear_name_and_filename, "Clear sample name & filename (used in sample name window)", "Alt+US_C");
+    init_bind_macro(sample_list, clear_name_and_filename, "Clear sample name & filename (only in sample list)", "Alt+US_C");
     init_bind_macro(sample_list, delete_sample, "Delete sample", "Alt+US_D");
     init_bind_macro(sample_list, downmix_to_mono, "Downmix stero sample to mono", "Alt+Shift+US_D");
     init_bind_macro(sample_list, resize_sample_with_interpolation, "Resize sample (with interpolation)", "Alt+US_E");
