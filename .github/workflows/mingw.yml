@@ -12,10 +12,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { sys: mingw32, target: i686 }
-          - { sys: mingw32, target: x86_64 }
-          - { sys: mingw32, target: armv7 }
-          - { sys: mingw32, target: aarch64 }
+          - { sys: mingw32, target: i686, stdlib: msvcrt }
+          - { sys: mingw32, target: x86_64, stdlib: msvcrt }
+          - { sys: mingw32, target: armv7, stdlib: msvcrt }
+          - { sys: mingw32, target: aarch64, stdlib: ucrt }
     name: ${{ matrix.sys }}-${{ matrix.target }}
     env:
       LLVM_MINGW_VERSION: 20240518
@@ -24,6 +24,7 @@ jobs:
       LIBOGG_VERSION: 1.3.5
       TARGET: ${{ matrix.target }}
       SYS: ${{ matrix.sys }}
+      STDLIB: ${{ matrix.stdlib }}
     steps:
       - name: 'Checkout'
         uses: actions/checkout@v4
@@ -36,8 +37,8 @@ jobs:
 
       - name: 'Grab llvm-mingw'
         run: |
-          curl -L "https://github.com/mstorsjo/llvm-mingw/releases/download/$LLVM_MINGW_VERSION/llvm-mingw-$LLVM_MINGW_VERSION-msvcrt-ubuntu-20.04-x86_64.tar.xz" | tar xJvf - -C "$HOME"
-          mv "$HOME/llvm-mingw-$LLVM_MINGW_VERSION-msvcrt-ubuntu-20.04-x86_64" "$HOME/llvm-mingw"
+          curl -L "https://github.com/mstorsjo/llvm-mingw/releases/download/$LLVM_MINGW_VERSION/llvm-mingw-$LLVM_MINGW_VERSION-$STDLIB-ubuntu-20.04-x86_64.tar.xz" | tar xJvf - -C "$HOME"
+          mv "$HOME/llvm-mingw-$LLVM_MINGW_VERSION-$STDLIB-ubuntu-20.04-x86_64" "$HOME/llvm-mingw"
         
       - name: 'Grab SDL2'
         run: |
@@ -51,7 +52,6 @@ jobs:
           ./configure --host="$TARGET-w64-$SYS" --prefix="$HOME/$TARGET"
           make
           make install
-          rm -rf arm64 x64
           cd ..
 
       - name: 'Download libflac and libogg sources'
@@ -91,7 +91,7 @@ jobs:
           autoreconf -I"$HOME/$TARGET/share/aclocal" -i
           mkdir build
           cd build
-          ../configure --host="$TARGET-w64-$SYS" --prefix="$HOME/$TARGET" --with-sdl-prefix="$HOME/$TARGET" --with-flac
+          ../configure --host="$TARGET-w64-$SYS" --prefix="$HOME/$TARGET" --with-sdl-prefix="$HOME/$TARGET" --with-flac LDFLAGS="-Wl,--major-os-version=5,--major-subsystem-version=5"
           make
           "$TARGET-w64-$SYS-strip" -g schismtracker.exe
           cp schismtracker.exe ../..
