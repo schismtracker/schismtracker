@@ -9,7 +9,6 @@
 
 typedef struct keybind_shortcut
 {
-    SDL_Keycode keycode;
     SDL_Scancode scancode;
     const char* character;
     SDL_Keymod modifier;

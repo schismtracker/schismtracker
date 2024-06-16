@@ -66,10 +66,6 @@ static void update_bind(keybind_bind* bind, SDL_KeyCode kcode, SDL_Scancode scod
                 continue;
             }
             mods_correct = check_mods(sc->modifier, mods, 1);
-        } else if(sc->keycode != SDLK_UNKNOWN) {
-            if(sc->keycode != kcode)
-                continue;
-            mods_correct = 1;
         } else if(sc->scancode != SDL_SCANCODE_UNKNOWN) {
             if(sc->scancode != scode)
                 continue;
@@ -253,7 +249,6 @@ void keybinds_add_bind_shortcut(keybind_bind* bind, SDL_Keycode keycode, SDL_Sca
     }
 
     int i = bind->shortcuts_count;
-    bind->shortcuts[i].keycode = keycode;
     bind->shortcuts[i].scancode = scancode;
     bind->shortcuts[i].modifier = modifier;
     bind->shortcuts[i].character = character;
@@ -366,7 +361,6 @@ static void init_bind(keybind_bind* bind, keybind_section_info* section_info, co
     bind->shortcuts = malloc(sizeof(keybind_shortcut) * 3);
 
     for(int i = 0; i < 3; i++) {
-        bind->shortcuts[i].keycode = SDLK_UNKNOWN;
         bind->shortcuts[i].scancode = SDL_SCANCODE_UNKNOWN;
         bind->shortcuts[i].modifier = KMOD_NONE;
     }
