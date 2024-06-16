@@ -311,7 +311,6 @@ static void set_shortcut_text(keybind_bind* bind)
 
         int length = strlen(ctrl_text) + strlen(alt_text) + strlen(shift_text) + key_text_length;
         char* strings[4] = { (char*)ctrl_text, (char*)alt_text, (char*)shift_text, (char*)key_text };
-        // char* next_out = str_concat(ctrl_text, alt_text, shift_text, key_text, NULL);
         char* next_out = str_concat_array(4, strings, 0);
 
         out[i] = next_out;
@@ -325,10 +324,27 @@ static void set_shortcut_text(keybind_bind* bind)
         free(key_text);
     }
 
-    char* shortcut_text = str_concat_with_delim(MAX_SHORTCUTS, out, ", ", 1);
+    char* shortcut_text = str_concat_with_delim(MAX_SHORTCUTS, out, ", ", 0);
     bind->shortcut_text = shortcut_text;
     if(shortcut_text[0])
         bind->shortcut_text_parens = str_concat_three(" (", shortcut_text, ")", 0);
+
+    for (int i = 0; i < MAX_SHORTCUTS; i++) {
+        char* text = out[i];
+
+        if(text && text[0]) {
+            char* padded = str_pad_between(text, "", ' ', 18, 1, 0);
+            out[i] = str_concat_two("    ", padded, 0);
+            free(padded);
+        }
+
+        if (text)
+            free(text);
+    }
+
+    char* help_shortcuts = str_concat_with_delim(MAX_SHORTCUTS, out, "\n", 1);
+    bind->help_text = str_concat_three(help_shortcuts, (char*)bind->description, "\n", 0);
+    free(help_shortcuts);
 }
 
 static void init_bind(keybind_bind* bind, keybind_section_info* section_info, const char* name, const char* description, const char* shortcut)
@@ -419,6 +435,10 @@ char* keybinds_get_help_text(enum page_numbers page)
         char* strings[2] = { (char*)bind->description, (char*)bind->shortcut_text };
 
         if (current_title != bind_title) {
+            if (current_title != NULL && bind->section_info == &global_keybinds_list.global_info) {
+                out = str_concat_two(out, "\n \n%\n", 0);
+            }
+
             char* prev_out = out;
             if(current_title)
                 out = str_concat_four(out, "\n \n  ", (char*)bind_title, "\n", 0);
@@ -428,10 +448,8 @@ char* keybinds_get_help_text(enum page_numbers page)
             free(prev_out);
         }
 
-        char* shortcut = str_pad_between((char*)bind->shortcut_text, "", ' ', 18, 1, 0);
         char* prev_out = out;
-        out = str_concat_five(out, "    ", shortcut, (char*)bind->description, "\n", 0);
-        free(shortcut);
+        out = str_concat_three(out, (char*)bind->help_text, "\n", 0);
         free(prev_out);
     }
 

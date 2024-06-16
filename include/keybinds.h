@@ -37,7 +37,8 @@ typedef struct keybind_bind
     const char* shortcut_text; // Contains all shortcuts with commas in-between, for example "F10, Ctrl-W"
     const char* first_shortcut_text; // Contains only the first shortcut, for example "F10"
     const char* shortcut_text_parens; // shortcut_text but with parenthesis around it. No parenthesis if there is no shortcut
-    const char* first_shortcut_text_parens;
+    const char* first_shortcut_text_parens; // Only first shortcut, with parenthesis around
+    const char* help_text; // Text formatted for showing on help page
     int pressed;
     int released;
     int repeated;
