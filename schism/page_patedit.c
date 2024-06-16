@@ -3394,7 +3394,7 @@ static int pattern_editor_insert(struct key_event *k)
 			status.flags |= SONG_NEEDS_SAVE;
 			break;
 		}
-		if (k->scancode == SDL_SCANCODE_GRAVE) {
+		if (key_active(pattern_edit, toggle_volume_panning)) {
 			panning_mode = !panning_mode;
 			status_text_flash("%s control set", (panning_mode ? "Panning" : "Volume"));
 			return 0;

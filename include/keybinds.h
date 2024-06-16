@@ -340,6 +340,11 @@ typedef struct keybind_list
         keybind_bind previous_4_pattern;
         keybind_bind next_order_pattern;
         keybind_bind previous_order_pattern;
+        keybind_bind clear_field;
+        keybind_bind note_cut;
+        keybind_bind note_off;
+        keybind_bind toggle_volume_panning;
+        keybind_bind note_fade;
         keybind_bind use_last_value;
         // keybind_bind preview_note;
 

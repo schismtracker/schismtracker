@@ -310,9 +310,21 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(pattern_edit, next_4_pattern, "Next 4 pattern (*)", "Shift+US_KP_PLUS");
     init_bind_macro(pattern_edit, previous_4_pattern, "Previous 4 pattern (*)", "Shift+US_KP_MINUS");
     init_bind_macro(pattern_edit, next_order_pattern, "Next order's pattern (*)", "Ctrl+US_KP_PLUS");
-    init_bind_macro(pattern_edit, previous_order_pattern, "Previous order's pattern (*)", "Ctrl+US_KP_MINUS");
-    init_bind_macro(pattern_edit, use_last_value, "Use last note/instrument/volume/effect/effect value\n ", "US_SPACE");
-    // init_bind_macro(pattern_edit, preview_note, "Preview note", "US_CAPSLOCK");
+    init_bind_macro(pattern_edit, previous_order_pattern,
+        "Previous order's pattern (*)\n"
+        "    0-9               Change octave/volume/instrument\n"
+        "    0-9, A-F          Change effect value\n"
+        "    A-Z               Change effect",
+        "Ctrl+US_KP_MINUS");
+    init_bind_macro(pattern_edit, clear_field, "Clear field(s)", "US_PERIOD");
+    init_bind_macro(pattern_edit, note_cut, "Note cut (^^^)", "US_1");
+    init_bind_macro(pattern_edit, note_off, "Note off (===) / panning toggle", "US_GRAVE");
+    init_bind_macro(pattern_edit, toggle_volume_panning, "Toggle panning / volume (on volume field)", "US_GRAVE");
+    init_bind_macro(pattern_edit, note_fade, "Note fade (~~~)", "Shift+US_GRAVE");
+    init_bind_macro(pattern_edit, use_last_value,
+        "Use last note/instrument/volume/effect/effect value\n"
+        "    Caps Lock+Key     Preview note\n ",
+        "US_SPACE");
 
     init_bind_macro(pattern_edit, get_default_value, "Get default note/instrument/volume/effect", "US_ENTER");
     init_bind_macro(pattern_edit, decrease_instrument, "Decrease instrument", "Shift+US_COMMA,Ctrl+US_UP");
