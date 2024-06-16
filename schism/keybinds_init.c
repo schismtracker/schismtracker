@@ -105,10 +105,10 @@ static void init_order_list_keybinds(cfg_file_t* cfg)
     // Is duplicate
     // init_bind_macro(order_list, toggle_order_list_locked, "Lock/unlock order list", "Alt+US_F11");
     init_bind_macro(order_list, sort_order_list, "Sort order list", "Alt+US_R");
-    init_bind_macro(order_list, find_unused_patterns, "Search for unused patterns", "Alt+US_U");
+    init_bind_macro(order_list, find_unused_patterns, "Search for unused patterns\n ", "Alt+US_U");
 
     init_bind_macro(order_list, link_pattern_to_sample, "Link (diskwriter) this pattern to the current sample", "Ctrl+US_B");
-    init_bind_macro(order_list, copy_pattern_to_sample, "Copy (diskwriter) this pattern to the current sample\n ", "Ctrl+US_O");
+    init_bind_macro(order_list, copy_pattern_to_sample, "Copy (diskwriter) this pattern to the current sample", "Ctrl+US_O");
     init_bind_macro(order_list, copy_pattern_to_sample_with_split, "Copy (diskwriter) to the current sample, with split(?)\n ", "Ctrl+Shift+US_O");
 
     init_bind_macro(order_list, continue_next_position_of_pattern, "Continue to next position of current pattern\n ", "US_C");
@@ -141,19 +141,20 @@ static void init_info_page_keybinds(cfg_file_t* cfg)
     init_bind_macro(info_page, change_window_type_up, "Change window type up", "US_PAGEUP");
     init_bind_macro(info_page, change_window_type_down, "Change window type down", "US_PAGEDOWN");
     init_bind_macro(info_page, move_window_base_up, "Move window base up", "Alt+US_UP");
-    init_bind_macro(info_page, move_window_base_down, "Move window base down", "Alt+US_DOWN");
+    init_bind_macro(info_page, move_window_base_down, "Move window base down\n ", "Alt+US_DOWN");
 
     init_bind_macro(info_page, toggle_volume_velocity_bars, "Toggle between volume/velocity bars", "US_V");
-    init_bind_macro(info_page, toggle_sample_instrument_names, "Toggle between sample/instrument names", "US_I");
+    init_bind_macro(info_page, toggle_sample_instrument_names, "Toggle between sample/instrument names\n ", "US_I");
 
     init_bind_macro(info_page, toggle_channel_mute, "Mute/unmute current channel", "US_Q");
     init_bind_macro(info_page, toggle_channel_mute_and_go_next, "Mute/unmute current channel and go to next", "US_SPACE");
-    init_bind_macro(info_page, solo_channel, "Solo current channel", "US_S");
+    init_bind_macro(info_page, solo_channel, "Solo current channel\n ", "US_S");
+
     init_bind_macro(info_page, goto_next_pattern, "Move forwards one pattern in song", "US_KP_PLUS");
-    init_bind_macro(info_page, goto_previous_pattern, "Move backwards one pattern in song", "US_KP_MINUS");
+    init_bind_macro(info_page, goto_previous_pattern, "Move backwards one pattern in song\n ", "US_KP_MINUS");
 
     init_bind_macro(info_page, toggle_stereo_playback, "Toggle stereo playback", "Alt+US_S");
-    init_bind_macro(info_page, reverse_output_channels, "Reverse output channels", "Alt+US_R");
+    init_bind_macro(info_page, reverse_output_channels, "Reverse output channels\n ", "Alt+US_R");
 
     init_bind_macro(info_page, goto_playing_pattern, "Goto pattern currently playing", "US_G");
 }
@@ -195,7 +196,8 @@ static void init_instrument_list_keybinds(cfg_file_t* cfg)
     init_bind_macro(instrument_list, exchange, "Exchange instruments (only in instrument list)\n ", "Alt+US_X");
 
     init_bind_macro(instrument_list, insert_slot, "Insert instrument slot (updates pattern data)", "Alt+US_INSERT");
-    init_bind_macro(instrument_list, remove_slot, "Remove instrument slot (updates pattern data)", "Alt+US_DELETE");
+    init_bind_macro(instrument_list, remove_slot, "Remove instrument slot (updates pattern data)\n ", "Alt+US_DELETE");
+
     init_bind_macro(instrument_list, increase_playback_channel, "Increase playback channel", "Shift+US_PERIOD");
     init_bind_macro(instrument_list, decrease_playback_channel, "Decrease playback channel", "Shift+US_COMMA");
 
@@ -207,7 +209,7 @@ static void init_instrument_list_keybinds(cfg_file_t* cfg)
     init_bind_macro(instrument_note_translation, decrease_sample_number, "Decrease sample number\n ", "Shift+US_COMMA,Ctrl+US_UP");
 
     init_bind_macro(instrument_note_translation, change_all_samples, "Change all samples", "Alt+US_A");
-    init_bind_macro(instrument_note_translation, change_all_samples_with_name, "Change all samples", "Alt+Shift+US_A");
+    init_bind_macro(instrument_note_translation, change_all_samples_with_name, "Change all samples, copy name", "Alt+Shift+US_A");
     init_bind_macro(instrument_note_translation, enter_next_note, "Enter next note", "Alt+US_N");
     init_bind_macro(instrument_note_translation, enter_previous_note, "Enter previous note", "Alt+US_P");
     init_bind_macro(instrument_note_translation, transpose_all_notes_semitone_up, "Transpose all notes a semitone up", "Alt+US_UP");
@@ -279,18 +281,18 @@ static void init_sample_list_keybinds(cfg_file_t* cfg)
     init_bind_macro(sample_list, exchange_sample, "Exchange sample (only in sample list)", "Alt+US_X");
     init_bind_macro(sample_list, text_to_sample, "Text to sample data", "Alt+US_Y");
     init_bind_macro(sample_list, edit_create_adlib_sample, "Edit/create AdLib (FM) sample", "Alt+US_Z");
-    init_bind_macro(sample_list, load_adlib_sample_by_midi_patch_number, "Load predefined AdLib sample by MIDI patch number", "Alt+Shift+US_Z");
+    init_bind_macro(sample_list, load_adlib_sample_by_midi_patch_number, "Load predefined AdLib sample by MIDI patch number\n ", "Alt+Shift+US_Z");
 
     init_bind_macro(sample_list, insert_sample_slot, "Insert sample slot (updates pattern data)", "Alt+US_INSERT");
     init_bind_macro(sample_list, remove_sample_slot, "Remove sample slot (updates pattern data)", "Alt+US_DELETE");
     init_bind_macro(sample_list, swap_sample_with_previous, "Swap sample with previous", "Alt+US_UP");
-    init_bind_macro(sample_list, swap_sample_with_next, "Swap sample with next", "Alt+US_DOWN");
+    init_bind_macro(sample_list, swap_sample_with_next, "Swap sample with next\n ", "Alt+US_DOWN");
 
     init_bind_macro(sample_list, toggle_current_sample, "Toggle current sample", "Alt+US_F9");
-    init_bind_macro(sample_list, solo_current_sample, "Solo current sample", "Alt+US_F10");
+    init_bind_macro(sample_list, solo_current_sample, "Solo current sample\n ", "Alt+US_F10");
 
     init_bind_macro(sample_list, decrease_playback_channel, "Decrease playback channel", "Alt+Shift+US_COMMA");
-    init_bind_macro(sample_list, increase_playback_channel, "Increase playback channel", "Alt+Shift+US_PERIOD");
+    init_bind_macro(sample_list, increase_playback_channel, "Increase playback channel\n ", "Alt+Shift+US_PERIOD");
 
     init_bind_macro(sample_list, increase_c5_frequency_1_octave, "Increase C-5 frequency by 1 octave", "Alt+US_KP_PLUS");
     init_bind_macro(sample_list, decrease_c5_frequency_1_octave, "Decrease C-5 frequency by 1 octave", "Alt+US_KP_MINUS");
@@ -383,8 +385,8 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(track_view, track_scheme_5, "View current track in scheme 5", "Ctrl+US_5");
     init_bind_macro(track_view, track_scheme_6, "View current track in scheme 6\n ", "Ctrl+US_6");
 
-    init_bind_macro(track_view, move_column_left, "Move left between track view columns", "Ctrl+US_LEFT");
-    init_bind_macro(track_view, move_column_right, "Move right between track view columns\n ", "Ctrl+US_RIGHT");
+    init_bind_macro(track_view, move_column_left, "Go to channel left (keep column position)", "Ctrl+US_LEFT");
+    init_bind_macro(track_view, move_column_right, "Go to channel right (keep column position)\n ", "Ctrl+US_RIGHT");
 
     // This doesn't work in previous version? It inputs unicodes.
     init_bind_macro(track_view, quick_view_scheme_1, "Quick view scheme setup 1", "Ctrl+Shift+US_1");
@@ -448,7 +450,7 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     // init_bind_macro(block_functions, paste_and_mix_field, "", "");
 
     init_bind_macro(block_functions, double_block_length, "Double block length (*)", "Alt+US_F");
-    init_bind_macro(block_functions, halve_block_length, "Halve block length (*)", "Alt+US_G");
+    init_bind_macro(block_functions, halve_block_length, "Halve block length (*)\n ", "Alt+US_G");
 
     init_bind_macro(block_functions, select_template_mode, "Select template mode / fast volume amplify (*)", "Alt+US_I");
     init_bind_macro(block_functions, disable_template_mode, "Disable template mode", "Alt+Shift+US_I");
@@ -459,10 +461,10 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
 
     init_section_macro(playback_functions, " Playback Functions.", PAGE_PATTERN_EDITOR);
     init_bind_macro(playback_functions, play_note_cursor, "Play note under cursor", "US_4");
-    init_bind_macro(playback_functions, play_row, "Play row", "US_8");
+    init_bind_macro(playback_functions, play_row, "Play row\n ", "US_8");
 
     init_bind_macro(playback_functions, play_from_row, "Play from current row", "Ctrl+US_F6");
-    init_bind_macro(playback_functions, toggle_playback_mark, "Set/clear playback mark (for use with F7)", "Ctrl+US_F7");
+    init_bind_macro(playback_functions, toggle_playback_mark, "Set/clear playback mark (for use with F7)\n ", "Ctrl+US_F7");
 
     init_bind_macro(playback_functions, toggle_current_channel, "Toggle current channel", "Alt+US_F9");
     init_bind_macro(playback_functions, solo_current_channel, "Solo current channel", "Alt+US_F10");
@@ -555,36 +557,44 @@ static void init_global_keybinds(cfg_file_t* cfg)
 
     init_bind_macro(global, fullscreen, "Toggle fullscreen\n ", "Ctrl+Alt+US_ENTER");
 
-    init_bind_macro(global, open_menu, "Open menu", "US_ESCAPE");
+    init_bind_macro(global, open_menu, "Open menu\n ", "US_ESCAPE");
+
     init_bind_macro(global, nav_left, "Navigate left", "US_LEFT");
     init_bind_macro(global, nav_right, "Navigate right", "US_RIGHT");
     init_bind_macro(global, nav_up, "Navigate up", "US_UP");
-    init_bind_macro(global, nav_down, "Navigate down", "US_DOWN");
+    init_bind_macro(global, nav_down, "Navigate down\n ", "US_DOWN");
+
     init_bind_macro(global, nav_page_up, "Navigate page up", "US_PAGEUP");
-    init_bind_macro(global, nav_page_down, "Navigate page down", "US_PAGEDOWN");
+    init_bind_macro(global, nav_page_down, "Navigate page down\n ", "US_PAGEDOWN");
+
     init_bind_macro(global, nav_accept, "Navigate accept", "US_ENTER");
-    init_bind_macro(global, nav_cancel, "Navigate cancel", "US_ESCAPE");
+    init_bind_macro(global, nav_cancel, "Navigate cancel\n ", "US_ESCAPE");
+
     init_bind_macro(global, nav_home, "Navigate home (start of line/first in list)", "US_HOME");
-    init_bind_macro(global, nav_end, "Navigate end (end of line/last in list)", "US_END");
+    init_bind_macro(global, nav_end, "Navigate end (end of line/last in list)\n ", "US_END");
+
     init_bind_macro(global, nav_tab, "Navigate to next item right", "US_TAB");
     init_bind_macro(global, nav_backtab, "Navigate to next item left\n ", "Shift+US_TAB");
 
-    init_bind_macro(global, thumbbar_min_value, "Thumbbar min value", "US_HOME");
     init_bind_macro(global, thumbbar_max_value, "Thumbbar max value", "US_END");
     init_bind_macro(global, thumbbar_increase_value, "Thumbbar increase value", "US_RIGHT");
     init_bind_macro(global, thumbbar_increase_value_2x, "Thumbbar increase value 2x", "Ctrl+US_RIGHT");
     init_bind_macro(global, thumbbar_increase_value_4x, "Thumbbar increase value 4x", "Shift+US_RIGHT");
-    init_bind_macro(global, thumbbar_increase_value_8x, "Thumbbar increase value 8x", "Alt+US_RIGHT");
+    init_bind_macro(global, thumbbar_increase_value_8x, "Thumbbar increase value 8x\n ", "Alt+US_RIGHT");
+
+    init_bind_macro(global, thumbbar_min_value, "Thumbbar min value", "US_HOME");
     init_bind_macro(global, thumbbar_decrease_value, "Thumbbar decrease value", "US_LEFT");
     init_bind_macro(global, thumbbar_decrease_value_2x, "Thumbbar decrease value 2x", "Ctrl+US_LEFT");
     init_bind_macro(global, thumbbar_decrease_value_4x, "Thumbbar decrease value 4x", "Shift+US_LEFT");
-    init_bind_macro(global, thumbbar_decrease_value_8x, "Thumbbar decrease value 8x", "Alt+US_LEFT");
+    init_bind_macro(global, thumbbar_decrease_value_8x, "Thumbbar decrease value 8x\n ", "Alt+US_LEFT");
 
     init_section_macro(dialog, "Dialog Keys.", PAGE_ANY);
     init_bind_macro(dialog, yes, "Answer yes in yes/no dialog.", "US_Y");
-    init_bind_macro(dialog, no, "Answer no in yes/no dialog.", "US_N");
+    init_bind_macro(dialog, no, "Answer no in yes/no dialog.\n ", "US_N");
+
     init_bind_macro(dialog, answer_ok, "Answer ok in ok/cancel dialog.", "US_O");
-    init_bind_macro(dialog, answer_cancel, "Answer cancel in ok/cancel dialog.", "US_C");
+    init_bind_macro(dialog, answer_cancel, "Answer cancel in ok/cancel dialog.\n ", "US_C");
+
     init_bind_macro(dialog, cancel, "Dialog cancel.", "US_ESCAPE");
     init_bind_macro(dialog, accept, "Dialog accept.", "US_ENTER");
 }
