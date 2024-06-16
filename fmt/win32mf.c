@@ -169,13 +169,14 @@ static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t
 		if (!prop_name)
 			continue; /* ... */
 
-		const int title = !wcscmp(prop_name, L"Title");
-		const int artist = !wcscmp(prop_name, L"Artist");
-
-		if (title || artist) {
+		if (!wcscmp(prop_name, L"Title")) {
 			PROPVARIANT propval = {0};
-			if (metadata->lpVtbl->GetProperty(metadata, prop_name, &propval) != S_OK)
-				continue; /* ... */
+			PropVariantInit(&propval);
+
+			if (FAILED(metadata->lpVtbl->GetProperty(metadata, prop_name, &propval))) {
+				PropVariantClear(&propval);
+				continue;
+			}
 
 			LPWSTR prop_val_str = NULL;
 			if (FAILED(MF_PropVariantToStringAlloc(&propval, &prop_val_str))) {
@@ -185,10 +186,7 @@ static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t
 
 			found = 1;
 
-			if (title)
-				charset_iconv((uint8_t*)prop_val_str, (uint8_t**)file->title, CHARSET_WCHAR_T, CHARSET_CP437);
-			else if (artist)
-				charset_iconv((uint8_t*)prop_val_str, (uint8_t**)file->artist, CHARSET_WCHAR_T, CHARSET_CP437);
+			charset_iconv((uint8_t*)prop_val_str, (uint8_t**)file->title, CHARSET_WCHAR_T, CHARSET_CP437);
 
 			CoTaskMemFree(prop_val_str);
 			PropVariantClear(&propval);
