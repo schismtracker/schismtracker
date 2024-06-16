@@ -30,7 +30,7 @@ jobs:
     steps:
       - name: 'Install dependencies'
         run: |
-          brew install automake zip
+          brew install autoconf automake libtool zip
 
       - name: 'Cache x86_64 files'
         id: cache-x86_64-files
