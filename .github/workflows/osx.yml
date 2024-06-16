@@ -20,7 +20,7 @@ on:
 
 jobs:
   osx:
-    runs-on: macos-11
+    runs-on: macos-12
     env:
       SDL_VERSION: 2.30.3
       SDL_PPC_VERSION: 2.0.3
@@ -39,6 +39,13 @@ jobs:
           path: '/Users/runner/x86_64'
           key: mac-x86_64-files
 
+      - name: 'Cache arm64 files'
+        id: cache-arm64-files
+        uses: actions/cache@v4
+        with:
+          path: '/Users/runner/arm64'
+          key: mac-arm64-files
+
       - name: 'Restore cached PowerPC files'
         id: cache-powerpc-restore
         uses: actions/cache/restore@v4
@@ -47,7 +54,6 @@ jobs:
           key: mac-powerpc-bins
 
       - name: 'Download 10.9 SDK for x86_64'
-        id: chown
         if: steps.cache-x86_64-files.outputs.cache-hit != 'true'
         run: |
           mkdir -p "$HOME/x86_64"
@@ -55,6 +61,16 @@ jobs:
           mkdir SDKs
           cd SDKs
           curl -L "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX10.9.sdk.tar.xz" | tar -xvf -
+          popd
+
+      - name: 'Download 11.0 SDK for arm64'
+        if: steps.cache-arm64-files.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$HOME/arm64"
+          pushd "$HOME/arm64"
+          mkdir SDKs
+          cd SDKs
+          curl -L "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.0.sdk.tar.xz" | tar -xvf -
           popd
 
       - name: 'Grab PowerPC cross compile binaries'
@@ -80,8 +96,8 @@ jobs:
           tar -xvf "Xcode3ld.tar.gz" -C "$HOME/ppc"
           tar -xvf "Xcode105SDK.tar.gz" -C "$HOME/ppc"
           tar -xvf "OSX108INT.tar.gz" -C "$HOME/ppc"
-          mkdir "/Applications/Xcode_13.2.1.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc"
-          cp "$HOME/ppc/usr/libexec/gcc/darwin/ppc/as" "/Applications/Xcode_13.2.1.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc/as"
+          mkdir "/Applications/Xcode_14.2.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc"
+          cp "$HOME/ppc/usr/libexec/gcc/darwin/ppc/as" "/Applications/Xcode_14.2.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc/as"
           popd
 
       - name: 'Checkout'
@@ -106,7 +122,7 @@ jobs:
         run: |
           (export PATH="$PATH:$HOME/ppc/usr/bin" && cd SDL2-$SDL_PPC_VERSION && mkdir build_powerpc && cd build_powerpc && ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CFLAGS="" CPPFLAGS="-isysroot $HOME/ppc/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.5.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.5.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --disable-rpath --disable-alsa-shared --disable-pulseaudio-shared --disable-x11-shared --disable-esd --disable-video-wayland --disable-alsa --disable-dbus --disable-nas --disable-pulseaudio --disable-video-x11 --disable-haptic --disable-rpath && make && make install) &
           (export MACOSX_DEPLOYMENT_TARGET="10.9" && cd SDL2-$SDL_VERSION && mkdir build_x86_64 && cd build_x86_64 && ../configure CPPFLAGS="-mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.9.sdk" --prefix="$HOME/x86_64prefix" && make && make install) &
-          (export MACOSX_DEPLOYMENT_TARGET="11.0" && cd SDL2-$SDL_VERSION && mkdir build_arm64 && cd build_arm64 && ../configure CPPFLAGS="-mmacosx-version-min=11.0 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk" CFLAGS="-arch arm64" LDFLAGS="-arch arm64" --host=aarch64-apple-darwin20 --prefix="$HOME/arm64prefix" && make && make install) &
+          (export MACOSX_DEPLOYMENT_TARGET="11.0" && cd SDL2-$SDL_VERSION && mkdir build_arm64 && cd build_arm64 && ../configure CPPFLAGS="-mmacosx-version-min=11.0 -isysroot $HOME/arm64/SDKs/MacOSX11.0.sdk" CFLAGS="-arch arm64" LDFLAGS="-arch arm64" --host=aarch64-apple-darwin20 --prefix="$HOME/arm64prefix" && make && make install) &
           wait
       
       - name: 'Download libflac and libogg sources'
@@ -121,7 +137,7 @@ jobs:
           autoreconf -I"$HOME/x86_64prefix/share/aclocal" -i
           (export PATH="$PATH:$HOME/ppc/usr/bin" && mkdir build_powerpc && cd build_powerpc && ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CFLAGS="" CPPFLAGS="-isysroot $HOME/ppc/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.5.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.5.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" && make && make install) &
           (export MACOSX_DEPLOYMENT_TARGET="10.9" && mkdir build_x86_64 && cd build_x86_64 && ../configure CPPFLAGS="-mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.9.sdk" --prefix="$HOME/x86_64prefix" && make && make install) &
-          (export MACOSX_DEPLOYMENT_TARGET="11.0" && mkdir build_arm64 && cd build_arm64 && ../configure CPPFLAGS="-mmacosx-version-min=11.0 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk" CFLAGS="-arch arm64" LDFLAGS="-arch arm64" --host=aarch64-apple-darwin20 --prefix="$HOME/arm64prefix" && make && make install) &
+          (export MACOSX_DEPLOYMENT_TARGET="11.0" && mkdir build_arm64 && cd build_arm64 && ../configure CPPFLAGS="-mmacosx-version-min=11.0 -isysroot $HOME/arm64/SDKs/MacOSX11.0.sdk" CFLAGS="-arch arm64" LDFLAGS="-arch arm64" --host=aarch64-apple-darwin20 --prefix="$HOME/arm64prefix" && make && make install) &
           wait
           popd
 
@@ -131,7 +147,7 @@ jobs:
           autoreconf -I"$HOME/x86_64prefix/share/aclocal" -i
           (export PATH="$PATH:$HOME/ppc/usr/bin" && mkdir build_powerpc && cd build_powerpc && ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CFLAGS="" CPPFLAGS="-isysroot $HOME/ppc/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.5.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.5.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --disable-cpplibs --disable-programs --disable-examples && make && make install) &
           (export MACOSX_DEPLOYMENT_TARGET="10.9" && mkdir build_x86_64 && cd build_x86_64 && ../configure CPPFLAGS="-mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.9.sdk" --prefix="$HOME/x86_64prefix" --disable-cpplibs --disable-programs --disable-examples && make && make install) &
-          (export MACOSX_DEPLOYMENT_TARGET="11.0" && mkdir build_arm64 && cd build_arm64 && ../configure CPPFLAGS="-mmacosx-version-min=11.0 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk" CFLAGS="-arch arm64" LDFLAGS="-arch arm64" --host=aarch64-apple-darwin20 --prefix="$HOME/arm64prefix" --disable-cpplibs --disable-programs --disable-examples && make && make install) &
+          (export MACOSX_DEPLOYMENT_TARGET="11.0" && mkdir build_arm64 && cd build_arm64 && ../configure CPPFLAGS="-mmacosx-version-min=11.0 -isysroot $HOME/arm64/SDKs/MacOSX11.0.sdk" CFLAGS="-arch arm64" LDFLAGS="-arch arm64" --host=aarch64-apple-darwin20 --prefix="$HOME/arm64prefix" --disable-cpplibs --disable-programs --disable-examples && make && make install) &
           wait
           popd
 
@@ -140,7 +156,7 @@ jobs:
           autoreconf -I"$HOME/x86_64prefix/share/aclocal" -i
           (export PATH="$PATH:$HOME/ppc/usr/bin" && export PKG_CONFIG_PATH="$HOME/ppcprefix/lib/pkgconfig" && mkdir build_powerpc && cd build_powerpc && ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CFLAGS="" CPPFLAGS="-isysroot $HOME/ppc/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.5.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.5.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --with-sdl-prefix="$HOME/ppcprefix" --with-flac && make) &
           (export MACOSX_DEPLOYMENT_TARGET="10.9" && export PKG_CONFIG_PATH="$HOME/x86_64prefix/lib/pkgconfig" && mkdir build_x86_64 && cd build_x86_64 && ../configure CPPFLAGS="-mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.9.sdk" --prefix="$HOME/x86_64prefix" --with-sdl-prefix="$HOME/x86_64prefix" --with-flac && make && strip -S schismtracker) &
-          (export MACOSX_DEPLOYMENT_TARGET="11.0" && export PKG_CONFIG_PATH="$HOME/arm64prefix/lib/pkgconfig" && mkdir build_arm64 && cd build_arm64 && ../configure CPPFLAGS="-mmacosx-version-min=11.0 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.sdk" OBJCFLAGS="-arch arm64" CFLAGS="-arch arm64" LDFLAGS="-arch arm64" --host=aarch64-apple-darwin20 --prefix="$HOME/arm64prefix" --with-sdl-prefix="$HOME/arm64prefix" && make && make install) &
+          (export MACOSX_DEPLOYMENT_TARGET="11.0" && export PKG_CONFIG_PATH="$HOME/arm64prefix/lib/pkgconfig" && mkdir build_arm64 && cd build_arm64 && ../configure CPPFLAGS="-mmacosx-version-min=11.0 -isysroot $HOME/arm64/SDKs/MacOSX11.0.sdk" OBJCFLAGS="-arch arm64" CFLAGS="-arch arm64" LDFLAGS="-arch arm64" --host=aarch64-apple-darwin20 --prefix="$HOME/arm64prefix" --with-sdl-prefix="$HOME/arm64prefix" && make && make install) &
           wait
 
       - name: 'Package Schism'
