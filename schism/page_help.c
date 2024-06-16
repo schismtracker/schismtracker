@@ -85,6 +85,7 @@ static const char blank_line[] = {LTYPE_NORMAL, '\0'};
 static const char separator_line[] = {LTYPE_SEPARATOR, '\0'};
 
 static int help_text_current_page = PAGE_ANY;
+static int help_text_current_help_index = 0;
 static int help_text_lastpos[PAGE_MAX] = {0};
 
 /* This isn't defined in an .h file since it's only used here. */
@@ -198,12 +199,14 @@ static int help_handle_key(struct key_event * k)
 static void help_set_page(void)
 {
 	int new_page = status.previous_page;
+	int new_help_index = status.current_help_index;
 
-	if (new_page == help_text_current_page) {
+	if (new_page == help_text_current_page && new_help_index == help_text_current_help_index) {
 		return;
 	}
 
 	help_text_current_page = new_page;
+	help_text_current_help_index = new_help_index;
 
 	const char *ptr;
 	int local_lines = 0, global_lines = 0, cur_line = 0;
