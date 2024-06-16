@@ -20,7 +20,7 @@ on:
 
 jobs:
   osx:
-    runs-on: macos-12
+    runs-on: macos-14
     env:
       SDL_VERSION: 2.30.3
       SDL_PPC_VERSION: 2.0.3
@@ -30,7 +30,7 @@ jobs:
     steps:
       - name: 'Install dependencies'
         run: |
-          brew install automake zip cmake wget
+          brew install automake zip
 
       - name: 'Cache x86_64 files'
         id: cache-x86_64-files
@@ -96,8 +96,8 @@ jobs:
           tar -xvf "Xcode3ld.tar.gz" -C "$HOME/ppc"
           tar -xvf "Xcode105SDK.tar.gz" -C "$HOME/ppc"
           tar -xvf "OSX108INT.tar.gz" -C "$HOME/ppc"
-          mkdir "/Applications/Xcode_14.2.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc"
-          cp "$HOME/ppc/usr/libexec/gcc/darwin/ppc/as" "/Applications/Xcode_14.2.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc/as"
+          mkdir "/Applications/Xcode_15.0.1.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc"
+          cp "$HOME/ppc/usr/libexec/gcc/darwin/ppc/as" "/Applications/Xcode_15.0.1.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc/as"
           popd
 
       - name: 'Checkout'
