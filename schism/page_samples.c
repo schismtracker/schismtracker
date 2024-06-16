@@ -478,7 +478,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 		} else if (key_pressed(instrument_list, goto_last_sample)) {
 			sample_set(_last_vis_sample());
 		// TODO END
-		} else if (key_released(global, nav_accept)) {
+		} else if (key_pressed(global, nav_accept)) {
 			set_page(PAGE_LOAD_SAMPLE);
 		} else if (key_pressed(sample_list, clear_name_and_filename)) {
 			clear_sample_text();
