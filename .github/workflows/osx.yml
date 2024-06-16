@@ -96,7 +96,7 @@ jobs:
           tar -xvf "Xcode3ld.tar.gz" -C "$HOME/ppc"
           tar -xvf "Xcode105SDK.tar.gz" -C "$HOME/ppc"
           tar -xvf "OSX108INT.tar.gz" -C "$HOME/ppc"
-          mkdir "/Applications/Xcode_13.2.1.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc"
+          mkdir "/Applications/Xcode_14.2.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc"
           cp "$HOME/ppc/usr/libexec/gcc/darwin/ppc/as" "/Applications/Xcode_14.2.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc/as"
           popd
 
