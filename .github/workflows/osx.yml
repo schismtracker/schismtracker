@@ -20,7 +20,7 @@ on:
 
 jobs:
   osx:
-    runs-on: macos-14
+    runs-on: macos-13
     env:
       SDL_VERSION: 2.30.3
       SDL_PPC_VERSION: 2.0.3
