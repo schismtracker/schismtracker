@@ -3481,6 +3481,9 @@ static void set_skip_value(int n)
 	status_text_flash("Cursor step set to %d", skip_value);
 }
 
+static int last_key_is_mark_column_or_pattern = 0;
+static int new_key_is_mark_column_or_pattern = 0;
+
 static int pattern_editor_handle_alt_key(struct key_event * k)
 {
 	int n;
@@ -3541,19 +3544,25 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 
 		n = block_double_size + current_row - 1;
 		selection.last_row = MIN(n, total_rows);
-	} else if(key_repeated(block_functions, mark_column_or_pattern)) {
-		/* 3x alt-l re-selects the current channel */
-		if (selection.first_channel == selection.last_channel) {
-			selection.first_channel = 1;
-			selection.last_channel = 64;
+	} else if (key_active(block_functions, mark_column_or_pattern)) {
+		new_key_is_mark_column_or_pattern = 1;
+
+		if (k->state == KEY_RELEASE)
+			return 1;
+
+		if (last_key_is_mark_column_or_pattern) {
+			/* 3x alt-l re-selects the current channel */
+			if (selection.first_channel == selection.last_channel) {
+				selection.first_channel = 1;
+				selection.last_channel = 64;
+			} else {
+				selection.first_channel = selection.last_channel = current_channel;
+			}
 		} else {
 			selection.first_channel = selection.last_channel = current_channel;
+			selection.first_row = 0;
+			selection.last_row = total_rows;
 		}
-		pattern_selection_system_copyout();
-	} else if (key_pressed(block_functions, mark_column_or_pattern)) {
-		selection.first_channel = selection.last_channel = current_channel;
-		selection.first_row = 0;
-		selection.last_row = total_rows;
 		pattern_selection_system_copyout();
 	} else if (key_pressed(track_view, clear_track_views)) {
 		draw_divisions = 1;
@@ -4270,12 +4279,16 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 		is_selecting = 1;
 	}
 
+	new_key_is_mark_column_or_pattern = 0;
+
 	int ret = (
 		pattern_editor_handle_alt_key(k) ||
 		pattern_editor_handle_ctrl_key(k) ||
 		pattern_editor_handle_key(k) ||
 		pattern_editor_handle_key_default(k)
 	);
+
+	last_key_is_mark_column_or_pattern = new_key_is_mark_column_or_pattern;
 
 	if(
 		!is_selecting && (
