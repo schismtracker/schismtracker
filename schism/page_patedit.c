@@ -3712,101 +3712,101 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 		set_view_scheme(1);
 	} else if(key_pressed(track_view, track_scheme_2)) {
 		set_view_scheme(2);
-	}  else if(key_pressed(track_view, track_scheme_3)) {
+	} else if(key_pressed(track_view, track_scheme_3)) {
 		set_view_scheme(3);
-	}  else if(key_pressed(track_view, track_scheme_4)) {
+	} else if(key_pressed(track_view, track_scheme_4)) {
 		set_view_scheme(4);
-	}  else if(key_pressed(track_view, track_scheme_5)) {
+	} else if(key_pressed(track_view, track_scheme_5)) {
 		set_view_scheme(5);
-	}  else if(key_pressed(track_view, track_scheme_6)) {
+	} else if(key_pressed(track_view, track_scheme_6)) {
 		set_view_scheme(6);
-	// TODO: Quick view scheme gets eaten by unicode
+	} else if(key_pressed(track_view, quick_view_scheme_default)) {
+		set_quick_view_scheme(0);
 	} else if(key_pressed(track_view, quick_view_scheme_1)) {
 		set_quick_view_scheme(1);
 	} else if(key_pressed(track_view, quick_view_scheme_2)) {
 		set_quick_view_scheme(2);
-	}  else if(key_pressed(track_view, quick_view_scheme_3)) {
+	} else if(key_pressed(track_view, quick_view_scheme_3)) {
 		set_quick_view_scheme(3);
-	}  else if(key_pressed(track_view, quick_view_scheme_4)) {
+	} else if(key_pressed(track_view, quick_view_scheme_4)) {
 		set_quick_view_scheme(4);
-	}  else if(key_pressed(track_view, quick_view_scheme_5)) {
+	} else if(key_pressed(track_view, quick_view_scheme_5)) {
 		set_quick_view_scheme(5);
-	}  else if(key_pressed(track_view, quick_view_scheme_6)) {
+	} else if(key_pressed(track_view, quick_view_scheme_6)) {
 		set_quick_view_scheme(6);
-	// TODO END
-	// }  else if(key_pressed(track_view, move_column_left)) {
+	// } else if(key_pressed(track_view, move_column_left)) {
 	// 	if (current_channel > top_display_channel)
 	// 		set_current_channel(current_channel - 1);
-	// }  else if(key_pressed(track_view, move_column_right)) {
+	// } else if(key_pressed(track_view, move_column_right)) {
 	// 	if (current_channel < top_display_channel + visible_channels - 1)
 	// 		set_current_channel(current_channel + 1);
-	}  else if(key_pressed(playback_functions, play_from_row)) {
+	} else if(key_pressed(playback_functions, play_from_row)) {
 		song_loop_pattern(current_pattern, current_row);
-	}  else if(key_pressed(playback_functions, toggle_playback_mark)) {
+	} else if(key_pressed(playback_functions, toggle_playback_mark)) {
 		set_playback_mark();
 	// TODO: Duplicates?
-	}  else if(key_pressed(pattern_edit, decrease_instrument)) {
+	} else if(key_pressed(pattern_edit, decrease_instrument)) {
 		set_previous_instrument();
 		status.flags |= NEED_UPDATE;
-	}  else if(key_pressed(pattern_edit, increase_instrument)) {
+	} else if(key_pressed(pattern_edit, increase_instrument)) {
 		set_next_instrument();
 		status.flags |= NEED_UPDATE;
 	// TODO END
-	}  else if(key_pressed(pattern_edit, move_pattern_top)) {
+	} else if(key_pressed(pattern_edit, move_pattern_top)) {
 		set_current_row(0);
-	}  else if(key_pressed(pattern_edit, move_pattern_bottom)) {
+	} else if(key_pressed(pattern_edit, move_pattern_bottom)) {
 		set_current_row(total_rows);
-	}  else if(key_pressed(pattern_edit, up_one_row)) {
+	} else if(key_pressed(pattern_edit, up_one_row)) {
 		set_current_row(current_row - 1);
-	}  else if(key_pressed(pattern_edit, down_one_row)) {
+	} else if(key_pressed(pattern_edit, down_one_row)) {
 		set_current_row(current_row + 1);
-	}  else if(key_pressed(block_functions, roll_block_down)) {
+	} else if(key_pressed(block_functions, roll_block_down)) {
 		selection_roll(ROLL_DOWN);
 		status.flags |= NEED_UPDATE;
-	}  else if(key_pressed(block_functions, roll_block_up)) {
+	} else if(key_pressed(block_functions, roll_block_up)) {
 		selection_roll(ROLL_UP);
 		status.flags |= NEED_UPDATE;
-	}  else if(
+	} else if(
 		key_pressed(pattern_edit, previous_order_pattern) &&
 		!(song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing)
 	) {
 		prev_order_pattern();
-	}  else if(
+	} else if(
 		key_pressed(pattern_edit, next_order_pattern) &&
 		!(song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing)
 	) {
 		next_order_pattern();
-	}  else if(key_pressed(pattern_edit, toggle_centralise_cursor)) {
+	} else if(key_pressed(pattern_edit, toggle_centralise_cursor)) {
 		centralise_cursor = !centralise_cursor;
 		status_text_flash("Centralise cursor %s", (centralise_cursor ? "enabled" : "disabled"));
-	}  else if(key_pressed(pattern_edit, toggle_highlight_row)) {
+	} else if(key_pressed(pattern_edit, toggle_highlight_row)) {
 		highlight_current_row = !highlight_current_row;
 		status_text_flash("Row hilight %s", (highlight_current_row ? "enabled" : "disabled"));
 		status.flags |= NEED_UPDATE;
-	}  else if(key_pressed(block_functions, toggle_fast_volume)) {
+	} else if(key_pressed(block_functions, toggle_fast_volume)) {
 		fast_volume_toggle();
-	}  else if(key_pressed(block_functions, selection_volume_vary)) {
+	} else if(key_pressed(block_functions, selection_volume_vary)) {
 		if (fast_volume_mode)
 			selection_vary(1, 100-fast_volume_percent, FX_CHANNELVOLUME);
 		else
 			vary_command(FX_CHANNELVOLUME);
 		status.flags |= NEED_UPDATE;
-	}  else if(key_pressed(block_functions, selection_panning_vary)) {
+	} else if(key_pressed(block_functions, selection_panning_vary)) {
 		if (fast_volume_mode)
 			selection_vary(1, 100-fast_volume_percent, FX_PANBRELLO);
 		else
 			vary_command(FX_PANBRELLO);
 		status.flags |= NEED_UPDATE;
-	}  else if(key_pressed(block_functions, selection_effect_vary)) {
+	} else if(key_pressed(block_functions, selection_effect_vary)) {
 		if (fast_volume_mode)
 			selection_vary(1, 100-fast_volume_percent, current_effect());
 		else
 			vary_command(current_effect());
 		status.flags |= NEED_UPDATE;
-	}  else if(key_pressed(pattern_edit, toggle_volume_display)) {
+	} else if(key_pressed(pattern_edit, toggle_volume_display)) {
 		show_default_volumes = !show_default_volumes;
 		status_text_flash("Default volumes %s", (show_default_volumes ? "enabled" : "disabled"));
-	}  else if(key_pressed(pattern_edit, undo)) {
+	} else if(key_pressed(pattern_edit, undo)) {
 		pattern_editor_display_history();
 	} else {
 		if (!(k->mod & KMOD_CTRL)) {

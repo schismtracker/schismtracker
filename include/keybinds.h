@@ -426,6 +426,7 @@ typedef struct keybind_list
         // keybind_bind move_column_left;
         // keybind_bind move_column_right;
 
+        keybind_bind quick_view_scheme_default;
         keybind_bind quick_view_scheme_1;
         keybind_bind quick_view_scheme_2;
         keybind_bind quick_view_scheme_3;

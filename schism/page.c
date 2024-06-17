@@ -815,17 +815,14 @@ void handle_key(struct key_event *k)
 {
 	keybinds_handle_event(k);
 
-	if (_handle_ime(k))
-		return;
-
 	/* okay... */
 	if (!(status.flags & DISKWRITER_ACTIVE) && ACTIVE_PAGE.pre_handle_key) {
 		if (ACTIVE_PAGE.pre_handle_key(k)) return;
 	}
 
-	if (handle_key_global(k)) return;
 	if (!(status.flags & DISKWRITER_ACTIVE) && menu_handle_key(k)) return;
 	if (widget_handle_key(k)) return;
+	if (handle_key_global(k)) return;
 
 	if (key_pressed_or_repeated(global, decrease_playback_speed)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
@@ -903,23 +900,24 @@ void handle_key(struct key_event *k)
 			menu_show();
 			return;
 		}
-	// TODO: Remove pattern edit octave keys
 	} else if(key_pressed_or_repeated(global, octave_decrease)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		kbd_set_current_octave(kbd_get_current_octave() - 1);
 	} else if(key_pressed_or_repeated(global, octave_increase)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		kbd_set_current_octave(kbd_get_current_octave() + 1);
-	// TODO END
-	}
-
-	/* and if we STILL didn't handle the key, pass it to the page.
-	 * (or dialog, if one's active) */
-	if (status.dialog_type & DIALOG_BOX) {
-		dialog_handle_key(k);
 	} else {
-		if (status.flags & DISKWRITER_ACTIVE) return;
-		if (ACTIVE_PAGE.handle_key) ACTIVE_PAGE.handle_key(k);
+		if (_handle_ime(k))
+			return;
+
+		/* and if we STILL didn't handle the key, pass it to the page.
+		* (or dialog, if one's active) */
+		if (status.dialog_type & DIALOG_BOX) {
+			dialog_handle_key(k);
+		} else {
+			if (status.flags & DISKWRITER_ACTIVE) return;
+			if (ACTIVE_PAGE.handle_key) ACTIVE_PAGE.handle_key(k);
+		}
 	}
 }
 

@@ -392,7 +392,7 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(track_view, toggle_track_view_divisions, "Toggle track view divisions", "Alt+US_H");
     // init_bind_macro(track_view, deselect_track, "Deselect current track\n ", "Ctrl+US_0");
 
-    init_bind_macro(track_view, track_scheme_default, "View current track in scheme default", "Ctrl+US_0");
+    init_bind_macro(track_view, track_scheme_default, "View current track in scheme default", "Ctrl+US_0,Ctrl+US_GRAVE");
     init_bind_macro(track_view, track_scheme_1, "View current track in scheme 1", "Ctrl+US_1");
     init_bind_macro(track_view, track_scheme_2, "View current track in scheme 2", "Ctrl+US_2");
     init_bind_macro(track_view, track_scheme_3, "View current track in scheme 3", "Ctrl+US_3");
@@ -403,7 +403,8 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     // init_bind_macro(track_view, move_column_left, "Go to channel left (keep column position)", "Ctrl+US_LEFT");
     // init_bind_macro(track_view, move_column_right, "Go to channel right (keep column position)\n ", "Ctrl+US_RIGHT");
 
-    // This doesn't work in previous version? It inputs unicodes.
+    // I added grave here because Ctrl+Shift+0 is not possible to use on windows. (took me so long to figure this out XD)
+    init_bind_macro(track_view, quick_view_scheme_default, "Quick view scheme setup default", "Ctrl+Shift+US_0,Ctrl+Shift+US_GRAVE");
     init_bind_macro(track_view, quick_view_scheme_1, "Quick view scheme setup 1", "Ctrl+Shift+US_1");
     init_bind_macro(track_view, quick_view_scheme_2, "Quick view scheme setup 2", "Ctrl+Shift+US_2");
     init_bind_macro(track_view, quick_view_scheme_3, "Quick view scheme setup 3", "Ctrl+Shift+US_3");
