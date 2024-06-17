@@ -237,11 +237,6 @@ static int thumbbar_panbar_handle_key(struct key_event * k)
 	if (status.flags & DISKWRITER_ACTIVE)
 		return 0;
 
-	if (widget->type == WIDGET_PANBAR) {
-		widget->d.panbar.muted = 0;
-		widget->d.panbar.surround = 0;
-	}
-
 	if (key_pressed_or_repeated(global, thumbbar_increase_value)) {
 		numentry_change_value(widget, widget->d.numentry.value + 1);
 	} else if (key_pressed_or_repeated(global, thumbbar_increase_value_2x)) {
@@ -264,6 +259,11 @@ static int thumbbar_panbar_handle_key(struct key_event * k)
 		numentry_change_value(widget, widget->d.thumbbar.max);
 	} else {
 		return 0;
+	}
+
+	if (widget->type == WIDGET_PANBAR) {
+		widget->d.panbar.muted = 0;
+		widget->d.panbar.surround = 0;
 	}
 
 	return 1;
