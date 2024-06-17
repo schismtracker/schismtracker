@@ -42,17 +42,17 @@ static void update_bind(keybind_bind* bind, SDL_Scancode scode, SDL_Keymod mods,
 {
     keybind_shortcut* sc;
 
-    if (bind->section_info->page_matcher) {
-        if (!bind->section_info->page_matcher(status.current_page)) return;
-    } else {
-        if (bind->section_info->page != PAGE_ANY && bind->section_info->page != status.current_page) return;
-    }
-
     // Bind is always updated on key event
     bind->pressed = 0;
     bind->released = 0;
     bind->repeated = 0;
     bind->press_repeats = 0;
+
+    if (bind->section_info->page_matcher) {
+        if (!bind->section_info->page_matcher(status.current_page)) return;
+    } else {
+        if (bind->section_info->page != PAGE_ANY && bind->section_info->page != status.current_page) return;
+    }
 
     for (int i = 0; i < bind->shortcuts_count; i++) {
         sc = &bind->shortcuts[i];
