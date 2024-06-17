@@ -506,6 +506,21 @@ static int handle_key_global(struct key_event * k)
 
 	/* next, if there's no dialog, check the rest of the keys */
 	if (status.flags & DISKWRITER_ACTIVE) return 0;
+
+	if(key_pressed(global, pattern_edit)) {
+		if (status.current_page == PAGE_PATTERN_EDITOR) {
+			if (status.dialog_type != DIALOG_NONE) {
+				dialog_yes_NULL();
+				status.flags |= NEED_UPDATE;
+			} else {
+				pattern_editor_display_options();
+			}
+		} else {
+			set_page(PAGE_PATTERN_EDITOR);
+		}
+		return 1;
+	}
+
 	if (status.dialog_type != DIALOG_NONE) return 0;
 	_mp_finish(NULL);
 
@@ -525,17 +540,6 @@ static int handle_key_global(struct key_event * k)
 		set_page(status.current_page == PAGE_MIDI ? PAGE_MIDI_OUTPUT : PAGE_MIDI);
 	} else if(key_pressed(global, system_configure)) {
 		set_page(PAGE_CONFIG);
-	} else if(key_pressed(global, pattern_edit)) {
-		if (status.current_page == PAGE_PATTERN_EDITOR) {
-			if (status.dialog_type != DIALOG_NONE) {
-				dialog_yes_NULL();
-				status.flags |= NEED_UPDATE;
-			} else {
-				pattern_editor_display_options();
-			}
-		} else {
-			set_page(PAGE_PATTERN_EDITOR);
-		}
 	} else if (key_pressed(global, sample_list)) {
 		set_page(PAGE_SAMPLE_LIST);
 	} else if (key_pressed(global, sample_library)) {

@@ -335,9 +335,11 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(pattern_edit, toggle_edit_mask, "Toggle edit mask for current field\n ", "US_COMMA");
 
     init_bind_macro(pattern_edit, insert_row, "Insert a row to current channel", "US_INSERT");
-    init_bind_macro(pattern_edit, delete_row, "Delete a rom from current channel", "US_DELETE");
+    init_bind_macro(pattern_edit, delete_row, "Delete a row from current channel\n ", "US_DELETE");
+
     init_bind_macro(pattern_edit, insert_pattern_row, "Insert an entire row to pattern (*)", "Alt+US_INSERT");
-    init_bind_macro(pattern_edit, delete_pattern_row, "Delete an entire row from pattern (*)", "Alt+US_DELETE");
+    init_bind_macro(pattern_edit, delete_pattern_row, "Delete an entire row from pattern (*)\n ", "Alt+US_DELETE");
+
     init_bind_macro(pattern_edit, up_by_skip, "Move up by the skip value (set with Alt 1-9)", "US_UP");
     init_bind_macro(pattern_edit, down_by_skip, "Move down by the skip value", "US_DOWN");
     init_bind_macro(pattern_edit, set_skip_1, "Set skip value to 1", "Alt+US_1");
@@ -348,7 +350,7 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(pattern_edit, set_skip_6, "Set skip value to 6", "Alt+US_6");
     init_bind_macro(pattern_edit, set_skip_7, "Set skip value to 7", "Alt+US_7");
     init_bind_macro(pattern_edit, set_skip_8, "Set skip value to 8", "Alt+US_8");
-    init_bind_macro(pattern_edit, set_skip_9, "Set skip value to 9", "Alt+US_9");
+    init_bind_macro(pattern_edit, set_skip_9, "Set skip value to 16\n ", "Alt+US_9");
 
     init_bind_macro(pattern_edit, up_one_row, "Move up by 1 row", "Ctrl+US_HOME");
     init_bind_macro(pattern_edit, down_one_row, "Move down by 1 row", "Ctrl+US_END");
@@ -356,8 +358,8 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(pattern_edit, slide_pattern_down, "Slide pattern down by 1 row", "Alt+US_DOWN");
     init_bind_macro(pattern_edit, move_cursor_left, "Move cursor left", "US_LEFT");
     init_bind_macro(pattern_edit, move_cursor_right, "Move cursor right", "US_RIGHT");
-    init_bind_macro(pattern_edit, move_forwards_channel, "Move forwards one channel", "Alt+US_RIGHT"); // Check correct?
-    init_bind_macro(pattern_edit, move_backwards_channel, "Move backwards one channel", "Alt+US_LEFT");
+    init_bind_macro(pattern_edit, move_forwards_channel, "Move forwards one channel", "Alt+US_RIGHT,Ctrl+US_RIGHT");
+    init_bind_macro(pattern_edit, move_backwards_channel, "Move backwards one channel", "Alt+US_LEFT,Ctrl+US_LEFT");
     init_bind_macro(pattern_edit, move_forwards_note_column, "Move forwards to note column", "US_TAB");
     init_bind_macro(pattern_edit, move_backwards_note_column, "Move backwards to note column", "Shift+US_TAB");
     init_bind_macro(pattern_edit, move_up_n_lines, "Move up n lines (n=row highlight major)", "US_PAGEUP");
@@ -398,8 +400,8 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(track_view, track_scheme_5, "View current track in scheme 5", "Ctrl+US_5");
     init_bind_macro(track_view, track_scheme_6, "View current track in scheme 6\n ", "Ctrl+US_6");
 
-    init_bind_macro(track_view, move_column_left, "Go to channel left (keep column position)", "Ctrl+US_LEFT");
-    init_bind_macro(track_view, move_column_right, "Go to channel right (keep column position)\n ", "Ctrl+US_RIGHT");
+    // init_bind_macro(track_view, move_column_left, "Go to channel left (keep column position)", "Ctrl+US_LEFT");
+    // init_bind_macro(track_view, move_column_right, "Go to channel right (keep column position)\n ", "Ctrl+US_RIGHT");
 
     // This doesn't work in previous version? It inputs unicodes.
     init_bind_macro(track_view, quick_view_scheme_1, "Quick view scheme setup 1", "Ctrl+Shift+US_1");

@@ -981,7 +981,8 @@ static void fast_volume_toggle(void)
 
 static void fast_volume_amplify(void)
 {
-	selection_amplify((100/fast_volume_percent)*100);
+	float percent = (100.0f/(float)fast_volume_percent) * 100.0f;
+	selection_amplify((int)percent);
 }
 
 static void fast_volume_attenuate(void)
@@ -3506,9 +3507,11 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		set_skip_value(9);
 	} else if (key_pressed(pattern_edit, store_pattern_data)) {
 		fast_save_update();
+		status_text_flash("Pattern data stored");
 	} else if (key_pressed(pattern_edit, revert_pattern_data)) {
 		pated_save("Undo revert pattern data (Alt-BkSpace)");
 		snap_paste(&fast_save, 0, 0, 0);
+		status_text_flash("Pattern data reverted");
 	} else if (key_pressed(block_functions, mark_beginning_block)) {
 		if (!SELECTION_EXISTS) {
 			selection.last_channel = current_channel;
@@ -3525,20 +3528,18 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		selection.last_channel = current_channel;
 		selection.last_row = current_row;
 		normalise_block_selection();
-	} else if (key_repeated(block_functions, quick_mark_lines)) {
-		if (total_rows - (current_row - 1) > block_double_size)
-			block_double_size <<= 1;
-
-		n = block_double_size + current_row - 1;
-		selection.last_row = MIN(n, total_rows);
 	} else if (key_pressed(block_functions, quick_mark_lines)) {
-		// emulate some weird impulse tracker behavior here:
-		// with row highlight set to zero, alt-d selects the whole channel
-		// if the cursor is at the top, and clears the selection otherwise
-		block_double_size = current_song->row_highlight_major ? current_song->row_highlight_major : (current_row ? 0 : 65536);
-		selection.first_channel = selection.last_channel = current_channel;
-		selection.first_row = current_row;
-
+		if (key_press_repeats(block_functions, quick_mark_lines)) {
+			if (total_rows - (current_row - 1) > block_double_size)
+				block_double_size <<= 1;
+		} else {
+			// emulate some weird impulse tracker behavior here:
+			// with row highlight set to zero, alt-d selects the whole channel
+			// if the cursor is at the top, and clears the selection otherwise
+			block_double_size = current_song->row_highlight_major ? current_song->row_highlight_major : (current_row ? 0 : 65536);
+			selection.first_channel = selection.last_channel = current_channel;
+			selection.first_row = current_row;
+		}
 		n = block_double_size + current_row - 1;
 		selection.last_row = MIN(n, total_rows);
 	} else if (key_pressed(block_functions, mark_column_or_pattern)) {
@@ -3633,13 +3634,13 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		draw_divisions = !draw_divisions;
 		recalculate_visible_area();
 		pattern_editor_reposition();
-	} else if (key_pressed(block_functions, raise_notes_semitone)) {
+	} else if (key_pressed_or_repeated(block_functions, raise_notes_semitone)) {
 		transpose_notes(1);
-	} else if (key_pressed(block_functions, raise_notes_octave)) {
+	} else if (key_pressed_or_repeated(block_functions, raise_notes_octave)) {
 		transpose_notes(12);
-	} else if (key_pressed(block_functions, lower_notes_semitone)) {
+	} else if (key_pressed_or_repeated(block_functions, lower_notes_semitone)) {
 		transpose_notes(-1);
-	} else if (key_pressed(block_functions, lower_notes_octave)) {
+	} else if (key_pressed_or_repeated(block_functions, lower_notes_octave)) {
 		transpose_notes(-12);
 	} else if (key_pressed(block_functions, select_template_mode)) {
 		if (fast_volume_mode)
@@ -3658,14 +3659,14 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		track_view_scheme[n] = ((track_view_scheme[n] + 1) % NUM_TRACK_VIEWS);
 		recalculate_visible_area();
 		pattern_editor_reposition();
-	} else if (key_pressed(pattern_edit, slide_pattern_up)) {
+	} else if (key_pressed_or_repeated(pattern_edit, slide_pattern_up)) {
 		if (top_display_row > 0) {
 			top_display_row--;
 			if (current_row > top_display_row + 31)
 				set_current_row(top_display_row + 31);
 			return -1;
 		}
-	} else if (key_pressed(pattern_edit, slide_pattern_down)) {
+	} else if (key_pressed_or_repeated(pattern_edit, slide_pattern_down)) {
 		if (top_display_row + 31 < total_rows) {
 			top_display_row++;
 			if (current_row < top_display_row)
@@ -3681,6 +3682,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		pated_save("Remove inserted row(s)    (Alt-Insert)");
 		pattern_insert_rows(current_row, 1, 1, 64);
 	} else if (key_pressed(pattern_edit, delete_pattern_row)) {
+		// TODO
 		pated_save("Replace deleted row(s)    (Alt-Delete)");
 		pattern_delete_rows(current_row, 1, 1, 64);
 	} else if (key_pressed(playback_functions, toggle_current_channel)) {
@@ -3732,12 +3734,12 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	}  else if(key_pressed(track_view, quick_view_scheme_6)) {
 		set_quick_view_scheme(6);
 	// TODO END
-	}  else if(key_pressed(track_view, move_column_left)) {
-		if (current_channel > top_display_channel)
-			set_current_channel(current_channel - 1);
-	}  else if(key_pressed(track_view, move_column_right)) {
-		if (current_channel < top_display_channel + visible_channels - 1)
-			set_current_channel(current_channel + 1);
+	// }  else if(key_pressed(track_view, move_column_left)) {
+	// 	if (current_channel > top_display_channel)
+	// 		set_current_channel(current_channel - 1);
+	// }  else if(key_pressed(track_view, move_column_right)) {
+	// 	if (current_channel < top_display_channel + visible_channels - 1)
+	// 		set_current_channel(current_channel + 1);
 	}  else if(key_pressed(playback_functions, play_from_row)) {
 		song_loop_pattern(current_pattern, current_row);
 	}  else if(key_pressed(playback_functions, toggle_playback_mark)) {
@@ -3807,6 +3809,10 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	}  else if(key_pressed(pattern_edit, undo)) {
 		pattern_editor_display_history();
 	} else {
+		if (!(k->mod & KMOD_CTRL)) {
+			return 0;
+		}
+
 		switch (k->sym) {
 
 		// TODO: Figure out what this does
@@ -3850,24 +3856,7 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 static int mute_toggle_hack[64]; /* mrsbrisby: please explain this one, i don't get why it's necessary... */
 static int pattern_editor_handle_key_default(struct key_event * k)
 {
-	/* bleah */
-	if (k->sym == SDLK_LESS || k->sym == SDLK_COLON || k->sym == SDLK_SEMICOLON) {
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if ((status.flags & CLASSIC_MODE) || current_position != 4) {
-			set_previous_instrument();
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
-	} else if (k->sym == SDLK_GREATER || k->sym == SDLK_QUOTE || k->sym == SDLK_QUOTEDBL) {
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if ((status.flags & CLASSIC_MODE) || current_position != 4) {
-			set_next_instrument();
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
-	} else if (key_active(pattern_edit, toggle_edit_mask)) {
+	if (key_active(pattern_edit, toggle_edit_mask)) {
 		if (k->state == KEY_RELEASE)
 			return 0;
 		switch (current_position) {
@@ -4099,11 +4088,11 @@ static int pattern_editor_handle_key(struct key_event * k)
 	} else if (key_pressed_or_repeated(pattern_edit, move_up_n_lines)) {
 		int rh = current_song->row_highlight_major ? current_song->row_highlight_major : 16;
 		if (current_row == total_rows)
-			set_current_row(current_row - (current_row % rh) ? (current_row % rh) : rh);
+			set_current_row(current_row - ((current_row % rh) ? (current_row % rh) : rh));
 		else
 			set_current_row(current_row - rh);
 	} else if (key_pressed_or_repeated(pattern_edit, move_down_n_lines)) {
-		set_current_row(current_row + current_song->row_highlight_major ? current_song->row_highlight_major : 16);
+		set_current_row(current_row + (current_song->row_highlight_major ? current_song->row_highlight_major : 16));
 	} else if (key_pressed_or_repeated(pattern_edit, move_start)) {
 		if (current_position == 0) {
 			if (invert_home_end ? (current_row != 0) : (current_channel == 1)) {
@@ -4220,6 +4209,22 @@ static int pattern_editor_handle_key(struct key_event * k)
 		}
 	} else if (key_pressed_or_repeated(pattern_edit, set_pattern_length)) {
 		pattern_editor_length_edit();
+	// } else if (
+	// 	key_released(block_functions, mark_beginning_block) ||
+	// 	key_released(block_functions, mark_end_block) ||
+	// 	key_released(block_functions, quick_mark_lines) ||
+	// 	key_released(block_functions, mark_column_or_pattern) ||
+	// 	key_released(block_functions, mark_block_left) ||
+	// 	key_released(block_functions, mark_block_right) ||
+	// 	key_released(block_functions, mark_block_up) ||
+	// 	key_released(block_functions, mark_block_down) ||
+	// 	key_released(block_functions, mark_block_start_row) ||
+	// 	key_released(block_functions, mark_block_end_row) ||
+	// 	key_released(block_functions, mark_block_page_up) ||
+	// 	key_released(block_functions, mark_block_page_down)
+	// ) {
+	// 	if (shift_selection.in_progress)
+	// 		shift_selection_end();
 	} else {
 		return 0;
 	}
@@ -4230,10 +4235,11 @@ static int pattern_editor_handle_key(struct key_event * k)
 	switch (k->sym) {
 	case SDLK_LSHIFT:
 	case SDLK_RSHIFT:
-		if (k->state == KEY_PRESS) {
-			if (shift_selection.in_progress)
-				shift_selection_end();
-		} else if (shift_chord_channels) {
+		// if (k->state == KEY_PRESS) {
+		// 	if (shift_selection.in_progress)
+		// 		shift_selection_end();
+		// } else
+		if (shift_chord_channels) {
 			set_current_channel(current_channel - shift_chord_channels);
 			while (current_channel < 1)
 				set_current_channel(current_channel + 64);
@@ -4263,14 +4269,14 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 	int is_selecting = 0;
 
 	if(
-		key_pressed_or_repeated(block_functions, mark_block_up) ||
-		key_pressed_or_repeated(block_functions, mark_block_down) ||
-		key_pressed_or_repeated(block_functions, mark_block_left) ||
-		key_pressed_or_repeated(block_functions, mark_block_right) ||
-		key_pressed_or_repeated(block_functions, mark_block_start_row) ||
-		key_pressed_or_repeated(block_functions, mark_block_end_row) ||
-		key_pressed_or_repeated(block_functions, mark_block_page_up) ||
-		key_pressed_or_repeated(block_functions, mark_block_page_down)
+		key_active(block_functions, mark_block_up) ||
+		key_active(block_functions, mark_block_down) ||
+		key_active(block_functions, mark_block_left) ||
+		key_active(block_functions, mark_block_right) ||
+		key_active(block_functions, mark_block_start_row) ||
+		key_active(block_functions, mark_block_end_row) ||
+		key_active(block_functions, mark_block_page_up) ||
+		key_active(block_functions, mark_block_page_down)
 	) {
 		shift_selection_begin();
 		is_selecting = 1;
@@ -4283,16 +4289,8 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 		pattern_editor_handle_key_default(k)
 	);
 
-	if(
-		!is_selecting && (
-			previous_current_channel != current_channel ||
-			previous_current_position != current_position ||
-			previous_current_row != current_row ||
-			previous_current_pattern != current_pattern
-		)
-	) {
+	if(!is_selecting && shift_selection.in_progress)
 		shift_selection_end();
-	}
 
 	shift_selection_update();
 

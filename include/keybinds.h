@@ -423,8 +423,8 @@ typedef struct keybind_list
         keybind_bind track_scheme_4;
         keybind_bind track_scheme_5;
         keybind_bind track_scheme_6;
-        keybind_bind move_column_left;
-        keybind_bind move_column_right;
+        // keybind_bind move_column_left;
+        // keybind_bind move_column_right;
 
         keybind_bind quick_view_scheme_1;
         keybind_bind quick_view_scheme_2;
