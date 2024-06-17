@@ -38,7 +38,7 @@ static int check_mods(SDL_Keymod needed, SDL_Keymod current, int lenient)
         return (ctrl_needed == has_ctrl) && (shift_needed == has_shift) && (alt_needed == has_alt) && (ralt_needed == has_ralt);
 }
 
-static void update_bind(keybind_bind* bind, SDL_KeyCode kcode, SDL_Scancode scode, SDL_Keymod mods, const char* text, int is_down)
+static void update_bind(keybind_bind* bind, SDL_Scancode scode, SDL_Keymod mods, const char* text, int is_down)
 {
     keybind_shortcut* sc;
 
@@ -52,8 +52,9 @@ static void update_bind(keybind_bind* bind, SDL_KeyCode kcode, SDL_Scancode scod
     bind->pressed = 0;
     bind->released = 0;
     bind->repeated = 0;
+    bind->press_repeats = 0;
 
-    for(int i = 0; i < bind->shortcuts_count; i++) {
+    for (int i = 0; i < bind->shortcuts_count; i++) {
         sc = &bind->shortcuts[i];
 
         int mods_correct = 0;
@@ -61,27 +62,39 @@ static void update_bind(keybind_bind* bind, SDL_KeyCode kcode, SDL_Scancode scod
         int released = 0;
         int repeated = 0;
 
-        if(sc->character[0] && text) {
+        if (sc->character[0] && text) {
             if (strcmp(text, sc->character) != 0) {
+                sc->is_press_repeat = 0;
+                sc->press_repeats = 0;
                 continue;
             }
             mods_correct = check_mods(sc->modifier, mods, 1);
-        } else if(sc->scancode != SDL_SCANCODE_UNKNOWN) {
-            if(sc->scancode != scode)
+        } else if (sc->scancode != SDL_SCANCODE_UNKNOWN) {
+            if(sc->scancode != scode) {
+                sc->is_press_repeat = 0;
+                sc->press_repeats = 0;
                 continue;
+            }
             mods_correct = check_mods(sc->modifier, mods, 0);
         }
 
         int is_repeat = is_down && (sc->pressed || sc->repeated);
 
-        if(is_down) {
-            if(mods_correct) {
+        if (is_down) {
+            if (mods_correct) {
                 pressed = !is_repeat;
                 repeated = is_repeat;
+
+                if (sc->is_press_repeat && !is_repeat) {
+                    sc->press_repeats++;
+                }
             }
         } else {
-            released = 1;
+            if (sc->pressed || sc->repeated)
+                released = 1;
         }
+
+        sc->is_press_repeat = 1;
 
         // Shortcut only updated when it changes. This allows us to correctly handle repeated/released.
         sc->pressed = pressed;
@@ -92,6 +105,7 @@ static void update_bind(keybind_bind* bind, SDL_KeyCode kcode, SDL_Scancode scod
             bind->pressed = pressed;
             bind->released = released;
             bind->repeated = repeated;
+            bind->press_repeats = sc->press_repeats;
             break;
         }
 
@@ -105,11 +119,21 @@ void keybinds_handle_event(struct key_event* event)
 		return;
 	}
 
+    switch(event->scancode) {
+        case SDL_SCANCODE_LCTRL:
+        case SDL_SCANCODE_RCTRL:
+        case SDL_SCANCODE_LALT:
+        case SDL_SCANCODE_RALT:
+        case SDL_SCANCODE_LSHIFT:
+        case SDL_SCANCODE_RSHIFT:
+            return; // we have to return here to support press_repeats
+    }
+
     int is_down = event->state == KEY_PRESS;
     SDL_Keymod mods = SDL_GetModState();
 
     for (int i = 0; i < current_binds_count; i++) {
-        update_bind(current_binds[i], event->orig_sym, event->scancode, mods, event->orig_text, is_down);
+        update_bind(current_binds[i], event->scancode, mods, event->orig_text, is_down);
     }
 }
 

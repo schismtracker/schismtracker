@@ -15,6 +15,8 @@ typedef struct keybind_shortcut
     int pressed;
     int released;
     int repeated;
+    int is_press_repeat;
+    int press_repeats;
 } keybind_shortcut;
 
 typedef struct keybind_section_info
@@ -31,16 +33,17 @@ typedef struct keybind_bind
     keybind_section_info* section_info;
     keybind_shortcut* shortcuts; // This array size is MAX_SHORTCUTS
     int shortcuts_count; // This number is used to skip checking the entire array
-    const char* name;
-    const char* description;
+    const char* name; // This is the variable name, for easier debugging
+    const char* description; // Text that shows up on help pages
     const char* shortcut_text; // Contains all shortcuts with commas in-between, for example "F10, Ctrl-W"
     const char* first_shortcut_text; // Contains only the first shortcut, for example "F10"
     const char* shortcut_text_parens; // shortcut_text but with parenthesis around it. No parenthesis if there is no shortcut
     const char* first_shortcut_text_parens; // Only first shortcut, with parenthesis around
     const char* help_text; // Text formatted for showing on help page
-    int pressed;
-    int released;
-    int repeated;
+    int pressed; // 1 on the event when this key was pressed down
+    int released; // 1 on the event when this key was released
+    int repeated; // 1 when the key was repeated (without releasing it)
+    int press_repeats; // Number of times this key has been pressed in a row
 } keybind_bind;
 
 /* *** KEYBIND LIST *** */
@@ -638,6 +641,16 @@ extern keybind_list global_keybinds_list;
 #define key_active(SECTION, NAME) ( \
     global_keybinds_list.SECTION.NAME.pressed || \
     global_keybinds_list.SECTION.NAME.repeated || \
-    global_keybinds_list.SECTION.NAME.released)
+    global_keybinds_list.SECTION.NAME.released \
+)
+
+/*
+    How many times the key was pressed and released in a row.
+    Pressing any other key will reset to 0.
+    Does not count repeats while holding down the key.
+*/
+#define key_press_repeats(SECTION, NAME) ( \
+    global_keybinds_list.SECTION.NAME.press_repeats \
+)
 
 #endif /* KEYBINDS_H */

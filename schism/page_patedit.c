@@ -3481,9 +3481,6 @@ static void set_skip_value(int n)
 	status_text_flash("Cursor step set to %d", skip_value);
 }
 
-static int last_key_is_mark_column_or_pattern = 0;
-static int new_key_is_mark_column_or_pattern = 0;
-
 static int pattern_editor_handle_alt_key(struct key_event * k)
 {
 	int n;
@@ -3544,13 +3541,8 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 
 		n = block_double_size + current_row - 1;
 		selection.last_row = MIN(n, total_rows);
-	} else if (key_active(block_functions, mark_column_or_pattern)) {
-		new_key_is_mark_column_or_pattern = 1;
-
-		if (k->state == KEY_RELEASE)
-			return 1;
-
-		if (last_key_is_mark_column_or_pattern) {
+	} else if (key_pressed(block_functions, mark_column_or_pattern)) {
+		if (key_press_repeats(block_functions, mark_column_or_pattern) > 0) {
 			/* 3x alt-l re-selects the current channel */
 			if (selection.first_channel == selection.last_channel) {
 				selection.first_channel = 1;
@@ -3581,24 +3573,25 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		}
 	} else if (key_pressed(block_functions, copy_block)) {
 		clipboard_copy(0);
-	} else if (key_repeated(block_functions, paste_and_overwrite)) {
-		clipboard_paste_overwrite(0, 1);
 	} else if (key_pressed(block_functions, paste_and_overwrite)) {
-		clipboard_paste_overwrite(0, 0);
+		if (key_press_repeats(block_functions, paste_and_overwrite) > 0) {
+			clipboard_paste_overwrite(0, 1);
+		} else {
+			clipboard_paste_overwrite(0, 0);
+		}
 	} else if (key_pressed(block_functions, paste_data)) {
 		clipboard_paste_insert();
-	} else if (key_repeated(block_functions, paste_and_mix)) {
-		clipboard_paste_mix_fields(0, 0);
 	} else if (key_pressed(block_functions, paste_and_mix)) {
-		clipboard_paste_mix_notes(0, 0);
+		if (key_press_repeats(block_functions, paste_and_mix) > 0) {
+			clipboard_paste_mix_fields(0, 0);
+		} else {
+			clipboard_paste_mix_notes(0, 0);
+		}
 	} else if (key_pressed(block_functions, double_block_length)) {
 		block_length_double();
 	} else if (key_pressed(block_functions, halve_block_length)) {
 		block_length_halve();
-	} else if (
-		key_pressed(pattern_edit, toggle_multichannel) ||
-		key_repeated(pattern_edit, toggle_multichannel)
-	) {
+	} else if (key_pressed(pattern_edit, toggle_multichannel)) {
 		channel_multi[current_channel - 1] ^= 1;
 		if (channel_multi[current_channel - 1]) {
 			channel_multi_enabled = 1;
@@ -3612,7 +3605,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			}
 		}
 
-		if (key_repeated(pattern_edit, toggle_multichannel)) {
+		if (key_press_repeats(pattern_edit, toggle_multichannel) > 0) {
 			pattern_editor_display_multichannel();
 		}
 	} else if (key_pressed(block_functions, cut_block)) {
@@ -3624,14 +3617,18 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		selection_set_volume();
 	} else if (key_pressed(block_functions, wipe_volume_or_panning)) {
 		selection_wipe_volume(0);
-	} else if (key_repeated(block_functions, slide_volume_or_panning)) {
-		selection_wipe_volume(1);
 	} else if (key_pressed(block_functions, slide_volume_or_panning)) {
-		selection_slide_volume();
-	} else if (key_repeated(block_functions, slide_effect_value)) {
-		selection_wipe_effect();
+		if (key_press_repeats(block_functions, slide_volume_or_panning) > 0) {
+			selection_wipe_volume(1);
+		} else {
+			selection_slide_volume();
+		}
 	} else if (key_pressed(block_functions, slide_effect_value)) {
-		selection_slide_effect();
+		if (key_press_repeats(block_functions, slide_effect_value) > 0) {
+			selection_wipe_effect();
+		} else {
+			selection_slide_effect();
+		}
 	} else if (key_pressed(track_view, toggle_track_view_divisions)) {
 		draw_divisions = !draw_divisions;
 		recalculate_visible_area();
@@ -4279,16 +4276,12 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 		is_selecting = 1;
 	}
 
-	new_key_is_mark_column_or_pattern = 0;
-
 	int ret = (
 		pattern_editor_handle_alt_key(k) ||
 		pattern_editor_handle_ctrl_key(k) ||
 		pattern_editor_handle_key(k) ||
 		pattern_editor_handle_key_default(k)
 	);
-
-	last_key_is_mark_column_or_pattern = new_key_is_mark_column_or_pattern;
 
 	if(
 		!is_selecting && (
