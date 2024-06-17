@@ -820,9 +820,9 @@ void handle_key(struct key_event *k)
 		if (ACTIVE_PAGE.pre_handle_key(k)) return;
 	}
 
+	if (handle_key_global(k)) return;
 	if (!(status.flags & DISKWRITER_ACTIVE) && menu_handle_key(k)) return;
 	if (widget_handle_key(k)) return;
-	if (handle_key_global(k)) return;
 
 	if (key_pressed_or_repeated(global, decrease_playback_speed)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
