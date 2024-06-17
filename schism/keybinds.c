@@ -48,10 +48,22 @@ static void update_bind(keybind_bind* bind, SDL_Scancode scode, SDL_Keymod mods,
     bind->repeated = 0;
     bind->press_repeats = 0;
 
-    if (bind->section_info->page_matcher) {
-        if (!bind->section_info->page_matcher(status.current_page)) return;
-    } else {
-        if (bind->section_info->page != PAGE_ANY && bind->section_info->page != status.current_page) return;
+    int page_matching = (
+        bind->section_info->page_matcher ?
+        bind->section_info->page_matcher(status.current_page) :
+        (bind->section_info->page == PAGE_ANY || bind->section_info->page == status.current_page)
+    );
+
+    if (!page_matching) {
+        // We need to reset everything so the state isn't messed up next time we enter the page
+        for (int i = 0; i < bind->shortcuts_count; i++) {
+            sc = &bind->shortcuts[i];
+            sc->pressed = 0;
+            sc->released = 0;
+            sc->repeated = 0;
+            sc->press_repeats = 0;
+        }
+        return;
     }
 
     for (int i = 0; i < bind->shortcuts_count; i++) {
