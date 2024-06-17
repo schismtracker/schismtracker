@@ -423,8 +423,6 @@ typedef struct keybind_list
         keybind_bind track_scheme_4;
         keybind_bind track_scheme_5;
         keybind_bind track_scheme_6;
-        // keybind_bind move_column_left;
-        // keybind_bind move_column_right;
 
         keybind_bind quick_view_scheme_default;
         keybind_bind quick_view_scheme_1;
@@ -463,12 +461,10 @@ typedef struct keybind_list
         keybind_bind set_volume_or_panning;
         keybind_bind wipe_volume_or_panning;
         keybind_bind slide_volume_or_panning;
-        // keybind_bind wipe_all_volume_or_panning;
         keybind_bind volume_amplifier;
         keybind_bind cut_block;
         keybind_bind swap_block;
         keybind_bind slide_effect_value;
-        // keybind_bind wipe_all_effect_data;
 
         keybind_bind roll_block_down;
         keybind_bind roll_block_up;
@@ -477,9 +473,7 @@ typedef struct keybind_list
         keybind_bind copy_block_with_mute;
         keybind_bind paste_data;
         keybind_bind paste_and_overwrite;
-        // keybind_bind grow_pattern_from_clipboard_length;
         keybind_bind paste_and_mix;
-        // keybind_bind paste_and_mix_field;
 
         keybind_bind double_block_length;
         keybind_bind halve_block_length;

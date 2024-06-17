@@ -330,8 +330,6 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(pattern_edit, get_default_value, "Get default note/instrument/volume/effect", "US_ENTER");
     init_bind_macro(pattern_edit, decrease_instrument, "Decrease instrument", "Shift+US_COMMA,Ctrl+US_UP");
     init_bind_macro(pattern_edit, increase_instrument, "Increase instrument", "Shift+US_PERIOD,Ctrl+US_DOWN");
-    // init_bind_macro(pattern_edit, decrease_octave, "Decrease octave", "US_KP_DIVIDE,Alt+US_HOME");
-    // init_bind_macro(pattern_edit, increase_octave, "Increase octave", "US_KP_MULTIPLY,Alt+US_END");
     init_bind_macro(pattern_edit, toggle_edit_mask, "Toggle edit mask for current field\n ", "US_COMMA");
 
     init_bind_macro(pattern_edit, insert_row, "Insert a row to current channel", "US_INSERT");
@@ -390,7 +388,6 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(track_view, cycle_view, "Cycle current track's view", "Alt+US_T");
     init_bind_macro(track_view, clear_track_views, "Clear all track views", "Alt+US_R");
     init_bind_macro(track_view, toggle_track_view_divisions, "Toggle track view divisions", "Alt+US_H");
-    // init_bind_macro(track_view, deselect_track, "Deselect current track\n ", "Ctrl+US_0");
 
     init_bind_macro(track_view, track_scheme_default, "View current track in scheme default", "Ctrl+US_0,Ctrl+US_GRAVE");
     init_bind_macro(track_view, track_scheme_1, "View current track in scheme 1", "Ctrl+US_1");
@@ -441,14 +438,12 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(block_functions, slide_volume_or_panning,
         "Slide volume/panning column (*)" TEXT_2X
         "Wipe all volume/panning controls (*)", "Alt+US_K");
-    // init_bind_macro(block_functions, wipe_all_volume_or_panning, "Wipe all volume/panning controls (*)", "");
     init_bind_macro(block_functions, volume_amplifier, "Volume amplifier (*) / fast volume attenuate (*)", "Alt+US_J");
     init_bind_macro(block_functions, cut_block, "Cut block (*)", "Alt+US_Z");
     init_bind_macro(block_functions, swap_block, "Swap block (*)", "Alt+US_Y");
     init_bind_macro(block_functions, slide_effect_value,
         "Slide effect value (*)" TEXT_2X
         "Wipe all effect data (*)\n ", "Alt+US_X");
-    // init_bind_macro(block_functions, wipe_all_effect_data, "", "");
 
     init_bind_macro(block_functions, roll_block_down, "Roll block down", "Ctrl+US_INSERT");
     init_bind_macro(block_functions, roll_block_up, "Roll block up", "Ctrl+US_DELETE");
@@ -459,11 +454,9 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(block_functions, paste_and_overwrite,
         "Overwrite with data from clipboard (*)" TEXT_2X
         "Grow pattern to clipboard length", "Alt+US_O");
-    // init_bind_macro(block_functions, grow_pattern_from_clipboard_length, "", "");
     init_bind_macro(block_functions, paste_and_mix,
         "Mix each row from clipboard with pattern data (*)" TEXT_2X
         "Mix each field from clipboard with pattern data\n ", "Alt+US_M");
-    // init_bind_macro(block_functions, paste_and_mix_field, "", "");
 
     init_bind_macro(block_functions, double_block_length, "Double block length (*)", "Alt+US_F");
     init_bind_macro(block_functions, halve_block_length, "Halve block length (*)\n ", "Alt+US_G");
