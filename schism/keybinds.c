@@ -113,12 +113,21 @@ static void update_bind(keybind_bind* bind, SDL_Scancode scode, SDL_Keymod mods,
     }
 }
 
+static void reset_bind(keybind_bind* bind)
+{
+    bind->pressed = 0;
+    bind->released = 0;
+    bind->repeated = 0;
+    bind->press_repeats = 0;
+}
+
 void keybinds_handle_event(struct key_event* event)
 {
 	if (event->mouse != MOUSE_NONE) {
 		return;
 	}
 
+    // This is so that mod keys don't mess with press_repeats
     switch(event->scancode) {
         case SDL_SCANCODE_LCTRL:
         case SDL_SCANCODE_RCTRL:
@@ -126,7 +135,10 @@ void keybinds_handle_event(struct key_event* event)
         case SDL_SCANCODE_RALT:
         case SDL_SCANCODE_LSHIFT:
         case SDL_SCANCODE_RSHIFT:
-            return; // we have to return here to support press_repeats
+            for (int i = 0; i < current_binds_count; i++) {
+                reset_bind(current_binds[i]);
+            }
+            return;
     }
 
     int is_down = event->state == KEY_PRESS;
