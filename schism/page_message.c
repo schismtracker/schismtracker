@@ -487,7 +487,7 @@ static int message_handle_key_viewmode(struct key_event * k)
 		top_line = get_num_lines(current_song->message) - 34;
 	} else if (key_pressed(message_edit, toggle_extended_font)) {
 		message_extfont = !message_extfont;
-	} else if (key_released(message_edit, edit_message)) {
+	} else if (key_pressed(message_edit, edit_message)) {
 		message_set_editmode();
 	} else {
 		return 0;

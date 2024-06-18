@@ -429,7 +429,7 @@ static int file_list_handle_key(struct key_event * k)
 	} else if (key_pressed_or_repeated(global, nav_end)) {
 		new_file = flist.num_files - 1;
 		slash_search_mode = -1;
-	} else if (key_released(global, nav_cancel)) {
+	} else if (key_pressed(global, nav_cancel)) {
 		if (slash_search_mode < 0) {
 			set_page(PAGE_SAMPLE_LIST);
 		} else {
@@ -437,7 +437,7 @@ static int file_list_handle_key(struct key_event * k)
 			status.flags |= NEED_UPDATE;
 		}
 		return 1;
-	} else if (key_released(global, nav_accept)) {
+	} else if (key_pressed(global, nav_accept)) {
 		if (slash_search_mode < 0) {
 			handle_enter_key();
 			slash_search_mode = -1;

@@ -727,7 +727,7 @@ static int file_list_handle_key(struct key_event * k)
 		new_file = 0;
 	} else if (key_pressed_or_repeated(global, nav_end)) {
 		new_file = flist.num_files - 1;
-	} else if (key_released(global, nav_accept)) {
+	} else if (key_pressed(global, nav_accept)) {
 		if (current_file < flist.num_files) {
 			dmoz_cache_update(cfg_dir_modules, &flist, &dlist);
 			handle_file_entered(flist.files[current_file]->path);
@@ -897,7 +897,7 @@ static int dir_list_handle_key(struct key_event * k)
 		new_dir = 0;
 	} else if (key_pressed_or_repeated(global, nav_end)) {
 		new_dir = dlist.num_dirs - 1;
-	} else if (key_released(global, nav_accept)) {
+	} else if (key_pressed(global, nav_accept)) {
 		/* reset */
 		top_file = current_file = 0;
 		if (current_dir >= 0 && current_dir < dlist.num_dirs)

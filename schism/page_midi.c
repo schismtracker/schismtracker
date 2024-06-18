@@ -153,7 +153,7 @@ static int midi_page_handle_key(struct key_event * k)
 		}
 	}
 
-	if (key_released(midi, toggle_port)) {
+	if (key_pressed(midi, toggle_port)) {
 		toggle_port();
 		return 1;
 	} else if(key_pressed(global, nav_page_up)) {
