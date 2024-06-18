@@ -590,6 +590,9 @@ typedef struct keybind_list
         keybind_bind nav_tab;
         keybind_bind nav_backtab;
 
+        keybind_bind numentry_increase_value;
+        keybind_bind numentry_decrease_value;
+
         keybind_bind thumbbar_min_value;
         keybind_bind thumbbar_max_value;
         keybind_bind thumbbar_increase_value;

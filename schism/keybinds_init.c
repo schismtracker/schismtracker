@@ -597,6 +597,9 @@ static void init_global_keybinds(cfg_file_t* cfg)
     init_bind_macro(global, thumbbar_decrease_value_4x, "Thumbbar decrease value 4x", "Shift+US_LEFT");
     init_bind_macro(global, thumbbar_decrease_value_8x, "Thumbbar decrease value 8x\n ", "Alt+US_LEFT");
 
+    init_bind_macro(global, numentry_increase_value, "Number increase value", "US_KP_PLUS,Shift+US_EQUALS");
+    init_bind_macro(global, numentry_decrease_value, "Number decrease value 8x\n ", "US_KP_MINUS,Shift+US_MINUS");
+
     init_section_macro(dialog, "Dialog Keys.", PAGE_ANY);
     init_bind_macro(dialog, yes, "Answer yes in yes/no dialog.", "US_Y");
     init_bind_macro(dialog, no, "Answer no in yes/no dialog.\n ", "US_N");

@@ -589,44 +589,22 @@ int widget_handle_key(struct key_event * k)
 		change_focus_to(widget->next.down);
 		return 1;
 	} else if (key_active(global, nav_left)) {
-		change_focus_to(widget->next.left);
-		return 1;
-	} else if (key_active(global, nav_right)) {
-		change_focus_to(widget->next.right);
-		return 1;
-	} else if (key_active(global, nav_tab)) {
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		change_focus_to(widget->next.tab);
-		return 1;
-	} else if (key_active(global, nav_backtab)) {
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		_backtab();
-		return 1;
-	}
-
-	switch (k->sym) {
-	case SDLK_LEFT:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		switch (current_type) {
 		case WIDGET_BITSET:
-		    if (NO_MODIFIER(k->mod))
 			bitset_move_cursor(widget, -1);
 		    break;
 		case WIDGET_NUMENTRY:
-			if (!NO_MODIFIER(k->mod)) {
-				return 0;
-			}
 			numentry_move_cursor(widget, -1);
 			return 1;
 		case WIDGET_TEXTENTRY:
-			if (!NO_MODIFIER(k->mod)) {
-				return 0;
-			}
 			textentry_move_cursor(widget, -1);
 			return 1;
+		default:
+			change_focus_to(widget->next.left);
+			return 1;
 		}
-		break;
-	case SDLK_RIGHT:
+	} else if (key_active(global, nav_right)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		/* pretty much the same as left, but with a few small
 		 * changes here and there... */
@@ -647,48 +625,65 @@ int widget_handle_key(struct key_event * k)
 			}
 			textentry_move_cursor(widget, 1);
 			return 1;
+		default:
+			if (!NO_MODIFIER(k->mod))
+				return 0;
+			change_focus_to(widget->next.right);
+			return 1;
 		}
-		break;
-	case SDLK_HOME:
+	} else if (key_active(global, nav_tab)) {
+		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		change_focus_to(widget->next.tab);
+		return 1;
+	} else if (key_active(global, nav_backtab)) {
+		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		_backtab();
+		return 1;
+	} else if (key_active(global, nav_home)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		/* Impulse Tracker only does home/end for the thumbbars.
 		 * This stuff is all extra. */
 		switch (current_type) {
 		case WIDGET_NUMENTRY:
-			if (!NO_MODIFIER(k->mod))
-				return 0;
 			*(widget->d.numentry.cursor_pos) = 0;
 			status.flags |= NEED_UPDATE;
 			return 1;
 		case WIDGET_TEXTENTRY:
-			if (!NO_MODIFIER(k->mod))
-				return 0;
 			widget->d.textentry.cursor_pos = 0;
 			status.flags |= NEED_UPDATE;
 			return 1;
 		default:
 			break;
 		}
-		break;
-	case SDLK_END:
+	} else if (key_active(global, nav_end)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		switch (current_type) {
 		case WIDGET_NUMENTRY:
-			if (!NO_MODIFIER(k->mod))
-				return 0;
 			*(widget->d.numentry.cursor_pos) = widget->width - 1;
 			status.flags |= NEED_UPDATE;
 			return 1;
 		case WIDGET_TEXTENTRY:
-			if (!NO_MODIFIER(k->mod))
-				return 0;
 			widget->d.textentry.cursor_pos = strlen(widget->d.textentry.text);
 			status.flags |= NEED_UPDATE;
 			return 1;
 		default:
 			break;
 		}
-		break;
+	} else if (key_active(global, numentry_increase_value)) {
+		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (current_type == WIDGET_NUMENTRY) {
+			numentry_change_value(widget, widget->d.numentry.value + 1);
+			return 1;
+		}
+	} else if (key_active(global, numentry_decrease_value)) {
+		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (current_type == WIDGET_NUMENTRY) {
+			numentry_change_value(widget, widget->d.numentry.value - 1);
+			return 1;
+		}
+	}
+
+	switch (k->sym) {
 	case SDLK_SPACE:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		switch (current_type) {
@@ -769,20 +764,6 @@ int widget_handle_key(struct key_event * k)
 		if (widget->changed) widget->changed();
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_PLUS:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type == WIDGET_NUMENTRY && NO_MODIFIER(k->mod)) {
-			numentry_change_value(widget, widget->d.numentry.value + 1);
-			return 1;
-		}
-		break;
-	case SDLK_MINUS:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type == WIDGET_NUMENTRY && NO_MODIFIER(k->mod)) {
-			numentry_change_value(widget, widget->d.numentry.value - 1);
-			return 1;
-		}
-		break;
 	default:
 		/* this avoids a warning about all the values of an enum not being handled.
 		(sheesh, it's already hundreds of lines long as it is!) */
