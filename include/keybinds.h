@@ -204,13 +204,16 @@ typedef struct keybind_list
         keybind_bind next_page;
         keybind_bind previous_page;
 
-        keybind_bind goto_first_sample;
-        keybind_bind goto_last_sample;
+        keybind_bind move_instrument_up;
+        keybind_bind move_instrument_down;
+
+        keybind_bind goto_first_instrument;
+        keybind_bind goto_last_instrument;
 
         // keybind_bind load_instrument;
         keybind_bind focus_list;
-        keybind_bind move_instrument_up;
-        keybind_bind move_instrument_down;
+        keybind_bind goto_instrument_up;
+        keybind_bind goto_instrument_down;
         keybind_bind clear_name_and_filename;
         keybind_bind wipe_data;
         keybind_bind edit_name;
@@ -290,9 +293,6 @@ typedef struct keybind_list
         keybind_bind move_up;
         keybind_bind move_down;
         keybind_bind focus_sample_list;
-
-        keybind_bind move_instrument_up;
-        keybind_bind move_instrument_down;
 
         keybind_bind goto_first_sample;
         keybind_bind goto_last_sample;

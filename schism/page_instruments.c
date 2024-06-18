@@ -499,6 +499,10 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			song_swap_instruments(current_instrument, new_ins);
 			instrument_set(new_ins);
 		}
+	} else if (key_pressed_or_repeated(instrument_list, goto_first_instrument)) {
+		instrument_set(1);
+	} else if (key_pressed_or_repeated(instrument_list, goto_last_instrument)) {
+		instrument_set(_last_vis_inst());
 	} else if (key_pressed_or_repeated(global, nav_page_up)) {
 		instrument_set(current_instrument - 16);
 	} else if (key_pressed_or_repeated(global, nav_page_down)) {
@@ -803,9 +807,9 @@ static int note_trans_handle_key(struct key_event * k)
 	} else if (key_pressed_or_repeated(instrument_note_translation, pickup_sample_number_and_default_play_note)) {
 		sample_set(ins->sample_map[note_trans_sel_line]);
 		get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
-	} else if (key_pressed(instrument_list, move_instrument_up)) {
+	} else if (key_pressed(instrument_list, goto_instrument_up)) {
 		instrument_set(current_instrument - 1);
-	} else if (key_pressed(instrument_list, move_instrument_down)) {
+	} else if (key_pressed(instrument_list, goto_instrument_down)) {
 		instrument_set(current_instrument + 1);
 	} else {
 		if (k->state == KEY_RELEASE)
@@ -1850,10 +1854,6 @@ static void instrument_list_handle_key(struct key_event * k)
 		song_change_current_play_channel(-1, 0);
 	} else if (key_pressed(instrument_list, increase_playback_channel)) {
 		song_change_current_play_channel(1, 0);
-	} else if (key_pressed(instrument_list, move_instrument_up)) {
-		instrument_set(current_instrument - 1);
-	} else if (key_pressed(instrument_list, move_instrument_down)) {
-		instrument_set(current_instrument + 1);
 	} else if (
 		key_active(instrument_list, focus_list) ||
 		(instrument_cursor_pos < 25 && key_active(global, nav_cancel))

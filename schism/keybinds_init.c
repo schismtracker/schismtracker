@@ -175,18 +175,18 @@ static void init_instrument_list_keybinds(cfg_file_t* cfg)
     global_keybinds_list.instrument_list_info.page_matcher = instrument_list_page_matcher;
 
     init_bind_macro(instrument_list, next_page, "Next page", "US_F4");
-    init_bind_macro(instrument_list, previous_page, "Previous page", "Shift+US_F4");
+    init_bind_macro(instrument_list, previous_page, "Previous page\n ", "Shift+US_F4");
 
     init_bind_macro(instrument_list, move_instrument_up, "Move instrument up (when on list)", "Alt+US_UP");
-    init_bind_macro(instrument_list, move_instrument_down, "Move instrument down (when on list)", "Alt+US_DOWN");
+    init_bind_macro(instrument_list, move_instrument_down, "Move instrument down (when on list)\n ", "Alt+US_DOWN");
 
-    init_bind_macro(instrument_list, goto_first_sample, "Select first sample (when on list)", "Ctrl+US_PAGEUP");
-    init_bind_macro(instrument_list, goto_last_sample, "Select last sample (when on list)", "Ctrl+US_PAGEDOWN");
+    init_bind_macro(instrument_list, goto_first_instrument, "Select first instrument (when on list)", "Ctrl+US_PAGEUP");
+    init_bind_macro(instrument_list, goto_last_instrument, "Select last instrument (when on list)", "Ctrl+US_PAGEDOWN");
 
     // init_bind_macro(instrument_list, load_instrument, "Load new instrument", "US_ENTER");
     init_bind_macro(instrument_list, focus_list, "Focus on list", "Shift+US_ESCAPE");
-    init_bind_macro(instrument_list, move_instrument_up, "Move instrument up (when not on list)", "Ctrl+US_PAGEUP");
-    init_bind_macro(instrument_list, move_instrument_down, "Move instrument down (when not on list)", "Ctrl+US_PAGEDOWN");
+    init_bind_macro(instrument_list, goto_instrument_up, "Goto instrument up (when not on list)", "Ctrl+US_PAGEUP");
+    init_bind_macro(instrument_list, goto_instrument_down, "Goto instrument down (when not on list)", "Ctrl+US_PAGEDOWN");
     init_bind_macro(instrument_list, clear_name_and_filename, "Clean instrument name & filename", "Alt+US_C");
     init_bind_macro(instrument_list, wipe_data, "Wipe instrument data", "Alt+US_W");
     init_bind_macro(instrument_list, edit_name, "Edit instrument name (ESC to exit)\n ", "US_SPACE");
