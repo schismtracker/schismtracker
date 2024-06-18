@@ -117,6 +117,10 @@ static void init_order_list_keybinds(cfg_file_t* cfg)
     init_bind_macro(order_list, save_order_list, "Save order list", "Alt+US_ENTER");
     init_bind_macro(order_list, restore_order_list, "Swap order list with saved order list", "Alt+US_BACKSPACE");
 
+	// I'm not sure why this is here, but it is
+    init_bind_macro(order_list, decrease_instrument, "Decrease instrument", "Shift+US_COMMA,Ctrl+US_UP");
+    init_bind_macro(order_list, increase_instrument, "Increase instrument", "Shift+US_PERIOD,Ctrl+US_DOWN");
+
     init_section_macro(order_list_panning, "Panning Keys.", PAGE_ORDERLIST_PANNING);
     init_bind_macro(order_list_panning, toggle_channel_mute, "Toggle channel muted", "US_SPACE");
     init_bind_macro(order_list_panning, set_panning_left, "Set panning left", "US_L");
@@ -172,6 +176,9 @@ static void init_instrument_list_keybinds(cfg_file_t* cfg)
 
     init_bind_macro(instrument_list, next_page, "Next page", "US_F4");
     init_bind_macro(instrument_list, previous_page, "Previous page", "Shift+US_F4");
+
+    init_bind_macro(instrument_list, move_instrument_up, "Move instrument up (when on list)", "Alt+US_UP");
+    init_bind_macro(instrument_list, move_instrument_down, "Move instrument down (when on list)", "Alt+US_DOWN");
 
     init_bind_macro(instrument_list, goto_first_sample, "Select first sample (when on list)", "Ctrl+US_PAGEUP");
     init_bind_macro(instrument_list, goto_last_sample, "Select last sample (when on list)", "Ctrl+US_PAGEDOWN");
@@ -258,6 +265,9 @@ static void init_sample_list_keybinds(cfg_file_t* cfg)
     init_bind_macro(sample_list, move_up, "Move up (when not on list)", "US_PAGEUP");
     init_bind_macro(sample_list, move_down, "Move down (when not on list)", "US_PAGEDOWN");
     init_bind_macro(sample_list, focus_sample_list, "Focus on sample list\n ", "Shift+US_ESCAPE");
+
+    init_bind_macro(sample_list, goto_first_sample, "Select first sample (when on list)", "Ctrl+US_PAGEUP");
+    init_bind_macro(sample_list, goto_last_sample, "Select last sample (when on list)\n ", "Ctrl+US_PAGEDOWN");
 
     init_bind_macro(sample_list, convert_signed_unsigned, "Convert signed to/from unsigned samples", "Alt+US_A");
     init_bind_macro(sample_list, pre_loop_cut, "Pre-loop cut sample", "Alt+US_B");
@@ -383,6 +393,7 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
     init_bind_macro(pattern_edit, toggle_volume_display, "Toggle default volume display\n ", "Ctrl+US_V");
 
     init_bind_macro(pattern_edit, set_pattern_length, "Set pattern length", "Ctrl+US_F2");
+    init_bind_macro(pattern_edit, toggle_midi_trigger, "Toggle MIDI trigger", "Ctrl+US_X,Ctrl+US_Z");
 
     init_section_macro(track_view, " Track View Functions.", PAGE_PATTERN_EDITOR);
     init_bind_macro(track_view, cycle_view, "Cycle current track's view", "Alt+US_T");

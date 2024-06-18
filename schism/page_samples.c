@@ -446,6 +446,8 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			set_cursor_pos(sample_list_cursor_pos + 1);
 		} else if (key_pressed_or_repeated(global, nav_up)) {
 			sample_set(current_sample - 1);
+		} else if (key_pressed_or_repeated(global, nav_down)) {
+			sample_set(current_sample + 1);
 		} else if (key_pressed(global, nav_home)) {
 			set_cursor_pos(0);
 		} else if (key_pressed(global, nav_end)) {
@@ -459,10 +461,9 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 		} else if (key_pressed_or_repeated(sample_list, swap_sample_with_next)) {
 			// restrict position to the "old" value of _last_vis_sample()
 			// (this is entirely for aesthetic reasons)
-			// TODO: Fix this
-			if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
-				_altswap_lastvis = _last_vis_sample();
-			// TODO END
+			// if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
+			// 	_altswap_lastvis = _last_vis_sample();
+
 			if (current_sample < _altswap_lastvis) {
 				int new_sample = current_sample + 1;
 				song_swap_samples(current_sample, new_sample);
@@ -472,12 +473,10 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			sample_set(current_sample - 16);
 		} else if (key_pressed_or_repeated(global, nav_page_down)) {
 			sample_set(current_sample + 16);
-		// TODO: instrument_list won't work here.....
-		} else if (key_pressed(instrument_list, goto_first_sample)) {
+		} else if (key_pressed(sample_list, goto_first_sample)) {
 			sample_set(1);
-		} else if (key_pressed(instrument_list, goto_last_sample)) {
+		} else if (key_pressed(sample_list, goto_last_sample)) {
 			sample_set(_last_vis_sample());
-		// TODO END
 		} else if (key_pressed(global, nav_accept)) {
 			set_page(PAGE_LOAD_SAMPLE);
 		} else if (key_pressed(sample_list, clear_name_and_filename)) {

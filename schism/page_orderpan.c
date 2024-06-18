@@ -488,14 +488,12 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		new_order -= 16;
 	} else if(key_pressed_or_repeated(global, nav_page_down)) {
 		new_order += 16;
-
-	// I'm not sure why this is here, but it is
-	} else if(key_pressed(pattern_edit, decrease_instrument)) {
+	} else if(key_pressed(order_list, decrease_instrument)) {
 		if (status.flags & CLASSIC_MODE) return 0;
 		sample_set(sample_get_current() - 1);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	} else if(key_pressed(pattern_edit, increase_instrument)) {
+	} else if(key_pressed(order_list, increase_instrument)) {
 		if (status.flags & CLASSIC_MODE) return 0;
 		sample_set(sample_get_current() + 1);
 		status.flags |= NEED_UPDATE;

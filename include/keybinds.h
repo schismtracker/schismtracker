@@ -146,6 +146,9 @@ typedef struct keybind_list
 
         keybind_bind save_order_list;
         keybind_bind restore_order_list;
+
+        keybind_bind decrease_instrument;
+        keybind_bind increase_instrument;
     } order_list;
 
     keybind_section_info order_list_panning_info;
@@ -288,6 +291,12 @@ typedef struct keybind_list
         keybind_bind move_down;
         keybind_bind focus_sample_list;
 
+        keybind_bind move_instrument_up;
+        keybind_bind move_instrument_down;
+
+        keybind_bind goto_first_sample;
+        keybind_bind goto_last_sample;
+
         keybind_bind convert_signed_unsigned;
         keybind_bind pre_loop_cut;
         keybind_bind clear_name_and_filename;
@@ -407,6 +416,7 @@ typedef struct keybind_list
         keybind_bind toggle_volume_display;
 
         keybind_bind set_pattern_length;
+        keybind_bind toggle_midi_trigger;
     } pattern_edit;
 
     keybind_section_info track_view_info;

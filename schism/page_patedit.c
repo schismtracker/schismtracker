@@ -3744,14 +3744,12 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 		song_loop_pattern(current_pattern, current_row);
 	} else if(key_pressed(playback_functions, toggle_playback_mark)) {
 		set_playback_mark();
-	// TODO: Duplicates?
 	} else if(key_pressed(pattern_edit, decrease_instrument)) {
 		set_previous_instrument();
 		status.flags |= NEED_UPDATE;
 	} else if(key_pressed(pattern_edit, increase_instrument)) {
 		set_next_instrument();
 		status.flags |= NEED_UPDATE;
-	// TODO END
 	} else if(key_pressed(pattern_edit, move_pattern_top)) {
 		set_current_row(0);
 	} else if(key_pressed(pattern_edit, move_pattern_bottom)) {
@@ -3808,33 +3806,28 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 		status_text_flash("Default volumes %s", (show_default_volumes ? "enabled" : "disabled"));
 	} else if(key_pressed(pattern_edit, undo)) {
 		pattern_editor_display_history();
+	} else if(key_pressed(pattern_edit, toggle_midi_trigger)) {
+		midi_start_record++;
+		if (midi_start_record > 2) midi_start_record = 0;
+		switch (midi_start_record) {
+		case 0:
+			status_text_flash("No MIDI Trigger");
+			break;
+		case 1:
+			status_text_flash("Pattern MIDI Trigger");
+			break;
+		case 2:
+			status_text_flash("Song MIDI Trigger");
+			break;
+		};
+		return 1;
 	} else {
 		if (!(k->mod & KMOD_CTRL)) {
 			return 0;
 		}
 
 		switch (k->sym) {
-
-		// TODO: Figure out what this does
-		case SDLK_x:
-		case SDLK_z:
-			if (k->state == KEY_RELEASE)
-				return 1;
-			midi_start_record++;
-			if (midi_start_record > 2) midi_start_record = 0;
-			switch (midi_start_record) {
-			case 0:
-				status_text_flash("No MIDI Trigger");
-				break;
-			case 1:
-				status_text_flash("Pattern MIDI Trigger");
-				break;
-			case 2:
-				status_text_flash("Song MIDI Trigger");
-				break;
-			};
-			return 1;
-		// TODO: And this
+		// TODO: What is this
 		case SDLK_b:
 			if (k->mod & KMOD_SHIFT)
 				return 0;

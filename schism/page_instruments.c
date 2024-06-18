@@ -483,17 +483,16 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 		instrument_set(current_instrument - 1);
 	} else if (key_pressed_or_repeated(global, nav_down)) {
 		instrument_set(current_instrument + 1);
-	} else if (key_pressed(instrument_envelope, move_node_up)) {
+	} else if (key_pressed_or_repeated(instrument_list, move_instrument_up)) {
 		if (current_instrument > 1) {
 			int new_ins = current_instrument - 1;
 			song_swap_instruments(current_instrument, new_ins);
 			instrument_set(new_ins);
 		}
-	} else if (key_pressed(instrument_envelope, move_node_down)) {
-		// TODO: What is this?
-		if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
-			_altswap_lastvis = _last_vis_inst();
-		// TODO END
+	} else if (key_pressed_or_repeated(instrument_list, move_instrument_down)) {
+		// This was in previous code. I can't see a difference with it on
+		// if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
+		// 	_altswap_lastvis = _last_vis_inst();
 
 		if (current_instrument < _altswap_lastvis) {
 			int new_ins = current_instrument + 1;
@@ -836,21 +835,17 @@ static int note_trans_handle_key(struct key_event * k)
 		case 2:        /* instrument, first digit */
 		case 3:        /* instrument, second digit */
 			if (k->sym == SDLK_SPACE) {
-				printf("B\n");
-				fflush(stdout);
 				ins->sample_map[note_trans_sel_line] =
 					sample_get_current();
 				note_trans_sel_line_set(note_trans_sel_line + 1);
 				break;
 			}
 
-			// TODO: What is this?
 			if ((k->sym == SDLK_PERIOD && NO_MODIFIER(k->mod)) || k->sym == SDLK_DELETE) {
 				ins->sample_map[note_trans_sel_line] = 0;
 				note_trans_sel_line_set(note_trans_sel_line + (k->sym == SDLK_PERIOD ? 1 : 0));
 				break;
 			}
-			// TODO END
 
 			if (key_pressed(instrument_note_translation, toggle_edit_mask)) {
 				note_sample_mask = note_sample_mask ? 0 : 1;
@@ -1495,27 +1490,27 @@ static int _env_handle_key_editmode(struct key_event *k, song_envelope_t *env, i
 
 	/* TODO: when does adding/removing a node alter loop points? */
 
-	if (key_pressed(instrument_envelope, nav_node_left)) {
+	if (key_pressed_or_repeated(instrument_envelope, nav_node_left)) {
 		new_node--;
-	} else if (key_pressed(instrument_envelope, nav_node_right)) {
+	} else if (key_pressed_or_repeated(instrument_envelope, nav_node_right)) {
 		new_node++;
-	} else if (key_pressed(instrument_envelope, move_node_up)) {
+	} else if (key_pressed_or_repeated(instrument_envelope, move_node_up)) {
 		new_value++;
-	} else if (key_pressed(instrument_envelope, move_node_up_fast)) {
+	} else if (key_pressed_or_repeated(instrument_envelope, move_node_up_fast)) {
 		new_value += 16;
-	} else if (key_pressed(instrument_envelope, move_node_down)) {
+	} else if (key_pressed_or_repeated(instrument_envelope, move_node_down)) {
 		new_value--;
-	} else if (key_pressed(instrument_envelope, move_node_down_fast)) {
+	} else if (key_pressed_or_repeated(instrument_envelope, move_node_down_fast)) {
 		new_value -= 16;
-	} else if (key_pressed(instrument_envelope, move_node_left)) {
+	} else if (key_pressed_or_repeated(instrument_envelope, move_node_left)) {
 		new_tick--;
-	} else if (key_pressed(instrument_envelope, move_node_left_fast)) {
+	} else if (key_pressed_or_repeated(instrument_envelope, move_node_left_fast)) {
 		new_tick -= 16;
 	} else if (key_pressed(instrument_envelope, move_node_left_max)) {
 		new_tick = 0;
-	} else if (key_pressed(instrument_envelope, move_node_right)) {
+	} else if (key_pressed_or_repeated(instrument_envelope, move_node_right)) {
 		new_tick++;
-	} else if (key_pressed(instrument_envelope, move_node_right_fast)) {
+	} else if (key_pressed_or_repeated(instrument_envelope, move_node_right_fast)) {
 		new_tick += 16;
 	} else if (key_pressed(instrument_envelope, move_node_right_max)) {
 		new_tick = 10000;
