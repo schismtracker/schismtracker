@@ -191,9 +191,6 @@ char* str_concat_six(char* str1, char* str2, char* str3, char* str4, char* str5,
 /* count is size of array. str_array is the array. If free_inputs is true free() will be called on the strings. */
 char* str_concat_with_delim(int count, char** str_array, const char* delim, int free_inputs);
 
-/* Get length of utf8 string. Utf8 strings can have a single visible character taking up 2 chars or more. */
-int utf8_length(const char* str);
-
 /* pad will be placed between str1 and str2 until width is reached. If free_inputs is true free() will be called on the strings. */
 char* str_pad_between(char* str1, char* str2, char pad, int width, int min_padding, int free_inputs);
 

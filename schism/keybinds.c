@@ -205,7 +205,7 @@ static int parse_shortcut_character(keybind_bind* bind, const char* shortcut, ch
 {
     if(!shortcut || !shortcut[0]) return 0;
 
-    if(utf8_length(shortcut) > 1) {
+    if(charset_strlen(shortcut, CHARSET_UTF8) > 1) {
         log_appendf(5, " %s/%s: Too many characters in '%s'", bind->section_info->name, bind->name, shortcut);
         printf("%s/%s: Too many characters in '%s'\n", bind->section_info->name, bind->name, shortcut);
         fflush(stdout);

@@ -947,26 +947,14 @@ char* str_concat_with_delim(int count, char** str_array, const char* delim, int 
 	return out;
 }
 
-int utf8_length(const char* str)
-{
-	int count = 0;
-
-	for(int i = 0; str[i]; i++) {
-		if ((str[i] & 0x80) == 0 || (str[i] & 0xc0) == 0xc0)
-			count++;
-	}
-
-	return count;
-}
-
 char* str_pad_between(char* str1, char* str2, char pad, int width, int min_padding, int free_inputs)
 {
 	int len1 = strlen(str1);
 	int len2 = strlen(str2);
 	int len_both = len1 + len2;
 
-	int len1_utf8 = utf8_length(str1);
-	int len2_utf8 = utf8_length(str2);
+	int len1_utf8 = charset_strlen(str1, CHARSET_UTF8);
+	int len2_utf8 = charset_strlen(str2, CHARSET_UTF8);
 	int len_both_utf8 = len1_utf8 + len2_utf8;
 	int len_padding = width - len_both_utf8;
 
