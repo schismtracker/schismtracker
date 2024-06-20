@@ -624,6 +624,41 @@ typedef struct keybind_list
         keybind_bind_t cancel;
         keybind_bind_t accept;
     } dialog;
+
+    keybind_section_info_t notes_info;
+    struct keybinds_notes {
+        keybind_bind_t note_row1_c;
+        keybind_bind_t note_row1_c_sharp;
+        keybind_bind_t note_row1_d;
+        keybind_bind_t note_row1_d_sharp;
+        keybind_bind_t note_row1_e;
+        keybind_bind_t note_row1_f;
+        keybind_bind_t note_row1_f_sharp;
+        keybind_bind_t note_row1_g;
+        keybind_bind_t note_row1_g_sharp;
+        keybind_bind_t note_row1_a;
+        keybind_bind_t note_row1_a_sharp;
+        keybind_bind_t note_row1_b;
+
+        keybind_bind_t note_row2_c;
+        keybind_bind_t note_row2_c_sharp;
+        keybind_bind_t note_row2_d;
+        keybind_bind_t note_row2_d_sharp;
+        keybind_bind_t note_row2_e;
+        keybind_bind_t note_row2_f;
+        keybind_bind_t note_row2_f_sharp;
+        keybind_bind_t note_row2_g;
+        keybind_bind_t note_row2_g_sharp;
+        keybind_bind_t note_row2_a;
+        keybind_bind_t note_row2_a_sharp;
+        keybind_bind_t note_row2_b;
+
+        keybind_bind_t note_row3_c;
+        keybind_bind_t note_row3_c_sharp;
+        keybind_bind_t note_row3_d;
+        keybind_bind_t note_row3_d_sharp;
+        keybind_bind_t note_row3_e;
+    } notes;
 } keybind_list_t;
 
 char* keybinds_get_help_text(enum page_numbers page);

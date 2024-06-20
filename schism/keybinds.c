@@ -6,7 +6,7 @@
 #include "keybinds_codes.c"
 #include "keybinds_init.c"
 
-#define MAX_BINDS 400
+#define MAX_BINDS 450
 #define MAX_SHORTCUTS 3
 static int current_binds_count = 0;
 static keybind_bind_t* current_binds[MAX_BINDS];

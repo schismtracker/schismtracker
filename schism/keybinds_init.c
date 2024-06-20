@@ -620,6 +620,43 @@ static void init_global_keybinds(cfg_file_t* cfg)
 
     INIT_BIND(dialog, cancel, "Dialog cancel.", "ESCAPE");
     INIT_BIND(dialog, accept, "Dialog accept.", "ENTER");
+
+    INIT_SECTION(notes, "Note Keys.", PAGE_GLOBAL);
+    INIT_BIND(notes, note_row1_c, "Row 1 C", "US_Z");
+    INIT_BIND(notes, note_row1_c_sharp, "Row 1 C#", "US_S");
+    INIT_BIND(notes, note_row1_d, "Row 1 D", "US_X");
+    INIT_BIND(notes, note_row1_d_sharp, "Row 1 D#", "US_D");
+    INIT_BIND(notes, note_row1_e, "Row 1 E\n ", "US_C");
+
+    INIT_BIND(notes, note_row1_f, "Row 1 F", "US_V");
+    INIT_BIND(notes, note_row1_f_sharp, "Row 1 F#", "US_G");
+    INIT_BIND(notes, note_row1_g, "Row 1 G", "US_B");
+    INIT_BIND(notes, note_row1_g_sharp, "Row 1 G#\n ", "US_H");
+
+    INIT_BIND(notes, note_row1_a, "Row 1 A", "US_N");
+    INIT_BIND(notes, note_row1_a_sharp, "Row 1 A#", "US_J");
+    INIT_BIND(notes, note_row1_b, "Row 1 B\n ", "US_M");
+
+    INIT_BIND(notes, note_row2_c, "Row 2 C", "US_Q");
+    INIT_BIND(notes, note_row2_c_sharp, "Row 2 C#", "US_2");
+    INIT_BIND(notes, note_row2_d, "Row 2 D", "US_W");
+    INIT_BIND(notes, note_row2_d_sharp, "Row 2 D#", "US_3");
+    INIT_BIND(notes, note_row2_e, "Row 2 E\n ", "US_E");
+
+    INIT_BIND(notes, note_row2_f, "Row 2 F", "US_R");
+    INIT_BIND(notes, note_row2_f_sharp, "Row 2 F#", "US_5");
+    INIT_BIND(notes, note_row2_g, "Row 2 G", "US_T");
+    INIT_BIND(notes, note_row2_g_sharp, "Row 2 G#\n ", "US_6");
+
+    INIT_BIND(notes, note_row2_a, "Row 2 A", "US_Y");
+    INIT_BIND(notes, note_row2_a_sharp, "Row 2 A#", "US_7");
+    INIT_BIND(notes, note_row2_b, "Row 2 B\n ", "US_U");
+
+    INIT_BIND(notes, note_row3_c, "Row 2 C", "US_I");
+    INIT_BIND(notes, note_row3_c_sharp, "Row 2 C#", "US_9");
+    INIT_BIND(notes, note_row3_d, "Row 2 D", "US_O");
+    INIT_BIND(notes, note_row3_d_sharp, "Row 2 D#", "US_0");
+    INIT_BIND(notes, note_row3_e, "Row 2 E\n ", "US_P");
 }
 
 static void init_all_keybinds(cfg_file_t* cfg) {

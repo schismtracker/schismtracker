@@ -483,40 +483,68 @@ int kbd_get_note(struct key_event *k)
 
 	if (!NO_CAM_MODS(k->mod)) return -1;
 
-	switch (k->scancode) {
-	case SDL_SCANCODE_Z: note = 1; break;
-	case SDL_SCANCODE_S: note = 2; break;
-	case SDL_SCANCODE_X: note = 3; break;
-	case SDL_SCANCODE_D: note = 4; break;
-	case SDL_SCANCODE_C: note = 5; break;
-	case SDL_SCANCODE_V: note = 6; break;
-	case SDL_SCANCODE_G: note = 7; break;
-	case SDL_SCANCODE_B: note = 8; break;
-	case SDL_SCANCODE_H: note = 9; break;
-	case SDL_SCANCODE_N: note = 10; break;
-	case SDL_SCANCODE_J: note = 11; break;
-	case SDL_SCANCODE_M: note = 12; break;
+	if (KEY_ACTIVE(notes, note_row1_c)) {
+		note = 1;
+	} else if (KEY_ACTIVE(notes, note_row1_c_sharp)) {
+		note = 2;
+	} else if (KEY_ACTIVE(notes, note_row1_d)) {
+		note = 3;
+	} else if (KEY_ACTIVE(notes, note_row1_d_sharp)) {
+		note = 4;
+	} else if (KEY_ACTIVE(notes, note_row1_e)) {
+		note = 5;
+	} else if (KEY_ACTIVE(notes, note_row1_f)) {
+		note = 6;
+	} else if (KEY_ACTIVE(notes, note_row1_f_sharp)) {
+		note = 7;
+	} else if (KEY_ACTIVE(notes, note_row1_g)) {
+		note = 8;
+	} else if (KEY_ACTIVE(notes, note_row1_g_sharp)) {
+		note = 9;
+	} else if (KEY_ACTIVE(notes, note_row1_a)) {
+		note = 10;
+	} else if (KEY_ACTIVE(notes, note_row1_a_sharp)) {
+		note = 11;
+	} else if (KEY_ACTIVE(notes, note_row1_b)) {
+		note = 12;
+	} else if (KEY_ACTIVE(notes, note_row2_c)) {
+		note = 13;
+	} else if (KEY_ACTIVE(notes, note_row2_c_sharp)) {
+		note = 14;
+	} else if (KEY_ACTIVE(notes, note_row2_d)) {
+		note = 15;
+	} else if (KEY_ACTIVE(notes, note_row2_d_sharp)) {
+		note = 16;
+	} else if (KEY_ACTIVE(notes, note_row2_e)) {
+		note = 17;
+	} else if (KEY_ACTIVE(notes, note_row2_f)) {
+		note = 18;
+	} else if (KEY_ACTIVE(notes, note_row2_f_sharp)) {
+		note = 19;
+	} else if (KEY_ACTIVE(notes, note_row2_g)) {
+		note = 20;
+	} else if (KEY_ACTIVE(notes, note_row2_g_sharp)) {
+		note = 21;
+	} else if (KEY_ACTIVE(notes, note_row2_a)) {
+		note = 22;
+	} else if (KEY_ACTIVE(notes, note_row2_a_sharp)) {
+		note = 23;
+	} else if (KEY_ACTIVE(notes, note_row2_b)) {
+		note = 24;
+	} else if (KEY_ACTIVE(notes, note_row3_c)) {
+		note = 25;
+	} else if (KEY_ACTIVE(notes, note_row3_c_sharp)) {
+		note = 26;
+	} else if (KEY_ACTIVE(notes, note_row3_d)) {
+		note = 27;
+	} else if (KEY_ACTIVE(notes, note_row3_d_sharp)) {
+		note = 28;
+	} else if (KEY_ACTIVE(notes, note_row3_e)) {
+		note = 29;
+	} else {
+		return -1;
+	}
 
-	case SDL_SCANCODE_Q: note = 13; break;
-	case SDL_SCANCODE_2: note = 14; break;
-	case SDL_SCANCODE_W: note = 15; break;
-	case SDL_SCANCODE_3: note = 16; break;
-	case SDL_SCANCODE_E: note = 17; break;
-	case SDL_SCANCODE_R: note = 18; break;
-	case SDL_SCANCODE_5: note = 19; break;
-	case SDL_SCANCODE_T: note = 20; break;
-	case SDL_SCANCODE_6: note = 21; break;
-	case SDL_SCANCODE_Y: note = 22; break;
-	case SDL_SCANCODE_7: note = 23; break;
-	case SDL_SCANCODE_U: note = 24; break;
-	case SDL_SCANCODE_I: note = 25; break;
-	case SDL_SCANCODE_9: note = 26; break;
-	case SDL_SCANCODE_O: note = 27; break;
-	case SDL_SCANCODE_0: note = 28; break;
-	case SDL_SCANCODE_P: note = 29; break;
-
-	default: return -1;
-	};
 	note += (12 * current_octave);
 	return CLAMP(note, 1, 120);
 }
