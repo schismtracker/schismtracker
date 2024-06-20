@@ -2,6 +2,7 @@
 #include "it.h"
 #include "page.h"
 #include "dmoz.h"
+#include "charset.h"
 #include "keybinds_codes.c"
 #include "keybinds_init.c"
 
@@ -168,11 +169,8 @@ static int string_to_mod_length = ARRAY_SIZE(string_to_mod);
 
 static int parse_shortcut_mods(const char* shortcut, SDL_Keymod* mods)
 {
-    char* shortcut_dup = strdup(shortcut);
-    str_to_upper(shortcut_dup);
-
     for (int i = 0; i < string_to_mod_length; i++) {
-        if (strcmp(shortcut_dup, string_to_mod[i].name) == 0) {
+        if (charset_strcasecmp(shortcut, CHARSET_UTF8, string_to_mod[i].name, CHARSET_UTF8) == 0) {
             *mods |= string_to_mod[i].mod;
             return 1;
         }
@@ -185,11 +183,8 @@ static int string_to_scancode_length = ARRAY_SIZE(string_to_scancode);
 
 static int parse_shortcut_scancode(keybind_bind* bind, const char* shortcut, SDL_Scancode* code)
 {
-    char* shortcut_dup = strdup(shortcut);
-    str_to_upper(shortcut_dup);
-
     for (int i = 0; i < string_to_scancode_length; i++) {
-        if (strcmp(shortcut_dup, string_to_scancode[i].name) == 0) {
+        if (charset_strcasecmp(shortcut, CHARSET_UTF8, string_to_scancode[i].name, CHARSET_UTF8) == 0) {
             *code = string_to_scancode[i].code;
             return 1;
         }

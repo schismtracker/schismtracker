@@ -197,9 +197,6 @@ int utf8_length(const char* str);
 /* pad will be placed between str1 and str2 until width is reached. If free_inputs is true free() will be called on the strings. */
 char* str_pad_between(char* str1, char* str2, char pad, int width, int min_padding, int free_inputs);
 
-/* Convert string to uppercase. The string will be modified */
-void str_to_upper(char *s);
-
 /* filesystem */
 int make_backup_file(const char *filename, int numbered);
 unsigned long long file_size(const char *filename);

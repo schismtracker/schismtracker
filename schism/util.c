@@ -997,12 +997,6 @@ char* str_pad_between(char* str1, char* str2, char pad, int width, int min_paddi
 	return out;
 }
 
-void str_to_upper(char *s)
-{
-    for (int i = 0; s[i]; i++)
-        s[i] = toupper((unsigned char)s[i]);
-}
-
 void unset_env_var(const char *key)
 {
 #ifdef HAVE_UNSETENV
