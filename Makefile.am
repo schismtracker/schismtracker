@@ -149,6 +149,7 @@ CLEANFILES = \
 	auto/helptext.c
 
 auto/default-font.c: Makefile.am scripts/bin2h.sh scripts/build-font.sh $(fonts)
+	${MKDIR_P} auto
 	sh $(srcdir)/scripts/build-font.sh $(srcdir) $(fonts) >$@
 
 auto/helptext.c: Makefile.am scripts/genhelp.pl $(helptexts)
