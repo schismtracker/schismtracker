@@ -615,7 +615,35 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
 /* ----------------------------------------------------------------------------------- */
 /* now we get to charset-aware versions of C stdlib functions. */
 
-/* this isn't *really* necessary, but nice to have */
+size_t charset_strlen(const uint8_t* in, charset_t inset) {
+	uint32_t codepoint;
+	size_t count = 0, in_needed, in_offset = 0;
+	int c;
+
+	if (inset >= ARRAY_SIZE(conv_to_ucs4_funcs))
+		return 0;
+
+	charset_conv_to_ucs4_func conv_to_ucs4_func = conv_to_ucs4_funcs[inset];
+
+	if (!conv_to_ucs4_func)
+		return 0;
+
+	for (;;) {
+		c = conv_to_ucs4_func(in + in_offset, &codepoint, &in_needed);
+
+		if (c == DECODER_ERROR)
+			return 0;
+
+        if (c == DECODER_DONE)
+            break;
+        
+        in_offset += in_needed;
+        count++;
+	}
+
+	return count;
+}
+
 int charset_strcmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set) {
 	uint32_t codepoint1, codepoint2;
 	size_t in1_needed, in2_needed, in1_offset = 0, in2_offset = 0;
