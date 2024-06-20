@@ -1507,6 +1507,7 @@ fail:
 	const char* err = SDL_GetError();
 	if (err) fprintf(stderr, "%s\n", err);
 	schism_exit(1);
+	return 0;
 }
 
 // Set up audio_buffer, reset the sample count, and kick off the mixer
