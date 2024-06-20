@@ -10,7 +10,7 @@
 typedef struct keybind_shortcut
 {
     SDL_Scancode scancode;
-    const char* character;
+    SDL_Keycode keycode;
     SDL_Keymod modifier;
     int pressed;
     int released;

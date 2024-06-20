@@ -876,7 +876,7 @@ char* str_concat_array(int count, char** str_array, int free_inputs)
 		len += strlen(str_array[i]);
 	}
 
-	if(len == 0) return "";
+	if(len == 0) return strdup("");
 
 	char* out = malloc((len + 1) * sizeof(char));
 	out[0] = '\0';
@@ -928,7 +928,7 @@ char* str_concat_with_delim(int count, char** str_array, const char* delim, int 
 		actual_count++;
 	}
 
-	if (len == 0 || actual_count == 0) return "";
+	if (len == 0 || actual_count == 0) return strdup("");
 
 	char* out = malloc((len + (actual_count - 1) * delim_len + 1) * sizeof(char));
 	out[0] = '\0';
