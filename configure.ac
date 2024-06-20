@@ -100,6 +100,11 @@ AC_ARG_WITH([alsa],
 	[],
 	[with_alsa=check])
 
+AC_ARG_WITH([mediafoundation],
+	[AS_HELP_STRING([--with-mediafoundation],[Build with Microsoft Media Foundation support @<:@default=check@:>@])],
+	[],
+	[with_mediafoundation=check])
+
 dnl ------------------------------------------------------------------------
 
 dnl Check for standard programs
@@ -123,7 +128,9 @@ AC_SUBST(WINDRES)
 AM_CONDITIONAL([HAVE_WINDRES], [test "x$WINDRES" != "x"])
 
 dnl Necessary for building the internal help.
-AM_PATH_PYTHON([2.4])
+AC_CHECK_TOOL([PERL], [perl])
+AC_SUBST([PERL])
+AM_CONDITIONAL([HAVE_PERL], [test "x$PERL" != "x"])
 
 dnl We're using C
 AC_LANG([C])
@@ -314,6 +321,7 @@ fi
 AM_CONDITIONAL([USE_ALSA], false)
 AM_CONDITIONAL([LINK_TO_ALSA], false)
 if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then
+	saved_LIBS="$LIBS"
 	AC_CHECK_LIB([asound], [snd_seq_open], [alsa_found=yes], [alsa_found=no])
 	if test "x$alsa_found" = "xyes"; then
 		AM_CONDITIONAL([USE_ALSA], true)
@@ -321,11 +329,23 @@ if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then
 		if test "x$ALSA_LINKING" = "xyes"; then
 			AM_CONDITIONAL([LINK_TO_ALSA], true)
 		else
-			LIBS=$saved_libs
+			LIBS="$saved_LIBS"
 			AC_DEFINE([ALSA_DYNAMIC_LOAD], [1], [Dynamically load ALSA symbols])
 		fi
 	elif test "x$with_alsa" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find ALSA])
+	fi
+fi
+
+AM_CONDITIONAL([USE_MEDIAFOUNDATION], false)
+if test "x$with_mediafoundation" = "xcheck" || test "x$with_mediafoundation" = "xyes"; then
+	dnl requires Windows 7 or newer, but doesn't link to the libraries to keep
+	dnl XP/Vista also working
+	if test "x$use_win32" = "xyes"; then
+		AM_CONDITIONAL([USE_MEDIAFOUNDATION], true)
+		AC_DEFINE([USE_MEDIAFOUNDATION], [1], [Use Media Foundation sample loading])
+	elif test "x$with_mediafoundation" = "xyes"; then
+		AC_MSG_ERROR([*** Failed to find Media Foundation with MFCreateMFByteStreamOnStream])
 	fi
 fi
 
@@ -384,3 +404,17 @@ dnl --------------------------------------------------------------------------
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
+
+dnl --------------------------------------------------------------------------
+dnl These are shipped in the release tarball, so we don't want to regenerate
+dnl them after configure is run.
+
+if test -e "auto/default-font.c"; then
+	touch "auto/default-font.c"
+fi
+
+if test "x$PERL" = "x"; then
+	if test -e "auto/helptext.c"; then
+		touch "auto/helptext.c"
+	fi
+fi

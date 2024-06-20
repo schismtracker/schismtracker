@@ -245,3 +245,106 @@ void read_lined_message(char *msg, slurp_t *fp, int len, int linelen)
 	*msg = '\0';
 }
 
+// calculated using this formula from OpenMPT
+// (i range 1-15, j range 0-15);
+// unsigned int st2MixingRate = 23863;
+// const unsigned char tempo_table[18] = {140, 50, 25, 15, 10, 7, 6, 4, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1};
+// long double samplesPerTick = (double) st2MixingRate / ((long double) 50 - ((tempo_table[high_nibble] * low_nibble) / 16));
+// st2MixingRate *= 5; // normally multiplied by the precision beyond the decimal point, however there's no decimal place here. :P
+// st2MixingRate += samplesPerTick;
+// st2MixingRate = (st2MixingRate >= 0)
+//                 ? (int32_t) (st2MixingRate / (samplesPerTick * 2))
+//                 : (int32_t)((st2MixingRate - ((samplesPerTick * 2) - 1)) / (samplesPerTick * 2));
+static uint8_t st2_tempo_table[15][16] = {
+	{ 125,  117,  110,  102,   95,   87,   80,   72,   62,   55,   47,   40,   32,   25,   17,   10, },
+	{ 125,  122,  117,  115,  110,  107,  102,  100,   95,   90,   87,   82,   80,   75,   72,   67, },
+	{ 125,  125,  122,  120,  117,  115,  112,  110,  107,  105,  102,  100,   97,   95,   92,   90, },
+	{ 125,  125,  122,  122,  120,  117,  117,  115,  112,  112,  110,  110,  107,  105,  105,  102, },
+	{ 125,  125,  125,  122,  122,  120,  120,  117,  117,  117,  115,  115,  112,  112,  110,  110, },
+	{ 125,  125,  125,  122,  122,  122,  120,  120,  117,  117,  117,  115,  115,  115,  112,  112, },
+	{ 125,  125,  125,  125,  122,  122,  122,  122,  120,  120,  120,  120,  117,  117,  117,  117, },
+	{ 125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  120,  120,  120,  120,  120, },
+	{ 125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  120,  120,  120,  120,  120, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125, },
+};
+
+uint8_t convert_stm_tempo_to_bpm(size_t tempo)
+{
+	size_t tpr = (tempo >> 4) ? (tempo >> 4) : 1;
+	size_t scale = (tempo & 15);
+
+	return st2_tempo_table[tpr - 1][scale];
+}
+
+void handle_stm_tempo_pattern(song_note_t *note, size_t tempo)
+{
+	for (int i = 0; i < 32; i++, note++) {
+		if (note->effect == FX_NONE) {
+			note->effect = FX_TEMPO;
+			note->param = convert_stm_tempo_to_bpm(tempo);
+			break;
+		}
+	}
+}
+
+const uint8_t stm_effects[16] = {
+	FX_NONE,               // .
+	FX_SPEED,              // A
+	FX_POSITIONJUMP,       // B
+	FX_PATTERNBREAK,       // C
+	FX_VOLUMESLIDE,        // D
+	FX_PORTAMENTODOWN,     // E
+	FX_PORTAMENTOUP,       // F
+	FX_TONEPORTAMENTO,     // G
+	FX_VIBRATO,            // H
+	FX_TREMOR,             // I
+	FX_ARPEGGIO,           // J
+	// KLMNO can be entered in the editor but don't do anything
+};
+
+void handle_stm_effects(song_note_t *chan_note) {
+	switch (chan_note->effect) {
+	case FX_SPEED:
+		/* do nothing; this is handled later */
+		break;
+	case FX_VOLUMESLIDE:
+		// Scream Tracker 2 checks for the lower nibble first for some reason...
+		if (chan_note->param & 0x0f && chan_note->param >> 4)
+			chan_note->param &= 0x0f;
+
+	case FX_PORTAMENTODOWN:
+	case FX_PORTAMENTOUP:
+		if (!chan_note->param)
+			chan_note->effect = FX_NONE;
+		break;
+	case FX_PATTERNBREAK:
+		chan_note->param = (chan_note->param & 0xf0) * 10 + (chan_note->param & 0xf);
+		break;
+	case FX_POSITIONJUMP:
+		// This effect is also very weird.
+		// Bxx doesn't appear to cause an immediate break -- it merely
+		// sets the next order for when the pattern ends (either by
+		// playing it all the way through, or via Cxx effect)
+		// I guess I'll "fix" it later...
+		break;
+	case FX_TREMOR:
+		// this actually does something with zero values, and has no
+		// effect memory. which makes SENSE for old-effects tremor,
+		// but ST3 went and screwed it all up by adding an effect
+		// memory and IT followed that, and those are much more popular
+		// than STM so we kind of have to live with this effect being
+		// broken... oh well. not a big loss.
+		break;
+	default:
+		// Anything not listed above is a no-op if there's no value.
+		// (ST2 doesn't have effect memory)
+		if (!chan_note->param)
+			chan_note->effect = FX_NONE;
+		break;
+	}
+}

@@ -168,7 +168,6 @@ struct tracker_status {
 	enum tracker_time_display time_display;
 	enum tracker_vis_style vis_style;
 	SDL_Keycode last_keysym;
-	SDL_Keycode last_keyupsym;
 
 	time_t last_midi_time;
 	unsigned char last_midi_event[64];
@@ -270,6 +269,7 @@ void cfg_load(void);
 void cfg_save(void);
 void cfg_midipage_save(void);
 void cfg_atexit_save(void); /* this only saves a handful of settings, not everything */
+void cfg_save_output(void);
 
 /* each page with configurable settings has a function to load/save them... */
 #include "config-parser.h" /* FIXME: shouldn't need this here */
@@ -285,6 +285,7 @@ void cfg_save_info(cfg_file_t *cfg);
 
 void cfg_load_audio(cfg_file_t *cfg);
 void cfg_save_audio(cfg_file_t *cfg);
+void cfg_save_audio_playback(cfg_file_t* cfg);
 void cfg_atexit_save_audio(cfg_file_t *cfg);
 
 void cfg_load_disko(cfg_file_t *cfg);
@@ -401,6 +402,10 @@ void kbd_set_current_octave(int new_octave);
 int kbd_get_note(struct key_event *k);
 
 int kbd_get_alnum(struct key_event *k);
+
+void handle_key_repeat(void);
+void cache_key_repeat(struct key_event* kk);
+void empty_key_repeat(void);
 
 /* use 0 for delay to (re)set the default rate. */
 void set_key_repeat(int delay, int rate);

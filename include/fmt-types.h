@@ -125,6 +125,7 @@ READ_INFO(s3i)  LOAD_SAMPLE(s3i)  SAVE_SAMPLE(s3i) /* FIXME should this be moved
 "reserved" field, Not sure about this positioning, but these are kind of rare formats anyway. */
 READ_INFO(imf) LOAD_SONG(imf)
 READ_INFO(sfx) LOAD_SONG(sfx)
+READ_INFO(stx) LOAD_SONG(stx)
 
 /* bleh */
 #if defined(USE_NON_TRACKED_TYPES) && defined(HAVE_VORBIS)
@@ -139,6 +140,10 @@ READ_INFO(stm) LOAD_SONG(stm)
 at all. I might move this toward the top if I can figure out how to identify an MP3 more precisely. */
 #ifdef USE_NON_TRACKED_TYPES
 READ_INFO(mp3)
+#endif
+
+#if USE_MEDIAFOUNDATION
+READ_INFO(win32mf) LOAD_SAMPLE(win32mf)
 #endif
 
 /* 15-sample mods have literally no identifying information */

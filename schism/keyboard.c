@@ -95,7 +95,7 @@ char get_effect_char(int effect)
 {
 	if (effect < 0 || effect > 34) {
 		log_appendf(4, "get_effect_char: effect %d out of range",
-			    effect);
+				effect);
 		return '?';
 	}
 	return effects[effect];
@@ -117,8 +117,8 @@ int get_effect_number(char effect)
 	if (effect >= 'a' && effect <= 'z') {
 		effect -= 32;
 	} else if (!((effect >= '0' && effect <= '9')
-		     || (effect >= 'A' && effect <= 'Z')
-		     || (effect == '.'))) {
+			 || (effect >= 'A' && effect <= 'Z')
+			 || (effect == '.'))) {
 		/* don't accept pseudo-effects */
 		if (status.flags & CLASSIC_MODE) return -1;
 	}
@@ -178,7 +178,7 @@ void key_translate(struct key_event *k)
 	if (k->mod & KMOD_GUI) {
 		k->mod = ((k->mod & ~KMOD_GUI)
 			  | ((status.flags & META_IS_CTRL)
-			     ? KMOD_CTRL : KMOD_ALT));
+				 ? KMOD_CTRL : KMOD_ALT));
 	}
 	if ((k->mod & KMOD_MODE) && (status.flags & ALTGR_IS_ALT)) {
 		/* Treat AltGr as Alt (delt) */
@@ -283,7 +283,7 @@ char *get_volume_string(int volume, int volume_effect, char *buf)
 
 	if (volume_effect < 0 || volume_effect > 13) {
 		log_appendf(4, "get_volume_string: volume effect %d out"
-			    " of range", volume_effect);
+				" of range", volume_effect);
 		buf[0] = buf[1] = '?';
 		return buf;
 	}
@@ -315,7 +315,7 @@ char *get_note_string(int note, char *buf)
 {
 #ifndef NDEBUG
 	if ((note < 0 || note > 120)
-	    && !(note == NOTE_CUT
+		&& !(note == NOTE_CUT
 		 || note == NOTE_OFF || note == NOTE_FADE)) {
 		log_appendf(4, "Note %d out of range", note);
 		buf[0] = buf[1] = buf[2] = '?';
@@ -359,7 +359,7 @@ char *get_note_string_short(int note, char *buf)
 {
 #ifndef NDEBUG
 	if ((note < 0 || note > 120)
-	    && !(note == NOTE_CUT
+		&& !(note == NOTE_CUT
 		 || note == NOTE_OFF || note == NOTE_FADE)) {
 		log_appendf(4, "Note %d out of range", note);
 		buf[0] = buf[1] = '?';
@@ -558,4 +558,73 @@ int kbd_get_alnum(struct key_event *k)
 		}
 	}
 	return k->sym;
+}
+
+/* -------------------------------------------------- */
+
+#define DEFAULT_KEY_REPEAT_DELAY 500
+#define DEFAULT_KEY_REPEAT_RATE  30
+
+/* emulate SDL 1.2 style key repeat */
+static int key_repeat_delay = DEFAULT_KEY_REPEAT_DELAY, key_repeat_rate = DEFAULT_KEY_REPEAT_RATE;
+static uint64_t key_repeat_next_tick = 0;
+
+static struct key_event cached_key_event = {0};
+
+/* use 64-bit functions only if they're available! */
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+#define SCHISM_TICKS_PASSED(a, b) ((a) >= (b))
+#define SCHISM_GET_TICKS SDL_GetTicks64
+#else
+#define SCHISM_TICKS_PASSED(a, b) (SDL_TICKS_PASSED(a, b))
+#define SCHISM_GET_TICKS SDL_GetTicks
+#endif
+
+void handle_key_repeat(void) {
+	if (!key_repeat_next_tick)
+		return;
+
+	const uint64_t now = SCHISM_GET_TICKS();
+	if (SCHISM_TICKS_PASSED(now, key_repeat_next_tick)) {
+		/* handle key functions have the ability to
+		 * change the values of the key_event structure.
+		 *
+		 * see: issue #465 */
+		struct key_event kk = cached_key_event;
+		handle_key(&kk);
+		key_repeat_next_tick = now + key_repeat_rate;
+	}
+}
+
+void cache_key_repeat(struct key_event* kk) {
+	if (cached_key_event.text)
+		free((uint8_t*)cached_key_event.text);
+
+	cached_key_event = *kk;
+	cached_key_event.is_repeat = 1;
+
+	/* need to duplicate this as well */
+	if (cached_key_event.text)
+		cached_key_event.text = str_dup(cached_key_event.text);
+
+	key_repeat_next_tick = SCHISM_GET_TICKS() + key_repeat_delay + key_repeat_rate;
+}
+
+void empty_key_repeat(void) {
+	if (cached_key_event.text) {
+		free((uint8_t*)cached_key_event.text);
+		cached_key_event.text = NULL;
+	}
+
+	key_repeat_next_tick = 0;
+}
+
+void set_key_repeat(int delay, int rate) {
+	if (delay) {
+		key_repeat_delay = delay;
+		key_repeat_rate = rate;
+	} else {
+		key_repeat_delay = DEFAULT_KEY_REPEAT_DELAY;
+		key_repeat_rate = DEFAULT_KEY_REPEAT_RATE;
+	}
 }

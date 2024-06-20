@@ -194,15 +194,17 @@ TODO: provide some sort of feedback if something went wrong. */
 static int change_dir(const char *dir)
 {
 	char *ptr = dmoz_path_normal(dir);
+	struct stat buf;
 
 	if (!ptr)
 		return 0;
 
 	dmoz_cache_update(cfg_dir_samples, &flist, NULL);
 
-	/* FIXME: need to make sure it exists, and that it's a directory */
-	strncpy(cfg_dir_samples, dir, PATH_MAX);
-	cfg_dir_samples[PATH_MAX] = 0;
+	if (os_stat(ptr, &buf) == 0 && S_ISDIR(buf.st_mode)) {
+		strncpy(cfg_dir_samples, ptr, PATH_MAX);
+		cfg_dir_samples[PATH_MAX] = 0;
+	}
 	free(ptr);
 
 	read_directory();

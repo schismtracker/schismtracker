@@ -22,6 +22,7 @@
  */
 
 #include "headers.h"
+#include "charset.h"
 #include "slurp.h"
 #include "fmt.h"
 #include "log.h"
@@ -480,6 +481,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	struct it_header hdr;
 	uint32_t para_smp[MAX_SAMPLES], para_ins[MAX_INSTRUMENTS], para_pat[MAX_PATTERNS], para_min;
 	int n;
+	int modplug = 0;
 	int ignoremidi = 0;
 	song_channel_t *channel;
 	song_sample_t *sample;
@@ -651,10 +653,10 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 
 	if ((hdr.special & 1) && hdr.msg_length && hdr.msg_offset + hdr.msg_length < fp->length) {
-		int len = MIN(MAX_MESSAGE, hdr.msg_length);
+		int msg_len = MIN(MAX_MESSAGE, hdr.msg_length);
 		slurp_seek(fp, hdr.msg_offset, SEEK_SET);
-		slurp_read(fp, song->message, len);
-		song->message[len] = '\0';
+		slurp_read(fp, song->message, msg_len);
+		song->message[msg_len] = '\0';
 	}
 
 
@@ -724,14 +726,17 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			tid = "OpenMPT %d.%02x (compat.)";
 		else
 			sprintf(song->tracker_id, "OpenMPT %d.%02x.%02x.%02x (compat.)", (hdr.cwtv & 0xf00) >> 8, hdr.cwtv & 0xff, (hdr.reserved >> 8) & 0xff, (hdr.reserved & 0xff));
+		modplug = 1;
 	} else if (hdr.cwtv == 0x0888 && hdr.cmwt == 0x0888 && hdr.reserved == 0/* && hdr.ordnum == 256*/) {
 		// erh.
 		// There's a way to identify the exact version apparently, but it seems too much trouble
 		// (ordinarily ordnum == 256, but I have encountered at least one file for which this is NOT
 		// the case (trackit_r2.it by dsck) and no other trackers I know of use 0x0888)
 		tid = "OpenMPT 1.17+";
+		modplug = 1;
 	} else if (hdr.cwtv == 0x0300 && hdr.cmwt == 0x0300 && hdr.reserved == 0 && hdr.ordnum == 256 && hdr.sep == 128 && hdr.pwd == 0) {
 		tid = "OpenMPT 1.17.02.20 - 1.17.02.25";
+		modplug = 1;
 	} else if (hdr.cwtv == 0x0217 && hdr.cmwt == 0x0200 && hdr.reserved == 0) {
 		int ompt = 0;
 		if (hdr.insnum > 0) {
@@ -752,12 +757,15 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		tid = (ompt
 			? "OpenMPT (compatibility mode)"
 			: "Modplug Tracker 1.09 - 1.16");
+		modplug = 1;
 	} else if (hdr.cwtv == 0x0214 && hdr.cmwt == 0x0200 && hdr.reserved == 0) {
 		// instruments 560 bytes apart
 		tid = "Modplug Tracker 1.00a5";
+		modplug = 1;
 	} else if (hdr.cwtv == 0x0214 && hdr.cmwt == 0x0202 && hdr.reserved == 0) {
 		// instruments 557 bytes apart
 		tid = "Modplug Tracker b3.3 - 1.07";
+		modplug = 1;
 	} else if (hdr.cwtv == 0x0214 && hdr.cmwt == 0x0214 && hdr.reserved == 0x49424843) {
 		// sample data stored directly after header
 		// all sample/instrument filenames say "-DEPRECATED-"
@@ -792,6 +800,47 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 	if (tid) {
 		sprintf(song->tracker_id, tid, (hdr.cwtv & 0xf00) >> 8, hdr.cwtv & 0xff);
+	}
+
+	if (modplug) {
+		/* The encoding of songs saved by Modplug (and OpenMPT) is dependent
+		 * on the current system encoding, which will be Windows-1252 in 99%
+		 * of cases. However, some modules made in other (usually Asian) countries
+		 * will be encoded in other character sets like Shift-JIS or UHC (Korean).
+		 *
+		 * There really isn't a good way to detect this aside from some heuristics
+		 * (JIS is fairly easy to detect, for example) and honestly it's a bit
+		 * more trouble than its really worth to deal with those edge cases when
+		 * we can't even display those characters correctly anyway.
+		 *
+		 *  - paper */
+		uint8_t* tmp;
+
+#define CONVERT(x, size) \
+	if (!charset_iconv(x, &tmp, CHARSET_WINDOWS1252, CHARSET_CP437)) { \
+		strncpy(x, tmp, size); \
+		free(tmp); \
+	}
+
+		CONVERT(song->title, ARRAY_SIZE(song->title))
+
+		for (n = 0; n < hdr.insnum; n++) {
+			song_instrument_t *inst = song->instruments[n + 1];
+			if (!inst)
+				continue;
+
+			CONVERT(inst->name, ARRAY_SIZE(inst->name))
+			CONVERT(inst->filename, ARRAY_SIZE(inst->filename))
+		}
+
+		for (n = 0, sample = song->samples + 1; n < hdr.smpnum; n++, sample++) {
+			CONVERT(sample->name, ARRAY_SIZE(sample->name))
+			CONVERT(sample->filename, ARRAY_SIZE(sample->filename))
+		}
+
+		CONVERT(song->message, ARRAY_SIZE(song->message))
+
+#undef CONVERT
 	}
 
 //      if (ferror(fp)) {

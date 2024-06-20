@@ -72,7 +72,7 @@ sysfiles = \
 scripts = \
 	scripts/bin2h.sh		\
 	scripts/build-font.sh		\
-	scripts/genhelp.py		\
+	scripts/genhelp.pl		\
 	scripts/itf2half.py		\
 	scripts/half2itf.py		\
 	scripts/itcfg.py		\
@@ -145,17 +145,19 @@ appicon_DATA= icons/schism-icon-128.png
 
 noinst_SCRIPTS = $(scripts)
 
-nodist_schismtracker_SOURCES = \
-	auto/default-font.c		\
-	auto/helptext.c
 CLEANFILES = \
-	auto/default-font.c		\
+	auto/default-font.c	\
 	auto/helptext.c
 
 auto/default-font.c: Makefile.am scripts/bin2h.sh scripts/build-font.sh $(fonts)
 	sh $(srcdir)/scripts/build-font.sh $(srcdir) $(fonts) >$@
-auto/helptext.c: Makefile.am scripts/genhelp.py $(helptexts)
-	$(PYTHON) $(srcdir)/scripts/genhelp.py $(srcdir) $(helptexts) >$@
+
+auto/helptext.c: Makefile.am scripts/genhelp.pl $(helptexts)
+if HAVE_PERL
+	$(PERL) $(srcdir)/scripts/genhelp.pl $(srcdir) $(helptexts) >$@
+else
+	@echo "*** python is required to regenerate $(@) ***"; exit 1;
+endif
 
 if USE_ALSA
 files_alsa = sys/alsa/midi-alsa.c
@@ -184,13 +186,18 @@ files_win32 = \
 cflags_win32=-I$(srcdir)/sys/win32
 lib_win32=-lwinmm
 
+if USE_MEDIAFOUNDATION
+files_mediafoundation=fmt/win32mf.c
+lib_mediafoundation=-lole32 -lmfuuid
+endif
+
 if HAVE_WINDRES
 
 ## use today's date if we didn't get a commit date from git
 if HAVE_GIT
-wrcflags_version = -DWRC_VERSION=0,`echo '$(PACKAGE_VERSION)' | sed 's/\(....\)\(..\)\(..\).*/\1,\2,\3/'`
+wrcflags_version = -DWRC_VERSION=0,`echo '$(PACKAGE_VERSION)' | sed 's/\(....\)\(..\)\(..\).*/\1,\2,\3/' | sed 's/,0\+/,/g'`
 else
-wrcflags_version = -DWRC_VERSION=0,`date +%Y%m%d | sed 's/\(....\)\(..\)\(..\).*/\1,\2,\3/'`
+wrcflags_version = -DWRC_VERSION=0,`date +%Y%m%d | sed 's/\(....\)\(..\)\(..\).*/\1,\2,\3/' | sed 's/,0\+/,/g'`
 endif # HAVE_GIT
 
 ## --use-temp-file is needed to work around stupid bugs
@@ -273,6 +280,7 @@ endif
 schismtracker_SOURCES = \
 	schism/page_blank.c		\
 	schism/charset.c		\
+	schism/charset_data.c   \
 	schism/sample-edit.c		\
 	schism/dmoz.c			\
 	schism/page_info.c		\
@@ -321,6 +329,7 @@ schismtracker_SOURCES = \
 	fmt/s3m.c			\
 	fmt/sfx.c			\
 	fmt/stm.c			\
+	fmt/stx.c			\
 	fmt/ult.c			\
 	fmt/wav.c			\
 	fmt/xi.c			\
@@ -370,6 +379,8 @@ schismtracker_SOURCES = \
 	player/effects.c		\
 	player/snd_gm.c			\
 	player/tables.c			\
+	auto/default-font.c		\
+	auto/helptext.c			\
 	$(files_macosx)			\
 	$(files_alsa)			\
 	$(files_oss)			\
@@ -381,7 +392,8 @@ schismtracker_SOURCES = \
 	$(files_windres)		\
 	$(files_flac)			\
 	$(files_jack)			\
-	$(files_opl)
+	$(files_opl)			\
+	$(files_mediafoundation)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
@@ -394,4 +406,4 @@ schismtracker_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 schismtracker_OBJCFLAGS = $(schismtracker_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(LIB_MATH) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(SDL_LIBS)
+schismtracker_LDADD = $(LIB_MATH) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(SDL_LIBS)

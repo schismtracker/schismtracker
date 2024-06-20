@@ -123,7 +123,7 @@ TODO: scroller hack on selected filename
 */
 
 #define GLOB_CLASSIC "*.it; *.xm; *.s3m; *.mtm; *.669; *.mod"
-#define GLOB_DEFAULT GLOB_CLASSIC "; *.mdl; *.mt2; *.stm; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf; *.imf; *.sfx; *.mus; *.mid"
+#define GLOB_DEFAULT GLOB_CLASSIC "; *.mdl; *.mt2; *.stm; *.stx; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf; *.imf; *.sfx; *.mus; *.mid"
 
 /* These are stored as CP437 */
 static uint8_t filename_entry[PATH_MAX + 1] = "";
@@ -636,8 +636,8 @@ static void file_list_draw(void)
 	} else {
 		if (ACTIVE_PAGE.selected_widget == 0) {
 			draw_text("No files.", 3, 13, 0, 3);
-			draw_fill_chars(12, 13, 46, 13, 3);
-			draw_char(168, 21, 13, 2, 3);
+			draw_fill_chars(12, 13, 48, 13, 3);
+			draw_char(168, 23, 13, 2, 3);
 			pos = 14;
 		} else {
 			draw_text("No files.", 3, 13, 7, 0);

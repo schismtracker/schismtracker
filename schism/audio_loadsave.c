@@ -23,6 +23,7 @@
 
 #include "headers.h"
 
+#include "charset.h"
 #include "it.h"
 #include "sndfile.h"
 #include "song.h"
@@ -80,9 +81,11 @@ static void _fix_names(song_t *qq)
 
 static void song_set_filename(const char *file)
 {
-	if (file && file[0]) {
-		strncpy(song_filename, file, PATH_MAX);
-		strncpy(song_basename, get_basename(file), NAME_MAX);
+	if (file && *file) {
+		CHARSET_EASY_MODE_CONST(file, CHARSET_CHAR, CHARSET_CP437, {
+			strncpy(song_filename, out, PATH_MAX);
+			strncpy(song_basename, get_basename(out), NAME_MAX);
+		});
 		song_filename[PATH_MAX] = '\0';
 		song_basename[NAME_MAX] = '\0';
 	} else {
@@ -282,7 +285,6 @@ int song_load_unchecked(const char *file)
 		log_appendf(4, " %s", fmt_strerror(errno));
 		return 0;
 	}
-
 
 	song_set_filename(file);
 

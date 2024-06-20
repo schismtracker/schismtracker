@@ -405,7 +405,7 @@ static int handle_key_truly_global(struct key_event * k) {
 			? "Mouse and keyboard grabbed, press Ctrl+D to release"
 			: "Mouse and keyboard released");
 	} else if (key_pressed(global, audio_reset))
-		audio_reinit();
+		audio_reinit(NULL);
 	else if (key_pressed(global, display_reset)) {
 		font_init();
 		status.flags |= NEED_UPDATE;

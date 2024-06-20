@@ -65,8 +65,7 @@ void video_update(void);
 void video_colors(unsigned char palette[16][3]);
 void video_resize(unsigned int width, unsigned int height);
 void video_fullscreen(int new_fs_flag);
-void video_translate(unsigned int vx, unsigned int vy,
-			unsigned int *x, unsigned int *y);
+void video_translate(int vx, int vy, unsigned int *x, unsigned int *y);
 void video_blit(void);
 void video_mousecursor(int z);
 int video_mousecursor_visible(void);

@@ -64,6 +64,12 @@
 #define NATIVE_SCREEN_WIDTH     640
 #define NATIVE_SCREEN_HEIGHT    400
 
+/* need to redefine these on SDL < 2.0.4 */
+#if !SDL_VERSION_ATLEAST(2, 0, 4)
+#define SDL_AUDIODEVICEADDED (0x1100)
+#define SDL_AUDIODEVICEREMOVED (0x1101)
+#endif
+
 /* --------------------------------------------------------------------- */
 /* globals */
 
@@ -76,6 +82,7 @@ static int shutdown_process = 0;
 
 static const char *video_driver = NULL;
 static const char *audio_driver = NULL;
+static const char *audio_device = NULL;
 static int did_fullscreen = 0;
 static int did_classic = 0;
 
@@ -290,7 +297,7 @@ static void parse_options(int argc, char **argv)
 	while ((opt = getopt_long(argc, argv, SHORT_OPTIONS, long_options, NULL)) != -1) {
 		switch (opt) {
 		case O_SDL_AUDIODRIVER:
-			audio_driver = str_dup(optarg);
+			audio_parse_driver_spec(optarg, (char**)&audio_driver, (char**)&audio_device);
 			break;
 		case O_SDL_VIDEODRIVER:
 			video_driver = str_dup(optarg);
@@ -475,12 +482,11 @@ static void pop_pending_keydown_event(const uint8_t* text, const char* orig_text
 	if (have_pending_keydown) {
 		pending_keydown.text = text;
 		pending_keydown.orig_text = orig_text;
+		cache_key_repeat(&pending_keydown);
 		handle_key(&pending_keydown);
 		have_pending_keydown = 0;
 	}
 }
-
-
 
 /* -------------------------------------------- */
 
@@ -490,17 +496,14 @@ static void event_loop(void)
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
 	uint32_t last_mouse_down, ticker;
 	SDL_Keycode last_key = 0;
-	SDL_Keycode last_keyup = 0;
 	int modkey;
 	time_t startdown;
-#ifdef os_screensaver_deactivate
-	time_t last_ss;
-#endif
 	int downtrip;
 	int wheel_x;
 	int wheel_y;
 	int sawrep;
 	int fix_numlock_key;
+	int screensaver;
 	struct key_event kk;
 
 	fix_numlock_key = status.fix_numlock_setting;
@@ -514,9 +517,9 @@ static void event_loop(void)
 	os_get_modkey(&modkey);
 	SDL_SetModState(modkey);
 
-#ifdef os_screensaver_deactivate
-	time(&last_ss);
-#endif
+	SDL_EnableScreenSaver();
+	screensaver = 1;
+
 	time(&status.now);
 	localtime_r(&status.now, &status.tmnow);
 	for (;;) {
@@ -541,6 +544,11 @@ static void event_loop(void)
 				}
 			}
 			switch (event.type) {
+			case SDL_AUDIODEVICEADDED:
+			case SDL_AUDIODEVICEREMOVED:
+				refresh_audio_device_list();
+				status.flags |= NEED_UPDATE;
+				break;
 #if defined(SCHISM_WIN32)
 #define _ALTTRACKED_KMOD        (KMOD_NUM|KMOD_CAPS)
 #else
@@ -570,9 +578,13 @@ static void event_loop(void)
 				break;
 			}
 			case SDL_KEYDOWN:
+				/* we have our own repeat handler now */
+				if (event.key.repeat)
+					break;
+
+				/* fallthrough */
 			case SDL_KEYUP:
 				pop_pending_keydown_event(NULL, NULL);
-
 				switch (event.key.keysym.sym) {
 				case SDLK_NUMLOCKCLEAR:
 					modkey ^= KMOD_NUM;
@@ -622,20 +634,22 @@ static void event_loop(void)
 				kk.mouse = MOUSE_NONE;
 				key_translate(&kk);
 
-				if ((event.type == SDL_KEYDOWN && last_key == kk.sym) ||
-					(event.type == SDL_KEYUP && last_keyup == kk.sym)) {
-					sawrep = kk.is_repeat = 1;
-				} else {
-					kk.is_repeat = 0;
-				}
-
 				if (event.type == SDL_KEYUP) {
 					handle_key(&kk);
-					status.last_keyupsym = kk.sym;
-					last_keyup = 0;
+
+					/* only empty the key repeat if
+					 * the last keydown is the same sym */
+					if (last_key == kk.sym)
+						empty_key_repeat();
 				} else {
 					push_pending_keydown_event(&kk);
-					status.last_keysym = 0;
+
+					/* reset key repeat regardless */
+					empty_key_repeat();
+
+					/* TODO this ought to be handled in
+					 * pop_pending_keydown_event() */
+					status.last_keysym = last_key;
 					last_key = kk.sym;
 				}
 				break;
@@ -780,63 +794,63 @@ static void event_loop(void)
 				case SCHISM_EVENT_NATIVE_SCRIPT:
 					/* destroy any active dialog before changing pages */
 					dialog_destroy();
-					if (strcasecmp(event.user.data1, "new") == 0) {
+					if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "new", CHARSET_UTF8) == 0) {
 						new_song_dialog();
-					} else if (strcasecmp(event.user.data1, "save") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "save", CHARSET_UTF8) == 0) {
 						save_song_or_save_as();
-					} else if (strcasecmp(event.user.data1, "save_as") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "save_as", CHARSET_UTF8) == 0) {
 						set_page(PAGE_SAVE_MODULE);
-					} else if (strcasecmp(event.user.data1, "export_song") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "export_song", CHARSET_UTF8) == 0) {
 						set_page(PAGE_EXPORT_MODULE);
-					} else if (strcasecmp(event.user.data1, "logviewer") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "logviewer", CHARSET_UTF8) == 0) {
 						set_page(PAGE_LOG);
-					} else if (strcasecmp(event.user.data1, "font_editor") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "font_editor", CHARSET_UTF8) == 0) {
 						set_page(PAGE_FONT_EDIT);
-					} else if (strcasecmp(event.user.data1, "load") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "load", CHARSET_UTF8) == 0) {
 						set_page(PAGE_LOAD_MODULE);
-					} else if (strcasecmp(event.user.data1, "help") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "help", CHARSET_UTF8) == 0) {
 						set_page(PAGE_HELP);
-					} else if (strcasecmp(event.user.data1, "pattern") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "pattern", CHARSET_UTF8) == 0) {
 						set_page(PAGE_PATTERN_EDITOR);
-					} else if (strcasecmp(event.user.data1, "orders") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "orders", CHARSET_UTF8) == 0) {
 						set_page(PAGE_ORDERLIST_PANNING);
-					} else if (strcasecmp(event.user.data1, "variables") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "variables", CHARSET_UTF8) == 0) {
 						set_page(PAGE_SONG_VARIABLES);
-					} else if (strcasecmp(event.user.data1, "message_edit") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "message_edit", CHARSET_UTF8) == 0) {
 						set_page(PAGE_MESSAGE);
-					} else if (strcasecmp(event.user.data1, "info") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "info", CHARSET_UTF8) == 0) {
 						set_page(PAGE_INFO);
-					} else if (strcasecmp(event.user.data1, "play") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "play", CHARSET_UTF8) == 0) {
 						song_start();
-					} else if (strcasecmp(event.user.data1, "play_pattern") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "play_pattern", CHARSET_UTF8) == 0) {
 						song_loop_pattern(get_current_pattern(), 0);
-					} else if (strcasecmp(event.user.data1, "play_order") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "play_order", CHARSET_UTF8) == 0) {
 						song_start_at_order(get_current_order(), 0);
-					} else if (strcasecmp(event.user.data1, "play_mark") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "play_mark", CHARSET_UTF8) == 0) {
 						play_song_from_mark();
-					} else if (strcasecmp(event.user.data1, "stop") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "stop", CHARSET_UTF8) == 0) {
 						song_stop();
-					} else if (strcasecmp(event.user.data1, "calc_length") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "calc_length", CHARSET_UTF8) == 0) {
 						show_song_length();
-					} else if (strcasecmp(event.user.data1, "sample_page") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "sample_page", CHARSET_UTF8) == 0) {
 						set_page(PAGE_SAMPLE_LIST);
-					} else if (strcasecmp(event.user.data1, "sample_library") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "sample_library", CHARSET_UTF8) == 0) {
 						set_page(PAGE_LIBRARY_SAMPLE);
-					} else if (strcasecmp(event.user.data1, "init_sound") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "init_sound", CHARSET_UTF8) == 0) {
 						/* does nothing :) */
-					} else if (strcasecmp(event.user.data1, "inst_page") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "inst_page", CHARSET_UTF8) == 0) {
 						set_page(PAGE_INSTRUMENT_LIST);
-					} else if (strcasecmp(event.user.data1, "inst_library") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "inst_library", CHARSET_UTF8) == 0) {
 						set_page(PAGE_LIBRARY_INSTRUMENT);
-					} else if (strcasecmp(event.user.data1, "preferences") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "preferences", CHARSET_UTF8) == 0) {
 						set_page(PAGE_PREFERENCES);
-					} else if (strcasecmp(event.user.data1, "system_config") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "system_config", CHARSET_UTF8) == 0) {
 						set_page(PAGE_CONFIG);
-					} else if (strcasecmp(event.user.data1, "midi_config") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "midi_config", CHARSET_UTF8) == 0) {
 						set_page(PAGE_MIDI);
-					} else if (strcasecmp(event.user.data1, "palette_page") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "palette_page", CHARSET_UTF8) == 0) {
 						set_page(PAGE_PALETTE_EDITOR);
-					} else if (strcasecmp(event.user.data1, "fullscreen") == 0) {
+					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "fullscreen", CHARSET_UTF8) == 0) {
 						toggle_display_fullscreen();
 					}
 					break;
@@ -853,6 +867,9 @@ static void event_loop(void)
 		 * and text input after it; if a text input event is NOT sent,
 		 * we should just send the keydown as is */
 		pop_pending_keydown_event(NULL, NULL);
+
+		/* handle key repeats */
+		handle_key_repeat();
 
 		/* now we can do whatever we need to do */
 		time(&status.now);
@@ -875,14 +892,16 @@ static void event_loop(void)
 		switch (song_get_mode()) {
 		case MODE_PLAYING:
 		case MODE_PATTERN_LOOP:
-#ifdef os_screensaver_deactivate
-			if ((status.now-last_ss) > 14) {
-				last_ss=status.now;
-				os_screensaver_deactivate();
+			if (screensaver) {
+				SDL_DisableScreenSaver();
+				screensaver = 0;
 			}
-#endif
 			break;
 		default:
+			if (!screensaver) {
+				SDL_EnableScreenSaver();
+				screensaver = 1;
+			}
 			break;
 		};
 
@@ -924,6 +943,8 @@ void schism_exit(int status)
 		run_exit_hook();
 #endif
 
+	free_audio_device_list();
+
 	if (shutdown_process & EXIT_SAVECFG)
 		cfg_atexit_save();
 
@@ -962,6 +983,8 @@ int main(int argc, char **argv)
 	os_sysinit(&argc, &argv);
 
 	vis_init();
+
+	ver_init();
 
 	video_fullscreen(0);
 
@@ -1018,7 +1041,7 @@ int main(int argc, char **argv)
 	font_init();
 	midi_engine_start();
 	log_nl();
-	audio_init(audio_driver);
+	audio_init(audio_driver, audio_device);
 	song_init_modplug();
 
 #ifndef SCHISM_WIN32

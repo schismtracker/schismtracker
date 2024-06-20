@@ -184,6 +184,9 @@ void cfg_load(void)
 	else
 		status.fix_numlock_setting = NUMLOCK_HONOR;
 
+	set_key_repeat(cfg_get_number(&cfg, "General", "key_repeat_delay", 0),
+		       cfg_get_number(&cfg, "General", "key_repeat_rate", 0));
+
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 	cfg_load_info(&cfg);
@@ -294,6 +297,21 @@ void cfg_save(void)
 	cfg_save_palette(&cfg);
 	cfg_save_disko(&cfg);
 	cfg_save_dmoz(&cfg);
+
+	cfg_write(&cfg);
+	cfg_free(&cfg);
+}
+
+void cfg_save_output(void)
+{
+	char *ptr;
+	cfg_file_t cfg;
+
+	ptr = dmoz_path_concat(cfg_dir_dotschism, "config");
+	cfg_init(&cfg, ptr);
+	free(ptr);
+
+	cfg_save_audio_playback(&cfg);
 
 	cfg_write(&cfg);
 	cfg_free(&cfg);

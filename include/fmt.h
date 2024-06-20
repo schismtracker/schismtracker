@@ -162,6 +162,11 @@ void mod_import_note(const uint8_t p[4], song_note_t *note);
 // Read a message with fixed-size line lengths
 void read_lined_message(char *msg, slurp_t *fp, int len, int linelen);
 
+// STM specific tools
+uint8_t convert_stm_tempo_to_bpm(size_t tempo);
+void handle_stm_tempo_pattern(song_note_t *note, size_t tempo);
+void handle_stm_effects(song_note_t *chan_note);
+extern const uint8_t stm_effects[16];
 
 // get L-R-R-L panning value from a (zero-based!) channel number
 #define PROTRACKER_PANNING(n) (((((n) + 1) >> 1) & 1) * 256)
@@ -170,6 +175,9 @@ void read_lined_message(char *msg, slurp_t *fp, int len, int linelen);
 #define MOD_FINETUNE(b) (finetune_table[((b) & 0xf) ^ 8])
 
 /* --------------------------------------------------------------------------------------------------------- */
+
+int win32mf_init(void);
+void win32mf_quit(void);
 
 #endif /* SCHISM_FMT_H_ */
 

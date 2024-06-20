@@ -1,6 +1,7 @@
 Written by Storlek <storlek@rigelseven.com> <http://rigelseven.com/>.
 
-Large swaths of code by Mrs. Brisby <mrs.brisby@nimh.org> <http://nimh.org/>.
+Large swaths of code by Mrs. Brisby <mrs.brisby@nimh.org> <http://nimh.org/>
+and Paper <paper@paper.us.eu.org>.
 
 Based (obviously) on Impulse Tracker by Jeffrey Lim <jeff@lim.com.au>.
 
@@ -68,6 +69,18 @@ Wii ISFS filesystem support code from ftpii by Joseph Jordan
 Wii Homebrew Browser icon by pbsds.
 
 Path manipulation code taken from bash.
+
+RepellantMold <repellantmold@outlook.com> improved the .stm loader and
+created the .stx loader.
+
+cs127 <cs127.pr@gmail.com> provided additional fixes to the .stm loader and
+effect processing code.
+
+HanaMcHanaface contributed fixes for backtabbing (Shift-Tab) and improvements
+to the palettes page.
+
+Vito Caputo <vcaputo@pengaru.com> provided the beginnings of the port to SDL2
+and provided many additional improvements in the general codebase.
 
 See https://github.com/schismtracker/schismtracker/graphs/contributors for a
 list of additional contributors.

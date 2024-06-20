@@ -55,35 +55,6 @@ int fmt_stm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* --------------------------------------------------------------------- */
 
-// calculated using this formula from OpenMPT
-// (i range 1-15, j range 0-15);
-// unsigned int st2MixingRate = 23863;
-// const unsigned char tempo_table[18] = {140, 50, 25, 15, 10, 7, 6, 4, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1};
-// long double samplesPerTick = (double) st2MixingRate / ((long double) 50 - ((tempo_table[high_nibble] * low_nibble) / 16));
-// st2MixingRate *= 5; // normally multiplied by the precision beyond the decimal point, however there's no decimal place here. :P
-// st2MixingRate += samplesPerTick;
-// st2MixingRate = (st2MixingRate >= 0)
-//                 ? (int32_t) (st2MixingRate / (samplesPerTick * 2))
-//                 : (int32_t)((st2MixingRate - ((samplesPerTick * 2) - 1)) / (samplesPerTick * 2));
-static unsigned int tempo_table[15][16] = {
-	{ 125,  117,  110,  102,   95,   87,   80,   72,   62,   55,   47,   40,   32,   25,   17,   10, },
-	{ 125,  122,  117,  115,  110,  107,  102,  100,   95,   90,   87,   82,   80,   75,   72,   67, },
-	{ 125,  125,  122,  120,  117,  115,  112,  110,  107,  105,  102,  100,   97,   95,   92,   90, },
-	{ 125,  125,  122,  122,  120,  117,  117,  115,  112,  112,  110,  110,  107,  105,  105,  102, },
-	{ 125,  125,  125,  122,  122,  120,  120,  117,  117,  117,  115,  115,  112,  112,  110,  110, },
-	{ 125,  125,  125,  122,  122,  122,  120,  120,  117,  117,  117,  115,  115,  115,  112,  112, },
-	{ 125,  125,  125,  125,  122,  122,  122,  122,  120,  120,  120,  120,  117,  117,  117,  117, },
-	{ 125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  120,  120,  120,  120,  120, },
-	{ 125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  120,  120,  120,  120,  120, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125, },
-};
-
-
 #pragma pack(push, 1)
 struct stm_sample {
 	char name[12];
@@ -99,44 +70,10 @@ struct stm_sample {
 };
 #pragma pack(pop)
 
-static uint8_t stm_effects[16] = {
-	FX_NONE,               // .
-	FX_SPEED,              // A
-	FX_POSITIONJUMP,       // B
-	FX_PATTERNBREAK,       // C
-	FX_VOLUMESLIDE,        // D
-	FX_PORTAMENTODOWN,     // E
-	FX_PORTAMENTOUP,       // F
-	FX_TONEPORTAMENTO,     // G
-	FX_VIBRATO,            // H
-	FX_TREMOR,             // I
-	FX_ARPEGGIO,           // J
-	// KLMNO can be entered in the editor but don't do anything
-};
-
-static uint8_t handle_tempo(size_t tempo)
-{
-	size_t tpr = (tempo >> 4) ? (tempo >> 4) : 1;
-	size_t scale = (tempo & 15);
-
-	return tempo_table[tpr - 1][scale];
-}
 
 /* ST2 says at startup:
 "Remark: the user ID is encoded in over ten places around the file!"
 I wonder if this is interesting at all. */
-
-static void handle_stm_tempo_pattern(song_note_t *note, size_t tempo)
-{
-	for (int i = 0; i < 5; i++, note++) {
-		if (note->effect == FX_NONE) {
-			note->effect = FX_TEMPO;
-			note->param = handle_tempo(tempo);
-			break;
-		}
-	}
-}
-
 static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 {
 	int row, chan;
@@ -160,44 +97,8 @@ static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 				chan_note->volparam = 0;
 			chan_note->param = v[3]; // easy!
 
-			chan_note->effect = stm_effects[v[2] & 0xf];
-			// patch a couple effects up
-			switch (chan_note->effect) {
-			case FX_SPEED:
-				/* do nothing; this is handled later */
-				break;
-			case FX_VOLUMESLIDE:
-				// Scream Tracker 2 checks for the lower nibble first for some reason...
-				if (chan_note->param & 0x0f && chan_note->param >> 4)
-					chan_note->param &= 0x0f;
-				if (!chan_note->param)
-					chan_note->effect = FX_NONE;
-				break;
-			case FX_PATTERNBREAK:
-				chan_note->param = (chan_note->param & 0xf0) * 10 + (chan_note->param & 0xf);
-				break;
-			case FX_POSITIONJUMP:
-				// This effect is also very weird.
-				// Bxx doesn't appear to cause an immediate break -- it merely
-				// sets the next order for when the pattern ends (either by
-				// playing it all the way through, or via Cxx effect)
-				// I guess I'll "fix" it later...
-				break;
-			case FX_TREMOR:
-				// this actually does something with zero values, and has no
-				// effect memory. which makes SENSE for old-effects tremor,
-				// but ST3 went and screwed it all up by adding an effect
-				// memory and IT followed that, and those are much more popular
-				// than STM so we kind of have to live with this effect being
-				// broken... oh well. not a big loss.
-				break;
-			default:
-				// Anything not listed above is a no-op if there's no value.
-				// (ST2 doesn't have effect memory)
-				if (!chan_note->param)
-					chan_note->effect = FX_NONE;
-				break;
-			}
+			chan_note->effect = stm_effects[v[2] & 0x0f];
+			handle_stm_effects(chan_note);
 		}
 
 		for (chan = 0; chan < 4; chan++) {
@@ -259,7 +160,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 
 	song->initial_speed = (tempo >> 4) ? (tempo >> 4) : 1;
-	song->initial_tempo = handle_tempo(tempo);
+	song->initial_tempo = convert_stm_tempo_to_bpm(tempo);
 
 	npat = slurp_getc(fp);
 	song->initial_global_volume = 2 * slurp_getc(fp);
@@ -274,6 +175,11 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		song_sample_t *sample = song->samples + n;
 
 		slurp_read(fp, &stmsmp, sizeof(stmsmp));
+
+		for (int i = 0; i < 12; i++) {
+			if ((uint8_t)stmsmp.name[i] == 0xFF)
+				stmsmp.name[i] = 0x20;
+		}
 		// the strncpy here is intentional -- ST2 doesn't show the '3' after the \0 bytes in the first
 		// sample of pm_fract.stm, for example
 		strncpy(sample->filename, stmsmp.name, 12);
