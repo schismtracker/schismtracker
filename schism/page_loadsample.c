@@ -476,19 +476,19 @@ static int stereo_cvt_hk(struct key_event *k)
 {
 	/* trap the default dialog keys - we don't want to escape this dialog without running something */
 
-	if (key_active(global, nav_accept)) {
+	if (KEY_ACTIVE(global, nav_accept)) {
 		printf("why am I here\n");
 	} else if(
-		key_active(dialog, answer_ok) ||
-		key_active(dialog, answer_cancel) ||
-		key_active(dialog, cancel)
+		KEY_ACTIVE(dialog, answer_ok) ||
+		KEY_ACTIVE(dialog, answer_cancel) ||
+		KEY_ACTIVE(dialog, cancel)
 	) {
 		return 1;
-	} else if(key_released(load_stereo_sample_dialog, load_left)) {
+	} else if(KEY_RELEASED(load_stereo_sample_dialog, load_left)) {
 		stereo_cvt_complete_left();
-	} else if(key_released(load_stereo_sample_dialog, load_right)) {
+	} else if(KEY_RELEASED(load_stereo_sample_dialog, load_right)) {
 		stereo_cvt_complete_right();
-	} else if(key_released(load_stereo_sample_dialog, load_both)) {
+	} else if(KEY_RELEASED(load_stereo_sample_dialog, load_both)) {
 		stereo_cvt_complete_both();
 	} else {
 		return 0;
@@ -656,7 +656,7 @@ static int file_list_handle_key(struct key_event * k)
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 
-	if (!(status.flags & CLASSIC_MODE) && key_released(load_sample, toggle_multichannel)) {
+	if (!(status.flags & CLASSIC_MODE) && KEY_RELEASED(load_sample, toggle_multichannel)) {
 		if (k->state == KEY_RELEASE)
 			song_toggle_multichannel_mode();
 		return 1;
@@ -675,40 +675,40 @@ static int file_list_handle_key(struct key_event * k)
 		}
 	}
 
-	if (key_pressed_or_repeated(global, nav_up)) {
+	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		new_file--;
 		search_pos = -1;
-	} else if (key_pressed_or_repeated(global, nav_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		new_file++;
 		search_pos = -1;
-	} else if (key_pressed_or_repeated(global, nav_page_up)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 		new_file -= 35;
 		search_pos = -1;
-	} else if (key_pressed_or_repeated(global, nav_page_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 		new_file += 35;
 		search_pos = -1;
-	} else if (key_pressed_or_repeated(global, nav_home)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		new_file = 0;
 		search_pos = -1;
-	} else if (key_pressed_or_repeated(global, nav_end)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		new_file = flist.num_files - 1;
 		search_pos = -1;
-	} else if (key_pressed(global, nav_cancel) && (search_pos < 0)) {
+	} else if (KEY_PRESSED(global, nav_cancel) && (search_pos < 0)) {
 		set_page(PAGE_SAMPLE_LIST);
 		return 1;
-	} else if (key_released(global, nav_cancel) && !(search_pos < 0)) {
+	} else if (KEY_RELEASED(global, nav_cancel) && !(search_pos < 0)) {
 		search_pos = -1;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	} else if (key_pressed(global, nav_accept) && (search_pos < 0)) {
+	} else if (KEY_PRESSED(global, nav_accept) && (search_pos < 0)) {
 		handle_enter_key();
 		search_pos = -1;
 		return 1;
-	} else if (key_released(global, nav_accept) && !(search_pos < 0)) {
+	} else if (KEY_RELEASED(global, nav_accept) && !(search_pos < 0)) {
 		search_pos = -1;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	} else if (key_pressed(file_list, delete)) {
+	} else if (KEY_PRESSED(file_list, delete)) {
 		search_pos = -1;
 		if (flist.num_files > 0)
 			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
@@ -783,7 +783,7 @@ static void load_sample_handle_key(struct key_event * k)
 {
 	int n, v;
 
-	if (key_pressed(global, nav_cancel)) {
+	if (KEY_PRESSED(global, nav_cancel)) {
 		set_page(PAGE_SAMPLE_LIST);
 		return;
 	}

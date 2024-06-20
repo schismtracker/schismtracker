@@ -180,29 +180,29 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 			new_palette += MOUSE_SCROLL_LINES;
 	}
 
-	if (key_pressed_or_repeated(global, nav_up)) {
+	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		if (--new_palette < 0) {
 			change_focus_to(47);
 			return 1;
 		}
-	} else if(key_pressed_or_repeated(global, nav_down)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		if (++new_palette >= NUM_PALETTES) {
 			change_focus_to(49);
 			return 1;
 		}
-	} else if(key_pressed_or_repeated(global, nav_home)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		new_palette = 0;
-	} else if(key_pressed_or_repeated(global, nav_page_up)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 		if (new_palette == 0) {
 			change_focus_to(45);
 			return 1;
 		}
 		new_palette -= 16;
-	} else if(key_pressed_or_repeated(global, nav_end)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		new_palette = NUM_PALETTES - 1;
-	} else if(key_pressed_or_repeated(global, nav_page_down)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 		new_palette += 16;
-	} else if(key_pressed_or_repeated(global, nav_accept)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_accept)) {
 		// if (selected_palette == -1) return 1;
 		palette_load_preset(selected_palette);
 		palette_apply();
@@ -210,18 +210,18 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 		status.flags |= NEED_UPDATE;
 		return 1;
 	} else if(
-		key_pressed_or_repeated(global, nav_right) ||
-		key_pressed_or_repeated(global, nav_tab)
+		KEY_PRESSED_OR_REPEATED(global, nav_right) ||
+		KEY_PRESSED_OR_REPEATED(global, nav_tab)
 	) {
 		change_focus_to(focus_offsets[selected_palette+1] + 8);
 		return 1;
-	} else if(key_pressed_or_repeated(global, nav_backtab)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_backtab)) {
 		change_focus_to(focus_offsets[selected_palette+1] + 29);
 		return 1;
-	} else if(key_pressed_or_repeated(global, nav_left)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_left)) {
 		change_focus_to(focus_offsets[selected_palette+1] + 29);
 		return 1;
-	} else if(key_pressed_or_repeated(palette_edit, copy)) {
+	} else if(KEY_PRESSED_OR_REPEATED(palette_edit, copy)) {
 		/* pasting is handled by the page */
 		palette_copy_palette_to_clipboard(selected_palette);
 		return 1;
@@ -253,14 +253,14 @@ static void palette_list_handle_key(struct key_event * k)
 {
 	int n = *selected_widget;
 
-	if (key_pressed_or_repeated(global, nav_page_up)) {
+	if (KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 		n -= 3;
-	} else if (key_pressed_or_repeated(global, nav_page_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 		n += 3;
-	} else if (key_pressed_or_repeated(palette_edit, copy)) {
+	} else if (KEY_PRESSED_OR_REPEATED(palette_edit, copy)) {
 		palette_copy_current_to_clipboard();
 		return;
-	} else if (key_pressed_or_repeated(palette_edit, paste)) {
+	} else if (KEY_PRESSED_OR_REPEATED(palette_edit, paste)) {
 		palette_paste_from_clipboard();
 		return;
 	}

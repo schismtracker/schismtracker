@@ -473,21 +473,21 @@ static int message_handle_key_viewmode(struct key_event * k)
 		}
 	}
 
-	if (key_pressed_or_repeated(global, nav_up)) {
+	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		top_line--;
-	} else if (key_pressed_or_repeated(global, nav_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		top_line++;
-	} else if (key_pressed_or_repeated(global, nav_page_up)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 		top_line -= 35;
-	} else if (key_pressed_or_repeated(global, nav_page_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 		top_line += 35;
-	} else if (key_pressed_or_repeated(global, nav_home)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		top_line = 0;
-	} else if (key_pressed_or_repeated(global, nav_end)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		top_line = get_num_lines(current_song->message) - 34;
-	} else if (key_pressed(message_edit, toggle_extended_font)) {
+	} else if (KEY_PRESSED(message_edit, toggle_extended_font)) {
 		message_extfont = !message_extfont;
-	} else if (key_pressed(message_edit, edit_message)) {
+	} else if (KEY_PRESSED(message_edit, edit_message)) {
 		message_set_editmode();
 	} else {
 		return 0;
@@ -572,37 +572,37 @@ static int message_handle_key_editmode(struct key_event * k)
 
 	line_len = get_nth_line(current_song->message, cursor_line, &ptr);
 
-	if (key_pressed_or_repeated(global, nav_up)) {
+	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		new_cursor_line--;
-	} else if (key_pressed_or_repeated(global, nav_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		new_cursor_line++;
-	} else if (key_pressed_or_repeated(global, nav_left)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_left)) {
 		new_cursor_char--;
-	} else if (key_pressed_or_repeated(global, nav_right)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_right)) {
 		new_cursor_char++;
-	} else if (key_pressed_or_repeated(global, nav_page_up)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 		new_cursor_line -= 35;
-	} else if (key_pressed_or_repeated(global, nav_page_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 		new_cursor_line += 35;
-	} else if (key_pressed(global, nav_home)) {
+	} else if (KEY_PRESSED(global, nav_home)) {
 		new_cursor_char = 0;
-	} else if (key_pressed(message_edit, goto_first_line)) {
+	} else if (KEY_PRESSED(message_edit, goto_first_line)) {
 			new_cursor_line = 0;
-	} else if (key_pressed(global, nav_end)) {
+	} else if (KEY_PRESSED(global, nav_end)) {
 		new_cursor_char = line_len;
-	} else if (key_pressed(message_edit, goto_last_line)) {
+	} else if (KEY_PRESSED(message_edit, goto_last_line)) {
 		num_lines = get_num_lines(current_song->message);
 		new_cursor_line = num_lines;
-	} else if (key_pressed(message_edit, finished_editing)) {
+	} else if (KEY_PRESSED(message_edit, finished_editing)) {
 		message_set_viewmode();
 		memused_songchanged();
 		return 1;
-	} else if (key_pressed(message_edit, toggle_extended_font)) {
+	} else if (KEY_PRESSED(message_edit, toggle_extended_font)) {
 		message_extfont = !message_extfont;
-	} else if (key_pressed(message_edit, delete_line)) {
+	} else if (KEY_PRESSED(message_edit, delete_line)) {
 		clippy_select(NULL, NULL, 0);
 		message_delete_line();
-	} else if (key_pressed(message_edit, clear_message)) {
+	} else if (KEY_PRESSED(message_edit, clear_message)) {
 		prompt_message_clear();
 		return 1;
 	} else {

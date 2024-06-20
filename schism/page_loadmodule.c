@@ -715,19 +715,19 @@ static int file_list_handle_key(struct key_event * k)
 {
 	int new_file = current_file;
 
-	if (key_pressed_or_repeated(global, nav_up)) {
+	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		new_file--;
-	} else if (key_pressed_or_repeated(global, nav_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		new_file++;
-	} else if (key_pressed_or_repeated(global, nav_page_up)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 		new_file -= 31;
-	} else if (key_pressed_or_repeated(global, nav_page_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 		new_file += 31;
-	} else if (key_pressed_or_repeated(global, nav_home)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		new_file = 0;
-	} else if (key_pressed_or_repeated(global, nav_end)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		new_file = flist.num_files - 1;
-	} else if (key_pressed(global, nav_accept)) {
+	} else if (KEY_PRESSED(global, nav_accept)) {
 		if (current_file < flist.num_files) {
 			dmoz_cache_update(cfg_dir_modules, &flist, &dlist);
 			handle_file_entered(flist.files[current_file]->path);
@@ -735,14 +735,14 @@ static int file_list_handle_key(struct key_event * k)
 		search_text_clear();
 
 		return 1;
-	} else if (key_pressed(file_list, delete)) {
+	} else if (KEY_PRESSED(file_list, delete)) {
 		if (flist.num_files > 0)
 			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
 		return 1;
-	} else if (key_pressed(load_module, show_song_length)) {
+	} else if (KEY_PRESSED(load_module, show_song_length)) {
 		show_selected_song_length();
 		return 1;
-	} else if (key_pressed(load_module, clear_search_text)) {
+	} else if (KEY_PRESSED(load_module, clear_search_text)) {
 		search_text_clear();
 	} else {
 		switch (k->sym) {
@@ -885,19 +885,19 @@ static int dir_list_handle_key(struct key_event * k)
 		}
 	}
 
-	if (key_pressed_or_repeated(global, nav_up)) {
+	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		new_dir--;
-	} else if (key_pressed_or_repeated(global, nav_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		new_dir++;
-	} else if (key_pressed_or_repeated(global, nav_page_up)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 		new_dir -= 21;
-	} else if (key_pressed_or_repeated(global, nav_page_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 		new_dir += 21;
-	} else if (key_pressed_or_repeated(global, nav_home)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		new_dir = 0;
-	} else if (key_pressed_or_repeated(global, nav_end)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		new_dir = dlist.num_dirs - 1;
-	} else if (key_pressed(global, nav_accept)) {
+	} else if (KEY_PRESSED(global, nav_accept)) {
 		/* reset */
 		top_file = current_file = 0;
 		if (current_dir >= 0 && current_dir < dlist.num_dirs)
@@ -907,7 +907,7 @@ static int dir_list_handle_key(struct key_event * k)
 			*selected_widget = 0;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	} else if (key_pressed(load_module, clear_search_text)) {
+	} else if (KEY_PRESSED(load_module, clear_search_text)) {
 		search_text_clear();
 	} else {
 		switch (k->sym) {

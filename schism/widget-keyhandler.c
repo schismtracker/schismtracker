@@ -237,25 +237,25 @@ static int thumbbar_panbar_handle_key(struct key_event * k)
 	if (status.flags & DISKWRITER_ACTIVE)
 		return 0;
 
-	if (key_pressed_or_repeated(global, thumbbar_increase_value)) {
+	if (KEY_PRESSED_OR_REPEATED(global, thumbbar_increase_value)) {
 		numentry_change_value(widget, widget->d.numentry.value + 1);
-	} else if (key_pressed_or_repeated(global, thumbbar_increase_value_2x)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_increase_value_2x)) {
 		numentry_change_value(widget, widget->d.numentry.value + 2);
-	} else if (key_pressed_or_repeated(global, thumbbar_increase_value_4x)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_increase_value_4x)) {
 		numentry_change_value(widget, widget->d.numentry.value + 4);
-	} else if (key_pressed_or_repeated(global, thumbbar_increase_value_8x)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_increase_value_8x)) {
 		numentry_change_value(widget, widget->d.numentry.value + 8);
-	} else if (key_pressed_or_repeated(global, thumbbar_decrease_value)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_decrease_value)) {
 		numentry_change_value(widget, widget->d.numentry.value - 1);
-	} else if (key_pressed_or_repeated(global, thumbbar_decrease_value_2x)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_decrease_value_2x)) {
 		numentry_change_value(widget, widget->d.numentry.value - 2);
-	} else if (key_pressed_or_repeated(global, thumbbar_decrease_value_4x)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_decrease_value_4x)) {
 		numentry_change_value(widget, widget->d.numentry.value - 4);
-	} else if (key_pressed_or_repeated(global, thumbbar_decrease_value_8x)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_decrease_value_8x)) {
 		numentry_change_value(widget, widget->d.numentry.value - 8);
-	} else if (key_pressed_or_repeated(global, thumbbar_min_value)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_min_value)) {
 		numentry_change_value(widget, widget->d.thumbbar.min);
-	} else if (key_pressed_or_repeated(global, thumbbar_max_value)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_max_value)) {
 		numentry_change_value(widget, widget->d.thumbbar.max);
 	} else {
 		return 0;
@@ -279,41 +279,41 @@ static int panbar_handle_key(struct key_event * k)
 	if (status.flags & DISKWRITER_ACTIVE)
 		return 0;
 
-	if (key_pressed(order_list_panning, toggle_channel_mute)) {
+	if (KEY_PRESSED(order_list_panning, toggle_channel_mute)) {
 		widget->d.panbar.muted = !widget->d.panbar.muted;
 		change_focus_to(widget->next.down);
 		if (widget->changed) widget->changed();
 		return 1;
-	} else if (key_pressed(order_list_panning, pan_unmuted_left)) {
+	} else if (KEY_PRESSED(order_list_panning, pan_unmuted_left)) {
 		song_set_pan_scheme(PANS_LEFT);
-	} else if (key_pressed(order_list_panning, set_panning_left)) {
+	} else if (KEY_PRESSED(order_list_panning, set_panning_left)) {
 		widget->d.panbar.muted = 0;
 		widget->d.panbar.surround = 0;
 		numentry_change_value(widget, 0);
-	} else if (key_pressed(order_list_panning, pan_unmuted_middle)) {
+	} else if (KEY_PRESSED(order_list_panning, pan_unmuted_middle)) {
 		song_set_pan_scheme(PANS_MONO);
-	} else if (key_pressed(order_list_panning, set_panning_middle)) {
+	} else if (KEY_PRESSED(order_list_panning, set_panning_middle)) {
 		widget->d.panbar.muted = 0;
 		widget->d.panbar.surround = 0;
 		numentry_change_value(widget, 32);
-	} else if (key_pressed(order_list_panning, pan_unmuted_right)) {
+	} else if (KEY_PRESSED(order_list_panning, pan_unmuted_right)) {
 		song_set_pan_scheme(PANS_RIGHT);
-	} else if (key_pressed(order_list_panning, set_panning_right)) {
+	} else if (KEY_PRESSED(order_list_panning, set_panning_right)) {
 		widget->d.panbar.muted = 0;
 		widget->d.panbar.surround = 0;
 		numentry_change_value(widget, 64);
-	} else if (key_pressed(order_list_panning, pan_unmuted_stereo)) {
+	} else if (KEY_PRESSED(order_list_panning, pan_unmuted_stereo)) {
 		song_set_pan_scheme(PANS_STEREO);
-	} else if (key_pressed(order_list_panning, set_panning_surround)) {
+	} else if (KEY_PRESSED(order_list_panning, set_panning_surround)) {
 		widget->d.panbar.muted = 0;
 		widget->d.panbar.surround = 1;
 		if (widget->changed) widget->changed();
 		status.flags |= NEED_UPDATE;
-	} else if (key_pressed(order_list_panning, pan_unmuted_amiga_stereo)) {
+	} else if (KEY_PRESSED(order_list_panning, pan_unmuted_amiga_stereo)) {
 		song_set_pan_scheme(PANS_AMIGA);
-	} else if (key_pressed(order_list_panning, linear_panning_right_to_left)) {
+	} else if (KEY_PRESSED(order_list_panning, linear_panning_right_to_left)) {
 		song_set_pan_scheme(PANS_SLASH);
-	} else if (key_pressed(order_list_panning, linear_panning_left_to_right)) {
+	} else if (KEY_PRESSED(order_list_panning, linear_panning_left_to_right)) {
 		song_set_pan_scheme(PANS_BACKSLASH);
 	} else {
 		return 0;
@@ -576,19 +576,19 @@ int widget_handle_key(struct key_event * k)
 		return 1;
 	} else if (panbar_handle_key(k)) {
 		return 1;
-	} else if (key_active(global, open_menu)) {
+	} else if (KEY_ACTIVE(global, open_menu)) {
 		/* this is to keep the text entries from taking the key hostage and inserting '<-'
 		characters instead of showing the menu */
 		return 0;
-	} else if (key_active(global, nav_up)) {
+	} else if (KEY_ACTIVE(global, nav_up)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		change_focus_to(widget->next.up);
 		return 1;
-	} else if (key_active(global, nav_down)) {
+	} else if (KEY_ACTIVE(global, nav_down)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		change_focus_to(widget->next.down);
 		return 1;
-	} else if (key_active(global, nav_left)) {
+	} else if (KEY_ACTIVE(global, nav_left)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		switch (current_type) {
 		case WIDGET_BITSET:
@@ -604,7 +604,7 @@ int widget_handle_key(struct key_event * k)
 			change_focus_to(widget->next.left);
 			return 1;
 		}
-	} else if (key_active(global, nav_right)) {
+	} else if (KEY_ACTIVE(global, nav_right)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		/* pretty much the same as left, but with a few small
 		 * changes here and there... */
@@ -631,15 +631,15 @@ int widget_handle_key(struct key_event * k)
 			change_focus_to(widget->next.right);
 			return 1;
 		}
-	} else if (key_active(global, nav_tab)) {
+	} else if (KEY_ACTIVE(global, nav_tab)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		change_focus_to(widget->next.tab);
 		return 1;
-	} else if (key_active(global, nav_backtab)) {
+	} else if (KEY_ACTIVE(global, nav_backtab)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		_backtab();
 		return 1;
-	} else if (key_active(global, nav_home)) {
+	} else if (KEY_ACTIVE(global, nav_home)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		/* Impulse Tracker only does home/end for the thumbbars.
 		 * This stuff is all extra. */
@@ -655,7 +655,7 @@ int widget_handle_key(struct key_event * k)
 		default:
 			break;
 		}
-	} else if (key_active(global, nav_end)) {
+	} else if (KEY_ACTIVE(global, nav_end)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		switch (current_type) {
 		case WIDGET_NUMENTRY:
@@ -669,13 +669,13 @@ int widget_handle_key(struct key_event * k)
 		default:
 			break;
 		}
-	} else if (key_active(global, numentry_increase_value)) {
+	} else if (KEY_ACTIVE(global, numentry_increase_value)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_NUMENTRY) {
 			numentry_change_value(widget, widget->d.numentry.value + 1);
 			return 1;
 		}
-	} else if (key_active(global, numentry_decrease_value)) {
+	} else if (KEY_ACTIVE(global, numentry_decrease_value)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_NUMENTRY) {
 			numentry_change_value(widget, widget->d.numentry.value - 1);

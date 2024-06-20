@@ -479,17 +479,17 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 		return 1;
 	}
 
-	if (key_pressed_or_repeated(global, nav_up)) {
+	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		instrument_set(current_instrument - 1);
-	} else if (key_pressed_or_repeated(global, nav_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		instrument_set(current_instrument + 1);
-	} else if (key_pressed_or_repeated(instrument_list, move_instrument_up)) {
+	} else if (KEY_PRESSED_OR_REPEATED(instrument_list, move_instrument_up)) {
 		if (current_instrument > 1) {
 			int new_ins = current_instrument - 1;
 			song_swap_instruments(current_instrument, new_ins);
 			instrument_set(new_ins);
 		}
-	} else if (key_pressed_or_repeated(instrument_list, move_instrument_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(instrument_list, move_instrument_down)) {
 		// This was in previous code. I can't see a difference with it on
 		// if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
 		// 	_altswap_lastvis = _last_vis_inst();
@@ -499,30 +499,30 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			song_swap_instruments(current_instrument, new_ins);
 			instrument_set(new_ins);
 		}
-	} else if (key_pressed_or_repeated(instrument_list, goto_first_instrument)) {
+	} else if (KEY_PRESSED_OR_REPEATED(instrument_list, goto_first_instrument)) {
 		instrument_set(1);
-	} else if (key_pressed_or_repeated(instrument_list, goto_last_instrument)) {
+	} else if (KEY_PRESSED_OR_REPEATED(instrument_list, goto_last_instrument)) {
 		instrument_set(_last_vis_inst());
-	} else if (key_pressed_or_repeated(global, nav_page_up)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 		instrument_set(current_instrument - 16);
-	} else if (key_pressed_or_repeated(global, nav_page_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 		instrument_set(current_instrument + 16);
-	} else if (key_pressed_or_repeated(global, nav_home)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		if (instrument_cursor_pos < 25) {
 			instrument_cursor_pos = 0;
 			get_page_widgets()->accept_text = 1;
 		}
-	} else if (key_pressed_or_repeated(global, nav_end)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		if (instrument_cursor_pos < 24) {
 			instrument_cursor_pos = 24;
 			get_page_widgets()->accept_text = 1;
 		}
-	} else if (key_pressed_or_repeated(global, nav_left)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_left)) {
 		if (instrument_cursor_pos < 25 && instrument_cursor_pos > 0) {
 			instrument_cursor_pos--;
 			get_page_widgets()->accept_text = 1;
 		}
-	} else if (key_pressed_or_repeated(global, nav_right)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_right)) {
 		if (instrument_cursor_pos == 25) {
 			get_page_widgets()->accept_text = 0;
 			change_focus_to(1);
@@ -530,7 +530,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			get_page_widgets()->accept_text = 1;
 			instrument_cursor_pos++;
 		}
-	} else if (key_pressed_or_repeated(global, nav_accept)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_accept)) {
 		if (instrument_cursor_pos < 25) {
 			instrument_cursor_pos = 25;
 			get_page_widgets()->accept_text = 0;
@@ -539,8 +539,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			set_page(PAGE_LOAD_INSTRUMENT);
 		}
 	} else if (
-		key_active(instrument_list, focus_list) ||
-		(instrument_cursor_pos < 25 && key_active(global, nav_cancel))
+		KEY_ACTIVE(instrument_list, focus_list) ||
+		(instrument_cursor_pos < 25 && KEY_ACTIVE(global, nav_cancel))
 	) {
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -548,7 +548,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 		get_page_widgets()->accept_text = 0;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	} else if (key_pressed(sample_list, focus_sample_list)) {
+	} else if (KEY_PRESSED(sample_list, focus_sample_list)) {
 		if (instrument_cursor_pos < 25) {
 			instrument_cursor_pos = 25;
 			get_page_widgets()->accept_text = 0;
@@ -559,13 +559,13 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 		if (instrument_cursor_pos == 25)
 			return 0;
 		instrument_list_delete_next_char();
-	} else if (key_pressed(instrument_list, insert_slot)) {
+	} else if (KEY_PRESSED(instrument_list, insert_slot)) {
 		song_insert_instrument_slot(current_instrument);
-	} else if (key_pressed(instrument_list, remove_slot)) {
+	} else if (KEY_PRESSED(instrument_list, remove_slot)) {
 		song_remove_instrument_slot(current_instrument);
-	} else if (key_pressed(instrument_list, clear_name_and_filename)) {
+	} else if (KEY_PRESSED(instrument_list, clear_name_and_filename)) {
 		clear_instrument_text();
-	} else if (key_pressed(instrument_list, edit_name)) {
+	} else if (KEY_PRESSED(instrument_list, edit_name)) {
 		instrument_cursor_pos = 0;
 		get_page_widgets()->accept_text = 0;
 		status.flags |= NEED_UPDATE;
@@ -746,15 +746,15 @@ static int note_trans_handle_key(struct key_event * k)
 		return 1;
 	}
 
-	if (key_pressed(instrument_note_translation, transpose_all_notes_semitone_up)) {
+	if (KEY_PRESSED(instrument_note_translation, transpose_all_notes_semitone_up)) {
 		instrument_note_trans_transpose(ins, 1);
-	} else if (key_pressed(instrument_note_translation, transpose_all_notes_semitone_down)) {
+	} else if (KEY_PRESSED(instrument_note_translation, transpose_all_notes_semitone_down)) {
 		instrument_note_trans_transpose(ins, -1);
-	} else if (key_pressed(instrument_note_translation, insert_row_from_table)) {
+	} else if (KEY_PRESSED(instrument_note_translation, insert_row_from_table)) {
 		instrument_note_trans_insert(ins, note_trans_sel_line);
-	} else if (key_pressed(instrument_note_translation, delete_row_from_table)) {
+	} else if (KEY_PRESSED(instrument_note_translation, delete_row_from_table)) {
 		instrument_note_trans_delete(ins, note_trans_sel_line);
-	} else if (key_pressed(instrument_note_translation, enter_next_note)) {
+	} else if (KEY_PRESSED(instrument_note_translation, enter_next_note)) {
 		int n = note_trans_sel_line - 1; // the line to copy *from*
 		if (n < 0 || ins->note_map[n] == NOTE_LAST)
 			return 0;
@@ -762,7 +762,7 @@ static int note_trans_handle_key(struct key_event * k)
 		ins->note_map[note_trans_sel_line] = ins->note_map[n] + 1;
 		ins->sample_map[note_trans_sel_line] = ins->sample_map[n];
 		note_trans_sel_line_set(note_trans_sel_line + 1);
-	} else if (key_pressed(instrument_note_translation, enter_previous_note)) {
+	} else if (KEY_PRESSED(instrument_note_translation, enter_previous_note)) {
 		int n = note_trans_sel_line + 1; // the line to copy *from*
 		if (n > (NOTE_LAST - NOTE_FIRST) || ins->note_map[n] == NOTE_FIRST)
 			return 0;
@@ -770,46 +770,46 @@ static int note_trans_handle_key(struct key_event * k)
 		ins->note_map[note_trans_sel_line] = ins->note_map[n] - 1;
 		ins->sample_map[note_trans_sel_line] = ins->sample_map[n];
 		note_trans_sel_line_set(note_trans_sel_line - 1);
-	} else if (key_pressed(instrument_note_translation, change_all_samples)) {
+	} else if (KEY_PRESSED(instrument_note_translation, change_all_samples)) {
 		int c = sample_get_current();
 		for (int n = 0; n < (NOTE_LAST - NOTE_FIRST + 1); n++)
 			ins->sample_map[n] = c;
-	} else if (key_pressed(instrument_note_translation, change_all_samples_with_name)) {
+	} else if (KEY_PRESSED(instrument_note_translation, change_all_samples_with_name)) {
 		int c = sample_get_current();
 		for (int n = 0; n < (NOTE_LAST - NOTE_FIRST + 1); n++)
 			ins->sample_map[n] = c;
 		// Copy the name too.
 		memcpy(ins->name, current_song->samples[c].name, 32);
-	} else if (key_pressed(instrument_note_translation, increase_sample_number)) {
+	} else if (KEY_PRESSED(instrument_note_translation, increase_sample_number)) {
 		sample_set(sample_get_current () + 1);
-	} else if (key_pressed(instrument_note_translation, decrease_sample_number)) {
+	} else if (KEY_PRESSED(instrument_note_translation, decrease_sample_number)) {
 		sample_set(sample_get_current() - 1);
-	} else if (key_pressed_or_repeated(global, nav_left)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_left)) {
 		note_trans_cursor_pos_set(note_trans_cursor_pos - 1);
-	} else if (key_pressed_or_repeated(global, nav_right)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_right)) {
 		note_trans_cursor_pos_set(note_trans_cursor_pos + 1);
-	} else if (key_pressed_or_repeated(global, nav_up)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		int new_line = note_trans_sel_line - 1;
 		note_trans_sel_line_set(new_line);
 		if (new_line < 0) {
 			change_focus_to(1);
 		}
-	} else if (key_pressed_or_repeated(global, nav_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		note_trans_sel_line_set(note_trans_sel_line + 1);
-	} else if (key_pressed_or_repeated(global, nav_page_up)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 		note_trans_sel_line_set(note_trans_sel_line - 16);
-	} else if (key_pressed_or_repeated(global, nav_page_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 		note_trans_sel_line_set(note_trans_sel_line + 16);
-	} else if (key_pressed_or_repeated(global, nav_home)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		note_trans_sel_line_set(0);
-	} else if (key_pressed_or_repeated(global, nav_end)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		note_trans_sel_line_set(119);
-	} else if (key_pressed_or_repeated(instrument_note_translation, pickup_sample_number_and_default_play_note)) {
+	} else if (KEY_PRESSED_OR_REPEATED(instrument_note_translation, pickup_sample_number_and_default_play_note)) {
 		sample_set(ins->sample_map[note_trans_sel_line]);
 		get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
-	} else if (key_pressed(instrument_list, goto_instrument_up)) {
+	} else if (KEY_PRESSED(instrument_list, goto_instrument_up)) {
 		instrument_set(current_instrument - 1);
-	} else if (key_pressed(instrument_list, goto_instrument_down)) {
+	} else if (KEY_PRESSED(instrument_list, goto_instrument_down)) {
 		instrument_set(current_instrument + 1);
 	} else {
 		if (k->state == KEY_RELEASE)
@@ -851,7 +851,7 @@ static int note_trans_handle_key(struct key_event * k)
 				break;
 			}
 
-			if (key_pressed(instrument_note_translation, toggle_edit_mask)) {
+			if (KEY_PRESSED(instrument_note_translation, toggle_edit_mask)) {
 				note_sample_mask = note_sample_mask ? 0 : 1;
 				break;
 			}
@@ -1282,49 +1282,49 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 	int new_node = *current_node;
 	int n;
 
-	if (key_pressed_or_repeated(global, nav_up)) {
+	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		change_focus_to(1);
-	} else if (key_pressed_or_repeated(global, nav_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		change_focus_to(6);
-	} else if (key_pressed_or_repeated(global, nav_left) || key_pressed(instrument_envelope, nav_node_left)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_left) || KEY_PRESSED(instrument_envelope, nav_node_left)) {
 		new_node--;
-	} else if (key_pressed_or_repeated(global, nav_right) || key_pressed(instrument_envelope, nav_node_right)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_right) || KEY_PRESSED(instrument_envelope, nav_node_right)) {
 		new_node++;
-	} else if (key_pressed(instrument_envelope, add_node)) {
+	} else if (KEY_PRESSED(instrument_envelope, add_node)) {
 		*current_node = _env_node_add(env, *current_node, -1, -1);
 		status.flags |= NEED_UPDATE;
 		return 1 | 2;
-	} else if (key_pressed(instrument_envelope, delete_node)) {
+	} else if (KEY_PRESSED(instrument_envelope, delete_node)) {
 		*current_node = _env_node_remove(env, *current_node);
 		status.flags |= NEED_UPDATE;
 		return 1 | 2;
-	} else if (key_pressed(instrument_envelope, play_default_note)) {
+	} else if (KEY_PRESSED(instrument_envelope, play_default_note)) {
 		song_keydown(KEYJAZZ_NOINST, current_instrument, last_note, 64, KEYJAZZ_CHAN_CURRENT);
-	} else if (key_released(instrument_envelope, play_default_note)) {
+	} else if (KEY_RELEASED(instrument_envelope, play_default_note)) {
 		song_keyup(KEYJAZZ_NOINST, current_instrument, last_note);
-	} else if (key_pressed(instrument_envelope, pick_up_or_drop_current_node)) {
+	} else if (KEY_PRESSED(instrument_envelope, pick_up_or_drop_current_node)) {
 		envelope_edit_mode = 1;
 		status.flags |= NEED_UPDATE;
 		return 1 | 2;
-	} else if (key_pressed(instrument_list, post_loop_cut)) {
+	} else if (KEY_PRESSED(instrument_list, post_loop_cut)) {
 		if (env->loop_end < (env->nodes-1))  {
 			dialog_create(DIALOG_OK_CANCEL, "Cut envelope?", do_post_loop_cut, NULL, 1, env);
 			return 1;
 		}
 		return 0;
-	} else if (key_pressed(instrument_envelope, pre_loop_cut_envelope)) {
+	} else if (KEY_PRESSED(instrument_envelope, pre_loop_cut_envelope)) {
 		if (env->loop_start > 0) {
 			dialog_create(DIALOG_OK_CANCEL, "Cut envelope?", do_pre_loop_cut, NULL, 1, env);
 			return 1;
 		}
 		return 0;
-	} else if (key_pressed(instrument_envelope, double_envelope_length)) {
+	} else if (KEY_PRESSED(instrument_envelope, double_envelope_length)) {
 		env_resize(env, env->ticks[env->nodes - 1] * 2);
-	} else if (key_pressed(instrument_envelope, halve_envelope_length)) {
+	} else if (KEY_PRESSED(instrument_envelope, halve_envelope_length)) {
 		env_resize(env, env->ticks[env->nodes - 1] / 2);
-	} else if (key_pressed(instrument_envelope, resize_envelope)) {
+	} else if (KEY_PRESSED(instrument_envelope, resize_envelope)) {
 		env_resize_dialog(env);
-	} else if (key_pressed(instrument_envelope, generate_envelope_from_ADSR_values)) {
+	} else if (KEY_PRESSED(instrument_envelope, generate_envelope_from_ADSR_values)) {
 		env_adsr_dialog(env);
 	} else {
 		if (k->state == KEY_PRESS)
@@ -1494,43 +1494,43 @@ static int _env_handle_key_editmode(struct key_event *k, song_envelope_t *env, i
 
 	/* TODO: when does adding/removing a node alter loop points? */
 
-	if (key_pressed_or_repeated(instrument_envelope, nav_node_left)) {
+	if (KEY_PRESSED_OR_REPEATED(instrument_envelope, nav_node_left)) {
 		new_node--;
-	} else if (key_pressed_or_repeated(instrument_envelope, nav_node_right)) {
+	} else if (KEY_PRESSED_OR_REPEATED(instrument_envelope, nav_node_right)) {
 		new_node++;
-	} else if (key_pressed_or_repeated(instrument_envelope, move_node_up)) {
+	} else if (KEY_PRESSED_OR_REPEATED(instrument_envelope, move_node_up)) {
 		new_value++;
-	} else if (key_pressed_or_repeated(instrument_envelope, move_node_up_fast)) {
+	} else if (KEY_PRESSED_OR_REPEATED(instrument_envelope, move_node_up_fast)) {
 		new_value += 16;
-	} else if (key_pressed_or_repeated(instrument_envelope, move_node_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(instrument_envelope, move_node_down)) {
 		new_value--;
-	} else if (key_pressed_or_repeated(instrument_envelope, move_node_down_fast)) {
+	} else if (KEY_PRESSED_OR_REPEATED(instrument_envelope, move_node_down_fast)) {
 		new_value -= 16;
-	} else if (key_pressed_or_repeated(instrument_envelope, move_node_left)) {
+	} else if (KEY_PRESSED_OR_REPEATED(instrument_envelope, move_node_left)) {
 		new_tick--;
-	} else if (key_pressed_or_repeated(instrument_envelope, move_node_left_fast)) {
+	} else if (KEY_PRESSED_OR_REPEATED(instrument_envelope, move_node_left_fast)) {
 		new_tick -= 16;
-	} else if (key_pressed(instrument_envelope, move_node_left_max)) {
+	} else if (KEY_PRESSED(instrument_envelope, move_node_left_max)) {
 		new_tick = 0;
-	} else if (key_pressed_or_repeated(instrument_envelope, move_node_right)) {
+	} else if (KEY_PRESSED_OR_REPEATED(instrument_envelope, move_node_right)) {
 		new_tick++;
-	} else if (key_pressed_or_repeated(instrument_envelope, move_node_right_fast)) {
+	} else if (KEY_PRESSED_OR_REPEATED(instrument_envelope, move_node_right_fast)) {
 		new_tick += 16;
-	} else if (key_pressed(instrument_envelope, move_node_right_max)) {
+	} else if (KEY_PRESSED(instrument_envelope, move_node_right_max)) {
 		new_tick = 10000;
-	} else if (key_pressed(instrument_envelope, add_node)) {
+	} else if (KEY_PRESSED(instrument_envelope, add_node)) {
 		*current_node = _env_node_add(env, *current_node, -1, -1);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	} else if (key_pressed(instrument_envelope, delete_node)) {
+	} else if (KEY_PRESSED(instrument_envelope, delete_node)) {
 		*current_node = _env_node_remove(env, *current_node);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	} else if (key_pressed(instrument_envelope, play_default_note)) {
+	} else if (KEY_PRESSED(instrument_envelope, play_default_note)) {
 		song_keyup(KEYJAZZ_NOINST, current_instrument, last_note);
 		song_keydown(KEYJAZZ_NOINST, current_instrument, last_note, 64, KEYJAZZ_CHAN_CURRENT);
 		return 1;
-	} else if (key_pressed(instrument_envelope, pick_up_or_drop_current_node)) {
+	} else if (KEY_PRESSED(instrument_envelope, pick_up_or_drop_current_node)) {
 		envelope_edit_mode = 0;
 		memused_songchanged();
 		status.flags |= NEED_UPDATE;
@@ -1683,9 +1683,9 @@ static int pitch_pan_center_handle_key(struct key_event *k)
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 	int ppc = ins->pitch_pan_center;
 
-	if (key_pressed_or_repeated(global, nav_left)) {
+	if (KEY_PRESSED_OR_REPEATED(global, nav_left)) {
 		ppc--;
-	} else if (key_pressed_or_repeated(global, nav_right)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_right)) {
 		ppc++;
 	} else {
 		if (k->state == KEY_RELEASE)
@@ -1770,26 +1770,26 @@ static void do_delete_inst_preserve(UNUSED void *ign)
 
 static void instrument_list_handle_alt_key(struct key_event *k)
 {
-	if (key_pressed(instrument_list, toggle_multichannel)) {
+	if (KEY_PRESSED(instrument_list, toggle_multichannel)) {
 		song_toggle_multichannel_mode();
-	} else if (key_pressed(instrument_list, save_to_disk)) {
+	} else if (KEY_PRESSED(instrument_list, save_to_disk)) {
 		instrument_save();
-	} else if (key_pressed(instrument_list, replace_in_song)) {
+	} else if (KEY_PRESSED(instrument_list, replace_in_song)) {
 		smpprompt_create("Replace instrument with:", "Instrument", do_replace_instrument);
-	} else if (key_pressed(instrument_list, swap)) {
+	} else if (KEY_PRESSED(instrument_list, swap)) {
 		// extra space to align the text like IT
 		smpprompt_create("Swap instrument with: ", "Instrument", do_swap_instrument);
-	} else if (key_pressed(instrument_list, exchange)) {
+	} else if (KEY_PRESSED(instrument_list, exchange)) {
 		smpprompt_create("Exchange instrument with:", "Instrument", do_exchange_instrument);
-	} else if (key_pressed(instrument_list, copy)) {
+	} else if (KEY_PRESSED(instrument_list, copy)) {
 		smpprompt_create("Copy instrument:", "Instrument", do_copy_instrument);
-	} else if (key_pressed(instrument_list, wipe_data)) {
+	} else if (KEY_PRESSED(instrument_list, wipe_data)) {
 		song_wipe_instrument(current_instrument);
-	} else if (key_pressed(instrument_list, delete_instrument_and_samples)) {
+	} else if (KEY_PRESSED(instrument_list, delete_instrument_and_samples)) {
 		dialog_create(DIALOG_OK_CANCEL,
 			"Delete Instrument?",
 			do_delete_inst, NULL, 1, NULL);
-	} else if (key_pressed(instrument_list, delete_instrument_and_unused_samples)) {
+	} else if (KEY_PRESSED(instrument_list, delete_instrument_and_unused_samples)) {
 		dialog_create(DIALOG_OK_CANCEL,
 			"Delete Instrument? (preserve shared samples)",
 			do_delete_inst_preserve, NULL, 1, NULL);
@@ -1803,7 +1803,7 @@ static int instrument_list_pre_handle_key(struct key_event * k)
 	// This changes the instrument list subpage
 
 	if (status.dialog_type != DIALOG_NONE ||
-		!(key_pressed(instrument_list, next_page) || key_pressed(instrument_list, previous_page))
+		!(KEY_PRESSED(instrument_list, next_page) || KEY_PRESSED(instrument_list, previous_page))
 	) {
 		return 0;
 	}
@@ -1815,7 +1815,7 @@ static int instrument_list_pre_handle_key(struct key_event * k)
 			return 0;
 	}
 
-	if (key_pressed(instrument_list, previous_page)) {
+	if (KEY_PRESSED(instrument_list, previous_page)) {
 		switch (status.current_page) {
 			default:
 			case PAGE_INSTRUMENT_LIST_VOLUME:  set_subpage(PAGE_INSTRUMENT_LIST_GENERAL); break;
@@ -1850,13 +1850,13 @@ static void instrument_list_handle_key(struct key_event * k)
 	// 			return;
 	// 	}
 
-	if (key_pressed(instrument_list, decrease_playback_channel)) {
+	if (KEY_PRESSED(instrument_list, decrease_playback_channel)) {
 		song_change_current_play_channel(-1, 0);
-	} else if (key_pressed(instrument_list, increase_playback_channel)) {
+	} else if (KEY_PRESSED(instrument_list, increase_playback_channel)) {
 		song_change_current_play_channel(1, 0);
 	} else if (
-		key_active(instrument_list, focus_list) ||
-		(instrument_cursor_pos < 25 && key_active(global, nav_cancel))
+		KEY_ACTIVE(instrument_list, focus_list) ||
+		(instrument_cursor_pos < 25 && KEY_ACTIVE(global, nav_cancel))
 	) {
 		if (k->state == KEY_RELEASE)
 				return;
@@ -2451,7 +2451,7 @@ static int _fixup_mouse_instpage_volume(struct key_event *k)
 	}
 
 	// TODO: Some sort of hack
-	if (key_pressed(instrument_list, post_loop_cut) || key_pressed(instrument_envelope, pre_loop_cut_envelope)) {
+	if (KEY_PRESSED(instrument_list, post_loop_cut) || KEY_PRESSED(instrument_envelope, pre_loop_cut_envelope)) {
 		return _env_handle_key_viewmode(k, &ins->vol_env, &current_node_vol, ENV_VOLUME);
 	}
 	// TODO END
@@ -2520,7 +2520,7 @@ static int _fixup_mouse_instpage_panning(struct key_event *k)
 		}
 	}
 	// TODO: Some sort of hack (again)
-	if (key_pressed(instrument_list, post_loop_cut) || key_pressed(instrument_envelope, pre_loop_cut_envelope)) {
+	if (KEY_PRESSED(instrument_list, post_loop_cut) || KEY_PRESSED(instrument_envelope, pre_loop_cut_envelope)) {
 		return _env_handle_key_viewmode(k, &ins->pan_env, &current_node_pan, ENV_PANNING);
 	}
 	// TODO END
@@ -2597,7 +2597,7 @@ static int _fixup_mouse_instpage_pitch(struct key_event *k)
 		}
 	}
 	// TODO: Some sort of hack (and yet again)
-	if (key_pressed(instrument_list, post_loop_cut) || key_pressed(instrument_envelope, pre_loop_cut_envelope)) {
+	if (KEY_PRESSED(instrument_list, post_loop_cut) || KEY_PRESSED(instrument_envelope, pre_loop_cut_envelope)) {
 		return _env_handle_key_viewmode(k, &ins->pitch_env, &current_node_pitch, ENV_PITCH);
 	}
 	// TODO END

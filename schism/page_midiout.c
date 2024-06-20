@@ -101,7 +101,7 @@ static void zxx_setpos(int pos)
 
 static int pre_handle_key(struct key_event *k)
 {
-	if (*selected_widget == 25 && key_pressed_or_repeated(global, nav_up)) {
+	if (*selected_widget == 25 && KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		/* scroll up */
 		if (zxx_top == 0)
 			return 0; /* let the normal key handler catch it and change focus */
@@ -109,17 +109,17 @@ static int pre_handle_key(struct key_event *k)
 		return 1;
 	}
 
-	if (*selected_widget == 31 && key_pressed_or_repeated(global, nav_down)) {
+	if (*selected_widget == 31 && KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		/* scroll down */
 		zxx_setpos(zxx_top + 1);
 		return 1;
 	}
 
 	if ((*selected_widget) >= 25) {
-		if (key_pressed_or_repeated(global, nav_page_up)) {
+		if (KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 			zxx_setpos(zxx_top - 7);
 			return 1;
-		} else if(key_pressed_or_repeated(global, nav_page_down)) {
+		} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 			zxx_setpos(zxx_top + 7);
 			return 1;
 		}

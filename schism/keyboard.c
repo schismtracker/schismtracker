@@ -469,13 +469,13 @@ int kbd_char_to_hex(struct key_event *k)
  *         but it's in the player. */
 int kbd_get_note(struct key_event *k)
 {
-	if (key_active(pattern_edit, clear_field)) {
+	if (KEY_ACTIVE(pattern_edit, clear_field)) {
 		return 0;
-	} else if(key_active(pattern_edit, note_cut)) {
+	} else if(KEY_ACTIVE(pattern_edit, note_cut)) {
 		return NOTE_CUT;
-	} else if(key_active(pattern_edit, note_off)) {
+	} else if(KEY_ACTIVE(pattern_edit, note_off)) {
 		return NOTE_OFF;
-	} else if(key_active(pattern_edit, note_fade)) {
+	} else if(KEY_ACTIVE(pattern_edit, note_fade)) {
 		return NOTE_FADE;
 	}
 

@@ -67,17 +67,17 @@ static void log_draw_const(void)
 
 static int log_handle_key(struct key_event * k)
 {
-	if (key_pressed_or_repeated(global, nav_up)) {
+	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		top_line--;
-	} else if(key_pressed_or_repeated(global, nav_page_up)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 		top_line -= 15;
-	} else if(key_pressed_or_repeated(global, nav_down)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		top_line++;
-	} else if(key_pressed_or_repeated(global, nav_page_down)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 		top_line += 15;
-	} else if(key_pressed_or_repeated(global, nav_home)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		top_line = 0;
-	} else if(key_pressed_or_repeated(global, nav_end)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		top_line = last_line;
 	} else {
 		switch (k->sym) {

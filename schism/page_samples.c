@@ -440,25 +440,25 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			}
 		}
 	} else {
-		if (key_pressed_or_repeated(global, nav_left)) {
+		if (KEY_PRESSED_OR_REPEATED(global, nav_left)) {
 			set_cursor_pos(sample_list_cursor_pos - 1);
-		} else if (key_pressed_or_repeated(global, nav_right)) {
+		} else if (KEY_PRESSED_OR_REPEATED(global, nav_right)) {
 			set_cursor_pos(sample_list_cursor_pos + 1);
-		} else if (key_pressed_or_repeated(global, nav_up)) {
+		} else if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 			sample_set(current_sample - 1);
-		} else if (key_pressed_or_repeated(global, nav_down)) {
+		} else if (KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 			sample_set(current_sample + 1);
-		} else if (key_pressed(global, nav_home)) {
+		} else if (KEY_PRESSED(global, nav_home)) {
 			set_cursor_pos(0);
-		} else if (key_pressed(global, nav_end)) {
+		} else if (KEY_PRESSED(global, nav_end)) {
 			set_cursor_pos(25);
-		} else if (key_pressed_or_repeated(sample_list, swap_sample_with_previous)) {
+		} else if (KEY_PRESSED_OR_REPEATED(sample_list, swap_sample_with_previous)) {
 			if (current_sample > 1) {
 				int new_sample = current_sample - 1;
 				song_swap_samples(current_sample, new_sample);
 				sample_set(new_sample);
 			}
-		} else if (key_pressed_or_repeated(sample_list, swap_sample_with_next)) {
+		} else if (KEY_PRESSED_OR_REPEATED(sample_list, swap_sample_with_next)) {
 			// restrict position to the "old" value of _last_vis_sample()
 			// (this is entirely for aesthetic reasons)
 			// if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
@@ -469,20 +469,20 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 				song_swap_samples(current_sample, new_sample);
 				sample_set(new_sample);
 			}
-		} else if (key_pressed_or_repeated(global, nav_page_up)) {
+		} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 			sample_set(current_sample - 16);
-		} else if (key_pressed_or_repeated(global, nav_page_down)) {
+		} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 			sample_set(current_sample + 16);
-		} else if (key_pressed(sample_list, goto_first_sample)) {
+		} else if (KEY_PRESSED(sample_list, goto_first_sample)) {
 			sample_set(1);
-		} else if (key_pressed(sample_list, goto_last_sample)) {
+		} else if (KEY_PRESSED(sample_list, goto_last_sample)) {
 			sample_set(_last_vis_sample());
-		} else if (key_pressed(global, nav_accept)) {
+		} else if (KEY_PRESSED(global, nav_accept)) {
 			set_page(PAGE_LOAD_SAMPLE);
-		} else if (key_pressed(sample_list, clear_name_and_filename)) {
+		} else if (KEY_PRESSED(sample_list, clear_name_and_filename)) {
 			clear_sample_text();
 			return 1;
-		} else if (key_pressed(sample_list, insert_arrow_up)) {
+		} else if (KEY_PRESSED(sample_list, insert_arrow_up)) {
 			/* just for compatibility with every weird thing
 			* Impulse Tracker does ^_^ */
 			if (sample_list_cursor_pos < 25) {
@@ -878,7 +878,7 @@ static void sample_adlibconfig_draw_const(void)
 
 static int do_adlib_handlekey(struct key_event *kk)
 {
-	if (key_released(global, help)) {
+	if (KEY_RELEASED(global, help)) {
 		status.current_help_index = HELP_ADLIB_SAMPLE;
 		dialog_f1_hack = 1;
 		dialog_destroy_all();
@@ -1079,18 +1079,18 @@ static int export_sample_list_handle_key(struct key_event * k)
 	if (k->state == KEY_RELEASE)
 		return 0;
 
-	if (key_pressed_or_repeated(global, nav_up)) {
+	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		new_format--;
-	} else if(key_pressed_or_repeated(global, nav_down)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		new_format++;
-	} else if(key_pressed(global, nav_home) || key_pressed(global, nav_page_up)) {
+	} else if(KEY_PRESSED(global, nav_home) || KEY_PRESSED(global, nav_page_up)) {
 		new_format = 0;
-	} else if(key_pressed(global, nav_end) || key_pressed(global, nav_page_down)) {
+	} else if(KEY_PRESSED(global, nav_end) || KEY_PRESSED(global, nav_page_down)) {
 		new_format = num_save_formats - 1;
-	} else if(key_pressed(global, nav_tab) || key_pressed(global, nav_left) || key_pressed(global, nav_right)) {
+	} else if(KEY_PRESSED(global, nav_tab) || KEY_PRESSED(global, nav_left) || KEY_PRESSED(global, nav_right)) {
 		change_focus_to(0); /* should focus 0/1/2 depending on what's closest */
 		return 1;
-	} else if(key_pressed(global, nav_backtab)) {
+	} else if(KEY_PRESSED(global, nav_backtab)) {
 		change_focus_to(0);
 		return 1;
 	} else {
@@ -1228,73 +1228,73 @@ static int sample_list_handle_alt_key(struct key_event * k)
 	song_sample_t *sample = song_get_sample(current_sample);
 	int canmod = (sample->data != NULL && !(sample->flags & CHN_ADLIB));
 
-	if (key_pressed(sample_list, convert_signed_unsigned)) {
+	if (KEY_PRESSED(sample_list, convert_signed_unsigned)) {
 		if (canmod)
 			dialog_create(DIALOG_OK_CANCEL, "Convert sample?", do_sign_convert, NULL, 0, NULL);
-	} else if (key_pressed(sample_list, pre_loop_cut)) {
+	} else if (KEY_PRESSED(sample_list, pre_loop_cut)) {
 		if (canmod && (sample->loop_start > 0
 			       || ((sample->flags & CHN_SUSTAINLOOP) && sample->sustain_start > 0))) {
 			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_pre_loop_cut, NULL, 1, NULL);
 		}
-	} else if (key_pressed(sample_list, pre_loop_cut)) {
+	} else if (KEY_PRESSED(sample_list, pre_loop_cut)) {
 		if (canmod && (sample->loop_start > 0
 			       || ((sample->flags & CHN_SUSTAINLOOP) && sample->sustain_start > 0))) {
 			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_pre_loop_cut, NULL, 1, NULL);
 		}
-	} else if (key_pressed(sample_list, delete_sample)) {
+	} else if (KEY_PRESSED(sample_list, delete_sample)) {
 		dialog_create(DIALOG_OK_CANCEL, "Delete sample?", do_delete_sample, NULL, 1, NULL);
-	} else if (key_pressed(sample_list, downmix_to_mono) && !(status.flags & CLASSIC_MODE)) {
+	} else if (KEY_PRESSED(sample_list, downmix_to_mono) && !(status.flags & CLASSIC_MODE)) {
 		if (canmod && sample->flags & CHN_STEREO) {
 			dialog_create(DIALOG_OK_CANCEL, "Downmix sample to mono?",
 				do_downmix, NULL, 0, NULL);
 		}
-	} else if (key_pressed(sample_list, resize_sample_with_interpolation)) {
+	} else if (KEY_PRESSED(sample_list, resize_sample_with_interpolation)) {
 		if (canmod)
 			resize_sample_dialog(1);
-	} else if (key_pressed(sample_list, resize_sample_without_interpolation)) {
+	} else if (KEY_PRESSED(sample_list, resize_sample_without_interpolation)) {
 		if (canmod)
 			resize_sample_dialog(0);
-	} else if (key_pressed(sample_list, reverse_sample)) {
+	} else if (KEY_PRESSED(sample_list, reverse_sample)) {
 		if (canmod)
 			sample_reverse(sample);
-	} else if (key_pressed(sample_list, centralise_sample)) {
+	} else if (KEY_PRESSED(sample_list, centralise_sample)) {
 		if (canmod)
 			dialog_create(DIALOG_YES_NO, "Centralise sample?", do_centralise, NULL, 0, NULL);
-	} else if (key_pressed(sample_list, invert_sample)) {
+	} else if (KEY_PRESSED(sample_list, invert_sample)) {
 		if (canmod)
 			sample_invert(sample);
-	} else if (key_pressed(sample_list, post_loop_cut)) {
+	} else if (KEY_PRESSED(sample_list, post_loop_cut)) {
 		if (canmod && (sample->loop_end > 0
 			       || ((sample->flags & CHN_SUSTAINLOOP) && sample->sustain_end > 0))) {
 			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_post_loop_cut, NULL, 1, NULL);
 		}
-	} else if (key_pressed(sample_list, sample_amplifier)) {
+	} else if (KEY_PRESSED(sample_list, sample_amplifier)) {
 		if (canmod)
 			sample_amplify_dialog();
-	} else if (key_pressed(sample_list, toggle_multichannel_playback)) {
+	} else if (KEY_PRESSED(sample_list, toggle_multichannel_playback)) {
 		song_toggle_multichannel_mode();
-	} else if (key_pressed(sample_list, save_sample_to_disk_it)) {
+	} else if (KEY_PRESSED(sample_list, save_sample_to_disk_it)) {
 		sample_save(NULL, "ITS");
-	} else if (key_pressed(sample_list, copy_sample)) {
+	} else if (KEY_PRESSED(sample_list, copy_sample)) {
 		smpprompt_create("Copy sample:", "Sample", do_copy_sample);
-	} else if (key_pressed(sample_list, toggle_sample_quality)) {
+	} else if (KEY_PRESSED(sample_list, toggle_sample_quality)) {
 		if (canmod) {
 			dialog_create(DIALOG_YES_NO, "Convert sample?",
 			      do_quality_convert, do_quality_toggle, 0, NULL);
 		}
-	} else if (key_pressed(sample_list, replace_current_sample)) {
+	} else if (KEY_PRESSED(sample_list, replace_current_sample)) {
 		smpprompt_create("Replace sample with:", "Sample", do_replace_sample);
-	} else if (key_pressed(sample_list, swap_sample)) {
+	} else if (KEY_PRESSED(sample_list, swap_sample)) {
 		smpprompt_create("Swap sample with:", "Sample", do_swap_sample);
-	} else if (key_pressed(sample_list, save_sample_to_disk_format_select)) {
+	} else if (KEY_PRESSED(sample_list, save_sample_to_disk_format_select)) {
 		export_sample_dialog();
-	} else if (key_pressed(sample_list, save_sample_to_disk_raw)) {
+	} else if (KEY_PRESSED(sample_list, save_sample_to_disk_raw)) {
 		sample_save(NULL, "RAW");
-	} else if (key_pressed(sample_list, exchange_sample)) {
+	} else if (KEY_PRESSED(sample_list, exchange_sample)) {
 		smpprompt_create("Exchange sample with:", "Sample", do_exchange_sample);
-	} else if (key_pressed(sample_list, text_to_sample)) {
+	} else if (KEY_PRESSED(sample_list, text_to_sample)) {
 		txtsynth_dialog();
-	} else if (key_pressed(sample_list, load_adlib_sample_by_midi_patch_number)) {
+	} else if (KEY_PRESSED(sample_list, load_adlib_sample_by_midi_patch_number)) {
 		// uguu~
 		void (*dlg)(void *) = sample_adlibpatch_dialog;
 		if (canmod) {
@@ -1303,7 +1303,7 @@ static int sample_list_handle_alt_key(struct key_event * k)
 		} else {
 			dlg(NULL);
 		}
-	} else if (key_pressed(sample_list, edit_create_adlib_sample)) {
+	} else if (KEY_PRESSED(sample_list, edit_create_adlib_sample)) {
 		// uguu~
 		void (*dlg)(void *) = sample_adlibconfig_dialog;
 		if (canmod) {
@@ -1312,13 +1312,13 @@ static int sample_list_handle_alt_key(struct key_event * k)
 		} else {
 			dlg(NULL);
 		}
-	} else if (key_pressed(sample_list, insert_sample_slot)) {
+	} else if (KEY_PRESSED(sample_list, insert_sample_slot)) {
 		song_insert_sample_slot(current_sample);
-	} else if (key_pressed(sample_list, remove_sample_slot)) {
+	} else if (KEY_PRESSED(sample_list, remove_sample_slot)) {
 		song_remove_sample_slot(current_sample);
-	} else if (key_pressed(sample_list, toggle_current_sample)) {
+	} else if (KEY_PRESSED(sample_list, toggle_current_sample)) {
 		sample_toggle_mute(current_sample);
-	} else if (key_pressed(sample_list, solo_current_sample)) {
+	} else if (KEY_PRESSED(sample_list, solo_current_sample)) {
 		sample_toggle_solo(current_sample);
 	} else {
 		return 0;
@@ -1332,27 +1332,27 @@ static void sample_list_handle_key(struct key_event * k)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
 
-	if (key_pressed(sample_list, increase_c5_frequency_1_octave)) {
+	if (KEY_PRESSED(sample_list, increase_c5_frequency_1_octave)) {
 		sample->c5speed *= 2;
 		status.flags |= SONG_NEEDS_SAVE;
-	} else if (key_pressed(sample_list, increase_c5_frequency_1_semitone)) {
+	} else if (KEY_PRESSED(sample_list, increase_c5_frequency_1_semitone)) {
 		sample->c5speed = calc_halftone(sample->c5speed, 1);
 		status.flags |= SONG_NEEDS_SAVE;
-	} else if (key_pressed(sample_list, decrease_c5_frequency_1_octave)) {
+	} else if (KEY_PRESSED(sample_list, decrease_c5_frequency_1_octave)) {
 		sample->c5speed /= 2;
 		status.flags |= SONG_NEEDS_SAVE;
-	} else if (key_pressed(sample_list, decrease_c5_frequency_1_semitone)) {
+	} else if (KEY_PRESSED(sample_list, decrease_c5_frequency_1_semitone)) {
 		sample->c5speed = calc_halftone(sample->c5speed, -1);
 		status.flags |= SONG_NEEDS_SAVE;
-	} else if (key_pressed(sample_list, decrease_playback_channel)) {
+	} else if (KEY_PRESSED(sample_list, decrease_playback_channel)) {
 		song_change_current_play_channel(-1, 0);
-	} else if (key_pressed(sample_list, increase_playback_channel)) {
+	} else if (KEY_PRESSED(sample_list, increase_playback_channel)) {
 		song_change_current_play_channel(1, 0);
-	} else if (key_pressed(sample_list, move_up)) {
+	} else if (KEY_PRESSED(sample_list, move_up)) {
 		sample_set(current_sample - 1);
-	} else if (key_pressed(sample_list, move_down)) {
+	} else if (KEY_PRESSED(sample_list, move_down)) {
 		sample_set(current_sample + 1);
-	} else if (key_pressed(sample_list, focus_sample_list)) {
+	} else if (KEY_PRESSED(sample_list, focus_sample_list)) {
 		set_cursor_pos(25);
 		_fix_accept_text();
 		change_focus_to(0);
@@ -1369,7 +1369,7 @@ static void sample_list_handle_key(struct key_event * k)
 					v = KEYJAZZ_DEFAULTVOL;
 				}
 			} else {
-				n = (key_pressed(pattern_edit, use_last_value)
+				n = (KEY_PRESSED(pattern_edit, use_last_value)
 					? last_note
 					: kbd_get_note(k));
 				if (n <= 0 || n > 120)

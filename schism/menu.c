@@ -524,7 +524,7 @@ int menu_handle_key(struct key_event *k)
 		return 1;
 	}
 
-	if (key_pressed(global, nav_cancel)) {
+	if (KEY_PRESSED(global, nav_cancel)) {
 		current_menu[1] = NULL;
 		if (status.dialog_type == DIALOG_SUBMENU) {
 			status.dialog_type = DIALOG_MAIN_MENU;
@@ -532,25 +532,25 @@ int menu_handle_key(struct key_event *k)
 		} else {
 			menu_hide();
 		}
-	} else if(key_pressed(global, nav_accept)) {
+	} else if(KEY_PRESSED(global, nav_accept)) {
 		menu->active_item = menu->selected_item; // Press down item
-	} else if(key_released(global, nav_accept)) {
+	} else if(KEY_RELEASED(global, nav_accept)) {
 		menu->selected_cb(); // Activate item
-	} else if(key_pressed_or_repeated(global, nav_up)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		if (menu->selected_item > 0) {
 			menu->selected_item--;
 		} else {
 			return 1;
 		}
-	} else if(key_pressed_or_repeated(global, nav_down)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		if (menu->selected_item < menu->num_items - 1) {
 			menu->selected_item++;
 		} else {
 			return 1;
 		}
-	} else if(key_pressed_or_repeated(global, nav_home)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		menu->selected_item = 0;
-	} else if(key_pressed_or_repeated(global, nav_end)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		menu->selected_item = menu->num_items - 1;
 	} else {
 		return 1;

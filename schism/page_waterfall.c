@@ -420,18 +420,18 @@ static int waterfall_handle_key(struct key_event *k)
 		}
 	}
 
-	if (key_pressed(waterfall, song_toggle_stereo)) {
+	if (KEY_PRESSED(waterfall, song_toggle_stereo)) {
 		song_toggle_stereo();
 		status.flags |= NEED_UPDATE;
 		return 1;
-	} else if (key_pressed(waterfall, view_toggle_mono)) {
+	} else if (KEY_PRESSED(waterfall, view_toggle_mono)) {
 		mono = !mono;
 		return 1;
-	} else if (key_pressed_or_repeated(waterfall, decrease_sensitivity)) {
+	} else if (KEY_PRESSED_OR_REPEATED(waterfall, decrease_sensitivity)) {
 		noisefloor-=4;
-	} else if (key_pressed_or_repeated(waterfall, increase_sensitivity)) {
+	} else if (KEY_PRESSED_OR_REPEATED(waterfall, increase_sensitivity)) {
 		noisefloor+=4;
-	} else if (key_pressed(waterfall, goto_pattern_edit)) {
+	} else if (KEY_PRESSED(waterfall, goto_pattern_edit)) {
 		order = song_get_current_order();
 		if (song_get_mode() == MODE_PLAYING) {
 			n = current_song->orderlist[order];
@@ -445,15 +445,15 @@ static int waterfall_handle_key(struct key_event *k)
 			set_page(PAGE_PATTERN_EDITOR);
 		}
 		return 1;
-	} else if (key_pressed(waterfall, song_flip_stereo)) {
+	} else if (KEY_PRESSED(waterfall, song_flip_stereo)) {
 		song_flip_stereo();
 		return 1;
-	} else if (key_pressed(waterfall, goto_next_order)) {
+	} else if (KEY_PRESSED(waterfall, goto_next_order)) {
 		if (song_get_mode() == MODE_PLAYING) {
 			song_set_current_order(song_get_current_order() + 1);
 		}
 		return 1;
-	} else if (key_pressed(waterfall, goto_previous_order)) {
+	} else if (KEY_PRESSED(waterfall, goto_previous_order)) {
 		if (song_get_mode() == MODE_PLAYING) {
 			song_set_current_order(song_get_current_order() - 1);
 		}

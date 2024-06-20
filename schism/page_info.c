@@ -1045,7 +1045,7 @@ static int info_page_handle_key(struct key_event * k)
 		return n;
 	}
 
-	if (key_pressed(info_page, goto_playing_pattern)) {
+	if (KEY_PRESSED(info_page, goto_playing_pattern)) {
 		set_current_channel(selected_channel);
 		order = song_get_current_order();
 
@@ -1060,39 +1060,39 @@ static int info_page_handle_key(struct key_event * k)
 			set_current_row(song_get_current_row());
 			set_page(PAGE_PATTERN_EDITOR);
 		}
-	} else if(key_pressed(info_page, toggle_volume_velocity_bars)) {
+	} else if(KEY_PRESSED(info_page, toggle_volume_velocity_bars)) {
 		velocity_mode = !velocity_mode;
 		status_text_flash("Using %s bars", (velocity_mode ? "velocity" : "volume"));
-	} else if(key_pressed(info_page, toggle_sample_instrument_names)) {
+	} else if(KEY_PRESSED(info_page, toggle_sample_instrument_names)) {
 		instrument_names = !instrument_names;
 		status_text_flash("Using %s names", (instrument_names ? "instrument" : "sample"));
-	} else if(key_pressed(info_page, reverse_output_channels)) {
+	} else if(KEY_PRESSED(info_page, reverse_output_channels)) {
 		song_flip_stereo();
 		status_text_flash("Left/right outputs reversed");
-	} else if(key_pressed(info_page, goto_next_pattern)) {
+	} else if(KEY_PRESSED(info_page, goto_next_pattern)) {
 		if (song_get_mode() == MODE_PLAYING) {
 			song_set_current_order(song_get_current_order() + 1);
 		}
-	} else if(key_pressed(info_page, goto_previous_pattern)) {
+	} else if(KEY_PRESSED(info_page, goto_previous_pattern)) {
 		if (song_get_mode() == MODE_PLAYING) {
 			song_set_current_order(song_get_current_order() - 1);
 		}
-	} else if(key_pressed(info_page, toggle_channel_mute)) {
+	} else if(KEY_PRESSED(info_page, toggle_channel_mute)) {
 		song_toggle_channel_mute(selected_channel - 1);
 		orderpan_recheck_muted_channels();
-	} else if(key_pressed(info_page, toggle_channel_mute_and_go_next)) {
+	} else if(KEY_PRESSED(info_page, toggle_channel_mute_and_go_next)) {
 		song_toggle_channel_mute(selected_channel - 1);
 		if (selected_channel < 64)
 			selected_channel++;
 		orderpan_recheck_muted_channels();
-	} else if(key_pressed(info_page, solo_channel)) {
+	} else if(KEY_PRESSED(info_page, solo_channel)) {
 		song_handle_channel_solo(selected_channel - 1);
 		orderpan_recheck_muted_channels();
-	} else if(key_pressed(info_page, toggle_stereo_playback)) {
+	} else if(KEY_PRESSED(info_page, toggle_stereo_playback)) {
 		song_toggle_stereo();
 		status_text_flash("Stereo %s", song_is_stereo()
 					? "Enabled" : "Disabled");
-	} else if(key_pressed_or_repeated(info_page, move_window_base_up)) {
+	} else if(KEY_PRESSED_OR_REPEATED(info_page, move_window_base_up)) {
 		/* make the current window one line shorter, and give the line to the next window
 		below it. if the window is already as small as it can get (3 lines) or if it's
 		the last window, don't do anything. */
@@ -1101,7 +1101,7 @@ static int info_page_handle_key(struct key_event * k)
 		}
 		windows[selected_window].height--;
 		windows[selected_window + 1].height++;
-	} else if(key_pressed_or_repeated(info_page, move_window_base_down)) {
+	} else if(KEY_PRESSED_OR_REPEATED(info_page, move_window_base_down)) {
 		/* expand the current window, taking a line from
 			* the next window down. BUT: don't do anything if
 			* (a) this is the last window, or (b) the next
@@ -1113,17 +1113,17 @@ static int info_page_handle_key(struct key_event * k)
 		}
 		windows[selected_window].height++;
 		windows[selected_window + 1].height--;
-	} else if(key_pressed_or_repeated(global, nav_up) || key_pressed_or_repeated(global, nav_left)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_up) || KEY_PRESSED_OR_REPEATED(global, nav_left)) {
 		if (selected_channel > 1)
 			selected_channel--;
-	} else if(key_pressed_or_repeated(global, nav_down) || key_pressed_or_repeated(global, nav_right)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_down) || KEY_PRESSED_OR_REPEATED(global, nav_right)) {
 		if (selected_channel < 64)
 			selected_channel++;
-	} else if(key_pressed_or_repeated(global, nav_home)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		selected_channel = 1;
-	} else if(key_pressed_or_repeated(global, nav_end)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		selected_channel = song_find_last_channel();
-	} else if(key_pressed(info_page, add_window)) {
+	} else if(KEY_PRESSED(info_page, add_window)) {
 		/* add a new window, unless there's already five (the maximum)
 		or if the current window isn't big enough to split in half. */
 		if (num_windows == MAX_WINDOWS || (windows[selected_window].height < 6)) {
@@ -1144,7 +1144,7 @@ static int info_page_handle_key(struct key_event * k)
 			/* odd number? compensate. (the selected window gets the extra line) */
 			windows[selected_window + 1].height++;
 		}
-	} else if(key_pressed(info_page, delete_window)) {
+	} else if(KEY_PRESSED(info_page, delete_window)) {
 		/* delete the current window and give the extra space to the next window down.
 		if this is the only window, well then don't delete it ;) */
 		if (num_windows == 1)
@@ -1162,17 +1162,17 @@ static int info_page_handle_key(struct key_event * k)
 		num_windows--;
 		if (selected_window == num_windows)
 			selected_window--;
-	} else if(key_pressed(info_page, change_window_type_up)) {
+	} else if(KEY_PRESSED(info_page, change_window_type_up)) {
 		n = windows[selected_window].type;
 		if (n == 0)
 			n = NUM_WINDOW_TYPES;
 		n--;
 		windows[selected_window].type = n;
-	} else if(key_pressed(info_page, change_window_type_down)) {
+	} else if(KEY_PRESSED(info_page, change_window_type_down)) {
 		windows[selected_window].type = (windows[selected_window].type + 1) % NUM_WINDOW_TYPES;
-	} else if(key_pressed(info_page, nav_next_window)) {
+	} else if(KEY_PRESSED(info_page, nav_next_window)) {
 		selected_window = (selected_window + 1) % num_windows;
-	} else if(key_pressed(info_page, nav_previous_window)) {
+	} else if(KEY_PRESSED(info_page, nav_previous_window)) {
 		if (selected_window == 0)
 			selected_window = num_windows;
 		selected_window--;

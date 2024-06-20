@@ -161,19 +161,19 @@ static int help_handle_key(struct key_event * k)
 		return 0;
 	}
 
-	if (key_pressed(global, nav_cancel)) {
+	if (KEY_PRESSED(global, nav_cancel)) {
 		set_page(status.previous_page);
-	} else if(key_pressed_or_repeated(global, nav_up)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		new_line--;
-	} else if(key_pressed_or_repeated(global, nav_down)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		new_line++;
-	} else if(key_pressed_or_repeated(global, nav_page_up)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 		new_line -= 32;
-	} else if(key_pressed_or_repeated(global, nav_page_down)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 		new_line += 32;
-	} else if(key_pressed_or_repeated(global, nav_home)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		new_line = 0;
-	} else if(key_pressed_or_repeated(global, nav_end)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		new_line = num_lines - 32;
 	} else {
 		if (k->mouse != MOUSE_NONE) {

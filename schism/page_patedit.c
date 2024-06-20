@@ -505,7 +505,7 @@ static void multichannel_close(UNUSED void *data)
 static int multichannel_handle_key(struct key_event *k)
 {
 	// CHECK IF WORKING
-	if (key_pressed(pattern_edit, toggle_multichannel)) {
+	if (KEY_PRESSED(pattern_edit, toggle_multichannel)) {
 		dialog_yes(NULL);
 		return 1;
 	}
@@ -887,9 +887,9 @@ static int history_handle_key(struct key_event *k)
 {
 	int i,j;
 
-	if (key_pressed(global, nav_cancel)) {
+	if (KEY_PRESSED(global, nav_cancel)) {
 		dialog_cancel(NULL);
-	} else if (key_pressed(global, nav_accept)) {
+	} else if (KEY_PRESSED(global, nav_accept)) {
 		j = undo_history_top;
 		for (i = 0; i < 10; i++) {
 			if (i == undo_selection) {
@@ -900,10 +900,10 @@ static int history_handle_key(struct key_event *k)
 			if (j < 0) j += 10;
 		}
 		dialog_cancel(NULL);
-	} else if (key_pressed_or_repeated(global, nav_up)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		undo_selection--;
 		if (undo_selection < 0) undo_selection = 0;
-	} else if (key_pressed_or_repeated(global, nav_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		undo_selection++;
 		if (undo_selection > 9) undo_selection = 9;
 	} else {
@@ -3161,7 +3161,7 @@ static int pattern_editor_insert(struct key_event *k)
 			ins = KEYJAZZ_NOINST;
 		}
 
-		if (key_pressed(playback_functions, play_note_cursor)) {
+		if (KEY_PRESSED(playback_functions, play_note_cursor)) {
 			if (k->state == KEY_RELEASE)
 				return 0;
 
@@ -3174,7 +3174,7 @@ static int pattern_editor_insert(struct key_event *k)
 				vol, current_channel, cur_note->effect, cur_note->param);
 			advance_cursor(!(k->mod & KMOD_SHIFT), 1);
 			return 1;
-		} else if (key_pressed(playback_functions, play_row)) {
+		} else if (KEY_PRESSED(playback_functions, play_row)) {
 			/* note: Impulse Tracker doesn't skip multichannels when pressing "8"  -delt. */
 			if (k->state == KEY_RELEASE)
 				return 0;
@@ -3192,7 +3192,7 @@ static int pattern_editor_insert(struct key_event *k)
 		}
 
 
-		if (key_pressed(pattern_edit, use_last_value)) {
+		if (KEY_PRESSED(pattern_edit, use_last_value)) {
 			/* copy mask to note */
 			n = mask_note.note;
 
@@ -3260,7 +3260,7 @@ static int pattern_editor_insert(struct key_event *k)
 
 		/* Never copy the instrument etc. from the mask when inserting control notes or when
 		erasing a note -- but DO write it when inserting a blank note with the space key. */
-		if (!(NOTE_IS_CONTROL(n) || (!key_pressed(pattern_edit, use_last_value) && n == NOTE_NONE)) && !template_mode) {
+		if (!(NOTE_IS_CONTROL(n) || (!KEY_PRESSED(pattern_edit, use_last_value) && n == NOTE_NONE)) && !template_mode) {
 			if (edit_copy_mask & MASK_INSTRUMENT) {
 				if (song_is_instrument_mode())
 					cur_note->instrument = instrument_get_current();
@@ -3315,7 +3315,7 @@ static int pattern_editor_insert(struct key_event *k)
 		break;
 	case 2:                 /* instrument, first digit */
 	case 3:                 /* instrument, second digit */
-		if (key_pressed(pattern_edit, use_last_value)) {
+		if (KEY_PRESSED(pattern_edit, use_last_value)) {
 			if (song_is_instrument_mode())
 				n = instrument_get_current();
 			else
@@ -3381,7 +3381,7 @@ static int pattern_editor_insert(struct key_event *k)
 		break;
 	case 4:
 	case 5:                 /* volume */
-		if (key_pressed(pattern_edit, use_last_value)) {
+		if (KEY_PRESSED(pattern_edit, use_last_value)) {
 			cur_note->volparam = mask_note.volparam;
 			cur_note->voleffect = mask_note.voleffect;
 			advance_cursor(1, 0);
@@ -3395,7 +3395,7 @@ static int pattern_editor_insert(struct key_event *k)
 			status.flags |= SONG_NEEDS_SAVE;
 			break;
 		}
-		if (key_active(pattern_edit, toggle_volume_panning)) {
+		if (KEY_ACTIVE(pattern_edit, toggle_volume_panning)) {
 			panning_mode = !panning_mode;
 			status_text_flash("%s control set", (panning_mode ? "Panning" : "Volume"));
 			return 0;
@@ -3414,7 +3414,7 @@ static int pattern_editor_insert(struct key_event *k)
 		pattern_selection_system_copyout();
 		break;
 	case 6:                 /* effect */
-		if (key_pressed(pattern_edit, use_last_value)) {
+		if (KEY_PRESSED(pattern_edit, use_last_value)) {
 			cur_note->effect = mask_note.effect;
 		} else {
 			n = kbd_get_effect_number(k);
@@ -3431,7 +3431,7 @@ static int pattern_editor_insert(struct key_event *k)
 		break;
 	case 7:                 /* param, high nibble */
 	case 8:                 /* param, low nibble */
-		if (key_pressed(pattern_edit, use_last_value)) {
+		if (KEY_PRESSED(pattern_edit, use_last_value)) {
 			cur_note->param = mask_note.param;
 			set_current_position(link_effect_column ? 6 : 7);
 			advance_cursor(1, 0);
@@ -3487,32 +3487,32 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	int n;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
 
-	if (key_pressed(pattern_edit, set_skip_1)) {
+	if (KEY_PRESSED(pattern_edit, set_skip_1)) {
 		set_skip_value(1);
-	} if (key_pressed(pattern_edit, set_skip_2)) {
+	} if (KEY_PRESSED(pattern_edit, set_skip_2)) {
 		set_skip_value(2);
-	} if (key_pressed(pattern_edit, set_skip_3)) {
+	} if (KEY_PRESSED(pattern_edit, set_skip_3)) {
 		set_skip_value(3);
-	} if (key_pressed(pattern_edit, set_skip_4)) {
+	} if (KEY_PRESSED(pattern_edit, set_skip_4)) {
 		set_skip_value(4);
-	} if (key_pressed(pattern_edit, set_skip_5)) {
+	} if (KEY_PRESSED(pattern_edit, set_skip_5)) {
 		set_skip_value(5);
-	} if (key_pressed(pattern_edit, set_skip_6)) {
+	} if (KEY_PRESSED(pattern_edit, set_skip_6)) {
 		set_skip_value(6);
-	} if (key_pressed(pattern_edit, set_skip_7)) {
+	} if (KEY_PRESSED(pattern_edit, set_skip_7)) {
 		set_skip_value(7);
-	} if (key_pressed(pattern_edit, set_skip_8)) {
+	} if (KEY_PRESSED(pattern_edit, set_skip_8)) {
 		set_skip_value(8);
-	} if (key_pressed(pattern_edit, set_skip_9)) {
+	} if (KEY_PRESSED(pattern_edit, set_skip_9)) {
 		set_skip_value(9);
-	} else if (key_pressed(pattern_edit, store_pattern_data)) {
+	} else if (KEY_PRESSED(pattern_edit, store_pattern_data)) {
 		fast_save_update();
 		status_text_flash("Pattern data stored");
-	} else if (key_pressed(pattern_edit, revert_pattern_data)) {
+	} else if (KEY_PRESSED(pattern_edit, revert_pattern_data)) {
 		pated_save("Undo revert pattern data (Alt-BkSpace)");
 		snap_paste(&fast_save, 0, 0, 0);
 		status_text_flash("Pattern data reverted");
-	} else if (key_pressed(block_functions, mark_beginning_block)) {
+	} else if (KEY_PRESSED(block_functions, mark_beginning_block)) {
 		if (!SELECTION_EXISTS) {
 			selection.last_channel = current_channel;
 			selection.last_row = current_row;
@@ -3520,7 +3520,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		selection.first_channel = current_channel;
 		selection.first_row = current_row;
 		normalise_block_selection();
-	} else if (key_pressed(block_functions, mark_end_block)) {
+	} else if (KEY_PRESSED(block_functions, mark_end_block)) {
 		if (!SELECTION_EXISTS) {
 			selection.first_channel = current_channel;
 			selection.first_row = current_row;
@@ -3528,8 +3528,8 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		selection.last_channel = current_channel;
 		selection.last_row = current_row;
 		normalise_block_selection();
-	} else if (key_pressed(block_functions, quick_mark_lines)) {
-		if (key_press_repeats(block_functions, quick_mark_lines)) {
+	} else if (KEY_PRESSED(block_functions, quick_mark_lines)) {
+		if (KEY_PRESS_REPEATS(block_functions, quick_mark_lines)) {
 			if (total_rows - (current_row - 1) > block_double_size)
 				block_double_size <<= 1;
 		} else {
@@ -3542,8 +3542,8 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		}
 		n = block_double_size + current_row - 1;
 		selection.last_row = MIN(n, total_rows);
-	} else if (key_pressed(block_functions, mark_column_or_pattern)) {
-		if (key_press_repeats(block_functions, mark_column_or_pattern) > 0) {
+	} else if (KEY_PRESSED(block_functions, mark_column_or_pattern)) {
+		if (KEY_PRESS_REPEATS(block_functions, mark_column_or_pattern) > 0) {
 			/* 3x alt-l re-selects the current channel */
 			if (selection.first_channel == selection.last_channel) {
 				selection.first_channel = 1;
@@ -3557,12 +3557,12 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			selection.last_row = total_rows;
 		}
 		pattern_selection_system_copyout();
-	} else if (key_pressed(track_view, clear_track_views)) {
+	} else if (KEY_PRESSED(track_view, clear_track_views)) {
 		draw_divisions = 1;
 		set_quick_view_scheme(0);
-	} else if (key_pressed(block_functions, set_instrument)) {
+	} else if (KEY_PRESSED(block_functions, set_instrument)) {
 		selection_set_sample();
-	} else if (key_pressed(block_functions, unmark)) {
+	} else if (KEY_PRESSED(block_functions, unmark)) {
 		if (SELECTION_EXISTS) {
 			selection_clear();
 		} else if (clipboard.data) {
@@ -3572,27 +3572,27 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		} else {
 			dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
 		}
-	} else if (key_pressed(block_functions, copy_block)) {
+	} else if (KEY_PRESSED(block_functions, copy_block)) {
 		clipboard_copy(0);
-	} else if (key_pressed(block_functions, paste_and_overwrite)) {
-		if (key_press_repeats(block_functions, paste_and_overwrite) > 0) {
+	} else if (KEY_PRESSED(block_functions, paste_and_overwrite)) {
+		if (KEY_PRESS_REPEATS(block_functions, paste_and_overwrite) > 0) {
 			clipboard_paste_overwrite(0, 1);
 		} else {
 			clipboard_paste_overwrite(0, 0);
 		}
-	} else if (key_pressed(block_functions, paste_data)) {
+	} else if (KEY_PRESSED(block_functions, paste_data)) {
 		clipboard_paste_insert();
-	} else if (key_pressed(block_functions, paste_and_mix)) {
-		if (key_press_repeats(block_functions, paste_and_mix) > 0) {
+	} else if (KEY_PRESSED(block_functions, paste_and_mix)) {
+		if (KEY_PRESS_REPEATS(block_functions, paste_and_mix) > 0) {
 			clipboard_paste_mix_fields(0, 0);
 		} else {
 			clipboard_paste_mix_notes(0, 0);
 		}
-	} else if (key_pressed(block_functions, double_block_length)) {
+	} else if (KEY_PRESSED(block_functions, double_block_length)) {
 		block_length_double();
-	} else if (key_pressed(block_functions, halve_block_length)) {
+	} else if (KEY_PRESSED(block_functions, halve_block_length)) {
 		block_length_halve();
-	} else if (key_pressed(pattern_edit, toggle_multichannel)) {
+	} else if (KEY_PRESSED(pattern_edit, toggle_multichannel)) {
 		channel_multi[current_channel - 1] ^= 1;
 		if (channel_multi[current_channel - 1]) {
 			channel_multi_enabled = 1;
@@ -3606,88 +3606,88 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			}
 		}
 
-		if (key_press_repeats(pattern_edit, toggle_multichannel) > 0) {
+		if (KEY_PRESS_REPEATS(pattern_edit, toggle_multichannel) > 0) {
 			pattern_editor_display_multichannel();
 		}
-	} else if (key_pressed(block_functions, cut_block)) {
+	} else if (KEY_PRESSED(block_functions, cut_block)) {
 		clipboard_copy(0);
 		selection_erase();
-	} else if (key_pressed(block_functions, swap_block)) {
+	} else if (KEY_PRESSED(block_functions, swap_block)) {
 		selection_swap();
-	} else if (key_pressed(block_functions, set_volume_or_panning)) {
+	} else if (KEY_PRESSED(block_functions, set_volume_or_panning)) {
 		selection_set_volume();
-	} else if (key_pressed(block_functions, wipe_volume_or_panning)) {
+	} else if (KEY_PRESSED(block_functions, wipe_volume_or_panning)) {
 		selection_wipe_volume(0);
-	} else if (key_pressed(block_functions, slide_volume_or_panning)) {
-		if (key_press_repeats(block_functions, slide_volume_or_panning) > 0) {
+	} else if (KEY_PRESSED(block_functions, slide_volume_or_panning)) {
+		if (KEY_PRESS_REPEATS(block_functions, slide_volume_or_panning) > 0) {
 			selection_wipe_volume(1);
 		} else {
 			selection_slide_volume();
 		}
-	} else if (key_pressed(block_functions, slide_effect_value)) {
-		if (key_press_repeats(block_functions, slide_effect_value) > 0) {
+	} else if (KEY_PRESSED(block_functions, slide_effect_value)) {
+		if (KEY_PRESS_REPEATS(block_functions, slide_effect_value) > 0) {
 			selection_wipe_effect();
 		} else {
 			selection_slide_effect();
 		}
-	} else if (key_pressed(track_view, toggle_track_view_divisions)) {
+	} else if (KEY_PRESSED(track_view, toggle_track_view_divisions)) {
 		draw_divisions = !draw_divisions;
 		recalculate_visible_area();
 		pattern_editor_reposition();
-	} else if (key_pressed_or_repeated(block_functions, raise_notes_semitone)) {
+	} else if (KEY_PRESSED_OR_REPEATED(block_functions, raise_notes_semitone)) {
 		transpose_notes(1);
-	} else if (key_pressed_or_repeated(block_functions, raise_notes_octave)) {
+	} else if (KEY_PRESSED_OR_REPEATED(block_functions, raise_notes_octave)) {
 		transpose_notes(12);
-	} else if (key_pressed_or_repeated(block_functions, lower_notes_semitone)) {
+	} else if (KEY_PRESSED_OR_REPEATED(block_functions, lower_notes_semitone)) {
 		transpose_notes(-1);
-	} else if (key_pressed_or_repeated(block_functions, lower_notes_octave)) {
+	} else if (KEY_PRESSED_OR_REPEATED(block_functions, lower_notes_octave)) {
 		transpose_notes(-12);
-	} else if (key_pressed(block_functions, select_template_mode)) {
+	} else if (KEY_PRESSED(block_functions, select_template_mode)) {
 		if (fast_volume_mode)
 			fast_volume_amplify();
 		else
 			template_mode = (template_mode + 1) % TEMPLATE_MODE_MAX; /* cycle */
-	} else if (key_pressed(block_functions, disable_template_mode)) {
+	} else if (KEY_PRESSED(block_functions, disable_template_mode)) {
 		template_mode = TEMPLATE_OFF;
-	} else if (key_pressed(block_functions, volume_amplifier)) {
+	} else if (KEY_PRESSED(block_functions, volume_amplifier)) {
 		if (fast_volume_mode)
 			fast_volume_attenuate();
 		else
 			volume_amplify();
-	} else if (key_pressed(track_view, cycle_view)) {
+	} else if (KEY_PRESSED(track_view, cycle_view)) {
 		n = current_channel - top_display_channel;
 		track_view_scheme[n] = ((track_view_scheme[n] + 1) % NUM_TRACK_VIEWS);
 		recalculate_visible_area();
 		pattern_editor_reposition();
-	} else if (key_pressed_or_repeated(pattern_edit, slide_pattern_up)) {
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, slide_pattern_up)) {
 		if (top_display_row > 0) {
 			top_display_row--;
 			if (current_row > top_display_row + 31)
 				set_current_row(top_display_row + 31);
 			return -1;
 		}
-	} else if (key_pressed_or_repeated(pattern_edit, slide_pattern_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, slide_pattern_down)) {
 		if (top_display_row + 31 < total_rows) {
 			top_display_row++;
 			if (current_row < top_display_row)
 				set_current_row(top_display_row);
 			return -1;
 		}
-	} else if (key_pressed(pattern_edit, move_backwards_channel)) {
+	} else if (KEY_PRESSED(pattern_edit, move_backwards_channel)) {
 		set_current_channel(current_channel - 1);
-	} else if (key_pressed(pattern_edit, move_forwards_channel)) {
+	} else if (KEY_PRESSED(pattern_edit, move_forwards_channel)) {
 		set_current_channel(current_channel + 1);
-	} else if (key_pressed(pattern_edit, insert_pattern_row)) {
+	} else if (KEY_PRESSED(pattern_edit, insert_pattern_row)) {
 		// TODO
 		pated_save("Remove inserted row(s)    (Alt-Insert)");
 		pattern_insert_rows(current_row, 1, 1, 64);
-	} else if (key_pressed(pattern_edit, delete_pattern_row)) {
+	} else if (KEY_PRESSED(pattern_edit, delete_pattern_row)) {
 		// TODO
 		pated_save("Replace deleted row(s)    (Alt-Delete)");
 		pattern_delete_rows(current_row, 1, 1, 64);
-	} else if (key_pressed(playback_functions, toggle_current_channel)) {
+	} else if (KEY_PRESSED(playback_functions, toggle_current_channel)) {
 		song_toggle_channel_mute(current_channel - 1);
-	} else if (key_pressed(playback_functions, solo_current_channel)) {
+	} else if (KEY_PRESSED(playback_functions, solo_current_channel)) {
 		song_handle_channel_solo(current_channel - 1);
 	} else {
 		return 0;
@@ -3706,33 +3706,33 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	int n;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
 
-	if(key_pressed(track_view, track_scheme_default)) {
+	if(KEY_PRESSED(track_view, track_scheme_default)) {
 		set_view_scheme(0);
-	} else if(key_pressed(track_view, track_scheme_1)) {
+	} else if(KEY_PRESSED(track_view, track_scheme_1)) {
 		set_view_scheme(1);
-	} else if(key_pressed(track_view, track_scheme_2)) {
+	} else if(KEY_PRESSED(track_view, track_scheme_2)) {
 		set_view_scheme(2);
-	} else if(key_pressed(track_view, track_scheme_3)) {
+	} else if(KEY_PRESSED(track_view, track_scheme_3)) {
 		set_view_scheme(3);
-	} else if(key_pressed(track_view, track_scheme_4)) {
+	} else if(KEY_PRESSED(track_view, track_scheme_4)) {
 		set_view_scheme(4);
-	} else if(key_pressed(track_view, track_scheme_5)) {
+	} else if(KEY_PRESSED(track_view, track_scheme_5)) {
 		set_view_scheme(5);
-	} else if(key_pressed(track_view, track_scheme_6)) {
+	} else if(KEY_PRESSED(track_view, track_scheme_6)) {
 		set_view_scheme(6);
-	} else if(key_pressed(track_view, quick_view_scheme_default)) {
+	} else if(KEY_PRESSED(track_view, quick_view_scheme_default)) {
 		set_quick_view_scheme(0);
-	} else if(key_pressed(track_view, quick_view_scheme_1)) {
+	} else if(KEY_PRESSED(track_view, quick_view_scheme_1)) {
 		set_quick_view_scheme(1);
-	} else if(key_pressed(track_view, quick_view_scheme_2)) {
+	} else if(KEY_PRESSED(track_view, quick_view_scheme_2)) {
 		set_quick_view_scheme(2);
-	} else if(key_pressed(track_view, quick_view_scheme_3)) {
+	} else if(KEY_PRESSED(track_view, quick_view_scheme_3)) {
 		set_quick_view_scheme(3);
-	} else if(key_pressed(track_view, quick_view_scheme_4)) {
+	} else if(KEY_PRESSED(track_view, quick_view_scheme_4)) {
 		set_quick_view_scheme(4);
-	} else if(key_pressed(track_view, quick_view_scheme_5)) {
+	} else if(KEY_PRESSED(track_view, quick_view_scheme_5)) {
 		set_quick_view_scheme(5);
-	} else if(key_pressed(track_view, quick_view_scheme_6)) {
+	} else if(KEY_PRESSED(track_view, quick_view_scheme_6)) {
 		set_quick_view_scheme(6);
 	// } else if(key_pressed(track_view, move_column_left)) {
 	// 	if (current_channel > top_display_channel)
@@ -3740,73 +3740,73 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	// } else if(key_pressed(track_view, move_column_right)) {
 	// 	if (current_channel < top_display_channel + visible_channels - 1)
 	// 		set_current_channel(current_channel + 1);
-	} else if(key_pressed(playback_functions, play_from_row)) {
+	} else if(KEY_PRESSED(playback_functions, play_from_row)) {
 		song_loop_pattern(current_pattern, current_row);
-	} else if(key_pressed(playback_functions, toggle_playback_mark)) {
+	} else if(KEY_PRESSED(playback_functions, toggle_playback_mark)) {
 		set_playback_mark();
-	} else if(key_pressed(pattern_edit, decrease_instrument)) {
+	} else if(KEY_PRESSED(pattern_edit, decrease_instrument)) {
 		set_previous_instrument();
 		status.flags |= NEED_UPDATE;
-	} else if(key_pressed(pattern_edit, increase_instrument)) {
+	} else if(KEY_PRESSED(pattern_edit, increase_instrument)) {
 		set_next_instrument();
 		status.flags |= NEED_UPDATE;
-	} else if(key_pressed(pattern_edit, move_pattern_top)) {
+	} else if(KEY_PRESSED(pattern_edit, move_pattern_top)) {
 		set_current_row(0);
-	} else if(key_pressed(pattern_edit, move_pattern_bottom)) {
+	} else if(KEY_PRESSED(pattern_edit, move_pattern_bottom)) {
 		set_current_row(total_rows);
-	} else if(key_pressed(pattern_edit, up_one_row)) {
+	} else if(KEY_PRESSED(pattern_edit, up_one_row)) {
 		set_current_row(current_row - 1);
-	} else if(key_pressed(pattern_edit, down_one_row)) {
+	} else if(KEY_PRESSED(pattern_edit, down_one_row)) {
 		set_current_row(current_row + 1);
-	} else if(key_pressed(block_functions, roll_block_down)) {
+	} else if(KEY_PRESSED(block_functions, roll_block_down)) {
 		selection_roll(ROLL_DOWN);
 		status.flags |= NEED_UPDATE;
-	} else if(key_pressed(block_functions, roll_block_up)) {
+	} else if(KEY_PRESSED(block_functions, roll_block_up)) {
 		selection_roll(ROLL_UP);
 		status.flags |= NEED_UPDATE;
 	} else if(
-		key_pressed(pattern_edit, previous_order_pattern) &&
+		KEY_PRESSED(pattern_edit, previous_order_pattern) &&
 		!(song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing)
 	) {
 		prev_order_pattern();
 	} else if(
-		key_pressed(pattern_edit, next_order_pattern) &&
+		KEY_PRESSED(pattern_edit, next_order_pattern) &&
 		!(song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing)
 	) {
 		next_order_pattern();
-	} else if(key_pressed(pattern_edit, toggle_centralise_cursor)) {
+	} else if(KEY_PRESSED(pattern_edit, toggle_centralise_cursor)) {
 		centralise_cursor = !centralise_cursor;
 		status_text_flash("Centralise cursor %s", (centralise_cursor ? "enabled" : "disabled"));
-	} else if(key_pressed(pattern_edit, toggle_highlight_row)) {
+	} else if(KEY_PRESSED(pattern_edit, toggle_highlight_row)) {
 		highlight_current_row = !highlight_current_row;
 		status_text_flash("Row hilight %s", (highlight_current_row ? "enabled" : "disabled"));
 		status.flags |= NEED_UPDATE;
-	} else if(key_pressed(block_functions, toggle_fast_volume)) {
+	} else if(KEY_PRESSED(block_functions, toggle_fast_volume)) {
 		fast_volume_toggle();
-	} else if(key_pressed(block_functions, selection_volume_vary)) {
+	} else if(KEY_PRESSED(block_functions, selection_volume_vary)) {
 		if (fast_volume_mode)
 			selection_vary(1, 100-fast_volume_percent, FX_CHANNELVOLUME);
 		else
 			vary_command(FX_CHANNELVOLUME);
 		status.flags |= NEED_UPDATE;
-	} else if(key_pressed(block_functions, selection_panning_vary)) {
+	} else if(KEY_PRESSED(block_functions, selection_panning_vary)) {
 		if (fast_volume_mode)
 			selection_vary(1, 100-fast_volume_percent, FX_PANBRELLO);
 		else
 			vary_command(FX_PANBRELLO);
 		status.flags |= NEED_UPDATE;
-	} else if(key_pressed(block_functions, selection_effect_vary)) {
+	} else if(KEY_PRESSED(block_functions, selection_effect_vary)) {
 		if (fast_volume_mode)
 			selection_vary(1, 100-fast_volume_percent, current_effect());
 		else
 			vary_command(current_effect());
 		status.flags |= NEED_UPDATE;
-	} else if(key_pressed(pattern_edit, toggle_volume_display)) {
+	} else if(KEY_PRESSED(pattern_edit, toggle_volume_display)) {
 		show_default_volumes = !show_default_volumes;
 		status_text_flash("Default volumes %s", (show_default_volumes ? "enabled" : "disabled"));
-	} else if(key_pressed(pattern_edit, undo)) {
+	} else if(KEY_PRESSED(pattern_edit, undo)) {
 		pattern_editor_display_history();
-	} else if(key_pressed(pattern_edit, toggle_midi_trigger)) {
+	} else if(KEY_PRESSED(pattern_edit, toggle_midi_trigger)) {
 		midi_start_record++;
 		if (midi_start_record > 2) midi_start_record = 0;
 		switch (midi_start_record) {
@@ -3849,7 +3849,7 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 static int mute_toggle_hack[64]; /* mrsbrisby: please explain this one, i don't get why it's necessary... */
 static int pattern_editor_handle_key_default(struct key_event * k)
 {
-	if (key_active(pattern_edit, toggle_edit_mask)) {
+	if (KEY_ACTIVE(pattern_edit, toggle_edit_mask)) {
 		if (k->state == KEY_RELEASE)
 			return 0;
 		switch (current_position) {
@@ -4036,8 +4036,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 	}
 
 	if (
-		key_pressed_or_repeated(pattern_edit, up_by_skip) ||
-		key_pressed_or_repeated(block_functions, mark_block_up)
+		KEY_PRESSED_OR_REPEATED(pattern_edit, up_by_skip) ||
+		KEY_PRESSED_OR_REPEATED(block_functions, mark_block_up)
 	) {
 		if (skip_value) {
 			if (current_row - skip_value >= 0)
@@ -4046,8 +4046,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 			set_current_row(current_row - 1);
 		}
 	} else if (
-		key_pressed_or_repeated(pattern_edit, down_by_skip) ||
-		key_pressed_or_repeated(block_functions, mark_block_down)
+		KEY_PRESSED_OR_REPEATED(pattern_edit, down_by_skip) ||
+		KEY_PRESSED_OR_REPEATED(block_functions, mark_block_down)
 	) {
 		if (skip_value) {
 			if (current_row + skip_value <= total_rows)
@@ -4055,38 +4055,38 @@ static int pattern_editor_handle_key(struct key_event * k)
 		} else {
 			set_current_row(current_row + 1);
 		}
-	} else if (key_pressed_or_repeated(block_functions, mark_block_left)) {
+	} else if (KEY_PRESSED_OR_REPEATED(block_functions, mark_block_left)) {
 		set_current_channel(current_channel - 1);
-	} else if (key_pressed_or_repeated(pattern_edit, move_cursor_left)) {
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_cursor_left)) {
 		if (link_effect_column && current_position == 0 && current_channel > 1) {
 			set_current_channel(current_channel - 1);
 			set_current_position(current_effect() ? 8 : 6);
 		} else {
 			set_current_position(current_position - 1);
 		}
-	} else if (key_pressed_or_repeated(block_functions, mark_block_right)) {
+	} else if (KEY_PRESSED_OR_REPEATED(block_functions, mark_block_right)) {
 		set_current_channel(current_channel + 1);
-	} else if (key_pressed_or_repeated(pattern_edit, move_cursor_right)) {
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_cursor_right)) {
 		if (link_effect_column && current_position == 6 && current_channel < 64) {
 			set_current_position(current_effect() ? 7 : 10);
 		} else {
 			set_current_position(current_position + 1);
 		}
-	} else if (key_pressed_or_repeated(pattern_edit, move_forwards_note_column)) {
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_forwards_note_column)) {
 		set_current_channel(current_channel + 1);
 		set_current_position(0);
-	} else if (key_pressed_or_repeated(pattern_edit, move_backwards_note_column)) {
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_backwards_note_column)) {
 		set_current_channel(current_channel - 1);
 		set_current_position(0);
-	} else if (key_pressed_or_repeated(pattern_edit, move_up_n_lines)) {
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_up_n_lines)) {
 		int rh = current_song->row_highlight_major ? current_song->row_highlight_major : 16;
 		if (current_row == total_rows)
 			set_current_row(current_row - ((current_row % rh) ? (current_row % rh) : rh));
 		else
 			set_current_row(current_row - rh);
-	} else if (key_pressed_or_repeated(pattern_edit, move_down_n_lines)) {
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_down_n_lines)) {
 		set_current_row(current_row + (current_song->row_highlight_major ? current_song->row_highlight_major : 16));
-	} else if (key_pressed_or_repeated(pattern_edit, move_start)) {
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_start)) {
 		if (current_position == 0) {
 			if (invert_home_end ? (current_row != 0) : (current_channel == 1)) {
 				set_current_row(0);
@@ -4096,7 +4096,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		} else {
 			set_current_position(0);
 		}
-	} else if (key_pressed_or_repeated(pattern_edit, move_end)) {
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_end)) {
 		n = song_find_last_channel();
 		if (current_position == 8) {
 			if (invert_home_end ? (current_row != total_rows) : (current_channel == n)) {
@@ -4107,7 +4107,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		} else {
 			set_current_position(8);
 		}
-	} else if (key_pressed_or_repeated(pattern_edit, insert_row)) {
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, insert_row)) {
 		if (template_mode && clipboard.rows == 1) {
 			n = clipboard.channels;
 			if (n + current_channel > 64) {
@@ -4117,7 +4117,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		} else {
 			pattern_insert_rows(current_row, 1, current_channel, 1);
 		}
-	} else if (key_pressed_or_repeated(pattern_edit, delete_row)) {
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, delete_row)) {
 		if (template_mode && clipboard.rows == 1) {
 			n = clipboard.channels;
 			if (n + current_channel > 64) {
@@ -4128,8 +4128,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 			pattern_delete_rows(current_row, 1, current_channel, 1);
 		}
 	} else if (
-		key_pressed_or_repeated(pattern_edit, previous_pattern) ||
-		key_pressed_or_repeated(pattern_edit, previous_4_pattern)
+		KEY_PRESSED_OR_REPEATED(pattern_edit, previous_pattern) ||
+		KEY_PRESSED_OR_REPEATED(pattern_edit, previous_4_pattern)
 	) {
 		if (playback_tracing) {
 			switch (song_get_mode()) {
@@ -4143,13 +4143,13 @@ static int pattern_editor_handle_key(struct key_event * k)
 			};
 		}
 
-		if (key_pressed_or_repeated(pattern_edit, previous_4_pattern))
+		if (KEY_PRESSED_OR_REPEATED(pattern_edit, previous_4_pattern))
 			set_current_pattern(current_pattern - 4);
 		else
 			set_current_pattern(current_pattern - 1);
 	} else if (
-		key_pressed_or_repeated(pattern_edit, next_pattern) ||
-		key_pressed_or_repeated(pattern_edit, next_4_pattern)
+		KEY_PRESSED_OR_REPEATED(pattern_edit, next_pattern) ||
+		KEY_PRESSED_OR_REPEATED(pattern_edit, next_4_pattern)
 	) {
 		if (playback_tracing) {
 			switch (song_get_mode()) {
@@ -4163,27 +4163,27 @@ static int pattern_editor_handle_key(struct key_event * k)
 			};
 		}
 
-		if (key_pressed_or_repeated(pattern_edit, next_4_pattern))
+		if (KEY_PRESSED_OR_REPEATED(pattern_edit, next_4_pattern))
 			set_current_pattern(current_pattern + 4);
 		else
 			set_current_pattern(current_pattern + 1);
-	} else if (key_pressed_or_repeated(pattern_edit, move_previous_position)) {
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_previous_position)) {
 		set_current_channel(multichannel_get_previous(current_channel));
 		if (skip_value)
 			set_current_row(current_row - skip_value);
 		else
 			set_current_row(current_row - 1);
-	} else if (key_pressed_or_repeated(pattern_edit, get_default_value)) {
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, get_default_value)) {
 		copy_note_to_mask();
 		if (template_mode != TEMPLATE_NOTES_ONLY)
 			template_mode = TEMPLATE_OFF;
 	} else if (
-		key_pressed_or_repeated(block_functions, copy_block_with_mute) &&
+		KEY_PRESSED_OR_REPEATED(block_functions, copy_block_with_mute) &&
 		!(status.flags & CLASSIC_MODE)
 	) {
 		clipboard_copy(1);
 	} else if (
-		key_pressed_or_repeated(pattern_edit, move_previous)
+		KEY_PRESSED_OR_REPEATED(pattern_edit, move_previous)
 		&& !(status.flags & CLASSIC_MODE)
 	) {
 		if (current_row != 0) {
@@ -4192,7 +4192,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			} while (!seek_done() && current_row != 0);
 		}
 	} else if (
-		key_pressed_or_repeated(pattern_edit, move_next)
+		KEY_PRESSED_OR_REPEATED(pattern_edit, move_next)
 		&& !(status.flags & CLASSIC_MODE)
 	) {
 		if (current_row != total_rows) {
@@ -4200,7 +4200,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 				set_current_row(current_row + 1);
 			} while (!seek_done() && current_row != total_rows);
 		}
-	} else if (key_pressed_or_repeated(pattern_edit, set_pattern_length)) {
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, set_pattern_length)) {
 		pattern_editor_length_edit();
 	// } else if (
 	// 	key_released(block_functions, mark_beginning_block) ||
@@ -4262,14 +4262,14 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 	int is_selecting = 0;
 
 	if(
-		key_active(block_functions, mark_block_up) ||
-		key_active(block_functions, mark_block_down) ||
-		key_active(block_functions, mark_block_left) ||
-		key_active(block_functions, mark_block_right) ||
-		key_active(block_functions, mark_block_start_row) ||
-		key_active(block_functions, mark_block_end_row) ||
-		key_active(block_functions, mark_block_page_up) ||
-		key_active(block_functions, mark_block_page_down)
+		KEY_ACTIVE(block_functions, mark_block_up) ||
+		KEY_ACTIVE(block_functions, mark_block_down) ||
+		KEY_ACTIVE(block_functions, mark_block_left) ||
+		KEY_ACTIVE(block_functions, mark_block_right) ||
+		KEY_ACTIVE(block_functions, mark_block_start_row) ||
+		KEY_ACTIVE(block_functions, mark_block_end_row) ||
+		KEY_ACTIVE(block_functions, mark_block_page_up) ||
+		KEY_ACTIVE(block_functions, mark_block_page_down)
 	) {
 		shift_selection_begin();
 		is_selecting = 1;

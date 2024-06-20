@@ -153,22 +153,22 @@ static int midi_page_handle_key(struct key_event * k)
 		}
 	}
 
-	if (key_pressed(midi, toggle_port)) {
+	if (KEY_PRESSED(midi, toggle_port)) {
 		toggle_port();
 		return 1;
-	} else if(key_pressed(global, nav_page_up)) {
+	} else if(KEY_PRESSED(global, nav_page_up)) {
 		new_port -= 13;
-	} else if(key_pressed(global, nav_page_down)) {
+	} else if(KEY_PRESSED(global, nav_page_down)) {
 		new_port += 13;
-	} else if(key_pressed(global, nav_home)) {
+	} else if(KEY_PRESSED(global, nav_home)) {
 		new_port = 0;
-	} else if(key_pressed(global, nav_end)) {
+	} else if(KEY_PRESSED(global, nav_end)) {
 		new_port = midi_engine_port_count() - 1;
-	} else if(key_pressed(global, nav_up)) {
+	} else if(KEY_PRESSED(global, nav_up)) {
 		new_port--;
-	} else if(key_pressed(global, nav_down)) {
+	} else if(KEY_PRESSED(global, nav_down)) {
 		new_port++;
-	} else if(key_pressed(global, nav_tab)) {
+	} else if(KEY_PRESSED(global, nav_tab)) {
 		change_focus_to(1);
 		status.flags |= NEED_UPDATE;
 		return 1;

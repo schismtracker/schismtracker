@@ -411,25 +411,25 @@ static int file_list_handle_key(struct key_event * k)
 		}
 	}
 
-	if (key_pressed_or_repeated(global, nav_up)) {
+	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		new_file--;
 		slash_search_mode = -1;
-	} else if (key_pressed_or_repeated(global, nav_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		new_file++;
 		slash_search_mode = -1;
-	} else if (key_pressed_or_repeated(global, nav_page_up)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 		new_file -= 35;
 		slash_search_mode = -1;
-	} else if (key_pressed_or_repeated(global, nav_page_down)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 		new_file += 35;
 		slash_search_mode = -1;
-	} else if (key_pressed_or_repeated(global, nav_home)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		new_file = 0;
 		slash_search_mode = -1;
-	} else if (key_pressed_or_repeated(global, nav_end)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		new_file = flist.num_files - 1;
 		slash_search_mode = -1;
-	} else if (key_pressed(global, nav_cancel)) {
+	} else if (KEY_PRESSED(global, nav_cancel)) {
 		if (slash_search_mode < 0) {
 			set_page(PAGE_SAMPLE_LIST);
 		} else {
@@ -437,7 +437,7 @@ static int file_list_handle_key(struct key_event * k)
 			status.flags |= NEED_UPDATE;
 		}
 		return 1;
-	} else if (key_pressed(global, nav_accept)) {
+	} else if (KEY_PRESSED(global, nav_accept)) {
 		if (slash_search_mode < 0) {
 			handle_enter_key();
 			slash_search_mode = -1;
@@ -447,7 +447,7 @@ static int file_list_handle_key(struct key_event * k)
 			return 1;
 		}
 		return 1;
-	} else if (key_pressed(file_list, delete)) {
+	} else if (KEY_PRESSED(file_list, delete)) {
 		slash_search_mode = -1;
 		if (flist.num_files > 0)
 			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
@@ -508,7 +508,7 @@ static void load_instrument_handle_key(struct key_event * k)
 	if (k->state == KEY_RELEASE)
 		return;
 
-	if (key_pressed(global, nav_cancel))
+	if (KEY_PRESSED(global, nav_cancel))
 		set_page(PAGE_INSTRUMENT_LIST);
 }
 

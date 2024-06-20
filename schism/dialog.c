@@ -189,14 +189,14 @@ int dialog_handle_key(struct key_event * k)
 		return 1;
 
 	/* this SHOULD be handling on key_pressed but the widget key handler is stealing that key. */
-	if (key_released(dialog, yes)) {
+	if (KEY_RELEASED(dialog, yes)) {
 		switch (status.dialog_type) {
 		case DIALOG_YES_NO:
 		case DIALOG_OK_CANCEL:
 			dialog_yes(d->data);
 			return 1;
 		}
-	} else if (key_released(dialog, no)) {
+	} else if (KEY_RELEASED(dialog, no)) {
 		switch (status.dialog_type) {
 		case DIALOG_YES_NO:
 			/* in Impulse Tracker, 'n' means cancel, not "no"!
@@ -209,24 +209,24 @@ int dialog_handle_key(struct key_event * k)
 			dialog_cancel(d->data);
 			return 1;
 		}
-	} else if (key_released(dialog, answer_ok)) {
+	} else if (KEY_RELEASED(dialog, answer_ok)) {
 		switch (status.dialog_type) {
 		case DIALOG_YES_NO:
 		case DIALOG_OK_CANCEL:
 			dialog_yes(d->data);
 			return 1;
 		}
-	} else if (key_released(dialog, answer_cancel)) {
+	} else if (KEY_RELEASED(dialog, answer_cancel)) {
 		switch (status.dialog_type) {
 		case DIALOG_YES_NO:
 		case DIALOG_OK_CANCEL:
 			dialog_cancel(d->data);
 			return 1;
 		}
-	} else if (key_released(dialog, accept)) {
+	} else if (KEY_RELEASED(dialog, accept)) {
 		dialog_yes(d->data);
 		return 1;
-	} else if (key_released(dialog, cancel)) {
+	} else if (KEY_RELEASED(dialog, cancel)) {
 		dialog_cancel(d->data);
 		return 1;
 	}

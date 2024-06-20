@@ -394,24 +394,24 @@ void handle_text_input(const uint8_t* text_input) {
 /* --------------------------------------------------------------------------------------------------------- */
 
 static int handle_key_truly_global(struct key_event * k) {
-	if (key_pressed(global, fullscreen))
+	if (KEY_PRESSED(global, fullscreen))
 		toggle_display_fullscreen();
-	else if (key_pressed(global, mouse))
+	else if (KEY_PRESSED(global, mouse))
 		video_mousecursor(MOUSE_CYCLE_STATE);
-	else if (key_pressed(global, mouse_grab)) {
+	else if (KEY_PRESSED(global, mouse_grab)) {
 		const SDL_bool grabbed = !SDL_GetWindowGrab(video_window());
 		SDL_SetWindowGrab(video_window(), grabbed);
 		status_text_flash(grabbed
 			? "Mouse and keyboard grabbed, press Ctrl+D to release"
 			: "Mouse and keyboard released");
-	} else if (key_pressed(global, audio_reset))
+	} else if (KEY_PRESSED(global, audio_reset))
 		audio_reinit(NULL);
-	else if (key_pressed(global, display_reset)) {
+	else if (KEY_PRESSED(global, display_reset)) {
 		font_init();
 		status.flags |= NEED_UPDATE;
-	} else if (key_pressed(global, octave_decrease))
+	} else if (KEY_PRESSED(global, octave_decrease))
 		kbd_set_current_octave(kbd_get_current_octave() - 1);
-	else if (key_pressed(global, octave_increase))
+	else if (KEY_PRESSED(global, octave_increase))
 		kbd_set_current_octave(kbd_get_current_octave() + 1);
 	else
 		return 0;
@@ -507,7 +507,7 @@ static int handle_key_global(struct key_event * k)
 	/* next, if there's no dialog, check the rest of the keys */
 	if (status.flags & DISKWRITER_ACTIVE) return 0;
 
-	if(key_pressed(global, pattern_edit)) {
+	if(KEY_PRESSED(global, pattern_edit)) {
 		if (status.current_page == PAGE_PATTERN_EDITOR) {
 			if (status.dialog_type != DIALOG_NONE) {
 				dialog_yes_NULL();
@@ -524,88 +524,88 @@ static int handle_key_global(struct key_event * k)
 	if (status.dialog_type != DIALOG_NONE) return 0;
 	_mp_finish(NULL);
 
-	if (key_pressed(global, quit)) {
+	if (KEY_PRESSED(global, quit)) {
 		show_exit_prompt();
-	} else if (key_pressed(global, quit_no_confirm)) {
+	} else if (KEY_PRESSED(global, quit_no_confirm)) {
 		schism_exit(0);
-	} else if (key_pressed(global, new_song)) {
+	} else if (KEY_PRESSED(global, new_song)) {
 		new_song_dialog();
-	} else if (key_pressed(global, go_to_time)) {
+	} else if (KEY_PRESSED(global, go_to_time)) {
 		show_song_timejump();
-	} else if (key_pressed(global, calculate_song_length)) {
+	} else if (KEY_PRESSED(global, calculate_song_length)) {
 		show_song_length();
-	} else if(key_pressed(global, help)) {
+	} else if(KEY_PRESSED(global, help)) {
 		set_page(PAGE_HELP);
-	} else if(key_pressed(global, midi)) {
+	} else if(KEY_PRESSED(global, midi)) {
 		set_page(status.current_page == PAGE_MIDI ? PAGE_MIDI_OUTPUT : PAGE_MIDI);
-	} else if(key_pressed(global, system_configure)) {
+	} else if(KEY_PRESSED(global, system_configure)) {
 		set_page(PAGE_CONFIG);
-	} else if (key_pressed(global, sample_list)) {
+	} else if (KEY_PRESSED(global, sample_list)) {
 		set_page(PAGE_SAMPLE_LIST);
-	} else if (key_pressed(global, sample_library)) {
+	} else if (KEY_PRESSED(global, sample_library)) {
 		set_page(PAGE_LIBRARY_SAMPLE);
-	} else if (key_pressed(global, instrument_list)) {
+	} else if (KEY_PRESSED(global, instrument_list)) {
 		set_page(PAGE_INSTRUMENT_LIST);
-	} else if (key_pressed(global, instrument_library)) {
+	} else if (KEY_PRESSED(global, instrument_library)) {
 		set_page(PAGE_LIBRARY_INSTRUMENT);
-	} else if (key_pressed(global, play_information_or_play_song)) {
+	} else if (KEY_PRESSED(global, play_information_or_play_song)) {
 		if (song_get_mode() == MODE_STOPPED ||
 			(song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO)
 		) {
 			song_start();
 		}
 		set_page(PAGE_INFO);
-	} else if (key_pressed(global, play_song)) {
+	} else if (KEY_PRESSED(global, play_song)) {
 		song_start();
-	} else if (key_pressed(global, preferences)) {
+	} else if (KEY_PRESSED(global, preferences)) {
 		set_page(PAGE_PREFERENCES);
-	} else if (key_pressed(global, play_current_pattern)) {
+	} else if (KEY_PRESSED(global, play_current_pattern)) {
 		song_loop_pattern(get_current_pattern(), 0);
-	} else if (key_pressed(global, play_song_from_order)) {
+	} else if (KEY_PRESSED(global, play_song_from_order)) {
 		song_start_at_order(get_current_order(), 0);
-	} else if (key_pressed(global, play_song_from_mark)) {
+	} else if (KEY_PRESSED(global, play_song_from_mark)) {
 		play_song_from_mark();
-	} else if (key_pressed(global, stop_playback)) {
+	} else if (KEY_PRESSED(global, stop_playback)) {
 		song_stop();
 		status.flags |= NEED_UPDATE;
-	} else if (key_pressed(global, toggle_playback)) {
+	} else if (KEY_PRESSED(global, toggle_playback)) {
 		song_pause();
-	} else if (key_pressed(global, load_module)) {
+	} else if (KEY_PRESSED(global, load_module)) {
 		set_page(PAGE_LOAD_MODULE);
-	} else if (key_pressed(global, message_editor)) {
+	} else if (KEY_PRESSED(global, message_editor)) {
 		set_page(PAGE_MESSAGE);
-	} else if (key_pressed(global, save)) {
+	} else if (KEY_PRESSED(global, save)) {
 		save_song_or_save_as();
-	} else if (key_pressed(global, save_module)) {
+	} else if (KEY_PRESSED(global, save_module)) {
 		set_page(PAGE_SAVE_MODULE);
-	} else if (key_pressed(global, export_module)) {
+	} else if (KEY_PRESSED(global, export_module)) {
 		set_page(PAGE_EXPORT_MODULE);
-	} else if (key_pressed(global, order_list)) {
+	} else if (KEY_PRESSED(global, order_list)) {
 		if (status.current_page == PAGE_ORDERLIST_PANNING)
 			set_page(PAGE_ORDERLIST_VOLUMES);
 		else
 			set_page(PAGE_ORDERLIST_PANNING);
-	} else if (key_pressed(global, schism_logging)) {
+	} else if (KEY_PRESSED(global, schism_logging)) {
 		if (status.current_page == PAGE_LOG) {
 			show_about();
 		} else {
 			set_page(PAGE_LOG);
 		}
-	} else if (key_pressed(global, order_list_lock)) {
+	} else if (KEY_PRESSED(global, order_list_lock)) {
 		if (song_toggle_orderlist_locked())
 			status_text_flash("Order list locked");
 		else
 			status_text_flash("Order list unlocked");
-	} else if (key_pressed(global, song_variables)) {
+	} else if (KEY_PRESSED(global, song_variables)) {
 		set_page(PAGE_SONG_VARIABLES);
-	} else if (key_pressed(global, palette_config)) {
+	} else if (KEY_PRESSED(global, palette_config)) {
 		set_page(PAGE_PALETTE_EDITOR);
-	} else if (key_pressed(global, font_editor)) {
+	} else if (KEY_PRESSED(global, font_editor)) {
 		fontedit_return_page = status.current_page;
 		set_page(PAGE_FONT_EDIT);
-	} else if (key_pressed(global, waterfall)) {
+	} else if (KEY_PRESSED(global, waterfall)) {
 		set_page(PAGE_WATERFALL);
-	} else if (key_pressed(global, toggle_playback_tracing)) {
+	} else if (KEY_PRESSED(global, toggle_playback_tracing)) {
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		_mp_finish(NULL);
@@ -613,7 +613,7 @@ static int handle_key_global(struct key_event * k)
 		status_text_flash("Playback tracing %s",
 				(playback_tracing ? "enabled" : "disabled"));
 		return 1;
-	} else if (key_pressed(global, toggle_midi_input)) {
+	} else if (KEY_PRESSED(global, toggle_midi_input)) {
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		_mp_finish(NULL);
@@ -627,28 +627,28 @@ static int handle_key_global(struct key_event * k)
 			return 0;
 	}
 
-	if(key_pressed(global, toggle_channel_1)) {
+	if(KEY_PRESSED(global, toggle_channel_1)) {
 		song_toggle_channel_mute(0);
 		status.flags |= NEED_UPDATE;
-	} else if(key_pressed(global, toggle_channel_2)) {
+	} else if(KEY_PRESSED(global, toggle_channel_2)) {
 		song_toggle_channel_mute(1);
 		status.flags |= NEED_UPDATE;
-	} else if(key_pressed(global, toggle_channel_3)) {
+	} else if(KEY_PRESSED(global, toggle_channel_3)) {
 		song_toggle_channel_mute(2);
 		status.flags |= NEED_UPDATE;
-	} else if(key_pressed(global, toggle_channel_4)) {
+	} else if(KEY_PRESSED(global, toggle_channel_4)) {
 		song_toggle_channel_mute(3);
 		status.flags |= NEED_UPDATE;
-	} else if(key_pressed(global, toggle_channel_5)) {
+	} else if(KEY_PRESSED(global, toggle_channel_5)) {
 		song_toggle_channel_mute(4);
 		status.flags |= NEED_UPDATE;
-	} else if(key_pressed(global, toggle_channel_6)) {
+	} else if(KEY_PRESSED(global, toggle_channel_6)) {
 		song_toggle_channel_mute(5);
 		status.flags |= NEED_UPDATE;
-	} else if(key_pressed(global, toggle_channel_7)) {
+	} else if(KEY_PRESSED(global, toggle_channel_7)) {
 		song_toggle_channel_mute(6);
 		status.flags |= NEED_UPDATE;
-	} else if(key_pressed(global, toggle_channel_8)) {
+	} else if(KEY_PRESSED(global, toggle_channel_8)) {
 		song_toggle_channel_mute(7);
 		status.flags |= NEED_UPDATE;
 	} else {
@@ -824,7 +824,7 @@ void handle_key(struct key_event *k)
 	if (!(status.flags & DISKWRITER_ACTIVE) && menu_handle_key(k)) return;
 	if (widget_handle_key(k)) return;
 
-	if (key_pressed_or_repeated(global, decrease_playback_speed)) {
+	if (KEY_PRESSED_OR_REPEATED(global, decrease_playback_speed)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		song_set_current_speed(song_get_current_speed() - 1);
 		status_text_flash("Speed set to %d frames per row", song_get_current_speed());
@@ -832,7 +832,7 @@ void handle_key(struct key_event *k)
 			song_set_initial_speed(song_get_current_speed());
 		}
 		return;
-	} else if (key_pressed_or_repeated(global, increase_playback_speed)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, increase_playback_speed)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		song_set_current_speed(song_get_current_speed() + 1);
 		status_text_flash("Speed set to %d frames per row", song_get_current_speed());
@@ -840,7 +840,7 @@ void handle_key(struct key_event *k)
 			song_set_initial_speed(song_get_current_speed());
 		}
 		return;
-	} else if (key_pressed_or_repeated(global, decrease_playback_tempo) && !(status.flags & CLASSIC_MODE)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, decrease_playback_tempo) && !(status.flags & CLASSIC_MODE)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		song_set_current_tempo(song_get_current_tempo() - 1);
 		status_text_flash("Tempo set to %d frames per row", song_get_current_tempo());
@@ -848,7 +848,7 @@ void handle_key(struct key_event *k)
 			song_set_initial_tempo(song_get_current_tempo());
 		}
 		return;
-	} else if (key_pressed_or_repeated(global, increase_playback_tempo) && !(status.flags & CLASSIC_MODE)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, increase_playback_tempo) && !(status.flags & CLASSIC_MODE)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		song_set_current_tempo(song_get_current_tempo() + 1);
 		status_text_flash("Tempo set to %d frames per row", song_get_current_tempo());
@@ -856,7 +856,7 @@ void handle_key(struct key_event *k)
 			song_set_initial_tempo(song_get_current_tempo());
 		}
 		return;
-	} else if (key_pressed_or_repeated(global, decrease_global_volume)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, decrease_global_volume)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		song_set_current_global_volume(song_get_current_global_volume() - 1);
 		status_text_flash("Global volume set to %d", song_get_current_global_volume());
@@ -864,7 +864,7 @@ void handle_key(struct key_event *k)
 			song_set_initial_global_volume(song_get_current_global_volume());
 		}
 		return;
-	} else if (key_pressed_or_repeated(global, increase_global_volume)) {
+	} else if (KEY_PRESSED_OR_REPEATED(global, increase_global_volume)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		song_set_current_global_volume(song_get_current_global_volume() + 1);
 		status_text_flash("Global volume set to %d", song_get_current_global_volume());
@@ -872,19 +872,19 @@ void handle_key(struct key_event *k)
 			song_set_initial_global_volume(song_get_current_global_volume());
 		}
 		return;
-	} else if(key_pressed_or_repeated(global, previous_order)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, previous_order)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		_mp_finish(NULL);
 		if (song_get_mode() == MODE_PLAYING)
 			song_set_current_order(song_get_current_order() - 1);
 		return;
-	} else if(key_pressed_or_repeated(global, next_order)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, next_order)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		_mp_finish(NULL);
 		if (song_get_mode() == MODE_PLAYING)
 			song_set_current_order(song_get_current_order() + 1);
 		return;
-	} else if(key_pressed(global, open_menu)) {
+	} else if(KEY_PRESSED(global, open_menu)) {
 		/* TODO | Page key handlers should return true/false depending on if the key was handled
 		   TODO | (same as with other handlers), and the escape key check should go *after* the
 		   TODO | page gets a chance to grab it. This way, the load sample page can switch back
@@ -900,10 +900,10 @@ void handle_key(struct key_event *k)
 			menu_show();
 			return;
 		}
-	} else if(key_pressed_or_repeated(global, octave_decrease)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, octave_decrease)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		kbd_set_current_octave(kbd_get_current_octave() - 1);
-	} else if(key_pressed_or_repeated(global, octave_increase)) {
+	} else if(KEY_PRESSED_OR_REPEATED(global, octave_increase)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		kbd_set_current_octave(kbd_get_current_octave() + 1);
 	} else {

@@ -632,21 +632,21 @@ void init_keybinds(void);
 extern keybind_list_t global_keybinds_list;
 
 /* Key was pressed this event. Will not trigger on held down repeats. */
-#define key_pressed(SECTION, NAME) global_keybinds_list.SECTION.NAME.pressed
+#define KEY_PRESSED(SECTION, NAME) global_keybinds_list.SECTION.NAME.pressed
 
 /* Key was released this event. */
-#define key_released(SECTION, NAME) global_keybinds_list.SECTION.NAME.released
+#define KEY_RELEASED(SECTION, NAME) global_keybinds_list.SECTION.NAME.released
 
 /* Key was repeated this event. Will not trigger when key is first pressed. */
-#define key_repeated(SECTION, NAME) global_keybinds_list.SECTION.NAME.repeated
+#define KEY_REPEATED(SECTION, NAME) global_keybinds_list.SECTION.NAME.repeated
 
 /* Key was pressed or repeated this event. Will not trigger on key released. */
-#define key_pressed_or_repeated(SECTION, NAME) ( \
+#define KEY_PRESSED_OR_REPEATED(SECTION, NAME) ( \
     global_keybinds_list.SECTION.NAME.pressed || \
     global_keybinds_list.SECTION.NAME.repeated)
 
 /* Key was pressed, repeated, or released this event */
-#define key_active(SECTION, NAME) ( \
+#define KEY_ACTIVE(SECTION, NAME) ( \
     global_keybinds_list.SECTION.NAME.pressed || \
     global_keybinds_list.SECTION.NAME.repeated || \
     global_keybinds_list.SECTION.NAME.released \
@@ -657,7 +657,7 @@ extern keybind_list_t global_keybinds_list;
     Pressing any other key will reset to 0.
     Does not count repeats while holding down the key.
 */
-#define key_press_repeats(SECTION, NAME) ( \
+#define KEY_PRESS_REPEATS(SECTION, NAME) ( \
     global_keybinds_list.SECTION.NAME.press_repeats \
 )
 
