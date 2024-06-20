@@ -28,6 +28,7 @@
 #include "it.h"
 #include "osdefs.h"
 #include "fmt.h"
+#include "charset.h"
 
 #include <windows.h>
 #include <ws2tcpip.h>
@@ -280,10 +281,18 @@ int win32_sdlevent(SDL_Event* event)
 
 wchar_t* str_to_wchar(char* string, int free_inputs)
 {
-	int wchars_num = MultiByteToWideChar(CP_UTF8, 0, string, -1, NULL, 0);
-	wchar_t* wstr = malloc(wchars_num * sizeof(wchar_t));
-	MultiByteToWideChar(CP_UTF8, 0, string, -1, wstr, wchars_num);
-	return wstr;
+	wchar_t* out = NULL;
+	charset_error_t result = charset_iconv(string, (uint8_t**)&out, CHARSET_UTF8, CHARSET_WCHAR_T);
+
+	if (result != CHARSET_ERROR_SUCCESS) {
+		printf("Failed converting \"%s\" to wchar. Error: %i.\n", string, result);
+		return L"";
+	}
+
+	if (free_inputs)
+		free(string);
+
+	return out;
 }
 
 #define append_menu(MENU, MENU_ITEM, NAME, KEYBIND_NAME) \
