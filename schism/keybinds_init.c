@@ -498,7 +498,7 @@ static int file_list_page_matcher(enum page_numbers page)
 
 static void init_file_list_keybinds(cfg_file_t* cfg)
 {
-    init_section_macro(file_list, "File List Keys.", PAGE_ANY);
+    init_section_macro(file_list, "File List Keys.", PAGE_GLOBAL);
     global_keybinds_list.file_list_info.page_matcher = file_list_page_matcher;
 
     init_bind_macro(file_list, delete, "Delete file", "US_DELETE");
@@ -506,7 +506,7 @@ static void init_file_list_keybinds(cfg_file_t* cfg)
 
 static void init_global_keybinds(cfg_file_t* cfg)
 {
-    init_section_macro(global, "Global Keys.", PAGE_ANY);
+    init_section_macro(global, "Global Keys.", PAGE_GLOBAL);
     init_bind_macro(global, help, "Help (context sensitive!)", "US_F1");
     init_bind_macro(global, midi, "MIDI screen", "Shift+US_F1");
     init_bind_macro(global, system_configure, "System configuration", "Ctrl+US_F1");
@@ -611,7 +611,7 @@ static void init_global_keybinds(cfg_file_t* cfg)
     init_bind_macro(global, numentry_increase_value, "Number increase value", "US_KP_PLUS,Shift+US_EQUALS");
     init_bind_macro(global, numentry_decrease_value, "Number decrease value 8x\n ", "US_KP_MINUS,Shift+US_MINUS");
 
-    init_section_macro(dialog, "Dialog Keys.", PAGE_ANY);
+    init_section_macro(dialog, "Dialog Keys.", PAGE_GLOBAL);
     init_bind_macro(dialog, yes, "Answer yes in yes/no dialog.", "US_Y");
     init_bind_macro(dialog, no, "Answer no in yes/no dialog.\n ", "US_N");
 

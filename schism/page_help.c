@@ -84,7 +84,7 @@ static int top_line = 0;
 static const char blank_line[] = {LTYPE_NORMAL, '\0'};
 static const char separator_line[] = {LTYPE_SEPARATOR, '\0'};
 
-static int help_text_current_page = PAGE_ANY;
+static int help_text_current_page = PAGE_GLOBAL;
 static int help_text_current_help_index = 0;
 static int help_text_lastpos[PAGE_MAX] = {0};
 

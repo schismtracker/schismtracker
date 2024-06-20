@@ -52,7 +52,7 @@ static void update_bind(keybind_bind_t* bind, SDL_Scancode scode, SDL_Keymod mod
     int page_matching = (
         bind->section_info->page_matcher ?
         bind->section_info->page_matcher(status.current_page) :
-        (bind->section_info->page == PAGE_ANY || bind->section_info->page == status.current_page)
+        (bind->section_info->page == PAGE_GLOBAL || bind->section_info->page == status.current_page)
     );
 
     if (!page_matching) {
@@ -465,7 +465,7 @@ char* keybinds_get_help_text(enum page_numbers page)
             if (!bind->section_info->page_matcher(page))
                 continue;
         } else {
-            if (bind_page != PAGE_ANY && bind_page != page)
+            if (bind_page != PAGE_GLOBAL && bind_page != page)
                 continue;
         }
 
