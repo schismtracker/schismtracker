@@ -212,7 +212,7 @@ static void change_video_settings(void)
 static void change_menu_bar_settings(void) {
 	cfg_video_want_menu_bar = widgets_config[14].d.togglebutton.state;
 
-	win32_toggle_menu(video_window());
+	win32_toggle_menu(video_window(), cfg_video_want_menu_bar);
 }
 #endif
 
