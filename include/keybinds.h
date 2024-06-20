@@ -17,7 +17,7 @@ typedef struct keybind_shortcut
     int repeated;
     int is_press_repeat;
     int press_repeats;
-} keybind_shortcut;
+} keybind_shortcut_t;
 
 typedef struct keybind_section_info
 {
@@ -26,12 +26,12 @@ typedef struct keybind_section_info
     int is_active;
     enum page_numbers page;
     int (*page_matcher)(enum page_numbers);
-} keybind_section_info;
+} keybind_section_info_t;
 
 typedef struct keybind_bind
 {
-    keybind_section_info* section_info;
-    keybind_shortcut* shortcuts; // This array size is MAX_SHORTCUTS
+    keybind_section_info_t* section_info;
+    keybind_shortcut_t* shortcuts; // This array size is MAX_SHORTCUTS
     int shortcuts_count; // This number is used to skip checking the entire array
     const char* name; // This is the variable name, for easier debugging
     const char* description; // Text that shows up on help pages
@@ -44,7 +44,7 @@ typedef struct keybind_bind
     int released; // 1 on the event when this key was released
     int repeated; // 1 when the key was repeated (without releasing it)
     int press_repeats; // Number of times this key has been pressed in a row
-} keybind_bind;
+} keybind_bind_t;
 
 /* *** KEYBIND LIST *** */
 
@@ -52,584 +52,584 @@ typedef struct keybind_list
 {
     /* *** MIDI *** */
 
-    keybind_section_info midi_info;
+    keybind_section_info_t midi_info;
     struct keybinds_midi {
-        keybind_bind toggle_port;
+        keybind_bind_t toggle_port;
     } midi;
 
     /* *** LOAD SAMPLE *** */
 
-    keybind_section_info load_sample_info;
+    keybind_section_info_t load_sample_info;
     struct keybinds_load_sample {
-        keybind_bind toggle_multichannel;
+        keybind_bind_t toggle_multichannel;
     } load_sample;
 
     /* *** LOAD STEREO SAMPLE DIALOG *** */
 
-    keybind_section_info load_stereo_sample_dialog_info;
+    keybind_section_info_t load_stereo_sample_dialog_info;
     struct keybinds_load_stereo_sample_dialog {
-        keybind_bind load_left;
-        keybind_bind load_right;
-        keybind_bind load_both;
+        keybind_bind_t load_left;
+        keybind_bind_t load_right;
+        keybind_bind_t load_both;
     } load_stereo_sample_dialog;
 
     /* *** MESSAGE EDIT *** */
 
-    keybind_section_info message_edit_info;
+    keybind_section_info_t message_edit_info;
     struct keybinds_message_edit {
-        keybind_bind edit_message;
-        keybind_bind finished_editing;
-        keybind_bind toggle_extended_font;
-        keybind_bind delete_line;
-        keybind_bind clear_message;
+        keybind_bind_t edit_message;
+        keybind_bind_t finished_editing;
+        keybind_bind_t toggle_extended_font;
+        keybind_bind_t delete_line;
+        keybind_bind_t clear_message;
 
-        keybind_bind goto_first_line;
-        keybind_bind goto_last_line;
+        keybind_bind_t goto_first_line;
+        keybind_bind_t goto_last_line;
     } message_edit;
 
     /* *** WATERFALL *** */
 
-    keybind_section_info waterfall_info;
+    keybind_section_info_t waterfall_info;
     struct keybinds_waterfall {
-        keybind_bind song_toggle_stereo;
-        keybind_bind song_flip_stereo;
-        keybind_bind view_toggle_mono;
-        keybind_bind decrease_sensitivity;
-        keybind_bind increase_sensitivity;
+        keybind_bind_t song_toggle_stereo;
+        keybind_bind_t song_flip_stereo;
+        keybind_bind_t view_toggle_mono;
+        keybind_bind_t decrease_sensitivity;
+        keybind_bind_t increase_sensitivity;
 
-        keybind_bind goto_next_order;
-        keybind_bind goto_previous_order;
+        keybind_bind_t goto_next_order;
+        keybind_bind_t goto_previous_order;
 
-        keybind_bind goto_pattern_edit;
+        keybind_bind_t goto_pattern_edit;
     } waterfall;
 
     /* *** LOAD MODULE *** */
 
-    keybind_section_info load_module_info;
+    keybind_section_info_t load_module_info;
     struct keybinds_load_module {
-        keybind_bind show_song_length;
-        keybind_bind clear_search_text;
+        keybind_bind_t show_song_length;
+        keybind_bind_t clear_search_text;
     } load_module;
 
     /* *** PALETTE EDIT *** */
 
-    keybind_section_info palette_edit_info;
+    keybind_section_info_t palette_edit_info;
     struct keybinds_palette_edit {
-        keybind_bind copy;
-        keybind_bind paste;
+        keybind_bind_t copy;
+        keybind_bind_t paste;
     } palette_edit;
 
     /* *** ORDER LIST *** */
 
-    keybind_section_info order_list_info;
+    keybind_section_info_t order_list_info;
     struct keybinds_order_list {
-        keybind_bind goto_selected_pattern;
-        keybind_bind select_order_for_playback;
-        keybind_bind play_from_order;
-        keybind_bind insert_next_pattern;
-        keybind_bind duplicate_pattern;
-        keybind_bind mark_end_of_song;
-        keybind_bind skip_to_next_order_mark;
-        keybind_bind insert_pattern;
-        keybind_bind delete_pattern;
+        keybind_bind_t goto_selected_pattern;
+        keybind_bind_t select_order_for_playback;
+        keybind_bind_t play_from_order;
+        keybind_bind_t insert_next_pattern;
+        keybind_bind_t duplicate_pattern;
+        keybind_bind_t mark_end_of_song;
+        keybind_bind_t skip_to_next_order_mark;
+        keybind_bind_t insert_pattern;
+        keybind_bind_t delete_pattern;
 
         // Is duplicate
-        // keybind_bind toggle_order_list_locked;
-        keybind_bind sort_order_list;
-        keybind_bind find_unused_patterns;
+        // keybind_bind_t toggle_order_list_locked;
+        keybind_bind_t sort_order_list;
+        keybind_bind_t find_unused_patterns;
 
-        keybind_bind link_pattern_to_sample;
-        keybind_bind copy_pattern_to_sample;
-        keybind_bind copy_pattern_to_sample_with_split;
+        keybind_bind_t link_pattern_to_sample;
+        keybind_bind_t copy_pattern_to_sample;
+        keybind_bind_t copy_pattern_to_sample_with_split;
 
-        keybind_bind continue_next_position_of_pattern;
+        keybind_bind_t continue_next_position_of_pattern;
 
-        keybind_bind save_order_list;
-        keybind_bind restore_order_list;
+        keybind_bind_t save_order_list;
+        keybind_bind_t restore_order_list;
 
-        keybind_bind decrease_instrument;
-        keybind_bind increase_instrument;
+        keybind_bind_t decrease_instrument;
+        keybind_bind_t increase_instrument;
     } order_list;
 
-    keybind_section_info order_list_panning_info;
+    keybind_section_info_t order_list_panning_info;
     struct keybinds_order_list_panning {
-        keybind_bind toggle_channel_mute;
-        keybind_bind set_panning_left;
-        keybind_bind set_panning_middle;
-        keybind_bind set_panning_right;
-        keybind_bind set_panning_surround;
-        keybind_bind pan_unmuted_left;
-        keybind_bind pan_unmuted_middle;
-        keybind_bind pan_unmuted_right;
-        keybind_bind pan_unmuted_stereo;
-        keybind_bind pan_unmuted_amiga_stereo;
-        keybind_bind linear_panning_left_to_right;
-        keybind_bind linear_panning_right_to_left;
+        keybind_bind_t toggle_channel_mute;
+        keybind_bind_t set_panning_left;
+        keybind_bind_t set_panning_middle;
+        keybind_bind_t set_panning_right;
+        keybind_bind_t set_panning_surround;
+        keybind_bind_t pan_unmuted_left;
+        keybind_bind_t pan_unmuted_middle;
+        keybind_bind_t pan_unmuted_right;
+        keybind_bind_t pan_unmuted_stereo;
+        keybind_bind_t pan_unmuted_amiga_stereo;
+        keybind_bind_t linear_panning_left_to_right;
+        keybind_bind_t linear_panning_right_to_left;
     } order_list_panning;
 
     /* *** INFO PAGE *** */
 
-    keybind_section_info info_page_info;
+    keybind_section_info_t info_page_info;
 
     struct keybinds_info_page {
-        keybind_bind add_window;
-        keybind_bind delete_window;
-        keybind_bind nav_next_window;
-        keybind_bind nav_previous_window;
-        keybind_bind change_window_type_up;
-        keybind_bind change_window_type_down;
-        keybind_bind move_window_base_up;
-        keybind_bind move_window_base_down;
+        keybind_bind_t add_window;
+        keybind_bind_t delete_window;
+        keybind_bind_t nav_next_window;
+        keybind_bind_t nav_previous_window;
+        keybind_bind_t change_window_type_up;
+        keybind_bind_t change_window_type_down;
+        keybind_bind_t move_window_base_up;
+        keybind_bind_t move_window_base_down;
 
-        keybind_bind toggle_volume_velocity_bars;
-        keybind_bind toggle_sample_instrument_names;
+        keybind_bind_t toggle_volume_velocity_bars;
+        keybind_bind_t toggle_sample_instrument_names;
 
-        keybind_bind toggle_channel_mute;
-        keybind_bind toggle_channel_mute_and_go_next;
-        keybind_bind solo_channel;
+        keybind_bind_t toggle_channel_mute;
+        keybind_bind_t toggle_channel_mute_and_go_next;
+        keybind_bind_t solo_channel;
 
-        keybind_bind goto_next_pattern;
-        keybind_bind goto_previous_pattern;
+        keybind_bind_t goto_next_pattern;
+        keybind_bind_t goto_previous_pattern;
 
-        keybind_bind toggle_stereo_playback;
-        keybind_bind reverse_output_channels;
+        keybind_bind_t toggle_stereo_playback;
+        keybind_bind_t reverse_output_channels;
 
-        keybind_bind goto_playing_pattern;
+        keybind_bind_t goto_playing_pattern;
     } info_page;
 
     /* *** INSTRUMENT LIST *** */
 
-    keybind_section_info instrument_list_info;
+    keybind_section_info_t instrument_list_info;
     struct keybinds_instrument_list {
-        keybind_bind next_page;
-        keybind_bind previous_page;
+        keybind_bind_t next_page;
+        keybind_bind_t previous_page;
 
-        keybind_bind move_instrument_up;
-        keybind_bind move_instrument_down;
+        keybind_bind_t move_instrument_up;
+        keybind_bind_t move_instrument_down;
 
-        keybind_bind goto_first_instrument;
-        keybind_bind goto_last_instrument;
+        keybind_bind_t goto_first_instrument;
+        keybind_bind_t goto_last_instrument;
 
-        // keybind_bind load_instrument;
-        keybind_bind focus_list;
-        keybind_bind goto_instrument_up;
-        keybind_bind goto_instrument_down;
-        keybind_bind clear_name_and_filename;
-        keybind_bind wipe_data;
-        keybind_bind edit_name;
+        // keybind_bind_t load_instrument;
+        keybind_bind_t focus_list;
+        keybind_bind_t goto_instrument_up;
+        keybind_bind_t goto_instrument_down;
+        keybind_bind_t clear_name_and_filename;
+        keybind_bind_t wipe_data;
+        keybind_bind_t edit_name;
 
-        keybind_bind delete_instrument_and_samples;
-        keybind_bind delete_instrument_and_unused_samples;
-        keybind_bind post_loop_cut;
-        keybind_bind toggle_multichannel;
-        keybind_bind save_to_disk;
-        keybind_bind copy;
-        keybind_bind replace_in_song;
-        keybind_bind swap;
+        keybind_bind_t delete_instrument_and_samples;
+        keybind_bind_t delete_instrument_and_unused_samples;
+        keybind_bind_t post_loop_cut;
+        keybind_bind_t toggle_multichannel;
+        keybind_bind_t save_to_disk;
+        keybind_bind_t copy;
+        keybind_bind_t replace_in_song;
+        keybind_bind_t swap;
 
         // Can't find this and can't figure out in previous version
-        // keybind_bind update_pattern_data;
-        keybind_bind exchange;
+        // keybind_bind_t update_pattern_data;
+        keybind_bind_t exchange;
 
-        keybind_bind insert_slot;
-        keybind_bind remove_slot;
+        keybind_bind_t insert_slot;
+        keybind_bind_t remove_slot;
 
-        keybind_bind increase_playback_channel;
-        keybind_bind decrease_playback_channel;
+        keybind_bind_t increase_playback_channel;
+        keybind_bind_t decrease_playback_channel;
     } instrument_list;
 
-    keybind_section_info instrument_note_translation_info;
+    keybind_section_info_t instrument_note_translation_info;
     struct keybinds_instrument_note_translation {
-        keybind_bind pickup_sample_number_and_default_play_note;
-        keybind_bind increase_sample_number;
-        keybind_bind decrease_sample_number;
+        keybind_bind_t pickup_sample_number_and_default_play_note;
+        keybind_bind_t increase_sample_number;
+        keybind_bind_t decrease_sample_number;
 
-        keybind_bind change_all_samples;
-        keybind_bind change_all_samples_with_name;
-        keybind_bind enter_next_note;
-        keybind_bind enter_previous_note;
-        keybind_bind transpose_all_notes_semitone_up;
-        keybind_bind transpose_all_notes_semitone_down;
-        keybind_bind insert_row_from_table;
-        keybind_bind delete_row_from_table;
-        keybind_bind toggle_edit_mask;
+        keybind_bind_t change_all_samples;
+        keybind_bind_t change_all_samples_with_name;
+        keybind_bind_t enter_next_note;
+        keybind_bind_t enter_previous_note;
+        keybind_bind_t transpose_all_notes_semitone_up;
+        keybind_bind_t transpose_all_notes_semitone_down;
+        keybind_bind_t insert_row_from_table;
+        keybind_bind_t delete_row_from_table;
+        keybind_bind_t toggle_edit_mask;
     } instrument_note_translation;
 
-    keybind_section_info instrument_envelope_info;
+    keybind_section_info_t instrument_envelope_info;
     struct keybinds_instrument_envelope {
-        keybind_bind pick_up_or_drop_current_node;
-        keybind_bind add_node;
-        keybind_bind delete_node;
-        keybind_bind nav_node_left;
-        keybind_bind nav_node_right;
+        keybind_bind_t pick_up_or_drop_current_node;
+        keybind_bind_t add_node;
+        keybind_bind_t delete_node;
+        keybind_bind_t nav_node_left;
+        keybind_bind_t nav_node_right;
 
-        keybind_bind move_node_left;
-        keybind_bind move_node_right;
-        keybind_bind move_node_left_fast;
-        keybind_bind move_node_right_fast;
-        keybind_bind move_node_left_max;
-        keybind_bind move_node_right_max;
-        keybind_bind move_node_up;
-        keybind_bind move_node_down;
-        keybind_bind move_node_up_fast;
-        keybind_bind move_node_down_fast;
+        keybind_bind_t move_node_left;
+        keybind_bind_t move_node_right;
+        keybind_bind_t move_node_left_fast;
+        keybind_bind_t move_node_right_fast;
+        keybind_bind_t move_node_left_max;
+        keybind_bind_t move_node_right_max;
+        keybind_bind_t move_node_up;
+        keybind_bind_t move_node_down;
+        keybind_bind_t move_node_up_fast;
+        keybind_bind_t move_node_down_fast;
 
-        keybind_bind pre_loop_cut_envelope;
-        keybind_bind double_envelope_length;
-        keybind_bind halve_envelope_length;
-        keybind_bind resize_envelope;
-        keybind_bind generate_envelope_from_ADSR_values;
+        keybind_bind_t pre_loop_cut_envelope;
+        keybind_bind_t double_envelope_length;
+        keybind_bind_t halve_envelope_length;
+        keybind_bind_t resize_envelope;
+        keybind_bind_t generate_envelope_from_ADSR_values;
 
-        keybind_bind play_default_note;
-        // keybind_bind note_off;
+        keybind_bind_t play_default_note;
+        // keybind_bind_t note_off;
     } instrument_envelope;
 
     /* *** SAMPLE LIST *** */
 
-    keybind_section_info sample_list_info;
+    keybind_section_info_t sample_list_info;
     struct keybinds_sample_list {
-        // keybind_bind load_new_sample;
-        // keybind_bind move_between_options;
-        keybind_bind move_up;
-        keybind_bind move_down;
-        keybind_bind focus_sample_list;
+        // keybind_bind_t load_new_sample;
+        // keybind_bind_t move_between_options;
+        keybind_bind_t move_up;
+        keybind_bind_t move_down;
+        keybind_bind_t focus_sample_list;
 
-        keybind_bind goto_first_sample;
-        keybind_bind goto_last_sample;
+        keybind_bind_t goto_first_sample;
+        keybind_bind_t goto_last_sample;
 
-        keybind_bind convert_signed_unsigned;
-        keybind_bind pre_loop_cut;
-        keybind_bind clear_name_and_filename;
-        keybind_bind delete_sample;
-        keybind_bind downmix_to_mono;
-        keybind_bind resize_sample_with_interpolation;
-        keybind_bind resize_sample_without_interpolation;
-        keybind_bind reverse_sample;
-        keybind_bind centralise_sample;
-        keybind_bind invert_sample;
-        keybind_bind post_loop_cut;
-        keybind_bind sample_amplifier;
-        keybind_bind toggle_multichannel_playback;
-        keybind_bind save_sample_to_disk_it;
-        keybind_bind copy_sample;
-        keybind_bind toggle_sample_quality;
-        keybind_bind replace_current_sample;
-        keybind_bind swap_sample;
-        keybind_bind save_sample_to_disk_format_select;
-        keybind_bind save_sample_to_disk_raw;
-        keybind_bind exchange_sample;
-        keybind_bind text_to_sample;
-        keybind_bind edit_create_adlib_sample;
-        keybind_bind load_adlib_sample_by_midi_patch_number;
+        keybind_bind_t convert_signed_unsigned;
+        keybind_bind_t pre_loop_cut;
+        keybind_bind_t clear_name_and_filename;
+        keybind_bind_t delete_sample;
+        keybind_bind_t downmix_to_mono;
+        keybind_bind_t resize_sample_with_interpolation;
+        keybind_bind_t resize_sample_without_interpolation;
+        keybind_bind_t reverse_sample;
+        keybind_bind_t centralise_sample;
+        keybind_bind_t invert_sample;
+        keybind_bind_t post_loop_cut;
+        keybind_bind_t sample_amplifier;
+        keybind_bind_t toggle_multichannel_playback;
+        keybind_bind_t save_sample_to_disk_it;
+        keybind_bind_t copy_sample;
+        keybind_bind_t toggle_sample_quality;
+        keybind_bind_t replace_current_sample;
+        keybind_bind_t swap_sample;
+        keybind_bind_t save_sample_to_disk_format_select;
+        keybind_bind_t save_sample_to_disk_raw;
+        keybind_bind_t exchange_sample;
+        keybind_bind_t text_to_sample;
+        keybind_bind_t edit_create_adlib_sample;
+        keybind_bind_t load_adlib_sample_by_midi_patch_number;
 
-        keybind_bind insert_sample_slot;
-        keybind_bind remove_sample_slot;
-        keybind_bind swap_sample_with_previous;
-        keybind_bind swap_sample_with_next;
+        keybind_bind_t insert_sample_slot;
+        keybind_bind_t remove_sample_slot;
+        keybind_bind_t swap_sample_with_previous;
+        keybind_bind_t swap_sample_with_next;
 
-        keybind_bind toggle_current_sample;
-        keybind_bind solo_current_sample;
+        keybind_bind_t toggle_current_sample;
+        keybind_bind_t solo_current_sample;
 
-        keybind_bind decrease_playback_channel;
-        keybind_bind increase_playback_channel;
+        keybind_bind_t decrease_playback_channel;
+        keybind_bind_t increase_playback_channel;
 
-        keybind_bind increase_c5_frequency_1_octave;
-        keybind_bind decrease_c5_frequency_1_octave;
+        keybind_bind_t increase_c5_frequency_1_octave;
+        keybind_bind_t decrease_c5_frequency_1_octave;
 
-        keybind_bind increase_c5_frequency_1_semitone;
-        keybind_bind decrease_c5_frequency_1_semitone;
+        keybind_bind_t increase_c5_frequency_1_semitone;
+        keybind_bind_t decrease_c5_frequency_1_semitone;
 
-        keybind_bind insert_arrow_up;
+        keybind_bind_t insert_arrow_up;
     } sample_list;
 
     /* *** PATTERN EDIT *** */
 
-    keybind_section_info pattern_edit_info;
+    keybind_section_info_t pattern_edit_info;
     struct keybinds_pattern_edit {
-        keybind_bind next_pattern;
-        keybind_bind previous_pattern;
-        keybind_bind next_4_pattern;
-        keybind_bind previous_4_pattern;
-        keybind_bind next_order_pattern;
-        keybind_bind previous_order_pattern;
-        keybind_bind clear_field;
-        keybind_bind note_cut;
-        keybind_bind note_off;
-        keybind_bind toggle_volume_panning;
-        keybind_bind note_fade;
-        keybind_bind use_last_value;
-        // keybind_bind preview_note;
+        keybind_bind_t next_pattern;
+        keybind_bind_t previous_pattern;
+        keybind_bind_t next_4_pattern;
+        keybind_bind_t previous_4_pattern;
+        keybind_bind_t next_order_pattern;
+        keybind_bind_t previous_order_pattern;
+        keybind_bind_t clear_field;
+        keybind_bind_t note_cut;
+        keybind_bind_t note_off;
+        keybind_bind_t toggle_volume_panning;
+        keybind_bind_t note_fade;
+        keybind_bind_t use_last_value;
+        // keybind_bind_t preview_note;
 
-        keybind_bind get_default_value;
-        keybind_bind decrease_instrument;
-        keybind_bind increase_instrument;
+        keybind_bind_t get_default_value;
+        keybind_bind_t decrease_instrument;
+        keybind_bind_t increase_instrument;
         // These are listed on pattern edit help but are actually global
-        // keybind_bind decrease_octave;
-        // keybind_bind increase_octave;
-        keybind_bind toggle_edit_mask;
+        // keybind_bind_t decrease_octave;
+        // keybind_bind_t increase_octave;
+        keybind_bind_t toggle_edit_mask;
 
-        keybind_bind insert_row;
-        keybind_bind delete_row;
-        keybind_bind insert_pattern_row;
-        keybind_bind delete_pattern_row;
+        keybind_bind_t insert_row;
+        keybind_bind_t delete_row;
+        keybind_bind_t insert_pattern_row;
+        keybind_bind_t delete_pattern_row;
 
-        keybind_bind up_by_skip;
-        keybind_bind down_by_skip;
-        keybind_bind set_skip_1;
-        keybind_bind set_skip_2;
-        keybind_bind set_skip_3;
-        keybind_bind set_skip_4;
-        keybind_bind set_skip_5;
-        keybind_bind set_skip_6;
-        keybind_bind set_skip_7;
-        keybind_bind set_skip_8;
-        keybind_bind set_skip_9;
+        keybind_bind_t up_by_skip;
+        keybind_bind_t down_by_skip;
+        keybind_bind_t set_skip_1;
+        keybind_bind_t set_skip_2;
+        keybind_bind_t set_skip_3;
+        keybind_bind_t set_skip_4;
+        keybind_bind_t set_skip_5;
+        keybind_bind_t set_skip_6;
+        keybind_bind_t set_skip_7;
+        keybind_bind_t set_skip_8;
+        keybind_bind_t set_skip_9;
 
-        keybind_bind up_one_row;
-        keybind_bind down_one_row;
-        keybind_bind slide_pattern_up;
-        keybind_bind slide_pattern_down;
-        keybind_bind move_cursor_left;
-        keybind_bind move_cursor_right;
-        keybind_bind move_forwards_channel;
-        keybind_bind move_backwards_channel;
-        keybind_bind move_forwards_note_column;
-        keybind_bind move_backwards_note_column;
-        keybind_bind move_up_n_lines;
-        keybind_bind move_down_n_lines;
-        keybind_bind move_pattern_top;
-        keybind_bind move_pattern_bottom;
-        keybind_bind move_start;
-        keybind_bind move_end;
-        keybind_bind move_previous_position;
-        keybind_bind move_previous;
-        keybind_bind move_next;
+        keybind_bind_t up_one_row;
+        keybind_bind_t down_one_row;
+        keybind_bind_t slide_pattern_up;
+        keybind_bind_t slide_pattern_down;
+        keybind_bind_t move_cursor_left;
+        keybind_bind_t move_cursor_right;
+        keybind_bind_t move_forwards_channel;
+        keybind_bind_t move_backwards_channel;
+        keybind_bind_t move_forwards_note_column;
+        keybind_bind_t move_backwards_note_column;
+        keybind_bind_t move_up_n_lines;
+        keybind_bind_t move_down_n_lines;
+        keybind_bind_t move_pattern_top;
+        keybind_bind_t move_pattern_bottom;
+        keybind_bind_t move_start;
+        keybind_bind_t move_end;
+        keybind_bind_t move_previous_position;
+        keybind_bind_t move_previous;
+        keybind_bind_t move_next;
 
-        keybind_bind toggle_multichannel;
+        keybind_bind_t toggle_multichannel;
 
-        keybind_bind store_pattern_data;
-        keybind_bind revert_pattern_data;
-        keybind_bind undo;
+        keybind_bind_t store_pattern_data;
+        keybind_bind_t revert_pattern_data;
+        keybind_bind_t undo;
 
-        keybind_bind toggle_centralise_cursor;
-        keybind_bind toggle_highlight_row;
-        keybind_bind toggle_volume_display;
+        keybind_bind_t toggle_centralise_cursor;
+        keybind_bind_t toggle_highlight_row;
+        keybind_bind_t toggle_volume_display;
 
-        keybind_bind set_pattern_length;
-        keybind_bind toggle_midi_trigger;
+        keybind_bind_t set_pattern_length;
+        keybind_bind_t toggle_midi_trigger;
     } pattern_edit;
 
-    keybind_section_info track_view_info;
+    keybind_section_info_t track_view_info;
     struct keybinds_track_view {
-        keybind_bind cycle_view;
-        keybind_bind clear_track_views;
-        keybind_bind toggle_track_view_divisions;
+        keybind_bind_t cycle_view;
+        keybind_bind_t clear_track_views;
+        keybind_bind_t toggle_track_view_divisions;
         // I can't find this in the code and can't get it to work in previous version
-        // keybind_bind deselect_track;
-        keybind_bind track_scheme_default;
-        keybind_bind track_scheme_1;
-        keybind_bind track_scheme_2;
-        keybind_bind track_scheme_3;
-        keybind_bind track_scheme_4;
-        keybind_bind track_scheme_5;
-        keybind_bind track_scheme_6;
+        // keybind_bind_t deselect_track;
+        keybind_bind_t track_scheme_default;
+        keybind_bind_t track_scheme_1;
+        keybind_bind_t track_scheme_2;
+        keybind_bind_t track_scheme_3;
+        keybind_bind_t track_scheme_4;
+        keybind_bind_t track_scheme_5;
+        keybind_bind_t track_scheme_6;
 
-        keybind_bind quick_view_scheme_default;
-        keybind_bind quick_view_scheme_1;
-        keybind_bind quick_view_scheme_2;
-        keybind_bind quick_view_scheme_3;
-        keybind_bind quick_view_scheme_4;
-        keybind_bind quick_view_scheme_5;
-        keybind_bind quick_view_scheme_6;
+        keybind_bind_t quick_view_scheme_default;
+        keybind_bind_t quick_view_scheme_1;
+        keybind_bind_t quick_view_scheme_2;
+        keybind_bind_t quick_view_scheme_3;
+        keybind_bind_t quick_view_scheme_4;
+        keybind_bind_t quick_view_scheme_5;
+        keybind_bind_t quick_view_scheme_6;
 
         // Can't find this and can't figure out in previous version
-        // keybind_bind toggle_cursor_tracking;
+        // keybind_bind_t toggle_cursor_tracking;
     } track_view;
 
-    keybind_section_info block_functions_info;
+    keybind_section_info_t block_functions_info;
     struct keybinds_block_functions {
-        keybind_bind mark_beginning_block;
-        keybind_bind mark_end_block;
-        keybind_bind quick_mark_lines;
-        keybind_bind mark_column_or_pattern;
-        keybind_bind mark_block_left;
-        keybind_bind mark_block_right;
-        keybind_bind mark_block_up;
-        keybind_bind mark_block_down;
-        keybind_bind mark_block_start_row;
-        keybind_bind mark_block_end_row;
-        keybind_bind mark_block_page_up;
-        keybind_bind mark_block_page_down;
+        keybind_bind_t mark_beginning_block;
+        keybind_bind_t mark_end_block;
+        keybind_bind_t quick_mark_lines;
+        keybind_bind_t mark_column_or_pattern;
+        keybind_bind_t mark_block_left;
+        keybind_bind_t mark_block_right;
+        keybind_bind_t mark_block_up;
+        keybind_bind_t mark_block_down;
+        keybind_bind_t mark_block_start_row;
+        keybind_bind_t mark_block_end_row;
+        keybind_bind_t mark_block_page_up;
+        keybind_bind_t mark_block_page_down;
 
-        keybind_bind unmark;
+        keybind_bind_t unmark;
 
-        keybind_bind raise_notes_semitone;
-        keybind_bind raise_notes_octave;
-        keybind_bind lower_notes_semitone;
-        keybind_bind lower_notes_octave;
-        keybind_bind set_instrument;
-        keybind_bind set_volume_or_panning;
-        keybind_bind wipe_volume_or_panning;
-        keybind_bind slide_volume_or_panning;
-        keybind_bind volume_amplifier;
-        keybind_bind cut_block;
-        keybind_bind swap_block;
-        keybind_bind slide_effect_value;
+        keybind_bind_t raise_notes_semitone;
+        keybind_bind_t raise_notes_octave;
+        keybind_bind_t lower_notes_semitone;
+        keybind_bind_t lower_notes_octave;
+        keybind_bind_t set_instrument;
+        keybind_bind_t set_volume_or_panning;
+        keybind_bind_t wipe_volume_or_panning;
+        keybind_bind_t slide_volume_or_panning;
+        keybind_bind_t volume_amplifier;
+        keybind_bind_t cut_block;
+        keybind_bind_t swap_block;
+        keybind_bind_t slide_effect_value;
 
-        keybind_bind roll_block_down;
-        keybind_bind roll_block_up;
+        keybind_bind_t roll_block_down;
+        keybind_bind_t roll_block_up;
 
-        keybind_bind copy_block;
-        keybind_bind copy_block_with_mute;
-        keybind_bind paste_data;
-        keybind_bind paste_and_overwrite;
-        keybind_bind paste_and_mix;
+        keybind_bind_t copy_block;
+        keybind_bind_t copy_block_with_mute;
+        keybind_bind_t paste_data;
+        keybind_bind_t paste_and_overwrite;
+        keybind_bind_t paste_and_mix;
 
-        keybind_bind double_block_length;
-        keybind_bind halve_block_length;
+        keybind_bind_t double_block_length;
+        keybind_bind_t halve_block_length;
 
-        keybind_bind select_template_mode;
-        keybind_bind disable_template_mode;
-        keybind_bind toggle_fast_volume;
-        keybind_bind selection_volume_vary;
-        keybind_bind selection_panning_vary;
-        keybind_bind selection_effect_vary;
+        keybind_bind_t select_template_mode;
+        keybind_bind_t disable_template_mode;
+        keybind_bind_t toggle_fast_volume;
+        keybind_bind_t selection_volume_vary;
+        keybind_bind_t selection_panning_vary;
+        keybind_bind_t selection_effect_vary;
     } block_functions;
 
-    keybind_section_info playback_functions_info;
+    keybind_section_info_t playback_functions_info;
     struct keybinds_playback_functions {
-        keybind_bind play_note_cursor;
-        keybind_bind play_row;
+        keybind_bind_t play_note_cursor;
+        keybind_bind_t play_row;
 
-        keybind_bind play_from_row;
-        keybind_bind toggle_playback_mark;
+        keybind_bind_t play_from_row;
+        keybind_bind_t toggle_playback_mark;
 
-        keybind_bind toggle_current_channel;
-        keybind_bind solo_current_channel;
+        keybind_bind_t toggle_current_channel;
+        keybind_bind_t solo_current_channel;
     } playback_functions;
 
     /* *** FILE LIST *** */
 
-    keybind_section_info file_list_info;
+    keybind_section_info_t file_list_info;
     struct keybinds_file_list {
-        keybind_bind delete;
+        keybind_bind_t delete;
     } file_list;
 
     /* *** GLOBAL *** */
 
-    keybind_section_info global_info;
+    keybind_section_info_t global_info;
     struct keybinds_global {
-        keybind_bind help;
-        keybind_bind midi;
-        keybind_bind system_configure;
-        keybind_bind pattern_edit;
-        keybind_bind sample_list;
-        keybind_bind sample_library;
-        keybind_bind instrument_list;
-        keybind_bind instrument_library;
-        keybind_bind play_information_or_play_song;
-        keybind_bind play_song;
-        keybind_bind preferences;
-        keybind_bind play_current_pattern;
-        keybind_bind play_song_from_order;
-        keybind_bind play_song_from_mark;
-        keybind_bind toggle_playback;
-        keybind_bind stop_playback;
+        keybind_bind_t help;
+        keybind_bind_t midi;
+        keybind_bind_t system_configure;
+        keybind_bind_t pattern_edit;
+        keybind_bind_t sample_list;
+        keybind_bind_t sample_library;
+        keybind_bind_t instrument_list;
+        keybind_bind_t instrument_library;
+        keybind_bind_t play_information_or_play_song;
+        keybind_bind_t play_song;
+        keybind_bind_t preferences;
+        keybind_bind_t play_current_pattern;
+        keybind_bind_t play_song_from_order;
+        keybind_bind_t play_song_from_mark;
+        keybind_bind_t toggle_playback;
+        keybind_bind_t stop_playback;
 
-        keybind_bind toggle_playback_tracing;
-        keybind_bind toggle_midi_input;
+        keybind_bind_t toggle_playback_tracing;
+        keybind_bind_t toggle_midi_input;
 
-        keybind_bind load_module;
-        keybind_bind message_editor;
-        keybind_bind save_module;
-        keybind_bind export_module;
-        keybind_bind order_list;
-        keybind_bind order_list_lock;
-        keybind_bind schism_logging;
-        keybind_bind song_variables;
-        keybind_bind palette_config;
-        keybind_bind font_editor;
-        keybind_bind waterfall;
+        keybind_bind_t load_module;
+        keybind_bind_t message_editor;
+        keybind_bind_t save_module;
+        keybind_bind_t export_module;
+        keybind_bind_t order_list;
+        keybind_bind_t order_list_lock;
+        keybind_bind_t schism_logging;
+        keybind_bind_t song_variables;
+        keybind_bind_t palette_config;
+        keybind_bind_t font_editor;
+        keybind_bind_t waterfall;
 
-        keybind_bind octave_decrease;
-        keybind_bind octave_increase;
-        keybind_bind decrease_playback_speed;
-        keybind_bind increase_playback_speed;
-        keybind_bind decrease_playback_tempo;
-        keybind_bind increase_playback_tempo;
-        keybind_bind decrease_global_volume;
-        keybind_bind increase_global_volume;
+        keybind_bind_t octave_decrease;
+        keybind_bind_t octave_increase;
+        keybind_bind_t decrease_playback_speed;
+        keybind_bind_t increase_playback_speed;
+        keybind_bind_t decrease_playback_tempo;
+        keybind_bind_t increase_playback_tempo;
+        keybind_bind_t decrease_global_volume;
+        keybind_bind_t increase_global_volume;
 
-        keybind_bind toggle_channel_1;
-        keybind_bind toggle_channel_2;
-        keybind_bind toggle_channel_3;
-        keybind_bind toggle_channel_4;
-        keybind_bind toggle_channel_5;
-        keybind_bind toggle_channel_6;
-        keybind_bind toggle_channel_7;
-        keybind_bind toggle_channel_8;
+        keybind_bind_t toggle_channel_1;
+        keybind_bind_t toggle_channel_2;
+        keybind_bind_t toggle_channel_3;
+        keybind_bind_t toggle_channel_4;
+        keybind_bind_t toggle_channel_5;
+        keybind_bind_t toggle_channel_6;
+        keybind_bind_t toggle_channel_7;
+        keybind_bind_t toggle_channel_8;
 
-        keybind_bind mouse_grab;
-        keybind_bind display_reset;
-        keybind_bind go_to_time;
-        keybind_bind audio_reset;
-        keybind_bind mouse;
-        keybind_bind new_song;
-        keybind_bind calculate_song_length;
-        keybind_bind quit;
-        keybind_bind quit_no_confirm;
-        keybind_bind save;
+        keybind_bind_t mouse_grab;
+        keybind_bind_t display_reset;
+        keybind_bind_t go_to_time;
+        keybind_bind_t audio_reset;
+        keybind_bind_t mouse;
+        keybind_bind_t new_song;
+        keybind_bind_t calculate_song_length;
+        keybind_bind_t quit;
+        keybind_bind_t quit_no_confirm;
+        keybind_bind_t save;
 
-        keybind_bind previous_order;
-        keybind_bind next_order;
+        keybind_bind_t previous_order;
+        keybind_bind_t next_order;
 
-        keybind_bind fullscreen;
+        keybind_bind_t fullscreen;
 
-        keybind_bind open_menu;
+        keybind_bind_t open_menu;
 
-        keybind_bind nav_left;
-        keybind_bind nav_right;
-        keybind_bind nav_up;
-        keybind_bind nav_down;
-        keybind_bind nav_page_up;
-        keybind_bind nav_page_down;
-        keybind_bind nav_accept;
-        keybind_bind nav_cancel;
-        keybind_bind nav_home;
-        keybind_bind nav_end;
-        keybind_bind nav_tab;
-        keybind_bind nav_backtab;
+        keybind_bind_t nav_left;
+        keybind_bind_t nav_right;
+        keybind_bind_t nav_up;
+        keybind_bind_t nav_down;
+        keybind_bind_t nav_page_up;
+        keybind_bind_t nav_page_down;
+        keybind_bind_t nav_accept;
+        keybind_bind_t nav_cancel;
+        keybind_bind_t nav_home;
+        keybind_bind_t nav_end;
+        keybind_bind_t nav_tab;
+        keybind_bind_t nav_backtab;
 
-        keybind_bind numentry_increase_value;
-        keybind_bind numentry_decrease_value;
+        keybind_bind_t numentry_increase_value;
+        keybind_bind_t numentry_decrease_value;
 
-        keybind_bind thumbbar_min_value;
-        keybind_bind thumbbar_max_value;
-        keybind_bind thumbbar_increase_value;
-        keybind_bind thumbbar_increase_value_2x;
-        keybind_bind thumbbar_increase_value_4x;
-        keybind_bind thumbbar_increase_value_8x;
-        keybind_bind thumbbar_decrease_value;
-        keybind_bind thumbbar_decrease_value_2x;
-        keybind_bind thumbbar_decrease_value_4x;
-        keybind_bind thumbbar_decrease_value_8x;
+        keybind_bind_t thumbbar_min_value;
+        keybind_bind_t thumbbar_max_value;
+        keybind_bind_t thumbbar_increase_value;
+        keybind_bind_t thumbbar_increase_value_2x;
+        keybind_bind_t thumbbar_increase_value_4x;
+        keybind_bind_t thumbbar_increase_value_8x;
+        keybind_bind_t thumbbar_decrease_value;
+        keybind_bind_t thumbbar_decrease_value_2x;
+        keybind_bind_t thumbbar_decrease_value_4x;
+        keybind_bind_t thumbbar_decrease_value_8x;
     } global;
 
-    keybind_section_info dialog_info;
+    keybind_section_info_t dialog_info;
     struct keybinds_dialog {
-        keybind_bind yes;
-        keybind_bind no;
-        keybind_bind answer_ok;
-        keybind_bind answer_cancel;
-        keybind_bind cancel;
-        keybind_bind accept;
+        keybind_bind_t yes;
+        keybind_bind_t no;
+        keybind_bind_t answer_ok;
+        keybind_bind_t answer_cancel;
+        keybind_bind_t cancel;
+        keybind_bind_t accept;
     } dialog;
-} keybind_list;
+} keybind_list_t;
 
 char* keybinds_get_help_text(enum page_numbers page);
 void keybinds_handle_event(struct key_event* event);
 void init_keybinds(void);
-extern keybind_list global_keybinds_list;
+extern keybind_list_t global_keybinds_list;
 
 /* Key was pressed this event. Will not trigger on held down repeats. */
 #define key_pressed(SECTION, NAME) global_keybinds_list.SECTION.NAME.pressed

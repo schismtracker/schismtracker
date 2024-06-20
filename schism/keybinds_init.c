@@ -16,12 +16,12 @@
 	cfg_set_string(cfg, current_section_name, #BIND, current_shortcut); \
     init_bind(&global_keybinds_list.SECTION.BIND, current_section_info, #BIND, DESCRIPTION, current_shortcut);
 
-keybind_section_info* current_section_info = NULL;
+keybind_section_info_t* current_section_info = NULL;
 static const char* current_section_name = "";
 static char current_shortcut[256] = "";
 
-static void init_section(keybind_section_info* section_info, const char* name, const char* title, enum page_numbers page);
-static void init_bind(keybind_bind* bind, keybind_section_info* section_info, const char* name, const char* description, const char* shortcut);
+static void init_section(keybind_section_info_t* section_info, const char* name, const char* title, enum page_numbers page);
+static void init_bind(keybind_bind_t* bind, keybind_section_info_t* section_info, const char* name, const char* description, const char* shortcut);
 
 static void init_midi_keybinds(cfg_file_t* cfg)
 {

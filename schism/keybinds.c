@@ -9,8 +9,8 @@
 #define MAX_BINDS 400
 #define MAX_SHORTCUTS 3
 static int current_binds_count = 0;
-static keybind_bind* current_binds[MAX_BINDS];
-keybind_list global_keybinds_list;
+static keybind_bind_t* current_binds[MAX_BINDS];
+keybind_list_t global_keybinds_list;
 static int has_init_problem = 0;
 
 /* --------------------------------------------------------------------- */
@@ -39,9 +39,9 @@ static int check_mods(SDL_Keymod needed, SDL_Keymod current, int lenient)
         return (ctrl_needed == has_ctrl) && (shift_needed == has_shift) && (alt_needed == has_alt) && (ralt_needed == has_ralt);
 }
 
-static void update_bind(keybind_bind* bind, SDL_Scancode scode, SDL_Keymod mods, const char* text, int is_down)
+static void update_bind(keybind_bind_t* bind, SDL_Scancode scode, SDL_Keymod mods, const char* text, int is_down)
 {
-    keybind_shortcut* sc;
+    keybind_shortcut_t* sc;
 
     // Bind is always updated on key event
     bind->pressed = 0;
@@ -126,7 +126,7 @@ static void update_bind(keybind_bind* bind, SDL_Scancode scode, SDL_Keymod mods,
     }
 }
 
-static void reset_bind(keybind_bind* bind)
+static void reset_bind(keybind_bind_t* bind)
 {
     bind->pressed = 0;
     bind->released = 0;
@@ -181,7 +181,7 @@ static int parse_shortcut_mods(const char* shortcut, SDL_Keymod* mods)
 
 static int string_to_scancode_length = ARRAY_SIZE(string_to_scancode);
 
-static int parse_shortcut_scancode(keybind_bind* bind, const char* shortcut, SDL_Scancode* code)
+static int parse_shortcut_scancode(keybind_bind_t* bind, const char* shortcut, SDL_Scancode* code)
 {
     for (int i = 0; i < string_to_scancode_length; i++) {
         if (charset_strcasecmp(shortcut, CHARSET_UTF8, string_to_scancode[i].name, CHARSET_UTF8) == 0) {
@@ -201,7 +201,7 @@ static int parse_shortcut_scancode(keybind_bind* bind, const char* shortcut, SDL
     return 0;
 }
 
-static int parse_shortcut_character(keybind_bind* bind, const char* shortcut, char** character)
+static int parse_shortcut_character(keybind_bind_t* bind, const char* shortcut, char** character)
 {
     if(!shortcut || !shortcut[0]) return 0;
 
@@ -217,9 +217,9 @@ static int parse_shortcut_character(keybind_bind* bind, const char* shortcut, ch
     return 1;
 }
 
-void keybinds_add_bind_shortcut(keybind_bind* bind, SDL_Keycode keycode, SDL_Scancode scancode, const char* character, SDL_Keymod modifier);
+void keybinds_add_bind_shortcut(keybind_bind_t* bind, SDL_Keycode keycode, SDL_Scancode scancode, const char* character, SDL_Keymod modifier);
 
-static void keybinds_parse_shortcut_splitted(keybind_bind* bind, const char* shortcut)
+static void keybinds_parse_shortcut_splitted(keybind_bind_t* bind, const char* shortcut)
 {
     char* shortcut_dup = strdup(shortcut);
     char *strtok_ptr;
@@ -258,7 +258,7 @@ static void keybinds_parse_shortcut_splitted(keybind_bind* bind, const char* sho
     keybinds_add_bind_shortcut(bind, key_code, scan_code, character, mods);
 }
 
-void keybinds_parse_shortcut(keybind_bind* bind, const char* shortcut)
+void keybinds_parse_shortcut(keybind_bind_t* bind, const char* shortcut)
 {
     char* shortcut_dup = strdup(shortcut);
     char *strtok_ptr;
@@ -276,7 +276,7 @@ void keybinds_parse_shortcut(keybind_bind* bind, const char* shortcut)
 /* --------------------------------------------------------------------- */
 /* Initiating keybinds */
 
-void keybinds_add_bind_shortcut(keybind_bind* bind, SDL_Keycode keycode, SDL_Scancode scancode, const char* character, SDL_Keymod modifier)
+void keybinds_add_bind_shortcut(keybind_bind_t* bind, SDL_Keycode keycode, SDL_Scancode scancode, const char* character, SDL_Keymod modifier)
 {
     if(bind->shortcuts_count == MAX_SHORTCUTS) {
         log_appendf(5, " %s/%s: Trying to bind too many shortcuts. Max is %i.", bind->section_info->name, bind->name, MAX_SHORTCUTS);
@@ -298,7 +298,7 @@ void keybinds_add_bind_shortcut(keybind_bind* bind, SDL_Keycode keycode, SDL_Sca
     bind->shortcuts_count++;
 }
 
-static void init_section(keybind_section_info* section_info, const char* name, const char* title, enum page_numbers page)
+static void init_section(keybind_section_info_t* section_info, const char* name, const char* title, enum page_numbers page)
 {
     section_info->is_active = 0;
     section_info->name = name;
@@ -307,7 +307,7 @@ static void init_section(keybind_section_info* section_info, const char* name, c
     section_info->page_matcher = NULL;
 }
 
-static void set_shortcut_text(keybind_bind* bind)
+static void set_shortcut_text(keybind_bind_t* bind)
 {
     char* out[MAX_SHORTCUTS];
     int is_first_shortcut = 1;
@@ -316,7 +316,7 @@ static void set_shortcut_text(keybind_bind* bind)
         out[i] = NULL;
         if(i >= bind->shortcuts_count) continue;
 
-        keybind_shortcut* sc = &bind->shortcuts[i];
+        keybind_shortcut_t* sc = &bind->shortcuts[i];
 
         const char* ctrl_text = (sc->modifier & KMOD_CTRL) ? "Ctrl-" : "";
         const char* alt_text = (sc->modifier & KMOD_LALT) ? "Alt-" : "";
@@ -385,7 +385,7 @@ static void set_shortcut_text(keybind_bind* bind)
     free(help_shortcuts);
 }
 
-static void init_bind(keybind_bind* bind, keybind_section_info* section_info, const char* name, const char* description, const char* shortcut)
+static void init_bind(keybind_bind_t* bind, keybind_section_info_t* section_info, const char* name, const char* description, const char* shortcut)
 {
     if(current_binds_count >= MAX_BINDS) {
         log_appendf(5, " Keybinds exceeding max bind count. Max is %i. Current is %i.", MAX_BINDS, current_binds_count);
@@ -401,7 +401,7 @@ static void init_bind(keybind_bind* bind, keybind_section_info* section_info, co
 
     bind->pressed = 0;
     bind->released = 0;
-    bind->shortcuts = malloc(sizeof(keybind_shortcut) * 3);
+    bind->shortcuts = malloc(sizeof(keybind_shortcut_t) * 3);
 
     for(int i = 0; i < 3; i++) {
         bind->shortcuts[i].scancode = SDL_SCANCODE_UNKNOWN;
@@ -457,7 +457,7 @@ char* keybinds_get_help_text(enum page_numbers page)
         if (i >= current_binds_count)
             continue;
 
-        keybind_bind* bind = current_binds[i];
+        keybind_bind_t* bind = current_binds[i];
         const char* bind_title = bind->section_info->title;
         enum page_numbers bind_page = bind->section_info->page;
 
