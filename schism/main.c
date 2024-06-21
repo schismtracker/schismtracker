@@ -444,36 +444,6 @@ static void key_event_reset(struct key_event *kk, int start_x, int start_y)
 	kk->sy = start_y;
 }
 
-/* -------------------------------------------------- */
-
-/* These are here for linking text input to keyboard inputs.
- * If no keyboard input can be found, then the text will
- * be sent to the already existing handlers written for the
- * original port to SDL2.
- *
- * - paper */
-
-static struct key_event pending_keydown;
-static int have_pending_keydown = 0;
-
-static void push_pending_keydown_event(struct key_event* kk) {
-	if (!have_pending_keydown) {
-		pending_keydown = *kk;
-		have_pending_keydown = 1;
-	}
-}
-
-static void pop_pending_keydown_event(const uint8_t* text) {
-	/* text can and will be NULL here. when it is not NULL, it
-	 * should be in CP437 */
-	if (have_pending_keydown) {
-		pending_keydown.text = text;
-		cache_key_repeat(&pending_keydown);
-		handle_key(&pending_keydown);
-		have_pending_keydown = 0;
-	}
-}
-
 /* -------------------------------------------- */
 
 static void event_loop(void)
@@ -552,8 +522,8 @@ static void event_loop(void)
 					break;
 				}
 
-				if (have_pending_keydown) {
-					pop_pending_keydown_event(input_text);
+				if (kbd_have_pending_keydown()) {
+					kbd_pop_pending_keydown(input_text);
 				} else {
 					/* wtf? whatever, send it to the text input
 					 * handlers I guess, don't throw it out! */
@@ -570,7 +540,7 @@ static void event_loop(void)
 
 				/* fallthrough */
 			case SDL_KEYUP:
-				pop_pending_keydown_event(NULL);
+				kbd_pop_pending_keydown(NULL);
 				switch (event.key.keysym.sym) {
 				case SDLK_NUMLOCKCLEAR:
 					modkey ^= KMOD_NUM;
@@ -626,15 +596,15 @@ static void event_loop(void)
 					/* only empty the key repeat if
 					 * the last keydown is the same sym */
 					if (last_key == kk.sym)
-						empty_key_repeat();
+						kbd_empty_key_repeat();
 				} else {
-					push_pending_keydown_event(&kk);
+					kbd_push_pending_keydown(&kk);
 
 					/* reset key repeat regardless */
-					empty_key_repeat();
+					kbd_empty_key_repeat();
 
 					/* TODO this ought to be handled in
-					 * pop_pending_keydown_event() */
+					 * kbd_pop_pending_keydown() */
 					status.last_keysym = last_key;
 					last_key = kk.sym;
 				}
@@ -852,10 +822,10 @@ static void event_loop(void)
 		/* when using a real keyboard SDL will send a keydown first
 		 * and text input after it; if a text input event is NOT sent,
 		 * we should just send the keydown as is */
-		pop_pending_keydown_event(NULL);
+		kbd_pop_pending_keydown(NULL);
 
 		/* handle key repeats */
-		handle_key_repeat();
+		kbd_handle_key_repeat();
 
 		/* now we can do whatever we need to do */
 		time(&status.now);

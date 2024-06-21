@@ -587,7 +587,8 @@ static schism_ticks_t key_repeat_next_tick = 0;
 
 static struct key_event cached_key_event = {0};
 
-void handle_key_repeat(void) {
+void kbd_handle_key_repeat(void)
+{
 	if (!key_repeat_next_tick)
 		return;
 
@@ -603,7 +604,8 @@ void handle_key_repeat(void) {
 	}
 }
 
-void cache_key_repeat(struct key_event* kk) {
+void kbd_cache_key_repeat(struct key_event* kk)
+{
 	if (cached_key_event.text)
 		free((uint8_t*)cached_key_event.text);
 
@@ -617,7 +619,8 @@ void cache_key_repeat(struct key_event* kk) {
 	key_repeat_next_tick = SCHISM_GET_TICKS() + key_repeat_delay + key_repeat_rate;
 }
 
-void empty_key_repeat(void) {
+void kbd_empty_key_repeat(void)
+{
 	if (cached_key_event.text) {
 		free((uint8_t*)cached_key_event.text);
 		cached_key_event.text = NULL;
@@ -626,7 +629,8 @@ void empty_key_repeat(void) {
 	key_repeat_next_tick = 0;
 }
 
-void set_key_repeat(int delay, int rate) {
+void kbd_set_key_repeat(int delay, int rate)
+{
 	if (delay) {
 		key_repeat_delay = delay;
 		key_repeat_rate = rate;
@@ -634,4 +638,40 @@ void set_key_repeat(int delay, int rate) {
 		key_repeat_delay = DEFAULT_KEY_REPEAT_DELAY;
 		key_repeat_rate = DEFAULT_KEY_REPEAT_RATE;
 	}
+}
+
+/* -------------------------------------------------- */
+
+/* These are here for linking text input to keyboard inputs.
+ * If no keyboard input can be found, then the text will
+ * be sent to the already existing handlers written for the
+ * original port to SDL2.
+ *
+ * - paper */
+
+static struct key_event pending_keydown;
+static int have_pending_keydown = 0;
+
+void kbd_push_pending_keydown(struct key_event* kk)
+{
+	if (!have_pending_keydown) {
+		pending_keydown = *kk;
+		have_pending_keydown = 1;
+	}
+}
+
+void kbd_pop_pending_keydown(const uint8_t* text)
+{
+	/* text is optional, but should be in CP437 if provided */
+	if (have_pending_keydown) {
+		pending_keydown.text = text;
+		kbd_cache_key_repeat(&pending_keydown);
+		handle_key(&pending_keydown);
+		have_pending_keydown = 0;
+	}
+}
+
+int kbd_have_pending_keydown(void)
+{
+	return have_pending_keydown;
 }

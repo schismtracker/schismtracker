@@ -54,13 +54,23 @@ int kbd_get_note(struct key_event *k);
 
 int kbd_get_alnum(struct key_event *k);
 
-void handle_key_repeat(void);
-void cache_key_repeat(struct key_event* kk);
-void empty_key_repeat(void);
+void kbd_key_translate(struct key_event *k);
+
+/* -------------------------------------------- */
+/* key repeat */
+
+void kbd_handle_key_repeat(void);
+void kbd_cache_key_repeat(struct key_event* kk);
+void kbd_empty_key_repeat(void);
 
 /* use 0 for delay to (re)set the default rate. */
-void set_key_repeat(int delay, int rate);
+void kbd_set_key_repeat(int delay, int rate);
 
-void kbd_key_translate(struct key_event *k);
+/* -------------------------------------------- */
+/* text <-> keydowns */
+
+void kbd_push_pending_keydown(struct key_event* kk);
+void kbd_pop_pending_keydown(const uint8_t* text);
+int kbd_have_pending_keydown(void);
 
 #endif /* SCHISM_KEYBOARD_H_ */

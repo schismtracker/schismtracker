@@ -186,7 +186,7 @@ void cfg_load(void)
 	else
 		status.fix_numlock_setting = NUMLOCK_HONOR;
 
-	set_key_repeat(cfg_get_number(&cfg, "General", "key_repeat_delay", 0),
+	kbd_set_key_repeat(cfg_get_number(&cfg, "General", "key_repeat_delay", 0),
 		       cfg_get_number(&cfg, "General", "key_repeat_rate", 0));
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
