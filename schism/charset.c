@@ -128,10 +128,10 @@ int char_digraph(int k1, int k2)
 static int utf8_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_next) {
 	uint8_t c = *in;
 
-	if (c == 0x00) {
-		return DECODER_DONE;
-	} else if (c < 0x80) {
+	if (c < 0x80) {
 		*out = c;
+		if (c == 0x00)
+			return DECODER_DONE;
 		*size_until_next = 1;
 	} else if (c < 0xC2) {
 		return DECODER_ERROR;
@@ -180,10 +180,10 @@ static int utf8_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_nex
 		uint16_t wc = *(tmp_in++); \
 		wc = bswap##x##16(wc); \
 	\
-		if (wc == 0x0000) {\
-			return DECODER_DONE; \
-		} else if (wc < 0xD800 || wc > 0xDFFF) { \
+		if (wc < 0xD800 || wc > 0xDFFF) { \
 			*out = wc; \
+			if (wc == 0x0000) \
+				return DECODER_DONE; \
 			*size_until_next = 2; \
 		} else if (wc >= 0xD800 && wc <= 0xDBFF) { \
 			uint16_t wc2 = *(tmp_in++); \
@@ -694,14 +694,17 @@ int charset_strcasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2,
 		if (c1 == DECODER_ERROR || c2 == DECODER_ERROR)
 			goto charsetfail;
 
-		if (c1 == DECODER_DONE || c2 == DECODER_DONE || charset_simple_case_fold(codepoint1) != charset_simple_case_fold(codepoint2))
+		codepoint1 = charset_simple_case_fold(codepoint1);
+		codepoint2 = charset_simple_case_fold(codepoint2);
+
+		if (c1 == DECODER_DONE || c2 == DECODER_DONE || codepoint1 != codepoint2)
 			break;
 
 		in1_offset += in1_needed;
 		in2_offset += in2_needed;
 	}
 
-	return charset_simple_case_fold(codepoint1) - charset_simple_case_fold(codepoint2);
+	return codepoint1 - codepoint2;
 
 charsetfail:
 #if HAVE_STRCASECMP
