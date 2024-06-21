@@ -54,7 +54,7 @@ void cfg_atexit_save(void); /* this only saves a handful of settings, not everyt
 void cfg_save_output(void);
 
 /* each page with configurable settings has a function to load/save them... */
-typedef struct cfg_file cfg_file_t; /* for the real type include config-parser.h */
+#include "config-parser.h"
 
 void cfg_load_midi(cfg_file_t *cfg);
 void cfg_save_midi(cfg_file_t *cfg);
