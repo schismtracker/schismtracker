@@ -96,6 +96,7 @@ noinst_HEADERS = \
 	include/auto/logoschism.h	\
 	include/auto/schismico.h	\
 	include/auto/schismico_hires.h	\
+	include/bswap.h			\
 	include/charset.h		\
 	include/clippy.h		\
 	include/cmixer.h		\
