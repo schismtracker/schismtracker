@@ -63,6 +63,8 @@ static int fake_slot = KEYJAZZ_NOINST;
 static const char *const loop_states[] = {
 		"Off", "On Forwards", "On Ping Pong", NULL };
 
+static char samp_cwd[PATH_MAX+1] = "";
+
 static void handle_preload(void);
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -175,17 +177,17 @@ static void read_directory(void)
 	struct stat st;
 
 	clear_directory();
-	if (os_stat(cfg_dir_samples, &st) < 0)
+	if (os_stat(samp_cwd, &st) < 0)
 		directory_mtime = 0;
 	else
 		directory_mtime = st.st_mtime;
 	/* if the stat call failed, this will probably break as well, but
 	at the very least, it'll add an entry for the root directory. */
-	if (dmoz_read(cfg_dir_samples, &flist, NULL, dmoz_read_sample_library) < 0)
-		log_perror(cfg_dir_samples);
+	if (dmoz_read(samp_cwd, &flist, NULL, dmoz_read_sample_library) < 0)
+		log_perror(samp_cwd);
 
 	dmoz_filter_filelist(&flist, dmoz_fill_ext_data, &current_file, file_list_reposition);
-	dmoz_cache_lookup(cfg_dir_samples, &flist, NULL);
+	dmoz_cache_lookup(samp_cwd, &flist, NULL);
 	file_list_reposition();
 }
 
@@ -201,10 +203,12 @@ static int change_dir(const char *dir)
 
 	dmoz_cache_update(cfg_dir_samples, &flist, NULL);
 
-	if (os_stat(ptr, &buf) == 0 && S_ISDIR(buf.st_mode)) {
+	if (!os_stat(ptr, &buf) && S_ISDIR(buf.st_mode)) {
 		strncpy(cfg_dir_samples, ptr, PATH_MAX);
-		cfg_dir_samples[PATH_MAX] = 0;
+		cfg_dir_samples[PATH_MAX] = '\0';
 	}
+	strncpy(samp_cwd, ptr, PATH_MAX);
+	samp_cwd[PATH_MAX] = '\0';
 	free(ptr);
 
 	read_directory();
@@ -321,15 +325,20 @@ static void _common_set_page(void)
 {
 	struct stat st;
 
+	if (!*samp_cwd) {
+		strncpy(samp_cwd, cfg_dir_samples, PATH_MAX);
+		samp_cwd[PATH_MAX] = '\0';
+	}
+
 	/* if we have a list, the directory didn't change, and the mtime is the same, we're set */
 	if (flist.num_files > 0
 	    && (status.flags & DIR_SAMPLES_CHANGED) == 0
-	    && os_stat(cfg_dir_samples, &st) == 0
+	    && os_stat(samp_cwd, &st) == 0
 	    && st.st_mtime == directory_mtime) {
 		return;
 	}
 
-	change_dir(cfg_dir_samples);
+	change_dir(samp_cwd);
 
 	status.flags &= ~DIR_SAMPLES_CHANGED;
 	fake_slot = KEYJAZZ_NOINST;
