@@ -1980,45 +1980,173 @@ static void pitch_pan_center_draw(void)
 	draw_text(get_note_string(ins->pitch_pan_center + 1, buf), 54, 45, selected ? 3 : 2, 0);
 }
 
-/* --------------------------------------------------------------------------------------------------------- */
-/* default key handler (for instrument changing on pgup/pgdn) */
+/* ----------------------------------------------------------------------------- */
+/* generic ITI saving routines */
 
-static void do_ins_save(void *p)
+/* filename can be NULL, in which case the instrument filename is used (quick save) */
+struct instrument_save_data {
+	char *path;
+	/* char *options? */
+	const char *format;
+};
+
+static void save_instrument_free_data(void *ptr)
 {
-	char *ptr = (char *)p;
-	if (song_save_instrument(current_instrument, ptr))
-		status_text_flash("Instrument saved (instrument %d)", current_instrument);
-	else
-		status_text_flash("Error: Instrument %d NOT saved! (No Filename?)", current_instrument);
-	free(ptr);
+	struct instrument_save_data *data = (struct instrument_save_data *) ptr;
+	if (data->path)
+		free(data->path);
+	free(data);
 }
 
-static void instrument_save(void)
+static void do_save_instrument(void *ptr)
 {
-	song_instrument_t *ins = song_get_instrument(current_instrument);
-	char *ptr = (char *) dmoz_path_concat(cfg_dir_instruments, ins->filename);
+	struct instrument_save_data *data = (struct instrument_save_data *) ptr;
+
+	song_save_instrument(data->path, data->format, song_get_instrument(current_instrument), current_instrument);
+	save_instrument_free_data(ptr);
+}
+
+static void instrument_save(const char *filename, const char *format)
+{
+	char *ptr = (char *) dmoz_path_concat(cfg_dir_instruments, filename);
 	struct stat buf;
 
-	if (os_stat(ptr, &buf) == 0) {
+	struct instrument_save_data *data = mem_alloc(sizeof(*data));
+	data->path = ptr;
+	data->format = format;
+
+	if (!os_stat(ptr, &buf)) {
 		if (S_ISDIR(buf.st_mode)) {
-			status_text_flash("%s is a directory", ins->filename);
+			status_text_flash("%s is a directory", filename);
 			return;
 		} else if (S_ISREG(buf.st_mode)) {
 			dialog_create(DIALOG_OK_CANCEL,
-				"Overwrite file?", do_ins_save,
-				free, 1, ptr);
+				"Overwrite file?", do_save_instrument,
+				save_instrument_free_data, 1, data);
 			return;
 		} else {
-			status_text_flash("%s is not a regular file", ins->filename);
+			status_text_flash("%s is not a regular file", filename);
 			return;
 		}
+	} else {
+		do_save_instrument(data);
 	}
-	if (song_save_instrument(current_instrument, ptr))
-		status_text_flash("Instrument saved (instrument %d)", current_instrument);
-	else
-		status_text_flash("Error: Instrument %d NOT saved! (No Filename?)", current_instrument);
-	free(ptr);
 }
+
+/* ----------------------------------------------------------------------------- */
+/* export instrument dialog */
+
+static struct widget export_instrument_widgets[4];
+static char export_instrument_filename[NAME_MAX + 1] = "";
+static int export_instrument_format = 0;
+static int num_save_formats = 0;
+
+static void do_export_instrument(UNUSED void *data)
+{
+	instrument_save(export_instrument_filename, instrument_save_formats[export_instrument_format].label);
+}
+
+static void export_instrument_list_draw(void)
+{
+	int n, focused = (*selected_widget == 3);
+
+	draw_fill_chars(53, 24, 56, 31, 0);
+	for (n = 0; instrument_save_formats[n].label; n++) {
+		int fg = 6, bg = 0;
+		if (focused && n == export_instrument_format) {
+			fg = 0;
+			bg = 3;
+		} else if (n == export_instrument_format) {
+			bg = 14;
+		}
+		draw_text_len(instrument_save_formats[n].label, 4, 53, 24 + n, fg, bg);
+	}
+}
+
+static int export_instrument_list_handle_key(struct key_event * k)
+{
+	int new_format = export_instrument_format;
+
+	if (k->state == KEY_RELEASE)
+		return 0;
+	switch (k->sym) {
+	case SDLK_UP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		new_format--;
+		break;
+	case SDLK_DOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		new_format++;
+		break;
+	case SDLK_PAGEUP:
+	case SDLK_HOME:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		new_format = 0;
+		break;
+	case SDLK_PAGEDOWN:
+	case SDLK_END:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		new_format = num_save_formats - 1;
+		break;
+	case SDLK_TAB:
+		if (k->mod & KMOD_SHIFT) {
+			widget_change_focus_to(0);
+			return 1;
+		}
+		/* fall through */
+	case SDLK_LEFT:
+	case SDLK_RIGHT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		widget_change_focus_to(0); /* should focus 0/1/2 depending on what's closest */
+		return 1;
+	default:
+		return 0;
+	}
+
+	new_format = CLAMP(new_format, 0, num_save_formats - 1);
+	if (new_format != export_instrument_format) {
+		/* update the option string */
+		export_instrument_format = new_format;
+		status.flags |= NEED_UPDATE;
+	}
+
+	return 1;
+}
+
+static void export_instrument_draw_const(void)
+{
+	draw_text("Export Instrument", 34, 21, 0, 2);
+
+	draw_text("Filename", 24, 24, 0, 2);
+	draw_box(32, 23, 51, 25, BOX_THICK | BOX_INNER | BOX_INSET);
+
+	draw_box(52, 23, 57, 32, BOX_THICK | BOX_INNER | BOX_INSET);
+}
+
+static void export_instrument_dialog(void)
+{
+	song_instrument_t *instrument = song_get_instrument(current_instrument);
+	struct dialog *dialog;
+
+	widget_create_textentry(export_instrument_widgets + 0, 33, 24, 18, 0, 1, 3, NULL,
+			 export_instrument_filename, NAME_MAX);
+	widget_create_button(export_instrument_widgets + 1, 31, 35, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
+	widget_create_button(export_instrument_widgets + 2, 42, 35, 6, 3, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_other(export_instrument_widgets + 3, 0, export_instrument_list_handle_key, NULL, export_instrument_list_draw);
+
+	strncpy(export_instrument_filename, instrument->filename, NAME_MAX);
+	export_instrument_filename[NAME_MAX] = 0;
+
+	dialog = dialog_create_custom(21, 20, 39, 18, export_instrument_widgets, 4, 0,
+				      export_instrument_draw_const, NULL);
+	dialog->action_yes = do_export_instrument;
+}
+
 
 static void do_delete_inst(UNUSED void *ign)
 {
@@ -2041,7 +2169,7 @@ static void instrument_list_handle_alt_key(struct key_event *k)
 		song_toggle_multichannel_mode();
 		return;
 	case SDLK_o:
-		instrument_save();
+		instrument_save(NULL, "ITI");
 		return;
 	case SDLK_r:
 		smpprompt_create("Replace instrument with:", "Instrument", do_replace_instrument);
@@ -2070,6 +2198,9 @@ static void instrument_list_handle_alt_key(struct key_event *k)
                 do_delete_inst, NULL, 1, NULL);
         }
 		return;
+	case SDLK_t:
+		export_instrument_dialog();
+		break;
 	default:
 		return;
 	}
@@ -2958,5 +3089,10 @@ void instrument_list_pitch_load_page(struct page *page)
 	widgets_pitch[17].d.thumbbar.text_at_min = "Off";
 	widgets_pitch[18].d.thumbbar.text_at_min = "Off";
 	widgets_pitch[19].d.thumbbar.text_at_min = "Off";
+
+	/* count how many formats there really are */
+	num_save_formats = 0;
+	while (instrument_save_formats[num_save_formats].label)
+		num_save_formats++;
 }
 
