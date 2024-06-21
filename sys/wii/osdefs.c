@@ -134,7 +134,7 @@ void wii_sysinit(int *pargc, char ***pargv)
 		}
 		chdir(ptr); // Hope that worked, otherwise we're hosed
 	}
-	put_env_var("HOME", ptr);
+	SDL_setenv("HOME", ptr, 1);
 	free(ptr);
 }
 
