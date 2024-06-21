@@ -785,14 +785,12 @@ char *get_current_directory(void)
 #else
 	char buf[PATH_MAX + 1] = {'\0'};
 
-	/* hmm. fall back to the current dir */
 	if (getcwd(buf, PATH_MAX))
 		return str_dup(buf);
 #endif
 	return str_dup(".");
 }
 
-/* this function is horrible */
 char *get_home_directory(void)
 {
 #if defined(__amigaos4__)
@@ -849,27 +847,6 @@ char *str_concat(const char *s, ...)
 	va_end(ap);
 	return out;
 
-}
-
-void unset_env_var(const char *key)
-{
-#ifdef HAVE_UNSETENV
-	unsetenv(key);
-#else
-	/* assume POSIX-style semantics */
-	putenv(key);
-#endif
-}
-
-void put_env_var(const char *key, const char *value)
-{
-	char *x;
-	x = mem_alloc(strlen(key) + strlen(value)+2);
-	sprintf(x, "%s=%s", key,value);
-	if (putenv(x) == -1) {
-		perror("putenv");
-		exit(255); /* memory exception */
-	}
 }
 
 /* fast integer sqrt */

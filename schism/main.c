@@ -110,13 +110,6 @@ static void sdl_init(void)
 	if (SDL_Init(SDL_INIT_FLAGS) == 0)
 		return;
 	err = SDL_GetError();
-	if (strstr(err, "mouse")) {
-		// see if we can start up mouseless
-		status.flags |= NO_MOUSE;
-		put_env_var("SDL_NOMOUSE", "1");
-		if (SDL_Init(SDL_INIT_FLAGS) == 0)
-			return;
-	}
 	fprintf(stderr, "SDL_Init: %s\n", err);
 	schism_exit(1);
 }

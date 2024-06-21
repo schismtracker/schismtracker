@@ -206,9 +206,6 @@ FILE* win32_fopen(const char* path, const char* flags);
 # define os_mkdir mkdir
 #endif
 
-void put_env_var(const char *key, const char *value);
-void unset_env_var(const char *key);
-
 /* integer sqrt (very fast; 32 bits limited) */
 unsigned int i_sqrt(unsigned int r);
 
