@@ -22,11 +22,14 @@
  */
 
 #include "headers.h"
+#include "vgamem.h"
 #include "it.h"
 #include "page.h"
 #include "video.h"
 #include "song.h"
 #include "version.h"
+#include "dialog.h"
+#include "widget.h"
 
 /* Eventual TODO: draw the pattern data in the Schism logo in a different color than the words */
 #include "auto/logoit.h"
@@ -189,7 +192,7 @@ void show_about(void)
 		}
 	}
 
-	create_button(widgets_about + 0,
+	widget_create_button(widgets_about + 0,
 			33,32,
 			12,
 			0,0,0,0,0,

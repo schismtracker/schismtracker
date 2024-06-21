@@ -423,65 +423,6 @@ void waterfall_load_page(struct page *page);
 
 /* --------------------------------------------------------------------- */
 
-void create_toggle(struct widget *w, int x, int y, int next_up,
-		   int next_down, int next_left, int next_right,
-		   int next_tab, void (*changed) (void));
-void create_menutoggle(struct widget *w, int x, int y, int next_up,
-		       int next_down, int next_left, int next_right,
-		       int next_tab, void (*changed) (void),
-		       const char *const *choices);
-void create_button(struct widget *w, int x, int y, int width, int next_up,
-		   int next_down, int next_left, int next_right,
-		   int next_tab, void (*changed) (void), const char *text,
-		   int padding);
-void create_togglebutton(struct widget *w, int x, int y, int width,
-			 int next_up, int next_down, int next_left,
-			 int next_right, int next_tab,
-			 void (*changed) (void), const char *text,
-			 int padding, const int *group);
-void create_textentry(struct widget *w, int x, int y, int width, int next_up,
-		      int next_down, int next_tab, void (*changed) (void),
-		      char *text, int max_length);
-void create_numentry(struct widget *w, int x, int y, int width, int next_up,
-		     int next_down, int next_tab, void (*changed) (void),
-		     int min, int max, int *cursor_pos);
-void create_thumbbar(struct widget *w, int x, int y, int width, int next_up,
-		     int next_down, int next_tab, void (*changed) (void),
-		     int min, int max);
-void create_bitset(struct widget *w, int x, int y, int width, int next_up,
-		   int next_down, int next_tab, void (*changed) (void),
-		   int nbits, const char* bits_on, const char* bits_off,
-		   int *cursor_pos);
-void create_panbar(struct widget *w, int x, int y, int next_up,
-		   int next_down, int next_tab, void (*changed) (void),
-		   int channel);
-void create_other(struct widget *w, int next_tab,
-		  int (*w_handle_key) (struct key_event * k),
-		  int (*w_handle_text_input) (const uint8_t* text),
-		  void (*w_redraw) (void));
-
-/* --------------------------------------------------------------------- */
-
-/* widget.c */
-int textentry_add_char(struct widget *widget, uint16_t unicode);
-int textentry_add_text(struct widget *widget, const uint8_t* text);
-void numentry_change_value(struct widget *widget, int new_value);
-int numentry_handle_text(struct widget *w, const uint8_t* text_input);
-int menutoggle_handle_key(struct widget *widget, struct key_event *k);
-int bitset_handle_key(struct widget *widget, struct key_event *k);
-
-int change_focus_to_xy(int x, int y);
-void change_focus_to(int new_widget_index);
-/* p_widgets should point to the group of widgets (not the actual widget that is
- * being set!) and widget should be the index of the widget within the group. */
-void togglebutton_set(struct widget *p_widgets, int widget, int do_callback);
-void draw_widget(struct widget *w, int selected);
-
-/* widget-keyhandler.c
- * [note: this always uses the current widget] */
-int widget_handle_text_input(const uint8_t* text_input);
-int widget_handle_key(struct key_event * k);
-
 /* draw-misc.c */
 void draw_thumb_bar(int x, int y, int width, int min, int max, int val,
 		    int selected);
@@ -523,63 +464,6 @@ void status_text_redraw(void);
 
 // page_message.c
 void message_reset_selection(void);
-
-/* --------------------------------------------------------------------- */
-/* dialog crap */
-
-struct dialog {
-	int type;
-	int x, y, w, h;
-
-	/* next two are for "simple" dialogs (type != DIALOG_CUSTOM) */
-	char *text;     /* malloc'ed */
-	int text_x;
-
-	struct widget *widgets;     /* malloc'ed */
-	int selected_widget;
-	int total_widgets;
-
-	void *data; /* extra data pointer */
-
-	/* maybe these should get the data pointer as well? */
-	void (*draw_const) (void);
-	int (*handle_key) (struct key_event * k);
-
-	/* there's no action_ok, as yes and ok are fundamentally the same */
-	void (*action_yes) (void *data);
-	void (*action_no) (void *data); /* only useful for y/n dialogs? */
-	/* currently, this is only settable for custom dialogs.
-	 * it's only used in a couple of places (mostly on the pattern editor) */
-	void (*action_cancel) (void *data);
-};
-
-/* dialog handlers
- * these are set by default for normal dialogs, and can be used with the custom dialogs.
- * they call the {yes, no, cancel} callback, destroy the dialog, and schedule a screen
- * update. (note: connect these to the BUTTONS, not the action_* callbacks!) */
-void dialog_yes(void *data);
-void dialog_no(void *data);
-void dialog_cancel(void *data);
-/* these are the same as dialog_yes(NULL) etc., and are used in button callbacks */
-void dialog_yes_NULL(void);
-void dialog_no_NULL(void);
-void dialog_cancel_NULL(void);
-
-int dialog_handle_key(struct key_event * k);
-void dialog_draw(void);
-
-struct dialog *dialog_create(int type, const char *text, void (*action_yes) (void *data),
-		   void (*action_no) (void *data), int default_widget, void *data);
-
-void dialog_destroy(void);
-void dialog_destroy_all(void);
-
-/* this builds and displays a dialog with an unspecified widget structure.
- * the caller can set other properties of the dialog (i.e. the yes/no/cancel callbacks) after
- * the dialog has been displayed. */
-struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *dialog_widgets,
-				    int dialog_total_widgets, int dialog_selected_widget,
-				    void (*draw_const) (void), void *data);
 
 /* --------------------------------------------------------------------- */
 /* Other UI prompt stuff. */

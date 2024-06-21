@@ -24,8 +24,10 @@
 #include "headers.h"
 
 #include "it.h"
+#include "vgamem.h"
 #include "song.h"
 #include "page.h"
+#include "dialog.h"
 
 #include "sdlmain.h"
 

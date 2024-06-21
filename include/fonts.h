@@ -42,4 +42,12 @@ void font_reset_char(int c);     /* resets just one char */
  * ... the main difference being font_init() is easier to deal with :) */
 void font_init(void);
 
+extern const unsigned char font_default_lower[];
+extern const unsigned char font_default_upper_alt[];
+extern const unsigned char font_default_upper_itf[];
+extern const unsigned char font_half_width[];
+
+extern uint8_t font_half_data[1024];
+extern uint8_t *font_data; /* 2048 bytes */
+
 #endif /* SCHISM_FONTS_H_ */

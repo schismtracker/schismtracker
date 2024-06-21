@@ -32,6 +32,9 @@
 #include "video.h"
 #include "keyboard.h"
 #include "fakemem.h"
+#include "widget.h"
+#include "dialog.h"
+#include "vgamem.h"
 
 #include <sys/stat.h>
 
@@ -554,7 +557,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				return 0;
 			if (instrument_cursor_pos == 25) {
 				get_page_widgets()->accept_text = 0;
-				change_focus_to(1);
+				widget_change_focus_to(1);
 			} else if (instrument_cursor_pos < 24) {
 				get_page_widgets()->accept_text = 1;
 				instrument_cursor_pos++;
@@ -860,7 +863,7 @@ static int note_trans_handle_key(struct key_event * k)
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			if (--new_line < 0) {
-				change_focus_to(1);
+				widget_change_focus_to(1);
 				return 1;
 			}
 			break;
@@ -1319,9 +1322,9 @@ static void env_resize_dialog(song_envelope_t *env)
 	struct dialog *dialog;
 
 	env_resize_cursor = 0;
-	create_numentry(env_resize_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999, &env_resize_cursor);
+	widget_create_numentry(env_resize_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999, &env_resize_cursor);
 	env_resize_widgets[0].d.numentry.value = env->ticks[env->nodes - 1];
-	create_button(env_resize_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_button(env_resize_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 	dialog = dialog_create_custom(26, 22, 29, 11, env_resize_widgets, 2, 0, env_resize_draw_const, env);
 	dialog->action_yes = do_env_resize;
 }
@@ -1383,11 +1386,11 @@ static void env_adsr_dialog(UNUSED song_envelope_t *env)
 	song_instrument_t *ins = song_get_instrument(current_instrument); // ARGHHH
 
 	env_adsr_cursor = 0;
-	create_thumbbar(env_adsr_widgets + 0, 34, 24, 17, 4, 1, 4, NULL, 0, 128);
-	create_thumbbar(env_adsr_widgets + 1, 34, 25, 17, 0, 2, 4, NULL, 0, 128);
-	create_thumbbar(env_adsr_widgets + 2, 34, 26, 17, 1, 3, 4, NULL, 0, 128);
-	create_thumbbar(env_adsr_widgets + 3, 34, 27, 17, 2, 4, 4, NULL, 0, 128);
-	create_button(env_adsr_widgets + 4, 36, 30, 6, 3, 0, 4, 4, 0, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_thumbbar(env_adsr_widgets + 0, 34, 24, 17, 4, 1, 4, NULL, 0, 128);
+	widget_create_thumbbar(env_adsr_widgets + 1, 34, 25, 17, 0, 2, 4, NULL, 0, 128);
+	widget_create_thumbbar(env_adsr_widgets + 2, 34, 26, 17, 1, 3, 4, NULL, 0, 128);
+	widget_create_thumbbar(env_adsr_widgets + 3, 34, 27, 17, 2, 4, 4, NULL, 0, 128);
+	widget_create_button(env_adsr_widgets + 4, 36, 30, 6, 3, 0, 4, 4, 0, dialog_cancel_NULL, "Cancel", 1);
 
 	dialog = dialog_create_custom(25, 21, 31, 12, env_adsr_widgets, 5, 0, env_adsr_draw_const, ins);
 	dialog->action_yes = do_env_adsr;
@@ -1408,12 +1411,12 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 	case SDLK_UP:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		change_focus_to(1);
+		widget_change_focus_to(1);
 		return 1;
 	case SDLK_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		change_focus_to(6);
+		widget_change_focus_to(6);
 		return 1;
 	case SDLK_LEFT:
 		if (k->state == KEY_RELEASE)
@@ -2148,7 +2151,7 @@ static void instrument_list_handle_key(struct key_event * k)
 				return;
 			instrument_cursor_pos = 25;
 			get_page_widgets()->accept_text = 0;
-			change_focus_to(0);
+			widget_change_focus_to(0);
 			status.flags |= NEED_UPDATE;
 			return;
 		}
@@ -2198,7 +2201,7 @@ static void set_subpage(int page)
 	case PAGE_INSTRUMENT_LIST_PITCH:   b = 4; break;
 	default: return;
 	};
-	togglebutton_set(pages[page].widgets, b, 0);
+	widget_togglebutton_set(pages[page].widgets, b, 0);
 	set_page(page);
 	if (widget >= ACTIVE_PAGE.total_widgets)
 		widget = ACTIVE_PAGE.total_widgets - 1;
@@ -2226,9 +2229,9 @@ static void instrument_list_general_predraw_hook(void)
 {
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 
-	togglebutton_set(widgets_general, 6 + (ins->nna % 4), 0);
-	togglebutton_set(widgets_general, 10 + (ins->dct % 4), 0);
-	togglebutton_set(widgets_general, 14 + (ins->dca % 3), 0);
+	widget_togglebutton_set(widgets_general, 6 + (ins->nna % 4), 0);
+	widget_togglebutton_set(widgets_general, 10 + (ins->dct % 4), 0);
+	widget_togglebutton_set(widgets_general, 14 + (ins->dca % 3), 0);
 
 	widgets_general[17].d.textentry.text = ins->filename;
 }
@@ -2642,7 +2645,7 @@ static void _load_page_common(struct page *page, struct widget *page_widgets)
 	/* the first five widgets are the same for all four pages. */
 
 	/* 0 = instrument list */
-	create_other(page_widgets + 0, 1, instrument_list_handle_key_on_list,
+	widget_create_other(page_widgets + 0, 1, instrument_list_handle_key_on_list,
 		instrument_list_handle_text_input_on_list, instrument_list_draw_list);
 	page_widgets[0].accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 	page_widgets[0].x = 5;
@@ -2651,13 +2654,13 @@ static void _load_page_common(struct page *page, struct widget *page_widgets)
 	page_widgets[0].height = 34;
 
 	/* 1-4 = subpage switches */
-	create_togglebutton(page_widgets + 1, 32, 13, 7, 1, 5, 0, 2, 2, change_subpage, "General",
+	widget_create_togglebutton(page_widgets + 1, 32, 13, 7, 1, 5, 0, 2, 2, change_subpage, "General",
 			    1, subpage_switches_group);
-	create_togglebutton(page_widgets + 2, 44, 13, 7, 2, 5, 1, 3, 3, change_subpage, "Volume",
+	widget_create_togglebutton(page_widgets + 2, 44, 13, 7, 2, 5, 1, 3, 3, change_subpage, "Volume",
 			    1, subpage_switches_group);
-	create_togglebutton(page_widgets + 3, 56, 13, 7, 3, 5, 2, 4, 4, change_subpage, "Panning",
+	widget_create_togglebutton(page_widgets + 3, 56, 13, 7, 3, 5, 2, 4, 4, change_subpage, "Panning",
 			    1, subpage_switches_group);
-	create_togglebutton(page_widgets + 4, 68, 13, 7, 4, 5, 3, 0, 0, change_subpage, "Pitch",
+	widget_create_togglebutton(page_widgets + 4, 68, 13, 7, 4, 5, 3, 0, 0, change_subpage, "Pitch",
 			    2, subpage_switches_group);
 }
 
@@ -2674,7 +2677,7 @@ void instrument_list_general_load_page(struct page *page)
 	widgets_general[2].next.down = widgets_general[3].next.down = widgets_general[4].next.down = 6;
 
 	/* 5 = note trans table */
-	create_other(widgets_general + 5, 6, note_trans_handle_key, NULL, note_trans_draw);
+	widget_create_other(widgets_general + 5, 6, note_trans_handle_key, NULL, note_trans_draw);
 	widgets_general[5].x = 32;
 	widgets_general[5].y = 16;
 	widgets_general[5].width = 9;
@@ -2682,47 +2685,47 @@ void instrument_list_general_load_page(struct page *page)
 	widgets_general[5].next.down = 6;
 
 	/* 6-9 = nna toggles */
-	create_togglebutton(widgets_general + 6, 46, 19, 29, 2, 7, 5, 0, 0,
+	widget_create_togglebutton(widgets_general + 6, 46, 19, 29, 2, 7, 5, 0, 0,
 			    instrument_list_general_update_values,
 			    "Note Cut", 2, nna_group);
-	create_togglebutton(widgets_general + 7, 46, 22, 29, 6, 8, 5, 0, 0,
+	widget_create_togglebutton(widgets_general + 7, 46, 22, 29, 6, 8, 5, 0, 0,
 			    instrument_list_general_update_values,
 			    "Continue", 2, nna_group);
-	create_togglebutton(widgets_general + 8, 46, 25, 29, 7, 9, 5, 0, 0,
+	widget_create_togglebutton(widgets_general + 8, 46, 25, 29, 7, 9, 5, 0, 0,
 			    instrument_list_general_update_values,
 			    "Note Off", 2, nna_group);
-	create_togglebutton(widgets_general + 9, 46, 28, 29, 8, 10, 5, 0, 0,
+	widget_create_togglebutton(widgets_general + 9, 46, 28, 29, 8, 10, 5, 0, 0,
 			    instrument_list_general_update_values,
 			    "Note Fade", 2, nna_group);
 
 	/* 10-13 = dct toggles */
-	create_togglebutton(widgets_general + 10, 46, 34, 12, 9, 11, 5, 14,
+	widget_create_togglebutton(widgets_general + 10, 46, 34, 12, 9, 11, 5, 14,
 			    14, instrument_list_general_update_values,
 			    "Disabled", 2, dct_group);
-	create_togglebutton(widgets_general + 11, 46, 37, 12, 10, 12, 5, 15,
+	widget_create_togglebutton(widgets_general + 11, 46, 37, 12, 10, 12, 5, 15,
 			    15, instrument_list_general_update_values,
 			    "Note", 2, dct_group);
-	create_togglebutton(widgets_general + 12, 46, 40, 12, 11, 13, 5, 16,
+	widget_create_togglebutton(widgets_general + 12, 46, 40, 12, 11, 13, 5, 16,
 			    16, instrument_list_general_update_values,
 			    "Sample", 2, dct_group);
-	create_togglebutton(widgets_general + 13, 46, 43, 12, 12, 17, 5, 13,
+	widget_create_togglebutton(widgets_general + 13, 46, 43, 12, 12, 17, 5, 13,
 			    13, instrument_list_general_update_values,
 			    "Instrument", 2, dct_group);
 	/* 14-16 = dca toggles */
-	create_togglebutton(widgets_general + 14, 62, 34, 13, 9, 15, 10, 0,
+	widget_create_togglebutton(widgets_general + 14, 62, 34, 13, 9, 15, 10, 0,
 			    0, instrument_list_general_update_values,
 			    "Note Cut", 2, dca_group);
-	create_togglebutton(widgets_general + 15, 62, 37, 13, 14, 16, 11, 0,
+	widget_create_togglebutton(widgets_general + 15, 62, 37, 13, 14, 16, 11, 0,
 			    0, instrument_list_general_update_values,
 			    "Note Off", 2, dca_group);
-	create_togglebutton(widgets_general + 16, 62, 40, 13, 15, 17, 12, 0,
+	widget_create_togglebutton(widgets_general + 16, 62, 40, 13, 15, 17, 12, 0,
 			    0, instrument_list_general_update_values,
 			    "Note Fade", 2, dca_group);
 	/* 17 = filename */
 	/* impulse tracker has a 17-char-wide box for the filename for
 	 * some reason, though it still limits the actual text to 12
 	 * characters. go figure... */
-	create_textentry(widgets_general + 17, 56, 47, 13, 13, 17, 0, update_filename,
+	widget_create_textentry(widgets_general + 17, 56, 47, 13, 13, 17, 0, update_filename,
 			 NULL, 12);
 }
 
@@ -2751,7 +2754,7 @@ void instrument_list_volume_load_page(struct page *page)
 	page->total_widgets = 17;
 
 	/* 5 = volume envelope */
-	create_other(widgets_volume + 5, 0, volume_envelope_handle_key, NULL, volume_envelope_draw);
+	widget_create_other(widgets_volume + 5, 0, volume_envelope_handle_key, NULL, volume_envelope_draw);
 	widgets_volume[5].x = 32;
 	widgets_volume[5].y = 18;
 	widgets_volume[5].width = 45;
@@ -2759,37 +2762,37 @@ void instrument_list_volume_load_page(struct page *page)
 	widgets_volume[5].next.down = 6;
 
 	/* 6-7 = envelope switches */
-	create_toggle(widgets_volume + 6, 54, 28, 5, 7, 0, 0, 0,
+	widget_create_toggle(widgets_volume + 6, 54, 28, 5, 7, 0, 0, 0,
 		      instrument_list_volume_update_values);
-	create_toggle(widgets_volume + 7, 54, 29, 6, 8, 0, 0, 0,
+	widget_create_toggle(widgets_volume + 7, 54, 29, 6, 8, 0, 0, 0,
 		      instrument_list_volume_update_values);
 
 	/* 8-10 envelope loop settings */
-	create_toggle(widgets_volume + 8, 54, 32, 7, 9, 0, 0, 0,
+	widget_create_toggle(widgets_volume + 8, 54, 32, 7, 9, 0, 0, 0,
 		      instrument_list_volume_update_values);
-	create_numentry(widgets_volume + 9, 54, 33, 3, 8, 10, 0,
+	widget_create_numentry(widgets_volume + 9, 54, 33, 3, 8, 10, 0,
 			instrument_list_volume_update_values, 0, 1,
 			numentry_cursor_pos + 0);
-	create_numentry(widgets_volume + 10, 54, 34, 3, 9, 11, 0,
+	widget_create_numentry(widgets_volume + 10, 54, 34, 3, 9, 11, 0,
 			instrument_list_volume_update_values, 0, 1,
 			numentry_cursor_pos + 0);
 
 	/* 11-13 = susloop settings */
-	create_toggle(widgets_volume + 11, 54, 37, 10, 12, 0, 0, 0,
+	widget_create_toggle(widgets_volume + 11, 54, 37, 10, 12, 0, 0, 0,
 		      instrument_list_volume_update_values);
-	create_numentry(widgets_volume + 12, 54, 38, 3, 11, 13, 0,
+	widget_create_numentry(widgets_volume + 12, 54, 38, 3, 11, 13, 0,
 			instrument_list_volume_update_values, 0, 1,
 			numentry_cursor_pos + 0);
-	create_numentry(widgets_volume + 13, 54, 39, 3, 12, 14, 0,
+	widget_create_numentry(widgets_volume + 13, 54, 39, 3, 12, 14, 0,
 			instrument_list_volume_update_values, 0, 1,
 			numentry_cursor_pos + 0);
 
 	/* 14-16 = volume thumbbars */
-	create_thumbbar(widgets_volume + 14, 54, 42, 17, 13, 15, 0,
+	widget_create_thumbbar(widgets_volume + 14, 54, 42, 17, 13, 15, 0,
 			instrument_list_volume_update_values, 0, 128);
-	create_thumbbar(widgets_volume + 15, 54, 43, 17, 14, 16, 0,
+	widget_create_thumbbar(widgets_volume + 15, 54, 43, 17, 14, 16, 0,
 			instrument_list_volume_update_values, 0, 256);
-	create_thumbbar(widgets_volume + 16, 54, 46, 17, 15, 16, 0,
+	widget_create_thumbbar(widgets_volume + 16, 54, 46, 17, 15, 16, 0,
 			instrument_list_volume_update_values, 0, 100);
 }
 
@@ -2817,7 +2820,7 @@ void instrument_list_panning_load_page(struct page *page)
 	page->total_widgets = 19;
 
 	/* 5 = panning envelope */
-	create_other(widgets_panning + 5, 0, panning_envelope_handle_key, NULL, panning_envelope_draw);
+	widget_create_other(widgets_panning + 5, 0, panning_envelope_handle_key, NULL, panning_envelope_draw);
 	widgets_panning[5].x = 32;
 	widgets_panning[5].y = 18;
 	widgets_panning[5].width = 45;
@@ -2825,46 +2828,46 @@ void instrument_list_panning_load_page(struct page *page)
 	widgets_panning[5].next.down = 6;
 
 	/* 6-7 = envelope switches */
-	create_toggle(widgets_panning + 6, 54, 28, 5, 7, 0, 0, 0,
+	widget_create_toggle(widgets_panning + 6, 54, 28, 5, 7, 0, 0, 0,
 		      instrument_list_panning_update_values);
-	create_toggle(widgets_panning + 7, 54, 29, 6, 8, 0, 0, 0,
+	widget_create_toggle(widgets_panning + 7, 54, 29, 6, 8, 0, 0, 0,
 		      instrument_list_panning_update_values);
 
 	/* 8-10 envelope loop settings */
-	create_toggle(widgets_panning + 8, 54, 32, 7, 9, 0, 0, 0,
+	widget_create_toggle(widgets_panning + 8, 54, 32, 7, 9, 0, 0, 0,
 		      instrument_list_panning_update_values);
-	create_numentry(widgets_panning + 9, 54, 33, 3, 8, 10, 0,
+	widget_create_numentry(widgets_panning + 9, 54, 33, 3, 8, 10, 0,
 			instrument_list_panning_update_values, 0, 1,
 			numentry_cursor_pos + 1);
-	create_numentry(widgets_panning + 10, 54, 34, 3, 9, 11, 0,
+	widget_create_numentry(widgets_panning + 10, 54, 34, 3, 9, 11, 0,
 			instrument_list_panning_update_values, 0, 1,
 			numentry_cursor_pos + 1);
 
 	/* 11-13 = susloop settings */
-	create_toggle(widgets_panning + 11, 54, 37, 10, 12, 0, 0, 0,
+	widget_create_toggle(widgets_panning + 11, 54, 37, 10, 12, 0, 0, 0,
 		      instrument_list_panning_update_values);
-	create_numentry(widgets_panning + 12, 54, 38, 3, 11, 13, 0,
+	widget_create_numentry(widgets_panning + 12, 54, 38, 3, 11, 13, 0,
 			instrument_list_panning_update_values, 0, 1,
 			numentry_cursor_pos + 1);
-	create_numentry(widgets_panning + 13, 54, 39, 3, 12, 14, 0,
+	widget_create_numentry(widgets_panning + 13, 54, 39, 3, 12, 14, 0,
 			instrument_list_panning_update_values, 0, 1,
 			numentry_cursor_pos + 1);
 
 	/* 14-15 = default panning */
-	create_toggle(widgets_panning + 14, 54, 42, 13, 15, 0, 0, 0,
+	widget_create_toggle(widgets_panning + 14, 54, 42, 13, 15, 0, 0, 0,
 		      instrument_list_panning_update_values);
-	create_thumbbar(widgets_panning + 15, 54, 43, 9, 14, 16, 0,
+	widget_create_thumbbar(widgets_panning + 15, 54, 43, 9, 14, 16, 0,
 			instrument_list_panning_update_values, 0, 64);
 
 	/* 16 = pitch-pan center */
-	create_other(widgets_panning + 16, 0, pitch_pan_center_handle_key, NULL, pitch_pan_center_draw);
+	widget_create_other(widgets_panning + 16, 0, pitch_pan_center_handle_key, NULL, pitch_pan_center_draw);
 	widgets_panning[16].next.up = 15;
 	widgets_panning[16].next.down = 17;
 
 	/* 17-18 = other panning stuff */
-	create_thumbbar(widgets_panning + 17, 54, 46, 9, 16, 18, 0,
+	widget_create_thumbbar(widgets_panning + 17, 54, 46, 9, 16, 18, 0,
 			instrument_list_panning_update_values, -32, 32);
-	create_thumbbar(widgets_panning + 18, 54, 47, 9, 17, 18, 0,
+	widget_create_thumbbar(widgets_panning + 18, 54, 47, 9, 17, 18, 0,
 			instrument_list_panning_update_values, 0, 64);
 }
 
@@ -2894,7 +2897,7 @@ void instrument_list_pitch_load_page(struct page *page)
 	page->total_widgets = 20;
 
 	/* 5 = pitch envelope */
-	create_other(widgets_pitch + 5, 0, pitch_envelope_handle_key, NULL, pitch_envelope_draw);
+	widget_create_other(widgets_pitch + 5, 0, pitch_envelope_handle_key, NULL, pitch_envelope_draw);
 	widgets_pitch[5].x = 32;
 	widgets_pitch[5].y = 18;
 	widgets_pitch[5].width = 45;
@@ -2902,41 +2905,41 @@ void instrument_list_pitch_load_page(struct page *page)
 	widgets_pitch[5].next.down = 6;
 
 	/* 6-7 = envelope switches */
-	create_menutoggle(widgets_pitch + 6, 54, 28, 5, 7, 0, 0, 0,
+	widget_create_menutoggle(widgets_pitch + 6, 54, 28, 5, 7, 0, 0, 0,
 		      instrument_list_pitch_update_values, pitch_envelope_states);
-	create_toggle(widgets_pitch + 7, 54, 29, 6, 8, 0, 0, 0,
+	widget_create_toggle(widgets_pitch + 7, 54, 29, 6, 8, 0, 0, 0,
 		      instrument_list_pitch_update_values);
 
 	/* 8-10 envelope loop settings */
-	create_toggle(widgets_pitch + 8, 54, 32, 7, 9, 0, 0, 0,
+	widget_create_toggle(widgets_pitch + 8, 54, 32, 7, 9, 0, 0, 0,
 		      instrument_list_pitch_update_values);
-	create_numentry(widgets_pitch + 9, 54, 33, 3, 8, 10, 0,
+	widget_create_numentry(widgets_pitch + 9, 54, 33, 3, 8, 10, 0,
 			instrument_list_pitch_update_values, 0, 1,
 			numentry_cursor_pos + 2);
-	create_numentry(widgets_pitch + 10, 54, 34, 3, 9, 11, 0,
+	widget_create_numentry(widgets_pitch + 10, 54, 34, 3, 9, 11, 0,
 			instrument_list_pitch_update_values, 0, 1,
 			numentry_cursor_pos + 2);
 
 	/* 11-13 = susloop settings */
-	create_toggle(widgets_pitch + 11, 54, 37, 10, 12, 0, 0, 0,
+	widget_create_toggle(widgets_pitch + 11, 54, 37, 10, 12, 0, 0, 0,
 		      instrument_list_pitch_update_values);
-	create_numentry(widgets_pitch + 12, 54, 38, 3, 11, 13, 0,
+	widget_create_numentry(widgets_pitch + 12, 54, 38, 3, 11, 13, 0,
 			instrument_list_pitch_update_values, 0, 1,
 			numentry_cursor_pos + 2);
-	create_numentry(widgets_pitch + 13, 54, 39, 3, 12, 14, 0,
+	widget_create_numentry(widgets_pitch + 13, 54, 39, 3, 12, 14, 0,
 			instrument_list_pitch_update_values, 0, 1,
 			numentry_cursor_pos + 2);
 
 	/* 14-15 = filter cutoff/resonance */
-	create_thumbbar(widgets_pitch + 14, 54, 42, 17, 13, 15, 0,
+	widget_create_thumbbar(widgets_pitch + 14, 54, 42, 17, 13, 15, 0,
 			instrument_list_pitch_update_values, -1, 127);
-	create_thumbbar(widgets_pitch + 15, 54, 43, 17, 14, 16, 0,
+	widget_create_thumbbar(widgets_pitch + 15, 54, 43, 17, 14, 16, 0,
 			instrument_list_pitch_update_values, -1, 127);
 	widgets_pitch[14].d.thumbbar.text_at_min = "Off";
 	widgets_pitch[15].d.thumbbar.text_at_min = "Off";
 
 	/* 16-19 = midi crap */
-	create_bitset(widgets_pitch + 16, 54, 44, 17, 15, 17, 0,
+	widget_create_bitset(widgets_pitch + 16, 54, 44, 17, 15, 17, 0,
 			instrument_list_pitch_update_values,
 			17,
 			" 1 2 3 4 5 6 7 8 9P\0""111213141516M\0",
@@ -2946,11 +2949,11 @@ void instrument_list_pitch_load_page(struct page *page)
 	widgets_pitch[16].d.bitset.activation_keys =
 		"123456789pabcdefm";
 
-	create_thumbbar(widgets_pitch + 17, 54, 45, 17, 16, 18, 0,
+	widget_create_thumbbar(widgets_pitch + 17, 54, 45, 17, 16, 18, 0,
 			instrument_list_pitch_update_values, -1, 127);
-	create_thumbbar(widgets_pitch + 18, 54, 46, 17, 17, 19, 0,
+	widget_create_thumbbar(widgets_pitch + 18, 54, 46, 17, 17, 19, 0,
 			instrument_list_pitch_update_values, -1, 127);
-	create_thumbbar(widgets_pitch + 19, 54, 47, 17, 18, 19, 0,
+	widget_create_thumbbar(widgets_pitch + 19, 54, 47, 17, 18, 19, 0,
 			instrument_list_pitch_update_values, -1, 127);
 	widgets_pitch[17].d.thumbbar.text_at_min = "Off";
 	widgets_pitch[18].d.thumbbar.text_at_min = "Off";

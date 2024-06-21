@@ -28,6 +28,8 @@
 #include "page.h"
 #include "clippy.h"
 #include "palettes.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include "sdlmain.h"
 
@@ -189,7 +191,7 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (--new_palette < 0) {
-			change_focus_to(47);
+			widget_change_focus_to(47);
 			return 1;
 		}
 		break;
@@ -198,7 +200,7 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 			return 0;
 		// new_palette++;
 		if (++new_palette >= NUM_PALETTES) {
-			change_focus_to(49);
+			widget_change_focus_to(49);
 			return 1;
 		}
 		break;
@@ -211,7 +213,7 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (new_palette == 0) {
-			change_focus_to(45);
+			widget_change_focus_to(45);
 			return 1;
 		}
 		new_palette -= 16;
@@ -238,17 +240,17 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 	case SDLK_RIGHT:
 	case SDLK_TAB:
 		if (k->mod & KMOD_SHIFT) {
-			change_focus_to(focus_offsets[selected_palette+1] + 29);
+			widget_change_focus_to(focus_offsets[selected_palette+1] + 29);
 			return 1;
 		}
 		if (!NO_MODIFIER(k->mod))
 			return 0;
-		change_focus_to(focus_offsets[selected_palette+1] + 8);
+		widget_change_focus_to(focus_offsets[selected_palette+1] + 8);
 		return 1;
 	case SDLK_LEFT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
-		change_focus_to(focus_offsets[selected_palette+1] + 29);
+		widget_change_focus_to(focus_offsets[selected_palette+1] + 29);
 		return 1;
 	case SDLK_c:
 		/* pasting is handled by the page */
@@ -322,7 +324,7 @@ static void palette_list_handle_key(struct key_event * k)
 		n = CLAMP(n, 0, 48);
 	}
 	if (n != *selected_widget)
-		change_focus_to(n);
+		widget_change_focus_to(n);
 }
 
 /* --------------------------------------------------------------------- */
@@ -370,16 +372,16 @@ void palette_load_page(struct page *page)
 			tabs[1] = 3 * n - 41;
 			tabs[2] = 3 * n - 40;
 		}
-		create_thumbbar(widgets_palette + (3 * n), 10 + 27 * (n / 7), 5 * (n % 7) + 14, 9,
+		widget_create_thumbbar(widgets_palette + (3 * n), 10 + 27 * (n / 7), 5 * (n % 7) + 14, 9,
 				n ? (3 * n - 1) : 0, 3 * n + 1, tabs[0], update_palette, 0, 63);
-		create_thumbbar(widgets_palette + (3 * n + 1), 10 + 27 * (n / 7), 5 * (n % 7) + 15, 9,
+		widget_create_thumbbar(widgets_palette + (3 * n + 1), 10 + 27 * (n / 7), 5 * (n % 7) + 15, 9,
 				3 * n, 3 * n + 2, tabs[1], update_palette, 0, 63);
-		create_thumbbar(widgets_palette + (3 * n + 2), 10 + 27 * (n / 7), 5 * (n % 7) + 16, 9,
+		widget_create_thumbbar(widgets_palette + (3 * n + 2), 10 + 27 * (n / 7), 5 * (n % 7) + 16, 9,
 				3 * n + 1, 3 * n + 3, tabs[2], update_palette, 0, 63);
 	}
 	update_thumbbars();
 
-	create_other(widgets_palette + 48, 0, palette_list_handle_key_on_list, NULL, palette_list_draw);
+	widget_create_other(widgets_palette + 48, 0, palette_list_handle_key_on_list, NULL, palette_list_draw);
 	widgets_palette[48].x = 56;
 	widgets_palette[48].y = 26;
 	widgets_palette[48].width = 20;
@@ -389,8 +391,8 @@ void palette_load_page(struct page *page)
 		widgets_palette[i].next.backtab = 48;
 	}
 
-	create_button(widgets_palette + 49, 55, 43, 20, 48, 50, 39, 18, 18, palette_copy_current_to_clipboard, "Copy To Clipboard", 3);
-	create_button(widgets_palette + 50, 55, 46, 20, 49, 0, 39, 18, 18, palette_paste_from_clipboard, "Paste From Clipboard", 1);
+	widget_create_button(widgets_palette + 49, 55, 43, 20, 48, 50, 39, 18, 18, palette_copy_current_to_clipboard, "Copy To Clipboard", 3);
+	widget_create_button(widgets_palette + 50, 55, 46, 20, 49, 0, 39, 18, 18, palette_paste_from_clipboard, "Paste From Clipboard", 1);
 
 	widgets_palette[0].next.up = 50;
 	widgets_palette[39].next.tab = 49;

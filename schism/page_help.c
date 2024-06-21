@@ -28,6 +28,8 @@
 
 #include "it.h"
 #include "page.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include "sdlmain.h"
 
@@ -95,7 +97,7 @@ static void help_draw_const(void)
 {
 	draw_box(1, 12, 78, 45, BOX_THICK | BOX_INNER | BOX_INSET);
 
-	if (status.dialog_type == DIALOG_NONE) change_focus_to(1);
+	if (status.dialog_type == DIALOG_NONE) widget_change_focus_to(1);
 }
 
 static void help_redraw(void)
@@ -221,7 +223,7 @@ static void help_set_page(void)
 	int local_lines = 0, global_lines = 0, cur_line = 0;
 	int have_local_help = (status.current_help_index != HELP_GLOBAL);
 
-	change_focus_to(1);
+	widget_change_focus_to(1);
 	top_line = help_text_lastpos[status.current_help_index];
 
 	lines = CURRENT_HELP_LINECACHE;
@@ -300,8 +302,8 @@ void help_load_page(struct page *page)
 	page->widgets = widgets_help;
 	page->pre_handle_key = help_handle_key;
 
-	create_other(widgets_help + 0, 0, help_handle_key, NULL, help_redraw);
-	create_button(widgets_help + 1, 35,47,8, 0, 1, 1,1, 0,
+	widget_create_other(widgets_help + 0, 0, help_handle_key, NULL, help_redraw);
+	widget_create_button(widgets_help + 1, 35,47,8, 0, 1, 1,1, 0,
 			_help_close, "Done", 3);
 }
 

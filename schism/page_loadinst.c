@@ -31,6 +31,9 @@
 #include "dmoz.h"
 #include "log.h"
 #include "fakemem.h"
+#include "dialog.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -156,7 +159,7 @@ static int change_dir(const char *dir)
 static void load_instrument_draw_const(void)
 {
 	draw_fill_chars(6, 13, 67, 47, 0);
-	draw_thin_inner_box(50, 12, 61, 48, 0,0);
+	draw_box(50, 12, 61, 48, BOX_THIN | BOX_INNER | BOX_SHADE_NONE);
 	draw_box(5, 12, 68, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 
 }
@@ -516,7 +519,7 @@ void load_instrument_load_page(struct page *page)
 	page->total_widgets = 1;
 	page->widgets = widgets_loadinst;
 	page->help_index = HELP_GLOBAL;
-	create_other(widgets_loadinst + 0, 0, file_list_handle_key, file_list_handle_text_input, file_list_draw);
+	widget_create_other(widgets_loadinst + 0, 0, file_list_handle_key, file_list_handle_text_input, file_list_draw);
 	widgets_loadinst[0].accept_text = 1;
 }
 

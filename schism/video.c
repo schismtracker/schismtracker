@@ -31,6 +31,7 @@
 #include "sdlmain.h"
 #include "video.h"
 #include "osdefs.h"
+#include "vgamem.h"
 
 #include <errno.h>
 

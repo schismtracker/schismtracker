@@ -24,9 +24,20 @@
 #ifndef SCHISM_PALETTES_H_
 #define SCHISM_PALETTES_H_
 
+#include <stdint.h>
+
+struct it_palette {
+	char name[21];
+	uint8_t colors[16][3];
+};
+
 void palette_apply(void);
 void palette_load_preset(int palette_index);
 void palette_to_string(int which, char *str_out);
 int set_palette_from_string(const char *str_in);
+
+extern struct it_palette palettes[];
+extern uint8_t current_palette[16][3];
+extern int current_palette_index;
 
 #endif /* SCHISM_PALETTES_H_ */

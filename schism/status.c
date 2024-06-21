@@ -28,6 +28,7 @@
 #include "it.h"
 #include "song.h"
 #include "page.h"
+#include "vgamem.h"
 
 #include "player/sndfile.h"
 

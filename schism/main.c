@@ -43,6 +43,8 @@
 #include "keyboard.h"
 #include "palettes.h"
 #include "fonts.h"
+#include "dialog.h"
+#include "widget.h"
 
 #include "osdefs.h"
 
@@ -704,7 +706,7 @@ static void event_loop(void)
 							}
 						}
 					}
-					if (change_focus_to_xy(kk.x, kk.y)) {
+					if (widget_change_focus_to_xy(kk.x, kk.y)) {
 						kk.on_target = 1;
 					} else {
 						kk.on_target = 0;

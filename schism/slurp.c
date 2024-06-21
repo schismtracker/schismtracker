@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "slurp.h"
+#include "fmt.h"
 #include "util.h"
 
 #include <sys/types.h>

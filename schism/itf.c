@@ -27,6 +27,9 @@
 #include "headers.h"
 
 #include "it.h"
+#include "vgamem.h"
+#include "dialog.h"
+#include "widget.h"
 #include "config.h"
 #include "dmoz.h"
 #include "page.h"
@@ -1120,5 +1123,5 @@ void fontedit_load_page(struct page *page)
 	page->total_widgets = 1;
 	page->pre_handle_key = fontedit_key_hack;
 	page->widgets = fontedit_widget_hack;
-	create_other(fontedit_widget_hack, 0, fontedit_handle_key, NULL, do_nil);
+	widget_create_other(fontedit_widget_hack, 0, fontedit_handle_key, NULL, do_nil);
 }

@@ -33,6 +33,9 @@
 #include "keyboard.h"
 #include "fakemem.h"
 #include "log.h"
+#include "widget.h"
+#include "dialog.h"
+#include "vgamem.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -522,15 +525,15 @@ static void finish_load(int cur)
 	smp = song_get_sample(cur);
 	if (smp->flags & CHN_STEREO) {
 		struct dialog *dd;
-		create_button(stereo_cvt_widgets+0, 27, 30, 6,
+		widget_create_button(stereo_cvt_widgets+0, 27, 30, 6,
 				0, 0, 2, 1, 1,
 				stereo_cvt_complete_left, "Left", 2);
 
-		create_button(stereo_cvt_widgets+1, 37, 30, 6,
+		widget_create_button(stereo_cvt_widgets+1, 37, 30, 6,
 				1, 1, 0, 2, 2,
 				stereo_cvt_complete_both, "Both", 2);
 
-		create_button(stereo_cvt_widgets+2, 47, 30, 6,
+		widget_create_button(stereo_cvt_widgets+2, 47, 30, 6,
 				2, 2, 1, 0, 0,
 				stereo_cvt_complete_right, "Right", 1);
 
@@ -932,88 +935,88 @@ void load_sample_load_page(struct page *page)
 	clear_directory();
 
 
-	create_other(widgets_loadsample + 0, 0,
+	widget_create_other(widgets_loadsample + 0, 0,
 				file_list_handle_key,
 				file_list_handle_text_input,
 				file_list_draw);
 	widgets_loadsample[0].accept_text = 1;
 	widgets_loadsample[0].next.tab = 1;
 
-	create_textentry(widgets_loadsample+1,
+	widget_create_textentry(widgets_loadsample+1,
 			64, 13,
 			13,
 				1,2, 9, handle_rename_op,
 				current_filename, sizeof(current_filename)-1);
 	sample_speed_pos = 0;
-	create_numentry(widgets_loadsample+2,
+	widget_create_numentry(widgets_loadsample+2,
 			64, 14,
 			7,
 			1,3, 9, handle_load_update,
 			0, 9999999,
 			&sample_speed_pos);
 
-	create_menutoggle(widgets_loadsample+3,
+	widget_create_menutoggle(widgets_loadsample+3,
 			64, 15,
 			2, 4,  0,  9,9, handle_load_update,
 			loop_states);
 
 	sample_loop_beg = 0;
-	create_numentry(widgets_loadsample+4,
+	widget_create_numentry(widgets_loadsample+4,
 			64, 16,
 			7,
 			3,5, 9, handle_load_update,
 			0, 9999999,
 			&sample_loop_beg);
 	sample_loop_end = 0;
-	create_numentry(widgets_loadsample+5,
+	widget_create_numentry(widgets_loadsample+5,
 			64, 17,
 			7,
 			4,6, 9, handle_load_update,
 			0, 9999999,
 			&sample_loop_end);
 
-	create_menutoggle(widgets_loadsample+6,
+	widget_create_menutoggle(widgets_loadsample+6,
 			64, 18,
 			5, 7,  0,  9,9, handle_load_update,
 			loop_states);
 
 	sample_susloop_beg = 0;
-	create_numentry(widgets_loadsample+7,
+	widget_create_numentry(widgets_loadsample+7,
 			64, 19,
 			7,
 			6,8, 9, handle_load_update,
 			0, 9999999,
 			&sample_susloop_beg);
 	sample_susloop_end = 0;
-	create_numentry(widgets_loadsample+8,
+	widget_create_numentry(widgets_loadsample+8,
 			64, 20,
 			7,
 			7,9, 9, handle_load_update,
 			0, 9999999,
 			&sample_susloop_end);
 
-	create_thumbbar(widgets_loadsample+9,
+	widget_create_thumbbar(widgets_loadsample+9,
 			63, 33,
 			9,
 			8, 10, 0, handle_load_update,
 			0,64);
-	create_thumbbar(widgets_loadsample+10,
+	widget_create_thumbbar(widgets_loadsample+10,
 			63, 34,
 			9,
 			9, 11, 0, handle_load_update,
 			0,64);
 
-	create_thumbbar(widgets_loadsample+11,
+	widget_create_thumbbar(widgets_loadsample+11,
 			63, 37,
 			9,
 			10, 12, 0, handle_load_update,
 			0,64);
-	create_thumbbar(widgets_loadsample+12,
+	widget_create_thumbbar(widgets_loadsample+12,
 			63, 38,
 			9,
 			11, 13, 0, handle_load_update,
 			0,32);
-	create_thumbbar(widgets_loadsample+13,
+	widget_create_thumbbar(widgets_loadsample+13,
 			63, 39,
 			9,
 			12, 13, 0, handle_load_update,

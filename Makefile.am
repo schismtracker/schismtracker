@@ -102,8 +102,8 @@ noinst_HEADERS = \
 	include/config-parser.h		\
 	include/config.h        \
 	include/disko.h			\
+	include/dialog.h        \
 	include/dmoz.h			\
-	include/draw-char.h		\
 	include/event.h			\
 	include/fakemem.h       \
 	include/fonts.h         \
@@ -126,8 +126,9 @@ noinst_HEADERS = \
 	include/tree.h			\
 	include/util.h			\
 	include/version.h		\
-	include/vgamem-scanner.h	\
+	include/vgamem.h      \
 	include/video.h			\
+	include/widget.h        \
 	include/player/cmixer.h		\
 	include/player/fmopl.h			\
 	include/player/precomp_lut.h		\
@@ -346,9 +347,8 @@ schismtracker_SOURCES = \
 	schism/dialog.c			\
 	schism/disko.c			\
 	schism/dmoz.c			\
-	schism/draw-char.c		\
-	schism/draw-misc.c		\
 	schism/fakemem.c		\
+	schism/fonts.c          \
 	schism/itf.c			\
 	schism/keyboard.c		\
 	schism/main.c			\
@@ -385,6 +385,7 @@ schismtracker_SOURCES = \
 	schism/status.c			\
 	schism/util.c			\
 	schism/version.c		\
+	schism/vgamem.c        \
 	schism/video.c			\
 	schism/widget-keyhandler.c	\
 	schism/widget.c			\

@@ -31,6 +31,9 @@
 #include "dmoz.h"
 #include "log.h"
 #include "fmt.h" /* only needed for SAVE_SUCCESS ... */
+#include "widget.h"
+#include "dialog.h"
+#include "vgamem.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -219,7 +222,7 @@ static void loadsave_song_changed(void)
 			}
 		}
 	}
-	togglebutton_set(widgets_savemodule, r, 0);
+	widget_togglebutton_set(widgets_savemodule, r, 0);
 }
 
 
@@ -1057,7 +1060,7 @@ void load_module_load_page(struct page *page)
 	page->widgets = widgets_loadmodule;
 	page->help_index = HELP_GLOBAL;
 
-	create_other(widgets_loadmodule + 0, 1, file_list_handle_key,
+	widget_create_other(widgets_loadmodule + 0, 1, file_list_handle_key,
 		file_list_handle_text_input, file_list_draw);
 	widgets_loadmodule[0].accept_text = 1;
 	widgets_loadmodule[0].x = 3;
@@ -1066,7 +1069,7 @@ void load_module_load_page(struct page *page)
 	widgets_loadmodule[0].height = 30;
 	widgets_loadmodule[0].next.left = widgets_loadmodule[0].next.right = 1;
 
-	create_other(widgets_loadmodule + 1, 2, dir_list_handle_key,
+	widget_create_other(widgets_loadmodule + 1, 2, dir_list_handle_key,
 		dir_list_handle_text_input, dir_list_draw);
 	widgets_loadmodule[1].accept_text = 1;
 	widgets_loadmodule[1].x = 50;
@@ -1074,9 +1077,9 @@ void load_module_load_page(struct page *page)
 	widgets_loadmodule[1].width = 27;
 	widgets_loadmodule[1].height = 21;
 
-	create_textentry(widgets_loadmodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
+	widget_create_textentry(widgets_loadmodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
 	widgets_loadmodule[2].activate = filename_entered;
-	create_textentry(widgets_loadmodule + 3, 13, 47, 64, 2, 3, 0, NULL, dirname_entry, PATH_MAX);
+	widget_create_textentry(widgets_loadmodule + 3, 13, 47, 64, 2, 3, 0, NULL, dirname_entry, PATH_MAX);
 	widgets_loadmodule[3].activate = dirname_entered;
 }
 
@@ -1128,27 +1131,27 @@ void save_module_load_page(struct page *page, int do_export)
 	page->selected_widget = 2;
 	page->song_changed_cb = loadsave_song_changed;
 
-	create_other(widgets_exportsave + 0, 1, file_list_handle_key,
+	widget_create_other(widgets_exportsave + 0, 1, file_list_handle_key,
 		file_list_handle_text_input, file_list_draw);
 	widgets_exportsave[0].accept_text = 1;
 	widgets_exportsave[0].next.left = 4;
 	widgets_exportsave[0].next.right = widgets_exportsave[0].next.tab = 1;
-	create_other(widgets_exportsave + 1, 2, dir_list_handle_key,
+	widget_create_other(widgets_exportsave + 1, 2, dir_list_handle_key,
 		dir_list_handle_text_input, dir_list_draw);
 	widgets_exportsave[1].accept_text = 1;
 	widgets_exportsave[1].next.right = widgets_exportsave[1].next.tab = 5;
 	widgets_exportsave[1].next.left = 0;
 
-	create_textentry(widgets_exportsave + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
+	widget_create_textentry(widgets_exportsave + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
 	widgets_exportsave[2].activate = filename_entered;
-	create_textentry(widgets_exportsave + 3, 13, 47, 64, 2, 0, 0, NULL, dirname_entry, PATH_MAX);
+	widget_create_textentry(widgets_exportsave + 3, 13, 47, 64, 2, 0, 0, NULL, dirname_entry, PATH_MAX);
 	widgets_exportsave[3].activate = dirname_entered;
 
 	widgets_exportsave[4].d.togglebutton.state = 1;
 
 	const struct save_format *formats = (do_export ? song_export_formats : song_save_formats);
 	for (n = 0; formats[n].label; n++) {
-		create_togglebutton(widgets_exportsave + 4 + n,
+		widget_create_togglebutton(widgets_exportsave + 4 + n,
 				70, 13 + (3 * n), 5,
 				4 + (n == 0 ? 0 : (n - 1)),
 				4 + (n + 1),

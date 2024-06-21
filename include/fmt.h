@@ -168,6 +168,9 @@ void handle_stm_tempo_pattern(song_note_t *note, size_t tempo);
 void handle_stm_effects(song_note_t *chan_note);
 extern const uint8_t stm_effects[16];
 
+/* used internally by slurp only. nothing else should need this */
+int mmcmp_unpack(uint8_t **data, size_t *length);
+
 // get L-R-R-L panning value from a (zero-based!) channel number
 #define PROTRACKER_PANNING(n) (((((n) + 1) >> 1) & 1) * 256)
 

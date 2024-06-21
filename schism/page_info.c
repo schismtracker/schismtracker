@@ -24,8 +24,10 @@
 #include "headers.h"
 
 #include "it.h"
+#include "vgamem.h"
 #include "song.h"
 #include "page.h"
+#include "widget.h"
 #include "pattern-view.h"
 #include "config-parser.h"
 
@@ -1333,5 +1335,5 @@ void info_load_page(struct page *page)
 	page->widgets = widgets_info;
 	page->help_index = HELP_INFO_PAGE;
 
-	create_other(widgets_info + 0, 0, info_page_handle_key, NULL, info_page_redraw);
+	widget_create_other(widgets_info + 0, 0, info_page_handle_key, NULL, info_page_redraw);
 }

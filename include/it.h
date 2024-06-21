@@ -193,12 +193,6 @@ enum {
 };
 #define MOUSE_MAX_STATE MOUSE_CYCLE_STATE
 
-
-struct it_palette {
-	char name[21];
-	uint8_t colors[16][3];
-};
-
 enum {
 	NOTE_TRANS_CLEAR = (30),
 	NOTE_TRANS_NOTE_CUT,
@@ -216,10 +210,6 @@ enum {
 /* global crap */
 
 extern struct tracker_status status;
-extern uint8_t *font_data; /* ... which is 2048 bytes */
-extern struct it_palette palettes[];
-extern uint8_t current_palette[16][3];
-extern int current_palette_index;
 
 extern int playback_tracing, midi_playback_tracing;
 
@@ -247,21 +237,7 @@ static inline unsigned char unicode_to_ascii(uint16_t unicode)
 }
 
 /* --------------------------------------------------------------------- */
-/* drawing functions */
-
-/* character drawing (in a separate header so they're easier to find) */
-#include "draw-char.h"
-
-struct song_sample;
-void draw_sample_data(struct vgamem_overlay *r, struct song_sample *sample);
-
-/* this works like draw_sample_data, just without having to allocate a
- * song_sample structure, and without caching the waveform.
- * mostly it's just for the oscilloscope view. */
-void draw_sample_data_rect_16(struct vgamem_overlay *r, signed short *data, int length,
-	unsigned int inputchans, unsigned int outputchans);
-void draw_sample_data_rect_8(struct vgamem_overlay *r, signed char *data, int length,
-	unsigned int inputchans, unsigned int outputchans);
+/* ... */
 
 /* these are in audio_playback.cc */
 extern signed short *audio_buffer;
@@ -293,6 +269,10 @@ void main_song_changed_cb(void);
 /* --------------------------------------------------------------------- */
 /* stuff */
 
+/* main.c */
+void toggle_display_fullscreen(void);
+
+/* page_instruments/page_samples.c */
 int sample_get_current(void);
 void sample_set(int n);
 int instrument_get_current(void);

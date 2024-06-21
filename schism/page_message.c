@@ -35,6 +35,9 @@
 #include "song.h"
 #include "clippy.h"
 #include "fakemem.h"
+#include "widget.h"
+#include "dialog.h"
+#include "vgamem.h"
 
 #include <ctype.h>
 #include <assert.h>
@@ -847,7 +850,7 @@ void message_load_page(struct page *page)
 	page->widgets = widgets_message;
 	page->help_index = HELP_MESSAGE_EDITOR;
 
-	create_other(widgets_message + 0, 0, message_handle_key_viewmode, NULL, message_draw);
+	widget_create_other(widgets_message + 0, 0, message_handle_key_viewmode, NULL, message_draw);
 	widgets_message[0].accept_text = edit_mode;
 }
 

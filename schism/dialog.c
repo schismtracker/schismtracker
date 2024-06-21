@@ -24,6 +24,9 @@
 #include "headers.h"
 
 #include "it.h"
+#include "dialog.h"
+#include "vgamem.h"
+#include "widget.h"
 #include "song.h"
 #include "page.h"
 
@@ -78,7 +81,7 @@ void dialog_draw(void)
 		n = dialogs[d].total_widgets;
 		while (n) {
 			n--;
-			draw_widget(dialogs[d].widgets + n, n == dialogs[d].selected_widget);
+			widget_draw_widget(dialogs[d].widgets + n, n == dialogs[d].selected_widget);
 		}
 	}
 }
@@ -270,7 +273,7 @@ static void dialog_create_ok(int textlen)
 	dialogs[d].widgets = (struct widget *)mem_alloc(sizeof(struct widget));
 	dialogs[d].total_widgets = 1;
 
-	create_button(dialogs[d].widgets + 0, 36, 30, 6, 0, 0, 0, 0, 0, dialog_yes_NULL, "OK", 3);
+	widget_create_button(dialogs[d].widgets + 0, 36, 30, 6, 0, 0, 0, 0, 0, dialog_yes_NULL, "OK", 3);
 }
 
 static void dialog_create_ok_cancel(int textlen)
@@ -293,8 +296,8 @@ static void dialog_create_ok_cancel(int textlen)
 	dialogs[d].widgets = mem_calloc(2, sizeof(struct widget));
 	dialogs[d].total_widgets = 2;
 
-	create_button(dialogs[d].widgets + 0, 31, 30, 6, 0, 0, 1, 1, 1, dialog_yes_NULL, "OK", 3);
-	create_button(dialogs[d].widgets + 1, 42, 30, 6, 1, 1, 0, 0, 0, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_button(dialogs[d].widgets + 0, 31, 30, 6, 0, 0, 1, 1, 1, dialog_yes_NULL, "OK", 3);
+	widget_create_button(dialogs[d].widgets + 1, 42, 30, 6, 1, 1, 0, 0, 0, dialog_cancel_NULL, "Cancel", 1);
 }
 
 static void dialog_create_yes_no(int textlen)
@@ -315,8 +318,8 @@ static void dialog_create_yes_no(int textlen)
 	dialogs[d].widgets = mem_calloc(2, sizeof(struct widget));
 	dialogs[d].total_widgets = 2;
 
-	create_button(dialogs[d].widgets + 0, 30, 30, 7, 0, 0, 1, 1, 1, dialog_yes_NULL, "Yes", 3);
-	create_button(dialogs[d].widgets + 1, 42, 30, 6, 1, 1, 0, 0, 0, dialog_no_NULL, "No", 3);
+	widget_create_button(dialogs[d].widgets + 0, 30, 30, 7, 0, 0, 1, 1, 1, dialog_yes_NULL, "Yes", 3);
+	widget_create_button(dialogs[d].widgets + 1, 42, 30, 6, 1, 1, 0, 0, 0, dialog_no_NULL, "No", 3);
 }
 
 /* --------------------------------------------------------------------- */
@@ -473,7 +476,7 @@ void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue)
 	dlgx = (80 - dlgwidth) / 2;
 	entryx = dlgx + 4 + numprompt_titlelen;
 
-	create_textentry(numprompt_widgets + 0, entryx, y, 4, 0, 0, 0, NULL, numprompt_buf, 3);
+	widget_create_textentry(numprompt_widgets + 0, entryx, y, 4, 0, 0, 0, NULL, numprompt_buf, 3);
 	numprompt_widgets[0].activate = numprompt_value;
 	numprompt_widgets[0].d.textentry.cursor_pos = initvalue ? 1 : 0;
 	numprompt_finish = finish;
@@ -533,8 +536,8 @@ void smpprompt_create(const char *title, const char *prompt, void (*finish)(int 
 	numprompt_smp_pos2 = 41 - strlen(prompt);
 	numprompt_buf[0] = '\0';
 
-	create_textentry(numprompt_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, numprompt_buf, 2);
-	create_button(numprompt_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_textentry(numprompt_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, numprompt_buf, 2);
+	widget_create_button(numprompt_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 	numprompt_finish = finish;
 	dialog = dialog_create_custom(26, 23, 29, 10, numprompt_widgets, 2, 0, smpprompt_draw_const, NULL);
 	dialog->action_yes = smpprompt_value;

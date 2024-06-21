@@ -31,6 +31,9 @@
 #include "osdefs.h"
 #include "palettes.h"
 #include "fonts.h"
+#include "dialog.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include "sdlmain.h"
 
@@ -172,9 +175,9 @@ static void video_change_dialog(void)
 	countdown = 10;
 	time(&started);
 
-	create_button(video_dialog_widgets+0, 28,28,8, 0, 0, 0, 1, 1,
+	widget_create_button(video_dialog_widgets+0, 28,28,8, 0, 0, 0, 1, 1,
 					dialog_yes_NULL, "OK", 4);
-	create_button(video_dialog_widgets+1, 42,28,8, 1, 1, 0, 1, 0,
+	widget_create_button(video_dialog_widgets+1, 42,28,8, 1, 1, 0, 1, 0,
 					dialog_cancel_NULL, "Cancel", 2);
 	d = dialog_create_custom(20, 17, 40, 14,
 			video_dialog_widgets,
@@ -297,94 +300,94 @@ void config_load_page(struct page *page)
 	page->widgets = widgets_config;
 	page->help_index = HELP_GLOBAL;
 
-	create_thumbbar(widgets_config+0,
+	widget_create_thumbbar(widgets_config+0,
 			18, 15, 17,
 			0,1,1,
 			change_mixer_limits, 4, 256);
-	create_numentry(widgets_config+1,
+	widget_create_numentry(widgets_config+1,
 			18, 16, 7,
 			0,2,2,
 			change_mixer_limits,
 			4000, 192000,
 			&sample_rate_cursor);
-	create_menutoggle(widgets_config+2,
+	widget_create_menutoggle(widgets_config+2,
 			18, 17,
 			1,3,2,2,3,
 			change_mixer_limits,
 			bit_rates);
-	create_menutoggle(widgets_config+3,
+	widget_create_menutoggle(widgets_config+3,
 			18, 18,
 			2,4,3,3,4,
 			change_mixer_limits,
 			output_channels);
 	////
-	create_menutoggle(widgets_config+4,
+	widget_create_menutoggle(widgets_config+4,
 			18, 20,
 			3,5,4,4,5,
 			change_ui_settings,
 			vis_styles);
-	create_toggle(widgets_config+5,
+	widget_create_toggle(widgets_config+5,
 			18, 21,
 			4,6,5,5,6,
 			change_ui_settings);
-	create_menutoggle(widgets_config+6,
+	widget_create_menutoggle(widgets_config+6,
 			18, 22,
 			5,7,6,6,7,
 			change_ui_settings,
 			sharp_flat);
-	create_menutoggle(widgets_config+7,
+	widget_create_menutoggle(widgets_config+7,
 			18, 23,
 			6,8,7,7,8,
 			change_ui_settings,
 			time_displays);
 	////
-	create_menutoggle(widgets_config+8,
+	widget_create_menutoggle(widgets_config+8,
 			18, 25,
 			7,11,8,8,11,
 			change_ui_settings,
 			midi_modes);
 	////
-	create_togglebutton(widgets_config+9,
+	widget_create_togglebutton(widgets_config+9,
 			44, 30, 5,
 			8,9,11,10,10,
 			change_video_settings,
 			"Yes",
 			2, video_fs_group);
-	create_togglebutton(widgets_config+10,
+	widget_create_togglebutton(widgets_config+10,
 			54, 30, 5,
 			10,10,9,10,0,
 			change_video_settings,
 			"No",
 			2, video_fs_group);
 	////
-	create_togglebutton(widgets_config+11,
+	widget_create_togglebutton(widgets_config+11,
 			6, 30, 26,
 			8,12,11,9,12,
 			change_video_settings,
 			"Nearest",
 			2, video_group);
 
-	create_togglebutton(widgets_config+12,
+	widget_create_togglebutton(widgets_config+12,
 			6, 33, 26,
 			11,13,12,9,13,
 			change_video_settings,
 			"Linear",
 			2, video_group);
 
-	create_togglebutton(widgets_config+13,
+	widget_create_togglebutton(widgets_config+13,
 			6, 36, 26,
 			12,14,13,9,14,
 			change_video_settings,
 			"Best",
 			2, video_group);
 #ifdef SCHISM_WIN32
-	create_togglebutton(widgets_config+14,
+	widget_create_togglebutton(widgets_config+14,
 			44, 34, 5,
 			8,9,11,10,10,
 			change_menu_bar_settings,
 			"Yes",
 			2, video_menu_bar_group);
-	create_togglebutton(widgets_config+15,
+	widget_create_togglebutton(widgets_config+15,
 			54, 34, 5,
 			10,10,9,10,0,
 			change_menu_bar_settings,

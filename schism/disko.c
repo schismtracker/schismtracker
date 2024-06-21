@@ -23,14 +23,16 @@
 
 #include "headers.h"
 
-#include "it.h"
-#include "song.h"
-#include "page.h"
-#include "util.h"
-#include "song.h"
-#include "dmoz.h"
 #include "config-parser.h"
+#include "dialog.h"
 #include "disko.h"
+#include "dmoz.h"
+#include "it.h"
+#include "page.h"
+#include "song.h"
+#include "song.h"
+#include "util.h"
+#include "vgamem.h"
 
 #include "player/sndfile.h"
 #include "player/cmixer.h"

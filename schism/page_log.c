@@ -28,6 +28,8 @@
 
 #include "it.h"
 #include "page.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include "sdlmain.h"
 
@@ -146,7 +148,7 @@ void log_load_page(struct page *page)
 	page->widgets = widgets_log;
 	page->help_index = HELP_COPYRIGHT; /* I guess */
 
-	create_other(widgets_log + 0, 0, log_handle_key, NULL, log_redraw);
+	widget_create_other(widgets_log + 0, 0, log_handle_key, NULL, log_redraw);
 }
 
 /* --------------------------------------------------------------------- */

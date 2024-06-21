@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "vgamem.h"
 #include "keyboard.h"
 #include "song.h"
 #include "page.h"
@@ -34,6 +35,8 @@
 #include "video.h"
 #include "fakemem.h"
 #include "fonts.h"
+#include "dialog.h"
+#include "widget.h"
 
 #include "sdlmain.h"
 
@@ -210,7 +213,7 @@ static void draw_page(void)
 	/* this doesn't use widgets[] because it needs to draw the page's
 	 * widgets whether or not a dialog is active */
 	while (n--)
-		draw_widget(ACTIVE_PAGE.widgets + n, n == ACTIVE_PAGE.selected_widget);
+		widget_draw_widget(ACTIVE_PAGE.widgets + n, n == ACTIVE_PAGE.selected_widget);
 
 	/* redraw the area over the menu if there is one */
 	if (status.dialog_type & DIALOG_MENU)
@@ -268,28 +271,28 @@ void new_song_dialog(void)
 
 	/* only create everything if it hasn't been set up already */
 	if (new_song_widgets[0].width == 0) {
-		create_togglebutton(new_song_widgets + 0, 35, 24, 6, 0, 2, 1, 1, 1, NULL, "Keep",
+		widget_create_togglebutton(new_song_widgets + 0, 35, 24, 6, 0, 2, 1, 1, 1, NULL, "Keep",
 				    2, new_song_groups[0]);
-		create_togglebutton(new_song_widgets + 1, 45, 24, 7, 1, 3, 0, 0, 0, NULL, "Clear",
+		widget_create_togglebutton(new_song_widgets + 1, 45, 24, 7, 1, 3, 0, 0, 0, NULL, "Clear",
 				    2, new_song_groups[0]);
-		create_togglebutton(new_song_widgets + 2, 35, 27, 6, 0, 4, 3, 3, 3, NULL, "Keep",
+		widget_create_togglebutton(new_song_widgets + 2, 35, 27, 6, 0, 4, 3, 3, 3, NULL, "Keep",
 				    2, new_song_groups[1]);
-		create_togglebutton(new_song_widgets + 3, 45, 27, 7, 1, 5, 2, 2, 2, NULL, "Clear",
+		widget_create_togglebutton(new_song_widgets + 3, 45, 27, 7, 1, 5, 2, 2, 2, NULL, "Clear",
 				    2, new_song_groups[1]);
-		create_togglebutton(new_song_widgets + 4, 35, 30, 6, 2, 6, 5, 5, 5, NULL, "Keep",
+		widget_create_togglebutton(new_song_widgets + 4, 35, 30, 6, 2, 6, 5, 5, 5, NULL, "Keep",
 				    2, new_song_groups[2]);
-		create_togglebutton(new_song_widgets + 5, 45, 30, 7, 3, 7, 4, 4, 4, NULL, "Clear",
+		widget_create_togglebutton(new_song_widgets + 5, 45, 30, 7, 3, 7, 4, 4, 4, NULL, "Clear",
 				    2, new_song_groups[2]);
-		create_togglebutton(new_song_widgets + 6, 35, 33, 6, 4, 8, 7, 7, 7, NULL, "Keep",
+		widget_create_togglebutton(new_song_widgets + 6, 35, 33, 6, 4, 8, 7, 7, 7, NULL, "Keep",
 				    2, new_song_groups[3]);
-		create_togglebutton(new_song_widgets + 7, 45, 33, 7, 5, 9, 6, 6, 6, NULL, "Clear",
+		widget_create_togglebutton(new_song_widgets + 7, 45, 33, 7, 5, 9, 6, 6, 6, NULL, "Clear",
 				    2, new_song_groups[3]);
-		create_button(new_song_widgets + 8, 28, 36, 8, 6, 8, 9, 9, 9, dialog_yes_NULL, "OK", 4);
-		create_button(new_song_widgets + 9, 41, 36, 8, 6, 9, 8, 8, 8, dialog_cancel_NULL, "Cancel", 2);
-		togglebutton_set(new_song_widgets, 1, 0);
-		togglebutton_set(new_song_widgets, 3, 0);
-		togglebutton_set(new_song_widgets, 5, 0);
-		togglebutton_set(new_song_widgets, 7, 0);
+		widget_create_button(new_song_widgets + 8, 28, 36, 8, 6, 8, 9, 9, 9, dialog_yes_NULL, "OK", 4);
+		widget_create_button(new_song_widgets + 9, 41, 36, 8, 6, 9, 8, 8, 8, dialog_cancel_NULL, "Cancel", 2);
+		widget_togglebutton_set(new_song_widgets, 1, 0);
+		widget_togglebutton_set(new_song_widgets, 3, 0);
+		widget_togglebutton_set(new_song_widgets, 5, 0);
+		widget_togglebutton_set(new_song_widgets, 7, 0);
 	}
 
 	dialog = dialog_create_custom(21, 20, 38, 19, new_song_widgets, 10, 8, new_song_draw_const, NULL);
@@ -369,7 +372,7 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 	_mp_text_y = midy - 2;
 	_mp_setv = setv;
 	_mp_setv_noplay = setv_noplay;
-	create_thumbbar(_mpw, midx - 8, midy, 13, 0, 0, 0, _mp_change, min, max);
+	widget_create_thumbbar(_mpw, midx - 8, midy, 13, 0, 0, 0, _mp_change, min, max);
 	_mpw[0].d.thumbbar.value = CLAMP(cv, min, max);
 	_mpw[0].depressed = 1; /* maybe it just needs some zoloft? */
 	dialog_create_custom(midx - 10, midy - 3,  20, 6, _mpw, 1, 0, _mp_draw, NULL);
@@ -1776,14 +1779,14 @@ static int _timejump_keyh(struct key_event *k)
 {
 	if (k->sym == SDLK_BACKSPACE) {
 		if (*selected_widget == 1 && _timejump_widgets[1].d.numentry.value == 0) {
-			if (k->state == KEY_RELEASE) change_focus_to(0);
+			if (k->state == KEY_RELEASE) widget_change_focus_to(0);
 			return 1;
 		}
 	}
 	if (k->sym == SDLK_COLON || k->sym == SDLK_SEMICOLON) {
 		if (k->state == KEY_RELEASE) {
 			if (*selected_widget == 0) {
-				change_focus_to(1);
+				widget_change_focus_to(1);
 			}
 		}
 		return 1;
@@ -1819,13 +1822,13 @@ void show_song_timejump(void)
 {
 	struct dialog *d;
 	_tj_num1 = _tj_num2 = 0;
-	create_numentry(_timejump_widgets+0, 44, 26, 2, 0, 2, 1, NULL, 0, 21, &_tj_num1);
-	create_numentry(_timejump_widgets+1, 47, 26, 2, 1, 2, 2, NULL, 0, 59, &_tj_num2);
+	widget_create_numentry(_timejump_widgets+0, 44, 26, 2, 0, 2, 1, NULL, 0, 21, &_tj_num1);
+	widget_create_numentry(_timejump_widgets+1, 47, 26, 2, 1, 2, 2, NULL, 0, 59, &_tj_num2);
 	_timejump_widgets[0].d.numentry.handle_unknown_key = _timejump_keyh;
 	_timejump_widgets[0].d.numentry.reverse = 1;
 	_timejump_widgets[1].d.numentry.reverse = 1;
-	create_button(_timejump_widgets+2, 30, 29, 8, 0, 2, 2, 3, 3, (void(*)(void))_timejump_ok, "OK", 4);
-	create_button(_timejump_widgets+3, 42, 29, 8, 1, 3, 3, 3, 0, dialog_cancel_NULL, "Cancel", 2);
+	widget_create_button(_timejump_widgets+2, 30, 29, 8, 0, 2, 2, 3, 3, (void(*)(void))_timejump_ok, "OK", 4);
+	widget_create_button(_timejump_widgets+3, 42, 29, 8, 1, 3, 3, 3, 0, dialog_cancel_NULL, "Cancel", 2);
 	d = dialog_create_custom(26, 24, 30, 8, _timejump_widgets, 4, 0, _timejump_draw, NULL);
 	d->handle_key = _timejump_keyh;
 	d->action_yes = _timejump_ok;

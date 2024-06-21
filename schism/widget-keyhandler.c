@@ -26,6 +26,7 @@
 #include "page.h"
 #include "song.h"
 #include "keyboard.h"
+#include "widget.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -194,12 +195,12 @@ static void _backtab(void)
 	int backtab = find_tab_to_recursive(selected);
 
 	if(backtab > -1) {
-		change_focus_to(backtab);
+		widget_change_focus_to(backtab);
 		return;
 	}
 
 	int right_or_down_to = find_right_or_down_to(selected, selected);
-	if(right_or_down_to > -1) change_focus_to(right_or_down_to);
+	if(right_or_down_to > -1) widget_change_focus_to(right_or_down_to);
 }
 
 /* return: 1 = handled text, 0 = didn't */
@@ -215,15 +216,48 @@ int widget_handle_text_input(const uint8_t* text_input) {
 				return 1;
 			break;
 		case WIDGET_NUMENTRY:
-			if (numentry_handle_text(widget, text_input))
+			if (widget_numentry_handle_text(widget, text_input))
 				return 1;
 			break;
 		case WIDGET_TEXTENTRY:
-			if (textentry_add_text(widget, text_input))
+			if (widget_textentry_add_text(widget, text_input))
 				return 1;
 			break;
 		default:
 			break;
+	}
+	return 0;
+}
+
+static int widget_menutoggle_handle_key(struct widget *w, struct key_event *k)
+{
+	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0)
+	   && w->d.menutoggle.activation_keys) {
+		const char* m = w->d.menutoggle.activation_keys;
+		const char* p = strchr(m, (char)k->sym);
+		if (p && *p) {
+			w->d.menutoggle.state = p - m;
+			if(w->changed) w->changed();
+			status.flags |= NEED_UPDATE;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static int widget_bitset_handle_key(struct widget *w, struct key_event *k)
+{
+	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0)
+	   && w->d.bitset.activation_keys) {
+		const char* m = w->d.bitset.activation_keys;
+		const char* p = strchr(m, (char)k->sym);
+		if (p && *p) {
+			int bit_index = p-m;
+			w->d.bitset.value ^= (1 << bit_index);
+			if(w->changed) w->changed();
+			status.flags |= NEED_UPDATE;
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -343,7 +377,7 @@ int widget_handle_key(struct key_event * k)
 				if (k->x - widget->x < 11) return 1;
 				if (k->x - widget->x > 19) return 1;
 			}
-			numentry_change_value(widget, n);
+			widget_numentry_change_value(widget, n);
 			return 1;
 		}
 		if (k->mouse) {
@@ -438,7 +472,7 @@ int widget_handle_key(struct key_event * k)
 			if (status.flags & DISKWRITER_ACTIVE) return 0;
 			if (widget->d.togglebutton.group) {
 				/* this also runs the changed callback and redraws the button(s) */
-				togglebutton_set(widgets, *selected_widget, 1);
+				widget_togglebutton_set(widgets, *selected_widget, 1);
 				return 1;
 			}
 			/* else... */
@@ -476,13 +510,13 @@ int widget_handle_key(struct key_event * k)
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
-		change_focus_to(widget->next.up);
+		widget_change_focus_to(widget->next.up);
 		return 1;
 	case SDLK_DOWN:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
-		change_focus_to(widget->next.down);
+		widget_change_focus_to(widget->next.down);
 		return 1;
 	case SDLK_TAB:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
@@ -492,7 +526,7 @@ int widget_handle_key(struct key_event * k)
 		}
 		if (!NO_MODIFIER(k->mod))
 			return 0;
-		change_focus_to(widget->next.tab);
+		widget_change_focus_to(widget->next.tab);
 		return 1;
 	case SDLK_LEFT:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
@@ -528,12 +562,12 @@ int widget_handle_key(struct key_event * k)
 			if (k->mod & KMOD_CTRL)
 				n *= 2;
 			n = widget->d.numentry.value - n;
-			numentry_change_value(widget, n);
+			widget_numentry_change_value(widget, n);
 			return 1;
 		default:
 			if (!NO_MODIFIER(k->mod))
 				return 0;
-			change_focus_to(widget->next.left);
+			widget_change_focus_to(widget->next.left);
 			return 1;
 		}
 		break;
@@ -571,12 +605,12 @@ int widget_handle_key(struct key_event * k)
 			if (k->mod & KMOD_CTRL)
 				n *= 2;
 			n = widget->d.numentry.value + n;
-			numentry_change_value(widget, n);
+			widget_numentry_change_value(widget, n);
 			return 1;
 		default:
 			if (!NO_MODIFIER(k->mod))
 				return 0;
-			change_focus_to(widget->next.right);
+			widget_change_focus_to(widget->next.right);
 			return 1;
 		}
 		break;
@@ -603,7 +637,7 @@ int widget_handle_key(struct key_event * k)
 			/* fall through */
 		case WIDGET_THUMBBAR:
 			n = widget->d.thumbbar.min;
-			numentry_change_value(widget, n);
+			widget_numentry_change_value(widget, n);
 			return 1;
 		default:
 			break;
@@ -630,7 +664,7 @@ int widget_handle_key(struct key_event * k)
 			/* fall through */
 		case WIDGET_THUMBBAR:
 			n = widget->d.thumbbar.max;
-			numentry_change_value(widget, n);
+			widget_numentry_change_value(widget, n);
 			return 1;
 		default:
 			break;
@@ -666,7 +700,7 @@ int widget_handle_key(struct key_event * k)
 				return 0;
 			widget->d.panbar.muted = !widget->d.panbar.muted;
 			changed = widget->changed;
-			change_focus_to(widget->next.down);
+			widget_change_focus_to(widget->next.down);
 			if (changed) changed();
 			return 1;
 		default:
@@ -727,14 +761,14 @@ int widget_handle_key(struct key_event * k)
 	case SDLK_PLUS:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_NUMENTRY && NO_MODIFIER(k->mod)) {
-			numentry_change_value(widget, widget->d.numentry.value + 1);
+			widget_numentry_change_value(widget, widget->d.numentry.value + 1);
 			return 1;
 		}
 		break;
 	case SDLK_MINUS:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_NUMENTRY && NO_MODIFIER(k->mod)) {
-			numentry_change_value(widget, widget->d.numentry.value - 1);
+			widget_numentry_change_value(widget, widget->d.numentry.value - 1);
 			return 1;
 		}
 		break;
@@ -747,7 +781,7 @@ int widget_handle_key(struct key_event * k)
 			} else if (NO_MODIFIER(k->mod)) {
 				widget->d.panbar.muted = 0;
 				widget->d.panbar.surround = 0;
-				numentry_change_value(widget, 0);
+				widget_numentry_change_value(widget, 0);
 				return 1;
 			}
 		}
@@ -761,7 +795,7 @@ int widget_handle_key(struct key_event * k)
 			} else if (NO_MODIFIER(k->mod)) {
 				widget->d.panbar.muted = 0;
 				widget->d.panbar.surround = 0;
-				numentry_change_value(widget, 32);
+				widget_numentry_change_value(widget, 32);
 				return 1;
 			}
 		}
@@ -775,7 +809,7 @@ int widget_handle_key(struct key_event * k)
 			} else if (NO_MODIFIER(k->mod)) {
 				widget->d.panbar.muted = 0;
 				widget->d.panbar.surround = 0;
-				numentry_change_value(widget, 64);
+				widget_numentry_change_value(widget, 64);
 				return 1;
 			}
 		}
@@ -836,11 +870,11 @@ int widget_handle_key(struct key_event * k)
 	/* if we're here, that mess didn't completely handle the key (gosh...) so now here's another mess. */
 	switch (current_type) {
 	case WIDGET_MENUTOGGLE:
-		if (menutoggle_handle_key(widget, k))
+		if (widget_menutoggle_handle_key(widget, k))
 			return 1;
 		break;
 	case WIDGET_BITSET:
-		if (bitset_handle_key(widget, k))
+		if (widget_bitset_handle_key(widget, k))
 			return 1;
 		break;
 	case WIDGET_THUMBBAR:
@@ -850,11 +884,11 @@ int widget_handle_key(struct key_event * k)
 		break;
 	case WIDGET_TEXTENTRY:
 		if ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0 &&
-			k->text && textentry_add_text(widget, k->text))
+			k->text && widget_textentry_add_text(widget, k->text))
 			return 1;
 		break;
 	case WIDGET_NUMENTRY:
-		if (k->text && numentry_handle_text(widget, k->text))
+		if (k->text && widget_numentry_handle_text(widget, k->text))
 			return 1;
 		break;
 	default:

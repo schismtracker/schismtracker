@@ -37,6 +37,9 @@
 #include "midi.h"
 #include "osdefs.h"
 #include "fakemem.h"
+#include "dialog.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include "sdlmain.h"
 #include "clippy.h"
@@ -330,20 +333,20 @@ void pattern_editor_display_options(void)
 
 	if (options_widgets[0].width == 0) {
 		/* haven't built it yet */
-		create_thumbbar(options_widgets + 0, 40, 23, 2, 7, 1, 1, options_change_base_octave, 0, 8);
-		create_thumbbar(options_widgets + 1, 40, 26, 3, 0, 2, 2, NULL, 0, 16);
-		create_thumbbar(options_widgets + 2, 40, 29, 5, 1, 3, 3, NULL, 0, 32);
-		create_thumbbar(options_widgets + 3, 40, 32, 17, 2, 4, 4, NULL, 0, 128);
+		widget_create_thumbbar(options_widgets + 0, 40, 23, 2, 7, 1, 1, options_change_base_octave, 0, 8);
+		widget_create_thumbbar(options_widgets + 1, 40, 26, 3, 0, 2, 2, NULL, 0, 16);
+		widget_create_thumbbar(options_widgets + 2, 40, 29, 5, 1, 3, 3, NULL, 0, 32);
+		widget_create_thumbbar(options_widgets + 3, 40, 32, 17, 2, 4, 4, NULL, 0, 128);
 		/* Although patterns as small as 1 row can be edited properly (as of c759f7a0166c), I have
 		discovered it's a bit annoying to hit 'home' here expecting to get 32 rows but end up with
 		just one row instead. so I'll allow editing these patterns, but not really provide a way to
 		set the size, at least until I decide how to present the option nonintrusively. */
-		create_thumbbar(options_widgets + 4, 40, 35, 22, 3, 5, 5, NULL, 32, 200);
-		create_togglebutton(options_widgets + 5, 40, 38, 8, 4, 7, 6, 6, 6,
+		widget_create_thumbbar(options_widgets + 4, 40, 35, 22, 3, 5, 5, NULL, 32, 200);
+		widget_create_togglebutton(options_widgets + 5, 40, 38, 8, 4, 7, 6, 6, 6,
 				    NULL, "Link", 3, options_link_split);
-		create_togglebutton(options_widgets + 6, 52, 38, 9, 4, 7, 5, 5, 5,
+		widget_create_togglebutton(options_widgets + 6, 52, 38, 9, 4, 7, 5, 5, 5,
 				    NULL, "Split", 3, options_link_split);
-		create_button(options_widgets + 7, 35, 41, 8, 5, 0, 7, 7, 7, dialog_yes_NULL, "Done", 3);
+		widget_create_button(options_widgets + 7, 35, 41, 8, 5, 0, 7, 7, 7, dialog_yes_NULL, "Done", 3);
 	}
 
 	options_last_octave = kbd_get_current_octave();
@@ -352,7 +355,7 @@ void pattern_editor_display_options(void)
 	options_widgets[2].d.thumbbar.value = current_song->row_highlight_minor;
 	options_widgets[3].d.thumbbar.value = current_song->row_highlight_major;
 	options_widgets[4].d.thumbbar.value = song_get_pattern(current_pattern, NULL);
-	togglebutton_set(options_widgets, link_effect_column ? 5 : 6, 0);
+	widget_togglebutton_set(options_widgets, link_effect_column ? 5 : 6, 0);
 
 	dialog = dialog_create_custom(10, 18, 60, 26, options_widgets, 8, options_selected_widget,
 				      options_draw_const, NULL);
@@ -413,15 +416,15 @@ void pattern_editor_length_edit(void)
 {
 	struct dialog *dialog;
 
-	create_thumbbar(length_edit_widgets + 0, 34, 24, 22, 0, 1, 1, NULL, 32, 200);
+	widget_create_thumbbar(length_edit_widgets + 0, 34, 24, 22, 0, 1, 1, NULL, 32, 200);
 	length_edit_widgets[0].d.thumbbar.value = song_get_pattern(current_pattern, NULL );
-	create_thumbbar(length_edit_widgets + 1, 34, 27, 26, 0, 2, 2, NULL, 0, 199);
-	create_thumbbar(length_edit_widgets + 2, 34, 28, 26, 1, 3, 3, NULL, 0, 199);
+	widget_create_thumbbar(length_edit_widgets + 1, 34, 27, 26, 0, 2, 2, NULL, 0, 199);
+	widget_create_thumbbar(length_edit_widgets + 2, 34, 28, 26, 1, 3, 3, NULL, 0, 199);
 	length_edit_widgets[1].d.thumbbar.value
 		= length_edit_widgets[2].d.thumbbar.value
 		= current_pattern;
 
-	create_button(length_edit_widgets + 3, 35, 31, 8, 2, 3, 3, 3, 0, dialog_yes_NULL, "OK", 4);
+	widget_create_button(length_edit_widgets + 3, 35, 31, 8, 2, 3, 3, 3, 0, dialog_yes_NULL, "OK", 4);
 
 	dialog = dialog_create_custom(15, 19, 51, 15, length_edit_widgets, 4, 0,
 				      length_edit_draw_const, NULL);
@@ -479,7 +482,7 @@ static void multichannel_draw_const(void)
 }
 static void mp_advance_channel(void)
 {
-	change_focus_to(*selected_widget + 1);
+	widget_change_focus_to(*selected_widget + 1);
 }
 
 static void pattern_editor_display_multichannel(void)
@@ -488,7 +491,7 @@ static void pattern_editor_display_multichannel(void)
 	int i;
 
 	for (i = 0; i < 64; i++) {
-		create_toggle(multichannel_widgets+i,
+		widget_create_toggle(multichannel_widgets+i,
 			20 + ((i / 16) * 16), /* X */
 			22 + (i % 16),  /* Y */
 
@@ -501,7 +504,7 @@ static void pattern_editor_display_multichannel(void)
 			mp_advance_channel);
 		multichannel_widgets[i].d.toggle.state = !!channel_multi[i];
 	}
-	create_button(multichannel_widgets + 64, 36, 40, 6, 15, 0, 64, 64, 64, dialog_yes_NULL, "OK", 3);
+	widget_create_button(multichannel_widgets + 64, 36, 40, 6, 15, 0, 64, 64, 64, dialog_yes_NULL, "OK", 3);
 
 	dialog = dialog_create_custom(7, 18, 66, 25, multichannel_widgets, 65, 0,
 				      multichannel_draw_const, NULL);
@@ -878,7 +881,7 @@ static void pattern_editor_display_history(void)
 {
 	struct dialog *dialog;
 
-	create_other(undo_widgets + 0, 0, history_handle_key, NULL, NULL);
+	widget_create_other(undo_widgets + 0, 0, history_handle_key, NULL, NULL);
 	dialog = dialog_create_custom(17, 21, 47, 16, undo_widgets, 1, 0,
 				      history_draw_const, NULL);
 	dialog->action_yes = history_close;
@@ -924,12 +927,12 @@ static void fast_volume_toggle(void)
 		fast_volume_mode = 0;
 		status_text_flash("Alt-I / Alt-J fast volume changes disabled");
 	} else {
-		create_thumbbar(volume_setup_widgets + 0, 33, 30, 11, 0, 1, 1, NULL, 10, 90);
+		widget_create_thumbbar(volume_setup_widgets + 0, 33, 30, 11, 0, 1, 1, NULL, 10, 90);
 
 		volume_setup_widgets[0].d.thumbbar.value = fast_volume_percent;
-		create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2,
+		widget_create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2,
 			      dialog_yes_NULL, "OK", 3);
-		create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1,
+		widget_create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1,
 			      dialog_cancel_NULL, "Cancel", 1);
 
 		dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets,
@@ -978,10 +981,10 @@ static void volume_amplify(void)
 	struct dialog *dialog;
 
 	CHECK_FOR_SELECTION(return);
-	create_thumbbar(volume_setup_widgets + 0, 26, 30, 26, 0, 1, 1, NULL, 0, 200);
+	widget_create_thumbbar(volume_setup_widgets + 0, 26, 30, 26, 0, 1, 1, NULL, 0, 200);
 	volume_setup_widgets[0].d.thumbbar.value = volume_percent;
-	create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
-	create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
+	widget_create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 	dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets,
 				      3, 0, volume_setup_draw_const, NULL);
 	dialog->handle_key = volume_amplify_jj;
@@ -1008,10 +1011,10 @@ static void vary_command(int how)
 {
 	struct dialog *dialog;
 
-	create_thumbbar(volume_setup_widgets + 0, 26, 30, 26, 0, 1, 1, NULL, 0, 50);
+	widget_create_thumbbar(volume_setup_widgets + 0, 26, 30, 26, 0, 1, 1, NULL, 0, 50);
 	volume_setup_widgets[0].d.thumbbar.value = vary_depth;
-	create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
-	create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
+	widget_create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 	dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets,
 				      3, 0, vary_setup_draw_const, NULL);
 	dialog->action_yes = vary_amplify_ok;
@@ -2904,7 +2907,7 @@ static int patedit_record_note(song_note_t *cur_note, int channel, UNUSED int ro
 				dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
 				r = 0;
 			} else if (!q->note) {
-				create_button(template_error_widgets+0,36,32,6,0,0,0,0,0,
+				widget_create_button(template_error_widgets+0,36,32,6,0,0,0,0,0,
 						dialog_yes_NULL,"OK",3);
 				dialog_create_custom(20, 23, 40, 12, template_error_widgets, 1,
 						0, template_error_draw, NULL);
@@ -4563,6 +4566,6 @@ void pattern_editor_load_page(struct page *page)
 	page->widgets = widgets_pattern;
 	page->help_index = HELP_PATTERN_EDITOR;
 
-	create_other(widgets_pattern + 0, 0, pattern_editor_handle_key_cb, NULL, pattern_editor_redraw);
+	widget_create_other(widgets_pattern + 0, 0, pattern_editor_handle_key_cb, NULL, pattern_editor_redraw);
 }
 

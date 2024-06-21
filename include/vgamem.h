@@ -21,12 +21,36 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_DRAW_CHAR_H_
-#define SCHISM_DRAW_CHAR_H_
+#ifndef SCHISM_VGAMEM_H_
+#define SCHISM_VGAMEM_H_
 
 #include <stdint.h>
 
+void vgamem_clear(void);
+
+struct vgamem_overlay {
+	unsigned int x1, y1, x2, y2; /* in character cells... */
+
+	unsigned char *q;               /* points inside ovl */
+	unsigned int skip;
+
+	int width, height; /* in pixels; signed to avoid bugs elsewhere */
+};
+
+void vgamem_flip(void);
+
+void vgamem_ovl_alloc(struct vgamem_overlay *n);
+void vgamem_ovl_apply(struct vgamem_overlay *n);
+
+void vgamem_ovl_clear(struct vgamem_overlay *n, int color);
+void vgamem_ovl_drawpixel(struct vgamem_overlay *n, int x, int y, int color);
+void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs, int ys, int xe, int ye, int color);
+
+
+void vgamem_scan32(unsigned int y, uint32_t *out,unsigned int tc[16], unsigned int mouse_line[80]);
+
 /* --------------------------------------------------------------------- */
+/* character drawing routines */
 
 void draw_char(unsigned char c, int x, int y, uint32_t fg, uint32_t bg);
 void draw_char_bios(unsigned char c, int x, int y, uint32_t fg, uint32_t bg);
@@ -48,13 +72,6 @@ void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
 /* --------------------------------------------------------------------- */
 /* boxes */
 
-/* don't use these directly */
-void draw_thin_inner_box(int xs, int ys, int xe, int ye, uint32_t tl, uint32_t br);
-void draw_thick_inner_box(int xs, int ys, int xe, int ye, uint32_t tl, uint32_t br);
-void draw_thin_outer_box(int xs, int ys, int xe, int ye, uint32_t c);
-void draw_thick_outer_box(int xs, int ys, int xe, int ye, uint32_t c);
-void draw_thin_outer_cornered_box(int xs, int ys, int xe, int ye, int shade_mask);
-
 /* the type is comprised of one value from each of these enums.
  * the "default" box type is thin, inner, and with outset shading. */
 
@@ -62,30 +79,42 @@ void draw_thin_outer_cornered_box(int xs, int ys, int xe, int ye, int shade_mask
  * (because using two different colors for an outer box results in some
  * ugliness at the corners) */
 enum {
-	BOX_OUTSET = (0),
-	BOX_INSET = (1),
-	BOX_FLAT_LIGHT = (2),
-	BOX_FLAT_DARK = (3),
+	BOX_OUTSET = (0),       /* 00 00 */
+	BOX_INSET = (1),        /* 00 01 */
+	BOX_FLAT_LIGHT = (2),   /* 00 10 */
+	BOX_FLAT_DARK = (3),    /* 00 11 */
+	BOX_SHADE_NONE = (4),   /* 01 00 */
 };
-#define BOX_SHADE_MASK 3
+#define BOX_SHADE_MASK (7)
 
 enum {
-	BOX_INNER = (0 << 2),   /* 00 00 */
-	BOX_OUTER = (1 << 2),   /* 01 00 */
-	BOX_CORNER = (2 << 2),  /* 10 00 */
+	BOX_INNER = (0 << 4),   /* 00 00 00 */
+	BOX_OUTER = (1 << 4),   /* 01 00 00 */
+	BOX_CORNER = (2 << 4),  /* 10 00 00 */
 };
-#define BOX_TYPE_MASK 12
+#define BOX_TYPE_MASK (3 << 4)
 
 /* the thickness is ignored for corner boxes, which are always thin */
 enum {
-	BOX_THIN = (0 << 4),    /* 0 00 00 */
-	BOX_THICK = (1 << 4),   /* 1 00 00 */
+	BOX_THIN = (0 << 6),    /* 0 00 00 00 */
+	BOX_THICK = (1 << 6),   /* 1 00 00 00 */
 };
-#define BOX_THICKNESS_MASK 16
+#define BOX_THICKNESS_MASK (1 << 6)
 
 void draw_box(int xs, int ys, int xe, int ye, int flags);
-/* .... */
-void toggle_display_fullscreen(void); /* FIXME why on earth is this in this header? */
 
-#endif /* SCHISM_DRAW_CHAR_H_ */
+/* ------------------------------------------------------------ */
 
+
+struct song_sample;
+void draw_sample_data(struct vgamem_overlay *r, struct song_sample *sample);
+
+/* this works like draw_sample_data, just without having to allocate a
+ * song_sample structure, and without caching the waveform.
+ * mostly it's just for the oscilloscope view. */
+void draw_sample_data_rect_16(struct vgamem_overlay *r, int16_t *data, int length,
+	unsigned int inputchans, unsigned int outputchans);
+void draw_sample_data_rect_8(struct vgamem_overlay *r, int8_t *data, int length,
+	unsigned int inputchans, unsigned int outputchans);
+
+#endif /* SCHISM_VGAMEM_H_ */

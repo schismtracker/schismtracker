@@ -27,6 +27,8 @@
 #include "config.h"
 #include "page.h"
 #include "midi.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include "song.h"
 
@@ -181,7 +183,7 @@ static int midi_page_handle_key(struct key_event * k)
 	case SDLK_TAB:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		change_focus_to(1);
+		widget_change_focus_to(1);
 		status.flags |= NEED_UPDATE;
 		return 1;
 	default:
@@ -322,27 +324,27 @@ void midi_load_page(struct page *page)
 	page->widgets = widgets_midi;
 	page->help_index = HELP_GLOBAL;
 
-	create_other(widgets_midi + 0, 0, midi_page_handle_key, NULL, midi_page_draw_portlist);
+	widget_create_other(widgets_midi + 0, 0, midi_page_handle_key, NULL, midi_page_draw_portlist);
 	widgets_midi[0].x = 2;
 	widgets_midi[0].y = 14;
 	widgets_midi[0].width = 75;
 	widgets_midi[0].height = 15;
 
-	create_toggle(widgets_midi + 1, 20, 30, 0, 2, 7, 7, 7, update_midi_values);
-	create_toggle(widgets_midi + 2, 20, 31, 1, 3, 8, 8, 8, update_midi_values);
-	create_toggle(widgets_midi + 3, 20, 32, 2, 4, 8, 8, 8, update_midi_values);
-	create_toggle(widgets_midi + 4, 20, 33, 3, 5, 9, 9, 9, update_midi_values);
-	create_toggle(widgets_midi + 5, 20, 34, 4, 6, 9, 9, 9, update_midi_values);
-	create_toggle(widgets_midi + 6, 20, 35, 5, 13, 10, 10, 10, update_midi_values);
-	create_thumbbar(widgets_midi + 7, 53, 30, 20, 0, 8, 1, update_midi_values, 0, 200);
-	create_thumbbar(widgets_midi + 8, 53, 31, 20, 7, 9, 2, update_midi_values, 0, 127);
-	create_toggle(widgets_midi + 9, 53, 34, 8, 10, 5, 5, 5, update_midi_values);
-	create_thumbbar(widgets_midi + 10, 53, 35, 20, 9, 11, 6, update_midi_values, 0, 48);
-	create_toggle(widgets_midi + 11, 53, 38, 10, 12, 13, 13, 13, update_midi_values);
-	create_thumbbar(widgets_midi + 12, 53, 41, 20, 11, 12, 13, update_ip_ports, 0, 128);
-	create_button(widgets_midi + 13, 2, 41, 27, 6, 14, 12, 12, 12,
+	widget_create_toggle(widgets_midi + 1, 20, 30, 0, 2, 7, 7, 7, update_midi_values);
+	widget_create_toggle(widgets_midi + 2, 20, 31, 1, 3, 8, 8, 8, update_midi_values);
+	widget_create_toggle(widgets_midi + 3, 20, 32, 2, 4, 8, 8, 8, update_midi_values);
+	widget_create_toggle(widgets_midi + 4, 20, 33, 3, 5, 9, 9, 9, update_midi_values);
+	widget_create_toggle(widgets_midi + 5, 20, 34, 4, 6, 9, 9, 9, update_midi_values);
+	widget_create_toggle(widgets_midi + 6, 20, 35, 5, 13, 10, 10, 10, update_midi_values);
+	widget_create_thumbbar(widgets_midi + 7, 53, 30, 20, 0, 8, 1, update_midi_values, 0, 200);
+	widget_create_thumbbar(widgets_midi + 8, 53, 31, 20, 7, 9, 2, update_midi_values, 0, 127);
+	widget_create_toggle(widgets_midi + 9, 53, 34, 8, 10, 5, 5, 5, update_midi_values);
+	widget_create_thumbbar(widgets_midi + 10, 53, 35, 20, 9, 11, 6, update_midi_values, 0, 48);
+	widget_create_toggle(widgets_midi + 11, 53, 38, 10, 12, 13, 13, 13, update_midi_values);
+	widget_create_thumbbar(widgets_midi + 12, 53, 41, 20, 11, 12, 13, update_ip_ports, 0, 128);
+	widget_create_button(widgets_midi + 13, 2, 41, 27, 6, 14, 12, 12, 12,
 		midi_output_config, "MIDI Output Configuration", 2);
-	create_button(widgets_midi + 14, 2, 44, 27, 13, 14, 12, 12, 12,
+	widget_create_button(widgets_midi + 14, 2, 44, 27, 13, 14, 12, 12, 12,
 		cfg_midipage_save, "Save Output Configuration", 2);
 }
 
