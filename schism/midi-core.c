@@ -24,17 +24,14 @@
 #include "headers.h"
 
 #include "event.h"
-
 #include "util.h"
-
 #include "midi.h"
 #include "song.h"
-
 #include "sdlmain.h"
-
 #include "page.h"
-
 #include "it.h"
+#include "config-parser.h"
+#include "config.h"
 
 #include "dmoz.h"
 
@@ -743,7 +740,7 @@ void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int 
 		memcpy(status.last_midi_event, data, status.last_midi_len);
 		status.flags |= MIDI_EVENT_CHANGED;
 		status.last_midi_port = NULL;
-		time(&status.last_midi_time);
+		status.last_midi_tick = SCHISM_GET_TICKS();
 		status.flags |= NEED_UPDATE;
 	}
 
@@ -826,7 +823,7 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int l
 	memcpy(status.last_midi_event, data, status.last_midi_len);
 	status.flags |= MIDI_EVENT_CHANGED;
 	status.last_midi_port = src;
-	time(&status.last_midi_time);
+	status.last_midi_tick = SCHISM_GET_TICKS();
 	SDL_UnlockMutex(midi_record_mutex);
 
 	/* pass through midi events when on midi page */

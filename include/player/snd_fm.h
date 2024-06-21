@@ -1,5 +1,5 @@
-#ifndef SCHISM_SND_FM_H_
-#define SCHISM_SND_FM_H_
+#ifndef SCHISM_PLAYER_SND_FM_H_
+#define SCHISM_PLAYER_SND_FM_H_
 
 void Fmdrv_Init(int mixfreq);
 void Fmdrv_MixTo(int* buf, int count);
@@ -197,5 +197,5 @@ void OPL_Close(void);
 #define     VOICE_TO_LEFT               0x10
 #define     VOICE_TO_RIGHT              0x20
 
-#endif /* SCHISM_SND_FM_H_ */
+#endif /* SCHISM_PLAYER_SND_FM_H_ */
 

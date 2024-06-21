@@ -29,12 +29,14 @@
 #include <ctype.h>
 
 #include "it.h"
+#include "keyboard.h"
 #include "page.h"
 #include "song.h"
 #include "pattern-view.h"
 #include "config-parser.h"
 #include "midi.h"
 #include "osdefs.h"
+#include "fakemem.h"
 
 #include "sdlmain.h"
 #include "clippy.h"

@@ -28,7 +28,7 @@
 #include "it.h" /* for get_effect_char */
 #include "log.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 #include <math.h> /* for pow */
 

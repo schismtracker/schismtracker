@@ -23,8 +23,8 @@
 
 #include "headers.h"
 
-#include "fmopl.h"
-#include "snd_fm.h"
+#include "player/fmopl.h"
+#include "player/snd_fm.h"
 #include "log.h"
 #include "util.h" /* for clamp */
 

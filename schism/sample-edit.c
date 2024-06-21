@@ -26,8 +26,9 @@
 #include "it.h"
 #include "util.h"
 #include "song.h"
-#include "cmixer.h"
 #include "sample-edit.h"
+
+#include "player/cmixer.h"
 
 #include "sdlmain.h"
 

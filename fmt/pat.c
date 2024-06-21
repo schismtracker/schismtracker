@@ -27,7 +27,7 @@
 
 #include "it.h"
 #include "song.h"
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 #include <string.h>
 #include <stdlib.h>

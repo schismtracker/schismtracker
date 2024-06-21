@@ -28,7 +28,7 @@
 #include "fmt.h"
 #include "log.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 #include <inttypes.h> /* need uint*_t format specifiers */
 

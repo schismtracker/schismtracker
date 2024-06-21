@@ -28,13 +28,12 @@
 #include "page.h"
 #include "util.h"
 #include "song.h"
-#include "sndfile.h"
 #include "dmoz.h"
 #include "config-parser.h"
-
-
-#include "cmixer.h"
 #include "disko.h"
+
+#include "player/sndfile.h"
+#include "player/cmixer.h"
 
 #include <sys/stat.h>
 

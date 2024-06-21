@@ -25,7 +25,7 @@
 #include "bswap.h"
 #include "fmt.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 #include "song.h"
 #include "it_defs.h"
 

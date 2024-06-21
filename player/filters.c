@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "sndfile.h"
-#include "cmixer.h"
+#include "player/sndfile.h"
+#include "player/cmixer.h"
 #include <math.h>
 
 

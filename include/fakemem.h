@@ -20,44 +20,21 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#ifndef SCHISM_FAKEMEM_H_
+#define SCHISM_FAKEMEM_H_
 
-#include <sys/mman.h>
-#include <fcntl.h>
-#include <errno.h>
+/* memory usage */
+unsigned int memused_lowmem(void);
+unsigned int memused_ems(void);
+unsigned int memused_songmessage(void);
+unsigned int memused_instruments(void);
+unsigned int memused_samples(void);
+unsigned int memused_clipboard(void);
+unsigned int memused_patterns(void);
+unsigned int memused_history(void);
+/* clears the memory lookup cache */
+void memused_songchanged(void);
 
-#include "slurp.h"
+void memused_get_pattern_saved(unsigned int *a, unsigned int *b); /* wtf */
 
-static void _munmap_slurp(slurp_t *useme)
-{
-	(void)munmap((void*)useme->data, useme->length);
-	(void)close(useme->extra);
-}
-
-int slurp_mmap(slurp_t *useme, const char *filename, size_t st)
-{
-	int fd;
-	void *addr;
-
-	fd = open(filename, O_RDONLY);
-	if (fd == -1) return 0;
-
-	addr = mmap(NULL, st, PROT_READ, MAP_SHARED
-#if defined(MAP_POPULATE) && defined(MAP_NONBLOCK)
-		| MAP_POPULATE | MAP_NONBLOCK
-#endif
-#if defined(MAP_NORESERVE)
-		| MAP_NORESERVE
-#endif
-		, fd, 0);
-
-	if (addr == MAP_FAILED) {
-		(void)close(fd);
-		return (errno == ENOMEM) ? 0 : -1;
-	}
-
-	useme->closure = _munmap_slurp;
-	useme->length = st;
-	useme->data = addr;
-	useme->extra = fd;
-	return 1;
-}
+#endif /* SCHISM_FAKEMEM_H_ */

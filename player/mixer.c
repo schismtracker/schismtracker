@@ -24,10 +24,10 @@
 #include <stdint.h>
 #include <math.h>
 
-#include "sndfile.h"
-#include "snd_fm.h"
-#include "snd_gm.h"
-#include "cmixer.h"
+#include "player/sndfile.h"
+#include "player/snd_fm.h"
+#include "player/snd_gm.h"
+#include "player/cmixer.h"
 #include "util.h" // for CLAMP
 
 // For pingpong loops that work like most of Impulse Tracker's drivers
@@ -92,7 +92,7 @@
 #define M_zBESSELEPS    1e-21
 
 
-#include "precomp_lut.h"
+#include "player/precomp_lut.h"
 
 
 // ----------------------------------------------------------------------------

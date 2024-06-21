@@ -34,6 +34,7 @@
 
 #include "song.h"
 #include "clippy.h"
+#include "fakemem.h"
 
 #include <ctype.h>
 #include <assert.h>

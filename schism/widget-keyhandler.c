@@ -25,6 +25,7 @@
 #include "it.h"
 #include "page.h"
 #include "song.h"
+#include "keyboard.h"
 
 /* --------------------------------------------------------------------- */
 

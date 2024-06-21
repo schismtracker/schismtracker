@@ -74,7 +74,7 @@ Revision History:
 #include <string.h>
 #include <math.h>
 
-#include "fmopl.h"
+#include "player/fmopl.h"
 
 
 #include "log.h"

@@ -23,9 +23,8 @@
 
 #include <string.h>
 
-#include "sndfile.h"
-
-#include "cmixer.h"
+#include "player/sndfile.h"
+#include "player/cmixer.h"
 
 #define OFSDECAYSHIFT 8
 #define OFSDECAYMASK  0xFF

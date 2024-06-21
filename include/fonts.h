@@ -21,43 +21,25 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <sys/mman.h>
-#include <fcntl.h>
-#include <errno.h>
+#ifndef SCHISM_FONTS_H_
+#define SCHISM_FONTS_H_
 
-#include "slurp.h"
+int font_load(const char *filename);
 
-static void _munmap_slurp(slurp_t *useme)
-{
-	(void)munmap((void*)useme->data, useme->length);
-	(void)close(useme->extra);
-}
+/* mostly for the itf editor */
+int font_save(const char *filename);
 
-int slurp_mmap(slurp_t *useme, const char *filename, size_t st)
-{
-	int fd;
-	void *addr;
+void font_reset_lower(void);    /* ascii chars (0-127) */
+void font_reset_upper(void);    /* itf chars (128-255) */
+void font_reset(void);  /* everything (0-255) */
+void font_reset_bios(void);     /* resets all chars to the alt font */
+void font_reset_char(int c);     /* resets just one char */
 
-	fd = open(filename, O_RDONLY);
-	if (fd == -1) return 0;
+/* this needs to be called before any char drawing.
+ * it's pretty much the same as doing...
+ *         if (!font_load("font.cfg"))
+ *                 font_reset();
+ * ... the main difference being font_init() is easier to deal with :) */
+void font_init(void);
 
-	addr = mmap(NULL, st, PROT_READ, MAP_SHARED
-#if defined(MAP_POPULATE) && defined(MAP_NONBLOCK)
-		| MAP_POPULATE | MAP_NONBLOCK
-#endif
-#if defined(MAP_NORESERVE)
-		| MAP_NORESERVE
-#endif
-		, fd, 0);
-
-	if (addr == MAP_FAILED) {
-		(void)close(fd);
-		return (errno == ENOMEM) ? 0 : -1;
-	}
-
-	useme->closure = _munmap_slurp;
-	useme->length = st;
-	useme->data = addr;
-	useme->extra = fd;
-	return 1;
-}
+#endif /* SCHISM_FONTS_H_ */

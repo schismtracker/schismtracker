@@ -27,8 +27,6 @@
 
 #include "util.h"
 
-#ifdef SCHISM_MACOSX
-
 #include <CoreServices/CoreServices.h>
 #include <CoreMIDI/MIDIServices.h>
 #include <CoreAudio/HostTime.h>
@@ -249,5 +247,3 @@ int macosx_midi_setup(void)
 
 	return 1;
 }
-
-#endif

@@ -26,7 +26,6 @@
 #include "bswap.h"
 #include "charset.h"
 #include "it.h"
-#include "sndfile.h"
 #include "song.h"
 #include "slurp.h"
 #include "page.h"
@@ -37,7 +36,9 @@
 
 #include "it_defs.h"
 
-#include "snd_gm.h"
+#include "player/sndfile.h"
+#include "player/snd_gm.h"
+
 #include "midi.h"
 #include "disko.h"
 

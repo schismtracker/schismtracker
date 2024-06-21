@@ -24,8 +24,10 @@
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
 #include "page.h"
 #include "clippy.h"
+#include "palettes.h"
 
 #include "sdlmain.h"
 

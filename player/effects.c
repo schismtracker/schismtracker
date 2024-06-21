@@ -21,12 +21,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
-#include "cmixer.h"
-#include "snd_fm.h"
-#include "snd_gm.h"
-#include "tables.h"
+#include "player/cmixer.h"
+#include "player/snd_fm.h"
+#include "player/snd_gm.h"
+#include "player/tables.h"
 
 #include "util.h" /* for clamp/min */
 

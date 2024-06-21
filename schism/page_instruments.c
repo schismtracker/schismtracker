@@ -24,11 +24,14 @@
 /* This is getting almost as disturbing as the pattern editor. */
 
 #include "headers.h"
+#include "config.h"
 #include "it.h"
 #include "page.h"
 #include "song.h"
 #include "dmoz.h"
 #include "video.h"
+#include "keyboard.h"
+#include "fakemem.h"
 
 #include <sys/stat.h>
 

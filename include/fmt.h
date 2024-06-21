@@ -31,7 +31,7 @@
 
 #include "disko.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* module loaders */

@@ -28,7 +28,7 @@
 #include "fmt.h"
 
 #include "song.h"
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 #pragma pack(push, 1)
 /* Note: This struct must match the disk layout struct */

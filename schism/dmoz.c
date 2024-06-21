@@ -26,6 +26,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "config-parser.h"
 #include "charset.h"
 #include "song.h"
 #include "dmoz.h"

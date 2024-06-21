@@ -26,6 +26,7 @@
 #include "it.h"
 #include "song.h"
 #include "pattern-view.h"
+#include "keyboard.h"
 
 /* this stuff's ugly */
 

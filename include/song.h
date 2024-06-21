@@ -26,7 +26,7 @@
 
 #include <stdint.h>
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 #include "util.h"
 #include "disko.h"
 #include "fmt.h"
@@ -378,9 +378,6 @@ void song_init_instrument_from_sample(int ins, int samp);
 
 /* --------------------------------------------------------------------- */
 /* misc. */
-
-/* called by audio system when buffer stuff change */
-void midi_queue_alloc(int buffer_size, int channels, int samples_per_second);
 
 void song_flip_stereo(void);
 

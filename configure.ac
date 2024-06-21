@@ -30,7 +30,7 @@ last_commit_date=[last_git_commit]
 AC_CONFIG_SRCDIR([schism/main.c])
 
 AM_INIT_AUTOMAKE([-Wall subdir-objects])
-AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_HEADERS([build-config.h])
 
 AC_CANONICAL_HOST
 
@@ -416,4 +416,12 @@ if test "x$PERL" = "x"; then
 	if test -e "auto/helptext.c"; then
 		touch "auto/helptext.c"
 	fi
+fi
+
+dnl --------------------------------------------------------------------------
+dnl old build config filename; it overrides the regular include paths, so it
+dnl has to be removed before we can start building
+
+if test -e "config.h"; then
+	rm "config.h"
 fi

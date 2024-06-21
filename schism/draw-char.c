@@ -61,6 +61,7 @@ the banks are:
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
 #include "dmoz.h" /* for dmoz_path_concat */
 #include "util.h"
 

@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
 #include "charset.h"
 #include "song.h"
 #include "page.h"
@@ -39,8 +40,6 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <errno.h>
-
-#include "sndfile.h"
 
 #include "disko.h"
 
@@ -1030,29 +1029,6 @@ static int update_directory(void)
 
 /* --------------------------------------------------------------------- */
 
-/* FIXME what are these for? apart from clearing the directory list constantly */
-#undef CACHEFREE
-#if CACHEFREE
-static int _save_cachefree_hack(struct key_event *k)
-{
-	if ((k->sym == SDLK_F10 && NO_MODIFIER(k->mod))
-	|| (k->sym == SDLK_w && (k->mod & KMOD_CTRL))
-	|| (k->sym == SDLK_s && (k->mod & KMOD_CTRL))) {
-		status.flags |= DIR_MODULES_CHANGED;
-	}
-	return 0;
-}
-static int _load_cachefree_hack(struct key_event *k)
-{
-	if ((k->sym == SDLK_F9 && NO_MODIFIER(k->mod))
-	|| (k->sym == SDLK_l && (k->mod & KMOD_CTRL))
-	|| (k->sym == SDLK_r && (k->mod & KMOD_CTRL))) {
-		status.flags |= DIR_MODULES_CHANGED;
-	}
-	return 0;
-}
-#endif
-
 static void load_module_set_page(void)
 {
 	handle_file_entered = handle_file_entered_L;
@@ -1080,9 +1056,6 @@ void load_module_load_page(struct page *page)
 	page->total_widgets = 4;
 	page->widgets = widgets_loadmodule;
 	page->help_index = HELP_GLOBAL;
-#if CACHEFREE
-	page->pre_handle_key = _load_cachefree_hack;
-#endif
 
 	create_other(widgets_loadmodule + 0, 1, file_list_handle_key,
 		file_list_handle_text_input, file_list_draw);
@@ -1153,9 +1126,6 @@ void save_module_load_page(struct page *page, int do_export)
 	page->total_widgets = 4;
 	page->help_index = HELP_GLOBAL;
 	page->selected_widget = 2;
-#if CACHEFREE
-	page->pre_handle_key = _save_cachefree_hack;
-#endif
 	page->song_changed_cb = loadsave_song_changed;
 
 	create_other(widgets_exportsave + 0, 1, file_list_handle_key,

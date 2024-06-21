@@ -23,6 +23,7 @@
 #include "headers.h"
 #include "song.h"
 #include "it.h"
+#include "fakemem.h"
 
 static int _cache_ok = 0;
 void memused_songchanged(void)

@@ -26,7 +26,7 @@
 #include "fmt.h"
 #include "it.h"
 #include "disko.h"
-#include "sndfile.h"
+#include "player/sndfile.h"
 #include "log.h"
 #include <stdint.h>
 

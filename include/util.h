@@ -24,6 +24,8 @@
 #ifndef SCHISM_UTIL_H_
 #define SCHISM_UTIL_H_
 
+#include "headers.h"
+
 #include <sys/stat.h> /* roundabout way to get time_t */
 #include <sys/types.h>
 #include <stddef.h> /* wchar_t */
@@ -187,7 +189,6 @@ char *get_current_directory(void); /* just a getcwd() wrapper */
 
 /* wrappers around functions for Unicode support */
 #ifdef SCHISM_WIN32
-#include <stdio.h> /* FILE */
 int win32_open(const char* path, int flags);
 int win32_wstat(const wchar_t* path, struct stat* st);
 int win32_stat(const char* path, struct stat* st);

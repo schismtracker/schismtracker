@@ -24,11 +24,14 @@
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
 #include "charset.h"
 #include "song.h"
 #include "page.h"
 #include "dmoz.h"
 #include "sample-edit.h"
+#include "keyboard.h"
+#include "fakemem.h"
 #include "log.h"
 
 #include <sys/types.h>

@@ -61,8 +61,11 @@ struct midi_provider {
 	void (*drain)(struct midi_port *d);
 };
 
-#define MIDI_INPUT      1
-#define MIDI_OUTPUT     2
+enum {
+	MIDI_INPUT = 1,
+	MIDI_OUTPUT = 2,
+};
+
 struct midi_port {
 	int io, iocap;
 	char *name;
@@ -148,6 +151,8 @@ int jack_midi_setup(void);      // USE_JACK
 int win32mm_midi_setup(void);   // SCHISM_WIN32
 int macosx_midi_setup(void);    // SCHISM_MACOSX
 
+/* called by audio system when buffer stuff change */
+void midi_queue_alloc(int buffer_size, int channels, int samples_per_second);
 
 /* MIDI_PITCH_BEND is defined by OSS -- maybe these need more specific names? */
 #define MIDI_TICK_QUANTIZE      0x00000001

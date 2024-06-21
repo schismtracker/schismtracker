@@ -21,17 +21,16 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "config.h"
+#include "headers.h"
+
 #ifndef SCHISM_WIN32
 # error You are not on Windows. What are you doing?
 #endif
 
-/* FIXME | this really ought to just provide an mmap() wrapper
-   FIXME | instead of reimplementing everything separately */
-
 #include <windows.h>
 #include <sys/stat.h>
 
+#include "util.h"
 #include "log.h"
 #include "slurp.h"
 #include "charset.h"

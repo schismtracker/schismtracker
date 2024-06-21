@@ -22,6 +22,7 @@
  */
 
 #include "headers.h"
+#include "charset.h"
 #include "it.h"
 #include "page.h"
 
@@ -321,10 +322,10 @@ static void textentry_reposition(struct widget *w)
 
 int textentry_add_char(struct widget *w, uint16_t unicode)
 {
-	int c = unicode_to_ascii(unicode);
-
+	uint8_t c = char_unicode_to_cp437(unicode);
 	if (c == 0)
 		return 0;
+
 	text_add_char(w->d.textentry.text, c, &(w->d.textentry.cursor_pos), w->d.textentry.max_length);
 
 	if (w->changed) w->changed();

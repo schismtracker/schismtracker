@@ -25,8 +25,9 @@
 #include "bswap.h"
 #include "fmt.h"
 #include "song.h"
-#include "tables.h"
 #include "log.h"
+
+#include "player/tables.h"
 
 #include <stdint.h>
 

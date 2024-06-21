@@ -29,7 +29,7 @@
 #include "log.h"
 #include "version.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 #include "midi.h"
 
 // TODO: its/iti loaders should be collapsed into here -- no sense duplicating all of this code

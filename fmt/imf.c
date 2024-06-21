@@ -27,7 +27,7 @@
 #include "log.h"
 #include "fmt.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 /* --------------------------------------------------------------------- */
 

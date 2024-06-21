@@ -4,14 +4,9 @@
  * Authors: Olivier Lapicque <olivierl@jps.net>,
  *          Adam Goode       <adam@evdebs.org> (endian and char fixes for PPC)
 */
-#ifndef SCHISM_SNDFILE_H_
-#define SCHISM_SNDFILE_H_
+#ifndef SCHISM_PLAYER_SNDFILE_H_
+#define SCHISM_PLAYER_SNDFILE_H_
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
-#define NEED_BYTESWAP
 #include "headers.h"
 
 #include "disko.h"
@@ -728,5 +723,5 @@ static inline int _muldivr(int a, int b, int c)
 }
 
 
-#endif /* SCHISM_SNDFILE_H_ */
+#endif /* SCHISM_PLAYER_SNDFILE_H_ */
 

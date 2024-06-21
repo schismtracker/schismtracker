@@ -303,7 +303,7 @@ static void main_menu_selected_cb(void)
 		break;
 	case 8: /* settings menu */
 		/* fudge the menu to show/hide the fullscreen toggle as appropriate */
-		if (status.flags & WM_AVAILABLE)
+		if (video_is_wm_available())
 			settings_menu.num_items = 6;
 		else
 			settings_menu.num_items = 5;

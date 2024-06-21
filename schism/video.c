@@ -25,16 +25,14 @@
 #define WINDOW_TITLE			"Schism Tracker"
 
 #include "headers.h"
+
 #include "it.h"
+#include "config.h"
 #include "sdlmain.h"
 #include "video.h"
 #include "osdefs.h"
 
-/* for memcpy */
-#include <string.h>
-#include <stdlib.h>
 #include <errno.h>
-#include <stdio.h>
 
 #include <inttypes.h>
 
@@ -300,13 +298,31 @@ void video_refresh(void)
 	vgamem_clear();
 }
 
+int video_is_focused(void)
+{
+	return !!(SDL_GetWindowFlags(video.window) & SDL_WINDOW_INPUT_FOCUS);
+}
+
+int video_is_visible(void)
+{
+	return !!(SDL_GetWindowFlags(video.window) & SDL_WINDOW_SHOWN);
+}
+
+int video_is_wm_available(void)
+{
+	SDL_SysWMinfo info;
+	SDL_VERSION(&info.version);
+
+	return !!SDL_GetWindowWMInfo(video.window, &info);
+}
+
 static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, unsigned int mouseline[80])
 {
 	unsigned int z;
 
 	memset(mouseline, 0, 80*sizeof(unsigned int));
 	if (video.mouse.visible != MOUSE_EMULATED
-		|| !(status.flags & IS_FOCUSED)
+		|| !video_is_focused()
 		|| y < video.mouse.y
 		|| y >= video.mouse.y+MOUSE_HEIGHT) {
 		return;
@@ -365,13 +381,6 @@ void video_mousecursor(int vis)
 		"Software mouse cursor enabled",
 		"Hardware mouse cursor enabled",
 	};
-
-	if (status.flags & NO_MOUSE) {
-		// disable it no matter what
-		video.mouse.visible = MOUSE_DISABLED;
-		//SDL_ShowCursor(0);
-		return;
-	}
 
 	switch (vis) {
 	case MOUSE_CYCLE_STATE:

@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "keyboard.h"
 #include "song.h"
 #include "page.h"
 #include "charset.h"
@@ -31,6 +32,8 @@
 #include "midi.h"
 #include "version.h"
 #include "video.h"
+#include "fakemem.h"
+#include "fonts.h"
 
 #include "sdlmain.h"
 
@@ -45,7 +48,7 @@ struct tracker_status status = {
 	.previous_page = PAGE_BLANK,
 	.current_help_index = HELP_GLOBAL,
 	.dialog_type = DIALOG_NONE,
-	.flags = IS_FOCUSED | IS_VISIBLE,
+	.flags = 0,
 	.time_display = TIME_PLAY_ELAPSED,
 	.vis_style = VIS_VU_METER,
 	.last_midi_event = "",
@@ -103,7 +106,7 @@ static int check_time(void)
 		h = (m = (s = song_get_current_time()) / 60) / 60;
 		break;
 	case TIME_ELAPSED:
-		h = (m = (s = SDL_GetTicks() / 1000) / 60) / 60;
+		h = (m = (s = SCHISM_GET_TICKS() / 1000) / 60) / 60;
 		break;
 	case TIME_ABSOLUTE:
 		/* absolute time shows the time of the current cursor

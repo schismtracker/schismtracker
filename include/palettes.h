@@ -21,43 +21,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <sys/mman.h>
-#include <fcntl.h>
-#include <errno.h>
+#ifndef SCHISM_PALETTES_H_
+#define SCHISM_PALETTES_H_
 
-#include "slurp.h"
+void palette_apply(void);
+void palette_load_preset(int palette_index);
+void palette_to_string(int which, char *str_out);
+int set_palette_from_string(const char *str_in);
 
-static void _munmap_slurp(slurp_t *useme)
-{
-	(void)munmap((void*)useme->data, useme->length);
-	(void)close(useme->extra);
-}
-
-int slurp_mmap(slurp_t *useme, const char *filename, size_t st)
-{
-	int fd;
-	void *addr;
-
-	fd = open(filename, O_RDONLY);
-	if (fd == -1) return 0;
-
-	addr = mmap(NULL, st, PROT_READ, MAP_SHARED
-#if defined(MAP_POPULATE) && defined(MAP_NONBLOCK)
-		| MAP_POPULATE | MAP_NONBLOCK
-#endif
-#if defined(MAP_NORESERVE)
-		| MAP_NORESERVE
-#endif
-		, fd, 0);
-
-	if (addr == MAP_FAILED) {
-		(void)close(fd);
-		return (errno == ENOMEM) ? 0 : -1;
-	}
-
-	useme->closure = _munmap_slurp;
-	useme->length = st;
-	useme->data = addr;
-	useme->extra = fd;
-	return 1;
-}
+#endif /* SCHISM_PALETTES_H_ */

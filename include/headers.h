@@ -26,7 +26,7 @@
 /* This is probably overkill, but it's consistent this way. */
 
 #ifdef HAVE_CONFIG_H
-# include <config.h>
+# include <build-config.h>
 #endif
 
 #include <stdio.h>

@@ -25,12 +25,16 @@
    LARGELY because I can't remember all the font characters. :)
 */
 #include "headers.h"
+
 #include "it.h"
+#include "config.h"
 #include "dmoz.h"
 #include "page.h"
 #include "version.h"
 #include "log.h"
 #include "util.h"
+#include "palettes.h"
+#include "fonts.h"
 
 #include "sdlmain.h"
 #include <string.h>

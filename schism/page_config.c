@@ -24,13 +24,17 @@
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
+#include "keyboard.h"
 #include "song.h"
 #include "page.h"
 #include "osdefs.h"
+#include "palettes.h"
+#include "fonts.h"
 
 #include "sdlmain.h"
 
-#include "snd_gm.h"
+#include "player/snd_gm.h"
 
 #include "disko.h"
 
@@ -92,7 +96,9 @@ static void change_ui_settings(void)
 	} else {
 		status.flags &= ~CLASSIC_MODE;
 	}
-	kbd_sharp_flat_toggle(widgets_config[6].d.menutoggle.state);
+	kbd_sharp_flat_toggle(widgets_config[6].d.menutoggle.state
+		? KBD_SHARP_FLAT_FLATS
+		: KBD_SHARP_FLAT_SHARPS);
 
 	GM_Reset(0);
 	if (widgets_config[8].d.toggle.state) {
@@ -258,7 +264,7 @@ static void config_set_page(void)
 
 	widgets_config[4].d.menutoggle.state = status.vis_style;
 	widgets_config[5].d.toggle.state = !!(status.flags & CLASSIC_MODE);
-	widgets_config[6].d.menutoggle.state = !!(status.flags & ACCIDENTALS_AS_FLATS);
+	widgets_config[6].d.menutoggle.state = (kbd_sharp_flat_state() == KBD_SHARP_FLAT_FLATS);
 	widgets_config[7].d.menutoggle.state = status.time_display;
 
 	widgets_config[8].d.toggle.state = !!(status.flags & MIDI_LIKE_TRACKER);

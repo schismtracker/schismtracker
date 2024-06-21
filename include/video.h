@@ -71,6 +71,9 @@ void video_mousecursor(int z);
 int video_mousecursor_visible(void);
 
 int video_is_fullscreen(void);
+int video_is_wm_available(void);
+int video_is_focused(void);
+int video_is_visible(void);
 int video_width(void);
 int video_height(void);
 SDL_Window * video_window(void);

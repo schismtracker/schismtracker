@@ -24,9 +24,7 @@
 #ifndef SCHISM_BSWAP_H_
 #define SCHISM_BSWAP_H_
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
+#include "headers.h"
 
 #if HAVE_BYTESWAP_H
 /* byteswap.h uses inline assembly if possible (faster than bit-shifting) */

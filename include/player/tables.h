@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_TABLES_H_
-#define SCHISM_TABLES_H_
+#ifndef SCHISM_PLAYER_TABLES_H_
+#define SCHISM_PLAYER_TABLES_H_
 
 #include <stdint.h>
 
@@ -52,5 +52,5 @@ extern const char *midi_group_names[17];
 extern const char *midi_program_names[128];
 extern const char *midi_percussion_names[61];
 
-#endif /* SCHISM_TABLES_H_ */
+#endif /* SCHISM_PLAYER_TABLES_H_ */
 

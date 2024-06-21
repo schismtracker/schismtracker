@@ -28,7 +28,7 @@
 #include <assert.h>
 
 #include "bswap.h"
-#include "sndfile.h"
+#include "player/sndfile.h"
 #include "log.h"
 #include "util.h"
 #include "fmt.h" // for it_decompress8 / it_decompress16

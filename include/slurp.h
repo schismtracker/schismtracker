@@ -24,18 +24,9 @@
 #ifndef SCHISM_SLURP_H
 #define SCHISM_SLURP_H
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
+#include "headers.h"
 
-#include "util.h"
-
-#include <sys/types.h>
-#include <sys/stat.h>
-
-#include <stdio.h>
-#include <stdint.h>
-#include <unistd.h>
+#include <sys/stat.h> /* struct stat */
 
 /* --------------------------------------------------------------------- */
 

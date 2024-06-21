@@ -28,8 +28,9 @@
 
 #include "it.h" // needed for get_effect_char (purely informational)
 #include "log.h"
-#include "sndfile.h"
-#include "tables.h"
+
+#include "player/sndfile.h"
+#include "player/tables.h"
 
 /* --------------------------------------------------------------------- */
 

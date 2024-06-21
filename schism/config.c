@@ -24,8 +24,10 @@
 #include "headers.h"
 
 #include "it.h"
-#include "video.h" /* shouldn't need this */
+#include "config.h"
+#include "keyboard.h"
 #include "util.h"
+#include "palettes.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -345,7 +347,7 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "General", "make_backups", !!(status.flags & MAKE_BACKUPS));
 	cfg_set_number(&cfg, "General", "numbered_backups", !!(status.flags & NUMBERED_BACKUPS));
 
-	cfg_set_number(&cfg, "General", "accidentals_as_flats", !!(status.flags & ACCIDENTALS_AS_FLATS));
+	cfg_set_number(&cfg, "General", "accidentals_as_flats", (kbd_sharp_flat_state() == KBD_SHARP_FLAT_FLATS));
 	cfg_set_number(&cfg, "General", "meta_is_ctrl", !!(status.flags & META_IS_CTRL));
 	cfg_set_number(&cfg, "General", "altgr_is_alt", !!(status.flags & ALTGR_IS_ALT));
 

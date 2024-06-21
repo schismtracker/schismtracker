@@ -22,7 +22,7 @@
  */
 
 
-#include "tables.h"
+#include "player/tables.h"
 
 const uint8_t vc_portamento_table[16] = {
 	0x00, 0x01, 0x04, 0x08, 0x10, 0x20, 0x40, 0x60,

@@ -34,11 +34,15 @@
 #include "clippy.h"
 #include "disko.h"
 
+#include "config.h"
 #include "version.h"
 #include "song.h"
 #include "midi.h"
 #include "dmoz.h"
 #include "charset.h"
+#include "keyboard.h"
+#include "palettes.h"
+#include "fonts.h"
 
 #include "osdefs.h"
 
@@ -46,8 +50,6 @@
 
 #include "sdlmain.h"
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -116,14 +118,7 @@ static void sdl_init(void)
 
 static void display_init(void)
 {
-	SDL_SysWMinfo	info;
-	SDL_VERSION(&info.version);
-
 	video_startup();
-
-	if (SDL_GetWindowWMInfo(video_window(), &info)) {
-		status.flags |= WM_AVAILABLE;
-	}
 
 	display_print_info();
 	SDL_StartTextInput();
@@ -143,18 +138,11 @@ static void handle_window_event(SDL_WindowEvent *w)
 {
 	switch (w->event) {
 	case SDL_WINDOWEVENT_SHOWN:
-		status.flags |= (IS_VISIBLE|SOFTWARE_MOUSE_MOVED);
-		video_mousecursor(MOUSE_RESET_STATE);
-		break;
-	case SDL_WINDOWEVENT_HIDDEN:
-		status.flags &= ~IS_VISIBLE;
-		break;
 	case SDL_WINDOWEVENT_FOCUS_GAINED:
-		status.flags |= IS_FOCUSED;
 		video_mousecursor(MOUSE_RESET_STATE);
 		break;
 	case SDL_WINDOWEVENT_FOCUS_LOST:
-		status.flags &= ~IS_FOCUSED;
+		/* XXX why do we need this */
 		SDL_ShowCursor(SDL_ENABLE);
 		break;
 	case SDL_WINDOWEVENT_RESIZED:
@@ -168,6 +156,7 @@ static void handle_window_event(SDL_WindowEvent *w)
 #if 0
 		/* ignored currently */
 		SDL_WINDOWEVENT_NONE,           /**< Never used */
+		SDL_WINDOWEVENT_HIDDEN,         /**< Window is out of view */
 		SDL_WINDOWEVENT_MINIMIZED,      /**< Window has been minimized */
 		SDL_WINDOWEVENT_MAXIMIZED,      /**< Window has been maximized */
 		SDL_WINDOWEVENT_RESTORED,       /**< Window has been restored to normal size
@@ -399,21 +388,26 @@ static void parse_options(int argc, char **argv)
 
 static void check_update(void)
 {
-	static unsigned long next = 0;
+	static schism_ticks_t next = 0;
+	schism_ticks_t now = SCHISM_GET_TICKS();
 
 	/* is there any reason why we'd want to redraw
 	   the screen when it's not even visible? */
-	if ((status.flags & (NEED_UPDATE | IS_VISIBLE)) == (NEED_UPDATE | IS_VISIBLE)) {
-		status.flags &= ~(NEED_UPDATE | SOFTWARE_MOUSE_MOVED);
-		if ((status.flags & (IS_FOCUSED | LAZY_REDRAW)) == LAZY_REDRAW) {
-			if (SDL_GetTicks() < next)
+	if (video_is_visible() && (status.flags & NEED_UPDATE)) {
+		status.flags &= ~NEED_UPDATE;
+
+		if (!video_is_focused() && (status.flags & LAZY_REDRAW)) {
+			if (!SCHISM_TICKS_PASSED(now, next))
 				return;
-			next = SDL_GetTicks() + 500;
+
+			next = now + 500;
 		} else if (status.flags & (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN)) {
-			if (SDL_GetTicks() < next)
+			if (!SCHISM_TICKS_PASSED(now, next))
 				return;
-			next = SDL_GetTicks() + 100;
+
+			next = now + 100;
 		}
+
 		redraw_screen();
 		video_refresh();
 		video_blit();
@@ -486,7 +480,7 @@ static void event_loop(void)
 {
 	SDL_Event event;
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
-	uint32_t last_mouse_down, ticker;
+	schism_ticks_t last_mouse_down, ticker;
 	SDL_Keycode last_key = 0;
 	int modkey;
 	time_t startdown;
@@ -624,7 +618,7 @@ static void event_loop(void)
 
 				kk.mod = modkey;
 				kk.mouse = MOUSE_NONE;
-				key_translate(&kk);
+				kbd_key_translate(&kk);
 
 				if (event.type == SDL_KEYUP) {
 					handle_key(&kk);
@@ -715,7 +709,7 @@ static void event_loop(void)
 						kk.mouse_button = MOUSE_BUTTON_LEFT;
 					}
 					if (kk.state == KEY_RELEASE) {
-						ticker = SDL_GetTicks();
+						ticker = SCHISM_GET_TICKS();
 						if (lx == kk.x
 						&& ly == kk.y
 						&& (ticker - last_mouse_down) < 300) {

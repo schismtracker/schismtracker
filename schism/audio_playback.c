@@ -25,8 +25,6 @@
 
 #include "it.h"
 #include "page.h"
-#include "cmixer.h"
-#include "sndfile.h"
 #include "song.h"
 #include "slurp.h"
 #include "config-parser.h"
@@ -45,8 +43,10 @@
 
 #include "midi.h"
 
-#include "snd_fm.h"
-#include "snd_gm.h"
+#include "player/cmixer.h"
+#include "player/sndfile.h"
+#include "player/snd_fm.h"
+#include "player/snd_gm.h"
 
 // Default audio configuration
 // (XXX: Can DEF_SAMPLE_RATE be defined to 48000 everywhere?

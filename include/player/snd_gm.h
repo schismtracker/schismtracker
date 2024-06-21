@@ -1,5 +1,5 @@
-#ifndef SCHISM_SND_GM_H_
-#define SCHISM_SND_GM_H_
+#ifndef SCHISM_PLAYER_SND_GM_H_
+#define SCHISM_PLAYER_SND_GM_H_
 
 void GM_Patch(int c, unsigned char p, int pref_chn_mask);
 void GM_DPatch(int ch, unsigned char GM, unsigned char bank, int pref_chn_mask);
@@ -36,4 +36,4 @@ void GM_SendSongTickCode(void);
 void GM_SendSongPositionCode(unsigned note16pos);
 void GM_IncrementSongCounter(int count);
 
-#endif /* SCHISM_SND_GM_H_ */
+#endif /* SCHISM_PLAYER_SND_GM_H_ */

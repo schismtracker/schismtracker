@@ -22,8 +22,10 @@
  */
 
 #include "headers.h"
+
 #include "it.h"
-#include "sndfile.h" /* for calc_halftone */
+#include "keyboard.h"
+#include "config.h"
 #include "page.h"
 #include "song.h"
 #include "dmoz.h"

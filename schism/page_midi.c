@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
 #include "page.h"
 #include "midi.h"
 
@@ -284,7 +285,7 @@ static void midi_page_draw_portlist(void)
 		draw_text_len(name, 64, 13, 15+i, 5, 0);
 
 		if (status.flags & MIDI_EVENT_CHANGED
-		    && difftime(now, status.last_midi_time) < 3.0
+		    && (now - status.last_midi_tick) < 3000
 		    && ((!status.last_midi_port && p->io & MIDI_OUTPUT)
 		    || p == status.last_midi_port)) {
 			for (j = n = 0; j < 21 && j < status.last_midi_len; j++) { /* 21 is approx 64/3 */
