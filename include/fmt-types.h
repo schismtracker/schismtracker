@@ -100,6 +100,7 @@ READ_INFO(okt) LOAD_SONG(okt)
 READ_INFO(mid) LOAD_SONG(mid)
 READ_INFO(mus) LOAD_SONG(mus)
 READ_INFO(mf)
+READ_INFO(dsm) LOAD_SONG(dsm)
 
 /* Sample formats with magic at start of file */
 READ_INFO(its)  LOAD_SAMPLE(its)  SAVE_SAMPLE(its)
