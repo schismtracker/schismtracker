@@ -269,10 +269,6 @@ int widget_handle_key(struct key_event * k)
 	if (!widget)
 		return 0;
 
-	/* XXX can this be removed? */
-	if (!widget->accept_text) /* hack */
-		widget->accept_text = 1;
-
 	int n, onw, wx, fmin, fmax, pad;
 	void (*changed)(void);
 	enum widget_type current_type = widget->type;
