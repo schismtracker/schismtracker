@@ -22,6 +22,7 @@
  */
 
 #include "headers.h"
+#include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
 #include "it.h" /* for get_effect_char */

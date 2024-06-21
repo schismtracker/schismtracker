@@ -23,6 +23,7 @@
 
 #include "headers.h"
 
+#include "bswap.h"
 #include "charset.h"
 #include "util.h"
 #include "sdlmain.h"

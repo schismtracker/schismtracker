@@ -11,6 +11,8 @@
 
 #include "headers.h"
 
+#include "bswap.h"
+
 #include "slurp.h" // for declaration of mmcmp_unpack
 
 #pragma pack(push, 1)

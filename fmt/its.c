@@ -22,6 +22,7 @@
  */
 
 #include "headers.h"
+#include "bswap.h"
 #include "fmt.h"
 
 #include "sndfile.h"

@@ -24,6 +24,7 @@
 /* FIXME this file is redundant and needs to go away -- s3m.c already does all of this */
 
 #include "headers.h"
+#include "bswap.h"
 #include "fmt.h"
 
 #include "song.h"

@@ -23,6 +23,7 @@
 
 #include "headers.h"
 
+#include "bswap.h"
 #include "charset.h"
 #include "it.h"
 #include "sndfile.h"

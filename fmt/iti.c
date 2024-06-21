@@ -22,14 +22,12 @@
  */
 
 #include "headers.h"
+#include "bswap.h"
 #include "fmt.h"
 
 #include "it.h"
 #include "song.h"
 #include "log.h"
-
-#ifndef SCHISM_WIN32
-#endif
 
 #include "it_defs.h"
 

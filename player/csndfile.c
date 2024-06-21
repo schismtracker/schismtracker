@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <assert.h>
 
+#include "bswap.h"
 #include "sndfile.h"
 #include "log.h"
 #include "util.h"
