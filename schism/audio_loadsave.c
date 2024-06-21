@@ -372,6 +372,7 @@ const struct save_format sample_save_formats[] = {
 
 const struct save_format instrument_save_formats[] = {
 	{"ITI", "Impulse Tracker", ".iti", {.save_instrument = fmt_iti_save_instrument}},
+	{"XI", "Fasttracker II", ".xi", {.save_instrument = fmt_xi_save_instrument}},
 	{.label = NULL}
 };
 

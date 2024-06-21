@@ -83,30 +83,40 @@ struct xi_file_header {
 	struct xi_sample_header xish;
 	struct xm_sample_header sheader[];
 };
+
 #pragma pack(pop)
+
+#define XI_ENV_ENABLED 0x01
+#define XI_ENV_SUSTAIN 0x02
+#define XI_ENV_LOOP    0x04
 
 static int validate_xi(const struct xi_file_header *xi, size_t length)
 {
-	if (length <= sizeof(struct xi_file_header))
+	if (length <= sizeof(*xi))
 		return 0;
-	if (memcmp(xi->header, "Extended Instrument: ", 21) != 0)
+
+	if (memcmp(xi->header, "Extended Instrument: ", 0x15) != 0)
 		return 0;
+
 	if (xi->magic != 0x1a)
 		return 0;
+
 	if (bswapLE16(xi->version) != 0x0102)
 		return(0);
+
 	return(1);
 }
 
 /* --------------------------------------------------------------------- */
+
 int fmt_xi_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	struct xi_file_header *xi = (struct xi_file_header *) data;
+	struct xi_file_header *xi = (struct xi_file_header *)data;
 
 	if (!validate_xi(xi, length))
 		return 0;
 
-	file->description = "FastTracker Instrument";
+	file->description = "Fasttracker II Instrument";
 	file->title = strn_dup((const char *)xi->name, 22);
 	file->type = TYPE_INST_XI;
 	return 1;
@@ -157,12 +167,12 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
 		xmsh.env.env[k] = bswapLE16(xmsh.env.env[k]);
 
 	// Set up envelope types in instrument
-	if (xmsh.vtype & 0x01) g->flags |= ENV_VOLUME;
-	if (xmsh.vtype & 0x02) g->flags |= ENV_VOLSUSTAIN;
-	if (xmsh.vtype & 0x04) g->flags |= ENV_VOLLOOP;
-	if (xmsh.ptype & 0x01) g->flags |= ENV_PANNING;
-	if (xmsh.ptype & 0x02) g->flags |= ENV_PANSUSTAIN;
-	if (xmsh.ptype & 0x04) g->flags |= ENV_PANLOOP;
+	if (xmsh.vtype & XI_ENV_ENABLED) g->flags |= ENV_VOLUME;
+	if (xmsh.vtype & XI_ENV_SUSTAIN) g->flags |= ENV_VOLSUSTAIN;
+	if (xmsh.vtype & XI_ENV_LOOP)    g->flags |= ENV_VOLLOOP;
+	if (xmsh.ptype & XI_ENV_ENABLED) g->flags |= ENV_PANNING;
+	if (xmsh.ptype & XI_ENV_SUSTAIN) g->flags |= ENV_PANSUSTAIN;
+	if (xmsh.ptype & XI_ENV_LOOP)    g->flags |= ENV_PANLOOP;
 
 	prevtick = -1;
 	// Copy envelopes into instrument
@@ -273,5 +283,160 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
 	}
 
 	return 1;
+}
+
+/* ------------------------------------------------------------------------ */
+
+int fmt_xi_save_instrument(disko_t *fp, song_t *song, song_instrument_t *ins)
+{
+	struct xi_file_header xi;
+	struct xi_sample_header xmsh;
+	struct instrumentloader ii;
+	song_instrument_t *g;
+	song_sample_t *smp;
+	int k, prevtick;
+
+	/* fill in sample numbers, epicly stolen from the iti code */
+	int xi_map[255];
+	int xi_invmap[255];
+	int xi_nalloc = 0;
+
+	for (int j = 0; j < 255; j++)
+		xi_map[j] = -1;
+
+	for (int j = 0; j < 96; j++) {
+		int o = ins->sample_map[j + 12];
+
+		if (o > 0 && o < 255 && xi_map[o] == -1) {
+			xi_map[o] = xi_nalloc;
+			xi_invmap[xi_nalloc] = o;
+			xi_nalloc++;
+		}
+
+		xi.xish.snum[j] = xi_map[o]+1;
+	}
+
+	if (xi_nalloc < 1)
+		return SAVE_FILE_ERROR;
+
+	/* now add header things */
+	memcpy(xi.header, "Extended Instrument: ", sizeof(xi.header));
+	strncpy(xi.name, ins->name, sizeof(ins->name));
+	xi.magic = 0x1A;
+	memcpy(xi.tracker, "Schism Tracker", 14);
+	xi.version = bswapLE16(0x0102);
+
+	/* envelope type */
+	if (ins->flags & ENV_VOLUME)     xi.xish.vtype |= XI_ENV_ENABLED;
+	if (ins->flags & ENV_VOLSUSTAIN) xi.xish.vtype |= XI_ENV_SUSTAIN;
+	if (ins->flags & ENV_VOLLOOP)    xi.xish.vtype |= XI_ENV_LOOP;
+	if (ins->flags & ENV_PANNING)    xi.xish.ptype |= XI_ENV_ENABLED;
+	if (ins->flags & ENV_PANSUSTAIN) xi.xish.ptype |= XI_ENV_SUSTAIN;
+	if (ins->flags & ENV_PANLOOP)    xi.xish.ptype |= XI_ENV_LOOP;
+
+	xi.xish.vloops = ins->vol_env.loop_start;
+	xi.xish.vloope = ins->vol_env.loop_end;
+	xi.xish.vsustain = ins->vol_env.sustain_start;
+	xi.xish.vnum = ins->vol_env.nodes;
+	xi.xish.vnum = MIN(xi.xish.vnum, 12);
+
+	xi.xish.ploops = ins->pan_env.loop_start;
+	xi.xish.ploope = ins->pan_env.loop_end;
+	xi.xish.psustain = ins->pan_env.sustain_start;
+	xi.xish.pnum = ins->pan_env.nodes;
+	xi.xish.pnum = MIN(xi.xish.pnum, 12);
+
+	/* envelope nodes */
+	for (k = 0; k < xi.xish.vnum; k++) {
+		xi.xish.env.sep.venv[k].ticks = ins->vol_env.ticks[k];
+		xi.xish.env.sep.venv[k].val = ins->vol_env.values[k];
+	}
+
+	/* envelope nodes */
+	for (k = 0; k < xi.xish.pnum; k++) {
+		xi.xish.env.sep.penv[k].ticks = ins->pan_env.ticks[k];
+		xi.xish.env.sep.penv[k].val = ins->pan_env.values[k];
+	}
+
+	for (k = 0; k < 48; k++)
+		xi.xish.env.env[k] = bswapLE16(xi.xish.env.env[k]);
+
+	/* XXX volfade */
+
+	/* Tuesday's coming! Did you bring your coat? */
+	memcpy(xi.xish.reserved1, "ILiveInAGiantBucket", 19);
+
+	xi.xish.nsamples = xi_nalloc;
+
+	if (xi_nalloc > 0) {
+		/* nab the first sample's info */
+		smp = song->samples + xi_invmap[0];
+
+		xi.xish.vibtype = smp->vib_type;
+		xi.xish.vibrate = MIN(smp->vib_speed, 63);
+		xi.xish.vibdepth = MIN(smp->vib_depth, 15);
+		if (xi.xish.vibrate | xi.xish.vibdepth) {
+			if (smp->vib_rate) {
+				int s = _muldivr(smp->vib_depth, 256, smp->vib_rate);
+				xi.xish.vibsweep = CLAMP(s, 0, 255);
+			} else {
+				xi.xish.vibsweep = 255;
+			}
+		}
+	}
+
+	/* now write the data... */
+	disko_write(fp, &xi, sizeof(xi));
+
+	for (k = 0; k < xi_nalloc; k++) {
+		int o = xi_invmap[k];
+		struct xm_sample_header xmss;
+		smp = song->samples + o;
+		strncpy(xmss.name, smp->name, sizeof(xmss.name));
+
+		const uint32_t samplesize = smp->length * ((smp->flags & CHN_16BIT) ? 2 : 1) * ((smp->flags & CHN_STEREO) ? 2 : 1);
+		xmss.samplen = bswapLE32(samplesize);
+
+		xmss.loopstart = smp->loop_start;
+		xmss.looplen = smp->loop_end - smp->loop_start;
+
+		xmss.loopstart = bswapLE32(xmss.loopstart);
+		xmss.looplen = bswapLE32(xmss.looplen);
+
+		if (smp->flags & CHN_PINGPONGLOOP) {
+			xmss.type |= 0x03;
+		} else if (smp->flags & CHN_LOOP) {
+			xmss.type |= 0x01;
+		}
+
+		if (smp->flags & CHN_16BIT)
+			xmss.type |= 0x10;
+
+		if (smp->flags & CHN_STEREO)
+			xmss.type |= 0x20;
+
+		xmss.vol = smp->volume >> 2;
+		xmss.pan = smp->panning;
+
+		int transp = frequency_to_transpose(smp->c5speed);
+
+		log_appendf(4, "%d", transp);
+
+		xmss.relnote = transp / 128;
+		xmss.finetune = transp % 128;
+
+		disko_write(fp, &xmss, sizeof(xmss));
+	}
+
+	for (k = 0; k < xi_nalloc; k++) {
+		int o = xi_invmap[k];
+		smp = song->samples + o;
+		csf_write_sample(fp, smp, SF_LE | SF_PCMD
+							| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
+							| ((smp->flags & CHN_STEREO) ? SF_SS : SF_M),
+							UINT32_MAX);
+	}
+
+	return SAVE_SUCCESS;
 }
 

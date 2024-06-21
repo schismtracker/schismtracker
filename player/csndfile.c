@@ -543,10 +543,10 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 	uint32_t pos, len = sample->length;
 	if(maxlengthmask != UINT32_MAX)
 		len = len > maxlengthmask ? maxlengthmask : (len & maxlengthmask);
-	int stride = 1;     // how much to add to the left/right pointer per sample written
-	int byteswap = 0;   // should the sample data be byte-swapped?
-	int add = 0;        // how much to add to the sample data (for converting to unsigned)
-	int channel;        // counter.
+	int stride = 1;           // how much to add to the left/right pointer per sample written
+	int byteswap = 0;         // should the sample data be byte-swapped?
+	int add = 0;              // how much to add to the sample data (for converting to unsigned/delta)
+	int channel;              // counter.
 
 	// validate the write flags, and set up the save params
 	switch (flags & SF_CHN_MASK) {
@@ -596,6 +596,10 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 		break;
 	case SF_PCMS:
 		break;
+	case SF_PCMD:
+		if ((flags & SF_CHN_MASK) == SF_SS || (flags & SF_CHN_MASK) == SF_M)
+			break;
+		/* fallthrough */
 	default:
 		SF_FAIL("encoding", flags & SF_ENC_MASK);
 	}
@@ -608,35 +612,86 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 		return 0;
 
 	// No point buffering the processing here -- the disk output already SHOULD have a 64kb buffer
-	if ((flags & SF_BIT_MASK) == SF_16) {
-		// 16-bit data.
-		const int16_t *data;
-		int16_t v;
+	switch (flags & SF_ENC_MASK) {
+	case SF_PCMU:
+	case SF_PCMS:
+		if ((flags & SF_BIT_MASK) == SF_16) {
+			// 16-bit data.
+			const int16_t *data;
 
-		for (channel = 0; channel < stride; channel++) {
-			data = (const int16_t *) sample->data + channel;
-			for (pos = 0; pos < len; pos++) {
-				v = *data + add;
-				if (byteswap)
-					v = bswap_16(v);
-				disko_write(fp, &v, 2);
-				data += stride;
+			for (channel = 0; channel < stride; channel++) {
+				data = (const int16_t *) sample->data + channel;
+				for (pos = 0; pos < len; pos++) {
+					uint16_t v = *data + add;
+					if (byteswap)
+						v = bswap_16(v);
+
+					disko_write(fp, &v, 2);
+					
+					data += stride;
+				}
+			}
+
+			len *= 2;
+		} else {
+			// 8-bit data. Mostly the same as above, but a little bit simpler since
+			// there's no byteswapping, and the values can be written with putc.
+			const int8_t *data;
+			uint8_t c;
+
+			for (channel = 0; channel < stride; channel++) {
+				int v_old = 0;
+
+				data = (const int8_t *) sample->data + channel;
+				for (pos = 0; pos < len; pos++) {
+					disko_putc(fp, *data + add);
+					data += stride;
+				}
 			}
 		}
+		break;
+	case SF_PCMD:
+		if ((flags & SF_BIT_MASK) == SF_16) {
+			const int16_t *data;
 
-		len *= 2;
-	} else {
-		// 8-bit data. Mostly the same as above, but a little bit simpler since
-		// there's no byteswapping, and the values can be written with putc.
-		const int8_t *data;
+			for (channel = 0; channel < stride; channel++) {
+				int v_old = 0;
 
-		for (channel = 0; channel < stride; channel++) {
-			data = (const int8_t *) sample->data + channel;
-			for (pos = 0; pos < len; pos++) {
-				disko_putc(fp, *data + add);
-				data += stride;
+				data = (const int16_t *)sample->data + channel;
+				for (pos = 0; pos < len; pos++) {
+					int v_new = *data + add;
+
+					int16_t c = v_new - v_old;
+					if (byteswap)
+						c = bswap_16(c);
+
+					disko_write(fp, &c, 2);
+
+					v_old = v_new;
+
+					data += stride;
+				}
+			}
+		} else {
+			const int8_t *data;
+			int v_old = 0;
+
+			for (channel = 0; channel < stride; channel++) {
+				int v_old = 0;
+
+				data = (const int8_t *)sample->data + channel;
+				for (pos = 0; pos < len; pos++) {
+					int v_new = *data + add;
+
+					disko_putc(fp, (int8_t)(v_new - v_old));
+
+					v_old = v_new;
+
+					data += stride;
+				}
 			}
 		}
+		break;
 	}
 
 	len *= stride;
