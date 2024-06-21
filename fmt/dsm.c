@@ -307,7 +307,7 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	 * This causes the order list and title to be empty and the global volume to remain as it was.
 	 * Make sure to notify the user if this ever actually happens. */
 	if (!num_song_headers)
-		log_appendf(4, " WARNING: No SONG chunk found! (invalid DSM file??)");
+		log_appendf(4, " WARNING: No SONG chunk found! (invalid DSM file?\?)");
 	else if (num_song_headers > 1)
 		log_appendf(4, " WARNING: Multiple (%zu) SONG chunks found!", num_song_headers);
 
