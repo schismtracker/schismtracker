@@ -25,17 +25,13 @@
 #define SCHISM_HEADERS_H_
 /* This is probably overkill, but it's consistent this way. */
 
-#define _GNU_SOURCE /* need this for <stdlib.h> to give us some functions */
-
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
 
 #include <stdio.h>
-
-#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
-#endif
+#include <stdint.h>
 
 #include <stdarg.h>
 
@@ -43,23 +39,7 @@
 #include <sys/param.h>
 #endif
 
-#include <stdint.h>
-
-
-/* Portability is a pain. */
-#if STDC_HEADERS
-# include <string.h>
-#else
-# ifndef HAVE_STRCHR
-#  define strchr index
-#  define strrchr rindex
-# endif
-char *strchr(), *strrchr();
-# ifndef HAVE_MEMMOVE
-#  define memcpy(d, s, n) bcopy ((s), (d), (n))
-#  define memmove(d, s, n) bcopy ((s), (d), (n))
-# endif
-#endif
+#include <string.h>
 
 #if !defined(HAVE_STRCASECMP) && defined(HAVE_STRICMP)
 # define strcasecmp stricmp
@@ -69,6 +49,10 @@ char *strchr(), *strrchr();
 #endif
 #ifndef HAVE_STRVERSCMP
 # define strverscmp strcasecmp
+#else
+/* need to declare this because its a GNU function, and
+ * we specifically don't want to define _GNU_SOURCE */
+int strverscmp(const char *s1, const char *s2);
 #endif
 #ifndef HAVE_STRCASESTR
 # define strcasestr strstr // derp
@@ -79,29 +63,11 @@ char *strchr(), *strrchr();
 # include <unistd.h>
 #endif
 
+#include <dirent.h>
 
-#if HAVE_DIRENT_H
-# include <dirent.h>
-# ifndef _D_EXACT_NAMLEN
-#  define _D_EXACT_NAMLEN(dirent) strlen((dirent)->d_name)
-# endif
-#else
-# define dirent direct
-# ifndef _D_EXACT_NAMLEN
-#  define _D_EXACT_NAMLEN(dirent) strlen((dirent)->d_name)
-# endif
-# if HAVE_SYS_NDIR_H
-#  include <sys/ndir.h>
-# endif
-# if HAVE_SYS_DIR_H
-#  include <sys/dir.h>
-# endif
-# if HAVE_NDIR_H
-#  include <ndir.h>
-# endif
-#endif
-
-/* dumb workaround for dumb devkitppc bug */
+/* dumb workaround for dumb devkitppc bug
+ *
+ * XXX is this still relevant at all? */
 #ifdef SCHISM_WII
 # undef NAME_MAX
 # undef PATH_MAX
@@ -128,6 +94,7 @@ char *strchr(), *strrchr();
 # include <sys/time.h>
 #endif
 #include <time.h>
+
 #ifndef timersub
 // from FreeBSD
 # define timersub(tvp, uvp, vvp)                                       \
@@ -141,29 +108,19 @@ char *strchr(), *strrchr();
 	} while (0)
 #endif
 
-/* Prototypes for replacement functions */
+/* Prototypes for replacement functions; if the standard library
+ * declaration doesn't match these, we're screwed anyway... */
 
-#ifndef HAVE_ASPRINTF
 int asprintf(char **strp, const char *fmt, ...);
-#endif
-
-#ifndef HAVE_VASPRINTF
 int vasprintf(char **strp, const char *fmt, va_list ap);
-#endif
-
-#ifndef HAVE_STRPTIME
 char *strptime(const char *buf, const char *fmt, struct tm *tm);
-#endif
+int mkstemp(char *template);
 
 #ifdef SCHISM_WIN32
 struct tm *localtime_r(const time_t *timep, struct tm *result);
 #endif
 
-#ifndef HAVE_MKSTEMP
-int mkstemp(char *template);
-#endif
-
-#define INT_SHAPED_PTR(v)               ((intptr_t)(((void*)(v))))
+#define INT_SHAPED_PTR(v)               ((intptr_t)(void*)(v))
 #define PTR_SHAPED_INT(i)               ((void*)(i))
 
 #endif /* SCHISM_HEADERS_H_ */
