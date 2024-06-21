@@ -358,14 +358,14 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 
 			iti_map[o] = qp;
 			qp += 80; /* header is 80 bytes */
-			save_its_header(fp, current_song->samples + o);
+			save_its_header(fp, song->samples + o);
 		}
 		for (int j = 0; j < iti_nalloc; j++) {
 			unsigned int op, tmp;
 
 			int o = iti_invmap[ j ];
 
-			song_sample_t *smp = current_song->samples + o;
+			song_sample_t *smp = song->samples + o;
 
 			op = disko_tell(fp);
 			tmp = bswapLE32(op);
