@@ -129,13 +129,13 @@ int fmt_dsm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
-	uint8_t riff[4], dsmf[4];
 	chunk_t chunk;
+	uint8_t riff[4], dsmf[4];
 	size_t pos = 0, length = 0;
-	uint32_t flags = 0;
-	uint16_t nord = 0, nsmp = 0, npat = 0, nchn = 0;
 	size_t s = 0, p = 0, n = 0;
+	uint16_t nord = 0, nsmp = 0, npat = 0, nchn = 0;
 	uint8_t chn_doesnt_match = 0;
+	size_t num_song_headers = 0;
 
 	slurp_read(fp, &riff, 4);
 	slurp_seek(fp, 4, SEEK_CUR);
@@ -167,6 +167,7 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			song->title[25] = '\0';
 
 			memcpy(song->orderlist, chunk.data->SONG.orders, nord);
+			num_song_headers++;
 			break;
 		case ID_INST: {
 			/* sanity check. it doesn't matter if nsmp isn't the real sample
@@ -212,24 +213,30 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			break;
 		}
 		case ID_PATT: {
-			if (lflags & LOAD_NOPATTERNS)
-				continue;
-
 			if (p > MAX_PATTERNS)
 				return LOAD_UNSUPPORTED; /* punt */
+
+			if (lflags & LOAD_NOPATTERNS) {
+				p++;
+				continue;
+			}
 
 			uint16_t offset = 0, length = bswapLE16(chunk.data->PATT.length);
 
 			song->patterns[p] = csf_allocate_pattern(64);
 
-			int row = 0;
-			while (row < 64 && offset < chunk.data->PATT.length) {
-				int mask = chunk.data->PATT.data[offset++];
+			/* make sure our offset doesn't pass the length */
+#define DSM_ASSERT_OFFSET(o, l) \
+	if ((o) >= (l)) { \
+		log_appendf(4, " WARNING: Offset (%"PRIu16") passed length (%"PRIu16") while parsing pattern!", (uint16_t)(o), (uint16_t)(l)); \
+		break; \
+	}
 
-				if (mask == EOF) {
-					log_appendf(4, " WARNING: Pattern %zu: file truncated", p);
-					break;
-				}
+			int row = 0;
+			while (row < 64) {
+				uint8_t mask = chunk.data->PATT.data[offset++];
+
+				DSM_ASSERT_OFFSET(offset, chunk.data->PATT.length)
 
 				if (!mask) {
 					/* done with the row */
@@ -248,16 +255,25 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				song_note_t *note = song->patterns[p] + 64 * row + chn;
 				if (mask & DSM_PAT_NOTE_PRESENT) {
 					uint8_t c = chunk.data->PATT.data[offset++];
+
+					DSM_ASSERT_OFFSET(offset, chunk.data->PATT.length)
+
 					if (c <= 168)
 						note->note = c + 12;
 				}
 
-				if (mask & DSM_PAT_INST_PRESENT)
+				if (mask & DSM_PAT_INST_PRESENT) {
 					note->instrument = chunk.data->PATT.data[offset++];
+
+					DSM_ASSERT_OFFSET(offset, chunk.data->PATT.length)
+				}
 
 				if (mask & DSM_PAT_VOL_PRESENT) {
 					/* volume */
 					uint8_t param = chunk.data->PATT.data[offset++];
+
+					DSM_ASSERT_OFFSET(offset, chunk.data->PATT.length)
+
 					if (param != 0xFF) {
 						note->voleffect = VOLFX_VOLUME;
 						note->volparam = param;
@@ -266,10 +282,19 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 				if (mask & DSM_PAT_CMD_PRESENT) {
 					note->effect = chunk.data->PATT.data[offset++];
+
+					DSM_ASSERT_OFFSET(offset, chunk.data->PATT.length)
+
 					note->param = chunk.data->PATT.data[offset++];
+
+					DSM_ASSERT_OFFSET(offset, chunk.data->PATT.length)
+
 					csf_import_mod_effect(note, 0);
 				}
 			}
+
+#undef DSM_ASSERT_OFFSET
+
 			p++;
 			break;
 		}
@@ -278,14 +303,22 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		}
 	}
 
+	/* With our loader, it's possible that the song header wasn't even found to begin with.
+	 * This causes the order list and title to be empty and the global volume to remain as it was.
+	 * Make sure to notify the user if this ever actually happens. */
+	if (!num_song_headers)
+		log_appendf(4, " WARNING: No SONG chunk found! (invalid DSM file??)");
+	else if (num_song_headers > 1)
+		log_appendf(4, " WARNING: Multiple (%zu) SONG chunks found!", num_song_headers);
+
 	if (s != nsmp)
-		log_appendf(4, " WARNING: More samples (%zu) than expected (" PRIu16 ") were found!", s, nsmp);
+		log_appendf(4, " WARNING: # of samples (%zu) different than expected (%"PRIu16")", s, nsmp);
 
 	if (p != npat)
-		log_appendf(4, " WARNING: More patterns (%zu) than expected (" PRIu16 ") were found!", p, npat);
+		log_appendf(4, " WARNING: # of patterns (%zu) different than expected (%"PRIu16")", p, npat);
 
-	if (chn_doesnt_match)
-		log_appendf(4, " WARNING: More channels (" PRIu8 ") than expected (" PRIu16 ") were found!", chn_doesnt_match, nchn);
+	if (chn_doesnt_match && chn_doesnt_match != nchn)
+		log_appendf(4, " WARNING: # of channels (%"PRIu8") different than expected (%"PRIu16")", chn_doesnt_match, nchn);
 
 	for (n = 0; n < nchn; n++)
 		song->channels[n].panning = (n & 0x1) ? 256 : 0;
