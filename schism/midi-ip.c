@@ -401,7 +401,7 @@ static void _ip_poll(struct midi_provider *p)
 	} else if (m > last_buildout) {
 		for (i = last_buildout; i < m; i++) {
 			buffer = NULL;
-			if (asprintf(&buffer, " Multicast/IP MIDI %lu", i+1) == -1) {
+			if (asprintf(&buffer, " Multicast/IP MIDI %ld", i+1) == -1) {
 				perror("asprintf");
 				exit(255);
 			}

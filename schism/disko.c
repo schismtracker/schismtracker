@@ -746,7 +746,7 @@ int disko_export_song(const char *filename, const struct save_format *format)
 		}
 	}
 
-	log_appendf(5, " %d Hz, %d bit, %s",
+	log_appendf(5, " %" PRIu32 " Hz, %" PRIu32 " bit, %s",
 		export_dwsong.mix_frequency, export_dwsong.mix_bits_per_sample,
 		export_dwsong.mix_channels == 1 ? "mono" : "stereo");
 	export_format = format;
@@ -847,7 +847,7 @@ static int disko_finish(void)
 			+ ((export_end_time.tv_usec - export_start_time.tv_usec) / 1000000.0);
 
 		/* it would be more useful if this actually got the real size of the files */
-		log_appendf(5, " %.2f MiB (%d:%02d) written in %.2lf sec",
+		log_appendf(5, " %.2f MiB (%zu:%zu) written in %.2lf sec",
 			total_size / 1048576.0,
 			samples_0 / disko_output_rate / 60, (samples_0 / disko_output_rate) % 60,
 			elapsed);

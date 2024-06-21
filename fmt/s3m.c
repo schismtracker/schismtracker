@@ -31,6 +31,8 @@
 #include "disko.h"
 #include "log.h"
 
+#include <inttypes.h>
+
 /* --------------------------------------------------------------------- */
 
 int fmt_s3m_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
@@ -449,9 +451,9 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			break;
 		case 1:
 			if (gus_addresses > 1)
-				tid = "Scream Tracker %d.%02x (GUS)";
+				tid = "Scream Tracker %" PRIu8 ".%02" PRIx8 " (GUS)";
 			else if (gus_addresses == 1 || !any_samples || trkvers == 0x1300)
-				tid = "Scream Tracker %d.%02x (SB)"; // could also be a GUS file with a single sample
+				tid = "Scream Tracker %" PRIu8 ".%02" PRIx8 " (SB)"; // could also be a GUS file with a single sample
 			else
 				strcpy(song->tracker_id, "Unknown tracker");
 			break;
@@ -459,14 +461,14 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			if (trkvers == 0x2013) // PlayerPRO on Intel forgets to byte-swap the tracker ID bytes 
 				strcpy(song->tracker_id, "PlayerPRO");
 			else
-				tid = "Imago Orpheus %d.%02x";
+				tid = "Imago Orpheus %" PRIu8 ".%02" PRIx8;
 			break;
 		case 3:
 			if (trkvers <= 0x3214) {
-				tid = "Impulse Tracker %d.%02x";
+				tid = "Impulse Tracker %" PRIu8 ".%02" PRIx8;
 			} else {
 				tid = NULL;
-				sprintf(song->tracker_id, "Impulse Tracker 2.14p%d", trkvers - 0x3214);
+				sprintf(song->tracker_id, "Impulse Tracker 2.14p" PRIu16, (uint16_t)(trkvers - 0x3214));
 			}
 			break;
 		case 4:
@@ -481,9 +483,9 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			if (trkvers == 0x5447)
 				strcpy(song->tracker_id, "Graoumf Tracker");
 			else if (trkvers >= 0x5129 && reserved)
-				sprintf(song->tracker_id, "OpenMPT %d.%02x.%02x.%02x", (trkvers & 0xf00) >> 8, trkvers & 0xff, (reserved >> 8) & 0xff, reserved & 0xff);
+				sprintf(song->tracker_id, "OpenMPT %" PRIu8 ".%02" PRIX8 ".%02" PRIX8 ".%02" PRIX8, (uint8_t)((trkvers & 0xf00) >> 8), (uint8_t)(trkvers & 0xff), (uint8_t)((reserved >> 8) & 0xff), (uint8_t)(reserved & 0xff));
 			else
-				tid = "OpenMPT %d.%02x";
+				tid = "OpenMPT %" PRIu8 ".%02" PRIX8;
 			break;
 		case 6:
 			strcpy(song->tracker_id, "BeRoTracker");
@@ -500,7 +502,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		}
 	}
 	if (tid)
-		sprintf(song->tracker_id, tid, (trkvers & 0xf00) >> 8, trkvers & 0xff);
+		sprintf(song->tracker_id, tid, (uint8_t)((trkvers & 0xf00) >> 8), (uint8_t)(trkvers & 0xff));
 
 //      if (ferror(fp)) {
 //              return LOAD_FILE_ERROR;

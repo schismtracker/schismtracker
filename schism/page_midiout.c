@@ -39,7 +39,7 @@ static midi_config_t editcfg;
 static void midiout_draw_const(void)
 {
 	char buf[4] = "SFx";
-	int i;
+	unsigned int i;
 
 	draw_text(    "MIDI Start", 6, 13, 0, 2);
 	draw_text(     "MIDI Stop", 7, 14, 0, 2);

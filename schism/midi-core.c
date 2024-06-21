@@ -143,7 +143,7 @@ void cfg_load_midi(cfg_file_t *cfg)
 {
 	midi_config_t *md, *mc;
 	char buf[17], buf2[33];
-	int i;
+	unsigned int i;
 
 	CFG_GET_MI(flags, MIDI_TICK_QUANTIZE | MIDI_RECORD_NOTEOFF
 		| MIDI_RECORD_VELOCITY | MIDI_RECORD_AFTERTOUCH
@@ -194,7 +194,8 @@ void cfg_save_midi(cfg_file_t *cfg)
 	midi_config_t *md, *mc;
 	char buf[33];
 	char *ss;
-	int i, j;
+	unsigned int i;
+	int j;
 
 	CFG_SET_MI(flags);
 	CFG_SET_MI(pitch_depth);
@@ -239,7 +240,7 @@ void cfg_save_midi(cfg_file_t *cfg)
 			if (!*ss) continue;
 			if (!q->io) continue;
 
-			snprintf(buf, 32, "MIDI Port %d", i); i++;
+			snprintf(buf, 32, "MIDI Port %u", i); i++;
 			cfg_set_string(cfg, buf, "name", ss);
 			ss = p->name;
 			if (ss) {

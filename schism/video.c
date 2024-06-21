@@ -36,6 +36,8 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include <inttypes.h>
+
 #ifndef SCHISM_MACOSX
 #ifdef SCHISM_WIN32
 #include "auto/schismico.h"
@@ -136,7 +138,7 @@ void video_report(void)
 
 	log_appendf(5, " Using driver '%s'", SDL_GetCurrentVideoDriver());
 
-	log_appendf(5, " Display format: %d bits/pixel", SDL_BITSPERPIXEL(format));
+	log_appendf(5, " Display format: %"PRIu32" bits/pixel", SDL_BITSPERPIXEL(format));
 
 	if (!SDL_GetCurrentDisplayMode(0, &display) && video.fullscreen)
 		log_appendf(5, " Display dimensions: %dx%d", display.w, display.h);

@@ -578,7 +578,8 @@ static int pattern_selection_system_paste(UNUSED int cb, const void *data)
 	int copyin_x, copyin_y;
 	int (*fx_map)(char f);
 	const char *str;
-	int x, scantmp;
+	int x;
+	unsigned int scantmp;
 
 	if (!data) return 0;
 	str = (const char *)data;
@@ -629,7 +630,7 @@ static int pattern_selection_system_paste(UNUSED int cb, const void *data)
 		};
 		str += 3;
 		/* instrument number */
-		if (sscanf(str, "%02d", &scantmp) == 1)
+		if (sscanf(str, "%02u", &scantmp) == 1)
 			n.instrument = scantmp;
 		else
 			n.instrument = 0;
@@ -638,7 +639,7 @@ static int pattern_selection_system_paste(UNUSED int cb, const void *data)
 			if (*str == '|' || *str == '\r' || *str == '\n') break;
 			if (!str[0] || !str[1] || !str[2]) break;
 			if (*str >= 'a' && *str <= 'z') {
-				if (sscanf(str+1, "%02d", &scantmp) == 1)
+				if (sscanf(str+1, "%02u", &scantmp) == 1)
 					n.volparam = scantmp;
 				else
 					n.volparam = 0;

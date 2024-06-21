@@ -28,6 +28,8 @@
 
 #include "sndfile.h"
 
+#include <inttypes.h>
+
 /* --------------------------------------------------------------------- */
 
 int fmt_okt_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
@@ -453,7 +455,7 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				continue;
 
 			if (ssmp->length != smpsize[sd]) {
-				log_appendf(4, " Warning: Sample %d: header/data size mismatch (%d/%d)", sh,
+				log_appendf(4, " Warning: Sample %d: header/data size mismatch (%" PRIu32 "/%" PRIu32 ")", sh,
 					ssmp->length, smpsize[sd]);
 				ssmp->length = MIN(smpsize[sd], ssmp->length);
 			}

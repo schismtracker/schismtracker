@@ -244,7 +244,7 @@ static void load_sample_draw_const(void)
 	if (current_file >= 0 && current_file < flist.num_files && flist.files[current_file]) {
 		f = flist.files[current_file];
 
-		sprintf(sbuf, "%07d", f->smp_length);
+		sprintf(sbuf, "%07u", f->smp_length);
 		draw_text_len(sbuf, 13, 64, 22, 2, 0);
 
 		if (!f->smp_length && !f->smp_filename && !f->smp_flags) {

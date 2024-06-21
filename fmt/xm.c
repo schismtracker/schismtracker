@@ -348,10 +348,10 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 	}
 
 	if (lostfx)
-		log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
+		log_appendf(4, " Warning: %u effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
 
 	if (lostpat)
-		log_appendf(4, " Warning: Too many patterns in song (%d skipped)", lostpat);
+		log_appendf(4, " Warning: Too many patterns in song (%u skipped)", lostpat);
 }
 
 static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)

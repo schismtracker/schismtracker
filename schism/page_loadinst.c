@@ -240,7 +240,7 @@ static void file_list_draw(void)
 		});
 
 		if (file->sampsize > 1) {
-			sprintf(sbuf, "%u Samples", file->sampsize);
+			sprintf(sbuf, "%d Samples", file->sampsize);
 			draw_text_len(sbuf, 10, 51, pos, fg, bg);
 		} else if (file->sampsize == 1) {
 			draw_text("1 Sample  ", 51, pos, fg, bg);
