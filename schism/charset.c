@@ -197,6 +197,11 @@ static int utf8_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_nex
 		return DECODER_NEED_MORE; \
 	}
 
+/* TODO: need to find some way to handle non-conforming file paths on win32;
+ * one possible solution is storing as CESU-8[1] and interpreting CHARSET_CHAR
+ * as it...
+ *
+ * [1]: https://www.unicode.org/reports/tr26/tr26-4.html */
 DECODE_UTF16_VARIANT(LE)
 DECODE_UTF16_VARIANT(BE)
 
@@ -310,40 +315,28 @@ static size_t ucs4_to_cp437(uint32_t ch, uint8_t* out) {
 
 #define ENCODE_UTF16_VARIANT(x) \
 	static size_t ucs4_to_utf16##x(uint32_t ch, uint8_t* out) { \
+		uint16_t *out16 = (uint16_t*)out; \
 		size_t len = 0; \
 	\
 		if (out) { \
 			if (ch < 0x10000) { \
-				APPEND_CHAR(ch); \
+				out16[len++] = bswap##x##16(ch); \
 			} else { \
 				uint16_t w1 = 0xD800 + ((ch - 0x10000) >> 10); \
-				uint16_t w2 = 0xDC00 + ((ch - 0x10000) & 0x3FF); \
+				uint16_t w2 = 0xDC00 + ((ch - 0x10000) & (1ul << 10)); \
 	\
-				APPEND_CHAR(w1); \
-				APPEND_CHAR(w2); \
+				out16[len++] = bswap##x##16(w1); \
+				out16[len++] = bswap##x##16(w2); \
 			} \
 		} else { \
-			len += (ch < 0x10000) ? 2 : 4; \
+			len += (ch < 0x10000) ? 1 : 2; \
 		} \
 	\
-		return len; \
+		return len * 2; \
 	}
 
-#define APPEND_CHAR(x) \
-	out[len++] = (uint8_t)(ch); \
-	out[len++] = (uint8_t)(ch >> 8)
-
 ENCODE_UTF16_VARIANT(LE)
-
-#undef APPEND_CHAR
-
-#define APPEND_CHAR(x) \
-	out[len++] = (uint8_t)(ch >> 8); \
-	out[len++] = (uint8_t)(ch);
-
 ENCODE_UTF16_VARIANT(BE)
-
-#undef APPEND_CHAR
 
 #undef ENCODE_UTF16_VARIANT
 
