@@ -48,37 +48,23 @@ static struct vgamem_overlay logo_image = {
 	NULL, 0, 0, 0,
 };
 
+static int did_destroy_dialog = 0;
 
 static int _fixup_ignore_globals(struct key_event *k)
 {
 	if (k->mouse && k->y > 20) return 0;
-	switch (k->sym) {
-	case SDLK_LEFT:
-	case SDLK_RIGHT:
-	case SDLK_DOWN:
-	case SDLK_UP:
-	case SDLK_TAB:
-	case SDLK_RETURN:
-	case SDLK_ESCAPE:
-		/* use default handler */
-		return 0;
-	case SDLK_F2: case SDLK_F5: case SDLK_F9: case SDLK_F10:
-		// Ctrl + these keys does not lead to a new screen
-		if (k->mod & KMOD_CTRL)
-			break;
-		// Fall through.
-	case SDLK_F1: case SDLK_F3: case SDLK_F4:
-	case SDLK_F11: case SDLK_F12:
-		// Ignore Alt and so on.
-		if (k->mod & (KMOD_ALT | KMOD_SHIFT))
-			break;
-		dialog_destroy();
-		return 0;
-	default:
-		break;
+
+	if (k->mouse == MOUSE_NONE) {
+		if (did_destroy_dialog) { // Will only get called if key press did not lead to a different page
+			set_page(PAGE_LOAD_MODULE);
+			status.flags |= NEED_UPDATE;
+		} else {
+			dialog_destroy();
+			did_destroy_dialog = 1;
+		}
 	}
-	/* this way, we can't pull up help here */
-	return 1;
+
+	return 0;
 }
 
 static void _draw_full(void)

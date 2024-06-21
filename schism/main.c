@@ -476,11 +476,12 @@ static void push_pending_keydown_event(struct key_event* kk) {
 	}
 }
 
-static void pop_pending_keydown_event(const uint8_t* text) {
+static void pop_pending_keydown_event(const uint8_t* text, const char* orig_text) {
 	/* text can and will be NULL here. when it is not NULL, it
 	 * should be in CP437 */
 	if (have_pending_keydown) {
 		pending_keydown.text = text;
+		pending_keydown.orig_text = orig_text;
 		cache_key_repeat(&pending_keydown);
 		handle_key(&pending_keydown);
 		have_pending_keydown = 0;
@@ -566,7 +567,7 @@ static void event_loop(void)
 				}
 
 				if (have_pending_keydown) {
-					pop_pending_keydown_event(input_text);
+					pop_pending_keydown_event(input_text, event.text.text);
 				} else {
 					/* wtf? whatever, send it to the text input
 					 * handlers I guess, don't throw it out! */
@@ -583,7 +584,7 @@ static void event_loop(void)
 
 				/* fallthrough */
 			case SDL_KEYUP:
-				pop_pending_keydown_event(NULL);
+				pop_pending_keydown_event(NULL, NULL);
 				switch (event.key.keysym.sym) {
 				case SDLK_NUMLOCKCLEAR:
 					modkey ^= KMOD_NUM;
@@ -865,7 +866,7 @@ static void event_loop(void)
 		/* when using a real keyboard SDL will send a keydown first
 		 * and text input after it; if a text input event is NOT sent,
 		 * we should just send the keydown as is */
-		pop_pending_keydown_event(NULL);
+		pop_pending_keydown_event(NULL, NULL);
 
 		/* handle key repeats */
 		handle_key_repeat();
@@ -1028,6 +1029,12 @@ int main(int argc, char **argv)
 	SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
 	shutdown_process |= EXIT_SDLQUIT;
 	os_sdlinit();
+	init_keybinds();
+	init_menu_keybinds();
+
+#ifdef SCHISM_WIN32
+	win32_create_menu();
+#endif
 
 	display_init();
 	palette_apply();

@@ -28,6 +28,7 @@
 #include "it.h"
 #include "osdefs.h"
 #include "fmt.h"
+#include "charset.h"
 
 #include <windows.h>
 #include <ws2tcpip.h>
@@ -278,8 +279,98 @@ int win32_sdlevent(SDL_Event* event)
 	return 1;
 }
 
-void win32_toggle_menu(SDL_Window* window)
+wchar_t* str_to_wchar(char* string, int free_inputs)
 {
+	wchar_t* out = NULL;
+	charset_error_t result = charset_iconv(string, (uint8_t**)&out, CHARSET_UTF8, CHARSET_WCHAR_T);
+
+	if (result != CHARSET_ERROR_SUCCESS) {
+		printf("Failed converting \"%s\" to wchar. Error: %i.\n", string, result);
+		return L"";
+	}
+
+	if (free_inputs)
+		free(string);
+
+	return out;
+}
+
+#define append_menu(MENU, MENU_ITEM, NAME, KEYBIND_NAME) \
+	AppendMenuW(MENU, MF_STRING, MENU_ITEM, \
+		str_to_wchar(str_concat_two(("&" NAME "\t"), \
+			(char*)global_keybinds_list.global.KEYBIND_NAME.shortcut_text, 0), 1));
+
+void win32_create_menu_2(void) {
+	menu = CreateMenu();
+	{
+		HMENU file = CreatePopupMenu();
+		append_menu(file, IDM_FILE_NEW, "New", new_song);
+		append_menu(file, IDM_FILE_LOAD, "Load", load_module);
+		append_menu(file, IDM_FILE_SAVE_CURRENT, "Save", save);
+		append_menu(file, IDM_FILE_SAVE_AS, "Save &As...", save_module);
+		append_menu(file, IDM_FILE_EXPORT, "Export...", export_module);
+		append_menu(file, IDM_FILE_MESSAGE_LOG, "Message Log", schism_logging);
+		AppendMenuA(file, MF_SEPARATOR, 0, NULL);
+		append_menu(file, IDM_FILE_QUIT, "Quit", quit);
+		AppendMenuW(menu, MF_POPUP, (uintptr_t)file, L"&File");
+	}
+	{
+		/* this is equivalent to the "Schism Tracker" menu on Mac OS X */
+		HMENU view = CreatePopupMenu();
+		append_menu(view, IDM_VIEW_HELP, "Help", help);
+		AppendMenuW(view, MF_SEPARATOR, 0, NULL);
+		append_menu(view, IDM_VIEW_VIEW_PATTERNS, "View Patterns", pattern_edit);
+		append_menu(view, IDM_VIEW_ORDERS_PANNING, "Orders/Panning", order_list);
+		append_menu(view, IDM_VIEW_VARIABLES, "Variables", song_variables);
+		append_menu(view, IDM_VIEW_MESSAGE_EDITOR, "Message Editor", message_editor);
+		AppendMenuW(view, MF_SEPARATOR, 0, NULL);
+		append_menu(view, IDM_VIEW_TOGGLE_FULLSCREEN, "Toggle Fullscreen", fullscreen);
+		AppendMenuW(menu, MF_POPUP, (uintptr_t)view, L"&View");
+	}
+	{
+		HMENU playback = CreatePopupMenu();
+		append_menu(playback, IDM_PLAYBACK_SHOW_INFOPAGE, "Show Infopage", play_information_or_play_song);
+		append_menu(playback, IDM_PLAYBACK_PLAY_SONG, "Play Song", play_song);
+		append_menu(playback, IDM_PLAYBACK_PLAY_PATTERN, "Play Pattern", play_current_pattern);
+		append_menu(playback, IDM_PLAYBACK_PLAY_FROM_ORDER, "Play From Order", play_song_from_order);
+		append_menu(playback, IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR, "Play From Mark / Cursor", play_song_from_mark);
+		append_menu(playback, IDM_PLAYBACK_STOP, "Stop", stop_playback);
+		append_menu(playback, IDM_PLAYBACK_CALCULATE_LENGTH, "Calculate Length", calculate_song_length);
+		AppendMenuW(menu, MF_POPUP, (uintptr_t)playback, L"&Playback");
+	}
+	{
+		HMENU samples = CreatePopupMenu();
+		append_menu(samples, IDM_SAMPLES_SAMPLE_LIST, "Sample List", sample_list);
+		append_menu(samples, IDM_SAMPLES_SAMPLE_LIBRARY, "Sample &Library", sample_library);
+		append_menu(samples, IDM_SAMPLES_RELOAD_SOUNDCARD, "Reload Soundcard", audio_reset);
+		AppendMenuW(menu, MF_POPUP, (uintptr_t)samples, L"&Samples");
+	}
+	{
+		HMENU instruments = CreatePopupMenu();
+		append_menu(instruments, IDM_INSTRUMENTS_INSTRUMENT_LIST, "Instrument List", instrument_list);
+		append_menu(instruments, IDM_INSTRUMENTS_INSTRUMENT_LIBRARY, "Instrument Library", instrument_library);
+		AppendMenuW(menu, MF_POPUP, (uintptr_t)instruments, L"&Instruments");
+	}
+	{
+		HMENU settings = CreatePopupMenu();
+		append_menu(settings, IDM_SETTINGS_PREFERENCES, "Preferences", preferences);
+		append_menu(settings, IDM_SETTINGS_MIDI_CONFIGURATION, "MIDI Configuration", midi);
+		append_menu(settings, IDM_SETTINGS_PALETTE_EDITOR, "Palette Editor", palette_config);
+		append_menu(settings, IDM_SETTINGS_FONT_EDITOR, "Font Editor", font_editor);
+		append_menu(settings, IDM_SETTINGS_SYSTEM_CONFIGURATION, "System Configuration", system_configure);
+		AppendMenuW(menu, MF_POPUP, (uintptr_t)settings, L"S&ettings");
+	}
+}
+
+SDL_Window* current_window;
+int menu_should_be_yes = 0;
+
+void win32_toggle_menu(SDL_Window* window, int yes)
+{
+	current_window = window;
+	if (!menu)
+		menu_should_be_yes = yes;
+
 	const int flags = SDL_GetWindowFlags(window);
 	int width, height;
 
@@ -298,4 +389,10 @@ void win32_toggle_menu(SDL_Window* window)
 
 	if (cache_size)
 		SDL_SetWindowSize(window, width, height);
+}
+
+void win32_create_menu(void) {
+	if (menu) return;
+	win32_create_menu_2();
+	win32_toggle_menu(current_window, menu_should_be_yes);
 }

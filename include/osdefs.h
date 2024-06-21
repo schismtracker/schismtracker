@@ -91,7 +91,9 @@ void win32_sysexit(void);
 void win32_sdlinit(void);
 void win32_get_modkey(int *m);
 void win32_filecreated_callback(const char *filename);
-void win32_toggle_menu(SDL_Window* window);
+void win32_toggle_menu(SDL_Window* window, int yes);
+void win32_refresh_menu(SDL_Window* window, int yes);
+void win32_create_menu();
 
 int macosx_sdlevent(SDL_Event* event);
 void macosx_sysexit(void);
