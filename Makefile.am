@@ -9,18 +9,18 @@ docs = \
 	docs/building_on_windows.md	\
 	docs/configuration.md
 helptexts = \
-	helptext/adlib-sample		\
-	helptext/copyright		\
 	helptext/global-keys		\
+	helptext/copyright		\
 	helptext/info-page		\
 	helptext/instrument-list	\
 	helptext/message-editor		\
 	helptext/midi-output		\
 	helptext/orderlist-pan		\
 	helptext/orderlist-vol		\
-	helptext/palettes \
 	helptext/pattern-editor		\
-	helptext/sample-list
+	helptext/adlib-sample		\
+	helptext/sample-list		\
+	helptext/palettes
 fonts = \
 	font/default-lower.fnt		\
 	font/default-upper-alt.fnt	\
