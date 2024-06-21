@@ -64,6 +64,9 @@ int strverscmp(const char *s1, const char *s2);
 #endif
 
 #include <dirent.h>
+#ifndef _D_EXACT_NAMLEN
+# define _D_EXACT_NAMLEN(dirent) strlen((dirent)->d_name)
+#endif
 
 /* dumb workaround for dumb devkitppc bug
  *
