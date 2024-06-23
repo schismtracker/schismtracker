@@ -118,8 +118,8 @@ int fmt_dsm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	memcpy(riff, data, 4);
 	memcpy(dsmf, data + 8, 4);
 
-	if (memcmp(riff, "RIFF", 4) != 0 && memcmp(dsmf, "DSMF", 4) != 0)
-	return LOAD_UNSUPPORTED;
+	if (memcmp(riff, "RIFF", 4) || memcmp(dsmf, "DSMF", 4))
+		return LOAD_UNSUPPORTED;
 
 	file->description = "DSIK Module";
 	/*file->extension = str_dup("dsm");*/
@@ -142,7 +142,7 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	slurp_seek(fp, 4, SEEK_CUR);
 	slurp_read(fp, &dsmf, 4);
 
-	if (memcmp(riff, "RIFF", 4) != 0 && memcmp(dsmf, "DSMF", 4) != 0)
+	if (memcmp(riff, "RIFF", 4) || memcmp(dsmf, "DSMF", 4))
 		return LOAD_UNSUPPORTED;
 
 	pos = slurp_tell(fp);
