@@ -151,6 +151,13 @@ void widget_create_textentry(struct widget *w, int x, int y, int width, int next
 	w->activate = NULL;
 }
 
+void widget_create_dyntextentry(struct widget *w, int x, int y, int width, int next_up, int next_down,
+		      int next_tab, void (*changed) (void), char *text, int size)
+{
+	widget_create_textentry(w, x, y, width, next_up, next_down, next_tab, changed, text, size);
+	w->type = WIDGET_DYNTEXTENTRY;
+}
+
 void widget_create_numentry(struct widget *w, int x, int y, int width, int next_up, int next_down,
 		     int next_tab, void (*changed) (void), int min, int max, int *cursor_pos)
 {
@@ -322,11 +329,22 @@ static void textentry_reposition(struct widget *w)
 	}
 }
 
-int widget_textentry_add_char(struct widget *w, uint16_t unicode)
+int widget_textentry_add_char(struct widget *w, uint8_t c)
 {
-	uint8_t c = char_unicode_to_cp437(unicode);
-	if (c == 0)
-		return 0;
+	if (w->type == WIDGET_DYNTEXTENTRY) {
+		// reallocate memory if needed
+		if (w->d.textentry.cursor_pos + 2 >= w->d.textentry.max_length) {
+			int new_len = w->d.textentry.max_length ? (w->d.textentry.max_length * 2) : 32;
+			printf("%d\n", new_len);
+
+			char *text = mem_realloc(w->d.textentry.text, new_len);
+			if (!text)
+				return 0;
+
+			w->d.textentry.max_length = new_len;
+			w->d.textentry.text = text;
+		}
+	}
 
 	text_add_char(w->d.textentry.text, c, &(w->d.textentry.cursor_pos), w->d.textentry.max_length);
 
@@ -466,6 +484,7 @@ void widget_draw_widget(struct widget *w, int selected)
 		draw_text(w->d.togglebutton.text, w->x + w->d.togglebutton.padding, w->y, selected ? 3 : 0, 2);
 		break;
 	case WIDGET_TEXTENTRY:
+	case WIDGET_DYNTEXTENTRY:
 		textentry_reposition(w);
 		draw_text_len(w->d.textentry.text + w->d.textentry.firstchar, w->width, w->x, w->y, 2, 0);
 		if (selected && !drew_cursor) {

@@ -23,9 +23,8 @@
 #ifndef SCHISM_CHARSET_H_
 #define SCHISM_CHARSET_H_
 
-#include <stddef.h>
-#include <stdint.h>
-#include <stddef.h>
+#include <stddef.h> /* need size_t */
+#include <stdint.h> /* uint*_t */
 
 /* UCS4 shouldn't ever be used externally; the output depends on endianness.
  * It should only be used as sort of an in-between from UTF-8 to CP437 for use
@@ -100,10 +99,12 @@ uint8_t *charset_case_fold_to_set(const uint8_t *in, charset_t inset, charset_t 
 /* ------------------------------------------------------------------------ */
 
 /* charset-aware replacements for C stdlib functions */
+size_t charset_strlen(const uint8_t* in, charset_t inset);
 int charset_strcmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set);
 int charset_strcasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set);
 int charset_strncasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num);
 size_t charset_strncasecmplen(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num);
+int charset_strncpy(uint8_t *out, charset_t outset, const uint8_t *in, charset_t inset, size_t bytes);
 
 /* basic fnmatch */
 enum {
@@ -132,6 +133,14 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
  *     }
 */
 charset_error_t charset_decode_next(charset_decode_t *decoder, charset_t inset);
+
+/* charset_encode:
+ *   [in]  (uint32_t)  codepoint to encode
+ *   [out] (uint8_t *) output buffer to write to, or NULL
+ *   [in]  (charset_t) the set to encode to
+ *   [ret] (size_t)    bytes needed to encode
+*/
+size_t charset_encode(uint32_t codepoint, uint8_t *buffer, charset_t bufferset);
 
 /* This is a simple macro for easy charset conversion.
  *
