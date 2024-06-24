@@ -39,8 +39,8 @@
 /* --------------------------------------------------------------------- */
 /* config settings */
 
-char cfg_dir_modules[PATH_MAX + 1], cfg_dir_samples[PATH_MAX + 1], cfg_dir_instruments[PATH_MAX + 1],
-	cfg_dir_dotschism[PATH_MAX + 1], cfg_font[NAME_MAX + 1];
+char *cfg_dir_modules = NULL, *cfg_dir_samples = NULL, *cfg_dir_instruments = NULL,
+	 *cfg_dir_dotschism = NULL, *cfg_font = NULL;
 char cfg_video_interpolation[8];
 int cfg_video_fullscreen = 0;
 int cfg_video_want_fixed = 0;
@@ -67,7 +67,7 @@ int cfg_video_want_menu_bar = 1;
 void cfg_init_dir(void)
 {
 #if defined(__amigaos4__)
-	strcpy(cfg_dir_dotschism, "PROGDIR:");
+	cfg_dir_dotschism = str_dup("PROGDIR:");
 #else
 	char *cur_dir, *portable_file;
 
@@ -77,17 +77,13 @@ void cfg_init_dir(void)
 	if(is_file(portable_file)) {
 		printf("In portable mode.\n");
 
-		strncpy(cfg_dir_dotschism, cur_dir, PATH_MAX);
-		cfg_dir_dotschism[PATH_MAX] = 0;
+		realloc_string(&cfg_dir_dotschism, cur_dir, 0);
 	} else {
 		char *dot_dir, *ptr;
 
 		dot_dir = get_dot_directory();
-		ptr = dmoz_path_concat(dot_dir, DOT_SCHISM);
-		strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
-		cfg_dir_dotschism[PATH_MAX] = 0;
+		cfg_dir_dotschism = dmoz_path_concat(dot_dir, DOT_SCHISM);
 		free(dot_dir);
-		free(ptr);
 
 		if (!is_directory(cfg_dir_dotschism)) {
 			printf("Creating directory %s\n", cfg_dir_dotschism);
@@ -159,22 +155,27 @@ void cfg_load(void)
 #endif
 
 	tmp = get_home_directory();
-	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, tmp);
-	cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, PATH_MAX, tmp);
-	cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, PATH_MAX, tmp);
+
+	ptr = cfg_get_string(&cfg, "Directories", "modules", NULL, 0, NULL);
+	realloc_string(&cfg_dir_modules, ptr ? ptr : tmp, 0);
+
+	ptr = cfg_get_string(&cfg, "Directories", "samples", NULL, 0, NULL);
+	realloc_string(&cfg_dir_samples, ptr ? ptr : tmp, 0);
+
+	ptr = cfg_get_string(&cfg, "Directories", "instruments", NULL, 0, NULL);
+	realloc_string(&cfg_dir_instruments, ptr ? ptr : tmp, 0);
+
 	free(tmp);
 
+	/* FIXME move this crap to page_loadmodule.c */
+#define GLOB_CLASSIC "*.it; *.xm; *.s3m; *.mtm; *.669; *.mod"
+#define GLOB_DEFAULT GLOB_CLASSIC "; *.dsm; *.mdl; *.mt2; *.stm; *.stx; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf; *.imf; *.sfx; *.mus; *.mid"
+
 	ptr = cfg_get_string(&cfg, "Directories", "module_pattern", NULL, 0, NULL);
-	if (ptr) {
-		strncpy(cfg_module_pattern, ptr, PATH_MAX);
-		cfg_module_pattern[PATH_MAX] = 0;
-	}
+	realloc_string(&cfg_module_pattern, ptr ? ptr : GLOB_DEFAULT, 0);
 
 	ptr = cfg_get_string(&cfg, "Directories", "export_pattern", NULL, 0, NULL);
-	if (ptr) {
-		strncpy(cfg_export_pattern, ptr, PATH_MAX);
-		cfg_export_pattern[PATH_MAX] = 0;
-	}
+	realloc_string(&cfg_export_pattern, ptr ? ptr : "*.wav; *.aiff; *.aif", 0);
 
 	ptr = cfg_get_string(&cfg, "General", "numlock_setting", NULL, 0, NULL);
 	if (!ptr)
@@ -250,7 +251,8 @@ void cfg_load(void)
 	else
 		status.flags &= ~MIDI_LIKE_TRACKER;
 
-	cfg_get_string(&cfg, "General", "font", cfg_font, NAME_MAX, "font.cfg");
+	ptr = cfg_get_string(&cfg, "General", "font", cfg_font, 0, "font.cfg");
+	realloc_string(&cfg_font, ptr, 0);
 
 	cfg_load_palette(&cfg);
 
