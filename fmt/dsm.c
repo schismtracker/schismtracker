@@ -119,7 +119,7 @@ int fmt_dsm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	memcpy(dsmf, data + 8, 4);
 
 	if (memcmp(riff, "RIFF", 4) || memcmp(dsmf, "DSMF", 4))
-		return LOAD_UNSUPPORTED;
+		return 0;
 
 	file->description = "DSIK Module";
 	/*file->extension = str_dup("dsm");*/
