@@ -233,7 +233,7 @@ static int cp437_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_ne
 		0x03A6, 0x0398, 0x03A9, 0x03B4, 0x221E, 0x03C6, 0x03B5, 0x2229,
 		/* 0xF0 */
 		0x2261, 0x00B1, 0x2265, 0x2264, 0x2320, 0x2321, 0x00F7, 0x2248,
-		0x00B0, 0x2219, 0x00B7, 0x221A, 0x207F, 0x00B2, 0x25A0, 0x00A0
+		0x00B0, 0x2219, 0x00B7, 0x221A, 0x207F, 0x00B2, 0x25A0, 0x00A0,
 	};
 
 	uint8_t c = *in;
@@ -245,24 +245,22 @@ static int cp437_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_ne
 
 static int windows1252_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_next) {
 	/* Microsoft and the Unicode Consortium define positions 81, 8D, 8F, 90, and 9D
-	 * as unused, so we just error out on those chars. */
+	 * as unused, HOWEVER, MultiByteToWideChar converts these to the corresponding
+	 * C1 control codes. I've decided to convert these to a question mark, which is
+	 * the same thing the Unicode -> CP437 conversion does. */
+
 	static const uint16_t windows1252_table[32] = {
 		/* 0x80 */
-		0x20AC, 0xFFFF, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,
-		0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0xFFFF, 0x017D, 0xFFFF,
+		0x20AC, 0x003F, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,
+		0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0x003F, 0x017D, 0x003F,
 		/* 0x90 */
-		0xFFFF, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
-		0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0xFFFF, 0x017E, 0x0178
+		0x003F, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
+		0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0x003F, 0x017E, 0x0178,
 	};
 
 	uint8_t c = *in;
-	if (c >= 0x80 && c < 0xA0) {
-		*out = windows1252_table[c - 0x80];
-		if (*out == 0xFFFF)
-			return DECODER_ERROR;
-	} else {
-		*out = c;
-	}
+
+	*out = (c >= 0x80 && c < 0xA0) ? windows1252_table[c - 0x80] : c;
 
 	*size_until_next = 1;
 	return (*out) ? DECODER_NEED_MORE : DECODER_DONE;
@@ -499,19 +497,24 @@ CHARSET_VARIATION(sdl) {
 		[CHARSET_UCS4] = "UCS-4",
 
 		[CHARSET_CP437] = "437",
+		[CHARSET_WINDOWS1252] = "CP1252",
 
 		[CHARSET_CHAR] = "",
-		[CHARSET_WCHAR_T] = "WCHAR_T"
+		[CHARSET_WCHAR_T] = "WCHAR_T",
 	};
 
 	/* A bit hacky, but whatever */
 	size_t src_size = strlen((const char*)in);
 	size_t out_size = src_size;
 
+	/* Sanity checks */
 	if (src_size <= 0)
 		return CHARSET_ERROR_UNIMPLEMENTED;
 
 	if (inset >= ARRAY_SIZE(charset_iconv_system_lookup) || outset >= ARRAY_SIZE(charset_iconv_system_lookup))
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	if (!charset_iconv_system_lookup[inset] || !charset_iconv_system_lookup[outset])
 		return CHARSET_ERROR_UNIMPLEMENTED;
 
 	SDL_iconv_t cd = SDL_iconv_open(charset_iconv_system_lookup[inset], charset_iconv_system_lookup[outset]);

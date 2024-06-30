@@ -590,7 +590,8 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 #define CONVERT(x, size) \
 	if (!charset_iconv(x, &tmp, CHARSET_WINDOWS1252, CHARSET_CP437)) { \
-		strncpy(x, tmp, size); \
+		strncpy(x, tmp, size - 1); \
+		tmp[size] = 0; \
 		free(tmp); \
 	}
 
