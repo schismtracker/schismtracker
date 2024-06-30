@@ -70,29 +70,94 @@ void cfg_save_disko(cfg_file_t *cfg)
 
 static void _dw_stdio_write(disko_t *ds, const void *buf, size_t len)
 {
-	if (fwrite(buf, len, 1, ds->file) != 1)
+	if (fwrite(buf, len, 1, ds->data.stdio) != 1)
 		disko_seterror(ds, errno);
 }
 
 static void _dw_stdio_putc(disko_t *ds, int c)
 {
-	if (fputc(c, ds->file) == EOF)
+	if (fputc(c, ds->data.stdio) == EOF)
 		disko_seterror(ds, errno);
 }
 
-static void _dw_stdio_seek(disko_t *ds, long pos, int whence)
+static void _dw_stdio_seek(disko_t *ds, int64_t pos, int whence)
 {
-	if (fseek(ds->file, pos, whence) < 0)
+	if (fseek(ds->data.stdio, pos, whence) != 0)
 		disko_seterror(ds, errno);
 }
 
-static long _dw_stdio_tell(disko_t *ds)
+static int64_t _dw_stdio_tell(disko_t *ds)
 {
-	long pos = ftell(ds->file);
+	long pos = ftell(ds->data.stdio);
 	if (pos < 0)
 		disko_seterror(ds, errno);
-	return pos;
+
+	return (int64_t)pos;
 }
+
+// ---------------------------------------------------------------------------
+// windows backend
+
+#ifdef SCHISM_WIN32
+
+static void _dw_win32_write(disko_t *ds, const void *buf, size_t len)
+{
+	DWORD bytes_written = 0;
+
+	if (!WriteFile(ds->data.win32, buf, len, &bytes_written, NULL)
+		|| bytes_written < len)
+		disko_seterror(ds, _doserrno); // XXX is this correct
+}
+
+
+static void _dw_win32_putc(disko_t *ds, int c)
+{
+	uint8_t uc = (uint8_t)c;
+	
+	_dw_win32_write(ds, &uc, 1);
+}
+
+static void _dw_win32_seek(disko_t *ds, int64_t pos, int whence)
+{
+	/* convert to win32 values */
+	DWORD move_method;
+
+	switch (whence) {
+	case SEEK_SET:
+		move_method = FILE_BEGIN;
+		break;
+	case SEEK_CUR:
+		move_method = FILE_CURRENT;
+		break;
+	case SEEK_END:
+		move_method = FILE_END;
+		break;
+	default:
+		/* ... */
+		assert(0);
+	}
+
+	/* abuse this structure */
+	LARGE_INTEGER size = {0};
+	size.QuadPart = pos;
+
+	/* now attempt setting the file pointer */
+	size.u.LowPart = SetFilePointer(ds->data.win32, size.u.LowPart, &size.u.HighPart, move_method);
+
+	/* what? */
+	if (size.QuadPart != pos)
+		return;
+}
+
+static int64_t _dw_win32_tell(disko_t *ds)
+{
+	LARGE_INTEGER size = {0};
+	size.u.LowPart = SetFilePointer(ds->data.win32, 0, &size.u.HighPart, FILE_CURRENT);
+
+	return size.HighPart;
+}
+
+#endif /* SCHISM_WIN32 */
 
 // ---------------------------------------------------------------------------
 // memory backend
@@ -107,16 +172,16 @@ static int _dw_bufcheck(disko_t *ds, size_t extend)
 
 	if (ds->length >= ds->allocated) {
 		size_t newsize = MAX(ds->allocated + DW_BUFFER_SIZE, ds->length);
-		uint8_t *new = realloc(ds->data, newsize);
+		uint8_t *new = realloc(ds->data.mem, newsize);
 		if (!new) {
 			// Eek
-			free(ds->data);
-			ds->data = NULL;
+			free(ds->data.mem);
+			ds->data.mem = NULL;
 			disko_seterror(ds, errno);
 			return 0;
 		}
 		memset(new + ds->allocated, 0, newsize - ds->allocated);
-		ds->data = new;
+		ds->data.mem = new;
 		ds->allocated = newsize;
 	}
 	return 1;
@@ -125,18 +190,19 @@ static int _dw_bufcheck(disko_t *ds, size_t extend)
 static void _dw_mem_write(disko_t *ds, const void *buf, size_t len)
 {
 	if (_dw_bufcheck(ds, len)) {
-		memcpy(ds->data + ds->pos, buf, len);
+		memcpy(ds->data.mem + ds->pos, buf, len);
 		ds->pos += len;
 	}
 }
 
 static void _dw_mem_putc(disko_t *ds, int c)
 {
-	if (_dw_bufcheck(ds, 1))
-		ds->data[ds->pos++] = c;
+	uint8_t uc = CLAMP(c, 0, 255);
+
+	_dw_mem_write(ds, &uc, 1);
 }
 
-static void _dw_mem_seek(disko_t *ds, long offset, int whence)
+static void _dw_mem_seek(disko_t *ds, int64_t offset, int whence)
 {
 	// mostly from slurp_seek
 	switch (whence) {
@@ -163,9 +229,9 @@ static void _dw_mem_seek(disko_t *ds, long offset, int whence)
 	ds->pos = offset;
 }
 
-static long _dw_mem_tell(disko_t *ds)
+static int64_t _dw_mem_tell(disko_t *ds)
 {
-	return (long) ds->pos;
+	return (int64_t)ds->pos;
 }
 
 // ---------------------------------------------------------------------------
@@ -240,17 +306,37 @@ disko_t *disko_open(const char *filename)
 	memcpy(ds->tempname + len, "XXXXXX", 6 * sizeof(char));
 
 #ifdef SCHISM_WIN32
-	{
-		if (win32_mktemp(ds->tempname, sizeof(ds->tempname)/sizeof(ds->tempname[0]))) {
-			free(ds);
-			return NULL;
-		}
+	if (win32_mktemp(ds->tempname, sizeof(ds->tempname)/sizeof(ds->tempname[0]))) {
+		free(ds);
+		return NULL;
+	}
 
-		ds->file = win32_fopen(ds->tempname, "wb");
-		if (!ds->file) {
-			free(ds);
-			return NULL;
+	wchar_t *tmp;
+	if (!charset_iconv(ds->tempname, CHARSET_CHAR, (uint8_t**)&tmp, CHARSET_WCHAR_T)) {
+		const DWORD attrib = GetFileAttributes(szPath);
+		const int file_exists = (attrib != INVALID_FILE_ATTRIBUTES && !(attrib & FILE_ATTRIBUTE_DIRECTORY));
+		
+		ds->data.win32 = CreateFileW(tmp, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_NEW, file_exists ? TRUNCATE_EXISTING : OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+		free(tmp);
+
+		if (ds->data.win32 != INVALID_HANDLE_VALUE) {
+			/* success! */
+			ds->backend = DISKO_BACKEND_WIN32;
+
+			ds->_write = _dw_win32_write;
+			ds->_seek = _dw_win32_seek;
+			ds->_tell = _dw_win32_tell;
+			ds->_putc = _dw_win32_putc;
+			return ds;
 		}
+	}
+
+	/* huh? fallback to stdio I guess */
+	ds->data.stdio = win32_fopen(ds->tempname, "wb");
+	if (!ds->data.stdio) {
+		free(ds);
+		return NULL;
 	}
 #else
 	fd = mkstemp(ds->tempname);
@@ -258,8 +344,8 @@ disko_t *disko_open(const char *filename)
 		free(ds);
 		return NULL;
 	}
-	ds->file = fdopen(fd, "wb");
-	if (!ds->file) {
+	ds->data.stdio = fdopen(fd, "wb");
+	if (!ds->data.stdio) {
 		err = errno;
 		close(fd);
 		unlink(ds->tempname);
@@ -269,8 +355,9 @@ disko_t *disko_open(const char *filename)
 	}
 #endif
 
-	setvbuf(ds->file, NULL, _IOFBF, DW_BUFFER_SIZE);
+	setvbuf(ds->data.stdio, NULL, _IOFBF, DW_BUFFER_SIZE);
 
+	ds->backend = DISKO_BACKEND_STDIO;
 	ds->_write = _dw_stdio_write;
 	ds->_seek = _dw_stdio_seek;
 	ds->_tell = _dw_stdio_tell;
@@ -284,9 +371,19 @@ int disko_close(disko_t *ds, int backup)
 	int err = ds->error;
 
 	// try to preserve the *first* error set, because it's most likely to be interesting
-	if (fclose(ds->file) == EOF && !err) {
-		err = errno;
-	} else if (!err) {
+	if (ds->backend == DISKO_BACKEND_STDIO) {
+		if (fclose(ds->data.stdio) == EOF && !err)
+			err = errno;
+#ifdef SCHISM_WIN32
+	} else if (ds->backend == DISKO_BACKEND_WIN32) {
+		if (!CloseHandle(ds->data.win32) && !err)
+			err = _doserrno;
+#endif
+	} else {
+		return DW_ERROR; // unsupported
+	}
+
+	if (!err) {
 		// preserve file mode, or set it sanely -- mkstemp() sets file mode to 0600
 #ifndef SCHISM_WII /* FIXME - autoconf check for this instead */
 		struct stat st;
@@ -300,10 +397,10 @@ int disko_close(disko_t *ds, int backup)
 			st.st_mode = 0666 & ~m;
 		}
 #endif
-		if (backup) {
-			// back up the old file
+		// back up the old file
+		if (backup)
 			make_backup_file(ds->filename, (backup != 1));
-		}
+
 		if (rename_file(ds->tempname, ds->filename, 1) != 0) {
 			err = errno;
 		} else {
@@ -313,10 +410,11 @@ int disko_close(disko_t *ds, int backup)
 #endif
 		}
 	}
+
 	// If anything failed so far, kill off the temp file
-	if (err) {
+	if (err)
 		unlink(ds->tempname);
-	}
+
 	free(ds);
 	if (err) {
 		errno = err;
@@ -333,13 +431,14 @@ disko_t *disko_memopen(void)
 	if (!ds)
 		return NULL;
 
-	ds->data = calloc(DW_BUFFER_SIZE, sizeof(uint8_t));
-	if (!ds->data) {
+	ds->data.mem = calloc(DW_BUFFER_SIZE, sizeof(uint8_t));
+	if (!ds->data.mem) {
 		free(ds);
 		return NULL;
 	}
 	ds->allocated = DW_BUFFER_SIZE;
 
+	ds->backend = DISKO_BACKEND_MEMORY;
 	ds->_write = _dw_mem_write;
 	ds->_seek = _dw_mem_seek;
 	ds->_tell = _dw_mem_tell;
@@ -350,9 +449,12 @@ disko_t *disko_memopen(void)
 
 int disko_memclose(disko_t *ds, int keep_buffer)
 {
+	if (ds->backend != DISKO_BACKEND_MEMORY)
+		return DW_ERROR;
+
 	int err = ds->error;
 	if (!keep_buffer || err)
-		free(ds->data);
+		free(ds->data.mem);
 	free(ds);
 	if (err) {
 		errno = err;
@@ -414,7 +516,7 @@ static int close_and_bind(song_t *dwsong, disko_t *ds, song_sample_t *sample, in
 		csf_free_sample(sample->data);
 	sample->data = newdata;
 
-	memcpy(newdata, dsshadow.data, dsshadow.length);
+	memcpy(newdata, dsshadow.data.mem, dsshadow.length);
 	sample->length = dsshadow.length / bps;
 	sample->flags &= ~(CHN_16BIT | CHN_STEREO | CHN_ADLIB);
 	if (dwsong->mix_channels > 1)
@@ -951,5 +1053,6 @@ void song_pattern_to_sample(int pattern, int split, int bind)
 /* called from audio_playback.c _schism_midi_out_raw() */
 int _disko_writemidi(UNUSED const void *data, UNUSED unsigned int len, UNUSED unsigned int delay)
 {
+	/* FIXME this is stupid */
 	return DW_ERROR;
 }

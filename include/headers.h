@@ -120,6 +120,9 @@ char *strptime(const char *buf, const char *fmt, struct tm *tm);
 int mkstemp(char *template);
 struct tm *localtime_r(const time_t *timep, struct tm *result);
 
+/* XXX need charset version of this */
+char *strcasestr(const char *haystack, const char *needle);
+
 #define INT_SHAPED_PTR(v)               ((intptr_t)(void*)(v))
 #define PTR_SHAPED_INT(i)               ((void*)(i))
 

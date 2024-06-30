@@ -30,14 +30,20 @@
 #define PATH_MAX 4096
 #endif
 
+enum {
+	DISKO_BACKEND_STDIO = 0,
+	DISKO_BACKEND_MEMORY = 1,
+	DISKO_BACKEND_WIN32 = 2, // should only exist on windows
+};
+
 typedef struct disko disko_t;
 struct disko {
 	// Functions whose implementation depends on the backend in use
 	// Use disko_write et al. instead of these.
-	void (*_write)(disko_t *ds, const void *buf, size_t len);
-	void (*_putc)(disko_t *ds, int c);
-	void (*_seek)(disko_t *ds, long offset, int whence);
-	long (*_tell)(disko_t *ds);
+	void    (*_write)(disko_t *ds, const void *buf, size_t len);
+	void    (*_putc)(disko_t *ds, int c);
+	void    (*_seek)(disko_t *ds, int64_t offset, int whence);
+	int64_t (*_tell)(disko_t *ds);
 
 	// Temporary filename that's being written to
 	char tempname[PATH_MAX];
@@ -45,11 +51,15 @@ struct disko {
 	// Name to change it to on close (if successful)
 	char filename[PATH_MAX];
 
-	// these could be unionized
-	// file pointer (only exists for disk files)
-	FILE *file;
-	// data for memory buffers (no filename/handle)
-	uint8_t *data;
+	// which backend is in use
+	int backend;
+
+	// data for said backend
+	union {
+		FILE *stdio;    // stdio (only for disk files)
+		void *win32; // windows (only for disk files)
+		uint8_t *mem; // memory (no filename/handle)
+	} data;
 
 	// First errno value recorded after something went wrong.
 	int error;
@@ -57,7 +67,8 @@ struct disko {
 	/* untouched by diskwriter; driver may use for anything */
 	void *userdata;
 
-	// for memory buffers
+	/* only used for the memory backends and ought to be moved
+	 * into the union */
 	size_t pos, length, allocated;
 };
 
@@ -66,6 +77,7 @@ enum {
 	DW_ERROR = 0,
 	DW_NOT_RUNNING = -1,
 };
+
 enum {
 	DW_SYNC_DONE = 0,
 	DW_SYNC_ERROR = -1,
