@@ -112,8 +112,8 @@ void setup_channel_filter(song_voice_t *chan, int reset, int flt_modifier, int f
 	chan->filter_b1 = (int32_t)(fb1 * (1 << FILTERPRECISION));
 
 	if (reset) {
-		chan->filter_y1 = chan->filter_y2 = 0;
-		chan->filter_y3 = chan->filter_y4 = 0;
+		chan->filter_y[0][0] = chan->filter_y[0][1] = 0;
+		chan->filter_y[1][0] = chan->filter_y[1][1] = 0;
 	}
 }
 
