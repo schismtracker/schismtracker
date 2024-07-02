@@ -161,6 +161,7 @@ auto/default-font.c: Makefile.am scripts/bin2h.sh scripts/build-font.sh $(fonts)
 
 auto/helptext.c: Makefile.am scripts/genhelp.pl $(helptexts)
 if HAVE_PERL
+	${MKDIR_P} auto
 	$(PERL) $(srcdir)/scripts/genhelp.pl $(srcdir) $(helptexts) >$@
 else
 	@echo "*** python is required to regenerate $(@) ***"; exit 1;
