@@ -481,7 +481,17 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			}
 			break;
 		case 5:
-			if (trkvers == 0x5447)
+			/* from OpenMPT src:
+			 *
+			 * Liquid Tracker's ID clashes with OpenMPT's.
+			 * OpenMPT started writing full version information with OpenMPT 1.29 and later changed the ultraClicks value from 8 to 16.
+			 * Liquid Tracker writes an ultraClicks value of 16.
+			 * So we assume that a file was saved with Liquid Tracker if the reserved fields are 0 and ultraClicks is 16. */
+			if (!reserved && uc == 16 && channel_types[1] != 1)
+				tid = "Liquid Tracker %" PRIu8 ".%" PRIu8;
+			else if ((trkvers >> 16) == 0x57)
+				tid = "NESMusa %" PRIu8 ".%" PRIu8; /* apparently a tool by Bisquit; can't find any modules using it though */
+			else if (trkvers == 0x5447)
 				strcpy(song->tracker_id, "Graoumf Tracker");
 			else if (trkvers >= 0x5129 && reserved)
 				sprintf(song->tracker_id, "OpenMPT %" PRIu8 ".%02" PRIX8 ".%02" PRIX8 ".%02" PRIX8, (uint8_t)((trkvers & 0xf00) >> 8), (uint8_t)(trkvers & 0xff), (uint8_t)((reserved >> 8) & 0xff), (uint8_t)(reserved & 0xff));
