@@ -230,9 +230,8 @@ static void file_list_draw(void)
 		draw_text_len((file->title ? file->title : ""),
 						25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
+		draw_text_utf8_len(file->base ? file->base : "", 18, 32, pos, fg, bg);
 		CHARSET_EASY_MODE(file->base ? file->base : "", CHARSET_CHAR, CHARSET_CP437, {
-			draw_text_bios_len(out, 18, 32, pos, fg, bg);
-
 			if (file->base && slash_search_mode > -1) {
 				if (strncasecmp(out,slash_search_str,slash_search_mode) == 0) {
 					for (i = 0 ; i < slash_search_mode; i++) {

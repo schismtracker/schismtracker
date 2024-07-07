@@ -42,10 +42,17 @@ void font_reset_char(int c);     /* resets just one char */
  * ... the main difference being font_init() is easier to deal with :) */
 void font_init(void);
 
-extern const unsigned char font_default_lower[];
-extern const unsigned char font_default_upper_alt[];
-extern const unsigned char font_default_upper_itf[];
-extern const unsigned char font_half_width[];
+extern const uint8_t font_default_lower[];
+extern const uint8_t font_default_upper_alt[];
+extern const uint8_t font_default_upper_itf[];
+extern const uint8_t font_half_width[];
+
+/* These fonts were adapted from the font8x8 pack
+ * which is in the public domain:
+ *   https://github.com/dhepper/font8x8 */
+extern const uint8_t font_hiragana[];
+extern const uint8_t font_extended_latin[];
+extern const uint8_t font_greek[];
 
 extern uint8_t font_half_data[1024];
 extern uint8_t *font_data; /* 2048 bytes */

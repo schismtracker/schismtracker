@@ -25,7 +25,10 @@ fonts = \
 	font/default-lower.fnt		\
 	font/default-upper-alt.fnt	\
 	font/default-upper-itf.fnt	\
-	font/half-width.fnt
+	font/half-width.fnt			\
+	font/hiragana.fnt			\
+	font/extended-latin.fnt		\
+	font/greek.fnt
 icons = \
 	icons/appIcon.icns		\
 	icons/it_logo.png		\

@@ -391,9 +391,10 @@ static void file_list_draw(void)
 		draw_text(numtostr(3, n+1, buf), 2, pos, 0, 2);
 		draw_text_len(file->title ? file->title : "", 25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
-		CHARSET_EASY_MODE(file->base ? file->base : "", CHARSET_CHAR, CHARSET_CP437, {
-			draw_text_bios_len(out, 18, 32, pos, fg, bg);
+		draw_text_utf8_len(file->base ? file->base : "", 18, 32, pos, fg, bg);
 
+		CHARSET_EASY_MODE(file->base ? file->base : "", CHARSET_CHAR, CHARSET_CP437, {
+			/* XXX this is wrong */
 			if (file->base && search_pos > -1) {
 				if (strncasecmp(out,search_str,search_pos) == 0) {
 					for (i = 0 ; i < search_pos; i++) {

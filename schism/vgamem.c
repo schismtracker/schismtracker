@@ -22,6 +22,7 @@
  */
 #include "headers.h"
 
+#include "charset.h"
 #include "it.h"
 #include "vgamem.h"
 #include "fonts.h"
@@ -61,7 +62,7 @@ struct vgamem_char {
 		struct {
 			/* two chars here */
 			struct {
-				uint_least8_t c : 7; /* 0...127 */
+				uint_least8_t c : 8; /* 0...255 */
 
 				struct vgamem_colors colors;
 			} c1, c2;
@@ -97,44 +98,6 @@ do {                                            \
 		br = n;                         \
 	}                                       \
 } while(0)
-
-/* --------------------------------------------------------------------- */
-/* half-width characters */
-
-/* ok i think i get this now, after inspecting it further.
-   good thing no one bothered putting any comments in the code. <grumble>
-   the fake vga buffer is pigeonholing the half-width characters into 14 bits.
-   why 14, i don't know, but that means 7 bits per character, and these functions
-   handle shifting stuff around to get them into that space. realistically, we
-   only need to bother with chars 32 through 127, as well as 173 (middot) and
-   205 (the double-line used for noteoff). since 32->127 is 96 characters, there's
-   plenty of room for the printable stuff... and guess what, 173->205 is another
-   32, which fits nice and clean into 7 bits! so if the character is within that
-   range, we're fine. otherwise it'll just result in a broken glyph. (but it
-   probably wasn't drawn in the font anyway) */
-
-static int _pack_halfw(int c)
-{
-	if (c >= 32 && c <= 127) {
-		return c - 32; /* 0 ... 95 */
-	} else if (c >= 173 && c <= 205) {
-		return 96 + c - 173; /* 96 ... 127 */
-	}
-
-	abort();
-	return '?';
-}
-
-static int _unpack_halfw(int c)
-{
-	if (c >= 0 && c <= 95) {
-		return c + 32;
-	} else if (c >= 96 && c <= 127) {
-		return 96 - c + 173;
-	}
-
-	return '?'; /* should never happen */
-}
 
 void vgamem_flip(void)
 {
@@ -282,14 +245,14 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 	}
 }
 
-/* generic scan macro */
+/* generic scanner; BITS must be one of 8, 16, 32, 64 */
 #define VGAMEM_SCANNER_VARIANT(BITS) \
-	void vgamem_scan##BITS(unsigned int ry, uint##BITS##_t *out, unsigned int tc[16], unsigned int mouseline[80]) \
+	void vgamem_scan##BITS(uint32_t ry, uint##BITS##_t *out, uint32_t tc[16], uint32_t mouseline[80]) \
 	{ \
 		struct vgamem_char *bp; \
 		uint32_t dg; \
 		uint8_t *q; \
-		uint8_t *itf, *bios, *bioslow, *hf; \
+		uint8_t *itf, *bios, *bioslow, *hf, *hiragana, *extlatin, *greek; \
 		uint32_t x, y; \
 		int fg, bg; \
 	\
@@ -299,6 +262,9 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 		itf = font_data + (ry & 7); \
 		bios = ((uint8_t *)font_default_upper_alt) + (ry & 7); \
 		bioslow = ((uint8_t *)font_default_lower) + (ry & 7); \
+		hiragana = ((uint8_t *)font_hiragana) + (ry & 7); \
+		extlatin = ((uint8_t *)font_extended_latin) + (ry & 7); \
+		greek = ((uint8_t *)font_greek) + (ry & 7); \
 		hf = font_half_data + ((ry & 7) >> 1); \
 	\
 		for (x = 0; x < 80; x++, bp++, q += 8) { \
@@ -313,7 +279,7 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 						? bios[(bp->character.cp437.c & 0x7F) << 3] \
 						: bioslow[(bp->character.cp437.c & 0x7F) << 3]; \
 				} else { \
-					dg = itf[(bp->character.itf.c & 0xFF) << 3]; \
+					dg = itf[bp->character.itf.c << 3]; \
 				} \
 				dg ^= mouseline[x]; \
 				if (!bp->character.cp437.c) /* XXX why */ \
@@ -329,7 +295,7 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				*out++ = tc[(dg & 0x1) ? fg : bg]; \
 				break; \
 			case VGAMEM_FONT_HALFWIDTH: \
-				dg = hf[bp->character.halfwidth.c1.c]; \
+				dg = hf[bp->character.halfwidth.c1.c << 2]; \
 				if (!(ry & 1)) \
 					dg = (dg >> 4); \
 				dg ^= mouseline[x] >> 4; \
@@ -342,7 +308,7 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				*out++ = tc[(dg & 0x2) ? fg : bg]; \
 				*out++ = tc[(dg & 0x1) ? fg : bg]; \
 			\
-				dg = hf[bp->character.halfwidth.c2.c]; \
+				dg = hf[bp->character.halfwidth.c2.c << 2]; \
 				if (!(ry & 1)) \
 					dg = (dg >> 4); \
 				dg ^= mouseline[x] >> 4; \
@@ -364,8 +330,43 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				*out++ = tc[ (q[5]^((mouseline[x] & 0x04)?15:0)) & 255]; \
 				*out++ = tc[ (q[6]^((mouseline[x] & 0x02)?15:0)) & 255]; \
 				*out++ = tc[ (q[7]^((mouseline[x] & 0x01)?15:0)) & 255]; \
-			case VGAMEM_FONT_UNICODE: \
-				break; /* XXX todo */ \
+				break; \
+			case VGAMEM_FONT_UNICODE: { \
+				uint32_t c = bp->character.unicode.c; \
+				if (c >= 0x20 && c <= 0x7F) { \
+					/* ASCII */ \
+					dg = itf[c << 3]; \
+				} else if (c >= 0xA0 && c <= 0xFF) { \
+					/* extended latin */ \
+					dg = extlatin[(c - 0xA0) << 3]; \
+				} else if (c >= 0x390 && c <= 0x3C9) { \
+					/* greek */ \
+					dg = greek[(c - 0x390) << 3]; \
+				} else if (c >= 0x3040 && c <= 0x309F) { \
+					/* japanese hiragana */ \
+					dg = hiragana[(c - 0x3040) << 3]; \
+				} else { \
+					dg = itf[63u << 3]; \
+				}\
+	\
+				fg = bp->character.unicode.colors.fg; \
+				bg = bp->character.unicode.colors.bg; \
+	\
+				dg ^= mouseline[x]; \
+				if (!bp->character.cp437.c) /* XXX why */ \
+					fg = 3; \
+	\
+				*out++ = tc[(dg & 0x80) ? fg : bg]; \
+				*out++ = tc[(dg & 0x40) ? fg : bg]; \
+				*out++ = tc[(dg & 0x20) ? fg : bg]; \
+				*out++ = tc[(dg & 0x10) ? fg : bg]; \
+				*out++ = tc[(dg & 0x8) ? fg : bg]; \
+				*out++ = tc[(dg & 0x4) ? fg : bg]; \
+				*out++ = tc[(dg & 0x2) ? fg : bg]; \
+				*out++ = tc[(dg & 0x1) ? fg : bg]; \
+	\
+				break; /* unused chars */ \
+			} \
 			} \
 		} \
 	}
@@ -374,6 +375,25 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 VGAMEM_SCANNER_VARIANT(32)
 
 #undef VGAMEM_SCAN_VARIANT
+
+void draw_char_unicode(uint32_t c, int x, int y, uint32_t fg, uint32_t bg)
+{
+	assert(x >= 0 && y >= 0 && x < 80 && y < 50);
+	struct vgamem_char ch = {
+		.font = VGAMEM_FONT_UNICODE,
+		.character = {
+			.unicode = {
+				.c = c,
+				.colors = {
+					.fg = fg,
+					.bg = bg,
+				},
+			},
+		},
+	};
+
+	vgamem[x + (y*80)] = ch;
+}
 
 void draw_char_bios(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 {
@@ -425,6 +445,7 @@ int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 
 	return n;
 }
+
 int draw_text_bios(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 {
 	int n = 0;
@@ -437,6 +458,23 @@ int draw_text_bios(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 
 	return n;
 }
+
+int draw_text_utf8(const char * text, int x, int y, uint32_t fg, uint32_t bg)
+{
+	uint32_t *ucs4;
+	int n = 0;
+
+	if (charset_iconv(text, (uint8_t **)&ucs4, CHARSET_UTF8, CHARSET_UCS4))
+		return draw_text_bios(text, x, y, fg, bg); /* err */
+
+	for (; ucs4[n]; n++)
+		draw_char_unicode(ucs4[n], x + n, y, fg, bg);
+
+	free(ucs4);
+
+	return n;
+}
+
 void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t color)
 {
 	struct vgamem_char *mm;
@@ -468,6 +506,7 @@ int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_
 	draw_fill_chars(x + n, y, x + len - 1, y, bg);
 	return n;
 }
+
 int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
 {
 	int n = 0;
@@ -478,6 +517,22 @@ int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, ui
 		text++;
 	}
 	draw_fill_chars(x + n, y, x + len - 1, y, bg);
+	return n;
+}
+
+int draw_text_utf8_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
+{
+	uint32_t *ucs4;
+	int n = 0;
+
+	if (charset_iconv(text, (uint8_t **)&ucs4, CHARSET_UTF8, CHARSET_UCS4))
+		return draw_text_bios_len(text, len, x, y, fg, bg);
+
+	for (; n < len && ucs4[n]; n++)
+		draw_char_unicode(ucs4[n], x + n, y, fg, bg);
+
+	draw_fill_chars(x + n, y, x + len - 1, y, bg);
+
 	return n;
 }
 

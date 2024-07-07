@@ -618,9 +618,8 @@ static void file_list_draw(void)
 				bg = 0;
 			}
 
-			CHARSET_EASY_MODE(file->base ? file->base : "", CHARSET_CHAR, CHARSET_CP437, {
-				draw_text_bios_len(out, 20, 3, pos, fg1, bg);
-			});
+
+			draw_text_utf8_len(file->base ? file->base : "", 20, 3, pos, fg1, bg);
 
 			draw_char(168, 23, pos, 2, bg);
 			draw_text_len(file->title ? file->title : "", 25, 24, pos, fg2, bg);
@@ -841,9 +840,7 @@ static void dir_list_draw(void)
 			bg = 0;
 		}
 
-		CHARSET_EASY_MODE(dlist.dirs[n]->base, CHARSET_CHAR, CHARSET_CP437, {
-			draw_text_bios_len(out, 77 - 51, 51, pos, fg, bg);
-		});
+		draw_text_utf8_len(dlist.dirs[n]->base, 77 - 51, 51, pos, fg, bg);
 	}
 
 	/* bleh */
