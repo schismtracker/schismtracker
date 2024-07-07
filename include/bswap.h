@@ -26,31 +26,41 @@
 
 #include "headers.h"
 
-#if HAVE_BYTESWAP_H
-/* byteswap.h uses inline assembly if possible (faster than bit-shifting) */
-# include <byteswap.h>
-#else
-# define bswap_32(x) (((((unsigned int)x) & 0xFF) << 24) | ((((unsigned int)x) & 0xFF00) << 8) \
-		       | (((((unsigned int)x) & 0xFF0000) >> 8) & 0xFF00) \
-		       | ((((((unsigned int)x) & 0xFF000000) >> 24)) & 0xFF))
-# define bswap_16(x) (((((unsigned short)x) >> 8) & 0xFF) | ((((unsigned short)x) << 8) & 0xFF00))
-#endif
+/* byteswap.h (at least on glibc) actually *doesn't* provide asm versions of byteswap
+ * operations; see commit 0d40d0e. in any case, the compiler will likely be able to optimize
+ * these better than assembly, and actually good compilers will notice the swapping pattern
+ * and optimize them itself
+ *
+ *  - paper */
+
+#define bswap_32(x) \
+	  (((((uint32_t)(x)) & 0xFF) << 24) \
+	|  ((((uint32_t)(x)) & 0xFF00) << 8) \
+	| (((((uint32_t)(x)) & 0xFF0000) >> 8) & 0xFF00) \
+	| (((((uint32_t)(x)) & 0xFF000000) >> 24) & 0xFF))
+
+#define bswap_16(x) (((((uint16_t)(x)) >> 8) & 0xFF) | ((((uint16_t)(x)) << 8) & 0xFF00))
+
 /* define the endian-related byte swapping (taken from libmodplug sndfile.h, glibc, and sdl) */
 #if defined(ARM) && defined(_WIN32_WCE)
 /* I have no idea what this does, but okay :) */
 
 /* This forces integer operations to only occur on aligned
-   addresses. -mrsb */
+ * addresses. -mrsb */
+
+/* when did schism ever run on wince? what?
+ *
+ *  - paper */
 static inline uint16_t ARM_get16(const void *data)
 {
 	uint16_t s;
-	memcpy(&s,data,sizeof(s));
+	memcpy(&s, data, sizeof(s));
 	return s;
 }
 static inline uint32_t ARM_get32(const void *data)
 {
 	uint32_t s;
-	memcpy(&s,data,sizeof(s));
+	memcpy(&s, data, sizeof(s));
 	return s;
 }
 # define bswapLE16(x) ARM_get16(&(x))
