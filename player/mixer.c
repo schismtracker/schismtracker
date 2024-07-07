@@ -297,7 +297,7 @@ typedef void(* mix_interface_t)(song_voice_t *, int *, int *);
 
 /* aliases here */
 #define BEGIN_FASTMIX_INTERFACE(func) BEGIN_MIX_INTERFACE(func)
-#define END_FASTMIX_INTERFACE(func) END_MIX_INTERFACE(func)
+#define END_FASTMIX_INTERFACE()       END_MIX_INTERFACE()
 
 // Volume Ramps
 #define BEGIN_RAMPMIX_INTERFACE(func) \
