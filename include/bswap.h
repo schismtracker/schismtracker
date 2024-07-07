@@ -33,13 +33,28 @@
  *
  *  - paper */
 
-#define bswap_32(x) \
+/* check for compiler builtins, for gcc >= 10 and probably clang too */
+#ifdef __has_builtin
+# if __has_builtin(__builtin_bswap16)
+#  define bswap_16(x) __builtin_bswap16(x)
+# endif
+# if __has_builtin(__builtin_bswap32)
+#  define bswap_32(x) __builtin_bswap32(x)
+# endif
+#endif
+
+/* roll our own byteswaps */
+#ifndef bswap_32
+# define bswap_32(x) \
 	  (((((uint32_t)(x)) & 0xFF) << 24) \
 	|  ((((uint32_t)(x)) & 0xFF00) << 8) \
 	| (((((uint32_t)(x)) & 0xFF0000) >> 8) & 0xFF00) \
 	| (((((uint32_t)(x)) & 0xFF000000) >> 24) & 0xFF))
+#endif
 
-#define bswap_16(x) (((((uint16_t)(x)) >> 8) & 0xFF) | ((((uint16_t)(x)) << 8) & 0xFF00))
+#ifndef bswap_16
+# define bswap_16(x) (((((uint16_t)(x)) >> 8) & 0xFF) | ((((uint16_t)(x)) << 8) & 0xFF00))
+#endif
 
 /* define the endian-related byte swapping (taken from libmodplug sndfile.h, glibc, and sdl) */
 #if defined(ARM) && defined(_WIN32_WCE)
