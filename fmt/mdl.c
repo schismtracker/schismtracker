@@ -101,6 +101,8 @@ struct mdl_infoblock {
 	uint8_t chanpan[32];
 };
 
+SCHISM_BINARY_STRUCT(struct mdl_infoblock, 32+20+2+2+1+1+1+32);
+
 /* This is actually a part of the instrument (II) block */
 struct mdl_samplehdr {
 	uint8_t smpnum;
@@ -118,6 +120,8 @@ struct mdl_samplehdr {
 	uint8_t freqenv_flags;
 };
 
+SCHISM_BINARY_STRUCT(struct mdl_samplehdr, 1+1+1+1+1+1+2+1+1+1+1+1+1);
+
 struct mdl_sampleinfo {
 	uint8_t smpnum;
 	char name[32];
@@ -129,6 +133,8 @@ struct mdl_sampleinfo {
 	uint8_t unused; // was volume in v0.0, why it was changed I have no idea
 	uint8_t flags;
 };
+
+SCHISM_BINARY_STRUCT(struct mdl_sampleinfo, 1+32+8+4+4+4+4+1+1);
 
 struct mdl_sampleinfo_v0 {
 	uint8_t smpnum;
@@ -142,6 +148,8 @@ struct mdl_sampleinfo_v0 {
 	uint8_t flags;
 };
 
+SCHISM_BINARY_STRUCT(struct mdl_sampleinfo_v0, 1+32+8+2+4+4+4+1+1);
+
 struct mdl_envelope {
 	uint8_t envnum;
 	struct {
@@ -151,6 +159,9 @@ struct mdl_envelope {
 	uint8_t flags;
 	uint8_t loop; // lower 4 bits = start, upper 4 bits = end
 };
+
+SCHISM_BINARY_STRUCT(struct mdl_envelope, 1+30+1+1);
+
 #pragma pack(pop)
 
 /* --------------------------------------------------------------------------------------------------------- */

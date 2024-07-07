@@ -55,6 +55,7 @@ enum {
 };
 
 #pragma pack(push, 1)
+
 struct ult_sample {
 	char name[32];
 	char filename[12];
@@ -67,6 +68,9 @@ struct ult_sample {
 	uint16_t speed; // only exists for 1.4+
 	int16_t finetune;
 };
+
+SCHISM_BINARY_STRUCT(struct ult_sample, 66);
+
 #pragma pack(pop)
 
 

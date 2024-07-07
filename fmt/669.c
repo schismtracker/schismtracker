@@ -30,6 +30,8 @@
 
 /* --------------------------------------------------------------------- */
 
+#pragma pack(push, 1)
+
 struct header_669 {
 	uint8_t sig[2];
 	uint8_t songmessage[108];
@@ -40,6 +42,10 @@ struct header_669 {
 	uint8_t tempolist[128];
 	uint8_t breaks[128];
 };
+
+SCHISM_BINARY_STRUCT(struct header_669, 2+108+1+1+1+128+128+128);
+
+#pragma pack(pop)
 
 int fmt_669_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {

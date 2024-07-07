@@ -52,6 +52,7 @@ whether it's arranged by track or by midi channel.
 
 
 #pragma pack(push, 1)
+
 struct mthd {
 	//char tag[4]; // MThd <read separately>
 	uint32_t header_length;
@@ -59,10 +60,16 @@ struct mthd {
 	uint16_t num_tracks; // number of track chunks
 	uint16_t division; // delta timing value: positive = units/beat; negative = smpte compatible units (?)
 };
+
+SCHISM_BINARY_STRUCT(struct mthd, 4+2+2+2);
+
 struct mtrk {
 	char tag[4]; // MTrk
 	uint32_t length; // number of bytes of track data following
 };
+
+SCHISM_BINARY_STRUCT(struct mtrk, 8);
+
 #pragma pack(pop)
 
 

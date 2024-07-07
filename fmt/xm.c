@@ -66,6 +66,8 @@ struct xm_file_header {
 	uint16_t bpm;           // Default BPM
 };
 
+SCHISM_BINARY_STRUCT(struct xm_file_header, 80);
+
 static uint8_t autovib_import[8] = {
 	VIB_SINE, VIB_SQUARE,
 	VIB_RAMP_DOWN, // actually ramp up

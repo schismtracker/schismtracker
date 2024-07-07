@@ -31,6 +31,7 @@
 #include "player/sndfile.h"
 
 #pragma pack(push, 1)
+
 /* Note: This struct must match the disk layout struct */
 struct s3i_header {
 	//00
@@ -57,6 +58,9 @@ struct s3i_header {
 	char samplesig[4]; /* SCRS or SCRI */
 	//50
 };
+
+SCHISM_BINARY_STRUCT(struct s3i_header, 0x50);
+
 #pragma pack(pop)
 
 static int load_s3i_sample(const uint8_t *data, size_t length, song_sample_t *smp)

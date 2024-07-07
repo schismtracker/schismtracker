@@ -1,12 +1,16 @@
 #ifndef SCHISM_IT_DEFS_H_
 #define SCHISM_IT_DEFS_H_
 
+#include "headers.h" /* SCHISM_BINARY_STRUCT */
+
 #pragma pack(push, 1)
 
 struct it_notetrans {
 	uint8_t note;
 	uint8_t sample;
 };
+
+SCHISM_BINARY_STRUCT(struct it_notetrans, 2);
 
 struct it_file {
 	uint32_t id;                    // 0x4D504D49
@@ -34,6 +38,14 @@ struct it_file {
 	uint8_t chnvol[64];
 };
 
+SCHISM_BINARY_STRUCT(struct it_file, 192);
+
+struct it_envelope_node {
+	int8_t value; // signed (-32 -> 32 for pan and pitch; 0 -> 64 for vol and filter)
+	uint16_t tick;
+};
+
+SCHISM_BINARY_STRUCT(struct it_envelope_node, 3);
 
 struct it_envelope {
 	uint8_t flags;
@@ -42,12 +54,11 @@ struct it_envelope {
 	uint8_t lpe;
 	uint8_t slb;
 	uint8_t sle;
-	struct {
-		int8_t value; // signed (-32 -> 32 for pan and pitch; 0 -> 64 for vol and filter)
-		uint16_t tick;
-	} nodes[25];
+	struct it_envelope_node nodes[25];
 	uint8_t reserved;
 };
+
+SCHISM_BINARY_STRUCT(struct it_envelope, 82);
 
 // Old Impulse Instrument Format (cmwt < 0x200)
 struct it_instrument_old {
@@ -73,6 +84,7 @@ struct it_instrument_old {
 	uint8_t nodes[50];
 };
 
+SCHISM_BINARY_STRUCT(struct it_instrument_old, 554);
 
 // Impulse Instrument Format
 struct it_instrument {
@@ -105,6 +117,7 @@ struct it_instrument {
 	uint8_t dummy[4]; // was 7, but IT v2.17 saves 554 bytes
 };
 
+SCHISM_BINARY_STRUCT(struct it_instrument, 554);
 
 // IT Sample Format
 struct it_sample {
@@ -129,6 +142,16 @@ struct it_sample {
 	uint8_t vir;
 	uint8_t vit;
 };
+
+SCHISM_BINARY_STRUCT(struct it_sample, 80);
+
+struct it_time_history {
+	uint16_t fat_date;
+	uint16_t fat_time;
+	uint32_t run_time;
+};
+
+SCHISM_BINARY_STRUCT(struct it_time_history, 8);
 
 #pragma pack(pop)
 

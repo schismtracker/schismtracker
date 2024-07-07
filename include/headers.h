@@ -123,4 +123,22 @@ struct tm *localtime_r(const time_t *timep, struct tm *result);
 #define INT_SHAPED_PTR(v)               ((intptr_t)(void*)(v))
 #define PTR_SHAPED_INT(i)               ((void*)(i))
 
+/* -------------------------------------------------------------- */
+/* C99 compatible static assertion */
+
+#if (__STDC_VERSION__ >= 201112L)
+# define SCHISM_STATIC_ASSERT(x, msg) _Static_assert(x, msg)
+#else
+/* should work anywhere and shouldn't dump random stack allocations
+ * BUT it fails to provide any sort of useful message to the user */
+# define SCHISM_STATIC_ASSERT(x, msg) \
+    extern int (*schism_static_assert_function_no_touchy_touchy_plz(void)) \
+      [!!sizeof (struct { int __error_if_negative: (x) ? 2 : -1; })]
+#endif
+
+/* similar to OpenMPT's `MPT_BINARY_STRUCT`, errors out if the
+ * size of `type` is not equal to `size` for e.g. packed structures */
+#define SCHISM_BINARY_STRUCT(type, size) \
+	SCHISM_STATIC_ASSERT(sizeof(type) == (size), "ERROR: struct size is different than what was expected (" #size ")");
+
 #endif /* SCHISM_HEADERS_H_ */

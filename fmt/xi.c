@@ -42,6 +42,8 @@ struct xm_point {
 	uint16_t val;        // Value from 0x00 to 0x40.
 };
 
+SCHISM_BINARY_STRUCT(struct xm_point, 4);
+
 struct xm_sample_header {
 	uint32_t samplen;
 	uint32_t loopstart;
@@ -54,6 +56,8 @@ struct xm_sample_header {
 	uint8_t res;
 	char name[22];
 };
+
+SCHISM_BINARY_STRUCT(struct xm_sample_header, 40);
 
 struct xi_sample_header {
 	uint8_t snum[96];
@@ -74,6 +78,8 @@ struct xi_sample_header {
 	uint16_t nsamples;
 };
 
+SCHISM_BINARY_STRUCT(struct xi_sample_header, 232);
+
 struct xi_file_header {
 	int8_t header[0x15];    // "Extended Instrument: "
 	int8_t name[0x16];      // Name of instrument
@@ -83,6 +89,8 @@ struct xi_file_header {
 	struct xi_sample_header xish;
 	struct xm_sample_header sheader[];
 };
+
+SCHISM_BINARY_STRUCT(struct xi_file_header, 298);
 
 #pragma pack(pop)
 

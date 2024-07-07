@@ -28,6 +28,8 @@ typedef struct mm_header {
 	uint8_t fmt_comp;
 } mm_header_t;
 
+SCHISM_BINARY_STRUCT(mm_header_t, 8+2+2+2+4+4+1+1);
+
 typedef struct mm_block {
 	uint32_t unpk_size;
 	uint32_t pk_size;
@@ -38,10 +40,14 @@ typedef struct mm_block {
 	uint16_t num_bits;
 } mm_block_t;
 
+SCHISM_BINARY_STRUCT(mm_block_t, 4+4+4+2+2+2+2);
+
 typedef struct mm_subblock {
 	uint32_t unpk_pos;
 	uint32_t unpk_size;
 } mm_subblock_t;
+
+SCHISM_BINARY_STRUCT(mm_subblock_t, 8);
 #pragma pack(pop)
 
 

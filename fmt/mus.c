@@ -31,6 +31,7 @@
 
 
 #pragma pack(push,1)
+
 struct mus_header {
 	char id[4]; // MUS\x1a
 	uint16_t scorelen;
@@ -40,6 +41,9 @@ struct mus_header {
 	uint16_t instrcnt;
 	uint16_t dummy;
 };
+
+SCHISM_BINARY_STRUCT(struct mus_header, 4+2+2+2+2+2+2);
+
 #pragma pack(pop)
 
 /* --------------------------------------------------------------------- */

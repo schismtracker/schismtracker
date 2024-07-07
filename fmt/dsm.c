@@ -36,40 +36,50 @@
 
 #pragma pack(push, 1)
 
+struct dsm_chunk_song {
+	char title[28];
+	uint16_t version, flags;
+	uint32_t pad;
+	uint16_t ordnum, smpnum, patnum, chnnum;
+	uint8_t gvol, mvol, is, it;
+	uint8_t chnmap[16];
+	uint8_t orders[128];
+};
+
+SCHISM_BINARY_STRUCT(struct dsm_chunk_song, 28+2+2+4+2+2+2+2+1+1+1+1+16+128);
+
+struct dsm_chunk_inst {
+	char filename[13];
+	uint16_t flags;
+	uint8_t volume;
+	uint32_t length, loop_start, loop_end, address_ptr;
+	uint16_t c5speed, period;
+	char name[28];
+	uint8_t smp_bytes[];
+};
+
+SCHISM_BINARY_STRUCT(struct dsm_chunk_inst, 13+2+1+4+4+4+4+2+2+28);
+
+struct dsm_chunk_patt {
+	uint16_t length;
+	uint8_t data[];
+};
+
+SCHISM_BINARY_STRUCT(struct dsm_chunk_patt, 2);
+
 typedef union chunkdata {
-	struct {
-		char title[28];
-		uint16_t version, flags;
-		uint32_t pad;
-		uint16_t ordnum, smpnum, patnum, chnnum;
-		uint8_t gvol, mvol, is, it;
-		uint8_t chnmap[16];
-		uint8_t orders[128];
-	} SONG;
-
-	struct {
-		char filename[13];
-		uint16_t flags;
-		uint8_t volume;
-		uint32_t length, loop_start, loop_end, address_ptr;
-		uint16_t c5speed, period;
-		char name[28];
-		uint8_t smp_bytes[];
-	} INST;
-
-	struct {
-		uint16_t length;
-		uint8_t data[];
-	} PATT;
+	struct dsm_chunk_song SONG;
+	struct dsm_chunk_inst INST;
+	struct dsm_chunk_patt PATT;
 } chunkdata_t;
+
+#pragma pack(pop)
 
 typedef struct chunk {
 	uint32_t id;
 	uint32_t size;
 	const chunkdata_t *data;
 } chunk_t;
-
-#pragma pack(pop)
 
 /* sample flags */
 enum {
@@ -102,7 +112,7 @@ static int _chunk_read(chunk_t *chunk, const uint8_t *data, size_t length, size_
 	memcpy(&chunk->id, data + *pos, 4);
 	memcpy(&chunk->size, data + *pos + 4, 4);
 	chunk->id = bswapBE32(chunk->id);
-	chunk->size = bswapLE32(chunk->size); /* yes, size is stored as little endian */
+	chunk->size = bswapLE32(chunk->size);
 	chunk->data = (chunkdata_t *) (data + *pos + 8);
 	*pos += 8 + chunk->size;
 	return (*pos <= length);

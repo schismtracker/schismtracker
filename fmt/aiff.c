@@ -42,31 +42,45 @@ static double ConvertFromIeeeExtended(const unsigned char *bytes);
 /* --------------------------------------------------------------------- */
 
 #pragma pack(push, 1)
+
+struct aiff_chunk_form {
+	uint32_t filetype; // AIFF, 8SVX, etc.
+	uint8_t data[]; // rest of file is encapsulated in here, also chunked
+};
+
+SCHISM_BINARY_STRUCT(struct aiff_chunk_form, 4);
+
+struct aiff_chunk_vhdr {
+	uint32_t smp_highoct_1shot;
+	uint32_t smp_highoct_repeat;
+	uint32_t smp_cycle_highoct;
+	uint16_t smp_per_sec;
+	uint8_t num_octaves;
+	uint8_t compression; // 0 = none, 1 = fibonacci-delta
+	uint32_t volume; // fixed point, 65536 = 1.0
+};
+
+SCHISM_BINARY_STRUCT(struct aiff_chunk_vhdr, 20);
+
+struct aiff_chunk_comm {
+	uint16_t num_channels;
+	uint32_t num_frames;
+	uint16_t sample_size;
+	uint8_t sample_rate[80]; // IEEE-extended
+};
+
+SCHISM_BINARY_STRUCT(struct aiff_chunk_comm, 88);
+
 typedef union chunkdata {
-	struct {
-		uint32_t filetype; // AIFF, 8SVX, etc.
-		uint8_t data[]; // rest of file is encapsulated in here, also chunked
-	} FORM;
+	struct aiff_chunk_form FORM;
 
 	// 8SVX
-	struct {
-		uint32_t smp_highoct_1shot;
-		uint32_t smp_highoct_repeat;
-		uint32_t smp_cycle_highoct;
-		uint16_t smp_per_sec;
-		uint8_t num_octaves;
-		uint8_t compression; // 0 = none, 1 = fibonacci-delta
-		uint32_t volume; // fixed point, 65536 = 1.0
-	} VHDR;
+	struct aiff_chunk_vhdr VHDR;
 
 	// AIFF
-	struct {
-		uint16_t num_channels;
-		uint32_t num_frames;
-		uint16_t sample_size;
-		uint8_t sample_rate[80]; // IEEE-extended
-	} COMM;
+	struct aiff_chunk_comm COMM;
 } chunkdata_t;
+
 #pragma pack(pop)
 
 typedef struct chunk {

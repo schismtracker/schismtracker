@@ -63,6 +63,8 @@ struct far_header {
 	uint16_t message_len;
 };
 
+SCHISM_BINARY_STRUCT(struct far_header, 4+40+3+2+1+16+9+1+16+4+2);
+
 struct far_sample {
 	char name[32];
 	uint32_t length;
@@ -73,6 +75,8 @@ struct far_sample {
 	uint8_t type;
 	uint8_t loop;
 };
+
+SCHISM_BINARY_STRUCT(struct far_sample, 32+4+1+1+4+4+1+1);
 #pragma pack(pop)
 
 static uint8_t far_effects[] = {

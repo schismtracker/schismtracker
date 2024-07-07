@@ -587,6 +587,8 @@ struct s3m_header {
 	uint8_t junk[4]; // last 2 bytes are "special", which means "more junk"
 };
 
+SCHISM_BINARY_STRUCT(struct s3m_header, 28+1+1+2+2+2+2+2+2+2+4+1+1+1+1+1+1+2+4+4);
+
 struct s3i_header {
 	uint8_t type;
 	char filename[12];
@@ -611,6 +613,9 @@ struct s3i_header {
 	char name[28];
 	char tag[4]; // SCRS/SCRI/whatever
 };
+
+SCHISM_BINARY_STRUCT(struct s3i_header, 1+12+15+1+1+1+1+4+12+28+4);
+
 #pragma pack(pop)
 
 #define SEEK_ALIGN(fp) disko_seek((fp), (16 - (disko_tell(fp) & 15)) & 15, SEEK_CUR)

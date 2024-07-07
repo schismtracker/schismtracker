@@ -58,6 +58,7 @@ int fmt_okt_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 #define OKT_BLK_SBOD    OKT_BLOCK('S','B','O','D')
 
 #pragma pack(push,1)
+
 struct okt_sample {
 	char name[20];
 	uint32_t length;
@@ -66,6 +67,9 @@ struct okt_sample {
 	uint16_t volume;
 	uint16_t mode;
 };
+
+SCHISM_BINARY_STRUCT(struct okt_sample, 20+4+2+2+2+2);
+
 #pragma pack(pop)
 
 enum {

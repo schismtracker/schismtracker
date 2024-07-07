@@ -72,7 +72,7 @@ typedef struct {
     uint32_t id_WAVE;
 } wave_file_header_t;
 
-
+SCHISM_BINARY_STRUCT(wave_file_header_t, 12);
 
 typedef struct {
     uint16_t format;          // 1
@@ -83,19 +83,23 @@ typedef struct {
     uint16_t bitspersample;   // bits per sample (8/16)
 } wave_format_t;
 
+SCHISM_BINARY_STRUCT(wave_format_t, 16);
 
 typedef struct {
     uint32_t id;
     uint32_t length;
 } wave_chunk_prefix_t;
 
+SCHISM_BINARY_STRUCT(wave_chunk_prefix_t, 8);
 
+#pragma pack(pop)
+
+/* this one is only used in memory; no need for packing */
 typedef struct {
     wave_format_t fmt;        // Format
     wave_chunk_prefix_t data; // Data header
     uint8_t *buf;
 } wave_file_t;
-#pragma pack(pop)
 
 /* --------------------------------------------------------------------------------------------------------- */
 

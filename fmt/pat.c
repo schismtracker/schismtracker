@@ -36,6 +36,7 @@
 /* --------------------------------------------------------------------- */
 
 #pragma pack(push, 1)
+
 struct GF1PatchHeader {
 	uint8_t sig[8]; // "GF1PATCH"
 	uint8_t ver[4]; // "100\0" or "110\0"
@@ -60,6 +61,8 @@ struct GF1PatchHeader {
 	uint8_t reserved3[40];
 };
 
+SCHISM_BINARY_STRUCT(struct GF1PatchHeader, 239);
+
 struct GF1PatchSampleHeader {
 	char wavename[7]; // Wave name (in ASCII)
 	uint8_t fractions; // bits 0-3 loop start frac / 4-7 loop end frac
@@ -80,6 +83,8 @@ struct GF1PatchSampleHeader {
 	uint16_t scalefac; // Scale factor [0..2048] (1024 is normal)
 	uint8_t reserved[36];
 };
+
+SCHISM_BINARY_STRUCT(struct GF1PatchSampleHeader, 96);
 #pragma pack(pop)
 
 /* --------------------------------------------------------------------- */
