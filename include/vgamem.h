@@ -34,7 +34,7 @@ struct vgamem_overlay {
 	unsigned char *q;               /* points inside ovl */
 	unsigned int skip;
 
-	int width, height; /* in pixels; signed to avoid bugs elsewhere */
+	int width, height; /* in pixels; signed to avoid bugs elsewhere */ /* XXX what bugs? */
 };
 
 void vgamem_flip(void);
@@ -52,8 +52,8 @@ void vgamem_scan32(unsigned int y, uint32_t *out,unsigned int tc[16], unsigned i
 /* --------------------------------------------------------------------- */
 /* character drawing routines */
 
-void draw_char(unsigned char c, int x, int y, uint32_t fg, uint32_t bg);
-void draw_char_bios(unsigned char c, int x, int y, uint32_t fg, uint32_t bg);
+void draw_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg);
+void draw_char_bios(uint8_t c, int x, int y, uint32_t fg, uint32_t bg);
 
 /* return value is the number of characters drawn */
 int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg);
