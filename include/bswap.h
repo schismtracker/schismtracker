@@ -26,12 +26,24 @@
 
 #include "headers.h"
 
-/* byteswap.h (at least on glibc) actually *doesn't* provide asm versions of byteswap
- * operations; see commit 0d40d0e. in any case, the compiler will likely be able to optimize
- * these better than assembly, and actually good compilers will notice the swapping pattern
- * and optimize them itself
- *
- *  - paper */
+/* better than macros, I guess. */
+inline uint32_t bswap_32_schism_internal_(uint32_t x)
+{
+	return (
+		  ((x & 0x000000FF) << 24)
+		| ((x & 0x0000FF00) << 8)
+		| ((x & 0x00FF0000) >> 8)
+		| ((x & 0xFF000000) >> 24)
+	);
+}
+
+inline uint16_t bswap_16_schism_internal_(uint16_t x)
+{
+	return (
+		  ((x & 0x00FF) << 8)
+		| ((x & 0xFF00) >> 8)
+	);
+}
 
 /* check for compiler builtins, for gcc >= 10 and probably clang too */
 #ifdef __has_builtin
@@ -43,46 +55,18 @@
 # endif
 #endif
 
-/* roll our own byteswaps */
+/* roll our own; it is now safe to assume that all byteswap
+ * routines will act like a function and not like a macro */
 #ifndef bswap_32
-# define bswap_32(x) \
-	  (((((uint32_t)(x)) & 0xFF) << 24) \
-	|  ((((uint32_t)(x)) & 0xFF00) << 8) \
-	| (((((uint32_t)(x)) & 0xFF0000) >> 8) & 0xFF00) \
-	| (((((uint32_t)(x)) & 0xFF000000) >> 24) & 0xFF))
+# define bswap_32(x) bswap_32_schism_internal_(x)
 #endif
 
 #ifndef bswap_16
-# define bswap_16(x) (((((uint16_t)(x)) >> 8) & 0xFF) | ((((uint16_t)(x)) << 8) & 0xFF00))
+# define bswap_16(x) bswap_16_schism_internal_(x)
 #endif
 
 /* define the endian-related byte swapping (taken from libmodplug sndfile.h, glibc, and sdl) */
-#if defined(ARM) && defined(_WIN32_WCE)
-/* I have no idea what this does, but okay :) */
-
-/* This forces integer operations to only occur on aligned
- * addresses. -mrsb */
-
-/* when did schism ever run on wince? what?
- *
- *  - paper */
-static inline uint16_t ARM_get16(const void *data)
-{
-	uint16_t s;
-	memcpy(&s, data, sizeof(s));
-	return s;
-}
-static inline uint32_t ARM_get32(const void *data)
-{
-	uint32_t s;
-	memcpy(&s, data, sizeof(s));
-	return s;
-}
-# define bswapLE16(x) ARM_get16(&(x))
-# define bswapLE32(x) ARM_get32(&(x))
-# define bswapBE16(x) bswap_16(ARM_get16(&(x)))
-# define bswapBE32(x) bswap_32(ARM_get32(&(x)))
-#elif WORDS_BIGENDIAN
+#if WORDS_BIGENDIAN
 # define bswapLE16(x) bswap_16(x)
 # define bswapLE32(x) bswap_32(x)
 # define bswapBE16(x) (x)

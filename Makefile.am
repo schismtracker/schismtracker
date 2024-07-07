@@ -340,6 +340,7 @@ schismtracker_SOURCES = \
 	player/tables.c			\
 	schism/audio_loadsave.c		\
 	schism/audio_playback.c		\
+	schism/bswap.c          \
 	schism/charset.c		\
 	schism/charset_data.c   \
 	schism/clippy.c			\
