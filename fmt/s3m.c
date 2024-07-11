@@ -433,11 +433,13 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			tid = ((mix_volume & 0x80) != 0)
 				? "ModPlug Tracker / OpenMPT 1.17"
 				: "ModPlug Tracker 1.0 alpha";
-		} else if (special == 0 && uc == 0 && flags == 0 && misc == (S3M_UNSIGNED)) {
+		} else if (special == 0 && uc == 0 && flags == 0 && misc == S3M_UNSIGNED) {
 			if (song->initial_global_volume == 128 && mix_volume == 48)
 				tid = "PlayerPRO";
 			else  // Always stereo
 				tid = "Velvet Studio";
+		} else if(special == 0 && uc == 0 && flags == 8 && misc == S3M_UNSIGNED) {
+			tid = "Impulse Tracker < 1.03";  // Not sure if 1.02 saves like this as I don't have it
 		} else if (uc != 16 && uc != 24 && uc != 32) {
 			// sure isn't scream tracker
 			tid = "Unknown tracker";
@@ -467,6 +469,8 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		case 3:
 			if (trkvers <= 0x3214) {
 				tid = "Impulse Tracker %" PRIu8 ".%02" PRIx8;
+			} else if (trkvers == 0x3320) {
+				tid = "Impulse Tracker 1.03";  // Could also be 1.02, maybe? I don't have that one
 			} else {
 				tid = NULL;
 				sprintf(song->tracker_id, "Impulse Tracker 2.14p" PRIu16, (uint16_t)(trkvers - 0x3214));
@@ -487,10 +491,10 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			 * OpenMPT started writing full version information with OpenMPT 1.29 and later changed the ultraClicks value from 8 to 16.
 			 * Liquid Tracker writes an ultraClicks value of 16.
 			 * So we assume that a file was saved with Liquid Tracker if the reserved fields are 0 and ultraClicks is 16. */
-			if (!reserved && uc == 16 && channel_types[1] != 1)
+			if ((trkvers >> 16) == 0x57)
+				tid = "NESMusa %" PRIu8 ".%" PRIu8; /* tool by Bisquit */
+			else if (!reserved && uc == 16 && channel_types[1] != 1)
 				tid = "Liquid Tracker %" PRIu8 ".%" PRIu8;
-			else if ((trkvers >> 16) == 0x57)
-				tid = "NESMusa %" PRIu8 ".%" PRIu8; /* apparently a tool by Bisquit; can't find any modules using it though */
 			else if (trkvers == 0x5447)
 				strcpy(song->tracker_id, "Graoumf Tracker");
 			else if (trkvers >= 0x5129 && reserved)
