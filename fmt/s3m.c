@@ -83,7 +83,8 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint16_t trkvers;
 	uint16_t flags;
 	uint16_t special;
-	uint16_t reserved;
+	uint8_t reserved[8];
+	uint16_t reserved16;
 	uint32_t adlib = 0; // bitset
 	uint16_t gus_addresses = 0;
 	uint8_t mix_volume; /* detect very old modplug tracker */
@@ -150,11 +151,10 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (slurp_getc(fp) != 0xfc)
 		misc &= ~S3M_CHANPAN;     /* stored pan values */
 
-	/* Extended Schism Tracker version information */
-	slurp_read(fp, &reserved, 2);
-	reserved = bswapLE16(reserved);
-	/* Impulse Tracker hides its edit timer in the next four bytes. */
-	slurp_seek(fp, 6, SEEK_CUR);
+	/* Extended Schism Tracker version information in the first two reserved bytes; 
+	Impulse Tracker hides its edit timer in the four bytes following that. */
+	slurp_read(fp, &reserved, 8);
+	reserved16 = reserved[0] | (reserved[1] << 8);
 	slurp_read(fp, &special, 2); // field not used by st3
 	special = bswapLE16(special);
 
@@ -425,7 +425,9 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	 * does NOT save channel pannings. Also, it writes a fairly recognizable LRRL pattern for the channels,
 	 * but I'm not checking that. (yet?) */
 	if (trkvers == 0x1320) {
-		if (special == 0 && uc == 0 && (flags & ~0x50) == 0
+		if (!memcmp(reserved, "SCLUB2.0", 8)) {
+			tid = "Sound Club 2";
+		} else if (special == 0 && uc == 0 && (flags & ~0x50) == 0
 		    && misc == (S3M_UNSIGNED | S3M_CHANPAN) && (nord % 16) == 0) {
 			/* from OpenMPT:
 			 * MPT 1.0 alpha5 doesn't set the stereo flag, but MPT 1.0 alpha6 does. */
@@ -457,8 +459,17 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				tid = "Scream Tracker %" PRIu8 ".%02" PRIx8 " (GUS)";
 			else if (gus_addresses == 1 || !any_samples || trkvers == 0x1300)
 				tid = "Scream Tracker %" PRIu8 ".%02" PRIx8 " (SB)"; // could also be a GUS file with a single sample
-			else
+			else {
 				strcpy(song->tracker_id, "Unknown tracker");
+				if (trkvers == 0x1301 && uc == 0) {
+					if (!(flags & ~0x50) && (mix_volume & 0x80) && (misc & S3M_CHANPAN))
+						strcpy(song->tracker_id, "UNMO3");
+					else if (!flags && song->initial_global_volume == 96 && mix_volume == 176 && song->initial_tempo == 150 && !(misc & S3M_CHANPAN))
+						strcpy(song->tracker_id, "deMODifier");  // SoundSmith to S3M converter
+					else if (!flags && song->initial_global_volume == 128 && song->initial_speed == 6 && song->initial_tempo == 125 && !(misc & S3M_CHANPAN))
+						strcpy(song->tracker_id, "Kosmic To-S3M");  // MTM to S3M converter by Zab/Kosmic
+				}
+			}
 			break;
 		case 2:
 			if (trkvers == 0x2013) // PlayerPRO on Intel forgets to byte-swap the tracker ID bytes 
@@ -481,7 +492,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				strcpy(song->tracker_id, "BeRoTracker");
 			} else {
 				strcpy(song->tracker_id, "Schism Tracker ");
-				ver_decode_cwtv(trkvers, reserved, song->tracker_id + strlen(song->tracker_id));
+				ver_decode_cwtv(trkvers, reserved16, song->tracker_id + strlen(song->tracker_id));
 			}
 			break;
 		case 5:
@@ -491,14 +502,14 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			 * OpenMPT started writing full version information with OpenMPT 1.29 and later changed the ultraClicks value from 8 to 16.
 			 * Liquid Tracker writes an ultraClicks value of 16.
 			 * So we assume that a file was saved with Liquid Tracker if the reserved fields are 0 and ultraClicks is 16. */
-			if ((trkvers >> 16) == 0x57)
-				tid = "NESMusa %" PRIu8 ".%" PRIu8; /* tool by Bisquit */
-			else if (!reserved && uc == 16 && channel_types[1] != 1)
-				tid = "Liquid Tracker %" PRIu8 ".%" PRIu8;
+			if ((trkvers >> 8) == 0x57)
+				tid = "NESMusa %" PRIu8 ".%" PRIX8; /* tool by Bisquit */
+			else if (!reserved16 && uc == 16 && channel_types[1] != 1)
+				tid = "Liquid Tracker %" PRIu8 ".%" PRIX8;
 			else if (trkvers == 0x5447)
 				strcpy(song->tracker_id, "Graoumf Tracker");
-			else if (trkvers >= 0x5129 && reserved)
-				sprintf(song->tracker_id, "OpenMPT %" PRIu8 ".%02" PRIX8 ".%02" PRIX8 ".%02" PRIX8, (uint8_t)((trkvers & 0xf00) >> 8), (uint8_t)(trkvers & 0xff), (uint8_t)((reserved >> 8) & 0xff), (uint8_t)(reserved & 0xff));
+			else if (trkvers >= 0x5129 && reserved16)
+				sprintf(song->tracker_id, "OpenMPT %" PRIu8 ".%02" PRIX8 ".%02" PRIX8 ".%02" PRIX8, (uint8_t)((trkvers & 0xf00) >> 8), (uint8_t)(trkvers & 0xff), reserved[1], reserved[0]);
 			else
 				tid = "OpenMPT %" PRIu8 ".%02" PRIX8;
 			break;
