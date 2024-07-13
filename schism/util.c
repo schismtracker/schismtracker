@@ -617,10 +617,10 @@ int get_num_lines(const char *text)
 /* 0 = success, !0 = failed (check errno) */
 int make_backup_file(const char *filename, int numbered)
 {
-	char buf[PATH_MAX];
+	int ret = 0;
+	char *buf = malloc(strlen(filename) + 16);
 
-	/* ensure plenty of room to breathe */
-	if (strlen(filename) > PATH_MAX - 16) {
+	if (NULL == buf) {
 		errno = ENAMETOOLONG;
 		return -1;
 	}
@@ -628,16 +628,19 @@ int make_backup_file(const char *filename, int numbered)
 	if (numbered) {
 		/* If some crazy person needs more than 65536 backup files,
 		   they probably have more serious issues to tend to. */
-		int n = 1, ret;
+		int n = 1;
 		do {
 			sprintf(buf, "%s.%d~", filename, n++);
 			ret = rename_file(filename, buf, 0);
 		} while (ret != 0 && errno == EEXIST && n < 65536);
+		free(buf);
 		return ret;
 	} else {
 		strcpy(buf, filename);
 		strcat(buf, "~");
-		return rename_file(filename, buf, 1);
+		ret = rename_file(filename, buf, 1);
+		free(buf);
+		return ret;
 	}
 }
 
@@ -783,10 +786,22 @@ char *get_current_directory(void)
 	if (_wgetcwd(buf, PATH_MAX) && !charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
 		return (char*)buf_utf8;
 #else
-	char buf[PATH_MAX + 1] = {'\0'};
+       /* Double the buffer size until getcwd() succeed or we run out
+	  of memory.  Not using get_current_dir_name() and
+	  getcwd(NULL, n) to only use methods defined by POSIX. */
+       size_t n = 1024;
+       char *buf = malloc(n);
+       while (buf && NULL == getcwd(buf, n)) {
+	       n *= 2;
+	       char *newbuf = realloc(buf, n);
+	       if (NULL == newbuf)
+		       break;
+	       buf = newbuf;
+       }
 
-	if (getcwd(buf, PATH_MAX))
-		return str_dup(buf);
+
+       if (buf)
+	       return buf;
 #endif
 	return str_dup(".");
 }
