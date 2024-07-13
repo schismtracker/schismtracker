@@ -2008,7 +2008,8 @@ static void do_save_instrument(void *ptr)
 
 static void instrument_save(const char *filename, const char *format)
 {
-	char *ptr = (char *) dmoz_path_concat(cfg_dir_instruments, filename);
+	song_instrument_t *penv = song_get_instrument(current_instrument);
+	char *ptr = (char *) dmoz_path_concat(cfg_dir_instruments, filename ? filename : penv->filename);
 	struct stat buf;
 
 	struct instrument_save_data *data = mem_alloc(sizeof(*data));
