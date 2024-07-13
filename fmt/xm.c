@@ -257,11 +257,9 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 				}
 
 				if (note->effect == FX_KEYOFF && note->param == 0) {
-					// FT2 ignores both K00 and its note entirely (but still plays
-					// previous notes and processes the volume column!)
+					// FT2 ignores notes and instruments next to a K00
 					note->note = NOTE_NONE;
 					note->instrument = 0;
-					note->effect = FX_NONE;
 				} else if (note->note == NOTE_OFF && note->effect == FX_SPECIAL
 					   && (note->param >> 4) == 0xd) {
 					// note off with a delay ignores the note off, and also
