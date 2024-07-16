@@ -461,16 +461,19 @@ int draw_text_bios(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 
 int draw_text_utf8(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 {
-	uint32_t *ucs4;
-	int n = 0;
+	uint8_t *composed = charset_compose_to_utf8(text, CHARSET_UTF8);
+	if (!composed)
+		return draw_text_bios(text, x, y, fg, bg);
 
-	if (charset_iconv(text, (uint8_t **)&ucs4, CHARSET_UTF8, CHARSET_UCS4))
-		return draw_text_bios(text, x, y, fg, bg); /* err */
+	charset_decode_t decoder = {
+		.in = composed,
+		.offset = 0,
+		.size = SIZE_MAX,
+	};
 
-	for (; ucs4[n]; n++)
-		draw_char_unicode(ucs4[n], x + n, y, fg, bg);
-
-	free(ucs4);
+	int n;
+	for (n = 0; decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_UTF8) && decoder.state != DECODER_STATE_DONE; n++)
+		draw_char_unicode(decoder.codepoint, x + n, y, fg, bg);
 
 	return n;
 }
@@ -522,14 +525,19 @@ int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, ui
 
 int draw_text_utf8_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
 {
-	uint32_t *ucs4;
-	int n = 0;
+	uint8_t *composed = charset_compose_to_utf8(text, CHARSET_UTF8);
+	if (!composed)
+		return draw_text_bios(text, x, y, fg, bg);
 
-	if (charset_iconv(text, (uint8_t **)&ucs4, CHARSET_UTF8, CHARSET_UCS4))
-		return draw_text_bios_len(text, len, x, y, fg, bg);
+	charset_decode_t decoder = {
+		.in = composed,
+		.offset = 0,
+		.size = SIZE_MAX,
+	};
 
-	for (; n < len && ucs4[n]; n++)
-		draw_char_unicode(ucs4[n], x + n, y, fg, bg);
+	int n;
+	for (n = 0; n < len && decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_UTF8) && decoder.state != DECODER_STATE_DONE; n++)
+		draw_char_unicode(decoder.codepoint, x + n, y, fg, bg);
 
 	draw_fill_chars(x + n, y, x + len - 1, y, bg);
 

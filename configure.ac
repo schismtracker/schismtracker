@@ -147,6 +147,15 @@ AC_SUBST([SDL_LIBS])
 dnl Libs
 AC_CHECK_LIB([dl], [dlopen])
 
+dnl Unicode crap
+PKG_CHECK_MODULES([UTF8PROC], [libutf8proc], [utf8proc_found=yes], [utf8proc_found=no])
+if test "x$utf8proc_found" = "xno"; then
+	AC_MSG_ERROR([*** Failed to find utf8proc])
+fi
+
+AC_SUBST([UTF8PROC_CFLAGS])
+AC_SUBST([UTF8PROC_LIBS])
+
 dnl Functions
 AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp mmap nice unsetenv dup fnmatch mkstemp localtime_r)
 AM_CONDITIONAL([NEED_ASPRINTF], [test "x$ac_cv_func_asprintf" = "xno"])
