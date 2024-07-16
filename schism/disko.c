@@ -24,12 +24,12 @@
 #include "headers.h"
 
 #include "config-parser.h"
+#include "charset.h"
 #include "dialog.h"
 #include "disko.h"
 #include "dmoz.h"
 #include "it.h"
 #include "page.h"
-#include "song.h"
 #include "song.h"
 #include "util.h"
 #include "vgamem.h"
@@ -133,15 +133,13 @@ static void _dw_win32_seek(disko_t *ds, int64_t pos, int whence)
 		move_method = FILE_END;
 		break;
 	default:
-		/* ... */
-		assert(0);
+		return; // what?
 	}
 
-	/* abuse this structure */
+	/* :p */
 	LARGE_INTEGER size = {0};
 	size.QuadPart = pos;
 
-	/* now attempt setting the file pointer */
 	size.u.LowPart = SetFilePointer(ds->data.win32, size.u.LowPart, &size.u.HighPart, move_method);
 
 	/* what? */
@@ -313,10 +311,10 @@ disko_t *disko_open(const char *filename)
 
 	wchar_t *tmp;
 	if (!charset_iconv(ds->tempname, CHARSET_CHAR, (uint8_t**)&tmp, CHARSET_WCHAR_T)) {
-		const DWORD attrib = GetFileAttributes(szPath);
+		const DWORD attrib = GetFileAttributes(tmp);
 		const int file_exists = (attrib != INVALID_FILE_ATTRIBUTES && !(attrib & FILE_ATTRIBUTE_DIRECTORY));
 		
-		ds->data.win32 = CreateFileW(tmp, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_NEW, file_exists ? TRUNCATE_EXISTING : OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		ds->data.win32 = CreateFileW(tmp, GENERIC_WRITE, FILE_SHARE_READ, NULL, (file_exists ? TRUNCATE_EXISTING : OPEN_ALWAYS), FILE_ATTRIBUTE_NORMAL, NULL);
 
 		free(tmp);
 
