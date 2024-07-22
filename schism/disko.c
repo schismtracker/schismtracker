@@ -310,7 +310,7 @@ disko_t *disko_open(const char *filename)
 	}
 
 	wchar_t *tmp;
-	if (!charset_iconv(ds->tempname, CHARSET_CHAR, (uint8_t**)&tmp, CHARSET_WCHAR_T)) {
+	if (!charset_iconv(ds->tempname, (uint8_t**)&tmp, CHARSET_CHAR, CHARSET_WCHAR_T)) {
 		const DWORD attrib = GetFileAttributesW(tmp);
 		const int file_exists = (attrib != INVALID_FILE_ATTRIBUTES && !(attrib & FILE_ATTRIBUTE_DIRECTORY));
 		
