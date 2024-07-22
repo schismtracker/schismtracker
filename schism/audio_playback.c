@@ -1410,6 +1410,7 @@ static int _audio_try_device(const char* name, const char *display_name, const S
 	/* punt if there was an error */
 	if (*SDL_GetError()) {
 		current_audio_device_initialized = 0;
+		fprintf(stderr, "Failed to initialize device \"%s\": \"%s\"\n", name, SDL_GetError());
 		return 0;
 	}
 
