@@ -102,7 +102,8 @@ static char cfg_audio_device[256] = { 0 };
 struct audio_device* audio_device_list = NULL;
 int audio_device_list_size = 0;
 
-static SDL_AudioDeviceID current_audio_device = 0;
+static SDL_AudioDeviceID current_audio_device;
+static int current_audio_device_initialized = 0;
 
 // ------------------------------------------------------------------------
 // playback
@@ -1323,7 +1324,6 @@ static void song_print_info_top(const char *d)
 
 
 /* --------------------------------------------------------------------------------------------------------- */
-/* This is completely horrible! :) */
 
 static int audio_was_init = 0;
 
@@ -1339,9 +1339,9 @@ const char *song_audio_device(void)
 
 static void _cleanup_audio_device(void)
 {
-	if (current_audio_device) {
+	if (current_audio_device_initialized) {
 		SDL_CloseAudioDevice(current_audio_device);
-		current_audio_device = 0;
+		current_audio_device_initialized = 0;
 		free(device_name);
 		device_name = NULL;
 	}
@@ -1358,8 +1358,6 @@ static int _audio_open_driver(const char *driver)
 		SDL_AudioQuit();
 		audio_was_init = 0;
 	}
-
-	const int cnt = SDL_GetNumAudioDrivers();
 
 	if (driver && *driver) {
 		/* compatibility! */
@@ -1378,6 +1376,7 @@ static int _audio_open_driver(const char *driver)
 			goto audio_was_init;
 	}
 
+	const int cnt = SDL_GetNumAudioDrivers();
 	for (int i = 0; i < cnt; i++) {
 		n = SDL_GetAudioDriver(i);
 
@@ -1392,6 +1391,35 @@ static int _audio_open_driver(const char *driver)
 audio_was_init:
 	driver_name = str_dup(n);
 	audio_was_init = 1;
+	return 1;
+}
+
+/* This is here because 0 is actually a perfectly fine audio device ID, as per SDL docs.
+ * So this function is here to wrap around SDL_OpenAudioDevice */
+static int _audio_try_device(const char* name, const char *display_name, const SDL_AudioSpec *desired, SDL_AudioSpec *obtained)
+{
+	/* name can be NULL but display_name cannot */
+
+	/* cache the last known error */
+	const char *err = SDL_GetError();
+
+	SDL_ClearError();
+
+	current_audio_device = SDL_OpenAudioDevice(name, 0, desired, obtained, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
+
+	/* punt if there was an error */
+	if (*SDL_GetError()) {
+		current_audio_device_initialized = 0;
+		return 0;
+	}
+
+	current_audio_device_initialized = 1;
+
+	/* otherwise, restore our cached error */
+	SDL_SetError(err);
+
+	device_name = str_dup(display_name);
+
 	return 1;
 }
 
@@ -1426,7 +1454,7 @@ static int _audio_open_device(const char *device, int verbose)
 //			put_env_var("AUDIODEV", "hw");
 //	}
 
-	SDL_AudioSpec desired = {
+	const SDL_AudioSpec desired = {
 		.freq = audio_settings.sample_rate,
 		.format = (audio_settings.bits == 8) ? AUDIO_U8 : AUDIO_S16SYS,
 		.channels = audio_settings.channels,
@@ -1434,23 +1462,20 @@ static int _audio_open_device(const char *device, int verbose)
 		.callback = audio_callback,
 		.userdata = NULL,
 	};
+
 	SDL_AudioSpec obtained;
 
-#define SCHISM_CHANGE_ALLOWED (SDL_AUDIO_ALLOW_FREQUENCY_CHANGE)
-
 	if (device && *device) {
-		current_audio_device = SDL_OpenAudioDevice(device, 0, &desired, &obtained, SCHISM_CHANGE_ALLOWED);
-		if (current_audio_device) {
-			device_name = str_dup(device);
+		if (_audio_try_device(device, device, &desired, &obtained))
 			goto success;
-		} else fputs("Failed to open requested audio device! Falling back to default...\n", stderr);
+
+		fputs("Failed to open requested audio device! Falling back to default...\n", stderr);
 	}
 
-	current_audio_device = SDL_OpenAudioDevice(NULL, 0, &desired, &obtained, SCHISM_CHANGE_ALLOWED);
-	if (current_audio_device) {
-		device_name = str_dup("default"); // ????
+	if (_audio_try_device(NULL, "default", &desired, &obtained))
 		goto success;
-	}
+
+	fputs("Failed to open a default audio device! (huh??)\n", stderr);
 
 	/* oops ! */
 	return 0;
@@ -1492,6 +1517,10 @@ static int _audio_init_head(const char *driver, const char *device, int verbose)
 		goto fail;
 	}
 
+	/* Refresh the audio device list on audio init; this allows for
+	 * machines using ancient SDL versions (i.e. powerpc macs) to
+	 * have an audio device list, despite not having
+	 * SDL_AUDIODEVICEADDED or SDL_AUDIODEVICEREMOVED */
 	refresh_audio_device_list();
 
 	if (!_audio_open_device(device, verbose)) {
