@@ -285,7 +285,7 @@ wchar_t* str_to_wchar(char* string, int free_inputs)
 	charset_error_t result = charset_iconv(string, (uint8_t**)&out, CHARSET_UTF8, CHARSET_WCHAR_T);
 
 	if (result != CHARSET_ERROR_SUCCESS) {
-		printf("Failed converting \"%s\" to wchar. Error: %i.\n", string, result);
+		printf("Failed converting \"%s\" to wchar. Error: %s.\n", string, charset_iconv_error_lookup(result));
 		return L"";
 	}
 
