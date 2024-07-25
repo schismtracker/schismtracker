@@ -343,7 +343,7 @@ static void update_palette(void)
 		current_palette[n][2] = widgets_palette[3 * n + 2].d.thumbbar.value;
 	}
 	selected_palette = current_palette_index = 0;
-	memcpy(palettes[selected_palette].colors, current_palette, sizeof(current_palette));
+	memcpy(palettes[0].colors, current_palette, sizeof(current_palette));
 	palette_apply();
 	cfg_save();
 	status.flags |= NEED_UPDATE;
