@@ -934,8 +934,7 @@ static int _handle_ime(struct key_event *k)
 	static uint32_t cs_unicode = 0;
 	static int cs_unicode_c = 0;
 
-	if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
-	    && ACTIVE_PAGE.widgets[ACTIVE_PAGE.selected_widget].accept_text) {
+	if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets && ACTIVE_PAGE_WIDGET.accept_text) {
 		if (digraph_n == -1 && k->state == KEY_RELEASE) {
 			digraph_n = 0;
 
@@ -986,7 +985,6 @@ static int _handle_ime(struct key_event *k)
 					if (unicode[0] >= 32) {
 						status_text_flash_bios("Enter Unicode: U+%04" PRIX32 " -> " PRIu8,
 									   cs_unicode, unicode[0]);
-						SDL_SetModState(0);
 						handle_text_input((const uint8_t*)unicode);
 					} else {
 						status_text_flash_bios("Enter Unicode: U+%04" PRIX32 " -> INVALID", cs_unicode);

@@ -657,7 +657,7 @@ int charset_strcmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, cha
 
 	for (;;) {
 		c1 = conv1_to_ucs4_func(in1 + in1_offset, &codepoint1, &in1_needed);
-		c2 = conv1_to_ucs4_func(in2 + in2_offset, &codepoint2, &in2_needed);
+		c2 = conv2_to_ucs4_func(in2 + in2_offset, &codepoint2, &in2_needed);
 
 		if (c1 == DECODER_ERROR || c2 == DECODER_ERROR)
 			goto charsetfail;
@@ -692,7 +692,7 @@ int charset_strcasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2,
 
 	for (;;) {
 		c1 = conv1_to_ucs4_func(in1 + in1_offset, &codepoint1, &in1_needed);
-		c2 = conv1_to_ucs4_func(in2 + in2_offset, &codepoint2, &in2_needed);
+		c2 = conv2_to_ucs4_func(in2 + in2_offset, &codepoint2, &in2_needed);
 
 		if (c1 == DECODER_ERROR || c2 == DECODER_ERROR)
 			goto charsetfail;
@@ -719,4 +719,139 @@ charsetfail:
 
 	return (tolower(*in1) - tolower(*--in2));
 #endif
+}
+
+int charset_strncasecmp(const uint8_t* in1, charset_t in1set, size_t in1num, const uint8_t* in2, charset_t in2set, size_t in2num) {
+	uint32_t codepoint1, codepoint2;
+	size_t in1_needed, in2_needed, in1_offset = 0, in2_offset = 0;
+	size_t i, j;
+	int c1, c2;
+
+	if (in1set >= ARRAY_SIZE(conv_to_ucs4_funcs) || in2set >= ARRAY_SIZE(conv_to_ucs4_funcs))
+		goto charsetfail;
+
+	charset_conv_to_ucs4_func conv1_to_ucs4_func = conv_to_ucs4_funcs[in1set],
+	                          conv2_to_ucs4_func = conv_to_ucs4_funcs[in2set];
+
+	if (!conv1_to_ucs4_func || !conv2_to_ucs4_func)
+		goto charsetfail;
+
+	for (i = 0, j = 0; i < in1num && j < in2num; i++, j++) {
+		c1 = conv1_to_ucs4_func(in1 + in1_offset, &codepoint1, &in1_needed);
+		c2 = conv2_to_ucs4_func(in2 + in2_offset, &codepoint2, &in2_needed);
+
+		if (c1 == DECODER_ERROR || c2 == DECODER_ERROR)
+			goto charsetfail;
+
+		codepoint1 = charset_simple_case_fold(codepoint1);
+		codepoint2 = charset_simple_case_fold(codepoint2);
+
+		if (c1 == DECODER_DONE || c2 == DECODER_DONE || codepoint1 != codepoint2)
+			break;
+
+		in1_offset += in1_needed;
+		in2_offset += in2_needed;
+	}
+
+	return codepoint1 - codepoint2;
+
+charsetfail:
+#if HAVE_STRCASECMP
+	return strcasecmp(in1, in2);
+#else
+	while (tolower(*in1) == tolower(*in2++))
+		if (*in1++ == '\0')
+			return 0;
+
+	return (tolower(*in1) - tolower(*--in2));
+#endif
+}
+
+/* copies a string from one encoding to another
+ * NUM IS IN CHARACTERS!! NOT BYTES !!
+ *
+ * returns the count of characters, or -1 if something failed */
+int charset_strncpy(uint8_t *out, charset_t outset, const uint8_t *in, charset_t inset, size_t num) {
+	uint32_t codepoint;
+	int count = 0;
+	int c;
+	size_t n;
+	size_t in_needed, in_offset = 0;
+
+	if (inset >= ARRAY_SIZE(conv_to_ucs4_funcs) || outset >= ARRAY_SIZE(conv_from_ucs4_funcs))
+		return -1;
+
+	charset_conv_to_ucs4_func conv_to_ucs4_func = conv_to_ucs4_funcs[inset];
+	charset_conv_from_ucs4_func conv_from_ucs4_func = conv_from_ucs4_funcs[outset];
+
+	if (!conv_to_ucs4_func || !conv_from_ucs4_func)
+		return -1;
+
+	for (n = 0; n < num; n++) {
+		c = conv_to_ucs4_func(in + in_offset, &codepoint, &in_needed);
+
+		if (c == DECODER_ERROR)
+			return -1;
+
+        if (c == DECODER_DONE)
+            break;
+
+		size_t out_needed = conv_from_ucs4_func(codepoint, NULL);
+		if (!out_needed)
+			return -1;
+
+		conv_from_ucs4_func(codepoint, out + n);
+        
+        in_offset += in_needed;
+        count++;
+	}
+
+	return count;
+}
+
+size_t charset_strncasecmplen(const uint8_t *in1, size_t in1len, charset_t in1set, const uint8_t *in2, size_t in2len, charset_t in2set)
+{
+	uint32_t codepoint1, codepoint2;
+	size_t in1_needed, in2_needed, in1_offset = 0, in2_offset = 0;
+	size_t count = 0;
+	size_t i = 0, j = 0;
+	int c1, c2;
+
+	if (in1set >= ARRAY_SIZE(conv_to_ucs4_funcs) || in2set >= ARRAY_SIZE(conv_to_ucs4_funcs))
+		goto charsetfail;
+
+	charset_conv_to_ucs4_func conv1_to_ucs4_func = conv_to_ucs4_funcs[in1set],
+	                          conv2_to_ucs4_func = conv_to_ucs4_funcs[in2set];
+
+	if (!conv1_to_ucs4_func || !conv2_to_ucs4_func)
+		goto charsetfail;
+
+	for (; i < in1len && j < in2len; i++, j++) {
+		c1 = conv1_to_ucs4_func(in1 + in1_offset, &codepoint1, &in1_needed);
+		c2 = conv2_to_ucs4_func(in2 + in2_offset, &codepoint2, &in2_needed);
+
+		if (c1 == DECODER_ERROR || c2 == DECODER_ERROR)
+			goto charsetfail;
+
+		codepoint1 = charset_simple_case_fold(codepoint1);
+		codepoint2 = charset_simple_case_fold(codepoint2);
+
+		if (c1 == DECODER_DONE || c2 == DECODER_DONE || codepoint1 != codepoint2)
+			break;
+
+		in1_offset += in1_needed;
+		in2_offset += in2_needed;
+
+		count++;
+	}
+
+	return count;
+
+charsetfail:
+	return 0;
+}
+
+size_t charset_strcasecmplen(const uint8_t *in1, charset_t in1set, const uint8_t *in2, charset_t in2set)
+{
+	return charset_strncasecmplen(in1, in1set, charset_strlen(in1, in1set), in2, in2set, charset_strlen(in2, in2set));
 }

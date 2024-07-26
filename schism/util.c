@@ -347,6 +347,30 @@ char *get_parent_directory(const char *dirname)
 	return ret;
 }
 
+/* if len is zero, this function calls strlen to get the input's
+ * length.
+ *
+ * The input will be free'd if the input isn't a null pointer,
+ * so make sure you initialize your strings properly ;)
+ *
+ * returns 0 on fail or 1 on success */
+int realloc_string(char **output, const char *input, int len) {
+	if (*output)
+		free(*output);
+
+	if (!len)
+		len = strlen(input);
+
+	*output = malloc((len + 1) * sizeof(char));
+	if (!*output)
+		return 0;
+
+	strncpy(*output, input, len);
+	(*output)[len] = '\0';
+
+	return 1;
+}
+
 static const char *whitespace = " \t\v\r\n";
 
 int ltrim_string(char *s)
@@ -617,26 +641,22 @@ int get_num_lines(const char *text)
 /* 0 = success, !0 = failed (check errno) */
 int make_backup_file(const char *filename, int numbered)
 {
-	char buf[PATH_MAX];
+	size_t len = strlen(filename);
 
 	/* ensure plenty of room to breathe */
-	if (strlen(filename) > PATH_MAX - 16) {
-		errno = ENAMETOOLONG;
-		return -1;
-	}
+	char buf[len + 8];
 
 	if (numbered) {
 		/* If some crazy person needs more than 65536 backup files,
-		   they probably have more serious issues to tend to. */
+		 * they probably have more serious issues to tend to. */
 		int n = 1, ret;
 		do {
-			sprintf(buf, "%s.%d~", filename, n++);
+			snprintf(buf, len + 16, "%s.%d~", filename, n++);
 			ret = rename_file(filename, buf, 0);
 		} while (ret != 0 && errno == EEXIST && n < 65536);
 		return ret;
 	} else {
-		strcpy(buf, filename);
-		strcat(buf, "~");
+		snprintf(buf, len + 16, "%s~", filename);
 		return rename_file(filename, buf, 1);
 	}
 }
@@ -783,9 +803,16 @@ char *get_current_directory(void)
 	if (_wgetcwd(buf, PATH_MAX) && !charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
 		return (char*)buf_utf8;
 #else
-	char buf[PATH_MAX + 1] = {'\0'};
+	size_t buf_size = 32;
+	char *buf = NULL;
 
-	if (getcwd(buf, PATH_MAX))
+	/* 512 KiB has to be enough space, else we punt */
+	do {
+		free(buf);
+		buf = mem_alloc(buf_size);
+	} while (!getcwd(buf, buf_size) && errno == ENOMEM && ((buf_size *= 2) < (1 << 19)));
+
+	if (buf)
 		return str_dup(buf);
 #endif
 	return str_dup(".");

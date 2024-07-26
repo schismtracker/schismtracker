@@ -166,6 +166,7 @@ char *num99tostr(int n, char *buf);
 const char *get_basename(const char *filename);
 const char *get_extension(const char *filename); // including dot; "" if no extension (note: used to strip dot)
 char *get_parent_directory(const char *dirname);
+int realloc_string(char **output, const char* input, int len);
 int ltrim_string(char *s); // return: length of string after trimming
 int rtrim_string(char *s);
 int trim_string(char *s);

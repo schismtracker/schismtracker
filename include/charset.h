@@ -23,7 +23,8 @@
 #ifndef SCHISM_CHARSET_H_
 #define SCHISM_CHARSET_H_
 
-#include <stdint.h>
+#include <stddef.h> /* need size_t */
+#include <stdint.h> /* uint*_t */
 
 /* UCS4 shouldn't ever be used externally; the output depends on endianness.
  * It should only be used as sort of an in-between from UTF-8 to CP437 for use
@@ -64,8 +65,14 @@ uint8_t char_unicode_to_cp437(unsigned int c);
 uint32_t charset_simple_case_fold(uint32_t codepoint);
 
 /* charset-aware replacements for C stdlib functions */
+size_t charset_strlen(const uint8_t* in, charset_t inset);
 int charset_strcmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set);
 int charset_strcasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set);
+int charset_strncasecmp(const uint8_t* in1, charset_t in1set, size_t in1num, const uint8_t* in2, charset_t in2set, size_t in2num);
+size_t charset_strcasecmplen(const uint8_t *in1, charset_t in1set, const uint8_t *in2, charset_t in2set);
+size_t charset_strncasecmplen(const uint8_t *in1, size_t in1len, charset_t in1set, const uint8_t *in2,
+		size_t in2len, charset_t in2set);
+int charset_strncpy(uint8_t *out, charset_t outset, const uint8_t *in, charset_t inset, size_t num);
 
 const char* charset_iconv_error_lookup(charset_error_t err);
 charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset);

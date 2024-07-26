@@ -53,7 +53,7 @@ static struct vgamem_overlay sample_image = {
 	NULL, 0, 0, 0,
 };
 
-static char current_filename[PATH_MAX];
+static char current_filename[22];
 static int sample_speed_pos = 0;
 static int sample_loop_beg = 0;
 static int sample_loop_end = 0;
@@ -69,7 +69,7 @@ static int fake_slot = KEYJAZZ_NOINST;
 static const char *const loop_states[] = {
 		"Off", "On Forwards", "On Ping Pong", NULL };
 
-static char samp_cwd[PATH_MAX+1] = "";
+static char *samp_cwd = NULL;
 
 static void handle_preload(void);
 
@@ -91,7 +91,7 @@ static dmoz_filelist_t flist;
 #define current_file (flist.selected)
 
 static int search_pos = -1;
-static char search_str[PATH_MAX];
+static char *search_str = NULL;
 
 /* get a color index from a dmoz_file_t 'type' field */
 static inline int get_type_color(int type)
@@ -128,11 +128,11 @@ static void file_list_reposition(void)
 		f = flist.files[current_file];
 
 		if (f && f->smp_filename) {
-			strncpy(current_filename, f->smp_filename, PATH_MAX-1);
+			strncpy(current_filename, f->smp_filename, ARRAY_SIZE(current_filename));
+			current_filename[ARRAY_SIZE(current_filename) - 1] = '\0';
 		} else if (f && f->base) {
-			CHARSET_EASY_MODE(f->base, CHARSET_CHAR, CHARSET_CP437, {
-				strncpy(current_filename, out, PATH_MAX-1);
-			});
+			charset_strncpy(current_filename, CHARSET_CP437, f->base, CHARSET_CHAR, ARRAY_SIZE(current_filename));
+			current_filename[ARRAY_SIZE(current_filename) - 1] = '\0';
 		} else {
 			current_filename[0] = '\0';
 		}
@@ -209,12 +209,11 @@ static int change_dir(const char *dir)
 
 	dmoz_cache_update(cfg_dir_samples, &flist, NULL);
 
-	if (!os_stat(ptr, &buf) && S_ISDIR(buf.st_mode)) {
-		strncpy(cfg_dir_samples, ptr, PATH_MAX);
-		cfg_dir_samples[PATH_MAX] = '\0';
-	}
-	strncpy(samp_cwd, ptr, PATH_MAX);
-	samp_cwd[PATH_MAX] = '\0';
+	if (!os_stat(ptr, &buf) && S_ISDIR(buf.st_mode))
+		realloc_string(&cfg_dir_samples, ptr, 0);
+
+	realloc_string(&samp_cwd, ptr, 0);
+
 	free(ptr);
 
 	read_directory();
@@ -331,10 +330,8 @@ static void _common_set_page(void)
 {
 	struct stat st;
 
-	if (!*samp_cwd) {
-		strncpy(samp_cwd, cfg_dir_samples, PATH_MAX);
-		samp_cwd[PATH_MAX] = '\0';
-	}
+	if (!samp_cwd)
+		realloc_string(&samp_cwd, cfg_dir_samples, 0);
 
 	/* if we have a list, the directory didn't change, and the mtime is the same, we're set */
 	if (flist.num_files > 0
@@ -396,12 +393,12 @@ static void file_list_draw(void)
 		CHARSET_EASY_MODE(file->base ? file->base : "", CHARSET_CHAR, CHARSET_CP437, {
 			/* XXX this is wrong */
 			if (file->base && search_pos > -1) {
-				if (strncasecmp(out,search_str,search_pos) == 0) {
-					for (i = 0 ; i < search_pos; i++) {
-						if (tolower(out[i]) != tolower(search_str[i]))
-							break;
-						draw_char(out[i], 32+i, pos, 3,1);
-					}
+				if (!charset_strncasecmp(file->base, CHARSET_CHAR, search_pos, search_str, CHARSET_CP437, search_pos)) {
+					size_t caselen = charset_strncasecmplen(
+						file->base, 18, CHARSET_CHAR,
+						search_str, search_pos, CHARSET_CP437);
+
+					draw_text_bios_len(out, MIN(caselen, 18), 32, pos, 3, 1);
 				}
 			}
 		});
@@ -656,17 +653,29 @@ static void do_delete_file(UNUSED void *data)
 
 static int file_list_handle_text_input(const uint8_t* text) {
 	dmoz_file_t* f = flist.files[current_file];
-	for (; *text; text++) {
-		if (*text >= 32 && (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
-			if (search_pos < 0) search_pos = 0;
-			if (search_pos < PATH_MAX) {
-				search_str[search_pos++] = *text;
-				reposition_at_slash_search();
-				status.flags |= NEED_UPDATE;
-			}
-			return 1;
-		}
+	size_t text_len = strlen(text);
+
+	if (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY))) {
+		size_t slash_search_len = (search_str) ? strlen(search_str) : 0;
+
+		if (search_pos < 0)
+			search_pos = 0;
+
+		/* realloc memory if necessary */
+		if (search_pos + text_len >= search_pos)
+			search_str = realloc(search_str, (search_pos + text_len) * sizeof(char));
+
+		/* now copy the data */
+		for (int i = 0; i < text_len; i++)
+			search_str[search_pos + i] = (char)text[i];
+
+		search_pos += text_len;
+
+		reposition_at_slash_search();
+		status.flags |= NEED_UPDATE;
+		return 1;
 	}
+
 	return 0;
 }
 
@@ -947,7 +956,7 @@ void load_sample_load_page(struct page *page)
 			64, 13,
 			13,
 				1,2, 9, handle_rename_op,
-				current_filename, sizeof(current_filename)-1);
+				current_filename, ARRAY_SIZE(current_filename)-1);
 	sample_speed_pos = 0;
 	widget_create_numentry(widgets_loadsample+2,
 			64, 14,
