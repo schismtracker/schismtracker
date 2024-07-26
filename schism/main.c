@@ -612,8 +612,7 @@ static void event_loop(void)
 				}
 				break;
 			case SDL_QUIT:
-				if (status.dialog_type == DIALOG_NONE)
-					show_exit_prompt();
+				show_exit_prompt();
 				break;
 			case SDL_WINDOWEVENT:
 				/* reset this... */
