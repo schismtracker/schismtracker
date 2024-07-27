@@ -247,7 +247,7 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 
 /* generic scanner; BITS must be one of 8, 16, 32, 64 */
 #define VGAMEM_SCANNER_VARIANT(BITS) \
-	void vgamem_scan##BITS(uint32_t ry, uint##BITS##_t *out, uint32_t tc[16], uint32_t mouseline[80]) \
+	void vgamem_scan##BITS(uint32_t ry, uint##BITS##_t *out, uint32_t tc[16], uint32_t mouseline[80], uint32_t mouseline_mask[80]) \
 	{ \
 		struct vgamem_char *bp; \
 		uint32_t dg; \
@@ -281,7 +281,8 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				} else { \
 					dg = itf[bp->character.itf.c << 3]; \
 				} \
-				dg ^= mouseline[x]; \
+				dg |= mouseline[x]; \
+				dg &= ~(mouseline_mask[x] ^ mouseline[x]); \
 				if (!bp->character.cp437.c) /* XXX why */ \
 					fg = 3; \
 			\
@@ -298,7 +299,7 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				dg = hf[bp->character.halfwidth.c1.c << 2]; \
 				if (!(ry & 1)) \
 					dg = (dg >> 4); \
-				dg ^= mouseline[x] >> 4; \
+				dg |= mouseline[x] >> 4; \
 			\
 				fg = bp->character.halfwidth.c1.colors.fg; \
 				bg = bp->character.halfwidth.c1.colors.bg; \
@@ -311,7 +312,7 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				dg = hf[bp->character.halfwidth.c2.c << 2]; \
 				if (!(ry & 1)) \
 					dg = (dg >> 4); \
-				dg ^= mouseline[x] >> 4; \
+				dg |= mouseline[x] >> 4; \
 			\
 				fg = bp->character.halfwidth.c2.colors.fg; \
 				bg = bp->character.halfwidth.c2.colors.bg; \
@@ -322,14 +323,14 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				*out++ = tc[(dg & 0x1) ? fg : bg]; \
 				break; \
 			case VGAMEM_FONT_OVERLAY: \
-				*out++ = tc[ (q[0]^((mouseline[x] & 0x80)?15:0)) & 255]; \
-				*out++ = tc[ (q[1]^((mouseline[x] & 0x40)?15:0)) & 255]; \
-				*out++ = tc[ (q[2]^((mouseline[x] & 0x20)?15:0)) & 255]; \
-				*out++ = tc[ (q[3]^((mouseline[x] & 0x10)?15:0)) & 255]; \
-				*out++ = tc[ (q[4]^((mouseline[x] & 0x08)?15:0)) & 255]; \
-				*out++ = tc[ (q[5]^((mouseline[x] & 0x04)?15:0)) & 255]; \
-				*out++ = tc[ (q[6]^((mouseline[x] & 0x02)?15:0)) & 255]; \
-				*out++ = tc[ (q[7]^((mouseline[x] & 0x01)?15:0)) & 255]; \
+				*out++ = tc[ (q[0]|((mouseline[x] & 0x80)?15:0)) & 255]; \
+				*out++ = tc[ (q[1]|((mouseline[x] & 0x40)?15:0)) & 255]; \
+				*out++ = tc[ (q[2]|((mouseline[x] & 0x20)?15:0)) & 255]; \
+				*out++ = tc[ (q[3]|((mouseline[x] & 0x10)?15:0)) & 255]; \
+				*out++ = tc[ (q[4]|((mouseline[x] & 0x08)?15:0)) & 255]; \
+				*out++ = tc[ (q[5]|((mouseline[x] & 0x04)?15:0)) & 255]; \
+				*out++ = tc[ (q[6]|((mouseline[x] & 0x02)?15:0)) & 255]; \
+				*out++ = tc[ (q[7]|((mouseline[x] & 0x01)?15:0)) & 255]; \
 				break; \
 			case VGAMEM_FONT_UNICODE: { \
 				uint32_t c = bp->character.unicode.c; \
@@ -352,7 +353,9 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				fg = bp->character.unicode.colors.fg; \
 				bg = bp->character.unicode.colors.bg; \
 	\
-				dg ^= mouseline[x]; \
+				dg |= mouseline[x]; \
+				dg &= ~(mouseline_mask[x] ^ mouseline[x]); \
+	\
 				if (!bp->character.cp437.c) /* XXX why */ \
 					fg = 3; \
 	\

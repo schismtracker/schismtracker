@@ -46,24 +46,46 @@
 #endif
 
 /* leeto drawing skills */
-#define MOUSE_HEIGHT    14
+#define MOUSE_HEIGHT    16
+#define MOUSE_WIDTH     10
 static const unsigned int _mouse_pointer[] = {
-	/* x....... */  0x80,
-	/* xx...... */  0xc0,
-	/* xxx..... */  0xe0,
-	/* xxxx.... */  0xf0,
-	/* xxxxx... */  0xf8,
-	/* xxxxxx.. */  0xfc,
-	/* xxxxxxx. */  0xfe,
-	/* xxxxxxxx */  0xff,
-	/* xxxxxxx. */  0xfe,
-	/* xxxxx... */  0xf8,
-	/* x...xx.. */  0x8c,
-	/* ....xx.. */  0x0c,
-	/* .....xx. */  0x06,
-	/* .....xx. */  0x06,
+	/* ........ ........ */  0x0000,
+	/* .x...... ........ */  0x4000,
+	/* .xx..... ........ */  0x6000,
+	/* .xxx.... ........ */  0x7000,
+	/* .xxxx... ........ */  0x7800,
+	/* .xxxxx.. ........ */  0x7c00,
+	/* .xxxxxx. ........ */  0x7e00,
+	/* .xxxxxxx ........ */  0x7f00,
+	/* .xxxxxxx x....... */  0x7f80,
+	/* .xxxxxxx ........ */  0x7f00,
+	/* .xxxxx.. ........ */  0x7c00,
+	/* .x...xx. ........ */  0x4600,
+	/* .....xx. ........ */  0x0600,
+	/* ......xx ........ */  0x0300,
+	/* ......xx ........ */  0x0300,
+	/* ........ ........ */  0x0000,
+	0,0
+};
 
-0,0
+static const unsigned int _mouse_pointer_mask[] = {
+	/* xx.. .... .... .... */  0xc000,
+	/* xxx. .... .... .... */  0xe000,
+	/* xxxx .... .... .... */  0xf000,
+	/* xxxx x... .... .... */  0xf800,
+	/* xxxx xx.. .... .... */  0xfc00,
+	/* xxxx xxx. .... .... */  0xfe00,
+	/* xxxx xxxx .... .... */  0xff00,
+	/* xxxx xxxx x... .... */  0xff80,
+	/* xxxx xxxx xx.. .... */  0xffc0,
+	/* xxxx xxxx x... .... */  0xff80,
+	/* xxxx xxx. .... .... */  0xfe00,
+	/* xxxx xxxx .... .... */  0xff00,
+	/* .x.. xxxx .... .... */  0x4f00,
+	/* .... .xxx x... .... */  0x0780,
+	/* .... .xxx x... .... */  0x0780,
+	/* .... ..xx .... .... */  0x0300,
+	0,0
 };
 
 struct video_cf {
@@ -317,11 +339,14 @@ int video_is_wm_available(void)
 	return !!SDL_GetWindowWMInfo(video.window, &info);
 }
 
-static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, unsigned int mouseline[80])
+static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, unsigned int mouseline[80], unsigned int mouseline_mask[80])
 {
 	unsigned int z;
+	unsigned int zm;
+	unsigned int c = ceil(MOUSE_WIDTH / 8.0); //cursor width in symbols
 
 	memset(mouseline, 0, 80*sizeof(unsigned int));
+	memset(mouseline_mask, 0, 80*sizeof(unsigned int));
 	if (video.mouse.visible != MOUSE_EMULATED
 		|| !video_is_focused()
 		|| y < video.mouse.y
@@ -330,8 +355,12 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 	}
 
 	z = _mouse_pointer[ y - video.mouse.y ];
-	mouseline[x] = z >> v;
-	if (x < 79) mouseline[x+1] = (z << (8-v)) & 0xff;
+	zm = _mouse_pointer_mask[ y - video.mouse.y ];
+
+	for (unsigned int i = 0; i < c && x + i < 80; i++) {
+		mouseline[x+i] = (z >> (v+8*(c-i-1))) & 0xff;
+		mouseline_mask[x+i] = (zm >> (v+8*(c-i-1))) & 0xff;
+	}
 }
 
 static void _blit11(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
@@ -339,13 +368,14 @@ static void _blit11(unsigned char *pixels, unsigned int pitch, unsigned int *tpa
 	unsigned int mouseline_x = (video.mouse.x / 8);
 	unsigned int mouseline_v = (video.mouse.x % 8);
 	unsigned int mouseline[80];
+	unsigned int mouseline_mask[80];
 	unsigned char *pdata;
 	unsigned int x, y;
 	int pitch24;
 
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-		make_mouseline(mouseline_x, mouseline_v, y, mouseline);
-		vgamem_scan32(y, (unsigned int *)pixels, tpal, mouseline);
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask);
+		vgamem_scan32(y, (unsigned int *)pixels, tpal, mouseline, mouseline_mask);
 		pixels += pitch;
 	}
 }
