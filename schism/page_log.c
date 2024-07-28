@@ -64,7 +64,7 @@ static int last_line = -1;
 static void log_draw_const(void)
 {
 	draw_box(1, 12, 78, 48, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_fill_chars(2, 13, 77, 47, 0);
+	draw_fill_chars(2, 13, 77, 47, DEFAULT_FG, 0);
 }
 
 static int log_handle_key(struct key_event * k)

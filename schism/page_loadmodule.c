@@ -458,7 +458,7 @@ static int search_text_length = 0;      /* same as strlen(search_text) */
 
 static void search_redraw(void)
 {
-	draw_fill_chars(51, 37, 76, 37, 0);
+	draw_fill_chars(51, 37, 76, 37, DEFAULT_FG, 0);
 	draw_text_bios_len(search_text + search_first_char, 25, 51, 37, 5, 0);
 
 	/* draw the cursor if it's on the dir/file list */
@@ -583,8 +583,8 @@ static void load_module_draw_const(void)
 	draw_box(50, 39, 77, 44, BOX_THICK | BOX_INNER | BOX_INSET); /* file info */
 	draw_box(12, 45, 77, 48, BOX_THICK | BOX_INNER | BOX_INSET); /* filename and directory input */
 
-	draw_fill_chars(51, 37, 76, 37, 0);
-	draw_fill_chars(13, 46, 76, 47, 0);
+	draw_fill_chars(51, 37, 76, 37, DEFAULT_FG, 0);
+	draw_fill_chars(13, 46, 76, 47, DEFAULT_FG, 0);
 }
 
 static void save_module_draw_const(void)
@@ -601,7 +601,7 @@ static void file_list_draw(void)
 	char buf[32];
 	dmoz_file_t *file;
 
-	draw_fill_chars(3, 13, 48, 43, 0);
+	draw_fill_chars(3, 13, 48, 43, DEFAULT_FG, 0);
 
 	if (flist.num_files > 0) {
 		if (top_file < 0) top_file = 0;
@@ -637,14 +637,14 @@ static void file_list_draw(void)
 	} else {
 		if (ACTIVE_PAGE.selected_widget == 0) {
 			draw_text("No files.", 3, 13, 0, 3);
-			draw_fill_chars(12, 13, 48, 13, 3);
+			draw_fill_chars(12, 13, 48, 13, DEFAULT_FG, 3);
 			draw_char(168, 23, 13, 2, 3);
 			pos = 14;
 		} else {
 			draw_text("No files.", 3, 13, 7, 0);
 			pos = 13;
 		}
-		draw_fill_chars(51, 40, 76, 43, 0);
+		draw_fill_chars(51, 40, 76, 43, DEFAULT_FG, 0);
 	}
 
 	while (pos < 44)
@@ -825,7 +825,7 @@ static void dir_list_draw(void)
 {
 	int n, pos, fg, bg;
 
-	draw_fill_chars(51, 13, 76, 34, 0);
+	draw_fill_chars(51, 13, 76, 34, DEFAULT_FG, 0);
 
 	for (n = top_dir, pos = 13; pos < 35; n++, pos++) {
 		if (n < 0) continue; /* er... */

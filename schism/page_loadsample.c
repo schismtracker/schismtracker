@@ -230,20 +230,20 @@ static void load_sample_draw_const(void)
 	char sbuf[64];
 
 	draw_box(5, 12, 50, 48, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_fill_chars(6, 13, 49, 47, 0);
+	draw_fill_chars(6, 13, 49, 47, DEFAULT_FG, 0);
 
-	draw_fill_chars(64, 13, 77, 22, 0);
+	draw_fill_chars(64, 13, 77, 22, DEFAULT_FG, 0);
 	draw_box(62, 32, 72, 35, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(62, 36, 72, 40, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	draw_box(63, 12, 77, 23, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	draw_box(51, 24, 77, 29, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_fill_chars(52, 25, 76, 28, 0);
+	draw_fill_chars(52, 25, 76, 28, DEFAULT_FG, 0);
 
 	draw_box(51, 30, 77, 42, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	draw_fill_chars(59, 44, 76, 47, 0);
+	draw_fill_chars(59, 44, 76, 47, DEFAULT_FG, 0);
 	draw_box(58, 43, 77, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	f = NULL;

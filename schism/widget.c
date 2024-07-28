@@ -438,11 +438,11 @@ void widget_draw_widget(struct widget *w, int selected)
 
 	switch (w->type) {
 	case WIDGET_TOGGLE:
-		draw_fill_chars(w->x, w->y, w->x + w->width - 1, w->y, 0);
+		draw_fill_chars(w->x, w->y, w->x + w->width - 1, w->y, DEFAULT_FG, 0);
 		draw_text((w->d.toggle.state ? "On" : "Off"), w->x, w->y, tfg, tbg);
 		break;
 	case WIDGET_MENUTOGGLE:
-		draw_fill_chars(w->x, w->y, w->x + w->width - 1, w->y, 0);
+		draw_fill_chars(w->x, w->y, w->x + w->width - 1, w->y, DEFAULT_FG, 0);
 		ptr = w->d.menutoggle.choices[w->d.menutoggle.state];
 		endptr = strchr(ptr, ' ');
 		if (endptr) {
@@ -546,7 +546,7 @@ void widget_draw_widget(struct widget *w, int selected)
 			int len = strlen(w->d.thumbbar.text_at_max);
 			int pos = w->x + w->width - len;
 
-			draw_fill_chars(w->x, w->y, pos - 1, w->y, 0);
+			draw_fill_chars(w->x, w->y, pos - 1, w->y, DEFAULT_FG, 0);
 			draw_text_len(w->d.thumbbar.text_at_max, len, pos, w->y, selected ? 3 : 2, 0);
 		} else {
 			draw_thumb_bar(w->x, w->y, w->width, w->d.thumbbar.min,
