@@ -255,15 +255,18 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 
 	for (pos = base + 1; pos < base + height - 1; pos++, c++) {
 		song_voice_t *voice = current_song->voices + c - 1;
-
 		/* always draw the channel number */
-		if (c == selected_channel)
+		memcpy(buf, numtostr(2, c, buf), 8*sizeof(char));
+
+		if (c == selected_channel) {
 			fg = (voice->flags & CHN_MUTE) ? 6 : 3;
-		else if (voice->flags & CHN_MUTE)
-			fg = 2; /* same as bg */
-		else
+		} else if (voice->flags & CHN_MUTE) {
+			fg = DEFAULT_FG;
+			memset(buf, 0, 8*sizeof(char));
+		} else
 			fg = active ? 1 : 0;
-		draw_text(numtostr(2, c, buf), 2, pos, fg, 2);
+
+		draw_text(buf, 2, pos, fg, 2);
 
 		if (!(voice->current_sample_data && voice->length))
 			continue;
