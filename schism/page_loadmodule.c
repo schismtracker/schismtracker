@@ -463,7 +463,7 @@ static void search_redraw(void)
 
 	/* draw the cursor if it's on the dir/file list */
 	if (ACTIVE_PAGE.selected_widget == 0 || ACTIVE_PAGE.selected_widget == 1) {
-		draw_char(0, 51 + search_text_length - search_first_char, 37, 6, 6);
+		draw_char(0, 51 + search_text_length - search_first_char, 37, 0, 6);
 	}
 }
 
