@@ -311,6 +311,7 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				if (!(ry & 1)) \
 					dg = (dg >> 4); \
 				dg |= mouseline[x] >> 4; \
+				dg &= ~(mouseline_mask[x] ^ mouseline[x]) >> 4; \
 			\
 				fg = bp->character.halfwidth.c2.colors.fg; \
 				bg = bp->character.halfwidth.c2.colors.bg; \
