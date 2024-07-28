@@ -177,7 +177,7 @@ void log_append(int color, int must_free, const char *text)
 }
 void log_nl(void)
 {
-	log_append(0,0,"");
+	log_append(DEFAULT_FG,0,"");
 }
 void log_appendf(int color, const char *format, ...)
 {
