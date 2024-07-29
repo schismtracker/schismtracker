@@ -110,13 +110,13 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 	all of the above are still set to valid values in sample mode
 	*/
 
-	draw_fill_chars(5, base + 1, 29, base + height - 2, 0);
+	draw_fill_chars(5, base + 1, 29, base + height - 2, DEFAULT_FG, 0);
 	draw_box(4, base, 30, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_text("Frequency", 6, base, 2, 1);
 	draw_text("Position", 17, base, 2, 1);
 	draw_text("Smp", 27, base, 2, 1);
 
-	draw_fill_chars(32, base + 1, 56, base + height - 2, 0);
+	draw_fill_chars(32, base + 1, 56, base + height - 2, DEFAULT_FG, 0);
 	draw_box(31, base, 57, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_text("FVl", 32, base, 2, 1);
 	draw_text("Vl",  36, base, 2, 1);
@@ -128,7 +128,7 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 	draw_text("PE",  55, base, 2, 1);
 
 	if (song_is_instrument_mode()) {
-		draw_fill_chars(59, base + 1, 65, base + height - 2, 0);
+		draw_fill_chars(59, base + 1, 65, base + height - 2, DEFAULT_FG, 0);
 		draw_box(58, base, 66, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 		draw_text("NNA", 59, base, 2, 1);
 		draw_text("Tot", 63, base, 2, 1);
@@ -225,16 +225,16 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 	char buf[8];
 	char *ptr;
 
-	draw_fill_chars(5, base + 1, 28, base + height - 2, 0);
-	draw_fill_chars(31, base + 1, 61, base + height - 2, 0);
+	draw_fill_chars(5, base + 1, 28, base + height - 2, DEFAULT_FG, 0);
+	draw_fill_chars(31, base + 1, 61, base + height - 2, DEFAULT_FG, 0);
 
 	draw_box(4, base, 29, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(30, base, 62, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 	if (song_is_stereo()) {
-		draw_fill_chars(64, base + 1, 72, base + height - 2, 0);
+		draw_fill_chars(64, base + 1, 72, base + height - 2, DEFAULT_FG, 0);
 		draw_box(63, base, 73, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 	} else {
-		draw_fill_chars(63, base, 73, base + height, 2);
+		draw_fill_chars(63, base, 73, base + height, DEFAULT_FG, 2);
 	}
 
 	if (song_get_mode() == MODE_STOPPED) {
@@ -255,15 +255,15 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 
 	for (pos = base + 1; pos < base + height - 1; pos++, c++) {
 		song_voice_t *voice = current_song->voices + c - 1;
-
 		/* always draw the channel number */
-		if (c == selected_channel)
+
+		if (c == selected_channel) {
 			fg = (voice->flags & CHN_MUTE) ? 6 : 3;
-		else if (voice->flags & CHN_MUTE)
-			fg = 2; /* same as bg */
-		else
+			draw_text(numtostr(2, c, buf), 2, pos, fg, 2);
+		} else if (!(voice->flags & CHN_MUTE)) {
 			fg = active ? 1 : 0;
-		draw_text(numtostr(2, c, buf), 2, pos, fg, 2);
+			draw_text(numtostr(2, c, buf), 2, pos, fg, 2);
+		}
 
 		if (!(voice->current_sample_data && voice->length))
 			continue;
@@ -409,7 +409,7 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
 	default:
 			/* stopped */
 			draw_fill_chars(5, base + 1, 4 + num_channels * channel_width - !!separator,
-					base + height - 2, 0);
+					base + height - 2, DEFAULT_FG, 0);
 			return;
 		}
 		cur_pattern_rows = song_get_pattern(current_song->orderlist[current_order], &cur_pattern);
@@ -679,7 +679,7 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
 	uint8_t d, dn;
 	uint8_t dot_field[73][36] = { {0} }; // f#2 -> f#8 = 73 columns
 
-	draw_fill_chars(5, base + 1, 77, base + height - 2, 0);
+	draw_fill_chars(5, base + 1, 77, base + height - 2, DEFAULT_FG, 0);
 	draw_box(4, base, 78, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	n = current_song->num_voices;

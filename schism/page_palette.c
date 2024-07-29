@@ -62,8 +62,8 @@ static void palette_draw_const(void)
 		draw_box(9, 13 + (5 * n), 19, 17 + (5 * n), BOX_THICK | BOX_INNER | BOX_INSET);
 		draw_box(29, 13 + (5 * n), 35, 17 + (5 * n), BOX_THICK | BOX_INNER | BOX_INSET);
 		draw_box(36, 13 + (5 * n), 46, 17 + (5 * n), BOX_THICK | BOX_INNER | BOX_INSET);
-		draw_fill_chars(3, 14 + (5 * n), 7, 16 + (5 * n), n);
-		draw_fill_chars(30, 14 + (5 * n), 34, 16 + (5 * n), n + 7);
+		draw_fill_chars(3, 14 + (5 * n), 7, 16 + (5 * n), DEFAULT_FG, n);
+		draw_fill_chars(30, 14 + (5 * n), 34, 16 + (5 * n), DEFAULT_FG, n + 7);
 	}
 
 	draw_box(56, 13, 62, 17, BOX_THICK | BOX_INNER | BOX_INSET);
@@ -71,8 +71,8 @@ static void palette_draw_const(void)
 	draw_box(56, 18, 62, 22, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(63, 18, 73, 22, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(54, 25, 77, 41, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_fill_chars(57, 14, 61, 16, 14);
-	draw_fill_chars(57, 19, 61, 21, 15);
+	draw_fill_chars(57, 14, 61, 16, DEFAULT_FG, 14);
+	draw_fill_chars(57, 19, 61, 21, DEFAULT_FG, 15);
 }
 
 /* --------------------------------------------------------------------- */
@@ -137,7 +137,7 @@ static void palette_list_draw(void)
 	int n, focused = (ACTIVE_PAGE.selected_widget == 48);
 	int fg, bg;
 
-	draw_fill_chars(55, 26, 76, 40, 0);
+	draw_fill_chars(55, 26, 76, 40, DEFAULT_FG, 0);
 
 	for (n = 0; n < NUM_PALETTES; n++) {
 		fg = 6;

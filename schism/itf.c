@@ -433,6 +433,7 @@ extern unsigned int color_set[16];
 
 static void draw_screen(void)
 {
+	draw_fill_chars(0,0,79,49,DEFAULT_FG,0);
 	draw_frame("Edit Box", EDITBOX_X, EDITBOX_Y, 9, 11, !!(selected_item == EDITBOX));
 	draw_editbox();
 

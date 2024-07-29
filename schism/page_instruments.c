@@ -1164,7 +1164,7 @@ static void _env_draw(const song_envelope_t *env, int middle, int current_node,
 		}
 	}
 
-	draw_fill_chars(65, 18, 76, 25, 0);
+	draw_fill_chars(65, 18, 76, 25, DEFAULT_FG, 0);
 	vgamem_ovl_apply(&env_overlay);
 
 	sprintf(buf, "Node %d/%d", current_node, env->nodes);
@@ -2051,7 +2051,7 @@ static void export_instrument_list_draw(void)
 {
 	int n, focused = (*selected_widget == 3);
 
-	draw_fill_chars(53, 24, 56, 31, 0);
+	draw_fill_chars(53, 24, 56, 31, DEFAULT_FG, 0);
 	for (n = 0; instrument_save_formats[n].label; n++) {
 		int fg = 6, bg = 0;
 		if (focused && n == export_instrument_format) {
@@ -2659,9 +2659,9 @@ static void instrument_list_volume_draw_const(void)
 {
 	instrument_list_draw_const();
 
-	draw_fill_chars(57, 28, 62, 29, 0);
-	draw_fill_chars(57, 32, 62, 34, 0);
-	draw_fill_chars(57, 37, 62, 39, 0);
+	draw_fill_chars(57, 28, 62, 29, DEFAULT_FG, 0);
+	draw_fill_chars(57, 32, 62, 34, DEFAULT_FG, 0);
+	draw_fill_chars(57, 37, 62, 39, DEFAULT_FG, 0);
 
 	draw_box(31, 17, 77, 26, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(53, 27, 63, 30, BOX_THICK | BOX_INNER | BOX_INSET);
@@ -2687,10 +2687,10 @@ static void instrument_list_panning_draw_const(void)
 {
 	instrument_list_draw_const();
 
-	draw_fill_chars(57, 28, 62, 29, 0);
-	draw_fill_chars(57, 32, 62, 34, 0);
-	draw_fill_chars(57, 37, 62, 39, 0);
-	draw_fill_chars(57, 42, 62, 45, 0);
+	draw_fill_chars(57, 28, 62, 29, DEFAULT_FG, 0);
+	draw_fill_chars(57, 32, 62, 34, DEFAULT_FG, 0);
+	draw_fill_chars(57, 37, 62, 39, DEFAULT_FG, 0);
+	draw_fill_chars(57, 42, 62, 45, DEFAULT_FG, 0);
 
 	draw_box(31, 17, 77, 26, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(53, 27, 63, 30, BOX_THICK | BOX_INNER | BOX_INSET);
@@ -2724,9 +2724,9 @@ static void instrument_list_pitch_draw_const(void)
 {
 	instrument_list_draw_const();
 
-	draw_fill_chars(57, 28, 62, 29, 0);
-	draw_fill_chars(57, 32, 62, 34, 0);
-	draw_fill_chars(57, 37, 62, 39, 0);
+	draw_fill_chars(57, 28, 62, 29, DEFAULT_FG, 0);
+	draw_fill_chars(57, 32, 62, 34, DEFAULT_FG, 0);
+	draw_fill_chars(57, 37, 62, 39, DEFAULT_FG, 0);
 
 	draw_box(31, 17, 77, 26, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(53, 27, 63, 30, BOX_THICK | BOX_INNER | BOX_INSET);

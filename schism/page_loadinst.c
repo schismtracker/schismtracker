@@ -158,7 +158,7 @@ static int change_dir(const char *dir)
 
 static void load_instrument_draw_const(void)
 {
-	draw_fill_chars(6, 13, 67, 47, 0);
+	draw_fill_chars(6, 13, 67, 47, DEFAULT_FG, 0);
 	draw_box(50, 12, 61, 48, BOX_THIN | BOX_INNER | BOX_SHADE_NONE);
 	draw_box(5, 12, 68, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 

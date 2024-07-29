@@ -220,15 +220,15 @@ static void midi_page_redraw(void)
 	draw_text(   "Record Aftertouch", 2, 34, 0, 2);
 	draw_text(        "Cut note off", 7, 35, 0, 2);
 
-	draw_fill_chars(23, 30, 24, 35, 0);
+	draw_fill_chars(23, 30, 24, 35, DEFAULT_FG, 0);
 	draw_box(19,29,25,36, BOX_THIN|BOX_INNER|BOX_INSET);
 
 	draw_box(52,29,73,32, BOX_THIN|BOX_INNER|BOX_INSET);
 
-	draw_fill_chars(56, 34, 72, 34, 0);
+	draw_fill_chars(56, 34, 72, 34, DEFAULT_FG, 0);
 	draw_box(52,33,73,36, BOX_THIN|BOX_INNER|BOX_INSET);
 
-	draw_fill_chars(56, 38, 72, 38, 0);
+	draw_fill_chars(56, 38, 72, 38, DEFAULT_FG, 0);
 	draw_box(52,37,73,39, BOX_THIN|BOX_INNER|BOX_INSET);
 
 	draw_text(    "Amplification", 39, 30, 0, 2);
@@ -252,7 +252,7 @@ static void midi_page_draw_portlist(void)
 	unsigned long j;
 	time_t now = time(NULL);
 
-	draw_fill_chars(3, 15, 76, 28, 0);
+	draw_fill_chars(3, 15, 76, 28, DEFAULT_FG, 0);
 	draw_text("MIDI ports:", 2, 13, 0, 2);
 	draw_box(2,14,77,28, BOX_THIN|BOX_INNER|BOX_INSET);
 

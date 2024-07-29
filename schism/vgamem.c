@@ -247,7 +247,7 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 
 /* generic scanner; BITS must be one of 8, 16, 32, 64 */
 #define VGAMEM_SCANNER_VARIANT(BITS) \
-	void vgamem_scan##BITS(uint32_t ry, uint##BITS##_t *out, uint32_t tc[16], uint32_t mouseline[80]) \
+	void vgamem_scan##BITS(uint32_t ry, uint##BITS##_t *out, uint32_t tc[16], uint32_t mouseline[80], uint32_t mouseline_mask[80]) \
 	{ \
 		struct vgamem_char *bp; \
 		uint32_t dg; \
@@ -281,9 +281,8 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				} else { \
 					dg = itf[bp->character.itf.c << 3]; \
 				} \
-				dg ^= mouseline[x]; \
-				if (!bp->character.cp437.c) /* XXX why */ \
-					fg = 3; \
+				dg |= mouseline[x]; \
+				dg &= ~(mouseline_mask[x] ^ mouseline[x]); \
 			\
 				*out++ = tc[(dg & 0x80) ? fg : bg]; \
 				*out++ = tc[(dg & 0x40) ? fg : bg]; \
@@ -298,7 +297,7 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				dg = hf[bp->character.halfwidth.c1.c << 2]; \
 				if (!(ry & 1)) \
 					dg = (dg >> 4); \
-				dg ^= mouseline[x] >> 4; \
+				dg |= mouseline[x] >> 4; \
 			\
 				fg = bp->character.halfwidth.c1.colors.fg; \
 				bg = bp->character.halfwidth.c1.colors.bg; \
@@ -311,7 +310,8 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				dg = hf[bp->character.halfwidth.c2.c << 2]; \
 				if (!(ry & 1)) \
 					dg = (dg >> 4); \
-				dg ^= mouseline[x] >> 4; \
+				dg |= mouseline[x] >> 4; \
+				dg &= ~(mouseline_mask[x] ^ mouseline[x]) >> 4; \
 			\
 				fg = bp->character.halfwidth.c2.colors.fg; \
 				bg = bp->character.halfwidth.c2.colors.bg; \
@@ -322,14 +322,14 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				*out++ = tc[(dg & 0x1) ? fg : bg]; \
 				break; \
 			case VGAMEM_FONT_OVERLAY: \
-				*out++ = tc[ (q[0]^((mouseline[x] & 0x80)?15:0)) & 255]; \
-				*out++ = tc[ (q[1]^((mouseline[x] & 0x40)?15:0)) & 255]; \
-				*out++ = tc[ (q[2]^((mouseline[x] & 0x20)?15:0)) & 255]; \
-				*out++ = tc[ (q[3]^((mouseline[x] & 0x10)?15:0)) & 255]; \
-				*out++ = tc[ (q[4]^((mouseline[x] & 0x08)?15:0)) & 255]; \
-				*out++ = tc[ (q[5]^((mouseline[x] & 0x04)?15:0)) & 255]; \
-				*out++ = tc[ (q[6]^((mouseline[x] & 0x02)?15:0)) & 255]; \
-				*out++ = tc[ (q[7]^((mouseline[x] & 0x01)?15:0)) & 255]; \
+				*out++ = tc[ (q[0]|((mouseline[x] & 0x80)?15:0)) & 255]; \
+				*out++ = tc[ (q[1]|((mouseline[x] & 0x40)?15:0)) & 255]; \
+				*out++ = tc[ (q[2]|((mouseline[x] & 0x20)?15:0)) & 255]; \
+				*out++ = tc[ (q[3]|((mouseline[x] & 0x10)?15:0)) & 255]; \
+				*out++ = tc[ (q[4]|((mouseline[x] & 0x08)?15:0)) & 255]; \
+				*out++ = tc[ (q[5]|((mouseline[x] & 0x04)?15:0)) & 255]; \
+				*out++ = tc[ (q[6]|((mouseline[x] & 0x02)?15:0)) & 255]; \
+				*out++ = tc[ (q[7]|((mouseline[x] & 0x01)?15:0)) & 255]; \
 				break; \
 			case VGAMEM_FONT_UNICODE: { \
 				uint32_t c = bp->character.unicode.c; \
@@ -352,9 +352,9 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				fg = bp->character.unicode.colors.fg; \
 				bg = bp->character.unicode.colors.bg; \
 	\
-				dg ^= mouseline[x]; \
-				if (!bp->character.cp437.c) /* XXX why */ \
-					fg = 3; \
+				dg |= mouseline[x]; \
+				dg &= ~(mouseline_mask[x] ^ mouseline[x]); \
+	\
 	\
 				*out++ = tc[(dg & 0x80) ? fg : bg]; \
 				*out++ = tc[(dg & 0x40) ? fg : bg]; \
@@ -475,7 +475,7 @@ int draw_text_utf8(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 	return n;
 }
 
-void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t color)
+void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t fg, uint32_t bg)
 {
 	struct vgamem_char *mm;
 	int x, len;
@@ -486,8 +486,8 @@ void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t color)
 		for (x = 0; x < len; x++) {
 			mm[x].font = VGAMEM_FONT_ITF;
 			mm[x].character.itf.c = 0;
-			mm[x].character.itf.colors.fg = color;
-			mm[x].character.itf.colors.bg = color;
+			mm[x].character.itf.colors.fg = fg;
+			mm[x].character.itf.colors.bg = bg;
 		}
 		mm += 80;
 		ye--;
@@ -503,7 +503,7 @@ int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_
 		n++;
 		text++;
 	}
-	draw_fill_chars(x + n, y, x + len - 1, y, bg);
+	draw_fill_chars(x + n, y, x + len - 1, y, fg, bg);
 	return n;
 }
 
@@ -516,7 +516,7 @@ int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, ui
 		n++;
 		text++;
 	}
-	draw_fill_chars(x + n, y, x + len - 1, y, bg);
+	draw_fill_chars(x + n, y, x + len - 1, y, fg, bg);
 	return n;
 }
 
@@ -531,7 +531,7 @@ int draw_text_utf8_len(const char * text, int len, int x, int y, uint32_t fg, ui
 	for (; n < len && ucs4[n]; n++)
 		draw_char_unicode(ucs4[n], x + n, y, fg, bg);
 
-	draw_fill_chars(x + n, y, x + len - 1, y, bg);
+	draw_fill_chars(x + n, y, x + len - 1, y, fg, bg);
 
 	return n;
 }
@@ -703,12 +703,12 @@ static inline void _draw_thumb_bar_internal(int width, int x, int y,
 	int n = ++val >> 3;
 
 	val %= 8;
-	draw_fill_chars(x, y, x + n - 1, y, 0);
+	draw_fill_chars(x, y, x + n - 1, y, DEFAULT_FG, 0);
 	draw_char(thumb_chars[0][val], x + n, y, fg, 0);
 	if (++n < width)
 		draw_char(thumb_chars[1][val], x + n, y, fg, 0);
 	if (++n < width)
-		draw_fill_chars(x + n, y, x + width - 1, y, 0);
+		draw_fill_chars(x + n, y, x + width - 1, y, DEFAULT_FG, 0);
 }
 
 void draw_thumb_bar(int x, int y, int width, int min, int max, int val,
@@ -716,7 +716,7 @@ void draw_thumb_bar(int x, int y, int width, int min, int max, int val,
 {
 	/* this wouldn't happen in a perfect world :P */
 	if (val < min || val > max) {
-		draw_fill_chars(x, y, x + width - 1, y,
+		draw_fill_chars(x, y, x + width - 1, y, DEFAULT_FG,
 				((status.flags & CLASSIC_MODE) ? 2 : 0));
 		return;
 	}

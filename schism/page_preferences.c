@@ -199,7 +199,7 @@ static void audio_device_list_draw() {
 	int fg, bg;
 	const char* current_audio_device = song_audio_device();
 
-	draw_fill_chars(AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y, AUDIO_DEVICE_BOX_END_X, AUDIO_DEVICE_BOX_END_Y, 0);
+	draw_fill_chars(AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y, AUDIO_DEVICE_BOX_END_X, AUDIO_DEVICE_BOX_END_Y, DEFAULT_FG, 0);
 
 	/* this macro expects the device name to be in UTF-8 */
 #define DRAW_DEVICE(name) \
@@ -355,7 +355,7 @@ static void audio_driver_list_draw() {
 	int fg, bg;
 	const char* current_audio_driver = song_audio_driver();
 
-	draw_fill_chars(AUDIO_DRIVER_BOX_X, AUDIO_DRIVER_BOX_Y, AUDIO_DRIVER_BOX_END_X, AUDIO_DRIVER_BOX_END_Y, 0);
+	draw_fill_chars(AUDIO_DRIVER_BOX_X, AUDIO_DRIVER_BOX_Y, AUDIO_DRIVER_BOX_END_X, AUDIO_DRIVER_BOX_END_Y, DEFAULT_FG, 0);
 
 	for (n = top_audio_driver; n < num_drivers && o < AUDIO_DRIVER_BOX_HEIGHT; n++) {
 		const char* name = SDL_GetAudioDriver(n);

@@ -108,7 +108,7 @@ static void help_redraw(void)
 	const uint8_t graphic_chars[] = {0, 0x89, 0x8f, 0x96, 0x84, 0, 0x91, 0x8b, 0x86, 0x8a};
 	char ch;
 
-	draw_fill_chars(2, 13, 77, 44, 0);
+	draw_fill_chars(2, 13, 77, 44, DEFAULT_FG, 0);
 
 	ptr = lines + top_line;
 	for (pos = 13, n = top_line; pos < 45; pos++, n++) {

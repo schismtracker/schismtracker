@@ -86,7 +86,7 @@ static int _fixup_ignore_globals(struct key_event *k)
 
 static void _draw_full(void)
 {
-	draw_fill_chars(0,0,79,49,0);
+	draw_fill_chars(0,0,79,49,DEFAULT_FG,0);
 }
 
 void about_load_page(struct page *page)
