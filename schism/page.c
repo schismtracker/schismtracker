@@ -1763,7 +1763,8 @@ void show_exit_prompt(void)
 			dialog_destroy_all();
 			set_page(fontedit_return_page);
 		}
-	} else {
+	} else if (status.dialog_type != DIALOG_OK_CANCEL) {
+		/* don't draw an exit prompt on top of an existing one */
 		dialog_create(DIALOG_OK_CANCEL,
 			      ((status.flags & CLASSIC_MODE)
 			       ? "Exit Impulse Tracker?"
