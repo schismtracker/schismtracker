@@ -30,87 +30,87 @@
 #include "song.h"
 #include "player/sndfile.h"
 
-#pragma pack(push, 1)
-
-/* Note: This struct must match the disk layout struct */
-struct s3i_header {
-	//00
-	unsigned char type;
-	char dosfn[12];
-	unsigned char memseg[3];
-	//10
-	unsigned int length;  // 32 bits
-	unsigned int loopbeg; // 32 bits
-	unsigned int loopend; // 32 bits
-	unsigned char volume;
-	char dummy1;
-	unsigned char packed;
-	unsigned char flags;
-	//20
-	unsigned int c2spd;   // 32 bits
-	char dummy2[4];
-	unsigned short dummy_gp;
-	unsigned short dummy_512;
-	unsigned int dummy_last;
-	//30
-	char samplename[28];
-	//4C
-	char samplesig[4]; /* SCRS or SCRI */
-	//50
+enum {
+	S3I_TYPE_PCM   = 1,
+	S3I_TYPE_ADLIB = 2,
 };
 
-SCHISM_BINARY_STRUCT(struct s3i_header, 0x50);
+enum {
+	S3I_PCM_FLAG_LOOP   = 0x01,
+	S3I_PCM_FLAG_STEREO = 0x02,
+	S3I_PCM_FLAG_16BIT  = 0x04,
+};
 
-#pragma pack(pop)
+/* XXX maybe this should be in fmt.h */
+#define READ_UINT(var, endian, bits, data, offset) \
+	do { \
+		/* ensure we can represent the entire number safely */ \
+		SCHISM_STATIC_ASSERT(sizeof(var) >= sizeof(uint ## bits ## _t), "mismatched read size"); \
+	\
+		uint ## bits ## _t x; \
+		memcpy(&x, (data) + (offset), sizeof(x)); \
+		(var) = bswap ## endian ## bits(x); \
+	} while (0)
 
-static int load_s3i_sample(const uint8_t *data, size_t length, song_sample_t *smp)
+/* nonzero on success */
+static int load_s3i_sample(const uint8_t *data, size_t length, song_sample_t *smp, int with_data)
 {
-	const struct s3i_header* header = (const struct s3i_header*) data;
-	/*
-	fprintf(stderr, "%X-%X-%X-%X-%X\n",
-	(((char*)&(header->type     ))-((char*)&(header->type))),
-	(((char*)&(header->length   ))-((char*)&(header->type))),
-	(((char*)&(header->c2spd    ))-((char*)&(header->type))),
-	(((char*)&(header->samplename))-((char*)&(header->type))),
-	(((char*)&(header->samplesig))-((char*)&(header->type)))
-	);
-
-	fprintf(stderr, "Considering %d byte sample (%.4s), %d\n",
-	(int)length,
-	header->samplesig,
-	header->length);
-	*/
-	if(length < 0x50)
-		return 0; // too small
-	if (strncmp(header->samplesig, "SCRS", 4) != 0
-	    && strncmp(header->samplesig, "SCRI", 4) != 0)
-		return 0; // It should be either SCRS or SCRI.
-
-	size_t samp_length = bswapLE32(header->length);
-	int bytes_per_sample = (header->type == 1 ? ((header->flags & 2) ? 2 : 1) : 0); // no sample data
-
-	if (length < 0x50 + smp->length * bytes_per_sample)
+	if (length < 0x50)
 		return 0;
 
-	smp->length = samp_length;
-	smp->global_volume = 64;
-	smp->volume = header->volume*256/64;
-	smp->loop_start = header->loopbeg;
-	smp->loop_end = header->loopend;
-	smp->c5speed = header->c2spd;
-	smp->flags = 0;
-	if (header->flags & 1)
-		smp->flags |= CHN_LOOP;
-	if (header->flags & 2)
-		smp->flags |= CHN_STEREO;
-	if (header->flags & 4)
-		smp->flags |= CHN_16BIT;
+	/* verify signature; offset 0x4C */
+	if (memcmp(data + 0x4C, "SCRS", 4) != 0
+		&& memcmp(data + 0x4C, "SCRI", 4) != 0)
+		return 0;
 
-	if (header->type == 2) {
+	uint8_t type = data[0x00];
+	if (type != S3I_TYPE_PCM && type != S3I_TYPE_ADLIB)
+		return 0;
+
+	uint8_t flags = data[0x1F];
+
+	smp->flags = 0;
+	smp->global_volume = 64;
+	smp->volume = ((uint_fast16_t)data[0x1C]) * 4; /* mphack */
+	READ_UINT(smp->loop_start, LE, 32, data, 0x14);
+	READ_UINT(smp->loop_end, LE, 32, data, 0x18);
+	READ_UINT(smp->c5speed, LE, 32, data, 0x20);
+
+	memcpy(smp->filename, data + 0x01, sizeof(smp->filename));
+	memcpy(smp->name, data + 0x30, sizeof(smp->name));
+
+	if (type == S3I_TYPE_PCM) {
+		/* PCM audio */
+		int bytes_per_sample = (flags & S3I_PCM_FLAG_STEREO) ? 2 : 1;
+
+		READ_UINT(smp->length, LE, 32, data, 0x10);
+
+		if (length < 0x50 + smp->length * bytes_per_sample)
+			return 0;
+
+		/* convert flags */
+		if (flags & S3I_PCM_FLAG_LOOP)
+			smp->flags |= CHN_LOOP;
+
+		if (flags & S3I_PCM_FLAG_STEREO)
+			smp->flags |= CHN_STEREO;
+
+		if (flags & S3I_PCM_FLAG_16BIT)
+			smp->flags |= CHN_16BIT;
+
+		if (with_data) {
+			int format = SF_M | SF_LE; // endianness; channels
+			format |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU); // bits; encoding
+
+			csf_read_sample((song_sample_t *) smp, format,
+				(const char *)(data + 0x50), (uint32_t)(length - 0x50));
+		}
+	} else if (type == S3I_TYPE_ADLIB) {
+		/* AdLib */
 		smp->flags |= CHN_ADLIB;
 		smp->flags &= ~(CHN_LOOP|CHN_16BIT);
 
-		memcpy(smp->adlib_bytes, &header->length, 11);
+		memcpy(smp->adlib_bytes, data + 0x10, 11);
 
 		smp->length = 1;
 		smp->loop_start = 0;
@@ -119,37 +119,26 @@ static int load_s3i_sample(const uint8_t *data, size_t length, song_sample_t *sm
 		smp->data = csf_allocate_sample(1);
 	}
 
-	int format = SF_M | SF_LE; // endianness; channels
-	format |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU); // bits; encoding
-
-	csf_read_sample((song_sample_t *) smp, format,
-		(const char *) (data + 0x50), (uint32_t) (length - 0x50));
-
-	strncpy(smp->filename, header->dosfn, 11);
-	strncpy(smp->name, header->samplename, 25);
-
 	return 1;
 }
 
-
 int fmt_s3i_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	song_sample_t tmp;
-	song_sample_t *smp = &tmp;
-	if (!load_s3i_sample(data, length, smp))
+	song_sample_t smp;
+	if (!load_s3i_sample(data, length, &smp, 0))
 		return 0;
 
-	file->smp_length = smp->length;
-	file->smp_flags = smp->flags;
-	file->smp_defvol = smp->volume;
-	file->smp_gblvol = smp->global_volume;
-	file->smp_loop_start = smp->loop_start;
-	file->smp_loop_end = smp->loop_end;
-	file->smp_speed = smp->c5speed;
-	file->smp_filename = strn_dup(smp->filename, 12);
+	file->smp_length = smp.length;
+	file->smp_flags = smp.flags;
+	file->smp_defvol = smp.volume;
+	file->smp_gblvol = smp.global_volume;
+	file->smp_loop_start = smp.loop_start;
+	file->smp_loop_end = smp.loop_end;
+	file->smp_speed = smp.c5speed;
+	file->smp_filename = strn_dup(smp.filename, 12);
 
 	file->description = "Scream Tracker Sample";
-	file->title = strn_dup(smp->name, 25);
+	file->title = strn_dup(smp.name, 25);
 	file->type = TYPE_SAMPLE_EXTD | TYPE_INST_OTHER;
 	return 1;
 }
@@ -157,6 +146,5 @@ int fmt_s3i_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 int fmt_s3i_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 {
 	// what the crap?
-	return load_s3i_sample(data, length, smp);
+	return load_s3i_sample(data, length, smp, 1);
 }
-
