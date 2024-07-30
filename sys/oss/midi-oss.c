@@ -29,8 +29,6 @@
 
 #include "util.h"
 
-#ifdef USE_OSS
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
@@ -178,4 +176,3 @@ int oss_midi_setup(void)
 	if (!midi_provider_register("OSS", &driver)) return 0;
 	return 1;
 }
-#endif

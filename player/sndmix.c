@@ -22,10 +22,10 @@
  */
 
 #include "song.h"
-#include "sndfile.h"
-#include "snd_fm.h"
-#include "snd_gm.h"
-#include "cmixer.h"
+#include "player/sndfile.h"
+#include "player/snd_fm.h"
+#include "player/snd_gm.h"
+#include "player/cmixer.h"
 #include "it.h"
 
 #include "util.h" /* for clamp */

@@ -34,6 +34,10 @@
 
 #include "song.h"
 #include "clippy.h"
+#include "fakemem.h"
+#include "widget.h"
+#include "dialog.h"
+#include "vgamem.h"
 
 #include <ctype.h>
 #include <assert.h>
@@ -230,7 +234,7 @@ static void message_draw(void)
 	int n, cp, clipl, clipr;
 	int skipc, cutc;
 
-	draw_fill_chars(2, 13, 77, 47, 0);
+	draw_fill_chars(2, 13, 77, 47, DEFAULT_FG, 0);
 
 	if (clippy_owner(CLIPPY_SELECT) == widgets_message) {
 		clipl = widgets_message[0].clip_start;
@@ -766,7 +770,7 @@ void message_load_page(struct page *page)
 	page->widgets = widgets_message;
 	page->help_index = HELP_MESSAGE_EDITOR;
 
-	create_other(widgets_message + 0, 0, message_handle_key_viewmode, NULL, message_draw);
+	widget_create_other(widgets_message + 0, 0, message_handle_key_viewmode, NULL, message_draw);
 	widgets_message[0].accept_text = edit_mode;
 }
 

@@ -24,17 +24,14 @@
 #include "headers.h"
 
 #include "event.h"
-
 #include "util.h"
-
 #include "midi.h"
 #include "song.h"
-
 #include "sdlmain.h"
-
 #include "page.h"
-
 #include "it.h"
+#include "config-parser.h"
+#include "config.h"
 
 #include "dmoz.h"
 
@@ -143,7 +140,7 @@ void cfg_load_midi(cfg_file_t *cfg)
 {
 	midi_config_t *md, *mc;
 	char buf[17], buf2[33];
-	int i;
+	unsigned int i;
 
 	CFG_GET_MI(flags, MIDI_TICK_QUANTIZE | MIDI_RECORD_NOTEOFF
 		| MIDI_RECORD_VELOCITY | MIDI_RECORD_AFTERTOUCH
@@ -194,7 +191,8 @@ void cfg_save_midi(cfg_file_t *cfg)
 	midi_config_t *md, *mc;
 	char buf[33];
 	char *ss;
-	int i, j;
+	unsigned int i;
+	int j;
 
 	CFG_SET_MI(flags);
 	CFG_SET_MI(pitch_depth);
@@ -239,7 +237,7 @@ void cfg_save_midi(cfg_file_t *cfg)
 			if (!*ss) continue;
 			if (!q->io) continue;
 
-			snprintf(buf, 32, "MIDI Port %d", i); i++;
+			snprintf(buf, 32, "MIDI Port %u", i); i++;
 			cfg_set_string(cfg, buf, "name", ss);
 			ss = p->name;
 			if (ss) {
@@ -742,7 +740,7 @@ void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int 
 		memcpy(status.last_midi_event, data, status.last_midi_len);
 		status.flags |= MIDI_EVENT_CHANGED;
 		status.last_midi_port = NULL;
-		time(&status.last_midi_time);
+		status.last_midi_tick = SCHISM_GET_TICKS();
 		status.flags |= NEED_UPDATE;
 	}
 
@@ -825,7 +823,7 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int l
 	memcpy(status.last_midi_event, data, status.last_midi_len);
 	status.flags |= MIDI_EVENT_CHANGED;
 	status.last_midi_port = src;
-	time(&status.last_midi_time);
+	status.last_midi_tick = SCHISM_GET_TICKS();
 	SDL_UnlockMutex(midi_record_mutex);
 
 	/* pass through midi events when on midi page */

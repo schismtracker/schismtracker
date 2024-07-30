@@ -28,9 +28,9 @@
 
 #include "log.h"
 #include "it.h" // needed for status.flags
-#include "sndfile.h"
+#include "player/sndfile.h"
+#include "player/snd_gm.h"
 #include "song.h" // for 'current_song', which we shouldn't need
-#include "snd_gm.h"
 
 #include <math.h> // for log
 

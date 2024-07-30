@@ -23,6 +23,7 @@
 
 #include "headers.h"
 
+#include "bswap.h"
 #include "charset.h"
 #include "util.h"
 #include "sdlmain.h"
@@ -31,7 +32,7 @@ int char_digraph(int k1, int k2)
 {
 #define DG(ax, eq) \
 	{ \
-		static const char c[2] = (ax); \
+		static const char c[2] = ax; \
 		if ((k1 == c[0] && k2 == c[1]) || (k2 == c[0] && k1 == c[1])) \
 			return eq; \
 	}
@@ -127,10 +128,10 @@ int char_digraph(int k1, int k2)
 static int utf8_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_next) {
 	uint8_t c = *in;
 
-	if (c == 0x00) {
-		return DECODER_DONE;
-	} else if (c < 0x80) {
+	if (c < 0x80) {
 		*out = c;
+		if (c == 0x00)
+			return DECODER_DONE;
 		*size_until_next = 1;
 	} else if (c < 0xC2) {
 		return DECODER_ERROR;
@@ -179,10 +180,10 @@ static int utf8_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_nex
 		uint16_t wc = *(tmp_in++); \
 		wc = bswap##x##16(wc); \
 	\
-		if (wc == 0x0000) {\
-			return DECODER_DONE; \
-		} else if (wc < 0xD800 || wc > 0xDFFF) { \
+		if (wc < 0xD800 || wc > 0xDFFF) { \
 			*out = wc; \
+			if (wc == 0x0000) \
+				return DECODER_DONE; \
 			*size_until_next = 2; \
 		} else if (wc >= 0xD800 && wc <= 0xDBFF) { \
 			uint16_t wc2 = *(tmp_in++); \
@@ -197,6 +198,11 @@ static int utf8_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_nex
 		return DECODER_NEED_MORE; \
 	}
 
+/* TODO: need to find some way to handle non-conforming file paths on win32;
+ * one possible solution is storing as CESU-8[1] and interpreting CHARSET_CHAR
+ * as it...
+ *
+ * [1]: https://www.unicode.org/reports/tr26/tr26-4.html */
 DECODE_UTF16_VARIANT(LE)
 DECODE_UTF16_VARIANT(BE)
 
@@ -227,7 +233,7 @@ static int cp437_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_ne
 		0x03A6, 0x0398, 0x03A9, 0x03B4, 0x221E, 0x03C6, 0x03B5, 0x2229,
 		/* 0xF0 */
 		0x2261, 0x00B1, 0x2265, 0x2264, 0x2320, 0x2321, 0x00F7, 0x2248,
-		0x00B0, 0x2219, 0x00B7, 0x221A, 0x207F, 0x00B2, 0x25A0, 0x00A0
+		0x00B0, 0x2219, 0x00B7, 0x221A, 0x207F, 0x00B2, 0x25A0, 0x00A0,
 	};
 
 	uint8_t c = *in;
@@ -239,24 +245,22 @@ static int cp437_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_ne
 
 static int windows1252_to_ucs4(const uint8_t* in, uint32_t* out, size_t* size_until_next) {
 	/* Microsoft and the Unicode Consortium define positions 81, 8D, 8F, 90, and 9D
-	 * as unused, so we just error out on those chars. */
+	 * as unused, HOWEVER, MultiByteToWideChar converts these to the corresponding
+	 * C1 control codes. I've decided to convert these to a question mark, which is
+	 * the same thing the Unicode -> CP437 conversion does. */
+
 	static const uint16_t windows1252_table[32] = {
 		/* 0x80 */
-		0x20AC, 0xFFFF, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,
-		0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0xFFFF, 0x017D, 0xFFFF,
+		0x20AC, 0x003F, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,
+		0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0x003F, 0x017D, 0x003F,
 		/* 0x90 */
-		0xFFFF, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
-		0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0xFFFF, 0x017E, 0x0178
+		0x003F, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
+		0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0x003F, 0x017E, 0x0178,
 	};
 
 	uint8_t c = *in;
-	if (c >= 0x80 && c < 0xA0) {
-		*out = windows1252_table[c - 0x80];
-		if (*out == 0xFFFF)
-			return DECODER_ERROR;
-	} else {
-		*out = c;
-	}
+
+	*out = (c >= 0x80 && c < 0xA0) ? windows1252_table[c - 0x80] : c;
 
 	*size_until_next = 1;
 	return (*out) ? DECODER_NEED_MORE : DECODER_DONE;
@@ -310,40 +314,28 @@ static size_t ucs4_to_cp437(uint32_t ch, uint8_t* out) {
 
 #define ENCODE_UTF16_VARIANT(x) \
 	static size_t ucs4_to_utf16##x(uint32_t ch, uint8_t* out) { \
+		uint16_t *out16 = (uint16_t*)out; \
 		size_t len = 0; \
 	\
 		if (out) { \
 			if (ch < 0x10000) { \
-				APPEND_CHAR(ch); \
+				out16[len++] = bswap##x##16(ch); \
 			} else { \
 				uint16_t w1 = 0xD800 + ((ch - 0x10000) >> 10); \
-				uint16_t w2 = 0xDC00 + ((ch - 0x10000) & 0x3FF); \
+				uint16_t w2 = 0xDC00 + ((ch - 0x10000) & (1ul << 10)); \
 	\
-				APPEND_CHAR(w1); \
-				APPEND_CHAR(w2); \
+				out16[len++] = bswap##x##16(w1); \
+				out16[len++] = bswap##x##16(w2); \
 			} \
 		} else { \
-			len += (ch < 0x10000) ? 2 : 4; \
+			len += (ch < 0x10000) ? 1 : 2; \
 		} \
 	\
-		return len; \
+		return len * 2; \
 	}
 
-#define APPEND_CHAR(x) \
-	out[len++] = (uint8_t)(ch); \
-	out[len++] = (uint8_t)(ch >> 8)
-
 ENCODE_UTF16_VARIANT(LE)
-
-#undef APPEND_CHAR
-
-#define APPEND_CHAR(x) \
-	out[len++] = (uint8_t)(ch >> 8); \
-	out[len++] = (uint8_t)(ch);
-
 ENCODE_UTF16_VARIANT(BE)
-
-#undef APPEND_CHAR
 
 #undef ENCODE_UTF16_VARIANT
 
@@ -505,19 +497,24 @@ CHARSET_VARIATION(sdl) {
 		[CHARSET_UCS4] = "UCS-4",
 
 		[CHARSET_CP437] = "437",
+		[CHARSET_WINDOWS1252] = "CP1252",
 
 		[CHARSET_CHAR] = "",
-		[CHARSET_WCHAR_T] = "WCHAR_T"
+		[CHARSET_WCHAR_T] = "WCHAR_T",
 	};
 
 	/* A bit hacky, but whatever */
 	size_t src_size = strlen((const char*)in);
 	size_t out_size = src_size;
 
+	/* Sanity checks */
 	if (src_size <= 0)
 		return CHARSET_ERROR_UNIMPLEMENTED;
 
 	if (inset >= ARRAY_SIZE(charset_iconv_system_lookup) || outset >= ARRAY_SIZE(charset_iconv_system_lookup))
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	if (!charset_iconv_system_lookup[inset] || !charset_iconv_system_lookup[outset])
 		return CHARSET_ERROR_UNIMPLEMENTED;
 
 	SDL_iconv_t cd = SDL_iconv_open(charset_iconv_system_lookup[inset], charset_iconv_system_lookup[outset]);
@@ -700,14 +697,17 @@ int charset_strcasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2,
 		if (c1 == DECODER_ERROR || c2 == DECODER_ERROR)
 			goto charsetfail;
 
-		if (c1 == DECODER_DONE || c2 == DECODER_DONE || charset_simple_case_fold(codepoint1) != charset_simple_case_fold(codepoint2))
+		codepoint1 = charset_simple_case_fold(codepoint1);
+		codepoint2 = charset_simple_case_fold(codepoint2);
+
+		if (c1 == DECODER_DONE || c2 == DECODER_DONE || codepoint1 != codepoint2)
 			break;
 
 		in1_offset += in1_needed;
 		in2_offset += in2_needed;
 	}
 
-	return charset_simple_case_fold(codepoint1) - charset_simple_case_fold(codepoint2);
+	return codepoint1 - codepoint2;
 
 charsetfail:
 #if HAVE_STRCASECMP

@@ -24,8 +24,12 @@
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
 #include "page.h"
 #include "clippy.h"
+#include "palettes.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include "sdlmain.h"
 
@@ -58,8 +62,8 @@ static void palette_draw_const(void)
 		draw_box(9, 13 + (5 * n), 19, 17 + (5 * n), BOX_THICK | BOX_INNER | BOX_INSET);
 		draw_box(29, 13 + (5 * n), 35, 17 + (5 * n), BOX_THICK | BOX_INNER | BOX_INSET);
 		draw_box(36, 13 + (5 * n), 46, 17 + (5 * n), BOX_THICK | BOX_INNER | BOX_INSET);
-		draw_fill_chars(3, 14 + (5 * n), 7, 16 + (5 * n), n);
-		draw_fill_chars(30, 14 + (5 * n), 34, 16 + (5 * n), n + 7);
+		draw_fill_chars(3, 14 + (5 * n), 7, 16 + (5 * n), DEFAULT_FG, n);
+		draw_fill_chars(30, 14 + (5 * n), 34, 16 + (5 * n), DEFAULT_FG, n + 7);
 	}
 
 	draw_box(56, 13, 62, 17, BOX_THICK | BOX_INNER | BOX_INSET);
@@ -67,8 +71,8 @@ static void palette_draw_const(void)
 	draw_box(56, 18, 62, 22, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(63, 18, 73, 22, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(54, 25, 77, 41, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_fill_chars(57, 14, 61, 16, 14);
-	draw_fill_chars(57, 19, 61, 21, 15);
+	draw_fill_chars(57, 14, 61, 16, DEFAULT_FG, 14);
+	draw_fill_chars(57, 19, 61, 21, DEFAULT_FG, 15);
 }
 
 /* --------------------------------------------------------------------- */
@@ -133,7 +137,7 @@ static void palette_list_draw(void)
 	int n, focused = (ACTIVE_PAGE.selected_widget == 48);
 	int fg, bg;
 
-	draw_fill_chars(55, 26, 76, 40, 0);
+	draw_fill_chars(55, 26, 76, 40, DEFAULT_FG, 0);
 
 	for (n = 0; n < NUM_PALETTES; n++) {
 		fg = 6;
@@ -293,6 +297,7 @@ static void update_palette(void)
 		current_palette[n][2] = widgets_palette[3 * n + 2].d.thumbbar.value;
 	}
 	selected_palette = current_palette_index = 0;
+	memcpy(palettes[0].colors, current_palette, sizeof(current_palette));
 	palette_apply();
 	cfg_save();
 	status.flags |= NEED_UPDATE;
@@ -324,16 +329,16 @@ void palette_load_page(struct page *page)
 			tabs[1] = 3 * n - 41;
 			tabs[2] = 3 * n - 40;
 		}
-		create_thumbbar(widgets_palette + (3 * n), 10 + 27 * (n / 7), 5 * (n % 7) + 14, 9,
+		widget_create_thumbbar(widgets_palette + (3 * n), 10 + 27 * (n / 7), 5 * (n % 7) + 14, 9,
 				n ? (3 * n - 1) : 0, 3 * n + 1, tabs[0], update_palette, 0, 63);
-		create_thumbbar(widgets_palette + (3 * n + 1), 10 + 27 * (n / 7), 5 * (n % 7) + 15, 9,
+		widget_create_thumbbar(widgets_palette + (3 * n + 1), 10 + 27 * (n / 7), 5 * (n % 7) + 15, 9,
 				3 * n, 3 * n + 2, tabs[1], update_palette, 0, 63);
-		create_thumbbar(widgets_palette + (3 * n + 2), 10 + 27 * (n / 7), 5 * (n % 7) + 16, 9,
+		widget_create_thumbbar(widgets_palette + (3 * n + 2), 10 + 27 * (n / 7), 5 * (n % 7) + 16, 9,
 				3 * n + 1, 3 * n + 3, tabs[2], update_palette, 0, 63);
 	}
 	update_thumbbars();
 
-	create_other(widgets_palette + 48, 0, palette_list_handle_key_on_list, NULL, palette_list_draw);
+	widget_create_other(widgets_palette + 48, 0, palette_list_handle_key_on_list, NULL, palette_list_draw);
 	widgets_palette[48].x = 56;
 	widgets_palette[48].y = 26;
 	widgets_palette[48].width = 20;
@@ -343,8 +348,8 @@ void palette_load_page(struct page *page)
 		widgets_palette[i].next.backtab = 48;
 	}
 
-	create_button(widgets_palette + 49, 55, 43, 20, 48, 50, 39, 18, 18, palette_copy_current_to_clipboard, "Copy To Clipboard", 3);
-	create_button(widgets_palette + 50, 55, 46, 20, 49, 0, 39, 18, 18, palette_paste_from_clipboard, "Paste From Clipboard", 1);
+	widget_create_button(widgets_palette + 49, 55, 43, 20, 48, 50, 39, 18, 18, palette_copy_current_to_clipboard, "Copy To Clipboard", 3);
+	widget_create_button(widgets_palette + 50, 55, 46, 20, 49, 0, 39, 18, 18, palette_paste_from_clipboard, "Paste From Clipboard", 1);
 
 	widgets_palette[0].next.up = 50;
 	widgets_palette[39].next.tab = 49;

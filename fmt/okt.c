@@ -22,11 +22,14 @@
  */
 
 #include "headers.h"
+#include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
 #include "log.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
+
+#include <inttypes.h>
 
 /* --------------------------------------------------------------------- */
 
@@ -55,6 +58,7 @@ int fmt_okt_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 #define OKT_BLK_SBOD    OKT_BLOCK('S','B','O','D')
 
 #pragma pack(push,1)
+
 struct okt_sample {
 	char name[20];
 	uint32_t length;
@@ -63,6 +67,9 @@ struct okt_sample {
 	uint16_t volume;
 	uint16_t mode;
 };
+
+SCHISM_BINARY_STRUCT(struct okt_sample, 20+4+2+2+2+2);
+
 #pragma pack(pop)
 
 enum {
@@ -453,7 +460,7 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				continue;
 
 			if (ssmp->length != smpsize[sd]) {
-				log_appendf(4, " Warning: Sample %d: header/data size mismatch (%d/%d)", sh,
+				log_appendf(4, " Warning: Sample %d: header/data size mismatch (%" PRIu32 "/%" PRIu32 ")", sh,
 					ssmp->length, smpsize[sd]);
 				ssmp->length = MIN(smpsize[sd], ssmp->length);
 			}

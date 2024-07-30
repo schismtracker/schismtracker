@@ -23,18 +23,19 @@
 
 #include "headers.h"
 
-#include "it.h"
-#include "song.h"
-#include "page.h"
-#include "util.h"
-#include "song.h"
-#include "sndfile.h"
-#include "dmoz.h"
 #include "config-parser.h"
-
-
-#include "cmixer.h"
+#include "dialog.h"
 #include "disko.h"
+#include "dmoz.h"
+#include "it.h"
+#include "page.h"
+#include "song.h"
+#include "song.h"
+#include "util.h"
+#include "vgamem.h"
+
+#include "player/sndfile.h"
+#include "player/cmixer.h"
 
 #include <sys/stat.h>
 
@@ -611,7 +612,7 @@ static void diskodlg_draw(void)
 	snprintf(buf, 32, "Exporting song...%6d:%02d", sec / 60, sec % 60);
 	buf[31] = '\0';
 	draw_text(buf, 27, 27, 0, 2);
-	draw_fill_chars(24, 30, 55, 30, 0);
+	draw_fill_chars(24, 30, 55, 30, DEFAULT_FG, 0);
 	draw_vu_meter(24, 30, 32, pos, prgh, prgh);
 	draw_box(23, 29, 56, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
@@ -746,7 +747,7 @@ int disko_export_song(const char *filename, const struct save_format *format)
 		}
 	}
 
-	log_appendf(5, " %d Hz, %d bit, %s",
+	log_appendf(5, " %" PRIu32 " Hz, %" PRIu32 " bit, %s",
 		export_dwsong.mix_frequency, export_dwsong.mix_bits_per_sample,
 		export_dwsong.mix_channels == 1 ? "mono" : "stereo");
 	export_format = format;
@@ -847,7 +848,7 @@ static int disko_finish(void)
 			+ ((export_end_time.tv_usec - export_start_time.tv_usec) / 1000000.0);
 
 		/* it would be more useful if this actually got the real size of the files */
-		log_appendf(5, " %.2f MiB (%d:%02d) written in %.2lf sec",
+		log_appendf(5, " %.2f MiB (%zu:%zu) written in %.2lf sec",
 			total_size / 1048576.0,
 			samples_0 / disko_output_rate / 60, (samples_0 / disko_output_rate) % 60,
 			elapsed);

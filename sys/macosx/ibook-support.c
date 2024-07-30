@@ -20,10 +20,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
 #include "headers.h"
 #include "util.h"
-
-#ifdef SCHISM_MACOSX
 
 #include <IOKit/IOKitLib.h>
 #include <IOKit/IOReturn.h>
@@ -40,11 +39,8 @@
 #define kIOHIDFKeyModeKey    "HIDFKeyMode"
 #endif
 
-#endif /* defined(SCHISM_MACOSX) */
-
 int macosx_ibook_fnswitch(int setting)
 {
-#if SCHISM_MACOSX
 	/* XXX can this be removed? */
 	kern_return_t kr;
 	mach_port_t mp;
@@ -94,7 +90,4 @@ int macosx_ibook_fnswitch(int setting)
 	IOServiceClose(dp);
 	/* old setting... */
 	return res;
-#else /* !defined(SCHISM_MACOSX) */
-	return -1;
-#endif
 }

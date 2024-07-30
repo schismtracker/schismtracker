@@ -1,7 +1,7 @@
-#ifndef SCHISM_CMIXER_H_
-#define SCHISM_CMIXER_H_
+#ifndef SCHISM_PLAYER_CMIXER_H_
+#define SCHISM_PLAYER_CMIXER_H_
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 // Stuff moved from sndfile.h
 
@@ -50,5 +50,5 @@ void ResampleMono16BitFirFilter(signed short *oldbuf, signed short *newbuf, unsi
 void ResampleStereo8BitFirFilter(signed char *oldbuf, signed char *newbuf, unsigned long oldlen, unsigned long newlen);
 void ResampleStereo16BitFirFilter(signed short *oldbuf, signed short *newbuf, unsigned long oldlen, unsigned long newlen);
 
-#endif /* SCHISM_CMIXER_H_ */
+#endif /* SCHISM_PLAYER_CMIXER_H_ */
 

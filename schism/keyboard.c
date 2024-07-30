@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "keyboard.h"
 #include "charset.h"
 #include "song.h"
 #include "page.h"
@@ -70,24 +71,28 @@ static const char ptm_effects[] = ".0123456789ABCDRFFT????GHK?YXPLZ()?";
 
 /* --------------------------------------------------------------------- */
 
-// XXX stupid magic numbers...
-void kbd_sharp_flat_toggle(int e)
+kbd_sharp_flat_t kbd_sharp_flat_state(void)
+{
+	return (note_names == note_names_up) ? KBD_SHARP_FLAT_SHARPS : KBD_SHARP_FLAT_FLATS;
+}
+
+void kbd_sharp_flat_toggle(kbd_sharp_flat_t e)
 {
 	switch (e) {
-	case -1:
-		kbd_sharp_flat_toggle(!!(note_names == note_names_up));
+	case KBD_SHARP_FLAT_TOGGLE:
+		kbd_sharp_flat_toggle((note_names == note_names_up) ? KBD_SHARP_FLAT_FLATS : KBD_SHARP_FLAT_SHARPS);
+		return;
+	default:
+	case KBD_SHARP_FLAT_SHARPS:
+		status_text_flash("Displaying accidentals as sharps (#)");
+		note_names = note_names_up;
+		note_names_short = note_names_short_up;
 		break;
-	case 1:
-		status.flags |= ACCIDENTALS_AS_FLATS;
+	case KBD_SHARP_FLAT_FLATS:
 		status_text_flash("Displaying accidentals as flats (b)");
 		note_names = note_names_down;
 		note_names_short = note_names_short_down;
 		break;
-	default: /* case 0... */
-		status.flags &= ~ACCIDENTALS_AS_FLATS;
-		status_text_flash("Displaying accidentals as sharps (#)");
-		note_names = note_names_up;
-		note_names_short = note_names_short_up;
 	}
 }
 
@@ -157,7 +162,7 @@ QZA(w);QZA(x);QZA(y);QZA(z);
 
 /* --------------------------------------------------------------------- */
 
-void key_translate(struct key_event *k)
+void kbd_key_translate(struct key_event *k)
 {
 	/* FIXME: this assumes a US keyboard layout */
 	k->orig_sym = k->sym;
@@ -595,24 +600,16 @@ int kbd_get_alnum(struct key_event *k)
 
 /* emulate SDL 1.2 style key repeat */
 static int key_repeat_delay = DEFAULT_KEY_REPEAT_DELAY, key_repeat_rate = DEFAULT_KEY_REPEAT_RATE;
-static uint64_t key_repeat_next_tick = 0;
+static schism_ticks_t key_repeat_next_tick = 0;
 
 static struct key_event cached_key_event = {0};
 
-/* use 64-bit functions only if they're available! */
-#if SDL_VERSION_ATLEAST(2, 0, 18)
-#define SCHISM_TICKS_PASSED(a, b) ((a) >= (b))
-#define SCHISM_GET_TICKS SDL_GetTicks64
-#else
-#define SCHISM_TICKS_PASSED(a, b) (SDL_TICKS_PASSED(a, b))
-#define SCHISM_GET_TICKS SDL_GetTicks
-#endif
-
-void handle_key_repeat(void) {
+void kbd_handle_key_repeat(void)
+{
 	if (!key_repeat_next_tick)
 		return;
 
-	const uint64_t now = SCHISM_GET_TICKS();
+	const schism_ticks_t now = SCHISM_GET_TICKS();
 	if (SCHISM_TICKS_PASSED(now, key_repeat_next_tick)) {
 		/* handle key functions have the ability to
 		 * change the values of the key_event structure.
@@ -624,7 +621,8 @@ void handle_key_repeat(void) {
 	}
 }
 
-void cache_key_repeat(struct key_event* kk) {
+void kbd_cache_key_repeat(struct key_event* kk)
+{
 	if (cached_key_event.text)
 		free((uint8_t*)cached_key_event.text);
 
@@ -638,7 +636,8 @@ void cache_key_repeat(struct key_event* kk) {
 	key_repeat_next_tick = SCHISM_GET_TICKS() + key_repeat_delay + key_repeat_rate;
 }
 
-void empty_key_repeat(void) {
+void kbd_empty_key_repeat(void)
+{
 	if (cached_key_event.text) {
 		free((uint8_t*)cached_key_event.text);
 		cached_key_event.text = NULL;
@@ -647,7 +646,8 @@ void empty_key_repeat(void) {
 	key_repeat_next_tick = 0;
 }
 
-void set_key_repeat(int delay, int rate) {
+void kbd_set_key_repeat(int delay, int rate)
+{
 	if (delay) {
 		key_repeat_delay = delay;
 		key_repeat_rate = rate;
@@ -655,4 +655,40 @@ void set_key_repeat(int delay, int rate) {
 		key_repeat_delay = DEFAULT_KEY_REPEAT_DELAY;
 		key_repeat_rate = DEFAULT_KEY_REPEAT_RATE;
 	}
+}
+
+/* -------------------------------------------------- */
+
+/* These are here for linking text input to keyboard inputs.
+ * If no keyboard input can be found, then the text will
+ * be sent to the already existing handlers written for the
+ * original port to SDL2.
+ *
+ * - paper */
+
+static struct key_event pending_keydown;
+static int have_pending_keydown = 0;
+
+void kbd_push_pending_keydown(struct key_event* kk)
+{
+	if (!have_pending_keydown) {
+		pending_keydown = *kk;
+		have_pending_keydown = 1;
+	}
+}
+
+void kbd_pop_pending_keydown(const uint8_t* text)
+{
+	/* text is optional, but should be in CP437 if provided */
+	if (have_pending_keydown) {
+		pending_keydown.text = text;
+		kbd_cache_key_repeat(&pending_keydown);
+		handle_key(&pending_keydown);
+		have_pending_keydown = 0;
+	}
+}
+
+int kbd_have_pending_keydown(void)
+{
+	return have_pending_keydown;
 }

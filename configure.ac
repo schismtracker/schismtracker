@@ -30,7 +30,7 @@ last_commit_date=[last_git_commit]
 AC_CONFIG_SRCDIR([schism/main.c])
 
 AM_INIT_AUTOMAKE([-Wall subdir-objects])
-AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_HEADERS([build-config.h])
 
 AC_CANONICAL_HOST
 
@@ -116,6 +116,7 @@ AM_PROG_CC_C_O
 AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
+AC_PROG_MKDIR_P
 
 dnl do we have Git
 AC_CHECK_TOOL([GIT], [git])
@@ -147,20 +148,18 @@ dnl Libs
 AC_CHECK_LIB([dl], [dlopen])
 
 dnl Functions
-AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp mmap nice unsetenv dup fnmatch mkstemp)
-AM_CONDITIONAL([NEED_ASPRINTF], [test "$ac_cv_func_asprintf" = "no"])
-AM_CONDITIONAL([NEED_VASPRINTF], [test "$ac_cv_func_vasprintf" = "no"])
-AM_CONDITIONAL([NEED_MEMCMP], [test "$ac_cv_func_memcmp" = "no"])
-AM_CONDITIONAL([NEED_STRPTIME], [test "$ac_cv_func_strptime" = "no"])
-AM_CONDITIONAL([NEED_MKSTEMP], [test "$ac_cv_func_mkstemp" = "no"])
+AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp mmap nice unsetenv dup fnmatch mkstemp localtime_r)
+AM_CONDITIONAL([NEED_ASPRINTF], [test "x$ac_cv_func_asprintf" = "xno"])
+AM_CONDITIONAL([NEED_VASPRINTF], [test "x$ac_cv_func_vasprintf" = "xno"])
+AM_CONDITIONAL([NEED_MEMCMP], [test "x$ac_cv_func_memcmp" = "xno"])
+AM_CONDITIONAL([NEED_STRPTIME], [test "x$ac_cv_func_strptime" = "xno"])
+AM_CONDITIONAL([NEED_MKSTEMP], [test "x$ac_cv_func_mkstemp" = "xno"])
+AM_CONDITIONAL([NEED_LOCALTIME_R], [test "x$ac_cv_func_localtime_r" = "xno"])
 
 AM_CONDITIONAL([USE_MMAP], [test "$ac_cv_func_mmap" = "yes"])
 
 dnl Headers, typedef crap, et al.
-AC_HEADER_DIRENT
-AC_CHECK_HEADERS_ONCE([sys/time.h])
-
-AC_CHECK_HEADERS(inttypes.h fcntl.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h byteswap.h sys/socket.h sys/soundcard.h poll.h sys/poll.h)
+AC_CHECK_HEADERS(sys/time.h dirent.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/socket.h sys/soundcard.h poll.h sys/poll.h)
 
 AM_CONDITIONAL([USE_OSS], [false])
 if test "x$ac_cv_header_sys_soundcard_h" = "xyes"; then
@@ -417,4 +416,12 @@ if test "x$PERL" = "x"; then
 	if test -e "auto/helptext.c"; then
 		touch "auto/helptext.c"
 	fi
+fi
+
+dnl --------------------------------------------------------------------------
+dnl old build config filename; it overrides the regular include paths, so it
+dnl has to be removed before we can start building
+
+if test -e "config.h"; then
+	rm "config.h"
 fi

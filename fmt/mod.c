@@ -22,10 +22,11 @@
  */
 
 #include "headers.h"
+#include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 #include "version.h"
 #include "disko.h"

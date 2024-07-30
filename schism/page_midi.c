@@ -24,8 +24,11 @@
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
 #include "page.h"
 #include "midi.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include "song.h"
 
@@ -203,15 +206,15 @@ static void midi_page_redraw(void)
 	draw_text(   "Record Aftertouch", 2, 34, 0, 2);
 	draw_text(        "Cut note off", 7, 35, 0, 2);
 
-	draw_fill_chars(23, 30, 24, 35, 0);
+	draw_fill_chars(23, 30, 24, 35, DEFAULT_FG, 0);
 	draw_box(19,29,25,36, BOX_THIN|BOX_INNER|BOX_INSET);
 
 	draw_box(52,29,73,32, BOX_THIN|BOX_INNER|BOX_INSET);
 
-	draw_fill_chars(56, 34, 72, 34, 0);
+	draw_fill_chars(56, 34, 72, 34, DEFAULT_FG, 0);
 	draw_box(52,33,73,36, BOX_THIN|BOX_INNER|BOX_INSET);
 
-	draw_fill_chars(56, 38, 72, 38, 0);
+	draw_fill_chars(56, 38, 72, 38, DEFAULT_FG, 0);
 	draw_box(52,37,73,39, BOX_THIN|BOX_INNER|BOX_INSET);
 
 	draw_text(    "Amplification", 39, 30, 0, 2);
@@ -235,7 +238,7 @@ static void midi_page_draw_portlist(void)
 	unsigned long j;
 	time_t now = time(NULL);
 
-	draw_fill_chars(3, 15, 76, 28, 0);
+	draw_fill_chars(3, 15, 76, 28, DEFAULT_FG, 0);
 	draw_text("MIDI ports:", 2, 13, 0, 2);
 	draw_box(2,14,77,28, BOX_THIN|BOX_INNER|BOX_INSET);
 
@@ -270,7 +273,7 @@ static void midi_page_draw_portlist(void)
 		draw_text_len(name, 64, 13, 15+i, 5, 0);
 
 		if (status.flags & MIDI_EVENT_CHANGED
-		    && difftime(now, status.last_midi_time) < 3.0
+		    && (now - status.last_midi_tick) < 3000
 		    && ((!status.last_midi_port && p->io & MIDI_OUTPUT)
 		    || p == status.last_midi_port)) {
 			for (j = n = 0; j < 21 && j < status.last_midi_len; j++) { /* 21 is approx 64/3 */
@@ -309,27 +312,27 @@ void midi_load_page(struct page *page)
 	page->widgets = widgets_midi;
 	page->help_index = HELP_GLOBAL;
 
-	create_other(widgets_midi + 0, 0, midi_page_handle_key, NULL, midi_page_draw_portlist);
+	widget_create_other(widgets_midi + 0, 0, midi_page_handle_key, NULL, midi_page_draw_portlist);
 	widgets_midi[0].x = 2;
 	widgets_midi[0].y = 14;
 	widgets_midi[0].width = 75;
 	widgets_midi[0].height = 15;
 
-	create_toggle(widgets_midi + 1, 20, 30, 0, 2, 7, 7, 7, update_midi_values);
-	create_toggle(widgets_midi + 2, 20, 31, 1, 3, 8, 8, 8, update_midi_values);
-	create_toggle(widgets_midi + 3, 20, 32, 2, 4, 8, 8, 8, update_midi_values);
-	create_toggle(widgets_midi + 4, 20, 33, 3, 5, 9, 9, 9, update_midi_values);
-	create_toggle(widgets_midi + 5, 20, 34, 4, 6, 9, 9, 9, update_midi_values);
-	create_toggle(widgets_midi + 6, 20, 35, 5, 13, 10, 10, 10, update_midi_values);
-	create_thumbbar(widgets_midi + 7, 53, 30, 20, 0, 8, 1, update_midi_values, 0, 200);
-	create_thumbbar(widgets_midi + 8, 53, 31, 20, 7, 9, 2, update_midi_values, 0, 127);
-	create_toggle(widgets_midi + 9, 53, 34, 8, 10, 5, 5, 5, update_midi_values);
-	create_thumbbar(widgets_midi + 10, 53, 35, 20, 9, 11, 6, update_midi_values, 0, 48);
-	create_toggle(widgets_midi + 11, 53, 38, 10, 12, 13, 13, 13, update_midi_values);
-	create_thumbbar(widgets_midi + 12, 53, 41, 20, 11, 12, 13, update_ip_ports, 0, 128);
-	create_button(widgets_midi + 13, 2, 41, 27, 6, 14, 12, 12, 12,
+	widget_create_toggle(widgets_midi + 1, 20, 30, 0, 2, 7, 7, 7, update_midi_values);
+	widget_create_toggle(widgets_midi + 2, 20, 31, 1, 3, 8, 8, 8, update_midi_values);
+	widget_create_toggle(widgets_midi + 3, 20, 32, 2, 4, 8, 8, 8, update_midi_values);
+	widget_create_toggle(widgets_midi + 4, 20, 33, 3, 5, 9, 9, 9, update_midi_values);
+	widget_create_toggle(widgets_midi + 5, 20, 34, 4, 6, 9, 9, 9, update_midi_values);
+	widget_create_toggle(widgets_midi + 6, 20, 35, 5, 13, 10, 10, 10, update_midi_values);
+	widget_create_thumbbar(widgets_midi + 7, 53, 30, 20, 0, 8, 1, update_midi_values, 0, 200);
+	widget_create_thumbbar(widgets_midi + 8, 53, 31, 20, 7, 9, 2, update_midi_values, 0, 127);
+	widget_create_toggle(widgets_midi + 9, 53, 34, 8, 10, 5, 5, 5, update_midi_values);
+	widget_create_thumbbar(widgets_midi + 10, 53, 35, 20, 9, 11, 6, update_midi_values, 0, 48);
+	widget_create_toggle(widgets_midi + 11, 53, 38, 10, 12, 13, 13, 13, update_midi_values);
+	widget_create_thumbbar(widgets_midi + 12, 53, 41, 20, 11, 12, 13, update_ip_ports, 0, 128);
+	widget_create_button(widgets_midi + 13, 2, 41, 27, 6, 14, 12, 12, 12,
 		midi_output_config, "MIDI Output Configuration", 2);
-	create_button(widgets_midi + 14, 2, 44, 27, 13, 14, 12, 12, 12,
+	widget_create_button(widgets_midi + 14, 2, 44, 27, 13, 14, 12, 12, 12,
 		cfg_midipage_save, "Save Output Configuration", 2);
 }
 

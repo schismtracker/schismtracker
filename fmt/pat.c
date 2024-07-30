@@ -20,12 +20,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
 #include "headers.h"
+#include "bswap.h"
 #include "fmt.h"
 
 #include "it.h"
 #include "song.h"
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -34,6 +36,7 @@
 /* --------------------------------------------------------------------- */
 
 #pragma pack(push, 1)
+
 struct GF1PatchHeader {
 	uint8_t sig[8]; // "GF1PATCH"
 	uint8_t ver[4]; // "100\0" or "110\0"
@@ -58,6 +61,8 @@ struct GF1PatchHeader {
 	uint8_t reserved3[40];
 };
 
+SCHISM_BINARY_STRUCT(struct GF1PatchHeader, 239);
+
 struct GF1PatchSampleHeader {
 	char wavename[7]; // Wave name (in ASCII)
 	uint8_t fractions; // bits 0-3 loop start frac / 4-7 loop end frac
@@ -78,6 +83,8 @@ struct GF1PatchSampleHeader {
 	uint16_t scalefac; // Scale factor [0..2048] (1024 is normal)
 	uint8_t reserved[36];
 };
+
+SCHISM_BINARY_STRUCT(struct GF1PatchSampleHeader, 96);
 #pragma pack(pop)
 
 /* --------------------------------------------------------------------- */

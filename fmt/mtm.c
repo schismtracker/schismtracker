@@ -22,10 +22,12 @@
  */
 
 #include "headers.h"
+#include "bswap.h"
 #include "fmt.h"
 #include "song.h"
-#include "tables.h"
 #include "log.h"
+
+#include "player/tables.h"
 
 #include <stdint.h>
 
@@ -46,11 +48,16 @@ typedef struct mtm_header {
 	uint8_t panpos[32];
 } mtm_header_t;
 
+SCHISM_BINARY_STRUCT(mtm_header_t, 4+20+2+1+1+2+1+1+1+1+32);
+
 typedef struct mtm_sample {
 	char name[22];
 	uint32_t length, loop_start, loop_end;
 	uint8_t finetune, volume, flags;
 } mtm_sample_t;
+
+SCHISM_BINARY_STRUCT(mtm_sample_t, 22+4+4+4+1+1+1);
+
 #pragma pack(pop)
 
 /* --------------------------------------------------------------------- */

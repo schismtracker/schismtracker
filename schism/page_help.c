@@ -28,6 +28,8 @@
 
 #include "it.h"
 #include "page.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include "sdlmain.h"
 
@@ -108,7 +110,7 @@ static void help_redraw(void)
 	const uint8_t graphic_chars[] = {0, 0x89, 0x8f, 0x96, 0x84, 0, 0x91, 0x8b, 0x86, 0x8a};
 	char ch;
 
-	draw_fill_chars(2, 13, 77, 44, 0);
+	draw_fill_chars(2, 13, 77, 44, DEFAULT_FG, 0);
 
 	ptr = lines + top_line;
 
@@ -302,8 +304,8 @@ void help_load_page(struct page *page)
 	page->widgets = widgets_help;
 	page->pre_handle_key = help_handle_key;
 
-	create_other(widgets_help + 0, 0, help_handle_key, NULL, help_redraw);
-	create_button(widgets_help + 1, 35,47,8, 0, 1, 1,1, 0,
+	widget_create_other(widgets_help + 0, 0, help_handle_key, NULL, help_redraw);
+	widget_create_button(widgets_help + 1, 35,47,8, 0, 1, 1,1, 0,
 			_help_close, "Done", 3);
 }
 

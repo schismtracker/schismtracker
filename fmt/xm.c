@@ -22,13 +22,15 @@
  */
 
 #include "headers.h"
+#include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
 
 #include "it.h" // needed for get_effect_char (purely informational)
 #include "log.h"
-#include "sndfile.h"
-#include "tables.h"
+
+#include "player/sndfile.h"
+#include "player/tables.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -63,6 +65,8 @@ struct xm_file_header {
 	uint16_t tempo;         // Default tempo
 	uint16_t bpm;           // Default BPM
 };
+
+SCHISM_BINARY_STRUCT(struct xm_file_header, 80);
 
 static uint8_t autovib_import[8] = {
 	VIB_SINE, VIB_SQUARE,
@@ -253,11 +257,9 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 				}
 
 				if (note->effect == FX_KEYOFF && note->param == 0) {
-					// FT2 ignores both K00 and its note entirely (but still plays
-					// previous notes and processes the volume column!)
+					// FT2 ignores notes and instruments next to a K00
 					note->note = NOTE_NONE;
 					note->instrument = 0;
-					note->effect = FX_NONE;
 				} else if (note->note == NOTE_OFF && note->effect == FX_SPECIAL
 					   && (note->param >> 4) == 0xd) {
 					// note off with a delay ignores the note off, and also
@@ -348,10 +350,10 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 	}
 
 	if (lostfx)
-		log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
+		log_appendf(4, " Warning: %u effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
 
 	if (lostpat)
-		log_appendf(4, " Warning: Too many patterns in song (%d skipped)", lostpat);
+		log_appendf(4, " Warning: Too many patterns in song (%u skipped)", lostpat);
 }
 
 static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)

@@ -171,23 +171,17 @@ struct jack_midi {
 };
 
 static void _jack_send(UNUSED struct midi_port *p, const unsigned char *data, unsigned int len, unsigned int delay) {
-	/* This is technically non-portable; jack time isn't necessarily linear, but it likely always is,
-	 * so who cares. */
-	jack_time_t absolute_delay = JACK_jack_frames_to_time(client, JACK_jack_get_time() + (delay * 1000));
+	if (len <= 1) /* ignore real-time messages for now */
+		return;
 
 	if (len + sizeof(len) > ringbuffer_max_write)
 		return;
 
-	while (JACK_jack_ringbuffer_write_space(ringbuffer) < len + sizeof(len) + sizeof(absolute_delay))
-		sched_yield();
+	while (JACK_jack_ringbuffer_write_space(ringbuffer) < len + sizeof(len))
+		sched_yield(); /* I guess */
 
 	JACK_jack_ringbuffer_write(ringbuffer, (const char*)&len, sizeof(len));
-	JACK_jack_ringbuffer_write(ringbuffer, (const char*)&absolute_delay, sizeof(absolute_delay));
 	JACK_jack_ringbuffer_write(ringbuffer, (const char*)data, len);
-}
-
-static void _jack_drain(UNUSED struct midi_port* p) {
-	/* do nothing; _jack_process handles this */
 }
 
 static int _jack_start(struct midi_port *p) {
@@ -215,9 +209,8 @@ static int _jack_stop(struct midi_port *p) {
 /* gets called by JACK in a separate thread */
 static int _jack_process(jack_nframes_t nframes, void* user_data) {
 	struct midi_provider* p = (struct midi_provider*)user_data;
-
 	if (p->cancelled)
-		return 1;
+		return 1; /* try to exit safely */
 
 	/* handle midi in */
 	void* midi_in_buffer = JACK_jack_port_get_buffer(midi_in_port, nframes);
@@ -239,15 +232,12 @@ static int _jack_process(jack_nframes_t nframes, void* user_data) {
 	JACK_jack_midi_clear_buffer(midi_out_buffer);
 
 	unsigned int size = 0;
-	jack_time_t time_delay = 0;
 
 	while (JACK_jack_ringbuffer_peek(ringbuffer, (char*)&size, sizeof(size)) == sizeof(size)
-	       && JACK_jack_ringbuffer_read_space(ringbuffer) >= sizeof(size) + sizeof(time_delay) + size) {
+	       && JACK_jack_ringbuffer_read_space(ringbuffer) >= sizeof(size) + size) {
 		JACK_jack_ringbuffer_read_advance(ringbuffer, sizeof(size));
 
-		JACK_jack_ringbuffer_read(ringbuffer, (char*)&time_delay, sizeof(time_delay));
-
-		jack_midi_data_t* data = JACK_jack_midi_event_reserve(midi_out_buffer, JACK_jack_time_to_frames(client, time_delay), size);
+		jack_midi_data_t* data = JACK_jack_midi_event_reserve(midi_out_buffer, 0, size);
 
 		if (data) return (JACK_jack_ringbuffer_read(ringbuffer, (char*)data, size) != size);
 		else JACK_jack_ringbuffer_read_advance(ringbuffer, size);
@@ -370,23 +360,22 @@ static void _jack_poll(struct midi_provider* jack_provider_)
 	}
 }
 
+static struct midi_driver jack_driver = {
+	.poll = _jack_poll,
+	.flags = 0,
+	.thread = NULL, /* called by jack */
+	.enable = _jack_start,
+	.disable = _jack_stop,
+	.send = _jack_send,
+};
+
 int jack_midi_setup(void)
 {
-	static struct midi_driver driver;
-
 #ifdef JACK_DYNAMIC_LOAD
 	if (!jack_dltrick_handle_)
 #endif
 		if (jack_dlinit())
 			return 0;
-
-	driver.poll = _jack_poll;
-	driver.flags = MIDI_PORT_CAN_SCHEDULE;
-	driver.thread = NULL;
-	driver.enable = _jack_start;
-	driver.disable = _jack_stop;
-	driver.send = _jack_send;
-	driver.drain = _jack_drain;
 
 	ringbuffer = JACK_jack_ringbuffer_create(JACK_RINGBUFFER_SIZE);
 	if (!ringbuffer)
@@ -394,7 +383,7 @@ int jack_midi_setup(void)
 
 	ringbuffer_max_write = JACK_jack_ringbuffer_write_space(ringbuffer);
 
-	struct midi_provider* p = midi_provider_register("JACK-MIDI", &driver);
+	struct midi_provider* p = midi_provider_register("JACK-MIDI", &jack_driver);
 	if (!p) {
 		/* how? can this check be removed? */
 		JACK_jack_ringbuffer_free(ringbuffer);

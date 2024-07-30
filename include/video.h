@@ -23,34 +23,6 @@
 #ifndef SCHISM_VIDEO_H_
 #define SCHISM_VIDEO_H_
 
-/* the vgamem implementation lives in draw-char.c
-it needs access to the fonts, and it shrank recently :)
-*/
-void vgamem_clear(void);
-
-struct vgamem_overlay {
-	unsigned int x1, y1, x2, y2; /* in character cells... */
-
-	unsigned char *q;               /* points inside ovl */
-	unsigned int skip;
-
-	int width, height; /* in pixels; signed to avoid bugs elsewhere */
-};
-
-void vgamem_flip(void);
-
-void vgamem_ovl_alloc(struct vgamem_overlay *n);
-void vgamem_ovl_apply(struct vgamem_overlay *n);
-
-void vgamem_ovl_clear(struct vgamem_overlay *n, int color);
-void vgamem_ovl_drawpixel(struct vgamem_overlay *n, int x, int y, int color);
-void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs, int ys, int xe, int ye, int color);
-
-
-void vgamem_scan32(unsigned int y,unsigned int *out,unsigned int tc[16], unsigned int mouse_line[80]);
-void vgamem_scan16(unsigned int y,unsigned short *out,unsigned int tc[16], unsigned int mouse_line[80]);
-void vgamem_scan8(unsigned int y,unsigned char *out,unsigned int tc[16], unsigned int mouse_line[80]);
-
 /* video output routines */
 const char *video_driver_name(void);
 
@@ -71,6 +43,9 @@ void video_mousecursor(int z);
 int video_mousecursor_visible(void);
 
 int video_is_fullscreen(void);
+int video_is_wm_available(void);
+int video_is_focused(void);
+int video_is_visible(void);
 int video_width(void);
 int video_height(void);
 SDL_Window * video_window(void);

@@ -60,7 +60,7 @@ differences between OPL2 and OPL3 shown in datasheets:
 #include <string.h>
 #include <math.h>
 
-#include "fmopl.h"
+#include "player/fmopl.h"
 
 
 

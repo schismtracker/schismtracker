@@ -24,11 +24,14 @@
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
 #include "charset.h"
 #include "song.h"
 #include "page.h"
 #include "osdefs.h"
 #include "sdlmain.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include "disko.h"
 
@@ -196,7 +199,7 @@ static void audio_device_list_draw() {
 	int fg, bg;
 	const char* current_audio_device = song_audio_device();
 
-	draw_fill_chars(AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y, AUDIO_DEVICE_BOX_END_X, AUDIO_DEVICE_BOX_END_Y, 0);
+	draw_fill_chars(AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y, AUDIO_DEVICE_BOX_END_X, AUDIO_DEVICE_BOX_END_Y, DEFAULT_FG, 0);
 
 	/* this macro expects the device name to be in UTF-8 */
 #define DRAW_DEVICE(name) \
@@ -270,7 +273,7 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (++new_device >= audio_device_list_size + 1) {
-			//change_focus_to(49);
+			//widget_change_focus_to(49);
 			return 1;
 		}
 		break;
@@ -352,7 +355,7 @@ static void audio_driver_list_draw() {
 	int fg, bg;
 	const char* current_audio_driver = song_audio_driver();
 
-	draw_fill_chars(AUDIO_DRIVER_BOX_X, AUDIO_DRIVER_BOX_Y, AUDIO_DRIVER_BOX_END_X, AUDIO_DRIVER_BOX_END_Y, 0);
+	draw_fill_chars(AUDIO_DRIVER_BOX_X, AUDIO_DRIVER_BOX_Y, AUDIO_DRIVER_BOX_END_X, AUDIO_DRIVER_BOX_END_Y, DEFAULT_FG, 0);
 
 	for (n = top_audio_driver; n < num_drivers && o < AUDIO_DRIVER_BOX_HEIGHT; n++) {
 		const char* name = SDL_GetAudioDriver(n);
@@ -417,7 +420,7 @@ static int audio_driver_list_handle_key_on_list(struct key_event * k)
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (++new_driver >= num_drivers + 1) {
-			//change_focus_to(49);
+			//widget_change_focus_to(49);
 			return 1;
 		}
 		break;
@@ -519,8 +522,8 @@ void preferences_load_page(struct page *page)
 	page->widgets = widgets_preferences;
 	page->help_index = HELP_GLOBAL;
 
-	create_thumbbar(widgets_preferences + 0, 22, 14, 5, 0, 1, 1, change_volume, 0, VOLUME_SCALE);
-	create_thumbbar(widgets_preferences + 1, 22, 15, 5, 0, 2, 2, change_volume, 0, VOLUME_SCALE);
+	widget_create_thumbbar(widgets_preferences + 0, 22, 14, 5, 0, 1, 1, change_volume, 0, VOLUME_SCALE);
+	widget_create_thumbbar(widgets_preferences + 1, 22, 15, 5, 0, 2, 2, change_volume, 0, VOLUME_SCALE);
 	widgets_preferences[0].next.left = widgets_preferences[0].next.right =
 		widgets_preferences[0].next.tab = widgets_preferences[0].next.backtab =
 		widgets_preferences[1].next.left = widgets_preferences[1].next.right =
@@ -531,7 +534,7 @@ void preferences_load_page(struct page *page)
 	for (i = 0; interpolation_modes[i]; i++) {
 		sprintf(buf, "%d Bit, %s", audio_settings.bits, interpolation_modes[i]);
 		ptr = str_dup(buf);
-		create_togglebutton(widgets_preferences+i+2,
+		widget_create_togglebutton(widgets_preferences+i+2,
 					6, 20 + (i * 3), 26,
 					i+1, i+3, i+2, interp_modes+11, i+3,
 					change_mixer,
@@ -549,7 +552,7 @@ void preferences_load_page(struct page *page)
 	for (j = 0; j < 4; j++) {
 		int n = i+(j*2);
 		if (j == 0) n = i+1;
-		create_thumbbar(widgets_preferences+i+2+(j*2),
+		widget_create_thumbbar(widgets_preferences+i+2+(j*2),
 						26, 23+(i*3)+j,
 						21,
 						n, i+(j*2)+4, i+(j*2)+3,
@@ -557,7 +560,7 @@ void preferences_load_page(struct page *page)
 						0, 127);
 		n = i+(j*2)+5;
 		if (j == 3) n--;
-		create_thumbbar(widgets_preferences+i+3+(j*2),
+		widget_create_thumbbar(widgets_preferences+i+3+(j*2),
 						53, 23+(i*3)+j,
 						21,
 						i+(j*2)+1, n, i+(j*2)+4,
@@ -572,33 +575,33 @@ void preferences_load_page(struct page *page)
 
 	ramp_group[0] = i+10;
 	ramp_group[1] = i+11;
-	create_togglebutton(widgets_preferences+i+10,
+	widget_create_togglebutton(widgets_preferences+i+10,
 			33,29+i*3,9,
 			i+9,i+12,i+10,i+11,i+11,
 			change_mixer,
 			"Enabled",2,
 			ramp_group);
 
-	create_togglebutton(widgets_preferences+i+11,
+	widget_create_togglebutton(widgets_preferences+i+11,
 			46,29+i*3,9,
 			i+9,i+12,i+10,i+13,i+13,
 			change_mixer,
 			"Disabled",1,
 			ramp_group);
 
-	create_button(widgets_preferences+i+12,
+	widget_create_button(widgets_preferences+i+12,
 			2, 44, 27,
 			i+10, i+12, i+12, i+13, i+13,
 			(void (*)(void)) save_config_now,
 			"Save Output Configuration", 2);
 
-	create_other(widgets_preferences+i+13, 0, audio_device_list_handle_key_on_list, NULL, audio_device_list_draw);
+	widget_create_other(widgets_preferences+i+13, 0, audio_device_list_handle_key_on_list, NULL, audio_device_list_draw);
 	widgets_preferences[i+13].x = AUDIO_DEVICE_BOX_X;
 	widgets_preferences[i+13].y = AUDIO_DEVICE_BOX_Y;
 	widgets_preferences[i+13].width = AUDIO_DEVICE_BOX_WIDTH;
 	widgets_preferences[i+13].height = AUDIO_DEVICE_BOX_HEIGHT;
 
-	create_other(widgets_preferences+i+14, 0, audio_driver_list_handle_key_on_list, NULL, audio_driver_list_draw);
+	widget_create_other(widgets_preferences+i+14, 0, audio_driver_list_handle_key_on_list, NULL, audio_driver_list_draw);
 	widgets_preferences[i+14].x = AUDIO_DRIVER_BOX_X;
 	widgets_preferences[i+14].y = AUDIO_DRIVER_BOX_Y;
 	widgets_preferences[i+14].width = AUDIO_DRIVER_BOX_WIDTH;

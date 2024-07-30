@@ -24,12 +24,16 @@
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
 #include "charset.h"
 #include "song.h"
 #include "page.h"
 #include "dmoz.h"
 #include "log.h"
 #include "fmt.h" /* only needed for SAVE_SUCCESS ... */
+#include "widget.h"
+#include "dialog.h"
+#include "vgamem.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -39,8 +43,6 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <errno.h>
-
-#include "sndfile.h"
 
 #include "disko.h"
 
@@ -123,7 +125,7 @@ TODO: scroller hack on selected filename
 */
 
 #define GLOB_CLASSIC "*.it; *.xm; *.s3m; *.mtm; *.669; *.mod"
-#define GLOB_DEFAULT GLOB_CLASSIC "; *.mdl; *.mt2; *.stm; *.stx; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf; *.imf; *.sfx; *.mus; *.mid"
+#define GLOB_DEFAULT GLOB_CLASSIC "; *.dsm; *.mdl; *.mt2; *.stm; *.stx; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf; *.imf; *.sfx; *.mus; *.mid"
 
 /* These are stored as CP437 */
 static uint8_t filename_entry[PATH_MAX + 1] = "";
@@ -220,7 +222,7 @@ static void loadsave_song_changed(void)
 			}
 		}
 	}
-	togglebutton_set(widgets_savemodule, r, 0);
+	widget_togglebutton_set(widgets_savemodule, r, 0);
 }
 
 
@@ -456,12 +458,12 @@ static int search_text_length = 0;      /* same as strlen(search_text) */
 
 static void search_redraw(void)
 {
-	draw_fill_chars(51, 37, 76, 37, 0);
+	draw_fill_chars(51, 37, 76, 37, DEFAULT_FG, 0);
 	draw_text_bios_len(search_text + search_first_char, 25, 51, 37, 5, 0);
 
 	/* draw the cursor if it's on the dir/file list */
 	if (ACTIVE_PAGE.selected_widget == 0 || ACTIVE_PAGE.selected_widget == 1) {
-		draw_char(0, 51 + search_text_length - search_first_char, 37, 6, 6);
+		draw_char(0, 51 + search_text_length - search_first_char, 37, 0, 6);
 	}
 }
 
@@ -581,8 +583,8 @@ static void load_module_draw_const(void)
 	draw_box(50, 39, 77, 44, BOX_THICK | BOX_INNER | BOX_INSET); /* file info */
 	draw_box(12, 45, 77, 48, BOX_THICK | BOX_INNER | BOX_INSET); /* filename and directory input */
 
-	draw_fill_chars(51, 37, 76, 37, 0);
-	draw_fill_chars(13, 46, 76, 47, 0);
+	draw_fill_chars(51, 37, 76, 37, DEFAULT_FG, 0);
+	draw_fill_chars(13, 46, 76, 47, DEFAULT_FG, 0);
 }
 
 static void save_module_draw_const(void)
@@ -599,7 +601,7 @@ static void file_list_draw(void)
 	char buf[32];
 	dmoz_file_t *file;
 
-	draw_fill_chars(3, 13, 48, 43, 0);
+	draw_fill_chars(3, 13, 48, 43, DEFAULT_FG, 0);
 
 	if (flist.num_files > 0) {
 		if (top_file < 0) top_file = 0;
@@ -616,9 +618,8 @@ static void file_list_draw(void)
 				bg = 0;
 			}
 
-			CHARSET_EASY_MODE(file->base ? file->base : "", CHARSET_CHAR, CHARSET_CP437, {
-				draw_text_bios_len(out, 20, 3, pos, fg1, bg);
-			});
+
+			draw_text_utf8_len(file->base ? file->base : "", 20, 3, pos, fg1, bg);
 
 			draw_char(168, 23, pos, 2, bg);
 			draw_text_len(file->title ? file->title : "", 25, 24, pos, fg2, bg);
@@ -636,14 +637,14 @@ static void file_list_draw(void)
 	} else {
 		if (ACTIVE_PAGE.selected_widget == 0) {
 			draw_text("No files.", 3, 13, 0, 3);
-			draw_fill_chars(12, 13, 48, 13, 3);
+			draw_fill_chars(12, 13, 48, 13, DEFAULT_FG, 3);
 			draw_char(168, 23, 13, 2, 3);
 			pos = 14;
 		} else {
 			draw_text("No files.", 3, 13, 7, 0);
 			pos = 13;
 		}
-		draw_fill_chars(51, 40, 76, 43, 0);
+		draw_fill_chars(51, 40, 76, 43, DEFAULT_FG, 0);
 	}
 
 	while (pos < 44)
@@ -814,7 +815,7 @@ static void dir_list_draw(void)
 {
 	int n, pos, fg, bg;
 
-	draw_fill_chars(51, 13, 76, 34, 0);
+	draw_fill_chars(51, 13, 76, 34, DEFAULT_FG, 0);
 
 	for (n = top_dir, pos = 13; pos < 35; n++, pos++) {
 		if (n < 0) continue; /* er... */
@@ -829,9 +830,7 @@ static void dir_list_draw(void)
 			bg = 0;
 		}
 
-		CHARSET_EASY_MODE(dlist.dirs[n]->base, CHARSET_CHAR, CHARSET_CP437, {
-			draw_text_bios_len(out, 77 - 51, 51, pos, fg, bg);
-		});
+		draw_text_utf8_len(dlist.dirs[n]->base, 77 - 51, 51, pos, fg, bg);
 	}
 
 	/* bleh */
@@ -1014,29 +1013,6 @@ static int update_directory(void)
 
 /* --------------------------------------------------------------------- */
 
-/* FIXME what are these for? apart from clearing the directory list constantly */
-#undef CACHEFREE
-#if CACHEFREE
-static int _save_cachefree_hack(struct key_event *k)
-{
-	if ((k->sym == SDLK_F10 && NO_MODIFIER(k->mod))
-	|| (k->sym == SDLK_w && (k->mod & KMOD_CTRL))
-	|| (k->sym == SDLK_s && (k->mod & KMOD_CTRL))) {
-		status.flags |= DIR_MODULES_CHANGED;
-	}
-	return 0;
-}
-static int _load_cachefree_hack(struct key_event *k)
-{
-	if ((k->sym == SDLK_F9 && NO_MODIFIER(k->mod))
-	|| (k->sym == SDLK_l && (k->mod & KMOD_CTRL))
-	|| (k->sym == SDLK_r && (k->mod & KMOD_CTRL))) {
-		status.flags |= DIR_MODULES_CHANGED;
-	}
-	return 0;
-}
-#endif
-
 static void load_module_set_page(void)
 {
 	handle_file_entered = handle_file_entered_L;
@@ -1066,11 +1042,8 @@ void load_module_load_page(struct page *page)
 	page->total_widgets = 4;
 	page->widgets = widgets_loadmodule;
 	page->help_index = HELP_GLOBAL;
-#if CACHEFREE
-	page->pre_handle_key = _load_cachefree_hack;
-#endif
 
-	create_other(widgets_loadmodule + 0, 1, file_list_handle_key,
+	widget_create_other(widgets_loadmodule + 0, 1, file_list_handle_key,
 		file_list_handle_text_input, file_list_draw);
 	widgets_loadmodule[0].accept_text = 1;
 	widgets_loadmodule[0].x = 3;
@@ -1079,7 +1052,7 @@ void load_module_load_page(struct page *page)
 	widgets_loadmodule[0].height = 30;
 	widgets_loadmodule[0].next.left = widgets_loadmodule[0].next.right = 1;
 
-	create_other(widgets_loadmodule + 1, 2, dir_list_handle_key,
+	widget_create_other(widgets_loadmodule + 1, 2, dir_list_handle_key,
 		dir_list_handle_text_input, dir_list_draw);
 	widgets_loadmodule[1].accept_text = 1;
 	widgets_loadmodule[1].x = 50;
@@ -1087,9 +1060,9 @@ void load_module_load_page(struct page *page)
 	widgets_loadmodule[1].width = 27;
 	widgets_loadmodule[1].height = 21;
 
-	create_textentry(widgets_loadmodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
+	widget_create_textentry(widgets_loadmodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
 	widgets_loadmodule[2].activate = filename_entered;
-	create_textentry(widgets_loadmodule + 3, 13, 47, 64, 2, 3, 0, NULL, dirname_entry, PATH_MAX);
+	widget_create_textentry(widgets_loadmodule + 3, 13, 47, 64, 2, 3, 0, NULL, dirname_entry, PATH_MAX);
 	widgets_loadmodule[3].activate = dirname_entered;
 }
 
@@ -1141,32 +1114,29 @@ void save_module_load_page(struct page *page, int do_export)
 	page->total_widgets = 4;
 	page->help_index = HELP_GLOBAL;
 	page->selected_widget = 2;
-#if CACHEFREE
-	page->pre_handle_key = _save_cachefree_hack;
-#endif
 	page->song_changed_cb = loadsave_song_changed;
 
-	create_other(widgets_exportsave + 0, 1, file_list_handle_key,
+	widget_create_other(widgets_exportsave + 0, 1, file_list_handle_key,
 		file_list_handle_text_input, file_list_draw);
 	widgets_exportsave[0].accept_text = 1;
 	widgets_exportsave[0].next.left = 4;
 	widgets_exportsave[0].next.right = widgets_exportsave[0].next.tab = 1;
-	create_other(widgets_exportsave + 1, 2, dir_list_handle_key,
+	widget_create_other(widgets_exportsave + 1, 2, dir_list_handle_key,
 		dir_list_handle_text_input, dir_list_draw);
 	widgets_exportsave[1].accept_text = 1;
 	widgets_exportsave[1].next.right = widgets_exportsave[1].next.tab = 5;
 	widgets_exportsave[1].next.left = 0;
 
-	create_textentry(widgets_exportsave + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
+	widget_create_textentry(widgets_exportsave + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
 	widgets_exportsave[2].activate = filename_entered;
-	create_textentry(widgets_exportsave + 3, 13, 47, 64, 2, 0, 0, NULL, dirname_entry, PATH_MAX);
+	widget_create_textentry(widgets_exportsave + 3, 13, 47, 64, 2, 0, 0, NULL, dirname_entry, PATH_MAX);
 	widgets_exportsave[3].activate = dirname_entered;
 
 	widgets_exportsave[4].d.togglebutton.state = 1;
 
 	const struct save_format *formats = (do_export ? song_export_formats : song_save_formats);
 	for (n = 0; formats[n].label; n++) {
-		create_togglebutton(widgets_exportsave + 4 + n,
+		widget_create_togglebutton(widgets_exportsave + 4 + n,
 				70, 13 + (3 * n), 5,
 				4 + (n == 0 ? 0 : (n - 1)),
 				4 + (n + 1),

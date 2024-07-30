@@ -24,6 +24,8 @@
 /* Predominantly this file is keyboard crap, but we also get the network configured here */
 
 #include "headers.h"
+
+#include "config.h"
 #include "sdlmain.h"
 #include "it.h"
 #include "osdefs.h"

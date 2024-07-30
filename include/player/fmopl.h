@@ -1,5 +1,5 @@
-#ifndef SCHISM_FMOPL_H_
-#define SCHISM_FMOPL_H_
+#ifndef SCHISM_PLAYER_FMOPL_H_
+#define SCHISM_PLAYER_FMOPL_H_
 
 #include <stdint.h>
 
@@ -39,4 +39,4 @@ void ymf262_set_timer_handler(void *chip, OPL_TIMERHANDLER TimerHandler, void *p
 void ymf262_set_irq_handler(void *chip, OPL_IRQHANDLER IRQHandler, void *param);
 void ymf262_set_update_handler(void *chip, OPL_UPDATEHANDLER UpdateHandler, void *param);
 
-#endif /* SCHISM_FMOPL_H_ */
+#endif /* SCHISM_PLAYER_FMOPL_H_ */

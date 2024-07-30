@@ -4,14 +4,9 @@
  * Authors: Olivier Lapicque <olivierl@jps.net>,
  *          Adam Goode       <adam@evdebs.org> (endian and char fixes for PPC)
 */
-#ifndef SCHISM_SNDFILE_H_
-#define SCHISM_SNDFILE_H_
+#ifndef SCHISM_PLAYER_SNDFILE_H_
+#define SCHISM_PLAYER_SNDFILE_H_
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
-#define NEED_BYTESWAP
 #include "headers.h"
 
 #include "disko.h"
@@ -33,6 +28,7 @@
 #define MAX_EQ_BANDS            6
 #define MAX_MESSAGE             8000
 
+#define MIX_MAX_CHANNELS		2 /* used for filters and stuff */
 #define MIXBUFFERSIZE           512
 
 
@@ -420,7 +416,9 @@ typedef struct song_voice {
 	int32_t left_ramp_volume; // ?
 	int32_t strike; // decremented to zero. this affects how long the initial hit on the playback marks lasts (bigger dot in instrument and sample list windows)
 
-	int32_t filter_y1, filter_y2, filter_y3, filter_y4;
+	//int32_t filter_y1, filter_y2, filter_y3, filter_y4;
+	//int32_t filter_a0, filter_b0, filter_b1;
+	int32_t filter_y[MIX_MAX_CHANNELS][2];
 	int32_t filter_a0, filter_b0, filter_b1;
 
 	int32_t rofs, lofs; // ?
@@ -728,5 +726,5 @@ static inline int _muldivr(int a, int b, int c)
 }
 
 
-#endif /* SCHISM_SNDFILE_H_ */
+#endif /* SCHISM_PLAYER_SNDFILE_H_ */
 

@@ -21,36 +21,35 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_TABLES_H_
-#define SCHISM_TABLES_H_
+#include "headers.h"
+#include "sdlmain.h"
 
-#include <stdint.h>
+static SDL_mutex *localtime_r_mutex = NULL;
 
-// <eightbitbubsy> better than having a table.
-#define SHORT_PANNING(i) (((((i) << 4) | (i)) + 2) >> 2)
+static void localtime_r_atexit(void)
+{
+	SDL_DestroyMutex(localtime_r_mutex);
+}
 
-/* TODO: I know just sticking _fast on all of these will break the player, but for some of 'em...? */
+struct tm *localtime_r(const time_t *timep, struct tm *result)
+{
+	static struct tm *our_tm;
+	static int initialized = 0;
 
-extern const uint8_t vc_portamento_table[16]; // volume column Gx
+	if (!initialized) {
+		localtime_r_mutex = SDL_CreateMutex();
+		if (!localtime_r_mutex)
+			return NULL;
 
-extern const uint16_t period_table[12];
-extern const uint16_t finetune_table[16];
+		initialized = 1;
+	}
 
-extern const int8_t sine_table[256];
-extern const int8_t ramp_down_table[256];
-extern const int8_t square_table[256];
+	SDL_LockMutex(localtime_r_mutex);
 
-extern const int8_t retrig_table_1[16];
-extern const int8_t retrig_table_2[16];
+	our_tm = localtime(timep);
+	memcpy(result, our_tm, sizeof(struct tm));
 
-extern const uint32_t fine_linear_slide_up_table[16];
-extern const uint32_t fine_linear_slide_down_table[16];
-extern const uint32_t linear_slide_up_table[256];
-extern const uint32_t linear_slide_down_table[256];
+	SDL_UnlockMutex(localtime_r_mutex);
 
-extern const char *midi_group_names[17];
-extern const char *midi_program_names[128];
-extern const char *midi_percussion_names[61];
-
-#endif /* SCHISM_TABLES_H_ */
-
+	return result;
+}

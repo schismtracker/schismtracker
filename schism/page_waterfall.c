@@ -21,9 +21,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "headers.h"
+
 #include "it.h"
+#include "keyboard.h"
 #include "page.h"
 #include "song.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include <math.h>
 
@@ -481,5 +485,5 @@ void waterfall_load_page(struct page *page)
 	page->set_page = waterfall_set_page;
 	page->total_widgets = 1;
 	page->widgets = waterfall_widget_hack;
-	create_other(waterfall_widget_hack, 0, waterfall_handle_key, NULL, do_nil);
+	widget_create_other(waterfall_widget_hack, 0, waterfall_handle_key, NULL, do_nil);
 }

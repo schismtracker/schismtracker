@@ -25,7 +25,7 @@
 #define SCHISM_DMOZ_H_
 
 #include <stdint.h>
-#include "sndfile.h" /* for song_sample_t */
+#include "player/sndfile.h" /* for song_sample_t */
 
 /* need these for struct stat */
 #include <sys/types.h>

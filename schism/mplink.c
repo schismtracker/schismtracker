@@ -25,7 +25,6 @@
 
 #include "it.h"
 #include "song.h"
-#include "sndfile.h"
 #include "slurp.h"
 
 #include <stdio.h>

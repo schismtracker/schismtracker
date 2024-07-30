@@ -22,14 +22,18 @@
  */
 
 #include "headers.h"
-#include "it.h"
-#include "sndfile.h" /* for calc_halftone */
-#include "page.h"
-#include "song.h"
+
+#include "config.h"
+#include "dialog.h"
 #include "dmoz.h"
-#include "sample-edit.h"
-#include "video.h"
 #include "fmt.h"
+#include "it.h"
+#include "keyboard.h"
+#include "page.h"
+#include "sample-edit.h"
+#include "song.h"
+#include "vgamem.h"
+#include "widget.h"
 
 /* --------------------------------------------------------------------- */
 /* static in my attic */
@@ -271,16 +275,16 @@ static void sample_list_predraw_hook(void)
 
 	switch (sample->vib_type) {
 	case VIB_SINE:
-		togglebutton_set(widgets_samplelist, 15, 0);
+		widget_togglebutton_set(widgets_samplelist, 15, 0);
 		break;
 	case VIB_RAMP_DOWN:
-		togglebutton_set(widgets_samplelist, 16, 0);
+		widget_togglebutton_set(widgets_samplelist, 16, 0);
 		break;
 	case VIB_SQUARE:
-		togglebutton_set(widgets_samplelist, 17, 0);
+		widget_togglebutton_set(widgets_samplelist, 17, 0);
 		break;
 	case VIB_RANDOM:
-		togglebutton_set(widgets_samplelist, 18, 0);
+		widget_togglebutton_set(widgets_samplelist, 18, 0);
 		break;
 	}
 
@@ -670,10 +674,10 @@ static void sample_amplify_dialog(void)
 
 	percent = MIN(percent, 400);
 
-	create_thumbbar(sample_amplify_widgets + 0, 13, 30, 51, 0, 1, 1, NULL, 0, 400);
+	widget_create_thumbbar(sample_amplify_widgets + 0, 13, 30, 51, 0, 1, 1, NULL, 0, 400);
 	sample_amplify_widgets[0].d.thumbbar.value = percent;
-	create_button(sample_amplify_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
-	create_button(sample_amplify_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_button(sample_amplify_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
+	widget_create_button(sample_amplify_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 
 	dialog = dialog_create_custom(9, 25, 61, 11, sample_amplify_widgets,
 				      3, 0, sample_amplify_draw_const, NULL);
@@ -722,9 +726,9 @@ static void txtsynth_dialog(void)
 	// TODO copy the current sample into the entry?
 
 	txtsynth_entry[0] = 0;
-	create_textentry(txtsynth_widgets + 0, 13, 30, 53, 0, 1, 1, NULL, txtsynth_entry, 65535);
-	create_button(txtsynth_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
-	create_button(txtsynth_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_textentry(txtsynth_widgets + 0, 13, 30, 53, 0, 1, 1, NULL, txtsynth_entry, 65535);
+	widget_create_button(txtsynth_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
+	widget_create_button(txtsynth_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 
 	dialog = dialog_create_custom(9, 25, 61, 11, txtsynth_widgets, 3, 0, txtsynth_draw_const, NULL);
 	dialog->action_yes = do_txtsynth;
@@ -864,11 +868,11 @@ static void sample_adlibconfig_draw_const(void)
 	// 39 33
 	draw_box(38, 2 + 30, 40, 5 + 30, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	draw_fill_chars(25, 6 + 30, 32,13 + 30, 0);
+	draw_fill_chars(25, 6 + 30, 32,13 + 30, DEFAULT_FG, 0);
 	draw_box(25, 6 + 30, 28, 13 + 30, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(29, 6 + 30, 32, 13 + 30, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	draw_fill_chars(57, 6 + 30, 64,13 + 30, 0);
+	draw_fill_chars(57, 6 + 30, 64,13 + 30, DEFAULT_FG, 0);
 	draw_box(57, 6 + 30, 60, 13 + 30, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(61, 6 + 30, 64, 13 + 30, BOX_THIN | BOX_INNER | BOX_INSET);
 
@@ -914,7 +918,7 @@ static void sample_adlibconfig_dialog(UNUSED void *ign)
 
 		switch (adlibconfig_widgets[a].type) {
 		case B:
-			create_menutoggle(sample_adlibconfig_widgets + a,
+			widget_create_menutoggle(sample_adlibconfig_widgets + a,
 				adlib_xpos[adlibconfig_widgets[a].xref],
 				adlibconfig_widgets[a].y + 30,
 				a > 0 ? a - 1 : 0,
@@ -926,7 +930,7 @@ static void sample_adlibconfig_dialog(UNUSED void *ign)
 			sample_adlibconfig_widgets[a].d.menutoggle.activation_keys = "ny";
 			break;
 		case N:
-			create_numentry(sample_adlibconfig_widgets + a,
+			widget_create_numentry(sample_adlibconfig_widgets + a,
 				adlib_xpos[adlibconfig_widgets[a].xref],
 				adlibconfig_widgets[a].y + 30,
 				nbits_real < 4 ? 1 : 2,
@@ -1059,7 +1063,7 @@ static void export_sample_list_draw(void)
 {
 	int n, focused = (*selected_widget == 3);
 
-	draw_fill_chars(53, 24, 56, 31, 0);
+	draw_fill_chars(53, 24, 56, 31, DEFAULT_FG, 0);
 	for (n = 0; sample_save_formats[n].label; n++) {
 		int fg = 6, bg = 0;
 		if (focused && n == export_sample_format) {
@@ -1122,11 +1126,11 @@ static void export_sample_dialog(void)
 	song_sample_t *sample = song_get_sample(current_sample);
 	struct dialog *dialog;
 
-	create_textentry(export_sample_widgets + 0, 33, 24, 18, 0, 1, 3, NULL,
+	widget_create_textentry(export_sample_widgets + 0, 33, 24, 18, 0, 1, 3, NULL,
 			 export_sample_filename, NAME_MAX);
-	create_button(export_sample_widgets + 1, 31, 35, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
-	create_button(export_sample_widgets + 2, 42, 35, 6, 3, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-	create_other(export_sample_widgets + 3, 0, export_sample_list_handle_key, NULL, export_sample_list_draw);
+	widget_create_button(export_sample_widgets + 1, 31, 35, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
+	widget_create_button(export_sample_widgets + 2, 42, 35, 6, 3, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_other(export_sample_widgets + 3, 0, export_sample_list_handle_key, NULL, export_sample_list_draw);
 
 	strncpy(export_sample_filename, sample->filename, NAME_MAX);
 	export_sample_filename[NAME_MAX] = 0;
@@ -1168,9 +1172,9 @@ static void resize_sample_dialog(int aa)
 	struct dialog *dialog;
 
 	resize_sample_cursor = 0;
-	create_numentry(resize_sample_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999999, &resize_sample_cursor);
+	widget_create_numentry(resize_sample_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999999, &resize_sample_cursor);
 	resize_sample_widgets[0].d.numentry.value = sample->length;
-	create_button(resize_sample_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1,
+	widget_create_button(resize_sample_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1,
 		dialog_cancel_NULL, "Cancel", 1);
 	dialog = dialog_create_custom(26, 22, 29, 11, resize_sample_widgets, 2, 0,
 		resize_sample_draw_const, NULL);
@@ -1414,8 +1418,8 @@ static void sample_list_draw_const(void)
 	draw_box(54, 42, 77, 48, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(55, 45, 72, 47, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	draw_fill_chars(41, 30, 46, 30, 0);
-	draw_fill_chars(64, 13, 76, 23, 0);
+	draw_fill_chars(41, 30, 46, 30, DEFAULT_FG, 0);
+	draw_fill_chars(64, 13, 76, 23, DEFAULT_FG, 0);
 
 	draw_text("Default Volume", 38, 14, 0, 2);
 	draw_text("Global Volume", 38, 21, 0, 2);
@@ -1640,7 +1644,7 @@ void sample_list_load_page(struct page *page)
 	page->help_index = HELP_SAMPLE_LIST;
 
 	/* 0 = sample list */
-	create_other(widgets_samplelist + 0, 1, sample_list_handle_key_on_list,
+	widget_create_other(widgets_samplelist + 0, 1, sample_list_handle_key_on_list,
 		sample_list_handle_text_input_on_list, sample_list_draw_list);
 	_fix_accept_text();
 
@@ -1650,39 +1654,39 @@ void sample_list_load_page(struct page *page)
 	widgets_samplelist[0].height = 35;
 
 	/* 1 -> 6 = middle column */
-	create_thumbbar(widgets_samplelist + 1, 38, 16, 9, 1, 2, 7, update_values_in_song, 0, 64);
-	create_thumbbar(widgets_samplelist + 2, 38, 23, 9, 1, 3, 7, update_values_in_song, 0, 64);
-	create_toggle(widgets_samplelist + 3, 38, 30, 2, 4, 0, 7, 7, update_values_in_song);
-	create_thumbbar(widgets_samplelist + 4, 38, 31, 9, 3, 5, 7, update_panning, 0, 64);
-	create_thumbbar(widgets_samplelist + 5, 38, 39, 9, 4, 6, 15, update_values_in_song, 0, 64);
-	create_thumbbar(widgets_samplelist + 6, 38, 46, 9, 5, 6, 19, update_values_in_song, 0, 32);
+	widget_create_thumbbar(widgets_samplelist + 1, 38, 16, 9, 1, 2, 7, update_values_in_song, 0, 64);
+	widget_create_thumbbar(widgets_samplelist + 2, 38, 23, 9, 1, 3, 7, update_values_in_song, 0, 64);
+	widget_create_toggle(widgets_samplelist + 3, 38, 30, 2, 4, 0, 7, 7, update_values_in_song);
+	widget_create_thumbbar(widgets_samplelist + 4, 38, 31, 9, 3, 5, 7, update_panning, 0, 64);
+	widget_create_thumbbar(widgets_samplelist + 5, 38, 39, 9, 4, 6, 15, update_values_in_song, 0, 64);
+	widget_create_thumbbar(widgets_samplelist + 6, 38, 46, 9, 5, 6, 19, update_values_in_song, 0, 32);
 	/* 7 -> 14 = top right box */
-	create_textentry(widgets_samplelist + 7, 64, 13, 13, 7, 8, 0, update_filename, NULL, 12);
-	create_numentry(widgets_samplelist + 8, 64, 14, 7, 7, 9, 0,
+	widget_create_textentry(widgets_samplelist + 7, 64, 13, 13, 7, 8, 0, update_filename, NULL, 12);
+	widget_create_numentry(widgets_samplelist + 8, 64, 14, 7, 7, 9, 0,
 			update_sample_speed, 0, 9999999, &sample_numentry_cursor_pos);
-	create_menutoggle(widgets_samplelist + 9, 64, 15, 8, 10, 1, 0, 0,
+	widget_create_menutoggle(widgets_samplelist + 9, 64, 15, 8, 10, 1, 0, 0,
 			  update_sample_loop_flags, loop_states);
-	create_numentry(widgets_samplelist + 10, 64, 16, 7, 9, 11, 0,
+	widget_create_numentry(widgets_samplelist + 10, 64, 16, 7, 9, 11, 0,
 			update_sample_loop_points, 0, 9999999, &sample_numentry_cursor_pos);
-	create_numentry(widgets_samplelist + 11, 64, 17, 7, 10, 12, 0,
+	widget_create_numentry(widgets_samplelist + 11, 64, 17, 7, 10, 12, 0,
 			update_sample_loop_points, 0, 9999999, &sample_numentry_cursor_pos);
-	create_menutoggle(widgets_samplelist + 12, 64, 18, 11, 13, 1, 0, 0,
+	widget_create_menutoggle(widgets_samplelist + 12, 64, 18, 11, 13, 1, 0, 0,
 			  update_sample_loop_flags, loop_states);
-	create_numentry(widgets_samplelist + 13, 64, 19, 7, 12, 14, 0,
+	widget_create_numentry(widgets_samplelist + 13, 64, 19, 7, 12, 14, 0,
 			update_sample_loop_points, 0, 9999999, &sample_numentry_cursor_pos);
-	create_numentry(widgets_samplelist + 14, 64, 20, 7, 13, 15, 0,
+	widget_create_numentry(widgets_samplelist + 14, 64, 20, 7, 13, 15, 0,
 			update_sample_loop_points, 0, 9999999, &sample_numentry_cursor_pos);
 	/* 15 -> 18 = vibrato waveforms */
-	create_togglebutton(widgets_samplelist + 15, 57, 36, 6, 14, 17, 5,
+	widget_create_togglebutton(widgets_samplelist + 15, 57, 36, 6, 14, 17, 5,
 			    16, 16, update_values_in_song, "\xb9\xba", 3, vibrato_waveforms);
-	create_togglebutton(widgets_samplelist + 16, 67, 36, 6, 14, 18, 15,
+	widget_create_togglebutton(widgets_samplelist + 16, 67, 36, 6, 14, 18, 15,
 			    0, 0, update_values_in_song, "\xbd\xbe", 3, vibrato_waveforms);
-	create_togglebutton(widgets_samplelist + 17, 57, 39, 6, 15, 19, 5,
+	widget_create_togglebutton(widgets_samplelist + 17, 57, 39, 6, 15, 19, 5,
 			    18, 18, update_values_in_song, "\xbb\xbc", 3, vibrato_waveforms);
-	create_togglebutton(widgets_samplelist + 18, 67, 39, 6, 16, 19, 17,
+	widget_create_togglebutton(widgets_samplelist + 18, 67, 39, 6, 16, 19, 17,
 			    0, 0, update_values_in_song, "Random", 1, vibrato_waveforms);
 	/* 19 = vibrato rate */
-	create_thumbbar(widgets_samplelist + 19, 56, 46, 16, 17, 19, 0, update_values_in_song, 0, 255);
+	widget_create_thumbbar(widgets_samplelist + 19, 56, 46, 16, 17, 19, 0, update_values_in_song, 0, 255);
 
 	/* count how many formats there really are */
 	num_save_formats = 0;

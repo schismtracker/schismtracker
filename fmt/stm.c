@@ -22,10 +22,11 @@
  */
 
 #include "headers.h"
+#include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -56,6 +57,7 @@ int fmt_stm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 /* --------------------------------------------------------------------- */
 
 #pragma pack(push, 1)
+
 struct stm_sample {
 	char name[12];
 	uint8_t zero;
@@ -68,6 +70,9 @@ struct stm_sample {
 	uint32_t morejunk;
 	uint16_t paragraphs; // what?
 };
+
+SCHISM_BINARY_STRUCT(struct stm_sample, 12+1+1+2+2+2+2+1+1+2+4+2);
+
 #pragma pack(pop)
 
 

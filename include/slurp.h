@@ -24,18 +24,9 @@
 #ifndef SCHISM_SLURP_H
 #define SCHISM_SLURP_H
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
+#include "headers.h"
 
-#include "util.h"
-
-#include <sys/types.h>
-#include <sys/stat.h>
-
-#include <stdio.h>
-#include <stdint.h>
-#include <unistd.h>
+#include <sys/stat.h> /* struct stat */
 
 /* --------------------------------------------------------------------- */
 
@@ -77,9 +68,6 @@ size_t slurp_read(slurp_t *t, void *ptr, size_t count); /* i never really liked 
 size_t slurp_peek(slurp_t *t, void *ptr, size_t count);
 int slurp_getc(slurp_t *t); /* returns unsigned char cast to int, or EOF */
 int slurp_eof(slurp_t *t); /* 1 = end of file */
-
-/* used internally by slurp, nothing else should need this */
-int mmcmp_unpack(uint8_t **data, size_t *length);
 
 #endif /* SCHISM_SLURP_H */
 

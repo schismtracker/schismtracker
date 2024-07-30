@@ -22,11 +22,12 @@
  */
 
 #include "headers.h"
+#include "bswap.h"
 #include "slurp.h"
 #include "log.h"
 #include "fmt.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -53,6 +54,7 @@ struct imf_channel {
 	uint8_t status;         /* Channel status: 0 = enabled, 1 = mute, 2 = disabled (ignore effects!) */
 };
 
+SCHISM_BINARY_STRUCT(struct imf_channel, 12+1+1+1+1);
 
 struct imf_header {
 	char title[32];         /* Songname (ASCIIZ-String, max. 31 chars) */
@@ -71,6 +73,8 @@ struct imf_header {
 	uint8_t orderlist[256]; /* Order list (0xff = +++; blank out anything beyond ordnum) */
 };
 
+SCHISM_BINARY_STRUCT(struct imf_header, 32+2+2+2+2+8+1+1+1+1+8+4+512+256);
+
 enum {
 	IMF_ENV_VOL = 0,
 	IMF_ENV_PAN = 1,
@@ -86,10 +90,14 @@ struct imf_env {
 	uint8_t unused[3];
 };
 
+SCHISM_BINARY_STRUCT(struct imf_env, 8);
+
 struct imf_envnodes {
 	uint16_t tick;
 	uint16_t value;
 };
+
+SCHISM_BINARY_STRUCT(struct imf_envnodes, 4);
 
 struct imf_instrument {
 	char name[32];          /* Inst. name (ASCIIZ-String, max. 31 chars) */
@@ -101,6 +109,8 @@ struct imf_instrument {
 	uint16_t smpnum;        /* Number of samples in instrument */
 	char ii10[4];           /* 'II10' */
 };
+
+SCHISM_BINARY_STRUCT(struct imf_instrument, 32+120+8+192+24+2+2+4);
 
 struct imf_sample {
 	char name[13];          /* Sample filename (12345678.ABC) */
@@ -118,6 +128,8 @@ struct imf_sample {
 	uint32_t dram;          /* Reserved for internal usage */
 	char is10[4];           /* 'IS10' or 'IW10' */
 };
+
+SCHISM_BINARY_STRUCT(struct imf_sample, 13+3+4+4+4+4+1+1+14+1+5+2+4+4);
 #pragma pack(pop)
 
 

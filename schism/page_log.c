@@ -28,6 +28,8 @@
 
 #include "it.h"
 #include "page.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include "sdlmain.h"
 
@@ -62,7 +64,7 @@ static int last_line = -1;
 static void log_draw_const(void)
 {
 	draw_box(1, 12, 78, 48, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_fill_chars(2, 13, 77, 47, 0);
+	draw_fill_chars(2, 13, 77, 47, DEFAULT_FG, 0);
 }
 
 static int log_handle_key(struct key_event * k)
@@ -133,7 +135,7 @@ void log_load_page(struct page *page)
 	page->widgets = widgets_log;
 	page->help_index = HELP_COPYRIGHT; /* I guess */
 
-	create_other(widgets_log + 0, 0, log_handle_key, NULL, log_redraw);
+	widget_create_other(widgets_log + 0, 0, log_handle_key, NULL, log_redraw);
 }
 
 /* --------------------------------------------------------------------- */
@@ -162,7 +164,7 @@ void log_append(int color, int must_free, const char *text)
 }
 void log_nl(void)
 {
-	log_append(0,0,"");
+	log_append(DEFAULT_FG,0,"");
 }
 void log_appendf(int color, const char *format, ...)
 {

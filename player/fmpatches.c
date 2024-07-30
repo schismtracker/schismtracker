@@ -25,7 +25,7 @@
 (As found in dro2midi.) */
 
 #include "headers.h"
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 static const uint8_t patches[][11] = {
 	{0x00,0x00,0x4F,0x00,0xF1,0xD2,0x51,0x43,0x00,0x00,0x06}, /*1*/

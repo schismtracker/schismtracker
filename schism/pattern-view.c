@@ -24,7 +24,10 @@
 #include "headers.h"
 
 #include "it.h"
+#include "keyboard.h"
 #include "song.h"
+#include "vgamem.h"
+
 #include "pattern-view.h"
 
 /* this stuff's ugly */

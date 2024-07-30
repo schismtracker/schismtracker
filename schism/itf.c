@@ -25,12 +25,19 @@
    LARGELY because I can't remember all the font characters. :)
 */
 #include "headers.h"
+
 #include "it.h"
+#include "vgamem.h"
+#include "dialog.h"
+#include "widget.h"
+#include "config.h"
 #include "dmoz.h"
 #include "page.h"
 #include "version.h"
 #include "log.h"
 #include "util.h"
+#include "palettes.h"
+#include "fonts.h"
 
 #include "sdlmain.h"
 #include <string.h>
@@ -426,6 +433,7 @@ extern unsigned int color_set[16];
 
 static void draw_screen(void)
 {
+	draw_fill_chars(0,0,79,49,DEFAULT_FG,0);
 	draw_frame("Edit Box", EDITBOX_X, EDITBOX_Y, 9, 11, !!(selected_item == EDITBOX));
 	draw_editbox();
 
@@ -1116,5 +1124,5 @@ void fontedit_load_page(struct page *page)
 	page->total_widgets = 1;
 	page->pre_handle_key = fontedit_key_hack;
 	page->widgets = fontedit_widget_hack;
-	create_other(fontedit_widget_hack, 0, fontedit_handle_key, NULL, do_nil);
+	widget_create_other(fontedit_widget_hack, 0, fontedit_handle_key, NULL, do_nil);
 }

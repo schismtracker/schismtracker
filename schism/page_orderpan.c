@@ -26,6 +26,8 @@
 #include "it.h"
 #include "song.h"
 #include "page.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include "sdlmain.h"
 
@@ -765,7 +767,7 @@ void orderpan_load_page(struct page *page)
 	page->help_index = HELP_ORDERLIST_PANNING;
 
 	/* 0 = order list */
-	create_other(widgets_orderpan + 0, 1, orderlist_handle_key_on_list,
+	widget_create_other(widgets_orderpan + 0, 1, orderlist_handle_key_on_list,
 		orderlist_handle_text_input_on_list, orderlist_draw);
 	widgets_orderpan[0].accept_text = 1;
 	widgets_orderpan[0].x = 6;
@@ -774,14 +776,14 @@ void orderpan_load_page(struct page *page)
 	widgets_orderpan[0].height = 32;
 
 	/* 1-64 = panbars */
-	create_panbar(widgets_orderpan + 1, 20, 15, 1, 2, 33, orderpan_update_values_in_song, 1);
+	widget_create_panbar(widgets_orderpan + 1, 20, 15, 1, 2, 33, orderpan_update_values_in_song, 1);
 	for (n = 2; n <= 32; n++) {
-		create_panbar(widgets_orderpan + n, 20, 14 + n, n - 1, n + 1, n + 32,
+		widget_create_panbar(widgets_orderpan + n, 20, 14 + n, n - 1, n + 1, n + 32,
 			      orderpan_update_values_in_song, n);
-		create_panbar(widgets_orderpan + n + 31, 54, 13 + n, n + 30, n + 32, 0,
+		widget_create_panbar(widgets_orderpan + n + 31, 54, 13 + n, n + 30, n + 32, 0,
 			      orderpan_update_values_in_song, n + 31);
 	}
-	create_panbar(widgets_orderpan + 64, 54, 46, 63, 64, 0, orderpan_update_values_in_song, 64);
+	widget_create_panbar(widgets_orderpan + 64, 54, 46, 63, 64, 0, orderpan_update_values_in_song, 64);
 }
 
 void ordervol_load_page(struct page *page)
@@ -799,7 +801,7 @@ void ordervol_load_page(struct page *page)
 	page->help_index = HELP_ORDERLIST_VOLUME;
 
 	/* 0 = order list */
-	create_other(widgets_ordervol + 0, 1, orderlist_handle_key_on_list,
+	widget_create_other(widgets_ordervol + 0, 1, orderlist_handle_key_on_list,
 		orderlist_handle_text_input_on_list, orderlist_draw);
 	widgets_ordervol[0].accept_text = 1;
 	widgets_ordervol[0].x = 6;
@@ -808,14 +810,14 @@ void ordervol_load_page(struct page *page)
 	widgets_ordervol[0].height = 32;
 
 	/* 1-64 = thumbbars */
-	create_thumbbar(widgets_ordervol + 1, 31, 15, 9, 1, 2, 33, ordervol_update_values_in_song, 0, 64);
+	widget_create_thumbbar(widgets_ordervol + 1, 31, 15, 9, 1, 2, 33, ordervol_update_values_in_song, 0, 64);
 	for (n = 2; n <= 32; n++) {
-		create_thumbbar(widgets_ordervol + n, 31, 14 + n, 9, n - 1, n + 1, n + 32,
+		widget_create_thumbbar(widgets_ordervol + n, 31, 14 + n, 9, n - 1, n + 1, n + 32,
 				ordervol_update_values_in_song, 0, 64);
-		create_thumbbar(widgets_ordervol + n + 31, 65, 13 + n, 9, n + 30, n + 32, 0,
+		widget_create_thumbbar(widgets_ordervol + n + 31, 65, 13 + n, 9, n + 30, n + 32, 0,
 				ordervol_update_values_in_song, 0, 64);
 	}
-	create_thumbbar(widgets_ordervol + 64, 65, 46, 9, 63, 64, 0, ordervol_update_values_in_song, 0, 64);
+	widget_create_thumbbar(widgets_ordervol + 64, 65, 46, 9, 63, 64, 0, ordervol_update_values_in_song, 0, 64);
 }
 
 /* --------------------------------------------------------------------- */

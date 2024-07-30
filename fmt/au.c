@@ -22,6 +22,7 @@
  */
 
 #include "headers.h"
+#include "bswap.h"
 #include "fmt.h"
 
 
@@ -36,11 +37,16 @@ enum {
 	AU_ISDN_ULAW_ADPCM = 23,        /* 8-bit ISDN µ-law (CCITT G.721 ADPCM compressed) */
 };
 
+#pragma pack(push, 1)
+
 struct au_header {
 	char magic[4]; /* ".snd" */
 	uint32_t data_offset, data_size, encoding, sample_rate, channels;
 };
 
+SCHISM_BINARY_STRUCT(struct au_header, 4+4+4+4+4+4);
+
+#pragma pack(pop)
 
 /* --------------------------------------------------------------------- */
 

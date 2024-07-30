@@ -24,6 +24,8 @@
 #include "headers.h"
 
 #include "it.h"
+#include "vgamem.h"
+#include "keyboard.h"
 #include "song.h"
 #include "page.h"
 #include "charset.h"
@@ -31,6 +33,10 @@
 #include "midi.h"
 #include "version.h"
 #include "video.h"
+#include "fakemem.h"
+#include "fonts.h"
+#include "dialog.h"
+#include "widget.h"
 
 #include "sdlmain.h"
 
@@ -45,7 +51,7 @@ struct tracker_status status = {
 	.previous_page = PAGE_BLANK,
 	.current_help_index = HELP_GLOBAL,
 	.dialog_type = DIALOG_NONE,
-	.flags = IS_FOCUSED | IS_VISIBLE,
+	.flags = 0,
 	.time_display = TIME_PLAY_ELAPSED,
 	.vis_style = VIS_VU_METER,
 	.last_midi_event = "",
@@ -103,7 +109,7 @@ static int check_time(void)
 		h = (m = (s = song_get_current_time()) / 60) / 60;
 		break;
 	case TIME_ELAPSED:
-		h = (m = (s = SDL_GetTicks() / 1000) / 60) / 60;
+		h = (m = (s = SCHISM_GET_TICKS() / 1000) / 60) / 60;
 		break;
 	case TIME_ABSOLUTE:
 		/* absolute time shows the time of the current cursor
@@ -207,7 +213,7 @@ static void draw_page(void)
 	/* this doesn't use widgets[] because it needs to draw the page's
 	 * widgets whether or not a dialog is active */
 	while (n--)
-		draw_widget(ACTIVE_PAGE.widgets + n, n == ACTIVE_PAGE.selected_widget);
+		widget_draw_widget(ACTIVE_PAGE.widgets + n, n == ACTIVE_PAGE.selected_widget);
 
 	/* redraw the area over the menu if there is one */
 	if (status.dialog_type & DIALOG_MENU)
@@ -265,28 +271,28 @@ void new_song_dialog(void)
 
 	/* only create everything if it hasn't been set up already */
 	if (new_song_widgets[0].width == 0) {
-		create_togglebutton(new_song_widgets + 0, 35, 24, 6, 0, 2, 1, 1, 1, NULL, "Keep",
+		widget_create_togglebutton(new_song_widgets + 0, 35, 24, 6, 0, 2, 1, 1, 1, NULL, "Keep",
 				    2, new_song_groups[0]);
-		create_togglebutton(new_song_widgets + 1, 45, 24, 7, 1, 3, 0, 0, 0, NULL, "Clear",
+		widget_create_togglebutton(new_song_widgets + 1, 45, 24, 7, 1, 3, 0, 0, 0, NULL, "Clear",
 				    2, new_song_groups[0]);
-		create_togglebutton(new_song_widgets + 2, 35, 27, 6, 0, 4, 3, 3, 3, NULL, "Keep",
+		widget_create_togglebutton(new_song_widgets + 2, 35, 27, 6, 0, 4, 3, 3, 3, NULL, "Keep",
 				    2, new_song_groups[1]);
-		create_togglebutton(new_song_widgets + 3, 45, 27, 7, 1, 5, 2, 2, 2, NULL, "Clear",
+		widget_create_togglebutton(new_song_widgets + 3, 45, 27, 7, 1, 5, 2, 2, 2, NULL, "Clear",
 				    2, new_song_groups[1]);
-		create_togglebutton(new_song_widgets + 4, 35, 30, 6, 2, 6, 5, 5, 5, NULL, "Keep",
+		widget_create_togglebutton(new_song_widgets + 4, 35, 30, 6, 2, 6, 5, 5, 5, NULL, "Keep",
 				    2, new_song_groups[2]);
-		create_togglebutton(new_song_widgets + 5, 45, 30, 7, 3, 7, 4, 4, 4, NULL, "Clear",
+		widget_create_togglebutton(new_song_widgets + 5, 45, 30, 7, 3, 7, 4, 4, 4, NULL, "Clear",
 				    2, new_song_groups[2]);
-		create_togglebutton(new_song_widgets + 6, 35, 33, 6, 4, 8, 7, 7, 7, NULL, "Keep",
+		widget_create_togglebutton(new_song_widgets + 6, 35, 33, 6, 4, 8, 7, 7, 7, NULL, "Keep",
 				    2, new_song_groups[3]);
-		create_togglebutton(new_song_widgets + 7, 45, 33, 7, 5, 9, 6, 6, 6, NULL, "Clear",
+		widget_create_togglebutton(new_song_widgets + 7, 45, 33, 7, 5, 9, 6, 6, 6, NULL, "Clear",
 				    2, new_song_groups[3]);
-		create_button(new_song_widgets + 8, 28, 36, 8, 6, 8, 9, 9, 9, dialog_yes_NULL, "OK", 4);
-		create_button(new_song_widgets + 9, 41, 36, 8, 6, 9, 8, 8, 8, dialog_cancel_NULL, "Cancel", 2);
-		togglebutton_set(new_song_widgets, 1, 0);
-		togglebutton_set(new_song_widgets, 3, 0);
-		togglebutton_set(new_song_widgets, 5, 0);
-		togglebutton_set(new_song_widgets, 7, 0);
+		widget_create_button(new_song_widgets + 8, 28, 36, 8, 6, 8, 9, 9, 9, dialog_yes_NULL, "OK", 4);
+		widget_create_button(new_song_widgets + 9, 41, 36, 8, 6, 9, 8, 8, 8, dialog_cancel_NULL, "Cancel", 2);
+		widget_togglebutton_set(new_song_widgets, 1, 0);
+		widget_togglebutton_set(new_song_widgets, 3, 0);
+		widget_togglebutton_set(new_song_widgets, 5, 0);
+		widget_togglebutton_set(new_song_widgets, 7, 0);
 	}
 
 	dialog = dialog_create_custom(21, 20, 38, 19, new_song_widgets, 10, 8, new_song_draw_const, NULL);
@@ -327,7 +333,7 @@ static void _mp_draw(void)
 		name = _mp_text;
 	}
 	i = strlen(name);
-	draw_fill_chars(_mp_text_x, _mp_text_y, _mp_text_x + 17, _mp_text_y, 2);
+	draw_fill_chars(_mp_text_x, _mp_text_y, _mp_text_x + 17, _mp_text_y, DEFAULT_FG, 2);
 	draw_text_len( name, 17, _mp_text_x, _mp_text_y, 0, 2);
 	if (i < 17 && name == _mp_text) {
 		draw_char(':', _mp_text_x + i, _mp_text_y, 0, 2);
@@ -366,7 +372,7 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 	_mp_text_y = midy - 2;
 	_mp_setv = setv;
 	_mp_setv_noplay = setv_noplay;
-	create_thumbbar(_mpw, midx - 8, midy, 13, 0, 0, 0, _mp_change, min, max);
+	widget_create_thumbbar(_mpw, midx - 8, midy, 13, 0, 0, 0, _mp_change, min, max);
 	_mpw[0].d.thumbbar.value = CLAMP(cv, min, max);
 	_mpw[0].depressed = 1; /* maybe it just needs some zoloft? */
 	dialog_create_custom(midx - 10, midy - 3,  20, 6, _mpw, 1, 0, _mp_draw, NULL);
@@ -665,7 +671,7 @@ static int _handle_ime(struct key_event *k)
 	static int alt_numpad_c = 0;
 	static int digraph_n = 0;
 	static int digraph_c = 0;
-	static int cs_unicode = 0;
+	static uint32_t cs_unicode = 0;
 	static int cs_unicode_c = 0;
 
 	if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
@@ -718,12 +724,12 @@ static int _handle_ime(struct key_event *k)
 					uint8_t unicode[2] = {(uint8_t)(char_unicode_to_cp437(cs_unicode)), '\0'};
 
 					if (unicode[0] >= 32) {
-						status_text_flash_bios("Enter Unicode: U+%04X -> %c",
+						status_text_flash_bios("Enter Unicode: U+%04" PRIX32 " -> " PRIu8,
 									   cs_unicode, unicode[0]);
 						SDL_SetModState(0);
 						handle_text_input((const uint8_t*)unicode);
 					} else {
-						status_text_flash_bios("Enter Unicode: U+%04X -> INVALID", cs_unicode);
+						status_text_flash_bios("Enter Unicode: U+%04" PRIX32 " -> INVALID", cs_unicode);
 					}
 					cs_unicode = cs_unicode_c = 0;
 					alt_numpad = alt_numpad_c = 0;
@@ -1076,7 +1082,7 @@ static void redraw_top_info(void)
 static void _draw_vis_box(void)
 {
 	draw_box(62, 5, 78, 8, BOX_THIN | BOX_INNER | BOX_INSET);
-	draw_fill_chars(63, 6, 77, 7, 0);
+	draw_fill_chars(63, 6, 77, 7, DEFAULT_FG, 0);
 }
 
 static int _vis_virgin = 1;
@@ -1252,7 +1258,7 @@ void redraw_screen(void)
 	char buf[4];
 
 	if (!ACTIVE_PAGE.draw_full) {
-		draw_fill_chars(0,0,79,49,2);
+		draw_fill_chars(0,0,79,49, DEFAULT_FG,2);
 
 		/* border around the whole screen */
 		draw_char(128, 0, 0, 3, 2);
@@ -1478,7 +1484,8 @@ void show_exit_prompt(void)
 			dialog_destroy_all();
 			set_page(fontedit_return_page);
 		}
-	} else {
+	} else if (status.dialog_type != DIALOG_OK_CANCEL) {
+		/* don't draw an exit prompt on top of an existing one */
 		dialog_create(DIALOG_OK_CANCEL,
 			      ((status.flags & CLASSIC_MODE)
 			       ? "Exit Impulse Tracker?"
@@ -1537,13 +1544,13 @@ void show_song_timejump(void)
 {
 	struct dialog *d;
 	_tj_num1 = _tj_num2 = 0;
-	create_numentry(_timejump_widgets+0, 44, 26, 2, 0, 2, 1, NULL, 0, 21, &_tj_num1);
-	create_numentry(_timejump_widgets+1, 47, 26, 2, 1, 2, 2, NULL, 0, 59, &_tj_num2);
+	widget_create_numentry(_timejump_widgets+0, 44, 26, 2, 0, 2, 1, NULL, 0, 21, &_tj_num1);
+	widget_create_numentry(_timejump_widgets+1, 47, 26, 2, 1, 2, 2, NULL, 0, 59, &_tj_num2);
 	_timejump_widgets[0].d.numentry.handle_unknown_key = _timejump_keyh;
 	_timejump_widgets[0].d.numentry.reverse = 1;
 	_timejump_widgets[1].d.numentry.reverse = 1;
-	create_button(_timejump_widgets+2, 30, 29, 8, 0, 2, 2, 3, 3, (void(*)(void))_timejump_ok, "OK", 4);
-	create_button(_timejump_widgets+3, 42, 29, 8, 1, 3, 3, 3, 0, dialog_cancel_NULL, "Cancel", 2);
+	widget_create_button(_timejump_widgets+2, 30, 29, 8, 0, 2, 2, 3, 3, (void(*)(void))_timejump_ok, "OK", 4);
+	widget_create_button(_timejump_widgets+3, 42, 29, 8, 1, 3, 3, 3, 0, dialog_cancel_NULL, "Cancel", 2);
 	d = dialog_create_custom(26, 24, 30, 8, _timejump_widgets, 4, 0, _timejump_draw, NULL);
 	d->handle_key = _timejump_keyh;
 	d->action_yes = _timejump_ok;

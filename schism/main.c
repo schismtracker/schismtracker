@@ -34,11 +34,17 @@
 #include "clippy.h"
 #include "disko.h"
 
+#include "config.h"
 #include "version.h"
 #include "song.h"
 #include "midi.h"
 #include "dmoz.h"
 #include "charset.h"
+#include "keyboard.h"
+#include "palettes.h"
+#include "fonts.h"
+#include "dialog.h"
+#include "widget.h"
 
 #include "osdefs.h"
 
@@ -46,8 +52,6 @@
 
 #include "sdlmain.h"
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -110,27 +114,13 @@ static void sdl_init(void)
 	if (SDL_Init(SDL_INIT_FLAGS) == 0)
 		return;
 	err = SDL_GetError();
-	if (strstr(err, "mouse")) {
-		// see if we can start up mouseless
-		status.flags |= NO_MOUSE;
-		put_env_var("SDL_NOMOUSE", "1");
-		if (SDL_Init(SDL_INIT_FLAGS) == 0)
-			return;
-	}
 	fprintf(stderr, "SDL_Init: %s\n", err);
 	schism_exit(1);
 }
 
 static void display_init(void)
 {
-	SDL_SysWMinfo	info;
-	SDL_VERSION(&info.version);
-
 	video_startup();
-
-	if (SDL_GetWindowWMInfo(video_window(), &info)) {
-		status.flags |= WM_AVAILABLE;
-	}
 
 	display_print_info();
 	SDL_StartTextInput();
@@ -150,18 +140,11 @@ static void handle_window_event(SDL_WindowEvent *w)
 {
 	switch (w->event) {
 	case SDL_WINDOWEVENT_SHOWN:
-		status.flags |= (IS_VISIBLE|SOFTWARE_MOUSE_MOVED);
-		video_mousecursor(MOUSE_RESET_STATE);
-		break;
-	case SDL_WINDOWEVENT_HIDDEN:
-		status.flags &= ~IS_VISIBLE;
-		break;
 	case SDL_WINDOWEVENT_FOCUS_GAINED:
-		status.flags |= IS_FOCUSED;
 		video_mousecursor(MOUSE_RESET_STATE);
 		break;
 	case SDL_WINDOWEVENT_FOCUS_LOST:
-		status.flags &= ~IS_FOCUSED;
+		/* XXX why do we need this */
 		SDL_ShowCursor(SDL_ENABLE);
 		break;
 	case SDL_WINDOWEVENT_RESIZED:
@@ -175,6 +158,7 @@ static void handle_window_event(SDL_WindowEvent *w)
 #if 0
 		/* ignored currently */
 		SDL_WINDOWEVENT_NONE,           /**< Never used */
+		SDL_WINDOWEVENT_HIDDEN,         /**< Window is out of view */
 		SDL_WINDOWEVENT_MINIMIZED,      /**< Window has been minimized */
 		SDL_WINDOWEVENT_MAXIMIZED,      /**< Window has been maximized */
 		SDL_WINDOWEVENT_RESTORED,       /**< Window has been restored to normal size
@@ -406,21 +390,26 @@ static void parse_options(int argc, char **argv)
 
 static void check_update(void)
 {
-	static unsigned long next = 0;
+	static schism_ticks_t next = 0;
+	schism_ticks_t now = SCHISM_GET_TICKS();
 
 	/* is there any reason why we'd want to redraw
 	   the screen when it's not even visible? */
-	if ((status.flags & (NEED_UPDATE | IS_VISIBLE)) == (NEED_UPDATE | IS_VISIBLE)) {
-		status.flags &= ~(NEED_UPDATE | SOFTWARE_MOUSE_MOVED);
-		if ((status.flags & (IS_FOCUSED | LAZY_REDRAW)) == LAZY_REDRAW) {
-			if (SDL_GetTicks() < next)
+	if (video_is_visible() && (status.flags & NEED_UPDATE)) {
+		status.flags &= ~NEED_UPDATE;
+
+		if (!video_is_focused() && (status.flags & LAZY_REDRAW)) {
+			if (!SCHISM_TICKS_PASSED(now, next))
 				return;
-			next = SDL_GetTicks() + 500;
+
+			next = now + 500;
 		} else if (status.flags & (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN)) {
-			if (SDL_GetTicks() < next)
+			if (!SCHISM_TICKS_PASSED(now, next))
 				return;
-			next = SDL_GetTicks() + 100;
+
+			next = now + 100;
 		}
+
 		redraw_screen();
 		video_refresh();
 		video_blit();
@@ -457,44 +446,13 @@ static void key_event_reset(struct key_event *kk, int start_x, int start_y)
 	kk->sy = start_y;
 }
 
-/* -------------------------------------------------- */
-
-/* These are here for linking text input to keyboard inputs.
- * If no keyboard input can be found, then the text will
- * be sent to the already existing handlers written for the
- * original port to SDL2.
- *
- * - paper */
-
-static struct key_event pending_keydown;
-static int have_pending_keydown = 0;
-
-static void push_pending_keydown_event(struct key_event* kk) {
-	if (!have_pending_keydown) {
-		pending_keydown = *kk;
-		have_pending_keydown = 1;
-	}
-}
-
-static void pop_pending_keydown_event(const uint8_t* text, const char* orig_text) {
-	/* text can and will be NULL here. when it is not NULL, it
-	 * should be in CP437 */
-	if (have_pending_keydown) {
-		pending_keydown.text = text;
-		pending_keydown.orig_text = orig_text;
-		cache_key_repeat(&pending_keydown);
-		handle_key(&pending_keydown);
-		have_pending_keydown = 0;
-	}
-}
-
 /* -------------------------------------------- */
 
 static void event_loop(void)
 {
 	SDL_Event event;
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
-	uint32_t last_mouse_down, ticker;
+	schism_ticks_t last_mouse_down, ticker;
 	SDL_Keycode last_key = 0;
 	int modkey;
 	time_t startdown;
@@ -566,8 +524,8 @@ static void event_loop(void)
 					break;
 				}
 
-				if (have_pending_keydown) {
-					pop_pending_keydown_event(input_text, event.text.text);
+				if (kbd_have_pending_keydown()) {
+					kbd_pop_pending_keydown(input_text);
 				} else {
 					/* wtf? whatever, send it to the text input
 					 * handlers I guess, don't throw it out! */
@@ -584,7 +542,7 @@ static void event_loop(void)
 
 				/* fallthrough */
 			case SDL_KEYUP:
-				pop_pending_keydown_event(NULL, NULL);
+				kbd_pop_pending_keydown(NULL);
 				switch (event.key.keysym.sym) {
 				case SDLK_NUMLOCKCLEAR:
 					modkey ^= KMOD_NUM;
@@ -632,7 +590,7 @@ static void event_loop(void)
 
 				kk.mod = modkey;
 				kk.mouse = MOUSE_NONE;
-				key_translate(&kk);
+				kbd_key_translate(&kk);
 
 				if (event.type == SDL_KEYUP) {
 					handle_key(&kk);
@@ -640,15 +598,15 @@ static void event_loop(void)
 					/* only empty the key repeat if
 					 * the last keydown is the same sym */
 					if (last_key == kk.sym)
-						empty_key_repeat();
+						kbd_empty_key_repeat();
 				} else {
-					push_pending_keydown_event(&kk);
+					kbd_push_pending_keydown(&kk);
 
 					/* reset key repeat regardless */
-					empty_key_repeat();
+					kbd_empty_key_repeat();
 
 					/* TODO this ought to be handled in
-					 * pop_pending_keydown_event() */
+					 * kbd_pop_pending_keydown() */
 					status.last_keysym = last_key;
 					last_key = kk.sym;
 				}
@@ -723,7 +681,7 @@ static void event_loop(void)
 						kk.mouse_button = MOUSE_BUTTON_LEFT;
 					}
 					if (kk.state == KEY_RELEASE) {
-						ticker = SDL_GetTicks();
+						ticker = SCHISM_GET_TICKS();
 						if (lx == kk.x
 						&& ly == kk.y
 						&& (ticker - last_mouse_down) < 300) {
@@ -748,7 +706,7 @@ static void event_loop(void)
 							}
 						}
 					}
-					if (change_focus_to_xy(kk.x, kk.y)) {
+					if (widget_change_focus_to_xy(kk.x, kk.y)) {
 						kk.on_target = 1;
 					} else {
 						kk.on_target = 0;
@@ -866,10 +824,10 @@ static void event_loop(void)
 		/* when using a real keyboard SDL will send a keydown first
 		 * and text input after it; if a text input event is NOT sent,
 		 * we should just send the keydown as is */
-		pop_pending_keydown_event(NULL, NULL);
+		kbd_pop_pending_keydown(NULL);
 
 		/* handle key repeats */
-		handle_key_repeat();
+		kbd_handle_key_repeat();
 
 		/* now we can do whatever we need to do */
 		time(&status.now);

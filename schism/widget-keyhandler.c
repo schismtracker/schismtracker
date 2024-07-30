@@ -25,6 +25,8 @@
 #include "it.h"
 #include "page.h"
 #include "song.h"
+#include "keyboard.h"
+#include "widget.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -214,11 +216,11 @@ int widget_handle_text_input(const uint8_t* text_input) {
 				return 1;
 			break;
 		case WIDGET_NUMENTRY:
-			if (numentry_handle_text(widget, text_input))
+			if (widget_numentry_handle_text(widget, text_input))
 				return 1;
 			break;
 		case WIDGET_TEXTENTRY:
-			if (textentry_add_text(widget, text_input))
+			if (widget_textentry_add_text(widget, text_input))
 				return 1;
 			break;
 		default:
@@ -333,16 +335,45 @@ static int panbar_handle_key(struct key_event * k)
 	return 1;
 }
 
+static int widget_menutoggle_handle_key(struct widget *w, struct key_event *k)
+{
+	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0)
+	   && w->d.menutoggle.activation_keys) {
+		const char* m = w->d.menutoggle.activation_keys;
+		const char* p = strchr(m, (char)k->sym);
+		if (p && *p) {
+			w->d.menutoggle.state = p - m;
+			if(w->changed) w->changed();
+			status.flags |= NEED_UPDATE;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static int widget_bitset_handle_key(struct widget *w, struct key_event *k)
+{
+	if( ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0)
+	   && w->d.bitset.activation_keys) {
+		const char* m = w->d.bitset.activation_keys;
+		const char* p = strchr(m, (char)k->sym);
+		if (p && *p) {
+			int bit_index = p-m;
+			w->d.bitset.value ^= (1 << bit_index);
+			if(w->changed) w->changed();
+			status.flags |= NEED_UPDATE;
+			return 1;
+		}
+	}
+	return 0;
+}
+
 /* return: 1 = handled key, 0 = didn't */
 int widget_handle_key(struct key_event * k)
 {
 	struct widget *widget = &ACTIVE_WIDGET;
 	if (!widget)
 		return 0;
-
-	/* XXX can this be removed? */
-	if (!widget->accept_text) /* hack */
-		widget->accept_text = 1;
 
 	int n, onw, wx, fmin, fmax, pad;
 	void (*changed)(void);
@@ -448,7 +479,7 @@ int widget_handle_key(struct key_event * k)
 				if (k->x - widget->x < 11) return 1;
 				if (k->x - widget->x > 19) return 1;
 			}
-			numentry_change_value(widget, n);
+			widget_numentry_change_value(widget, n);
 			return 1;
 		}
 		if (k->mouse) {
@@ -543,7 +574,7 @@ int widget_handle_key(struct key_event * k)
 			if (status.flags & DISKWRITER_ACTIVE) return 0;
 			if (widget->d.togglebutton.group) {
 				/* this also runs the changed callback and redraws the button(s) */
-				togglebutton_set(widgets, *selected_widget, 1);
+				widget_togglebutton_set(widgets, *selected_widget, 1);
 				return 1;
 			}
 			/* else... */
@@ -600,6 +631,23 @@ int widget_handle_key(struct key_event * k)
 		case WIDGET_TEXTENTRY:
 			textentry_move_cursor(widget, -1);
 			return 1;
+		case WIDGET_PANBAR:
+			widget->d.panbar.muted = 0;
+			widget->d.panbar.surround = 0;
+			/* fall through */
+		case WIDGET_THUMBBAR:
+			/* I'm handling the key modifiers differently than Impulse Tracker, but only
+			because I think this is much more useful. :) */
+			n = 1;
+			if (k->mod & (KMOD_ALT | KMOD_GUI))
+				n *= 8;
+			if (k->mod & KMOD_SHIFT)
+				n *= 4;
+			if (k->mod & KMOD_CTRL)
+				n *= 2;
+			n = widget->d.numentry.value - n;
+			widget_numentry_change_value(widget, n);
+			return 1;
 		default:
 			widget_change_focus_to(widget->next.left);
 			return 1;
@@ -624,6 +672,21 @@ int widget_handle_key(struct key_event * k)
 				return 0;
 			}
 			textentry_move_cursor(widget, 1);
+			return 1;
+		case WIDGET_PANBAR:
+			widget->d.panbar.muted = 0;
+			widget->d.panbar.surround = 0;
+			/* fall through */
+		case WIDGET_THUMBBAR:
+			n = 1;
+			if (k->mod & (KMOD_ALT | KMOD_GUI))
+				n *= 8;
+			if (k->mod & KMOD_SHIFT)
+				n *= 4;
+			if (k->mod & KMOD_CTRL)
+				n *= 2;
+			n = widget->d.numentry.value + n;
+			widget_numentry_change_value(widget, n);
 			return 1;
 		default:
 			if (!NO_MODIFIER(k->mod))
@@ -652,6 +715,14 @@ int widget_handle_key(struct key_event * k)
 			widget->d.textentry.cursor_pos = 0;
 			status.flags |= NEED_UPDATE;
 			return 1;
+		case WIDGET_PANBAR:
+			widget->d.panbar.muted = 0;
+			widget->d.panbar.surround = 0;
+			/* fall through */
+		case WIDGET_THUMBBAR:
+			n = widget->d.thumbbar.min;
+			widget_numentry_change_value(widget, n);
+			return 1;
 		default:
 			break;
 		}
@@ -665,6 +736,14 @@ int widget_handle_key(struct key_event * k)
 		case WIDGET_TEXTENTRY:
 			widget->d.textentry.cursor_pos = strlen(widget->d.textentry.text);
 			status.flags |= NEED_UPDATE;
+			return 1;
+		case WIDGET_PANBAR:
+			widget->d.panbar.muted = 0;
+			widget->d.panbar.surround = 0;
+			/* fall through */
+		case WIDGET_THUMBBAR:
+			n = widget->d.thumbbar.max;
+			widget_numentry_change_value(widget, n);
 			return 1;
 		default:
 			break;
@@ -708,6 +787,14 @@ int widget_handle_key(struct key_event * k)
 				% widget->d.menutoggle.num_choices;
 			if (widget->changed) widget->changed();
 			status.flags |= NEED_UPDATE;
+			return 1;
+		case WIDGET_PANBAR:
+			if (!NO_MODIFIER(k->mod))
+				return 0;
+			widget->d.panbar.muted = !widget->d.panbar.muted;
+			changed = widget->changed;
+			widget_change_focus_to(widget->next.down);
+			if (changed) changed();
 			return 1;
 		default:
 			break;
@@ -774,11 +861,11 @@ int widget_handle_key(struct key_event * k)
 	/* if we're here, that mess didn't completely handle the key (gosh...) so now here's another mess. */
 	switch (current_type) {
 	case WIDGET_MENUTOGGLE:
-		if (menutoggle_handle_key(widget, k))
+		if (widget_menutoggle_handle_key(widget, k))
 			return 1;
 		break;
 	case WIDGET_BITSET:
-		if (bitset_handle_key(widget, k))
+		if (widget_bitset_handle_key(widget, k))
 			return 1;
 		break;
 	case WIDGET_THUMBBAR:
@@ -788,11 +875,11 @@ int widget_handle_key(struct key_event * k)
 		break;
 	case WIDGET_TEXTENTRY:
 		if ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0 &&
-			k->text && textentry_add_text(widget, k->text))
+			k->text && widget_textentry_add_text(widget, k->text))
 			return 1;
 		break;
 	case WIDGET_NUMENTRY:
-		if (k->text && numentry_handle_text(widget, k->text))
+		if (k->text && widget_numentry_handle_text(widget, k->text))
 			return 1;
 		break;
 	default:

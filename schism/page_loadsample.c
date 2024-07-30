@@ -24,12 +24,18 @@
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
 #include "charset.h"
 #include "song.h"
 #include "page.h"
 #include "dmoz.h"
 #include "sample-edit.h"
+#include "keyboard.h"
+#include "fakemem.h"
 #include "log.h"
+#include "widget.h"
+#include "dialog.h"
+#include "vgamem.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -62,6 +68,8 @@ static int will_move_to = -1;
 static int fake_slot = KEYJAZZ_NOINST;
 static const char *const loop_states[] = {
 		"Off", "On Forwards", "On Ping Pong", NULL };
+
+static char samp_cwd[PATH_MAX+1] = "";
 
 static void handle_preload(void);
 
@@ -175,17 +183,17 @@ static void read_directory(void)
 	struct stat st;
 
 	clear_directory();
-	if (os_stat(cfg_dir_samples, &st) < 0)
+	if (os_stat(samp_cwd, &st) < 0)
 		directory_mtime = 0;
 	else
 		directory_mtime = st.st_mtime;
 	/* if the stat call failed, this will probably break as well, but
 	at the very least, it'll add an entry for the root directory. */
-	if (dmoz_read(cfg_dir_samples, &flist, NULL, dmoz_read_sample_library) < 0)
-		log_perror(cfg_dir_samples);
+	if (dmoz_read(samp_cwd, &flist, NULL, dmoz_read_sample_library) < 0)
+		log_perror(samp_cwd);
 
 	dmoz_filter_filelist(&flist, dmoz_fill_ext_data, &current_file, file_list_reposition);
-	dmoz_cache_lookup(cfg_dir_samples, &flist, NULL);
+	dmoz_cache_lookup(samp_cwd, &flist, NULL);
 	file_list_reposition();
 }
 
@@ -201,10 +209,12 @@ static int change_dir(const char *dir)
 
 	dmoz_cache_update(cfg_dir_samples, &flist, NULL);
 
-	if (os_stat(ptr, &buf) == 0 && S_ISDIR(buf.st_mode)) {
+	if (!os_stat(ptr, &buf) && S_ISDIR(buf.st_mode)) {
 		strncpy(cfg_dir_samples, ptr, PATH_MAX);
-		cfg_dir_samples[PATH_MAX] = 0;
+		cfg_dir_samples[PATH_MAX] = '\0';
 	}
+	strncpy(samp_cwd, ptr, PATH_MAX);
+	samp_cwd[PATH_MAX] = '\0';
 	free(ptr);
 
 	read_directory();
@@ -220,27 +230,27 @@ static void load_sample_draw_const(void)
 	char sbuf[64];
 
 	draw_box(5, 12, 50, 48, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_fill_chars(6, 13, 49, 47, 0);
+	draw_fill_chars(6, 13, 49, 47, DEFAULT_FG, 0);
 
-	draw_fill_chars(64, 13, 77, 22, 0);
+	draw_fill_chars(64, 13, 77, 22, DEFAULT_FG, 0);
 	draw_box(62, 32, 72, 35, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(62, 36, 72, 40, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	draw_box(63, 12, 77, 23, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	draw_box(51, 24, 77, 29, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_fill_chars(52, 25, 76, 28, 0);
+	draw_fill_chars(52, 25, 76, 28, DEFAULT_FG, 0);
 
 	draw_box(51, 30, 77, 42, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	draw_fill_chars(59, 44, 76, 47, 0);
+	draw_fill_chars(59, 44, 76, 47, DEFAULT_FG, 0);
 	draw_box(58, 43, 77, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	f = NULL;
 	if (current_file >= 0 && current_file < flist.num_files && flist.files[current_file]) {
 		f = flist.files[current_file];
 
-		sprintf(sbuf, "%07d", f->smp_length);
+		sprintf(sbuf, "%07u", f->smp_length);
 		draw_text_len(sbuf, 13, 64, 22, 2, 0);
 
 		if (!f->smp_length && !f->smp_filename && !f->smp_flags) {
@@ -321,15 +331,20 @@ static void _common_set_page(void)
 {
 	struct stat st;
 
+	if (!*samp_cwd) {
+		strncpy(samp_cwd, cfg_dir_samples, PATH_MAX);
+		samp_cwd[PATH_MAX] = '\0';
+	}
+
 	/* if we have a list, the directory didn't change, and the mtime is the same, we're set */
 	if (flist.num_files > 0
 	    && (status.flags & DIR_SAMPLES_CHANGED) == 0
-	    && os_stat(cfg_dir_samples, &st) == 0
+	    && os_stat(samp_cwd, &st) == 0
 	    && st.st_mtime == directory_mtime) {
 		return;
 	}
 
-	change_dir(cfg_dir_samples);
+	change_dir(samp_cwd);
 
 	status.flags &= ~DIR_SAMPLES_CHANGED;
 	fake_slot = KEYJAZZ_NOINST;
@@ -376,9 +391,10 @@ static void file_list_draw(void)
 		draw_text(numtostr(3, n+1, buf), 2, pos, 0, 2);
 		draw_text_len(file->title ? file->title : "", 25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
-		CHARSET_EASY_MODE(file->base ? file->base : "", CHARSET_CHAR, CHARSET_CP437, {
-			draw_text_bios_len(out, 18, 32, pos, fg, bg);
+		draw_text_utf8_len(file->base ? file->base : "", 18, 32, pos, fg, bg);
 
+		CHARSET_EASY_MODE(file->base ? file->base : "", CHARSET_CHAR, CHARSET_CP437, {
+			/* XXX this is wrong */
 			if (file->base && search_pos > -1) {
 				if (strncasecmp(out,search_str,search_pos) == 0) {
 					for (i = 0 ; i < search_pos; i++) {
@@ -506,15 +522,15 @@ static void finish_load(int cur)
 	smp = song_get_sample(cur);
 	if (smp->flags & CHN_STEREO) {
 		struct dialog *dd;
-		create_button(stereo_cvt_widgets+0, 27, 30, 6,
+		widget_create_button(stereo_cvt_widgets+0, 27, 30, 6,
 				0, 0, 2, 1, 1,
 				stereo_cvt_complete_left, "Left", 2);
 
-		create_button(stereo_cvt_widgets+1, 37, 30, 6,
+		widget_create_button(stereo_cvt_widgets+1, 37, 30, 6,
 				1, 1, 0, 2, 2,
 				stereo_cvt_complete_both, "Both", 2);
 
-		create_button(stereo_cvt_widgets+2, 47, 30, 6,
+		widget_create_button(stereo_cvt_widgets+2, 47, 30, 6,
 				2, 2, 1, 0, 0,
 				stereo_cvt_complete_right, "Right", 1);
 
@@ -924,88 +940,88 @@ void load_sample_load_page(struct page *page)
 	clear_directory();
 
 
-	create_other(widgets_loadsample + 0, 0,
+	widget_create_other(widgets_loadsample + 0, 0,
 				file_list_handle_key,
 				file_list_handle_text_input,
 				file_list_draw);
 	widgets_loadsample[0].accept_text = 1;
 	widgets_loadsample[0].next.tab = 1;
 
-	create_textentry(widgets_loadsample+1,
+	widget_create_textentry(widgets_loadsample+1,
 			64, 13,
 			13,
 				1,2, 9, handle_rename_op,
 				current_filename, sizeof(current_filename)-1);
 	sample_speed_pos = 0;
-	create_numentry(widgets_loadsample+2,
+	widget_create_numentry(widgets_loadsample+2,
 			64, 14,
 			7,
 			1,3, 9, handle_load_update,
 			0, 9999999,
 			&sample_speed_pos);
 
-	create_menutoggle(widgets_loadsample+3,
+	widget_create_menutoggle(widgets_loadsample+3,
 			64, 15,
 			2, 4,  0,  9,9, handle_load_update,
 			loop_states);
 
 	sample_loop_beg = 0;
-	create_numentry(widgets_loadsample+4,
+	widget_create_numentry(widgets_loadsample+4,
 			64, 16,
 			7,
 			3,5, 9, handle_load_update,
 			0, 9999999,
 			&sample_loop_beg);
 	sample_loop_end = 0;
-	create_numentry(widgets_loadsample+5,
+	widget_create_numentry(widgets_loadsample+5,
 			64, 17,
 			7,
 			4,6, 9, handle_load_update,
 			0, 9999999,
 			&sample_loop_end);
 
-	create_menutoggle(widgets_loadsample+6,
+	widget_create_menutoggle(widgets_loadsample+6,
 			64, 18,
 			5, 7,  0,  9,9, handle_load_update,
 			loop_states);
 
 	sample_susloop_beg = 0;
-	create_numentry(widgets_loadsample+7,
+	widget_create_numentry(widgets_loadsample+7,
 			64, 19,
 			7,
 			6,8, 9, handle_load_update,
 			0, 9999999,
 			&sample_susloop_beg);
 	sample_susloop_end = 0;
-	create_numentry(widgets_loadsample+8,
+	widget_create_numentry(widgets_loadsample+8,
 			64, 20,
 			7,
 			7,9, 9, handle_load_update,
 			0, 9999999,
 			&sample_susloop_end);
 
-	create_thumbbar(widgets_loadsample+9,
+	widget_create_thumbbar(widgets_loadsample+9,
 			63, 33,
 			9,
 			8, 10, 0, handle_load_update,
 			0,64);
-	create_thumbbar(widgets_loadsample+10,
+	widget_create_thumbbar(widgets_loadsample+10,
 			63, 34,
 			9,
 			9, 11, 0, handle_load_update,
 			0,64);
 
-	create_thumbbar(widgets_loadsample+11,
+	widget_create_thumbbar(widgets_loadsample+11,
 			63, 37,
 			9,
 			10, 12, 0, handle_load_update,
 			0,64);
-	create_thumbbar(widgets_loadsample+12,
+	widget_create_thumbbar(widgets_loadsample+12,
 			63, 38,
 			9,
 			11, 13, 0, handle_load_update,
 			0,32);
-	create_thumbbar(widgets_loadsample+13,
+	widget_create_thumbbar(widgets_loadsample+13,
 			63, 39,
 			9,
 			12, 13, 0, handle_load_update,

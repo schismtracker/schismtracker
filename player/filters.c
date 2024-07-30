@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "sndfile.h"
-#include "cmixer.h"
+#include "player/sndfile.h"
+#include "player/cmixer.h"
 #include <math.h>
 
 
@@ -112,8 +112,8 @@ void setup_channel_filter(song_voice_t *chan, int reset, int flt_modifier, int f
 	chan->filter_b1 = (int32_t)(fb1 * (1 << FILTERPRECISION));
 
 	if (reset) {
-		chan->filter_y1 = chan->filter_y2 = 0;
-		chan->filter_y3 = chan->filter_y4 = 0;
+		chan->filter_y[0][0] = chan->filter_y[0][1] = 0;
+		chan->filter_y[1][0] = chan->filter_y[1][1] = 0;
 	}
 }
 

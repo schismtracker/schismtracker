@@ -21,14 +21,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
-#if HAVE_MMAP
-#include <sys/types.h>
 #include <sys/mman.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -68,5 +61,3 @@ int slurp_mmap(slurp_t *useme, const char *filename, size_t st)
 	useme->extra = fd;
 	return 1;
 }
-
-#endif

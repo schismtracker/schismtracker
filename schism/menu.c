@@ -24,8 +24,10 @@
 #include "headers.h"
 
 #include "it.h"
+#include "vgamem.h"
 #include "song.h"
 #include "page.h"
+#include "dialog.h"
 
 #include "sdlmain.h"
 
@@ -260,7 +262,7 @@ static void _draw_menu(struct menu *menu)
 		 BOX_THICK | BOX_OUTER | BOX_FLAT_LIGHT);
 	draw_box(menu->x + 1, menu->y + 1, menu->x + menu->w + 6,
 		 menu->y + h - 2, BOX_THIN | BOX_OUTER | BOX_FLAT_DARK);
-	draw_fill_chars(menu->x + 2, menu->y + 2, menu->x + menu->w + 5, menu->y + 3, 2);
+	draw_fill_chars(menu->x + 2, menu->y + 2, menu->x + menu->w + 5, menu->y + 3, DEFAULT_FG, 2);
 	draw_text(menu->title, menu->x + 6, menu->y + 2, 3, 2);
 }
 
@@ -348,7 +350,7 @@ static void main_menu_selected_cb(void)
 		break;
 	case 8: /* settings menu */
 		/* fudge the menu to show/hide the fullscreen toggle as appropriate */
-		if (status.flags & WM_AVAILABLE)
+		if (video_is_wm_available())
 			settings_menu.num_items = 6;
 		else
 			settings_menu.num_items = 5;

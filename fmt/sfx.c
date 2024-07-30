@@ -22,11 +22,12 @@
  */
 
 #include "headers.h"
+#include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
 #include "log.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -73,12 +74,12 @@ Mikmod support SFX (and for good reason; it's a particularly dumb format) */
 int fmt_sfx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
 	uint8_t tag[4];
-	int n, nord, npat, pat, chan, restart, nsmp = 0;
+	int nord, npat, pat, chan, restart, nsmp = 0;
 	uint32_t smpsize[31];
 	uint16_t tmp;
 	song_note_t *note;
 	song_sample_t *sample;
-	unsigned int effwarn = 0;
+	unsigned int effwarn = 0, n;
 	struct sfxfmt *fmt = sfxfmts;
 
 	do {

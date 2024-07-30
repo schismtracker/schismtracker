@@ -26,7 +26,7 @@ Fick <webmaster@mark-f.de> (spline mixing, fir-resampler) and Adam Goode
 <adam@evdebs.org> (endian-ness and char fixes).
 
 Further changes to the player code were back-ported from the OpenMPT project
-<http://modplug.sourceforge.net/>.
+<https://openmpt.org/> by Storlek and Saga Musix.
 
 Ben de Graaff rewrote a large portion of libmodplug in C.
 

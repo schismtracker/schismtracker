@@ -28,8 +28,9 @@
 #include "it.h"
 #include "song.h"
 #include "page.h"
+#include "vgamem.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 #include "sdlmain.h"
 
@@ -37,42 +38,44 @@
 
 static int status_bios = 0;
 static char *status_text = NULL;
-static uint32_t text_timeout;
+static schism_ticks_t text_timeout;
 
 /* --------------------------------------------------------------------- */
+
+static void status_text_flash_generic(const char *format, int bios, va_list ap)
+{
+	text_timeout = SCHISM_GET_TICKS() + 1000;
+
+	if (status_text)
+		free(status_text);
+
+	status_bios = bios;
+
+	if (vasprintf(&status_text, format, ap) == -1) abort();
+
+	status.flags |= NEED_UPDATE;
+}
 
 void status_text_flash(const char *format, ...)
 {
 	va_list ap;
 
-	text_timeout = SDL_GetTicks() + 1000;
-
-	if (status_text)
-		free(status_text);
-
-	status_bios = 0;
 	va_start(ap, format);
-	if (vasprintf(&status_text, format, ap) == -1) abort();
-	va_end(ap);
 
-	status.flags |= NEED_UPDATE;
+	status_text_flash_generic(format, 0, ap);
+
+	va_end(ap);
 }
 
 void status_text_flash_bios(const char *format, ...)
 {
 	va_list ap;
 
-	text_timeout = SDL_GetTicks() + 1000;
-
-	if (status_text)
-		free(status_text);
-
-	status_bios = 1;
 	va_start(ap, format);
-	if (vasprintf(&status_text, format, ap) == -1) abort();
-	va_end(ap);
 
-	status.flags |= NEED_UPDATE;
+	status_text_flash_generic(format, 1, ap);
+
+	va_end(ap);
 }
 
 /* --------------------------------------------------------------------- */
@@ -153,7 +156,7 @@ static inline void draw_playing_channels(void)
 
 void status_text_redraw(void)
 {
-	uint32_t now = SDL_GetTicks();
+	schism_ticks_t now = SCHISM_GET_TICKS();
 
 	/* if there's a message set, and it's expired, clear it */
 	if (status_text && now > text_timeout) {

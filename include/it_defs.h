@@ -1,7 +1,16 @@
 #ifndef SCHISM_IT_DEFS_H_
 #define SCHISM_IT_DEFS_H_
 
+#include "headers.h" /* SCHISM_BINARY_STRUCT */
+
 #pragma pack(push, 1)
+
+struct it_notetrans {
+	uint8_t note;
+	uint8_t sample;
+};
+
+SCHISM_BINARY_STRUCT(struct it_notetrans, 2);
 
 struct it_file {
 	uint32_t id;                    // 0x4D504D49
@@ -29,6 +38,14 @@ struct it_file {
 	uint8_t chnvol[64];
 };
 
+SCHISM_BINARY_STRUCT(struct it_file, 192);
+
+struct it_envelope_node {
+	int8_t value; // signed (-32 -> 32 for pan and pitch; 0 -> 64 for vol and filter)
+	uint16_t tick;
+};
+
+SCHISM_BINARY_STRUCT(struct it_envelope_node, 3);
 
 struct it_envelope {
 	uint8_t flags;
@@ -37,9 +54,11 @@ struct it_envelope {
 	uint8_t lpe;
 	uint8_t slb;
 	uint8_t sle;
-	uint8_t data[25*3];
+	struct it_envelope_node nodes[25];
 	uint8_t reserved;
 };
+
+SCHISM_BINARY_STRUCT(struct it_envelope, 82);
 
 // Old Impulse Instrument Format (cmwt < 0x200)
 struct it_instrument_old {
@@ -60,11 +79,12 @@ struct it_instrument_old {
 	uint8_t reserved2;
 	int8_t name[26];
 	uint16_t reserved3[3];
-	uint8_t keyboard[240];
+	struct it_notetrans keyboard[120];
 	uint8_t volenv[200];
 	uint8_t nodes[50];
 };
 
+SCHISM_BINARY_STRUCT(struct it_instrument_old, 554);
 
 // Impulse Instrument Format
 struct it_instrument {
@@ -90,13 +110,14 @@ struct it_instrument {
 	uint8_t mch;
 	uint8_t mpr;
 	uint16_t mbank;
-	uint8_t keyboard[240];
+	struct it_notetrans keyboard[120];
 	struct it_envelope volenv;
 	struct it_envelope panenv;
 	struct it_envelope pitchenv;
 	uint8_t dummy[4]; // was 7, but IT v2.17 saves 554 bytes
 };
 
+SCHISM_BINARY_STRUCT(struct it_instrument, 554);
 
 // IT Sample Format
 struct it_sample {
@@ -112,7 +133,7 @@ struct it_sample {
 	uint32_t length;
 	uint32_t loopbegin;
 	uint32_t loopend;
-	uint32_t C5Speed;
+	uint32_t c5speed;
 	uint32_t susloopbegin;
 	uint32_t susloopend;
 	uint32_t samplepointer;
@@ -122,7 +143,29 @@ struct it_sample {
 	uint8_t vit;
 };
 
+SCHISM_BINARY_STRUCT(struct it_sample, 80);
+
+struct it_time_history {
+	uint16_t fat_date;
+	uint16_t fat_time;
+	uint32_t run_time;
+};
+
+SCHISM_BINARY_STRUCT(struct it_time_history, 8);
+
 #pragma pack(pop)
+
+/* pattern mask variable bits */
+enum {
+	ITNOTE_NOTE = 1,
+	ITNOTE_SAMPLE = 2,
+	ITNOTE_VOLUME = 4,
+	ITNOTE_EFFECT = 8,
+	ITNOTE_SAME_NOTE = 16,
+	ITNOTE_SAME_SAMPLE = 32,
+	ITNOTE_SAME_VOLUME = 64,
+	ITNOTE_SAME_EFFECT = 128,
+};
 
 
 #endif /* SCHISM_IT_DEFS_H_ */

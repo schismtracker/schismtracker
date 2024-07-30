@@ -22,9 +22,10 @@
  */
 
 #include "headers.h"
+#include "bswap.h"
 #include "fmt.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 #include "song.h"
 #include "it_defs.h"
 
@@ -65,7 +66,7 @@ int fmt_its_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 	file->smp_loop_start = bswapLE32(its->loopbegin);
 	file->smp_loop_end = bswapLE32(its->loopend);
-	file->smp_speed = bswapLE32(its->C5Speed);
+	file->smp_speed = bswapLE32(its->c5speed);
 	file->smp_sustain_start = bswapLE32(its->susloopbegin);
 	file->smp_sustain_end = bswapLE32(its->susloopend);
 
@@ -124,7 +125,7 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
 		smp->flags |= CHN_PANNING;
 	smp->loop_start = bswapLE32(its->loopbegin);
 	smp->loop_end = bswapLE32(its->loopend);
-	smp->c5speed = bswapLE32(its->C5Speed);
+	smp->c5speed = bswapLE32(its->c5speed);
 	smp->sustain_start = bswapLE32(its->susloopbegin);
 	smp->sustain_end = bswapLE32(its->susloopend);
 
@@ -197,7 +198,7 @@ void save_its_header(disko_t *fp, song_sample_t *smp)
 	its.length = bswapLE32(smp->length);
 	its.loopbegin = bswapLE32(smp->loop_start);
 	its.loopend = bswapLE32(smp->loop_end);
-	its.C5Speed = bswapLE32(smp->c5speed);
+	its.c5speed = bswapLE32(smp->c5speed);
 	its.susloopbegin = bswapLE32(smp->sustain_start);
 	its.susloopend = bswapLE32(smp->sustain_end);
 	//its.samplepointer = 42; - this will be filled in later

@@ -24,11 +24,16 @@
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
 #include "charset.h"
 #include "song.h"
 #include "page.h"
 #include "dmoz.h"
 #include "log.h"
+#include "fakemem.h"
+#include "dialog.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -153,8 +158,8 @@ static int change_dir(const char *dir)
 
 static void load_instrument_draw_const(void)
 {
-	draw_fill_chars(6, 13, 67, 47, 0);
-	draw_thin_inner_box(50, 12, 61, 48, 0,0);
+	draw_fill_chars(6, 13, 67, 47, DEFAULT_FG, 0);
+	draw_box(50, 12, 61, 48, BOX_THIN | BOX_INNER | BOX_SHADE_NONE);
 	draw_box(5, 12, 68, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 
 }
@@ -225,9 +230,8 @@ static void file_list_draw(void)
 		draw_text_len((file->title ? file->title : ""),
 						25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
+		draw_text_utf8_len(file->base ? file->base : "", 18, 32, pos, fg, bg);
 		CHARSET_EASY_MODE(file->base ? file->base : "", CHARSET_CHAR, CHARSET_CP437, {
-			draw_text_bios_len(out, 18, 32, pos, fg, bg);
-
 			if (file->base && slash_search_mode > -1) {
 				if (strncasecmp(out,slash_search_str,slash_search_mode) == 0) {
 					for (i = 0 ; i < slash_search_mode; i++) {
@@ -240,7 +244,7 @@ static void file_list_draw(void)
 		});
 
 		if (file->sampsize > 1) {
-			sprintf(sbuf, "%u Samples", file->sampsize);
+			sprintf(sbuf, "%d Samples", file->sampsize);
 			draw_text_len(sbuf, 10, 51, pos, fg, bg);
 		} else if (file->sampsize == 1) {
 			draw_text("1 Sample  ", 51, pos, fg, bg);
@@ -525,7 +529,7 @@ void load_instrument_load_page(struct page *page)
 	page->total_widgets = 1;
 	page->widgets = widgets_loadinst;
 	page->help_index = HELP_GLOBAL;
-	create_other(widgets_loadinst + 0, 0, file_list_handle_key, file_list_handle_text_input, file_list_draw);
+	widget_create_other(widgets_loadinst + 0, 0, file_list_handle_key, file_list_handle_text_input, file_list_draw);
 	widgets_loadinst[0].accept_text = 1;
 }
 

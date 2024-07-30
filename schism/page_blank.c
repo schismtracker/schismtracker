@@ -25,6 +25,7 @@
 
 #include "it.h"
 #include "page.h"
+#include "widget.h"
 
 #include "sdlmain.h"
 
@@ -52,5 +53,5 @@ void blank_load_page(struct page *page)
 	page->widgets = widgets_blank;
 	page->help_index = HELP_GLOBAL;
 
-	create_other(widgets_blank + 0, 0, blank_page_handle_key, NULL, blank_page_redraw);
+	widget_create_other(widgets_blank + 0, 0, blank_page_handle_key, NULL, blank_page_redraw);
 }

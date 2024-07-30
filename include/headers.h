@@ -25,17 +25,13 @@
 #define SCHISM_HEADERS_H_
 /* This is probably overkill, but it's consistent this way. */
 
-#define _GNU_SOURCE /* need this for <stdlib.h> to give us some functions */
-
 #ifdef HAVE_CONFIG_H
-# include <config.h>
+# include <build-config.h>
 #endif
 
 #include <stdio.h>
-
-#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
-#endif
+#include <stdint.h>
 
 #include <stdarg.h>
 
@@ -43,23 +39,7 @@
 #include <sys/param.h>
 #endif
 
-#include <stdint.h>
-
-
-/* Portability is a pain. */
-#if STDC_HEADERS
-# include <string.h>
-#else
-# ifndef HAVE_STRCHR
-#  define strchr index
-#  define strrchr rindex
-# endif
-char *strchr(), *strrchr();
-# ifndef HAVE_MEMMOVE
-#  define memcpy(d, s, n) bcopy ((s), (d), (n))
-#  define memmove(d, s, n) bcopy ((s), (d), (n))
-# endif
-#endif
+#include <string.h>
 
 #if !defined(HAVE_STRCASECMP) && defined(HAVE_STRICMP)
 # define strcasecmp stricmp
@@ -69,6 +49,10 @@ char *strchr(), *strrchr();
 #endif
 #ifndef HAVE_STRVERSCMP
 # define strverscmp strcasecmp
+#else
+/* need to declare this because its a GNU function, and
+ * we specifically don't want to define _GNU_SOURCE */
+int strverscmp(const char *s1, const char *s2);
 #endif
 #ifndef HAVE_STRCASESTR
 # define strcasestr strstr // derp
@@ -79,29 +63,14 @@ char *strchr(), *strrchr();
 # include <unistd.h>
 #endif
 
-
-#if HAVE_DIRENT_H
-# include <dirent.h>
-# ifndef _D_EXACT_NAMLEN
-#  define _D_EXACT_NAMLEN(dirent) strlen((dirent)->d_name)
-# endif
-#else
-# define dirent direct
-# ifndef _D_EXACT_NAMLEN
-#  define _D_EXACT_NAMLEN(dirent) strlen((dirent)->d_name)
-# endif
-# if HAVE_SYS_NDIR_H
-#  include <sys/ndir.h>
-# endif
-# if HAVE_SYS_DIR_H
-#  include <sys/dir.h>
-# endif
-# if HAVE_NDIR_H
-#  include <ndir.h>
-# endif
+#include <dirent.h>
+#ifndef _D_EXACT_NAMLEN
+# define _D_EXACT_NAMLEN(dirent) strlen((dirent)->d_name)
 #endif
 
-/* dumb workaround for dumb devkitppc bug */
+/* dumb workaround for dumb devkitppc bug
+ *
+ * XXX is this still relevant at all? */
 #ifdef SCHISM_WII
 # undef NAME_MAX
 # undef PATH_MAX
@@ -128,6 +97,7 @@ char *strchr(), *strrchr();
 # include <sys/time.h>
 #endif
 #include <time.h>
+
 #ifndef timersub
 // from FreeBSD
 # define timersub(tvp, uvp, vvp)                                       \
@@ -141,72 +111,34 @@ char *strchr(), *strrchr();
 	} while (0)
 #endif
 
-#if HAVE_BYTESWAP_H
-/* byteswap.h uses inline assembly if possible (faster than bit-shifting) */
-# include <byteswap.h>
-#else
-# define bswap_32(x) (((((unsigned int)x) & 0xFF) << 24) | ((((unsigned int)x) & 0xFF00) << 8) \
-		       | (((((unsigned int)x) & 0xFF0000) >> 8) & 0xFF00) \
-		       | ((((((unsigned int)x) & 0xFF000000) >> 24)) & 0xFF))
-# define bswap_16(x) (((((unsigned short)x) >> 8) & 0xFF) | ((((unsigned short)x) << 8) & 0xFF00))
-#endif
-/* define the endian-related byte swapping (taken from libmodplug sndfile.h, glibc, and sdl) */
-#if defined(ARM) && defined(_SCHISM_WIN32_WCE)
-/* I have no idea what this does, but okay :) */
+/* Prototypes for replacement functions; if the standard library
+ * declaration doesn't match these, we're screwed anyway... */
 
-/* This forces integer operations to only occur on aligned
-   addresses. -mrsb */
-static inline uint16_t ARM_get16(const void *data)
-{
-	uint16_t s;
-	memcpy(&s,data,sizeof(s));
-	return s;
-}
-static inline uint32_t ARM_get32(const void *data)
-{
-	uint32_t s;
-	memcpy(&s,data,sizeof(s));
-	return s;
-}
-# define bswapLE16(x) ARM_get16(&(x))
-# define bswapLE32(x) ARM_get32(&(x))
-# define bswapBE16(x) bswap_16(ARM_get16(&(x)))
-# define bswapBE32(x) bswap_32(ARM_get32(&(x)))
-#elif WORDS_BIGENDIAN
-# define bswapLE16(x) bswap_16(x)
-# define bswapLE32(x) bswap_32(x)
-# define bswapBE16(x) (x)
-# define bswapBE32(x) (x)
-#else
-# define bswapBE16(x) bswap_16(x)
-# define bswapBE32(x) bswap_32(x)
-# define bswapLE16(x) (x)
-# define bswapLE32(x) (x)
-#endif
-
-/* Prototypes for replacement functions */
-
-#ifndef HAVE_ASPRINTF
 int asprintf(char **strp, const char *fmt, ...);
-#endif
-
-#ifndef HAVE_VASPRINTF
 int vasprintf(char **strp, const char *fmt, va_list ap);
-#endif
-
-#ifndef HAVE_STRPTIME
 char *strptime(const char *buf, const char *fmt, struct tm *tm);
-#endif
-
-#ifdef SCHISM_WIN32
-struct tm *localtime_r(const time_t *timep, struct tm *result);
-#endif
-
-#ifndef HAVE_MKSTEMP
 int mkstemp(char *template);
+struct tm *localtime_r(const time_t *timep, struct tm *result);
+
+#define INT_SHAPED_PTR(v)               ((intptr_t)(void*)(v))
+#define PTR_SHAPED_INT(i)               ((void*)(i))
+
+/* -------------------------------------------------------------- */
+/* C99 compatible static assertion */
+
+#if (__STDC_VERSION__ >= 201112L)
+# define SCHISM_STATIC_ASSERT(x, msg) _Static_assert(x, msg)
+#else
+/* should work anywhere and shouldn't dump random stack allocations
+ * BUT it fails to provide any sort of useful message to the user */
+# define SCHISM_STATIC_ASSERT(x, msg) \
+    extern int (*schism_static_assert_function_no_touchy_touchy_plz(void)) \
+      [!!sizeof (struct { int __error_if_negative: (x) ? 2 : -1; })]
 #endif
 
-#define INT_SHAPED_PTR(v)               ((intptr_t)(((void*)(v))))
-#define PTR_SHAPED_INT(i)               ((void*)(i))
+/* similar to OpenMPT's `MPT_BINARY_STRUCT`, errors out if the
+ * size of `type` is not equal to `size` for e.g. packed structures */
+#define SCHISM_BINARY_STRUCT(type, size) \
+	SCHISM_STATIC_ASSERT(sizeof(type) == (size), "ERROR: struct size is different than what was expected (" #size ")");
 
 #endif /* SCHISM_HEADERS_H_ */

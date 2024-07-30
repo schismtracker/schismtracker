@@ -57,7 +57,7 @@ doing weird stuff like hacking the files, but then you're just asking for troubl
 #ifndef LOAD_INSTRUMENT
 # define LOAD_INSTRUMENT(x)
 #endif
-#ifndef SAVE_INSTRUMENT /* not actually used - instrument saving is currently hardcoded to write .iti files */
+#ifndef SAVE_INSTRUMENT
 # define SAVE_INSTRUMENT(x)
 #endif
 #ifndef EXPORT
@@ -100,6 +100,7 @@ READ_INFO(okt) LOAD_SONG(okt)
 READ_INFO(mid) LOAD_SONG(mid)
 READ_INFO(mus) LOAD_SONG(mus)
 READ_INFO(mf)
+READ_INFO(dsm) LOAD_SONG(dsm)
 
 /* Sample formats with magic at start of file */
 READ_INFO(its)  LOAD_SAMPLE(its)  SAVE_SAMPLE(its)
@@ -109,8 +110,8 @@ READ_INFO(wav)  LOAD_SAMPLE(wav)  SAVE_SAMPLE(wav)  EXPORT(wav)
 #ifdef USE_FLAC
 READ_INFO(flac) LOAD_SAMPLE(flac) SAVE_SAMPLE(flac) EXPORT(flac)
 #endif
-READ_INFO(iti)  LOAD_INSTRUMENT(iti)
-READ_INFO(xi)   LOAD_INSTRUMENT(xi)
+READ_INFO(iti)  LOAD_INSTRUMENT(iti) SAVE_INSTRUMENT(iti)
+READ_INFO(xi)   LOAD_INSTRUMENT(xi)  SAVE_INSTRUMENT(xi)
 READ_INFO(pat)  LOAD_INSTRUMENT(pat)
 
 READ_INFO(ult) LOAD_SONG(ult)

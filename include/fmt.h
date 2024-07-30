@@ -31,7 +31,7 @@
 
 #include "disko.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* module loaders */
@@ -64,6 +64,7 @@ enum {
 #define PROTO_LOAD_SAMPLE       (const uint8_t *data, size_t length, song_sample_t *smp)
 #define PROTO_SAVE_SAMPLE       (disko_t *fp, song_sample_t *smp)
 #define PROTO_LOAD_INSTRUMENT   (const uint8_t *data, size_t length, int slot)
+#define PROTO_SAVE_INSTRUMENT   (disko_t *fp, song_t *song, song_instrument_t *ins)
 #define PROTO_EXPORT_HEAD       (disko_t *fp, int bits, int channels, int rate)
 #define PROTO_EXPORT_SILENCE    (disko_t *fp, long bytes)
 #define PROTO_EXPORT_BODY       (disko_t *fp, const uint8_t *data, size_t length)
@@ -75,6 +76,7 @@ typedef int (*fmt_save_song_func)       PROTO_SAVE_SONG;
 typedef int (*fmt_load_sample_func)     PROTO_LOAD_SAMPLE;
 typedef int (*fmt_save_sample_func)     PROTO_SAVE_SAMPLE;
 typedef int (*fmt_load_instrument_func) PROTO_LOAD_INSTRUMENT;
+typedef int (*fmt_save_instrument_func) PROTO_SAVE_INSTRUMENT;
 typedef int (*fmt_export_head_func)     PROTO_EXPORT_HEAD;
 typedef int (*fmt_export_silence_func)  PROTO_EXPORT_SILENCE;
 typedef int (*fmt_export_body_func)     PROTO_EXPORT_BODY;
@@ -86,6 +88,7 @@ typedef int (*fmt_export_tail_func)     PROTO_EXPORT_TAIL;
 #define LOAD_SAMPLE(t)          int fmt_##t##_load_sample       PROTO_LOAD_SAMPLE;
 #define SAVE_SAMPLE(t)          int fmt_##t##_save_sample       PROTO_SAVE_SAMPLE;
 #define LOAD_INSTRUMENT(t)      int fmt_##t##_load_instrument   PROTO_LOAD_INSTRUMENT;
+#define SAVE_INSTRUMENT(t)		int fmt_##t##_save_instrument	PROTO_SAVE_INSTRUMENT;
 #define EXPORT(t)               int fmt_##t##_export_head       PROTO_EXPORT_HEAD; \
 				int fmt_##t##_export_silence    PROTO_EXPORT_SILENCE; \
 				int fmt_##t##_export_body       PROTO_EXPORT_BODY; \
@@ -102,6 +105,7 @@ struct save_format {
 	union {
 		fmt_save_song_func save_song;
 		fmt_save_sample_func save_sample;
+		fmt_save_instrument_func save_instrument;
 		struct {
 			fmt_export_head_func head;
 			fmt_export_silence_func silence;
@@ -115,6 +119,7 @@ struct save_format {
 extern const struct save_format song_save_formats[];
 extern const struct save_format song_export_formats[];
 extern const struct save_format sample_save_formats[];
+extern const struct save_format instrument_save_formats[];
 
 /* --------------------------------------------------------------------------------------------------------- */
 struct instrumentloader {
@@ -137,7 +142,10 @@ uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, uint8_t **ibuf, int8_
 
 /* shared by the .it, .its, and .iti saving functions */
 void save_its_header(disko_t *fp, song_sample_t *smp);
+void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int iti_file);
 int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, song_sample_t *smp);
+void load_it_instrument(song_instrument_t *instrument, const uint8_t *data);
+void load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp);
 
 /* --------------------------------------------------------------------------------------------------------- */
 // other misc functions...
@@ -167,6 +175,9 @@ uint8_t convert_stm_tempo_to_bpm(size_t tempo);
 void handle_stm_tempo_pattern(song_note_t *note, size_t tempo);
 void handle_stm_effects(song_note_t *chan_note);
 extern const uint8_t stm_effects[16];
+
+/* used internally by slurp only. nothing else should need this */
+int mmcmp_unpack(uint8_t **data, size_t *length);
 
 // get L-R-R-L panning value from a (zero-based!) channel number
 #define PROTRACKER_PANNING(n) (((((n) + 1) >> 1) & 1) * 256)
