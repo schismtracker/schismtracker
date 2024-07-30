@@ -1633,7 +1633,7 @@ void sample_list_load_page(struct page *page)
 	vgamem_ovl_alloc(&sample_image);
 
 	char* shortcut_text = (char*)global_keybinds_list.global.sample_list.shortcut_text_parens;
-	page->title = str_concat_two("Sample List", shortcut_text, 0);
+	page->title = str_concat_2("Sample List", shortcut_text);
 
 	page->draw_const = sample_list_draw_const;
 	page->predraw_hook = sample_list_predraw_hook;

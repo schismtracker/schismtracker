@@ -175,23 +175,30 @@ char *str_unescape(const char *source);
 char *pretty_name(const char *filename);
 int get_num_lines(const char *text);
 
-/* Concat strings. Last argument must be NULL */
-// char* str_concat(const char* input_str, ...); // NOT WORKING
-
 /* Count how many times character is in str */
 int str_count_occurences(char character, const char* str);
 
-/* count is size of array. str_array is the array. If free_inputs is true free() will be called on the strings. */
-char* str_concat_array(int count, char** str_array, int free_inputs);
+/* Concatenates strings in array. count is size of array. str_array is the array. */
+char* str_concat_array(int count, const char** str_array);
+/* Concatenates strings in array. count is size of array. str_array is the array. Frees the strings in the array. */
+char* str_concat_array_free(int count, char** str_array);
 
-char* str_concat_two(char* str1, char* str2, int free_inputs);
-char* str_concat_three(char* str1, char* str2, char* str3, int free_inputs);
-char* str_concat_four(char* str1, char* str2, char* str3, char* str4, int free_inputs);
-char* str_concat_five(char* str1, char* str2, char* str3, char* str4, char* str5, int free_inputs);
-char* str_concat_six(char* str1, char* str2, char* str3, char* str4, char* str5, char* str6, int free_inputs);
+char* str_concat_2(const char* str1, const char* str2);
+char* str_concat_3(const char* str1, const char* str2, const char* str3);
+char* str_concat_4(const char* str1, const char* str2, const char* str3, const char* str4);
+char* str_concat_5(const char* str1, const char* str2, const char* str3, const char* str4, const char* str5);
+char* str_concat_6(const char* str1, const char* str2, const char* str3, const char* str4, const char* str5, const char* str6);
 
-/* count is size of array. str_array is the array. If free_inputs is true free() will be called on the strings. */
-char* str_concat_with_delim(int count, char** str_array, const char* delim, int free_inputs);
+char* str_concat_2_free(char* str1, char* str2);
+char* str_concat_3_free(char* str1, char* str2, char* str3);
+char* str_concat_4_free(char* str1, char* str2, char* str3, char* str4);
+char* str_concat_5_free(char* str1, char* str2, char* str3, char* str4, char* str5);
+char* str_concat_6_free(char* str1, char* str2, char* str3, char* str4, char* str5, char* str6);
+
+/* Concatenates strings in array, putting a delimiter between them. count is size of array. str_array is the array. */
+char* str_concat_with_delim(int count, const char** str_array, const char* delim);
+/* Concatenates strings in array, putting a delimiter between them. count is size of array. str_array is the array. Frees the strings in the array. */
+char* str_concat_with_delim_free(int count, char** str_array, const char* delim);
 
 /* pad will be placed between str1 and str2 until width is reached. If free_inputs is true free() will be called on the strings. */
 char* str_pad_between(char* str1, char* str2, char pad, int width, int min_padding, int free_inputs);

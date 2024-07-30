@@ -846,26 +846,7 @@ int str_count_occurences(char character, const char* str)
 	return count;
 }
 
-// char* str_concat(const char* input_str, ...)
-// {
-// 	char* out = strdup(input_str);
-// 	int len = 0;
-
-// 	va_list ap;
-// 	va_start(ap, input_str);
-// 	while (1) {
-// 		const char* current_arg = va_arg(ap, const char*);
-// 		if (!current_arg || !current_arg[0]) break;
-// 		len += strlen(current_arg);
-// 		out = realloc(out, len + 1); // mem_realloc(out, len + 1);
-// 		strcat(out, current_arg);
-// 	}
-// 	va_end(ap);
-
-// 	return out;
-// }
-
-char* str_concat_array(int count, char** str_array, int free_inputs)
+char* str_concat_array(int count, const char** str_array)
 {
 	int len = 0;
 
@@ -882,39 +863,82 @@ char* str_concat_array(int count, char** str_array, int free_inputs)
 	for(int i = 0; i < count; i++) {
 		if (!str_array[i] || !str_array[i][0]) continue;
 		strcat(out, str_array[i]);
-		if (free_inputs)
-			free(str_array[i]);
 	}
 
 	return out;
 }
 
-char* str_concat_two(char* str1, char* str2, int free_inputs) {
+char* str_concat_array_free(int count, char** str_array)
+{
+	char* out = str_concat_array(count, (const char**)str_array);
+
+	for(int i = 0; i < count; i++)
+		free(str_array[i]);
+
+	return out;
+}
+
+char* str_concat_2(const char* str1, const char* str2)
+{
+	const char* strings[2] = { str1, str2 };
+	return str_concat_array(2, strings);
+}
+
+char* str_concat_3(const char* str1, const char* str2, const char* str3)
+{
+	const char* strings[3] = { str1, str2, str3 };
+	return str_concat_array(3, strings);
+}
+
+char* str_concat_4(const char* str1, const char* str2, const char* str3, const char* str4)
+{
+	const char* strings[4] = { str1, str2, str3, str4 };
+	return str_concat_array(4, strings);
+}
+
+char* str_concat_5(const char* str1, const char* str2, const char* str3, const char* str4, const char* str5)
+{
+	const char* strings[5] = { str1, str2, str3, str4, str5 };
+	return str_concat_array(5, strings);
+}
+
+char* str_concat_6(const char* str1, const char* str2, const char* str3, const char* str4, const char* str5, const char* str6)
+{
+	const char* strings[6] = { str1, str2, str3, str4, str5, str6 };
+	return str_concat_array(6, strings);
+}
+
+char* str_concat_2_free(char* str1, char* str2)
+{
 	char* strings[2] = { str1, str2 };
-	return str_concat_array(2, strings, free_inputs);
+	return str_concat_array_free(2, strings);
 }
 
-char* str_concat_three(char* str1, char* str2, char* str3, int free_inputs) {
+char* str_concat_3_free(char* str1, char* str2, char* str3)
+{
 	char* strings[3] = { str1, str2, str3 };
-	return str_concat_array(3, strings, free_inputs);
+	return str_concat_array_free(3, strings);
 }
 
-char* str_concat_four(char* str1, char* str2, char* str3, char* str4, int free_inputs) {
+char* str_concat_4_free(char* str1, char* str2, char* str3, char* str4)
+{
 	char* strings[4] = { str1, str2, str3, str4 };
-	return str_concat_array(4, strings, free_inputs);
+	return str_concat_array_free(4, strings);
 }
 
-char* str_concat_five(char* str1, char* str2, char* str3, char* str4, char* str5, int free_inputs) {
+char* str_concat_5_free(char* str1, char* str2, char* str3, char* str4, char* str5)
+{
 	char* strings[5] = { str1, str2, str3, str4, str5 };
-	return str_concat_array(5, strings, free_inputs);
+	return str_concat_array_free(5, strings);
 }
 
-char* str_concat_six(char* str1, char* str2, char* str3, char* str4, char* str5, char* str6, int free_inputs) {
+char* str_concat_6_free(char* str1, char* str2, char* str3, char* str4, char* str5, char* str6)
+{
 	char* strings[6] = { str1, str2, str3, str4, str5, str6 };
-	return str_concat_array(6, strings, free_inputs);
+	return str_concat_array_free(6, strings);
 }
 
-char* str_concat_with_delim(int count, char** str_array, const char* delim, int free_inputs)
+char* str_concat_with_delim(int count, const char** str_array, const char* delim)
 {
 	int len = 0;
 	int delim_len = strlen(delim);
@@ -938,9 +962,17 @@ char* str_concat_with_delim(int count, char** str_array, const char* delim, int 
 		current_count++;
 		if (current_count != actual_count)
 			strcat(out, delim);
-		if (free_inputs)
-			free(str_array[i]);
 	}
+
+	return out;
+}
+
+char* str_concat_with_delim_free(int count, char** str_array, const char* delim)
+{
+	char* out = str_concat_with_delim(count, (const char**)str_array, delim);
+
+	for (int i = 0; i < count; i++)
+		free(str_array[i]);
 
 	return out;
 }

@@ -754,7 +754,7 @@ void orderpan_load_page(struct page *page)
 {
 	int n;
 	char* shortcut_text = (char*)global_keybinds_list.global.order_list.shortcut_text_parens;
-	page->title = str_concat_two("Order List and Panning", shortcut_text, 0);
+	page->title = str_concat_2("Order List and Panning", shortcut_text);
 	page->draw_const = orderpan_draw_const;
 	/* this does the work for both pages */
 	page->song_changed_cb = order_pan_vol_song_changed_cb;
@@ -790,7 +790,7 @@ void ordervol_load_page(struct page *page)
 {
 	int n;
 	char* shortcut_text = (char*)global_keybinds_list.global.order_list.shortcut_text_parens;
-	page->title = str_concat_two("Order List and Channel Volume", shortcut_text, 0);
+	page->title = str_concat_2("Order List and Channel Volume", shortcut_text);
 
 	page->draw_const = ordervol_draw_const;
 	page->playback_update = order_pan_vol_playback_update;

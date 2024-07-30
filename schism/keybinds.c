@@ -367,24 +367,22 @@ static void set_shortcut_text(keybind_bind_t* bind)
         if (key_text_length == 0)
             continue;
 
-        int length = strlen(ctrl_text) + strlen(alt_text) + strlen(shift_text) + key_text_length;
-        char* strings[4] = { (char*)ctrl_text, (char*)alt_text, (char*)shift_text, (char*)key_text };
-        char* next_out = str_concat_array(4, strings, 0);
+        char* next_out = str_concat_4(ctrl_text, alt_text, shift_text, key_text);
 
         out[i] = next_out;
 
         if(i == 0) {
             bind->first_shortcut_text = strdup(next_out);
-            bind->first_shortcut_text_parens = str_concat_three(" (", next_out, ")", 0);
+            bind->first_shortcut_text_parens = str_concat_3(" (", next_out, ")");
         }
 
         free(key_text);
     }
 
-    char* shortcut_text = str_concat_with_delim(MAX_SHORTCUTS, out, ", ", 0);
+    char* shortcut_text = str_concat_with_delim(MAX_SHORTCUTS, (const char**)out, ", ");
     bind->shortcut_text = shortcut_text;
     if(shortcut_text[0])
-        bind->shortcut_text_parens = str_concat_three(" (", shortcut_text, ")", 0);
+        bind->shortcut_text_parens = str_concat_3(" (", shortcut_text, ")");
 
     for (int i = 0; i < MAX_SHORTCUTS; i++) {
         if (!out[i]) continue;
@@ -393,7 +391,7 @@ static void set_shortcut_text(keybind_bind_t* bind)
 
         if(text && text[0]) {
             char* padded = str_pad_between(text, "", ' ', 18, 1, 0);
-            out[i] = str_concat_two("    ", padded, 0);
+            out[i] = str_concat_2("    ", padded);
             free(padded);
         }
 
@@ -401,8 +399,8 @@ static void set_shortcut_text(keybind_bind_t* bind)
             free(text);
     }
 
-    char* help_shortcuts = str_concat_with_delim(MAX_SHORTCUTS, out, "\n", 1);
-    bind->help_text = str_concat_three(help_shortcuts, (char*)bind->description, "\n", 0);
+    char* help_shortcuts = str_concat_with_delim_free(MAX_SHORTCUTS, out, "\n");
+    bind->help_text = str_concat_3(help_shortcuts, (char*)bind->description, "\n");
     free(help_shortcuts);
 }
 
@@ -507,20 +505,20 @@ char* keybinds_get_help_text(enum page_numbers page)
 
         if (current_title != bind_title) {
             if (current_title != NULL && bind->section_info == &global_keybinds_list.global_info) {
-                out = str_concat_two(out, "\n \n%\n", 0);
+                out = str_concat_2(out, "\n \n%\n");
             }
 
             char* prev_out = out;
             if(current_title)
-                out = str_concat_four(out, "\n \n  ", (char*)bind_title, "\n", 0);
+                out = str_concat_4(out, "\n \n  ", (char*)bind_title, "\n");
             else
-                out = str_concat_four(out, "\n  ", (char*)bind_title, "\n", 0);
+                out = str_concat_4(out, "\n  ", (char*)bind_title, "\n");
             current_title = bind_title;
             free(prev_out);
         }
 
         char* prev_out = out;
-        out = str_concat_three(out, (char*)bind->help_text, "\n", 0);
+        out = str_concat_3(out, (char*)bind->help_text, "\n");
         free(prev_out);
     }
 

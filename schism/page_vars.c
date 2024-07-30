@@ -195,7 +195,7 @@ static void dir_instruments_changed(void)
 void song_vars_load_page(struct page *page)
 {
 	char* shortcut_text = (char*)global_keybinds_list.global.song_variables.shortcut_text_parens;
-	page->title = str_concat_two("Song Variables & Directory Configuration", shortcut_text, 0);
+	page->title = str_concat_2("Song Variables & Directory Configuration", shortcut_text);
 
 	page->draw_const = song_vars_draw_const;
 	page->song_changed_cb = song_changed_cb;

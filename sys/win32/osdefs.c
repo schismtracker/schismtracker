@@ -299,8 +299,8 @@ wchar_t* str_to_wchar(char* string, int free_inputs)
 
 #define append_menu(MENU, MENU_ITEM, NAME, KEYBIND_NAME) \
 	AppendMenuW(MENU, MF_STRING, MENU_ITEM, \
-		str_to_wchar(str_concat_two(("&" NAME "\t"), \
-			(char*)global_keybinds_list.global.KEYBIND_NAME.shortcut_text, 0), 1));
+		str_to_wchar(str_concat_2(("&" NAME "\t"), \
+			(char*)global_keybinds_list.global.KEYBIND_NAME.shortcut_text), 1));
 
 void win32_create_menu_2(void) {
 	menu = CreateMenu();

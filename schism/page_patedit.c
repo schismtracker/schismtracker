@@ -4357,7 +4357,7 @@ void pattern_editor_load_page(struct page *page)
 	}
 
 	char* shortcut_text = (char*)global_keybinds_list.global.pattern_edit.shortcut_text_parens;
-	page->title = str_concat_two("Pattern Editor", shortcut_text, 0);
+	page->title = str_concat_2("Pattern Editor", shortcut_text);
 
 	page->playback_update = pattern_editor_playback_update;
 	page->song_changed_cb = pated_song_changed;

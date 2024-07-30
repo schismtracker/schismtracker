@@ -1041,7 +1041,7 @@ void library_sample_load_page(struct page *page)
 {
 	/* this shares all the widgets from load_sample */
 	char* shortcut_text = (char*)global_keybinds_list.global.sample_library.shortcut_text_parens;
-	page->title = str_concat_two("Sample Library", shortcut_text, 0);
+	page->title = str_concat_2("Sample Library", shortcut_text);
 
 	page->draw_const = load_sample_draw_const;
 	page->set_page = library_sample_set_page;

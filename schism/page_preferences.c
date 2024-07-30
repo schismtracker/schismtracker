@@ -514,7 +514,7 @@ void preferences_load_page(struct page *page)
 	for (interp_modes = 0; interpolation_modes[interp_modes]; interp_modes++);
 
 	char* shortcut_text = (char*)global_keybinds_list.global.preferences.shortcut_text_parens;
-	page->title = str_concat_two("Preferences", shortcut_text, 0);
+	page->title = str_concat_2("Preferences", shortcut_text);
 
 	page->draw_const = preferences_draw_const;
 	page->set_page = preferences_set_page;

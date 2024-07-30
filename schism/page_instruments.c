@@ -2482,7 +2482,7 @@ static void _load_page_common(struct page *page, struct widget *page_widgets)
 	vgamem_ovl_alloc(&env_overlay);
 
 	char* shortcut_text = (char*)global_keybinds_list.global.instrument_list.shortcut_text_parens;
-	page->title = str_concat_two("Instrument List", shortcut_text, 0);
+	page->title = str_concat_2("Instrument List", shortcut_text);
 
 	page->pre_handle_key = instrument_list_pre_handle_key;
 	page->handle_key = instrument_list_handle_key;
