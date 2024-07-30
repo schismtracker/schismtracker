@@ -137,13 +137,41 @@ int convert_voleffect(uint8_t *e, uint8_t *p, int force)
 			}
 		}
 		return 0;
-	case FX_VIBRATO:
-		if (force)
-			*p = MIN(*p, 9);
-		else if (*p > 9)
+	case FX_VIBRATO: {
+		uint8_t depth = (*p & 0x0F);
+		uint8_t speed = (*p & 0xF0);
+
+		/* can't do this */
+		if (speed && depth && !force)
 			return 0;
-		*e = VOLFX_VIBRATODEPTH;
-		break;
+
+		if (speed) {
+			if (force)
+				speed = MIN(speed, 9);
+			else if (speed > 9)
+				return 0;
+
+			*e = VOLFX_VIBRATOSPEED;
+			*p = speed;
+
+			return 1;
+		} else if (depth || force) {
+			if (force)
+				depth = MIN(depth, 9);
+			else if (depth > 9)
+				return 0;
+
+			*e = VOLFX_VIBRATODEPTH;
+			*p = depth;
+
+			return 1;
+		} else {
+			/* ... */
+			return 0;
+		}
+
+		return 1;
+	}
 	case FX_FINEVIBRATO:
 		if (force)
 			*p = 0;
@@ -213,6 +241,18 @@ int convert_voleffect(uint8_t *e, uint8_t *p, int force)
 		default:
 			break;
 		}
+		return 0;
+	case FX_PANNINGSLIDE:
+		if (!(*p & 0xF0)) {
+			*e = VOLFX_PANSLIDERIGHT;
+			*p &= 0x0F;
+			return (*p < 10);
+		} else if (!(*p & 0x0F)) {
+			*e = VOLFX_PANSLIDELEFT;
+			*p >>= 4;
+			return (*p < 10);
+		}
+		/* can't convert fine panning */
 		return 0;
 	default:
 		return 0;
