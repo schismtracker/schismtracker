@@ -223,6 +223,7 @@ typedef struct keybind_list
         keybind_bind_t post_loop_cut;
         keybind_bind_t toggle_multichannel;
         keybind_bind_t save_to_disk;
+        keybind_bind_t save_to_disk_exp;
         keybind_bind_t copy;
         keybind_bind_t replace_in_song;
         keybind_bind_t swap;

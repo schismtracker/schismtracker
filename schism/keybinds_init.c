@@ -195,7 +195,8 @@ static void init_instrument_list_keybinds(cfg_file_t* cfg)
     INIT_BIND(instrument_list, delete_instrument_and_unused_samples, "Delete instrument & all related unused samples", "Alt+Shift+D");
     INIT_BIND(instrument_list, post_loop_cut, "Post-loop cut envelope", "Alt+L");
     INIT_BIND(instrument_list, toggle_multichannel, "Toggle multichannel playback", "Alt+N");
-    INIT_BIND(instrument_list, save_to_disk, "Save current instrument to disk", "Alt+O");
+    INIT_BIND(instrument_list, save_to_disk, "Save current instrument to disk (IT Format)", "Alt+O");
+    INIT_BIND(instrument_list, save_to_disk_exp, "Save current instrument to disk (Export Format)", "Alt+T");
     INIT_BIND(instrument_list, copy, "Copy instrument", "Alt+P");
     INIT_BIND(instrument_list, replace_in_song, "Replace current instrument in song", "Alt+R");
     INIT_BIND(instrument_list, swap, "Swap instruments (in song also)", "Alt+S");
