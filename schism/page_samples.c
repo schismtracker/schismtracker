@@ -1088,10 +1088,10 @@ static int export_sample_list_handle_key(struct key_event * k)
 	} else if(KEY_PRESSED(global, nav_end) || KEY_PRESSED(global, nav_page_down)) {
 		new_format = num_save_formats - 1;
 	} else if(KEY_PRESSED(global, nav_tab) || KEY_PRESSED(global, nav_left) || KEY_PRESSED(global, nav_right)) {
-		change_focus_to(0); /* should focus 0/1/2 depending on what's closest */
+		widget_change_focus_to(0); /* should focus 0/1/2 depending on what's closest */
 		return 1;
 	} else if(KEY_PRESSED(global, nav_backtab)) {
-		change_focus_to(0);
+		widget_change_focus_to(0);
 		return 1;
 	} else {
 		return 0;
@@ -1355,7 +1355,7 @@ static void sample_list_handle_key(struct key_event * k)
 	} else if (KEY_PRESSED(sample_list, focus_sample_list)) {
 		set_cursor_pos(25);
 		_fix_accept_text();
-		change_focus_to(0);
+		widget_change_focus_to(0);
 	} else if(sample_list_handle_alt_key(k)) {
 		return;
 	} else {

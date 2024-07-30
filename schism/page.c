@@ -1494,14 +1494,14 @@ static int _timejump_keyh(struct key_event *k)
 {
 	if (k->sym == SDLK_BACKSPACE) {
 		if (*selected_widget == 1 && _timejump_widgets[1].d.numentry.value == 0) {
-			if (k->state == KEY_RELEASE) change_focus_to(0);
+			if (k->state == KEY_RELEASE) widget_change_focus_to(0);
 			return 1;
 		}
 	}
 	if (k->sym == SDLK_COLON || k->sym == SDLK_SEMICOLON) {
 		if (k->state == KEY_RELEASE) {
 			if (*selected_widget == 0) {
-				change_focus_to(1);
+				widget_change_focus_to(1);
 			}
 		}
 		return 1;

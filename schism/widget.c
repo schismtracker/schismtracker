@@ -616,7 +616,7 @@ void draw_widget(struct widget *w, int selected)
 /* --------------------------------------------------------------------- */
 /* more crap */
 
-void change_focus_to(int new_widget_index)
+void widget_change_focus_to(int new_widget_index)
 {
 	if(new_widget_index == *selected_widget || new_widget_index < 0 || new_widget_index >= *total_widgets) {
 		return;
@@ -665,7 +665,7 @@ int change_focus_to_xy(int x, int y)
 {
 	int n = _find_widget_xy(x, y);
 	if (n >= 0) {
-		change_focus_to(n);
+		widget_change_focus_to(n);
 		return 1;
 	}
 	return 0;

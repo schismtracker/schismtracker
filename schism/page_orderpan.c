@@ -467,9 +467,9 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		}
 		return 1;
 	} else if(KEY_PRESSED_OR_REPEATED(global, nav_tab)) {
-		change_focus_to(1);
+		widget_change_focus_to(1);
 	} else if(KEY_PRESSED_OR_REPEATED(global, nav_backtab)) {
-		change_focus_to(33);
+		widget_change_focus_to(33);
 	} else if(KEY_PRESSED_OR_REPEATED(global, nav_left)) {
 		new_cursor_pos--;
 	} else if(KEY_PRESSED_OR_REPEATED(global, nav_right)) {
@@ -726,7 +726,7 @@ static void order_pan_vol_handle_key(struct key_event * k)
 
 	n = CLAMP(n, 1, 64);
 	if (ACTIVE_PAGE.selected_widget != n)
-		change_focus_to(n);
+		widget_change_focus_to(n);
 }
 
 static int order_pre_key(struct key_event *k)

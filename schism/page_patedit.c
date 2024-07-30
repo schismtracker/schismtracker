@@ -536,7 +536,7 @@ static void multichannel_draw_const(void)
 }
 static void mp_advance_channel(void)
 {
-	change_focus_to(*selected_widget + 1);
+	widget_change_focus_to(*selected_widget + 1);
 }
 
 static void pattern_editor_display_multichannel(void)

@@ -193,12 +193,12 @@ static void _backtab(void)
 	int backtab = find_tab_to_recursive(selected);
 
 	if(backtab > -1) {
-		change_focus_to(backtab);
+		widget_change_focus_to(backtab);
 		return;
 	}
 
 	int right_or_down_to = find_right_or_down_to(selected, selected);
-	if(right_or_down_to > -1) change_focus_to(right_or_down_to);
+	if(right_or_down_to > -1) widget_change_focus_to(right_or_down_to);
 }
 
 /* return: 1 = handled text, 0 = didn't */
@@ -281,7 +281,7 @@ static int panbar_handle_key(struct key_event * k)
 
 	if (KEY_PRESSED(order_list_panning, toggle_channel_mute)) {
 		widget->d.panbar.muted = !widget->d.panbar.muted;
-		change_focus_to(widget->next.down);
+		widget_change_focus_to(widget->next.down);
 		if (widget->changed) widget->changed();
 		return 1;
 	} else if (KEY_PRESSED(order_list_panning, pan_unmuted_left)) {
@@ -582,11 +582,11 @@ int widget_handle_key(struct key_event * k)
 		return 0;
 	} else if (KEY_ACTIVE(global, nav_up)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		change_focus_to(widget->next.up);
+		widget_change_focus_to(widget->next.up);
 		return 1;
 	} else if (KEY_ACTIVE(global, nav_down)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		change_focus_to(widget->next.down);
+		widget_change_focus_to(widget->next.down);
 		return 1;
 	} else if (KEY_ACTIVE(global, nav_left)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
@@ -601,7 +601,7 @@ int widget_handle_key(struct key_event * k)
 			textentry_move_cursor(widget, -1);
 			return 1;
 		default:
-			change_focus_to(widget->next.left);
+			widget_change_focus_to(widget->next.left);
 			return 1;
 		}
 	} else if (KEY_ACTIVE(global, nav_right)) {
@@ -628,12 +628,12 @@ int widget_handle_key(struct key_event * k)
 		default:
 			if (!NO_MODIFIER(k->mod))
 				return 0;
-			change_focus_to(widget->next.right);
+			widget_change_focus_to(widget->next.right);
 			return 1;
 		}
 	} else if (KEY_ACTIVE(global, nav_tab)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		change_focus_to(widget->next.tab);
+		widget_change_focus_to(widget->next.tab);
 		return 1;
 	} else if (KEY_ACTIVE(global, nav_backtab)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;

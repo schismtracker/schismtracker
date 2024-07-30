@@ -525,7 +525,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 	} else if (KEY_PRESSED_OR_REPEATED(global, nav_right)) {
 		if (instrument_cursor_pos == 25) {
 			get_page_widgets()->accept_text = 0;
-			change_focus_to(1);
+			widget_change_focus_to(1);
 		} else if (instrument_cursor_pos < 24) {
 			get_page_widgets()->accept_text = 1;
 			instrument_cursor_pos++;
@@ -792,7 +792,7 @@ static int note_trans_handle_key(struct key_event * k)
 		int new_line = note_trans_sel_line - 1;
 		note_trans_sel_line_set(new_line);
 		if (new_line < 0) {
-			change_focus_to(1);
+			widget_change_focus_to(1);
 		}
 	} else if (KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		note_trans_sel_line_set(note_trans_sel_line + 1);
@@ -1283,9 +1283,9 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 	int n;
 
 	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
-		change_focus_to(1);
+		widget_change_focus_to(1);
 	} else if (KEY_PRESSED_OR_REPEATED(global, nav_down)) {
-		change_focus_to(6);
+		widget_change_focus_to(6);
 	} else if (KEY_PRESSED_OR_REPEATED(global, nav_left) || KEY_PRESSED(instrument_envelope, nav_node_left)) {
 		new_node--;
 	} else if (KEY_PRESSED_OR_REPEATED(global, nav_right) || KEY_PRESSED(instrument_envelope, nav_node_right)) {
@@ -1862,7 +1862,7 @@ static void instrument_list_handle_key(struct key_event * k)
 				return;
 		instrument_cursor_pos = 25;
 		get_page_widgets()->accept_text = 0;
-		change_focus_to(0);
+		widget_change_focus_to(0);
 		status.flags |= NEED_UPDATE;
 		return;
 	} else {

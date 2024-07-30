@@ -473,7 +473,7 @@ int menutoggle_handle_key(struct widget *widget, struct key_event *k);
 int bitset_handle_key(struct widget *widget, struct key_event *k);
 
 int change_focus_to_xy(int x, int y);
-void change_focus_to(int new_widget_index);
+void widget_change_focus_to(int new_widget_index);
 /* p_widgets should point to the group of widgets (not the actual widget that is
  * being set!) and widget should be the index of the widget within the group. */
 void togglebutton_set(struct widget *p_widgets, int widget, int do_callback);

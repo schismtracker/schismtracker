@@ -97,7 +97,7 @@ static void help_draw_const(void)
 {
 	draw_box(1, 12, 78, 45, BOX_THICK | BOX_INNER | BOX_INSET);
 
-	if (status.dialog_type == DIALOG_NONE) change_focus_to(1);
+	if (status.dialog_type == DIALOG_NONE) widget_change_focus_to(1);
 }
 
 static void help_redraw(void)
@@ -212,7 +212,7 @@ static void help_set_page(void)
 	int local_lines = 0, global_lines = 0, cur_line = 0;
 	int have_local_help = (status.current_help_index != HELP_GLOBAL);
 
-	change_focus_to(1);
+	widget_change_focus_to(1);
 	top_line = help_text_lastpos[help_text_current_page];
 
 	/* how many lines? */

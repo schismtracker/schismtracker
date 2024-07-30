@@ -182,19 +182,19 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 
 	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		if (--new_palette < 0) {
-			change_focus_to(47);
+			widget_change_focus_to(47);
 			return 1;
 		}
 	} else if(KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		if (++new_palette >= NUM_PALETTES) {
-			change_focus_to(49);
+			widget_change_focus_to(49);
 			return 1;
 		}
 	} else if(KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		new_palette = 0;
 	} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 		if (new_palette == 0) {
-			change_focus_to(45);
+			widget_change_focus_to(45);
 			return 1;
 		}
 		new_palette -= 16;
@@ -213,13 +213,13 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 		KEY_PRESSED_OR_REPEATED(global, nav_right) ||
 		KEY_PRESSED_OR_REPEATED(global, nav_tab)
 	) {
-		change_focus_to(focus_offsets[selected_palette+1] + 8);
+		widget_change_focus_to(focus_offsets[selected_palette+1] + 8);
 		return 1;
 	} else if(KEY_PRESSED_OR_REPEATED(global, nav_backtab)) {
-		change_focus_to(focus_offsets[selected_palette+1] + 29);
+		widget_change_focus_to(focus_offsets[selected_palette+1] + 29);
 		return 1;
 	} else if(KEY_PRESSED_OR_REPEATED(global, nav_left)) {
-		change_focus_to(focus_offsets[selected_palette+1] + 29);
+		widget_change_focus_to(focus_offsets[selected_palette+1] + 29);
 		return 1;
 	} else if(KEY_PRESSED_OR_REPEATED(palette_edit, copy)) {
 		/* pasting is handled by the page */
@@ -274,7 +274,7 @@ static void palette_list_handle_key(struct key_event * k)
 		n = CLAMP(n, 0, 48);
 	}
 	if (n != *selected_widget)
-		change_focus_to(n);
+		widget_change_focus_to(n);
 }
 
 /* --------------------------------------------------------------------- */

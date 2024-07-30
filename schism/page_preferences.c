@@ -262,7 +262,7 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (--new_device < 0) {
-			change_focus_to(47);
+			widget_change_focus_to(47);
 			return 1;
 		}
 		break;
@@ -307,13 +307,13 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 		if (!(k->mod & KMOD_SHIFT || NO_MODIFIER(k->mod)))
 			return 0;
 
-		change_focus_to(focus_offsets[selected_audio_device]);
+		widget_change_focus_to(focus_offsets[selected_audio_device]);
 		return 1;
 	case SDLK_LEFT: case SDLK_RIGHT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 
-		change_focus_to(focus_offsets[selected_audio_device]);
+		widget_change_focus_to(focus_offsets[selected_audio_device]);
 		return 1;
 	default:
 		if (k->mouse == MOUSE_NONE)
@@ -409,7 +409,7 @@ static int audio_driver_list_handle_key_on_list(struct key_event * k)
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (--new_driver < 0) {
-			change_focus_to(47);
+			widget_change_focus_to(47);
 			return 1;
 		}
 		break;
@@ -454,13 +454,13 @@ static int audio_driver_list_handle_key_on_list(struct key_event * k)
 		if (!(k->mod & KMOD_SHIFT || NO_MODIFIER(k->mod)))
 			return 0;
 
-		change_focus_to(focus_offsets[selected_audio_driver]);
+		widget_change_focus_to(focus_offsets[selected_audio_driver]);
 		return 1;
 	case SDLK_LEFT: case SDLK_RIGHT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 
-		change_focus_to(focus_offsets[selected_audio_driver]);
+		widget_change_focus_to(focus_offsets[selected_audio_driver]);
 		return 1;
 	default:
 		if (k->mouse == MOUSE_NONE)

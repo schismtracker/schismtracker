@@ -169,7 +169,7 @@ static int midi_page_handle_key(struct key_event * k)
 	} else if(KEY_PRESSED(global, nav_down)) {
 		new_port++;
 	} else if(KEY_PRESSED(global, nav_tab)) {
-		change_focus_to(1);
+		widget_change_focus_to(1);
 		status.flags |= NEED_UPDATE;
 		return 1;
 	} else {
