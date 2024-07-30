@@ -398,35 +398,60 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 {
 	unsigned int z;
 	unsigned int zm;
-	unsigned int c ; //cursor width in symbols
-	struct mouse_cursor cursor;
+	unsigned int swidth; //cursor width in symbols
+	unsigned int scenter;
+	unsigned int centeroffset;
+	unsigned int temp;
+	struct mouse_cursor *cursor;
+
+	switch (video.mouse.type) {
+		case CURSOR_ARROW : cursor = &cursor_arrow; break;
+		case CURSOR_CROSSHAIR : cursor = &cursor_crosshair; break;
+	}
 
 	memset(mouseline, 0, 80*sizeof(unsigned int));
 	memset(mouseline_mask, 0, 80*sizeof(unsigned int));
 
-	switch (video.mouse.type) {
-		case CURSOR_ARROW : cursor = cursor_arrow; break;
-		case CURSOR_CROSSHAIR : cursor = cursor_crosshair; break;
-	}
-
 	if (video.mouse.visible != MOUSE_EMULATED
 		|| !video_is_focused()
-		|| y < video.mouse.y
-		|| y >= video.mouse.y+cursor.height) {
+		|| y < video.mouse.y - cursor->center_y
+		|| y >= video.mouse.y + cursor->height - cursor->center_y) {
 		return;
 	}
 
-	z = cursor.pointer[ y - video.mouse.y ];
-	zm = cursor.mask[ y - video.mouse.y ];
-	c = ceil(cursor.width / 8.0);
+	scenter = ceil(cursor->center_x / 8.0);
+	swidth = ceil(cursor->width / 8.0);
+	centeroffset = cursor->center_x % 8;
 
-	mouseline[x] = (z >> (v + 8*(c-1))) & 0xff;
-	mouseline_mask[x] = (zm >> (v + 8 * (c-1))) & 0xff;
-	for (unsigned int i = 0; i < c && x + i < 79; i++) {
-		mouseline[x+i+1] = (z << (8 - v + 8 * i));
-		mouseline[x+i+1] >>= 8*(c-1);
-		mouseline_mask[x+i+1] = (zm << (8 - v + 8 * i));
-		mouseline_mask[x+i+1] >>= 8*(c-1);
+	z = cursor->pointer[ y - video.mouse.y + cursor->center_y];
+	zm = cursor->mask[ y - video.mouse.y + cursor->center_y];
+
+	z <<= 8;
+	zm <<= 8;
+	if (v < centeroffset) {
+		z <<= centeroffset - v;
+		zm <<= centeroffset - v;
+	} else {
+		z >>= v - centeroffset;
+		zm >>= v - centeroffset;
+	}
+
+	//always fill the cell the mouse coordinates are in
+	mouseline[x] = z >> (8 * (swidth - scenter + 1)) & 0xff;
+	mouseline_mask[x] = zm >> (8 * (swidth - scenter + 1)) & 0xff;
+
+	//draw the parts of the cursor sticking out to the left
+	temp = (cursor->center_x < v) ? 0 : ceil((cursor->center_x - v) / 8.0);
+	for( int i = 1; i <= temp && x >= i; i++) {
+		mouseline[x-i] = z >> 8 * ( swidth - scenter + 1 + i) & 0xff;
+		mouseline_mask[x-i] = zm >> 8 * ( swidth - scenter + 1 + i) & 0xff;
+	}
+
+	//and to the right
+	temp = swidth - scenter + 1;
+	for( int i = 1; i <= temp && x+i < 80; i++) {
+		mouseline[x+i] = z >> 8 * ( swidth - scenter + 1 - i) & 0xff;
+		mouseline_mask[x+i] = zm >> 8 * ( swidth - scenter + 1 - i) & 0xff;
 	}
 }
 
