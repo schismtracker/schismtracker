@@ -1,5 +1,6 @@
 
 #include "it.h"
+#include "config.h"
 #include "page.h"
 #include "dmoz.h"
 #include "charset.h"

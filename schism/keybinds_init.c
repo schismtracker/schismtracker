@@ -2,6 +2,7 @@
 #include "it.h"
 #include "keybinds.h"
 #include "page.h"
+#include "config-parser.h"
 
 #define DESCRIPTION_SPACER "                      "
 #define TEXT_2X "\n                  2x: "

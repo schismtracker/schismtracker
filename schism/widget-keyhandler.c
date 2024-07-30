@@ -240,25 +240,25 @@ static int thumbbar_panbar_handle_key(struct key_event * k)
 		return 0;
 
 	if (KEY_PRESSED_OR_REPEATED(global, thumbbar_increase_value)) {
-		numentry_change_value(widget, widget->d.numentry.value + 1);
+		widget_numentry_change_value(widget, widget->d.numentry.value + 1);
 	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_increase_value_2x)) {
-		numentry_change_value(widget, widget->d.numentry.value + 2);
+		widget_numentry_change_value(widget, widget->d.numentry.value + 2);
 	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_increase_value_4x)) {
-		numentry_change_value(widget, widget->d.numentry.value + 4);
+		widget_numentry_change_value(widget, widget->d.numentry.value + 4);
 	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_increase_value_8x)) {
-		numentry_change_value(widget, widget->d.numentry.value + 8);
+		widget_numentry_change_value(widget, widget->d.numentry.value + 8);
 	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_decrease_value)) {
-		numentry_change_value(widget, widget->d.numentry.value - 1);
+		widget_numentry_change_value(widget, widget->d.numentry.value - 1);
 	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_decrease_value_2x)) {
-		numentry_change_value(widget, widget->d.numentry.value - 2);
+		widget_numentry_change_value(widget, widget->d.numentry.value - 2);
 	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_decrease_value_4x)) {
-		numentry_change_value(widget, widget->d.numentry.value - 4);
+		widget_numentry_change_value(widget, widget->d.numentry.value - 4);
 	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_decrease_value_8x)) {
-		numentry_change_value(widget, widget->d.numentry.value - 8);
+		widget_numentry_change_value(widget, widget->d.numentry.value - 8);
 	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_min_value)) {
-		numentry_change_value(widget, widget->d.thumbbar.min);
+		widget_numentry_change_value(widget, widget->d.thumbbar.min);
 	} else if (KEY_PRESSED_OR_REPEATED(global, thumbbar_max_value)) {
-		numentry_change_value(widget, widget->d.thumbbar.max);
+		widget_numentry_change_value(widget, widget->d.thumbbar.max);
 	} else {
 		return 0;
 	}
@@ -291,19 +291,19 @@ static int panbar_handle_key(struct key_event * k)
 	} else if (KEY_PRESSED(order_list_panning, set_panning_left)) {
 		widget->d.panbar.muted = 0;
 		widget->d.panbar.surround = 0;
-		numentry_change_value(widget, 0);
+		widget_numentry_change_value(widget, 0);
 	} else if (KEY_PRESSED(order_list_panning, pan_unmuted_middle)) {
 		song_set_pan_scheme(PANS_MONO);
 	} else if (KEY_PRESSED(order_list_panning, set_panning_middle)) {
 		widget->d.panbar.muted = 0;
 		widget->d.panbar.surround = 0;
-		numentry_change_value(widget, 32);
+		widget_numentry_change_value(widget, 32);
 	} else if (KEY_PRESSED(order_list_panning, pan_unmuted_right)) {
 		song_set_pan_scheme(PANS_RIGHT);
 	} else if (KEY_PRESSED(order_list_panning, set_panning_right)) {
 		widget->d.panbar.muted = 0;
 		widget->d.panbar.surround = 0;
-		numentry_change_value(widget, 64);
+		widget_numentry_change_value(widget, 64);
 	} else if (KEY_PRESSED(order_list_panning, pan_unmuted_stereo)) {
 		song_set_pan_scheme(PANS_STEREO);
 	} else if (KEY_PRESSED(order_list_panning, set_panning_surround)) {
@@ -751,13 +751,13 @@ int widget_handle_key(struct key_event * k)
 	} else if (KEY_ACTIVE(global, numentry_increase_value)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_NUMENTRY) {
-			numentry_change_value(widget, widget->d.numentry.value + 1);
+			widget_numentry_change_value(widget, widget->d.numentry.value + 1);
 			return 1;
 		}
 	} else if (KEY_ACTIVE(global, numentry_decrease_value)) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_NUMENTRY) {
-			numentry_change_value(widget, widget->d.numentry.value - 1);
+			widget_numentry_change_value(widget, widget->d.numentry.value - 1);
 			return 1;
 		}
 	}
