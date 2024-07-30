@@ -334,7 +334,11 @@ static void set_shortcut_text(keybind_bind_t* bind)
         if (sc->keycode != SDLK_UNKNOWN) {
             switch(sc->keycode) {
                 case SDLK_RETURN:
+#ifdef SCHISM_MACOSX
+                    key_text = strdup("Return");
+#else
                     key_text = strdup("Enter");
+#endif
                     break;
                 case SDLK_SPACE:
                     key_text = strdup("Spacebar");
