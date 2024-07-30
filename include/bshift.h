@@ -27,39 +27,36 @@
 #include <stdint.h>
 #include <assert.h>
 
-/* Portable replacements for signed integer bit shifting. */
+/* Portable replacements for signed integer bit shifting. These do not return the same
+ * bit size as was given in; in lots of cases that won't really match up at all. */
 
-#define SCHISM_SIGNED_LSHIFT_VARIANT(BITS) \
-	inline int ## BITS ## _t schism_signed_lshift_ ## BITS ## _(int ## BITS ## _t x, int y) \
+#define SCHISM_SIGNED_LSHIFT_VARIANT(BITS, RBITS) \
+	inline int ## RBITS ## _t schism_signed_lshift_ ## BITS ## _(int ## BITS ## _t x, int y) \
 	{ \
-		assert(y >= 0 && y <= BITS - 1); /* argh */ \
-		const uint ## BITS ## _t roffset = INT ## BITS ## _C(1) << (BITS - 1); \
-		int ## BITS ## _t rx = x; \
-		uint ## BITS ## _t urx = (uint ## BITS ## _t)rx; \
+		const uint ## RBITS ## _t roffset = UINT ## RBITS ## _C(1) << (RBITS - 1); \
+		uint ## RBITS ## _t urx = (uint ## RBITS ## _t)x; \
 		urx += roffset; \
 		urx <<= y; \
 		urx -= roffset << y; \
-		return (int ## BITS ## _t)urx; \
+		return (int ## RBITS ## _t)urx; \
 	}
 
-SCHISM_SIGNED_LSHIFT_VARIANT(32)
+SCHISM_SIGNED_LSHIFT_VARIANT(32, 64)
 
 #undef SCHISM_SIGNED_LSHIFT_VARIANT
 
-#define SCHISM_SIGNED_RSHIFT_VARIANT(BITS) \
-	inline int ## BITS ## _t schism_signed_rshift_ ## BITS ## _(int ## BITS ## _t x, int y) \
+#define SCHISM_SIGNED_RSHIFT_VARIANT(BITS, RBITS) \
+	inline int ## RBITS ## _t schism_signed_rshift_ ## BITS ## _(int ## BITS ## _t x, int y) \
 	{ \
-		assert(y >= 0 && y <= BITS - 1); /* argh */ \
-		const uint ## BITS ## _t roffset = INT ## BITS ## _C(1) << (BITS - 1); \
-		int ## BITS ## _t rx = x; \
-		uint ## BITS ## _t urx = (uint ## BITS ## _t)rx; \
+		const uint ## RBITS ## _t roffset = UINT ## RBITS ## _C(1) << (RBITS - 1); \
+		uint ## RBITS ## _t urx = (uint ## RBITS ## _t)((int ## RBITS ## _t)x); \
 		urx += roffset; \
 		urx >>= y; \
 		urx -= roffset >> y; \
-		return (int ## BITS ## _t)urx; \
+		return (int ## RBITS ## _t)urx; \
 	}
 
-SCHISM_SIGNED_RSHIFT_VARIANT(32)
+SCHISM_SIGNED_RSHIFT_VARIANT(32, 32)
 
 #undef SCHISM_SIGNED_RSHIFT_VARIANT
 
