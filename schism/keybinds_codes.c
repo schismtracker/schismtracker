@@ -378,14 +378,21 @@ static struct {
     {"KBDILLUMUP", SDLK_KBDILLUMUP},
     {"EJECT", SDLK_EJECT},
     {"SLEEP", SDLK_SLEEP},
+
+    /* These keys were only defined in later
+     * SDL versions... */
+#if SDL_VERSION_ATLEAST(2, 0, 6)
     {"APP1", SDLK_APP1},
     {"APP2", SDLK_APP2},
 
     {"AUDIOREWIND", SDLK_AUDIOREWIND},
     {"AUDIOFASTFORWARD", SDLK_AUDIOFASTFORWARD},
+#endif
 
+#if SDL_VERSION_ATLEAST(2, 24, 0)
     {"SOFTLEFT", SDLK_SOFTLEFT},
     {"SOFTRIGHT", SDLK_SOFTRIGHT},
     {"CALL", SDLK_CALL},
-    {"ENDCALL", SDLK_ENDCALL}
+    {"ENDCALL", SDLK_ENDCALL},
+#endif
 };
