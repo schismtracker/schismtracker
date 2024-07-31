@@ -2009,8 +2009,17 @@ static void do_save_instrument(void *ptr)
 static void instrument_save(const char *filename, const char *format)
 {
 	song_instrument_t *penv = song_get_instrument(current_instrument);
-	char *ptr = (char *) dmoz_path_concat(cfg_dir_instruments, filename ? filename : penv->filename);
+	char *ptr;
 	struct stat buf;
+
+	if (filename) {
+		ptr = (char *) dmoz_path_concat(cfg_dir_instruments, filename);
+	} else if (penv->filename[0]) {
+		ptr = (char *) dmoz_path_concat(cfg_dir_instruments, penv->filename);
+	} else {
+		status_text_flash("Error: Instrument %d NOT saved! (No Filename?)", current_instrument);
+		return;
+	}
 
 	struct instrument_save_data *data = mem_alloc(sizeof(*data));
 	data->path = ptr;
