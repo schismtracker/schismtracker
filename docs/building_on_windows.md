@@ -51,11 +51,11 @@ Execute the following command:
 
 If asked to "enter a selection", hit Enter to go with the default.
 
-Also, you need the following specific dependency:
+Also, you need the following specific dependencies:
 
-	pacman -S mingw-w64-x86_64-SDL2
+	pacman -S mingw-w64-x86_64-SDL2 mingw-w64-x86_64-pkgconf
 
-For FLAC sample loading, you'll also need the following dependency:
+For optional FLAC sample loading, you'll also need the following dependency:
 
 	pacman -S mingw-w64-x86_64-flac
 	
