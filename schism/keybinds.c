@@ -26,8 +26,6 @@
 #include "page.h"
 #include "dmoz.h"
 #include "charset.h"
-#include "keybinds_codes.c"
-#include "keybinds_init.c"
 
 #define MAX_BINDS 450
 #define MAX_SHORTCUTS 3
@@ -379,10 +377,11 @@ static void set_shortcut_text(keybind_bind_t* bind)
 			case SDL_SCANCODE_SPACE:
 				key_text = strdup("Spacebar");
 				break;
-			default:
+			default: {
 				SDL_Keycode code = SDL_GetKeyFromScancode(sc->scancode);
 				key_text = strdup(SDL_GetKeyName(code));
 				break;
+			}
 			}
 		} else {
 			continue;
@@ -480,7 +479,7 @@ static void init_bind(keybind_bind_t* bind, keybind_section_info_t* section_info
 	set_shortcut_text(bind);
 }
 
-void init_keybinds(void)
+void keybinds_init(void)
 {
 	if (current_binds_count != 0)
 		return;
