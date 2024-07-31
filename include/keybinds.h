@@ -686,7 +686,7 @@ typedef struct keybind_list
 
 char* keybinds_get_help_text(enum page_numbers page);
 void keybinds_handle_event(struct key_event* event);
-void init_keybinds(void);
+void keybinds_init(void);
 extern keybind_list_t global_keybinds_list;
 
 /* Key was pressed this event. Will not trigger on held down repeats. */

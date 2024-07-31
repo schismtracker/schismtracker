@@ -193,7 +193,7 @@ static struct menu settings_menu = {
 		' ', WIDTH, 0, 0);
 
 /* Add first keybind shortcut to the end of menu strings */
-void init_menu_keybinds(void) {
+void menu_init_keybinds(void) {
 	set_menu_keybind(main_menu, 2, pattern_edit, 25);
 	set_menu_keybind(main_menu, 5, order_list, 25);
 	set_menu_keybind(main_menu, 6, song_variables, 25);

@@ -27,6 +27,10 @@
 #include "dmoz.h"
 #include "charset.h"
 
+/* these two ought to be compiled separately */
+#include "keybinds_codes.c"
+#include "keybinds_init.c"
+
 #define MAX_BINDS 450
 #define MAX_SHORTCUTS 3
 static int current_binds_count = 0;
