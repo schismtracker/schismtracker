@@ -24,6 +24,7 @@
 #define SCHISM_CHARSET_H_
 
 #include <stdint.h>
+#include <stddef.h>
 
 /* UCS4 shouldn't ever be used externally; the output depends on endianness.
  * It should only be used as sort of an in-between from UTF-8 to CP437 for use
