@@ -53,7 +53,7 @@ static struct mouse_cursor {
 	unsigned int center_x, center_y; //which point of the pointer does actually point
 }
 	cursor_arrow = {
-		.pointer = {    /* 0 -|-------------> */
+		.pointer = {    /*   -|-------------> */
 			0x0000, /* | ................ */
 			0x4000, /* - .x.............. */
 			0x6000, /* | .xx............. */
@@ -72,7 +72,7 @@ static struct mouse_cursor {
 			0x0000, /* v ................ */
 			0,0
 			},
-		.mask = {       /* 0 -|-------------> */
+		.mask = {       /*   -|-------------> */
 			0xc000, /* | xx.............. */
 			0xe000, /* - xxx............. */
 			0xf000, /* | xxxx............ */
@@ -97,7 +97,7 @@ static struct mouse_cursor {
 		.center_y = 1,
 	},
 	cursor_crosshair = {
-		.pointer = {  /* 0 ---|---> */
+		.pointer = {  /*   ---|---> */
 			0x00, /* | ........ */
 			0x10, /* | ...x.... */
 			0x7c, /* - .xxxxx.. */
@@ -116,7 +116,7 @@ static struct mouse_cursor {
 			0x00, /* v ........ */
 			0,0
 			},
-		.mask = {     /* 0 ---|---> */
+		.mask = {     /*   ---|---> */
 			0x10, /* | ...x.... */
 			0x7c, /* | .xxxxx.. */
 			0xfe, /* - xxxxxxx. */
