@@ -33,7 +33,8 @@ static struct {
 	{"SHIFT", KMOD_SHIFT},
 	{"LSHIFT", KMOD_LSHIFT},
 	{"RSHIFT", KMOD_RSHIFT},
-	{"ALT", KMOD_LALT},
+	{"ALT", KMOD_ALT},
+	{"LALT", KMOD_LALT},
 	{"RALT", KMOD_RALT}
 };
 

@@ -26,6 +26,7 @@
 #include "page.h"
 #include "dmoz.h"
 #include "charset.h"
+#include "util.h"
 
 /* these two ought to be compiled separately */
 #include "keybinds_codes.c"
@@ -41,28 +42,32 @@ static int has_init_problem = 0;
 /* --------------------------------------------------------------------- */
 /* Updating bind state (handling input events) */
 
-static int check_mods(SDL_Keymod needed, SDL_Keymod current, int any)
+static int check_mods(SDL_Keymod needed, SDL_Keymod current)
 {
-	int ralt_needed = needed & KMOD_RALT;
-	int ctrl_needed = needed & KMOD_CTRL;
-	int shift_needed = needed & KMOD_SHIFT;
-	int alt_needed = needed & KMOD_LALT;
+    current &= (KMOD_CTRL | KMOD_SHIFT | KMOD_ALT); // Remove unsupported mods.
 
-	int has_ralt  = current & KMOD_RALT;
-	int has_ctrl  = !has_ralt && (current & KMOD_CTRL);
-	int has_shift = current & KMOD_SHIFT;
-	int has_alt   = current & KMOD_LALT;
+    /*
+        On windows there is a strange issue with SDL. It means that RALT will always be sent
+        together with LCTRL and there's no way to tell if LCTRL is actually held or not.
+        That's why LCTRL will be removed while pressing RALT.
+        Issue: https://github.com/libsdl-org/SDL/issues/5685
+    */
+#ifdef SCHISM_WIN32
+    if (current & KMOD_RALT) { current &= ~KMOD_LCTRL; }
+#endif
 
-	if (any) {
-		if (ctrl_needed  && !has_ctrl)  return 0;
-		if (shift_needed && !has_shift) return 0;
-		if (alt_needed   && !has_alt)   return 0;
-		if (ralt_needed  && !has_ralt)  return 0;
+    // If either L or R key needed, fixup the flags so both are active.
 
-		return 1;
-	} else {
-		return (!!ctrl_needed == !!has_ctrl) && (!!shift_needed == !!has_shift) && (!!alt_needed == !!has_alt) && (!!ralt_needed == !!has_ralt);
-	}
+    if ((needed & KMOD_LCTRL) && (needed & KMOD_RCTRL) && (current & KMOD_CTRL))
+        current |= KMOD_CTRL;
+
+    if ((needed & KMOD_LSHIFT) && (needed & KMOD_RSHIFT) && (current & KMOD_SHIFT))
+        current |= KMOD_SHIFT;
+
+    if ((needed & KMOD_LALT) && (needed & KMOD_RALT) && (current & KMOD_ALT))
+        current |= KMOD_ALT;
+
+    return needed == current;
 }
 
 static void update_bind(keybind_bind_t* bind, SDL_Scancode scode, SDL_Keycode kcode, SDL_Keymod mods, const char* text, int is_down)
@@ -109,7 +114,7 @@ static void update_bind(keybind_bind_t* bind, SDL_Scancode scode, SDL_Keycode kc
 			}
 		}
 
-		int mods_correct = check_mods(sc->modifier, mods, 0);
+		int mods_correct = check_mods(sc->modifier, mods);
 		int is_repeat = is_down && (sc->pressed || sc->repeated);
 
 		if (is_down) {
@@ -351,9 +356,30 @@ static void set_shortcut_text(keybind_bind_t* bind)
 
 		keybind_shortcut_t* sc = &bind->shortcuts[i];
 
-		const char* ctrl_text  = (sc->modifier & KMOD_CTRL)  ? "Ctrl-"  : "";
-		const char* alt_text   = (sc->modifier & KMOD_LALT)  ? "Alt-"   : "";
-		const char* shift_text = (sc->modifier & KMOD_SHIFT) ? "Shift-" : "";
+		const char* ctrl_text = "";
+		const char* alt_text = "";
+		const char* shift_text = "";
+
+        if ((sc->modifier & KMOD_LCTRL) && (sc->modifier & KMOD_RCTRL))
+            ctrl_text = "Ctrl-";
+        else if (sc->modifier & KMOD_LCTRL)
+            ctrl_text = "LCtrl-";
+        else if (sc->modifier & KMOD_RCTRL)
+            ctrl_text = "RCtrl-";
+
+        if ((sc->modifier & KMOD_LSHIFT) && (sc->modifier & KMOD_RSHIFT))
+            ctrl_text = "Shift-";
+        else if (sc->modifier & KMOD_LSHIFT)
+            ctrl_text = "LShift-";
+        else if (sc->modifier & KMOD_RSHIFT)
+            ctrl_text = "RShift-";
+
+        if ((sc->modifier & KMOD_LALT) && (sc->modifier & KMOD_RALT))
+            ctrl_text = "Alt-";
+        else if (sc->modifier & KMOD_LALT)
+            ctrl_text = "LAlt-";
+        else if (sc->modifier & KMOD_RALT)
+            ctrl_text = "RAlt-";
 
 		char* key_text = NULL;
 
