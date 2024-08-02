@@ -61,7 +61,7 @@ static int check_mods(SDL_Keymod needed, SDL_Keymod current, int any)
 
 		return 1;
 	} else {
-		return (ctrl_needed == has_ctrl) && (shift_needed == has_shift) && (alt_needed == has_alt) && (ralt_needed == has_ralt);
+		return (!!ctrl_needed == !!has_ctrl) && (!!shift_needed == !!has_shift) && (!!alt_needed == !!has_alt) && (!!ralt_needed == !!has_ralt);
 	}
 }
 
