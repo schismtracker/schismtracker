@@ -414,7 +414,8 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 
 	if (video.mouse.visible != MOUSE_EMULATED
 		|| !video_is_focused()
-		|| y < video.mouse.y - cursor->center_y
+		|| (video.mouse.y >= cursor->center_y && y < video.mouse.y - cursor->center_y)
+		|| y < cursor->center_y
 		|| y >= video.mouse.y + cursor->height - cursor->center_y) {
 		return;
 	}
