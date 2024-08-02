@@ -204,7 +204,7 @@ char* str_concat_with_delim_free(int count, char** str_array, const char* delim)
 char* str_pad_between(char* str1, char* str2, char pad, int width, int min_padding, int free_inputs);
 
 
-/* Prints first 8 bits of a variable. Used like this: printf("hello = " BYTE_TO_BINARY_PATTERN ".\n", BYTE_TO_BINARY(hello_var)); */
+/* Prints last 8 bits of a variable. Used like this: printf("hello = " BYTE_TO_BINARY_PATTERN ".\n", BYTE_TO_BINARY(hello_var)); */
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte)  \
   ((byte) & 0x80 ? '1' : '0'), \
