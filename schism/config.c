@@ -60,6 +60,8 @@ int cfg_video_want_menu_bar = 1;
 # define DOT_SCHISM "Library/Application Support/Schism Tracker"
 #elif defined(SCHISM_WII)
 # define DOT_SCHISM "."
+#elif defined(__HAIKU__)
+# define DOT_SCHISM "config/settings/schism"
 #else
 # define DOT_SCHISM ".schism"
 #endif
