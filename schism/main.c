@@ -33,6 +33,7 @@
 
 #include "clippy.h"
 #include "disko.h"
+#include "fakemem.h"
 
 #include "config.h"
 #include "version.h"
@@ -475,6 +476,7 @@ static void event_loop(void)
 	os_get_modkey(&modkey);
 	SDL_SetModState(modkey);
 
+	SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 	SDL_EnableScreenSaver();
 	screensaver = 1;
 
@@ -718,6 +720,37 @@ static void event_loop(void)
 					handle_key(&kk);
 					break;
 				};
+				break;
+
+			case SDL_DROPFILE:
+				switch(status.current_page)
+				{
+				case PAGE_SAMPLE_LIST:
+				case PAGE_LOAD_SAMPLE:
+				case PAGE_LIBRARY_SAMPLE:
+					song_load_sample(sample_get_current(), event.drop.file);
+					memused_songchanged();
+					status.flags |= SONG_NEEDS_SAVE;
+					set_page(PAGE_SAMPLE_LIST);
+					break;
+				case PAGE_INSTRUMENT_LIST_GENERAL:
+				case PAGE_INSTRUMENT_LIST_VOLUME:
+				case PAGE_INSTRUMENT_LIST_PANNING:
+				case PAGE_INSTRUMENT_LIST_PITCH:
+				case PAGE_LOAD_INSTRUMENT:
+				case PAGE_LIBRARY_INSTRUMENT:
+					song_load_instrument_with_prompt(instrument_get_current(), event.drop.file);
+					memused_songchanged();
+					status.flags |= SONG_NEEDS_SAVE;
+					set_page(PAGE_INSTRUMENT_LIST);
+					break;
+				default:
+					song_load(event.drop.file);
+					break;
+				}
+				SDL_free(event.drop.file);
+				break;
+
 			/* Our own custom events.
 			 *
 			 * XXX:
