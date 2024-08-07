@@ -236,6 +236,7 @@ char *num99tostr(int n, char *buf)
 	return buf;
 
 }
+
 char *numtostr(int digits, unsigned int n, char *buf)
 {
 	if (digits > 0) {
@@ -250,6 +251,7 @@ char *numtostr(int digits, unsigned int n, char *buf)
 	}
 	return buf;
 }
+
 char *numtostr_signed(int digits, int n, char *buf)
 {
 	if (digits > 0) {
@@ -832,21 +834,185 @@ char *get_dot_directory(void)
 	return get_home_directory();
 }
 
-char *str_concat(const char *s, ...)
+int str_count_occurences(char character, const char* str)
 {
-	va_list ap;
-	char *out = NULL;
+	int count = 0;
+
+	for (int i = 0; str[i]; i++) {
+		if (str[i] == character)
+			count++;
+	}
+
+	return count;
+}
+
+char* str_concat_array(int count, const char** str_array)
+{
 	int len = 0;
 
-	va_start(ap,s);
-	while (s) {
-		out = mem_realloc(out, (len += strlen(s)+1));
-		strcat(out, s);
-		s = va_arg(ap, const char *);
+	for(int i = 0; i < count; i++) {
+		if (!str_array[i] || !str_array[i][0]) continue;
+		len += strlen(str_array[i]);
 	}
-	va_end(ap);
-	return out;
 
+	if(len == 0) return strdup("");
+
+	char* out = malloc((len + 1) * sizeof(char));
+	out[0] = '\0';
+
+	for(int i = 0; i < count; i++) {
+		if (!str_array[i] || !str_array[i][0]) continue;
+		strcat(out, str_array[i]);
+	}
+
+	return out;
+}
+
+char* str_concat_array_free(int count, char** str_array)
+{
+	char* out = str_concat_array(count, (const char**)str_array);
+
+	for(int i = 0; i < count; i++)
+		free(str_array[i]);
+
+	return out;
+}
+
+char* str_concat_2(const char* str1, const char* str2)
+{
+	const char* strings[2] = { str1, str2 };
+	return str_concat_array(2, strings);
+}
+
+char* str_concat_3(const char* str1, const char* str2, const char* str3)
+{
+	const char* strings[3] = { str1, str2, str3 };
+	return str_concat_array(3, strings);
+}
+
+char* str_concat_4(const char* str1, const char* str2, const char* str3, const char* str4)
+{
+	const char* strings[4] = { str1, str2, str3, str4 };
+	return str_concat_array(4, strings);
+}
+
+char* str_concat_5(const char* str1, const char* str2, const char* str3, const char* str4, const char* str5)
+{
+	const char* strings[5] = { str1, str2, str3, str4, str5 };
+	return str_concat_array(5, strings);
+}
+
+char* str_concat_6(const char* str1, const char* str2, const char* str3, const char* str4, const char* str5, const char* str6)
+{
+	const char* strings[6] = { str1, str2, str3, str4, str5, str6 };
+	return str_concat_array(6, strings);
+}
+
+char* str_concat_2_free(char* str1, char* str2)
+{
+	char* strings[2] = { str1, str2 };
+	return str_concat_array_free(2, strings);
+}
+
+char* str_concat_3_free(char* str1, char* str2, char* str3)
+{
+	char* strings[3] = { str1, str2, str3 };
+	return str_concat_array_free(3, strings);
+}
+
+char* str_concat_4_free(char* str1, char* str2, char* str3, char* str4)
+{
+	char* strings[4] = { str1, str2, str3, str4 };
+	return str_concat_array_free(4, strings);
+}
+
+char* str_concat_5_free(char* str1, char* str2, char* str3, char* str4, char* str5)
+{
+	char* strings[5] = { str1, str2, str3, str4, str5 };
+	return str_concat_array_free(5, strings);
+}
+
+char* str_concat_6_free(char* str1, char* str2, char* str3, char* str4, char* str5, char* str6)
+{
+	char* strings[6] = { str1, str2, str3, str4, str5, str6 };
+	return str_concat_array_free(6, strings);
+}
+
+char* str_concat_with_delim(int count, const char** str_array, const char* delim)
+{
+	int len = 0;
+	int delim_len = strlen(delim);
+	int actual_count = 0;
+
+	for (int i = 0; i < count; i++) {
+		if (!str_array[i] || !str_array[i][0]) continue;
+		len += strlen(str_array[i]);
+		actual_count++;
+	}
+
+	if (len == 0 || actual_count == 0) return strdup("");
+
+	char* out = malloc((len + (actual_count - 1) * delim_len + 1) * sizeof(char));
+	out[0] = '\0';
+	int current_count = 0;
+
+	for (int i = 0; i < count; i++) {
+		if (!str_array[i] || !str_array[i][0]) continue;
+		strcat(out, str_array[i]);
+		current_count++;
+		if (current_count != actual_count)
+			strcat(out, delim);
+	}
+
+	return out;
+}
+
+char* str_concat_with_delim_free(int count, char** str_array, const char* delim)
+{
+	char* out = str_concat_with_delim(count, (const char**)str_array, delim);
+
+	for (int i = 0; i < count; i++)
+		free(str_array[i]);
+
+	return out;
+}
+
+char* str_pad_between(char* str1, char* str2, char pad, int width, int min_padding, int free_inputs)
+{
+	int len1 = strlen(str1);
+	int len2 = strlen(str2);
+	int len_both = len1 + len2;
+
+	int len1_utf8 = charset_strlen(str1, CHARSET_UTF8);
+	int len2_utf8 = charset_strlen(str2, CHARSET_UTF8);
+	int len_both_utf8 = len1_utf8 + len2_utf8;
+	int len_padding = width - len_both_utf8;
+
+	if (len_padding < 0) len_padding = 0;
+	if (len_padding < min_padding) len_padding = min_padding;
+
+	int len_out = len_both + len_padding;
+	char* out = malloc((len_out + 1) * sizeof(char));
+	out[0] = '\0';
+
+	strcat(out, str1);
+
+	int end_padding = len1 + len_padding;
+
+	for(int i = len1; i < len1 + len_padding; i++) {
+		out[i] = pad;
+	}
+
+	out[end_padding] = '\0';
+
+	strcat(out, str2);
+
+	if(free_inputs) {
+		free(str1);
+		free(str2);
+	}
+
+	return out;
 }
 
 /* fast integer sqrt */

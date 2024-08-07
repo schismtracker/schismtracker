@@ -174,7 +174,47 @@ char *str_escape(const char *source, int space_hack);
 char *str_unescape(const char *source);
 char *pretty_name(const char *filename);
 int get_num_lines(const char *text);
-char *str_concat(const char *s, ...);
+
+/* Count how many times character is in str */
+int str_count_occurences(char character, const char* str);
+
+/* Concatenates strings in array. count is size of array. str_array is the array. */
+char* str_concat_array(int count, const char** str_array);
+/* Concatenates strings in array. count is size of array. str_array is the array. Frees the strings in the array. */
+char* str_concat_array_free(int count, char** str_array);
+
+char* str_concat_2(const char* str1, const char* str2);
+char* str_concat_3(const char* str1, const char* str2, const char* str3);
+char* str_concat_4(const char* str1, const char* str2, const char* str3, const char* str4);
+char* str_concat_5(const char* str1, const char* str2, const char* str3, const char* str4, const char* str5);
+char* str_concat_6(const char* str1, const char* str2, const char* str3, const char* str4, const char* str5, const char* str6);
+
+char* str_concat_2_free(char* str1, char* str2);
+char* str_concat_3_free(char* str1, char* str2, char* str3);
+char* str_concat_4_free(char* str1, char* str2, char* str3, char* str4);
+char* str_concat_5_free(char* str1, char* str2, char* str3, char* str4, char* str5);
+char* str_concat_6_free(char* str1, char* str2, char* str3, char* str4, char* str5, char* str6);
+
+/* Concatenates strings in array, putting a delimiter between them. count is size of array. str_array is the array. */
+char* str_concat_with_delim(int count, const char** str_array, const char* delim);
+/* Concatenates strings in array, putting a delimiter between them. count is size of array. str_array is the array. Frees the strings in the array. */
+char* str_concat_with_delim_free(int count, char** str_array, const char* delim);
+
+/* pad will be placed between str1 and str2 until width is reached. If free_inputs is true free() will be called on the strings. */
+char* str_pad_between(char* str1, char* str2, char pad, int width, int min_padding, int free_inputs);
+
+
+/* Prints last 8 bits of a variable. Used like this: printf("hello = " BYTE_TO_BINARY_PATTERN ".\n", BYTE_TO_BINARY(hello_var)); */
+#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte)  \
+  ((byte) & 0x80 ? '1' : '0'), \
+  ((byte) & 0x40 ? '1' : '0'), \
+  ((byte) & 0x20 ? '1' : '0'), \
+  ((byte) & 0x10 ? '1' : '0'), \
+  ((byte) & 0x08 ? '1' : '0'), \
+  ((byte) & 0x04 ? '1' : '0'), \
+  ((byte) & 0x02 ? '1' : '0'), \
+  ((byte) & 0x01 ? '1' : '0')
 
 
 /* filesystem */
