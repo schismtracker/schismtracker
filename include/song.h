@@ -134,6 +134,7 @@ int song_load_sample(int n, const char *file);
 void song_create_host_instrument(int smp);
 
 int song_load_instrument(int n, const char *file);
+int song_load_instrument_with_prompt(int n, const char *file);
 int song_load_instrument_ex(int n, const char *file, const char *libf, int nx);
 int song_save_instrument(const char *filename, const char *type, song_instrument_t *ins, int num);
 
