@@ -46,47 +46,100 @@
 #endif
 
 /* leeto drawing skills */
-#define MOUSE_HEIGHT    16
-#define MOUSE_WIDTH     10
-static const unsigned int _mouse_pointer[] = {
-	/* ........ ........ */  0x0000,
-	/* .x...... ........ */  0x4000,
-	/* .xx..... ........ */  0x6000,
-	/* .xxx.... ........ */  0x7000,
-	/* .xxxx... ........ */  0x7800,
-	/* .xxxxx.. ........ */  0x7c00,
-	/* .xxxxxx. ........ */  0x7e00,
-	/* .xxxxxxx ........ */  0x7f00,
-	/* .xxxxxxx x....... */  0x7f80,
-	/* .xxxxxxx ........ */  0x7f00,
-	/* .xxxxx.. ........ */  0x7c00,
-	/* .x...xx. ........ */  0x4600,
-	/* .....xx. ........ */  0x0600,
-	/* ......xx ........ */  0x0300,
-	/* ......xx ........ */  0x0300,
-	/* ........ ........ */  0x0000,
-	0,0
-};
-
-static const unsigned int _mouse_pointer_mask[] = {
-	/* xx.. .... .... .... */  0xc000,
-	/* xxx. .... .... .... */  0xe000,
-	/* xxxx .... .... .... */  0xf000,
-	/* xxxx x... .... .... */  0xf800,
-	/* xxxx xx.. .... .... */  0xfc00,
-	/* xxxx xxx. .... .... */  0xfe00,
-	/* xxxx xxxx .... .... */  0xff00,
-	/* xxxx xxxx x... .... */  0xff80,
-	/* xxxx xxxx xx.. .... */  0xffc0,
-	/* xxxx xxxx x... .... */  0xff80,
-	/* xxxx xxx. .... .... */  0xfe00,
-	/* xxxx xxxx .... .... */  0xff00,
-	/* .x.. xxxx .... .... */  0x4f00,
-	/* .... .xxx x... .... */  0x0780,
-	/* .... .xxx x... .... */  0x0780,
-	/* .... ..xx .... .... */  0x0300,
-	0,0
-};
+static struct mouse_cursor {
+	unsigned int pointer[18];
+	unsigned int mask[18];
+	unsigned int height, width;
+	unsigned int center_x, center_y; //which point of the pointer does actually point
+}
+	cursor_arrow = {
+		.pointer = {    /*   -|-------------> */
+			0x0000, /* | ................ */
+			0x4000, /* - .x.............. */
+			0x6000, /* | .xx............. */
+			0x7000, /* | .xxx............ */
+			0x7800, /* | .xxxx........... */
+			0x7c00, /* | .xxxxx.......... */
+			0x7e00, /* | .xxxxxx......... */
+			0x7f00, /* | .xxxxxxx........ */
+			0x7f80, /* | .xxxxxxxx....... */
+			0x7f00, /* | .xxxxxxx........ */
+			0x7c00, /* | .xxxxx.......... */
+			0x4600, /* | .x...xx......... */
+			0x0600, /* | .....xx......... */
+			0x0300, /* | ......xx........ */
+			0x0300, /* | ......xx........ */
+			0x0000, /* v ................ */
+			0,0
+			},
+		.mask = {       /*   -|-------------> */
+			0xc000, /* | xx.............. */
+			0xe000, /* - xxx............. */
+			0xf000, /* | xxxx............ */
+			0xf800, /* | xxxxx........... */
+			0xfc00, /* | xxxxxx.......... */
+			0xfe00, /* | xxxxxxx......... */
+			0xff00, /* | xxxxxxxx........ */
+			0xff80, /* | xxxxxxxxx....... */
+			0xffc0, /* | xxxxxxxxxx...... */
+			0xff80, /* | xxxxxxxxx....... */
+			0xfe00, /* | xxxxxxx......... */
+			0xff00, /* | xxxxxxxx........ */
+			0x4f00, /* | .x..xxxx........ */
+			0x0780, /* | .....xxxx....... */
+			0x0780, /* | .....xxxx....... */
+			0x0300, /* v ......xx........ */
+			0,0
+			},
+		.height = 16,
+		.width = 10,
+		.center_x = 1,
+		.center_y = 1,
+	},
+	cursor_crosshair = {
+		.pointer = {  /*   ---|---> */
+			0x00, /* | ........ */
+			0x10, /* | ...x.... */
+			0x7c, /* - .xxxxx.. */
+			0x10, /* | ...x.... */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* v ........ */
+			0,0
+			},
+		.mask = {     /*   ---|---> */
+			0x10, /* | ...x.... */
+			0x7c, /* | .xxxxx.. */
+			0xfe, /* - xxxxxxx. */
+			0x7c, /* | .xxxxx.. */
+			0x10, /* | ...x.... */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* | ........ */
+			0x00, /* v ........ */
+			0,0
+			},
+		.height = 5,
+		.width = 7,
+		.center_x = 3,
+		.center_y = 2,
+	};
 
 struct video_cf {
 	SDL_Window *window;
@@ -98,6 +151,7 @@ struct video_cf {
 
 	struct {
 		unsigned int x, y;
+		int type;
 		int visible;
 	} mouse;
 
@@ -121,7 +175,8 @@ struct video_cf {
 /* don't stomp defaults */
 static struct video_cf video = {
 	.mouse = {
-		.visible = MOUSE_EMULATED
+		.visible = MOUSE_EMULATED,
+		.type = CURSOR_ARROW
 	}
 };
 
@@ -343,23 +398,61 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 {
 	unsigned int z;
 	unsigned int zm;
-	unsigned int c = ceil(MOUSE_WIDTH / 8.0); //cursor width in symbols
+	unsigned int swidth; //cursor width in symbols
+	unsigned int scenter;
+	unsigned int centeroffset;
+	unsigned int temp;
+	struct mouse_cursor *cursor;
+
+	switch (video.mouse.type) {
+		case CURSOR_ARROW : cursor = &cursor_arrow; break;
+		case CURSOR_CROSSHAIR : cursor = &cursor_crosshair; break;
+	}
 
 	memset(mouseline, 0, 80*sizeof(unsigned int));
 	memset(mouseline_mask, 0, 80*sizeof(unsigned int));
+
 	if (video.mouse.visible != MOUSE_EMULATED
 		|| !video_is_focused()
-		|| y < video.mouse.y
-		|| y >= video.mouse.y+MOUSE_HEIGHT) {
+		|| (video.mouse.y >= cursor->center_y && y < video.mouse.y - cursor->center_y)
+		|| y < cursor->center_y
+		|| y >= video.mouse.y + cursor->height - cursor->center_y) {
 		return;
 	}
 
-	z = _mouse_pointer[ y - video.mouse.y ];
-	zm = _mouse_pointer_mask[ y - video.mouse.y ];
+	scenter = ceil(cursor->center_x / 8.0);
+	swidth = ceil(cursor->width / 8.0);
+	centeroffset = cursor->center_x % 8;
 
-	for (unsigned int i = 0; i < c && x + i < 80; i++) {
-		mouseline[x+i] = (z >> (v+8*(c-i-1))) & 0xff;
-		mouseline_mask[x+i] = (zm >> (v+8*(c-i-1))) & 0xff;
+	z = cursor->pointer[ y - video.mouse.y + cursor->center_y];
+	zm = cursor->mask[ y - video.mouse.y + cursor->center_y];
+
+	z <<= 8;
+	zm <<= 8;
+	if (v < centeroffset) {
+		z <<= centeroffset - v;
+		zm <<= centeroffset - v;
+	} else {
+		z >>= v - centeroffset;
+		zm >>= v - centeroffset;
+	}
+
+	//always fill the cell the mouse coordinates are in
+	mouseline[x] = z >> (8 * (swidth - scenter + 1)) & 0xff;
+	mouseline_mask[x] = zm >> (8 * (swidth - scenter + 1)) & 0xff;
+
+	//draw the parts of the cursor sticking out to the left
+	temp = (cursor->center_x < v) ? 0 : ceil((cursor->center_x - v) / 8.0);
+	for( int i = 1; i <= temp && x >= i; i++) {
+		mouseline[x-i] = z >> 8 * ( swidth - scenter + 1 + i) & 0xff;
+		mouseline_mask[x-i] = zm >> 8 * ( swidth - scenter + 1 + i) & 0xff;
+	}
+
+	//and to the right
+	temp = swidth - scenter + 1;
+	for( int i = 1; i <= temp && x+i < 80; i++) {
+		mouseline[x+i] = z >> 8 * ( swidth - scenter + 1 - i) & 0xff;
+		mouseline_mask[x+i] = zm >> 8 * ( swidth - scenter + 1 - i) & 0xff;
 	}
 }
 
@@ -405,6 +498,10 @@ int video_mousecursor_visible(void)
 	return video.mouse.visible;
 }
 
+void video_set_mousecursor_type(int type)
+{
+	video.mouse.type = type;
+}
 void video_mousecursor(int vis)
 {
 	const char *state[] = {

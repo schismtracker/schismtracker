@@ -41,6 +41,11 @@ void video_translate(int vx, int vy, unsigned int *x, unsigned int *y);
 void video_blit(void);
 void video_mousecursor(int z);
 int video_mousecursor_visible(void);
+enum {
+ CURSOR_ARROW,
+ CURSOR_CROSSHAIR,
+};
+void video_set_mousecursor_type(int);
 
 int video_is_fullscreen(void);
 int video_is_wm_available(void);
