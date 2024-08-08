@@ -1119,7 +1119,6 @@ void save_module_load_page(struct page *page, int do_export)
 	current_file = current_dir = 0;
 	dir_list_reposition();
 	file_list_reposition();
-	read_directory();
 
 	page->draw_const = save_module_draw_const;
 	page->set_page = save_module_set_page;
