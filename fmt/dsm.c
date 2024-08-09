@@ -306,7 +306,6 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					csf_import_mod_effect(note, 0);
 
 					if (note->effect == FX_PANNING)
-						// TODO: handle the surround parameter (0xA4)
 						if (note->param <= 0x80)
 							note->param <<= 1;
 						else if (note->param == 0xA4) {
@@ -343,8 +342,10 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (chn_doesnt_match && chn_doesnt_match != nchn)
 		log_appendf(4, " WARNING: # of channels (%"PRIu8") different than expected (%"PRIu16")", chn_doesnt_match, nchn);
 
-	for (n = 0; n < nchn; n++)
-		song->channels[n].panning = (chnpan[n & 15] & 0x80) << 1;
+	for (n = 0; n < nchn; n++) {
+		if (chnpan[n & 15] <= 0x80)
+			song->channels[n].panning = chnpan[n & 15] << 1;
+	}
 
 	for (; n < MAX_CHANNELS; n++)
 		song->channels[n].flags |= CHN_MUTE;
