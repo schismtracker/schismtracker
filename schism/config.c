@@ -31,6 +31,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <SDL_filesystem.h>
 
 #include "config-parser.h"
 #include "dmoz.h"
@@ -69,15 +70,15 @@ void cfg_init_dir(void)
 #if defined(__amigaos4__)
 	strcpy(cfg_dir_dotschism, "PROGDIR:");
 #else
-	char *cur_dir, *portable_file;
+	char *app_dir, *portable_file;
 
-	cur_dir = get_current_directory();
-	portable_file = dmoz_path_concat(cur_dir, "portable.txt");
+	app_dir = SDL_GetBasePath();
+	portable_file = dmoz_path_concat(app_dir, "portable.txt");
 
 	if(is_file(portable_file)) {
 		printf("In portable mode.\n");
 
-		strncpy(cfg_dir_dotschism, cur_dir, PATH_MAX);
+		strncpy(cfg_dir_dotschism, app_dir, PATH_MAX);
 		cfg_dir_dotschism[PATH_MAX] = 0;
 	} else {
 		char *dot_dir, *ptr;
@@ -99,7 +100,7 @@ void cfg_init_dir(void)
 		}
 	}
 
-	free(cur_dir);
+	SDL_free(app_dir);
 	free(portable_file);
 #endif
 }
