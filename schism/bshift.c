@@ -25,3 +25,4 @@
 
 extern inline int64_t schism_signed_lshift_32_(int32_t x, int y);
 extern inline int32_t schism_signed_rshift_32_(int32_t x, int y);
+extern inline int64_t schism_signed_rshift_64_(int64_t x, int y);
