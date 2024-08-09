@@ -1557,6 +1557,7 @@ static int _env_handle_mouse(struct key_event *k, song_envelope_t *env, int *cur
 	if (k->state == KEY_RELEASE) {
 		/* mouse release */
 		if (envelope_mouse_edit) {
+			video_set_mousecursor_shape(CURSOR_SHAPE_ARROW);
 			if (current_node && *current_node) {
 				for (i = 0; i < env->nodes-1; i++) {
 					if (*current_node == i) continue;
@@ -1582,6 +1583,7 @@ static int _env_handle_mouse(struct key_event *k, song_envelope_t *env, int *cur
 		max_ticks *= 2;
 
 	if (envelope_mouse_edit) {
+		video_set_mousecursor_shape(CURSOR_SHAPE_CROSSHAIR);
 		if (k->fx < 259)
 			x = 0;
 		else
