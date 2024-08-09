@@ -39,13 +39,18 @@ void video_resize(unsigned int width, unsigned int height);
 void video_fullscreen(int new_fs_flag);
 void video_translate(int vx, int vy, unsigned int *x, unsigned int *y);
 void video_blit(void);
-void video_mousecursor(int z);
-int video_mousecursor_visible(void);
-enum {
- CURSOR_ARROW,
- CURSOR_CROSSHAIR,
+
+/* cursor-specific stuff */
+enum video_mousecursor_shape {
+	CURSOR_SHAPE_ARROW,
+	CURSOR_SHAPE_CROSSHAIR,
 };
-void video_set_mousecursor_type(int);
+
+void video_mousecursor(int z); /* takes in the MOUSE_* enum from it.h (why is it there?) */
+int video_mousecursor_visible(void);
+void video_set_mousecursor_shape(enum video_mousecursor_shape shape);
+
+/* getters, will sometimes poll SDL */
 
 int video_is_fullscreen(void);
 int video_is_wm_available(void);
@@ -53,7 +58,7 @@ int video_is_focused(void);
 int video_is_visible(void);
 int video_width(void);
 int video_height(void);
-SDL_Window * video_window(void);
+SDL_Window *video_window(void);
 
 void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y);
 

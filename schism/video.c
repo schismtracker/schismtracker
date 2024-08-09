@@ -46,100 +46,104 @@
 #endif
 
 /* leeto drawing skills */
-static struct mouse_cursor {
+struct mouse_cursor {
 	unsigned int pointer[18];
 	unsigned int mask[18];
 	unsigned int height, width;
-	unsigned int center_x, center_y; //which point of the pointer does actually point
-}
-	cursor_arrow = {
-		.pointer = {    /*   -|-------------> */
-			0x0000, /* | ................ */
-			0x4000, /* - .x.............. */
-			0x6000, /* | .xx............. */
-			0x7000, /* | .xxx............ */
-			0x7800, /* | .xxxx........... */
-			0x7c00, /* | .xxxxx.......... */
-			0x7e00, /* | .xxxxxx......... */
-			0x7f00, /* | .xxxxxxx........ */
-			0x7f80, /* | .xxxxxxxx....... */
-			0x7f00, /* | .xxxxxxx........ */
-			0x7c00, /* | .xxxxx.......... */
-			0x4600, /* | .x...xx......... */
-			0x0600, /* | .....xx......... */
-			0x0300, /* | ......xx........ */
-			0x0300, /* | ......xx........ */
-			0x0000, /* v ................ */
+	unsigned int center_x, center_y; /* which point of the pointer does actually point */
+};
+
+/* ex. cursors[CURSOR_SHAPE_ARROW] */
+static struct mouse_cursor cursors[] = {
+	[CURSOR_SHAPE_ARROW] = {
+		.pointer = { /* / -|-------------> */
+			0x0000,  /* | ................ */
+			0x4000,  /* - .x.............. */
+			0x6000,  /* | .xx............. */
+			0x7000,  /* | .xxx............ */
+			0x7800,  /* | .xxxx........... */
+			0x7c00,  /* | .xxxxx.......... */
+			0x7e00,  /* | .xxxxxx......... */
+			0x7f00,  /* | .xxxxxxx........ */
+			0x7f80,  /* | .xxxxxxxx....... */
+			0x7f00,  /* | .xxxxxxx........ */
+			0x7c00,  /* | .xxxxx.......... */
+			0x4600,  /* | .x...xx......... */
+			0x0600,  /* | .....xx......... */
+			0x0300,  /* | ......xx........ */
+			0x0300,  /* | ......xx........ */
+			0x0000,  /* v ................ */
 			0,0
-			},
-		.mask = {       /*   -|-------------> */
-			0xc000, /* | xx.............. */
-			0xe000, /* - xxx............. */
-			0xf000, /* | xxxx............ */
-			0xf800, /* | xxxxx........... */
-			0xfc00, /* | xxxxxx.......... */
-			0xfe00, /* | xxxxxxx......... */
-			0xff00, /* | xxxxxxxx........ */
-			0xff80, /* | xxxxxxxxx....... */
-			0xffc0, /* | xxxxxxxxxx...... */
-			0xff80, /* | xxxxxxxxx....... */
-			0xfe00, /* | xxxxxxx......... */
-			0xff00, /* | xxxxxxxx........ */
-			0x4f00, /* | .x..xxxx........ */
-			0x0780, /* | .....xxxx....... */
-			0x0780, /* | .....xxxx....... */
-			0x0300, /* v ......xx........ */
+		},
+		.mask = {    /* / -|-------------> */
+			0xc000,  /* | xx.............. */
+			0xe000,  /* - xxx............. */
+			0xf000,  /* | xxxx............ */
+			0xf800,  /* | xxxxx........... */
+			0xfc00,  /* | xxxxxx.......... */
+			0xfe00,  /* | xxxxxxx......... */
+			0xff00,  /* | xxxxxxxx........ */
+			0xff80,  /* | xxxxxxxxx....... */
+			0xffc0,  /* | xxxxxxxxxx...... */
+			0xff80,  /* | xxxxxxxxx....... */
+			0xfe00,  /* | xxxxxxx......... */
+			0xff00,  /* | xxxxxxxx........ */
+			0x4f00,  /* | .x..xxxx........ */
+			0x0780,  /* | .....xxxx....... */
+			0x0780,  /* | .....xxxx....... */
+			0x0300,  /* v ......xx........ */
 			0,0
-			},
+		},
 		.height = 16,
 		.width = 10,
 		.center_x = 1,
 		.center_y = 1,
 	},
-	cursor_crosshair = {
-		.pointer = {  /*   ---|---> */
-			0x00, /* | ........ */
-			0x10, /* | ...x.... */
-			0x7c, /* - .xxxxx.. */
-			0x10, /* | ...x.... */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* v ........ */
+	[CURSOR_SHAPE_CROSSHAIR] = {
+		.pointer = {  /* / ---|---> */
+			0x00,     /* | ........ */
+			0x10,     /* | ...x.... */
+			0x7c,     /* - .xxxxx.. */
+			0x10,     /* | ...x.... */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* v ........ */
 			0,0
-			},
-		.mask = {     /*   ---|---> */
-			0x10, /* | ...x.... */
-			0x7c, /* | .xxxxx.. */
-			0xfe, /* - xxxxxxx. */
-			0x7c, /* | .xxxxx.. */
-			0x10, /* | ...x.... */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* | ........ */
-			0x00, /* v ........ */
+		},
+		.mask = {     /* / ---|---> */
+			0x10,     /* | ...x.... */
+			0x7c,     /* | .xxxxx.. */
+			0xfe,     /* - xxxxxxx. */
+			0x7c,     /* | .xxxxx.. */
+			0x10,     /* | ...x.... */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* v ........ */
 			0,0
-			},
+		},
 		.height = 5,
 		.width = 7,
 		.center_x = 3,
 		.center_y = 2,
-	};
+	},
+};
 
 struct video_cf {
 	SDL_Window *window;
@@ -151,7 +155,7 @@ struct video_cf {
 
 	struct {
 		unsigned int x, y;
-		int type;
+		enum video_mousecursor_shape shape;
 		int visible;
 	} mouse;
 
@@ -176,7 +180,7 @@ struct video_cf {
 static struct video_cf video = {
 	.mouse = {
 		.visible = MOUSE_EMULATED,
-		.type = CURSOR_ARROW
+		.shape = CURSOR_SHAPE_ARROW
 	}
 };
 
@@ -200,7 +204,7 @@ void video_update(void)
 	SDL_GetWindowSize(video.window, &video.width, &video.height);
 }
 
-const char * video_driver_name(void)
+const char *video_driver_name(void)
 {
 	return SDL_GetCurrentVideoDriver();
 }
@@ -233,7 +237,7 @@ void video_shutdown(void)
 	SDL_DestroyTexture(video.texture);
 }
 
-void video_setup(const char* quality)
+void video_setup(const char *quality)
 {
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
 }
@@ -398,19 +402,14 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 {
 	unsigned int z;
 	unsigned int zm;
-	unsigned int swidth; //cursor width in symbols
+	unsigned int swidth; // cursor width in symbols
 	unsigned int scenter;
 	unsigned int centeroffset;
 	unsigned int temp;
-	struct mouse_cursor *cursor;
+	struct mouse_cursor *cursor = &cursors[video.mouse.shape];
 
-	switch (video.mouse.type) {
-		case CURSOR_ARROW : cursor = &cursor_arrow; break;
-		case CURSOR_CROSSHAIR : cursor = &cursor_crosshair; break;
-	}
-
-	memset(mouseline, 0, 80*sizeof(unsigned int));
-	memset(mouseline_mask, 0, 80*sizeof(unsigned int));
+	memset(mouseline, 0, 80 * sizeof(unsigned int));
+	memset(mouseline_mask, 0, 80 * sizeof(unsigned int));
 
 	if (video.mouse.visible != MOUSE_EMULATED
 		|| !video_is_focused()
@@ -498,10 +497,11 @@ int video_mousecursor_visible(void)
 	return video.mouse.visible;
 }
 
-void video_set_mousecursor_type(int type)
+void video_set_mousecursor_shape(enum video_mousecursor_shape shape)
 {
-	video.mouse.type = type;
+	video.mouse.shape = shape;
 }
+
 void video_mousecursor(int vis)
 {
 	const char *state[] = {
