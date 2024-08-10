@@ -998,12 +998,12 @@ static int dir_list_handle_key(struct key_event * k, int width)
 
 static int dir_list_handle_key_load(struct key_event * k)
 {
-	dir_list_handle_key(k, 77 - 51);
+	return dir_list_handle_key(k, 77 - 51);
 }
 
 static int dir_list_handle_key_exportsave(struct key_event * k)
 {
-	dir_list_handle_key(k, 68 - 51);
+	return dir_list_handle_key(k, 68 - 51);
 }
 
 /* --------------------------------------------------------------------- */
