@@ -727,7 +727,7 @@ static int write_s3m_pattern(disko_t *fp, song_t *song, int pat, uint8_t *chanty
 			}
 
 			/* Translate notes */
-			if (out.note <= 12 || (out.note >= 109 && out.note <= 120)) {
+			if ((out.note > 0 && out.note <= 12) || (out.note >= 109 && out.note <= 120)) {
 				// Octave 0/9 (or higher?)
 				warn |= 1 << WARN_NOTERANGE;
 				out.note = 255;
