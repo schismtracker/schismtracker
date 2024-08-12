@@ -549,7 +549,8 @@ static void finish_load(int cur)
 static void reposition_at_slash_search(void)
 {
 	dmoz_file_t *f;
-	int i, j, b, bl;
+	int i, b, bl;
+	size_t j;
 
 	if (search_pos < 0) return;
 	bl = b = -1;
@@ -557,13 +558,11 @@ static void reposition_at_slash_search(void)
 		f = flist.files[i];
 		if (!f || !f->base) continue;
 
-		CHARSET_EASY_MODE(f->base, CHARSET_CHAR, CHARSET_CP437, {
-			for (j = 0; j < search_pos; j++) {
-				if (tolower(out[j]) != tolower(search_str[j]))
-					break;
-			}
-		});
+		/* ignore... i guess */
+		if (charset_strncasecmp(f->base, CHARSET_CHAR, search_str, CHARSET_CP437, search_pos))
+			continue;
 
+		j = charset_strncasecmplen(f->base, CHARSET_CHAR, search_str, CHARSET_CP437, search_pos);
 		if (bl < j) {
 			bl = j;
 			b = i;

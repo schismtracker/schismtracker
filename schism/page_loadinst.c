@@ -285,7 +285,8 @@ static void dont_enable_inst(UNUSED void *d)
 static void reposition_at_slash_search(void)
 {
 	dmoz_file_t *f;
-	int i, j, b, bl;
+	int i, b, bl;
+	size_t j;
 
 	if (slash_search_mode < 0) return;
 	bl = b = -1;
@@ -294,14 +295,11 @@ static void reposition_at_slash_search(void)
 		f = flist.files[i];
 		if (!f || !f->base) continue;
 
-		CHARSET_EASY_MODE(f->base, CHARSET_CHAR, CHARSET_CP437, {
-			for (j = 0; j < slash_search_mode; j++) {
-				if (tolower(((unsigned)f->base[j]))
-				!= tolower(((unsigned)slash_search_str[j])))
-					break;
-			}
-		});
+		/* ignore any strings that don't match */
+		if (charset_strncasecmp(f->base, CHARSET_CHAR, slash_search_str, CHARSET_CP437, slash_search_mode))
+			continue;
 
+		j = charset_strncasecmplen(f->base, CHARSET_CHAR, slash_search_str, CHARSET_CP437, slash_search_mode);
 		if (bl < j) {
 			bl = j;
 			b = i;

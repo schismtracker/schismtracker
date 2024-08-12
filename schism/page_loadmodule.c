@@ -1026,6 +1026,7 @@ static void dirname_entered(void)
 	CHARSET_EASY_MODE(dirname_entry, CHARSET_CP437, CHARSET_CHAR, {
 		if (!change_dir(out)) {
 			/* FIXME: need to give some kind of feedback here */
+			free(out); /* ergh */
 			return;
 		}
 	});
