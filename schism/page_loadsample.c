@@ -393,18 +393,16 @@ static void file_list_draw(void)
 		draw_char(168, 31, pos, 2, bg);
 		draw_text_utf8_len(file->base ? file->base : "", 18, 32, pos, fg, bg);
 
-		CHARSET_EASY_MODE(file->base ? file->base : "", CHARSET_CHAR, CHARSET_CP437, {
-			/* XXX this is wrong */
-			if (file->base && search_pos > -1) {
-				if (strncasecmp(out,search_str,search_pos) == 0) {
-					for (i = 0 ; i < search_pos; i++) {
-						if (tolower(out[i]) != tolower(search_str[i]))
-							break;
-						draw_char(out[i], 32+i, pos, 3,1);
-					}
-				}
+		/* this is stupid */
+		if (file->base && search_pos > -1) {
+			if (charset_strncasecmp(file->base, CHARSET_CHAR,
+					search_str, CHARSET_CP437, search_pos) == 0) {
+				size_t len = charset_strncasecmplen(file->base, CHARSET_CHAR,
+					search_str, CHARSET_CP437, search_pos);
+
+				draw_text_utf8_len(file->base, MIN(len, 18), 32, pos, 3, 1);
 			}
-		});
+		}
 	}
 
 	/* draw the info for the current file (or directory...) */

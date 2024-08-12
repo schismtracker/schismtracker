@@ -720,3 +720,99 @@ charsetfail:
 	return (tolower(*in1) - tolower(*--in2));
 #endif
 }
+
+/* ugh. (num is the number of CHARACTERS, not the number of bytes!!) */
+int charset_strncasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num) {
+	uint32_t codepoint1, codepoint2;
+	size_t in1_needed, in2_needed, in1_offset = 0, in2_offset = 0;
+	int c1, c2;
+
+	if (in1set >= ARRAY_SIZE(conv_to_ucs4_funcs) || in2set >= ARRAY_SIZE(conv_to_ucs4_funcs))
+		goto charsetfail;
+
+	charset_conv_to_ucs4_func conv1_to_ucs4_func = conv_to_ucs4_funcs[in1set],
+	                          conv2_to_ucs4_func = conv_to_ucs4_funcs[in2set];
+
+	if (!conv1_to_ucs4_func || !conv2_to_ucs4_func)
+		goto charsetfail;
+
+	size_t i;
+	for (i = 0; i < num; i++) {
+		c1 = conv1_to_ucs4_func(in1 + in1_offset, &codepoint1, &in1_needed);
+		c2 = conv1_to_ucs4_func(in2 + in2_offset, &codepoint2, &in2_needed);
+
+		if (c1 == DECODER_ERROR || c2 == DECODER_ERROR)
+			goto charsetfail;
+
+		codepoint1 = charset_simple_case_fold(codepoint1);
+		codepoint2 = charset_simple_case_fold(codepoint2);
+
+		if (c1 == DECODER_DONE || c2 == DECODER_DONE || codepoint1 != codepoint2)
+			break;
+
+		in1_offset += in1_needed;
+		in2_offset += in2_needed;
+	}
+
+	return codepoint1 - codepoint2;
+
+charsetfail:
+	/* commenting this out unless it's really necessary */
+	/* if (in1set != CHARSET_CHAR && in2set != CHARSET_CHAR) return 0; */
+
+#if HAVE_STRCASECMP
+	return strncasecmp(in1, in2, num);
+#else
+	do {
+		if (tolower(*in1) != tolower(*in2++))
+			return (tolower(*in1) - tolower(*--in1));
+		if (*in1++ == '\0')
+			break;
+	} while (--num != 0);
+
+	return 0;
+#endif
+}
+
+/* this does the exact same as the above function but returns how many characters were passed */
+size_t charset_strncasecmplen(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num) {
+	uint32_t codepoint1, codepoint2;
+	size_t i, in1_needed, in2_needed, in1_offset = 0, in2_offset = 0;
+	int c1, c2;
+
+	if (in1set >= ARRAY_SIZE(conv_to_ucs4_funcs) || in2set >= ARRAY_SIZE(conv_to_ucs4_funcs))
+		goto charsetfail;
+
+	charset_conv_to_ucs4_func conv1_to_ucs4_func = conv_to_ucs4_funcs[in1set],
+	                          conv2_to_ucs4_func = conv_to_ucs4_funcs[in2set];
+
+	if (!conv1_to_ucs4_func || !conv2_to_ucs4_func)
+		goto charsetfail;
+
+	for (i = 0; i < num; i++) {
+		c1 = conv1_to_ucs4_func(in1 + in1_offset, &codepoint1, &in1_needed);
+		c2 = conv1_to_ucs4_func(in2 + in2_offset, &codepoint2, &in2_needed);
+
+		if (c1 == DECODER_ERROR || c2 == DECODER_ERROR)
+			goto charsetfail;
+
+		codepoint1 = charset_simple_case_fold(codepoint1);
+		codepoint2 = charset_simple_case_fold(codepoint2);
+
+		if (c1 == DECODER_DONE || c2 == DECODER_DONE || codepoint1 != codepoint2)
+			break;
+
+		in1_offset += in1_needed;
+		in2_offset += in2_needed;
+	}
+
+	return i;
+
+charsetfail:
+	/* Whoops! You have to put the CD in your computer! */
+	for (i = 0; i < num; i++)
+		if (tolower(in1[i]) != tolower(in2[i]))
+			break;
+
+	return i;
+}

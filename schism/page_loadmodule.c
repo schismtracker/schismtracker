@@ -214,7 +214,7 @@ static void loadsave_song_changed(void)
 	ext = get_extension(ptr);
 	if (ext[0] && ext[1]) {
 		for (i = 0; song_save_formats[i].label; i++) {
-			if (strcasecmp(ext, song_save_formats[i].ext) == 0) {
+			if (charset_strcasecmp(ext, CHARSET_CHAR, song_save_formats[i].ext, CHARSET_CHAR) == 0) {
 				/* ugh :) offset to the button for the file type on the save module
 				   page is (position in diskwriter driver array) + 4 */
 				r = i + 4;
@@ -480,23 +480,21 @@ static void search_update(void)
 	 * find the first entry matching the text */
 	if (*selected_widget == 0) {
 		for (n = 0; n < flist.num_files; n++) {
-			CHARSET_EASY_MODE(flist.files[n]->base, CHARSET_CHAR, CHARSET_CP437, {
-				if (strncasecmp(out, search_text, search_text_length) == 0) {
-					current_file = n;
-					file_list_reposition();
-					break;
-				}
-			});
+			if (charset_strncasecmp(flist.files[n]->base, CHARSET_CHAR,
+					search_text, CHARSET_CP437, search_text_length) == 0) {
+				current_file = n;
+				file_list_reposition();
+				break;
+			}
 		}
 	} else {
 		for (n = 0; n < dlist.num_dirs; n++) {
-			CHARSET_EASY_MODE(dlist.dirs[n]->base, CHARSET_CHAR, CHARSET_CP437, {
-				if (strncasecmp(out, search_text, search_text_length) == 0) {
-					current_dir = n;
-					dir_list_reposition();
-					break;
-				}
-			});
+			if (charset_strncasecmp(dlist.dirs[n]->base, CHARSET_CHAR,
+					search_text, CHARSET_CP437, search_text_length) == 0) {
+				current_dir = n;
+				dir_list_reposition();
+				break;
+			}
 		}
 	}
 
@@ -1069,7 +1067,7 @@ static void load_module_set_page(void)
 		pages[PAGE_LOAD_MODULE].selected_widget = (flist.num_files > 0) ? 0 : 1;
 
 	// Don't reparse the glob if it hasn't changed; that will mess with the cursor position
-	if (strcasecmp(glob_list_src, cfg_module_pattern) == 0)
+	if (charset_strcasecmp(glob_list_src, CHARSET_CHAR, cfg_module_pattern, CHARSET_CHAR) == 0)
 		strcpy(filename_entry, glob_list_src);
 	else
 		set_default_glob(1);
