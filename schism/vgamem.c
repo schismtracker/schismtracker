@@ -334,6 +334,7 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				break; \
 			case VGAMEM_FONT_UNICODE: { \
 				uint32_t c = bp->character.unicode.c; \
+	\
 				if (c >= 0x20 && c <= 0x7F) { \
 					/* ASCII */ \
 					dg = itf[c << 3]; \
@@ -347,8 +348,10 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 					/* japanese hiragana */ \
 					dg = hiragana[(c - 0x3040) << 3]; \
 				} else { \
-					dg = itf[63u << 3]; \
-				}\
+					/* will display a ? if no cp437 equivalent found */ \
+					uint32_t cp437 = char_unicode_to_cp437(c); \
+					dg = itf[cp437 << 3]; \
+				} \
 	\
 				fg = bp->character.unicode.colors.fg; \
 				bg = bp->character.unicode.colors.bg; \
