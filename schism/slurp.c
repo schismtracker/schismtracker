@@ -271,7 +271,7 @@ void unslurp(slurp_t * t)
 
 /* --------------------------------------------------------------------- */
 
-int slurp_seek(slurp_t *t, long offset, int whence)
+int slurp_seek(slurp_t *t, int64_t offset, int whence)
 {
 	switch (whence) {
 	default:
@@ -284,15 +284,17 @@ int slurp_seek(slurp_t *t, long offset, int whence)
 		offset += t->length;
 		break;
 	}
-	if (offset < 0 || (size_t) offset > t->length)
+
+	if (offset < 0 || (size_t)offset > t->length)
 		return -1;
+
 	t->pos = offset;
 	return 0;
 }
 
-long slurp_tell(slurp_t *t)
+int64_t slurp_tell(slurp_t *t)
 {
-	return (long) t->pos;
+	return (int64_t)t->pos;
 }
 
 size_t slurp_read(slurp_t *t, void *ptr, size_t count)

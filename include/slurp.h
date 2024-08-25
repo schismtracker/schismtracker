@@ -37,6 +37,7 @@ struct _slurp_struct {
 	int extra;
 	void *bextra;
 	void (*closure)(slurp_t *);
+
 	/* for reading streams */
 	size_t pos;
 };
@@ -49,7 +50,7 @@ returned by stat -- this can be used to read only part of a file, or if the file
 a stat structure is not available. */
 slurp_t *slurp(const char *filename, struct stat *buf, size_t size);
 
-void unslurp(slurp_t * t);
+void unslurp(slurp_t *t);
 
 #ifdef SCHISM_WIN32
 int slurp_win32(slurp_t *useme, const char *filename, size_t st);
@@ -60,8 +61,8 @@ int slurp_mmap(slurp_t *useme, const char *filename, size_t st);
 #endif
 
 /* stdio-style file processing */
-int slurp_seek(slurp_t *t, long offset, int whence); /* whence => SEEK_SET, SEEK_CUR, SEEK_END */
-long slurp_tell(slurp_t *t);
+int slurp_seek(slurp_t *t, int64_t offset, int whence); /* whence => SEEK_SET, SEEK_CUR, SEEK_END */
+int64_t slurp_tell(slurp_t *t);
 #define slurp_rewind(t) slurp_seek((t), 0, SEEK_SET)
 
 size_t slurp_read(slurp_t *t, void *ptr, size_t count); /* i never really liked fread */
