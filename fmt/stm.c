@@ -36,7 +36,7 @@ int fmt_stm_read_info(dmoz_file_t *file, slurp_t *fp)
 	int what, type, version;
 	int i;
 
-	slurp_seek(fp, SEEK_SET, 28);
+	slurp_seek(fp, 28, SEEK_SET);
 	what = slurp_getc(fp);
 	type = slurp_getc(fp);
 	version = slurp_getc(fp);
@@ -46,7 +46,7 @@ int fmt_stm_read_info(dmoz_file_t *file, slurp_t *fp)
 		|| version != 2)
 		return 0;
 
-	slurp_seek(fp, SEEK_SET, 20);
+	slurp_seek(fp, 20, SEEK_SET);
 	for (i = 0; i < 8; i++) {
 		/* the ID should be all safe ASCII */
 		int id = slurp_getc(fp);
@@ -54,7 +54,7 @@ int fmt_stm_read_info(dmoz_file_t *file, slurp_t *fp)
 			return 0;
 	}
 
-	slurp_seek(fp, SEEK_SET, 0);
+	slurp_rewind(fp);
 	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 

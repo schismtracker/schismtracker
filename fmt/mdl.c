@@ -49,35 +49,22 @@ int fmt_mdl_read_info(dmoz_file_t *file, slurp_t *fp)
 	if ((((unsigned char)version & 0xf0) >> 4) <= 1)
 		return 0;
 
-	size_t position = 5;
-	while (position + 6 < fp->length) {
+	for (;;) {
+		unsigned char id[2];
 		uint32_t block_length;
 
-		slurp_seek(fp, SEEK_SET, position + 2);
-		if (slurp_read(fp, &block_length, sizeof(block_length)) != sizeof(block_length))
+		if (slurp_read(fp, &id, sizeof(id)) != sizeof(id)
+			|| slurp_read(fp, &block_length, sizeof(block_length)) != sizeof(block_length))
 			return 0;
 
 		block_length = bswapLE32(block_length);
 
-		if (block_length + position > fp->length)
-			return 0;
-
-		unsigned char id[2];
-
-		slurp_seek(fp, SEEK_SET, position);
-		if (slurp_read(fp, &id, sizeof(id)) != sizeof(id))
-			return 0;
-
-		if (memcmp(id, "IN", 2) == 0) {
+		if (!memcmp(id, "IN", 2)) {
 			/* hey! we have a winner */
 			unsigned char title[32], artist[20];
 
-			slurp_seek(fp, SEEK_SET, position + 6);
-			if (slurp_read(fp, &title, sizeof(title)) != sizeof(title))
-				return 0;
-
-			slurp_seek(fp, SEEK_SET, position + 38);
-			if (slurp_read(fp, &artist, sizeof(artist)) != sizeof(artist))
+			if (slurp_read(fp, &title, sizeof(title)) != sizeof(title)
+				|| slurp_read(fp, &artist, sizeof(artist)) != sizeof(artist))
 				return 0;
 
 			file->title = strn_dup(title, sizeof(title));
@@ -86,8 +73,9 @@ int fmt_mdl_read_info(dmoz_file_t *file, slurp_t *fp)
 			/*file->extension = str_dup("mdl");*/
 			file->type = TYPE_MODULE_XM;
 			return 1;
-		} /* else... */
-		position += 6 + block_length;
+		} else {
+			slurp_seek(fp, SEEK_CUR, block_length);
+		}
 	}
 
 	return 0;

@@ -125,16 +125,18 @@ int fmt_dsm_read_info(dmoz_file_t *file, slurp_t *fp)
 	if (!(fp->length > 40))
 		return 0;
 
-	slurp_read(fp, riff, sizeof(riff));
-
-	slurp_seek(fp, SEEK_SET, 8);
-	slurp_read(fp, dsmf, sizeof(dsmf));
-
-	if (memcmp(riff, "RIFF", 4) || memcmp(dsmf, "DSMF", 4))
+	if (slurp_read(fp, riff, sizeof(riff)) != sizeof(dsmf)
+		|| memcmp(riff, "RIFF", 4))
 		return 0;
 
-	slurp_seek(fp, SEEK_SET, 20);
-	slurp_read(fp, title, sizeof(title));
+	slurp_seek(fp, 8, SEEK_SET);
+	if (slurp_read(fp, dsmf, sizeof(dsmf)) != sizeof(dsmf)
+		|| memcmp(dsmf, "DSMF", 4))
+		return 0;
+
+	slurp_seek(fp, 20, SEEK_SET);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
+		return 0;
 
 	file->description = "DSIK Module";
 	/*file->extension = str_dup("dsm");*/

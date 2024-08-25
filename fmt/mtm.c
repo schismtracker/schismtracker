@@ -70,7 +70,7 @@ int fmt_mtm_read_info(dmoz_file_t *file, slurp_t *fp)
 		|| memcmp(magic, "MTM", 3))
 		return 0;
 
-	slurp_seek(fp, SEEK_SET, 4);
+	slurp_seek(fp, 4, SEEK_SET);
 	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 

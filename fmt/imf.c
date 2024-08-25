@@ -35,12 +35,12 @@ int fmt_imf_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	unsigned char magic[4], title[32];
 
-	slurp_seek(fp, SEEK_SET, 60);
+	slurp_seek(fp, 60, SEEK_SET);
 	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
 		|| memcmp(magic, "IM10", sizeof(title)))
 		return 0;
 
-	slurp_seek(fp, SEEK_SET, 0);
+	slurp_seek(fp, 0, SEEK_SET);
 	slurp_read(fp, title, sizeof(title));
 
 	file->description = "Imago Orpheus";

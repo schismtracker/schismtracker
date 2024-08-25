@@ -40,7 +40,7 @@ int fmt_ams_read_info(dmoz_file_t *file, slurp_t *fp)
 	if (!(fp->length > 38 && memcmp(magic, "AMShdr\x1a", 7) == 0))
 		return 0;
 
-	slurp_seek(fp, SEEK_SET, 7);
+	slurp_seek(fp, 7, SEEK_SET);
 	int n = slurp_getc(fp);
 	n = CLAMP(n, 0, 30);
 

@@ -37,7 +37,7 @@ int fmt_f2r_read_info(dmoz_file_t *file, slurp_t *fp)
 		return 0;
 
 	unsigned char title[40];
-	slurp_seek(fp, SEEK_SET, 6);
+	slurp_seek(fp, 6, SEEK_SET);
 	slurp_read(fp, title, sizeof(title));
 
 	file->description = "Farandole 2 (linear)";

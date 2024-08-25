@@ -56,8 +56,8 @@ int fmt_mus_read_info(dmoz_file_t *file, slurp_t *fp)
 		return 0;
 
 	/* cast necessary for big-endian systems */
-	if (memcmp(hdr.id, "MUS\x1a", 4) == 0
-	      || ((size_t)bswapLE16(hdr.scorestart) + bswapLE16(hdr.scorelen)) > fp->length)
+	if (!memcmp(hdr.id, "MUS\x1a", 4)
+	    || ((size_t)bswapLE16(hdr.scorestart) + bswapLE16(hdr.scorelen)) > fp->length)
 		return 0;
 
 	file->description = "Doom Music File";

@@ -42,7 +42,7 @@ int fmt_mt2_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	unsigned char title[64];
 
-	slurp_seek(fp, SEEK_SET, 42);
+	slurp_seek(fp, 42, SEEK_SET);
 	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 

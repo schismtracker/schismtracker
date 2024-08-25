@@ -230,7 +230,8 @@ int fmt_wav_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	if (!wav_load(&f, fp->data, fp->length))
 		return 0;
-	else if (f.fmt.format != WAVE_FORMAT_PCM ||
+
+	if (f.fmt.format != WAVE_FORMAT_PCM ||
 		!f.fmt.freqHz ||
 		(f.fmt.channels != 1 && f.fmt.channels != 2) ||
 		(f.fmt.bitspersample != 8 && f.fmt.bitspersample != 16 &&

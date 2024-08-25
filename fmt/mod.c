@@ -153,7 +153,7 @@ int fmt_mod_read_info(dmoz_file_t *file, slurp_t *fp)
 	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 
-	slurp_seek(fp, SEEK_SET, 1080);
+	slurp_seek(fp, 1080, SEEK_SET);
 	if (slurp_read(fp, tag, sizeof(tag)) != sizeof(tag))
 		return 0;
 
@@ -173,7 +173,7 @@ int fmt_mod_read_info(dmoz_file_t *file, slurp_t *fp)
 	}
 
 	/* check if it could be a SoundTracker MOD */
-	slurp_seek(fp, SEEK_SET, 0);
+	slurp_rewind(fp);
 	int errors = 0;
 	for (i = 0; i < 20; i++) {
 		int b = slurp_getc(fp);
@@ -186,7 +186,7 @@ int fmt_mod_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	uint8_t all_volumes = 0, all_lengths = 0;
 	for (i = 0; i < 15; i++) {
-		slurp_seek(fp, SEEK_SET, 20 + i * 30 + 22);
+		slurp_seek(fp, 20 + i * 30 + 22, SEEK_SET);
 		int length_high = slurp_getc(fp);
 		int length_low = slurp_getc(fp);
 		int length = length_high * 0x100 + length_low;
@@ -203,7 +203,6 @@ int fmt_mod_read_info(dmoz_file_t *file, slurp_t *fp)
 			return 0; /* invalid sample length */
 
 		all_volumes |= volume;
-
 		all_lengths |= length_high | length_low;
 	}
 

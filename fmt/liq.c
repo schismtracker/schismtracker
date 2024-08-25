@@ -34,16 +34,16 @@ int fmt_liq_read_info(dmoz_file_t *file, slurp_t *fp)
 		|| memcmp(magic1, "Liquid Module:", sizeof(magic1)))
 		return 0;
 
-	slurp_seek(fp, SEEK_SET, 64);
+	slurp_seek(fp, 64, SEEK_SET);
 	int magic2 = slurp_getc(fp);
 	if (magic2 != 0x1a)
 		return 0;
 
-	slurp_seek(fp, SEEK_SET, 14);
+	slurp_seek(fp, 14, SEEK_SET);
 	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 
-	slurp_seek(fp, SEEK_SET, 44);
+	slurp_seek(fp, 44, SEEK_SET);
 	if (slurp_read(fp, artist, sizeof(artist)) != sizeof(artist))
 		return 0;
 

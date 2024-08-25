@@ -40,12 +40,12 @@ int fmt_s3m_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	unsigned char magic[4], title[27];
 	
-	slurp_seek(fp, SEEK_SET, 44);
+	slurp_seek(fp, 44, SEEK_SET);
 	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
 		|| memcmp(magic, "SCRM", sizeof(magic)))
 		return 0;
 
-	slurp_seek(fp, SEEK_SET, 0);
+	slurp_rewind(fp);
 	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 

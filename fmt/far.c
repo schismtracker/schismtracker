@@ -39,15 +39,17 @@ int fmt_far_read_info(dmoz_file_t *file, slurp_t *fp)
 	being "accidentally" correct is pretty low) */
 	unsigned char magic1[4], magic2[3], title[40];
 
-	slurp_read(fp, magic1, sizeof(magic1));
-
-	slurp_seek(fp, SEEK_SET, 44);
-	slurp_read(fp, magic2, sizeof(magic2));
-
-	if (!(memcmp(magic2, "\x0d\x0a\x1a", 3) == 0 && memcmp(magic1, "FAR\xfe", 4) == 0))
+	if (slurp_read(fp, magic1, sizeof(magic1)) != sizeof(magic1)
+		|| memcmp(magic1, "FAR\xfe", 4))
 		return 0;
 
-	slurp_read(fp, title, sizeof(title));
+	slurp_seek(fp, 44, SEEK_SET);
+	if (slurp_read(fp, magic2, sizeof(magic2)) != sizeof(magic2)\
+		|| memcmp(magic2, "\x0d\x0a\x1a", 3))
+		return 0;
+
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
+		return 0;
 
 	file->description = "Farandole Module";
 	/*file->extension = str_dup("far");*/

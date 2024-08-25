@@ -54,7 +54,7 @@ int fmt_sfx_read_info(dmoz_file_t *file, slurp_t *fp)
 	unsigned char tag[4];
 
 	for (n = 0; sfxfmts[n].nsmp; n++) {
-		slurp_seek(fp, SEEK_SET, sfxfmts[n].tagpos);
+		slurp_seek(fp, sfxfmts[n].tagpos, SEEK_SET);
 		if (slurp_read(fp, tag, sizeof(tag)) == sizeof(tag)
 			&& !memcmp(tag, sfxfmts[n].tag, 4)) {
 			file->description = sfxfmts[n].id;

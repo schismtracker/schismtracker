@@ -39,12 +39,12 @@ int fmt_stx_read_info(dmoz_file_t *file, slurp_t *fp)
 	unsigned char magic[4];
 	int i;
 
-	slurp_seek(fp, SEEK_SET, 60);
+	slurp_seek(fp, 60, SEEK_SET);
 	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
 		|| memcmp(magic, "SCRM", sizeof(magic)))
 		return 0;
 
-	slurp_seek(fp, SEEK_SET, 20);
+	slurp_seek(fp, 20, SEEK_SET);
 	for (i = 0; i < 8; i++) {
 		int id = slurp_getc(fp);
 		if (id < 0x20 || id > 0x7E)
@@ -53,7 +53,7 @@ int fmt_stx_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	unsigned char title[20];
 
-	slurp_seek(fp, SEEK_SET, 0);
+	slurp_rewind(fp);
 	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 

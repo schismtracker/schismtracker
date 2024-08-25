@@ -47,13 +47,13 @@ int fmt_it_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	/* This ought to be more particular; if it's not actually made *with* Impulse Tracker,
 	 * it's probably not compressed, irrespective of what the CMWT says. */
-	slurp_seek(fp, SEEK_SET, 42);
+	slurp_seek(fp, 42, SEEK_SET);
 	int cmwt = slurp_getc(fp);
 	file->description = (cmwt >= 0x14) ? "Compressed Impulse Tracker" : "Impulse Tracker";
 
 	unsigned char title[25];
 
-	slurp_seek(fp, SEEK_SET, 4);
+	slurp_seek(fp, 4, SEEK_SET);
 	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 

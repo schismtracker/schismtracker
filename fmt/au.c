@@ -86,7 +86,7 @@ int fmt_au_read_info(dmoz_file_t *file, slurp_t *fp)
 	if (au.data_offset > 24) {
 		int extlen = au.data_offset - 24;
 
-		slurp_seek(fp, SEEK_SET, 24);
+		slurp_seek(fp, 24, SEEK_SET);
 
 		unsigned char title[extlen];
 		if (slurp_read(fp, title, extlen) != extlen)

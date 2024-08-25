@@ -22,6 +22,7 @@
  */
 
 #include "headers.h"
+#include "bshift.h"
 #include "fmt.h"
 #include "it.h"
 #include "disko.h"
@@ -223,7 +224,8 @@ static int flac_load(struct flac_file* flac_file, int meta_only)
 {
 	unsigned char magic[4];
 
-	if (slurp_read(fp, magic, sizeof(magic)) != 4 || memcmp(magic, "fLaC", sizeof(magic)) != 0)
+	if (slurp_read(flac_file->fp, magic, sizeof(magic)) != 4
+		|| memcmp(magic, "fLaC", sizeof(magic)))
 		return 0;
 
 	FLAC__StreamDecoder* decoder = FLAC__stream_decoder_new();

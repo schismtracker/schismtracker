@@ -33,11 +33,12 @@ int fmt_mf_read_info(dmoz_file_t *file, slurp_t *fp)
 		|| memcmp(moonfish, "MOONFISH", sizeof(moonfish)))
 		return 0;
 
-	slurp_seek(fp, SEEK_SET, 33);
-	int title_length = slurp_getc(fp);
-	title_length = MIN(32, title_length);
-
 	unsigned char title[32];
+
+	slurp_seek(fp, 33, SEEK_SET);
+	int title_length = slurp_getc(fp);
+	title_length = MIN(sizeof(title), title_length);
+
 	if (slurp_read(fp, title, title_length) != title_length)
 		return 0;
 
