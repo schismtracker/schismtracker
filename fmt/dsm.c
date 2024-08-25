@@ -67,6 +67,7 @@ struct dsm_chunk_patt {
 
 SCHISM_BINARY_STRUCT(struct dsm_chunk_patt, 2);
 
+/* of variable size */
 typedef union chunkdata {
 	struct dsm_chunk_song SONG;
 	struct dsm_chunk_inst INST;
@@ -78,7 +79,7 @@ typedef union chunkdata {
 typedef struct chunk {
 	uint32_t id;
 	uint32_t size;
-	const chunkdata_t *data;
+	chunkdata_t *data;
 } chunk_t;
 
 /* sample flags */
@@ -102,20 +103,43 @@ enum {
 #define ID_INST 0x494E5354
 #define ID_PATT 0x50415454
 
-// 'chunk' is filled in with the chunk header
 // return: 0 if chunk overflows EOF, 1 if it was successfully read
-// pos is updated to point to the beginning of the next chunk
-static int _chunk_read(chunk_t *chunk, const uint8_t *data, size_t length, size_t *pos)
+//
+// fills in chunk->id and chunk->size as to not waste memory on unrecognized
+// chunks
+static int _chunk_peek(chunk_t *chunk, slurp_t *fp)
 {
-	if (*pos + 8 > length)
+	if (slurp_read(fp, &chunk->id, sizeof(chunk->id)) != sizeof(chunk->id)
+		|| slurp_read(fp, &chunk->size, sizeof(chunk->size)) != sizeof(chunk->size))
 		return 0;
-	memcpy(&chunk->id, data + *pos, 4);
-	memcpy(&chunk->size, data + *pos + 4, 4);
+
 	chunk->id = bswapBE32(chunk->id);
 	chunk->size = bswapLE32(chunk->size);
-	chunk->data = (chunkdata_t *) (data + *pos + 8);
-	*pos += 8 + chunk->size;
-	return (*pos <= length);
+
+	return 1;
+}
+
+static void _chunk_skip(chunk_t *chunk, slurp_t *fp)
+{
+	slurp_seek(fp, chunk->size, SEEK_CUR);
+}
+
+// 'chunk->data' is allocated and filled with the actual chunk data
+static int _chunk_read(chunk_t *chunk, slurp_t *fp)
+{
+	/* this must be free'd by the caller */
+	chunk->data = malloc(chunk->size);
+	if (slurp_read(fp, chunk->data, chunk->size) != chunk->size)
+		return 0;
+
+	return 1;
+}
+
+// this must be called every time a chunk is allocated through _chunk_read
+static void _chunk_free(chunk_t *chunk)
+{
+	free(chunk->data);
+	chunk->data = NULL;
 }
 
 int fmt_dsm_read_info(dmoz_file_t *file, slurp_t *fp)
@@ -129,25 +153,33 @@ int fmt_dsm_read_info(dmoz_file_t *file, slurp_t *fp)
 		|| memcmp(riff, "RIFF", 4))
 		return 0;
 
-	slurp_seek(fp, 8, SEEK_SET);
+	slurp_seek(fp, 4, SEEK_CUR);
 	if (slurp_read(fp, dsmf, sizeof(dsmf)) != sizeof(dsmf)
 		|| memcmp(dsmf, "DSMF", 4))
 		return 0;
 
-	slurp_seek(fp, 20, SEEK_SET);
-	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
-		return 0;
+	chunk_t chunk;
+	while (_chunk_peek(&chunk, fp)) {
+		if (chunk.id == ID_SONG) {
+			/* we only need the title, really */
+			unsigned char title[28];
+
+			if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
+				return 0;
+
+			file->title = strn_dup(title, sizeof(title));
+			break;
+		} else { _chunk_skip(&chunk, fp); }
+	}
 
 	file->description = "DSIK Module";
 	/*file->extension = str_dup("dsm");*/
 	file->type = TYPE_MODULE_MOD;
-	file->title = strn_dup(title, 20);
 	return 1;
 }
 
 int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
-	chunk_t chunk;
 	uint8_t riff[4], dsmf[4], chnpan[16];
 	size_t pos = 0;
 	size_t s = 0, p = 0, n = 0;
@@ -162,18 +194,20 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (memcmp(riff, "RIFF", 4) || memcmp(dsmf, "DSMF", 4))
 		return LOAD_UNSUPPORTED;
 
-	pos = slurp_tell(fp);
-
-	while (_chunk_read(&chunk, fp->data, fp->length, &pos)) {
+	chunk_t chunk;
+	while (_chunk_peek(&chunk, fp)) {
 		switch(chunk.id) {
 		case ID_SONG:
+			_chunk_read(&chunk, fp);
 			nord = bswapLE16(chunk.data->SONG.ordnum);
 			nsmp = bswapLE16(chunk.data->SONG.smpnum);
 			npat = bswapLE16(chunk.data->SONG.patnum);
 			nchn = bswapLE16(chunk.data->SONG.chnnum);
 
-			if (nord > MAX_ORDERS || nsmp > MAX_SAMPLES || npat > MAX_PATTERNS || nchn > MAX_CHANNELS)
+			if (nord > MAX_ORDERS || nsmp > MAX_SAMPLES || npat > MAX_PATTERNS || nchn > MAX_CHANNELS) {
+				_chunk_free(&chunk);
 				return LOAD_UNSUPPORTED;
+			}
 
 			song->initial_global_volume = chunk.data->SONG.gvol << 1;
 			song->mixing_volume = chunk.data->SONG.mvol >> 1;
@@ -186,6 +220,7 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 			memcpy(song->orderlist, chunk.data->SONG.orders, nord);
 			num_song_headers++;
+			_chunk_free(&chunk);
 			break;
 		case ID_INST: {
 			/* sanity check. it doesn't matter if nsmp isn't the real sample
@@ -198,6 +233,8 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				s++;
 				continue;
 			}
+
+			_chunk_read(&chunk, fp);
 
 			/* samples internally start at index 1 */
 			song_sample_t *sample = song->samples + s + 1;
@@ -228,6 +265,9 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 			csf_read_sample(sample, flags, chunk.data->INST.smp_bytes, chunk.data->INST.length);
 			s++;
+
+			_chunk_free(&chunk);
+
 			break;
 		}
 		case ID_PATT: {
@@ -239,6 +279,8 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				continue;
 			}
 
+			_chunk_read(&chunk, fp);
+
 			uint16_t offset = 0, length = bswapLE16(chunk.data->PATT.length);
 
 			song->patterns[p] = csf_allocate_pattern(64);
@@ -246,7 +288,7 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			/* make sure our offset doesn't pass the length */
 #define DSM_ASSERT_OFFSET(o, l) \
 	if ((o) >= (l)) { \
-		log_appendf(4, " WARNING: Offset (%"PRIu16") passed length (%"PRIu16") while parsing pattern!", (uint16_t)(o), (uint16_t)(l)); \
+		log_appendf(4, " WARNING: Offset (%" PRIu16 ") passed length (%" PRIu16 ") while parsing pattern!", (uint16_t)(o), (uint16_t)(l)); \
 		break; \
 	}
 
@@ -254,7 +296,7 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			while (row < 64) {
 				uint8_t mask = chunk.data->PATT.data[offset++];
 
-				DSM_ASSERT_OFFSET(offset, chunk.data->PATT.length)
+				DSM_ASSERT_OFFSET(offset, length)
 
 				if (!mask) {
 					/* done with the row */
@@ -264,8 +306,10 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 				uint8_t chn = (mask & DSM_PAT_CHN_NUM_MASK);
 
-				if (chn > MAX_CHANNELS) /* whoops */
+				if (chn > MAX_CHANNELS) { /* whoops */
+					_chunk_free(&chunk);
 					return LOAD_UNSUPPORTED;
+				}
 
 				if (chn > nchn) /* header doesn't match? warn. */
 					chn_doesnt_match = MAX(chn, chn_doesnt_match);
@@ -274,7 +318,7 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				if (mask & DSM_PAT_NOTE_PRESENT) {
 					uint8_t c = chunk.data->PATT.data[offset++];
 
-					DSM_ASSERT_OFFSET(offset, chunk.data->PATT.length)
+					DSM_ASSERT_OFFSET(offset, length)
 
 					if (c <= 168)
 						note->note = c + 12;
@@ -283,14 +327,14 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				if (mask & DSM_PAT_INST_PRESENT) {
 					note->instrument = chunk.data->PATT.data[offset++];
 
-					DSM_ASSERT_OFFSET(offset, chunk.data->PATT.length)
+					DSM_ASSERT_OFFSET(offset, length)
 				}
 
 				if (mask & DSM_PAT_VOL_PRESENT) {
 					/* volume */
 					uint8_t param = chunk.data->PATT.data[offset++];
 
-					DSM_ASSERT_OFFSET(offset, chunk.data->PATT.length)
+					DSM_ASSERT_OFFSET(offset, length)
 
 					if (param != 0xFF) {
 						note->voleffect = VOLFX_VOLUME;
@@ -301,30 +345,35 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				if (mask & DSM_PAT_CMD_PRESENT) {
 					note->effect = chunk.data->PATT.data[offset++];
 
-					DSM_ASSERT_OFFSET(offset, chunk.data->PATT.length)
+					DSM_ASSERT_OFFSET(offset, length)
 
 					note->param = chunk.data->PATT.data[offset++];
 
-					DSM_ASSERT_OFFSET(offset, chunk.data->PATT.length)
+					DSM_ASSERT_OFFSET(offset, length)
 
 					csf_import_mod_effect(note, 0);
 
-					if (note->effect == FX_PANNING)
-						if (note->param <= 0x80)
+					if (note->effect == FX_PANNING) {
+						if (note->param <= 0x80) {
 							note->param <<= 1;
-						else if (note->param == 0xA4) {
+						} else if (note->param == 0xA4) {
 						    note->effect = FX_SPECIAL;
 						    note->param = 0x91;
 						}
+					}
 				}
 			}
 
 #undef DSM_ASSERT_OFFSET
 
 			p++;
+
+			_chunk_free(&chunk);
+
 			break;
 		}
 		default:
+			_chunk_skip(&chunk, fp);
 			break;
 		}
 	}
@@ -338,13 +387,13 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		log_appendf(4, " WARNING: Multiple (%zu) SONG chunks found!", num_song_headers);
 
 	if (s != nsmp)
-		log_appendf(4, " WARNING: # of samples (%zu) different than expected (%"PRIu16")", s, nsmp);
+		log_appendf(4, " WARNING: # of samples (%zu) different than expected (%" PRIu16 ")", s, nsmp);
 
 	if (p != npat)
-		log_appendf(4, " WARNING: # of patterns (%zu) different than expected (%"PRIu16")", p, npat);
+		log_appendf(4, " WARNING: # of patterns (%zu) different than expected (%" PRIu16 ")", p, npat);
 
 	if (chn_doesnt_match && chn_doesnt_match != nchn)
-		log_appendf(4, " WARNING: # of channels (%"PRIu8") different than expected (%"PRIu16")", chn_doesnt_match, nchn);
+		log_appendf(4, " WARNING: # of channels (%"PRIu8") different than expected (%" PRIu16 ")", chn_doesnt_match, nchn);
 
 	for (n = 0; n < nchn; n++) {
 		if (chnpan[n & 15] <= 0x80)
