@@ -23,6 +23,7 @@
 
 #include "headers.h"
 #include "bshift.h"
+#include "bswap.h"
 #include "fmt.h"
 #include "it.h"
 #include "disko.h"
@@ -35,7 +36,10 @@
 
 #include <stdint.h>
 
-struct flac_file {
+/* ----------------------------------------------------------------------------------- */
+/* reading... */
+
+struct flac_readdata {
 	FLAC__StreamMetadata_StreamInfo streaminfo;
 
 	struct {
@@ -50,43 +54,60 @@ struct flac_file {
 		} loop;
 	} flags;
 
-	slurp_t *fp; /* file pointer... */
+	slurp_t *fp;
 
 	struct {
-		uint8_t* data;
+		uint8_t *data;
 		size_t len;
 
-		uint32_t samples_decoded, samples_read;
+		uint32_t samples_decoded;
 	} uncompressed;
 };
 
-static void on_meta(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data) {
-	struct flac_file* flac_file = (struct flac_file*)client_data;
+static void read_on_meta(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data)
+{
+	struct flac_readdata* read_data = (struct flac_readdata*)client_data;
 	int32_t loop_start = -1, loop_length = -1;
 
 	switch (metadata->type) {
 		case FLAC__METADATA_TYPE_STREAMINFO:
-			memcpy(&flac_file->streaminfo, &metadata->data.stream_info, sizeof(flac_file->streaminfo));
+			memcpy(&read_data->streaminfo, &metadata->data.stream_info, sizeof(read_data->streaminfo));
 			break;
 		case FLAC__METADATA_TYPE_VORBIS_COMMENT:
 			for (size_t i = 0; i < metadata->data.vorbis_comment.num_comments; i++) {
 				const char *tag = (const char*)metadata->data.vorbis_comment.comments[i].entry;
 				const FLAC__uint32 length = metadata->data.vorbis_comment.comments[i].length;
 
-				if (length > 6 && !strncasecmp(tag, "TITLE=", 6))
-					strncpy(flac_file->flags.name, tag + 6, 32);
-				else if (length > 11 && !strncasecmp(tag, "SAMPLERATE=", 11))
-					flac_file->flags.sample_rate = strtol(tag + 11, NULL, 10);
-				else if (length > 10 && !strncasecmp(tag, "LOOPSTART=", 10))
-					loop_start = strtol(tag + 10, NULL, 10);
-				else if (length > 11 && !strncasecmp(tag, "LOOPLENGTH=", 11))
-					loop_length = strtol(tag + 11, NULL, 10);
+/* "name" must be a string literal for both of these */
+#define CHECK_TAG_SIZE(name) \
+	if (length > (sizeof(name "=")) && !strncasecmp(tag, name "=", sizeof(name "=")))
+
+#define STRING_TAG(name, outvar, outvarsize) \
+	CHECK_TAG_SIZE(name) { \
+		strncpy(outvar, tag + sizeof(name "="), outvarsize); \
+		continue; \
+	}
+
+#define INTEGER_TAG(name, outvar) \
+	CHECK_TAG_SIZE(name) { \
+		outvar = strtoll(tag + sizeof(name "="), NULL, 10); \
+		continue; \
+	}
+
+				STRING_TAG("TITLE", read_data->flags.name, sizeof(read_data->flags.name));
+				INTEGER_TAG("SAMPLERATE", read_data->flags.sample_rate);
+				INTEGER_TAG("LOOPSTART", read_data->flags.sample_rate);
+				INTEGER_TAG("LOOPLENGTH", read_data->flags.sample_rate);
+
+#undef INTEGER_TAG
+#undef STRING_TAG
+#undef CHECK_TAG_SIZE
 			}
 
 			if (loop_start > 0 && loop_length > 1) {
-				flac_file->flags.loop.type = 0;
-				flac_file->flags.loop.start = loop_start;
-				flac_file->flags.loop.end = loop_start + loop_length - 1;
+				read_data->flags.loop.type = 0;
+				read_data->flags.loop.start = loop_start;
+				read_data->flags.loop.end = loop_start + loop_length - 1;
 			}
 
 			break;
@@ -96,7 +117,7 @@ static void on_meta(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetada
 			uint32_t chunk_id  = *(uint32_t*)data; data += sizeof(uint32_t);
 			uint32_t chunk_len = *(uint32_t*)data; data += sizeof(uint32_t);
 
-			if (chunk_id == 0x61727478 && chunk_len >= 8) { // "xtra"
+			if (chunk_id == bswapLE32(0x61727478) && chunk_len >= 8) { // "xtra"
 				uint32_t xtra_flags = *(uint32_t*)data; data += sizeof(uint32_t);
 
 				// panning (0..256)
@@ -105,7 +126,7 @@ static void on_meta(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetada
 					if (tmp_pan > 255)
 						tmp_pan = 255;
 
-					flac_file->flags.pan = (uint8_t)tmp_pan;
+					read_data->flags.pan = (uint8_t)tmp_pan;
 				}
 				data += sizeof(uint16_t);
 
@@ -114,19 +135,19 @@ static void on_meta(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetada
 				if (tmp_vol > 256)
 					tmp_vol = 256;
 
-				flac_file->flags.vol = (uint8_t)((tmp_vol + 2) / 4); // 0..256 -> 0..64 (rounded)
+				read_data->flags.vol = (uint8_t)((tmp_vol + 2) / 4); // 0..256 -> 0..64 (rounded)
 			}
 
-			if (chunk_id == 0x6C706D73 && chunk_len > 52) { // "smpl"
+			if (chunk_id == bswapLE32(0x6C706D73) && chunk_len > 52) { // "smpl"
 				data += 28; // seek to first wanted byte
 
 				uint32_t num_loops = *(uint32_t *)data; data += sizeof(uint32_t);
 				if (num_loops == 1) {
 					data += 4 + 4; // skip "samplerData" and "identifier"
 
-					flac_file->flags.loop.type  = *(uint32_t *)data; data += sizeof(uint32_t);
-					flac_file->flags.loop.start = *(uint32_t *)data; data += sizeof(uint32_t);
-					flac_file->flags.loop.end   = *(uint32_t *)data; data += sizeof(uint32_t);
+					read_data->flags.loop.type  = *(uint32_t *)data; data += sizeof(uint32_t);
+					read_data->flags.loop.start = *(uint32_t *)data; data += sizeof(uint32_t);
+					read_data->flags.loop.end   = *(uint32_t *)data; data += sizeof(uint32_t);
 				}
 			}
 			break;
@@ -138,119 +159,160 @@ static void on_meta(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetada
 	(void)decoder, (void)client_data;
 }
 
-static FLAC__StreamDecoderReadStatus on_read(const FLAC__StreamDecoder *decoder, FLAC__byte buffer[], size_t *bytes, void *client_data)
+static FLAC__StreamDecoderReadStatus read_on_read(const FLAC__StreamDecoder *decoder, FLAC__byte buffer[], size_t *bytes, void *client_data)
 {
-	struct flac_file* flac_file = (struct flac_file*)client_data;
+	slurp_t *fp = ((struct flac_readdata *)client_data)->fp;
 
-	*bytes = slurp_read(flac_file->fp, buffer, *bytes);
-	return (*bytes) ? FLAC__STREAM_DECODER_READ_STATUS_CONTINUE : FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
+	if (*bytes > 0) {
+		*bytes = slurp_read(fp, buffer, *bytes);
+
+		return (*bytes)
+			? FLAC__STREAM_DECODER_READ_STATUS_CONTINUE
+			: (slurp_eof(fp))
+				? FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM
+				: FLAC__STREAM_DECODER_READ_STATUS_ABORT;
+	} else {
+		return FLAC__STREAM_DECODER_READ_STATUS_ABORT;
+	}
 
 	(void)decoder;
 }
 
-static void on_error(const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data)
+static FLAC__StreamDecoderSeekStatus read_on_seek(const FLAC__StreamDecoder *decoder, FLAC__uint64 absolute_byte_offset, void *client_data)
+{
+	slurp_t *fp = ((struct flac_readdata *)client_data)->fp;
+
+	/* how? whatever */
+	if (absolute_byte_offset > INT64_MAX)
+		return FLAC__STREAM_DECODER_SEEK_STATUS_UNSUPPORTED;
+
+	return (slurp_seek(fp, absolute_byte_offset, SEEK_SET) >= 0)
+		? FLAC__STREAM_DECODER_SEEK_STATUS_OK
+		: FLAC__STREAM_DECODER_SEEK_STATUS_ERROR;
+}
+
+static FLAC__StreamDecoderTellStatus read_on_tell(const FLAC__StreamDecoder *decoder, FLAC__uint64 *absolute_byte_offset, void *client_data)
+{
+	slurp_t *fp = ((struct flac_readdata *)client_data)->fp;
+
+	int64_t off = slurp_tell(fp);
+	if (off < 0)
+		return FLAC__STREAM_DECODER_TELL_STATUS_ERROR;
+
+	*absolute_byte_offset = off;
+	return FLAC__STREAM_DECODER_TELL_STATUS_OK;
+}
+
+static FLAC__StreamDecoderLengthStatus read_on_length(const FLAC__StreamDecoder *decoder, FLAC__uint64 *stream_length, void *client_data)
+{
+	/* XXX need a slurp_length() */
+	*stream_length = (FLAC__uint64)((struct flac_readdata*)client_data)->fp->length;
+	return FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
+}
+
+static FLAC__bool read_on_eof(const FLAC__StreamDecoder *decoder, void *client_data)
+{
+	return slurp_eof(((struct flac_readdata*)client_data)->fp);
+}
+
+static void read_on_error(const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data)
 {
 	log_appendf(4, "Error loading FLAC: %s", FLAC__StreamDecoderErrorStatusString[status]);
 
 	(void)decoder, (void)client_data;
 }
 
-static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 *const buffer[], void *client_data)
+static FLAC__StreamDecoderWriteStatus read_on_write(const FLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 *const buffer[], void *client_data)
 {
-	struct flac_file* flac_file = (struct flac_file*)client_data;
+	struct flac_readdata* read_data = (struct flac_readdata*)client_data;
 
 	/* invalid?; FIXME: this should probably make sure the total_samples
 	 * is less than the max sample constant thing */
-	if (!flac_file->streaminfo.total_samples || !flac_file->streaminfo.channels
-		|| flac_file->streaminfo.channels > 2)
+	if (!read_data->streaminfo.total_samples || !read_data->streaminfo.channels
+		|| read_data->streaminfo.channels > 2)
 		return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 
 	if (frame->header.number.sample_number == 0) {
-		/* allocate our buffer */
-		flac_file->uncompressed.len = ((size_t)flac_file->streaminfo.total_samples * flac_file->streaminfo.channels * flac_file->streaminfo.bits_per_sample/8);
-		flac_file->uncompressed.data = (uint8_t*)malloc(flac_file->uncompressed.len * ((flac_file->streaminfo.bits_per_sample == 8) ? sizeof(int8_t) : sizeof(int16_t)));
-		if (!flac_file->uncompressed.data)
+		/* allocate our buffer. for some reason the length isn't the real
+		 * length of the buffer in bytes but I can't be bothered to figure
+		 * out why. */
+		read_data->uncompressed.len = ((size_t)read_data->streaminfo.total_samples * read_data->streaminfo.channels * read_data->streaminfo.bits_per_sample/8);
+		read_data->uncompressed.data = (uint8_t*)malloc(read_data->uncompressed.len * ((read_data->streaminfo.bits_per_sample == 8) ? sizeof(int8_t) : sizeof(int16_t)));
+		if (!read_data->uncompressed.data)
 			return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 
-		flac_file->uncompressed.samples_decoded = 0;
+		read_data->uncompressed.samples_decoded = 0;
 	}
 
-	uint32_t block_size = frame->header.blocksize * flac_file->streaminfo.channels;
+	uint32_t block_size = frame->header.blocksize * read_data->streaminfo.channels;
 
-	const uint32_t samples_allocated = flac_file->streaminfo.total_samples * flac_file->streaminfo.channels;
-	if (flac_file->uncompressed.samples_decoded + block_size > samples_allocated)
-		block_size = samples_allocated - flac_file->uncompressed.samples_decoded;
+	const uint32_t samples_allocated = read_data->streaminfo.total_samples * read_data->streaminfo.channels;
+	if (read_data->uncompressed.samples_decoded + block_size > samples_allocated)
+		block_size = samples_allocated - read_data->uncompressed.samples_decoded;
 
-	if (flac_file->streaminfo.bits_per_sample <= 8) {
-		int8_t* buf_ptr = (int8_t*)flac_file->uncompressed.data + flac_file->uncompressed.samples_decoded;
-		uint32_t bit_shift = 8 - flac_file->streaminfo.bits_per_sample;
+	if (read_data->streaminfo.bits_per_sample <= 8) {
+		int8_t *buf_ptr = (int8_t*)read_data->uncompressed.data + read_data->uncompressed.samples_decoded;
+		uint32_t bit_shift = 8 - read_data->streaminfo.bits_per_sample;
 
 		size_t i, j, c;
 		for (i = 0, j = 0; i < block_size; j++)
-			for (c = 0; c < flac_file->streaminfo.channels; c++)
+			for (c = 0; c < read_data->streaminfo.channels; c++)
 				buf_ptr[i++] = lshift_signed_32(buffer[c][j], bit_shift);
-	} else if (flac_file->streaminfo.bits_per_sample <= 16) {
-		int16_t* buf_ptr = (int16_t*)flac_file->uncompressed.data + flac_file->uncompressed.samples_decoded;
-		uint32_t bit_shift = 16 - flac_file->streaminfo.bits_per_sample;
+	} else if (read_data->streaminfo.bits_per_sample <= 16) {
+		int16_t *buf_ptr = (int16_t*)read_data->uncompressed.data + read_data->uncompressed.samples_decoded;
+		uint32_t bit_shift = 16 - read_data->streaminfo.bits_per_sample;
 
 		size_t i, j, c;
 		for (i = 0, j = 0; i < block_size; j++)
-			for (c = 0; c < flac_file->streaminfo.channels; c++)
+			for (c = 0; c < read_data->streaminfo.channels; c++)
 				buf_ptr[i++] = lshift_signed_32(buffer[c][j], bit_shift);
 	} else { /* >= 16 */
-		int16_t* buf_ptr = (int16_t*)flac_file->uncompressed.data + flac_file->uncompressed.samples_decoded;
-		uint32_t bit_shift = flac_file->streaminfo.bits_per_sample - 16;
+		int16_t *buf_ptr = (int16_t*)read_data->uncompressed.data + read_data->uncompressed.samples_decoded;
+		uint32_t bit_shift = read_data->streaminfo.bits_per_sample - 16;
 
 		size_t i, j, c;
 		for (i = 0, j = 0; i < block_size; j++)
-			for (c = 0; c < flac_file->streaminfo.channels; c++)
+			for (c = 0; c < read_data->streaminfo.channels; c++)
 				buf_ptr[i++] = rshift_signed_32(buffer[c][j], bit_shift);
 	}
 
-	flac_file->uncompressed.samples_decoded += block_size;
+	read_data->uncompressed.samples_decoded += block_size;
 
 	return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
 
 	(void)decoder;
 }
 
-#define FLAC_ERROR(x) \
-	do { \
-		if (!decoder) FLAC__stream_decoder_delete(decoder); \
-		return x; \
-	} while (0);
-
-static int flac_load(struct flac_file* flac_file, int meta_only)
+static int flac_load(struct flac_readdata* read_data, int meta_only)
 {
 	unsigned char magic[4];
 
-	if (slurp_read(flac_file->fp, magic, sizeof(magic)) != 4
+	slurp_rewind(read_data->fp); /* paranoia */
+
+	if (slurp_peek(read_data->fp, magic, sizeof(magic)) != sizeof(magic)
 		|| memcmp(magic, "fLaC", sizeof(magic)))
 		return 0;
 
-	FLAC__StreamDecoder* decoder = FLAC__stream_decoder_new();
+	FLAC__StreamDecoder *decoder = FLAC__stream_decoder_new();
 	if (!decoder)
 		return 0;
 
 	FLAC__stream_decoder_set_metadata_respond_all(decoder);
 
-	/* XXX on_seek ? */
 	FLAC__StreamDecoderInitStatus initStatus =
 		FLAC__stream_decoder_init_stream(
 			decoder,
-			on_read, NULL,
-			NULL, NULL,
-			NULL, on_write,
-			on_meta, on_error,
-			flac_file
+			read_on_read, read_on_seek,
+			read_on_tell, read_on_length,
+			read_on_eof,  read_on_write,
+			read_on_meta, read_on_error,
+			read_data
 		);
 
-	if (meta_only) {
-		if (!FLAC__stream_decoder_process_until_end_of_metadata(decoder))
-			FLAC_ERROR(0);
-	} else {
-		if (!FLAC__stream_decoder_process_until_end_of_stream(decoder))
-			FLAC_ERROR(0);
+	/* flac function names are such a yapfest */
+	if (!(meta_only ? FLAC__stream_decoder_process_until_end_of_metadata(decoder) : FLAC__stream_decoder_process_until_end_of_stream(decoder))) {
+		FLAC__stream_decoder_delete(decoder);
+		return 0;
 	}
 
 	FLAC__stream_decoder_finish(decoder);
@@ -260,29 +322,33 @@ static int flac_load(struct flac_file* flac_file, int meta_only)
 }
 #undef FLAC_ERROR
 
-int fmt_flac_load_sample(slurp_t *fp, song_sample_t *smp) {
-	struct flac_file flac_file = {0};
-	flac_file.fp = fp;
-	// XXX: WTF does this line even do?
-	// strncpy(flac_file.flags.name, smp->name, ARRAY_SIZE(flac_file.flags.name));
-	flac_file.flags.sample_rate = 0;
-	flac_file.flags.loop.type = -1;
+int fmt_flac_load_sample(slurp_t *fp, song_sample_t *smp)
+{
+	struct flac_readdata read_data = {
+		.fp = fp,
+		.flags = {
+			.sample_rate = 0,
+			.loop = {
+				.type = -1,
+			},
+		},
+	};
 
-	if (!flac_load(&flac_file, 0))
+	if (!flac_load(&read_data, 0))
 		return 0;
 
 	smp->volume        = 64 * 4;
 	smp->global_volume = 64;
-	smp->c5speed       = flac_file.streaminfo.sample_rate;
-	smp->length        = flac_file.streaminfo.total_samples;
-	if (flac_file.flags.loop.type != -1) {
-		smp->loop_start    = flac_file.flags.loop.start;
-		smp->loop_end      = flac_file.flags.loop.end + 1;
-		smp->flags |= (flac_file.flags.loop.type ? (CHN_LOOP | CHN_PINGPONGLOOP) : CHN_LOOP);
+	smp->c5speed       = read_data.streaminfo.sample_rate;
+	smp->length        = read_data.streaminfo.total_samples;
+	if (read_data.flags.loop.type != -1) {
+		smp->loop_start = read_data.flags.loop.start;
+		smp->loop_end   = read_data.flags.loop.end + 1;
+		smp->flags |= (read_data.flags.loop.type ? (CHN_LOOP | CHN_PINGPONGLOOP) : CHN_LOOP);
 	}
 
-	if (flac_file.flags.sample_rate)
-		smp->c5speed = flac_file.flags.sample_rate;
+	if (read_data.flags.sample_rate)
+		smp->c5speed = read_data.flags.sample_rate;
 
 	// endianness, based on host system
 	uint32_t flags = 0;
@@ -293,54 +359,61 @@ int fmt_flac_load_sample(slurp_t *fp, song_sample_t *smp) {
 #endif
 
 	// channels
-	flags |= (flac_file.streaminfo.channels == 2) ? SF_SI : SF_M;
+	flags |= (read_data.streaminfo.channels == 2) ? SF_SI : SF_M;
 
 	// bit width
-	flags |= (flac_file.streaminfo.bits_per_sample <= 8) ? SF_8 : SF_16;
+	flags |= (read_data.streaminfo.bits_per_sample <= 8) ? SF_8 : SF_16;
 
 	// libFLAC always returns signed
 	flags |= SF_PCMS;
 
-	int ret = csf_read_sample(smp, flags, flac_file.uncompressed.data, flac_file.uncompressed.len);
-	free(flac_file.uncompressed.data);
+	int ret = csf_read_sample(smp, flags, read_data.uncompressed.data, read_data.uncompressed.len);
+
+	free(read_data.uncompressed.data);
 
 	return ret;
 }
 
 int fmt_flac_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	struct flac_file flac_file = {0};
-	flac_file.fp = fp;
-	flac_file.flags.loop.type = -1;
+	struct flac_readdata read_data = {
+		.fp = fp,
+		.flags = {
+			.sample_rate = 0,
+			.loop = {
+				.type = -1,
+			},
+		},
+	};
 
-	if (!flac_load(&flac_file, 1))
+	if (!flac_load(&read_data, 1))
 		return 0;
 
 	file->smp_flags = 0;
 
 	/* don't even attempt */
-	if (flac_file.streaminfo.channels > 2 || !flac_file.streaminfo.total_samples ||
-		!flac_file.streaminfo.channels)
+	if (read_data.streaminfo.channels > 2 || !read_data.streaminfo.total_samples ||
+		!read_data.streaminfo.channels)
 		return 0;
 
-	if (flac_file.streaminfo.bits_per_sample > 8)
+	if (read_data.streaminfo.bits_per_sample > 8)
 		file->smp_flags |= CHN_16BIT;
 
-	if (flac_file.streaminfo.channels == 2)
+	if (read_data.streaminfo.channels == 2)
 		file->smp_flags |= CHN_STEREO;
 
-	file->smp_speed      = flac_file.streaminfo.sample_rate;
-	file->smp_length     = flac_file.streaminfo.total_samples;
+	file->smp_speed  = read_data.streaminfo.sample_rate;
+	file->smp_length = read_data.streaminfo.total_samples;
 
 	/* stupid magic numbers... */
-	if (flac_file.flags.loop.type != -1) {
-		file->smp_loop_start = flac_file.flags.loop.start;
-		file->smp_loop_end   = flac_file.flags.loop.end + 1;
-		file->smp_flags    |= (flac_file.flags.loop.type ? (CHN_LOOP | CHN_PINGPONGLOOP) : CHN_LOOP);
+	if (read_data.flags.loop.type >= 0) {
+		file->smp_loop_start = read_data.flags.loop.start;
+		file->smp_loop_end   = read_data.flags.loop.end + 1;
+		file->smp_flags    |= (read_data.flags.loop.type ? (CHN_LOOP | CHN_PINGPONGLOOP) : CHN_LOOP);
 	}
 
-	if (flac_file.flags.sample_rate)
-		file->smp_speed = flac_file.flags.sample_rate;
+	if (read_data.flags.sample_rate)
+		file->smp_speed = read_data.flags.sample_rate;
 
 	file->description  = "FLAC Audio File";
 	file->type         = TYPE_SAMPLE_COMPR;
@@ -353,6 +426,7 @@ int fmt_flac_read_info(dmoz_file_t *file, slurp_t *fp)
 /* Now onto the writing stuff */
 
 struct flac_writedata {
+	/* TODO would be nice to save some metadata */
 	FLAC__StreamEncoder *encoder;
 
 	int bits;
@@ -360,21 +434,24 @@ struct flac_writedata {
 };
 
 static FLAC__StreamEncoderWriteStatus write_on_write(const FLAC__StreamEncoder *encoder, const FLAC__byte buffer[],
-	size_t bytes, uint32_t samples, uint32_t current_frame, void *client_data) {
+	size_t bytes, uint32_t samples, uint32_t current_frame, void *client_data)
+{
 	disko_t* fp = (disko_t*)client_data;
 
 	disko_write(fp, buffer, bytes);
 	return FLAC__STREAM_ENCODER_WRITE_STATUS_OK;
 }
 
-static FLAC__StreamEncoderSeekStatus write_on_seek(const FLAC__StreamEncoder *encoder, FLAC__uint64 absolute_byte_offset, void *client_data) {
+static FLAC__StreamEncoderSeekStatus write_on_seek(const FLAC__StreamEncoder *encoder, FLAC__uint64 absolute_byte_offset, void *client_data)
+{
 	disko_t* fp = (disko_t*)client_data;
 
 	disko_seek(fp, absolute_byte_offset, SEEK_SET);
 	return FLAC__STREAM_ENCODER_SEEK_STATUS_OK;
 }
 
-static FLAC__StreamEncoderTellStatus write_on_tell(const FLAC__StreamEncoder *encoder, FLAC__uint64 *absolute_byte_offset, void *client_data) {
+static FLAC__StreamEncoderTellStatus write_on_tell(const FLAC__StreamEncoder *encoder, FLAC__uint64 *absolute_byte_offset, void *client_data)
+{
 	disko_t* fp = (disko_t*)client_data;
 
 	long b = disko_tell(fp);
@@ -428,7 +505,7 @@ static int flac_save_init(disko_t *fp, int bits, int channels, int rate, int est
 		write_on_write,
 		write_on_seek,
 		write_on_tell,
-		NULL,
+		NULL, /* metadata callback */
 		fp
 	);
 
