@@ -96,8 +96,8 @@ static void read_on_meta(const FLAC__StreamDecoder *decoder, const FLAC__StreamM
 
 				STRING_TAG("TITLE", read_data->flags.name, sizeof(read_data->flags.name));
 				INTEGER_TAG("SAMPLERATE", read_data->flags.sample_rate);
-				INTEGER_TAG("LOOPSTART", read_data->flags.sample_rate);
-				INTEGER_TAG("LOOPLENGTH", read_data->flags.sample_rate);
+				INTEGER_TAG("LOOPSTART", loop_start);
+				INTEGER_TAG("LOOPLENGTH", loop_length);
 
 #undef INTEGER_TAG
 #undef STRING_TAG
