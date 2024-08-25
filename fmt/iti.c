@@ -211,7 +211,8 @@ int fmt_iti_load_instrument(slurp_t *fp, int slot)
 	struct instrumentloader ii;
 	song_instrument_t *ins = instrument_loader_init(&ii, slot);
 
-	load_it_instrument(ins, fp);
+	if (!load_it_instrument(ins, fp))
+		return 0;
 
 	/* okay, on to samples */
 	size_t pos = 554;

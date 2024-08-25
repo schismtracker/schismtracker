@@ -152,7 +152,7 @@ int fmt_pat_load_instrument(slurp_t *fp, int slot)
 	struct instrumentloader ii;
 	song_instrument_t *g;
 	song_sample_t *smp;
-	unsigned int pos, rs;
+	unsigned int rs;
 	int lo, hi, tmp, i, nsamp, n;
 
 	if (!slot)
@@ -163,9 +163,8 @@ int fmt_pat_load_instrument(slurp_t *fp, int slot)
 
 	if ((memcmp(header.sig, "GF1PATCH", 8) != 0)
 	    || (memcmp(header.ver, "110\0", 4) != 0 && memcmp(header.ver, "100\0", 4) != 0)
-	    || (memcmp(header.id, "ID#000002\0", 10) != 0)) {
+	    || (memcmp(header.id, "ID#000002\0", 10) != 0))
 		return 0;
-	}
 
 	header.waveforms = bswapLE16(header.waveforms);
 	header.mastervol = bswapLE16(header.mastervol);
@@ -243,14 +242,16 @@ int fmt_pat_load_instrument(slurp_t *fp, int slot)
 		smp->vib_rate = gfsamp.vib_rate;
 		smp->vib_depth = gfsamp.vib_depth;
 
-		unsigned char *buf = malloc(fp->length - pos);
+		size_t smp_length = gfsamp.samplesize * ((rs & SF_16) ? 2 : 1);
 
-		if (slurp_read(fp, buf, fp->length - pos) != (fp->length - pos)) {
+		unsigned char *buf = malloc(smp_length);
+
+		if (slurp_read(fp, buf, smp_length) != smp_length) {
 			free(buf);
 			return 0;
 		}
 
-		csf_read_sample(smp, rs, buf, fp->length - pos);
+		csf_read_sample(smp, rs, buf, smp_length);
 	
 		free(buf);
 	}
