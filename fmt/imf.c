@@ -31,14 +31,21 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_imf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_imf_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 64 && memcmp(data + 60, "IM10", 4) == 0))
+	unsigned char magic[4], title[32];
+
+	slurp_seek(fp, SEEK_SET, 60);
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "IM10", sizeof(title)))
 		return 0;
+
+	slurp_seek(fp, SEEK_SET, 0);
+	slurp_read(fp, title, sizeof(title));
 
 	file->description = "Imago Orpheus";
 	/*file->extension = str_dup("imf");*/
-	file->title = strn_dup((const char *)data, 32);
+	file->title = strn_dup(title, sizeof(title));
 	file->type = TYPE_MODULE_IT;
 	return 1;
 }

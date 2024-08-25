@@ -26,9 +26,11 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_med_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_med_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 32 && memcmp(data, "MMD0", 3) == 0))
+	unsigned char magic[4];
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "MMD0", 4))
 		return 0;
 
 	file->description = "OctaMed";

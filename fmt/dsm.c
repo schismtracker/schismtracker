@@ -118,23 +118,28 @@ static int _chunk_read(chunk_t *chunk, const uint8_t *data, size_t length, size_
 	return (*pos <= length);
 }
 
-int fmt_dsm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_dsm_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	uint8_t riff[4], dsmf[4];
+	unsigned char riff[4], dsmf[4], title[20];
 
-	if (!(length > 40))
+	if (!(fp->length > 40))
 		return 0;
 
-	memcpy(riff, data, 4);
-	memcpy(dsmf, data + 8, 4);
+	slurp_read(fp, riff, sizeof(riff));
+
+	slurp_seek(fp, SEEK_SET, 8);
+	slurp_read(fp, dsmf, sizeof(dsmf));
 
 	if (memcmp(riff, "RIFF", 4) || memcmp(dsmf, "DSMF", 4))
 		return 0;
 
+	slurp_seek(fp, SEEK_SET, 20);
+	slurp_read(fp, title, sizeof(title));
+
 	file->description = "DSIK Module";
 	/*file->extension = str_dup("dsm");*/
 	file->type = TYPE_MODULE_MOD;
-	file->title = strn_dup((const char *)&data[20], 20);
+	file->title = strn_dup(title, 20);
 	return 1;
 }
 
@@ -142,7 +147,7 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
 	chunk_t chunk;
 	uint8_t riff[4], dsmf[4], chnpan[16];
-	size_t pos = 0, length = 0;
+	size_t pos = 0;
 	size_t s = 0, p = 0, n = 0;
 	uint16_t nord = 0, nsmp = 0, npat = 0, nchn = 0;
 	uint8_t chn_doesnt_match = 0;
@@ -156,11 +161,8 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		return LOAD_UNSUPPORTED;
 
 	pos = slurp_tell(fp);
-	slurp_seek(fp, 0, SEEK_END);
-	length = slurp_tell(fp);
-	slurp_rewind(fp);
 
-	while (_chunk_read(&chunk, fp->data, length, &pos)) {
+	while (_chunk_read(&chunk, fp->data, fp->length, &pos)) {
 		switch(chunk.id) {
 		case ID_SONG:
 			nord = bswapLE16(chunk.data->SONG.ordnum);

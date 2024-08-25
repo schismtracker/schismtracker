@@ -32,22 +32,6 @@
 #include "player/sndfile.h"
 #include "player/tables.h"
 
-/* --------------------------------------------------------------------- */
-
-int fmt_xm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
-{
-	if (!(length > 38 && memcmp(data, "Extended Module: ", 17) == 0))
-		return 0;
-
-	file->description = "Fast Tracker 2 Module";
-	file->type = TYPE_MODULE_XM;
-	/*file->extension = str_dup("xm");*/
-	file->title = strn_dup((const char *)data + 17, 20);
-	return 1;
-}
-
-/* --------------------------------------------------------------------------------------------------------- */
-
 // gloriously stolen from xmp
 struct xm_file_header {
 	uint8_t id[17];         // ID text: "Extended module: "
@@ -67,6 +51,27 @@ struct xm_file_header {
 };
 
 SCHISM_BINARY_STRUCT(struct xm_file_header, 80);
+
+/* --------------------------------------------------------------------- */
+
+int fmt_xm_read_info(dmoz_file_t *file, slurp_t *fp)
+{
+	struct xm_file_header hdr;
+
+	if (slurp_read(fp, &hdr, sizeof(hdr)) != sizeof(hdr))
+		return 0;
+
+	if (memcmp(hdr.id, "Extended Module: ", sizeof(hdr.id)))
+		return 0;
+
+	file->description = "Fast Tracker 2 Module";
+	file->type = TYPE_MODULE_XM;
+	/*file->extension = str_dup("xm");*/
+	file->title = strn_dup(hdr.name, sizeof(hdr.name));
+	return 1;
+}
+
+/* --------------------------------------------------------------------------------------------------------- */
 
 static uint8_t autovib_import[8] = {
 	VIB_SINE, VIB_SQUARE,

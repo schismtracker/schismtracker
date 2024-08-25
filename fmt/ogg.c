@@ -26,6 +26,10 @@
 /* TODO: test this again since I rearranged the artist/title stuff.
 Can't be bothered actually compiling it now to make sure it works. :P */
 
+/* read info and load sample arguments have changed too, btw. this
+ * will not compile and I honestly don't even know how to compile
+ * it anyway. I'll probably remove this file... */
+
 #include "headers.h"
 #include "fmt.h"
 

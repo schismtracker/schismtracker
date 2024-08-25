@@ -33,24 +33,55 @@
 
 /* MDL is nice, but it's a pain to read the title... */
 
-int fmt_mdl_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_mdl_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	uint32_t position, block_length;
+	unsigned char magic[4];
 
-	/* data[4] = major version number (accept 0 or 1) */
-	if (!(length > 5 && ((data[4] & 0xf0) >> 4) <= 1 && memcmp(data, "DMDL", 4) == 0))
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "DMDL", sizeof(magic)))
 		return 0;
 
-	position = 5;
-	while (position + 6 < length) {
-		memcpy(&block_length, data + position + 2, 4);
-		block_length = bswapLE32(block_length);
-		if (block_length + position > length)
+	/* major version number (accept 0 or 1) */
+	int version = slurp_getc(fp);
+	if (version == EOF)
+		return 0;
+
+	if ((((unsigned char)version & 0xf0) >> 4) <= 1)
+		return 0;
+
+	size_t position = 5;
+	while (position + 6 < fp->length) {
+		uint32_t block_length;
+
+		slurp_seek(fp, SEEK_SET, position + 2);
+		if (slurp_read(fp, &block_length, sizeof(block_length)) != sizeof(block_length))
 			return 0;
-		if (memcmp(data + position, "IN", 2) == 0) {
+
+		block_length = bswapLE32(block_length);
+
+		if (block_length + position > fp->length)
+			return 0;
+
+		unsigned char id[2];
+
+		slurp_seek(fp, SEEK_SET, position);
+		if (slurp_read(fp, &id, sizeof(id)) != sizeof(id))
+			return 0;
+
+		if (memcmp(id, "IN", 2) == 0) {
 			/* hey! we have a winner */
-			file->title = strn_dup((const char *)data + position + 6, 32);
-			file->artist = strn_dup((const char *)data + position + 38, 20);
+			unsigned char title[32], artist[20];
+
+			slurp_seek(fp, SEEK_SET, position + 6);
+			if (slurp_read(fp, &title, sizeof(title)) != sizeof(title))
+				return 0;
+
+			slurp_seek(fp, SEEK_SET, position + 38);
+			if (slurp_read(fp, &artist, sizeof(artist)) != sizeof(artist))
+				return 0;
+
+			file->title = strn_dup(title, sizeof(title));
+			file->artist = strn_dup(artist, sizeof(artist));
 			file->description = "Digitrakker";
 			/*file->extension = str_dup("mdl");*/
 			file->type = TYPE_MODULE_XM;

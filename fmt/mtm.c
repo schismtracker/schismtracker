@@ -62,14 +62,21 @@ SCHISM_BINARY_STRUCT(mtm_sample_t, 22+4+4+4+1+1+1);
 
 /* --------------------------------------------------------------------- */
 
-int fmt_mtm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_mtm_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 24 && memcmp(data, "MTM", 3) == 0))
+	unsigned char magic[3], title[20];
+
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "MTM", 3))
+		return 0;
+
+	slurp_seek(fp, SEEK_SET, 4);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 
 	file->description = "MultiTracker Module";
 	/*file->extension = str_dup("mtm");*/
-	file->title = strn_dup((const char *)data + 4, 20);
+	file->title = strn_dup(title, sizeof(title));
 	file->type = TYPE_MODULE_MOD;
 	return 1;
 }

@@ -30,16 +30,28 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_far_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_far_read_info(dmoz_file_t *file, slurp_t *fp)
 {
+	if (!(fp->length > 47))
+		return 0;
+
 	/* The magic for this format is truly weird (which I suppose is good, as the chance of it
 	being "accidentally" correct is pretty low) */
-	if (!(length > 47 && memcmp(data + 44, "\x0d\x0a\x1a", 3) == 0 && memcmp(data, "FAR\xfe", 4) == 0))
+	unsigned char magic1[4], magic2[3], title[40];
+
+	slurp_read(fp, magic1, sizeof(magic1));
+
+	slurp_seek(fp, SEEK_SET, 44);
+	slurp_read(fp, magic2, sizeof(magic2));
+
+	if (!(memcmp(magic2, "\x0d\x0a\x1a", 3) == 0 && memcmp(magic1, "FAR\xfe", 4) == 0))
 		return 0;
+
+	slurp_read(fp, title, sizeof(title));
 
 	file->description = "Farandole Module";
 	/*file->extension = str_dup("far");*/
-	file->title = strn_dup((const char *)data + 4, 40);
+	file->title = strn_dup(title, sizeof(title));
 	file->type = TYPE_MODULE_S3M;
 	return 1;
 }

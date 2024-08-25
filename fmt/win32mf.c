@@ -406,7 +406,7 @@ void win32mf_quit(void)
 	if (uncompressed_type) \
 		uncompressed_type->lpVtbl->Release(uncompressed_type);
 
-int fmt_win32mf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_win32mf_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	if (!media_foundation_initialized)
 		return 0;
@@ -417,7 +417,7 @@ int fmt_win32mf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	if (!file->path || charset_iconv(file->path, (uint8_t **)&url, CHARSET_UTF8, CHARSET_WCHAR_T))
 		url = NULL;
 
-	MEDIA_FOUNDATION_START(data, length, url, cleanup)
+	MEDIA_FOUNDATION_START(fp->data, fp->length, url, cleanup)
 
 	file->smp_flags = flags;
 	file->smp_speed = sps;
@@ -503,7 +503,7 @@ cleanup:
 	return success;
 }
 
-int fmt_win32mf_load_sample(const uint8_t *data, size_t len, song_sample_t *smp)
+int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 {
 	if (!media_foundation_initialized)
 		return 0;
@@ -512,7 +512,7 @@ int fmt_win32mf_load_sample(const uint8_t *data, size_t len, song_sample_t *smp)
 	uint8_t *uncompressed = NULL;
 	size_t uncompressed_size = 0, sample_length = 0;
 
-	MEDIA_FOUNDATION_START(data, len, NULL, cleanup)
+	MEDIA_FOUNDATION_START(fp->data, fp->length, NULL, cleanup)
 
 	for (;;) {
 		int loop_success = reader_load_sample(reader, &uncompressed, &uncompressed_size);

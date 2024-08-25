@@ -36,14 +36,22 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_s3m_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_s3m_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 48 && memcmp(data + 44, "SCRM", 4) == 0))
+	unsigned char magic[4], title[27];
+	
+	slurp_seek(fp, SEEK_SET, 44);
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "SCRM", sizeof(magic)))
+		return 0;
+
+	slurp_seek(fp, SEEK_SET, 0);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 
 	file->description = "Scream Tracker 3";
 	/*file->extension = str_dup("s3m");*/
-	file->title = strn_dup((const char *)data, 27);
+	file->title = strn_dup(title, sizeof(title));
 	file->type = TYPE_MODULE_S3M;
 	return 1;
 }

@@ -34,22 +34,32 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_stx_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_stx_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	char id[8];
+	unsigned char magic[4];
 	int i;
 
-	if (!(length > 48 && memcmp(data + 60, "SCRM", 4) == 0))
+	slurp_seek(fp, SEEK_SET, 60);
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "SCRM", sizeof(magic)))
 		return 0;
 
-	memcpy(id, data + 20, 8);
-	for (i = 0; i < 8; i++)
-		if (id[i] < 0x20 || id[i] > 0x7E)
+	slurp_seek(fp, SEEK_SET, 20);
+	for (i = 0; i < 8; i++) {
+		int id = slurp_getc(fp);
+		if (id < 0x20 || id > 0x7E)
 			return 0;
+	}
+
+	unsigned char title[20];
+
+	slurp_seek(fp, SEEK_SET, 0);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
+		return 0;
 
 	file->description = "ST Music Interface Kit";
 	/*file->extension = str_dup("stx");*/
-	file->title = strn_dup((const char *)data, 20);
+	file->title = strn_dup(title, sizeof(title));
 	file->type = TYPE_MODULE_MOD;
 	return 1;
 }

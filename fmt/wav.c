@@ -185,12 +185,12 @@ static int wav_load(wave_file_t *f, const uint8_t *data, size_t len)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample_t *smp)
+int fmt_wav_load_sample(slurp_t *fp, song_sample_t *smp)
 {
 	wave_file_t f;
 	uint32_t flags;
 
-	if (!wav_load(&f, data, len))
+	if (!wav_load(&f, fp->data, fp->length))
 		return 0;
 
 	if (f.fmt.format != WAVE_FORMAT_PCM ||
@@ -224,11 +224,11 @@ int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample_t *smp)
 	return csf_read_sample((song_sample_t *)smp, flags, (const char *) f.buf, f.data.length);
 }
 
-int fmt_wav_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_wav_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	wave_file_t f;
 
-	if (!wav_load(&f, data, length))
+	if (!wav_load(&f, fp->data, fp->length))
 		return 0;
 	else if (f.fmt.format != WAVE_FORMAT_PCM ||
 		!f.fmt.freqHz ||

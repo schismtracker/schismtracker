@@ -26,14 +26,24 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_mf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_mf_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 290 && memcmp(data, "MOONFISH", 8) == 0))
+	unsigned char moonfish[8];
+	if (slurp_read(fp, moonfish, sizeof(moonfish)) != sizeof(moonfish)
+		|| memcmp(moonfish, "MOONFISH", sizeof(moonfish)))
+		return 0;
+
+	slurp_seek(fp, SEEK_SET, 33);
+	int title_length = slurp_getc(fp);
+	title_length = MIN(32, title_length);
+
+	unsigned char title[32];
+	if (slurp_read(fp, title, title_length) != title_length)
 		return 0;
 
 	file->description = "MoonFish";
 	/*file->extension = str_dup("mf");*/
-	file->title = strn_dup((const char *)data + 33, MIN(32, data[32]));
+	file->title = strn_dup(title, title_length);
 	file->type = TYPE_MODULE_MOD;    /* ??? */
 	return 1;
 }

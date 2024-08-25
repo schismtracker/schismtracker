@@ -122,10 +122,11 @@ static int load_s3i_sample(const uint8_t *data, size_t length, song_sample_t *sm
 	return 1;
 }
 
-int fmt_s3i_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+/* FIXME update this stuff to not use fp->data */
+int fmt_s3i_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	song_sample_t smp;
-	if (!load_s3i_sample(data, length, &smp, 0))
+	if (!load_s3i_sample(fp->data, fp->length, &smp, 0))
 		return 0;
 
 	file->smp_length = smp.length;
@@ -143,8 +144,8 @@ int fmt_s3i_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	return 1;
 }
 
-int fmt_s3i_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
+int fmt_s3i_load_sample(slurp_t *fp, song_sample_t *smp)
 {
 	// what the crap?
-	return load_s3i_sample(data, length, smp, 1);
+	return load_s3i_sample(fp->data, fp->length, smp, 1);
 }

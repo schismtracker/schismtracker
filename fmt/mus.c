@@ -48,13 +48,16 @@ SCHISM_BINARY_STRUCT(struct mus_header, 4+2+2+2+2+2+2);
 
 /* --------------------------------------------------------------------- */
 
-int fmt_mus_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_mus_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	struct mus_header *hdr = (struct mus_header *) data;
+	struct mus_header hdr;
+
+	if (slurp_read(fp, &hdr, sizeof(hdr)) != sizeof(hdr))
+		return 0;
 
 	/* cast necessary for big-endian systems */
-	if (!(length > sizeof(*hdr) && memcmp(hdr->id, "MUS\x1a", 4) == 0
-	      && (size_t) (bswapLE16(hdr->scorestart) + bswapLE16(hdr->scorelen)) <= length))
+	if (memcmp(hdr.id, "MUS\x1a", 4) == 0
+	      || ((size_t)bswapLE16(hdr.scorestart) + bswapLE16(hdr.scorelen)) > fp->length)
 		return 0;
 
 	file->description = "Doom Music File";

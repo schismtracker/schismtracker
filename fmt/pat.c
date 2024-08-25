@@ -126,24 +126,26 @@ static int gusfreq(unsigned int freq)
 
 /* --------------------------------------------------------------------- */
 
-int fmt_pat_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_pat_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	const struct GF1PatchHeader *header = (const struct GF1PatchHeader *) data;
+	struct GF1PatchHeader hdr;
 
-	if ((length <= sizeof(struct GF1PatchHeader))
-	    || (memcmp(header->sig, "GF1PATCH", 8) != 0)
-	    || (memcmp(header->ver, "110\0", 4) != 0 && memcmp(header->ver, "100\0", 4) != 0)
-	    || (memcmp(header->id, "ID#000002\0", 10) != 0)) {
+	if (slurp_read(fp, &hdr, sizeof(hdr)) != sizeof(hdr))
 		return 0;
-	}
+
+	if ((memcmp(hdr.sig, "GF1PATCH", 8) != 0)
+	    || (memcmp(hdr.ver, "110\0", 4) != 0 && memcmp(hdr.ver, "100\0", 4) != 0)
+	    || (memcmp(hdr.id, "ID#000002\0", 10) != 0))
+		return 0;
+
 	file->description = "Gravis Patch File";
-	file->title = strn_dup(header->insname, 16);
+	file->title = strn_dup(hdr.insname, 16);
 	file->type = TYPE_INST_OTHER;
 	return 1;
 }
 
 
-int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
+int fmt_pat_load_instrument(slurp_t *fp, int slot)
 {
 	struct GF1PatchHeader header;
 	struct GF1PatchSampleHeader gfsamp;
@@ -153,8 +155,12 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
 	unsigned int pos, rs;
 	int lo, hi, tmp, i, nsamp, n;
 
-	if (length < sizeof(header) || !slot) return 0;
-	memcpy(&header, data, sizeof(header));
+	if (!slot)
+		return 0;
+
+	if (slurp_read(fp, &header, sizeof(header)) != sizeof(header))
+		return 0;
+
 	if ((memcmp(header.sig, "GF1PATCH", 8) != 0)
 	    || (memcmp(header.ver, "110\0", 4) != 0 && memcmp(header.ver, "100\0", 4) != 0)
 	    || (memcmp(header.id, "ID#000002\0", 10) != 0)) {
@@ -173,14 +179,13 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
 	g->name[15] = '\0';
 
 	nsamp = CLAMP(header.smpnum, 1, 16);
-	pos = sizeof(header);
 	for (i = 0; i < 120; i++) {
 		g->sample_map[i] = 0;
 		g->note_map[i] = i + 1;
 	}
 	for (i = 0; i < nsamp; i++) {
-		memcpy(&gfsamp, data + pos, sizeof(gfsamp));
-		pos += sizeof(gfsamp);
+		if (slurp_read(fp, &gfsamp, sizeof(gfsamp)) != sizeof(gfsamp))
+			return 0;
 
 		n = instrument_loader_sample(&ii, i + 1);
 		smp = song_get_sample(n);
@@ -238,7 +243,16 @@ int fmt_pat_load_instrument(const uint8_t *data, size_t length, int slot)
 		smp->vib_rate = gfsamp.vib_rate;
 		smp->vib_depth = gfsamp.vib_depth;
 
-		pos += csf_read_sample(smp, rs, data + pos, length - pos);
+		unsigned char *buf = malloc(fp->length - pos);
+
+		if (slurp_read(fp, buf, fp->length - pos) != (fp->length - pos)) {
+			free(buf);
+			return 0;
+		}
+
+		csf_read_sample(smp, rs, buf, fp->length - pos);
+	
+		free(buf);
 	}
 	return 1;
 }

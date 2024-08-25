@@ -117,42 +117,48 @@ static int validate_xi(const struct xi_file_header *xi, size_t length)
 
 /* --------------------------------------------------------------------- */
 
-int fmt_xi_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_xi_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	struct xi_file_header *xi = (struct xi_file_header *)data;
+	struct xi_file_header xi;
+	
+	if (slurp_read(fp, &xi, sizeof(xi)) != sizeof(xi))
+		return 0;
 
-	if (!validate_xi(xi, length))
+	if (!validate_xi(&xi, fp->length))
 		return 0;
 
 	file->description = "Fasttracker II Instrument";
-	file->title = strn_dup((const char *)xi->name, 22);
+	file->title = strn_dup((const char *)xi.name, sizeof(xi.name));
 	file->type = TYPE_INST_XI;
 	return 1;
 }
 
-int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
+int fmt_xi_load_instrument(slurp_t *fp, int slot)
 {
-	const struct xi_file_header *xi = (const struct xi_file_header *) data;
+	struct xi_file_header xi;
 	struct xi_sample_header xmsh;
 	struct instrumentloader ii;
 	song_instrument_t *g;
 	const uint8_t *sampledata, *end;
 	int k, prevtick;
 
-	if (!slot)
-		return 0;
-	if (!validate_xi(xi, length))
+	if (slurp_read(fp, &xi, sizeof(xi)) != sizeof(xi))
 		return 0;
 
-	end = data + length;
+	if (!slot)
+		return 0;
+	if (!validate_xi(&xi, fp->length))
+		return 0;
+
+	end = fp->data + fp->length;
 
 	song_delete_instrument(slot, 0);
 
 	g = instrument_loader_init(&ii, slot);
-	memcpy(g->name, xi->name, 22);
+	memcpy(g->name, xi.name, 22);
 	g->name[22] = '\0';
 
-	xmsh = xi->xish;
+	xmsh = xi.xish;
 
 	for (k = 0; k < 96; k++) {
 		if (xmsh.snum[k] > 15)
@@ -217,10 +223,10 @@ int fmt_xi_load_instrument(const uint8_t *data, size_t length, int slot)
 	xmsh.nsamples = bswapLE16(xmsh.nsamples);
 
 	// Sample data begins at the end of the sample headers
-	sampledata = (const uint8_t *) (xi->sheader + xmsh.nsamples);
+	sampledata = (const uint8_t *) (xi.sheader + xmsh.nsamples);
 
 	for (k = 0; k < xmsh.nsamples; k++) {
-		struct xm_sample_header xmss = xi->sheader[k];
+		struct xm_sample_header xmss = xi.sheader[k];
 		song_sample_t *smp;
 		unsigned int rs, samplesize, n;
 

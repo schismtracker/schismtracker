@@ -30,27 +30,40 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_stm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_stm_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	char id[8];
+	unsigned char title[20];
+	int what, type, version;
 	int i;
 
+	slurp_seek(fp, SEEK_SET, 28);
+	what = slurp_getc(fp);
+	type = slurp_getc(fp);
+	version = slurp_getc(fp);
+	
 	/* data[29] is the type: 1 = song, 2 = module (with samples) */
-	if (!(length > 28 && (data[28] == 0x1a || data[28] == 0x02) && (data[29] == 1 || data[29] == 2)
-		&& data[30] == 2))
+	if ((what != 0x1a && what != 0x02) || (type != 1 && type != 2)
+		|| version != 2)
 		return 0;
 
-	memcpy(id, data + 20, 8);
-	for (i = 0; i < 8; i++)
-		if (id[i] < 0x20 || id[i] > 0x7E)
+	slurp_seek(fp, SEEK_SET, 20);
+	for (i = 0; i < 8; i++) {
+		/* the ID should be all safe ASCII */
+		int id = slurp_getc(fp);
+		if (id < 0x20 || id > 0x7E)
 			return 0;
+	}
+
+	slurp_seek(fp, SEEK_SET, 0);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
+		return 0;
 
 	/* I used to check whether it was a 'song' or 'module' and set the description
-	accordingly, but it's fairly pointless information :) */
+	 * accordingly, but it's fairly pointless information :) */
 	file->description = "Scream Tracker 2";
 	/*file->extension = str_dup("stm");*/
 	file->type = TYPE_MODULE_MOD;
-	file->title = strn_dup((const char *)data, 20);
+	file->title = strn_dup(title, sizeof(title));
 	return 1;
 }
 

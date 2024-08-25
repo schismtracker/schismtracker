@@ -49,10 +49,7 @@ struct flac_file {
 		} loop;
 	} flags;
 
-	struct {
-		const uint8_t* data;
-		size_t len;
-	} compressed;
+	slurp_t *fp; /* file pointer... */
 
 	struct {
 		uint8_t* data;
@@ -140,43 +137,36 @@ static void on_meta(const FLAC__StreamDecoder *decoder, const FLAC__StreamMetada
 	(void)decoder, (void)client_data;
 }
 
-static FLAC__StreamDecoderReadStatus on_read(const FLAC__StreamDecoder *decoder, FLAC__byte buffer[], size_t *bytes, void *client_data) {
+static FLAC__StreamDecoderReadStatus on_read(const FLAC__StreamDecoder *decoder, FLAC__byte buffer[], size_t *bytes, void *client_data)
+{
 	struct flac_file* flac_file = (struct flac_file*)client_data;
 
-	if (flac_file->uncompressed.samples_read < flac_file->compressed.len) {
-		size_t needed = flac_file->compressed.len - flac_file->uncompressed.samples_read;
-		if (*bytes > needed)
-			*bytes = needed;
-
-		memcpy(buffer, flac_file->compressed.data + flac_file->uncompressed.samples_read, *bytes);
-		flac_file->uncompressed.samples_read += *bytes;
-
-		return FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
-	} else {
-		*bytes = 0;
-		return FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
-	}
+	*bytes = slurp_read(flac_file->fp, buffer, *bytes);
+	return (*bytes) ? FLAC__STREAM_DECODER_READ_STATUS_CONTINUE : FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
 
 	(void)decoder;
 }
 
-static void on_error(const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data) {
+static void on_error(const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data)
+{
 	log_appendf(4, "Error loading FLAC: %s", FLAC__StreamDecoderErrorStatusString[status]);
 
 	(void)decoder, (void)client_data;
 }
 
-static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 *const buffer[], void *client_data) {
+static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 *const buffer[], void *client_data)
+{
 	struct flac_file* flac_file = (struct flac_file*)client_data;
 
-	/* invalid? */
+	/* invalid?; FIXME: this should probably make sure the total_samples
+	 * is less than the max sample constant thing */
 	if (!flac_file->streaminfo.total_samples || !flac_file->streaminfo.channels
 		|| flac_file->streaminfo.channels > 2)
 		return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 
 	if (frame->header.number.sample_number == 0) {
 		/* allocate our buffer */
-		flac_file->uncompressed.len = (size_t)(flac_file->streaminfo.total_samples * flac_file->streaminfo.channels * flac_file->streaminfo.bits_per_sample/8);
+		flac_file->uncompressed.len = ((size_t)flac_file->streaminfo.total_samples * flac_file->streaminfo.channels * flac_file->streaminfo.bits_per_sample/8);
 		flac_file->uncompressed.data = (uint8_t*)malloc(flac_file->uncompressed.len * ((flac_file->streaminfo.bits_per_sample == 8) ? sizeof(int8_t) : sizeof(int16_t)));
 		if (!flac_file->uncompressed.data)
 			return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
@@ -197,7 +187,7 @@ static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decode
 		size_t i, j, c;
 		for (i = 0, j = 0; i < block_size; j++)
 			for (c = 0; c < flac_file->streaminfo.channels; c++)
-				buf_ptr[i++] = buffer[c][j] << bit_shift;
+				buf_ptr[i++] = lshift_signed_32(buffer[c][j], bit_shift);
 	} else if (flac_file->streaminfo.bits_per_sample <= 16) {
 		int16_t* buf_ptr = (int16_t*)flac_file->uncompressed.data + flac_file->uncompressed.samples_decoded;
 		uint32_t bit_shift = 16 - flac_file->streaminfo.bits_per_sample;
@@ -205,7 +195,7 @@ static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decode
 		size_t i, j, c;
 		for (i = 0, j = 0; i < block_size; j++)
 			for (c = 0; c < flac_file->streaminfo.channels; c++)
-				buf_ptr[i++] = buffer[c][j] << bit_shift;
+				buf_ptr[i++] = lshift_signed_32(buffer[c][j], bit_shift);
 	} else { /* >= 16 */
 		int16_t* buf_ptr = (int16_t*)flac_file->uncompressed.data + flac_file->uncompressed.samples_decoded;
 		uint32_t bit_shift = flac_file->streaminfo.bits_per_sample - 16;
@@ -213,7 +203,7 @@ static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decode
 		size_t i, j, c;
 		for (i = 0, j = 0; i < block_size; j++)
 			for (c = 0; c < flac_file->streaminfo.channels; c++)
-				buf_ptr[i++] = buffer[c][j] >> bit_shift;
+				buf_ptr[i++] = rshift_signed_32(buffer[c][j], bit_shift);
 	}
 
 	flac_file->uncompressed.samples_decoded += block_size;
@@ -229,11 +219,11 @@ static FLAC__StreamDecoderWriteStatus on_write(const FLAC__StreamDecoder *decode
 		return x; \
 	} while (0);
 
-static int flac_load(struct flac_file* flac_file, int meta_only) {
-	if (flac_file->compressed.len < 4)
-		return 0;
+static int flac_load(struct flac_file* flac_file, int meta_only)
+{
+	unsigned char magic[4];
 
-	if (memcmp(flac_file->compressed.data, "fLaC", 4))
+	if (slurp_read(fp, magic, sizeof(magic)) != 4 || memcmp(magic, "fLaC", sizeof(magic)) != 0)
 		return 0;
 
 	FLAC__StreamDecoder* decoder = FLAC__stream_decoder_new();
@@ -242,6 +232,7 @@ static int flac_load(struct flac_file* flac_file, int meta_only) {
 
 	FLAC__stream_decoder_set_metadata_respond_all(decoder);
 
+	/* XXX on_seek ? */
 	FLAC__StreamDecoderInitStatus initStatus =
 		FLAC__stream_decoder_init_stream(
 			decoder,
@@ -267,11 +258,11 @@ static int flac_load(struct flac_file* flac_file, int meta_only) {
 }
 #undef FLAC_ERROR
 
-int fmt_flac_load_sample(const uint8_t *data, size_t len, song_sample_t *smp) {
+int fmt_flac_load_sample(slurp_t *fp, song_sample_t *smp) {
 	struct flac_file flac_file = {0};
-	flac_file.compressed.data = data;
-	flac_file.compressed.len = len;
-	strncpy(flac_file.flags.name, smp->name, ARRAY_SIZE(flac_file.flags.name));
+	flac_file.fp = fp;
+	// XXX: WTF does this line even do?
+	// strncpy(flac_file.flags.name, smp->name, ARRAY_SIZE(flac_file.flags.name));
 	flac_file.flags.sample_rate = 0;
 	flac_file.flags.loop.type = -1;
 
@@ -291,8 +282,13 @@ int fmt_flac_load_sample(const uint8_t *data, size_t len, song_sample_t *smp) {
 	if (flac_file.flags.sample_rate)
 		smp->c5speed = flac_file.flags.sample_rate;
 
-	// endianness
-	uint32_t flags = SF_LE;
+	// endianness, based on host system
+	uint32_t flags = 0;
+#ifdef WORDS_BIGENDIAN
+	flags |= SF_BE;
+#else
+	flags |= SF_LE;
+#endif
 
 	// channels
 	flags |= (flac_file.streaminfo.channels == 2) ? SF_SI : SF_M;
@@ -309,11 +305,10 @@ int fmt_flac_load_sample(const uint8_t *data, size_t len, song_sample_t *smp) {
 	return ret;
 }
 
-int fmt_flac_read_info(dmoz_file_t *file, const uint8_t *data, size_t len)
+int fmt_flac_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	struct flac_file flac_file = {0};
-	flac_file.compressed.data = data;
-	flac_file.compressed.len = len;
+	flac_file.fp = fp;
 	flac_file.flags.loop.type = -1;
 
 	if (!flac_load(&flac_file, 1))
@@ -335,6 +330,7 @@ int fmt_flac_read_info(dmoz_file_t *file, const uint8_t *data, size_t len)
 	file->smp_speed      = flac_file.streaminfo.sample_rate;
 	file->smp_length     = flac_file.streaminfo.total_samples;
 
+	/* stupid magic numbers... */
 	if (flac_file.flags.loop.type != -1) {
 		file->smp_loop_start = flac_file.flags.loop.start;
 		file->smp_loop_end   = flac_file.flags.loop.end + 1;

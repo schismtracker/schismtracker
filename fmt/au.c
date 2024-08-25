@@ -44,27 +44,27 @@ struct au_header {
 	uint32_t data_offset, data_size, encoding, sample_rate, channels;
 };
 
-SCHISM_BINARY_STRUCT(struct au_header, 4+4+4+4+4+4);
+SCHISM_BINARY_STRUCT(struct au_header, 24);
 
 #pragma pack(pop)
 
 /* --------------------------------------------------------------------- */
 
-int fmt_au_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_au_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	struct au_header au;
 
-	if (!(length > 24 && memcmp(data, ".snd", 4) == 0))
+	if (slurp_read(fp, &au, sizeof(au)) != sizeof(au)
+		|| memcmp(au.magic, ".snd", sizeof(au.magic)))
 		return 0;
 
-	memcpy(&au, data, 24);
 	au.data_offset = bswapBE32(au.data_offset);
 	au.data_size = bswapBE32(au.data_size);
 	au.encoding = bswapBE32(au.encoding);
 	au.sample_rate = bswapBE32(au.sample_rate);
 	au.channels = bswapBE32(au.channels);
 
-	if (!(au.data_offset < length && au.data_size > 0 && au.data_size <= length - au.data_offset))
+	if (!(au.data_offset < fp->length && au.data_size > 0 && au.data_size <= fp->length - au.data_offset))
 		return 0;
 
 	file->smp_length = au.data_size / au.channels;
@@ -86,7 +86,13 @@ int fmt_au_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	if (au.data_offset > 24) {
 		int extlen = au.data_offset - 24;
 
-		file->title = strn_dup((const char *)data + 24, extlen);
+		slurp_seek(fp, SEEK_SET, 24);
+
+		unsigned char title[extlen];
+		if (slurp_read(fp, title, extlen) != extlen)
+			return 0;
+
+		file->title = strn_dup(title, extlen);
 	}
 	file->smp_filename = file->title;
 	file->type = TYPE_SAMPLE_PLAIN;
@@ -95,15 +101,14 @@ int fmt_au_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* --------------------------------------------------------------------- */
 
-int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
+int fmt_au_load_sample(slurp_t *fp, song_sample_t *smp)
 {
 	struct au_header au;
 	uint32_t sflags = SF_BE | SF_PCMS;
 
-	if (length < 24)
+	if (slurp_read(fp, &au, sizeof(au)) != sizeof(au))
 		return 0;
 
-	memcpy(&au, data, sizeof(au));
 	/* optimization: could #ifdef this out on big-endian machines */
 	au.data_offset = bswapBE32(au.data_offset);
 	au.data_size = bswapBE32(au.data_size);
@@ -115,9 +120,9 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 #define C__(cond) if (!(cond)) { return 0; }
 	C__(memcmp(au.magic, ".snd", 4) == 0);
 	C__(au.data_offset >= 24);
-	C__(au.data_offset < length);
+	C__(au.data_offset < fp->length);
 	C__(au.data_size > 0);
-	C__(au.data_size <= length - au.data_offset);
+	C__(au.data_size <= fp->length - au.data_offset);
 	C__(au.encoding == AU_PCM_8 || au.encoding == AU_PCM_16);
 	C__(au.channels == 1 || au.channels == 2);
 
@@ -138,15 +143,28 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 		sflags |= SF_M;
 	}
 
-	if (au.data_offset > 24) {
-		int extlen = MIN(25, au.data_offset - 24);
-		memcpy(smp->name, data + 24, extlen);
+	if (au.data_offset > sizeof(au)) {
+		int extlen = MIN(au.data_offset - sizeof(au), sizeof(smp->name) - 1);
+
+		if (slurp_read(fp, smp->name, extlen) != extlen)
+			return 0;
+
 		smp->name[extlen] = 0;
 	}
 
-	csf_read_sample(smp, sflags, data + au.data_offset, length - au.data_offset);
+	unsigned char *buf = malloc(fp->length - au.data_offset);
 
-	return 1;
+	slurp_seek(fp, SEEK_SET, au.data_offset);
+	if (slurp_read(fp, buf, fp->length - au.data_offset) != (fp->length - au.data_offset)) {
+		free(buf);
+		return 0;
+	}
+
+	int ret = csf_read_sample(smp, sflags, buf, fp->length - au.data_offset);
+
+	free(buf);
+
+	return ret;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

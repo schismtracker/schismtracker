@@ -36,26 +36,33 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_it_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_it_read_info(dmoz_file_t *file, slurp_t *fp)
 {
+	unsigned char magic[4];
+
 	/* "Bart just said I-M-P! He's made of pee!" */
-	if (length > 30 && memcmp(data, "IMPM", 4) == 0) {
-		/* This ought to be more particular; if it's not actually made *with* Impulse Tracker,
-		it's probably not compressed, irrespective of what the CMWT says. */
-		if (data[42] >= 0x14)
-			file->description = "Compressed Impulse Tracker";
-		else
-			file->description = "Impulse Tracker";
-	} else {
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "IMPM", sizeof(magic)))
 		return 0;
-	}
+
+	/* This ought to be more particular; if it's not actually made *with* Impulse Tracker,
+	 * it's probably not compressed, irrespective of what the CMWT says. */
+	slurp_seek(fp, SEEK_SET, 42);
+	int cmwt = slurp_getc(fp);
+	file->description = (cmwt >= 0x14) ? "Compressed Impulse Tracker" : "Impulse Tracker";
+
+	unsigned char title[25];
+
+	slurp_seek(fp, SEEK_SET, 4);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
+		return 0;
+
+	for (int n = 0; n < sizeof(title); n++)
+		if (!title[n])
+			title[n] = 0x20;
 
 	/*file->extension = str_dup("it");*/
-	file->title = mem_alloc(26);
-	for (int n = 0; n < 25; n++) {
-		file->title[n] = data[4 + n] ? data[4 + n] : 32;
-	}
-	file->title[25] = 0;
+	file->title = strn_dup(title, sizeof(title));
 	rtrim_string(file->title);
 	file->type = TYPE_MODULE_IT;
 	return 1;
@@ -437,8 +444,9 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				continue;
 			slurp_seek(fp, para_ins[n], SEEK_SET);
 			inst = song->instruments[n + 1] = csf_allocate_instrument();
+			
 			if (hdr.cmwt >= 0x0200)
-				load_it_instrument(inst, fp->data + para_ins[n]);
+				load_it_instrument(inst, fp);
 			else
 				load_it_instrument_old(inst, fp);
 		}

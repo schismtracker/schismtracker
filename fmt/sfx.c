@@ -48,12 +48,15 @@ static struct sfxfmt {
 };
 
 
-int fmt_sfx_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_sfx_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	int n;
+	unsigned char tag[4];
+
 	for (n = 0; sfxfmts[n].nsmp; n++) {
-		if (length >= sfxfmts[n].tagpos + 4
-		    && memcmp(data + sfxfmts[n].tagpos, sfxfmts[n].tag, 4) == 0) {
+		slurp_seek(fp, SEEK_SET, sfxfmts[n].tagpos);
+		if (slurp_read(fp, tag, sizeof(tag)) == sizeof(tag)
+			&& !memcmp(tag, sfxfmts[n].tag, 4)) {
 			file->description = sfxfmts[n].id;
 			/*file->extension = str_dup("sfx");*/
 			file->title = strdup(""); // whatever

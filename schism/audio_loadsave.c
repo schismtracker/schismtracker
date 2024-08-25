@@ -724,7 +724,8 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 
 	r = 0;
 	for (x = 0; load_instrument_funcs[x]; x++) {
-		r = load_instrument_funcs[x](s->data, s->length, target);
+		slurp_rewind(s);
+		r = load_instrument_funcs[x](s, target);
 		if (r) break;
 	}
 
@@ -808,9 +809,9 @@ int song_load_sample(int n, const char *file)
 	strncpy(smp.name, base, 25);
 
 	for (load = load_sample_funcs; *load; load++) {
-		if ((*load)(s->data, s->length, &smp)) {
+		slurp_rewind(s);
+		if ((*load)(s, &smp))
 			break;
-		}
 	}
 
 	if (!load) {

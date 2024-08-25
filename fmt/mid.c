@@ -61,7 +61,7 @@ struct mthd {
 	uint16_t division; // delta timing value: positive = units/beat; negative = smpte compatible units (?)
 };
 
-SCHISM_BINARY_STRUCT(struct mthd, 4+2+2+2);
+SCHISM_BINARY_STRUCT(struct mthd, 10);
 
 struct mtrk {
 	char tag[4]; // MTrk
@@ -116,20 +116,20 @@ static unsigned int read_varlen(slurp_t *fp)
 /* --------------------------------------------------------------------------------------------------------- */
 // info (this is ultra lame)
 
-int fmt_mid_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_mid_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	slurp_t fp = {.length = length, .data = (uint8_t *) data, .pos = 0};
 	song_t *tmpsong = csf_allocate();
-
 	if (!tmpsong)
 		return 0; // wahhhh
-	if (fmt_mid_load_song(tmpsong, &fp, LOAD_NOSAMPLES | LOAD_NOPATTERNS) == LOAD_SUCCESS) {
+
+	if (fmt_mid_load_song(tmpsong, fp, LOAD_NOSAMPLES | LOAD_NOPATTERNS) == LOAD_SUCCESS) {
 		file->description = "Standard MIDI File";
 		file->title = strdup(tmpsong->title);
 		file->type = TYPE_MODULE_MOD;
 		csf_free(tmpsong);
 		return 1;
 	}
+
 	csf_free(tmpsong);
 	return 0;
 }

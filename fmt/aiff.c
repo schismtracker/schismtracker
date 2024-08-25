@@ -302,14 +302,15 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 
 /* --------------------------------------------------------------------- */
 
-int fmt_aiff_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+/* FIXME needs to be updated to use proper slurp functions */
+int fmt_aiff_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	return _read_iff(file, NULL, data, length);
+	return _read_iff(file, NULL, fp->data, fp->length);
 }
 
-int fmt_aiff_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
+int fmt_aiff_load_sample(slurp_t *fp, song_sample_t *smp)
 {
-	return _read_iff(NULL, smp, data, length);
+	return _read_iff(NULL, smp, fp->data, fp->length);
 }
 
 /* --------------------------------------------------------------------- */

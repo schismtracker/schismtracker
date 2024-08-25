@@ -33,9 +33,15 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_okt_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_okt_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 16 && memcmp(data, "OKTASONG", 8) == 0))
+	unsigned char magic[8];
+
+	if (fp->length < 16)
+		return 0;
+
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "OKTASONG", sizeof(magic)))
 		return 0;
 
 	file->description = "Amiga Oktalyzer";

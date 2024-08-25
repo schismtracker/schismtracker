@@ -142,15 +142,20 @@ const uint16_t amigaperiod_table[256] = {
 	0,    0,    0
 };
 
-int fmt_mod_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_mod_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	char tag[4];
+	char tag[4], title[20];
 	int i = 0;
 
-	if (length < 1085)
+	if (fp->length < 1085)
 		return 0;
 
-	memcpy(tag, data + 1080, 4);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
+		return 0;
+
+	slurp_seek(fp, SEEK_SET, 1080);
+	if (slurp_read(fp, tag, sizeof(tag)) != sizeof(tag))
+		return 0;
 
 	for (i = 0; valid_tags[i][0] != NULL; i++) {
 		if (memcmp(tag, valid_tags[i][0], 4) == 0) {
@@ -161,45 +166,53 @@ int fmt_mod_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 			file->description = valid_tags[i][1];
 			/*file->extension = str_dup("mod");*/
-			file->title = strn_dup((const char *)data, 20);
+			file->title = strn_dup(title, sizeof(title));
 			file->type = TYPE_MODULE_MOD;
 			return 1;
 		}
 	}
 
 	/* check if it could be a SoundTracker MOD */
+	slurp_seek(fp, SEEK_SET, 0);
 	int errors = 0;
 	for (i = 0; i < 20; i++) {
-		if (data[i] > 0 && data[i] < 32) {
+		int b = slurp_getc(fp);
+		if (b > 0 && b < 32) {
 			errors++;
-			if (errors > 5) {
+			if (errors > 5)
 				return 0;
-			}
 		}
 	}
 
 	uint8_t all_volumes = 0, all_lengths = 0;
 	for (i = 0; i < 15; i++) {
-		if (data[20 + i * 30 + 24] != 0) {
+		slurp_seek(fp, SEEK_SET, 20 + i * 30 + 22);
+		int length_high = slurp_getc(fp);
+		int length_low = slurp_getc(fp);
+		int length = length_high * 0x100 + length_low;
+		int finetune = slurp_getc(fp);
+		int volume = slurp_getc(fp);
+
+		if (finetune)
 			return 0; /* invalid finetune */
-		}
-		if (data[20 + i * 30 + 25] > 64) {
+
+		if (volume > 64)
 			return 0; /* invalid volume */
-		}
-		all_volumes |= data[20 + i * 30 + 25];
-		if (data[20 + i * 30 + 22] * 256 + data[20 + i * 30 + 23] > 32768) {
+
+		if (length > 32768)
 			return 0; /* invalid sample length */
-		}
-		all_lengths |= data[20 + i * 30 + 22] | data[20 + i * 30 + 23];
+
+		all_volumes |= volume;
+
+		all_lengths |= length_high | length_low;
 	}
 
-	if (all_lengths == 0 || all_volumes == 0) {
+	if (!all_lengths || !all_volumes)
 		return 0;
-	}
 
 	file->description = "SoundTracker";
 	/*file->extension = str_dup("mod");*/
-	file->title = strn_dup((const char *)data, 20);
+	file->title = strn_dup(title, sizeof(title));
 	file->type = TYPE_MODULE_MOD;
 
 	return 1;
