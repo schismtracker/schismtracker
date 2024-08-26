@@ -171,9 +171,7 @@ struct video_cf {
 
 	int fullscreen;
 
-	unsigned int pal[256];
-
-	unsigned int tc_bgr32[256];
+	uint32_t pal[256];
 };
 
 /* don't stomp defaults */
@@ -227,7 +225,7 @@ void video_report(void)
 void video_redraw_texture(void)
 {
 	SDL_DestroyTexture(video.texture);
-	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
+	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
 }
 
 void video_shutdown(void)
@@ -306,7 +304,7 @@ void video_startup(void)
 
 	video.window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width, video.height, SDL_WINDOW_RESIZABLE);
 	video.renderer = SDL_CreateRenderer(video.window, -1, 0);
-	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
+	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
 	video.framebuf = calloc(NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT, sizeof(uint32_t));
 
 	/* Aspect ratio correction if it's wanted */
@@ -333,44 +331,27 @@ void video_resize(unsigned int width, unsigned int height)
 	status.flags |= (NEED_UPDATE);
 }
 
-static void _bgr32_pal(int i, int rgb[3])
-{
-	video.tc_bgr32[i] = rgb[2] |
-			(rgb[1] << 8) |
-			(rgb[0] << 16) | (255 << 24);
-}
-static void _gl_pal(int i, int rgb[3])
-{
-	video.pal[i] = rgb[2] |
-			(rgb[1] << 8) |
-			(rgb[0] << 16) | (255 << 24);
-}
-
 void video_colors(unsigned char palette[16][3])
 {
-	const int lastmap[] = { 0,1,2,3,5 };
-	int rgb[3], i, j, p;
+	static const int lastmap[] = { 0, 1, 2, 3, 5 };
+	int i, p;
 
 	/* make our "base" space */
 	for (i = 0; i < 16; i++) {
-		rgb[0]=palette[i][0];
-		rgb[1]=palette[i][1];
-		rgb[2]=palette[i][2];
-		_gl_pal(i, rgb);
-		_bgr32_pal(i, rgb);
+		video.pal[i] = palette[i][2]
+			| (palette[i][1] << 8)
+			| (palette[i][0] << 16);
 	}
+
 	/* make our "gradient" space */
-	for (i = 128; i < 256; i++) {
-		j = i - 128;
-		p = lastmap[(j>>5)];
-		rgb[0] = (int)palette[p][0] +
-			(((int)(palette[p+1][0] - palette[p][0]) * (j&31)) /32);
-		rgb[1] = (int)palette[p][1] +
-			(((int)(palette[p+1][1] - palette[p][1]) * (j&31)) /32);
-		rgb[2] = (int)palette[p][2] +
-			(((int)(palette[p+1][2] - palette[p][2]) * (j&31)) /32);
-		_gl_pal(i, rgb);
-		_bgr32_pal(i, rgb);
+	for (i = 0; i < 128; i++) {
+		p = lastmap[(i>>5)];
+
+		/* voodoo magic */
+		video.pal[i + 128] =
+			   ((int)palette[p][2] + (((int)(palette[p+1][2] - palette[p][2]) * (i & 0x1F)) / 0x20))
+			| (((int)palette[p][1] + (((int)(palette[p+1][1] - palette[p][1]) * (i & 0x1F)) / 0x20)) << 8)
+			| (((int)palette[p][0] + (((int)(palette[p+1][0] - palette[p][0]) * (i & 0x1F)) / 0x20)) << 16);
 	}
 }
 
@@ -400,16 +381,10 @@ int video_is_wm_available(void)
 
 static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, unsigned int mouseline[80], unsigned int mouseline_mask[80])
 {
-	unsigned int z;
-	unsigned int zm;
-	unsigned int swidth; // cursor width in symbols
-	unsigned int scenter;
-	unsigned int centeroffset;
-	unsigned int temp;
 	struct mouse_cursor *cursor = &cursors[video.mouse.shape];
 
-	memset(mouseline, 0, 80 * sizeof(unsigned int));
-	memset(mouseline_mask, 0, 80 * sizeof(unsigned int));
+	memset(mouseline,      0, 80 * sizeof(*mouseline));
+	memset(mouseline_mask, 0, 80 * sizeof(*mouseline));
 
 	if (video.mouse.visible != MOUSE_EMULATED
 		|| !video_is_focused()
@@ -419,12 +394,12 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 		return;
 	}
 
-	scenter = ceil(cursor->center_x / 8.0);
-	swidth = ceil(cursor->width / 8.0);
-	centeroffset = cursor->center_x % 8;
+	unsigned int scenter = ceil(cursor->center_x / 8.0);
+	unsigned int swidth  = ceil(cursor->width    / 8.0);
+	unsigned int centeroffset = cursor->center_x % 8;
 
-	z = cursor->pointer[ y - video.mouse.y + cursor->center_y];
-	zm = cursor->mask[ y - video.mouse.y + cursor->center_y];
+	unsigned int z  = cursor->pointer[y - video.mouse.y + cursor->center_y];
+	unsigned int zm = cursor->mask[y - video.mouse.y + cursor->center_y];
 
 	z <<= 8;
 	zm <<= 8;
@@ -436,58 +411,57 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 		zm >>= v - centeroffset;
 	}
 
-	//always fill the cell the mouse coordinates are in
-	mouseline[x] = z >> (8 * (swidth - scenter + 1)) & 0xff;
-	mouseline_mask[x] = zm >> (8 * (swidth - scenter + 1)) & 0xff;
+	// always fill the cell the mouse coordinates are in
+	mouseline[x]      = z  >> (8 * (swidth - scenter + 1)) & 0xFF;
+	mouseline_mask[x] = zm >> (8 * (swidth - scenter + 1)) & 0xFF;
 
-	//draw the parts of the cursor sticking out to the left
-	temp = (cursor->center_x < v) ? 0 : ceil((cursor->center_x - v) / 8.0);
-	for( int i = 1; i <= temp && x >= i; i++) {
-		mouseline[x-i] = z >> 8 * ( swidth - scenter + 1 + i) & 0xff;
-		mouseline_mask[x-i] = zm >> 8 * ( swidth - scenter + 1 + i) & 0xff;
+	// draw the parts of the cursor sticking out to the left
+	unsigned int temp = (cursor->center_x < v) ? 0 : ceil((cursor->center_x - v) / 8.0);
+	for (int i = 1; i <= temp && x >= i; i++) {
+		mouseline[x-i]      = z  >> (8 * (swidth - scenter + 1 + i)) & 0xFF;
+		mouseline_mask[x-i] = zm >> (8 * (swidth - scenter + 1 + i)) & 0xFF;
 	}
 
-	//and to the right
+	// and to the right
 	temp = swidth - scenter + 1;
-	for( int i = 1; i <= temp && x+i < 80; i++) {
-		mouseline[x+i] = z >> 8 * ( swidth - scenter + 1 - i) & 0xff;
-		mouseline_mask[x+i] = zm >> 8 * ( swidth - scenter + 1 - i) & 0xff;
+	for (int i = 1; (i <= temp) && (x + i < 80); i++) {
+		mouseline[x+i]      = z  >> (8 * (swidth - scenter + 1 - i)) & 0xff;
+		mouseline_mask[x+i] = zm >> (8 * (swidth - scenter + 1 - i)) & 0xff;
 	}
 }
 
 static void _blit11(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
 {
-	unsigned int mouseline_x = (video.mouse.x / 8);
-	unsigned int mouseline_v = (video.mouse.x % 8);
+	const unsigned int mouseline_x = (video.mouse.x / 8);
+	const unsigned int mouseline_v = (video.mouse.x % 8);
 	unsigned int mouseline[80];
 	unsigned int mouseline_mask[80];
-	unsigned char *pdata;
-	unsigned int x, y;
-	int pitch24;
 
-	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
+	for (unsigned int y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
 		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask);
-		vgamem_scan32(y, (unsigned int *)pixels, tpal, mouseline, mouseline_mask);
+		vgamem_scan32(y, (uint32_t *)pixels, tpal, mouseline, mouseline_mask);
 		pixels += pitch;
 	}
 }
 
 void video_blit(void)
 {
-	SDL_Rect dstrect = {
-		.x = 0,
-		.y = 0,
-		.w = cfg_video_want_fixed_width,
-		.h = cfg_video_want_fixed_height
-	};
+	static const unsigned int pitch = NATIVE_SCREEN_WIDTH * sizeof(Uint32);
+	SDL_Rect dstrect;
 
-	unsigned char *pixels = video.framebuf;
-	unsigned int pitch = NATIVE_SCREEN_WIDTH * sizeof(Uint32);
+	if (cfg_video_want_fixed) {
+		dstrect = (SDL_Rect){
+			.x = 0,
+			.y = 0,
+			.w = cfg_video_want_fixed_width,
+			.h = cfg_video_want_fixed_height,
+		};
+	}
 
-	_blit11(pixels, pitch, video.pal);
+	_blit11(video.framebuf, pitch, video.pal);
 
 	SDL_RenderClear(video.renderer);
-	SDL_UpdateTexture(video.texture, NULL, pixels, pitch);
+	SDL_UpdateTexture(video.texture, NULL, video.framebuf, pitch);
 	SDL_RenderCopy(video.renderer, video.texture, NULL, (cfg_video_want_fixed) ? &dstrect : NULL);
 	SDL_RenderPresent(video.renderer);
 }
@@ -519,10 +493,12 @@ void video_mousecursor(int vis)
 	case MOUSE_EMULATED:
 		video.mouse.visible = vis;
 		status_text_flash("%s", state[video.mouse.visible]);
+		break;
 	case MOUSE_RESET_STATE:
 		break;
 	default:
 		video.mouse.visible = MOUSE_EMULATED;
+		break;
 	}
 
 	SDL_ShowCursor(video.mouse.visible == MOUSE_SYSTEM);
