@@ -1035,7 +1035,7 @@ void load_module_load_page(struct page *page)
 	file_list_reposition();
 
 	char* shortcut_text = (char*)global_keybinds_list.global.load_module.shortcut_text_parens;
-	page->title = str_concat_2("Load Module", shortcut_text);
+	page->title = STR_CONCAT(2, "Load Module", shortcut_text);
 
 	page->draw_const = load_module_draw_const;
 	page->set_page = load_module_set_page;
@@ -1092,11 +1092,11 @@ void save_module_load_page(struct page *page, int do_export)
 
 	if (do_export) {
 		char* shortcut_text = (char*)global_keybinds_list.global.export_module.shortcut_text_parens;
-		page->title = str_concat_2("Export Module", shortcut_text);
+		page->title = STR_CONCAT(2, "Export Module", shortcut_text);
 		page->widgets = widgets_exportmodule;
 	} else {
 		char* shortcut_text = (char*)global_keybinds_list.global.save_module.shortcut_text_parens;
-		page->title = str_concat_2("Save Module", shortcut_text);
+		page->title = STR_CONCAT(2, "Save Module", shortcut_text);
 		page->widgets = widgets_savemodule;
 	}
 	widgets_exportsave = page->widgets;

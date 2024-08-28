@@ -187,50 +187,52 @@ static struct menu settings_menu = {
 
 /* *INDENT-ON* */
 
-#define set_menu_keybind(MENU, ITEM, BIND, WIDTH) \
+#define SET_MENU_KEYBIND(MENU, ITEM, BIND, WIDTH) \
 	MENU.items[ITEM] = str_pad_between(MENU.items[ITEM], \
 		(char*)global_keybinds_list.global.BIND.first_shortcut_text_parens, \
-		' ', WIDTH, 0, 0);
+		' ', WIDTH, 0);
 
 /* Add first keybind shortcut to the end of menu strings */
 void menu_init_keybinds(void) {
-	set_menu_keybind(main_menu, 2, pattern_edit, 25);
-	set_menu_keybind(main_menu, 5, order_list, 25);
-	set_menu_keybind(main_menu, 6, song_variables, 25);
-	set_menu_keybind(main_menu, 7, message_editor, 25);
-	set_menu_keybind(main_menu, 9, help, 25);
+	SET_MENU_KEYBIND(main_menu, 2, pattern_edit, 25);
+	SET_MENU_KEYBIND(main_menu, 5, order_list, 25);
+	SET_MENU_KEYBIND(main_menu, 6, song_variables, 25);
+	SET_MENU_KEYBIND(main_menu, 7, message_editor, 25);
+	SET_MENU_KEYBIND(main_menu, 9, help, 25);
 
-	set_menu_keybind(file_menu, 0, load_module, 22);
-	set_menu_keybind(file_menu, 1, new_song, 22);
-	set_menu_keybind(file_menu, 2, save, 22);
-	set_menu_keybind(file_menu, 3, save_module, 22);
-	set_menu_keybind(file_menu, 4, export_module, 22);
-	set_menu_keybind(file_menu, 5, schism_logging, 22);
-	set_menu_keybind(file_menu, 6, quit, 22);
+	SET_MENU_KEYBIND(file_menu, 0, load_module, 22);
+	SET_MENU_KEYBIND(file_menu, 1, new_song, 22);
+	SET_MENU_KEYBIND(file_menu, 2, save, 22);
+	SET_MENU_KEYBIND(file_menu, 3, save_module, 22);
+	SET_MENU_KEYBIND(file_menu, 4, export_module, 22);
+	SET_MENU_KEYBIND(file_menu, 5, schism_logging, 22);
+	SET_MENU_KEYBIND(file_menu, 6, quit, 22);
 
-	set_menu_keybind(playback_menu, 0, play_information_or_play_song, 27);
-	set_menu_keybind(playback_menu, 1, play_song, 27);
-	set_menu_keybind(playback_menu, 2, play_current_pattern, 27);
-	set_menu_keybind(playback_menu, 3, play_song_from_order, 27);
-	set_menu_keybind(playback_menu, 4, play_song_from_mark, 27);
-	set_menu_keybind(playback_menu, 5, stop_playback, 27);
-	set_menu_keybind(playback_menu, 6, audio_reset, 27);
-	set_menu_keybind(playback_menu, 7, preferences, 27);
-	set_menu_keybind(playback_menu, 8, calculate_song_length, 27);
+	SET_MENU_KEYBIND(playback_menu, 0, play_information_or_play_song, 27);
+	SET_MENU_KEYBIND(playback_menu, 1, play_song, 27);
+	SET_MENU_KEYBIND(playback_menu, 2, play_current_pattern, 27);
+	SET_MENU_KEYBIND(playback_menu, 3, play_song_from_order, 27);
+	SET_MENU_KEYBIND(playback_menu, 4, play_song_from_mark, 27);
+	SET_MENU_KEYBIND(playback_menu, 5, stop_playback, 27);
+	SET_MENU_KEYBIND(playback_menu, 6, audio_reset, 27);
+	SET_MENU_KEYBIND(playback_menu, 7, preferences, 27);
+	SET_MENU_KEYBIND(playback_menu, 8, calculate_song_length, 27);
 
-	set_menu_keybind(sample_menu, 0, sample_list, 25);
-	set_menu_keybind(sample_menu, 1, sample_library, 25);
+	SET_MENU_KEYBIND(sample_menu, 0, sample_list, 25);
+	SET_MENU_KEYBIND(sample_menu, 1, sample_library, 25);
 
-	set_menu_keybind(instrument_menu, 0, instrument_list, 29);
-	set_menu_keybind(instrument_menu, 1, instrument_library, 29);
+	SET_MENU_KEYBIND(instrument_menu, 0, instrument_list, 29);
+	SET_MENU_KEYBIND(instrument_menu, 1, instrument_library, 29);
 
-	set_menu_keybind(settings_menu, 0, preferences, 34);
-	set_menu_keybind(settings_menu, 1, midi, 34);
-	set_menu_keybind(settings_menu, 2, system_configure, 34);
-	set_menu_keybind(settings_menu, 3, palette_config, 34);
-	set_menu_keybind(settings_menu, 4, font_editor, 34);
-	set_menu_keybind(settings_menu, 5, fullscreen, 34);
+	SET_MENU_KEYBIND(settings_menu, 0, preferences, 34);
+	SET_MENU_KEYBIND(settings_menu, 1, midi, 34);
+	SET_MENU_KEYBIND(settings_menu, 2, system_configure, 34);
+	SET_MENU_KEYBIND(settings_menu, 3, palette_config, 34);
+	SET_MENU_KEYBIND(settings_menu, 4, font_editor, 34);
+	SET_MENU_KEYBIND(settings_menu, 5, fullscreen, 34);
 }
+
+#undef SET_MENU_KEYBIND
 
 /* updated to whatever menu is currently active.
  * this generalises the key handling.

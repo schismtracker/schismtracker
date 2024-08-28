@@ -29,6 +29,7 @@
 #include <sys/stat.h> /* roundabout way to get time_t */
 #include <sys/types.h>
 #include <stddef.h> /* wchar_t */
+#include <stdint.h> /* uint32_t */
 
 /* --------------------------------------------------------------------- */
 
@@ -176,45 +177,48 @@ char *pretty_name(const char *filename);
 int get_num_lines(const char *text);
 
 /* Count how many times character is in str */
-int str_count_occurences(char character, const char* str);
+size_t str_count_occurrences(char character, const char* str);
 
 /* Concatenates strings in array. count is size of array. str_array is the array. */
-char* str_concat_array(int count, const char** str_array);
+char* str_concat(size_t count, const char** str_array);
 /* Concatenates strings in array. count is size of array. str_array is the array. Frees the strings in the array. */
-char* str_concat_array_free(int count, char** str_array);
+char* str_concat_free(size_t count, char** str_array);
 
-char* str_concat_2(const char* str1, const char* str2);
-char* str_concat_3(const char* str1, const char* str2, const char* str3);
-char* str_concat_4(const char* str1, const char* str2, const char* str3, const char* str4);
-char* str_concat_5(const char* str1, const char* str2, const char* str3, const char* str4, const char* str5);
-char* str_concat_6(const char* str1, const char* str2, const char* str3, const char* str4, const char* str5, const char* str6);
+/* variadic macros for the above function, so one can write e.g. STR_CONCAT(3, "123", "123", "123") and receive "123123123" */
+#define STR_CONCAT(count, ...) \
+	str_concat((count), (const char *[]){ __VA_ARGS__ })
 
-char* str_concat_2_free(char* str1, char* str2);
-char* str_concat_3_free(char* str1, char* str2, char* str3);
-char* str_concat_4_free(char* str1, char* str2, char* str3, char* str4);
-char* str_concat_5_free(char* str1, char* str2, char* str3, char* str4, char* str5);
-char* str_concat_6_free(char* str1, char* str2, char* str3, char* str4, char* str5, char* str6);
+#define STR_CONCAT_FREE(count, ...) \
+	str_concat_free((count), (char *[]){ __VA_ARGS__ })
+
+/* The following two functions are named after the php implode() function. */
 
 /* Concatenates strings in array, putting a delimiter between them. count is size of array. str_array is the array. */
-char* str_concat_with_delim(int count, const char** str_array, const char* delim);
+char* str_implode(size_t count, const char* delim, const char** str_array);
 /* Concatenates strings in array, putting a delimiter between them. count is size of array. str_array is the array. Frees the strings in the array. */
-char* str_concat_with_delim_free(int count, char** str_array, const char* delim);
+char* str_implode_free(size_t count, const char* delim, char** str_array);
 
-/* pad will be placed between str1 and str2 until width is reached. If free_inputs is true free() will be called on the strings. */
-char* str_pad_between(char* str1, char* str2, char pad, int width, int min_padding, int free_inputs);
+#define STR_IMPLODE(count, delim, ...) \
+	str_implode((count), (delim), (const char *[]){ __VA_ARGS__ })
 
+#define STR_IMPLODE_FREE(count, delim, ...) \
+	str_implode_free((count), (delim), (char *[]){ __VA_ARGS__ })
+
+/* pad will be placed between str1 and str2 until width is reached.
+ * !!! THIS FUNCTION ASSUMES PROPER UTF-8 ENCODED STRINGS !!! */
+char* str_pad_between(const char* str1, const char* str2, char pad, int width, int min_padding);
 
 /* Prints last 8 bits of a variable. Used like this: printf("hello = " BYTE_TO_BINARY_PATTERN ".\n", BYTE_TO_BINARY(hello_var)); */
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte)  \
-  ((byte) & 0x80 ? '1' : '0'), \
-  ((byte) & 0x40 ? '1' : '0'), \
-  ((byte) & 0x20 ? '1' : '0'), \
-  ((byte) & 0x10 ? '1' : '0'), \
-  ((byte) & 0x08 ? '1' : '0'), \
-  ((byte) & 0x04 ? '1' : '0'), \
-  ((byte) & 0x02 ? '1' : '0'), \
-  ((byte) & 0x01 ? '1' : '0')
+	((byte) & 0x80 ? '1' : '0'), \
+	((byte) & 0x40 ? '1' : '0'), \
+	((byte) & 0x20 ? '1' : '0'), \
+	((byte) & 0x10 ? '1' : '0'), \
+	((byte) & 0x08 ? '1' : '0'), \
+	((byte) & 0x04 ? '1' : '0'), \
+	((byte) & 0x02 ? '1' : '0'), \
+	((byte) & 0x01 ? '1' : '0')
 
 
 /* filesystem */
@@ -249,6 +253,9 @@ FILE* win32_fopen(const char* path, const char* flags);
 
 /* integer sqrt (very fast; 32 bits limited) */
 unsigned int i_sqrt(unsigned int r);
+
+/* crc32 hash function */
+uint32_t crc32b(const unsigned char *message);
 
 /* sleep in msec */
 void ms_sleep(unsigned int m);

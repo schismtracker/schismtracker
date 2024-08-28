@@ -358,6 +358,7 @@ schismtracker_SOURCES = \
 	schism/fonts.c          \
 	schism/itf.c			\
 	schism/keybinds.c		\
+	schism/keybinds_codes.c \
 	schism/keyboard.c		\
 	schism/main.c			\
 	schism/menu.c			\

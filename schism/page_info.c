@@ -1196,7 +1196,7 @@ static void info_page_playback_update(void)
 void info_load_page(struct page *page)
 {
 	char* shortcut_text = (char*)global_keybinds_list.global.play_information_or_play_song.shortcut_text_parens;
-	page->title = str_concat_2("Info Page", shortcut_text);
+	page->title = STR_CONCAT(2, "Info Page", shortcut_text);
 
 	page->playback_update = info_page_playback_update;
 	page->total_widgets = 1;

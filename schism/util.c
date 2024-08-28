@@ -834,183 +834,91 @@ char *get_dot_directory(void)
 	return get_home_directory();
 }
 
-int str_count_occurences(char character, const char* str)
+size_t str_count_occurrences(char character, const char *str)
 {
-	int count = 0;
+	size_t count = 0;
 
-	for (int i = 0; str[i]; i++) {
-		if (str[i] == character)
-			count++;
-	}
+	for (; *str; count += (*str == character), str++);
 
 	return count;
 }
 
-char* str_concat_array(int count, const char** str_array)
+char* str_concat(size_t count, const char **str_array)
 {
-	int len = 0;
+	size_t str_array_lens[count];
+	size_t len = 0;
+	size_t i, c;
 
-	for(int i = 0; i < count; i++) {
-		if (!str_array[i] || !str_array[i][0]) continue;
-		len += strlen(str_array[i]);
-	}
+	for (i = 0; i < count; i++)
+		len += (str_array_lens[i] = (str_array[i] && *str_array[i]) ? strlen(str_array[i]) : 0);
 
-	if(len == 0) return strdup("");
+	if (!len) return strdup("");
 
-	char* out = malloc((len + 1) * sizeof(char));
-	out[0] = '\0';
+	char* out = malloc(len + 1);
 
-	for(int i = 0; i < count; i++) {
-		if (!str_array[i] || !str_array[i][0]) continue;
-		strcat(out, str_array[i]);
-	}
+	for (i = 0, c = 0; i < count && c < len; i++, c += str_array_lens[i])
+		memcpy(out + c, str_array[i], str_array_lens[i]);
 
 	return out;
 }
 
-char* str_concat_array_free(int count, char** str_array)
+char* str_concat_free(size_t count, char **str_array)
 {
-	char* out = str_concat_array(count, (const char**)str_array);
+	char* out = str_concat(count, (const char **)str_array);
 
-	for(int i = 0; i < count; i++)
+	for (size_t i = 0; i < count; i++)
 		free(str_array[i]);
 
 	return out;
 }
 
-char* str_concat_2(const char* str1, const char* str2)
+char* str_implode(size_t count, const char *delim, const char **str_array)
 {
-	const char* strings[2] = { str1, str2 };
-	return str_concat_array(2, strings);
-}
+	const char *str_array_with_delims[count * 2];
+	memset(str_array_with_delims, 0, count * 2);
 
-char* str_concat_3(const char* str1, const char* str2, const char* str3)
-{
-	const char* strings[3] = { str1, str2, str3 };
-	return str_concat_array(3, strings);
-}
+	size_t i, c;
 
-char* str_concat_4(const char* str1, const char* str2, const char* str3, const char* str4)
-{
-	const char* strings[4] = { str1, str2, str3, str4 };
-	return str_concat_array(4, strings);
-}
+	for (i = 0, c = 0; i < count; i++) {
+		if (!str_array[i] || !str_array[i][0])
+			continue;
 
-char* str_concat_5(const char* str1, const char* str2, const char* str3, const char* str4, const char* str5)
-{
-	const char* strings[5] = { str1, str2, str3, str4, str5 };
-	return str_concat_array(5, strings);
-}
-
-char* str_concat_6(const char* str1, const char* str2, const char* str3, const char* str4, const char* str5, const char* str6)
-{
-	const char* strings[6] = { str1, str2, str3, str4, str5, str6 };
-	return str_concat_array(6, strings);
-}
-
-char* str_concat_2_free(char* str1, char* str2)
-{
-	char* strings[2] = { str1, str2 };
-	return str_concat_array_free(2, strings);
-}
-
-char* str_concat_3_free(char* str1, char* str2, char* str3)
-{
-	char* strings[3] = { str1, str2, str3 };
-	return str_concat_array_free(3, strings);
-}
-
-char* str_concat_4_free(char* str1, char* str2, char* str3, char* str4)
-{
-	char* strings[4] = { str1, str2, str3, str4 };
-	return str_concat_array_free(4, strings);
-}
-
-char* str_concat_5_free(char* str1, char* str2, char* str3, char* str4, char* str5)
-{
-	char* strings[5] = { str1, str2, str3, str4, str5 };
-	return str_concat_array_free(5, strings);
-}
-
-char* str_concat_6_free(char* str1, char* str2, char* str3, char* str4, char* str5, char* str6)
-{
-	char* strings[6] = { str1, str2, str3, str4, str5, str6 };
-	return str_concat_array_free(6, strings);
-}
-
-char* str_concat_with_delim(int count, const char** str_array, const char* delim)
-{
-	int len = 0;
-	int delim_len = strlen(delim);
-	int actual_count = 0;
-
-	for (int i = 0; i < count; i++) {
-		if (!str_array[i] || !str_array[i][0]) continue;
-		len += strlen(str_array[i]);
-		actual_count++;
+		str_array_with_delims[c++] = str_array[i];
+		str_array_with_delims[c++] = delim;
 	}
 
-	if (len == 0 || actual_count == 0) return strdup("");
+	/* welp */
+	if (!c) return strdup("");
 
-	char* out = malloc((len + (actual_count - 1) * delim_len + 1) * sizeof(char));
-	out[0] = '\0';
-	int current_count = 0;
-
-	for (int i = 0; i < count; i++) {
-		if (!str_array[i] || !str_array[i][0]) continue;
-		strcat(out, str_array[i]);
-		current_count++;
-		if (current_count != actual_count)
-			strcat(out, delim);
-	}
-
-	return out;
+	/* decrement c by one so we don't get an extra delim */
+	return str_concat(--c, str_array_with_delims);
 }
 
-char* str_concat_with_delim_free(int count, char** str_array, const char* delim)
+char* str_implode_free(size_t count, const char *delim, char **str_array)
 {
-	char* out = str_concat_with_delim(count, (const char**)str_array, delim);
+	char* out = str_implode(count, delim, (const char **)str_array);
 
-	for (int i = 0; i < count; i++)
+	for (size_t i = 0; i < count; i++)
 		free(str_array[i]);
 
 	return out;
 }
 
-char* str_pad_between(char* str1, char* str2, char pad, int width, int min_padding, int free_inputs)
+char* str_pad_between(const char* str1, const char* str2, char pad, int width, int min_padding)
 {
-	int len1 = strlen(str1);
-	int len2 = strlen(str2);
-	int len_both = len1 + len2;
+	size_t len1 = strlen(str1), len2 = strlen(str2);
 
-	int len1_utf8 = charset_strlen(str1, CHARSET_UTF8);
-	int len2_utf8 = charset_strlen(str2, CHARSET_UTF8);
-	int len_both_utf8 = len1_utf8 + len2_utf8;
-	int len_padding = width - len_both_utf8;
+	/* ptrdiff_t is close enough to a signed size_t */
+	ptrdiff_t len_padding = (ptrdiff_t)width - (charset_strlen(str1, CHARSET_UTF8) + charset_strlen(str2, CHARSET_UTF8));
+	len_padding = CLAMP(0, min_padding, len_padding);
 
-	if (len_padding < 0) len_padding = 0;
-	if (len_padding < min_padding) len_padding = min_padding;
+	char* out = malloc(len1 + len2 + len_padding + 1);
 
-	int len_out = len_both + len_padding;
-	char* out = malloc((len_out + 1) * sizeof(char));
-	out[0] = '\0';
+	memcpy(out, str1, len1);
+	memset(out + len1, pad, len_padding);
+	memcpy(out + len1 + len_padding, str2, len2);
 
-	strcat(out, str1);
-
-	int end_padding = len1 + len_padding;
-
-	for(int i = len1; i < len1 + len_padding; i++) {
-		out[i] = pad;
-	}
-
-	out[end_padding] = '\0';
-
-	strcat(out, str2);
-
-	if(free_inputs) {
-		free(str1);
-		free(str2);
-	}
+	out[len1 + len2 + len_padding] = '\0';
 
 	return out;
 }
@@ -1028,6 +936,21 @@ unsigned int i_sqrt(unsigned int r)
 		}
 	}
 	return(c);
+}
+
+/* fairly fast crc32 hashing function; used for keybinds */
+uint32_t crc32b(const unsigned char *message) {
+	uint32_t crc = UINT32_C(0xFFFFFFFF);
+	size_t i, j;
+
+	for (i = 0; message[i]; i++) {
+		crc ^= message[i];
+
+		for (j = 0; j < 8; j++)
+			crc = (crc >> 1) ^ (0xEDB88320 & -(crc & 1));
+	}
+
+	return ~crc;
 }
 
 int run_hook(const char *dir, const char *name, const char *maybe_arg)

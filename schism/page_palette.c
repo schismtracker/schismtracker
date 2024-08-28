@@ -308,7 +308,7 @@ static void update_palette(void)
 void palette_load_page(struct page *page)
 {
 	char* shortcut_text = (char*)global_keybinds_list.global.palette_config.shortcut_text_parens;
-	page->title = str_concat_2("Palette Configuration", shortcut_text);
+	page->title = STR_CONCAT(2, "Palette Configuration", shortcut_text);
 
 	page->draw_const = palette_draw_const;
 	page->handle_key = palette_list_handle_key;

@@ -29,14 +29,13 @@
 #include "util.h"
 
 /* these two ought to be compiled separately */
-#include "keybinds_codes.c"
 #include "keybinds_init.c"
 
 #define MAX_BINDS 450
 #define MAX_SHORTCUTS 3
 static int current_binds_count = 0;
 static keybind_bind_t* current_binds[MAX_BINDS];
-keybind_list_t global_keybinds_list;
+keybind_list_t global_keybinds_list = {0};
 static int has_init_problem = 0;
 
 /* --------------------------------------------------------------------- */
@@ -186,34 +185,15 @@ void keybinds_handle_event(struct key_event* event)
 /* --------------------------------------------------------------------- */
 /* Parsing keybind strings */
 
-static int string_to_mod_length = ARRAY_SIZE(string_to_mod);
-
-static int parse_shortcut_mods(const char* shortcut, SDL_Keymod* mods)
-{
-	for (int i = 0; i < string_to_mod_length; i++) {
-		if (charset_strcasecmp(shortcut, CHARSET_UTF8, string_to_mod[i].name, CHARSET_UTF8) == 0) {
-			*mods |= string_to_mod[i].mod;
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-static int string_to_scancode_length = ARRAY_SIZE(string_to_scancode);
-
 static int parse_shortcut_scancode(keybind_bind_t* bind, const char* shortcut, SDL_Scancode* code)
 {
-	for (int i = 0; i < string_to_scancode_length; i++) {
-		if (charset_strcasecmp(shortcut, CHARSET_UTF8, string_to_scancode[i].name, CHARSET_UTF8) == 0) {
-			*code = string_to_scancode[i].code;
-			return 1;
-		}
-	}
+	if (keybinds_parse_scancode(shortcut, code))
+		return 1;
 
-	if (shortcut[0] == 'U' && shortcut[1] == 'S' && shortcut[2] == '_') {
-		log_appendf(5, " %s/%s: Unknown code '%s'", bind->section_info->name, bind->name, shortcut);
-		printf("%s/%s: Unknown code '%s'\n", bind->section_info->name, bind->name, shortcut);
+	if (!strncmp(shortcut, "US_", 3)) {
+		/* unknown scancode ? */
+		log_appendf(5, " %s/%s: Unknown scancode '%s'", bind->section_info->name, bind->name, shortcut);
+		printf("%s/%s: Unknown scancode '%s'\n", bind->section_info->name, bind->name, shortcut);
 		fflush(stdout);
 		has_init_problem = 1;
 		return -1;
@@ -221,32 +201,24 @@ static int parse_shortcut_scancode(keybind_bind_t* bind, const char* shortcut, S
 
 	return 0;
 }
-
-static int string_to_keycode_length = ARRAY_SIZE(string_to_keycode);
 
 static int parse_shortcut_keycode(keybind_bind_t* bind, const char* shortcut, SDL_Keycode* kcode)
 {
 	if (!shortcut || !shortcut[0])
 		return 0;
 
-	for (int i = 0; i < string_to_keycode_length; i++) {
-		if (charset_strcasecmp(shortcut, CHARSET_UTF8, string_to_keycode[i].name, CHARSET_UTF8) == 0) {
-			*kcode = string_to_keycode[i].code;
-			return 1;
-		}
-	}
+	if (keybinds_parse_keycode(shortcut, kcode))
+		return 1;
 
-	SDL_Keycode found_code = SDL_GetKeyFromName(shortcut);
+	*kcode = SDL_GetKeyFromName(shortcut);
 
-	if (found_code == SDLK_UNKNOWN) {
+	if (*kcode == SDLK_UNKNOWN) {
 		log_appendf(5, " %s/%s: Unknown code '%s'", bind->section_info->name, bind->name, shortcut);
 		printf("%s/%s: Unknown code '%s'\n", bind->section_info->name, bind->name, shortcut);
 		fflush(stdout);
 		has_init_problem = 1;
 		return -1;
 	}
-
-	*kcode = found_code;
 
 	return 1;
 }
@@ -275,7 +247,11 @@ static void keybinds_parse_shortcut_splitted(keybind_bind_t* bind, const char* s
 
 		if (next == NULL) break;
 
-		if (parse_shortcut_mods(trimmed, &mods)) continue;
+		SDL_Keymod mod;
+		if (keybinds_parse_modkey(trimmed, &mod)) {
+			mods |= mod;
+			continue;
+		}
 
 		int scan_result = parse_shortcut_scancode(bind, trimmed, &scan_code);
 		if (scan_result == 1) break;
@@ -422,22 +398,22 @@ static void set_shortcut_text(keybind_bind_t* bind)
 		if (key_text_length == 0)
 			continue;
 
-		char* next_out = str_concat_4(ctrl_text, alt_text, shift_text, key_text);
+		char* next_out = STR_CONCAT(4, ctrl_text, alt_text, shift_text, key_text);
 
 		out[i] = next_out;
 
 		if(i == 0) {
 			bind->first_shortcut_text = strdup(next_out);
-			bind->first_shortcut_text_parens = str_concat_3(" (", next_out, ")");
+			bind->first_shortcut_text_parens = STR_CONCAT(3, " (", next_out, ")");
 		}
 
 		free(key_text);
 	}
 
-	char* shortcut_text = str_concat_with_delim(MAX_SHORTCUTS, (const char**)out, ", ");
+	char* shortcut_text = str_implode(MAX_SHORTCUTS, ", ", (const char**)out);
 	bind->shortcut_text = shortcut_text;
 	if(shortcut_text[0])
-		bind->shortcut_text_parens = str_concat_3(" (", shortcut_text, ")");
+		bind->shortcut_text_parens = STR_CONCAT(3, " (", shortcut_text, ")");
 
 	for (int i = 0; i < MAX_SHORTCUTS; i++) {
 		if (!out[i])
@@ -446,8 +422,8 @@ static void set_shortcut_text(keybind_bind_t* bind)
 		char* text = out[i];
 
 		if (text && text[0]) {
-			char* padded = str_pad_between(text, "", ' ', 18, 1, 0);
-			out[i] = str_concat_2("    ", padded);
+			char* padded = str_pad_between(text, "", ' ', 18, 1);
+			out[i] = STR_CONCAT(2, "    ", padded);
 			free(padded);
 		}
 
@@ -455,8 +431,8 @@ static void set_shortcut_text(keybind_bind_t* bind)
 			free(text);
 	}
 
-	char* help_shortcuts = str_concat_with_delim_free(MAX_SHORTCUTS, out, "\n");
-	bind->help_text = str_concat_3(help_shortcuts, (char*)bind->description, "\n");
+	char* help_shortcuts = str_implode_free(MAX_SHORTCUTS, "\n", out);
+	bind->help_text = STR_CONCAT(3, help_shortcuts, (char*)bind->description, "\n");
 	free(help_shortcuts);
 }
 
@@ -528,6 +504,8 @@ void keybinds_init(void)
 	cfg_write(&cfg);
 	cfg_free(&cfg);
 
+	free(path);
+
 	if(!has_init_problem)
 		log_appendf(5, " No issues");
 	log_nl();
@@ -563,18 +541,18 @@ char *keybinds_get_help_text(enum page_numbers page)
 
 		if (current_title != bind_title) {
 			if (current_title != NULL && bind->section_info == &global_keybinds_list.global_info)
-				out = str_concat_2(out, "\n \n%\n");
+				out = STR_CONCAT(2, out, "\n \n%\n");
 
 			char* prev_out = out;
 
-			out = str_concat_4(out, current_title ? "\n \n  " : "\n  ", (char *)bind_title, "\n");
+			out = STR_CONCAT(4, out, current_title ? "\n \n  " : "\n  ", (char *)bind_title, "\n");
 
 			current_title = bind_title;
 			free(prev_out);
 		}
 
 		char* prev_out = out;
-		out = str_concat_3(out, (char*)bind->help_text, "\n");
+		out = STR_CONCAT(3, out, (char*)bind->help_text, "\n");
 		free(prev_out);
 	}
 

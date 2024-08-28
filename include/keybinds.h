@@ -684,6 +684,12 @@ typedef struct keybind_list
 	} notes;
 } keybind_list_t;
 
+/* keybinds_codes.c */
+int keybinds_parse_keycode(const char *name, SDL_Keycode *ret);
+int keybinds_parse_modkey(const char *name, SDL_Keymod *ret);
+int keybinds_parse_scancode(const char *name, SDL_Scancode *ret);
+
+/* keybinds.c */
 char* keybinds_get_help_text(enum page_numbers page);
 void keybinds_handle_event(struct key_event* event);
 void keybinds_init(void);

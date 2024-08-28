@@ -128,7 +128,7 @@ static void log_redraw(void)
 void log_load_page(struct page *page)
 {
 	char* shortcut_text = (char*)global_keybinds_list.global.schism_logging.shortcut_text_parens;
-	page->title = str_concat_2("Message Log Viewer", shortcut_text);
+	page->title = STR_CONCAT(2, "Message Log Viewer", shortcut_text);
 
 	page->draw_const = log_draw_const;
 	page->total_widgets = 1;

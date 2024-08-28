@@ -228,7 +228,7 @@ static void help_set_page(void)
 
 	// previous_page because the current page is now PAGE_HELP :)
 	char* keybinds_help = keybinds_get_help_text(status.previous_page);
-	int keybinds_help_lines = str_count_occurences('\n', keybinds_help);
+	int keybinds_help_lines = str_count_occurrences('\n', keybinds_help);
 	num_lines += keybinds_help_lines;
 
 	/* allocate the array */
@@ -296,7 +296,7 @@ static void help_set_page(void)
 void help_load_page(struct page *page)
 {
 	char* shortcut_text = (char*)global_keybinds_list.global.help.shortcut_text_parens;
-	page->title = str_concat_2("Help", shortcut_text);
+	page->title = STR_CONCAT(2, "Help", shortcut_text);
 
 	page->draw_const = help_draw_const;
 	page->set_page = help_set_page;
