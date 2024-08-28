@@ -381,10 +381,17 @@ def generate_function(file: io.TextIOWrapper, name: str, keybinds: Keybinds):
 
 	for keybind in keybinds.keybinds:
 		name = keybinds.schism_prefix + keybind.name
+		have_sdl_version = keybind.sdl_version.major > 2 or keybind.sdl_version.minor > 0 or keybind.sdl_version.patch > 0
+
+		if have_sdl_version:
+			f.write("#if SDL_VERSION_ATLEAST(%d, %d, %d)\n" % (keybind.sdl_version.major, keybind.sdl_version.minor, keybind.sdl_version.patch))
 
 		f.write("\tcase 0x%08x: /* %s */\n" % (zlib.crc32(name.encode('utf-8')), name))
 		f.write("\t\t*ret = %s%s;\n" % (keybinds.sdl_prefix, keybind.name))
 		f.write("\t\treturn 1;\n")
+
+		if have_sdl_version:
+			f.write("#endif\n")
 
 	f.write("\tdefault:\n")
 	f.write("\t\tbreak;\n")
