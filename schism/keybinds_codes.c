@@ -1051,30 +1051,46 @@ int keybinds_parse_keycode(const char *name, SDL_Keycode *ret)
 	case 0xf867001c: /* SLEEP */
 		*ret = SDLK_SLEEP;
 		return 1;
+#if SDL_VERSION_ATLEAST(2, 0, 6)
 	case 0x8535939a: /* APP1 */
 		*ret = SDLK_APP1;
 		return 1;
+#endif
+#if SDL_VERSION_ATLEAST(2, 0, 6)
 	case 0x1c3cc220: /* APP2 */
 		*ret = SDLK_APP2;
 		return 1;
+#endif
+#if SDL_VERSION_ATLEAST(2, 0, 6)
 	case 0xc31cac01: /* AUDIOREWIND */
 		*ret = SDLK_AUDIOREWIND;
 		return 1;
+#endif
+#if SDL_VERSION_ATLEAST(2, 0, 6)
 	case 0x61c78cf0: /* AUDIOFASTFORWARD */
 		*ret = SDLK_AUDIOFASTFORWARD;
 		return 1;
+#endif
+#if SDL_VERSION_ATLEAST(2, 24, 0)
 	case 0x75ec7b66: /* SOFTLEFT */
 		*ret = SDLK_SOFTLEFT;
 		return 1;
+#endif
+#if SDL_VERSION_ATLEAST(2, 24, 0)
 	case 0x6813f347: /* SOFTRIGHT */
 		*ret = SDLK_SOFTRIGHT;
 		return 1;
+#endif
+#if SDL_VERSION_ATLEAST(2, 24, 0)
 	case 0xfa1bc28a: /* CALL */
 		*ret = SDLK_CALL;
 		return 1;
+#endif
+#if SDL_VERSION_ATLEAST(2, 24, 0)
 	case 0xc8210da3: /* ENDCALL */
 		*ret = SDLK_ENDCALL;
 		return 1;
+#endif
 	default:
 		break;
 	}
