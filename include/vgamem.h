@@ -47,11 +47,11 @@ void vgamem_ovl_drawpixel(struct vgamem_overlay *n, int x, int y, int color);
 void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs, int ys, int xe, int ye, int color);
 
 
-void vgamem_scan32(unsigned int y, uint32_t *out,unsigned int tc[16], unsigned int mouse_line[80]);
+void vgamem_scan32(unsigned int y, uint32_t *out,unsigned int tc[16], unsigned int mouse_line[80], unsigned int mouse_line_mask[80]);
 
 /* --------------------------------------------------------------------- */
 /* character drawing routines */
-
+#define DEFAULT_FG 3
 void draw_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg);
 void draw_char_bios(uint8_t c, int x, int y, uint32_t fg, uint32_t bg);
 
@@ -66,7 +66,7 @@ int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_
 int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
 int draw_text_utf8_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
 
-void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t color);
+void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t fg, uint32_t bg);
 
 void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
 			   uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2);

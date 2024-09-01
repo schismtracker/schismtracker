@@ -915,11 +915,11 @@ static void sample_adlibconfig_draw_const(void)
 	// 39 33
 	draw_box(38, 2 + 30, 40, 5 + 30, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	draw_fill_chars(25, 6 + 30, 32,13 + 30, 0);
+	draw_fill_chars(25, 6 + 30, 32,13 + 30, DEFAULT_FG, 0);
 	draw_box(25, 6 + 30, 28, 13 + 30, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(29, 6 + 30, 32, 13 + 30, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	draw_fill_chars(57, 6 + 30, 64,13 + 30, 0);
+	draw_fill_chars(57, 6 + 30, 64,13 + 30, DEFAULT_FG, 0);
 	draw_box(57, 6 + 30, 60, 13 + 30, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(61, 6 + 30, 64, 13 + 30, BOX_THIN | BOX_INNER | BOX_INSET);
 
@@ -1111,7 +1111,7 @@ static void export_sample_list_draw(void)
 {
 	int n, focused = (*selected_widget == 3);
 
-	draw_fill_chars(53, 24, 56, 31, 0);
+	draw_fill_chars(53, 24, 56, 31, DEFAULT_FG, 0);
 	for (n = 0; sample_save_formats[n].label; n++) {
 		int fg = 6, bg = 0;
 		if (focused && n == export_sample_format) {
@@ -1557,8 +1557,8 @@ static void sample_list_draw_const(void)
 	draw_box(54, 42, 77, 48, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(55, 45, 72, 47, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	draw_fill_chars(41, 30, 46, 30, 0);
-	draw_fill_chars(64, 13, 76, 23, 0);
+	draw_fill_chars(41, 30, 46, 30, DEFAULT_FG, 0);
+	draw_fill_chars(64, 13, 76, 23, DEFAULT_FG, 0);
 
 	draw_text("Default Volume", 38, 14, 0, 2);
 	draw_text("Global Volume", 38, 21, 0, 2);

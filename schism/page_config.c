@@ -249,7 +249,7 @@ static void config_draw_const(void)
 	draw_text("Menu Bar:", 38, 32, 0, 2);
 #endif
 
-	draw_fill_chars(18, 15, 34, 25, 0);
+	draw_fill_chars(18, 15, 34, 25, DEFAULT_FG, 0);
 	draw_box(17,14,35,26, BOX_THIN | BOX_INNER | BOX_INSET);
 
 	for (n = 18; n < 35; n++) {

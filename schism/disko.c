@@ -612,7 +612,7 @@ static void diskodlg_draw(void)
 	snprintf(buf, 32, "Exporting song...%6d:%02d", sec / 60, sec % 60);
 	buf[31] = '\0';
 	draw_text(buf, 27, 27, 0, 2);
-	draw_fill_chars(24, 30, 55, 30, 0);
+	draw_fill_chars(24, 30, 55, 30, DEFAULT_FG, 0);
 	draw_vu_meter(24, 30, 32, pos, prgh, prgh);
 	draw_box(23, 29, 56, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }

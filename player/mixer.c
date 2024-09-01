@@ -128,12 +128,12 @@
 
 // No interpolation
 #define SNDMIX_GETMONOVOLNOIDO(bits) \
-	int32_t vol = p[position >> 16] << (-bits + 16);
+	int32_t vol = lshift_signed_32(p[position >> 16], -bits + 16);
 
 // Linear Interpolation
 #define SNDMIX_GETMONOVOLLINEAR(bits) \
 	int32_t poshi  = position >> 16; \
-	int32_t poslo   = (position >> (bits / 2)) & 0xFF; \
+	int32_t poslo   = (position >> 8) & 0xFF; \
 	int32_t srcvol  = p[poshi]; \
 	int32_t destvol = p[poshi + 1]; \
 	int32_t vol     = lshift_signed_32(srcvol, -bits + 16) + rshift_signed_32(poslo * (destvol - srcvol), bits - 8);
@@ -143,10 +143,10 @@
 	int32_t poshi = position >> 16; \
 	int32_t poslo = rshift_signed_32(position, SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
 	int32_t vol   = rshift_signed_32( \
-		cubic_spline_lut[poslo    ] * (int32_t)p[poshi - 1] + \
-			cubic_spline_lut[poslo + 1] * (int32_t)p[poshi    ] + \
-			cubic_spline_lut[poslo + 3] * (int32_t)p[poshi + 2] + \
-			cubic_spline_lut[poslo + 2] * (int32_t)p[poshi + 1], \
+		  cubic_spline_lut[poslo + 0] * (int32_t)p[poshi - 1] \
+		+ cubic_spline_lut[poslo + 1] * (int32_t)p[poshi + 0] \
+		+ cubic_spline_lut[poslo + 2] * (int32_t)p[poshi + 1] \
+		+ cubic_spline_lut[poslo + 3] * (int32_t)p[poshi + 2], \
 		SPLINE_##bits##SHIFT);
 
 // fir interpolation
@@ -173,30 +173,30 @@
 // Stereo
 
 #define SNDMIX_GETSTEREOVOLNOIDO(bits) \
-	int32_t vol_l = p[(position >> 16) * 2    ] << (-bits + 16); \
-	int32_t vol_r = p[(position >> 16) * 2 + 1] << (-bits + 16);
+	int32_t vol_l = lshift_signed_32(p[(position >> 16) * 2 + 0], -bits + 16); \
+	int32_t vol_r = lshift_signed_32(p[(position >> 16) * 2 + 1], -bits + 16);
 
 #define SNDMIX_GETSTEREOVOLLINEAR(bits) \
 	int32_t poshi    = position >> 16; \
 	int32_t poslo    = (position >> 8) & 0xFF; \
-	int32_t srcvol_l = p[poshi * 2]; \
-	int32_t vol_l    = lshift_signed_32(srcvol_l, -bits + 16) + rshift_signed_32(poslo * (p[poshi * 2 + 2] - srcvol_l), bits - 8);\
-	int32_t srcvol_r = p[poshi * 2 + 1];\
+	int32_t srcvol_l = p[poshi * 2 + 0]; \
+	int32_t srcvol_r = p[poshi * 2 + 1]; \
+	int32_t vol_l    = lshift_signed_32(srcvol_l, -bits + 16) + rshift_signed_32(poslo * (p[poshi * 2 + 2] - srcvol_l), bits - 8); \
 	int32_t vol_r    = lshift_signed_32(srcvol_r, -bits + 16) + rshift_signed_32(poslo * (p[poshi * 2 + 3] - srcvol_r), bits - 8);
 
 // Spline Interpolation
 #define SNDMIX_GETSTEREOVOLSPLINE(bits) \
 	int32_t poshi   = position >> 16; \
-	int32_t poslo   = rshift_signed_32((int32_t)position, SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
+	int32_t poslo   = (position >> SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
 	int32_t vol_l   = rshift_signed_32( \
-			cubic_spline_lut[poslo    ] * (int32_t)p[(poshi - 1) * 2] + \
-			cubic_spline_lut[poslo + 1] * (int32_t)p[(poshi    ) * 2] + \
+			cubic_spline_lut[poslo + 0] * (int32_t)p[(poshi - 1) * 2] + \
+			cubic_spline_lut[poslo + 1] * (int32_t)p[(poshi + 0) * 2] + \
 			cubic_spline_lut[poslo + 2] * (int32_t)p[(poshi + 1) * 2] + \
 			cubic_spline_lut[poslo + 3] * (int32_t)p[(poshi + 2) * 2], \
 			SPLINE_##bits##SHIFT); \
 	int32_t vol_r   = rshift_signed_32( \
-			cubic_spline_lut[poslo    ] * (int32_t)p[(poshi - 1) * 2 + 1] + \
-			cubic_spline_lut[poslo + 1] * (int32_t)p[(poshi    ) * 2 + 1] + \
+			cubic_spline_lut[poslo + 0] * (int32_t)p[(poshi - 1) * 2 + 1] + \
+			cubic_spline_lut[poslo + 1] * (int32_t)p[(poshi + 0) * 2 + 1] + \
 			cubic_spline_lut[poslo + 2] * (int32_t)p[(poshi + 1) * 2 + 1] + \
 			cubic_spline_lut[poslo + 3] * (int32_t)p[(poshi + 2) * 2 + 1], \
 			SPLINE_##bits##SHIFT);
@@ -284,7 +284,7 @@
 	int32_t t##chn;
 
 #define SNDMIX_PROCESSFILTER(outchn, volume) \
-	t##outchn = rshift_signed_32( \
+	t##outchn = rshift_signed_64( \
 		MUL_32_TO_64(volume, chan->filter_a0) \
 			+ MUL_32_TO_64(FILT_CLIP(fy##outchn##1), chan->filter_b0) \
 			+ MUL_32_TO_64(FILT_CLIP(fy##outchn##2), chan->filter_b1) \
@@ -314,7 +314,7 @@ typedef void(* mix_interface_t)(song_voice_t *, int *, int *);
 #define BEGIN_MIX_INTERFACE(func) \
 	static void func(song_voice_t *channel, int *pbuffer, int *pbufmax) \
 	{ \
-	uint_fast32_t position;
+		int_fast32_t position;
 
 
 #define END_MIX_INTERFACE() \
@@ -565,7 +565,7 @@ static int get_sample_count(song_voice_t *chan, int samples)
 		return 0;
 
 	// Under zero ?
-	if ((int) chan->position < loop_start) {
+	if ((int32_t)chan->position < loop_start) {
 		if (increment < 0) {
 			// Invert loop for bidi loops
 			int delta = ((loop_start - chan->position) << 16) - (chan->position_frac & 0xFFFF);

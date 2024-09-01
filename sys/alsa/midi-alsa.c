@@ -68,8 +68,8 @@ struct alsa_midi {
 
 static size_t (*ALSA_snd_seq_port_info_sizeof)(void);
 static size_t (*ALSA_snd_seq_client_info_sizeof)(void);
+static size_t (*ALSA_snd_seq_queue_tempo_sizeof)(void);
 static int (*ALSA_snd_seq_control_queue)(snd_seq_t*s,int q,int type, int value, snd_seq_event_t *ev);
-static int (*ALSA_snd_seq_queue_tempo_malloc)(snd_seq_queue_tempo_t**ptr);
 static void (*ALSA_snd_seq_queue_tempo_set_tempo)(snd_seq_queue_tempo_t *info, unsigned int tempo);
 static void (*ALSA_snd_seq_queue_tempo_set_ppq)(snd_seq_queue_tempo_t *info, int ppq);
 static int (*ALSA_snd_seq_set_queue_tempo)(snd_seq_t *handle, int q, snd_seq_queue_tempo_t *tempo);
@@ -113,6 +113,7 @@ static int (*ALSA_snd_seq_set_client_name)(snd_seq_t*seeq,const char *name);
 #define ALSA_snd_seq_ev_schedule_tick snd_seq_ev_schedule_tick
 #define ALSA_snd_seq_client_info_alloca snd_seq_client_info_alloca
 #define ALSA_snd_seq_port_info_alloca snd_seq_port_info_alloca
+#define ALSA_snd_seq_queue_tempo_alloca snd_seq_queue_tempo_alloca
 #define ALSA_snd_seq_start_queue snd_seq_start_queue
 
 static int load_alsa_syms(void);
@@ -122,6 +123,7 @@ static int load_alsa_syms(void);
 /* said inline functions call these... */
 #define snd_seq_client_info_sizeof ALSA_snd_seq_client_info_sizeof
 #define snd_seq_port_info_sizeof ALSA_snd_seq_port_info_sizeof
+#define snd_seq_queue_tempo_sizeof ALSA_snd_seq_queue_tempo_sizeof
 #define snd_seq_control_queue ALSA_snd_seq_control_queue
 
 void *alsa_dltrick_handle_;
@@ -175,7 +177,7 @@ static int load_alsa_syms(void) {
 	SCHISM_ALSA_SYM(snd_seq_port_info_sizeof);
 	SCHISM_ALSA_SYM(snd_seq_client_info_sizeof);
 	SCHISM_ALSA_SYM(snd_seq_control_queue);
-	SCHISM_ALSA_SYM(snd_seq_queue_tempo_malloc);
+	SCHISM_ALSA_SYM(snd_seq_queue_tempo_sizeof);
 	SCHISM_ALSA_SYM(snd_seq_queue_tempo_set_tempo);
 	SCHISM_ALSA_SYM(snd_seq_queue_tempo_set_ppq);
 	SCHISM_ALSA_SYM(snd_seq_set_queue_tempo);
@@ -223,6 +225,7 @@ static void _alsa_drain(struct midi_port *p UNUSED)
 	/* not port specific */
 	ALSA_snd_seq_drain_output(seq);
 }
+
 static void _alsa_send(struct midi_port *p, const unsigned char *data, unsigned int len, unsigned int delay)
 {
 	struct alsa_midi *ex;
@@ -253,6 +256,7 @@ static void _alsa_send(struct midi_port *p, const unsigned char *data, unsigned 
 		len -= rr;
 	}
 }
+
 static int _alsa_start(struct midi_port *p)
 {
 	struct alsa_midi *data;
@@ -260,18 +264,20 @@ static int _alsa_start(struct midi_port *p)
 
 	err = 0;
 	data = (struct alsa_midi *)p->userdata;
-	if (p->io & MIDI_INPUT) {
+
+	if (p->io & MIDI_INPUT)
 		err = ALSA_snd_seq_connect_from(seq, 0, data->c, data->p);
-	}
-	if (p->io & MIDI_OUTPUT) {
+
+	if (p->io & MIDI_OUTPUT)
 		err = ALSA_snd_seq_connect_to(seq, 0, data->c, data->p);
-	}
+
 	if (err < 0) {
 		log_appendf(4, "ALSA: %s", ALSA_snd_strerror(err));
 		return 0;
 	}
 	return 1;
 }
+
 static int _alsa_stop(struct midi_port *p)
 {
 	struct alsa_midi *data;
@@ -279,18 +285,19 @@ static int _alsa_stop(struct midi_port *p)
 
 	err = 0;
 	data = (struct alsa_midi *)p->userdata;
-	if (p->io & MIDI_OUTPUT) {
+	if (p->io & MIDI_OUTPUT)
 		err = ALSA_snd_seq_disconnect_to(seq, 0, data->c, data->p);
-	}
-	if (p->io & MIDI_INPUT) {
+
+	if (p->io & MIDI_INPUT)
 		err = ALSA_snd_seq_disconnect_from(seq, 0, data->c, data->p);
-	}
+
 	if (err < 0) {
 		log_appendf(4, "ALSA: %s", ALSA_snd_strerror(err));
 		return 0;
 	}
 	return 1;
 }
+
 static int _alsa_thread(struct midi_provider *p)
 {
 	int npfd;
@@ -349,6 +356,7 @@ static int _alsa_thread(struct midi_provider *p)
 	}
 	return 0;
 }
+
 static void _alsa_poll(struct midi_provider *_alsa_provider)
 {
 	struct midi_port *ptr;
@@ -359,26 +367,6 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 
 	snd_seq_client_info_t *cinfo;
 	snd_seq_port_info_t *pinfo;
-
-	if (local_port == -1) {
-		local_port = ALSA_snd_seq_create_simple_port(seq,
-				PORT_NAME,
-				SND_SEQ_PORT_CAP_READ
-			|       SND_SEQ_PORT_CAP_WRITE
-			|       SND_SEQ_PORT_CAP_SYNC_READ
-			|       SND_SEQ_PORT_CAP_SYNC_WRITE
-			|       SND_SEQ_PORT_CAP_DUPLEX
-			|       SND_SEQ_PORT_CAP_SUBS_READ
-			|       SND_SEQ_PORT_CAP_SUBS_WRITE,
-
-				SND_SEQ_PORT_TYPE_APPLICATION
-			|       SND_SEQ_PORT_TYPE_SYNTH
-			|       SND_SEQ_PORT_TYPE_MIDI_GENERIC
-			|       SND_SEQ_PORT_TYPE_MIDI_GM
-			|       SND_SEQ_PORT_TYPE_MIDI_GS
-			|       SND_SEQ_PORT_TYPE_MIDI_XG
-			|       SND_SEQ_PORT_TYPE_MIDI_MT32);
-	}
 
 	ptr = NULL;
 	while (midi_port_foreach(_alsa_provider, &ptr)) {
@@ -466,14 +454,24 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 		midi_port_unregister(ptr->num);
 	}
 }
+
+static struct midi_driver alsa_driver = {
+	.poll = _alsa_poll,
+	.thread = _alsa_thread,
+	.enable = _alsa_start,
+	.disable = _alsa_stop,
+	.send = _alsa_send,
+	.flags = MIDI_PORT_CAN_SCHEDULE,
+	.drain = _alsa_drain,
+};
+
 int alsa_midi_setup(void)
 {
-	static snd_seq_queue_tempo_t *tempo;
-	static struct midi_driver driver;
+	snd_seq_queue_tempo_t *tempo;
 
 	/* only bother if alsa midi actually exists, otherwise this will
-	produce useless and annoying error messages on systems where alsa
-	libs are installed but which aren't actually running it */
+	 * produce useless and annoying error messages on systems where alsa
+	 * libs are installed but which aren't actually running it */
 	struct stat sbuf;
 	if (stat("/dev/snd/seq", &sbuf) != 0)
 		return 0;
@@ -484,28 +482,42 @@ int alsa_midi_setup(void)
 		if (alsa_dlinit())
 			return 0;
 
-	driver.poll = _alsa_poll;
-	driver.thread = _alsa_thread;
-	driver.enable = _alsa_start;
-	driver.disable = _alsa_stop;
-	driver.send = _alsa_send;
-	driver.flags = MIDI_PORT_CAN_SCHEDULE;
-	driver.drain = _alsa_drain;
-
 	if (ALSA_snd_seq_open(&seq, "default", SND_SEQ_OPEN_DUPLEX, 0) < 0
-	|| ALSA_snd_seq_set_client_name(seq, PORT_NAME) < 0) {
+	|| ALSA_snd_seq_set_client_name(seq, PORT_NAME) < 0)
 		return 0;
-	}
 
 	alsa_queue = ALSA_snd_seq_alloc_queue(seq);
-	ALSA_snd_seq_queue_tempo_malloc(&tempo);
-	ALSA_snd_seq_queue_tempo_set_tempo(tempo,480000);
+	ALSA_snd_seq_queue_tempo_alloca(&tempo);
+	ALSA_snd_seq_queue_tempo_set_tempo(tempo, 480000);
 	ALSA_snd_seq_queue_tempo_set_ppq(tempo, 480);
 	ALSA_snd_seq_set_queue_tempo(seq, alsa_queue, tempo);
 	ALSA_snd_seq_start_queue(seq, alsa_queue, NULL);
 	ALSA_snd_seq_drain_output(seq);
 
-	if (!midi_provider_register("ALSA", &driver)) return 0;
+	local_port = ALSA_snd_seq_create_simple_port(
+		seq,
+		PORT_NAME,
+		SND_SEQ_PORT_CAP_READ
+		| SND_SEQ_PORT_CAP_WRITE
+		| SND_SEQ_PORT_CAP_SYNC_READ
+		| SND_SEQ_PORT_CAP_SYNC_WRITE
+		| SND_SEQ_PORT_CAP_DUPLEX
+		| SND_SEQ_PORT_CAP_SUBS_READ
+		| SND_SEQ_PORT_CAP_SUBS_WRITE,
+		SND_SEQ_PORT_TYPE_APPLICATION
+		| SND_SEQ_PORT_TYPE_SYNTH
+		| SND_SEQ_PORT_TYPE_MIDI_GENERIC
+		| SND_SEQ_PORT_TYPE_MIDI_GM
+		| SND_SEQ_PORT_TYPE_MIDI_GS
+		| SND_SEQ_PORT_TYPE_MIDI_XG
+		| SND_SEQ_PORT_TYPE_MIDI_MT32
+	);
+	if (local_port < 0) {
+		log_appendf(4, "ALSA: %s", ALSA_snd_strerror(local_port));
+		return 0;
+	}
+
+	if (!midi_provider_register("ALSA", &alsa_driver)) return 0;
 	return 1;
 }
 

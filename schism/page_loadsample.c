@@ -230,20 +230,20 @@ static void load_sample_draw_const(void)
 	char sbuf[64];
 
 	draw_box(5, 12, 50, 48, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_fill_chars(6, 13, 49, 47, 0);
+	draw_fill_chars(6, 13, 49, 47, DEFAULT_FG, 0);
 
-	draw_fill_chars(64, 13, 77, 22, 0);
+	draw_fill_chars(64, 13, 77, 22, DEFAULT_FG, 0);
 	draw_box(62, 32, 72, 35, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(62, 36, 72, 40, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	draw_box(63, 12, 77, 23, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	draw_box(51, 24, 77, 29, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_fill_chars(52, 25, 76, 28, 0);
+	draw_fill_chars(52, 25, 76, 28, DEFAULT_FG, 0);
 
 	draw_box(51, 30, 77, 42, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	draw_fill_chars(59, 44, 76, 47, 0);
+	draw_fill_chars(59, 44, 76, 47, DEFAULT_FG, 0);
 	draw_box(58, 43, 77, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	f = NULL;
@@ -393,18 +393,16 @@ static void file_list_draw(void)
 		draw_char(168, 31, pos, 2, bg);
 		draw_text_utf8_len(file->base ? file->base : "", 18, 32, pos, fg, bg);
 
-		CHARSET_EASY_MODE(file->base ? file->base : "", CHARSET_CHAR, CHARSET_CP437, {
-			/* XXX this is wrong */
-			if (file->base && search_pos > -1) {
-				if (strncasecmp(out,search_str,search_pos) == 0) {
-					for (i = 0 ; i < search_pos; i++) {
-						if (tolower(out[i]) != tolower(search_str[i]))
-							break;
-						draw_char(out[i], 32+i, pos, 3,1);
-					}
-				}
+		/* this is stupid */
+		if (file->base && search_pos > -1) {
+			if (charset_strncasecmp(file->base, CHARSET_CHAR,
+					search_str, CHARSET_CP437, search_pos) == 0) {
+				size_t len = charset_strncasecmplen(file->base, CHARSET_CHAR,
+					search_str, CHARSET_CP437, search_pos);
+
+				draw_text_utf8_len(file->base, MIN(len, 18), 32, pos, 3, 1);
 			}
-		});
+		}
 	}
 
 	/* draw the info for the current file (or directory...) */
@@ -559,13 +557,7 @@ static void reposition_at_slash_search(void)
 		f = flist.files[i];
 		if (!f || !f->base) continue;
 
-		CHARSET_EASY_MODE(f->base, CHARSET_CHAR, CHARSET_CP437, {
-			for (j = 0; j < search_pos; j++) {
-				if (tolower(out[j]) != tolower(search_str[j]))
-					break;
-			}
-		});
-
+		j = charset_strncasecmplen(f->base, CHARSET_CHAR, search_str, CHARSET_CP437, search_pos);
 		if (bl < j) {
 			bl = j;
 			b = i;

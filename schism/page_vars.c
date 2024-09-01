@@ -60,7 +60,7 @@ static void song_vars_draw_const(void)
 	draw_box(16, 22, 34, 28, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(12, 41, 78, 45, BOX_THICK | BOX_INNER | BOX_INSET);
 
-	draw_fill_chars(20, 26, 33, 27, 0);
+	draw_fill_chars(20, 26, 33, 27, DEFAULT_FG, 0);
 
 	draw_text("Song Variables", 33, 13, 3, 2);
 	draw_text("Song Name", 7, 16, 0, 2);

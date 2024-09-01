@@ -333,7 +333,7 @@ static void _mp_draw(void)
 		name = _mp_text;
 	}
 	i = strlen(name);
-	draw_fill_chars(_mp_text_x, _mp_text_y, _mp_text_x + 17, _mp_text_y, 2);
+	draw_fill_chars(_mp_text_x, _mp_text_y, _mp_text_x + 17, _mp_text_y, DEFAULT_FG, 2);
 	draw_text_len( name, 17, _mp_text_x, _mp_text_y, 0, 2);
 	if (i < 17 && name == _mp_text) {
 		draw_char(':', _mp_text_x + i, _mp_text_y, 0, 2);
@@ -1361,7 +1361,7 @@ static void redraw_top_info(void)
 static void _draw_vis_box(void)
 {
 	draw_box(62, 5, 78, 8, BOX_THIN | BOX_INNER | BOX_INSET);
-	draw_fill_chars(63, 6, 77, 7, 0);
+	draw_fill_chars(63, 6, 77, 7, DEFAULT_FG, 0);
 }
 
 static int _vis_virgin = 1;
@@ -1537,7 +1537,7 @@ void redraw_screen(void)
 	char buf[4];
 
 	if (!ACTIVE_PAGE.draw_full) {
-		draw_fill_chars(0,0,79,49,2);
+		draw_fill_chars(0,0,79,49, DEFAULT_FG,2);
 
 		/* border around the whole screen */
 		draw_char(128, 0, 0, 3, 2);
@@ -1763,7 +1763,8 @@ void show_exit_prompt(void)
 			dialog_destroy_all();
 			set_page(fontedit_return_page);
 		}
-	} else {
+	} else if (status.dialog_type != DIALOG_OK_CANCEL) {
+		/* don't draw an exit prompt on top of an existing one */
 		dialog_create(DIALOG_OK_CANCEL,
 			      ((status.flags & CLASSIC_MODE)
 			       ? "Exit Impulse Tracker?"

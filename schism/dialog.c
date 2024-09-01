@@ -70,7 +70,8 @@ void dialog_draw(void)
 			 dialogs[d].x + dialogs[d].w - 1,
 			 dialogs[d].y + dialogs[d].h - 1, BOX_THICK | BOX_OUTER | BOX_FLAT_LIGHT);
 		draw_fill_chars(dialogs[d].x + 1, dialogs[d].y + 1,
-				dialogs[d].x + dialogs[d].w - 2, dialogs[d].y + dialogs[d].h - 2, 2);
+				dialogs[d].x + dialogs[d].w - 2, dialogs[d].y + dialogs[d].h - 2,
+				DEFAULT_FG, 2);
 
 		/* then the rest of the stuff */
 		if (dialogs[d].draw_const) dialogs[d].draw_const();

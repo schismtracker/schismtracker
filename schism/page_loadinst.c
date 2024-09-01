@@ -158,7 +158,7 @@ static int change_dir(const char *dir)
 
 static void load_instrument_draw_const(void)
 {
-	draw_fill_chars(6, 13, 67, 47, 0);
+	draw_fill_chars(6, 13, 67, 47, DEFAULT_FG, 0);
 	draw_box(50, 12, 61, 48, BOX_THIN | BOX_INNER | BOX_SHADE_NONE);
 	draw_box(5, 12, 68, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 
@@ -231,17 +231,15 @@ static void file_list_draw(void)
 						25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
 		draw_text_utf8_len(file->base ? file->base : "", 18, 32, pos, fg, bg);
-		CHARSET_EASY_MODE(file->base ? file->base : "", CHARSET_CHAR, CHARSET_CP437, {
-			if (file->base && slash_search_mode > -1) {
-				if (strncasecmp(out,slash_search_str,slash_search_mode) == 0) {
-					for (i = 0 ; i < slash_search_mode; i++) {
-						if (tolower(((unsigned)file->base[i]))
-						!= tolower(((unsigned)slash_search_str[i]))) break;
-						draw_char(out[i], 32+i, pos, 3,1);
-					}
-				}
+		if (file->base && slash_search_mode > -1) {
+			if (charset_strncasecmp(file->base, CHARSET_CHAR,
+					slash_search_str, CHARSET_CP437, slash_search_mode) == 0) {
+				size_t len = charset_strncasecmplen(file->base, CHARSET_CHAR,
+					slash_search_str, CHARSET_CP437, slash_search_mode);
+
+				draw_text_utf8_len(file->base, MIN(len, 18), 32, pos, 3, 1);
 			}
-		});
+		}
 
 		if (file->sampsize > 1) {
 			sprintf(sbuf, "%d Samples", file->sampsize);
@@ -296,14 +294,7 @@ static void reposition_at_slash_search(void)
 		f = flist.files[i];
 		if (!f || !f->base) continue;
 
-		CHARSET_EASY_MODE(f->base, CHARSET_CHAR, CHARSET_CP437, {
-			for (j = 0; j < slash_search_mode; j++) {
-				if (tolower(((unsigned)f->base[j]))
-				!= tolower(((unsigned)slash_search_str[j])))
-					break;
-			}
-		});
-
+		j = charset_strncasecmplen(f->base, CHARSET_CHAR, slash_search_str, CHARSET_CP437, slash_search_mode);
 		if (bl < j) {
 			bl = j;
 			b = i;
