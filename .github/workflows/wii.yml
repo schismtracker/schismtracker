@@ -8,6 +8,8 @@ on:
 jobs:
   wii:
     runs-on: ubuntu-latest
+    env:
+      UTF8PROC_VERSION: 2.9.0
     container:
       image: devkitpro/devkitppc:latest
     steps:
@@ -27,6 +29,18 @@ jobs:
           cd schismtracker
           echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
           cd ..
+
+      - name: 'Build utf8proc'
+        run: |
+          (curl -L https://github.com/JuliaStrings/utf8proc/releases/download/v$UTF8PROC_VERSION/utf8proc-$UTF8PROC_VERSION.tar.gz) | tar -xzvf -
+          cd utf8proc-$UTF8PROC_VERSION
+          mkdir build
+          cd build
+          export PATH="${DEVKITPRO}/portlibs/wii/bin:${DEVKITPPC}/bin:$PATH"
+          powerpc-eabi-cmake -DCMAKE_INSTALL_PREFIX="${DEVKITPRO}/portlibs/wii" ..
+          make
+          make install
+          cd ../..
 
       - name: 'Build Schism'
         run: |

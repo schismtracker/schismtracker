@@ -22,6 +22,7 @@ jobs:
       SDL_VERSION: 2.30.3
       FLAC_VERSION: 1.4.3
       LIBOGG_VERSION: 1.3.5
+      UTF8PROC_VERSION: 2.9.0
       TARGET: ${{ matrix.target }}
       SYS: ${{ matrix.sys }}
       STDLIB: ${{ matrix.stdlib }}
@@ -72,6 +73,21 @@ jobs:
           mkdir build
           cd build
           ../configure --host="$TARGET-w64-$SYS" --prefix="$HOME/$TARGET" --disable-programs --disable-examples --disable-cpplibs
+          make
+          make install
+          cd ../..
+
+      - name: 'Download utf8proc'
+        run: |
+          (curl -L https://github.com/JuliaStrings/utf8proc/releases/download/v$UTF8PROC_VERSION/utf8proc-$UTF8PROC_VERSION.tar.gz) | tar -xzvf -
+
+      - name: 'Build utf8proc'
+        run: |
+          export PATH="$HOME/llvm-mingw/bin:$PATH"
+          cd utf8proc-$UTF8PROC_VERSION
+          mkdir build
+          cd build
+          cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$HOME/$TARGET" -DCMAKE_C_COMPILER="$TARGET-w64-$SYS-clang" -DCMAKE_SYSTEM_NAME="Windows"
           make
           make install
           cd ../..

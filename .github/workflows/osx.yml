@@ -26,6 +26,7 @@ jobs:
       SDL_PPC_VERSION: 2.0.3
       FLAC_VERSION: 1.4.3
       LIBOGG_VERSION: 1.3.5
+      UTF8PROC_VERSION: 2.9.0
     
     steps:
       - name: 'Install dependencies'
@@ -151,13 +152,29 @@ jobs:
           wait
           popd
 
+      - name: 'Download utf8proc'
+        run: |
+          (curl -L https://github.com/JuliaStrings/utf8proc/releases/download/v$UTF8PROC_VERSION/utf8proc-$UTF8PROC_VERSION.tar.gz) | tar -xzvf -
+
+      - name: 'Build utf8proc'
+        run: |
+          export PATH="$HOME/llvm-mingw/bin:$PATH"
+          cd utf8proc-$UTF8PROC_VERSION
+          (export PATH="$PATH:$HOME/ppc/usr/bin" && mkdir build_powerpc && cd build_powerpc && LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.5.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.5.sdk" cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$HOME/ppcprefix" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.5" -DCMAKE_OSX_SYSROOT="$HOME/ppc/SDKs/MacOSX10.5.sdk" -DCMAKE_C_COMPILER="powerpc-apple-darwin10-gcc-4.2.1" -DCMAKE_SYSTEM_NAME="Darwin" && make && make install)
+          (export MACOSX_DEPLOYMENT_TARGET="10.9" && mkdir build_x86_64 && cd build_x86_64 && cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$HOME/x86_64prefix" -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET="10.7" -DCMAKE_OSX_SYSROOT="$HOME/x86_64/SDKs/MacOSX10.9.sdk" && make && make install)
+          (export MACOSX_DEPLOYMENT_TARGET="11.0" && mkdir build_arm64 && cd build_arm64 && cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$HOME/arm64prefix" -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET="11.0" -DCMAKE_OSX_SYSROOT="$HOME/arm64/SDKs/MacOSX11.0.sdk" && make && make install)
+          wait
+          cd ../..
+
       - name: 'Build Schism'
         run: |
           autoreconf -I"$HOME/x86_64prefix/share/aclocal" -i
+          rm "$HOME/ppc/SDKs/MacOSX10.5.sdk/usr/local/lib/libutf8proc.dylib"  # hack
           (export PATH="$PATH:$HOME/ppc/usr/bin" && export PKG_CONFIG_PATH="$HOME/ppcprefix/lib/pkgconfig" && mkdir build_powerpc && cd build_powerpc && ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CFLAGS="" CPPFLAGS="-isysroot $HOME/ppc/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.5.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.5.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --with-sdl-prefix="$HOME/ppcprefix" --with-flac && make) &
           (export MACOSX_DEPLOYMENT_TARGET="10.9" && export PKG_CONFIG_PATH="$HOME/x86_64prefix/lib/pkgconfig" && mkdir build_x86_64 && cd build_x86_64 && ../configure CPPFLAGS="-mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.9.sdk" --prefix="$HOME/x86_64prefix" --with-sdl-prefix="$HOME/x86_64prefix" --with-flac && make && strip -S schismtracker) &
           (export MACOSX_DEPLOYMENT_TARGET="11.0" && export PKG_CONFIG_PATH="$HOME/arm64prefix/lib/pkgconfig" && mkdir build_arm64 && cd build_arm64 && ../configure CPPFLAGS="-mmacosx-version-min=11.0 -isysroot $HOME/arm64/SDKs/MacOSX11.0.sdk" OBJCFLAGS="-arch arm64" CFLAGS="-arch arm64" LDFLAGS="-arch arm64" --host=aarch64-apple-darwin20 --prefix="$HOME/arm64prefix" --with-sdl-prefix="$HOME/arm64prefix" && make && make install) &
           wait
+          cd ../..
 
       - name: 'Package Schism'
         run: |
