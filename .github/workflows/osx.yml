@@ -173,6 +173,7 @@ jobs:
           (export MACOSX_DEPLOYMENT_TARGET="10.9" && export PKG_CONFIG_PATH="$HOME/x86_64prefix/lib/pkgconfig" && mkdir build_x86_64 && cd build_x86_64 && ../configure CPPFLAGS="-mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.9.sdk" --prefix="$HOME/x86_64prefix" --with-sdl-prefix="$HOME/x86_64prefix" --with-flac && make && strip -S schismtracker) &
           (export MACOSX_DEPLOYMENT_TARGET="11.0" && export PKG_CONFIG_PATH="$HOME/arm64prefix/lib/pkgconfig" && mkdir build_arm64 && cd build_arm64 && ../configure CPPFLAGS="-mmacosx-version-min=11.0 -isysroot $HOME/arm64/SDKs/MacOSX11.0.sdk" OBJCFLAGS="-arch arm64" CFLAGS="-arch arm64" LDFLAGS="-arch arm64" --host=aarch64-apple-darwin20 --prefix="$HOME/arm64prefix" --with-sdl-prefix="$HOME/arm64prefix" && make && make install) &
           wait
+          cd ../..
 
       - name: 'Package Schism'
         run: |
