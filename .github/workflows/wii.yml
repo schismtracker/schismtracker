@@ -37,7 +37,7 @@ jobs:
           mkdir build
           cd build
           export PATH="${DEVKITPRO}/portlibs/wii/bin:${DEVKITPPC}/bin:$PATH"
-          powerpc-eabi-cmake -DCMAKE_INSTALL_PREFIX="${DEVKITPRO}/portlibs/wii"
+          powerpc-eabi-cmake -DCMAKE_INSTALL_PREFIX="${DEVKITPRO}/portlibs/wii" ..
           make
           make install
           cd ../..
