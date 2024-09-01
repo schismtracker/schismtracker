@@ -87,7 +87,7 @@ jobs:
           cd utf8proc-$UTF8PROC_VERSION
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$HOME/$TARGET" -DCMAKE_C_COMPILER_TARGET="$TARGET-w64-$SYS"
+          cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$HOME/$TARGET" -DCMAKE_C_COMPILER="$TARGET-w64-$SYS-clang" -DCMAKE_SYSTEM_NAME="Windows"
           make
           make install
           cd ../..
