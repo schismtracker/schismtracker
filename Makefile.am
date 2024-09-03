@@ -168,7 +168,7 @@ if HAVE_PERL
 	${MKDIR_P} auto
 	$(PERL) $(srcdir)/scripts/genhelp.pl $(srcdir) $(helptexts) >$@
 else
-	@echo "*** python is required to regenerate $(@) ***"; exit 1;
+	@echo "*** perl is required to regenerate $(@) ***"; exit 1;
 endif
 
 if USE_ALSA
