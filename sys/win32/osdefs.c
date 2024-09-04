@@ -67,7 +67,7 @@
 #define IDM_SETTINGS_SYSTEM_CONFIGURATION 605
 
 /* global menu object */
-HMENU menu = NULL;
+static HMENU menu = NULL;
 
 /* eek... */
 void win32_get_modkey(int *mk)
@@ -93,66 +93,6 @@ void win32_sysinit(UNUSED int *pargc, UNUSED char ***pargv)
 	if (WSAStartup(0x202, &ignored) == SOCKET_ERROR) {
 		WSACleanup(); /* ? */
 		status.flags |= NO_NETWORK;
-	}
-
-	menu = CreateMenu();
-	{
-		HMENU file = CreatePopupMenu();
-		AppendMenuW(file, MF_STRING, IDM_FILE_NEW, L"&New\tCtrl+N");
-		AppendMenuW(file, MF_STRING, IDM_FILE_LOAD, L"&Load\tF9");
-		AppendMenuW(file, MF_STRING, IDM_FILE_SAVE_CURRENT, L"&Save Current\tCtrl+S");
-		AppendMenuW(file, MF_STRING, IDM_FILE_SAVE_AS, L"Save &As...\tF10");
-		AppendMenuW(file, MF_STRING, IDM_FILE_EXPORT, L"&Export...\tShift+F10");
-		AppendMenuW(file, MF_STRING, IDM_FILE_MESSAGE_LOG, L"&Message Log\tCtrl+F11");
-		AppendMenuW(file, MF_SEPARATOR, 0, NULL);
-		AppendMenuW(file, MF_STRING, IDM_FILE_QUIT, L"&Quit\tCtrl+Q");
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)file, L"&File");
-	}
-	{
-		/* this is equivalent to the "Schism Tracker" menu on Mac OS X */
-		HMENU view = CreatePopupMenu();
-		AppendMenuW(view, MF_STRING, IDM_VIEW_HELP, L"Help\tF1");
-		AppendMenuW(view, MF_SEPARATOR, 0, NULL);
-		AppendMenuW(view, MF_STRING, IDM_VIEW_VIEW_PATTERNS, L"View Patterns\tF2");
-		AppendMenuW(view, MF_STRING, IDM_VIEW_ORDERS_PANNING, L"Orders/Panning\tF11");
-		AppendMenuW(view, MF_STRING, IDM_VIEW_VARIABLES, L"Variables\tF12");
-		AppendMenuW(view, MF_STRING, IDM_VIEW_MESSAGE_EDITOR, L"Message Editor\tF9");
-		AppendMenuW(view, MF_SEPARATOR, 0, NULL);
-		AppendMenuW(view, MF_STRING, IDM_VIEW_TOGGLE_FULLSCREEN, L"Toggle Fullscreen\tCtrl+Alt+Return");
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)view, L"&View");
-	}
-	{
-		HMENU playback = CreatePopupMenu();
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_SHOW_INFOPAGE, L"Show Infopage\tF5");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_PLAY_SONG, L"Play Song\tCtrl+F5");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_PLAY_PATTERN, L"Play Pattern\tF6");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_PLAY_FROM_ORDER, L"Play from Order\tShift+F6");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR, L"Play from Mark/Cursor\tF7");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_STOP, L"Stop\tF8");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_CALCULATE_LENGTH, L"Calculate Length\tCtrl+P");
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)playback, L"&Playback");
-	}
-	{
-		HMENU samples = CreatePopupMenu();
-		AppendMenuW(samples, MF_STRING, IDM_SAMPLES_SAMPLE_LIST, L"&Sample List\tF3");
-		AppendMenuW(samples, MF_STRING, IDM_SAMPLES_SAMPLE_LIBRARY, L"Sample &Library\tShift+F3");
-		AppendMenuW(samples, MF_STRING, IDM_SAMPLES_RELOAD_SOUNDCARD, L"&Reload Soundcard\tCtrl+G");
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)samples, L"&Samples");
-	}
-	{
-		HMENU instruments = CreatePopupMenu();
-		AppendMenuW(instruments, MF_STRING, IDM_INSTRUMENTS_INSTRUMENT_LIST, L"Instrument List\tF4");
-		AppendMenuW(instruments, MF_STRING, IDM_INSTRUMENTS_INSTRUMENT_LIBRARY, L"Instrument Library\tShift+F4");
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)instruments, L"&Instruments");
-	}
-	{
-		HMENU settings = CreatePopupMenu();
-		AppendMenuW(settings, MF_STRING, IDM_SETTINGS_PREFERENCES, L"Preferences\tShift+F5");
-		AppendMenuW(settings, MF_STRING, IDM_SETTINGS_MIDI_CONFIGURATION, L"MIDI Configuration\tShift+F1");
-		AppendMenuW(settings, MF_STRING, IDM_SETTINGS_PALETTE_EDITOR, L"Palette Editor\tCtrl+F12");
-		AppendMenuW(settings, MF_STRING, IDM_SETTINGS_FONT_EDITOR, L"Font Editor\tShift+F12");
-		AppendMenuW(settings, MF_STRING, IDM_SETTINGS_SYSTEM_CONFIGURATION, L"System Configuration\tCtrl+F1");
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)settings, L"S&ettings");
 	}
 
 #ifdef USE_MEDIAFOUNDATION
@@ -281,7 +221,7 @@ int win32_sdlevent(SDL_Event* event)
 	return 1;
 }
 
-wchar_t* str_to_wchar(char* string, int free_inputs)
+static wchar_t* str_to_wchar(char* string, int free_inputs)
 {
 	wchar_t* out = NULL;
 	charset_error_t result = charset_iconv(string, (uint8_t**)&out, CHARSET_UTF8, CHARSET_WCHAR_T);
@@ -297,13 +237,36 @@ wchar_t* str_to_wchar(char* string, int free_inputs)
 	return out;
 }
 
+void win32_toggle_menu(SDL_Window* window, int yes)
+{
+	const int flags = SDL_GetWindowFlags(window);
+	int width, height;
+
+	const int cache_size = !(flags & SDL_WINDOW_MAXIMIZED);
+	if (cache_size)
+		SDL_GetWindowSize(window, &width, &height);
+
+	/* Get the HWND */
+	SDL_SysWMinfo wm_info;
+	SDL_VERSION(&wm_info.version);
+	if (!SDL_GetWindowWMInfo(window, &wm_info))
+		return;
+
+	SetMenu(wm_info.info.win.window, (cfg_video_want_menu_bar && !(flags & SDL_WINDOW_FULLSCREEN)) ? menu : NULL);
+	DrawMenuBar(wm_info.info.win.window);
+
+	if (cache_size)
+		SDL_SetWindowSize(window, width, height);
+}
+
+void win32_create_menu(void) {
+	menu = CreateMenu();
+
 #define append_menu(MENU, MENU_ITEM, NAME, KEYBIND_NAME) \
 	AppendMenuW(MENU, MF_STRING, MENU_ITEM, \
-		str_to_wchar(str_concat_2(("&" NAME "\t"), \
-			(char*)global_keybinds_list.global.KEYBIND_NAME.shortcut_text), 1));
+		str_to_wchar(STR_CONCAT(2, ("&" NAME "\t"), \
+			global_keybinds_list.global.KEYBIND_NAME.shortcut_text), 1));
 
-void win32_create_menu_2(void) {
-	menu = CreateMenu();
 	{
 		HMENU file = CreatePopupMenu();
 		append_menu(file, IDM_FILE_NEW, "New", new_song);
@@ -362,39 +325,6 @@ void win32_create_menu_2(void) {
 		append_menu(settings, IDM_SETTINGS_SYSTEM_CONFIGURATION, "System Configuration", system_configure);
 		AppendMenuW(menu, MF_POPUP, (uintptr_t)settings, L"S&ettings");
 	}
-}
 
-SDL_Window* current_window;
-int menu_should_be_yes = 0;
-
-void win32_toggle_menu(SDL_Window* window, int yes)
-{
-	current_window = window;
-	if (!menu)
-		menu_should_be_yes = yes;
-
-	const int flags = SDL_GetWindowFlags(window);
-	int width, height;
-
-	const int cache_size = !(flags & SDL_WINDOW_MAXIMIZED);
-	if (cache_size)
-		SDL_GetWindowSize(window, &width, &height);
-
-	/* Get the HWND */
-	SDL_SysWMinfo wm_info;
-	SDL_VERSION(&wm_info.version);
-	if (!SDL_GetWindowWMInfo(window, &wm_info))
-		return;
-
-	SetMenu(wm_info.info.win.window, (cfg_video_want_menu_bar && !(flags & SDL_WINDOW_FULLSCREEN)) ? menu : NULL);
-	DrawMenuBar(wm_info.info.win.window);
-
-	if (cache_size)
-		SDL_SetWindowSize(window, width, height);
-}
-
-void win32_create_menu(void) {
-	if (menu) return;
-	win32_create_menu_2();
-	win32_toggle_menu(current_window, menu_should_be_yes);
+#undef append_menu
 }
