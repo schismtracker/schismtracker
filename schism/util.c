@@ -846,18 +846,25 @@ size_t str_count_occurrences(char character, const char *str)
 char* str_concat(size_t count, const char **str_array)
 {
 	size_t str_array_lens[count];
-	size_t len = 0;
+	size_t len;
 	size_t i, c;
 
-	for (i = 0; i < count; i++)
+	for (len = 0, i = 0; i < count; i++)
 		len += (str_array_lens[i] = (str_array[i] && *str_array[i]) ? strlen(str_array[i]) : 0);
 
 	if (!len) return strdup("");
 
-	char* out = malloc(len + 1);
+	char *out = malloc(len + 1);
 
-	for (i = 0, c = 0; i < count && c < len; i++, c += str_array_lens[i])
+	for (i = 0, c = 0; i < count && c < len; i++) {
+		if (!str_array[i] || !*str_array[i])
+			continue;
+
 		memcpy(out + c, str_array[i], str_array_lens[i]);
+		c += str_array_lens[i];
+	}
+
+	out[len] = '\0';
 
 	return out;
 }
@@ -910,15 +917,15 @@ char* str_pad_between(const char* str1, const char* str2, char pad, int width, i
 
 	/* ptrdiff_t is close enough to a signed size_t */
 	ptrdiff_t len_padding = (ptrdiff_t)width - (charset_strlen(str1, CHARSET_UTF8) + charset_strlen(str2, CHARSET_UTF8));
-	len_padding = CLAMP(0, min_padding, len_padding);
+	len_padding = CLAMP(len_padding, 0, min_padding);
 
-	char* out = malloc(len1 + len2 + len_padding + 1);
+	char* out = malloc(len1 + len_padding + len2 + 1);
 
 	memcpy(out, str1, len1);
-	memset(out + len1, pad, len_padding);
+	memset(out + len1, *(unsigned char*)&pad, len_padding);
 	memcpy(out + len1 + len_padding, str2, len2);
 
-	out[len1 + len2 + len_padding] = '\0';
+	out[len1 + len_padding + len2] = '\0';
 
 	return out;
 }
