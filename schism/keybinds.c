@@ -241,7 +241,7 @@ static void keybinds_parse_shortcut_splitted(keybind_bind_t* bind, const char* s
 	for (int i = 0; ; i++) {
 		const char* next = strtok_r(i == 0 ? shortcut_dup : NULL, delim, &strtok_ptr);
 
-		if (trimmed) free(trimmed);
+		free(trimmed);
 		trimmed = strdup(next);
 		trim_string(trimmed);
 
@@ -262,9 +262,7 @@ static void keybinds_parse_shortcut_splitted(keybind_bind_t* bind, const char* s
 		if (key_result == -1) { has_problem = 1; break; }
 	}
 
-	if (trimmed)
-		free(trimmed);
-
+	free(trimmed);
 	free(shortcut_dup);
 
 	if (has_problem)
