@@ -284,7 +284,7 @@
 	int32_t t##chn;
 
 #define SNDMIX_PROCESSFILTER(outchn, volume) \
-	t##outchn = rshift_signed_32( \
+	t##outchn = rshift_signed_64( \
 		MUL_32_TO_64(volume, chan->filter_a0) \
 			+ MUL_32_TO_64(FILT_CLIP(fy##outchn##1), chan->filter_b0) \
 			+ MUL_32_TO_64(FILT_CLIP(fy##outchn##2), chan->filter_b1) \

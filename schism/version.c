@@ -171,7 +171,7 @@ static void version_time_format(char* buf, version_time_t ver) {
 		}
 	}
 
-	snprintf(buf, 12, "%4lld-%2lld-%2lld", year, month + 1, days);
+	snprintf(buf, 12, "%04lld-%02lld-%02lld", year, month + 1, days);
 }
 
 /* ----------------------------------------------------------------- */

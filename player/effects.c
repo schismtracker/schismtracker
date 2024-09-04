@@ -91,6 +91,7 @@ void fx_note_cut(song_t *csf, uint32_t nchan, int clear_note)
 	// stop the current note:
 	chan->flags |= CHN_FASTVOLRAMP;
 	//if (chan->ptr_instrument) chan->volume = 0;
+	chan->length = 0; /* tentative fix: tremor breaks without this, but OpenMPT doesn't do this at all (???) */
 	chan->increment = 0;
 	if (clear_note) {
 		// keep instrument numbers from picking up old notes

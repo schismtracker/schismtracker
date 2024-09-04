@@ -214,7 +214,7 @@ static void loadsave_song_changed(void)
 	ext = get_extension(ptr);
 	if (ext[0] && ext[1]) {
 		for (i = 0; song_save_formats[i].label; i++) {
-			if (strcasecmp(ext, song_save_formats[i].ext) == 0) {
+			if (charset_strcasecmp(ext, CHARSET_CHAR, song_save_formats[i].ext, CHARSET_CHAR) == 0) {
 				/* ugh :) offset to the button for the file type on the save module
 				   page is (position in diskwriter driver array) + 4 */
 				r = i + 4;
@@ -480,23 +480,21 @@ static void search_update(void)
 	 * find the first entry matching the text */
 	if (*selected_widget == 0) {
 		for (n = 0; n < flist.num_files; n++) {
-			CHARSET_EASY_MODE(flist.files[n]->base, CHARSET_CHAR, CHARSET_CP437, {
-				if (strncasecmp(out, search_text, search_text_length) == 0) {
-					current_file = n;
-					file_list_reposition();
-					break;
-				}
-			});
+			if (charset_strncasecmp(flist.files[n]->base, CHARSET_CHAR,
+					search_text, CHARSET_CP437, search_text_length) == 0) {
+				current_file = n;
+				file_list_reposition();
+				break;
+			}
 		}
 	} else {
 		for (n = 0; n < dlist.num_dirs; n++) {
-			CHARSET_EASY_MODE(dlist.dirs[n]->base, CHARSET_CHAR, CHARSET_CP437, {
-				if (strncasecmp(out, search_text, search_text_length) == 0) {
-					current_dir = n;
-					dir_list_reposition();
-					break;
-				}
-			});
+			if (charset_strncasecmp(dlist.dirs[n]->base, CHARSET_CHAR,
+					search_text, CHARSET_CP437, search_text_length) == 0) {
+				current_dir = n;
+				dir_list_reposition();
+				break;
+			}
 		}
 	}
 
@@ -572,24 +570,35 @@ static int change_dir(const char *dir)
 /* unfortunately, there's not enough room with this layout for labels by
  * the search box and file information. :( */
 
-static void load_module_draw_const(void)
+static void both_module_draw_const(void)
 {
 	draw_text("Filename", 4, 46, 0, 2);
 	draw_text("Directory", 3, 47, 0, 2);
 	draw_char(0, 51, 37, 0, 6);
 	draw_box(2, 12, 49, 44, BOX_THICK | BOX_INNER | BOX_INSET); /* file list */
-	draw_box(50, 12, 77, 35, BOX_THICK | BOX_INNER | BOX_INSET); /* dir list */
 	draw_box(50, 36, 77, 38, BOX_THICK | BOX_INNER | BOX_INSET); /* search */
 	draw_box(50, 39, 77, 44, BOX_THICK | BOX_INNER | BOX_INSET); /* file info */
 	draw_box(12, 45, 77, 48, BOX_THICK | BOX_INNER | BOX_INSET); /* filename and directory input */
 
-	draw_fill_chars(51, 37, 76, 37, DEFAULT_FG, 0);
 	draw_fill_chars(13, 46, 76, 47, DEFAULT_FG, 0);
+}
+
+static void load_module_draw_const(void)
+{
+	both_module_draw_const();
+
+	/* dir list */
+	draw_box(50, 12, 77, 35, BOX_THICK | BOX_INNER | BOX_INSET);
+	draw_fill_chars(51, 37, 76, 37, DEFAULT_FG, 0);
 }
 
 static void save_module_draw_const(void)
 {
-	load_module_draw_const();
+	both_module_draw_const();
+
+	/* dir list */
+	draw_box(50, 12, 68, 35, BOX_THICK | BOX_INNER | BOX_INSET);
+	draw_fill_chars(51, 37, 67, 37, DEFAULT_FG, 0);
 }
 
 /* --------------------------------------------------------------------- */
@@ -810,12 +819,14 @@ static int file_list_handle_key(struct key_event * k)
 }
 
 /* --------------------------------------------------------------------- */
+/* These could check for the current page, but that's kind of weird to do
+ * and I just don't like that idea in general :) */
 
-static void dir_list_draw(void)
+static void dir_list_draw(int width)
 {
 	int n, pos, fg, bg;
 
-	draw_fill_chars(51, 13, 76, 34, DEFAULT_FG, 0);
+	draw_fill_chars(51, 13, 51 + width - 1, 34, DEFAULT_FG, 0);
 
 	for (n = top_dir, pos = 13; pos < 35; n++, pos++) {
 		if (n < 0) continue; /* er... */
@@ -830,11 +841,21 @@ static void dir_list_draw(void)
 			bg = 0;
 		}
 
-		draw_text_utf8_len(dlist.dirs[n]->base, 77 - 51, 51, pos, fg, bg);
+		draw_text_utf8_len(dlist.dirs[n]->base, width, 51, pos, fg, bg);
 	}
 
 	/* bleh */
 	search_redraw();
+}
+
+static void dir_list_draw_load(void)
+{
+	dir_list_draw(77 - 51);
+}
+
+static void dir_list_draw_exportsave(void)
+{
+	dir_list_draw(68 - 51);
 }
 
 static int dir_list_handle_text_input(const uint8_t* text) {
@@ -850,12 +871,12 @@ static int dir_list_handle_text_input(const uint8_t* text) {
 	return 1;
 }
 
-static int dir_list_handle_key(struct key_event * k)
+static int dir_list_handle_key(struct key_event * k, int width)
 {
 	int new_dir = current_dir;
 
 	if (k->mouse != MOUSE_NONE) {
-		if (k->x >= 52 && k->x <= 77 && k->y >= 13 && k->y <= 34) {
+		if (k->x >= 51 && k->x <= (51 + width - 1) && k->y >= 13 && k->y <= 34) {
 			switch (k->mouse) {
 				case MOUSE_CLICK:
 					new_dir = (k->y - 13) + top_dir;
@@ -957,6 +978,16 @@ static int dir_list_handle_key(struct key_event * k)
 	return 1;
 }
 
+static int dir_list_handle_key_load(struct key_event * k)
+{
+	return dir_list_handle_key(k, 77 - 51);
+}
+
+static int dir_list_handle_key_exportsave(struct key_event * k)
+{
+	return dir_list_handle_key(k, 68 - 51);
+}
+
 /* --------------------------------------------------------------------- */
 /* these handle when enter is pressed on the file/directory textboxes at the bottom of the screen. */
 
@@ -979,6 +1010,7 @@ static void dirname_entered(void)
 	CHARSET_EASY_MODE(dirname_entry, CHARSET_CP437, CHARSET_CHAR, {
 		if (!change_dir(out)) {
 			/* FIXME: need to give some kind of feedback here */
+			free(out); /* ergh */
 			return;
 		}
 	});
@@ -1020,7 +1052,7 @@ static void load_module_set_page(void)
 		pages[PAGE_LOAD_MODULE].selected_widget = (flist.num_files > 0) ? 0 : 1;
 
 	// Don't reparse the glob if it hasn't changed; that will mess with the cursor position
-	if (strcasecmp(glob_list_src, cfg_module_pattern) == 0)
+	if (charset_strcasecmp(glob_list_src, CHARSET_CHAR, cfg_module_pattern, CHARSET_CHAR) == 0)
 		strcpy(filename_entry, glob_list_src);
 	else
 		set_default_glob(1);
@@ -1052,8 +1084,8 @@ void load_module_load_page(struct page *page)
 	widgets_loadmodule[0].height = 30;
 	widgets_loadmodule[0].next.left = widgets_loadmodule[0].next.right = 1;
 
-	widget_create_other(widgets_loadmodule + 1, 2, dir_list_handle_key,
-		dir_list_handle_text_input, dir_list_draw);
+	widget_create_other(widgets_loadmodule + 1, 2, dir_list_handle_key_load,
+		dir_list_handle_text_input, dir_list_draw_load);
 	widgets_loadmodule[1].accept_text = 1;
 	widgets_loadmodule[1].x = 50;
 	widgets_loadmodule[1].y = 13;
@@ -1107,7 +1139,6 @@ void save_module_load_page(struct page *page, int do_export)
 	current_file = current_dir = 0;
 	dir_list_reposition();
 	file_list_reposition();
-	read_directory();
 
 	page->draw_const = save_module_draw_const;
 	page->set_page = save_module_set_page;
@@ -1121,11 +1152,20 @@ void save_module_load_page(struct page *page, int do_export)
 	widgets_exportsave[0].accept_text = 1;
 	widgets_exportsave[0].next.left = 4;
 	widgets_exportsave[0].next.right = widgets_exportsave[0].next.tab = 1;
-	widget_create_other(widgets_exportsave + 1, 2, dir_list_handle_key,
-		dir_list_handle_text_input, dir_list_draw);
+	widgets_exportsave[0].x = 3;
+	widgets_exportsave[0].y = 13;
+	widgets_exportsave[0].width = 44;
+	widgets_exportsave[0].height = 30;
+
+	widget_create_other(widgets_exportsave + 1, 2, dir_list_handle_key_exportsave,
+		dir_list_handle_text_input, dir_list_draw_exportsave);
 	widgets_exportsave[1].accept_text = 1;
 	widgets_exportsave[1].next.right = widgets_exportsave[1].next.tab = 5;
 	widgets_exportsave[1].next.left = 0;
+	widgets_exportsave[1].x = 50;
+	widgets_exportsave[1].y = 13;
+	widgets_exportsave[1].width = 18;
+	widgets_exportsave[1].height = 21;
 
 	widget_create_textentry(widgets_exportsave + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
 	widgets_exportsave[2].activate = filename_entered;

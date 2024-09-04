@@ -30,37 +30,41 @@
 /* Portable replacements for signed integer bit shifting. These do not return the same
  * bit size as was given in; in lots of cases that won't really match up at all. */
 
-#define SCHISM_SIGNED_LSHIFT_VARIANT(BITS, RBITS) \
-	inline int ## RBITS ## _t schism_signed_lshift_ ## BITS ## _(int ## BITS ## _t x, int y) \
+#define SCHISM_SIGNED_SHIFT_VARIANT(BITS, RBITS, PREFIX, OPERATION) \
+	inline int ## RBITS ## _t schism_signed_ ## PREFIX ## shift_ ## BITS ## _(int ## BITS ## _t x, int y) \
 	{ \
 		const uint ## RBITS ## _t roffset = UINT ## RBITS ## _C(1) << (RBITS - 1); \
 		uint ## RBITS ## _t urx = (uint ## RBITS ## _t)x; \
 		urx += roffset; \
-		urx <<= y; \
-		urx -= roffset << y; \
+		urx OPERATION ## = y; \
+		urx -= roffset OPERATION y; \
 		return (int ## RBITS ## _t)urx; \
 	}
+
+#define SCHISM_SIGNED_LSHIFT_VARIANT(BITS, RBITS) \
+	SCHISM_SIGNED_SHIFT_VARIANT(BITS, RBITS, l, <<)
 
 SCHISM_SIGNED_LSHIFT_VARIANT(32, 64)
 
 #undef SCHISM_SIGNED_LSHIFT_VARIANT
 
 #define SCHISM_SIGNED_RSHIFT_VARIANT(BITS, RBITS) \
-	inline int ## RBITS ## _t schism_signed_rshift_ ## BITS ## _(int ## BITS ## _t x, int y) \
-	{ \
-		const uint ## RBITS ## _t roffset = UINT ## RBITS ## _C(1) << (RBITS - 1); \
-		uint ## RBITS ## _t urx = (uint ## RBITS ## _t)((int ## RBITS ## _t)x); \
-		urx += roffset; \
-		urx >>= y; \
-		urx -= roffset >> y; \
-		return (int ## RBITS ## _t)urx; \
-	}
+	SCHISM_SIGNED_SHIFT_VARIANT(BITS, RBITS, r, >>)
 
 SCHISM_SIGNED_RSHIFT_VARIANT(32, 32)
+SCHISM_SIGNED_RSHIFT_VARIANT(64, 64)
 
 #undef SCHISM_SIGNED_RSHIFT_VARIANT
 
 #define lshift_signed_32(x, y) schism_signed_lshift_32_(x, y)
 #define rshift_signed_32(x, y) schism_signed_rshift_32_(x, y)
+#define rshift_signed_64(x, y) schism_signed_rshift_64_(x, y)
+
+/* note: it is in fact possible to replicate template-like
+ * behavior in standard C. However, Schism is de-facto
+ * meant to conform to C99 (even though it doesn't) so
+ * the very very useful C11 _Generic feature is unavailable.
+ * For now we just make do, and at some point I may consider
+ * switching to C11. */
 
 #endif /* SCHISM_BSHIFT_H_ */
