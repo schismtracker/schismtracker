@@ -818,11 +818,13 @@ static int note_trans_handle_key(struct key_event * k)
 	} else if (KEY_PRESSED(instrument_list, goto_instrument_down)) {
 		instrument_set(current_instrument + 1);
 	} else {
+		int n, c;
+
 		if (k->state == KEY_RELEASE)
 			return 0;
 		switch (note_trans_cursor_pos) {
-		case 0:        /* note */
-			int n = kbd_get_note(k);
+		case 0: {       /* note */
+			n = kbd_get_note(k);
 			if (!NOTE_IS_NOTE(n))
 				return 0;
 			ins->note_map[note_trans_sel_line] = n;
@@ -830,14 +832,16 @@ static int note_trans_handle_key(struct key_event * k)
 				ins->sample_map[note_trans_sel_line] = sample_get_current();
 			note_trans_sel_line_set(note_trans_sel_line + 1);
 			break;
-		case 1:        /* octave */
-			int c = kbd_char_to_hex(k);
-			if (c < 0 || c > 9) return 0;
-			n = ins->note_map[note_trans_sel_line];
-			n = ((n - 1) % 12) + (12 * c) + 1;
-			ins->note_map[note_trans_sel_line] = n;
+		}
+		case 1: {       /* octave */
+			c = kbd_char_to_hex(k);
+			if (c < 0 || c > 9)
+				return 0;
+
+			ins->note_map[note_trans_sel_line] = ((ins->note_map[note_trans_sel_line] - 1) % 12) + (12 * c) + 1;
 			note_trans_sel_line_set(note_trans_sel_line + 1);
 			break;
+		}
 
 			/* Made it possible to enter H to R letters
 			on 1st digit for expanded sample slots.  -delt. */
