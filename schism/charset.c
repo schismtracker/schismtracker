@@ -825,7 +825,7 @@ size_t charset_strlen(const uint8_t* in, charset_t inset) {
 	if (!conv_to_ucs4_func)
 		return 0;
 
-	for (;; count++) {
+	for (;;) {
 		conv_to_ucs4_func(&decoder);
 
 		if (decoder.state < 0)
