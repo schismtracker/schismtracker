@@ -236,6 +236,7 @@ char *num99tostr(int n, char *buf)
 	return buf;
 
 }
+
 char *numtostr(int digits, unsigned int n, char *buf)
 {
 	if (digits > 0) {
@@ -250,6 +251,7 @@ char *numtostr(int digits, unsigned int n, char *buf)
 	}
 	return buf;
 }
+
 char *numtostr_signed(int digits, int n, char *buf)
 {
 	if (digits > 0) {
@@ -832,21 +834,102 @@ char *get_dot_directory(void)
 	return get_home_directory();
 }
 
-char *str_concat(const char *s, ...)
+size_t str_count_occurrences(char character, const char *str)
 {
-	va_list ap;
-	char *out = NULL;
-	int len = 0;
+	size_t count = 0;
 
-	va_start(ap,s);
-	while (s) {
-		out = mem_realloc(out, (len += strlen(s)+1));
-		strcat(out, s);
-		s = va_arg(ap, const char *);
+	for (; *str; count += (*str == character), str++);
+
+	return count;
+}
+
+char *str_concat(size_t count, const char **str_array)
+{
+	size_t str_array_lens[count];
+	size_t len;
+	size_t i, c;
+
+	for (len = 0, i = 0; i < count; i++)
+		len += (str_array_lens[i] = (str_array[i] && *str_array[i]) ? strlen(str_array[i]) : 0);
+
+	if (!len)
+		return str_dup("");
+
+	char *out = malloc(len + 1);
+
+	for (i = 0, c = 0; i < count && c < len; i++) {
+		if (!str_array[i] || !*str_array[i])
+			continue;
+
+		memcpy(out + c, str_array[i], str_array_lens[i]);
+		c += str_array_lens[i];
 	}
-	va_end(ap);
-	return out;
 
+	out[len] = '\0';
+
+	return out;
+}
+
+char *str_concat_free(size_t count, char **str_array)
+{
+	char* out = str_concat(count, (const char **)str_array);
+
+	for (size_t i = 0; i < count; i++)
+		free(str_array[i]);
+
+	return out;
+}
+
+char *str_implode(size_t count, const char *delim, const char **str_array)
+{
+	const char *str_array_with_delims[count * 2];
+	memset(str_array_with_delims, 0, count * 2);
+
+	size_t i, c;
+
+	for (i = 0, c = 0; i < count; i++) {
+		if (!str_array[i] || !str_array[i][0])
+			continue;
+
+		str_array_with_delims[c++] = str_array[i];
+		str_array_with_delims[c++] = delim;
+	}
+
+	/* welp */
+	if (!c)
+		return str_dup("");
+
+	/* decrement c by one so we don't get an extra delim */
+	return str_concat(--c, str_array_with_delims);
+}
+
+char *str_implode_free(size_t count, const char *delim, char **str_array)
+{
+	char *out = str_implode(count, delim, (const char **)str_array);
+
+	for (size_t i = 0; i < count; i++)
+		free(str_array[i]);
+
+	return out;
+}
+
+char *str_pad_between(const char* str1, const char* str2, unsigned char pad, int width, int min_padding)
+{
+	size_t len1 = strlen(str1), len2 = strlen(str2);
+
+	/* ptrdiff_t is close enough to a signed size_t */
+	ptrdiff_t len_padding = (ptrdiff_t)width - (charset_strlen(str1, CHARSET_UTF8) + charset_strlen(str2, CHARSET_UTF8));
+	len_padding = MAX(len_padding, min_padding);
+
+	char *out = malloc(len1 + len_padding + len2 + 1);
+
+	memcpy(out, str1, len1);
+	memset(out + len1, pad, len_padding);
+	memcpy(out + len1 + len_padding, str2, len2);
+
+	out[len1 + len_padding + len2] = '\0';
+
+	return out;
 }
 
 /* fast integer sqrt */
@@ -862,6 +945,21 @@ unsigned int i_sqrt(unsigned int r)
 		}
 	}
 	return(c);
+}
+
+/* fairly fast crc32 hashing function; used for keybinds */
+uint32_t crc32b(const unsigned char *message) {
+	uint32_t crc = UINT32_C(0xFFFFFFFF);
+	size_t i, j;
+
+	for (i = 0; message[i]; i++) {
+		crc ^= message[i];
+
+		for (j = 0; j < 8; j++)
+			crc = (crc >> 1) ^ (0xEDB88320 & -(crc & 1));
+	}
+
+	return ~crc;
 }
 
 int run_hook(const char *dir, const char *name, const char *maybe_arg)

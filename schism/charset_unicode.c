@@ -107,7 +107,7 @@ uint8_t *charset_case_fold_to_utf8(const uint8_t *in, charset_t set)
 
 uint8_t *charset_case_fold(const uint8_t *in, charset_t set)
 {
-	uint8_t *folded = charset_compose_to_utf8(in, set);
+	uint8_t *folded = charset_case_fold_to_utf8(in, set);
 	if (set == CHARSET_UTF8)
 		return folded;
 
