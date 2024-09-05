@@ -28,15 +28,10 @@
 #include "charset.h"
 #include "util.h"
 
-/* these two ought to be compiled separately */
-#include "keybinds_init.c"
-
 #define MAX_BINDS 450
-#define MAX_SHORTCUTS 3
-static int current_binds_count = 0;
+static int current_binds_size = 0;
 static keybind_bind_t* current_binds[MAX_BINDS];
 keybind_list_t global_keybinds_list = {0};
-static int has_init_problem = 0;
 
 /* --------------------------------------------------------------------- */
 /* Updating bind state (handling input events) */
@@ -169,7 +164,7 @@ void keybinds_handle_event(struct key_event* event)
 	case SDL_SCANCODE_RALT:
 	case SDL_SCANCODE_LSHIFT:
 	case SDL_SCANCODE_RSHIFT:
-		for (int i = 0; i < current_binds_count; i++)
+		for (int i = 0; i < current_binds_size; i++)
 			reset_bind(current_binds[i]);
 
 		return;
@@ -178,130 +173,41 @@ void keybinds_handle_event(struct key_event* event)
 	int is_down = event->state == KEY_PRESS;
 	SDL_Keymod mods = SDL_GetModState();
 
-	for (int i = 0; i < current_binds_count; i++)
+	for (int i = 0; i < current_binds_size; i++)
 		update_bind(current_binds[i], event->scancode, event->orig_sym, mods, event->orig_text, is_down);
-}
-
-/* --------------------------------------------------------------------- */
-/* Parsing keybind strings */
-
-static int parse_shortcut_scancode(keybind_bind_t* bind, const char* shortcut, SDL_Scancode* code)
-{
-	if (keybinds_parse_scancode(shortcut, code))
-		return 1;
-
-	if (!strncmp(shortcut, "US_", 3)) {
-		/* unknown scancode ? */
-		log_appendf(5, " %s/%s: Unknown scancode '%s'", bind->section_info->name, bind->name, shortcut);
-		printf("%s/%s: Unknown scancode '%s'\n", bind->section_info->name, bind->name, shortcut);
-		fflush(stdout);
-		has_init_problem = 1;
-		return -1;
-	}
-
-	return 0;
-}
-
-static int parse_shortcut_keycode(keybind_bind_t* bind, const char* shortcut, SDL_Keycode* kcode)
-{
-	if (!shortcut || !shortcut[0])
-		return 0;
-
-	if (keybinds_parse_keycode(shortcut, kcode))
-		return 1;
-
-	*kcode = SDL_GetKeyFromName(shortcut);
-
-	if (*kcode == SDLK_UNKNOWN) {
-		log_appendf(5, " %s/%s: Unknown code '%s'", bind->section_info->name, bind->name, shortcut);
-		printf("%s/%s: Unknown code '%s'\n", bind->section_info->name, bind->name, shortcut);
-		fflush(stdout);
-		has_init_problem = 1;
-		return -1;
-	}
-
-	return 1;
-}
-
-void keybinds_add_bind_shortcut(keybind_bind_t* bind, SDL_Keycode keycode, SDL_Scancode scancode, SDL_Keymod modifier);
-
-static void keybinds_parse_shortcut_splitted(keybind_bind_t* bind, const char* shortcut)
-{
-	char* shortcut_dup = strdup(shortcut);
-	char *strtok_ptr;
-	const char* delim = "+";
-	char* trimmed = NULL;
-	int has_problem = 0;
-
-	SDL_Keymod mods = KMOD_NONE;
-	SDL_Scancode scan_code = SDL_SCANCODE_UNKNOWN;
-	SDL_Keycode key_code = SDLK_UNKNOWN;
-	char* character = "\0";
-
-	for (int i = 0; ; i++) {
-		const char* next = strtok_r(i == 0 ? shortcut_dup : NULL, delim, &strtok_ptr);
-
-		free(trimmed);
-		trimmed = strdup(next);
-		trim_string(trimmed);
-
-		if (next == NULL) break;
-
-		SDL_Keymod mod;
-		if (keybinds_parse_modkey(trimmed, &mod)) {
-			mods |= mod;
-			continue;
-		}
-
-		int scan_result = parse_shortcut_scancode(bind, trimmed, &scan_code);
-		if (scan_result == 1) break;
-		if (scan_result == -1) { has_problem = 1; break; }
-
-		int key_result = parse_shortcut_keycode(bind, trimmed, &key_code);
-		if (key_result == 1) break;
-		if (key_result == -1) { has_problem = 1; break; }
-	}
-
-	free(trimmed);
-	free(shortcut_dup);
-
-	if (has_problem)
-		return;
-
-	keybinds_add_bind_shortcut(bind, key_code, scan_code, mods);
-}
-
-void keybinds_parse_shortcut(keybind_bind_t* bind, const char* shortcut)
-{
-	char* shortcut_dup = strdup(shortcut);
-	char *strtok_ptr;
-	const char* delim = ",";
-
-	for (int i = 0; i < 10; i++) {
-		const char* next = strtok_r(i == 0 ? shortcut_dup : NULL, delim, &strtok_ptr);
-		if (next == NULL) break;
-		keybinds_parse_shortcut_splitted(bind, next);
-	}
-
-	free(shortcut_dup);
 }
 
 /* --------------------------------------------------------------------- */
 /* Initiating keybinds */
 
-void keybinds_add_bind_shortcut(keybind_bind_t* bind, SDL_Keycode keycode, SDL_Scancode scancode, SDL_Keymod modifier)
+int keybinds_append_bind_to_list(keybind_bind_t *bind)
 {
-	if (bind->shortcuts_count == MAX_SHORTCUTS) {
-		log_appendf(5, " %s/%s: Trying to bind too many shortcuts. Max is %i.", bind->section_info->name, bind->name, MAX_SHORTCUTS);
-		printf("%s/%s: Trying to bind too many shortcuts. Max is %i.\n", bind->section_info->name, bind->name, MAX_SHORTCUTS);
+	if (current_binds_size >= MAX_BINDS) {
+		log_appendf(5, " Keybinds exceeding max bind count. Max is %i. Current is %i.", MAX_BINDS, current_binds_size);
+		printf("Keybinds exceeding max bind count. Max is %i. Current is %i.\n", MAX_BINDS, current_binds_size);
 		fflush(stdout);
-		has_init_problem = 1;
-		return;
+		current_binds_size++;
+		return 0;
+	}
+
+	current_binds[current_binds_size] = bind;
+	current_binds_size++;
+
+	return 1;
+}
+
+int keybinds_append_shortcut_to_bind(keybind_bind_t* bind, SDL_Keycode keycode, SDL_Scancode scancode, SDL_Keymod modifier)
+{
+	if (bind->shortcuts_count >= KEYBINDS_MAX_SHORTCUTS) {
+		log_appendf(5, " %s/%s: Trying to bind too many shortcuts. Max is %i.", bind->section_info->name, bind->name, KEYBINDS_MAX_SHORTCUTS);
+		printf("%s/%s: Trying to bind too many shortcuts. Max is %i.\n", bind->section_info->name, bind->name, KEYBINDS_MAX_SHORTCUTS);
+		fflush(stdout);
+		return 0;
 	}
 
 	if (keycode == SDLK_UNKNOWN && scancode == SDL_SCANCODE_UNKNOWN) {
 		printf("Attempting to bind shortcut with no key. Skipping.\n");
-		return;
+		return 0;
 	}
 
 	int i = bind->shortcuts_count;
@@ -309,204 +215,7 @@ void keybinds_add_bind_shortcut(keybind_bind_t* bind, SDL_Keycode keycode, SDL_S
 	bind->shortcuts[i].scancode = scancode;
 	bind->shortcuts[i].modifier = modifier;
 	bind->shortcuts_count++;
-}
-
-static void init_section(keybind_section_info_t* section_info, const char* name, const char* title, enum page_numbers page)
-{
-	section_info->is_active = 0;
-	section_info->name = name;
-	section_info->title = title;
-	section_info->page = page;
-	section_info->page_matcher = NULL;
-}
-
-static void set_shortcut_text(keybind_bind_t* bind)
-{
-	char* out[MAX_SHORTCUTS];
-
-	for(int i = 0; i < MAX_SHORTCUTS; i++) {
-		out[i] = NULL;
-		if(i >= bind->shortcuts_count) continue;
-
-		keybind_shortcut_t* sc = &bind->shortcuts[i];
-
-		const char* ctrl_text = "";
-		const char* alt_text = "";
-		const char* shift_text = "";
-
-        if ((sc->modifier & KMOD_LCTRL) && (sc->modifier & KMOD_RCTRL))
-            ctrl_text = "Ctrl-";
-        else if (sc->modifier & KMOD_LCTRL)
-            ctrl_text = "LCtrl-";
-        else if (sc->modifier & KMOD_RCTRL)
-            ctrl_text = "RCtrl-";
-
-        if ((sc->modifier & KMOD_LSHIFT) && (sc->modifier & KMOD_RSHIFT))
-            ctrl_text = "Shift-";
-        else if (sc->modifier & KMOD_LSHIFT)
-            ctrl_text = "LShift-";
-        else if (sc->modifier & KMOD_RSHIFT)
-            ctrl_text = "RShift-";
-
-        if ((sc->modifier & KMOD_LALT) && (sc->modifier & KMOD_RALT))
-            ctrl_text = "Alt-";
-        else if (sc->modifier & KMOD_LALT)
-            ctrl_text = "LAlt-";
-        else if (sc->modifier & KMOD_RALT)
-            ctrl_text = "RAlt-";
-
-		char* key_text = NULL;
-
-		if (sc->keycode != SDLK_UNKNOWN) {
-			switch(sc->keycode) {
-			case SDLK_RETURN:
-#ifdef SCHISM_MACOSX
-				key_text = strdup("Return");
-#else
-				key_text = strdup("Enter");
-#endif
-				break;
-			case SDLK_SPACE:
-				key_text = strdup("Spacebar");
-				break;
-			default:
-				key_text = strdup(SDL_GetKeyName(sc->keycode));
-				break;
-			}
-		} else if (sc->scancode != SDL_SCANCODE_UNKNOWN) {
-			switch(sc->scancode) {
-			case SDL_SCANCODE_RETURN:
-				key_text = strdup("Enter");
-				break;
-			case SDL_SCANCODE_SPACE:
-				key_text = strdup("Spacebar");
-				break;
-			default: {
-				SDL_Keycode code = SDL_GetKeyFromScancode(sc->scancode);
-				key_text = strdup(SDL_GetKeyName(code));
-				break;
-			}
-			}
-		} else {
-			continue;
-		}
-
-		int key_text_length = strlen(key_text);
-
-		if (key_text_length == 0)
-			continue;
-
-		char* next_out = STR_CONCAT(4, ctrl_text, alt_text, shift_text, key_text);
-
-		out[i] = next_out;
-
-		if(i == 0) {
-			bind->first_shortcut_text = strdup(next_out);
-			bind->first_shortcut_text_parens = STR_CONCAT(3, " (", next_out, ")");
-		}
-
-		free(key_text);
-	}
-
-	char* shortcut_text = str_implode(MAX_SHORTCUTS, ", ", (const char**)out);
-	bind->shortcut_text = shortcut_text;
-	if(shortcut_text[0])
-		bind->shortcut_text_parens = STR_CONCAT(3, " (", shortcut_text, ")");
-
-	for (int i = 0; i < MAX_SHORTCUTS; i++) {
-		if (!out[i])
-			continue;
-
-		char* text = out[i];
-
-		if (text && text[0]) {
-			char* padded = str_pad_between(text, "", ' ', 18, 1);
-			out[i] = STR_CONCAT(2, "    ", padded);
-			free(padded);
-		}
-
-		if (text)
-			free(text);
-	}
-
-	char* help_shortcuts = str_implode_free(MAX_SHORTCUTS, "\n", out);
-	bind->help_text = STR_CONCAT(3, help_shortcuts, (char*)bind->description, "\n");
-	free(help_shortcuts);
-}
-
-static void init_bind(keybind_bind_t* bind, keybind_section_info_t* section_info, const char* name, const char* description, const char* shortcut)
-{
-	if (current_binds_count >= MAX_BINDS) {
-		log_appendf(5, " Keybinds exceeding max bind count. Max is %i. Current is %i.", MAX_BINDS, current_binds_count);
-		printf("Keybinds exceeding max bind count. Max is %i. Current is %i.\n", MAX_BINDS, current_binds_count);
-		fflush(stdout);
-		has_init_problem = 1;
-		current_binds_count++;
-		return;
-	}
-
-	current_binds[current_binds_count] = bind;
-	current_binds_count++;
-
-	bind->pressed = 0;
-	bind->released = 0;
-	bind->shortcuts = malloc(sizeof(keybind_shortcut_t) * 3);
-
-	for (int i = 0; i < 3; i++) {
-		keybind_shortcut_t* sc = &bind->shortcuts[i];
-		sc->scancode = SDL_SCANCODE_UNKNOWN;
-		sc->keycode = SDLK_UNKNOWN;
-		sc->modifier = KMOD_NONE;
-		sc->pressed = 0;
-		sc->released = 0;
-		sc->repeated = 0;
-		sc->is_press_repeat = 0;
-		sc->press_repeats = 0;
-	}
-
-	bind->shortcuts_count = 0;
-	bind->section_info = section_info;
-	bind->name = name;
-	bind->description = description;
-	bind->shortcut_text = "";
-	bind->first_shortcut_text = "";
-	bind->shortcut_text_parens = "";
-	bind->first_shortcut_text_parens = "";
-	bind->help_text = "";
-
-	bind->pressed = 0;
-	bind->released = 0;
-	bind->repeated = 0;
-	bind->press_repeats = 0;
-
-	keybinds_parse_shortcut(bind, shortcut);
-	set_shortcut_text(bind);
-}
-
-void keybinds_init(void)
-{
-	if (current_binds_count != 0)
-		return;
-
-	log_append(2, 0, "Custom Key Bindings");
-	log_underline(19);
-
-	char* path = dmoz_path_concat(cfg_dir_dotschism, "keybinds.ini");
-
-	cfg_file_t cfg;
-	cfg_init(&cfg, path);
-
-	// Defined in keybinds_init.c
-	init_all_keybinds(&cfg);
-
-	cfg_write(&cfg);
-	cfg_free(&cfg);
-
-	free(path);
-
-	if(!has_init_problem)
-		log_appendf(5, " No issues");
-	log_nl();
+	return 1;
 }
 
 /* --------------------------------------------------------------------- */
@@ -518,9 +227,7 @@ char *keybinds_get_help_text(enum page_numbers page)
 	char *out = strdup("");
 
 	for (int i = 0; i < MAX_BINDS; i++) {
-		// lines[i] = NULL;
-
-		if (i >= current_binds_count)
+		if (i >= current_binds_size)
 			continue;
 
 		keybind_bind_t* bind = current_binds[i];

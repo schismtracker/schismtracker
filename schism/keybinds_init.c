@@ -24,49 +24,381 @@
 #include "it.h"
 #include "keybinds.h"
 #include "page.h"
+#include "config.h"
 #include "config-parser.h"
+#include "dmoz.h"
+
+/* XXX need to shove this crap into their respective page files */
+static int init_load_sample_keybinds(cfg_file_t *cfg);
+static int init_load_stereo_sample_dialog_keybinds(cfg_file_t *cfg);
+static int init_message_edit_keybinds(cfg_file_t *cfg);
+static int init_waterfall_keybinds(cfg_file_t *cfg);
+static int init_load_module_keybinds(cfg_file_t *cfg);
+static int init_palette_edit_keybinds(cfg_file_t *cfg);
+static int init_order_list_keybinds(cfg_file_t *cfg);
+static int init_info_page_keybinds(cfg_file_t *cfg);
+static int init_sample_list_keybinds(cfg_file_t *cfg);
+static int init_instrument_list_keybinds(cfg_file_t *cfg);
+static int init_pattern_edit_keybinds(cfg_file_t *cfg);
+static int init_file_list_keybinds(cfg_file_t *cfg);
+static int init_global_keybinds(cfg_file_t *cfg);
+
+/* --------------------------------------------------------------------- */
+/* Parsing keybind strings */
+
+static int parse_shortcut_scancode(keybind_bind_t* bind, const char* shortcut, SDL_Scancode* code)
+{
+	if (keybinds_parse_scancode(shortcut, code))
+		return 1;
+
+	if (!strncmp(shortcut, "US_", 3)) {
+		/* unknown scancode ? */
+		log_appendf(5, " %s/%s: Unknown scancode '%s'", bind->section_info->name, bind->name, shortcut);
+		printf("%s/%s: Unknown scancode '%s'\n", bind->section_info->name, bind->name, shortcut);
+		fflush(stdout);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int parse_shortcut_keycode(keybind_bind_t* bind, const char* shortcut, SDL_Keycode* kcode)
+{
+	if (!shortcut || !shortcut[0])
+		return 0;
+
+	if (keybinds_parse_keycode(shortcut, kcode))
+		return 1;
+
+	*kcode = SDL_GetKeyFromName(shortcut);
+
+	if (*kcode == SDLK_UNKNOWN) {
+		log_appendf(5, " %s/%s: Unknown code '%s'", bind->section_info->name, bind->name, shortcut);
+		printf("%s/%s: Unknown code '%s'\n", bind->section_info->name, bind->name, shortcut);
+		fflush(stdout);
+		return -1;
+	}
+
+	return 1;
+}
+
+static int keybinds_parse_shortcut(keybind_bind_t* bind, const char* shortcut)
+{
+	int has_problem = 0;
+
+	SDL_Keymod mods = KMOD_NONE;
+	SDL_Scancode scan_code = SDL_SCANCODE_UNKNOWN;
+	SDL_Keycode key_code = SDLK_UNKNOWN;
+
+	for (const char *last_pch = shortcut, *pch = shortcut; pch; last_pch = pch + 1) {
+		pch = strchr(last_pch, '+');
+
+		char *trimmed = (pch) ? strndup(last_pch, pch - last_pch) : strdup(last_pch);
+		trim_string(trimmed);
+
+		SDL_Keymod mod;
+		if (keybinds_parse_modkey(trimmed, &mod)) {
+			mods |= mod;
+			free(trimmed);
+			continue;
+		}
+
+		int result;
+
+		result = parse_shortcut_scancode(bind, trimmed, &scan_code);
+		if (result == 1) { free(trimmed); break; }
+		if (result == -1) { free(trimmed); has_problem = 1; break; }
+
+		result = parse_shortcut_keycode(bind, trimmed, &key_code);
+		if (result == 1) { free(trimmed); break; }
+		if (result == -1) { free(trimmed); has_problem = 1; break; }
+
+		free(trimmed);
+	}
+
+	if (has_problem)
+		return 0;
+
+	keybinds_append_shortcut_to_bind(bind, key_code, scan_code, mods);
+	return 1;
+}
+
+static int keybinds_parse_shortcuts(keybind_bind_t* bind, const char* shortcut)
+{
+	for (const char *last_pch = shortcut, *pch; ; last_pch = pch + 1) {
+		pch = strchr(last_pch, ',');
+
+		char *shortcut_dup = (pch) ? strndup(last_pch, pch - last_pch) : strdup(last_pch);
+
+		if (!keybinds_parse_shortcut(bind, shortcut_dup)) {
+			free(shortcut_dup);
+			return 0;
+		}
+
+		free(shortcut_dup);
+
+		if (!pch)
+			break;
+	}
+
+	return 1;
+}
+
+static void set_shortcut_text(keybind_bind_t* bind)
+{
+	char* out[KEYBINDS_MAX_SHORTCUTS];
+
+	for(int i = 0; i < KEYBINDS_MAX_SHORTCUTS; i++) {
+		out[i] = NULL;
+		if(i >= bind->shortcuts_count) continue;
+
+		keybind_shortcut_t* sc = &bind->shortcuts[i];
+
+		const char* ctrl_text = "";
+		const char* alt_text = "";
+		const char* shift_text = "";
+
+		if ((sc->modifier & KMOD_LCTRL) && (sc->modifier & KMOD_RCTRL))
+			ctrl_text = "Ctrl-";
+		else if (sc->modifier & KMOD_LCTRL)
+			ctrl_text = "LCtrl-";
+		else if (sc->modifier & KMOD_RCTRL)
+			ctrl_text = "RCtrl-";
+
+		if ((sc->modifier & KMOD_LSHIFT) && (sc->modifier & KMOD_RSHIFT))
+			ctrl_text = "Shift-";
+		else if (sc->modifier & KMOD_LSHIFT)
+			ctrl_text = "LShift-";
+		else if (sc->modifier & KMOD_RSHIFT)
+			ctrl_text = "RShift-";
+
+		if ((sc->modifier & KMOD_LALT) && (sc->modifier & KMOD_RALT))
+			ctrl_text = "Alt-";
+		else if (sc->modifier & KMOD_LALT)
+			ctrl_text = "LAlt-";
+		else if (sc->modifier & KMOD_RALT)
+			ctrl_text = "RAlt-";
+
+		char* key_text = NULL;
+
+		if (sc->keycode != SDLK_UNKNOWN) {
+			switch(sc->keycode) {
+			case SDLK_RETURN:
+#ifdef SCHISM_MACOSX
+				key_text = strdup("Return");
+#else
+				key_text = strdup("Enter");
+#endif
+				break;
+			case SDLK_SPACE:
+				key_text = strdup("Spacebar");
+				break;
+			default:
+				key_text = strdup(SDL_GetKeyName(sc->keycode));
+				break;
+			}
+		} else if (sc->scancode != SDL_SCANCODE_UNKNOWN) {
+			switch(sc->scancode) {
+			case SDL_SCANCODE_RETURN:
+				key_text = strdup("Enter");
+				break;
+			case SDL_SCANCODE_SPACE:
+				key_text = strdup("Spacebar");
+				break;
+			default: {
+				SDL_Keycode code = SDL_GetKeyFromScancode(sc->scancode);
+				key_text = strdup(SDL_GetKeyName(code));
+				break;
+			}
+			}
+		} else {
+			continue;
+		}
+
+		int key_text_length = strlen(key_text);
+
+		if (key_text_length == 0)
+			continue;
+
+		char* next_out = STR_CONCAT(4, ctrl_text, alt_text, shift_text, key_text);
+
+		out[i] = next_out;
+
+		if(i == 0) {
+			bind->first_shortcut_text = strdup(next_out);
+			bind->first_shortcut_text_parens = STR_CONCAT(3, " (", next_out, ")");
+		}
+
+		free(key_text);
+	}
+
+	bind->shortcut_text = str_implode(KEYBINDS_MAX_SHORTCUTS, ", ", (const char**)out);
+	if(*bind->shortcut_text)
+		bind->shortcut_text_parens = STR_CONCAT(3, " (", bind->shortcut_text, ")");
+
+	for (int i = 0; i < KEYBINDS_MAX_SHORTCUTS; i++) {
+		if (!out[i])
+			continue;
+
+		char* text = out[i];
+
+		if (text && *text) {
+			char* padded = str_pad_between(text, "", ' ', 18, 1);
+			out[i] = STR_CONCAT(2, "    ", padded);
+			free(padded);
+		}
+
+		if (text)
+			free(text);
+	}
+
+	char* help_shortcuts = str_implode_free(KEYBINDS_MAX_SHORTCUTS, "\n", out);
+	bind->help_text = STR_CONCAT(3, help_shortcuts, (char*)bind->description, "\n");
+	free(help_shortcuts);
+}
+
+void keybinds_init_shortcut(keybind_shortcut_t *sc)
+{
+	sc->scancode = SDL_SCANCODE_UNKNOWN;
+	sc->keycode = SDLK_UNKNOWN;
+	sc->modifier = KMOD_NONE;
+	sc->pressed = 0;
+	sc->released = 0;
+	sc->repeated = 0;
+	sc->is_press_repeat = 0;
+	sc->press_repeats = 0;
+}
+
+int keybinds_init_bind(keybind_bind_t* bind, keybind_section_info_t* section_info, const char* name, const char* description, const char* shortcut)
+{
+	bind->pressed = 0;
+	bind->released = 0;
+
+	for (int i = 0; i < KEYBINDS_MAX_SHORTCUTS; i++)
+		keybinds_init_shortcut(bind->shortcuts + i);
+
+	bind->shortcuts_count = 0;
+	bind->section_info = section_info;
+	bind->name = name;
+	bind->description = description;
+	bind->shortcut_text = "";
+	bind->first_shortcut_text = "";
+	bind->shortcut_text_parens = "";
+	bind->first_shortcut_text_parens = "";
+	bind->help_text = "";
+
+	bind->pressed = 0;
+	bind->released = 0;
+	bind->repeated = 0;
+	bind->press_repeats = 0;
+
+	if (!keybinds_parse_shortcuts(bind, shortcut))
+		return 0;
+
+	set_shortcut_text(bind);
+
+	return 1;
+}
+
+void keybinds_init_section(keybind_section_info_t* section_info, const char* name, const char* title, enum page_numbers page)
+{
+	section_info->is_active = 0;
+	section_info->name = name;
+	section_info->title = title;
+	section_info->page = page;
+	section_info->page_matcher = NULL;
+}
+
+int keybinds_init(void)
+{
+	log_append(2, 0, "Custom Key Bindings");
+	log_underline(19);
+
+	char* path = dmoz_path_concat(cfg_dir_dotschism, "keybinds.ini");
+	if (!path)
+		return 0;
+
+	cfg_file_t cfg;
+	cfg_init(&cfg, path);
+
+#define KEYBINDS_INIT_ASSERT(x) \
+	do { if (!(x)) { cfg_write(&cfg); cfg_free(&cfg); return 0; } } while (0)
+
+	KEYBINDS_INIT_ASSERT(init_load_sample_keybinds(&cfg));
+	KEYBINDS_INIT_ASSERT(init_load_stereo_sample_dialog_keybinds(&cfg));
+	KEYBINDS_INIT_ASSERT(init_message_edit_keybinds(&cfg));
+	KEYBINDS_INIT_ASSERT(init_waterfall_keybinds(&cfg));
+	KEYBINDS_INIT_ASSERT(init_load_module_keybinds(&cfg));
+	KEYBINDS_INIT_ASSERT(init_palette_edit_keybinds(&cfg));
+	KEYBINDS_INIT_ASSERT(init_order_list_keybinds(&cfg));
+	KEYBINDS_INIT_ASSERT(init_info_page_keybinds(&cfg));
+	KEYBINDS_INIT_ASSERT(init_sample_list_keybinds(&cfg));
+	KEYBINDS_INIT_ASSERT(init_instrument_list_keybinds(&cfg));
+	KEYBINDS_INIT_ASSERT(init_pattern_edit_keybinds(&cfg));
+	KEYBINDS_INIT_ASSERT(init_file_list_keybinds(&cfg));
+	KEYBINDS_INIT_ASSERT(init_global_keybinds(&cfg));
+
+#undef KEYBINDS_INIT_ASSERT
+
+	cfg_write(&cfg);
+	cfg_free(&cfg);
+
+	free(path);
+
+	log_appendf(5, " No issues");
+
+	log_nl();
+	return 1;
+}
+
+/* -------------------------------------------------------------------------- */
 
 #define DESCRIPTION_SPACER "                      "
 #define TEXT_2X "\n                  2x: "
 
 #define INIT_SECTION(SECTION, TITLE, PAGE) \
-	init_section(&global_keybinds_list.SECTION##_info, #SECTION, TITLE, PAGE); \
-	current_section_name = #SECTION; \
-	current_section_info = &global_keybinds_list.SECTION##_info;
+	keybinds_init_section(&global_keybinds_list.SECTION##_info, #SECTION, TITLE, PAGE);
 
 #define INIT_BIND(SECTION, BIND, DESCRIPTION, DEFAULT_KEYBIND) \
-	cfg_get_string(cfg, current_section_name, #BIND, current_shortcut, 255, DEFAULT_KEYBIND); \
-	cfg_set_string(cfg, current_section_name, #BIND, current_shortcut); \
-	init_bind(&global_keybinds_list.SECTION.BIND, current_section_info, #BIND, DESCRIPTION, current_shortcut);
+	do { \
+		const char *shortcut = str_dup(cfg_get_string(cfg, #SECTION, #BIND, NULL, 0, DEFAULT_KEYBIND)); \
+		cfg_set_string(cfg, #SECTION, #BIND, shortcut); \
+	\
+		if (!keybinds_init_bind(&global_keybinds_list.SECTION.BIND, &global_keybinds_list.SECTION ## _info, #BIND, DESCRIPTION, shortcut)) { \
+			free((void *)shortcut); \
+			return 0; \
+		} \
+	\
+		free((void *)shortcut); \
+	\
+		if (!keybinds_append_bind_to_list(&global_keybinds_list.SECTION.BIND)) \
+			return 0; \
+	} while (0)
 
-keybind_section_info_t* current_section_info = NULL;
-static const char* current_section_name = "";
-static char current_shortcut[256] = "";
-
-static void init_section(keybind_section_info_t* section_info, const char* name, const char* title, enum page_numbers page);
-static void init_bind(keybind_bind_t* bind, keybind_section_info_t* section_info, const char* name, const char* description, const char* shortcut);
-
-static void init_midi_keybinds(cfg_file_t* cfg)
+static int init_midi_keybinds(cfg_file_t* cfg)
 {
 	INIT_SECTION(midi, "Midi Keys.", PAGE_MIDI);
 	INIT_BIND(midi, toggle_port, "Toggle port", "SPACE");
+	return 1;
 }
 
-static void init_load_sample_keybinds(cfg_file_t* cfg)
+static int init_load_sample_keybinds(cfg_file_t* cfg)
 {
 	INIT_SECTION(load_sample, "Load Sample Keys.", PAGE_LOAD_SAMPLE);
 	INIT_BIND(load_sample, toggle_multichannel, "Toggle multichannel mode", "Alt+N");
+	return 1;
 }
 
-static void init_load_stereo_sample_dialog_keybinds(cfg_file_t* cfg)
+static int init_load_stereo_sample_dialog_keybinds(cfg_file_t* cfg)
 {
 	INIT_SECTION(load_stereo_sample_dialog, "Stereo Sample Dialog Keys.", PAGE_LOAD_SAMPLE);
 	INIT_BIND(load_stereo_sample_dialog, load_left, "Load left channel", "L");
 	INIT_BIND(load_stereo_sample_dialog, load_right, "Load right channel", "R");
 	INIT_BIND(load_stereo_sample_dialog, load_both, "Load both channels", "B,S");
+	return 1;
 }
 
-static void init_message_edit_keybinds(cfg_file_t* cfg)
+static int init_message_edit_keybinds(cfg_file_t* cfg)
 {
 	INIT_SECTION(message_edit, "Editing Keys.", PAGE_MESSAGE);
 	INIT_BIND(message_edit, edit_message, "Edit message", "ENTER");
@@ -77,9 +409,10 @@ static void init_message_edit_keybinds(cfg_file_t* cfg)
 
 	INIT_BIND(message_edit, goto_first_line, "Go to first line", "Ctrl+HOME");
 	INIT_BIND(message_edit, goto_last_line, "Go to last line", "Ctrl+END");
+	return 1;
 }
 
-static void init_waterfall_keybinds(cfg_file_t* cfg)
+static int init_waterfall_keybinds(cfg_file_t* cfg)
 {
 	INIT_SECTION(waterfall, "Waterfall Keys.", PAGE_WATERFALL);
 	INIT_BIND(waterfall, song_toggle_stereo, "Toggle song stereo/mono", "Alt+S");
@@ -90,20 +423,23 @@ static void init_waterfall_keybinds(cfg_file_t* cfg)
 	INIT_BIND(waterfall, goto_previous_order, "Play previous order (while playing)", "KP_MINUS");
 	INIT_BIND(waterfall, goto_next_order, "Play next order (while playing)", "KP_PLUS");
 	INIT_BIND(waterfall, goto_pattern_edit, "Go to current position in pattern editor", "Alt+G");
+	return 1;
 }
 
-static void init_load_module_keybinds(cfg_file_t* cfg)
+static int init_load_module_keybinds(cfg_file_t* cfg)
 {
 	INIT_SECTION(load_module, "Load Module Keys.", PAGE_LOAD_MODULE);
 	INIT_BIND(load_module, show_song_length, "Show song length", "Alt+P");
 	INIT_BIND(load_module, clear_search_text, "Clear search text", "Ctrl+BACKSPACE");
+	return 1;
 }
 
-static void init_palette_edit_keybinds(cfg_file_t* cfg)
+static int init_palette_edit_keybinds(cfg_file_t* cfg)
 {
 	INIT_SECTION(palette_edit, "Palette Keys.", PAGE_PALETTE_EDITOR);
 	INIT_BIND(palette_edit, copy, "Copy current palette to the clipboard", "Ctrl+C");
 	INIT_BIND(palette_edit, paste, "Paste a palette from the clipboard", "Ctrl+V");
+	return 1;
 }
 
 static int order_list_page_matcher(enum page_numbers page)
@@ -111,7 +447,7 @@ static int order_list_page_matcher(enum page_numbers page)
 	return page == PAGE_ORDERLIST_PANNING || page == PAGE_ORDERLIST_VOLUMES;
 }
 
-static void init_order_list_keybinds(cfg_file_t* cfg)
+static int init_order_list_keybinds(cfg_file_t* cfg)
 {
 	INIT_SECTION(order_list, "Order Keys.", PAGE_ORDERLIST_PANNING);
 	global_keybinds_list.order_list_info.page_matcher = order_list_page_matcher;
@@ -157,9 +493,11 @@ static void init_order_list_keybinds(cfg_file_t* cfg)
 	INIT_BIND(order_list_panning, pan_unmuted_amiga_stereo, "Pan all unmuted channels amiga stereo", "Alt+A");
 	INIT_BIND(order_list_panning, linear_panning_left_to_right, "Linear panning (left to right)", "Alt+BACKSLASH");
 	INIT_BIND(order_list_panning, linear_panning_right_to_left, "Linear panning (right to left)", "Alt+SLASH,Alt+KP_DIVIDE");
+
+	return 1;
 }
 
-static void init_info_page_keybinds(cfg_file_t* cfg)
+static int init_info_page_keybinds(cfg_file_t* cfg)
 {
 	INIT_SECTION(info_page, "Info Page Keys.", PAGE_INFO);
 	INIT_BIND(info_page, add_window, "Add a new window", "INSERT");
@@ -185,6 +523,8 @@ static void init_info_page_keybinds(cfg_file_t* cfg)
 	INIT_BIND(info_page, reverse_output_channels, "Reverse output channels\n ", "Alt+R");
 
 	INIT_BIND(info_page, goto_playing_pattern, "Goto pattern currently playing", "G");
+
+	return 1;
 }
 
 static int instrument_list_page_matcher(enum page_numbers page)
@@ -192,7 +532,7 @@ static int instrument_list_page_matcher(enum page_numbers page)
 	return page == PAGE_INSTRUMENT_LIST_GENERAL || page == PAGE_INSTRUMENT_LIST_PANNING || page == PAGE_INSTRUMENT_LIST_PITCH || page == PAGE_INSTRUMENT_LIST_VOLUME;
 }
 
-static void init_instrument_list_keybinds(cfg_file_t* cfg)
+static int init_instrument_list_keybinds(cfg_file_t* cfg)
 {
 	INIT_SECTION(instrument_list, "Instrument List Keys.", PAGE_INSTRUMENT_LIST);
 	global_keybinds_list.instrument_list_info.page_matcher = instrument_list_page_matcher;
@@ -278,9 +618,11 @@ static void init_instrument_list_keybinds(cfg_file_t* cfg)
 
 	INIT_BIND(instrument_envelope, play_default_note, "Play default note", "SPACE");
 	// INIT_BIND(instrument_envelope, note_off, "Note off command", "");
+
+	return 1;
 }
 
-static void init_sample_list_keybinds(cfg_file_t* cfg)
+static int init_sample_list_keybinds(cfg_file_t* cfg)
 {
 	INIT_SECTION(sample_list, "Sample List Keys.", PAGE_SAMPLE_LIST);
 	// Don't really need these, they are better replaced by global navs
@@ -335,9 +677,11 @@ static void init_sample_list_keybinds(cfg_file_t* cfg)
 	INIT_BIND(sample_list, decrease_c5_frequency_1_semitone, "Decrease C-5 frequency by 1 semitone\n ", "Ctrl+KP_MINUS");
 
 	INIT_BIND(sample_list, insert_arrow_up, "Insert arrow up (on list)", "Ctrl+BACKSPACE");
+
+	return 1;
 }
 
-static void init_pattern_edit_keybinds(cfg_file_t* cfg)
+static int init_pattern_edit_keybinds(cfg_file_t* cfg)
 {
 	INIT_SECTION(pattern_edit, "Pattern Edit Keys.", PAGE_PATTERN_EDITOR);
 	INIT_BIND(pattern_edit, next_pattern, "Next pattern (*)", "KP_PLUS");
@@ -512,6 +856,8 @@ static void init_pattern_edit_keybinds(cfg_file_t* cfg)
 
 	INIT_BIND(playback_functions, toggle_current_channel, "Toggle current channel", "Alt+F9");
 	INIT_BIND(playback_functions, solo_current_channel, "Solo current channel", "Alt+F10");
+
+	return 1;
 }
 
 static int file_list_page_matcher(enum page_numbers page)
@@ -520,15 +866,17 @@ static int file_list_page_matcher(enum page_numbers page)
 	return page == PAGE_LOAD_INSTRUMENT || page == PAGE_LOAD_MODULE || page == PAGE_LOAD_SAMPLE;
 }
 
-static void init_file_list_keybinds(cfg_file_t* cfg)
+static int init_file_list_keybinds(cfg_file_t* cfg)
 {
 	INIT_SECTION(file_list, "File List Keys.", PAGE_GLOBAL);
 	global_keybinds_list.file_list_info.page_matcher = file_list_page_matcher;
 
 	INIT_BIND(file_list, delete, "Delete file", "DELETE");
+
+	return 1;
 }
 
-static void init_global_keybinds(cfg_file_t* cfg)
+static int init_global_keybinds(cfg_file_t* cfg)
 {
 	INIT_SECTION(global, "Global Keys.", PAGE_GLOBAL);
 	INIT_BIND(global, help, "Help (context sensitive!)", "F1");
@@ -681,20 +1029,6 @@ static void init_global_keybinds(cfg_file_t* cfg)
 	INIT_BIND(notes, note_row3_d, "Row 2 D", "US_O");
 	INIT_BIND(notes, note_row3_d_sharp, "Row 2 D#", "US_0");
 	INIT_BIND(notes, note_row3_e, "Row 2 E\n ", "US_P");
-}
 
-static void init_all_keybinds(cfg_file_t* cfg) {
-	init_load_sample_keybinds(cfg);
-	init_load_stereo_sample_dialog_keybinds(cfg);
-	init_message_edit_keybinds(cfg);
-	init_waterfall_keybinds(cfg);
-	init_load_module_keybinds(cfg);
-	init_palette_edit_keybinds(cfg);
-	init_order_list_keybinds(cfg);
-	init_info_page_keybinds(cfg);
-	init_sample_list_keybinds(cfg);
-	init_instrument_list_keybinds(cfg);
-	init_pattern_edit_keybinds(cfg);
-	init_file_list_keybinds(cfg);
-	init_global_keybinds(cfg);
+	return 1;
 }

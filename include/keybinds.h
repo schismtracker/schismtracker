@@ -29,6 +29,8 @@
 
 /* *** TYPES *** */
 
+#define KEYBINDS_MAX_SHORTCUTS 3
+
 typedef struct keybind_shortcut
 {
 	SDL_Scancode scancode;
@@ -53,8 +55,8 @@ typedef struct keybind_section_info
 typedef struct keybind_bind
 {
 	keybind_section_info_t* section_info;
-	keybind_shortcut_t* shortcuts; // This array size is MAX_SHORTCUTS
-	int shortcuts_count; // This number is used to skip checking the entire array
+	keybind_shortcut_t shortcuts[KEYBINDS_MAX_SHORTCUTS]; // This array size is KEYBINDS_MAX_SHORTCUTS
+	int shortcuts_count; // The amount of shortcuts that are actually initialized
 	const char* name; // This is the variable name, for easier debugging
 	const char* description; // Text that shows up on help pages
 	const char* shortcut_text; // Contains all shortcuts with commas in-between, for example "F10, Ctrl-W"
@@ -689,10 +691,18 @@ int keybinds_parse_keycode(const char *name, SDL_Keycode *ret);
 int keybinds_parse_modkey(const char *name, SDL_Keymod *ret);
 int keybinds_parse_scancode(const char *name, SDL_Scancode *ret);
 
+/* keybinds_init.c */
+void keybinds_init_shortcut(keybind_shortcut_t *shortcut);
+int keybinds_init_bind(keybind_bind_t* bind, keybind_section_info_t* section_info, const char* name, const char* description, const char* shortcut);
+void keybinds_init_section(keybind_section_info_t* section_info, const char* name, const char* title, enum page_numbers page);
+int keybinds_init(void);
+
 /* keybinds.c */
+int keybinds_append_bind_to_list(keybind_bind_t *bind);
+int keybinds_append_shortcut_to_bind(keybind_bind_t* bind, SDL_Keycode keycode, SDL_Scancode scancode, SDL_Keymod modifier);
 char* keybinds_get_help_text(enum page_numbers page);
 void keybinds_handle_event(struct key_event* event);
-void keybinds_init(void);
+int keybinds_init_failed(void);
 extern keybind_list_t global_keybinds_list;
 
 /* Key was pressed this event. Will not trigger on held down repeats. */
