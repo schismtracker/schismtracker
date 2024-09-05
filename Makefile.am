@@ -76,6 +76,7 @@ scripts = \
 	scripts/bin2h.sh		\
 	scripts/build-font.sh		\
 	scripts/genhelp.pl		\
+	scripts/genkeybinds.py  \
 	scripts/half2itf.py		\
 	scripts/itcfg.py		\
 	scripts/itf2half.py		\
