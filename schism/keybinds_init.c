@@ -146,110 +146,99 @@ static int keybinds_parse_shortcuts(keybind_bind_t* bind, const char* shortcut)
 
 static void set_shortcut_text(keybind_bind_t* bind)
 {
-	char* out[KEYBINDS_MAX_SHORTCUTS];
+	char* out[KEYBINDS_MAX_SHORTCUTS] = {0};
 
-	for(int i = 0; i < KEYBINDS_MAX_SHORTCUTS; i++) {
-		out[i] = NULL;
-		if(i >= bind->shortcuts_count) continue;
-
+	for(int i = 0; i < KEYBINDS_MAX_SHORTCUTS && i < bind->shortcuts_count; i++) {
 		keybind_shortcut_t* sc = &bind->shortcuts[i];
 
-		const char* ctrl_text = "";
-		const char* alt_text = "";
-		const char* shift_text = "";
+		const char* ctrl_text = (sc->modifier & KMOD_CTRL)
+			? "Ctrl"
+			: (sc->modifier & KMOD_LCTRL)
+				? "LCtrl"
+				: (sc->modifier & KMOD_RCTRL)
+					? "RCtrl"
+					: "";
+		const char* alt_text = (sc->modifier & KMOD_ALT)
+			? "Alt"
+			: (sc->modifier & KMOD_LALT)
+				? "LAlt"
+				: (sc->modifier & KMOD_RALT)
+					? "RAlt"
+					: "";
+		const char* shift_text = (sc->modifier & KMOD_SHIFT)
+			? "Shift"
+			: (sc->modifier & KMOD_LSHIFT)
+				? "LShift"
+				: (sc->modifier & KMOD_RSHIFT)
+					? "RShift"
+					: "";
 
-		if ((sc->modifier & KMOD_LCTRL) && (sc->modifier & KMOD_RCTRL))
-			ctrl_text = "Ctrl-";
-		else if (sc->modifier & KMOD_LCTRL)
-			ctrl_text = "LCtrl-";
-		else if (sc->modifier & KMOD_RCTRL)
-			ctrl_text = "RCtrl-";
+		SDL_Keycode kc = (sc->keycode != SDLK_UNKNOWN)
+			? sc->keycode
+			: (sc->scancode != SDL_SCANCODE_UNKNOWN)
+				? SDL_GetKeyFromScancode(sc->scancode)
+				: SDLK_UNKNOWN;
 
-		if ((sc->modifier & KMOD_LSHIFT) && (sc->modifier & KMOD_RSHIFT))
-			ctrl_text = "Shift-";
-		else if (sc->modifier & KMOD_LSHIFT)
-			ctrl_text = "LShift-";
-		else if (sc->modifier & KMOD_RSHIFT)
-			ctrl_text = "RShift-";
-
-		if ((sc->modifier & KMOD_LALT) && (sc->modifier & KMOD_RALT))
-			ctrl_text = "Alt-";
-		else if (sc->modifier & KMOD_LALT)
-			ctrl_text = "LAlt-";
-		else if (sc->modifier & KMOD_RALT)
-			ctrl_text = "RAlt-";
-
-		char* key_text = NULL;
-
-		if (sc->keycode != SDLK_UNKNOWN) {
-			switch(sc->keycode) {
-			case SDLK_RETURN:
-#ifdef SCHISM_MACOSX
-				key_text = strdup("Return");
-#else
-				key_text = strdup("Enter");
-#endif
-				break;
-			case SDLK_SPACE:
-				key_text = strdup("Spacebar");
-				break;
-			default:
-				key_text = strdup(SDL_GetKeyName(sc->keycode));
-				break;
-			}
-		} else if (sc->scancode != SDL_SCANCODE_UNKNOWN) {
-			switch(sc->scancode) {
-			case SDL_SCANCODE_RETURN:
-				key_text = strdup("Enter");
-				break;
-			case SDL_SCANCODE_SPACE:
-				key_text = strdup("Spacebar");
-				break;
-			default: {
-				SDL_Keycode code = SDL_GetKeyFromScancode(sc->scancode);
-				key_text = strdup(SDL_GetKeyName(code));
-				break;
-			}
-			}
-		} else {
+		if (kc == SDLK_UNKNOWN)
 			continue;
+
+		char *key_text;
+
+		switch(sc->keycode) {
+		case SDLK_RETURN:
+#ifdef SCHISM_MACOSX
+			key_text = strdup("Return");
+#else
+			key_text = strdup("Enter");
+#endif
+			break;
+		case SDLK_EQUALS:
+			key_text = strdup("Equals");
+			break;
+		case SDLK_MINUS:
+			key_text = strdup("Minus");
+			break;
+		case SDLK_SPACE:
+			key_text = strdup("Spacebar");
+			break;
+		default:
+			key_text = strdup(SDL_GetKeyName(sc->keycode));
+			break;
 		}
 
 		int key_text_length = strlen(key_text);
-
-		if (key_text_length == 0)
+		if (!key_text_length)
 			continue;
 
-		char* next_out = STR_CONCAT(4, ctrl_text, alt_text, shift_text, key_text);
-
-		out[i] = next_out;
+		out[i] = STR_IMPLODE(4, "-", ctrl_text, alt_text, shift_text, key_text);
 
 		if(i == 0) {
-			bind->first_shortcut_text = strdup(next_out);
-			bind->first_shortcut_text_parens = STR_CONCAT(3, " (", next_out, ")");
+			bind->first_shortcut_text = strdup(out[i]);
+			bind->first_shortcut_text_parens = STR_CONCAT(3, " (", out[i], ")");
 		}
 
 		free(key_text);
 	}
 
 	bind->shortcut_text = str_implode(KEYBINDS_MAX_SHORTCUTS, ", ", (const char**)out);
-	if(*bind->shortcut_text)
+	if (*bind->shortcut_text)
 		bind->shortcut_text_parens = STR_CONCAT(3, " (", bind->shortcut_text, ")");
 
 	for (int i = 0; i < KEYBINDS_MAX_SHORTCUTS; i++) {
 		if (!out[i])
 			continue;
 
-		char* text = out[i];
+		char *text = out[i];
+
+		puts(text);
 
 		if (text && *text) {
-			char* padded = str_pad_between(text, "", ' ', 18, 1);
+			char* padded = str_pad_end(text, ' ', 18);
 			out[i] = STR_CONCAT(2, "    ", padded);
 			free(padded);
 		}
 
-		if (text)
-			free(text);
+		free(text);
 	}
 
 	char* help_shortcuts = str_implode_free(KEYBINDS_MAX_SHORTCUTS, "\n", out);

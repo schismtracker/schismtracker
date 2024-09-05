@@ -226,10 +226,7 @@ char *keybinds_get_help_text(enum page_numbers page)
 	const char *current_title = NULL;
 	char *out = strdup("");
 
-	for (int i = 0; i < MAX_BINDS; i++) {
-		if (i >= current_binds_size)
-			continue;
-
+	for (int i = 0; i < current_binds_size; i++) {
 		keybind_bind_t* bind = current_binds[i];
 		const char* bind_title = bind->section_info->title;
 		enum page_numbers bind_page = bind->section_info->page;
@@ -242,22 +239,22 @@ char *keybinds_get_help_text(enum page_numbers page)
 				continue;
 		}
 
-		char *strings[2] = { (char *)bind->description, (char *)bind->shortcut_text };
-
 		if (current_title != bind_title) {
-			if (current_title != NULL && bind->section_info == &global_keybinds_list.global_info)
-				out = STR_CONCAT(2, out, "\n \n%\n");
+			if (current_title != NULL && bind->section_info == &global_keybinds_list.global_info) {
+				char *new = STR_CONCAT(2, out, "\n \n%\n");
+				free(out);
+				out = new;
+			}
 
-			char* prev_out = out;
-
-			out = STR_CONCAT(4, out, current_title ? "\n \n  " : "\n  ", (char *)bind_title, "\n");
+			char *new = STR_CONCAT(4, out, (current_title) ? "\n \n  " : "\n  ", (char *)bind_title, "\n");
+			free(out);
+			out = new;
 
 			current_title = bind_title;
-			free(prev_out);
 		}
 
-		char* prev_out = out;
-		out = STR_CONCAT(3, out, (char*)bind->help_text, "\n");
+		char *prev_out = out;
+		out = STR_CONCAT(3, prev_out, (char*)bind->help_text, "\n");
 		free(prev_out);
 	}
 
