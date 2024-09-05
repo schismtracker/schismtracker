@@ -843,7 +843,7 @@ size_t str_count_occurrences(char character, const char *str)
 	return count;
 }
 
-char* str_concat(size_t count, const char **str_array)
+char *str_concat(size_t count, const char **str_array)
 {
 	size_t str_array_lens[count];
 	size_t len;
@@ -869,7 +869,7 @@ char* str_concat(size_t count, const char **str_array)
 	return out;
 }
 
-char* str_concat_free(size_t count, char **str_array)
+char *str_concat_free(size_t count, char **str_array)
 {
 	char* out = str_concat(count, (const char **)str_array);
 
@@ -879,7 +879,7 @@ char* str_concat_free(size_t count, char **str_array)
 	return out;
 }
 
-char* str_implode(size_t count, const char *delim, const char **str_array)
+char *str_implode(size_t count, const char *delim, const char **str_array)
 {
 	const char *str_array_with_delims[count * 2];
 	memset(str_array_with_delims, 0, count * 2);
@@ -901,9 +901,9 @@ char* str_implode(size_t count, const char *delim, const char **str_array)
 	return str_concat(--c, str_array_with_delims);
 }
 
-char* str_implode_free(size_t count, const char *delim, char **str_array)
+char *str_implode_free(size_t count, const char *delim, char **str_array)
 {
-	char* out = str_implode(count, delim, (const char **)str_array);
+	char *out = str_implode(count, delim, (const char **)str_array);
 
 	for (size_t i = 0; i < count; i++)
 		free(str_array[i]);
@@ -911,18 +911,18 @@ char* str_implode_free(size_t count, const char *delim, char **str_array)
 	return out;
 }
 
-char* str_pad_between(const char* str1, const char* str2, char pad, int width, int min_padding)
+char *str_pad_between(const char* str1, const char* str2, unsigned char pad, int width, int min_padding)
 {
 	size_t len1 = strlen(str1), len2 = strlen(str2);
 
 	/* ptrdiff_t is close enough to a signed size_t */
 	ptrdiff_t len_padding = (ptrdiff_t)width - (charset_strlen(str1, CHARSET_UTF8) + charset_strlen(str2, CHARSET_UTF8));
-	len_padding = CLAMP(len_padding, 0, min_padding);
+	len_padding = MAX(len_padding, min_padding);
 
-	char* out = malloc(len1 + len_padding + len2 + 1);
+	char *out = malloc(len1 + len_padding + len2 + 1);
 
 	memcpy(out, str1, len1);
-	memset(out + len1, *(unsigned char*)&pad, len_padding);
+	memset(out + len1, pad, len_padding);
 	memcpy(out + len1 + len_padding, str2, len2);
 
 	out[len1 + len_padding + len2] = '\0';
