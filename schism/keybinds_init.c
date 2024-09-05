@@ -93,7 +93,7 @@ static int keybinds_parse_shortcut(keybind_bind_t* bind, const char* shortcut)
 	for (const char *last_pch = shortcut, *pch = shortcut; pch; last_pch = pch + 1) {
 		pch = strchr(last_pch, '+');
 
-		char *trimmed = (pch) ? strndup(last_pch, pch - last_pch) : strdup(last_pch);
+		char *trimmed = (pch) ? strn_dup(last_pch, pch - last_pch) : str_dup(last_pch);
 		trim_string(trimmed);
 
 		SDL_Keymod mod;
@@ -128,7 +128,7 @@ static int keybinds_parse_shortcuts(keybind_bind_t* bind, const char* shortcut)
 	for (const char *last_pch = shortcut, *pch; ; last_pch = pch + 1) {
 		pch = strchr(last_pch, ',');
 
-		char *shortcut_dup = (pch) ? strndup(last_pch, pch - last_pch) : strdup(last_pch);
+		char *shortcut_dup = (pch) ? strn_dup(last_pch, pch - last_pch) : str_dup(last_pch);
 
 		if (!keybinds_parse_shortcut(bind, shortcut_dup)) {
 			free(shortcut_dup);
@@ -187,22 +187,22 @@ static void set_shortcut_text(keybind_bind_t* bind)
 		switch(sc->keycode) {
 		case SDLK_RETURN:
 #ifdef SCHISM_MACOSX
-			key_text = strdup("Return");
+			key_text = str_dup("Return");
 #else
-			key_text = strdup("Enter");
+			key_text = str_dup("Enter");
 #endif
 			break;
 		case SDLK_EQUALS:
-			key_text = strdup("Equals");
+			key_text = str_dup("Equals");
 			break;
 		case SDLK_MINUS:
-			key_text = strdup("Minus");
+			key_text = str_dup("Minus");
 			break;
 		case SDLK_SPACE:
-			key_text = strdup("Spacebar");
+			key_text = str_dup("Spacebar");
 			break;
 		default:
-			key_text = strdup(SDL_GetKeyName(sc->keycode));
+			key_text = str_dup(SDL_GetKeyName(sc->keycode));
 			break;
 		}
 
@@ -213,7 +213,7 @@ static void set_shortcut_text(keybind_bind_t* bind)
 		out[i] = STR_IMPLODE(4, "-", ctrl_text, alt_text, shift_text, key_text);
 
 		if(i == 0) {
-			bind->first_shortcut_text = strdup(out[i]);
+			bind->first_shortcut_text = str_dup(out[i]);
 			bind->first_shortcut_text_parens = STR_CONCAT(3, " (", out[i], ")");
 		}
 
