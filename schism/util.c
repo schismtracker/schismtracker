@@ -852,7 +852,8 @@ char *str_concat(size_t count, const char **str_array)
 	for (len = 0, i = 0; i < count; i++)
 		len += (str_array_lens[i] = (str_array[i] && *str_array[i]) ? strlen(str_array[i]) : 0);
 
-	if (!len) return strdup("");
+	if (!len)
+		return str_dup("");
 
 	char *out = malloc(len + 1);
 
@@ -895,7 +896,8 @@ char *str_implode(size_t count, const char *delim, const char **str_array)
 	}
 
 	/* welp */
-	if (!c) return strdup("");
+	if (!c)
+		return str_dup("");
 
 	/* decrement c by one so we don't get an extra delim */
 	return str_concat(--c, str_array_with_delims);
