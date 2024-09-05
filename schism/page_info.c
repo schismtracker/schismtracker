@@ -1178,6 +1178,8 @@ static int info_page_handle_key(struct key_event * k)
 		if (selected_window == 0)
 			selected_window = num_windows;
 		selected_window--;
+	} else {
+		return 0;
 	}
 
 	recalculate_windows();
