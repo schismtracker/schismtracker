@@ -31,1419 +31,1083 @@
 int keybinds_parse_scancode(const char *name, SDL_Scancode *ret)
 {
 	char *casefolded_name = charset_case_fold(name, CHARSET_UTF8);
-	switch (crc32b(casefolded_name)) {
+	uint32_t crc = crc32b(casefolded_name);
+	free(casefolded_name);
+
+	switch (crc) {
 	case 0x2c8449ee: /* us_a */
 		*ret = SDL_SCANCODE_A;
-		free(casefolded_name);
 		return 1;
 	case 0xb58d1854: /* us_b */
 		*ret = SDL_SCANCODE_B;
-		free(casefolded_name);
 		return 1;
 	case 0xc28a28c2: /* us_c */
 		*ret = SDL_SCANCODE_C;
-		free(casefolded_name);
 		return 1;
 	case 0x5ceebd61: /* us_d */
 		*ret = SDL_SCANCODE_D;
-		free(casefolded_name);
 		return 1;
 	case 0x2be98df7: /* us_e */
 		*ret = SDL_SCANCODE_E;
-		free(casefolded_name);
 		return 1;
 	case 0xb2e0dc4d: /* us_f */
 		*ret = SDL_SCANCODE_F;
-		free(casefolded_name);
 		return 1;
 	case 0xc5e7ecdb: /* us_g */
 		*ret = SDL_SCANCODE_G;
-		free(casefolded_name);
 		return 1;
 	case 0x5558f14a: /* us_h */
 		*ret = SDL_SCANCODE_H;
-		free(casefolded_name);
 		return 1;
 	case 0x225fc1dc: /* us_i */
 		*ret = SDL_SCANCODE_I;
-		free(casefolded_name);
 		return 1;
 	case 0xbb569066: /* us_j */
 		*ret = SDL_SCANCODE_J;
-		free(casefolded_name);
 		return 1;
 	case 0xcc51a0f0: /* us_k */
 		*ret = SDL_SCANCODE_K;
-		free(casefolded_name);
 		return 1;
 	case 0x52353553: /* us_l */
 		*ret = SDL_SCANCODE_L;
-		free(casefolded_name);
 		return 1;
 	case 0x253205c5: /* us_m */
 		*ret = SDL_SCANCODE_M;
-		free(casefolded_name);
 		return 1;
 	case 0xbc3b547f: /* us_n */
 		*ret = SDL_SCANCODE_N;
-		free(casefolded_name);
 		return 1;
 	case 0xcb3c64e9: /* us_o */
 		*ret = SDL_SCANCODE_O;
-		free(casefolded_name);
 		return 1;
 	case 0x4634691c: /* us_p */
 		*ret = SDL_SCANCODE_P;
-		free(casefolded_name);
 		return 1;
 	case 0x3133598a: /* us_q */
 		*ret = SDL_SCANCODE_Q;
-		free(casefolded_name);
 		return 1;
 	case 0xa83a0830: /* us_r */
 		*ret = SDL_SCANCODE_R;
-		free(casefolded_name);
 		return 1;
 	case 0xdf3d38a6: /* us_s */
 		*ret = SDL_SCANCODE_S;
-		free(casefolded_name);
 		return 1;
 	case 0x4159ad05: /* us_t */
 		*ret = SDL_SCANCODE_T;
-		free(casefolded_name);
 		return 1;
 	case 0x365e9d93: /* us_u */
 		*ret = SDL_SCANCODE_U;
-		free(casefolded_name);
 		return 1;
 	case 0xaf57cc29: /* us_v */
 		*ret = SDL_SCANCODE_V;
-		free(casefolded_name);
 		return 1;
 	case 0xd850fcbf: /* us_w */
 		*ret = SDL_SCANCODE_W;
-		free(casefolded_name);
 		return 1;
 	case 0x48efe12e: /* us_x */
 		*ret = SDL_SCANCODE_X;
-		free(casefolded_name);
 		return 1;
 	case 0x3fe8d1b8: /* us_y */
 		*ret = SDL_SCANCODE_Y;
-		free(casefolded_name);
 		return 1;
 	case 0xa6e18002: /* us_z */
 		*ret = SDL_SCANCODE_Z;
-		free(casefolded_name);
 		return 1;
 	case 0x47ef181a: /* us_1 */
 		*ret = SDL_SCANCODE_1;
-		free(casefolded_name);
 		return 1;
 	case 0xdee649a0: /* us_2 */
 		*ret = SDL_SCANCODE_2;
-		free(casefolded_name);
 		return 1;
 	case 0xa9e17936: /* us_3 */
 		*ret = SDL_SCANCODE_3;
-		free(casefolded_name);
 		return 1;
 	case 0x3785ec95: /* us_4 */
 		*ret = SDL_SCANCODE_4;
-		free(casefolded_name);
 		return 1;
 	case 0x4082dc03: /* us_5 */
 		*ret = SDL_SCANCODE_5;
-		free(casefolded_name);
 		return 1;
 	case 0xd98b8db9: /* us_6 */
 		*ret = SDL_SCANCODE_6;
-		free(casefolded_name);
 		return 1;
 	case 0xae8cbd2f: /* us_7 */
 		*ret = SDL_SCANCODE_7;
-		free(casefolded_name);
 		return 1;
 	case 0x3e33a0be: /* us_8 */
 		*ret = SDL_SCANCODE_8;
-		free(casefolded_name);
 		return 1;
 	case 0x49349028: /* us_9 */
 		*ret = SDL_SCANCODE_9;
-		free(casefolded_name);
 		return 1;
 	case 0x30e8288c: /* us_0 */
 		*ret = SDL_SCANCODE_0;
-		free(casefolded_name);
 		return 1;
 	case 0x8b033246: /* us_f1 */
 		*ret = SDL_SCANCODE_F1;
-		free(casefolded_name);
 		return 1;
 	case 0x120a63fc: /* us_f2 */
 		*ret = SDL_SCANCODE_F2;
-		free(casefolded_name);
 		return 1;
 	case 0x650d536a: /* us_f3 */
 		*ret = SDL_SCANCODE_F3;
-		free(casefolded_name);
 		return 1;
 	case 0xfb69c6c9: /* us_f4 */
 		*ret = SDL_SCANCODE_F4;
-		free(casefolded_name);
 		return 1;
 	case 0x8c6ef65f: /* us_f5 */
 		*ret = SDL_SCANCODE_F5;
-		free(casefolded_name);
 		return 1;
 	case 0x1567a7e5: /* us_f6 */
 		*ret = SDL_SCANCODE_F6;
-		free(casefolded_name);
 		return 1;
 	case 0x62609773: /* us_f7 */
 		*ret = SDL_SCANCODE_F7;
-		free(casefolded_name);
 		return 1;
 	case 0xf2df8ae2: /* us_f8 */
 		*ret = SDL_SCANCODE_F8;
-		free(casefolded_name);
 		return 1;
 	case 0x85d8ba74: /* us_f9 */
 		*ret = SDL_SCANCODE_F9;
-		free(casefolded_name);
 		return 1;
 	case 0x6bef38b6: /* us_f10 */
 		*ret = SDL_SCANCODE_F10;
-		free(casefolded_name);
 		return 1;
 	case 0x1ce80820: /* us_f11 */
 		*ret = SDL_SCANCODE_F11;
-		free(casefolded_name);
 		return 1;
 	case 0x85e1599a: /* us_f12 */
 		*ret = SDL_SCANCODE_F12;
-		free(casefolded_name);
 		return 1;
 	case 0xbd2303b5: /* us_return */
 		*ret = SDL_SCANCODE_RETURN;
-		free(casefolded_name);
 		return 1;
 	case 0xde98077a: /* us_enter */
 		*ret = SDL_SCANCODE_RETURN;
-		free(casefolded_name);
 		return 1;
 	case 0x3f558c34: /* us_escape */
 		*ret = SDL_SCANCODE_ESCAPE;
-		free(casefolded_name);
 		return 1;
 	case 0xb10a4f7d: /* us_backspace */
 		*ret = SDL_SCANCODE_BACKSPACE;
-		free(casefolded_name);
 		return 1;
 	case 0x4b932224: /* us_tab */
 		*ret = SDL_SCANCODE_TAB;
-		free(casefolded_name);
 		return 1;
 	case 0x4e9a062e: /* us_space */
 		*ret = SDL_SCANCODE_SPACE;
-		free(casefolded_name);
 		return 1;
 	case 0x5f4b7063: /* us_minus */
 		*ret = SDL_SCANCODE_MINUS;
-		free(casefolded_name);
 		return 1;
 	case 0x22443f1b: /* us_equals */
 		*ret = SDL_SCANCODE_EQUALS;
-		free(casefolded_name);
 		return 1;
 	case 0x40a72447: /* us_leftbracket */
 		*ret = SDL_SCANCODE_LEFTBRACKET;
-		free(casefolded_name);
 		return 1;
 	case 0x99ecfe03: /* us_rightbracket */
 		*ret = SDL_SCANCODE_RIGHTBRACKET;
-		free(casefolded_name);
 		return 1;
 	case 0x9fb6c9b6: /* us_backslash */
 		*ret = SDL_SCANCODE_BACKSLASH;
-		free(casefolded_name);
 		return 1;
 	case 0xc829187f: /* us_semicolon */
 		*ret = SDL_SCANCODE_SEMICOLON;
-		free(casefolded_name);
 		return 1;
 	case 0xbe1920cc: /* us_apostrophe */
 		*ret = SDL_SCANCODE_APOSTROPHE;
-		free(casefolded_name);
 		return 1;
 	case 0x464619f3: /* us_grave */
 		*ret = SDL_SCANCODE_GRAVE;
-		free(casefolded_name);
 		return 1;
 	case 0xb6f4c696: /* us_comma */
 		*ret = SDL_SCANCODE_COMMA;
-		free(casefolded_name);
 		return 1;
 	case 0xdf052274: /* us_period */
 		*ret = SDL_SCANCODE_PERIOD;
-		free(casefolded_name);
 		return 1;
 	case 0x602680e5: /* us_slash */
 		*ret = SDL_SCANCODE_SLASH;
-		free(casefolded_name);
 		return 1;
 	case 0x3459cca4: /* us_capslock */
 		*ret = SDL_SCANCODE_CAPSLOCK;
-		free(casefolded_name);
 		return 1;
 	case 0xb930c753: /* us_printscreen */
 		*ret = SDL_SCANCODE_PRINTSCREEN;
-		free(casefolded_name);
 		return 1;
 	case 0x7e19cb97: /* us_scrolllock */
 		*ret = SDL_SCANCODE_SCROLLLOCK;
-		free(casefolded_name);
 		return 1;
 	case 0xb07255f9: /* us_pause */
 		*ret = SDL_SCANCODE_PAUSE;
-		free(casefolded_name);
 		return 1;
 	case 0xdf71a24f: /* us_insert */
 		*ret = SDL_SCANCODE_INSERT;
-		free(casefolded_name);
 		return 1;
 	case 0x20af403d: /* us_delete */
 		*ret = SDL_SCANCODE_DELETE;
-		free(casefolded_name);
 		return 1;
 	case 0x445bd44b: /* us_home */
 		*ret = SDL_SCANCODE_HOME;
-		free(casefolded_name);
 		return 1;
 	case 0x388c5299: /* us_end */
 		*ret = SDL_SCANCODE_END;
-		free(casefolded_name);
 		return 1;
 	case 0xeeaff4db: /* us_pageup */
 		*ret = SDL_SCANCODE_PAGEUP;
-		free(casefolded_name);
 		return 1;
 	case 0xac6ea158: /* us_pagedown */
 		*ret = SDL_SCANCODE_PAGEDOWN;
-		free(casefolded_name);
 		return 1;
 	case 0xd322b200: /* us_right */
 		*ret = SDL_SCANCODE_RIGHT;
-		free(casefolded_name);
 		return 1;
 	case 0x4fea3ff3: /* us_left */
 		*ret = SDL_SCANCODE_LEFT;
-		free(casefolded_name);
 		return 1;
 	case 0x297248a0: /* us_down */
 		*ret = SDL_SCANCODE_DOWN;
-		free(casefolded_name);
 		return 1;
 	case 0xeb3702d2: /* us_up */
 		*ret = SDL_SCANCODE_UP;
-		free(casefolded_name);
 		return 1;
 	case 0x7891b220: /* us_numlockclear */
 		*ret = SDL_SCANCODE_NUMLOCKCLEAR;
-		free(casefolded_name);
 		return 1;
 	case 0x7d44a2e0: /* us_kp_divide */
 		*ret = SDL_SCANCODE_KP_DIVIDE;
-		free(casefolded_name);
 		return 1;
 	case 0xaa6595b9: /* us_kp_multiply */
 		*ret = SDL_SCANCODE_KP_MULTIPLY;
-		free(casefolded_name);
 		return 1;
 	case 0x36d769ef: /* us_kp_minus */
 		*ret = SDL_SCANCODE_KP_MINUS;
-		free(casefolded_name);
 		return 1;
 	case 0x3fa44af9: /* us_kp_plus */
 		*ret = SDL_SCANCODE_KP_PLUS;
-		free(casefolded_name);
 		return 1;
 	case 0xb7041ef6: /* us_kp_enter */
 		*ret = SDL_SCANCODE_KP_ENTER;
-		free(casefolded_name);
 		return 1;
 	case 0xc0e25e74: /* us_kp_1 */
 		*ret = SDL_SCANCODE_KP_1;
-		free(casefolded_name);
 		return 1;
 	case 0x59eb0fce: /* us_kp_2 */
 		*ret = SDL_SCANCODE_KP_2;
-		free(casefolded_name);
 		return 1;
 	case 0x2eec3f58: /* us_kp_3 */
 		*ret = SDL_SCANCODE_KP_3;
-		free(casefolded_name);
 		return 1;
 	case 0xb088aafb: /* us_kp_4 */
 		*ret = SDL_SCANCODE_KP_4;
-		free(casefolded_name);
 		return 1;
 	case 0xc78f9a6d: /* us_kp_5 */
 		*ret = SDL_SCANCODE_KP_5;
-		free(casefolded_name);
 		return 1;
 	case 0x5e86cbd7: /* us_kp_6 */
 		*ret = SDL_SCANCODE_KP_6;
-		free(casefolded_name);
 		return 1;
 	case 0x2981fb41: /* us_kp_7 */
 		*ret = SDL_SCANCODE_KP_7;
-		free(casefolded_name);
 		return 1;
 	case 0xb93ee6d0: /* us_kp_8 */
 		*ret = SDL_SCANCODE_KP_8;
-		free(casefolded_name);
 		return 1;
 	case 0xce39d646: /* us_kp_9 */
 		*ret = SDL_SCANCODE_KP_9;
-		free(casefolded_name);
 		return 1;
 	case 0xb7e56ee2: /* us_kp_0 */
 		*ret = SDL_SCANCODE_KP_0;
-		free(casefolded_name);
 		return 1;
 	case 0x3b627166: /* us_kp_period */
 		*ret = SDL_SCANCODE_KP_PERIOD;
-		free(casefolded_name);
 		return 1;
 	case 0xc6236c09: /* us_kp_equals */
 		*ret = SDL_SCANCODE_KP_EQUALS;
-		free(casefolded_name);
 		return 1;
 	default:
 		break;
 	}
 
 	*ret = SDL_SCANCODE_UNKNOWN;
-	free(casefolded_name);
 	return 0;
 }
 
 int keybinds_parse_modkey(const char *name, SDL_Keymod *ret)
 {
 	char *casefolded_name = charset_case_fold(name, CHARSET_UTF8);
-	switch (crc32b(casefolded_name)) {
+	uint32_t crc = crc32b(casefolded_name);
+	free(casefolded_name);
+
+	switch (crc) {
 	case 0x0222717a: /* ctrl */
 		*ret = KMOD_CTRL;
-		free(casefolded_name);
 		return 1;
 	case 0xb986c337: /* lctrl */
 		*ret = KMOD_LCTRL;
-		free(casefolded_name);
 		return 1;
 	case 0x6656ead4: /* rctrl */
 		*ret = KMOD_RCTRL;
-		free(casefolded_name);
 		return 1;
 	case 0xa50b3b45: /* shift */
 		*ret = KMOD_SHIFT;
-		free(casefolded_name);
 		return 1;
 	case 0xaddda2da: /* lshift */
 		*ret = KMOD_LSHIFT;
-		free(casefolded_name);
 		return 1;
 	case 0x9401c131: /* rshift */
 		*ret = KMOD_RSHIFT;
-		free(casefolded_name);
 		return 1;
 	case 0x2874e98b: /* alt */
 		*ret = KMOD_ALT;
-		free(casefolded_name);
 		return 1;
 	case 0x8781a73e: /* lalt */
 		*ret = KMOD_LALT;
-		free(casefolded_name);
 		return 1;
 	case 0x37478792: /* ralt */
 		*ret = KMOD_RALT;
-		free(casefolded_name);
 		return 1;
 	default:
 		break;
 	}
 
 	*ret = KMOD_NONE;
-	free(casefolded_name);
 	return 0;
 }
 
 int keybinds_parse_keycode(const char *name, SDL_Keycode *ret)
 {
 	char *casefolded_name = charset_case_fold(name, CHARSET_UTF8);
-	switch (crc32b(casefolded_name)) {
+	uint32_t crc = crc32b(casefolded_name);
+	free(casefolded_name);
+
+	switch (crc) {
 	case 0xa79e3f0f: /* return */
 		*ret = SDLK_RETURN;
-		free(casefolded_name);
 		return 1;
 	case 0xb970c06e: /* enter */
 		*ret = SDLK_RETURN;
-		free(casefolded_name);
 		return 1;
 	case 0x25e8b08e: /* escape */
 		*ret = SDLK_ESCAPE;
-		free(casefolded_name);
 		return 1;
 	case 0xbfe0826f: /* backspace */
 		*ret = SDLK_BACKSPACE;
-		free(casefolded_name);
 		return 1;
 	case 0x73e3430c: /* tab */
 		*ret = SDLK_TAB;
-		free(casefolded_name);
 		return 1;
 	case 0x2972c13a: /* space */
 		*ret = SDLK_SPACE;
-		free(casefolded_name);
 		return 1;
 	case 0xc2d81aaa: /* exclaim */
 		*ret = SDLK_EXCLAIM;
-		free(casefolded_name);
 		return 1;
 	case 0x1e910af0: /* quotedbl */
 		*ret = SDLK_QUOTEDBL;
-		free(casefolded_name);
 		return 1;
 	case 0xd1b862b8: /* hash */
 		*ret = SDLK_HASH;
-		free(casefolded_name);
 		return 1;
 	case 0x61b68039: /* percent */
 		*ret = SDLK_PERCENT;
-		free(casefolded_name);
 		return 1;
 	case 0xcb153c7a: /* dollar */
 		*ret = SDLK_DOLLAR;
-		free(casefolded_name);
 		return 1;
 	case 0x50828443: /* ampersand */
 		*ret = SDLK_AMPERSAND;
-		free(casefolded_name);
 		return 1;
 	case 0x6b71cbf4: /* quote */
 		*ret = SDLK_QUOTE;
-		free(casefolded_name);
 		return 1;
 	case 0x233de1e3: /* leftparen */
 		*ret = SDLK_LEFTPAREN;
-		free(casefolded_name);
 		return 1;
 	case 0x8c8ff1f1: /* rightparen */
 		*ret = SDLK_RIGHTPAREN;
-		free(casefolded_name);
 		return 1;
 	case 0x3dc0084d: /* asterisk */
 		*ret = SDLK_ASTERISK;
-		free(casefolded_name);
 		return 1;
 	case 0x90f2e0f1: /* plus */
 		*ret = SDLK_PLUS;
-		free(casefolded_name);
 		return 1;
 	case 0xd11c0182: /* comma */
 		*ret = SDLK_COMMA;
-		free(casefolded_name);
 		return 1;
 	case 0x38a3b777: /* minus */
 		*ret = SDLK_MINUS;
-		free(casefolded_name);
 		return 1;
 	case 0xc5b81ece: /* period */
 		*ret = SDLK_PERIOD;
-		free(casefolded_name);
 		return 1;
 	case 0x07ce47f1: /* slash */
 		*ret = SDLK_SLASH;
-		free(casefolded_name);
 		return 1;
 	case 0xf4dbdf21: /* 0 */
 		*ret = SDLK_0;
-		free(casefolded_name);
 		return 1;
 	case 0x83dcefb7: /* 1 */
 		*ret = SDLK_1;
-		free(casefolded_name);
 		return 1;
 	case 0x1ad5be0d: /* 2 */
 		*ret = SDLK_2;
-		free(casefolded_name);
 		return 1;
 	case 0x6dd28e9b: /* 3 */
 		*ret = SDLK_3;
-		free(casefolded_name);
 		return 1;
 	case 0xf3b61b38: /* 4 */
 		*ret = SDLK_4;
-		free(casefolded_name);
 		return 1;
 	case 0x84b12bae: /* 5 */
 		*ret = SDLK_5;
-		free(casefolded_name);
 		return 1;
 	case 0x1db87a14: /* 6 */
 		*ret = SDLK_6;
-		free(casefolded_name);
 		return 1;
 	case 0x6abf4a82: /* 7 */
 		*ret = SDLK_7;
-		free(casefolded_name);
 		return 1;
 	case 0xfa005713: /* 8 */
 		*ret = SDLK_8;
-		free(casefolded_name);
 		return 1;
 	case 0x8d076785: /* 9 */
 		*ret = SDLK_9;
-		free(casefolded_name);
 		return 1;
 	case 0x725714a6: /* colon */
 		*ret = SDLK_COLON;
-		free(casefolded_name);
 		return 1;
 	case 0xc6c3d56d: /* semicolon */
 		*ret = SDLK_SEMICOLON;
-		free(casefolded_name);
 		return 1;
 	case 0xd3b694df: /* less */
 		*ret = SDLK_LESS;
-		free(casefolded_name);
 		return 1;
 	case 0x38f903a1: /* equals */
 		*ret = SDLK_EQUALS;
-		free(casefolded_name);
 		return 1;
 	case 0xb2a626fa: /* greater */
 		*ret = SDLK_GREATER;
-		free(casefolded_name);
 		return 1;
 	case 0xb6f7494e: /* question */
 		*ret = SDLK_QUESTION;
-		free(casefolded_name);
 		return 1;
 	case 0x6a57fd3c: /* at */
 		*ret = SDLK_AT;
-		free(casefolded_name);
 		return 1;
 	case 0xdd86e473: /* leftbracket */
 		*ret = SDLK_LEFTBRACKET;
-		free(casefolded_name);
 		return 1;
 	case 0x915c04a4: /* backslash */
 		*ret = SDLK_BACKSLASH;
-		free(casefolded_name);
 		return 1;
 	case 0xb8c52b76: /* rightbracket */
 		*ret = SDLK_RIGHTBRACKET;
-		free(casefolded_name);
 		return 1;
 	case 0x83bdfc1f: /* caret */
 		*ret = SDLK_CARET;
-		free(casefolded_name);
 		return 1;
 	case 0x5835dd19: /* underscore */
 		*ret = SDLK_UNDERSCORE;
-		free(casefolded_name);
 		return 1;
 	case 0xfde388a1: /* backquote */
 		*ret = SDLK_BACKQUOTE;
-		free(casefolded_name);
 		return 1;
 	case 0xe8b7be43: /* a */
 		*ret = SDLK_a;
-		free(casefolded_name);
 		return 1;
 	case 0x71beeff9: /* b */
 		*ret = SDLK_b;
-		free(casefolded_name);
 		return 1;
 	case 0x06b9df6f: /* c */
 		*ret = SDLK_c;
-		free(casefolded_name);
 		return 1;
 	case 0x98dd4acc: /* d */
 		*ret = SDLK_d;
-		free(casefolded_name);
 		return 1;
 	case 0xefda7a5a: /* e */
 		*ret = SDLK_e;
-		free(casefolded_name);
 		return 1;
 	case 0x76d32be0: /* f */
 		*ret = SDLK_f;
-		free(casefolded_name);
 		return 1;
 	case 0x01d41b76: /* g */
 		*ret = SDLK_g;
-		free(casefolded_name);
 		return 1;
 	case 0x916b06e7: /* h */
 		*ret = SDLK_h;
-		free(casefolded_name);
 		return 1;
 	case 0xe66c3671: /* i */
 		*ret = SDLK_i;
-		free(casefolded_name);
 		return 1;
 	case 0x7f6567cb: /* j */
 		*ret = SDLK_j;
-		free(casefolded_name);
 		return 1;
 	case 0x0862575d: /* k */
 		*ret = SDLK_k;
-		free(casefolded_name);
 		return 1;
 	case 0x9606c2fe: /* l */
 		*ret = SDLK_l;
-		free(casefolded_name);
 		return 1;
 	case 0xe101f268: /* m */
 		*ret = SDLK_m;
-		free(casefolded_name);
 		return 1;
 	case 0x7808a3d2: /* n */
 		*ret = SDLK_n;
-		free(casefolded_name);
 		return 1;
 	case 0x0f0f9344: /* o */
 		*ret = SDLK_o;
-		free(casefolded_name);
 		return 1;
 	case 0x82079eb1: /* p */
 		*ret = SDLK_p;
-		free(casefolded_name);
 		return 1;
 	case 0xf500ae27: /* q */
 		*ret = SDLK_q;
-		free(casefolded_name);
 		return 1;
 	case 0x6c09ff9d: /* r */
 		*ret = SDLK_r;
-		free(casefolded_name);
 		return 1;
 	case 0x1b0ecf0b: /* s */
 		*ret = SDLK_s;
-		free(casefolded_name);
 		return 1;
 	case 0x856a5aa8: /* t */
 		*ret = SDLK_t;
-		free(casefolded_name);
 		return 1;
 	case 0xf26d6a3e: /* u */
 		*ret = SDLK_u;
-		free(casefolded_name);
 		return 1;
 	case 0x6b643b84: /* v */
 		*ret = SDLK_v;
-		free(casefolded_name);
 		return 1;
 	case 0x1c630b12: /* w */
 		*ret = SDLK_w;
-		free(casefolded_name);
 		return 1;
 	case 0x8cdc1683: /* x */
 		*ret = SDLK_x;
-		free(casefolded_name);
 		return 1;
 	case 0xfbdb2615: /* y */
 		*ret = SDLK_y;
-		free(casefolded_name);
 		return 1;
 	case 0x62d277af: /* z */
 		*ret = SDLK_z;
-		free(casefolded_name);
 		return 1;
 	case 0x051cecac: /* capslock */
 		*ret = SDLK_CAPSLOCK;
-		free(casefolded_name);
 		return 1;
 	case 0x23a0dee4: /* f1 */
 		*ret = SDLK_F1;
-		free(casefolded_name);
 		return 1;
 	case 0xbaa98f5e: /* f2 */
 		*ret = SDLK_F2;
-		free(casefolded_name);
 		return 1;
 	case 0xcdaebfc8: /* f3 */
 		*ret = SDLK_F3;
-		free(casefolded_name);
 		return 1;
 	case 0x53ca2a6b: /* f4 */
 		*ret = SDLK_F4;
-		free(casefolded_name);
 		return 1;
 	case 0x24cd1afd: /* f5 */
 		*ret = SDLK_F5;
-		free(casefolded_name);
 		return 1;
 	case 0xbdc44b47: /* f6 */
 		*ret = SDLK_F6;
-		free(casefolded_name);
 		return 1;
 	case 0xcac37bd1: /* f7 */
 		*ret = SDLK_F7;
-		free(casefolded_name);
 		return 1;
 	case 0x5a7c6640: /* f8 */
 		*ret = SDLK_F8;
-		free(casefolded_name);
 		return 1;
 	case 0x2d7b56d6: /* f9 */
 		*ret = SDLK_F9;
-		free(casefolded_name);
 		return 1;
 	case 0x539f599e: /* f10 */
 		*ret = SDLK_F10;
-		free(casefolded_name);
 		return 1;
 	case 0x24986908: /* f11 */
 		*ret = SDLK_F11;
-		free(casefolded_name);
 		return 1;
 	case 0xbd9138b2: /* f12 */
 		*ret = SDLK_F12;
-		free(casefolded_name);
 		return 1;
 	case 0x24110767: /* printscreen */
 		*ret = SDLK_PRINTSCREEN;
-		free(casefolded_name);
 		return 1;
 	case 0x8dae5012: /* scrolllock */
 		*ret = SDLK_SCROLLLOCK;
-		free(casefolded_name);
 		return 1;
 	case 0xd79a92ed: /* pause */
 		*ret = SDLK_PAUSE;
-		free(casefolded_name);
 		return 1;
 	case 0xc5cc9ef5: /* insert */
 		*ret = SDLK_INSERT;
-		free(casefolded_name);
 		return 1;
 	case 0x71d60cd0: /* home */
 		*ret = SDLK_HOME;
-		free(casefolded_name);
 		return 1;
 	case 0xf412c861: /* pageup */
 		*ret = SDLK_PAGEUP;
-		free(casefolded_name);
 		return 1;
 	case 0x3a127c87: /* delete */
 		*ret = SDLK_DELETE;
-		free(casefolded_name);
 		return 1;
 	case 0x00fc33b1: /* end */
 		*ret = SDLK_END;
-		free(casefolded_name);
 		return 1;
 	case 0x9d2b8150: /* pagedown */
 		*ret = SDLK_PAGEDOWN;
-		free(casefolded_name);
 		return 1;
 	case 0xb4ca7514: /* right */
 		*ret = SDLK_RIGHT;
-		free(casefolded_name);
 		return 1;
 	case 0x7a67e768: /* left */
 		*ret = SDLK_LEFT;
-		free(casefolded_name);
 		return 1;
 	case 0x1cff903b: /* down */
 		*ret = SDLK_DOWN;
-		free(casefolded_name);
 		return 1;
 	case 0x4394ee70: /* up */
 		*ret = SDLK_UP;
-		free(casefolded_name);
 		return 1;
 	case 0x59b86755: /* numlockclear */
 		*ret = SDLK_NUMLOCKCLEAR;
-		free(casefolded_name);
 		return 1;
 	case 0x73ae6ff2: /* kp_divide */
 		*ret = SDLK_KP_DIVIDE;
-		free(casefolded_name);
 		return 1;
 	case 0x3744558d: /* kp_multiply */
 		*ret = SDLK_KP_MULTIPLY;
-		free(casefolded_name);
 		return 1;
 	case 0x079249e7: /* kp_minus */
 		*ret = SDLK_KP_MINUS;
-		free(casefolded_name);
 		return 1;
 	case 0x140aad57: /* kp_plus */
 		*ret = SDLK_KP_PLUS;
-		free(casefolded_name);
 		return 1;
 	case 0x86413efe: /* kp_enter */
 		*ret = SDLK_KP_ENTER;
-		free(casefolded_name);
 		return 1;
 	case 0xf56f86ef: /* kp_1 */
 		*ret = SDLK_KP_1;
-		free(casefolded_name);
 		return 1;
 	case 0x6c66d755: /* kp_2 */
 		*ret = SDLK_KP_2;
-		free(casefolded_name);
 		return 1;
 	case 0x1b61e7c3: /* kp_3 */
 		*ret = SDLK_KP_3;
-		free(casefolded_name);
 		return 1;
 	case 0x85057260: /* kp_4 */
 		*ret = SDLK_KP_4;
-		free(casefolded_name);
 		return 1;
 	case 0xf20242f6: /* kp_5 */
 		*ret = SDLK_KP_5;
-		free(casefolded_name);
 		return 1;
 	case 0x6b0b134c: /* kp_6 */
 		*ret = SDLK_KP_6;
-		free(casefolded_name);
 		return 1;
 	case 0x1c0c23da: /* kp_7 */
 		*ret = SDLK_KP_7;
-		free(casefolded_name);
 		return 1;
 	case 0x8cb33e4b: /* kp_8 */
 		*ret = SDLK_KP_8;
-		free(casefolded_name);
 		return 1;
 	case 0xfbb40edd: /* kp_9 */
 		*ret = SDLK_KP_9;
-		free(casefolded_name);
 		return 1;
 	case 0x8268b679: /* kp_0 */
 		*ret = SDLK_KP_0;
-		free(casefolded_name);
 		return 1;
 	case 0x3588bc74: /* kp_period */
 		*ret = SDLK_KP_PERIOD;
-		free(casefolded_name);
 		return 1;
 	case 0xa45bddc1: /* application */
 		*ret = SDLK_APPLICATION;
-		free(casefolded_name);
 		return 1;
 	case 0xab8a01a0: /* power */
 		*ret = SDLK_POWER;
-		free(casefolded_name);
 		return 1;
 	case 0xc8c9a11b: /* kp_equals */
 		*ret = SDLK_KP_EQUALS;
-		free(casefolded_name);
 		return 1;
 	case 0xca960824: /* f13 */
 		*ret = SDLK_F13;
-		free(casefolded_name);
 		return 1;
 	case 0x54f29d87: /* f14 */
 		*ret = SDLK_F14;
-		free(casefolded_name);
 		return 1;
 	case 0x23f5ad11: /* f15 */
 		*ret = SDLK_F15;
-		free(casefolded_name);
 		return 1;
 	case 0xbafcfcab: /* f16 */
 		*ret = SDLK_F16;
-		free(casefolded_name);
 		return 1;
 	case 0xcdfbcc3d: /* f17 */
 		*ret = SDLK_F17;
-		free(casefolded_name);
 		return 1;
 	case 0x5d44d1ac: /* f18 */
 		*ret = SDLK_F18;
-		free(casefolded_name);
 		return 1;
 	case 0x2a43e13a: /* f19 */
 		*ret = SDLK_F19;
-		free(casefolded_name);
 		return 1;
 	case 0x78b20a5d: /* f20 */
 		*ret = SDLK_F20;
-		free(casefolded_name);
 		return 1;
 	case 0x0fb53acb: /* f21 */
 		*ret = SDLK_F21;
-		free(casefolded_name);
 		return 1;
 	case 0x96bc6b71: /* f22 */
 		*ret = SDLK_F22;
-		free(casefolded_name);
 		return 1;
 	case 0xe1bb5be7: /* f23 */
 		*ret = SDLK_F23;
-		free(casefolded_name);
 		return 1;
 	case 0x7fdfce44: /* f24 */
 		*ret = SDLK_F24;
-		free(casefolded_name);
 		return 1;
 	case 0xff6310de: /* execute */
 		*ret = SDLK_EXECUTE;
-		free(casefolded_name);
 		return 1;
 	case 0x08875cac: /* help */
 		*ret = SDLK_HELP;
-		free(casefolded_name);
 		return 1;
 	case 0x7d053a93: /* menu */
 		*ret = SDLK_MENU;
-		free(casefolded_name);
 		return 1;
 	case 0x4bf2eac0: /* select */
 		*ret = SDLK_SELECT;
-		free(casefolded_name);
 		return 1;
 	case 0xb95616b6: /* stop */
 		*ret = SDLK_STOP;
-		free(casefolded_name);
 		return 1;
 	case 0x93a15bfc: /* again */
 		*ret = SDLK_AGAIN;
-		free(casefolded_name);
 		return 1;
 	case 0xe370bbf2: /* undo */
 		*ret = SDLK_UNDO;
-		free(casefolded_name);
 		return 1;
 	case 0xb0f094fd: /* cut */
 		*ret = SDLK_CUT;
-		free(casefolded_name);
 		return 1;
 	case 0x4dbabb82: /* copy */
 		*ret = SDLK_COPY;
-		free(casefolded_name);
 		return 1;
 	case 0x9c567898: /* paste */
 		*ret = SDLK_PASTE;
-		free(casefolded_name);
 		return 1;
 	case 0xc9ae6404: /* find */
 		*ret = SDLK_FIND;
-		free(casefolded_name);
 		return 1;
 	case 0xccb9735c: /* mute */
 		*ret = SDLK_MUTE;
-		free(casefolded_name);
 		return 1;
 	case 0xb9fa0176: /* volumeup */
 		*ret = SDLK_VOLUMEUP;
-		free(casefolded_name);
 		return 1;
 	case 0x7a10323a: /* volumedown */
 		*ret = SDLK_VOLUMEDOWN;
-		free(casefolded_name);
 		return 1;
 	case 0xee2dff12: /* kp_comma */
 		*ret = SDLK_KP_COMMA;
-		free(casefolded_name);
 		return 1;
 	case 0xbebdc5fb: /* kp_equalsas400 */
 		*ret = SDLK_KP_EQUALSAS400;
-		free(casefolded_name);
 		return 1;
 	case 0x45fd98d5: /* alterase */
 		*ret = SDLK_ALTERASE;
-		free(casefolded_name);
 		return 1;
 	case 0xd9c13176: /* sysreq */
 		*ret = SDLK_SYSREQ;
-		free(casefolded_name);
 		return 1;
 	case 0x5616c572: /* cancel */
 		*ret = SDLK_CANCEL;
-		free(casefolded_name);
 		return 1;
 	case 0xe5b1f106: /* clear */
 		*ret = SDLK_CLEAR;
-		free(casefolded_name);
 		return 1;
 	case 0xe5aee812: /* prior */
 		*ret = SDLK_PRIOR;
-		free(casefolded_name);
 		return 1;
 	case 0x8acd3da3: /* return2 */
 		*ret = SDLK_RETURN2;
-		free(casefolded_name);
 		return 1;
 	case 0x97f2cd88: /* separator */
 		*ret = SDLK_SEPARATOR;
-		free(casefolded_name);
 		return 1;
 	case 0xb9ea6d99: /* out */
 		*ret = SDLK_OUT;
-		free(casefolded_name);
 		return 1;
 	case 0xb071dfeb: /* oper */
 		*ret = SDLK_OPER;
-		free(casefolded_name);
 		return 1;
 	case 0xc5ae4c10: /* clearagain */
 		*ret = SDLK_CLEARAGAIN;
-		free(casefolded_name);
 		return 1;
 	case 0xd3bff60f: /* crsel */
 		*ret = SDLK_CRSEL;
-		free(casefolded_name);
 		return 1;
 	case 0x3342e3cb: /* exsel */
 		*ret = SDLK_EXSEL;
-		free(casefolded_name);
 		return 1;
 	case 0xdd807e0f: /* kp_00 */
 		*ret = SDLK_KP_00;
-		free(casefolded_name);
 		return 1;
 	case 0x64b942ce: /* kp_000 */
 		*ret = SDLK_KP_000;
-		free(casefolded_name);
 		return 1;
 	case 0xbade325d: /* thousandsseparator */
 		*ret = SDLK_THOUSANDSSEPARATOR;
-		free(casefolded_name);
 		return 1;
 	case 0x942f12bf: /* decimalseparator */
 		*ret = SDLK_DECIMALSEPARATOR;
-		free(casefolded_name);
 		return 1;
 	case 0x435a8db2: /* currencyunit */
 		*ret = SDLK_CURRENCYUNIT;
-		free(casefolded_name);
 		return 1;
 	case 0x58bbbf34: /* currencysubunit */
 		*ret = SDLK_CURRENCYSUBUNIT;
-		free(casefolded_name);
 		return 1;
 	case 0x511c7412: /* kp_leftparen */
 		*ret = SDLK_KP_LEFTPAREN;
-		free(casefolded_name);
 		return 1;
 	case 0x464712ee: /* kp_rightparen */
 		*ret = SDLK_KP_RIGHTPAREN;
-		free(casefolded_name);
 		return 1;
 	case 0xd6782ba6: /* kp_leftbrace */
 		*ret = SDLK_KP_LEFTBRACE;
-		free(casefolded_name);
 		return 1;
 	case 0xc1234d5a: /* kp_rightbrace */
 		*ret = SDLK_KP_RIGHTBRACE;
-		free(casefolded_name);
 		return 1;
 	case 0x35ef3b1f: /* kp_tab */
 		*ret = SDLK_KP_TAB;
-		free(casefolded_name);
 		return 1;
 	case 0xcdc1179e: /* kp_backspace */
 		*ret = SDLK_KP_BACKSPACE;
-		free(casefolded_name);
 		return 1;
 	case 0x9e04d71b: /* kp_a */
 		*ret = SDLK_KP_A;
-		free(casefolded_name);
 		return 1;
 	case 0x070d86a1: /* kp_b */
 		*ret = SDLK_KP_B;
-		free(casefolded_name);
 		return 1;
 	case 0x700ab637: /* kp_c */
 		*ret = SDLK_KP_C;
-		free(casefolded_name);
 		return 1;
 	case 0xee6e2394: /* kp_d */
 		*ret = SDLK_KP_D;
-		free(casefolded_name);
 		return 1;
 	case 0x99691302: /* kp_e */
 		*ret = SDLK_KP_E;
-		free(casefolded_name);
 		return 1;
 	case 0x006042b8: /* kp_f */
 		*ret = SDLK_KP_F;
-		free(casefolded_name);
 		return 1;
 	case 0xbfc1ff91: /* kp_xor */
 		*ret = SDLK_KP_XOR;
-		free(casefolded_name);
 		return 1;
 	case 0x94bbff30: /* kp_power */
 		*ret = SDLK_KP_POWER;
-		free(casefolded_name);
 		return 1;
 	case 0x4af2ea09: /* kp_percent */
 		*ret = SDLK_KP_PERCENT;
-		free(casefolded_name);
 		return 1;
 	case 0x574ed979: /* kp_less */
 		*ret = SDLK_KP_LESS;
-		free(casefolded_name);
 		return 1;
 	case 0x99e24cca: /* kp_greater */
 		*ret = SDLK_KP_GREATER;
-		free(casefolded_name);
 		return 1;
 	case 0x22a311b2: /* kp_ampersand */
 		*ret = SDLK_KP_AMPERSAND;
-		free(casefolded_name);
 		return 1;
 	case 0xd130bd66: /* kp_dblampersand */
 		*ret = SDLK_KP_DBLAMPERSAND;
-		free(casefolded_name);
 		return 1;
 	case 0xfd01607b: /* kp_verticalbar */
 		*ret = SDLK_KP_VERTICALBAR;
-		free(casefolded_name);
 		return 1;
 	case 0xc7357c30: /* kp_dblverticalbar */
 		*ret = SDLK_KP_DBLVERTICALBAR;
-		free(casefolded_name);
 		return 1;
 	case 0x4d66ea36: /* kp_colon */
 		*ret = SDLK_KP_COLON;
-		free(casefolded_name);
 		return 1;
 	case 0x55402f1e: /* kp_hash */
 		*ret = SDLK_KP_HASH;
-		free(casefolded_name);
 		return 1;
 	case 0x16433faa: /* kp_space */
 		*ret = SDLK_KP_SPACE;
-		free(casefolded_name);
 		return 1;
 	case 0x0f919793: /* kp_at */
 		*ret = SDLK_KP_AT;
-		free(casefolded_name);
 		return 1;
 	case 0xf7d21b54: /* kp_exclam */
 		*ret = SDLK_KP_EXCLAM;
-		free(casefolded_name);
 		return 1;
 	case 0x5cafce69: /* kp_memstore */
 		*ret = SDLK_KP_MEMSTORE;
-		free(casefolded_name);
 		return 1;
 	case 0xb19cc083: /* kp_memrecall */
 		*ret = SDLK_KP_MEMRECALL;
-		free(casefolded_name);
 		return 1;
 	case 0x46496718: /* kp_memclear */
 		*ret = SDLK_KP_MEMCLEAR;
-		free(casefolded_name);
 		return 1;
 	case 0x6f5d628b: /* kp_memadd */
 		*ret = SDLK_KP_MEMADD;
-		free(casefolded_name);
 		return 1;
 	case 0xa39dc3e2: /* kp_memsubtract */
 		*ret = SDLK_KP_MEMSUBTRACT;
-		free(casefolded_name);
 		return 1;
 	case 0x9373f820: /* kp_memmultiply */
 		*ret = SDLK_KP_MEMMULTIPLY;
-		free(casefolded_name);
 		return 1;
 	case 0x793208bd: /* kp_memdivide */
 		*ret = SDLK_KP_MEMDIVIDE;
-		free(casefolded_name);
 		return 1;
 	case 0x2ea837f7: /* kp_plusminus */
 		*ret = SDLK_KP_PLUSMINUS;
-		free(casefolded_name);
 		return 1;
 	case 0xda800f96: /* kp_clear */
 		*ret = SDLK_KP_CLEAR;
-		free(casefolded_name);
 		return 1;
 	case 0xb7e66983: /* kp_clearentry */
 		*ret = SDLK_KP_CLEARENTRY;
-		free(casefolded_name);
 		return 1;
 	case 0x36d04bbf: /* kp_binary */
 		*ret = SDLK_KP_BINARY;
-		free(casefolded_name);
 		return 1;
 	case 0xa0f806e5: /* kp_octal */
 		*ret = SDLK_KP_OCTAL;
-		free(casefolded_name);
 		return 1;
 	case 0x71b9d9a3: /* kp_decimal */
 		*ret = SDLK_KP_DECIMAL;
-		free(casefolded_name);
 		return 1;
 	case 0xab3761b6: /* kp_hexadecimal */
 		*ret = SDLK_KP_HEXADECIMAL;
-		free(casefolded_name);
 		return 1;
 	case 0xcbcc3ee1: /* rgui */
 		*ret = SDLK_RGUI;
-		free(casefolded_name);
 		return 1;
 	case 0x97ca47ab: /* mode */
 		*ret = SDLK_MODE;
-		free(casefolded_name);
 		return 1;
 	case 0x27aa0765: /* audionext */
 		*ret = SDLK_AUDIONEXT;
-		free(casefolded_name);
 		return 1;
 	case 0x9f679f0c: /* audioprev */
 		*ret = SDLK_AUDIOPREV;
-		free(casefolded_name);
 		return 1;
 	case 0x9ad301ef: /* audiostop */
 		*ret = SDLK_AUDIOSTOP;
-		free(casefolded_name);
 		return 1;
 	case 0x7d0cc9e3: /* audioplay */
 		*ret = SDLK_AUDIOPLAY;
-		free(casefolded_name);
 		return 1;
 	case 0xef3c6405: /* audiomute */
 		*ret = SDLK_AUDIOMUTE;
-		free(casefolded_name);
 		return 1;
 	case 0xded3c2ed: /* mediaselect */
 		*ret = SDLK_MEDIASELECT;
-		free(casefolded_name);
 		return 1;
 	case 0x00e0ac69: /* www */
 		*ret = SDLK_WWW;
-		free(casefolded_name);
 		return 1;
 	case 0x5126ac48: /* mail */
 		*ret = SDLK_MAIL;
-		free(casefolded_name);
 		return 1;
 	case 0x247990c2: /* calculator */
 		*ret = SDLK_CALCULATOR;
-		free(casefolded_name);
 		return 1;
 	case 0xa298a7a6: /* computer */
 		*ret = SDLK_COMPUTER;
-		free(casefolded_name);
 		return 1;
 	case 0x23dac54b: /* ac_search */
 		*ret = SDLK_AC_SEARCH;
-		free(casefolded_name);
 		return 1;
 	case 0xd41c6e0d: /* ac_home */
 		*ret = SDLK_AC_HOME;
-		free(casefolded_name);
 		return 1;
 	case 0xc804a3ea: /* ac_back */
 		*ret = SDLK_AC_BACK;
-		free(casefolded_name);
 		return 1;
 	case 0x4ebaabcb: /* ac_forward */
 		*ret = SDLK_AC_FORWARD;
-		free(casefolded_name);
 		return 1;
 	case 0x1c9c746b: /* ac_stop */
 		*ret = SDLK_AC_STOP;
-		free(casefolded_name);
 		return 1;
 	case 0xc9aa24b6: /* ac_refresh */
 		*ret = SDLK_AC_REFRESH;
-		free(casefolded_name);
 		return 1;
 	case 0xd7d01e1a: /* ac_bookmarks */
 		*ret = SDLK_AC_BOOKMARKS;
-		free(casefolded_name);
 		return 1;
 	case 0xd75b836f: /* brightnessdown */
 		*ret = SDLK_BRIGHTNESSDOWN;
-		free(casefolded_name);
 		return 1;
 	case 0x5977e0c8: /* brightnessup */
 		*ret = SDLK_BRIGHTNESSUP;
-		free(casefolded_name);
 		return 1;
 	case 0xe481bc6f: /* displayswitch */
 		*ret = SDLK_DISPLAYSWITCH;
-		free(casefolded_name);
 		return 1;
 	case 0x9749756b: /* kbdillumtoggle */
 		*ret = SDLK_KBDILLUMTOGGLE;
-		free(casefolded_name);
 		return 1;
 	case 0xcec541a9: /* kbdillumdown */
 		*ret = SDLK_KBDILLUMDOWN;
-		free(casefolded_name);
 		return 1;
 	case 0xcfc0389b: /* kbdillumup */
 		*ret = SDLK_KBDILLUMUP;
-		free(casefolded_name);
 		return 1;
 	case 0x94cf9ccd: /* eject */
 		*ret = SDLK_EJECT;
-		free(casefolded_name);
 		return 1;
 	case 0x0f33c2ac: /* sleep */
 		*ret = SDLK_SLEEP;
-		free(casefolded_name);
 		return 1;
 #if SDL_VERSION_ATLEAST(2, 0, 6)
 	case 0x88ce5ee6: /* app1 */
 		*ret = SDLK_APP1;
-		free(casefolded_name);
 		return 1;
 #endif
 #if SDL_VERSION_ATLEAST(2, 0, 6)
 	case 0x11c70f5c: /* app2 */
 		*ret = SDLK_APP2;
-		free(casefolded_name);
 		return 1;
 #endif
 #if SDL_VERSION_ATLEAST(2, 0, 6)
 	case 0x4e1f3ee9: /* audiorewind */
 		*ret = SDLK_AUDIOREWIND;
-		free(casefolded_name);
 		return 1;
 #endif
 #if SDL_VERSION_ATLEAST(2, 0, 6)
 	case 0x1515b32e: /* audiofastforward */
 		*ret = SDLK_AUDIOFASTFORWARD;
-		free(casefolded_name);
 		return 1;
 #endif
 #if SDL_VERSION_ATLEAST(2, 24, 0)
 	case 0xb3dfe72a: /* softleft */
 		*ret = SDLK_SOFTLEFT;
-		free(casefolded_name);
 		return 1;
 #endif
 #if SDL_VERSION_ATLEAST(2, 24, 0)
 	case 0x2cd1eda8: /* softright */
 		*ret = SDLK_SOFTRIGHT;
-		free(casefolded_name);
 		return 1;
 #endif
 #if SDL_VERSION_ATLEAST(2, 24, 0)
 	case 0xcc8e2f3e: /* call */
 		*ret = SDLK_CALL;
-		free(casefolded_name);
 		return 1;
 #endif
 #if SDL_VERSION_ATLEAST(2, 24, 0)
 	case 0xf764f3b9: /* endcall */
 		*ret = SDLK_ENDCALL;
-		free(casefolded_name);
 		return 1;
 #endif
 	default:
@@ -1451,7 +1115,6 @@ int keybinds_parse_keycode(const char *name, SDL_Keycode *ret)
 	}
 
 	*ret = SDLK_UNKNOWN;
-	free(casefolded_name);
 	return 0;
 }
 

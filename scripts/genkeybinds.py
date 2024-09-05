@@ -382,7 +382,9 @@ def generate_function(file: io.TextIOWrapper, name: str, keybinds: Keybinds):
 	f.write("int %s(const char *name, %s *ret)\n" % (name, keybinds.type))
 	f.write("{\n")
 	f.write("\tchar *casefolded_name = charset_case_fold(name, CHARSET_UTF8);\n");
-	f.write("\tswitch (crc32b(casefolded_name)) {\n")
+	f.write("\tuint32_t crc = crc32b(casefolded_name);\n");
+	f.write("\tfree(casefolded_name);\n\n")
+	f.write("\tswitch (crc) {\n")
 
 	for keybind in keybinds.keybinds:
 		name = (keybinds.schism_prefix + keybind.name).casefold()
@@ -393,7 +395,6 @@ def generate_function(file: io.TextIOWrapper, name: str, keybinds: Keybinds):
 
 		f.write("\tcase 0x%08x: /* %s */\n" % (zlib.crc32(name.encode('utf-8')), name))
 		f.write("\t\t*ret = %s%s;\n" % (keybinds.sdl_prefix, keybind.sdl_name if not keybind.sdl_name is None else keybind.name))
-		f.write("\t\tfree(casefolded_name);\n")
 		f.write("\t\treturn 1;\n")
 
 		if have_sdl_version:
@@ -404,7 +405,6 @@ def generate_function(file: io.TextIOWrapper, name: str, keybinds: Keybinds):
 	f.write("\t}\n\n")
 
 	f.write("\t*ret = %s;\n" % keybinds.default_value)
-	f.write("\tfree(casefolded_name);\n")
 	f.write("\treturn 0;\n")
 
 	f.write("}\n\n")
