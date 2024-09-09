@@ -347,6 +347,7 @@ schismtracker_SOURCES = \
 	schism/bshift.c         \
 	schism/bswap.c          \
 	schism/charset.c		\
+	schism/charset_stdlib.c \
 	schism/charset_unicode.c   \
 	schism/clippy.c			\
 	schism/config-parser.c		\
