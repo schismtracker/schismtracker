@@ -38,8 +38,7 @@ struct tm *localtime_r(const time_t *timep, struct tm *result)
 
 	if (!initialized) {
 		localtime_r_mutex = SDL_CreateMutex();
-		if (!localtime_r_mutex)
-			return NULL;
+		if (!localtime_r_mutex) return NULL;
 
 		initialized = 1;
 	}

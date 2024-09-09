@@ -31,41 +31,37 @@
 #include "player/sndfile.h"
 
 enum {
-	S3I_TYPE_PCM   = 1,
+	S3I_TYPE_PCM = 1,
 	S3I_TYPE_ADLIB = 2,
 };
 
 enum {
-	S3I_PCM_FLAG_LOOP   = 0x01,
+	S3I_PCM_FLAG_LOOP = 0x01,
 	S3I_PCM_FLAG_STEREO = 0x02,
-	S3I_PCM_FLAG_16BIT  = 0x04,
+	S3I_PCM_FLAG_16BIT = 0x04,
 };
 
 /* XXX maybe this should be in fmt.h */
 #define READ_UINT(var, endian, bits, data, offset) \
-	do { \
-		/* ensure we can represent the entire number safely */ \
-		SCHISM_STATIC_ASSERT(sizeof(var) >= sizeof(uint ## bits ## _t), "mismatched read size"); \
-	\
-		uint ## bits ## _t x; \
-		memcpy(&x, (data) + (offset), sizeof(x)); \
-		(var) = bswap ## endian ## bits(x); \
-	} while (0)
+ do { \
+  /* ensure we can represent the entire number safely */ \
+  SCHISM_STATIC_ASSERT(sizeof(var) >= sizeof(uint##bits##_t), "mismatched read size"); \
+\
+  uint##bits##_t x; \
+  memcpy(&x, (data) + (offset), sizeof(x)); \
+  (var) = bswap##endian##bits(x); \
+ } while (0)
 
 /* nonzero on success */
 static int load_s3i_sample(const uint8_t *data, size_t length, song_sample_t *smp, int with_data)
 {
-	if (length < 0x50)
-		return 0;
+	if (length < 0x50) return 0;
 
 	/* verify signature; offset 0x4C */
-	if (memcmp(data + 0x4C, "SCRS", 4) != 0
-		&& memcmp(data + 0x4C, "SCRI", 4) != 0)
-		return 0;
+	if (memcmp(data + 0x4C, "SCRS", 4) != 0 && memcmp(data + 0x4C, "SCRI", 4) != 0) return 0;
 
 	uint8_t type = data[0x00];
-	if (type != S3I_TYPE_PCM && type != S3I_TYPE_ADLIB)
-		return 0;
+	if (type != S3I_TYPE_PCM && type != S3I_TYPE_ADLIB) return 0;
 
 	uint8_t flags = data[0x1F];
 
@@ -85,30 +81,25 @@ static int load_s3i_sample(const uint8_t *data, size_t length, song_sample_t *sm
 
 		READ_UINT(smp->length, LE, 32, data, 0x10);
 
-		if (length < 0x50 + smp->length * bytes_per_sample)
-			return 0;
+		if (length < 0x50 + smp->length * bytes_per_sample) return 0;
 
 		/* convert flags */
-		if (flags & S3I_PCM_FLAG_LOOP)
-			smp->flags |= CHN_LOOP;
+		if (flags & S3I_PCM_FLAG_LOOP) smp->flags |= CHN_LOOP;
 
-		if (flags & S3I_PCM_FLAG_STEREO)
-			smp->flags |= CHN_STEREO;
+		if (flags & S3I_PCM_FLAG_STEREO) smp->flags |= CHN_STEREO;
 
-		if (flags & S3I_PCM_FLAG_16BIT)
-			smp->flags |= CHN_16BIT;
+		if (flags & S3I_PCM_FLAG_16BIT) smp->flags |= CHN_16BIT;
 
 		if (with_data) {
-			int format = SF_M | SF_LE; // endianness; channels
+			int format = SF_M | SF_LE;                                                 // endianness; channels
 			format |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU); // bits; encoding
 
-			csf_read_sample((song_sample_t *) smp, format,
-				(const char *)(data + 0x50), (uint32_t)(length - 0x50));
+			csf_read_sample((song_sample_t *)smp, format, (const char *)(data + 0x50), (uint32_t)(length - 0x50));
 		}
 	} else if (type == S3I_TYPE_ADLIB) {
 		/* AdLib */
 		smp->flags |= CHN_ADLIB;
-		smp->flags &= ~(CHN_LOOP|CHN_16BIT);
+		smp->flags &= ~(CHN_LOOP | CHN_16BIT);
 
 		memcpy(smp->adlib_bytes, data + 0x10, 11);
 
@@ -125,8 +116,7 @@ static int load_s3i_sample(const uint8_t *data, size_t length, song_sample_t *sm
 int fmt_s3i_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	song_sample_t smp;
-	if (!load_s3i_sample(data, length, &smp, 0))
-		return 0;
+	if (!load_s3i_sample(data, length, &smp, 0)) return 0;
 
 	file->smp_length = smp.length;
 	file->smp_flags = smp.flags;

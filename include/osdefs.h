@@ -43,20 +43,20 @@ etc.) If defined, this function will be called after capturing an SDL event.
 A return value of 0 indicates that the event should NOT be processed by the main event handler.
 */
 #if defined(SCHISM_WII)
-# define os_sysinit wii_sysinit
-# define os_sdlinit wii_sdlinit
-# define os_sysexit wii_sysexit
+# define os_sysinit  wii_sysinit
+# define os_sdlinit  wii_sdlinit
+# define os_sysexit  wii_sysexit
 # define os_sdlevent wii_sdlevent
 #elif defined(SCHISM_WIN32)
-# define os_sdlevent win32_sdlevent
-# define os_sdlinit win32_sdlinit
-# define os_sysinit win32_sysinit
-# define os_sysexit win32_sysexit
+# define os_sdlevent   win32_sdlevent
+# define os_sdlinit    win32_sdlinit
+# define os_sysinit    win32_sysinit
+# define os_sysexit    win32_sysexit
 # define os_get_modkey win32_get_modkey
 #elif defined(SCHISM_MACOSX)
-# define os_sdlevent macosx_sdlevent
-# define os_sysexit macosx_sysexit
-# define os_sysinit macosx_sysinit
+# define os_sdlevent   macosx_sdlevent
+# define os_sysexit    macosx_sysexit
+# define os_sysinit    macosx_sysinit
 # define os_get_modkey macosx_get_modkey
 #endif
 
@@ -67,13 +67,13 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_sdlinit()
 #endif
 #ifndef os_sysinit
-# define os_sysinit(pargc,argv)
+# define os_sysinit(pargc, argv)
 #endif
 #ifndef os_sysexit
 # define os_sysexit()
 #endif
 #ifndef os_get_modkey
-#define os_get_modkey(m)
+# define os_get_modkey(m)
 #endif
 
 // Implementations for the above, and more.
@@ -81,19 +81,19 @@ A return value of 0 indicates that the event should NOT be processed by the main
 int macosx_ibook_fnswitch(int setting);
 
 void wii_sysinit(int *pargc, char ***pargv); // set up filesystem
-void wii_sysexit(void); // close filesystem
-void wii_sdlinit(void); // set up wiimote
-int wii_sdlevent(SDL_Event *event); // add unicode values; wiimote hack to allow simple playback
+void wii_sysexit(void);                      // close filesystem
+void wii_sdlinit(void);                      // set up wiimote
+int wii_sdlevent(SDL_Event *event);          // add unicode values; wiimote hack to allow simple playback
 
-int win32_sdlevent(SDL_Event* event);
+int win32_sdlevent(SDL_Event *event);
 void win32_sysinit(int *pargc, char ***pargv);
 void win32_sysexit(void);
 void win32_sdlinit(void);
 void win32_get_modkey(int *m);
 void win32_filecreated_callback(const char *filename);
-void win32_toggle_menu(SDL_Window* window);
+void win32_toggle_menu(SDL_Window *window);
 
-int macosx_sdlevent(SDL_Event* event);
+int macosx_sdlevent(SDL_Event *event);
 void macosx_sysexit(void);
 void macosx_sysinit(int *pargc, char ***pargv); /* set up ibook helper */
 void macosx_get_modkey(int *m);

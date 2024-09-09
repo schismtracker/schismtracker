@@ -31,25 +31,23 @@
  * bit size as was given in; in lots of cases that won't really match up at all. */
 
 #define SCHISM_SIGNED_SHIFT_VARIANT(BITS, RBITS, PREFIX, OPERATION) \
-	inline int ## RBITS ## _t schism_signed_ ## PREFIX ## shift_ ## BITS ## _(int ## BITS ## _t x, int y) \
-	{ \
-		const uint ## RBITS ## _t roffset = UINT ## RBITS ## _C(1) << (RBITS - 1); \
-		uint ## RBITS ## _t urx = (uint ## RBITS ## _t)x; \
-		urx += roffset; \
-		urx OPERATION ## = y; \
-		urx -= roffset OPERATION y; \
-		return (int ## RBITS ## _t)urx; \
-	}
+ inline int##RBITS##_t schism_signed_##PREFIX##shift_##BITS##_(int##BITS##_t x, int y) \
+ { \
+  const uint##RBITS##_t roffset = UINT##RBITS##_C(1) << (RBITS - 1); \
+  uint##RBITS##_t urx = (uint##RBITS##_t)x; \
+  urx += roffset; \
+  urx OPERATION## = y; \
+  urx -= roffset OPERATION y; \
+  return (int##RBITS##_t)urx; \
+ }
 
-#define SCHISM_SIGNED_LSHIFT_VARIANT(BITS, RBITS) \
-	SCHISM_SIGNED_SHIFT_VARIANT(BITS, RBITS, l, <<)
+#define SCHISM_SIGNED_LSHIFT_VARIANT(BITS, RBITS) SCHISM_SIGNED_SHIFT_VARIANT(BITS, RBITS, l, <<)
 
 SCHISM_SIGNED_LSHIFT_VARIANT(32, 64)
 
 #undef SCHISM_SIGNED_LSHIFT_VARIANT
 
-#define SCHISM_SIGNED_RSHIFT_VARIANT(BITS, RBITS) \
-	SCHISM_SIGNED_SHIFT_VARIANT(BITS, RBITS, r, >>)
+#define SCHISM_SIGNED_RSHIFT_VARIANT(BITS, RBITS) SCHISM_SIGNED_SHIFT_VARIANT(BITS, RBITS, r, >>)
 
 SCHISM_SIGNED_RSHIFT_VARIANT(32, 32)
 SCHISM_SIGNED_RSHIFT_VARIANT(64, 64)

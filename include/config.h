@@ -67,7 +67,7 @@ void cfg_save_info(cfg_file_t *cfg);
 
 void cfg_load_audio(cfg_file_t *cfg);
 void cfg_save_audio(cfg_file_t *cfg);
-void cfg_save_audio_playback(cfg_file_t* cfg);
+void cfg_save_audio_playback(cfg_file_t *cfg);
 void cfg_atexit_save_audio(cfg_file_t *cfg);
 
 void cfg_load_disko(cfg_file_t *cfg);

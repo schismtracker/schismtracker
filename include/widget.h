@@ -26,50 +26,43 @@
 
 /* --------------------------------------------------- */
 
-void widget_create_toggle(struct widget *w, int x, int y, int next_up,
-		   int next_down, int next_left, int next_right,
-		   int next_tab, void (*changed) (void));
-void widget_create_menutoggle(struct widget *w, int x, int y, int next_up,
-		       int next_down, int next_left, int next_right,
-		       int next_tab, void (*changed) (void),
-		       const char *const *choices);
-void widget_create_button(struct widget *w, int x, int y, int width, int next_up,
-		   int next_down, int next_left, int next_right,
-		   int next_tab, void (*changed) (void), const char *text,
-		   int padding);
-void widget_create_togglebutton(struct widget *w, int x, int y, int width,
-			 int next_up, int next_down, int next_left,
-			 int next_right, int next_tab,
-			 void (*changed) (void), const char *text,
-			 int padding, const int *group);
-void widget_create_textentry(struct widget *w, int x, int y, int width, int next_up,
-		      int next_down, int next_tab, void (*changed) (void),
-		      char *text, int max_length);
-void widget_create_numentry(struct widget *w, int x, int y, int width, int next_up,
-		     int next_down, int next_tab, void (*changed) (void),
-		     int min, int max, int *cursor_pos);
-void widget_create_thumbbar(struct widget *w, int x, int y, int width, int next_up,
-		     int next_down, int next_tab, void (*changed) (void),
-		     int min, int max);
-void widget_create_bitset(struct widget *w, int x, int y, int width, int next_up,
-		   int next_down, int next_tab, void (*changed) (void),
-		   int nbits, const char* bits_on, const char* bits_off,
-		   int *cursor_pos);
-void widget_create_panbar(struct widget *w, int x, int y, int next_up,
-		   int next_down, int next_tab, void (*changed) (void),
-		   int channel);
-void widget_create_other(struct widget *w, int next_tab,
-		  int (*w_handle_key) (struct key_event * k),
-		  int (*w_handle_text_input) (const uint8_t* text),
-		  void (*w_redraw) (void));
+void widget_create_toggle(
+	struct widget *w, int x, int y, int next_up, int next_down, int next_left, int next_right, int next_tab,
+	void (*changed)(void));
+void widget_create_menutoggle(
+	struct widget *w, int x, int y, int next_up, int next_down, int next_left, int next_right, int next_tab,
+	void (*changed)(void), const char *const *choices);
+void widget_create_button(
+	struct widget *w, int x, int y, int width, int next_up, int next_down, int next_left, int next_right, int next_tab,
+	void (*changed)(void), const char *text, int padding);
+void widget_create_togglebutton(
+	struct widget *w, int x, int y, int width, int next_up, int next_down, int next_left, int next_right, int next_tab,
+	void (*changed)(void), const char *text, int padding, const int *group);
+void widget_create_textentry(
+	struct widget *w, int x, int y, int width, int next_up, int next_down, int next_tab, void (*changed)(void),
+	char *text, int max_length);
+void widget_create_numentry(
+	struct widget *w, int x, int y, int width, int next_up, int next_down, int next_tab, void (*changed)(void), int min,
+	int max, int *cursor_pos);
+void widget_create_thumbbar(
+	struct widget *w, int x, int y, int width, int next_up, int next_down, int next_tab, void (*changed)(void), int min,
+	int max);
+void widget_create_bitset(
+	struct widget *w, int x, int y, int width, int next_up, int next_down, int next_tab, void (*changed)(void),
+	int nbits, const char *bits_on, const char *bits_off, int *cursor_pos);
+void widget_create_panbar(
+	struct widget *w, int x, int y, int next_up, int next_down, int next_tab, void (*changed)(void), int channel);
+void widget_create_other(
+	struct widget *w, int next_tab, int (*w_handle_key)(struct key_event *k),
+	int (*w_handle_text_input)(const uint8_t *text), void (*w_redraw)(void));
 
 /* --------------------------------------------------- */
 /* widget.c */
 
 int widget_textentry_add_char(struct widget *widget, uint16_t unicode);
-int widget_textentry_add_text(struct widget *widget, const uint8_t* text);
+int widget_textentry_add_text(struct widget *widget, const uint8_t *text);
 void widget_numentry_change_value(struct widget *widget, int new_value);
-int widget_numentry_handle_text(struct widget *w, const uint8_t* text_input);
+int widget_numentry_handle_text(struct widget *w, const uint8_t *text_input);
 
 int widget_change_focus_to_xy(int x, int y);
 void widget_change_focus_to(int new_widget_index);
@@ -82,7 +75,7 @@ void widget_draw_widget(struct widget *w, int selected);
 /* widget-keyhandler.c
  * [note: these always uses the current widget] */
 
-int widget_handle_text_input(const uint8_t* text_input);
-int widget_handle_key(struct key_event * k);
+int widget_handle_text_input(const uint8_t *text_input);
+int widget_handle_key(struct key_event *k);
 
 #endif /* SCHISM_WIDGET_H_ */

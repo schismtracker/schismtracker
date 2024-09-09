@@ -38,14 +38,13 @@
 /* --------------------------------------------------------------------- */
 /* static in my attic */
 static struct vgamem_overlay sample_image = {
-	55,26,76,29,
-	NULL, 0, 0, 0,
+	55, 26, 76, 29, NULL, 0, 0, 0,
 };
 
 static int dialog_f1_hack = 0;
 
 static struct widget widgets_samplelist[20];
-static const int vibrato_waveforms[] = { 15, 16, 17, 18, -1 };
+static const int vibrato_waveforms[] = {15, 16, 17, 18, -1};
 
 static int top_sample = 1;
 static int current_sample = 1;
@@ -59,7 +58,7 @@ static void sample_adlibconfig_dialog(UNUSED void *ign);
 static int sample_numentry_cursor_pos = 0;
 
 /* for the loops */
-static const char *const loop_states[] = { "Off", "On Forwards", "On Ping Pong", NULL };
+static const char *const loop_states[] = {"Off", "On Forwards", "On Ping Pong", NULL};
 
 /* playback */
 static int last_note = NOTE_MIDC;
@@ -76,7 +75,7 @@ static int _is_magic_sample(int no)
 	int pn;
 
 	sample = song_get_sample(no);
-	if (sample && ((unsigned char) sample->name[23]) == 0xFF) {
+	if (sample && ((unsigned char)sample->name[23]) == 0xFF) {
 		pn = (sample->name[24]);
 		if (pn < 200) return 1;
 	}
@@ -115,14 +114,11 @@ static void sample_list_reposition(void)
 {
 	if (current_sample < top_sample) {
 		top_sample = current_sample;
-		if (top_sample < 1)
-			top_sample = 1;
+		if (top_sample < 1) top_sample = 1;
 	} else if (current_sample > top_sample + 34) {
 		top_sample = current_sample - 34;
 	}
-	if (dialog_f1_hack
-	    && status.current_page == PAGE_SAMPLE_LIST
-	    && status.previous_page == PAGE_HELP) {
+	if (dialog_f1_hack && status.current_page == PAGE_SAMPLE_LIST && status.previous_page == PAGE_HELP) {
 		sample_adlibconfig_dialog(NULL);
 	}
 	dialog_f1_hack = 0;
@@ -139,20 +135,16 @@ void sample_set(int n)
 {
 	int new_sample = n;
 
-	if (status.current_page == PAGE_SAMPLE_LIST)
-		new_sample = CLAMP(n, 1, _last_vis_sample());
-	else
-		new_sample = CLAMP(n, 0, _last_vis_sample());
+	if (status.current_page == PAGE_SAMPLE_LIST) new_sample = CLAMP(n, 1, _last_vis_sample());
+	else new_sample = CLAMP(n, 0, _last_vis_sample());
 
-	if (current_sample == new_sample)
-		return;
+	if (current_sample == new_sample) return;
 
 	current_sample = new_sample;
 	sample_list_reposition();
 
 	/* update_current_instrument(); */
-	if (status.current_page == PAGE_SAMPLE_LIST)
-		status.flags |= NEED_UPDATE;
+	if (status.current_page == PAGE_SAMPLE_LIST) status.flags |= NEED_UPDATE;
 }
 
 /* --------------------------------------------------------------------- */
@@ -177,8 +169,7 @@ static void sample_list_draw_list(void)
 		is_selected = (n == current_sample);
 		has_data = (sample->data != NULL);
 
-		if (sample->played)
-			draw_char(is_playing[n] > 1 ? 183 : 173, 1, 13 + pos, is_playing[n] ? 3 : 1, 2);
+		if (sample->played) draw_char(is_playing[n] > 1 ? 183 : 173, 1, 13 + pos, is_playing[n] ? 3 : 1, 2);
 
 		draw_text(num99tostr(n, buf), 2, 13 + pos, (sample->flags & CHN_MUTE) ? 1 : 0, 2);
 
@@ -187,10 +178,10 @@ static void sample_list_draw_list(void)
 		if (((unsigned char)sample->name[23]) == 0xFF && pn < 200) {
 			nl = 23;
 			draw_text(numtostr(3, (int)pn, buf), 32, 13 + pos, 0, 2);
-			draw_char('P', 28, 13+pos, 3, 2);
-			draw_char('a', 29, 13+pos, 3, 2);
-			draw_char('t', 30, 13+pos, 3, 2);
-			draw_char('.', 31, 13+pos, 3, 2);
+			draw_char('P', 28, 13 + pos, 3, 2);
+			draw_char('a', 29, 13 + pos, 3, 2);
+			draw_char('t', 30, 13 + pos, 3, 2);
+			draw_char('.', 31, 13 + pos, 3, 2);
 		} else {
 			nl = 25;
 			draw_char(168, 30, 13 + pos, 2, (is_selected ? 14 : 0));
@@ -199,7 +190,7 @@ static void sample_list_draw_list(void)
 
 		draw_text_len(sample->name, nl, 5, 13 + pos, 6, (is_selected ? 14 : 0));
 		if (ss == n) {
-			draw_text_len(sample->name + cl, (cr-cl)+1, 5 + cl, 13 + pos, 3, 8);
+			draw_text_len(sample->name + cl, (cr - cl) + 1, 5 + cl, 13 + pos, 3, 8);
 		}
 	}
 
@@ -214,9 +205,9 @@ static void sample_list_draw_list(void)
 		} else if (sample_list_cursor_pos == 25) {
 			draw_text("Play", 31, 13 + pos, 0, (has_data ? 3 : 6));
 		} else {
-			draw_char(((sample_list_cursor_pos > (signed) strlen(sample->name))
-				   ? 0 : sample->name[sample_list_cursor_pos]),
-				  sample_list_cursor_pos + 5, 13 + pos, 0, 3);
+			draw_char(
+				((sample_list_cursor_pos > (signed)strlen(sample->name)) ? 0 : sample->name[sample_list_cursor_pos]),
+				sample_list_cursor_pos + 5, 13 + pos, 0, 3);
 		}
 	}
 
@@ -264,26 +255,16 @@ static void sample_list_predraw_hook(void)
 	widgets_samplelist[14].d.numentry.value = sample->sustain_end;
 
 	switch (sample->vib_type) {
-	case VIB_SINE:
-		widget_togglebutton_set(widgets_samplelist, 15, 0);
-		break;
-	case VIB_RAMP_DOWN:
-		widget_togglebutton_set(widgets_samplelist, 16, 0);
-		break;
-	case VIB_SQUARE:
-		widget_togglebutton_set(widgets_samplelist, 17, 0);
-		break;
-	case VIB_RANDOM:
-		widget_togglebutton_set(widgets_samplelist, 18, 0);
-		break;
+	case VIB_SINE: widget_togglebutton_set(widgets_samplelist, 15, 0); break;
+	case VIB_RAMP_DOWN: widget_togglebutton_set(widgets_samplelist, 16, 0); break;
+	case VIB_SQUARE: widget_togglebutton_set(widgets_samplelist, 17, 0); break;
+	case VIB_RANDOM: widget_togglebutton_set(widgets_samplelist, 18, 0); break;
 	}
 
 	widgets_samplelist[19].d.thumbbar.value = sample->vib_rate;
 
 	if (has_data) {
-		sprintf(buf, "%d bit%s",
-			(sample->flags & CHN_16BIT) ? 16 : 8,
-			(sample->flags & CHN_STEREO) ? " Stereo" : "");
+		sprintf(buf, "%d bit%s", (sample->flags & CHN_16BIT) ? 16 : 8, (sample->flags & CHN_STEREO) ? " Stereo" : "");
 	} else {
 		strcpy(buf, "No sample");
 	}
@@ -300,8 +281,7 @@ static int sample_list_add_char(uint8_t c)
 {
 	song_sample_t *smp;
 
-	if (c < 32)
-		return 0;
+	if (c < 32) return 0;
 	smp = song_get_sample(current_sample);
 	text_add_char(smp->name, c, &sample_list_cursor_pos, _is_magic_sample(current_sample) ? 22 : 25);
 	_fix_accept_text();
@@ -382,24 +362,23 @@ static void do_replace_sample(int n)
 
 /* --------------------------------------------------------------------- */
 
-static int sample_list_handle_text_input_on_list(const uint8_t* text) {
+static int sample_list_handle_text_input_on_list(const uint8_t *text)
+{
 	int success = 0;
 
 	for (; *text; text++)
-		if (sample_list_cursor_pos < 25 && sample_list_add_char(*text))
-			success = 1;
+		if (sample_list_cursor_pos < 25 && sample_list_add_char(*text)) success = 1;
 
 	return success;
 }
 
-static int sample_list_handle_key_on_list(struct key_event * k)
+static int sample_list_handle_key_on_list(struct key_event *k)
 {
 	int new_sample = current_sample;
 	int new_cursor_pos = sample_list_cursor_pos;
 
 	if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
-		if (k->state == KEY_RELEASE)
-			status.flags |= CLIPPY_PASTE_SELECTION;
+		if (k->state == KEY_RELEASE) status.flags |= CLIPPY_PASTE_SELECTION;
 		return 1;
 	} else if (k->state == KEY_PRESS && k->mouse != MOUSE_NONE && k->x >= 5 && k->y >= 13 && k->y <= 47 && k->x <= 34) {
 		if (k->mouse == MOUSE_SCROLL_UP) {
@@ -409,8 +388,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			return 1;
 		} else if (k->mouse == MOUSE_SCROLL_DOWN) {
 			top_sample += MOUSE_SCROLL_LINES;
-			if (top_sample > (_last_vis_sample()-34))
-				top_sample = (_last_vis_sample()-34);
+			if (top_sample > (_last_vis_sample() - 34)) top_sample = (_last_vis_sample() - 34);
 			status.flags |= NEED_UPDATE;
 			return 1;
 		} else {
@@ -439,36 +417,27 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 	} else {
 		switch (k->sym) {
 		case SDLK_LEFT:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
+			if (!NO_MODIFIER(k->mod)) return 0;
 			new_cursor_pos--;
 			break;
 		case SDLK_RIGHT:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
+			if (!NO_MODIFIER(k->mod)) return 0;
 			new_cursor_pos++;
 			break;
 		case SDLK_HOME:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
+			if (!NO_MODIFIER(k->mod)) return 0;
 			new_cursor_pos = 0;
 			break;
 		case SDLK_END:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
+			if (!NO_MODIFIER(k->mod)) return 0;
 			new_cursor_pos = 25;
 			break;
 		case SDLK_UP:
-			if (k->state == KEY_RELEASE)
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
 			if (k->mod & KMOD_ALT) {
 				if (current_sample > 1) {
 					new_sample = current_sample - 1;
@@ -481,13 +450,11 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			}
 			break;
 		case SDLK_DOWN:
-			if (k->state == KEY_RELEASE)
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
 			if (k->mod & KMOD_ALT) {
 				// restrict position to the "old" value of _last_vis_sample()
 				// (this is entirely for aesthetic reasons)
-				if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
-					_altswap_lastvis = _last_vis_sample();
+				if (status.last_keysym != SDLK_DOWN && !k->is_repeat) _altswap_lastvis = _last_vis_sample();
 				if (current_sample < _altswap_lastvis) {
 					new_sample = current_sample + 1;
 					song_swap_samples(current_sample, new_sample);
@@ -499,8 +466,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			}
 			break;
 		case SDLK_PAGEUP:
-			if (k->state == KEY_RELEASE)
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
 			if (k->mod & KMOD_CTRL) {
 				new_sample = 1;
 			} else {
@@ -508,8 +474,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			}
 			break;
 		case SDLK_PAGEDOWN:
-			if (k->state == KEY_RELEASE)
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
 			if (k->mod & KMOD_CTRL) {
 				new_sample = _last_vis_sample();
 			} else {
@@ -517,13 +482,11 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			}
 			break;
 		case SDLK_RETURN:
-			if (k->state == KEY_PRESS)
-				return 0;
+			if (k->state == KEY_PRESS) return 0;
 			set_page(PAGE_LOAD_SAMPLE);
 			break;
 		case SDLK_BACKSPACE:
-			if (k->state == KEY_RELEASE)
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
 			if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) {
 				if (sample_list_cursor_pos < 25) {
 					sample_list_delete_char();
@@ -539,8 +502,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			}
 			return 0;
 		case SDLK_DELETE:
-			if (k->state == KEY_RELEASE)
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
 			if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) {
 				if (sample_list_cursor_pos < 25) {
 					sample_list_delete_next_char();
@@ -550,8 +512,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			return 0;
 		case SDLK_ESCAPE:
 			if (k->mod & KMOD_SHIFT) {
-				if (k->state == KEY_RELEASE)
-					return 1;
+				if (k->state == KEY_RELEASE) return 1;
 				new_cursor_pos = 25;
 				break;
 			}
@@ -563,11 +524,9 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 					return 1;
 				}
 			} else if ((k->mod & KMOD_CTRL) == 0 && sample_list_cursor_pos < 25) {
-				if (k->state == KEY_RELEASE)
-					return 1;
+				if (k->state == KEY_RELEASE) return 1;
 
-				if (k->text)
-					return sample_list_handle_text_input_on_list(k->text);
+				if (k->text) return sample_list_handle_text_input_on_list(k->text);
 
 				/* ...uhhhhhh */
 				return 0;
@@ -613,10 +572,8 @@ static void do_quality_toggle(UNUSED void *data)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
 
-	if (sample->flags & CHN_STEREO)
-		status_text_flash("Can't toggle quality for stereo samples");
-	else
-		sample_toggle_quality(sample, 0);
+	if (sample->flags & CHN_STEREO) status_text_flash("Can't toggle quality for stereo samples");
+	else sample_toggle_quality(sample, 0);
 }
 
 static void do_delete_sample(UNUSED void *data)
@@ -634,12 +591,10 @@ static void do_downmix(UNUSED void *data)
 static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
 {
 	song_sample_t *sample = song_get_sample(current_sample);
-	unsigned long pos = ((sample->flags & CHN_SUSTAINLOOP)
-			     ? MAX(sample->loop_end, sample->sustain_end)
-			     : sample->loop_end);
+	unsigned long pos =
+		((sample->flags & CHN_SUSTAINLOOP) ? MAX(sample->loop_end, sample->sustain_end) : sample->loop_end);
 
-	if (pos == 0 || pos >= sample->length)
-		return;
+	if (pos == 0 || pos >= sample->length) return;
 
 	status.flags |= SONG_NEEDS_SAVE;
 
@@ -656,16 +611,13 @@ static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
 static void do_pre_loop_cut(UNUSED void *bweh)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
-	unsigned long pos = ((sample->flags & CHN_SUSTAINLOOP)
-			     ? MIN(sample->loop_start, sample->sustain_start)
-			     : sample->loop_start);
-	unsigned long start_byte = pos * ((sample->flags & CHN_16BIT) ? 2 : 1)
-				* ((sample->flags & CHN_STEREO) ? 2 : 1);
-	unsigned long  bytes = (sample->length - pos) * ((sample->flags & CHN_16BIT) ? 2 : 1)
-				* ((sample->flags & CHN_STEREO) ? 2 : 1);
+	unsigned long pos =
+		((sample->flags & CHN_SUSTAINLOOP) ? MIN(sample->loop_start, sample->sustain_start) : sample->loop_start);
+	unsigned long start_byte = pos * ((sample->flags & CHN_16BIT) ? 2 : 1) * ((sample->flags & CHN_STEREO) ? 2 : 1);
+	unsigned long bytes =
+		(sample->length - pos) * ((sample->flags & CHN_16BIT) ? 2 : 1) * ((sample->flags & CHN_STEREO) ? 2 : 1);
 
-	if (pos == 0 || pos > sample->length)
-		return;
+	if (pos == 0 || pos > sample->length) return;
 
 	status.flags |= SONG_NEEDS_SAVE;
 
@@ -674,22 +626,14 @@ static void do_pre_loop_cut(UNUSED void *bweh)
 	memmove(sample->data, sample->data + start_byte, bytes);
 	sample->length -= pos;
 
-	if (sample->loop_start > pos)
-		sample->loop_start -= pos;
-	else
-		sample->loop_start = 0;
-	if (sample->sustain_start > pos)
-		sample->sustain_start -= pos;
-	else
-		sample->sustain_start = 0;
-	if (sample->loop_end > pos)
-		sample->loop_end -= pos;
-	else
-		sample->loop_end = 0;
-	if (sample->sustain_end > pos)
-		sample->sustain_end -= pos;
-	else
-		sample->sustain_end = 0;
+	if (sample->loop_start > pos) sample->loop_start -= pos;
+	else sample->loop_start = 0;
+	if (sample->sustain_start > pos) sample->sustain_start -= pos;
+	else sample->sustain_start = 0;
+	if (sample->loop_end > pos) sample->loop_end -= pos;
+	else sample->loop_end = 0;
+	if (sample->sustain_end > pos) sample->sustain_end -= pos;
+	else sample->sustain_end = 0;
 	song_unlock_audio();
 }
 
@@ -726,8 +670,7 @@ static void sample_amplify_dialog(void)
 	widget_create_button(sample_amplify_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
 	widget_create_button(sample_amplify_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 
-	dialog = dialog_create_custom(9, 25, 61, 11, sample_amplify_widgets,
-				      3, 0, sample_amplify_draw_const, NULL);
+	dialog = dialog_create_custom(9, 25, 61, 11, sample_amplify_widgets, 3, 0, sample_amplify_draw_const, NULL);
 	dialog->action_yes = do_amplify;
 }
 
@@ -739,12 +682,10 @@ static char txtsynth_entry[65536];
 static void do_txtsynth(UNUSED void *data)
 {
 	int len = strlen(txtsynth_entry);
-	if (!len)
-		return;
+	if (!len) return;
 
 	song_sample_t *sample = song_get_sample(current_sample);
-	if (sample->data)
-		csf_free_sample(sample->data);
+	if (sample->data) csf_free_sample(sample->data);
 	sample->data = csf_allocate_sample(len);
 	memcpy(sample->data, txtsynth_entry, len);
 	sample->length = len;
@@ -752,8 +693,7 @@ static void do_txtsynth(UNUSED void *data)
 	sample->loop_end = len;
 	sample->sustain_start = sample->sustain_end = 0;
 	sample->flags |= CHN_LOOP;
-	sample->flags &= ~(CHN_PINGPONGLOOP | CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN
-			   | CHN_16BIT | CHN_STEREO | CHN_ADLIB);
+	sample->flags &= ~(CHN_PINGPONGLOOP | CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN | CHN_16BIT | CHN_STEREO | CHN_ADLIB);
 	csf_adjust_sample_loop(sample);
 	sample_host_dialog(-1);
 
@@ -789,42 +729,45 @@ static int adlib_cursorpos[] = {0, 0, 0, 0, 0};
 static const char *yn_toggle[3] = {"n", "y", NULL};
 
 /* N - number, B - boolean (toggle) */
-typedef enum adlibconfig_wtypes {N, B} adlibconfig_wtypes;
+typedef enum adlibconfig_wtypes {
+	N,
+	B
+} adlibconfig_wtypes;
 static const struct {
 	int xref, y;
 	adlibconfig_wtypes type;
 	int byteno, firstbit, nbits;
 } adlibconfig_widgets[] = {
-	{4,  3, B,10, 0, 1 }, // add. synth
-	{4,  4, N,10, 1, 3 }, // mod. feedback
+	{4, 3,  B, 10, 0, 1 }, // add. synth
+	{4, 4,  N, 10, 1, 3 }, // mod. feedback
 
-	{0,  7, N, 5, 4, 4 }, // carrier attack
-	{0,  8, N, 5, 0, 4 }, // carrier decay
-	{0,  9, N, 7, 4,-4 }, // carrier sustain (0=maximum, 15=minimum)
-	{0, 10, N, 7, 0, 4 }, // carrier release
-	{0, 11, B, 1, 5, 1 }, // carrier sustain flag
-	{0, 12, N, 3, 0,-6 }, // carrier volume (0=maximum, 63=minimum)
+	{0, 7,  N, 5,  4, 4 }, // carrier attack
+	{0, 8,  N, 5,  0, 4 }, // carrier decay
+	{0, 9,  N, 7,  4, -4}, // carrier sustain (0=maximum, 15=minimum)
+	{0, 10, N, 7,  0, 4 }, // carrier release
+	{0, 11, B, 1,  5, 1 }, // carrier sustain flag
+	{0, 12, N, 3,  0, -6}, // carrier volume (0=maximum, 63=minimum)
 
-	{1,  7, N, 4, 4, 4 }, // modulator attack
-	{1,  8, N, 4, 0, 4 }, // modulator decay
-	{1,  9, N, 6, 4,-4 }, // modulator sustain (0=maximum, 15=minimum)
-	{1, 10, N, 6, 0, 4 }, // modulator release
-	{1, 11, B, 0, 5, 1 }, // modulator sustain flag
-	{1, 12, N, 2, 0,-6 }, // modulator volume (0=maximum, 63=minimum)
+	{1, 7,  N, 4,  4, 4 }, // modulator attack
+	{1, 8,  N, 4,  0, 4 }, // modulator decay
+	{1, 9,  N, 6,  4, -4}, // modulator sustain (0=maximum, 15=minimum)
+	{1, 10, N, 6,  0, 4 }, // modulator release
+	{1, 11, B, 0,  5, 1 }, // modulator sustain flag
+	{1, 12, N, 2,  0, -6}, // modulator volume (0=maximum, 63=minimum)
 
-	{2,  7, B, 1, 4, 1 }, // carrier scale envelope flag
-	{2,  8, N, 3, 6, 2 }, // carrier level scaling (This is actually reversed bits...)
-	{2,  9, N, 1, 0, 4 }, // carrier frequency multiplier
-	{2, 10, N, 9, 0, 3 }, // carrier wave select
-	{2, 11, B, 1, 6, 1 }, // carrier pitch vibrato
-	{2, 12, B, 1, 7, 1 }, // carrier volume vibrato
+	{2, 7,  B, 1,  4, 1 }, // carrier scale envelope flag
+	{2, 8,  N, 3,  6, 2 }, // carrier level scaling (This is actually reversed bits...)
+	{2, 9,  N, 1,  0, 4 }, // carrier frequency multiplier
+	{2, 10, N, 9,  0, 3 }, // carrier wave select
+	{2, 11, B, 1,  6, 1 }, // carrier pitch vibrato
+	{2, 12, B, 1,  7, 1 }, // carrier volume vibrato
 
-	{3,  7, B, 0, 4, 1 }, // modulator scale envelope flag
-	{3,  8, N, 2, 6, 2 }, // modulator level scaling (This is actually reversed bits...)
-	{3,  9, N, 0, 0, 4 }, // modulator frequency multiplier
-	{3, 10, N, 8, 0, 3 }, // modulator wave select
-	{3, 11, B, 0, 6, 1 }, // modulator pitch vibrato
-	{3, 12, B, 0, 7, 1 }, // modulator volume vibrato
+	{3, 7,  B, 0,  4, 1 }, // modulator scale envelope flag
+	{3, 8,  N, 2,  6, 2 }, // modulator level scaling (This is actually reversed bits...)
+	{3, 9,  N, 0,  0, 4 }, // modulator frequency multiplier
+	{3, 10, N, 8,  0, 3 }, // modulator wave select
+	{3, 11, B, 0,  6, 1 }, // modulator pitch vibrato
+	{3, 12, B, 0,  7, 1 }, // modulator volume vibrato
 };
 
 static void do_adlibconfig(UNUSED void *data)
@@ -832,16 +775,14 @@ static void do_adlibconfig(UNUSED void *data)
 	//page->help_index = HELP_SAMPLE_LIST;
 
 	song_sample_t *sample = song_get_sample(current_sample);
-	if (sample->data)
-		csf_free_sample(sample->data);
+	if (sample->data) csf_free_sample(sample->data);
 	sample->data = csf_allocate_sample(1);
 	sample->length = 1;
 	if (!(sample->flags & CHN_ADLIB)) {
 		sample->flags |= CHN_ADLIB;
 		status_text_flash("Created adlib sample");
 	}
-	sample->flags &= ~(CHN_16BIT | CHN_STEREO
-			| CHN_LOOP | CHN_PINGPONGLOOP | CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
+	sample->flags &= ~(CHN_16BIT | CHN_STEREO | CHN_LOOP | CHN_PINGPONGLOOP | CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
 	sample->loop_start = sample->loop_end = 0;
 	sample->sustain_start = sample->sustain_end = 0;
 	if (!sample->c5speed) {
@@ -864,9 +805,8 @@ static void adlibconfig_refresh(void)
 	for (a = 0; a < ARRAY_SIZE(adlibconfig_widgets); a++) {
 		unsigned int srcvalue = 0;
 		unsigned int maskvalue = 0xFFFF;
-		unsigned int nbits_real = (adlibconfig_widgets[a].nbits < 0
-				? -adlibconfig_widgets[a].nbits
-				: adlibconfig_widgets[a].nbits);
+		unsigned int nbits_real =
+			(adlibconfig_widgets[a].nbits < 0 ? -adlibconfig_widgets[a].nbits : adlibconfig_widgets[a].nbits);
 		unsigned int maxvalue = (1 << nbits_real) - 1;
 
 		switch (adlibconfig_widgets[a].type) {
@@ -874,14 +814,15 @@ static void adlibconfig_refresh(void)
 		case N: srcvalue = sample_adlibconfig_widgets[a].d.numentry.value; break;
 		}
 
-		if(adlibconfig_widgets[a].nbits < 0)
-			srcvalue = maxvalue - srcvalue; // reverse the semantics
+		if (adlibconfig_widgets[a].nbits < 0) srcvalue = maxvalue - srcvalue; // reverse the semantics
 
-		srcvalue  &= maxvalue; srcvalue  <<= adlibconfig_widgets[a].firstbit;
-		maskvalue &= maxvalue; maskvalue <<= adlibconfig_widgets[a].firstbit;
+		srcvalue &= maxvalue;
+		srcvalue <<= adlibconfig_widgets[a].firstbit;
+		maskvalue &= maxvalue;
+		maskvalue <<= adlibconfig_widgets[a].firstbit;
 
 		sample->adlib_bytes[adlibconfig_widgets[a].byteno] =
-			(sample->adlib_bytes[adlibconfig_widgets[a].byteno] &~ maskvalue) | srcvalue;
+			(sample->adlib_bytes[adlibconfig_widgets[a].byteno] & ~maskvalue) | srcvalue;
 	}
 }
 
@@ -891,23 +832,23 @@ static void sample_adlibconfig_draw_const(void)
 		int x, y;
 		const char *label;
 	} labels[] = {
-		{19,  1, "Adlib Melodic Instrument Parameters"},
-		{19,  3, "Additive Synthesis:"},
-		{18,  4, "Modulation Feedback:"},
-		{26,  6, "Car Mod"},
-		{19,  7, "Attack"},
-		{20,  8, "Decay"},
-		{18,  9, "Sustain"},
-		{18, 10, "Release"},
-		{12, 11, "Sustain Sound"},
-		{19, 12, "Volume"},
-		{58,  6, "Car Mod"},
-		{43,  7, "Scale Envelope"},
-		{44,  8, "Level Scaling"},
-		{37,  9, "Frequency Multiplier"},
-		{46, 10, "Wave Select"},
-		{44, 11, "Pitch Vibrato"},
-		{43, 12, "Volume Vibrato"},
+		{19, 1,  "Adlib Melodic Instrument Parameters"},
+		{19, 3,  "Additive Synthesis:"                },
+		{18, 4,  "Modulation Feedback:"               },
+		{26, 6,  "Car Mod"							},
+		{19, 7,  "Attack"							 },
+		{20, 8,  "Decay"							  },
+		{18, 9,  "Sustain"							},
+		{18, 10, "Release"							},
+		{12, 11, "Sustain Sound"                      },
+		{19, 12, "Volume"							 },
+		{58, 6,  "Car Mod"							},
+		{43, 7,  "Scale Envelope"                     },
+		{44, 8,  "Level Scaling"                      },
+		{37, 9,  "Frequency Multiplier"               },
+		{46, 10, "Wave Select"                        },
+		{44, 11, "Pitch Vibrato"                      },
+		{43, 12, "Volume Vibrato"                     },
 	};
 
 	int a;
@@ -915,23 +856,21 @@ static void sample_adlibconfig_draw_const(void)
 	// 39 33
 	draw_box(38, 2 + 30, 40, 5 + 30, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	draw_fill_chars(25, 6 + 30, 32,13 + 30, DEFAULT_FG, 0);
+	draw_fill_chars(25, 6 + 30, 32, 13 + 30, DEFAULT_FG, 0);
 	draw_box(25, 6 + 30, 28, 13 + 30, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(29, 6 + 30, 32, 13 + 30, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	draw_fill_chars(57, 6 + 30, 64,13 + 30, DEFAULT_FG, 0);
+	draw_fill_chars(57, 6 + 30, 64, 13 + 30, DEFAULT_FG, 0);
 	draw_box(57, 6 + 30, 60, 13 + 30, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(61, 6 + 30, 64, 13 + 30, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	for (a = 0; a < ARRAY_SIZE(labels); a++)
-		draw_text(labels[a].label, labels[a].x, labels[a].y + 30, a ? 0 : 3, 2);
+	for (a = 0; a < ARRAY_SIZE(labels); a++) draw_text(labels[a].label, labels[a].x, labels[a].y + 30, a ? 0 : 3, 2);
 }
 
 static int do_adlib_handlekey(struct key_event *kk)
 {
 	if (kk->sym == SDLK_F1) {
-		if (kk->state == KEY_PRESS)
-			return 1;
+		if (kk->state == KEY_PRESS) return 1;
 		status.current_help_index = HELP_ADLIB_SAMPLE;
 		dialog_f1_hack = 1;
 		dialog_destroy_all();
@@ -954,48 +893,37 @@ static void sample_adlibconfig_dialog(UNUSED void *ign)
 
 	for (a = 0; a < ARRAY_SIZE(adlibconfig_widgets); a++) {
 		unsigned int srcvalue = sample->adlib_bytes[adlibconfig_widgets[a].byteno];
-		unsigned int nbits_real = adlibconfig_widgets[a].nbits < 0
-				? -adlibconfig_widgets[a].nbits
-				:  adlibconfig_widgets[a].nbits;
+		unsigned int nbits_real =
+			adlibconfig_widgets[a].nbits < 0 ? -adlibconfig_widgets[a].nbits : adlibconfig_widgets[a].nbits;
 		unsigned int minvalue = 0, maxvalue = (1 << nbits_real) - 1;
 
 		srcvalue >>= adlibconfig_widgets[a].firstbit;
 		srcvalue &= maxvalue;
-		if (adlibconfig_widgets[a].nbits < 0)
-			srcvalue = maxvalue - srcvalue; // reverse the semantics
+		if (adlibconfig_widgets[a].nbits < 0) srcvalue = maxvalue - srcvalue; // reverse the semantics
 
 		switch (adlibconfig_widgets[a].type) {
 		case B:
-			widget_create_menutoggle(sample_adlibconfig_widgets + a,
-				adlib_xpos[adlibconfig_widgets[a].xref],
-				adlibconfig_widgets[a].y + 30,
-				a > 0 ? a - 1 : 0,
-				a + 1 < ARRAY_SIZE(adlibconfig_widgets) ? a + 1 : a,
-				a, a,
-				(a > 1 ? ((a + 4) % (ARRAY_SIZE(adlibconfig_widgets) - 2)) + 2 : 2),
-				adlibconfig_refresh, yn_toggle);
+			widget_create_menutoggle(
+				sample_adlibconfig_widgets + a, adlib_xpos[adlibconfig_widgets[a].xref], adlibconfig_widgets[a].y + 30,
+				a > 0 ? a - 1 : 0, a + 1 < ARRAY_SIZE(adlibconfig_widgets) ? a + 1 : a, a, a,
+				(a > 1 ? ((a + 4) % (ARRAY_SIZE(adlibconfig_widgets) - 2)) + 2 : 2), adlibconfig_refresh, yn_toggle);
 			sample_adlibconfig_widgets[a].d.menutoggle.state = srcvalue;
 			sample_adlibconfig_widgets[a].d.menutoggle.activation_keys = "ny";
 			break;
 		case N:
-			widget_create_numentry(sample_adlibconfig_widgets + a,
-				adlib_xpos[adlibconfig_widgets[a].xref],
-				adlibconfig_widgets[a].y + 30,
-				nbits_real < 4 ? 1 : 2,
-				a > 0 ? a - 1 : 0,
-				a + 1 < ARRAY_SIZE(adlibconfig_widgets) ? a + 1 : a,
-				(a > 1 ? ((a + 4) % (ARRAY_SIZE(adlibconfig_widgets) - 2)) + 2 : 2),
-				adlibconfig_refresh,
-				minvalue, maxvalue,
-				adlib_cursorpos + adlibconfig_widgets[a].xref);
+			widget_create_numentry(
+				sample_adlibconfig_widgets + a, adlib_xpos[adlibconfig_widgets[a].xref], adlibconfig_widgets[a].y + 30,
+				nbits_real < 4 ? 1 : 2, a > 0 ? a - 1 : 0, a + 1 < ARRAY_SIZE(adlibconfig_widgets) ? a + 1 : a,
+				(a > 1 ? ((a + 4) % (ARRAY_SIZE(adlibconfig_widgets) - 2)) + 2 : 2), adlibconfig_refresh, minvalue,
+				maxvalue, adlib_cursorpos + adlibconfig_widgets[a].xref);
 			sample_adlibconfig_widgets[a].d.numentry.value = srcvalue;
 			break;
 		}
 	}
 
-	dialog = dialog_create_custom(9, 30, 61, 15, sample_adlibconfig_widgets,
-				  ARRAY_SIZE(adlibconfig_widgets), 0,
-				  sample_adlibconfig_draw_const, NULL);
+	dialog = dialog_create_custom(
+		9, 30, 61, 15, sample_adlibconfig_widgets, ARRAY_SIZE(adlibconfig_widgets), 0, sample_adlibconfig_draw_const,
+		NULL);
 	dialog->action_yes = do_adlibconfig;
 	dialog->handle_key = do_adlib_handlekey;
 }
@@ -1005,11 +933,10 @@ static void sample_adlibpatch_finish(int n)
 {
 	song_sample_t *sample;
 
-	if (n <= 0 || n > 128)
-		return;
+	if (n <= 0 || n > 128) return;
 
 	sample = song_get_sample(current_sample);
-	adlib_patch_apply((song_sample_t *) sample, n - 1);
+	adlib_patch_apply((song_sample_t *)sample, n - 1);
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE; // redraw the sample
 
 	sample_host_dialog(-1);
@@ -1031,15 +958,14 @@ struct sample_save_data {
 
 static void save_sample_free_data(void *ptr)
 {
-	struct sample_save_data *data = (struct sample_save_data *) ptr;
-	if (data->path)
-		free(data->path);
+	struct sample_save_data *data = (struct sample_save_data *)ptr;
+	if (data->path) free(data->path);
 	free(data);
 }
 
 static void do_save_sample(void *ptr)
 {
-	struct sample_save_data *data = (struct sample_save_data *) ptr;
+	struct sample_save_data *data = (struct sample_save_data *)ptr;
 
 	// I guess this function doesn't need to care about the return value,
 	// since song_save_sample is handling all the visual feedback...
@@ -1060,7 +986,7 @@ static void sample_save(const char *filename, const char *format)
 		return;
 	}
 
-	tmp=0;
+	tmp = 0;
 	data = mem_alloc(sizeof(struct sample_save_data));
 	if (!S_ISDIR(buf.st_mode)) {
 		/* directory browsing */
@@ -1081,8 +1007,7 @@ static void sample_save(const char *filename, const char *format)
 
 	if (filename && *filename && os_stat(ptr, &buf) == 0) {
 		if (S_ISREG(buf.st_mode)) {
-			dialog_create(DIALOG_OK_CANCEL, "Overwrite file?",
-				      do_save_sample, save_sample_free_data, 1, data);
+			dialog_create(DIALOG_OK_CANCEL, "Overwrite file?", do_save_sample, save_sample_free_data, 1, data);
 			/* callback will free it */
 		} else if (S_ISDIR(buf.st_mode)) {
 			status_text_flash("%s is a directory", filename);
@@ -1124,33 +1049,28 @@ static void export_sample_list_draw(void)
 	}
 }
 
-static int export_sample_list_handle_key(struct key_event * k)
+static int export_sample_list_handle_key(struct key_event *k)
 {
 	int new_format = export_sample_format;
 
-	if (k->state == KEY_RELEASE)
-		return 0;
+	if (k->state == KEY_RELEASE) return 0;
 	switch (k->sym) {
 	case SDLK_UP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		new_format--;
 		break;
 	case SDLK_DOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		new_format++;
 		break;
 	case SDLK_PAGEUP:
 	case SDLK_HOME:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		new_format = 0;
 		break;
 	case SDLK_PAGEDOWN:
 	case SDLK_END:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		new_format = num_save_formats - 1;
 		break;
 	case SDLK_TAB:
@@ -1161,12 +1081,10 @@ static int export_sample_list_handle_key(struct key_event * k)
 		/* fall through */
 	case SDLK_LEFT:
 	case SDLK_RIGHT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		widget_change_focus_to(0); /* should focus 0/1/2 depending on what's closest */
 		return 1;
-	default:
-		return 0;
+	default: return 0;
 	}
 
 	new_format = CLAMP(new_format, 0, num_save_formats - 1);
@@ -1194,8 +1112,7 @@ static void export_sample_dialog(void)
 	song_sample_t *sample = song_get_sample(current_sample);
 	struct dialog *dialog;
 
-	widget_create_textentry(export_sample_widgets + 0, 33, 24, 18, 0, 1, 3, NULL,
-			 export_sample_filename, NAME_MAX);
+	widget_create_textentry(export_sample_widgets + 0, 33, 24, 18, 0, 1, 3, NULL, export_sample_filename, NAME_MAX);
 	widget_create_button(export_sample_widgets + 1, 31, 35, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
 	widget_create_button(export_sample_widgets + 2, 42, 35, 6, 3, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 	widget_create_other(export_sample_widgets + 3, 0, export_sample_list_handle_key, NULL, export_sample_list_draw);
@@ -1203,8 +1120,7 @@ static void export_sample_dialog(void)
 	strncpy(export_sample_filename, sample->filename, NAME_MAX);
 	export_sample_filename[NAME_MAX] = 0;
 
-	dialog = dialog_create_custom(21, 20, 39, 18, export_sample_widgets, 4, 0,
-				      export_sample_draw_const, NULL);
+	dialog = dialog_create_custom(21, 20, 39, 18, export_sample_widgets, 4, 0, export_sample_draw_const, NULL);
 	dialog->action_yes = do_export_sample;
 }
 
@@ -1242,10 +1158,8 @@ static void resize_sample_dialog(int aa)
 	resize_sample_cursor = 0;
 	widget_create_numentry(resize_sample_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999999, &resize_sample_cursor);
 	resize_sample_widgets[0].d.numentry.value = sample->length;
-	widget_create_button(resize_sample_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1,
-		dialog_cancel_NULL, "Cancel", 1);
-	dialog = dialog_create_custom(26, 22, 29, 11, resize_sample_widgets, 2, 0,
-		resize_sample_draw_const, NULL);
+	widget_create_button(resize_sample_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	dialog = dialog_create_custom(26, 22, 29, 11, resize_sample_widgets, 2, 0, resize_sample_draw_const, NULL);
 	dialog->action_yes = aa ? do_resize_sample_aa : do_resize_sample;
 }
 
@@ -1256,14 +1170,12 @@ static void sample_set_mute(int n, int mute)
 	song_sample_t *smp = song_get_sample(n);
 
 	if (mute) {
-		if (smp->flags & CHN_MUTE)
-			return;
+		if (smp->flags & CHN_MUTE) return;
 		smp->globalvol_saved = smp->global_volume;
 		smp->global_volume = 0;
 		smp->flags |= CHN_MUTE;
 	} else {
-		if (!(smp->flags & CHN_MUTE))
-			return;
+		if (!(smp->flags & CHN_MUTE)) return;
 		smp->global_volume = smp->globalvol_saved;
 		smp->flags &= ~CHN_MUTE;
 	}
@@ -1289,153 +1201,108 @@ static void sample_toggle_solo(int n)
 			}
 		}
 	}
-	for (i = 1; i < MAX_SAMPLES; i++)
-		sample_set_mute(i, solo && i != n);
+	for (i = 1; i < MAX_SAMPLES; i++) sample_set_mute(i, solo && i != n);
 }
 
 /* --------------------------------------------------------------------- */
 
-static void sample_list_handle_alt_key(struct key_event * k)
+static void sample_list_handle_alt_key(struct key_event *k)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
 	int canmod = (sample->data != NULL && !(sample->flags & CHN_ADLIB));
 
-	if (k->state == KEY_RELEASE)
-		return;
+	if (k->state == KEY_RELEASE) return;
 	switch (k->sym) {
 	case SDLK_a:
-		if (canmod)
-			dialog_create(DIALOG_OK_CANCEL, "Convert sample?", do_sign_convert, NULL, 0, NULL);
+		if (canmod) dialog_create(DIALOG_OK_CANCEL, "Convert sample?", do_sign_convert, NULL, 0, NULL);
 		return;
 	case SDLK_b:
-		if (canmod && (sample->loop_start > 0
-			       || ((sample->flags & CHN_SUSTAINLOOP) && sample->sustain_start > 0))) {
+		if (canmod && (sample->loop_start > 0 || ((sample->flags & CHN_SUSTAINLOOP) && sample->sustain_start > 0))) {
 			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_pre_loop_cut, NULL, 1, NULL);
 		}
 		return;
 	case SDLK_d:
 		if ((k->mod & KMOD_SHIFT) && !(status.flags & CLASSIC_MODE)) {
 			if (canmod && sample->flags & CHN_STEREO) {
-				dialog_create(DIALOG_OK_CANCEL, "Downmix sample to mono?",
-					do_downmix, NULL, 0, NULL);
+				dialog_create(DIALOG_OK_CANCEL, "Downmix sample to mono?", do_downmix, NULL, 0, NULL);
 			}
 		} else {
-			dialog_create(DIALOG_OK_CANCEL, "Delete sample?", do_delete_sample,
-				NULL, 1, NULL);
+			dialog_create(DIALOG_OK_CANCEL, "Delete sample?", do_delete_sample, NULL, 1, NULL);
 		}
 		return;
 	case SDLK_e:
-		if (canmod)
-			resize_sample_dialog(1);
+		if (canmod) resize_sample_dialog(1);
 		break;
 	case SDLK_f:
-		if (canmod)
-			resize_sample_dialog(0);
+		if (canmod) resize_sample_dialog(0);
 		break;
 	case SDLK_g:
-		if (canmod)
-			sample_reverse(sample);
+		if (canmod) sample_reverse(sample);
 		break;
 	case SDLK_h:
-		if (canmod)
-			dialog_create(DIALOG_YES_NO, "Centralise sample?", do_centralise, NULL, 0, NULL);
+		if (canmod) dialog_create(DIALOG_YES_NO, "Centralise sample?", do_centralise, NULL, 0, NULL);
 		return;
 	case SDLK_i:
-		if (canmod)
-			sample_invert(sample);
+		if (canmod) sample_invert(sample);
 		break;
 	case SDLK_l:
-		if (canmod && (sample->loop_end > 0
-			       || ((sample->flags & CHN_SUSTAINLOOP) && sample->sustain_end > 0))) {
+		if (canmod && (sample->loop_end > 0 || ((sample->flags & CHN_SUSTAINLOOP) && sample->sustain_end > 0))) {
 			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_post_loop_cut, NULL, 1, NULL);
 		}
 		return;
 	case SDLK_m:
-		if (canmod)
-			sample_amplify_dialog();
+		if (canmod) sample_amplify_dialog();
 		return;
-	case SDLK_n:
-		song_toggle_multichannel_mode();
-		return;
-	case SDLK_o:
-		sample_save(NULL, "ITS");
-		return;
-	case SDLK_p:
-		smpprompt_create("Copy sample:", "Sample", do_copy_sample);
-		return;
+	case SDLK_n: song_toggle_multichannel_mode(); return;
+	case SDLK_o: sample_save(NULL, "ITS"); return;
+	case SDLK_p: smpprompt_create("Copy sample:", "Sample", do_copy_sample); return;
 	case SDLK_q:
 		if (canmod) {
-			dialog_create(DIALOG_YES_NO, "Convert sample?",
-			      do_quality_convert, do_quality_toggle, 0, NULL);
+			dialog_create(DIALOG_YES_NO, "Convert sample?", do_quality_convert, do_quality_toggle, 0, NULL);
 		}
 		return;
-	case SDLK_r:
-		smpprompt_create("Replace sample with:", "Sample", do_replace_sample);
-		return;
-	case SDLK_s:
-		smpprompt_create("Swap sample with:", "Sample", do_swap_sample);
-		return;
-	case SDLK_t:
-		export_sample_dialog();
-		return;
-	case SDLK_w:
-		sample_save(NULL, "RAW");
-		return;
-	case SDLK_x:
-		smpprompt_create("Exchange sample with:", "Sample", do_exchange_sample);
-		return;
+	case SDLK_r: smpprompt_create("Replace sample with:", "Sample", do_replace_sample); return;
+	case SDLK_s: smpprompt_create("Swap sample with:", "Sample", do_swap_sample); return;
+	case SDLK_t: export_sample_dialog(); return;
+	case SDLK_w: sample_save(NULL, "RAW"); return;
+	case SDLK_x: smpprompt_create("Exchange sample with:", "Sample", do_exchange_sample); return;
 	case SDLK_y:
 		/* hi virt */
 		txtsynth_dialog();
 		return;
-	case SDLK_z:
-		{ // uguu~
-			void (*dlg)(void *) = (k->mod & KMOD_SHIFT)
-				? sample_adlibpatch_dialog
-				: sample_adlibconfig_dialog;
-			if (canmod) {
-				dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample.",
-					      dlg, NULL, 1, NULL);
-			} else {
-				dlg(NULL);
-			}
+	case SDLK_z: { // uguu~
+		void (*dlg)(void *) = (k->mod & KMOD_SHIFT) ? sample_adlibpatch_dialog : sample_adlibconfig_dialog;
+		if (canmod) {
+			dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample.", dlg, NULL, 1, NULL);
+		} else {
+			dlg(NULL);
 		}
+	}
 		return;
-	case SDLK_INSERT:
-		song_insert_sample_slot(current_sample);
-		break;
-	case SDLK_DELETE:
-		song_remove_sample_slot(current_sample);
-		break;
-	case SDLK_F9:
-		sample_toggle_mute(current_sample);
-		break;
-	case SDLK_F10:
-		sample_toggle_solo(current_sample);
-		break;
-	default:
-		return;
+	case SDLK_INSERT: song_insert_sample_slot(current_sample); break;
+	case SDLK_DELETE: song_remove_sample_slot(current_sample); break;
+	case SDLK_F9: sample_toggle_mute(current_sample); break;
+	case SDLK_F10: sample_toggle_solo(current_sample); break;
+	default: return;
 	}
 
 	status.flags |= NEED_UPDATE;
 }
 
-static void sample_list_handle_key(struct key_event * k)
+static void sample_list_handle_key(struct key_event *k)
 {
 	int new_sample = current_sample;
 	song_sample_t *sample = song_get_sample(current_sample);
 
 	switch (k->sym) {
 	case SDLK_SPACE:
-		if (k->state == KEY_RELEASE)
-			return;
+		if (k->state == KEY_RELEASE) return;
 		if (selected_widget && *selected_widget == 0) {
 			status.flags |= NEED_UPDATE;
 		}
 		return;
 	case SDLK_PLUS:
-		if (k->state == KEY_RELEASE)
-			return;
+		if (k->state == KEY_RELEASE) return;
 		if (k->mod & KMOD_ALT) {
 			sample->c5speed *= 2;
 			status.flags |= SONG_NEEDS_SAVE;
@@ -1446,8 +1313,7 @@ static void sample_list_handle_key(struct key_event * k)
 		status.flags |= NEED_UPDATE;
 		return;
 	case SDLK_MINUS:
-		if (k->state == KEY_RELEASE)
-			return;
+		if (k->state == KEY_RELEASE) return;
 		if (k->mod & KMOD_ALT) {
 			sample->c5speed /= 2;
 			status.flags |= SONG_NEEDS_SAVE;
@@ -1460,30 +1326,25 @@ static void sample_list_handle_key(struct key_event * k)
 
 	case SDLK_COMMA:
 	case SDLK_LESS:
-		if (k->state == KEY_RELEASE)
-			return;
+		if (k->state == KEY_RELEASE) return;
 		song_change_current_play_channel(-1, 0);
 		return;
 	case SDLK_PERIOD:
 	case SDLK_GREATER:
-		if (k->state == KEY_RELEASE)
-			return;
+		if (k->state == KEY_RELEASE) return;
 		song_change_current_play_channel(1, 0);
 		return;
 	case SDLK_PAGEUP:
-		if (k->state == KEY_RELEASE)
-			return;
+		if (k->state == KEY_RELEASE) return;
 		new_sample--;
 		break;
 	case SDLK_PAGEDOWN:
-		if (k->state == KEY_RELEASE)
-			return;
+		if (k->state == KEY_RELEASE) return;
 		new_sample++;
 		break;
 	case SDLK_ESCAPE:
 		if (k->mod & KMOD_SHIFT) {
-			if (k->state == KEY_RELEASE)
-				return;
+			if (k->state == KEY_RELEASE) return;
 			sample_list_cursor_pos = 25;
 			_fix_accept_text();
 			widget_change_focus_to(0);
@@ -1493,8 +1354,7 @@ static void sample_list_handle_key(struct key_event * k)
 		return;
 	default:
 		if (k->mod & KMOD_ALT) {
-			if (k->state == KEY_RELEASE)
-				return;
+			if (k->state == KEY_RELEASE) return;
 			sample_list_handle_alt_key(k);
 		} else if (!k->is_repeat) {
 			int n, v;
@@ -1506,11 +1366,8 @@ static void sample_list_handle_key(struct key_event * k)
 					v = KEYJAZZ_DEFAULTVOL;
 				}
 			} else {
-				n = (k->sym == SDLK_SPACE)
-					? last_note
-					: kbd_get_note(k);
-				if (n <= 0 || n > 120)
-					return;
+				n = (k->sym == SDLK_SPACE) ? last_note : kbd_get_note(k);
+				if (n <= 0 || n > 120) return;
 				v = KEYJAZZ_DEFAULTVOL;
 			}
 			if (k->state == KEY_RELEASE) {
@@ -1578,8 +1435,7 @@ static void sample_list_draw_const(void)
 	draw_text("Vibrato Waveform", 58, 33, 0, 2);
 	draw_text("Vibrato Rate", 60, 44, 0, 2);
 
-	for (n = 0; n < 13; n++)
-		draw_char(154, 64 + n, 21, 3, 0);
+	for (n = 0; n < 13; n++) draw_char(154, 64 + n, 21, 3, 0);
 }
 
 /* --------------------------------------------------------------------- */
@@ -1603,17 +1459,13 @@ static void update_sample_loop_flags(void)
 	}
 
 	if (sample->flags & CHN_LOOP) {
-		if (sample->loop_start == sample->length)
-			sample->loop_start = 0;
-		if (sample->loop_end <= sample->loop_start)
-			sample->loop_end = sample->length;
+		if (sample->loop_start == sample->length) sample->loop_start = 0;
+		if (sample->loop_end <= sample->loop_start) sample->loop_end = sample->length;
 	}
 
 	if (sample->flags & CHN_SUSTAINLOOP) {
-		if (sample->sustain_start == sample->length)
-			sample->sustain_start = 0;
-		if (sample->sustain_end <= sample->sustain_start)
-			sample->sustain_end = sample->length;
+		if (sample->sustain_start == sample->length) sample->sustain_start = 0;
+		if (sample->sustain_end <= sample->sustain_start) sample->sustain_end = sample->length;
 	}
 
 	csf_adjust_sample_loop(sample);
@@ -1631,32 +1483,32 @@ static void update_sample_loop_points(void)
 	int flags_changed = 0;
 
 	/* 9 = loop toggle, 10 = loop start, 11 = loop end */
-	if ((unsigned long) widgets_samplelist[10].d.numentry.value > sample->length - 1)
+	if ((unsigned long)widgets_samplelist[10].d.numentry.value > sample->length - 1)
 		widgets_samplelist[10].d.numentry.value = sample->length - 1;
 	if (widgets_samplelist[11].d.numentry.value <= widgets_samplelist[10].d.numentry.value) {
 		widgets_samplelist[9].d.menutoggle.state = 0;
 		flags_changed = 1;
-	} else if ((unsigned long) widgets_samplelist[11].d.numentry.value > sample->length) {
+	} else if ((unsigned long)widgets_samplelist[11].d.numentry.value > sample->length) {
 		widgets_samplelist[11].d.numentry.value = sample->length;
 	}
-	if (sample->loop_start != (unsigned long) widgets_samplelist[10].d.numentry.value
-	|| sample->loop_end != (unsigned long) widgets_samplelist[11].d.numentry.value) {
+	if (sample->loop_start != (unsigned long)widgets_samplelist[10].d.numentry.value
+	    || sample->loop_end != (unsigned long)widgets_samplelist[11].d.numentry.value) {
 		flags_changed = 1;
 	}
 	sample->loop_start = widgets_samplelist[10].d.numentry.value;
 	sample->loop_end = widgets_samplelist[11].d.numentry.value;
 
 	/* 12 = sus toggle, 13 = sus start, 14 = sus end */
-	if ((unsigned long) widgets_samplelist[13].d.numentry.value > sample->length - 1)
+	if ((unsigned long)widgets_samplelist[13].d.numentry.value > sample->length - 1)
 		widgets_samplelist[13].d.numentry.value = sample->length - 1;
 	if (widgets_samplelist[14].d.numentry.value <= widgets_samplelist[13].d.numentry.value) {
 		widgets_samplelist[12].d.menutoggle.state = 0;
 		flags_changed = 1;
-	} else if ((unsigned long) widgets_samplelist[14].d.numentry.value > sample->length) {
+	} else if ((unsigned long)widgets_samplelist[14].d.numentry.value > sample->length) {
 		widgets_samplelist[14].d.numentry.value = sample->length;
 	}
-	if (sample->sustain_start != (unsigned long) widgets_samplelist[13].d.numentry.value
-	|| sample->sustain_end != (unsigned long) widgets_samplelist[14].d.numentry.value) {
+	if (sample->sustain_start != (unsigned long)widgets_samplelist[13].d.numentry.value
+	    || sample->sustain_end != (unsigned long)widgets_samplelist[14].d.numentry.value) {
 		flags_changed = 1;
 	}
 	sample->sustain_start = widgets_samplelist[13].d.numentry.value;
@@ -1681,21 +1533,15 @@ static void update_values_in_song(void)
 	sample->volume = widgets_samplelist[1].d.thumbbar.value * 4;
 	sample->global_volume = widgets_samplelist[2].d.thumbbar.value;
 
-	if (widgets_samplelist[3].d.toggle.state)
-		sample->flags |= CHN_PANNING;
-	else
-		sample->flags &= ~CHN_PANNING;
+	if (widgets_samplelist[3].d.toggle.state) sample->flags |= CHN_PANNING;
+	else sample->flags &= ~CHN_PANNING;
 	sample->vib_speed = widgets_samplelist[5].d.thumbbar.value;
 	sample->vib_depth = widgets_samplelist[6].d.thumbbar.value;
 
-	if (widgets_samplelist[15].d.togglebutton.state)
-		sample->vib_type = VIB_SINE;
-	else if (widgets_samplelist[16].d.togglebutton.state)
-		sample->vib_type = VIB_RAMP_DOWN;
-	else if (widgets_samplelist[17].d.togglebutton.state)
-		sample->vib_type = VIB_SQUARE;
-	else
-		sample->vib_type = VIB_RANDOM;
+	if (widgets_samplelist[15].d.togglebutton.state) sample->vib_type = VIB_SINE;
+	else if (widgets_samplelist[16].d.togglebutton.state) sample->vib_type = VIB_RAMP_DOWN;
+	else if (widgets_samplelist[17].d.togglebutton.state) sample->vib_type = VIB_SQUARE;
+	else sample->vib_type = VIB_RANDOM;
 	sample->vib_rate = widgets_samplelist[19].d.thumbbar.value;
 
 	status.flags |= SONG_NEEDS_SAVE;
@@ -1738,8 +1584,7 @@ int sample_is_used_by_instrument(int samp)
 		ins = song_get_instrument(i);
 		if (!ins) continue;
 		for (j = 0; j < 120; j++) {
-			if (ins->sample_map[j] == (unsigned int)samp)
-				return 1;
+			if (ins->sample_map[j] == (unsigned int)samp) return 1;
 		}
 	}
 	return 0;
@@ -1781,8 +1626,9 @@ void sample_list_load_page(struct page *page)
 	page->help_index = HELP_SAMPLE_LIST;
 
 	/* 0 = sample list */
-	widget_create_other(widgets_samplelist + 0, 1, sample_list_handle_key_on_list,
-		sample_list_handle_text_input_on_list, sample_list_draw_list);
+	widget_create_other(
+		widgets_samplelist + 0, 1, sample_list_handle_key_on_list, sample_list_handle_text_input_on_list,
+		sample_list_draw_list);
 	_fix_accept_text();
 
 	widgets_samplelist[0].x = 5;
@@ -1799,35 +1645,35 @@ void sample_list_load_page(struct page *page)
 	widget_create_thumbbar(widgets_samplelist + 6, 38, 46, 9, 5, 6, 19, update_values_in_song, 0, 32);
 	/* 7 -> 14 = top right box */
 	widget_create_textentry(widgets_samplelist + 7, 64, 13, 13, 7, 8, 0, update_filename, NULL, 12);
-	widget_create_numentry(widgets_samplelist + 8, 64, 14, 7, 7, 9, 0,
-			update_sample_speed, 0, 9999999, &sample_numentry_cursor_pos);
-	widget_create_menutoggle(widgets_samplelist + 9, 64, 15, 8, 10, 1, 0, 0,
-			  update_sample_loop_flags, loop_states);
-	widget_create_numentry(widgets_samplelist + 10, 64, 16, 7, 9, 11, 0,
-			update_sample_loop_points, 0, 9999999, &sample_numentry_cursor_pos);
-	widget_create_numentry(widgets_samplelist + 11, 64, 17, 7, 10, 12, 0,
-			update_sample_loop_points, 0, 9999999, &sample_numentry_cursor_pos);
-	widget_create_menutoggle(widgets_samplelist + 12, 64, 18, 11, 13, 1, 0, 0,
-			  update_sample_loop_flags, loop_states);
-	widget_create_numentry(widgets_samplelist + 13, 64, 19, 7, 12, 14, 0,
-			update_sample_loop_points, 0, 9999999, &sample_numentry_cursor_pos);
-	widget_create_numentry(widgets_samplelist + 14, 64, 20, 7, 13, 15, 0,
-			update_sample_loop_points, 0, 9999999, &sample_numentry_cursor_pos);
+	widget_create_numentry(
+		widgets_samplelist + 8, 64, 14, 7, 7, 9, 0, update_sample_speed, 0, 9999999, &sample_numentry_cursor_pos);
+	widget_create_menutoggle(widgets_samplelist + 9, 64, 15, 8, 10, 1, 0, 0, update_sample_loop_flags, loop_states);
+	widget_create_numentry(
+		widgets_samplelist + 10, 64, 16, 7, 9, 11, 0, update_sample_loop_points, 0, 9999999,
+		&sample_numentry_cursor_pos);
+	widget_create_numentry(
+		widgets_samplelist + 11, 64, 17, 7, 10, 12, 0, update_sample_loop_points, 0, 9999999,
+		&sample_numentry_cursor_pos);
+	widget_create_menutoggle(widgets_samplelist + 12, 64, 18, 11, 13, 1, 0, 0, update_sample_loop_flags, loop_states);
+	widget_create_numentry(
+		widgets_samplelist + 13, 64, 19, 7, 12, 14, 0, update_sample_loop_points, 0, 9999999,
+		&sample_numentry_cursor_pos);
+	widget_create_numentry(
+		widgets_samplelist + 14, 64, 20, 7, 13, 15, 0, update_sample_loop_points, 0, 9999999,
+		&sample_numentry_cursor_pos);
 	/* 15 -> 18 = vibrato waveforms */
-	widget_create_togglebutton(widgets_samplelist + 15, 57, 36, 6, 14, 17, 5,
-			    16, 16, update_values_in_song, "\xb9\xba", 3, vibrato_waveforms);
-	widget_create_togglebutton(widgets_samplelist + 16, 67, 36, 6, 14, 18, 15,
-			    0, 0, update_values_in_song, "\xbd\xbe", 3, vibrato_waveforms);
-	widget_create_togglebutton(widgets_samplelist + 17, 57, 39, 6, 15, 19, 5,
-			    18, 18, update_values_in_song, "\xbb\xbc", 3, vibrato_waveforms);
-	widget_create_togglebutton(widgets_samplelist + 18, 67, 39, 6, 16, 19, 17,
-			    0, 0, update_values_in_song, "Random", 1, vibrato_waveforms);
+	widget_create_togglebutton(
+		widgets_samplelist + 15, 57, 36, 6, 14, 17, 5, 16, 16, update_values_in_song, "\xb9\xba", 3, vibrato_waveforms);
+	widget_create_togglebutton(
+		widgets_samplelist + 16, 67, 36, 6, 14, 18, 15, 0, 0, update_values_in_song, "\xbd\xbe", 3, vibrato_waveforms);
+	widget_create_togglebutton(
+		widgets_samplelist + 17, 57, 39, 6, 15, 19, 5, 18, 18, update_values_in_song, "\xbb\xbc", 3, vibrato_waveforms);
+	widget_create_togglebutton(
+		widgets_samplelist + 18, 67, 39, 6, 16, 19, 17, 0, 0, update_values_in_song, "Random", 1, vibrato_waveforms);
 	/* 19 = vibrato rate */
 	widget_create_thumbbar(widgets_samplelist + 19, 56, 46, 16, 17, 19, 0, update_values_in_song, 0, 255);
 
 	/* count how many formats there really are */
 	num_save_formats = 0;
-	while (sample_save_formats[num_save_formats].label)
-		num_save_formats++;
+	while (sample_save_formats[num_save_formats].label) num_save_formats++;
 }
-

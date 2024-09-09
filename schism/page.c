@@ -72,7 +72,7 @@ static struct {
 	int h, m, s;
 } current_time = {0, 0, 0};
 
-extern int playback_tracing;    /* scroll lock */
+extern int playback_tracing; /* scroll lock */
 extern int midi_playback_tracing;
 
 /* return 1 -> the time changed; need to redraw */
@@ -88,29 +88,16 @@ static int check_time(void)
 	int row, order;
 
 	switch (td) {
-	case TIME_PLAY_ELAPSED:
-		td = (is_playing ? TIME_PLAYBACK : TIME_ELAPSED);
-		break;
-	case TIME_PLAY_CLOCK:
-		td = (is_playing ? TIME_PLAYBACK : TIME_CLOCK);
-		break;
-	case TIME_PLAY_OFF:
-		td = (is_playing ? TIME_PLAYBACK : TIME_OFF);
-		break;
-	default:
-		break;
+	case TIME_PLAY_ELAPSED: td = (is_playing ? TIME_PLAYBACK : TIME_ELAPSED); break;
+	case TIME_PLAY_CLOCK: td = (is_playing ? TIME_PLAYBACK : TIME_CLOCK); break;
+	case TIME_PLAY_OFF: td = (is_playing ? TIME_PLAYBACK : TIME_OFF); break;
+	default: break;
 	}
 
 	switch (td) {
-	case TIME_OFF:
-		h = m = s = 0;
-		break;
-	case TIME_PLAYBACK:
-		h = (m = (s = song_get_current_time()) / 60) / 60;
-		break;
-	case TIME_ELAPSED:
-		h = (m = (s = SCHISM_GET_TICKS() / 1000) / 60) / 60;
-		break;
+	case TIME_OFF: h = m = s = 0; break;
+	case TIME_PLAYBACK: h = (m = (s = song_get_current_time()) / 60) / 60; break;
+	case TIME_ELAPSED: h = (m = (s = SCHISM_GET_TICKS() / 1000) / 60) / 60; break;
 	case TIME_ABSOLUTE:
 		/* absolute time shows the time of the current cursor
 		position in the pattern editor :) */
@@ -161,13 +148,11 @@ static inline void draw_time(void)
 	char buf[16];
 	int is_playing = song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP);
 
-	if (status.time_display == TIME_OFF || (status.time_display == TIME_PLAY_OFF && !is_playing))
-		return;
+	if (status.time_display == TIME_OFF || (status.time_display == TIME_PLAY_OFF && !is_playing)) return;
 
 	/* this allows for 999 hours... that's like... 41 days...
 	 * who on earth leaves a tracker running for 41 days? */
-	sprintf(buf, "%3d:%02d:%02d", current_time.h % 1000,
-		current_time.m % 60, current_time.s % 60);
+	sprintf(buf, "%3d:%02d:%02d", current_time.h % 1000, current_time.m % 60, current_time.s % 60);
 	draw_text(buf, 69, 9, 0, 2);
 }
 
@@ -180,16 +165,13 @@ static void draw_page_title(void)
 	if (tlen > 0) {
 		tpos = 41 - ((tlen + 1) / 2);
 
-		for (x = 1; x < tpos - 1; x++)
-			draw_char(154, x, 11, 1, 2);
+		for (x = 1; x < tpos - 1; x++) draw_char(154, x, 11, 1, 2);
 		draw_char(0, tpos - 1, 11, 1, 2);
 		draw_text(ACTIVE_PAGE.title, tpos, 11, 0, 2);
 		draw_char(0, tpos + tlen, 11, 1, 2);
-		for (x = tpos + tlen + 1; x < 79; x++)
-			draw_char(154, x, 11, 1, 2);
+		for (x = tpos + tlen + 1; x < 79; x++) draw_char(154, x, 11, 1, 2);
 	} else {
-		for (x = 1; x < 79; x++)
-			draw_char(154, x, 11, 1, 2);
+		for (x = 1; x < 79; x++) draw_char(154, x, 11, 1, 2);
 	}
 }
 
@@ -204,7 +186,6 @@ static void draw_page(void)
 	if (ACTIVE_PAGE.draw_full) {
 		ACTIVE_PAGE.draw_full();
 	} else {
-
 		draw_page_title();
 		if (ACTIVE_PAGE.draw_const) ACTIVE_PAGE.draw_const();
 		if (ACTIVE_PAGE.predraw_hook) ACTIVE_PAGE.predraw_hook();
@@ -212,14 +193,11 @@ static void draw_page(void)
 
 	/* this doesn't use widgets[] because it needs to draw the page's
 	 * widgets whether or not a dialog is active */
-	while (n--)
-		widget_draw_widget(ACTIVE_PAGE.widgets + n, n == ACTIVE_PAGE.selected_widget);
+	while (n--) widget_draw_widget(ACTIVE_PAGE.widgets + n, n == ACTIVE_PAGE.selected_widget);
 
 	/* redraw the area over the menu if there is one */
-	if (status.dialog_type & DIALOG_MENU)
-		menu_draw();
-	else if (status.dialog_type & DIALOG_BOX)
-		dialog_draw();
+	if (status.dialog_type & DIALOG_MENU) menu_draw();
+	else if (status.dialog_type & DIALOG_BOX) dialog_draw();
 }
 
 /* --------------------------------------------------------------------- */
@@ -230,29 +208,28 @@ inline int page_is_instrument_list(int page)
 	case PAGE_INSTRUMENT_LIST_GENERAL:
 	case PAGE_INSTRUMENT_LIST_VOLUME:
 	case PAGE_INSTRUMENT_LIST_PANNING:
-	case PAGE_INSTRUMENT_LIST_PITCH:
-		return 1;
-	default:
-		return 0;
+	case PAGE_INSTRUMENT_LIST_PITCH: return 1;
+	default: return 0;
 	}
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
 
 static struct widget new_song_widgets[10] = {0};
-static const int new_song_groups[4][3] = { {0, 1, -1}, {2, 3, -1}, {4, 5, -1}, {6, 7, -1} };
+static const int new_song_groups[4][3] = {
+	{0, 1, -1},
+    {2, 3, -1},
+    {4, 5, -1},
+    {6, 7, -1}
+};
 
 static void new_song_ok(UNUSED void *data)
 {
 	int flags = 0;
-	if (new_song_widgets[0].d.togglebutton.state)
-		flags |= KEEP_PATTERNS;
-	if (new_song_widgets[2].d.togglebutton.state)
-		flags |= KEEP_SAMPLES;
-	if (new_song_widgets[4].d.togglebutton.state)
-		flags |= KEEP_INSTRUMENTS;
-	if (new_song_widgets[6].d.togglebutton.state)
-		flags |= KEEP_ORDERLIST;
+	if (new_song_widgets[0].d.togglebutton.state) flags |= KEEP_PATTERNS;
+	if (new_song_widgets[2].d.togglebutton.state) flags |= KEEP_SAMPLES;
+	if (new_song_widgets[4].d.togglebutton.state) flags |= KEEP_INSTRUMENTS;
+	if (new_song_widgets[6].d.togglebutton.state) flags |= KEEP_ORDERLIST;
 	song_new(flags);
 }
 
@@ -271,22 +248,18 @@ void new_song_dialog(void)
 
 	/* only create everything if it hasn't been set up already */
 	if (new_song_widgets[0].width == 0) {
-		widget_create_togglebutton(new_song_widgets + 0, 35, 24, 6, 0, 2, 1, 1, 1, NULL, "Keep",
-				    2, new_song_groups[0]);
-		widget_create_togglebutton(new_song_widgets + 1, 45, 24, 7, 1, 3, 0, 0, 0, NULL, "Clear",
-				    2, new_song_groups[0]);
-		widget_create_togglebutton(new_song_widgets + 2, 35, 27, 6, 0, 4, 3, 3, 3, NULL, "Keep",
-				    2, new_song_groups[1]);
-		widget_create_togglebutton(new_song_widgets + 3, 45, 27, 7, 1, 5, 2, 2, 2, NULL, "Clear",
-				    2, new_song_groups[1]);
-		widget_create_togglebutton(new_song_widgets + 4, 35, 30, 6, 2, 6, 5, 5, 5, NULL, "Keep",
-				    2, new_song_groups[2]);
-		widget_create_togglebutton(new_song_widgets + 5, 45, 30, 7, 3, 7, 4, 4, 4, NULL, "Clear",
-				    2, new_song_groups[2]);
-		widget_create_togglebutton(new_song_widgets + 6, 35, 33, 6, 4, 8, 7, 7, 7, NULL, "Keep",
-				    2, new_song_groups[3]);
-		widget_create_togglebutton(new_song_widgets + 7, 45, 33, 7, 5, 9, 6, 6, 6, NULL, "Clear",
-				    2, new_song_groups[3]);
+		widget_create_togglebutton(new_song_widgets + 0, 35, 24, 6, 0, 2, 1, 1, 1, NULL, "Keep", 2, new_song_groups[0]);
+		widget_create_togglebutton(
+			new_song_widgets + 1, 45, 24, 7, 1, 3, 0, 0, 0, NULL, "Clear", 2, new_song_groups[0]);
+		widget_create_togglebutton(new_song_widgets + 2, 35, 27, 6, 0, 4, 3, 3, 3, NULL, "Keep", 2, new_song_groups[1]);
+		widget_create_togglebutton(
+			new_song_widgets + 3, 45, 27, 7, 1, 5, 2, 2, 2, NULL, "Clear", 2, new_song_groups[1]);
+		widget_create_togglebutton(new_song_widgets + 4, 35, 30, 6, 2, 6, 5, 5, 5, NULL, "Keep", 2, new_song_groups[2]);
+		widget_create_togglebutton(
+			new_song_widgets + 5, 45, 30, 7, 3, 7, 4, 4, 4, NULL, "Clear", 2, new_song_groups[2]);
+		widget_create_togglebutton(new_song_widgets + 6, 35, 33, 6, 4, 8, 7, 7, 7, NULL, "Keep", 2, new_song_groups[3]);
+		widget_create_togglebutton(
+			new_song_widgets + 7, 45, 33, 7, 5, 9, 6, 6, 6, NULL, "Clear", 2, new_song_groups[3]);
 		widget_create_button(new_song_widgets + 8, 28, 36, 8, 6, 8, 9, 9, 9, dialog_yes_NULL, "OK", 4);
 		widget_create_button(new_song_widgets + 9, 41, 36, 8, 6, 9, 8, 8, 8, dialog_cancel_NULL, "Cancel", 2);
 		widget_togglebutton_set(new_song_widgets, 1, 0);
@@ -318,36 +291,30 @@ static void _mp_draw(void)
 	if (_mp_text[0] == '!') {
 		/* inst */
 		n = instrument_get_current();
-		if (n)
-			name = song_get_instrument(n)->name;
-		else
-			name = "(No Instrument)";
+		if (n) name = song_get_instrument(n)->name;
+		else name = "(No Instrument)";
 	} else if (_mp_text[0] == '@') {
 		/* samp */
 		n = sample_get_current();
-		if (n > 0)
-			name = song_get_sample(n)->name;
-		else
-			name = "(No Sample)";
+		if (n > 0) name = song_get_sample(n)->name;
+		else name = "(No Sample)";
 	} else {
 		name = _mp_text;
 	}
 	i = strlen(name);
 	draw_fill_chars(_mp_text_x, _mp_text_y, _mp_text_x + 17, _mp_text_y, DEFAULT_FG, 2);
-	draw_text_len( name, 17, _mp_text_x, _mp_text_y, 0, 2);
+	draw_text_len(name, 17, _mp_text_x, _mp_text_y, 0, 2);
 	if (i < 17 && name == _mp_text) {
 		draw_char(':', _mp_text_x + i, _mp_text_y, 0, 2);
 	}
-	draw_box(_mp_text_x, _mp_text_y + 1, _mp_text_x + 14, _mp_text_y + 3,
-		 BOX_THIN | BOX_INNER | BOX_INSET);
+	draw_box(_mp_text_x, _mp_text_y + 1, _mp_text_x + 14, _mp_text_y + 3, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
 static void _mp_change(void)
 {
 	if (_mp_setv) _mp_setv(_mpw[0].d.thumbbar.value);
 	if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
-		if (_mp_setv_noplay)
-			_mp_setv_noplay(_mpw[0].d.thumbbar.value);
+		if (_mp_setv_noplay) _mp_setv_noplay(_mpw[0].d.thumbbar.value);
 	}
 	_mp_active = 2;
 }
@@ -360,8 +327,8 @@ static void _mp_finish(UNUSED void *ign)
 	}
 }
 
-static void minipop_slide(int cv, const char *name, int min, int max,
-	void (*setv)(int v), void (*setv_noplay)(int v), int midx, int midy)
+static void minipop_slide(
+	int cv, const char *name, int min, int max, void (*setv)(int v), void (*setv_noplay)(int v), int midx, int midy)
 {
 	if (_mp_active == 1) {
 		_mp_active = 2;
@@ -375,13 +342,12 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 	widget_create_thumbbar(_mpw, midx - 8, midy, 13, 0, 0, 0, _mp_change, min, max);
 	_mpw[0].d.thumbbar.value = CLAMP(cv, min, max);
 	_mpw[0].depressed = 1; /* maybe it just needs some zoloft? */
-	dialog_create_custom(midx - 10, midy - 3,  20, 6, _mpw, 1, 0, _mp_draw, NULL);
+	dialog_create_custom(midx - 10, midy - 3, 20, 6, _mpw, 1, 0, _mp_draw, NULL);
 	/* warp mouse to position of slider knob */
 	if (max == 0) max = 1; /* prevent division by zero */
 	SDL_WarpMouseInWindow(
-		video_window(),
-		video_width()*((midx - 8)*8 + (cv - min)*96.0/(max - min) + 1)/640,
-		video_height()*midy*8/400.0 + 4);
+		video_window(), video_width() * ((midx - 8) * 8 + (cv - min) * 96.0 / (max - min) + 1) / 640,
+		video_height() * midy * 8 / 400.0 + 4);
 
 	_mp_active = 1;
 	status.flags |= NEED_UPDATE;
@@ -390,17 +356,17 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 /* --------------------------------------------------------------------------------------------------------- */
 /* text input handler */
 
-void handle_text_input(const uint8_t* text_input) {
+void handle_text_input(const uint8_t *text_input)
+{
 	if (widget_handle_text_input(text_input)) return;
 
-	if (!(status.dialog_type & DIALOG_BOX) && ACTIVE_PAGE.handle_text_input)
-		ACTIVE_PAGE.handle_text_input(text_input);
+	if (!(status.dialog_type & DIALOG_BOX) && ACTIVE_PAGE.handle_text_input) ACTIVE_PAGE.handle_text_input(text_input);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
 
 /* returns 1 if the key was handled */
-static int handle_key_global(struct key_event * k)
+static int handle_key_global(struct key_event *k)
 {
 	int i, ins_mode;
 
@@ -418,51 +384,47 @@ static int handle_key_global(struct key_event * k)
 			status.flags |= NEED_UPDATE;
 			return 1;
 		} else if (k->y == 5 && k->x == 50) {
-			minipop_slide(kbd_get_current_octave(), "Octave", 0, 8,
-				kbd_set_current_octave, NULL, 50, 5);
+			minipop_slide(kbd_get_current_octave(), "Octave", 0, 8, kbd_set_current_octave, NULL, 50, 5);
 			return 1;
 		} else if (k->y == 4 && k->x >= 50 && k->x <= 52) {
-			minipop_slide(song_get_current_speed(), "Speed", 1, 255,
-				song_set_current_speed, song_set_initial_speed, 51, 4);
+			minipop_slide(
+				song_get_current_speed(), "Speed", 1, 255, song_set_current_speed, song_set_initial_speed, 51, 4);
 			return 1;
 		} else if (k->y == 4 && k->x >= 54 && k->x <= 56) {
-			minipop_slide(song_get_current_tempo(), "Tempo", 32, 255,
-				song_set_current_tempo, song_set_initial_tempo, 55, 4);
+			minipop_slide(
+				song_get_current_tempo(), "Tempo", 32, 255, song_set_current_tempo, song_set_initial_tempo, 55, 4);
 			return 1;
-		} else if (k->y == 3 && k->x >= 50 && k-> x <= 77) {
-			if (page_is_instrument_list(status.current_page)
-			    || status.current_page == PAGE_SAMPLE_LIST
+		} else if (k->y == 3 && k->x >= 50 && k->x <= 77) {
+			if (page_is_instrument_list(status.current_page) || status.current_page == PAGE_SAMPLE_LIST
 			    || (!(status.flags & CLASSIC_MODE)
-				&& (status.current_page == PAGE_ORDERLIST_PANNING
-				    || status.current_page == PAGE_ORDERLIST_VOLUMES)))
+			        && (status.current_page == PAGE_ORDERLIST_PANNING
+			            || status.current_page == PAGE_ORDERLIST_VOLUMES)))
 				ins_mode = 0;
-			else
-				ins_mode = song_is_instrument_mode();
+			else ins_mode = song_is_instrument_mode();
 			if (ins_mode) {
-				minipop_slide(instrument_get_current(), "Instrument",
-					status.current_page == PAGE_INSTRUMENT_LIST ? 1 : 0,
+				minipop_slide(
+					instrument_get_current(), "Instrument", status.current_page == PAGE_INSTRUMENT_LIST ? 1 : 0,
 					99 /* FIXME */, instrument_set, NULL, 58, 3);
 			} else {
-				minipop_slide(sample_get_current(), "Sample",
-					status.current_page == PAGE_SAMPLE_LIST ? 1 : 0,
-					99 /* FIXME */, sample_set, NULL, 58, 3);
+				minipop_slide(
+					sample_get_current(), "Sample", status.current_page == PAGE_SAMPLE_LIST ? 1 : 0, 99 /* FIXME */,
+					sample_set, NULL, 58, 3);
 			}
 
 		} else if (k->x >= 12 && k->x <= 18) {
 			if (k->y == 7) {
-				minipop_slide(get_current_row(), "Row",
-					0, song_get_rows_in_pattern(get_current_pattern()),
-					set_current_row, NULL, 14, 7);
+				minipop_slide(
+					get_current_row(), "Row", 0, song_get_rows_in_pattern(get_current_pattern()), set_current_row, NULL,
+					14, 7);
 				return 1;
 			} else if (k->y == 6) {
-				minipop_slide(get_current_pattern(), "Pattern",
-					0, csf_get_num_patterns(current_song),
-					set_current_pattern, NULL, 14, 6);
+				minipop_slide(
+					get_current_pattern(), "Pattern", 0, csf_get_num_patterns(current_song), set_current_pattern, NULL,
+					14, 6);
 				return 1;
 			} else if (k->y == 5) {
-				minipop_slide(get_current_order(), "Order",
-					0, csf_get_num_orders(current_song),
-					set_current_order, NULL, 14, 5);
+				minipop_slide(
+					get_current_order(), "Order", 0, csf_get_num_orders(current_song), set_current_order, NULL, 14, 5);
 				return 1;
 			}
 		}
@@ -486,16 +448,14 @@ static int handle_key_global(struct key_event * k)
 	switch (k->sym) {
 	case SDLK_RETURN:
 		if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
-			if (k->state == KEY_PRESS)
-				return 1;
+			if (k->state == KEY_PRESS) return 1;
 			toggle_display_fullscreen();
 			return 1;
 		}
 		break;
 	case SDLK_m:
 		if (k->mod & KMOD_CTRL) {
-			if (k->state == KEY_RELEASE)
-				return 1;
+			if (k->state == KEY_RELEASE) return 1;
 			video_mousecursor(MOUSE_CYCLE_STATE);
 			return 1;
 		}
@@ -503,13 +463,11 @@ static int handle_key_global(struct key_event * k)
 
 	case SDLK_d:
 		if (k->mod & KMOD_CTRL) {
-			if (k->state == KEY_RELEASE)
-				return 1; /* argh */
+			if (k->state == KEY_RELEASE) return 1; /* argh */
 			const SDL_bool grabbed = !SDL_GetWindowGrab(video_window());
 			SDL_SetWindowGrab(video_window(), grabbed);
-			status_text_flash(grabbed
-				? "Mouse and keyboard grabbed, press Ctrl+D to release"
-				: "Mouse and keyboard released");
+			status_text_flash(
+				grabbed ? "Mouse and keyboard grabbed, press Ctrl+D to release" : "Mouse and keyboard released");
 			return 1;
 		}
 		break;
@@ -517,8 +475,7 @@ static int handle_key_global(struct key_event * k)
 	case SDLK_i:
 		/* reset audio stuff? */
 		if (k->mod & KMOD_CTRL) {
-			if (k->state == KEY_RELEASE)
-				return 1;
+			if (k->state == KEY_RELEASE) return 1;
 			audio_reinit(NULL);
 			return 1;
 		}
@@ -526,8 +483,7 @@ static int handle_key_global(struct key_event * k)
 	case SDLK_e:
 		/* This should reset everything display-related. */
 		if (k->mod & KMOD_CTRL) {
-			if (k->state == KEY_RELEASE)
-				return 1;
+			if (k->state == KEY_RELEASE) return 1;
 			font_init();
 			status.flags |= NEED_UPDATE;
 			return 1;
@@ -536,19 +492,16 @@ static int handle_key_global(struct key_event * k)
 	case SDLK_HOME:
 		if (!(k->mod & KMOD_ALT)) break;
 		if (status.flags & DISKWRITER_ACTIVE) break;
-		if (k->state == KEY_RELEASE)
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
 		kbd_set_current_octave(kbd_get_current_octave() - 1);
 		return 1;
 	case SDLK_END:
 		if (!(k->mod & KMOD_ALT)) break;
 		if (status.flags & DISKWRITER_ACTIVE) break;
-		if (k->state == KEY_RELEASE)
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
 		kbd_set_current_octave(kbd_get_current_octave() + 1);
 		return 1;
-	default:
-		break;
+	default: break;
 	}
 
 	/* next, if there's no dialog, check the rest of the keys */
@@ -556,63 +509,51 @@ static int handle_key_global(struct key_event * k)
 
 	switch (k->sym) {
 	case SDLK_q:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
+		if (status.dialog_type != DIALOG_NONE) return 0;
 		if (k->mod & KMOD_CTRL) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS) {
-				if (k->mod & KMOD_SHIFT)
-					schism_exit(0);
+				if (k->mod & KMOD_SHIFT) schism_exit(0);
 				show_exit_prompt();
 			}
 			return 1;
 		}
 		break;
 	case SDLK_n:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
+		if (status.dialog_type != DIALOG_NONE) return 0;
 		if (k->mod & KMOD_CTRL) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				new_song_dialog();
+			if (k->state == KEY_PRESS) new_song_dialog();
 			return 1;
 		}
 		break;
 	case SDLK_g:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
+		if (status.dialog_type != DIALOG_NONE) return 0;
 		if (k->mod & KMOD_CTRL) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				show_song_timejump();
+			if (k->state == KEY_PRESS) show_song_timejump();
 			return 1;
 		}
 		break;
 	case SDLK_p:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
+		if (status.dialog_type != DIALOG_NONE) return 0;
 		if (k->mod & KMOD_CTRL) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				show_song_length();
+			if (k->state == KEY_PRESS) show_song_length();
 			return 1;
 		}
 		break;
 	case SDLK_F1:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
+		if (status.dialog_type != DIALOG_NONE) return 0;
 		if (k->mod & KMOD_CTRL) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_CONFIG);
+			if (k->state == KEY_PRESS) set_page(PAGE_CONFIG);
 		} else if (k->mod & KMOD_SHIFT) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(status.current_page == PAGE_MIDI ? PAGE_MIDI_OUTPUT : PAGE_MIDI);
+			if (k->state == KEY_PRESS) set_page(status.current_page == PAGE_MIDI ? PAGE_MIDI_OUTPUT : PAGE_MIDI);
 		} else if (NO_MODIFIER(k->mod)) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_HELP);
+			if (k->state == KEY_PRESS) set_page(PAGE_HELP);
 		} else {
 			break;
 		}
@@ -626,8 +567,7 @@ static int handle_key_global(struct key_event * k)
 				}
 				return 1;
 			}
-			if (status.dialog_type != DIALOG_NONE)
-				return 0;
+			if (status.dialog_type != DIALOG_NONE) return 0;
 		} else if (NO_MODIFIER(k->mod)) {
 			if (status.current_page == PAGE_PATTERN_EDITOR) {
 				if (k->state == KEY_PRESS) {
@@ -642,22 +582,18 @@ static int handle_key_global(struct key_event * k)
 					}
 				}
 			} else {
-				if (status.dialog_type != DIALOG_NONE)
-					return 0;
+				if (status.dialog_type != DIALOG_NONE) return 0;
 				_mp_finish(NULL);
-				if (k->state == KEY_PRESS)
-					set_page(PAGE_PATTERN_EDITOR);
+				if (k->state == KEY_PRESS) set_page(PAGE_PATTERN_EDITOR);
 			}
 			return 1;
 		}
 		break;
 	case SDLK_F3:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
+		if (status.dialog_type != DIALOG_NONE) return 0;
 		if (NO_MODIFIER(k->mod)) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_SAMPLE_LIST);
+			if (k->state == KEY_PRESS) set_page(PAGE_SAMPLE_LIST);
 		} else {
 			_mp_finish(NULL);
 			if (k->mod & KMOD_CTRL) set_page(PAGE_LIBRARY_SAMPLE);
@@ -665,13 +601,11 @@ static int handle_key_global(struct key_event * k)
 		}
 		return 1;
 	case SDLK_F4:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
+		if (status.dialog_type != DIALOG_NONE) return 0;
 		if (NO_MODIFIER(k->mod)) {
 			if (status.current_page == PAGE_INSTRUMENT_LIST) return 0;
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_INSTRUMENT_LIST);
+			if (k->state == KEY_PRESS) set_page(PAGE_INSTRUMENT_LIST);
 		} else {
 			if (k->mod & KMOD_SHIFT) return 0;
 			_mp_finish(NULL);
@@ -682,24 +616,19 @@ static int handle_key_global(struct key_event * k)
 	case SDLK_F5:
 		if (k->mod & KMOD_CTRL) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				song_start();
+			if (k->state == KEY_PRESS) song_start();
 		} else if (k->mod & KMOD_SHIFT) {
-			if (status.dialog_type != DIALOG_NONE)
-				return 0;
+			if (status.dialog_type != DIALOG_NONE) return 0;
 			_mp_finish(NULL);
-			if (k->state == KEY_RELEASE)
-				set_page(PAGE_PREFERENCES);
+			if (k->state == KEY_RELEASE) set_page(PAGE_PREFERENCES);
 		} else if (NO_MODIFIER(k->mod)) {
 			if (song_get_mode() == MODE_STOPPED
-			|| (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO)) {
+			    || (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO)) {
 				_mp_finish(NULL);
-				if (k->state == KEY_PRESS)
-					song_start();
+				if (k->state == KEY_PRESS) song_start();
 			}
 			if (k->state == KEY_PRESS) {
-				if (status.dialog_type != DIALOG_NONE)
-					return 0;
+				if (status.dialog_type != DIALOG_NONE) return 0;
 				_mp_finish(NULL);
 				set_page(PAGE_INFO);
 			}
@@ -710,12 +639,10 @@ static int handle_key_global(struct key_event * k)
 	case SDLK_F6:
 		if (k->mod & KMOD_SHIFT) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				song_start_at_order(get_current_order(), 0);
+			if (k->state == KEY_PRESS) song_start_at_order(get_current_order(), 0);
 		} else if (NO_MODIFIER(k->mod)) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				song_loop_pattern(get_current_pattern(), 0);
+			if (k->state == KEY_PRESS) song_loop_pattern(get_current_pattern(), 0);
 		} else {
 			break;
 		}
@@ -723,101 +650,83 @@ static int handle_key_global(struct key_event * k)
 	case SDLK_F7:
 		if (NO_MODIFIER(k->mod)) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				play_song_from_mark();
+			if (k->state == KEY_PRESS) play_song_from_mark();
 		} else {
 			break;
 		}
 		return 1;
 	case SDLK_F8:
 		if (k->mod & KMOD_SHIFT) {
-			if (k->state == KEY_PRESS)
-				song_pause();
+			if (k->state == KEY_PRESS) song_pause();
 		} else if (NO_MODIFIER(k->mod)) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				song_stop();
+			if (k->state == KEY_PRESS) song_stop();
 			status.flags |= NEED_UPDATE;
 		} else {
 			break;
 		}
 		return 1;
 	case SDLK_F9:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
+		if (status.dialog_type != DIALOG_NONE) return 0;
 		if (k->mod & KMOD_SHIFT) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_MESSAGE);
+			if (k->state == KEY_PRESS) set_page(PAGE_MESSAGE);
 		} else if (NO_MODIFIER(k->mod)) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_LOAD_MODULE);
+			if (k->state == KEY_PRESS) set_page(PAGE_LOAD_MODULE);
 		} else {
 			break;
 		}
 		return 1;
 	case SDLK_l:
 	case SDLK_r:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
+		if (status.dialog_type != DIALOG_NONE) return 0;
 		if (k->mod & KMOD_CTRL) {
 			_mp_finish(NULL);
-			if (k->state == KEY_RELEASE)
-				set_page(PAGE_LOAD_MODULE);
+			if (k->state == KEY_RELEASE) set_page(PAGE_LOAD_MODULE);
 		} else {
 			break;
 		}
 		return 1;
 	case SDLK_s:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
+		if (status.dialog_type != DIALOG_NONE) return 0;
 		if (k->mod & KMOD_CTRL) {
 			_mp_finish(NULL);
-			if (k->state == KEY_RELEASE)
-				save_song_or_save_as();
+			if (k->state == KEY_RELEASE) save_song_or_save_as();
 		} else {
 			break;
 		}
 		return 1;
 	case SDLK_w:
 		/* Ctrl-W _IS_ in IT, and hands don't leave home row :) */
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
+		if (status.dialog_type != DIALOG_NONE) return 0;
 		if (k->mod & KMOD_CTRL) {
 			_mp_finish(NULL);
-			if (k->state == KEY_RELEASE)
-				set_page(PAGE_SAVE_MODULE);
+			if (k->state == KEY_RELEASE) set_page(PAGE_SAVE_MODULE);
 		} else {
 			break;
 		}
 		return 1;
 	case SDLK_F10:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
+		if (status.dialog_type != DIALOG_NONE) return 0;
 		if (k->mod & KMOD_ALT) break;
 		if (k->mod & KMOD_CTRL) break;
 
 		_mp_finish(NULL);
 		if (k->mod & KMOD_SHIFT) {
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_EXPORT_MODULE);
+			if (k->state == KEY_PRESS) set_page(PAGE_EXPORT_MODULE);
 		} else {
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_SAVE_MODULE);
+			if (k->state == KEY_PRESS) set_page(PAGE_SAVE_MODULE);
 		}
 		return 1;
 	case SDLK_F11:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
+		if (status.dialog_type != DIALOG_NONE) return 0;
 		if (NO_MODIFIER(k->mod)) {
 			_mp_finish(NULL);
 			if (status.current_page == PAGE_ORDERLIST_PANNING) {
-				if (k->state == KEY_PRESS)
-					set_page(PAGE_ORDERLIST_VOLUMES);
+				if (k->state == KEY_PRESS) set_page(PAGE_ORDERLIST_VOLUMES);
 			} else {
-				if (k->state == KEY_PRESS)
-					set_page(PAGE_ORDERLIST_PANNING);
+				if (k->state == KEY_PRESS) set_page(PAGE_ORDERLIST_PANNING);
 			}
 		} else if (k->mod & KMOD_CTRL) {
 			if (k->state == KEY_PRESS) {
@@ -830,25 +739,20 @@ static int handle_key_global(struct key_event * k)
 			}
 		} else if (k->state == KEY_PRESS && (k->mod & KMOD_ALT)) {
 			_mp_finish(NULL);
-			if (song_toggle_orderlist_locked())
-				status_text_flash("Order list locked");
-			else
-				status_text_flash("Order list unlocked");
+			if (song_toggle_orderlist_locked()) status_text_flash("Order list locked");
+			else status_text_flash("Order list unlocked");
 		} else {
 			break;
 		}
 		return 1;
 	case SDLK_F12:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
+		if (status.dialog_type != DIALOG_NONE) return 0;
 		if ((k->mod & KMOD_ALT) && status.current_page == PAGE_INFO) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_WATERFALL);
+			if (k->state == KEY_PRESS) set_page(PAGE_WATERFALL);
 		} else if (k->mod & KMOD_CTRL) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_PALETTE_EDITOR);
+			if (k->state == KEY_PRESS) set_page(PAGE_PALETTE_EDITOR);
 		} else if (k->mod & KMOD_SHIFT) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS) {
@@ -858,27 +762,22 @@ static int handle_key_global(struct key_event * k)
 
 		} else if (NO_MODIFIER(k->mod)) {
 			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_SONG_VARIABLES);
+			if (k->state == KEY_PRESS) set_page(PAGE_SONG_VARIABLES);
 		} else {
 			break;
 		}
 		return 1;
 	/* hack alert */
 	case SDLK_f:
-		if (!(k->mod & KMOD_CTRL))
-			return 0;
+		if (!(k->mod & KMOD_CTRL)) return 0;
 		/* fall through */
 	case SDLK_SCROLLLOCK:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
+		if (status.dialog_type != DIALOG_NONE) return 0;
 		_mp_finish(NULL);
 		if (k->mod & KMOD_ALT) {
 			if (k->state == KEY_PRESS) {
 				midi_flags ^= (MIDI_DISABLE_RECORD);
-				status_text_flash("MIDI Input %s",
-					(midi_flags & MIDI_DISABLE_RECORD)
-					? "Disabled" : "Enabled");
+				status_text_flash("MIDI Input %s", (midi_flags & MIDI_DISABLE_RECORD) ? "Disabled" : "Enabled");
 			}
 			return 1;
 		} else {
@@ -886,14 +785,12 @@ static int handle_key_global(struct key_event * k)
 			 * so catch ctrl+scroll lock here as well */
 			if (k->state == KEY_PRESS) {
 				midi_playback_tracing = (playback_tracing = !playback_tracing);
-				status_text_flash("Playback tracing %s",
-						  (playback_tracing ? "enabled" : "disabled"));
+				status_text_flash("Playback tracing %s", (playback_tracing ? "enabled" : "disabled"));
 			}
 			return 1;
 		}
 	default:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
+		if (status.dialog_type != DIALOG_NONE) return 0;
 		break;
 	}
 
@@ -909,11 +806,9 @@ static int handle_key_global(struct key_event * k)
 		case SDLK_F6: i = 5; break;
 		case SDLK_F7: i = 6; break;
 		case SDLK_F8: i = 7; break;
-		default:
-			return 0;
+		default: return 0;
 		};
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 
 		song_toggle_channel_mute(i);
 		status.flags |= NEED_UPDATE;
@@ -942,33 +837,30 @@ static int _handle_ime(struct key_event *k)
 		} else if (!(status.flags & CLASSIC_MODE) && (k->sym == SDLK_LCTRL || k->sym == SDLK_RCTRL)) {
 			if (k->state == KEY_RELEASE && digraph_n >= 0) {
 				digraph_n++;
-				if (digraph_n >= 2)
-					status_text_flash_bios("Enter digraph:");
+				if (digraph_n >= 2) status_text_flash_bios("Enter digraph:");
 			}
 		} else if (k->sym == SDLK_LSHIFT || k->sym == SDLK_RSHIFT) {
 			/* do nothing */
-		} else if (!NO_MODIFIER((k->mod&~KMOD_SHIFT)) || (c=(k->text) ? *k->text : k->sym) == 0 || digraph_n < 2) {
+		} else if (!NO_MODIFIER((k->mod & ~KMOD_SHIFT)) || (c = (k->text) ? *k->text : k->sym) == 0 || digraph_n < 2) {
 			if (k->state == KEY_PRESS && k->mouse == MOUSE_NONE) {
 				if (digraph_n > 0) status_text_flash(" ");
 				digraph_n = -1;
 			}
 		} else if (digraph_n >= 2) {
-			if (k->state == KEY_RELEASE)
-				return 1;
+			if (k->state == KEY_RELEASE) return 1;
 			if (!digraph_c) {
 				digraph_c = c;
 				status_text_flash_bios("Enter digraph: %c", c);
 			} else {
 				uint8_t digraph_input[2] = {char_digraph(digraph_c, c), '\0'};
 				if (digraph_input[0]) {
-					status_text_flash_bios("Enter digraph: %c%c -> %c",
-							       digraph_c, c, digraph_input[0]);
+					status_text_flash_bios("Enter digraph: %c%c -> %c", digraph_c, c, digraph_input[0]);
 				} else {
 					status_text_flash_bios("Enter digraph: %c%c -> INVALID", digraph_c, c);
 				}
 				digraph_n = digraph_c = 0;
 				if (digraph_input[0]) {
-					handle_text_input((const uint8_t*)digraph_input);
+					handle_text_input((const uint8_t *)digraph_input);
 				}
 			}
 			return 1;
@@ -978,16 +870,15 @@ static int _handle_ime(struct key_event *k)
 		}
 
 		/* ctrl+shift -> unicode character */
-		if (k->sym==SDLK_LCTRL || k->sym==SDLK_RCTRL || k->sym==SDLK_LSHIFT || k->sym==SDLK_RSHIFT) {
+		if (k->sym == SDLK_LCTRL || k->sym == SDLK_RCTRL || k->sym == SDLK_LSHIFT || k->sym == SDLK_RSHIFT) {
 			if (k->state == KEY_RELEASE) {
 				if (cs_unicode_c > 0) {
 					uint8_t unicode[2] = {(uint8_t)(char_unicode_to_cp437(cs_unicode)), '\0'};
 
 					if (unicode[0] >= 32) {
-						status_text_flash_bios("Enter Unicode: U+%04" PRIX32 " -> " PRIu8,
-									   cs_unicode, unicode[0]);
+						status_text_flash_bios("Enter Unicode: U+%04" PRIX32 " -> " PRIu8, cs_unicode, unicode[0]);
 						SDL_SetModState(0);
-						handle_text_input((const uint8_t*)unicode);
+						handle_text_input((const uint8_t *)unicode);
 					} else {
 						status_text_flash_bios("Enter Unicode: U+%04" PRIX32 " -> INVALID", cs_unicode);
 					}
@@ -1024,29 +915,26 @@ static int _handle_ime(struct key_event *k)
 				}
 			}
 		} else {
-			if (k->sym==SDLK_LCTRL || k->sym==SDLK_RCTRL || k->sym==SDLK_LSHIFT || k->sym==SDLK_RSHIFT) {
+			if (k->sym == SDLK_LCTRL || k->sym == SDLK_RCTRL || k->sym == SDLK_LSHIFT || k->sym == SDLK_RSHIFT) {
 				return 1;
 			}
 			cs_unicode = cs_unicode_c = 0;
 		}
 
 		/* alt+numpad -> char number */
-		if (k->sym == SDLK_LALT || k->sym == SDLK_RALT
-			|| k->sym == SDLK_LGUI || k->sym == SDLK_RGUI) {
-			if (k->state == KEY_RELEASE && alt_numpad_c > 0 && (alt_numpad & 255) > 0) {\
-				if (alt_numpad < 32)
-					return 0;
+		if (k->sym == SDLK_LALT || k->sym == SDLK_RALT || k->sym == SDLK_LGUI || k->sym == SDLK_RGUI) {
+			if (k->state == KEY_RELEASE && alt_numpad_c > 0 && (alt_numpad & 255) > 0) {
+				if (alt_numpad < 32) return 0;
 				uint8_t unicode[2] = {(uint8_t)(alt_numpad & 255), '\0'};
 				if (!(status.flags & CLASSIC_MODE))
-					status_text_flash_bios("Enter DOS/ASCII: %d -> %c",
-							       (int)unicode[0], (int)unicode[0]);
-				handle_text_input((const uint8_t*)unicode);
+					status_text_flash_bios("Enter DOS/ASCII: %d -> %c", (int)unicode[0], (int)unicode[0]);
+				handle_text_input((const uint8_t *)unicode);
 				alt_numpad = alt_numpad_c = 0;
 				digraph_n = digraph_c = 0;
 				cs_unicode = cs_unicode_c = 0;
 				return 1;
 			}
-		} else if (k->mod & KMOD_ALT && !(k->mod & (KMOD_CTRL|KMOD_SHIFT))) {
+		} else if (k->mod & KMOD_ALT && !(k->mod & (KMOD_CTRL | KMOD_SHIFT))) {
 			if (alt_numpad_c >= 0) {
 				m = k->mod;
 				k->mod = 0;
@@ -1059,8 +947,7 @@ static int _handle_ime(struct key_event *k)
 					alt_numpad *= 10;
 					alt_numpad += c;
 					alt_numpad_c++;
-					if (!(status.flags & CLASSIC_MODE))
-						status_text_flash_bios("Enter DOS/ASCII: %d", (int)alt_numpad);
+					if (!(status.flags & CLASSIC_MODE)) status_text_flash_bios("Enter DOS/ASCII: %d", (int)alt_numpad);
 					return 1;
 				}
 			}
@@ -1079,8 +966,7 @@ static int _handle_ime(struct key_event *k)
 /* this is the important one */
 void handle_key(struct key_event *k)
 {
-	if (_handle_ime(k))
-		return;
+	if (_handle_ime(k)) return;
 
 	/* okay... */
 	if (!(status.flags & DISKWRITER_ACTIVE) && ACTIVE_PAGE.pre_handle_key) {
@@ -1098,8 +984,7 @@ void handle_key(struct key_event *k)
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if ((k->mod & KMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
 			_mp_finish(NULL);
-			if (song_get_mode() == MODE_PLAYING)
-				song_set_current_order(song_get_current_order() - 1);
+			if (song_get_mode() == MODE_PLAYING) song_set_current_order(song_get_current_order() - 1);
 			return;
 		}
 		break;
@@ -1108,8 +993,7 @@ void handle_key(struct key_event *k)
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if ((k->mod & KMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
 			_mp_finish(NULL);
-			if (song_get_mode() == MODE_PLAYING)
-				song_set_current_order(song_get_current_order() + 1);
+			if (song_get_mode() == MODE_PLAYING) song_set_current_order(song_get_current_order() + 1);
 			return;
 		}
 		break;
@@ -1119,8 +1003,7 @@ void handle_key(struct key_event *k)
 		   TODO | page gets a chance to grab it. This way, the load sample page can switch back
 		   TODO | to the sample list on escape like it's supposed to. (The status.current_page
 		   TODO | checks above won't be necessary, either.) */
-		if (NO_MODIFIER(k->mod) && status.dialog_type == DIALOG_NONE
-		    && status.current_page != PAGE_LOAD_SAMPLE
+		if (NO_MODIFIER(k->mod) && status.dialog_type == DIALOG_NONE && status.current_page != PAGE_LOAD_SAMPLE
 		    && status.current_page != PAGE_LOAD_INSTRUMENT) {
 			if (k->state == KEY_RELEASE) return;
 			if (_mp_active) {
@@ -1192,8 +1075,7 @@ void handle_key(struct key_event *k)
 		}
 		return;
 
-	default:
-		break;
+	default: break;
 	}
 
 	/* and if we STILL didn't handle the key, pass it to the page.
@@ -1219,8 +1101,9 @@ static void draw_top_info_const(void)
 		br = 3;
 	}
 
-	draw_text(schism_banner(status.flags & CLASSIC_MODE),
-		(80 - strlen(schism_banner(status.flags & CLASSIC_MODE))) / 2, 1, 0, 2);
+	draw_text(
+		schism_banner(status.flags & CLASSIC_MODE), (80 - strlen(schism_banner(status.flags & CLASSIC_MODE))) / 2, 1, 0,
+		2);
 	draw_text("Song Name", 2, 3, 0, 2);
 	draw_text("File Name", 2, 4, 0, 2);
 	draw_text("Order", 6, 5, 0, 2);
@@ -1305,27 +1188,21 @@ void update_current_instrument(void)
 	char *name = NULL;
 	char buf[4];
 
-	if (page_is_instrument_list(status.current_page)
-	|| status.current_page == PAGE_SAMPLE_LIST
-	|| status.current_page == PAGE_LOAD_SAMPLE
-	|| status.current_page == PAGE_LIBRARY_SAMPLE
-	|| (!(status.flags & CLASSIC_MODE)
-		&& (status.current_page == PAGE_ORDERLIST_PANNING
-			|| status.current_page == PAGE_ORDERLIST_VOLUMES)))
+	if (page_is_instrument_list(status.current_page) || status.current_page == PAGE_SAMPLE_LIST
+	    || status.current_page == PAGE_LOAD_SAMPLE || status.current_page == PAGE_LIBRARY_SAMPLE
+	    || (!(status.flags & CLASSIC_MODE)
+	        && (status.current_page == PAGE_ORDERLIST_PANNING || status.current_page == PAGE_ORDERLIST_VOLUMES)))
 		ins_mode = 0;
-	else
-		ins_mode = song_is_instrument_mode();
+	else ins_mode = song_is_instrument_mode();
 
 	if (ins_mode) {
 		draw_text("Instrument", 39, 3, 0, 2);
 		n = instrument_get_current();
-		if (n > 0)
-			name = song_get_instrument(n)->name;
+		if (n > 0) name = song_get_instrument(n)->name;
 	} else {
 		draw_text("    Sample", 39, 3, 0, 2);
 		n = sample_get_current();
-		if (n > 0)
-			name = song_get_sample(n)->name;
+		if (n > 0) name = song_get_sample(n)->name;
 	}
 
 	if (n > 0) {
@@ -1346,8 +1223,7 @@ static void redraw_top_info(void)
 	draw_text_len(song_get_basename(), 18, 12, 4, 5, 0);
 	draw_text_len(current_song->title, 25, 12, 3, 5, 0);
 
-	if ((status.flags & (CLASSIC_MODE | SONG_NEEDS_SAVE)) == SONG_NEEDS_SAVE)
-		draw_char('+', 29, 4, 4, 0);
+	if ((status.flags & (CLASSIC_MODE | SONG_NEEDS_SAVE)) == SONG_NEEDS_SAVE) draw_char('+', 29, 4, 4, 0);
 
 	update_current_order();
 	update_current_pattern();
@@ -1366,8 +1242,7 @@ static void _draw_vis_box(void)
 
 static int _vis_virgin = 1;
 static struct vgamem_overlay vis_overlay = {
-	63, 6, 77, 7,
-	NULL, 0, 0, 0,
+	63, 6, 77, 7, NULL, 0, 0, 0,
 };
 
 extern short current_fft_data[2][1024];
@@ -1378,26 +1253,26 @@ static inline void _get_columns_from_fft(unsigned char *out, short d[2][1024])
 {
 	int i, j, jbis, t, a;
 	/*this assumes out of size 120. */
-	for (i = 0, t= 0 , a=0; i < 120; i++, t+=2)  {
+	for (i = 0, t = 0, a = 0; i < 120; i++, t += 2) {
 		float afloat = fftlog[t];
 		float floora = floor(afloat);
-		if (afloat + 1.0f > fftlog[t+1]) {
+		if (afloat + 1.0f > fftlog[t + 1]) {
 			a = (int)floora;
-			j = d[0][a] + (d[0][a+1]-d[0][a])*(afloat-floora);
-			jbis = d[1][a] + (d[1][a+1]-d[1][a])*(afloat-floora);
-			j = MAX(j,jbis);
-			a = floor(afloat+0.5f);
-		}
-		else {
-			j=d[0][a];
-			j = MAX(j,d[1][a]);
-			while(a<=afloat){
-				j = MAX(j,d[0][a]);
-				j = MAX(j,d[1][a]);
+			j = d[0][a] + (d[0][a + 1] - d[0][a]) * (afloat - floora);
+			jbis = d[1][a] + (d[1][a + 1] - d[1][a]) * (afloat - floora);
+			j = MAX(j, jbis);
+			a = floor(afloat + 0.5f);
+		} else {
+			j = d[0][a];
+			j = MAX(j, d[1][a]);
+			while (a <= afloat) {
+				j = MAX(j, d[0][a]);
+				j = MAX(j, d[1][a]);
 				a++;
 			}
 		}
-		*out = j; out++;
+		*out = j;
+		out++;
 	}
 }
 static void vis_fft(void)
@@ -1413,15 +1288,15 @@ static void vis_fft(void)
 	_draw_vis_box();
 	song_lock_audio();
 
-	vgamem_ovl_clear(&vis_overlay,0);
-	_get_columns_from_fft(outfft,current_fft_data);
+	vgamem_ovl_clear(&vis_overlay, 0);
+	_get_columns_from_fft(outfft, current_fft_data);
 	for (i = 0; i < 120; i++) {
 		y = outfft[i];
 		/*reduce range */
 		y >>= 3;
 		if (y > 15) y = 15;
 		if (y > 0) {
-		       vgamem_ovl_drawline(&vis_overlay,i,15-y,i,15,5);
+			vgamem_ovl_drawline(&vis_overlay, i, 15 - y, i, 15, 5);
 		}
 	}
 	vgamem_ovl_apply(&vis_overlay);
@@ -1438,20 +1313,16 @@ static void vis_oscilloscope(void)
 	song_lock_audio();
 	if (status.vis_style == VIS_MONOSCOPE) {
 		if (audio_output_bits == 16) {
-			draw_sample_data_rect_16(&vis_overlay,audio_buffer,
-					audio_buffer_samples,
-					audio_output_channels,1);
+			draw_sample_data_rect_16(&vis_overlay, audio_buffer, audio_buffer_samples, audio_output_channels, 1);
 		} else {
-			draw_sample_data_rect_8(&vis_overlay,(void*)audio_buffer,
-					audio_buffer_samples,
-					audio_output_channels,1);
+			draw_sample_data_rect_8(&vis_overlay, (void *)audio_buffer, audio_buffer_samples, audio_output_channels, 1);
 		}
 	} else if (audio_output_bits == 16) {
-		draw_sample_data_rect_16(&vis_overlay,audio_buffer,audio_buffer_samples,
-					audio_output_channels,audio_output_channels);
+		draw_sample_data_rect_16(
+			&vis_overlay, audio_buffer, audio_buffer_samples, audio_output_channels, audio_output_channels);
 	} else {
-		draw_sample_data_rect_8(&vis_overlay,(void *)audio_buffer,audio_buffer_samples,
-					audio_output_channels,audio_output_channels);
+		draw_sample_data_rect_8(
+			&vis_overlay, (void *)audio_buffer, audio_buffer_samples, audio_output_channels, audio_output_channels);
 	}
 	song_unlock_audio();
 }
@@ -1492,11 +1363,8 @@ static void vis_fakemem(void)
 		sprintf(buf, "FreeEMS %uk", ems);
 		draw_text(buf, 63, 7, 0, 2);
 	} else {
-		sprintf(buf, "   Song %uk",
-				(unsigned)(
-					(memused_patterns()
-					 +memused_instruments()
-					 +memused_songmessage()) >> 10));
+		sprintf(
+			buf, "   Song %uk", (unsigned)((memused_patterns() + memused_instruments() + memused_songmessage()) >> 10));
 		draw_text(buf, 63, 6, 0, 2);
 		sprintf(buf, "Samples %uk", (unsigned)(memused_samples() >> 10));
 		draw_text(buf, 63, 7, 0, 2);
@@ -1511,22 +1379,13 @@ static inline void draw_vis(void)
 		return;
 	}
 	switch (status.vis_style) {
-	case VIS_FAKEMEM:
-		vis_fakemem();
-		break;
+	case VIS_FAKEMEM: vis_fakemem(); break;
 	case VIS_OSCILLOSCOPE:
-	case VIS_MONOSCOPE:
-		vis_oscilloscope();
-		break;
-	case VIS_VU_METER:
-		vis_vu_meter();
-		break;
-	case VIS_FFT:
-		vis_fft();
-		break;
+	case VIS_MONOSCOPE: vis_oscilloscope(); break;
+	case VIS_VU_METER: vis_vu_meter(); break;
+	case VIS_FFT: vis_fft(); break;
 	default:
-	case VIS_OFF:
-		break;
+	case VIS_OFF: break;
 	}
 }
 
@@ -1537,12 +1396,11 @@ void redraw_screen(void)
 	char buf[4];
 
 	if (!ACTIVE_PAGE.draw_full) {
-		draw_fill_chars(0,0,79,49, DEFAULT_FG,2);
+		draw_fill_chars(0, 0, 79, 49, DEFAULT_FG, 2);
 
 		/* border around the whole screen */
 		draw_char(128, 0, 0, 3, 2);
-		for (n = 79; n > 49; n--)
-			draw_char(129, n, 0, 3, 2);
+		for (n = 79; n > 49; n--) draw_char(129, n, 0, 3, 2);
 		do {
 			draw_char(129, n, 0, 3, 2);
 			draw_char(131, 0, n, 3, 2);
@@ -1562,15 +1420,13 @@ void redraw_screen(void)
 	}
 
 	draw_page();
-
 }
 
 /* important :) */
 void playback_update(void)
 {
 	/* the order here is significant -- check_time has side effects */
-	if (check_time() || song_get_mode())
-		status.flags |= NEED_UPDATE;
+	if (check_time() || song_get_mode()) status.flags |= NEED_UPDATE;
 
 	if (ACTIVE_PAGE.playback_update) ACTIVE_PAGE.playback_update();
 }
@@ -1584,10 +1440,8 @@ static void _set_from_f3(void)
 	case PAGE_ORDERLIST_VOLUMES:
 		if (status.flags & CLASSIC_MODE) return;
 	case PAGE_SAMPLE_LIST:
-		if (song_is_instrument_mode())
-			instrument_synchronize_to_sample();
-		else
-			instrument_set(sample_get_current());
+		if (song_is_instrument_mode()) instrument_synchronize_to_sample();
+		else instrument_set(sample_get_current());
 	};
 }
 
@@ -1601,7 +1455,7 @@ static void _set_from_f4(void)
 	case PAGE_LOAD_SAMPLE:
 	case PAGE_LIBRARY_SAMPLE:
 		return;
-/*
+		/*
  * storlek says pattern editor syncs...
 	case PAGE_PATTERN_EDITOR:
 */
@@ -1616,15 +1470,13 @@ void set_page(int new_page)
 	int prev_page = status.current_page;
 
 
-	if (new_page != prev_page)
-		status.previous_page = prev_page;
+	if (new_page != prev_page) status.previous_page = prev_page;
 	status.current_page = new_page;
 
 	_set_from_f3();
 	_set_from_f4();
 
-	if (new_page != PAGE_HELP)
-		status.current_help_index = ACTIVE_PAGE.help_index;
+	if (new_page != PAGE_HELP) status.current_help_index = ACTIVE_PAGE.help_index;
 
 	if (status.dialog_type & DIALOG_MENU) {
 		menu_hide();
@@ -1671,7 +1523,7 @@ void load_pages(void)
 	load_instrument_load_page(pages + PAGE_LOAD_INSTRUMENT);
 	library_instrument_load_page(pages + PAGE_LIBRARY_INSTRUMENT);
 	waterfall_load_page(pages + PAGE_WATERFALL);
-	about_load_page(pages+PAGE_ABOUT);
+	about_load_page(pages + PAGE_ABOUT);
 	config_load_page(pages + PAGE_CONFIG);
 	save_module_load_page(pages + PAGE_EXPORT_MODULE, 1);
 
@@ -1689,15 +1541,13 @@ void main_song_changed_cb(void)
 	/* perhaps this should be in page_patedit.c? */
 	set_current_order(0);
 	n = current_song->orderlist[0];
-	if (n > 199)
-		n = 0;
+	if (n > 199) n = 0;
 	set_current_pattern(n);
 	set_current_row(0);
 	song_save_channel_states();
 
 	for (n = ARRAY_SIZE(pages) - 1; n >= 0; n--) {
-		if (pages[n].song_changed_cb)
-			pages[n].song_changed_cb();
+		if (pages[n].song_changed_cb) pages[n].song_changed_cb();
 	}
 
 	/* TODO | print some message like "new song created" if there's
@@ -1756,8 +1606,7 @@ void show_exit_prompt(void)
 		schism_exit(0);
 	} else if (status.current_page == PAGE_FONT_EDIT) {
 		if (status.flags & STARTUP_FONTEDIT) {
-			dialog_create(DIALOG_OK_CANCEL, "Exit Font Editor?",
-				      exit_ok_confirm, NULL, 0, NULL);
+			dialog_create(DIALOG_OK_CANCEL, "Exit Font Editor?", exit_ok_confirm, NULL, 0, NULL);
 		} else {
 			/* don't ask, just go away */
 			dialog_destroy_all();
@@ -1765,11 +1614,9 @@ void show_exit_prompt(void)
 		}
 	} else if (status.dialog_type != DIALOG_OK_CANCEL) {
 		/* don't draw an exit prompt on top of an existing one */
-		dialog_create(DIALOG_OK_CANCEL,
-			      ((status.flags & CLASSIC_MODE)
-			       ? "Exit Impulse Tracker?"
-			       : "Exit Schism Tracker?"),
-			      exit_ok, NULL, 0, NULL);
+		dialog_create(
+			DIALOG_OK_CANCEL, ((status.flags & CLASSIC_MODE) ? "Exit Impulse Tracker?" : "Exit Schism Tracker?"),
+			exit_ok, NULL, 0, NULL);
 	}
 }
 
@@ -1807,8 +1654,7 @@ static void _timejump_ok(UNUSED void *ign)
 {
 	unsigned long sec;
 	int no, np, nr;
-	sec = (_timejump_widgets[0].d.numentry.value * 60)
-		+ _timejump_widgets[1].d.numentry.value;
+	sec = (_timejump_widgets[0].d.numentry.value * 60) + _timejump_widgets[1].d.numentry.value;
 	song_get_at_time(sec, &no, &nr);
 	set_current_order(no);
 	np = current_song->orderlist[no];
@@ -1823,13 +1669,13 @@ void show_song_timejump(void)
 {
 	struct dialog *d;
 	_tj_num1 = _tj_num2 = 0;
-	widget_create_numentry(_timejump_widgets+0, 44, 26, 2, 0, 2, 1, NULL, 0, 21, &_tj_num1);
-	widget_create_numentry(_timejump_widgets+1, 47, 26, 2, 1, 2, 2, NULL, 0, 59, &_tj_num2);
+	widget_create_numentry(_timejump_widgets + 0, 44, 26, 2, 0, 2, 1, NULL, 0, 21, &_tj_num1);
+	widget_create_numentry(_timejump_widgets + 1, 47, 26, 2, 1, 2, 2, NULL, 0, 59, &_tj_num2);
 	_timejump_widgets[0].d.numentry.handle_unknown_key = _timejump_keyh;
 	_timejump_widgets[0].d.numentry.reverse = 1;
 	_timejump_widgets[1].d.numentry.reverse = 1;
-	widget_create_button(_timejump_widgets+2, 30, 29, 8, 0, 2, 2, 3, 3, (void(*)(void))_timejump_ok, "OK", 4);
-	widget_create_button(_timejump_widgets+3, 42, 29, 8, 1, 3, 3, 3, 0, dialog_cancel_NULL, "Cancel", 2);
+	widget_create_button(_timejump_widgets + 2, 30, 29, 8, 0, 2, 2, 3, 3, (void (*)(void))_timejump_ok, "OK", 4);
+	widget_create_button(_timejump_widgets + 3, 42, 29, 8, 1, 3, 3, 3, 0, dialog_cancel_NULL, "Cancel", 2);
 	d = dialog_create_custom(26, 24, 30, 8, _timejump_widgets, 4, 0, _timejump_draw, NULL);
 	d->handle_key = _timejump_keyh;
 	d->action_yes = _timejump_ok;
@@ -1855,17 +1701,12 @@ void show_song_length(void)
 to get the frigging thing to build */
 void set_previous_instrument(void)
 {
-	if (song_is_instrument_mode())
-		instrument_set(instrument_get_current() - 1);
-	else
-		sample_set(sample_get_current() - 1);
+	if (song_is_instrument_mode()) instrument_set(instrument_get_current() - 1);
+	else sample_set(sample_get_current() - 1);
 }
 
 void set_next_instrument(void)
 {
-	if (song_is_instrument_mode())
-		instrument_set(instrument_get_current() + 1);
-	else
-		sample_set(sample_get_current() + 1);
+	if (song_is_instrument_mode()) instrument_set(instrument_get_current() + 1);
+	else sample_set(sample_get_current() + 1);
 }
-

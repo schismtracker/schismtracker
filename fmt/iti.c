@@ -37,7 +37,7 @@
 /* --------------------------------------------------------------------- */
 int fmt_iti_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	if (!(length > 554 && memcmp(data, "IMPI",4) == 0)) return 0;
+	if (!(length > 554 && memcmp(data, "IMPI", 4) == 0)) return 0;
 	file->description = "Impulse Tracker Instrument";
 	file->title = strn_dup((const char *)data + 32, 25);
 	file->type = TYPE_INST_ITI;
@@ -46,8 +46,8 @@ int fmt_iti_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 }
 
 static const uint32_t env_flags[3][4] = {
-	{ENV_VOLUME,  ENV_VOLLOOP,   ENV_VOLSUSTAIN,   ENV_VOLCARRY},
-	{ENV_PANNING, ENV_PANLOOP,   ENV_PANSUSTAIN,   ENV_PANCARRY},
+	{ENV_VOLUME,  ENV_VOLLOOP,   ENV_VOLSUSTAIN,   ENV_VOLCARRY  },
+	{ENV_PANNING, ENV_PANLOOP,   ENV_PANSUSTAIN,   ENV_PANCARRY  },
 	{ENV_PITCH,   ENV_PITCHLOOP, ENV_PITCHSUSTAIN, ENV_PITCHCARRY},
 };
 
@@ -57,8 +57,7 @@ static void load_it_notetrans(song_instrument_t *instrument, struct it_notetrans
 	for (n = 0; n < 120; n++) {
 		note = notetrans[n].note + NOTE_FIRST;
 		// map invalid notes to themselves
-		if (!NOTE_IS_NOTE(note))
-			note = n + NOTE_FIRST;
+		if (!NOTE_IS_NOTE(note)) note = n + NOTE_FIRST;
 		instrument->note_map[n] = note;
 		instrument->sample_map[n] = notetrans[n].sample;
 	}
@@ -84,12 +83,10 @@ static uint32_t load_it_envelope(song_envelope_t *env, struct it_envelope *itenv
 	env->ticks[0] = 0; // sanity check
 
 	for (n = 0; n < 4; n++) {
-		if (itenv->flags & (1 << n))
-			flags |= env_flags[envtype][n];
+		if (itenv->flags & (1 << n)) flags |= env_flags[envtype][n];
 	}
 
-	if (envtype == 2 && (itenv->flags & 0x80))
-		flags |= ENV_FILTER;
+	if (envtype == 2 && (itenv->flags & 0x80)) flags |= ENV_FILTER;
 
 	return flags;
 }
@@ -121,12 +118,9 @@ void load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp)
 
 	load_it_notetrans(instrument, ihdr.keyboard);
 
-	if (ihdr.flags & 1)
-		instrument->flags |= ENV_VOLUME;
-	if (ihdr.flags & 2)
-		instrument->flags |= ENV_VOLLOOP;
-	if (ihdr.flags & 4)
-		instrument->flags |= ENV_VOLSUSTAIN;
+	if (ihdr.flags & 1) instrument->flags |= ENV_VOLUME;
+	if (ihdr.flags & 2) instrument->flags |= ENV_VOLLOOP;
+	if (ihdr.flags & 4) instrument->flags |= ENV_VOLSUSTAIN;
 
 	instrument->vol_env.loop_start = ihdr.vls;
 	instrument->vol_env.loop_end = ihdr.vle;
@@ -165,8 +159,7 @@ void load_it_instrument(song_instrument_t *instrument, const uint8_t *data)
 	instrument->pitch_pan_center = MIN(ihdr.ppc, 119); // I guess
 	instrument->global_volume = MIN(ihdr.gbv, 128);
 	instrument->panning = MIN((ihdr.dfp & 127), 64) * 4; //mphack
-	if (!(ihdr.dfp & 128))
-		instrument->flags |= ENV_SETPANNING;
+	if (!(ihdr.dfp & 128)) instrument->flags |= ENV_SETPANNING;
 	instrument->vol_swing = MIN(ihdr.rv, 100);
 	instrument->pan_swing = MIN(ihdr.rp, 64);
 
@@ -176,11 +169,7 @@ void load_it_instrument(song_instrument_t *instrument, const uint8_t *data)
 	// (blah... this isn't supposed to be a mask according to the
 	// spec. where did this code come from? and what is 0x10000?)
 	instrument->midi_channel_mask =
-			((ihdr.mch > 16)
-			 ? (0x10000 + ihdr.mch)
-			 : ((ihdr.mch > 0)
-			    ? (1 << (ihdr.mch - 1))
-			    : 0));
+		((ihdr.mch > 16) ? (0x10000 + ihdr.mch) : ((ihdr.mch > 0) ? (1 << (ihdr.mch - 1)) : 0));
 	instrument->midi_program = ihdr.mpr;
 	instrument->midi_bank = bswapLE16(ihdr.mbank);
 
@@ -199,7 +188,7 @@ int fmt_iti_load_instrument(const uint8_t *data, size_t length, int slot)
 	song_sample_t *smp;
 	int j;
 
-	if (!(length > 554 && memcmp(data, "IMPI",4) == 0)) return 0;
+	if (!(length > 554 && memcmp(data, "IMPI", 4) == 0)) return 0;
 
 	memcpy(&iti, data, sizeof(iti));
 
@@ -210,7 +199,7 @@ int fmt_iti_load_instrument(const uint8_t *data, size_t length, int slot)
 	/* okay, on to samples */
 	unsigned int pos = 554;
 	for (j = 0; j < ii.expect_samples; j++) {
-		smp = song_get_sample(ii.sample_map[j+1]);
+		smp = song_get_sample(ii.sample_map[j + 1]);
 		if (!smp) break;
 		if (!load_its_sample(data + pos, data, length, smp)) {
 			log_appendf(4, "Could not load sample %d from ITI file", j);
@@ -228,13 +217,12 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 	struct it_instrument iti = {0};
 
 	/* don't have an instrument? make one up! */
-	if (!ins)
-		ins = &blank_instrument;
+	if (!ins) ins = &blank_instrument;
 
 	// envelope: flags num lpb lpe slb sle data[25*3] reserved
 
 	iti.id = bswapLE32(0x49504D49); // IMPI
-	strncpy((char *) iti.filename, (char *) ins->filename, 12);
+	strncpy((char *)iti.filename, (char *)ins->filename, 12);
 	iti.zero = 0;
 	iti.nna = ins->nna;
 	iti.dct = ins->dct;
@@ -245,30 +233,25 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 	iti.gbv = ins->global_volume;
 
 	iti.dfp = ins->panning / 4;
-	if (!(ins->flags & ENV_SETPANNING))
-		iti.dfp |= 0x80;
+	if (!(ins->flags & ENV_SETPANNING)) iti.dfp |= 0x80;
 
 	iti.rv = ins->vol_swing;
 	iti.rp = ins->pan_swing;
 
-	if (iti_file)
-		iti.trkvers = bswapLE16(0x1000 | ver_cwtv);
+	if (iti_file) iti.trkvers = bswapLE16(0x1000 | ver_cwtv);
 
 	// reserved1
-	strncpy((char *) iti.name, (char *) ins->name, 25);
+	strncpy((char *)iti.name, (char *)ins->name, 25);
 	iti.name[25] = 0;
 	iti.ifc = ins->ifc;
 	iti.ifr = ins->ifr;
 	iti.mch = 0;
-	if(ins->midi_channel_mask >= 0x10000)
-	{
-	    iti.mch = ins->midi_channel_mask - 0x10000;
-	    if(iti.mch <= 16) iti.mch = 16;
-	}
-	else if(ins->midi_channel_mask & 0xFFFF)
-	{
-	    iti.mch = 1;
-	    while(!(ins->midi_channel_mask & (1 << (iti.mch-1)))) ++iti.mch;
+	if (ins->midi_channel_mask >= 0x10000) {
+		iti.mch = ins->midi_channel_mask - 0x10000;
+		if (iti.mch <= 16) iti.mch = 16;
+	} else if (ins->midi_channel_mask & 0xFFFF) {
+		iti.mch = 1;
+		while (!(ins->midi_channel_mask & (1 << (iti.mch - 1)))) ++iti.mch;
 	}
 	iti.mpr = ins->midi_program;
 	iti.mbank = bswapLE16(ins->midi_bank);
@@ -277,8 +260,7 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 	int iti_invmap[255];
 	int iti_nalloc = 0;
 
-	for (int j = 0; j < 255; j++)
-		iti_map[j] = -1;
+	for (int j = 0; j < 255; j++) iti_map[j] = -1;
 
 	for (int j = 0; j < 120; j++) {
 		if (iti_file) {
@@ -288,15 +270,14 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 				iti_invmap[iti_nalloc] = o;
 				iti_nalloc++;
 			}
-			iti.keyboard[j].sample = iti_map[o]+1;
+			iti.keyboard[j].sample = iti_map[o] + 1;
 		} else {
 			iti.keyboard[j].sample = ins->sample_map[j];
 		}
 		iti.keyboard[j].note = ins->note_map[j] - 1;
 	}
 
-	if (iti_file)
-		iti.nos = (uint8_t)iti_nalloc;
+	if (iti_file) iti.nos = (uint8_t)iti_nalloc;
 
 	// envelope stuff from modplug
 	iti.volenv.flags = 0;
@@ -354,7 +335,7 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 		unsigned int qp = 554;
 		/* okay, now go through samples */
 		for (int j = 0; j < iti_nalloc; j++) {
-			int o = iti_invmap[ j ];
+			int o = iti_invmap[j];
 
 			iti_map[o] = qp;
 			qp += 80; /* header is 80 bytes */
@@ -363,19 +344,20 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 		for (int j = 0; j < iti_nalloc; j++) {
 			unsigned int op, tmp;
 
-			int o = iti_invmap[ j ];
+			int o = iti_invmap[j];
 
 			song_sample_t *smp = song->samples + o;
 
 			op = disko_tell(fp);
 			tmp = bswapLE32(op);
-			disko_seek(fp, iti_map[o]+0x48, SEEK_SET);
+			disko_seek(fp, iti_map[o] + 0x48, SEEK_SET);
 			disko_write(fp, &tmp, 4);
 			disko_seek(fp, op, SEEK_SET);
-			csf_write_sample(fp, smp, SF_LE | SF_PCMS
-					| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
+			csf_write_sample(
+				fp, smp,
+				SF_LE | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
 					| ((smp->flags & CHN_STEREO) ? SF_SS : SF_M),
-					UINT32_MAX);
+				UINT32_MAX);
 		}
 	}
 }

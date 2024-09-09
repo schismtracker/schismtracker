@@ -66,13 +66,13 @@
 # define ENABLE_HOOKS 1
 #endif
 
-#define NATIVE_SCREEN_WIDTH     640
-#define NATIVE_SCREEN_HEIGHT    400
+#define NATIVE_SCREEN_WIDTH  640
+#define NATIVE_SCREEN_HEIGHT 400
 
 /* need to redefine these on SDL < 2.0.4 */
 #if !SDL_VERSION_ATLEAST(2, 0, 4)
-#define SDL_AUDIODEVICEADDED (0x1100)
-#define SDL_AUDIODEVICEREMOVED (0x1101)
+# define SDL_AUDIODEVICEADDED   (0x1100)
+# define SDL_AUDIODEVICEREMOVED (0x1101)
 #endif
 
 /* --------------------------------------------------------------------- */
@@ -112,8 +112,7 @@ static void display_print_info(void)
 static void sdl_init(void)
 {
 	const char *err;
-	if (SDL_Init(SDL_INIT_FLAGS) == 0)
-		return;
+	if (SDL_Init(SDL_INIT_FLAGS) == 0) return;
 	err = SDL_GetError();
 	fprintf(stderr, "SDL_Init: %s\n", err);
 	schism_exit(1);
@@ -141,9 +140,7 @@ static void handle_window_event(SDL_WindowEvent *w)
 {
 	switch (w->event) {
 	case SDL_WINDOWEVENT_SHOWN:
-	case SDL_WINDOWEVENT_FOCUS_GAINED:
-		video_mousecursor(MOUSE_RESET_STATE);
-		break;
+	case SDL_WINDOWEVENT_FOCUS_GAINED: video_mousecursor(MOUSE_RESET_STATE); break;
 	case SDL_WINDOWEVENT_FOCUS_LOST:
 		/* XXX why do we need this */
 		SDL_ShowCursor(SDL_ENABLE);
@@ -152,9 +149,7 @@ static void handle_window_event(SDL_WindowEvent *w)
 	case SDL_WINDOWEVENT_SIZE_CHANGED: /* tiling window managers */
 		video_update();
 		/* fallthrough */
-	case SDL_WINDOWEVENT_EXPOSED:
-		status.flags |= (NEED_UPDATE);
-		break;
+	case SDL_WINDOWEVENT_EXPOSED: status.flags |= (NEED_UPDATE); break;
 	default:
 #if 0
 		/* ignored currently */
@@ -211,7 +206,7 @@ static char *diskwrite_to = NULL;
 
 /* startup flags */
 enum {
-	SF_PLAY = 1, /* -p: start playing after loading initial_song */
+	SF_PLAY = 1,  /* -p: start playing after loading initial_song */
 	SF_HOOKS = 2, /* --no-hooks: don't run startup/exit scripts */
 	SF_FONTEDIT = 4,
 	SF_CLASSIC = 8,
@@ -225,21 +220,28 @@ enum {
 	// short options
 	O_SDL_AUDIODRIVER = 'a',
 	O_SDL_VIDEODRIVER = 'v',
-	O_FULLSCREEN = 'f', O_NO_FULLSCREEN = 'F',
-	O_PLAY = 'p', O_NO_PLAY = 'P',
+	O_FULLSCREEN = 'f',
+	O_NO_FULLSCREEN = 'F',
+	O_PLAY = 'p',
+	O_NO_PLAY = 'P',
 	O_HELP = 'h',
 	// ids for long options with no corresponding short option
 	O_VIDEO_YUVLAYOUT = 256,
 	O_VIDEO_RESOLUTION,
-	O_VIDEO_STRETCH, O_NO_VIDEO_STRETCH,
+	O_VIDEO_STRETCH,
+	O_NO_VIDEO_STRETCH,
 	O_VIDEO_DEPTH,
 #if USE_NETWORK
-	O_NETWORK, O_NO_NETWORK,
+	O_NETWORK,
+	O_NO_NETWORK,
 #endif
-	O_CLASSIC_MODE, O_NO_CLASSIC_MODE,
-	O_FONTEDIT, O_NO_FONTEDIT,
+	O_CLASSIC_MODE,
+	O_NO_CLASSIC_MODE,
+	O_FONTEDIT,
+	O_NO_FONTEDIT,
 #if ENABLE_HOOKS
-	O_HOOKS, O_NO_HOOKS,
+	O_HOOKS,
+	O_NO_HOOKS,
 #endif
 	O_DISKWRITE,
 	O_DEBUG,
@@ -253,47 +255,39 @@ enum {
 static void parse_options(int argc, char **argv)
 {
 	struct option long_options[] = {
-		{"audio-driver", 1, NULL, O_SDL_AUDIODRIVER},
-		{"video-driver", 1, NULL, O_SDL_VIDEODRIVER},
+		{"audio-driver",   1, NULL, O_SDL_AUDIODRIVER},
+		{"video-driver",   1, NULL, O_SDL_VIDEODRIVER},
 
 #if USE_NETWORK
-		{"network", 0, NULL, O_NETWORK},
-		{"no-network", 0, NULL, O_NO_NETWORK},
+		{"network",        0, NULL, O_NETWORK        },
+		{"no-network",     0, NULL, O_NO_NETWORK     },
 #endif
-		{"classic", 0, NULL, O_CLASSIC_MODE},
-		{"no-classic", 0, NULL, O_NO_CLASSIC_MODE},
-		{"fullscreen", 0, NULL, O_FULLSCREEN},
-		{"no-fullscreen", 0, NULL, O_NO_FULLSCREEN},
-		{"play", 0, NULL, O_PLAY},
-		{"no-play", 0, NULL, O_NO_PLAY},
-		{"diskwrite", 1, NULL, O_DISKWRITE},
-		{"font-editor", 0, NULL, O_FONTEDIT},
-		{"no-font-editor", 0, NULL, O_NO_FONTEDIT},
+		{"classic",        0, NULL, O_CLASSIC_MODE   },
+		{"no-classic",     0, NULL, O_NO_CLASSIC_MODE},
+		{"fullscreen",     0, NULL, O_FULLSCREEN     },
+		{"no-fullscreen",  0, NULL, O_NO_FULLSCREEN  },
+		{"play",           0, NULL, O_PLAY           },
+		{"no-play",        0, NULL, O_NO_PLAY        },
+		{"diskwrite",      1, NULL, O_DISKWRITE      },
+		{"font-editor",    0, NULL, O_FONTEDIT       },
+		{"no-font-editor", 0, NULL, O_NO_FONTEDIT    },
 #if ENABLE_HOOKS
-		{"hooks", 0, NULL, O_HOOKS},
-		{"no-hooks", 0, NULL, O_NO_HOOKS},
+		{"hooks",          0, NULL, O_HOOKS          },
+		{"no-hooks",       0, NULL, O_NO_HOOKS       },
 #endif
-		{"version", 0, NULL, O_VERSION},
-		{"help", 0, NULL, O_HELP},
-		{NULL, 0, NULL, 0},
+		{"version",        0, NULL, O_VERSION        },
+		{"help",           0, NULL, O_HELP           },
+		{NULL,             0, NULL, 0                },
 	};
 	int opt;
 
 	while ((opt = getopt_long(argc, argv, SHORT_OPTIONS, long_options, NULL)) != -1) {
 		switch (opt) {
-		case O_SDL_AUDIODRIVER:
-			audio_parse_driver_spec(optarg, (char**)&audio_driver, (char**)&audio_device);
-			break;
-		case O_SDL_VIDEODRIVER:
-			video_driver = str_dup(optarg);
-			break;
+		case O_SDL_AUDIODRIVER: audio_parse_driver_spec(optarg, (char **)&audio_driver, (char **)&audio_device); break;
+		case O_SDL_VIDEODRIVER: video_driver = str_dup(optarg); break;
 #if USE_NETWORK
-		case O_NETWORK:
-			startup_flags |= SF_NETWORK;
-			break;
-		case O_NO_NETWORK:
-			startup_flags &= ~SF_NETWORK;
-			break;
+		case O_NETWORK: startup_flags |= SF_NETWORK; break;
+		case O_NO_NETWORK: startup_flags &= ~SF_NETWORK; break;
 #endif
 		case O_CLASSIC_MODE:
 			startup_flags |= SF_CLASSIC;
@@ -311,28 +305,14 @@ static void parse_options(int argc, char **argv)
 			video_fullscreen(0);
 			did_fullscreen = 1;
 			break;
-		case O_PLAY:
-			startup_flags |= SF_PLAY;
-			break;
-		case O_NO_PLAY:
-			startup_flags &= ~SF_PLAY;
-			break;
-		case O_FONTEDIT:
-			startup_flags |= SF_FONTEDIT;
-			break;
-		case O_NO_FONTEDIT:
-			startup_flags &= ~SF_FONTEDIT;
-			break;
-		case O_DISKWRITE:
-			diskwrite_to = optarg;
-			break;
+		case O_PLAY: startup_flags |= SF_PLAY; break;
+		case O_NO_PLAY: startup_flags &= ~SF_PLAY; break;
+		case O_FONTEDIT: startup_flags |= SF_FONTEDIT; break;
+		case O_NO_FONTEDIT: startup_flags &= ~SF_FONTEDIT; break;
+		case O_DISKWRITE: diskwrite_to = optarg; break;
 #if ENABLE_HOOKS
-		case O_HOOKS:
-			startup_flags |= SF_HOOKS;
-			break;
-		case O_NO_HOOKS:
-			startup_flags &= ~SF_HOOKS;
-			break;
+		case O_HOOKS: startup_flags |= SF_HOOKS; break;
+		case O_NO_HOOKS: startup_flags &= ~SF_HOOKS; break;
 #endif
 		case O_VERSION:
 			puts(schism_banner(0));
@@ -353,8 +333,7 @@ static void parse_options(int argc, char **argv)
 				"      --hooks (--no-hooks)\n"
 #endif
 				"      --version\n"
-				"  -h, --help\n"
-			);
+				"  -h, --help\n");
 			printf("Refer to the documentation for complete usage details.\n");
 			exit(0);
 		case '?': // unknown option
@@ -400,13 +379,11 @@ static void check_update(void)
 		status.flags &= ~NEED_UPDATE;
 
 		if (!video_is_focused() && (status.flags & LAZY_REDRAW)) {
-			if (!SCHISM_TICKS_PASSED(now, next))
-				return;
+			if (!SCHISM_TICKS_PASSED(now, next)) return;
 
 			next = now + 500;
 		} else if (status.flags & (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN)) {
-			if (!SCHISM_TICKS_PASSED(now, next))
-				return;
+			if (!SCHISM_TICKS_PASSED(now, next)) return;
 
 			next = now + 100;
 		}
@@ -422,15 +399,11 @@ static void check_update(void)
 
 static void _do_clipboard_paste_op(SDL_Event *e)
 {
-	if (ACTIVE_WIDGET.clipboard_paste
-	&& ACTIVE_WIDGET.clipboard_paste(e->user.code,
-				e->user.data1)) return;
+	if (ACTIVE_WIDGET.clipboard_paste && ACTIVE_WIDGET.clipboard_paste(e->user.code, e->user.data1)) return;
 
-	if (ACTIVE_PAGE.clipboard_paste
-	&& ACTIVE_PAGE.clipboard_paste(e->user.code,
-				e->user.data1)) return;
+	if (ACTIVE_PAGE.clipboard_paste && ACTIVE_PAGE.clipboard_paste(e->user.code, e->user.data1)) return;
 
-	handle_text_input((uint8_t*)e->user.data1);
+	handle_text_input((uint8_t *)e->user.data1);
 }
 
 static void key_event_reset(struct key_event *kk, int start_x, int start_y)
@@ -485,8 +458,7 @@ static void event_loop(void)
 	for (;;) {
 		while (SDL_PollEvent(&event)) {
 			/* handle the current event queue */
-			if (!os_sdlevent(&event))
-				continue;
+			if (!os_sdlevent(&event)) continue;
 
 			key_event_reset(&kk, kk.sx, kk.sy);
 
@@ -510,14 +482,15 @@ static void event_loop(void)
 				status.flags |= NEED_UPDATE;
 				break;
 #if defined(SCHISM_WIN32)
-#define _ALTTRACKED_KMOD        (KMOD_NUM|KMOD_CAPS)
+# define _ALTTRACKED_KMOD (KMOD_NUM | KMOD_CAPS)
 #else
-#define _ALTTRACKED_KMOD        0
+# define _ALTTRACKED_KMOD 0
 #endif
 			case SDL_TEXTINPUT: {
-				uint8_t* input_text = NULL;
+				uint8_t *input_text = NULL;
 
-				charset_error_t err = charset_iconv((uint8_t*)event.text.text, &input_text, CHARSET_UTF8, CHARSET_CP437);
+				charset_error_t err =
+					charset_iconv((uint8_t *)event.text.text, &input_text, CHARSET_UTF8, CHARSET_CP437);
 				if (err || !input_text) {
 					log_appendf(4, " [ERROR] failed to convert SDL text input event");
 					log_appendf(4, "  %s", event.text.text);
@@ -539,16 +512,13 @@ static void event_loop(void)
 			}
 			case SDL_KEYDOWN:
 				/* we have our own repeat handler now */
-				if (event.key.repeat)
-					break;
+				if (event.key.repeat) break;
 
 				/* fallthrough */
 			case SDL_KEYUP:
 				kbd_pop_pending_keydown(NULL);
 				switch (event.key.keysym.sym) {
-				case SDLK_NUMLOCKCLEAR:
-					modkey ^= KMOD_NUM;
-					break;
+				case SDLK_NUMLOCKCLEAR: modkey ^= KMOD_NUM; break;
 				case SDLK_CAPSLOCK:
 					if (event.type == SDL_KEYDOWN) {
 						status.flags |= CAPS_PRESSED;
@@ -557,20 +527,16 @@ static void event_loop(void)
 					}
 					modkey ^= KMOD_CAPS;
 					break;
-				case SDLK_LSHIFT: case SDLK_RSHIFT:
-					if (event.type == SDL_KEYDOWN)
-						status.flags |= SHIFT_KEY_DOWN;
-					else
-						status.flags &= ~SHIFT_KEY_DOWN;
+				case SDLK_LSHIFT:
+				case SDLK_RSHIFT:
+					if (event.type == SDL_KEYDOWN) status.flags |= SHIFT_KEY_DOWN;
+					else status.flags &= ~SHIFT_KEY_DOWN;
 					break;
-				default:
-					break;
+				default: break;
 				};
 
 				if (kk.state == KEY_PRESS) {
-					modkey = (event.key.keysym.mod
-						& ~(_ALTTRACKED_KMOD))
-						| (modkey & _ALTTRACKED_KMOD);
+					modkey = (event.key.keysym.mod & ~(_ALTTRACKED_KMOD)) | (modkey & _ALTTRACKED_KMOD);
 				}
 
 				os_get_modkey(&modkey);
@@ -582,12 +548,8 @@ static void event_loop(void)
 				case NUMLOCK_GUESS:
 					/* should be handled per OS */
 					break;
-				case NUMLOCK_ALWAYS_OFF:
-					modkey &= ~KMOD_NUM;
-					break;
-				case NUMLOCK_ALWAYS_ON:
-					modkey |= KMOD_NUM;
-					break;
+				case NUMLOCK_ALWAYS_OFF: modkey &= ~KMOD_NUM; break;
+				case NUMLOCK_ALWAYS_ON: modkey |= KMOD_NUM; break;
 				};
 
 				kk.mod = modkey;
@@ -599,8 +561,7 @@ static void event_loop(void)
 
 					/* only empty the key repeat if
 					 * the last keydown is the same sym */
-					if (last_key == kk.sym)
-						kbd_empty_key_repeat();
+					if (last_key == kk.sym) kbd_empty_key_repeat();
 				} else {
 					kbd_push_pending_keydown(&kk);
 
@@ -613,9 +574,7 @@ static void event_loop(void)
 					last_key = kk.sym;
 				}
 				break;
-			case SDL_QUIT:
-				show_exit_prompt();
-				break;
+			case SDL_QUIT: show_exit_prompt(); break;
 			case SDL_WINDOWEVENT:
 				/* reset this... */
 				modkey = SDL_GetModState();
@@ -624,8 +583,7 @@ static void event_loop(void)
 
 				handle_window_event(&event.window);
 				break;
-			case SDL_MOUSEWHEEL:
-				kk.state = -1;  /* neither KEY_PRESS nor KEY_RELEASE */
+			case SDL_MOUSEWHEEL: kk.state = -1; /* neither KEY_PRESS nor KEY_RELEASE */
 #if SDL_VERSION_ATLEAST(2, 26, 0)
 				/* SDL just sends this to us anyway, don't ask for it again */
 				wheel_x = event.wheel.mouseX;
@@ -647,13 +605,12 @@ static void event_loop(void)
 				kk.sym = 0;
 				kk.mod = 0;
 
-				if (event.type != SDL_MOUSEWHEEL)
-					video_translate(event.button.x, event.button.y, &kk.fx, &kk.fy);
+				if (event.type != SDL_MOUSEWHEEL) video_translate(event.button.x, event.button.y, &kk.fx, &kk.fy);
 
 				/* character resolution */
 				kk.x = kk.fx / kk.rx;
 				/* half-character selection */
-				if ((kk.fx / (kk.rx/2)) % 2 == 0) {
+				if ((kk.fx / (kk.rx / 2)) % 2 == 0) {
 					kk.hx = 0;
 				} else {
 					kk.hx = 1;
@@ -673,20 +630,16 @@ static void event_loop(void)
 				case SDL_BUTTON_RIGHT:
 				case SDL_BUTTON_MIDDLE:
 				case SDL_BUTTON_LEFT:
-					if ((modkey & KMOD_CTRL)
-					|| event.button.button == SDL_BUTTON_RIGHT) {
+					if ((modkey & KMOD_CTRL) || event.button.button == SDL_BUTTON_RIGHT) {
 						kk.mouse_button = MOUSE_BUTTON_RIGHT;
-					} else if ((modkey & (KMOD_ALT|KMOD_GUI))
-					|| event.button.button == SDL_BUTTON_MIDDLE) {
+					} else if ((modkey & (KMOD_ALT | KMOD_GUI)) || event.button.button == SDL_BUTTON_MIDDLE) {
 						kk.mouse_button = MOUSE_BUTTON_MIDDLE;
 					} else {
 						kk.mouse_button = MOUSE_BUTTON_LEFT;
 					}
 					if (kk.state == KEY_RELEASE) {
 						ticker = SCHISM_GET_TICKS();
-						if (lx == kk.x
-						&& ly == kk.y
-						&& (ticker - last_mouse_down) < 300) {
+						if (lx == kk.x && ly == kk.y && (ticker - last_mouse_down) < 300) {
 							last_mouse_down = 0;
 							kk.mouse = MOUSE_DBLCLICK;
 						} else {
@@ -723,8 +676,7 @@ static void event_loop(void)
 				break;
 
 			case SDL_DROPFILE:
-				switch(status.current_page)
-				{
+				switch (status.current_page) {
 				case PAGE_SAMPLE_LIST:
 				case PAGE_LOAD_SAMPLE:
 				case PAGE_LIBRARY_SAMPLE:
@@ -744,9 +696,7 @@ static void event_loop(void)
 					status.flags |= SONG_NEEDS_SAVE;
 					set_page(PAGE_INSTRUMENT_LIST);
 					break;
-				default:
-					song_load(event.drop.file);
-					break;
+				default: song_load(event.drop.file); break;
 				}
 				SDL_free(event.drop.file);
 				break;
@@ -758,9 +708,7 @@ static void event_loop(void)
 			 *
 			 * We can probably get away with doing this though, since
 			 * we don't have any dependencies that use SDL anyway. */
-			case SCHISM_EVENT_MIDI:
-				midi_engine_handle_event(&event);
-				break;
+			case SCHISM_EVENT_MIDI: midi_engine_handle_event(&event); break;
 			case SCHISM_EVENT_UPDATE_IPMIDI:
 				status.flags |= (NEED_UPDATE);
 				midi_engine_poll_ports();
@@ -768,8 +716,7 @@ static void event_loop(void)
 			case SCHISM_EVENT_PLAYBACK:
 				/* this is the sound thread */
 				midi_send_flush();
-				if (!(status.flags & (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN)))
-					playback_update();
+				if (!(status.flags & (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN))) playback_update();
 				break;
 			case SCHISM_EVENT_PASTE:
 				/* handle clipboard events */
@@ -779,9 +726,7 @@ static void event_loop(void)
 			case SCHISM_EVENT_NATIVE:
 				/* used by native system scripting */
 				switch (event.user.code) {
-				case SCHISM_EVENT_NATIVE_OPEN: /* open song */
-					song_load(event.user.data1);
-					break;
+				case SCHISM_EVENT_NATIVE_OPEN: /* open song */ song_load(event.user.data1); break;
 				case SCHISM_EVENT_NATIVE_SCRIPT:
 					/* destroy any active dialog before changing pages */
 					dialog_destroy();
@@ -825,7 +770,8 @@ static void event_loop(void)
 						show_song_length();
 					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "sample_page", CHARSET_UTF8) == 0) {
 						set_page(PAGE_SAMPLE_LIST);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "sample_library", CHARSET_UTF8) == 0) {
+					} else if (
+						charset_strcasecmp(event.user.data1, CHARSET_UTF8, "sample_library", CHARSET_UTF8) == 0) {
 						set_page(PAGE_LIBRARY_SAMPLE);
 					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "init_sound", CHARSET_UTF8) == 0) {
 						/* does nothing :) */
@@ -866,16 +812,14 @@ static void event_loop(void)
 		time(&status.now);
 		localtime_r(&status.now, &status.tmnow);
 
-		if (status.dialog_type == DIALOG_NONE
-		    && startdown && (status.now - startdown) > 1) {
+		if (status.dialog_type == DIALOG_NONE && startdown && (status.now - startdown) > 1) {
 			menu_show();
 			startdown = 0;
 			downtrip = 1;
 		}
-		if (status.flags & (CLIPPY_PASTE_SELECTION|CLIPPY_PASTE_BUFFER)) {
-			clippy_paste((status.flags & CLIPPY_PASTE_BUFFER)
-				     ? CLIPPY_BUFFER : CLIPPY_SELECT);
-			status.flags &= ~(CLIPPY_PASTE_BUFFER|CLIPPY_PASTE_SELECTION);
+		if (status.flags & (CLIPPY_PASTE_SELECTION | CLIPPY_PASTE_BUFFER)) {
+			clippy_paste((status.flags & CLIPPY_PASTE_BUFFER) ? CLIPPY_BUFFER : CLIPPY_SELECT);
+			status.flags &= ~(CLIPPY_PASTE_BUFFER | CLIPPY_PASTE_SELECTION);
 		}
 
 		check_update();
@@ -916,12 +860,12 @@ static void event_loop(void)
 		/* let dmoz build directory lists, etc
 		 *
 		 * as long as there's no user-event going on... */
-		while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(NULL));
+		while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(NULL))
+			;
 
 		/* delay until there's an event OR 10 ms have passed */
 		int t;
-		for (t = 0; t < 10 && !SDL_PollEvent(NULL); t++)
-			SDL_Delay(1);
+		for (t = 0; t < 10 && !SDL_PollEvent(NULL); t++) SDL_Delay(1);
 	}
 	schism_exit(0);
 }
@@ -930,14 +874,12 @@ static void event_loop(void)
 void schism_exit(int status)
 {
 #if ENABLE_HOOKS
-	if (shutdown_process & EXIT_HOOK)
-		run_exit_hook();
+	if (shutdown_process & EXIT_HOOK) run_exit_hook();
 #endif
 
 	free_audio_device_list();
 
-	if (shutdown_process & EXIT_SAVECFG)
-		cfg_atexit_save();
+	if (shutdown_process & EXIT_SAVECFG) cfg_atexit_save();
 
 	if (shutdown_process & EXIT_SDLQUIT) {
 		song_lock_audio();
@@ -966,7 +908,7 @@ extern void vis_init(void);
 
 /* wart */
 #ifdef SCHISM_MACOSX
-int SDL_main(int argc, char** argv)
+int SDL_main(int argc, char **argv)
 #else
 int main(int argc, char **argv)
 #endif
@@ -1067,9 +1009,8 @@ int main(int argc, char **argv)
 			if (diskwrite_to) {
 				// make a guess?
 				const char *multi = strcasestr(diskwrite_to, "%c");
-				const char *driver = (strcasestr(diskwrite_to, ".aif")
-						      ? (multi ? "MAIFF" : "AIFF")
-						      : (multi ? "MWAV" : "WAV"));
+				const char *driver =
+					(strcasestr(diskwrite_to, ".aif") ? (multi ? "MAIFF" : "AIFF") : (multi ? "MWAV" : "WAV"));
 				if (song_export(diskwrite_to, driver) != SAVE_SUCCESS) {
 					schism_exit(1);
 				}
@@ -1084,8 +1025,7 @@ int main(int argc, char **argv)
 	}
 
 #if HAVE_NICE
-	if (nice(1) == -1) {
-	}
+	if (nice(1) == -1) {}
 #endif
 	/* poll once */
 	midi_engine_poll_ports();

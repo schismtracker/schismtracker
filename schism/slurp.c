@@ -69,7 +69,7 @@ static void _slurp_closure_free(slurp_t *t)
  * (so maybe this should grab the block size from stat() instead...) */
 #define CHUNK 65536
 
-static int _slurp_stdio_pipe(slurp_t * t, int fd)
+static int _slurp_stdio_pipe(slurp_t *t, int fd)
 {
 	int old_errno;
 	FILE *fp;
@@ -79,13 +79,12 @@ static int _slurp_stdio_pipe(slurp_t * t, int fd)
 
 	t->data = NULL;
 	fp = fdopen(dup(fd), "rb");
-	if (fp == NULL)
-		return 0;
+	if (fp == NULL) return 0;
 
 	do {
 		chunks++;
 		/* Have to cast away the const... */
-		realloc_buf = realloc((void *) t->data, CHUNK * chunks);
+		realloc_buf = realloc((void *)t->data, CHUNK * chunks);
 		if (realloc_buf == NULL) {
 			old_errno = errno;
 			fclose(fp);
@@ -94,7 +93,7 @@ static int _slurp_stdio_pipe(slurp_t * t, int fd)
 			return 0;
 		}
 		t->data = realloc_buf;
-		read_buf = (void *) (t->data + (CHUNK * (chunks - 1)));
+		read_buf = (void *)(t->data + (CHUNK * (chunks - 1)));
 		this_len = fread(read_buf, 1, CHUNK, fp);
 		if (this_len <= 0) {
 			if (ferror(fp)) {
@@ -112,7 +111,7 @@ static int _slurp_stdio_pipe(slurp_t * t, int fd)
 	return 1;
 }
 
-static int _slurp_stdio(slurp_t * t, int fd)
+static int _slurp_stdio(slurp_t *t, int fd)
 {
 	int old_errno;
 	FILE *fp;
@@ -125,10 +124,9 @@ static int _slurp_stdio(slurp_t * t, int fd)
 
 	fp = fdopen(dup(fd), "rb");
 
-	if (!fp)
-		return 0;
+	if (!fp) return 0;
 
-	t->data = (uint8_t *) malloc(t->length);
+	t->data = (uint8_t *)malloc(t->length);
 	if (t->data == NULL) {
 		old_errno = errno;
 		fclose(fp);
@@ -169,7 +167,7 @@ static int _slurp_stdio(slurp_t * t, int fd)
 
 /* --------------------------------------------------------------------- */
 
-static slurp_t *_slurp_open(const char *filename, struct stat * buf, size_t size)
+static slurp_t *_slurp_open(const char *filename, struct stat *buf, size_t size)
 {
 	slurp_t *t;
 	int fd, old_errno;
@@ -179,14 +177,12 @@ static slurp_t *_slurp_open(const char *filename, struct stat * buf, size_t size
 		return NULL;
 	}
 
-	t = (slurp_t *) mem_alloc(sizeof(slurp_t));
-	if (t == NULL)
-		return NULL;
+	t = (slurp_t *)mem_alloc(sizeof(slurp_t));
+	if (t == NULL) return NULL;
 	t->pos = 0;
 
 	if (strcmp(filename, "-") == 0) {
-		if (_slurp_stdio(t, STDIN_FILENO))
-			return t;
+		if (_slurp_stdio(t, STDIN_FILENO)) return t;
 		free(t);
 		return NULL;
 	}
@@ -230,7 +226,7 @@ static slurp_t *_slurp_open(const char *filename, struct stat * buf, size_t size
 	return NULL;
 }
 
-slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
+slurp_t *slurp(const char *filename, struct stat *buf, size_t size)
 {
 	slurp_t *t = _slurp_open(filename, buf, size);
 	uint8_t *mmdata;
@@ -259,10 +255,9 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
 }
 
 
-void unslurp(slurp_t * t)
+void unslurp(slurp_t *t)
 {
-	if (!t)
-		return;
+	if (!t) return;
 	if (t->data && t->closure) {
 		t->closure(t);
 	}
@@ -275,24 +270,18 @@ int slurp_seek(slurp_t *t, long offset, int whence)
 {
 	switch (whence) {
 	default:
-	case SEEK_SET:
-		break;
-	case SEEK_CUR:
-		offset += t->pos;
-		break;
-	case SEEK_END:
-		offset += t->length;
-		break;
+	case SEEK_SET: break;
+	case SEEK_CUR: offset += t->pos; break;
+	case SEEK_END: offset += t->length; break;
 	}
-	if (offset < 0 || (size_t) offset > t->length)
-		return -1;
+	if (offset < 0 || (size_t)offset > t->length) return -1;
 	t->pos = offset;
 	return 0;
 }
 
 long slurp_tell(slurp_t *t)
 {
-	return (long) t->pos;
+	return (long)t->pos;
 }
 
 size_t slurp_read(slurp_t *t, void *ptr, size_t count)
@@ -309,10 +298,9 @@ size_t slurp_peek(slurp_t *t, void *ptr, size_t count)
 		// short read -- fill in any extra bytes with zeroes
 		size_t tail = count - bytesleft;
 		count = bytesleft;
-		memset((uint8_t*)ptr + count, 0, tail);
+		memset((uint8_t *)ptr + count, 0, tail);
 	}
-	if (count)
-		memcpy(ptr, t->data + t->pos, count);
+	if (count) memcpy(ptr, t->data + t->pos, count);
 	return count;
 }
 
@@ -325,4 +313,3 @@ int slurp_eof(slurp_t *t)
 {
 	return t->pos >= t->length;
 }
-

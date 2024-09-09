@@ -55,31 +55,15 @@ static inline void make_half_width_middot(void)
 	 * together chars 173 and 184 of the half-width font will
 	 * produce the equivalent of 184 of the full-width font. */
 
-	font_half_data[173 * 4 + 0] =
-		(font_normal[184 * 8 + 0] & 0xf0) |
-		(font_normal[184 * 8 + 1] & 0xf0) >> 4;
-	font_half_data[173 * 4 + 1] =
-		(font_normal[184 * 8 + 2] & 0xf0) |
-		(font_normal[184 * 8 + 3] & 0xf0) >> 4;
-	font_half_data[173 * 4 + 2] =
-		(font_normal[184 * 8 + 4] & 0xf0) |
-		(font_normal[184 * 8 + 5] & 0xf0) >> 4;
-	font_half_data[173 * 4 + 3] =
-		(font_normal[184 * 8 + 6] & 0xf0) |
-		(font_normal[184 * 8 + 7] & 0xf0) >> 4;
+	font_half_data[173 * 4 + 0] = (font_normal[184 * 8 + 0] & 0xf0) | (font_normal[184 * 8 + 1] & 0xf0) >> 4;
+	font_half_data[173 * 4 + 1] = (font_normal[184 * 8 + 2] & 0xf0) | (font_normal[184 * 8 + 3] & 0xf0) >> 4;
+	font_half_data[173 * 4 + 2] = (font_normal[184 * 8 + 4] & 0xf0) | (font_normal[184 * 8 + 5] & 0xf0) >> 4;
+	font_half_data[173 * 4 + 3] = (font_normal[184 * 8 + 6] & 0xf0) | (font_normal[184 * 8 + 7] & 0xf0) >> 4;
 
-	font_half_data[184 * 4 + 0] =
-		(font_normal[184 * 8 + 0] & 0xf) << 4 |
-		(font_normal[184 * 8 + 1] & 0xf);
-	font_half_data[184 * 4 + 1] =
-		(font_normal[184 * 8 + 2] & 0xf) << 4 |
-		(font_normal[184 * 8 + 3] & 0xf);
-	font_half_data[184 * 4 + 2] =
-		(font_normal[184 * 8 + 4] & 0xf) << 4 |
-		(font_normal[184 * 8 + 5] & 0xf);
-	font_half_data[184 * 4 + 3] =
-		(font_normal[184 * 8 + 6] & 0xf) << 4 |
-		(font_normal[184 * 8 + 7] & 0xf);
+	font_half_data[184 * 4 + 0] = (font_normal[184 * 8 + 0] & 0xf) << 4 | (font_normal[184 * 8 + 1] & 0xf);
+	font_half_data[184 * 4 + 1] = (font_normal[184 * 8 + 2] & 0xf) << 4 | (font_normal[184 * 8 + 3] & 0xf);
+	font_half_data[184 * 4 + 2] = (font_normal[184 * 8 + 4] & 0xf) << 4 | (font_normal[184 * 8 + 5] & 0xf);
+	font_half_data[184 * 4 + 3] = (font_normal[184 * 8 + 6] & 0xf) << 4 | (font_normal[184 * 8 + 7] & 0xf);
 }
 
 /* just the non-itf chars */
@@ -120,10 +104,10 @@ void font_reset_char(int ch)
 	ch <<= 3;
 	cx = ch;
 	if (ch >= 1024) {
-		base = (uint8_t *) font_default_upper_itf;
+		base = (uint8_t *)font_default_upper_itf;
 		cx -= 1024;
 	} else {
-		base = (uint8_t *) font_default_lower;
+		base = (uint8_t *)font_default_lower;
 	}
 	/* update them both... */
 	memcpy(font_normal + ch, base + cx, 8);
@@ -134,16 +118,14 @@ void font_reset_char(int ch)
 
 /* --------------------------------------------------------------------- */
 
-static int squeeze_8x16_font(FILE * fp)
+static int squeeze_8x16_font(FILE *fp)
 {
 	uint8_t data_8x16[4096];
 	int n;
 
-	if (fread(data_8x16, 4096, 1, fp) != 1)
-		return -1;
+	if (fread(data_8x16, 4096, 1, fp) != 1) return -1;
 
-	for (n = 0; n < 2048; n++)
-		font_normal[n] = data_8x16[2 * n] | data_8x16[2 * n + 1];
+	for (n = 0; n < 2048; n++) font_normal[n] = data_8x16[2 * n] | data_8x16[2 * n + 1];
 
 	return 0;
 }
@@ -174,8 +156,7 @@ int font_load(const char *filename)
 
 		fseek(fp, -2, SEEK_CUR);
 		if (fread(data, 2, 1, fp) < 1) {
-			SDL_SetError("%s: %s", font_file,
-				     feof(fp) ? "Unexpected EOF on read" : strerror(errno));
+			SDL_SetError("%s: %s", font_file, feof(fp) ? "Unexpected EOF on read" : strerror(errno));
 			fclose(fp);
 			free(font_file);
 			return -1;
@@ -198,8 +179,7 @@ int font_load(const char *filename)
 			free(font_file);
 			return 0;
 		} else {
-			SDL_SetError("%s: %s", font_file,
-				     feof(fp) ? "Unexpected EOF on read" : strerror(errno));
+			SDL_SetError("%s: %s", font_file, feof(fp) ? "Unexpected EOF on read" : strerror(errno));
 			fclose(fp);
 			free(font_file);
 			return -1;
@@ -212,8 +192,7 @@ int font_load(const char *filename)
 	}
 
 	if (fread(font_normal, 2048, 1, fp) != 1) {
-		SDL_SetError("%s: %s", font_file,
-			     feof(fp) ? "Unexpected EOF on read" : strerror(errno));
+		SDL_SetError("%s: %s", font_file, feof(fp) ? "Unexpected EOF on read" : strerror(errno));
 		fclose(fp);
 		free(font_file);
 		return -1;
@@ -229,7 +208,7 @@ int font_load(const char *filename)
 int font_save(const char *filename)
 {
 	FILE *fp;
-	uint8_t ver[2] = { 0x12, 0x2 };
+	uint8_t ver[2] = {0x12, 0x2};
 	char *font_dir, *font_file;
 
 	font_dir = dmoz_path_concat(cfg_dir_dotschism, "fonts");

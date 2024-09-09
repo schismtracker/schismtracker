@@ -30,7 +30,7 @@
 
 /* --------------------------------------------------------------------- */
 
-static void get_title_from_id3(struct id3_tag const *tag, char **artist_ptr, char **title_ptr)
+static void get_title_from_id3(struct const id3_tag *tag, char **artist_ptr, char **title_ptr)
 {
 	struct id3_frame *frame;
 	/*union id3_field *field;*/
@@ -62,13 +62,11 @@ int fmt_mp3_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	id3len = id3_tag_query(data, length);
 	if (id3len <= 0) {
 		/*version = 1;*/
-		if (length <= 128)
-			return 0;
+		if (length <= 128) return 0;
 
 		id3off = length - 128;
 		id3len = id3_tag_query(data + id3off, 128);
-		if (id3len <= 0)
-			/* See the note at the end of this file. */
+		if (id3len <= 0) /* See the note at the end of this file. */
 			return 0;
 	}
 

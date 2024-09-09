@@ -36,19 +36,19 @@
 #pragma pack(push, 1)
 typedef struct mtm_header {
 	char filever[4]; /* M T M \x10 */
-	char title[20]; /* asciz */
+	char title[20];  /* asciz */
 	uint16_t ntracks;
 	uint8_t last_pattern;
 	uint8_t last_order; /* songlength - 1 */
 	uint16_t msglen;
 	uint8_t nsamples;
 	uint8_t flags; /* always 0 */
-	uint8_t rows; /* prob. 64 */
+	uint8_t rows;  /* prob. 64 */
 	uint8_t nchannels;
 	uint8_t panpos[32];
 } mtm_header_t;
 
-SCHISM_BINARY_STRUCT(mtm_header_t, 4+20+2+1+1+2+1+1+1+1+32);
+SCHISM_BINARY_STRUCT(mtm_header_t, 4 + 20 + 2 + 1 + 1 + 2 + 1 + 1 + 1 + 1 + 32);
 
 typedef struct mtm_sample {
 	char name[22];
@@ -56,7 +56,7 @@ typedef struct mtm_sample {
 	uint8_t finetune, volume, flags;
 } mtm_sample_t;
 
-SCHISM_BINARY_STRUCT(mtm_sample_t, 22+4+4+4+1+1+1);
+SCHISM_BINARY_STRUCT(mtm_sample_t, 22 + 4 + 4 + 4 + 1 + 1 + 1);
 
 #pragma pack(pop)
 
@@ -64,8 +64,7 @@ SCHISM_BINARY_STRUCT(mtm_sample_t, 22+4+4+4+1+1+1);
 
 int fmt_mtm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	if (!(length > 24 && memcmp(data, "MTM", 3) == 0))
-		return 0;
+	if (!(length > 24 && memcmp(data, "MTM", 3) == 0)) return 0;
 
 	file->description = "MultiTracker Module";
 	/*file->extension = str_dup("mtm");*/
@@ -88,8 +87,7 @@ static void mtm_unpack_track(const uint8_t *b, song_note_t *note, int rows)
 		note->effect = b[1] & 0xf;
 		note->param = b[2];
 		/* From mikmod: volume slide up always overrides slide down */
-		if (note->effect == 0xa && (note->param & 0xf0))
-			note->param &= 0xf0;
+		if (note->effect == 0xa && (note->param & 0xf0)) note->param &= 0xf0;
 		csf_import_mod_effect(note, 0);
 	}
 }
@@ -107,8 +105,7 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	song_sample_t *sample;
 
 	slurp_read(fp, b, 3);
-	if (memcmp(b, "MTM", 3) != 0)
-		return LOAD_UNSUPPORTED;
+	if (memcmp(b, "MTM", 3) != 0) return LOAD_UNSUPPORTED;
 	n = slurp_getc(fp);
 	sprintf(song->tracker_id, "MultiTracker %d.%d", n >> 4, n & 0xf);
 	slurp_read(fp, song->title, 20);
@@ -122,10 +119,9 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	comment_len = bswapLE16(comment_len);
 
 	nsmp = slurp_getc(fp);
-	slurp_getc(fp); /* attribute byte (unused) */
+	slurp_getc(fp);        /* attribute byte (unused) */
 	rows = slurp_getc(fp); /* beats per track (translation: number of rows in every pattern) */
-	if (rows != 64)
-		todo |= 64;
+	if (rows != 64) todo |= 64;
 	rows = MIN(rows, 64);
 	nchan = slurp_getc(fp);
 
@@ -139,8 +135,7 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		pan *= 4; //mphack
 		song->channels[n].panning = pan;
 	}
-	for (n = nchan; n < MAX_CHANNELS; n++)
-		song->channels[n].flags = CHN_MUTE;
+	for (n = nchan; n < MAX_CHANNELS; n++) song->channels[n].flags = CHN_MUTE;
 
 	/* samples */
 	if (nsmp > MAX_SAMPLES) {
@@ -219,29 +214,25 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			if (tmp == 0) {
 				continue;
 			} else if (tmp > ntrk) {
-				for (n = 0; n < ntrk; n++)
-					free(trackdata[n]);
+				for (n = 0; n < ntrk; n++) free(trackdata[n]);
 				free(trackdata);
 				return LOAD_FORMAT_ERROR;
 			}
 			note = song->patterns[pat] + chan;
 			tracknote = trackdata[tmp - 1];
-			for (n = 0; n < rows; n++, tracknote++, note += MAX_CHANNELS)
-				*note = *tracknote;
+			for (n = 0; n < rows; n++, tracknote++, note += MAX_CHANNELS) *note = *tracknote;
 		}
 		if (rows < 32) {
 			/* stick a pattern break on the first channel with an empty effect column
 			 * (XXX don't do this if there's already one in another column) */
 			note = song->patterns[pat] + 64 * (rows - 1);
-			while (note->effect || note->param)
-				note++;
+			while (note->effect || note->param) note++;
 			note->effect = FX_PATTERNBREAK;
 		}
 	}
 
 	/* free willy */
-	for (n = 0; n < ntrk; n++)
-		free(trackdata[n]);
+	for (n = 0; n < ntrk; n++) free(trackdata[n]);
 	free(trackdata);
 
 	read_lined_message(song->message, fp, comment_len, 40);
@@ -251,11 +242,9 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		for (smp = 1; smp <= nsmp && smp <= MAX_SAMPLES; smp++) {
 			uint32_t ssize;
 
-			if (song->samples[smp].length == 0)
-				continue;
-			ssize = csf_read_sample(song->samples + smp,
-				(SF_LE | SF_PCMU | SF_M
-				 | ((song->samples[smp].flags & CHN_16BIT) ? SF_16 : SF_8)),
+			if (song->samples[smp].length == 0) continue;
+			ssize = csf_read_sample(
+				song->samples + smp, (SF_LE | SF_PCMU | SF_M | ((song->samples[smp].flags & CHN_16BIT) ? SF_16 : SF_8)),
 				fp->data + fp->pos, fp->length - fp->pos);
 			slurp_seek(fp, ssize, SEEK_CUR);
 		}
@@ -264,16 +253,13 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	/* set the rest of the stuff */
 	song->flags = SONG_ITOLDEFFECTS | SONG_COMPATGXX;
 
-//      if (ferror(fp)) {
-//              return LOAD_FILE_ERROR;
-//      }
+	//      if (ferror(fp)) {
+	//              return LOAD_FILE_ERROR;
+	//      }
 
-	if (todo & 64)
-		log_appendf(2, " TODO: test this file with other players (beats per track != 64)");
-	if (todo & 16)
-		log_appendf(2, " TODO: double check 16 bit sample loading");
+	if (todo & 64) log_appendf(2, " TODO: test this file with other players (beats per track != 64)");
+	if (todo & 16) log_appendf(2, " TODO: double check 16 bit sample loading");
 
 	/* done! */
 	return LOAD_SUCCESS;
 }
-

@@ -35,8 +35,8 @@
 #include "auto/logoit.h"
 #include "auto/logoschism.h"
 
-#define LOGO_WIDTH 292
-#define LOGO_PITCH 292
+#define LOGO_WIDTH  292
+#define LOGO_PITCH  292
 #define LOGO_HEIGHT 50
 
 static int fake_driver = 0;
@@ -46,9 +46,7 @@ static SDL_Surface *schism_logo = NULL;
 static struct widget widgets_about[1];
 
 static struct vgamem_overlay logo_image = {
-	23, 17,
-	58, 24,
-	NULL, 0, 0, 0,
+	23, 17, 58, 24, NULL, 0, 0, 0,
 };
 
 
@@ -65,20 +63,23 @@ static int _fixup_ignore_globals(struct key_event *k)
 	case SDLK_ESCAPE:
 		/* use default handler */
 		return 0;
-	case SDLK_F2: case SDLK_F5: case SDLK_F9: case SDLK_F10:
+	case SDLK_F2:
+	case SDLK_F5:
+	case SDLK_F9:
+	case SDLK_F10:
 		// Ctrl + these keys does not lead to a new screen
-		if (k->mod & KMOD_CTRL)
-			break;
+		if (k->mod & KMOD_CTRL) break;
 		// Fall through.
-	case SDLK_F1: case SDLK_F3: case SDLK_F4:
-	case SDLK_F11: case SDLK_F12:
+	case SDLK_F1:
+	case SDLK_F3:
+	case SDLK_F4:
+	case SDLK_F11:
+	case SDLK_F12:
 		// Ignore Alt and so on.
-		if (k->mod & (KMOD_ALT | KMOD_SHIFT))
-			break;
+		if (k->mod & (KMOD_ALT | KMOD_SHIFT)) break;
 		dialog_destroy();
 		return 0;
-	default:
-		break;
+	default: break;
 	}
 	/* this way, we can't pull up help here */
 	return 1;
@@ -86,7 +87,7 @@ static int _fixup_ignore_globals(struct key_event *k)
 
 static void _draw_full(void)
 {
-	draw_fill_chars(0,0,79,49,DEFAULT_FG,0);
+	draw_fill_chars(0, 0, 79, 49, DEFAULT_FG, 0);
 }
 
 void about_load_page(struct page *page)
@@ -112,11 +113,11 @@ static void about_draw_const(void)
 
 	if (status.current_page == PAGE_ABOUT) {
 		/* redraw outer part */
-		draw_box(11,16, 68, 34, BOX_THIN | BOX_OUTER | BOX_FLAT_DARK);
+		draw_box(11, 16, 68, 34, BOX_THIN | BOX_OUTER | BOX_FLAT_DARK);
 	}
 
 	if (status.flags & CLASSIC_MODE) {
-		draw_box(25,25, 56, 30, BOX_THIN | BOX_OUTER | BOX_FLAT_DARK);
+		draw_box(25, 25, 56, 30, BOX_THIN | BOX_OUTER | BOX_FLAT_DARK);
 
 		draw_text("Sound Card Setup", 32, 26, 0, 2);
 
@@ -167,7 +168,7 @@ void show_about(void)
 		vgamem_ovl_alloc(&logo_image);
 		it_logo = xpmdata(_logo_it_xpm);
 		schism_logo = xpmdata(_logo_schism_xpm);
-		didit=1;
+		didit = 1;
 	}
 
 	if (status.flags & CLASSIC_MODE) {
@@ -183,24 +184,17 @@ void show_about(void)
 		for (y = 0; y < LOGO_HEIGHT; y++) {
 			for (x = 0; x < LOGO_WIDTH; x++) {
 				if (p[x]) {
-					vgamem_ovl_drawpixel(&logo_image, x+2, y+6, c);
+					vgamem_ovl_drawpixel(&logo_image, x + 2, y + 6, c);
 				}
 			}
-			vgamem_ovl_drawpixel(&logo_image, x, y+6, 2);
-			vgamem_ovl_drawpixel(&logo_image, x+1, y+6, 2);
+			vgamem_ovl_drawpixel(&logo_image, x, y + 6, 2);
+			vgamem_ovl_drawpixel(&logo_image, x + 1, y + 6, 2);
 			p += LOGO_PITCH;
 		}
 	}
 
-	widget_create_button(widgets_about + 0,
-			33,32,
-			12,
-			0,0,0,0,0,
-			dialog_yes_NULL, "Continue", 3);
-	d = dialog_create_custom(11,16,
-			58, 19,
-			widgets_about, 1, 0,
-			about_draw_const, NULL);
+	widget_create_button(widgets_about + 0, 33, 32, 12, 0, 0, 0, 0, 0, dialog_yes_NULL, "Continue", 3);
+	d = dialog_create_custom(11, 16, 58, 19, widgets_about, 1, 0, about_draw_const, NULL);
 	d->action_yes = about_close;
 	d->action_no = about_close;
 	d->action_cancel = about_close;
@@ -213,4 +207,3 @@ void show_about(void)
 	status.flags |= DIR_MODULES_CHANGED;
 	pages[PAGE_LOAD_MODULE].set_page();
 }
-

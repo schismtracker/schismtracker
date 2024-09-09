@@ -34,8 +34,7 @@ uint8_t *charset_compose_to_set(const uint8_t *in, charset_t inset, charset_t ou
 	if (inset == CHARSET_UTF8) {
 		utf8 = in;
 	} else {
-		if (charset_iconv(in, &alloc_ptr, inset, CHARSET_UTF8))
-			return NULL;
+		if (charset_iconv(in, &alloc_ptr, inset, CHARSET_UTF8)) return NULL;
 		utf8 = alloc_ptr;
 	}
 
@@ -45,11 +44,9 @@ uint8_t *charset_compose_to_set(const uint8_t *in, charset_t inset, charset_t ou
 
 	free(alloc_ptr);
 
-	if (!success)
-		return NULL;
+	if (!success) return NULL;
 
-	if (outset == CHARSET_UTF8)
-		return composed;
+	if (outset == CHARSET_UTF8) return composed;
 
 	uint8_t *composed_in_outset;
 
@@ -69,8 +66,7 @@ uint8_t *charset_case_fold_to_set(const uint8_t *in, charset_t inset, charset_t 
 	if (inset == CHARSET_UTF8) {
 		utf8 = in;
 	} else {
-		if (charset_iconv(in, &alloc_ptr, inset, CHARSET_UTF8))
-			return NULL;
+		if (charset_iconv(in, &alloc_ptr, inset, CHARSET_UTF8)) return NULL;
 
 		utf8 = alloc_ptr;
 	}
@@ -81,11 +77,9 @@ uint8_t *charset_case_fold_to_set(const uint8_t *in, charset_t inset, charset_t 
 
 	free(alloc_ptr);
 
-	if (!success)
-		return NULL;
+	if (!success) return NULL;
 
-	if (outset == CHARSET_UTF8)
-		return folded;
+	if (outset == CHARSET_UTF8) return folded;
 
 	uint8_t *folded_in_outset;
 

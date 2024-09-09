@@ -59,21 +59,21 @@
 static IOHIDManagerRef hid_manager = NULL;
 static SDL_atomic_t is_caps_pressed = {0};
 
-static void hid_callback(void *context, IOReturn result, void *sender, IOHIDValueRef value) {
+static void hid_callback(void *context, IOReturn result, void *sender, IOHIDValueRef value)
+{
 	IOHIDElementRef elem = IOHIDValueGetElement(value);
 	if (IOHIDElementGetUsagePage(elem) != kHIDPage_KeyboardOrKeypad
-		|| IOHIDElementGetUsage(elem) != kHIDUsage_KeyboardCapsLock)
+	    || IOHIDElementGetUsage(elem) != kHIDUsage_KeyboardCapsLock)
 		return;
 
 	const int pressed = IOHIDValueGetIntegerValue(value);
 	SDL_AtomicSet(&is_caps_pressed, !!pressed);
 }
 
-static CFDictionaryRef create_hid_device(uint32_t page, uint32_t usage) {
+static CFDictionaryRef create_hid_device(uint32_t page, uint32_t usage)
+{
 	CFMutableDictionaryRef dict = CFDictionaryCreateMutable(
-		kCFAllocatorDefault, 0,
-		&kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks
-	);
+		kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
 	if (dict) {
 		CFNumberRef number = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &page);
 		if (number) {
@@ -91,9 +91,9 @@ static CFDictionaryRef create_hid_device(uint32_t page, uint32_t usage) {
 	return NULL;
 }
 
-static void quit_hid_callback(void) {
-	if (!hid_manager)
-		return;
+static void quit_hid_callback(void)
+{
+	if (!hid_manager) return;
 
 	IOHIDManagerUnscheduleFromRunLoop(hid_manager, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
 	IOHIDManagerRegisterInputValueCallback(hid_manager, NULL, NULL);
@@ -102,45 +102,38 @@ static void quit_hid_callback(void) {
 	hid_manager = NULL;
 }
 
-static void init_hid_callback(void) {
+static void init_hid_callback(void)
+{
 	hid_manager = IOHIDManagerCreate(kCFAllocatorDefault, kIOHIDOptionsTypeNone);
-	if (!hid_manager)
-		return;
+	if (!hid_manager) return;
 
 	CFDictionaryRef keyboard = NULL, keypad = NULL;
 	CFArrayRef matches = NULL;
 
 	keyboard = create_hid_device(kHIDPage_GenericDesktop, kHIDUsage_GD_Keyboard);
-	if (!keyboard)
-		goto fail;
+	if (!keyboard) goto fail;
 
 	keypad = create_hid_device(kHIDPage_GenericDesktop, kHIDUsage_GD_Keypad);
-	if (!keypad)
-		goto fail;
+	if (!keypad) goto fail;
 
-	CFDictionaryRef matches_list[] = { keyboard, keypad };
+	CFDictionaryRef matches_list[] = {keyboard, keypad};
 	matches = CFArrayCreate(kCFAllocatorDefault, (const void **)matches_list, 2, NULL);
-	if (!matches)
-		goto fail;
+	if (!matches) goto fail;
 
 	IOHIDManagerSetDeviceMatchingMultiple(hid_manager, matches);
 	IOHIDManagerRegisterInputValueCallback(hid_manager, hid_callback, NULL);
 	IOHIDManagerScheduleWithRunLoop(hid_manager, CFRunLoopGetMain(), kCFRunLoopDefaultMode);
-	if (IOHIDManagerOpen(hid_manager, kIOHIDOptionsTypeNone) == kIOReturnSuccess)
-		goto cleanup;
+	if (IOHIDManagerOpen(hid_manager, kIOHIDOptionsTypeNone) == kIOReturnSuccess) goto cleanup;
 
 fail:
 	quit_hid_callback();
 
 cleanup:
-	if (matches)
-		CFRelease(matches);
+	if (matches) CFRelease(matches);
 
-	if (keypad)
-		CFRelease(keypad);
+	if (keypad) CFRelease(keypad);
 
-	if (keyboard)
-		CFRelease(keyboard);
+	if (keyboard) CFRelease(keyboard);
 }
 
 /* --------------------------------------------------------- */
@@ -154,14 +147,9 @@ int macosx_sdlevent(SDL_Event *event)
 	switch (event->type) {
 	case SDL_WINDOWEVENT:
 		switch (event->window.event) {
-		case SDL_WINDOWEVENT_FOCUS_GAINED:
-			macosx_ibook_fnswitch(1);
-			break;
-		case SDL_WINDOWEVENT_FOCUS_LOST:
-			macosx_ibook_fnswitch(ibook_helper);
-			break;
-		default:
-			break;
+		case SDL_WINDOWEVENT_FOCUS_GAINED: macosx_ibook_fnswitch(1); break;
+		case SDL_WINDOWEVENT_FOCUS_LOST: macosx_ibook_fnswitch(ibook_helper); break;
+		default: break;
 		}
 		return 1;
 	case SDL_KEYDOWN:
@@ -170,9 +158,8 @@ int macosx_sdlevent(SDL_Event *event)
 		case NUMLOCK_GUESS:
 			/* why is this checking for ibook_helper? */
 			if (ibook_helper != -1) {
-				if (ACTIVE_PAGE.selected_widget > -1
-					&& ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
-					&& ACTIVE_PAGE_WIDGET.accept_text) {
+				if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
+				    && ACTIVE_PAGE_WIDGET.accept_text) {
 					/* text is more likely? */
 					event->key.keysym.mod |= KMOD_NUM;
 				} else {
@@ -200,36 +187,34 @@ int macosx_sdlevent(SDL_Event *event)
 			 *   - paper */
 			event->key.keysym.sym = SDLK_INSERT;
 			break;
-		default:
-			break;
+		default: break;
 		};
 		return 1;
-	default:
-		break;
+	default: break;
 	}
 	return 1;
 }
 
-void macosx_sysexit(void) {
+void macosx_sysexit(void)
+{
 	/* return back to default */
-	if (ibook_helper != -1)
-		macosx_ibook_fnswitch(ibook_helper);
+	if (ibook_helper != -1) macosx_ibook_fnswitch(ibook_helper);
 
 	quit_hid_callback();
 }
 
-void macosx_sysinit(UNUSED int *pargc, UNUSED char ***pargv) {
+void macosx_sysinit(UNUSED int *pargc, UNUSED char ***pargv)
+{
 	/* macosx_ibook_fnswitch only sets the value if it's one of (0, 1) */
 	ibook_helper = macosx_ibook_fnswitch(-1);
 
 	init_hid_callback();
 }
 
-void macosx_get_modkey(UNUSED int *mk) {
+void macosx_get_modkey(UNUSED int *mk)
+{
 	int caps = SDL_AtomicGet(&is_caps_pressed);
 
-	if (caps)
-		status.flags |= CAPS_PRESSED;
-	else
-		status.flags &= ~CAPS_PRESSED;
+	if (caps) status.flags |= CAPS_PRESSED;
+	else status.flags &= ~CAPS_PRESSED;
 }

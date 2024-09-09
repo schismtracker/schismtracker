@@ -34,36 +34,36 @@
 #include <windows.h>
 #include <ws2tcpip.h>
 
-#define IDM_FILE_NEW  101
-#define IDM_FILE_LOAD 102
-#define IDM_FILE_SAVE_CURRENT 103
-#define IDM_FILE_SAVE_AS 104
-#define IDM_FILE_EXPORT 105
-#define IDM_FILE_MESSAGE_LOG 106
-#define IDM_FILE_QUIT 107
-#define IDM_PLAYBACK_SHOW_INFOPAGE 201
-#define IDM_PLAYBACK_PLAY_SONG 202
-#define IDM_PLAYBACK_PLAY_PATTERN 203
-#define IDM_PLAYBACK_PLAY_FROM_ORDER 204
+#define IDM_FILE_NEW                       101
+#define IDM_FILE_LOAD                      102
+#define IDM_FILE_SAVE_CURRENT              103
+#define IDM_FILE_SAVE_AS                   104
+#define IDM_FILE_EXPORT                    105
+#define IDM_FILE_MESSAGE_LOG               106
+#define IDM_FILE_QUIT                      107
+#define IDM_PLAYBACK_SHOW_INFOPAGE         201
+#define IDM_PLAYBACK_PLAY_SONG             202
+#define IDM_PLAYBACK_PLAY_PATTERN          203
+#define IDM_PLAYBACK_PLAY_FROM_ORDER       204
 #define IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR 205
-#define IDM_PLAYBACK_STOP 206
-#define IDM_PLAYBACK_CALCULATE_LENGTH 207
-#define IDM_SAMPLES_SAMPLE_LIST 301
-#define IDM_SAMPLES_SAMPLE_LIBRARY 302
-#define IDM_SAMPLES_RELOAD_SOUNDCARD 303
-#define IDM_INSTRUMENTS_INSTRUMENT_LIST 401
+#define IDM_PLAYBACK_STOP                  206
+#define IDM_PLAYBACK_CALCULATE_LENGTH      207
+#define IDM_SAMPLES_SAMPLE_LIST            301
+#define IDM_SAMPLES_SAMPLE_LIBRARY         302
+#define IDM_SAMPLES_RELOAD_SOUNDCARD       303
+#define IDM_INSTRUMENTS_INSTRUMENT_LIST    401
 #define IDM_INSTRUMENTS_INSTRUMENT_LIBRARY 402
-#define IDM_VIEW_HELP 501
-#define IDM_VIEW_VIEW_PATTERNS 502
-#define IDM_VIEW_ORDERS_PANNING 503
-#define IDM_VIEW_VARIABLES 504
-#define IDM_VIEW_MESSAGE_EDITOR 505
-#define IDM_VIEW_TOGGLE_FULLSCREEN 506
-#define IDM_SETTINGS_PREFERENCES 601
-#define IDM_SETTINGS_MIDI_CONFIGURATION 602
-#define IDM_SETTINGS_PALETTE_EDITOR 603
-#define IDM_SETTINGS_FONT_EDITOR 604
-#define IDM_SETTINGS_SYSTEM_CONFIGURATION 605
+#define IDM_VIEW_HELP                      501
+#define IDM_VIEW_VIEW_PATTERNS             502
+#define IDM_VIEW_ORDERS_PANNING            503
+#define IDM_VIEW_VARIABLES                 504
+#define IDM_VIEW_MESSAGE_EDITOR            505
+#define IDM_VIEW_TOGGLE_FULLSCREEN         506
+#define IDM_SETTINGS_PREFERENCES           601
+#define IDM_SETTINGS_MIDI_CONFIGURATION    602
+#define IDM_SETTINGS_PALETTE_EDITOR        603
+#define IDM_SETTINGS_FONT_EDITOR           604
+#define IDM_SETTINGS_SYSTEM_CONFIGURATION  605
 
 /* global menu object */
 HMENU menu = NULL;
@@ -80,9 +80,8 @@ void win32_get_modkey(int *mk)
 		status.flags &= ~CAPS_PRESSED;
 	}
 
-	(*mk) = ((*mk) & ~(KMOD_NUM|KMOD_CAPS))
-		| ((ks[VK_NUMLOCK]&1) ? KMOD_NUM : 0)
-		| ((ks[VK_CAPITAL]&1) ? KMOD_CAPS : 0);
+	(*mk) = ((*mk) & ~(KMOD_NUM | KMOD_CAPS)) | ((ks[VK_NUMLOCK] & 1) ? KMOD_NUM : 0)
+	        | ((ks[VK_CAPITAL] & 1) ? KMOD_CAPS : 0);
 }
 
 void win32_sysinit(UNUSED int *pargc, UNUSED char ***pargv)
@@ -171,108 +170,46 @@ void win32_sdlinit(void)
 	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 }
 
-int win32_sdlevent(SDL_Event* event)
+int win32_sdlevent(SDL_Event *event)
 {
-	if (event->type != SDL_SYSWMEVENT)
-		return 1;
+	if (event->type != SDL_SYSWMEVENT) return 1;
 
 	if (event->syswm.msg->msg.win.msg == WM_COMMAND) {
 		SDL_Event e;
 		e.type = SCHISM_EVENT_NATIVE;
 		e.user.code = SCHISM_EVENT_NATIVE_SCRIPT;
 		switch (LOWORD(event->syswm.msg->msg.win.wParam)) {
-			case IDM_FILE_NEW:
-				e.user.data1 = "new";
-				break;
-			case IDM_FILE_LOAD:
-				e.user.data1 = "load";
-				break;
-			case IDM_FILE_SAVE_CURRENT:
-				e.user.data1 = "save";
-				break;
-			case IDM_FILE_SAVE_AS:
-				e.user.data1 = "save_as";
-				break;
-			case IDM_FILE_EXPORT:
-				e.user.data1 = "export_song";
-				break;
-			case IDM_FILE_MESSAGE_LOG:
-				e.user.data1 = "logviewer";
-				break;
-			case IDM_FILE_QUIT:
-				e.type = SDL_QUIT;
-				break;
-			case IDM_PLAYBACK_SHOW_INFOPAGE:
-				e.user.data1 = "info";
-				break;
-			case IDM_PLAYBACK_PLAY_SONG:
-				e.user.data1 = "play";
-				break;
-			case IDM_PLAYBACK_PLAY_PATTERN:
-				e.user.data1 = "play_pattern";
-				break;
-			case IDM_PLAYBACK_PLAY_FROM_ORDER:
-				e.user.data1 = "play_order";
-				break;
-			case IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR:
-				e.user.data1 = "play_mark";
-				break;
-			case IDM_PLAYBACK_STOP:
-				e.user.data1 = "stop";
-				break;
-			case IDM_PLAYBACK_CALCULATE_LENGTH:
-				e.user.data1 = "calc_length";
-				break;
-			case IDM_SAMPLES_SAMPLE_LIST:
-				e.user.data1 = "sample_page";
-				break;
-			case IDM_SAMPLES_SAMPLE_LIBRARY:
-				e.user.data1 = "sample_library";
-				break;
-			case IDM_SAMPLES_RELOAD_SOUNDCARD:
-				e.user.data1 = "init_sound";
-				break;
-			case IDM_INSTRUMENTS_INSTRUMENT_LIST:
-				e.user.data1 = "inst_page";
-				break;
-			case IDM_INSTRUMENTS_INSTRUMENT_LIBRARY:
-				e.user.data1 = "inst_library";
-				break;
-			case IDM_VIEW_HELP:
-				e.user.data1 = "help";
-				break;
-			case IDM_VIEW_VIEW_PATTERNS:
-				e.user.data1 = "pattern";
-				break;
-			case IDM_VIEW_ORDERS_PANNING:
-				e.user.data1 = "orders";
-				break;
-			case IDM_VIEW_VARIABLES:
-				e.user.data1 = "variables";
-				break;
-			case IDM_VIEW_MESSAGE_EDITOR:
-				e.user.data1 = "message_edit";
-				break;
-			case IDM_VIEW_TOGGLE_FULLSCREEN:
-				e.user.data1 = "fullscreen";
-				break;
-			case IDM_SETTINGS_PREFERENCES:
-				e.user.data1 = "preferences";
-				break;
-			case IDM_SETTINGS_MIDI_CONFIGURATION:
-				e.user.data1 = "midi_config";
-				break;
-			case IDM_SETTINGS_PALETTE_EDITOR:
-				e.user.data1 = "palette_page";
-				break;
-			case IDM_SETTINGS_FONT_EDITOR:
-				e.user.data1 = "font_editor";
-				break;
-			case IDM_SETTINGS_SYSTEM_CONFIGURATION:
-				e.user.data1 = "system_config";
-				break;
-			default:
-				break;
+		case IDM_FILE_NEW: e.user.data1 = "new"; break;
+		case IDM_FILE_LOAD: e.user.data1 = "load"; break;
+		case IDM_FILE_SAVE_CURRENT: e.user.data1 = "save"; break;
+		case IDM_FILE_SAVE_AS: e.user.data1 = "save_as"; break;
+		case IDM_FILE_EXPORT: e.user.data1 = "export_song"; break;
+		case IDM_FILE_MESSAGE_LOG: e.user.data1 = "logviewer"; break;
+		case IDM_FILE_QUIT: e.type = SDL_QUIT; break;
+		case IDM_PLAYBACK_SHOW_INFOPAGE: e.user.data1 = "info"; break;
+		case IDM_PLAYBACK_PLAY_SONG: e.user.data1 = "play"; break;
+		case IDM_PLAYBACK_PLAY_PATTERN: e.user.data1 = "play_pattern"; break;
+		case IDM_PLAYBACK_PLAY_FROM_ORDER: e.user.data1 = "play_order"; break;
+		case IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR: e.user.data1 = "play_mark"; break;
+		case IDM_PLAYBACK_STOP: e.user.data1 = "stop"; break;
+		case IDM_PLAYBACK_CALCULATE_LENGTH: e.user.data1 = "calc_length"; break;
+		case IDM_SAMPLES_SAMPLE_LIST: e.user.data1 = "sample_page"; break;
+		case IDM_SAMPLES_SAMPLE_LIBRARY: e.user.data1 = "sample_library"; break;
+		case IDM_SAMPLES_RELOAD_SOUNDCARD: e.user.data1 = "init_sound"; break;
+		case IDM_INSTRUMENTS_INSTRUMENT_LIST: e.user.data1 = "inst_page"; break;
+		case IDM_INSTRUMENTS_INSTRUMENT_LIBRARY: e.user.data1 = "inst_library"; break;
+		case IDM_VIEW_HELP: e.user.data1 = "help"; break;
+		case IDM_VIEW_VIEW_PATTERNS: e.user.data1 = "pattern"; break;
+		case IDM_VIEW_ORDERS_PANNING: e.user.data1 = "orders"; break;
+		case IDM_VIEW_VARIABLES: e.user.data1 = "variables"; break;
+		case IDM_VIEW_MESSAGE_EDITOR: e.user.data1 = "message_edit"; break;
+		case IDM_VIEW_TOGGLE_FULLSCREEN: e.user.data1 = "fullscreen"; break;
+		case IDM_SETTINGS_PREFERENCES: e.user.data1 = "preferences"; break;
+		case IDM_SETTINGS_MIDI_CONFIGURATION: e.user.data1 = "midi_config"; break;
+		case IDM_SETTINGS_PALETTE_EDITOR: e.user.data1 = "palette_page"; break;
+		case IDM_SETTINGS_FONT_EDITOR: e.user.data1 = "font_editor"; break;
+		case IDM_SETTINGS_SYSTEM_CONFIGURATION: e.user.data1 = "system_config"; break;
+		default: break;
 		}
 		*event = e;
 	}
@@ -280,24 +217,21 @@ int win32_sdlevent(SDL_Event* event)
 	return 1;
 }
 
-void win32_toggle_menu(SDL_Window* window)
+void win32_toggle_menu(SDL_Window *window)
 {
 	const int flags = SDL_GetWindowFlags(window);
 	int width, height;
 
 	const int cache_size = !(flags & SDL_WINDOW_MAXIMIZED);
-	if (cache_size)
-		SDL_GetWindowSize(window, &width, &height);
+	if (cache_size) SDL_GetWindowSize(window, &width, &height);
 
 	/* Get the HWND */
 	SDL_SysWMinfo wm_info;
 	SDL_VERSION(&wm_info.version);
-	if (!SDL_GetWindowWMInfo(window, &wm_info))
-		return;
+	if (!SDL_GetWindowWMInfo(window, &wm_info)) return;
 
 	SetMenu(wm_info.info.win.window, (cfg_video_want_menu_bar && !(flags & SDL_WINDOW_FULLSCREEN)) ? menu : NULL);
 	DrawMenuBar(wm_info.info.win.window);
 
-	if (cache_size)
-		SDL_SetWindowSize(window, width, height);
+	if (cache_size) SDL_SetWindowSize(window, width, height);
 }

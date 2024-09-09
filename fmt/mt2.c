@@ -32,8 +32,7 @@
 
 int fmt_mt2_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	if (!(length > 106 && memcmp(data, "MT20", 4) == 0))
-		return 0;
+	if (!(length > 106 && memcmp(data, "MT20", 4) == 0)) return 0;
 
 	file->description = "MadTracker 2 Module";
 	/*file->extension = str_dup("mt2");*/

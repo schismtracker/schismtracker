@@ -47,7 +47,7 @@ unsigned int memused_patterns(void)
 	for (i = 0; i < nm; i++) {
 		if (csf_pattern_is_empty(current_song, i)) continue;
 		rows = song_get_pattern(i, &ptr);
-		q += (rows*256);
+		q += (rows * 256);
 	}
 	return p_cached = q;
 }
@@ -61,7 +61,7 @@ unsigned int memused_clipboard(void)
 	_cache_ok |= 2;
 
 	memused_get_pattern_saved(&q, NULL);
-	c_cached = q*256;
+	c_cached = q * 256;
 	return c_cached;
 }
 unsigned int memused_history(void)
@@ -123,17 +123,15 @@ is being taken up by the current song.
 
 it's pure, unadulterated crack, but the routines are useful for schism mode :)
 */
-static unsigned int _align4k(unsigned int q) {
+static unsigned int _align4k(unsigned int q)
+{
 	return ((q + 0xfff) & ~0xfff);
 }
 unsigned int memused_ems(void)
 {
-	return _align4k(memused_samples())
-		+ _align4k(memused_history())
-		+ _align4k(memused_patterns());
+	return _align4k(memused_samples()) + _align4k(memused_history()) + _align4k(memused_patterns());
 }
 unsigned int memused_lowmem(void)
 {
-	return memused_songmessage() + memused_instruments()
-		+ memused_clipboard();
+	return memused_songmessage() + memused_instruments() + memused_clipboard();
 }

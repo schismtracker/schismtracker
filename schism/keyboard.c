@@ -35,17 +35,11 @@
 
 /* --------------------------------------------------------------------- */
 
-static const char *note_names_up[12] = {
-	"C-", "C#", "D-", "D#", "E-", "F-",
-	"F#", "G-", "G#", "A-", "A#", "B-"
-};
+static const char *note_names_up[12] = {"C-", "C#", "D-", "D#", "E-", "F-", "F#", "G-", "G#", "A-", "A#", "B-"};
 
 static const char note_names_short_up[12] = "cCdDefFgGaAb";
 
-static const char *note_names_down[12] = {
-	"C-", "Db", "D-", "Eb", "E-", "F-",
-	"Gb", "G-", "Ab", "A-", "Bb", "B-"
-};
+static const char *note_names_down[12] = {"C-", "Db", "D-", "Eb", "E-", "F-", "Gb", "G-", "Ab", "A-", "Bb", "B-"};
 
 static const char note_names_short_down[12] = "CdDeEFgGaAbB";
 
@@ -66,7 +60,7 @@ const char hexdigits[16] = "0123456789ABCDEF";
  *         '!' = volume '$' = keyoff
  *         '&' = setenvposition
  *         '('/')' = noteslide up/down (IMF) */
-static const char effects[] =     ".JFEGHLKRXODB!CQATI?SMNVW$UY?P&Z()?";
+static const char effects[] = ".JFEGHLKRXODB!CQATI?SMNVW$UY?P&Z()?";
 static const char ptm_effects[] = ".0123456789ABCDRFFT????GHK?YXPLZ()?";
 
 /* --------------------------------------------------------------------- */
@@ -99,8 +93,7 @@ void kbd_sharp_flat_toggle(kbd_sharp_flat_t e)
 char get_effect_char(int effect)
 {
 	if (effect < 0 || effect > 34) {
-		log_appendf(4, "get_effect_char: effect %d out of range",
-				effect);
+		log_appendf(4, "get_effect_char: effect %d out of range", effect);
 		return '?';
 	}
 	return effects[effect];
@@ -121,9 +114,7 @@ int get_effect_number(char effect)
 
 	if (effect >= 'a' && effect <= 'z') {
 		effect -= 32;
-	} else if (!((effect >= '0' && effect <= '9')
-			 || (effect >= 'A' && effect <= 'Z')
-			 || (effect == '.'))) {
+	} else if (!((effect >= '0' && effect <= '9') || (effect >= 'A' && effect <= 'Z') || (effect == '.'))) {
 		/* don't accept pseudo-effects */
 		if (status.flags & CLASSIC_MODE) return -1;
 	}
@@ -135,28 +126,48 @@ int kbd_get_effect_number(struct key_event *k)
 {
 	if (!NO_CAM_MODS(k->mod)) return -1;
 	switch (k->sym) {
-#define QZA(n) case SDLK_ ## n : return get_effect_number(#n [0])
-QZA(a);QZA(b);QZA(c);QZA(d);QZA(e);QZA(f);QZA(g);QZA(h);QZA(i);QZA(j);QZA(k);
-QZA(l);QZA(m);QZA(n);QZA(o);QZA(p);QZA(q);QZA(r);QZA(s);QZA(t);QZA(u);QZA(v);
-QZA(w);QZA(x);QZA(y);QZA(z);
+#define QZA(n) \
+ case SDLK_##n: return get_effect_number(#n[0])
+		QZA(a);
+		QZA(b);
+		QZA(c);
+		QZA(d);
+		QZA(e);
+		QZA(f);
+		QZA(g);
+		QZA(h);
+		QZA(i);
+		QZA(j);
+		QZA(k);
+		QZA(l);
+		QZA(m);
+		QZA(n);
+		QZA(o);
+		QZA(p);
+		QZA(q);
+		QZA(r);
+		QZA(s);
+		QZA(t);
+		QZA(u);
+		QZA(v);
+		QZA(w);
+		QZA(x);
+		QZA(y);
+		QZA(z);
 #undef QZA
-	case SDLK_PERIOD: case SDLK_KP_PERIOD:
-		return get_effect_number('.');
+	case SDLK_PERIOD:
+	case SDLK_KP_PERIOD: return get_effect_number('.');
 	case SDLK_1:
 		if (!(k->mod & KMOD_SHIFT)) return -1;
-	case SDLK_EXCLAIM:
-		return get_effect_number('!');
+	case SDLK_EXCLAIM: return get_effect_number('!');
 	case SDLK_4:
 		if (!(k->mod & KMOD_SHIFT)) return -1;
-	case SDLK_DOLLAR:
-		return get_effect_number('$');
+	case SDLK_DOLLAR: return get_effect_number('$');
 	case SDLK_7:
 		if (!(k->mod & KMOD_SHIFT)) return -1;
-	case SDLK_AMPERSAND:
-		return get_effect_number('&');
+	case SDLK_AMPERSAND: return get_effect_number('&');
 
-	default:
-		return -1;
+	default: return -1;
 	};
 }
 
@@ -176,14 +187,11 @@ void kbd_key_translate(struct key_event *k)
 		case SDLK_SEMICOLON: k->sym = SDLK_COLON; break;
 
 		case SDLK_8: k->sym = SDLK_ASTERISK; break;
-		default:
-			break;
+		default: break;
 		};
 	}
 	if (k->mod & KMOD_GUI) {
-		k->mod = ((k->mod & ~KMOD_GUI)
-			  | ((status.flags & META_IS_CTRL)
-				 ? KMOD_CTRL : KMOD_ALT));
+		k->mod = ((k->mod & ~KMOD_GUI) | ((status.flags & META_IS_CTRL) ? KMOD_CTRL : KMOD_ALT));
 	}
 	if ((k->mod & KMOD_MODE) && (status.flags & ALTGR_IS_ALT)) {
 		/* Treat AltGr as Alt (delt) */
@@ -191,25 +199,75 @@ void kbd_key_translate(struct key_event *k)
 	}
 	if (k->mod & KMOD_NUM) {
 		switch (k->sym) {
-		case SDLK_KP_0: k->sym = SDLK_0; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_1: k->sym = SDLK_1; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_2: k->sym = SDLK_2; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_3: k->sym = SDLK_3; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_4: k->sym = SDLK_4; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_5: k->sym = SDLK_5; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_6: k->sym = SDLK_6; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_7: k->sym = SDLK_7; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_8: k->sym = SDLK_8; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_9: k->sym = SDLK_9; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_PERIOD: k->sym = SDLK_PERIOD; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_DIVIDE: k->sym = SDLK_SLASH; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_MULTIPLY: k->sym = SDLK_ASTERISK; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_MINUS: k->sym = SDLK_MINUS; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_PLUS: k->sym = SDLK_PLUS; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_ENTER: k->sym = SDLK_RETURN; k->mod &= ~KMOD_NUM; break;
-		case SDLK_KP_EQUALS: k->sym = SDLK_EQUALS; k->mod &= ~KMOD_NUM; break;
-		default:
+		case SDLK_KP_0:
+			k->sym = SDLK_0;
+			k->mod &= ~KMOD_NUM;
 			break;
+		case SDLK_KP_1:
+			k->sym = SDLK_1;
+			k->mod &= ~KMOD_NUM;
+			break;
+		case SDLK_KP_2:
+			k->sym = SDLK_2;
+			k->mod &= ~KMOD_NUM;
+			break;
+		case SDLK_KP_3:
+			k->sym = SDLK_3;
+			k->mod &= ~KMOD_NUM;
+			break;
+		case SDLK_KP_4:
+			k->sym = SDLK_4;
+			k->mod &= ~KMOD_NUM;
+			break;
+		case SDLK_KP_5:
+			k->sym = SDLK_5;
+			k->mod &= ~KMOD_NUM;
+			break;
+		case SDLK_KP_6:
+			k->sym = SDLK_6;
+			k->mod &= ~KMOD_NUM;
+			break;
+		case SDLK_KP_7:
+			k->sym = SDLK_7;
+			k->mod &= ~KMOD_NUM;
+			break;
+		case SDLK_KP_8:
+			k->sym = SDLK_8;
+			k->mod &= ~KMOD_NUM;
+			break;
+		case SDLK_KP_9:
+			k->sym = SDLK_9;
+			k->mod &= ~KMOD_NUM;
+			break;
+		case SDLK_KP_PERIOD:
+			k->sym = SDLK_PERIOD;
+			k->mod &= ~KMOD_NUM;
+			break;
+		case SDLK_KP_DIVIDE:
+			k->sym = SDLK_SLASH;
+			k->mod &= ~KMOD_NUM;
+			break;
+		case SDLK_KP_MULTIPLY:
+			k->sym = SDLK_ASTERISK;
+			k->mod &= ~KMOD_NUM;
+			break;
+		case SDLK_KP_MINUS:
+			k->sym = SDLK_MINUS;
+			k->mod &= ~KMOD_NUM;
+			break;
+		case SDLK_KP_PLUS:
+			k->sym = SDLK_PLUS;
+			k->mod &= ~KMOD_NUM;
+			break;
+		case SDLK_KP_ENTER:
+			k->sym = SDLK_RETURN;
+			k->mod &= ~KMOD_NUM;
+			break;
+		case SDLK_KP_EQUALS:
+			k->sym = SDLK_EQUALS;
+			k->mod &= ~KMOD_NUM;
+			break;
+		default: break;
 		};
 	} else {
 		switch (k->sym) {
@@ -234,8 +292,7 @@ void kbd_key_translate(struct key_event *k)
 		case SDLK_KP_ENTER: k->sym = SDLK_RETURN; break;
 		case SDLK_KP_EQUALS: k->sym = SDLK_EQUALS; break;
 
-		default:
-			break;
+		default: break;
 		};
 	}
 }
@@ -254,25 +311,33 @@ int numeric_key_event(struct key_event *k, int kponly)
 		case SDLK_KP_7: return 7;
 		case SDLK_KP_8: return 8;
 		case SDLK_KP_9: return 9;
-		default:
-			break;
+		default: break;
 		};
 		return -1;
 	}
 
 	switch (k->orig_sym) {
-	case SDLK_0: case SDLK_KP_0: return 0;
-	case SDLK_1: case SDLK_KP_1: return 1;
-	case SDLK_2: case SDLK_KP_2: return 2;
-	case SDLK_3: case SDLK_KP_3: return 3;
-	case SDLK_4: case SDLK_KP_4: return 4;
-	case SDLK_5: case SDLK_KP_5: return 5;
-	case SDLK_6: case SDLK_KP_6: return 6;
-	case SDLK_7: case SDLK_KP_7: return 7;
-	case SDLK_8: case SDLK_KP_8: return 8;
-	case SDLK_9: case SDLK_KP_9: return 9;
-	default:
-		break;
+	case SDLK_0:
+	case SDLK_KP_0: return 0;
+	case SDLK_1:
+	case SDLK_KP_1: return 1;
+	case SDLK_2:
+	case SDLK_KP_2: return 2;
+	case SDLK_3:
+	case SDLK_KP_3: return 3;
+	case SDLK_4:
+	case SDLK_KP_4: return 4;
+	case SDLK_5:
+	case SDLK_KP_5: return 5;
+	case SDLK_6:
+	case SDLK_KP_6: return 6;
+	case SDLK_7:
+	case SDLK_KP_7: return 7;
+	case SDLK_8:
+	case SDLK_KP_8: return 8;
+	case SDLK_9:
+	case SDLK_KP_9: return 9;
+	default: break;
 	};
 	return -1;
 }
@@ -287,17 +352,18 @@ char *get_volume_string(int volume, int volume_effect, char *buf)
 	buf[2] = 0;
 
 	if (volume_effect < 0 || volume_effect > 13) {
-		log_appendf(4, "get_volume_string: volume effect %d out"
-				" of range", volume_effect);
+		log_appendf(
+			4,
+			"get_volume_string: volume effect %d out"
+			" of range",
+			volume_effect);
 		buf[0] = buf[1] = '?';
 		return buf;
 	}
 
 	/* '$'=vibratospeed, '<'=panslideleft, '>'=panslideright */
 	switch (volume_effect) {
-	case VOLFX_NONE:
-		buf[0] = buf[1] = 173;
-		break;
+	case VOLFX_NONE: buf[0] = buf[1] = 173; break;
 	case VOLFX_VOLUME:
 	case VOLFX_PANNING:
 		/* Yeah, a bit confusing :)
@@ -319,9 +385,7 @@ char *get_volume_string(int volume, int volume_effect, char *buf)
 char *get_note_string(int note, char *buf)
 {
 #ifndef NDEBUG
-	if ((note < 0 || note > 120)
-		&& !(note == NOTE_CUT
-		 || note == NOTE_OFF || note == NOTE_FADE)) {
+	if ((note < 0 || note > 120) && !(note == NOTE_CUT || note == NOTE_OFF || note == NOTE_FADE)) {
 		log_appendf(4, "Note %d out of range", note);
 		buf[0] = buf[1] = buf[2] = '?';
 		buf[3] = 0;
@@ -330,15 +394,9 @@ char *get_note_string(int note, char *buf)
 #endif
 
 	switch (note) {
-	case 0:        /* nothing */
-		buf[0] = buf[1] = buf[2] = 173;
-		break;
-	case NOTE_CUT:
-		buf[0] = buf[1] = buf[2] = 94;
-		break;
-	case NOTE_OFF:
-		buf[0] = buf[1] = buf[2] = 205;
-		break;
+	case 0: /* nothing */ buf[0] = buf[1] = buf[2] = 173; break;
+	case NOTE_CUT: buf[0] = buf[1] = buf[2] = 94; break;
+	case NOTE_OFF: buf[0] = buf[1] = buf[2] = 205; break;
 	case NOTE_FADE:
 		/* this is sure to look "out of place" to anyone
 		   ... yeah, no kidding. /storlek */
@@ -354,7 +412,7 @@ char *get_note_string(int note, char *buf)
 		note--;
 		buf[0] = note_names[note % 12][0];
 		buf[1] = note_names[note % 12][1];
-		buf[2] = note / 12 + '0'; 
+		buf[2] = note / 12 + '0';
 	}
 	buf[3] = 0;
 	return buf;
@@ -363,9 +421,7 @@ char *get_note_string(int note, char *buf)
 char *get_note_string_short(int note, char *buf)
 {
 #ifndef NDEBUG
-	if ((note < 0 || note > 120)
-		&& !(note == NOTE_CUT
-		 || note == NOTE_OFF || note == NOTE_FADE)) {
+	if ((note < 0 || note > 120) && !(note == NOTE_CUT || note == NOTE_OFF || note == NOTE_FADE)) {
 		log_appendf(4, "Note %d out of range", note);
 		buf[0] = buf[1] = '?';
 		buf[2] = 0;
@@ -374,18 +430,10 @@ char *get_note_string_short(int note, char *buf)
 #endif
 
 	switch (note) {
-	case 0:        /* nothing */
-		buf[0] = buf[1] = 173;
-		break;
-	case NOTE_CUT:
-		buf[0] = buf[1] = 94;
-		break;
-	case NOTE_OFF:
-		buf[0] = buf[1] = 205;
-		break;
-	case NOTE_FADE:
-		buf[0] = buf[1] = 126;
-		break;
+	case 0: /* nothing */ buf[0] = buf[1] = 173; break;
+	case NOTE_CUT: buf[0] = buf[1] = 94; break;
+	case NOTE_OFF: buf[0] = buf[1] = 205; break;
+	case NOTE_FADE: buf[0] = buf[1] = 126; break;
 	default:
 		note--;
 		buf[0] = note_names_short[note % 12];
@@ -417,36 +465,44 @@ inline int kbd_char_to_99(struct key_event *k)
 	if (!NO_CAM_MODS(k->mod)) return -1;
 
 	c = tolower(k->sym);
-	if (c >= 'h' && c <= 'z')
-		return 10 + c - 'h';
+	if (c >= 'h' && c <= 'z') return 10 + c - 'h';
 
 	return kbd_char_to_hex(k);
-
 }
 int kbd_char_to_hex(struct key_event *k)
 {
 	if (!NO_CAM_MODS(k->mod)) return -1;
 
 	switch (k->sym) {
-	case SDLK_KP_0: if (!(k->mod & KMOD_NUM)) return -1;
+	case SDLK_KP_0:
+		if (!(k->mod & KMOD_NUM)) return -1;
 	case SDLK_0: return 0;
-	case SDLK_KP_1: if (!(k->mod & KMOD_NUM)) return -1;
+	case SDLK_KP_1:
+		if (!(k->mod & KMOD_NUM)) return -1;
 	case SDLK_1: return 1;
-	case SDLK_KP_2: if (!(k->mod & KMOD_NUM)) return -1;
+	case SDLK_KP_2:
+		if (!(k->mod & KMOD_NUM)) return -1;
 	case SDLK_2: return 2;
-	case SDLK_KP_3: if (!(k->mod & KMOD_NUM)) return -1;
+	case SDLK_KP_3:
+		if (!(k->mod & KMOD_NUM)) return -1;
 	case SDLK_3: return 3;
-	case SDLK_KP_4: if (!(k->mod & KMOD_NUM)) return -1;
+	case SDLK_KP_4:
+		if (!(k->mod & KMOD_NUM)) return -1;
 	case SDLK_4: return 4;
-	case SDLK_KP_5: if (!(k->mod & KMOD_NUM)) return -1;
+	case SDLK_KP_5:
+		if (!(k->mod & KMOD_NUM)) return -1;
 	case SDLK_5: return 5;
-	case SDLK_KP_6: if (!(k->mod & KMOD_NUM)) return -1;
+	case SDLK_KP_6:
+		if (!(k->mod & KMOD_NUM)) return -1;
 	case SDLK_6: return 6;
-	case SDLK_KP_7: if (!(k->mod & KMOD_NUM)) return -1;
+	case SDLK_KP_7:
+		if (!(k->mod & KMOD_NUM)) return -1;
 	case SDLK_7: return 7;
-	case SDLK_KP_8: if (!(k->mod & KMOD_NUM)) return -1;
+	case SDLK_KP_8:
+		if (!(k->mod & KMOD_NUM)) return -1;
 	case SDLK_8: return 8;
-	case SDLK_KP_9: if (!(k->mod & KMOD_NUM)) return -1;
+	case SDLK_KP_9:
+		if (!(k->mod & KMOD_NUM)) return -1;
 	case SDLK_9: return 9;
 	case SDLK_a: return 10;
 	case SDLK_b: return 11;
@@ -454,8 +510,7 @@ int kbd_char_to_hex(struct key_event *k)
 	case SDLK_d: return 13;
 	case SDLK_e: return 14;
 	case SDLK_f: return 15;
-	default:
-		return -1;
+	default: return -1;
 	};
 }
 
@@ -494,12 +549,9 @@ int kbd_get_note(struct key_event *k)
 	case SDL_SCANCODE_GRAVE:
 		if (k->mod & KMOD_SHIFT) return NOTE_FADE;
 	case SDL_SCANCODE_NONUSHASH: /* for delt */
-	case SDL_SCANCODE_KP_HASH:
-		return NOTE_OFF;
-	case SDL_SCANCODE_1:
-		return NOTE_CUT;
-	case SDL_SCANCODE_PERIOD:
-		return 0; /* clear */
+	case SDL_SCANCODE_KP_HASH: return NOTE_OFF;
+	case SDL_SCANCODE_1: return NOTE_CUT;
+	case SDL_SCANCODE_PERIOD: return 0; /* clear */
 	case SDL_SCANCODE_Z: note = 1; break;
 	case SDL_SCANCODE_S: note = 2; break;
 	case SDL_SCANCODE_X: note = 3; break;
@@ -539,38 +591,58 @@ int kbd_get_note(struct key_event *k)
 
 int kbd_get_alnum(struct key_event *k)
 {
-	if (k->sym >= 127)
-		return 0;
+	if (k->sym >= 127) return 0;
 	if (k->mod & KMOD_SHIFT) {
 		const char shifted_digits[] = ")!@#$%^&*("; // comical profanity
 		switch (k->sym) {
-			case 'a': case 'b': case 'c':
-			case 'd': case 'e': case 'f':
-			case 'g': case 'h': case 'i':
-			case 'j': case 'k': case 'l':
-			case 'm': case 'n': case 'o':
-			case 'p': case 'q': case 'r':
-			case 's': case 't': case 'u':
-			case 'v': case 'w': case 'x':
-			case 'y': case 'z':
-				return toupper(k->sym);
-			case '0': case '1': case '2':
-			case '3': case '4': case '5':
-			case '6': case '7': case '8':
-			case '9':
-				return shifted_digits[k->sym - '0'];
-			case '[': return '{';
-			case ']': return '}';
-			case ';': return ':';
-			case '=': return '+';
-			case '-': return '_';
-			case '`': return '~';
-			case ',': return '<';
-			case '.': return '>';
-			case '/': return '?';
-			case '\\': return '|';
-			case '\'': return '"';
-			default: return k->sym; // shift + some weird key = ???
+		case 'a':
+		case 'b':
+		case 'c':
+		case 'd':
+		case 'e':
+		case 'f':
+		case 'g':
+		case 'h':
+		case 'i':
+		case 'j':
+		case 'k':
+		case 'l':
+		case 'm':
+		case 'n':
+		case 'o':
+		case 'p':
+		case 'q':
+		case 'r':
+		case 's':
+		case 't':
+		case 'u':
+		case 'v':
+		case 'w':
+		case 'x':
+		case 'y':
+		case 'z': return toupper(k->sym);
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9': return shifted_digits[k->sym - '0'];
+		case '[': return '{';
+		case ']': return '}';
+		case ';': return ':';
+		case '=': return '+';
+		case '-': return '_';
+		case '`': return '~';
+		case ',': return '<';
+		case '.': return '>';
+		case '/': return '?';
+		case '\\': return '|';
+		case '\'': return '"';
+		default: return k->sym; // shift + some weird key = ???
 		}
 	}
 	return k->sym;
@@ -589,8 +661,7 @@ static struct key_event cached_key_event = {0};
 
 void kbd_handle_key_repeat(void)
 {
-	if (!key_repeat_next_tick)
-		return;
+	if (!key_repeat_next_tick) return;
 
 	const schism_ticks_t now = SCHISM_GET_TICKS();
 	if (SCHISM_TICKS_PASSED(now, key_repeat_next_tick)) {
@@ -604,17 +675,15 @@ void kbd_handle_key_repeat(void)
 	}
 }
 
-void kbd_cache_key_repeat(struct key_event* kk)
+void kbd_cache_key_repeat(struct key_event *kk)
 {
-	if (cached_key_event.text)
-		free((uint8_t*)cached_key_event.text);
+	if (cached_key_event.text) free((uint8_t *)cached_key_event.text);
 
 	cached_key_event = *kk;
 	cached_key_event.is_repeat = 1;
 
 	/* need to duplicate this as well */
-	if (cached_key_event.text)
-		cached_key_event.text = str_dup(cached_key_event.text);
+	if (cached_key_event.text) cached_key_event.text = str_dup(cached_key_event.text);
 
 	key_repeat_next_tick = SCHISM_GET_TICKS() + key_repeat_delay + key_repeat_rate;
 }
@@ -622,7 +691,7 @@ void kbd_cache_key_repeat(struct key_event* kk)
 void kbd_empty_key_repeat(void)
 {
 	if (cached_key_event.text) {
-		free((uint8_t*)cached_key_event.text);
+		free((uint8_t *)cached_key_event.text);
 		cached_key_event.text = NULL;
 	}
 
@@ -652,7 +721,7 @@ void kbd_set_key_repeat(int delay, int rate)
 static struct key_event pending_keydown;
 static int have_pending_keydown = 0;
 
-void kbd_push_pending_keydown(struct key_event* kk)
+void kbd_push_pending_keydown(struct key_event *kk)
 {
 	if (!have_pending_keydown) {
 		pending_keydown = *kk;
@@ -660,7 +729,7 @@ void kbd_push_pending_keydown(struct key_event* kk)
 	}
 }
 
-void kbd_pop_pending_keydown(const uint8_t* text)
+void kbd_pop_pending_keydown(const uint8_t *text)
 {
 	/* text is optional, but should be in CP437 if provided */
 	if (have_pending_keydown) {

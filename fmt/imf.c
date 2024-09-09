@@ -33,8 +33,7 @@
 
 int fmt_imf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	if (!(length > 64 && memcmp(data + 60, "IM10", 4) == 0))
-		return 0;
+	if (!(length > 64 && memcmp(data + 60, "IM10", 4) == 0)) return 0;
 
 	file->description = "Imago Orpheus";
 	/*file->extension = str_dup("imf");*/
@@ -47,33 +46,33 @@ int fmt_imf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 #pragma pack(push, 1)
 struct imf_channel {
-	char name[12];          /* Channelname (ASCIIZ-String, max 11 chars) */
-	uint8_t chorus;         /* Default chorus */
-	uint8_t reverb;         /* Default reverb */
-	uint8_t panning;        /* Pan positions 00-FF */
-	uint8_t status;         /* Channel status: 0 = enabled, 1 = mute, 2 = disabled (ignore effects!) */
+	char name[12];   /* Channelname (ASCIIZ-String, max 11 chars) */
+	uint8_t chorus;  /* Default chorus */
+	uint8_t reverb;  /* Default reverb */
+	uint8_t panning; /* Pan positions 00-FF */
+	uint8_t status;  /* Channel status: 0 = enabled, 1 = mute, 2 = disabled (ignore effects!) */
 };
 
-SCHISM_BINARY_STRUCT(struct imf_channel, 12+1+1+1+1);
+SCHISM_BINARY_STRUCT(struct imf_channel, 12 + 1 + 1 + 1 + 1);
 
 struct imf_header {
-	char title[32];         /* Songname (ASCIIZ-String, max. 31 chars) */
-	uint16_t ordnum;        /* Number of orders saved */
-	uint16_t patnum;        /* Number of patterns saved */
-	uint16_t insnum;        /* Number of instruments saved */
-	uint16_t flags;         /* Module flags (&1 => linear) */
+	char title[32];  /* Songname (ASCIIZ-String, max. 31 chars) */
+	uint16_t ordnum; /* Number of orders saved */
+	uint16_t patnum; /* Number of patterns saved */
+	uint16_t insnum; /* Number of instruments saved */
+	uint16_t flags;  /* Module flags (&1 => linear) */
 	uint8_t unused1[8];
-	uint8_t tempo;          /* Default tempo (Axx, 1..255) */
-	uint8_t bpm;            /* Default beats per minute (BPM) (Txx, 32..255) */
-	uint8_t master;         /* Default mastervolume (Vxx, 0..64) */
-	uint8_t amp;            /* Amplification factor (mixing volume, 4..127) */
+	uint8_t tempo;  /* Default tempo (Axx, 1..255) */
+	uint8_t bpm;    /* Default beats per minute (BPM) (Txx, 32..255) */
+	uint8_t master; /* Default mastervolume (Vxx, 0..64) */
+	uint8_t amp;    /* Amplification factor (mixing volume, 4..127) */
 	uint8_t unused2[8];
-	char im10[4];           /* 'IM10' */
+	char im10[4];                    /* 'IM10' */
 	struct imf_channel channels[32]; /* Channel settings */
-	uint8_t orderlist[256]; /* Order list (0xff = +++; blank out anything beyond ordnum) */
+	uint8_t orderlist[256];          /* Order list (0xff = +++; blank out anything beyond ordnum) */
 };
 
-SCHISM_BINARY_STRUCT(struct imf_header, 32+2+2+2+2+8+1+1+1+1+8+4+512+256);
+SCHISM_BINARY_STRUCT(struct imf_header, 32 + 2 + 2 + 2 + 2 + 8 + 1 + 1 + 1 + 1 + 8 + 4 + 512 + 256);
 
 enum {
 	IMF_ENV_VOL = 0,
@@ -82,11 +81,11 @@ enum {
 };
 
 struct imf_env {
-	uint8_t points;         /* Number of envelope points */
-	uint8_t sustain;        /* Envelope sustain point */
-	uint8_t loop_start;     /* Envelope loop start point */
-	uint8_t loop_end;       /* Envelope loop end point */
-	uint8_t flags;          /* Envelope flags */
+	uint8_t points;     /* Number of envelope points */
+	uint8_t sustain;    /* Envelope sustain point */
+	uint8_t loop_start; /* Envelope loop start point */
+	uint8_t loop_end;   /* Envelope loop end point */
+	uint8_t flags;      /* Envelope flags */
 	uint8_t unused[3];
 };
 
@@ -100,74 +99,74 @@ struct imf_envnodes {
 SCHISM_BINARY_STRUCT(struct imf_envnodes, 4);
 
 struct imf_instrument {
-	char name[32];          /* Inst. name (ASCIIZ-String, max. 31 chars) */
-	uint8_t map[120];       /* Multisample settings */
+	char name[32];    /* Inst. name (ASCIIZ-String, max. 31 chars) */
+	uint8_t map[120]; /* Multisample settings */
 	uint8_t unused[8];
 	struct imf_envnodes nodes[3][16];
 	struct imf_env env[3];
-	uint16_t fadeout;       /* Fadeout rate (0...0FFFH) */
-	uint16_t smpnum;        /* Number of samples in instrument */
-	char ii10[4];           /* 'II10' */
+	uint16_t fadeout; /* Fadeout rate (0...0FFFH) */
+	uint16_t smpnum;  /* Number of samples in instrument */
+	char ii10[4];     /* 'II10' */
 };
 
-SCHISM_BINARY_STRUCT(struct imf_instrument, 32+120+8+192+24+2+2+4);
+SCHISM_BINARY_STRUCT(struct imf_instrument, 32 + 120 + 8 + 192 + 24 + 2 + 2 + 4);
 
 struct imf_sample {
-	char name[13];          /* Sample filename (12345678.ABC) */
+	char name[13]; /* Sample filename (12345678.ABC) */
 	uint8_t unused1[3];
-	uint32_t length;        /* Length */
-	uint32_t loop_start;    /* Loop start */
-	uint32_t loop_end;      /* Loop end */
-	uint32_t c5speed;       /* Samplerate */
-	uint8_t volume;         /* Default volume (0..64) */
-	uint8_t panning;        /* Default pan (00h = Left / 80h = Middle) */
+	uint32_t length;     /* Length */
+	uint32_t loop_start; /* Loop start */
+	uint32_t loop_end;   /* Loop end */
+	uint32_t c5speed;    /* Samplerate */
+	uint8_t volume;      /* Default volume (0..64) */
+	uint8_t panning;     /* Default pan (00h = Left / 80h = Middle) */
 	uint8_t unused2[14];
-	uint8_t flags;          /* Sample flags */
+	uint8_t flags; /* Sample flags */
 	uint8_t unused3[5];
-	uint16_t ems;           /* Reserved for internal usage */
-	uint32_t dram;          /* Reserved for internal usage */
-	char is10[4];           /* 'IS10' or 'IW10' */
+	uint16_t ems;  /* Reserved for internal usage */
+	uint32_t dram; /* Reserved for internal usage */
+	char is10[4];  /* 'IS10' or 'IW10' */
 };
 
-SCHISM_BINARY_STRUCT(struct imf_sample, 13+3+4+4+4+4+1+1+14+1+5+2+4+4);
+SCHISM_BINARY_STRUCT(struct imf_sample, 13 + 3 + 4 + 4 + 4 + 4 + 1 + 1 + 14 + 1 + 5 + 2 + 4 + 4);
 #pragma pack(pop)
 
 
 static uint8_t imf_efftrans[] = {
 	FX_NONE,
-	FX_SPEED, // 0x01 1xx Set Tempo
-	FX_TEMPO, // 0x02 2xx Set BPM
+	FX_SPEED,          // 0x01 1xx Set Tempo
+	FX_TEMPO,          // 0x02 2xx Set BPM
 	FX_TONEPORTAMENTO, // 0x03 3xx Tone Portamento                  (*)
-	FX_TONEPORTAVOL, // 0x04 4xy Tone Portamento + Volume Slide   (*)
-	FX_VIBRATO, // 0x05 5xy Vibrato                          (*)
-	FX_VIBRATOVOL, // 0x06 6xy Vibrato + Volume Slide           (*)
-	FX_FINEVIBRATO, // 0x07 7xy Fine Vibrato                     (*)
-	FX_TREMOLO, // 0x08 8xy Tremolo                          (*)
-	FX_ARPEGGIO, // 0x09 9xy Arpeggio                         (*)
-	FX_PANNING, // 0x0A Axx Set Pan Position
-	FX_PANNINGSLIDE, // 0x0B Bxy Pan Slide                        (*)
-	FX_VOLUME, // 0x0C Cxx Set Volume
-	FX_VOLUMESLIDE, // 0x0D Dxy Volume Slide                     (*)
-	FX_VOLUMESLIDE, // 0x0E Exy Fine Volume Slide                (*)
-	FX_SPECIAL, // 0x0F Fxx Set Finetune
-	FX_NOTESLIDEUP, // 0x10 Gxy Note Slide Up                    (*)
-	FX_NOTESLIDEDOWN, // 0x11 Hxy Note Slide Down                  (*)
-	FX_PORTAMENTOUP, // 0x12 Ixx Slide Up                         (*)
+	FX_TONEPORTAVOL,   // 0x04 4xy Tone Portamento + Volume Slide   (*)
+	FX_VIBRATO,        // 0x05 5xy Vibrato                          (*)
+	FX_VIBRATOVOL,     // 0x06 6xy Vibrato + Volume Slide           (*)
+	FX_FINEVIBRATO,    // 0x07 7xy Fine Vibrato                     (*)
+	FX_TREMOLO,        // 0x08 8xy Tremolo                          (*)
+	FX_ARPEGGIO,       // 0x09 9xy Arpeggio                         (*)
+	FX_PANNING,        // 0x0A Axx Set Pan Position
+	FX_PANNINGSLIDE,   // 0x0B Bxy Pan Slide                        (*)
+	FX_VOLUME,         // 0x0C Cxx Set Volume
+	FX_VOLUMESLIDE,    // 0x0D Dxy Volume Slide                     (*)
+	FX_VOLUMESLIDE,    // 0x0E Exy Fine Volume Slide                (*)
+	FX_SPECIAL,        // 0x0F Fxx Set Finetune
+	FX_NOTESLIDEUP,    // 0x10 Gxy Note Slide Up                    (*)
+	FX_NOTESLIDEDOWN,  // 0x11 Hxy Note Slide Down                  (*)
+	FX_PORTAMENTOUP,   // 0x12 Ixx Slide Up                         (*)
 	FX_PORTAMENTODOWN, // 0x13 Jxx Slide Down                       (*)
-	FX_PORTAMENTOUP, // 0x14 Kxx Fine Slide Up                    (*)
+	FX_PORTAMENTOUP,   // 0x14 Kxx Fine Slide Up                    (*)
 	FX_PORTAMENTODOWN, // 0x15 Lxx Fine Slide Down                  (*)
-	FX_MIDI, // 0x16 Mxx Set Filter Cutoff - XXX
-	FX_NONE, // 0x17 Nxy Filter Slide + Resonance - XXX
-	FX_OFFSET, // 0x18 Oxx Set Sample Offset                (*)
-	FX_NONE, // 0x19 Pxx Set Fine Sample Offset - XXX
-	FX_KEYOFF, // 0x1A Qxx Key Off
-	FX_RETRIG, // 0x1B Rxy Retrig                           (*)
-	FX_TREMOR, // 0x1C Sxy Tremor                           (*)
-	FX_POSITIONJUMP, // 0x1D Txx Position Jump
-	FX_PATTERNBREAK, // 0x1E Uxx Pattern Break
-	FX_GLOBALVOLUME, // 0x1F Vxx Set Mastervolume
+	FX_MIDI,           // 0x16 Mxx Set Filter Cutoff - XXX
+	FX_NONE,           // 0x17 Nxy Filter Slide + Resonance - XXX
+	FX_OFFSET,         // 0x18 Oxx Set Sample Offset                (*)
+	FX_NONE,           // 0x19 Pxx Set Fine Sample Offset - XXX
+	FX_KEYOFF,         // 0x1A Qxx Key Off
+	FX_RETRIG,         // 0x1B Rxy Retrig                           (*)
+	FX_TREMOR,         // 0x1C Sxy Tremor                           (*)
+	FX_POSITIONJUMP,   // 0x1D Txx Position Jump
+	FX_PATTERNBREAK,   // 0x1E Uxx Pattern Break
+	FX_GLOBALVOLUME,   // 0x1F Vxx Set Mastervolume
 	FX_GLOBALVOLSLIDE, // 0x20 Wxy Mastervolume Slide               (*)
-	FX_SPECIAL, // 0x21 Xxx Extended Effect
+	FX_SPECIAL,        // 0x21 Xxx Extended Effect
 	//      X1x Set Filter
 	//      X3x Glissando
 	//      X5x Vibrato Waveform
@@ -189,16 +188,11 @@ static void import_imf_effect(song_note_t *note)
 	switch (note->effect) {
 	case 0xe: // fine volslide
 		// hackaround to get almost-right behavior for fine slides (i think!)
-		if (note->param == 0)
-			/* nothing */;
-		else if (note->param == 0xf0)
-			note->param = 0xef;
-		else if (note->param == 0x0f)
-			note->param = 0xfe;
-		else if (note->param & 0xf0)
-			note->param |= 0xf;
-		else
-			note->param |= 0xf0;
+		if (note->param == 0) /* nothing */;
+		else if (note->param == 0xf0) note->param = 0xef;
+		else if (note->param == 0x0f) note->param = 0xfe;
+		else if (note->param & 0xf0) note->param |= 0xf;
+		else note->param |= 0xf0;
 		break;
 	case 0xf: // set finetune
 		// we don't implement this, but let's at least import the value
@@ -207,12 +201,10 @@ static void import_imf_effect(song_note_t *note)
 	case 0x14: // fine slide up
 	case 0x15: // fine slide down
 		// this is about as close as we can do...
-		if (note->param >> 4)
-			note->param = 0xf0 | MIN(note->param >> 4, 0xf);
-		else
-			note->param |= 0xe0;
+		if (note->param >> 4) note->param = 0xf0 | MIN(note->param >> 4, 0xf);
+		else note->param |= 0xe0;
 		break;
-	case 0x16: // filter
+	case 0x16:                                 // filter
 		note->param = (255 - note->param) / 2; // TODO: cutoff range in IMF is 125...8000 Hz
 		break;
 	case 0x1f: // set global volume
@@ -226,7 +218,7 @@ static void import_imf_effect(song_note_t *note)
 			this is here to allow S00 to pick up the previous value (assuming IMF
 			even does that -- I haven't actually tried it) */
 			break;
-		default: // undefined
+		default:  // undefined
 		case 0x1: // set filter
 		case 0xf: // invert loop
 			note->effect = 0;
@@ -254,23 +246,27 @@ static void import_imf_effect(song_note_t *note)
 			switch (note->param & 0x0F) {
 				/* predicament: we can only disable one envelope at a time.
 				volume is probably most noticeable, so let's go with that. */
-			case 0: note->param = 0x77; break;
+			case 0:
+				note->param = 0x77;
+				break;
 				// Volume
-			case 1: note->param = 0x77; break;
+			case 1:
+				note->param = 0x77;
+				break;
 				// Panning
-			case 2: note->param = 0x79; break;
+			case 2:
+				note->param = 0x79;
+				break;
 				// Filter
 			case 3: note->param = 0x7B; break;
 			}
 			break;
 		case 0x18: // sample offset
 			// O00 doesn't pick up the previous value
-			if (!note->param)
-				note->effect = 0;
+			if (!note->param) note->effect = 0;
 			break;
 		}
-		if (n)
-			note->param = n | (note->param & 0xf);
+		if (n) note->param = n | (note->param & 0xf);
 		break;
 	}
 	note->effect = (note->effect < 0x24) ? imf_efftrans[note->effect] : FX_NONE;
@@ -379,8 +375,7 @@ static int load_imf_pattern(song_t *song, int pat, uint32_t ignore_channels, slu
 			note->effect = slurp_getc(fp);
 			note->param = slurp_getc(fp);
 		}
-		if (note->effect)
-			import_imf_effect(note);
+		if (note->effect) import_imf_effect(note);
 	}
 
 	return lostfx;
@@ -388,8 +383,8 @@ static int load_imf_pattern(song_t *song, int pat, uint32_t ignore_channels, slu
 
 
 static unsigned int envflags[3][3] = {
-	{ENV_VOLUME,             ENV_VOLSUSTAIN,   ENV_VOLLOOP},
-	{ENV_PANNING,            ENV_PANSUSTAIN,   ENV_PANLOOP},
+	{ENV_VOLUME,             ENV_VOLSUSTAIN,   ENV_VOLLOOP  },
+	{ENV_PANNING,            ENV_PANSUSTAIN,   ENV_PANLOOP  },
 	{ENV_PITCH | ENV_FILTER, ENV_PITCHSUSTAIN, ENV_PITCHLOOP},
 };
 
@@ -413,12 +408,9 @@ static void load_imf_envelope(song_instrument_t *ins, song_envelope_t *env, stru
 		min = t + 1;
 	}
 	// this would be less retarded if the envelopes all had their own flags...
-	if (imfins->env[e].flags & 1)
-		ins->flags |= envflags[e][0];
-	if (imfins->env[e].flags & 2)
-		ins->flags |= envflags[e][1];
-	if (imfins->env[e].flags & 4)
-		ins->flags |= envflags[e][2];
+	if (imfins->env[e].flags & 1) ins->flags |= envflags[e][0];
+	if (imfins->env[e].flags & 2) ins->flags |= envflags[e][1];
+	if (imfins->env[e].flags & 4) ins->flags |= envflags[e][2];
 }
 
 
@@ -427,7 +419,7 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	struct imf_header hdr;
 	int n, s;
 	song_sample_t *sample = song->samples + 1;
-	int firstsample = 1; // first sample for the current instrument
+	int firstsample = 1;          // first sample for the current instrument
 	uint32_t ignore_channels = 0; /* bit set for each channel that's completely disabled */
 	int lostfx = 0;
 
@@ -437,18 +429,15 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	hdr.insnum = bswapLE16(hdr.insnum);
 	hdr.flags = bswapLE16(hdr.flags);
 
-	if (memcmp(hdr.im10, "IM10", 4) != 0)
-		return LOAD_UNSUPPORTED;
+	if (memcmp(hdr.im10, "IM10", 4) != 0) return LOAD_UNSUPPORTED;
 
-	if (hdr.ordnum > MAX_ORDERS || hdr.patnum > MAX_PATTERNS || hdr.insnum > MAX_INSTRUMENTS)
-		return LOAD_FORMAT_ERROR;
+	if (hdr.ordnum > MAX_ORDERS || hdr.patnum > MAX_PATTERNS || hdr.insnum > MAX_INSTRUMENTS) return LOAD_FORMAT_ERROR;
 
 	memcpy(song->title, hdr.title, 25);
 	song->title[25] = 0;
 	strcpy(song->tracker_id, "Imago Orpheus");
 
-	if (hdr.flags & 1)
-		song->flags |= SONG_LINEARSLIDES;
+	if (hdr.flags & 1) song->flags |= SONG_LINEARSLIDES;
 	song->flags |= SONG_INSTRUMENTMODE;
 	song->initial_speed = hdr.tempo;
 	song->initial_tempo = hdr.bpm;
@@ -460,11 +449,8 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 		song->channels[n].panning *= 4; //mphack
 		/* TODO: reverb/chorus??? */
 		switch (hdr.channels[n].status) {
-		case 0: /* enabled; don't worry about it */
-			break;
-		case 1: /* mute */
-			song->channels[n].flags |= CHN_MUTE;
-			break;
+		case 0: /* enabled; don't worry about it */ break;
+		case 1: /* mute */ song->channels[n].flags |= CHN_MUTE; break;
 		case 2: /* disabled */
 			song->channels[n].flags |= CHN_MUTE;
 			ignore_channels |= (1 << n);
@@ -474,26 +460,20 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 			return LOAD_FORMAT_ERROR;
 		}
 	}
-	for (; n < MAX_CHANNELS; n++)
-		song->channels[n].flags |= CHN_MUTE;
+	for (; n < MAX_CHANNELS; n++) song->channels[n].flags |= CHN_MUTE;
 	/* From mikmod: work around an Orpheus bug */
 	if (hdr.channels[0].status == 0) {
 		for (n = 1; n < 16; n++)
-			if (hdr.channels[n].status != 1)
-				break;
+			if (hdr.channels[n].status != 1) break;
 		if (n == 16)
-			for (n = 1; n < 16; n++)
-				song->channels[n].flags &= ~CHN_MUTE;
+			for (n = 1; n < 16; n++) song->channels[n].flags &= ~CHN_MUTE;
 	}
 
-	for (n = 0; n < hdr.ordnum; n++)
-		song->orderlist[n] = ((hdr.orderlist[n] == 0xff) ? ORDER_SKIP : hdr.orderlist[n]);
+	for (n = 0; n < hdr.ordnum; n++) song->orderlist[n] = ((hdr.orderlist[n] == 0xff) ? ORDER_SKIP : hdr.orderlist[n]);
 
-	for (n = 0; n < hdr.patnum; n++)
-		lostfx += load_imf_pattern(song, n, ignore_channels, fp);
+	for (n = 0; n < hdr.patnum; n++) lostfx += load_imf_pattern(song, n, ignore_channels, fp);
 
-	if (lostfx)
-		log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
+	if (lostfx) log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
 
 	for (n = 0; n < hdr.insnum; n++) {
 		// read the ins header
@@ -561,11 +541,9 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 			sample->loop_end = bswapLE32(imfsmp.loop_end);
 			sample->c5speed = bswapLE32(imfsmp.c5speed);
 			sample->volume = imfsmp.volume * 4; //mphack
-			sample->panning = imfsmp.panning; //mphack (IT uses 0-64, IMF uses the full 0-255)
-			if (imfsmp.flags & 1)
-				sample->flags |= CHN_LOOP;
-			if (imfsmp.flags & 2)
-				sample->flags |= CHN_PINGPONGLOOP;
+			sample->panning = imfsmp.panning;   //mphack (IT uses 0-64, IMF uses the full 0-255)
+			if (imfsmp.flags & 1) sample->flags |= CHN_LOOP;
+			if (imfsmp.flags & 2) sample->flags |= CHN_PINGPONGLOOP;
 			if (imfsmp.flags & 4) {
 				sflags |= SF_16;
 				sample->length >>= 1;
@@ -574,8 +552,7 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 			} else {
 				sflags |= SF_8;
 			}
-			if (imfsmp.flags & 8)
-				sample->flags |= CHN_PANNING;
+			if (imfsmp.flags & 8) sample->flags |= CHN_PANNING;
 
 			if (blen && !(lflags & LOAD_NOSAMPLES))
 				csf_read_sample(sample, sflags, fp->data + fp->pos, fp->length - fp->pos);
@@ -593,4 +570,3 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 
 	return LOAD_SUCCESS;
 }
-

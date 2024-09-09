@@ -43,10 +43,8 @@ static void _minmax_8(signed char *data, unsigned long length, signed char *min,
 	*max = -128;
 	while (pos) {
 		pos--;
-		if (data[pos] < *min)
-			*min = data[pos];
-		else if (data[pos] > *max)
-			*max = data[pos];
+		if (data[pos] < *min) *min = data[pos];
+		else if (data[pos] > *max) *max = data[pos];
 	}
 }
 
@@ -58,10 +56,8 @@ static void _minmax_16(signed short *data, unsigned long length, signed short *m
 	*max = -32768;
 	while (pos) {
 		pos--;
-		if (data[pos] < *min)
-			*min = data[pos];
-		else if (data[pos] > *max)
-			*max = data[pos];
+		if (data[pos] < *min) *min = data[pos];
+		else if (data[pos] > *max) *max = data[pos];
 	}
 }
 
@@ -88,15 +84,13 @@ static void _sign_convert_16(signed short *data, unsigned long length)
 	}
 }
 
-void sample_sign_convert(song_sample_t * sample)
+void sample_sign_convert(song_sample_t *sample)
 {
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
 	if (sample->flags & CHN_16BIT)
-		_sign_convert_16((signed short *) sample->data,
-			sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
-	else
-		_sign_convert_8(sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
+		_sign_convert_16((signed short *)sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
+	else _sign_convert_8(sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
 	song_unlock_audio();
 }
 
@@ -144,7 +138,7 @@ static void _reverse_32(signed int *data, unsigned long length)
 	}
 }
 
-void sample_reverse(song_sample_t * sample)
+void sample_reverse(song_sample_t *sample)
 {
 	unsigned long tmp;
 
@@ -152,15 +146,11 @@ void sample_reverse(song_sample_t * sample)
 	status.flags |= SONG_NEEDS_SAVE;
 
 	if (sample->flags & CHN_STEREO) {
-		if (sample->flags & CHN_16BIT)
-			_reverse_32((signed int *)sample->data, sample->length);
-		else
-			_reverse_16((signed short *) sample->data, sample->length);
+		if (sample->flags & CHN_16BIT) _reverse_32((signed int *)sample->data, sample->length);
+		else _reverse_16((signed short *)sample->data, sample->length);
 	} else {
-		if (sample->flags & CHN_16BIT)
-			_reverse_16((signed short *) sample->data, sample->length);
-		else
-			_reverse_8(sample->data, sample->length);
+		if (sample->flags & CHN_16BIT) _reverse_16((signed short *)sample->data, sample->length);
+		else _reverse_8(sample->data, sample->length);
 	}
 
 	tmp = sample->length - sample->loop_start;
@@ -200,7 +190,7 @@ static void _quality_convert_16to8(signed short *idata, signed char *odata, unsi
 	}
 }
 
-void sample_toggle_quality(song_sample_t * sample, int convert_data)
+void sample_toggle_quality(song_sample_t *sample, int convert_data)
 {
 	signed char *odata;
 
@@ -213,15 +203,14 @@ void sample_toggle_quality(song_sample_t * sample, int convert_data)
 
 	status.flags |= SONG_NEEDS_SAVE;
 	if (convert_data) {
-		odata = csf_allocate_sample(sample->length
-			* ((sample->flags & CHN_16BIT) ? 2 : 1)
-			* ((sample->flags & CHN_STEREO) ? 2 : 1));
+		odata = csf_allocate_sample(
+			sample->length * ((sample->flags & CHN_16BIT) ? 2 : 1) * ((sample->flags & CHN_STEREO) ? 2 : 1));
 		if (sample->flags & CHN_16BIT) {
-			_quality_convert_8to16(sample->data, (signed short *) odata,
-				sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
+			_quality_convert_8to16(
+				sample->data, (signed short *)odata, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
 		} else {
-			_quality_convert_16to8((signed short *) sample->data, odata,
-				sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
+			_quality_convert_16to8(
+				(signed short *)sample->data, odata, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
 		}
 		csf_free_sample(sample->data);
 		sample->data = odata;
@@ -255,8 +244,7 @@ static void _centralise_8(signed char *data, unsigned long length)
 	_minmax_8(data, length, &min, &max);
 
 	offset = (max + min + 1) >> 1;
-	if (offset == 0)
-		return;
+	if (offset == 0) return;
 
 	pos = length;
 	while (pos) {
@@ -275,15 +263,12 @@ static void _centralise_16(signed short *data, unsigned long length)
 
 	while (pos) {
 		pos--;
-		if (data[pos] < min)
-			min = data[pos];
-		else if (data[pos] > max)
-			max = data[pos];
+		if (data[pos] < min) min = data[pos];
+		else if (data[pos] > max) max = data[pos];
 	}
 
 	offset = (max + min + 1) >> 1;
-	if (offset == 0)
-		return;
+	if (offset == 0) return;
 
 	pos = length;
 	while (pos) {
@@ -292,15 +277,13 @@ static void _centralise_16(signed short *data, unsigned long length)
 	}
 }
 
-void sample_centralise(song_sample_t * sample)
+void sample_centralise(song_sample_t *sample)
 {
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
 	if (sample->flags & CHN_16BIT)
-		_centralise_16((signed short *) sample->data,
-			sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
-	else
-		_centralise_8(sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
+		_centralise_16((signed short *)sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
+	else _centralise_8(sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
 	song_unlock_audio();
 }
 
@@ -310,27 +293,22 @@ void sample_centralise(song_sample_t * sample)
 static void _downmix_8(signed char *data, unsigned long length)
 {
 	unsigned long i, j;
-	for (i = j = 0; j < length; j++, i += 2)
-		data[j] = (data[i] + data[i + 1]) / 2;
+	for (i = j = 0; j < length; j++, i += 2) data[j] = (data[i] + data[i + 1]) / 2;
 }
 
 static void _downmix_16(signed short *data, unsigned long length)
 {
 	unsigned long i, j;
-	for (i = j = 0; j < length; j++, i += 2)
-		data[j] = (data[i] + data[i + 1]) / 2;
+	for (i = j = 0; j < length; j++, i += 2) data[j] = (data[i] + data[i + 1]) / 2;
 }
 
 void sample_downmix(song_sample_t *sample)
 {
-	if (!(sample->flags & CHN_STEREO))
-		return; /* what are we doing here with a mono sample? */
+	if (!(sample->flags & CHN_STEREO)) return; /* what are we doing here with a mono sample? */
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
-	if (sample->flags & CHN_16BIT)
-		_downmix_16((signed short *) sample->data, sample->length);
-	else
-		_downmix_8(sample->data, sample->length);
+	if (sample->flags & CHN_16BIT) _downmix_16((signed short *)sample->data, sample->length);
+	else _downmix_8(sample->data, sample->length);
 	sample->flags &= ~CHN_STEREO;
 	song_unlock_audio();
 }
@@ -362,15 +340,13 @@ static void _amplify_16(signed short *data, unsigned long length, int percent)
 	}
 }
 
-void sample_amplify(song_sample_t * sample, int percent)
+void sample_amplify(song_sample_t *sample, int percent)
 {
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
 	if (sample->flags & CHN_16BIT)
-		_amplify_16((signed short *) sample->data,
-			sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1), percent);
-	else
-		_amplify_8(sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1), percent);
+		_amplify_16((signed short *)sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1), percent);
+	else _amplify_8(sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1), percent);
 	song_unlock_audio();
 }
 
@@ -395,11 +371,9 @@ int sample_get_amplify_amount(song_sample_t *sample)
 	int percent;
 
 	if (sample->flags & CHN_16BIT)
-		percent = _get_amplify_16((signed short *) sample->data,
-			sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
-	else
-		percent = _get_amplify_8(sample->data,
-			sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
+		percent =
+			_get_amplify_16((signed short *)sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
+	else percent = _get_amplify_8(sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
 
 	if (percent < 100) percent = 100;
 	return percent;
@@ -432,15 +406,13 @@ static void _delta_decode_16(signed short *data, unsigned long length)
 	}
 }
 
-void sample_delta_decode(song_sample_t * sample)
+void sample_delta_decode(song_sample_t *sample)
 {
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
 	if (sample->flags & CHN_16BIT)
-		_delta_decode_16((signed short *) sample->data,
-			sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
-	else
-		_delta_decode_8(sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
+		_delta_decode_16((signed short *)sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
+	else _delta_decode_8(sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
 	song_unlock_audio();
 }
 
@@ -468,32 +440,32 @@ static void _invert_16(signed short *data, unsigned long length)
 }
 
 
-static void _resize_16(signed short *dst, unsigned long newlen,
-		signed short *src, unsigned long oldlen, unsigned int is_stereo)
+static void
+_resize_16(signed short *dst, unsigned long newlen, signed short *src, unsigned long oldlen, unsigned int is_stereo)
 {
 	unsigned int i;
 	double factor = (double)oldlen / (double)newlen;
-	if (is_stereo) for (i = 0; i < newlen; i++)
-	{
-		unsigned int pos = 2*(unsigned int)((double)i * factor);
-		dst[2*i] = src[pos];
-		dst[2*i+1] = src[pos+1];
-	}
-	else for (i = 0; i < newlen; i++)
-	{
-		dst[i] = src[(unsigned int)((double)i * factor)];
-	}
+	if (is_stereo)
+		for (i = 0; i < newlen; i++) {
+			unsigned int pos = 2 * (unsigned int)((double)i * factor);
+			dst[2 * i] = src[pos];
+			dst[2 * i + 1] = src[pos + 1];
+		}
+	else
+		for (i = 0; i < newlen; i++) {
+			dst[i] = src[(unsigned int)((double)i * factor)];
+		}
 }
-static void _resize_8(signed char *dst, unsigned long newlen,
-		signed char *src, unsigned long oldlen, unsigned int is_stereo)
+static void
+_resize_8(signed char *dst, unsigned long newlen, signed char *src, unsigned long oldlen, unsigned int is_stereo)
 {
 	unsigned int i;
 	double factor = (double)oldlen / (double)newlen;
 	if (is_stereo) {
 		for (i = 0; i < newlen; i++) {
-			unsigned int pos = 2*(unsigned int)((double)i * factor);
-			dst[2*i] = src[pos];
-			dst[2*i+1] = src[pos+1];
+			unsigned int pos = 2 * (unsigned int)((double)i * factor);
+			dst[2 * i] = src[pos];
+			dst[2 * i + 1] = src[pos + 1];
 		}
 	} else {
 		for (i = 0; i < newlen; i++) {
@@ -501,26 +473,22 @@ static void _resize_8(signed char *dst, unsigned long newlen,
 		}
 	}
 }
-static void _resize_8aa(signed char *dst, unsigned long newlen,
-		signed char *src, unsigned long oldlen, unsigned int is_stereo)
+static void
+_resize_8aa(signed char *dst, unsigned long newlen, signed char *src, unsigned long oldlen, unsigned int is_stereo)
 {
-	if (is_stereo)
-		ResampleStereo8BitFirFilter(src, dst, oldlen, newlen);
-	else
-		ResampleMono8BitFirFilter(src, dst, oldlen, newlen);
+	if (is_stereo) ResampleStereo8BitFirFilter(src, dst, oldlen, newlen);
+	else ResampleMono8BitFirFilter(src, dst, oldlen, newlen);
 }
-static void _resize_16aa(signed short *dst, unsigned long newlen,
-		signed short *src, unsigned long oldlen, unsigned int is_stereo)
+static void
+_resize_16aa(signed short *dst, unsigned long newlen, signed short *src, unsigned long oldlen, unsigned int is_stereo)
 {
-	if (is_stereo)
-		ResampleStereo16BitFirFilter(src, dst, oldlen, newlen);
-	else
-		ResampleMono16BitFirFilter(src, dst, oldlen, newlen);
+	if (is_stereo) ResampleStereo16BitFirFilter(src, dst, oldlen, newlen);
+	else ResampleMono16BitFirFilter(src, dst, oldlen, newlen);
 }
 
 
 
-void sample_resize(song_sample_t * sample, unsigned long newlen, int aa)
+void sample_resize(song_sample_t *sample, unsigned long newlen, int aa)
 {
 	int bps;
 	signed char *d, *z;
@@ -537,35 +505,31 @@ void sample_resize(song_sample_t * sample, unsigned long newlen, int aa)
 	// hopefully this won't (re)introduce crashes. --Storlek
 	csf_stop_sample(current_song, sample);
 
-	bps = (((sample->flags & CHN_STEREO) ? 2 : 1)
-		* ((sample->flags & CHN_16BIT) ? 2 : 1));
+	bps = (((sample->flags & CHN_STEREO) ? 2 : 1) * ((sample->flags & CHN_16BIT) ? 2 : 1));
 
 	status.flags |= SONG_NEEDS_SAVE;
 
-	d = csf_allocate_sample(newlen*bps);
+	d = csf_allocate_sample(newlen * bps);
 	z = sample->data;
 
-	sample->c5speed = (unsigned long)((((double)newlen) * ((double)sample->c5speed))
-			/ ((double)sample->length));
+	sample->c5speed = (unsigned long)((((double)newlen) * ((double)sample->c5speed)) / ((double)sample->length));
 
 	/* scale loop points */
-	sample->loop_start = (unsigned long)((((double)newlen) * ((double)sample->loop_start))
-			/ ((double)sample->length));
-	sample->loop_end = (unsigned long)((((double)newlen) * ((double)sample->loop_end))
-			/ ((double)sample->length));
-	sample->sustain_start = (unsigned long)((((double)newlen) * ((double)sample->sustain_start))
-			/ ((double)sample->length));
-	sample->sustain_end = (unsigned long)((((double)newlen) * ((double)sample->sustain_end))
-			/ ((double)sample->length));
+	sample->loop_start = (unsigned long)((((double)newlen) * ((double)sample->loop_start)) / ((double)sample->length));
+	sample->loop_end = (unsigned long)((((double)newlen) * ((double)sample->loop_end)) / ((double)sample->length));
+	sample->sustain_start =
+		(unsigned long)((((double)newlen) * ((double)sample->sustain_start)) / ((double)sample->length));
+	sample->sustain_end =
+		(unsigned long)((((double)newlen) * ((double)sample->sustain_end)) / ((double)sample->length));
 
 	oldlen = sample->length;
 	sample->length = newlen;
 
 	if (sample->flags & CHN_16BIT) {
 		if (aa) {
-			_resize_16aa((signed short *) d, newlen, (short *) sample->data, oldlen, sample->flags & CHN_STEREO);
+			_resize_16aa((signed short *)d, newlen, (short *)sample->data, oldlen, sample->flags & CHN_STEREO);
 		} else {
-			_resize_16((signed short *) d, newlen, (short *) sample->data, oldlen, sample->flags & CHN_STEREO);
+			_resize_16((signed short *)d, newlen, (short *)sample->data, oldlen, sample->flags & CHN_STEREO);
 		}
 	} else {
 		if (aa) {
@@ -580,54 +544,50 @@ void sample_resize(song_sample_t * sample, unsigned long newlen, int aa)
 	song_unlock_audio();
 }
 
-void sample_invert(song_sample_t * sample)
+void sample_invert(song_sample_t *sample)
 {
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
 	if (sample->flags & CHN_16BIT)
-		_invert_16((signed short *) sample->data,
-			sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
-	else
-		_invert_8(sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
+		_invert_16((signed short *)sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
+	else _invert_8(sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
 	song_unlock_audio();
 }
 
 static void _mono_lr16(signed short *data, unsigned long length, int shift)
 {
-	unsigned long i=1, j;
-	if (shift) { i=0; }
-	for (j = 0; j < length; j++, i += 2)
-		data[j] = data[i];
+	unsigned long i = 1, j;
+	if (shift) {
+		i = 0;
+	}
+	for (j = 0; j < length; j++, i += 2) data[j] = data[i];
 }
 static void _mono_lr8(signed char *data, unsigned long length, int shift)
 {
-	unsigned long i=1, j;
-	if (shift) { i=0; }
-	for (j = 0; j < length; j++, i += 2)
-		data[j] = data[i];
+	unsigned long i = 1, j;
+	if (shift) {
+		i = 0;
+	}
+	for (j = 0; j < length; j++, i += 2) data[j] = data[i];
 }
-void sample_mono_left(song_sample_t * sample)
+void sample_mono_left(song_sample_t *sample)
 {
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
 	if (sample->flags & CHN_STEREO) {
-		if (sample->flags & CHN_16BIT)
-			_mono_lr16((signed short *)sample->data, sample->length, 1);
-		else
-			_mono_lr8((signed char *)sample->data, sample->length, 1);
+		if (sample->flags & CHN_16BIT) _mono_lr16((signed short *)sample->data, sample->length, 1);
+		else _mono_lr8((signed char *)sample->data, sample->length, 1);
 		sample->flags &= ~CHN_STEREO;
 	}
 	song_unlock_audio();
 }
-void sample_mono_right(song_sample_t * sample)
+void sample_mono_right(song_sample_t *sample)
 {
 	song_lock_audio();
 	status.flags |= SONG_NEEDS_SAVE;
 	if (sample->flags & CHN_STEREO) {
-		if (sample->flags & CHN_16BIT)
-			_mono_lr16((signed short *)sample->data, sample->length, 0);
-		else
-			_mono_lr8((signed char *)sample->data, sample->length, 0);
+		if (sample->flags & CHN_16BIT) _mono_lr16((signed short *)sample->data, sample->length, 0);
+		else _mono_lr8((signed char *)sample->data, sample->length, 0);
 		sample->flags &= ~CHN_STEREO;
 	}
 	song_unlock_audio();

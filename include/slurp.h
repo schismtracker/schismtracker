@@ -49,7 +49,7 @@ returned by stat -- this can be used to read only part of a file, or if the file
 a stat structure is not available. */
 slurp_t *slurp(const char *filename, struct stat *buf, size_t size);
 
-void unslurp(slurp_t * t);
+void unslurp(slurp_t *t);
 
 #ifdef SCHISM_WIN32
 int slurp_win32(slurp_t *useme, const char *filename, size_t st);
@@ -67,7 +67,6 @@ long slurp_tell(slurp_t *t);
 size_t slurp_read(slurp_t *t, void *ptr, size_t count); /* i never really liked fread */
 size_t slurp_peek(slurp_t *t, void *ptr, size_t count);
 int slurp_getc(slurp_t *t); /* returns unsigned char cast to int, or EOF */
-int slurp_eof(slurp_t *t); /* 1 = end of file */
+int slurp_eof(slurp_t *t);  /* 1 = end of file */
 
 #endif /* SCHISM_SLURP_H */
-

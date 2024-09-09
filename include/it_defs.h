@@ -13,7 +13,7 @@ struct it_notetrans {
 SCHISM_BINARY_STRUCT(struct it_notetrans, 2);
 
 struct it_file {
-	uint32_t id;                    // 0x4D504D49
+	uint32_t id; // 0x4D504D49
 	int8_t songname[26];
 	uint8_t hilight_minor;
 	uint8_t hilight_major;
@@ -62,8 +62,8 @@ SCHISM_BINARY_STRUCT(struct it_envelope, 82);
 
 // Old Impulse Instrument Format (cmwt < 0x200)
 struct it_instrument_old {
-	uint32_t id;                    // IMPI = 0x49504D49
-	int8_t filename[12];    // DOS file name
+	uint32_t id;         // IMPI = 0x49504D49
+	int8_t filename[12]; // DOS file name
 	uint8_t zero;
 	uint8_t flags;
 	uint8_t vls;
@@ -121,7 +121,7 @@ SCHISM_BINARY_STRUCT(struct it_instrument, 554);
 
 // IT Sample Format
 struct it_sample {
-	uint32_t id;            // 0x53504D49
+	uint32_t id; // 0x53504D49
 	int8_t filename[12];
 	uint8_t zero;
 	uint8_t gvl;

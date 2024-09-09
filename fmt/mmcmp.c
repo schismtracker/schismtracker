@@ -28,7 +28,7 @@ typedef struct mm_header {
 	uint8_t fmt_comp;
 } mm_header_t;
 
-SCHISM_BINARY_STRUCT(mm_header_t, 8+2+2+2+4+4+1+1);
+SCHISM_BINARY_STRUCT(mm_header_t, 8 + 2 + 2 + 2 + 4 + 4 + 1 + 1);
 
 typedef struct mm_block {
 	uint32_t unpk_size;
@@ -40,7 +40,7 @@ typedef struct mm_block {
 	uint16_t num_bits;
 } mm_block_t;
 
-SCHISM_BINARY_STRUCT(mm_block_t, 4+4+4+2+2+2+2);
+SCHISM_BINARY_STRUCT(mm_block_t, 4 + 4 + 4 + 2 + 2 + 2 + 2);
 
 typedef struct mm_subblock {
 	uint32_t unpk_pos;
@@ -59,25 +59,25 @@ typedef struct mm_bit_buffer {
 
 
 enum {
-	MM_COMP   = 0x0001,
-	MM_DELTA  = 0x0002,
-	MM_16BIT  = 0x0004,
+	MM_COMP = 0x0001,
+	MM_DELTA = 0x0002,
+	MM_16BIT = 0x0004,
 	MM_STEREO = 0x0100, // unused?
-	MM_ABS16  = 0x0200,
+	MM_ABS16 = 0x0200,
 	MM_ENDIAN = 0x0400, // unused?
 };
 
 
-static const uint32_t mm_8bit_commands[8] = { 0x01, 0x03, 0x07, 0x0F, 0x1E, 0x3C, 0x78, 0xF8 };
+static const uint32_t mm_8bit_commands[8] = {0x01, 0x03, 0x07, 0x0F, 0x1E, 0x3C, 0x78, 0xF8};
 
-static const uint32_t mm_8bit_fetch[8] = { 3, 3, 3, 3, 2, 1, 0, 0 };
+static const uint32_t mm_8bit_fetch[8] = {3, 3, 3, 3, 2, 1, 0, 0};
 
 static const uint32_t mm_16bit_commands[16] = {
 	0x0001, 0x0003, 0x0007, 0x000F, 0x001E, 0x003C, 0x0078, 0x00F0,
 	0x01F0, 0x03F0, 0x07F0, 0x0FF0, 0x1FF0, 0x3FF0, 0x7FF0, 0xFFF0,
 };
 
-static const uint32_t mm_16bit_fetch[16] = { 4, 4, 4, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+static const uint32_t mm_16bit_fetch[16] = {4, 4, 4, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 
 
@@ -119,24 +119,18 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
 	hdr.filesize = bswapLE32(hdr.filesize);
 	hdr.blktable = bswapLE32(hdr.blktable);
 
-	if (memcmp(hdr.zirconia, "ziRCONia", 8) != 0
-	    || hdr.hdrsize < 14
-	    || hdr.blocks == 0
-	    || hdr.filesize < 16
-	    || hdr.filesize > 0x8000000
-	    || hdr.blktable >= memlength
-	    || hdr.blktable + 4 * hdr.blocks > memlength) {
+	if (memcmp(hdr.zirconia, "ziRCONia", 8) != 0 || hdr.hdrsize < 14 || hdr.blocks == 0 || hdr.filesize < 16
+	    || hdr.filesize > 0x8000000 || hdr.blktable >= memlength || hdr.blktable + 4 * hdr.blocks > memlength) {
 		return 0;
 	}
 	filesize = hdr.filesize;
-	if ((buffer = calloc(1, (filesize + 31) & ~15)) == NULL)
-		return 0;
+	if ((buffer = calloc(1, (filesize + 31) & ~15)) == NULL) return 0;
 
-	pblk_table = (uint32_t *) (memfile + hdr.blktable);
+	pblk_table = (uint32_t *)(memfile + hdr.blktable);
 
 	for (block = 0; block < hdr.blocks; block++) {
 		uint32_t pos = bswapLE32(pblk_table[block]);
-		mm_subblock_t *psubblk = (mm_subblock_t *) (memfile + pos + 20);
+		mm_subblock_t *psubblk = (mm_subblock_t *)(memfile + pos + 20);
 		mm_block_t pblk;
 
 		memcpy(&pblk, memfile + pos, sizeof(pblk));
@@ -148,8 +142,7 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
 		pblk.tt_entries = bswapLE16(pblk.tt_entries);
 		pblk.num_bits = bswapLE16(pblk.num_bits);
 
-		if ((pos + 20 >= memlength)
-		    || (pos + 20 + pblk.sub_blk * 8 >= memlength)) {
+		if ((pos + 20 >= memlength) || (pos + 20 + pblk.sub_blk * 8 >= memlength)) {
 			break;
 		}
 		pos += 20 + pblk.sub_blk * 8;
@@ -159,8 +152,7 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
 			for (i = 0; i < pblk.sub_blk; i++) {
 				uint32_t unpk_pos = bswapLE32(psubblk->unpk_pos);
 				uint32_t unpk_size = bswapLE32(psubblk->unpk_size);
-				if ((unpk_pos > filesize)
-				    || (unpk_pos + unpk_size > filesize)) {
+				if ((unpk_pos > filesize) || (unpk_pos + unpk_size > filesize)) {
 					break;
 				}
 				memcpy(buffer + unpk_pos, memfile + pos, unpk_size);
@@ -169,7 +161,7 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
 			}
 		} else if (pblk.flags & MM_16BIT) {
 			/* Data is 16-bit packed */
-			uint16_t *dest = (uint16_t *) (buffer + bswapLE32(psubblk->unpk_pos));
+			uint16_t *dest = (uint16_t *)(buffer + bswapLE32(psubblk->unpk_pos));
 			uint32_t size = bswapLE32(psubblk->unpk_size) >> 1;
 			uint32_t destpos = 0;
 			uint32_t numbits = pblk.num_bits;
@@ -188,14 +180,12 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
 
 				if (d >= mm_16bit_commands[numbits]) {
 					uint32_t fetch = mm_16bit_fetch[numbits];
-					uint32_t newbits = get_bits(&bb, fetch)
-						+ ((d - mm_16bit_commands[numbits]) << fetch);
+					uint32_t newbits = get_bits(&bb, fetch) + ((d - mm_16bit_commands[numbits]) << fetch);
 					if (newbits != numbits) {
 						numbits = newbits & 0x0F;
 					} else {
 						if ((d = get_bits(&bb, 4)) == 0x0F) {
-							if (get_bits(&bb, 1))
-								break;
+							if (get_bits(&bb, 1)) break;
 							newval = 0xFFFF;
 						} else {
 							newval = 0xFFF0 + d;
@@ -205,16 +195,14 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
 					newval = d;
 				}
 				if (newval < 0x10000) {
-					newval = (newval & 1)
-						? (uint32_t) (-(int32_t)((newval + 1) >> 1))
-						: (uint32_t) (newval >> 1);
+					newval = (newval & 1) ? (uint32_t)(-(int32_t)((newval + 1) >> 1)) : (uint32_t)(newval >> 1);
 					if (pblk.flags & MM_DELTA) {
 						newval += oldval;
 						oldval = newval;
 					} else if (!(pblk.flags & MM_ABS16)) {
 						newval ^= 0x8000;
 					}
-					dest[destpos++] = bswapLE16((uint16_t) newval);
+					dest[destpos++] = bswapLE16((uint16_t)newval);
 				}
 				if (destpos >= size) {
 					subblk++;
@@ -245,14 +233,12 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
 
 				if (d >= mm_8bit_commands[numbits]) {
 					uint32_t fetch = mm_8bit_fetch[numbits];
-					uint32_t newbits = get_bits(&bb, fetch)
-						+ ((d - mm_8bit_commands[numbits]) << fetch);
+					uint32_t newbits = get_bits(&bb, fetch) + ((d - mm_8bit_commands[numbits]) << fetch);
 					if (newbits != numbits) {
 						numbits = newbits & 0x07;
 					} else {
 						if ((d = get_bits(&bb, 3)) == 7) {
-							if (get_bits(&bb, 1))
-								break;
+							if (get_bits(&bb, 1)) break;
 							newval = 0xFF;
 						} else {
 							newval = 0xF8 + d;
@@ -267,7 +253,7 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
 						n += oldval;
 						oldval = n;
 					}
-					dest[destpos++] = (uint8_t) n;
+					dest[destpos++] = (uint8_t)n;
 				}
 				if (destpos >= size) {
 					subblk++;
@@ -282,4 +268,3 @@ int mmcmp_unpack(uint8_t **data, size_t *length)
 	*length = filesize;
 	return 1;
 }
-

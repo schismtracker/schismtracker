@@ -56,15 +56,15 @@ whether it's arranged by track or by midi channel.
 struct mthd {
 	//char tag[4]; // MThd <read separately>
 	uint32_t header_length;
-	uint16_t format; // 0 = single-track, 1 = multi-track, 2 = multi-song
+	uint16_t format;     // 0 = single-track, 1 = multi-track, 2 = multi-song
 	uint16_t num_tracks; // number of track chunks
-	uint16_t division; // delta timing value: positive = units/beat; negative = smpte compatible units (?)
+	uint16_t division;   // delta timing value: positive = units/beat; negative = smpte compatible units (?)
 };
 
-SCHISM_BINARY_STRUCT(struct mthd, 4+2+2+2);
+SCHISM_BINARY_STRUCT(struct mthd, 4 + 2 + 2 + 2);
 
 struct mtrk {
-	char tag[4]; // MTrk
+	char tag[4];     // MTrk
 	uint32_t length; // number of bytes of track data following
 };
 
@@ -75,8 +75,8 @@ SCHISM_BINARY_STRUCT(struct mtrk, 8);
 
 struct event {
 	unsigned int pulse; // the PPQN-tick, counting from zero, when this midi-event happens
-	uint8_t chan; // target channel (0-based!)
-	song_note_t note; // the note data (new data will overwrite old data in same channel+row)
+	uint8_t chan;       // target channel (0-based!)
+	song_note_t note;   // the note data (new data will overwrite old data in same channel+row)
 	struct event *next;
 };
 
@@ -105,8 +105,7 @@ static unsigned int read_varlen(slurp_t *fp)
 	// This will fail tremendously if a value overflows. I don't care.
 	do {
 		b = slurp_getc(fp);
-		if (b == EOF)
-			return 0; // truncated?!
+		if (b == EOF) return 0; // truncated?!
 		v <<= 7;
 		v |= b & 0x7f;
 	} while (b & 0x80);
@@ -118,11 +117,10 @@ static unsigned int read_varlen(slurp_t *fp)
 
 int fmt_mid_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	slurp_t fp = {.length = length, .data = (uint8_t *) data, .pos = 0};
+	slurp_t fp = {.length = length, .data = (uint8_t *)data, .pos = 0};
 	song_t *tmpsong = csf_allocate();
 
-	if (!tmpsong)
-		return 0; // wahhhh
+	if (!tmpsong) return 0; // wahhhh
 	if (fmt_mid_load_song(tmpsong, &fp, LOAD_NOSAMPLES | LOAD_NOPATTERNS) == LOAD_SUCCESS) {
 		file->description = "Standard MIDI File";
 		file->title = strdup(tmpsong->title);
@@ -148,7 +146,9 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		uint8_t fg_note;
 		uint8_t bg_note; // really just used as a boolean...
 		uint8_t instrument;
-	} midich[16] = {{NOTE_NONE, NOTE_NONE, 0}};
+	} midich[16] = {
+		{NOTE_NONE, NOTE_NONE, 0}
+    };
 	char *message_cur = song->message;
 	unsigned int message_left = MAX_MESSAGE;
 	unsigned int pulse = 0; // cumulative time from start of track
@@ -181,14 +181,14 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	require PPQN to be very ridiculously high, or a file that's several *hours* long.
 
 	Stuff a useless event at the start of the event queue. */
-	note = (song_note_t) {.note = NOTE_NONE};
+	note = (song_note_t){.note = NOTE_NONE};
 	event_queue = alloc_event(0, 0, &note, NULL);
 
 	for (int trknum = 0; trknum < mthd.num_tracks; trknum++) {
 		unsigned int delta; // time since last event (read from file)
-		unsigned int vlen; // some other generic varlen number
-		int rs = 0; // running status byte
-		int status; // THIS status byte (as opposed to rs)
+		unsigned int vlen;  // some other generic varlen number
+		int rs = 0;         // running status byte
+		int status;         // THIS status byte (as opposed to rs)
 		unsigned char hi, lo, cn, x, y;
 		unsigned int bpm; // stupid
 		int found_end = 0;
@@ -211,7 +211,7 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 		while (!found_end && slurp_tell(fp) < nextpos) {
 			delta = read_varlen(fp); // delta-time
-			pulse += delta; // 'real' pulse count
+			pulse += delta;          // 'real' pulse count
 
 			// get status byte, if there is one
 			if (fp->data[fp->pos] & 0x80) {
@@ -223,7 +223,7 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				continue;
 			}
 
-			note = (song_note_t) {.note = NOTE_NONE};
+			note = (song_note_t){.note = NOTE_NONE};
 			hi = status >> 4;
 			lo = status & 0xf;
 			cn = lo; //or: trknum * CHANNELS_PER_TRACK + lo % CHANNELS_PER_TRACK;
@@ -231,25 +231,25 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			switch (hi) {
 			case 0x8: // note off - x, y
 				rs = status;
-				x = slurp_getc(fp); // note
-				y = slurp_getc(fp); // release velocity
+				x = slurp_getc(fp);                               // note
+				y = slurp_getc(fp);                               // release velocity
 				x = CLAMP(x + NOTE_FIRST, NOTE_FIRST, NOTE_LAST); // clamp is wrong, but whatever
 				// if the last note in the channel is the same as this note, just write ===
 				// otherwise, if there is a note playing, assume our note got backgrounded
 				// and write S71 (past note off)
 				if (midich[cn].fg_note == x) {
-					note = (song_note_t) {.note = NOTE_OFF};
+					note = (song_note_t){.note = NOTE_OFF};
 					midich[cn].fg_note = NOTE_NONE;
 				} else {
 					// S71, past note off
-					note = (song_note_t) {.effect = FX_SPECIAL, .param = 0x71};
+					note = (song_note_t){.effect = FX_SPECIAL, .param = 0x71};
 					midich[cn].bg_note = NOTE_NONE;
 				}
 				break;
 			case 0x9: // note on - x, y (velocity zero = note off)
 				rs = status;
-				x = slurp_getc(fp); // note
-				y = slurp_getc(fp); // attack velocity
+				x = slurp_getc(fp);                               // note
+				y = slurp_getc(fp);                               // attack velocity
 				x = CLAMP(x + NOTE_FIRST, NOTE_FIRST, NOTE_LAST); // see note off above.
 
 				if (lo == 9) {
@@ -258,11 +258,11 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					// this is actually another note-off, see above
 					// (maybe that stuff should be split into a function or blahblah)
 					if (midich[cn].fg_note == x) {
-						note = (song_note_t) {.note = NOTE_OFF};
+						note = (song_note_t){.note = NOTE_OFF};
 						midich[cn].fg_note = NOTE_NONE;
 					} else {
 						// S71, past note off
-						note = (song_note_t) {.effect = FX_SPECIAL, .param = 0x71};
+						note = (song_note_t){.effect = FX_SPECIAL, .param = 0x71};
 						midich[cn].bg_note = NOTE_NONE;
 					}
 				} else {
@@ -273,7 +273,7 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						nsmp++;
 					}
 
-					note = (song_note_t) {
+					note = (song_note_t){
 						.note = x,
 						.instrument = patch_samples[midich[cn].instrument],
 						.voleffect = VOLFX_VOLUME,
@@ -312,7 +312,7 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						log_appendf(4, " Warning: Too many samples");
 					}
 				}
-				note = (song_note_t) {.instrument = patch_samples[x]};
+				note = (song_note_t){.instrument = patch_samples[x]};
 				break;
 			case 0xd: // channel pressure (aftertouch) - x
 				rs = status;
@@ -327,8 +327,8 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				continue;
 			case 0xf: // system messages
 				switch (lo) {
-				case 0xf: // meta-event (text and stuff)
-					x = slurp_getc(fp); // type
+				case 0xf:                   // meta-event (text and stuff)
+					x = slurp_getc(fp);     // type
 					vlen = read_varlen(fp); // value length
 					switch (x) {
 					case 0x1: // text
@@ -354,14 +354,12 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						break;
 
 					case 0x20: // MIDI channel (FF 20 len* cc)
-						// specifies which midi-channel sysexes are assigned to
+							   // specifies which midi-channel sysexes are assigned to
 					case 0x21: // MIDI port (FF 21 len* pp)
 						// specifies which port/bus this track's events are routed to
 						break;
 
-					case 0x2f:
-						found_end = 1;
-						break;
+					case 0x2f: found_end = 1; break;
 					case 0x51: // set tempo
 						// read another stupid kind of variable length number
 						// hopefully this fits into 4 bytes - if not, too bad!
@@ -371,7 +369,7 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						slurp_read(fp, buf + (4 - y), y);
 						bpm = buf[0] << 24 | (buf[1] << 16) | (buf[2] << 8) | buf[3];
 						bpm = CLAMP(60000000 / (bpm ? bpm : 1), 0x20, 0xff);
-						note = (song_note_t) {.effect = FX_TEMPO, .param = bpm};
+						note = (song_note_t){.effect = FX_TEMPO, .param = bpm};
 						vlen -= y;
 						break;
 					case 0x54: // SMPTE offset (what time in the song this track starts)
@@ -394,13 +392,21 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				/* sysex */
 				case 0x0:
 				/* syscommon */
-				case 0x1: case 0x2: case 0x3:
-				case 0x4: case 0x5: case 0x6:
+				case 0x1:
+				case 0x2:
+				case 0x3:
+				case 0x4:
+				case 0x5:
+				case 0x6:
 				case 0x7:
 					rs = 0; // clear running status
 				/* sysrt */
-				case 0x8: case 0x9: case 0xa:
-				case 0xb: case 0xc: case 0xd:
+				case 0x8:
+				case 0x9:
+				case 0xa:
+				case 0xb:
+				case 0xc:
+				case 0xd:
 				case 0xe:
 					// 0xf0 - sysex
 					// 0xf1-0xf7 - common
@@ -422,8 +428,7 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			prev = prev->next;
 		}
 		if (slurp_tell(fp) != nextpos) {
-			log_appendf(2, " Track %d ended %ld bytes from boundary",
-				trknum, slurp_tell(fp) - nextpos);
+			log_appendf(2, " Track %d ended %ld bytes from boundary", trknum, slurp_tell(fp) - nextpos);
 			slurp_seek(fp, nextpos, SEEK_SET);
 		}
 	}
@@ -446,9 +451,9 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	// okey doke! now let's write this crap out to the patterns
 	song_note_t *pattern = NULL, *rowdata;
 	int row = MID_ROWS_PER_PATTERN; // what row of the pattern rowdata is pointing to (fixed point)
-	int rowfrac = 0; // how much is left over
-	int pat = 0; // next pattern number to create
-	pulse = 0; // PREVIOUS event pulse.
+	int rowfrac = 0;                // how much is left over
+	int pat = 0;                    // next pattern number to create
+	pulse = 0;                      // PREVIOUS event pulse.
 
 	while (cur) {
 		/* calculate pulse delta from previous event
@@ -471,7 +476,7 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 		while (row >= MID_ROWS_PER_PATTERN) {
 			// New pattern time!
-			if(pat >= MAX_PATTERNS) {
+			if (pat >= MAX_PATTERNS) {
 				log_appendf(4, " Warning: Too many patterns, song is truncated");
 				return LOAD_SUCCESS;
 			}
@@ -502,4 +507,3 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	return LOAD_SUCCESS;
 }
-

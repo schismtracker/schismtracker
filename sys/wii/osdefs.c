@@ -25,7 +25,7 @@
 #include "osdefs.h"
 #include "event.h"
 #include "song.h"
-#include "it.h" // need for kbd_get_alnum
+#include "it.h"   // need for kbd_get_alnum
 #include "page.h" // need for struct key_event
 #include "log.h"
 
@@ -47,10 +47,11 @@
  * is NULL.
 */
 static SDL_JoystickID joystick_id = 0;
-static SDL_Joystick* joystick = NULL;
+static SDL_Joystick *joystick = NULL;
 
 // cargopasta'd from libogc git __di_check_ahbprot
-static u32 _check_ahbprot(void) {
+static u32 _check_ahbprot(void)
+{
 	s32 res;
 	u64 title_id;
 	u32 tmd_size;
@@ -90,20 +91,20 @@ void wii_sysinit(int *pargc, char ***pargv)
 {
 	char *ptr = NULL;
 
-	log_appendf(1, "[Wii] This is IOS%d v%X, and AHBPROT is %s",
-		IOS_GetVersion(), IOS_GetRevision(), _check_ahbprot() > 0 ? "enabled" : "disabled");
+	log_appendf(
+		1, "[Wii] This is IOS%d v%X, and AHBPROT is %s", IOS_GetVersion(), IOS_GetRevision(),
+		_check_ahbprot() > 0 ? "enabled" : "disabled");
 	if (*pargc == 0 && *pargv == NULL) {
 		// I don't know if any other loaders provide similarly broken environments
 		log_appendf(1, "[Wii] Was I just bannerbombed? Prepare for crash at exit...");
-	} else if (memcmp((void *) 0x80001804, "STUBHAXX", 8) == 0) {
+	} else if (memcmp((void *)0x80001804, "STUBHAXX", 8) == 0) {
 		log_appendf(1, "[Wii] Hello, HBC user!");
 	} else {
 		log_appendf(1, "[Wii] Where am I?!");
 	}
 
 	ISFS_SU();
-	if (ISFS_Initialize() == IPC_OK)
-		ISFS_Mount();
+	if (ISFS_Initialize() == IPC_OK) ISFS_Mount();
 	fatInit(CACHE_PAGES, 0);
 
 	// Attempt to locate a suitable home directory.
@@ -122,7 +123,7 @@ void wii_sysinit(int *pargc, char ***pargv)
 		ptr = str_dup("sd:/apps/schismtracker");
 	}
 	if (chdir(ptr) != 0) {
-		DIR* dir = opendir("sd:/");
+		DIR *dir = opendir("sd:/");
 		free(ptr);
 		if (dir) {
 			// Ok at least the sd card works, there's some other dysfunction
@@ -143,7 +144,8 @@ void wii_sysexit(void)
 	ISFS_Deinitialize();
 }
 
-static void open_joystick(int n) {
+static void open_joystick(int n)
+{
 	joystick = SDL_JoystickOpen(n);
 	if (joystick) {
 		joystick_id = SDL_JoystickInstanceID(joystick);
@@ -171,16 +173,12 @@ static SDL_Keycode hat_to_keysym(int value)
 	switch (value) {
 	case SDL_HAT_LEFTUP:
 	case SDL_HAT_UP:
-	case SDL_HAT_RIGHTUP:
-		return SDLK_UP;
+	case SDL_HAT_RIGHTUP: return SDLK_UP;
 	case SDL_HAT_LEFTDOWN:
 	case SDL_HAT_DOWN:
-	case SDL_HAT_RIGHTDOWN:
-		return SDLK_DOWN;
-	case SDL_HAT_LEFT:
-		return SDLK_LEFT;
-	case SDL_HAT_RIGHT:
-		return SDLK_RIGHT;
+	case SDL_HAT_RIGHTDOWN: return SDLK_DOWN;
+	case SDL_HAT_LEFT: return SDLK_LEFT;
+	case SDL_HAT_RIGHT: return SDLK_RIGHT;
 	default: // SDL_HAT_CENTERED
 		return 0;
 	}
@@ -195,8 +193,7 @@ int wii_sdlevent(SDL_Event *event)
 
 	switch (event->type) {
 	case SDL_KEYDOWN:
-	case SDL_KEYUP:
-		return 1;
+	case SDL_KEYUP: return 1;
 
 	case SDL_JOYHATMOTION:
 		// TODO key repeat for these, somehow
@@ -251,13 +248,10 @@ int wii_sdlevent(SDL_Event *event)
 				song_set_current_order(song_get_current_order() + 1);
 			}
 			return 0;
-		case 6: /* Home */
-			event->type = SDL_QUIT;
-			return 1;
+		case 6: /* Home */ event->type = SDL_QUIT; return 1;
 		case 0: /* A */
 		case 1: /* B */
-		default:
-			return 0;
+		default: return 0;
 		}
 		newev.key.keysym.sym = sym;
 		if (event->type == SDL_JOYBUTTONDOWN) {
@@ -271,8 +265,7 @@ int wii_sdlevent(SDL_Event *event)
 		*event = newev;
 		return 1;
 	case SDL_JOYDEVICEADDED:
-		if (!joystick)
-			open_joystick(event->jdevice.which);
+		if (!joystick) open_joystick(event->jdevice.which);
 		return 0;
 	case SDL_JOYDEVICEREMOVED:
 		if (joystick && event->jdevice.which == joystick_id) {
@@ -283,4 +276,3 @@ int wii_sdlevent(SDL_Event *event)
 	}
 	return 1;
 }
-

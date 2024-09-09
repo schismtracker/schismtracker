@@ -70,88 +70,74 @@ doing weird stuff like hacking the files, but then you're just asking for troubl
 ffs... "if"?!) Still, it's better than STM. The only reason this is first is because the position of the
 SCRM magic lies within the 669 message field, and the 669 check is much more complex (and thus more likely
 to be right). */
-READ_INFO(669) LOAD_SONG(669)
+READ_INFO(669)
+LOAD_SONG(669)
 
-/* Since so many programs have added noncompatible extensions to the mod format, there are about 30 strings to
+	/* Since so many programs have added noncompatible extensions to the mod format, there are about 30 strings to
 compare against for the magic. Also, there are special cases for WOW files, which even share the same magic
 as plain ProTracker, but are quite different; there are some really nasty heuristics to detect these... ugh,
 ugh, ugh. However, it has to be above the formats with the magic at the beginning...
 
 This only handles 31-sample mods; 15-sample ones have no identifying
 information and are therefore placed much lower in this list. */
-READ_INFO(mod) LOAD_SONG(mod31) SAVE_SONG(mod)
+	READ_INFO(mod) LOAD_SONG(mod31) SAVE_SONG(mod)
 
-/* S3M needs to be before a lot of stuff. */
-READ_INFO(s3m) LOAD_SONG(s3m) SAVE_SONG(s3m)
-/* FAR and S3M have different magic in the same place, so it doesn't really matter which one goes
+	/* S3M needs to be before a lot of stuff. */
+	READ_INFO(s3m) LOAD_SONG(s3m) SAVE_SONG(s3m)
+	/* FAR and S3M have different magic in the same place, so it doesn't really matter which one goes
 where. I just have S3M first since it's a more common format. */
-READ_INFO(far) LOAD_SONG(far)
+	READ_INFO(far) LOAD_SONG(far)
 
-/* These next formats have their magic at the beginning of the data, so none of them can possibly
+	/* These next formats have their magic at the beginning of the data, so none of them can possibly
 conflict with other ones. I've organized them pretty much in order of popularity. */
-READ_INFO(xm) LOAD_SONG(xm)
-READ_INFO(it) LOAD_SONG(it) SAVE_SONG(it)
-READ_INFO(mt2)
-READ_INFO(mtm) LOAD_SONG(mtm)
-READ_INFO(ntk)
-READ_INFO(mdl) LOAD_SONG(mdl)
-READ_INFO(med)
-READ_INFO(okt) LOAD_SONG(okt)
-READ_INFO(mid) LOAD_SONG(mid)
-READ_INFO(mus) LOAD_SONG(mus)
-READ_INFO(mf)
-READ_INFO(dsm) LOAD_SONG(dsm)
+	READ_INFO(xm) LOAD_SONG(xm) READ_INFO(it) LOAD_SONG(it) SAVE_SONG(it) READ_INFO(mt2) READ_INFO(mtm) LOAD_SONG(mtm)
+		READ_INFO(ntk) READ_INFO(mdl) LOAD_SONG(mdl) READ_INFO(med) READ_INFO(okt) LOAD_SONG(okt) READ_INFO(mid)
+			LOAD_SONG(mid) READ_INFO(mus) LOAD_SONG(mus) READ_INFO(mf) READ_INFO(dsm) LOAD_SONG(dsm)
 
-/* Sample formats with magic at start of file */
-READ_INFO(its)  LOAD_SAMPLE(its)  SAVE_SAMPLE(its)
-READ_INFO(au)   LOAD_SAMPLE(au)   SAVE_SAMPLE(au)
-READ_INFO(aiff) LOAD_SAMPLE(aiff) SAVE_SAMPLE(aiff) EXPORT(aiff)
-READ_INFO(wav)  LOAD_SAMPLE(wav)  SAVE_SAMPLE(wav)  EXPORT(wav)
+	/* Sample formats with magic at start of file */
+	READ_INFO(its) LOAD_SAMPLE(its) SAVE_SAMPLE(its) READ_INFO(au) LOAD_SAMPLE(au) SAVE_SAMPLE(au) READ_INFO(aiff)
+		LOAD_SAMPLE(aiff) SAVE_SAMPLE(aiff) EXPORT(aiff) READ_INFO(wav) LOAD_SAMPLE(wav) SAVE_SAMPLE(wav) EXPORT(wav)
 #ifdef USE_FLAC
-READ_INFO(flac) LOAD_SAMPLE(flac) SAVE_SAMPLE(flac) EXPORT(flac)
+			READ_INFO(flac) LOAD_SAMPLE(flac) SAVE_SAMPLE(flac) EXPORT(flac)
 #endif
-READ_INFO(iti)  LOAD_INSTRUMENT(iti) SAVE_INSTRUMENT(iti)
-READ_INFO(xi)   LOAD_INSTRUMENT(xi)  SAVE_INSTRUMENT(xi)
-READ_INFO(pat)  LOAD_INSTRUMENT(pat)
+				READ_INFO(iti) LOAD_INSTRUMENT(iti) SAVE_INSTRUMENT(iti) READ_INFO(xi) LOAD_INSTRUMENT(xi)
+					SAVE_INSTRUMENT(xi) READ_INFO(pat) LOAD_INSTRUMENT(pat)
 
-READ_INFO(ult) LOAD_SONG(ult)
-READ_INFO(liq)
+						READ_INFO(ult) LOAD_SONG(ult) READ_INFO(liq)
 
-READ_INFO(ams)
-READ_INFO(f2r)
+							READ_INFO(ams) READ_INFO(f2r)
 
-READ_INFO(s3i)  LOAD_SAMPLE(s3i)  SAVE_SAMPLE(s3i) /* FIXME should this be moved? S3I has magic at 0x4C... */
+								READ_INFO(s3i) LOAD_SAMPLE(s3i)
+									SAVE_SAMPLE(s3i) /* FIXME should this be moved? S3I has magic at 0x4C... */
 
-/* IMF and SFX (as well as STX) all have the magic values at 0x3C-0x3F, which is positioned in IT's
+	/* IMF and SFX (as well as STX) all have the magic values at 0x3C-0x3F, which is positioned in IT's
 "reserved" field, Not sure about this positioning, but these are kind of rare formats anyway. */
-READ_INFO(imf) LOAD_SONG(imf)
-READ_INFO(sfx) LOAD_SONG(sfx)
-READ_INFO(stx) LOAD_SONG(stx)
+	READ_INFO(imf) LOAD_SONG(imf) READ_INFO(sfx) LOAD_SONG(sfx) READ_INFO(stx) LOAD_SONG(stx)
 
 /* bleh */
 #if defined(USE_NON_TRACKED_TYPES) && defined(HAVE_VORBIS)
-READ_INFO(ogg)
+		READ_INFO(ogg)
 #endif
 
-/* STM seems to have a case insensitive magic string with several possible values, and only one byte
+	/* STM seems to have a case insensitive magic string with several possible values, and only one byte
 is guaranteed to be the same in the whole file... yeagh. */
-READ_INFO(stm) LOAD_SONG(stm)
+	READ_INFO(stm) LOAD_SONG(stm)
 
 /* An ID3 tag could actually be anywhere in an MP3 file, and there's no guarantee that it even exists
 at all. I might move this toward the top if I can figure out how to identify an MP3 more precisely. */
 #ifdef USE_NON_TRACKED_TYPES
-READ_INFO(mp3)
+		READ_INFO(mp3)
 #endif
 
 #if USE_MEDIAFOUNDATION
-READ_INFO(win32mf) LOAD_SAMPLE(win32mf)
+			READ_INFO(win32mf) LOAD_SAMPLE(win32mf)
 #endif
 
-/* 15-sample mods have literally no identifying information */
-READ_INFO(mod) LOAD_SONG(mod15)
+	/* 15-sample mods have literally no identifying information */
+	READ_INFO(mod) LOAD_SONG(mod15)
 
-/* not really a type, so no info reader for these */
-LOAD_SAMPLE(raw) SAVE_SAMPLE(raw)
+	/* not really a type, so no info reader for these */
+	LOAD_SAMPLE(raw) SAVE_SAMPLE(raw)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -165,4 +151,3 @@ LOAD_SAMPLE(raw) SAVE_SAMPLE(raw)
 #undef LOAD_INSTRUMENT
 #undef SAVE_INSTRUMENT
 #undef EXPORT
-

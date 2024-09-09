@@ -67,37 +67,31 @@ static void log_draw_const(void)
 	draw_fill_chars(2, 13, 77, 47, DEFAULT_FG, 0);
 }
 
-static int log_handle_key(struct key_event * k)
+static int log_handle_key(struct key_event *k)
 {
 	switch (k->sym) {
 	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		top_line--;
 		break;
 	case SDLK_PAGEUP:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		top_line -= 15;
 		break;
 	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		top_line++;
 		break;
 	case SDLK_PAGEDOWN:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		top_line += 15;
 		break;
 	case SDLK_HOME:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		top_line = 0;
 		break;
 	case SDLK_END:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		top_line = last_line;
 		break;
 	default:
@@ -113,7 +107,7 @@ static int log_handle_key(struct key_event * k)
 
 		return 0;
 	};
-	top_line = CLAMP(top_line, 0, (last_line-32));
+	top_line = CLAMP(top_line, 0, (last_line - 32));
 	if (top_line < 0) top_line = 0;
 	status.flags |= NEED_UPDATE;
 	return 1;
@@ -127,13 +121,9 @@ static void log_redraw(void)
 	for (n = 0; n <= last_line && n < 33; n++, i++) {
 		if (!lines[i].text) continue;
 		if (lines[i].bios_font) {
-			draw_text_bios_len(lines[i].text,
-					74, 3, 14 + n,
-					lines[i].color, 0);
+			draw_text_bios_len(lines[i].text, 74, 3, 14 + n, lines[i].color, 0);
 		} else {
-			draw_text_len(lines[i].text,
-					74, 3, 14 + n,
-					lines[i].color, 0);
+			draw_text_len(lines[i].text, 74, 3, 14 + n, lines[i].color, 0);
 		}
 	}
 }
@@ -158,18 +148,16 @@ void log_append2(int bios_font, int color, int must_free, const char *text)
 	if (last_line < NUM_LINES - 1) {
 		last_line++;
 	} else {
-		if (lines[0].must_free)
-			free((void *) lines[0].text);
+		if (lines[0].must_free) free((void *)lines[0].text);
 		memmove(lines, lines + 1, last_line * sizeof(struct log_line));
 	}
 	lines[last_line].text = text;
 	lines[last_line].color = color;
 	lines[last_line].must_free = must_free;
 	lines[last_line].bios_font = bios_font;
-	top_line = CLAMP(last_line - 32, 0, NUM_LINES-32);
+	top_line = CLAMP(last_line - 32, 0, NUM_LINES - 32);
 
-	if (status.current_page == PAGE_LOG)
-		status.flags |= NEED_UPDATE;
+	if (status.current_page == PAGE_LOG) status.flags |= NEED_UPDATE;
 }
 void log_append(int color, int must_free, const char *text)
 {
@@ -177,7 +165,7 @@ void log_append(int color, int must_free, const char *text)
 }
 void log_nl(void)
 {
-	log_append(DEFAULT_FG,0,"");
+	log_append(DEFAULT_FG, 0, "");
 }
 void log_appendf(int color, const char *format, ...)
 {
@@ -203,10 +191,9 @@ void log_underline(int chars)
 {
 	char buf[75];
 
-	chars = CLAMP(chars, 0, (int) sizeof(buf) - 1);
+	chars = CLAMP(chars, 0, (int)sizeof(buf) - 1);
 	buf[chars--] = '\0';
-	do
-		buf[chars] = 0x81;
+	do buf[chars] = 0x81;
 	while (chars--);
 	log_appendf(2, "%s", buf);
 }
@@ -217,4 +204,3 @@ void log_perror(const char *prefix)
 	perror(prefix);
 	log_appendf(4, "%s: %s", prefix, e);
 }
-

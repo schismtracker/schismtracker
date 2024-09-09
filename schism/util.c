@@ -46,25 +46,25 @@ extraneous libraries (i.e. GLib). */
 # define FALLBACK_DIR "C:\\"
 #elif defined(SCHISM_WII)
 # define FALLBACK_DIR "isfs:/" // always exists, seldom useful
-#else /* POSIX? */
+#else                          /* POSIX? */
 # define FALLBACK_DIR "/"
 #endif
 
 #ifdef SCHISM_WIN32
-#include <windows.h>
-#include <process.h>
-#include <shlobj.h>
+# include <windows.h>
+# include <process.h>
+# include <shlobj.h>
 #else
-#include <sys/types.h>
-#include <sys/wait.h>
+# include <sys/types.h>
+# include <sys/wait.h>
 #endif
 
 void ms_sleep(unsigned int ms)
 {
 #ifdef SCHISM_WIN32
-	SleepEx(ms,FALSE);
+	SleepEx(ms, FALSE);
 #else
-	usleep(ms*1000);
+	usleep(ms * 1000);
 #endif
 }
 
@@ -154,7 +154,7 @@ double dB2_power(double db)
 short dB_s(int noisefloor, double amplitude, double correction_dBs)
 {
 	double db = dB(amplitude) + correction_dBs;
-	return CLAMP((int)(128.0*(db+noisefloor))/noisefloor, 0, 127);
+	return CLAMP((int)(128.0 * (db + noisefloor)) / noisefloor, 0, 127);
 }
 
 /* decibel -> linear */
@@ -164,7 +164,7 @@ short dB_s(int noisefloor, double amplitude, double correction_dBs)
 /* correction_dBs corrects the dB after converted, but before scaling.*/
 short dB2_amp_s(int noisefloor, int db, double correction_dBs)
 {
-	return dB2_amp((db*noisefloor/128.0)-noisefloor-correction_dBs);
+	return dB2_amp((db * noisefloor / 128.0) - noisefloor - correction_dBs);
 }
 /* linear -> decibel */
 /* power normalized to 1.0f. */
@@ -173,8 +173,8 @@ short dB2_amp_s(int noisefloor, int db, double correction_dBs)
 /* correction_dBs corrects the dB after converted, but before scaling.*/
 short pdB_s(int noisefloor, double power, double correction_dBs)
 {
-	float db = pdB(power)+correction_dBs;
-	return CLAMP((int)(128.0*(db+noisefloor))/noisefloor, 0, 127);
+	float db = pdB(power) + correction_dBs;
+	return CLAMP((int)(128.0 * (db + noisefloor)) / noisefloor, 0, 127);
 }
 
 /* deciBell -> linear */
@@ -184,7 +184,7 @@ short pdB_s(int noisefloor, double power, double correction_dBs)
 /* correction_dBs corrects the dB after converted, but before scaling.*/
 short dB2_power_s(int noisefloor, int db, double correction_dBs)
 {
-	return dB2_power((db*noisefloor/128.f)-noisefloor-correction_dBs);
+	return dB2_power((db * noisefloor / 128.f) - noisefloor - correction_dBs);
 }
 /* --------------------------------------------------------------------- */
 /* FORMATTING FUNCTIONS */
@@ -193,18 +193,8 @@ char *get_date_string(time_t when, char *buf)
 {
 	struct tm tmr;
 	const char *month_str[12] = {
-		"January",
-		"February",
-		"March",
-		"April",
-		"May",
-		"June",
-		"July",
-		"August",
-		"September",
-		"October",
-		"November",
-		"December",
+		"January", "February", "March",     "April",   "May",      "June",
+		"July",    "August",   "September", "October", "November", "December",
 	};
 
 	/* DO NOT change this back to localtime(). If some backward platform
@@ -219,7 +209,8 @@ char *get_time_string(time_t when, char *buf)
 	struct tm tmr;
 
 	localtime_r(&when, &tmr);
-	snprintf(buf, 27, "%d:%02d%s", (tmr.tm_hour % 12) ? (tmr.tm_hour % 12) : 12, tmr.tm_min, tmr.tm_hour < 12 ? "am" : "pm");
+	snprintf(
+		buf, 27, "%d:%02d%s", (tmr.tm_hour % 12) ? (tmr.tm_hour % 12) : 12, tmr.tm_min, tmr.tm_hour < 12 ? "am" : "pm");
 	return buf;
 }
 
@@ -230,11 +221,9 @@ char *num99tostr(int n, char *buf)
 		sprintf(buf, "%02d", n);
 	} else if (n <= 256) {
 		n -= 100;
-		sprintf(buf, "%c%d",
-			qv[(n/10)], (n % 10));
+		sprintf(buf, "%c%d", qv[(n / 10)], (n % 10));
 	}
 	return buf;
-
 }
 char *numtostr(int digits, unsigned int n, char *buf)
 {
@@ -310,30 +299,26 @@ const char *get_extension(const char *filename)
 */
 char *get_parent_directory(const char *dirname)
 {
-	if (!dirname || !dirname[0])
-		return NULL;
+	if (!dirname || !dirname[0]) return NULL;
 
 	/* need the root path, including the separator */
-	const char* root = strchr(dirname, DIR_SEPARATOR);
-	if (!root)
-		return NULL;
-    root++;
+	const char *root = strchr(dirname, DIR_SEPARATOR);
+	if (!root) return NULL;
+	root++;
 
 	/* okay, now we need to find the final token */
-	const char* pos = root + strlen(root) - 1;
+	const char *pos = root + strlen(root) - 1;
 	if (*pos == DIR_SEPARATOR) /* strip off an excess separator, if any */
 		pos--;
 
 	while (--pos > root) {
-		if (*pos == DIR_SEPARATOR)
-			break;
+		if (*pos == DIR_SEPARATOR) break;
 	}
 
 	ptrdiff_t n = pos - dirname;
 
 	/* sanity check */
-	if (n <= 0)
-		return NULL;
+	if (n <= 0) return NULL;
 
 	char *ret = mem_alloc((n + 1) * sizeof(char));
 	memcpy(ret, dirname, n * sizeof(char));
@@ -354,8 +339,7 @@ int ltrim_string(char *s)
 	int ws = strspn(s, whitespace);
 	int len = strlen(s) - ws;
 
-	if (ws)
-		memmove(s, s + ws, len + 1);
+	if (ws) memmove(s, s + ws, len + 1);
 	return len;
 }
 
@@ -363,7 +347,8 @@ int rtrim_string(char *s)
 {
 	int len = strlen(s);
 
-	while (--len > 0 && strchr(whitespace, s[len]));
+	while (--len > 0 && strchr(whitespace, s[len]))
+		;
 
 	s[++len] = '\0';
 	return len;
@@ -382,8 +367,7 @@ the pointers returned in first/second should be free()'d by the caller. */
 int str_break(const char *s, char c, char **first, char **second)
 {
 	const char *p = strchr(s, c);
-	if (!p)
-		return 0;
+	if (!p) return 0;
 	*first = mem_alloc(p - s + 1);
 	strncpy(*first, s, p - s);
 	(*first)[p - s] = 0;
@@ -437,18 +421,20 @@ char *str_escape(const char *s, int space)
 			*d++ = '\\';
 			*d++ = 'v';
 			break;
-		case '\\': case '"':
+		case '\\':
+		case '"':
 			*d++ = '\\';
 			*d++ = *s;
 			break;
 
 		default:
 			if (*s < ' ' || *s >= 127 || (space && *s == ' ' && s[1] == '\0')) {
-		case '#': case ';':
+			case '#':
+			case ';':
 				*d++ = '\\';
-				*d++ = '0' + ((((uint8_t) *s) >> 6) & 7);
-				*d++ = '0' + ((((uint8_t) *s) >> 3) & 7);
-				*d++ = '0' + ( ((uint8_t) *s)       & 7);
+				*d++ = '0' + ((((uint8_t)*s) >> 6) & 7);
+				*d++ = '0' + ((((uint8_t)*s) >> 3) & 7);
+				*d++ = '0' + (((uint8_t)*s) & 7);
 			} else {
 				*d++ = *s;
 			}
@@ -468,22 +454,29 @@ static inline int readhex(const char *s, int w)
 	while (w--) {
 		o <<= 4;
 		switch (*s) {
-			case '0': case '1': case '2':
-			case '3': case '4': case '5':
-			case '6': case '7': case '8':
-			case '9':
-				o |= *s - '0';
-				break;
-			case 'a': case 'b': case 'c':
-			case 'd': case 'e': case 'f':
-				o |= *s - 'a' + 10;
-				break;
-			case 'A': case 'B': case 'C':
-			case 'D': case 'E': case 'F':
-				o |= *s - 'A' + 10;
-				break;
-			default:
-				return -1;
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9': o |= *s - '0'; break;
+		case 'a':
+		case 'b':
+		case 'c':
+		case 'd':
+		case 'e':
+		case 'f': o |= *s - 'a' + 10; break;
+		case 'A':
+		case 'B':
+		case 'C':
+		case 'D':
+		case 'E':
+		case 'F': o |= *s - 'A' + 10; break;
+		default: return -1;
 		}
 		s++;
 	}
@@ -502,9 +495,14 @@ char *str_unescape(const char *s)
 		if (*s == '\\') {
 			s++;
 			switch (*s) {
-			case '0': case '1': case '2':
-			case '3': case '4': case '5':
-			case '6': case '7':
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
 				*d = 0;
 				end = s + 3;
 				while (s < end && *s >= '0' && *s <= '7') {
@@ -514,27 +512,13 @@ char *str_unescape(const char *s)
 				d++;
 				s--;
 				break;
-			case 'a':
-				*d++ = '\a';
-				break;
-			case 'b':
-				*d++ = '\b';
-				break;
-			case 'f':
-				*d++ = '\f';
-				break;
-			case 'n':
-				*d++ = '\n';
-				break;
-			case 'r':
-				*d++ = '\r';
-				break;
-			case 't':
-				*d++ = '\t';
-				break;
-			case 'v':
-				*d++ = '\v';
-				break;
+			case 'a': *d++ = '\a'; break;
+			case 'b': *d++ = '\b'; break;
+			case 'f': *d++ = '\f'; break;
+			case 'n': *d++ = '\n'; break;
+			case 'r': *d++ = '\r'; break;
+			case 't': *d++ = '\t'; break;
+			case 'v': *d++ = '\v'; break;
 			case '\0': // trailing backslash?
 				*d++ = '\\';
 				s--;
@@ -547,9 +531,7 @@ char *str_unescape(const char *s)
 					break;
 				}
 				/* fall through */
-			default: /* Also handles any other char, like \" \\ \; etc. */
-				*d++ = *s;
-				break;
+			default: /* Also handles any other char, like \" \\ \; etc. */ *d++ = *s; break;
 			}
 		} else {
 			*d++ = *s;
@@ -580,8 +562,7 @@ char *pretty_name(const char *filename)
 
 	/* change underscores to spaces (of course, this could be adapted
 	 * to use strpbrk and strip any number of characters) */
-	while ((temp = strchr(ret, '_')) != NULL)
-		*temp = ' ';
+	while ((temp = strchr(ret, '_')) != NULL) *temp = ' ';
 
 	/* TODO | the first letter, and any letter following a space,
 	 * TODO | should be capitalized; multiple spaces should be cut
@@ -597,16 +578,12 @@ int get_num_lines(const char *text)
 	const char *ptr = text;
 	int n = 0;
 
-	if (!text)
-		return 0;
+	if (!text) return 0;
 	for (;;) {
 		ptr = strpbrk(ptr, "\015\012");
-		if (!ptr)
-			return n;
-		if (ptr[0] == 13 && ptr[1] == 10)
-			ptr += 2;
-		else
-			ptr++;
+		if (!ptr) return n;
+		if (ptr[0] == 13 && ptr[1] == 10) ptr += 2;
+		else ptr++;
 		n++;
 	}
 }
@@ -642,12 +619,12 @@ int make_backup_file(const char *filename, int numbered)
 }
 
 #ifdef SCHISM_WIN32
-int win32_wstat(const wchar_t* path, struct stat* st) {
+int win32_wstat(const wchar_t *path, struct stat *st)
+{
 	struct _stat mstat;
 
 	int ws = _wstat(path, &mstat);
-	if (ws < 0)
-		return ws;
+	if (ws < 0) return ws;
 
 	/* copy all the values */
 	st->st_gid = mstat.st_gid;
@@ -671,10 +648,10 @@ int win32_wstat(const wchar_t* path, struct stat* st) {
  * well, you *can*, but it will bite you in the ass once
  * you get a string that has a mysterious "X" stored somewhere
  * in the filename; better to just give it as a wide string */
-int win32_mktemp(char* template, size_t size) {
-	wchar_t* wc = NULL;
-	if (charset_iconv((const uint8_t*)template, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
-		return -1;
+int win32_mktemp(char *template, size_t size)
+{
+	wchar_t *wc = NULL;
+	if (charset_iconv((const uint8_t *)template, (uint8_t **)&wc, CHARSET_UTF8, CHARSET_WCHAR_T)) return -1;
 
 	if (!_wmktemp(wc)) {
 		free(wc);
@@ -691,42 +668,43 @@ int win32_mktemp(char* template, size_t size) {
 	return 0;
 }
 
-int win32_stat(const char* path, struct stat* st) {
-	wchar_t* wc = NULL;
-	if (charset_iconv((const uint8_t*)path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
-		return -1;
+int win32_stat(const char *path, struct stat *st)
+{
+	wchar_t *wc = NULL;
+	if (charset_iconv((const uint8_t *)path, (uint8_t **)&wc, CHARSET_UTF8, CHARSET_WCHAR_T)) return -1;
 
 	int ret = win32_wstat(wc, st);
 	free(wc);
 	return ret;
 }
 
-int win32_open(const char* path, int flags) {
-	wchar_t* wc = NULL;
-	if (charset_iconv((const uint8_t*)path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
-		return -1;
+int win32_open(const char *path, int flags)
+{
+	wchar_t *wc = NULL;
+	if (charset_iconv((const uint8_t *)path, (uint8_t **)&wc, CHARSET_UTF8, CHARSET_WCHAR_T)) return -1;
 
 	int ret = _wopen(wc, flags);
 	free(wc);
 	return ret;
 }
 
-FILE* win32_fopen(const char* path, const char* flags) {
-	wchar_t* wc = NULL, *wc_flags = NULL;
-	if (charset_iconv((const uint8_t*)path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T)
-		|| charset_iconv((const uint8_t*)flags, (uint8_t**)&wc_flags, CHARSET_UTF8, CHARSET_WCHAR_T))
+FILE *win32_fopen(const char *path, const char *flags)
+{
+	wchar_t *wc = NULL, *wc_flags = NULL;
+	if (charset_iconv((const uint8_t *)path, (uint8_t **)&wc, CHARSET_UTF8, CHARSET_WCHAR_T)
+	    || charset_iconv((const uint8_t *)flags, (uint8_t **)&wc_flags, CHARSET_UTF8, CHARSET_WCHAR_T))
 		return NULL;
 
-	FILE* ret = _wfopen(wc, wc_flags);
+	FILE *ret = _wfopen(wc, wc_flags);
 	free(wc);
 	free(wc_flags);
 	return ret;
 }
 
-int win32_mkdir(const char *path, UNUSED mode_t mode) {
-	wchar_t* wc = NULL;
-	if (charset_iconv((const uint8_t*)path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
-		return -1;
+int win32_mkdir(const char *path, UNUSED mode_t mode)
+{
+	wchar_t *wc = NULL;
+	if (charset_iconv((const uint8_t *)path, (uint8_t **)&wc, CHARSET_UTF8, CHARSET_WCHAR_T)) return -1;
 
 	int ret = _wmkdir(wc);
 	free(wc);
@@ -734,7 +712,8 @@ int win32_mkdir(const char *path, UNUSED mode_t mode) {
 }
 #endif
 
-unsigned long long file_size(const char *filename) {
+unsigned long long file_size(const char *filename)
+{
 	struct stat buf;
 
 	if (os_stat(filename, &buf) < 0) {
@@ -778,15 +757,14 @@ char *get_current_directory(void)
 {
 #ifdef SCHISM_WIN32
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
-	uint8_t* buf_utf8 = NULL;
+	uint8_t *buf_utf8 = NULL;
 
-	if (_wgetcwd(buf, PATH_MAX) && !charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
-		return (char*)buf_utf8;
+	if (_wgetcwd(buf, PATH_MAX) && !charset_iconv((uint8_t *)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
+		return (char *)buf_utf8;
 #else
 	char buf[PATH_MAX + 1] = {'\0'};
 
-	if (getcwd(buf, PATH_MAX))
-		return str_dup(buf);
+	if (getcwd(buf, PATH_MAX)) return str_dup(buf);
 #endif
 	return str_dup(".");
 }
@@ -797,20 +775,19 @@ char *get_home_directory(void)
 	return str_dup("PROGDIR:");
 #elif defined(SCHISM_WIN32)
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
-	uint8_t* buf_utf8 = NULL;
+	uint8_t *buf_utf8 = NULL;
 
-	if (SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK && !charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
-		return (char*)buf_utf8;
+	if (SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK
+	    && !charset_iconv((uint8_t *)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
+		return (char *)buf_utf8;
 #else
 	char *ptr = getenv("HOME");
-	if (ptr)
-		return str_dup(ptr);
+	if (ptr) return str_dup(ptr);
 #endif
 
 	/* hmm. fall back to the current dir */
-	char* path = get_current_directory();
-	if (!strcmp(path, "."))
-		return path;
+	char *path = get_current_directory();
+	if (!strcmp(path, ".")) return path;
 
 	free(path);
 
@@ -822,12 +799,12 @@ char *get_dot_directory(void)
 {
 #ifdef SCHISM_WIN32
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
-	uint8_t* buf_utf8 = NULL;
+	uint8_t *buf_utf8 = NULL;
 	if (SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) == S_OK
-		&& !charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
-		return (char*)buf_utf8;
+	    && !charset_iconv((uint8_t *)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
+		return (char *)buf_utf8;
 
-	// else fall back to home (but if this ever happens, things are really screwed...)
+		// else fall back to home (but if this ever happens, things are really screwed...)
 #endif
 	return get_home_directory();
 }
@@ -838,21 +815,20 @@ char *str_concat(const char *s, ...)
 	char *out = NULL;
 	int len = 0;
 
-	va_start(ap,s);
+	va_start(ap, s);
 	while (s) {
-		out = mem_realloc(out, (len += strlen(s)+1));
+		out = mem_realloc(out, (len += strlen(s) + 1));
 		strcat(out, s);
 		s = va_arg(ap, const char *);
 	}
 	va_end(ap);
 	return out;
-
 }
 
 /* fast integer sqrt */
 unsigned int i_sqrt(unsigned int r)
 {
-	unsigned int t, b, c=0;
+	unsigned int t, b, c = 0;
 	for (b = 0x10000000; b != 0; b >>= 2) {
 		t = c + b;
 		c >>= 1;
@@ -861,7 +837,7 @@ unsigned int i_sqrt(unsigned int r)
 			c += b;
 		}
 	}
-	return(c);
+	return (c);
 }
 
 int run_hook(const char *dir, const char *name, const char *maybe_arg)
@@ -873,12 +849,10 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	struct stat sb = {0};
 	int r;
 
-	if (!GetCurrentDirectoryW(PATH_MAX-1, cwd))
-		return 0;
+	if (!GetCurrentDirectoryW(PATH_MAX - 1, cwd)) return 0;
 
-	wchar_t* name_w = NULL;
-	if (charset_iconv((const uint8_t*)name, (uint8_t**)&name_w, CHARSET_UTF8, CHARSET_WCHAR_T))
-		return 0;
+	wchar_t *name_w = NULL;
+	if (charset_iconv((const uint8_t *)name, (uint8_t **)&name_w, CHARSET_UTF8, CHARSET_WCHAR_T)) return 0;
 
 	size_t name_len = wcslen(name_w);
 	wcsncpy(batch_file, name_w, name_len);
@@ -886,9 +860,8 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 
 	free(name_w);
 
-	wchar_t* dir_w = NULL;
-	if (charset_iconv((const uint8_t*)dir, (uint8_t**)&dir_w, CHARSET_UTF8, CHARSET_WCHAR_T))
-		return 0;
+	wchar_t *dir_w = NULL;
+	if (charset_iconv((const uint8_t *)dir, (uint8_t **)&dir_w, CHARSET_UTF8, CHARSET_WCHAR_T)) return 0;
 
 	if (_wchdir(dir_w) == -1) {
 		free(dir_w);
@@ -897,16 +870,14 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 
 	free(dir_w);
 
-	wchar_t* maybe_arg_w = NULL;
-	if (charset_iconv((const uint8_t*)maybe_arg, (uint8_t**)&maybe_arg_w, CHARSET_UTF8, CHARSET_WCHAR_T))
-		return 0;
+	wchar_t *maybe_arg_w = NULL;
+	if (charset_iconv((const uint8_t *)maybe_arg, (uint8_t **)&maybe_arg_w, CHARSET_UTF8, CHARSET_WCHAR_T)) return 0;
 
 	if (win32_wstat(batch_file, &sb) == -1) {
 		r = 0;
 	} else {
 		cmd = _wgetenv(L"COMSPEC");
-		if (!cmd)
-			cmd = L"command.com";
+		if (!cmd) cmd = L"command.com";
 
 		r = _wspawnlp(_P_WAIT, cmd, cmd, "/c", batch_file, maybe_arg_w, 0);
 	}
@@ -918,9 +889,9 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	return 0;
 #elif defined(SCHISM_WII)
 	// help how do I operating system
-	(void) dir;
-	(void) name;
-	(void) maybe_arg;
+	(void)dir;
+	(void)name;
+	(void)maybe_arg;
 	return 0;
 #else
 	char *tmp;
@@ -930,15 +901,14 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	case -1: return 0;
 	case 0:
 		if (chdir(dir) == -1) _exit(255);
-		tmp = malloc(strlen(name)+4);
+		tmp = malloc(strlen(name) + 4);
 		if (!tmp) _exit(255);
 		sprintf(tmp, "./%s", name);
 		execl(tmp, tmp, maybe_arg, NULL);
 		free(tmp);
 		_exit(255);
 	};
-	while (wait(&st) == -1) {
-	}
+	while (wait(&st) == -1) {}
 	if (WIFEXITED(st) && WEXITSTATUS(st) == 0) return 1;
 	return 0;
 #endif
@@ -972,13 +942,12 @@ static int _rename_nodestroy(const char *old, const char *new)
 /* 0 = success, !0 = failed (check errno) */
 int rename_file(const char *old, const char *new, int overwrite)
 {
-	if (!overwrite)
-		return _rename_nodestroy(old, new);
+	if (!overwrite) return _rename_nodestroy(old, new);
 
 #ifdef SCHISM_WIN32
-	wchar_t* old_w = NULL, *new_w = NULL;
-	if (charset_iconv((const uint8_t*)new, (uint8_t**)&new_w, CHARSET_UTF8, CHARSET_WCHAR_T)
-		|| charset_iconv((const uint8_t*)old, (uint8_t**)&old_w, CHARSET_UTF8, CHARSET_WCHAR_T)) {
+	wchar_t *old_w = NULL, *new_w = NULL;
+	if (charset_iconv((const uint8_t *)new, (uint8_t **)&new_w, CHARSET_UTF8, CHARSET_WCHAR_T)
+	    || charset_iconv((const uint8_t *)old, (uint8_t **)&old_w, CHARSET_UTF8, CHARSET_WCHAR_T)) {
 		free(old_w);
 		free(new_w);
 		return -1;
@@ -1000,10 +969,8 @@ int rename_file(const char *old, const char *new, int overwrite)
 	if (r != 0 && errno == EEXIST) {
 		/* Broken rename()? Try smashing the old file first,
 		and hope *that* doesn't also fail ;) */
-		if (unlink(old) != 0 || rename(old, new) == -1)
-			return -1;
+		if (unlink(old) != 0 || rename(old, new) == -1) return -1;
 	}
 	return r;
 #endif
 }
-
