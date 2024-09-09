@@ -122,18 +122,18 @@ from within the pattern editor keymap.
 #pragma pack(push, 1)
 typedef union {
 	struct {
-		unsigned int dev_type :  4; // SKDEV_TYPE_whatever
-		unsigned int dev_id   :  4; // which device? (1->n; 0 is a pseudo "all" device)
+		unsigned int dev_type : 4; // SKDEV_TYPE_whatever
+		unsigned int dev_id : 4;   // which device? (1->n; 0 is a pseudo "all" device)
 
 		// note: not all "press" events have a corresponding "release"
-		unsigned int release  :  1; // 1 for key-up
+		unsigned int release : 1; // 1 for key-up
 
 		// next three fields are only relevant for the pc keyboard
-		unsigned int repeat   :  1; // 1 for synthetic key-repeat
-		unsigned int unicode  :  1; // 1 if character maps to printable unicode
-		unsigned int modifier :  5; // ctrl, alt, shift
+		unsigned int repeat : 1;   // 1 for synthetic key-repeat
+		unsigned int unicode : 1;  // 1 if character maps to printable unicode
+		unsigned int modifier : 5; // ctrl, alt, shift
 
-		unsigned int keycode  : 16; // keyboard keysym/scancode
+		unsigned int keycode : 16; // keyboard keysym/scancode
 	} bits;
 	uint32_t ival;
 } isysev_t;
@@ -160,8 +160,8 @@ enum {
 
 // Keyboard modifier bits
 enum {
-	SKMODE_CTRL  = 1 << 0,
-	SKMODE_ALT   = 1 << 1,
+	SKMODE_CTRL = 1 << 0,
+	SKMODE_ALT = 1 << 1,
 	SKMODE_SHIFT = 1 << 2,
 };
 
@@ -178,20 +178,28 @@ enum {
 // in order to identify keyup and repeat events.
 
 #define MAX_JS_BUTTONS 256
-#define MAX_JS_AXES 64
-#define MAX_JS_HATS 64
-#define MAX_JS_BALLS 64
+#define MAX_JS_AXES    64
+#define MAX_JS_HATS    64
+#define MAX_JS_BALLS   64
 
 // Threshold values from ZSNES
 #define JS_AXIS_THRESHOLD 16384
 #define JS_BALL_THRESHOLD 100
 
-enum { JS_AXIS_NEG, JS_AXIS_POS }; // for axes
-enum { JS_DIR_UP, JS_DIR_DOWN, JS_DIR_LEFT, JS_DIR_RIGHT }; // for hats/balls
-#define JS_BUTTON_TO_KEYCODE(n)     (n)
-#define JS_AXIS_TO_KEYCODE(n, dir)  (2 * (n) + (dir) + MAX_JS_BUTTONS)
-#define JS_HAT_TO_KEYCODE(n, dir)   (4 * (n) + (dir) + MAX_JS_BUTTONS + 2 * MAX_JS_AXES)
-#define JS_BALL_TO_KEYCODE(n, dir)  (4 * (n) + (dir) + MAX_JS_BUTTONS + 2 * MAX_JS_AXES + 4 * MAX_JS_HATS)
+enum {
+	JS_AXIS_NEG,
+	JS_AXIS_POS
+}; // for axes
+enum {
+	JS_DIR_UP,
+	JS_DIR_DOWN,
+	JS_DIR_LEFT,
+	JS_DIR_RIGHT
+}; // for hats/balls
+#define JS_BUTTON_TO_KEYCODE(n)    (n)
+#define JS_AXIS_TO_KEYCODE(n, dir) (2 * (n) + (dir) + MAX_JS_BUTTONS)
+#define JS_HAT_TO_KEYCODE(n, dir)  (4 * (n) + (dir) + MAX_JS_BUTTONS + 2 * MAX_JS_AXES)
+#define JS_BALL_TO_KEYCODE(n, dir) (4 * (n) + (dir) + MAX_JS_BUTTONS + 2 * MAX_JS_AXES + 4 * MAX_JS_HATS)
 #if (JS_BALL_TO_KEYCODE(MAX_JS_BALLS, 0) > 65535)
 # error Joystick limits are too large!
 #endif
@@ -230,8 +238,7 @@ static const char *keytab_code_to_name(int keycode)
 
 	if (!(keycode & SKCODE_PCK_SCANCODE))
 		for (k = keytab; k; k = k->next)
-			if (k->code == keycode)
-				return k->name;
+			if (k->code == keycode) return k->name;
 	return NULL;
 }
 
@@ -239,11 +246,9 @@ static int keytab_name_to_code(const char *keyname)
 {
 	keytab_t *k;
 
-	if (!keyname[0])
-		return 0;
+	if (!keyname[0]) return 0;
 	for (k = keytab; k; k = k->next)
-		if (strcasecmp(k->name, keyname) == 0)
-			return k->code;
+		if (strcasecmp(k->name, keyname) == 0) return k->code;
 	return 0;
 }
 
@@ -252,12 +257,10 @@ static void keytab_free(void)
 {
 	keytab_t *k, *prev = NULL;
 	for (k = keytab; k; k = k->next) {
-		if (prev)
-			free(prev);
+		if (prev) free(prev);
 		prev = k;
 	}
-	if (prev)
-		free(prev);
+	if (prev) free(prev);
 }
 
 static void keytab_init(void)
@@ -269,263 +272,262 @@ static void keytab_init(void)
 		int code;
 		const char *name;
 	} keys[] = {
-		{SDLK_BACKSPACE, "Backspace"},
-		{SDLK_TAB, "Tab"},
-		{SDLK_CLEAR, "Clear"},
-		{SDLK_RETURN, "Return"},
-		{SDLK_PAUSE, "Pause"},
-		{SDLK_ESCAPE, "Escape"},
-		{SDLK_SPACE, "Space"},
-		{SDLK_EXCLAIM, "Exclaim"},
-		{SDLK_QUOTEDBL, "QuoteDbl"},
-		{SDLK_HASH, "Hash"},
-		{SDLK_DOLLAR, "Dollar"},
-		{SDLK_AMPERSAND, "Ampersand"},
-		{SDLK_QUOTE, "Quote"},
-		{SDLK_LEFTPAREN, "LeftParen"},
-		{SDLK_RIGHTPAREN, "RightParen"},
-		{SDLK_ASTERISK, "Asterisk"},
-		{SDLK_PLUS, "Plus"},
-		{SDLK_COMMA, "Comma"},
-		{SDLK_MINUS, "Minus"},
-		{SDLK_PERIOD, "Period"},
-		{SDLK_SLASH, "Slash"},
-		{SDLK_0, "0"},
-		{SDLK_1, "1"},
-		{SDLK_2, "2"},
-		{SDLK_3, "3"},
-		{SDLK_4, "4"},
-		{SDLK_5, "5"},
-		{SDLK_6, "6"},
-		{SDLK_7, "7"},
-		{SDLK_8, "8"},
-		{SDLK_9, "9"},
-		{SDLK_COLON, "Colon"},
-		{SDLK_SEMICOLON, "Semicolon"},
-		{SDLK_LESS, "Less"},
-		{SDLK_EQUALS, "Equals"},
-		{SDLK_GREATER, "Greater"},
-		{SDLK_QUESTION, "Question"},
-		{SDLK_AT, "At"},
+		{SDLK_BACKSPACE,    "Backspace"   },
+		{SDLK_TAB,          "Tab"         },
+		{SDLK_CLEAR,        "Clear"       },
+		{SDLK_RETURN,       "Return"      },
+		{SDLK_PAUSE,        "Pause"       },
+		{SDLK_ESCAPE,       "Escape"      },
+		{SDLK_SPACE,        "Space"       },
+		{SDLK_EXCLAIM,      "Exclaim"     },
+		{SDLK_QUOTEDBL,     "QuoteDbl"    },
+		{SDLK_HASH,         "Hash"        },
+		{SDLK_DOLLAR,       "Dollar"      },
+		{SDLK_AMPERSAND,    "Ampersand"   },
+		{SDLK_QUOTE,        "Quote"       },
+		{SDLK_LEFTPAREN,    "LeftParen"   },
+		{SDLK_RIGHTPAREN,   "RightParen"  },
+		{SDLK_ASTERISK,     "Asterisk"    },
+		{SDLK_PLUS,         "Plus"        },
+		{SDLK_COMMA,        "Comma"       },
+		{SDLK_MINUS,        "Minus"       },
+		{SDLK_PERIOD,       "Period"      },
+		{SDLK_SLASH,        "Slash"       },
+		{SDLK_0,            "0"           },
+		{SDLK_1,            "1"           },
+		{SDLK_2,            "2"           },
+		{SDLK_3,            "3"           },
+		{SDLK_4,            "4"           },
+		{SDLK_5,            "5"           },
+		{SDLK_6,            "6"           },
+		{SDLK_7,            "7"           },
+		{SDLK_8,            "8"           },
+		{SDLK_9,            "9"           },
+		{SDLK_COLON,        "Colon"       },
+		{SDLK_SEMICOLON,    "Semicolon"   },
+		{SDLK_LESS,         "Less"        },
+		{SDLK_EQUALS,       "Equals"      },
+		{SDLK_GREATER,      "Greater"     },
+		{SDLK_QUESTION,     "Question"    },
+		{SDLK_AT,           "At"          },
 
-		// Skip uppercase letters
+ // Skip uppercase letters
 
-		{SDLK_LEFTBRACKET, "LeftBracket"},
-		{SDLK_BACKSLASH, "Backslash"},
+		{SDLK_LEFTBRACKET,  "LeftBracket" },
+		{SDLK_BACKSLASH,    "Backslash"   },
 		{SDLK_RIGHTBRACKET, "RightBracket"},
-		{SDLK_CARET, "Caret"},
-		{SDLK_UNDERSCORE, "Underscore"},
-		{SDLK_BACKQUOTE, "Backquote"},
-		{SDLK_a, "A"},
-		{SDLK_b, "B"},
-		{SDLK_c, "C"},
-		{SDLK_d, "D"},
-		{SDLK_e, "E"},
-		{SDLK_f, "F"},
-		{SDLK_g, "G"},
-		{SDLK_h, "H"},
-		{SDLK_i, "I"},
-		{SDLK_j, "J"},
-		{SDLK_k, "K"},
-		{SDLK_l, "L"},
-		{SDLK_m, "M"},
-		{SDLK_n, "N"},
-		{SDLK_o, "O"},
-		{SDLK_p, "P"},
-		{SDLK_q, "Q"},
-		{SDLK_r, "R"},
-		{SDLK_s, "S"},
-		{SDLK_t, "T"},
-		{SDLK_u, "U"},
-		{SDLK_v, "V"},
-		{SDLK_w, "W"},
-		{SDLK_x, "X"},
-		{SDLK_y, "Y"},
-		{SDLK_z, "Z"},
-		{SDLK_DELETE, "Delete"},
-		// End of ASCII mapped keysyms
+		{SDLK_CARET,        "Caret"       },
+		{SDLK_UNDERSCORE,   "Underscore"  },
+		{SDLK_BACKQUOTE,    "Backquote"   },
+		{SDLK_a,            "A"           },
+		{SDLK_b,            "B"           },
+		{SDLK_c,            "C"           },
+		{SDLK_d,            "D"           },
+		{SDLK_e,            "E"           },
+		{SDLK_f,            "F"           },
+		{SDLK_g,            "G"           },
+		{SDLK_h,            "H"           },
+		{SDLK_i,            "I"           },
+		{SDLK_j,            "J"           },
+		{SDLK_k,            "K"           },
+		{SDLK_l,            "L"           },
+		{SDLK_m,            "M"           },
+		{SDLK_n,            "N"           },
+		{SDLK_o,            "O"           },
+		{SDLK_p,            "P"           },
+		{SDLK_q,            "Q"           },
+		{SDLK_r,            "R"           },
+		{SDLK_s,            "S"           },
+		{SDLK_t,            "T"           },
+		{SDLK_u,            "U"           },
+		{SDLK_v,            "V"           },
+		{SDLK_w,            "W"           },
+		{SDLK_x,            "X"           },
+		{SDLK_y,            "Y"           },
+		{SDLK_z,            "Z"           },
+		{SDLK_DELETE,       "Delete"      },
+ // End of ASCII mapped keysyms
 
-		// International keyboard syms
-		{SDLK_WORLD_0, "World_0"},
-		{SDLK_WORLD_1, "World_1"},
-		{SDLK_WORLD_2, "World_2"},
-		{SDLK_WORLD_3, "World_3"},
-		{SDLK_WORLD_4, "World_4"},
-		{SDLK_WORLD_5, "World_5"},
-		{SDLK_WORLD_6, "World_6"},
-		{SDLK_WORLD_7, "World_7"},
-		{SDLK_WORLD_8, "World_8"},
-		{SDLK_WORLD_9, "World_9"},
-		{SDLK_WORLD_10, "World_10"},
-		{SDLK_WORLD_11, "World_11"},
-		{SDLK_WORLD_12, "World_12"},
-		{SDLK_WORLD_13, "World_13"},
-		{SDLK_WORLD_14, "World_14"},
-		{SDLK_WORLD_15, "World_15"},
-		{SDLK_WORLD_16, "World_16"},
-		{SDLK_WORLD_17, "World_17"},
-		{SDLK_WORLD_18, "World_18"},
-		{SDLK_WORLD_19, "World_19"},
-		{SDLK_WORLD_20, "World_20"},
-		{SDLK_WORLD_21, "World_21"},
-		{SDLK_WORLD_22, "World_22"},
-		{SDLK_WORLD_23, "World_23"},
-		{SDLK_WORLD_24, "World_24"},
-		{SDLK_WORLD_25, "World_25"},
-		{SDLK_WORLD_26, "World_26"},
-		{SDLK_WORLD_27, "World_27"},
-		{SDLK_WORLD_28, "World_28"},
-		{SDLK_WORLD_29, "World_29"},
-		{SDLK_WORLD_30, "World_30"},
-		{SDLK_WORLD_31, "World_31"},
-		{SDLK_WORLD_32, "World_32"},
-		{SDLK_WORLD_33, "World_33"},
-		{SDLK_WORLD_34, "World_34"},
-		{SDLK_WORLD_35, "World_35"},
-		{SDLK_WORLD_36, "World_36"},
-		{SDLK_WORLD_37, "World_37"},
-		{SDLK_WORLD_38, "World_38"},
-		{SDLK_WORLD_39, "World_39"},
-		{SDLK_WORLD_40, "World_40"},
-		{SDLK_WORLD_41, "World_41"},
-		{SDLK_WORLD_42, "World_42"},
-		{SDLK_WORLD_43, "World_43"},
-		{SDLK_WORLD_44, "World_44"},
-		{SDLK_WORLD_45, "World_45"},
-		{SDLK_WORLD_46, "World_46"},
-		{SDLK_WORLD_47, "World_47"},
-		{SDLK_WORLD_48, "World_48"},
-		{SDLK_WORLD_49, "World_49"},
-		{SDLK_WORLD_50, "World_50"},
-		{SDLK_WORLD_51, "World_51"},
-		{SDLK_WORLD_52, "World_52"},
-		{SDLK_WORLD_53, "World_53"},
-		{SDLK_WORLD_54, "World_54"},
-		{SDLK_WORLD_55, "World_55"},
-		{SDLK_WORLD_56, "World_56"},
-		{SDLK_WORLD_57, "World_57"},
-		{SDLK_WORLD_58, "World_58"},
-		{SDLK_WORLD_59, "World_59"},
-		{SDLK_WORLD_60, "World_60"},
-		{SDLK_WORLD_61, "World_61"},
-		{SDLK_WORLD_62, "World_62"},
-		{SDLK_WORLD_63, "World_63"},
-		{SDLK_WORLD_64, "World_64"},
-		{SDLK_WORLD_65, "World_65"},
-		{SDLK_WORLD_66, "World_66"},
-		{SDLK_WORLD_67, "World_67"},
-		{SDLK_WORLD_68, "World_68"},
-		{SDLK_WORLD_69, "World_69"},
-		{SDLK_WORLD_70, "World_70"},
-		{SDLK_WORLD_71, "World_71"},
-		{SDLK_WORLD_72, "World_72"},
-		{SDLK_WORLD_73, "World_73"},
-		{SDLK_WORLD_74, "World_74"},
-		{SDLK_WORLD_75, "World_75"},
-		{SDLK_WORLD_76, "World_76"},
-		{SDLK_WORLD_77, "World_77"},
-		{SDLK_WORLD_78, "World_78"},
-		{SDLK_WORLD_79, "World_79"},
-		{SDLK_WORLD_80, "World_80"},
-		{SDLK_WORLD_81, "World_81"},
-		{SDLK_WORLD_82, "World_82"},
-		{SDLK_WORLD_83, "World_83"},
-		{SDLK_WORLD_84, "World_84"},
-		{SDLK_WORLD_85, "World_85"},
-		{SDLK_WORLD_86, "World_86"},
-		{SDLK_WORLD_87, "World_87"},
-		{SDLK_WORLD_88, "World_88"},
-		{SDLK_WORLD_89, "World_89"},
-		{SDLK_WORLD_90, "World_90"},
-		{SDLK_WORLD_91, "World_91"},
-		{SDLK_WORLD_92, "World_92"},
-		{SDLK_WORLD_93, "World_93"},
-		{SDLK_WORLD_94, "World_94"},
-		{SDLK_WORLD_95, "World_95"},
+  // International keyboard syms
+		{SDLK_WORLD_0,      "World_0"     },
+		{SDLK_WORLD_1,      "World_1"     },
+		{SDLK_WORLD_2,      "World_2"     },
+		{SDLK_WORLD_3,      "World_3"     },
+		{SDLK_WORLD_4,      "World_4"     },
+		{SDLK_WORLD_5,      "World_5"     },
+		{SDLK_WORLD_6,      "World_6"     },
+		{SDLK_WORLD_7,      "World_7"     },
+		{SDLK_WORLD_8,      "World_8"     },
+		{SDLK_WORLD_9,      "World_9"     },
+		{SDLK_WORLD_10,     "World_10"    },
+		{SDLK_WORLD_11,     "World_11"    },
+		{SDLK_WORLD_12,     "World_12"    },
+		{SDLK_WORLD_13,     "World_13"    },
+		{SDLK_WORLD_14,     "World_14"    },
+		{SDLK_WORLD_15,     "World_15"    },
+		{SDLK_WORLD_16,     "World_16"    },
+		{SDLK_WORLD_17,     "World_17"    },
+		{SDLK_WORLD_18,     "World_18"    },
+		{SDLK_WORLD_19,     "World_19"    },
+		{SDLK_WORLD_20,     "World_20"    },
+		{SDLK_WORLD_21,     "World_21"    },
+		{SDLK_WORLD_22,     "World_22"    },
+		{SDLK_WORLD_23,     "World_23"    },
+		{SDLK_WORLD_24,     "World_24"    },
+		{SDLK_WORLD_25,     "World_25"    },
+		{SDLK_WORLD_26,     "World_26"    },
+		{SDLK_WORLD_27,     "World_27"    },
+		{SDLK_WORLD_28,     "World_28"    },
+		{SDLK_WORLD_29,     "World_29"    },
+		{SDLK_WORLD_30,     "World_30"    },
+		{SDLK_WORLD_31,     "World_31"    },
+		{SDLK_WORLD_32,     "World_32"    },
+		{SDLK_WORLD_33,     "World_33"    },
+		{SDLK_WORLD_34,     "World_34"    },
+		{SDLK_WORLD_35,     "World_35"    },
+		{SDLK_WORLD_36,     "World_36"    },
+		{SDLK_WORLD_37,     "World_37"    },
+		{SDLK_WORLD_38,     "World_38"    },
+		{SDLK_WORLD_39,     "World_39"    },
+		{SDLK_WORLD_40,     "World_40"    },
+		{SDLK_WORLD_41,     "World_41"    },
+		{SDLK_WORLD_42,     "World_42"    },
+		{SDLK_WORLD_43,     "World_43"    },
+		{SDLK_WORLD_44,     "World_44"    },
+		{SDLK_WORLD_45,     "World_45"    },
+		{SDLK_WORLD_46,     "World_46"    },
+		{SDLK_WORLD_47,     "World_47"    },
+		{SDLK_WORLD_48,     "World_48"    },
+		{SDLK_WORLD_49,     "World_49"    },
+		{SDLK_WORLD_50,     "World_50"    },
+		{SDLK_WORLD_51,     "World_51"    },
+		{SDLK_WORLD_52,     "World_52"    },
+		{SDLK_WORLD_53,     "World_53"    },
+		{SDLK_WORLD_54,     "World_54"    },
+		{SDLK_WORLD_55,     "World_55"    },
+		{SDLK_WORLD_56,     "World_56"    },
+		{SDLK_WORLD_57,     "World_57"    },
+		{SDLK_WORLD_58,     "World_58"    },
+		{SDLK_WORLD_59,     "World_59"    },
+		{SDLK_WORLD_60,     "World_60"    },
+		{SDLK_WORLD_61,     "World_61"    },
+		{SDLK_WORLD_62,     "World_62"    },
+		{SDLK_WORLD_63,     "World_63"    },
+		{SDLK_WORLD_64,     "World_64"    },
+		{SDLK_WORLD_65,     "World_65"    },
+		{SDLK_WORLD_66,     "World_66"    },
+		{SDLK_WORLD_67,     "World_67"    },
+		{SDLK_WORLD_68,     "World_68"    },
+		{SDLK_WORLD_69,     "World_69"    },
+		{SDLK_WORLD_70,     "World_70"    },
+		{SDLK_WORLD_71,     "World_71"    },
+		{SDLK_WORLD_72,     "World_72"    },
+		{SDLK_WORLD_73,     "World_73"    },
+		{SDLK_WORLD_74,     "World_74"    },
+		{SDLK_WORLD_75,     "World_75"    },
+		{SDLK_WORLD_76,     "World_76"    },
+		{SDLK_WORLD_77,     "World_77"    },
+		{SDLK_WORLD_78,     "World_78"    },
+		{SDLK_WORLD_79,     "World_79"    },
+		{SDLK_WORLD_80,     "World_80"    },
+		{SDLK_WORLD_81,     "World_81"    },
+		{SDLK_WORLD_82,     "World_82"    },
+		{SDLK_WORLD_83,     "World_83"    },
+		{SDLK_WORLD_84,     "World_84"    },
+		{SDLK_WORLD_85,     "World_85"    },
+		{SDLK_WORLD_86,     "World_86"    },
+		{SDLK_WORLD_87,     "World_87"    },
+		{SDLK_WORLD_88,     "World_88"    },
+		{SDLK_WORLD_89,     "World_89"    },
+		{SDLK_WORLD_90,     "World_90"    },
+		{SDLK_WORLD_91,     "World_91"    },
+		{SDLK_WORLD_92,     "World_92"    },
+		{SDLK_WORLD_93,     "World_93"    },
+		{SDLK_WORLD_94,     "World_94"    },
+		{SDLK_WORLD_95,     "World_95"    },
 
-		// Numeric keypad
-		{SDLK_KP0, "KP_0"},
-		{SDLK_KP1, "KP_1"},
-		{SDLK_KP2, "KP_2"},
-		{SDLK_KP3, "KP_3"},
-		{SDLK_KP4, "KP_4"},
-		{SDLK_KP5, "KP_5"},
-		{SDLK_KP6, "KP_6"},
-		{SDLK_KP7, "KP_7"},
-		{SDLK_KP8, "KP_8"},
-		{SDLK_KP9, "KP_9"},
-		{SDLK_KP_PERIOD, "KP_Period"},
-		{SDLK_KP_DIVIDE, "KP_Divide"},
-		{SDLK_KP_MULTIPLY, "KP_Multiply"},
-		{SDLK_KP_MINUS, "KP_Minus"},
-		{SDLK_KP_PLUS, "KP_Plus"},
-		{SDLK_KP_ENTER, "KP_Enter"},
-		{SDLK_KP_EQUALS, "KP_Equals"},
+ // Numeric keypad
+		{SDLK_KP0,          "KP_0"        },
+		{SDLK_KP1,          "KP_1"        },
+		{SDLK_KP2,          "KP_2"        },
+		{SDLK_KP3,          "KP_3"        },
+		{SDLK_KP4,          "KP_4"        },
+		{SDLK_KP5,          "KP_5"        },
+		{SDLK_KP6,          "KP_6"        },
+		{SDLK_KP7,          "KP_7"        },
+		{SDLK_KP8,          "KP_8"        },
+		{SDLK_KP9,          "KP_9"        },
+		{SDLK_KP_PERIOD,    "KP_Period"   },
+		{SDLK_KP_DIVIDE,    "KP_Divide"   },
+		{SDLK_KP_MULTIPLY,  "KP_Multiply" },
+		{SDLK_KP_MINUS,     "KP_Minus"    },
+		{SDLK_KP_PLUS,      "KP_Plus"     },
+		{SDLK_KP_ENTER,     "KP_Enter"    },
+		{SDLK_KP_EQUALS,    "KP_Equals"   },
 
-		// Arrows + Home/End pad
-		{SDLK_UP, "Up"},
-		{SDLK_DOWN, "Down"},
-		{SDLK_RIGHT, "Right"},
-		{SDLK_LEFT, "Left"},
-		{SDLK_INSERT, "Insert"},
-		{SDLK_HOME, "Home"},
-		{SDLK_END, "End"},
-		{SDLK_PAGEUP, "PageUp"},
-		{SDLK_PAGEDOWN, "PageDown"},
+ // Arrows + Home/End pad
+		{SDLK_UP,           "Up"          },
+		{SDLK_DOWN,         "Down"        },
+		{SDLK_RIGHT,        "Right"       },
+		{SDLK_LEFT,         "Left"        },
+		{SDLK_INSERT,       "Insert"      },
+		{SDLK_HOME,         "Home"        },
+		{SDLK_END,          "End"         },
+		{SDLK_PAGEUP,       "PageUp"      },
+		{SDLK_PAGEDOWN,     "PageDown"    },
 
-		// Function keys
-		{SDLK_F1, "F1"},
-		{SDLK_F2, "F2"},
-		{SDLK_F3, "F3"},
-		{SDLK_F4, "F4"},
-		{SDLK_F5, "F5"},
-		{SDLK_F6, "F6"},
-		{SDLK_F7, "F7"},
-		{SDLK_F8, "F8"},
-		{SDLK_F9, "F9"},
-		{SDLK_F10, "F10"},
-		{SDLK_F11, "F11"},
-		{SDLK_F12, "F12"},
-		{SDLK_F13, "F13"},
-		{SDLK_F14, "F14"},
-		{SDLK_F15, "F15"},
+ // Function keys
+		{SDLK_F1,           "F1"          },
+		{SDLK_F2,           "F2"          },
+		{SDLK_F3,           "F3"          },
+		{SDLK_F4,           "F4"          },
+		{SDLK_F5,           "F5"          },
+		{SDLK_F6,           "F6"          },
+		{SDLK_F7,           "F7"          },
+		{SDLK_F8,           "F8"          },
+		{SDLK_F9,           "F9"          },
+		{SDLK_F10,          "F10"         },
+		{SDLK_F11,          "F11"         },
+		{SDLK_F12,          "F12"         },
+		{SDLK_F13,          "F13"         },
+		{SDLK_F14,          "F14"         },
+		{SDLK_F15,          "F15"         },
 
-		// Key state modifier keys
-		{SDLK_NUMLOCK, "NumLock"},
-		{SDLK_CAPSLOCK, "CapsLock"},
-		{SDLK_SCROLLOCK, "ScrollLock"},
-		{SDLK_RSHIFT, "RightShift"},
-		{SDLK_LSHIFT, "LeftShift"},
-		{SDLK_RCTRL, "RightCtrl"},
-		{SDLK_LCTRL, "LeftCtrl"},
-		{SDLK_RALT, "RightAlt"},
-		{SDLK_LALT, "LeftAlt"},
-		{SDLK_RMETA, "RightMeta"},
-		{SDLK_LMETA, "LeftMeta"},
-		{SDLK_LSUPER, "LeftSuper"},
-		{SDLK_RSUPER, "RightSuper"},
-		{SDLK_MODE, "Mode"},
-		{SDLK_COMPOSE, "Compose"},
+ // Key state modifier keys
+		{SDLK_NUMLOCK,      "NumLock"     },
+		{SDLK_CAPSLOCK,     "CapsLock"    },
+		{SDLK_SCROLLOCK,    "ScrollLock"  },
+		{SDLK_RSHIFT,       "RightShift"  },
+		{SDLK_LSHIFT,       "LeftShift"   },
+		{SDLK_RCTRL,        "RightCtrl"   },
+		{SDLK_LCTRL,        "LeftCtrl"    },
+		{SDLK_RALT,         "RightAlt"    },
+		{SDLK_LALT,         "LeftAlt"     },
+		{SDLK_RMETA,        "RightMeta"   },
+		{SDLK_LMETA,        "LeftMeta"    },
+		{SDLK_LSUPER,       "LeftSuper"   },
+		{SDLK_RSUPER,       "RightSuper"  },
+		{SDLK_MODE,         "Mode"        },
+		{SDLK_COMPOSE,      "Compose"     },
 
-		// Miscellaneous function keys
-		{SDLK_HELP, "Help"},
-		{SDLK_PRINTSCREEN, "Print Screen"},
-		{SDLK_SYSREQ, "SysRq"},
-		{SDLK_BREAK, "Break"},
-		{SDLK_MENU, "Menu"},
-		{SDLK_POWER, "Power"},
-		{SDLK_EURO, "Euro"},
-		{SDLK_UNDO, "Undo"},
-		{0, NULL},
+ // Miscellaneous function keys
+		{SDLK_HELP,         "Help"        },
+		{SDLK_PRINTSCREEN,  "Print Screen"},
+		{SDLK_SYSREQ,       "SysRq"       },
+		{SDLK_BREAK,        "Break"       },
+		{SDLK_MENU,         "Menu"        },
+		{SDLK_POWER,        "Power"       },
+		{SDLK_EURO,         "Euro"        },
+		{SDLK_UNDO,         "Undo"        },
+		{0,				 NULL          },
 	};
 
-	for (n = 0; keys[n].name; n++)
-		key_add(keys[n].code, keys[n].name);
+	for (n = 0; keys[n].name; n++) key_add(keys[n].code, keys[n].name);
 }
 
 // ------------------------------------------------------------------------------------------------------------
 
-typedef void (*ev_handler) (isysev_t ev, const char *data);
+typedef void (*ev_handler)(isysev_t ev, const char *data);
 
 typedef struct kmapnode kmapnode_t;
 typedef struct kmap kmap_t;
@@ -565,12 +567,12 @@ static void kmapnode_print(void *v)
 
 static int kmapnode_cmp(const void *a, const void *b)
 {
-	return ((kmapnode_t *) a)->ev.ival - ((kmapnode_t *) b)->ev.ival;
+	return ((kmapnode_t *)a)->ev.ival - ((kmapnode_t *)b)->ev.ival;
 }
 
 static int kmap_cmp(const void *a, const void *b)
 {
-	return strcasecmp(((kmap_t *) a)->name, ((kmap_t *) b)->name);
+	return strcasecmp(((kmap_t *)a)->name, ((kmap_t *)b)->name);
 }
 
 
@@ -597,7 +599,7 @@ static void kmap_init(void)
 
 static void kmap_free(void)
 {
-	tree_free(keymaps, (treewalk_t) kmap_freemap);
+	tree_free(keymaps, (treewalk_t)kmap_freemap);
 }
 
 // if create is nonzero, the keymap is allocated if not already in the tree
@@ -616,7 +618,7 @@ static kmap_t *kmap_find(const char *name, int create)
 			return new;
 		}
 	} else {
-		find.name = (char *) name; // stupid cast...
+		find.name = (char *)name; // stupid cast...
 		return tree_find(keymaps, &find);
 	}
 }
@@ -639,8 +641,7 @@ static int kmap_run_binding(kmap_t *m, isysev_t ev)
 	kmapnode_t *node;
 	kmapnode_t find;
 
-	if (!m)
-		return 0;
+	if (!m) return 0;
 
 	// Most of the time, the key-repeat behavior is desired (e.g. arrow keys), and in the rare cases
 	// where it isn't, the function that handles the event can check the flag itself.
@@ -687,7 +688,7 @@ typedef struct evfunc {
 
 static int evfunc_cmp(const void *a, const void *b)
 {
-	return strcasecmp(((evfunc_t *) a)->name, ((evfunc_t *) b)->name);
+	return strcasecmp(((evfunc_t *)a)->name, ((evfunc_t *)b)->name);
 }
 
 
@@ -698,7 +699,7 @@ static void evfunc_init(void)
 
 static void evfunc_free(void)
 {
-	tree_free(evfuncs, (treewalk_t) free);
+	tree_free(evfuncs, (treewalk_t)free);
 }
 
 
@@ -724,8 +725,7 @@ static void evfunc_register_many(evfunc_t *funcs)
 {
 	evfunc_t *f;
 
-	for (f = funcs; f->handler; f++)
-		evfunc_register(f->name, f->handler);
+	for (f = funcs; f->handler; f++) evfunc_register(f->name, f->handler);
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -751,7 +751,7 @@ static isysev_t event_parse(const char *s)
 		n = strtol(s, &e, 10);
 		if (s == e) {
 			printf("event_parse: what kind of rubbish is this?\n");
-			return (isysev_t) 0u;
+			return (isysev_t)0u;
 		}
 		ev.bits.dev_type = CLAMP(n, 0, SKDEV_TYPE_SENTINEL - 1);
 	} else {
@@ -790,7 +790,7 @@ static isysev_t event_parse(const char *s)
 		if (!len) {
 			// Argh, this isn't an event descriptor at all, it's just junk. Time to bail.
 			printf("event_parse: unknown event descriptor\n");
-			return (isysev_t) 0u;
+			return (isysev_t)0u;
 		}
 	}
 	s += len;
@@ -802,7 +802,7 @@ static isysev_t event_parse(const char *s)
 		if (s == e) {
 			// Wait, no.
 			printf("event_parse: hexcode is not hex\n");
-			return (isysev_t) 0u;
+			return (isysev_t)0u;
 		}
 		ev.bits.keycode = CLAMP(n, 0, SKCODE_MAX);
 		s = e;
@@ -813,19 +813,19 @@ static isysev_t event_parse(const char *s)
 			size_t len;
 			char *str;
 		} mod[] = {
-			{SKMODE_CTRL,  4, "ctrl"},
-			{SKMODE_ALT,   3, "alt"},
-			{SKMODE_SHIFT, 5, "shift"},
-			// alternate representations
+			{SKMODE_CTRL,  4, "ctrl"   },
+			{SKMODE_ALT,   3, "alt"    },
+			{SKMODE_SHIFT, 5, "shift"  },
+ // alternate representations
 			{SKMODE_CTRL,  7, "control"},
-			{SKMODE_CTRL,  3, "ctl"},
-			{SKMODE_ALT,   4, "mod1"},
-			{SKMODE_ALT,   4, "meta"},
-			{SKMODE_CTRL,  1, "c"},
-			{SKMODE_ALT,   1, "a"},
-			{SKMODE_SHIFT, 1, "s"},
-			{SKMODE_ALT,   1, "m"},
-			{0,            0, NULL},
+			{SKMODE_CTRL,  3, "ctl"    },
+			{SKMODE_ALT,   4, "mod1"   },
+			{SKMODE_ALT,   4, "meta"   },
+			{SKMODE_CTRL,  1, "c"      },
+			{SKMODE_ALT,   1, "a"      },
+			{SKMODE_SHIFT, 1, "s"      },
+			{SKMODE_ALT,   1, "m"      },
+			{0,            0, NULL     },
 		};
 
 		if (*s == '^') {
@@ -835,9 +835,7 @@ static isysev_t event_parse(const char *s)
 		len = strcspn(s, "+-");
 		n = 0;
 		while (s[len] && mod[n].len) {
-			if (len == mod[n].len
-			    && (s[len] == '+' || s[len] == '-')
-			    && strncasecmp(s, mod[n].str, len) == 0) {
+			if (len == mod[n].len && (s[len] == '+' || s[len] == '-') && strncasecmp(s, mod[n].str, len) == 0) {
 				s += 1 + len;
 				ev.bits.modifier |= mod[n].skmode;
 				len = strcspn(s, "+-");
@@ -851,8 +849,7 @@ static isysev_t event_parse(const char *s)
 		strncpy(tmp, s, 15);
 		tmp[15] = 0;
 		e = strpbrk(tmp, " \t");
-		if (e)
-			*e = 0;
+		if (e) *e = 0;
 		n = keytab_name_to_code(tmp);
 
 		if (n) {
@@ -860,14 +857,14 @@ static isysev_t event_parse(const char *s)
 		} else {
 			// Argh! All this work and it's not a valid key.
 			printf("event_parse: unknown key \"%s\"\n", tmp);
-			return (isysev_t) 0u;
+			return (isysev_t)0u;
 		}
 
 		s += strlen(tmp);
 	} else {
 		// Give up!
 		printf("event_parse: invalid event descriptor for device\n");
-		return (isysev_t) 0u;
+		return (isysev_t)0u;
 	}
 
 	len = strspn(s, " \t");
@@ -878,8 +875,7 @@ static isysev_t event_parse(const char *s)
 			s += 2;
 			// Make sure it's not something like "upasdfjs": next character
 			// should be either whitespace or the end of the string.
-			if (*s == '\0' || *s == ' ' || *s == '\t')
-				ev.bits.release = 1;
+			if (*s == '\0' || *s == ' ' || *s == '\t') ev.bits.release = 1;
 		}
 	}
 
@@ -906,12 +902,9 @@ static int event_describe(char *buf, isysev_t ev)
 		// Key repeat isn't relevant here, as that's a more low-level thing that select few parts of
 		// the code actually look at (namely, keyjazz). Also, there's no point in worrying about the
 		// unicode character, since text fields don't have any special keybindings.
-		if (ev.bits.modifier & SKMODE_CTRL)
-			len += sprintf(buf + len, "Ctrl-");
-		if (ev.bits.modifier & SKMODE_ALT)
-			len += sprintf(buf + len, "Alt-");
-		if (ev.bits.modifier & SKMODE_SHIFT)
-			len += sprintf(buf + len, "Shift-");
+		if (ev.bits.modifier & SKMODE_CTRL) len += sprintf(buf + len, "Ctrl-");
+		if (ev.bits.modifier & SKMODE_ALT) len += sprintf(buf + len, "Alt-");
+		if (ev.bits.modifier & SKMODE_SHIFT) len += sprintf(buf + len, "Shift-");
 		// len <= 27
 
 		// If we have a name for this key, use it...
@@ -992,32 +985,27 @@ static void event_loop(void)
 		ev.ival = 0;
 
 		switch (sdlev.type) {
-
 		case SDL_KEYUP:
 			lastsym = 0;
 			ev.bits.release = 1;
 			// fall through
 		case SDL_KEYDOWN:
-			if (sdlev.key.which > SKDEV_ID_MAX)
-				break;
+			if (sdlev.key.which > SKDEV_ID_MAX) break;
 
 			ev.bits.dev_type = SKDEV_TYPE_PCKEYBOARD;
 			ev.bits.dev_id = 1 + sdlev.key.which;
 			ev.bits.repeat = (sdlev.key.keysym.sym && sdlev.key.keysym.sym == lastsym);
-			if (sdlev.key.state == SDL_PRESSED)
-				lastsym = sdlev.key.keysym.sym;
-			if (sdlev.key.keysym.unicode >= 32)
-				ev.bits.unicode = 1; // XXX need to save the unicode value somewhere...
+			if (sdlev.key.state == SDL_PRESSED) lastsym = sdlev.key.keysym.sym;
+			if (sdlev.key.keysym.unicode >= 32) ev.bits.unicode = 1; // XXX need to save the unicode value somewhere...
 
 			// Scancodes are 8-bit values. Keysyms are 16-bit, but SDL only uses 9 bits of them.
 			// Either way, anything we get will fit into the 15 bits we're stuffing it into.
-			ev.bits.keycode = sdlev.key.keysym.sym
-				? (sdlev.key.keysym.sym & ~SKCODE_PCK_SCANCODE)
-				: (sdlev.key.keysym.scancode | SKCODE_PCK_SCANCODE);
+			ev.bits.keycode = sdlev.key.keysym.sym ? (sdlev.key.keysym.sym & ~SKCODE_PCK_SCANCODE) :
+			                                         (sdlev.key.keysym.scancode | SKCODE_PCK_SCANCODE);
 
-			if (sdlev.key.keysym.mod & KMOD_CTRL)   ev.bits.modifier |= SKMODE_CTRL;
-			if (sdlev.key.keysym.mod & KMOD_ALT)    ev.bits.modifier |= SKMODE_ALT;
-			if (sdlev.key.keysym.mod & KMOD_SHIFT)  ev.bits.modifier |= SKMODE_SHIFT;
+			if (sdlev.key.keysym.mod & KMOD_CTRL) ev.bits.modifier |= SKMODE_CTRL;
+			if (sdlev.key.keysym.mod & KMOD_ALT) ev.bits.modifier |= SKMODE_ALT;
+			if (sdlev.key.keysym.mod & KMOD_SHIFT) ev.bits.modifier |= SKMODE_SHIFT;
 
 			event_handle(ev);
 			break;
@@ -1026,8 +1014,7 @@ static void event_loop(void)
 		case SDL_JOYBALLMOTION:
 			// XXX calculate velocity from xrel/yrel and save it.
 			// Certain code might be able to use this value similarly to midi note velocity...
-			if (sdlev.jball.which > SKDEV_ID_MAX || sdlev.jball.ball > MAX_JS_BALLS)
-				break;
+			if (sdlev.jball.which > SKDEV_ID_MAX || sdlev.jball.ball > MAX_JS_BALLS) break;
 
 			ev.bits.dev_type = SKDEV_TYPE_JOYSTICK;
 			ev.bits.dev_id = 1 + sdlev.jball.which;
@@ -1051,14 +1038,12 @@ static void event_loop(void)
 
 		case SDL_JOYHATMOTION:
 			// XXX save hat direction; handle repeat when held down; issue release events.
-			if (sdlev.jhat.which > SKDEV_ID_MAX || sdlev.jhat.hat > MAX_JS_HATS)
-				break;
+			if (sdlev.jhat.which > SKDEV_ID_MAX || sdlev.jhat.hat > MAX_JS_HATS) break;
 
 			ev.bits.dev_type = SKDEV_TYPE_JOYSTICK;
 			ev.bits.dev_id = 1 + sdlev.jhat.which;
 			switch (sdlev.jhat.value) {
-			default:
-				break;
+			default: break;
 			case SDL_HAT_LEFTUP:
 				ev.bits.keycode = JS_HAT_TO_KEYCODE(sdlev.jhat.hat, JS_DIR_LEFT);
 				event_handle(ev);
@@ -1098,8 +1083,7 @@ static void event_loop(void)
 
 		case SDL_JOYAXISMOTION:
 			// XXX save axis direction; handle repeat when held down; issue release events.
-			if (sdlev.jbutton.which > SKDEV_ID_MAX || sdlev.jaxis.axis > MAX_JS_AXES)
-				break;
+			if (sdlev.jbutton.which > SKDEV_ID_MAX || sdlev.jaxis.axis > MAX_JS_AXES) break;
 
 			ev.bits.dev_type = SKDEV_TYPE_JOYSTICK;
 			ev.bits.dev_id = 1 + sdlev.jaxis.which;
@@ -1119,8 +1103,7 @@ static void event_loop(void)
 			ev.bits.release = 1;
 			// fall through
 		case SDL_JOYBUTTONDOWN:
-			if (sdlev.jbutton.which > SKDEV_ID_MAX || sdlev.jbutton.button > MAX_JS_BUTTONS)
-				break;
+			if (sdlev.jbutton.which > SKDEV_ID_MAX || sdlev.jbutton.button > MAX_JS_BUTTONS) break;
 
 			ev.bits.dev_type = SKDEV_TYPE_JOYSTICK;
 			ev.bits.dev_id = 1 + sdlev.jbutton.which;
@@ -1130,14 +1113,12 @@ static void event_loop(void)
 			break;
 
 
-		// Need to get midi-in events routed through here somehow.
+			// Need to get midi-in events routed through here somehow.
 
 
-		case SDL_QUIT:
-			return;
+		case SDL_QUIT: return;
 
-		default:
-			break;
+		default: break;
 		}
 	}
 }
@@ -1146,12 +1127,7 @@ static void event_loop(void)
 
 int current_page = 2;
 const char *page_names[] = {
-	NULL,
-	NULL,
-	"Pattern Editor",
-	"Sample List",
-	"Instrument List",
-	"Info Page",
+	NULL, NULL, "Pattern Editor", "Sample List", "Instrument List", "Info Page",
 };
 
 static void ev_pat_raise_semitone(isysev_t ev, const char *data)
@@ -1277,10 +1253,9 @@ int main(int argc, char **argv)
 	}
 	for (jn = 0; jn < n; jn++) {
 		SDL_Joystick *js = SDL_JoystickOpen(jn);
-		printf("Joystick #%d [%s]\n\taxes:%d buttons:%d hats:%d balls:%d\n",
-			jn, SDL_JoystickName(jn),
-			SDL_JoystickNumAxes(js), SDL_JoystickNumButtons(js),
-			SDL_JoystickNumHats(js), SDL_JoystickNumBalls(js));
+		printf(
+			"Joystick #%d [%s]\n\taxes:%d buttons:%d hats:%d balls:%d\n", jn, SDL_JoystickName(jn),
+			SDL_JoystickNumAxes(js), SDL_JoystickNumButtons(js), SDL_JoystickNumHats(js), SDL_JoystickNumBalls(js));
 	}
 
 	keytab_init();
@@ -1295,61 +1270,60 @@ int main(int argc, char **argv)
 	evfunc_t evs[] = {
 		{"pat_raise_semitone", ev_pat_raise_semitone},
 		{"pat_lower_semitone", ev_pat_lower_semitone},
-		{"pat_raise_octave", ev_pat_raise_octave},
-		{"pat_lower_octave", ev_pat_lower_octave},
-		{"pat_options", ev_pat_options},
-		{"pat_set_length", ev_pat_set_length},
-		{"smp_swap_sign", ev_smp_swap_sign},
+		{"pat_raise_octave",   ev_pat_raise_octave  },
+		{"pat_lower_octave",   ev_pat_lower_octave  },
+		{"pat_options",        ev_pat_options       },
+		{"pat_set_length",     ev_pat_set_length    },
+		{"smp_swap_sign",      ev_smp_swap_sign     },
 		{"smp_toggle_quality", ev_smp_toggle_quality},
-		{"keyjazz", ev_keyjazz},
-		{"quit", ev_quit},
-		{"page_switch", ev_page_switch},
+		{"keyjazz",            ev_keyjazz           },
+		{"quit",               ev_quit              },
+		{"page_switch",        ev_page_switch       },
 		{"song_play_infopage", ev_song_play_infopage},
-		{"song_play", ev_song_play},
-		{"song_stop", ev_song_stop},
-		{"main_menu", ev_main_menu},
-		{"dlg_cancel", ev_dlg_cancel},
-		{NULL, NULL},
+		{"song_play",          ev_song_play         },
+		{"song_stop",          ev_song_stop         },
+		{"main_menu",          ev_main_menu         },
+		{"dlg_cancel",         ev_dlg_cancel        },
+		{NULL,				 NULL                 },
 	};
 	evfunc_register_many(evs);
 
 	dbg_t debug[] = {
-		{"Pattern Editor",      "Alt-Q",        "pat_raise_semitone",   NULL},
-		{"Pattern Editor",      "Alt-A",        "pat_lower_semitone",   NULL},
-		{"Pattern Editor",      "Alt-Shift-Q",  "pat_raise_octave",     NULL},
-		{"Pattern Editor",      "Alt-Shift-A",  "pat_lower_octave",     NULL},
-		{"Pattern Editor",      "F2",           "pat_options",          NULL},
-		{"Pattern Editor",      "Ctrl-F2",      "pat_set_length",       NULL},
-		{"Pattern Editor Options", "F2",        "page_switch",          "Pattern Editor"},
-		{"Sample List",         "Alt-Q",        "smp_toggle_quality",   NULL},
-		{"Sample List",         "Alt-A",        "smp_swap_sign",        NULL},
-		{"Keyjazz",             "q",            "keyjazz",              "C-1"},
-		{"Keyjazz",             "2",            "keyjazz",              "C#1"},
-		{"Keyjazz",             "w",            "keyjazz",              "D-1"},
-		{"Keyjazz",             "3",            "keyjazz",              "D#1"},
-		{"Keyjazz",             "e",            "keyjazz",              "E-1"},
-		{"Keyjazz",             "r",            "keyjazz",              "F-1"},
-		{"Keyjazz",             "5",            "keyjazz",              "F#1"},
-		{"Keyjazz",             "t",            "keyjazz",              "G-1"},
-		{"Keyjazz",             "6",            "keyjazz",              "G#1"},
-		{"Keyjazz",             "y",            "keyjazz",              "A-1"},
-		{"Keyjazz",             "7",            "keyjazz",              "A#1"},
-		{"Keyjazz",             "u",            "keyjazz",              "B-1"},
-		{"Keyjazz",             "i",            "keyjazz",              "C-2"},
-		{"Global",              "Ctrl-Q",       "quit",                 NULL},
-		{"Global",              "F2",           "page_switch",          "Pattern Editor"},
-		{"Global",              "F3",           "page_switch",          "Sample List"},
-		{"Global",              "F4",           "page_switch",          "Instrument List"},
-		{"Global",              "F5",           "song_play_infopage",   NULL},
-		{"Global",              "Ctrl-F5",      "song_play",            NULL},
-		{"Global",              "F8",           "song_stop",            NULL},
-		{"Global",              "Escape",       "main_menu",            NULL},
-		{"Dialog",              "Escape",       "dlg_cancel",           NULL},
-		{NULL,                  NULL,           NULL,                   NULL},
+		{"Pattern Editor",         "Alt-Q",       "pat_raise_semitone", NULL             },
+		{"Pattern Editor",         "Alt-A",       "pat_lower_semitone", NULL             },
+		{"Pattern Editor",         "Alt-Shift-Q", "pat_raise_octave",   NULL             },
+		{"Pattern Editor",         "Alt-Shift-A", "pat_lower_octave",   NULL             },
+		{"Pattern Editor",         "F2",          "pat_options",        NULL             },
+		{"Pattern Editor",         "Ctrl-F2",     "pat_set_length",     NULL             },
+		{"Pattern Editor Options", "F2",          "page_switch",        "Pattern Editor" },
+		{"Sample List",            "Alt-Q",       "smp_toggle_quality", NULL             },
+		{"Sample List",            "Alt-A",       "smp_swap_sign",      NULL             },
+		{"Keyjazz",                "q",           "keyjazz",            "C-1"            },
+		{"Keyjazz",                "2",           "keyjazz",            "C#1"            },
+		{"Keyjazz",                "w",           "keyjazz",            "D-1"            },
+		{"Keyjazz",                "3",           "keyjazz",            "D#1"            },
+		{"Keyjazz",                "e",           "keyjazz",            "E-1"            },
+		{"Keyjazz",                "r",           "keyjazz",            "F-1"            },
+		{"Keyjazz",                "5",           "keyjazz",            "F#1"            },
+		{"Keyjazz",                "t",           "keyjazz",            "G-1"            },
+		{"Keyjazz",                "6",           "keyjazz",            "G#1"            },
+		{"Keyjazz",                "y",           "keyjazz",            "A-1"            },
+		{"Keyjazz",                "7",           "keyjazz",            "A#1"            },
+		{"Keyjazz",                "u",           "keyjazz",            "B-1"            },
+		{"Keyjazz",                "i",           "keyjazz",            "C-2"            },
+		{"Global",                 "Ctrl-Q",      "quit",               NULL             },
+		{"Global",                 "F2",          "page_switch",        "Pattern Editor" },
+		{"Global",                 "F3",          "page_switch",        "Sample List"    },
+		{"Global",                 "F4",          "page_switch",        "Instrument List"},
+		{"Global",                 "F5",          "song_play_infopage", NULL             },
+		{"Global",                 "Ctrl-F5",     "song_play",          NULL             },
+		{"Global",                 "F8",          "song_stop",          NULL             },
+		{"Global",                 "Escape",      "main_menu",          NULL             },
+		{"Dialog",                 "Escape",      "dlg_cancel",         NULL             },
+		{NULL,					 NULL,          NULL,                 NULL             },
 	};
 	for (n = 0; debug[n].k; n++) {
-		if (strcasecmp(m->name, debug[n].m) != 0)
-			m = kmap_find(debug[n].m, 1);
+		if (strcasecmp(m->name, debug[n].m) != 0) m = kmap_find(debug[n].m, 1);
 		f = evfunc_lookup(debug[n].f);
 		if (!f) {
 			printf("warning: unknown function \"%s\"\n", debug[n].f);
@@ -1372,4 +1346,3 @@ int main(int argc, char **argv)
 
 	return 0;
 }
-

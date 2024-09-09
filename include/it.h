@@ -41,26 +41,24 @@
 
 #define SDL_ToggleCursor() SDL_ShowCursor(!SDL_ShowCursor(SDL_QUERY))
 
-#define NO_MODIFIER(mod) \
-	(((mod) & (KMOD_CTRL | KMOD_ALT | KMOD_SHIFT)) == 0)
-#define NO_CAM_MODS(mod) \
-	(((mod) & (KMOD_CTRL | KMOD_ALT)) == 0)
+#define NO_MODIFIER(mod) (((mod) & (KMOD_CTRL | KMOD_ALT | KMOD_SHIFT)) == 0)
+#define NO_CAM_MODS(mod) (((mod) & (KMOD_CTRL | KMOD_ALT)) == 0)
 
 /* --------------------------------------------------------------------- */
 /* structs 'n enums */
 
 /* tracker_status dialog_types */
 enum {
-	DIALOG_NONE = (0),                              /* 0000 0000 */
-	DIALOG_MENU = (1 << 0),                         /* 0000 0001 */
-	DIALOG_MAIN_MENU = (DIALOG_MENU | (1 << 1)),    /* 0000 0011 */
-	DIALOG_SUBMENU = (DIALOG_MENU | (1 << 2)),      /* 0000 0101 */
-	DIALOG_BOX = (1 << 3),                          /* 0000 1000 */
-	DIALOG_OK = (DIALOG_BOX | (1 << 4)),            /* 0001 1000 */
-	DIALOG_OK_CANCEL = (DIALOG_BOX | (1 << 5)),     /* 0010 1000 */
+	DIALOG_NONE = (0),                           /* 0000 0000 */
+	DIALOG_MENU = (1 << 0),                      /* 0000 0001 */
+	DIALOG_MAIN_MENU = (DIALOG_MENU | (1 << 1)), /* 0000 0011 */
+	DIALOG_SUBMENU = (DIALOG_MENU | (1 << 2)),   /* 0000 0101 */
+	DIALOG_BOX = (1 << 3),                       /* 0000 1000 */
+	DIALOG_OK = (DIALOG_BOX | (1 << 4)),         /* 0001 1000 */
+	DIALOG_OK_CANCEL = (DIALOG_BOX | (1 << 5)),  /* 0010 1000 */
 	/* yes/no technically has a cancel as well, i.e. the escape key */
-	DIALOG_YES_NO = (DIALOG_BOX | (1 << 6)),        /* 0100 1000 */
-	DIALOG_CUSTOM = (DIALOG_BOX | (1 << 7)),        /* 1000 1000 */
+	DIALOG_YES_NO = (DIALOG_BOX | (1 << 6)), /* 0100 1000 */
+	DIALOG_CUSTOM = (DIALOG_BOX | (1 << 7)), /* 1000 1000 */
 };
 
 /* tracker_status flags
@@ -139,13 +137,25 @@ enum {
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
 enum tracker_time_display {
-	TIME_OFF, TIME_PLAY_ELAPSED, TIME_PLAY_CLOCK, TIME_PLAY_OFF,
-	TIME_ELAPSED, TIME_CLOCK, TIME_ABSOLUTE, TIME_PLAYBACK,
+	TIME_OFF,
+	TIME_PLAY_ELAPSED,
+	TIME_PLAY_CLOCK,
+	TIME_PLAY_OFF,
+	TIME_ELAPSED,
+	TIME_CLOCK,
+	TIME_ABSOLUTE,
+	TIME_PLAYBACK,
 };
 
 /* what should go in the little box on the top right? */
 enum tracker_vis_style {
-	VIS_OFF, VIS_FAKEMEM, VIS_OSCILLOSCOPE, VIS_VU_METER, VIS_MONOSCOPE, VIS_FFT, VIS_SENTINEL
+	VIS_OFF,
+	VIS_FAKEMEM,
+	VIS_OSCILLOSCOPE,
+	VIS_VU_METER,
+	VIS_MONOSCOPE,
+	VIS_FFT,
+	VIS_SENTINEL
 };
 
 struct midi_port; /* midi.h */
@@ -154,7 +164,7 @@ struct tracker_status {
 	int current_page;
 	int previous_page;
 	int current_help_index;
-	int dialog_type;        /* one of the DIALOG_* constants above */
+	int dialog_type; /* one of the DIALOG_* constants above */
 	int flags;
 	enum tracker_time_display time_display;
 	enum tracker_vis_style vis_style;
@@ -213,14 +223,14 @@ extern struct tracker_status status;
 
 extern int playback_tracing, midi_playback_tracing;
 
-extern const char hexdigits[16];        /* in keyboard.c at the moment */
+extern const char hexdigits[16]; /* in keyboard.c at the moment */
 
 /* this used to just translate keys to notes, but it's sort of become the
  * keyboard map... perhaps i should rename it. */
-extern const char *note_trans;  /* keyboard.c */
+extern const char *note_trans; /* keyboard.c */
 
 
-extern int show_default_volumes;        /* pattern-view.c */
+extern int show_default_volumes; /* pattern-view.c */
 
 /* --------------------------------------------------------------------- */
 /* text functions */
@@ -233,7 +243,7 @@ void text_delete_next_char(char *text, int *cursor_pos, int max_length);
 static inline unsigned char unicode_to_ascii(uint16_t unicode)
 {
 	return unicode & 0xff;
-//        return ((unicode & 0xff80) ? 0 : (unicode & 0x7f));
+	//        return ((unicode & 0xff80) ? 0 : (unicode & 0x7f));
 }
 
 /* --------------------------------------------------------------------- */
@@ -253,11 +263,11 @@ void set_page(int new_page);
 /* (there's no get_page -- just use status.current_page) */
 
 /* these should only be called from main */
-void load_pages(void);  /* called once at start of program */
-void playback_update(void);     /* once per cycle */
+void load_pages(void);      /* called once at start of program */
+void playback_update(void); /* once per cycle */
 struct key_event;
-void handle_key(struct key_event * k);        /* whenever there's a keypress ;) */
-void handle_text_input(const uint8_t* text_input);
+void handle_key(struct key_event *k); /* whenever there's a keypress ;) */
+void handle_text_input(const uint8_t *text_input);
 
 /* this should only be called from main.
  * anywhere else, use status.flags |= NEED_UPDATE instead. */
@@ -323,4 +333,3 @@ void schism_exit(int status);
 /* --------------------------------------------------------------------- */
 
 #endif /* SCHISM_IT_H_ */
-

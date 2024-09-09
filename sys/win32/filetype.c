@@ -30,11 +30,10 @@
 
 void win32_filecreated_callback(const char *filename)
 {
-	wchar_t* wc = NULL;
-	if (charset_iconv((const uint8_t*)filename, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
-		return;
+	wchar_t *wc = NULL;
+	if (charset_iconv((const uint8_t *)filename, (uint8_t **)&wc, CHARSET_UTF8, CHARSET_WCHAR_T)) return;
 
 	/* let explorer know when we create a file. */
-	SHChangeNotify(SHCNE_CREATE, SHCNF_PATH|SHCNF_FLUSHNOWAIT, wc, NULL);
-	SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATH|SHCNF_FLUSHNOWAIT, wc, NULL);
+	SHChangeNotify(SHCNE_CREATE, SHCNF_PATH | SHCNF_FLUSHNOWAIT, wc, NULL);
+	SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATH | SHCNF_FLUSHNOWAIT, wc, NULL);
 }

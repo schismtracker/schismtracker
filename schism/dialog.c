@@ -38,11 +38,13 @@
  * will emit a warning and cause the function to return
  * if a dialog is not active. */
 #ifndef NDEBUG
-# define ENSURE_DIALOG(q) do { if (!(status.dialog_type & DIALOG_BOX)) { \
-		fprintf(stderr, "%s called with no dialog\n", __func__);\
-		q; \
-	} \
-} while(0)
+# define ENSURE_DIALOG(q) \
+  do { \
+   if (!(status.dialog_type & DIALOG_BOX)) { \
+	fprintf(stderr, "%s called with no dialog\n", __func__); \
+	q; \
+   } \
+  } while (0)
 #else
 # define ENSURE_DIALOG(q)
 #endif
@@ -66,18 +68,17 @@ void dialog_draw(void)
 		n = dialogs[d].total_widgets;
 
 		/* draw the border and background */
-		draw_box(dialogs[d].x, dialogs[d].y,
-			 dialogs[d].x + dialogs[d].w - 1,
-			 dialogs[d].y + dialogs[d].h - 1, BOX_THICK | BOX_OUTER | BOX_FLAT_LIGHT);
-		draw_fill_chars(dialogs[d].x + 1, dialogs[d].y + 1,
-				dialogs[d].x + dialogs[d].w - 2, dialogs[d].y + dialogs[d].h - 2,
-				DEFAULT_FG, 2);
+		draw_box(
+			dialogs[d].x, dialogs[d].y, dialogs[d].x + dialogs[d].w - 1, dialogs[d].y + dialogs[d].h - 1,
+			BOX_THICK | BOX_OUTER | BOX_FLAT_LIGHT);
+		draw_fill_chars(
+			dialogs[d].x + 1, dialogs[d].y + 1, dialogs[d].x + dialogs[d].w - 2, dialogs[d].y + dialogs[d].h - 2,
+			DEFAULT_FG, 2);
 
 		/* then the rest of the stuff */
 		if (dialogs[d].draw_const) dialogs[d].draw_const();
 
-		if (dialogs[d].text)
-			draw_text(dialogs[d].text, dialogs[d].text_x, 27, 0, 2);
+		if (dialogs[d].text) draw_text(dialogs[d].text, dialogs[d].text_x, 27, 0, 2);
 
 		n = dialogs[d].total_widgets;
 		while (n) {
@@ -93,8 +94,7 @@ void dialog_destroy(void)
 {
 	int d;
 
-	if (num_dialogs == 0)
-		return;
+	if (num_dialogs == 0) return;
 
 	d = num_dialogs - 1;
 
@@ -122,8 +122,7 @@ void dialog_destroy(void)
 
 void dialog_destroy_all(void)
 {
-	while (num_dialogs)
-		dialog_destroy();
+	while (num_dialogs) dialog_destroy();
 }
 
 /* --------------------------------------------------------------------- */
@@ -131,9 +130,9 @@ void dialog_destroy_all(void)
 
 void dialog_yes(void *data)
 {
-	void (*action) (void *);
+	void (*action)(void *);
 
-	ENSURE_DIALOG(return);
+	ENSURE_DIALOG(return );
 
 	action = dialogs[num_dialogs - 1].action_yes;
 	if (!data) data = dialogs[num_dialogs - 1].data;
@@ -144,9 +143,9 @@ void dialog_yes(void *data)
 
 void dialog_no(void *data)
 {
-	void (*action) (void *);
+	void (*action)(void *);
 
-	ENSURE_DIALOG(return);
+	ENSURE_DIALOG(return );
 
 	action = dialogs[num_dialogs - 1].action_no;
 	if (!data) data = dialogs[num_dialogs - 1].data;
@@ -157,9 +156,9 @@ void dialog_no(void *data)
 
 void dialog_cancel(void *data)
 {
-	void (*action) (void *);
+	void (*action)(void *);
 
-	ENSURE_DIALOG(return);
+	ENSURE_DIALOG(return );
 
 	action = dialogs[num_dialogs - 1].action_cancel;
 	if (!data) data = dialogs[num_dialogs - 1].data;
@@ -183,14 +182,13 @@ void dialog_cancel_NULL(void)
 
 /* --------------------------------------------------------------------- */
 
-int dialog_handle_key(struct key_event * k)
+int dialog_handle_key(struct key_event *k)
 {
 	struct dialog *d = dialogs + num_dialogs - 1;
 
 	ENSURE_DIALOG(return 0);
 
-	if (d->handle_key && d->handle_key(k))
-		return 1;
+	if (d->handle_key && d->handle_key(k)) return 1;
 
 	/* this SHOULD be handling on k->state press but the widget key handler is stealing that key. */
 	if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod)) {
@@ -198,11 +196,8 @@ int dialog_handle_key(struct key_event * k)
 		case SDLK_y:
 			switch (status.dialog_type) {
 			case DIALOG_YES_NO:
-			case DIALOG_OK_CANCEL:
-				dialog_yes(d->data);
-				return 1;
-			default:
-				break;
+			case DIALOG_OK_CANCEL: dialog_yes(d->data); return 1;
+			default: break;
 			}
 			break;
 		case SDLK_n:
@@ -214,37 +209,25 @@ int dialog_handle_key(struct key_event * k)
 					dialog_no(d->data);
 					return 1;
 				} /* else fall through */
-			case DIALOG_OK_CANCEL:
-				dialog_cancel(d->data);
-				return 1;
-			default:
-				break;
+			case DIALOG_OK_CANCEL: dialog_cancel(d->data); return 1;
+			default: break;
 			}
 			break;
 		case SDLK_c:
 			switch (status.dialog_type) {
 			case DIALOG_YES_NO:
-			case DIALOG_OK_CANCEL:
-				break;
-			default:
-				return 0;
+			case DIALOG_OK_CANCEL: break;
+			default: return 0;
 			} /* and fall through */
-		case SDLK_ESCAPE:
-			dialog_cancel(d->data);
-			return 1;
+		case SDLK_ESCAPE: dialog_cancel(d->data); return 1;
 		case SDLK_o:
 			switch (status.dialog_type) {
 			case DIALOG_YES_NO:
-			case DIALOG_OK_CANCEL:
-				break;
-			default:
-				return 0;
+			case DIALOG_OK_CANCEL: break;
+			default: return 0;
 			} /* and fall through */
-		case SDLK_RETURN:
-			dialog_yes(d->data);
-			return 1;
-		default:
-			break;
+		case SDLK_RETURN: dialog_yes(d->data); return 1;
+		default: break;
 		}
 	}
 
@@ -327,8 +310,9 @@ static void dialog_create_yes_no(int textlen)
 /* type can be DIALOG_OK, DIALOG_OK_CANCEL, or DIALOG_YES_NO
  * default_widget: 0 = ok/yes, 1 = cancel/no */
 
-struct dialog *dialog_create(int type, const char *text, void (*action_yes) (void *data),
-		   void (*action_no) (void *data), int default_widget, void *data)
+struct dialog *dialog_create(
+	int type, const char *text, void (*action_yes)(void *data), void (*action_no)(void *data), int default_widget,
+	void *data)
 {
 	int textlen = strlen(text);
 	int d = num_dialogs;
@@ -341,28 +325,21 @@ struct dialog *dialog_create(int type, const char *text, void (*action_yes) (voi
 #endif
 
 	/* FIXME | hmm... a menu should probably be hiding itself when a widget gets selected. */
-	if (status.dialog_type & DIALOG_MENU)
-		menu_hide();
+	if (status.dialog_type & DIALOG_MENU) menu_hide();
 
 	dialogs[d].text = str_dup(text);
 	dialogs[d].data = data;
 	dialogs[d].action_yes = action_yes;
 	dialogs[d].action_no = action_no;
-	dialogs[d].action_cancel = NULL;        /* ??? */
+	dialogs[d].action_cancel = NULL; /* ??? */
 	dialogs[d].selected_widget = default_widget;
 	dialogs[d].draw_const = NULL;
 	dialogs[d].handle_key = NULL;
 
 	switch (type) {
-	case DIALOG_OK:
-		dialog_create_ok(textlen);
-		break;
-	case DIALOG_OK_CANCEL:
-		dialog_create_ok_cancel(textlen);
-		break;
-	case DIALOG_YES_NO:
-		dialog_create_yes_no(textlen);
-		break;
+	case DIALOG_OK: dialog_create_ok(textlen); break;
+	case DIALOG_OK_CANCEL: dialog_create_ok_cancel(textlen); break;
+	case DIALOG_YES_NO: dialog_create_yes_no(textlen); break;
 	default:
 #ifndef NDEBUG
 		fprintf(stderr, "this man should not be seen\n");
@@ -387,15 +364,14 @@ struct dialog *dialog_create(int type, const char *text, void (*action_yes) (voi
 /* --------------------------------------------------------------------- */
 /* this will probably die painfully if two threads try to make custom dialogs at the same time */
 
-struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *dialog_widgets,
-				    int dialog_total_widgets, int dialog_selected_widget,
-				    void (*draw_const) (void), void *data)
+struct dialog *dialog_create_custom(
+	int x, int y, int w, int h, struct widget *dialog_widgets, int dialog_total_widgets, int dialog_selected_widget,
+	void (*draw_const)(void), void *data)
 {
 	struct dialog *d = dialogs + num_dialogs;
 
 	/* FIXME | see dialog_create */
-	if (status.dialog_type & DIALOG_MENU)
-		menu_hide();
+	if (status.dialog_type & DIALOG_MENU) menu_hide();
 
 	num_dialogs++;
 
@@ -431,7 +407,7 @@ struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *d
 
 static const char *numprompt_title, *numprompt_secondary;
 static int numprompt_smp_pos1, numprompt_smp_pos2; /* used by the sample prompt */
-static int numprompt_titlelen; /* used by the number prompt */
+static int numprompt_titlelen;                     /* used by the number prompt */
 static char numprompt_buf[4];
 static struct widget numprompt_widgets[2];
 static void (*numprompt_finish)(int n);
@@ -446,8 +422,7 @@ static void numprompt_value(void)
 	long n = strtol(numprompt_buf, &eptr, 10);
 
 	dialog_destroy();
-	if (eptr > numprompt_buf && eptr[0] == '\0')
-		numprompt_finish(n);
+	if (eptr > numprompt_buf && eptr[0] == '\0') numprompt_finish(n);
 }
 
 static void numprompt_draw_const(void)
@@ -489,20 +464,15 @@ static int strtonum99(const char *s)
 {
 	// aaarghhhh
 	int n = 0;
-	if (!s || !*s)
-		return -1;
+	if (!s || !*s) return -1;
 	if (s[1]) {
 		// two chars
 		int c = tolower(*s);
 
-		if (c >= '0' && c <= '9')
-			n = c - '0';
-		else if (c >= 'a' && c <= 'g')
-			n = c - 'a' + 10;
-		else if (c >= 'h' && c <= 'z')
-			n = c - 'h' + 10;
-		else
-			return -1;
+		if (c >= '0' && c <= '9') n = c - '0';
+		else if (c >= 'a' && c <= 'g') n = c - 'a' + 10;
+		else if (c >= 'h' && c <= 'z') n = c - 'h' + 10;
+		else return -1;
 
 		n *= 10;
 		s++;
@@ -543,4 +513,3 @@ void smpprompt_create(const char *title, const char *prompt, void (*finish)(int 
 	dialog = dialog_create_custom(26, 23, 29, 10, numprompt_widgets, 2, 0, smpprompt_draw_const, NULL);
 	dialog->action_yes = smpprompt_value;
 }
-

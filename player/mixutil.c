@@ -32,64 +32,63 @@
 
 void init_mix_buffer(int *buffer, unsigned int samples)
 {
-    memset(buffer, 0, samples * sizeof(int));
+	memset(buffer, 0, samples * sizeof(int));
 }
 
 
-void stereo_fill(int *buffer, unsigned int samples, int* profs, int *plofs)
+void stereo_fill(int *buffer, unsigned int samples, int *profs, int *plofs)
 {
-    int rofs = *profs;
-    int lofs = *plofs;
+	int rofs = *profs;
+	int lofs = *plofs;
 
-    if (!rofs && !lofs) {
-	init_mix_buffer(buffer, samples * 2);
-	return;
-    }
+	if (!rofs && !lofs) {
+		init_mix_buffer(buffer, samples * 2);
+		return;
+	}
 
-    for (unsigned int i = 0; i < samples; i++) {
-	int x_r = (rofs + (((-rofs) >> 31) & OFSDECAYMASK)) >> OFSDECAYSHIFT;
-	int x_l = (lofs + (((-lofs) >> 31) & OFSDECAYMASK)) >> OFSDECAYSHIFT;
+	for (unsigned int i = 0; i < samples; i++) {
+		int x_r = (rofs + (((-rofs) >> 31) & OFSDECAYMASK)) >> OFSDECAYSHIFT;
+		int x_l = (lofs + (((-lofs) >> 31) & OFSDECAYMASK)) >> OFSDECAYSHIFT;
 
-	rofs -= x_r;
-	lofs -= x_l;
-	buffer[i * 2 ]    = x_r;
-	buffer[i * 2 + 1] = x_l;
-    }
+		rofs -= x_r;
+		lofs -= x_l;
+		buffer[i * 2] = x_r;
+		buffer[i * 2 + 1] = x_l;
+	}
 
-    *profs = rofs;
-    *plofs = lofs;
+	*profs = rofs;
+	*plofs = lofs;
 }
 
 
 void end_channel_ofs(song_voice_t *channel, int *buffer, unsigned int samples)
 {
-    int rofs = channel->rofs;
-    int lofs = channel->lofs;
+	int rofs = channel->rofs;
+	int lofs = channel->lofs;
 
-    if (!rofs && !lofs)
-	return;
+	if (!rofs && !lofs) return;
 
-    for (unsigned int i = 0; i < samples; i++) {
-	int x_r = (rofs + (((-rofs) >> 31) & OFSDECAYMASK)) >> OFSDECAYSHIFT;
-	int x_l = (lofs + (((-lofs) >> 31) & OFSDECAYMASK)) >> OFSDECAYSHIFT;
+	for (unsigned int i = 0; i < samples; i++) {
+		int x_r = (rofs + (((-rofs) >> 31) & OFSDECAYMASK)) >> OFSDECAYSHIFT;
+		int x_l = (lofs + (((-lofs) >> 31) & OFSDECAYMASK)) >> OFSDECAYSHIFT;
 
-	rofs -= x_r;
-	lofs -= x_l;
-	buffer[i * 2]     += x_r;
-	buffer[i * 2 + 1] += x_l;
-    }
+		rofs -= x_r;
+		lofs -= x_l;
+		buffer[i * 2] += x_r;
+		buffer[i * 2 + 1] += x_l;
+	}
 
-    channel->rofs = rofs;
-    channel->lofs = lofs;
+	channel->rofs = rofs;
+	channel->lofs = lofs;
 }
 
 
 void mono_from_stereo(int *mix_buf, unsigned int samples)
 {
-    for (unsigned int j, i = 0; i < samples; i++) {
-	j = i << 1;
-	mix_buf[i] = (mix_buf[j] + mix_buf[j + 1]) >> 1;
-    }
+	for (unsigned int j, i = 0; i < samples; i++) {
+		j = i << 1;
+		mix_buf[i] = (mix_buf[j] + mix_buf[j + 1]) >> 1;
+	}
 }
 
 // ----------------------------------------------------------------------------
@@ -103,52 +102,44 @@ void mono_from_stereo(int *mix_buf, unsigned int samples)
 // Clip and convert to 8 bit. mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1] right.
 unsigned int clip_32_to_8(void *ptr, int *buffer, unsigned int samples, int *mins, int *maxs)
 {
-    unsigned char *p = (unsigned char *) ptr;
+	unsigned char *p = (unsigned char *)ptr;
 
-    for (unsigned int i = 0; i < samples; i++) {
-	int n = buffer[i];
+	for (unsigned int i = 0; i < samples; i++) {
+		int n = buffer[i];
 
-	if (n < MIXING_CLIPMIN)
-	    n = MIXING_CLIPMIN;
-	else if (n > MIXING_CLIPMAX)
-	    n = MIXING_CLIPMAX;
+		if (n < MIXING_CLIPMIN) n = MIXING_CLIPMIN;
+		else if (n > MIXING_CLIPMAX) n = MIXING_CLIPMAX;
 
-	if (n < mins[i & 1])
-	    mins[i & 1] = n;
-	else if (n > maxs[i & 1])
-	    maxs[i & 1] = n;
+		if (n < mins[i & 1]) mins[i & 1] = n;
+		else if (n > maxs[i & 1]) maxs[i & 1] = n;
 
-	// 8-bit unsigned
-	p[i] = (n >> (24 - MIXING_ATTENUATION)) ^ 0x80;
-    }
+		// 8-bit unsigned
+		p[i] = (n >> (24 - MIXING_ATTENUATION)) ^ 0x80;
+	}
 
-    return samples;
+	return samples;
 }
 
 
 // Clip and convert to 16 bit. mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1] right.
 unsigned int clip_32_to_16(void *ptr, int *buffer, unsigned int samples, int *mins, int *maxs)
 {
-    signed short *p = (signed short *) ptr;
+	signed short *p = (signed short *)ptr;
 
-    for (unsigned int i = 0; i < samples; i++) {
-	int n = buffer[i];
+	for (unsigned int i = 0; i < samples; i++) {
+		int n = buffer[i];
 
-	if (n < MIXING_CLIPMIN)
-	    n = MIXING_CLIPMIN;
-	else if (n > MIXING_CLIPMAX)
-	    n = MIXING_CLIPMAX;
+		if (n < MIXING_CLIPMIN) n = MIXING_CLIPMIN;
+		else if (n > MIXING_CLIPMAX) n = MIXING_CLIPMAX;
 
-	if (n < mins[i & 1])
-	    mins[i & 1] = n;
-	else if (n > maxs[i & 1])
-	    maxs[i & 1] = n;
+		if (n < mins[i & 1]) mins[i & 1] = n;
+		else if (n > maxs[i & 1]) maxs[i & 1] = n;
 
-	// 16-bit signed
-	p[i] = n >> (16 - MIXING_ATTENUATION);
-    }
+		// 16-bit signed
+		p[i] = n >> (16 - MIXING_ATTENUATION);
+	}
 
-    return samples * 2;
+	return samples * 2;
 }
 
 
@@ -156,56 +147,47 @@ unsigned int clip_32_to_16(void *ptr, int *buffer, unsigned int samples, int *mi
 // Note, this is 24bit, not 24-in-32bits. The former is used in .wav. The latter is used in audio IO
 unsigned int clip_32_to_24(void *ptr, int *buffer, unsigned int samples, int *mins, int *maxs)
 {
-    /* the inventor of 24bit anything should be shot */
-    unsigned char *p = (unsigned char *) ptr;
+	/* the inventor of 24bit anything should be shot */
+	unsigned char *p = (unsigned char *)ptr;
 
-    for (unsigned int i = 0; i < samples; i++) {
-	int n = buffer[i];
+	for (unsigned int i = 0; i < samples; i++) {
+		int n = buffer[i];
 
-	if (n < MIXING_CLIPMIN)
-	    n = MIXING_CLIPMIN;
-	else if (n > MIXING_CLIPMAX)
-	    n = MIXING_CLIPMAX;
+		if (n < MIXING_CLIPMIN) n = MIXING_CLIPMIN;
+		else if (n > MIXING_CLIPMAX) n = MIXING_CLIPMAX;
 
-	if (n < mins[i & 1])
-	    mins[i & 1] = n;
-	else if (n > maxs[i & 1])
-	    maxs[i & 1] = n;
+		if (n < mins[i & 1]) mins[i & 1] = n;
+		else if (n > maxs[i & 1]) maxs[i & 1] = n;
 
-	// 24-bit signed
-	n = n >> (8 - MIXING_ATTENUATION);
+		// 24-bit signed
+		n = n >> (8 - MIXING_ATTENUATION);
 
-	/* err, assume same endian */
-	memcpy(p, &n, 3);
-	p += 3;
-    }
+		/* err, assume same endian */
+		memcpy(p, &n, 3);
+		p += 3;
+	}
 
-    return samples * 3;
+	return samples * 3;
 }
 
 
 // Clip and convert to 32 bit(int). mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1] right.
 unsigned int clip_32_to_32(void *ptr, int *buffer, unsigned int samples, int *mins, int *maxs)
 {
-    signed int *p = (signed int *) ptr;
+	signed int *p = (signed int *)ptr;
 
-    for (unsigned int i = 0; i < samples; i++) {
-	int n = buffer[i];
+	for (unsigned int i = 0; i < samples; i++) {
+		int n = buffer[i];
 
-	if (n < MIXING_CLIPMIN)
-	    n = MIXING_CLIPMIN;
-	else if (n > MIXING_CLIPMAX)
-	    n = MIXING_CLIPMAX;
+		if (n < MIXING_CLIPMIN) n = MIXING_CLIPMIN;
+		else if (n > MIXING_CLIPMAX) n = MIXING_CLIPMAX;
 
-	if (n < mins[i & 1])
-	    mins[i & 1] = n;
-	else if (n > maxs[i & 1])
-	    maxs[i & 1] = n;
+		if (n < mins[i & 1]) mins[i & 1] = n;
+		else if (n > maxs[i & 1]) maxs[i & 1] = n;
 
-	// 32-bit signed
-	p[i] = (n << MIXING_ATTENUATION);
-    }
+		// 32-bit signed
+		p[i] = (n << MIXING_ATTENUATION);
+	}
 
-    return samples * 4;
+	return samples * 4;
 }
-

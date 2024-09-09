@@ -35,8 +35,7 @@
 
 int fmt_okt_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	if (!(length > 16 && memcmp(data, "OKTASONG", 8) == 0))
-		return 0;
+	if (!(length > 16 && memcmp(data, "OKTASONG", 8) == 0)) return 0;
 
 	file->description = "Amiga Oktalyzer";
 	/* okts don't have names? */
@@ -47,17 +46,17 @@ int fmt_okt_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#define OKT_BLOCK(a,b,c,d) (((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
-#define OKT_BLK_CMOD    OKT_BLOCK('C','M','O','D')
-#define OKT_BLK_SAMP    OKT_BLOCK('S','A','M','P')
-#define OKT_BLK_SPEE    OKT_BLOCK('S','P','E','E')
-#define OKT_BLK_SLEN    OKT_BLOCK('S','L','E','N')
-#define OKT_BLK_PLEN    OKT_BLOCK('P','L','E','N')
-#define OKT_BLK_PATT    OKT_BLOCK('P','A','T','T')
-#define OKT_BLK_PBOD    OKT_BLOCK('P','B','O','D')
-#define OKT_BLK_SBOD    OKT_BLOCK('S','B','O','D')
+#define OKT_BLOCK(a, b, c, d) (((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
+#define OKT_BLK_CMOD          OKT_BLOCK('C', 'M', 'O', 'D')
+#define OKT_BLK_SAMP          OKT_BLOCK('S', 'A', 'M', 'P')
+#define OKT_BLK_SPEE          OKT_BLOCK('S', 'P', 'E', 'E')
+#define OKT_BLK_SLEN          OKT_BLOCK('S', 'L', 'E', 'N')
+#define OKT_BLK_PLEN          OKT_BLOCK('P', 'L', 'E', 'N')
+#define OKT_BLK_PATT          OKT_BLOCK('P', 'A', 'T', 'T')
+#define OKT_BLK_PBOD          OKT_BLOCK('P', 'B', 'O', 'D')
+#define OKT_BLK_SBOD          OKT_BLOCK('S', 'B', 'O', 'D')
 
-#pragma pack(push,1)
+#pragma pack(push, 1)
 
 struct okt_sample {
 	char name[20];
@@ -68,7 +67,7 @@ struct okt_sample {
 	uint16_t mode;
 };
 
-SCHISM_BINARY_STRUCT(struct okt_sample, 20+4+2+2+2+2);
+SCHISM_BINARY_STRUCT(struct okt_sample, 20 + 4 + 2 + 2 + 2 + 2);
 
 #pragma pack(pop)
 
@@ -88,12 +87,10 @@ static int okt_read_cmod(song_t *song, slurp_t *fp)
 	int t, cn = 0;
 
 	for (t = 0; t < 4; t++) {
-		if (slurp_getc(fp) || slurp_getc(fp))
-			cs[cn++].panning = PROTRACKER_PANNING(t);
+		if (slurp_getc(fp) || slurp_getc(fp)) cs[cn++].panning = PROTRACKER_PANNING(t);
 		cs[cn++].panning = PROTRACKER_PANNING(t);
 	}
-	for (t = cn; t < 64; t++)
-		cs[t].flags |= CHN_MUTE;
+	for (t = cn; t < 64; t++) cs[t].flags |= CHN_MUTE;
 	return cn;
 }
 
@@ -104,8 +101,7 @@ static void okt_read_samp(song_t *song, slurp_t *fp, uint32_t len, uint32_t smpf
 	struct okt_sample osmp;
 	song_sample_t *ssmp = song->samples + 1;
 
-	if (len % 32)
-		log_appendf(4, " Warning: Sample data is misaligned");
+	if (len % 32) log_appendf(4, " Warning: Sample data is misaligned");
 	len /= 32;
 	if (len >= MAX_SAMPLES) {
 		log_appendf(4, " Warning: Too many samples in file");
@@ -126,10 +122,8 @@ static void okt_read_samp(song_t *song, slurp_t *fp, uint32_t len, uint32_t smpf
 		if (osmp.loop_len > 2 && osmp.loop_len + osmp.loop_start < ssmp->length) {
 			ssmp->sustain_start = osmp.loop_start;
 			ssmp->sustain_end = osmp.loop_start + osmp.loop_len;
-			if (ssmp->sustain_start < ssmp->length && ssmp->sustain_end < ssmp->length)
-				ssmp->flags |= CHN_SUSTAINLOOP;
-			else
-				ssmp->sustain_start = 0;
+			if (ssmp->sustain_start < ssmp->length && ssmp->sustain_end < ssmp->length) ssmp->flags |= CHN_SUSTAINLOOP;
+			else ssmp->sustain_start = 0;
 		}
 		ssmp->loop_start *= 2;
 		ssmp->loop_end *= 2;
@@ -198,8 +192,7 @@ static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 			}
 
 			/* blah -- check for read error */
-			if (e < 0)
-				return effwarn;
+			if (e < 0) return effwarn;
 
 			switch (e) {
 			case 0: // Nothing
@@ -227,8 +220,7 @@ static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 
 			/* This one is close enough to "standard" arpeggio -- I think! */
 			case 12: // C Arpeggio 3 (up, up, orig)
-				if (note->param)
-					note->effect = FX_ARPEGGIO;
+				if (note->param) note->effect = FX_ARPEGGIO;
 				break;
 
 			case 13: // D Slide Down (Notes)
@@ -277,7 +269,7 @@ static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 				note->instrument = note->effect = note->param = 0;
 				break;
 
-			case 28: // S Speed
+			case 28:                     // S Speed
 				note->effect = FX_SPEED; // or tempo?
 				break;
 
@@ -290,8 +282,10 @@ static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 						break;
 					}
 					// 0x40 is set volume -- fall through
-				case 0: case 1:
-				case 2: case 3:
+				case 0:
+				case 1:
+				case 2:
+				case 3:
 					note->voleffect = VOLFX_VOLUME;
 					note->volparam = note->param;
 					note->effect = FX_NONE;
@@ -340,25 +334,24 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
 	uint8_t tag[8];
 	unsigned int readflags = 0;
-	uint16_t w; // temp for reading
-	int plen = 0; // how many positions in the orderlist are valid
-	int npat = 0; // next pattern to read
-	int nsmp = 1; // next sample (data, not header)
+	uint16_t w;         // temp for reading
+	int plen = 0;       // how many positions in the orderlist are valid
+	int npat = 0;       // next pattern to read
+	int nsmp = 1;       // next sample (data, not header)
 	int pat, sh, sd, e; // iterators (pattern, sample header, sample data, effect warnings
-	int nchn = 0; // how many channels does this song use?
+	int nchn = 0;       // how many channels does this song use?
 	size_t patseek[MAX_PATTERNS] = {0};
-	size_t smpseek[MAX_SAMPLES + 1] = {0}; // where the sample's data starts
+	size_t smpseek[MAX_SAMPLES + 1] = {0};   // where the sample's data starts
 	uint32_t smpsize[MAX_SAMPLES + 2] = {0}; // data size (one element bigger to simplify loop condition)
 	uint32_t smpflag[MAX_SAMPLES + 1] = {0}; // bit width
-	uint32_t effwarn = 0; // effect warning mask
+	uint32_t effwarn = 0;                    // effect warning mask
 
 	slurp_read(fp, tag, 8);
-	if (memcmp(tag, "OKTASONG", 8) != 0)
-		return LOAD_UNSUPPORTED;
+	if (memcmp(tag, "OKTASONG", 8) != 0) return LOAD_UNSUPPORTED;
 
 	while (!slurp_eof(fp)) {
 		uint32_t blklen; // length of this block
-		size_t nextpos; // ... and start of next one
+		size_t nextpos;  // ... and start of next one
 
 		slurp_read(fp, tag, 4);
 		slurp_read(fp, &blklen, 4);
@@ -406,8 +399,7 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		case OKT_BLK_PBOD:
 			/* Need the channel count (in CMOD) in order to read these */
 			if (npat < MAX_PATTERNS) {
-				if (blklen > 0)
-					patseek[npat] = slurp_tell(fp);
+				if (blklen > 0) patseek[npat] = slurp_tell(fp);
 				npat++;
 			}
 			break;
@@ -415,8 +407,7 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			if (nsmp < MAX_SAMPLES) {
 				smpseek[nsmp] = slurp_tell(fp);
 				smpsize[nsmp] = blklen;
-				if (smpsize[nsmp])
-					nsmp++;
+				if (smpsize[nsmp]) nsmp++;
 			}
 			break;
 
@@ -432,8 +423,7 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		}
 	}
 
-	if ((readflags & (OKT_HAS_CMOD | OKT_HAS_SPEE)) != (OKT_HAS_CMOD | OKT_HAS_SPEE))
-		return LOAD_FORMAT_ERROR;
+	if ((readflags & (OKT_HAS_CMOD | OKT_HAS_SPEE)) != (OKT_HAS_CMOD | OKT_HAS_SPEE)) return LOAD_FORMAT_ERROR;
 
 	if (!(lflags & LOAD_NOPATTERNS)) {
 		for (pat = 0; pat < npat; pat++) {
@@ -442,12 +432,10 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		}
 
 		if (effwarn) {
-			if (effwarn & 1)
-				log_appendf(4, " Warning: Out-of-range effects (junk data?)");
+			if (effwarn & 1) log_appendf(4, " Warning: Out-of-range effects (junk data?)");
 			for (e = 2; e <= 32; e++) {
 				if (effwarn & (1 << (e - 1))) {
-					log_appendf(4, " Warning: Unimplemented effect %cxx",
-						e + (e < 10 ? '0' : ('A' - 10)));
+					log_appendf(4, " Warning: Unimplemented effect %cxx", e + (e < 10 ? '0' : ('A' - 10)));
 				}
 			}
 		}
@@ -456,17 +444,16 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (sh = sd = 1; sh < MAX_SAMPLES && smpsize[sd]; sh++) {
 			song_sample_t *ssmp = song->samples + sh;
-			if (!ssmp->length)
-				continue;
+			if (!ssmp->length) continue;
 
 			if (ssmp->length != smpsize[sd]) {
-				log_appendf(4, " Warning: Sample %d: header/data size mismatch (%" PRIu32 "/%" PRIu32 ")", sh,
-					ssmp->length, smpsize[sd]);
+				log_appendf(
+					4, " Warning: Sample %d: header/data size mismatch (%" PRIu32 "/%" PRIu32 ")", sh, ssmp->length,
+					smpsize[sd]);
 				ssmp->length = MIN(smpsize[sd], ssmp->length);
 			}
 
-			csf_read_sample(ssmp, SF_BE | SF_M | SF_PCMS | smpflag[sd],
-					fp->data + smpseek[sd], ssmp->length);
+			csf_read_sample(ssmp, SF_BE | SF_M | SF_PCMS | smpflag[sd], fp->data + smpseek[sd], ssmp->length);
 			sd++;
 		}
 		// Make sure there's nothing weird going on
@@ -484,4 +471,3 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	return LOAD_SUCCESS;
 }
-

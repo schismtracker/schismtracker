@@ -28,13 +28,11 @@
 
 int fmt_mf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	if (!(length > 290 && memcmp(data, "MOONFISH", 8) == 0))
-		return 0;
+	if (!(length > 290 && memcmp(data, "MOONFISH", 8) == 0)) return 0;
 
 	file->description = "MoonFish";
 	/*file->extension = str_dup("mf");*/
 	file->title = strn_dup((const char *)data + 33, MIN(32, data[32]));
-	file->type = TYPE_MODULE_MOD;    /* ??? */
+	file->type = TYPE_MODULE_MOD; /* ??? */
 	return 1;
 }
-

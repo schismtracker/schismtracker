@@ -38,15 +38,13 @@ int fmt_mdl_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	uint32_t position, block_length;
 
 	/* data[4] = major version number (accept 0 or 1) */
-	if (!(length > 5 && ((data[4] & 0xf0) >> 4) <= 1 && memcmp(data, "DMDL", 4) == 0))
-		return 0;
+	if (!(length > 5 && ((data[4] & 0xf0) >> 4) <= 1 && memcmp(data, "DMDL", 4) == 0)) return 0;
 
 	position = 5;
 	while (position + 6 < length) {
 		memcpy(&block_length, data + position + 2, 4);
 		block_length = bswapLE32(block_length);
-		if (block_length + position > length)
-			return 0;
+		if (block_length + position > length) return 0;
 		if (memcmp(data + position, "IN", 2) == 0) {
 			/* hey! we have a winner */
 			file->title = strn_dup((const char *)data + position + 6, 32);
@@ -65,31 +63,31 @@ int fmt_mdl_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 /* --------------------------------------------------------------------------------------------------------- */
 /* Structs and stuff for the loader */
 
-#define MDL_BLOCK(a,b)          (((a) << 8) | (b))
-#define MDL_BLK_INFO            MDL_BLOCK('I','N')
-#define MDL_BLK_MESSAGE         MDL_BLOCK('M','E')
-#define MDL_BLK_PATTERNS        MDL_BLOCK('P','A')
-#define MDL_BLK_PATTERNNAMES    MDL_BLOCK('P','N')
-#define MDL_BLK_TRACKS          MDL_BLOCK('T','R')
-#define MDL_BLK_INSTRUMENTS     MDL_BLOCK('I','I')
-#define MDL_BLK_VOLENVS         MDL_BLOCK('V','E')
-#define MDL_BLK_PANENVS         MDL_BLOCK('P','E')
-#define MDL_BLK_FREQENVS        MDL_BLOCK('F','E')
-#define MDL_BLK_SAMPLEINFO      MDL_BLOCK('I','S')
-#define MDL_BLK_SAMPLEDATA      MDL_BLOCK('S','A')
+#define MDL_BLOCK(a, b)      (((a) << 8) | (b))
+#define MDL_BLK_INFO         MDL_BLOCK('I', 'N')
+#define MDL_BLK_MESSAGE      MDL_BLOCK('M', 'E')
+#define MDL_BLK_PATTERNS     MDL_BLOCK('P', 'A')
+#define MDL_BLK_PATTERNNAMES MDL_BLOCK('P', 'N')
+#define MDL_BLK_TRACKS       MDL_BLOCK('T', 'R')
+#define MDL_BLK_INSTRUMENTS  MDL_BLOCK('I', 'I')
+#define MDL_BLK_VOLENVS      MDL_BLOCK('V', 'E')
+#define MDL_BLK_PANENVS      MDL_BLOCK('P', 'E')
+#define MDL_BLK_FREQENVS     MDL_BLOCK('F', 'E')
+#define MDL_BLK_SAMPLEINFO   MDL_BLOCK('I', 'S')
+#define MDL_BLK_SAMPLEDATA   MDL_BLOCK('S', 'A')
 
 #define MDL_FADE_CUT 0xffff
 
 enum {
-	MDLNOTE_NOTE            = 1 << 0,
-	MDLNOTE_SAMPLE          = 1 << 1,
-	MDLNOTE_VOLUME          = 1 << 2,
-	MDLNOTE_EFFECTS         = 1 << 3,
-	MDLNOTE_PARAM1          = 1 << 4,
-	MDLNOTE_PARAM2          = 1 << 5,
+	MDLNOTE_NOTE = 1 << 0,
+	MDLNOTE_SAMPLE = 1 << 1,
+	MDLNOTE_VOLUME = 1 << 2,
+	MDLNOTE_EFFECTS = 1 << 3,
+	MDLNOTE_PARAM1 = 1 << 4,
+	MDLNOTE_PARAM2 = 1 << 5,
 };
 
-#pragma pack(push,1)
+#pragma pack(push, 1)
 struct mdl_infoblock {
 	char title[32];
 	char composer[20];
@@ -101,7 +99,7 @@ struct mdl_infoblock {
 	uint8_t chanpan[32];
 };
 
-SCHISM_BINARY_STRUCT(struct mdl_infoblock, 32+20+2+2+1+1+1+32);
+SCHISM_BINARY_STRUCT(struct mdl_infoblock, 32 + 20 + 2 + 2 + 1 + 1 + 1 + 32);
 
 /* This is actually a part of the instrument (II) block */
 struct mdl_samplehdr {
@@ -120,7 +118,7 @@ struct mdl_samplehdr {
 	uint8_t freqenv_flags;
 };
 
-SCHISM_BINARY_STRUCT(struct mdl_samplehdr, 1+1+1+1+1+1+2+1+1+1+1+1+1);
+SCHISM_BINARY_STRUCT(struct mdl_samplehdr, 1 + 1 + 1 + 1 + 1 + 1 + 2 + 1 + 1 + 1 + 1 + 1 + 1);
 
 struct mdl_sampleinfo {
 	uint8_t smpnum;
@@ -134,7 +132,7 @@ struct mdl_sampleinfo {
 	uint8_t flags;
 };
 
-SCHISM_BINARY_STRUCT(struct mdl_sampleinfo, 1+32+8+4+4+4+4+1+1);
+SCHISM_BINARY_STRUCT(struct mdl_sampleinfo, 1 + 32 + 8 + 4 + 4 + 4 + 4 + 1 + 1);
 
 struct mdl_sampleinfo_v0 {
 	uint8_t smpnum;
@@ -148,7 +146,7 @@ struct mdl_sampleinfo_v0 {
 	uint8_t flags;
 };
 
-SCHISM_BINARY_STRUCT(struct mdl_sampleinfo_v0, 1+32+8+2+4+4+4+1+1);
+SCHISM_BINARY_STRUCT(struct mdl_sampleinfo_v0, 1 + 32 + 8 + 2 + 4 + 4 + 4 + 1 + 1);
 
 struct mdl_envelope {
 	uint8_t envnum;
@@ -160,7 +158,7 @@ struct mdl_envelope {
 	uint8_t loop; // lower 4 bits = start, upper 4 bits = end
 };
 
-SCHISM_BINARY_STRUCT(struct mdl_envelope, 1+30+1+1);
+SCHISM_BINARY_STRUCT(struct mdl_envelope, 1 + 30 + 1 + 1);
 
 #pragma pack(pop)
 
@@ -168,8 +166,8 @@ SCHISM_BINARY_STRUCT(struct mdl_envelope, 1+30+1+1);
 /* Internal definitions */
 
 struct mdlpat {
-	int track; // which track to put here
-	int rows; // 1-256
+	int track;         // which track to put here
+	int rows;          // 1-256
 	song_note_t *note; // first note -- add 64 for next note, etc.
 	struct mdlpat *next;
 };
@@ -180,16 +178,16 @@ struct mdlenv {
 };
 
 enum {
-	MDL_HAS_INFO            = 1 << 0,
-	MDL_HAS_MESSAGE         = 1 << 1,
-	MDL_HAS_PATTERNS        = 1 << 2,
-	MDL_HAS_TRACKS          = 1 << 3,
-	MDL_HAS_INSTRUMENTS     = 1 << 4,
-	MDL_HAS_VOLENVS         = 1 << 5,
-	MDL_HAS_PANENVS         = 1 << 6,
-	MDL_HAS_FREQENVS        = 1 << 7,
-	MDL_HAS_SAMPLEINFO      = 1 << 8,
-	MDL_HAS_SAMPLEDATA      = 1 << 9,
+	MDL_HAS_INFO = 1 << 0,
+	MDL_HAS_MESSAGE = 1 << 1,
+	MDL_HAS_PATTERNS = 1 << 2,
+	MDL_HAS_TRACKS = 1 << 3,
+	MDL_HAS_INSTRUMENTS = 1 << 4,
+	MDL_HAS_VOLENVS = 1 << 5,
+	MDL_HAS_PANENVS = 1 << 6,
+	MDL_HAS_FREQENVS = 1 << 7,
+	MDL_HAS_SAMPLEINFO = 1 << 8,
+	MDL_HAS_SAMPLEDATA = 1 << 9,
 };
 
 static const uint8_t mdl_efftrans[] = {
@@ -231,8 +229,7 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
 	uint8_t e = *pe;
 	uint8_t p = *pp;
 
-	if (e > 21)
-		e = 0; // (shouldn't ever happen)
+	if (e > 21) e = 0; // (shouldn't ever happen)
 	*pe = mdl_efftrans[e];
 
 	switch (e) {
@@ -294,11 +291,10 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
 			break;
 		}
 		break;
-	case 0x10: // volslide up
+	case 0x10:          // volslide up
 		if (p < 0xE0) { // Gxy -> Dz0 (z=(xy>>2))
 			p >>= 2;
-			if (p > 0x0F)
-				p = 0x0F;
+			if (p > 0x0F) p = 0x0F;
 			p <<= 4;
 		} else if (p < 0xF0) { // GEy -> DzF (z=(y>>2))
 			p = (((p & 0x0F) << 2) | 0x0F);
@@ -306,15 +302,14 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
 			p = ((p << 4) | 0x0F);
 		}
 		break;
-	case 0x11: // volslide down
+	case 0x11:          // volslide down
 		if (p < 0xE0) { // Hxy -> D0z (z=(xy>>2))
 			p >>= 2;
-			if(p > 0x0F)
-				p = 0x0F;
+			if (p > 0x0F) p = 0x0F;
 		} else if (p < 0xF0) { // HEy -> DFz (z=(y>>2))
 			p = (((p & 0x0F) >> 2) | 0xF0);
 		} else { // HFy -> DFy
-			// Nothing to do
+				 // Nothing to do
 		}
 		break;
 	}
@@ -330,8 +325,7 @@ static int cram_mdl_effects(song_note_t *note, uint8_t vol, uint8_t e1, uint8_t 
 	uint8_t tmp;
 
 	// map second effect values 1-6 to effects G-L
-	if (e2 >= 1 && e2 <= 6)
-		e2 += 15;
+	if (e2 >= 1 && e2 <= 6) e2 += 15;
 
 	translate_fx(&e1, &p1);
 	translate_fx(&e2, &p2);
@@ -353,8 +347,7 @@ static int cram_mdl_effects(song_note_t *note, uint8_t vol, uint8_t e1, uint8_t 
 	if (e1 == FX_OFFSET) {
 		// EFy -xx => offset yxx00
 		p1 = (p1 & 0xf) ? 0xff : p2;
-		if (e2 == FX_OFFSET)
-			e2 = FX_NONE;
+		if (e2 == FX_OFFSET) e2 = FX_NONE;
 	} else if (e2 == FX_OFFSET) {
 		// --- EFy => offset y0000 (best we can do without doing a ton of extra work is 0xff00)
 		p2 = (p2 & 0xf) ? 0xff : 0;
@@ -403,8 +396,12 @@ static int cram_mdl_effects(song_note_t *note, uint8_t vol, uint8_t e1, uint8_t 
 				break;
 			} else {
 				// swap them
-				tmp = e2; e2 = e1; e1 = tmp;
-				tmp = p2; p2 = p1; p1 = tmp;
+				tmp = e2;
+				e2 = e1;
+				e1 = tmp;
+				tmp = p2;
+				p2 = p1;
+				p1 = tmp;
 			}
 		}
 	}
@@ -451,8 +448,7 @@ static int mdl_read_info(song_t *song, slurp_t *fp)
 	// channel pannings
 	for (n = 0; n < 32; n++) {
 		song->channels[n].panning = (info.chanpan[n] & 127) << 1; // ugh
-		if (info.chanpan[n] & 128)
-			song->channels[n].flags |= CHN_MUTE;
+		if (info.chanpan[n] & 128) song->channels[n].flags |= CHN_MUTE;
 	}
 	for (; n < 64; n++) {
 		song->channels[n].panning = 128;
@@ -476,13 +472,12 @@ static void mdl_read_message(song_t *song, slurp_t *fp, uint32_t blklen)
 	slurp_read(fp, ptr, blklen);
 	ptr[blklen] = '\0';
 
-	while ((ptr = strchr(ptr, '\r')) != NULL)
-		*ptr = '\n';
+	while ((ptr = strchr(ptr, '\r')) != NULL) *ptr = '\n';
 }
 
 static struct mdlpat *mdl_read_patterns(song_t *song, slurp_t *fp)
 {
-	struct mdlpat pat_head = { .next = NULL }; // only exists for .next
+	struct mdlpat pat_head = {.next = NULL}; // only exists for .next
 	struct mdlpat *patptr = &pat_head;
 	song_note_t *note;
 	int npat, nchn, rows, pat, chn;
@@ -491,7 +486,6 @@ static struct mdlpat *mdl_read_patterns(song_t *song, slurp_t *fp)
 	npat = slurp_getc(fp);
 	npat = MIN(npat, MAX_PATTERNS);
 	for (pat = 0; pat < npat; pat++) {
-
 		nchn = slurp_getc(fp);
 		rows = slurp_getc(fp) + 1;
 		slurp_seek(fp, 16, SEEK_CUR); // skip the name
@@ -501,8 +495,7 @@ static struct mdlpat *mdl_read_patterns(song_t *song, slurp_t *fp)
 		for (chn = 0; chn < nchn; chn++, note++) {
 			slurp_read(fp, &trknum, 2);
 			trknum = bswapLE16(trknum);
-			if (!trknum)
-				continue;
+			if (!trknum) continue;
 
 			patptr->next = mem_alloc(sizeof(struct mdlpat));
 			patptr = patptr->next;
@@ -519,7 +512,7 @@ static struct mdlpat *mdl_read_patterns(song_t *song, slurp_t *fp)
 // mostly the same as above
 static struct mdlpat *mdl_read_patterns_v0(song_t *song, slurp_t *fp)
 {
-	struct mdlpat pat_head = { .next = NULL };
+	struct mdlpat pat_head = {.next = NULL};
 	struct mdlpat *patptr = &pat_head;
 	song_note_t *note;
 	int npat, pat, chn;
@@ -528,14 +521,12 @@ static struct mdlpat *mdl_read_patterns_v0(song_t *song, slurp_t *fp)
 	npat = slurp_getc(fp);
 	npat = MIN(npat, MAX_PATTERNS);
 	for (pat = 0; pat < npat; pat++) {
-
 		note = song->patterns[pat] = csf_allocate_pattern(64);
 		song->pattern_size[pat] = song->pattern_alloc_size[pat] = 64;
 		for (chn = 0; chn < 32; chn++, note++) {
 			slurp_read(fp, &trknum, 2);
 			trknum = bswapLE16(trknum);
-			if (!trknum)
-				continue;
+			if (!trknum) continue;
 
 			patptr->next = mem_alloc(sizeof(struct mdlpat));
 			patptr = patptr->next;
@@ -584,8 +575,7 @@ static song_note_t **mdl_read_tracks(slurp_t *fp)
 				}
 				break;
 			case 2: // Copy note from row x
-				if (row > x)
-					tracks[trk][row] = tracks[trk][x];
+				if (row > x) tracks[trk][row] = tracks[trk][x];
 				row++;
 				break;
 			case 3: // New note data
@@ -598,8 +588,7 @@ static song_note_t **mdl_read_tracks(slurp_t *fp)
 				}
 				if (x & MDLNOTE_SAMPLE) {
 					b = slurp_getc(fp);
-					if (b >= MAX_INSTRUMENTS)
-						b = 0;
+					if (b >= MAX_INSTRUMENTS) b = 0;
 					tracks[trk][row].instrument = b;
 				}
 				vol = (x & MDLNOTE_VOLUME) ? slurp_getc(fp) : 0;
@@ -619,8 +608,7 @@ static song_note_t **mdl_read_tracks(slurp_t *fp)
 		}
 		fp->length = reallen; // widen
 	}
-	if (lostfx)
-		log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
+	if (lostfx) log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
 
 	return tracks;
 }
@@ -639,8 +627,8 @@ won't always line up. */
 static void mdl_read_instruments(song_t *song, slurp_t *fp)
 {
 	struct mdl_samplehdr shdr; // Etaoin shrdlu
-	song_instrument_t *ins; // 'master' instrument
-	song_instrument_t *sins; // other instruments created to track each sample's individual envelopes
+	song_instrument_t *ins;    // 'master' instrument
+	song_instrument_t *sins;   // other instruments created to track each sample's individual envelopes
 	song_sample_t *smp;
 	int nins, nsmp;
 	int insnum;
@@ -658,8 +646,7 @@ static void mdl_read_instruments(song_t *song, slurp_t *fp)
 			continue;
 		}
 		// ok, make an instrument
-		if (!song->instruments[insnum])
-			song->instruments[insnum] = csf_allocate_instrument();
+		if (!song->instruments[insnum]) song->instruments[insnum] = csf_allocate_instrument();
 		ins = song->instruments[insnum];
 
 		slurp_read(fp, ins->name, 25);
@@ -673,8 +660,7 @@ static void mdl_read_instruments(song_t *song, slurp_t *fp)
 			if (shdr.smpnum == 0 || shdr.smpnum > MAX_SAMPLES) {
 				continue;
 			}
-			if (!song->instruments[shdr.smpnum])
-				song->instruments[shdr.smpnum] = csf_allocate_instrument();
+			if (!song->instruments[shdr.smpnum]) song->instruments[shdr.smpnum] = csf_allocate_instrument();
 			sins = song->instruments[shdr.smpnum];
 
 			smp = song->samples + shdr.smpnum;
@@ -682,8 +668,7 @@ static void mdl_read_instruments(song_t *song, slurp_t *fp)
 			// Write this sample's instrument mapping
 			// (note: test "jazz 2 jazz.mdl", it uses a multisampled piano)
 			shdr.lastnote = MIN(shdr.lastnote, 119);
-			for (note = firstnote; note <= shdr.lastnote; note++)
-				ins->sample_map[note] = shdr.smpnum;
+			for (note = firstnote; note <= shdr.lastnote; note++) ins->sample_map[note] = shdr.smpnum;
 			firstnote = shdr.lastnote + 1; // get ready for the next sample
 
 			// temporarily hijack the envelope "nodes" field to write the envelope number
@@ -691,27 +676,23 @@ static void mdl_read_instruments(song_t *song, slurp_t *fp)
 			sins->pan_env.nodes = shdr.panenv_flags & 63;
 			sins->pitch_env.nodes = shdr.freqenv_flags & 63;
 
-			if (shdr.volenv_flags & 128)
-				sins->flags |= ENV_VOLUME;
-			if (shdr.panenv_flags & 128)
-				sins->flags |= ENV_PANNING;
-			if (shdr.freqenv_flags & 128)
-				sins->flags |= ENV_PITCH;
+			if (shdr.volenv_flags & 128) sins->flags |= ENV_VOLUME;
+			if (shdr.panenv_flags & 128) sins->flags |= ENV_PANNING;
+			if (shdr.freqenv_flags & 128) sins->flags |= ENV_PITCH;
 
 			// DT fadeout = 0000-1fff, or 0xffff for "cut"
 			// assuming DT uses 'cut' behavior for anything past 0x1fff, too lazy to bother
 			// hex-editing a file at the moment to find out :P
-			sins->fadeout = (shdr.fadeout < 0x2000)
-				? (shdr.fadeout + 1) >> 1 // this seems about right
-				: MDL_FADE_CUT; // temporary
+			sins->fadeout = (shdr.fadeout < 0x2000) ? (shdr.fadeout + 1) >> 1 // this seems about right
+			                                          :
+			                                          MDL_FADE_CUT; // temporary
 
 			// for the volume envelope / flags:
 			//      "bit 6   -> flags, if volume is used"
 			// ... huh? what happens if the volume isn't used?
-			smp->volume = shdr.volume; //mphack (range 0-255, s/b 0-64)
+			smp->volume = shdr.volume;                              //mphack (range 0-255, s/b 0-64)
 			smp->panning = ((MIN(shdr.panning, 127) + 1) >> 1) * 4; //mphack
-			if (shdr.panenv_flags & 64)
-				smp->flags |= CHN_PANNING;
+			if (shdr.panenv_flags & 64) smp->flags |= CHN_PANNING;
 
 			smp->vib_speed = shdr.vibspeed; // XXX bother checking ranges for vibrato
 			smp->vib_depth = shdr.vibdepth;
@@ -756,8 +737,7 @@ static void mdl_read_sampleinfo(song_t *song, slurp_t *fp, uint8_t *packtype)
 			smp->loop_start >>= 1;
 			smp->loop_end >>= 1;
 		}
-		if (sinfo.flags & 2)
-			smp->flags |= CHN_PINGPONGLOOP;
+		if (sinfo.flags & 2) smp->flags |= CHN_PINGPONGLOOP;
 		packtype[sinfo.smpnum] = ((sinfo.flags >> 2) & 3);
 
 		smp->global_volume = 64;
@@ -799,8 +779,7 @@ static void mdl_read_sampleinfo_v0(song_t *song, slurp_t *fp, uint8_t *packtype)
 			smp->loop_start >>= 1;
 			smp->loop_end >>= 1;
 		}
-		if (sinfo.flags & 2)
-			smp->flags |= CHN_PINGPONGLOOP;
+		if (sinfo.flags & 2) smp->flags |= CHN_PINGPONGLOOP;
 		packtype[sinfo.smpnum] = ((sinfo.flags >> 2) & 3);
 
 		smp->global_volume = 64;
@@ -817,11 +796,9 @@ static void mdl_read_envelopes(slurp_t *fp, struct mdlenv **envs, uint32_t flags
 	nenv = slurp_getc(fp);
 	while (nenv--) {
 		slurp_read(fp, &ehdr, sizeof(ehdr));
-		if (ehdr.envnum > 63)
-			continue;
+		if (ehdr.envnum > 63) continue;
 
-		if (!envs[ehdr.envnum])
-			envs[ehdr.envnum] = mem_calloc(1, sizeof(struct mdlenv));
+		if (!envs[ehdr.envnum]) envs[ehdr.envnum] = mem_calloc(1, sizeof(struct mdlenv));
 		env = &envs[ehdr.envnum]->data;
 
 		env->nodes = 15;
@@ -841,12 +818,8 @@ static void mdl_read_envelopes(slurp_t *fp, struct mdlenv **envs, uint32_t flags
 		env->sustain_start = env->sustain_end = ehdr.flags & 0xf;
 
 		envs[ehdr.envnum]->flags = 0;
-		if (ehdr.flags & 16)
-			envs[ehdr.envnum]->flags
-				|= (flags & (ENV_VOLSUSTAIN | ENV_PANSUSTAIN | ENV_PITCHSUSTAIN));
-		if (ehdr.flags & 32)
-			envs[ehdr.envnum]->flags
-				|= (flags & (ENV_VOLLOOP | ENV_PANLOOP | ENV_PITCHLOOP));
+		if (ehdr.flags & 16) envs[ehdr.envnum]->flags |= (flags & (ENV_VOLSUSTAIN | ENV_PANSUSTAIN | ENV_PITCHSUSTAIN));
+		if (ehdr.flags & 32) envs[ehdr.envnum]->flags |= (flags & (ENV_VOLLOOP | ENV_PANLOOP | ENV_PITCHLOOP));
 	}
 }
 
@@ -879,15 +852,14 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	uint8_t fmtver; // file format version, e.g. 0x11 = v1.1
 
 	slurp_read(fp, tag, 4);
-	if (memcmp(tag, "DMDL", 4) != 0)
-		return LOAD_UNSUPPORTED;
+	if (memcmp(tag, "DMDL", 4) != 0) return LOAD_UNSUPPORTED;
 
 	fmtver = slurp_getc(fp);
 
 	// Read the next block
 	while (!slurp_eof(fp)) {
 		uint32_t blklen; // length of this block
-		size_t nextpos; // ... and start of next one
+		size_t nextpos;  // ... and start of next one
 
 		slurp_read(fp, tag, 2);
 		slurp_read(fp, &blklen, 4);
@@ -946,8 +918,7 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 		case MDL_BLK_SAMPLEINFO:
 			if (!(readflags & MDL_HAS_SAMPLEINFO)) {
 				readflags |= MDL_HAS_SAMPLEINFO;
-				((fmtver >> 4) ? mdl_read_sampleinfo : mdl_read_sampleinfo_v0)
-					(song, fp, packtype);
+				((fmtver >> 4) ? mdl_read_sampleinfo : mdl_read_sampleinfo_v0)(song, fp, packtype);
 			}
 			break;
 		case MDL_BLK_SAMPLEDATA:
@@ -994,27 +965,22 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 		if (datapos) {
 			slurp_seek(fp, datapos, SEEK_SET);
 			for (n = 1; n < MAX_SAMPLES; n++) {
-				if (!packtype[n] && !song->samples[n].length)
-					continue;
+				if (!packtype[n] && !song->samples[n].length) continue;
 				uint32_t smpsize, flags;
 				if (packtype[n] > 2) {
-					log_appendf(4, " Warning: Sample %d: unknown packing type %d",
-						    n, packtype[n]);
+					log_appendf(4, " Warning: Sample %d: unknown packing type %d", n, packtype[n]);
 					packtype[n] = 0; // ?
 				} else if (packtype[n] == ((song->samples[n].flags & CHN_16BIT) ? 1 : 2)) {
-					log_appendf(4, " Warning: Sample %d: bit width / pack type mismatch",
-						    n);
+					log_appendf(4, " Warning: Sample %d: bit width / pack type mismatch", n);
 				}
 				flags = SF_LE | SF_M;
 				flags |= packtype[n] ? SF_MDL : SF_PCMS;
 				flags |= (song->samples[n].flags & CHN_16BIT) ? SF_16 : SF_8;
-				smpsize = csf_read_sample(song->samples + n, flags,
-					fp->data + fp->pos, fp->length - fp->pos);
+				smpsize = csf_read_sample(song->samples + n, flags, fp->data + fp->pos, fp->length - fp->pos);
 				slurp_seek(fp, smpsize, SEEK_CUR);
 			}
 		} else {
-			for (n = 1; n < MAX_SAMPLES; n++)
-				song->samples[n].length = 0;
+			for (n = 1; n < MAX_SAMPLES; n++) song->samples[n].length = 0;
 		}
 	}
 
@@ -1033,10 +999,9 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 					}
 					if (trknote->instrument) {
 						// translate it
-						trknote->instrument = song->instruments[trknote->instrument]
-							? (song->instruments[trknote->instrument]
-							   ->sample_map[cnote - 1])
-							: 0;
+						trknote->instrument = song->instruments[trknote->instrument] ?
+						                          (song->instruments[trknote->instrument]->sample_map[cnote - 1]) :
+						                          0;
 					}
 				}
 			}
@@ -1045,16 +1010,14 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 		// "paste" the tracks into the channels
 		for (pat = patptr; pat; pat = pat->next) {
 			trknote = tracks[pat->track];
-			if (!trknote)
-				continue;
+			if (!trknote) continue;
 			patnote = pat->note;
 			for (n = 0; n < pat->rows; n++, trknote++, patnote += 64) {
 				*patnote = *trknote;
 			}
 		}
 		// and clean up
-		for (trk = 1; trk < 65536 && tracks[trk]; trk++)
-			free(tracks[trk]);
+		for (trk = 1; trk < 65536 && tracks[trk]; trk++) free(tracks[trk]);
 		free(tracks);
 	}
 	while (patptr) {
@@ -1076,8 +1039,7 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 				if (!(ins->flags & ENV_VOLLOOP))
 					ins->vol_env.loop_start = ins->vol_env.loop_end = ins->vol_env.nodes - 1;
 				if (!(ins->flags & ENV_VOLSUSTAIN))
-					ins->vol_env.sustain_start = ins->vol_env.sustain_end
-						= ins->vol_env.nodes - 1;
+					ins->vol_env.sustain_start = ins->vol_env.sustain_end = ins->vol_env.nodes - 1;
 				ins->flags |= ENV_VOLLOOP | ENV_VOLSUSTAIN;
 			}
 			if (ins->fadeout == MDL_FADE_CUT) {
@@ -1107,29 +1069,27 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	}
 
 	if (readflags & MDL_HAS_VOLENVS) {
-		for (n = 0; n < 64; n++)
-			free(volenvs[n]);
+		for (n = 0; n < 64; n++) free(volenvs[n]);
 	}
 	if (readflags & MDL_HAS_PANENVS) {
-		for (n = 0; n < 64; n++)
-			free(panenvs[n]);
+		for (n = 0; n < 64; n++) free(panenvs[n]);
 	}
 	if (readflags & MDL_HAS_FREQENVS) {
-		for (n = 0; n < 64; n++)
-			free(freqenvs[n]);
+		for (n = 0; n < 64; n++) free(freqenvs[n]);
 	}
 
-	if (restartpos > 0)
-		csf_insert_restart_pos(song, restartpos);
+	if (restartpos > 0) csf_insert_restart_pos(song, restartpos);
 
 	song->flags |= SONG_ITOLDEFFECTS | SONG_COMPATGXX | SONG_INSTRUMENTMODE | SONG_LINEARSLIDES;
 
-	sprintf(song->tracker_id, "Digitrakker %s",
+	sprintf(
+		song->tracker_id, "Digitrakker %s",
 		(fmtver == 0x11) ? "3" // really could be 2.99b -- but close enough for me
-		: (fmtver == 0x10) ? "2.3"
-		: (fmtver == 0x00) ? "2.0 - 2.2b" // there was no 1.x release
-		: "v?.?");
+		:
+		(fmtver == 0x10) ? "2.3" :
+		(fmtver == 0x00) ? "2.0 - 2.2b" // there was no 1.x release
+						   :
+						   "v?.?");
 
 	return LOAD_SUCCESS;
 }
-

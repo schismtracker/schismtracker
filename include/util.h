@@ -32,39 +32,39 @@
 
 /* --------------------------------------------------------------------- */
 
-#define ARRAY_SIZE(a) ((signed)(sizeof(a)/sizeof(*(a))))
+#define ARRAY_SIZE(a) ((signed)(sizeof(a) / sizeof(*(a))))
 
 
 /* macros stolen from glib */
 #ifndef MAX
-# define MAX(X,Y) (((X)>(Y))?(X):(Y))
+# define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 #endif
 #ifndef MIN
-# define MIN(X,Y) (((X)<(Y))?(X):(Y))
+# define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #endif
 #ifndef CLAMP
-# define CLAMP(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
+# define CLAMP(N, L, H) (((N) > (H)) ? (H) : (((N) < (L)) ? (L) : (N)))
 #endif
 
 #if defined(__has_attribute)
-# if __has_attribute (unused)
+# if __has_attribute(unused)
 #  define UNUSED __attribute__((unused))
 # endif
-# if __has_attribute (packed)
+# if __has_attribute(packed)
 #  define PACKED __attribute__((packed))
 # endif
-# if __has_attribute (malloc)
+# if __has_attribute(malloc)
 #  define MALLOC __attribute__((malloc))
 # endif
-# if __has_attribute (pure)
+# if __has_attribute(pure)
 #  define PURE __attribute__((pure))
 # endif
 #endif
 
 #if defined(__has_builtin)
-# if __has_builtin (__builtin_expect)
+# if __has_builtin(__builtin_expect)
 #  define LIKELY(x)   __builtin_expect(!!(x), 1)
-#  define UNLIKELY(x) __builtin_expect(!(x),  1)
+#  define UNLIKELY(x) __builtin_expect(!(x), 1)
 # endif
 #endif
 
@@ -89,12 +89,12 @@
 
 /* Path stuff that differs by platform */
 #ifdef SCHISM_WIN32
-# define DIR_SEPARATOR '\\'
-# define DIR_SEPARATOR_STR "\\"
+# define DIR_SEPARATOR       '\\'
+# define DIR_SEPARATOR_STR   "\\"
 # define IS_DIR_SEPARATOR(c) ((c) == '/' || (c) == '\\')
 #else
-# define DIR_SEPARATOR '/'
-# define DIR_SEPARATOR_STR "/"
+# define DIR_SEPARATOR       '/'
+# define DIR_SEPARATOR_STR   "/"
 # define IS_DIR_SEPARATOR(c) ((c) == '/')
 #endif
 
@@ -108,7 +108,7 @@ extern MALLOC void *mem_alloc(size_t);
 extern MALLOC void *mem_calloc(size_t, size_t);
 extern MALLOC char *str_dup(const char *);
 extern MALLOC char *strn_dup(const char *, size_t);
-extern void *mem_realloc(void *,size_t);
+extern void *mem_realloc(void *, size_t);
 extern void mem_free(void *);
 
 /*Conversion*/
@@ -183,23 +183,23 @@ unsigned long long file_size(const char *filename);
 int is_file(const char *filename);
 int is_directory(const char *filename);
 /* following functions should free() the resulting strings */
-char *get_home_directory(void); /* "default" directory for user files, i.e. $HOME, My Documents, etc. */
-char *get_dot_directory(void); /* where settings files go (%AppData% on Windows, same as $HOME elsewhere) */
+char *get_home_directory(void);    /* "default" directory for user files, i.e. $HOME, My Documents, etc. */
+char *get_dot_directory(void);     /* where settings files go (%AppData% on Windows, same as $HOME elsewhere) */
 char *get_current_directory(void); /* just a getcwd() wrapper */
 
 /* wrappers around functions for Unicode support */
 #ifdef SCHISM_WIN32
-int win32_open(const char* path, int flags);
-int win32_wstat(const wchar_t* path, struct stat* st);
-int win32_stat(const char* path, struct stat* st);
-int win32_mktemp(char* template, size_t size);
-int win32_mkdir(const char* path, mode_t mode);
-FILE* win32_fopen(const char* path, const char* flags);
+int win32_open(const char *path, int flags);
+int win32_wstat(const wchar_t *path, struct stat *st);
+int win32_stat(const char *path, struct stat *st);
+int win32_mktemp(char *template, size_t size);
+int win32_mkdir(const char *path, mode_t mode);
+FILE *win32_fopen(const char *path, const char *flags);
 # define win32_wmkdir(path, mode) _wmkdir(path)
-# define os_fopen win32_fopen
-# define os_stat  win32_stat
-# define os_open  win32_open
-# define os_mkdir win32_mkdir
+# define os_fopen                 win32_fopen
+# define os_stat                  win32_stat
+# define os_open                  win32_open
+# define os_mkdir                 win32_mkdir
 #else
 # define os_fopen fopen
 # define os_stat  stat
@@ -221,4 +221,3 @@ If 'overwrite' is zero, attempts to rename over an existing file will fail with 
 int rename_file(const char *old, const char *newf, int overwrite);
 
 #endif /* SCHISM_UTIL_H_ */
-

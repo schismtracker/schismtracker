@@ -62,19 +62,15 @@ static void update_ip_ports(void)
 
 static void update_midi_values(void)
 {
-	midi_flags = 0
-	|       (widgets_midi[1].d.toggle.state ? MIDI_TICK_QUANTIZE : 0)
-	|       (widgets_midi[2].d.toggle.state ? MIDI_BASE_PROGRAM1 : 0)
-	|       (widgets_midi[3].d.toggle.state ? MIDI_RECORD_NOTEOFF : 0)
-	|       (widgets_midi[4].d.toggle.state ? MIDI_RECORD_VELOCITY : 0)
-	|       (widgets_midi[5].d.toggle.state ? MIDI_RECORD_AFTERTOUCH : 0)
-	|       (widgets_midi[6].d.toggle.state ? MIDI_CUT_NOTE_OFF : 0)
-	|       (widgets_midi[9].d.toggle.state ? MIDI_PITCHBEND : 0)
-	;
-	if (widgets_midi[11].d.toggle.state)
-		current_song->flags |= SONG_EMBEDMIDICFG;
-	else
-		current_song->flags &= ~SONG_EMBEDMIDICFG;
+	midi_flags = 0 | (widgets_midi[1].d.toggle.state ? MIDI_TICK_QUANTIZE : 0)
+	             | (widgets_midi[2].d.toggle.state ? MIDI_BASE_PROGRAM1 : 0)
+	             | (widgets_midi[3].d.toggle.state ? MIDI_RECORD_NOTEOFF : 0)
+	             | (widgets_midi[4].d.toggle.state ? MIDI_RECORD_VELOCITY : 0)
+	             | (widgets_midi[5].d.toggle.state ? MIDI_RECORD_AFTERTOUCH : 0)
+	             | (widgets_midi[6].d.toggle.state ? MIDI_CUT_NOTE_OFF : 0)
+	             | (widgets_midi[9].d.toggle.state ? MIDI_PITCHBEND : 0);
+	if (widgets_midi[11].d.toggle.state) current_song->flags |= SONG_EMBEDMIDICFG;
+	else current_song->flags &= ~SONG_EMBEDMIDICFG;
 
 	midi_amplification = widgets_midi[7].d.thumbbar.value;
 	midi_c5note = widgets_midi[8].d.thumbbar.value;
@@ -105,7 +101,8 @@ static void toggle_port(void)
 	if (p) {
 		status.flags |= NEED_UPDATE;
 
-		if (p->disable) if (!p->disable(p)) return;
+		if (p->disable)
+			if (!p->disable(p)) return;
 		switch (p->io) {
 		case 0:
 			if (p->iocap & MIDI_INPUT) p->io = MIDI_INPUT;
@@ -119,9 +116,7 @@ static void toggle_port(void)
 			if (p->iocap & MIDI_INPUT) p->io |= MIDI_INPUT;
 			else p->io = 0;
 			break;
-		case MIDI_INPUT|MIDI_OUTPUT:
-			p->io = 0;
-			break;
+		case MIDI_INPUT | MIDI_OUTPUT: p->io = 0; break;
 		};
 
 		if (p->enable) {
@@ -133,7 +128,7 @@ static void toggle_port(void)
 	}
 }
 
-static int midi_page_handle_key(struct key_event * k)
+static int midi_page_handle_key(struct key_event *k)
 {
 	int new_port = current_port;
 	int pos;
@@ -145,8 +140,7 @@ static int midi_page_handle_key(struct key_event * k)
 	} else if (k->mouse) {
 		if (k->x >= 3 && k->x <= 11 && k->y >= 15 && k->y <= 27) {
 			if (k->mouse == MOUSE_DBLCLICK) {
-				if (k->state == KEY_PRESS)
-					return 0;
+				if (k->state == KEY_PRESS) return 0;
 				toggle_port();
 				return 1;
 			}
@@ -158,31 +152,17 @@ static int midi_page_handle_key(struct key_event * k)
 
 	switch (k->sym) {
 	case SDLK_SPACE:
-		if (k->state == KEY_PRESS)
-			return 1;
+		if (k->state == KEY_PRESS) return 1;
 		toggle_port();
 		return 1;
-	case SDLK_PAGEUP:
-		new_port -= 13;
-		break;
-	case SDLK_PAGEDOWN:
-		new_port += 13;
-		break;
-	case SDLK_HOME:
-		new_port = 0;
-		break;
-	case SDLK_END:
-		new_port = midi_engine_port_count() - 1;
-		break;
-	case SDLK_UP:
-		new_port--;
-		break;
-	case SDLK_DOWN:
-		new_port++;
-		break;
+	case SDLK_PAGEUP: new_port -= 13; break;
+	case SDLK_PAGEDOWN: new_port += 13; break;
+	case SDLK_HOME: new_port = 0; break;
+	case SDLK_END: new_port = midi_engine_port_count() - 1; break;
+	case SDLK_UP: new_port--; break;
+	case SDLK_DOWN: new_port++; break;
 	case SDLK_TAB:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		widget_change_focus_to(1);
 		status.flags |= NEED_UPDATE;
 		return 1;
@@ -190,16 +170,14 @@ static int midi_page_handle_key(struct key_event * k)
 		if (!k->mouse) return 0;
 		break;
 	};
-	if (k->state == KEY_RELEASE)
-		return 0;
+	if (k->state == KEY_RELEASE) return 0;
 
 	if (new_port != current_port) {
 		int sz = midi_engine_port_count() - 1;
 		new_port = CLAMP(new_port, 0, sz);
 
 		current_port = new_port;
-		if (current_port < top_midi_port)
-			top_midi_port = current_port;
+		if (current_port < top_midi_port) top_midi_port = current_port;
 
 		pos = current_port - top_midi_port;
 		if (pos > 12) top_midi_port = current_port - 12;
@@ -213,32 +191,32 @@ static int midi_page_handle_key(struct key_event * k)
 
 static void midi_page_redraw(void)
 {
-	draw_text(       "Tick quantize", 6, 30, 0, 2);
-	draw_text(      "Base Program 1", 5, 31, 0, 2);
-	draw_text(     "Record Note-Off", 4, 32, 0, 2);
-	draw_text(     "Record Velocity", 4, 33, 0, 2);
-	draw_text(   "Record Aftertouch", 2, 34, 0, 2);
-	draw_text(        "Cut note off", 7, 35, 0, 2);
+	draw_text("Tick quantize", 6, 30, 0, 2);
+	draw_text("Base Program 1", 5, 31, 0, 2);
+	draw_text("Record Note-Off", 4, 32, 0, 2);
+	draw_text("Record Velocity", 4, 33, 0, 2);
+	draw_text("Record Aftertouch", 2, 34, 0, 2);
+	draw_text("Cut note off", 7, 35, 0, 2);
 
 	draw_fill_chars(23, 30, 24, 35, DEFAULT_FG, 0);
-	draw_box(19,29,25,36, BOX_THIN|BOX_INNER|BOX_INSET);
+	draw_box(19, 29, 25, 36, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	draw_box(52,29,73,32, BOX_THIN|BOX_INNER|BOX_INSET);
+	draw_box(52, 29, 73, 32, BOX_THIN | BOX_INNER | BOX_INSET);
 
 	draw_fill_chars(56, 34, 72, 34, DEFAULT_FG, 0);
-	draw_box(52,33,73,36, BOX_THIN|BOX_INNER|BOX_INSET);
+	draw_box(52, 33, 73, 36, BOX_THIN | BOX_INNER | BOX_INSET);
 
 	draw_fill_chars(56, 38, 72, 38, DEFAULT_FG, 0);
-	draw_box(52,37,73,39, BOX_THIN|BOX_INNER|BOX_INSET);
+	draw_box(52, 37, 73, 39, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	draw_text(    "Amplification", 39, 30, 0, 2);
-	draw_text(   "C-5 Note-value", 38, 31, 0, 2);
+	draw_text("Amplification", 39, 30, 0, 2);
+	draw_text("C-5 Note-value", 38, 31, 0, 2);
 	draw_text("Output MIDI pitch", 35, 34, 0, 2);
 	draw_text("Pitch wheel depth", 35, 35, 0, 2);
-	draw_text(  "Embed MIDI data", 37, 38, 0, 2);
+	draw_text("Embed MIDI data", 37, 38, 0, 2);
 
-	draw_text(    "IP MIDI ports", 39, 41, 0, 2);
-	draw_box(52,40,73,42, BOX_THIN|BOX_INNER|BOX_INSET);
+	draw_text("IP MIDI ports", 39, 41, 0, 2);
+	draw_box(52, 40, 73, 42, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
 static void midi_page_draw_portlist(void)
@@ -254,7 +232,7 @@ static void midi_page_draw_portlist(void)
 
 	draw_fill_chars(3, 15, 76, 28, DEFAULT_FG, 0);
 	draw_text("MIDI ports:", 2, 13, 0, 2);
-	draw_box(2,14,77,28, BOX_THIN|BOX_INNER|BOX_INSET);
+	draw_box(2, 14, 77, 28, BOX_THIN | BOX_INNER | BOX_INSET);
 
 	if (difftime(now, last_midi_poll) > 10.0) {
 		last_midi_poll = now;
@@ -264,46 +242,40 @@ static void midi_page_draw_portlist(void)
 	ct = midi_engine_port_count();
 
 	/* make sure this stuff doesn't overflow! */
-	if (ct > 13 && top_midi_port + 13 >= ct)
-		top_midi_port = ct - 13;
+	if (ct > 13 && top_midi_port + 13 >= ct) top_midi_port = ct - 13;
 
 	current_port = MIN(current_port, ct - 1);
 
 	for (i = 0; i < 13; i++) {
 		draw_char(168, 12, i + 15, 2, 0);
 
-		if (top_midi_port + i >= ct)
-			continue; /* err */
+		if (top_midi_port + i >= ct) continue; /* err */
 
 		p = midi_engine_port(top_midi_port + i, &name);
-		if (current_port == top_midi_port + i
-		    && ACTIVE_WIDGET.type == WIDGET_OTHER) {
+		if (current_port == top_midi_port + i && ACTIVE_WIDGET.type == WIDGET_OTHER) {
 			fg = 0;
 			bg = 3;
 		} else {
 			fg = 5;
 			bg = 0;
 		}
-		draw_text_len(name, 64, 13, 15+i, 5, 0);
+		draw_text_len(name, 64, 13, 15 + i, 5, 0);
 
-		if (status.flags & MIDI_EVENT_CHANGED
-		    && (now - status.last_midi_tick) < 3000
-		    && ((!status.last_midi_port && p->io & MIDI_OUTPUT)
-		    || p == status.last_midi_port)) {
+		if (status.flags & MIDI_EVENT_CHANGED && (now - status.last_midi_tick) < 3000
+		    && ((!status.last_midi_port && p->io & MIDI_OUTPUT) || p == status.last_midi_port)) {
 			for (j = n = 0; j < 21 && j < status.last_midi_len; j++) { /* 21 is approx 64/3 */
 				sprintf(buffer + n, "%02X ", status.last_midi_event[j]);
 				n += 3;
 			}
-			draw_text(buffer, 77 - strlen(buffer), 15+i,
-				status.last_midi_port ? 4 : 10, 0);
+			draw_text(buffer, 77 - strlen(buffer), 15 + i, status.last_midi_port ? 4 : 10, 0);
 		}
 
 		switch (p->io) {
-			case 0:                         state = "Disabled "; break;
-			case MIDI_INPUT:                state = "   Input "; break;
-			case MIDI_OUTPUT:               state = "  Output "; break;
-			case MIDI_INPUT | MIDI_OUTPUT:  state = "  Duplex "; break;
-			default:                        state = " Enabled?"; break;
+		case 0: state = "Disabled "; break;
+		case MIDI_INPUT: state = "   Input "; break;
+		case MIDI_OUTPUT: state = "  Output "; break;
+		case MIDI_INPUT | MIDI_OUTPUT: state = "  Duplex "; break;
+		default: state = " Enabled?"; break;
 		}
 		draw_text(state, 3, 15 + i, fg, bg);
 	}
@@ -342,9 +314,8 @@ void midi_load_page(struct page *page)
 	widget_create_thumbbar(widgets_midi + 10, 53, 35, 20, 9, 11, 6, update_midi_values, 0, 48);
 	widget_create_toggle(widgets_midi + 11, 53, 38, 10, 12, 13, 13, 13, update_midi_values);
 	widget_create_thumbbar(widgets_midi + 12, 53, 41, 20, 11, 12, 13, update_ip_ports, 0, 128);
-	widget_create_button(widgets_midi + 13, 2, 41, 27, 6, 14, 12, 12, 12,
-		midi_output_config, "MIDI Output Configuration", 2);
-	widget_create_button(widgets_midi + 14, 2, 44, 27, 13, 14, 12, 12, 12,
-		cfg_midipage_save, "Save Output Configuration", 2);
+	widget_create_button(
+		widgets_midi + 13, 2, 41, 27, 6, 14, 12, 12, 12, midi_output_config, "MIDI Output Configuration", 2);
+	widget_create_button(
+		widgets_midi + 14, 2, 44, 27, 13, 14, 12, 12, 12, cfg_midipage_save, "Save Output Configuration", 2);
 }
-

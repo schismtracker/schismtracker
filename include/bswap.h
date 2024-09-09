@@ -29,20 +29,12 @@
 /* better than macros, I guess. */
 inline uint32_t bswap_32_schism_internal_(uint32_t x)
 {
-	return (
-		  ((x & 0x000000FF) << 24)
-		| ((x & 0x0000FF00) << 8)
-		| ((x & 0x00FF0000) >> 8)
-		| ((x & 0xFF000000) >> 24)
-	);
+	return (((x & 0x000000FF) << 24) | ((x & 0x0000FF00) << 8) | ((x & 0x00FF0000) >> 8) | ((x & 0xFF000000) >> 24));
 }
 
 inline uint16_t bswap_16_schism_internal_(uint16_t x)
 {
-	return (
-		  ((x & 0x00FF) << 8)
-		| ((x & 0xFF00) >> 8)
-	);
+	return (((x & 0x00FF) << 8) | ((x & 0xFF00) >> 8));
 }
 
 /* check for compiler builtins, for gcc >= 10 and probably clang too */

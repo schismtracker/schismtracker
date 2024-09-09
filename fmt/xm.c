@@ -36,8 +36,7 @@
 
 int fmt_xm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	if (!(length > 38 && memcmp(data, "Extended Module: ", 17) == 0))
-		return 0;
+	if (!(length > 38 && memcmp(data, "Extended Module: ", 17) == 0)) return 0;
 
 	file->description = "Fast Tracker 2 Module";
 	file->type = TYPE_MODULE_XM;
@@ -50,30 +49,34 @@ int fmt_xm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 // gloriously stolen from xmp
 struct xm_file_header {
-	uint8_t id[17];         // ID text: "Extended module: "
-	uint8_t name[20];       // Module name, padded with zeroes
-	uint8_t doseof;         // 0x1a
-	uint8_t tracker[20];    // Tracker name
-	uint16_t version;       // Version number, minor-major
-	uint32_t headersz;      // Header size
-	uint16_t songlen;       // Song length (in patten order table)
-	uint16_t restart;       // Restart position
-	uint16_t channels;      // Number of channels (2,4,6,8,10,...,32)
-	uint16_t patterns;      // Number of patterns (max 256)
-	uint16_t instruments;   // Number of instruments (max 128)
-	uint16_t flags;         // bit 0: 0=Amiga freq table, 1=Linear
-	uint16_t tempo;         // Default tempo
-	uint16_t bpm;           // Default BPM
+	uint8_t id[17];       // ID text: "Extended module: "
+	uint8_t name[20];     // Module name, padded with zeroes
+	uint8_t doseof;       // 0x1a
+	uint8_t tracker[20];  // Tracker name
+	uint16_t version;     // Version number, minor-major
+	uint32_t headersz;    // Header size
+	uint16_t songlen;     // Song length (in patten order table)
+	uint16_t restart;     // Restart position
+	uint16_t channels;    // Number of channels (2,4,6,8,10,...,32)
+	uint16_t patterns;    // Number of patterns (max 256)
+	uint16_t instruments; // Number of instruments (max 128)
+	uint16_t flags;       // bit 0: 0=Amiga freq table, 1=Linear
+	uint16_t tempo;       // Default tempo
+	uint16_t bpm;         // Default BPM
 };
 
 SCHISM_BINARY_STRUCT(struct xm_file_header, 80);
 
 static uint8_t autovib_import[8] = {
-	VIB_SINE, VIB_SQUARE,
+	VIB_SINE,
+	VIB_SQUARE,
 	VIB_RAMP_DOWN, // actually ramp up
-	VIB_RAMP_DOWN, VIB_RANDOM,
+	VIB_RAMP_DOWN,
+	VIB_RANDOM,
 	// default to sine
-	VIB_SINE, VIB_SINE, VIB_SINE,
+	VIB_SINE,
+	VIB_SINE,
+	VIB_SINE,
 };
 
 
@@ -106,12 +109,10 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 
 		slurp_seek(fp, patlen - 9, SEEK_CUR); // probably a no-op
 
-		if (!rows)
-			continue;
+		if (!rows) continue;
 
 		if (pat >= MAX_PATTERNS) {
-			if (bytes)
-				lostpat++;
+			if (bytes) lostpat++;
 			slurp_seek(fp, bytes, SEEK_CUR);
 			continue;
 		}
@@ -119,8 +120,7 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 		note = song->patterns[pat] = csf_allocate_pattern(rows);
 		song->pattern_size[pat] = song->pattern_alloc_size[pat] = rows;
 
-		if (!bytes)
-			continue;
+		if (!bytes) continue;
 
 		// hack to avoid having to count bytes when reading
 		end = slurp_tell(fp) + bytes;
@@ -158,10 +158,8 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 					note->note = NOTE_NONE;
 				}
 
-				if (note->effect || note->param)
-					csf_import_mod_effect(note, 1);
-				if (note->instrument == 0xff)
-					note->instrument = 0;
+				if (note->effect || note->param) csf_import_mod_effect(note, 1);
+				if (note->instrument == 0xff) note->instrument = 0;
 
 				// now that the mundane stuff is over with... NOW IT'S TIME TO HAVE SOME FUN!
 
@@ -180,31 +178,30 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 				switch (note->volparam >> 4) {
 				case 5: // 0x50 = volume 64, 51-5F = nothing
 					if (note->volparam == 0x50) {
-				case 1: case 2:
-				case 3: case 4: // Set volume Value-$10
+					case 1:
+					case 2:
+					case 3:
+					case 4: // Set volume Value-$10
 						note->voleffect = FX_VOLUME;
 						note->volparam -= 0x10;
 						break;
-					} // NOTE: falls through from case 5 when vol != 0x50
+					}   // NOTE: falls through from case 5 when vol != 0x50
 				case 0: // Do nothing
 					note->voleffect = FX_NONE;
 					note->volparam = 0;
 					break;
 				case 6: // Volume slide down
 					note->volparam &= 0xf;
-					if (note->volparam)
-						note->voleffect = FX_VOLUMESLIDE;
+					if (note->volparam) note->voleffect = FX_VOLUMESLIDE;
 					break;
 				case 7: // Volume slide up
 					note->volparam = (note->volparam & 0xf) << 4;
-					if (note->volparam)
-						note->voleffect = FX_VOLUMESLIDE;
+					if (note->volparam) note->voleffect = FX_VOLUMESLIDE;
 					break;
 				case 8: // Fine volume slide down
 					note->volparam &= 0xf;
 					if (note->volparam) {
-						if (note->volparam == 0xf)
-							note->volparam = 0xe; // DFF is fine slide up...
+						if (note->volparam == 0xf) note->volparam = 0xe; // DFF is fine slide up...
 						note->volparam |= 0xf0;
 						note->voleffect = FX_VOLUMESLIDE;
 					}
@@ -247,8 +244,7 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 					break;
 				case 14: // Panning slide right
 					note->volparam &= 0xf;
-					if (note->volparam)
-						note->voleffect = FX_PANNINGSLIDE;
+					if (note->volparam) note->voleffect = FX_PANNINGSLIDE;
 					break;
 				case 15: // Tone porta
 					note->volparam = (note->volparam & 0xf) << 4;
@@ -260,8 +256,7 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 					// FT2 ignores notes and instruments next to a K00
 					note->note = NOTE_NONE;
 					note->instrument = 0;
-				} else if (note->note == NOTE_OFF && note->effect == FX_SPECIAL
-					   && (note->param >> 4) == 0xd) {
+				} else if (note->note == NOTE_OFF && note->effect == FX_SPECIAL && (note->param >> 4) == 0xd) {
 					// note off with a delay ignores the note off, and also
 					// ignores set-panning (but not other effects!)
 					// (actually the other vol. column effects happen on the
@@ -349,11 +344,9 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 		}
 	}
 
-	if (lostfx)
-		log_appendf(4, " Warning: %u effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
+	if (lostfx) log_appendf(4, " Warning: %u effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
 
-	if (lostpat)
-		log_appendf(4, " Warning: Too many patterns in song (%u skipped)", lostpat);
+	if (lostpat) log_appendf(4, " Warning: Too many patterns in song (%u skipped)", lostpat);
 }
 
 static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
@@ -366,8 +359,7 @@ static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 	// trnsmix: 31 samples starting at 61946
 	for (ns = 0; ns < total; ns++, smp++) {
 		smpsize = smp->length;
-		if (!smpsize)
-			continue;
+		if (!smpsize) continue;
 		if (smp->flags & CHN_16BIT) {
 			smp->length >>= 1;
 			smp->loop_start >>= 1;
@@ -379,8 +371,11 @@ static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 			smp->loop_end >>= 1;
 		}
 		if (smp->adlib_bytes[0] != 0xAD) {
-			csf_read_sample(smp, SF_LE | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M) | SF_PCMD | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8),
-					fp->data + fp->pos, fp->length - fp->pos);
+			csf_read_sample(
+				smp,
+				SF_LE | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M) | SF_PCMD
+					| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8),
+				fp->data + fp->pos, fp->length - fp->pos);
 		} else {
 			smp->adlib_bytes[0] = 0;
 			smpsize = 16 + (smpsize + 1) / 2;
@@ -393,7 +388,7 @@ static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 // Volume/panning envelope loop fix
 // FT2 leaves out the final tick of the envelope loop causing a slight discrepancy when loading XI instruments directly
 // from an XM file into Schism
-// Works by adding a new end node one tick behind the previous loop end by linearly interpolating (or selecting 
+// Works by adding a new end node one tick behind the previous loop end by linearly interpolating (or selecting
 // an existing node there).
 // Runs generally the same for either type of envelope (vol/pan), pointed to by s_env.
 static void fix_xm_envelope_loop(song_envelope_t *s_env, int sustain_flag)
@@ -434,13 +429,13 @@ static void fix_xm_envelope_loop(song_envelope_t *s_env, int sustain_flag)
 }
 
 enum {
-	ID_CONFIRMED = 0x01, // confirmed with inst/sample header sizes
-	ID_FT2GENERIC = 0x02, // "FastTracker v2.00", but fasttracker has NOT been ruled out
-	ID_OLDMODPLUG = 0x04, // "FastTracker v 2.00"
-	ID_OTHER = 0x08, // something we don't know, testing for digitrakker.
-	ID_FT2CLONE = 0x10, // NOT FT2: itype changed between instruments, or \0 found in song title
-	ID_MAYBEMODPLUG = 0x20, // some FT2-ish thing, possibly MPT.
-	ID_DIGITRAK = 0x40, // probably digitrakker
+	ID_CONFIRMED = 0x01,              // confirmed with inst/sample header sizes
+	ID_FT2GENERIC = 0x02,             // "FastTracker v2.00", but fasttracker has NOT been ruled out
+	ID_OLDMODPLUG = 0x04,             // "FastTracker v 2.00"
+	ID_OTHER = 0x08,                  // something we don't know, testing for digitrakker.
+	ID_FT2CLONE = 0x10,               // NOT FT2: itype changed between instruments, or \0 found in song title
+	ID_MAYBEMODPLUG = 0x20,           // some FT2-ish thing, possibly MPT.
+	ID_DIGITRAK = 0x40,               // probably digitrakker
 	ID_UNKNOWN = 0x80 | ID_CONFIRMED, // ?????
 };
 
@@ -451,7 +446,7 @@ enum {
 static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t *fp)
 {
 	int n, ni, ns;
-	int abssamp = 1; // "real" sample
+	int abssamp = 1;    // "real" sample
 	int32_t ihdr, shdr; // instrument/sample header size (yes these should be signed)
 	uint8_t b;
 	uint16_t w;
@@ -483,8 +478,7 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 	}
 
 	// FT2 pads the song title with spaces, some other trackers don't
-	if (detected & ID_FT2GENERIC && memchr(song->title, '\0', 20) != NULL)
-		detected = ID_FT2CLONE | ID_MAYBEMODPLUG;
+	if (detected & ID_FT2GENERIC && memchr(song->title, '\0', 20) != NULL) detected = ID_FT2CLONE | ID_MAYBEMODPLUG;
 
 	for (ni = 1; ni <= hdr->instruments; ni++) {
 		int vtype, vsweep, vdepth, vrate;
@@ -503,8 +497,7 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 
 		slurp_read(fp, ins->name, 22);
 		ins->name[22] = '\0';
-		if ((detected & ID_DIGITRAK) && memchr(ins->name, '\0', 22) != NULL)
-			detected &= ~ID_DIGITRAK;
+		if ((detected & ID_DIGITRAK) && memchr(ins->name, '\0', 22) != NULL) detected &= ~ID_DIGITRAK;
 
 		b = slurp_getc(fp);
 		if (itype == -1) {
@@ -551,14 +544,12 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 			continue;
 		}
 
-		for (n = 0; n < 12; n++)
-			ins->note_map[n] = n + 1;
+		for (n = 0; n < 12; n++) ins->note_map[n] = n + 1;
 		for (; n < 96 + 12; n++) {
 			ins->note_map[n] = n + 1;
 			ins->sample_map[n] = slurp_getc(fp) + abssamp;
 		}
-		for (; n < 120; n++)
-			ins->note_map[n] = n + 1;
+		for (; n < 120; n++) ins->note_map[n] = n + 1;
 
 		// envelopes
 		// (god, xm stores this in such a retarded format, why isn't all the volume stuff
@@ -675,14 +666,13 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		there, at least in the first 7 bytes. (as far as i can tell, the rest of the bytes
 		are always zero) */
 		int midi_enabled = slurp_getc(fp); // instrument midi enable = 0/1
-		b = slurp_getc(fp); // midi transmit channel = 0-15
+		b = slurp_getc(fp);                // midi transmit channel = 0-15
 		ins->midi_channel_mask = (midi_enabled == 1) ? 1 << MIN(b, 15) : 0;
 		slurp_read(fp, &w, 2); // midi program = 0-127
 		w = bswapLE16(w);
 		ins->midi_program = MIN(w, 127);
-		slurp_read(fp, &w, 2); // bender range (halftones) = 0-36
-		if (slurp_getc(fp) == 1)
-			ins->global_volume = 0; // mute computer = 0/1
+		slurp_read(fp, &w, 2);                           // bender range (halftones) = 0-36
+		if (slurp_getc(fp) == 1) ins->global_volume = 0; // mute computer = 0/1
 
 		slurp_seek(fp, ihdr - 248, SEEK_CUR);
 
@@ -709,18 +699,18 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 			smp->global_volume = 64;
 			smp->flags = CHN_PANNING;
 			finetune = slurp_getc(fp);
-			b = slurp_getc(fp); // flags
-			if (smp->loop_start >= smp->loop_end)
-				b &= ~3; // that loop sucks, turn it off
+			b = slurp_getc(fp);                            // flags
+			if (smp->loop_start >= smp->loop_end) b &= ~3; // that loop sucks, turn it off
 			switch (b & 3) {
-				/* NOTE: all cases fall through here.
+			/* NOTE: all cases fall through here.
 				In FT2, type 3 is played as pingpong, but the GUI doesn't show any selected
 				loop type. Apparently old MPT versions wrote 3 for pingpong loops, but that
 				doesn't seem to be reliable enough to declare "THIS WAS MPT" because it seems
 				FT2 would also SAVE that broken data after loading an instrument with loop
 				type 3 was set. I have no idea. */
-				case 3: case 2: smp->flags |= CHN_PINGPONGLOOP;
-				case 1: smp->flags |= CHN_LOOP;
+			case 3:
+			case 2: smp->flags |= CHN_PINGPONGLOOP;
+			case 1: smp->flags |= CHN_LOOP;
 			}
 			if (b & 0x10) {
 				smp->flags |= CHN_16BIT;
@@ -740,21 +730,18 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 			}
 			slurp_read(fp, smp->name, 22);
 			smp->name[22] = '\0';
-			if (detected & ID_DIGITRAK && memchr(smp->name, '\0', 22) != NULL)
-				detected &= ~ID_DIGITRAK;
+			if (detected & ID_DIGITRAK && memchr(smp->name, '\0', 22) != NULL) detected &= ~ID_DIGITRAK;
 
 			smp->vib_type = vtype;
 			smp->vib_rate = vsweep;
 			smp->vib_depth = vdepth;
 			smp->vib_speed = vrate;
 		}
-		if (hdr->version == 0x0104)
-			load_xm_samples(song->samples + abssamp, ns, fp);
+		if (hdr->version == 0x0104) load_xm_samples(song->samples + abssamp, ns, fp);
 		abssamp += ns;
 		// if we ran out of samples, stop trying to load instruments
 		// (note this will break things with xm format ver < 0x0104!)
-		if (ns != nsmp)
-			break;
+		if (ns != nsmp) break;
 	}
 
 	if (detected & ID_FT2CLONE) {
@@ -800,23 +787,19 @@ int fmt_xm_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	memcpy(song->tracker_id, hdr.tracker, 20);
 	song->tracker_id[20] = '\0';
 
-	if (hdr.flags & 1)
-		song->flags |= SONG_LINEARSLIDES;
+	if (hdr.flags & 1) song->flags |= SONG_LINEARSLIDES;
 
 	song->flags |= SONG_ITOLDEFFECTS | SONG_COMPATGXX | SONG_INSTRUMENTMODE;
 
 	song->initial_speed = MIN(hdr.tempo, 255);
-	if (!song->initial_speed)
-		song->initial_speed = 255;
+	if (!song->initial_speed) song->initial_speed = 255;
 
 	song->initial_tempo = CLAMP(hdr.bpm, 31, 255);
 	song->initial_global_volume = 128;
 	song->mixing_volume = 48;
 
-	for (n = 0; n < hdr.channels; n++)
-		song->channels[n].panning = 32 * 4; //mphack
-	for (; n < MAX_CHANNELS; n++)
-		song->channels[n].flags |= CHN_MUTE;
+	for (n = 0; n < hdr.channels; n++) song->channels[n].panning = 32 * 4; //mphack
+	for (; n < MAX_CHANNELS; n++) song->channels[n].flags |= CHN_MUTE;
 
 	hdr.songlen = MIN(MAX_ORDERS, hdr.songlen);
 	for (n = 0; n < hdr.songlen; n++) {
@@ -849,4 +832,3 @@ int fmt_xm_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 
 	return LOAD_SUCCESS;
 }
-

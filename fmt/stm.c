@@ -36,14 +36,12 @@ int fmt_stm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	int i;
 
 	/* data[29] is the type: 1 = song, 2 = module (with samples) */
-	if (!(length > 28 && (data[28] == 0x1a || data[28] == 0x02) && (data[29] == 1 || data[29] == 2)
-		&& data[30] == 2))
+	if (!(length > 28 && (data[28] == 0x1a || data[28] == 0x02) && (data[29] == 1 || data[29] == 2) && data[30] == 2))
 		return 0;
 
 	memcpy(id, data + 20, 8);
 	for (i = 0; i < 8; i++)
-		if (id[i] < 0x20 || id[i] > 0x7E)
-			return 0;
+		if (id[i] < 0x20 || id[i] > 0x7E) return 0;
 
 	/* I used to check whether it was a 'song' or 'module' and set the description
 	accordingly, but it's fairly pointless information :) */
@@ -62,7 +60,7 @@ struct stm_sample {
 	char name[12];
 	uint8_t zero;
 	uint8_t inst_disk; // lol disks
-	uint16_t pcmpara; // in the official documentation, this is misleadingly labelled reserved...
+	uint16_t pcmpara;  // in the official documentation, this is misleadingly labelled reserved...
 	uint16_t length, loop_start, loop_end;
 	uint8_t volume;
 	uint8_t reserved2;
@@ -71,7 +69,7 @@ struct stm_sample {
 	uint16_t paragraphs; // what?
 };
 
-SCHISM_BINARY_STRUCT(struct stm_sample, 12+1+1+2+2+2+2+1+1+2+4+2);
+SCHISM_BINARY_STRUCT(struct stm_sample, 12 + 1 + 1 + 2 + 2 + 2 + 2 + 1 + 1 + 2 + 4 + 2);
 
 #pragma pack(pop)
 
@@ -86,20 +84,16 @@ static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 
 	for (row = 0; row < 64; row++, note += 64 - 4) {
 		for (chan = 0; chan < 4; chan++) {
-			song_note_t* chan_note = note + chan;
+			song_note_t *chan_note = note + chan;
 			slurp_read(fp, v, 4);
 
 			// mostly copied from modplug...
-			if (v[0] < 251)
-				chan_note->note = (v[0] >> 4) * 12 + (v[0] & 0xf) + 37;
+			if (v[0] < 251) chan_note->note = (v[0] >> 4) * 12 + (v[0] & 0xf) + 37;
 			chan_note->instrument = v[1] >> 3;
-			if (chan_note->instrument > 31)
-				chan_note->instrument = 0; // oops never mind, that was crap
+			if (chan_note->instrument > 31) chan_note->instrument = 0; // oops never mind, that was crap
 			chan_note->volparam = (v[1] & 0x7) + ((v[2] & 0xf0) >> 1);
-			if (chan_note->volparam <= 64)
-				chan_note->voleffect = VOLFX_VOLUME;
-			else
-				chan_note->volparam = 0;
+			if (chan_note->volparam <= 64) chan_note->voleffect = VOLFX_VOLUME;
+			else chan_note->volparam = 0;
 			chan_note->param = v[3]; // easy!
 
 			chan_note->effect = stm_effects[v[2] & 0x0f];
@@ -107,7 +101,7 @@ static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 		}
 
 		for (chan = 0; chan < 4; chan++) {
-			song_note_t* chan_note = note + chan;
+			song_note_t *chan_note = note + chan;
 			if (chan_note->effect == FX_SPEED) {
 				uint32_t tempo = chan_note->param;
 				chan_note->param >>= 4;
@@ -124,31 +118,29 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	char id[8];
 	uint8_t tmp[4];
 	int npat, n;
-	uint16_t para_sdata[MAX_SAMPLES] = { 0 };
+	uint16_t para_sdata[MAX_SAMPLES] = {0};
 
 	slurp_seek(fp, 20, SEEK_SET);
 	slurp_read(fp, id, 8);
 	slurp_read(fp, tmp, 4);
 
 	if (!(
-		// this byte is *usually* guaranteed to be 0x1a,
-		// however putup10.stm and putup11.stm are outliers
-		// for some reason?...
-		(tmp[0] == 0x1a || tmp[0] == 0x02)
-		// from the doc:
-		//      1 - song (contains no samples)
-		//      2 - module (contains samples)
-		// I'm not going to care about "songs".
-		&& tmp[1] == 2
-		// do version 1 STM's even exist?...
-		&& tmp[2] == 2
-	)) {
+			// this byte is *usually* guaranteed to be 0x1a,
+			// however putup10.stm and putup11.stm are outliers
+			// for some reason?...
+			(tmp[0] == 0x1a || tmp[0] == 0x02)
+			// from the doc:
+			//      1 - song (contains no samples)
+			//      2 - module (contains samples)
+			// I'm not going to care about "songs".
+			&& tmp[1] == 2
+			// do version 1 STM's even exist?...
+			&& tmp[2] == 2)) {
 		return LOAD_UNSUPPORTED;
 	}
 	// check the file tag for printable ASCII
 	for (n = 0; n < 8; n++)
-		if (id[n] < 0x20 || id[n] > 0x7E)
-			return LOAD_FORMAT_ERROR;
+		if (id[n] < 0x20 || id[n] > 0x7E) return LOAD_FORMAT_ERROR;
 
 	// and the next two bytes are the tracker version.
 	sprintf(song->tracker_id, "Scream Tracker %d.%02d", tmp[2], tmp[3]);
@@ -171,8 +163,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	song->initial_global_volume = 2 * slurp_getc(fp);
 	slurp_seek(fp, 13, SEEK_CUR); // junk
 
-	if (npat > 64)
-		return LOAD_FORMAT_ERROR;
+	if (npat > 64) return LOAD_FORMAT_ERROR;
 
 	for (n = 1; n <= 31; n++) {
 		struct stm_sample stmsmp;
@@ -182,8 +173,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		slurp_read(fp, &stmsmp, sizeof(stmsmp));
 
 		for (int i = 0; i < 12; i++) {
-			if ((uint8_t)stmsmp.name[i] == 0xFF)
-				stmsmp.name[i] = 0x20;
+			if ((uint8_t)stmsmp.name[i] == 0xFF) stmsmp.name[i] = 0x20;
 		}
 		// the strncpy here is intentional -- ST2 doesn't show the '3' after the \0 bytes in the first
 		// sample of pm_fract.stm, for example
@@ -194,9 +184,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		sample->loop_end = bswapLE16(stmsmp.loop_end);
 		sample->c5speed = bswapLE16(stmsmp.c5speed);
 		sample->volume = stmsmp.volume * 4; //mphack
-		if (sample->loop_start < blen
-			&& sample->loop_end != 0xffff
-			&& sample->loop_start < sample->loop_end) {
+		if (sample->loop_start < blen && sample->loop_end != 0xffff && sample->loop_start < sample->loop_end) {
 			sample->flags |= CHN_LOOP;
 			sample->loop_end = CLAMP(sample->loop_end, sample->loop_start, blen);
 		}
@@ -207,8 +195,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	slurp_read(fp, song->orderlist, orderlist_size);
 	for (n = 0; n < orderlist_size; n++) {
-		if (song->orderlist[n] >= 64)
-			song->orderlist[n] = ORDER_LAST;
+		if (song->orderlist[n] >= 64) song->orderlist[n] = ORDER_LAST;
 	}
 
 	if (lflags & LOAD_NOPATTERNS) {
@@ -230,19 +217,16 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				sample->length = 0;
 			} else {
 				slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
-				csf_read_sample(sample, SF_LE | SF_PCMS | SF_8 | SF_M,
-					(const char *) (fp->data + fp->pos), sample->length);
+				csf_read_sample(
+					sample, SF_LE | SF_PCMS | SF_8 | SF_M, (const char *)(fp->data + fp->pos), sample->length);
 			}
 		}
 	}
 
-	for (n = 0; n < 4; n++)
-		song->channels[n].panning = ((n & 1) ? 64 : 0) * 4; //mphack
-	for (; n < 64; n++)
-		song->channels[n].flags |= CHN_MUTE;
+	for (n = 0; n < 4; n++) song->channels[n].panning = ((n & 1) ? 64 : 0) * 4; //mphack
+	for (; n < 64; n++) song->channels[n].flags |= CHN_MUTE;
 	song->pan_separation = 64;
 	song->flags = SONG_ITOLDEFFECTS | SONG_COMPATGXX | SONG_NOSTEREO;
 
 	return LOAD_SUCCESS;
 }
-

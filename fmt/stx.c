@@ -39,13 +39,11 @@ int fmt_stx_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	char id[8];
 	int i;
 
-	if (!(length > 48 && memcmp(data + 60, "SCRM", 4) == 0))
-		return 0;
+	if (!(length > 48 && memcmp(data + 60, "SCRM", 4) == 0)) return 0;
 
 	memcpy(id, data + 20, 8);
 	for (i = 0; i < 8; i++)
-		if (id[i] < 0x20 || id[i] > 0x7E)
-			return 0;
+		if (id[i] < 0x20 || id[i] > 0x7E) return 0;
 
 	file->description = "ST Music Interface Kit";
 	/*file->extension = str_dup("stx");*/
@@ -74,10 +72,10 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	/* parapointers */
 	uint16_t para_patptr;
 	uint16_t para_smptr;
-	uint16_t para_chnptr;   // supposedly settings...
+	uint16_t para_chnptr; // supposedly settings...
 	uint16_t para_smp[MAX_SAMPLES];
 	uint16_t para_pat[MAX_PATTERNS];
-	uint32_t para_sdata[MAX_SAMPLES] = { 0 };
+	uint32_t para_sdata[MAX_SAMPLES] = {0};
 	song_sample_t *sample;
 	int subversion = 1;
 	uint16_t first_pattern_size;
@@ -90,10 +88,8 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	slurp_seek(fp, 60, SEEK_SET);
 	slurp_read(fp, b, 4);
 	for (n = 0; n < 8; n++)
-		if (b2[n] < 0x20 || b2[n] > 0x7E)
-			return LOAD_UNSUPPORTED;
-	if (memcmp(b, "SCRM", 4) != 0)
-		return LOAD_UNSUPPORTED;
+		if (b2[n] < 0x20 || b2[n] > 0x7E) return LOAD_UNSUPPORTED;
+	if (memcmp(b, "SCRM", 4) != 0) return LOAD_UNSUPPORTED;
 
 	/* read the title */
 	slurp_rewind(fp);
@@ -128,13 +124,11 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	nsmp = bswapLE16(nsmp);
 
 	// STX 1.0 modules sometimes have bugged sample counts...
-	if (nsmp > 31)
-		nsmp = 31;
+	if (nsmp > 31) nsmp = 31;
 
 	npat = bswapLE16(npat);
 
-	if (nord > MAX_ORDERS || nsmp > MAX_SAMPLES || npat > MAX_PATTERNS)
-		return LOAD_FORMAT_ERROR;
+	if (nord > MAX_ORDERS || nsmp > MAX_SAMPLES || npat > MAX_PATTERNS) return LOAD_FORMAT_ERROR;
 
 	song->flags = SONG_ITOLDEFFECTS | SONG_NOSTEREO;
 
@@ -162,8 +156,7 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		sample->filename[12] = 0;
 
 		for (int i = 0; i < 12; i++) {
-			if ((uint8_t)sample->filename[i] == 0xFF)
-				sample->filename[i] = 0x20;
+			if ((uint8_t)sample->filename[i] == 0xFF) sample->filename[i] = 0x20;
 		}
 
 		slurp_read(fp, b, 3); // data pointer for pcm, irrelevant otherwise
@@ -178,11 +171,9 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			sample->loop_end = bswapLE32(tmplong);
 			sample->volume = slurp_getc(fp) * 4; //mphack
 			slurp_seek(fp, 2, SEEK_CUR);
-			c = slurp_getc(fp);  /* flags */
-			if (c & 1)
-				sample->flags |= CHN_LOOP;
-			if (sample->length)
-				any_samples = 1;
+			c = slurp_getc(fp); /* flags */
+			if (c & 1) sample->flags |= CHN_LOOP;
+			if (sample->length) any_samples = 1;
 			break;
 
 		default:
@@ -195,13 +186,12 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 		slurp_read(fp, &tmplong, 4);
 		sample->c5speed = bswapLE32(tmplong);
-		slurp_seek(fp, 12, SEEK_CUR);        /* unused space */
+		slurp_seek(fp, 12, SEEK_CUR); /* unused space */
 		slurp_read(fp, sample->name, 25);
 		sample->name[25] = 0;
 
 		for (int i = 0; i < 25; i++) {
-			if ((uint8_t)sample->name[i] == 0xFF)
-				sample->name[i] = 0x20;
+			if ((uint8_t)sample->name[i] == 0xFF) sample->name[i] = 0x20;
 		}
 
 		sample->vib_type = 0;
@@ -221,8 +211,7 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		// Amusingly, Purple Motion's "Future Brain" actually
 		// specifies pattern size in the song header even though
 		// the patterns themselves don't specify their size.
-		if (pattern_size == first_pattern_size)
-			subversion = 0;
+		if (pattern_size == first_pattern_size) subversion = 0;
 	}
 
 	if (!(lflags & LOAD_NOPATTERNS)) {
@@ -230,12 +219,10 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			int row = 0;
 
 			para_pat[n] = bswapLE16(para_pat[n]);
-			if (!para_pat[n])
-				continue;
+			if (!para_pat[n]) continue;
 
 			slurp_seek(fp, para_pat[n] << 4, SEEK_SET);
-			if (!subversion)
-				slurp_seek(fp, 2, SEEK_CUR);
+			if (!subversion) slurp_seek(fp, 2, SEEK_CUR);
 
 			song->patterns[n] = csf_allocate_pattern(64);
 
@@ -264,12 +251,8 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						// Note; hi=oct, lo=note
 						note->note = ((note->note >> 4) + 2) * 12 + (note->note & 0xf) + 13;
 						break;
-					case 255:
-						note->note = NOTE_NONE;
-						break;
-					case 254:
-						note->note = NOTE_CUT;
-						break;
+					case 255: note->note = NOTE_NONE; break;
+					case 254: note->note = NOTE_CUT; break;
 					}
 				}
 				if (mask & 64) {
@@ -290,7 +273,7 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				}
 
 				for (chn = 0; chn < 32; chn++) {
-					song_note_t* chan_note = note + chn;
+					song_note_t *chan_note = note + chn;
 					if (chan_note->effect == FX_SPEED) {
 						uint32_t tempo = chan_note->param;
 						chan_note->param >>= 4;
@@ -305,25 +288,21 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	/* sample data */
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (n = 0, sample = song->samples + 1; n < nsmp; n++, sample++) {
-			if (sample->length < 3)
-				continue;
+			if (sample->length < 3) continue;
 			slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
 			csf_read_sample(sample, SF_LE | SF_PCMS | SF_8 | SF_M, fp->data + fp->pos, fp->length - fp->pos);
 		}
 	}
 
-	for (n = 0; n < 4; n++)
-		song->channels[n].panning = ((n & 1) ? 64 : 0) * 4; //mphack
-	for (; n < 64; n++)
-		song->channels[n].flags |= CHN_MUTE;
+	for (n = 0; n < 4; n++) song->channels[n].panning = ((n & 1) ? 64 : 0) * 4; //mphack
+	for (; n < 64; n++) song->channels[n].flags |= CHN_MUTE;
 	song->pan_separation = 64;
 
 	sprintf(song->tracker_id, "ST Music Interface Kit (1.%d)", subversion);
 
-//      if (ferror(fp)) {
-//              return LOAD_FILE_ERROR;
-//      }
+	//      if (ferror(fp)) {
+	//              return LOAD_FILE_ERROR;
+	//      }
 	/* done! */
 	return LOAD_SUCCESS;
 }
-

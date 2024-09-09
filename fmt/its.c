@@ -34,8 +34,7 @@ int fmt_its_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	struct it_sample *its;
 
-	if (!(length > 80 && memcmp(data, "IMPS", 4) == 0))
-		return 0;
+	if (!(length > 80 && memcmp(data, "IMPS", 4) == 0)) return 0;
 
 	its = (struct it_sample *)data;
 	file->smp_length = bswapLE32(its->length);
@@ -46,13 +45,11 @@ int fmt_its_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	}
 	if (its->flags & 16) {
 		file->smp_flags |= CHN_LOOP;
-		if (its->flags & 64)
-			file->smp_flags |= CHN_PINGPONGLOOP;
+		if (its->flags & 64) file->smp_flags |= CHN_PINGPONGLOOP;
 	}
 	if (its->flags & 32) {
 		file->smp_flags |= CHN_SUSTAINLOOP;
-		if (its->flags & 128)
-			file->smp_flags |= CHN_PINGPONGSUSTAIN;
+		if (its->flags & 128) file->smp_flags |= CHN_PINGPONGSUSTAIN;
 	}
 
 	if (its->dfp & 128) file->smp_flags |= CHN_PANNING;
@@ -84,8 +81,7 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
 	uint32_t format;
 	uint32_t bp;
 
-	if (length < 80 || strncmp((const char *) header, "IMPS", 4) != 0)
-		return 0;
+	if (length < 80 || strncmp((const char *)header, "IMPS", 4) != 0) return 0;
 	/* alright, let's get started */
 	smp->length = bswapLE32(its->length);
 	if ((its->flags & 1) == 0) {
@@ -110,19 +106,16 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
 	smp->global_volume = its->gvl;
 	if (its->flags & 16) {
 		smp->flags |= CHN_LOOP;
-		if (its->flags & 64)
-			smp->flags |= CHN_PINGPONGLOOP;
+		if (its->flags & 64) smp->flags |= CHN_PINGPONGLOOP;
 	}
 	if (its->flags & 32) {
 		smp->flags |= CHN_SUSTAINLOOP;
-		if (its->flags & 128)
-			smp->flags |= CHN_PINGPONGSUSTAIN;
+		if (its->flags & 128) smp->flags |= CHN_PINGPONGSUSTAIN;
 	}
 	smp->volume = its->vol * 4;
-	strncpy(smp->name, (const char *) its->name, 25);
+	strncpy(smp->name, (const char *)its->name, 25);
 	smp->panning = (its->dfp & 127) * 4;
-	if (its->dfp & 128)
-		smp->flags |= CHN_PANNING;
+	if (its->dfp & 128) smp->flags |= CHN_PANNING;
 	smp->loop_start = bswapLE32(its->loopbegin);
 	smp->loop_end = bswapLE32(its->loopend);
 	smp->c5speed = bswapLE32(its->c5speed);
@@ -157,9 +150,7 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
 	bp = bswapLE32(its->samplepointer);
 
 	// dumb casts :P
-	return csf_read_sample((song_sample_t *) smp, format,
-			(const char *) (data + bp),
-			(uint32_t) (length - bp));
+	return csf_read_sample((song_sample_t *)smp, format, (const char *)(data + bp), (uint32_t)(length - bp));
 }
 
 int fmt_its_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
@@ -172,29 +163,21 @@ void save_its_header(disko_t *fp, song_sample_t *smp)
 	struct it_sample its = {0};
 
 	its.id = bswapLE32(0x53504D49); // IMPS
-	strncpy((char *) its.filename, smp->filename, 12);
+	strncpy((char *)its.filename, smp->filename, 12);
 	its.gvl = smp->global_volume;
-	if (smp->data && smp->length)
-		its.flags |= 1;
-	if (smp->flags & CHN_16BIT)
-		its.flags |= 2;
-	if (smp->flags & CHN_STEREO)
-		its.flags |= 4;
-	if (smp->flags & CHN_LOOP)
-		its.flags |= 16;
-	if (smp->flags & CHN_SUSTAINLOOP)
-		its.flags |= 32;
-	if (smp->flags & CHN_PINGPONGLOOP)
-		its.flags |= 64;
-	if (smp->flags & CHN_PINGPONGSUSTAIN)
-		its.flags |= 128;
+	if (smp->data && smp->length) its.flags |= 1;
+	if (smp->flags & CHN_16BIT) its.flags |= 2;
+	if (smp->flags & CHN_STEREO) its.flags |= 4;
+	if (smp->flags & CHN_LOOP) its.flags |= 16;
+	if (smp->flags & CHN_SUSTAINLOOP) its.flags |= 32;
+	if (smp->flags & CHN_PINGPONGLOOP) its.flags |= 64;
+	if (smp->flags & CHN_PINGPONGSUSTAIN) its.flags |= 128;
 	its.vol = smp->volume / 4;
-	strncpy((char *) its.name, smp->name, 25);
+	strncpy((char *)its.name, smp->name, 25);
 	its.name[25] = 0;
-	its.cvt = 1;                    // signed samples
+	its.cvt = 1; // signed samples
 	its.dfp = smp->panning / 4;
-	if (smp->flags & CHN_PANNING)
-		its.dfp |= 0x80;
+	if (smp->flags & CHN_PANNING) its.dfp |= 0x80;
 	its.length = bswapLE32(smp->length);
 	its.loopbegin = bswapLE32(smp->loop_start);
 	its.loopend = bswapLE32(smp->loop_end);
@@ -206,11 +189,11 @@ void save_its_header(disko_t *fp, song_sample_t *smp)
 	its.vir = smp->vib_rate;
 	its.vid = smp->vib_depth;
 	switch (smp->vib_type) {
-		case VIB_RANDOM:    its.vit = 3; break;
-		case VIB_SQUARE:    its.vit = 2; break;
-		case VIB_RAMP_DOWN: its.vit = 1; break;
-		default:
-		case VIB_SINE:      its.vit = 0; break;
+	case VIB_RANDOM: its.vit = 3; break;
+	case VIB_SQUARE: its.vit = 2; break;
+	case VIB_RAMP_DOWN: its.vit = 1; break;
+	default:
+	case VIB_SINE: its.vit = 0; break;
 	}
 
 	disko_write(fp, &its, sizeof(its));
@@ -219,10 +202,10 @@ void save_its_header(disko_t *fp, song_sample_t *smp)
 int fmt_its_save_sample(disko_t *fp, song_sample_t *smp)
 {
 	save_its_header(fp, smp);
-	csf_write_sample(fp, smp, SF_LE | SF_PCMS
-			| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
-			| ((smp->flags & CHN_STEREO) ? SF_SS : SF_M),
-			UINT32_MAX);
+	csf_write_sample(
+		fp, smp,
+		SF_LE | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8) | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M),
+		UINT32_MAX);
 
 	/* Write the sample pointer. In an ITS file, the sample data is right after the header,
 	so its position in the file will be the same as the size of the header. */
@@ -232,4 +215,3 @@ int fmt_its_save_sample(disko_t *fp, song_sample_t *smp)
 
 	return SAVE_SUCCESS;
 }
-

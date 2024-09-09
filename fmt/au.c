@@ -27,14 +27,14 @@
 
 
 enum {
-	AU_ULAW = 1,                    /* µ-law */
-	AU_PCM_8 = 2,                   /* 8-bit linear PCM (RS_PCM8U in Modplug) */
-	AU_PCM_16 = 3,                  /* 16-bit linear PCM (RS_PCM16M) */
-	AU_PCM_24 = 4,                  /* 24-bit linear PCM */
-	AU_PCM_32 = 5,                  /* 32-bit linear PCM */
-	AU_IEEE_32 = 6,                 /* 32-bit IEEE floating point */
-	AU_IEEE_64 = 7,                 /* 64-bit IEEE floating point */
-	AU_ISDN_ULAW_ADPCM = 23,        /* 8-bit ISDN µ-law (CCITT G.721 ADPCM compressed) */
+	AU_ULAW = 1,             /* µ-law */
+	AU_PCM_8 = 2,            /* 8-bit linear PCM (RS_PCM8U in Modplug) */
+	AU_PCM_16 = 3,           /* 16-bit linear PCM (RS_PCM16M) */
+	AU_PCM_24 = 4,           /* 24-bit linear PCM */
+	AU_PCM_32 = 5,           /* 32-bit linear PCM */
+	AU_IEEE_32 = 6,          /* 32-bit IEEE floating point */
+	AU_IEEE_64 = 7,          /* 64-bit IEEE floating point */
+	AU_ISDN_ULAW_ADPCM = 23, /* 8-bit ISDN µ-law (CCITT G.721 ADPCM compressed) */
 };
 
 #pragma pack(push, 1)
@@ -44,7 +44,7 @@ struct au_header {
 	uint32_t data_offset, data_size, encoding, sample_rate, channels;
 };
 
-SCHISM_BINARY_STRUCT(struct au_header, 4+4+4+4+4+4);
+SCHISM_BINARY_STRUCT(struct au_header, 4 + 4 + 4 + 4 + 4 + 4);
 
 #pragma pack(pop)
 
@@ -54,8 +54,7 @@ int fmt_au_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	struct au_header au;
 
-	if (!(length > 24 && memcmp(data, ".snd", 4) == 0))
-		return 0;
+	if (!(length > 24 && memcmp(data, ".snd", 4) == 0)) return 0;
 
 	memcpy(&au, data, 24);
 	au.data_offset = bswapBE32(au.data_offset);
@@ -64,8 +63,7 @@ int fmt_au_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 	au.sample_rate = bswapBE32(au.sample_rate);
 	au.channels = bswapBE32(au.channels);
 
-	if (!(au.data_offset < length && au.data_size > 0 && au.data_size <= length - au.data_offset))
-		return 0;
+	if (!(au.data_offset < length && au.data_size > 0 && au.data_size <= length - au.data_offset)) return 0;
 
 	file->smp_length = au.data_size / au.channels;
 	file->smp_flags = 0;
@@ -100,8 +98,7 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 	struct au_header au;
 	uint32_t sflags = SF_BE | SF_PCMS;
 
-	if (length < 24)
-		return 0;
+	if (length < 24) return 0;
 
 	memcpy(&au, data, sizeof(au));
 	/* optimization: could #ifdef this out on big-endian machines */
@@ -112,7 +109,10 @@ int fmt_au_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 	au.channels = bswapBE32(au.channels);
 
 /*#define C__(cond) if (!(cond)) { log_appendf(2, "failed condition: %s", #cond); return 0; }*/
-#define C__(cond) if (!(cond)) { return 0; }
+#define C__(cond) \
+ if (!(cond)) { \
+  return 0; \
+ }
 	C__(memcmp(au.magic, ".snd", 4) == 0);
 	C__(au.data_offset >= 24);
 	C__(au.data_offset < length);
@@ -177,10 +177,10 @@ int fmt_au_save_sample(disko_t *fp, song_sample_t *smp)
 
 	disko_write(fp, &au, sizeof(au));
 	disko_write(fp, smp->name, 25);
-	csf_write_sample(fp, smp, SF_BE | SF_PCMS
-			| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
-			| ((smp->flags & CHN_STEREO) ? SF_SI : SF_M),
-			UINT32_MAX);
+	csf_write_sample(
+		fp, smp,
+		SF_BE | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8) | ((smp->flags & CHN_STEREO) ? SF_SI : SF_M),
+		UINT32_MAX);
 
 	return SAVE_SUCCESS;
 }

@@ -29,11 +29,11 @@ int font_load(const char *filename);
 /* mostly for the itf editor */
 int font_save(const char *filename);
 
-void font_reset_lower(void);    /* ascii chars (0-127) */
-void font_reset_upper(void);    /* itf chars (128-255) */
-void font_reset(void);  /* everything (0-255) */
-void font_reset_bios(void);     /* resets all chars to the alt font */
-void font_reset_char(int c);     /* resets just one char */
+void font_reset_lower(void); /* ascii chars (0-127) */
+void font_reset_upper(void); /* itf chars (128-255) */
+void font_reset(void);       /* everything (0-255) */
+void font_reset_bios(void);  /* resets all chars to the alt font */
+void font_reset_char(int c); /* resets just one char */
 
 /* this needs to be called before any char drawing.
  * it's pretty much the same as doing...

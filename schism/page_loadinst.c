@@ -48,7 +48,7 @@
 /* the locals */
 
 static struct widget widgets_loadinst[1];
-static char inst_cwd[PATH_MAX+1] = "";
+static char inst_cwd[PATH_MAX + 1] = "";
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -74,14 +74,10 @@ static char slash_search_str[PATH_MAX];
 /* get a color index from a dmoz_file_t 'type' field */
 static inline int get_type_color(int type)
 {
-	if (type == TYPE_DIRECTORY)
-		return 5;
-	if (!(type & TYPE_EXT_DATA_MASK))
-		return 4; /* unchecked */
-	if (type & TYPE_BROWSABLE_MASK)
-		return 6; /* library */
-	if (type == TYPE_UNKNOWN)
-		return 2;
+	if (type == TYPE_DIRECTORY) return 5;
+	if (!(type & TYPE_EXT_DATA_MASK)) return 4; /* unchecked */
+	if (type & TYPE_BROWSABLE_MASK) return 6;   /* library */
+	if (type == TYPE_UNKNOWN) return 2;
 	return 3; /* sample */
 }
 
@@ -101,13 +97,10 @@ static int instgrep(dmoz_file_t *f)
 
 static void file_list_reposition(void)
 {
-	if (current_file >= flist.num_files)
-		current_file = flist.num_files-1;
+	if (current_file >= flist.num_files) current_file = flist.num_files - 1;
 	if (current_file < 0) current_file = 0;
-	if (current_file < top_file)
-		top_file = current_file;
-	else if (current_file > top_file + 34)
-		top_file = current_file - 34;
+	if (current_file < top_file) top_file = current_file;
+	else if (current_file > top_file + 34) top_file = current_file - 34;
 }
 
 static void read_directory(void)
@@ -116,16 +109,13 @@ static void read_directory(void)
 
 	clear_directory();
 
-	if (os_stat(inst_cwd, &st) < 0)
-		directory_mtime = 0;
-	else
-		directory_mtime = st.st_mtime;
+	if (os_stat(inst_cwd, &st) < 0) directory_mtime = 0;
+	else directory_mtime = st.st_mtime;
 	/* if the stat call failed, this will probably break as well, but
 	at the very least, it'll add an entry for the root directory. */
-	if (dmoz_read(inst_cwd, &flist, NULL, dmoz_read_instrument_library) < 0)
-		log_perror(inst_cwd);
+	if (dmoz_read(inst_cwd, &flist, NULL, dmoz_read_instrument_library) < 0) log_perror(inst_cwd);
 
-	dmoz_filter_filelist(&flist,instgrep, &current_file, file_list_reposition);
+	dmoz_filter_filelist(&flist, instgrep, &current_file, file_list_reposition);
 	dmoz_cache_lookup(inst_cwd, &flist, NULL);
 	file_list_reposition();
 }
@@ -137,8 +127,7 @@ static int change_dir(const char *dir)
 	char *ptr = dmoz_path_normal(dir);
 	struct stat buf;
 
-	if (!ptr)
-		return 0;
+	if (!ptr) return 0;
 
 	dmoz_cache_update(inst_cwd, &flist, NULL);
 
@@ -161,7 +150,6 @@ static void load_instrument_draw_const(void)
 	draw_fill_chars(6, 13, 67, 47, DEFAULT_FG, 0);
 	draw_box(50, 12, 61, 48, BOX_THIN | BOX_INNER | BOX_SHADE_NONE);
 	draw_box(5, 12, 68, 48, BOX_THICK | BOX_INNER | BOX_INSET);
-
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -175,9 +163,7 @@ static void _common_set_page(void)
 	}
 
 	/* if we have a list, the directory didn't change, and the mtime is the same, we're set */
-	if (flist.num_files > 0
-	    && (status.flags & DIR_SAMPLES_CHANGED) == 0
-		&& os_stat(inst_cwd, &st) == 0
+	if (flist.num_files > 0 && (status.flags & DIR_SAMPLES_CHANGED) == 0 && os_stat(inst_cwd, &st) == 0
 	    && st.st_mtime == directory_mtime) {
 		return;
 	}
@@ -227,15 +213,14 @@ static void file_list_draw(void)
 		}
 
 		draw_text(numtostr(3, n, buf), 2, pos, 0, 2);
-		draw_text_len((file->title ? file->title : ""),
-						25, 6, pos, fg, bg);
+		draw_text_len((file->title ? file->title : ""), 25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
 		draw_text_utf8_len(file->base ? file->base : "", 18, 32, pos, fg, bg);
 		if (file->base && slash_search_mode > -1) {
-			if (charset_strncasecmp(file->base, CHARSET_CHAR,
-					slash_search_str, CHARSET_CP437, slash_search_mode) == 0) {
-				size_t len = charset_strncasecmplen(file->base, CHARSET_CHAR,
-					slash_search_str, CHARSET_CP437, slash_search_mode);
+			if (charset_strncasecmp(file->base, CHARSET_CHAR, slash_search_str, CHARSET_CP437, slash_search_mode)
+			    == 0) {
+				size_t len = charset_strncasecmplen(
+					file->base, CHARSET_CHAR, slash_search_str, CHARSET_CP437, slash_search_mode);
 
 				draw_text_utf8_len(file->base, MIN(len, 18), 32, pos, 3, 1);
 			}
@@ -247,7 +232,10 @@ static void file_list_draw(void)
 		} else if (file->sampsize == 1) {
 			draw_text("1 Sample  ", 51, pos, fg, bg);
 		} else if (file->type & TYPE_MODULE_MASK) {
-			draw_text("\x9a\x9a""Module\x9a\x9a", 51, pos, fg, bg);
+			draw_text(
+				"\x9a\x9a"
+				"Module\x9a\x9a",
+				51, pos, fg, bg);
 		} else {
 			draw_text("          ", 51, pos, fg, bg);
 		}
@@ -265,8 +253,7 @@ static void file_list_draw(void)
 
 	/* draw the info for the current file (or directory...) */
 
-	while (pos < 48)
-		draw_char(168, 31, pos++, 2, 0);
+	while (pos < 48) draw_char(168, 31, pos++, 2, 0);
 }
 
 static void do_enable_inst(UNUSED void *d)
@@ -324,15 +311,12 @@ static void handle_enter_key(void)
 		if (_library_mode) return;
 		status.flags |= SONG_NEEDS_SAVE;
 		if (file->instnum > -1) {
-			song_load_instrument_ex(cur, NULL,
-					file->path, file->instnum);
+			song_load_instrument_ex(cur, NULL, file->path, file->instnum);
 		} else {
 			song_load_instrument(cur, file->path);
 		}
 		if (!song_is_instrument_mode()) {
-			dialog_create(DIALOG_YES_NO,
-				"Enable instrument mode?",
-				do_enable_inst, dont_enable_inst, 0, NULL);
+			dialog_create(DIALOG_YES_NO, "Enable instrument mode?", do_enable_inst, dont_enable_inst, 0, NULL);
 		} else {
 			set_page(PAGE_INSTRUMENT_LIST);
 		}
@@ -347,8 +331,7 @@ static void do_delete_file(UNUSED void *data)
 	int old_top_file, old_current_file;
 	char *ptr;
 
-	if (current_file < 0 || current_file >= flist.num_files)
-		return;
+	if (current_file < 0 || current_file >= flist.num_files) return;
 
 	ptr = flist.files[current_file]->path;
 
@@ -365,13 +348,13 @@ static void do_delete_file(UNUSED void *data)
 	top_file = old_top_file;
 	current_file = old_current_file;
 	/* edge case: if this was the last file, move the cursor up */
-	if (current_file >= flist.num_files)
-		current_file = flist.num_files - 1;
+	if (current_file >= flist.num_files) current_file = flist.num_files - 1;
 	file_list_reposition();
 }
 
-static int file_list_handle_text_input(const uint8_t* text) {
-	dmoz_file_t* f = flist.files[current_file];
+static int file_list_handle_text_input(const uint8_t *text)
+{
+	dmoz_file_t *f = flist.files[current_file];
 
 	for (; *text; text++) {
 		if (*text >= 32 && (slash_search_mode > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
@@ -387,7 +370,7 @@ static int file_list_handle_text_input(const uint8_t* text) {
 	return 0;
 }
 
-static int file_list_handle_key(struct key_event * k)
+static int file_list_handle_key(struct key_event *k)
 {
 	int new_file = current_file;
 
@@ -406,44 +389,56 @@ static int file_list_handle_key(struct key_event * k)
 		}
 	}
 	switch (k->sym) {
-	case SDLK_UP:           new_file--; slash_search_mode = -1; break;
-	case SDLK_DOWN:         new_file++; slash_search_mode = -1; break;
-	case SDLK_PAGEUP:       new_file -= 35; slash_search_mode = -1; break;
-	case SDLK_PAGEDOWN:     new_file += 35; slash_search_mode = -1; break;
-	case SDLK_HOME:         new_file = 0; slash_search_mode = -1; break;
-	case SDLK_END:          new_file = flist.num_files - 1; slash_search_mode = -1; break;
+	case SDLK_UP:
+		new_file--;
+		slash_search_mode = -1;
+		break;
+	case SDLK_DOWN:
+		new_file++;
+		slash_search_mode = -1;
+		break;
+	case SDLK_PAGEUP:
+		new_file -= 35;
+		slash_search_mode = -1;
+		break;
+	case SDLK_PAGEDOWN:
+		new_file += 35;
+		slash_search_mode = -1;
+		break;
+	case SDLK_HOME:
+		new_file = 0;
+		slash_search_mode = -1;
+		break;
+	case SDLK_END:
+		new_file = flist.num_files - 1;
+		slash_search_mode = -1;
+		break;
 
 	case SDLK_ESCAPE:
 		if (slash_search_mode < 0) {
-			if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod))
-				set_page(PAGE_SAMPLE_LIST);
+			if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod)) set_page(PAGE_SAMPLE_LIST);
 			return 1;
 		} /* else fall through */
 	case SDLK_RETURN:
 		if (slash_search_mode < 0) {
-			if (k->state == KEY_PRESS)
-				return 0;
+			if (k->state == KEY_PRESS) return 0;
 			handle_enter_key();
 			slash_search_mode = -1;
 		} else {
-			if (k->state == KEY_PRESS)
-				return 1;
+			if (k->state == KEY_PRESS) return 1;
 			slash_search_mode = -1;
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
 		return 1;
 	case SDLK_DELETE:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		slash_search_mode = -1;
-		if (flist.num_files > 0)
-			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
+		if (flist.num_files > 0) dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
 		return 1;
 	case SDLK_BACKSPACE:
 		if (slash_search_mode > -1) {
-			if (k->state == KEY_RELEASE)
-				return 1;
+			if (k->state == KEY_RELEASE) return 1;
 			slash_search_mode--;
 			status.flags |= NEED_UPDATE;
 			reposition_at_slash_search();
@@ -452,8 +447,7 @@ static int file_list_handle_key(struct key_event * k)
 	case SDLK_SLASH:
 		if (slash_search_mode < 0) {
 			if (k->orig_sym == SDLK_SLASH) {
-				if (k->state == KEY_PRESS)
-					return 0;
+				if (k->state == KEY_PRESS) return 0;
 				slash_search_mode = 0;
 				status.flags |= NEED_UPDATE;
 				return 1;
@@ -461,22 +455,19 @@ static int file_list_handle_key(struct key_event * k)
 			return 0;
 		} /* else fall through */
 	default:
-		if (k->text)
-			return file_list_handle_text_input(k->text);
+		if (k->text) return file_list_handle_text_input(k->text);
 
 		if (!k->mouse) return 0;
 	}
 
 	if (k->mouse == MOUSE_CLICK) {
-		if (k->state == KEY_RELEASE)
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
 	} else if (k->mouse == MOUSE_DBLCLICK) {
 		handle_enter_key();
 		return 1;
 	} else {
 		/* prevent moving the cursor twice from a single key press */
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 	}
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
@@ -488,12 +479,10 @@ static int file_list_handle_key(struct key_event * k)
 	return 1;
 }
 
-static void load_instrument_handle_key(struct key_event * k)
+static void load_instrument_handle_key(struct key_event *k)
 {
-	if (k->state == KEY_RELEASE)
-		return;
-	if (k->sym == SDLK_ESCAPE && NO_MODIFIER(k->mod))
-		set_page(PAGE_INSTRUMENT_LIST);
+	if (k->state == KEY_RELEASE) return;
+	if (k->sym == SDLK_ESCAPE && NO_MODIFIER(k->mod)) set_page(PAGE_INSTRUMENT_LIST);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -523,4 +512,3 @@ void library_instrument_load_page(struct page *page)
 	page->widgets = widgets_loadinst;
 	page->help_index = HELP_GLOBAL;
 }
-

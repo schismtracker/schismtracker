@@ -66,9 +66,9 @@ static int message_extfont = 1;
 
 /* --------------------------------------------------------------------- */
 
-static int message_handle_key_editmode(struct key_event * k);
-static int message_handle_text_input_editmode(const uint8_t* text);
-static int message_handle_key_viewmode(struct key_event * k);
+static int message_handle_key_editmode(struct key_event *k);
+static int message_handle_text_input_editmode(const uint8_t *text);
+static int message_handle_key_viewmode(struct key_event *k);
 
 /* --------------------------------------------------------------------- */
 
@@ -91,14 +91,12 @@ static int get_nth_line(char *text, int n, char **ptr)
 			*ptr = text + strlen(text);
 			return -1;
 		}
-		if ((*ptr)[0] == 13 && (*ptr)[1] == 10)
-			*ptr += 2;
-		else
-			(*ptr)++;
+		if ((*ptr)[0] == 13 && (*ptr)[1] == 10) *ptr += 2;
+		else (*ptr)++;
 	}
 
 	tmp = strpbrk(*ptr, "\xd\xa");
-	return (tmp ? (unsigned) (tmp - *ptr) : strlen(*ptr));
+	return (tmp ? (unsigned)(tmp - *ptr) : strlen(*ptr));
 }
 static void set_absolute_position(char *text, int pos, int *line, int *ch)
 {
@@ -179,19 +177,15 @@ static int message_wrap_line(char *bol_ptr)
 	char *last_space = NULL;
 	char *tmp = bol_ptr;
 
-	if (!bol_ptr)
-		/* shouldn't happen, but... */
+	if (!bol_ptr) /* shouldn't happen, but... */
 		return 0;
 
 	eol_ptr = strpbrk(bol_ptr, "\xd\xa");
-	if (!eol_ptr)
-		eol_ptr = bol_ptr + strlen(bol_ptr);
+	if (!eol_ptr) eol_ptr = bol_ptr + strlen(bol_ptr);
 
 	for (;;) {
 		tmp = strpbrk((tmp + 1), " \t");
-		if (tmp == NULL || tmp > eol_ptr
-		    || tmp - bol_ptr > LINE_WRAP)
-			break;
+		if (tmp == NULL || tmp > eol_ptr || tmp - bol_ptr > LINE_WRAP) break;
 		last_space = tmp;
 	}
 
@@ -200,8 +194,7 @@ static int message_wrap_line(char *bol_ptr)
 		return last_space - bol_ptr;
 	} else {
 		/* what, no spaces to cut at? chop it mercilessly. */
-		if (message_add_char(13, bol_ptr + LINE_WRAP - current_song->message)
-		    == 0)
+		if (message_add_char(13, bol_ptr + LINE_WRAP - current_song->message) == 0)
 			/* ack, the message is too long to wrap the line!
 			 * gonna have to resort to something ugly. */
 			bol_ptr[LINE_WRAP] = 13;
@@ -214,15 +207,15 @@ static void text(char *line, int len, int n)
 {
 	unsigned char ch;
 	int fg = (message_extfont ? 12 : 6);
-	int  i;
+	int i;
 
 	for (i = 0; line[i] && i < len; i++) {
 		ch = line[i];
 
 		if (ch == ' ') {
-			draw_char(' ', 2+i, 13+n, 3,0);
+			draw_char(' ', 2 + i, 13 + n, 3, 0);
 		} else {
-			(message_extfont ? draw_char_bios : draw_char)(ch, 2+i, 13+n, fg, 0);
+			(message_extfont ? draw_char_bios : draw_char)(ch, 2 + i, 13 + n, fg, 0);
 		}
 	}
 }
@@ -255,8 +248,7 @@ static void message_draw(void)
 			/* FIXME | shouldn't need this check here,
 			 * FIXME | because the line should already be
 			 * FIXME | short enough to fit */
-			if (len > LINE_WRAP)
-				len = LINE_WRAP;
+			if (len > LINE_WRAP) len = LINE_WRAP;
 			text(line, len, n);
 
 			if (clipl > -1) {
@@ -268,12 +260,10 @@ static void message_draw(void)
 					skipc = 0;
 				}
 				if (cutc < 0) cutc = 0;
-				if (cutc > (len-skipc)) cutc = (len-skipc);
+				if (cutc > (len - skipc)) cutc = (len - skipc);
 				if (cutc > 0 && skipc < len) {
-					if (message_extfont)
-						draw_text_bios_len(line+skipc, cutc, 2+skipc, 13 + n, 6, 8);
-					else
-						draw_text_len(line+skipc, cutc, 2+skipc, 13 + n, 6, 8);
+					if (message_extfont) draw_text_bios_len(line + skipc, cutc, 2 + skipc, 13 + n, 6, 8);
+					else draw_text_len(line + skipc, cutc, 2 + skipc, 13 + n, 6, 8);
 				}
 			}
 		}
@@ -288,8 +278,7 @@ static void message_draw(void)
 		/* end of the message */
 		len = get_nth_line(prevline, 0, &line);
 		/* FIXME: see above */
-		if (len > LINE_WRAP)
-			len = LINE_WRAP;
+		if (len > LINE_WRAP) len = LINE_WRAP;
 		draw_char(20, 2 + len, 13 + n - 1, 2, 0);
 	}
 
@@ -298,17 +287,14 @@ static void message_draw(void)
 		len = get_nth_line(current_song->message, cursor_line, &line);
 
 		/* FIXME: ... ugh */
-		if (len > LINE_WRAP)
-			len = LINE_WRAP;
-		if (cursor_char > LINE_WRAP + 1)
-			cursor_char = LINE_WRAP + 1;
+		if (len > LINE_WRAP) len = LINE_WRAP;
+		if (cursor_char > LINE_WRAP + 1) cursor_char = LINE_WRAP + 1;
 
 		if (cursor_char >= len) {
-			(message_extfont ? draw_char_bios : draw_char)
-				(20, 2 + cursor_char, 13 + (cursor_line - top_line), 0, 3);
+			(message_extfont ? draw_char_bios : draw_char)(20, 2 + cursor_char, 13 + (cursor_line - top_line), 0, 3);
 		} else {
-			(message_extfont ? draw_char_bios : draw_char)
-				(line[cursor_char], 2 + cursor_char, 13 + (cursor_line - top_line), 8, 3);
+			(message_extfont ? draw_char_bios :
+			                   draw_char)(line[cursor_char], 2 + cursor_char, 13 + (cursor_line - top_line), 8, 3);
 		}
 	}
 }
@@ -343,8 +329,7 @@ static void message_insert_char(int c)
 	char *ptr;
 	int n;
 
-	if (!edit_mode)
-		return;
+	if (!edit_mode) return;
 
 	memused_songchanged();
 	if (c == '\t') {
@@ -356,8 +341,7 @@ static void message_insert_char(int c)
 			message_insert_char('\r');
 		} else {
 			do {
-				if (!message_add_char(' ', cursor_pos))
-					break;
+				if (!message_add_char(' ', cursor_pos)) break;
 				cursor_char++;
 				cursor_pos++;
 				n--;
@@ -366,8 +350,7 @@ static void message_insert_char(int c)
 	} else if (c < 32 && c != '\r') {
 		return;
 	} else {
-		if (!message_add_char(c, cursor_pos))
-			return;
+		if (!message_add_char(c, cursor_pos)) return;
 		cursor_pos++;
 		if (c == '\r') {
 			cursor_char = 0;
@@ -393,10 +376,8 @@ static void message_delete_char(void)
 	int len = strlen(current_song->message);
 	char *ptr;
 
-	if (cursor_pos == 0)
-		return;
-	memmove(current_song->message + cursor_pos - 1, current_song->message + cursor_pos,
-		len - cursor_pos + 1);
+	if (cursor_pos == 0) return;
+	memmove(current_song->message + cursor_pos - 1, current_song->message + cursor_pos, len - cursor_pos + 1);
 	current_song->message[MAX_MESSAGE] = 0;
 	cursor_pos--;
 	if (cursor_char == 0) {
@@ -414,10 +395,8 @@ static void message_delete_next_char(void)
 {
 	int len = strlen(current_song->message);
 
-	if (cursor_pos == len)
-		return;
-	memmove(current_song->message + cursor_pos, current_song->message + cursor_pos + 1,
-		len - cursor_pos);
+	if (cursor_pos == len) return;
+	memmove(current_song->message + cursor_pos, current_song->message + cursor_pos + 1, len - cursor_pos);
 	current_song->message[MAX_MESSAGE] = 0;
 
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
@@ -430,13 +409,10 @@ static void message_delete_line(void)
 	char *ptr;
 
 	len = get_nth_line(current_song->message, cursor_line, &ptr);
-	if (len < 0)
-		return;
-	if (ptr[len] == 13 && ptr[len + 1] == 10)
-		len++;
+	if (len < 0) return;
+	if (ptr[len] == 13 && ptr[len + 1] == 10) len++;
 	movelen = (current_song->message + strlen(current_song->message) - ptr);
-	if (movelen == 0)
-		return;
+	if (movelen == 0) return;
 	memmove(ptr, ptr + len + 1, movelen);
 	len = get_nth_line(current_song->message, cursor_line, &ptr);
 	if (cursor_char > len) {
@@ -464,7 +440,7 @@ static void prompt_message_clear(void)
 
 /* --------------------------------------------------------------------- */
 
-static int message_handle_key_viewmode(struct key_event * k)
+static int message_handle_key_viewmode(struct key_event *k)
 {
 	if (k->state == KEY_PRESS) {
 		if (k->mouse == MOUSE_SCROLL_UP) {
@@ -479,54 +455,44 @@ static int message_handle_key_viewmode(struct key_event * k)
 
 	switch (k->sym) {
 	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
 		top_line--;
 		break;
 	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
 		top_line++;
 		break;
 	case SDLK_PAGEUP:
-		if (k->state == KEY_RELEASE)
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
 		top_line -= 35;
 		break;
 	case SDLK_PAGEDOWN:
-		if (k->state == KEY_RELEASE)
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
 		top_line += 35;
 		break;
 	case SDLK_HOME:
-		if (k->state == KEY_RELEASE)
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
 		top_line = 0;
 		break;
 	case SDLK_END:
-		if (k->state == KEY_RELEASE)
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
 		top_line = get_num_lines(current_song->message) - 34;
 		break;
 	case SDLK_t:
-		if (k->state == KEY_RELEASE)
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
 		if (k->mod & KMOD_CTRL) {
 			message_extfont = !message_extfont;
 			break;
 		}
 		return 1;
 	case SDLK_RETURN:
-		if (k->state == KEY_PRESS)
-			return 0;
+		if (k->state == KEY_PRESS) return 0;
 		message_set_editmode();
 		return 1;
-	default:
-		return 0;
+	default: return 0;
 	}
 
-	if (top_line < 0)
-		top_line = 0;
+	if (top_line < 0) top_line = 0;
 
 	status.flags |= NEED_UPDATE;
 
@@ -545,10 +511,10 @@ static void _delete_selection(void)
 		eat = widgets_message[0].clip_end - cursor_pos;
 	}
 	clippy_select(NULL, NULL, 0);
-	if (cursor_pos == len)
-		return;
-	memmove(current_song->message + cursor_pos, current_song->message + cursor_pos + eat + 1,
-		((len - cursor_pos) - eat)+1);
+	if (cursor_pos == len) return;
+	memmove(
+		current_song->message + cursor_pos, current_song->message + cursor_pos + eat + 1,
+		((len - cursor_pos) - eat) + 1);
 	current_song->message[MAX_MESSAGE] = 0;
 	set_absolute_position(current_song->message, cursor_pos, &cursor_line, &cursor_char);
 	message_reposition();
@@ -556,17 +522,16 @@ static void _delete_selection(void)
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
-static int message_handle_text_input_editmode(const uint8_t* text) {
-	if (clippy_owner(CLIPPY_SELECT) == widgets_message)
-		_delete_selection();
+static int message_handle_text_input_editmode(const uint8_t *text)
+{
+	if (clippy_owner(CLIPPY_SELECT) == widgets_message) _delete_selection();
 
-	for (; *text; text++)
-		message_insert_char(*text);
+	for (; *text; text++) message_insert_char(*text);
 
 	return 1;
 }
 
-static int message_handle_key_editmode(struct key_event * k)
+static int message_handle_key_editmode(struct key_event *k)
 {
 	int line_len, num_lines = -1;
 	int new_cursor_line = cursor_line;
@@ -576,16 +541,13 @@ static int message_handle_key_editmode(struct key_event * k)
 	int clipl, clipr, cp;
 
 	if (k->mouse == MOUSE_SCROLL_UP) {
-		if (k->state == KEY_RELEASE)
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
 		new_cursor_line -= MOUSE_SCROLL_LINES;
 	} else if (k->mouse == MOUSE_SCROLL_DOWN) {
-		if (k->state == KEY_RELEASE)
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
 		new_cursor_line += MOUSE_SCROLL_LINES;
 	} else if (k->mouse == MOUSE_CLICK && k->mouse_button == 2) {
-		if (k->state == KEY_RELEASE)
-			status.flags |= CLIPPY_PASTE_SELECTION;
+		if (k->state == KEY_RELEASE) status.flags |= CLIPPY_PASTE_SELECTION;
 		return 1;
 	} else if (k->mouse == MOUSE_CLICK) {
 		if (k->x >= 2 && k->x <= 77 && k->y >= 13 && k->y <= 47) {
@@ -593,8 +555,7 @@ static int message_handle_key_editmode(struct key_event * k)
 			new_cursor_char = (k->x - 2);
 			if (k->sx != k->x || k->sy != k->y) {
 				/* yay drag operation */
-				cp = get_absolute_position(current_song->message, (k->sy-13)+top_line,
-							(k->sx-2));
+				cp = get_absolute_position(current_song->message, (k->sy - 13) + top_line, (k->sx - 2));
 				widgets_message[0].clip_start = cp;
 				doing_drag = 1;
 			}
@@ -606,58 +567,42 @@ static int message_handle_key_editmode(struct key_event * k)
 
 	switch (k->sym) {
 	case SDLK_UP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
 		new_cursor_line--;
 		break;
 	case SDLK_DOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
 		new_cursor_line++;
 		break;
 	case SDLK_LEFT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
 		new_cursor_char--;
 		break;
 	case SDLK_RIGHT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
 		new_cursor_char++;
 		break;
 	case SDLK_PAGEUP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
 		new_cursor_line -= 35;
 		break;
 	case SDLK_PAGEDOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
 		new_cursor_line += 35;
 		break;
 	case SDLK_HOME:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (k->mod & KMOD_CTRL)
-			new_cursor_line = 0;
-		else
-			new_cursor_char = 0;
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_CTRL) new_cursor_line = 0;
+		else new_cursor_char = 0;
 		break;
 	case SDLK_END:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		if (k->mod & KMOD_CTRL) {
 			num_lines = get_num_lines(current_song->message);
 			new_cursor_line = num_lines;
@@ -666,18 +611,14 @@ static int message_handle_key_editmode(struct key_event * k)
 		}
 		break;
 	case SDLK_ESCAPE:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
 		message_set_viewmode();
 		memused_songchanged();
 		return 1;
 	case SDLK_BACKSPACE:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
 		if (k->sym && clippy_owner(CLIPPY_SELECT) == widgets_message) {
 			_delete_selection();
 		} else {
@@ -685,24 +626,18 @@ static int message_handle_key_editmode(struct key_event * k)
 		}
 		return 1;
 	case SDLK_DELETE:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->state == KEY_RELEASE) return 1;
 
-		if (clippy_owner(CLIPPY_SELECT) == widgets_message)
-			_delete_selection();
-		else
-			message_delete_next_char();
+		if (clippy_owner(CLIPPY_SELECT) == widgets_message) _delete_selection();
+		else message_delete_next_char();
 
 		return 1;
 	case SDLK_RETURN:
 		if (NO_MODIFIER(k->mod)) {
-			if (k->state == KEY_RELEASE)
-				return 1;
+			if (k->state == KEY_RELEASE) return 1;
 
-			if (clippy_owner(CLIPPY_SELECT) == widgets_message)
-				_delete_selection();
+			if (clippy_owner(CLIPPY_SELECT) == widgets_message) _delete_selection();
 
 			message_insert_char('\r');
 
@@ -712,8 +647,7 @@ static int message_handle_key_editmode(struct key_event * k)
 	default:
 		/* keybinds... */
 		if (k->mod & KMOD_CTRL) {
-			if (k->state == KEY_RELEASE)
-				return 1;
+			if (k->state == KEY_RELEASE) return 1;
 
 			if (k->sym == SDLK_t) {
 				message_extfont = !message_extfont;
@@ -724,25 +658,21 @@ static int message_handle_key_editmode(struct key_event * k)
 				break;
 			}
 		} else if (k->mod & KMOD_ALT) {
-			if (k->state == KEY_RELEASE)
-				return 1;
+			if (k->state == KEY_RELEASE) return 1;
 
 			if (k->sym == SDLK_c) {
 				prompt_message_clear();
 				return 1;
 			}
 		} else if (k->mouse == MOUSE_NONE) {
-			if (k->text)
-				return message_handle_text_input_editmode(k->text);
+			if (k->text) return message_handle_text_input_editmode(k->text);
 
 			return 0;
 		}
 
-		if (k->mouse != MOUSE_CLICK)
-			return 0;
+		if (k->mouse != MOUSE_CLICK) return 0;
 
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		if (!doing_drag) {
 			clippy_select(NULL, NULL, 0);
 		}
@@ -750,35 +680,29 @@ static int message_handle_key_editmode(struct key_event * k)
 	}
 
 	if (new_cursor_line != cursor_line) {
-		if (num_lines == -1)
-			num_lines = get_num_lines(current_song->message);
+		if (num_lines == -1) num_lines = get_num_lines(current_song->message);
 
-		if (new_cursor_line < 0)
-			new_cursor_line = 0;
-		else if (new_cursor_line > num_lines)
-			new_cursor_line = num_lines;
+		if (new_cursor_line < 0) new_cursor_line = 0;
+		else if (new_cursor_line > num_lines) new_cursor_line = num_lines;
 
 		/* make sure the cursor doesn't go past the new eol */
 		line_len = get_nth_line(current_song->message, new_cursor_line, &ptr);
-		if (new_cursor_char > line_len)
-			new_cursor_char = line_len;
+		if (new_cursor_char > line_len) new_cursor_char = line_len;
 
 		cursor_char = new_cursor_char;
 		cursor_line = new_cursor_line;
 	} else if (new_cursor_char != cursor_char) {
-	/* we say "else" here ESPECIALLY because the mouse can only come
+		/* we say "else" here ESPECIALLY because the mouse can only come
 	in the top section - not because it's some clever optimization */
 		if (new_cursor_char < 0) {
 			if (cursor_line == 0) {
 				new_cursor_char = cursor_char;
 			} else {
 				cursor_line--;
-				new_cursor_char =
-					get_nth_line(current_song->message, cursor_line, &ptr);
+				new_cursor_char = get_nth_line(current_song->message, cursor_line, &ptr);
 			}
 
-		} else if (new_cursor_char >
-			   get_nth_line(current_song->message, cursor_line, &ptr)) {
+		} else if (new_cursor_char > get_nth_line(current_song->message, cursor_line, &ptr)) {
 			if (cursor_line == get_num_lines(current_song->message)) {
 				new_cursor_char = cursor_char;
 			} else {
@@ -802,7 +726,7 @@ static int message_handle_key_editmode(struct key_event * k)
 			clipl = clipr;
 			clipr = cp;
 		}
-		clippy_select(widgets_message, (current_song->message+clipl), clipr-clipl);
+		clippy_select(widgets_message, (current_song->message + clipl), clipr - clipl);
 	}
 
 	status.flags |= NEED_UPDATE;
@@ -829,14 +753,12 @@ static void song_changed_cb(void)
 
 	len = get_nth_line(current_song->message, 0, &line);
 	while (len >= 0) {
-		if (len > LINE_WRAP)
-			message_wrap_line(line);
+		if (len > LINE_WRAP) message_wrap_line(line);
 		prevline = line;
 		len = get_nth_line(prevline, 1, &line);
 	}
 
-	if (status.current_page == PAGE_MESSAGE)
-		status.flags |= NEED_UPDATE;
+	if (status.current_page == PAGE_MESSAGE) status.flags |= NEED_UPDATE;
 }
 
 /* --------------------------------------------------------------------- */

@@ -52,10 +52,7 @@ static struct widget widgets_panning[19];
 static struct widget widgets_pitch[20];
 
 /* rastops for envelope */
-static struct vgamem_overlay env_overlay = {
-	32, 18, 65, 25,
-	NULL, 0, 0, 0
-};
+static struct vgamem_overlay env_overlay = {32, 18, 65, 25, NULL, 0, 0, 0};
 
 /* toggled when pressing "," on the note table's sample field
  * more of a boolean than a bit mask  -delt.
@@ -65,29 +62,25 @@ static int note_sample_mask = 1;
 static struct widget *get_page_widgets(void)
 {
 	switch (instrument_list_subpage) {
-	case PAGE_INSTRUMENT_LIST_GENERAL:
-		return widgets_general;
-	case PAGE_INSTRUMENT_LIST_VOLUME:
-		return widgets_volume;
-	case PAGE_INSTRUMENT_LIST_PANNING:
-		return widgets_panning;
-	case PAGE_INSTRUMENT_LIST_PITCH:
-		return widgets_pitch;
+	case PAGE_INSTRUMENT_LIST_GENERAL: return widgets_general;
+	case PAGE_INSTRUMENT_LIST_VOLUME: return widgets_volume;
+	case PAGE_INSTRUMENT_LIST_PANNING: return widgets_panning;
+	case PAGE_INSTRUMENT_LIST_PITCH: return widgets_pitch;
 	};
 	return widgets_general;
 }
 
-static const int subpage_switches_group[5] = { 1, 2, 3, 4, -1 };
-static const int nna_group[5] = { 6, 7, 8, 9, -1 };
-static const int dct_group[5] = { 10, 11, 12, 13, -1 };
-static const int dca_group[4] = { 14, 15, 16, -1 };
+static const int subpage_switches_group[5] = {1, 2, 3, 4, -1};
+static const int nna_group[5] = {6, 7, 8, 9, -1};
+static const int dct_group[5] = {10, 11, 12, 13, -1};
+static const int dca_group[4] = {14, 15, 16, -1};
 
-static const char *const pitch_envelope_states[] = { "Off", "On Pitch", "On Filter", NULL };
+static const char *const pitch_envelope_states[] = {"Off", "On Pitch", "On Filter", NULL};
 
 static int top_instrument = 1;
 static int current_instrument = 1;
-static int _altswap_lastvis = 99; // for alt-down instrument-swapping
-static int instrument_cursor_pos = 25;  /* "play" mode */
+static int _altswap_lastvis = 99;      // for alt-down instrument-swapping
+static int instrument_cursor_pos = 25; /* "play" mode */
 
 static int note_trans_top_line = 0;
 static int note_trans_sel_line = 0;
@@ -96,7 +89,7 @@ static int note_trans_cursor_pos = 0;
 
 /* shared by all the numentries on a page
  * (0 = volume, 1 = panning, 2 = pitch) */
-static int numentry_cursor_pos[3] = { 0 };
+static int numentry_cursor_pos[3] = {0};
 
 static int current_node_vol = 0;
 static int current_node_pan = 0;
@@ -109,7 +102,7 @@ static int envelope_tick_limit = 0;
 static void set_subpage(int page);
 
 /* playback */
-static int last_note = 61;              /* C-5 */
+static int last_note = 61; /* C-5 */
 
 /* strange saved envelopes */
 static song_envelope_t saved_env[10];
@@ -121,30 +114,24 @@ static void save_envelope(int slot, song_envelope_t *e, unsigned int sec)
 {
 	song_instrument_t *ins;
 
-	slot = ((unsigned)slot)%10;
+	slot = ((unsigned)slot) % 10;
 
 	ins = song_get_instrument(current_instrument);
 	memcpy(&saved_env[slot], e, sizeof(song_envelope_t));
 
 	switch (sec) {
-	case ENV_VOLUME:
-		flags[slot] = ins->flags & (ENV_VOLUME|ENV_VOLSUSTAIN|ENV_VOLLOOP|ENV_VOLCARRY);
-		break;
+	case ENV_VOLUME: flags[slot] = ins->flags & (ENV_VOLUME | ENV_VOLSUSTAIN | ENV_VOLLOOP | ENV_VOLCARRY); break;
 	case ENV_PANNING:
-		flags[slot] =
-			((ins->flags & ENV_PANNING) ? ENV_VOLUME : 0)
-		|       ((ins->flags & ENV_PANSUSTAIN) ? ENV_VOLSUSTAIN : 0)
-		|       ((ins->flags & ENV_PANLOOP) ? ENV_VOLLOOP : 0)
-		|       ((ins->flags & ENV_PANCARRY) ? ENV_VOLCARRY : 0)
-		|       (ins->flags & ENV_SETPANNING);
+		flags[slot] = ((ins->flags & ENV_PANNING) ? ENV_VOLUME : 0)
+		              | ((ins->flags & ENV_PANSUSTAIN) ? ENV_VOLSUSTAIN : 0)
+		              | ((ins->flags & ENV_PANLOOP) ? ENV_VOLLOOP : 0)
+		              | ((ins->flags & ENV_PANCARRY) ? ENV_VOLCARRY : 0) | (ins->flags & ENV_SETPANNING);
 		break;
 	case ENV_PITCH:
-		flags[slot] =
-			((ins->flags & ENV_PITCH) ? ENV_VOLUME : 0)
-		|       ((ins->flags & ENV_PITCHSUSTAIN) ? ENV_VOLSUSTAIN : 0)
-		|       ((ins->flags & ENV_PITCHLOOP) ? ENV_VOLLOOP : 0)
-		|       ((ins->flags & ENV_PITCHCARRY) ? ENV_VOLCARRY : 0)
-		|       (ins->flags & ENV_FILTER);
+		flags[slot] = ((ins->flags & ENV_PITCH) ? ENV_VOLUME : 0)
+		              | ((ins->flags & ENV_PITCHSUSTAIN) ? ENV_VOLSUSTAIN : 0)
+		              | ((ins->flags & ENV_PITCHLOOP) ? ENV_VOLLOOP : 0)
+		              | ((ins->flags & ENV_PITCHCARRY) ? ENV_VOLCARRY : 0) | (ins->flags & ENV_FILTER);
 		break;
 	};
 }
@@ -154,19 +141,19 @@ static void restore_envelope(int slot, song_envelope_t *e, unsigned int sec)
 
 	song_lock_audio();
 
-	slot = ((unsigned)slot)%10;
+	slot = ((unsigned)slot) % 10;
 
 	ins = song_get_instrument(current_instrument);
 	memcpy(e, &saved_env[slot], sizeof(song_envelope_t));
 
 	switch (sec) {
 	case ENV_VOLUME:
-		ins->flags &= ~(ENV_VOLUME|ENV_VOLSUSTAIN|ENV_VOLLOOP|ENV_VOLCARRY);
-		ins->flags |= (flags[slot] & (ENV_VOLUME|ENV_VOLSUSTAIN|ENV_VOLLOOP|ENV_VOLCARRY));
+		ins->flags &= ~(ENV_VOLUME | ENV_VOLSUSTAIN | ENV_VOLLOOP | ENV_VOLCARRY);
+		ins->flags |= (flags[slot] & (ENV_VOLUME | ENV_VOLSUSTAIN | ENV_VOLLOOP | ENV_VOLCARRY));
 		break;
 
 	case ENV_PANNING:
-		ins->flags &= ~(ENV_PANNING|ENV_PANSUSTAIN|ENV_PANLOOP|ENV_PANCARRY|ENV_SETPANNING);
+		ins->flags &= ~(ENV_PANNING | ENV_PANSUSTAIN | ENV_PANLOOP | ENV_PANCARRY | ENV_SETPANNING);
 		if (flags[slot] & ENV_VOLUME) ins->flags |= ENV_PANNING;
 		if (flags[slot] & ENV_VOLSUSTAIN) ins->flags |= ENV_PANSUSTAIN;
 		if (flags[slot] & ENV_VOLLOOP) ins->flags |= ENV_PANLOOP;
@@ -175,14 +162,13 @@ static void restore_envelope(int slot, song_envelope_t *e, unsigned int sec)
 		break;
 
 	case ENV_PITCH:
-		ins->flags &= ~(ENV_PITCH|ENV_PITCHSUSTAIN|ENV_PITCHLOOP|ENV_PITCHCARRY|ENV_FILTER);
+		ins->flags &= ~(ENV_PITCH | ENV_PITCHSUSTAIN | ENV_PITCHLOOP | ENV_PITCHCARRY | ENV_FILTER);
 		if (flags[slot] & ENV_VOLUME) ins->flags |= ENV_PITCH;
 		if (flags[slot] & ENV_VOLSUSTAIN) ins->flags |= ENV_PITCHSUSTAIN;
 		if (flags[slot] & ENV_VOLLOOP) ins->flags |= ENV_PITCHLOOP;
 		if (flags[slot] & ENV_VOLCARRY) ins->flags |= ENV_PITCHCARRY;
 		ins->flags |= (flags[slot] & ENV_FILTER);
 		break;
-
 	};
 
 	song_unlock_audio();
@@ -209,8 +195,7 @@ static int _last_vis_inst(void)
 			j = i;
 		}
 	}
-	while ((j + 34) > n)
-		n += 34;
+	while ((j + 34) > n) n += 34;
 	return MIN(n, MAX_INSTRUMENTS - 1);
 }
 /* the actual list */
@@ -243,8 +228,7 @@ void instrument_set(int n)
 		new_ins = CLAMP(n, 0, _last_vis_inst());
 	}
 
-	if (current_instrument == new_ins)
-		return;
+	if (current_instrument == new_ins) return;
 
 	envelope_edit_mode = 0;
 	current_instrument = new_ins;
@@ -278,8 +262,7 @@ void instrument_synchronize_to_sample(void)
 	/* 2. look through the instrument list for the first instrument
 	 * that uses the selected sample. */
 	for (n = 1; n < 100; n++) {
-		if (n == sample)
-			continue;
+		if (n == sample) continue;
 		ins = song_get_instrument(n);
 		for (pos = 0; pos < 120; pos++) {
 			if ((int)(ins->sample_map[pos]) == sample) {
@@ -300,12 +283,10 @@ static int instrument_list_add_char(int c)
 {
 	song_instrument_t *ins;
 
-	if (c < 32)
-		return 0;
+	if (c < 32) return 0;
 	ins = song_get_instrument(current_instrument);
 	text_add_char(ins->name, c, &instrument_cursor_pos, 25);
-	if (instrument_cursor_pos == 25)
-		instrument_cursor_pos--;
+	if (instrument_cursor_pos == 25) instrument_cursor_pos--;
 
 	get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 	status.flags |= NEED_UPDATE;
@@ -339,8 +320,7 @@ static void clear_instrument_text(void)
 
 	memset(ins->filename, 0, 14);
 	memset(ins->name, 0, 26);
-	if (instrument_cursor_pos != 25)
-		instrument_cursor_pos = 0;
+	if (instrument_cursor_pos != 25) instrument_cursor_pos = 0;
 
 	get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 	status.flags |= NEED_UPDATE;
@@ -397,8 +377,7 @@ static void instrument_list_draw_list(void)
 		ins = song_get_instrument(n);
 		is_current = (n == current_instrument);
 
-		if (ins->played)
-			draw_char(is_playing[n] > 1 ? 183 : 173, 1, 13 + pos, is_playing[n] ? 3 : 1, 2);
+		if (ins->played) draw_char(is_playing[n] > 1 ? 183 : 173, 1, 13 + pos, is_playing[n] ? 3 : 1, 2);
 
 		draw_text(num99tostr(n, buf), 2, 13 + pos, 0, 2);
 		if (instrument_cursor_pos < 25) {
@@ -406,43 +385,37 @@ static void instrument_list_draw_list(void)
 			if (is_current) {
 				draw_text_len(ins->name, 25, 5, 13 + pos, 6, 14);
 				if (selected) {
-					draw_char(ins->name[instrument_cursor_pos],
-						  5 + instrument_cursor_pos,
-						  13 + pos, 0, 3);
+					draw_char(ins->name[instrument_cursor_pos], 5 + instrument_cursor_pos, 13 + pos, 0, 3);
 				}
 			} else {
 				draw_text_len(ins->name, 25, 5, 13 + pos, 6, 0);
 			}
 		} else {
-			draw_text_len(ins->name, 25, 5, 13 + pos,
-				      ((is_current && selected) ? 0 : 6),
-				      (is_current ? (selected ? 3 : 14) : 0));
+			draw_text_len(
+				ins->name, 25, 5, 13 + pos, ((is_current && selected) ? 0 : 6), (is_current ? (selected ? 3 : 14) : 0));
 		}
 		if (ss == n) {
-			draw_text_len(ins->name + cl, (cr-cl)+1,
-					5 + cl, 13 + pos,
-					(is_current ? 3 : 11), 8);
+			draw_text_len(ins->name + cl, (cr - cl) + 1, 5 + cl, 13 + pos, (is_current ? 3 : 11), 8);
 		}
 	}
 }
 
-static int instrument_list_handle_text_input_on_list(const uint8_t* text) {
+static int instrument_list_handle_text_input_on_list(const uint8_t *text)
+{
 	int success = 0;
 	for (; *text; text++)
-		if (instrument_cursor_pos < 25 && instrument_list_add_char(*text))
-			success = 1;
+		if (instrument_cursor_pos < 25 && instrument_list_add_char(*text)) success = 1;
 	return success;
 }
 
-static int instrument_list_handle_key_on_list(struct key_event * k)
+static int instrument_list_handle_key_on_list(struct key_event *k)
 {
 	int new_ins = current_instrument;
 
 	if (k->state == KEY_PRESS && k->mouse != MOUSE_NONE && k->y >= 13 && k->y <= 47 && k->x >= 5 && k->x <= 30) {
 		if (k->mouse == MOUSE_CLICK) {
 			new_ins = (k->y - 13) + top_instrument;
-			if (instrument_cursor_pos < 25)
-				instrument_cursor_pos = MIN(k->x - 5, 24);
+			if (instrument_cursor_pos < 25) instrument_cursor_pos = MIN(k->x - 5, 24);
 			status.flags |= NEED_UPDATE;
 		} else if (k->mouse == MOUSE_DBLCLICK) {
 			/* this doesn't seem to work, but I think it'd be
@@ -463,15 +436,14 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			return 1;
 		} else if (k->mouse == MOUSE_SCROLL_DOWN) {
 			top_instrument += MOUSE_SCROLL_LINES;
-			if (top_instrument > (_last_vis_inst()-34)) top_instrument = _last_vis_inst()-34;
+			if (top_instrument > (_last_vis_inst() - 34)) top_instrument = _last_vis_inst() - 34;
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
 	} else {
 		switch (k->sym) {
 		case SDLK_UP:
-			if (k->state == KEY_RELEASE)
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
 			if (k->mod & KMOD_ALT) {
 				if (current_instrument > 1) {
 					new_ins = current_instrument - 1;
@@ -484,13 +456,11 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			}
 			break;
 		case SDLK_DOWN:
-			if (k->state == KEY_RELEASE)
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
 			if (k->mod & KMOD_ALT) {
 				// restrict position to the "old" value of _last_vis_inst()
 				// (this is entirely for aesthetic reasons)
-				if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
-					_altswap_lastvis = _last_vis_inst();
+				if (status.last_keysym != SDLK_DOWN && !k->is_repeat) _altswap_lastvis = _last_vis_inst();
 				if (current_instrument < _altswap_lastvis) {
 					new_ins = current_instrument + 1;
 					song_swap_instruments(current_instrument, new_ins);
@@ -502,26 +472,18 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			}
 			break;
 		case SDLK_PAGEUP:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (k->mod & KMOD_CTRL)
-				new_ins = 1;
-			else
-				new_ins -= 16;
+			if (k->state == KEY_RELEASE) return 0;
+			if (k->mod & KMOD_CTRL) new_ins = 1;
+			else new_ins -= 16;
 			break;
 		case SDLK_PAGEDOWN:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (k->mod & KMOD_CTRL)
-				new_ins = _last_vis_inst();
-			else
-				new_ins += 16;
+			if (k->state == KEY_RELEASE) return 0;
+			if (k->mod & KMOD_CTRL) new_ins = _last_vis_inst();
+			else new_ins += 16;
 			break;
 		case SDLK_HOME:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
+			if (!NO_MODIFIER(k->mod)) return 0;
 			if (instrument_cursor_pos < 25) {
 				instrument_cursor_pos = 0;
 				get_page_widgets()->accept_text = 1;
@@ -529,10 +491,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			}
 			return 1;
 		case SDLK_END:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
+			if (!NO_MODIFIER(k->mod)) return 0;
 			if (instrument_cursor_pos < 24) {
 				instrument_cursor_pos = 24;
 				get_page_widgets()->accept_text = 1;
@@ -540,10 +500,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			}
 			return 1;
 		case SDLK_LEFT:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
+			if (!NO_MODIFIER(k->mod)) return 0;
 			if (instrument_cursor_pos < 25 && instrument_cursor_pos > 0) {
 				instrument_cursor_pos--;
 				get_page_widgets()->accept_text = 1;
@@ -551,10 +509,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			}
 			return 1;
 		case SDLK_RIGHT:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
+			if (!NO_MODIFIER(k->mod)) return 0;
 			if (instrument_cursor_pos == 25) {
 				get_page_widgets()->accept_text = 0;
 				widget_change_focus_to(1);
@@ -565,8 +521,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			}
 			return 1;
 		case SDLK_RETURN:
-			if (k->state == KEY_PRESS)
-				return 0;
+			if (k->state == KEY_PRESS) return 0;
 			if (instrument_cursor_pos < 25) {
 				instrument_cursor_pos = 25;
 				get_page_widgets()->accept_text = 0;
@@ -578,8 +533,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			return 1;
 		case SDLK_ESCAPE:
 			if ((k->mod & KMOD_SHIFT) || instrument_cursor_pos < 25) {
-				if (k->state == KEY_RELEASE)
-					return 1;
+				if (k->state == KEY_RELEASE) return 1;
 				instrument_cursor_pos = 25;
 				get_page_widgets()->accept_text = 0;
 				status.flags |= NEED_UPDATE;
@@ -587,18 +541,13 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			}
 			return 0;
 		case SDLK_BACKSPACE:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (instrument_cursor_pos == 25)
-				return 0;
-			if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0)
-				instrument_list_delete_char();
-			else if (k->mod & KMOD_CTRL)
-				instrument_list_add_char(127);
+			if (k->state == KEY_RELEASE) return 0;
+			if (instrument_cursor_pos == 25) return 0;
+			if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) instrument_list_delete_char();
+			else if (k->mod & KMOD_CTRL) instrument_list_add_char(127);
 			return 1;
 		case SDLK_INSERT:
-			if (k->state == KEY_RELEASE)
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
 			if (k->mod & KMOD_ALT) {
 				song_insert_instrument_slot(current_instrument);
 				status.flags |= NEED_UPDATE;
@@ -606,22 +555,19 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			}
 			return 0;
 		case SDLK_DELETE:
-			if (k->state == KEY_RELEASE)
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
 			if (k->mod & KMOD_ALT) {
 				song_remove_instrument_slot(current_instrument);
 				status.flags |= NEED_UPDATE;
 				return 1;
 			} else if ((k->mod & KMOD_CTRL) == 0) {
-				if (instrument_cursor_pos == 25)
-					return 0;
+				if (instrument_cursor_pos == 25) return 0;
 				instrument_list_delete_next_char();
 				return 1;
 			}
 			return 0;
 		default:
-			if (k->state == KEY_RELEASE)
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
 
 			if (k->mod & KMOD_ALT) {
 				if (k->sym == SDLK_c) {
@@ -630,8 +576,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				}
 			} else if ((k->mod & KMOD_CTRL) == 0) {
 				if (instrument_cursor_pos < 25) {
-					if (k->text)
-						return instrument_list_handle_text_input_on_list(k->text);
+					if (k->text) return instrument_list_handle_text_input_on_list(k->text);
 				} else if (k->sym == SDLK_SPACE) {
 					instrument_cursor_pos = 0;
 					get_page_widgets()->accept_text = 0;
@@ -679,17 +624,14 @@ static void note_trans_draw(void)
 		bg = ((n == note_trans_sel_line) ? sel_bg : 0);
 
 		/* invalid notes are translated to themselves (and yes, this edits the actual instrument) */
-		if (ins->note_map[n] < 1 || ins->note_map[n] > 120)
-			ins->note_map[n] = n + 1;
+		if (ins->note_map[n] < 1 || ins->note_map[n] > 120) ins->note_map[n] = n + 1;
 
 		draw_text(get_note_string(n + 1, buf), 32, 16 + pos, 2, bg);
 		draw_char(168, 35, 16 + pos, 2, bg);
 		draw_text(get_note_string(ins->note_map[n], buf), 36, 16 + pos, 2, bg);
 		if (is_selected && n == note_trans_sel_line) {
-			if (note_trans_cursor_pos == 0)
-				draw_char(buf[0], 36, 16 + pos, 0, 3);
-			else if (note_trans_cursor_pos == 1)
-				draw_char(buf[2], 38, 16 + pos, 0, 3);
+			if (note_trans_cursor_pos == 0) draw_char(buf[0], 36, 16 + pos, 0, 3);
+			else if (note_trans_cursor_pos == 1) draw_char(buf[2], 38, 16 + pos, 0, 3);
 		}
 		draw_char(0, 39, 16 + pos, 2, bg);
 		if (ins->sample_map[n]) {
@@ -700,10 +642,8 @@ static void note_trans_draw(void)
 		}
 		draw_text(buf, 40, 16 + pos, 2, bg);
 		if (is_selected && n == note_trans_sel_line) {
-			if (note_trans_cursor_pos == 2)
-				draw_char(buf[0], 40, 16 + pos, 0, 3);
-			else if (note_trans_cursor_pos == 3)
-				draw_char(buf[1], 41, 16 + pos, 0, 3);
+			if (note_trans_cursor_pos == 2) draw_char(buf[0], 40, 16 + pos, 0, 3);
+			else if (note_trans_cursor_pos == 3) draw_char(buf[1], 41, 16 + pos, 0, 3);
 		}
 	}
 
@@ -741,7 +681,7 @@ static void instrument_note_trans_transpose(song_instrument_t *ins, int dir)
 {
 	int i;
 	for (i = 0; i < 120; i++) {
-		ins->note_map[i] = CLAMP(ins->note_map[i]+dir, 1, 120);
+		ins->note_map[i] = CLAMP(ins->note_map[i] + dir, 1, 120);
 	}
 }
 
@@ -749,11 +689,11 @@ static void instrument_note_trans_insert(song_instrument_t *ins, int pos)
 {
 	int i;
 	for (i = 119; i > pos; i--) {
-		ins->note_map[i] = ins->note_map[i-1];
-		ins->sample_map[i] = ins->sample_map[i-1];
+		ins->note_map[i] = ins->note_map[i - 1];
+		ins->sample_map[i] = ins->sample_map[i - 1];
 	}
 	if (pos) {
-		ins->note_map[pos] = ins->note_map[pos-1]+1;
+		ins->note_map[pos] = ins->note_map[pos - 1] + 1;
 	} else {
 		ins->note_map[0] = 1;
 	}
@@ -763,13 +703,13 @@ static void instrument_note_trans_delete(song_instrument_t *ins, int pos)
 {
 	int i;
 	for (i = pos; i < 120; i++) {
-		ins->note_map[i] = ins->note_map[i+1];
-		ins->sample_map[i] = ins->sample_map[i+1];
+		ins->note_map[i] = ins->note_map[i + 1];
+		ins->sample_map[i] = ins->sample_map[i + 1];
 	}
-	ins->note_map[119] = ins->note_map[118]+1;
+	ins->note_map[119] = ins->note_map[118] + 1;
 }
 
-static int note_trans_handle_key(struct key_event * k)
+static int note_trans_handle_key(struct key_event *k)
 {
 	int prev_line = note_trans_sel_line;
 	int new_line = prev_line;
@@ -779,8 +719,7 @@ static int note_trans_handle_key(struct key_event * k)
 	int c, n;
 
 	if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
-		if (k->state == KEY_RELEASE)
-			status.flags |= CLIPPY_PASTE_SELECTION;
+		if (k->state == KEY_RELEASE) status.flags |= CLIPPY_PASTE_SELECTION;
 		return 1;
 	} else if (k->mouse == MOUSE_SCROLL_UP || k->mouse == MOUSE_SCROLL_DOWN) {
 		if (k->state == KEY_PRESS) {
@@ -794,91 +733,63 @@ static int note_trans_handle_key(struct key_event * k)
 			new_line = note_trans_top_line + k->y - 16;
 			if (new_line == prev_line) {
 				switch (k->x - 36) {
-				case 2:
-					new_pos = 1;
-					break;
-				case 4:
-					new_pos = 2;
-					break;
-				case 5:
-					new_pos = 3;
-					break;
-				default:
-					new_pos = 0;
-					break;
+				case 2: new_pos = 1; break;
+				case 4: new_pos = 2; break;
+				case 5: new_pos = 3; break;
+				default: new_pos = 0; break;
 				};
 			}
 		}
 	} else if (k->mod & KMOD_ALT) {
-		if (k->state == KEY_RELEASE)
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
 		switch (k->sym) {
-		case SDLK_UP:
-			instrument_note_trans_transpose(ins, 1);
-			break;
-		case SDLK_DOWN:
-			instrument_note_trans_transpose(ins, -1);
-			break;
-		case SDLK_INSERT:
-			instrument_note_trans_insert(ins, note_trans_sel_line);
-			break;
-		case SDLK_DELETE:
-			instrument_note_trans_delete(ins, note_trans_sel_line);
-			break;
+		case SDLK_UP: instrument_note_trans_transpose(ins, 1); break;
+		case SDLK_DOWN: instrument_note_trans_transpose(ins, -1); break;
+		case SDLK_INSERT: instrument_note_trans_insert(ins, note_trans_sel_line); break;
+		case SDLK_DELETE: instrument_note_trans_delete(ins, note_trans_sel_line); break;
 		case SDLK_n:
 			n = note_trans_sel_line - 1; // the line to copy *from*
-			if (n < 0 || ins->note_map[n] == NOTE_LAST)
-				break;
+			if (n < 0 || ins->note_map[n] == NOTE_LAST) break;
 			ins->note_map[note_trans_sel_line] = ins->note_map[n] + 1;
 			ins->sample_map[note_trans_sel_line] = ins->sample_map[n];
 			new_line++;
 			break;
 		case SDLK_p:
 			n = note_trans_sel_line + 1; // the line to copy *from*
-			if (n > (NOTE_LAST - NOTE_FIRST) || ins->note_map[n] == NOTE_FIRST)
-				break;
+			if (n > (NOTE_LAST - NOTE_FIRST) || ins->note_map[n] == NOTE_FIRST) break;
 			ins->note_map[note_trans_sel_line] = ins->note_map[n] - 1;
 			ins->sample_map[note_trans_sel_line] = ins->sample_map[n];
 			new_line--;
 			break;
 		case SDLK_a:
 			c = sample_get_current();
-			for (n = 0; n < (NOTE_LAST - NOTE_FIRST + 1); n++)
-				ins->sample_map[n] = c;
+			for (n = 0; n < (NOTE_LAST - NOTE_FIRST + 1); n++) ins->sample_map[n] = c;
 			if (k->mod & KMOD_SHIFT) {
 				// Copy the name too.
 				memcpy(ins->name, current_song->samples[c].name, 32);
 			}
 			break;
-		default:
-			return 0;
+		default: return 0;
 		}
 	} else {
 		switch (k->sym) {
 		case SDLK_UP:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (k->mod & KMOD_CTRL)
-				sample_set(sample_get_current () - 1);
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
+			if (k->mod & KMOD_CTRL) sample_set(sample_get_current() - 1);
+			if (!NO_MODIFIER(k->mod)) return 0;
 			if (--new_line < 0) {
 				widget_change_focus_to(1);
 				return 1;
 			}
 			break;
 		case SDLK_DOWN:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (k->mod & KMOD_CTRL)
-				sample_set(sample_get_current () + 1);
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
+			if (k->mod & KMOD_CTRL) sample_set(sample_get_current() + 1);
+			if (!NO_MODIFIER(k->mod)) return 0;
 			new_line++;
 			break;
 		case SDLK_PAGEUP:
-			if (k->state == KEY_RELEASE)
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
 			if (k->mod & KMOD_CTRL) {
 				instrument_set(current_instrument - 1);
 				return 1;
@@ -886,8 +797,7 @@ static int note_trans_handle_key(struct key_event * k)
 			new_line -= 16;
 			break;
 		case SDLK_PAGEDOWN:
-			if (k->state == KEY_RELEASE)
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
 			if (k->mod & KMOD_CTRL) {
 				instrument_set(current_instrument + 1);
 				return 1;
@@ -895,70 +805,56 @@ static int note_trans_handle_key(struct key_event * k)
 			new_line += 16;
 			break;
 		case SDLK_HOME:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
+			if (!NO_MODIFIER(k->mod)) return 0;
 			new_line = 0;
 			break;
 		case SDLK_END:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
+			if (!NO_MODIFIER(k->mod)) return 0;
 			new_line = 119;
 			break;
 		case SDLK_LEFT:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
+			if (!NO_MODIFIER(k->mod)) return 0;
 			new_pos--;
 			break;
 		case SDLK_RIGHT:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
+			if (!NO_MODIFIER(k->mod)) return 0;
 			new_pos++;
 			break;
 		case SDLK_RETURN:
-			if (k->state == KEY_PRESS)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
+			if (k->state == KEY_PRESS) return 0;
+			if (!NO_MODIFIER(k->mod)) return 0;
 			sample_set(ins->sample_map[note_trans_sel_line]);
 			get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 			return 1;
 		case SDLK_LESS:
 		case SDLK_SEMICOLON:
 		case SDLK_COLON:
-			if (k->state == KEY_RELEASE)
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
 			sample_set(sample_get_current() - 1);
 			return 1;
 		case SDLK_GREATER:
 		case SDLK_QUOTE:
 		case SDLK_QUOTEDBL:
-			if (k->state == KEY_RELEASE)
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
 			sample_set(sample_get_current() + 1);
 			return 1;
 
 		default:
-			if (k->state == KEY_RELEASE)
-				return 0;
+			if (k->state == KEY_RELEASE) return 0;
 			switch (note_trans_cursor_pos) {
-			case 0:        /* note */
+			case 0: /* note */
 				n = kbd_get_note(k);
-				if (!NOTE_IS_NOTE(n))
-					return 0;
+				if (!NOTE_IS_NOTE(n)) return 0;
 				ins->note_map[note_trans_sel_line] = n;
 				if (note_sample_mask || (status.flags & CLASSIC_MODE))
 					ins->sample_map[note_trans_sel_line] = sample_get_current();
 				new_line++;
 				break;
-			case 1:        /* octave */
+			case 1: /* octave */
 				c = kbd_char_to_hex(k);
 				if (c < 0 || c > 9) return 0;
 				n = ins->note_map[note_trans_sel_line];
@@ -970,11 +866,10 @@ static int note_trans_handle_key(struct key_event * k)
 				/* Made it possible to enter H to R letters
 				on 1st digit for expanded sample slots.  -delt. */
 
-			case 2:        /* instrument, first digit */
-			case 3:        /* instrument, second digit */
+			case 2: /* instrument, first digit */
+			case 3: /* instrument, second digit */
 				if (k->sym == SDLK_SPACE) {
-					ins->sample_map[note_trans_sel_line] =
-						sample_get_current();
+					ins->sample_map[note_trans_sel_line] = sample_get_current();
 					new_line++;
 					break;
 				}
@@ -1029,10 +924,8 @@ static int note_trans_handle_key(struct key_event * k)
 static void _env_draw_axes(int middle)
 {
 	int n, y = middle ? 31 : 62;
-	for (n = 0; n < 64; n += 2)
-		vgamem_ovl_drawpixel(&env_overlay, 3, n, 12);
-	for (n = 0; n < 256; n += 2)
-		vgamem_ovl_drawpixel(&env_overlay, 1 + n, y, 12);
+	for (n = 0; n < 64; n += 2) vgamem_ovl_drawpixel(&env_overlay, 3, n, 12);
+	for (n = 0; n < 256; n += 2) vgamem_ovl_drawpixel(&env_overlay, 1 + n, y, 12);
 }
 
 static void _env_draw_node(int x, int y, int on)
@@ -1047,18 +940,18 @@ static void _env_draw_node(int x, int y, int on)
 	vgamem_ovl_drawpixel(&env_overlay, x, y, c);
 	vgamem_ovl_drawpixel(&env_overlay, x, y + 1, c);
 
-	vgamem_ovl_drawpixel(&env_overlay, x + 1, y - 1,c);
-	vgamem_ovl_drawpixel(&env_overlay, x + 1, y,c);
-	vgamem_ovl_drawpixel(&env_overlay, x + 1, y + 1,c);
+	vgamem_ovl_drawpixel(&env_overlay, x + 1, y - 1, c);
+	vgamem_ovl_drawpixel(&env_overlay, x + 1, y, c);
+	vgamem_ovl_drawpixel(&env_overlay, x + 1, y + 1, c);
 
 	if (on) {
-		vgamem_ovl_drawpixel(&env_overlay, x - 3, y - 1,c);
-		vgamem_ovl_drawpixel(&env_overlay, x - 3, y,c);
-		vgamem_ovl_drawpixel(&env_overlay, x - 3, y + 1,c);
+		vgamem_ovl_drawpixel(&env_overlay, x - 3, y - 1, c);
+		vgamem_ovl_drawpixel(&env_overlay, x - 3, y, c);
+		vgamem_ovl_drawpixel(&env_overlay, x - 3, y + 1, c);
 
-		vgamem_ovl_drawpixel(&env_overlay, x + 3, y - 1,c);
-		vgamem_ovl_drawpixel(&env_overlay, x + 3, y,c);
-		vgamem_ovl_drawpixel(&env_overlay, x + 3, y + 1,c);
+		vgamem_ovl_drawpixel(&env_overlay, x + 3, y - 1, c);
+		vgamem_ovl_drawpixel(&env_overlay, x + 3, y, c);
+		vgamem_ovl_drawpixel(&env_overlay, x + 3, y + 1, c);
 	}
 }
 
@@ -1071,30 +964,38 @@ static void _env_draw_loop(int xs, int xe, int sustain)
 		while (y < 62) {
 			/* unrolled once */
 			vgamem_ovl_drawpixel(&env_overlay, xs, y, c);
-			vgamem_ovl_drawpixel(&env_overlay, xe, y, c); y++;
+			vgamem_ovl_drawpixel(&env_overlay, xe, y, c);
+			y++;
 			vgamem_ovl_drawpixel(&env_overlay, xs, y, 0);
-			vgamem_ovl_drawpixel(&env_overlay, xe, y, 0); y++;
+			vgamem_ovl_drawpixel(&env_overlay, xe, y, 0);
+			y++;
 			vgamem_ovl_drawpixel(&env_overlay, xs, y, c);
-			vgamem_ovl_drawpixel(&env_overlay, xe, y, c); y++;
+			vgamem_ovl_drawpixel(&env_overlay, xe, y, c);
+			y++;
 			vgamem_ovl_drawpixel(&env_overlay, xs, y, 0);
-			vgamem_ovl_drawpixel(&env_overlay, xe, y, 0); y++;
+			vgamem_ovl_drawpixel(&env_overlay, xe, y, 0);
+			y++;
 		}
 	} else {
 		while (y < 62) {
 			vgamem_ovl_drawpixel(&env_overlay, xs, y, 0);
-			vgamem_ovl_drawpixel(&env_overlay, xe, y, 0); y++;
+			vgamem_ovl_drawpixel(&env_overlay, xe, y, 0);
+			y++;
 			vgamem_ovl_drawpixel(&env_overlay, xs, y, c);
-			vgamem_ovl_drawpixel(&env_overlay, xe, y, c); y++;
+			vgamem_ovl_drawpixel(&env_overlay, xe, y, c);
+			y++;
 			vgamem_ovl_drawpixel(&env_overlay, xs, y, c);
-			vgamem_ovl_drawpixel(&env_overlay, xe, y, c); y++;
+			vgamem_ovl_drawpixel(&env_overlay, xe, y, c);
+			y++;
 			vgamem_ovl_drawpixel(&env_overlay, xs, y, 0);
-			vgamem_ovl_drawpixel(&env_overlay, xe, y, 0); y++;
+			vgamem_ovl_drawpixel(&env_overlay, xe, y, 0);
+			y++;
 		}
 	}
 }
 
-static void _env_draw(const song_envelope_t *env, int middle, int current_node,
-			int env_on, int loop_on, int sustain_on, int env_num)
+static void _env_draw(
+	const song_envelope_t *env, int middle, int current_node, int env_on, int loop_on, int sustain_on, int env_num)
 {
 	song_voice_t *channel;
 	unsigned int *channel_list;
@@ -1104,8 +1005,7 @@ static void _env_draw(const song_envelope_t *env, int middle, int current_node,
 	int last_x = 0, last_y = 0;
 	int max_ticks = 50;
 
-	while (env->ticks[env->nodes - 1] >= max_ticks)
-		max_ticks *= 2;
+	while (env->ticks[env->nodes - 1] >= max_ticks) max_ticks *= 2;
 
 	vgamem_ovl_clear(&env_overlay, 0);
 
@@ -1126,41 +1026,35 @@ static void _env_draw(const song_envelope_t *env, int middle, int current_node,
 
 		_env_draw_node(x, y, n == current_node);
 
-		if (last_x)
-			vgamem_ovl_drawline(&env_overlay,
-				last_x, last_y, x, y, 12);
+		if (last_x) vgamem_ovl_drawline(&env_overlay, last_x, last_y, x, y, 12);
 
 		last_x = x;
 		last_y = y;
 	}
 
 	if (sustain_on)
-		_env_draw_loop(4 + env->ticks[env->sustain_start] * 256 / max_ticks,
-			       4 + env->ticks[env->sustain_end] * 256 / max_ticks, 1);
+		_env_draw_loop(
+			4 + env->ticks[env->sustain_start] * 256 / max_ticks, 4 + env->ticks[env->sustain_end] * 256 / max_ticks,
+			1);
 	if (loop_on)
-		_env_draw_loop(4 + env->ticks[env->loop_start] * 256 / max_ticks,
-			       4 + env->ticks[env->loop_end] * 256 / max_ticks, 0);
+		_env_draw_loop(
+			4 + env->ticks[env->loop_start] * 256 / max_ticks, 4 + env->ticks[env->loop_end] * 256 / max_ticks, 0);
 
 	if (env_on) {
-		max_ticks = env->ticks[env->nodes-1];
+		max_ticks = env->ticks[env->nodes - 1];
 		m = max_ticks ? song_get_mix_state(&channel_list) : 0;
 		while (m--) {
 			channel = song_get_mix_channel(channel_list[m]);
-			if (channel->ptr_instrument != song_get_instrument(current_instrument))
-				continue;
+			if (channel->ptr_instrument != song_get_instrument(current_instrument)) continue;
 
 			envpos[0] = channel->vol_env_position;
 			envpos[1] = channel->pan_env_position;
 			envpos[2] = channel->pitch_env_position;
 
-			x = 4 + (envpos[env_num] * (last_x-4) / max_ticks);
-			if (x > last_x)
-				x = last_x;
-			c =  (status.flags & CLASSIC_MODE)
-				? 12
-				: ((channel->flags & (CHN_KEYOFF | CHN_NOTEFADE)) ? 8 : 6);
-			for (y = 0; y < 62; y++)
-				vgamem_ovl_drawpixel(&env_overlay, x, y, c);
+			x = 4 + (envpos[env_num] * (last_x - 4) / max_ticks);
+			if (x > last_x) x = last_x;
+			c = (status.flags & CLASSIC_MODE) ? 12 : ((channel->flags & (CHN_KEYOFF | CHN_NOTEFADE)) ? 8 : 6);
+			for (y = 0; y < 62; y++) vgamem_ovl_drawpixel(&env_overlay, x, y, c);
 		}
 	}
 
@@ -1182,8 +1076,7 @@ static int _env_node_add(song_envelope_t *env, int current_node, int override_ti
 
 	status.flags |= SONG_NEEDS_SAVE;
 
-	if (env->nodes > 24 || current_node == env->nodes - 1)
-		return current_node;
+	if (env->nodes > 24 || current_node == env->nodes - 1) return current_node;
 
 	newtick = (env->ticks[current_node] + env->ticks[current_node + 1]) / 2;
 	newvalue = (env->values[current_node] + env->values[current_node + 1]) / 2;
@@ -1196,9 +1089,11 @@ static int _env_node_add(song_envelope_t *env, int current_node, int override_ti
 	}
 
 	env->nodes++;
-	memmove(env->ticks + current_node + 1, env->ticks + current_node,
+	memmove(
+		env->ticks + current_node + 1, env->ticks + current_node,
 		(env->nodes - current_node - 1) * sizeof(env->ticks[0]));
-	memmove(env->values + current_node + 1, env->values + current_node,
+	memmove(
+		env->values + current_node + 1, env->values + current_node,
 		(env->nodes - current_node - 1) * sizeof(env->values[0]));
 	env->ticks[current_node + 1] = newtick;
 	env->values[current_node + 1] = newvalue;
@@ -1215,33 +1110,25 @@ static int _env_node_remove(song_envelope_t *env, int current_node)
 {
 	status.flags |= SONG_NEEDS_SAVE;
 
-	if (current_node == 0 || env->nodes < 3)
-		return current_node;
+	if (current_node == 0 || env->nodes < 3) return current_node;
 
-	memmove(env->ticks + current_node, env->ticks + current_node + 1,
+	memmove(
+		env->ticks + current_node, env->ticks + current_node + 1,
 		(env->nodes - current_node - 1) * sizeof(env->ticks[0]));
-	memmove(env->values + current_node, env->values + current_node + 1,
+	memmove(
+		env->values + current_node, env->values + current_node + 1,
 		(env->nodes - current_node - 1) * sizeof(env->values[0]));
 	env->nodes--;
 
-	if (env->loop_start >= env->nodes)
-		env->loop_start = env->nodes - 1;
-	else if (env->loop_start > current_node)
-		env->loop_start--;
-	if (env->loop_end >= env->nodes)
-		env->loop_end = env->nodes - 1;
-	else if (env->loop_end > current_node)
-		env->loop_end--;
-	if (env->sustain_start >= env->nodes)
-		env->sustain_start = env->nodes - 1;
-	else if (env->sustain_start > current_node)
-		env->sustain_start--;
-	if (env->sustain_end >= env->nodes)
-		env->sustain_end = env->nodes - 1;
-	else if (env->sustain_end > current_node)
-		env->sustain_end--;
-	if (current_node >= env->nodes)
-		current_node = env->nodes - 1;
+	if (env->loop_start >= env->nodes) env->loop_start = env->nodes - 1;
+	else if (env->loop_start > current_node) env->loop_start--;
+	if (env->loop_end >= env->nodes) env->loop_end = env->nodes - 1;
+	else if (env->loop_end > current_node) env->loop_end--;
+	if (env->sustain_start >= env->nodes) env->sustain_start = env->nodes - 1;
+	else if (env->sustain_start > current_node) env->sustain_start--;
+	if (env->sustain_end >= env->nodes) env->sustain_end = env->nodes - 1;
+	else if (env->sustain_end > current_node) env->sustain_end--;
+	if (current_node >= env->nodes) current_node = env->nodes - 1;
 
 	return current_node;
 }
@@ -1273,17 +1160,15 @@ static void do_pre_loop_cut(void *ign)
 		env->loop_end = 0;
 	}
 	env->loop_start = 0;
-	if (env->loop_start > env->loop_end)
-		env->loop_end = env->loop_start;
-	if (env->sustain_start > env->sustain_end)
-		env->sustain_end = env->sustain_start;
+	if (env->loop_start > env->loop_end) env->loop_end = env->loop_start;
+	if (env->sustain_start > env->sustain_end) env->sustain_end = env->sustain_start;
 	status.flags |= NEED_UPDATE;
 }
 
 static void do_post_loop_cut(void *ign)
 {
 	song_envelope_t *env = (song_envelope_t *)ign;
-	env->nodes = env->loop_end+1;
+	env->nodes = env->loop_end + 1;
 }
 
 
@@ -1292,8 +1177,7 @@ static void env_resize(song_envelope_t *env, int ticks)
 	int old = env->ticks[env->nodes - 1];
 	int n, t;
 
-	if (ticks > 9999)
-		ticks = 9999;
+	if (ticks > 9999) ticks = 9999;
 	for (n = 1; n < env->nodes; n++) {
 		t = env->ticks[n] * ticks / old;
 		env->ticks[n] = MAX(t, env->ticks[n - 1] + 1);
@@ -1307,7 +1191,7 @@ static int env_resize_cursor;
 
 static void do_env_resize(void *data)
 {
-	env_resize((song_envelope_t *) data, env_resize_widgets[0].d.numentry.value);
+	env_resize((song_envelope_t *)data, env_resize_widgets[0].d.numentry.value);
 }
 
 static void env_resize_draw_const(void)
@@ -1338,7 +1222,7 @@ static void do_env_adsr(void *data)
 {
 	// FIXME | move env flags into the envelope itself, where they should be in the first place.
 	// FIXME | then this nonsense can go away.
-	song_instrument_t *ins = (song_instrument_t *) data;
+	song_instrument_t *ins = (song_instrument_t *)data;
 	song_envelope_t *env = &ins->vol_env;
 	int a = env_adsr_widgets[0].d.thumbbar.value;
 	int d = env_adsr_widgets[1].d.thumbbar.value;
@@ -1364,8 +1248,7 @@ static void do_env_adsr(void *data)
 	env->values[n++] = 0;
 	env->nodes = n;
 	for (n = 0; n < env->nodes - 1; n++)
-		if (env->ticks[n] >= env->ticks[n + 1])
-			env->ticks[n + 1] = env->ticks[n] + 1;
+		if (env->ticks[n] >= env->ticks[n + 1]) env->ticks[n + 1] = env->ticks[n] + 1;
 	ins->flags |= ENV_VOLSUSTAIN | ENV_VOLUME; // arghhhhh
 }
 
@@ -1409,50 +1292,38 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 
 	switch (k->sym) {
 	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
 		widget_change_focus_to(1);
 		return 1;
 	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
 		widget_change_focus_to(6);
 		return 1;
 	case SDLK_LEFT:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		new_node--;
 		break;
 	case SDLK_RIGHT:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		new_node++;
 		break;
 	case SDLK_INSERT:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		*current_node = _env_node_add(env, *current_node, -1, -1);
 		status.flags |= NEED_UPDATE;
 		return 1 | 2;
 	case SDLK_DELETE:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		*current_node = _env_node_remove(env, *current_node);
 		status.flags |= NEED_UPDATE;
 		return 1 | 2;
 	case SDLK_SPACE:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->is_repeat)
-			return 1;
+		if (!NO_MODIFIER(k->mod)) return 0;
+		if (k->is_repeat) return 1;
 
 		if (k->state == KEY_PRESS) {
 			song_keydown(KEYJAZZ_NOINST, current_instrument, last_note, 64, KEYJAZZ_CHAN_CURRENT);
@@ -1464,25 +1335,21 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 
 		return 0;
 	case SDLK_RETURN:
-		if (k->state == KEY_PRESS)
-			return 0;
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (k->state == KEY_PRESS) return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		envelope_edit_mode = 1;
 		status.flags |= NEED_UPDATE;
 		return 1 | 2;
 	case SDLK_l:
-		if (k->state == KEY_PRESS)
-			return 0;
+		if (k->state == KEY_PRESS) return 0;
 		if (!(k->mod & KMOD_ALT)) return 0;
-		if (env->loop_end < (env->nodes-1))  {
+		if (env->loop_end < (env->nodes - 1)) {
 			dialog_create(DIALOG_OK_CANCEL, "Cut envelope?", do_post_loop_cut, NULL, 1, env);
 			return 1;
 		}
 		return 0;
 	case SDLK_b:
-		if (k->state == KEY_PRESS)
-			return 0;
+		if (k->state == KEY_PRESS) return 0;
 		if (!(k->mod & KMOD_ALT)) return 0;
 		if (env->loop_start > 0) {
 			dialog_create(DIALOG_OK_CANCEL, "Cut envelope?", do_pre_loop_cut, NULL, 1, env);
@@ -1493,34 +1360,29 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 	// F/G for key symmetry with pattern double/halve block
 	// E for symmetry with sample resize
 	case SDLK_f:
-		if (k->state == KEY_PRESS)
-			return 0;
+		if (k->state == KEY_PRESS) return 0;
 		if (!(k->mod & KMOD_ALT)) return 0;
 		env_resize(env, env->ticks[env->nodes - 1] * 2);
 		return 1;
 	case SDLK_g:
-		if (k->state == KEY_PRESS)
-			return 0;
+		if (k->state == KEY_PRESS) return 0;
 		if (!(k->mod & KMOD_ALT)) return 0;
 		env_resize(env, env->ticks[env->nodes - 1] / 2);
 		return 1;
 	case SDLK_e:
-		if (k->state == KEY_PRESS)
-			return 0;
+		if (k->state == KEY_PRESS) return 0;
 		if (!(k->mod & KMOD_ALT)) return 0;
 		env_resize_dialog(env);
 		return 1;
 
 	case SDLK_z:
-		if (k->state == KEY_PRESS)
-			return 0;
+		if (k->state == KEY_PRESS) return 0;
 		if (!(k->mod & KMOD_ALT)) return 0;
 		env_adsr_dialog(env);
 		return 1;
 
 	default:
-		if (k->state == KEY_PRESS)
-			return 0;
+		if (k->state == KEY_PRESS) return 0;
 
 		n = numeric_key_event(k, 0);
 		if (n > -1) {
@@ -1529,8 +1391,7 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 				status_text_flash("Envelope copied into slot %d", n);
 			} else if (k->mod & KMOD_SHIFT) {
 				restore_envelope(n, env, sec);
-				if (!(status.flags & CLASSIC_MODE))
-					status_text_flash("Pasted envelope from slot %d", n);
+				if (!(status.flags & CLASSIC_MODE)) status_text_flash("Pasted envelope from slot %d", n);
 			}
 			return 1;
 		}
@@ -1559,10 +1420,9 @@ static int _env_handle_mouse(struct key_event *k, song_envelope_t *env, int *cur
 		if (envelope_mouse_edit) {
 			video_set_mousecursor_shape(CURSOR_SHAPE_ARROW);
 			if (current_node && *current_node) {
-				for (i = 0; i < env->nodes-1; i++) {
+				for (i = 0; i < env->nodes - 1; i++) {
 					if (*current_node == i) continue;
-					if (env->ticks[ *current_node ] == env->ticks[i]
-					&& env->values[ *current_node ] == env->values[i]) {
+					if (env->ticks[*current_node] == env->ticks[i] && env->values[*current_node] == env->values[i]) {
 						status_text_flash("Removed node %d", (int)(*current_node));
 						status.flags |= SONG_NEEDS_SAVE;
 
@@ -1570,7 +1430,6 @@ static int _env_handle_mouse(struct key_event *k, song_envelope_t *env, int *cur
 						break;
 					}
 				}
-
 			}
 			status.flags |= NEED_UPDATE;
 		}
@@ -1579,15 +1438,12 @@ static int _env_handle_mouse(struct key_event *k, song_envelope_t *env, int *cur
 		return 1;
 	}
 
-	while (env->ticks[env->nodes - 1] >= max_ticks)
-		max_ticks *= 2;
+	while (env->ticks[env->nodes - 1] >= max_ticks) max_ticks *= 2;
 
 	if (envelope_mouse_edit) {
 		video_set_mousecursor_shape(CURSOR_SHAPE_CROSSHAIR);
-		if (k->fx < 259)
-			x = 0;
-		else
-			x = (k->fx - 259) * max_ticks / 256;
+		if (k->fx < 259) x = 0;
+		else x = (k->fx - 259) * max_ticks / 256;
 		y = 64 - (k->fy - 144);
 		if (y > 63) y++;
 		if (y > 42) y++;
@@ -1595,12 +1451,12 @@ static int _env_handle_mouse(struct key_event *k, song_envelope_t *env, int *cur
 		if (y > 64) y = 64;
 		if (y < 0) y = 0;
 
-		if (*current_node && env->ticks[ (*current_node)-1 ] >= x) {
-			x = env->ticks[ (*current_node)-1 ]+1;
+		if (*current_node && env->ticks[(*current_node) - 1] >= x) {
+			x = env->ticks[(*current_node) - 1] + 1;
 		}
-		if (*current_node < (env->nodes-1)) {
-			if (env->ticks[ (*current_node)+1 ] <= x) {
-				x = env->ticks[ (*current_node)+1 ]-1;
+		if (*current_node < (env->nodes - 1)) {
+			if (env->ticks[(*current_node) + 1] <= x) {
+				x = env->ticks[(*current_node) + 1] - 1;
 			}
 		}
 		if (env->ticks[*current_node] == x && env->ticks[*current_node] == y) {
@@ -1609,8 +1465,8 @@ static int _env_handle_mouse(struct key_event *k, song_envelope_t *env, int *cur
 		if (x < 0) x = 0;
 		if (x > envelope_tick_limit) x = envelope_tick_limit;
 		if (x > 9999) x = 9999;
-		if (*current_node) env->ticks[ *current_node ] = x;
-		env->values[ *current_node ] = y;
+		if (*current_node) env->ticks[*current_node] = x;
+		env->values[*current_node] = y;
 		status.flags |= SONG_NEEDS_SAVE;
 		status.flags |= NEED_UPDATE;
 	} else {
@@ -1621,8 +1477,7 @@ static int _env_handle_mouse(struct key_event *k, song_envelope_t *env, int *cur
 
 		best_dist_node = -1;
 
-		if (k->x < 32 || k->y < 18 || k->x > 32+45 || k->y > 18+8)
-			return 0;
+		if (k->x < 32 || k->y < 18 || k->x > 32 + 45 || k->y > 18 + 8) return 0;
 
 		for (n = 0; n < env->nodes; n++) {
 			x = 259 + env->ticks[n] * 256 / max_ticks;
@@ -1632,9 +1487,9 @@ static int _env_handle_mouse(struct key_event *k, song_envelope_t *env, int *cur
 			if (y > 21) y--;
 			y = 206 - y;
 
-			dx = abs(x - (int) k->fx);
-			dy = abs(y - (int) k->fy);
-			dist = i_sqrt((dx*dx)+(dy*dy));
+			dx = abs(x - (int)k->fx);
+			dy = abs(y - (int)k->fy);
+			dist = i_sqrt((dx * dx) + (dy * dy));
 			if (best_dist_node == -1 || dist < best_dist) {
 				if (dist <= 5) {
 					best_dist = dist;
@@ -1657,7 +1512,7 @@ static int _env_handle_mouse(struct key_event *k, song_envelope_t *env, int *cur
 					if (env->ticks[i] <= x) *current_node = i;
 					if (abs(env->ticks[i] - x) < 2) return 0;
 				}
-				best_dist_node = (_env_node_add(env, *current_node, x, y))+1;
+				best_dist_node = (_env_node_add(env, *current_node, x, y)) + 1;
 				status_text_flash("Created node %d", best_dist_node);
 			}
 			if (best_dist_node == -1) return 0;
@@ -1683,119 +1538,84 @@ static int _env_handle_mouse(struct key_event *k, song_envelope_t *env, int *cur
      no reason to indicate a change in the envelope here. */
 static int _env_handle_key_editmode(struct key_event *k, song_envelope_t *env, int *current_node)
 {
-	int new_node = *current_node, new_tick = env->ticks[*current_node],
-		new_value = env->values[*current_node];
+	int new_node = *current_node, new_tick = env->ticks[*current_node], new_value = env->values[*current_node];
 
 	/* TODO: when does adding/removing a node alter loop points? */
 
 	switch (k->sym) {
 	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (k->mod & KMOD_ALT)
-			new_value += 16;
-		else
-			new_value++;
+		if (k->state == KEY_RELEASE) return 0;
+		if (k->mod & KMOD_ALT) new_value += 16;
+		else new_value++;
 		break;
 	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (k->mod & KMOD_ALT)
-			new_value -= 16;
-		else
-			new_value--;
+		if (k->state == KEY_RELEASE) return 0;
+		if (k->mod & KMOD_ALT) new_value -= 16;
+		else new_value--;
 		break;
 	case SDLK_PAGEUP:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		new_value += 16;
 		break;
 	case SDLK_PAGEDOWN:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		new_value -= 16;
 		break;
 	case SDLK_LEFT:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (k->mod & KMOD_CTRL)
-			new_node--;
-		else if (k->mod & KMOD_ALT)
-			new_tick -= 16;
-		else
-			new_tick--;
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_CTRL) new_node--;
+		else if (k->mod & KMOD_ALT) new_tick -= 16;
+		else new_tick--;
 		break;
 	case SDLK_RIGHT:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (k->mod & KMOD_CTRL)
-			new_node++;
-		else if (k->mod & KMOD_ALT)
-			new_tick += 16;
-		else
-			new_tick++;
+		if (k->state == KEY_RELEASE) return 1;
+		if (k->mod & KMOD_CTRL) new_node++;
+		else if (k->mod & KMOD_ALT) new_tick += 16;
+		else new_tick++;
 		break;
 	case SDLK_TAB:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (k->mod & KMOD_SHIFT)
-			new_tick -= 16;
-		else
-			new_tick += 16;
+		if (k->state == KEY_RELEASE) return 0;
+		if (k->mod & KMOD_SHIFT) new_tick -= 16;
+		else new_tick += 16;
 		break;
 	case SDLK_HOME:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		new_tick = 0;
 		break;
 	case SDLK_END:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		new_tick = 10000;
 		break;
 	case SDLK_INSERT:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		*current_node = _env_node_add(env, *current_node, -1, -1);
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_DELETE:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		*current_node = _env_node_remove(env, *current_node);
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_SPACE:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (k->state == KEY_RELEASE) return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		song_keyup(KEYJAZZ_NOINST, current_instrument, last_note);
 		song_keydown(KEYJAZZ_NOINST, current_instrument, last_note, 64, KEYJAZZ_CHAN_CURRENT);
 		return 1;
 	case SDLK_RETURN:
-		if (k->state == KEY_PRESS)
-			return 0;
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (k->state == KEY_PRESS) return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		envelope_edit_mode = 0;
 		memused_songchanged();
 		status.flags |= NEED_UPDATE;
 		break;
-	default:
-		return 0;
+	default: return 0;
 	}
 
 	new_node = CLAMP(new_node, 0, env->nodes - 1);
@@ -1805,10 +1625,10 @@ static int _env_handle_key_editmode(struct key_event *k, song_envelope_t *env, i
 		return 1;
 	}
 
-	new_tick = (new_node == 0) ? 0 : CLAMP(new_tick,
-					env->ticks[new_node - 1] + 1,
-				       ((new_node == env->nodes - 1)
-					? 10000 : env->ticks[new_node + 1]) - 1);
+	new_tick = (new_node == 0) ? 0 :
+	                             CLAMP(
+									 new_tick, env->ticks[new_node - 1] + 1,
+									 ((new_node == env->nodes - 1) ? 10000 : env->ticks[new_node + 1]) - 1);
 	if (new_tick != env->ticks[new_node]) {
 		env->ticks[*current_node] = new_tick;
 		status.flags |= SONG_NEEDS_SAVE;
@@ -1836,8 +1656,7 @@ static void _draw_env_label(const char *env_name, int is_selected)
 
 	pos += draw_text(env_name, pos, 16, is_selected ? 3 : 0, 2);
 	pos += draw_text(" Envelope", pos, 16, is_selected ? 3 : 0, 2);
-	if (envelope_edit_mode || envelope_mouse_edit)
-		draw_text(" (Edit)", pos, 16, is_selected ? 3 : 0, 2);
+	if (envelope_edit_mode || envelope_mouse_edit) draw_text(" (Edit)", pos, 16, is_selected ? 3 : 0, 2);
 }
 
 static void volume_envelope_draw(void)
@@ -1846,9 +1665,9 @@ static void volume_envelope_draw(void)
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 
 	_draw_env_label("Volume", is_selected);
-	_env_draw(&ins->vol_env, 0, current_node_vol,
-		ins->flags & ENV_VOLUME,
-		  ins->flags & ENV_VOLLOOP, ins->flags & ENV_VOLSUSTAIN, 0);
+	_env_draw(
+		&ins->vol_env, 0, current_node_vol, ins->flags & ENV_VOLUME, ins->flags & ENV_VOLLOOP,
+		ins->flags & ENV_VOLSUSTAIN, 0);
 }
 
 static void panning_envelope_draw(void)
@@ -1857,9 +1676,9 @@ static void panning_envelope_draw(void)
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 
 	_draw_env_label("Panning", is_selected);
-	_env_draw(&ins->pan_env, 1, current_node_pan,
-		ins->flags & ENV_PANNING,
-		  ins->flags & ENV_PANLOOP, ins->flags & ENV_PANSUSTAIN, 1);
+	_env_draw(
+		&ins->pan_env, 1, current_node_pan, ins->flags & ENV_PANNING, ins->flags & ENV_PANLOOP,
+		ins->flags & ENV_PANSUSTAIN, 1);
 }
 
 static void pitch_envelope_draw(void)
@@ -1868,12 +1687,12 @@ static void pitch_envelope_draw(void)
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 
 	_draw_env_label("Frequency", is_selected);
-	_env_draw(&ins->pitch_env, (ins->flags & ENV_FILTER) ? 0 : 1, current_node_pitch,
-		ins->flags & (ENV_PITCH|ENV_FILTER),
-		  ins->flags & ENV_PITCHLOOP, ins->flags & ENV_PITCHSUSTAIN, 2);
+	_env_draw(
+		&ins->pitch_env, (ins->flags & ENV_FILTER) ? 0 : 1, current_node_pitch, ins->flags & (ENV_PITCH | ENV_FILTER),
+		ins->flags & ENV_PITCHLOOP, ins->flags & ENV_PITCHSUSTAIN, 2);
 }
 
-static int volume_envelope_handle_key(struct key_event * k)
+static int volume_envelope_handle_key(struct key_event *k)
 {
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 	int r;
@@ -1882,10 +1701,8 @@ static int volume_envelope_handle_key(struct key_event * k)
 		ins->flags |= ENV_VOLUME;
 		return 1;
 	}
-	if (envelope_edit_mode)
-		r = _env_handle_key_editmode(k, &ins->vol_env, &current_node_vol);
-	else
-		r = _env_handle_key_viewmode(k, &ins->vol_env, &current_node_vol, ENV_VOLUME);
+	if (envelope_edit_mode) r = _env_handle_key_editmode(k, &ins->vol_env, &current_node_vol);
+	else r = _env_handle_key_viewmode(k, &ins->vol_env, &current_node_vol, ENV_VOLUME);
 	if (r & 2) {
 		r ^= 2;
 		ins->flags |= ENV_VOLUME;
@@ -1893,7 +1710,7 @@ static int volume_envelope_handle_key(struct key_event * k)
 	return r;
 }
 
-static int panning_envelope_handle_key(struct key_event * k)
+static int panning_envelope_handle_key(struct key_event *k)
 {
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 	int r;
@@ -1903,10 +1720,8 @@ static int panning_envelope_handle_key(struct key_event * k)
 		return 1;
 	}
 
-	if (envelope_edit_mode)
-		r = _env_handle_key_editmode(k, &ins->pan_env, &current_node_pan);
-	else
-		r = _env_handle_key_viewmode(k, &ins->pan_env, &current_node_pan, ENV_PANNING);
+	if (envelope_edit_mode) r = _env_handle_key_editmode(k, &ins->pan_env, &current_node_pan);
+	else r = _env_handle_key_viewmode(k, &ins->pan_env, &current_node_pan, ENV_PANNING);
 	if (r & 2) {
 		r ^= 2;
 		ins->flags |= ENV_PANNING;
@@ -1914,7 +1729,7 @@ static int panning_envelope_handle_key(struct key_event * k)
 	return r;
 }
 
-static int pitch_envelope_handle_key(struct key_event * k)
+static int pitch_envelope_handle_key(struct key_event *k)
 {
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 	int r;
@@ -1923,10 +1738,8 @@ static int pitch_envelope_handle_key(struct key_event * k)
 		ins->flags |= ENV_PITCH;
 		return 1;
 	}
-	if (envelope_edit_mode)
-		r = _env_handle_key_editmode(k, &ins->pitch_env, &current_node_pitch);
-	else
-		r = _env_handle_key_viewmode(k, &ins->pitch_env, &current_node_pitch, ENV_PITCH);
+	if (envelope_edit_mode) r = _env_handle_key_editmode(k, &ins->pitch_env, &current_node_pitch);
+	else r = _env_handle_key_viewmode(k, &ins->pitch_env, &current_node_pitch, ENV_PITCH);
 	if (r & 2) {
 		r ^= 2;
 		ins->flags |= ENV_PITCH;
@@ -1942,31 +1755,26 @@ static int pitch_pan_center_handle_key(struct key_event *k)
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 	int ppc = ins->pitch_pan_center;
 
-	if (k->state == KEY_RELEASE)
-		return 0;
+	if (k->state == KEY_RELEASE) return 0;
 	switch (k->sym) {
 	case SDLK_LEFT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		ppc--;
 		break;
 	case SDLK_RIGHT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		ppc++;
 		break;
 	default:
 		if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) {
 			ppc = kbd_get_note(k);
-			if (ppc < 1 || ppc > 120)
-				return 0;
+			if (ppc < 1 || ppc > 120) return 0;
 			ppc--;
 			break;
 		}
 		return 0;
 	}
-	if ((unsigned int)ppc != ins->pitch_pan_center
-	&& ppc >= 0 && ppc < 120) {
+	if ((unsigned int)ppc != ins->pitch_pan_center && ppc >= 0 && ppc < 120) {
 		ins->pitch_pan_center = (unsigned int)ppc;
 		status.flags |= NEED_UPDATE;
 	}
@@ -1994,15 +1802,14 @@ struct instrument_save_data {
 
 static void save_instrument_free_data(void *ptr)
 {
-	struct instrument_save_data *data = (struct instrument_save_data *) ptr;
-	if (data->path)
-		free(data->path);
+	struct instrument_save_data *data = (struct instrument_save_data *)ptr;
+	if (data->path) free(data->path);
 	free(data);
 }
 
 static void do_save_instrument(void *ptr)
 {
-	struct instrument_save_data *data = (struct instrument_save_data *) ptr;
+	struct instrument_save_data *data = (struct instrument_save_data *)ptr;
 
 	song_save_instrument(data->path, data->format, song_get_instrument(current_instrument), current_instrument);
 	save_instrument_free_data(ptr);
@@ -2015,9 +1822,9 @@ static void instrument_save(const char *filename, const char *format)
 	struct stat buf;
 
 	if (filename) {
-		ptr = (char *) dmoz_path_concat(cfg_dir_instruments, filename);
+		ptr = (char *)dmoz_path_concat(cfg_dir_instruments, filename);
 	} else if (penv->filename[0]) {
-		ptr = (char *) dmoz_path_concat(cfg_dir_instruments, penv->filename);
+		ptr = (char *)dmoz_path_concat(cfg_dir_instruments, penv->filename);
 	} else {
 		status_text_flash("Error: Instrument %d NOT saved! (No Filename?)", current_instrument);
 		return;
@@ -2032,9 +1839,7 @@ static void instrument_save(const char *filename, const char *format)
 			status_text_flash("%s is a directory", filename);
 			return;
 		} else if (S_ISREG(buf.st_mode)) {
-			dialog_create(DIALOG_OK_CANCEL,
-				"Overwrite file?", do_save_instrument,
-				save_instrument_free_data, 1, data);
+			dialog_create(DIALOG_OK_CANCEL, "Overwrite file?", do_save_instrument, save_instrument_free_data, 1, data);
 			return;
 		} else {
 			status_text_flash("%s is not a regular file", filename);
@@ -2075,33 +1880,28 @@ static void export_instrument_list_draw(void)
 	}
 }
 
-static int export_instrument_list_handle_key(struct key_event * k)
+static int export_instrument_list_handle_key(struct key_event *k)
 {
 	int new_format = export_instrument_format;
 
-	if (k->state == KEY_RELEASE)
-		return 0;
+	if (k->state == KEY_RELEASE) return 0;
 	switch (k->sym) {
 	case SDLK_UP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		new_format--;
 		break;
 	case SDLK_DOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		new_format++;
 		break;
 	case SDLK_PAGEUP:
 	case SDLK_HOME:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		new_format = 0;
 		break;
 	case SDLK_PAGEDOWN:
 	case SDLK_END:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		new_format = num_save_formats - 1;
 		break;
 	case SDLK_TAB:
@@ -2112,12 +1912,10 @@ static int export_instrument_list_handle_key(struct key_event * k)
 		/* fall through */
 	case SDLK_LEFT:
 	case SDLK_RIGHT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+		if (!NO_MODIFIER(k->mod)) return 0;
 		widget_change_focus_to(0); /* should focus 0/1/2 depending on what's closest */
 		return 1;
-	default:
-		return 0;
+	default: return 0;
 	}
 
 	new_format = CLAMP(new_format, 0, num_save_formats - 1);
@@ -2145,17 +1943,17 @@ static void export_instrument_dialog(void)
 	song_instrument_t *instrument = song_get_instrument(current_instrument);
 	struct dialog *dialog;
 
-	widget_create_textentry(export_instrument_widgets + 0, 33, 24, 18, 0, 1, 3, NULL,
-			 export_instrument_filename, NAME_MAX);
+	widget_create_textentry(
+		export_instrument_widgets + 0, 33, 24, 18, 0, 1, 3, NULL, export_instrument_filename, NAME_MAX);
 	widget_create_button(export_instrument_widgets + 1, 31, 35, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
 	widget_create_button(export_instrument_widgets + 2, 42, 35, 6, 3, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-	widget_create_other(export_instrument_widgets + 3, 0, export_instrument_list_handle_key, NULL, export_instrument_list_draw);
+	widget_create_other(
+		export_instrument_widgets + 3, 0, export_instrument_list_handle_key, NULL, export_instrument_list_draw);
 
 	strncpy(export_instrument_filename, instrument->filename, NAME_MAX);
 	export_instrument_filename[NAME_MAX] = 0;
 
-	dialog = dialog_create_custom(21, 20, 39, 18, export_instrument_widgets, 4, 0,
-				      export_instrument_draw_const, NULL);
+	dialog = dialog_create_custom(21, 20, 39, 18, export_instrument_widgets, 4, 0, export_instrument_draw_const, NULL);
 	dialog->action_yes = do_export_instrument;
 }
 
@@ -2174,124 +1972,96 @@ static void instrument_list_handle_alt_key(struct key_event *k)
 {
 	/* song_instrument_t *ins = song_get_instrument(current_instrument); */
 
-	if (k->state == KEY_RELEASE)
-		return;
+	if (k->state == KEY_RELEASE) return;
 	switch (k->sym) {
-	case SDLK_n:
-		song_toggle_multichannel_mode();
-		return;
-	case SDLK_o:
-		instrument_save(NULL, "ITI");
-		return;
-	case SDLK_r:
-		smpprompt_create("Replace instrument with:", "Instrument", do_replace_instrument);
-		return;
+	case SDLK_n: song_toggle_multichannel_mode(); return;
+	case SDLK_o: instrument_save(NULL, "ITI"); return;
+	case SDLK_r: smpprompt_create("Replace instrument with:", "Instrument", do_replace_instrument); return;
 	case SDLK_s:
 		// extra space to align the text like IT
 		smpprompt_create("Swap instrument with: ", "Instrument", do_swap_instrument);
 		return;
-	case SDLK_x:
-		smpprompt_create("Exchange instrument with:", "Instrument", do_exchange_instrument);
-		return;
-	case SDLK_p:
-		smpprompt_create("Copy instrument:", "Instrument", do_copy_instrument);
-		return;
-	case SDLK_w:
-		song_wipe_instrument(current_instrument);
-		break;
+	case SDLK_x: smpprompt_create("Exchange instrument with:", "Instrument", do_exchange_instrument); return;
+	case SDLK_p: smpprompt_create("Copy instrument:", "Instrument", do_copy_instrument); return;
+	case SDLK_w: song_wipe_instrument(current_instrument); break;
 	case SDLK_d:
-        if (k->mod & KMOD_SHIFT) {
-            dialog_create(DIALOG_OK_CANCEL,
-                "Delete Instrument? (preserve shared samples)",
-                do_delete_inst_preserve, NULL, 1, NULL);
-        } else {
-            dialog_create(DIALOG_OK_CANCEL,
-                "Delete Instrument?",
-                do_delete_inst, NULL, 1, NULL);
-        }
+		if (k->mod & KMOD_SHIFT) {
+			dialog_create(
+				DIALOG_OK_CANCEL, "Delete Instrument? (preserve shared samples)", do_delete_inst_preserve, NULL, 1,
+				NULL);
+		} else {
+			dialog_create(DIALOG_OK_CANCEL, "Delete Instrument?", do_delete_inst, NULL, 1, NULL);
+		}
 		return;
-	case SDLK_t:
-		export_instrument_dialog();
-		break;
-	default:
-		return;
+	case SDLK_t: export_instrument_dialog(); break;
+	default: return;
 	}
 
 	status.flags |= NEED_UPDATE;
 }
 
-static int instrument_list_pre_handle_key(struct key_event * k)
+static int instrument_list_pre_handle_key(struct key_event *k)
 {
 	// Only handle plain F4 key when no dialog is active.
-	if (status.dialog_type != DIALOG_NONE || k->sym != SDLK_F4 || (k->mod & (KMOD_CTRL | KMOD_ALT)))
-		return 0;
-	if (k->state == KEY_RELEASE)
-		return 1;
+	if (status.dialog_type != DIALOG_NONE || k->sym != SDLK_F4 || (k->mod & (KMOD_CTRL | KMOD_ALT))) return 0;
+	if (k->state == KEY_RELEASE) return 1;
 
 	if (song_is_instrument_mode()) {
 		int csamp = sample_get_current();
 		sample_synchronize_to_instrument();
-		if (csamp != sample_get_current())
-			return 0;
+		if (csamp != sample_get_current()) return 0;
 	}
 
 	if (k->mod & KMOD_SHIFT) {
 		switch (status.current_page) {
-			default:
-			case PAGE_INSTRUMENT_LIST_VOLUME:  set_subpage(PAGE_INSTRUMENT_LIST_GENERAL); break;
-			case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_VOLUME);  break;
-			case PAGE_INSTRUMENT_LIST_PITCH:   set_subpage(PAGE_INSTRUMENT_LIST_PANNING); break;
-			case PAGE_INSTRUMENT_LIST_GENERAL: set_subpage(PAGE_INSTRUMENT_LIST_PITCH);   break;
+		default:
+		case PAGE_INSTRUMENT_LIST_VOLUME: set_subpage(PAGE_INSTRUMENT_LIST_GENERAL); break;
+		case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_VOLUME); break;
+		case PAGE_INSTRUMENT_LIST_PITCH: set_subpage(PAGE_INSTRUMENT_LIST_PANNING); break;
+		case PAGE_INSTRUMENT_LIST_GENERAL: set_subpage(PAGE_INSTRUMENT_LIST_PITCH); break;
 		}
 	} else {
 		switch (status.current_page) {
-			default:
-			case PAGE_INSTRUMENT_LIST_PITCH:   set_subpage(PAGE_INSTRUMENT_LIST_GENERAL); break;
-			case PAGE_INSTRUMENT_LIST_GENERAL: set_subpage(PAGE_INSTRUMENT_LIST_VOLUME);  break;
-			case PAGE_INSTRUMENT_LIST_VOLUME:  set_subpage(PAGE_INSTRUMENT_LIST_PANNING); break;
-			case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_PITCH);   break;
+		default:
+		case PAGE_INSTRUMENT_LIST_PITCH: set_subpage(PAGE_INSTRUMENT_LIST_GENERAL); break;
+		case PAGE_INSTRUMENT_LIST_GENERAL: set_subpage(PAGE_INSTRUMENT_LIST_VOLUME); break;
+		case PAGE_INSTRUMENT_LIST_VOLUME: set_subpage(PAGE_INSTRUMENT_LIST_PANNING); break;
+		case PAGE_INSTRUMENT_LIST_PANNING: set_subpage(PAGE_INSTRUMENT_LIST_PITCH); break;
 		}
 	}
 	return 1;
 }
-static void instrument_list_handle_key(struct key_event * k)
+static void instrument_list_handle_key(struct key_event *k)
 {
 	switch (k->sym) {
 	case SDLK_COMMA:
 		if (NO_MODIFIER(k->mod)) {
-			if (!(status.flags & CLASSIC_MODE)
-			&& ACTIVE_PAGE.selected_widget == 5) return;
+			if (!(status.flags & CLASSIC_MODE) && ACTIVE_PAGE.selected_widget == 5) return;
 		}
 	case SDLK_LESS:
-		if (k->state == KEY_RELEASE)
-			return;
+		if (k->state == KEY_RELEASE) return;
 		song_change_current_play_channel(-1, 0);
 		return;
 	case SDLK_PERIOD:
 		if (NO_MODIFIER(k->mod)) {
-			if (!(status.flags & CLASSIC_MODE)
-			&& ACTIVE_PAGE.selected_widget == 5) return;
+			if (!(status.flags & CLASSIC_MODE) && ACTIVE_PAGE.selected_widget == 5) return;
 		}
 	case SDLK_GREATER:
-		if (k->state == KEY_RELEASE)
-			return;
+		if (k->state == KEY_RELEASE) return;
 		song_change_current_play_channel(1, 0);
 		return;
 
 	case SDLK_PAGEUP:
-		if (k->state == KEY_RELEASE)
-			return;
+		if (k->state == KEY_RELEASE) return;
 		instrument_set(current_instrument - 1);
 		break;
 	case SDLK_PAGEDOWN:
-		if (k->state == KEY_RELEASE)
-			return;
+		if (k->state == KEY_RELEASE) return;
 		instrument_set(current_instrument + 1);
 		break;
 	case SDLK_ESCAPE:
 		if ((k->mod & KMOD_SHIFT) || instrument_cursor_pos < 25) {
-			if (k->state == KEY_RELEASE)
-				return;
+			if (k->state == KEY_RELEASE) return;
 			instrument_cursor_pos = 25;
 			get_page_widgets()->accept_text = 0;
 			widget_change_focus_to(0);
@@ -2315,8 +2085,7 @@ static void instrument_list_handle_key(struct key_event * k)
 			} else {
 				v = 64;
 				n = kbd_get_note(k);
-				if (n <= 0 || n > 120)
-					return;
+				if (n <= 0 || n > 120) return;
 			}
 
 			if (k->state == KEY_RELEASE) {
@@ -2339,15 +2108,14 @@ static void set_subpage(int page)
 	int b = 1;
 	switch (page) {
 	case PAGE_INSTRUMENT_LIST_GENERAL: b = 1; break;
-	case PAGE_INSTRUMENT_LIST_VOLUME:  b = 2; break;
+	case PAGE_INSTRUMENT_LIST_VOLUME: b = 2; break;
 	case PAGE_INSTRUMENT_LIST_PANNING: b = 3; break;
-	case PAGE_INSTRUMENT_LIST_PITCH:   b = 4; break;
+	case PAGE_INSTRUMENT_LIST_PITCH: b = 4; break;
 	default: return;
 	};
 	widget_togglebutton_set(pages[page].widgets, b, 0);
 	set_page(page);
-	if (widget >= ACTIVE_PAGE.total_widgets)
-		widget = ACTIVE_PAGE.total_widgets - 1;
+	if (widget >= ACTIVE_PAGE.total_widgets) widget = ACTIVE_PAGE.total_widgets - 1;
 	ACTIVE_PAGE.selected_widget = widget;
 	instrument_list_subpage = page;
 	status.flags |= NEED_UPDATE;
@@ -2391,10 +2159,8 @@ static void instrument_list_volume_predraw_hook(void)
 	/* FIXME: this is the wrong place for this.
 	... and it's probably not even right -- how does Impulse Tracker handle loop constraints?
 	See below for panning/pitch envelopes; same deal there. */
-	if (ins->vol_env.loop_start > ins->vol_env.loop_end)
-		ins->vol_env.loop_end = ins->vol_env.loop_start;
-	if (ins->vol_env.sustain_start > ins->vol_env.sustain_end)
-		ins->vol_env.sustain_end = ins->vol_env.sustain_start;
+	if (ins->vol_env.loop_start > ins->vol_env.loop_end) ins->vol_env.loop_end = ins->vol_env.loop_start;
+	if (ins->vol_env.sustain_start > ins->vol_env.sustain_end) ins->vol_env.sustain_end = ins->vol_env.sustain_start;
 
 	widgets_volume[9].d.numentry.max = ins->vol_env.nodes - 1;
 	widgets_volume[10].d.numentry.max = ins->vol_env.nodes - 1;
@@ -2421,10 +2187,8 @@ static void instrument_list_panning_predraw_hook(void)
 	widgets_panning[8].d.toggle.state = !!(ins->flags & ENV_PANLOOP);
 	widgets_panning[11].d.toggle.state = !!(ins->flags & ENV_PANSUSTAIN);
 
-	if (ins->pan_env.loop_start > ins->pan_env.loop_end)
-		ins->pan_env.loop_end = ins->pan_env.loop_start;
-	if (ins->pan_env.sustain_start > ins->pan_env.sustain_end)
-		ins->pan_env.sustain_end = ins->pan_env.sustain_start;
+	if (ins->pan_env.loop_start > ins->pan_env.loop_end) ins->pan_env.loop_end = ins->pan_env.loop_start;
+	if (ins->pan_env.sustain_start > ins->pan_env.sustain_end) ins->pan_env.sustain_end = ins->pan_env.sustain_start;
 
 	widgets_panning[9].d.numentry.max = ins->pan_env.nodes - 1;
 	widgets_panning[10].d.numentry.max = ins->pan_env.nodes - 1;
@@ -2447,15 +2211,12 @@ static void instrument_list_pitch_predraw_hook(void)
 {
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 
-	widgets_pitch[6].d.menutoggle.state = ((ins->flags & ENV_PITCH)
-					     ? ((ins->flags & ENV_FILTER)
-						? 2 : 1) : 0);
+	widgets_pitch[6].d.menutoggle.state = ((ins->flags & ENV_PITCH) ? ((ins->flags & ENV_FILTER) ? 2 : 1) : 0);
 	widgets_pitch[7].d.toggle.state = !!(ins->flags & ENV_PITCHCARRY);
 	widgets_pitch[8].d.toggle.state = !!(ins->flags & ENV_PITCHLOOP);
 	widgets_pitch[11].d.toggle.state = !!(ins->flags & ENV_PITCHSUSTAIN);
 
-	if (ins->pitch_env.loop_start > ins->pitch_env.loop_end)
-		ins->pitch_env.loop_end = ins->pitch_env.loop_start;
+	if (ins->pitch_env.loop_start > ins->pitch_env.loop_end) ins->pitch_env.loop_end = ins->pitch_env.loop_start;
 	if (ins->pitch_env.sustain_start > ins->pitch_env.sustain_end)
 		ins->pitch_env.sustain_end = ins->pitch_env.sustain_start;
 
@@ -2469,21 +2230,17 @@ static void instrument_list_pitch_predraw_hook(void)
 	widgets_pitch[12].d.numentry.value = ins->pitch_env.sustain_start;
 	widgets_pitch[13].d.numentry.value = ins->pitch_env.sustain_end;
 
-	if (ins->ifc & 0x80)
-		widgets_pitch[14].d.thumbbar.value = ins->ifc & 0x7f;
-	else
-		widgets_pitch[14].d.thumbbar.value = -1;
-	if (ins->ifr & 0x80)
-		widgets_pitch[15].d.thumbbar.value = ins->ifr & 0x7f;
-	else
-		widgets_pitch[15].d.thumbbar.value = -1;
+	if (ins->ifc & 0x80) widgets_pitch[14].d.thumbbar.value = ins->ifc & 0x7f;
+	else widgets_pitch[14].d.thumbbar.value = -1;
+	if (ins->ifr & 0x80) widgets_pitch[15].d.thumbbar.value = ins->ifr & 0x7f;
+	else widgets_pitch[15].d.thumbbar.value = -1;
 
 	/* printf("ins%02d: ch%04d pgm%04d bank%06d drum%04d\n", current_instrument,
 		ins->midi_channel, ins->midi_program, ins->midi_bank, ins->midi_drum_key); */
-	widgets_pitch[16].d.bitset.value           = ins->midi_channel_mask;
-	widgets_pitch[17].d.thumbbar.value = (signed char) ins->midi_program;
-	widgets_pitch[18].d.thumbbar.value = (signed char) (ins->midi_bank & 0xff);
-	widgets_pitch[19].d.thumbbar.value = (signed char) (ins->midi_bank >> 8);
+	widgets_pitch[16].d.bitset.value = ins->midi_channel_mask;
+	widgets_pitch[17].d.thumbbar.value = (signed char)ins->midi_program;
+	widgets_pitch[18].d.thumbbar.value = (signed char)(ins->midi_bank & 0xff);
+	widgets_pitch[19].d.thumbbar.value = (signed char)(ins->midi_bank >> 8);
 	/* what is midi_drum_key for? */
 }
 
@@ -2496,14 +2253,11 @@ static void instrument_list_general_update_values(void)
 
 	status.flags |= SONG_NEEDS_SAVE;
 	for (ins->nna = 4; ins->nna--;)
-		if (widgets_general[ins->nna + 6].d.togglebutton.state)
-			break;
+		if (widgets_general[ins->nna + 6].d.togglebutton.state) break;
 	for (ins->dct = 4; ins->dct--;)
-		if (widgets_general[ins->dct + 10].d.togglebutton.state)
-			break;
+		if (widgets_general[ins->dct + 10].d.togglebutton.state) break;
 	for (ins->dca = 3; ins->dca--;)
-		if (widgets_general[ins->dca + 14].d.togglebutton.state)
-			break;
+		if (widgets_general[ins->dca + 14].d.togglebutton.state) break;
 }
 
 static void update_filename(void)
@@ -2511,7 +2265,11 @@ static void update_filename(void)
 	status.flags |= SONG_NEEDS_SAVE;
 }
 
-#define CHECK_SET(a,b,c) if (a != b) { a = b; c; }
+#define CHECK_SET(a, b, c) \
+ if (a != b) { \
+  a = b; \
+  c; \
+ }
 
 static void instrument_list_volume_update_values(void)
 {
@@ -2519,23 +2277,15 @@ static void instrument_list_volume_update_values(void)
 
 	status.flags |= SONG_NEEDS_SAVE;
 	ins->flags &= ~(ENV_VOLUME | ENV_VOLCARRY | ENV_VOLLOOP | ENV_VOLSUSTAIN);
-	if (widgets_volume[6].d.toggle.state)
-		ins->flags |= ENV_VOLUME;
-	if (widgets_volume[7].d.toggle.state)
-		ins->flags |= ENV_VOLCARRY;
-	if (widgets_volume[8].d.toggle.state)
-		ins->flags |= ENV_VOLLOOP;
-	if (widgets_volume[11].d.toggle.state)
-		ins->flags |= ENV_VOLSUSTAIN;
+	if (widgets_volume[6].d.toggle.state) ins->flags |= ENV_VOLUME;
+	if (widgets_volume[7].d.toggle.state) ins->flags |= ENV_VOLCARRY;
+	if (widgets_volume[8].d.toggle.state) ins->flags |= ENV_VOLLOOP;
+	if (widgets_volume[11].d.toggle.state) ins->flags |= ENV_VOLSUSTAIN;
 
-	CHECK_SET(ins->vol_env.loop_start, widgets_volume[9].d.numentry.value,
-		  ins->flags |= ENV_VOLLOOP);
-	CHECK_SET(ins->vol_env.loop_end, widgets_volume[10].d.numentry.value,
-		  ins->flags |= ENV_VOLLOOP);
-	CHECK_SET(ins->vol_env.sustain_start, widgets_volume[12].d.numentry.value,
-		  ins->flags |= ENV_VOLSUSTAIN);
-	CHECK_SET(ins->vol_env.sustain_end, widgets_volume[13].d.numentry.value,
-		  ins->flags |= ENV_VOLSUSTAIN);
+	CHECK_SET(ins->vol_env.loop_start, widgets_volume[9].d.numentry.value, ins->flags |= ENV_VOLLOOP);
+	CHECK_SET(ins->vol_env.loop_end, widgets_volume[10].d.numentry.value, ins->flags |= ENV_VOLLOOP);
+	CHECK_SET(ins->vol_env.sustain_start, widgets_volume[12].d.numentry.value, ins->flags |= ENV_VOLSUSTAIN);
+	CHECK_SET(ins->vol_env.sustain_end, widgets_volume[13].d.numentry.value, ins->flags |= ENV_VOLSUSTAIN);
 
 	/* more ugly shifts */
 	ins->global_volume = widgets_volume[14].d.thumbbar.value;
@@ -2552,25 +2302,16 @@ static void instrument_list_panning_update_values(void)
 
 	status.flags |= SONG_NEEDS_SAVE;
 	ins->flags &= ~(ENV_PANNING | ENV_PANCARRY | ENV_PANLOOP | ENV_PANSUSTAIN | ENV_SETPANNING);
-	if (widgets_panning[6].d.toggle.state)
-		ins->flags |= ENV_PANNING;
-	if (widgets_panning[7].d.toggle.state)
-		ins->flags |= ENV_PANCARRY;
-	if (widgets_panning[8].d.toggle.state)
-		ins->flags |= ENV_PANLOOP;
-	if (widgets_panning[11].d.toggle.state)
-		ins->flags |= ENV_PANSUSTAIN;
-	if (widgets_panning[14].d.toggle.state)
-		ins->flags |= ENV_SETPANNING;
+	if (widgets_panning[6].d.toggle.state) ins->flags |= ENV_PANNING;
+	if (widgets_panning[7].d.toggle.state) ins->flags |= ENV_PANCARRY;
+	if (widgets_panning[8].d.toggle.state) ins->flags |= ENV_PANLOOP;
+	if (widgets_panning[11].d.toggle.state) ins->flags |= ENV_PANSUSTAIN;
+	if (widgets_panning[14].d.toggle.state) ins->flags |= ENV_SETPANNING;
 
-	CHECK_SET(ins->pan_env.loop_start, widgets_panning[9].d.numentry.value,
-		  ins->flags |= ENV_PANLOOP);
-	CHECK_SET(ins->pan_env.loop_end, widgets_panning[10].d.numentry.value,
-		  ins->flags |= ENV_PANLOOP);
-	CHECK_SET(ins->pan_env.sustain_start, widgets_panning[12].d.numentry.value,
-		  ins->flags |= ENV_PANSUSTAIN);
-	CHECK_SET(ins->pan_env.sustain_end, widgets_panning[13].d.numentry.value,
-		  ins->flags |= ENV_PANSUSTAIN);
+	CHECK_SET(ins->pan_env.loop_start, widgets_panning[9].d.numentry.value, ins->flags |= ENV_PANLOOP);
+	CHECK_SET(ins->pan_env.loop_end, widgets_panning[10].d.numentry.value, ins->flags |= ENV_PANLOOP);
+	CHECK_SET(ins->pan_env.sustain_start, widgets_panning[12].d.numentry.value, ins->flags |= ENV_PANSUSTAIN);
+	CHECK_SET(ins->pan_env.sustain_end, widgets_panning[13].d.numentry.value, ins->flags |= ENV_PANSUSTAIN);
 
 	n = widgets_panning[15].d.thumbbar.value << 2;
 	if (ins->panning != (unsigned int)n) {
@@ -2596,23 +2337,15 @@ static void instrument_list_pitch_update_values(void)
 	case 1: ins->flags |= ENV_PITCH;
 	}
 
-	if (widgets_pitch[6].d.menutoggle.state)
-		ins->flags |= ENV_PITCH;
-	if (widgets_pitch[7].d.toggle.state)
-		ins->flags |= ENV_PITCHCARRY;
-	if (widgets_pitch[8].d.toggle.state)
-		ins->flags |= ENV_PITCHLOOP;
-	if (widgets_pitch[11].d.toggle.state)
-		ins->flags |= ENV_PITCHSUSTAIN;
+	if (widgets_pitch[6].d.menutoggle.state) ins->flags |= ENV_PITCH;
+	if (widgets_pitch[7].d.toggle.state) ins->flags |= ENV_PITCHCARRY;
+	if (widgets_pitch[8].d.toggle.state) ins->flags |= ENV_PITCHLOOP;
+	if (widgets_pitch[11].d.toggle.state) ins->flags |= ENV_PITCHSUSTAIN;
 
-	CHECK_SET(ins->pitch_env.loop_start, widgets_pitch[9].d.numentry.value,
-		  ins->flags |= ENV_PITCHLOOP);
-	CHECK_SET(ins->pitch_env.loop_end, widgets_pitch[10].d.numentry.value,
-		  ins->flags |= ENV_PITCHLOOP);
-	CHECK_SET(ins->pitch_env.sustain_start, widgets_pitch[12].d.numentry.value,
-		  ins->flags |= ENV_PITCHSUSTAIN);
-	CHECK_SET(ins->pitch_env.sustain_end, widgets_pitch[13].d.numentry.value,
-		  ins->flags |= ENV_PITCHSUSTAIN);
+	CHECK_SET(ins->pitch_env.loop_start, widgets_pitch[9].d.numentry.value, ins->flags |= ENV_PITCHLOOP);
+	CHECK_SET(ins->pitch_env.loop_end, widgets_pitch[10].d.numentry.value, ins->flags |= ENV_PITCHLOOP);
+	CHECK_SET(ins->pitch_env.sustain_start, widgets_pitch[12].d.numentry.value, ins->flags |= ENV_PITCHSUSTAIN);
+	CHECK_SET(ins->pitch_env.sustain_end, widgets_pitch[13].d.numentry.value, ins->flags |= ENV_PITCHSUSTAIN);
 	if (widgets_pitch[14].d.thumbbar.value > -1) {
 		ins->ifc = widgets_pitch[14].d.thumbbar.value | 0x80;
 	} else {
@@ -2625,8 +2358,7 @@ static void instrument_list_pitch_update_values(void)
 	}
 	ins->midi_channel_mask = widgets_pitch[16].d.bitset.value;
 	ins->midi_program = widgets_pitch[17].d.thumbbar.value;
-	ins->midi_bank = ((widgets_pitch[19].d.thumbbar.value << 8)
-			  | (widgets_pitch[18].d.thumbbar.value & 0xff));
+	ins->midi_bank = ((widgets_pitch[19].d.thumbbar.value << 8) | (widgets_pitch[18].d.thumbbar.value & 0xff));
 
 	song_update_playing_instrument(current_instrument);
 }
@@ -2788,8 +2520,9 @@ static void _load_page_common(struct page *page, struct widget *page_widgets)
 	/* the first five widgets are the same for all four pages. */
 
 	/* 0 = instrument list */
-	widget_create_other(page_widgets + 0, 1, instrument_list_handle_key_on_list,
-		instrument_list_handle_text_input_on_list, instrument_list_draw_list);
+	widget_create_other(
+		page_widgets + 0, 1, instrument_list_handle_key_on_list, instrument_list_handle_text_input_on_list,
+		instrument_list_draw_list);
 	page_widgets[0].accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 	page_widgets[0].x = 5;
 	page_widgets[0].y = 13;
@@ -2797,14 +2530,14 @@ static void _load_page_common(struct page *page, struct widget *page_widgets)
 	page_widgets[0].height = 34;
 
 	/* 1-4 = subpage switches */
-	widget_create_togglebutton(page_widgets + 1, 32, 13, 7, 1, 5, 0, 2, 2, change_subpage, "General",
-			    1, subpage_switches_group);
-	widget_create_togglebutton(page_widgets + 2, 44, 13, 7, 2, 5, 1, 3, 3, change_subpage, "Volume",
-			    1, subpage_switches_group);
-	widget_create_togglebutton(page_widgets + 3, 56, 13, 7, 3, 5, 2, 4, 4, change_subpage, "Panning",
-			    1, subpage_switches_group);
-	widget_create_togglebutton(page_widgets + 4, 68, 13, 7, 4, 5, 3, 0, 0, change_subpage, "Pitch",
-			    2, subpage_switches_group);
+	widget_create_togglebutton(
+		page_widgets + 1, 32, 13, 7, 1, 5, 0, 2, 2, change_subpage, "General", 1, subpage_switches_group);
+	widget_create_togglebutton(
+		page_widgets + 2, 44, 13, 7, 2, 5, 1, 3, 3, change_subpage, "Volume", 1, subpage_switches_group);
+	widget_create_togglebutton(
+		page_widgets + 3, 56, 13, 7, 3, 5, 2, 4, 4, change_subpage, "Panning", 1, subpage_switches_group);
+	widget_create_togglebutton(
+		page_widgets + 4, 68, 13, 7, 4, 5, 3, 0, 0, change_subpage, "Pitch", 2, subpage_switches_group);
 }
 
 void instrument_list_general_load_page(struct page *page)
@@ -2828,48 +2561,47 @@ void instrument_list_general_load_page(struct page *page)
 	widgets_general[5].next.down = 6;
 
 	/* 6-9 = nna toggles */
-	widget_create_togglebutton(widgets_general + 6, 46, 19, 29, 2, 7, 5, 0, 0,
-			    instrument_list_general_update_values,
-			    "Note Cut", 2, nna_group);
-	widget_create_togglebutton(widgets_general + 7, 46, 22, 29, 6, 8, 5, 0, 0,
-			    instrument_list_general_update_values,
-			    "Continue", 2, nna_group);
-	widget_create_togglebutton(widgets_general + 8, 46, 25, 29, 7, 9, 5, 0, 0,
-			    instrument_list_general_update_values,
-			    "Note Off", 2, nna_group);
-	widget_create_togglebutton(widgets_general + 9, 46, 28, 29, 8, 10, 5, 0, 0,
-			    instrument_list_general_update_values,
-			    "Note Fade", 2, nna_group);
+	widget_create_togglebutton(
+		widgets_general + 6, 46, 19, 29, 2, 7, 5, 0, 0, instrument_list_general_update_values, "Note Cut", 2,
+		nna_group);
+	widget_create_togglebutton(
+		widgets_general + 7, 46, 22, 29, 6, 8, 5, 0, 0, instrument_list_general_update_values, "Continue", 2,
+		nna_group);
+	widget_create_togglebutton(
+		widgets_general + 8, 46, 25, 29, 7, 9, 5, 0, 0, instrument_list_general_update_values, "Note Off", 2,
+		nna_group);
+	widget_create_togglebutton(
+		widgets_general + 9, 46, 28, 29, 8, 10, 5, 0, 0, instrument_list_general_update_values, "Note Fade", 2,
+		nna_group);
 
 	/* 10-13 = dct toggles */
-	widget_create_togglebutton(widgets_general + 10, 46, 34, 12, 9, 11, 5, 14,
-			    14, instrument_list_general_update_values,
-			    "Disabled", 2, dct_group);
-	widget_create_togglebutton(widgets_general + 11, 46, 37, 12, 10, 12, 5, 15,
-			    15, instrument_list_general_update_values,
-			    "Note", 2, dct_group);
-	widget_create_togglebutton(widgets_general + 12, 46, 40, 12, 11, 13, 5, 16,
-			    16, instrument_list_general_update_values,
-			    "Sample", 2, dct_group);
-	widget_create_togglebutton(widgets_general + 13, 46, 43, 12, 12, 17, 5, 13,
-			    13, instrument_list_general_update_values,
-			    "Instrument", 2, dct_group);
+	widget_create_togglebutton(
+		widgets_general + 10, 46, 34, 12, 9, 11, 5, 14, 14, instrument_list_general_update_values, "Disabled", 2,
+		dct_group);
+	widget_create_togglebutton(
+		widgets_general + 11, 46, 37, 12, 10, 12, 5, 15, 15, instrument_list_general_update_values, "Note", 2,
+		dct_group);
+	widget_create_togglebutton(
+		widgets_general + 12, 46, 40, 12, 11, 13, 5, 16, 16, instrument_list_general_update_values, "Sample", 2,
+		dct_group);
+	widget_create_togglebutton(
+		widgets_general + 13, 46, 43, 12, 12, 17, 5, 13, 13, instrument_list_general_update_values, "Instrument", 2,
+		dct_group);
 	/* 14-16 = dca toggles */
-	widget_create_togglebutton(widgets_general + 14, 62, 34, 13, 9, 15, 10, 0,
-			    0, instrument_list_general_update_values,
-			    "Note Cut", 2, dca_group);
-	widget_create_togglebutton(widgets_general + 15, 62, 37, 13, 14, 16, 11, 0,
-			    0, instrument_list_general_update_values,
-			    "Note Off", 2, dca_group);
-	widget_create_togglebutton(widgets_general + 16, 62, 40, 13, 15, 17, 12, 0,
-			    0, instrument_list_general_update_values,
-			    "Note Fade", 2, dca_group);
+	widget_create_togglebutton(
+		widgets_general + 14, 62, 34, 13, 9, 15, 10, 0, 0, instrument_list_general_update_values, "Note Cut", 2,
+		dca_group);
+	widget_create_togglebutton(
+		widgets_general + 15, 62, 37, 13, 14, 16, 11, 0, 0, instrument_list_general_update_values, "Note Off", 2,
+		dca_group);
+	widget_create_togglebutton(
+		widgets_general + 16, 62, 40, 13, 15, 17, 12, 0, 0, instrument_list_general_update_values, "Note Fade", 2,
+		dca_group);
 	/* 17 = filename */
 	/* impulse tracker has a 17-char-wide box for the filename for
 	 * some reason, though it still limits the actual text to 12
 	 * characters. go figure... */
-	widget_create_textentry(widgets_general + 17, 56, 47, 13, 13, 17, 0, update_filename,
-			 NULL, 12);
+	widget_create_textentry(widgets_general + 17, 56, 47, 13, 13, 17, 0, update_filename, NULL, 12);
 }
 
 static int _fixup_mouse_instpage_volume(struct key_event *k)
@@ -2905,38 +2637,27 @@ void instrument_list_volume_load_page(struct page *page)
 	widgets_volume[5].next.down = 6;
 
 	/* 6-7 = envelope switches */
-	widget_create_toggle(widgets_volume + 6, 54, 28, 5, 7, 0, 0, 0,
-		      instrument_list_volume_update_values);
-	widget_create_toggle(widgets_volume + 7, 54, 29, 6, 8, 0, 0, 0,
-		      instrument_list_volume_update_values);
+	widget_create_toggle(widgets_volume + 6, 54, 28, 5, 7, 0, 0, 0, instrument_list_volume_update_values);
+	widget_create_toggle(widgets_volume + 7, 54, 29, 6, 8, 0, 0, 0, instrument_list_volume_update_values);
 
 	/* 8-10 envelope loop settings */
-	widget_create_toggle(widgets_volume + 8, 54, 32, 7, 9, 0, 0, 0,
-		      instrument_list_volume_update_values);
-	widget_create_numentry(widgets_volume + 9, 54, 33, 3, 8, 10, 0,
-			instrument_list_volume_update_values, 0, 1,
-			numentry_cursor_pos + 0);
-	widget_create_numentry(widgets_volume + 10, 54, 34, 3, 9, 11, 0,
-			instrument_list_volume_update_values, 0, 1,
-			numentry_cursor_pos + 0);
+	widget_create_toggle(widgets_volume + 8, 54, 32, 7, 9, 0, 0, 0, instrument_list_volume_update_values);
+	widget_create_numentry(
+		widgets_volume + 9, 54, 33, 3, 8, 10, 0, instrument_list_volume_update_values, 0, 1, numentry_cursor_pos + 0);
+	widget_create_numentry(
+		widgets_volume + 10, 54, 34, 3, 9, 11, 0, instrument_list_volume_update_values, 0, 1, numentry_cursor_pos + 0);
 
 	/* 11-13 = susloop settings */
-	widget_create_toggle(widgets_volume + 11, 54, 37, 10, 12, 0, 0, 0,
-		      instrument_list_volume_update_values);
-	widget_create_numentry(widgets_volume + 12, 54, 38, 3, 11, 13, 0,
-			instrument_list_volume_update_values, 0, 1,
-			numentry_cursor_pos + 0);
-	widget_create_numentry(widgets_volume + 13, 54, 39, 3, 12, 14, 0,
-			instrument_list_volume_update_values, 0, 1,
-			numentry_cursor_pos + 0);
+	widget_create_toggle(widgets_volume + 11, 54, 37, 10, 12, 0, 0, 0, instrument_list_volume_update_values);
+	widget_create_numentry(
+		widgets_volume + 12, 54, 38, 3, 11, 13, 0, instrument_list_volume_update_values, 0, 1, numentry_cursor_pos + 0);
+	widget_create_numentry(
+		widgets_volume + 13, 54, 39, 3, 12, 14, 0, instrument_list_volume_update_values, 0, 1, numentry_cursor_pos + 0);
 
 	/* 14-16 = volume thumbbars */
-	widget_create_thumbbar(widgets_volume + 14, 54, 42, 17, 13, 15, 0,
-			instrument_list_volume_update_values, 0, 128);
-	widget_create_thumbbar(widgets_volume + 15, 54, 43, 17, 14, 16, 0,
-			instrument_list_volume_update_values, 0, 256);
-	widget_create_thumbbar(widgets_volume + 16, 54, 46, 17, 15, 16, 0,
-			instrument_list_volume_update_values, 0, 100);
+	widget_create_thumbbar(widgets_volume + 14, 54, 42, 17, 13, 15, 0, instrument_list_volume_update_values, 0, 128);
+	widget_create_thumbbar(widgets_volume + 15, 54, 43, 17, 14, 16, 0, instrument_list_volume_update_values, 0, 256);
+	widget_create_thumbbar(widgets_volume + 16, 54, 46, 17, 15, 16, 0, instrument_list_volume_update_values, 0, 100);
 }
 
 static int _fixup_mouse_instpage_panning(struct key_event *k)
@@ -2971,36 +2692,29 @@ void instrument_list_panning_load_page(struct page *page)
 	widgets_panning[5].next.down = 6;
 
 	/* 6-7 = envelope switches */
-	widget_create_toggle(widgets_panning + 6, 54, 28, 5, 7, 0, 0, 0,
-		      instrument_list_panning_update_values);
-	widget_create_toggle(widgets_panning + 7, 54, 29, 6, 8, 0, 0, 0,
-		      instrument_list_panning_update_values);
+	widget_create_toggle(widgets_panning + 6, 54, 28, 5, 7, 0, 0, 0, instrument_list_panning_update_values);
+	widget_create_toggle(widgets_panning + 7, 54, 29, 6, 8, 0, 0, 0, instrument_list_panning_update_values);
 
 	/* 8-10 envelope loop settings */
-	widget_create_toggle(widgets_panning + 8, 54, 32, 7, 9, 0, 0, 0,
-		      instrument_list_panning_update_values);
-	widget_create_numentry(widgets_panning + 9, 54, 33, 3, 8, 10, 0,
-			instrument_list_panning_update_values, 0, 1,
-			numentry_cursor_pos + 1);
-	widget_create_numentry(widgets_panning + 10, 54, 34, 3, 9, 11, 0,
-			instrument_list_panning_update_values, 0, 1,
-			numentry_cursor_pos + 1);
+	widget_create_toggle(widgets_panning + 8, 54, 32, 7, 9, 0, 0, 0, instrument_list_panning_update_values);
+	widget_create_numentry(
+		widgets_panning + 9, 54, 33, 3, 8, 10, 0, instrument_list_panning_update_values, 0, 1, numentry_cursor_pos + 1);
+	widget_create_numentry(
+		widgets_panning + 10, 54, 34, 3, 9, 11, 0, instrument_list_panning_update_values, 0, 1,
+		numentry_cursor_pos + 1);
 
 	/* 11-13 = susloop settings */
-	widget_create_toggle(widgets_panning + 11, 54, 37, 10, 12, 0, 0, 0,
-		      instrument_list_panning_update_values);
-	widget_create_numentry(widgets_panning + 12, 54, 38, 3, 11, 13, 0,
-			instrument_list_panning_update_values, 0, 1,
-			numentry_cursor_pos + 1);
-	widget_create_numentry(widgets_panning + 13, 54, 39, 3, 12, 14, 0,
-			instrument_list_panning_update_values, 0, 1,
-			numentry_cursor_pos + 1);
+	widget_create_toggle(widgets_panning + 11, 54, 37, 10, 12, 0, 0, 0, instrument_list_panning_update_values);
+	widget_create_numentry(
+		widgets_panning + 12, 54, 38, 3, 11, 13, 0, instrument_list_panning_update_values, 0, 1,
+		numentry_cursor_pos + 1);
+	widget_create_numentry(
+		widgets_panning + 13, 54, 39, 3, 12, 14, 0, instrument_list_panning_update_values, 0, 1,
+		numentry_cursor_pos + 1);
 
 	/* 14-15 = default panning */
-	widget_create_toggle(widgets_panning + 14, 54, 42, 13, 15, 0, 0, 0,
-		      instrument_list_panning_update_values);
-	widget_create_thumbbar(widgets_panning + 15, 54, 43, 9, 14, 16, 0,
-			instrument_list_panning_update_values, 0, 64);
+	widget_create_toggle(widgets_panning + 14, 54, 42, 13, 15, 0, 0, 0, instrument_list_panning_update_values);
+	widget_create_thumbbar(widgets_panning + 15, 54, 43, 9, 14, 16, 0, instrument_list_panning_update_values, 0, 64);
 
 	/* 16 = pitch-pan center */
 	widget_create_other(widgets_panning + 16, 0, pitch_pan_center_handle_key, NULL, pitch_pan_center_draw);
@@ -3008,10 +2722,8 @@ void instrument_list_panning_load_page(struct page *page)
 	widgets_panning[16].next.down = 17;
 
 	/* 17-18 = other panning stuff */
-	widget_create_thumbbar(widgets_panning + 17, 54, 46, 9, 16, 18, 0,
-			instrument_list_panning_update_values, -32, 32);
-	widget_create_thumbbar(widgets_panning + 18, 54, 47, 9, 17, 18, 0,
-			instrument_list_panning_update_values, 0, 64);
+	widget_create_thumbbar(widgets_panning + 17, 54, 46, 9, 16, 18, 0, instrument_list_panning_update_values, -32, 32);
+	widget_create_thumbbar(widgets_panning + 18, 54, 47, 9, 17, 18, 0, instrument_list_panning_update_values, 0, 64);
 }
 
 static int _fixup_mouse_instpage_pitch(struct key_event *k)
@@ -3048,63 +2760,46 @@ void instrument_list_pitch_load_page(struct page *page)
 	widgets_pitch[5].next.down = 6;
 
 	/* 6-7 = envelope switches */
-	widget_create_menutoggle(widgets_pitch + 6, 54, 28, 5, 7, 0, 0, 0,
-		      instrument_list_pitch_update_values, pitch_envelope_states);
-	widget_create_toggle(widgets_pitch + 7, 54, 29, 6, 8, 0, 0, 0,
-		      instrument_list_pitch_update_values);
+	widget_create_menutoggle(
+		widgets_pitch + 6, 54, 28, 5, 7, 0, 0, 0, instrument_list_pitch_update_values, pitch_envelope_states);
+	widget_create_toggle(widgets_pitch + 7, 54, 29, 6, 8, 0, 0, 0, instrument_list_pitch_update_values);
 
 	/* 8-10 envelope loop settings */
-	widget_create_toggle(widgets_pitch + 8, 54, 32, 7, 9, 0, 0, 0,
-		      instrument_list_pitch_update_values);
-	widget_create_numentry(widgets_pitch + 9, 54, 33, 3, 8, 10, 0,
-			instrument_list_pitch_update_values, 0, 1,
-			numentry_cursor_pos + 2);
-	widget_create_numentry(widgets_pitch + 10, 54, 34, 3, 9, 11, 0,
-			instrument_list_pitch_update_values, 0, 1,
-			numentry_cursor_pos + 2);
+	widget_create_toggle(widgets_pitch + 8, 54, 32, 7, 9, 0, 0, 0, instrument_list_pitch_update_values);
+	widget_create_numentry(
+		widgets_pitch + 9, 54, 33, 3, 8, 10, 0, instrument_list_pitch_update_values, 0, 1, numentry_cursor_pos + 2);
+	widget_create_numentry(
+		widgets_pitch + 10, 54, 34, 3, 9, 11, 0, instrument_list_pitch_update_values, 0, 1, numentry_cursor_pos + 2);
 
 	/* 11-13 = susloop settings */
-	widget_create_toggle(widgets_pitch + 11, 54, 37, 10, 12, 0, 0, 0,
-		      instrument_list_pitch_update_values);
-	widget_create_numentry(widgets_pitch + 12, 54, 38, 3, 11, 13, 0,
-			instrument_list_pitch_update_values, 0, 1,
-			numentry_cursor_pos + 2);
-	widget_create_numentry(widgets_pitch + 13, 54, 39, 3, 12, 14, 0,
-			instrument_list_pitch_update_values, 0, 1,
-			numentry_cursor_pos + 2);
+	widget_create_toggle(widgets_pitch + 11, 54, 37, 10, 12, 0, 0, 0, instrument_list_pitch_update_values);
+	widget_create_numentry(
+		widgets_pitch + 12, 54, 38, 3, 11, 13, 0, instrument_list_pitch_update_values, 0, 1, numentry_cursor_pos + 2);
+	widget_create_numentry(
+		widgets_pitch + 13, 54, 39, 3, 12, 14, 0, instrument_list_pitch_update_values, 0, 1, numentry_cursor_pos + 2);
 
 	/* 14-15 = filter cutoff/resonance */
-	widget_create_thumbbar(widgets_pitch + 14, 54, 42, 17, 13, 15, 0,
-			instrument_list_pitch_update_values, -1, 127);
-	widget_create_thumbbar(widgets_pitch + 15, 54, 43, 17, 14, 16, 0,
-			instrument_list_pitch_update_values, -1, 127);
+	widget_create_thumbbar(widgets_pitch + 14, 54, 42, 17, 13, 15, 0, instrument_list_pitch_update_values, -1, 127);
+	widget_create_thumbbar(widgets_pitch + 15, 54, 43, 17, 14, 16, 0, instrument_list_pitch_update_values, -1, 127);
 	widgets_pitch[14].d.thumbbar.text_at_min = "Off";
 	widgets_pitch[15].d.thumbbar.text_at_min = "Off";
 
 	/* 16-19 = midi crap */
-	widget_create_bitset(widgets_pitch + 16, 54, 44, 17, 15, 17, 0,
-			instrument_list_pitch_update_values,
-			17,
-			" 1 2 3 4 5 6 7 8 9P\0""111213141516M\0",
-			".\0.\0.\0.\0.\0.\0.\0.\0.\0p\0.\0.\0.\0.\0.\0.\0m\0",
-			&midi_channel_selection_cursor_position
-			);
-	widgets_pitch[16].d.bitset.activation_keys =
-		"123456789pabcdefm";
+	widget_create_bitset(
+		widgets_pitch + 16, 54, 44, 17, 15, 17, 0, instrument_list_pitch_update_values, 17,
+		" 1 2 3 4 5 6 7 8 9P\0"
+		"111213141516M\0",
+		".\0.\0.\0.\0.\0.\0.\0.\0.\0p\0.\0.\0.\0.\0.\0.\0m\0", &midi_channel_selection_cursor_position);
+	widgets_pitch[16].d.bitset.activation_keys = "123456789pabcdefm";
 
-	widget_create_thumbbar(widgets_pitch + 17, 54, 45, 17, 16, 18, 0,
-			instrument_list_pitch_update_values, -1, 127);
-	widget_create_thumbbar(widgets_pitch + 18, 54, 46, 17, 17, 19, 0,
-			instrument_list_pitch_update_values, -1, 127);
-	widget_create_thumbbar(widgets_pitch + 19, 54, 47, 17, 18, 19, 0,
-			instrument_list_pitch_update_values, -1, 127);
+	widget_create_thumbbar(widgets_pitch + 17, 54, 45, 17, 16, 18, 0, instrument_list_pitch_update_values, -1, 127);
+	widget_create_thumbbar(widgets_pitch + 18, 54, 46, 17, 17, 19, 0, instrument_list_pitch_update_values, -1, 127);
+	widget_create_thumbbar(widgets_pitch + 19, 54, 47, 17, 18, 19, 0, instrument_list_pitch_update_values, -1, 127);
 	widgets_pitch[17].d.thumbbar.text_at_min = "Off";
 	widgets_pitch[18].d.thumbbar.text_at_min = "Off";
 	widgets_pitch[19].d.thumbbar.text_at_min = "Off";
 
 	/* count how many formats there really are */
 	num_save_formats = 0;
-	while (instrument_save_formats[num_save_formats].label)
-		num_save_formats++;
+	while (instrument_save_formats[num_save_formats].label) num_save_formats++;
 }
-

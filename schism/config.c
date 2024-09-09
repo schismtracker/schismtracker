@@ -75,7 +75,7 @@ void cfg_init_dir(void)
 	app_dir = SDL_GetBasePath();
 	portable_file = dmoz_path_concat(app_dir, "portable.txt");
 
-	if(is_file(portable_file)) {
+	if (is_file(portable_file)) {
 		printf("In portable mode.\n");
 
 		strncpy(cfg_dir_dotschism, app_dir, PATH_MAX);
@@ -113,7 +113,7 @@ static void cfg_load_palette(cfg_file_t *cfg)
 	char palette_text[49] = "";
 	cfg_get_string(cfg, "General", "palette_cur", palette_text, 48, "");
 
-	if(palette_text[0]) {
+	if (palette_text[0]) {
 		set_palette_from_string(palette_text);
 	}
 
@@ -124,7 +124,7 @@ static void cfg_save_palette(cfg_file_t *cfg)
 {
 	cfg_set_number(cfg, "General", "palette", current_palette_index);
 
-	if(current_palette_index == 0) {
+	if (current_palette_index == 0) {
 		char palette_text[49] = "";
 		palette_to_string(current_palette_index, palette_text);
 		cfg_set_string(cfg, "General", "palette_cur", palette_text);
@@ -178,17 +178,13 @@ void cfg_load(void)
 	}
 
 	ptr = cfg_get_string(&cfg, "General", "numlock_setting", NULL, 0, NULL);
-	if (!ptr)
-		status.fix_numlock_setting = NUMLOCK_GUESS;
-	else if (strcasecmp(ptr, "on") == 0)
-		status.fix_numlock_setting = NUMLOCK_ALWAYS_ON;
-	else if (strcasecmp(ptr, "off") == 0)
-		status.fix_numlock_setting = NUMLOCK_ALWAYS_OFF;
-	else
-		status.fix_numlock_setting = NUMLOCK_HONOR;
+	if (!ptr) status.fix_numlock_setting = NUMLOCK_GUESS;
+	else if (strcasecmp(ptr, "on") == 0) status.fix_numlock_setting = NUMLOCK_ALWAYS_ON;
+	else if (strcasecmp(ptr, "off") == 0) status.fix_numlock_setting = NUMLOCK_ALWAYS_OFF;
+	else status.fix_numlock_setting = NUMLOCK_HONOR;
 
-	kbd_set_key_repeat(cfg_get_number(&cfg, "General", "key_repeat_delay", 0),
-		       cfg_get_number(&cfg, "General", "key_repeat_rate", 0));
+	kbd_set_key_repeat(
+		cfg_get_number(&cfg, "General", "key_repeat_delay", 0), cfg_get_number(&cfg, "General", "key_repeat_rate", 0));
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -201,29 +197,21 @@ void cfg_load(void)
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-	if (cfg_get_number(&cfg, "General", "classic_mode", 0))
-		status.flags |= CLASSIC_MODE;
-	else
-		status.flags &= ~CLASSIC_MODE;
-	if (cfg_get_number(&cfg, "General", "make_backups", 1))
-		status.flags |= MAKE_BACKUPS;
-	else
-		status.flags &= ~MAKE_BACKUPS;
-	if (cfg_get_number(&cfg, "General", "numbered_backups", 0))
-		status.flags |= NUMBERED_BACKUPS;
-	else
-		status.flags &= ~NUMBERED_BACKUPS;
+	if (cfg_get_number(&cfg, "General", "classic_mode", 0)) status.flags |= CLASSIC_MODE;
+	else status.flags &= ~CLASSIC_MODE;
+	if (cfg_get_number(&cfg, "General", "make_backups", 1)) status.flags |= MAKE_BACKUPS;
+	else status.flags &= ~MAKE_BACKUPS;
+	if (cfg_get_number(&cfg, "General", "numbered_backups", 0)) status.flags |= NUMBERED_BACKUPS;
+	else status.flags &= ~NUMBERED_BACKUPS;
 
 	i = cfg_get_number(&cfg, "General", "time_display", TIME_PLAY_ELAPSED);
 	/* default to play/elapsed for invalid values */
-	if (i < 0 || i >= TIME_PLAYBACK)
-		i = TIME_PLAY_ELAPSED;
+	if (i < 0 || i >= TIME_PLAYBACK) i = TIME_PLAY_ELAPSED;
 	status.time_display = i;
 
 	i = cfg_get_number(&cfg, "General", "vis_style", VIS_OSCILLOSCOPE);
 	/* default to oscilloscope for invalid values */
-	if (i < 0 || i >= VIS_SENTINEL)
-		i = VIS_OSCILLOSCOPE;
+	if (i < 0 || i >= VIS_SENTINEL) i = VIS_OSCILLOSCOPE;
 	status.vis_style = i;
 
 	kbd_sharp_flat_toggle(cfg_get_number(&cfg, "General", "accidentals_as_flats", 0) == 1);
@@ -233,23 +221,15 @@ void cfg_load(void)
 #else
 # define DEFAULT_META 0
 #endif
-	if (cfg_get_number(&cfg, "General", "meta_is_ctrl", DEFAULT_META))
-		status.flags |= META_IS_CTRL;
-	else
-		status.flags &= ~META_IS_CTRL;
-	if (cfg_get_number(&cfg, "General", "altgr_is_alt", 1))
-		status.flags |= ALTGR_IS_ALT;
-	else
-		status.flags &= ~ALTGR_IS_ALT;
-	if (cfg_get_number(&cfg, "Video", "lazy_redraw", 0))
-		status.flags |= LAZY_REDRAW;
-	else
-		status.flags &= ~LAZY_REDRAW;
+	if (cfg_get_number(&cfg, "General", "meta_is_ctrl", DEFAULT_META)) status.flags |= META_IS_CTRL;
+	else status.flags &= ~META_IS_CTRL;
+	if (cfg_get_number(&cfg, "General", "altgr_is_alt", 1)) status.flags |= ALTGR_IS_ALT;
+	else status.flags &= ~ALTGR_IS_ALT;
+	if (cfg_get_number(&cfg, "Video", "lazy_redraw", 0)) status.flags |= LAZY_REDRAW;
+	else status.flags &= ~LAZY_REDRAW;
 
-	if (cfg_get_number(&cfg, "General", "midi_like_tracker", 0))
-		status.flags |= MIDI_LIKE_TRACKER;
-	else
-		status.flags &= ~MIDI_LIKE_TRACKER;
+	if (cfg_get_number(&cfg, "General", "midi_like_tracker", 0)) status.flags |= MIDI_LIKE_TRACKER;
+	else status.flags &= ~MIDI_LIKE_TRACKER;
 
 	cfg_get_string(&cfg, "General", "font", cfg_font, NAME_MAX, "font.cfg");
 
@@ -360,15 +340,9 @@ void cfg_atexit_save(void)
 	include comments to the config by default listing what the numbers are, but that shouldn't
 	be necessary in most cases. */
 	switch (status.fix_numlock_setting) {
-	case NUMLOCK_ALWAYS_ON:
-		cfg_set_string(&cfg, "General", "numlock_setting", "on");
-		break;
-	case NUMLOCK_ALWAYS_OFF:
-		cfg_set_string(&cfg, "General", "numlock_setting", "off");
-		break;
-	case NUMLOCK_HONOR:
-		cfg_set_string(&cfg, "General", "numlock_setting", "system");
-		break;
+	case NUMLOCK_ALWAYS_ON: cfg_set_string(&cfg, "General", "numlock_setting", "on"); break;
+	case NUMLOCK_ALWAYS_OFF: cfg_set_string(&cfg, "General", "numlock_setting", "off"); break;
+	case NUMLOCK_HONOR: cfg_set_string(&cfg, "General", "numlock_setting", "system"); break;
 	case NUMLOCK_GUESS:
 		/* leave empty */
 		break;
@@ -382,4 +356,3 @@ void cfg_atexit_save(void)
 	cfg_write(&cfg);
 	cfg_free(&cfg);
 }
-

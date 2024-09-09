@@ -55,20 +55,19 @@ static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *d, unsigned int le
 	char *z;
 	LPMIDIHDR m;
 
-	if (!d) len=0;
+	if (!d) len = 0;
 	z = mem_calloc(1, sizeof(MIDIHDR) + len);
 	m = (LPMIDIHDR)z;
 
 	if (len) memcpy(z + sizeof(MIDIHDR), d, len);
 
-	m->lpData = (z+sizeof(MIDIHDR));
+	m->lpData = (z + sizeof(MIDIHDR));
 	m->dwBufferLength = len;
 	m->lpNext = *q;
 	m->dwOffset = 0;
 	(*q) = (m);
 }
-static void _win32mm_send(struct midi_port *p, const unsigned char *data,
-		unsigned int len, UNUSED unsigned int delay)
+static void _win32mm_send(struct midi_port *p, const unsigned char *data, unsigned int len, UNUSED unsigned int delay)
 {
 	struct win32mm_midi *m;
 	DWORD q;
@@ -101,65 +100,55 @@ struct curry {
 };
 
 
-static CALLBACK void _win32mm_xp_output(UNUSED UINT uTimerID,
-			UNUSED UINT uMsg,
-			DWORD_PTR dwUser,
-			UNUSED DWORD_PTR dw1,
-			UNUSED DWORD_PTR dw2)
+static CALLBACK void
+_win32mm_xp_output(UNUSED UINT uTimerID, UNUSED UINT uMsg, DWORD_PTR dwUser, UNUSED DWORD_PTR dw1, UNUSED DWORD_PTR dw2)
 {
 	struct curry *c;
 	c = (struct curry *)dwUser;
 	_win32mm_send(c->p, c->d, c->len, 0);
 	free(c);
 }
-static void _win32mm_send_xp(struct midi_port *p, const unsigned char *buf,
-		unsigned int len, unsigned int delay)
+static void _win32mm_send_xp(struct midi_port *p, const unsigned char *buf, unsigned int len, unsigned int delay)
 {
 	/* version for windows XP */
 	struct curry *c;
 
-	if (!delay) _win32mm_send(p,buf,len,0);
+	if (!delay) _win32mm_send(p, buf, len, 0);
 	if (len == 0) return;
 
 	c = mem_alloc(sizeof(struct curry) + len);
 	c->p = p;
-	c->d = ((unsigned char*)c)+sizeof(struct curry);
+	c->d = ((unsigned char *)c) + sizeof(struct curry);
 	c->len = len;
-	timeSetEvent(delay, mm_period, _win32mm_xp_output, (DWORD_PTR)c,
-					TIME_ONESHOT | TIME_CALLBACK_FUNCTION);
+	timeSetEvent(delay, mm_period, _win32mm_xp_output, (DWORD_PTR)c, TIME_ONESHOT | TIME_CALLBACK_FUNCTION);
 }
 
-static CALLBACK void _win32mm_inputcb(UNUSED HMIDIIN in, UINT wmsg, DWORD_PTR inst,
-					   DWORD_PTR param1, DWORD_PTR param2)
+static CALLBACK void _win32mm_inputcb(UNUSED HMIDIIN in, UINT wmsg, DWORD_PTR inst, DWORD_PTR param1, DWORD_PTR param2)
 {
 	struct midi_port *p = (struct midi_port *)inst;
 	struct win32mm_midi *m;
 	unsigned char c[4];
 
 	switch (wmsg) {
-	case MIM_OPEN:
-		SDL_Delay(0); /* eh? */
-	case MIM_CLOSE:
-		break;
+	case MIM_OPEN: SDL_Delay(0); /* eh? */
+	case MIM_CLOSE: break;
 	case MIM_DATA:
 		c[0] = param1 & 255;
 		c[1] = (param1 >> 8) & 255;
 		c[2] = (param1 >> 16) & 255;
 		midi_received_cb(p, c, 3);
 		break;
-	case MIM_LONGDATA:
-		{
-			MIDIHDR* hdr = (MIDIHDR*) param1;
-			if (hdr->dwBytesRecorded > 0)
-			{
-				/* long data */
-				m = p->userdata;
-				midi_received_cb(p, (unsigned char *) m->hh.lpData, m->hh.dwBytesRecorded);
-				//TODO: The event for the midi sysex (midi-core.c SCHISM_EVENT_MIDI_SYSEX) should
-				// call us back so that we can add the buffer back with midiInAddBuffer().
-			}
-			break;
+	case MIM_LONGDATA: {
+		MIDIHDR *hdr = (MIDIHDR *)param1;
+		if (hdr->dwBytesRecorded > 0) {
+			/* long data */
+			m = p->userdata;
+			midi_received_cb(p, (unsigned char *)m->hh.lpData, m->hh.dwBytesRecorded);
+			//TODO: The event for the midi sysex (midi-core.c SCHISM_EVENT_MIDI_SYSEX) should
+			// call us back so that we can add the buffer back with midiInAddBuffer().
 		}
+		break;
+	}
 	}
 }
 
@@ -174,11 +163,7 @@ static int _win32mm_start(struct midi_port *p)
 	id = m->id;
 	if (p->io == MIDI_INPUT) {
 		m->in = NULL;
-		r = midiInOpen(&m->in,
-				(UINT_PTR)id,
-				(DWORD_PTR)_win32mm_inputcb,
-				(DWORD_PTR)p,
-				CALLBACK_FUNCTION);
+		r = midiInOpen(&m->in, (UINT_PTR)id, (DWORD_PTR)_win32mm_inputcb, (DWORD_PTR)p, CALLBACK_FUNCTION);
 		if (r != MMSYSERR_NOERROR) return 0;
 		memset(&m->hh, 0, sizeof(m->hh));
 		m->hh.lpData = (LPSTR)m->sysx;
@@ -189,14 +174,10 @@ static int _win32mm_start(struct midi_port *p)
 		r = midiInAddBuffer(m->in, &m->hh, sizeof(MIDIHDR));
 		if (r != MMSYSERR_NOERROR) return 0;
 		if (midiInStart(m->in) != MMSYSERR_NOERROR) return 0;
-
 	}
 	if (p->io & MIDI_OUTPUT) {
 		m->out = NULL;
-		if (midiOutOpen(&m->out,
-				(UINT_PTR)id,
-				0, 0,
-				CALLBACK_NULL) != MMSYSERR_NOERROR) return 0;
+		if (midiOutOpen(&m->out, (UINT_PTR)id, 0, 0, CALLBACK_NULL) != MMSYSERR_NOERROR) return 0;
 	}
 	return 1;
 }
@@ -211,7 +192,7 @@ static int _win32mm_stop(struct midi_port *p)
 		for these guys */
 		(void)midiInStop(m->in);
 		(void)midiInReset(m->in);
-		(void)midiInUnprepareHeader(m->in,&m->hh,sizeof(m->hh));
+		(void)midiInUnprepareHeader(m->in, &m->hh, sizeof(m->hh));
 		(void)midiInClose(m->in);
 	}
 	if (p->io & MIDI_OUTPUT) {
@@ -240,8 +221,7 @@ static void _win32mm_poll(struct midi_provider *p)
 	mmin = midiInGetNumDevs();
 	for (i = last_known_in_port; i < mmin; i++) {
 		data = mem_calloc(1, sizeof(struct win32mm_midi));
-		r = midiInGetDevCaps(i, (LPMIDIINCAPS)&data->icp,
-					sizeof(MIDIINCAPS));
+		r = midiInGetDevCaps(i, (LPMIDIINCAPS)&data->icp, sizeof(MIDIINCAPS));
 		if (r != MMSYSERR_NOERROR) {
 			free(data);
 			continue;
@@ -254,8 +234,7 @@ static void _win32mm_poll(struct midi_provider *p)
 	mmout = midiOutGetNumDevs();
 	for (i = last_known_out_port; i < mmout; i++) {
 		data = mem_calloc(1, sizeof(struct win32mm_midi));
-		r = midiOutGetDevCaps(i, (LPMIDIOUTCAPS)&data->ocp,
-					sizeof(MIDIOUTCAPS));
+		r = midiOutGetDevCaps(i, (LPMIDIOUTCAPS)&data->ocp, sizeof(MIDIOUTCAPS));
 		if (r != MMSYSERR_NOERROR) {
 			if (data) free(data);
 			continue;
@@ -279,19 +258,19 @@ int win32mm_midi_setup(void)
 	driver.disable = _win32mm_stop;
 
 	{
-			if (timeGetDevCaps(&caps, sizeof(caps)) == 0) {
-				mm_period = caps.wPeriodMin;
-				if (timeBeginPeriod(mm_period) == 0) {
-					driver.send = _win32mm_send_xp;
-					driver.flags |= MIDI_PORT_CAN_SCHEDULE;
-				} else {
-					driver.send = _win32mm_send;
-					log_appendf(4, "Cannot install WINMM timer (midi output will skip)");
-				}
+		if (timeGetDevCaps(&caps, sizeof(caps)) == 0) {
+			mm_period = caps.wPeriodMin;
+			if (timeBeginPeriod(mm_period) == 0) {
+				driver.send = _win32mm_send_xp;
+				driver.flags |= MIDI_PORT_CAN_SCHEDULE;
 			} else {
 				driver.send = _win32mm_send;
-				log_appendf(4, "Cannot get WINMM timer capabilities (midi output will skip)");
+				log_appendf(4, "Cannot install WINMM timer (midi output will skip)");
 			}
+		} else {
+			driver.send = _win32mm_send;
+			log_appendf(4, "Cannot get WINMM timer capabilities (midi output will skip)");
+		}
 	}
 
 	if (!midi_provider_register("Win32MM", &driver)) return 0;

@@ -46,8 +46,7 @@ static void status_text_flash_generic(const char *format, int bios, va_list ap)
 {
 	text_timeout = SCHISM_GET_TICKS() + 1000;
 
-	if (status_text)
-		free(status_text);
+	if (status_text) free(status_text);
 
 	status_bios = bios;
 
@@ -116,8 +115,7 @@ static inline void draw_song_playing_status(void)
 	pos++;
 	pos += draw_text(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
 
-	if (draw_text_len(" Channels", 62 - pos, pos, 9, 0, 2) < 9)
-		draw_char(16, 61, 9, 1, 2);
+	if (draw_text_len(" Channels", 62 - pos, pos, 9, 0, 2) < 9) draw_char(16, 61, 9, 1, 2);
 }
 
 static inline void draw_pattern_playing_status(void)
@@ -140,8 +138,7 @@ static inline void draw_pattern_playing_status(void)
 	pos++;
 	pos += draw_text(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
 
-	if (draw_text_len(" Channels", 62 - pos, pos, 9, 0, 2) < 9)
-		draw_char(16, 61, 9, 1, 2);
+	if (draw_text_len(" Channels", 62 - pos, pos, 9, 0, 2) < 9) draw_char(16, 61, 9, 1, 2);
 }
 
 static inline void draw_playing_channels(void)
@@ -172,19 +169,14 @@ void status_text_redraw(void)
 		}
 	} else {
 		switch (song_get_mode()) {
-		case MODE_PLAYING:
-			draw_song_playing_status();
-			break;
-		case MODE_PATTERN_LOOP:
-			draw_pattern_playing_status();
-			break;
+		case MODE_PLAYING: draw_song_playing_status(); break;
+		case MODE_PATTERN_LOOP: draw_pattern_playing_status(); break;
 		case MODE_SINGLE_STEP:
 			if (song_get_playing_channels() > 1) {
 				draw_playing_channels();
 				break;
 			}
-		default:
-			break;
+		default: break;
 		}
 	}
 }

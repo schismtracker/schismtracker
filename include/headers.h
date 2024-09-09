@@ -36,7 +36,7 @@
 #include <stdarg.h>
 
 #ifdef HAVE_SYS_PARAM_H
-#include <sys/param.h>
+# include <sys/param.h>
 #endif
 
 #include <string.h>
@@ -77,7 +77,7 @@ int strverscmp(const char *s1, const char *s2);
 #endif
 
 #ifdef HAVE_LIMITS_H
-#include <limits.h>
+# include <limits.h>
 #endif
 
 #ifndef NAME_MAX
@@ -100,15 +100,15 @@ int strverscmp(const char *s1, const char *s2);
 
 #ifndef timersub
 // from FreeBSD
-# define timersub(tvp, uvp, vvp)                                       \
-	do {                                                            \
-		(vvp)->tv_sec = (tvp)->tv_sec - (uvp)->tv_sec;          \
-		(vvp)->tv_usec = (tvp)->tv_usec - (uvp)->tv_usec;       \
-		if ((vvp)->tv_usec < 0) {                               \
-			(vvp)->tv_sec--;                                \
-			(vvp)->tv_usec += 1000000;                      \
-		}                                                       \
-	} while (0)
+# define timersub(tvp, uvp, vvp) \
+  do { \
+   (vvp)->tv_sec = (tvp)->tv_sec - (uvp)->tv_sec; \
+   (vvp)->tv_usec = (tvp)->tv_usec - (uvp)->tv_usec; \
+   if ((vvp)->tv_usec < 0) { \
+	(vvp)->tv_sec--; \
+	(vvp)->tv_usec += 1000000; \
+   } \
+  } while (0)
 #endif
 
 /* Prototypes for replacement functions; if the standard library
@@ -120,8 +120,8 @@ char *strptime(const char *buf, const char *fmt, struct tm *tm);
 int mkstemp(char *template);
 struct tm *localtime_r(const time_t *timep, struct tm *result);
 
-#define INT_SHAPED_PTR(v)               ((intptr_t)(void*)(v))
-#define PTR_SHAPED_INT(i)               ((void*)(i))
+#define INT_SHAPED_PTR(v) ((intptr_t)(void *)(v))
+#define PTR_SHAPED_INT(i) ((void *)(i))
 
 /* -------------------------------------------------------------- */
 /* C99 compatible static assertion */
@@ -132,13 +132,13 @@ struct tm *localtime_r(const time_t *timep, struct tm *result);
 /* should work anywhere and shouldn't dump random stack allocations
  * BUT it fails to provide any sort of useful message to the user */
 # define SCHISM_STATIC_ASSERT(x, msg) \
-    extern int (*schism_static_assert_function_no_touchy_touchy_plz(void)) \
-      [!!sizeof (struct { int __error_if_negative: (x) ? 2 : -1; })]
+  extern int(*schism_static_assert_function_no_touchy_touchy_plz( \
+	  void))[!!sizeof(struct { int __error_if_negative : (x) ? 2 : -1; })]
 #endif
 
 /* similar to OpenMPT's `MPT_BINARY_STRUCT`, errors out if the
  * size of `type` is not equal to `size` for e.g. packed structures */
 #define SCHISM_BINARY_STRUCT(type, size) \
-	SCHISM_STATIC_ASSERT(sizeof(type) == (size), "ERROR: struct size is different than what was expected (" #size ")");
+ SCHISM_STATIC_ASSERT(sizeof(type) == (size), "ERROR: struct size is different than what was expected (" #size ")");
 
 #endif /* SCHISM_HEADERS_H_ */

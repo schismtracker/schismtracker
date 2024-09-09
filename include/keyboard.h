@@ -26,8 +26,8 @@
 
 int numeric_key_event(struct key_event *k, int kponly);
 
-char *get_note_string(int note, char *buf);     /* "C-5" or "G#4" */
-char *get_note_string_short(int note, char *buf);       /* "c5" or "G4" */
+char *get_note_string(int note, char *buf);       /* "C-5" or "G#4" */
+char *get_note_string_short(int note, char *buf); /* "c5" or "G4" */
 char *get_volume_string(int volume, int volume_effect, char *buf);
 char get_effect_char(int command);
 int get_effect_number(char effect);
@@ -60,7 +60,7 @@ void kbd_key_translate(struct key_event *k);
 /* key repeat */
 
 void kbd_handle_key_repeat(void);
-void kbd_cache_key_repeat(struct key_event* kk);
+void kbd_cache_key_repeat(struct key_event *kk);
 void kbd_empty_key_repeat(void);
 
 /* use 0 for delay to (re)set the default rate. */
@@ -69,8 +69,8 @@ void kbd_set_key_repeat(int delay, int rate);
 /* -------------------------------------------- */
 /* text <-> keydowns */
 
-void kbd_push_pending_keydown(struct key_event* kk);
-void kbd_pop_pending_keydown(const uint8_t* text);
+void kbd_push_pending_keydown(struct key_event *kk);
+void kbd_pop_pending_keydown(const uint8_t *text);
 int kbd_have_pending_keydown(void);
 
 #endif /* SCHISM_KEYBOARD_H_ */

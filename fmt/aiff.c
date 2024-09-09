@@ -30,10 +30,10 @@
 
 #include <stdint.h>
 #include <unistd.h> /* swab */
-#include <math.h> /* for ldexp/frexp */
+#include <math.h>   /* for ldexp/frexp */
 
 #ifdef SCHISM_WIN32
-# define swab(a,b,c) swab((const char*)(a),(char*)(b),(size_t)(c))
+# define swab(a, b, c) swab((const char *)(a), (char *)(b), (size_t)(c))
 #endif
 
 static void ConvertToIeeeExtended(double num, unsigned char *bytes);
@@ -45,7 +45,7 @@ static double ConvertFromIeeeExtended(const unsigned char *bytes);
 
 struct aiff_chunk_form {
 	uint32_t filetype; // AIFF, 8SVX, etc.
-	uint8_t data[]; // rest of file is encapsulated in here, also chunked
+	uint8_t data[];    // rest of file is encapsulated in here, also chunked
 };
 
 SCHISM_BINARY_STRUCT(struct aiff_chunk_form, 4);
@@ -57,7 +57,7 @@ struct aiff_chunk_vhdr {
 	uint16_t smp_per_sec;
 	uint8_t num_octaves;
 	uint8_t compression; // 0 = none, 1 = fibonacci-delta
-	uint32_t volume; // fixed point, 65536 = 1.0
+	uint32_t volume;     // fixed point, 65536 = 1.0
 };
 
 SCHISM_BINARY_STRUCT(struct aiff_chunk_vhdr, 20);
@@ -97,13 +97,12 @@ typedef struct chunk {
 // pos is updated to point to the beginning of the next chunk
 static int iff_chunk_read(chunk_t *chunk, const uint8_t *data, size_t length, size_t *pos)
 {
-	if (*pos + 8 > length)
-		return 0;
+	if (*pos + 8 > length) return 0;
 	memcpy(&chunk->id, data + *pos, 4);
 	memcpy(&chunk->size, data + *pos + 4, 4);
 	chunk->id = bswapBE32(chunk->id);
 	chunk->size = bswapBE32(chunk->size);
-	chunk->data = (chunkdata_t *) (data + *pos + 8);
+	chunk->data = (chunkdata_t *)(data + *pos + 8);
 	*pos += 8 + chunk->size;
 	return (*pos <= length);
 }
@@ -135,10 +134,8 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 	size_t pos = 0;
 	chunk_t vhdr, body, name, comm, auth, anno, ssnd; // butt
 
-	if (!iff_chunk_read(&chunk, data, length, &pos))
-		return 0;
-	if (chunk.id != ID_FORM)
-		return 0;
+	if (!iff_chunk_read(&chunk, data, length, &pos)) return 0;
+	if (chunk.id != ID_FORM) return 0;
 
 	// jump "into" the FORM chunk
 	// if (pos < length), there's more data after the FORM chunk -- but I don't care about this scenario
@@ -159,24 +156,22 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 
 		while (iff_chunk_read(&chunk, data, length, &pos)) {
 			switch (chunk.id) {
-				case ID_VHDR: vhdr = chunk; break;
-				case ID_BODY: body = chunk; break;
-				case ID_NAME: name = chunk; break;
-				case ID_AUTH: auth = chunk; break;
-				case ID_ANNO: anno = chunk; break;
-				default: break;
+			case ID_VHDR: vhdr = chunk; break;
+			case ID_BODY: body = chunk; break;
+			case ID_NAME: name = chunk; break;
+			case ID_AUTH: auth = chunk; break;
+			case ID_ANNO: anno = chunk; break;
+			default: break;
 			}
 		}
-		if (!(vhdr.id && body.id))
-			return 0;
+		if (!(vhdr.id && body.id)) return 0;
 
 		if (vhdr.data->VHDR.compression) {
 			log_appendf(4, "error: compressed 8SVX files are unsupported");
 			return 0;
 		}
 		if (vhdr.data->VHDR.num_octaves != 1) {
-			log_appendf(4, "warning: 8SVX file contains %d octaves",
-				vhdr.data->VHDR.num_octaves);
+			log_appendf(4, "warning: 8SVX file contains %d octaves", vhdr.data->VHDR.num_octaves);
 		}
 
 		if (file) {
@@ -186,7 +181,6 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 		if (!name.id) name = auth;
 		if (!name.id) name = anno;
 		if (name.id) {
-
 			if (file) file->title = strn_dup((const char *)name.data, name.size);
 			if (smp) {
 				int len = MIN(25, name.size);
@@ -199,9 +193,9 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 			smp->c5speed = bswapBE16(vhdr.data->VHDR.smp_per_sec);
 			smp->length = body.size;
 
-			csf_read_sample(smp, SF_BE | SF_PCMS | SF_8 | SF_M, (uint8_t*)body.data, body.size);
+			csf_read_sample(smp, SF_BE | SF_PCMS | SF_8 | SF_M, (uint8_t *)body.data, body.size);
 
-			smp->volume = 64*4;
+			smp->volume = 64 * 4;
 			smp->global_volume = 64;
 
 			// this is done kinda weird
@@ -209,12 +203,9 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 			if (smp->loop_end) {
 				smp->loop_start = bswapBE32(vhdr.data->VHDR.smp_highoct_1shot);
 				smp->loop_end += smp->loop_start;
-				if (smp->loop_start > smp->length)
-					smp->loop_start = 0;
-				if (smp->loop_end > smp->length)
-					smp->loop_end = smp->length;
-				if (smp->loop_start + 2 < smp->loop_end)
-					smp->flags |= CHN_LOOP;
+				if (smp->loop_start > smp->length) smp->loop_start = 0;
+				if (smp->loop_end > smp->length) smp->loop_end = smp->length;
+				if (smp->loop_start + 2 < smp->loop_end) smp->flags |= CHN_LOOP;
 			}
 			// TODO vhdr.data->VHDR.volume ?
 		}
@@ -230,14 +221,13 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 
 		while (iff_chunk_read(&chunk, data, length, &pos)) {
 			switch (chunk.id) {
-				case ID_COMM: comm = chunk; break;
-				case ID_SSND: ssnd = chunk; break;
-				case ID_NAME: name = chunk; break;
-				default: break;
+			case ID_COMM: comm = chunk; break;
+			case ID_SSND: ssnd = chunk; break;
+			case ID_NAME: name = chunk; break;
+			default: break;
 			}
 		}
-		if (!(comm.id && ssnd.id))
-			return 0;
+		if (!(comm.id && ssnd.id)) return 0;
 
 		if (file) {
 			file->description = "Audio IFF sample";
@@ -260,25 +250,15 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 			uint32_t flags = SF_BE | SF_PCMS;
 
 			switch (bswapBE16(comm.data->COMM.num_channels)) {
-			default:
-				log_appendf(4, "warning: multichannel AIFF is unsupported");
-			case 1:
-				flags |= SF_M;
-				break;
-			case 2:
-				flags |= SF_SI;
-				break;
+			default: log_appendf(4, "warning: multichannel AIFF is unsupported");
+			case 1: flags |= SF_M; break;
+			case 2: flags |= SF_SI; break;
 			}
 
 			switch ((bswapBE16(comm.data->COMM.sample_size) + 7) & ~7) {
-			default:
-				log_appendf(4, "warning: AIFF has unsupported bit-width");
-			case 8:
-				flags |= SF_8;
-				break;
-			case 16:
-				flags |= SF_16;
-				break;
+			default: log_appendf(4, "warning: AIFF has unsupported bit-width");
+			case 8: flags |= SF_8; break;
+			case 16: flags |= SF_16; break;
 			}
 
 			// TODO: data checking; make sure sample count and byte size agree
@@ -286,12 +266,12 @@ static int _read_iff(dmoz_file_t *file, song_sample_t *smp, const uint8_t *data,
 
 			smp->c5speed = ConvertFromIeeeExtended(comm.data->COMM.sample_rate);
 			smp->length = bswapBE32(comm.data->COMM.num_frames);
-			smp->volume = 64*4;
+			smp->volume = 64 * 4;
 			smp->global_volume = 64;
 
 			// the audio data starts 8 bytes into the chunk
 			// (don't care about the block alignment stuff)
-			csf_read_sample(smp, flags, (uint8_t*)ssnd.data + 8, ssnd.size - 8);
+			csf_read_sample(smp, flags, (uint8_t *)ssnd.data + 8, ssnd.size - 8);
 		}
 
 		return 1;
@@ -316,13 +296,14 @@ int fmt_aiff_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
 
 struct aiff_writedata {
 	long comm_frames, ssnd_size; // seek positions for writing header data
-	size_t numbytes; // how many bytes have been written
-	int bps; // bytes per sample
-	int swap; // should be byteswapped?
+	size_t numbytes;             // how many bytes have been written
+	int bps;                     // bytes per sample
+	int swap;                    // should be byteswapped?
 };
 
-static int aiff_header(disko_t *fp, int bits, int channels, int rate,
-	const char *name, size_t length, struct aiff_writedata *awd /* out */)
+static int aiff_header(
+	disko_t *fp, int bits, int channels, int rate, const char *name, size_t length,
+	struct aiff_writedata *awd /* out */)
 {
 	int16_t s;
 	uint32_t ul;
@@ -342,8 +323,7 @@ static int aiff_header(disko_t *fp, int bits, int channels, int rate,
 		ul = bswapBE32(ul);
 		disko_write(fp, &ul, 4);
 		disko_write(fp, name, tlen);
-		if (tlen & 1)
-			disko_putc(fp, '\0');
+		if (tlen & 1) disko_putc(fp, '\0');
 	}
 
 	/* Common Chunk
@@ -361,8 +341,7 @@ static int aiff_header(disko_t *fp, int bits, int channels, int rate,
 	disko_write(fp, &ul, 4);
 	s = bswapBE16(channels);
 	disko_write(fp, &s, 2);
-	if (awd)
-		awd->comm_frames = disko_tell(fp);
+	if (awd) awd->comm_frames = disko_tell(fp);
 	ul = bswapBE32(length); /* num sample frames */
 	disko_write(fp, &ul, 4);
 	s = bswapBE16(bits);
@@ -383,8 +362,7 @@ static int aiff_header(disko_t *fp, int bits, int channels, int rate,
 		unsigned char   soundData[];
 	} SoundDataChunk; */
 	disko_write(fp, "SSND", 4);
-	if (awd)
-		awd->ssnd_size = disko_tell(fp);
+	if (awd) awd->ssnd_size = disko_tell(fp);
 	ul = bswapBE32(length * bps + 8);
 	disko_write(fp, &ul, 4);
 	ul = bswapBE32(0);
@@ -404,8 +382,9 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample_t *smp)
 	flags |= (smp->flags & CHN_16BIT) ? SF_16 : SF_8;
 	flags |= (smp->flags & CHN_STEREO) ? SF_SI : SF_M;
 
-	bps = aiff_header(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1,
-		smp->c5speed, smp->name, smp->length, NULL);
+	bps = aiff_header(
+		fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1, smp->c5speed, smp->name, smp->length,
+		NULL);
 
 	if (csf_write_sample(fp, smp, flags, UINT32_MAX) != smp->length * bps) {
 		log_appendf(4, "AIFF: unexpected data size written");
@@ -427,8 +406,7 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample_t *smp)
 int fmt_aiff_export_head(disko_t *fp, int bits, int channels, int rate)
 {
 	struct aiff_writedata *awd = malloc(sizeof(struct aiff_writedata));
-	if (!awd)
-		return DW_ERROR;
+	if (!awd) return DW_ERROR;
 	fp->userdata = awd;
 	awd->bps = aiff_header(fp, bits, channels, rate, NULL, ~0, awd);
 	awd->numbytes = 0;
@@ -453,7 +431,7 @@ int fmt_aiff_export_body(disko_t *fp, const uint8_t *data, size_t length)
 	awd->numbytes += length;
 
 	if (awd->swap) {
-		const int16_t *ptr = (const int16_t *) data;
+		const int16_t *ptr = (const int16_t *)data;
 		uint16_t v;
 
 		length /= 2;
@@ -539,8 +517,8 @@ int fmt_aiff_export_tail(disko_t *fp)
 # define HUGE_VAL HUGE
 #endif /* HUGE_VAL */
 
-#define FloatToUnsigned(f) ((uint32_t) (((int32_t) (f - 2147483648.0)) + 2147483647L + 1))
-#define UnsignedToFloat(u) (((double) ((int32_t) (u - 2147483647L - 1))) + 2147483648.0)
+#define FloatToUnsigned(f) ((uint32_t)(((int32_t)(f - 2147483648.0)) + 2147483647L + 1))
+#define UnsignedToFloat(u) (((double)((int32_t)(u - 2147483647L - 1))) + 2147483648.0)
 
 static void ConvertToIeeeExtended(double num, unsigned char *bytes)
 {
@@ -603,14 +581,10 @@ static double ConvertFromIeeeExtended(const unsigned char *bytes)
 	uint32_t hiMant, loMant;
 
 	expon = ((bytes[0] & 0x7F) << 8) | (bytes[1] & 0xFF);
-	hiMant = ((uint32_t) (bytes[2] & 0xFF) << 24)
-		| ((uint32_t) (bytes[3] & 0xFF) << 16)
-		| ((uint32_t) (bytes[4] & 0xFF) << 8)
-		| ((uint32_t) (bytes[5] & 0xFF));
-	loMant = ((uint32_t) (bytes[6] & 0xFF) << 24)
-		| ((uint32_t) (bytes[7] & 0xFF) << 16)
-		| ((uint32_t) (bytes[8] & 0xFF) << 8)
-		| ((uint32_t) (bytes[9] & 0xFF));
+	hiMant = ((uint32_t)(bytes[2] & 0xFF) << 24) | ((uint32_t)(bytes[3] & 0xFF) << 16)
+	         | ((uint32_t)(bytes[4] & 0xFF) << 8) | ((uint32_t)(bytes[5] & 0xFF));
+	loMant = ((uint32_t)(bytes[6] & 0xFF) << 24) | ((uint32_t)(bytes[7] & 0xFF) << 16)
+	         | ((uint32_t)(bytes[8] & 0xFF) << 8) | ((uint32_t)(bytes[9] & 0xFF));
 
 	if (expon == 0 && hiMant == 0 && loMant == 0) {
 		f = 0;
@@ -623,8 +597,6 @@ static double ConvertFromIeeeExtended(const unsigned char *bytes)
 		f += ldexp(UnsignedToFloat(loMant), expon -= 32);
 	}
 
-	if (bytes[0] & 0x80)
-		return -f;
-	else
-		return f;
+	if (bytes[0] & 0x80) return -f;
+	else return f;
 }

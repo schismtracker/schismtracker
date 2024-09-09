@@ -67,15 +67,12 @@ static void _fix_names(song_t *qq)
 
 	for (n = 1; n < MAX_INSTRUMENTS; n++) {
 		for (c = 0; c < 25; c++)
-			if (qq->samples[n].name[c] == 0)
-				qq->samples[n].name[c] = 32;
+			if (qq->samples[n].name[c] == 0) qq->samples[n].name[c] = 32;
 		qq->samples[n].name[25] = 0;
 
-		if (!qq->instruments[n])
-			continue;
+		if (!qq->instruments[n]) continue;
 		for (c = 0; c < 25; c++)
-			if (qq->instruments[n]->name[c] == 0)
-				qq->instruments[n]->name[c] = 32;
+			if (qq->instruments[n]->name[c] == 0) qq->instruments[n]->name[c] = 32;
 		qq->instruments[n]->name[25] = 0;
 	}
 }
@@ -181,17 +178,15 @@ static fmt_load_song_func load_song_funcs[] = {
 const char *fmt_strerror(int n)
 {
 	switch (n) {
-	case -LOAD_UNSUPPORTED:
-		return "Unrecognised file type";
-	case -LOAD_FORMAT_ERROR:
-		return "File format error (corrupt?)";
-	default:
-		return strerror(errno);
+	case -LOAD_UNSUPPORTED: return "Unrecognised file type";
+	case -LOAD_FORMAT_ERROR: return "File format error (corrupt?)";
+	default: return strerror(errno);
 	}
 }
 
 // IT uses \r in song messages; replace errant \n's
-void message_convert_newlines(song_t *song) {
+void message_convert_newlines(song_t *song)
+{
 	int i = 0, len = strlen(song->message);
 	for (i = 0; i < len; i++) {
 		if (song->message[i] == '\n') {
@@ -206,17 +201,14 @@ song_t *song_create_load(const char *file)
 	int ok = 0, err = 0;
 
 	slurp_t *s = slurp(file, NULL, 0);
-	if (!s)
-		return NULL;
+	if (!s) return NULL;
 
 	song_t *newsong = csf_allocate();
 
 	if (current_song) {
 		newsong->mix_flags = current_song->mix_flags;
-		csf_set_wave_config(newsong,
-			current_song->mix_frequency,
-			current_song->mix_bits_per_sample,
-			current_song->mix_channels);
+		csf_set_wave_config(
+			newsong, current_song->mix_frequency, current_song->mix_bits_per_sample, current_song->mix_channels);
 
 		// loaders might override these
 		newsong->row_highlight_major = current_song->row_highlight_major;
@@ -231,15 +223,9 @@ song_t *song_create_load(const char *file)
 			err = 0;
 			ok = 1;
 			break;
-		case LOAD_UNSUPPORTED:
-			err = -LOAD_UNSUPPORTED;
-			continue;
-		case LOAD_FORMAT_ERROR:
-			err = -LOAD_FORMAT_ERROR;
-			break;
-		case LOAD_FILE_ERROR:
-			err = errno;
-			break;
+		case LOAD_UNSUPPORTED: err = -LOAD_UNSUPPORTED; continue;
+		case LOAD_FORMAT_ERROR: err = -LOAD_FORMAT_ERROR; break;
+		case LOAD_FILE_ERROR: err = errno; break;
 		}
 		if (err) {
 			csf_free(newsong);
@@ -301,8 +287,7 @@ int song_load_unchecked(const char *file)
 	song_stop_unlocked(0);
 	song_unlock_audio();
 
-	if (was_playing && (status.flags & PLAY_AFTER_LOAD))
-		song_start();
+	if (was_playing && (status.flags & PLAY_AFTER_LOAD)) song_start();
 
 	main_song_changed_cb();
 
@@ -317,16 +302,12 @@ int song_load_unchecked(const char *file)
 	song_instrument_t **ins;
 
 	for (n = 0, smp = current_song->samples + 1, nsmp = 0; n < MAX_SAMPLES; n++, smp++)
-		if (smp->data)
-			nsmp++;
+		if (smp->data) nsmp++;
 	for (n = 0, ins = current_song->instruments + 1, nins = 0; n < MAX_INSTRUMENTS; n++, ins++)
-		if (*ins != NULL)
-			nins++;
+		if (*ins != NULL) nins++;
 
-	if (tid[0])
-		log_appendf(5, " %s", tid);
-	if (!nins)
-		*strrchr(fmt, ',') = 0; // cut off 'instruments'
+	if (tid[0]) log_appendf(5, " %s", tid);
+	if (!nins) *strrchr(fmt, ',') = 0; // cut off 'instruments'
 	log_appendf(5, fmt, csf_get_num_patterns(current_song), nsmp, nins);
 
 
@@ -336,46 +317,45 @@ int song_load_unchecked(const char *file)
 /* ------------------------------------------------------------------------- */
 
 const struct save_format song_save_formats[] = {
-	{"IT", "Impulse Tracker", ".it", {.save_song = fmt_it_save_song}},
-	{"S3M", "Scream Tracker 3", ".s3m", {.save_song = fmt_s3m_save_song}},
-	{"MOD", "Amiga ProTracker", ".mod", {.save_song = fmt_mod_save_song}},
+	{"IT",				"Impulse Tracker", ".it", {.save_song = fmt_it_save_song}},
+	{"S3M",			  "Scream Tracker 3", ".s3m", {.save_song = fmt_s3m_save_song}},
+	{"MOD",				   "Amiga ProTracker", ".mod", {.save_song = fmt_mod_save_song}},
 	{.label = NULL}
 };
 
-#define EXPORT_FUNCS(t) \
-	fmt_##t##_export_head, fmt_##t##_export_silence, fmt_##t##_export_body, fmt_##t##_export_tail
+#define EXPORT_FUNCS(t) fmt_##t##_export_head, fmt_##t##_export_silence, fmt_##t##_export_body, fmt_##t##_export_tail
 
 const struct save_format song_export_formats[] = {
-	{"WAV", "WAV", ".wav", {.export = {EXPORT_FUNCS(wav), 0}}},
-	{"MWAV", "WAV multi-write", ".wav", {.export = {EXPORT_FUNCS(wav), 1}}},
-	{"AIFF", "Audio IFF", ".aiff", {.export = {EXPORT_FUNCS(aiff), 0}}},
-	{"MAIFF", "Audio IFF multi-write", ".aiff", {.export = {EXPORT_FUNCS(aiff), 1}}},
+	{"WAV",							   "WAV", ".wav", {.export = {EXPORT_FUNCS(wav), 0}}},
+	{"MWAV",							 "WAV multi-write", ".wav", {.export = {EXPORT_FUNCS(wav), 1}}},
+	{"AIFF",								   "Audio IFF", ".aiff", {.export = {EXPORT_FUNCS(aiff), 0}}},
+	{"MAIFF","Audio IFF multi-write", ".aiff", {.export = {EXPORT_FUNCS(aiff), 1}}},
 #ifdef USE_FLAC
 	{"FLAC", "Free Lossless Audio Codec", ".flac", {.export = {EXPORT_FUNCS(flac), 0}}},
-	{"MFLAC", "Free Lossless Audio Codec multi-write", ".flac", {.export = {EXPORT_FUNCS(flac), 1}}},
+	{"MFLAC",							  "Free Lossless Audio Codec multi-write", ".flac", {.export = {EXPORT_FUNCS(flac), 1}}},
 #endif
-	{.label = NULL}
+	{.label = NULL						   }
 };
 // <distance> and maiff sounds like something you'd want to hug
 // <distance> .. dont ask
 
 const struct save_format sample_save_formats[] = {
-	{"ITS", "Impulse Tracker", ".its", {.save_sample = fmt_its_save_sample}},
-	//{"S3I", "Scream Tracker", ".s3i", {.save_sample = fmt_s3i_save_sample}},
-	{"AIFF", "Audio IFF", ".aiff", {.save_sample = fmt_aiff_save_sample}},
-	{"AU", "Sun/NeXT", ".au", {.save_sample = fmt_au_save_sample}},
-	{"WAV", "WAV", ".wav", {.save_sample = fmt_wav_save_sample}},
+	{"ITS",								  "Impulse Tracker", ".its", {.save_sample = fmt_its_save_sample}},
+ //{"S3I", "Scream Tracker", ".s3i", {.save_sample = fmt_s3i_save_sample}},
+	{"AIFF",								"Audio IFF", ".aiff", {.save_sample = fmt_aiff_save_sample}},
+	{"AU",									  "Sun/NeXT", ".au", {.save_sample = fmt_au_save_sample}},
+	{"WAV","WAV", ".wav", {.save_sample = fmt_wav_save_sample}},
 #ifdef USE_FLAC
 	{"FLAC", "Free Lossless Audio Codec", ".flac", {.save_sample = fmt_flac_save_sample}},
 #endif
-	{"RAW", "Raw", ".raw", {.save_sample = fmt_raw_save_sample}},
-	{.label = NULL}
+	{"RAW",								   "Raw", ".raw", {.save_sample = fmt_raw_save_sample}},
+	{.label = NULL								}
 };
 
 const struct save_format instrument_save_formats[] = {
-	{"ITI", "Impulse Tracker", ".iti", {.save_instrument = fmt_iti_save_instrument}},
+	{"ITI",   "Impulse Tracker", ".iti", {.save_instrument = fmt_iti_save_instrument}},
 	{"XI", "Fasttracker II", ".xi", {.save_instrument = fmt_xi_save_instrument}},
-	{.label = NULL}
+	{.label = NULL      }
 };
 
 static const struct save_format *get_save_format(const struct save_format *formats, const char *label)
@@ -389,8 +369,7 @@ static const struct save_format *get_save_format(const struct save_format *forma
 	}
 
 	for (n = 0; formats[n].label; n++)
-		if (strcmp(formats[n].label, label) == 0)
-			return formats + n;
+		if (strcmp(formats[n].label, label) == 0) return formats + n;
 
 	log_appendf(4, "Unknown save format %s", label);
 	return NULL;
@@ -405,24 +384,17 @@ static char *mangle_filename(const char *in, const char *mid, const char *ext)
 
 	iext = get_extension(in);
 	rlen = baselen = iext - in;
-	if (mid)
-		rlen += strlen(mid);
-	if (iext[0])
-		rlen += strlen(iext);
-	else if (ext)
-		rlen += strlen(ext);
+	if (mid) rlen += strlen(mid);
+	if (iext[0]) rlen += strlen(iext);
+	else if (ext) rlen += strlen(ext);
 	ret = malloc(rlen + 1); /* room for terminating \0 */
-	if (!ret)
-		return NULL;
+	if (!ret) return NULL;
 	strncpy(ret, in, baselen);
 	ret[baselen] = '\0';
-	if (mid)
-		strcat(ret, mid);
+	if (mid) strcat(ret, mid);
 	/* maybe output a warning if iext and ext differ? */
-	if (iext[0])
-		strcat(ret, iext);
-	else if (ext)
-		strcat(ret, ext);
+	if (iext[0]) strcat(ret, iext);
+	else if (ext) strcat(ret, ext);
 	return ret;
 }
 
@@ -433,8 +405,7 @@ int song_export(const char *filename, const char *type)
 	char *mangle;
 	int r;
 
-	if (!format)
-		return SAVE_INTERNAL_ERROR;
+	if (!format) return SAVE_INTERNAL_ERROR;
 
 	mid = (format->f.export.multi && strcasestr(filename, "%c") == NULL) ? ".%c" : NULL;
 	mangle = mangle_filename(filename, mid, format->ext);
@@ -448,12 +419,9 @@ int song_export(const char *filename, const char *type)
 	r = disko_export_song(mangle, format);
 	free(mangle);
 	switch (r) {
-	case DW_OK:
-		return SAVE_SUCCESS;
-	case DW_ERROR:
-		return SAVE_FILE_ERROR;
-	default:
-		return SAVE_INTERNAL_ERROR;
+	case DW_OK: return SAVE_SUCCESS;
+	case DW_ERROR: return SAVE_FILE_ERROR;
+	default: return SAVE_INTERNAL_ERROR;
 	}
 }
 
@@ -464,8 +432,7 @@ int song_save(const char *filename, const char *type)
 	const struct save_format *format = get_save_format(song_save_formats, type);
 	char *mangle;
 
-	if (!format)
-		return SAVE_INTERNAL_ERROR;
+	if (!format) return SAVE_INTERNAL_ERROR;
 
 	mangle = mangle_filename(filename, NULL, format->ext);
 
@@ -474,7 +441,7 @@ int song_save(const char *filename, const char *type)
 	log_appendf(2, "Saving %s module", format->name);
 	log_underline(strlen(format->name) + 14);
 
-/* TODO: add or replace file extension as appropriate
+	/* TODO: add or replace file extension as appropriate
 
 From IT 2.10 update:
   - Automatic filename extension replacement on Ctrl-S, so that if you press
@@ -507,11 +474,8 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
 	}
 
 	ret = format->f.save_song(fp, current_song);
-	if (ret != SAVE_SUCCESS)
-		disko_seterror(fp, EINVAL);
-	backup = ((status.flags & MAKE_BACKUPS)
-		  ? (status.flags & NUMBERED_BACKUPS)
-		  ? 65536 : 1 : 0);
+	if (ret != SAVE_SUCCESS) disko_seterror(fp, EINVAL);
+	backup = ((status.flags & MAKE_BACKUPS) ? (status.flags & NUMBERED_BACKUPS) ? 65536 : 1 : 0);
 	if (disko_close(fp, backup) == DW_ERROR && ret == SAVE_SUCCESS) {
 		// this was not as successful as originally claimed!
 		ret = SAVE_FILE_ERROR;
@@ -520,13 +484,10 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
 	switch (ret) {
 	case SAVE_SUCCESS:
 		status.flags &= ~SONG_NEEDS_SAVE;
-		if (strcasecmp(song_filename, mangle))
-			song_set_filename(mangle);
+		if (strcasecmp(song_filename, mangle)) song_set_filename(mangle);
 		log_appendf(5, " Done");
 		break;
-	case SAVE_FILE_ERROR:
-		log_perror(mangle);
-		break;
+	case SAVE_FILE_ERROR: log_perror(mangle); break;
 	case SAVE_INTERNAL_ERROR:
 	default: // ???
 		log_appendf(4, " Internal error saving song");
@@ -542,8 +503,7 @@ int song_save_sample(const char *filename, const char *type, song_sample_t *smp,
 	int ret;
 	const struct save_format *format = get_save_format(sample_save_formats, type);
 
-	if (!format)
-		return SAVE_INTERNAL_ERROR;
+	if (!format) return SAVE_INTERNAL_ERROR;
 
 	if (!filename || !filename[0]) {
 		status_text_flash("Error: Sample %d NOT saved! (%s)", num, "No Filename?");
@@ -553,8 +513,7 @@ int song_save_sample(const char *filename, const char *type, song_sample_t *smp,
 	disko_t *fp = disko_open(filename);
 	if (fp) {
 		ret = format->f.save_sample(fp, smp);
-		if (ret != SAVE_SUCCESS)
-			disko_seterror(fp, EINVAL);
+		if (ret != SAVE_SUCCESS) disko_seterror(fp, EINVAL);
 		if (disko_close(fp, 0) == DW_ERROR && ret == SAVE_SUCCESS) {
 			// this was not as successful as originally claimed!
 			ret = SAVE_FILE_ERROR;
@@ -564,9 +523,7 @@ int song_save_sample(const char *filename, const char *type, song_sample_t *smp,
 	}
 
 	switch (ret) {
-	case SAVE_SUCCESS:
-		status_text_flash("%s sample saved (sample %d)", format->name, num);
-		break;
+	case SAVE_SUCCESS: status_text_flash("%s sample saved (sample %d)", format->name, num); break;
 	case SAVE_FILE_ERROR:
 		status_text_flash("Error: Sample %d NOT saved! (%s)", num, "File Error");
 		log_perror(get_basename(filename));
@@ -618,10 +575,8 @@ void song_copy_sample(int n, song_sample_t *src)
 
 	if (src->data) {
 		unsigned long bytelength = src->length;
-		if (src->flags & CHN_16BIT)
-			bytelength *= 2;
-		if (src->flags & CHN_STEREO)
-			bytelength *= 2;
+		if (src->flags & CHN_16BIT) bytelength *= 2;
+		if (src->flags & CHN_STEREO) bytelength *= 2;
 
 		current_song->samples[n].data = csf_allocate_sample(bytelength);
 		memcpy(current_song->samples[n].data, src->data, bytelength);
@@ -646,7 +601,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 		}
 		/* mark... */
 		for (unsigned int q = 0; q < MAX_INSTRUMENTS; q++) {
-			if ((int) q == target) continue;
+			if ((int)q == target) continue;
 			if (!current_song->instruments[q]) continue;
 			for (unsigned int j = 0; j < 128; j++) {
 				x = current_song->instruments[q]->sample_map[j];
@@ -687,8 +642,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 						//song_sample *smp = (song_sample *)song_get_sample(k);
 
 						for (int c = 0; c < 25; c++) {
-							if (xl->samples[x].name[c] == 0)
-								xl->samples[x].name[c] = 32;
+							if (xl->samples[x].name[c] == 0) xl->samples[x].name[c] = 32;
 						}
 						xl->samples[x].name[25] = 0;
 
@@ -705,9 +659,8 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 
 		/* and rewrite! */
 		for (unsigned int k = 0; k < 128; k++) {
-			current_song->instruments[target]->sample_map[k] = sampmap[
-					current_song->instruments[target]->sample_map[k]
-			];
+			current_song->instruments[target]->sample_map[k] =
+				sampmap[current_song->instruments[target]->sample_map[k]];
 		}
 
 		song_unlock_audio();
@@ -734,12 +687,12 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 	return r;
 }
 
-int song_load_instrument(int n, const char* file)
+int song_load_instrument(int n, const char *file)
 {
-	return song_load_instrument_ex(n,file,NULL,-1);
+	return song_load_instrument_ex(n, file, NULL, -1);
 }
 
-static void do_enable_inst(UNUSED void* d)
+static void do_enable_inst(UNUSED void *d)
 {
 	song_set_instrument_mode(1);
 	main_song_changed_cb();
@@ -747,20 +700,17 @@ static void do_enable_inst(UNUSED void* d)
 	memused_songchanged();
 }
 
-static void dont_enable_inst(UNUSED void* d)
+static void dont_enable_inst(UNUSED void *d)
 {
 	set_page(PAGE_INSTRUMENT_LIST);
 }
 
-int song_load_instrument_with_prompt(int n, const char* file)
+int song_load_instrument_with_prompt(int n, const char *file)
 {
 	int retval = song_load_instrument_ex(n, file, NULL, -1);
 	if (!song_is_instrument_mode()) {
-		dialog_create(DIALOG_YES_NO,
-			"Enable instrument mode?",
-			do_enable_inst, dont_enable_inst, 0, NULL);
-	}
-	else {
+		dialog_create(DIALOG_YES_NO, "Enable instrument mode?", do_enable_inst, dont_enable_inst, 0, NULL);
+	} else {
 		set_page(PAGE_INSTRUMENT_LIST);
 	}
 	return retval;
@@ -843,8 +793,7 @@ void song_create_host_instrument(int smp)
 {
 	int ins = instrument_get_current();
 
-	if (csf_instrument_is_empty(current_song->instruments[smp]))
-		ins = smp;
+	if (csf_instrument_is_empty(current_song->instruments[smp])) ins = smp;
 	else if ((status.flags & CLASSIC_MODE) || !csf_instrument_is_empty(current_song->instruments[ins]))
 		ins = csf_first_blank_instrument(current_song, 0);
 
@@ -863,8 +812,7 @@ int song_save_instrument(const char *filename, const char *type, song_instrument
 	int ret;
 	const struct save_format *format = get_save_format(instrument_save_formats, type);
 
-	if (!format)
-		return SAVE_INTERNAL_ERROR;
+	if (!format) return SAVE_INTERNAL_ERROR;
 
 	if (!filename || !filename[0]) {
 		status_text_flash("Error: Instrument %d NOT saved! (%s)", num, "No Filename?");
@@ -874,8 +822,7 @@ int song_save_instrument(const char *filename, const char *type, song_instrument
 	disko_t *fp = disko_open(filename);
 	if (fp) {
 		ret = format->f.save_instrument(fp, current_song, ins);
-		if (ret != SAVE_SUCCESS)
-			disko_seterror(fp, EINVAL);
+		if (ret != SAVE_SUCCESS) disko_seterror(fp, EINVAL);
 		if (disko_close(fp, 0) == DW_ERROR && ret == SAVE_SUCCESS) {
 			// this was not as successful as originally claimed!
 			ret = SAVE_FILE_ERROR;
@@ -885,9 +832,7 @@ int song_save_instrument(const char *filename, const char *type, song_instrument
 	}
 
 	switch (ret) {
-	case SAVE_SUCCESS:
-		status_text_flash("%s instrument saved (instrument %d)", format->name, num);
-		break;
+	case SAVE_SUCCESS: status_text_flash("%s instrument saved (instrument %d)", format->name, num); break;
 	case SAVE_FILE_ERROR:
 		status_text_flash("Error: Instrument %d NOT saved! (%s)", num, "File Error");
 		log_perror(get_basename(filename));
@@ -939,11 +884,9 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 	}
 
 	for (int n = 1; n < MAX_INSTRUMENTS; n++) {
-		if (!library->instruments[n])
-			continue;
+		if (!library->instruments[n]) continue;
 
-		dmoz_file_t *file = dmoz_add_file(flist,
-			str_dup(path), str_dup(base), NULL, n);
+		dmoz_file_t *file = dmoz_add_file(flist, str_dup(path), str_dup(base), NULL, n);
 		file->title = str_dup(library->instruments[n]->name);
 
 		int count[128] = {0};
@@ -992,8 +935,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 	dmoz_fill_ext_data(&info_file);
 
 	/* free extra data we don't need */
-	if (info_file.smp_filename != info_file.base &&
-	    info_file.smp_filename != info_file.title) {
+	if (info_file.smp_filename != info_file.base && info_file.smp_filename != info_file.title) {
 		free(info_file.smp_filename);
 	}
 
@@ -1001,8 +943,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 	free(info_file.base);
 
 	if (info_file.type & TYPE_EXT_DATA_MASK) {
-		if (info_file.artist)
-			free(info_file.artist);
+		if (info_file.artist) free(info_file.artist);
 		free(info_file.title);
 	}
 
@@ -1010,7 +951,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 		library = song_create_load(path);
 	} else if (info_file.type & TYPE_INST_MASK) {
 		/* temporarily set the current song to the library */
-		song_t* tmp_ptr = current_song;
+		song_t *tmp_ptr = current_song;
 		library = current_song = csf_allocate();
 
 		int ret = song_load_instrument(1, path);
@@ -1026,14 +967,14 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 	for (int n = 1; n < MAX_SAMPLES; n++) {
 		if (library->samples[n].length) {
 			for (int c = 0; c < 25; c++) {
-				if (library->samples[n].name[c] == 0)
-					library->samples[n].name[c] = 32;
+				if (library->samples[n].name[c] == 0) library->samples[n].name[c] = 32;
 				library->samples[n].name[25] = 0;
 			}
 			dmoz_file_t *file = dmoz_add_file(flist, str_dup(path), str_dup(base), NULL, n);
 			file->type = TYPE_SAMPLE_EXTD;
 			file->description = "Impulse Tracker Sample"; /* FIXME: this lies for XI and PAT */
-			file->filesize = library->samples[n].length*((library->samples[n].flags & CHN_STEREO) + 1)*((library->samples[n].flags & CHN_16BIT) + 1);
+			file->filesize = library->samples[n].length * ((library->samples[n].flags & CHN_STEREO) + 1)
+			                 * ((library->samples[n].flags & CHN_16BIT) + 1);
 			file->smp_speed = library->samples[n].c5speed;
 			file->smp_loop_start = library->samples[n].loop_start;
 			file->smp_loop_end = library->samples[n].loop_end;
@@ -1041,7 +982,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 			file->smp_sustain_end = library->samples[n].sustain_end;
 			file->smp_length = library->samples[n].length;
 			file->smp_flags = library->samples[n].flags;
-			file->smp_defvol = library->samples[n].volume>>2;
+			file->smp_defvol = library->samples[n].volume >> 2;
 			file->smp_gblvol = library->samples[n].global_volume;
 			file->smp_vibrato_speed = library->samples[n].vib_speed;
 			file->smp_vibrato_depth = library->samples[n].vib_depth;
@@ -1051,7 +992,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 				library->samples[n].name[23] = ' ';
 			}
 			file->title = str_dup(library->samples[n].name);
-			file->sample = (song_sample_t *) library->samples + n;
+			file->sample = (song_sample_t *)library->samples + n;
 		}
 	}
 
@@ -1077,7 +1018,7 @@ int instrument_loader_abort(struct instrumentloader *ii)
 	song_wipe_instrument(ii->slot);
 	for (n = 0; n < MAX_SAMPLES; n++) {
 		if (ii->sample_map[n]) {
-			song_clear_sample(ii->sample_map[n]-1);
+			song_clear_sample(ii->sample_map[n] - 1);
 			ii->sample_map[n] = 0;
 		}
 	}
@@ -1093,10 +1034,9 @@ int instrument_loader_sample(struct instrumentloader *ii, int slot)
 	for (x = ii->basex; x < MAX_SAMPLES; x++) {
 		song_sample_t *cur = (current_song->samples + x);
 
-//              if (!csf_sample_is_empty(current_song->samples + x))
-//                      continue;
-		if (cur->data != NULL)
-			continue;
+		//              if (!csf_sample_is_empty(current_song->samples + x))
+		//                      continue;
+		if (cur->data != NULL) continue;
 
 		ii->expect_samples++;
 		ii->sample_map[slot] = x;
@@ -1106,4 +1046,3 @@ int instrument_loader_sample(struct instrumentloader *ii, int slot)
 	status_text_flash("Too many samples");
 	return 0;
 }
-

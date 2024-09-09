@@ -31,14 +31,15 @@
 /* --------------------------------------------------------------------- */
 /* create_* functions (the constructors, if you will) */
 
-void widget_create_toggle(struct widget *w, int x, int y, int next_up, int next_down,
-		   int next_left, int next_right, int next_tab, void (*changed) (void))
+void widget_create_toggle(
+	struct widget *w, int x, int y, int next_up, int next_down, int next_left, int next_right, int next_tab,
+	void (*changed)(void))
 {
 	w->type = WIDGET_TOGGLE;
 	w->accept_text = 0;
 	w->x = x;
 	w->y = y;
-	w->width = 3;   /* "Off" */
+	w->width = 3; /* "Off" */
 	w->next.up = next_up;
 	w->next.left = next_left;
 	w->next.down = next_down;
@@ -51,15 +52,15 @@ void widget_create_toggle(struct widget *w, int x, int y, int next_up, int next_
 	w->height = 1;
 }
 
-void widget_create_menutoggle(struct widget *w, int x, int y, int next_up, int next_down, int next_left,
-		       int next_right, int next_tab, void (*changed) (void), const char *const *choices)
+void widget_create_menutoggle(
+	struct widget *w, int x, int y, int next_up, int next_down, int next_left, int next_right, int next_tab,
+	void (*changed)(void), const char *const *choices)
 {
 	int n, width = 0, len;
 
 	for (n = 0; choices[n]; n++) {
 		len = strlen(choices[n]);
-		if (width < len)
-			width = len;
+		if (width < len) width = len;
 	}
 
 	w->type = WIDGET_MENUTOGGLE;
@@ -82,8 +83,9 @@ void widget_create_menutoggle(struct widget *w, int x, int y, int next_up, int n
 	w->d.menutoggle.activation_keys = NULL;
 }
 
-void widget_create_button(struct widget *w, int x, int y, int width, int next_up, int next_down, int next_left,
-		   int next_right, int next_tab, void (*changed) (void), const char *text, int padding)
+void widget_create_button(
+	struct widget *w, int x, int y, int width, int next_up, int next_down, int next_left, int next_right, int next_tab,
+	void (*changed)(void), const char *text, int padding)
 {
 	w->type = WIDGET_BUTTON;
 	w->accept_text = 0;
@@ -104,9 +106,9 @@ void widget_create_button(struct widget *w, int x, int y, int width, int next_up
 	w->activate = NULL;
 }
 
-void widget_create_togglebutton(struct widget *w, int x, int y, int width, int next_up, int next_down,
-			 int next_left, int next_right, int next_tab, void (*changed) (void),
-			 const char *text, int padding, const int *group)
+void widget_create_togglebutton(
+	struct widget *w, int x, int y, int width, int next_up, int next_down, int next_left, int next_right, int next_tab,
+	void (*changed)(void), const char *text, int padding, const int *group)
 {
 	w->type = WIDGET_TOGGLEBUTTON;
 	w->accept_text = 0;
@@ -128,8 +130,9 @@ void widget_create_togglebutton(struct widget *w, int x, int y, int width, int n
 	w->activate = NULL;
 }
 
-void widget_create_textentry(struct widget *w, int x, int y, int width, int next_up, int next_down,
-		      int next_tab, void (*changed) (void), char *text, int max_length)
+void widget_create_textentry(
+	struct widget *w, int x, int y, int width, int next_up, int next_down, int next_tab, void (*changed)(void),
+	char *text, int max_length)
 {
 	w->type = WIDGET_TEXTENTRY;
 	w->accept_text = 1;
@@ -151,8 +154,9 @@ void widget_create_textentry(struct widget *w, int x, int y, int width, int next
 	w->activate = NULL;
 }
 
-void widget_create_numentry(struct widget *w, int x, int y, int width, int next_up, int next_down,
-		     int next_tab, void (*changed) (void), int min, int max, int *cursor_pos)
+void widget_create_numentry(
+	struct widget *w, int x, int y, int width, int next_up, int next_down, int next_tab, void (*changed)(void), int min,
+	int max, int *cursor_pos)
 {
 	w->type = WIDGET_NUMENTRY;
 	w->accept_text = 1;
@@ -175,8 +179,9 @@ void widget_create_numentry(struct widget *w, int x, int y, int width, int next_
 	w->activate = NULL;
 }
 
-void widget_create_thumbbar(struct widget *w, int x, int y, int width, int next_up, int next_down,
-		     int next_tab, void (*changed) (void), int min, int max)
+void widget_create_thumbbar(
+	struct widget *w, int x, int y, int width, int next_up, int next_down, int next_tab, void (*changed)(void), int min,
+	int max)
 {
 	w->type = WIDGET_THUMBBAR;
 	w->accept_text = 0;
@@ -198,10 +203,9 @@ void widget_create_thumbbar(struct widget *w, int x, int y, int width, int next_
 	w->activate = NULL;
 }
 
-void widget_create_bitset(struct widget *w, int x, int y, int width, int next_up, int next_down,
-		   int next_tab, void (*changed) (void),
-		   int nbits, const char* bits_on, const char* bits_off,
-		   int *cursor_pos)
+void widget_create_bitset(
+	struct widget *w, int x, int y, int width, int next_up, int next_down, int next_tab, void (*changed)(void),
+	int nbits, const char *bits_on, const char *bits_off, int *cursor_pos)
 {
 	w->type = WIDGET_BITSET;
 	w->accept_text = 0;
@@ -224,8 +228,8 @@ void widget_create_bitset(struct widget *w, int x, int y, int width, int next_up
 	w->activate = NULL;
 }
 
-void widget_create_panbar(struct widget *w, int x, int y, int next_up, int next_down, int next_tab,
-		   void (*changed) (void), int channel)
+void widget_create_panbar(
+	struct widget *w, int x, int y, int next_up, int next_down, int next_tab, void (*changed)(void), int channel)
 {
 	w->type = WIDGET_PANBAR;
 	w->accept_text = 0;
@@ -246,8 +250,9 @@ void widget_create_panbar(struct widget *w, int x, int y, int next_up, int next_
 	w->activate = NULL;
 }
 
-void widget_create_other(struct widget *w, int next_tab, int (*i_handle_key) (struct key_event *k),
-		  int (*i_handle_text_input) (const uint8_t* text), void (*i_redraw) (void))
+void widget_create_other(
+	struct widget *w, int next_tab, int (*i_handle_key)(struct key_event *k),
+	int (*i_handle_text_input)(const uint8_t *text), void (*i_redraw)(void))
 {
 	w->type = WIDGET_OTHER;
 	w->accept_text = 0;
@@ -278,11 +283,9 @@ void text_add_char(char *text, uint8_t c, int *cursor_pos, int max_length)
 
 	text[max_length] = 0;
 	len = strlen(text);
-	if (*cursor_pos >= max_length)
-		*cursor_pos = max_length - 1;
+	if (*cursor_pos >= max_length) *cursor_pos = max_length - 1;
 	/* FIXME: this causes some weirdness with the end key. maybe hitting end should trim spaces? */
-	while (len < *cursor_pos)
-		text[len++] = ' ';
+	while (len < *cursor_pos) text[len++] = ' ';
 	memmove(text + *cursor_pos + 1, text + *cursor_pos, max_length - *cursor_pos - 1);
 	text[*cursor_pos] = c;
 	(*cursor_pos)++;
@@ -290,8 +293,7 @@ void text_add_char(char *text, uint8_t c, int *cursor_pos, int max_length)
 
 void text_delete_char(char *text, int *cursor_pos, int max_length)
 {
-	if (*cursor_pos == 0)
-		return;
+	if (*cursor_pos == 0) return;
 	(*cursor_pos)--;
 	memmove(text + *cursor_pos, text + *cursor_pos + 1, max_length - *cursor_pos);
 }
@@ -317,16 +319,14 @@ static void textentry_reposition(struct widget *w)
 		w->d.textentry.cursor_pos = len;
 	} else if (w->d.textentry.cursor_pos > (w->d.textentry.firstchar + w->width - 1)) {
 		w->d.textentry.firstchar = w->d.textentry.cursor_pos - w->width + 1;
-		if (w->d.textentry.firstchar < 0)
-			w->d.textentry.firstchar = 0;
+		if (w->d.textentry.firstchar < 0) w->d.textentry.firstchar = 0;
 	}
 }
 
 int widget_textentry_add_char(struct widget *w, uint16_t unicode)
 {
 	uint8_t c = char_unicode_to_cp437(unicode);
-	if (c == 0)
-		return 0;
+	if (c == 0) return 0;
 
 	text_add_char(w->d.textentry.text, c, &(w->d.textentry.cursor_pos), w->d.textentry.max_length);
 
@@ -336,13 +336,12 @@ int widget_textentry_add_char(struct widget *w, uint16_t unicode)
 	return 1;
 }
 
-int widget_textentry_add_text(struct widget *w, const uint8_t* text) {
-	if (!text)
-		return 0;
+int widget_textentry_add_text(struct widget *w, const uint8_t *text)
+{
+	if (!text) return 0;
 
 	for (; *text; text++)
-		if (!widget_textentry_add_char(w, *text))
-			return 0;
+		if (!widget_textentry_add_char(w, *text)) return 0;
 
 	return 1;
 }
@@ -358,21 +357,21 @@ void widget_numentry_change_value(struct widget *w, int new_value)
 	status.flags |= NEED_UPDATE;
 }
 
-static inline int fast_pow10(int n) {
-	static const int tens[] = { 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000 };
+static inline int fast_pow10(int n)
+{
+	static const int tens[] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000};
 
 	/* use our cache if we can to avoid buffer overrun */
-	return (n < (sizeof(tens)/sizeof(tens[0]))) ? tens[n] : pow(10, n);
+	return (n < (sizeof(tens) / sizeof(tens[0]))) ? tens[n] : pow(10, n);
 }
 
-int widget_numentry_handle_text(struct widget *w, const uint8_t* text_input) {
-	if (text_input == NULL)
-		return 0;
+int widget_numentry_handle_text(struct widget *w, const uint8_t *text_input)
+{
+	if (text_input == NULL) return 0;
 
 	char valid_digits[] = "0123456789";
-	int len = strspn((const char*)text_input, valid_digits);
-	if (len < 1)
-		return 1;
+	int len = strspn((const char *)text_input, valid_digits);
+	if (len < 1) return 1;
 
 	int value = w->d.numentry.value;
 
@@ -412,12 +411,10 @@ void widget_togglebutton_set(struct widget *p_widgets, int widget, int do_callba
 
 	if (!group) return; /* assert */
 
-	for (i = 0; group[i] >= 0; i++)
-		p_widgets[group[i]].d.togglebutton.state = 0;
+	for (i = 0; group[i] >= 0; i++) p_widgets[group[i]].d.togglebutton.state = 0;
 	p_widgets[widget].d.togglebutton.state = 1;
 
-	if (do_callback && p_widgets[widget].changed)
-		p_widgets[widget].changed();
+	if (do_callback && p_widgets[widget].changed) p_widgets[widget].changed();
 
 	status.flags |= NEED_UPDATE;
 }
@@ -428,13 +425,13 @@ void widget_togglebutton_set(struct widget *p_widgets, int widget, int do_callba
 void widget_draw_widget(struct widget *w, int selected)
 {
 	char buf[16] = "Channel 42";
-	const char *ptr, *endptr;       /* for the menutoggle */
+	const char *ptr, *endptr; /* for the menutoggle */
 	char *str;
 	int n;
 	const int tfg = selected ? 0 : 2;
 	const int tbg = selected ? 3 : 0;
 	int drew_cursor = 0;
-	int fg,bg;
+	int fg, bg;
 
 	switch (w->type) {
 	case WIDGET_TOGGLE:
@@ -454,15 +451,15 @@ void widget_draw_widget(struct widget *w, int selected)
 		}
 		break;
 	case WIDGET_BUTTON:
-		draw_box(w->x - 1, w->y - 1, w->x + w->width + 2, w->y + 1,
-			 BOX_THIN | BOX_INNER | (
-				w->depressed ? BOX_INSET : BOX_OUTSET));
+		draw_box(
+			w->x - 1, w->y - 1, w->x + w->width + 2, w->y + 1,
+			BOX_THIN | BOX_INNER | (w->depressed ? BOX_INSET : BOX_OUTSET));
 		draw_text(w->d.button.text, w->x + w->d.button.padding, w->y, selected ? 3 : 0, 2);
 		break;
 	case WIDGET_TOGGLEBUTTON:
-		draw_box(w->x - 1, w->y - 1, w->x + w->width + 2, w->y + 1,
-			 BOX_THIN | BOX_INNER |(
-				(w->d.togglebutton.state || w->depressed) ? BOX_INSET : BOX_OUTSET));
+		draw_box(
+			w->x - 1, w->y - 1, w->x + w->width + 2, w->y + 1,
+			BOX_THIN | BOX_INNER | ((w->d.togglebutton.state || w->depressed) ? BOX_INSET : BOX_OUTSET));
 		draw_text(w->d.togglebutton.text, w->x + w->d.togglebutton.padding, w->y, selected ? 3 : 0, 2);
 		break;
 	case WIDGET_TEXTENTRY:
@@ -470,9 +467,9 @@ void widget_draw_widget(struct widget *w, int selected)
 		draw_text_len(w->d.textentry.text + w->d.textentry.firstchar, w->width, w->x, w->y, 2, 0);
 		if (selected && !drew_cursor) {
 			n = w->d.textentry.cursor_pos - w->d.textentry.firstchar;
-			draw_char(((n < (signed) strlen(w->d.textentry.text))
-				   ? (w->d.textentry.text[w->d.textentry.cursor_pos]) : ' '),
-				  w->x + n, w->y, 0, 3);
+			draw_char(
+				((n < (signed)strlen(w->d.textentry.text)) ? (w->d.textentry.text[w->d.textentry.cursor_pos]) : ' '),
+				w->x + n, w->y, 0, 3);
 		}
 		break;
 	case WIDGET_NUMENTRY:
@@ -481,25 +478,20 @@ void widget_draw_widget(struct widget *w, int selected)
 			while (*str == '0') str++;
 			draw_text_len("", w->width, w->x, w->y, 2, 0);
 			if (*str) {
-				draw_text(str, (w->x+w->width) - strlen(str),
-						w->y, 2, 0);
+				draw_text(str, (w->x + w->width) - strlen(str), w->y, 2, 0);
 			}
 			if (selected && !drew_cursor) {
 				while (str[0] && str[1]) str++;
 				if (!str[0]) str[0] = ' ';
-				draw_char(str[0], w->x + (w->width-1),
-						w->y, 0, 3);
+				draw_char(str[0], w->x + (w->width - 1), w->y, 0, 3);
 			}
 		} else {
 			if (w->d.numentry.min < 0 || w->d.numentry.max < 0) {
-				numtostr_signed(w->width, w->d.numentry.value,
-							buf);
+				numtostr_signed(w->width, w->d.numentry.value, buf);
 			} else {
-				numtostr(w->width, w->d.numentry.value,
-							buf);
+				numtostr(w->width, w->d.numentry.value, buf);
 			}
-			draw_text_len(buf,
-					w->width, w->x, w->y, 2, 0);
+			draw_text_len(buf, w->width, w->x, w->y, 2, 0);
 			if (selected && !drew_cursor) {
 				n = *(w->d.numentry.cursor_pos);
 				draw_char(buf[n], w->x + n, w->y, 0, 3);
@@ -507,35 +499,28 @@ void widget_draw_widget(struct widget *w, int selected)
 		}
 		break;
 	case WIDGET_BITSET:
-		for(n = 0; n < w->d.bitset.nbits; ++n)
-		{
+		for (n = 0; n < w->d.bitset.nbits; ++n) {
 			int set = !!(w->d.bitset.value & (1 << n));
-			char label_c1   = set ? w->d.bitset.bits_on[n*2+0]
-					      : w->d.bitset.bits_off[n*2+0];
-			char label_c2   = set ? w->d.bitset.bits_on[n*2+1]
-					      : w->d.bitset.bits_off[n*2+1];
+			char label_c1 = set ? w->d.bitset.bits_on[n * 2 + 0] : w->d.bitset.bits_off[n * 2 + 0];
+			char label_c2 = set ? w->d.bitset.bits_on[n * 2 + 1] : w->d.bitset.bits_off[n * 2 + 1];
 			int is_focused = selected && n == *w->d.bitset.cursor_pos;
 			/* In textentries, cursor=0,3; normal=2,0 */
-			static const char fg_selection[4] =
-			{
+			static const char fg_selection[4] = {
 				2, /* not cursor, not set */
 				3, /* not cursor, is  set */
 				0, /* has cursor, not set */
 				0  /* has cursor, is  set */
 			};
-			static const char bg_selection[4] =
-			{
+			static const char bg_selection[4] = {
 				0, /* not cursor, not set */
 				0, /* not cursor, is  set */
 				2, /* has cursor, not set */
 				3  /* has cursor, is  set */
 			};
-			fg = fg_selection[set + is_focused*2];
-			bg = bg_selection[set + is_focused*2];
-			if(label_c2)
-			      draw_half_width_chars(label_c1, label_c2, w->x + n, w->y, fg, bg, fg, bg);
-			else
-			      draw_char(label_c1, w->x + n, w->y, fg, bg);
+			fg = fg_selection[set + is_focused * 2];
+			bg = bg_selection[set + is_focused * 2];
+			if (label_c2) draw_half_width_chars(label_c1, label_c2, w->x + n, w->y, fg, bg, fg, bg);
+			else draw_char(label_c1, w->x + n, w->y, fg, bg);
 		}
 		break;
 	case WIDGET_THUMBBAR:
@@ -549,16 +534,14 @@ void widget_draw_widget(struct widget *w, int selected)
 			draw_fill_chars(w->x, w->y, pos - 1, w->y, DEFAULT_FG, 0);
 			draw_text_len(w->d.thumbbar.text_at_max, len, pos, w->y, selected ? 3 : 2, 0);
 		} else {
-			draw_thumb_bar(w->x, w->y, w->width, w->d.thumbbar.min,
-				       w->d.thumbbar.max, w->d.thumbbar.value, selected);
+			draw_thumb_bar(w->x, w->y, w->width, w->d.thumbbar.min, w->d.thumbbar.max, w->d.thumbbar.value, selected);
 		}
 		if (w->d.thumbbar.min < 0 || w->d.thumbbar.max < 0) {
 			numtostr_signed(3, w->d.thumbbar.value, buf);
 		} else {
 			numtostr(3, w->d.thumbbar.value, buf);
 		}
-		draw_text(buf,
-				w->x + w->width + 1, w->y, 1, 2);
+		draw_text(buf, w->x + w->width + 1, w->y, 1, 2);
 		break;
 	case WIDGET_PANBAR:
 		numtostr(2, w->d.panbar.channel, buf + 8);
@@ -588,7 +571,7 @@ void widget_draw_widget(struct widget *w, int selected)
 
 void widget_change_focus_to(int new_widget_index)
 {
-	if(new_widget_index == *selected_widget || new_widget_index < 0 || new_widget_index >= *total_widgets) {
+	if (new_widget_index == *selected_widget || new_widget_index < 0 || new_widget_index >= *total_widgets) {
 		return;
 	}
 
@@ -599,8 +582,7 @@ void widget_change_focus_to(int new_widget_index)
 	ACTIVE_WIDGET.depressed = 0;
 
 	if (ACTIVE_WIDGET.type == WIDGET_TEXTENTRY)
-		ACTIVE_WIDGET.d.textentry.cursor_pos
-				= strlen(ACTIVE_WIDGET.d.textentry.text);
+		ACTIVE_WIDGET.d.textentry.cursor_pos = strlen(ACTIVE_WIDGET.d.textentry.text);
 
 	status.flags |= NEED_UPDATE;
 }
@@ -610,19 +592,13 @@ static int _find_widget_xy(int x, int y)
 	struct widget *w;
 	int i, pad;
 
-	if (!total_widgets)
-		return -1;
+	if (!total_widgets) return -1;
 	for (i = 0; i < *total_widgets; i++) {
 		w = widgets + i;
 		switch (w->type) {
-		case WIDGET_BUTTON:
-			pad = w->d.button.padding + 1;
-			break;
-		case WIDGET_TOGGLEBUTTON:
-			pad = w->d.togglebutton.padding + 1;
-			break;
-		default:
-			pad = 0;
+		case WIDGET_BUTTON: pad = w->d.button.padding + 1; break;
+		case WIDGET_TOGGLEBUTTON: pad = w->d.togglebutton.padding + 1; break;
+		default: pad = 0;
 		}
 		if (x >= w->x && x < w->x + w->width + pad && y >= w->y && y < w->y + w->height) {
 			return i;

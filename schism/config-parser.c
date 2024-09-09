@@ -44,13 +44,11 @@ static struct cfg_section *_get_section(cfg_file_t *cfg, const char *section_nam
 {
 	struct cfg_section *section = cfg->sections, *prev = NULL;
 
-	if (section_name == NULL)
-		return NULL;
+	if (section_name == NULL) return NULL;
 
 	while (section) {
 		/* the config is historically ASCII, but UTF-8 works just fine too */
-		if (charset_strcasecmp(section_name, CHARSET_UTF8, section->name, CHARSET_UTF8) == 0)
-			return section;
+		if (charset_strcasecmp(section_name, CHARSET_UTF8, section->name, CHARSET_UTF8) == 0) return section;
 		prev = section;
 		section = section->next;
 	}
@@ -71,12 +69,10 @@ static struct cfg_key *_get_key(struct cfg_section *section, const char *key_nam
 {
 	struct cfg_key *key = section->keys, *prev = NULL;
 
-	if (key_name == NULL)
-		return NULL;
+	if (key_name == NULL) return NULL;
 
 	while (key) {
-		if (charset_strcasecmp(key_name, CHARSET_UTF8, key->name, CHARSET_UTF8) == 0)
-			return key;
+		if (charset_strcasecmp(key_name, CHARSET_UTF8, key->name, CHARSET_UTF8) == 0) return key;
 		prev = key;
 		key = key->next;
 	}
@@ -106,8 +102,7 @@ static size_t _parse_comments(const char *s, char **comments)
 	do {
 		prev = ptr;
 		ptr += strspn(ptr, " \t\r\n");
-		if (*ptr == '#' || *ptr == ';')
-			ptr += strcspn(ptr, "\r\n");
+		if (*ptr == '#' || *ptr == ';') ptr += strcspn(ptr, "\r\n");
 	} while (*ptr && ptr != prev);
 	len = ptr - s;
 	if (len) {
@@ -138,8 +133,7 @@ static int _parse_section(cfg_file_t *cfg, char *line, struct cfg_section **cur_
 {
 	char *tmp;
 
-	if (line[0] != '[' || line[strlen(line) - 1] != ']')
-		return 0;
+	if (line[0] != '[' || line[strlen(line) - 1] != ']') return 0;
 
 	memmove(line, line + 1, strlen(line));
 	line[strlen(line) - 1] = 0;
@@ -188,8 +182,8 @@ static int _parse_keyval(cfg_file_t *cfg, char *line, struct cfg_section *cur_se
 
 	key = _get_key(cur_section, k, 1);
 	if (key->value) {
-		fprintf(stderr, "%s: duplicate key \"%s\" in section \"%s\"; overwriting\n",
-			cfg->filename, k, cur_section->name);
+		fprintf(
+			stderr, "%s: duplicate key \"%s\" in section \"%s\"; overwriting\n", cfg->filename, k, cur_section->name);
 		free(key->value);
 	}
 	key->value = str_unescape(v);
@@ -228,8 +222,7 @@ static struct cfg_key *_free_key(struct cfg_key *key)
 
 	free(key->name);
 	free(key->value);
-	if (key->comments)
-		free(key->comments);
+	if (key->comments) free(key->comments);
 	free(key);
 	return next_key;
 }
@@ -240,10 +233,8 @@ static struct cfg_section *_free_section(struct cfg_section *section)
 	struct cfg_key *key = section->keys;
 
 	free(section->name);
-	if (section->comments)
-		free(section->comments);
-	while (key)
-		key = _free_key(key);
+	if (section->comments) free(section->comments);
+	while (key) key = _free_key(key);
 	free(section);
 	return next_section;
 }
@@ -257,23 +248,20 @@ int cfg_read(cfg_file_t *cfg)
 	slurp_t *t;
 	struct cfg_section *cur_section = NULL;
 	const char *pos; /* current position in the buffer */
-	size_t len; /* how far away the end of the token is from the start */
+	size_t len;      /* how far away the end of the token is from the start */
 	char *comments = NULL, *tmp;
 
 	/* have to do our own stat, because we're going to fiddle with the size. (this is to be sure the
 	buffer ends with a '\0', which makes it much easier to handle with normal string operations) */
-	if (os_stat(cfg->filename, &buf) < 0)
-		return -1;
+	if (os_stat(cfg->filename, &buf) < 0) return -1;
 	if (S_ISDIR(buf.st_mode)) {
 		errno = EISDIR;
 		return -1;
 	}
-	if (buf.st_size <= 0)
-		return -1;
+	if (buf.st_size <= 0) return -1;
 	buf.st_size++;
 	t = slurp(cfg->filename, &buf, 0);
-	if (!t)
-		return -1;
+	if (!t) return -1;
 
 	pos = (const char *)t->data;
 	do {
@@ -287,8 +275,7 @@ int cfg_read(cfg_file_t *cfg)
 			char *line;
 			line = strn_dup(pos, len);
 			trim_string(line);
-			if (_parse_section(cfg, line, &cur_section, comments)
-			    || _parse_keyval(cfg, line, cur_section, comments)) {
+			if (_parse_section(cfg, line, &cur_section, comments) || _parse_keyval(cfg, line, cur_section, comments)) {
 				comments = NULL;
 			} else {
 				/* broken line: add it as a comment. */
@@ -319,10 +306,8 @@ int cfg_read(cfg_file_t *cfg)
 		pos += len;
 
 		/* skip the newline */
-		if (*pos == '\r')
-			pos++;
-		if (*pos == '\n')
-			pos++;
+		if (*pos == '\r') pos++;
+		if (*pos == '\n') pos++;
 	} while (*pos);
 	cfg->eof_comments = comments;
 
@@ -346,8 +331,7 @@ int cfg_write(cfg_file_t *cfg)
 		return -1;
 	}
 
-	if (!cfg->dirty)
-		return 0;
+	if (!cfg->dirty) return 0;
 	cfg->dirty = 0;
 
 	make_backup_file(cfg->filename, 0);
@@ -362,16 +346,14 @@ int cfg_write(cfg_file_t *cfg)
 	/* I should be checking a lot more return values, but ... meh */
 
 	for (section = cfg->sections; section; section = section->next) {
-		if (section->comments)
-			fprintf(fp, "%s", section->comments);
+		if (section->comments) fprintf(fp, "%s", section->comments);
 		if (section->omit) fputc('#', fp);
 		fprintf(fp, "[%s]\n", section->name);
 		for (key = section->keys; key; key = key->next) {
 			/* NOTE: key names are intentionally not escaped in any way;
 			 * it is up to the program to choose names that aren't stupid.
 			 * (cfg_delete_key uses this to comment out a key name) */
-			if (key->comments)
-				fprintf(fp, "%s", key->comments);
+			if (key->comments) fprintf(fp, "%s", key->comments);
 			if (section->omit) fputc('#', fp);
 			/* TODO | if no keys in a section have defined values,
 			 * TODO | comment out the section header as well. (this
@@ -386,16 +368,15 @@ int cfg_write(cfg_file_t *cfg)
 			}
 		}
 	}
-	if (cfg->eof_comments)
-		fprintf(fp, "%s", cfg->eof_comments);
+	if (cfg->eof_comments) fprintf(fp, "%s", cfg->eof_comments);
 
 	fclose(fp);
 
 	return 0;
 }
 
-const char *cfg_get_string(cfg_file_t *cfg, const char *section_name, const char *key_name,
-			   char *value, int len, const char *def)
+const char *
+cfg_get_string(cfg_file_t *cfg, const char *section_name, const char *key_name, char *value, int len, const char *def)
 {
 	struct cfg_section *section;
 	struct cfg_key *key;
@@ -404,8 +385,7 @@ const char *cfg_get_string(cfg_file_t *cfg, const char *section_name, const char
 	section = _get_section(cfg, section_name, 0);
 	if (section) {
 		key = _get_key(section, key_name, 0);
-		if (key && key->value)
-			r = key->value;
+		if (key && key->value) r = key->value;
 	}
 	if (value && r) {
 		//copy up to len chars [0..len-1]
@@ -445,18 +425,14 @@ void cfg_set_string(cfg_file_t *cfg, const char *section_name, const char *key_n
 	struct cfg_section *section;
 	struct cfg_key *key;
 
-	if (section_name == NULL || key_name == NULL)
-		return;
+	if (section_name == NULL || key_name == NULL) return;
 	section = _get_section(cfg, section_name, 1);
 	section->omit = 0;
 
 	key = _get_key(section, key_name, 1);
-	if (key->value)
-		free(key->value);
-	if (value)
-		key->value = str_dup(value);
-	else
-		key->value = NULL;
+	if (key->value) free(key->value);
+	if (value) key->value = str_dup(value);
+	else key->value = NULL;
 	cfg->dirty = 1;
 }
 
@@ -465,14 +441,12 @@ void cfg_set_number(cfg_file_t *cfg, const char *section_name, const char *key_n
 	struct cfg_section *section;
 	struct cfg_key *key;
 
-	if (section_name == NULL || key_name == NULL)
-		return;
+	if (section_name == NULL || key_name == NULL) return;
 	section = _get_section(cfg, section_name, 1);
 	section->omit = 0;
 
 	key = _get_key(section, key_name, 1);
-	if (key->value)
-		free(key->value);
+	if (key->value) free(key->value);
 	if (asprintf(&key->value, "%d", value) == -1) {
 		perror("asprintf");
 		exit(255);
@@ -490,12 +464,10 @@ void cfg_delete_key(cfg_file_t *cfg, const char *section_name, const char *key_n
 	struct cfg_key *key;
 	char *newname;
 
-	if (section_name == NULL || key_name == NULL)
-		return;
+	if (section_name == NULL || key_name == NULL) return;
 	section = _get_section(cfg, section_name, 1);
 	key = _get_key(section, key_name, 0);
-	if (key == NULL || key->name[0] == '#')
-		return;
+	if (key == NULL || key->name[0] == '#') return;
 	newname = mem_alloc(strlen(key->name) + 2);
 	newname[0] = '#';
 	strcpy(newname + 1, key->name);
@@ -517,10 +489,8 @@ void cfg_free(cfg_file_t *cfg)
 	struct cfg_section *section = cfg->sections;
 
 	free(cfg->filename);
-	if (cfg->eof_comments)
-		free(cfg->eof_comments);
-	while (section)
-		section = _free_section(section);
+	if (cfg->eof_comments) free(cfg->eof_comments);
+	while (section) section = _free_section(section);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -545,7 +515,7 @@ int main(int argc, char **argv)
 	void cfg_set_string(cfg_file_t *cfg, const char *section_name, const char *key_name, const char *value);
 	void cfg_set_number(cfg_file_t *cfg, const char *section_name, const char *key_name, int value);
 	*/
-/*
+	/*
 [ducks]
 color = brown
 count = 7
@@ -572,12 +542,14 @@ weight = 64 lb.
 	printf("number with null key: %d\n", cfg_get_number(&cfg, "shouldn't crash", NULL, 1));
 	printf("string with null default value: %s\n", cfg_get_string(&cfg, "doesn't", "exist", NULL, 0, NULL));
 	strcpy(buf, "didn't change");
-	printf("null default value, with value return parameter set: %s\n",
-	       cfg_get_string(&cfg, "still", "nonexistent", buf, 64, NULL));
+	printf(
+		"null default value, with value return parameter set: %s\n",
+		cfg_get_string(&cfg, "still", "nonexistent", buf, 64, NULL));
 	printf("... and the buffer it returned: %s\n", buf);
 	strcpy(buf, "didn't change");
-	printf("null default value on defined key with return parameter: %s\n",
-	       cfg_get_string(&cfg, "ducks", "weight", buf, 64, NULL));
+	printf(
+		"null default value on defined key with return parameter: %s\n",
+		cfg_get_string(&cfg, "ducks", "weight", buf, 64, NULL));
 	printf("... and the buffer it returned: %s\n", buf);
 	printf("\n");
 	printf("string boundary tests\n");
@@ -604,8 +576,9 @@ weight = 64 lb.
 	cfg_set_string(&cfg, "shouldn't", NULL, "crash");
 	printf("string with null value\n");
 	cfg_set_string(&cfg, "shouldn't", "crash", NULL);
-	printf("re-reading that null string should return default value: %s\n",
-	       cfg_get_string(&cfg, "shouldn't", "crash", NULL, 0, "it does"));
+	printf(
+		"re-reading that null string should return default value: %s\n",
+		cfg_get_string(&cfg, "shouldn't", "crash", NULL, 0, "it does"));
 	printf("number with null section\n");
 	cfg_set_number(&cfg, NULL, "don't segfault", 42);
 	printf("number with null key\n");

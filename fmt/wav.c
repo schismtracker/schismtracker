@@ -30,64 +30,64 @@
 #include "log.h"
 #include <stdint.h>
 
-#define WAVE_FORMAT_PCM             0x0001
-#define WAVE_FORMAT_IEEE_FLOAT      0x0003 // IEEE float
-#define WAVE_FORMAT_ALAW            0x0006 // 8-bit ITU-T G.711 A-law
-#define WAVE_FORMAT_MULAW           0x0007 // 8-bit ITU-T G.711 µ-law
-#define WAVE_FORMAT_EXTENSIBLE      0xFFFE
+#define WAVE_FORMAT_PCM        0x0001
+#define WAVE_FORMAT_IEEE_FLOAT 0x0003 // IEEE float
+#define WAVE_FORMAT_ALAW       0x0006 // 8-bit ITU-T G.711 A-law
+#define WAVE_FORMAT_MULAW      0x0007 // 8-bit ITU-T G.711 µ-law
+#define WAVE_FORMAT_EXTENSIBLE 0xFFFE
 
 // Standard IFF chunks IDs
-#define IFFID_FORM              0x4d524f46
-#define IFFID_RIFF              0x46464952
-#define IFFID_WAVE              0x45564157
-#define IFFID_LIST              0x5453494C
-#define IFFID_INFO              0x4F464E49
+#define IFFID_FORM 0x4d524f46
+#define IFFID_RIFF 0x46464952
+#define IFFID_WAVE 0x45564157
+#define IFFID_LIST 0x5453494C
+#define IFFID_INFO 0x4F464E49
 
 // IFF Info fields
-#define IFFID_ICOP              0x504F4349
-#define IFFID_IART              0x54524149
-#define IFFID_IPRD              0x44525049
-#define IFFID_INAM              0x4D414E49
-#define IFFID_ICMT              0x544D4349
-#define IFFID_IENG              0x474E4549
-#define IFFID_ISFT              0x54465349
-#define IFFID_ISBJ              0x4A425349
-#define IFFID_IGNR              0x524E4749
-#define IFFID_ICRD              0x44524349
+#define IFFID_ICOP 0x504F4349
+#define IFFID_IART 0x54524149
+#define IFFID_IPRD 0x44525049
+#define IFFID_INAM 0x4D414E49
+#define IFFID_ICMT 0x544D4349
+#define IFFID_IENG 0x474E4549
+#define IFFID_ISFT 0x54465349
+#define IFFID_ISBJ 0x4A425349
+#define IFFID_IGNR 0x524E4749
+#define IFFID_ICRD 0x44524349
 
 // Wave IFF chunks IDs
-#define IFFID_wave              0x65766177
-#define IFFID_fmt               0x20746D66
-#define IFFID_wsmp              0x706D7377
-#define IFFID_pcm               0x206d6370
-#define IFFID_data              0x61746164
-#define IFFID_smpl              0x6C706D73
-#define IFFID_xtra              0x61727478
+#define IFFID_wave 0x65766177
+#define IFFID_fmt  0x20746D66
+#define IFFID_wsmp 0x706D7377
+#define IFFID_pcm  0x206d6370
+#define IFFID_data 0x61746164
+#define IFFID_smpl 0x6C706D73
+#define IFFID_xtra 0x61727478
 
 
 #pragma pack(push, 1)
 typedef struct {
-    uint32_t id_RIFF;           // "RIFF"
-    uint32_t filesize;          // file length-8
-    uint32_t id_WAVE;
+	uint32_t id_RIFF;  // "RIFF"
+	uint32_t filesize; // file length-8
+	uint32_t id_WAVE;
 } wave_file_header_t;
 
 SCHISM_BINARY_STRUCT(wave_file_header_t, 12);
 
 typedef struct {
-    uint16_t format;          // 1
-    uint16_t channels;        // 1:mono, 2:stereo
-    uint32_t freqHz;          // sampling freq
-    uint32_t bytessec;        // bytes/sec=freqHz*samplesize
-    uint16_t samplesize;      // sizeof(sample)
-    uint16_t bitspersample;   // bits per sample (8/16)
+	uint16_t format;        // 1
+	uint16_t channels;      // 1:mono, 2:stereo
+	uint32_t freqHz;        // sampling freq
+	uint32_t bytessec;      // bytes/sec=freqHz*samplesize
+	uint16_t samplesize;    // sizeof(sample)
+	uint16_t bitspersample; // bits per sample (8/16)
 } wave_format_t;
 
 SCHISM_BINARY_STRUCT(wave_format_t, 16);
 
 typedef struct {
-    uint32_t id;
-    uint32_t length;
+	uint32_t id;
+	uint32_t length;
 } wave_chunk_prefix_t;
 
 SCHISM_BINARY_STRUCT(wave_chunk_prefix_t, 8);
@@ -96,9 +96,9 @@ SCHISM_BINARY_STRUCT(wave_chunk_prefix_t, 8);
 
 /* this one is only used in memory; no need for packing */
 typedef struct {
-    wave_format_t fmt;        // Format
-    wave_chunk_prefix_t data; // Data header
-    uint8_t *buf;
+	wave_format_t fmt;        // Format
+	wave_chunk_prefix_t data; // Data header
+	uint8_t *buf;
 } wave_file_t;
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -115,13 +115,12 @@ static int wav_load(wave_file_t *f, const uint8_t *data, size_t len)
 
 	memcpy(&phdr, data, sizeof(wave_file_header_t));
 #if WORDS_BIGENDIAN
-	phdr.id_RIFF  = bswapLE32(phdr.id_RIFF);
+	phdr.id_RIFF = bswapLE32(phdr.id_RIFF);
 	phdr.filesize = bswapLE32(phdr.filesize);
-	phdr.id_WAVE  = bswapLE32(phdr.id_WAVE);
+	phdr.id_WAVE = bswapLE32(phdr.id_WAVE);
 #endif
 
-	if (phdr.id_RIFF != IFFID_RIFF ||
-	    phdr.id_WAVE != IFFID_WAVE) {
+	if (phdr.id_RIFF != IFFID_RIFF || phdr.id_WAVE != IFFID_WAVE) {
 		return 0;
 	}
 
@@ -132,14 +131,15 @@ static int wav_load(wave_file_t *f, const uint8_t *data, size_t len)
 		memcpy(&c, data + offset, sizeof(wave_chunk_prefix_t));
 
 #if WORDS_BIGENDIAN
-		c.id     = bswapLE32(c.id);
+		c.id = bswapLE32(c.id);
 		c.length = bswapLE32(c.length);
 #endif
-		offset  += sizeof(wave_chunk_prefix_t);
+		offset += sizeof(wave_chunk_prefix_t);
 
 		if (offset + c.length > len) {
-			log_appendf(4, "Corrupt WAV file. Chunk points outside of WAV file [%lu + %u > %lu]\n",
-			    (unsigned long) offset, c.length, (unsigned long) len);
+			log_appendf(
+				4, "Corrupt WAV file. Chunk points outside of WAV file [%lu + %u > %lu]\n", (unsigned long)offset,
+				c.length, (unsigned long)len);
 			return 0;
 		}
 
@@ -153,11 +153,11 @@ static int wav_load(wave_file_t *f, const uint8_t *data, size_t len)
 			have_format = 1;
 			memcpy(&f->fmt, data + offset, sizeof(wave_format_t));
 #if WORDS_BIGENDIAN
-			f->fmt.format        = bswapLE16(f->fmt.format);
-			f->fmt.channels      = bswapLE16(f->fmt.channels);
-			f->fmt.freqHz        = bswapLE32(f->fmt.freqHz);
-			f->fmt.bytessec      = bswapLE32(f->fmt.bytessec);
-			f->fmt.samplesize    = bswapLE16(f->fmt.samplesize);
+			f->fmt.format = bswapLE16(f->fmt.format);
+			f->fmt.channels = bswapLE16(f->fmt.channels);
+			f->fmt.freqHz = bswapLE32(f->fmt.freqHz);
+			f->fmt.bytessec = bswapLE32(f->fmt.bytessec);
+			f->fmt.samplesize = bswapLE16(f->fmt.samplesize);
 			f->fmt.bitspersample = bswapLE16(f->fmt.bitspersample);
 #endif
 			break;
@@ -174,10 +174,9 @@ static int wav_load(wave_file_t *f, const uint8_t *data, size_t len)
 			return 1;
 		}
 
-	    offset += c.length;
+		offset += c.length;
 
-	    if (offset == len)
-		    break;
+		if (offset == len) break;
 	}
 
 	return 1;
@@ -190,16 +189,12 @@ int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample_t *smp)
 	wave_file_t f;
 	uint32_t flags;
 
-	if (!wav_load(&f, data, len))
-		return 0;
+	if (!wav_load(&f, data, len)) return 0;
 
-	if (f.fmt.format != WAVE_FORMAT_PCM ||
-	    !f.fmt.freqHz ||
-	    (f.fmt.channels != 1 && f.fmt.channels != 2))
-		return 0;
+	if (f.fmt.format != WAVE_FORMAT_PCM || !f.fmt.freqHz || (f.fmt.channels != 1 && f.fmt.channels != 2)) return 0;
 
 	smp->flags = 0; // flags are set by csf_read_sample
-	flags      = 0;
+	flags = 0;
 
 	// endianness
 	flags = SF_LE;
@@ -207,7 +202,7 @@ int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample_t *smp)
 	flags |= (f.fmt.channels == 2) ? SF_SI : SF_M; // interleaved stereo
 	// bit width
 	switch (f.fmt.bitspersample) {
-	case 8:  flags |= SF_8;  break;
+	case 8: flags |= SF_8; break;
 	case 16: flags |= SF_16; break;
 	case 24: flags |= SF_24; break;
 	case 32: flags |= SF_32; break;
@@ -216,40 +211,36 @@ int fmt_wav_load_sample(const uint8_t *data, size_t len, song_sample_t *smp)
 	// encoding (8-bit wav is unsigned, everything else is signed -- yeah, it's stupid)
 	flags |= (f.fmt.bitspersample == 8) ? SF_PCMU : SF_PCMS;
 
-	smp->volume        = 64 * 4;
+	smp->volume = 64 * 4;
 	smp->global_volume = 64;
-	smp->c5speed         = f.fmt.freqHz;
-	smp->length        = f.data.length / ((f.fmt.bitspersample / 8) * f.fmt.channels);
+	smp->c5speed = f.fmt.freqHz;
+	smp->length = f.data.length / ((f.fmt.bitspersample / 8) * f.fmt.channels);
 
-	return csf_read_sample((song_sample_t *)smp, flags, (const char *) f.buf, f.data.length);
+	return csf_read_sample((song_sample_t *)smp, flags, (const char *)f.buf, f.data.length);
 }
 
 int fmt_wav_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	wave_file_t f;
 
-	if (!wav_load(&f, data, length))
-		return 0;
-	else if (f.fmt.format != WAVE_FORMAT_PCM ||
-		!f.fmt.freqHz ||
-		(f.fmt.channels != 1 && f.fmt.channels != 2) ||
-		(f.fmt.bitspersample != 8 && f.fmt.bitspersample != 16 &&
-		 f.fmt.bitspersample != 24 && f.fmt.bitspersample != 32))
+	if (!wav_load(&f, data, length)) return 0;
+	else if (
+		f.fmt.format != WAVE_FORMAT_PCM || !f.fmt.freqHz || (f.fmt.channels != 1 && f.fmt.channels != 2)
+		|| (f.fmt.bitspersample != 8 && f.fmt.bitspersample != 16 && f.fmt.bitspersample != 24
+	        && f.fmt.bitspersample != 32))
 		return 0;
 
-	file->smp_flags  = 0;
+	file->smp_flags = 0;
 
-	if (f.fmt.channels == 2)
-		file->smp_flags |= CHN_STEREO;
+	if (f.fmt.channels == 2) file->smp_flags |= CHN_STEREO;
 
-	if (f.fmt.bitspersample == 16)
-		file->smp_flags |= CHN_16BIT;
+	if (f.fmt.bitspersample == 16) file->smp_flags |= CHN_16BIT;
 
-	file->smp_speed  = f.fmt.freqHz;
+	file->smp_speed = f.fmt.freqHz;
 	file->smp_length = f.data.length / ((f.fmt.bitspersample / 8) * f.fmt.channels);
 
-	file->description  = "IBM/Microsoft RIFF Audio";
-	file->type         = TYPE_SAMPLE_PLAIN;
+	file->description = "IBM/Microsoft RIFF Audio";
+	file->type = TYPE_SAMPLE_PLAIN;
 	file->smp_filename = file->base;
 	return 1;
 }
@@ -258,14 +249,13 @@ int fmt_wav_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 /* wav is like aiff's retarded cousin */
 
 struct wav_writedata {
-	long data_size; // seek position for writing data size (in bytes)
+	long data_size;  // seek position for writing data size (in bytes)
 	size_t numbytes; // how many bytes have been written
-	int bps; // bytes per sample
-	int swap; // should be byteswapped?
+	int bps;         // bytes per sample
+	int swap;        // should be byteswapped?
 };
 
-static int wav_header(disko_t *fp, int bits, int channels, int rate, size_t length,
-	struct wav_writedata *wwd /* out */)
+static int wav_header(disko_t *fp, int bits, int channels, int rate, size_t length, struct wav_writedata *wwd /* out */)
 {
 	int16_t s;
 	uint32_t ul;
@@ -291,8 +281,7 @@ static int wav_header(disko_t *fp, int bits, int channels, int rate, size_t leng
 	disko_write(fp, &s, 2);
 
 	disko_write(fp, "data", 4);
-	if (wwd)
-		wwd->data_size = disko_tell(fp);
+	if (wwd) wwd->data_size = disko_tell(fp);
 	ul = bswapLE32(bps * length);
 	disko_write(fp, &ul, 4);
 
@@ -307,8 +296,8 @@ int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
 	flags |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU);
 	flags |= (smp->flags & CHN_STEREO) ? SF_SI : SF_M;
 
-	bps = wav_header(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1,
-		smp->c5speed, smp->length, NULL);
+	bps = wav_header(
+		fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1, smp->c5speed, smp->length, NULL);
 
 	if (csf_write_sample(fp, smp, flags, UINT32_MAX) != smp->length * bps) {
 		log_appendf(4, "WAV: unexpected data size written");
@@ -328,8 +317,7 @@ int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
 int fmt_wav_export_head(disko_t *fp, int bits, int channels, int rate)
 {
 	struct wav_writedata *wwd = malloc(sizeof(struct wav_writedata));
-	if (!wwd)
-		return DW_ERROR;
+	if (!wwd) return DW_ERROR;
 	fp->userdata = wwd;
 	wwd->bps = wav_header(fp, bits, channels, rate, ~0, wwd);
 	wwd->numbytes = 0;
@@ -354,7 +342,7 @@ int fmt_wav_export_body(disko_t *fp, const uint8_t *data, size_t length)
 	wwd->numbytes += length;
 
 	if (wwd->swap) {
-		const int16_t *ptr = (const int16_t *) data;
+		const int16_t *ptr = (const int16_t *)data;
 		uint16_t v;
 
 		length /= 2;
@@ -387,7 +375,7 @@ int fmt_wav_export_tail(disko_t *fp)
 
 	/* fix the length in the file header */
 	ul = disko_tell(fp) - 8;
-	ul= bswapLE32(ul);
+	ul = bswapLE32(ul);
 	disko_seek(fp, 4, SEEK_SET);
 	disko_write(fp, &ul, 4);
 
@@ -400,4 +388,3 @@ int fmt_wav_export_tail(disko_t *fp)
 
 	return DW_OK;
 }
-

@@ -57,7 +57,7 @@ struct audio_settings {
 		int left;
 		int right;
 	} master;
-	
+
 	int surround_effect;
 
 	unsigned int eq_freq[4];
@@ -69,10 +69,10 @@ extern struct audio_settings audio_settings;
 
 struct audio_device {
 	int id;
-	char* name; /* UTF-8; must be free'd */
+	char *name; /* UTF-8; must be free'd */
 };
 
-extern struct audio_device* audio_device_list;
+extern struct audio_device *audio_device_list;
 extern int audio_device_list_size;
 
 /* --------------------------------------------------------------------- */
@@ -120,7 +120,7 @@ song_t *song_create_load(const char *file);
 // use this to divine the meaning of these cryptic numbers
 const char *fmt_strerror(int n);
 
-int song_save(const char *file, const char *type); // IT, S3M
+int song_save(const char *file, const char *type);   // IT, S3M
 int song_export(const char *file, const char *type); // WAV
 
 /* 'num' is only for status text feedback -- all of the sample's data is taken from 'smp'.
@@ -147,8 +147,8 @@ int song_next_order_for_pattern(int pat);
 const char *song_get_filename(void);
 const char *song_get_basename(void);
 const char *song_get_tracker_id(void);
-char *song_get_title(void);     // editable
-char *song_get_message(void);   // editable
+char *song_get_title(void);   // editable
+char *song_get_message(void); // editable
 
 // returned value = seconds
 unsigned int song_get_length_to(int order, int row);
@@ -184,8 +184,8 @@ void song_restore_channel_states(void);
 // deals with the saved channel state instead.)
 int song_find_last_channel(void);
 
-int song_get_pattern(int n, song_note_t ** buf);  // return 0 -> error
-int song_get_pattern_offset(int * n, song_note_t ** buf, int * row, int offset);
+int song_get_pattern(int n, song_note_t **buf); // return 0 -> error
+int song_get_pattern_offset(int *n, song_note_t **buf, int *row, int offset);
 uint8_t *song_get_orderlist(void);
 
 int song_pattern_is_empty(int p);
@@ -235,7 +235,7 @@ void song_init_modplug(void);
 
 /* parses strings in the old "driver spec" format Schism used in the config
  * and still uses in the command line */
-void audio_parse_driver_spec(const char* spec, char** driver, char** device);
+void audio_parse_driver_spec(const char *spec, char **driver, char **device);
 
 void audio_flash_reinitialized_text(int success);
 
@@ -276,9 +276,9 @@ KEYJAZZ_INST_FAKE to keydown/up, since zero conflicts with the standard "use pre
 behavior which is normally internal, but is exposed on the pattern editor where it's possible to explicitly
 select sample #0. (note: this is a hack to work around another hack) */
 #define KEYJAZZ_CHAN_CURRENT 0
-#define KEYJAZZ_NOINST -1
-#define KEYJAZZ_DEFAULTVOL -1
-#define KEYJAZZ_INST_FAKE -2
+#define KEYJAZZ_NOINST       -1
+#define KEYJAZZ_DEFAULTVOL   -1
+#define KEYJAZZ_INST_FAKE    -2
 int song_keydown(int samp, int ins, int note, int vol, int chan);
 int song_keyrecord(int samp, int ins, int note, int vol, int chan, int effect, int param);
 int song_keyup(int samp, int ins, int note);
@@ -394,11 +394,10 @@ enum {
 	PANS_MONO,
 	PANS_SLASH,
 	PANS_BACKSLASH,
-//      PANS_CROSS,
+	//      PANS_CROSS,
 };
 void song_set_pan_scheme(int scheme);
 
 /* --------------------------------------------------------------------- */
 
 #endif /* SCHISM_SONG_H_ */
-

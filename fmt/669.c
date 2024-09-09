@@ -43,37 +43,31 @@ struct header_669 {
 	uint8_t breaks[128];
 };
 
-SCHISM_BINARY_STRUCT(struct header_669, 2+108+1+1+1+128+128+128);
+SCHISM_BINARY_STRUCT(struct header_669, 2 + 108 + 1 + 1 + 1 + 128 + 128 + 128);
 
 #pragma pack(pop)
 
 int fmt_669_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
-	struct header_669 *header = (struct header_669 *) data;
+	struct header_669 *header = (struct header_669 *)data;
 	unsigned long i;
 	const char *desc;
 
-	if (length < sizeof(struct header_669))
-		return 0;
+	if (length < sizeof(struct header_669)) return 0;
 
 	/* Impulse Tracker identifies any 669 file as a "Composer 669 Module",
 	regardless of the signature tag. */
-	if (memcmp(header->sig, "if", 2) == 0)
-		desc = "Composer 669 Module";
-	else if (memcmp(header->sig, "JN", 2) == 0)
-		desc = "Extended 669 Module";
-	else
-		return 0;
+	if (memcmp(header->sig, "if", 2) == 0) desc = "Composer 669 Module";
+	else if (memcmp(header->sig, "JN", 2) == 0) desc = "Extended 669 Module";
+	else return 0;
 
-	if (header->samples == 0 || header->patterns == 0
-	    || header->samples > 64 || header->patterns > 128
+	if (header->samples == 0 || header->patterns == 0 || header->samples > 64 || header->patterns > 128
 	    || header->restartpos > 127)
 		return 0;
 	for (i = 0; i < 128; i++)
-		if (header->breaks[i] > 0x3f)
-			return 0;
+		if (header->breaks[i] > 0x3f) return 0;
 
-	file->title = strn_dup((char*)header->songmessage, 36);
+	file->title = strn_dup((char *)header->songmessage, 36);
 	file->description = desc;
 	/*file->extension = str_dup("669");*/
 	file->type = TYPE_MODULE_S3M;
@@ -106,8 +100,7 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	case 0x4e4a: // 'JN'
 		tid = "UNIS 669";
 		break;
-	default:
-		return LOAD_UNSUPPORTED;
+	default: return LOAD_UNSUPPORTED;
 	}
 
 	/* The message is 108 bytes, split onto 3 lines of 36 bytes each.
@@ -125,8 +118,7 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	npat = slurp_getc(fp);
 	restartpos = slurp_getc(fp);
 
-	if (nsmp > 64 || npat > 128 || restartpos > 127)
-		return LOAD_UNSUPPORTED;
+	if (nsmp > 64 || npat > 128 || restartpos > 127) return LOAD_UNSUPPORTED;
 
 	strcpy(song->tracker_id, tid);
 
@@ -141,9 +133,9 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	for (smp = 1; smp <= nsmp; smp++) {
 		slurp_read(fp, b, 13);
 		b[13] = 0; /* the spec says it's supposed to be ASCIIZ, but some 669's use all 13 chars */
-		strcpy(song->samples[smp].name, (char *) b);
+		strcpy(song->samples[smp].name, (char *)b);
 		b[12] = 0; /* ... filename field only has room for 12 chars though */
-		strcpy(song->samples[smp].filename, (char *) b);
+		strcpy(song->samples[smp].filename, (char *)b);
 
 		slurp_read(fp, &tmplong, 4);
 		song->samples[smp].length = bswapLE32(tmplong);
@@ -151,16 +143,14 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		song->samples[smp].loop_start = bswapLE32(tmplong);
 		slurp_read(fp, &tmplong, 4);
 		tmplong = bswapLE32(tmplong);
-		if (tmplong > song->samples[smp].length)
-			tmplong = 0;
-		else
-			song->samples[smp].flags |= CHN_LOOP;
+		if (tmplong > song->samples[smp].length) tmplong = 0;
+		else song->samples[smp].flags |= CHN_LOOP;
 		song->samples[smp].loop_end = tmplong;
 
 		song->samples[smp].c5speed = 8363;
-		song->samples[smp].volume = 60;  /* ickypoo */
-		song->samples[smp].volume *= 4; //mphack
-		song->samples[smp].global_volume = 64;  /* ickypoo */
+		song->samples[smp].volume = 60;        /* ickypoo */
+		song->samples[smp].volume *= 4;        //mphack
+		song->samples[smp].global_volume = 64; /* ickypoo */
 		song->samples[smp].vib_type = 0;
 		song->samples[smp].vib_rate = 0;
 		song->samples[smp].vib_depth = 0;
@@ -182,8 +172,7 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		uint8_t effect[8] = {255, 255, 255, 255, 255, 255, 255, 255};
 
 		uint8_t rows = breakpos[pat] + 1;
-		if (rows > 64)
-			return LOAD_UNSUPPORTED;
+		if (rows > 64) return LOAD_UNSUPPORTED;
 
 		song->patterns[pat] = csf_allocate_pattern(CLAMP(rows, 32, 64));
 		song->pattern_size[pat] = song->pattern_alloc_size[pat] = CLAMP(rows, 32, 64);
@@ -195,12 +184,11 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				slurp_read(fp, b, 3);
 
 				switch (b[0]) {
-				case 0xfe:     /* no note, only volume */
+				case 0xfe: /* no note, only volume */
 					note->voleffect = VOLFX_VOLUME;
 					note->volparam = (b[1] & 0xf) << 2;
 					break;
-				case 0xff:     /* no note or volume */
-					break;
+				case 0xff: /* no note or volume */ break;
 				default:
 					note->note = (b[0] >> 2) + 36 + 1;
 					note->instrument = ((b[0] & 3) << 4 | (b[1] >> 4)) + 1;
@@ -211,15 +199,12 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				}
 
 				/* now handle effects */
-				if (b[2] != 0xff)
-					effect[chan] = b[2];
+				if (b[2] != 0xff) effect[chan] = b[2];
 
 				/* param value of zero = reset */
-				if ((b[2] & 0x0f) == 0 && b[2] != 0x30)
-					effect[chan] = 0xff;
+				if ((b[2] & 0x0f) == 0 && b[2] != 0x30) effect[chan] = 0xff;
 
-				if (effect[chan] == 0xff)
-					continue;
+				if (effect[chan] == 0xff) continue;
 
 				note->param = effect[chan] & 0x0f;
 
@@ -251,8 +236,7 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					break;
 				case 6:
 					// G - subcommands (extended)
-					switch(note->param)
-					{
+					switch (note->param) {
 					case 0:
 						// balance fine slide left
 						note->param = 0x4F;
@@ -261,8 +245,7 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						// balance fine slide right
 						note->param = 0xF4;
 						break;
-					default:
-						note->effect = FX_NONE;
+					default: note->effect = FX_NONE;
 					}
 					break;
 				}
@@ -304,11 +287,10 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		for (smp = 1; smp <= nsmp; smp++) {
 			uint32_t ssize;
 
-			if (song->samples[smp].length == 0)
-				continue;
+			if (song->samples[smp].length == 0) continue;
 
-			ssize = csf_read_sample(song->samples + smp, SF_LE | SF_M | SF_PCMU | SF_8,
-				fp->data + fp->pos, fp->length - fp->pos);
+			ssize = csf_read_sample(
+				song->samples + smp, SF_LE | SF_M | SF_PCMU | SF_8, fp->data + fp->pos, fp->length - fp->pos);
 			slurp_seek(fp, ssize, SEEK_CUR);
 		}
 	}
@@ -319,16 +301,13 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	song->flags = SONG_ITOLDEFFECTS | SONG_LINEARSLIDES;
 
 	song->pan_separation = 64;
-	for (n = 0; n < 8; n++)
-		song->channels[n].panning = (n & 1) ? 256 : 0; //mphack
-	for (n = 8; n < 64; n++)
-		song->channels[n].flags = CHN_MUTE;
+	for (n = 0; n < 8; n++) song->channels[n].panning = (n & 1) ? 256 : 0; //mphack
+	for (n = 8; n < 64; n++) song->channels[n].flags = CHN_MUTE;
 
-//      if (ferror(fp)) {
-//              return LOAD_FILE_ERROR;
-//      }
+	//      if (ferror(fp)) {
+	//              return LOAD_FILE_ERROR;
+	//      }
 
 	/* done! */
 	return LOAD_SUCCESS;
 }
-

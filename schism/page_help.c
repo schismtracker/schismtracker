@@ -48,11 +48,11 @@ enum {
 };
 
 /* Types that should be hidden from view in classic/non-classic mode */
-#define LINE_SCHISM_HIDDEN(p) (0[p] == LTYPE_CLASSIC)
-#define LINE_CLASSIC_HIDDEN(p) (0[p] == LTYPE_SCHISM || 0[p] == LTYPE_SCHISM_BIOS)
+#define LINE_SCHISM_HIDDEN(p)  (0 [p] == LTYPE_CLASSIC)
+#define LINE_CLASSIC_HIDDEN(p) (0 [p] == LTYPE_SCHISM || 0 [p] == LTYPE_SCHISM_BIOS)
 
 /* Types that should be rendered with the standard font */
-#define LINE_BIOS(p) (0[p] == LTYPE_BIOS || 0[p] == LTYPE_SCHISM_BIOS)
+#define LINE_BIOS(p) (0 [p] == LTYPE_BIOS || 0 [p] == LTYPE_SCHISM_BIOS)
 
 static struct widget widgets_help[2];
 
@@ -114,7 +114,7 @@ static void help_redraw(void)
 	for (pos = 13, n = top_line; pos < 45; pos++, n++) {
 		switch (**ptr) {
 		default:
-			lp = strcspn(*ptr+1, "\015\012");
+			lp = strcspn(*ptr + 1, "\015\012");
 			if (LINE_BIOS(*ptr)) {
 				draw_text_bios_len(*ptr + 1, lp, 2, pos, 6, 0);
 			} else {
@@ -125,14 +125,12 @@ static void help_redraw(void)
 			lp = strcspn(*ptr + 1, "\015\012");
 			for (x = 1; x <= lp; x++) {
 				ch = ptr[0][x];
-				if (ch >= '1' && ch <= '9')
-					ch = graphic_chars[ch - '0'];
+				if (ch >= '1' && ch <= '9') ch = graphic_chars[ch - '0'];
 				draw_char(ch, x + 1, pos, 6, 0);
 			}
 			break;
 		case LTYPE_SEPARATOR:
-			for (x = 2; x < 78; x++)
-				draw_char(154, x, pos, 6, 0);
+			for (x = 2; x < 78; x++) draw_char(154, x, pos, 6, 0);
 			break;
 		}
 		ptr++;
@@ -146,7 +144,7 @@ static void _help_close(void)
 	set_page(status.previous_page);
 }
 
-static int help_handle_key(struct key_event * k)
+static int help_handle_key(struct key_event *k)
 {
 	int new_line = top_line;
 
@@ -162,44 +160,36 @@ static int help_handle_key(struct key_event * k)
 	}
 	switch (k->sym) {
 	case SDLK_ESCAPE:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		set_page(status.previous_page);
 		return 1;
 	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		new_line--;
 		break;
 	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		new_line++;
 		break;
 	case SDLK_PAGEUP:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		new_line -= 32;
 		break;
 	case SDLK_PAGEDOWN:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		new_line += 32;
 		break;
 	case SDLK_HOME:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		new_line = 0;
 		break;
 	case SDLK_END:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		if (k->state == KEY_RELEASE) return 1;
 		new_line = num_lines - 32;
 		break;
 	default:
 		if (k->mouse != MOUSE_NONE) {
-			if (k->state == KEY_RELEASE)
-				return 1;
+			if (k->state == KEY_RELEASE) return 1;
 		} else {
 			return 0;
 		}
@@ -249,17 +239,13 @@ static void help_set_page(void)
 		ptr = help_text[status.current_help_index];
 		while (local_lines--) {
 			if (status.flags & CLASSIC_MODE) {
-				if (!LINE_CLASSIC_HIDDEN(ptr))
-					lines[cur_line++] = ptr;
+				if (!LINE_CLASSIC_HIDDEN(ptr)) lines[cur_line++] = ptr;
 			} else {
-				if (!LINE_SCHISM_HIDDEN(ptr))
-					lines[cur_line++] = ptr;
+				if (!LINE_SCHISM_HIDDEN(ptr)) lines[cur_line++] = ptr;
 			}
 			ptr = strpbrk(ptr, "\015\012");
-			if (*ptr == 13)
-				ptr++;
-			if (*ptr == 10)
-				ptr++;
+			if (*ptr == 13) ptr++;
+			if (*ptr == 10) ptr++;
 		}
 		lines[cur_line++] = blank_line;
 		lines[cur_line++] = separator_line;
@@ -270,22 +256,17 @@ static void help_set_page(void)
 	ptr = help_text[HELP_GLOBAL];
 	while (global_lines--) {
 		if (status.flags & CLASSIC_MODE) {
-			if (!LINE_CLASSIC_HIDDEN(ptr))
-				lines[cur_line++] = ptr;
+			if (!LINE_CLASSIC_HIDDEN(ptr)) lines[cur_line++] = ptr;
 		} else {
-			if (!LINE_SCHISM_HIDDEN(ptr))
-				lines[cur_line++] = ptr;
+			if (!LINE_SCHISM_HIDDEN(ptr)) lines[cur_line++] = ptr;
 		}
 		ptr = strpbrk(ptr, "\015\012");
-		if (*ptr == 13)
-			ptr++;
-		if (*ptr == 10)
-			ptr++;
+		if (*ptr == 13) ptr++;
+		if (*ptr == 10) ptr++;
 	}
 
 	lines[cur_line++] = blank_line;
-	if (have_local_help)
-		lines[cur_line++] = separator_line;
+	if (have_local_help) lines[cur_line++] = separator_line;
 
 	lines[cur_line] = NULL;
 	CURRENT_HELP_LINECOUNT = num_lines = cur_line;
@@ -303,7 +284,5 @@ void help_load_page(struct page *page)
 	page->pre_handle_key = help_handle_key;
 
 	widget_create_other(widgets_help + 0, 0, help_handle_key, NULL, help_redraw);
-	widget_create_button(widgets_help + 1, 35,47,8, 0, 1, 1,1, 0,
-			_help_close, "Done", 3);
+	widget_create_button(widgets_help + 1, 35, 47, 8, 0, 1, 1, 1, 0, _help_close, "Done", 3);
 }
-

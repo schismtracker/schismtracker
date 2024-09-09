@@ -70,27 +70,23 @@ void cfg_save_disko(cfg_file_t *cfg)
 
 static void _dw_stdio_write(disko_t *ds, const void *buf, size_t len)
 {
-	if (fwrite(buf, len, 1, ds->file) != 1)
-		disko_seterror(ds, errno);
+	if (fwrite(buf, len, 1, ds->file) != 1) disko_seterror(ds, errno);
 }
 
 static void _dw_stdio_putc(disko_t *ds, int c)
 {
-	if (fputc(c, ds->file) == EOF)
-		disko_seterror(ds, errno);
+	if (fputc(c, ds->file) == EOF) disko_seterror(ds, errno);
 }
 
 static void _dw_stdio_seek(disko_t *ds, long pos, int whence)
 {
-	if (fseek(ds->file, pos, whence) < 0)
-		disko_seterror(ds, errno);
+	if (fseek(ds->file, pos, whence) < 0) disko_seterror(ds, errno);
 }
 
 static long _dw_stdio_tell(disko_t *ds)
 {
 	long pos = ftell(ds->file);
-	if (pos < 0)
-		disko_seterror(ds, errno);
+	if (pos < 0) disko_seterror(ds, errno);
 	return pos;
 }
 
@@ -100,8 +96,7 @@ static long _dw_stdio_tell(disko_t *ds)
 // 0 => memory error, abandon ship
 static int _dw_bufcheck(disko_t *ds, size_t extend)
 {
-	if (ds->pos + extend <= ds->length)
-		return 1;
+	if (ds->pos + extend <= ds->length) return 1;
 
 	ds->length = MAX(ds->length, ds->pos + extend);
 
@@ -132,8 +127,7 @@ static void _dw_mem_write(disko_t *ds, const void *buf, size_t len)
 
 static void _dw_mem_putc(disko_t *ds, int c)
 {
-	if (_dw_bufcheck(ds, 1))
-		ds->data[ds->pos++] = c;
+	if (_dw_bufcheck(ds, 1)) ds->data[ds->pos++] = c;
 }
 
 static void _dw_mem_seek(disko_t *ds, long offset, int whence)
@@ -141,14 +135,9 @@ static void _dw_mem_seek(disko_t *ds, long offset, int whence)
 	// mostly from slurp_seek
 	switch (whence) {
 	default:
-	case SEEK_SET:
-		break;
-	case SEEK_CUR:
-		offset += ds->pos;
-		break;
-	case SEEK_END:
-		offset += ds->length;
-		break;
+	case SEEK_SET: break;
+	case SEEK_CUR: offset += ds->pos; break;
+	case SEEK_END: offset += ds->length; break;
 	}
 	if (offset < 0) {
 		disko_seterror(ds, EINVAL);
@@ -165,27 +154,24 @@ static void _dw_mem_seek(disko_t *ds, long offset, int whence)
 
 static long _dw_mem_tell(disko_t *ds)
 {
-	return (long) ds->pos;
+	return (long)ds->pos;
 }
 
 // ---------------------------------------------------------------------------
 
 void disko_write(disko_t *ds, const void *buf, size_t len)
 {
-	if (len != 0 && !ds->error)
-		ds->_write(ds, buf, len);
+	if (len != 0 && !ds->error) ds->_write(ds, buf, len);
 }
 
 void disko_putc(disko_t *ds, int c)
 {
-	if (!ds->error)
-		ds->_putc(ds, c);
+	if (!ds->error) ds->_putc(ds, c);
 }
 
 void disko_seek(disko_t *ds, long pos, int whence)
 {
-	if (!ds->error)
-		ds->_seek(ds, pos, whence);
+	if (!ds->error) ds->_seek(ds, pos, whence);
 }
 
 /* used by multi-write */
@@ -196,8 +182,7 @@ static void disko_seekcur(disko_t *ds, long pos)
 
 long disko_tell(disko_t *ds)
 {
-	if (!ds->error)
-		return ds->_tell(ds);
+	if (!ds->error) return ds->_tell(ds);
 	return -1;
 }
 
@@ -216,8 +201,7 @@ disko_t *disko_open(const char *filename)
 	int fd;
 	int err;
 
-	if (!filename)
-		return NULL;
+	if (!filename) return NULL;
 
 	len = strlen(filename);
 	if (len + 6 >= PATH_MAX) {
@@ -227,13 +211,11 @@ disko_t *disko_open(const char *filename)
 
 #ifndef SCHISM_WII /* FIXME - make a replacement access() */
 	// Attempt to honor read-only (since we're writing them in such a roundabout way)
-	if (access(filename, W_OK) != 0 && errno != ENOENT)
-		return NULL;
+	if (access(filename, W_OK) != 0 && errno != ENOENT) return NULL;
 #endif
 
 	disko_t *ds = calloc(1, sizeof(disko_t));
-	if (!ds)
-		return NULL;
+	if (!ds) return NULL;
 
 	memcpy(ds->filename, filename, len * sizeof(char));
 	memcpy(ds->tempname, filename, len * sizeof(char));
@@ -241,7 +223,7 @@ disko_t *disko_open(const char *filename)
 
 #ifdef SCHISM_WIN32
 	{
-		if (win32_mktemp(ds->tempname, sizeof(ds->tempname)/sizeof(ds->tempname[0]))) {
+		if (win32_mktemp(ds->tempname, sizeof(ds->tempname) / sizeof(ds->tempname[0]))) {
 			free(ds);
 			return NULL;
 		}
@@ -330,8 +312,7 @@ int disko_close(disko_t *ds, int backup)
 disko_t *disko_memopen(void)
 {
 	disko_t *ds = calloc(1, sizeof(disko_t));
-	if (!ds)
-		return NULL;
+	if (!ds) return NULL;
 
 	ds->data = calloc(DW_BUFFER_SIZE, sizeof(uint8_t));
 	if (!ds->data) {
@@ -351,8 +332,7 @@ disko_t *disko_memopen(void)
 int disko_memclose(disko_t *ds, int keep_buffer)
 {
 	int err = ds->error;
-	if (!keep_buffer || err)
-		free(ds->data);
+	if (!keep_buffer || err) free(ds->data);
 	free(ds);
 	if (err) {
 		errno = err;
@@ -374,8 +354,8 @@ static void _export_setup(song_t *dwsong, int *bps)
 	dwsong->multi_write = NULL; /* should be null already, but to be sure... */
 
 	csf_set_current_order(dwsong, 0); /* rather indirect way of resetting playback variables */
-	csf_set_wave_config(dwsong, disko_output_rate, disko_output_bits,
-		(dwsong->flags & SONG_NOSTEREO) ? 1 : disko_output_channels);
+	csf_set_wave_config(
+		dwsong, disko_output_rate, disko_output_bits, (dwsong->flags & SONG_NOSTEREO) ? 1 : disko_output_channels);
 
 	dwsong->mix_flags |= SNDMIX_DIRECTTODISK | SNDMIX_NOBACKWARDJUMPS;
 
@@ -407,20 +387,16 @@ static int close_and_bind(song_t *dwsong, disko_t *ds, song_sample_t *sample, in
 	}
 
 	newdata = csf_allocate_sample(dsshadow.length);
-	if (!newdata)
-		return DW_ERROR;
+	if (!newdata) return DW_ERROR;
 	csf_stop_sample(current_song, sample);
-	if (sample->data)
-		csf_free_sample(sample->data);
+	if (sample->data) csf_free_sample(sample->data);
 	sample->data = newdata;
 
 	memcpy(newdata, dsshadow.data, dsshadow.length);
 	sample->length = dsshadow.length / bps;
 	sample->flags &= ~(CHN_16BIT | CHN_STEREO | CHN_ADLIB);
-	if (dwsong->mix_channels > 1)
-		sample->flags |= CHN_STEREO;
-	if (dwsong->mix_bits_per_sample > 8)
-		sample->flags |= CHN_16BIT;
+	if (dwsong->mix_channels > 1) sample->flags |= CHN_STEREO;
+	if (dwsong->mix_bits_per_sample > 8) sample->flags |= CHN_16BIT;
 	sample->c5speed = dwsong->mix_frequency;
 	sample->name[0] = '\0';
 
@@ -436,12 +412,10 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
 	disko_t *ds;
 	int bps;
 
-	if (smpnum < 1 || smpnum >= MAX_SAMPLES)
-		return DW_ERROR;
+	if (smpnum < 1 || smpnum >= MAX_SAMPLES) return DW_ERROR;
 
 	ds = disko_memopen();
-	if (!ds)
-		return DW_ERROR;
+	if (!ds) return DW_ERROR;
 
 	_export_setup(&dwsong, &bps);
 	dwsong.repeat_count = -1; // FIXME do this right
@@ -449,7 +423,7 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
 
 	do {
 		disko_write(ds, buf, csf_read(&dwsong, buf, sizeof(buf)) * bps);
-		if (ds->length >= (size_t) (MAX_SAMPLE_LENGTH * bps)) {
+		if (ds->length >= (size_t)(MAX_SAMPLE_LENGTH * bps)) {
 			/* roughly 3 minutes at 44khz -- surely big enough (?) */
 			ds->length = MAX_SAMPLE_LENGTH * bps;
 			dwsong.flags |= SONG_ENDREACHED;
@@ -490,8 +464,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 	dwsong.repeat_count = -1; // FIXME do this right
 	csf_loop_pattern(&dwsong, pattern, 0);
 	dwsong.multi_write = calloc(MAX_CHANNELS, sizeof(struct multi_write));
-	if (!dwsong.multi_write)
-		err = errno ? errno : ENOMEM;
+	if (!dwsong.multi_write) err = errno ? errno : ENOMEM;
 
 	if (!err) {
 		for (n = 0; n < MAX_CHANNELS; n++) {
@@ -509,8 +482,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 		_export_teardown();
 		err = err ? err : errno;
 		free(dwsong.multi_write);
-		for (n = 0; n < MAX_CHANNELS; n++)
-			disko_memclose(ds[n], 0);
+		for (n = 0; n < MAX_CHANNELS; n++) disko_memclose(ds[n], 0);
 		errno = err;
 		return DW_ERROR;
 	}
@@ -518,8 +490,8 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 	for (n = 0; n < MAX_CHANNELS; n++) {
 		dwsong.multi_write[n].data = ds[n];
 		/* Dumb casts. (written this way to make the definition of song_t independent of disko) */
-		dwsong.multi_write[n].write = (void(*)(void*, const uint8_t*, size_t))disko_write;
-		dwsong.multi_write[n].silence = (void(*)(void*, long))disko_seekcur;
+		dwsong.multi_write[n].write = (void (*)(void *, const uint8_t *, size_t))disko_write;
+		dwsong.multi_write[n].silence = (void (*)(void *, long))disko_seekcur;
 	}
 
 	do {
@@ -553,8 +525,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 
 		ds[n]->length = MIN(ds[n]->length, smpsize * bps);
 		smpnum = csf_first_blank_sample(current_song, smpnum);
-		if (smpnum < 0)
-			break;
+		if (smpnum < 0) break;
 		sample = current_song->samples + smpnum;
 		if (close_and_bind(&dwsong, ds[n], sample, bps) == DW_OK) {
 			sprintf(sample->name, "Pattern %03d, channel %02d", pattern, n + 1);
@@ -585,7 +556,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 
 static song_t export_dwsong;
 static int export_bps;
-static disko_t *export_ds[MAX_CHANNELS + 1]; /* only [0] is used unless multichannel */
+static disko_t *export_ds[MAX_CHANNELS + 1];           /* only [0] is used unless multichannel */
 static const struct save_format *export_format = NULL; /* NULL == not running */
 static struct widget diskodlg_widgets[1];
 static size_t est_len;
@@ -625,8 +596,7 @@ static void diskodlg_cancel(UNUSED void *ignored)
 		log_appendf(4, "export was already dead on the inside");
 		return;
 	}
-	for (int n = 0; export_ds[n]; n++)
-		disko_seterror(export_ds[n], EINTR);
+	for (int n = 0; export_ds[n]; n++) disko_seterror(export_ds[n], EINTR);
 
 	/* The next disko_sync will notice the (artifical) error status and call disko_finish,
 	which will clean up all the files.
@@ -672,8 +642,7 @@ static char *get_filename(const char *template, int n)
 	char *s, *sub, buf[4];
 
 	s = strdup(template);
-	if (!s)
-		return NULL;
+	if (!s) return NULL;
 	sub = strcasestr(s, "%c");
 	if (!sub) {
 		errno = EINVAL;
@@ -704,8 +673,7 @@ int disko_export_song(const char *filename, const struct save_format *format)
 	_export_setup(&export_dwsong, &export_bps);
 	if (numfiles > 1) {
 		export_dwsong.multi_write = calloc(numfiles, sizeof(struct multi_write));
-		if (!export_dwsong.multi_write)
-			err = errno ? errno : ENOMEM;
+		if (!export_dwsong.multi_write) err = errno ? errno : ENOMEM;
 	}
 
 	memset(export_ds, 0, sizeof(export_ds));
@@ -719,8 +687,11 @@ int disko_export_song(const char *filename, const struct save_format *format)
 		} else {
 			export_ds[n] = disko_open(filename);
 		}
-		if (!(export_ds[n] && format->f.export.head(export_ds[n], export_dwsong.mix_bits_per_sample,
-				export_dwsong.mix_channels, export_dwsong.mix_frequency) == DW_OK)) {
+		if (!(export_ds[n]
+		      && format->f.export.head(
+					 export_ds[n], export_dwsong.mix_bits_per_sample, export_dwsong.mix_channels,
+					 export_dwsong.mix_frequency)
+		             == DW_OK)) {
 			err = errno ? errno : EINVAL;
 			break;
 		}
@@ -742,13 +713,13 @@ int disko_export_song(const char *filename, const struct save_format *format)
 		for (n = 0; n < numfiles; n++) {
 			export_dwsong.multi_write[n].data = export_ds[n];
 			/* Dumb casts, again */
-			export_dwsong.multi_write[n].write = (void(*)(void*, const uint8_t*, size_t))format->f.export.body;
-			export_dwsong.multi_write[n].silence = (void(*)(void*, long))format->f.export.silence;
+			export_dwsong.multi_write[n].write = (void (*)(void *, const uint8_t *, size_t))format->f.export.body;
+			export_dwsong.multi_write[n].silence = (void (*)(void *, long))format->f.export.silence;
 		}
 	}
 
-	log_appendf(5, " %" PRIu32 " Hz, %" PRIu32 " bit, %s",
-		export_dwsong.mix_frequency, export_dwsong.mix_bits_per_sample,
+	log_appendf(
+		5, " %" PRIu32 " Hz, %" PRIu32 " bit, %s", export_dwsong.mix_frequency, export_dwsong.mix_bits_per_sample,
 		export_dwsong.mix_channels == 1 ? "mono" : "stereo");
 	export_format = format;
 	status.flags |= DISKWRITER_ACTIVE; /* tell main to care about us */
@@ -774,8 +745,7 @@ int disko_sync(void)
 
 	frames = csf_read(&export_dwsong, buf, sizeof(buf));
 
-	if (!export_dwsong.multi_write)
-		export_format->f.export.body(export_ds[0], buf, frames * export_bps);
+	if (!export_dwsong.multi_write) export_format->f.export.body(export_ds[0], buf, frames * export_bps);
 	/* always check if something died, multi-write or not */
 	for (n = 0; export_ds[n]; n++) {
 		if (export_ds[n]->error) {
@@ -810,8 +780,7 @@ static int disko_finish(void)
 		return DW_ERROR; /* no writer running (why are we here?) */
 	}
 
-	if (!canceled)
-		dialog_destroy();
+	if (!canceled) dialog_destroy();
 
 	samples_0 = export_ds[0]->length;
 	for (n = 0; export_ds[n]; n++) {
@@ -829,8 +798,7 @@ static int disko_finish(void)
 				total_size += disko_tell(export_ds[n]);
 			}
 			tmp = disko_close(export_ds[n], 0);
-			if (ret == DW_OK)
-				ret = tmp;
+			if (ret == DW_OK) ret = tmp;
 		}
 	}
 	memset(export_ds, 0, sizeof(export_ds));
@@ -845,24 +813,19 @@ static int disko_finish(void)
 	case DW_OK:
 		gettimeofday(&export_end_time, NULL);
 		elapsed = (export_end_time.tv_sec - export_start_time.tv_sec)
-			+ ((export_end_time.tv_usec - export_start_time.tv_usec) / 1000000.0);
+		          + ((export_end_time.tv_usec - export_start_time.tv_usec) / 1000000.0);
 
 		/* it would be more useful if this actually got the real size of the files */
-		log_appendf(5, " %.2f MiB (%zu:%zu) written in %.2lf sec",
-			total_size / 1048576.0,
-			samples_0 / disko_output_rate / 60, (samples_0 / disko_output_rate) % 60,
-			elapsed);
+		log_appendf(
+			5, " %.2f MiB (%zu:%zu) written in %.2lf sec", total_size / 1048576.0, samples_0 / disko_output_rate / 60,
+			(samples_0 / disko_output_rate) % 60, elapsed);
 		break;
 	case DW_ERROR:
 		/* hey, what was the filename? oops */
-		if (canceled)
-			log_appendf(5, " Canceled");
-		else
-			log_perror(" Write error");
+		if (canceled) log_appendf(5, " Canceled");
+		else log_perror(" Write error");
 		break;
-	default:
-		log_appendf(5, " Internal error exporting song");
-		break;
+	default: log_appendf(5, " Internal error exporting song"); break;
 	}
 
 	return ret;
@@ -919,8 +882,8 @@ void song_pattern_to_sample(int pattern, int split, int bind)
 	for (n = 1; n < MAX_SAMPLES; n++) {
 		song_sample_t *samp = song_get_sample(n);
 		if (!samp) continue;
-		if (((unsigned char) samp->name[23]) != 0xFF) continue;
-		if (((unsigned char) samp->name[24]) != pattern) continue;
+		if (((unsigned char)samp->name[23]) != 0xFF) continue;
+		if (((unsigned char)samp->name[24]) != pattern) continue;
 		status_text_flash("Pattern %d already linked to sample %d", pattern, n);
 		return;
 	}
@@ -940,8 +903,7 @@ void song_pattern_to_sample(int pattern, int split, int bind)
 		if (current_song->samples[ps->sample].data == NULL) {
 			pat2smp_single(ps);
 		} else {
-			dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample.",
-				pat2smp_single, free, 1, ps);
+			dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample.", pat2smp_single, free, 1, ps);
 		}
 	}
 }
