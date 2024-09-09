@@ -26,7 +26,8 @@
 
 #include <ctype.h>
 
-size_t charset_strlen(const uint8_t* in, charset_t inset) {
+size_t charset_strlen(const uint8_t* in, charset_t inset)
+{
 	charset_decode_t decoder = {
 		.in = in,
 		.offset = 0,
@@ -50,7 +51,8 @@ size_t charset_strlen(const uint8_t* in, charset_t inset) {
 	return count;
 }
 
-int charset_strcmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set) {
+int charset_strcmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set)
+{
 	charset_decode_t decoder1 = {
 		.in = in1,
 		.offset = 0,
@@ -85,7 +87,8 @@ charsetfail:
 }
 
 /* this IS necessary to actually sort properly. */
-int charset_strcasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set) {
+int charset_strcasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set)
+{
 	uint8_t *folded8_1 = NULL, *folded8_2 = NULL;
 
 	/* one at a time, please */
@@ -142,7 +145,8 @@ charsetfail:
 }
 
 /* ugh. (num is the number of CHARACTERS, not the number of bytes!!) */
-int charset_strncasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num) {
+int charset_strncasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num)
+{
 	uint8_t *folded8_1 = NULL, *folded8_2 = NULL;
 
 	/* one at a time, please */
@@ -205,7 +209,8 @@ charsetfail:
 }
 
 /* this does the exact same as the above function but returns how many characters were passed */
-size_t charset_strncasecmplen(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num) {
+size_t charset_strncasecmplen(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num)
+{
 	uint8_t *folded8_1 = NULL, *folded8_2 = NULL;
 
 	/* one at a time, please */
@@ -258,4 +263,84 @@ charsetfail:
 			break;
 
 	return i;
+}
+
+/* ------------------------------------------------------- */
+/* fnmatch... */
+
+#if HAVE_FNMATCH
+# define _GNU_SOURCE /* ugh */
+# include <fnmatch.h>
+#endif
+
+#define UCS4_ASTERISK UINT32_C(0x2A)
+#define UCS4_PERIOD UINT32_C(0x2E)
+#define UCS4_QUESTION UINT32_C(0x3F)
+
+/* expects UCS4 input that's case-folded if desired */
+static inline int charset_fnmatch_impl(const uint32_t *m, const uint32_t *s)
+{
+	if (*m == UCS4_ASTERISK)
+		for (++m; *s; ++s)
+			if (!charset_fnmatch_impl(m, s))
+				return 0;
+
+	return (!*s || !(*m == UCS4_QUESTION || *s == *m))
+		? (*m | *s) : charset_fnmatch_impl(m + 1, s + 1);
+}
+
+int charset_fnmatch(const uint8_t *match, charset_t match_set, const uint8_t *str, charset_t str_set, int flags)
+{
+	uint32_t *match_ucs4 = NULL, *str_ucs4 = NULL;
+
+	if (flags & CHARSET_FNM_CASEFOLD) {
+		match_ucs4 = (uint32_t *)charset_case_fold_to_set(match, match_set, CHARSET_UCS4);
+		if (!match_ucs4)
+			goto charsetfail;
+
+		str_ucs4 = (uint32_t *)charset_case_fold_to_set(str, str_set, CHARSET_UCS4);
+		if (!str_ucs4) {
+			free(match_ucs4);
+			goto charsetfail;
+		}
+	} else {
+		if (charset_iconv(match, (uint8_t **)&match_ucs4, match_set, CHARSET_UCS4))
+			goto charsetfail;
+
+		if (charset_iconv(str, (uint8_t **)&str_ucs4, str_set, CHARSET_UCS4)) {
+			free(match_ucs4);
+			goto charsetfail;
+		}
+	}
+
+	int r = ((flags & CHARSET_FNM_PERIOD) && (*str_ucs4 == UCS4_PERIOD && *match_ucs4 != UCS4_PERIOD))
+		? 0
+		: charset_fnmatch_impl(match_ucs4, str_ucs4);
+
+	free(match_ucs4);
+	free(str_ucs4);
+
+	return r;
+
+charsetfail:
+	/* fall back to the system implementation, if there even is one */
+
+#if HAVE_FNMATCH
+	if (match_set != CHARSET_CHAR && str_set != CHARSET_CHAR)
+		return -1;
+
+	int fnm_flags = 0;
+
+	if (flags & CHARSET_FNM_PERIOD)
+		fnm_flags |= FNM_PERIOD;
+
+# ifdef FNM_CASEFOLD
+	if (flags & CHARSET_FNM_CASEFOLD)
+		fnm_flags |= FNM_CASEFOLD;
+# endif
+
+	return fnmatch(match, str, fnm_flags);
+#else
+	return -1;
+#endif
 }
