@@ -244,8 +244,7 @@ int fmt_sfx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 			if (sample->length <= 2)
 				continue;
-			ssize = csf_read_sample(sample, SF_8 | SF_LE | SF_PCMS | SF_M,
-				fp->data + fp->pos, fp->length - fp->pos);
+			ssize = slurp_read_sample(fp, sample, SF_8 | SF_LE | SF_PCMS | SF_M);
 			slurp_seek(fp, ssize, SEEK_CUR);
 		}
 	}

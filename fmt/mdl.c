@@ -1027,8 +1027,7 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 				flags = SF_LE | SF_M;
 				flags |= packtype[n] ? SF_MDL : SF_PCMS;
 				flags |= (song->samples[n].flags & CHN_16BIT) ? SF_16 : SF_8;
-				smpsize = csf_read_sample(song->samples + n, flags,
-					fp->data + fp->pos, fp->length - fp->pos);
+				smpsize = slurp_read_sample(fp, song->samples + n, flags);
 				slurp_seek(fp, smpsize, SEEK_CUR);
 			}
 		} else {

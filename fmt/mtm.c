@@ -260,10 +260,9 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 			if (song->samples[smp].length == 0)
 				continue;
-			ssize = csf_read_sample(song->samples + smp,
+			ssize = slurp_read_sample(fp, song->samples + smp,
 				(SF_LE | SF_PCMU | SF_M
-				 | ((song->samples[smp].flags & CHN_16BIT) ? SF_16 : SF_8)),
-				fp->data + fp->pos, fp->length - fp->pos);
+				 | ((song->samples[smp].flags & CHN_16BIT) ? SF_16 : SF_8)));
 			slurp_seek(fp, ssize, SEEK_CUR);
 		}
 	}

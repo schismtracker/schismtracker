@@ -223,7 +223,7 @@ int fmt_xi_load_instrument(slurp_t *fp, int slot)
 	xmsh.nsamples = bswapLE16(xmsh.nsamples);
 
 	// Sample data begins at the end of the sample headers
-	sampledata = (const uint8_t *) (xi.sheader + xmsh.nsamples);
+	slurp_seek(fp, (unsigned char *)(xi.sheader + xmsh.nsamples) - (unsigned char *)&xi, SEEK_SET);
 
 	for (k = 0; k < xmsh.nsamples; k++) {
 		struct xm_sample_header xmss = xi.sheader[k];
@@ -293,7 +293,7 @@ int fmt_xi_load_instrument(slurp_t *fp, int slot)
 		}
 
 		smp->c5speed = transpose_to_frequency(xmss.relnote, xmss.finetune);
-		sampledata += csf_read_sample(current_song->samples + n, rs, sampledata, (end-sampledata));
+		slurp_seek(fp, slurp_read_sample(fp, current_song->samples + n, rs), SEEK_CUR);
 	}
 
 	return 1;

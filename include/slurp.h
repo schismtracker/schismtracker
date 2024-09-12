@@ -25,21 +25,56 @@
 #define SCHISM_SLURP_H
 
 #include "headers.h"
+#include "player/sndfile.h"
 
+#include <stdint.h>
 #include <sys/stat.h> /* struct stat */
 
 /* --------------------------------------------------------------------- */
 
-typedef struct _slurp_struct slurp_t;
-struct _slurp_struct {
-	size_t length;
-	uint8_t *data;
-	int extra;
-	void *bextra;
+enum {
+	SLURP_OPEN_IGNORE  = -1,
+	SLURP_OPEN_FAIL    =  0,
+	SLURP_OPEN_SUCCESS =  1,
+};
+
+typedef struct slurp_struct_ slurp_t;
+struct slurp_struct_ {
+	/* stdio-style interfaces */
+	int (*seek)(slurp_t *, long, int);
+	int64_t (*tell)(slurp_t *);
+	size_t (*peek)(slurp_t *, void *, size_t);
+	int (*eof)(slurp_t *);
+
+	/* clean up after ourselves */
 	void (*closure)(slurp_t *);
 
-	/* for reading streams */
-	size_t pos;
+	/* receive data in a callback function; keeps away useless allocation for memory mapping */
+	int (*receive)(slurp_t *, int (*callback)(void *, size_t, void *), size_t length, void *userdata);
+
+	union {
+		struct {
+			unsigned char *data;
+			size_t length;
+			size_t pos;
+
+			/* for specific interfaces that are all "memory-based" */
+			union {
+				struct {
+					void *handle;
+				} win32;
+
+				struct {
+					int fd;
+				} mmap;
+			} interfaces;
+		} memory;
+
+		struct {
+			/* only contains this (for now i guess) */
+			FILE *fp;
+		} stdio;
+	} internal;
 };
 
 /* --------------------------------------------------------------------- */
@@ -68,7 +103,10 @@ int64_t slurp_tell(slurp_t *t);
 size_t slurp_read(slurp_t *t, void *ptr, size_t count); /* i never really liked fread */
 size_t slurp_peek(slurp_t *t, void *ptr, size_t count);
 int slurp_getc(slurp_t *t); /* returns unsigned char cast to int, or EOF */
-int slurp_eof(slurp_t *t); /* 1 = end of file */
+int slurp_eof(slurp_t *t);  /* 1 = end of file */
+int slurp_receive(slurp_t *t, int (*callback)(void *, size_t, void *), size_t count, void *userdata);
+
+/* csndfile */
+int slurp_read_sample(slurp_t *t, song_sample_t *sample, uint32_t flags);
 
 #endif /* SCHISM_SLURP_H */
-

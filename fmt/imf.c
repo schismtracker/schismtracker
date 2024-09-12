@@ -585,7 +585,8 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 				sample->flags |= CHN_PANNING;
 
 			if (blen && !(lflags & LOAD_NOSAMPLES))
-				csf_read_sample(sample, sflags, fp->data + fp->pos, fp->length - fp->pos);
+				slurp_read_sample(fp, sample, sflags);
+
 			slurp_seek(fp, blen, SEEK_CUR);
 
 			sample++;

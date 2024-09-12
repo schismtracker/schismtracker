@@ -318,7 +318,7 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			if (sample->length < 3)
 				continue;
 			slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
-			csf_read_sample(sample, SF_LE | SF_PCMS | SF_8 | SF_M, fp->data + fp->pos, fp->length - fp->pos);
+			csf_read_sample(fp, sample, SF_LE | SF_PCMS | SF_8 | SF_M);
 		}
 	}
 

@@ -243,8 +243,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				sample->length = 0;
 			} else {
 				slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
-				csf_read_sample(sample, SF_LE | SF_PCMS | SF_8 | SF_M,
-					(const char *) (fp->data + fp->pos), sample->length);
+				slurp_read_sample(fp, sample, SF_LE | SF_PCMS | SF_8 | SF_M);
 			}
 		}
 	}

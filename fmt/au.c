@@ -152,19 +152,7 @@ int fmt_au_load_sample(slurp_t *fp, song_sample_t *smp)
 		smp->name[extlen] = 0;
 	}
 
-	unsigned char *buf = malloc(fp->length - au.data_offset);
-
-	slurp_seek(fp, SEEK_SET, au.data_offset);
-	if (slurp_read(fp, buf, fp->length - au.data_offset) != (fp->length - au.data_offset)) {
-		free(buf);
-		return 0;
-	}
-
-	int ret = csf_read_sample(smp, sflags, buf, fp->length - au.data_offset);
-
-	free(buf);
-
-	return ret;
+	return slurp_read_sample(fp, smp, sflags);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

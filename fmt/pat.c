@@ -242,18 +242,7 @@ int fmt_pat_load_instrument(slurp_t *fp, int slot)
 		smp->vib_rate = gfsamp.vib_rate;
 		smp->vib_depth = gfsamp.vib_depth;
 
-		size_t smp_length = gfsamp.samplesize * ((rs & SF_16) ? 2 : 1);
-
-		unsigned char *buf = malloc(smp_length);
-
-		if (slurp_read(fp, buf, smp_length) != smp_length) {
-			free(buf);
-			return 0;
-		}
-
-		csf_read_sample(smp, rs, buf, smp_length);
-	
-		free(buf);
+		slurp_read_sample(fp, smp, rs);
 	}
 	return 1;
 }

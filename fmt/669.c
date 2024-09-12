@@ -303,13 +303,10 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	/* sample data */
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (smp = 1; smp <= nsmp; smp++) {
-			uint32_t ssize;
-
 			if (song->samples[smp].length == 0)
 				continue;
 
-			ssize = csf_read_sample(song->samples + smp, SF_LE | SF_M | SF_PCMU | SF_8,
-				fp->data + fp->pos, fp->length - fp->pos);
+			int ssize = slurp_read_sample(fp, song->samples + smp, SF_LE | SF_M | SF_PCMU | SF_8);
 			slurp_seek(fp, ssize, SEEK_CUR);
 		}
 	}
