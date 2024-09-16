@@ -70,6 +70,11 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
 {
 	slurp_t *t = (slurp_t *)mem_calloc(1, sizeof(slurp_t));
 
+	if (!size)
+		size = (buf ? buf->st_size : file_size(filename));
+
+	printf("%s, %zu\n", filename, size);
+
 #ifdef SCHISM_WIN32
 	switch (slurp_win32(t, filename, size)) {
 	case SLURP_OPEN_FAIL:
@@ -125,7 +130,7 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
 	/* fail */
 	return NULL;
 
-finished:
+finished: ; /* this semicolon is important because C */
 	uint8_t *mmdata;
 	size_t mmlen;
 
@@ -170,14 +175,7 @@ void unslurp(slurp_t * t)
 
 static int slurp_stdio_open_(slurp_t *t, const char *filename)
 {
-	FILE *fp;
-
-	if (!strcmp(filename, "-")) {
-		fp = stdin;
-	} else {
-		fp = os_fopen(filename, "rb");
-	}
-
+	FILE *fp = !strcmp(filename, "-") ? stdin : os_fopen(filename, "rb");
 	if (!fp)
 		return SLURP_OPEN_FAIL;
 
@@ -273,7 +271,7 @@ static int64_t slurp_memory_tell_(slurp_t *t)
 
 static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count)
 {
-	ptrdiff_t bytesleft = t->internal.memory.length - t->internal.memory.pos;
+	ptrdiff_t bytesleft = (ptrdiff_t)t->internal.memory.length - t->internal.memory.pos;
 	if (bytesleft < 0)
 		return 0;
 
