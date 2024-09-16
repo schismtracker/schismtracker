@@ -51,7 +51,11 @@ static inline int iff_chunk_peek_impl(iff_chunk_t *chunk, slurp_t *fp, uint32_t 
 
 	slurp_seek(fp, chunk->size, SEEK_CUR);
 
-	return !slurp_eof(fp);
+	int64_t pos = slurp_tell(fp);
+	if (pos < 0)
+		return 0;
+
+	return (pos <= slurp_length(fp));
 }
 
 int iff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp)
