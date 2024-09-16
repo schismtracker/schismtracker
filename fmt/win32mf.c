@@ -66,6 +66,198 @@ static MF_SHCreateMemStreamSpec MF_SHCreateMemStream;
 /* --------------------------------------------------------------------- */
 /* stupid COM stuff incoming */
 
+/* IMFByteStream implementation for slurp */
+struct mfbytestream {
+	/* IMFByteStream vtable */
+	IMFByteStreamVtbl* lpvtbl;
+
+	/* our custom stuff here */
+	slurp_t *fp;
+	ULONG ref_cnt;
+}
+
+/* IUnknown methods */
+static HRESULT STDMETHODCALLTYPE mfbytestream_QueryInterface(IMFByteStream *This, REFIID riid, void **ppobj)
+{
+	/* what? */
+	static const QITAB qit[] = {
+		QITABENT(mfbytestream, IMFByteStream),
+		{0},
+	};
+
+	return QISearch(This, qit, IID_PPV_ARGS(&ppobj));
+}
+
+static ULONG STDMETHODCALLTYPE mfbytestream_AddRef(IMFByteStream *This)
+{
+	return InterlockedIncrement(&(((struct mfbytestream *)This)->ref_cnt));
+}
+
+static ULONG STDMETHODCALLTYPE mfbytestream_Release(IMFByteStream *This)
+{
+	long cRef = InterlockedDecrement(&(((struct mfbytestream *)This)->ref_cnt));
+	if (!cRef)
+		free(This);
+
+	return cRef;
+}
+
+/* IMFByteStream methods */
+static HRESULT STDMETHODCALLTYPE mfbytestream_GetCapabilities(UNUSED IMFByteStream* This, DWORD *pdwCapabilities)
+{
+	*pdwCapabilities = MFBYTESTREAM_IS_READABLE | MFBYTESTREAM_IS_SEEKABLE | MFBYTESTREAM_DOES_NOT_USE_NETWORK;
+	return S_OK;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_GetLength(IMFByteStream *This, QWORD *pqwLength)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)this;
+	*pqwLength = slurp_length(mfb->fp);
+	return S_OK;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_SetLength(IMFByteStream *This, QWORD qwLength)
+{
+	return E_NOTIMPL;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_SetCurrentPosition(IMFByteStream *This, QWORD qwPosition)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)this;
+
+	slurp_seek(mfb->fp, qwPosition, SEEK_SET);
+
+	return S_OK;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_GetCurrentPosition(IMFByteStream *This, QWORD *pqwPosition)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)this;
+
+	int64_t pos = slurp_tell(mfb->fp);
+	if (pos < 0)
+		return E_FAIL;
+
+	*pqwPosition = pos;
+	return S_OK;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_IsEndOfStream(IMFByteStream *This, WINBOOL *pfEndOfStream)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)this;
+
+	*pfEndOfStream = slurp_eof(mfb->fp);
+
+	return S_OK;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_Read(IMFByteStream *This, BYTE *pb, ULONG cb, ULONG *pcbRead)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)this;
+
+	*pcbRead = slurp_read(mfb->fp, pb, cb);
+
+	return S_OK;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_BeginRead(IMFByteStream *This, BYTE *pb, ULONG cb, IMFAsyncCallback *pCallback, IUnknown *punkState)
+{
+	return E_NOTIMPL;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_EndRead(IMFByteStream *This, IMFAsyncResult *pResult, ULONG *pcbRead)
+{
+	return E_NOTIMPL;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_Write(IMFByteStream *This, const BYTE *pb, ULONG cb, ULONG *pcbWritten)
+{
+	return E_NOINTERFACE;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_BeginWrite(IMFByteStream *This, const BYTE *pb, ULONG cb, IMFAsyncCallback *pCallback, IUnknown *punkState)
+{
+	return E_NOINTERFACE;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_EndWrite(IMFByteStream *This, IMFAsyncResult *pResult, ULONG *pcbWritten)
+{
+	return E_NOINTERFACE;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_Seek(IMFByteStream *This, MFBYTESTREAM_SEEK_ORIGIN SeekOrigin, LONGLONG llSeekOffset, DWORD dwSeekFlags, QWORD *pqwCurrentPosition)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)this;
+	int whence;
+
+	switch (SeekOrigin) {
+	case msoBegin:
+		whence = SEEK_SET;
+		break;
+	case msoCurrent:
+		whence = SEEK_CUR;
+		break;
+	default:
+		return E_NOINTERFACE;
+	}
+
+	// XXX MFBYTESTREAM_SEEK_FLAG_CANCEL_PENDING_IO wtf?
+
+	slurp_seek(mfb->fp, llSeekOffset, whence);
+
+	*pqwCurrentPosition = slurp_tell(mfb->fp);
+
+	return S_OK;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_Flush(IMFByteStream *This)
+{
+	/* we don't have anything to flush... */
+	return S_OK;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_Close(IMFByteStream *This)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)this;
+
+	unslurp(mfb->fp);
+
+	return S_OK;
+}
+
+static const IMFByteStreamVtbl mfbytestream_vtbl = {
+	/* IUnknown */
+	.QueryInterface = mfbytestream_QueryInterface,
+	.AddRef = mfbytestream_AddRef,
+	.Release = mfbytestream_Release,
+
+	/* IMFByteStream */
+	.GetCapabilities = mfbytestream_GetCapabilities,
+	.GetLength = mfbytestream_GetLength,
+	.SetLength = mfbytestream_SetLength,
+	.SetCurrentPosition = mfbytestream_SetCurrentPosition,
+	.GetCurrentPosition = mfbytestream_GetCurrentPosition,
+	.IsEndOfStream = mfbytestream_IsEndOfStream,
+	.Read = mfbytestream_Read,
+	.BeginRead = mfbytestream_BeginRead,
+	.EndRead = mfbytestream_EndRead,
+	.Write = mfbytestream_Write,
+	.BeginWrite = mfbytestream_BeginWrite,
+	.EndWrite = mfbytestream_EndWrite,
+	.Seek = mfbytestream_Seek,
+	.Flush = mfbytestream_Flush,
+	.Close = mfbytestream_Close,
+};
+
+static int mfbytestream_init(struct mfbytestream *mfb, slurp_t *fp)
+{
+	mfb->vtbl = mfbytestream_vtbl;
+	mfb->fp = fp;
+	mfb->ref_cnt = 0;
+}
+
+/* -------------------------------------------------------------- */
+
 /* I really have no idea what (apartment/multi)threading does. I don't
  * think it really has an impact, either */
 #define COM_INITFLAGS (COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE)
@@ -115,11 +307,8 @@ static const char* get_media_type_description(IMFMediaType* media_type)
 
 static int get_source_reader_information(IMFSourceReader *reader, dmoz_file_t *file) {
 	IMFMediaType *media_type = NULL;
-	PROPVARIANT duration = {0};
 	uint64_t length = 0;
 	BOOL compressed = FALSE;
-
-	PropVariantInit(&duration);
 
 	if (SUCCEEDED(reader->lpVtbl->GetNativeMediaType(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, MF_SOURCE_READER_CURRENT_TYPE_INDEX, &media_type))) {
 		file->type = (SUCCEEDED(media_type->lpVtbl->IsCompressedFormat(media_type, &compressed)) && compressed)
@@ -130,8 +319,6 @@ static int get_source_reader_information(IMFSourceReader *reader, dmoz_file_t *f
 
 		media_type->lpVtbl->Release(media_type);
 	}
-
-	PropVariantClear(&duration);
 
 	return 1;
 }
