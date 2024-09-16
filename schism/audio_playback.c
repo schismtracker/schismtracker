@@ -1347,15 +1347,59 @@ static void _cleanup_audio_device(void)
 	}
 }
 
+/* explanation for this:
+ * in 2.0.18, the logic for SDL's audio initialization functions
+ * changed, so that you can use SDL_AudioInit() directly without
+ * any repercussions; before that, SDL would do a sanity check
+ * calling SDL_WasInit() which surprise surprise doesn't actually
+ * get initialized from SDL_AudioInit(). to work around this, we
+ * have to use a separate audio driver initialization function
+ * under SDL pre-2.0.18. */
+static SDLCALL int schism_init_audio_impl(const char *name)
+{
+	const char *orig_drv = SDL_getenv("SDL_AUDIODRIVER");
+
+	if (name)
+		SDL_setenv("SDL_AUDIODRIVER", name, 1);
+
+	int ret = SDL_InitSubSystem(SDL_INIT_AUDIO);
+
+	/* clean up our dirty work, or empty the var */
+	SDL_setenv("SDL_AUDIODRIVER", orig_drv ? orig_drv : "", 1);
+
+	/* forward any error, if any */
+	return ret;
+}
+
+static SDLCALL void schism_quit_audio_impl(void)
+{
+	SDL_QuitSubSystem(SDL_INIT_AUDIO);
+}
+
 static int _audio_open_driver(const char *driver)
 {
+	int (SDLCALL *sdl_audio_init)(const char *);
+	void (SDLCALL *sdl_audio_quit)(void);
 	const char *n;
+
+	/* see explanation above for why we have to do this */
+	SDL_version ver;
+	SDL_GetVersion(&ver);
+	if ((ver.major >= 2)
+		 && (ver.major > 2 || ver.minor >= 0)
+		 && (ver.major > 2 || ver.minor > 0 || ver.patch >= 18)) {
+		sdl_audio_init = SDL_AudioInit;
+		sdl_audio_quit = SDL_AudioQuit;
+	} else {
+		sdl_audio_init = schism_init_audio_impl;
+		sdl_audio_quit = schism_quit_audio_impl;
+	}
 
 	if (audio_was_init) {
 		_cleanup_audio_device();
 		free(driver_name);
 		driver_name = NULL;
-		SDL_AudioQuit();
+		sdl_audio_quit();
 		audio_was_init = 0;
 	}
 
@@ -1367,21 +1411,21 @@ static int _audio_open_driver(const char *driver)
 			: (!strcmp(driver, "nosound") || !strcmp(driver, "none")) ? "dummy"
 			: driver;
 
-		if (!SDL_AudioInit(n))
+		if (!sdl_audio_init(n))
 			goto audio_was_init;
 	}
 
 	/* ... */
 	n = SDL_getenv("SDL_AUDIODRIVER");
 	if (n && *n) {
-		if (!SDL_AudioInit(n))
+		if (!sdl_audio_init(n))
 			goto audio_was_init;
 	}
 
 	for (int i = 0; i < cnt; i++) {
 		n = SDL_GetAudioDriver(i);
 
-		if (!SDL_AudioInit(n))
+		if (!sdl_audio_init(n))
 			goto audio_was_init;
 	}
 

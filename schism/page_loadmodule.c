@@ -47,34 +47,6 @@
 #include "disko.h"
 
 /* --------------------------------------------------------------------- */
-/* this was adapted from a really slick two-line fnmatch()
-at http://compressionratings.com/d_archiver_template.html
-and fuglified to add FNM_CASEFOLD|FNM_PERIOD behavior */
-
-#if HAVE_FNMATCH
-# include <fnmatch.h>
-/* GNU extension, ignore */
-# ifndef FNM_CASEFOLD
-#  define FNM_CASEFOLD 0
-# endif
-#else
-# define FNM_CASEFOLD 0
-# define FNM_PERIOD 0
-# define fnmatch xfnmatch
-inline static int _fnmatch(const char *m, const char *s);
-inline static int _fnmatch(const char *m, const char *s)
-{
-	if (*m == '*') for (++m; *s; ++s) if (!_fnmatch(m, s)) return 0;
-	return (!*s || !(*m == '?' || tolower(*s) == tolower(*m)))
-		? tolower(*m) | tolower(*s) : _fnmatch(++m, ++s);
-}
-inline static int xfnmatch(const char *m, const char *s, UNUSED int f)
-{
-	return (*s == '.' && *m != '.') ? 0 : _fnmatch(m, s);
-}
-#endif /* !HAVE_FNMATCH */
-
-/* --------------------------------------------------------------------- */
 /* the locals */
 
 static int modgrep(dmoz_file_t *f);
@@ -356,10 +328,11 @@ static int modgrep(dmoz_file_t *f)
 
 	if (!glob_list)
 		return 1;
-	for (i = 0; glob_list[i]; i++) {
-		if (fnmatch(glob_list[i], f->base, FNM_PERIOD | FNM_CASEFOLD) == 0)
+
+	for (i = 0; glob_list[i]; i++)
+		if (charset_fnmatch(glob_list[i], CHARSET_CHAR, f->base, CHARSET_CHAR, CHARSET_FNM_PERIOD | CHARSET_FNM_CASEFOLD) == 0)
 			return 1;
-	}
+
 	return 0;
 }
 
