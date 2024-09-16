@@ -575,16 +575,14 @@ static song_note_t **mdl_read_tracks(slurp_t *fp)
 	uint16_t h;
 	uint8_t b, x, y;
 	uint8_t vol, e1, e2, p1, p2;
-	size_t bytesleft, reallen = fp->length;
 
 	slurp_read(fp, &h, 2);
 	ntrks = bswapLE16(h);
 
 	// track 0 is always blank
 	for (trk = 1; trk <= ntrks; trk++) {
-		slurp_read(fp, &h, 2);
-		bytesleft = bswapLE16(h);
-		fp->length = MIN(fp->length, fp->pos + bytesleft); // narrow
+		// hope and pray that we don't overshoot
+		slurp_seek(fp, 2, SEEK_CUR);
 		tracks[trk] = mem_calloc(256, sizeof(song_note_t));
 		row = 0;
 		while (row < 256 && !slurp_eof(fp)) {
@@ -636,7 +634,6 @@ static song_note_t **mdl_read_tracks(slurp_t *fp)
 				break;
 			}
 		}
-		fp->length = reallen; // widen
 	}
 	if (lostfx)
 		log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");

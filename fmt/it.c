@@ -374,7 +374,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	slurp_read(fp, para_smp, 4 * hdr.smpnum);
 	slurp_read(fp, para_pat, 4 * hdr.patnum);
 
-	para_min = ((hdr.special & 1) && hdr.msglength) ? hdr.msgoffset : fp->length;
+	para_min = ((hdr.special & 1) && hdr.msglength) ? hdr.msgoffset : slurp_length(fp);
 	for (n = 0; n < hdr.insnum; n++) {
 		para_ins[n] = bswapLE32(para_ins[n]);
 		if (para_ins[n] < para_min)
@@ -416,7 +416,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			slurp_seek(fp, sizeof(midi_config_t), SEEK_CUR);
 		}
 		memset(&song->midi_config, 0, sizeof(midi_config_t));
-	} else if ((hdr.special & 8) && fp->pos + sizeof(midi_config_t) <= fp->length) {
+	} else if ((hdr.special & 8) && slurp_tell(fp) + sizeof(midi_config_t) <= slurp_length(fp)) {
 		slurp_read(fp, &song->midi_config, sizeof(midi_config_t));
 	}
 	if (!hist) {
@@ -428,7 +428,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		}
 	}
 
-	if ((hdr.special & 1) && hdr.msglength && hdr.msgoffset + hdr.msglength < fp->length) {
+	if ((hdr.special & 1) && hdr.msglength && hdr.msgoffset + hdr.msglength < slurp_length(fp)) {
 		int msg_len = MIN(MAX_MESSAGE, hdr.msglength);
 		slurp_seek(fp, hdr.msgoffset, SEEK_SET);
 		slurp_read(fp, song->message, msg_len);

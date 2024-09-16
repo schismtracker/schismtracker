@@ -41,51 +41,67 @@ enum {
 	S3I_PCM_FLAG_16BIT  = 0x04,
 };
 
-/* XXX maybe this should be in fmt.h */
-#define READ_UINT(var, endian, bits, data, offset) \
-	do { \
-		/* ensure we can represent the entire number safely */ \
-		SCHISM_STATIC_ASSERT(sizeof(var) >= sizeof(uint ## bits ## _t), "mismatched read size"); \
-	\
-		uint ## bits ## _t x; \
-		memcpy(&x, (data) + (offset), sizeof(x)); \
-		(var) = bswap ## endian ## bits(x); \
-	} while (0)
-
 /* nonzero on success */
-static int load_s3i_sample(const uint8_t *data, size_t length, song_sample_t *smp, int with_data)
+static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 {
-	if (length < 0x50)
+	unsigned char magic[4];
+	uint16_t sw;
+	uint32_t dw;
+
+	if (slurp_length(fp) < 0x50)
 		return 0;
 
-	/* verify signature; offset 0x4C */
-	if (memcmp(data + 0x4C, "SCRS", 4) != 0
-		&& memcmp(data + 0x4C, "SCRI", 4) != 0)
+	slurp_seek(fp, 0x4C, SEEK_SET);
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic))
 		return 0;
 
-	uint8_t type = data[0x00];
+	if (memcmp(magic, "SCRS", 4) && memcmp(magic, "SCRI", 4))
+		return 0;
+
+	slurp_seek(fp, 0x00, SEEK_SET);
+	int type = slurp_getc(fp);
 	if (type != S3I_TYPE_PCM && type != S3I_TYPE_ADLIB)
 		return 0;
 
-	uint8_t flags = data[0x1F];
+	slurp_seek(fp, 0x1F, SEEK_SET);
+	int flags = slurp_getc(fp);
+	if (flags < 0)
+		return 0;
 
+	slurp_seek(fp, 0x1C, SEEK_SET);
 	smp->flags = 0;
 	smp->global_volume = 64;
-	smp->volume = ((uint_fast16_t)data[0x1C]) * 4; /* mphack */
-	READ_UINT(smp->loop_start, LE, 32, data, 0x14);
-	READ_UINT(smp->loop_end, LE, 32, data, 0x18);
-	READ_UINT(smp->c5speed, LE, 32, data, 0x20);
+	smp->volume = slurp_getc(fp) * 4; /* mphack */
 
-	memcpy(smp->filename, data + 0x01, sizeof(smp->filename));
-	memcpy(smp->name, data + 0x30, sizeof(smp->name));
+	slurp_seek(fp, 0x14, SEEK_SET);
+
+	if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
+		return 0;
+	smp->loop_start = bswapLE32(sw);
+
+	if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
+		return 0;
+	smp->loop_end = bswapLE32(dw);
+
+	if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
+		return 0;
+	smp->c5speed = bswapLE32(dw);
+
+	slurp_seek(fp, 0x01, SEEK_SET);
+	slurp_read(fp, smp->filename, MIN(sizeof(smp->filename) - 1, 12));
+
+	slurp_seek(fp, 0x30, SEEK_SET);
+	slurp_read(fp, smp->name, MIN(sizeof(smp->name) - 1, 28));
 
 	if (type == S3I_TYPE_PCM) {
-		/* PCM audio */
 		int bytes_per_sample = (flags & S3I_PCM_FLAG_STEREO) ? 2 : 1;
 
-		READ_UINT(smp->length, LE, 32, data, 0x10);
+		slurp_seek(fp, 0x10, SEEK_SET);
+		if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
+			return 0;
+		smp->length = bswapLE32(dw);
 
-		if (length < 0x50 + smp->length * bytes_per_sample)
+		if (slurp_length(fp) < 0x50 + smp->length * bytes_per_sample)
 			return 0;
 
 		/* convert flags */
@@ -102,15 +118,16 @@ static int load_s3i_sample(const uint8_t *data, size_t length, song_sample_t *sm
 			int format = SF_M | SF_LE; // endianness; channels
 			format |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU); // bits; encoding
 
-			csf_read_sample((song_sample_t *) smp, format,
-				(const char *)(data + 0x50), (uint32_t)(length - 0x50));
+			slurp_seek(fp, 0x50, SEEK_SET);
+			slurp_read_sample(fp, smp, format);
 		}
 	} else if (type == S3I_TYPE_ADLIB) {
-		/* AdLib */
 		smp->flags |= CHN_ADLIB;
 		smp->flags &= ~(CHN_LOOP|CHN_16BIT);
 
-		memcpy(smp->adlib_bytes, data + 0x10, 11);
+		slurp_seek(fp, 0x10, SEEK_SET);
+		if (slurp_read(fp, smp->adlib_bytes, sizeof(smp->adlib_bytes)) != sizeof(smp->adlib_bytes))
+			return 0;
 
 		smp->length = 1;
 		smp->loop_start = 0;
@@ -126,7 +143,7 @@ static int load_s3i_sample(const uint8_t *data, size_t length, song_sample_t *sm
 int fmt_s3i_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	song_sample_t smp;
-	if (!load_s3i_sample(fp->data, fp->length, &smp, 0))
+	if (!load_s3i_sample(fp, &smp, 0))
 		return 0;
 
 	file->smp_length = smp.length;
@@ -147,5 +164,5 @@ int fmt_s3i_read_info(dmoz_file_t *file, slurp_t *fp)
 int fmt_s3i_load_sample(slurp_t *fp, song_sample_t *smp)
 {
 	// what the crap?
-	return load_s3i_sample(fp->data, fp->length, smp, 1);
+	return load_s3i_sample(fp, smp, 1);
 }

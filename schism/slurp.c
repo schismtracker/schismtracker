@@ -49,64 +49,26 @@ the control gets back to slurp, it closes the fd (again). It doesn't seem to exi
 #endif
 
 static int slurp_stdio_open_(slurp_t *t, const char *filename);
+static int slurp_stdio_open_file_(slurp_t *t, FILE *fp);
 static int slurp_stdio_seek_(slurp_t *t, long offset, int whence);
 static int64_t slurp_stdio_tell_(slurp_t *t);
 static size_t slurp_stdio_peek_(slurp_t *t, void *ptr, size_t count);
 static int slurp_stdio_eof_(slurp_t *t);
+static int slurp_stdio_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
 static void slurp_stdio_closure_(slurp_t *t);
 
 static int slurp_memory_seek_(slurp_t *t, long offset, int whence);
 static int64_t slurp_memory_tell_(slurp_t *t);
 static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count);
+static int slurp_memory_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
 static int slurp_memory_eof_(slurp_t *t);
+static void slurp_memory_closure_free_(slurp_t *t);
 
 /* --------------------------------------------------------------------- */
 
-static slurp_t *_slurp_open(const char *filename, struct stat * buf, size_t size)
-{
-	slurp_t *t;
-	int fd, old_errno;
-
-	if (buf && S_ISDIR(buf->st_mode)) {
-		errno = EISDIR;
-		return NULL;
-	}
-
-	if (t == NULL)
-		return NULL;
-	t->pos = 0;
-
-	if (strcmp(filename, "-") == 0) {
-		if (_slurp_stdio(t, STDIN_FILENO))
-			return t;
-		free(t);
-		return NULL;
-	}
-
-
-	fd = os_open(filename, O_RDONLY | O_BINARY);
-	if (fd < 0) {
-		free(t);
-		return NULL;
-	}
-
-	t->length = size;
-
-	if (_slurp_stdio(t, fd)) {
-		close(fd);
-		return t;
-	}
-
-	old_errno = errno;
-	close(fd);
-	free(t);
-	errno = old_errno;
-	return NULL;
-}
-
 slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
 {
-	slurp_t *t = (slurp_t *)mem_alloc(sizeof(slurp_t));
+	slurp_t *t = (slurp_t *)mem_calloc(1, sizeof(slurp_t));
 
 #ifdef SCHISM_WIN32
 	switch (slurp_win32(t, filename, size)) {
@@ -118,6 +80,7 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
 		t->tell = slurp_memory_tell_;
 		t->eof  = slurp_memory_eof_;
 		t->peek = slurp_memory_peek_;
+		t->receive = slurp_memory_receive_;
 		goto finished;
 	default:
 	case SLURP_OPEN_IGNORE:
@@ -135,6 +98,7 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
 		t->tell = slurp_memory_tell_;
 		t->eof  = slurp_memory_eof_;
 		t->peek = slurp_memory_peek_;
+		t->receive = slurp_memory_receive_;
 		goto finished;
 	default:
 	case SLURP_OPEN_IGNORE:
@@ -151,6 +115,7 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
 		t->tell = slurp_stdio_tell_;
 		t->eof  = slurp_stdio_eof_;
 		t->peek = slurp_stdio_peek_;
+		t->receive = slurp_stdio_receive_;
 		goto finished;
 	default:
 	case SLURP_OPEN_IGNORE:
@@ -161,23 +126,27 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
 	return NULL;
 
 finished:
-#if 0 /* need to pass slurp pointer here */
 	uint8_t *mmdata;
 	size_t mmlen;
 
-	mmdata = t->data;
-	mmlen = t->length;
-	if (mmcmp_unpack(&mmdata, &mmlen)) {
+	if (mmcmp_unpack(t, &mmdata, &mmlen)) {
 		// clean up the existing data
 		if (t->closure)
 			t->closure(t);
 
 		// and put the new stuff in
-		t->length = mmlen;
-		t->data = mmdata;
-		t->closure = _slurp_closure_free;
+		t->seek = slurp_memory_seek_;
+		t->tell = slurp_memory_tell_;
+		t->eof  = slurp_memory_eof_;
+		t->peek = slurp_memory_peek_;
+		t->receive = slurp_memory_receive_;
+
+		t->internal.memory.length = mmlen;
+		t->internal.memory.data = mmdata;
+		t->closure = slurp_memory_closure_free_;
 	}
-#endif
+
+	slurp_rewind(t);
 
 	// TODO re-add PP20 unpacker, possibly also handle other formats?
 
@@ -199,12 +168,26 @@ void unslurp(slurp_t * t)
 /* --------------------------------------------------------------------- */
 /* stdio implementation */
 
-static int slurp_stdio_open_(slurp_t *t, const char *filename, UNUSED size_t size)
+static int slurp_stdio_open_(slurp_t *t, const char *filename)
 {
-	FILE *fp = os_fopen(filename, "rb");
+	FILE *fp;
+
+	if (!strcmp(filename, "-")) {
+		fp = stdin;
+	} else {
+		fp = os_fopen(filename, "rb");
+	}
+
 	if (!fp)
 		return SLURP_OPEN_FAIL;
 
+	t->closure = slurp_stdio_closure_;
+
+	return slurp_stdio_open_file_(t, fp);
+}
+
+static int slurp_stdio_open_file_(slurp_t *t, FILE *fp)
+{
 	t->internal.stdio.fp = fp;
 	return SLURP_OPEN_SUCCESS;
 }
@@ -227,8 +210,10 @@ static size_t slurp_stdio_peek_(slurp_t *t, void *ptr, size_t count)
 		return 0;
 
 	size_t read = fread(ptr, 1, count, t->internal.stdio.fp);
+	if (read < count)
+		memset((unsigned char*)ptr + read, 0, count - read);
 
-	slurp_stdio_seek_(t->internal.stdio.fp, pos, SEEK_SET);
+	slurp_stdio_seek_(t, pos, SEEK_SET);
 
 	return read;
 }
@@ -243,7 +228,7 @@ static void slurp_stdio_closure_(slurp_t *t)
 	fclose(t->internal.stdio.fp);
 }
 
-static int slurp_stdio_receive_(slurp_t *, int (*callback)(void *, size_t, void *), size_t count, void *userdata)
+static int slurp_stdio_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata)
 {
 	unsigned char *buf = malloc(count);
 	if (!buf)
@@ -267,28 +252,28 @@ static int slurp_memory_seek_(slurp_t *t, long offset, int whence)
 	case SEEK_SET:
 		break;
 	case SEEK_CUR:
-		offset += t->memory.pos;
+		offset += t->internal.memory.pos;
 		break;
 	case SEEK_END:
-		offset += t->memory.length;
+		offset += t->internal.memory.length;
 		break;
 	}
 
-	if (offset < 0 || (size_t)offset > t->memory.length)
+	if (offset < 0 || (size_t)offset > t->internal.memory.length)
 		return -1;
 
-	t->memory.pos = offset;
+	t->internal.memory.pos = offset;
 	return 0;
 }
 
 static int64_t slurp_memory_tell_(slurp_t *t)
 {
-	return t->memory.pos;
+	return t->internal.memory.pos;
 }
 
 static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count)
 {
-	ptrdiff_t bytesleft = t->memory.length - t->memory.pos;
+	ptrdiff_t bytesleft = t->internal.memory.length - t->internal.memory.pos;
 	if (bytesleft < 0)
 		return 0;
 
@@ -300,26 +285,29 @@ static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count)
 	}
 
 	if (count)
-		memcpy(ptr, t->memory.data + t->memory.pos, count);
+		memcpy(ptr, t->internal.memory.data + t->internal.memory.pos, count);
 
 	return count;
 }
 
 static int slurp_memory_eof_(slurp_t *t)
 {
-	return t->memory.pos >= t->memory.length;
+	return t->internal.memory.pos >= t->internal.memory.length;
 }
 
-static int slurp_memory_receive_(slurp_t *, int (*callback)(void *, size_t, void *), size_t count, void *userdata)
+static int slurp_memory_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata)
 {
 	/* xd */
-	ptrdiff_t bytesleft = t->memory.length - t->memory.pos;
+	ptrdiff_t bytesleft = (ptrdiff_t)t->internal.memory.length - t->internal.memory.pos;
 	if (bytesleft < 0)
 		return -1;
 
-	count = MIN(bytesleft, count);
+	return callback(t->internal.memory.data + t->internal.memory.pos, MIN(bytesleft, count), userdata);
+}
 
-	return callback(t->memory.data + t->memory.pos, count, userdata);
+static void slurp_memory_closure_free_(slurp_t *t)
+{
+	free(t->internal.memory.data);
 }
 
 /* --------------------------------------------------------------------- */
@@ -380,7 +368,7 @@ int slurp_eof(slurp_t *t)
 	return t->eof(t);
 }
 
-int slurp_receive(slurp_t *t, int (*callback)(void *, size_t, void *), size_t count, void *userdata)
+int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata)
 {
 	return t->receive(t, callback, count, userdata);
 }
@@ -393,7 +381,7 @@ struct slurp_read_smp_data {
 	uint32_t flags;
 };
 
-static int slurp_read_sample_callback_(void *ptr, size_t count, void *userdata)
+static int slurp_read_sample_callback_(const void *ptr, size_t count, void *userdata)
 {
 	struct slurp_read_smp_data *data = userdata;
 
@@ -402,7 +390,7 @@ static int slurp_read_sample_callback_(void *ptr, size_t count, void *userdata)
 
 int slurp_read_sample(slurp_t *t, song_sample_t *sample, uint32_t flags)
 {
-	slurp_read_smp_data data = {
+	struct slurp_read_smp_data data = {
 		.smp = sample,
 		.flags = flags,
 	};

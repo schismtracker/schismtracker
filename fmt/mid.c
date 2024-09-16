@@ -187,8 +187,8 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	for (int trknum = 0; trknum < mthd.num_tracks; trknum++) {
 		unsigned int delta; // time since last event (read from file)
 		unsigned int vlen; // some other generic varlen number
-		int rs = 0; // running status byte
-		int status; // THIS status byte (as opposed to rs)
+		unsigned char rs = 0; // running status byte
+		unsigned char status; // THIS status byte (as opposed to rs)
 		unsigned char hi, lo, cn, x, y;
 		unsigned int bpm; // stupid
 		int found_end = 0;
@@ -214,8 +214,8 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			pulse += delta; // 'real' pulse count
 
 			// get status byte, if there is one
-			if (fp->data[fp->pos] & 0x80) {
-				status = slurp_getc(fp);
+			if (slurp_peek(fp, &status, sizeof(status)) == sizeof(status) && status & 0x80) {
+				slurp_seek(fp, 1, SEEK_CUR);
 			} else if (rs & 0x80) {
 				status = rs;
 			} else {

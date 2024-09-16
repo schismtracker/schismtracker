@@ -124,7 +124,7 @@ int fmt_xi_read_info(dmoz_file_t *file, slurp_t *fp)
 	if (slurp_read(fp, &xi, sizeof(xi)) != sizeof(xi))
 		return 0;
 
-	if (!validate_xi(&xi, fp->length))
+	if (!validate_xi(&xi, slurp_length(fp)))
 		return 0;
 
 	file->description = "Fasttracker II Instrument";
@@ -139,7 +139,6 @@ int fmt_xi_load_instrument(slurp_t *fp, int slot)
 	struct xi_sample_header xmsh;
 	struct instrumentloader ii;
 	song_instrument_t *g;
-	const uint8_t *sampledata, *end;
 	int k, prevtick;
 
 	if (slurp_read(fp, &xi, sizeof(xi)) != sizeof(xi))
@@ -147,10 +146,8 @@ int fmt_xi_load_instrument(slurp_t *fp, int slot)
 
 	if (!slot)
 		return 0;
-	if (!validate_xi(&xi, fp->length))
+	if (!validate_xi(&xi, slurp_length(fp)))
 		return 0;
-
-	end = fp->data + fp->length;
 
 	song_delete_instrument(slot, 0);
 

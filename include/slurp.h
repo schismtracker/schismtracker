@@ -50,7 +50,7 @@ struct slurp_struct_ {
 	void (*closure)(slurp_t *);
 
 	/* receive data in a callback function; keeps away useless allocation for memory mapping */
-	int (*receive)(slurp_t *, int (*callback)(void *, size_t, void *), size_t length, void *userdata);
+	int (*receive)(slurp_t *, int (*callback)(const void *, size_t, void *), size_t length, void *userdata);
 
 	union {
 		struct {
@@ -61,7 +61,8 @@ struct slurp_struct_ {
 			/* for specific interfaces that are all "memory-based" */
 			union {
 				struct {
-					void *handle;
+					void *file;
+					void *mapping;
 				} win32;
 
 				struct {
@@ -104,7 +105,9 @@ size_t slurp_read(slurp_t *t, void *ptr, size_t count); /* i never really liked 
 size_t slurp_peek(slurp_t *t, void *ptr, size_t count);
 int slurp_getc(slurp_t *t); /* returns unsigned char cast to int, or EOF */
 int slurp_eof(slurp_t *t);  /* 1 = end of file */
-int slurp_receive(slurp_t *t, int (*callback)(void *, size_t, void *), size_t count, void *userdata);
+int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
+
+size_t slurp_length(slurp_t *t);
 
 /* csndfile */
 int slurp_read_sample(slurp_t *t, song_sample_t *sample, uint32_t flags);

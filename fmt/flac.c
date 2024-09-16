@@ -206,7 +206,7 @@ static FLAC__StreamDecoderTellStatus read_on_tell(const FLAC__StreamDecoder *dec
 static FLAC__StreamDecoderLengthStatus read_on_length(const FLAC__StreamDecoder *decoder, FLAC__uint64 *stream_length, void *client_data)
 {
 	/* XXX need a slurp_length() */
-	*stream_length = (FLAC__uint64)((struct flac_readdata*)client_data)->fp->length;
+	*stream_length = (FLAC__uint64)slurp_length(((struct flac_readdata*)client_data)->fp);
 	return FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
 }
 

@@ -32,7 +32,7 @@
 
 int fmt_far_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(fp->length > 47))
+	if (!(slurp_length(fp) > 47))
 		return 0;
 
 	/* The magic for this format is truly weird (which I suppose is good, as the chance of it

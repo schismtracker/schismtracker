@@ -32,7 +32,7 @@
 
 int fmt_mt2_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (fp->length <= 106)
+	if (slurp_length(fp) <= 106)
 		return 0;
 
 	unsigned char magic[4];

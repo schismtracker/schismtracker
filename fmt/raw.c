@@ -32,11 +32,12 @@
 
 int fmt_raw_load_sample(slurp_t *fp, song_sample_t *smp)
 {
-	/* XXX need a limit of 4mb or so */
+	size_t len = slurp_length(fp);
+
 	smp->c5speed = 8363;
 	smp->volume = 64 * 4;
 	smp->global_volume = 64;
-	smp->length = length;
+	smp->length = MIN(len, 1u << 22); /* max of 4MB */
 	slurp_read_sample(fp, smp, SF_LE | SF_8 | SF_PCMU | SF_M);
 
 	return 1;

@@ -936,19 +936,18 @@ enum {
 
 static int file_info_get(dmoz_file_t *file)
 {
-	slurp_t *t;
-	const fmt_read_info_func *func;
-
 	if (file->filesize == 0)
 		return FINF_EMPTY;
-	t = slurp(file->path, NULL, file->filesize);
-	if (t == NULL)
+
+	slurp_t *t = slurp(file->path, NULL, file->filesize);
+	if (!t)
 		return FINF_ERRNO;
+
 	file->artist = NULL;
 	file->title = NULL;
 	file->smp_defvol = 64;
 	file->smp_gblvol = 64;
-	for (func = read_info_funcs; *func; func++) {
+	for (const fmt_read_info_func *func = read_info_funcs; *func; func++) {
 		slurp_rewind(t);
 		if ((*func) (file, t)) {
 			if (file->artist)

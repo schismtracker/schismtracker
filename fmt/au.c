@@ -64,7 +64,7 @@ int fmt_au_read_info(dmoz_file_t *file, slurp_t *fp)
 	au.sample_rate = bswapBE32(au.sample_rate);
 	au.channels = bswapBE32(au.channels);
 
-	if (!(au.data_offset < fp->length && au.data_size > 0 && au.data_size <= fp->length - au.data_offset))
+	if (!(au.data_offset < slurp_length(fp) && au.data_size > 0 && au.data_size <= slurp_length(fp) - au.data_offset))
 		return 0;
 
 	file->smp_length = au.data_size / au.channels;
@@ -116,15 +116,15 @@ int fmt_au_load_sample(slurp_t *fp, song_sample_t *smp)
 	au.sample_rate = bswapBE32(au.sample_rate);
 	au.channels = bswapBE32(au.channels);
 
-/*#define C__(cond) if (!(cond)) { log_appendf(2, "failed condition: %s", #cond); return 0; }*/
-#define C__(cond) if (!(cond)) { return 0; }
-	C__(memcmp(au.magic, ".snd", 4) == 0);
-	C__(au.data_offset >= 24);
-	C__(au.data_offset < fp->length);
-	C__(au.data_size > 0);
-	C__(au.data_size <= fp->length - au.data_offset);
-	C__(au.encoding == AU_PCM_8 || au.encoding == AU_PCM_16);
-	C__(au.channels == 1 || au.channels == 2);
+/*#define C_(cond) if (!(cond)) { log_appendf(2, "failed condition: %s", #cond); return 0; }*/
+#define C_(cond) if (!(cond)) { return 0; }
+	C_(memcmp(au.magic, ".snd", 4) == 0);
+	C_(au.data_offset >= 24);
+	C_(au.data_offset < slurp_length(fp));
+	C_(au.data_size > 0);
+	C_(au.data_size <= slurp_length(fp) - au.data_offset);
+	C_(au.encoding == AU_PCM_8 || au.encoding == AU_PCM_16);
+	C_(au.channels == 1 || au.channels == 2);
 
 	smp->c5speed = au.sample_rate;
 	smp->volume = 64 * 4;

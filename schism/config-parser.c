@@ -251,31 +251,14 @@ static struct cfg_section *_free_section(struct cfg_section *section)
 /* --------------------------------------------------------------------------------------------------------- */
 /* public functions */
 
-int cfg_read(cfg_file_t *cfg)
+static int cfg_read_receive_impl(const void *data, size_t size, void *userdata)
 {
-	struct stat buf;
-	slurp_t *t;
-	struct cfg_section *cur_section = NULL;
-	const char *pos; /* current position in the buffer */
 	size_t len; /* how far away the end of the token is from the start */
+	struct cfg_section *cur_section = NULL;
 	char *comments = NULL, *tmp;
+	cfg_file_t *cfg = (cfg_file_t *)userdata;
 
-	/* have to do our own stat, because we're going to fiddle with the size. (this is to be sure the
-	buffer ends with a '\0', which makes it much easier to handle with normal string operations) */
-	if (os_stat(cfg->filename, &buf) < 0)
-		return -1;
-	if (S_ISDIR(buf.st_mode)) {
-		errno = EISDIR;
-		return -1;
-	}
-	if (buf.st_size <= 0)
-		return -1;
-	buf.st_size++;
-	t = slurp(cfg->filename, &buf, 0);
-	if (!t)
-		return -1;
-
-	pos = (const char *)t->data;
+	const char *pos = (const char *)data;
 	do {
 		pos += _parse_comments(pos, &comments);
 
@@ -284,8 +267,7 @@ int cfg_read(cfg_file_t *cfg)
 		semicolon-comments are only handled at the start of lines. */
 		len = strcspn(pos, "#\r\n");
 		if (len) {
-			char *line;
-			line = strn_dup(pos, len);
+			char *line = strn_dup(pos, len);
 			trim_string(line);
 			if (_parse_section(cfg, line, &cur_section, comments)
 			    || _parse_keyval(cfg, line, cur_section, comments)) {
@@ -324,11 +306,23 @@ int cfg_read(cfg_file_t *cfg)
 		if (*pos == '\n')
 			pos++;
 	} while (*pos);
+
 	cfg->eof_comments = comments;
+
+	return 1;
+}
+
+int cfg_read(cfg_file_t *cfg)
+{
+	slurp_t *fp = slurp(cfg->filename, NULL, 0);
+	if (!fp)
+		return -1;
+
+	slurp_receive(fp, cfg_read_receive_impl, slurp_length(fp) + 1, cfg);
 
 	cfg->dirty = 0;
 
-	unslurp(t);
+	unslurp(fp);
 
 	return 0;
 }

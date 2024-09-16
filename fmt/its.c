@@ -90,7 +90,7 @@ int load_its_sample(struct it_sample *its, slurp_t *fp, song_sample_t *smp)
 	uint32_t format;
 	uint32_t bp;
 
-	if (fp->length < 80 || its->id != bswapLE32(0x53504D49))
+	if (slurp_length(fp) < 80 || its->id != bswapLE32(0x53504D49))
 		return 0;
 	/* alright, let's get started */
 	smp->length = bswapLE32(its->length);

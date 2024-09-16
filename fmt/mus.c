@@ -56,8 +56,8 @@ int fmt_mus_read_info(dmoz_file_t *file, slurp_t *fp)
 		return 0;
 
 	/* cast necessary for big-endian systems */
-	if (!memcmp(hdr.id, "MUS\x1a", 4)
-	    || ((size_t)bswapLE16(hdr.scorestart) + bswapLE16(hdr.scorelen)) > fp->length)
+	if (memcmp(hdr.id, "MUS\x1a", 4)
+	    || ((size_t)bswapLE16(hdr.scorestart) + bswapLE16(hdr.scorelen)) > slurp_length(fp))
 		return 0;
 
 	file->description = "Doom Music File";
@@ -98,7 +98,6 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	song_note_t *note;
 	int pat, row;
 	int finished = 0;
-	size_t reallen;
 	int tickfrac = 0; // fixed point
 	struct {
 		uint8_t note; // the last note played in this channel
@@ -109,6 +108,7 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	uint8_t patch_samples[128] = {0};
 	uint8_t patch_percussion[128] = {0};
 	uint8_t nsmp = 1; // Next free sample
+	size_t len;
 
 	slurp_read(fp, &hdr, sizeof(hdr));
 	hdr.scorelen = bswapLE16(hdr.scorelen);
@@ -116,7 +116,7 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 
 	if (memcmp(hdr.id, "MUS\x1a", 4) != 0)
 		return LOAD_UNSUPPORTED;
-	else if (hdr.scorestart + hdr.scorelen > fp->length)
+	else if (hdr.scorestart + hdr.scorelen > slurp_length(fp))
 		return LOAD_FORMAT_ERROR;
 
 
@@ -126,8 +126,7 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	slurp_seek(fp, hdr.scorestart, SEEK_SET);
 
 	// Narrow the data buffer to simplify reading
-	reallen = fp->length;
-	fp->length = MIN(fp->length, hdr.scorestart + hdr.scorelen);
+	len = MIN(slurp_length(fp), hdr.scorestart + hdr.scorelen);
 
 	/* start the first pattern */
 	pat = 0;
@@ -137,7 +136,7 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	note = song->patterns[pat];
 	song->orderlist[pat] = pat;
 
-	while (!finished && !slurp_eof(fp)) {
+	while (!finished && slurp_tell(fp) < len) {
 		uint8_t event, b1, b2, type, ch;
 
 		event = slurp_getc(fp);
@@ -366,9 +365,6 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 			note += 64 * row;
 		}
 	}
-
-	// Widen the buffer again.
-	fp->length = reallen;
 
 	song->flags |= SONG_NOSTEREO;
 	song->initial_speed = 1;

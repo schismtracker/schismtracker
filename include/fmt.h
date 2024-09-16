@@ -150,6 +150,21 @@ int load_it_instrument(song_instrument_t *instrument, slurp_t *fp);
 int load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp);
 
 /* --------------------------------------------------------------------------------------------------------- */
+
+/* [R]IFF helper functions */
+
+typedef struct chunk {
+	uint32_t id;
+	uint32_t size;
+	int64_t offset;
+} iff_chunk_t;
+
+int iff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp);
+int riff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp);
+int iff_chunk_read(iff_chunk_t *chunk, slurp_t *fp, void *data, size_t size);
+int iff_read_sample(iff_chunk_t *chunk, slurp_t *fp, song_sample_t *smp, uint32_t flags, size_t offset);
+
+/* --------------------------------------------------------------------------------------------------------- */
 // other misc functions...
 
 /* effect_weight[FX_something] => how "important" the effect is. */
@@ -179,7 +194,7 @@ void handle_stm_effects(song_note_t *chan_note);
 extern const uint8_t stm_effects[16];
 
 /* used internally by slurp only. nothing else should need this */
-int mmcmp_unpack(uint8_t **data, size_t *length);
+int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length);
 
 // get L-R-R-L panning value from a (zero-based!) channel number
 #define PROTRACKER_PANNING(n) (((((n) + 1) >> 1) & 1) * 256)

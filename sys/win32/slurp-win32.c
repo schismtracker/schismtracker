@@ -38,22 +38,21 @@
 // indices for 'h' (handles)
 enum { FILE_HANDLE = 0, MAPPING_HANDLE = 1 };
 
-static void _win32_unmap(slurp_t *slurp)
+static void win32_unmap_(slurp_t *slurp)
 {
-	if (slurp->data != NULL) {
-		UnmapViewOfFile(slurp->data);
-		slurp->data = NULL;
+	if (slurp->internal.memory.data != NULL) {
+		UnmapViewOfFile(slurp->internal.memory.data);
+		slurp->internal.memory.data = NULL;
 	}
 
-	HANDLE *h = slurp->bextra;
-	if (h[FILE_HANDLE] != INVALID_HANDLE_VALUE) {
-		CloseHandle(h[FILE_HANDLE]);
-	}
-	if (h[MAPPING_HANDLE] != NULL) {
-		CloseHandle(h[MAPPING_HANDLE]);
-	}
-	free(h);
-	slurp->bextra = NULL;
+	if (slurp->internal.memory.interfaces.win32.file != INVALID_HANDLE_VALUE)
+		CloseHandle(slurp->internal.memory.interfaces.win32.file);
+
+	if (slurp->internal.memory.interfaces.win32.mapping != NULL)
+		CloseHandle(slurp->internal.memory.interfaces.win32.mapping);
+
+	slurp->internal.memory.interfaces.win32.file = NULL;
+	slurp->internal.memory.interfaces.win32.mapping = NULL;
 }
 
 // This reader used to return -1 sometimes, which is kind of a hack to tell the
@@ -64,7 +63,7 @@ static void _win32_unmap(slurp_t *slurp)
 // file didn't exist.
 // Note: this doesn't bother setting errno; maybe it should?
 
-static int _win32_error_unmap(slurp_t *slurp, const char *filename, const char *function)
+static int win32_error_unmap_(slurp_t *slurp, const char *filename, const char *function)
 {
 	DWORD err = GetLastError();
 	LPTSTR errmsg;
@@ -77,33 +76,30 @@ static int _win32_error_unmap(slurp_t *slurp, const char *filename, const char *
 	log_appendf(4, "%s: %s: error %lu:", filename, function, err);
 	log_appendf(4, "  %s", errmsg);
 	LocalFree(errmsg);
-	_win32_unmap(slurp);
+	win32_unmap_(slurp);
 	return 0;
 }
 
 int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
 {
-	LPVOID addr;
-	HANDLE *h = slurp->bextra = mem_alloc(sizeof(HANDLE) * 2);
-
 	wchar_t* filename_w = NULL;
-	if (charset_iconv((const uint8_t*)filename, (uint8_t**)&filename_w, CHARSET_UTF8, CHARSET_WCHAR_T))
-		return _win32_error_unmap(slurp, filename, "MultiByteToWideChar");
+	if (charset_iconv((const uint8_t *)filename, (uint8_t **)&filename_w, CHARSET_UTF8, CHARSET_WCHAR_T))
+		return win32_error_unmap_(slurp, filename, "MultiByteToWideChar");
 
-	h[FILE_HANDLE] = CreateFileW(filename_w, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	slurp->internal.memory.interfaces.win32.file = CreateFileW(filename_w, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	free(filename_w);
-	if (h[FILE_HANDLE] == INVALID_HANDLE_VALUE)
-		return _win32_error_unmap(slurp, filename, "CreateFileW");
+	if (slurp->internal.memory.interfaces.win32.file == INVALID_HANDLE_VALUE)
+		return win32_error_unmap_(slurp, filename, "CreateFileW");
 
-	h[MAPPING_HANDLE] = CreateFileMapping(h[FILE_HANDLE], NULL, PAGE_READONLY, 0, 0, NULL);
-	if (!h[MAPPING_HANDLE])
-		return _win32_error_unmap(slurp, filename, "CreateFileMapping");
+	slurp->internal.memory.interfaces.win32.mapping = CreateFileMapping(slurp->internal.memory.interfaces.win32.file, NULL, PAGE_READONLY, 0, 0, NULL);
+	if (!slurp->internal.memory.interfaces.win32.mapping)
+		return win32_error_unmap_(slurp, filename, "CreateFileMapping");
 
-	slurp->data = MapViewOfFile(h[MAPPING_HANDLE], FILE_MAP_READ, 0, 0, 0);
-	if (!slurp->data)
-		return _win32_error_unmap(slurp, filename, "MapViewOfFile");
+	slurp->internal.memory.data = MapViewOfFile(slurp->internal.memory.interfaces.win32.mapping, FILE_MAP_READ, 0, 0, 0);
+	if (!slurp->internal.memory.data)
+		return win32_error_unmap_(slurp, filename, "MapViewOfFile");
 
 	slurp->length = st;
-	slurp->closure = _win32_unmap;
+	slurp->closure = win32_unmap_;
 	return 1;
 }
