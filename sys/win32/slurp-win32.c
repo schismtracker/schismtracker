@@ -99,7 +99,7 @@ int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
 	if (!slurp->internal.memory.data)
 		return win32_error_unmap_(slurp, filename, "MapViewOfFile");
 
-	slurp->length = st;
+	slurp->internal.memory.length = st;
 	slurp->closure = win32_unmap_;
 	return 1;
 }
