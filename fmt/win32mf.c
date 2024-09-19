@@ -64,25 +64,206 @@ static MF_MFCreateMediaTypeSpec MF_MFCreateMediaType;
 static MF_SHCreateMemStreamSpec MF_SHCreateMemStream;
 
 /* --------------------------------------------------------------------- */
-/* stupid COM stuff incoming */
+/* this is what C++ nonsense looks like in plain C, btw. this api is
+ * absolutely diabolical and I yearn to just use function pointers again */
+
+struct slurp_async_op {
+	/* vtable */
+	CONST_VTBL IUnknownVtbl *lpvtbl;
+
+	/* things we have to free, or whatever */
+	IMFByteStream *bs;
+	IMFAsyncCallback *cb;
+
+	/* agh */
+	BYTE *buffer;
+	ULONG req_length;
+	ULONG actual_length;
+
+	//int64_t pos; TODO
+
+	long ref_cnt;
+};
+
+static HRESULT STDMETHODCALLTYPE slurp_async_op_QueryInterface(IUnknown *This, REFIID riid, void **ppvobj)
+{
+	static const QITAB qit[] = {
+		{&IID_IUnknown, 0},
+		{NULL, 0},
+	};
+
+	return QISearch(This, qit, riid, ppvobj);
+}
+
+static ULONG STDMETHODCALLTYPE slurp_async_op_AddRef(IUnknown *This)
+{
+	return InterlockedIncrement(&(((struct slurp_async_op *)This)->ref_cnt));
+}
+
+static ULONG STDMETHODCALLTYPE slurp_async_op_Release(IUnknown *This)
+{
+	long ref = InterlockedDecrement(&(((struct slurp_async_op *)This)->ref_cnt));
+	if (!ref)
+		free(This);
+
+	return ref;
+}
+
+static const IUnknownVtbl slurp_async_op_vtbl = {
+	.QueryInterface = slurp_async_op_QueryInterface,
+	.AddRef = slurp_async_op_AddRef,
+	.Release = slurp_async_op_Release,
+};
+
+static inline int slurp_async_op_new(IUnknown **This, IMFByteStream *bs, IMFAsyncCallback *cb, BYTE *buffer, ULONG req_length)
+{
+	struct slurp_async_op *op = calloc(1, sizeof(struct slurp_async_op));
+	if (!op)
+		return 0;
+
+	op->vtbl = &slurp_async_op_vtbl;
+
+	/* user provided info... */
+	op->bs = bs;
+	op->cb = cb;
+	op->buffer = buffer;
+	op->req_length = req_length;
+
+	/* hmph */
+	op->ref_cnt = 1;
+
+	*This = (IUnknown *)op;
+	return 1;
+}
+
+/* ---------------------------------------------------------------------- */
+
+/* IMFAsyncCallback implementation; I really wish I could just use the regular
+ * IMFByteStream implementation because there isn't really anything special about
+ * this :/ */
+struct slurp_async_callback {
+	/* vtable */
+	CONST_VTBL IMFAsyncCallbackVtbl *lpvtbl;
+
+	long ref_cnt;
+};
+
+/* IUnknown */
+static HRESULT STDMETHODCALLTYPE slurp_async_callback_QueryInterface(IMFAsyncCallback *This, REFIID riid, void **ppobj)
+{
+	static const QITAB qit[] = {
+		{&IID_IMFAsyncCallback, 0},
+		{NULL, 0},
+	};
+
+	return QISearch(This, qit, IID_PPV_ARGS(&ppobj));
+}
+
+static ULONG STDMETHODCALLTYPE slurp_async_callback_AddRef(IMFAsyncCallback *This)
+{
+	return InterlockedIncrement(&(((struct slurp_async_callback *)This)->ref_cnt));
+}
+
+static ULONG STDMETHODCALLTYPE slurp_async_callback_Release(IMFAsyncCallback *This)
+{
+	long ref = InterlockedDecrement(&(((struct slurp_async_callback *)This)->ref_cnt));
+	if (!ref)
+		free(This);
+
+	return ref;
+}
+
+/* IMFAsyncCallback */
+static HRESULT STDMETHODCALLTYPE slurp_async_callback_GetParameters(IMFAsyncCallback *This, DWORD *pdwFlags, DWORD *pdwQueue)
+{
+	/* optional apparently, don't care enough to implement */
+	return E_NOTIMPL;
+}
+
+static HRESULT STDMETHODCALLTYPE slurp_async_callback_Invoke(IMFAsyncCallback *This, IMFAsyncResult *pAsyncResult)
+{
+	IUnknown *pState = NULL;
+	IUnknown *pUnk = NULL;
+	IMFAsyncResult *caller = NULL;
+	HRESULT hr = S_OK;
+
+	hr = pAsyncResult->lpVtbl->GetState(pAsyncResult, &pState);
+	if (FAILED(hr))
+		goto done;
+
+	hr = pState->lpVtbl->QueryInterface(pState, IID_PPV_ARGS(&caller));
+	if (FAILED(hr))
+		goto done;
+
+	hr = caller->lpVtbl->GetObject(&pUnk);
+	if (FAILED(hr))
+		goto done;
+
+	op = (struct slurp_async_op *)pUnk;
+
+	/* now we can actually do the work */
+	hr = op->bs->lpVtbl->Read(op->bs, op->buffer, op->req_length, &op->actual_length);
+
+done:
+	if (op->caller) {
+		op->caller->lpVtbl->SetStatus(op->caller, hr);
+		MFInvokeCallback(op->caller);
+	}
+
+	if (pState)
+		pState->lpVtbl->Release(pState);
+
+	if (caller)
+		caller->lpVtbl->Release(caller);
+
+	if (pUnk)
+		pUnk->lpVtbl->Release(pUnk);
+
+	return S_OK;
+}
+
+static const IMFASyncCallbackVtbl = {
+	/* IUnknown */
+	.QueryInterface = slurp_async_callback_QueryInterface,
+	.AddRef = slurp_async_callback_AddRef,
+	.Release = slurp_async_callback_Release,
+
+	/* IMFASyncCallback */
+	.GetParameters = slurp_async_callback_GetParameters,
+	.Invoke = slurp_async_callback_Invoke,
+};
+
+static inline int slurp_async_callback_new(IMFASyncCallback **This)
+{
+	struct slurp_async_callback *cb = calloc(1, sizeof(struct slurp_async_callback));
+	if (!cb)
+		return 0;
+
+	cb->ref_cnt = 1;
+
+	*This = (IMFAsyncCallback *)cb;
+	return 1;
+}
+
+/* ----------------------------------------------------------------------------------------- */
 
 /* IMFByteStream implementation for slurp */
 struct mfbytestream {
 	/* IMFByteStream vtable */
-	IMFByteStreamVtbl* lpvtbl;
+	CONST_VTBL IMFByteStreamVtbl *lpvtbl;
 
-	/* our custom stuff here */
 	slurp_t *fp;
-	ULONG ref_cnt;
-}
+	SDL_mutex *mutex;
+	long ref_cnt;
+};
 
 /* IUnknown methods */
 static HRESULT STDMETHODCALLTYPE mfbytestream_QueryInterface(IMFByteStream *This, REFIID riid, void **ppobj)
 {
-	/* what? */
+	/* stupid fucking hack */
 	static const QITAB qit[] = {
-		QITABENT(mfbytestream, IMFByteStream),
-		{0},
+		{&IID_IMFByteStream, 0},
+		{NULL, 0},
 	};
 
 	return QISearch(This, qit, IID_PPV_ARGS(&ppobj));
@@ -90,16 +271,22 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_QueryInterface(IMFByteStream *This
 
 static ULONG STDMETHODCALLTYPE mfbytestream_AddRef(IMFByteStream *This)
 {
-	return InterlockedIncrement(&(((struct mfbytestream *)This)->ref_cnt));
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
+
+	return InterlockedIncrement(&mfb->ref_cnt);
 }
 
 static ULONG STDMETHODCALLTYPE mfbytestream_Release(IMFByteStream *This)
 {
-	long cRef = InterlockedDecrement(&(((struct mfbytestream *)This)->ref_cnt));
-	if (!cRef)
-		free(This);
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
 
-	return cRef;
+	long ref = InterlockedDecrement(&mfb->ref_cnt);
+	if (!ref) {
+		SDL_DestroyMutex(mfb->mutex);
+		free(mfb);
+	}
+
+	return ref;
 }
 
 /* IMFByteStream methods */
@@ -111,7 +298,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_GetCapabilities(UNUSED IMFByteStre
 
 static HRESULT STDMETHODCALLTYPE mfbytestream_GetLength(IMFByteStream *This, QWORD *pqwLength)
 {
-	struct mfbytestream *mfb = (struct mfbytestream *)this;
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
 	*pqwLength = slurp_length(mfb->fp);
 	return S_OK;
 }
@@ -125,7 +312,11 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_SetCurrentPosition(IMFByteStream *
 {
 	struct mfbytestream *mfb = (struct mfbytestream *)this;
 
+	SDL_LockMutex(mfb->mutex);
+
 	slurp_seek(mfb->fp, qwPosition, SEEK_SET);
+
+	SDL_UnlockMutex(mfb->mutex);
 
 	return S_OK;
 }
@@ -134,7 +325,12 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_GetCurrentPosition(IMFByteStream *
 {
 	struct mfbytestream *mfb = (struct mfbytestream *)this;
 
+	SDL_LockMutex(mfb->mutex);
+
 	int64_t pos = slurp_tell(mfb->fp);
+
+	SDL_UnlockMutex(mfb->mutex);
+
 	if (pos < 0)
 		return E_FAIL;
 
@@ -146,7 +342,11 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_IsEndOfStream(IMFByteStream *This,
 {
 	struct mfbytestream *mfb = (struct mfbytestream *)this;
 
+	SDL_LockMutex(mfb->mutex);
+
 	*pfEndOfStream = slurp_eof(mfb->fp);
+
+	SDL_UnlockMutex(mfb->mutex);
 
 	return S_OK;
 }
@@ -155,19 +355,74 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_Read(IMFByteStream *This, BYTE *pb
 {
 	struct mfbytestream *mfb = (struct mfbytestream *)this;
 
+	SDL_LockMutex(mfb->mutex);
+
 	*pcbRead = slurp_read(mfb->fp, pb, cb);
+
+	SDL_UnlockMutex(mfb->mutex);
 
 	return S_OK;
 }
 
 static HRESULT STDMETHODCALLTYPE mfbytestream_BeginRead(IMFByteStream *This, BYTE *pb, ULONG cb, IMFAsyncCallback *pCallback, IUnknown *punkState)
 {
-	return E_NOTIMPL;
+	IUnknown *op = NULL;
+	IMFASyncCallback* cb = NULL;
+	IMFAsyncResult *result = NULL;
+	HRESULT hr = S_OK;
+
+	if (!slurp_async_callback_new(&cb))
+		return E_OUTOFMEMORY;
+
+	if (!slurp_async_op_new(&op, This, cb, pb, cb))
+		return E_OUTOFMEMORY;
+
+	if (FAILED(hr = MFCreateAsyncResult(op, pCallback, punkState, &result)))
+		goto fail;
+
+	hr = MFPutWorkItem(MFASYNC_CALLBACK_QUEUE_STANDARD, cb, result);
+
+	result->lpVtbl->Release(result);
+
+	return hr;
+
+fail:
+	if (cb)
+		cb->lpVtbl->Release(cb);
+
+	if (result)
+		result->lpVtbl->Release(result);
+
+	return hr;
 }
 
 static HRESULT STDMETHODCALLTYPE mfbytestream_EndRead(IMFByteStream *This, IMFAsyncResult *pResult, ULONG *pcbRead)
 {
-	return E_NOTIMPL;
+	*pcbRead = 0;
+
+	struct async_slurp_op *op = NULL;
+	IUnknown *unk = NULL;
+
+	HRESULT hr = pResult->lpVtbl->GetStatus(pResult);
+	if (FAILED(hr))
+		goto done;
+
+	hr = pResult->lpVtbl->GetObject(pResult, &unk);
+	if (FAILED(hr))
+		goto done;
+
+	op = (struct async_slurp_op *)unk;
+
+	*pcbRead = op->actual_length;
+
+done:
+	if (op) {
+		/* need to deal with this crap */
+		op->cb->lpvtbl->Release(op->cb);
+		op->lpvtbl->Release(op);
+	}
+
+	return hr;
 }
 
 static HRESULT STDMETHODCALLTYPE mfbytestream_Write(IMFByteStream *This, const BYTE *pb, ULONG cb, ULONG *pcbWritten)
@@ -218,10 +473,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_Flush(IMFByteStream *This)
 
 static HRESULT STDMETHODCALLTYPE mfbytestream_Close(IMFByteStream *This)
 {
-	struct mfbytestream *mfb = (struct mfbytestream *)this;
-
-	unslurp(mfb->fp);
-
+	/* do nothing */
 	return S_OK;
 }
 
@@ -249,11 +501,21 @@ static const IMFByteStreamVtbl mfbytestream_vtbl = {
 	.Close = mfbytestream_Close,
 };
 
-static int mfbytestream_init(struct mfbytestream *mfb, slurp_t *fp)
+static inline int mfbytestream_new(IMFByteStream **imf, slurp_t *fp)
 {
+	struct mfbytestream *mfb = calloc(1, sizeof(*mfb));
+	if (!mfb)
+		return 0;
+
+	/* put in the vtable */
 	mfb->vtbl = mfbytestream_vtbl;
 	mfb->fp = fp;
-	mfb->ref_cnt = 0;
+	mfb->mutex = SDL_CreateMutex();
+	mfb->ref_cnt = 1;
+
+	/* owned */
+	*imf = (IMFByteStream *)mfb;
+	return 1;
 }
 
 /* -------------------------------------------------------------- */
@@ -494,14 +756,14 @@ void win32mf_quit(void)
 	CoUninitialize();
 }
 
-/* implementation for both READ_INFO and LOAD_SAMPLE */
-#define MEDIA_FOUNDATION_START(data, len, url, cleanup) \
+/* implementation for both READ_INFO and LOAD_SAMPLE
+ * TODO make this a function with a structure pls */
+#define MEDIA_FOUNDATION_START(fp, url, cleanup) \
 	IMFSourceResolver* resolver = NULL; \
 	MF_OBJECT_TYPE object_type = MF_OBJECT_INVALID; \
 	IUnknown* unknown_media_source = NULL; \
 	IMFMediaSource* real_media_source = NULL; \
 	IMFSourceReader* reader = NULL; \
-	IStream *stream = NULL; \
 	IMFByteStream *byte_stream = NULL; \
 	uint32_t channels = 0, sps = 0, bps = 0, flags; \
 	IMFMediaType *uncompressed_type = NULL; \
@@ -509,11 +771,7 @@ void win32mf_quit(void)
 	if (FAILED(MF_MFCreateSourceResolver(&resolver))) \
 		goto cleanup; \
 \
-	stream = MF_SHCreateMemStream(data, len); \
-	if (!stream) \
-		goto cleanup; \
-\
-	if (FAILED(MF_MFCreateMFByteStreamOnStream(stream, &byte_stream))) \
+	if (!mfbytestream_new(&byte_stream, fp)) \
 		goto cleanup; \
 \
 	if (FAILED(resolver->lpVtbl->CreateObjectFromByteStream(resolver, byte_stream, url, MF_RESOLUTION_MEDIASOURCE | MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE | MF_RESOLUTION_READ, NULL, &object_type, &unknown_media_source))) \
@@ -557,19 +815,24 @@ void win32mf_quit(void)
 	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_BITS_PER_SAMPLE, &bps))) \
 		goto cleanup; \
 \
-	if (channels <= 0 || channels > 2) \
-		goto cleanup; \
-\
 	if (sps <= 0) \
 		goto cleanup; \
 \
-	if (bps != 8 && bps != 16) \
-		goto cleanup; \
+	flags = SF_LE | SF_PCMS; \
 \
-	flags = SF_LE; \
-	flags |= (channels == 2) ? SF_SI : SF_M; \
-	flags |= (bps <= 8) ? SF_8 : SF_16; \
-	flags |= SF_PCMS;
+	switch (channels) { \
+	case 1: flags |= SF_M; \
+	case 2: flags |= SF_SI; \
+	default: goto cleanup; \
+	} \
+\
+	switch (bps) { \
+	case 8: flags |= SF_8; \
+	case 16: flags |= SF_16; \
+	case 24: flags |= SF_24; \
+	case 32: flags |= SF_32; \
+	default: goto cleanup; \
+	}
 
 #define MEDIA_FOUNDATION_END() \
 	if (resolver) \
@@ -583,9 +846,6 @@ void win32mf_quit(void)
 \
 	if (reader) \
 		reader->lpVtbl->Release(reader); \
-\
-	if (stream) \
-		stream->lpVtbl->Release(stream); \
 \
 	if (byte_stream) \
 		byte_stream->lpVtbl->Release(byte_stream); \
