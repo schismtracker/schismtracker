@@ -121,7 +121,7 @@ static inline int slurp_async_op_new(IUnknown **This, IMFByteStream *bs, IMFAsyn
 	if (!op)
 		return 0;
 
-	op->vtbl = &slurp_async_op_vtbl;
+	op->lpvtbl = &slurp_async_op_vtbl;
 
 	/* user provided info... */
 	op->bs = bs;
@@ -156,7 +156,7 @@ static HRESULT STDMETHODCALLTYPE slurp_async_callback_QueryInterface(IMFAsyncCal
 		{NULL, 0},
 	};
 
-	return QISearch(This, qit, IID_PPV_ARGS(&ppobj));
+	return QISearch(This, qit, riid, ppobj);
 }
 
 static ULONG STDMETHODCALLTYPE slurp_async_callback_AddRef(IMFAsyncCallback *This)
@@ -182,6 +182,7 @@ static HRESULT STDMETHODCALLTYPE slurp_async_callback_GetParameters(IMFAsyncCall
 
 static HRESULT STDMETHODCALLTYPE slurp_async_callback_Invoke(IMFAsyncCallback *This, IMFAsyncResult *pAsyncResult)
 {
+	struct slurp_async_op *op;
 	IUnknown *pState = NULL;
 	IUnknown *pUnk = NULL;
 	IMFAsyncResult *caller = NULL;
@@ -191,11 +192,11 @@ static HRESULT STDMETHODCALLTYPE slurp_async_callback_Invoke(IMFAsyncCallback *T
 	if (FAILED(hr))
 		goto done;
 
-	hr = pState->lpVtbl->QueryInterface(pState, IID_PPV_ARGS(&caller));
+	hr = pState->lpVtbl->QueryInterface(pState, &IID_IMFAsyncResult, &caller);
 	if (FAILED(hr))
 		goto done;
 
-	hr = caller->lpVtbl->GetObject(&pUnk);
+	hr = caller->lpVtbl->GetObject(caller, &pUnk);
 	if (FAILED(hr))
 		goto done;
 
@@ -222,7 +223,7 @@ done:
 	return S_OK;
 }
 
-static const IMFASyncCallbackVtbl = {
+static const IMFASyncCallbackVtbl slurp_async_callback_vtbl = {
 	/* IUnknown */
 	.QueryInterface = slurp_async_callback_QueryInterface,
 	.AddRef = slurp_async_callback_AddRef,
@@ -233,11 +234,13 @@ static const IMFASyncCallbackVtbl = {
 	.Invoke = slurp_async_callback_Invoke,
 };
 
-static inline int slurp_async_callback_new(IMFASyncCallback **This)
+static inline int slurp_async_callback_new(IMFAsyncCallback **This)
 {
 	struct slurp_async_callback *cb = calloc(1, sizeof(struct slurp_async_callback));
 	if (!cb)
 		return 0;
+
+	cb->lpvtbl = &slurp_async_callback_vtbl;
 
 	cb->ref_cnt = 1;
 
@@ -266,7 +269,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_QueryInterface(IMFByteStream *This
 		{NULL, 0},
 	};
 
-	return QISearch(This, qit, IID_PPV_ARGS(&ppobj));
+	return QISearch(This, qit, riid, ppobj);
 }
 
 static ULONG STDMETHODCALLTYPE mfbytestream_AddRef(IMFByteStream *This)
@@ -381,10 +384,6 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_BeginRead(IMFByteStream *This, BYT
 		goto fail;
 
 	hr = MFPutWorkItem(MFASYNC_CALLBACK_QUEUE_STANDARD, cb, result);
-
-	result->lpVtbl->Release(result);
-
-	return hr;
 
 fail:
 	if (cb)
@@ -508,12 +507,17 @@ static inline int mfbytestream_new(IMFByteStream **imf, slurp_t *fp)
 		return 0;
 
 	/* put in the vtable */
-	mfb->vtbl = mfbytestream_vtbl;
+	mfb->lpvtbl = mfbytestream_vtbl;
+
+	/* whatever */
 	mfb->fp = fp;
 	mfb->mutex = SDL_CreateMutex();
+	if (!mfb->mutex) {
+		free(mfb);
+		return 0;
+	}
 	mfb->ref_cnt = 1;
 
-	/* owned */
 	*imf = (IMFByteStream *)mfb;
 	return 1;
 }
@@ -522,45 +526,53 @@ static inline int mfbytestream_new(IMFByteStream **imf, slurp_t *fp)
 
 /* I really have no idea what (apartment/multi)threading does. I don't
  * think it really has an impact, either */
-#define COM_INITFLAGS (COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE)
+#define COM_INITFLAGS (COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)
 
 static const char* get_media_type_description(IMFMediaType* media_type)
 {
-	GUID subtype;
+	static const struct {
+		const GUID *guid;
+		const char *description;
+	} guids = {
+		{&MFAudioFormat_AAC, "Advanced Audio Coding"},
+		// {&MFAudioFormat_ADTS, "Not used"},
+		{&MFAudioFormat_ALAC, "Apple Lossless Audio Codec"},
+		{&MFAudioFormat_AMR_NB, "Adaptive Multi-Rate"},
+		{&MFAudioFormat_AMR_WB, "Adaptive Multi-Rate Wideband"},
+		{&MFAudioFormat_Dolby_AC3, "Dolby Digital (AC-3)"},
+		{&MFAudioFormat_Dolby_AC3_SPDIF, "Dolby AC-3 over S/PDIF"},
+		{&MFAudioFormat_Dolby_DDPlus, "Dolby Digital Plus"},
+		{&MFAudioFormat_DRM, "Encrypted audio data"}, // ????
+		{&MFAudioFormat_DTS, "Digital Theater Systems"}, // yes, "theater", not "theatre"
+		{&MFAudioFormat_FLAC, "Free Lossless Audio Codec"},
+		{&MFAudioFormat_Float, "Uncompressed floating-point audio"},
+		{&MFAudioFormat_Float_SpatialObjects, "Uncompressed floating-point audio"},
+		{&MFAudioFormat_MP3, "MPEG Layer-3 (MP3)"},
+		{&MFAudioFormat_MPEG, "MPEG-1 audio payload"},
+		{&MFAudioFormat_MSP1, "Windows Media Audio 9 Voice"},
+		{&MFAudioFormat_Opus, "Opus"},
+		{&MFAudioFormat_PCM, "Uncompressed PCM"},
+		// {&MFAudioFormat_QCELP, "QCELP audio"}, // can't get this to compile... 
+		{&MFAudioFormat_WMASPDIF, "Windows Media Audio 9 over S/PDIF"},
+		{&MFAudioFormat_WMAudio_Lossless, "Windows Media Audio 9 Lossless"},
+		{&MFAudioFormat_WMAudioV8, "Windows Media Audio 8"},
+		{&MFAudioFormat_WMAudioV9, "Windows Media Audio 8"},
+	};
 
+	GUID subtype;
 	if (SUCCEEDED(media_type->lpVtbl->GetGUID(media_type, &MF_MT_SUBTYPE, &subtype))) {
-#define SUBTYPE(x, n) do { if (IsEqualGUID(&subtype, &x)) return n; } while (0)
-		SUBTYPE(MFAudioFormat_AAC, "Advanced Audio Coding");
-		/* SUBTYPE(MFAudioFormat_ADTS, "Not used"); */
-		SUBTYPE(MFAudioFormat_ALAC, "Apple Lossless Audio Codec");
-		SUBTYPE(MFAudioFormat_AMR_NB, "Adaptive Multi-Rate");
-		SUBTYPE(MFAudioFormat_AMR_WB, "Adaptive Multi-Rate Wideband");
-		SUBTYPE(MFAudioFormat_Dolby_AC3, "Dolby Digital (AC-3)");
-		SUBTYPE(MFAudioFormat_Dolby_AC3_SPDIF, "Dolby AC-3 over S/PDIF");
-		SUBTYPE(MFAudioFormat_Dolby_DDPlus, "Dolby Digital Plus");
-		SUBTYPE(MFAudioFormat_DRM, "Encrypted audio data"); /* ???? */
-		SUBTYPE(MFAudioFormat_DTS, "Digital Theater Systems"); /* yes, "theater", not "theatre" */
-		SUBTYPE(MFAudioFormat_FLAC, "Free Lossless Audio Codec");
-		SUBTYPE(MFAudioFormat_Float, "Uncompressed floating-point audio");
-		SUBTYPE(MFAudioFormat_Float_SpatialObjects, "Uncompressed floating-point audio");
-		SUBTYPE(MFAudioFormat_MP3, "MPEG Layer-3 (MP3)");
-		SUBTYPE(MFAudioFormat_MPEG, "MPEG-1 audio payload");
-		SUBTYPE(MFAudioFormat_MSP1, "Windows Media Audio 9 Voice");
-		SUBTYPE(MFAudioFormat_Opus, "Opus");
-		SUBTYPE(MFAudioFormat_PCM, "Uncompressed PCM");
-		/* SUBTYPE(MFAudioFormat_QCELP, "QCELP audio"); -- ...can't get this to compile */
-		SUBTYPE(MFAudioFormat_WMASPDIF, "Windows Media Audio 9 over S/PDIF");
-		SUBTYPE(MFAudioFormat_WMAudio_Lossless, "Windows Media Audio 9 Lossless");
-		SUBTYPE(MFAudioFormat_WMAudioV8, "Windows Media Audio 8");
-		SUBTYPE(MFAudioFormat_WMAudioV9, "Windows Media Audio 8");
-#undef SUBTYPE
+		for (size_t i = 0; i < ARRAY_SIZE(guids); i++)
+			if (IsEqualGUID(&subtype, guids[i].guid))
+				return guids[i].description;
+
 #ifdef SCHISM_MF_DEBUG
 		log_appendf(1, "Unknown Media Foundation subtype found:");
-		log_appendf(1, "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}", 
-			subtype.Data1, subtype.Data2, subtype.Data3, 
+		log_appendf(1, "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}",
+			subtype.Data1, subtype.Data2, subtype.Data3,
 			subtype.Data4[0], subtype.Data4[1], subtype.Data4[2], subtype.Data4[3],
 			subtype.Data4[4], subtype.Data4[5], subtype.Data4[6], subtype.Data4[7]);
 #endif
+
 	}
 
 	/* welp */
@@ -756,128 +768,143 @@ void win32mf_quit(void)
 	CoUninitialize();
 }
 
-/* implementation for both READ_INFO and LOAD_SAMPLE
- * TODO make this a function with a structure pls */
-#define MEDIA_FOUNDATION_START(fp, url, cleanup) \
-	IMFSourceResolver* resolver = NULL; \
-	MF_OBJECT_TYPE object_type = MF_OBJECT_INVALID; \
-	IUnknown* unknown_media_source = NULL; \
-	IMFMediaSource* real_media_source = NULL; \
-	IMFSourceReader* reader = NULL; \
-	IMFByteStream *byte_stream = NULL; \
-	uint32_t channels = 0, sps = 0, bps = 0, flags; \
-	IMFMediaType *uncompressed_type = NULL; \
-\
-	if (FAILED(MF_MFCreateSourceResolver(&resolver))) \
-		goto cleanup; \
-\
-	if (!mfbytestream_new(&byte_stream, fp)) \
-		goto cleanup; \
-\
-	if (FAILED(resolver->lpVtbl->CreateObjectFromByteStream(resolver, byte_stream, url, MF_RESOLUTION_MEDIASOURCE | MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE | MF_RESOLUTION_READ, NULL, &object_type, &unknown_media_source))) \
-		goto cleanup; \
-\
-	if (object_type != MF_OBJECT_MEDIASOURCE) \
-		goto cleanup; \
-\
-	if (FAILED(unknown_media_source->lpVtbl->QueryInterface(unknown_media_source, &IID_IMFMediaSource, (void**)&real_media_source))) \
-		goto cleanup; \
-\
-	if (FAILED(MF_MFCreateSourceReaderFromMediaSource(real_media_source, NULL, &reader))) \
-		goto cleanup; \
-\
-	if (FAILED(MF_MFCreateMediaType(&uncompressed_type))) \
-		goto cleanup; \
-\
-	if (FAILED(uncompressed_type->lpVtbl->SetGUID(uncompressed_type, &MF_MT_MAJOR_TYPE, &MFMediaType_Audio))) \
-		goto cleanup; \
-\
-	if (FAILED(uncompressed_type->lpVtbl->SetGUID(uncompressed_type, &MF_MT_SUBTYPE, &MFAudioFormat_PCM))) \
-		goto cleanup; \
-\
-	if (FAILED(reader->lpVtbl->SetCurrentMediaType(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, NULL, uncompressed_type))) \
-		goto cleanup; \
-\
-	uncompressed_type->lpVtbl->Release(uncompressed_type); \
-\
-	if (FAILED(reader->lpVtbl->GetCurrentMediaType(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, &uncompressed_type))) \
-		goto cleanup; \
-\
-	if (FAILED(reader->lpVtbl->SetStreamSelection(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, TRUE))) \
-		goto cleanup; \
-\
-	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_NUM_CHANNELS, &channels))) \
-		goto cleanup; \
-\
-	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_SAMPLES_PER_SECOND, &sps))) \
-		goto cleanup; \
-\
-	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_BITS_PER_SAMPLE, &bps))) \
-		goto cleanup; \
-\
-	if (sps <= 0) \
-		goto cleanup; \
-\
-	flags = SF_LE | SF_PCMS; \
-\
-	switch (channels) { \
-	case 1: flags |= SF_M; \
-	case 2: flags |= SF_SI; \
-	default: goto cleanup; \
-	} \
-\
-	switch (bps) { \
-	case 8: flags |= SF_8; \
-	case 16: flags |= SF_16; \
-	case 24: flags |= SF_24; \
-	case 32: flags |= SF_32; \
-	default: goto cleanup; \
+struct win32mf_data {
+	/* wew */
+	IMFSourceReader *reader;
+	IMFMediaSource *source;
+	IMFByteStream *byte_stream; /* FIXME resolver probably handles this, can maybe remove */
+
+	/* info about the output audio data */
+	uint32_t flags, sps, bps, channels;
+};
+
+static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
+{
+	int success = 0;
+	IMFSourceResolver *resolver = NULL;
+	IUnknown *unknown_media_source = NULL;
+	IMFMediaType *uncompressed_type = NULL;
+	MF_OBJECT_TYPE object_type = MF_OBJECT_INVALID;
+
+	if (FAILED(MF_MFCreateSourceResolver(&resolver)))
+		goto cleanup;
+
+	if (!mfbytestream_new(&data->byte_stream, fp))
+		goto cleanup;
+
+	if (FAILED(resolver->lpVtbl->CreateObjectFromByteStream(resolver, data->byte_stream, url, MF_RESOLUTION_MEDIASOURCE | MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE | MF_RESOLUTION_READ, NULL, &object_type, &unknown_media_source)))
+		goto cleanup;
+
+	if (object_type != MF_OBJECT_MEDIASOURCE)
+		goto cleanup;
+
+	if (FAILED(unknown_media_source->lpVtbl->QueryInterface(unknown_media_source, &IID_IMFMediaSource, (void**)&data->source)))
+		goto cleanup;
+
+	if (FAILED(MF_MFCreateSourceReaderFromMediaSource(data->source, NULL, &data->reader)))
+		goto cleanup;
+
+	if (FAILED(MF_MFCreateMediaType(&uncompressed_type)))
+		goto cleanup;
+
+	if (FAILED(uncompressed_type->lpVtbl->SetGUID(uncompressed_type, &MF_MT_MAJOR_TYPE, &MFMediaType_Audio)))
+		goto cleanup;
+
+	if (FAILED(uncompressed_type->lpVtbl->SetGUID(uncompressed_type, &MF_MT_SUBTYPE, &MFAudioFormat_PCM)))
+		goto cleanup;
+
+	if (FAILED(data->reader->lpVtbl->SetCurrentMediaType(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, NULL, uncompressed_type)))
+		goto cleanup;
+
+	uncompressed_type->lpVtbl->Release(uncompressed_type);
+
+	if (FAILED(data->reader->lpVtbl->GetCurrentMediaType(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, &uncompressed_type)))
+		goto cleanup;
+
+	if (FAILED(data->reader->lpVtbl->SetStreamSelection(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, TRUE)))
+		goto cleanup;
+
+	/* get output audio track data */
+	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_NUM_CHANNELS, &data->channels)))
+		goto cleanup;
+
+	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_SAMPLES_PER_SECOND, &data->sps)))
+		goto cleanup;
+
+	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_BITS_PER_SAMPLE, &data->bps)))
+		goto cleanup;
+
+	if (data->sps <= 0)
+		goto cleanup;
+
+	data->flags = SF_LE | SF_PCMS;
+
+	switch (data->channels) {
+	case 1: data->flags |= SF_M;
+	case 2: data->flags |= SF_SI;
+	default: goto cleanup;
 	}
 
-#define MEDIA_FOUNDATION_END() \
-	if (resolver) \
-		resolver->lpVtbl->Release(resolver); \
-\
-	if (unknown_media_source) \
-		unknown_media_source->lpVtbl->Release(unknown_media_source); \
-\
-	if (real_media_source) \
-		real_media_source->lpVtbl->Release(real_media_source); \
-\
-	if (reader) \
-		reader->lpVtbl->Release(reader); \
-\
-	if (byte_stream) \
-		byte_stream->lpVtbl->Release(byte_stream); \
-\
-	if (uncompressed_type) \
-		uncompressed_type->lpVtbl->Release(uncompressed_type);
-
-int fmt_win32mf_read_info(dmoz_file_t *file, slurp_t *fp)
-{
-	if (!media_foundation_initialized)
-		return 0;
-
-	int success = 0;
-
-	wchar_t *url = NULL;
-	if (!file->path || charset_iconv(file->path, (uint8_t **)&url, CHARSET_UTF8, CHARSET_WCHAR_T))
-		url = NULL;
-
-	MEDIA_FOUNDATION_START(fp->data, fp->length, url, cleanup)
-
-	file->smp_flags = flags;
-	file->smp_speed = sps;
-
-	convert_media_foundation_metadata(real_media_source, file);
-	get_source_reader_information(reader, file);
+	switch (data->bps) {
+	case 8: data->flags |= SF_8;
+	case 16: data->flags |= SF_16;
+	case 24: data->flags |= SF_24;
+	case 32: data->flags |= SF_32;
+	default: goto cleanup;
+	}
 
 	success = 1;
 
 cleanup:
-	MEDIA_FOUNDATION_END()
+	if (resolver)
+		resolver->lpVtbl->Release(resolver);
+
+	if (unknown_media_source)
+		unknown_media_source->lpVtbl->Release(unknown_media_source);
+
+	if (uncompressed_type)
+		uncompressed_type->lpVtbl->Release(uncompressed_type);
 
 	return success;
+}
+
+static void win32mf_end(struct win32mf_data *data)
+{
+	if (data->reader)
+		data->reader->lpVtbl->Release(data->reader);
+
+	if (data->source)
+		data->source->lpVtbl->Release(data->source);
+
+	if (data->byte_stream)
+		data->byte_stream->lpVtbl->Release(data->byte_stream);
+}
+
+int fmt_win32mf_read_info(dmoz_file_t *file, slurp_t *fp)
+{
+	struct win32mf_data data = {0};
+	wchar_t *url = NULL;
+
+	if (!media_foundation_initialized)
+		return 0;
+
+	if (!file->path || charset_iconv(file->path, (uint8_t **)&url, CHARSET_UTF8, CHARSET_WCHAR_T))
+		url = NULL;
+
+	if (!win32mf_start(&data, fp, url)) {
+		win32mf_end(&data);
+		return 0;
+	}
+
+	file->smp_flags = data.flags;
+	file->smp_speed = data.sps;
+
+	convert_media_foundation_metadata(data.source, file);
+	get_source_reader_information(data.reader, file);
+
+	win32mf_end(&data);
+
+	return 1;
 }
 
 enum {
@@ -952,43 +979,47 @@ cleanup:
 
 int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 {
+	struct win32mf_data data = {0};
+	uint8_t *uncompressed = NULL;
+	size_t uncompressed_size = 0;
+
 	if (!media_foundation_initialized)
 		return 0;
 
-	int success = 0;
-	uint8_t *uncompressed = NULL;
-	size_t uncompressed_size = 0, sample_length = 0;
-
-	MEDIA_FOUNDATION_START(fp->data, fp->length, NULL, cleanup)
+	if (!win32mf_start(&data, fp, url)) {
+		win32mf_end(&data);
+		return 0;
+	}
 
 	for (;;) {
-		int loop_success = reader_load_sample(reader, &uncompressed, &uncompressed_size);
-		if (loop_success == READER_LOAD_ERROR)
-			goto cleanup;
+		int loop_success = reader_load_sample(data.reader, &uncompressed, &uncompressed_size);
+		if (loop_success == READER_LOAD_ERROR) {
+			free(uncompressed);
+			win32mf_end(&data);
+			return 0;
+		}
 
 		if (loop_success == READER_LOAD_DONE)
 			break;
 
-		if (uncompressed_size / channels / (bps / 8) > MAX_SAMPLE_LENGTH)
-			break; /* punt */
+		if (uncompressed_size / data.channels / (data.bps / 8) > MAX_SAMPLE_LENGTH) {
+			free(uncompressed);
+			win32mf_end(&data);
+			return 0;
+		}
 	}
 
-	sample_length = uncompressed_size / channels / (bps / 8);
-	if (sample_length < 1 || sample_length > MAX_SAMPLE_LENGTH)
-		goto cleanup;
+	uint32_t sample_length = uncompressed_size / data.channels / (data.bps / 8);
+	if (sample_length < 1 || sample_length > MAX_SAMPLE_LENGTH) {
+		free(uncompressed);
+		win32mf_end(&data);
+		return 0;
+	}
 
 	smp->volume        = 64 * 4;
 	smp->global_volume = 64;
 	smp->c5speed       = sps;
 	smp->length        = sample_length;
 
-	success = csf_read_sample(smp, flags, uncompressed, uncompressed_size);
-
-cleanup:
-	MEDIA_FOUNDATION_END()
-
-	if (uncompressed)
-		free(uncompressed);
-
-	return success;
+	return csf_read_sample(smp, flags, uncompressed, uncompressed_size);
 }
