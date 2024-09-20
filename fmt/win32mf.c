@@ -199,7 +199,7 @@ static HRESULT STDMETHODCALLTYPE slurp_async_callback_Invoke(IMFAsyncCallback *T
 	if (FAILED(hr))
 		goto done;
 
-	hr = pState->lpVtbl->QueryInterface(pState, &IID_IMFAsyncResult, &caller);
+	hr = pState->lpVtbl->QueryInterface(pState, &IID_IMFAsyncResult, (void **)&caller);
 	if (FAILED(hr))
 		goto done;
 
