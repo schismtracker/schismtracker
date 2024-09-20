@@ -32,6 +32,9 @@
 #include "fmt.h"
 #include "util.h"
 
+/* we want constant vtables */
+#define CONST_VTABLE
+
 #include <mfapi.h>
 #include <mfidl.h>
 #include <mfreadwrite.h>
@@ -223,7 +226,7 @@ static const IMFAsyncCallbackVtbl slurp_async_callback_vtbl = {
 	.AddRef = slurp_async_callback_AddRef,
 	.Release = slurp_async_callback_Release,
 
-	/* IMFASyncCallback */
+	/* IMFAsyncCallback */
 	.GetParameters = slurp_async_callback_GetParameters,
 	.Invoke = slurp_async_callback_Invoke,
 };
@@ -364,20 +367,20 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_Read(IMFByteStream *This, BYTE *pb
 static HRESULT STDMETHODCALLTYPE mfbytestream_BeginRead(IMFByteStream *This, BYTE *pb, ULONG cb, IMFAsyncCallback *pCallback, IUnknown *punkState)
 {
 	IUnknown *op = NULL;
-	IMFASyncCallback* cb = NULL;
+	IMFAsyncCallback* callback = NULL;
 	IMFAsyncResult *result = NULL;
 	HRESULT hr = S_OK;
 
-	if (!slurp_async_callback_new(&cb))
+	if (!slurp_async_callback_new(&callback))
 		return E_OUTOFMEMORY;
 
-	if (!slurp_async_op_new(&op, This, cb, pb, cb))
+	if (!slurp_async_op_new(&op, This, callback, pb, cb))
 		return E_OUTOFMEMORY;
 
 	if (FAILED(hr = MFCreateAsyncResult(op, pCallback, punkState, &result)))
 		goto fail;
 
-	hr = MFPutWorkItem(MFASYNC_CALLBACK_QUEUE_STANDARD, cb, result);
+	hr = MFPutWorkItem(MFASYNC_CALLBACK_QUEUE_STANDARD, callback, (IUnknown *)result);
 
 fail:
 	if (result)
@@ -390,7 +393,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_EndRead(IMFByteStream *This, IMFAs
 {
 	*pcbRead = 0;
 
-	struct async_slurp_op *op = NULL;
+	struct slurp_async_op *op = NULL;
 	IUnknown *unk = NULL;
 
 	HRESULT hr = pResult->lpVtbl->GetStatus(pResult);
@@ -401,7 +404,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_EndRead(IMFByteStream *This, IMFAs
 	if (FAILED(hr))
 		goto done;
 
-	op = (struct async_slurp_op *)unk;
+	op = (struct slurp_async_op *)unk;
 
 	*pcbRead = op->actual_length;
 
@@ -525,7 +528,7 @@ static const char* get_media_type_description(IMFMediaType* media_type)
 	static const struct {
 		const GUID *guid;
 		const char *description;
-	} guids = {
+	} guids[] = {
 		{&MFAudioFormat_AAC, "Advanced Audio Coding"},
 		// {&MFAudioFormat_ADTS, "Not used"},
 		{&MFAudioFormat_ALAC, "Apple Lossless Audio Codec"},
@@ -881,7 +884,7 @@ int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 	if (!media_foundation_initialized)
 		return 0;
 
-	if (!win32mf_start(&data, fp, url)) {
+	if (!win32mf_start(&data, fp, NULL)) {
 		win32mf_end(&data);
 		return 0;
 	}
@@ -913,10 +916,10 @@ int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 
 	smp->volume        = 64 * 4;
 	smp->global_volume = 64;
-	smp->c5speed       = sps;
+	smp->c5speed       = data.sps;
 	smp->length        = sample_length;
 
-	return csf_read_sample(smp, flags, uncompressed, uncompressed_size);
+	return csf_read_sample(smp, data.flags, uncompressed, uncompressed_size);
 }
 
 /* ----------------------------------------------------------- */
@@ -945,7 +948,7 @@ int win32mf_init(void)
 
 #define LOAD_MF_OBJECT(o, x) \
 	do { \
-		MF_##x = (MF_##x##Spec)GetProcAddress(o, #x); \
+		MF_##x = (MF_##x##Spec)GetProcAddress(lib_ ## o, #x); \
 		if (!MF_##x) { DEBUG_PUTS("Failed to load " #x " from library " #o ".dll !"); goto fail; } \
 	} while (0)
 
