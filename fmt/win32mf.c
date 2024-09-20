@@ -392,12 +392,12 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_ReadAtPosition(IMFByteStream *This
 		goto done;
 	}
 
-	slurp_seek(fp, pos, SEEK_SET);
+	slurp_seek(mfb->fp, pos, SEEK_SET);
 
-	*pcbRead = slurp_read(fp, pb, cb);
+	*pcbRead = slurp_read(mfb->fp, pb, cb);
 
 	/* seek back to the old position */
-	slurp_seek(fp, old_pos, SEEK_SET);
+	slurp_seek(mfb->fp, old_pos, SEEK_SET);
 
 done:
 	SDL_UnlockMutex(mfb->mutex);
