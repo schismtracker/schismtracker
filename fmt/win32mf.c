@@ -44,17 +44,17 @@
 
 /* Dynamically loaded Media Foundation functions, to keep Schism working with Windows XP */
 
-typedef HRESULT WINAPI (*MF_MFStartupSpec)(ULONG version, DWORD flags);
-typedef HRESULT WINAPI (*MF_MFShutdownSpec)(void);
-typedef HRESULT WINAPI (*MF_MFCreateSourceResolverSpec)(IMFSourceResolver **ppISourceResolver);
-typedef HRESULT WINAPI (*MF_MFGetServiceSpec)(IUnknown *punkObject, REFGUID guidService, REFIID riid, LPVOID *ppvObject);
-typedef HRESULT WINAPI (*MF_PropVariantToStringAllocSpec)(REFPROPVARIANT propvar, PWSTR *ppszOut);
-typedef HRESULT WINAPI (*MF_PropVariantToUInt64Spec)(REFPROPVARIANT propvar, ULONGLONG *pullRet);
-typedef HRESULT WINAPI (*MF_MFCreateSourceReaderFromMediaSourceSpec)(IMFMediaSource *pMediaSource, IMFAttributes *pAttributes, IMFSourceReader **ppSourceReader);
-typedef HRESULT WINAPI (*MF_MFCreateMediaTypeSpec)(IMFMediaType **ppMFType);
-typedef HRESULT WINAPI (*MF_MFCreateAsyncResultSpec)(IUnknown *punkObject, IMFAsyncCallback *pCallback, IUnknown *punkState, IMFAsyncResult **ppAsyncResult);
-typedef HRESULT WINAPI (*MF_MFPutWorkItemSpec)(DWORD dwQueue, IMFAsyncCallback *pCallback, IUnknown *pState);
-typedef HRESULT WINAPI (*MF_MFInvokeCallbackSpec)(IMFAsyncResult *pAsyncResult);
+typedef HRESULT (WINAPI *MF_MFStartupSpec)(ULONG version, DWORD flags);
+typedef HRESULT (WINAPI *MF_MFShutdownSpec)(void);
+typedef HRESULT (WINAPI *MF_MFCreateSourceResolverSpec)(IMFSourceResolver **ppISourceResolver);
+typedef HRESULT (WINAPI *MF_MFGetServiceSpec)(IUnknown *punkObject, REFGUID guidService, REFIID riid, LPVOID *ppvObject);
+typedef HRESULT (WINAPI *MF_PropVariantToStringAllocSpec)(REFPROPVARIANT propvar, PWSTR *ppszOut);
+typedef HRESULT (WINAPI *MF_PropVariantToUInt64Spec)(REFPROPVARIANT propvar, ULONGLONG *pullRet);
+typedef HRESULT (WINAPI *MF_MFCreateSourceReaderFromMediaSourceSpec)(IMFMediaSource *pMediaSource, IMFAttributes *pAttributes, IMFSourceReader **ppSourceReader);
+typedef HRESULT (WINAPI *MF_MFCreateMediaTypeSpec)(IMFMediaType **ppMFType);
+typedef HRESULT (WINAPI *MF_MFCreateAsyncResultSpec)(IUnknown *punkObject, IMFAsyncCallback *pCallback, IUnknown *punkState, IMFAsyncResult **ppAsyncResult);
+typedef HRESULT (WINAPI *MF_MFPutWorkItemSpec)(DWORD dwQueue, IMFAsyncCallback *pCallback, IUnknown *pState);
+typedef HRESULT (WINAPI *MF_MFInvokeCallbackSpec)(IMFAsyncResult *pAsyncResult);
 
 static MF_MFStartupSpec MF_MFStartup;
 static MF_MFShutdownSpec MF_MFShutdown;
@@ -747,6 +747,8 @@ static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 	if (FAILED(MF_MFCreateSourceReaderFromMediaSource(data->source, NULL, &data->reader)))
 		goto cleanup;
 
+	puts("found source reader");
+
 	if (FAILED(MF_MFCreateMediaType(&uncompressed_type)))
 		goto cleanup;
 
@@ -767,6 +769,8 @@ static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 	if (FAILED(data->reader->lpVtbl->SetStreamSelection(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, TRUE)))
 		goto cleanup;
 
+	puts("have audio stream");
+
 	/* get output audio track data */
 	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_NUM_CHANNELS, &data->channels)))
 		goto cleanup;
@@ -777,22 +781,24 @@ static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_BITS_PER_SAMPLE, &data->bps)))
 		goto cleanup;
 
+	printf("channels: %" PRIu32 ", sps: %" PRIu32 ", bps: %" PRIu32 "\n", data->channels, data->sps, data->bps);
+
 	if (data->sps <= 0)
 		goto cleanup;
 
 	data->flags = SF_LE | SF_PCMS;
 
 	switch (data->channels) {
-	case 1: data->flags |= SF_M;
-	case 2: data->flags |= SF_SI;
+	case 1:  data->flags |= SF_M;  break;
+	case 2:  data->flags |= SF_SI; break;
 	default: goto cleanup;
 	}
 
 	switch (data->bps) {
-	case 8: data->flags |= SF_8;
-	case 16: data->flags |= SF_16;
-	case 24: data->flags |= SF_24;
-	case 32: data->flags |= SF_32;
+	case 8:  data->flags |= SF_8;  break;
+	case 16: data->flags |= SF_16; break;
+	case 24: data->flags |= SF_24; break;
+	case 32: data->flags |= SF_32; break;
 	default: goto cleanup;
 	}
 
@@ -945,14 +951,14 @@ int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 		if (loop_success == READER_LOAD_DONE)
 			break;
 
-		if (uncompressed_size / data.channels / (data.bps / 8) > MAX_SAMPLE_LENGTH) {
+		if (uncompressed_size / data.channels / (data.bps <= 8 ? 1 : 2) > MAX_SAMPLE_LENGTH) {
 			free(uncompressed);
 			win32mf_end(&data);
 			return 0;
 		}
 	}
 
-	uint32_t sample_length = uncompressed_size / data.channels / (data.bps / 8);
+	uint32_t sample_length = uncompressed_size / data.channels / (data.bps <= 8 ? 1 : 2);
 	if (sample_length < 1 || sample_length > MAX_SAMPLE_LENGTH) {
 		free(uncompressed);
 		win32mf_end(&data);
