@@ -27,6 +27,7 @@
 #define _WIN32_WINNT 0x1000
 
 #include "headers.h"
+#include "sdlmain.h"
 #include "charset.h"
 #include "fmt.h"
 #include "util.h"
@@ -46,10 +47,7 @@ typedef HRESULT WINAPI (*MF_MFGetServiceSpec)(IUnknown *punkObject, REFGUID guid
 typedef HRESULT WINAPI (*MF_PropVariantToStringAllocSpec)(REFPROPVARIANT propvar, PWSTR *ppszOut);
 typedef HRESULT WINAPI (*MF_PropVariantToUInt64Spec)(REFPROPVARIANT propvar, ULONGLONG *pullRet);
 typedef HRESULT WINAPI (*MF_MFCreateSourceReaderFromMediaSourceSpec)(IMFMediaSource *pMediaSource, IMFAttributes *pAttributes, IMFSourceReader **ppSourceReader);
-typedef HRESULT WINAPI (*MF_MFCreateMFByteStreamOnStreamSpec)(IStream *pStream, IMFByteStream **ppByteStream);
 typedef HRESULT WINAPI (*MF_MFCreateMediaTypeSpec)(IMFMediaType **ppMFType);
-
-typedef IStream * WINAPI (*MF_SHCreateMemStreamSpec)(const BYTE *pInit, UINT cbInit);
 
 static MF_MFStartupSpec MF_MFStartup;
 static MF_MFShutdownSpec MF_MFShutdown;
@@ -58,10 +56,9 @@ static MF_MFGetServiceSpec MF_MFGetService;
 static MF_PropVariantToStringAllocSpec MF_PropVariantToStringAlloc;
 static MF_PropVariantToUInt64Spec MF_PropVariantToUInt64;
 static MF_MFCreateSourceReaderFromMediaSourceSpec MF_MFCreateSourceReaderFromMediaSource;
-static MF_MFCreateMFByteStreamOnStreamSpec MF_MFCreateMFByteStreamOnStream;
 static MF_MFCreateMediaTypeSpec MF_MFCreateMediaType;
 
-static MF_SHCreateMemStreamSpec MF_SHCreateMemStream;
+static int media_foundation_initialized = 0;
 
 /* --------------------------------------------------------------------- */
 /* this is what C++ nonsense looks like in plain C, btw. this api is
@@ -206,16 +203,13 @@ static HRESULT STDMETHODCALLTYPE slurp_async_callback_Invoke(IMFAsyncCallback *T
 	hr = op->bs->lpVtbl->Read(op->bs, op->buffer, op->req_length, &op->actual_length);
 
 done:
-	if (op->caller) {
-		op->caller->lpVtbl->SetStatus(op->caller, hr);
-		MFInvokeCallback(op->caller);
+	if (caller) {
+		caller->lpVtbl->SetStatus(caller, hr);
+		MFInvokeCallback(caller);
 	}
 
 	if (pState)
 		pState->lpVtbl->Release(pState);
-
-	if (caller)
-		caller->lpVtbl->Release(caller);
 
 	if (pUnk)
 		pUnk->lpVtbl->Release(pUnk);
@@ -223,7 +217,7 @@ done:
 	return S_OK;
 }
 
-static const IMFASyncCallbackVtbl slurp_async_callback_vtbl = {
+static const IMFAsyncCallbackVtbl slurp_async_callback_vtbl = {
 	/* IUnknown */
 	.QueryInterface = slurp_async_callback_QueryInterface,
 	.AddRef = slurp_async_callback_AddRef,
@@ -313,7 +307,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_SetLength(IMFByteStream *This, QWO
 
 static HRESULT STDMETHODCALLTYPE mfbytestream_SetCurrentPosition(IMFByteStream *This, QWORD qwPosition)
 {
-	struct mfbytestream *mfb = (struct mfbytestream *)this;
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
 
 	SDL_LockMutex(mfb->mutex);
 
@@ -326,7 +320,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_SetCurrentPosition(IMFByteStream *
 
 static HRESULT STDMETHODCALLTYPE mfbytestream_GetCurrentPosition(IMFByteStream *This, QWORD *pqwPosition)
 {
-	struct mfbytestream *mfb = (struct mfbytestream *)this;
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
 
 	SDL_LockMutex(mfb->mutex);
 
@@ -343,7 +337,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_GetCurrentPosition(IMFByteStream *
 
 static HRESULT STDMETHODCALLTYPE mfbytestream_IsEndOfStream(IMFByteStream *This, WINBOOL *pfEndOfStream)
 {
-	struct mfbytestream *mfb = (struct mfbytestream *)this;
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
 
 	SDL_LockMutex(mfb->mutex);
 
@@ -356,7 +350,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_IsEndOfStream(IMFByteStream *This,
 
 static HRESULT STDMETHODCALLTYPE mfbytestream_Read(IMFByteStream *This, BYTE *pb, ULONG cb, ULONG *pcbRead)
 {
-	struct mfbytestream *mfb = (struct mfbytestream *)this;
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
 
 	SDL_LockMutex(mfb->mutex);
 
@@ -386,9 +380,6 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_BeginRead(IMFByteStream *This, BYT
 	hr = MFPutWorkItem(MFASYNC_CALLBACK_QUEUE_STANDARD, cb, result);
 
 fail:
-	if (cb)
-		cb->lpVtbl->Release(cb);
-
 	if (result)
 		result->lpVtbl->Release(result);
 
@@ -417,7 +408,8 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_EndRead(IMFByteStream *This, IMFAs
 done:
 	if (op) {
 		/* need to deal with this crap */
-		op->cb->lpvtbl->Release(op->cb);
+		if (op->cb)
+			op->cb->lpvtbl->Release(op->cb);
 		op->lpvtbl->Release(op);
 	}
 
@@ -599,9 +591,9 @@ static int get_source_reader_information(IMFSourceReader *reader, dmoz_file_t *f
 
 static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t* file)
 {
-	IMFPresentationDescriptor* descriptor = NULL;
-	IMFMetadataProvider* provider = NULL;
-	IMFMetadata* metadata = NULL;
+	IMFPresentationDescriptor *descriptor = NULL;
+	IMFMetadataProvider *provider = NULL;
+	IMFMetadata *metadata = NULL;
 	PROPVARIANT propnames = {0};
 	DWORD streams = 0;
 	int found = 0;
@@ -669,104 +661,7 @@ cleanup:
 	return found;
 }
 
-static int media_foundation_initialized = 0;
-
-/* needs to be called once on startup */
-int win32mf_init(void)
-{
-	HMODULE shlwapi = NULL;
-	HMODULE mf = NULL;
-	HMODULE mfplat = NULL;
-	HMODULE mfreadwrite = NULL;
-	HMODULE propsys = NULL;
-
-#ifdef SCHISM_MF_DEBUG
-#define DEBUG_PUTS(x) puts(x)
-#else
-#define DEBUG_PUTS(x)
-#endif
-
-#define LOAD_MF_LIBRARY(o) \
-	do { \
-		o = LoadLibraryW(L ## #o L".dll"); \
-		if (!(o)) { DEBUG_PUTS("Failed to load library " #o "!"); goto fail; } \
-	} while (0)
-
-#define LOAD_MF_OBJECT(o, x) \
-	do { \
-		MF_##x = (MF_##x##Spec)GetProcAddress(o, #x); \
-		if (!MF_##x) { DEBUG_PUTS("Failed to load " #x " from library " #o ".dll !"); goto fail; } \
-	} while (0)
-
-	HRESULT com_init = CoInitializeEx(NULL, COM_INITFLAGS);
-	if (com_init != S_OK && com_init != S_FALSE && com_init != RPC_E_CHANGED_MODE) {
-		DEBUG_PUTS("Failed to initialize COM!");
-		goto fail;
-	}
-
-	LOAD_MF_LIBRARY(shlwapi);
-
-	MF_SHCreateMemStream = (MF_SHCreateMemStreamSpec)GetProcAddress(shlwapi, MAKEINTRESOURCE(12));
-	if (!MF_SHCreateMemStream) {
-		DEBUG_PUTS("Failed to load SHCreateMemStream from library shlwapi.dll!");
-		goto fail;
-	}
-
-	LOAD_MF_LIBRARY(mf);
-
-	LOAD_MF_OBJECT(mf, MFGetService);
-	LOAD_MF_OBJECT(mf, MFCreateSourceResolver);
-
-	LOAD_MF_LIBRARY(mfplat);
-
-	LOAD_MF_OBJECT(mfplat, MFCreateMFByteStreamOnStream);
-	LOAD_MF_OBJECT(mfplat, MFCreateMediaType);
-	LOAD_MF_OBJECT(mfplat, MFStartup);
-	LOAD_MF_OBJECT(mfplat, MFShutdown);
-
-	LOAD_MF_LIBRARY(mfreadwrite);
-
-	LOAD_MF_OBJECT(mfreadwrite, MFCreateSourceReaderFromMediaSource);
-
-	LOAD_MF_LIBRARY(propsys);
-
-	LOAD_MF_OBJECT(propsys, PropVariantToStringAlloc);
-	LOAD_MF_OBJECT(propsys, PropVariantToUInt64);
-
-	/* MFSTARTUP_LITE == no sockets */
-	media_foundation_initialized = SUCCEEDED(MF_MFStartup(MF_VERSION, MFSTARTUP_LITE));
-
-	return media_foundation_initialized;
-
-fail:
-	if (shlwapi)
-		FreeLibrary(shlwapi);
-
-	if (mfplat)
-		FreeLibrary(mfplat);
-
-	if (mf)
-		FreeLibrary(mf);
-
-	if (mfreadwrite)
-		FreeLibrary(mfreadwrite);
-
-	if (propsys)
-		FreeLibrary(propsys);
-
-	CoUninitialize();
-
-	return 0;
-}
-
-void win32mf_quit(void)
-{
-	if (!media_foundation_initialized)
-		return;
-
-	MF_MFShutdown();
-	CoUninitialize();
-}
+/* ---------------------------------------------------------------- */
 
 struct win32mf_data {
 	/* wew */
@@ -1022,4 +917,108 @@ int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 	smp->length        = sample_length;
 
 	return csf_read_sample(smp, flags, uncompressed, uncompressed_size);
+}
+
+/* ----------------------------------------------------------- */
+
+static HMODULE lib_shlwapi = NULL;
+static HMODULE lib_mf = NULL;
+static HMODULE lib_mfplat = NULL;
+static HMODULE lib_mfreadwrite = NULL;
+static HMODULE lib_propsys = NULL;
+
+/* needs to be called once on startup */
+int win32mf_init(void)
+{
+
+#ifdef SCHISM_MF_DEBUG
+#define DEBUG_PUTS(x) puts(x)
+#else
+#define DEBUG_PUTS(x)
+#endif
+
+#define LOAD_MF_LIBRARY(o) \
+	do { \
+		lib_ ## o = LoadLibraryW(L ## #o L".dll"); \
+		if (!(lib_ ## o)) { DEBUG_PUTS("Failed to load library " #o "!"); goto fail; } \
+	} while (0)
+
+#define LOAD_MF_OBJECT(o, x) \
+	do { \
+		MF_##x = (MF_##x##Spec)GetProcAddress(o, #x); \
+		if (!MF_##x) { DEBUG_PUTS("Failed to load " #x " from library " #o ".dll !"); goto fail; } \
+	} while (0)
+
+	HRESULT com_init = CoInitializeEx(NULL, COM_INITFLAGS);
+	if (com_init != S_OK && com_init != S_FALSE && com_init != RPC_E_CHANGED_MODE) {
+		DEBUG_PUTS("Failed to initialize COM!");
+		goto fail;
+	}
+
+	LOAD_MF_LIBRARY(mf);
+
+	LOAD_MF_OBJECT(mf, MFGetService);
+	LOAD_MF_OBJECT(mf, MFCreateSourceResolver);
+
+	LOAD_MF_LIBRARY(mfplat);
+
+	LOAD_MF_OBJECT(mfplat, MFCreateMediaType);
+	LOAD_MF_OBJECT(mfplat, MFStartup);
+	LOAD_MF_OBJECT(mfplat, MFShutdown);
+
+	LOAD_MF_LIBRARY(mfreadwrite);
+
+	LOAD_MF_OBJECT(mfreadwrite, MFCreateSourceReaderFromMediaSource);
+
+	LOAD_MF_LIBRARY(propsys);
+
+	LOAD_MF_OBJECT(propsys, PropVariantToStringAlloc);
+	LOAD_MF_OBJECT(propsys, PropVariantToUInt64);
+
+	/* MFSTARTUP_LITE == no sockets */
+	return (media_foundation_initialized = SUCCEEDED(MF_MFStartup(MF_VERSION, MFSTARTUP_LITE)));
+
+fail:
+	if (lib_shlwapi)
+		FreeLibrary(lib_shlwapi);
+
+	if (lib_mfplat)
+		FreeLibrary(lib_mfplat);
+
+	if (lib_mf)
+		FreeLibrary(lib_mf);
+
+	if (lib_mfreadwrite)
+		FreeLibrary(lib_mfreadwrite);
+
+	if (lib_propsys)
+		FreeLibrary(lib_propsys);
+
+	CoUninitialize();
+
+	return 0;
+}
+
+void win32mf_quit(void)
+{
+	if (!media_foundation_initialized)
+		return;
+
+	if (lib_shlwapi)
+		FreeLibrary(lib_shlwapi);
+
+	if (lib_mfplat)
+		FreeLibrary(lib_mfplat);
+
+	if (lib_mf)
+		FreeLibrary(lib_mf);
+
+	if (lib_mfreadwrite)
+		FreeLibrary(lib_mfreadwrite);
+
+	if (lib_propsys)
+		FreeLibrary(lib_propsys);
+
+	MF_MFShutdown();
+	CoUninitialize();
 }
