@@ -70,6 +70,9 @@ static MF_MFInvokeCallbackSpec MF_MFInvokeCallback;
 
 static int media_foundation_initialized = 0;
 
+/* forward declare this */
+static HRESULT STDMETHODCALLTYPE mfbytestream_ReadAtPosition(IMFByteStream *This, BYTE *pb, ULONG cb, ULONG *pcbRead, int64_t pos);
+
 /* --------------------------------------------------------------------- */
 /* this is what C++ nonsense looks like in plain C, btw. this api is
  * absolutely diabolical and I yearn to just use function pointers again */
@@ -79,15 +82,14 @@ struct slurp_async_op {
 	CONST_VTBL IUnknownVtbl *lpvtbl;
 
 	/* things we have to free, or whatever */
-	IMFByteStream *bs;
 	IMFAsyncCallback *cb;
+	IMFByteStream *bs;
 
-	/* agh */
+	/* stuff */
 	BYTE *buffer;
 	ULONG req_length;
 	ULONG actual_length;
-
-	//int64_t pos; TODO
+	int64_t pos;
 
 	long ref_cnt;
 };
@@ -122,7 +124,7 @@ static const IUnknownVtbl slurp_async_op_vtbl = {
 	.Release = slurp_async_op_Release,
 };
 
-static inline int slurp_async_op_new(IUnknown **This, IMFByteStream *bs, IMFAsyncCallback *cb, BYTE *buffer, ULONG req_length)
+static inline int slurp_async_op_new(IUnknown **This, IMFByteStream *bs, IMFAsyncCallback *cb, BYTE *buffer, ULONG req_length, int64_t pos)
 {
 	struct slurp_async_op *op = calloc(1, sizeof(struct slurp_async_op));
 	if (!op)
@@ -135,6 +137,7 @@ static inline int slurp_async_op_new(IUnknown **This, IMFByteStream *bs, IMFAsyn
 	op->cb = cb;
 	op->buffer = buffer;
 	op->req_length = req_length;
+	op->pos = pos;
 
 	/* hmph */
 	op->ref_cnt = 1;
@@ -210,7 +213,7 @@ static HRESULT STDMETHODCALLTYPE slurp_async_callback_Invoke(IMFAsyncCallback *T
 	op = (struct slurp_async_op *)pUnk;
 
 	/* now we can actually do the work */
-	hr = op->bs->lpVtbl->Read(op->bs, op->buffer, op->req_length, &op->actual_length);
+	hr = mfbytestream_ReadAtPosition(op->bs, op->buffer, op->req_length, &op->actual_length, op->pos);
 
 done:
 	if (caller) {
@@ -371,17 +374,55 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_Read(IMFByteStream *This, BYTE *pb
 	return S_OK;
 }
 
+/* this is only used internally */
+static HRESULT STDMETHODCALLTYPE mfbytestream_ReadAtPosition(IMFByteStream *This, BYTE *pb, ULONG cb, ULONG *pcbRead, int64_t pos)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
+	HRESULT hr = S_OK;
+
+	*pcbRead = 0;
+
+	SDL_LockMutex(mfb->mutex);
+
+	/* cache the old position */
+	int64_t old_pos = slurp_tell(mfb->fp);
+	if (old_pos < 0) {
+		/* what ? */
+		hr = E_FAIL;
+		goto done;
+	}
+
+	slurp_seek(fp, pos, SEEK_SET);
+
+	*pcbRead = slurp_read(fp, pb, cb);
+
+	/* seek back to the old position */
+	slurp_seek(fp, old_pos, SEEK_SET);
+
+done:
+	SDL_UnlockMutex(mfb->mutex);
+
+	return hr;
+}
+
 static HRESULT STDMETHODCALLTYPE mfbytestream_BeginRead(IMFByteStream *This, BYTE *pb, ULONG cb, IMFAsyncCallback *pCallback, IUnknown *punkState)
 {
 	IUnknown *op = NULL;
 	IMFAsyncCallback* callback = NULL;
 	IMFAsyncResult *result = NULL;
+	QWORD pos;
 	HRESULT hr = S_OK;
+
+	if (FAILED(hr = mfbytestream_GetCurrentPosition(This, &pos)))
+		return hr;
+
+	if (FAILED(hr = mfbytestream_SetCurrentPosition(This, pos + cb)))
+		return hr;
 
 	if (!slurp_async_callback_new(&callback))
 		return E_OUTOFMEMORY;
 
-	if (!slurp_async_op_new(&op, This, callback, pb, cb))
+	if (!slurp_async_op_new(&op, This, callback, pb, cb, pos))
 		return E_OUTOFMEMORY;
 
 	if (FAILED(hr = MF_MFCreateAsyncResult(op, pCallback, punkState, &result)))
