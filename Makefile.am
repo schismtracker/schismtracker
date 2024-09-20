@@ -199,7 +199,7 @@ lib_win32=-lwinmm
 
 if USE_MEDIAFOUNDATION
 files_mediafoundation=fmt/win32mf.c
-lib_mediafoundation=-lole32 -lmfuuid
+lib_mediafoundation=-lole32 -lmfuuid -lshlwapi
 endif
 
 if HAVE_WINDRES

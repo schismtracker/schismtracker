@@ -39,6 +39,7 @@
 #include <mfidl.h>
 #include <mfreadwrite.h>
 #include <mferror.h>
+#include <shlwapi.h>
 #include <propvarutil.h>
 
 /* Dynamically loaded Media Foundation functions, to keep Schism working with Windows XP */
