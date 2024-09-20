@@ -394,17 +394,14 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_EndRead(IMFByteStream *This, IMFAs
 	*pcbRead = 0;
 
 	struct slurp_async_op *op = NULL;
-	IUnknown *unk = NULL;
 
 	HRESULT hr = pResult->lpVtbl->GetStatus(pResult);
 	if (FAILED(hr))
 		goto done;
 
-	hr = pResult->lpVtbl->GetObject(pResult, &unk);
+	hr = pResult->lpVtbl->GetObject(pResult, (IUnknown **)&op);
 	if (FAILED(hr))
 		goto done;
-
-	op = (struct slurp_async_op *)unk;
 
 	*pcbRead = op->actual_length;
 
@@ -412,8 +409,8 @@ done:
 	if (op) {
 		/* need to deal with this crap */
 		if (op->cb)
-			op->cb->lpvtbl->Release(op->cb);
-		op->lpvtbl->Release(op);
+			op->cb->lpVtbl->Release(op->cb);
+		op->lpvtbl->Release((IUnknown *)op);
 	}
 
 	return hr;
@@ -436,7 +433,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_EndWrite(IMFByteStream *This, IMFA
 
 static HRESULT STDMETHODCALLTYPE mfbytestream_Seek(IMFByteStream *This, MFBYTESTREAM_SEEK_ORIGIN SeekOrigin, LONGLONG llSeekOffset, DWORD dwSeekFlags, QWORD *pqwCurrentPosition)
 {
-	struct mfbytestream *mfb = (struct mfbytestream *)this;
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
 	int whence;
 
 	switch (SeekOrigin) {
@@ -502,7 +499,7 @@ static inline int mfbytestream_new(IMFByteStream **imf, slurp_t *fp)
 		return 0;
 
 	/* put in the vtable */
-	mfb->lpvtbl = mfbytestream_vtbl;
+	mfb->lpvtbl = &mfbytestream_vtbl;
 
 	/* whatever */
 	mfb->fp = fp;
