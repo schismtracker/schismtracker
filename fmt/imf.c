@@ -37,7 +37,7 @@ int fmt_imf_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	slurp_seek(fp, 60, SEEK_SET);
 	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
-		|| memcmp(magic, "IM10", sizeof(title)))
+		|| memcmp(magic, "IM10", sizeof(magic)))
 		return 0;
 
 	slurp_seek(fp, 0, SEEK_SET);
