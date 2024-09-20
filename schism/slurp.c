@@ -73,8 +73,6 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
 	if (!size)
 		size = (buf ? buf->st_size : file_size(filename));
 
-	printf("%s, %zu\n", filename, size);
-
 #ifdef SCHISM_WIN32
 	switch (slurp_win32(t, filename, size)) {
 	case SLURP_OPEN_FAIL:
