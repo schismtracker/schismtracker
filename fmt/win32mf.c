@@ -52,6 +52,9 @@ typedef HRESULT WINAPI (*MF_PropVariantToStringAllocSpec)(REFPROPVARIANT propvar
 typedef HRESULT WINAPI (*MF_PropVariantToUInt64Spec)(REFPROPVARIANT propvar, ULONGLONG *pullRet);
 typedef HRESULT WINAPI (*MF_MFCreateSourceReaderFromMediaSourceSpec)(IMFMediaSource *pMediaSource, IMFAttributes *pAttributes, IMFSourceReader **ppSourceReader);
 typedef HRESULT WINAPI (*MF_MFCreateMediaTypeSpec)(IMFMediaType **ppMFType);
+typedef HRESULT WINAPI (*MF_MFCreateAsyncResultSpec)(IUnknown *punkObject, IMFAsyncCallback *pCallback, IUnknown *punkState, IMFAsyncResult **ppAsyncResult);
+typedef HRESULT WINAPI (*MF_MFPutWorkItemSpec)(DWORD dwQueue, IMFAsyncCallback *pCallback, IUnknown *pState);
+typedef HRESULT WINAPI (*MF_MFInvokeCallbackSpec)(IMFAsyncResult *pAsyncResult);
 
 static MF_MFStartupSpec MF_MFStartup;
 static MF_MFShutdownSpec MF_MFShutdown;
@@ -61,6 +64,9 @@ static MF_PropVariantToStringAllocSpec MF_PropVariantToStringAlloc;
 static MF_PropVariantToUInt64Spec MF_PropVariantToUInt64;
 static MF_MFCreateSourceReaderFromMediaSourceSpec MF_MFCreateSourceReaderFromMediaSource;
 static MF_MFCreateMediaTypeSpec MF_MFCreateMediaType;
+static MF_MFCreateAsyncResultSpec MF_MFCreateAsyncResult;
+static MF_MFPutWorkItemSpec MF_MFPutWorkItem;
+static MF_MFInvokeCallbackSpec MF_MFInvokeCallback;
 
 static int media_foundation_initialized = 0;
 
@@ -209,7 +215,7 @@ static HRESULT STDMETHODCALLTYPE slurp_async_callback_Invoke(IMFAsyncCallback *T
 done:
 	if (caller) {
 		caller->lpVtbl->SetStatus(caller, hr);
-		MFInvokeCallback(caller);
+		MF_MFInvokeCallback(caller);
 	}
 
 	if (pState)
@@ -378,10 +384,10 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_BeginRead(IMFByteStream *This, BYT
 	if (!slurp_async_op_new(&op, This, callback, pb, cb))
 		return E_OUTOFMEMORY;
 
-	if (FAILED(hr = MFCreateAsyncResult(op, pCallback, punkState, &result)))
+	if (FAILED(hr = MF_MFCreateAsyncResult(op, pCallback, punkState, &result)))
 		goto fail;
 
-	hr = MFPutWorkItem(MFASYNC_CALLBACK_QUEUE_STANDARD, callback, (IUnknown *)result);
+	hr = MF_MFPutWorkItem(MFASYNC_CALLBACK_QUEUE_STANDARD, callback, (IUnknown *)result);
 
 fail:
 	if (result)
@@ -966,6 +972,9 @@ int win32mf_init(void)
 	LOAD_MF_OBJECT(mfplat, MFCreateMediaType);
 	LOAD_MF_OBJECT(mfplat, MFStartup);
 	LOAD_MF_OBJECT(mfplat, MFShutdown);
+	LOAD_MF_OBJECT(mfplat, MFCreateAsyncResult);
+	LOAD_MF_OBJECT(mfplat, MFPutWorkItem);
+	LOAD_MF_OBJECT(mfplat, MFInvokeCallback);
 
 	LOAD_MF_LIBRARY(mfreadwrite);
 
