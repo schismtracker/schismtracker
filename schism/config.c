@@ -136,12 +136,10 @@ void cfg_init_dir(void)
 static const char palette_trans[64] = ".0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 static void cfg_load_palette(cfg_file_t *cfg)
 {
-	char palette_text[49] = "";
-	cfg_get_string(cfg, "General", "palette_cur", palette_text, 48, "");
+	const char *palette_text = cfg_get_string(cfg, "General", "palette_cur", NULL, 0, NULL);
 
-	if(palette_text[0]) {
+	if (palette_text && strlen(palette_text) >= 48)
 		set_palette_from_string(palette_text);
-	}
 
 	palette_load_preset(cfg_get_number(cfg, "General", "palette", 2));
 }
@@ -150,11 +148,9 @@ static void cfg_save_palette(cfg_file_t *cfg)
 {
 	cfg_set_number(cfg, "General", "palette", current_palette_index);
 
-	if(current_palette_index == 0) {
-		char palette_text[49] = "";
-		palette_to_string(current_palette_index, palette_text);
-		cfg_set_string(cfg, "General", "palette_cur", palette_text);
-	}
+	char palette_text[48 + 1] = {0};
+	palette_to_string(0, palette_text);
+	cfg_set_string(cfg, "General", "palette_cur", palette_text);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
