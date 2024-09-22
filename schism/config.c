@@ -55,15 +55,22 @@ int cfg_video_want_menu_bar = 1;
 
 /* --------------------------------------------------------------------- */
 
+static const char *schism_dotfolders[] = {
 #if defined(SCHISM_WIN32)
-# define DOT_SCHISM "Schism Tracker"
+	"Schism Tracker",
 #elif defined(SCHISM_MACOSX)
-# define DOT_SCHISM "Library/Application Support/Schism Tracker"
+	"Library/Application Support/Schism Tracker",
 #elif defined(SCHISM_WII)
-# define DOT_SCHISM "."
+	".",
 #else
-# define DOT_SCHISM ".schism"
+# ifdef __HAIKU__
+	"config/settings/schism",
+# else
+	".config/schism",
+# endif
+	".schism",
 #endif
+};
 
 void cfg_init_dir(void)
 {
@@ -81,16 +88,33 @@ void cfg_init_dir(void)
 		strncpy(cfg_dir_dotschism, app_dir, PATH_MAX);
 		cfg_dir_dotschism[PATH_MAX] = 0;
 	} else {
-		char *dot_dir, *ptr;
+		int found = 0;
+		char *dot_dir = get_dot_directory();
 
-		dot_dir = get_dot_directory();
-		ptr = dmoz_path_concat(dot_dir, DOT_SCHISM);
-		strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
-		cfg_dir_dotschism[PATH_MAX] = 0;
-		free(dot_dir);
-		free(ptr);
+		for (size_t i = 0; i < ARRAY_SIZE(schism_dotfolders); i++) {
+			char *ptr;
 
-		if (!is_directory(cfg_dir_dotschism)) {
+			ptr = dmoz_path_concat(dot_dir, schism_dotfolders[i]);
+			strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
+			cfg_dir_dotschism[PATH_MAX] = 0;
+
+			free(ptr);
+
+			if (is_directory(cfg_dir_dotschism)) {
+				found = 1;
+				break;
+			}
+		}
+
+		if (!found) {
+			char *ptr;
+
+			ptr = dmoz_path_concat(dot_dir, schism_dotfolders[0]);
+			strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
+			cfg_dir_dotschism[PATH_MAX] = 0;
+
+			free(ptr);
+
 			printf("Creating directory %s\n", cfg_dir_dotschism);
 			printf("Schism Tracker uses this directory to store your settings.\n");
 			if (os_mkdir(cfg_dir_dotschism, 0777) != 0) {
@@ -98,6 +122,8 @@ void cfg_init_dir(void)
 				fprintf(stderr, "Everything will still work, but preferences will not be saved.\n");
 			}
 		}
+
+		free(dot_dir);
 	}
 
 	SDL_free(app_dir);
