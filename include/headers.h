@@ -54,7 +54,9 @@
  * we specifically don't want to define _GNU_SOURCE */
 int strverscmp(const char *s1, const char *s2);
 #endif
-#ifndef HAVE_STRCASESTR
+#ifdef HAVE_STRCASESTR
+char *strcasestr(const char *haystack, const char *needle);
+#else
 # define strcasestr strstr // derp
 #endif
 

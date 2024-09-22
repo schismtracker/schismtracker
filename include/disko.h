@@ -72,8 +72,9 @@ enum {
 	DW_SYNC_MORE = 1,
 };
 
-/* fopen/fclose-ish writeout/finish wrapper that allocates a structure */
-disko_t *disko_open(const char *filename);
+/* fopen/fclose-ish writeout/finish wrapper that shoves data into the
+ * user-allocated structure */
+int disko_open(disko_t *ds, const char *filename);
 /* Close the file. If there was no error writing the file, it is renamed
 to the name specified in disko_open; otherwise, the original file is left
 intact and the temporary file is deleted. Returns DW_OK on success,
@@ -88,7 +89,7 @@ int disko_close(disko_t *f, int backup);
 /* alloc/free a memory buffer
 if free_buffer is 0, the internal buffer is left alone when deallocating,
 so that it can continue to be used later */
-disko_t *disko_memopen(void);
+int disko_memopen(disko_t *f);
 int disko_memclose(disko_t *f, int free_buffer);
 
 

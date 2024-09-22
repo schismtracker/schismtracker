@@ -460,6 +460,7 @@ int song_export(const char *filename, const char *type)
 
 int song_save(const char *filename, const char *type)
 {
+	disko_t fp;
 	int ret, backup;
 	const struct save_format *format = get_save_format(song_save_formats, type);
 	char *mangle;
@@ -499,23 +500,23 @@ saying "Could not save file". This can be seen rather easily by trying to save a
 such as "abc|def.it". This dialog is presented both when saving from F10 and Ctrl-S.
 */
 
-	disko_t *fp = disko_open(mangle);
-	if (!fp) {
+	if (disko_open(&fp, mangle) < 0) {
 		log_perror(mangle);
 		free(mangle);
 		return SAVE_FILE_ERROR;
 	}
 
-	ret = format->f.save_song(fp, current_song);
+	ret = format->f.save_song(&fp, current_song);
 	if (ret != SAVE_SUCCESS)
-		disko_seterror(fp, EINVAL);
+		disko_seterror(&fp, EINVAL);
+
 	backup = ((status.flags & MAKE_BACKUPS)
 		  ? (status.flags & NUMBERED_BACKUPS)
 		  ? 65536 : 1 : 0);
-	if (disko_close(fp, backup) == DW_ERROR && ret == SAVE_SUCCESS) {
-		// this was not as successful as originally claimed!
+
+	// this was not as successful as originally claimed!
+	if (disko_close(&fp, backup) == DW_ERROR && ret == SAVE_SUCCESS)
 		ret = SAVE_FILE_ERROR;
-	}
 
 	switch (ret) {
 	case SAVE_SUCCESS:
@@ -539,6 +540,7 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
 
 int song_save_sample(const char *filename, const char *type, song_sample_t *smp, int num)
 {
+	disko_t fp;
 	int ret;
 	const struct save_format *format = get_save_format(sample_save_formats, type);
 
@@ -550,15 +552,14 @@ int song_save_sample(const char *filename, const char *type, song_sample_t *smp,
 		return SAVE_INTERNAL_ERROR; // ?
 	}
 
-	disko_t *fp = disko_open(filename);
-	if (fp) {
-		ret = format->f.save_sample(fp, smp);
+	if (disko_open(&fp, filename) < 0) {
+		ret = format->f.save_sample(&fp, smp);
 		if (ret != SAVE_SUCCESS)
-			disko_seterror(fp, EINVAL);
-		if (disko_close(fp, 0) == DW_ERROR && ret == SAVE_SUCCESS) {
-			// this was not as successful as originally claimed!
+			disko_seterror(&fp, EINVAL);
+
+		// this was not as successful as originally claimed!
+		if (disko_close(&fp, 0) == DW_ERROR && ret == SAVE_SUCCESS)
 			ret = SAVE_FILE_ERROR;
-		}
 	} else {
 		ret = SAVE_FILE_ERROR;
 	}
@@ -860,6 +861,7 @@ void song_create_host_instrument(int smp)
 
 int song_save_instrument(const char *filename, const char *type, song_instrument_t *ins, int num)
 {
+	disko_t fp;
 	int ret;
 	const struct save_format *format = get_save_format(instrument_save_formats, type);
 
@@ -871,15 +873,14 @@ int song_save_instrument(const char *filename, const char *type, song_instrument
 		return SAVE_INTERNAL_ERROR; // ?
 	}
 
-	disko_t *fp = disko_open(filename);
-	if (fp) {
-		ret = format->f.save_instrument(fp, current_song, ins);
+	if (disko_open(&fp, filename) >= 0) {
+		ret = format->f.save_instrument(&fp, current_song, ins);
 		if (ret != SAVE_SUCCESS)
-			disko_seterror(fp, EINVAL);
-		if (disko_close(fp, 0) == DW_ERROR && ret == SAVE_SUCCESS) {
-			// this was not as successful as originally claimed!
+			disko_seterror(&fp, EINVAL);
+
+		// this was not as successful as originally claimed!
+		if (disko_close(&fp, 0) == DW_ERROR && ret == SAVE_SUCCESS)
 			ret = SAVE_FILE_ERROR;
-		}
 	} else {
 		ret = SAVE_FILE_ERROR;
 	}
