@@ -35,9 +35,6 @@
 #include "slurp.h"
 #include "charset.h"
 
-// indices for 'h' (handles)
-enum { FILE_HANDLE = 0, MAPPING_HANDLE = 1 };
-
 static void win32_unmap_(slurp_t *slurp)
 {
 	if (slurp->internal.memory.data != NULL) {
