@@ -416,22 +416,27 @@ int jack_midi_setup(void)
 
 	ringbuffer_in = JACK_jack_ringbuffer_create(JACK_RINGBUFFER_SIZE);
 	if (!ringbuffer_in)
-		return 0;
+		goto fail;
 
 	ringbuffer_out = JACK_jack_ringbuffer_create(JACK_RINGBUFFER_SIZE);
 	if (!ringbuffer_out)
-		return 0;
+		goto fail;
 
 	ringbuffer_in_max_write = JACK_jack_ringbuffer_write_space(ringbuffer_in);
 	ringbuffer_out_max_write = JACK_jack_ringbuffer_write_space(ringbuffer_out);
 
 	struct midi_provider* p = midi_provider_register("JACK-MIDI", &jack_driver);
-	if (!p) {
-		/* how? can this check be removed? */
-		JACK_jack_ringbuffer_free(ringbuffer_in);
-		JACK_jack_ringbuffer_free(ringbuffer_out);
-		return 0;
-	}
+	if (!p) /* how? can this check be removed? */
+		goto fail;
 
 	return 1;
+
+fail:
+	if (ringbuffer_in)
+		JACK_jack_ringbuffer_free(ringbuffer_in);
+
+	if (ringbuffer_out)
+		JACK_jack_ringbuffer_free(ringbuffer_out);
+
+	return 0;
 }
