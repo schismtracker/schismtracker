@@ -314,15 +314,15 @@ static int cfg_read_receive_impl(const void *data, size_t size, void *userdata)
 
 int cfg_read(cfg_file_t *cfg)
 {
-	slurp_t *fp = slurp(cfg->filename, NULL, 0);
-	if (!fp)
+	slurp_t fp;
+	if (slurp(&fp, cfg->filename, NULL, 0) < 0)
 		return -1;
 
-	slurp_receive(fp, cfg_read_receive_impl, slurp_length(fp) + 1, cfg);
+	slurp_receive(&fp, cfg_read_receive_impl, slurp_length(&fp) + 1, cfg);
 
 	cfg->dirty = 0;
 
-	unslurp(fp);
+	unslurp(&fp);
 
 	return 0;
 }

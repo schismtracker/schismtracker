@@ -66,36 +66,23 @@ static void slurp_memory_closure_free_(slurp_t *t);
 
 /* --------------------------------------------------------------------- */
 
-slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
+int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 {
-	slurp_t *t = (slurp_t *)mem_calloc(1, sizeof(slurp_t));
-
 	if (!size)
 		size = (buf ? buf->st_size : file_size(filename));
 
-#ifdef SCHISM_WIN32
-	switch (slurp_win32(t, filename, size)) {
-	case SLURP_OPEN_FAIL:
-		free(t);
-		return NULL;
-	case SLURP_OPEN_SUCCESS:
-		t->seek = slurp_memory_seek_;
-		t->tell = slurp_memory_tell_;
-		t->eof  = slurp_memory_eof_;
-		t->peek = slurp_memory_peek_;
-		t->receive = slurp_memory_receive_;
-		goto finished;
-	default:
-	case SLURP_OPEN_IGNORE:
-		break;
-	}
-#endif
 
-#ifdef HAVE_MMAP
-	switch (slurp_mmap(t, filename, size)) {
+	switch (
+#ifdef SCHISM_WIN32
+		slurp_win32(t, filename, size)
+#elif defined(HAVE_MMAP)
+		slurp_mmap(t, filename, size)
+#else
+		SLURP_OPEN_IGNORE
+#endif
+	) {
 	case SLURP_OPEN_FAIL:
-		free(t);
-		return NULL;
+		return -1;
 	case SLURP_OPEN_SUCCESS:
 		t->seek = slurp_memory_seek_;
 		t->tell = slurp_memory_tell_;
@@ -107,12 +94,10 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
 	case SLURP_OPEN_IGNORE:
 		break;
 	}
-#endif
 
 	switch (slurp_stdio_open_(t, filename)) {
 	case SLURP_OPEN_FAIL:
-		free(t);
-		return NULL;
+		return -1;
 	case SLURP_OPEN_SUCCESS:
 		t->seek = slurp_stdio_seek_;
 		t->tell = slurp_stdio_tell_;
@@ -126,7 +111,7 @@ slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
 	}
 
 	/* fail */
-	return NULL;
+	return -1;
 
 finished: ; /* this semicolon is important because C */
 	uint8_t *mmdata;
@@ -153,7 +138,7 @@ finished: ; /* this semicolon is important because C */
 
 	// TODO re-add PP20 unpacker, possibly also handle other formats?
 
-	return t;
+	return 0;
 }
 
 
@@ -164,8 +149,6 @@ void unslurp(slurp_t * t)
 
 	if (t->closure)
 		t->closure(t);
-
-	free(t);
 }
 
 /* --------------------------------------------------------------------- */

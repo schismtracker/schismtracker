@@ -80,11 +80,12 @@ struct slurp_struct_ {
 
 /* --------------------------------------------------------------------- */
 
-/* slurp returns NULL and sets errno on error. 'buf' is only meaningful if you've already stat()'d
-the file; in most cases it can simply be NULL. If size is nonzero, it overrides the file's size as
-returned by stat -- this can be used to read only part of a file, or if the file size is known but
-a stat structure is not available. */
-slurp_t *slurp(const char *filename, struct stat *buf, size_t size);
+/* slurp receives a pointer to a user-allocated structure, returns a negative integer, and sets
+errno on error. 'buf' is only meaningful if you've already stat()'d the file; in most cases it
+can simply be NULL. If size is nonzero, it overrides the file's size as returned by stat -- this
+can be used to read only part of a file, or if the file size is known but a stat structure is not
+available. */
+int slurp(slurp_t *t, const char *filename, struct stat *buf, size_t size);
 
 void unslurp(slurp_t *t);
 

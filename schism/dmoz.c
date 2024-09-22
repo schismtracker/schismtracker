@@ -936,11 +936,11 @@ enum {
 
 static int file_info_get(dmoz_file_t *file)
 {
+	slurp_t t;
 	if (file->filesize == 0)
 		return FINF_EMPTY;
 
-	slurp_t *t = slurp(file->path, NULL, file->filesize);
-	if (!t)
+	if (slurp(&t, file->path, NULL, file->filesize) < 0)
 		return FINF_ERRNO;
 
 	file->artist = NULL;
@@ -948,8 +948,8 @@ static int file_info_get(dmoz_file_t *file)
 	file->smp_defvol = 64;
 	file->smp_gblvol = 64;
 	for (const fmt_read_info_func *func = read_info_funcs; *func; func++) {
-		slurp_rewind(t);
-		if ((*func) (file, t)) {
+		slurp_rewind(&t);
+		if ((*func) (file, &t)) {
 			if (file->artist)
 				trim_string(file->artist);
 			if (file->title == NULL)
@@ -958,7 +958,7 @@ static int file_info_get(dmoz_file_t *file)
 			break;
 		}
 	}
-	unslurp(t);
+	unslurp(&t);
 	return file->title ? FINF_SUCCESS : FINF_UNSUPPORTED;
 }
 

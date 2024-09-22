@@ -202,11 +202,11 @@ void message_convert_newlines(song_t *song) {
 
 song_t *song_create_load(const char *file)
 {
+	slurp_t s;
 	fmt_load_song_func *func;
 	int ok = 0, err = 0;
 
-	slurp_t *s = slurp(file, NULL, 0);
-	if (!s)
+	if (slurp(&s, file, NULL, 0) < 0)
 		return NULL;
 
 	song_t *newsong = csf_allocate();
@@ -225,8 +225,8 @@ song_t *song_create_load(const char *file)
 	}
 
 	for (func = load_song_funcs; *func && !ok; func++) {
-		slurp_rewind(s);
-		switch ((*func)(newsong, s, 0)) {
+		slurp_rewind(&s);
+		switch ((*func)(newsong, &s, 0)) {
 		case LOAD_SUCCESS:
 			err = 0;
 			ok = 1;
@@ -243,13 +243,13 @@ song_t *song_create_load(const char *file)
 		}
 		if (err) {
 			csf_free(newsong);
-			unslurp(s);
+			unslurp(&s);
 			errno = err;
 			return NULL;
 		}
 	}
 
-	unslurp(s);
+	unslurp(&s);
 
 	if (err) {
 		// awwww, nerts!
@@ -630,7 +630,7 @@ void song_copy_sample(int n, song_sample_t *src)
 
 int song_load_instrument_ex(int target, const char *file, const char *libf, int n)
 {
-	slurp_t *s;
+	slurp_t s;
 	int r, x;
 
 	song_lock_audio();
@@ -715,8 +715,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 	}
 
 	/* okay, load an ITI file */
-	s = slurp(file, NULL, 0);
-	if (!s) {
+	if (slurp(&s, file, NULL, 0) < 0) {
 		log_perror(file);
 		song_unlock_audio();
 		return 0;
@@ -724,12 +723,12 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 
 	r = 0;
 	for (x = 0; load_instrument_funcs[x]; x++) {
-		slurp_rewind(s);
-		r = load_instrument_funcs[x](s, target);
+		slurp_rewind(&s);
+		r = load_instrument_funcs[x](&s, target);
 		if (r) break;
 	}
 
-	unslurp(s);
+	unslurp(&s);
 	song_unlock_audio();
 
 	return r;
@@ -792,13 +791,13 @@ int song_preload_sample(dmoz_file_t *file)
 
 int song_load_sample(int n, const char *file)
 {
+	slurp_t s;
 	fmt_load_sample_func *load;
 	song_sample_t smp = {0};
 
 	const char *base = get_basename(file);
-	slurp_t *s = slurp(file, NULL, 0);
 
-	if (s == NULL) {
+	if (slurp(&s, file, NULL, 0)) {
 		log_perror(base);
 		return 0;
 	}
@@ -809,13 +808,13 @@ int song_load_sample(int n, const char *file)
 	strncpy(smp.name, base, 25);
 
 	for (load = load_sample_funcs; *load; load++) {
-		slurp_rewind(s);
-		if ((*load)(s, &smp))
+		slurp_rewind(&s);
+		if ((*load)(&s, &smp))
 			break;
 	}
 
 	if (!load) {
-		unslurp(s);
+		unslurp(&s);
 		log_perror(base);
 		song_unlock_audio();
 		return 0;
@@ -835,7 +834,7 @@ int song_load_sample(int n, const char *file)
 	memcpy(&(current_song->samples[n]), &smp, sizeof(song_sample_t));
 	song_unlock_audio();
 
-	unslurp(s);
+	unslurp(&s);
 
 	return 1;
 }
