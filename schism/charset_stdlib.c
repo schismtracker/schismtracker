@@ -44,7 +44,7 @@ size_t charset_strlen(const uint8_t* in, charset_t inset)
 
         if (decoder.state == DECODER_STATE_DONE)
             break;
-        
+
         count++;
 	}
 
@@ -90,6 +90,7 @@ charsetfail:
 int charset_strcasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set)
 {
 	uint8_t *folded8_1 = NULL, *folded8_2 = NULL;
+	int result = 0;
 
 	/* one at a time, please */
 	folded8_1 = charset_case_fold_to_utf8(in1, in1set);
@@ -120,14 +121,19 @@ int charset_strcasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2,
 		if (decoder1.state == DECODER_STATE_ERROR || decoder2.state == DECODER_STATE_ERROR)
 			goto charsetfail;
 
-		if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE || decoder1.codepoint != decoder2.codepoint)
+		if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE)
+			break;
+
+		result = decoder1.codepoint - decoder2.codepoint;
+
+		if (result != 0)
 			break;
 	}
 
 	free(folded8_1);
 	free(folded8_2);
 
-	return decoder1.codepoint - decoder2.codepoint;
+	return result;
 
 charsetfail:
 	free(folded8_1);
@@ -148,6 +154,7 @@ charsetfail:
 int charset_strncasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num)
 {
 	uint8_t *folded8_1 = NULL, *folded8_2 = NULL;
+	int result = 0;
 
 	/* one at a time, please */
 	folded8_1 = charset_case_fold_to_utf8(in1, in1set);
@@ -178,14 +185,19 @@ int charset_strncasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2
 		if (decoder1.state == DECODER_STATE_ERROR || decoder2.state == DECODER_STATE_ERROR)
 			goto charsetfail;
 
-		if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE || decoder1.codepoint != decoder2.codepoint)
+		if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE)
+			break;
+
+		result = decoder1.codepoint - decoder2.codepoint;
+
+		if (result != 0)
 			break;
 	}
 
 	free(folded8_1);
 	free(folded8_2);
 
-	return decoder1.codepoint - decoder2.codepoint;
+	return result;
 
 charsetfail:
 	free(folded8_1);
@@ -212,6 +224,7 @@ charsetfail:
 size_t charset_strncasecmplen(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num)
 {
 	uint8_t *folded8_1 = NULL, *folded8_2 = NULL;
+	int result = 0;
 
 	/* one at a time, please */
 	folded8_1 = charset_case_fold_to_utf8(in1, in1set);
@@ -244,7 +257,12 @@ size_t charset_strncasecmplen(const uint8_t* in1, charset_t in1set, const uint8_
 		if (decoder1.state == DECODER_STATE_ERROR || decoder2.state == DECODER_STATE_ERROR)
 			goto charsetfail;
 
-		if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE || decoder1.codepoint != decoder2.codepoint)
+		if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE)
+			break;
+
+		result = decoder1.codepoint - decoder2.codepoint;
+
+		if (result != 0)
 			break;
 	}
 
