@@ -53,6 +53,8 @@ size_t charset_strlen(const uint8_t* in, charset_t inset)
 
 int charset_strcmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set)
 {
+	int result = 0;
+
 	charset_decode_t decoder1 = {
 		.in = in1,
 		.offset = 0,
@@ -76,11 +78,16 @@ int charset_strcmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, cha
 		if (decoder1.state == DECODER_STATE_ERROR || decoder2.state == DECODER_STATE_ERROR)
 			goto charsetfail;
 
-		if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE || decoder1.codepoint != decoder2.codepoint)
+		if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE)
+			break;
+
+		result = decoder1.codepoint - decoder2.codepoint;
+
+		if (result != 0)
 			break;
 	}
 
-	return decoder1.codepoint - decoder2.codepoint;
+	return result;
 
 charsetfail:
 	return strcmp(in1, in2);
