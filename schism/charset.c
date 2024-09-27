@@ -253,8 +253,7 @@ static void cp437_to_ucs4(charset_decode_t *decoder) {
 
 	uint8_t c = decoder->in[decoder->offset++];
 	decoder->codepoint = (c < 0x80) ? c : cp437_table[c - 0x80];
-	if (!c)
-		decoder->state = DECODER_STATE_DONE;
+	decoder->state = c ? DECODER_STATE_NEED_MORE : DECODER_STATE_DONE;
 }
 
 static void windows1252_to_ucs4(charset_decode_t *decoder) {
@@ -276,8 +275,7 @@ static void windows1252_to_ucs4(charset_decode_t *decoder) {
 
 	uint8_t c = decoder->in[decoder->offset++];
 	decoder->codepoint = (c >= 0x80 && c < 0xA0) ? windows1252_table[c - 0x80] : c;
-	if (!c)
-		decoder->state = DECODER_STATE_DONE;
+	decoder->state = c ? DECODER_STATE_NEED_MORE : DECODER_STATE_DONE;
 }
 
 static void do_nothing_ucs4(charset_decode_t *decoder) {
@@ -285,8 +283,8 @@ static void do_nothing_ucs4(charset_decode_t *decoder) {
 
 	uint32_t codepoint = *(uint32_t*)(decoder->in + decoder->offset);
 	decoder->codepoint = codepoint;
-	if (!codepoint)
-		decoder->state = DECODER_STATE_DONE;
+	decoder->offset += 4;
+	decoder->state = codepoint ? DECODER_STATE_NEED_MORE : DECODER_STATE_DONE;
 }
 
 /* ----------------------------------------------------- */
@@ -776,8 +774,13 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
 
 #define TRY_VARIATION(name) \
 	state = charset_iconv_##name##_(in, out, inset, outset); \
-	if (state == CHARSET_ERROR_SUCCESS || state == CHARSET_ERROR_NOMEM) \
-		return state;
+	if (state == CHARSET_ERROR_SUCCESS) \
+		return state; \
+	if (state == CHARSET_ERROR_NOMEM) { \
+		*out = NULL; \
+		return state; \
+	} \
+	*out = NULL;
 
 	TRY_VARIATION(internal);
 	TRY_VARIATION(sdl);

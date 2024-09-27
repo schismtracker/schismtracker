@@ -53,20 +53,18 @@ size_t charset_strlen(const uint8_t* in, charset_t inset)
 
 int charset_strcmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set)
 {
+	int result = 0;
+
 	charset_decode_t decoder1 = {
 		.in = in1,
 		.offset = 0,
 		.size = SIZE_MAX,
-
-		.codepoint = 0,
 	};
 
 	charset_decode_t decoder2 = {
 		.in = in2,
 		.offset = 0,
 		.size = SIZE_MAX,
-
-		.codepoint = 0,
 	};
 
 	for (;;) {
@@ -76,11 +74,13 @@ int charset_strcmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, cha
 		if (decoder1.state == DECODER_STATE_ERROR || decoder2.state == DECODER_STATE_ERROR)
 			goto charsetfail;
 
-		if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE || decoder1.codepoint != decoder2.codepoint)
+		result = decoder1.codepoint - decoder2.codepoint;
+
+		if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE || result)
 			break;
 	}
 
-	return decoder1.codepoint - decoder2.codepoint;
+	return result;
 
 charsetfail:
 	return strcmp(in1, in2);
@@ -89,45 +89,24 @@ charsetfail:
 /* this IS necessary to actually sort properly. */
 int charset_strcasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set)
 {
-	uint8_t *folded8_1 = NULL, *folded8_2 = NULL;
+	uint32_t *folded8_1 = NULL, *folded8_2 = NULL;
+	int res;
 
-	/* one at a time, please */
-	folded8_1 = charset_case_fold_to_utf8(in1, in1set);
+	/* takes up more memory than necessary, but whatever */
+	folded8_1 = (uint32_t *)charset_case_fold_to_set(in1, in1set, CHARSET_UCS4);
 	if (!folded8_1)
 		goto charsetfail;
 
-	folded8_2 = charset_case_fold_to_utf8(in2, in2set);
+	folded8_2 = (uint32_t *)charset_case_fold_to_set(in2, in2set, CHARSET_UCS4);
 	if (!folded8_2)
 		goto charsetfail;
 
-	charset_decode_t decoder1 = {
-		.in = folded8_1,
-		.offset = 0,
-		.size = SIZE_MAX,
-	};
-
-	charset_decode_t decoder2 = {
-		.in = folded8_2,
-		.offset = 0,
-		.size = SIZE_MAX,
-	};
-
-	for (;;) {
-		charset_decode_next(&decoder1, CHARSET_UTF8);
-		charset_decode_next(&decoder2, CHARSET_UTF8);
-
-		/* can probably be removed; utf8proc guarantees valid UTF-8 */
-		if (decoder1.state == DECODER_STATE_ERROR || decoder2.state == DECODER_STATE_ERROR)
-			goto charsetfail;
-
-		if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE || decoder1.codepoint != decoder2.codepoint)
-			break;
-	}
+	res = charset_strcmp((uint8_t *)folded8_1, CHARSET_UCS4, (uint8_t *)folded8_2, CHARSET_UCS4);
 
 	free(folded8_1);
 	free(folded8_2);
 
-	return decoder1.codepoint - decoder2.codepoint;
+	return res;
 
 charsetfail:
 	free(folded8_1);
@@ -144,57 +123,80 @@ charsetfail:
 #endif
 }
 
-/* ugh. (num is the number of CHARACTERS, not the number of bytes!!) */
-int charset_strncasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num)
+/* --------------------------------------------------------------------------- */
+/* charset_strncasecmp[len] share the same implementation, but return different
+ * results */
+
+struct strncasecmp_impl_struct {
+	int diff;
+	size_t count;
+
+	int success;
+};
+
+static struct strncasecmp_impl_struct charset_strncasecmp_impl(const uint8_t *in1, charset_t in1set, const uint8_t *in2, charset_t in2set, size_t num)
 {
-	uint8_t *folded8_1 = NULL, *folded8_2 = NULL;
-
-	/* one at a time, please */
-	folded8_1 = charset_case_fold_to_utf8(in1, in1set);
-	if (!folded8_1)
-		goto charsetfail;
-
-	folded8_2 = charset_case_fold_to_utf8(in2, in2set);
-	if (!folded8_2)
-		goto charsetfail;
+	struct strncasecmp_impl_struct result = {0};
 
 	charset_decode_t decoder1 = {
-		.in = folded8_1,
+		.in = in1,
 		.offset = 0,
 		.size = SIZE_MAX,
 	};
 
 	charset_decode_t decoder2 = {
-		.in = folded8_2,
+		.in = in2,
 		.offset = 0,
 		.size = SIZE_MAX,
 	};
 
-	for (;;) {
-		charset_decode_next(&decoder1, CHARSET_UTF8);
-		charset_decode_next(&decoder2, CHARSET_UTF8);
+	size_t i;
+	for (i = 0; i < num; i++) {
+		charset_decode_next(&decoder1, in1set);
+		charset_decode_next(&decoder2, in2set);
 
-		/* can probably be removed; utf8proc guarantees valid UTF-8 */
 		if (decoder1.state == DECODER_STATE_ERROR || decoder2.state == DECODER_STATE_ERROR)
-			goto charsetfail;
+			return result;
 
-		if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE || decoder1.codepoint != decoder2.codepoint)
-			break;
+		uint32_t cp1[2] = {decoder1.codepoint, 0};
+		uint32_t cp2[2] = {decoder2.codepoint, 0};
+
+		uint32_t *cf1 = (uint32_t *)charset_case_fold_to_set((uint8_t *)cp1, CHARSET_UCS4, CHARSET_UCS4);
+		if (!cf1)
+			return result;
+
+		uint32_t *cf2 = (uint32_t *)charset_case_fold_to_set((uint8_t *)cp2, CHARSET_UCS4, CHARSET_UCS4);
+		if (!cf2) {
+			free(cf1);
+			return result;
+		}
+
+	    result.diff = charset_strcmp((uint8_t *)cf1, CHARSET_UCS4, (uint8_t *)cf2, CHARSET_UCS4);
+
+	    free(cf1);
+	    free(cf2);
+
+	    if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE || result.diff)
+	        break;
 	}
 
-	free(folded8_1);
-	free(folded8_2);
+	result.success = 1;
+	result.count = i;
 
-	return decoder1.codepoint - decoder2.codepoint;
+done:
+	return result;
+}
 
-charsetfail:
-	free(folded8_1);
-	free(folded8_2);
+/* ugh. (num is the number of CHARACTERS, not the number of bytes!!) */
+int charset_strncasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num)
+{
+	struct strncasecmp_impl_struct result = charset_strncasecmp_impl(in1, in1set, in2, in2set, num);
 
-	/* commenting this out unless it's really necessary */
-	/* if (in1set != CHARSET_CHAR && in2set != CHARSET_CHAR) return 0; */
+	if (result.success)
+		return result.diff;
 
-#if HAVE_STRCASECMP
+	/* at least try *something* */
+#if HAVE_STRNCASECMP
 	return strncasecmp(in1, in2, num);
 #else
 	do {
@@ -211,53 +213,13 @@ charsetfail:
 /* this does the exact same as the above function but returns how many characters were passed */
 size_t charset_strncasecmplen(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num)
 {
-	uint8_t *folded8_1 = NULL, *folded8_2 = NULL;
+	struct strncasecmp_impl_struct result = charset_strncasecmp_impl(in1, in1set, in2, in2set, num);
 
-	/* one at a time, please */
-	folded8_1 = charset_case_fold_to_utf8(in1, in1set);
-	if (!folded8_1)
-		goto charsetfail;
-
-	folded8_2 = charset_case_fold_to_utf8(in2, in2set);
-	if (!folded8_2)
-		goto charsetfail;
-
-	charset_decode_t decoder1 = {
-		.in = folded8_1,
-		.offset = 0,
-		.size = SIZE_MAX,
-	};
-
-	charset_decode_t decoder2 = {
-		.in = folded8_2,
-		.offset = 0,
-		.size = SIZE_MAX,
-	};
-
-	/* eh */
-	size_t i;
-	for (i = 0; i < num; i++) {
-		charset_decode_next(&decoder1, CHARSET_UTF8);
-		charset_decode_next(&decoder2, CHARSET_UTF8);
-
-		/* can probably be removed; utf8proc guarantees valid UTF-8 */
-		if (decoder1.state == DECODER_STATE_ERROR || decoder2.state == DECODER_STATE_ERROR)
-			goto charsetfail;
-
-		if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE || decoder1.codepoint != decoder2.codepoint)
-			break;
-	}
-
-	free(folded8_1);
-	free(folded8_2);
-
-	return i;
-
-charsetfail:
-	free(folded8_1);
-	free(folded8_2);
+	if (result.success)
+		return result.count;
 
 	/* Whoops! You have to put the CD in your computer! */
+	size_t i;
 	for (i = 0; i < num; i++)
 		if (tolower(in1[i]) != tolower(in2[i]))
 			break;
@@ -299,18 +261,14 @@ int charset_fnmatch(const uint8_t *match, charset_t match_set, const uint8_t *st
 			goto charsetfail;
 
 		str_ucs4 = (uint32_t *)charset_case_fold_to_set(str, str_set, CHARSET_UCS4);
-		if (!str_ucs4) {
-			free(match_ucs4);
+		if (!str_ucs4)
 			goto charsetfail;
-		}
 	} else {
 		if (charset_iconv(match, (uint8_t **)&match_ucs4, match_set, CHARSET_UCS4))
 			goto charsetfail;
 
-		if (charset_iconv(str, (uint8_t **)&str_ucs4, str_set, CHARSET_UCS4)) {
-			free(match_ucs4);
+		if (charset_iconv(str, (uint8_t **)&str_ucs4, str_set, CHARSET_UCS4))
 			goto charsetfail;
-		}
 	}
 
 	int r = ((flags & CHARSET_FNM_PERIOD) && (*str_ucs4 == UCS4_PERIOD && *match_ucs4 != UCS4_PERIOD))
@@ -323,6 +281,9 @@ int charset_fnmatch(const uint8_t *match, charset_t match_set, const uint8_t *st
 	return r;
 
 charsetfail:
+	free(match_ucs4);
+	free(str_ucs4);
+
 	/* fall back to the system implementation, if there even is one */
 
 #if HAVE_FNMATCH
