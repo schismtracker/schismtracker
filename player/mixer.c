@@ -128,7 +128,7 @@
 
 // No interpolation
 #define SNDMIX_GETMONOVOLNOIDO(bits) \
-	int32_t vol = lshift_signed_32(p[position >> 16], -bits + 16);
+	int32_t vol = lshift_signed(p[position >> 16], -bits + 16);
 
 // Linear Interpolation
 #define SNDMIX_GETMONOVOLLINEAR(bits) \
@@ -136,13 +136,13 @@
 	int32_t poslo   = (position >> 8) & 0xFF; \
 	int32_t srcvol  = p[poshi]; \
 	int32_t destvol = p[poshi + 1]; \
-	int32_t vol     = lshift_signed_32(srcvol, -bits + 16) + rshift_signed_32(poslo * (destvol - srcvol), bits - 8);
+	int32_t vol     = lshift_signed(srcvol, -bits + 16) + rshift_signed(poslo * (destvol - srcvol), bits - 8);
 
 // spline interpolation (2 guard bits should be enough???)
 #define SNDMIX_GETMONOVOLSPLINE(bits) \
 	int32_t poshi = position >> 16; \
-	int32_t poslo = rshift_signed_32(position, SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
-	int32_t vol   = rshift_signed_32( \
+	int32_t poslo = rshift_signed(position, SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
+	int32_t vol   = rshift_signed( \
 		  cubic_spline_lut[poslo + 0] * (int32_t)p[poshi - 1] \
 		+ cubic_spline_lut[poslo + 1] * (int32_t)p[poshi + 0] \
 		+ cubic_spline_lut[poslo + 2] * (int32_t)p[poshi + 1] \
@@ -153,15 +153,15 @@
 #define SNDMIX_GETMONOVOLFIRFILTER(bits) \
 	int32_t poshi  = position >> 16; \
 	int32_t poslo  = (position & 0xFFFF); \
-	int32_t firidx = rshift_signed_32(poslo + WFIR_FRACHALVE, WFIR_FRACSHIFT) & WFIR_FRACMASK; \
-	int32_t vol = rshift_signed_32( \
-		rshift_signed_32( \
+	int32_t firidx = rshift_signed(poslo + WFIR_FRACHALVE, WFIR_FRACSHIFT) & WFIR_FRACMASK; \
+	int32_t vol = rshift_signed( \
+		rshift_signed( \
 			(windowed_fir_lut[firidx + 0] * (int32_t)p[poshi + 1 - 4]) + \
 			(windowed_fir_lut[firidx + 1] * (int32_t)p[poshi + 2 - 4]) + \
 			(windowed_fir_lut[firidx + 2] * (int32_t)p[poshi + 3 - 4]) + \
 			(windowed_fir_lut[firidx + 3] * (int32_t)p[poshi + 4 - 4]) \
 			, 1) + \
-		rshift_signed_32( \
+		rshift_signed( \
 			(windowed_fir_lut[firidx + 4] * (int32_t)p[poshi + 5 - 4]) + \
 			(windowed_fir_lut[firidx + 5] * (int32_t)p[poshi + 6 - 4]) + \
 			(windowed_fir_lut[firidx + 6] * (int32_t)p[poshi + 7 - 4]) + \
@@ -173,28 +173,28 @@
 // Stereo
 
 #define SNDMIX_GETSTEREOVOLNOIDO(bits) \
-	int32_t vol_l = lshift_signed_32(p[(position >> 16) * 2 + 0], -bits + 16); \
-	int32_t vol_r = lshift_signed_32(p[(position >> 16) * 2 + 1], -bits + 16);
+	int32_t vol_l = lshift_signed(p[(position >> 16) * 2 + 0], -bits + 16); \
+	int32_t vol_r = lshift_signed(p[(position >> 16) * 2 + 1], -bits + 16);
 
 #define SNDMIX_GETSTEREOVOLLINEAR(bits) \
 	int32_t poshi    = position >> 16; \
 	int32_t poslo    = (position >> 8) & 0xFF; \
 	int32_t srcvol_l = p[poshi * 2 + 0]; \
 	int32_t srcvol_r = p[poshi * 2 + 1]; \
-	int32_t vol_l    = lshift_signed_32(srcvol_l, -bits + 16) + rshift_signed_32(poslo * (p[poshi * 2 + 2] - srcvol_l), bits - 8); \
-	int32_t vol_r    = lshift_signed_32(srcvol_r, -bits + 16) + rshift_signed_32(poslo * (p[poshi * 2 + 3] - srcvol_r), bits - 8);
+	int32_t vol_l    = lshift_signed(srcvol_l, -bits + 16) + rshift_signed(poslo * (p[poshi * 2 + 2] - srcvol_l), bits - 8); \
+	int32_t vol_r    = lshift_signed(srcvol_r, -bits + 16) + rshift_signed(poslo * (p[poshi * 2 + 3] - srcvol_r), bits - 8);
 
 // Spline Interpolation
 #define SNDMIX_GETSTEREOVOLSPLINE(bits) \
 	int32_t poshi   = position >> 16; \
 	int32_t poslo   = (position >> SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
-	int32_t vol_l   = rshift_signed_32( \
+	int32_t vol_l   = rshift_signed( \
 			cubic_spline_lut[poslo + 0] * (int32_t)p[(poshi - 1) * 2] + \
 			cubic_spline_lut[poslo + 1] * (int32_t)p[(poshi + 0) * 2] + \
 			cubic_spline_lut[poslo + 2] * (int32_t)p[(poshi + 1) * 2] + \
 			cubic_spline_lut[poslo + 3] * (int32_t)p[(poshi + 2) * 2], \
 			SPLINE_##bits##SHIFT); \
-	int32_t vol_r   = rshift_signed_32( \
+	int32_t vol_r   = rshift_signed( \
 			cubic_spline_lut[poslo + 0] * (int32_t)p[(poshi - 1) * 2 + 1] + \
 			cubic_spline_lut[poslo + 1] * (int32_t)p[(poshi + 0) * 2 + 1] + \
 			cubic_spline_lut[poslo + 2] * (int32_t)p[(poshi + 1) * 2 + 1] + \
@@ -205,29 +205,29 @@
 #define SNDMIX_GETSTEREOVOLFIRFILTER(bits) \
 	int32_t poshi   = position >> 16; \
 	int32_t poslo   = (position & 0xFFFF); \
-	int32_t firidx  = rshift_signed_32(poslo + WFIR_FRACHALVE, WFIR_FRACSHIFT) & WFIR_FRACMASK; \
-	int32_t vol_l = rshift_signed_32( \
-		rshift_signed_32( \
+	int32_t firidx  = rshift_signed(poslo + WFIR_FRACHALVE, WFIR_FRACSHIFT) & WFIR_FRACMASK; \
+	int32_t vol_l = rshift_signed( \
+		rshift_signed( \
 			(windowed_fir_lut[firidx + 0] * p[(poshi + 1 - 4) * 2]) + \
 			(windowed_fir_lut[firidx + 1] * p[(poshi + 2 - 4) * 2]) + \
 			(windowed_fir_lut[firidx + 2] * p[(poshi + 3 - 4) * 2]) + \
 			(windowed_fir_lut[firidx + 3] * p[(poshi + 4 - 4) * 2]) \
 			, 1) + \
-		rshift_signed_32( \
+		rshift_signed( \
 			(windowed_fir_lut[firidx + 4] * p[(poshi + 5 - 4) * 2]) + \
 			(windowed_fir_lut[firidx + 5] * p[(poshi + 6 - 4) * 2]) + \
 			(windowed_fir_lut[firidx + 6] * p[(poshi + 7 - 4) * 2]) + \
 			(windowed_fir_lut[firidx + 7] * p[(poshi + 8 - 4) * 2]) \
 			, 1), \
 		WFIR_##bits##SHIFT - 1); \
-	int32_t vol_r = rshift_signed_32( \
-		rshift_signed_32( \
+	int32_t vol_r = rshift_signed( \
+		rshift_signed( \
 			(windowed_fir_lut[firidx + 0] * p[(poshi + 1 - 4) * 2 + 1]) + \
 			(windowed_fir_lut[firidx + 1] * p[(poshi + 2 - 4) * 2 + 1]) + \
 			(windowed_fir_lut[firidx + 2] * p[(poshi + 3 - 4) * 2 + 1]) + \
 			(windowed_fir_lut[firidx + 3] * p[(poshi + 4 - 4) * 2 + 1]) \
 			, 1) + \
-		rshift_signed_32( \
+		rshift_signed( \
 			(windowed_fir_lut[firidx + 4] * p[(poshi + 5 - 4) * 2 + 1]) + \
 			(windowed_fir_lut[firidx + 5] * p[(poshi + 6 - 4) * 2 + 1]) + \
 			(windowed_fir_lut[firidx + 6] * p[(poshi + 7 - 4) * 2 + 1]) + \
@@ -254,13 +254,13 @@
 #define SNDMIX_RAMPMONOVOL \
 	left_ramp_volume += chan->left_ramp; \
 	right_ramp_volume += chan->right_ramp; \
-	pvol[0] += vol * rshift_signed_32(right_ramp_volume, VOLUMERAMPPRECISION); \
-	pvol[1] += vol * rshift_signed_32(left_ramp_volume, VOLUMERAMPPRECISION); \
+	pvol[0] += vol * rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
+	pvol[1] += vol * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	pvol += 2;
 
 #define SNDMIX_RAMPFASTMONOVOL \
 	right_ramp_volume += chan->right_ramp; \
-	int32_t fastvol = vol * rshift_signed_32(right_ramp_volume, VOLUMERAMPPRECISION); \
+	int32_t fastvol = vol * rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
 	pvol[0] += fastvol; \
 	pvol[1] += fastvol; \
 	pvol += 2;
@@ -268,8 +268,8 @@
 #define SNDMIX_RAMPSTEREOVOL \
 	left_ramp_volume += chan->left_ramp; \
 	right_ramp_volume += chan->right_ramp; \
-	pvol[0] += vol_l * rshift_signed_32(right_ramp_volume, VOLUMERAMPPRECISION); \
-	pvol[1] += vol_r * rshift_signed_32(left_ramp_volume, VOLUMERAMPPRECISION); \
+	pvol[0] += vol_l * rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
+	pvol[1] += vol_r * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	pvol += 2;
 
 ///////////////////////////////////////////////////
@@ -284,11 +284,11 @@
 	int32_t t##chn;
 
 #define SNDMIX_PROCESSFILTER(outchn, volume) \
-	t##outchn = rshift_signed_64( \
+	t##outchn = rshift_signed( \
 		MUL_32_TO_64(volume, chan->filter_a0) \
 			+ MUL_32_TO_64(FILT_CLIP(fy##outchn##1), chan->filter_b0) \
 			+ MUL_32_TO_64(FILT_CLIP(fy##outchn##2), chan->filter_b1) \
-			+ lshift_signed_32(1, FILTERPRECISION - 1), \
+			+ lshift_signed(1, FILTERPRECISION - 1), \
 		FILTERPRECISION); \
 	fy##outchn##2 = fy##outchn##1; fy##outchn##1 = t##outchn; volume = t##outchn;
 
@@ -335,9 +335,9 @@ typedef void(* mix_interface_t)(song_voice_t *, int *, int *);
 #define END_RAMPMIX_INTERFACE() \
 	SNDMIX_ENDSAMPLELOOP \
 	channel->right_ramp_volume = right_ramp_volume; \
-	channel->right_volume     = rshift_signed_32(right_ramp_volume, VOLUMERAMPPRECISION); \
+	channel->right_volume     = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
 	channel->left_ramp_volume  = left_ramp_volume; \
-	channel->left_volume      = rshift_signed_32(left_ramp_volume, VOLUMERAMPPRECISION); \
+	channel->left_volume      = rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	}
 
 
@@ -350,7 +350,7 @@ typedef void(* mix_interface_t)(song_voice_t *, int *, int *);
 	SNDMIX_ENDSAMPLELOOP \
 	channel->right_ramp_volume = right_ramp_volume; \
 	channel->left_ramp_volume  = right_ramp_volume; \
-	channel->right_volume     = rshift_signed_32(right_ramp_volume, VOLUMERAMPPRECISION); \
+	channel->right_volume     = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
 	channel->left_volume      = channel->right_volume; \
 	}
 
@@ -378,9 +378,9 @@ typedef void(* mix_interface_t)(song_voice_t *, int *, int *);
 	SNDMIX_ENDSAMPLELOOP \
 	MIX_END_MONO_FILTER \
 	channel->right_ramp_volume = right_ramp_volume; \
-	channel->right_volume     = rshift_signed_32(right_ramp_volume, VOLUMERAMPPRECISION); \
+	channel->right_volume     = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
 	channel->left_ramp_volume  = left_ramp_volume; \
-	channel->left_volume      = rshift_signed_32(left_ramp_volume, VOLUMERAMPPRECISION); \
+	channel->left_volume      = rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	}
 
 
@@ -407,9 +407,9 @@ typedef void(* mix_interface_t)(song_voice_t *, int *, int *);
 	SNDMIX_ENDSAMPLELOOP \
 	MIX_END_STEREO_FILTER \
 	channel->right_ramp_volume = right_ramp_volume; \
-	channel->right_volume     = rshift_signed_32(right_ramp_volume, VOLUMERAMPPRECISION); \
+	channel->right_volume     = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
 	channel->left_ramp_volume  = left_ramp_volume; \
-	channel->left_volume      = rshift_signed_32(left_ramp_volume, VOLUMERAMPPRECISION); \
+	channel->left_volume      = rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	}
 
 #define BEGIN_RESAMPLE_INTERFACE(func, sampletype, numchannels) \

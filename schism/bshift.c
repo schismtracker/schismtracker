@@ -23,6 +23,5 @@
 
 #include "bshift.h"
 
-extern inline int64_t schism_signed_lshift_32_(int32_t x, int y);
-extern inline int32_t schism_signed_rshift_32_(int32_t x, int y);
-extern inline int64_t schism_signed_rshift_64_(int64_t x, int y);
+extern inline intmax_t schism_signed_lshift_(intmax_t x, unsigned int y);
+extern inline intmax_t schism_signed_rshift_(intmax_t x, unsigned int y);

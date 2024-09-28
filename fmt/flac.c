@@ -257,7 +257,7 @@ static FLAC__StreamDecoderWriteStatus read_on_write(const FLAC__StreamDecoder *d
 		size_t i, j, c;
 		for (i = 0, j = 0; i < block_size; j++)
 			for (c = 0; c < read_data->streaminfo.channels; c++)
-				buf_ptr[i++] = lshift_signed_32(buffer[c][j], bit_shift);
+				buf_ptr[i++] = lshift_signed(buffer[c][j], bit_shift);
 	} else if (read_data->streaminfo.bits_per_sample <= 16) {
 		int16_t *buf_ptr = (int16_t*)read_data->uncompressed.data + read_data->uncompressed.samples_decoded;
 		uint32_t bit_shift = 16 - read_data->streaminfo.bits_per_sample;
@@ -265,7 +265,7 @@ static FLAC__StreamDecoderWriteStatus read_on_write(const FLAC__StreamDecoder *d
 		size_t i, j, c;
 		for (i = 0, j = 0; i < block_size; j++)
 			for (c = 0; c < read_data->streaminfo.channels; c++)
-				buf_ptr[i++] = lshift_signed_32(buffer[c][j], bit_shift);
+				buf_ptr[i++] = lshift_signed(buffer[c][j], bit_shift);
 	} else { /* >= 16 */
 		int16_t *buf_ptr = (int16_t*)read_data->uncompressed.data + read_data->uncompressed.samples_decoded;
 		uint32_t bit_shift = read_data->streaminfo.bits_per_sample - 16;
@@ -273,7 +273,7 @@ static FLAC__StreamDecoderWriteStatus read_on_write(const FLAC__StreamDecoder *d
 		size_t i, j, c;
 		for (i = 0, j = 0; i < block_size; j++)
 			for (c = 0; c < read_data->streaminfo.channels; c++)
-				buf_ptr[i++] = rshift_signed_32(buffer[c][j], bit_shift);
+				buf_ptr[i++] = rshift_signed(buffer[c][j], bit_shift);
 	}
 
 	read_data->uncompressed.samples_decoded += block_size;
