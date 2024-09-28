@@ -25,11 +25,10 @@
 
 #include <utf8proc.h>
 
-uint8_t *charset_compose_to_set(const uint8_t *in, charset_t inset, charset_t outset)
+static inline uint8_t *charset_map_to_utf8(const uint8_t *in, charset_t inset, utf8proc_option_t option)
 {
 	const uint8_t *utf8;
 	uint8_t *alloc_ptr = NULL;
-	int success;
 
 	if (inset == CHARSET_UTF8) {
 		utf8 = in;
@@ -39,59 +38,40 @@ uint8_t *charset_compose_to_set(const uint8_t *in, charset_t inset, charset_t ou
 		utf8 = alloc_ptr;
 	}
 
-	uint8_t *composed;
+	uint8_t *mapped;
 
-	success = (utf8proc_map(utf8, 0, &composed, UTF8PROC_NULLTERM | UTF8PROC_COMPOSE) >= 0);
+	int success = (utf8proc_map(utf8, 0, &mapped, option) >= 0);
 
 	free(alloc_ptr);
 
-	if (!success)
+	return success ? mapped : NULL;
+}
+
+static inline uint8_t *charset_map_to_set(const uint8_t *in, charset_t inset, charset_t outset, utf8proc_option_t option)
+{
+	uint8_t *mapped_utf8 = charset_map_to_utf8(in, inset, option);
+	if (!mapped_utf8)
 		return NULL;
 
+	/* now convert it back to the set we want */
 	if (outset == CHARSET_UTF8)
-		return composed;
+		return mapped_utf8;
 
-	uint8_t *composed_in_outset;
+	uint8_t *mapped;
 
-	success = (charset_iconv(composed, &composed_in_outset, CHARSET_UTF8, outset) == CHARSET_ERROR_SUCCESS);
+	int success = (charset_iconv(mapped_utf8, &mapped, CHARSET_UTF8, outset) == CHARSET_ERROR_SUCCESS);
 
-	free(composed);
+	free(mapped_utf8);
 
-	return (success ? composed_in_outset : NULL);
+	return (success ? mapped : NULL);
+}
+
+uint8_t *charset_compose_to_set(const uint8_t *in, charset_t inset, charset_t outset)
+{
+	return charset_map_to_set(in, inset, outset, UTF8PROC_NULLTERM | UTF8PROC_COMPOSE);
 }
 
 uint8_t *charset_case_fold_to_set(const uint8_t *in, charset_t inset, charset_t outset)
 {
-	const uint8_t *utf8;
-	uint8_t *alloc_ptr = NULL;
-	int success;
-
-	if (inset == CHARSET_UTF8) {
-		utf8 = in;
-	} else {
-		if (charset_iconv(in, &alloc_ptr, inset, CHARSET_UTF8))
-			return NULL;
-
-		utf8 = alloc_ptr;
-	}
-
-	uint8_t *folded;
-
-	success = (utf8proc_map(utf8, 0, &folded, UTF8PROC_NULLTERM | UTF8PROC_CASEFOLD | UTF8PROC_DECOMPOSE) >= 0);
-
-	free(alloc_ptr);
-
-	if (!success)
-		return NULL;
-
-	if (outset == CHARSET_UTF8)
-		return folded;
-
-	uint8_t *folded_in_outset;
-
-	success = (charset_iconv(folded, &folded_in_outset, CHARSET_UTF8, outset) == CHARSET_ERROR_SUCCESS);
-
-	free(folded);
-
-	return (success ? folded_in_outset : NULL);
+	return charset_map_to_set(in, inset, outset, UTF8PROC_NULLTERM | UTF8PROC_CASEFOLD | UTF8PROC_DECOMPOSE);
 }
