@@ -578,18 +578,22 @@ int kbd_get_alnum(struct key_event *k)
 
 /* -------------------------------------------------- */
 
-#define DEFAULT_KEY_REPEAT_DELAY 500
-#define DEFAULT_KEY_REPEAT_RATE  30
-
 /* emulate SDL 1.2 style key repeat */
-static int key_repeat_delay = DEFAULT_KEY_REPEAT_DELAY, key_repeat_rate = DEFAULT_KEY_REPEAT_RATE;
+static int key_repeat_delay = 0;
+static int key_repeat_rate = 0;
+static int key_repeat_enabled = 0;
 static schism_ticks_t key_repeat_next_tick = 0;
 
 static struct key_event cached_key_event = {0};
 
+int kbd_key_repeat_enabled(void)
+{
+	return key_repeat_enabled;
+}
+
 void kbd_handle_key_repeat(void)
 {
-	if (!key_repeat_next_tick)
+	if (!key_repeat_next_tick || !key_repeat_enabled)
 		return;
 
 	const schism_ticks_t now = SCHISM_GET_TICKS();
@@ -606,6 +610,9 @@ void kbd_handle_key_repeat(void)
 
 void kbd_cache_key_repeat(struct key_event* kk)
 {
+	if (!key_repeat_enabled)
+		return;
+
 	if (cached_key_event.text)
 		free((uint8_t*)cached_key_event.text);
 
@@ -621,6 +628,9 @@ void kbd_cache_key_repeat(struct key_event* kk)
 
 void kbd_empty_key_repeat(void)
 {
+	if (!key_repeat_enabled)
+		return;
+
 	if (cached_key_event.text) {
 		free((uint8_t*)cached_key_event.text);
 		cached_key_event.text = NULL;
@@ -631,12 +641,12 @@ void kbd_empty_key_repeat(void)
 
 void kbd_set_key_repeat(int delay, int rate)
 {
+	/* I don't know why this check is here but i'm keeping it to
+	 * retain compatibility */
 	if (delay) {
 		key_repeat_delay = delay;
 		key_repeat_rate = rate;
-	} else {
-		key_repeat_delay = DEFAULT_KEY_REPEAT_DELAY;
-		key_repeat_rate = DEFAULT_KEY_REPEAT_RATE;
+		key_repeat_enabled = 1;
 	}
 }
 
