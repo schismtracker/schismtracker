@@ -95,7 +95,7 @@ static void it_import_voleffect(song_note_t *note, uint8_t v)
 	note->volparam = v - adj;
 }
 
-static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows)
+static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows, uint16_t cwtv)
 {
 	song_note_t last_note[64];
 	int chan, row = 0;
@@ -152,6 +152,16 @@ static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows)
 			note[chan].effect = slurp_getc(fp) & 0x1f;
 			note[chan].param = slurp_getc(fp);
 			csf_import_s3m_effect(note + chan, 1);
+
+			if (note[chan].effect == FX_SPECIAL && (note[chan].param & 0xf0) == 0xa0 && cwtv < 0x0200) {
+				// IT 1.xx does not support high offset command
+				note[chan].effect = FX_NONE;
+			} else if (note[chan].effect == FX_GLOBALVOLUME && note[chan].param > 0x80 && cwtv >= 0x1000 && cwtv <= 0x1050) {
+				// Fix handling of commands V81-VFF in ITs made with old Schism Tracker versions
+				// (fixed in commit ab5517d4730d4c717f7ebffb401445679bd30888 - one of the last versions to identify as v0.50)
+				note[chan].param = 0x80;
+			}
+
 			last_note[chan].effect = note[chan].effect;
 			last_note[chan].param = note[chan].param;
 		}
@@ -472,7 +482,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			slurp_seek(fp, 4, SEEK_CUR);
 			song->patterns[n] = csf_allocate_pattern(rows);
 			song->pattern_size[n] = song->pattern_alloc_size[n] = rows;
-			load_it_pattern(song->patterns[n], fp, rows);
+			load_it_pattern(song->patterns[n], fp, rows, hdr.cwtv);
 			got = slurp_tell(fp) - para_pat[n] - 8;
 			if (bytes != got)
 				log_appendf(4, " Warning: Pattern %d: size mismatch"
