@@ -1420,6 +1420,14 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
 			effect = FX_PORTAMENTODOWN;
 			param = 0xe0 | (param & 0xf);
 			break;
+		case 0x50:
+		case 0x60:
+		case 0x70:
+		case 0x90:
+		case 0xa0:
+			// ModPlug Tracker extensions
+			effect = FX_SPECIAL;
+			break;
 		default:
 			effect = param = 0;
 			break;
