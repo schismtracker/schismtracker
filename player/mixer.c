@@ -483,7 +483,7 @@ DEFINE_MIX_INTERFACE(16)
 	BEGIN_RESAMPLE_INTERFACE(ResampleMono##bits##BitFirFilter, int##bits##_t, 1) \
 		SNDMIX_GETMONOVOLFIRFILTER(bits) \
 		vol  >>= (WFIR_16SHIFT-WFIR_##bits##SHIFT);  /* This is used to compensate, since the code assumes that it always outputs to 16bits */ \
-		vol = CLAMP(vol, INT ## bits ## _MIN, INT ## bits ## _MIN); \
+		vol = CLAMP(vol, INT##bits##_MIN, INT##bits##_MAX); \
 	END_RESAMPLE_INTERFACE_MONO()
 
 #define DEFINE_STEREO_RESAMPLE_INTERFACE(bits) \
@@ -491,8 +491,8 @@ DEFINE_MIX_INTERFACE(16)
 		SNDMIX_GETSTEREOVOLFIRFILTER(bits) \
 		vol_l  >>= (WFIR_16SHIFT-WFIR_##bits##SHIFT);  /* This is used to compensate, since the code assumes that it always outputs to 16bits */ \
 		vol_r  >>= (WFIR_16SHIFT-WFIR_##bits##SHIFT);  /* This is used to compensate, since the code assumes that it always outputs to 16bits */ \
-		vol_l = CLAMP(vol_l, INT ## bits ## _MIN, INT ## bits ## _MIN); \
-		vol_r = CLAMP(vol_r, INT ## bits ## _MIN, INT ## bits ## _MIN); \
+		vol_l = CLAMP(vol_l, INT##bits##_MIN, INT##bits##_MAX); \
+		vol_r = CLAMP(vol_r, INT##bits##_MIN, INT##bits##_MAX); \
 	END_RESAMPLE_INTERFACE_STEREO()
 
 DEFINE_MONO_RESAMPLE_INTERFACE(8)
