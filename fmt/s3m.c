@@ -240,7 +240,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	for (n = 0, sample = song->samples + 1; n < nsmp; n++, sample++) {
 		uint8_t type;
 
-		slurp_seek(fp, (para_smp[n]) << 4, SEEK_SET);
+		slurp_seek(fp, bswapLE16(para_smp[n]) << 4, SEEK_SET);
 
 		type = slurp_getc(fp);
 		slurp_read(fp, sample->filename, 12);
