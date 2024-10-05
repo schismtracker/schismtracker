@@ -20,7 +20,8 @@ on:
 
 jobs:
   osx:
-    runs-on: macos-12
+    # We don't need the large image, but it's the only one still using Intel.
+    runs-on: macos-14-large
     env:
       SDL_VERSION: 2.30.7
       SDL_PPC_VERSION: 2.0.3
