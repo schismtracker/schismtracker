@@ -539,8 +539,12 @@ static void event_loop(void)
 			}
 			case SDL_KEYDOWN:
 				/* we have our own repeat handler now */
-				if (event.key.repeat && kbd_key_repeat_enabled())
-					break;
+				if (event.key.repeat) {
+					if (kbd_key_repeat_enabled())
+						break;
+
+					kk.is_repeat = 1;
+				}
 
 				/* fallthrough */
 			case SDL_KEYUP:
