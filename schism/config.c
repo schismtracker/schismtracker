@@ -77,12 +77,13 @@ void cfg_init_dir(void)
 #if defined(__amigaos4__)
 	strcpy(cfg_dir_dotschism, "PROGDIR:");
 #else
-	char *app_dir, *portable_file;
+	char *portable_file = NULL;
 
-	app_dir = SDL_GetBasePath();
-	portable_file = dmoz_path_concat(app_dir, "portable.txt");
+	char *app_dir = SDL_GetBasePath();
+	if (app_dir)
+		portable_file = dmoz_path_concat(app_dir, "portable.txt");
 
-	if(is_file(portable_file)) {
+	if (portable_file && is_file(portable_file)) {
 		printf("In portable mode.\n");
 
 		strncpy(cfg_dir_dotschism, app_dir, PATH_MAX);
