@@ -40,7 +40,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: '/Users/runner/x86_64'
-          key: mac-x86_64-files
+          key: mac-x86_64-files-x
 
       - name: 'Cache arm64 files'
         id: cache-arm64-files
