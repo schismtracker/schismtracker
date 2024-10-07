@@ -246,12 +246,26 @@ case "${host_os}" in
 		AC_MSG_RESULT([nothing to do here])
 
 		dnl now check for other stuff
+		saved_LIBS="$LIBS"
 		AC_CHECK_LIB([ogc], [IOS_ReloadIOS], [libogc_found=yes], [libogc_found=no], [-mrvl -L${DEVKITPRO}/libogc/lib/wii])
 		AC_CHECK_LIB([wut], [OSDynLoad_Acquire], [libwut_found=yes], [libwut_found=no], [-L${DEVKITPRO}/wut/lib])
+		LIBS="$saved_LIBS"
 
-		if test "x$FORCE_WIIU" = "xno" && test "x$libogc_found" = "xyes"; then
+		which=none
+
+		if test "x$FORCE_WIIU" = "xyes"; then
+			which=wiiu
+		elif test "x$FORCE_WII" = "xyes"; then
+			which=wii
+		elif test "x$libogc_found" = "xyes"; then
+			which=wii
+		elif test "x$libwut_found" = "xyes"; then
+			which=wiiu
+		fi
+
+		if test "x$which" = "xwii"; then
 			WII_CPPFLAGS="-I${DEVKITPRO}/libogc/include -I${DEVKITPPC}/powerpc-eabi/include"
-			WII_LDFLAGS="-L${DEVKITPRO}/libogc/lib/wii -L${DEVKITPPC}/powerpc-eabi/lib"
+			WII_LDFLAGS="-logc -L${DEVKITPRO}/libogc/lib/wii -L${DEVKITPPC}/powerpc-eabi/lib"
 			AC_SUBST([WII_CPPFLAGS])
 			AC_SUBST([WII_LDFLAGS])
 
@@ -260,9 +274,9 @@ case "${host_os}" in
 
 			use_wii=yes
 			AC_DEFINE([SCHISM_WII], [1], [Wii])
-		elif test "x$libwut_found" = "xyes"; then
+		elif test "x$which" = "xwiiu"; then
 			WIIU_CPPFLAGS="-I${DEVKITPRO}/wut/include -I${DEVKITPPC}/powerpc-eabi/include"
-			WIIU_LDFLAGS="-T${DEVKITPRO}/wut/share/wut.ld -Wl,--gc-sections -Wl,--emit-relocs -Wl,--no-eh-frame-hdr -z nocopyreloc -L${DEVKITPRO}/wut/lib -L${DEVKITPPC}/powerpc-eabi/lib"
+			WIIU_LDFLAGS="-lwut -T${DEVKITPRO}/wut/share/wut.ld -Wl,--gc-sections -Wl,--emit-relocs -Wl,--no-eh-frame-hdr -z nocopyreloc -L${DEVKITPRO}/wut/lib -L${DEVKITPPC}/powerpc-eabi/lib"
 			AC_SUBST([WIIU_CPPFLAGS])
 			AC_SUBST([WIIU_LDFLAGS])
 
