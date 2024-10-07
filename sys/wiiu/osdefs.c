@@ -23,6 +23,8 @@
 
 #include "headers.h"
 #include "osdefs.h"
+#include "mem.h"
+#include "dmoz.h"
 
 /* fixup HOME envvar */
 void wiiu_sysinit(int *pargc, char ***pargv)
@@ -33,7 +35,7 @@ void wiiu_sysinit(int *pargc, char ***pargv)
 	if (strchr(*pargv[0], '/') != NULL) {
 		// presumably launched from hbc menu - put stuff in the boot dir
 		// (does get_parent_directory do what I want here?)
-		ptr = get_parent_directory(*pargv[0]);
+		ptr = dmoz_path_get_parent_directory(*pargv[0]);
 	}
 
 	if (!ptr)
