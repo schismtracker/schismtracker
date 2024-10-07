@@ -157,7 +157,7 @@ AC_SUBST([UTF8PROC_CFLAGS])
 AC_SUBST([UTF8PROC_LIBS])
 
 dnl Functions
-AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp mmap nice unsetenv dup fnmatch mkstemp localtime_r)
+AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp mmap nice unsetenv dup fnmatch mkstemp localtime_r umask)
 AM_CONDITIONAL([NEED_ASPRINTF], [test "x$ac_cv_func_asprintf" = "xno"])
 AM_CONDITIONAL([NEED_VASPRINTF], [test "x$ac_cv_func_vasprintf" = "xno"])
 AM_CONDITIONAL([NEED_MEMCMP], [test "x$ac_cv_func_memcmp" = "xno"])
@@ -202,6 +202,7 @@ AC_MSG_CHECKING([host platform])
 use_macosx=no
 use_win32=no
 use_wii=no
+use_wiiu=no
 use_network=no
 
 case "${host_os}" in
@@ -236,6 +237,7 @@ case "${host_os}" in
 
 		dnl now check for other stuff
 		AC_CHECK_LIB([ogc], [IOS_ReloadIOS], [libogc_found=yes], [libogc_found=no], [-mrvl -L${DEVKITPRO}/libogc/lib/wii])
+		AC_CHECK_LIB([wut], [OSDynLoad_Acquire], [libwut_found=yes], [libwut_found=no], [-L${DEVKITPRO}/wut/lib])
 
 		if test "x$libogc_found" = "xyes"; then
 			WII_CPPFLAGS="-I${DEVKITPRO}/libogc/include -I${DEVKITPPC}/powerpc-eabi/include"
@@ -248,6 +250,30 @@ case "${host_os}" in
 
 			use_wii=yes
 			AC_DEFINE([SCHISM_WII], [1], [Wii])
+		elif test "x$libwut_found" = "xyes"; then
+			WIIU_CPPFLAGS="-I${DEVKITPRO}/wut/include -I${DEVKITPPC}/powerpc-eabi/include"
+			WIIU_LDFLAGS="-T${DEVKITPRO}/wut/share/wut.ld -Wl,--gc-sections -Wl,--emit-relocs -Wl,--no-eh-frame-hdr -z nocopyreloc -L${DEVKITPRO}/wut/lib -L${DEVKITPPC}/powerpc-eabi/lib"
+			AC_SUBST([WIIU_CPPFLAGS])
+			AC_SUBST([WIIU_LDFLAGS])
+
+			AC_PATH_PROG([WUHBTOOL], [wuhbtool])
+			if test "x$WUHBTOOL" = "x"; then
+				AC_MSG_ERROR([*** Couldn't find wuhbtool])
+			fi
+
+			AC_PATH_PROG([ELF2RPL],  [elf2rpl])
+			if test "x$ELF2RPL" = "x"; then
+				AC_MSG_ERROR([*** Couldn't find elf2rpl])
+			fi
+
+			AC_SUBST([WUHBTOOL])
+			AC_SUBST([ELF2RPL])
+
+			EXEEXT=.elf
+			AC_SUBST([EXEEXT])
+
+			use_wiiu=yes
+			AC_DEFINE([SCHISM_WIIU], [1], [Wii U])
 		fi
 
 		dnl Networking...
@@ -285,6 +311,7 @@ fi
 
 AM_CONDITIONAL([USE_WIN32], [test "x$use_win32" = "xyes"])
 AM_CONDITIONAL([USE_WII], [test "x$use_wii" = "xyes"])
+AM_CONDITIONAL([USE_WIIU], [test "x$use_wiiu" = "xyes"])
 AM_CONDITIONAL([USE_MACOSX], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([am__fastdepOBJC], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([USE_NETWORK], [test "x$use_network" = "xyes"])

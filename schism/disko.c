@@ -286,8 +286,10 @@ int disko_close(disko_t *ds, int backup)
 	if (fclose(ds->file) == EOF && !err) {
 		err = errno;
 	} else if (!err) {
-		// preserve file mode, or set it sanely -- mkstemp() sets file mode to 0600
-#ifndef SCHISM_WII /* FIXME - autoconf check for this instead */
+		// preserve file mode, or set it sanely -- mkstemp() sets file mode to 0600.
+		// some operating systems (see: Wii, Wii U) don't have umask, so we can't do
+		// this. boohoo, whatever
+#if HAVE_UMASK
 		struct stat st;
 		if (os_stat(ds->filename, &st) < 0) {
 			/* Probably didn't exist already, let's make something up.
@@ -306,7 +308,7 @@ int disko_close(disko_t *ds, int backup)
 		if (rename_file(ds->tempname, ds->filename, 1) != 0) {
 			err = errno;
 		} else {
-#ifndef SCHISM_WII
+#if HAVE_UMASK
 			// Fix the permissions on the file
 			chmod(ds->filename, st.st_mode);
 #endif

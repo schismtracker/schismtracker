@@ -58,7 +58,12 @@
 static const char *devices[] = {
 	"sd:/",
 	"isfs:/",
-	NULL
+	NULL,
+};
+#elif defined(SCHISM_WIIU)
+static const char *devices[] = {
+	"fs:/vol/external01",
+	NULL,
 };
 #endif
 
@@ -316,7 +321,7 @@ int dmoz_path_is_absolute(const char *path)
 	char *colon = strchr(path, ':'), *slash = strchr(path, '/');
 	if (colon && (colon < slash || (colon && !slash && colon[1] == '\0')))
 		return colon - path + 1;
-#elif defined(SCHISM_WII)
+#elif defined(SCHISM_WII) || defined(SCHISM_WIIU)
 	char *colon = strchr(path, ':'), *slash = strchr(path, '/');
 	if (colon + 1 == slash)
 		return slash - path + 1;
@@ -717,7 +722,7 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 		}
 	}
 	em = SetErrorMode(em);
-#elif defined(SCHISM_WII)
+#elif defined(SCHISM_WII) || defined(SCHISM_WIIU)
 	int i;
 	for (i = 0; devices[i]; i++) {
 		DIR *dir = opendir(devices[i]);
@@ -851,7 +856,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 		path = FAILSAFE_PATH;
 	pathlen = strlen(path);
 
-#ifdef SCHISM_WII
+#ifdef SCHISM_WII /* and Wii U maybe? *?
 	/* awful hack: libfat's file reads bail if a device is given without a slash. */
 	if (strchr(path, ':') != NULL && strchr(path, '/') == NULL) {
 		int i;

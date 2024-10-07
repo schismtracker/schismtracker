@@ -47,6 +47,8 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_sdlinit wii_sdlinit
 # define os_sysexit wii_sysexit
 # define os_sdlevent wii_sdlevent
+#elif defined(SCHISM_WIIU)
+# define os_sysinit wiiu_sysinit
 #elif defined(SCHISM_WIN32)
 # define os_sdlevent win32_sdlevent
 # define os_sdlinit win32_sdlinit
@@ -79,6 +81,8 @@ A return value of 0 indicates that the event should NOT be processed by the main
 // Implementations for the above, and more.
 
 int macosx_ibook_fnswitch(int setting);
+
+void wiiu_sysinit(int *pargc, char ***pargv); // fixup HOME envvar
 
 void wii_sysinit(int *pargc, char ***pargv); // set up filesystem
 void wii_sysexit(void); // close filesystem

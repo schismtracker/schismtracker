@@ -916,7 +916,7 @@ int run_hook(const char *dir, const char *name, const char *maybe_arg)
 	_wchdir(cwd);
 	if (r == 0) return 1;
 	return 0;
-#elif defined(SCHISM_WII)
+#elif defined(SCHISM_WII) || defined(SCHISM_WIIU)
 	// help how do I operating system
 	(void) dir;
 	(void) name;
