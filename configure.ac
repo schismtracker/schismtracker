@@ -80,6 +80,16 @@ AC_ARG_ENABLE(alsa-linking,
 	ALSA_LINKING=$enableval,
 	ALSA_LINKING=no)
 
+AC_ARG_ENABLE(force-wii,
+	AS_HELP_STRING([--enable-force-wii], [Force target the Wii]),
+	FORCE_WII=$enableval,
+	FORCE_WII=no)
+
+AC_ARG_ENABLE(force-wiiu,
+	AS_HELP_STRING([--enable-force-wiiu], [Force target the Wii U]),
+	FORCE_WIIU=$enableval,
+	FORCE_WIIU=no)
+
 AC_ARG_ENABLE(opl2,
 	AS_HELP_STRING([--enable-opl2], [Use OPL2 instead of OPL3]),
 	USE_OPL2=$enableval,
@@ -239,7 +249,7 @@ case "${host_os}" in
 		AC_CHECK_LIB([ogc], [IOS_ReloadIOS], [libogc_found=yes], [libogc_found=no], [-mrvl -L${DEVKITPRO}/libogc/lib/wii])
 		AC_CHECK_LIB([wut], [OSDynLoad_Acquire], [libwut_found=yes], [libwut_found=no], [-L${DEVKITPRO}/wut/lib])
 
-		if test "x$libogc_found" = "xyes"; then
+		if test "x$FORCE_WIIU" = "xno" && test "x$libogc_found" = "xyes"; then
 			WII_CPPFLAGS="-I${DEVKITPRO}/libogc/include -I${DEVKITPPC}/powerpc-eabi/include"
 			WII_LDFLAGS="-L${DEVKITPRO}/libogc/lib/wii -L${DEVKITPPC}/powerpc-eabi/lib"
 			AC_SUBST([WII_CPPFLAGS])
