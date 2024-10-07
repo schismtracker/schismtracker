@@ -71,7 +71,7 @@ A return value of 0 indicates that the event should NOT be processed by the main
 
 #if defined(SCHISM_WIN32)
 # define os_run_hook win32_run_hook
-#elif defined(HAVE_EXECL)
+#elif defined(HAVE_EXECL) && defined(HAVE_FORK)
 # define os_run_hook posix_run_hook
 #endif
 
