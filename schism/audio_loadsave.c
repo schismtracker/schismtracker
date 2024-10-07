@@ -32,6 +32,7 @@
 #include "slurp.h"
 #include "page.h"
 #include "version.h"
+#include "osdefs.h"
 
 #include "fmt.h"
 #include "dmoz.h"
@@ -88,7 +89,7 @@ static void song_set_filename(const char *file)
 	if (file && *file) {
 		CHARSET_EASY_MODE_CONST(file, CHARSET_CHAR, CHARSET_CP437, {
 			strncpy(song_filename, out, PATH_MAX);
-			strncpy(song_basename, get_basename(out), NAME_MAX);
+			strncpy(song_basename, dmoz_path_get_basename(out), NAME_MAX);
 		});
 		song_filename[PATH_MAX] = '\0';
 		song_basename[NAME_MAX] = '\0';
@@ -267,7 +268,7 @@ song_t *song_create_load(const char *file)
 
 int song_load_unchecked(const char *file)
 {
-	const char *base = get_basename(file);
+	const char *base = dmoz_path_get_basename(file);
 	int was_playing;
 	song_t *newsong;
 
@@ -403,7 +404,7 @@ static char *mangle_filename(const char *in, const char *mid, const char *ext)
 	const char *iext;
 	size_t baselen, rlen;
 
-	iext = get_extension(in);
+	iext = dmoz_path_get_extension(in);
 	rlen = baselen = iext - in;
 	if (mid)
 		rlen += strlen(mid);
@@ -570,7 +571,7 @@ int song_save_sample(const char *filename, const char *type, song_sample_t *smp,
 		break;
 	case SAVE_FILE_ERROR:
 		status_text_flash("Error: Sample %d NOT saved! (%s)", num, "File Error");
-		log_perror(get_basename(filename));
+		log_perror(dmoz_path_get_basename(filename));
 		break;
 	case SAVE_INTERNAL_ERROR:
 	default: // ???
@@ -796,7 +797,7 @@ int song_load_sample(int n, const char *file)
 	fmt_load_sample_func *load;
 	song_sample_t smp = {0};
 
-	const char *base = get_basename(file);
+	const char *base = dmoz_path_get_basename(file);
 
 	if (slurp(&s, file, NULL, 0)) {
 		log_perror(base);
@@ -891,7 +892,7 @@ int song_save_instrument(const char *filename, const char *type, song_instrument
 		break;
 	case SAVE_FILE_ERROR:
 		status_text_flash("Error: Instrument %d NOT saved! (%s)", num, "File Error");
-		log_perror(get_basename(filename));
+		log_perror(dmoz_path_get_basename(filename));
 		break;
 	case SAVE_INTERNAL_ERROR:
 	default: // ???
@@ -932,7 +933,7 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 	csf_stop_sample(current_song, current_song->samples + 0);
 	csf_free(library);
 
-	const char *base = get_basename(path);
+	const char *base = dmoz_path_get_basename(path);
 	library = song_create_load(path);
 	if (!library) {
 		log_appendf(4, "%s: %s", base, fmt_strerror(errno));
@@ -978,7 +979,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 	csf_stop_sample(current_song, current_song->samples + 0);
 	csf_free(library);
 
-	const char *base = get_basename(path);
+	const char *base = dmoz_path_get_basename(path);
 
 	struct stat st;
 	if (os_stat(path, &st) < 0) {

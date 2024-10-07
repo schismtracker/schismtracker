@@ -26,10 +26,6 @@
 
 #include "headers.h"
 
-#include <sys/stat.h> /* roundabout way to get time_t */
-#include <sys/types.h>
-#include <stddef.h> /* wchar_t */
-
 /* --------------------------------------------------------------------- */
 
 #define ARRAY_SIZE(a) ((signed)(sizeof(a)/sizeof(*(a))))
@@ -98,18 +94,13 @@
 # define IS_DIR_SEPARATOR(c) ((c) == '/')
 #endif
 
+#include "mem.h" // XXX these includes suck
+#include "str.h" // and need to go away
+
 /* --------------------------------------------------------------------- */
 /* functions returning const char * use a static buffer; ones returning char * malloc their return value
 (thus it needs free'd)... except numtostr, get_time_string, and get_date_string, which return the buffer
 passed to them in the 'buf' parameter. */
-
-/* memory */
-extern MALLOC void *mem_alloc(size_t);
-extern MALLOC void *mem_calloc(size_t, size_t);
-extern MALLOC char *str_dup(const char *);
-extern MALLOC char *strn_dup(const char *, size_t);
-extern void *mem_realloc(void *,size_t);
-extern void mem_free(void *);
 
 /*Conversion*/
 /* linear -> deciBell*/
@@ -154,71 +145,7 @@ extern short pdB_s(int noisefloor, double power, double correction_dBs);
 /* correction_dBs corrects the dB after converted, but before scaling.*/
 extern short dB2_power_s(int noisefloor, int db, double correction_dBs);
 
-/* formatting */
-/* for get_{time,date}_string, buf should be (at least) 27 chars; anything past that isn't used. */
-char *get_date_string(time_t when, char *buf);
-char *get_time_string(time_t when, char *buf);
-char *numtostr(int digits, unsigned int n, char *buf);
-char *numtostr_signed(int digits, int n, char *buf);
-char *num99tostr(int n, char *buf);
-
-/* string handling */
-const char *get_basename(const char *filename);
-const char *get_extension(const char *filename); // including dot; "" if no extension (note: used to strip dot)
-char *get_parent_directory(const char *dirname);
-int ltrim_string(char *s); // return: length of string after trimming
-int rtrim_string(char *s);
-int trim_string(char *s);
-int str_break(const char *s, char c, char **first, char **second);
-char *str_escape(const char *source, int space_hack);
-char *str_unescape(const char *source);
-char *pretty_name(const char *filename);
-int get_num_lines(const char *text);
-char *str_concat(const char *s, ...);
-
-
-/* filesystem */
-int make_backup_file(const char *filename, int numbered);
-unsigned long long file_size(const char *filename);
-int is_file(const char *filename);
-int is_directory(const char *filename);
-/* following functions should free() the resulting strings */
-char *get_home_directory(void); /* "default" directory for user files, i.e. $HOME, My Documents, etc. */
-char *get_dot_directory(void); /* where settings files go (%AppData% on Windows, same as $HOME elsewhere) */
-char *get_current_directory(void); /* just a getcwd() wrapper */
-
-/* wrappers around functions for Unicode support */
-#ifdef SCHISM_WIN32
-int win32_open(const char* path, int flags);
-int win32_wstat(const wchar_t* path, struct stat* st);
-int win32_stat(const char* path, struct stat* st);
-int win32_mktemp(char* template, size_t size);
-int win32_mkdir(const char* path, mode_t mode);
-FILE* win32_fopen(const char* path, const char* flags);
-# define win32_wmkdir(path, mode) _wmkdir(path)
-# define os_fopen win32_fopen
-# define os_stat  win32_stat
-# define os_open  win32_open
-# define os_mkdir win32_mkdir
-#else
-# define os_fopen fopen
-# define os_stat  stat
-# define os_open  open
-# define os_mkdir mkdir
-#endif
-
 /* integer sqrt (very fast; 32 bits limited) */
 unsigned int i_sqrt(unsigned int r);
 
-/* sleep in msec */
-void ms_sleep(unsigned int m);
-
-/* run a hook */
-int run_hook(const char *dir, const char *name, const char *maybe_arg);
-
-/* Mostly a glorified rename(), with fixes for certain dumb OSes.
-If 'overwrite' is zero, attempts to rename over an existing file will fail with EEXIST. */
-int rename_file(const char *old, const char *newf, int overwrite);
-
 #endif /* SCHISM_UTIL_H_ */
-

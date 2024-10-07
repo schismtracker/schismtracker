@@ -182,6 +182,19 @@ copy of 'b'. */
 char *dmoz_path_concat(const char *a, const char *b);
 char *dmoz_path_concat_len(const char *a, const char *b, int alen, int blen);
 
+const char *dmoz_path_get_basename(const char *filename);
+const char *dmoz_path_get_extension(const char *filename);
+char *dmoz_path_get_parent_directory(const char *dirname);
+int dmoz_path_make_backup(const char *filename, int numbered);
+int dmoz_path_rename(const char *old, const char *new, int overwrite);
+int dmoz_path_is_file(const char *filename);
+int dmoz_path_is_directory(const char *filename);
+unsigned long long dmoz_path_get_file_size(const char *filename);
+
+char *dmoz_get_current_directory(void);
+char *dmoz_get_home_directory(void);
+char *dmoz_get_dot_directory(void);
+
 
 /* Adding files and directories
 For all of these, path and base should be free()-able. */

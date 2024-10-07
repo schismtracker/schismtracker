@@ -164,10 +164,10 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 	smp->volume        = 64 * 4;
 	smp->global_volume = 64;
 	smp->c5speed       = fmt.freqHz;
-	smp->length        = c.size / ((fmt.bitspersample / 8) * fmt.channels);
+	smp->length        = data_chunk.size / ((fmt.bitspersample / 8) * fmt.channels);
 
 	if (load_sample) {
-		return iff_read_sample(&c, fp, smp, flags, 0);
+		return iff_read_sample(&data_chunk, fp, smp, flags, 0);
 	} else {
 		if (fmt.channels == 2)
 			smp->flags |= CHN_STEREO;

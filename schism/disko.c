@@ -33,6 +33,7 @@
 #include "song.h"
 #include "util.h"
 #include "vgamem.h"
+#include "osdefs.h"
 
 #include "player/sndfile.h"
 #include "player/cmixer.h"
@@ -286,8 +287,10 @@ int disko_close(disko_t *ds, int backup)
 	if (fclose(ds->file) == EOF && !err) {
 		err = errno;
 	} else if (!err) {
-		// preserve file mode, or set it sanely -- mkstemp() sets file mode to 0600
-#ifndef SCHISM_WII /* FIXME - autoconf check for this instead */
+		// preserve file mode, or set it sanely -- mkstemp() sets file mode to 0600.
+		// some operating systems (see: Wii, Wii U) don't have umask, so we can't do
+		// this. boohoo, whatever
+#if HAVE_UMASK
 		struct stat st;
 		if (os_stat(ds->filename, &st) < 0) {
 			/* Probably didn't exist already, let's make something up.
@@ -301,12 +304,12 @@ int disko_close(disko_t *ds, int backup)
 #endif
 		if (backup) {
 			// back up the old file
-			make_backup_file(ds->filename, (backup != 1));
+			dmoz_path_make_backup(ds->filename, (backup != 1));
 		}
-		if (rename_file(ds->tempname, ds->filename, 1) != 0) {
+		if (dmoz_path_rename(ds->tempname, ds->filename, 1) != 0) {
 			err = errno;
 		} else {
-#ifndef SCHISM_WII
+#if HAVE_UMASK
 			// Fix the permissions on the file
 			chmod(ds->filename, st.st_mode);
 #endif
@@ -679,7 +682,7 @@ static char *get_filename(const char *template, int n)
 		free(s);
 		return NULL;
 	}
-	num99tostr(n, buf);
+	str_from_num99(n, buf);
 	sub[0] = buf[0];
 	sub[1] = buf[1];
 	return s;

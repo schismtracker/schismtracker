@@ -1362,7 +1362,7 @@ void update_current_instrument(void)
 	}
 
 	if (n > 0) {
-		draw_text(num99tostr(n, buf), 50, 3, 5, 0);
+		draw_text(str_from_num99(n, buf), 50, 3, 5, 0);
 		draw_text_len(name, 25, 53, 3, 5, 0);
 	} else {
 		draw_text("..", 50, 3, 5, 0);
@@ -1386,8 +1386,8 @@ static void redraw_top_info(void)
 	update_current_pattern();
 	update_current_row();
 
-	draw_text(numtostr(3, song_get_current_speed(), buf), 50, 4, 5, 0);
-	draw_text(numtostr(3, song_get_current_tempo(), buf), 54, 4, 5, 0);
+	draw_text(str_from_num(3, song_get_current_speed(), buf), 50, 4, 5, 0);
+	draw_text(str_from_num(3, song_get_current_tempo(), buf), 54, 4, 5, 0);
 	draw_char('0' + kbd_get_current_octave(), 50, 5, 5, 0);
 }
 
@@ -1588,8 +1588,8 @@ void redraw_screen(void)
 	if (!ACTIVE_PAGE.draw_full) {
 		draw_vis();
 		draw_time();
-		draw_text(numtostr(3, song_get_current_speed(), buf), 50, 4, 5, 0);
-		draw_text(numtostr(3, song_get_current_tempo(), buf), 54, 4, 5, 0);
+		draw_text(str_from_num(3, song_get_current_speed(), buf), 50, 4, 5, 0);
+		draw_text(str_from_num(3, song_get_current_tempo(), buf), 54, 4, 5, 0);
 
 		status_text_redraw();
 	}

@@ -118,7 +118,7 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	strncpy(titletmp, song->message, 36);
 	titletmp[36] = '\0';
 	titletmp[strcspn(titletmp, "\r\n")] = '\0';
-	trim_string(titletmp);
+	str_trim(titletmp);
 	titletmp[25] = '\0';
 	strcpy(song->title, titletmp);
 

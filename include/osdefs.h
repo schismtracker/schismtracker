@@ -30,6 +30,9 @@ and possibly other files as well. Only one osdefs.c should be in use at a time. 
 #include "headers.h"
 #include "event.h"
 
+/* need stat; TODO autoconf test */
+#include <sys/stat.h> /* roundabout way to get time_t */
+
 /*
 os_sysinit: any platform-dependent setup that needs to occur directly upon startup.
 This code is processed right as soon as main() starts.
@@ -47,17 +50,29 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_sdlinit wii_sdlinit
 # define os_sysexit wii_sysexit
 # define os_sdlevent wii_sdlevent
+#elif defined(SCHISM_WIIU)
+# define os_sysinit wiiu_sysinit
 #elif defined(SCHISM_WIN32)
 # define os_sdlevent win32_sdlevent
 # define os_sdlinit win32_sdlinit
 # define os_sysinit win32_sysinit
 # define os_sysexit win32_sysexit
 # define os_get_modkey win32_get_modkey
+# define os_fopen win32_fopen
+# define os_stat win32_stat
+# define os_open win32_open
+# define os_mkdir win32_mkdir
 #elif defined(SCHISM_MACOSX)
 # define os_sdlevent macosx_sdlevent
 # define os_sysexit macosx_sysexit
 # define os_sysinit macosx_sysinit
 # define os_get_modkey macosx_get_modkey
+#endif
+
+#if defined(SCHISM_WIN32)
+# define os_run_hook win32_run_hook
+#elif defined(HAVE_EXECL)
+# define os_run_hook posix_run_hook
 #endif
 
 #ifndef os_sdlevent
@@ -75,10 +90,27 @@ A return value of 0 indicates that the event should NOT be processed by the main
 #ifndef os_get_modkey
 #define os_get_modkey(m)
 #endif
+#ifndef os_fopen
+# define os_fopen fopen
+#endif
+#ifndef os_stat
+# define os_stat stat
+#endif
+#ifndef os_open
+# define os_open open
+#endif
+#ifndef os_mkdir
+# define os_mkdir mkdir
+#endif
+#ifndef os_run_hook
+# define os_run_hook(a,b,c) 0
+#endif
 
 // Implementations for the above, and more.
 
 int macosx_ibook_fnswitch(int setting);
+
+void wiiu_sysinit(int *pargc, char ***pargv); // fixup HOME envvar
 
 void wii_sysinit(int *pargc, char ***pargv); // set up filesystem
 void wii_sysexit(void); // close filesystem
@@ -92,6 +124,16 @@ void win32_sdlinit(void);
 void win32_get_modkey(int *m);
 void win32_filecreated_callback(const char *filename);
 void win32_toggle_menu(SDL_Window* window);
+int win32_open(const char* path, int flags);
+int win32_wstat(const wchar_t* path, struct stat* st);
+int win32_stat(const char* path, struct stat* st);
+int win32_mktemp(char* template, size_t size);
+int win32_mkdir(const char* path, mode_t mode);
+FILE* win32_fopen(const char* path, const char* flags);
+#define win32_wmkdir(path, mode) _wmkdir(path)
+int win32_run_hook(const char *dir, const char *name, const char *maybe_arg);
+
+int posix_run_hook(const char *dir, const char *name, const char *maybe_arg);
 
 int macosx_sdlevent(SDL_Event* event);
 void macosx_sysexit(void);

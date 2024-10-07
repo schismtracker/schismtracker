@@ -527,7 +527,7 @@ static int message_handle_key_viewmode(struct key_event * k)
 	case SDLK_END:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		top_line = last_line - 34;
+		top_line = str_get_num_lines(current_song->message) - 34;
 		new_cur_line = last_line;
 		break;
 	case SDLK_LEFT:
@@ -723,7 +723,7 @@ static int message_handle_key_editmode(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & KMOD_CTRL) {
-			num_lines = get_num_lines(current_song->message);
+			num_lines = str_get_num_lines(current_song->message);
 			new_cursor_line = num_lines;
 			report_line = 1;
 		} else {
@@ -818,7 +818,7 @@ static int message_handle_key_editmode(struct key_event * k)
 
 	if (new_cursor_line != cursor_line) {
 		if (num_lines == -1)
-			num_lines = get_num_lines(current_song->message);
+			num_lines = str_get_num_lines(current_song->message);
 
 		if (new_cursor_line < 0)
 			new_cursor_line = 0;
@@ -846,7 +846,7 @@ static int message_handle_key_editmode(struct key_event * k)
 
 		} else if (new_cursor_char >
 			   get_nth_line(current_song->message, cursor_line, &ptr)) {
-			if (cursor_line == get_num_lines(current_song->message)) {
+			if (cursor_line == str_get_num_lines(current_song->message)) {
 				new_cursor_char = cursor_char;
 			} else {
 				cursor_line++;

@@ -316,9 +316,9 @@ static void help_set_page(void)
 	}
 
 	/* how many lines? */
-	global_lines = get_num_lines(help_text[HELP_GLOBAL]);
+	global_lines = str_get_num_lines(help_text[HELP_GLOBAL]);
 	if (have_local_help) {
-		local_lines = get_num_lines(help_text[status.current_help_index]);
+		local_lines = str_get_num_lines(help_text[status.current_help_index]);
 		num_lines = local_lines + global_lines + 5;
 	} else {
 		num_lines = global_lines + 2;

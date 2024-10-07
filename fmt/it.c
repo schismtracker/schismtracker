@@ -63,7 +63,7 @@ int fmt_it_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	/*file->extension = str_dup("it");*/
 	file->title = strn_dup(title, sizeof(title));
-	rtrim_string(file->title);
+	str_rtrim(file->title);
 	file->type = TYPE_MODULE_IT;
 	return 1;
 }
@@ -301,7 +301,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		song->title[n] = hdr.songname[n] ? hdr.songname[n] : 32;
 	}
 	song->title[25] = 0;
-	rtrim_string(song->title);
+	str_rtrim(song->title);
 
 	if (hdr.cmwt < 0x0214 && hdr.cwtv < 0x0214)
 		ignoremidi = 1;

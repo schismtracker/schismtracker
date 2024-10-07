@@ -37,6 +37,7 @@
 #include "dialog.h"
 #include "vgamem.h"
 #include "accessibility.h"
+#include "osdefs.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -285,9 +286,9 @@ static void load_sample_draw_const(void)
 		}
 		sprintf(sbuf, "%07ld", (long)f->filesize);
 		draw_text(sbuf, 59, 45, 5,0);
-		get_date_string(f->timestamp, sbuf);
+		str_from_date(f->timestamp, sbuf);
 		draw_text(sbuf, 59, 46, 5,0);
-		get_time_string(f->timestamp, sbuf);
+		str_from_time(f->timestamp, sbuf);
 		draw_text(sbuf, 59, 47, 5,0);
 	}
 
@@ -389,7 +390,7 @@ static void file_list_draw(void)
 			fg = get_type_color(file->type);
 			bg = 0;
 		}
-		draw_text(numtostr(3, n+1, buf), 2, pos, 0, 2);
+		draw_text(str_from_num(3, n+1, buf), 2, pos, 0, 2);
 		draw_text_len(file->title ? file->title : "", 25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
 		draw_text_utf8_len(file->base ? file->base : "", 18, 32, pos, fg, bg);

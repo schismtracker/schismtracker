@@ -61,8 +61,8 @@ void update_current_order(void)
 {
 	char buf[4];
 
-	draw_text(numtostr(3, current_order, buf), 12, 5, 5, 0);
-	draw_text(numtostr(3, csf_last_order(current_song), buf), 16, 5, 5, 0);
+	draw_text(str_from_num(3, current_order, buf), 12, 5, 5, 0);
+	draw_text(str_from_num(3, csf_last_order(current_song), buf), 16, 5, 5, 0);
 }
 
 
@@ -172,7 +172,7 @@ static void get_pattern_string(unsigned char pattern, char *buf)
 		buf[3] = 0;
 		break;
 	default:
-		numtostr(3, pattern, buf);
+		str_from_num(3, pattern, buf);
 		break;
 	}
 }
@@ -192,7 +192,7 @@ static void orderlist_draw(void)
 
 	/* draw the list */
 	for (pos = 0, n = top_order; pos < 32; pos++, n++) {
-		draw_text(numtostr(3, n, buf), 2, 15 + pos, (n == playing_order ? 3 : 0), 2);
+		draw_text(str_from_num(3, n, buf), 2, 15 + pos, (n == playing_order ? 3 : 0), 2);
 		get_pattern_string(current_song->orderlist[n], buf);
 		draw_text(buf, 6, 15 + pos, 2, 0);
 	}
@@ -762,7 +762,7 @@ static void ordervol_draw_const(void)
 			}
 		}
 
-		numtostr(2, n, buf + 8);
+		str_from_num(2, n, buf + 8);
 		draw_text(buf, 20, 14 + n, fg, 2);
 
 		fg = 0;
@@ -772,7 +772,7 @@ static void ordervol_draw_const(void)
 			}
 		}
 
-		numtostr(2, n + 32, buf + 8);
+		str_from_num(2, n + 32, buf + 8);
 		draw_text(buf, 54, 14 + n, fg, 2);
 	}
 }

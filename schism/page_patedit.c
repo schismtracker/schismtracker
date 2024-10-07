@@ -2392,8 +2392,8 @@ void update_current_row(void)
 {
 	char buf[4];
 
-	draw_text(numtostr(3, current_row, buf), 12, 7, 5, 0);
-	draw_text(numtostr(3, song_get_rows_in_pattern(current_pattern), buf), 16, 7, 5, 0);
+	draw_text(str_from_num(3, current_row, buf), 12, 7, 5, 0);
+	draw_text(str_from_num(3, song_get_rows_in_pattern(current_pattern), buf), 16, 7, 5, 0);
 }
 
 int get_current_channel(void)
@@ -2426,8 +2426,8 @@ void update_current_pattern(void)
 {
 	char buf[4];
 
-	draw_text(numtostr(3, current_pattern, buf), 12, 6, 5, 0);
-	draw_text(numtostr(3, csf_get_num_patterns(current_song) - 1, buf), 16, 6, 5, 0);
+	draw_text(str_from_num(3, current_pattern, buf), 12, 6, 5, 0);
+	draw_text(str_from_num(3, csf_get_num_patterns(current_song) - 1, buf), 16, 6, 5, 0);
 }
 
 int get_current_pattern(void)
@@ -2620,7 +2620,7 @@ static void pattern_editor_redraw(void)
 			if (chan_pos == 0) {
 				fg = pattern_is_playing && row == playing_row ? 3 : 0;
 				bg = (current_pattern == marked_pattern && row == marked_row) ? 11 : 2;
-				draw_text(numtostr(3, row, buf), 1, 15 + row_pos, fg, bg);
+				draw_text(str_from_num(3, row, buf), 1, 15 + row_pos, fg, bg);
 			}
 
 			if (is_in_selection(chan, row)) {

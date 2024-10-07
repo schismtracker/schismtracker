@@ -485,7 +485,7 @@ void widget_draw_widget(struct widget *w, int selected)
 		break;
 	case WIDGET_NUMENTRY:
 		if (w->d.numentry.reverse) {
-			str = numtostr(w->width, w->d.numentry.value, buf);
+			str = str_from_num(w->width, w->d.numentry.value, buf);
 			while (*str == '0') str++;
 			draw_text_len("", w->width, w->x, w->y, 2, 0);
 			if (*str) {
@@ -500,10 +500,10 @@ void widget_draw_widget(struct widget *w, int selected)
 			}
 		} else {
 			if (w->d.numentry.min < 0 || w->d.numentry.max < 0) {
-				numtostr_signed(w->width, w->d.numentry.value,
+				str_from_num_signed(w->width, w->d.numentry.value,
 							buf);
 			} else {
-				numtostr(w->width, w->d.numentry.value,
+				str_from_num(w->width, w->d.numentry.value,
 							buf);
 			}
 			draw_text_len(buf,
@@ -561,15 +561,15 @@ void widget_draw_widget(struct widget *w, int selected)
 				       w->d.thumbbar.max, w->d.thumbbar.value, selected);
 		}
 		if (w->d.thumbbar.min < 0 || w->d.thumbbar.max < 0) {
-			numtostr_signed(3, w->d.thumbbar.value, buf);
+			str_from_num_signed(3, w->d.thumbbar.value, buf);
 		} else {
-			numtostr(3, w->d.thumbbar.value, buf);
+			str_from_num(3, w->d.thumbbar.value, buf);
 		}
 		draw_text(buf,
 				w->x + w->width + 1, w->y, 1, 2);
 		break;
 	case WIDGET_PANBAR:
-		numtostr(2, w->d.panbar.channel, buf + 8);
+		str_from_num(2, w->d.panbar.channel, buf + 8);
 		draw_text(buf, w->x, w->y, selected ? 3 : 0, 2);
 		if (w->d.panbar.muted) {
 			draw_text("  Muted  ", w->x + 11, w->y, selected ? 3 : 5, 0);
@@ -579,7 +579,7 @@ void widget_draw_widget(struct widget *w, int selected)
 			/* draw_fill_chars(w->x + 21, w->y, w->x + 23, w->y, 2); */
 		} else {
 			draw_thumb_bar(w->x + 11, w->y, 9, 0, 64, w->d.panbar.value, selected);
-			draw_text(numtostr(3, w->d.thumbbar.value, buf), w->x + 21, w->y, 1, 2);
+			draw_text(str_from_num(3, w->d.thumbbar.value, buf), w->x + 21, w->y, 1, 2);
 		}
 		break;
 	case WIDGET_OTHER:
