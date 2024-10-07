@@ -40,6 +40,7 @@
 #include "dialog.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "accessibility.h"
 
 #include "sdlmain.h"
 #include "clippy.h"

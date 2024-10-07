@@ -99,6 +99,7 @@ noinst_HEADERS = \
 	include/auto/logoschism.h	\
 	include/auto/schismico.h	\
 	include/auto/schismico_hires.h	\
+	include/accessibility.h			\
 	include/bswap.h			\
 	include/bshift.h        \
 	include/charset.h		\
@@ -169,6 +170,10 @@ if HAVE_PERL
 	$(PERL) $(srcdir)/scripts/genhelp.pl $(srcdir) $(helptexts) >$@
 else
 	@echo "*** perl is required to regenerate $(@) ***"; exit 1;
+endif
+
+if USE_ACCESSIBILITY
+lib_sral=-lSRAL
 endif
 
 if USE_ALSA
@@ -343,6 +348,7 @@ schismtracker_SOURCES = \
 	player/snd_gm.c			\
 	player/sndmix.c			\
 	player/tables.c			\
+	schism/accessibility.c		\
 	schism/audio_loadsave.c		\
 	schism/audio_playback.c		\
 	schism/bshift.c         \
@@ -425,4 +431,4 @@ schismtracker_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 schismtracker_OBJCFLAGS = $(schismtracker_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(LIB_MATH) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(UTF8PROC_LIBS) $(SDL_LIBS)
+schismtracker_LDADD = $(LIB_MATH) $(libs_jack) $(libs_macosx) $(lib_sral) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(UTF8PROC_LIBS) $(SDL_LIBS)

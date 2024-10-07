@@ -35,6 +35,7 @@
 #include "dialog.h"
 #include "vgamem.h"
 
+#include "accessibility.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -440,6 +441,21 @@ static void search_redraw(void)
 	}
 }
 
+static const char* file_list_a11y_get_value(char *buf)
+{
+	if (current_file >= 0 && current_file < flist.num_files)
+		strcpy(buf, flist.files[current_file]->base);
+	else
+		a11y_get_text_from_rect(3, 13, 9, 1, buf);
+	return buf;
+}
+
+static const char* dir_list_a11y_get_value(char *buf)
+{
+	strcpy(buf, dlist.dirs[current_dir]->base);
+	return buf;
+}
+
 static void search_update(void)
 {
 	int n;
@@ -457,6 +473,9 @@ static void search_update(void)
 					search_text, CHARSET_CP437, search_text_length) == 0) {
 				current_file = n;
 				file_list_reposition();
+				char buf[strlen(flist.files[current_file]->base) + 1];
+				file_list_a11y_get_value(buf);
+				a11y_output(buf, 1);
 				break;
 			}
 		}
@@ -466,6 +485,9 @@ static void search_update(void)
 					search_text, CHARSET_CP437, search_text_length) == 0) {
 				current_dir = n;
 				dir_list_reposition();
+				char buf[strlen(dlist.dirs[current_dir]->base) + 1];
+				dir_list_a11y_get_value(buf);
+				a11y_output(buf, 1);
 				break;
 			}
 		}
@@ -796,6 +818,9 @@ static int file_list_handle_key(struct key_event * k)
 	if (new_file != current_file) {
 		current_file = new_file;
 		file_list_reposition();
+		char buf[strlen(flist.files[current_file]->base) + 1];
+		file_list_a11y_get_value(buf);
+		a11y_output(buf, 1);
 		status.flags |= NEED_UPDATE;
 	}
 	return 1;
@@ -962,6 +987,9 @@ static int dir_list_handle_key(struct key_event * k, int width)
 	if (new_dir != current_dir) {
 		current_dir = new_dir;
 		dir_list_reposition();
+		char buf[strlen(dlist.dirs[current_dir]->base) + 1];
+		dir_list_a11y_get_value(buf);
+		a11y_output(buf, 1);
 		status.flags |= NEED_UPDATE;
 	}
 	return 1;
@@ -1070,6 +1098,8 @@ void load_module_load_page(struct page *page)
 	widgets_loadmodule[0].width = 44;
 	widgets_loadmodule[0].height = 30;
 	widgets_loadmodule[0].next.left = widgets_loadmodule[0].next.right = 1;
+	widgets_loadmodule[0].d.other.a11y_type = "List";
+	widgets_loadmodule[0].d.other.a11y_get_value = file_list_a11y_get_value;
 
 	widget_create_other(widgets_loadmodule + 1, 2, dir_list_handle_key_load,
 		dir_list_handle_text_input, dir_list_draw_load);
@@ -1078,6 +1108,8 @@ void load_module_load_page(struct page *page)
 	widgets_loadmodule[1].y = 13;
 	widgets_loadmodule[1].width = 27;
 	widgets_loadmodule[1].height = 21;
+	widgets_loadmodule[1].d.other.a11y_type = "List";
+	widgets_loadmodule[1].d.other.a11y_get_value = dir_list_a11y_get_value;
 
 	widget_create_textentry(widgets_loadmodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
 	widgets_loadmodule[2].activate = filename_entered;

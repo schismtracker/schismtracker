@@ -37,6 +37,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include "accessibility.h"
 
 #include "sdlmain.h"
 
@@ -370,6 +371,12 @@ static void do_delete_file(UNUSED void *data)
 	file_list_reposition();
 }
 
+static const char* file_list_a11y_get_value(char *buf)
+{
+	strcpy(buf, flist.files[current_file]->base);
+	return buf;
+}
+
 static int file_list_handle_text_input(const uint8_t* text) {
 	dmoz_file_t* f = flist.files[current_file];
 
@@ -379,6 +386,9 @@ static int file_list_handle_text_input(const uint8_t* text) {
 			if (slash_search_mode < PATH_MAX) {
 				slash_search_str[slash_search_mode++] = *text;
 				reposition_at_slash_search();
+				char buf[strlen(flist.files[current_file]->base) + 1];
+				file_list_a11y_get_value(buf);
+				a11y_output(buf, 1);
 				status.flags |= NEED_UPDATE;
 			}
 			return 1;
@@ -483,6 +493,9 @@ static int file_list_handle_key(struct key_event * k)
 	if (new_file != current_file) {
 		current_file = new_file;
 		file_list_reposition();
+		char buf[strlen(flist.files[current_file]->base) + 1];
+		file_list_a11y_get_value(buf);
+		a11y_output(buf, 1);
 		status.flags |= NEED_UPDATE;
 	}
 	return 1;
@@ -511,6 +524,8 @@ void load_instrument_load_page(struct page *page)
 	page->help_index = HELP_GLOBAL;
 	widget_create_other(widgets_loadinst + 0, 0, file_list_handle_key, file_list_handle_text_input, file_list_draw);
 	widgets_loadinst[0].accept_text = 1;
+	widgets_loadinst[0].d.other.a11y_type = "List";
+	widgets_loadinst[0].d.other.a11y_get_value = file_list_a11y_get_value;
 }
 
 void library_instrument_load_page(struct page *page)

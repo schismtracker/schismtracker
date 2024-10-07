@@ -119,4 +119,8 @@ void draw_sample_data_rect_16(struct vgamem_overlay *r, int16_t *data, int lengt
 void draw_sample_data_rect_8(struct vgamem_overlay *r, int8_t *data, int length,
 	unsigned int inputchans, unsigned int outputchans);
 
+#ifdef USE_ACCESSIBILITY
+uint32_t* acbuf_get_ptr_to(int x, int y);
+#endif
+
 #endif /* SCHISM_VGAMEM_H_ */

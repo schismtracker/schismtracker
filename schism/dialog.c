@@ -29,6 +29,7 @@
 #include "widget.h"
 #include "song.h"
 #include "page.h"
+#include "accessibility.h"
 
 #include "sdlmain.h"
 
@@ -55,6 +56,7 @@
 
 static struct dialog dialogs[4];
 static int num_dialogs = 0;
+static int a11y_text_reported = 0;
 
 /* --------------------------------------------------------------------- */
 
@@ -75,6 +77,11 @@ void dialog_draw(void)
 
 		/* then the rest of the stuff */
 		if (dialogs[d].draw_const) dialogs[d].draw_const();
+		if (dialogs[d].type == DIALOG_CUSTOM && !a11y_text_reported) {
+			char buf[4000];
+			a11y_get_text_from_rect(dialogs[d].x + 1, dialogs[d].y + 1, dialogs[d].w - 2, dialogs[d].h - 6, buf);
+			a11y_output(buf, 1);
+		}
 
 		if (dialogs[d].text)
 			draw_text(dialogs[d].text, dialogs[d].text_x, 27, 0, 2);
@@ -83,6 +90,14 @@ void dialog_draw(void)
 		while (n) {
 			n--;
 			widget_draw_widget(dialogs[d].widgets + n, n == dialogs[d].selected_widget);
+		}
+		if (!a11y_text_reported) {
+			char buf[512];
+			a11y_get_widget_info(&ACTIVE_WIDGET, INFO_LABEL | INFO_TYPE | INFO_STATE, buf);
+			a11y_output(buf, 0);
+			a11y_get_widget_info(&ACTIVE_WIDGET, INFO_VALUE, buf);
+			a11y_output(buf, 0);
+			a11y_text_reported = 1;
 		}
 	}
 }
@@ -115,6 +130,7 @@ void dialog_destroy(void)
 		selected_widget = &(ACTIVE_PAGE.selected_widget);
 		total_widgets = &(ACTIVE_PAGE.total_widgets);
 		status.dialog_type = DIALOG_NONE;
+		a11y_text_reported = 0;
 	}
 
 	/* it's up to the calling function to redraw the page */
@@ -380,6 +396,7 @@ struct dialog *dialog_create(int type, const char *text, void (*action_yes) (voi
 	num_dialogs++;
 
 	status.dialog_type = type;
+	if (text) a11y_output(text, 0);
 	status.flags |= NEED_UPDATE;
 	return &dialogs[d];
 }
@@ -482,6 +499,7 @@ void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue)
 	numprompt_widgets[0].d.textentry.cursor_pos = initvalue ? 1 : 0;
 	numprompt_finish = finish;
 	dialog_create_custom(dlgx, y - 2, dlgwidth, 5, numprompt_widgets, 1, 0, numprompt_draw_const, NULL);
+	a11y_output(numprompt_title, 1);
 }
 
 
@@ -542,5 +560,6 @@ void smpprompt_create(const char *title, const char *prompt, void (*finish)(int 
 	numprompt_finish = finish;
 	dialog = dialog_create_custom(26, 23, 29, 10, numprompt_widgets, 2, 0, smpprompt_draw_const, NULL);
 	dialog->action_yes = smpprompt_value;
+	a11y_output(numprompt_title, 1);
 }
 

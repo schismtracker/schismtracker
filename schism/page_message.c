@@ -38,6 +38,7 @@
 #include "widget.h"
 #include "dialog.h"
 #include "vgamem.h"
+#include "accessibility.h"
 
 #include <ctype.h>
 #include <assert.h>
@@ -47,6 +48,8 @@
 static struct widget widgets_message[1];
 
 static int top_line = 0;
+static int current_line = 0; // Virtual accessibility cursor for lines in view mode
+static int current_char = 0; // the same thing for chars
 static int cursor_line = 0;
 static int cursor_char = 0;
 /* this is the absolute cursor position from top of message.
@@ -323,6 +326,7 @@ static inline void message_set_editmode(void)
 	widgets_message[0].d.other.handle_key = message_handle_key_editmode;
 	widgets_message[0].d.other.handle_text_input = message_handle_text_input_editmode;
 
+	a11y_output("Edit mode", 1);
 	status.flags |= NEED_UPDATE;
 }
 
@@ -333,6 +337,7 @@ static inline void message_set_viewmode(void)
 	widgets_message[0].d.other.handle_key = message_handle_key_viewmode;
 	widgets_message[0].d.other.handle_text_input = NULL;
 
+	a11y_output("View mode", 1);
 	status.flags |= NEED_UPDATE;
 }
 
@@ -395,6 +400,7 @@ static void message_delete_char(void)
 
 	if (cursor_pos == 0)
 		return;
+	a11y_output_char(current_song->message[cursor_pos - 1], 1);
 	memmove(current_song->message + cursor_pos - 1, current_song->message + cursor_pos,
 		len - cursor_pos + 1);
 	current_song->message[MAX_MESSAGE] = 0;
@@ -416,6 +422,7 @@ static void message_delete_next_char(void)
 
 	if (cursor_pos == len)
 		return;
+	a11y_output_char(current_song->message[cursor_pos], 1);
 	memmove(current_song->message + cursor_pos, current_song->message + cursor_pos + 1,
 		len - cursor_pos);
 	current_song->message[MAX_MESSAGE] = 0;
@@ -444,6 +451,10 @@ static void message_delete_line(void)
 		cursor_pos = get_absolute_position(current_song->message, cursor_line, cursor_char);
 	}
 	message_reposition();
+	char buf[len + sizeof(char)];
+	buf[sizeof(buf) - 1] = '\0';
+	memcpy(buf, ptr, len);
+	a11y_output_cp437(buf, 1);
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
@@ -466,53 +477,81 @@ static void prompt_message_clear(void)
 
 static int message_handle_key_viewmode(struct key_event * k)
 {
+	int new_cur_line = current_line;
 	if (k->state == KEY_PRESS) {
 		if (k->mouse == MOUSE_SCROLL_UP) {
 			top_line -= MOUSE_SCROLL_LINES;
+			new_cur_line -= MOUSE_SCROLL_LINES;
 		} else if (k->mouse == MOUSE_SCROLL_DOWN) {
 			top_line += MOUSE_SCROLL_LINES;
+			new_cur_line += MOUSE_SCROLL_LINES;
 		} else if (k->mouse == MOUSE_CLICK) {
 			message_set_editmode();
 			return message_handle_key_editmode(k);
 		}
 	}
-
+	int last_line = get_num_lines(current_song->message);
+	char *ptr = NULL;
+	int line_len = get_nth_line(current_song->message, current_line, &ptr);
 	switch (k->sym) {
 	case SDLK_UP:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line--;
+		new_cur_line--;
 		break;
 	case SDLK_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line++;
+		new_cur_line++;
 		break;
 	case SDLK_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line -= 35;
+		new_cur_line -= 35;
 		break;
 	case SDLK_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line += 35;
+		new_cur_line += 35;
 		break;
 	case SDLK_HOME:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line = 0;
+		new_cur_line = 0;
 		break;
 	case SDLK_END:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		top_line = get_num_lines(current_song->message) - 34;
+		top_line = last_line - 34;
+		new_cur_line = last_line;
+		break;
+	case SDLK_LEFT:
+		if (k->state == KEY_RELEASE)
+			return 0;
+		current_char--;
+		if (current_char < 0) current_char = 0;
+		a11y_output_char(ptr[current_char], 1);
+		return 1;
+		break;
+	case SDLK_RIGHT:
+		if (k->state == KEY_RELEASE)
+			return 0;
+		current_char++;
+		if (current_char >= line_len) current_char = line_len - 1;
+		a11y_output_char(ptr[current_char], 1);
+		return 1;
 		break;
 	case SDLK_t:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (k->mod & KMOD_CTRL) {
 			message_extfont = !message_extfont;
+			a11y_output((message_extfont ? "Extended font" : "Normal font"), 1);
 			break;
 		}
 		return 1;
@@ -527,6 +566,20 @@ static int message_handle_key_viewmode(struct key_event * k)
 
 	if (top_line < 0)
 		top_line = 0;
+	if (new_cur_line < 0)
+		new_cur_line = 0;
+	else if (new_cur_line > last_line)
+		new_cur_line = last_line;
+	if (new_cur_line != current_line) {
+		current_line = new_cur_line;
+		current_char = 0;
+	}
+
+	line_len = get_nth_line(current_song->message, current_line, &ptr);
+	char buf[line_len + sizeof(char)];
+	buf[sizeof(buf) - 1] = '\0';
+	memcpy(buf, ptr, line_len);
+	a11y_output_cp437(buf, 1);
 
 	status.flags |= NEED_UPDATE;
 
@@ -574,6 +627,8 @@ static int message_handle_key_editmode(struct key_event * k)
 	char *ptr;
 	int doing_drag = 0;
 	int clipl, clipr, cp;
+	int report_line = 0;
+	int report_char = 0;
 
 	if (k->mouse == MOUSE_SCROLL_UP) {
 		if (k->state == KEY_RELEASE)
@@ -611,6 +666,7 @@ static int message_handle_key_editmode(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_line--;
+		report_line = 1;
 		break;
 	case SDLK_DOWN:
 		if (!NO_MODIFIER(k->mod))
@@ -618,6 +674,7 @@ static int message_handle_key_editmode(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_line++;
+		report_line = 1;
 		break;
 	case SDLK_LEFT:
 		if (!NO_MODIFIER(k->mod))
@@ -625,6 +682,7 @@ static int message_handle_key_editmode(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_char--;
+		report_char = 1;
 		break;
 	case SDLK_RIGHT:
 		if (!NO_MODIFIER(k->mod))
@@ -632,6 +690,7 @@ static int message_handle_key_editmode(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_char++;
+		report_char = 1;
 		break;
 	case SDLK_PAGEUP:
 		if (!NO_MODIFIER(k->mod))
@@ -639,6 +698,7 @@ static int message_handle_key_editmode(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_line -= 35;
+		report_line = 1;
 		break;
 	case SDLK_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
@@ -646,14 +706,18 @@ static int message_handle_key_editmode(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_line += 35;
+		report_line = 1;
 		break;
 	case SDLK_HOME:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_CTRL)
+		if (k->mod & KMOD_CTRL) {
 			new_cursor_line = 0;
-		else
+			report_line = 1;
+		} else {
 			new_cursor_char = 0;
+			report_char = 1;
+		}
 		break;
 	case SDLK_END:
 		if (k->state == KEY_RELEASE)
@@ -661,8 +725,10 @@ static int message_handle_key_editmode(struct key_event * k)
 		if (k->mod & KMOD_CTRL) {
 			num_lines = get_num_lines(current_song->message);
 			new_cursor_line = num_lines;
+			report_line = 1;
 		} else {
 			new_cursor_char = line_len;
+			report_char = 1;
 		}
 		break;
 	case SDLK_ESCAPE:
@@ -717,6 +783,7 @@ static int message_handle_key_editmode(struct key_event * k)
 
 			if (k->sym == SDLK_t) {
 				message_extfont = !message_extfont;
+				a11y_output((message_extfont ? "Extended font" : "Normal font"), 1);
 				break;
 			} else if (k->sym == SDLK_y) {
 				clippy_select(NULL, NULL, 0);
@@ -791,6 +858,15 @@ static int message_handle_key_editmode(struct key_event * k)
 
 	message_reposition();
 	cursor_pos = get_absolute_position(current_song->message, cursor_line, cursor_char);
+	if (report_line) {
+		char buf[line_len + sizeof(char)];
+		buf[sizeof(buf) - 1] = '\0';
+		memcpy(buf, ptr, line_len);
+		a11y_output_cp437(buf, 1);
+	} else if (report_char) {
+		get_nth_line(current_song->message, cursor_line, &ptr);
+		a11y_output_char(ptr[cursor_char], 1);
+	}
 
 	if (doing_drag) {
 		widgets_message[0].clip_end = cursor_pos;

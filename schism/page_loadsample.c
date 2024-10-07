@@ -36,6 +36,7 @@
 #include "widget.h"
 #include "dialog.h"
 #include "vgamem.h"
+#include "accessibility.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -646,6 +647,12 @@ static void do_delete_file(UNUSED void *data)
 	file_list_reposition();
 }
 
+static const char* file_list_a11y_get_value(char *buf)
+{
+	strcpy(buf, flist.files[current_file]->base);
+	return buf;
+}
+
 static int file_list_handle_text_input(const uint8_t* text) {
 	dmoz_file_t* f = flist.files[current_file];
 	for (; *text; text++) {
@@ -654,6 +661,9 @@ static int file_list_handle_text_input(const uint8_t* text) {
 			if (search_pos < PATH_MAX) {
 				search_str[search_pos++] = *text;
 				reposition_at_slash_search();
+				char buf[strlen(flist.files[current_file]->base) + 1];
+				file_list_a11y_get_value(buf);
+				a11y_output(buf, 1);
 				status.flags |= NEED_UPDATE;
 			}
 			return 1;
@@ -779,6 +789,9 @@ static int file_list_handle_key(struct key_event * k)
 		search_pos = -1;
 		current_file = new_file;
 		file_list_reposition();
+		char buf[strlen(flist.files[current_file]->base) + 1];
+		file_list_a11y_get_value(buf);
+		a11y_output(buf, 1);
 		status.flags |= NEED_UPDATE;
 	}
 	return 1;
@@ -934,6 +947,8 @@ void load_sample_load_page(struct page *page)
 				file_list_draw);
 	widgets_loadsample[0].accept_text = 1;
 	widgets_loadsample[0].next.tab = 1;
+	widgets_loadsample[0].d.other.a11y_type = "List";
+	widgets_loadsample[0].d.other.a11y_get_value = file_list_a11y_get_value;
 
 	widget_create_textentry(widgets_loadsample+1,
 			64, 13,

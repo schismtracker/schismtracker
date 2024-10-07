@@ -30,6 +30,7 @@
 #include "page.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "accessibility.h"
 
 #include "sdlmain.h"
 
@@ -57,6 +58,8 @@ static struct widget widgets_log[1];
 #define NUM_LINES 1000
 static struct log_line lines[NUM_LINES];
 static int top_line = 0;
+static int current_line = 0; // Virtual accessibility cursor for lines
+static int current_char = 0; // The same thing for chars
 static int last_line = -1;
 
 /* --------------------------------------------------------------------- */
@@ -69,44 +72,68 @@ static void log_draw_const(void)
 
 static int log_handle_key(struct key_event * k)
 {
+	int new_cur_line = current_line;
 	switch (k->sym) {
 	case SDLK_UP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line--;
+		new_cur_line--;
 		break;
 	case SDLK_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line -= 15;
+		new_cur_line -= 15;
 		break;
 	case SDLK_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line++;
+		new_cur_line++;
 		break;
 	case SDLK_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line += 15;
+		new_cur_line += 15;
 		break;
 	case SDLK_HOME:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line = 0;
+		new_cur_line = 0;
 		break;
 	case SDLK_END:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line = last_line;
+		new_cur_line = last_line;
 		break;
+	case SDLK_LEFT:
+		if (k->state == KEY_RELEASE || !lines[current_line].text)
+			return 1;
+		current_char--;
+		if (current_char < 0) current_char = 0;
+		a11y_output_char(lines[current_line].text[current_char], 1);
+		return 1;
+	case SDLK_RIGHT:
+		if (k->state == KEY_RELEASE || !lines[current_line].text)
+			return 1;
+		current_char++;
+		int len = strlen(lines[current_line].text);
+		if (current_char >= len) current_char = len - 1;
+		a11y_output_char(lines[current_line].text[current_char], 1);
+		return 1;
 	default:
 		if (k->state == KEY_PRESS) {
 			if (k->mouse == MOUSE_SCROLL_UP) {
 				top_line -= MOUSE_SCROLL_LINES;
+				new_cur_line -= MOUSE_SCROLL_LINES;
 				break;
 			} else if (k->mouse == MOUSE_SCROLL_DOWN) {
 				top_line += MOUSE_SCROLL_LINES;
+				new_cur_line += MOUSE_SCROLL_LINES;
 				break;
 			}
 		}
@@ -115,6 +142,16 @@ static int log_handle_key(struct key_event * k)
 	};
 	top_line = CLAMP(top_line, 0, (last_line-32));
 	if (top_line < 0) top_line = 0;
+	if (new_cur_line < 0)
+		new_cur_line = 0;
+	else if (new_cur_line > last_line)
+		new_cur_line = last_line;
+	if(new_cur_line != current_line) {
+		current_line = new_cur_line;
+		current_char = 0;
+	}
+	if (lines[current_line].text)
+		a11y_output_cp437(lines[current_line].text, 1);
 	status.flags |= NEED_UPDATE;
 	return 1;
 }
@@ -157,6 +194,7 @@ void log_append2(int bios_font, int color, int must_free, const char *text)
 {
 	if (last_line < NUM_LINES - 1) {
 		last_line++;
+		current_line++;
 	} else {
 		if (lines[0].must_free)
 			free((void *) lines[0].text);

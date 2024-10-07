@@ -30,6 +30,7 @@
 #include "palettes.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "accessibility.h"
 
 #include "sdlmain.h"
 
@@ -131,6 +132,12 @@ static int palette_paste_callback(UNUSED int cb, const void *data)
 }
 
 /* --------------------------------------------------------------------- */
+
+static const char* palete_list_a11y_get_value(char *buf)
+{
+	sprintf(buf, "Palete %d", selected_palette);
+	return buf;
+}
 
 static void palette_list_draw(void)
 {
@@ -268,6 +275,9 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 
 	if (new_palette != selected_palette || load_selected_palette) {
 		selected_palette = new_palette;
+		char buf[16];
+		palete_list_a11y_get_value(buf);
+		a11y_output(buf, 1);
 
 		if(load_selected_palette) {
 			palette_load_preset(selected_palette);
@@ -387,6 +397,8 @@ void palette_load_page(struct page *page)
 	widgets_palette[48].y = 26;
 	widgets_palette[48].width = 20;
 	widgets_palette[48].height = 15;
+	widgets_palette[48].d.other.a11y_type = "List";
+	widgets_palette[48].d.other.a11y_get_value = palete_list_a11y_get_value;
 
 	for(int i = 6; i < 18; i++) {
 		widgets_palette[i].next.backtab = 48;

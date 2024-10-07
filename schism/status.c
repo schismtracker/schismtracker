@@ -29,6 +29,7 @@
 #include "song.h"
 #include "page.h"
 #include "vgamem.h"
+#include "accessibility.h"
 
 #include "player/sndfile.h"
 
@@ -53,6 +54,7 @@ static void status_text_flash_generic(const char *format, int bios, va_list ap)
 
 	if (vasprintf(&status_text, format, ap) == -1) abort();
 
+	a11y_output(status_text, 0);
 	status.flags |= NEED_UPDATE;
 }
 

@@ -46,6 +46,7 @@
 #include "fonts.h"
 #include "dialog.h"
 #include "widget.h"
+#include "accessibility.h"
 
 #include "osdefs.h"
 
@@ -976,6 +977,7 @@ int main(int argc, char **argv)
 	vis_init();
 
 	ver_init();
+	a11y_init();
 
 	video_fullscreen(0);
 

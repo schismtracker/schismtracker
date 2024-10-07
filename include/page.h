@@ -221,6 +221,9 @@ struct widget_other {
 	 * draw a custom widget, so it calls this instead.
 	 * this MUST be set to a valid function. */
 	void (*redraw) (void);
+	// Accessibility stuf
+	const char *a11y_type;
+	const char* (*a11y_get_value) (char*);
 };
 
 /* --------------------------------------------------------------------- */

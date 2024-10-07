@@ -88,6 +88,19 @@ struct vgamem_char {
 static struct vgamem_char vgamem[4000] = {0};
 static struct vgamem_char vgamem_read[4000] = {0};
 
+#ifdef USE_ACCESSIBILITY
+// I know this is horrible!
+typedef uint32_t acbuf_line[80];
+static acbuf_line acbuf[50] = { 0 };
+
+uint32_t* acbuf_get_ptr_to(int x, int y)
+{
+	assert(x >= 0 && y >= 0 && x < 80 && y < 50);
+
+	return &acbuf[y][x];
+}
+#endif
+
 static uint8_t ovl[640*400] = {0}; /* 256K */
 
 #define CHECK_INVERT(tl,br,n) \
@@ -441,6 +454,16 @@ int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 {
 	int n = 0;
 
+	#ifdef USE_ACCESSIBILITY
+	charset_decode_t decoder = {
+		.in = text,
+		.offset = 0,
+		.size = SIZE_MAX,
+	};
+	for (int i = 0; decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_CP437) && decoder.state != DECODER_STATE_DONE; i++)
+		acbuf[y][x + i] = decoder.codepoint;
+	#endif
+
 	while (*text) {
 		draw_char(*text, x + n, y, fg, bg);
 		n++;
@@ -453,6 +476,16 @@ int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 int draw_text_bios(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 {
 	int n = 0;
+
+	#ifdef USE_ACCESSIBILITY
+	charset_decode_t decoder = {
+		.in = text,
+		.offset = 0,
+		.size = SIZE_MAX,
+	};
+	for (int i = 0; decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_CP437) && decoder.state != DECODER_STATE_DONE; i++)
+		acbuf[y][x + i] = decoder.codepoint;
+	#endif
 
 	while (*text) {
 		draw_char_bios(*text, x + n, y, fg, bg);
@@ -476,8 +509,12 @@ int draw_text_utf8(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 	};
 
 	int n;
-	for (n = 0; decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_UTF8) && decoder.state != DECODER_STATE_DONE; n++)
+	for (n = 0; decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_UTF8) && decoder.state != DECODER_STATE_DONE; n++) {
+		#ifdef USE_ACCESSIBILITY
+		acbuf[y][x + n] = decoder.codepoint;
+		#endif
 		draw_char_unicode(decoder.codepoint, x + n, y, fg, bg);
+	}
 
 	return n;
 }
@@ -489,6 +526,15 @@ void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t fg, uint32_t bg)
 	mm = &vgamem[(ys * 80) + xs];
 	len = (xe - xs)+1;
 	ye -= ys;
+
+	#ifdef USE_ACCESSIBILITY
+	for (int y = ys; y < ys + ye; y++) {
+		for (x = xs; x < xe; x++) {
+			acbuf[y][x] = 0;
+		}
+	}
+	#endif
+
 	do {
 		for (x = 0; x < len; x++) {
 			mm[x].font = VGAMEM_FONT_ITF;
@@ -505,12 +551,23 @@ int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_
 {
 	int n = 0;
 
+	#ifdef USE_ACCESSIBILITY
+	charset_decode_t decoder = {
+		.in = text,
+		.offset = 0,
+		.size = SIZE_MAX,
+	};
+	for (int i = 0; i < len && decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_CP437) && decoder.state != DECODER_STATE_DONE; i++)
+		acbuf[y][x + i] = decoder.codepoint;
+	#endif
+
 	while (*text && n < len) {
 		draw_char(*text, x + n, y, fg, bg);
 		n++;
 		text++;
 	}
 	draw_fill_chars(x + n, y, x + len - 1, y, fg, bg);
+
 	return n;
 }
 
@@ -518,12 +575,23 @@ int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, ui
 {
 	int n = 0;
 
+	#ifdef USE_ACCESSIBILITY
+	charset_decode_t decoder = {
+		.in = text,
+		.offset = 0,
+		.size = SIZE_MAX,
+	};
+	for (int i = 0; i < len && decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_CP437) && decoder.state != DECODER_STATE_DONE; i++)
+		acbuf[y][x + i] = decoder.codepoint;
+	#endif
+
 	while (*text && n < len) {
 		draw_char_bios(*text, x + n, y, fg, bg);
 		n++;
 		text++;
 	}
 	draw_fill_chars(x + n, y, x + len - 1, y, fg, bg);
+
 	return n;
 }
 
@@ -540,8 +608,12 @@ int draw_text_utf8_len(const char * text, int len, int x, int y, uint32_t fg, ui
 	};
 
 	int n;
-	for (n = 0; n < len && decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_UTF8) && decoder.state != DECODER_STATE_DONE; n++)
+	for (n = 0; n < len && decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_UTF8) && decoder.state != DECODER_STATE_DONE; n++) {
+		#ifdef USE_ACCESSIBILITY
+		acbuf[y][x + n] = decoder.codepoint;
+		#endif
 		draw_char_unicode(decoder.codepoint, x + n, y, fg, bg);
+	}
 
 	draw_fill_chars(x + n, y, x + len - 1, y, fg, bg);
 

@@ -26,6 +26,7 @@
 #include "page.h"
 #include "song.h"
 #include "keyboard.h"
+#include "accessibility.h"
 #include "widget.h"
 
 /* --------------------------------------------------------------------- */
@@ -36,6 +37,9 @@ static void numentry_move_cursor(struct widget *widget, int n)
 	if (widget->d.numentry.reverse) return;
 	n += *(widget->d.numentry.cursor_pos);
 	n = CLAMP(n, 0, widget->width - 1);
+	char buf[16];
+	a11y_get_widget_value(widget, buf);
+	a11y_output_char(buf[n], 1);
 	if (*(widget->d.numentry.cursor_pos) == n)
 		return;
 	*(widget->d.numentry.cursor_pos) = n;
@@ -46,6 +50,7 @@ static void textentry_move_cursor(struct widget *widget, int n)
 {
 	n += widget->d.textentry.cursor_pos;
 	n = CLAMP(n, 0, widget->d.textentry.max_length);
+	a11y_output_char(widget->d.textentry.text[n], 1);
 	if (widget->d.textentry.cursor_pos == n)
 		return;
 	widget->d.textentry.cursor_pos = n;
@@ -59,6 +64,9 @@ static void bitset_move_cursor(struct widget *widget, int n)
 	if (*widget->d.bitset.cursor_pos == n)
 		return;
 	*widget->d.bitset.cursor_pos = n;
+	char buf[3];
+	a11y_get_widget_info(widget, INFO_VALUE, buf);
+	a11y_output(buf, 1);
 	status.flags |= NEED_UPDATE;
 }
 
@@ -237,6 +245,8 @@ static int widget_menutoggle_handle_key(struct widget *w, struct key_event *k)
 		const char* p = strchr(m, (char)k->sym);
 		if (p && *p) {
 			w->d.menutoggle.state = p - m;
+			const char *state = a11y_get_widget_state(w);
+			a11y_output(state, 1);
 			if(w->changed) w->changed();
 			status.flags |= NEED_UPDATE;
 			return 1;
@@ -254,6 +264,9 @@ static int widget_bitset_handle_key(struct widget *w, struct key_event *k)
 		if (p && *p) {
 			int bit_index = p-m;
 			w->d.bitset.value ^= (1 << bit_index);
+			char buf[3];
+			a11y_get_widget_info(w, INFO_VALUE, buf);
+			a11y_output(buf, 1);
 			if(w->changed) w->changed();
 			status.flags |= NEED_UPDATE;
 			return 1;
@@ -297,6 +310,7 @@ int widget_handle_key(struct key_event * k)
 
 	if (k->mouse == MOUSE_CLICK) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		const char *state;
 		switch (current_type) {
 		case WIDGET_TOGGLE:
 			if (!NO_MODIFIER(k->mod))
@@ -304,6 +318,8 @@ int widget_handle_key(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 1;
 			widget->d.toggle.state = !widget->d.toggle.state;
+			state = a11y_get_widget_state(widget);
+			a11y_output(state, 1);
 			if (widget->changed) widget->changed();
 			status.flags |= NEED_UPDATE;
 			return 1;
@@ -314,6 +330,8 @@ int widget_handle_key(struct key_event * k)
 				return 1;
 			widget->d.menutoggle.state = (widget->d.menutoggle.state + 1)
 				% widget->d.menutoggle.num_choices;
+			state = a11y_get_widget_state(widget);
+			a11y_output(state, 1);
 			if (widget->changed) widget->changed();
 			status.flags |= NEED_UPDATE;
 			return 1;
@@ -473,6 +491,8 @@ int widget_handle_key(struct key_event * k)
 			}
 			/* else... */
 			widget->d.togglebutton.state = !widget->d.togglebutton.state;
+			const char *state = a11y_get_widget_state(widget);
+			a11y_output(state, 1);
 			/* and fall through */
 		case WIDGET_BUTTON:
 			/* maybe buttons should ignore the changed callback, and use activate instead...
@@ -619,12 +639,16 @@ int widget_handle_key(struct key_event * k)
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			*(widget->d.numentry.cursor_pos) = 0;
+			char buf[16];
+			a11y_get_widget_value(widget, buf);
+			a11y_output_char(buf[0], 1);
 			status.flags |= NEED_UPDATE;
 			return 1;
 		case WIDGET_TEXTENTRY:
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			widget->d.textentry.cursor_pos = 0;
+			a11y_output_char(widget->d.textentry.text[0], 1);
 			status.flags |= NEED_UPDATE;
 			return 1;
 		case WIDGET_PANBAR:
@@ -646,12 +670,16 @@ int widget_handle_key(struct key_event * k)
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			*(widget->d.numentry.cursor_pos) = widget->width - 1;
+			char buf[16];
+			a11y_get_widget_value(widget, buf);
+			a11y_output_char(buf[*widget->d.numentry.cursor_pos], 1);
 			status.flags |= NEED_UPDATE;
 			return 1;
 		case WIDGET_TEXTENTRY:
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			widget->d.textentry.cursor_pos = strlen(widget->d.textentry.text);
+			a11y_output_char(widget->d.textentry.text[widget->d.textentry.cursor_pos - 1], 1);
 			status.flags |= NEED_UPDATE;
 			return 1;
 		case WIDGET_PANBAR:
@@ -668,11 +696,15 @@ int widget_handle_key(struct key_event * k)
 		break;
 	case SDLK_SPACE:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		const char *state;
 		switch (current_type) {
 		case WIDGET_BITSET:
 		    if (!NO_MODIFIER(k->mod))
 			return 0;
 		    widget->d.bitset.value ^= (1 << *widget->d.bitset.cursor_pos);
+		    char buf[3];
+		    a11y_get_widget_value(widget, buf);
+		    a11y_output(buf, 1);
 			if (widget->changed) widget->changed();
 		    status.flags |= NEED_UPDATE;
 		    return 1;
@@ -680,6 +712,8 @@ int widget_handle_key(struct key_event * k)
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			widget->d.toggle.state = !widget->d.toggle.state;
+			state = a11y_get_widget_state(widget);
+			a11y_output(state, 1);
 			if (widget->changed) widget->changed();
 			status.flags |= NEED_UPDATE;
 			return 1;
@@ -688,6 +722,8 @@ int widget_handle_key(struct key_event * k)
 				return 0;
 			widget->d.menutoggle.state = (widget->d.menutoggle.state + 1)
 				% widget->d.menutoggle.num_choices;
+			state = a11y_get_widget_state(widget);
+			a11y_output(state, 1);
 			if (widget->changed) widget->changed();
 			status.flags |= NEED_UPDATE;
 			return 1;
@@ -709,6 +745,9 @@ int widget_handle_key(struct key_event * k)
 			if (widget->d.numentry.reverse) {
 				/* woot! */
 				widget->d.numentry.value /= 10;
+				char buf[16];
+				a11y_get_widget_value(widget, buf);
+				a11y_output(buf, 1);
 				if (widget->changed) widget->changed();
 				status.flags |= NEED_UPDATE;
 				return 1;
@@ -726,6 +765,7 @@ int widget_handle_key(struct key_event * k)
 			/* clear the whole field */
 			widget->d.textentry.text[0] = 0;
 			widget->d.textentry.cursor_pos = 0;
+			a11y_output("Text clearet", 1);
 		} else {
 			if (widget->d.textentry.cursor_pos == 0) {
 				/* act like ST3 */

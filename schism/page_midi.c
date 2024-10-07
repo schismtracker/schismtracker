@@ -29,6 +29,7 @@
 #include "midi.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "accessibility.h"
 
 #include "song.h"
 
@@ -38,6 +39,7 @@ static int top_midi_port = 0;
 static int current_port = 0;
 static struct widget widgets_midi[17];
 static time_t last_midi_poll = 0;
+static int a11y_text_reported = 1;
 
 /* --------------------------------------------------------------------- */
 
@@ -148,6 +150,7 @@ static int midi_page_handle_key(struct key_event * k)
 				if (k->state == KEY_PRESS)
 					return 0;
 				toggle_port();
+				a11y_text_reported = 0;
 				return 1;
 			}
 			new_port = top_midi_port + (k->y - 15);
@@ -161,6 +164,7 @@ static int midi_page_handle_key(struct key_event * k)
 		if (k->state == KEY_PRESS)
 			return 1;
 		toggle_port();
+		a11y_text_reported = 0;
 		return 1;
 	case SDLK_PAGEUP:
 		new_port -= 13;
@@ -205,6 +209,7 @@ static int midi_page_handle_key(struct key_event * k)
 		if (pos > 12) top_midi_port = current_port - 12;
 		if (top_midi_port < 0) top_midi_port = 0;
 
+		a11y_text_reported = 0;
 		status.flags |= NEED_UPDATE;
 	}
 
@@ -239,6 +244,14 @@ static void midi_page_redraw(void)
 
 	draw_text(    "IP MIDI ports", 39, 41, 0, 2);
 	draw_box(52,40,73,42, BOX_THIN|BOX_INNER|BOX_INSET);
+}
+
+static const char* midi_page_a11y_get_value(char *buf)
+{
+	int pos = current_port - top_midi_port;
+	a11y_get_text_from_rect(widgets_midi[0].x + 1, widgets_midi[0].y + pos + 1,
+		widgets_midi[0].width -2, 1, buf);
+	return buf;
 }
 
 static void midi_page_draw_portlist(void)
@@ -307,6 +320,12 @@ static void midi_page_draw_portlist(void)
 		}
 		draw_text(state, 3, 15 + i, fg, bg);
 	}
+
+	if (ACTIVE_WIDGET.type == WIDGET_OTHER && !a11y_text_reported) {
+		char buf[128];
+		midi_page_a11y_get_value(buf);
+		a11y_text_reported = a11y_output(buf, 1);
+	}
 }
 
 /* --------------------------------------------------------------------- */
@@ -329,6 +348,8 @@ void midi_load_page(struct page *page)
 	widgets_midi[0].y = 14;
 	widgets_midi[0].width = 75;
 	widgets_midi[0].height = 15;
+	widgets_midi[0].d.other.a11y_type = "List";
+	widgets_midi[0].d.other.a11y_get_value = midi_page_a11y_get_value;
 
 	widget_create_toggle(widgets_midi + 1, 20, 30, 0, 2, 7, 7, 7, update_midi_values);
 	widget_create_toggle(widgets_midi + 2, 20, 31, 1, 3, 8, 8, 8, update_midi_values);

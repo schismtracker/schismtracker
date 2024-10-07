@@ -32,6 +32,7 @@
 #include "sdlmain.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "accessibility.h"
 
 #include "disko.h"
 
@@ -62,6 +63,7 @@ static int top_audio_device = 0;
 
 static int selected_audio_driver = 0;
 static int top_audio_driver = 0;
+static int a11y_text_reported = 1;
 
 #define AUDIO_DEVICE_BOX_X 37
 #define AUDIO_DEVICE_BOX_Y 16
@@ -190,6 +192,14 @@ static void change_mixer(void)
 
 /* --------------------------------------------------------------------- */
 
+static const char* audio_device_list_a11y_get_value(char *buf)
+{
+	a11y_get_text_from_rect(AUDIO_DEVICE_BOX_X,
+		AUDIO_DEVICE_BOX_Y + (selected_audio_device - top_audio_device),
+		AUDIO_DEVICE_BOX_WIDTH, 1, buf);
+	return buf;
+}
+
 static void audio_device_list_draw() {
 	int interp_modes;
 
@@ -229,6 +239,12 @@ static void audio_device_list_draw() {
 		DRAW_DEVICE(audio_device_list[n].name);
 
 #undef DRAW_DEVICE
+
+	if(focused && !a11y_text_reported) {
+		char buf[AUDIO_DEVICE_BOX_WIDTH + 1];
+		audio_device_list_a11y_get_value(buf);
+		a11y_text_reported = a11y_output(buf, 1);
+	}
 }
 
 static int audio_device_list_handle_key_on_list(struct key_event * k)
@@ -334,6 +350,7 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 
 		top_audio_device = MIN(top_audio_device, audio_device_list_size - AUDIO_DEVICE_BOX_HEIGHT + 1);
 		top_audio_device = MAX(top_audio_device, 0);
+		a11y_text_reported = 0;
 	}
 
 	if (load_selected_device)
@@ -343,6 +360,14 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 }
 
 /* --------------------------------------------------------------------- */
+
+static const char* audio_driver_list_a11y_get_value(char *buf)
+{
+	a11y_get_text_from_rect(AUDIO_DRIVER_BOX_X,
+		AUDIO_DRIVER_BOX_Y + (selected_audio_driver - top_audio_driver),
+		AUDIO_DRIVER_BOX_WIDTH, 1, buf);
+	return buf;
+}
 
 static void audio_driver_list_draw() {
 	int interp_modes;
@@ -374,6 +399,12 @@ static void audio_driver_list_draw() {
 		draw_text_utf8_len(!strcmp(current_audio_driver, name) ? "*" : " ", 1, AUDIO_DRIVER_BOX_X, AUDIO_DRIVER_BOX_Y + o, fg, bg);
 		draw_text_utf8_len(name, AUDIO_DRIVER_BOX_WIDTH - 1, AUDIO_DRIVER_BOX_X + 1, AUDIO_DRIVER_BOX_Y + o, fg, bg);
 		o++;
+	}
+
+	if(focused && !a11y_text_reported) {
+		char buf[AUDIO_DRIVER_BOX_WIDTH + 1];
+		audio_driver_list_a11y_get_value(buf);
+		a11y_text_reported = a11y_output(buf, 1);
 	}
 }
 
@@ -481,6 +512,7 @@ static int audio_driver_list_handle_key_on_list(struct key_event * k)
 
 		top_audio_driver = MIN(top_audio_driver, num_drivers - AUDIO_DRIVER_BOX_HEIGHT + 1);
 		top_audio_driver = MAX(top_audio_driver, 0);
+		a11y_text_reported = 0;
 	}
 
 	if (load_selected_driver) {
@@ -596,10 +628,14 @@ void preferences_load_page(struct page *page)
 	widgets_preferences[i+13].y = AUDIO_DEVICE_BOX_Y;
 	widgets_preferences[i+13].width = AUDIO_DEVICE_BOX_WIDTH;
 	widgets_preferences[i+13].height = AUDIO_DEVICE_BOX_HEIGHT;
+	widgets_preferences[i+13].d.other.a11y_type = "List";
+	widgets_preferences[i+13].d.other.a11y_get_value = audio_device_list_a11y_get_value;
 
 	widget_create_other(widgets_preferences+i+14, 0, audio_driver_list_handle_key_on_list, NULL, audio_driver_list_draw);
 	widgets_preferences[i+14].x = AUDIO_DRIVER_BOX_X;
 	widgets_preferences[i+14].y = AUDIO_DRIVER_BOX_Y;
 	widgets_preferences[i+14].width = AUDIO_DRIVER_BOX_WIDTH;
 	widgets_preferences[i+14].height = AUDIO_DRIVER_BOX_HEIGHT;
+	widgets_preferences[i+14].d.other.a11y_type = "List";
+	widgets_preferences[i+14].d.other.a11y_get_value = audio_driver_list_a11y_get_value;
 }

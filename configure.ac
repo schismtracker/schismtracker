@@ -105,6 +105,11 @@ AC_ARG_WITH([mediafoundation],
 	[],
 	[with_mediafoundation=check])
 
+AC_ARG_WITH([accessibility],
+	[AS_HELP_STRING([--with-accessibility],[Build with accessibility support @<:@default=check@:>@])],
+	[],
+	[with_accessibility=check])
+
 dnl ------------------------------------------------------------------------
 
 dnl Check for standard programs
@@ -342,6 +347,18 @@ if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then
 		fi
 	elif test "x$with_alsa" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find ALSA])
+	fi
+fi
+
+AM_CONDITIONAL([USE_ACCESSIBILITY], false)
+if test "x$with_accessibility" = "xcheck" || test "x$with_accessibility" = "xyes"; then
+	saved_LIBS="$LIBS"
+	AC_CHECK_LIB([SRAL], [SRAL_Initialize], [sral_found=yes], [sral_found=no])
+	if test "x$sral_found" = "xyes"; then
+		AM_CONDITIONAL([USE_ACCESSIBILITY], true)
+		AC_DEFINE([USE_ACCESSIBILITY], [1], [Accessibility support])
+	elif test "x$with_accessibility" = "xyes"; then
+		AC_MSG_ERROR([*** Failed to find SRAL])
 	fi
 fi
 

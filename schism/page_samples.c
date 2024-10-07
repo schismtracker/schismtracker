@@ -34,6 +34,7 @@
 #include "song.h"
 #include "vgamem.h"
 #include "widget.h"
+#include "accessibility.h"
 
 /* --------------------------------------------------------------------- */
 /* static in my attic */
@@ -52,6 +53,7 @@ static int current_sample = 1;
 static int _altswap_lastvis = 99; // for alt-down sample-swapping
 
 static int sample_list_cursor_pos = 25; /* the "play" text */
+static int a11y_text_reported = 1;
 
 static void sample_adlibconfig_dialog(UNUSED void *ign);
 
@@ -155,6 +157,13 @@ void sample_set(int n)
 		status.flags |= NEED_UPDATE;
 }
 
+static const char* sample_list_a11y_get_value(char* buf)
+{
+	a11y_get_text_from_rect(2,
+		widgets_samplelist[0].y + (current_sample - top_sample), 33, 1, buf);
+	return buf;
+}
+
 /* --------------------------------------------------------------------- */
 /* draw the actual list */
 
@@ -220,6 +229,11 @@ static void sample_list_draw_list(void)
 		}
 	}
 
+	if (!a11y_text_reported) {
+		char buf[34];
+		sample_list_a11y_get_value(buf);
+		a11y_text_reported = a11y_output(buf, 1);
+	}
 	status.flags |= NEED_UPDATE;
 }
 
@@ -560,6 +574,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			if (k->mod & KMOD_ALT) {
 				if (k->sym == SDLK_c) {
 					clear_sample_text();
+					a11y_output("Text cleared", 1);
 					return 1;
 				}
 			} else if ((k->mod & KMOD_CTRL) == 0 && sample_list_cursor_pos < 25) {
@@ -582,9 +597,12 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 	if (new_sample != current_sample) {
 		sample_set(new_sample);
 		sample_list_reposition();
+		a11y_text_reported = 0;
 	}
 	if (new_cursor_pos != sample_list_cursor_pos) {
 		sample_list_cursor_pos = new_cursor_pos;
+		song_sample_t *smp = song_get_sample(current_sample);
+		a11y_output_char(smp->name[sample_list_cursor_pos], 1);
 		_fix_accept_text();
 	}
 
@@ -1124,6 +1142,12 @@ static void export_sample_list_draw(void)
 	}
 }
 
+static const char* export_sample_list_a11y_get_value(char *buf)
+{
+	a11y_get_text_from_rect(53, 24 + export_sample_format, 4, 1, buf);
+	return buf;
+}
+
 static int export_sample_list_handle_key(struct key_event * k)
 {
 	int new_format = export_sample_format;
@@ -1173,6 +1197,9 @@ static int export_sample_list_handle_key(struct key_event * k)
 	if (new_format != export_sample_format) {
 		/* update the option string */
 		export_sample_format = new_format;
+		char buf[5];
+		export_sample_list_a11y_get_value(buf);
+		a11y_output(buf, 1);
 		status.flags |= NEED_UPDATE;
 	}
 
@@ -1199,6 +1226,8 @@ static void export_sample_dialog(void)
 	widget_create_button(export_sample_widgets + 1, 31, 35, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
 	widget_create_button(export_sample_widgets + 2, 42, 35, 6, 3, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 	widget_create_other(export_sample_widgets + 3, 0, export_sample_list_handle_key, NULL, export_sample_list_draw);
+	export_sample_widgets[3].d.other.a11y_type = "List";
+	export_sample_widgets[3].d.other.a11y_get_value = export_sample_list_a11y_get_value;
 
 	strncpy(export_sample_filename, sample->filename, NAME_MAX);
 	export_sample_filename[NAME_MAX] = 0;
@@ -1528,6 +1557,7 @@ static void sample_list_handle_key(struct key_event * k)
 	if (new_sample != current_sample) {
 		sample_set(new_sample);
 		sample_list_reposition();
+		a11y_text_reported = 0;
 		status.flags |= NEED_UPDATE;
 	}
 }
@@ -1783,6 +1813,8 @@ void sample_list_load_page(struct page *page)
 	/* 0 = sample list */
 	widget_create_other(widgets_samplelist + 0, 1, sample_list_handle_key_on_list,
 		sample_list_handle_text_input_on_list, sample_list_draw_list);
+	widgets_samplelist[0].d.other.a11y_type = "Sample list";
+	widgets_samplelist[0].d.other.a11y_get_value = sample_list_a11y_get_value;
 	_fix_accept_text();
 
 	widgets_samplelist[0].x = 5;

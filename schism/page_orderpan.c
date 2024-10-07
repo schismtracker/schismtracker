@@ -28,6 +28,7 @@
 #include "page.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "accessibility.h"
 
 #include "sdlmain.h"
 
@@ -41,6 +42,7 @@ static int orderlist_cursor_pos = 0;
 
 static unsigned char saved_orderlist[256];
 static int _did_save_orderlist = 0;
+static int a11y_text_reported = 1;
 
 /* --------------------------------------------------------------------- */
 
@@ -175,6 +177,13 @@ static void get_pattern_string(unsigned char pattern, char *buf)
 	}
 }
 
+static const char* orderlist_a11y_get_value(char *buf)
+{
+	a11y_get_text_from_rect(2,
+		widgets_orderpan[0].y + (current_order - top_order), 7, 1, buf);
+	return buf;
+}
+
 static void orderlist_draw(void)
 {
 	char buf[4];
@@ -193,6 +202,11 @@ static void orderlist_draw(void)
 		get_pattern_string(current_song->orderlist[current_order], buf);
 		pos = current_order - top_order;
 		draw_char(buf[orderlist_cursor_pos], orderlist_cursor_pos + 6, 15 + pos, 0, 3);
+		if (!a11y_text_reported) {
+			char buf[8];
+			orderlist_a11y_get_value(buf);
+			a11y_text_reported = a11y_output(buf, 1);
+		}
 	}
 
 	status.flags |= NEED_UPDATE;
@@ -693,6 +707,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 
 	if (new_order != prev_order) {
 		set_current_order(new_order);
+		a11y_text_reported = 0;
 	} else if (new_cursor_pos != orderlist_cursor_pos) {
 		orderlist_cursor_pos = new_cursor_pos;
 	} else {
@@ -911,6 +926,8 @@ void orderpan_load_page(struct page *page)
 	widgets_orderpan[0].y = 15;
 	widgets_orderpan[0].width = 3;
 	widgets_orderpan[0].height = 32;
+	widgets_orderpan[0].d.other.a11y_type = "Order list";
+	widgets_orderpan[0].d.other.a11y_get_value = orderlist_a11y_get_value;
 
 	/* 1-64 = panbars */
 	widget_create_panbar(widgets_orderpan + 1, 20, 15, 1, 2, 33, orderpan_update_values_in_song, 1);
@@ -944,6 +961,8 @@ void ordervol_load_page(struct page *page)
 	widgets_ordervol[0].y = 15;
 	widgets_ordervol[0].width = 3;
 	widgets_ordervol[0].height = 32;
+	widgets_orderpan[0].d.other.a11y_type = "Order list";
+	widgets_orderpan[0].d.other.a11y_get_value = orderlist_a11y_get_value;
 
 	/* 1-64 = thumbbars */
 	widget_create_thumbbar(widgets_ordervol + 1, 31, 15, 9, 1, 2, 33, ordervol_update_values_in_song, 0, 64);

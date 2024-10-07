@@ -37,6 +37,7 @@
 #include "fonts.h"
 #include "dialog.h"
 #include "widget.h"
+#include "accessibility.h"
 
 #include "sdlmain.h"
 
@@ -65,6 +66,7 @@ int *selected_widget = NULL;
 int *total_widgets = NULL;
 
 static int fontedit_return_page = PAGE_PATTERN_EDITOR;
+static int a11y_text_reported = 0;
 
 /* --------------------------------------------------------------------- */
 
@@ -220,6 +222,14 @@ static void draw_page(void)
 		menu_draw();
 	else if (status.dialog_type & DIALOG_BOX)
 		dialog_draw();
+	else if (!a11y_text_reported) {
+		char buf[512];
+		a11y_get_widget_info(&ACTIVE_WIDGET, INFO_LABEL | INFO_TYPE | INFO_STATE, buf);
+		a11y_output(buf, 0);
+		a11y_get_widget_info(&ACTIVE_WIDGET, INFO_VALUE, buf);
+		a11y_output(buf, 0);
+		a11y_text_reported = 1;
+	}
 }
 
 /* --------------------------------------------------------------------- */
@@ -403,6 +413,7 @@ void handle_text_input(const uint8_t* text_input) {
 static int handle_key_global(struct key_event * k)
 {
 	int i, ins_mode;
+	char buf[16];
 
 	if (_mp_active == 2 && (k->mouse == MOUSE_CLICK && k->state == KEY_RELEASE)) {
 		status.flags |= NEED_UPDATE;
@@ -484,6 +495,12 @@ static int handle_key_global(struct key_event * k)
 	/* first, check the truly global keys (the ones that still work if
 	 * a dialog's open) */
 	switch (k->sym) {
+	case SDLK_LCTRL:
+	case SDLK_RCTRL:
+	case SDLK_LSHIFT:
+	case SDLK_RSHIFT:
+		if (k->state == KEY_PRESS)
+			a11y_interrupt();
 	case SDLK_RETURN:
 		if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
 			if (k->state == KEY_PRESS)
@@ -539,6 +556,8 @@ static int handle_key_global(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 0;
 		kbd_set_current_octave(kbd_get_current_octave() - 1);
+		sprintf(buf, "Octave %d", kbd_get_current_octave());
+		a11y_output(buf, 1);
 		return 1;
 	case SDLK_END:
 		if (!(k->mod & KMOD_ALT)) break;
@@ -546,6 +565,8 @@ static int handle_key_global(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 0;
 		kbd_set_current_octave(kbd_get_current_octave() + 1);
+		sprintf(buf, "Octave %d", kbd_get_current_octave());
+		a11y_output(buf, 1);
 		return 1;
 	default:
 		break;
@@ -916,6 +937,7 @@ static int handle_key_global(struct key_event * k)
 			return 1;
 
 		song_toggle_channel_mute(i);
+		a11y_output(current_song->channels[i].flags & CHN_MUTE ? "Muted" : "Unmuted", 1);
 		status.flags |= NEED_UPDATE;
 		return 1;
 	}
@@ -1092,14 +1114,18 @@ void handle_key(struct key_event *k)
 	if (widget_handle_key(k)) return;
 
 	/* now check a couple other keys. */
+	char buf[16];
 	switch (k->sym) {
 	case SDLK_LEFT:
 		if (k->state == KEY_RELEASE) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if ((k->mod & KMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
 			_mp_finish(NULL);
-			if (song_get_mode() == MODE_PLAYING)
+			if (song_get_mode() == MODE_PLAYING) {
 				song_set_current_order(song_get_current_order() - 1);
+				sprintf(buf, "Order %d", song_get_current_order());
+				a11y_output(buf, 1);
+			}
 			return;
 		}
 		break;
@@ -1108,8 +1134,11 @@ void handle_key(struct key_event *k)
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if ((k->mod & KMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
 			_mp_finish(NULL);
-			if (song_get_mode() == MODE_PLAYING)
+			if (song_get_mode() == MODE_PLAYING) {
 				song_set_current_order(song_get_current_order() + 1);
+				sprintf(buf, "Order %d", song_get_current_order());
+				a11y_output(buf, 1);
+			}
 			return;
 		}
 		break;
@@ -1136,6 +1165,8 @@ void handle_key(struct key_event *k)
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if (k->orig_sym == SDLK_KP_DIVIDE) {
 			kbd_set_current_octave(kbd_get_current_octave() - 1);
+			sprintf(buf, "Octave %d", kbd_get_current_octave());
+			a11y_output(buf, 1);
 		}
 		return;
 	case SDLK_ASTERISK:
@@ -1143,6 +1174,8 @@ void handle_key(struct key_event *k)
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if (k->orig_sym == SDLK_KP_MULTIPLY) {
 			kbd_set_current_octave(kbd_get_current_octave() + 1);
+			sprintf(buf, "Octave %d", kbd_get_current_octave());
+			a11y_output(buf, 1);
 		}
 		return;
 	case SDLK_LEFTBRACKET:
@@ -1638,6 +1671,8 @@ void set_page(int new_page)
 	total_widgets = &(ACTIVE_PAGE.total_widgets);
 
 	if (ACTIVE_PAGE.set_page) ACTIVE_PAGE.set_page();
+	a11y_output(ACTIVE_PAGE.title, 1);
+	a11y_text_reported = 0;
 	status.flags |= NEED_UPDATE;
 }
 

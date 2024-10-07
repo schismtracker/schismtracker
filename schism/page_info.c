@@ -30,6 +30,7 @@
 #include "widget.h"
 #include "pattern-view.h"
 #include "config-parser.h"
+#include "accessibility.h"
 
 #include "sdlmain.h"
 
@@ -1022,6 +1023,8 @@ static void info_page_redraw(void)
 static int info_page_handle_key(struct key_event * k)
 {
 	int n, p, order;
+	int prev_channel = selected_channel;
+	char buf[16];
 
 	if (k->mouse == MOUSE_CLICK || k->mouse == MOUSE_DBLCLICK) {
 		p = selected_channel;
@@ -1119,6 +1122,7 @@ static int info_page_handle_key(struct key_event * k)
 			return 1;
 		song_toggle_channel_mute(selected_channel - 1);
 		orderpan_recheck_muted_channels();
+		a11y_output(current_song->channels[selected_channel - 1].flags & CHN_MUTE ? "Muted" : "Unmuted", 1);
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_s:
@@ -1142,6 +1146,7 @@ static int info_page_handle_key(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_toggle_channel_mute(selected_channel - 1);
+		a11y_output(current_song->channels[selected_channel - 1].flags & CHN_MUTE ? "Muted" : "Unmuted", 1);
 		if (selected_channel < 64)
 			selected_channel++;
 		orderpan_recheck_muted_channels();
@@ -1298,6 +1303,7 @@ static int info_page_handle_key(struct key_event * k)
 		if (k->mod & KMOD_ALT) {
 			song_toggle_channel_mute(selected_channel - 1);
 			orderpan_recheck_muted_channels();
+			a11y_output(current_song->channels[selected_channel - 1].flags & CHN_MUTE ? "Muted" : "Unmuted", 1);
 			return 1;
 		}
 		return 0;
@@ -1314,6 +1320,10 @@ static int info_page_handle_key(struct key_event * k)
 		return 0;
 	}
 
+	if (selected_channel != prev_channel) {
+		sprintf(buf, "Channel %d", selected_channel);
+		a11y_output(buf, 0);
+	}
 	recalculate_windows();
 	status.flags |= NEED_UPDATE;
 	return 1;

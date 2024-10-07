@@ -28,6 +28,7 @@
 #include "song.h"
 #include "page.h"
 #include "dialog.h"
+#include "accessibility.h"
 
 #include "sdlmain.h"
 
@@ -237,6 +238,7 @@ void menu_show(void)
 	dialog_destroy_all();
 	status.dialog_type = DIALOG_MAIN_MENU;
 	current_menu[0] = &main_menu;
+	a11y_output(current_menu[0]->items[current_menu[0]->selected_item], 1);
 
 	status.flags |= NEED_UPDATE;
 }
@@ -253,6 +255,7 @@ void menu_hide(void)
 		current_menu[1]->active_item = -1;
 
 	current_menu[0] = current_menu[1] = NULL;
+	a11y_output("Closed", 1);
 
 	/* note! this does NOT redraw the screen; that's up to the caller.
 	 * the reason for this is that so many of the menu items cause a
@@ -269,6 +272,7 @@ static void set_submenu(struct menu *menu)
 	status.dialog_type = DIALOG_SUBMENU;
 	main_menu.active_item = main_menu.selected_item;
 	current_menu[1] = menu;
+	a11y_output(menu->items[menu->selected_item], 1);
 
 	status.flags |= NEED_UPDATE;
 }
@@ -472,6 +476,7 @@ int menu_handle_key(struct key_event *k)
 				if (status.dialog_type == DIALOG_SUBMENU) {
 					status.dialog_type = DIALOG_MAIN_MENU;
 					main_menu.active_item = -1;
+					a11y_output(main_menu.items[main_menu.selected_item], 1);
 				} else {
 					menu_hide();
 				}
@@ -489,6 +494,7 @@ int menu_handle_key(struct key_event *k)
 		if (status.dialog_type == DIALOG_SUBMENU) {
 			status.dialog_type = DIALOG_MAIN_MENU;
 			main_menu.active_item = -1;
+			a11y_output(main_menu.items[main_menu.selected_item], 1);
 		} else {
 			menu_hide();
 		}
@@ -498,6 +504,7 @@ int menu_handle_key(struct key_event *k)
 			return 1;
 		if (menu->selected_item > 0) {
 			menu->selected_item--;
+			a11y_output(menu->items[menu->selected_item], 1);
 			break;
 		}
 		return 1;
@@ -506,6 +513,7 @@ int menu_handle_key(struct key_event *k)
 			return 1;
 		if (menu->selected_item < menu->num_items - 1) {
 			menu->selected_item++;
+			a11y_output(menu->items[menu->selected_item], 1);
 			break;
 		}
 		return 1;
@@ -514,11 +522,13 @@ int menu_handle_key(struct key_event *k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		menu->selected_item = 0;
+		a11y_output(menu->items[menu->selected_item], 1);
 		break;
 	case SDLK_END:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		menu->selected_item = menu->num_items - 1;
+		a11y_output(menu->items[menu->selected_item], 1);
 		break;
 	case SDLK_RETURN:
 		if (k->state == KEY_PRESS) {
@@ -526,6 +536,7 @@ int menu_handle_key(struct key_event *k)
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
+		a11y_output(menu->items[menu->selected_item], 1);
 		menu->selected_cb();
 		return 1;
 	default:

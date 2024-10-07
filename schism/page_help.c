@@ -30,6 +30,7 @@
 #include "page.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "accessibility.h"
 
 #include "sdlmain.h"
 
@@ -82,6 +83,8 @@ static const char **lines = NULL;
 
 static int num_lines = 0;
 static int top_line = 0;
+static int current_line = 0; // Virtual accessibility cursor for lines
+static int current_char = 0; // Same thing for chars
 
 static const char blank_line[] = {LTYPE_NORMAL, '\0'};
 static const char separator_line[] = {LTYPE_SEPARATOR, '\0'};
@@ -146,17 +149,68 @@ static void _help_close(void)
 	set_page(status.previous_page);
 }
 
+static int _get_line_length(int line)
+{
+	const char **ptr = lines + line;
+	return strcspn(*ptr+1, "\015\012");
+}
+
+static const char* help_a11y_get_value(char *buf)
+{
+	const char **ptr = lines + current_line;
+	int lp = _get_line_length(current_line);
+	const char *type;
+	switch (**ptr) {
+	case LTYPE_GRAPHIC:
+		type = "Graphic ";
+		break;
+	case LTYPE_SEPARATOR:
+		type = "Separator";
+		break;
+	case LTYPE_DISABLED:
+		type = "Disabled";
+		break;
+	default:
+		type = "";
+		break;
+	}
+	strcpy(buf, type);
+	if (**ptr == LTYPE_DISABLED) {
+		strcat(buf, " ");
+		strncat(buf, *ptr + 2, lp);
+	} else if (!*type) {
+		strncat(buf, *ptr + 2, lp);
+	}
+	return buf;
+}
+
+static char help_a11y_get_char_at(int pos)
+{
+	const char **ptr = lines + current_line;
+	int lp = _get_line_length(current_line);
+	if (pos < 0 || !lp || pos >= lp)
+		return 0;
+	if(**ptr == LTYPE_SEPARATOR || **ptr == LTYPE_GRAPHIC)
+		return 0;
+	return (*ptr + 1)[pos];
+}
+
 static int help_handle_key(struct key_event * k)
 {
 	int new_line = top_line;
+	int new_cur_line = current_line;
+	char buf[100];
+	char ch;
+	int last_char = _get_line_length(new_cur_line) - 1;
 
 	if (status.dialog_type != DIALOG_NONE) return 0;
 
 	if (k->mouse == MOUSE_SCROLL_UP) {
 		new_line -= MOUSE_SCROLL_LINES;
+		new_cur_line -= MOUSE_SCROLL_LINES;
 	} else if (k->mouse == MOUSE_SCROLL_DOWN) {
 		new_line += MOUSE_SCROLL_LINES;
-
+		new_cur_line += MOUSE_SCROLL_LINES;
 	} else if (k->mouse != MOUSE_NONE) {
 		return 0;
 	}
@@ -170,32 +224,54 @@ static int help_handle_key(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line--;
+		new_cur_line--;
 		break;
 	case SDLK_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line++;
+		new_cur_line++;
 		break;
 	case SDLK_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line -= 32;
+		new_cur_line -= 32;
 		break;
 	case SDLK_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line += 32;
+		new_cur_line += 32;
 		break;
 	case SDLK_HOME:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line = 0;
+		new_cur_line = 0;
 		break;
 	case SDLK_END:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line = num_lines - 32;
+		new_cur_line = num_lines - 1;
 		break;
+	case SDLK_LEFT:
+		if (k->state == KEY_RELEASE)
+			return 1;
+		current_char--;
+		if (current_char < 0) current_char = 0;
+		ch = help_a11y_get_char_at(current_char);
+		if (ch) a11y_output_char(ch, 1);
+		return 1;
+	case SDLK_RIGHT:
+		if (k->state == KEY_RELEASE)
+			return 1;
+		current_char++;
+		if (current_char > last_char) current_char = last_char;
+		ch = help_a11y_get_char_at(current_char);
+		if (ch) a11y_output_char(ch, 1);
+		return 1;
 	default:
 		if (k->mouse != MOUSE_NONE) {
 			if (k->state == KEY_RELEASE)
@@ -206,11 +282,18 @@ static int help_handle_key(struct key_event * k)
 	}
 
 	new_line = CLAMP(new_line, 0, num_lines - 32);
+	new_cur_line = CLAMP(new_cur_line, 0, num_lines - 1);
 	if (new_line != top_line) {
 		top_line = new_line;
 		help_text_lastpos[status.current_help_index] = top_line;
 		status.flags |= NEED_UPDATE;
 	}
+	if (new_cur_line != current_line) {
+		current_line = new_cur_line;
+		current_char = 0;
+	}
+	help_a11y_get_value(buf);
+	a11y_output_cp437(buf, 1);
 
 	return 1;
 }
@@ -289,6 +372,7 @@ static void help_set_page(void)
 
 	lines[cur_line] = NULL;
 	CURRENT_HELP_LINECOUNT = num_lines = cur_line;
+	current_line = top_line;
 }
 
 /* --------------------------------------------------------------------- */

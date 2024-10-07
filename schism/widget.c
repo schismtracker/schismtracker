@@ -27,6 +27,7 @@
 #include "page.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "accessibility.h"
 
 /* --------------------------------------------------------------------- */
 /* create_* functions (the constructors, if you will) */
@@ -267,6 +268,8 @@ void widget_create_other(struct widget *w, int next_tab, int (*i_handle_key) (st
 	w->d.other.handle_key = i_handle_key;
 	w->d.other.handle_text_input = i_handle_text_input;
 	w->d.other.redraw = i_redraw;
+	w->d.other.a11y_type = NULL;
+	w->d.other.a11y_get_value = NULL;
 }
 
 /* --------------------------------------------------------------------- */
@@ -292,12 +295,14 @@ void text_delete_char(char *text, int *cursor_pos, int max_length)
 {
 	if (*cursor_pos == 0)
 		return;
+	a11y_output_char(text[*cursor_pos - 1], 1);
 	(*cursor_pos)--;
 	memmove(text + *cursor_pos, text + *cursor_pos + 1, max_length - *cursor_pos);
 }
 
 void text_delete_next_char(char *text, int *cursor_pos, int max_length)
 {
+	a11y_output_char(text[*cursor_pos], 1);
 	memmove(text + *cursor_pos, text + *cursor_pos + 1, max_length - *cursor_pos);
 }
 
@@ -354,6 +359,9 @@ void widget_numentry_change_value(struct widget *w, int new_value)
 {
 	new_value = CLAMP(new_value, w->d.numentry.min, w->d.numentry.max);
 	w->d.numentry.value = new_value;
+	char buf[16];
+	a11y_get_widget_value(w, buf);
+	a11y_output(buf, 1);
 	if (w->changed) w->changed();
 	status.flags |= NEED_UPDATE;
 }
@@ -602,6 +610,11 @@ void widget_change_focus_to(int new_widget_index)
 		ACTIVE_WIDGET.d.textentry.cursor_pos
 				= strlen(ACTIVE_WIDGET.d.textentry.text);
 
+	char buf[512];
+	a11y_get_widget_info(&ACTIVE_WIDGET, INFO_LABEL | INFO_TYPE | INFO_STATE, buf);
+	a11y_output(buf, 1);
+	a11y_get_widget_info(&ACTIVE_WIDGET, INFO_VALUE, buf);
+	a11y_output(buf, 0);
 	status.flags |= NEED_UPDATE;
 }
 
