@@ -26,7 +26,7 @@
 
 #include <sys/wait.h>
 
-#ifdef HAVE_FORK
+#ifdef HAVE_EXECL
 int posix_run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
 	char *tmp;
