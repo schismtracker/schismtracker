@@ -103,7 +103,7 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_mkdir mkdir
 #endif
 #ifndef os_run_hook
-# define os_run_hook 0
+# define os_run_hook(a,b,c) 0
 #endif
 
 // Implementations for the above, and more.
