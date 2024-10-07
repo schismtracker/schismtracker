@@ -1,0 +1,11 @@
+--- a/CMakeLists.txt	2024-10-06 21:59:24.343387636 -0400
++++ b/CMakeLists.txt	2024-10-06 13:24:51.887538244 -0400
+@@ -48,7 +48,7 @@
+ endif ()
+ 
+ set_target_properties (utf8proc PROPERTIES
+-  POSITION_INDEPENDENT_CODE ON
++  POSITION_INDEPENDENT_CODE OFF
+   VERSION "${SO_MAJOR}.${SO_MINOR}.${SO_PATCH}"
+   SOVERSION ${SO_MAJOR}
+ )
