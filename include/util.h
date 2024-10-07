@@ -83,9 +83,6 @@
 # define PURE
 #endif
 
-#include "mem.h" // XXX these includes suck
-#include "str.h" // and need to go away
-
 /* Path stuff that differs by platform */
 #ifdef SCHISM_WIN32
 # define DIR_SEPARATOR '\\'
@@ -96,6 +93,9 @@
 # define DIR_SEPARATOR_STR "/"
 # define IS_DIR_SEPARATOR(c) ((c) == '/')
 #endif
+
+#include "mem.h" // XXX these includes suck
+#include "str.h" // and need to go away
 
 /* --------------------------------------------------------------------- */
 /* functions returning const char * use a static buffer; ones returning char * malloc their return value

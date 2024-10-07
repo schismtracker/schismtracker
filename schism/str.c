@@ -23,7 +23,9 @@
 
 #include "headers.h"
 
+#include "mem.h"
 #include "str.h"
+#include "util.h"
 
 /* --------------------------------------------------------------------- */
 /* FORMATTING FUNCTIONS */
