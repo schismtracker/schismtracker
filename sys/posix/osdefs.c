@@ -24,9 +24,10 @@
 #include "headers.h"
 #include "osdefs.h"
 
+/* ugh */
+#if defined(HAVE_EXECL) && defined(HAVE_FORK) && !defined(SCHISM_WIN32)
 #include <sys/wait.h>
 
-#ifdef HAVE_EXECL
 int posix_run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
 	char *tmp;

@@ -28,6 +28,8 @@
 #include "it.h" // need for kbd_get_alnum
 #include "page.h" // need for struct key_event
 #include "log.h"
+#include "dmoz.h"
+#include "mem.h"
 
 #include <di/di.h>
 #include <fat.h>
@@ -115,7 +117,7 @@ void wii_sysinit(int *pargc, char ***pargv)
 	} else if (strchr(*pargv[0], '/') != NULL) {
 		// presumably launched from hbc menu - put stuff in the boot dir
 		// (does get_parent_directory do what I want here?)
-		ptr = get_parent_directory(*pargv[0]);
+		ptr = dmoz_path_get_parent_directory(*pargv[0]);
 	}
 	if (!ptr) {
 		// Make a guess anyway

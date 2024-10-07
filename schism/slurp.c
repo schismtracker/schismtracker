@@ -54,6 +54,7 @@ static int slurp_stdio_open_file_(slurp_t *t, FILE *fp);
 static int slurp_stdio_seek_(slurp_t *t, long offset, int whence);
 static int64_t slurp_stdio_tell_(slurp_t *t);
 static size_t slurp_stdio_peek_(slurp_t *t, void *ptr, size_t count);
+static size_t slurp_stdio_read_(slurp_t *t, void *ptr, size_t count);
 static int slurp_stdio_eof_(slurp_t *t);
 static int slurp_stdio_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
 static void slurp_stdio_closure_(slurp_t *t);
@@ -61,6 +62,7 @@ static void slurp_stdio_closure_(slurp_t *t);
 static int slurp_memory_seek_(slurp_t *t, long offset, int whence);
 static int64_t slurp_memory_tell_(slurp_t *t);
 static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count);
+static size_t slurp_memory_read_(slurp_t *t, void *ptr, size_t count);
 static int slurp_memory_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
 static int slurp_memory_eof_(slurp_t *t);
 static void slurp_memory_closure_free_(slurp_t *t);
@@ -89,6 +91,7 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 		t->tell = slurp_memory_tell_;
 		t->eof  = slurp_memory_eof_;
 		t->peek = slurp_memory_peek_;
+		t->read = slurp_memory_read_;
 		t->receive = slurp_memory_receive_;
 		goto finished;
 	default:
@@ -104,6 +107,7 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 		t->tell = slurp_stdio_tell_;
 		t->eof  = slurp_stdio_eof_;
 		t->peek = slurp_stdio_peek_;
+		t->read = slurp_stdio_read_;
 		t->receive = slurp_stdio_receive_;
 		goto finished;
 	default:
@@ -128,6 +132,7 @@ finished: ; /* this semicolon is important because C */
 		t->tell = slurp_memory_tell_;
 		t->eof  = slurp_memory_eof_;
 		t->peek = slurp_memory_peek_;
+		t->read = slurp_memory_read_;
 		t->receive = slurp_memory_receive_;
 
 		t->internal.memory.length = mmlen;
@@ -189,11 +194,18 @@ static size_t slurp_stdio_peek_(slurp_t *t, void *ptr, size_t count)
 	if (pos < 0)
 		return 0;
 
+	count = slurp_stdio_read_(t, ptr, count);
+
+	slurp_stdio_seek_(t, pos, SEEK_SET);
+
+	return count;
+}
+
+static size_t slurp_stdio_read_(slurp_t *t, void *ptr, size_t count)
+{
 	size_t read = fread(ptr, 1, count, t->internal.stdio.fp);
 	if (read < count)
 		memset((unsigned char*)ptr + read, 0, count - read);
-
-	slurp_stdio_seek_(t, pos, SEEK_SET);
 
 	return read;
 }
@@ -270,6 +282,13 @@ static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count)
 	return count;
 }
 
+static size_t slurp_memory_read_(slurp_t *t, void *ptr, size_t count)
+{
+	count = slurp_memory_peek_(t, ptr, count);
+	slurp_memory_seek_(t, count, SEEK_CUR);
+	return count;
+}
+
 static int slurp_memory_eof_(slurp_t *t)
 {
 	return t->internal.memory.pos >= t->internal.memory.length;
@@ -308,15 +327,12 @@ size_t slurp_peek(slurp_t *t, void *ptr, size_t count)
 	return t->peek(t, ptr, count);
 }
 
-/* actual implementations */
-
 size_t slurp_read(slurp_t *t, void *ptr, size_t count)
 {
-	/* XXX could maybe look into putting a read function into slurp_t */
-	count = t->peek(t, ptr, count);
-	t->seek(t, count, SEEK_CUR);
-	return count;
+	return t->read(t, ptr, count);
 }
+
+/* actual implementations */
 
 size_t slurp_length(slurp_t *t)
 {
