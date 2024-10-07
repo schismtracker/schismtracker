@@ -23,6 +23,8 @@
 
 #include "headers.h"
 
+#include "dmoz.h"
+#include "osdefs.h"
 #include "charset.h"
 #include "slurp.h"
 #include "util.h"
@@ -183,8 +185,8 @@ static int _parse_keyval(cfg_file_t *cfg, char *line, struct cfg_section *cur_se
 	}
 
 	str_break(line, '=', &k, &v);
-	trim_string(k);
-	trim_string(v);
+	str_trim(k);
+	str_trim(v);
 
 	key = _get_key(cur_section, k, 1);
 	if (key->value) {
@@ -268,7 +270,7 @@ static int cfg_read_receive_impl(const void *data, size_t size, void *userdata)
 		len = strcspn(pos, "#\r\n");
 		if (len) {
 			char *line = strn_dup(pos, len);
-			trim_string(line);
+			str_trim(line);
 			if (_parse_section(cfg, line, &cur_section, comments)
 			    || _parse_keyval(cfg, line, cur_section, comments)) {
 				comments = NULL;
@@ -344,7 +346,7 @@ int cfg_write(cfg_file_t *cfg)
 		return 0;
 	cfg->dirty = 0;
 
-	make_backup_file(cfg->filename, 0);
+	dmoz_path_make_backup(cfg->filename, 0);
 
 	fp = os_fopen(cfg->filename, "wb");
 	if (!fp) {

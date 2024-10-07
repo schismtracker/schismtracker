@@ -277,7 +277,7 @@ void read_lined_message(char *msg, slurp_t *fp, int len, int linelen)
 		len -= linesize;
 
 		msg[linesize] = '\0';
-		linesize = rtrim_string(msg);
+		linesize = str_rtrim(msg);
 		msgsize += linesize + 1;
 		msg += linesize;
 		*msg++ = '\n';

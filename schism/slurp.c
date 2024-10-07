@@ -26,6 +26,7 @@
 #include "slurp.h"
 #include "fmt.h"
 #include "util.h"
+#include "osdefs.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -69,7 +70,7 @@ static void slurp_memory_closure_free_(slurp_t *t);
 int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 {
 	if (!size)
-		size = (buf ? buf->st_size : file_size(filename));
+		size = (buf ? buf->st_size : dmoz_path_get_file_size(filename));
 
 
 	switch (

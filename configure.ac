@@ -167,7 +167,7 @@ AC_SUBST([UTF8PROC_CFLAGS])
 AC_SUBST([UTF8PROC_LIBS])
 
 dnl Functions
-AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp mmap nice unsetenv dup fnmatch mkstemp localtime_r umask)
+AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp mmap nice unsetenv dup fnmatch mkstemp localtime_r umask fork)
 AM_CONDITIONAL([NEED_ASPRINTF], [test "x$ac_cv_func_asprintf" = "xno"])
 AM_CONDITIONAL([NEED_VASPRINTF], [test "x$ac_cv_func_vasprintf" = "xno"])
 AM_CONDITIONAL([NEED_MEMCMP], [test "x$ac_cv_func_memcmp" = "xno"])
@@ -175,6 +175,7 @@ AM_CONDITIONAL([NEED_STRPTIME], [test "x$ac_cv_func_strptime" = "xno"])
 AM_CONDITIONAL([NEED_MKSTEMP], [test "x$ac_cv_func_mkstemp" = "xno"])
 AM_CONDITIONAL([NEED_LOCALTIME_R], [test "x$ac_cv_func_localtime_r" = "xno"])
 
+AM_CONDITIONAL([USE_FORK], [test "x$ac_cv_func_fork" = "xyes"])
 AM_CONDITIONAL([USE_MMAP], [test "$ac_cv_func_mmap" = "yes"])
 
 dnl Headers, typedef crap, et al.

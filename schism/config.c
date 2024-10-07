@@ -83,14 +83,14 @@ void cfg_init_dir(void)
 	if (app_dir)
 		portable_file = dmoz_path_concat(app_dir, "portable.txt");
 
-	if (portable_file && is_file(portable_file)) {
+	if (portable_file && dmoz_path_is_file(portable_file)) {
 		printf("In portable mode.\n");
 
 		strncpy(cfg_dir_dotschism, app_dir, PATH_MAX);
 		cfg_dir_dotschism[PATH_MAX] = 0;
 	} else {
 		int found = 0;
-		char *dot_dir = get_dot_directory();
+		char *dot_dir = dmoz_get_dot_directory();
 
 		for (size_t i = 0; i < ARRAY_SIZE(schism_dotfolders); i++) {
 			char *ptr;
@@ -101,7 +101,7 @@ void cfg_init_dir(void)
 
 			free(ptr);
 
-			if (is_directory(cfg_dir_dotschism)) {
+			if (dmoz_path_is_directory(cfg_dir_dotschism)) {
 				found = 1;
 				break;
 			}
@@ -182,7 +182,7 @@ void cfg_load(void)
 	cfg_video_want_menu_bar = !!cfg_get_number(&cfg, "Video", "want_menu_bar", 1);
 #endif
 
-	tmp = get_home_directory();
+	tmp = dmoz_get_home_directory();
 	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, tmp);
 	cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, PATH_MAX, tmp);
 	cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, PATH_MAX, tmp);

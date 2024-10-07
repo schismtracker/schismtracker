@@ -34,6 +34,7 @@
 #include "widget.h"
 #include "dialog.h"
 #include "vgamem.h"
+#include "osdefs.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -183,7 +184,7 @@ static void loadsave_song_changed(void)
 
 	if (!ptr)
 		return;
-	ext = get_extension(ptr);
+	ext = dmoz_path_get_extension(ptr);
 	if (ext[0] && ext[1]) {
 		for (i = 0; song_save_formats[i].label; i++) {
 			if (charset_strcasecmp(ext, CHARSET_CHAR, song_save_formats[i].ext, CHARSET_CHAR) == 0) {
@@ -613,8 +614,8 @@ static void file_list_draw(void)
 			draw_text_len(file->description ? file->description : "", 26, 51, 40, 5, 0);
 			sprintf(buf, "%09lu", (unsigned long)file->filesize);
 			draw_text_len(buf, 26, 51, 41, 5, 0);
-			draw_text_len(get_date_string(file->timestamp, buf), 26, 51, 42, 5, 0);
-			draw_text_len(get_time_string(file->timestamp, buf), 26, 51, 43, 5, 0);
+			draw_text_len(str_from_date(file->timestamp, buf), 26, 51, 42, 5, 0);
+			draw_text_len(str_from_time(file->timestamp, buf), 26, 51, 43, 5, 0);
 		}
 	} else {
 		if (ACTIVE_PAGE.selected_widget == 0) {
@@ -680,7 +681,7 @@ static void show_selected_song_length(void)
 		log_appendf(4, "%s: %s", ptr, fmt_strerror(errno));
 		return;
 	}
-	show_length_dialog(get_basename(ptr), csf_get_length(song));
+	show_length_dialog(dmoz_path_get_basename(ptr), csf_get_length(song));
 	csf_free(song);
 }
 

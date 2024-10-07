@@ -179,16 +179,16 @@ static void handle_window_event(SDL_WindowEvent *w)
 #if ENABLE_HOOKS
 static void run_startup_hook(void)
 {
-	run_hook(cfg_dir_dotschism, "startup-hook", NULL);
+	os_run_hook(cfg_dir_dotschism, "startup-hook", NULL);
 }
 static void run_disko_complete_hook(void)
 {
-	run_hook(cfg_dir_dotschism, "diskwriter-hook", NULL);
+	os_run_hook(cfg_dir_dotschism, "diskwriter-hook", NULL);
 }
 
 static void run_exit_hook(void)
 {
-	run_hook(cfg_dir_dotschism, "exit-hook", NULL);
+	os_run_hook(cfg_dir_dotschism, "exit-hook", NULL);
 }
 #endif
 
@@ -366,7 +366,7 @@ static void parse_options(int argc, char **argv)
 		}
 	}
 
-	char *cwd = get_current_directory();
+	char *cwd = dmoz_get_current_directory();
 	for (; optind < argc; optind++) {
 		char *arg = argv[optind];
 		char *tmp = dmoz_path_concat(cwd, arg);
@@ -376,7 +376,7 @@ static void parse_options(int argc, char **argv)
 		}
 		char *norm = dmoz_path_normal(tmp);
 		free(tmp);
-		if (is_directory(arg)) {
+		if (dmoz_path_is_directory(arg)) {
 			free(initial_dir);
 			initial_dir = norm;
 		} else {
@@ -1046,9 +1046,9 @@ int main(int argc, char **argv)
 	main_song_changed_cb();
 
 	if (initial_song && !initial_dir) {
-		initial_dir = get_parent_directory(initial_song);
+		initial_dir = dmoz_path_get_parent_directory(initial_song);
 		if (!initial_dir) {
-			initial_dir = get_current_directory();
+			initial_dir = dmoz_get_current_directory();
 		}
 	}
 	if (initial_dir) {

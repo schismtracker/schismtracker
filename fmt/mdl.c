@@ -459,7 +459,7 @@ static int mdl_read_info(song_t *song, slurp_t *fp)
 
 	// title is space-padded
 	info.title[31] = '\0';
-	trim_string(info.title);
+	str_trim(info.title);
 	strncpy(song->title, info.title, 25);
 	song->title[25] = '\0';
 

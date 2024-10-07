@@ -378,6 +378,7 @@ schismtracker_SOURCES = \
 	schism/itf.c			\
 	schism/keyboard.c		\
 	schism/main.c			\
+	schism/mem.c           \
 	schism/menu.c			\
 	schism/midi-core.c		\
 	schism/midi-ip.c		\
@@ -409,6 +410,7 @@ schismtracker_SOURCES = \
 	schism/sample-view.c		\
 	schism/slurp.c			\
 	schism/status.c			\
+	schism/str.c             \
 	schism/util.c			\
 	schism/version.c		\
 	schism/vgamem.c        \
@@ -416,6 +418,7 @@ schismtracker_SOURCES = \
 	schism/widget-keyhandler.c	\
 	schism/widget.c			\
 	schism/xpmdata.c		\
+	sys/posix/osdefs.c \
 	$(files_macosx)			\
 	$(files_alsa)			\
 	$(files_oss)			\

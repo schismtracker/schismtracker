@@ -27,6 +27,7 @@
 #include "config.h"
 #include "fonts.h"
 #include "util.h"
+#include "osdefs.h"
 
 #include <errno.h>
 

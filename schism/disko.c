@@ -33,6 +33,7 @@
 #include "song.h"
 #include "util.h"
 #include "vgamem.h"
+#include "osdefs.h"
 
 #include "player/sndfile.h"
 #include "player/cmixer.h"
@@ -303,9 +304,9 @@ int disko_close(disko_t *ds, int backup)
 #endif
 		if (backup) {
 			// back up the old file
-			make_backup_file(ds->filename, (backup != 1));
+			dmoz_path_make_backup(ds->filename, (backup != 1));
 		}
-		if (rename_file(ds->tempname, ds->filename, 1) != 0) {
+		if (dmoz_path_rename(ds->tempname, ds->filename, 1) != 0) {
 			err = errno;
 		} else {
 #if HAVE_UMASK
@@ -681,7 +682,7 @@ static char *get_filename(const char *template, int n)
 		free(s);
 		return NULL;
 	}
-	num99tostr(n, buf);
+	str_from_num99(n, buf);
 	sub[0] = buf[0];
 	sub[1] = buf[1];
 	return s;

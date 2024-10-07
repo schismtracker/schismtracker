@@ -80,7 +80,7 @@ void draw_note_13(int x, int y, const song_note_t *note, int cursor_pos, int fg,
 	/* come to think of it, maybe the instrument text should be
 	 * created the same way as the volume. */
 	if (note->instrument)
-		num99tostr(note->instrument, instbuf);
+		str_from_num99(note->instrument, instbuf);
 	else
 		strcpy(instbuf, "\xad\xad");
 
@@ -158,7 +158,7 @@ void draw_note_10(int x, int y, const song_note_t *note, int cursor_pos, UNUSED 
 
 	get_note_string(note->note, note_buf);
 	if (note->instrument) {
-		num99tostr(note->instrument, ins_buf);
+		str_from_num99(note->instrument, ins_buf);
 	} else {
 		ins_buf[0] = ins_buf[1] = 173;
 		ins_buf[2] = 0;
@@ -260,7 +260,7 @@ void draw_note_7(int x, int y, const song_note_t *note, int cursor_pos, UNUSED i
 
 	get_note_string(note->note, note_buf);
 	if (note->instrument)
-		num99tostr(note->instrument, ins_buf);
+		str_from_num99(note->instrument, ins_buf);
 	else
 		ins_buf[0] = ins_buf[1] = 173;
 	get_volume_string(note->volparam, note->voleffect, vol_buf);
@@ -402,7 +402,7 @@ void draw_note_3(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 		cursor_pos -= 1;
 		buf[0] = ' ';
 		if (note->instrument) {
-			num99tostr(note->instrument, buf + 1);
+			str_from_num99(note->instrument, buf + 1);
 		} else {
 			buf[1] = buf[2] = 173;
 			buf[3] = 0;
@@ -441,7 +441,7 @@ void draw_note_3(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 		draw_text(buf, x, y, fg, bg);
 	} else if (note->instrument) {
 		buf[0] = ' ';
-		num99tostr(note->instrument, buf + 1);
+		str_from_num99(note->instrument, buf + 1);
 		draw_text(buf, x, y, fg, bg);
 	} else if (note->voleffect) {
 		buf[0] = ' ';
@@ -575,7 +575,7 @@ void draw_note_2(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 	case 3:
 		cursor_pos -= 2;
 		if (note->instrument) {
-			num99tostr(note->instrument, buf);
+			str_from_num99(note->instrument, buf);
 		} else {
 			buf[0] = buf[1] = 173;
 			buf[2] = 0;
@@ -625,7 +625,7 @@ void draw_note_2(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 		draw_text(buf, x, y, fg, bg);
 		*/
 	} else if (note->instrument) {
-		num99tostr(note->instrument, buf);
+		str_from_num99(note->instrument, buf);
 		draw_text(buf, x, y, fg, bg);
 	} else if (note->voleffect) {
 		get_volume_string(note->volparam, note->voleffect, buf);
@@ -726,7 +726,7 @@ void draw_note_1(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 	case 3:
 		cursor_pos -= 2;
 		if (note->instrument)
-			num99tostr(note->instrument, buf);
+			str_from_num99(note->instrument, buf);
 		else
 			buf[0] = buf[1] = 173;
 		if (cursor_pos == 0)
@@ -758,7 +758,7 @@ void draw_note_1(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 		get_note_string_short(note->note, buf);
 		draw_char(buf[0], x, y, fg, bg);
 	} else if (note->instrument) {
-		num99tostr(note->instrument, buf);
+		str_from_num99(note->instrument, buf);
 		draw_half_width_chars(buf[0], buf[1], x, y, fg, bg, fg, bg);
 	} else if (note->voleffect) {
 		if (cursor_pos != 0)
@@ -816,7 +816,7 @@ void draw_note_6(int x, int y, const song_note_t *note, int cursor_pos, UNUSED i
 
 	get_note_string_short(note->note, note_buf);
 	if (note->instrument)
-		num99tostr(note->instrument, ins_buf);
+		str_from_num99(note->instrument, ins_buf);
 	else
 		ins_buf[0] = ins_buf[1] = 173;
 	/* note & instrument */
@@ -869,7 +869,7 @@ void draw_note_6(int x, int y, const song_note_t *note, int cursor_pos, UNUSED i
 #endif
 
 	if (note->instrument)
-		num99tostr(note->instrument, ins_buf);
+		str_from_num99(note->instrument, ins_buf);
 	else
 		ins_buf[0] = ins_buf[1] = 173;
 

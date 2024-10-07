@@ -34,6 +34,7 @@
 #include "song.h"
 #include "vgamem.h"
 #include "widget.h"
+#include "osdefs.h"
 
 /* --------------------------------------------------------------------- */
 /* static in my attic */
@@ -180,13 +181,13 @@ static void sample_list_draw_list(void)
 		if (sample->played)
 			draw_char(is_playing[n] > 1 ? 183 : 173, 1, 13 + pos, is_playing[n] ? 3 : 1, 2);
 
-		draw_text(num99tostr(n, buf), 2, 13 + pos, (sample->flags & CHN_MUTE) ? 1 : 0, 2);
+		draw_text(str_from_num99(n, buf), 2, 13 + pos, (sample->flags & CHN_MUTE) ? 1 : 0, 2);
 
 		// wow, this is entirely horrible
 		pn = ((unsigned char)sample->name[24]);
 		if (((unsigned char)sample->name[23]) == 0xFF && pn < 200) {
 			nl = 23;
-			draw_text(numtostr(3, (int)pn, buf), 32, 13 + pos, 0, 2);
+			draw_text(str_from_num(3, (int)pn, buf), 32, 13 + pos, 0, 2);
 			draw_char('P', 28, 13+pos, 3, 2);
 			draw_char('a', 29, 13+pos, 3, 2);
 			draw_char('t', 30, 13+pos, 3, 2);
@@ -289,7 +290,7 @@ static void sample_list_predraw_hook(void)
 	}
 	draw_text_len(buf, 13, 64, 22, 2, 0);
 
-	draw_text_len(numtostr(0, sample->length, buf), 13, 64, 23, 2, 0);
+	draw_text_len(str_from_num(0, sample->length, buf), 13, 64, 23, 2, 0);
 
 	draw_sample_data(&sample_image, sample);
 }
