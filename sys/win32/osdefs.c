@@ -30,6 +30,7 @@
 #include "it.h"
 #include "osdefs.h"
 #include "fmt.h"
+#include "charset.h"
 
 #include <windows.h>
 #include <ws2tcpip.h>
