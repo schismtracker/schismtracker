@@ -51,6 +51,7 @@
 #ifdef SCHISM_WIN32
 #include <windows.h>
 #include <winbase.h>
+#include <shlobj.h>
 #endif
 
 #ifdef SCHISM_WII
