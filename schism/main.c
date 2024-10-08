@@ -46,6 +46,9 @@
 #include "fonts.h"
 #include "dialog.h"
 #include "widget.h"
+#ifdef SCHISM_CONTROLLER
+# include "controller.h"
+#endif
 
 #include "osdefs.h"
 
@@ -100,24 +103,7 @@ static void display_print_info(void)
 	video_report();
 }
 
-/* If we're not not debugging, don't not dump core. (Have I ever mentioned
- * that NDEBUG is poorly named -- or that identifiers for settings in the
- * negative form are a bad idea?) */
-#if defined(NDEBUG)
-# define SDL_INIT_FLAGS SDL_INIT_TIMER | SDL_INIT_VIDEO
-#else
-# define SDL_INIT_FLAGS SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE
-#endif
-
-static void sdl_init(void)
-{
-	const char *err;
-	if (SDL_Init(SDL_INIT_FLAGS) == 0)
-		return;
-	err = SDL_GetError();
-	fprintf(stderr, "SDL_Init: %s\n", err);
-	schism_exit(1);
-}
+#define SDL_INIT_FLAGS SDL_INIT_TIMER | SDL_INIT_VIDEO
 
 static void display_init(void)
 {
@@ -488,6 +474,11 @@ static void event_loop(void)
 			if (!os_sdlevent(&event))
 				continue;
 
+#ifdef SCHISM_CONTROLLER
+			if (!controller_sdlevent(&event))
+				continue;
+#endif
+
 			key_event_reset(&kk, kk.sx, kk.sy);
 
 			sawrep = 0;
@@ -640,7 +631,7 @@ static void event_loop(void)
 #endif
 				video_translate(wheel_x, wheel_y, &kk.fx, &kk.fy);
 				kk.mouse = (event.wheel.y > 0) ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN;
-			case SDL_MOUSEMOTION:
+			case SDL_MOUSEMOTION: // FIXME THIS IS WRONG
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
 				if (kk.state == KEY_PRESS) {
@@ -927,9 +918,9 @@ static void event_loop(void)
 		for (t = 0; t < 10 && !SDL_PollEvent(NULL); t++)
 			SDL_Delay(1);
 	}
+	
 	schism_exit(0);
 }
-
 
 void schism_exit(int status)
 {
@@ -960,9 +951,14 @@ void schism_exit(int status)
 		See long-standing bug: https://github.com/libsdl-org/SDL/issues/3184
 			/ Vanfanel
 		*/
+#ifdef SCHISM_CONTROLLER
+		controller_quit();
+#endif
 		SDL_Quit();
 	}
+
 	os_sysexit();
+
 	exit(status);
 }
 
@@ -1009,21 +1005,27 @@ int main(int argc, char **argv)
 		if (startup_flags & SF_CLASSIC) status.flags |= CLASSIC_MODE;
 	}
 
-	if (!did_fullscreen) {
+	if (!did_fullscreen)
 		video_fullscreen(cfg_video_fullscreen);
-	}
 
-	if (!(startup_flags & SF_NETWORK)) {
+	if (!(startup_flags & SF_NETWORK))
 		status.flags |= NO_NETWORK;
-	}
 
 	shutdown_process |= EXIT_SAVECFG;
 
-	sdl_init();
+	if (SDL_Init(SDL_INIT_FLAGS) < 0) {
+		fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
+		schism_exit(1);
+	}
+
 	/* make SDL_SetWindowGrab grab the keyboard too */
 	SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
 	shutdown_process |= EXIT_SDLQUIT;
 	os_sdlinit();
+
+#ifdef SCHISM_CONTROLLER
+	controller_init();
+#endif
 
 	display_init();
 	palette_apply();
@@ -1095,5 +1097,6 @@ int main(int argc, char **argv)
 	midi_engine_poll_ports();
 
 	event_loop();
+
 	return 0; /* blah */
 }

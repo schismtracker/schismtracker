@@ -22,13 +22,20 @@
  */
 
 #include "headers.h"
+#include "controller.h"
 #include "osdefs.h"
 #include "mem.h"
 #include "dmoz.h"
 
+#include <whb/proc.h>
+#include <sysapp/launch.h>
+
 /* fixup HOME envvar */
 void wiiu_sysinit(int *pargc, char ***pargv)
 {
+	/* tell the wii u about us */
+	WHBProcInit();
+
 	char *ptr = NULL;
 
 	// Attempt to locate a suitable home directory.
@@ -58,4 +65,12 @@ void wiiu_sysinit(int *pargc, char ***pargv)
 	free(ptr);
 }
 
-/* TODO handle joysticks... gamepad ? */
+void wiiu_sysexit(void)
+{
+	/* hmph */
+	WHBProcShutdown();
+
+	/* if WHCProcShutdown didn't return us to the Homebrew Launcher
+	 * or similar, return to the system menu */
+	SYSLaunchMenu();
+}
