@@ -219,6 +219,7 @@ use_win32=no
 use_wii=no
 use_wiiu=no
 use_network=no
+use_controller=no
 
 case "${host_os}" in
 	darwin*)
@@ -278,7 +279,9 @@ case "${host_os}" in
 			AC_SUBST([EXEEXT])
 
 			use_wii=yes
+			use_controller=yes
 			AC_DEFINE([SCHISM_WII], [1], [Wii])
+			AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
 		elif test "x$which" = "xwiiu"; then
 			WIIU_CPPFLAGS="-I${DEVKITPRO}/wut/include -I${DEVKITPPC}/powerpc-eabi/include"
 			WIIU_LDFLAGS="-lwut -T${DEVKITPRO}/wut/share/wut.ld -Wl,--gc-sections -Wl,--emit-relocs -Wl,--no-eh-frame-hdr -z nocopyreloc -L${DEVKITPRO}/wut/lib -L${DEVKITPPC}/powerpc-eabi/lib"
@@ -302,7 +305,9 @@ case "${host_os}" in
 			AC_SUBST([EXEEXT])
 
 			use_wiiu=yes
+			use_controller=yes
 			AC_DEFINE([SCHISM_WIIU], [1], [Wii U])
+			AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
 		fi
 
 		dnl Networking...
@@ -341,6 +346,7 @@ fi
 AM_CONDITIONAL([USE_WIN32], [test "x$use_win32" = "xyes"])
 AM_CONDITIONAL([USE_WII], [test "x$use_wii" = "xyes"])
 AM_CONDITIONAL([USE_WIIU], [test "x$use_wiiu" = "xyes"])
+AM_CONDITIONAL([USE_CONTROLLER], [test "x$use_controller" = "xyes"])
 AM_CONDITIONAL([USE_MACOSX], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([am__fastdepOBJC], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([USE_NETWORK], [test "x$use_network" = "xyes"])

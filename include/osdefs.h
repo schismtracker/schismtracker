@@ -47,11 +47,10 @@ A return value of 0 indicates that the event should NOT be processed by the main
 */
 #if defined(SCHISM_WII)
 # define os_sysinit wii_sysinit
-# define os_sdlinit wii_sdlinit
 # define os_sysexit wii_sysexit
-# define os_sdlevent wii_sdlevent
 #elif defined(SCHISM_WIIU)
 # define os_sysinit wiiu_sysinit
+# define os_sysexit wiiu_sysexit
 #elif defined(SCHISM_WIN32)
 # define os_sdlevent win32_sdlevent
 # define os_sdlinit win32_sdlinit
@@ -111,11 +110,10 @@ A return value of 0 indicates that the event should NOT be processed by the main
 int macosx_ibook_fnswitch(int setting);
 
 void wiiu_sysinit(int *pargc, char ***pargv); // fixup HOME envvar
+void wiiu_sysexit(void);
 
 void wii_sysinit(int *pargc, char ***pargv); // set up filesystem
 void wii_sysexit(void); // close filesystem
-void wii_sdlinit(void); // set up wiimote
-int wii_sdlevent(SDL_Event *event); // add unicode values; wiimote hack to allow simple playback
 
 int win32_sdlevent(SDL_Event* event);
 void win32_sysinit(int *pargc, char ***pargv);

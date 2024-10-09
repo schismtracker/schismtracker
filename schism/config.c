@@ -37,6 +37,14 @@
 #include "dmoz.h"
 #include "osdefs.h"
 
+#if defined(SCHISM_WII) || defined(SCHISM_WIIU)
+#define DEFAULT_KEY_REPEAT_DELAY 500
+#define DEFAULT_KEY_REPEAT_RATE  30
+#else // use system defaults
+#define DEFAULT_KEY_REPEAT_DELAY 0
+#define DEFAULT_KEY_REPEAT_RATE  0
+#endif
+
 /* --------------------------------------------------------------------- */
 /* config settings */
 
@@ -210,8 +218,8 @@ void cfg_load(void)
 	else
 		status.fix_numlock_setting = NUMLOCK_HONOR;
 
-	kbd_set_key_repeat(cfg_get_number(&cfg, "General", "key_repeat_delay", 0),
-		       cfg_get_number(&cfg, "General", "key_repeat_rate", 0));
+	kbd_set_key_repeat(cfg_get_number(&cfg, "General", "key_repeat_delay", DEFAULT_KEY_REPEAT_DELAY),
+		       cfg_get_number(&cfg, "General", "key_repeat_rate", DEFAULT_KEY_REPEAT_RATE));
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 

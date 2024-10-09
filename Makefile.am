@@ -226,6 +226,10 @@ endif # HAVE_WINDRES
 
 endif # USE_WIN32
 
+if USE_CONTROLLER
+files_controller=schism/controller.c
+endif
+
 if USE_WII
 files_wii=sys/wii/isfs.c sys/wii/osdefs.c
 cflags_wii=-mrvl -mcpu=750 -meabi -mhard-float
@@ -438,7 +442,8 @@ schismtracker_SOURCES = \
 	$(files_jack)			\
 	$(files_opl)			\
 	$(files_mediafoundation) \
-	$(files_wiiu)
+	$(files_wiiu)           \
+	$(files_controller)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
