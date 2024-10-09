@@ -29,16 +29,16 @@
 #include "charset.h"
 #include "accessibility.h"
 
+#include <stdarg.h>
+
+static char* a11y_message = NULL;
+
 const char* a11y_get_widget_info(struct widget *w, enum a11y_info info, char *buf)
 {
 	size_t len = 0;
 	buf[0] = '\0';
 	if (info & INFO_LABEL) {
-		const char* label = a11y_get_widget_label(w);
-		if (*label)
-			strcpy(buf, label);
-		else
-			a11y_try_find_widget_label(w, buf);
+		a11y_get_widget_label(w, buf);
 		if (strlen(buf)) strcat(buf, " ");
 	}
 	if (info & INFO_TYPE) {
@@ -55,16 +55,28 @@ const char* a11y_get_widget_info(struct widget *w, enum a11y_info info, char *bu
 	return buf;
 }
 
-const char* a11y_get_widget_label(struct widget *w)
+const char* a11y_get_widget_label(struct widget *w, char *buf)
 {
+	buf[0] = '\0';
 	switch (w-> type) {
 	case WIDGET_BUTTON:
-		return w->d.button.text;
+		CHARSET_EASY_MODE_CONST(w->d.button.text, CHARSET_CP437, CHARSET_CHAR, {
+			strcpy(buf, out);
+		});
+		break;
 	case WIDGET_TOGGLEBUTTON:
-		return w->d.togglebutton.text;
+		CHARSET_EASY_MODE_CONST(w->d.togglebutton.text, CHARSET_CP437, CHARSET_CHAR, {
+			strcpy(buf, out);
+		});
+		break;
+	case WIDGET_PANBAR:
+		sprintf(buf, "Channel %d", w->d.panbar.channel);
+		break;
 	default:
-		return "";
+		a11y_try_find_widget_label(w, buf);
+		break;
 	}
+	return buf;
 }
 
 const char* a11y_get_widget_state(struct widget *w)
@@ -112,27 +124,27 @@ const char* a11y_get_widget_type(struct widget *w)
 
 const char* a11y_get_widget_value(struct widget *w, char *buf)
 {
-	const unsigned char *value;
+	const char *value;
 	buf[0] = '\0';
 	switch (w->type) {
 	case WIDGET_TEXTENTRY:
 		value = w->d.textentry.text;
 		// IS this the only case where something non-ASCII is possible? It seems so.
 		CHARSET_EASY_MODE_CONST(value, CHARSET_CP437, CHARSET_CHAR, {
-			sprintf(buf, "%s", out);
+			strcpy(buf, out);
 		});
 		break;
 	case WIDGET_NUMENTRY:
 		if (w->d.numentry.reverse) {
-			unsigned char *str = numtostr(w->width, w->d.numentry.value, buf);
+			unsigned char *str = str_from_num(w->width, w->d.numentry.value, buf);
 			while (*str == '0') str++;
 			if (*str) strcpy(buf, str);
 			break;
 		} else if (w->d.numentry.min < 0 || w->d.numentry.max < 0) {
-			numtostr_signed(w->width, w->d.numentry.value,
+			str_from_num_signed(w->width, w->d.numentry.value,
 						buf);
 		} else {
-			numtostr(w->width, w->d.numentry.value,
+			str_from_num(w->width, w->d.numentry.value,
 						buf);
 		}
 		break;
@@ -156,9 +168,9 @@ const char* a11y_get_widget_value(struct widget *w, char *buf)
 			int len = strlen(w->d.thumbbar.text_at_max);
 			snprintf(buf, len, "%s", w->d.thumbbar.text_at_max);
 		} else if (w->d.thumbbar.min < 0 || w->d.thumbbar.max < 0) {
-			numtostr_signed(3, w->d.thumbbar.value, buf);
+			str_from_num_signed(3, w->d.thumbbar.value, buf);
 		} else {
-			numtostr(3, w->d.thumbbar.value, buf);
+			str_from_num(3, w->d.thumbbar.value, buf);
 		}
 		break;
 	case WIDGET_PANBAR:
@@ -167,7 +179,7 @@ const char* a11y_get_widget_value(struct widget *w, char *buf)
 		} else if (w->d.panbar.surround) {
 			sprintf(buf, "%s", "Surround");
 		} else {
-			numtostr(3, w->d.thumbbar.value, buf);
+			str_from_num(3, w->d.thumbbar.value, buf);
 		};
 		break;
 	case WIDGET_OTHER:
@@ -179,18 +191,26 @@ const char* a11y_get_widget_value(struct widget *w, char *buf)
 	return buf;
 }
 
+// Behold the truly terrible heuristic mess!
 const char* a11y_try_find_widget_label(struct widget *w, char* buf)
 {
 	uint32_t *label = NULL;
 	int found = 0;
+	int alternative_method = 0;
+	int i, j;
 	buf[0] = '\0';
 	if (w->x <= 0 || w->x >= 80 || w->y <= 0 || w->y >= 50)
 		return buf;
-	if (w->type == WIDGET_OTHER) {
-		for (int i = 1; i <= 2; i++) {
-			label = acbuf_get_ptr_to(w->x, w->y - i);
-			if (label && *label)
-				found = 1;
+	alternative: if (w->type == WIDGET_OTHER || alternative_method) {
+		for (i = 1; i <= 2; i++) {
+			for (j = 0; j < 6 && j < 80 - w->x; j++) {
+				label = acbuf_get_ptr_to(w->x + j, w->y - i);
+				if (label && *label) {
+					found = 1;
+					break;
+				}
+			}
+			if (found) break;
 		}
 		if (!found)
 			return buf;
@@ -202,24 +222,29 @@ const char* a11y_try_find_widget_label(struct widget *w, char* buf)
 	uint32_t *start = acbuf_get_ptr_to(0, w->y);
 	uint32_t *wx = &start[w->x];
 	label = wx - 2;
-	if (label <= start)
-		return buf;
+	if (label <= start || !*label) {
+		alternative_method = 1;
+		goto alternative;
+	}
 	for ( ; label >= start; label--) {
 		if (label && *label)
 			continue;
 		label++;
-		found = 1;
+	found = 1;
 		break;
 	}
 	if (found) {
 		CHARSET_EASY_MODE_CONST((uint8_t*)label, CHARSET_UCS4, CHARSET_CHAR, {
 			strcpy(buf, out);
 		});
+	} else {
+		alternative_method = 1;
+		goto alternative;
 	}
 	return buf;
 }
 
-static int find_first_non_null_index(const uint32_t *arr, size_t len)
+static int _find_first_non_null_index(const uint32_t *arr, size_t len)
 {
 	for (int i = 0; i < len; i++) {
 		if (arr[i] != 0)
@@ -228,7 +253,7 @@ static int find_first_non_null_index(const uint32_t *arr, size_t len)
 	return -1;
 }
 
-static uint32_t* replace_nulls_and_terminate(uint32_t *str, size_t len)
+static uint32_t* _replace_nulls_and_terminate(uint32_t *str, size_t len)
 {
 	for (uint32_t i = 0; i < len; i++) {
 		if (str[i] == 0)
@@ -264,21 +289,21 @@ const char* a11y_get_text_from_rect(int x, int y, int w, int h, char *buf)
 	for (int i = 0; i < h; i++) {
 		ptr = acbuf_get_ptr_to(x, y + i);
 		memcpy(str, ptr, w * sizeof(uint32_t));
-		start = find_first_non_null_index(str, w);
+		start = _find_first_non_null_index(str, w);
 		if (start == -1)
 			continue;
-		replace_nulls_and_terminate(&str[start], w - start);
+		_replace_nulls_and_terminate(&str[start], w - start);
 		CHARSET_EASY_MODE_CONST((uint8_t*)&str[start], CHARSET_UCS4, CHARSET_CHAR, {
 			strcat(buf, out);
 		});
-		if (strlen(buf)) strcat(buf, "\n");
+		if (strlen(buf)) strcat(buf, " ");
 	}
 	return buf;
 }
 
 int a11y_init(void)
 {
-	return SRAL_Initialize(ENGINE_SAPI);
+	return SRAL_Initialize(ENGINE_NONE);
 }
 
 int a11y_output(const char* text, int interrupt)
@@ -302,6 +327,24 @@ int a11y_output_char(char chr, int interrupt)
 	unsigned char text[2] = { chr, '\0' };
 	if (!*text) return 0;
 	return a11y_output_cp437(text, interrupt);
+}
+
+int a11y_outputf(const char *format, int interrupt, ...)
+{
+	int result;
+
+	va_list ap;
+
+	va_start(ap, interrupt);
+
+	if (vasprintf(&a11y_message, format, ap) == -1) abort();
+
+	result = a11y_output(a11y_message, interrupt);
+
+	va_end(ap);
+	if (a11y_message)
+		free(a11y_message);
+	return result;
 }
 
 void a11y_interrupt(void)

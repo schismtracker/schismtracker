@@ -38,7 +38,7 @@ enum a11y_info {
 };
 
 const char* a11y_get_widget_info(struct widget *w, enum a11y_info info, char *buf);
-const char* a11y_get_widget_label(struct widget *w);
+const char* a11y_get_widget_label(struct widget *w, char *buf);
 const char* a11y_get_widget_type(struct widget *w);
 const char* a11y_get_widget_state(struct widget *w);
 const char* a11y_get_widget_value(struct widget *w, char *buf);
@@ -49,6 +49,7 @@ int a11y_init(void);
 int a11y_output(const char* text, int interrupt);
 int a11y_output_cp437(const char* text, int interrupt);
 int a11y_output_char(char chr, int interrupt);
+int a11y_outputf(const char *format, int interrupt, ...);
 void a11y_interrupt(void);
 void a11y_uninit(void);
 void a11y_delay(int delay_ms);

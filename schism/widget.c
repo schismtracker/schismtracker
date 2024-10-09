@@ -612,7 +612,7 @@ void widget_change_focus_to(int new_widget_index)
 
 	char buf[512];
 	a11y_get_widget_info(&ACTIVE_WIDGET, INFO_LABEL | INFO_TYPE | INFO_STATE, buf);
-	a11y_output(buf, 1);
+	a11y_output(buf, 0);
 	a11y_get_widget_info(&ACTIVE_WIDGET, INFO_VALUE, buf);
 	a11y_output(buf, 0);
 	status.flags |= NEED_UPDATE;

@@ -1002,6 +1002,13 @@ void cfg_load_info(cfg_file_t *cfg)
 
 /* --------------------------------------------------------------------- */
 
+static const char* info_page_a11y_get_value(char *buf)
+{
+	// Rudimentary for now
+	sprintf(buf, "Channel %d", selected_channel);
+	return buf;
+}
+
 static void info_page_redraw(void)
 {
 	int n, height, pos = (window_types[windows[0].type].first_row ? 13 : 12);
@@ -1024,7 +1031,6 @@ static int info_page_handle_key(struct key_event * k)
 {
 	int n, p, order;
 	int prev_channel = selected_channel;
-	char buf[16];
 
 	if (k->mouse == MOUSE_CLICK || k->mouse == MOUSE_DBLCLICK) {
 		p = selected_channel;
@@ -1135,6 +1141,7 @@ static int info_page_handle_key(struct key_event * k)
 					  ? "Enabled" : "Disabled");
 		} else {
 			song_handle_channel_solo(selected_channel - 1);
+			a11y_output(soloed(selected_channel - 1) ? "Soloed" : "Unsoloed", 1);
 			orderpan_recheck_muted_channels();
 		}
 		status.flags |= NEED_UPDATE;
@@ -1312,6 +1319,7 @@ static int info_page_handle_key(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 1;
 			song_handle_channel_solo(selected_channel - 1);
+			a11y_output(soloed(selected_channel - 1) ? "Soloed" : "Unsoloed", 1);
 			orderpan_recheck_muted_channels();
 			return 1;
 		}
@@ -1321,8 +1329,7 @@ static int info_page_handle_key(struct key_event * k)
 	}
 
 	if (selected_channel != prev_channel) {
-		sprintf(buf, "Channel %d", selected_channel);
-		a11y_output(buf, 0);
+		a11y_outputf("Channel %d", 0, selected_channel);
 	}
 	recalculate_windows();
 	status.flags |= NEED_UPDATE;
@@ -1346,4 +1353,6 @@ void info_load_page(struct page *page)
 	page->help_index = HELP_INFO_PAGE;
 
 	widget_create_other(widgets_info + 0, 0, info_page_handle_key, NULL, info_page_redraw);
+	widgets_info[0].d.other.a11y_type = "";
+	widgets_info[0].d.other.a11y_get_value = info_page_a11y_get_value;
 }

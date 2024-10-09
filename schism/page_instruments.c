@@ -1061,7 +1061,7 @@ static int note_trans_handle_key(struct key_event * k)
 		a11y_text_reported = 0;
 	} else if (prev_pos <= 1 && note_trans_cursor_pos >= 2) {
 		if (ins->sample_map[note_trans_sel_line])
-			num99tostr(ins->sample_map[note_trans_sel_line], buf);
+			str_from_num99(ins->sample_map[note_trans_sel_line], buf);
 		a11y_output(*buf ? buf : "No sample", 1);
 	} else if (prev_pos >= 2 && note_trans_cursor_pos <= 1) {
 			get_note_string(ins->note_map[note_trans_sel_line], buf);
@@ -1225,24 +1225,24 @@ static void _env_draw(const song_envelope_t *env, int middle, int current_node,
 
 	sprintf(buf, "Node %d/%d", current_node, env->nodes);
 	draw_text(buf, 66, 19, 2, 0);
-	int len = sprintf(a11y_env_value, "%s\n", buf);
+	int len = sprintf(a11y_env_value, "%s ", buf);
 	sprintf(buf, "Tick %d", env->ticks[current_node]);
 	draw_text(buf, 66, 21, 2, 0);
-	len += sprintf(&a11y_env_value[len], "%s\n", buf);
+	len += sprintf(&a11y_env_value[len], "%s ", buf);
 	sprintf(buf, "Value %d", (int)(env->values[current_node] - (middle ? 32 : 0)));
 	draw_text(buf, 66, 23, 2, 0);
-	len += sprintf(&a11y_env_value[len], "%s\n", buf);
+	len += sprintf(&a11y_env_value[len], "%s", buf);
 	if (loop_on) {
 		if (current_node == env->loop_start)
-			len += sprintf(&a11y_env_value[len], "Loop start\n");
+			len += sprintf(&a11y_env_value[len], "Loop start ");
 		if (current_node == env->loop_end)
-			len += sprintf(&a11y_env_value[len], "Loop end\n");
+			len += sprintf(&a11y_env_value[len], "Loop end ");
 	}
 	if (sustain_on) {
 		if (current_node == env->sustain_start)
-			len += sprintf(&a11y_env_value[len], "Sustain start\n");
+			len += sprintf(&a11y_env_value[len], "Sustain start ");
 		if (current_node == env->sustain_end)
-			len += sprintf(&a11y_env_value[len], "Sustain end\n");
+			len += sprintf(&a11y_env_value[len], "Sustain end ");
 	}
 	int is_selected = (ACTIVE_PAGE.selected_widget == 5);
 	if (is_selected && !a11y_text_reported)

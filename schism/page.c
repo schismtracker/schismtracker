@@ -413,7 +413,6 @@ void handle_text_input(const uint8_t* text_input) {
 static int handle_key_global(struct key_event * k)
 {
 	int i, ins_mode;
-	char buf[16];
 
 	if (_mp_active == 2 && (k->mouse == MOUSE_CLICK && k->state == KEY_RELEASE)) {
 		status.flags |= NEED_UPDATE;
@@ -494,13 +493,9 @@ static int handle_key_global(struct key_event * k)
 
 	/* first, check the truly global keys (the ones that still work if
 	 * a dialog's open) */
+	if (k->state == KEY_PRESS)
+		a11y_interrupt();
 	switch (k->sym) {
-	case SDLK_LCTRL:
-	case SDLK_RCTRL:
-	case SDLK_LSHIFT:
-	case SDLK_RSHIFT:
-		if (k->state == KEY_PRESS)
-			a11y_interrupt();
 	case SDLK_RETURN:
 		if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
 			if (k->state == KEY_PRESS)
@@ -556,8 +551,7 @@ static int handle_key_global(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 0;
 		kbd_set_current_octave(kbd_get_current_octave() - 1);
-		sprintf(buf, "Octave %d", kbd_get_current_octave());
-		a11y_output(buf, 1);
+		a11y_outputf("Octave %d", 1, kbd_get_current_octave());
 		return 1;
 	case SDLK_END:
 		if (!(k->mod & KMOD_ALT)) break;
@@ -565,8 +559,7 @@ static int handle_key_global(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 0;
 		kbd_set_current_octave(kbd_get_current_octave() + 1);
-		sprintf(buf, "Octave %d", kbd_get_current_octave());
-		a11y_output(buf, 1);
+		a11y_outputf("Octave %d", 1, kbd_get_current_octave());
 		return 1;
 	default:
 		break;
@@ -1123,8 +1116,7 @@ void handle_key(struct key_event *k)
 			_mp_finish(NULL);
 			if (song_get_mode() == MODE_PLAYING) {
 				song_set_current_order(song_get_current_order() - 1);
-				sprintf(buf, "Order %d", song_get_current_order());
-				a11y_output(buf, 1);
+				a11y_outputf("Order %d", 1, song_get_current_order());
 			}
 			return;
 		}
@@ -1136,8 +1128,7 @@ void handle_key(struct key_event *k)
 			_mp_finish(NULL);
 			if (song_get_mode() == MODE_PLAYING) {
 				song_set_current_order(song_get_current_order() + 1);
-				sprintf(buf, "Order %d", song_get_current_order());
-				a11y_output(buf, 1);
+				a11y_outputf("Order %d", 1, song_get_current_order());
 			}
 			return;
 		}
@@ -1165,8 +1156,7 @@ void handle_key(struct key_event *k)
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if (k->orig_sym == SDLK_KP_DIVIDE) {
 			kbd_set_current_octave(kbd_get_current_octave() - 1);
-			sprintf(buf, "Octave %d", kbd_get_current_octave());
-			a11y_output(buf, 1);
+			a11y_outputf("Octave %d", 1, kbd_get_current_octave());
 		}
 		return;
 	case SDLK_ASTERISK:
@@ -1174,8 +1164,7 @@ void handle_key(struct key_event *k)
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if (k->orig_sym == SDLK_KP_MULTIPLY) {
 			kbd_set_current_octave(kbd_get_current_octave() + 1);
-			sprintf(buf, "Octave %d", kbd_get_current_octave());
-			a11y_output(buf, 1);
+			a11y_outputf("Octave %d", 1, kbd_get_current_octave());
 		}
 		return;
 	case SDLK_LEFTBRACKET:

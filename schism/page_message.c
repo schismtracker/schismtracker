@@ -230,6 +230,15 @@ static void text(char *line, int len, int n)
 	}
 }
 
+static const char* message_a11y_get_value(char *buf)
+{
+	char *ptr = NULL;
+	int line_len = get_nth_line(current_song->message, current_line, &ptr);
+	memcpy(buf, ptr, line_len);
+	buf[line_len] = '\0';
+	return buf;
+}
+
 static void message_draw(void)
 {
 	char *line, *prevline = current_song->message;
@@ -451,10 +460,6 @@ static void message_delete_line(void)
 		cursor_pos = get_absolute_position(current_song->message, cursor_line, cursor_char);
 	}
 	message_reposition();
-	char buf[len + sizeof(char)];
-	buf[sizeof(buf) - 1] = '\0';
-	memcpy(buf, ptr, len);
-	a11y_output_cp437(buf, 1);
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
@@ -490,7 +495,7 @@ static int message_handle_key_viewmode(struct key_event * k)
 			return message_handle_key_editmode(k);
 		}
 	}
-	int last_line = get_num_lines(current_song->message);
+	int last_line = str_get_num_lines(current_song->message);
 	char *ptr = NULL;
 	int line_len = get_nth_line(current_song->message, current_line, &ptr);
 	switch (k->sym) {
@@ -577,14 +582,14 @@ static int message_handle_key_viewmode(struct key_event * k)
 
 	line_len = get_nth_line(current_song->message, current_line, &ptr);
 	char buf[line_len + sizeof(char)];
-	buf[sizeof(buf) - 1] = '\0';
-	memcpy(buf, ptr, line_len);
+	message_a11y_get_value(buf);
 	a11y_output_cp437(buf, 1);
 
 	status.flags |= NEED_UPDATE;
 
 	return 1;
 }
+
 static void _delete_selection(void)
 {
 	int len = strlen(current_song->message);
@@ -788,6 +793,7 @@ static int message_handle_key_editmode(struct key_event * k)
 			} else if (k->sym == SDLK_y) {
 				clippy_select(NULL, NULL, 0);
 				message_delete_line();
+				report_line = 1;
 				break;
 			}
 		} else if (k->mod & KMOD_ALT) {
@@ -860,7 +866,6 @@ static int message_handle_key_editmode(struct key_event * k)
 	cursor_pos = get_absolute_position(current_song->message, cursor_line, cursor_char);
 	if (report_line) {
 		char buf[line_len + sizeof(char)];
-		buf[sizeof(buf) - 1] = '\0';
 		memcpy(buf, ptr, line_len);
 		a11y_output_cp437(buf, 1);
 	} else if (report_char) {
@@ -928,6 +933,8 @@ void message_load_page(struct page *page)
 
 	widget_create_other(widgets_message + 0, 0, message_handle_key_viewmode, NULL, message_draw);
 	widgets_message[0].accept_text = edit_mode;
+	widgets_message[0].d.other.a11y_type = "Edit multi line";
+	widgets_message[0].d.other.a11y_get_value = message_a11y_get_value;
 }
 
 void message_reset_selection(void)

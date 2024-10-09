@@ -981,7 +981,6 @@ int main(int argc, char **argv)
 	vis_init();
 
 	ver_init();
-	a11y_init();
 
 	video_fullscreen(0);
 
@@ -1063,6 +1062,7 @@ int main(int argc, char **argv)
 		free(initial_dir);
 	}
 
+	a11y_init();
 	if (startup_flags & SF_FONTEDIT) {
 		status.flags |= STARTUP_FONTEDIT;
 		set_page(PAGE_FONT_EDIT);

@@ -181,7 +181,7 @@ void song_toggle_channel_mute(int channel)
 	song_set_channel_mute(channel, (current_song->voices[channel].flags & CHN_MUTE) == 0);
 }
 
-static int _soloed(int channel) {
+int soloed(int channel) {
 	int n = 64;
 	// if this channel is muted, it obviously isn't soloed
 	if (current_song->voices[channel].flags & CHN_MUTE)
@@ -199,7 +199,7 @@ void song_handle_channel_solo(int channel)
 {
 	int n = 64;
 
-	if (_soloed(channel)) {
+	if (soloed(channel)) {
 		song_restore_channel_states();
 	} else {
 		while (n-- > 0)

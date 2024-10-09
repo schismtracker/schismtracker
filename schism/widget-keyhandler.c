@@ -679,7 +679,7 @@ int widget_handle_key(struct key_event * k)
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			widget->d.textentry.cursor_pos = strlen(widget->d.textentry.text);
-			a11y_output_char(widget->d.textentry.text[widget->d.textentry.cursor_pos - 1], 1);
+			a11y_output_char(widget->d.textentry.text[widget->d.textentry.cursor_pos], 1);
 			status.flags |= NEED_UPDATE;
 			return 1;
 		case WIDGET_PANBAR:
@@ -731,6 +731,7 @@ int widget_handle_key(struct key_event * k)
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			widget->d.panbar.muted = !widget->d.panbar.muted;
+			a11y_output(a11y_get_widget_value(widget, buf), 1);
 			changed = widget->changed;
 			widget_change_focus_to(widget->next.down);
 			if (changed) changed();
@@ -860,6 +861,8 @@ int widget_handle_key(struct key_event * k)
 				widget->d.panbar.muted = 0;
 				widget->d.panbar.surround = 1;
 				if (widget->changed) widget->changed();
+				char buf[16];
+				a11y_output(a11y_get_widget_value(widget, buf), 1);
 				status.flags |= NEED_UPDATE;
 				return 1;
 			}

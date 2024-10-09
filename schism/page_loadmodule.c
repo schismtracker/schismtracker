@@ -1174,6 +1174,8 @@ void save_module_load_page(struct page *page, int do_export)
 	widgets_exportsave[0].y = 13;
 	widgets_exportsave[0].width = 44;
 	widgets_exportsave[0].height = 30;
+	widgets_exportsave[0].d.other.a11y_type = "List";
+	widgets_exportsave[0].d.other.a11y_get_value = file_list_a11y_get_value;
 
 	widget_create_other(widgets_exportsave + 1, 2, dir_list_handle_key_exportsave,
 		dir_list_handle_text_input, dir_list_draw_exportsave);
@@ -1184,6 +1186,8 @@ void save_module_load_page(struct page *page, int do_export)
 	widgets_exportsave[1].y = 13;
 	widgets_exportsave[1].width = 18;
 	widgets_exportsave[1].height = 21;
+	widgets_exportsave[1].d.other.a11y_type = "List";
+	widgets_exportsave[1].d.other.a11y_get_value = dir_list_a11y_get_value;
 
 	widget_create_textentry(widgets_exportsave + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
 	widgets_exportsave[2].activate = filename_entered;

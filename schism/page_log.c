@@ -58,9 +58,9 @@ static struct widget widgets_log[1];
 #define NUM_LINES 1000
 static struct log_line lines[NUM_LINES];
 static int top_line = 0;
-static int current_line = 0; // Virtual accessibility cursor for lines
 static int current_char = 0; // The same thing for chars
 static int last_line = -1;
+static int current_line = -1; // Virtual accessibility cursor for lines
 
 /* --------------------------------------------------------------------- */
 
@@ -68,6 +68,15 @@ static void log_draw_const(void)
 {
 	draw_box(1, 12, 78, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_fill_chars(2, 13, 77, 47, DEFAULT_FG, 0);
+}
+
+static const char* log_a11y_get_value(char *buf)
+{
+	if (lines[current_line].text)
+		strcpy(buf, lines[current_line].text);
+	else
+		buf[0] = '\0';
+	return buf;
 }
 
 static int log_handle_key(struct key_event * k)
@@ -186,6 +195,8 @@ void log_load_page(struct page *page)
 	page->help_index = HELP_COPYRIGHT; /* I guess */
 
 	widget_create_other(widgets_log + 0, 0, log_handle_key, NULL, log_redraw);
+	widgets_log[0].d.other.a11y_type = "";
+	widgets_log[0].d.other.a11y_get_value = log_a11y_get_value;
 }
 
 /* --------------------------------------------------------------------- */

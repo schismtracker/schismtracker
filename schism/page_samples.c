@@ -1473,6 +1473,7 @@ static void sample_list_handle_key(struct key_event * k)
 			sample->c5speed = calc_halftone(sample->c5speed, 1);
 			status.flags |= SONG_NEEDS_SAVE;
 		}
+		a11y_outputf("Speed %d", 1, sample->c5speed);
 		status.flags |= NEED_UPDATE;
 		return;
 	case SDLK_MINUS:
@@ -1485,6 +1486,7 @@ static void sample_list_handle_key(struct key_event * k)
 			sample->c5speed = calc_halftone(sample->c5speed, -1);
 			status.flags |= SONG_NEEDS_SAVE;
 		}
+		a11y_outputf("Speed %d", 1, sample->c5speed);
 		status.flags |= NEED_UPDATE;
 		return;
 

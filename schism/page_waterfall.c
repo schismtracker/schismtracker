@@ -561,4 +561,5 @@ void waterfall_load_page(struct page *page)
 	page->total_widgets = 1;
 	page->widgets = waterfall_widget_hack;
 	widget_create_other(waterfall_widget_hack, 0, waterfall_handle_key, NULL, do_nil);
+	waterfall_widget_hack[0].d.other.a11y_type = "Waterfall";
 }
