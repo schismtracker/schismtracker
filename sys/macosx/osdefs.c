@@ -28,6 +28,7 @@
 #include "event.h"
 #include "song.h"
 #include "page.h"
+#include "widget.h"
 
 #include <IOKit/hid/IOHIDLib.h>
 
