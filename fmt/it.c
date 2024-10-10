@@ -256,7 +256,7 @@ static void load_it_sample(song_sample_t *sample, slurp_t *fp, uint16_t cwtv)
 			flags |= (shdr.cvt & 4) ? SF_PCMD : (shdr.cvt & 1) ? SF_PCMS : SF_PCMU;
 		}
 		flags |= (shdr.flags & 2) ? SF_16 : SF_8;
-		slurp_read_sample(fp, sample, flags);
+		csf_read_sample(sample, flags, fp);
 	} else {
 		sample->length = 0;
 	}

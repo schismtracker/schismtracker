@@ -317,7 +317,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			if (!sample->length || (sample->flags & CHN_ADLIB))
 				continue;
 			slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
-			slurp_read_sample(fp, sample, smp_flags[n]);
+			csf_read_sample(sample, smp_flags[n], fp);
 		}
 	}
 

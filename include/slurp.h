@@ -25,7 +25,6 @@
 #define SCHISM_SLURP_H
 
 #include "headers.h"
-#include "player/sndfile.h"
 
 #include <stdint.h>
 #include <sys/stat.h> /* struct stat */
@@ -88,6 +87,9 @@ can be used to read only part of a file, or if the file size is known but a stat
 available. */
 int slurp(slurp_t *t, const char *filename, struct stat *buf, size_t size);
 
+/* initializes a slurp_t over an existing memory stream */
+int slurp_memstream(slurp_t *t, uint8_t *mem, size_t memsize);
+
 void unslurp(slurp_t *t);
 
 #ifdef SCHISM_WIN32
@@ -110,8 +112,5 @@ int slurp_eof(slurp_t *t);  /* 1 = end of file */
 int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
 
 size_t slurp_length(slurp_t *t);
-
-/* csndfile */
-int slurp_read_sample(slurp_t *t, song_sample_t *sample, uint32_t flags);
 
 #endif /* SCHISM_SLURP_H */

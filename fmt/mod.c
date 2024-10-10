@@ -473,8 +473,7 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 				pcmflag = SF_PCMD16;
 			}
 
-			uint32_t ssize = slurp_read_sample(fp, song->samples + n, SF_8 | SF_M | SF_LE | pcmflag);
-			slurp_seek(fp, ssize, SEEK_CUR);
+			csf_read_sample(song->samples + n, SF_8 | SF_M | SF_LE | pcmflag, fp);
 		}
 	}
 

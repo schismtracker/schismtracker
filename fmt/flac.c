@@ -367,7 +367,10 @@ int fmt_flac_load_sample(slurp_t *fp, song_sample_t *smp)
 	// libFLAC always returns signed
 	flags |= SF_PCMS;
 
-	int ret = csf_read_sample(smp, flags, read_data.uncompressed.data, read_data.uncompressed.len);
+	slurp_t fake_fp;
+	slurp_memstream(&fake_fp, read_data.uncompressed.data, read_data.uncompressed.len);
+
+	int ret = csf_read_sample(smp, flags, &fake_fp);
 
 	free(read_data.uncompressed.data);
 

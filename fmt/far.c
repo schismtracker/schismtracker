@@ -259,7 +259,7 @@ int fmt_far_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			smp->flags |= CHN_LOOP;
 		smp->c5speed = 16726;
 		smp->global_volume = 64;
-		slurp_read_sample(fp, smp, SF_LE | SF_M | SF_PCMS | ((fsmp.type & 1) ? SF_16 : SF_8));
+		csf_read_sample(smp, SF_LE | SF_M | SF_PCMS | ((fsmp.type & 1) ? SF_16 : SF_8), fp);
 		slurp_seek(fp, fsmp.length, SEEK_CUR);
 	}
 

@@ -98,7 +98,7 @@ int iff_read_sample(iff_chunk_t *chunk, slurp_t *fp, song_sample_t *smp, uint32_
 	if (slurp_seek(fp, chunk->offset + offset, SEEK_SET))
 		return 0;
 
-	int r = slurp_read_sample(fp, smp, flags);
+	int r = csf_read_sample(smp, flags, fp);
 
 	slurp_seek(fp, pos, SEEK_SET);
 

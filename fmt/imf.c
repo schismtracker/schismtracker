@@ -563,7 +563,7 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 			strncpy(sample->filename, imfsmp.name, 12);
 			sample->filename[12] = 0;
 			strcpy(sample->name, sample->filename);
-			blen = sample->length = bswapLE32(imfsmp.length);
+			sample->length = bswapLE32(imfsmp.length);
 			sample->loop_start = bswapLE32(imfsmp.loop_start);
 			sample->loop_end = bswapLE32(imfsmp.loop_end);
 			sample->c5speed = bswapLE32(imfsmp.c5speed);
@@ -584,10 +584,10 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 			if (imfsmp.flags & 8)
 				sample->flags |= CHN_PANNING;
 
-			if (blen && !(lflags & LOAD_NOSAMPLES))
-				slurp_read_sample(fp, sample, sflags);
-
-			slurp_seek(fp, blen, SEEK_CUR);
+			if (!(lflags & LOAD_NOSAMPLES))
+				csf_read_sample(sample, sflags, fp);
+			else
+				slurp_seek(fp, blen, SEEK_CUR);
 
 			sample++;
 		}
