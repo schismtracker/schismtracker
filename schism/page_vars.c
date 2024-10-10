@@ -232,12 +232,12 @@ void song_vars_load_page(struct page *page)
 	widget_create_togglebutton(widgets_vars + 13, 32, 36, 11, 11, 14, 12, 12, 12, update_values_in_song,
 			    Amiga, 1, group_slides);
 	/* 14-16 = directories */
-	widget_create_textentry(widgets_vars + 14, 13, 42, 65, 12, 15, 15, dir_modules_changed,
-			 cfg_dir_modules, PATH_MAX);
-	widget_create_textentry(widgets_vars + 15, 13, 43, 65, 14, 16, 16, dir_samples_changed,
-			 cfg_dir_samples, PATH_MAX);
-	widget_create_textentry(widgets_vars + 16, 13, 44, 65, 15, 17, 17, dir_instruments_changed,
-			 cfg_dir_instruments, PATH_MAX);
+	widget_create_dyntextentry(widgets_vars + 14, 13, 42, 65, 12, 15, 15, dir_modules_changed,
+			 cfg_dir_modules, strlen(cfg_dir_modules) + 1);
+	widget_create_dyntextentry(widgets_vars + 15, 13, 43, 65, 14, 16, 16, dir_samples_changed,
+			 cfg_dir_samples, strlen(cfg_dir_modules) + 1);
+	widget_create_dyntextentry(widgets_vars + 16, 13, 44, 65, 15, 17, 17, dir_instruments_changed,
+			 cfg_dir_instruments, strlen(cfg_dir_modules) + 1);
 	/* 17 = save all preferences */
 	widget_create_button(widgets_vars + 17, 28, 47, 22, 16, 17, 17, 17, 17, cfg_save, "Save all Preferences", 2);
 	widgets_vars[17].next.backtab = 17;

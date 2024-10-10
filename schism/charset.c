@@ -807,3 +807,15 @@ charset_error_t charset_decode_next(charset_decode_t *decoder, charset_t inset)
 
 	return CHARSET_ERROR_SUCCESS;
 }
+
+size_t charset_encode(uint32_t codepoint, uint8_t *buffer, charset_t bufferset)
+{
+	if (bufferset >= ARRAY_SIZE(conv_from_ucs4_funcs))
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	charset_conv_from_ucs4_func conv_from_ucs4_func = conv_from_ucs4_funcs[bufferset];
+	if (!conv_from_ucs4_func)
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	return conv_from_ucs4_func(codepoint, buffer);
+}
