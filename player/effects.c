@@ -298,17 +298,17 @@ static void fx_portamento_down(uint32_t flags, song_voice_t *chan, uint32_t para
 static void fx_tone_portamento(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
 	if (!param)
-		param = chan->mem_portanote;
+		return;
 
 	chan->flags |= CHN_PORTAMENTO;
 	if (chan->frequency && chan->portamento_target && !(flags & SONG_FIRSTTICK)) {
 		if (chan->frequency < chan->portamento_target) {
 			chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, param * 4, 1);
-			if (chan->frequency > chan->portamento_target) {
+			if (chan->frequency >= chan->portamento_target) {
 				chan->frequency = chan->portamento_target;
 				chan->portamento_target = 0;
 			}
-		} else if (chan->frequency > chan->portamento_target) {
+		} else if (chan->frequency >= chan->portamento_target) {
 			chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, param * -4, 1);
 			if (chan->frequency < chan->portamento_target) {
 				chan->frequency = chan->portamento_target;
@@ -1747,23 +1747,11 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		break;
 
 	case FX_PORTAMENTOUP:
-		if (firsttick) {
-			if (param)
-				chan->mem_pitchslide = param;
-			if (!(csf->flags & SONG_COMPATGXX))
-				chan->mem_portanote = chan->mem_pitchslide;
-		}
-		fx_portamento_up(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
+		fx_portamento_up(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, chan->mem_pitchslide);
 		break;
 
 	case FX_PORTAMENTODOWN:
-		if (firsttick) {
-			if (param)
-				chan->mem_pitchslide = param;
-			if (!(csf->flags & SONG_COMPATGXX))
-				chan->mem_portanote = chan->mem_pitchslide;
-		}
-		fx_portamento_down(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
+		fx_portamento_down(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, chan->mem_pitchslide);
 		break;
 
 	case FX_VOLUMESLIDE:
@@ -1771,18 +1759,12 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		break;
 
 	case FX_TONEPORTAMENTO:
-		if (firsttick) {
-			if (param)
-				chan->mem_portanote = param;
-			if (!(csf->flags & SONG_COMPATGXX))
-				chan->mem_pitchslide = chan->mem_portanote;
-		}
-		fx_tone_portamento(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
+		fx_tone_portamento(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, chan->mem_portanote);
 		break;
 
 	case FX_TONEPORTAVOL:
 		fx_volume_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
-		fx_tone_portamento(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, 0);
+		fx_tone_portamento(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, chan->mem_portanote);
 		break;
 
 	case FX_VIBRATO:
@@ -2042,35 +2024,20 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
 		break;
 
 	case VOLFX_PORTAUP: // Fx
-		if (start_note) {
-			if (vol)
-				chan->mem_pitchslide = 4 * vol;
-			if (!(csf->flags & SONG_COMPATGXX))
-				chan->mem_portanote = chan->mem_pitchslide;
-		} else {
-			fx_reg_portamento_up(csf->flags, chan, chan->mem_pitchslide);
+		if (!start_note) {
+			fx_reg_portamento_up(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, chan->mem_pitchslide);
 		}
 		break;
 
 	case VOLFX_PORTADOWN: // Ex
-		if (start_note) {
-			if (vol)
-				chan->mem_pitchslide = 4 * vol;
-			if (!(csf->flags & SONG_COMPATGXX))
-				chan->mem_portanote = chan->mem_pitchslide;
-		} else {
-			fx_reg_portamento_down(csf->flags, chan, chan->mem_pitchslide);
+		if (!start_note) {
+			fx_reg_portamento_down(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, chan->mem_pitchslide);
 		}
 		break;
 
 	case VOLFX_TONEPORTAMENTO: // Gx
-		if (start_note) {
-			if (vol)
-				chan->mem_portanote = vc_portamento_table[vol & 0x0F];
-			if (!(csf->flags & SONG_COMPATGXX))
-				chan->mem_pitchslide = chan->mem_portanote;
-		} else {
-			fx_tone_portamento(csf->flags, chan, vc_portamento_table[vol & 0x0F]);
+		if (!start_note) {
+			fx_tone_portamento(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, chan->mem_portanote);
 		}
 		break;
 
@@ -2352,7 +2319,35 @@ void csf_process_effects(song_t *csf, int firsttick)
 			}
 		}
 
-		handle_effect(csf, nchan, cmd, param, porta, firsttick);
+		// Initialize portamento command memory (needs to be done in exactly this order)
+		if (firsttick) {
+			const int effect_column_tone_porta = (cmd == FX_TONEPORTAMENTO || cmd == FX_TONEPORTAVOL);
+			if (effect_column_tone_porta) {
+				if (param)
+					chan->mem_portanote = param;
+				if (!(csf->flags & SONG_COMPATGXX))
+					chan->mem_pitchslide = chan->mem_portanote;
+			}
+			if (volcmd == VOLFX_TONEPORTAMENTO) {
+				if (vol)
+					chan->mem_portanote = vc_portamento_table[vol & 0x0F];
+				if (!(csf->flags & SONG_COMPATGXX))
+					chan->mem_pitchslide = chan->mem_portanote;
+			}
+
+			if (vol && (volcmd == VOLFX_PORTAUP || volcmd == VOLFX_PORTADOWN)) {
+				chan->mem_pitchslide = 4 * vol;
+				if (!effect_column_tone_porta && !(csf->flags & SONG_COMPATGXX))
+					chan->mem_portanote = chan->mem_pitchslide;
+			}
+			if (param && (cmd == FX_PORTAMENTOUP || cmd == FX_PORTAMENTODOWN)) {
+				chan->mem_pitchslide = param;
+				if (!(csf->flags & SONG_COMPATGXX))
+					chan->mem_portanote = chan->mem_pitchslide;
+			}
+		}
+
 		handle_voleffect(csf, chan, volcmd, vol, firsttick, start_note);
+		handle_effect(csf, nchan, cmd, param, porta, firsttick);
 	}
 }
