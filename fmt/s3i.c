@@ -119,7 +119,7 @@ static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 			format |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU); // bits; encoding
 
 			slurp_seek(fp, 0x50, SEEK_SET);
-			slurp_read_sample(fp, smp, format);
+			csf_read_sample(smp, format, fp);
 		}
 	} else if (type == S3I_TYPE_ADLIB) {
 		smp->flags |= CHN_ADLIB;

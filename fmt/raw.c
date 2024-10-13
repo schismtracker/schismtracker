@@ -38,7 +38,7 @@ int fmt_raw_load_sample(slurp_t *fp, song_sample_t *smp)
 	smp->volume = 64 * 4;
 	smp->global_volume = 64;
 	smp->length = MIN(len, 1u << 22); /* max of 4MB */
-	slurp_read_sample(fp, smp, SF_LE | SF_8 | SF_PCMU | SF_M);
+	csf_read_sample(smp, SF_LE | SF_8 | SF_PCMU | SF_M, fp);
 
 	return 1;
 }

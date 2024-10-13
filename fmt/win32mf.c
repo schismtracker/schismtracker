@@ -970,7 +970,16 @@ int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 	smp->c5speed       = data.sps;
 	smp->length        = sample_length;
 
-	return csf_read_sample(smp, data.flags, uncompressed, uncompressed_size);
+	slurp_t fake_fp;
+	slurp_memstream(&fake_fp, uncompressed, uncompressed_size);
+
+	int r = csf_read_sample(smp, data.flags, &fake_fp);
+
+	free(uncompressed);
+
+	win32mf_end(&data);
+
+	return r;
 }
 
 /* ----------------------------------------------------------- */

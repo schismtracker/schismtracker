@@ -242,7 +242,7 @@ int fmt_pat_load_instrument(slurp_t *fp, int slot)
 		smp->vib_rate = gfsamp.vib_rate;
 		smp->vib_depth = gfsamp.vib_depth;
 
-		slurp_read_sample(fp, smp, rs);
+		csf_read_sample(smp, rs, fp);
 	}
 	return 1;
 }

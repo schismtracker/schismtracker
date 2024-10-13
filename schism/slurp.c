@@ -147,6 +147,24 @@ finished: ; /* this semicolon is important because C */
 	return 0;
 }
 
+/* Initializes a slurp structure on an existing memory stream.
+ * Does NOT free the input. */
+int slurp_memstream(slurp_t *t, uint8_t *mem, size_t memsize)
+{
+	t->seek = slurp_memory_seek_;
+	t->tell = slurp_memory_tell_;
+	t->eof  = slurp_memory_eof_;
+	t->peek = slurp_memory_peek_;
+	t->read = slurp_memory_read_;
+	t->receive = slurp_memory_receive_;
+
+	t->internal.memory.length = memsize;
+	t->internal.memory.data = mem;
+	t->closure = NULL; // haha
+
+	return 0;
+}
+
 
 void unslurp(slurp_t * t)
 {
@@ -367,37 +385,4 @@ int slurp_eof(slurp_t *t)
 int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata)
 {
 	return t->receive(t, callback, count, userdata);
-}
-
-/* ---------------------------------------------------------------------------------- */
-/* wrapper around csf_read_sample (hehe) :) */
-
-struct slurp_read_smp_data {
-	song_sample_t *smp;
-	uint32_t flags;
-};
-
-static int slurp_read_sample_callback_(const void *ptr, size_t count, void *userdata)
-{
-	struct slurp_read_smp_data *data = userdata;
-
-	return (int)csf_read_sample(data->smp, data->flags, ptr, count);
-}
-
-int slurp_read_sample(slurp_t *t, song_sample_t *sample, uint32_t flags)
-{
-	struct slurp_read_smp_data data = {
-		.smp = sample,
-		.flags = flags,
-	};
-
-	size_t len = slurp_length(t);
-	if (!len)
-		return -1;
-
-	int64_t pos = slurp_tell(t);
-	if (pos < 0)
-		return -1;
-
-	return slurp_receive(t, &slurp_read_sample_callback_, len - pos, &data);
 }

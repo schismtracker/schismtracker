@@ -390,9 +390,8 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (n = 0, smp = song->samples + 1; n < nsmp; n++, smp++) {
-			uint32_t ssize = slurp_read_sample(fp, smp,
-				SF_LE | SF_M | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8));
-			slurp_seek(fp, ssize, SEEK_CUR);
+			csf_read_sample(smp,
+				SF_LE | SF_M | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8), fp);
 		}
 	}
 	return LOAD_SUCCESS;

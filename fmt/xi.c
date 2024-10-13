@@ -290,7 +290,7 @@ int fmt_xi_load_instrument(slurp_t *fp, int slot)
 		}
 
 		smp->c5speed = transpose_to_frequency(xmss.relnote, xmss.finetune);
-		slurp_seek(fp, slurp_read_sample(fp, current_song->samples + n, rs), SEEK_CUR);
+		slurp_seek(fp, csf_read_sample(current_song->samples + n, rs, fp), SEEK_CUR);
 	}
 
 	return 1;

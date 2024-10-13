@@ -162,7 +162,17 @@ int load_its_sample(struct it_sample *its, slurp_t *fp, song_sample_t *smp)
 
 	bp = bswapLE32(its->samplepointer);
 
-	return slurp_read_sample(fp, smp, format);
+	int64_t pos = slurp_tell(fp);
+	if (pos < 0)
+		return 0;
+
+	slurp_seek(fp, bp, SEEK_SET);
+
+	int r = csf_read_sample(smp, format, fp);
+
+	slurp_seek(fp, pos, SEEK_SET);
+
+	return r;
 }
 
 int fmt_its_load_sample(slurp_t *fp, song_sample_t *smp)

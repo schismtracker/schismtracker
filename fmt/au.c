@@ -152,7 +152,7 @@ int fmt_au_load_sample(slurp_t *fp, song_sample_t *smp)
 		smp->name[extlen] = 0;
 	}
 
-	return slurp_read_sample(fp, smp, sflags);
+	return csf_read_sample(smp, sflags, fp);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

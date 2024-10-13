@@ -471,7 +471,7 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				ssmp->length = MIN(smpsize[sd], ssmp->length);
 			}
 
-			slurp_read_sample(fp, ssmp, SF_BE | SF_M | SF_PCMS | smpflag[sd]);
+			csf_read_sample(ssmp, SF_BE | SF_M | SF_PCMS | smpflag[sd], fp);
 			sd++;
 		}
 		// Make sure there's nothing weird going on

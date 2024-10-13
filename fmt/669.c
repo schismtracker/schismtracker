@@ -306,8 +306,7 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			if (song->samples[smp].length == 0)
 				continue;
 
-			int ssize = slurp_read_sample(fp, song->samples + smp, SF_LE | SF_M | SF_PCMU | SF_8);
-			slurp_seek(fp, ssize, SEEK_CUR);
+			csf_read_sample(song->samples + smp, SF_LE | SF_M | SF_PCMU | SF_8, fp);
 		}
 	}
 

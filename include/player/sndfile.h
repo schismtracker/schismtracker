@@ -10,6 +10,7 @@
 #include "headers.h"
 
 #include "disko.h"
+#include "slurp.h"
 
 #include "tables.h"
 
@@ -618,7 +619,7 @@ song_instrument_t *csf_allocate_instrument(void);
 void csf_init_instrument(song_instrument_t *ins, int samp);
 void csf_free_instrument(song_instrument_t *p);
 
-uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, const void *filedata, uint32_t datalength);
+uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp);
 uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, uint32_t maxlengthmask);
 void csf_adjust_sample_loop(song_sample_t *sample);
 

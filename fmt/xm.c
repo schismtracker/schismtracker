@@ -370,8 +370,7 @@ static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 	// dontyou: 20 samples starting at 26122
 	// trnsmix: 31 samples starting at 61946
 	for (ns = 0; ns < total; ns++, smp++) {
-		smpsize = smp->length;
-		if (!smpsize)
+		if (!smp->length)
 			continue;
 		if (smp->flags & CHN_16BIT) {
 			smp->length >>= 1;
@@ -384,13 +383,11 @@ static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 			smp->loop_end >>= 1;
 		}
 		if (smp->adlib_bytes[0] != 0xAD) {
-			slurp_read_sample(fp, smp, SF_LE | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M) | SF_PCMD | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8));
+			csf_read_sample(smp, SF_LE | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M) | SF_PCMD | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8), fp);
 		} else {
 			smp->adlib_bytes[0] = 0;
-			smpsize = 16 + (smpsize + 1) / 2;
-			slurp_read_sample(fp, smp, SF_8 | SF_M | SF_LE | SF_PCMD16);
+			csf_read_sample(smp, SF_8 | SF_M | SF_LE | SF_PCMD16, fp);
 		}
-		slurp_seek(fp, smpsize, SEEK_CUR);
 	}
 }
 
