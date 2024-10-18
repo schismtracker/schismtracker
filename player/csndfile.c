@@ -886,26 +886,24 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case RS_STPCM8D: {
 		int iadd = (flags == RS_STPCM8U) ? -128 : 0;
 
-		len = sample->length;
-		if (len*2 > memsize) break;
+		len = sample->length * 2;
+		if (len > memsize) break;
 
 		int8_t *data = (int8_t *)sample->data;
-		for (uint32_t j=0; j<len; j++) {
-			data[j * 2] = slurp_getc(fp) + iadd;
+		for (uint32_t j=0; j<len; j+=2) {
+			data[j] = slurp_getc(fp) + iadd;
 			if (flags == RS_STPCM16D)
-				iadd = data[j * 2];
+				iadd = data[j];
 		}
 
 		iadd = (flags == RS_STPCM16U) ? -128 : 0;
 
 		data = (int8_t *)sample->data + 1;
-		for (uint32_t j=0; j<len; j++) {
-			data[j * 2] = slurp_getc(fp) + iadd;
+		for (uint32_t j=0; j<len; j+=2) {
+			data[j] = slurp_getc(fp) + iadd;
 			if (flags == RS_STPCM16D)
-				iadd = data[j * 2];
+				iadd = data[j];
 		}
-
-		len *= 2;
 
 		break;
 	}
@@ -916,31 +914,31 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case RS_STPCM16D:
 		{
 			int iadd = (flags == RS_STPCM16U) ? -0x8000 : 0;
-			len = sample->length;
-			if (len*4 > memsize) break;
+			len = sample->length * 2;
+			if (len*2 > memsize) break;
 
 			int16_t *data = (int16_t *)sample->data;
-			for (uint32_t j=0; j<len; j++) {
-				slurp_read(fp, &data[j * 2], 2);
-				data[j * 2] = bswapLE16(data[j * 2]) + iadd;
+			for (uint32_t j=0; j<len; j+=2) {
+				slurp_read(fp, &data[j], 2);
+				data[j] = bswapLE16(data[j]) + iadd;
 
 				if (flags == RS_STPCM16D)
-					iadd = data[j * 2];
+					iadd = data[j];
 			}
 
 			iadd = (flags == RS_STPCM16U) ? -0x8000 : 0;
 
 			data = (int16_t *)sample->data + 1;
-			for (uint32_t j=0; j<len; j++) {
-				slurp_read(fp, &data[j * 2], 2);
+			for (uint32_t j=0; j<len; j+=2) {
+				slurp_read(fp, &data[j], 2);
 
-				data[j * 2] = bswapLE16(data[j * 2]) + iadd;
+				data[j] = bswapLE16(data[j]) + iadd;
 
 				if (flags == RS_STPCM16D)
-					iadd = data[j * 2];
+					iadd = data[j];
 			}
 
-			len *= 4;
+			len *= 2;
 		}
 		break;
 
@@ -991,8 +989,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 
 				slurp_read(fp, w, sizeof(w));
 
-				data[j*2] = (signed char)(w[0] + iadd);
-				data[j*2+1] = (signed char)(w[1] + iadd);
+				data[j*2] = w[0] + iadd;
+				data[j*2+1] = w[1] + iadd;
 			}
 			len *= 2;
 		}
@@ -1003,18 +1001,15 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case RS_STIPCM16U:
 		{
 			int iadd = (flags == RS_STIPCM16U) ? -0x8000 : 0;
-			len = sample->length;
-			if (len*4 > memsize) len = memsize >> 2;
+			len = sample->length * 2;
+			if (len*2 > memsize) len = memsize >> 1;
 			short int *data = (short int *)sample->data;
 			for (uint32_t j=0; j<len; j++) {
-				int16_t w[2];
+				slurp_read(fp, data + j, sizeof(*data));
 
-				slurp_read(fp, w, sizeof(w));
-
-				data[j*2] = (short int)(bswapLE16(w[0]) + iadd);
-				data[j*2+1] = (short int)(bswapLE16(w[1]) + iadd);
+				data[j] = bswapLE16(data[j]) + iadd;
 			}
-			len *= 4;
+			len *= 2;
 		}
 		break;
 
@@ -1153,17 +1148,16 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 
 	// Stereo PCM 24-bit signed -> load sample, and normalize it to 16-bit
 	case RS_STIPCM24S:
-	case RS_STIPCM32S:
-		len = sample->length * 6;
-		if (flags == RS_STIPCM32S) len += sample->length * 2;
+	case RS_STIPCM32S: {
+		const uint32_t slsize = (flags == RS_STIPCM32S) ? 4 : 3;
+		len = sample->length * slsize * 2;
 		if (len > memsize) break;
 		if (len > 8*8) {
-			uint32_t slsize = (flags == RS_STIPCM32S) ? 4 : 3;
 			int32_t max = 255;
 			const int64_t start = slurp_tell(fp);
 			for (uint32_t j=0; j<len; j+=slsize) {
 				if (flags == RS_STIPCM32S) slurp_getc(fp); // meh
-				int8_t src[3] = {slurp_getc(fp), slurp_getc(fp), slurp_getc(fp)};
+				uint8_t src[3] = {slurp_getc(fp), slurp_getc(fp), slurp_getc(fp)};
 				int32_t l = ((((src[2] << 8) + src[1]) << 8) + src[0]) << 8;
 				l /= 256;
 				if (l > max) max = l;
@@ -1174,32 +1168,58 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 			slurp_seek(fp, start, SEEK_SET);
 			for (uint32_t k=0; k<len; k+=slsize) {
 				if (flags == RS_STIPCM32S) slurp_getc(fp); // meh
-				int8_t srcl[3] = {slurp_getc(fp), slurp_getc(fp), slurp_getc(fp)};
-				int32_t ll = ((((srcl[2] << 8) + srcl[1]) << 8) + srcl[0]) << 8;
-				if (flags == RS_STIPCM32S) slurp_getc(fp); // meh
-				int8_t srcr[3] = {slurp_getc(fp), slurp_getc(fp), slurp_getc(fp)};
-				int32_t lr = ((((srcr[2] << 8) + srcr[1]) << 8) + srcr[0]) << 8;
-				dest[0] = (signed short)(ll/max);
-				dest[1] = (signed short)(lr/max);
-				dest += 2;
+				uint8_t src[3] = {slurp_getc(fp), slurp_getc(fp), slurp_getc(fp)};
+				int32_t l = ((((src[2] << 8) + src[1]) << 8) + src[0]) << 8;
+
+				*dest++ = (signed short)(l/max);
 			}
 		}
 		break;
+	}
 
+	case SF(24,SI,BE,PCMS):
+	case SF(32,SI,BE,PCMS): {
+		const uint32_t slsize = (flags == SF(32,SI,BE,PCMS)) ? 4 : 3;
+		len = sample->length * slsize * 2;
+		if (len > memsize) break;
+		if (len > 8*8) {
+			int32_t max = 255;
+			const int64_t start = slurp_tell(fp);
+			for (uint32_t j=0; j<len; j+=slsize) {
+				uint8_t src[3] = {slurp_getc(fp), slurp_getc(fp), slurp_getc(fp)};
+				if (flags == SF(32,SI,BE,PCMS)) slurp_getc(fp); // meh
+				int32_t l = ((((src[0] << 8) + src[1]) << 8) + src[2]) << 8;
+				l /= 256;
+				if (l > max) max = l;
+				if (-l > max) max = -l;
+			}
+			max = (max / 128) + 1;
+			signed short *dest = (signed short *)sample->data;
+			slurp_seek(fp, start, SEEK_SET);
+			for (uint32_t k=0; k<len; k+=slsize) {
+				uint8_t src[3] = {slurp_getc(fp), slurp_getc(fp), slurp_getc(fp)};
+				if (flags == SF(32,SI,BE,PCMS)) slurp_getc(fp); // meh
+				int32_t l = ((((src[0] << 8) + src[1]) << 8) + src[2]) << 8;
+
+				*dest++ = (signed short)(l/max);
+			}
+		}
+		break;
+	}
 
 	// 16-bit signed big endian interleaved stereo
 	case RS_STIPCM16M:
 		{
-			len = sample->length;
-			if (len*4 > memsize) len = memsize >> 2;
+			len = sample->length * 2;
+			if (len*2 > memsize) len = memsize >> 1;
 
 			short int *data = (short int *)sample->data;
-			slurp_read(fp, data, len * 4);
+			slurp_read(fp, data, len * 2);
 
 			for (uint32_t j=0; j<len; j++)
 				data[j] = bswapBE16(data[j]);
 
-			len *= 4;
+			len *= 2;
 		}
 		break;
 
