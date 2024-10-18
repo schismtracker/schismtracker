@@ -31,6 +31,7 @@
 #include "player/sndfile.h"
 #include "log.h"
 #include "util.h"
+#include "float.h"
 #include "fmt.h" // for it_decompress8 / it_decompress16
 
 
@@ -710,7 +711,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 
 	// validate the read flags before anything else
 	switch (flags & SF_BIT_MASK) {
-		case SF_7: case SF_8: case SF_16: case SF_24: case SF_32: break;
+		case SF_7: case SF_8: case SF_16: case SF_24: case SF_32: case SF_64: break;
 		default: SF_FAIL("bit width", flags & SF_BIT_MASK);
 	}
 	switch (flags & SF_CHN_MASK) {
@@ -724,6 +725,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	switch (flags & SF_ENC_MASK) {
 		case SF_PCMS: case SF_PCMU: case SF_PCMD: case SF_IT214: case SF_IT215:
 		case SF_AMS: case SF_DMF: case SF_MDL: case SF_PTM: case SF_PCMD16:
+		case SF_IEEE:
 			break;
 		default: SF_FAIL("encoding", flags & SF_ENC_MASK);
 	}
@@ -739,7 +741,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	// fix the sample flags
 	sample->flags &= ~(CHN_16BIT|CHN_STEREO);
 	switch (flags & SF_BIT_MASK) {
-	case SF_16: case SF_24: case SF_32:
+	case SF_16: case SF_24: case SF_32: case SF_64:
 		// these are all stuffed into 16 bits.
 		mem *= 2;
 		sample->flags |= CHN_16BIT;
@@ -1231,6 +1233,60 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		for (uint32_t j = 0; j < len; j++)
 			sample->data[j] = CLAMP(slurp_getc(fp) * 2, -128, 127);
 		break;
+
+	// 32-bit IEEE floating point
+	case SF(32,M,LE,IEEE):
+	case SF(32,M,BE,IEEE):
+	case SF(32,SI,BE,IEEE):
+	case SF(32,SI,LE,IEEE): {
+		len = sample->length;
+
+		int16_t *data = (int16_t *)sample->data;
+
+		if ((flags & SF_CHN_MASK) == SF_SI)
+			len *= 2;
+
+		for (uint32_t k = 0; k < len; k++) {
+			uint32_t bytes;
+			slurp_read(fp, &bytes, sizeof(bytes));
+			if ((flags & SF_END_MASK) == SF_LE)
+				bytes = bswap_32(bytes);
+
+			double num = float_decode_ieee_32((const unsigned char *)&bytes) * (INT16_MAX + 1);
+			data[k] = (int16_t)CLAMP(num, INT16_MIN, INT16_MAX);
+		}
+
+		len *= 4;
+
+		break;
+	}
+
+	// 64-bit IEEE floating point
+	case SF(64,M,LE,IEEE):
+	case SF(64,M,BE,IEEE):
+	case SF(64,SI,BE,IEEE):
+	case SF(64,SI,LE,IEEE): {
+		len = sample->length;
+
+		int16_t *data = (int16_t *)sample->data;
+
+		if ((flags & SF_CHN_MASK) == SF_SI)
+			len *= 2;
+
+		for (uint32_t k = 0; k < len; k++) {
+			uint64_t bytes;
+			slurp_read(fp, &bytes, sizeof(bytes));
+			if ((flags & SF_END_MASK) == SF_LE)
+				bytes = bswap_64(bytes);
+
+			double num = float_decode_ieee_64((const unsigned char *)&bytes) * (INT16_MAX + 1);
+			data[k] = (int16_t)CLAMP(num, INT16_MIN, INT16_MAX);
+		}
+
+		len *= 8;
+
+		break;
+	}
 
 	// 8-bit ADPCM data w/ 16-byte table (MOD ADPCM)
 	case RS_PCM8D16:

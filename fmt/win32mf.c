@@ -937,14 +937,14 @@ int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 			break;
 
 		if (loop_success == READER_LOAD_ERROR ||
-			(ds.length / data.channels / (data.bps <= 8 ? 1 : 2) > MAX_SAMPLE_LENGTH)) {
+			(ds.length / data.channels / (data.bps / 8) > MAX_SAMPLE_LENGTH)) {
 			win32mf_end(&data);
 			disko_memclose(&ds, 0);
 			return 0;
 		}
 	}
 
-	uint32_t sample_length = ds.length / data.channels / (data.bps <= 8 ? 1 : 2);
+	uint32_t sample_length = ds.length / data.channels / (data.bps / 8);
 	if (sample_length < 1 || sample_length > MAX_SAMPLE_LENGTH) {
 		win32mf_end(&data);
 		disko_memclose(&ds, 0);

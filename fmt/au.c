@@ -112,8 +112,9 @@ int fmt_au_read_info(dmoz_file_t *file, slurp_t *fp)
 
 int fmt_au_load_sample(slurp_t *fp, song_sample_t *smp)
 {
+	const size_t memsize = slurp_length(fp);
 	struct au_header au;
-	uint32_t sflags = SF_BE | SF_PCMS;
+	uint32_t sflags = SF_BE;
 
 	if (slurp_read(fp, &au, sizeof(au)) != sizeof(au))
 		return 0;
@@ -125,14 +126,14 @@ int fmt_au_load_sample(slurp_t *fp, song_sample_t *smp)
 	au.sample_rate = bswapBE32(au.sample_rate);
 	au.channels = bswapBE32(au.channels);
 
-/*#define C_(cond) if (!(cond)) { log_appendf(2, "failed condition: %s", #cond); return 0; }*/
-#define C_(cond) if (!(cond)) { return 0; }
-	C_(memcmp(au.magic, ".snd", 4) == 0);
-	C_(au.data_offset >= 24);
-	C_(au.data_offset < slurp_length(fp));
-	C_(au.data_size > 0);
-	C_(au.data_size <= slurp_length(fp) - au.data_offset);
-	C_(au.channels == 1 || au.channels == 2);
+	if (memcmp(au.magic, ".snd", sizeof(au.magic)))
+		return 0;
+
+	if (au.data_offset < sizeof(au) || au.data_offset > memsize
+		|| au.data_size > memsize - au.data_offset
+		|| (au.channels != 1 && au.channels != 2)) {
+		return 0;
+	}
 
 	smp->c5speed = au.sample_rate;
 	smp->volume = 64 * 4;
@@ -141,26 +142,39 @@ int fmt_au_load_sample(slurp_t *fp, song_sample_t *smp)
 
 	switch (au.encoding) {
 	case AU_PCM_16:
-		sflags |= SF_16;
+		sflags |= SF_16 | SF_PCMS;
 		smp->length /= 2;
 		break;
 	case AU_PCM_24:
-		sflags |= SF_24;
+		sflags |= SF_24 | SF_PCMS;
 		smp->length /= 3;
 		break;
 	case AU_PCM_32:
-		sflags |= SF_32;
+		sflags |= SF_32 | SF_PCMS;
 		smp->length /= 4;
+		break;
+	case AU_IEEE_32:
+		sflags |= SF_32 | SF_IEEE;
+		smp->length /= 4;
+		break;
+	case AU_IEEE_64:
+		sflags |= SF_64 | SF_IEEE;
+		smp->length /= 8;
 		break;
 	default:
 		return 0;
 	}
 
-	if (au.channels == 2) {
+	switch (au.channels) {
+	case 1:
+		sflags |= SF_M;
+		break;
+	case 2:
 		sflags |= SF_SI;
 		smp->length /= 2;
-	} else {
-		sflags |= SF_M;
+		break;
+	default:
+		return 0;
 	}
 
 	if (au.data_offset > sizeof(au)) {

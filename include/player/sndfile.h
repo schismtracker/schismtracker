@@ -257,6 +257,7 @@ enum {
 #define SF_16                  _SDV_BIT(16) // 16-bit
 #define SF_24                  _SDV_BIT(24) // 24-bit
 #define SF_32                  _SDV_BIT(32) // 32-bit
+#define SF_64                  _SDV_BIT(64) // 64-bit (for IEEE floating point)
 
 // Channels (4 bits)
 #define _SDV_CHN(n)            ((n) << 8)
@@ -284,6 +285,7 @@ enum {
 #define SF_MDL                 _SDV_ENC(8) // MDL Huffman compression
 #define SF_PTM                 _SDV_ENC(9) // PTM 8-bit delta value -> 16-bit sample
 #define SF_PCMD16              _SDV_ENC(10) // PCM, 16-byte table delta-encoded
+#define SF_IEEE                _SDV_ENC(11) // IEEE floating point
 
 // Sample format shortcut
 #define SF(a,b,c,d) (SF_ ## a | SF_ ## b| SF_ ## c | SF_ ## d)
