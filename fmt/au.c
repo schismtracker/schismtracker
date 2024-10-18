@@ -69,19 +69,28 @@ int fmt_au_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	file->smp_length = au.data_size / au.channels;
 	file->smp_flags = 0;
-	if (au.encoding == AU_PCM_16) {
+	switch (au.encoding) {
+	case AU_PCM_16:
 		file->smp_flags |= CHN_16BIT;
 		file->smp_length /= 2;
-	} else if (au.encoding == AU_PCM_24) {
+		break;
+	case AU_PCM_24:
 		file->smp_length /= 3;
-	} else if (au.encoding == AU_PCM_32 || au.encoding == AU_IEEE_32) {
+		break;
+	case AU_PCM_32:
+	case AU_IEEE_32:
 		file->smp_length /= 4;
-	} else if (au.encoding == AU_IEEE_64) {
+		break;
+	case AU_IEEE_64:
 		file->smp_length /= 8;
+		break;
+	default:
+		break;
 	}
-	if (au.channels >= 2) {
+
+	if (au.channels >= 2)
 		file->smp_flags |= CHN_STEREO;
-	}
+
 	file->description = "AU Sample";
 	if (au.data_offset > 24) {
 		int extlen = au.data_offset - 24;
@@ -123,19 +132,30 @@ int fmt_au_load_sample(slurp_t *fp, song_sample_t *smp)
 	C_(au.data_offset < slurp_length(fp));
 	C_(au.data_size > 0);
 	C_(au.data_size <= slurp_length(fp) - au.data_offset);
-	C_(au.encoding == AU_PCM_8 || au.encoding == AU_PCM_16);
 	C_(au.channels == 1 || au.channels == 2);
 
 	smp->c5speed = au.sample_rate;
 	smp->volume = 64 * 4;
 	smp->global_volume = 64;
 	smp->length = au.data_size;
-	if (au.encoding == AU_PCM_16) {
+
+	switch (au.encoding) {
+	case AU_PCM_16:
 		sflags |= SF_16;
 		smp->length /= 2;
-	} else {
-		sflags |= SF_8;
+		break;
+	case AU_PCM_24:
+		sflags |= SF_24;
+		smp->length /= 3;
+		break;
+	case AU_PCM_32:
+		sflags |= SF_32;
+		smp->length /= 4;
+		break;
+	default:
+		return 0;
 	}
+
 	if (au.channels == 2) {
 		sflags |= SF_SI;
 		smp->length /= 2;
