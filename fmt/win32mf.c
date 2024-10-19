@@ -747,8 +747,6 @@ static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 	if (FAILED(MF_MFCreateSourceReaderFromMediaSource(data->source, NULL, &data->reader)))
 		goto cleanup;
 
-	puts("found source reader");
-
 	if (FAILED(MF_MFCreateMediaType(&uncompressed_type)))
 		goto cleanup;
 
@@ -769,8 +767,6 @@ static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 	if (FAILED(data->reader->lpVtbl->SetStreamSelection(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, TRUE)))
 		goto cleanup;
 
-	puts("have audio stream");
-
 	/* get output audio track data */
 	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_NUM_CHANNELS, &data->channels)))
 		goto cleanup;
@@ -780,8 +776,6 @@ static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 
 	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_BITS_PER_SAMPLE, &data->bps)))
 		goto cleanup;
-
-	printf("channels: %" PRIu32 ", sps: %" PRIu32 ", bps: %" PRIu32 "\n", data->channels, data->sps, data->bps);
 
 	if (data->sps <= 0)
 		goto cleanup;
