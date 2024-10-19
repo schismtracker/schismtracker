@@ -31,7 +31,7 @@
 #include "player/sndfile.h"
 #include "log.h"
 #include "util.h"
-#include "float.h"
+#include "ieee-float.h"
 #include "fmt.h" // for it_decompress8 / it_decompress16
 
 

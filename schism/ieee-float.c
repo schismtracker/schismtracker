@@ -24,7 +24,7 @@
 /* Routines to portably operate on IEEE floating point numbers. */
 
 #include "headers.h"
-#include "float.h"
+#include "ieee-float.h"
 
 #include <math.h>
 

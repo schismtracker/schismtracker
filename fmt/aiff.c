@@ -25,7 +25,7 @@
 
 #include "headers.h"
 #include "bswap.h"
-#include "float.h"
+#include "ieee-float.h"
 #include "log.h"
 #include "fmt.h"
 
