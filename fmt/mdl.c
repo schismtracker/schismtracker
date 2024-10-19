@@ -666,9 +666,7 @@ static int mdl_read_tracks(slurp_t *fp, song_note_t *tracks[65536])
 
 		int c = slurp_receive(fp, mdl_receive_track, bytesleft, &data);
 
-		printf("%zu %d\n", bytesleft, c);
-
-		slurp_seek(fp, startpos + c, SEEK_SET);
+		slurp_seek(fp, startpos + c + 2, SEEK_SET);
 	}
 	if (lostfx)
 		log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
