@@ -136,7 +136,8 @@ int instrument_loader_sample(struct instrumentloader *ii, int slot);
 uint32_t it_decompress8(void *dest, uint32_t len, slurp_t *fp, int it215, int channels);
 uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int channels);
 
-uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, slurp_t *fp, int8_t n);
+uint32_t mdl_decompress8(void *dest, uint32_t len, slurp_t *fp);
+uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp);
 
 /* --------------------------------------------------------------------------------------------------------- */
 

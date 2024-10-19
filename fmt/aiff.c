@@ -56,10 +56,10 @@ struct aiff_chunk_comm {
 	uint16_t num_channels;
 	uint32_t num_frames;
 	uint16_t sample_size;
-	uint8_t sample_rate[80]; // IEEE-extended
+	unsigned char sample_rate[10]; // IEEE-extended
 };
 
-SCHISM_BINARY_STRUCT(struct aiff_chunk_comm, 88);
+SCHISM_BINARY_STRUCT(struct aiff_chunk_comm, 18);
 
 #pragma pack(pop)
 

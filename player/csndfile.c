@@ -1015,110 +1015,38 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		}
 		break;
 
-#if 0
-	// AMS compressed samples
-	case RS_AMS8:
-	case RS_AMS16:
-		len = 9;
-		if (memsize > 9) {
-			const char *psrc = buffer;
-			char packcharacter = buffer[8], *pdest = (char *)sample->data;
-			len += bswapLE32(*((uint32_t *)(buffer+4)));
-			if (len > memsize) len = memsize;
-			uint32_t dmax = sample->length;
-			if (sample->flags & CHN_16BIT) dmax <<= 1;
-			AMSUnpack(psrc+9, len-9, pdest, dmax, packcharacter);
-		}
-		break;
-#endif
-
 	// PTM 8bit delta to 16-bit sample
-	case RS_PTM8DTO16:
-		{
-			len = sample->length * 2;
-			if (len > memsize) break;
-			signed char *data = (signed char *)sample->data;
-			signed char delta8 = 0;
-			for (uint32_t j=0; j<len; j++) {
-				delta8 += slurp_getc(fp);
-				*data++ = delta8;
-			}
-			uint16_t *data16 = (uint16_t *)sample->data;
-			for (uint32_t j=0; j<len; j+=2) {
-				*data16 = bswapLE16(*data16);
-				data16++;
-			}
+	case SF(16,M,LE,PTM): {
+		len = sample->length * 2;
+		if (len > memsize) break;
+		signed char *data = (signed char *)sample->data;
+		signed char delta8 = 0;
+		for (uint32_t j=0; j<len; j++) {
+			delta8 += slurp_getc(fp);
+			*data++ = delta8;
 		}
-		break;
+		uint16_t *data16 = (uint16_t *)sample->data;
+		for (uint32_t j=0; j<len; j+=2) {
+			*data16 = bswapLE16(*data16);
+			data16++;
+		}
+	}
+	break;
 
 	// Huffman MDL compressed samples
-	case RS_MDL8:
-	case RS_MDL16:
-		if (memsize >= 8) {
-			// first 4 bytes indicate packed length
-			uint32_t bitbuf;
-			uint32_t bitnum = 32;
-			uint8_t dlt = 0, lowbyte = 0;
-
-			uint32_t dw;
-			slurp_read(fp, &dw, sizeof(dw));
-
-			len = bswapLE32(dw);
-			len = MIN(len, memsize) + 4;
-
-			slurp_read(fp, &dw, sizeof(dw));
-			bitbuf = bswapLE32(dw);
-
-			uint8_t * data = (uint8_t *)sample->data;
-
-			// TODO move all this junk to fmt/compression.c
-			for (uint32_t j=0; j<sample->length; j++) {
-				uint8_t hibyte;
-				uint8_t sign;
-				if (flags == RS_MDL16)
-					lowbyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 8);
-				sign = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 1);
-				if (mdl_read_bits(&bitbuf, &bitnum, fp, 1)) {
-					hibyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 3);
-				} else {
-					hibyte = 8;
-					while (!mdl_read_bits(&bitbuf, &bitnum, fp, 1)) hibyte += 0x10;
-					hibyte += mdl_read_bits(&bitbuf, &bitnum, fp, 4);
-				}
-				if (sign) hibyte = ~hibyte;
-				dlt += hibyte;
-				if (flags == RS_MDL8) {
-					data[j] = dlt;
-				} else {
-#ifdef WORDS_BIGENDIAN
-					data[j<<1] = dlt;
-					data[(j<<1)+1] = lowbyte;
-#else
-					data[j<<1] = lowbyte;
-					data[(j<<1)+1] = dlt;
-#endif
-				}
-			}
+	case SF(8,M,LE,MDL):
+	case SF(16,M,LE,MDL):
+		if (memsize < 8) break;
+		if ((flags & SF_BIT_MASK) == SF_8) {
+			len = mdl_decompress8(sample->data, sample->length, fp);
+		} else {
+			len = mdl_decompress16(sample->data, sample->length, fp);
 		}
 		break;
-
-#if 0
-	case RS_DMF8:
-	case RS_DMF16:
-		len = memsize;
-		if (len >= 4) {
-			uint32_t maxlen = sample->length;
-			if (sample->flags & CHN_16BIT) maxlen <<= 1;
-			uint8_t * ibuf = (uint8_t *)buffer;
-			uint8_t * ibufmax = (uint8_t *)(buffer+memsize);
-			len = DMFUnpack((uint8_t *)sample->data, ibuf, ibufmax, maxlen);
-		}
-		break;
-#endif
 
 	// PCM 24-bit signed -> load sample, and normalize it to 16-bit
-	case RS_PCM24S:
-	case RS_PCM32S:
+	case SF(24,M,LE,PCMS):
+	case SF(32,M,LE,PCMS):
 		len = sample->length * 3;
 		if (flags == RS_PCM32S) len += sample->length;
 		if (len > memsize) break;
@@ -1149,8 +1077,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 
 
 	// Stereo PCM 24-bit signed -> load sample, and normalize it to 16-bit
-	case RS_STIPCM24S:
-	case RS_STIPCM32S: {
+	case SF(24,SI,LE,PCMS):
+	case SF(32,SI,LE,PCMS): {
 		const uint32_t slsize = (flags == RS_STIPCM32S) ? 4 : 3;
 		len = sample->length * slsize * 2;
 		if (len > memsize) break;
@@ -1210,20 +1138,19 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	}
 
 	// 16-bit signed big endian interleaved stereo
-	case RS_STIPCM16M:
-		{
-			len = sample->length * 2;
-			if (len*2 > memsize) len = memsize >> 1;
+	case SF(16,SI,BE,PCMS): {
+		len = sample->length * 2;
+		if (len*2 > memsize) len = memsize >> 1;
 
-			short int *data = (short int *)sample->data;
-			slurp_read(fp, data, len * 2);
+		short int *data = (short int *)sample->data;
+		slurp_read(fp, data, len * 2);
 
-			for (uint32_t j=0; j<len; j++)
-				data[j] = bswapBE16(data[j]);
+		for (uint32_t j=0; j<len; j++)
+			data[j] = bswapBE16(data[j]);
 
-			len *= 2;
-		}
-		break;
+		len *= 2;
+	}
+	break;
 
 	// 7-bit (data shifted one bit left)
 	case SF(7,M,BE,PCMS):
