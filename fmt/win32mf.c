@@ -747,8 +747,6 @@ static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 	if (FAILED(MF_MFCreateSourceReaderFromMediaSource(data->source, NULL, &data->reader)))
 		goto cleanup;
 
-	puts("found source reader");
-
 	if (FAILED(MF_MFCreateMediaType(&uncompressed_type)))
 		goto cleanup;
 
@@ -769,8 +767,6 @@ static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 	if (FAILED(data->reader->lpVtbl->SetStreamSelection(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, TRUE)))
 		goto cleanup;
 
-	puts("have audio stream");
-
 	/* get output audio track data */
 	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_NUM_CHANNELS, &data->channels)))
 		goto cleanup;
@@ -780,8 +776,6 @@ static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 
 	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_BITS_PER_SAMPLE, &data->bps)))
 		goto cleanup;
-
-	printf("channels: %" PRIu32 ", sps: %" PRIu32 ", bps: %" PRIu32 "\n", data->channels, data->sps, data->bps);
 
 	if (data->sps <= 0)
 		goto cleanup;
@@ -863,7 +857,7 @@ enum {
 };
 
 /* uncompressed MUST point to NULL (or some other allocated memory) before the first pass! */
-static int reader_load_sample(IMFSourceReader *reader, uint8_t **uncompressed, size_t *size)
+static int reader_load_sample(IMFSourceReader *reader, disko_t *ds)
 {
 	if (!reader)
 		return READER_LOAD_ERROR;
@@ -897,19 +891,7 @@ static int reader_load_sample(IMFSourceReader *reader, uint8_t **uncompressed, s
 		goto cleanup;
 	}
 
-	{
-		uint8_t *orig = *uncompressed;
-		*uncompressed = realloc(orig, *size + buffer_data_size);
-		if (!*uncompressed) {
-			free(orig);
-			success = READER_LOAD_ERROR;
-			goto cleanup;
-		}
-
-		memcpy(*uncompressed + *size, buffer_data, buffer_data_size);
-
-		*size += buffer_data_size;
-	}
+	disko_write(ds, buffer_data, buffer_data_size);
 
 	if (FAILED(buffer->lpVtbl->Unlock(buffer))) {
 		success = READER_LOAD_ERROR;
@@ -928,40 +910,38 @@ cleanup:
 
 int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 {
-	struct win32mf_data data = {0};
-	uint8_t *uncompressed = NULL;
-	size_t uncompressed_size = 0;
-
 	if (!media_foundation_initialized)
 		return 0;
 
+	disko_t ds = {0};
+	if (disko_memopen(&ds) < 0)
+		return 0;
+
+	struct win32mf_data data = {0};
+
 	if (!win32mf_start(&data, fp, NULL)) {
 		win32mf_end(&data);
+		disko_memclose(&ds, 0);
 		return 0;
 	}
 
 	for (;;) {
-		int loop_success = reader_load_sample(data.reader, &uncompressed, &uncompressed_size);
-		if (loop_success == READER_LOAD_ERROR) {
-			free(uncompressed);
-			win32mf_end(&data);
-			return 0;
-		}
-
+		int loop_success = reader_load_sample(data.reader, &ds);
 		if (loop_success == READER_LOAD_DONE)
 			break;
 
-		if (uncompressed_size / data.channels / (data.bps <= 8 ? 1 : 2) > MAX_SAMPLE_LENGTH) {
-			free(uncompressed);
+		if (loop_success == READER_LOAD_ERROR ||
+			(ds.length / data.channels / (data.bps / 8) > MAX_SAMPLE_LENGTH)) {
 			win32mf_end(&data);
+			disko_memclose(&ds, 0);
 			return 0;
 		}
 	}
 
-	uint32_t sample_length = uncompressed_size / data.channels / (data.bps <= 8 ? 1 : 2);
+	uint32_t sample_length = ds.length / data.channels / (data.bps / 8);
 	if (sample_length < 1 || sample_length > MAX_SAMPLE_LENGTH) {
-		free(uncompressed);
 		win32mf_end(&data);
+		disko_memclose(&ds, 0);
 		return 0;
 	}
 
@@ -971,11 +951,11 @@ int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 	smp->length        = sample_length;
 
 	slurp_t fake_fp;
-	slurp_memstream(&fake_fp, uncompressed, uncompressed_size);
+	slurp_memstream(&fake_fp, ds.data, ds.length);
 
 	int r = csf_read_sample(smp, data.flags, &fake_fp);
 
-	free(uncompressed);
+	disko_memclose(&ds, 0);
 
 	win32mf_end(&data);
 

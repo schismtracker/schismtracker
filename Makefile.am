@@ -385,6 +385,7 @@ schismtracker_SOURCES = \
 	schism/dmoz.c			\
 	schism/fakemem.c		\
 	schism/fonts.c          \
+	schism/ieee-float.c     \
 	schism/itf.c			\
 	schism/keyboard.c		\
 	schism/main.c			\

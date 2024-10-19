@@ -71,9 +71,13 @@ static void slurp_memory_closure_free_(slurp_t *t);
 
 int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 {
+	if (!t)
+		return -1;
+
+	*t = (slurp_t){0};
+
 	if (!size)
 		size = (buf ? buf->st_size : dmoz_path_get_file_size(filename));
-
 
 	switch (
 #ifdef SCHISM_WIN32

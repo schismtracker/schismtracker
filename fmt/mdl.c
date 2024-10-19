@@ -46,7 +46,7 @@ int fmt_mdl_read_info(dmoz_file_t *file, slurp_t *fp)
 	if (version == EOF)
 		return 0;
 
-	if ((((unsigned char)version & 0xf0) >> 4) <= 1)
+	if ((((unsigned char)version & 0xf0) >> 4) > 1)
 		return 0;
 
 	for (;;) {
@@ -568,77 +568,110 @@ static struct mdlpat *mdl_read_patterns_v0(song_t *song, slurp_t *fp)
 	return pat_head.next;
 }
 
-static song_note_t **mdl_read_tracks(slurp_t *fp)
+struct receive_userdata {
+	song_note_t *track;
+	int *lostfx;
+};
+
+static int mdl_receive_track(const void *data, size_t len, void *userdata)
 {
-	song_note_t **tracks = mem_calloc(65536, sizeof(song_note_t *));
-	int ntrks, trk, row, lostfx = 0;
-	uint16_t h;
+	struct receive_userdata *rec_userdata = userdata;
+	int row = 0;
 	uint8_t b, x, y;
 	uint8_t vol, e1, e2, p1, p2;
+	song_note_t *track = rec_userdata->track;
+	int *lostfx = rec_userdata->lostfx;
 
-	slurp_read(fp, &h, 2);
-	ntrks = bswapLE16(h);
+	slurp_t fake_fp = {0};
+	slurp_memstream(&fake_fp, (uint8_t *)data, len);
+
+	while (row < 256 && !slurp_eof(&fake_fp)) {
+		b = slurp_getc(&fake_fp);
+		x = b >> 2;
+		y = b & 3;
+		switch (y) {
+		case 0: // (x+1) empty notes follow
+			row += x + 1;
+			break;
+		case 1: // Repeat previous note (x+1) times
+			if (row > 0) {
+				do {
+					track[row] = track[row - 1];
+				} while (++row < 256 && x--);
+			}
+			break;
+		case 2: // Copy note from row x
+			if (row > x)
+				track[row] = track[x];
+			row++;
+			break;
+		case 3: // New note data
+			if (x & MDLNOTE_NOTE) {
+				b = slurp_getc(&fake_fp);
+				// convenient! :)
+				// (I don't know what DT does for out of range notes, might be worth
+				// checking some time)
+				track[row].note = (b > 120) ? NOTE_OFF : b;
+			}
+			if (x & MDLNOTE_SAMPLE) {
+				b = slurp_getc(&fake_fp);
+				if (b >= MAX_INSTRUMENTS)
+					b = 0;
+				track[row].instrument = b;
+			}
+			vol = (x & MDLNOTE_VOLUME) ? slurp_getc(&fake_fp) : 0;
+			if (x & MDLNOTE_EFFECTS) {
+				b = slurp_getc(&fake_fp);
+				e1 = b & 0xf;
+				e2 = b >> 4;
+			} else {
+				e1 = e2 = 0;
+			}
+			p1 = (x & MDLNOTE_PARAM1) ? slurp_getc(&fake_fp) : 0;
+			p2 = (x & MDLNOTE_PARAM2) ? slurp_getc(&fake_fp) : 0;
+			*lostfx += cram_mdl_effects(&track[row], vol, e1, e2, p1, p2);
+			row++;
+			break;
+		}
+	}
+
+	return slurp_tell(&fake_fp);
+}
+
+static int mdl_read_tracks(slurp_t *fp, song_note_t *tracks[65536])
+{
+	/* why are we allocating so many of these ? */
+	uint16_t ntrks, trk;
+	int lostfx = 0;
+
+	slurp_read(fp, &ntrks, 2);
+	ntrks = bswapLE16(ntrks);
 
 	// track 0 is always blank
 	for (trk = 1; trk <= ntrks; trk++) {
-		// hope and pray that we don't overshoot
-		slurp_seek(fp, 2, SEEK_CUR);
+		int64_t startpos = slurp_tell(fp);
+		if (startpos < 0)
+			return 0; /* what ? */
+
+		uint16_t bytesleft;
+		slurp_read(fp, &bytesleft, sizeof(bytesleft));
+		bytesleft = bswapLE16(bytesleft);
+
 		tracks[trk] = mem_calloc(256, sizeof(song_note_t));
-		row = 0;
-		while (row < 256 && !slurp_eof(fp)) {
-			b = slurp_getc(fp);
-			x = b >> 2;
-			y = b & 3;
-			switch (y) {
-			case 0: // (x+1) empty notes follow
-				row += x + 1;
-				break;
-			case 1: // Repeat previous note (x+1) times
-				if (row > 0) {
-					do {
-						tracks[trk][row] = tracks[trk][row - 1];
-					} while (++row < 256 && x--);
-				}
-				break;
-			case 2: // Copy note from row x
-				if (row > x)
-					tracks[trk][row] = tracks[trk][x];
-				row++;
-				break;
-			case 3: // New note data
-				if (x & MDLNOTE_NOTE) {
-					b = slurp_getc(fp);
-					// convenient! :)
-					// (I don't know what DT does for out of range notes, might be worth
-					// checking some time)
-					tracks[trk][row].note = (b > 120) ? NOTE_OFF : b;
-				}
-				if (x & MDLNOTE_SAMPLE) {
-					b = slurp_getc(fp);
-					if (b >= MAX_INSTRUMENTS)
-						b = 0;
-					tracks[trk][row].instrument = b;
-				}
-				vol = (x & MDLNOTE_VOLUME) ? slurp_getc(fp) : 0;
-				if (x & MDLNOTE_EFFECTS) {
-					b = slurp_getc(fp);
-					e1 = b & 0xf;
-					e2 = b >> 4;
-				} else {
-					e1 = e2 = 0;
-				}
-				p1 = (x & MDLNOTE_PARAM1) ? slurp_getc(fp) : 0;
-				p2 = (x & MDLNOTE_PARAM2) ? slurp_getc(fp) : 0;
-				lostfx += cram_mdl_effects(&tracks[trk][row], vol, e1, e2, p1, p2);
-				row++;
-				break;
-			}
-		}
+
+		struct receive_userdata data = {
+			.track = tracks[trk],
+			.lostfx = &lostfx,
+		};
+
+		int c = slurp_receive(fp, mdl_receive_track, bytesleft, &data);
+
+		slurp_seek(fp, startpos + c + 2, SEEK_SET);
 	}
 	if (lostfx)
 		log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
 
-	return tracks;
+	return 1;
 }
 
 
@@ -884,9 +917,9 @@ static void copy_envelope(song_instrument_t *ins, song_envelope_t *ienv, struct 
 int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 {
 	struct mdlpat *pat, *patptr = NULL;
-	struct mdlenv *volenvs[64] = {NULL}, *panenvs[64] = {NULL}, *freqenvs[64] = {NULL};
+	struct mdlenv *volenvs[64] = {0}, *panenvs[64] = {0}, *freqenvs[64] = {0};
 	uint8_t packtype[MAX_SAMPLES] = {0};
-	song_note_t **tracks = NULL;
+	song_note_t *tracks[65536] = {0};
 	long datapos = 0; // where to seek for the sample data
 	int restartpos = -1;
 	int trk, n;
@@ -932,7 +965,7 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 		case MDL_BLK_TRACKS:
 			if (!(readflags & MDL_HAS_TRACKS)) {
 				readflags |= MDL_HAS_TRACKS;
-				tracks = mdl_read_tracks(fp);
+				mdl_read_tracks(fp, tracks);
 			}
 			break;
 		case MDL_BLK_INSTRUMENTS:
@@ -1069,7 +1102,6 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 		// and clean up
 		for (trk = 1; trk < 65536 && tracks[trk]; trk++)
 			free(tracks[trk]);
-		free(tracks);
 	}
 	while (patptr) {
 		pat = patptr;

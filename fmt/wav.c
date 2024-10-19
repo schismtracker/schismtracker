@@ -81,13 +81,39 @@ typedef struct {
     uint32_t bytessec;        // bytes/sec=freqHz*samplesize
     uint16_t samplesize;      // sizeof(sample)
     uint16_t bitspersample;   // bits per sample (8/16)
+
+    // okay, these bits are optional:
+    uint16_t ext_size;
+    unsigned char xx[2]; // irrelevant for us
+    uint32_t channel_mask;
+    unsigned char subformat[16];
 } wave_format_t;
 
-SCHISM_BINARY_STRUCT(wave_format_t, 16);
+SCHISM_BINARY_STRUCT(wave_format_t, 40);
 
 #pragma pack(pop)
 
 /* --------------------------------------------------------------------------------------------------------- */
+
+static inline uint32_t wav_get_format_tag(const wave_format_t *fmt)
+{
+	if (fmt->format == WAVE_FORMAT_EXTENSIBLE) {
+		if (fmt->ext_size < 22)
+			return 0;
+
+		static const unsigned char subformat_base[16] = {
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00,
+			0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71,
+		};
+
+        if (memcmp(fmt->subformat + sizeof(uint32_t), subformat_base + sizeof(uint32_t), sizeof(subformat_base) - sizeof(uint32_t)) != 0)
+            return 0;
+
+        return bswapLE32(*(uint32_t *)fmt->subformat);
+	} else {
+		return fmt->format;
+	}
+}
 
 static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 {
@@ -139,6 +165,11 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 	fmt.bytessec      = bswapLE32(fmt.bytessec);
 	fmt.samplesize    = bswapLE16(fmt.samplesize);
 	fmt.bitspersample = bswapLE16(fmt.bitspersample);
+	fmt.ext_size      = bswapLE16(fmt.ext_size);
+	fmt.channel_mask  = bswapLE32(fmt.channel_mask);
+
+	// fix the format tag
+	fmt.format = wav_get_format_tag(&fmt);
 
 	uint32_t flags = 0;
 
@@ -158,7 +189,15 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 	}
 
 	// encoding (8-bit wav is unsigned, everything else is signed -- yeah, it's stupid)
-	flags |= (fmt.bitspersample == 8) ? SF_PCMU : SF_PCMS;
+	switch (fmt.format) {
+	case WAVE_FORMAT_PCM:
+		flags |= (fmt.bitspersample == 8) ? SF_PCMU : SF_PCMS;
+		break;
+	case WAVE_FORMAT_IEEE_FLOAT:
+		flags |= SF_IEEE;
+		break;
+	default: return 0; // unsupported
+	}
 
 	smp->flags         = 0; // flags are set by csf_read_sample
 	smp->volume        = 64 * 4;

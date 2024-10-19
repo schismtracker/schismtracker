@@ -25,19 +25,16 @@
 
 #include "headers.h"
 #include "bswap.h"
+#include "ieee-float.h"
 #include "log.h"
 #include "fmt.h"
 
 #include <stdint.h>
 #include <unistd.h> /* swab */
-#include <math.h> /* for ldexp/frexp */
 
 #ifdef SCHISM_WIN32
 # define swab(a,b,c) swab((const char*)(a),(char*)(b),(size_t)(c))
 #endif
-
-static void ConvertToIeeeExtended(double num, unsigned char *bytes);
-static double ConvertFromIeeeExtended(const unsigned char *bytes);
 
 /* --------------------------------------------------------------------- */
 
@@ -59,10 +56,10 @@ struct aiff_chunk_comm {
 	uint16_t num_channels;
 	uint32_t num_frames;
 	uint16_t sample_size;
-	uint8_t sample_rate[80]; // IEEE-extended
+	unsigned char sample_rate[10]; // IEEE-extended
 };
 
-SCHISM_BINARY_STRUCT(struct aiff_chunk_comm, 88);
+SCHISM_BINARY_STRUCT(struct aiff_chunk_comm, 18);
 
 #pragma pack(pop)
 
@@ -197,7 +194,7 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 		iff_chunk_read(&comm, fp, &chunk_comm, sizeof(chunk_comm));
 
 		if (file) {
-			file->smp_speed = ConvertFromIeeeExtended(chunk_comm.sample_rate);
+			file->smp_speed = float_decode_ieee_80(chunk_comm.sample_rate);
 			file->smp_length = bswapBE32(chunk_comm.num_frames);
 
 			file->description = "Audio IFF sample";
@@ -253,7 +250,7 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 			// TODO: data checking; make sure sample count and byte size agree
 			// (and if not, cut to shorter of the two)
 
-			smp->c5speed = ConvertFromIeeeExtended(chunk_comm.sample_rate);
+			smp->c5speed = float_decode_ieee_80(chunk_comm.sample_rate);
 			smp->length = bswapBE32(chunk_comm.num_frames);
 			smp->volume = 64*4;
 			smp->global_volume = 64;
@@ -339,7 +336,7 @@ static int aiff_header(disko_t *fp, int bits, int channels, int rate,
 	disko_write(fp, &ul, 4);
 	s = bswapBE16(bits);
 	disko_write(fp, &s, 2);
-	ConvertToIeeeExtended(rate, b);
+	float_encode_ieee_80(rate, b);
 	disko_write(fp, b, 10);
 
 	/* NOW do this (sample size in AIFF is indicated per channel, not per frame) */
@@ -473,132 +470,4 @@ int fmt_aiff_export_tail(disko_t *fp)
 	free(awd);
 
 	return DW_OK;
-}
-
-/* --------------------------------------------------------------------- */
-/* Copyright (C) 1988-1991 Apple Computer, Inc.
- * All rights reserved.
- *
- * Machine-independent I/O routines for IEEE floating-point numbers.
- *
- * NaN's and infinities are converted to HUGE_VAL or HUGE, which
- * happens to be infinity on IEEE machines.  Unfortunately, it is
- * impossible to preserve NaN's in a machine-independent way.
- * Infinities are, however, preserved on IEEE machines.
- *
- * These routines have been tested on the following machines:
- *    Apple Macintosh, MPW 3.1 C compiler
- *    Apple Macintosh, THINK C compiler
- *    Silicon Graphics IRIS, MIPS compiler
- *    Cray X/MP and Y/MP
- *    Digital Equipment VAX
- *
- *
- * Implemented by Malcolm Slaney and Ken Turkowski.
- *
- * Malcolm Slaney contributions during 1988-1990 include big- and little-
- * endian file I/O, conversion to and from Motorola's extended 80-bit
- * floating-point format, and conversions to and from IEEE single-
- * precision floating-point format.
- *
- * In 1991, Ken Turkowski implemented the conversions to and from
- * IEEE double-precision format, added more precision to the extended
- * conversions, and accommodated conversions involving +/- infinity,
- * NaN's, and denormalized numbers.
- */
-
-/* XXX this crap should be moved into util.c */
-
-#ifndef HUGE_VAL
-# define HUGE_VAL HUGE
-#endif /* HUGE_VAL */
-
-#define FloatToUnsigned(f) ((uint32_t) (((int32_t) (f - 2147483648.0)) + 2147483647L + 1))
-#define UnsignedToFloat(u) (((double) ((int32_t) (u - 2147483647L - 1))) + 2147483648.0)
-
-static void ConvertToIeeeExtended(double num, unsigned char *bytes)
-{
-	int sign, expon;
-	double fMant, fsMant;
-	uint32_t hiMant, loMant;
-
-	if (num < 0) {
-		sign = 0x8000;
-		num *= -1;
-	} else {
-		sign = 0;
-	}
-
-	if (num == 0) {
-		expon = 0;
-		hiMant = 0;
-		loMant = 0;
-	} else {
-		fMant = frexp(num, &expon);
-		if ((expon > 16384) || !(fMant < 1)) {
-			/* Infinity or NaN */
-			expon = sign | 0x7FFF;
-			hiMant = 0;
-			loMant = 0; /* infinity */
-		} else {
-			/* Finite */
-			expon += 16382;
-			if (expon < 0) {
-				/* denormalized */
-				fMant = ldexp(fMant, expon);
-				expon = 0;
-			}
-			expon |= sign;
-			fMant = ldexp(fMant, 32);
-			fsMant = floor(fMant);
-			hiMant = FloatToUnsigned(fsMant);
-			fMant = ldexp(fMant - fsMant, 32);
-			fsMant = floor(fMant);
-			loMant = FloatToUnsigned(fsMant);
-		}
-	}
-
-	bytes[0] = expon >> 8;
-	bytes[1] = expon;
-	bytes[2] = hiMant >> 24;
-	bytes[3] = hiMant >> 16;
-	bytes[4] = hiMant >> 8;
-	bytes[5] = hiMant;
-	bytes[6] = loMant >> 24;
-	bytes[7] = loMant >> 16;
-	bytes[8] = loMant >> 8;
-	bytes[9] = loMant;
-}
-
-static double ConvertFromIeeeExtended(const unsigned char *bytes)
-{
-	double f;
-	int expon;
-	uint32_t hiMant, loMant;
-
-	expon = ((bytes[0] & 0x7F) << 8) | (bytes[1] & 0xFF);
-	hiMant = ((uint32_t) (bytes[2] & 0xFF) << 24)
-		| ((uint32_t) (bytes[3] & 0xFF) << 16)
-		| ((uint32_t) (bytes[4] & 0xFF) << 8)
-		| ((uint32_t) (bytes[5] & 0xFF));
-	loMant = ((uint32_t) (bytes[6] & 0xFF) << 24)
-		| ((uint32_t) (bytes[7] & 0xFF) << 16)
-		| ((uint32_t) (bytes[8] & 0xFF) << 8)
-		| ((uint32_t) (bytes[9] & 0xFF));
-
-	if (expon == 0 && hiMant == 0 && loMant == 0) {
-		f = 0;
-	} else if (expon == 0x7FFF) {
-		/* Infinity or NaN */
-		f = HUGE_VAL;
-	} else {
-		expon -= 16383;
-		f = ldexp(UnsignedToFloat(hiMant), expon -= 31);
-		f += ldexp(UnsignedToFloat(loMant), expon -= 32);
-	}
-
-	if (bytes[0] & 0x80)
-		return -f;
-	else
-		return f;
 }

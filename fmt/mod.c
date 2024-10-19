@@ -705,10 +705,10 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 		song_sample_t *smp = song->samples + (n + 1);
 		if (smp->data)
 			if( (smp->flags & CHN_LOOP) && (smp->loop_start < smp->loop_end) && (smp->loop_end <= MIN(smp->length, 0x1FFFE)) ) {
-				csf_write_sample(fp, smp, RS_PCM8S, 0x1FFFE); // third argument is a compound flag: PCMS,8,M,LE
+				csf_write_sample(fp, smp, SF(PCMS,8,M,LE), 0x1FFFE);
 			} else if (1 < smp->length) { // floor(smp->length / 2) MUST be positive!
 				tmppos = disko_tell(fp);
-				csf_write_sample(fp, smp, RS_PCM8S, 0x1FFFE); // third argument is a compound flag: PCMS,8,M,LE
+				csf_write_sample(fp, smp, SF(PCMS,8,M,LE), 0x1FFFE);
 				disko_seek(fp, tmppos, SEEK_SET);
 				disko_write(fp, tmp, 2);
 				disko_seek(fp, 0, SEEK_END);

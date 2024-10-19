@@ -21,10 +21,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "bswap.h"
+#ifndef SCHISM_FLOAT_H_
+#define SCHISM_FLOAT_H_
 
-/* these are defined here for compliance with C99's weird
- * inline behavior */
-extern inline uint64_t bswap_64_schism_internal_(uint64_t x);
-extern inline uint32_t bswap_32_schism_internal_(uint32_t x);
-extern inline uint16_t bswap_16_schism_internal_(uint16_t x);
+/* These functions assume big endian input; you'll have to byteswap
+ * if this is not the case. */
+
+double float_decode_ieee_32(const unsigned char bytes[4]);
+void float_encode_ieee_32(double num, unsigned char bytes[4]);
+
+double float_decode_ieee_64(const unsigned char bytes[8]);
+void float_encode_ieee_64(double num, unsigned char bytes[8]);
+
+double float_decode_ieee_80(const unsigned char bytes[10]);
+void float_encode_ieee_80(double num, unsigned char bytes[10]);
+
+#endif /* SCHISM_FLOAT_H_ */

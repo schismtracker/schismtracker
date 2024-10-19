@@ -23,6 +23,7 @@
 
 #include "headers.h"
 #include "fmt.h"
+#include "bswap.h"
 
 // ------------------------------------------------------------------------------------------------------------
 // IT decompression code from itsex.c (Cubic Player) and load_it.cpp (Modplug)
@@ -260,7 +261,7 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 // ------------------------------------------------------------------------------------------------------------
 // MDL sample decompression
 
-uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, slurp_t *fp, int8_t n)
+static inline uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, slurp_t *fp, int8_t n)
 {
 	uint16_t v = (uint16_t)((*bitbuf) & ((1 << n) - 1) );
 	(*bitbuf) >>= n;
@@ -272,3 +273,103 @@ uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, slurp_t *fp, int8_t n
 	return v;
 }
 
+uint32_t mdl_decompress8(void *dest, uint32_t len, slurp_t *fp)
+{
+	const int64_t startpos = slurp_tell(fp);
+	if (startpos < 0)
+		return 0; // wat
+
+	const size_t filelen = slurp_length(fp);
+
+	uint32_t bitnum = 32;
+	uint8_t dlt = 0;
+
+	// first 4 bytes indicate packed length
+	uint32_t v;
+	if (slurp_read(fp, &v, sizeof(v)) != sizeof(v))
+		return 0;
+	v = bswapLE32(v);
+	v = MIN(v, filelen - startpos) + 4;
+
+	uint32_t bitbuf;
+	if (slurp_read(fp, &bitbuf, sizeof(bitbuf)) != sizeof(bitbuf))
+		return 0;
+	bitbuf = bswapLE32(bitbuf);
+
+	uint8_t *data = dest;
+
+	for (uint32_t j=0; j<len; j++) {
+		uint8_t sign = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 1);
+
+		uint8_t hibyte;
+		if (mdl_read_bits(&bitbuf, &bitnum, fp, 1)) {
+			hibyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 3);
+		} else {
+			hibyte = 8;
+			while (!mdl_read_bits(&bitbuf, &bitnum, fp, 1)) hibyte += 0x10;
+			hibyte += mdl_read_bits(&bitbuf, &bitnum, fp, 4);
+		}
+
+		if (sign)
+			hibyte = ~hibyte;
+
+		dlt += hibyte;
+
+		data[j] = dlt;
+	}
+
+	slurp_seek(fp, startpos + v, SEEK_SET);
+
+	return v;
+}
+
+uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp)
+{
+	const int64_t startpos = slurp_tell(fp);
+	if (startpos < 0)
+		return 0; // wat
+
+	const size_t filelen = slurp_length(fp);
+
+	// first 4 bytes indicate packed length
+	uint32_t bitnum = 32;
+	uint8_t dlt = 0, lowbyte = 0;
+
+	uint32_t v;
+	slurp_read(fp, &v, sizeof(v));
+	v = bswapLE32(v);
+	v = MIN(v, filelen - startpos) + 4;
+
+	uint32_t bitbuf;
+	slurp_read(fp, &bitbuf, sizeof(bitbuf));
+	bitbuf = bswapLE32(bitbuf);
+
+	uint8_t *data = dest;
+
+	for (uint32_t j=0; j<len; j++) {
+		uint8_t hibyte;
+		uint8_t sign;
+		lowbyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 8);
+		sign = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 1);
+		if (mdl_read_bits(&bitbuf, &bitnum, fp, 1)) {
+			hibyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 3);
+		} else {
+			hibyte = 8;
+			while (!mdl_read_bits(&bitbuf, &bitnum, fp, 1)) hibyte += 0x10;
+			hibyte += mdl_read_bits(&bitbuf, &bitnum, fp, 4);
+		}
+		if (sign) hibyte = ~hibyte;
+		dlt += hibyte;
+#ifdef WORDS_BIGENDIAN
+		data[j<<1] = dlt;
+		data[(j<<1)+1] = lowbyte;
+#else
+		data[j<<1] = lowbyte;
+		data[(j<<1)+1] = dlt;
+#endif
+	}
+
+	slurp_seek(fp, startpos + v, SEEK_SET);
+
+	return v;
+}
