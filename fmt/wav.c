@@ -205,8 +205,6 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 	smp->c5speed       = fmt.freqHz;
 	smp->length        = data_chunk.size / ((fmt.bitspersample / 8) * fmt.channels);
 
-	printf("%d\n", smp->length);
-
 	if (load_sample) {
 		int crap = iff_read_sample(&data_chunk, fp, smp, flags, 0);
 		printf("%d\n", crap);
