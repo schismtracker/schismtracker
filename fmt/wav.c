@@ -206,9 +206,7 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 	smp->length        = data_chunk.size / ((fmt.bitspersample / 8) * fmt.channels);
 
 	if (load_sample) {
-		int crap = iff_read_sample(&data_chunk, fp, smp, flags, 0);
-		printf("%d\n", crap);
-		return crap;
+		return iff_read_sample(&data_chunk, fp, smp, flags, 0);
 	} else {
 		if (fmt.channels == 2)
 			smp->flags |= CHN_STEREO;
