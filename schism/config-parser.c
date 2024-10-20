@@ -333,7 +333,6 @@ int cfg_write(cfg_file_t *cfg)
 {
 	struct cfg_section *section;
 	struct cfg_key *key;
-	FILE *fp;
 
 	if (!cfg->filename) {
 		/* FIXME | don't print a message here! this should be considered library code.
@@ -346,10 +345,8 @@ int cfg_write(cfg_file_t *cfg)
 		return 0;
 	cfg->dirty = 0;
 
-	dmoz_path_make_backup(cfg->filename, 0);
-
-	fp = os_fopen(cfg->filename, "wb");
-	if (!fp) {
+	disko_t fp = {0};
+	if (disko_open(&fp, cfg->filename) < 0) {
 		/* FIXME: don't print a message here! */
 		perror(cfg->filename);
 		return -1;
@@ -359,33 +356,49 @@ int cfg_write(cfg_file_t *cfg)
 
 	for (section = cfg->sections; section; section = section->next) {
 		if (section->comments)
-			fprintf(fp, "%s", section->comments);
-		if (section->omit) fputc('#', fp);
-		fprintf(fp, "[%s]\n", section->name);
+			disko_write(&fp, section->comments, strlen(section->comments));
+
+		if (section->omit)
+			disko_putc(&fp, '#');
+
+		disko_putc(&fp, '[');
+		disko_write(&fp, section->name, strlen(section->name));
+		disko_putc(&fp, ']');
+		disko_putc(&fp, '\n');
+
 		for (key = section->keys; key; key = key->next) {
 			/* NOTE: key names are intentionally not escaped in any way;
 			 * it is up to the program to choose names that aren't stupid.
 			 * (cfg_delete_key uses this to comment out a key name) */
 			if (key->comments)
-				fprintf(fp, "%s", key->comments);
-			if (section->omit) fputc('#', fp);
+				disko_write(&fp, key->comments, strlen(key->comments));
+
+			if (section->omit)
+				disko_putc(&fp, '#');
+
 			/* TODO | if no keys in a section have defined values,
 			 * TODO | comment out the section header as well. (this
 			 * TODO | might be difficult since it's already been
 			 * TODO | written to the file) */
 			if (key->value) {
 				char *tmp = str_escape(key->value, 1);
-				fprintf(fp, "%s=%s\n", key->name, tmp);
+				disko_write(&fp, key->name, strlen(key->name));
+				disko_putc(&fp, '=');
+				disko_write(&fp, tmp, strlen(tmp));
+				disko_putc(&fp, '\n');
 				free(tmp);
 			} else {
-				fprintf(fp, "# %s=(undefined)\n", key->name);
+				disko_write(&fp, "# ", ARRAY_SIZE("# "));
+				disko_write(&fp, key->name, strlen(key->name));
+				disko_write(&fp, "=(undefined)\n", ARRAY_SIZE("=(undefined)\n"));
 			}
 		}
 	}
-	if (cfg->eof_comments)
-		fprintf(fp, "%s", cfg->eof_comments);
 
-	fclose(fp);
+	if (cfg->eof_comments)
+		disko_write(&fp, cfg->eof_comments, strlen(cfg->eof_comments));
+
+	disko_close(&fp, 1);
 
 	return 0;
 }

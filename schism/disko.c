@@ -279,6 +279,10 @@ int disko_open(disko_t *ds, const char *filename)
 	return 0;
 }
 
+/* weird stupid magic numbers:
+ *  backup == 0, no backup
+ *  backup == 1, backup with ~
+ *  else, backup with numberings */
 int disko_close(disko_t *ds, int backup)
 {
 	int err = ds->error;
