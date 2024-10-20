@@ -579,12 +579,10 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		tid = "Impulse Tracker %d.%02x";
 		if (hdr.cmwt > 0x0214) {
 			hdr.cwtv = 0x0215;
-		} else if (hdr.cwtv > 0x0214) {
-			// Patched update of IT 2.14 (0x0215 - 0x0217 == p1 - p3)
-			// p4 (as found on modland) adds the ITVSOUND driver, but doesn't seem to change
-			// anything as far as file saving is concerned.
+		} else if (hdr.cwtv >= 0x0215 && hdr.cwtv <= 0x0217) {
 			tid = NULL;
-			sprintf(song->tracker_id, "Impulse Tracker 2.14p%d", hdr.cwtv - 0x0214);
+			const char *versions[] = { "1-2", "3", "4-5" };
+			sprintf(song->tracker_id, "Impulse Tracker 2.14p%s", versions[hdr.cwtv - 0x0215]);
 		}
 		//"saved %d time%s", hist, (hist == 1) ? "" : "s"
 	}
