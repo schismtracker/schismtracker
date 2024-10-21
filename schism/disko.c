@@ -213,18 +213,11 @@ void disko_seterror(disko_t *ds, int err)
 
 int disko_open(disko_t *ds, const char *filename)
 {
-	size_t len;
 	int fd;
 	int err;
 
 	if (!filename)
 		return -1;
-
-	len = strlen(filename);
-	if (len + 6 >= PATH_MAX) {
-		errno = ENAMETOOLONG;
-		return -1;
-	}
 
 #ifndef SCHISM_WII /* FIXME - make a replacement access() */
 	// Attempt to honor read-only (since we're writing them in such a roundabout way)
@@ -235,27 +228,31 @@ int disko_open(disko_t *ds, const char *filename)
 	if (!ds)
 		return -1;
 
-	memcpy(ds->filename, filename, len * sizeof(char));
-	memcpy(ds->tempname, filename, len * sizeof(char));
-	memcpy(ds->tempname + len, "XXXXXX", 6 * sizeof(char));
+	if (asprintf(&ds->tempname, "%sXXXXXX", filename) < 0)
+		return -1;
+
+	ds->filename = str_dup(filename);
 
 #ifdef SCHISM_WIN32
 	{
-		if (win32_mktemp(ds->tempname, sizeof(ds->tempname)/sizeof(ds->tempname[0]))) {
-			free(ds);
+		if (win32_mktemp(ds->tempname, strlen(ds->tempname) + 1)) {
+			free(ds->tempname);
+			free(ds->filename);
 			return -1;
 		}
 
 		ds->file = win32_fopen(ds->tempname, "wb");
 		if (!ds->file) {
-			free(ds);
+			free(ds->tempname);
+			free(ds->filename);
 			return -1;
 		}
 	}
 #else
 	fd = mkstemp(ds->tempname);
 	if (fd == -1) {
-		free(ds);
+		free(ds->tempname);
+		free(ds->filename);
 		return -1;
 	}
 	ds->file = fdopen(fd, "wb");
@@ -263,7 +260,8 @@ int disko_open(disko_t *ds, const char *filename)
 		err = errno;
 		close(fd);
 		unlink(ds->tempname);
-		free(ds);
+		free(ds->tempname);
+		free(ds->filename);
 		errno = err;
 		return -1;
 	}
@@ -322,6 +320,9 @@ int disko_close(disko_t *ds, int backup)
 	// If anything failed so far, kill off the temp file
 	if (err)
 		unlink(ds->tempname);
+
+	free(ds->tempname);
+	free(ds->filename);
 
 	if (err) {
 		errno = err;

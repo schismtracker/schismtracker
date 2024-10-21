@@ -25,11 +25,6 @@
 
 #include <sys/types.h>
 
-// hurd doesn't have limits.h
-#ifdef __GNU__
-#define PATH_MAX 4096
-#endif
-
 typedef struct disko disko_t;
 struct disko {
 	// Functions whose implementation depends on the backend in use
@@ -40,10 +35,10 @@ struct disko {
 	long (*_tell)(disko_t *ds);
 
 	// Temporary filename that's being written to
-	char tempname[PATH_MAX];
+	char *tempname;
 
 	// Name to change it to on close (if successful)
-	char filename[PATH_MAX];
+	char *filename;
 
 	// these could be unionized
 	// file pointer (only exists for disk files)
