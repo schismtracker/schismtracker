@@ -63,16 +63,18 @@ static void win32_unmap_(slurp_t *slurp)
 static int win32_error_unmap_(slurp_t *slurp, const char *filename, const char *function)
 {
 	DWORD err = GetLastError();
-	LPTSTR errmsg;
-	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+	LPWSTR errmsg = NULL;
+	FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
 		      err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), errmsg, 0, NULL);
 	// I don't particularly want to split this stuff onto two lines, but
 	// it's the only way to make the error message readable in some cases
 	// (though no matter what, the message is still probably going to be
 	// truncated because Windows is excessively verbose)
 	log_appendf(4, "%s: %s: error %lu:", filename, function, err);
-	log_appendf(4, "  %s", errmsg);
-	LocalFree(errmsg);
+	if (errmsg) {
+		log_appendf(4, "  %ls", errmsg);
+		LocalFree(errmsg);
+	}
 	win32_unmap_(slurp);
 	return 0;
 }
