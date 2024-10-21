@@ -140,6 +140,8 @@ finished: ; /* this semicolon is important because C */
  * Does NOT free the input. */
 int slurp_memstream(slurp_t *t, uint8_t *mem, size_t memsize)
 {
+	*t = (slurp_t){0};
+
 	t->seek = slurp_memory_seek_;
 	t->tell = slurp_memory_tell_;
 	t->eof  = slurp_memory_eof_;
