@@ -258,7 +258,6 @@ void font_init(void)
 	memcpy(font_half_data, font_half_width, 1024);
 
 	if (font_load(cfg_font) != 0) {
-		printf("%s\n", SDL_GetError());
 		SDL_ClearError();
 		font_reset();
 	}
