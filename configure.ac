@@ -452,6 +452,10 @@ if test x$ADD_WARN \!= xno; then
 	CFLAGS="$ADD_WARN $CFLAGS"
 fi
 
+dnl Unlike a grand -Werror, this one could be rather important:
+dnl functions returning random values are no good under any circumstances.
+AS_IF([test ${ac_cv_c_compiler_gnu+y}], [CFLAGS="$CFLAGS -Werror=return-type"])
+
 if test x$ADD_PROFILING \!= xno || test x$ADD_DEBUG \!= xno; then
 	CFLAGS="$CFLAGS -g -O0"
 	OBJCFLAGS="$OBJCFLAGS -g -O0"
