@@ -35,6 +35,7 @@
 #include "widget.h"
 #include "vgamem.h"
 #include "osdefs.h"
+#include "util.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -46,10 +47,12 @@
 #include <errno.h>
 
 /* --------------------------------------------------------------------------------------------------------- */
-/* the locals */
+/* the locals + setters */
 
 static struct widget widgets_loadinst[1];
-static char inst_cwd[PATH_MAX+1] = "";
+static char *inst_cwd = NULL;
+
+#define SET_INST_CWD(path) str_realloc(&inst_cwd, path, 0)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -69,8 +72,9 @@ static int _library_mode = 0;
 static dmoz_filelist_t flist;
 #define current_file flist.selected
 
+/* why is this called "mode" ?? */
 static int slash_search_mode = -1;
-static char slash_search_str[PATH_MAX];
+static uint8_t *slash_search_str = NULL;
 
 /* get a color index from a dmoz_file_t 'type' field */
 static inline int get_type_color(int type)
@@ -143,12 +147,11 @@ static int change_dir(const char *dir)
 
 	dmoz_cache_update(inst_cwd, &flist, NULL);
 
-	if (os_stat(ptr, &buf) == 0 && S_ISDIR(buf.st_mode)) {
-		strncpy(cfg_dir_instruments, ptr, PATH_MAX);
-		cfg_dir_instruments[PATH_MAX] = 0;
-	}
-	strncpy(inst_cwd, ptr, PATH_MAX);
-	inst_cwd[PATH_MAX] = 0;
+	if (os_stat(ptr, &buf) == 0 && S_ISDIR(buf.st_mode))
+		str_realloc(&cfg_dir_instruments, ptr, 0);
+
+	SET_INST_CWD(ptr);
+
 	free(ptr);
 
 	read_directory();
@@ -171,9 +174,8 @@ static void _common_set_page(void)
 {
 	struct stat st;
 
-	if (!inst_cwd[0]) {
-		strcpy(inst_cwd, cfg_dir_instruments);
-	}
+	if (!inst_cwd)
+		SET_INST_CWD(cfg_dir_instruments);
 
 	/* if we have a list, the directory didn't change, and the mtime is the same, we're set */
 	if (flist.num_files > 0
@@ -286,16 +288,15 @@ static void dont_enable_inst(UNUSED void *d)
 static void reposition_at_slash_search(void)
 {
 	dmoz_file_t *f;
-	int i, j, b, bl;
+	int i, b = -1, bl = -1;
 
 	if (slash_search_mode < 0) return;
-	bl = b = -1;
 
 	for (i = 0; i < flist.num_files; i++) {
 		f = flist.files[i];
 		if (!f || !f->base) continue;
 
-		j = charset_strncasecmplen(f->base, CHARSET_CHAR, slash_search_str, CHARSET_CP437, slash_search_mode);
+		int j = charset_strncasecmplen(f->base, CHARSET_CHAR, slash_search_str, CHARSET_CP437, slash_search_mode);
 		if (bl < j) {
 			bl = j;
 			b = i;
@@ -373,18 +374,29 @@ static void do_delete_file(UNUSED void *data)
 
 static int file_list_handle_text_input(const uint8_t* text) {
 	dmoz_file_t* f = flist.files[current_file];
+	size_t text_len = strlen(text);
 
-	for (; *text; text++) {
-		if (*text >= 32 && (slash_search_mode > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
-			if (slash_search_mode < 0) slash_search_mode = 0;
-			if (slash_search_mode < PATH_MAX) {
-				slash_search_str[slash_search_mode++] = *text;
-				reposition_at_slash_search();
-				status.flags |= NEED_UPDATE;
-			}
-			return 1;
-		}
+	if (slash_search_mode > -1 || (f && (f->type & TYPE_DIRECTORY))) {
+		size_t slash_search_len = (slash_search_str) ? strlen(slash_search_str) : 0;
+
+		if (slash_search_mode < 0)
+			slash_search_mode = 0;
+
+		/* realloc memory if necessary */
+		if (slash_search_mode + text_len >= slash_search_len)
+			slash_search_str = realloc(slash_search_str, (slash_search_mode + text_len) * sizeof(char));
+
+		/* now copy the data */
+		for (int i = 0; i < text_len; i++)
+			slash_search_str[slash_search_mode + i] = (char)text[i];
+
+		slash_search_mode += text_len;
+
+		reposition_at_slash_search();
+		status.flags |= NEED_UPDATE;
+		return 1;
 	}
+
 	return 0;
 }
 

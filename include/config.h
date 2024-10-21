@@ -38,13 +38,13 @@ extern int cfg_video_width, cfg_video_height;
 extern int cfg_video_want_menu_bar;
 #endif
 
-extern char cfg_dir_modules[], cfg_dir_samples[], cfg_dir_instruments[];
-extern char cfg_dir_dotschism[]; /* the full path to ~/.schism */
-extern char cfg_font[];
+extern char *cfg_dir_modules, *cfg_dir_samples, *cfg_dir_instruments;
+extern char *cfg_dir_dotschism; /* the full path to ~/.schism */
+extern char *cfg_font;
 extern int cfg_palette;
 
-extern char cfg_module_pattern[];
-extern char cfg_export_pattern[];
+extern char *cfg_module_pattern;
+extern char *cfg_export_pattern;
 
 void cfg_init_dir(void);
 void cfg_load(void);

@@ -44,4 +44,6 @@ char *str_pretty_name(const char *filename);
 int str_get_num_lines(const char *text);
 char *str_concat(const char *s, ...);
 
+int str_realloc(char **output, const char *input, size_t len);
+
 #endif
