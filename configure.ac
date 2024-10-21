@@ -163,9 +163,6 @@ if test "x$utf8proc_found" = "xno"; then
 	AC_MSG_ERROR([*** Failed to find utf8proc])
 fi
 
-AC_SUBST([UTF8PROC_CFLAGS])
-AC_SUBST([UTF8PROC_LIBS])
-
 dnl Functions
 AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp mmap nice unsetenv dup fnmatch mkstemp localtime_r umask execl fork)
 AM_CONDITIONAL([NEED_ASPRINTF], [test "x$ac_cv_func_asprintf" = "xno"])
@@ -355,8 +352,6 @@ if test "x$with_flac" = "xcheck" || test "x$with_flac" = "xyes"; then
 	dnl use pkg-config, it'll deal with everything for us
 	PKG_CHECK_MODULES([FLAC], [flac], [libflac_found=yes], [libflac_found=no])
 	if test "x$libflac_found" = "xyes"; then
-		AC_SUBST([FLAC_CFLAGS])
-		AC_SUBST([FLAC_LIBS])
 		AC_DEFINE([USE_FLAC], [1], [FLAC support])
 		AM_CONDITIONAL([USE_FLAC], true)
 	elif test "x$with_flac" = "xyes"; then
@@ -369,11 +364,9 @@ AM_CONDITIONAL([LINK_TO_JACK], false)
 if test "x$with_jack" = "xcheck" || test "x$with_jack" = "xyes"; then
 	PKG_CHECK_MODULES([JACK], [jack], [jack_found=yes], [jack_found=no])
 	if test "x$jack_found" = "xyes"; then
-		AC_SUBST([JACK_CFLAGS])
 		AM_CONDITIONAL([USE_JACK], true)
 		AC_DEFINE([USE_JACK], [1], [JACK MIDI support])
 		if test "x$JACK_LINKING" = "xyes"; then
-			AC_SUBST([JACK_LIBS])
 			AM_CONDITIONAL([LINK_TO_JACK], true)
 		else
 			AC_DEFINE([JACK_DYNAMIC_LOAD], [1], [Dynamically load JACK symbols])
