@@ -86,7 +86,9 @@ static int top_line = 0;
 static const char blank_line[] = {LTYPE_NORMAL, '\0'};
 static const char separator_line[] = {LTYPE_SEPARATOR, '\0'};
 
-static int help_text_lastpos[HELP_NUM_ITEMS] = {0};
+static int help_text_current_page = PAGE_GLOBAL;
+static int help_text_current_help_index = 0;
+static int help_text_lastpos[PAGE_MAX] = {0};
 
 /* This isn't defined in an .h file since it's only used here. */
 extern const char *help_text[];
@@ -111,6 +113,7 @@ static void help_redraw(void)
 	draw_fill_chars(2, 13, 77, 44, DEFAULT_FG, 0);
 
 	ptr = lines + top_line;
+
 	for (pos = 13, n = top_line; pos < 45; pos++, n++) {
 		switch (**ptr) {
 		default:
@@ -156,47 +159,25 @@ static int help_handle_key(struct key_event * k)
 		new_line -= MOUSE_SCROLL_LINES;
 	} else if (k->mouse == MOUSE_SCROLL_DOWN) {
 		new_line += MOUSE_SCROLL_LINES;
-
 	} else if (k->mouse != MOUSE_NONE) {
 		return 0;
 	}
-	switch (k->sym) {
-	case SDLK_ESCAPE:
-		if (k->state == KEY_RELEASE)
-			return 1;
+
+	if (KEY_PRESSED(global, nav_cancel)) {
 		set_page(status.previous_page);
-		return 1;
-	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		new_line--;
-		break;
-	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		new_line++;
-		break;
-	case SDLK_PAGEUP:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 		new_line -= 32;
-		break;
-	case SDLK_PAGEDOWN:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 		new_line += 32;
-		break;
-	case SDLK_HOME:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		new_line = 0;
-		break;
-	case SDLK_END:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		new_line = num_lines - 32;
-		break;
-	default:
+	} else {
 		if (k->mouse != MOUSE_NONE) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -208,7 +189,7 @@ static int help_handle_key(struct key_event * k)
 	new_line = CLAMP(new_line, 0, num_lines - 32);
 	if (new_line != top_line) {
 		top_line = new_line;
-		help_text_lastpos[status.current_help_index] = top_line;
+		help_text_lastpos[help_text_current_page] = top_line;
 		status.flags |= NEED_UPDATE;
 	}
 
@@ -219,18 +200,22 @@ static int help_handle_key(struct key_event * k)
 
 static void help_set_page(void)
 {
+	int new_page = status.previous_page;
+	int new_help_index = status.current_help_index;
+
+	if (new_page == help_text_current_page && new_help_index == help_text_current_help_index) {
+		return;
+	}
+
+	help_text_current_page = new_page;
+	help_text_current_help_index = new_help_index;
+
 	const char *ptr;
 	int local_lines = 0, global_lines = 0, cur_line = 0;
 	int have_local_help = (status.current_help_index != HELP_GLOBAL);
 
 	widget_change_focus_to(1);
-	top_line = help_text_lastpos[status.current_help_index];
-
-	lines = CURRENT_HELP_LINECACHE;
-	if (lines) {
-		num_lines = CURRENT_HELP_LINECOUNT;
-		return;
-	}
+	top_line = help_text_lastpos[help_text_current_page];
 
 	/* how many lines? */
 	global_lines = str_get_num_lines(help_text[HELP_GLOBAL]);
@@ -240,6 +225,11 @@ static void help_set_page(void)
 	} else {
 		num_lines = global_lines + 2;
 	}
+
+	// previous_page because the current page is now PAGE_HELP :)
+	char* keybinds_help = keybinds_get_help_text(status.previous_page);
+	int keybinds_help_lines = str_count_occurrences('\n', keybinds_help);
+	num_lines += keybinds_help_lines;
 
 	/* allocate the array */
 	lines = CURRENT_HELP_LINECACHE = mem_calloc(num_lines + 1, sizeof(char *));
@@ -265,6 +255,16 @@ static void help_set_page(void)
 		lines[cur_line++] = separator_line;
 	}
 	lines[cur_line++] = blank_line;
+
+    char *strtok_ptr;
+    const char* delim = "\n";
+
+    for(int i = 0;; i++) {
+        const char* next = strtok_r(i == 0 ? keybinds_help : NULL, delim, &strtok_ptr);
+		if (next == NULL) break;
+		lines[cur_line] = strdup(next);
+		cur_line++;
+    }
 
 	/* global help text */
 	ptr = help_text[HELP_GLOBAL];
@@ -295,7 +295,9 @@ static void help_set_page(void)
 
 void help_load_page(struct page *page)
 {
-	page->title = "Help";
+	char* shortcut_text = (char*)global_keybinds_list.global.help.shortcut_text_parens;
+	page->title = STR_CONCAT(2, "Help", shortcut_text);
+
 	page->draw_const = help_draw_const;
 	page->set_page = help_set_page;
 	page->total_widgets = 2;

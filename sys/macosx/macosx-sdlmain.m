@@ -42,6 +42,7 @@ extern char *initial_song;
 #include <SDL.h> /* necessary here */
 #include "event.h"
 #include "osdefs.h"
+#include "keybinds.h"
 
 #include <crt_externs.h>
 
@@ -76,8 +77,6 @@ extern OSErr CPSSetProcessName(CPSProcessSerNum *psn, char *processname);
 extern OSErr CPSSetFrontProcess(CPSProcessSerNum *psn);
 
 static int macosx_did_finderlaunch;
-
-#define KEQ_FN(n) [NSString stringWithFormat:@"%C", (unichar)(NSF##n##FunctionKey)]
 
 @interface NSApplication(OtherMacOSXExtensions)
 -(void)setAppleMenu:(NSMenu*)m;
@@ -165,7 +164,6 @@ static int macosx_did_finderlaunch;
 		CFRelease(url);
 		CFRelease(url2);
 	}
-
 }
 
 /* Called when the internal event loop has just started running */
@@ -180,6 +178,64 @@ static int macosx_did_finderlaunch;
 @end /* @implementation SchismTracker */
 
 /* ------------------------------------------------------- */
+
+/* building the menus */
+
+static NSString *get_key_equivalent(keybind_bind_t *bind)
+{
+	const keybind_shortcut_t* shortcut = &bind->shortcuts[0];
+	const SDL_Keycode kc = (shortcut->keycode != SDLK_UNKNOWN)
+		? (shortcut->keycode)
+		: (shortcut->scancode != SDL_SCANCODE_UNKNOWN)
+			? SDL_GetKeyFromScancode(shortcut->scancode)
+			: SDLK_UNKNOWN;
+
+	if (kc == SDLK_UNKNOWN)
+		return @"";
+
+	switch (kc) {
+#define KEQ_FN(n) [NSString stringWithFormat:@"%C", (unichar)(NSF##n##FunctionKey)]
+	case SDLK_F1:  return KEQ_FN(1);
+	case SDLK_F2:  return KEQ_FN(2);
+	case SDLK_F3:  return KEQ_FN(3);
+	case SDLK_F4:  return KEQ_FN(4);
+	case SDLK_F5:  return KEQ_FN(5);
+	case SDLK_F6:  return KEQ_FN(6);
+	case SDLK_F7:  return KEQ_FN(7);
+	case SDLK_F8:  return KEQ_FN(8);
+	case SDLK_F9:  return KEQ_FN(9);
+	case SDLK_F10: return KEQ_FN(10);
+	case SDLK_F11: return KEQ_FN(11);
+	case SDLK_F12: return KEQ_FN(12);
+#undef KEQ_FN
+	default:
+		/* unichar is 16-bit, can't hold more than that */
+		if (kc & 0x80000000 || kc > 0xFFFF)
+			return @"";
+
+		return [NSString stringWithFormat:@"%C", (unichar)kc];
+	}
+}
+
+static int get_key_equivalent_modifier(keybind_bind_t *bind)
+{
+	const SDL_Keymod mod = bind->shortcuts[0].modkey;
+	int modifiers = 0;
+
+	if (mod & KMOD_CTRL)
+		modifiers |= NSControlKeyMask;
+
+	if (mod & KMOD_SHIFT)
+		modifiers |= NSShiftKeyMask;
+
+	if (mod & KMOD_ALT)
+		modifiers |= NSAlternateKeyMask;
+
+	if (mod & KMOD_GUI)
+		modifiers |= NSCommandKeyMask;
+
+	return modifiers;
+}
 
 static void setApplicationMenu(void)
 {
