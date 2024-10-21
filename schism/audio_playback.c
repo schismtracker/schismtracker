@@ -302,10 +302,20 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	song_sample_t *s = NULL;
 	song_instrument_t *i = NULL;
 
-	if (chan == KEYJAZZ_CHAN_CURRENT) {
-		chan = current_play_channel;
+	if (chan < 1) {
+		if (chan == KEYJAZZ_CHAN_CURRENT)
+			chan = current_play_channel;
 		if (multichannel_mode)
 			song_change_current_play_channel(1, 1);
+		else if (chan == KEYJAZZ_CHAN_AUTO) {
+			chan = current_play_channel;
+			do {
+				if (!keyjazz_chan_to_note[chan]) break;
+				else chan++;
+			} while (chan <= MAX_CHANNELS + 1);
+			if (chan > MAX_CHANNELS)
+				chan = current_play_channel;
+		}
 	}
     // back to the 0..63 range
     int chan_internal = chan -1;
