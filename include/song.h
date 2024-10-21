@@ -276,6 +276,8 @@ KEYJAZZ_INST_FAKE to keydown/up, since zero conflicts with the standard "use pre
 behavior which is normally internal, but is exposed on the pattern editor where it's possible to explicitly
 select sample #0. (note: this is a hack to work around another hack) */
 #define KEYJAZZ_CHAN_CURRENT 0
+// For automatic channel allocation when playing chords in the instrument editor.
+#define KEYJAZZ_CHAN_AUTO -1
 #define KEYJAZZ_NOINST -1
 #define KEYJAZZ_DEFAULTVOL -1
 #define KEYJAZZ_INST_FAKE -2
