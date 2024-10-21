@@ -490,9 +490,10 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				tid = "Impulse Tracker %" PRIu8 ".%02" PRIx8;
 			} else if (trkvers == 0x3320) {
 				tid = "Impulse Tracker 1.03";  // Could also be 1.02, maybe? I don't have that one
-			} else {
+			} else if(trkvers >= 0x3215 && trkvers <= 0x3217) {
 				tid = NULL;
-				sprintf(song->tracker_id, "Impulse Tracker 2.14p" PRIu16, (uint16_t)(trkvers - 0x3214));
+				const char *versions[] = { "1-2", "3", "4-5" };
+				sprintf(song->tracker_id, "Impulse Tracker 2.14p%s", versions[trkvers - 0x3215]);
 			}
 			break;
 		case 4:

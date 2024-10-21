@@ -75,12 +75,6 @@ static void _dw_stdio_write(disko_t *ds, const void *buf, size_t len)
 		disko_seterror(ds, errno);
 }
 
-static void _dw_stdio_putc(disko_t *ds, int c)
-{
-	if (fputc(c, ds->file) == EOF)
-		disko_seterror(ds, errno);
-}
-
 static void _dw_stdio_seek(disko_t *ds, long pos, int whence)
 {
 	if (fseek(ds->file, pos, whence) < 0)
@@ -131,12 +125,6 @@ static void _dw_mem_write(disko_t *ds, const void *buf, size_t len)
 	}
 }
 
-static void _dw_mem_putc(disko_t *ds, int c)
-{
-	if (_dw_bufcheck(ds, 1))
-		ds->data[ds->pos++] = c;
-}
-
 static void _dw_mem_seek(disko_t *ds, long offset, int whence)
 {
 	// mostly from slurp_seek
@@ -177,10 +165,9 @@ void disko_write(disko_t *ds, const void *buf, size_t len)
 		ds->_write(ds, buf, len);
 }
 
-void disko_putc(disko_t *ds, int c)
+void disko_putc(disko_t *ds, unsigned char c)
 {
-	if (!ds->error)
-		ds->_putc(ds, c);
+	disko_write(ds, &c, sizeof(c));
 }
 
 void disko_seek(disko_t *ds, long pos, int whence)
@@ -213,18 +200,11 @@ void disko_seterror(disko_t *ds, int err)
 
 int disko_open(disko_t *ds, const char *filename)
 {
-	size_t len;
 	int fd;
 	int err;
 
 	if (!filename)
 		return -1;
-
-	len = strlen(filename);
-	if (len + 6 >= PATH_MAX) {
-		errno = ENAMETOOLONG;
-		return -1;
-	}
 
 #ifndef SCHISM_WII /* FIXME - make a replacement access() */
 	// Attempt to honor read-only (since we're writing them in such a roundabout way)
@@ -235,27 +215,33 @@ int disko_open(disko_t *ds, const char *filename)
 	if (!ds)
 		return -1;
 
-	memcpy(ds->filename, filename, len * sizeof(char));
-	memcpy(ds->tempname, filename, len * sizeof(char));
-	memcpy(ds->tempname + len, "XXXXXX", 6 * sizeof(char));
+	*ds = (disko_t){0};
+
+	if (asprintf(&ds->tempname, "%sXXXXXX", filename) < 0)
+		return -1;
+
+	ds->filename = str_dup(filename);
 
 #ifdef SCHISM_WIN32
 	{
-		if (win32_mktemp(ds->tempname, sizeof(ds->tempname)/sizeof(ds->tempname[0]))) {
-			free(ds);
+		if (win32_mktemp(ds->tempname, strlen(ds->tempname) + 1)) {
+			free(ds->tempname);
+			free(ds->filename);
 			return -1;
 		}
 
 		ds->file = win32_fopen(ds->tempname, "wb");
 		if (!ds->file) {
-			free(ds);
+			free(ds->tempname);
+			free(ds->filename);
 			return -1;
 		}
 	}
 #else
 	fd = mkstemp(ds->tempname);
 	if (fd == -1) {
-		free(ds);
+		free(ds->tempname);
+		free(ds->filename);
 		return -1;
 	}
 	ds->file = fdopen(fd, "wb");
@@ -263,7 +249,8 @@ int disko_open(disko_t *ds, const char *filename)
 		err = errno;
 		close(fd);
 		unlink(ds->tempname);
-		free(ds);
+		free(ds->tempname);
+		free(ds->filename);
 		errno = err;
 		return -1;
 	}
@@ -274,11 +261,14 @@ int disko_open(disko_t *ds, const char *filename)
 	ds->_write = _dw_stdio_write;
 	ds->_seek = _dw_stdio_seek;
 	ds->_tell = _dw_stdio_tell;
-	ds->_putc = _dw_stdio_putc;
 
 	return 0;
 }
 
+/* weird stupid magic numbers:
+ *  backup == 0, no backup
+ *  backup == 1, backup with ~
+ *  else, backup with numberings */
 int disko_close(disko_t *ds, int backup)
 {
 	int err = ds->error;
@@ -319,6 +309,9 @@ int disko_close(disko_t *ds, int backup)
 	if (err)
 		unlink(ds->tempname);
 
+	free(ds->tempname);
+	free(ds->filename);
+
 	if (err) {
 		errno = err;
 		return DW_ERROR;
@@ -333,6 +326,8 @@ int disko_memopen(disko_t *ds)
 	if (!ds)
 		return -1;
 
+	*ds = (disko_t){0};
+
 	ds->data = calloc(DW_BUFFER_SIZE, sizeof(uint8_t));
 	if (!ds->data)
 		return -1;
@@ -342,7 +337,6 @@ int disko_memopen(disko_t *ds)
 	ds->_write = _dw_mem_write;
 	ds->_seek = _dw_mem_seek;
 	ds->_tell = _dw_mem_tell;
-	ds->_putc = _dw_mem_putc;
 
 	return 0;
 }

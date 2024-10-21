@@ -40,7 +40,7 @@ enum {
 typedef struct slurp_struct_ slurp_t;
 struct slurp_struct_ {
 	/* stdio-style interfaces */
-	int (*seek)(slurp_t *, long, int);
+	int (*seek)(slurp_t *, int64_t, int);
 	int64_t (*tell)(slurp_t *);
 	size_t (*peek)(slurp_t *, void *, size_t);
 	size_t (*read)(slurp_t *, void *, size_t);

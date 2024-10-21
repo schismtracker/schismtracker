@@ -34,24 +34,9 @@
 #include <errno.h>
 #include <fcntl.h>
 
-/* The dup's are because fclose closes its file descriptor even if the FILE* was acquired with fdopen, and when
-the control gets back to slurp, it closes the fd (again). It doesn't seem to exist on Amiga OS though, so... */
-#ifndef HAVE_DUP
-# define dup(fd) fd
-#endif
-
-/* I hate this... */
-#ifndef O_BINARY
-# ifdef O_RAW
-#  define O_BINARY O_RAW
-# else
-#  define O_BINARY 0
-# endif
-#endif
-
 static int slurp_stdio_open_(slurp_t *t, const char *filename);
 static int slurp_stdio_open_file_(slurp_t *t, FILE *fp);
-static int slurp_stdio_seek_(slurp_t *t, long offset, int whence);
+static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence);
 static int64_t slurp_stdio_tell_(slurp_t *t);
 static size_t slurp_stdio_peek_(slurp_t *t, void *ptr, size_t count);
 static size_t slurp_stdio_read_(slurp_t *t, void *ptr, size_t count);
@@ -59,7 +44,7 @@ static int slurp_stdio_eof_(slurp_t *t);
 static int slurp_stdio_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
 static void slurp_stdio_closure_(slurp_t *t);
 
-static int slurp_memory_seek_(slurp_t *t, long offset, int whence);
+static int slurp_memory_seek_(slurp_t *t, int64_t offset, int whence);
 static int64_t slurp_memory_tell_(slurp_t *t);
 static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count);
 static size_t slurp_memory_read_(slurp_t *t, void *ptr, size_t count);
@@ -155,6 +140,8 @@ finished: ; /* this semicolon is important because C */
  * Does NOT free the input. */
 int slurp_memstream(slurp_t *t, uint8_t *mem, size_t memsize)
 {
+	*t = (slurp_t){0};
+
 	t->seek = slurp_memory_seek_;
 	t->tell = slurp_memory_tell_;
 	t->eof  = slurp_memory_eof_;
@@ -199,7 +186,7 @@ static int slurp_stdio_open_file_(slurp_t *t, FILE *fp)
 	return SLURP_OPEN_SUCCESS;
 }
 
-static int slurp_stdio_seek_(slurp_t *t, long offset, int whence)
+static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence)
 {
 	return fseek(t->internal.stdio.fp, offset, whence);
 }
@@ -259,7 +246,7 @@ static int slurp_stdio_receive_(slurp_t *t, int (*callback)(const void *, size_t
 
 /* --------------------------------------------------------------------- */
 
-static int slurp_memory_seek_(slurp_t *t, long offset, int whence)
+static int slurp_memory_seek_(slurp_t *t, int64_t offset, int whence)
 {
 	switch (whence) {
 	default:

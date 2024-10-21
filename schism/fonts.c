@@ -135,12 +135,12 @@ void font_reset_char(int ch)
 
 /* --------------------------------------------------------------------- */
 
-static int squeeze_8x16_font(FILE * fp)
+static int squeeze_8x16_font(slurp_t *fp)
 {
 	uint8_t data_8x16[4096];
 	int n;
 
-	if (fread(data_8x16, 4096, 1, fp) != 1)
+	if (slurp_read(fp, data_8x16, 4096) != 1)
 		return -1;
 
 	for (n = 0; n < 2048; n++)
@@ -152,107 +152,104 @@ static int squeeze_8x16_font(FILE * fp)
 /* Hmm. I could've done better with this one. */
 int font_load(const char *filename)
 {
-	FILE *fp;
-	long pos;
+	int res = -1;
 	uint8_t data[4];
-	char *font_dir, *font_file;
+	char *font_file;
+	{
+		char *font_dir = dmoz_path_concat(cfg_dir_dotschism, "fonts");
+		font_file = dmoz_path_concat(font_dir, filename);
+		free(font_dir);
+	}
 
-	font_dir = dmoz_path_concat(cfg_dir_dotschism, "fonts");
-	font_file = dmoz_path_concat(font_dir, filename);
-	free(font_dir);
+	slurp_t fp = {0};
 
-	fp = os_fopen(font_file, "rb");
-	if (fp == NULL) {
+	if (slurp(&fp, font_file, NULL, 0) < 0) {
 		SDL_SetError("%s: %s", font_file, strerror(errno));
 		free(font_file);
 		return -1;
 	}
 
-	fseek(fp, 0, SEEK_END);
-	pos = ftell(fp);
-	if (pos == 2050) {
-		/* Probably an ITF. Check the version. */
-
-		fseek(fp, -2, SEEK_CUR);
-		if (fread(data, 2, 1, fp) < 1) {
+	size_t len = slurp_length(&fp);
+	switch (len) {
+	case 2048: /* raw font data */
+		break;
+	case 2050: /* *probably* an ITF */
+		slurp_seek(&fp, 2048, SEEK_SET);
+		if (slurp_read(&fp, data, 2) != 2) {
 			SDL_SetError("%s: %s", font_file,
-				     feof(fp) ? "Unexpected EOF on read" : strerror(errno));
-			fclose(fp);
+				     slurp_eof(&fp) ? "Unexpected EOF on read" : strerror(errno));
+			unslurp(&fp);
 			free(font_file);
 			return -1;
 		}
 		if (data[1] != 0x2 || (data[0] != 0x12 && data[0] != 9)) {
 			SDL_SetError("%s: Unsupported ITF file version %02x.%20x", font_file, data[1], data[0]);
-			fclose(fp);
+			unslurp(&fp);
 			free(font_file);
 			return -1;
 		}
-		rewind(fp);
-	} else if (pos == 2048) {
-		/* It's a raw file -- nothing else to check... */
-		rewind(fp);
-	} else if (pos == 4096) {
-		rewind(fp);
-		if (squeeze_8x16_font(fp) == 0) {
+		slurp_rewind(&fp);
+		break;
+	case 4096: /* raw font data, 8x16 */
+		if (squeeze_8x16_font(&fp) == 0) {
 			make_half_width_middot();
-			fclose(fp);
+			unslurp(&fp);
 			free(font_file);
 			return 0;
 		} else {
 			SDL_SetError("%s: %s", font_file,
-				     feof(fp) ? "Unexpected EOF on read" : strerror(errno));
-			fclose(fp);
+				     slurp_eof(&fp) ? "Unexpected EOF on read" : strerror(errno));
+			unslurp(&fp);
 			free(font_file);
 			return -1;
 		}
-	} else {
+		break;
+	default:
 		SDL_SetError("%s: Invalid font file", font_file);
-		fclose(fp);
+		unslurp(&fp);
 		free(font_file);
 		return -1;
 	}
 
-	if (fread(font_normal, 2048, 1, fp) != 1) {
+	if (slurp_read(&fp, font_normal, 2048) != 2048) {
 		SDL_SetError("%s: %s", font_file,
-			     feof(fp) ? "Unexpected EOF on read" : strerror(errno));
-		fclose(fp);
+			     slurp_eof(&fp) ? "Unexpected EOF on read" : strerror(errno));
+		unslurp(&fp);
 		free(font_file);
 		return -1;
 	}
 
 	make_half_width_middot();
 
-	fclose(fp);
+	unslurp(&fp);
 	free(font_file);
 	return 0;
 }
 
 int font_save(const char *filename)
 {
-	FILE *fp;
 	uint8_t ver[2] = { 0x12, 0x2 };
-	char *font_dir, *font_file;
+	char *font_file;
+	{
+		char *font_dir = dmoz_path_concat(cfg_dir_dotschism, "fonts");
+		font_file = dmoz_path_concat(font_dir, filename);
+		free(font_dir);
+	}
 
-	font_dir = dmoz_path_concat(cfg_dir_dotschism, "fonts");
-	font_file = dmoz_path_concat(font_dir, filename);
-	free(font_dir);
-
-	fp = os_fopen(font_file, "wb");
-	if (fp == NULL) {
+	disko_t fp = {0};
+	if (disko_open(&fp, font_file) < 0) {
 		SDL_SetError("%s: %s", font_file, strerror(errno));
 		free(font_file);
 		return -1;
 	}
 
-	if (fwrite(font_normal, 2048, 1, fp) < 1 || fwrite(ver, 2, 1, fp) < 1) {
-		SDL_SetError("%s: %s", font_file, strerror(errno));
-		fclose(fp);
-		free(font_file);
-		return -1;
-	}
+	disko_write(&fp, font_normal, 2048);
+	disko_write(&fp, ver, 2);
 
-	fclose(fp);
+	disko_close(&fp, 0);
+
 	free(font_file);
+
 	return 0;
 }
 
