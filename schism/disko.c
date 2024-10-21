@@ -75,12 +75,6 @@ static void _dw_stdio_write(disko_t *ds, const void *buf, size_t len)
 		disko_seterror(ds, errno);
 }
 
-static void _dw_stdio_putc(disko_t *ds, int c)
-{
-	if (fputc(c, ds->file) == EOF)
-		disko_seterror(ds, errno);
-}
-
 static void _dw_stdio_seek(disko_t *ds, long pos, int whence)
 {
 	if (fseek(ds->file, pos, whence) < 0)
@@ -131,12 +125,6 @@ static void _dw_mem_write(disko_t *ds, const void *buf, size_t len)
 	}
 }
 
-static void _dw_mem_putc(disko_t *ds, int c)
-{
-	if (_dw_bufcheck(ds, 1))
-		ds->data[ds->pos++] = c;
-}
-
 static void _dw_mem_seek(disko_t *ds, long offset, int whence)
 {
 	// mostly from slurp_seek
@@ -177,10 +165,9 @@ void disko_write(disko_t *ds, const void *buf, size_t len)
 		ds->_write(ds, buf, len);
 }
 
-void disko_putc(disko_t *ds, int c)
+void disko_putc(disko_t *ds, unsigned char c)
 {
-	if (!ds->error)
-		ds->_putc(ds, c);
+	disko_write(ds, &c, sizeof(c));
 }
 
 void disko_seek(disko_t *ds, long pos, int whence)
@@ -272,7 +259,6 @@ int disko_open(disko_t *ds, const char *filename)
 	ds->_write = _dw_stdio_write;
 	ds->_seek = _dw_stdio_seek;
 	ds->_tell = _dw_stdio_tell;
-	ds->_putc = _dw_stdio_putc;
 
 	return 0;
 }
@@ -347,7 +333,6 @@ int disko_memopen(disko_t *ds)
 	ds->_write = _dw_mem_write;
 	ds->_seek = _dw_mem_seek;
 	ds->_tell = _dw_mem_tell;
-	ds->_putc = _dw_mem_putc;
 
 	return 0;
 }
