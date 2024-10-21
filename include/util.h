@@ -26,14 +26,6 @@
 
 #include "headers.h"
 
-<<<<<<< HEAD
-#include <sys/stat.h> /* roundabout way to get time_t */
-#include <sys/types.h>
-#include <stddef.h> /* wchar_t */
-#include <stdint.h> /* uint32_t */
-
-=======
->>>>>>> master
 /* --------------------------------------------------------------------- */
 
 #define ARRAY_SIZE(a) ((signed)(sizeof(a)/sizeof(*(a))))
