@@ -30,7 +30,6 @@ struct disko {
 	// Functions whose implementation depends on the backend in use
 	// Use disko_write et al. instead of these.
 	void (*_write)(disko_t *ds, const void *buf, size_t len);
-	void (*_putc)(disko_t *ds, int c);
 	void (*_seek)(disko_t *ds, long offset, int whence);
 	long (*_tell)(disko_t *ds);
 
@@ -114,8 +113,8 @@ int disko_sync(void);
 /* Write data to the file, as in fwrite() */
 void disko_write(disko_t *ds, const void *buf, size_t len);
 
-/* Write one character (unsigned char, cast to int) */
-void disko_putc(disko_t *ds, int c);
+/* Write one character */
+void disko_putc(disko_t *ds, unsigned char c);
 
 /* Change file position. This CAN be used to seek past the end,
 but be cognizant that random data might exist in the "gap". */
