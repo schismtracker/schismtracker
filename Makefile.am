@@ -444,7 +444,7 @@ schismtracker_SOURCES = \
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
 
 schismtracker_CPPFLAGS = -I$(srcdir)/include -I. $(cppflags_wii) $(cppflags_wiiu)
-schismtracker_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
+schismtracker_CFLAGS = -Werror=return-type $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
 	$(cflags_version) $(cflags_win32) $(cflags_wii) \
 	$(cflags_macosx) $(cflags_flac) $(cflags_jack) \
