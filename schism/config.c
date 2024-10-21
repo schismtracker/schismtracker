@@ -37,6 +37,14 @@
 #include "dmoz.h"
 #include "osdefs.h"
 
+#if defined(SCHISM_WII) || defined(SCHISM_WIIU)
+#define DEFAULT_KEY_REPEAT_DELAY 500
+#define DEFAULT_KEY_REPEAT_RATE  30
+#else // use system defaults
+#define DEFAULT_KEY_REPEAT_DELAY 0
+#define DEFAULT_KEY_REPEAT_RATE  0
+#endif
+
 /* --------------------------------------------------------------------- */
 /* config settings */
 
@@ -55,42 +63,67 @@ int cfg_video_want_menu_bar = 1;
 
 /* --------------------------------------------------------------------- */
 
+static const char *schism_dotfolders[] = {
 #if defined(SCHISM_WIN32)
-# define DOT_SCHISM "Schism Tracker"
+	"Schism Tracker",
 #elif defined(SCHISM_MACOSX)
-# define DOT_SCHISM "Library/Application Support/Schism Tracker"
+	"Library/Application Support/Schism Tracker",
 #elif defined(SCHISM_WII)
-# define DOT_SCHISM "."
+	".",
 #else
-# define DOT_SCHISM ".schism"
+# ifdef __HAIKU__
+	"config/settings/schism",
+# else
+	".config/schism",
+# endif
+	".schism",
 #endif
+};
 
 void cfg_init_dir(void)
 {
 #if defined(__amigaos4__)
 	strcpy(cfg_dir_dotschism, "PROGDIR:");
 #else
-	char *app_dir, *portable_file;
+	char *portable_file = NULL;
 
-	app_dir = SDL_GetBasePath();
-	portable_file = dmoz_path_concat(app_dir, "portable.txt");
+	char *app_dir = SDL_GetBasePath();
+	if (app_dir)
+		portable_file = dmoz_path_concat(app_dir, "portable.txt");
 
-	if(is_file(portable_file)) {
+	if (portable_file && dmoz_path_is_file(portable_file)) {
 		printf("In portable mode.\n");
 
 		strncpy(cfg_dir_dotschism, app_dir, PATH_MAX);
 		cfg_dir_dotschism[PATH_MAX] = 0;
 	} else {
-		char *dot_dir, *ptr;
+		int found = 0;
+		char *dot_dir = dmoz_get_dot_directory();
 
-		dot_dir = get_dot_directory();
-		ptr = dmoz_path_concat(dot_dir, DOT_SCHISM);
-		strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
-		cfg_dir_dotschism[PATH_MAX] = 0;
-		free(dot_dir);
-		free(ptr);
+		for (size_t i = 0; i < ARRAY_SIZE(schism_dotfolders); i++) {
+			char *ptr;
 
-		if (!is_directory(cfg_dir_dotschism)) {
+			ptr = dmoz_path_concat(dot_dir, schism_dotfolders[i]);
+			strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
+			cfg_dir_dotschism[PATH_MAX] = 0;
+
+			free(ptr);
+
+			if (dmoz_path_is_directory(cfg_dir_dotschism)) {
+				found = 1;
+				break;
+			}
+		}
+
+		if (!found) {
+			char *ptr;
+
+			ptr = dmoz_path_concat(dot_dir, schism_dotfolders[0]);
+			strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
+			cfg_dir_dotschism[PATH_MAX] = 0;
+
+			free(ptr);
+
 			printf("Creating directory %s\n", cfg_dir_dotschism);
 			printf("Schism Tracker uses this directory to store your settings.\n");
 			if (os_mkdir(cfg_dir_dotschism, 0777) != 0) {
@@ -98,6 +131,8 @@ void cfg_init_dir(void)
 				fprintf(stderr, "Everything will still work, but preferences will not be saved.\n");
 			}
 		}
+
+		free(dot_dir);
 	}
 
 	SDL_free(app_dir);
@@ -110,12 +145,10 @@ void cfg_init_dir(void)
 static const char palette_trans[64] = ".0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 static void cfg_load_palette(cfg_file_t *cfg)
 {
-	char palette_text[49] = "";
-	cfg_get_string(cfg, "General", "palette_cur", palette_text, 48, "");
+	const char *palette_text = cfg_get_string(cfg, "General", "palette_cur", NULL, 0, NULL);
 
-	if(palette_text[0]) {
+	if (palette_text && strlen(palette_text) >= 48)
 		set_palette_from_string(palette_text);
-	}
 
 	palette_load_preset(cfg_get_number(cfg, "General", "palette", 2));
 }
@@ -124,11 +157,9 @@ static void cfg_save_palette(cfg_file_t *cfg)
 {
 	cfg_set_number(cfg, "General", "palette", current_palette_index);
 
-	if(current_palette_index == 0) {
-		char palette_text[49] = "";
-		palette_to_string(current_palette_index, palette_text);
-		cfg_set_string(cfg, "General", "palette_cur", palette_text);
-	}
+	char palette_text[48 + 1] = {0};
+	palette_to_string(0, palette_text);
+	cfg_set_string(cfg, "General", "palette_cur", palette_text);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -159,7 +190,7 @@ void cfg_load(void)
 	cfg_video_want_menu_bar = !!cfg_get_number(&cfg, "Video", "want_menu_bar", 1);
 #endif
 
-	tmp = get_home_directory();
+	tmp = dmoz_get_home_directory();
 	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, tmp);
 	cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, PATH_MAX, tmp);
 	cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, PATH_MAX, tmp);
@@ -187,8 +218,8 @@ void cfg_load(void)
 	else
 		status.fix_numlock_setting = NUMLOCK_HONOR;
 
-	kbd_set_key_repeat(cfg_get_number(&cfg, "General", "key_repeat_delay", 0),
-		       cfg_get_number(&cfg, "General", "key_repeat_rate", 0));
+	kbd_set_key_repeat(cfg_get_number(&cfg, "General", "key_repeat_delay", DEFAULT_KEY_REPEAT_DELAY),
+		       cfg_get_number(&cfg, "General", "key_repeat_rate", DEFAULT_KEY_REPEAT_RATE));
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 

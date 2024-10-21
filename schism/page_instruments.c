@@ -35,6 +35,7 @@
 #include "widget.h"
 #include "dialog.h"
 #include "vgamem.h"
+#include "osdefs.h"
 
 #include <sys/stat.h>
 
@@ -423,7 +424,7 @@ static void instrument_list_draw_list(void)
 		if (ins->played)
 			draw_char(is_playing[n] > 1 ? 183 : 173, 1, 13 + pos, is_playing[n] ? 3 : 1, 2);
 
-		draw_text(num99tostr(n, buf), 2, 13 + pos, 0, 2);
+		draw_text(str_from_num99(n, buf), 2, 13 + pos, 0, 2);
 		if (instrument_cursor_pos < 25) {
 			/* it's in edit mode */
 			if (is_current) {
@@ -630,7 +631,7 @@ static void note_trans_draw(void)
 		}
 		draw_char(0, 39, 16 + pos, 2, bg);
 		if (ins->sample_map[n]) {
-			num99tostr(ins->sample_map[n], buf);
+			str_from_num99(ins->sample_map[n], buf);
 		} else {
 			buf[0] = buf[1] = 173;
 			buf[2] = 0;

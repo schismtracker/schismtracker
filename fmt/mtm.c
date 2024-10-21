@@ -62,14 +62,21 @@ SCHISM_BINARY_STRUCT(mtm_sample_t, 22+4+4+4+1+1+1);
 
 /* --------------------------------------------------------------------- */
 
-int fmt_mtm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_mtm_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 24 && memcmp(data, "MTM", 3) == 0))
+	unsigned char magic[3], title[20];
+
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "MTM", 3))
+		return 0;
+
+	slurp_seek(fp, 4, SEEK_SET);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 
 	file->description = "MultiTracker Module";
 	/*file->extension = str_dup("mtm");*/
-	file->title = strn_dup((const char *)data + 4, 20);
+	file->title = strn_dup(title, sizeof(title));
 	file->type = TYPE_MODULE_MOD;
 	return 1;
 }
@@ -249,15 +256,12 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	/* sample data */
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (smp = 1; smp <= nsmp && smp <= MAX_SAMPLES; smp++) {
-			uint32_t ssize;
-
 			if (song->samples[smp].length == 0)
 				continue;
-			ssize = csf_read_sample(song->samples + smp,
+
+			csf_read_sample(song->samples + smp,
 				(SF_LE | SF_PCMU | SF_M
-				 | ((song->samples[smp].flags & CHN_16BIT) ? SF_16 : SF_8)),
-				fp->data + fp->pos, fp->length - fp->pos);
-			slurp_seek(fp, ssize, SEEK_CUR);
+				 | ((song->samples[smp].flags & CHN_16BIT) ? SF_16 : SF_8)), fp);
 		}
 	}
 

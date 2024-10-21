@@ -86,14 +86,16 @@ uint8_t char_unicode_to_cp437(unsigned int c);
 
 /* ------------------------------------------------------------------------ */
 
-/* The following functions have two versions: one that returns
- * UTF-8 data, and one that converts it back to the source charset.
- * The UTF-8 variants are suffixed with `to_utf8`. */
-uint8_t *charset_compose_to_utf8(const uint8_t *in, charset_t set);
-uint8_t *charset_compose(const uint8_t *in, charset_t set);
+/* unicode composing and case folding graciously provided by utf8proc */
+uint8_t *charset_compose_to_set(const uint8_t *in, charset_t inset, charset_t outset);
+uint8_t *charset_case_fold_to_set(const uint8_t *in, charset_t inset, charset_t outset);
 
-uint8_t *charset_case_fold_to_utf8(const uint8_t *in, charset_t set);
-uint8_t *charset_case_fold(const uint8_t *in, charset_t set);
+/* only provided for source compatibility and should be killed with fire */
+#define charset_compose(in, set)         charset_compose_to_set(in, set, set)
+#define charset_compose_to_utf8(in, set) charset_compose_to_set(in, set, CHARSET_UTF8)
+
+#define charset_case_fold(in, set)         charset_case_fold_to_set(in, set, set)
+#define charset_case_fold_to_utf8(in, set) charset_case_fold_to_set(in, set, CHARSET_UTF8)
 
 /* ------------------------------------------------------------------------ */
 
@@ -104,6 +106,15 @@ int charset_strcasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2,
 int charset_strncasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num);
 size_t charset_strncasecmplen(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num);
 
+/* basic fnmatch */
+enum {
+	CHARSET_FNM_CASEFOLD = (1 << 0),
+	CHARSET_FNM_PERIOD   = (1 << 1),
+};
+
+int charset_fnmatch(const uint8_t *match, charset_t match_set, const uint8_t *str, charset_t str_set, int flags);
+
+/* iconv replacement */
 const char* charset_iconv_error_lookup(charset_error_t err);
 charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset);
 

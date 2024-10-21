@@ -36,14 +36,22 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_s3m_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_s3m_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 48 && memcmp(data + 44, "SCRM", 4) == 0))
+	unsigned char magic[4], title[27];
+	
+	slurp_seek(fp, 44, SEEK_SET);
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "SCRM", sizeof(magic)))
+		return 0;
+
+	slurp_rewind(fp);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 
 	file->description = "Scream Tracker 3";
 	/*file->extension = str_dup("s3m");*/
-	file->title = strn_dup((const char *)data, 27);
+	file->title = strn_dup(title, sizeof(title));
 	file->type = TYPE_MODULE_S3M;
 	return 1;
 }
@@ -232,7 +240,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	for (n = 0, sample = song->samples + 1; n < nsmp; n++, sample++) {
 		uint8_t type;
 
-		slurp_seek(fp, (para_smp[n]) << 4, SEEK_SET);
+		slurp_seek(fp, bswapLE16(para_smp[n]) << 4, SEEK_SET);
 
 		type = slurp_getc(fp);
 		slurp_read(fp, sample->filename, 12);
@@ -309,7 +317,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			if (!sample->length || (sample->flags & CHN_ADLIB))
 				continue;
 			slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
-			csf_read_sample(sample, smp_flags[n], fp->data + fp->pos, fp->length - fp->pos);
+			csf_read_sample(sample, smp_flags[n], fp);
 		}
 	}
 
@@ -482,9 +490,10 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				tid = "Impulse Tracker %" PRIu8 ".%02" PRIx8;
 			} else if (trkvers == 0x3320) {
 				tid = "Impulse Tracker 1.03";  // Could also be 1.02, maybe? I don't have that one
-			} else {
+			} else if(trkvers >= 0x3215 && trkvers <= 0x3217) {
 				tid = NULL;
-				sprintf(song->tracker_id, "Impulse Tracker 2.14p" PRIu16, (uint16_t)(trkvers - 0x3214));
+				const char *versions[] = { "1-2", "3", "4-5" };
+				sprintf(song->tracker_id, "Impulse Tracker 2.14p%s", versions[trkvers - 0x3215]);
 			}
 			break;
 		case 4:

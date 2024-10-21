@@ -33,9 +33,15 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_okt_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_okt_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 16 && memcmp(data, "OKTASONG", 8) == 0))
+	unsigned char magic[8];
+
+	if (slurp_length(fp) < 16)
+		return 0;
+
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "OKTASONG", sizeof(magic)))
 		return 0;
 
 	file->description = "Amiga Oktalyzer";
@@ -465,8 +471,7 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				ssmp->length = MIN(smpsize[sd], ssmp->length);
 			}
 
-			csf_read_sample(ssmp, SF_BE | SF_M | SF_PCMS | smpflag[sd],
-					fp->data + smpseek[sd], ssmp->length);
+			csf_read_sample(ssmp, SF_BE | SF_M | SF_PCMS | smpflag[sd], fp);
 			sd++;
 		}
 		// Make sure there's nothing weird going on

@@ -142,15 +142,20 @@ const uint16_t amigaperiod_table[256] = {
 	0,    0,    0
 };
 
-int fmt_mod_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_mod_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	char tag[4];
+	char tag[4], title[20];
 	int i = 0;
 
-	if (length < 1085)
+	if (slurp_length(fp) < 1085)
 		return 0;
 
-	memcpy(tag, data + 1080, 4);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
+		return 0;
+
+	slurp_seek(fp, 1080, SEEK_SET);
+	if (slurp_read(fp, tag, sizeof(tag)) != sizeof(tag))
+		return 0;
 
 	for (i = 0; valid_tags[i][0] != NULL; i++) {
 		if (memcmp(tag, valid_tags[i][0], 4) == 0) {
@@ -161,45 +166,52 @@ int fmt_mod_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 
 			file->description = valid_tags[i][1];
 			/*file->extension = str_dup("mod");*/
-			file->title = strn_dup((const char *)data, 20);
+			file->title = strn_dup(title, sizeof(title));
 			file->type = TYPE_MODULE_MOD;
 			return 1;
 		}
 	}
 
 	/* check if it could be a SoundTracker MOD */
+	slurp_rewind(fp);
 	int errors = 0;
 	for (i = 0; i < 20; i++) {
-		if (data[i] > 0 && data[i] < 32) {
+		int b = slurp_getc(fp);
+		if (b > 0 && b < 32) {
 			errors++;
-			if (errors > 5) {
+			if (errors > 5)
 				return 0;
-			}
 		}
 	}
 
 	uint8_t all_volumes = 0, all_lengths = 0;
 	for (i = 0; i < 15; i++) {
-		if (data[20 + i * 30 + 24] != 0) {
+		slurp_seek(fp, 20 + i * 30 + 22, SEEK_SET);
+		int length_high = slurp_getc(fp);
+		int length_low = slurp_getc(fp);
+		int length = length_high * 0x100 + length_low;
+		int finetune = slurp_getc(fp);
+		int volume = slurp_getc(fp);
+
+		if (finetune)
 			return 0; /* invalid finetune */
-		}
-		if (data[20 + i * 30 + 25] > 64) {
+
+		if (volume > 64)
 			return 0; /* invalid volume */
-		}
-		all_volumes |= data[20 + i * 30 + 25];
-		if (data[20 + i * 30 + 22] * 256 + data[20 + i * 30 + 23] > 32768) {
+
+		if (length > 32768)
 			return 0; /* invalid sample length */
-		}
-		all_lengths |= data[20 + i * 30 + 22] | data[20 + i * 30 + 23];
+
+		all_volumes |= volume;
+		all_lengths |= length_high | length_low;
 	}
 
-	if (all_lengths == 0 || all_volumes == 0) {
+	if (!all_lengths || !all_volumes)
 		return 0;
-	}
 
 	file->description = "SoundTracker";
 	/*file->extension = str_dup("mod");*/
-	file->title = strn_dup((const char *)data, 20);
+	file->title = strn_dup(title, sizeof(title));
 	file->type = TYPE_MODULE_MOD;
 
 	return 1;
@@ -461,10 +473,7 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 				pcmflag = SF_PCMD16;
 			}
 
-			uint32_t ssize = csf_read_sample(song->samples + n,
-				SF_8 | SF_M | SF_LE | pcmflag,
-				fp->data + fp->pos, fp->length - fp->pos);
-			slurp_seek(fp, ssize, SEEK_CUR);
+			csf_read_sample(song->samples + n, SF_8 | SF_M | SF_LE | pcmflag, fp);
 		}
 	}
 
@@ -696,10 +705,10 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 		song_sample_t *smp = song->samples + (n + 1);
 		if (smp->data)
 			if( (smp->flags & CHN_LOOP) && (smp->loop_start < smp->loop_end) && (smp->loop_end <= MIN(smp->length, 0x1FFFE)) ) {
-				csf_write_sample(fp, smp, RS_PCM8S, 0x1FFFE); // third argument is a compound flag: PCMS,8,M,LE
+				csf_write_sample(fp, smp, SF(PCMS,8,M,LE), 0x1FFFE);
 			} else if (1 < smp->length) { // floor(smp->length / 2) MUST be positive!
 				tmppos = disko_tell(fp);
-				csf_write_sample(fp, smp, RS_PCM8S, 0x1FFFE); // third argument is a compound flag: PCMS,8,M,LE
+				csf_write_sample(fp, smp, SF(PCMS,8,M,LE), 0x1FFFE);
 				disko_seek(fp, tmppos, SEEK_SET);
 				disko_write(fp, tmp, 2);
 				disko_seek(fp, 0, SEEK_END);

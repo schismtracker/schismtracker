@@ -28,6 +28,9 @@
 #include "it.h" // need for kbd_get_alnum
 #include "page.h" // need for struct key_event
 #include "log.h"
+#include "dmoz.h"
+#include "util.h"
+#include "controller.h"
 
 #include <di/di.h>
 #include <fat.h>
@@ -39,15 +42,6 @@
 #include <sys/dir.h>
 #include "isfs.h"
 #define CACHE_PAGES 8
-
-/* whichever joystick we get is up to libogc to decide!
- *
- * note: do NOT check if joystick_id is zero to see if
- * there are no joysticks attached, check if joystick
- * is NULL.
-*/
-static SDL_JoystickID joystick_id = 0;
-static SDL_Joystick* joystick = NULL;
 
 // cargopasta'd from libogc git __di_check_ahbprot
 static u32 _check_ahbprot(void) {
@@ -115,7 +109,7 @@ void wii_sysinit(int *pargc, char ***pargv)
 	} else if (strchr(*pargv[0], '/') != NULL) {
 		// presumably launched from hbc menu - put stuff in the boot dir
 		// (does get_parent_directory do what I want here?)
-		ptr = get_parent_directory(*pargv[0]);
+		ptr = dmoz_path_get_parent_directory(*pargv[0]);
 	}
 	if (!ptr) {
 		// Make a guess anyway
@@ -142,145 +136,3 @@ void wii_sysexit(void)
 {
 	ISFS_Deinitialize();
 }
-
-static void open_joystick(int n) {
-	joystick = SDL_JoystickOpen(n);
-	if (joystick) {
-		joystick_id = SDL_JoystickInstanceID(joystick);
-	} else {
-		log_appendf(4, "joystick [%d] open fail: %s", n, SDL_GetError());
-	}
-}
-
-void wii_sdlinit(void)
-{
-	int n, total;
-
-	if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) != 0) {
-		log_appendf(4, "joystick init failed: %s", SDL_GetError());
-		return;
-	}
-}
-
-
-static int lasthatsym = 0;
-
-static SDL_Keycode hat_to_keysym(int value)
-{
-	// up/down take precedence over left/right
-	switch (value) {
-	case SDL_HAT_LEFTUP:
-	case SDL_HAT_UP:
-	case SDL_HAT_RIGHTUP:
-		return SDLK_UP;
-	case SDL_HAT_LEFTDOWN:
-	case SDL_HAT_DOWN:
-	case SDL_HAT_RIGHTDOWN:
-		return SDLK_DOWN;
-	case SDL_HAT_LEFT:
-		return SDLK_LEFT;
-	case SDL_HAT_RIGHT:
-		return SDLK_RIGHT;
-	default: // SDL_HAT_CENTERED
-		return 0;
-	}
-}
-
-/* rewrite events to where you can at least do *something*
- * without a keyboard */
-int wii_sdlevent(SDL_Event *event)
-{
-	SDL_Event newev = {0};
-	SDL_Keycode sym;
-
-	switch (event->type) {
-	case SDL_KEYDOWN:
-	case SDL_KEYUP:
-		return 1;
-
-	case SDL_JOYHATMOTION:
-		// TODO key repeat for these, somehow
-		sym = hat_to_keysym(event->jhat.value);
-		if (sym) {
-			newev.type = SDL_KEYDOWN;
-			newev.key.state = SDL_PRESSED;
-			lasthatsym = sym;
-		} else {
-			newev.type = SDL_KEYUP;
-			newev.key.state = SDL_RELEASED;
-			sym = lasthatsym;
-			lasthatsym = 0;
-		}
-		newev.key.keysym.sym = sym;
-		newev.key.type = newev.type; // is this a no-op?
-		*event = newev;
-		return 1;
-
-	case SDL_JOYBUTTONDOWN:
-	case SDL_JOYBUTTONUP:
-		switch (event->jbutton.button) {
-		case 2: /* 1 */
-			/* "Load Module" if the song is stopped, else stop the song */
-			sym = (song_get_mode() == MODE_STOPPED) ? SDLK_F9 : SDLK_F8;
-			break;
-		case 3: /* 2 */
-			if (status.current_page == PAGE_LOAD_MODULE) {
-				// if the cursor is on a song, load then play; otherwise handle as enter
-				// (hmm. ctrl-enter?)
-				sym = SDLK_RETURN;
-			} else {
-				// F5 key
-				sym = SDLK_F5;
-			}
-			break;
-		case 4: /* - */
-			// dialog escape, or jump back a pattern
-			if (status.dialog_type) {
-				sym = SDLK_ESCAPE;
-				break;
-			} else if (event->type == SDL_JOYBUTTONDOWN && song_get_mode() == MODE_PLAYING) {
-				song_set_current_order(song_get_current_order() - 1);
-			}
-			return 0;
-		case 5: /* + */
-			// dialog enter, or jump forward a pattern
-			if (status.dialog_type) {
-				sym = SDLK_RETURN;
-				break;
-			} else if (event->type == SDL_JOYBUTTONDOWN && song_get_mode() == MODE_PLAYING) {
-				song_set_current_order(song_get_current_order() + 1);
-			}
-			return 0;
-		case 6: /* Home */
-			event->type = SDL_QUIT;
-			return 1;
-		case 0: /* A */
-		case 1: /* B */
-		default:
-			return 0;
-		}
-		newev.key.keysym.sym = sym;
-		if (event->type == SDL_JOYBUTTONDOWN) {
-			newev.type = SDL_KEYDOWN;
-			newev.key.state = SDL_PRESSED;
-		} else {
-			newev.type = SDL_KEYUP;
-			newev.key.state = SDL_RELEASED;
-		}
-		newev.key.type = newev.type; // no-op?
-		*event = newev;
-		return 1;
-	case SDL_JOYDEVICEADDED:
-		if (!joystick)
-			open_joystick(event->jdevice.which);
-		return 0;
-	case SDL_JOYDEVICEREMOVED:
-		if (joystick && event->jdevice.which == joystick_id) {
-			SDL_JoystickClose(joystick);
-			joystick = NULL;
-		}
-		return 0;
-	}
-	return 1;
-}
-

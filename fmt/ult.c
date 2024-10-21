@@ -34,15 +34,22 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_ult_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_ult_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 48 && memcmp(data, "MAS_UTrack_V00", 14) == 0))
+	unsigned char magic[14], title[32];
+
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "MAS_UTrack_V00", sizeof(magic)))
+		return 0;
+
+	slurp_seek(fp, 15, SEEK_SET);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 
 	file->description = "UltraTracker Module";
 	file->type = TYPE_MODULE_S3M;
 	/*file->extension = str_dup("ult");*/
-	file->title = strn_dup((const char *)data + 15, 32);
+	file->title = strn_dup(title, sizeof(title));
 	return 1;
 }
 
@@ -383,10 +390,8 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (n = 0, smp = song->samples + 1; n < nsmp; n++, smp++) {
-			uint32_t ssize = csf_read_sample(smp,
-				SF_LE | SF_M | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8),
-				fp->data + fp->pos, fp->length - fp->pos);
-			slurp_seek(fp, ssize, SEEK_CUR);
+			csf_read_sample(smp,
+				SF_LE | SF_M | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8), fp);
 		}
 	}
 	return LOAD_SUCCESS;

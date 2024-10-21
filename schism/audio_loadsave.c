@@ -32,6 +32,7 @@
 #include "slurp.h"
 #include "page.h"
 #include "version.h"
+#include "osdefs.h"
 
 #include "fmt.h"
 #include "dmoz.h"
@@ -88,7 +89,7 @@ static void song_set_filename(const char *file)
 	if (file && *file) {
 		CHARSET_EASY_MODE_CONST(file, CHARSET_CHAR, CHARSET_CP437, {
 			strncpy(song_filename, out, PATH_MAX);
-			strncpy(song_basename, get_basename(out), NAME_MAX);
+			strncpy(song_basename, dmoz_path_get_basename(out), NAME_MAX);
 		});
 		song_filename[PATH_MAX] = '\0';
 		song_basename[NAME_MAX] = '\0';
@@ -202,11 +203,11 @@ void message_convert_newlines(song_t *song) {
 
 song_t *song_create_load(const char *file)
 {
+	slurp_t s;
 	fmt_load_song_func *func;
 	int ok = 0, err = 0;
 
-	slurp_t *s = slurp(file, NULL, 0);
-	if (!s)
+	if (slurp(&s, file, NULL, 0) < 0)
 		return NULL;
 
 	song_t *newsong = csf_allocate();
@@ -225,8 +226,8 @@ song_t *song_create_load(const char *file)
 	}
 
 	for (func = load_song_funcs; *func && !ok; func++) {
-		slurp_rewind(s);
-		switch ((*func)(newsong, s, 0)) {
+		slurp_rewind(&s);
+		switch ((*func)(newsong, &s, 0)) {
 		case LOAD_SUCCESS:
 			err = 0;
 			ok = 1;
@@ -243,13 +244,13 @@ song_t *song_create_load(const char *file)
 		}
 		if (err) {
 			csf_free(newsong);
-			unslurp(s);
+			unslurp(&s);
 			errno = err;
 			return NULL;
 		}
 	}
 
-	unslurp(s);
+	unslurp(&s);
 
 	if (err) {
 		// awwww, nerts!
@@ -267,7 +268,7 @@ song_t *song_create_load(const char *file)
 
 int song_load_unchecked(const char *file)
 {
-	const char *base = get_basename(file);
+	const char *base = dmoz_path_get_basename(file);
 	int was_playing;
 	song_t *newsong;
 
@@ -403,7 +404,7 @@ static char *mangle_filename(const char *in, const char *mid, const char *ext)
 	const char *iext;
 	size_t baselen, rlen;
 
-	iext = get_extension(in);
+	iext = dmoz_path_get_extension(in);
 	rlen = baselen = iext - in;
 	if (mid)
 		rlen += strlen(mid);
@@ -460,6 +461,7 @@ int song_export(const char *filename, const char *type)
 
 int song_save(const char *filename, const char *type)
 {
+	disko_t fp;
 	int ret, backup;
 	const struct save_format *format = get_save_format(song_save_formats, type);
 	char *mangle;
@@ -499,23 +501,23 @@ saying "Could not save file". This can be seen rather easily by trying to save a
 such as "abc|def.it". This dialog is presented both when saving from F10 and Ctrl-S.
 */
 
-	disko_t *fp = disko_open(mangle);
-	if (!fp) {
+	if (disko_open(&fp, mangle) < 0) {
 		log_perror(mangle);
 		free(mangle);
 		return SAVE_FILE_ERROR;
 	}
 
-	ret = format->f.save_song(fp, current_song);
+	ret = format->f.save_song(&fp, current_song);
 	if (ret != SAVE_SUCCESS)
-		disko_seterror(fp, EINVAL);
+		disko_seterror(&fp, EINVAL);
+
 	backup = ((status.flags & MAKE_BACKUPS)
 		  ? (status.flags & NUMBERED_BACKUPS)
 		  ? 65536 : 1 : 0);
-	if (disko_close(fp, backup) == DW_ERROR && ret == SAVE_SUCCESS) {
-		// this was not as successful as originally claimed!
+
+	// this was not as successful as originally claimed!
+	if (disko_close(&fp, backup) == DW_ERROR && ret == SAVE_SUCCESS)
 		ret = SAVE_FILE_ERROR;
-	}
 
 	switch (ret) {
 	case SAVE_SUCCESS:
@@ -539,6 +541,7 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
 
 int song_save_sample(const char *filename, const char *type, song_sample_t *smp, int num)
 {
+	disko_t fp;
 	int ret;
 	const struct save_format *format = get_save_format(sample_save_formats, type);
 
@@ -550,15 +553,14 @@ int song_save_sample(const char *filename, const char *type, song_sample_t *smp,
 		return SAVE_INTERNAL_ERROR; // ?
 	}
 
-	disko_t *fp = disko_open(filename);
-	if (fp) {
-		ret = format->f.save_sample(fp, smp);
+	if (disko_open(&fp, filename) < 0) {
+		ret = format->f.save_sample(&fp, smp);
 		if (ret != SAVE_SUCCESS)
-			disko_seterror(fp, EINVAL);
-		if (disko_close(fp, 0) == DW_ERROR && ret == SAVE_SUCCESS) {
-			// this was not as successful as originally claimed!
+			disko_seterror(&fp, EINVAL);
+
+		// this was not as successful as originally claimed!
+		if (disko_close(&fp, 0) == DW_ERROR && ret == SAVE_SUCCESS)
 			ret = SAVE_FILE_ERROR;
-		}
 	} else {
 		ret = SAVE_FILE_ERROR;
 	}
@@ -569,7 +571,7 @@ int song_save_sample(const char *filename, const char *type, song_sample_t *smp,
 		break;
 	case SAVE_FILE_ERROR:
 		status_text_flash("Error: Sample %d NOT saved! (%s)", num, "File Error");
-		log_perror(get_basename(filename));
+		log_perror(dmoz_path_get_basename(filename));
 		break;
 	case SAVE_INTERNAL_ERROR:
 	default: // ???
@@ -630,7 +632,7 @@ void song_copy_sample(int n, song_sample_t *src)
 
 int song_load_instrument_ex(int target, const char *file, const char *libf, int n)
 {
-	slurp_t *s;
+	slurp_t s;
 	int r, x;
 
 	song_lock_audio();
@@ -715,8 +717,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 	}
 
 	/* okay, load an ITI file */
-	s = slurp(file, NULL, 0);
-	if (!s) {
+	if (slurp(&s, file, NULL, 0) < 0) {
 		log_perror(file);
 		song_unlock_audio();
 		return 0;
@@ -724,11 +725,12 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 
 	r = 0;
 	for (x = 0; load_instrument_funcs[x]; x++) {
-		r = load_instrument_funcs[x](s->data, s->length, target);
+		slurp_rewind(&s);
+		r = load_instrument_funcs[x](&s, target);
 		if (r) break;
 	}
 
-	unslurp(s);
+	unslurp(&s);
 	song_unlock_audio();
 
 	return r;
@@ -791,13 +793,13 @@ int song_preload_sample(dmoz_file_t *file)
 
 int song_load_sample(int n, const char *file)
 {
+	slurp_t s;
 	fmt_load_sample_func *load;
 	song_sample_t smp = {0};
 
-	const char *base = get_basename(file);
-	slurp_t *s = slurp(file, NULL, 0);
+	const char *base = dmoz_path_get_basename(file);
 
-	if (s == NULL) {
+	if (slurp(&s, file, NULL, 0)) {
 		log_perror(base);
 		return 0;
 	}
@@ -808,13 +810,13 @@ int song_load_sample(int n, const char *file)
 	strncpy(smp.name, base, 25);
 
 	for (load = load_sample_funcs; *load; load++) {
-		if ((*load)(s->data, s->length, &smp)) {
+		slurp_rewind(&s);
+		if ((*load)(&s, &smp))
 			break;
-		}
 	}
 
 	if (!load) {
-		unslurp(s);
+		unslurp(&s);
 		log_perror(base);
 		song_unlock_audio();
 		return 0;
@@ -834,7 +836,7 @@ int song_load_sample(int n, const char *file)
 	memcpy(&(current_song->samples[n]), &smp, sizeof(song_sample_t));
 	song_unlock_audio();
 
-	unslurp(s);
+	unslurp(&s);
 
 	return 1;
 }
@@ -860,6 +862,7 @@ void song_create_host_instrument(int smp)
 
 int song_save_instrument(const char *filename, const char *type, song_instrument_t *ins, int num)
 {
+	disko_t fp;
 	int ret;
 	const struct save_format *format = get_save_format(instrument_save_formats, type);
 
@@ -871,15 +874,14 @@ int song_save_instrument(const char *filename, const char *type, song_instrument
 		return SAVE_INTERNAL_ERROR; // ?
 	}
 
-	disko_t *fp = disko_open(filename);
-	if (fp) {
-		ret = format->f.save_instrument(fp, current_song, ins);
+	if (disko_open(&fp, filename) >= 0) {
+		ret = format->f.save_instrument(&fp, current_song, ins);
 		if (ret != SAVE_SUCCESS)
-			disko_seterror(fp, EINVAL);
-		if (disko_close(fp, 0) == DW_ERROR && ret == SAVE_SUCCESS) {
-			// this was not as successful as originally claimed!
+			disko_seterror(&fp, EINVAL);
+
+		// this was not as successful as originally claimed!
+		if (disko_close(&fp, 0) == DW_ERROR && ret == SAVE_SUCCESS)
 			ret = SAVE_FILE_ERROR;
-		}
 	} else {
 		ret = SAVE_FILE_ERROR;
 	}
@@ -890,7 +892,7 @@ int song_save_instrument(const char *filename, const char *type, song_instrument
 		break;
 	case SAVE_FILE_ERROR:
 		status_text_flash("Error: Instrument %d NOT saved! (%s)", num, "File Error");
-		log_perror(get_basename(filename));
+		log_perror(dmoz_path_get_basename(filename));
 		break;
 	case SAVE_INTERNAL_ERROR:
 	default: // ???
@@ -931,7 +933,7 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 	csf_stop_sample(current_song, current_song->samples + 0);
 	csf_free(library);
 
-	const char *base = get_basename(path);
+	const char *base = dmoz_path_get_basename(path);
 	library = song_create_load(path);
 	if (!library) {
 		log_appendf(4, "%s: %s", base, fmt_strerror(errno));
@@ -977,7 +979,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 	csf_stop_sample(current_song, current_song->samples + 0);
 	csf_free(library);
 
-	const char *base = get_basename(path);
+	const char *base = dmoz_path_get_basename(path);
 
 	struct stat st;
 	if (os_stat(path, &st) < 0) {

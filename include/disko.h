@@ -25,25 +25,19 @@
 
 #include <sys/types.h>
 
-// hurd doesn't have limits.h
-#ifdef __GNU__
-#define PATH_MAX 4096
-#endif
-
 typedef struct disko disko_t;
 struct disko {
 	// Functions whose implementation depends on the backend in use
 	// Use disko_write et al. instead of these.
 	void (*_write)(disko_t *ds, const void *buf, size_t len);
-	void (*_putc)(disko_t *ds, int c);
 	void (*_seek)(disko_t *ds, long offset, int whence);
 	long (*_tell)(disko_t *ds);
 
 	// Temporary filename that's being written to
-	char tempname[PATH_MAX];
+	char *tempname;
 
 	// Name to change it to on close (if successful)
-	char filename[PATH_MAX];
+	char *filename;
 
 	// these could be unionized
 	// file pointer (only exists for disk files)
@@ -72,8 +66,9 @@ enum {
 	DW_SYNC_MORE = 1,
 };
 
-/* fopen/fclose-ish writeout/finish wrapper that allocates a structure */
-disko_t *disko_open(const char *filename);
+/* fopen/fclose-ish writeout/finish wrapper that shoves data into the
+ * user-allocated structure */
+int disko_open(disko_t *ds, const char *filename);
 /* Close the file. If there was no error writing the file, it is renamed
 to the name specified in disko_open; otherwise, the original file is left
 intact and the temporary file is deleted. Returns DW_OK on success,
@@ -88,7 +83,7 @@ int disko_close(disko_t *f, int backup);
 /* alloc/free a memory buffer
 if free_buffer is 0, the internal buffer is left alone when deallocating,
 so that it can continue to be used later */
-disko_t *disko_memopen(void);
+int disko_memopen(disko_t *f);
 int disko_memclose(disko_t *f, int free_buffer);
 
 
@@ -118,8 +113,8 @@ int disko_sync(void);
 /* Write data to the file, as in fwrite() */
 void disko_write(disko_t *ds, const void *buf, size_t len);
 
-/* Write one character (unsigned char, cast to int) */
-void disko_putc(disko_t *ds, int c);
+/* Write one character */
+void disko_putc(disko_t *ds, unsigned char c);
 
 /* Change file position. This CAN be used to seek past the end,
 but be cognizant that random data might exist in the "gap". */

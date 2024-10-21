@@ -34,22 +34,32 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_stx_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_stx_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	char id[8];
+	unsigned char magic[4];
 	int i;
 
-	if (!(length > 48 && memcmp(data + 60, "SCRM", 4) == 0))
+	slurp_seek(fp, 60, SEEK_SET);
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "SCRM", sizeof(magic)))
 		return 0;
 
-	memcpy(id, data + 20, 8);
-	for (i = 0; i < 8; i++)
-		if (id[i] < 0x20 || id[i] > 0x7E)
+	slurp_seek(fp, 20, SEEK_SET);
+	for (i = 0; i < 8; i++) {
+		int id = slurp_getc(fp);
+		if (id < 0x20 || id > 0x7E)
 			return 0;
+	}
+
+	unsigned char title[20];
+
+	slurp_rewind(fp);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
+		return 0;
 
 	file->description = "ST Music Interface Kit";
 	/*file->extension = str_dup("stx");*/
-	file->title = strn_dup((const char *)data, 20);
+	file->title = strn_dup(title, sizeof(title));
 	file->type = TYPE_MODULE_MOD;
 	return 1;
 }
@@ -308,7 +318,7 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			if (sample->length < 3)
 				continue;
 			slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
-			csf_read_sample(sample, SF_LE | SF_PCMS | SF_8 | SF_M, fp->data + fp->pos, fp->length - fp->pos);
+			csf_read_sample(sample, SF_LE | SF_PCMS | SF_8 | SF_M, fp);
 		}
 	}
 

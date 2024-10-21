@@ -61,7 +61,7 @@ struct mthd {
 	uint16_t division; // delta timing value: positive = units/beat; negative = smpte compatible units (?)
 };
 
-SCHISM_BINARY_STRUCT(struct mthd, 4+2+2+2);
+SCHISM_BINARY_STRUCT(struct mthd, 10);
 
 struct mtrk {
 	char tag[4]; // MTrk
@@ -116,20 +116,20 @@ static unsigned int read_varlen(slurp_t *fp)
 /* --------------------------------------------------------------------------------------------------------- */
 // info (this is ultra lame)
 
-int fmt_mid_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_mid_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	slurp_t fp = {.length = length, .data = (uint8_t *) data, .pos = 0};
 	song_t *tmpsong = csf_allocate();
-
 	if (!tmpsong)
 		return 0; // wahhhh
-	if (fmt_mid_load_song(tmpsong, &fp, LOAD_NOSAMPLES | LOAD_NOPATTERNS) == LOAD_SUCCESS) {
+
+	if (fmt_mid_load_song(tmpsong, fp, LOAD_NOSAMPLES | LOAD_NOPATTERNS) == LOAD_SUCCESS) {
 		file->description = "Standard MIDI File";
 		file->title = strdup(tmpsong->title);
 		file->type = TYPE_MODULE_MOD;
 		csf_free(tmpsong);
 		return 1;
 	}
+
 	csf_free(tmpsong);
 	return 0;
 }
@@ -187,8 +187,8 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	for (int trknum = 0; trknum < mthd.num_tracks; trknum++) {
 		unsigned int delta; // time since last event (read from file)
 		unsigned int vlen; // some other generic varlen number
-		int rs = 0; // running status byte
-		int status; // THIS status byte (as opposed to rs)
+		unsigned char rs = 0; // running status byte
+		unsigned char status; // THIS status byte (as opposed to rs)
 		unsigned char hi, lo, cn, x, y;
 		unsigned int bpm; // stupid
 		int found_end = 0;
@@ -214,8 +214,8 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			pulse += delta; // 'real' pulse count
 
 			// get status byte, if there is one
-			if (fp->data[fp->pos] & 0x80) {
-				status = slurp_getc(fp);
+			if (slurp_peek(fp, &status, sizeof(status)) == sizeof(status) && status & 0x80) {
+				slurp_seek(fp, 1, SEEK_CUR);
 			} else if (rs & 0x80) {
 				status = rs;
 			} else {

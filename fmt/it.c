@@ -36,27 +36,34 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_it_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_it_read_info(dmoz_file_t *file, slurp_t *fp)
 {
+	unsigned char magic[4];
+
 	/* "Bart just said I-M-P! He's made of pee!" */
-	if (length > 30 && memcmp(data, "IMPM", 4) == 0) {
-		/* This ought to be more particular; if it's not actually made *with* Impulse Tracker,
-		it's probably not compressed, irrespective of what the CMWT says. */
-		if (data[42] >= 0x14)
-			file->description = "Compressed Impulse Tracker";
-		else
-			file->description = "Impulse Tracker";
-	} else {
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "IMPM", sizeof(magic)))
 		return 0;
-	}
+
+	/* This ought to be more particular; if it's not actually made *with* Impulse Tracker,
+	 * it's probably not compressed, irrespective of what the CMWT says. */
+	slurp_seek(fp, 42, SEEK_SET);
+	int cmwt = slurp_getc(fp);
+	file->description = (cmwt >= 0x14) ? "Compressed Impulse Tracker" : "Impulse Tracker";
+
+	unsigned char title[25];
+
+	slurp_seek(fp, 4, SEEK_SET);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
+		return 0;
+
+	for (int n = 0; n < sizeof(title); n++)
+		if (!title[n])
+			title[n] = 0x20;
 
 	/*file->extension = str_dup("it");*/
-	file->title = mem_alloc(26);
-	for (int n = 0; n < 25; n++) {
-		file->title[n] = data[4 + n] ? data[4 + n] : 32;
-	}
-	file->title[25] = 0;
-	rtrim_string(file->title);
+	file->title = strn_dup(title, sizeof(title));
+	str_rtrim(file->title);
 	file->type = TYPE_MODULE_IT;
 	return 1;
 }
@@ -88,7 +95,7 @@ static void it_import_voleffect(song_note_t *note, uint8_t v)
 	note->volparam = v - adj;
 }
 
-static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows)
+static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows, uint16_t cwtv)
 {
 	song_note_t last_note[64];
 	int chan, row = 0;
@@ -145,6 +152,16 @@ static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows)
 			note[chan].effect = slurp_getc(fp) & 0x1f;
 			note[chan].param = slurp_getc(fp);
 			csf_import_s3m_effect(note + chan, 1);
+
+			if (note[chan].effect == FX_SPECIAL && (note[chan].param & 0xf0) == 0xa0 && cwtv < 0x0200) {
+				// IT 1.xx does not support high offset command
+				note[chan].effect = FX_NONE;
+			} else if (note[chan].effect == FX_GLOBALVOLUME && note[chan].param > 0x80 && cwtv >= 0x1000 && cwtv <= 0x1050) {
+				// Fix handling of commands V81-VFF in ITs made with old Schism Tracker versions
+				// (fixed in commit ab5517d4730d4c717f7ebffb401445679bd30888 - one of the last versions to identify as v0.50)
+				note[chan].param = 0x80;
+			}
+
 			last_note[chan].effect = note[chan].effect;
 			last_note[chan].param = note[chan].param;
 		}
@@ -239,7 +256,7 @@ static void load_it_sample(song_sample_t *sample, slurp_t *fp, uint16_t cwtv)
 			flags |= (shdr.cvt & 4) ? SF_PCMD : (shdr.cvt & 1) ? SF_PCMS : SF_PCMU;
 		}
 		flags |= (shdr.flags & 2) ? SF_16 : SF_8;
-		csf_read_sample(sample, flags, fp->data + fp->pos, fp->length - fp->pos);
+		csf_read_sample(sample, flags, fp);
 	} else {
 		sample->length = 0;
 	}
@@ -284,7 +301,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		song->title[n] = hdr.songname[n] ? hdr.songname[n] : 32;
 	}
 	song->title[25] = 0;
-	rtrim_string(song->title);
+	str_rtrim(song->title);
 
 	if (hdr.cmwt < 0x0214 && hdr.cwtv < 0x0214)
 		ignoremidi = 1;
@@ -367,7 +384,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	slurp_read(fp, para_smp, 4 * hdr.smpnum);
 	slurp_read(fp, para_pat, 4 * hdr.patnum);
 
-	para_min = ((hdr.special & 1) && hdr.msglength) ? hdr.msgoffset : fp->length;
+	para_min = ((hdr.special & 1) && hdr.msglength) ? hdr.msgoffset : slurp_length(fp);
 	for (n = 0; n < hdr.insnum; n++) {
 		para_ins[n] = bswapLE32(para_ins[n]);
 		if (para_ins[n] < para_min)
@@ -409,7 +426,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			slurp_seek(fp, sizeof(midi_config_t), SEEK_CUR);
 		}
 		memset(&song->midi_config, 0, sizeof(midi_config_t));
-	} else if ((hdr.special & 8) && fp->pos + sizeof(midi_config_t) <= fp->length) {
+	} else if ((hdr.special & 8) && slurp_tell(fp) + sizeof(midi_config_t) <= slurp_length(fp)) {
 		slurp_read(fp, &song->midi_config, sizeof(midi_config_t));
 	}
 	if (!hist) {
@@ -421,7 +438,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		}
 	}
 
-	if ((hdr.special & 1) && hdr.msglength && hdr.msgoffset + hdr.msglength < fp->length) {
+	if ((hdr.special & 1) && hdr.msglength && hdr.msgoffset + hdr.msglength < slurp_length(fp)) {
 		int msg_len = MIN(MAX_MESSAGE, hdr.msglength);
 		slurp_seek(fp, hdr.msgoffset, SEEK_SET);
 		slurp_read(fp, song->message, msg_len);
@@ -437,8 +454,9 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				continue;
 			slurp_seek(fp, para_ins[n], SEEK_SET);
 			inst = song->instruments[n + 1] = csf_allocate_instrument();
+			
 			if (hdr.cmwt >= 0x0200)
-				load_it_instrument(inst, fp->data + para_ins[n]);
+				load_it_instrument(inst, fp);
 			else
 				load_it_instrument_old(inst, fp);
 		}
@@ -464,7 +482,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			slurp_seek(fp, 4, SEEK_CUR);
 			song->patterns[n] = csf_allocate_pattern(rows);
 			song->pattern_size[n] = song->pattern_alloc_size[n] = rows;
-			load_it_pattern(song->patterns[n], fp, rows);
+			load_it_pattern(song->patterns[n], fp, rows, hdr.cwtv);
 			got = slurp_tell(fp) - para_pat[n] - 8;
 			if (bytes != got)
 				log_appendf(4, " Warning: Pattern %d: size mismatch"
@@ -561,12 +579,10 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		tid = "Impulse Tracker %d.%02x";
 		if (hdr.cmwt > 0x0214) {
 			hdr.cwtv = 0x0215;
-		} else if (hdr.cwtv > 0x0214) {
-			// Patched update of IT 2.14 (0x0215 - 0x0217 == p1 - p3)
-			// p4 (as found on modland) adds the ITVSOUND driver, but doesn't seem to change
-			// anything as far as file saving is concerned.
+		} else if (hdr.cwtv >= 0x0215 && hdr.cwtv <= 0x0217) {
 			tid = NULL;
-			sprintf(song->tracker_id, "Impulse Tracker 2.14p%d", hdr.cwtv - 0x0214);
+			const char *versions[] = { "1-2", "3", "4-5" };
+			sprintf(song->tracker_id, "Impulse Tracker 2.14p%s", versions[hdr.cwtv - 0x0215]);
 		}
 		//"saved %d time%s", hist, (hist == 1) ? "" : "s"
 	}

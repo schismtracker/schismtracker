@@ -44,6 +44,8 @@ extern char *initial_song;
 #include "osdefs.h"
 #include "keybinds.h"
 
+#include <crt_externs.h>
+
 /* Old versions of SDL define "vector" as a GCC
  * builtin; this causes importing Cocoa to fail,
  * as one struct Cocoa needs is named "vector".
@@ -55,7 +57,7 @@ extern char *initial_song;
 
 #import <Cocoa/Cocoa.h>
 
-@interface SDLMain : NSObject
+@interface SchismTrackerDelegate : NSObject
 - (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)filename;
 @end
 
@@ -69,24 +71,21 @@ typedef struct CPSProcessSerNum
 	UInt32 hi;
 } CPSProcessSerNum;
 
-extern OSErr    CPSGetCurrentProcess( CPSProcessSerNum *psn);
-extern OSErr    CPSEnableForegroundOperation( CPSProcessSerNum *psn, UInt32 _arg2, UInt32 _arg3, UInt32 _arg4, UInt32 _arg5);
-extern OSErr    CPSSetProcessName ( CPSProcessSerNum *psn, char *processname);
-extern OSErr    CPSSetFrontProcess( CPSProcessSerNum *psn);
+extern OSErr CPSGetCurrentProcess(CPSProcessSerNum *psn);
+extern OSErr CPSEnableForegroundOperation(CPSProcessSerNum *psn, UInt32 _arg2, UInt32 _arg3, UInt32 _arg4, UInt32 _arg5);
+extern OSErr CPSSetProcessName(CPSProcessSerNum *psn, char *processname);
+extern OSErr CPSSetFrontProcess(CPSProcessSerNum *psn);
 
-static int    gArgc;
-static char  **gArgv;
-static BOOL   gFinderLaunch;
-int macosx_did_finderlaunch;
-
-@interface SDL_SchismTracker : NSApplication
-@end
+static int macosx_did_finderlaunch;
 
 @interface NSApplication(OtherMacOSXExtensions)
 -(void)setAppleMenu:(NSMenu*)m;
 @end
 
-@implementation SDL_SchismTracker
+@interface SchismTracker : NSApplication
+@end
+
+@implementation SchismTracker
 /* Invoked from the Quit menu item */
 - (void)terminate:(id)sender
 {
@@ -95,6 +94,7 @@ int macosx_did_finderlaunch;
 	event.type = SDL_QUIT;
 	SDL_PushEvent(&event);
 }
+
 - (void)_menu_callback:(id)sender
 {
 	SDL_Event e;
@@ -119,11 +119,10 @@ int macosx_did_finderlaunch;
 	}
 }
 
-
 @end
 
 /* The main class of the application, the application's delegate */
-@implementation SDLMain
+@implementation SchismTrackerDelegate
 
 - (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)filename
 {
@@ -166,6 +165,21 @@ int macosx_did_finderlaunch;
 		CFRelease(url2);
 	}
 }
+
+/* Called when the internal event loop has just started running */
+- (void) applicationDidFinishLaunching: (NSNotification *) note
+{
+	/* Set the working directory to the .app's parent directory */
+	[self setupWorkingDirectory: (BOOL)macosx_did_finderlaunch];
+
+	exit(SDL_main(*_NSGetArgc(), *_NSGetArgv()));
+}
+
+@end /* @implementation SchismTracker */
+
+/* ------------------------------------------------------- */
+
+/* building the menus */
 
 static NSString *get_key_equivalent(keybind_bind_t *bind)
 {
@@ -235,30 +249,26 @@ static void setApplicationMenu(void)
 	/* Add menu items */
 	menuItem = (NSMenuItem*)[appleMenu addItemWithTitle:@"Help"
 				action:@selector(_menu_callback:)
-				keyEquivalent:get_key_equivalent(&global_keybinds_list.global.help)];
-	[menuItem setKeyEquivalentModifierMask:get_key_equivalent_modifier(&global_keybinds_list.global.help)];
+				keyEquivalent:KEQ_FN(1)];
+	[menuItem setKeyEquivalentModifierMask:0];
 	[menuItem setRepresentedObject: @"help"];
 
 	[appleMenu addItem:[NSMenuItem separatorItem]];
-
 	menuItem = (NSMenuItem*)[appleMenu addItemWithTitle:@"View Patterns"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(2)];
 	[menuItem setKeyEquivalentModifierMask:0];
 	[menuItem setRepresentedObject: @"pattern"];
-
 	menuItem = (NSMenuItem*)[appleMenu addItemWithTitle:@"Orders/Panning"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(11)];
 	[menuItem setKeyEquivalentModifierMask:0];
 	[menuItem setRepresentedObject: @"orders"];
-
 	menuItem = (NSMenuItem*)[appleMenu addItemWithTitle:@"Variables"
 					action:@selector(_menu_callback:)
 				 keyEquivalent:KEQ_FN(12)];
 	[menuItem setKeyEquivalentModifierMask:0];
 	[menuItem setRepresentedObject: @"variables"];
-
 	menuItem = (NSMenuItem*)[appleMenu addItemWithTitle:@"Message Editor"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(9)];
@@ -469,122 +479,49 @@ static void setupWindowMenu(void)
 	[windowMenuItem release];
 }
 
-/* Replacement for NSApplicationMain */
-static void CustomApplicationMain (int argc, char **argv)
+#ifdef main
+#  undef main
+#endif
+
+/* Main entry point to executable - should *not* be SDL_main! */
+int main (int argc, char **argv)
 {
-	NSAutoreleasePool       *pool = [[NSAutoreleasePool alloc] init];
-	SDLMain                         *sdlMain;
-	CPSProcessSerNum PSN;
+	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+
+	/* Copy the arguments into a global variable */
+	/* This is passed if we are launched by double-clicking */
+	macosx_did_finderlaunch = (argc >= 2 && strncmp (argv[1], "-psn", 4) == 0);
+
+	{
+		CPSProcessSerNum PSN;
+		/* Tell the dock about us */
+		if (!CPSGetCurrentProcess(&PSN)) {
+			if (!macosx_did_finderlaunch)
+				CPSSetProcessName(&PSN,"Schism Tracker");
+
+			if (!CPSEnableForegroundOperation(&PSN,0x03,0x3C,0x2C,0x1103))
+				if (!CPSSetFrontProcess(&PSN))
+					[SchismTracker sharedApplication];
+		}
+	}
 
 	/* Ensure the application object is initialised */
-	[SDL_SchismTracker sharedApplication];
-
-	/* Tell the dock about us */
-	if (!CPSGetCurrentProcess(&PSN)) {
-		if (!macosx_did_finderlaunch) {
-			CPSSetProcessName(&PSN,"Schism Tracker");
-		}
-		if (!CPSEnableForegroundOperation(&PSN,0x03,0x3C,0x2C,0x1103))
-			if (!CPSSetFrontProcess(&PSN))
-				[SDL_SchismTracker sharedApplication];
-	}
+	[SchismTracker sharedApplication];
 
 	/* Set up the menubar */
 	[NSApp setMainMenu:[[NSMenu alloc] init]];
 	setApplicationMenu();
 	setupWindowMenu();
 
-	/* Create SDLMain and make it the app delegate */
-	sdlMain = [[SDLMain alloc] init];
-	[NSApp setDelegate:sdlMain];
+	/* Create the app delegate */
+	SchismTrackerDelegate *delegate = [[SchismTrackerDelegate alloc] init];
+	[NSApp setDelegate: delegate];
 
 	/* Start the main event loop */
 	[NSApp run];
 
-	[sdlMain release];
+	[delegate release];
 	[pool release];
-}
-
-/* Called when the internal event loop has just started running */
-- (void) applicationDidFinishLaunching: (NSNotification *) note
-{
-	int status;
-
-	/* Set the working directory to the .app's parent directory */
-	[self setupWorkingDirectory:gFinderLaunch];
-
-	/* Hand off to main application code */
-	status = SDL_main (gArgc, gArgv);
-
-	/* We're done, thank you for playing */
-	exit(status);
-}
-@end
-
-
-@implementation NSString (ReplaceSubString)
-
-- (NSString *)stringByReplacingRange:(NSRange)aRange with:(NSString *)aString
-{
-	unsigned int bufferSize;
-	unsigned int selfLen = [self length];
-	unsigned int aStringLen = [aString length];
-	unichar *buffer;
-	NSRange localRange;
-	NSString *result;
-
-	bufferSize = selfLen + aStringLen - aRange.length;
-	buffer = NSAllocateMemoryPages(bufferSize*sizeof(unichar));
-
-	/* Get first part into buffer */
-	localRange.location = 0;
-	localRange.length = aRange.location;
-	[self getCharacters:buffer range:localRange];
-
-	/* Get middle part into buffer */
-	localRange.location = 0;
-	localRange.length = aStringLen;
-	[aString getCharacters:(buffer+aRange.location) range:localRange];
-
-	/* Get last part into buffer */
-	localRange.location = aRange.location + aRange.length;
-	localRange.length = selfLen - localRange.location;
-	[self getCharacters:(buffer+aRange.location+aStringLen) range:localRange];
-
-	/* Build output string */
-	result = [NSString stringWithCharacters:buffer length:bufferSize];
-
-	NSDeallocateMemoryPages(buffer, bufferSize);
-
-	return result;
-}
-
-@end
-
-
-
-#ifdef main
-#  undef main
-#endif
-
-
-/* Main entry point to executable - should *not* be SDL_main! */
-int main (int argc, char **argv)
-{
-	/* Copy the arguments into a global variable */
-	/* This is passed if we are launched by double-clicking */
-	if ( argc >= 2 && strncmp (argv[1], "-psn", 4) == 0 ) {
-		gArgc = 1;
-		gFinderLaunch = YES;
-		macosx_did_finderlaunch = 1;
-	} else {
-		gArgc = argc;
-		gFinderLaunch = NO;
-		macosx_did_finderlaunch = 0;
-	}
-	gArgv = argv;
-
-	CustomApplicationMain (argc, argv);
 
 	return 0;
 }

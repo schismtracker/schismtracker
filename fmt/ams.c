@@ -32,19 +32,25 @@ I don't know what this data's supposed to be for :) */
 
 /* btw: AMS stands for "Advanced Module System" */
 
-int fmt_ams_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_ams_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	uint8_t n;
+	unsigned char magic[7] = {0};
+	slurp_read(fp, &magic, sizeof(magic));
 
-	if (!(length > 38 && memcmp(data, "AMShdr\x1a", 7) == 0))
+	if (!(slurp_length(fp) > 38 && memcmp(magic, "AMShdr\x1a", 7) == 0))
 		return 0;
 
-	n = data[7];
-	if (n > 30)
-		n = 30;
+	slurp_seek(fp, 7, SEEK_SET);
+	int n = slurp_getc(fp);
+	n = CLAMP(n, 0, 30);
+
+	unsigned char title[30] = {0};
+	slurp_read(fp, &title, n);
+
 	file->description = "Velvet Studio";
 	/*file->extension = str_dup("ams");*/
-	file->title = strn_dup((const char *)data + 8, n);
+	file->title = strn_dup(title, n);
 	file->type = TYPE_MODULE_XM;
+
 	return 1;
 }

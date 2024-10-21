@@ -32,22 +32,6 @@
 #include "player/sndfile.h"
 #include "player/tables.h"
 
-/* --------------------------------------------------------------------- */
-
-int fmt_xm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
-{
-	if (!(length > 38 && memcmp(data, "Extended Module: ", 17) == 0))
-		return 0;
-
-	file->description = "Fast Tracker 2 Module";
-	file->type = TYPE_MODULE_XM;
-	/*file->extension = str_dup("xm");*/
-	file->title = strn_dup((const char *)data + 17, 20);
-	return 1;
-}
-
-/* --------------------------------------------------------------------------------------------------------- */
-
 // gloriously stolen from xmp
 struct xm_file_header {
 	uint8_t id[17];         // ID text: "Extended module: "
@@ -67,6 +51,27 @@ struct xm_file_header {
 };
 
 SCHISM_BINARY_STRUCT(struct xm_file_header, 80);
+
+/* --------------------------------------------------------------------- */
+
+int fmt_xm_read_info(dmoz_file_t *file, slurp_t *fp)
+{
+	struct xm_file_header hdr;
+
+	if (slurp_read(fp, &hdr, sizeof(hdr)) != sizeof(hdr))
+		return 0;
+
+	if (memcmp(hdr.id, "Extended Module: ", sizeof(hdr.id)))
+		return 0;
+
+	file->description = "Fast Tracker 2 Module";
+	file->type = TYPE_MODULE_XM;
+	/*file->extension = str_dup("xm");*/
+	file->title = strn_dup(hdr.name, sizeof(hdr.name));
+	return 1;
+}
+
+/* --------------------------------------------------------------------------------------------------------- */
 
 static uint8_t autovib_import[8] = {
 	VIB_SINE, VIB_SQUARE,
@@ -124,10 +129,10 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 
 		// hack to avoid having to count bytes when reading
 		end = slurp_tell(fp) + bytes;
-		end = MIN(end, fp->length);
+		end = MIN(end, slurp_length(fp));
 
 		for (row = 0; row < rows; row++, note += MAX_CHANNELS - hdr->channels) {
-			for (chan = 0; fp->pos < end && chan < hdr->channels; chan++, note++) {
+			for (chan = 0; slurp_tell(fp) < end && chan < hdr->channels; chan++, note++) {
 				b = slurp_getc(fp);
 				if (b & 128) {
 					if (b & 1) note->note = slurp_getc(fp);
@@ -365,8 +370,7 @@ static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 	// dontyou: 20 samples starting at 26122
 	// trnsmix: 31 samples starting at 61946
 	for (ns = 0; ns < total; ns++, smp++) {
-		smpsize = smp->length;
-		if (!smpsize)
+		if (!smp->length)
 			continue;
 		if (smp->flags & CHN_16BIT) {
 			smp->length >>= 1;
@@ -379,14 +383,11 @@ static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 			smp->loop_end >>= 1;
 		}
 		if (smp->adlib_bytes[0] != 0xAD) {
-			csf_read_sample(smp, SF_LE | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M) | SF_PCMD | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8),
-					fp->data + fp->pos, fp->length - fp->pos);
+			csf_read_sample(smp, SF_LE | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M) | SF_PCMD | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8), fp);
 		} else {
 			smp->adlib_bytes[0] = 0;
-			smpsize = 16 + (smpsize + 1) / 2;
-			csf_read_sample(smp, SF_8 | SF_M | SF_LE | SF_PCMD16, fp->data + fp->pos, fp->length - fp->pos);
+			csf_read_sample(smp, SF_8 | SF_M | SF_LE | SF_PCMD16, fp);
 		}
-		slurp_seek(fp, smpsize, SEEK_CUR);
 	}
 }
 

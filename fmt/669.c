@@ -47,33 +47,34 @@ SCHISM_BINARY_STRUCT(struct header_669, 2+108+1+1+1+128+128+128);
 
 #pragma pack(pop)
 
-int fmt_669_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_669_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	struct header_669 *header = (struct header_669 *) data;
+	struct header_669 hdr;
+
+	if (slurp_read(fp, &hdr, sizeof(hdr)) != sizeof(hdr))
+		return 0;
+
 	unsigned long i;
 	const char *desc;
 
-	if (length < sizeof(struct header_669))
-		return 0;
-
 	/* Impulse Tracker identifies any 669 file as a "Composer 669 Module",
 	regardless of the signature tag. */
-	if (memcmp(header->sig, "if", 2) == 0)
+	if (memcmp(hdr.sig, "if", 2) == 0)
 		desc = "Composer 669 Module";
-	else if (memcmp(header->sig, "JN", 2) == 0)
+	else if (memcmp(hdr.sig, "JN", 2) == 0)
 		desc = "Extended 669 Module";
 	else
 		return 0;
 
-	if (header->samples == 0 || header->patterns == 0
-	    || header->samples > 64 || header->patterns > 128
-	    || header->restartpos > 127)
+	if (hdr.samples == 0 || hdr.patterns == 0
+	    || hdr.samples > 64 || hdr.patterns > 128
+	    || hdr.restartpos > 127)
 		return 0;
 	for (i = 0; i < 128; i++)
-		if (header->breaks[i] > 0x3f)
+		if (hdr.breaks[i] > 0x3f)
 			return 0;
 
-	file->title = strn_dup((char*)header->songmessage, 36);
+	file->title = strn_dup((const char*)hdr.songmessage, sizeof(hdr.songmessage));
 	file->description = desc;
 	/*file->extension = str_dup("669");*/
 	file->type = TYPE_MODULE_S3M;
@@ -117,7 +118,7 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	strncpy(titletmp, song->message, 36);
 	titletmp[36] = '\0';
 	titletmp[strcspn(titletmp, "\r\n")] = '\0';
-	trim_string(titletmp);
+	str_trim(titletmp);
 	titletmp[25] = '\0';
 	strcpy(song->title, titletmp);
 
@@ -302,14 +303,10 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	/* sample data */
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (smp = 1; smp <= nsmp; smp++) {
-			uint32_t ssize;
-
 			if (song->samples[smp].length == 0)
 				continue;
 
-			ssize = csf_read_sample(song->samples + smp, SF_LE | SF_M | SF_PCMU | SF_8,
-				fp->data + fp->pos, fp->length - fp->pos);
-			slurp_seek(fp, ssize, SEEK_CUR);
+			csf_read_sample(song->samples + smp, SF_LE | SF_M | SF_PCMU | SF_8, fp);
 		}
 	}
 

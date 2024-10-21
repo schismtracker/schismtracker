@@ -30,61 +30,67 @@
 #include "it_defs.h"
 
 /* --------------------------------------------------------------------- */
-int fmt_its_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_its_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	struct it_sample *its;
+	struct it_sample its;
+	unsigned char title[25];
 
-	if (!(length > 80 && memcmp(data, "IMPS", 4) == 0))
+	if (slurp_read(fp, &its, sizeof(its)) != sizeof(its)
+		|| memcmp(&its.id, "IMPS", 4))
 		return 0;
 
-	its = (struct it_sample *)data;
-	file->smp_length = bswapLE32(its->length);
+	file->smp_length = bswapLE32(its.length);
 	file->smp_flags = 0;
 
-	if (its->flags & 2) {
+	if (its.flags & 2)
 		file->smp_flags |= CHN_16BIT;
-	}
-	if (its->flags & 16) {
+
+	if (its.flags & 16) {
 		file->smp_flags |= CHN_LOOP;
-		if (its->flags & 64)
+		if (its.flags & 64)
 			file->smp_flags |= CHN_PINGPONGLOOP;
 	}
-	if (its->flags & 32) {
+
+	if (its.flags & 32) {
 		file->smp_flags |= CHN_SUSTAINLOOP;
-		if (its->flags & 128)
+		if (its.flags & 128)
 			file->smp_flags |= CHN_PINGPONGSUSTAIN;
 	}
 
-	if (its->dfp & 128) file->smp_flags |= CHN_PANNING;
-	if (its->flags & 4) file->smp_flags |= CHN_STEREO;
+	if (its.dfp & 128) file->smp_flags |= CHN_PANNING;
+	if (its.flags & 4) file->smp_flags |= CHN_STEREO;
 
-	file->smp_defvol = its->vol;
-	file->smp_gblvol = its->gvl;
-	file->smp_vibrato_speed = its->vis;
-	file->smp_vibrato_depth = its->vid & 0x7f;
-	file->smp_vibrato_rate = its->vir;
+	file->smp_defvol = its.vol;
+	file->smp_gblvol = its.gvl;
+	file->smp_vibrato_speed = its.vis;
+	file->smp_vibrato_depth = its.vid & 0x7f;
+	file->smp_vibrato_rate = its.vir;
 
-	file->smp_loop_start = bswapLE32(its->loopbegin);
-	file->smp_loop_end = bswapLE32(its->loopend);
-	file->smp_speed = bswapLE32(its->c5speed);
-	file->smp_sustain_start = bswapLE32(its->susloopbegin);
-	file->smp_sustain_end = bswapLE32(its->susloopend);
+	file->smp_loop_start = bswapLE32(its.loopbegin);
+	file->smp_loop_end = bswapLE32(its.loopend);
+	file->smp_speed = bswapLE32(its.c5speed);
+	file->smp_sustain_start = bswapLE32(its.susloopbegin);
+	file->smp_sustain_end = bswapLE32(its.susloopend);
 
-	file->smp_filename = strn_dup((const char *)its->filename, 12);
+	file->smp_filename = strn_dup((const char *)its.filename, 12);
 	file->description = "Impulse Tracker Sample";
-	file->title = strn_dup((const char *)data + 20, 25);
 	file->type = TYPE_SAMPLE_EXTD;
+
+	slurp_seek(fp, 20, SEEK_SET);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
+		return 0;
+
+	file->title = strn_dup(title, sizeof(title));
 
 	return 1;
 }
 
-int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, song_sample_t *smp)
+int load_its_sample(struct it_sample *its, slurp_t *fp, song_sample_t *smp)
 {
-	struct it_sample *its = (struct it_sample *)header;
 	uint32_t format;
 	uint32_t bp;
 
-	if (length < 80 || strncmp((const char *) header, "IMPS", 4) != 0)
+	if (slurp_length(fp) < 80 || its->id != bswapLE32(0x53504D49))
 		return 0;
 	/* alright, let's get started */
 	smp->length = bswapLE32(its->length);
@@ -156,15 +162,27 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
 
 	bp = bswapLE32(its->samplepointer);
 
-	// dumb casts :P
-	return csf_read_sample((song_sample_t *) smp, format,
-			(const char *) (data + bp),
-			(uint32_t) (length - bp));
+	int64_t pos = slurp_tell(fp);
+	if (pos < 0)
+		return 0;
+
+	slurp_seek(fp, bp, SEEK_SET);
+
+	int r = csf_read_sample(smp, format, fp);
+
+	slurp_seek(fp, pos, SEEK_SET);
+
+	return r;
 }
 
-int fmt_its_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
+int fmt_its_load_sample(slurp_t *fp, song_sample_t *smp)
 {
-	return load_its_sample(data, data, length, smp);
+	struct it_sample its;
+
+	if (slurp_read(fp, &its, sizeof(its)) != sizeof(its))
+		return 0;
+
+	return load_its_sample(&its, fp, smp);
 }
 
 void save_its_header(disko_t *fp, song_sample_t *smp)
@@ -225,7 +243,7 @@ int fmt_its_save_sample(disko_t *fp, song_sample_t *smp)
 			UINT32_MAX);
 
 	/* Write the sample pointer. In an ITS file, the sample data is right after the header,
-	so its position in the file will be the same as the size of the header. */
+	 * so its position in the file will be the same as the size of the header. */
 	unsigned int tmp = bswapLE32(sizeof(struct it_sample));
 	disko_seek(fp, 0x48, SEEK_SET);
 	disko_write(fp, &tmp, 4);

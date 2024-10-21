@@ -35,11 +35,16 @@
 #include <assert.h>
 
 /* --------------------------------------------------------------------- */
-int fmt_iti_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_iti_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 554 && memcmp(data, "IMPI",4) == 0)) return 0;
+	struct it_instrument iti;
+
+	if (slurp_read(fp, &iti, sizeof(iti)) != sizeof(iti)
+		|| memcmp(&iti.id, "IMPI", sizeof(iti.id)))
+		return 0;
+
 	file->description = "Impulse Tracker Instrument";
-	file->title = strn_dup((const char *)data + 32, 25);
+	file->title = strn_dup(iti.name, sizeof(iti.name));
 	file->type = TYPE_INST_ITI;
 
 	return 1;
@@ -94,12 +99,17 @@ static uint32_t load_it_envelope(song_envelope_t *env, struct it_envelope *itenv
 	return flags;
 }
 
-void load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp)
+int load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp)
 {
 	struct it_instrument_old ihdr;
 	int n;
 
-	slurp_read(fp, &ihdr, sizeof(ihdr));
+	if (slurp_read(fp, &ihdr, sizeof(ihdr)) != sizeof(ihdr))
+		return 0;
+
+	/* err */
+	if (ihdr.id != bswapLE32(0x49504D49))
+		return 0;
 
 	memcpy(instrument->name, ihdr.name, 25);
 	instrument->name[25] = '\0';
@@ -146,11 +156,16 @@ void load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp)
 	}
 }
 
-void load_it_instrument(song_instrument_t *instrument, const uint8_t *data)
+int load_it_instrument(song_instrument_t *instrument, slurp_t *fp)
 {
 	struct it_instrument ihdr;
 
-	memcpy(&ihdr, data, sizeof(ihdr));
+	if (slurp_read(fp, &ihdr, sizeof(ihdr)) != sizeof(ihdr))
+		return 0;
+
+	/* err */
+	if (ihdr.id != bswapLE32(0x49504D49))
+		return 0;
 
 	memcpy(instrument->name, ihdr.name, 25);
 	instrument->name[25] = '\0';
@@ -191,28 +206,25 @@ void load_it_instrument(song_instrument_t *instrument, const uint8_t *data)
 	instrument->flags |= load_it_envelope(&instrument->pitch_env, &ihdr.pitchenv, 2, 32);
 }
 
-int fmt_iti_load_instrument(const uint8_t *data, size_t length, int slot)
+int fmt_iti_load_instrument(slurp_t *fp, int slot)
 {
-	struct it_instrument iti;
 	struct instrumentloader ii;
-	song_instrument_t *ins;
-	song_sample_t *smp;
-	int j;
+	song_instrument_t *ins = instrument_loader_init(&ii, slot);
 
-	if (!(length > 554 && memcmp(data, "IMPI",4) == 0)) return 0;
-
-	memcpy(&iti, data, sizeof(iti));
-
-	ins = instrument_loader_init(&ii, slot);
-
-	load_it_instrument(ins, data);
+	if (!load_it_instrument(ins, fp))
+		return 0;
 
 	/* okay, on to samples */
-	unsigned int pos = 554;
-	for (j = 0; j < ii.expect_samples; j++) {
-		smp = song_get_sample(ii.sample_map[j+1]);
-		if (!smp) break;
-		if (!load_its_sample(data + pos, data, length, smp)) {
+	size_t pos = 554;
+	for (int j = 0; j < ii.expect_samples; j++) {
+		song_sample_t *smp = song_get_sample(ii.sample_map[j+1]);
+		if (!smp)
+			break;
+
+		struct it_sample its;
+		slurp_read(fp, &its, sizeof(its));
+
+		if (!load_its_sample(&its, fp, smp)) {
 			log_appendf(4, "Could not load sample %d from ITI file", j);
 			return instrument_loader_abort(&ii);
 		}

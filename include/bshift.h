@@ -26,39 +26,30 @@
 
 #include <stdint.h>
 #include <assert.h>
+#include <limits.h>
 
-/* Portable replacements for signed integer bit shifting. These do not return the same
- * bit size as was given in; in lots of cases that won't really match up at all. */
+/* Portable replacements for signed integer bit shifting. These share the same
+ * implementation and only do different operations in the same manner and as such
+ * are written using a very simple macro. */
 
-#define SCHISM_SIGNED_SHIFT_VARIANT(BITS, RBITS, PREFIX, OPERATION) \
-	inline int ## RBITS ## _t schism_signed_ ## PREFIX ## shift_ ## BITS ## _(int ## BITS ## _t x, int y) \
+#define SCHISM_SIGNED_SHIFT_VARIANT(PREFIX, OPERATION) \
+	inline intmax_t schism_signed_ ## PREFIX ## shift_(intmax_t x, unsigned int y) \
 	{ \
-		const uint ## RBITS ## _t roffset = UINT ## RBITS ## _C(1) << (RBITS - 1); \
-		uint ## RBITS ## _t urx = (uint ## RBITS ## _t)x; \
+		const uintmax_t roffset = UINTMAX_C(1) << (sizeof(x) * CHAR_BIT - 1); \
+		uintmax_t urx = (uintmax_t)x; \
 		urx += roffset; \
 		urx OPERATION ## = y; \
 		urx -= roffset OPERATION y; \
-		return (int ## RBITS ## _t)urx; \
+		return (intmax_t)urx; \
 	}
 
-#define SCHISM_SIGNED_LSHIFT_VARIANT(BITS, RBITS) \
-	SCHISM_SIGNED_SHIFT_VARIANT(BITS, RBITS, l, <<)
+SCHISM_SIGNED_SHIFT_VARIANT(l, <<)
+SCHISM_SIGNED_SHIFT_VARIANT(r, >>)
 
-SCHISM_SIGNED_LSHIFT_VARIANT(32, 64)
+#undef SCHISM_SIGNED_SHIFT_VARIANT
 
-#undef SCHISM_SIGNED_LSHIFT_VARIANT
-
-#define SCHISM_SIGNED_RSHIFT_VARIANT(BITS, RBITS) \
-	SCHISM_SIGNED_SHIFT_VARIANT(BITS, RBITS, r, >>)
-
-SCHISM_SIGNED_RSHIFT_VARIANT(32, 32)
-SCHISM_SIGNED_RSHIFT_VARIANT(64, 64)
-
-#undef SCHISM_SIGNED_RSHIFT_VARIANT
-
-#define lshift_signed_32(x, y) schism_signed_lshift_32_(x, y)
-#define rshift_signed_32(x, y) schism_signed_rshift_32_(x, y)
-#define rshift_signed_64(x, y) schism_signed_rshift_64_(x, y)
+#define lshift_signed(x, y) schism_signed_lshift_(x, y)
+#define rshift_signed(x, y) schism_signed_rshift_(x, y)
 
 /* note: it is in fact possible to replicate template-like
  * behavior in standard C. However, Schism is de-facto

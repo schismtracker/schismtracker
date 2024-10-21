@@ -34,6 +34,8 @@
 
 #include <windows.h>
 #include <ws2tcpip.h>
+#include <process.h>
+#include <shlobj.h>
 
 #define IDM_FILE_NEW  101
 #define IDM_FILE_LOAD 102
@@ -327,4 +329,159 @@ void win32_create_menu(void) {
 	}
 
 #undef append_menu
+}
+
+/* -------------------------------------------------------------------- */
+
+int win32_wstat(const wchar_t* path, struct stat* st)
+{
+	struct _stat mstat;
+
+	int ws = _wstat(path, &mstat);
+	if (ws < 0)
+		return ws;
+
+	/* copy all the values */
+	st->st_gid = mstat.st_gid;
+	st->st_atime = mstat.st_atime;
+	st->st_ctime = mstat.st_ctime;
+	st->st_dev = mstat.st_dev;
+	st->st_ino = mstat.st_ino;
+	st->st_mode = mstat.st_mode;
+	st->st_mtime = mstat.st_mtime;
+	st->st_nlink = mstat.st_nlink;
+	st->st_rdev = mstat.st_rdev;
+	st->st_size = mstat.st_size;
+	st->st_uid = mstat.st_uid;
+
+	return ws;
+}
+
+/* you may wonder: why is this needed? can't we just use
+ * _mktemp() even on UTF-8 encoded strings?
+ *
+ * well, you *can*, but it will bite you in the ass once
+ * you get a string that has a mysterious "X" stored somewhere
+ * in the filename; better to just give it as a wide string */
+int win32_mktemp(char* template, size_t size)
+{
+	wchar_t* wc = NULL;
+	if (charset_iconv((const uint8_t*)template, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
+		return -1;
+
+	if (!_wmktemp(wc)) {
+		free(wc);
+		return -1;
+	}
+
+	/* still have to WideCharToMultiByte here */
+	if (!WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wc, -1, template, size, NULL, NULL)) {
+		free(wc);
+		return -1;
+	}
+
+	free(wc);
+	return 0;
+}
+
+int win32_stat(const char* path, struct stat* st)
+{
+	wchar_t* wc = NULL;
+	if (charset_iconv((const uint8_t*)path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
+		return -1;
+
+	int ret = win32_wstat(wc, st);
+	free(wc);
+	return ret;
+}
+
+int win32_open(const char* path, int flags)
+{
+	wchar_t* wc = NULL;
+	if (charset_iconv((const uint8_t*)path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
+		return -1;
+
+	int ret = _wopen(wc, flags);
+	free(wc);
+	return ret;
+}
+
+FILE* win32_fopen(const char* path, const char* flags)
+{
+	wchar_t* wc = NULL, *wc_flags = NULL;
+	if (charset_iconv((const uint8_t*)path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T)
+		|| charset_iconv((const uint8_t*)flags, (uint8_t**)&wc_flags, CHARSET_UTF8, CHARSET_WCHAR_T))
+		return NULL;
+
+	FILE* ret = _wfopen(wc, wc_flags);
+	free(wc);
+	free(wc_flags);
+	return ret;
+}
+
+int win32_mkdir(const char *path, UNUSED mode_t mode)
+{
+	wchar_t* wc = NULL;
+	if (charset_iconv((const uint8_t*)path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
+		return -1;
+
+	int ret = _wmkdir(wc);
+	free(wc);
+	return ret;
+}
+
+/* ------------------------------------------------------------------------------- */
+/* run hook */
+
+int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
+{
+	wchar_t cwd[PATH_MAX] = {L'\0'};
+	const wchar_t *cmd = NULL;
+	wchar_t batch_file[PATH_MAX] = {L'\0'};
+	struct stat sb = {0};
+	int r;
+
+	if (!GetCurrentDirectoryW(PATH_MAX-1, cwd))
+		return 0;
+
+	wchar_t* name_w = NULL;
+	if (charset_iconv((const uint8_t*)name, (uint8_t**)&name_w, CHARSET_UTF8, CHARSET_WCHAR_T))
+		return 0;
+
+	size_t name_len = wcslen(name_w);
+	wcsncpy(batch_file, name_w, name_len);
+	wcscpy(&batch_file[name_len], L".bat");
+
+	free(name_w);
+
+	wchar_t* dir_w = NULL;
+	if (charset_iconv((const uint8_t*)dir, (uint8_t**)&dir_w, CHARSET_UTF8, CHARSET_WCHAR_T))
+		return 0;
+
+	if (_wchdir(dir_w) == -1) {
+		free(dir_w);
+		return 0;
+	}
+
+	free(dir_w);
+
+	wchar_t* maybe_arg_w = NULL;
+	if (charset_iconv((const uint8_t*)maybe_arg, (uint8_t**)&maybe_arg_w, CHARSET_UTF8, CHARSET_WCHAR_T))
+		return 0;
+
+	if (win32_wstat(batch_file, &sb) == -1) {
+		r = 0;
+	} else {
+		cmd = _wgetenv(L"COMSPEC");
+		if (!cmd)
+			cmd = L"command.com";
+
+		r = _wspawnlp(_P_WAIT, cmd, cmd, "/c", batch_file, maybe_arg_w, 0);
+	}
+
+	free(maybe_arg_w);
+
+	_wchdir(cwd);
+	if (r == 0) return 1;
+	return 0;
 }

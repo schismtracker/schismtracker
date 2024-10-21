@@ -46,6 +46,9 @@
 #include "fonts.h"
 #include "dialog.h"
 #include "widget.h"
+#ifdef SCHISM_CONTROLLER
+# include "controller.h"
+#endif
 
 #include "osdefs.h"
 
@@ -100,24 +103,7 @@ static void display_print_info(void)
 	video_report();
 }
 
-/* If we're not not debugging, don't not dump core. (Have I ever mentioned
- * that NDEBUG is poorly named -- or that identifiers for settings in the
- * negative form are a bad idea?) */
-#if defined(NDEBUG)
-# define SDL_INIT_FLAGS SDL_INIT_TIMER | SDL_INIT_VIDEO
-#else
-# define SDL_INIT_FLAGS SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE
-#endif
-
-static void sdl_init(void)
-{
-	const char *err;
-	if (SDL_Init(SDL_INIT_FLAGS) == 0)
-		return;
-	err = SDL_GetError();
-	fprintf(stderr, "SDL_Init: %s\n", err);
-	schism_exit(1);
-}
+#define SDL_INIT_FLAGS SDL_INIT_TIMER | SDL_INIT_VIDEO
 
 static void display_init(void)
 {
@@ -179,16 +165,16 @@ static void handle_window_event(SDL_WindowEvent *w)
 #if ENABLE_HOOKS
 static void run_startup_hook(void)
 {
-	run_hook(cfg_dir_dotschism, "startup-hook", NULL);
+	os_run_hook(cfg_dir_dotschism, "startup-hook", NULL);
 }
 static void run_disko_complete_hook(void)
 {
-	run_hook(cfg_dir_dotschism, "diskwriter-hook", NULL);
+	os_run_hook(cfg_dir_dotschism, "diskwriter-hook", NULL);
 }
 
 static void run_exit_hook(void)
 {
-	run_hook(cfg_dir_dotschism, "exit-hook", NULL);
+	os_run_hook(cfg_dir_dotschism, "exit-hook", NULL);
 }
 #endif
 
@@ -366,7 +352,7 @@ static void parse_options(int argc, char **argv)
 		}
 	}
 
-	char *cwd = get_current_directory();
+	char *cwd = dmoz_get_current_directory();
 	for (; optind < argc; optind++) {
 		char *arg = argv[optind];
 		char *tmp = dmoz_path_concat(cwd, arg);
@@ -376,7 +362,7 @@ static void parse_options(int argc, char **argv)
 		}
 		char *norm = dmoz_path_normal(tmp);
 		free(tmp);
-		if (is_directory(arg)) {
+		if (dmoz_path_is_directory(arg)) {
 			free(initial_dir);
 			initial_dir = norm;
 		} else {
@@ -488,6 +474,11 @@ static void event_loop(void)
 			if (!os_sdlevent(&event))
 				continue;
 
+#ifdef SCHISM_CONTROLLER
+			if (!controller_sdlevent(&event))
+				continue;
+#endif
+
 			key_event_reset(&kk, kk.sx, kk.sy);
 
 			sawrep = 0;
@@ -539,8 +530,12 @@ static void event_loop(void)
 			}
 			case SDL_KEYDOWN:
 				/* we have our own repeat handler now */
-				if (event.key.repeat)
-					break;
+				if (event.key.repeat) {
+					if (kbd_key_repeat_enabled())
+						break;
+
+					kk.is_repeat = 1;
+				}
 
 				/* fallthrough */
 			case SDL_KEYUP:
@@ -636,7 +631,7 @@ static void event_loop(void)
 #endif
 				video_translate(wheel_x, wheel_y, &kk.fx, &kk.fy);
 				kk.mouse = (event.wheel.y > 0) ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN;
-			case SDL_MOUSEMOTION:
+			case SDL_MOUSEMOTION: // FIXME THIS IS WRONG
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
 				if (kk.state == KEY_PRESS) {
@@ -923,9 +918,9 @@ static void event_loop(void)
 		for (t = 0; t < 10 && !SDL_PollEvent(NULL); t++)
 			SDL_Delay(1);
 	}
+	
 	schism_exit(0);
 }
-
 
 void schism_exit(int status)
 {
@@ -956,9 +951,14 @@ void schism_exit(int status)
 		See long-standing bug: https://github.com/libsdl-org/SDL/issues/3184
 			/ Vanfanel
 		*/
+#ifdef SCHISM_CONTROLLER
+		controller_quit();
+#endif
 		SDL_Quit();
 	}
+
 	os_sysexit();
+
 	exit(status);
 }
 
@@ -1005,17 +1005,19 @@ int main(int argc, char **argv)
 		if (startup_flags & SF_CLASSIC) status.flags |= CLASSIC_MODE;
 	}
 
-	if (!did_fullscreen) {
+	if (!did_fullscreen)
 		video_fullscreen(cfg_video_fullscreen);
-	}
 
-	if (!(startup_flags & SF_NETWORK)) {
+	if (!(startup_flags & SF_NETWORK))
 		status.flags |= NO_NETWORK;
-	}
 
 	shutdown_process |= EXIT_SAVECFG;
 
-	sdl_init();
+	if (SDL_Init(SDL_INIT_FLAGS) < 0) {
+		fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
+		schism_exit(1);
+	}
+
 	/* make SDL_SetWindowGrab grab the keyboard too */
 	SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
 	shutdown_process |= EXIT_SDLQUIT;
@@ -1025,6 +1027,10 @@ int main(int argc, char **argv)
 
 #ifdef SCHISM_WIN32
 	win32_create_menu();
+#endif
+
+#ifdef SCHISM_CONTROLLER
+	controller_init();
 #endif
 
 	display_init();
@@ -1048,9 +1054,9 @@ int main(int argc, char **argv)
 	main_song_changed_cb();
 
 	if (initial_song && !initial_dir) {
-		initial_dir = get_parent_directory(initial_song);
+		initial_dir = dmoz_path_get_parent_directory(initial_song);
 		if (!initial_dir) {
-			initial_dir = get_current_directory();
+			initial_dir = dmoz_get_current_directory();
 		}
 	}
 	if (initial_dir) {
@@ -1097,5 +1103,6 @@ int main(int argc, char **argv)
 	midi_engine_poll_ports();
 
 	event_loop();
+
 	return 0; /* blah */
 }

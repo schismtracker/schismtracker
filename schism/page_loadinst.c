@@ -34,6 +34,7 @@
 #include "dialog.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "osdefs.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -226,7 +227,7 @@ static void file_list_draw(void)
 			bg = 0;
 		}
 
-		draw_text(numtostr(3, n, buf), 2, pos, 0, 2);
+		draw_text(str_from_num(3, n, buf), 2, pos, 0, 2);
 		draw_text_len((file->title ? file->title : ""),
 						25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);

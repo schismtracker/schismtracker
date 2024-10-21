@@ -58,12 +58,12 @@ enum {
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#define PROTO_READ_INFO         (dmoz_file_t *file, const uint8_t *data, size_t length)
+#define PROTO_READ_INFO         (dmoz_file_t *file, slurp_t *fp)
 #define PROTO_LOAD_SONG         (song_t *song, slurp_t *fp, unsigned int lflags)
 #define PROTO_SAVE_SONG         (disko_t *fp, song_t *song)
-#define PROTO_LOAD_SAMPLE       (const uint8_t *data, size_t length, song_sample_t *smp)
+#define PROTO_LOAD_SAMPLE       (slurp_t *fp, song_sample_t *smp)
 #define PROTO_SAVE_SAMPLE       (disko_t *fp, song_sample_t *smp)
-#define PROTO_LOAD_INSTRUMENT   (const uint8_t *data, size_t length, int slot)
+#define PROTO_LOAD_INSTRUMENT   (slurp_t *fp, int slot)
 #define PROTO_SAVE_INSTRUMENT   (disko_t *fp, song_t *song, song_instrument_t *ins)
 #define PROTO_EXPORT_HEAD       (disko_t *fp, int bits, int channels, int rate)
 #define PROTO_EXPORT_SILENCE    (disko_t *fp, long bytes)
@@ -133,19 +133,37 @@ int instrument_loader_sample(struct instrumentloader *ii, int slot);
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-uint32_t it_decompress8(void *dest, uint32_t len, const void *file, uint32_t filelen, int it215, int channels);
-uint32_t it_decompress16(void *dest, uint32_t len, const void *file, uint32_t filelen, int it215, int channels);
+uint32_t it_decompress8(void *dest, uint32_t len, slurp_t *fp, int it215, int channels);
+uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int channels);
 
-uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, uint8_t **ibuf, int8_t n);
+uint32_t mdl_decompress8(void *dest, uint32_t len, slurp_t *fp);
+uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp);
 
 /* --------------------------------------------------------------------------------------------------------- */
+
+struct it_sample; /* definition in it_defs.h */
 
 /* shared by the .it, .its, and .iti saving functions */
 void save_its_header(disko_t *fp, song_sample_t *smp);
 void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int iti_file);
-int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, song_sample_t *smp);
-void load_it_instrument(song_instrument_t *instrument, const uint8_t *data);
-void load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp);
+int load_its_sample(struct it_sample *its, slurp_t *fp, song_sample_t *smp);
+int load_it_instrument(song_instrument_t *instrument, slurp_t *fp);
+int load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp);
+
+/* --------------------------------------------------------------------------------------------------------- */
+
+/* [R]IFF helper functions */
+
+typedef struct chunk {
+	uint32_t id;
+	uint32_t size;
+	int64_t offset;
+} iff_chunk_t;
+
+int iff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp);
+int riff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp);
+int iff_chunk_read(iff_chunk_t *chunk, slurp_t *fp, void *data, size_t size);
+int iff_read_sample(iff_chunk_t *chunk, slurp_t *fp, song_sample_t *smp, uint32_t flags, size_t offset);
 
 /* --------------------------------------------------------------------------------------------------------- */
 // other misc functions...
@@ -177,7 +195,7 @@ void handle_stm_effects(song_note_t *chan_note);
 extern const uint8_t stm_effects[16];
 
 /* used internally by slurp only. nothing else should need this */
-int mmcmp_unpack(uint8_t **data, size_t *length);
+int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length);
 
 // get L-R-R-L panning value from a (zero-based!) channel number
 #define PROTRACKER_PANNING(n) (((((n) + 1) >> 1) & 1) * 256)

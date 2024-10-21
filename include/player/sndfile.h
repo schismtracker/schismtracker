@@ -10,6 +10,7 @@
 #include "headers.h"
 
 #include "disko.h"
+#include "slurp.h"
 
 #include "tables.h"
 
@@ -256,6 +257,7 @@ enum {
 #define SF_16                  _SDV_BIT(16) // 16-bit
 #define SF_24                  _SDV_BIT(24) // 24-bit
 #define SF_32                  _SDV_BIT(32) // 32-bit
+#define SF_64                  _SDV_BIT(64) // 64-bit (for IEEE floating point)
 
 // Channels (4 bits)
 #define _SDV_CHN(n)            ((n) << 8)
@@ -283,50 +285,10 @@ enum {
 #define SF_MDL                 _SDV_ENC(8) // MDL Huffman compression
 #define SF_PTM                 _SDV_ENC(9) // PTM 8-bit delta value -> 16-bit sample
 #define SF_PCMD16              _SDV_ENC(10) // PCM, 16-byte table delta-encoded
+#define SF_IEEE                _SDV_ENC(11) // IEEE floating point
 
 // Sample format shortcut
 #define SF(a,b,c,d) (SF_ ## a | SF_ ## b| SF_ ## c | SF_ ## d)
-
-// Deprecated constants
-#define RS_AMS16        SF(AMS,16,M,LE)
-#define RS_AMS8         SF(AMS,8,M,LE)
-#define RS_DMF16        SF(DMF,16,M,LE)
-#define RS_DMF8         SF(DMF,8,M,LE)
-#define RS_IT21416      SF(IT214,16,M,LE)
-#define RS_IT2148       SF(IT214,8,M,LE)
-#define RS_IT21516      SF(IT215,16,M,LE)
-#define RS_IT2158       SF(IT215,8,M,LE)
-#define RS_IT21416S     SF(IT214,16,SS,LE)
-#define RS_IT2148S      SF(IT214,8,SS,LE)
-#define RS_IT21516S     SF(IT215,16,SS,LE)
-#define RS_IT2158S      SF(IT215,8,SS,LE)
-#define RS_MDL16        SF(MDL,16,M,LE)
-#define RS_MDL8         SF(MDL,8,M,LE)
-#define RS_PCM16D       SF(PCMD,16,M,LE)
-#define RS_PCM16M       SF(PCMS,16,M,BE)
-#define RS_PCM16S       SF(PCMS,16,M,LE)
-#define RS_PCM16U       SF(PCMU,16,M,LE)
-#define RS_PCM24S       SF(PCMS,24,M,LE)
-#define RS_PCM32S       SF(PCMS,32,M,LE)
-#define RS_PCM8D        SF(PCMD,8,M,LE)
-#define RS_PCM8D16      SF(PCMD16,8,M,LE)
-#define RS_PCM8S        SF(PCMS,8,M,LE)
-#define RS_PCM8U        SF(PCMU,8,M,LE)
-#define RS_PTM8DTO16    SF(PTM,16,M,LE)
-#define RS_STIPCM16M    SF(PCMS,16,SI,BE)
-#define RS_STIPCM16S    SF(PCMS,16,SI,LE)
-#define RS_STIPCM16U    SF(PCMU,16,SI,LE)
-#define RS_STIPCM24S    SF(PCMS,24,SI,LE)
-#define RS_STIPCM32S    SF(PCMS,32,SI,LE)
-#define RS_STIPCM8S     SF(PCMS,8,SI,LE)
-#define RS_STIPCM8U     SF(PCMU,8,SI,LE)
-#define RS_STPCM16D     SF(PCMD,16,SS,LE)
-#define RS_STPCM16M     SF(PCMS,16,SS,BE)
-#define RS_STPCM16S     SF(PCMS,16,SS,LE)
-#define RS_STPCM16U     SF(PCMU,16,SS,LE)
-#define RS_STPCM8D      SF(PCMD,8,SS,LE)
-#define RS_STPCM8S      SF(PCMS,8,SS,LE)
-#define RS_STPCM8U      SF(PCMU,8,SS,LE)
 
 // ------------------------------------------------------------------------------------------------------------
 
@@ -618,7 +580,7 @@ song_instrument_t *csf_allocate_instrument(void);
 void csf_init_instrument(song_instrument_t *ins, int samp);
 void csf_free_instrument(song_instrument_t *p);
 
-uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, const void *filedata, uint32_t datalength);
+uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp);
 uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, uint32_t maxlengthmask);
 void csf_adjust_sample_loop(song_sample_t *sample);
 

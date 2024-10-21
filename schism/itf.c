@@ -38,6 +38,7 @@
 #include "util.h"
 #include "palettes.h"
 #include "fonts.h"
+#include "osdefs.h"
 
 #include "sdlmain.h"
 #include <string.h>
@@ -169,7 +170,7 @@ static int fontgrep(dmoz_file_t *f)
 		return 1; /* this is our font.cfg, at the top of the list */
 	if (f->type & TYPE_BROWSABLE_MASK)
 		return 0; /* we don't care about directories and stuff */
-	ext = get_extension(f->base);
+	ext = dmoz_path_get_extension(f->base);
 	return (strcasecmp(ext, ".itf") == 0 || strcasecmp(ext, ".fnt") == 0);
 }
 

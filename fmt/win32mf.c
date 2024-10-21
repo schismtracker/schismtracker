@@ -27,29 +27,34 @@
 #define _WIN32_WINNT 0x1000
 
 #include "headers.h"
+#include "sdlmain.h"
 #include "charset.h"
 #include "fmt.h"
 #include "util.h"
+
+/* we want constant vtables */
+#define CONST_VTABLE
 
 #include <mfapi.h>
 #include <mfidl.h>
 #include <mfreadwrite.h>
 #include <mferror.h>
+#include <shlwapi.h>
 #include <propvarutil.h>
 
 /* Dynamically loaded Media Foundation functions, to keep Schism working with Windows XP */
 
-typedef HRESULT WINAPI (*MF_MFStartupSpec)(ULONG version, DWORD flags);
-typedef HRESULT WINAPI (*MF_MFShutdownSpec)(void);
-typedef HRESULT WINAPI (*MF_MFCreateSourceResolverSpec)(IMFSourceResolver **ppISourceResolver);
-typedef HRESULT WINAPI (*MF_MFGetServiceSpec)(IUnknown *punkObject, REFGUID guidService, REFIID riid, LPVOID *ppvObject);
-typedef HRESULT WINAPI (*MF_PropVariantToStringAllocSpec)(REFPROPVARIANT propvar, PWSTR *ppszOut);
-typedef HRESULT WINAPI (*MF_PropVariantToUInt64Spec)(REFPROPVARIANT propvar, ULONGLONG *pullRet);
-typedef HRESULT WINAPI (*MF_MFCreateSourceReaderFromMediaSourceSpec)(IMFMediaSource *pMediaSource, IMFAttributes *pAttributes, IMFSourceReader **ppSourceReader);
-typedef HRESULT WINAPI (*MF_MFCreateMFByteStreamOnStreamSpec)(IStream *pStream, IMFByteStream **ppByteStream);
-typedef HRESULT WINAPI (*MF_MFCreateMediaTypeSpec)(IMFMediaType **ppMFType);
-
-typedef IStream * WINAPI (*MF_SHCreateMemStreamSpec)(const BYTE *pInit, UINT cbInit);
+typedef HRESULT (WINAPI *MF_MFStartupSpec)(ULONG version, DWORD flags);
+typedef HRESULT (WINAPI *MF_MFShutdownSpec)(void);
+typedef HRESULT (WINAPI *MF_MFCreateSourceResolverSpec)(IMFSourceResolver **ppISourceResolver);
+typedef HRESULT (WINAPI *MF_MFGetServiceSpec)(IUnknown *punkObject, REFGUID guidService, REFIID riid, LPVOID *ppvObject);
+typedef HRESULT (WINAPI *MF_PropVariantToStringAllocSpec)(REFPROPVARIANT propvar, PWSTR *ppszOut);
+typedef HRESULT (WINAPI *MF_PropVariantToUInt64Spec)(REFPROPVARIANT propvar, ULONGLONG *pullRet);
+typedef HRESULT (WINAPI *MF_MFCreateSourceReaderFromMediaSourceSpec)(IMFMediaSource *pMediaSource, IMFAttributes *pAttributes, IMFSourceReader **ppSourceReader);
+typedef HRESULT (WINAPI *MF_MFCreateMediaTypeSpec)(IMFMediaType **ppMFType);
+typedef HRESULT (WINAPI *MF_MFCreateAsyncResultSpec)(IUnknown *punkObject, IMFAsyncCallback *pCallback, IUnknown *punkState, IMFAsyncResult **ppAsyncResult);
+typedef HRESULT (WINAPI *MF_MFPutWorkItemSpec)(DWORD dwQueue, IMFAsyncCallback *pCallback, IUnknown *pState);
+typedef HRESULT (WINAPI *MF_MFInvokeCallbackSpec)(IMFAsyncResult *pAsyncResult);
 
 static MF_MFStartupSpec MF_MFStartup;
 static MF_MFShutdownSpec MF_MFShutdown;
@@ -58,55 +63,556 @@ static MF_MFGetServiceSpec MF_MFGetService;
 static MF_PropVariantToStringAllocSpec MF_PropVariantToStringAlloc;
 static MF_PropVariantToUInt64Spec MF_PropVariantToUInt64;
 static MF_MFCreateSourceReaderFromMediaSourceSpec MF_MFCreateSourceReaderFromMediaSource;
-static MF_MFCreateMFByteStreamOnStreamSpec MF_MFCreateMFByteStreamOnStream;
 static MF_MFCreateMediaTypeSpec MF_MFCreateMediaType;
+static MF_MFCreateAsyncResultSpec MF_MFCreateAsyncResult;
+static MF_MFPutWorkItemSpec MF_MFPutWorkItem;
+static MF_MFInvokeCallbackSpec MF_MFInvokeCallback;
 
-static MF_SHCreateMemStreamSpec MF_SHCreateMemStream;
+static int media_foundation_initialized = 0;
+
+/* forward declare this */
+static HRESULT STDMETHODCALLTYPE mfbytestream_ReadAtPosition(IMFByteStream *This, BYTE *pb, ULONG cb, ULONG *pcbRead, int64_t pos);
 
 /* --------------------------------------------------------------------- */
-/* stupid COM stuff incoming */
+/* this is what C++ nonsense looks like in plain C, btw. this api is
+ * absolutely diabolical and I yearn to just use function pointers again */
+
+struct slurp_async_op {
+	/* vtable */
+	CONST_VTBL IUnknownVtbl *lpvtbl;
+
+	/* things we have to free, or whatever */
+	IMFAsyncCallback *cb;
+	IMFByteStream *bs;
+
+	/* stuff */
+	BYTE *buffer;
+	ULONG req_length;
+	ULONG actual_length;
+	int64_t pos;
+
+	long ref_cnt;
+};
+
+static HRESULT STDMETHODCALLTYPE slurp_async_op_QueryInterface(IUnknown *This, REFIID riid, void **ppvobj)
+{
+	static const QITAB qit[] = {
+		{&IID_IUnknown, 0},
+		{NULL, 0},
+	};
+
+	return QISearch(This, qit, riid, ppvobj);
+}
+
+static ULONG STDMETHODCALLTYPE slurp_async_op_AddRef(IUnknown *This)
+{
+	return InterlockedIncrement(&(((struct slurp_async_op *)This)->ref_cnt));
+}
+
+static ULONG STDMETHODCALLTYPE slurp_async_op_Release(IUnknown *This)
+{
+	long ref = InterlockedDecrement(&(((struct slurp_async_op *)This)->ref_cnt));
+	if (!ref)
+		free(This);
+
+	return ref;
+}
+
+static const IUnknownVtbl slurp_async_op_vtbl = {
+	.QueryInterface = slurp_async_op_QueryInterface,
+	.AddRef = slurp_async_op_AddRef,
+	.Release = slurp_async_op_Release,
+};
+
+static inline int slurp_async_op_new(IUnknown **This, IMFByteStream *bs, IMFAsyncCallback *cb, BYTE *buffer, ULONG req_length, int64_t pos)
+{
+	struct slurp_async_op *op = calloc(1, sizeof(struct slurp_async_op));
+	if (!op)
+		return 0;
+
+	op->lpvtbl = &slurp_async_op_vtbl;
+
+	/* user provided info... */
+	op->bs = bs;
+	op->cb = cb;
+	op->buffer = buffer;
+	op->req_length = req_length;
+	op->pos = pos;
+
+	/* hmph */
+	op->ref_cnt = 1;
+
+	*This = (IUnknown *)op;
+	return 1;
+}
+
+/* ---------------------------------------------------------------------- */
+
+/* IMFAsyncCallback implementation; I really wish I could just use the regular
+ * IMFByteStream implementation because there isn't really anything special about
+ * this :/ */
+struct slurp_async_callback {
+	/* vtable */
+	CONST_VTBL IMFAsyncCallbackVtbl *lpvtbl;
+
+	long ref_cnt;
+};
+
+/* IUnknown */
+static HRESULT STDMETHODCALLTYPE slurp_async_callback_QueryInterface(IMFAsyncCallback *This, REFIID riid, void **ppobj)
+{
+	static const QITAB qit[] = {
+		{&IID_IMFAsyncCallback, 0},
+		{NULL, 0},
+	};
+
+	return QISearch(This, qit, riid, ppobj);
+}
+
+static ULONG STDMETHODCALLTYPE slurp_async_callback_AddRef(IMFAsyncCallback *This)
+{
+	return InterlockedIncrement(&(((struct slurp_async_callback *)This)->ref_cnt));
+}
+
+static ULONG STDMETHODCALLTYPE slurp_async_callback_Release(IMFAsyncCallback *This)
+{
+	long ref = InterlockedDecrement(&(((struct slurp_async_callback *)This)->ref_cnt));
+	if (!ref)
+		free(This);
+
+	return ref;
+}
+
+/* IMFAsyncCallback */
+static HRESULT STDMETHODCALLTYPE slurp_async_callback_GetParameters(IMFAsyncCallback *This, DWORD *pdwFlags, DWORD *pdwQueue)
+{
+	/* optional apparently, don't care enough to implement */
+	return E_NOTIMPL;
+}
+
+static HRESULT STDMETHODCALLTYPE slurp_async_callback_Invoke(IMFAsyncCallback *This, IMFAsyncResult *pAsyncResult)
+{
+	struct slurp_async_op *op;
+	IUnknown *pState = NULL;
+	IUnknown *pUnk = NULL;
+	IMFAsyncResult *caller = NULL;
+	HRESULT hr = S_OK;
+
+	hr = pAsyncResult->lpVtbl->GetState(pAsyncResult, &pState);
+	if (FAILED(hr))
+		goto done;
+
+	hr = pState->lpVtbl->QueryInterface(pState, &IID_IMFAsyncResult, (void **)&caller);
+	if (FAILED(hr))
+		goto done;
+
+	hr = caller->lpVtbl->GetObject(caller, &pUnk);
+	if (FAILED(hr))
+		goto done;
+
+	op = (struct slurp_async_op *)pUnk;
+
+	/* now we can actually do the work */
+	hr = mfbytestream_ReadAtPosition(op->bs, op->buffer, op->req_length, &op->actual_length, op->pos);
+
+done:
+	if (caller) {
+		caller->lpVtbl->SetStatus(caller, hr);
+		MF_MFInvokeCallback(caller);
+	}
+
+	if (pState)
+		pState->lpVtbl->Release(pState);
+
+	if (pUnk)
+		pUnk->lpVtbl->Release(pUnk);
+
+	return S_OK;
+}
+
+static const IMFAsyncCallbackVtbl slurp_async_callback_vtbl = {
+	/* IUnknown */
+	.QueryInterface = slurp_async_callback_QueryInterface,
+	.AddRef = slurp_async_callback_AddRef,
+	.Release = slurp_async_callback_Release,
+
+	/* IMFAsyncCallback */
+	.GetParameters = slurp_async_callback_GetParameters,
+	.Invoke = slurp_async_callback_Invoke,
+};
+
+static inline int slurp_async_callback_new(IMFAsyncCallback **This)
+{
+	struct slurp_async_callback *cb = calloc(1, sizeof(struct slurp_async_callback));
+	if (!cb)
+		return 0;
+
+	cb->lpvtbl = &slurp_async_callback_vtbl;
+
+	cb->ref_cnt = 1;
+
+	*This = (IMFAsyncCallback *)cb;
+	return 1;
+}
+
+/* ----------------------------------------------------------------------------------------- */
+
+/* IMFByteStream implementation for slurp */
+struct mfbytestream {
+	/* IMFByteStream vtable */
+	CONST_VTBL IMFByteStreamVtbl *lpvtbl;
+
+	slurp_t *fp;
+	SDL_mutex *mutex;
+	long ref_cnt;
+};
+
+/* IUnknown methods */
+static HRESULT STDMETHODCALLTYPE mfbytestream_QueryInterface(IMFByteStream *This, REFIID riid, void **ppobj)
+{
+	/* stupid fucking hack */
+	static const QITAB qit[] = {
+		{&IID_IMFByteStream, 0},
+		{NULL, 0},
+	};
+
+	return QISearch(This, qit, riid, ppobj);
+}
+
+static ULONG STDMETHODCALLTYPE mfbytestream_AddRef(IMFByteStream *This)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
+
+	return InterlockedIncrement(&mfb->ref_cnt);
+}
+
+static ULONG STDMETHODCALLTYPE mfbytestream_Release(IMFByteStream *This)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
+
+	long ref = InterlockedDecrement(&mfb->ref_cnt);
+	if (!ref) {
+		SDL_DestroyMutex(mfb->mutex);
+		free(mfb);
+	}
+
+	return ref;
+}
+
+/* IMFByteStream methods */
+static HRESULT STDMETHODCALLTYPE mfbytestream_GetCapabilities(UNUSED IMFByteStream* This, DWORD *pdwCapabilities)
+{
+	*pdwCapabilities = MFBYTESTREAM_IS_READABLE | MFBYTESTREAM_IS_SEEKABLE | MFBYTESTREAM_DOES_NOT_USE_NETWORK;
+	return S_OK;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_GetLength(IMFByteStream *This, QWORD *pqwLength)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
+	*pqwLength = slurp_length(mfb->fp);
+	return S_OK;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_SetLength(IMFByteStream *This, QWORD qwLength)
+{
+	return E_NOTIMPL;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_SetCurrentPosition(IMFByteStream *This, QWORD qwPosition)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
+
+	SDL_LockMutex(mfb->mutex);
+
+	slurp_seek(mfb->fp, qwPosition, SEEK_SET);
+
+	SDL_UnlockMutex(mfb->mutex);
+
+	return S_OK;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_GetCurrentPosition(IMFByteStream *This, QWORD *pqwPosition)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
+
+	SDL_LockMutex(mfb->mutex);
+
+	int64_t pos = slurp_tell(mfb->fp);
+
+	SDL_UnlockMutex(mfb->mutex);
+
+	if (pos < 0)
+		return E_FAIL;
+
+	*pqwPosition = pos;
+	return S_OK;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_IsEndOfStream(IMFByteStream *This, WINBOOL *pfEndOfStream)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
+
+	SDL_LockMutex(mfb->mutex);
+
+	*pfEndOfStream = slurp_eof(mfb->fp);
+
+	SDL_UnlockMutex(mfb->mutex);
+
+	return S_OK;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_Read(IMFByteStream *This, BYTE *pb, ULONG cb, ULONG *pcbRead)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
+
+	SDL_LockMutex(mfb->mutex);
+
+	*pcbRead = slurp_read(mfb->fp, pb, cb);
+
+	SDL_UnlockMutex(mfb->mutex);
+
+	return S_OK;
+}
+
+/* this is only used internally */
+static HRESULT STDMETHODCALLTYPE mfbytestream_ReadAtPosition(IMFByteStream *This, BYTE *pb, ULONG cb, ULONG *pcbRead, int64_t pos)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
+	HRESULT hr = S_OK;
+
+	*pcbRead = 0;
+
+	SDL_LockMutex(mfb->mutex);
+
+	/* cache the old position */
+	int64_t old_pos = slurp_tell(mfb->fp);
+	if (old_pos < 0) {
+		/* what ? */
+		hr = E_FAIL;
+		goto done;
+	}
+
+	slurp_seek(mfb->fp, pos, SEEK_SET);
+
+	*pcbRead = slurp_read(mfb->fp, pb, cb);
+
+	/* seek back to the old position */
+	slurp_seek(mfb->fp, old_pos, SEEK_SET);
+
+done:
+	SDL_UnlockMutex(mfb->mutex);
+
+	return hr;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_BeginRead(IMFByteStream *This, BYTE *pb, ULONG cb, IMFAsyncCallback *pCallback, IUnknown *punkState)
+{
+	IUnknown *op = NULL;
+	IMFAsyncCallback* callback = NULL;
+	IMFAsyncResult *result = NULL;
+	QWORD pos;
+	HRESULT hr = S_OK;
+
+	if (FAILED(hr = mfbytestream_GetCurrentPosition(This, &pos)))
+		return hr;
+
+	if (FAILED(hr = mfbytestream_SetCurrentPosition(This, pos + cb)))
+		return hr;
+
+	if (!slurp_async_callback_new(&callback))
+		return E_OUTOFMEMORY;
+
+	if (!slurp_async_op_new(&op, This, callback, pb, cb, pos))
+		return E_OUTOFMEMORY;
+
+	if (FAILED(hr = MF_MFCreateAsyncResult(op, pCallback, punkState, &result)))
+		goto fail;
+
+	hr = MF_MFPutWorkItem(MFASYNC_CALLBACK_QUEUE_STANDARD, callback, (IUnknown *)result);
+
+fail:
+	if (result)
+		result->lpVtbl->Release(result);
+
+	return hr;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_EndRead(IMFByteStream *This, IMFAsyncResult *pResult, ULONG *pcbRead)
+{
+	*pcbRead = 0;
+
+	struct slurp_async_op *op = NULL;
+
+	HRESULT hr = pResult->lpVtbl->GetStatus(pResult);
+	if (FAILED(hr))
+		goto done;
+
+	hr = pResult->lpVtbl->GetObject(pResult, (IUnknown **)&op);
+	if (FAILED(hr))
+		goto done;
+
+	*pcbRead = op->actual_length;
+
+done:
+	if (op) {
+		/* need to deal with this crap */
+		if (op->cb)
+			op->cb->lpVtbl->Release(op->cb);
+		op->lpvtbl->Release((IUnknown *)op);
+	}
+
+	return hr;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_Write(IMFByteStream *This, const BYTE *pb, ULONG cb, ULONG *pcbWritten)
+{
+	return E_NOINTERFACE;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_BeginWrite(IMFByteStream *This, const BYTE *pb, ULONG cb, IMFAsyncCallback *pCallback, IUnknown *punkState)
+{
+	return E_NOINTERFACE;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_EndWrite(IMFByteStream *This, IMFAsyncResult *pResult, ULONG *pcbWritten)
+{
+	return E_NOINTERFACE;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_Seek(IMFByteStream *This, MFBYTESTREAM_SEEK_ORIGIN SeekOrigin, LONGLONG llSeekOffset, DWORD dwSeekFlags, QWORD *pqwCurrentPosition)
+{
+	struct mfbytestream *mfb = (struct mfbytestream *)This;
+	int whence;
+
+	switch (SeekOrigin) {
+	case msoBegin:
+		whence = SEEK_SET;
+		break;
+	case msoCurrent:
+		whence = SEEK_CUR;
+		break;
+	default:
+		return E_NOINTERFACE;
+	}
+
+	// XXX MFBYTESTREAM_SEEK_FLAG_CANCEL_PENDING_IO wtf?
+
+	slurp_seek(mfb->fp, llSeekOffset, whence);
+
+	*pqwCurrentPosition = slurp_tell(mfb->fp);
+
+	return S_OK;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_Flush(IMFByteStream *This)
+{
+	/* we don't have anything to flush... */
+	return S_OK;
+}
+
+static HRESULT STDMETHODCALLTYPE mfbytestream_Close(IMFByteStream *This)
+{
+	/* do nothing */
+	return S_OK;
+}
+
+static const IMFByteStreamVtbl mfbytestream_vtbl = {
+	/* IUnknown */
+	.QueryInterface = mfbytestream_QueryInterface,
+	.AddRef = mfbytestream_AddRef,
+	.Release = mfbytestream_Release,
+
+	/* IMFByteStream */
+	.GetCapabilities = mfbytestream_GetCapabilities,
+	.GetLength = mfbytestream_GetLength,
+	.SetLength = mfbytestream_SetLength,
+	.SetCurrentPosition = mfbytestream_SetCurrentPosition,
+	.GetCurrentPosition = mfbytestream_GetCurrentPosition,
+	.IsEndOfStream = mfbytestream_IsEndOfStream,
+	.Read = mfbytestream_Read,
+	.BeginRead = mfbytestream_BeginRead,
+	.EndRead = mfbytestream_EndRead,
+	.Write = mfbytestream_Write,
+	.BeginWrite = mfbytestream_BeginWrite,
+	.EndWrite = mfbytestream_EndWrite,
+	.Seek = mfbytestream_Seek,
+	.Flush = mfbytestream_Flush,
+	.Close = mfbytestream_Close,
+};
+
+static inline int mfbytestream_new(IMFByteStream **imf, slurp_t *fp)
+{
+	struct mfbytestream *mfb = calloc(1, sizeof(*mfb));
+	if (!mfb)
+		return 0;
+
+	/* put in the vtable */
+	mfb->lpvtbl = &mfbytestream_vtbl;
+
+	/* whatever */
+	mfb->fp = fp;
+	mfb->mutex = SDL_CreateMutex();
+	if (!mfb->mutex) {
+		free(mfb);
+		return 0;
+	}
+	mfb->ref_cnt = 1;
+
+	*imf = (IMFByteStream *)mfb;
+	return 1;
+}
+
+/* -------------------------------------------------------------- */
 
 /* I really have no idea what (apartment/multi)threading does. I don't
  * think it really has an impact, either */
-#define COM_INITFLAGS (COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE)
+#define COM_INITFLAGS (COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)
 
 static const char* get_media_type_description(IMFMediaType* media_type)
 {
-	GUID subtype;
+	static const struct {
+		const GUID *guid;
+		const char *description;
+	} guids[] = {
+		{&MFAudioFormat_AAC, "Advanced Audio Coding"},
+		// {&MFAudioFormat_ADTS, "Not used"},
+		{&MFAudioFormat_ALAC, "Apple Lossless Audio Codec"},
+		{&MFAudioFormat_AMR_NB, "Adaptive Multi-Rate"},
+		{&MFAudioFormat_AMR_WB, "Adaptive Multi-Rate Wideband"},
+		{&MFAudioFormat_Dolby_AC3, "Dolby Digital (AC-3)"},
+		{&MFAudioFormat_Dolby_AC3_SPDIF, "Dolby AC-3 over S/PDIF"},
+		{&MFAudioFormat_Dolby_DDPlus, "Dolby Digital Plus"},
+		{&MFAudioFormat_DRM, "Encrypted audio data"}, // ????
+		{&MFAudioFormat_DTS, "Digital Theater Systems"}, // yes, "theater", not "theatre"
+		{&MFAudioFormat_FLAC, "Free Lossless Audio Codec"},
+		{&MFAudioFormat_Float, "Uncompressed floating-point audio"},
+		{&MFAudioFormat_Float_SpatialObjects, "Uncompressed floating-point audio"},
+		{&MFAudioFormat_MP3, "MPEG Layer-3 (MP3)"},
+		{&MFAudioFormat_MPEG, "MPEG-1 audio payload"},
+		{&MFAudioFormat_MSP1, "Windows Media Audio 9 Voice"},
+		{&MFAudioFormat_Opus, "Opus"},
+		{&MFAudioFormat_PCM, "Uncompressed PCM"},
+		// {&MFAudioFormat_QCELP, "QCELP audio"}, // can't get this to compile... 
+		{&MFAudioFormat_WMASPDIF, "Windows Media Audio 9 over S/PDIF"},
+		{&MFAudioFormat_WMAudio_Lossless, "Windows Media Audio 9 Lossless"},
+		{&MFAudioFormat_WMAudioV8, "Windows Media Audio 8"},
+		{&MFAudioFormat_WMAudioV9, "Windows Media Audio 8"},
+	};
 
+	GUID subtype;
 	if (SUCCEEDED(media_type->lpVtbl->GetGUID(media_type, &MF_MT_SUBTYPE, &subtype))) {
-#define SUBTYPE(x, n) do { if (IsEqualGUID(&subtype, &x)) return n; } while (0)
-		SUBTYPE(MFAudioFormat_AAC, "Advanced Audio Coding");
-		/* SUBTYPE(MFAudioFormat_ADTS, "Not used"); */
-		SUBTYPE(MFAudioFormat_ALAC, "Apple Lossless Audio Codec");
-		SUBTYPE(MFAudioFormat_AMR_NB, "Adaptive Multi-Rate");
-		SUBTYPE(MFAudioFormat_AMR_WB, "Adaptive Multi-Rate Wideband");
-		SUBTYPE(MFAudioFormat_Dolby_AC3, "Dolby Digital (AC-3)");
-		SUBTYPE(MFAudioFormat_Dolby_AC3_SPDIF, "Dolby AC-3 over S/PDIF");
-		SUBTYPE(MFAudioFormat_Dolby_DDPlus, "Dolby Digital Plus");
-		SUBTYPE(MFAudioFormat_DRM, "Encrypted audio data"); /* ???? */
-		SUBTYPE(MFAudioFormat_DTS, "Digital Theater Systems"); /* yes, "theater", not "theatre" */
-		SUBTYPE(MFAudioFormat_FLAC, "Free Lossless Audio Codec");
-		SUBTYPE(MFAudioFormat_Float, "Uncompressed floating-point audio");
-		SUBTYPE(MFAudioFormat_Float_SpatialObjects, "Uncompressed floating-point audio");
-		SUBTYPE(MFAudioFormat_MP3, "MPEG Layer-3 (MP3)");
-		SUBTYPE(MFAudioFormat_MPEG, "MPEG-1 audio payload");
-		SUBTYPE(MFAudioFormat_MSP1, "Windows Media Audio 9 Voice");
-		SUBTYPE(MFAudioFormat_Opus, "Opus");
-		SUBTYPE(MFAudioFormat_PCM, "Uncompressed PCM");
-		/* SUBTYPE(MFAudioFormat_QCELP, "QCELP audio"); -- ...can't get this to compile */
-		SUBTYPE(MFAudioFormat_WMASPDIF, "Windows Media Audio 9 over S/PDIF");
-		SUBTYPE(MFAudioFormat_WMAudio_Lossless, "Windows Media Audio 9 Lossless");
-		SUBTYPE(MFAudioFormat_WMAudioV8, "Windows Media Audio 8");
-		SUBTYPE(MFAudioFormat_WMAudioV9, "Windows Media Audio 8");
-#undef SUBTYPE
+		for (size_t i = 0; i < ARRAY_SIZE(guids); i++)
+			if (IsEqualGUID(&subtype, guids[i].guid))
+				return guids[i].description;
+
 #ifdef SCHISM_MF_DEBUG
 		log_appendf(1, "Unknown Media Foundation subtype found:");
-		log_appendf(1, "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}", 
-			subtype.Data1, subtype.Data2, subtype.Data3, 
+		log_appendf(1, "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}",
+			subtype.Data1, subtype.Data2, subtype.Data3,
 			subtype.Data4[0], subtype.Data4[1], subtype.Data4[2], subtype.Data4[3],
 			subtype.Data4[4], subtype.Data4[5], subtype.Data4[6], subtype.Data4[7]);
 #endif
+
 	}
 
 	/* welp */
@@ -115,11 +621,8 @@ static const char* get_media_type_description(IMFMediaType* media_type)
 
 static int get_source_reader_information(IMFSourceReader *reader, dmoz_file_t *file) {
 	IMFMediaType *media_type = NULL;
-	PROPVARIANT duration = {0};
 	uint64_t length = 0;
 	BOOL compressed = FALSE;
-
-	PropVariantInit(&duration);
 
 	if (SUCCEEDED(reader->lpVtbl->GetNativeMediaType(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, MF_SOURCE_READER_CURRENT_TYPE_INDEX, &media_type))) {
 		file->type = (SUCCEEDED(media_type->lpVtbl->IsCompressedFormat(media_type, &compressed)) && compressed)
@@ -131,16 +634,14 @@ static int get_source_reader_information(IMFSourceReader *reader, dmoz_file_t *f
 		media_type->lpVtbl->Release(media_type);
 	}
 
-	PropVariantClear(&duration);
-
 	return 1;
 }
 
 static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t* file)
 {
-	IMFPresentationDescriptor* descriptor = NULL;
-	IMFMetadataProvider* provider = NULL;
-	IMFMetadata* metadata = NULL;
+	IMFPresentationDescriptor *descriptor = NULL;
+	IMFMetadataProvider *provider = NULL;
+	IMFMetadata *metadata = NULL;
 	PROPVARIANT propnames = {0};
 	DWORD streams = 0;
 	int found = 0;
@@ -208,229 +709,145 @@ cleanup:
 	return found;
 }
 
-static int media_foundation_initialized = 0;
+/* ---------------------------------------------------------------- */
 
-/* needs to be called once on startup */
-int win32mf_init(void)
+struct win32mf_data {
+	/* wew */
+	IMFSourceReader *reader;
+	IMFMediaSource *source;
+	IMFByteStream *byte_stream; /* FIXME resolver probably handles this, can maybe remove */
+
+	/* info about the output audio data */
+	uint32_t flags, sps, bps, channels;
+};
+
+static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 {
-	HMODULE shlwapi = NULL;
-	HMODULE mf = NULL;
-	HMODULE mfplat = NULL;
-	HMODULE mfreadwrite = NULL;
-	HMODULE propsys = NULL;
-
-#ifdef SCHISM_MF_DEBUG
-#define DEBUG_PUTS(x) puts(x)
-#else
-#define DEBUG_PUTS(x)
-#endif
-
-#define LOAD_MF_LIBRARY(o) \
-	do { \
-		o = LoadLibraryW(L ## #o L".dll"); \
-		if (!(o)) { DEBUG_PUTS("Failed to load library " #o "!"); goto fail; } \
-	} while (0)
-
-#define LOAD_MF_OBJECT(o, x) \
-	do { \
-		MF_##x = (MF_##x##Spec)GetProcAddress(o, #x); \
-		if (!MF_##x) { DEBUG_PUTS("Failed to load " #x " from library " #o ".dll !"); goto fail; } \
-	} while (0)
-
-	HRESULT com_init = CoInitializeEx(NULL, COM_INITFLAGS);
-	if (com_init != S_OK && com_init != S_FALSE && com_init != RPC_E_CHANGED_MODE) {
-		DEBUG_PUTS("Failed to initialize COM!");
-		goto fail;
-	}
-
-	LOAD_MF_LIBRARY(shlwapi);
-
-	MF_SHCreateMemStream = (MF_SHCreateMemStreamSpec)GetProcAddress(shlwapi, MAKEINTRESOURCE(12));
-	if (!MF_SHCreateMemStream) {
-		DEBUG_PUTS("Failed to load SHCreateMemStream from library shlwapi.dll!");
-		goto fail;
-	}
-
-	LOAD_MF_LIBRARY(mf);
-
-	LOAD_MF_OBJECT(mf, MFGetService);
-	LOAD_MF_OBJECT(mf, MFCreateSourceResolver);
-
-	LOAD_MF_LIBRARY(mfplat);
-
-	LOAD_MF_OBJECT(mfplat, MFCreateMFByteStreamOnStream);
-	LOAD_MF_OBJECT(mfplat, MFCreateMediaType);
-	LOAD_MF_OBJECT(mfplat, MFStartup);
-	LOAD_MF_OBJECT(mfplat, MFShutdown);
-
-	LOAD_MF_LIBRARY(mfreadwrite);
-
-	LOAD_MF_OBJECT(mfreadwrite, MFCreateSourceReaderFromMediaSource);
-
-	LOAD_MF_LIBRARY(propsys);
-
-	LOAD_MF_OBJECT(propsys, PropVariantToStringAlloc);
-	LOAD_MF_OBJECT(propsys, PropVariantToUInt64);
-
-	/* MFSTARTUP_LITE == no sockets */
-	media_foundation_initialized = SUCCEEDED(MF_MFStartup(MF_VERSION, MFSTARTUP_LITE));
-
-	return media_foundation_initialized;
-
-fail:
-	if (shlwapi)
-		FreeLibrary(shlwapi);
-
-	if (mfplat)
-		FreeLibrary(mfplat);
-
-	if (mf)
-		FreeLibrary(mf);
-
-	if (mfreadwrite)
-		FreeLibrary(mfreadwrite);
-
-	if (propsys)
-		FreeLibrary(propsys);
-
-	CoUninitialize();
-
-	return 0;
-}
-
-void win32mf_quit(void)
-{
-	if (!media_foundation_initialized)
-		return;
-
-	MF_MFShutdown();
-	CoUninitialize();
-}
-
-/* implementation for both READ_INFO and LOAD_SAMPLE */
-#define MEDIA_FOUNDATION_START(data, len, url, cleanup) \
-	IMFSourceResolver* resolver = NULL; \
-	MF_OBJECT_TYPE object_type = MF_OBJECT_INVALID; \
-	IUnknown* unknown_media_source = NULL; \
-	IMFMediaSource* real_media_source = NULL; \
-	IMFSourceReader* reader = NULL; \
-	IStream *stream = NULL; \
-	IMFByteStream *byte_stream = NULL; \
-	uint32_t channels = 0, sps = 0, bps = 0, flags; \
-	IMFMediaType *uncompressed_type = NULL; \
-\
-	if (FAILED(MF_MFCreateSourceResolver(&resolver))) \
-		goto cleanup; \
-\
-	stream = MF_SHCreateMemStream(data, len); \
-	if (!stream) \
-		goto cleanup; \
-\
-	if (FAILED(MF_MFCreateMFByteStreamOnStream(stream, &byte_stream))) \
-		goto cleanup; \
-\
-	if (FAILED(resolver->lpVtbl->CreateObjectFromByteStream(resolver, byte_stream, url, MF_RESOLUTION_MEDIASOURCE | MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE | MF_RESOLUTION_READ, NULL, &object_type, &unknown_media_source))) \
-		goto cleanup; \
-\
-	if (object_type != MF_OBJECT_MEDIASOURCE) \
-		goto cleanup; \
-\
-	if (FAILED(unknown_media_source->lpVtbl->QueryInterface(unknown_media_source, &IID_IMFMediaSource, (void**)&real_media_source))) \
-		goto cleanup; \
-\
-	if (FAILED(MF_MFCreateSourceReaderFromMediaSource(real_media_source, NULL, &reader))) \
-		goto cleanup; \
-\
-	if (FAILED(MF_MFCreateMediaType(&uncompressed_type))) \
-		goto cleanup; \
-\
-	if (FAILED(uncompressed_type->lpVtbl->SetGUID(uncompressed_type, &MF_MT_MAJOR_TYPE, &MFMediaType_Audio))) \
-		goto cleanup; \
-\
-	if (FAILED(uncompressed_type->lpVtbl->SetGUID(uncompressed_type, &MF_MT_SUBTYPE, &MFAudioFormat_PCM))) \
-		goto cleanup; \
-\
-	if (FAILED(reader->lpVtbl->SetCurrentMediaType(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, NULL, uncompressed_type))) \
-		goto cleanup; \
-\
-	uncompressed_type->lpVtbl->Release(uncompressed_type); \
-\
-	if (FAILED(reader->lpVtbl->GetCurrentMediaType(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, &uncompressed_type))) \
-		goto cleanup; \
-\
-	if (FAILED(reader->lpVtbl->SetStreamSelection(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, TRUE))) \
-		goto cleanup; \
-\
-	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_NUM_CHANNELS, &channels))) \
-		goto cleanup; \
-\
-	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_SAMPLES_PER_SECOND, &sps))) \
-		goto cleanup; \
-\
-	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_BITS_PER_SAMPLE, &bps))) \
-		goto cleanup; \
-\
-	if (channels <= 0 || channels > 2) \
-		goto cleanup; \
-\
-	if (sps <= 0) \
-		goto cleanup; \
-\
-	if (bps != 8 && bps != 16) \
-		goto cleanup; \
-\
-	flags = SF_LE; \
-	flags |= (channels == 2) ? SF_SI : SF_M; \
-	flags |= (bps <= 8) ? SF_8 : SF_16; \
-	flags |= SF_PCMS;
-
-#define MEDIA_FOUNDATION_END() \
-	if (resolver) \
-		resolver->lpVtbl->Release(resolver); \
-\
-	if (unknown_media_source) \
-		unknown_media_source->lpVtbl->Release(unknown_media_source); \
-\
-	if (real_media_source) \
-		real_media_source->lpVtbl->Release(real_media_source); \
-\
-	if (reader) \
-		reader->lpVtbl->Release(reader); \
-\
-	if (stream) \
-		stream->lpVtbl->Release(stream); \
-\
-	if (byte_stream) \
-		byte_stream->lpVtbl->Release(byte_stream); \
-\
-	if (uncompressed_type) \
-		uncompressed_type->lpVtbl->Release(uncompressed_type);
-
-int fmt_win32mf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
-{
-	if (!media_foundation_initialized)
-		return 0;
-
 	int success = 0;
+	IMFSourceResolver *resolver = NULL;
+	IUnknown *unknown_media_source = NULL;
+	IMFMediaType *uncompressed_type = NULL;
+	MF_OBJECT_TYPE object_type = MF_OBJECT_INVALID;
 
-	wchar_t *url = NULL;
-	if (!file->path || charset_iconv(file->path, (uint8_t **)&url, CHARSET_UTF8, CHARSET_WCHAR_T))
-		url = NULL;
+	if (FAILED(MF_MFCreateSourceResolver(&resolver)))
+		goto cleanup;
 
-	MEDIA_FOUNDATION_START(data, length, url, cleanup)
+	if (!mfbytestream_new(&data->byte_stream, fp))
+		goto cleanup;
 
-	file->smp_flags = flags;
-	file->smp_speed = sps;
+	if (FAILED(resolver->lpVtbl->CreateObjectFromByteStream(resolver, data->byte_stream, url, MF_RESOLUTION_MEDIASOURCE | MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE | MF_RESOLUTION_READ, NULL, &object_type, &unknown_media_source)))
+		goto cleanup;
 
-	convert_media_foundation_metadata(real_media_source, file);
-	get_source_reader_information(reader, file);
+	if (object_type != MF_OBJECT_MEDIASOURCE)
+		goto cleanup;
+
+	if (FAILED(unknown_media_source->lpVtbl->QueryInterface(unknown_media_source, &IID_IMFMediaSource, (void**)&data->source)))
+		goto cleanup;
+
+	if (FAILED(MF_MFCreateSourceReaderFromMediaSource(data->source, NULL, &data->reader)))
+		goto cleanup;
+
+	if (FAILED(MF_MFCreateMediaType(&uncompressed_type)))
+		goto cleanup;
+
+	if (FAILED(uncompressed_type->lpVtbl->SetGUID(uncompressed_type, &MF_MT_MAJOR_TYPE, &MFMediaType_Audio)))
+		goto cleanup;
+
+	if (FAILED(uncompressed_type->lpVtbl->SetGUID(uncompressed_type, &MF_MT_SUBTYPE, &MFAudioFormat_PCM)))
+		goto cleanup;
+
+	if (FAILED(data->reader->lpVtbl->SetCurrentMediaType(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, NULL, uncompressed_type)))
+		goto cleanup;
+
+	uncompressed_type->lpVtbl->Release(uncompressed_type);
+
+	if (FAILED(data->reader->lpVtbl->GetCurrentMediaType(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, &uncompressed_type)))
+		goto cleanup;
+
+	if (FAILED(data->reader->lpVtbl->SetStreamSelection(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, TRUE)))
+		goto cleanup;
+
+	/* get output audio track data */
+	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_NUM_CHANNELS, &data->channels)))
+		goto cleanup;
+
+	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_SAMPLES_PER_SECOND, &data->sps)))
+		goto cleanup;
+
+	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_BITS_PER_SAMPLE, &data->bps)))
+		goto cleanup;
+
+	if (data->sps <= 0)
+		goto cleanup;
+
+	data->flags = SF_LE | SF_PCMS;
+
+	switch (data->channels) {
+	case 1:  data->flags |= SF_M;  break;
+	case 2:  data->flags |= SF_SI; break;
+	default: goto cleanup;
+	}
+
+	switch (data->bps) {
+	case 8:  data->flags |= SF_8;  break;
+	case 16: data->flags |= SF_16; break;
+	case 24: data->flags |= SF_24; break;
+	case 32: data->flags |= SF_32; break;
+	default: goto cleanup;
+	}
 
 	success = 1;
 
 cleanup:
-	MEDIA_FOUNDATION_END()
+	if (resolver)
+		resolver->lpVtbl->Release(resolver);
+
+	if (unknown_media_source)
+		unknown_media_source->lpVtbl->Release(unknown_media_source);
+
+	if (uncompressed_type)
+		uncompressed_type->lpVtbl->Release(uncompressed_type);
 
 	return success;
+}
+
+static void win32mf_end(struct win32mf_data *data)
+{
+	if (data->reader)
+		data->reader->lpVtbl->Release(data->reader);
+
+	if (data->source)
+		data->source->lpVtbl->Release(data->source);
+
+	if (data->byte_stream)
+		data->byte_stream->lpVtbl->Release(data->byte_stream);
+}
+
+int fmt_win32mf_read_info(dmoz_file_t *file, slurp_t *fp)
+{
+	struct win32mf_data data = {0};
+	wchar_t *url = NULL;
+
+	if (!media_foundation_initialized)
+		return 0;
+
+	if (!file->path || charset_iconv(file->path, (uint8_t **)&url, CHARSET_UTF8, CHARSET_WCHAR_T))
+		url = NULL;
+
+	if (!win32mf_start(&data, fp, url)) {
+		win32mf_end(&data);
+		return 0;
+	}
+
+	file->smp_flags = data.flags;
+	file->smp_speed = data.sps;
+
+	convert_media_foundation_metadata(data.source, file);
+	get_source_reader_information(data.reader, file);
+
+	win32mf_end(&data);
+
+	return 1;
 }
 
 enum {
@@ -440,7 +857,7 @@ enum {
 };
 
 /* uncompressed MUST point to NULL (or some other allocated memory) before the first pass! */
-static int reader_load_sample(IMFSourceReader *reader, uint8_t **uncompressed, size_t *size)
+static int reader_load_sample(IMFSourceReader *reader, disko_t *ds)
 {
 	if (!reader)
 		return READER_LOAD_ERROR;
@@ -474,19 +891,7 @@ static int reader_load_sample(IMFSourceReader *reader, uint8_t **uncompressed, s
 		goto cleanup;
 	}
 
-	{
-		uint8_t *orig = *uncompressed;
-		*uncompressed = realloc(orig, *size + buffer_data_size);
-		if (!*uncompressed) {
-			free(orig);
-			success = READER_LOAD_ERROR;
-			goto cleanup;
-		}
-
-		memcpy(*uncompressed + *size, buffer_data, buffer_data_size);
-
-		*size += buffer_data_size;
-	}
+	disko_write(ds, buffer_data, buffer_data_size);
 
 	if (FAILED(buffer->lpVtbl->Unlock(buffer))) {
 		success = READER_LOAD_ERROR;
@@ -503,45 +908,163 @@ cleanup:
 	return success;
 }
 
-int fmt_win32mf_load_sample(const uint8_t *data, size_t len, song_sample_t *smp)
+int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 {
 	if (!media_foundation_initialized)
 		return 0;
 
-	int success = 0;
-	uint8_t *uncompressed = NULL;
-	size_t uncompressed_size = 0, sample_length = 0;
+	disko_t ds = {0};
+	if (disko_memopen(&ds) < 0)
+		return 0;
 
-	MEDIA_FOUNDATION_START(data, len, NULL, cleanup)
+	struct win32mf_data data = {0};
+
+	if (!win32mf_start(&data, fp, NULL)) {
+		win32mf_end(&data);
+		disko_memclose(&ds, 0);
+		return 0;
+	}
 
 	for (;;) {
-		int loop_success = reader_load_sample(reader, &uncompressed, &uncompressed_size);
-		if (loop_success == READER_LOAD_ERROR)
-			goto cleanup;
-
+		int loop_success = reader_load_sample(data.reader, &ds);
 		if (loop_success == READER_LOAD_DONE)
 			break;
 
-		if (uncompressed_size / channels / (bps / 8) > MAX_SAMPLE_LENGTH)
-			break; /* punt */
+		if (loop_success == READER_LOAD_ERROR ||
+			(ds.length / data.channels / (data.bps / 8) > MAX_SAMPLE_LENGTH)) {
+			win32mf_end(&data);
+			disko_memclose(&ds, 0);
+			return 0;
+		}
 	}
 
-	sample_length = uncompressed_size / channels / (bps / 8);
-	if (sample_length < 1 || sample_length > MAX_SAMPLE_LENGTH)
-		goto cleanup;
+	uint32_t sample_length = ds.length / data.channels / (data.bps / 8);
+	if (sample_length < 1 || sample_length > MAX_SAMPLE_LENGTH) {
+		win32mf_end(&data);
+		disko_memclose(&ds, 0);
+		return 0;
+	}
 
 	smp->volume        = 64 * 4;
 	smp->global_volume = 64;
-	smp->c5speed       = sps;
+	smp->c5speed       = data.sps;
 	smp->length        = sample_length;
 
-	success = csf_read_sample(smp, flags, uncompressed, uncompressed_size);
+	slurp_t fake_fp;
+	slurp_memstream(&fake_fp, ds.data, ds.length);
 
-cleanup:
-	MEDIA_FOUNDATION_END()
+	int r = csf_read_sample(smp, data.flags, &fake_fp);
 
-	if (uncompressed)
-		free(uncompressed);
+	disko_memclose(&ds, 0);
 
-	return success;
+	win32mf_end(&data);
+
+	return r;
+}
+
+/* ----------------------------------------------------------- */
+
+static HMODULE lib_shlwapi = NULL;
+static HMODULE lib_mf = NULL;
+static HMODULE lib_mfplat = NULL;
+static HMODULE lib_mfreadwrite = NULL;
+static HMODULE lib_propsys = NULL;
+
+/* needs to be called once on startup */
+int win32mf_init(void)
+{
+
+#ifdef SCHISM_MF_DEBUG
+#define DEBUG_PUTS(x) puts(x)
+#else
+#define DEBUG_PUTS(x)
+#endif
+
+#define LOAD_MF_LIBRARY(o) \
+	do { \
+		lib_ ## o = LoadLibraryW(L ## #o L".dll"); \
+		if (!(lib_ ## o)) { DEBUG_PUTS("Failed to load library " #o "!"); goto fail; } \
+	} while (0)
+
+#define LOAD_MF_OBJECT(o, x) \
+	do { \
+		MF_##x = (MF_##x##Spec)GetProcAddress(lib_ ## o, #x); \
+		if (!MF_##x) { DEBUG_PUTS("Failed to load " #x " from library " #o ".dll !"); goto fail; } \
+	} while (0)
+
+	HRESULT com_init = CoInitializeEx(NULL, COM_INITFLAGS);
+	if (com_init != S_OK && com_init != S_FALSE && com_init != RPC_E_CHANGED_MODE) {
+		DEBUG_PUTS("Failed to initialize COM!");
+		goto fail;
+	}
+
+	LOAD_MF_LIBRARY(mf);
+
+	LOAD_MF_OBJECT(mf, MFGetService);
+	LOAD_MF_OBJECT(mf, MFCreateSourceResolver);
+
+	LOAD_MF_LIBRARY(mfplat);
+
+	LOAD_MF_OBJECT(mfplat, MFCreateMediaType);
+	LOAD_MF_OBJECT(mfplat, MFStartup);
+	LOAD_MF_OBJECT(mfplat, MFShutdown);
+	LOAD_MF_OBJECT(mfplat, MFCreateAsyncResult);
+	LOAD_MF_OBJECT(mfplat, MFPutWorkItem);
+	LOAD_MF_OBJECT(mfplat, MFInvokeCallback);
+
+	LOAD_MF_LIBRARY(mfreadwrite);
+
+	LOAD_MF_OBJECT(mfreadwrite, MFCreateSourceReaderFromMediaSource);
+
+	LOAD_MF_LIBRARY(propsys);
+
+	LOAD_MF_OBJECT(propsys, PropVariantToStringAlloc);
+	LOAD_MF_OBJECT(propsys, PropVariantToUInt64);
+
+	/* MFSTARTUP_LITE == no sockets */
+	return (media_foundation_initialized = SUCCEEDED(MF_MFStartup(MF_VERSION, MFSTARTUP_LITE)));
+
+fail:
+	if (lib_shlwapi)
+		FreeLibrary(lib_shlwapi);
+
+	if (lib_mfplat)
+		FreeLibrary(lib_mfplat);
+
+	if (lib_mf)
+		FreeLibrary(lib_mf);
+
+	if (lib_mfreadwrite)
+		FreeLibrary(lib_mfreadwrite);
+
+	if (lib_propsys)
+		FreeLibrary(lib_propsys);
+
+	CoUninitialize();
+
+	return 0;
+}
+
+void win32mf_quit(void)
+{
+	if (!media_foundation_initialized)
+		return;
+
+	if (lib_shlwapi)
+		FreeLibrary(lib_shlwapi);
+
+	if (lib_mfplat)
+		FreeLibrary(lib_mfplat);
+
+	if (lib_mf)
+		FreeLibrary(lib_mf);
+
+	if (lib_mfreadwrite)
+		FreeLibrary(lib_mfreadwrite);
+
+	if (lib_propsys)
+		FreeLibrary(lib_propsys);
+
+	MF_MFShutdown();
+	CoUninitialize();
 }

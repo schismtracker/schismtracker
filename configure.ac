@@ -80,6 +80,16 @@ AC_ARG_ENABLE(alsa-linking,
 	ALSA_LINKING=$enableval,
 	ALSA_LINKING=no)
 
+AC_ARG_ENABLE(force-wii,
+	AS_HELP_STRING([--enable-force-wii], [Force target the Wii]),
+	FORCE_WII=$enableval,
+	FORCE_WII=no)
+
+AC_ARG_ENABLE(force-wiiu,
+	AS_HELP_STRING([--enable-force-wiiu], [Force target the Wii U]),
+	FORCE_WIIU=$enableval,
+	FORCE_WIIU=no)
+
 AC_ARG_ENABLE(opl2,
 	AS_HELP_STRING([--enable-opl2], [Use OPL2 instead of OPL3]),
 	USE_OPL2=$enableval,
@@ -157,7 +167,7 @@ AC_SUBST([UTF8PROC_CFLAGS])
 AC_SUBST([UTF8PROC_LIBS])
 
 dnl Functions
-AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp mmap nice unsetenv dup fnmatch mkstemp localtime_r)
+AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp mmap nice unsetenv dup fnmatch mkstemp localtime_r umask execl fork)
 AM_CONDITIONAL([NEED_ASPRINTF], [test "x$ac_cv_func_asprintf" = "xno"])
 AM_CONDITIONAL([NEED_VASPRINTF], [test "x$ac_cv_func_vasprintf" = "xno"])
 AM_CONDITIONAL([NEED_MEMCMP], [test "x$ac_cv_func_memcmp" = "xno"])
@@ -202,7 +212,9 @@ AC_MSG_CHECKING([host platform])
 use_macosx=no
 use_win32=no
 use_wii=no
+use_wiiu=no
 use_network=no
+use_controller=no
 
 case "${host_os}" in
 	darwin*)
@@ -235,11 +247,26 @@ case "${host_os}" in
 		AC_MSG_RESULT([nothing to do here])
 
 		dnl now check for other stuff
+		saved_LIBS="$LIBS"
 		AC_CHECK_LIB([ogc], [IOS_ReloadIOS], [libogc_found=yes], [libogc_found=no], [-mrvl -L${DEVKITPRO}/libogc/lib/wii])
+		AC_CHECK_LIB([wut], [OSDynLoad_Acquire], [libwut_found=yes], [libwut_found=no], [-L${DEVKITPRO}/wut/lib])
+		LIBS="$saved_LIBS"
 
-		if test "x$libogc_found" = "xyes"; then
+		which=none
+
+		if test "x$FORCE_WIIU" = "xyes"; then
+			which=wiiu
+		elif test "x$FORCE_WII" = "xyes"; then
+			which=wii
+		elif test "x$libogc_found" = "xyes"; then
+			which=wii
+		elif test "x$libwut_found" = "xyes"; then
+			which=wiiu
+		fi
+
+		if test "x$which" = "xwii"; then
 			WII_CPPFLAGS="-I${DEVKITPRO}/libogc/include -I${DEVKITPPC}/powerpc-eabi/include"
-			WII_LDFLAGS="-L${DEVKITPRO}/libogc/lib/wii -L${DEVKITPPC}/powerpc-eabi/lib"
+			WII_LDFLAGS="-logc -L${DEVKITPRO}/libogc/lib/wii -L${DEVKITPPC}/powerpc-eabi/lib"
 			AC_SUBST([WII_CPPFLAGS])
 			AC_SUBST([WII_LDFLAGS])
 
@@ -247,7 +274,35 @@ case "${host_os}" in
 			AC_SUBST([EXEEXT])
 
 			use_wii=yes
+			use_controller=yes
 			AC_DEFINE([SCHISM_WII], [1], [Wii])
+			AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
+		elif test "x$which" = "xwiiu"; then
+			WIIU_CPPFLAGS="-I${DEVKITPRO}/wut/include -I${DEVKITPPC}/powerpc-eabi/include"
+			WIIU_LDFLAGS="-lwut -T${DEVKITPRO}/wut/share/wut.ld -Wl,--gc-sections -Wl,--emit-relocs -Wl,--no-eh-frame-hdr -z nocopyreloc -L${DEVKITPRO}/wut/lib -L${DEVKITPPC}/powerpc-eabi/lib"
+			AC_SUBST([WIIU_CPPFLAGS])
+			AC_SUBST([WIIU_LDFLAGS])
+
+			AC_PATH_PROG([WUHBTOOL], [wuhbtool])
+			if test "x$WUHBTOOL" = "x"; then
+				AC_MSG_ERROR([*** Couldn't find wuhbtool])
+			fi
+
+			AC_PATH_PROG([ELF2RPL],  [elf2rpl])
+			if test "x$ELF2RPL" = "x"; then
+				AC_MSG_ERROR([*** Couldn't find elf2rpl])
+			fi
+
+			AC_SUBST([WUHBTOOL])
+			AC_SUBST([ELF2RPL])
+
+			EXEEXT=.elf
+			AC_SUBST([EXEEXT])
+
+			use_wiiu=yes
+			use_controller=yes
+			AC_DEFINE([SCHISM_WIIU], [1], [Wii U])
+			AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
 		fi
 
 		dnl Networking...
@@ -285,6 +340,8 @@ fi
 
 AM_CONDITIONAL([USE_WIN32], [test "x$use_win32" = "xyes"])
 AM_CONDITIONAL([USE_WII], [test "x$use_wii" = "xyes"])
+AM_CONDITIONAL([USE_WIIU], [test "x$use_wiiu" = "xyes"])
+AM_CONDITIONAL([USE_CONTROLLER], [test "x$use_controller" = "xyes"])
 AM_CONDITIONAL([USE_MACOSX], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([am__fastdepOBJC], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([USE_NETWORK], [test "x$use_network" = "xyes"])

@@ -30,16 +30,30 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_far_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_far_read_info(dmoz_file_t *file, slurp_t *fp)
 {
+	if (!(slurp_length(fp) > 47))
+		return 0;
+
 	/* The magic for this format is truly weird (which I suppose is good, as the chance of it
 	being "accidentally" correct is pretty low) */
-	if (!(length > 47 && memcmp(data + 44, "\x0d\x0a\x1a", 3) == 0 && memcmp(data, "FAR\xfe", 4) == 0))
+	unsigned char magic1[4], magic2[3], title[40];
+
+	if (slurp_read(fp, magic1, sizeof(magic1)) != sizeof(magic1)
+		|| memcmp(magic1, "FAR\xfe", 4))
+		return 0;
+
+	slurp_seek(fp, 44, SEEK_SET);
+	if (slurp_read(fp, magic2, sizeof(magic2)) != sizeof(magic2)\
+		|| memcmp(magic2, "\x0d\x0a\x1a", 3))
+		return 0;
+
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 
 	file->description = "Farandole Module";
 	/*file->extension = str_dup("far");*/
-	file->title = strn_dup((const char *)data + 4, 40);
+	file->title = strn_dup(title, sizeof(title));
 	file->type = TYPE_MODULE_S3M;
 	return 1;
 }
@@ -245,8 +259,7 @@ int fmt_far_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			smp->flags |= CHN_LOOP;
 		smp->c5speed = 16726;
 		smp->global_volume = 64;
-		csf_read_sample(smp, SF_LE | SF_M | SF_PCMS | ((fsmp.type & 1) ? SF_16 : SF_8),
-			fp->data + fp->pos, fp->length - fp->pos);
+		csf_read_sample(smp, SF_LE | SF_M | SF_PCMS | ((fsmp.type & 1) ? SF_16 : SF_8), fp);
 		slurp_seek(fp, fsmp.length, SEEK_CUR);
 	}
 

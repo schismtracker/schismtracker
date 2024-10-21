@@ -200,7 +200,7 @@ lib_win32=-lwinmm
 
 if USE_MEDIAFOUNDATION
 files_mediafoundation=fmt/win32mf.c
-lib_mediafoundation=-lole32 -lmfuuid
+lib_mediafoundation=-lole32 -lmfuuid -lshlwapi -luuid
 endif
 
 if HAVE_WINDRES
@@ -222,11 +222,32 @@ endif # HAVE_WINDRES
 
 endif # USE_WIN32
 
+if USE_CONTROLLER
+files_controller=schism/controller.c
+endif
+
 if USE_WII
 files_wii=sys/wii/isfs.c sys/wii/osdefs.c
 cflags_wii=-mrvl -mcpu=750 -meabi -mhard-float
 cppflags_wii=-I$(srcdir)/sys/wii $(WII_CPPFLAGS)
 libs_wii=$(wii_machdep) $(WII_LDFLAGS)
+endif
+
+if USE_WIIU
+files_wiiu=sys/wiiu/osdefs.c
+cflags_wiiu=-mcpu=750 -meabi -mhard-float
+cppflags_wiiu=$(WIIU_CPPFLAGS)
+libs_wiiu=$(WIIU_LDFLAGS)
+
+# Wii U specific build rules for wuhb crap
+schismtracker.wuhb: schismtracker.rpx
+schismtracker.rpx: schismtracker.elf
+
+.rpx.wuhb:
+	$(WUHBTOOL) --name "Schism Tracker" --author "Storlek, Mrs. Brisby, et al." --icon=$(srcdir)/icons/schism-icon-128.png $< $@
+
+.elf.rpx:
+	$(ELF2RPL) $< $@
 endif
 
 if USE_MACOSX
@@ -305,6 +326,7 @@ schismtracker_SOURCES = \
 	fmt/far.c			\
 	fmt/generic.c			\
 	fmt/imf.c			\
+	fmt/iff.c           \
 	fmt/it.c			\
 	fmt/iti.c			\
 	fmt/its.c			\
@@ -348,6 +370,7 @@ schismtracker_SOURCES = \
 	schism/bshift.c         \
 	schism/bswap.c          \
 	schism/charset.c		\
+	schism/charset_stdlib.c \
 	schism/charset_unicode.c   \
 	schism/clippy.c			\
 	schism/config-parser.c		\
@@ -357,12 +380,14 @@ schismtracker_SOURCES = \
 	schism/dmoz.c			\
 	schism/fakemem.c		\
 	schism/fonts.c          \
+	schism/ieee-float.c     \
 	schism/itf.c			\
 	schism/keybinds.c		\
 	schism/keybinds_codes.c \
 	schism/keybinds_init.c  \
 	schism/keyboard.c		\
 	schism/main.c			\
+	schism/mem.c           \
 	schism/menu.c			\
 	schism/midi-core.c		\
 	schism/midi-ip.c		\
@@ -394,6 +419,7 @@ schismtracker_SOURCES = \
 	schism/sample-view.c		\
 	schism/slurp.c			\
 	schism/status.c			\
+	schism/str.c             \
 	schism/util.c			\
 	schism/version.c		\
 	schism/vgamem.c        \
@@ -401,6 +427,7 @@ schismtracker_SOURCES = \
 	schism/widget-keyhandler.c	\
 	schism/widget.c			\
 	schism/xpmdata.c		\
+	sys/posix/osdefs.c \
 	$(files_macosx)			\
 	$(files_alsa)			\
 	$(files_oss)			\
@@ -413,18 +440,21 @@ schismtracker_SOURCES = \
 	$(files_flac)			\
 	$(files_jack)			\
 	$(files_opl)			\
-	$(files_mediafoundation)
+	$(files_mediafoundation) \
+	$(files_wiiu)           \
+	$(files_controller)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
 
-schismtracker_CPPFLAGS = -I$(srcdir)/include -I. $(cppflags_wii)
+schismtracker_CPPFLAGS = -I$(srcdir)/include -I. $(cppflags_wii) $(cppflags_wiiu)
 schismtracker_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
 	$(cflags_version) $(cflags_win32) $(cflags_wii) \
 	$(cflags_macosx) $(cflags_flac) $(cflags_jack) \
+	$(cflags_wiiu) \
 	$(UTF8PROC_CFLAGS)
 schismtracker_OBJCFLAGS = $(schismtracker_CFLAGS)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(LIB_MATH) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(UTF8PROC_LIBS) $(SDL_LIBS)
+schismtracker_LDADD = $(LIB_MATH) $(libs_wii) $(libs_wiiu) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(UTF8PROC_LIBS) $(SDL_LIBS)

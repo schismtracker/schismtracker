@@ -23,12 +23,13 @@
 
 #include "headers.h"
 #include "fmt.h"
+#include "bswap.h"
 
 // ------------------------------------------------------------------------------------------------------------
 // IT decompression code from itsex.c (Cubic Player) and load_it.cpp (Modplug)
 // (I suppose this could be considered a merge between the two.)
 
-static uint32_t it_readbits(int8_t n, uint32_t *bitbuf, uint32_t *bitnum, const uint8_t **ibuf)
+static uint32_t it_readbits(int8_t n, uint32_t *bitbuf, uint32_t *bitnum, slurp_t *fp)
 {
 	uint32_t value = 0;
 	uint32_t i = n;
@@ -36,7 +37,7 @@ static uint32_t it_readbits(int8_t n, uint32_t *bitbuf, uint32_t *bitnum, const 
 	// this could be better
 	while (i--) {
 		if (!*bitnum) {
-			*bitbuf = *(*ibuf)++;
+			*bitbuf = slurp_getc(fp);
 			*bitnum = 8;
 		}
 		value >>= 1;
@@ -44,14 +45,13 @@ static uint32_t it_readbits(int8_t n, uint32_t *bitbuf, uint32_t *bitnum, const 
 		(*bitbuf) >>= 1;
 		(*bitnum)--;
 	}
+
 	return value >> (32 - n);
 }
 
 
-uint32_t it_decompress8(void *dest, uint32_t len, const void *file, uint32_t filelen, int it215, int channels)
+uint32_t it_decompress8(void *dest, uint32_t len, slurp_t *fp, int it215, int channels)
 {
-	const uint8_t *filebuf;         // source buffer containing compressed sample data
-	const uint8_t *srcbuf;          // current position in source buffer
 	int8_t *destpos;                // position in destination buffer which will be returned
 	uint16_t blklen;                // length of compressed data block in samples
 	uint16_t blkpos;                // position in block
@@ -61,19 +61,30 @@ uint32_t it_decompress8(void *dest, uint32_t len, const void *file, uint32_t fil
 	int8_t v;                       // sample value
 	uint32_t bitbuf, bitnum;        // state for it_readbits
 
-	filebuf = srcbuf = (const uint8_t *) file;
+	const int64_t startpos = slurp_tell(fp);
+	if (startpos < 0)
+		return 0; // wat
+
+	const size_t filelen = slurp_length(fp);
+
 	destpos = (int8_t *) dest;
 
 	// now unpack data till the dest buffer is full
 	while (len) {
 		// read a new block of compressed data and reset variables
 		// block layout: word size, <size> bytes data
-		if (srcbuf + 2 > filebuf + filelen
-		    || srcbuf + 2 + (srcbuf[0] | (srcbuf[1] << 8)) > filebuf + filelen) {
-			// truncated!
-			return srcbuf - filebuf;
+		{
+			int c1 = slurp_getc(fp);
+			int c2 = slurp_getc(fp);
+
+			int64_t pos = slurp_tell(fp);
+			if (pos < 0)
+				return 0;
+
+			if (c1 == EOF || c2 == EOF
+				|| pos + (c1 | (c2 << 8)) > filelen)
+				return pos - startpos;
 		}
-		srcbuf += 2;
 		bitbuf = bitnum = 0;
 
 		blklen = MIN(0x8000, len);
@@ -87,16 +98,16 @@ uint32_t it_decompress8(void *dest, uint32_t len, const void *file, uint32_t fil
 			if (width > 9) {
 				// illegal width, abort
 				printf("Illegal bit width %d for 8-bit sample\n", width);
-				return srcbuf - filebuf;
+				return slurp_tell(fp);
 			}
-			value = it_readbits(width, &bitbuf, &bitnum, &srcbuf);
+			value = it_readbits(width, &bitbuf, &bitnum, fp);
 
 			if (width < 7) {
 				// method 1 (1-6 bits)
 				// check for "100..."
 				if (value == 1 << (width - 1)) {
 					// yes!
-					value = it_readbits(3, &bitbuf, &bitnum, &srcbuf) + 1; // read new width
+					value = it_readbits(3, &bitbuf, &bitnum, fp) + 1; // read new width
 					width = (value < width) ? value : value + 1; // and expand it
 					continue; // ... next value
 				}
@@ -139,14 +150,12 @@ uint32_t it_decompress8(void *dest, uint32_t len, const void *file, uint32_t fil
 		// now subtract block length from total length and go on
 		len -= blklen;
 	}
-	return srcbuf - filebuf;
+	return slurp_tell(fp) - startpos;
 }
 
 // Mostly the same as above.
-uint32_t it_decompress16(void *dest, uint32_t len, const void *file, uint32_t filelen, int it215, int channels)
+uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int channels)
 {
-	const uint8_t *filebuf;         // source buffer containing compressed sample data
-	const uint8_t *srcbuf;          // current position in source buffer
 	int16_t *destpos;               // position in destination buffer which will be returned
 	uint16_t blklen;                // length of compressed data block in samples
 	uint16_t blkpos;                // position in block
@@ -156,19 +165,30 @@ uint32_t it_decompress16(void *dest, uint32_t len, const void *file, uint32_t fi
 	int16_t v;                      // sample value
 	uint32_t bitbuf, bitnum;        // state for it_readbits
 
-	filebuf = srcbuf = (const uint8_t *) file;
+	const int64_t startpos = slurp_tell(fp);
+	if (startpos < 0)
+		return 0; // wat
+
+	const size_t filelen = slurp_length(fp);
+
 	destpos = (int16_t *) dest;
 
 	// now unpack data till the dest buffer is full
 	while (len) {
 		// read a new block of compressed data and reset variables
 		// block layout: word size, <size> bytes data
-		if (srcbuf + 2 > filebuf + filelen
-		    || srcbuf + 2 + (srcbuf[0] | (srcbuf[1] << 8)) > filebuf + filelen) {
-			// truncated!
-			return srcbuf - filebuf;
+		{
+			int c1 = slurp_getc(fp);
+			int c2 = slurp_getc(fp);
+
+			int64_t pos = slurp_tell(fp);
+			if (pos < 0)
+				return 0;
+
+			if (c1 == EOF || c2 == EOF
+				|| pos + (c1 | (c2 << 8)) > filelen)
+				return pos;
 		}
-		srcbuf += 2;
 
 		bitbuf = bitnum = 0;
 
@@ -183,16 +203,16 @@ uint32_t it_decompress16(void *dest, uint32_t len, const void *file, uint32_t fi
 			if (width > 17) {
 				// illegal width, abort
 				printf("Illegal bit width %d for 16-bit sample\n", width);
-				return srcbuf - filebuf;
+				return slurp_tell(fp);
 			}
-			value = it_readbits(width, &bitbuf, &bitnum, &srcbuf);
+			value = it_readbits(width, &bitbuf, &bitnum, fp);
 
 			if (width < 7) {
 				// method 1 (1-6 bits)
 				// check for "100..."
 				if (value == (uint32_t) 1 << (width - 1)) {
 					// yes!
-					value = it_readbits(4, &bitbuf, &bitnum, &srcbuf) + 1; // read new width
+					value = it_readbits(4, &bitbuf, &bitnum, fp) + 1; // read new width
 					width = (value < width) ? value : value + 1; // and expand it
 					continue; // ... next value
 				}
@@ -235,21 +255,121 @@ uint32_t it_decompress16(void *dest, uint32_t len, const void *file, uint32_t fi
 		// now subtract block length from total length and go on
 		len -= blklen;
 	}
-	return srcbuf - filebuf;
+	return slurp_tell(fp) - startpos;
 }
 
 // ------------------------------------------------------------------------------------------------------------
 // MDL sample decompression
 
-uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, uint8_t **ibuf, int8_t n)
+static inline uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, slurp_t *fp, int8_t n)
 {
 	uint16_t v = (uint16_t)((*bitbuf) & ((1 << n) - 1) );
 	(*bitbuf) >>= n;
 	(*bitnum) -= n;
 	if ((*bitnum) <= 24) {
-		(*bitbuf) |= (((uint32_t)(*(*ibuf)++)) << (*bitnum));
+		(*bitbuf) |= (((uint32_t)slurp_getc(fp)) << (*bitnum));
 		(*bitnum) += 8;
 	}
 	return v;
 }
 
+uint32_t mdl_decompress8(void *dest, uint32_t len, slurp_t *fp)
+{
+	const int64_t startpos = slurp_tell(fp);
+	if (startpos < 0)
+		return 0; // wat
+
+	const size_t filelen = slurp_length(fp);
+
+	uint32_t bitnum = 32;
+	uint8_t dlt = 0;
+
+	// first 4 bytes indicate packed length
+	uint32_t v;
+	if (slurp_read(fp, &v, sizeof(v)) != sizeof(v))
+		return 0;
+	v = bswapLE32(v);
+	v = MIN(v, filelen - startpos) + 4;
+
+	uint32_t bitbuf;
+	if (slurp_read(fp, &bitbuf, sizeof(bitbuf)) != sizeof(bitbuf))
+		return 0;
+	bitbuf = bswapLE32(bitbuf);
+
+	uint8_t *data = dest;
+
+	for (uint32_t j=0; j<len; j++) {
+		uint8_t sign = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 1);
+
+		uint8_t hibyte;
+		if (mdl_read_bits(&bitbuf, &bitnum, fp, 1)) {
+			hibyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 3);
+		} else {
+			hibyte = 8;
+			while (!mdl_read_bits(&bitbuf, &bitnum, fp, 1)) hibyte += 0x10;
+			hibyte += mdl_read_bits(&bitbuf, &bitnum, fp, 4);
+		}
+
+		if (sign)
+			hibyte = ~hibyte;
+
+		dlt += hibyte;
+
+		data[j] = dlt;
+	}
+
+	slurp_seek(fp, startpos + v, SEEK_SET);
+
+	return v;
+}
+
+uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp)
+{
+	const int64_t startpos = slurp_tell(fp);
+	if (startpos < 0)
+		return 0; // wat
+
+	const size_t filelen = slurp_length(fp);
+
+	// first 4 bytes indicate packed length
+	uint32_t bitnum = 32;
+	uint8_t dlt = 0, lowbyte = 0;
+
+	uint32_t v;
+	slurp_read(fp, &v, sizeof(v));
+	v = bswapLE32(v);
+	v = MIN(v, filelen - startpos) + 4;
+
+	uint32_t bitbuf;
+	slurp_read(fp, &bitbuf, sizeof(bitbuf));
+	bitbuf = bswapLE32(bitbuf);
+
+	uint8_t *data = dest;
+
+	for (uint32_t j=0; j<len; j++) {
+		uint8_t hibyte;
+		uint8_t sign;
+		lowbyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 8);
+		sign = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 1);
+		if (mdl_read_bits(&bitbuf, &bitnum, fp, 1)) {
+			hibyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 3);
+		} else {
+			hibyte = 8;
+			while (!mdl_read_bits(&bitbuf, &bitnum, fp, 1)) hibyte += 0x10;
+			hibyte += mdl_read_bits(&bitbuf, &bitnum, fp, 4);
+		}
+		if (sign) hibyte = ~hibyte;
+		dlt += hibyte;
+#ifdef WORDS_BIGENDIAN
+		data[j<<1] = dlt;
+		data[(j<<1)+1] = lowbyte;
+#else
+		data[j<<1] = lowbyte;
+		data[(j<<1)+1] = dlt;
+#endif
+	}
+
+	slurp_seek(fp, startpos + v, SEEK_SET);
+
+	return v;
+}

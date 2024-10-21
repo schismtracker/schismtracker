@@ -26,15 +26,31 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_liq_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_liq_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 64 && data[64] == 0x1a && memcmp(data, "Liquid Module:", 14) == 0))
+	unsigned char magic1[14], artist[20], title[30];
+
+	if (slurp_read(fp, magic1, sizeof(magic1)) != sizeof(magic1)
+		|| memcmp(magic1, "Liquid Module:", sizeof(magic1)))
+		return 0;
+
+	slurp_seek(fp, 64, SEEK_SET);
+	int magic2 = slurp_getc(fp);
+	if (magic2 != 0x1a)
+		return 0;
+
+	slurp_seek(fp, 14, SEEK_SET);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
+		return 0;
+
+	slurp_seek(fp, 44, SEEK_SET);
+	if (slurp_read(fp, artist, sizeof(artist)) != sizeof(artist))
 		return 0;
 
 	file->description = "Liquid Tracker";
 	/*file->extension = str_dup("liq");*/
-	file->artist = strn_dup((const char *)data + 44, 20);
-	file->title = strn_dup((const char *)data + 14, 30);
+	file->artist = strn_dup(title, sizeof(title));
+	file->title = strn_dup(artist, sizeof(artist));
 	file->type = TYPE_MODULE_S3M;
 
 	return 1;

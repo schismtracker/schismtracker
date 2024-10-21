@@ -59,6 +59,7 @@ void kbd_key_translate(struct key_event *k);
 /* -------------------------------------------- */
 /* key repeat */
 
+int kbd_key_repeat_enabled(void);
 void kbd_handle_key_repeat(void);
 void kbd_cache_key_repeat(struct key_event* kk);
 void kbd_empty_key_repeat(void);
