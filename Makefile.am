@@ -114,11 +114,13 @@ noinst_HEADERS = \
 	include/fmt-types.h		\
 	include/fmt.h			\
 	include/headers.h		\
+	include/ieee-float.h    \
 	include/it.h			\
 	include/it_defs.h		\
 	include/keyboard.h      \
 	include/log.h			\
 	include/midi.h			\
+	include/mem.h           \
 	include/osdefs.h		\
 	include/page.h			\
 	include/palettes.h          \
@@ -127,6 +129,7 @@ noinst_HEADERS = \
 	include/sdlmain.h		\
 	include/slurp.h			\
 	include/song.h			\
+	include/str.h           \
 	include/tree.h			\
 	include/util.h			\
 	include/version.h		\
