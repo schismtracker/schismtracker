@@ -154,6 +154,7 @@ int load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp)
 		instrument->vol_env.ticks[n] = node;
 		instrument->vol_env.values[n] = ihdr.nodes[2 * n + 1];
 	}
+	return 1;
 }
 
 int load_it_instrument(song_instrument_t *instrument, slurp_t *fp)
@@ -204,6 +205,7 @@ int load_it_instrument(song_instrument_t *instrument, slurp_t *fp)
 	instrument->flags |= load_it_envelope(&instrument->vol_env, &ihdr.volenv, 0, 0);
 	instrument->flags |= load_it_envelope(&instrument->pan_env, &ihdr.panenv, 1, 32);
 	instrument->flags |= load_it_envelope(&instrument->pitch_env, &ihdr.pitchenv, 2, 32);
+	return 1;
 }
 
 int fmt_iti_load_instrument(slurp_t *fp, int slot)
