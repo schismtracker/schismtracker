@@ -25,7 +25,6 @@
 #include "bswap.h"
 #include "fmt.h"
 
-
 enum {
 	AU_ULAW = 1,                    /* µ-law */
 	AU_PCM_8 = 2,                   /* 8-bit linear PCM (RS_PCM8U in Modplug) */
@@ -37,16 +36,52 @@ enum {
 	AU_ISDN_ULAW_ADPCM = 23,        /* 8-bit ISDN µ-law (CCITT G.721 ADPCM compressed) */
 };
 
-#pragma pack(push, 1)
-
 struct au_header {
 	char magic[4]; /* ".snd" */
 	uint32_t data_offset, data_size, encoding, sample_rate, channels;
 };
 
-SCHISM_BINARY_STRUCT(struct au_header, 24);
+static int read_header_au(struct au_header *hdr, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) return 0
 
-#pragma pack(pop)
+	READ_VALUE(magic);
+	READ_VALUE(data_offset);
+	READ_VALUE(data_size);
+	READ_VALUE(encoding);
+	READ_VALUE(sample_rate);
+	READ_VALUE(channels);
+
+#undef READ_VALUE
+
+	if (memcmp(hdr->magic, ".snd", sizeof(hdr->magic)))
+		return 0;
+
+	/* now byteswap */
+	hdr->data_offset = bswapBE32(hdr->data_offset);
+	hdr->data_size = bswapBE32(hdr->data_size);
+	hdr->encoding = bswapBE32(hdr->encoding);
+	hdr->sample_rate = bswapBE32(hdr->sample_rate);
+	hdr->channels = bswapBE32(hdr->channels);
+
+	const size_t memsize = slurp_length(fp);
+
+	if (hdr->data_offset < 24
+		|| hdr->data_offset > memsize
+		|| hdr->data_size > memsize - hdr->data_offset)
+		return 0;
+
+	switch (hdr->channels) {
+	case 1:
+	case 2:
+		break;
+	default:
+		return 0;
+	}
+
+	return 1;
+}
 
 /* --------------------------------------------------------------------- */
 
@@ -54,24 +89,12 @@ int fmt_au_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	struct au_header au;
 
-	if (slurp_read(fp, &au, sizeof(au)) != sizeof(au)
-		|| memcmp(au.magic, ".snd", sizeof(au.magic)))
+	if (!read_header_au(&au, fp))
 		return 0;
 
-	au.data_offset = bswapBE32(au.data_offset);
-	au.data_size = bswapBE32(au.data_size);
-	au.encoding = bswapBE32(au.encoding);
-	au.sample_rate = bswapBE32(au.sample_rate);
-	au.channels = bswapBE32(au.channels);
-
-	if (!(au.data_offset < slurp_length(fp) && au.data_size > 0 && au.data_size <= slurp_length(fp) - au.data_offset))
-		return 0;
-
+	/* calculate length and flags */
 	file->smp_length = au.data_size / au.channels;
 	file->smp_flags = 0;
-	file->smp_speed = au.sample_rate;
-	file->smp_defvol = 64;
-	file->smp_gblvol = 64;
 	switch (au.encoding) {
 	case AU_PCM_16:
 		file->smp_flags |= CHN_16BIT;
@@ -91,13 +114,20 @@ int fmt_au_read_info(dmoz_file_t *file, slurp_t *fp)
 		file->smp_length /= 8;
 		break;
 	default:
-		break;
+		return 0;
 	}
 
-	if (au.channels >= 2)
+	if (au.channels == 2)
 		file->smp_flags |= CHN_STEREO;
 
+	file->smp_speed = au.sample_rate;
+	file->smp_defvol = 64;
+	file->smp_gblvol = 64;
 	file->description = "AU Sample";
+	file->smp_filename = file->base;
+	file->type = TYPE_SAMPLE_PLAIN;
+
+	/* now we can grab the title */
 	if (au.data_offset > 24) {
 		int extlen = au.data_offset - 24;
 
@@ -109,8 +139,7 @@ int fmt_au_read_info(dmoz_file_t *file, slurp_t *fp)
 
 		file->title = strn_dup(title, extlen);
 	}
-	file->smp_filename = file->base;
-	file->type = TYPE_SAMPLE_PLAIN;
+
 	return 1;
 }
 
@@ -118,28 +147,11 @@ int fmt_au_read_info(dmoz_file_t *file, slurp_t *fp)
 
 int fmt_au_load_sample(slurp_t *fp, song_sample_t *smp)
 {
-	const size_t memsize = slurp_length(fp);
 	struct au_header au;
 	uint32_t sflags = SF_BE;
 
-	if (slurp_read(fp, &au, sizeof(au)) != sizeof(au))
+	if (!read_header_au(&au, fp))
 		return 0;
-
-	/* optimization: could #ifdef this out on big-endian machines */
-	au.data_offset = bswapBE32(au.data_offset);
-	au.data_size = bswapBE32(au.data_size);
-	au.encoding = bswapBE32(au.encoding);
-	au.sample_rate = bswapBE32(au.sample_rate);
-	au.channels = bswapBE32(au.channels);
-
-	if (memcmp(au.magic, ".snd", sizeof(au.magic)))
-		return 0;
-
-	if (au.data_offset < sizeof(au) || au.data_offset > memsize
-		|| au.data_size > memsize - au.data_offset
-		|| (au.channels != 1 && au.channels != 2)) {
-		return 0;
-	}
 
 	smp->c5speed = au.sample_rate;
 	smp->volume = 64 * 4;

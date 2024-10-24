@@ -33,35 +33,6 @@
 
 /* --------------------------------------------------------------------- */
 
-#pragma pack(push, 1)
-typedef struct mtm_header {
-	char filever[4]; /* M T M \x10 */
-	char title[20]; /* asciz */
-	uint16_t ntracks;
-	uint8_t last_pattern;
-	uint8_t last_order; /* songlength - 1 */
-	uint16_t msglen;
-	uint8_t nsamples;
-	uint8_t flags; /* always 0 */
-	uint8_t rows; /* prob. 64 */
-	uint8_t nchannels;
-	uint8_t panpos[32];
-} mtm_header_t;
-
-SCHISM_BINARY_STRUCT(mtm_header_t, 4+20+2+1+1+2+1+1+1+1+32);
-
-typedef struct mtm_sample {
-	char name[22];
-	uint32_t length, loop_start, loop_end;
-	uint8_t finetune, volume, flags;
-} mtm_sample_t;
-
-SCHISM_BINARY_STRUCT(mtm_sample_t, 22+4+4+4+1+1+1);
-
-#pragma pack(pop)
-
-/* --------------------------------------------------------------------- */
-
 int fmt_mtm_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	unsigned char magic[3], title[20];

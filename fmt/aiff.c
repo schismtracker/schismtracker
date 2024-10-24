@@ -38,8 +38,6 @@
 
 /* --------------------------------------------------------------------- */
 
-#pragma pack(push, 1)
-
 struct aiff_chunk_vhdr {
 	uint32_t smp_highoct_1shot;
 	uint32_t smp_highoct_repeat;
@@ -50,8 +48,6 @@ struct aiff_chunk_vhdr {
 	uint32_t volume; // fixed point, 65536 = 1.0
 };
 
-SCHISM_BINARY_STRUCT(struct aiff_chunk_vhdr, 20);
-
 struct aiff_chunk_comm {
 	uint16_t num_channels;
 	uint32_t num_frames;
@@ -59,9 +55,52 @@ struct aiff_chunk_comm {
 	unsigned char sample_rate[10]; // IEEE-extended
 };
 
-SCHISM_BINARY_STRUCT(struct aiff_chunk_comm, 18);
+static int aiff_chunk_vhdr_read(const void *data, size_t size, void *void_vhdr)
+{
+	struct aiff_chunk_vhdr *vhdr = (struct aiff_chunk_vhdr *)void_vhdr;
 
-#pragma pack(pop)
+	slurp_t fp;
+	slurp_memstream(&fp, (uint8_t *)data, size);
+
+#define READ_VALUE(name) \
+	do { if (slurp_read(&fp, &vhdr->name, sizeof(vhdr->name)) != sizeof(vhdr->name)) { unslurp(&fp); return 0; } } while (0)
+
+	READ_VALUE(smp_highoct_1shot);
+	READ_VALUE(smp_highoct_repeat);
+	READ_VALUE(smp_cycle_highoct);
+	READ_VALUE(smp_per_sec);
+	READ_VALUE(num_octaves);
+	READ_VALUE(compression);
+	READ_VALUE(volume);
+
+#undef READ_VALUE
+
+	unslurp(&fp);
+
+	return 1;
+}
+
+static int aiff_chunk_comm_read(const void *data, size_t size, void *void_comm)
+{
+	struct aiff_chunk_comm *comm = (struct aiff_chunk_comm *)void_comm;
+
+	slurp_t fp;
+	slurp_memstream(&fp, (uint8_t *)data, size);
+
+#define READ_VALUE(name) \
+	do { if (slurp_read(&fp, &comm->name, sizeof(comm->name)) != sizeof(comm->name)) { unslurp(&fp); return 0; } } while (0)
+
+	READ_VALUE(num_channels);
+	READ_VALUE(num_frames);
+	READ_VALUE(sample_size);
+	READ_VALUE(sample_rate);
+
+#undef READ_VALUE
+
+	unslurp(&fp);
+
+	return 1;
+}
 
 // other chunks that might exist: "NAME", "AUTH", "ANNO", "(c) "
 
@@ -119,7 +158,8 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 		if (!(vhdr.id && body.id))
 			return 0;
 
-		iff_chunk_read(&vhdr, fp, &chunk_vhdr, sizeof(chunk_vhdr));
+		if (!iff_chunk_receive(&vhdr, fp, aiff_chunk_vhdr_read, &chunk_vhdr))
+			return 0;
 
 		if (chunk_vhdr.compression) {
 			log_appendf(4, "error: compressed 8SVX files are unsupported");
@@ -191,7 +231,8 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 		if (!(comm.id && ssnd.id))
 			return 0;
 
-		iff_chunk_read(&comm, fp, &chunk_comm, sizeof(chunk_comm));
+		if (!iff_chunk_receive(&comm, fp, aiff_chunk_comm_read, &chunk_comm))
+			return 0;
 
 		if (file) {
 			file->smp_speed = float_decode_ieee_80(chunk_comm.sample_rate);

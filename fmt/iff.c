@@ -87,6 +87,24 @@ int iff_chunk_read(iff_chunk_t *chunk, slurp_t *fp, void *data, size_t size)
 	return size;
 }
 
+int iff_chunk_receive(iff_chunk_t *chunk, slurp_t *fp, int (*callback)(const void *, size_t, void *), void *userdata)
+{
+	int64_t pos = slurp_tell(fp);
+	if (pos < 0)
+		return 0;
+
+	if (slurp_seek(fp, chunk->offset, SEEK_SET))
+		return 0;
+
+	int res = slurp_receive(fp, callback, chunk->size, userdata);
+
+	/* how ? */
+	if (slurp_seek(fp, pos, SEEK_SET))
+		return 0;
+
+	return res;
+}
+
 /* offset is the offset the sample is actually located in the chunk;
  * this can be different depending on the file format... */
 int iff_read_sample(iff_chunk_t *chunk, slurp_t *fp, song_sample_t *smp, uint32_t flags, size_t offset)

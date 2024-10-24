@@ -164,6 +164,7 @@ int iff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp);
 int riff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp);
 int iff_chunk_read(iff_chunk_t *chunk, slurp_t *fp, void *data, size_t size);
 int iff_read_sample(iff_chunk_t *chunk, slurp_t *fp, song_sample_t *smp, uint32_t flags, size_t offset);
+int iff_chunk_receive(iff_chunk_t *chunk, slurp_t *fp, int (*callback)(const void *, size_t, void *), void *userdata);
 
 /* --------------------------------------------------------------------------------------------------------- */
 // other misc functions...

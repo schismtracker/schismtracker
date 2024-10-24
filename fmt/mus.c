@@ -29,22 +29,44 @@
 
 #include "player/sndfile.h"
 
-
-#pragma pack(push,1)
-
 struct mus_header {
 	char id[4]; // MUS\x1a
 	uint16_t scorelen;
 	uint16_t scorestart;
-	uint16_t channels;
-	uint16_t sec_channels;
-	uint16_t instrcnt;
-	uint16_t dummy;
+	//uint16_t channels;
+	//uint16_t sec_channels;
+	//uint16_t instrcnt;
+	//uint16_t dummy;
 };
 
-SCHISM_BINARY_STRUCT(struct mus_header, 4+2+2+2+2+2+2);
+static int read_mus_header(struct mus_header *hdr, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
 
-#pragma pack(pop)
+	READ_VALUE(id);
+	READ_VALUE(scorelen);
+	READ_VALUE(scorestart);
+	//READ_VALUE(channels);
+	//READ_VALUE(sec_channels);
+	//READ_VALUE(instrcnt);
+	//READ_VALUE(dummy);
+
+#undef READ_VALUE
+
+	if (memcmp(hdr->id, "MUS\x1a", 4))
+		return 0;
+
+	hdr->scorelen   = bswapLE16(hdr->scorelen);
+	hdr->scorestart = bswapLE16(hdr->scorestart);
+
+	if (((size_t)hdr->scorestart + hdr->scorelen) > slurp_length(fp))
+		return 0;
+
+	slurp_seek(fp, 8, SEEK_CUR); // skip
+
+	return 1;
+}
 
 /* --------------------------------------------------------------------- */
 
@@ -52,12 +74,7 @@ int fmt_mus_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	struct mus_header hdr;
 
-	if (slurp_read(fp, &hdr, sizeof(hdr)) != sizeof(hdr))
-		return 0;
-
-	/* cast necessary for big-endian systems */
-	if (memcmp(hdr.id, "MUS\x1a", 4)
-	    || ((size_t)bswapLE16(hdr.scorestart) + bswapLE16(hdr.scorelen)) > slurp_length(fp))
+	if (!read_mus_header(&hdr, fp))
 		return 0;
 
 	file->description = "Doom Music File";
@@ -72,11 +89,11 @@ never even *played* Doom. Frankly, I'm surprised that this produces something th
 
 Some things yet to tackle:
 - Pitch wheel support is nonexistent. Shouldn't be TOO difficult; keep track of the target pitch value and how
-  much of a slide has already been done, insert EFx/FFx effects, adjust notes when inserting them if the pitch
-  wheel is more than a semitone off, and keep the speed at 1 if there's more sliding to do.
+	much of a slide has already been done, insert EFx/FFx effects, adjust notes when inserting them if the pitch
+	wheel is more than a semitone off, and keep the speed at 1 if there's more sliding to do.
 - Percussion channel isn't handled. Get a few adlib patches from some adlib S3Ms?
 - Volumes for a couple of files are pretty screwy -- don't know whether I'm doing something wrong here, or if
-  adlib's doing something funny with the volume, or maybe it's with the patches I'm using...
+	adlib's doing something funny with the volume, or maybe it's with the patches I'm using...
 - awesomus/d_doom.mus has some very strange timing issues: I'm getting note events with thousands of ticks.
 - Probably ought to clean up the warnings so messages only show once... */
 
@@ -110,15 +127,8 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	uint8_t nsmp = 1; // Next free sample
 	size_t len;
 
-	slurp_read(fp, &hdr, sizeof(hdr));
-	hdr.scorelen = bswapLE16(hdr.scorelen);
-	hdr.scorestart = bswapLE16(hdr.scorestart);
-
-	if (memcmp(hdr.id, "MUS\x1a", 4) != 0)
+	if (!read_mus_header(&hdr, fp))
 		return LOAD_UNSUPPORTED;
-	else if (hdr.scorestart + hdr.scorelen > slurp_length(fp))
-		return LOAD_FORMAT_ERROR;
-
 
 	for (n = 16; n < 64; n++)
 		song->channels[n].flags |= CHN_MUTE;
@@ -126,7 +136,8 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	slurp_seek(fp, hdr.scorestart, SEEK_SET);
 
 	// Narrow the data buffer to simplify reading
-	len = MIN(slurp_length(fp), hdr.scorestart + hdr.scorelen);
+	len = slurp_length(fp);
+	len = MIN(len, hdr.scorestart + hdr.scorelen);
 
 	/* start the first pattern */
 	pat = 0;

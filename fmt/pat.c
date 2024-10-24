@@ -48,7 +48,7 @@ struct GF1PatchHeader {
 	uint16_t waveforms;
 	uint16_t mastervol; // 0-127 [then why is it 16-bit? ugh]
 	uint32_t datasize;
-	uint8_t reserved1[36];
+	//uint8_t reserved1[36];
 	uint16_t insID; // Instrument ID [0..0xFFFF] [?]
 	char insname[16]; // Instrument name (in ASCII)
 	uint32_t inssize; // Instrument size
@@ -58,10 +58,52 @@ struct GF1PatchHeader {
 	uint8_t layer;
 	uint32_t layersize;
 	uint8_t smpnum;
-	uint8_t reserved3[40];
+	//uint8_t reserved3[40];
 };
 
-SCHISM_BINARY_STRUCT(struct GF1PatchHeader, 239);
+static int read_pat_header(struct GF1PatchHeader *hdr, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
+
+	READ_VALUE(sig);
+	READ_VALUE(ver);
+	READ_VALUE(id);
+	READ_VALUE(desc);
+	READ_VALUE(insnum);
+	READ_VALUE(voicenum);
+	READ_VALUE(channum);
+	READ_VALUE(waveforms);
+	READ_VALUE(mastervol);
+	READ_VALUE(datasize);
+	slurp_seek(fp, 36, SEEK_CUR); // reserved
+	READ_VALUE(insID);
+	READ_VALUE(insname);
+	READ_VALUE(inssize);
+	READ_VALUE(layers);
+	slurp_seek(fp, 40, SEEK_CUR); // reserved
+	READ_VALUE(layerduplicate);
+	READ_VALUE(layer);
+	READ_VALUE(layersize);
+	READ_VALUE(smpnum);
+	slurp_seek(fp, 40, SEEK_CUR); // reserved
+
+#undef READ_VALUE
+
+	if ((memcmp(hdr->sig, "GF1PATCH", 8))
+	    || (memcmp(hdr->ver, "110\0", 4) && memcmp(hdr->ver, "100\0", 4))
+	    || (memcmp(hdr->id, "ID#000002\0", 10)))
+		return 0;
+
+	hdr->waveforms = bswapLE16(hdr->waveforms);
+	hdr->mastervol = bswapLE16(hdr->mastervol);
+	hdr->datasize  = bswapLE32(hdr->datasize);
+	hdr->insID     = bswapLE16(hdr->insID);
+	hdr->inssize   = bswapLE32(hdr->inssize);
+	hdr->layersize = bswapLE32(hdr->layersize);
+
+	return 1;
+}
 
 struct GF1PatchSampleHeader {
 	char wavename[7]; // Wave name (in ASCII)
@@ -81,10 +123,51 @@ struct GF1PatchSampleHeader {
 	uint8_t smpmode; // bit mask: 16, unsigned, loop, pingpong, reverse, sustain, envelope, clamped release
 	uint16_t scalefreq; // Scale frequency
 	uint16_t scalefac; // Scale factor [0..2048] (1024 is normal)
-	uint8_t reserved[36];
+	//uint8_t reserved[36];
 };
 
-SCHISM_BINARY_STRUCT(struct GF1PatchSampleHeader, 96);
+static int read_pat_sample_header(struct GF1PatchSampleHeader *hdr, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
+
+	READ_VALUE(wavename);
+	READ_VALUE(fractions);
+	READ_VALUE(samplesize);
+	READ_VALUE(loopstart);
+	READ_VALUE(loopend);
+	READ_VALUE(samplerate);
+	READ_VALUE(lofreq);
+	READ_VALUE(hifreq);
+	READ_VALUE(rtfreq);
+	READ_VALUE(tune);
+	READ_VALUE(panning);
+	READ_VALUE(envelopes);
+	READ_VALUE(trem_speed);
+	READ_VALUE(trem_rate);
+	READ_VALUE(trem_depth);
+	READ_VALUE(vib_speed);
+	READ_VALUE(vib_rate);
+	READ_VALUE(vib_depth);
+	READ_VALUE(smpmode);
+	READ_VALUE(scalefreq);
+	READ_VALUE(scalefac);
+	slurp_seek(fp, 36, SEEK_CUR); // reserved
+
+#undef READ_VALUE
+
+	hdr->samplesize = bswapLE32(hdr->samplesize);
+	hdr->loopstart = bswapLE32(hdr->loopstart);
+	hdr->loopend = bswapLE32(hdr->loopend);
+	hdr->samplerate = bswapLE16(hdr->samplerate);
+	hdr->lofreq = bswapLE32(hdr->lofreq);
+	hdr->hifreq = bswapLE32(hdr->hifreq);
+	hdr->rtfreq = bswapLE32(hdr->rtfreq);
+	hdr->tune = bswapLE16(hdr->tune);
+	hdr->scalefreq = bswapLE16(hdr->scalefac);
+
+	return 1;
+}
 #pragma pack(pop)
 
 /* --------------------------------------------------------------------- */
@@ -158,20 +241,8 @@ int fmt_pat_load_instrument(slurp_t *fp, int slot)
 	if (!slot)
 		return 0;
 
-	if (slurp_read(fp, &header, sizeof(header)) != sizeof(header))
+	if (!read_pat_header(&header, fp))
 		return 0;
-
-	if ((memcmp(header.sig, "GF1PATCH", 8) != 0)
-	    || (memcmp(header.ver, "110\0", 4) != 0 && memcmp(header.ver, "100\0", 4) != 0)
-	    || (memcmp(header.id, "ID#000002\0", 10) != 0))
-		return 0;
-
-	header.waveforms = bswapLE16(header.waveforms);
-	header.mastervol = bswapLE16(header.mastervol);
-	header.datasize  = bswapLE32(header.datasize);
-	header.insID     = bswapLE16(header.insID);
-	header.inssize   = bswapLE32(header.inssize);
-	header.layersize = bswapLE32(header.layersize);
 
 	g = instrument_loader_init(&ii, slot);
 	memcpy(g->name, header.insname, 16);
@@ -183,21 +254,11 @@ int fmt_pat_load_instrument(slurp_t *fp, int slot)
 		g->note_map[i] = i + 1;
 	}
 	for (i = 0; i < nsamp; i++) {
-		if (slurp_read(fp, &gfsamp, sizeof(gfsamp)) != sizeof(gfsamp))
+		if (!read_pat_sample_header(&gfsamp, fp))
 			return 0;
 
 		n = instrument_loader_sample(&ii, i + 1);
 		smp = song_get_sample(n);
-
-		gfsamp.samplesize = bswapLE32(gfsamp.samplesize);
-		gfsamp.loopstart = bswapLE32(gfsamp.loopstart);
-		gfsamp.loopend = bswapLE32(gfsamp.loopend);
-		gfsamp.samplerate = bswapLE16(gfsamp.samplerate);
-		gfsamp.lofreq = bswapLE32(gfsamp.lofreq);
-		gfsamp.hifreq = bswapLE32(gfsamp.hifreq);
-		gfsamp.rtfreq = bswapLE32(gfsamp.rtfreq);
-		gfsamp.tune = bswapLE16(gfsamp.tune);
-		gfsamp.scalefreq = bswapLE16(gfsamp.scalefac);
 
 		lo = CLAMP(gusfreq(gfsamp.lofreq), 0, 95);
 		hi = CLAMP(gusfreq(gfsamp.hifreq), 0, 95);

@@ -64,8 +64,6 @@
 #define IFFID_smpl              0x6C706D73
 #define IFFID_xtra              0x61727478
 
-
-#pragma pack(push, 1)
 typedef struct {
     uint32_t id_RIFF;           // "RIFF"
     uint32_t filesize;          // file length-8
@@ -81,39 +79,66 @@ typedef struct {
     uint32_t bytessec;        // bytes/sec=freqHz*samplesize
     uint16_t samplesize;      // sizeof(sample)
     uint16_t bitspersample;   // bits per sample (8/16)
-
-    // okay, these bits are optional:
-    uint16_t ext_size;
-    unsigned char xx[2]; // irrelevant for us
-    uint32_t channel_mask;
-    unsigned char subformat[16];
 } wave_format_t;
-
-SCHISM_BINARY_STRUCT(wave_format_t, 40);
-
-#pragma pack(pop)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-static inline uint32_t wav_get_format_tag(const wave_format_t *fmt)
+static int wav_chunk_fmt_read(const void *data, size_t size, void *void_fmt)
 {
+	wave_format_t *fmt = (wave_format_t *)void_fmt;
+
+	slurp_t fp;
+	slurp_memstream(&fp, (uint8_t *)data, size);
+
+#define READ_VALUE(name) \
+	do { if (slurp_read(&fp, &name, sizeof(name)) != sizeof(name)) { unslurp(&fp); return 0; } } while (0)
+
+	READ_VALUE(fmt->format);
+	READ_VALUE(fmt->channels);
+	READ_VALUE(fmt->freqHz);
+	READ_VALUE(fmt->bytessec);
+	READ_VALUE(fmt->samplesize);
+	READ_VALUE(fmt->bitspersample);
+
+	fmt->format        = bswapLE16(fmt->format);
+	fmt->channels      = bswapLE16(fmt->channels);
+	fmt->freqHz        = bswapLE32(fmt->freqHz);
+	fmt->bytessec      = bswapLE32(fmt->bytessec);
+	fmt->samplesize    = bswapLE16(fmt->samplesize);
+	fmt->bitspersample = bswapLE16(fmt->bitspersample);
+
+	/* BUT I'M NOT DONE YET */
 	if (fmt->format == WAVE_FORMAT_EXTENSIBLE) {
-		if (fmt->ext_size < 22)
+		uint16_t ext_size;
+		READ_VALUE(ext_size);
+		ext_size = bswapLE16(ext_size);
+
+		if (ext_size < 22)
 			return 0;
 
-		static const unsigned char subformat_base[16] = {
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00,
-			0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71,
+		slurp_seek(&fp, 6, SEEK_CUR);
+
+		static const unsigned char subformat_base[12] = {
+			0x00, 0x00, 0x10, 0x00,
+			0x80, 0x00, 0x00, 0xAA,
+			0x00, 0x38, 0x9B, 0x71,
 		};
 
-        if (memcmp(fmt->subformat + sizeof(uint32_t), subformat_base + sizeof(uint32_t), sizeof(subformat_base) - sizeof(uint32_t)) != 0)
+		unsigned char subformat[16];
+		READ_VALUE(subformat);
+
+        if (memcmp(subformat + sizeof(uint32_t), subformat_base, sizeof(subformat_base)))
             return 0;
 
-        return bswapLE32(*(uint32_t *)fmt->subformat);
-	} else {
-		return fmt->format;
+        fmt->format = bswapLE32(*(uint32_t *)subformat);
 	}
+
+#undef READ_VALUE
+
+	return 1;
 }
+
+/* --------------------------------------------------------------------------------------------------------- */
 
 static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 {
@@ -122,14 +147,14 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 	wave_file_header_t phdr;
 	int have_format = 0;
 
-	if (slurp_read(fp, &phdr, sizeof(phdr)) != sizeof(phdr))
+	if (slurp_read(fp, &phdr.id_RIFF, sizeof(phdr.id_RIFF)) != sizeof(phdr.id_RIFF)
+		|| slurp_read(fp, &phdr.filesize, sizeof(phdr.filesize)) != sizeof(phdr.filesize)
+		|| slurp_read(fp, &phdr.id_WAVE, sizeof(phdr.id_WAVE)) != sizeof(phdr.id_WAVE))
 		return 0;
 
-#if WORDS_BIGENDIAN
 	phdr.id_RIFF  = bswapLE32(phdr.id_RIFF);
 	phdr.filesize = bswapLE32(phdr.filesize);
 	phdr.id_WAVE  = bswapLE32(phdr.id_WAVE);
-#endif
 
 	if (phdr.id_RIFF != IFFID_RIFF ||
 	    phdr.id_WAVE != IFFID_WAVE)
@@ -158,18 +183,8 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 	if (!fmt_chunk.id || !data_chunk.id)
 		return 0;
 
-	iff_chunk_read(&fmt_chunk, fp, &fmt, sizeof(fmt));
-	fmt.format        = bswapLE16(fmt.format);
-	fmt.channels      = bswapLE16(fmt.channels);
-	fmt.freqHz        = bswapLE32(fmt.freqHz);
-	fmt.bytessec      = bswapLE32(fmt.bytessec);
-	fmt.samplesize    = bswapLE16(fmt.samplesize);
-	fmt.bitspersample = bswapLE16(fmt.bitspersample);
-	fmt.ext_size      = bswapLE16(fmt.ext_size);
-	fmt.channel_mask  = bswapLE32(fmt.channel_mask);
-
-	// fix the format tag
-	fmt.format = wav_get_format_tag(&fmt);
+	if (!iff_chunk_receive(&fmt_chunk, fp, wav_chunk_fmt_read, &fmt))
+		return 0;
 
 	uint32_t flags = 0;
 

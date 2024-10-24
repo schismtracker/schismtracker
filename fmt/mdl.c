@@ -108,7 +108,6 @@ enum {
 	MDLNOTE_PARAM2          = 1 << 5,
 };
 
-#pragma pack(push,1)
 struct mdl_infoblock {
 	char title[32];
 	char composer[20];
@@ -119,8 +118,6 @@ struct mdl_infoblock {
 	uint8_t tempo;
 	uint8_t chanpan[32];
 };
-
-SCHISM_BINARY_STRUCT(struct mdl_infoblock, 32+20+2+2+1+1+1+32);
 
 /* This is actually a part of the instrument (II) block */
 struct mdl_samplehdr {
@@ -135,11 +132,8 @@ struct mdl_samplehdr {
 	uint8_t vibdepth;
 	uint8_t vibsweep;
 	uint8_t vibtype;
-	uint8_t reserved; // zero
 	uint8_t freqenv_flags;
 };
-
-SCHISM_BINARY_STRUCT(struct mdl_samplehdr, 1+1+1+1+1+1+2+1+1+1+1+1+1);
 
 struct mdl_sampleinfo {
 	uint8_t smpnum;
@@ -149,25 +143,9 @@ struct mdl_sampleinfo {
 	uint32_t length;
 	uint32_t loopstart;
 	uint32_t looplen;
-	uint8_t unused; // was volume in v0.0, why it was changed I have no idea
+	uint8_t volume; // volume in v0.0, unused after
 	uint8_t flags;
 };
-
-SCHISM_BINARY_STRUCT(struct mdl_sampleinfo, 1+32+8+4+4+4+4+1+1);
-
-struct mdl_sampleinfo_v0 {
-	uint8_t smpnum;
-	char name[32];
-	char filename[8];
-	uint16_t c4speed;
-	uint32_t length;
-	uint32_t loopstart;
-	uint32_t looplen;
-	uint8_t volume;
-	uint8_t flags;
-};
-
-SCHISM_BINARY_STRUCT(struct mdl_sampleinfo_v0, 1+32+8+2+4+4+4+1+1);
 
 struct mdl_envelope {
 	uint8_t envnum;
@@ -180,8 +158,6 @@ struct mdl_envelope {
 };
 
 SCHISM_BINARY_STRUCT(struct mdl_envelope, 1+30+1+1);
-
-#pragma pack(pop)
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* Internal definitions */
@@ -453,7 +429,20 @@ static int mdl_read_info(song_t *song, slurp_t *fp)
 	int n, songlen;
 	uint8_t b;
 
-	slurp_read(fp, &info, sizeof(info));
+#define READ_VALUE(name) \
+	do { if (slurp_read(fp, &info.name, sizeof(info.name)) != sizeof(info.name)) { return 0; } } while (0)
+
+	READ_VALUE(title);
+	READ_VALUE(composer);
+	READ_VALUE(numorders);
+	READ_VALUE(repeatpos);
+	READ_VALUE(globalvol);
+	READ_VALUE(speed);
+	READ_VALUE(tempo);
+	READ_VALUE(chanpan);
+
+#undef READ_VALUE
+
 	info.numorders = bswapLE16(info.numorders);
 	info.repeatpos = bswapLE16(info.repeatpos);
 
@@ -717,13 +706,32 @@ static void mdl_read_instruments(song_t *song, slurp_t *fp)
 
 		while (nsmp--) {
 			// read a sample
-			slurp_read(fp, &shdr, sizeof(shdr));
+#define READ_VALUE(name) slurp_read(fp, &shdr.name, sizeof(shdr.name))
+
+			READ_VALUE(smpnum);
+			READ_VALUE(lastnote);
+			READ_VALUE(volume);
+			READ_VALUE(volenv_flags);
+			READ_VALUE(panning);
+			READ_VALUE(panenv_flags);
+			READ_VALUE(fadeout);
+			READ_VALUE(vibspeed);
+			READ_VALUE(vibdepth);
+			READ_VALUE(vibsweep);
+			READ_VALUE(vibtype);
+			slurp_seek(fp, 1, SEEK_CUR); // reserved, zero
+			READ_VALUE(freqenv_flags);
+
+#undef READ_VALUE
+
 			shdr.fadeout = bswapLE16(shdr.fadeout);
-			if (shdr.smpnum == 0 || shdr.smpnum > MAX_SAMPLES) {
+
+			if (shdr.smpnum == 0 || shdr.smpnum > MAX_SAMPLES)
 				continue;
-			}
+
 			if (!song->instruments[shdr.smpnum])
 				song->instruments[shdr.smpnum] = csf_allocate_instrument();
+
 			sins = song->instruments[shdr.smpnum];
 
 			smp = song->samples + shdr.smpnum;
@@ -778,7 +786,20 @@ static void mdl_read_sampleinfo(song_t *song, slurp_t *fp, uint8_t *packtype)
 
 	nsmp = slurp_getc(fp);
 	while (nsmp--) {
-		slurp_read(fp, &sinfo, sizeof(sinfo));
+#define READ_VALUE(name) slurp_read(fp, &sinfo.name, sizeof(sinfo.name))
+
+		READ_VALUE(smpnum);
+		READ_VALUE(name);
+		READ_VALUE(filename);
+		READ_VALUE(c4speed);
+		READ_VALUE(length);
+		READ_VALUE(loopstart);
+		READ_VALUE(looplen);
+		READ_VALUE(volume);
+		READ_VALUE(flags);
+
+#undef READ_VALUE
+
 		if (sinfo.smpnum == 0 || sinfo.smpnum > MAX_SAMPLES) {
 			continue;
 		}
@@ -816,13 +837,26 @@ static void mdl_read_sampleinfo(song_t *song, slurp_t *fp, uint8_t *packtype)
 // (ughh)
 static void mdl_read_sampleinfo_v0(song_t *song, slurp_t *fp, uint8_t *packtype)
 {
-	struct mdl_sampleinfo_v0 sinfo;
+	struct mdl_sampleinfo sinfo;
 	song_sample_t *smp;
 	int nsmp;
 
 	nsmp = slurp_getc(fp);
 	while (nsmp--) {
-		slurp_read(fp, &sinfo, sizeof(sinfo));
+#define READ_VALUE(name) slurp_read(fp, &sinfo.name, sizeof(sinfo.name))
+
+		READ_VALUE(smpnum);
+		READ_VALUE(name);
+		READ_VALUE(filename);
+		READ_VALUE(c4speed);
+		READ_VALUE(length);
+		READ_VALUE(loopstart);
+		READ_VALUE(looplen);
+		READ_VALUE(volume);
+		READ_VALUE(flags);
+
+#undef READ_VALUE
+
 		if (sinfo.smpnum == 0 || sinfo.smpnum > MAX_SAMPLES) {
 			continue;
 		}
@@ -865,7 +899,20 @@ static void mdl_read_envelopes(slurp_t *fp, struct mdlenv **envs, uint32_t flags
 
 	nenv = slurp_getc(fp);
 	while (nenv--) {
-		slurp_read(fp, &ehdr, sizeof(ehdr));
+#define READ_VALUE(name) slurp_read(fp, &ehdr.name, sizeof(ehdr.name))
+
+		READ_VALUE(envnum);
+
+		for (size_t i = 0; i < ARRAY_SIZE(ehdr.nodes); i++) {
+			READ_VALUE(nodes[i].x);
+			READ_VALUE(nodes[i].y);
+		}
+
+		READ_VALUE(flags);
+		READ_VALUE(loop);
+
+#undef READ_VALUE
+
 		if (ehdr.envnum > 63)
 			continue;
 

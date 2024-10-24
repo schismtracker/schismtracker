@@ -61,8 +61,6 @@ enum {
 	ULT_PINGPONGLOOP = 16,
 };
 
-#pragma pack(push, 1)
-
 struct ult_sample {
 	char name[32];
 	char filename[12];
@@ -76,9 +74,41 @@ struct ult_sample {
 	int16_t finetune;
 };
 
-SCHISM_BINARY_STRUCT(struct ult_sample, 66);
+static int read_sample_ult(struct ult_sample *smp, slurp_t *fp, uint8_t ver)
+{
+#define READ_VALUE(name) \
+	if (slurp_read(fp, &smp->name, sizeof(smp->name)) != sizeof(smp->name)) return 0
 
-#pragma pack(pop)
+	READ_VALUE(name);
+	READ_VALUE(filename);
+	READ_VALUE(loop_start);
+	READ_VALUE(loop_end);
+	READ_VALUE(size_start);
+	READ_VALUE(size_end);
+	READ_VALUE(volume);
+	READ_VALUE(flags);
+
+	// annoying: v4 added a field before the end of the struct
+	if (ver >= 4) {
+		READ_VALUE(speed);
+		smp->speed = bswapLE16(smp->speed);
+	} else {
+		smp->speed = 8363;
+	}
+
+	READ_VALUE(finetune);
+
+#undef READ_VALUE
+
+	/* now byteswap */
+	smp->finetune = bswapLE16(smp->finetune);
+	smp->loop_start = bswapLE32(smp->loop_start);
+	smp->loop_end = bswapLE32(smp->loop_end);
+	smp->size_start = bswapLE32(smp->size_start);
+	smp->size_end = bswapLE32(smp->size_end);
+
+	return 1;
+}
 
 
 /* Unhandled effects:
@@ -285,20 +315,8 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	nsmp = slurp_getc(fp);
 	for (n = 0, smp = song->samples + 1; n < nsmp; n++, smp++) {
-		// annoying: v4 added a field before the end of the struct
-		if (ver >= 4) {
-			slurp_read(fp, &usmp, sizeof(usmp));
-			usmp.speed = bswapLE16(usmp.speed);
-		} else {
-			slurp_read(fp, &usmp, 64);
-			usmp.finetune = usmp.speed;
-			usmp.speed = 8363;
-		}
-		usmp.finetune = bswapLE16(usmp.finetune);
-		usmp.loop_start = bswapLE32(usmp.loop_start);
-		usmp.loop_end = bswapLE32(usmp.loop_end);
-		usmp.size_start = bswapLE32(usmp.size_start);
-		usmp.size_end = bswapLE32(usmp.size_end);
+		if (!read_sample_ult(&usmp, fp, ver))
+			return LOAD_FORMAT_ERROR;
 
 		strncpy(smp->name, usmp.name, 25);
 		smp->name[25] = '\0';

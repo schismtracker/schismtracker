@@ -50,28 +50,73 @@ whether it's arranged by track or by midi channel.
 #define FRACBITS 12
 #define FRACMASK ((1 << FRACBITS) - 1)
 
-
-#pragma pack(push, 1)
-
 struct mthd {
-	//char tag[4]; // MThd <read separately>
+	char tag[4]; // MThd
 	uint32_t header_length;
 	uint16_t format; // 0 = single-track, 1 = multi-track, 2 = multi-song
 	uint16_t num_tracks; // number of track chunks
 	uint16_t division; // delta timing value: positive = units/beat; negative = smpte compatible units (?)
 };
 
-SCHISM_BINARY_STRUCT(struct mthd, 10);
-
 struct mtrk {
 	char tag[4]; // MTrk
 	uint32_t length; // number of bytes of track data following
 };
 
-SCHISM_BINARY_STRUCT(struct mtrk, 8);
+static int read_mid_mthd(struct mthd *hdr, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
 
-#pragma pack(pop)
+	READ_VALUE(tag);
 
+	if (memcmp(hdr->tag, "RIFF", 4) == 0) {
+		// Stupid MS crap.
+		slurp_seek(fp, 16, SEEK_CUR);
+		READ_VALUE(tag);
+	}
+
+	READ_VALUE(header_length);
+	READ_VALUE(format);
+	READ_VALUE(num_tracks);
+	READ_VALUE(division);
+
+#undef READ_VALUE
+
+	if (memcmp(hdr->tag, "MThd", 4))
+		return 0;
+
+	hdr->header_length = bswapBE32(hdr->header_length);
+	// don't care about format, either there's one track or more than one track. whoop de doo.
+	// (format 2 MIDs will probably be hilariously broken, but I don't have any and also don't care)
+	hdr->format = bswapBE16(hdr->format);
+	hdr->num_tracks = bswapBE16(hdr->num_tracks);
+	hdr->division = bswapBE16(hdr->division);
+
+	slurp_seek(fp, hdr->header_length - 6, SEEK_CUR); // account for potential weirdness
+
+	return 1;
+}
+
+static int read_mid_mtrk(struct mtrk *mtrk, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	do { if (slurp_read(fp, &mtrk->name, sizeof(mtrk->name)) != sizeof(mtrk->name)) { return 0; } } while (0)
+
+	READ_VALUE(tag);
+	READ_VALUE(length);
+
+#undef READ_VALUE
+
+	if (memcmp(mtrk->tag, "MTrk", 4)) {
+		log_appendf(4, " Warning: Invalid track header (corrupt file?)");
+		return 0;
+	}
+
+	mtrk->length = bswapBE32(mtrk->length);
+
+	return 1;
+}
 
 struct event {
 	unsigned int pulse; // the PPQN-tick, counting from zero, when this midi-event happens
@@ -155,22 +200,8 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint8_t patch_samples[128] = {0};
 	uint8_t nsmp = 1; // Next free sample
 
-	slurp_read(fp, buf, 4);
-	if (memcmp(buf, "RIFF", 4) == 0) {
-		// Stupid MS crap.
-		slurp_seek(fp, 16, SEEK_CUR);
-		slurp_read(fp, buf, 4);
-	}
-	if (memcmp(buf, "MThd", 4) != 0 || slurp_read(fp, &mthd, sizeof(mthd)) != sizeof(mthd)) {
+	if (!read_mid_mthd(&mthd, fp))
 		return LOAD_UNSUPPORTED;
-	}
-	mthd.header_length = bswapBE32(mthd.header_length);
-	// don't care about format, either there's one track or more than one track. whoop de doo.
-	// (format 2 MIDs will probably be hilariously broken, but I don't have any and also don't care)
-	mthd.format = bswapBE16(mthd.format);
-	mthd.num_tracks = bswapBE16(mthd.num_tracks);
-	mthd.division = bswapBE16(mthd.division);
-	slurp_seek(fp, mthd.header_length - 6, SEEK_CUR); // account for potential weirdness
 
 	song->title[0] = '\0'; // should be already, but to be sure...
 
@@ -198,15 +229,9 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		prev = event_queue;
 		pulse = 0;
 
-		if (slurp_read(fp, &mtrk, sizeof(mtrk)) != sizeof(mtrk)) {
-			log_appendf(4, " Warning: Short read on track header (truncated?)");
+		if (!read_mid_mtrk(&mtrk, fp))
 			break;
-		}
-		if (memcmp(mtrk.tag, "MTrk", 4) != 0) {
-			log_appendf(4, " Warning: Invalid track header (corrupt file?)");
-			break;
-		}
-		mtrk.length = bswapBE32(mtrk.length);
+
 		nextpos = slurp_tell(fp) + mtrk.length; // where this track is supposed to end
 
 		while (!found_end && slurp_tell(fp) < nextpos) {
