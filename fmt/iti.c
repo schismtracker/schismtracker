@@ -30,8 +30,6 @@
 #include "log.h"
 #include "version.h"
 
-#include "it_defs.h"
-
 #include <assert.h>
 
 /* -------------------------------------------------------- */

@@ -37,8 +37,6 @@
 #include "fmt.h"
 #include "dmoz.h"
 
-#include "it_defs.h"
-
 #include "player/sndfile.h"
 #include "player/snd_gm.h"
 

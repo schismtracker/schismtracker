@@ -116,7 +116,6 @@ noinst_HEADERS = \
 	include/headers.h		\
 	include/ieee-float.h    \
 	include/it.h			\
-	include/it_defs.h		\
 	include/keyboard.h      \
 	include/log.h			\
 	include/midi.h			\
