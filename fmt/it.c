@@ -70,9 +70,45 @@ int fmt_it_read_info(dmoz_file_t *file, slurp_t *fp)
 
 /* --------------------------------------------------------------------- */
 
-#include "it_defs.h"
+struct it_file {
+	uint32_t id;                    // 0x4D504D49
+	int8_t songname[26];
+	uint8_t hilight_minor;
+	uint8_t hilight_major;
+	uint16_t ordnum;
+	uint16_t insnum;
+	uint16_t smpnum;
+	uint16_t patnum;
+	uint16_t cwtv;
+	uint16_t cmwt;
+	uint16_t flags;
+	uint16_t special;
+	uint8_t globalvol;
+	uint8_t mv;
+	uint8_t speed;
+	uint8_t tempo;
+	uint8_t sep;
+	uint8_t pwd;
+	uint16_t msglength;
+	uint32_t msgoffset;
+	uint32_t reserved;
+	uint8_t chnpan[64];
+	uint8_t chnvol[64];
+};
 
 static const uint8_t autovib_import[] = {VIB_SINE, VIB_RAMP_DOWN, VIB_SQUARE, VIB_RANDOM};
+
+/* pattern mask variable bits */
+enum {
+	ITNOTE_NOTE = 1,
+	ITNOTE_SAMPLE = 2,
+	ITNOTE_VOLUME = 4,
+	ITNOTE_EFFECT = 8,
+	ITNOTE_SAME_NOTE = 16,
+	ITNOTE_SAME_SAMPLE = 32,
+	ITNOTE_SAME_VOLUME = 64,
+	ITNOTE_SAME_EFFECT = 128,
+};
 
 /* --------------------------------------------------------------------- */
 
@@ -180,86 +216,52 @@ static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows, uint16_t c
 	}
 }
 
-static void load_it_sample(song_sample_t *sample, slurp_t *fp, uint16_t cwtv)
+static int it_load_header(struct it_file *hdr, slurp_t *fp)
 {
-	struct it_sample shdr;
+#define LOAD_VALUE(name) do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name) != sizeof(hdr->name))) { return 0; } } while (0)
 
-	slurp_read(fp, &shdr, sizeof(shdr));
+	LOAD_VALUE(id);
+	LOAD_VALUE(songname);
+	LOAD_VALUE(hilight_minor);
+	LOAD_VALUE(hilight_major);
+	LOAD_VALUE(ordnum);
+	LOAD_VALUE(insnum);
+	LOAD_VALUE(smpnum);
+	LOAD_VALUE(patnum);
+	LOAD_VALUE(cwtv);
+	LOAD_VALUE(cmwt);
+	LOAD_VALUE(flags);
+	LOAD_VALUE(special);
+	LOAD_VALUE(globalvol);
+	LOAD_VALUE(mv);
+	LOAD_VALUE(speed);
+	LOAD_VALUE(tempo);
+	LOAD_VALUE(sep);
+	LOAD_VALUE(pwd);
+	LOAD_VALUE(msglength);
+	LOAD_VALUE(msgoffset);
+	LOAD_VALUE(reserved);
+	LOAD_VALUE(chnpan);
+	LOAD_VALUE(chnvol);
 
-	/* Fun fact: Impulse Tracker doesn't check any of the header data for consistency when loading samples
-	(or instruments, for that matter). If some other data is stored in place of the IMPS/IMPI, it'll
-	happily load it anyway -- and in fact, since the song is manipulated in memory in the same format as
-	on disk, this data is even preserved when the file is saved! */
+#undef LOAD_VALUE
 
-	memcpy(sample->name, shdr.name, 25);
-	sample->name[25] = '\0';
+	if (memcmp(&hdr->id, "IMPM", 4))
+		return 0;
 
-	memcpy(sample->filename, shdr.filename, 12);
-	sample->filename[12] = '\0';
+	hdr->ordnum = bswapLE16(hdr->ordnum);
+	hdr->insnum = bswapLE16(hdr->insnum);
+	hdr->smpnum = bswapLE16(hdr->smpnum);
+	hdr->patnum = bswapLE16(hdr->patnum);
+	hdr->cwtv = bswapLE16(hdr->cwtv);
+	hdr->cmwt = bswapLE16(hdr->cmwt);
+	hdr->flags = bswapLE16(hdr->flags);
+	hdr->special = bswapLE16(hdr->special);
+	hdr->msglength = bswapLE16(hdr->msglength);
+	hdr->msgoffset = bswapLE32(hdr->msgoffset);
+	hdr->reserved = bswapLE32(hdr->reserved);
 
-	if (shdr.dfp & 128) {
-		sample->flags |= CHN_PANNING;
-		shdr.dfp &= 127;
-	}
-
-	sample->global_volume = MIN(shdr.gvl, 64);
-	sample->volume = MIN(shdr.vol, 64) * 4; //mphack
-	sample->panning = MIN(shdr.dfp, 64) * 4; //mphack
-	sample->length = bswapLE32(shdr.length);
-	sample->length = MIN(sample->length, MAX_SAMPLE_LENGTH);
-	sample->loop_start = bswapLE32(shdr.loopbegin);
-	sample->loop_end = bswapLE32(shdr.loopend);
-	sample->c5speed = bswapLE32(shdr.c5speed);
-	sample->sustain_start = bswapLE32(shdr.susloopbegin);
-	sample->sustain_end = bswapLE32(shdr.susloopend);
-
-	sample->vib_speed = MIN(shdr.vis, 64);
-	sample->vib_depth = MIN(shdr.vid, 32);
-	sample->vib_rate = shdr.vir;
-	sample->vib_type = autovib_import[shdr.vit % 4];
-
-	if (shdr.flags & 16)
-		sample->flags |= CHN_LOOP;
-	if (shdr.flags & 32)
-		sample->flags |= CHN_SUSTAINLOOP;
-	if (shdr.flags & 64)
-		sample->flags |= CHN_PINGPONGLOOP;
-	if (shdr.flags & 128)
-		sample->flags |= CHN_PINGPONGSUSTAIN;
-
-	/* IT sometimes didn't clear the flag after loading a stereo sample. This appears to have
-	been fixed sometime before IT 2.14, which is fortunate because that's what a lot of other
-	programs annoyingly identify themselves as. */
-	if (cwtv < 0x0214)
-		shdr.flags &= ~4;
-
-	if ((shdr.flags & 1) && shdr.cvt == 64 && sample->length == 12) {
-		// OPL instruments in OpenMPT MPTM files (which are essentially extended IT files)
-		slurp_seek(fp, bswapLE32(shdr.samplepointer), SEEK_SET);
-		slurp_read(fp, sample->adlib_bytes, 12);
-		sample->flags |= CHN_ADLIB;
-		// dumb hackaround that ought to some day be fixed:
-		sample->length = 1;
-		sample->data = csf_allocate_sample(1);
-	} else if (shdr.flags & 1) {
-		slurp_seek(fp, bswapLE32(shdr.samplepointer), SEEK_SET);
-
-		uint32_t flags = SF_LE;
-		flags |= (shdr.flags & 4) ? SF_SS : SF_M;
-		if (shdr.flags & 8) {
-			flags |= (shdr.cvt & 4) ? SF_IT215 : SF_IT214;
-		} else {
-			// XXX for some reason I had a note in pm/fmt/it.c saying that I had found some
-			// .it files with the signed flag set incorrectly and to assume unsigned when
-			// hdr.cwtv < 0x0202. Why, and for what files?
-			// Do any other players use the header for deciding sample data signedness?
-			flags |= (shdr.cvt & 4) ? SF_PCMD : (shdr.cvt & 1) ? SF_PCMS : SF_PCMU;
-		}
-		flags |= (shdr.flags & 2) ? SF_16 : SF_8;
-		csf_read_sample(sample, flags, fp);
-	} else {
-		sample->length = 0;
-	}
+	return 1;
 }
 
 int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
@@ -274,22 +276,8 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint16_t hist = 0; // save history (for IT only)
 	const char *tid = NULL;
 
-	slurp_read(fp, &hdr, sizeof(hdr));
-
-	if (memcmp(&hdr.id, "IMPM", 4) != 0)
+	if (!it_load_header(&hdr, fp))
 		return LOAD_UNSUPPORTED;
-
-	hdr.ordnum = bswapLE16(hdr.ordnum);
-	hdr.insnum = bswapLE16(hdr.insnum);
-	hdr.smpnum = bswapLE16(hdr.smpnum);
-	hdr.patnum = bswapLE16(hdr.patnum);
-	hdr.cwtv = bswapLE16(hdr.cwtv);
-	hdr.cmwt = bswapLE16(hdr.cmwt);
-	hdr.flags = bswapLE16(hdr.flags);
-	hdr.special = bswapLE16(hdr.special);
-	hdr.msglength = bswapLE16(hdr.msglength);
-	hdr.msgoffset = bswapLE32(hdr.msgoffset);
-	hdr.reserved = bswapLE32(hdr.reserved);
 
 	// Screwy limits?
 	if (hdr.insnum > MAX_INSTRUMENTS || hdr.smpnum > MAX_SAMPLES
@@ -456,14 +444,14 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			inst = song->instruments[n + 1] = csf_allocate_instrument();
 			
 			if (hdr.cmwt >= 0x0200)
-				load_it_instrument(inst, fp);
+				load_it_instrument(NULL, inst, fp);
 			else
 				load_it_instrument_old(inst, fp);
 		}
 
 		for (n = 0, sample = song->samples + 1; n < hdr.smpnum; n++, sample++) {
 			slurp_seek(fp, para_smp[n], SEEK_SET);
-			load_it_sample(sample, fp, hdr.cwtv);
+			load_its_sample(fp, sample, hdr.cwtv);
 		}
 	}
 

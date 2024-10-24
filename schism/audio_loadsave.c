@@ -479,9 +479,9 @@ int song_save(const char *filename, const char *type)
 /* TODO: add or replace file extension as appropriate
 
 From IT 2.10 update:
-  - Automatic filename extension replacement on Ctrl-S, so that if you press
-    Ctrl-S after loading a .MOD, .669, .MTM or .XM, the filename will be
-    automatically modified to have a .IT extension.
+	- Automatic filename extension replacement on Ctrl-S, so that if you press
+		Ctrl-S after loading a .MOD, .669, .MTM or .XM, the filename will be
+		automatically modified to have a .IT extension.
 
 In IT, if the filename given has no extension ("basename"), then the extension for the proper file type
 (IT/S3M) will be appended to the name.
@@ -512,8 +512,8 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
 		disko_seterror(&fp, EINVAL);
 
 	backup = ((status.flags & MAKE_BACKUPS)
-		  ? (status.flags & NUMBERED_BACKUPS)
-		  ? 65536 : 1 : 0);
+			? (status.flags & NUMBERED_BACKUPS)
+			? 65536 : 1 : 0);
 
 	// this was not as successful as originally claimed!
 	if (disko_close(&fp, backup) == DW_ERROR && ret == SAVE_SUCCESS)
@@ -553,7 +553,7 @@ int song_save_sample(const char *filename, const char *type, song_sample_t *smp,
 		return SAVE_INTERNAL_ERROR; // ?
 	}
 
-	if (disko_open(&fp, filename) < 0) {
+	if (disko_open(&fp, filename) >= 0) {
 		ret = format->f.save_sample(&fp, smp);
 		if (ret != SAVE_SUCCESS)
 			disko_seterror(&fp, EINVAL);
@@ -995,7 +995,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dm
 
 	/* free extra data we don't need */
 	if (info_file.smp_filename != info_file.base &&
-	    info_file.smp_filename != info_file.title) {
+			info_file.smp_filename != info_file.title) {
 		free(info_file.smp_filename);
 	}
 

@@ -141,13 +141,11 @@ uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp);
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-struct it_sample; /* definition in it_defs.h */
-
 /* shared by the .it, .its, and .iti saving functions */
 void save_its_header(disko_t *fp, song_sample_t *smp);
 void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int iti_file);
-int load_its_sample(struct it_sample *its, slurp_t *fp, song_sample_t *smp);
-int load_it_instrument(song_instrument_t *instrument, slurp_t *fp);
+int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv);
+int load_it_instrument(struct instrumentloader* ii, song_instrument_t *instrument, slurp_t *fp);
 int load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp);
 
 /* --------------------------------------------------------------------------------------------------------- */
