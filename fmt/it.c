@@ -32,42 +32,6 @@
 #include "player/sndfile.h"
 #include "midi.h"
 
-// TODO: its/iti loaders should be collapsed into here -- no sense duplicating all of this code
-
-/* --------------------------------------------------------------------- */
-
-int fmt_it_read_info(dmoz_file_t *file, slurp_t *fp)
-{
-	unsigned char magic[4];
-
-	/* "Bart just said I-M-P! He's made of pee!" */
-	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
-		|| memcmp(magic, "IMPM", sizeof(magic)))
-		return 0;
-
-	/* This ought to be more particular; if it's not actually made *with* Impulse Tracker,
-	 * it's probably not compressed, irrespective of what the CMWT says. */
-	slurp_seek(fp, 42, SEEK_SET);
-	int cmwt = slurp_getc(fp);
-	file->description = (cmwt >= 0x14) ? "Compressed Impulse Tracker" : "Impulse Tracker";
-
-	unsigned char title[25];
-
-	slurp_seek(fp, 4, SEEK_SET);
-	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
-		return 0;
-
-	for (int n = 0; n < sizeof(title); n++)
-		if (!title[n])
-			title[n] = 0x20;
-
-	/*file->extension = str_dup("it");*/
-	file->title = strn_dup(title, sizeof(title));
-	str_rtrim(file->title);
-	file->type = TYPE_MODULE_IT;
-	return 1;
-}
-
 /* --------------------------------------------------------------------- */
 
 struct it_file {
@@ -95,6 +59,81 @@ struct it_file {
 	uint8_t chnpan[64];
 	uint8_t chnvol[64];
 };
+
+static int it_load_header(struct it_file *hdr, slurp_t *fp)
+{
+#define LOAD_VALUE(name) do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
+
+	LOAD_VALUE(id);
+	LOAD_VALUE(songname);
+	LOAD_VALUE(hilight_minor);
+	LOAD_VALUE(hilight_major);
+	LOAD_VALUE(ordnum);
+	LOAD_VALUE(insnum);
+	LOAD_VALUE(smpnum);
+	LOAD_VALUE(patnum);
+	LOAD_VALUE(cwtv);
+	LOAD_VALUE(cmwt);
+	LOAD_VALUE(flags);
+	LOAD_VALUE(special);
+	LOAD_VALUE(globalvol);
+	LOAD_VALUE(mv);
+	LOAD_VALUE(speed);
+	LOAD_VALUE(tempo);
+	LOAD_VALUE(sep);
+	LOAD_VALUE(pwd);
+	LOAD_VALUE(msglength);
+	LOAD_VALUE(msgoffset);
+	LOAD_VALUE(reserved);
+	LOAD_VALUE(chnpan);
+	LOAD_VALUE(chnvol);
+
+#undef LOAD_VALUE
+
+	if (memcmp(&hdr->id, "IMPM", 4))
+		return 0;
+
+	hdr->ordnum = bswapLE16(hdr->ordnum);
+	hdr->insnum = bswapLE16(hdr->insnum);
+	hdr->smpnum = bswapLE16(hdr->smpnum);
+	hdr->patnum = bswapLE16(hdr->patnum);
+	hdr->cwtv = bswapLE16(hdr->cwtv);
+	hdr->cmwt = bswapLE16(hdr->cmwt);
+	hdr->flags = bswapLE16(hdr->flags);
+	hdr->special = bswapLE16(hdr->special);
+	hdr->msglength = bswapLE16(hdr->msglength);
+	hdr->msgoffset = bswapLE32(hdr->msgoffset);
+	hdr->reserved = bswapLE32(hdr->reserved);
+
+	/* replace NUL bytes with spaces */
+	for (int n = 0; n < sizeof(hdr->songname); n++)
+		if (!hdr->songname[n])
+			hdr->songname[n] = 0x20;
+
+	return 1;
+}
+
+/* --------------------------------------------------------------------- */
+
+int fmt_it_read_info(dmoz_file_t *file, slurp_t *fp)
+{
+	struct it_file hdr;
+	
+	if (!it_load_header(&hdr, fp))
+		return 0;
+
+	/* This ought to be more particular; if it's not actually made *with* Impulse Tracker,
+	 * it's probably not compressed, irrespective of what the CMWT says. */
+	file->description = (hdr.cmwt >= 0x214) ? "Compressed Impulse Tracker" : "Impulse Tracker";
+
+	/*file->extension = str_dup("it");*/
+	file->title = strn_dup(hdr.songname, sizeof(hdr.songname));
+	str_rtrim(file->title);
+	file->type = TYPE_MODULE_IT;
+	return 1;
+}
+
+/* --------------------------------------------------------------------- */
 
 static const uint8_t autovib_import[] = {VIB_SINE, VIB_RAMP_DOWN, VIB_SQUARE, VIB_RANDOM};
 
@@ -216,54 +255,6 @@ static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows, uint16_t c
 	}
 }
 
-static int it_load_header(struct it_file *hdr, slurp_t *fp)
-{
-#define LOAD_VALUE(name) do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
-
-	LOAD_VALUE(id);
-	LOAD_VALUE(songname);
-	LOAD_VALUE(hilight_minor);
-	LOAD_VALUE(hilight_major);
-	LOAD_VALUE(ordnum);
-	LOAD_VALUE(insnum);
-	LOAD_VALUE(smpnum);
-	LOAD_VALUE(patnum);
-	LOAD_VALUE(cwtv);
-	LOAD_VALUE(cmwt);
-	LOAD_VALUE(flags);
-	LOAD_VALUE(special);
-	LOAD_VALUE(globalvol);
-	LOAD_VALUE(mv);
-	LOAD_VALUE(speed);
-	LOAD_VALUE(tempo);
-	LOAD_VALUE(sep);
-	LOAD_VALUE(pwd);
-	LOAD_VALUE(msglength);
-	LOAD_VALUE(msgoffset);
-	LOAD_VALUE(reserved);
-	LOAD_VALUE(chnpan);
-	LOAD_VALUE(chnvol);
-
-#undef LOAD_VALUE
-
-	if (memcmp(&hdr->id, "IMPM", 4))
-		return 0;
-
-	hdr->ordnum = bswapLE16(hdr->ordnum);
-	hdr->insnum = bswapLE16(hdr->insnum);
-	hdr->smpnum = bswapLE16(hdr->smpnum);
-	hdr->patnum = bswapLE16(hdr->patnum);
-	hdr->cwtv = bswapLE16(hdr->cwtv);
-	hdr->cmwt = bswapLE16(hdr->cmwt);
-	hdr->flags = bswapLE16(hdr->flags);
-	hdr->special = bswapLE16(hdr->special);
-	hdr->msglength = bswapLE16(hdr->msglength);
-	hdr->msgoffset = bswapLE32(hdr->msgoffset);
-	hdr->reserved = bswapLE32(hdr->reserved);
-
-	return 1;
-}
-
 int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
 	struct it_file hdr;
@@ -285,10 +276,8 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		return LOAD_FORMAT_ERROR;
 	}
 
-	for (n = 0; n < 25; n++) {
-		song->title[n] = hdr.songname[n] ? hdr.songname[n] : 32;
-	}
-	song->title[25] = 0;
+	strncpy(song->title, hdr.songname, sizeof(hdr.songname));
+
 	str_rtrim(song->title);
 
 	if (hdr.cmwt < 0x0214 && hdr.cwtv < 0x0214)
@@ -419,11 +408,10 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 	if (!hist) {
 		// berotracker check
-		char modu[4];
+		unsigned char modu[4];
 		slurp_read(fp, modu, 4);
-		if (memcmp(modu, "MODU", 4) == 0) {
-			tid = "BeroTracker";
-		}
+		if (!memcmp(modu, "MODU", 4))
+			tid = "BeRoTracker";
 	}
 
 	if ((hdr.special & 1) && hdr.msglength && hdr.msgoffset + hdr.msglength < slurp_length(fp)) {
@@ -773,7 +761,7 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 
 	hdr.id = bswapLE32(0x4D504D49); // IMPM
 	strncpy((char *) hdr.songname, song->title, 25);
-	hdr.songname[25] = 0;
+	hdr.songname[25] = 0; // why ?
 	hdr.hilight_major = song->row_highlight_major;
 	hdr.hilight_minor = song->row_highlight_minor;
 	hdr.ordnum = bswapLE16(nord);
@@ -853,16 +841,11 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 	disko_write(fp, para_smp, 4*nsmp);
 	disko_write(fp, para_pat, 4*npat);
 
+
+	uint16_t h;
+
 	// edit history (see scripts/timestamp.py)
 	// Should™ be fully compatible with Impulse Tracker.
-	struct timeval savetime, elapsed;
-	struct tm loadtm;
-	uint16_t h;
-	//x86/x64 compatibility
-	time_t thetime = song->editstart.tv_sec;
-	localtime_r(&thetime, &loadtm);
-	gettimeofday(&savetime, NULL);
-	timersub(&savetime, &song->editstart, &elapsed);
 
 	// item count
 	h = song->histlen + 1;
@@ -870,18 +853,35 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 	disko_write(fp, &h, 2);
 	// old data
 	disko_write(fp, song->histdata, 8 * song->histlen);
-	// 16-bit date
-	h = loadtm.tm_mday | ((loadtm.tm_mon + 1) << 5) | ((loadtm.tm_year - 80) << 9);
-	h = bswapLE16(h);
-	disko_write(fp, &h, 2);
-	// 16-bit time
-	h = (loadtm.tm_sec / 2) | (loadtm.tm_min << 5) | (loadtm.tm_hour << 11);
-	h = bswapLE16(h);
-	disko_write(fp, &h, 2);
+	{
+		struct tm loadtm;
+
+		localtime_r(&song->editstart.tv_sec, &loadtm);
+
+		// 16-bit date
+		h = loadtm.tm_mday | ((loadtm.tm_mon + 1) << 5) | ((loadtm.tm_year - 80) << 9);
+		h = bswapLE16(h);
+		disko_write(fp, &h, 2);
+		// 16-bit time
+		h = (loadtm.tm_sec / 2) | (loadtm.tm_min << 5) | (loadtm.tm_hour << 11);
+		h = bswapLE16(h);
+		disko_write(fp, &h, 2);
+	}
+
 	// 32-bit DOS tick count (tick = 1/18.2 second; 54945 * 18.2 = 999999 which is Close Enough)
-	uint32_t ticks = elapsed.tv_sec * 182 / 10 + elapsed.tv_usec / 54945;
-	ticks = bswapLE32(ticks);
-	disko_write(fp, &ticks, 4);
+	{
+		struct timeval elapsed;
+
+		{
+			struct timeval savetime;
+			gettimeofday(&savetime, NULL);
+			timersub(&savetime, &song->editstart, &elapsed);
+		}
+
+		uint32_t ticks = elapsed.tv_sec * 182 / 10 + elapsed.tv_usec / 54945;
+		ticks = bswapLE32(ticks);
+		disko_write(fp, &ticks, 4);
+	}
 
 	// here comes MIDI configuration
 	// here comes MIDI configuration
