@@ -128,7 +128,7 @@ static int xi_file_header_write(struct xi_file_header *hdr, disko_t *fp)
 	WRITE_VALUE(xish.reserved1);
 	WRITE_VALUE(xish.nsamples);
 
-#undef READ_VALUE
+#undef WRITE_VALUE
 
 	return 1;
 }
