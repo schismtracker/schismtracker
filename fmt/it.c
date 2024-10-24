@@ -218,7 +218,7 @@ static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows, uint16_t c
 
 static int it_load_header(struct it_file *hdr, slurp_t *fp)
 {
-#define LOAD_VALUE(name) do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name) != sizeof(hdr->name))) { return 0; } } while (0)
+#define LOAD_VALUE(name) do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
 
 	LOAD_VALUE(id);
 	LOAD_VALUE(songname);
