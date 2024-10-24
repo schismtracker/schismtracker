@@ -69,19 +69,25 @@ int fmt_au_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	file->smp_length = au.data_size / au.channels;
 	file->smp_flags = 0;
+	file->smp_speed = au.sample_rate;
+	file->smp_defvol = 64;
+	file->smp_gblvol = 64;
 	switch (au.encoding) {
 	case AU_PCM_16:
 		file->smp_flags |= CHN_16BIT;
 		file->smp_length /= 2;
 		break;
 	case AU_PCM_24:
+		file->smp_flags |= CHN_16BIT;
 		file->smp_length /= 3;
 		break;
 	case AU_PCM_32:
 	case AU_IEEE_32:
+		file->smp_flags |= CHN_16BIT;
 		file->smp_length /= 4;
 		break;
 	case AU_IEEE_64:
+		file->smp_flags |= CHN_16BIT;
 		file->smp_length /= 8;
 		break;
 	default:
@@ -103,7 +109,7 @@ int fmt_au_read_info(dmoz_file_t *file, slurp_t *fp)
 
 		file->title = strn_dup(title, extlen);
 	}
-	file->smp_filename = file->title;
+	file->smp_filename = file->base;
 	file->type = TYPE_SAMPLE_PLAIN;
 	return 1;
 }
@@ -141,6 +147,9 @@ int fmt_au_load_sample(slurp_t *fp, song_sample_t *smp)
 	smp->length = au.data_size;
 
 	switch (au.encoding) {
+	case AU_PCM_8:
+		sflags |= SF_8 | SF_PCMS;
+		break;
 	case AU_PCM_16:
 		sflags |= SF_16 | SF_PCMS;
 		smp->length /= 2;
