@@ -63,7 +63,7 @@ struct menu {
 	unsigned int x, y, w;
 	const char *title;
 	int num_items;  /* meh... */
-	const char *items[14];  /* writing **items doesn't work here :( */
+	char *items[14];  /* writing **items doesn't work here :( */
 	int selected_item;      /* the highlighted item */
 	int active_item;        /* "pressed" menu item, for submenus */
 	void (*selected_cb) (void);     /* triggered by return key */
@@ -78,14 +78,14 @@ static struct menu main_menu = {
 	.items = {
 		"File Menu...",
 		"Playback Menu...",
-		"View Patterns        (F2)",
+		"View Patterns",
 		"Sample Menu...",
 		"Instrument Menu...",
-		"View Orders/Panning (F11)",
-		"View Variables      (F12)",
-		"Message Editor (Shift-F9)",
+		"View Orders/Panning",
+		"View Variables",
+		"Message Editor",
 		"Settings Menu...",
-		"Help!                (F1)",
+		"Help!",
 	},
 	.selected_item = 0,
 	.active_item = -1,
@@ -99,13 +99,13 @@ static struct menu file_menu = {
 	.title = "File Menu",
 	.num_items = 7,
 	.items = {
-		"Load...           (F9)",
-		"New...        (Ctrl-N)",
-		"Save Current  (Ctrl-S)",
-		"Save As...       (F10)",
-		"Export...  (Shift-F10)",
-		"Message Log (Ctrl-F11)",
-		"Quit          (Ctrl-Q)",
+		"Load...",
+		"New...",
+		"Save Current",
+		"Save As...",
+		"Export...",
+		"Message Log",
+		"Quit",
 	},
 	.selected_item = 0,
 	.active_item = -1,
@@ -119,15 +119,15 @@ static struct menu playback_menu = {
 	.title = " Playback Menu",
 	.num_items = 9,
 	.items = {
-		"Show Infopage          (F5)",
-		"Play Song         (Ctrl-F5)",
-		"Play Pattern           (F6)",
-		"Play from Order  (Shift-F6)",
-		"Play from Mark/Cursor  (F7)",
-		"Stop                   (F8)",
-		"Reinit Soundcard   (Ctrl-I)",
-		"Driver Screen    (Shift-F5)",
-		"Calculate Length   (Ctrl-P)",
+		"Show Infopage",
+		"Play Song",
+		"Play Pattern",
+		"Play from Order",
+		"Play from Mark/Cursor",
+		"Stop",
+		"Reinit Soundcard",
+		"Driver Screen",
+		"Calculate Length",
 	},
 	.selected_item = 0,
 	.active_item = -1,
@@ -141,8 +141,8 @@ static struct menu sample_menu = {
 	.title = "Sample Menu",
 	.num_items = 2,
 	.items = {
-		"Sample List          (F3)",
-		"Sample Library  (Ctrl-F3)",
+		"Sample List",
+		"Sample Library",
 	},
 	.selected_item = 0,
 	.active_item = -1,
@@ -156,8 +156,8 @@ static struct menu instrument_menu = {
 	.title = "Instrument Menu",
 	.num_items = 2,
 	.items = {
-		"Instrument List          (F4)",
-		"Instrument Library  (Ctrl-F4)",
+		"Instrument List",
+		"Instrument Library",
 	},
 	.selected_item = 0,
 	.active_item = -1,
@@ -173,12 +173,12 @@ static struct menu settings_menu = {
 	the toggle fullscreen item doesn't appear) */
 	.num_items = 6,
 	.items = {
-		"Preferences             (Shift-F5)",
-		"MIDI Configuration      (Shift-F1)",
-		"System Configuration     (Ctrl-F1)",
-		"Palette Editor          (Ctrl-F12)",
-		"Font Editor            (Shift-F12)",
-		"Toggle Fullscreen (Ctrl-Alt-Enter)",
+		"Preferences",
+		"MIDI Configuration",
+		"System Configuration",
+		"Palette Editor",
+		"Font Editor",
+		"Toggle Fullscreen",
 	},
 	.selected_item = 0,
 	.active_item = -1,
@@ -186,6 +186,53 @@ static struct menu settings_menu = {
 };
 
 /* *INDENT-ON* */
+
+#define SET_MENU_KEYBIND(MENU, ITEM, BIND, WIDTH) \
+	MENU.items[ITEM] = str_pad_between(MENU.items[ITEM], \
+		(char*)global_keybinds_list.global.BIND.first_shortcut_text_parens, \
+		' ', WIDTH, 0);
+
+/* Add first keybind shortcut to the end of menu strings */
+void menu_init_keybinds(void) {
+	SET_MENU_KEYBIND(main_menu, 2, pattern_edit, 25);
+	SET_MENU_KEYBIND(main_menu, 5, order_list, 25);
+	SET_MENU_KEYBIND(main_menu, 6, song_variables, 25);
+	SET_MENU_KEYBIND(main_menu, 7, message_editor, 25);
+	SET_MENU_KEYBIND(main_menu, 9, help, 25);
+
+	SET_MENU_KEYBIND(file_menu, 0, load_module, 22);
+	SET_MENU_KEYBIND(file_menu, 1, new_song, 22);
+	SET_MENU_KEYBIND(file_menu, 2, save, 22);
+	SET_MENU_KEYBIND(file_menu, 3, save_module, 22);
+	SET_MENU_KEYBIND(file_menu, 4, export_module, 22);
+	SET_MENU_KEYBIND(file_menu, 5, schism_logging, 22);
+	SET_MENU_KEYBIND(file_menu, 6, quit, 22);
+
+	SET_MENU_KEYBIND(playback_menu, 0, play_information_or_play_song, 27);
+	SET_MENU_KEYBIND(playback_menu, 1, play_song, 27);
+	SET_MENU_KEYBIND(playback_menu, 2, play_current_pattern, 27);
+	SET_MENU_KEYBIND(playback_menu, 3, play_song_from_order, 27);
+	SET_MENU_KEYBIND(playback_menu, 4, play_song_from_mark, 27);
+	SET_MENU_KEYBIND(playback_menu, 5, stop_playback, 27);
+	SET_MENU_KEYBIND(playback_menu, 6, audio_reset, 27);
+	SET_MENU_KEYBIND(playback_menu, 7, preferences, 27);
+	SET_MENU_KEYBIND(playback_menu, 8, calculate_song_length, 27);
+
+	SET_MENU_KEYBIND(sample_menu, 0, sample_list, 25);
+	SET_MENU_KEYBIND(sample_menu, 1, sample_library, 25);
+
+	SET_MENU_KEYBIND(instrument_menu, 0, instrument_list, 29);
+	SET_MENU_KEYBIND(instrument_menu, 1, instrument_library, 29);
+
+	SET_MENU_KEYBIND(settings_menu, 0, preferences, 34);
+	SET_MENU_KEYBIND(settings_menu, 1, midi, 34);
+	SET_MENU_KEYBIND(settings_menu, 2, system_configure, 34);
+	SET_MENU_KEYBIND(settings_menu, 3, palette_config, 34);
+	SET_MENU_KEYBIND(settings_menu, 4, font_editor, 34);
+	SET_MENU_KEYBIND(settings_menu, 5, fullscreen, 34);
+}
+
+#undef SET_MENU_KEYBIND
 
 /* updated to whatever menu is currently active.
  * this generalises the key handling.
@@ -481,10 +528,7 @@ int menu_handle_key(struct key_event *k)
 		return 1;
 	}
 
-	switch (k->sym) {
-	case SDLK_ESCAPE:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	if (KEY_PRESSED(global, nav_cancel)) {
 		current_menu[1] = NULL;
 		if (status.dialog_type == DIALOG_SUBMENU) {
 			status.dialog_type = DIALOG_MAIN_MENU;
@@ -492,43 +536,27 @@ int menu_handle_key(struct key_event *k)
 		} else {
 			menu_hide();
 		}
-		break;
-	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(global, nav_accept)) {
+		menu->active_item = menu->selected_item; // Press down item
+	} else if(KEY_RELEASED(global, nav_accept)) {
+		menu->selected_cb(); // Activate item
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		if (menu->selected_item > 0) {
 			menu->selected_item--;
-			break;
-		}
-		return 1;
-	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
+		} else {
 			return 1;
+		}
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		if (menu->selected_item < menu->num_items - 1) {
 			menu->selected_item++;
-			break;
-		}
-		return 1;
-		/* home/end are new here :) */
-	case SDLK_HOME:
-		if (k->state == KEY_RELEASE)
+		} else {
 			return 1;
+		}
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		menu->selected_item = 0;
-		break;
-	case SDLK_END:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		menu->selected_item = menu->num_items - 1;
-		break;
-	case SDLK_RETURN:
-		if (k->state == KEY_PRESS) {
-			menu->active_item = menu->selected_item;
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
-		menu->selected_cb();
-		return 1;
-	default:
+	} else {
 		return 1;
 	}
 

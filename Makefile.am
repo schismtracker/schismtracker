@@ -76,6 +76,7 @@ scripts = \
 	scripts/bin2h.sh		\
 	scripts/build-font.sh		\
 	scripts/genhelp.pl		\
+	scripts/genkeybinds.py  \
 	scripts/half2itf.py		\
 	scripts/itcfg.py		\
 	scripts/itf2half.py		\
@@ -384,6 +385,9 @@ schismtracker_SOURCES = \
 	schism/fonts.c          \
 	schism/ieee-float.c     \
 	schism/itf.c			\
+	schism/keybinds.c		\
+	schism/keybinds_codes.c \
+	schism/keybinds_init.c  \
 	schism/keyboard.c		\
 	schism/main.c			\
 	schism/mem.c           \

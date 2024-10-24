@@ -122,3 +122,18 @@ unsigned int i_sqrt(unsigned int r)
 	}
 	return(c);
 }
+
+/* fairly fast crc32 hashing function; used for keybinds */
+uint32_t crc32b(const unsigned char *message) {
+	uint32_t crc = UINT32_C(0xFFFFFFFF);
+	size_t i, j;
+
+	for (i = 0; message[i]; i++) {
+		crc ^= message[i];
+
+		for (j = 0; j < 8; j++)
+			crc = (crc >> 1) ^ (0xEDB88320 & -(crc & 1));
+	}
+
+	return ~crc;
+}
