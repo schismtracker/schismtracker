@@ -22,7 +22,8 @@ helptexts = \
 	helptext/pattern-editor		\
 	helptext/adlib-sample		\
 	helptext/sample-list		\
-	helptext/palettes
+	helptext/palettes			\
+	helptext/time-information
 fonts = \
 	font/default-lower.fnt		\
 	font/default-upper-alt.fnt	\
@@ -411,6 +412,7 @@ schismtracker_SOURCES = \
 	schism/page_patedit.c		\
 	schism/page_preferences.c	\
 	schism/page_samples.c		\
+	schism/page_timeinfo.c		\
 	schism/page_vars.c		\
 	schism/page_waterfall.c		\
 	schism/palettes.c		\

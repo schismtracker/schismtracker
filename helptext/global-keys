@@ -46,6 +46,9 @@
 |   Ctrl-S            Save current song
 |
 |   Ctrl-Alt-Enter    Toggle Fullscreen
+|
+|   LShift-LAlt-RAlt-RCtrl-Pause
+|        Time Information
 :
 : On text widgets.
 :   Ctrl, Ctrl        Digraph entry:
