@@ -150,6 +150,9 @@ int load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp);
 uint32_t it_decode_edit_timer(uint16_t cwtv, uint32_t runtime);
 uint32_t it_get_song_elapsed_dos_time(song_t *song);
 
+/* s3i, called from s3m saver */
+void s3i_write_header(disko_t *fp, song_sample_t *smp, uint32_t sdata);
+
 /* --------------------------------------------------------------------------------------------------------- */
 
 /* [R]IFF helper functions */
