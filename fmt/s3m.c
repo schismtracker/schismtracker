@@ -70,6 +70,20 @@ enum {
 #define S3M_UNSIGNED 1
 #define S3M_CHANPAN 2 // the FC byte
 
+static int s3m_import_edittime(song_t *song, uint16_t trkvers, uint32_t reserved32)
+{
+	if (song->histlen)
+		return 0; // ?
+
+	song->histlen = 1;
+	song->history = mem_calloc(1, sizeof(*song->history));
+
+	uint32_t runtime = it_decode_edit_timer(trkvers, reserved32);
+	dos_time_to_timeval(&song->history[0].runtime, runtime);
+
+	return 1;
+}
+
 int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
 	uint16_t nsmp, nord, npat;
@@ -93,6 +107,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint16_t special;
 	uint8_t reserved[8];
 	uint16_t reserved16;
+	uint32_t reserved32; // Impulse Tracker edit time
 	uint32_t adlib = 0; // bitset
 	uint16_t gus_addresses = 0;
 	uint8_t mix_volume; /* detect very old modplug tracker */
@@ -159,10 +174,9 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (slurp_getc(fp) != 0xfc)
 		misc &= ~S3M_CHANPAN;     /* stored pan values */
 
-	/* Extended Schism Tracker version information in the first two reserved bytes; 
-	Impulse Tracker hides its edit timer in the four bytes following that. */
 	slurp_read(fp, &reserved, 8);
-	reserved16 = reserved[0] | (reserved[1] << 8);
+	reserved16 = bswapLE16(*(uint16_t *)(reserved)); // schism & openmpt version info
+	reserved32 = bswapLE32(*(uint32_t *)(reserved + 2)); // impulse tracker edit timer
 	slurp_read(fp, &special, 2); // field not used by st3
 	special = bswapLE16(special);
 
@@ -495,6 +509,10 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				const char *versions[] = { "1-2", "3", "4-5" };
 				sprintf(song->tracker_id, "Impulse Tracker 2.14p%s", versions[trkvers - 0x3215]);
 			}
+
+			if (trkvers >= 0x3207 && trkvers <= 0x3217 && reserved32)
+				s3m_import_edittime(song, trkvers, reserved32);
+
 			break;
 		case 4:
 			if (trkvers == 0x4100) {
@@ -502,6 +520,8 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			} else {
 				strcpy(song->tracker_id, "Schism Tracker ");
 				ver_decode_cwtv(trkvers, reserved16, song->tracker_id + strlen(song->tracker_id));
+				if (trkvers == 0x4fff && reserved16 >= 0x1560)
+					s3m_import_edittime(song, 0x0000, reserved32);
 			}
 			break;
 		case 5:
@@ -1028,6 +1048,18 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 	hdr.uc = 16; // ultraclick (the "Waste GUS channels" option)
 	hdr.dp = 252;
 	hdr.reserved = bswapLE16(ver_reserved);
+
+	/* Save the edit time in the reserved header, where
+	 * Impulse Tracker also conveniently stores it */
+	hdr.reserved2 = 0;
+
+	for (size_t i = 0; i < song->histlen; i++)
+		hdr.reserved2 += timeval_to_dos_time(&song->history[i].runtime);
+
+	// 32-bit DOS tick count (tick = 1/18.2 second; 54945 * 18.2 = 999999 which is Close Enough)
+	hdr.reserved2 += it_get_song_elapsed_dos_time(song);
+
+	hdr.reserved2 = bswapLE32(hdr.reserved2);
 
 	/* The sample data parapointers are 24+4 bits, whereas pattern data and sample headers are only 16+4
 	bits -- so while the sample data can be written up to 268 MB within the file (starting at 0xffffff0),

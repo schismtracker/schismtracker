@@ -471,6 +471,8 @@ typedef struct song_note {
 } song_note_t;
 
 typedef struct song_history {
+	int time_valid;
+
 	// meh, just use the standard structures
 	struct tm time;
 	struct timeval runtime;

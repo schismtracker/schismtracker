@@ -394,7 +394,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 	if (hist) {
 		song->histlen = hist;
-		song->history = mem_alloc(sizeof(*song->history) * song->histlen);
+		song->history = mem_calloc(song->histlen, sizeof(*song->history));
 		for (size_t i = 0; i < song->histlen; i++) {
 			// handle the date
 			uint16_t fat_date;
@@ -405,7 +405,10 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			slurp_read(fp, &fat_time, sizeof(fat_time));
 			fat_time = bswapLE16(fat_time);
 
-			fat_date_time_to_tm(&song->history[i].time, fat_date, fat_time);
+			if (fat_date && fat_time) {
+				fat_date_time_to_tm(&song->history[i].time, fat_date, fat_time);
+				song->history[i].time_valid = 1;
+			}
 
 			// now deal with the runtime
 			uint32_t run_time;
@@ -579,6 +582,17 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			const char *versions[] = { "1-2", "3", "4-5" };
 			sprintf(song->tracker_id, "Impulse Tracker 2.14p%s", versions[hdr.cwtv - 0x0215]);
 		}
+
+		if (hdr.cwtv >= 0x0207 && !song->histlen && hdr.reserved) {
+			// Starting from version 2.07, IT stores the total edit
+			// time of a module in the "reserved" field
+			song->histlen = 1;
+			song->history = mem_calloc(1, sizeof(*song->history));
+
+			uint32_t runtime = it_decode_edit_timer(hdr.cwtv, hdr.reserved);
+			dos_time_to_timeval(&song->history[0].runtime, runtime);
+		}
+
 		//"saved %d time%s", hist, (hist == 1) ? "" : "s"
 	}
 	if (tid) {
@@ -872,9 +886,10 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 
 	// old data
 	for (size_t i = 0; i < song->histlen; i++) {
-		uint16_t fat_date, fat_time;
+		uint16_t fat_date = 0, fat_time = 0;
 
-		tm_to_fat_date_time(&song->history[i].time, &fat_date, &fat_time);
+		if (song->history[i].time_valid)
+			tm_to_fat_date_time(&song->history[i].time, &fat_date, &fat_time);
 
 		fat_date = bswapLE16(fat_date);
 		disko_write(fp, &fat_date, sizeof(fat_date));
@@ -882,7 +897,6 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 		disko_write(fp, &fat_time, sizeof(fat_time));
 
 		uint32_t run_time = bswapLE32(timeval_to_dos_time(&song->history[i].runtime));
-
 		disko_write(fp, &run_time, sizeof(run_time));
 	}
 
@@ -901,15 +915,7 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 
 	// 32-bit DOS tick count (tick = 1/18.2 second; 54945 * 18.2 = 999999 which is Close Enough)
 	{
-		struct timeval elapsed;
-
-		{
-			struct timeval savetime;
-			gettimeofday(&savetime, NULL);
-			timersub(&savetime, &song->editstart, &elapsed);
-		}
-
-		uint32_t ticks = timeval_to_dos_time(&elapsed);
+		uint32_t ticks = it_get_song_elapsed_dos_time(song);
 		ticks = bswapLE32(ticks);
 		disko_write(fp, &ticks, sizeof(ticks));
 	}

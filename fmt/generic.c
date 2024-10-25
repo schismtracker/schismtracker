@@ -388,3 +388,30 @@ void handle_stm_effects(song_note_t *chan_note) {
 		break;
 	}
 }
+
+uint32_t it_decode_edit_timer(uint16_t cwtv, uint32_t runtime)
+{
+	if ((cwtv & 0xFFF) >= 0x0208) {
+		// it's the thirstiest time of the year
+		runtime ^= 0x4954524B;  // 'ITRK'
+		runtime = ((runtime << (32 - 7)) | (runtime >> 7));
+		runtime = ~runtime + 1;
+		runtime = ((runtime >> (32 - 4)) | (runtime << 4));
+		runtime ^= 0x4A54484C;  // 'JTHL'
+	}
+
+	return runtime;
+}
+
+uint32_t it_get_song_elapsed_dos_time(song_t *song)
+{
+	struct timeval elapsed;
+
+	{
+		struct timeval savetime;
+		gettimeofday(&savetime, NULL);
+		timersub(&savetime, &song->editstart, &elapsed);
+	}
+
+	return timeval_to_dos_time(&elapsed);
+}

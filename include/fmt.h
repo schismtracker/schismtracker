@@ -147,6 +147,8 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv);
 int load_it_instrument(struct instrumentloader* ii, song_instrument_t *instrument, slurp_t *fp);
 int load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp);
+uint32_t it_decode_edit_timer(uint16_t cwtv, uint32_t runtime);
+uint32_t it_get_song_elapsed_dos_time(song_t *song);
 
 /* --------------------------------------------------------------------------------------------------------- */
 

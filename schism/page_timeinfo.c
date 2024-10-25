@@ -75,53 +75,62 @@ static int timeinfo_handle_key(struct key_event * k)
 			return 1;
 		}
 		return 0;
-	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		top_line--;
-		break;
-	case SDLK_PAGEUP:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		top_line -= 15;
-		break;
-	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		top_line++;
-		break;
-	case SDLK_PAGEDOWN:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		top_line += 15;
-		break;
-	case SDLK_HOME:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		top_line = 0;
-		break;
-	case SDLK_END:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		top_line = current_song->histlen;
-		break;
 	default:
-		if (k->state == KEY_PRESS) {
-			if (k->mouse == MOUSE_SCROLL_UP) {
-				top_line -= MOUSE_SCROLL_LINES;
-				break;
-			} else if (k->mouse == MOUSE_SCROLL_DOWN) {
-				top_line += MOUSE_SCROLL_LINES;
-				break;
-			}
-		}
+		break;
+	}
 
+	if (display_session) {
+		switch (k->sym) {
+		case SDLK_UP:
+			if (k->state == KEY_RELEASE)
+				return 1;
+			top_line--;
+			break;
+		case SDLK_PAGEUP:
+			if (k->state == KEY_RELEASE)
+				return 1;
+			top_line -= 15;
+			break;
+		case SDLK_DOWN:
+			if (k->state == KEY_RELEASE)
+				return 1;
+			top_line++;
+			break;
+		case SDLK_PAGEDOWN:
+			if (k->state == KEY_RELEASE)
+				return 1;
+			top_line += 15;
+			break;
+		case SDLK_HOME:
+			if (k->state == KEY_RELEASE)
+				return 1;
+			top_line = 0;
+			break;
+		case SDLK_END:
+			if (k->state == KEY_RELEASE)
+				return 1;
+			top_line = current_song->histlen;
+			break;
+		default:
+			if (k->state == KEY_PRESS) {
+				if (k->mouse == MOUSE_SCROLL_UP) {
+					top_line -= MOUSE_SCROLL_LINES;
+					break;
+				} else if (k->mouse == MOUSE_SCROLL_DOWN) {
+					top_line += MOUSE_SCROLL_LINES;
+					break;
+				}
+			}
+
+			return 0;
+		}
+		top_line = MIN(top_line, (ptrdiff_t)current_song->histlen);
+		top_line = MAX(top_line, 0);
+		status.flags |= NEED_UPDATE;
+		return 1;
+	} else {
 		return 0;
-	};
-	top_line = MIN(top_line, ((ptrdiff_t)current_song->histlen - 32));
-	top_line = MAX(top_line, 0);
-	status.flags |= NEED_UPDATE;
-	return 1;
+	}
 }
 
 static inline void draw_time(uint64_t secs, int x, int y)
@@ -176,11 +185,11 @@ static void timeinfo_redraw(void)
 
 	draw_time(total_secs, 18, 16);
 
-	if (display_session) {
-		// draw the bar
-		for (int x = 1; x < 79; x++)
-			draw_char(154, x, 18, 0, 2);
+	// draw the bar
+	for (int x = 1; x < 79; x++)
+		draw_char(154, x, 18, 0, 2);
 
+	if (display_session) {
 		uint64_t session_secs = 0;
 
 		for (int i = 0; i < current_song->histlen; i++) {
@@ -189,11 +198,15 @@ static void timeinfo_redraw(void)
 			session_secs += current_song->history[i].runtime.tv_sec;
 
 			if (i >= top_line && i < top_line + 29) {
-				str_date_from_tm(&current_song->history[i].time, buf);
-				draw_text_len(buf, 27, 4, 20 + i - top_line, 0, 2);
+				if (current_song->history[i].time_valid) {
+					str_date_from_tm(&current_song->history[i].time, buf);
+					draw_text_len(buf, 27, 4, 20 + i - top_line, 0, 2);
 
-				str_time_from_tm(&current_song->history[i].time, buf);
-				draw_text_len(buf, 27, 29, 20 + i - top_line, 0, 2);
+					str_time_from_tm(&current_song->history[i].time, buf);
+					draw_text_len(buf, 27, 29, 20 + i - top_line, 0, 2);
+				} else {
+					draw_text("<unknown date>", 4, 20 + i - top_line, 0, 2);
+				}
 
 				draw_time(current_song->history[i].runtime.tv_sec, 44, 20 + i - top_line);
 
