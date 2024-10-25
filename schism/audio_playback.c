@@ -283,14 +283,15 @@ int song_is_multichannel_mode(void)
 	return multichannel_mode;
 }
 
+#define MAX_KEYJAZZ_CHANNELS 24
 
 /* Channel corresponding to each note played.
 That is, keyjazz_note_to_chan[66] will indicate in which channel F-5 was played most recently.
 This will break if the same note was keydown'd twice without a keyup, but I think that's a
 fairly unlikely scenario that you'd have to TRY to bring about. */
-static int keyjazz_note_to_chan[NOTE_LAST + 1];
+static int keyjazz_note_to_chan[NOTE_LAST + 1] = {0};
 /* last note played by channel tracking */
-static int keyjazz_chan_to_note[MAX_CHANNELS + 1];
+static int keyjazz_chan_to_note[MAX_KEYJAZZ_CHANNELS] = {0};
 
 /* **** chan ranges from 1 to 64   */
 static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int effect, int param)
@@ -303,22 +304,22 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	song_instrument_t *i = NULL;
 
 	if (chan < 1) {
-		if (chan == KEYJAZZ_CHAN_CURRENT)
+		if (chan == KEYJAZZ_CHAN_CURRENT) {
 			chan = current_play_channel;
-		if (multichannel_mode)
-			song_change_current_play_channel(1, 1);
-		else if (chan == KEYJAZZ_CHAN_AUTO) {
-			chan = current_play_channel;
+			if (multichannel_mode)
+				song_change_current_play_channel(1, 1);
+		} else if (chan == KEYJAZZ_CHAN_AUTO) {
+			chan = 1;
 			do {
-				if (!keyjazz_chan_to_note[chan]) break;
-				else chan++;
-			} while (chan <= MAX_CHANNELS + 1);
-			if (chan > MAX_CHANNELS)
-				chan = current_play_channel;
+				if (!keyjazz_chan_to_note[chan])
+					break;
+				chan++;
+			} while (chan < MAX_KEYJAZZ_CHANNELS);
 		}
 	}
-    // back to the 0..63 range
-    int chan_internal = chan -1;
+
+    // back to the 128..192 range
+    int chan_internal = chan + 128;
 
 	song_lock_audio();
 
@@ -341,10 +342,12 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 			samp = c->last_instrument;
 		else if (samp == KEYJAZZ_INST_FAKE)
 			samp = 0; // dumb hack
+
 		if (ins == 0)
 			ins = c->last_instrument;
 		else if (ins == KEYJAZZ_INST_FAKE)
 			ins = 0; // dumb hack
+
 		c->last_instrument = ins_mode ? ins : samp;
 
 		// give the channel a sample, and maybe an instrument
