@@ -141,14 +141,26 @@ uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp);
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-struct it_sample; /* definition in it_defs.h */
-
 /* shared by the .it, .its, and .iti saving functions */
 void save_its_header(disko_t *fp, song_sample_t *smp);
 void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int iti_file);
-int load_its_sample(struct it_sample *its, slurp_t *fp, song_sample_t *smp);
-int load_it_instrument(song_instrument_t *instrument, slurp_t *fp);
+int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv);
+int load_it_instrument(struct instrumentloader* ii, song_instrument_t *instrument, slurp_t *fp);
 int load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp);
+uint32_t it_decode_edit_timer(uint16_t cwtv, uint32_t runtime);
+uint32_t it_get_song_elapsed_dos_time(song_t *song);
+
+/* s3i, called from s3m saver */
+void s3i_write_header(disko_t *fp, song_sample_t *smp, uint32_t sdata);
+
+/* --------------------------------------------------------------------------------------------------------- */
+
+/* handle dos timestamps */
+void dos_time_to_timeval(struct timeval *timeval, uint32_t dos_time);
+uint32_t timeval_to_dos_time(const struct timeval *timeval);
+
+void fat_date_time_to_tm(struct tm *tm, uint16_t fat_date, uint16_t fat_time);
+void tm_to_fat_date_time(const struct tm *tm, uint16_t *fat_date, uint16_t *fat_time);
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -164,6 +176,7 @@ int iff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp);
 int riff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp);
 int iff_chunk_read(iff_chunk_t *chunk, slurp_t *fp, void *data, size_t size);
 int iff_read_sample(iff_chunk_t *chunk, slurp_t *fp, song_sample_t *smp, uint32_t flags, size_t offset);
+int iff_chunk_receive(iff_chunk_t *chunk, slurp_t *fp, int (*callback)(const void *, size_t, void *), void *userdata);
 
 /* --------------------------------------------------------------------------------------------------------- */
 // other misc functions...

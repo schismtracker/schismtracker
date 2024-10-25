@@ -24,9 +24,13 @@
 #ifndef SCHISM_STR_H_
 #define SCHISM_STR_H_
 
+#include "headers.h"
+
 #include <sys/types.h>
 
 /* formatting */
+char *str_date_from_tm(struct tm *tm, char buf[27]);
+char *str_time_from_tm(struct tm *tm, char buf[27]);
 char *str_from_date(time_t when, char buf[27]);
 char *str_from_time(time_t when, char buf[27]);
 char *str_from_num(int digits, unsigned int n, char *buf); // what size

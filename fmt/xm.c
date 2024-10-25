@@ -50,7 +50,51 @@ struct xm_file_header {
 	uint16_t bpm;           // Default BPM
 };
 
-SCHISM_BINARY_STRUCT(struct xm_file_header, 80);
+/* --------------------------------------------------------------------- */
+
+static int read_header_xm(struct xm_file_header *hdr, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) return 0
+
+	READ_VALUE(id);
+	READ_VALUE(name);
+	READ_VALUE(doseof);
+	READ_VALUE(tracker);
+	READ_VALUE(version);
+	READ_VALUE(headersz);
+	READ_VALUE(songlen);
+	READ_VALUE(restart);
+	READ_VALUE(channels);
+	READ_VALUE(patterns);
+	READ_VALUE(instruments);
+	READ_VALUE(flags);
+	READ_VALUE(tempo);
+	READ_VALUE(bpm);
+
+#undef READ_VALUE
+
+	if (memcmp(hdr->id, "Extended Module: ", sizeof(hdr->id))
+		|| hdr->doseof != 0x1a)
+		return 0;
+
+	/* now byteswap */
+	hdr->version = bswapLE16(hdr->version);
+	hdr->headersz = bswapLE32(hdr->headersz);
+	hdr->songlen = bswapLE16(hdr->songlen);
+	hdr->restart = bswapLE16(hdr->restart);
+	hdr->channels = bswapLE16(hdr->channels);
+	hdr->patterns = bswapLE16(hdr->patterns);
+	hdr->instruments = bswapLE16(hdr->instruments);
+	hdr->flags = bswapLE16(hdr->flags);
+	hdr->tempo = bswapLE16(hdr->tempo);
+	hdr->bpm = bswapLE16(hdr->bpm);
+
+	if (hdr->channels > MAX_CHANNELS)
+		return 0;
+
+	return 1;
+}
 
 /* --------------------------------------------------------------------- */
 
@@ -58,10 +102,7 @@ int fmt_xm_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	struct xm_file_header hdr;
 
-	if (slurp_read(fp, &hdr, sizeof(hdr)) != sizeof(hdr))
-		return 0;
-
-	if (memcmp(hdr.id, "Extended Module: ", sizeof(hdr.id)))
+	if (!read_header_xm(&hdr, fp))
 		return 0;
 
 	file->description = "Fast Tracker 2 Module";
@@ -781,19 +822,7 @@ int fmt_xm_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	int n;
 	uint8_t b;
 
-	slurp_read(fp, &hdr, sizeof(hdr));
-	hdr.version = bswapLE16(hdr.version);
-	hdr.headersz = bswapLE32(hdr.headersz);
-	hdr.songlen = bswapLE16(hdr.songlen);
-	hdr.restart = bswapLE16(hdr.restart);
-	hdr.channels = bswapLE16(hdr.channels);
-	hdr.patterns = bswapLE16(hdr.patterns);
-	hdr.instruments = bswapLE16(hdr.instruments);
-	hdr.flags = bswapLE16(hdr.flags);
-	hdr.tempo = bswapLE16(hdr.tempo);
-	hdr.bpm = bswapLE16(hdr.bpm);
-
-	if (memcmp(hdr.id, "Extended Module: ", 17) != 0 || hdr.doseof != 0x1a || hdr.channels > MAX_CHANNELS)
+	if (!read_header_xm(&hdr, fp))
 		return LOAD_UNSUPPORTED;
 
 	memcpy(song->title, hdr.name, 20);

@@ -971,6 +971,17 @@ static int handle_key_global(struct key_event * k)
 			}
 			return 1;
 		}
+
+		return 1;
+	case SDLK_PAUSE:
+		if ((k->mod & KMOD_LSHIFT) && (k->mod & KMOD_LALT) && (k->mod & KMOD_RALT) && (k->mod & KMOD_RCTRL)) {
+			_mp_finish(NULL);
+			if (k->state == KEY_PRESS)
+				set_page(PAGE_TIME_INFORMATION);
+
+			return 1;
+		}
+		return 0;
 	default:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
@@ -978,9 +989,8 @@ static int handle_key_global(struct key_event * k)
 	}
 
 	/* got a bit ugly here, sorry */
-	i = k->sym;
 	if (k->mod & KMOD_ALT) {
-		switch (i) {
+		switch (k->sym) {
 		case SDLK_F1: i = 0; break;
 		case SDLK_F2: i = 1; break;
 		case SDLK_F3: i = 2; break;
@@ -1764,6 +1774,7 @@ void load_pages(void)
 	about_load_page(pages+PAGE_ABOUT);
 	config_load_page(pages + PAGE_CONFIG);
 	save_module_load_page(pages + PAGE_EXPORT_MODULE, 1);
+	timeinfo_load_page(pages + PAGE_TIME_INFORMATION);
 
 	widgets = pages[PAGE_BLANK].widgets;
 	selected_widget = &(pages[PAGE_BLANK].selected_widget);

@@ -14,6 +14,8 @@
 
 #include "tables.h"
 
+#include <time.h> // need tm and timeval
+
 
 #define MOD_AMIGAC2             0x1AB
 #define MAX_SAMPLE_LENGTH       16000000
@@ -468,6 +470,14 @@ typedef struct song_note {
 	uint8_t param;
 } song_note_t;
 
+typedef struct song_history {
+	int time_valid;
+
+	// meh, just use the standard structures
+	struct tm time;
+	struct timeval runtime;
+} song_history_t;
+
 ////////////////////////////////////////////////////////////////////
 
 typedef struct {
@@ -550,8 +560,9 @@ typedef struct song {
 
 	// These store the existing IT save history from prior editing sessions.
 	// Current session data is added at save time, and is NOT a part of histdata.
-	int histlen; // How many session history data entries exist (each entry is eight bytes)
-	uint8_t *histdata; // Preserved entries from prior sessions, might be NULL if histlen = 0
+	size_t histlen; // How many session history data entries exist (each entry is eight bytes)
+	song_history_t *history; // Preserved entries from prior sessions, might be NULL if histlen = 0
+
 	struct timeval editstart; // When the song was loaded
 
 	// mixer stuff

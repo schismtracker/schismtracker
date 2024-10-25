@@ -388,3 +388,76 @@ void handle_stm_effects(song_note_t *chan_note) {
 		break;
 	}
 }
+
+uint32_t it_decode_edit_timer(uint16_t cwtv, uint32_t runtime)
+{
+	if ((cwtv & 0xFFF) >= 0x0208) {
+		// it's the thirstiest time of the year
+		runtime ^= 0x4954524B;  // 'ITRK'
+		runtime = ((runtime << (32 - 7)) | (runtime >> 7));
+		runtime = ~runtime + 1;
+		runtime = ((runtime >> (32 - 4)) | (runtime << 4));
+		runtime ^= 0x4A54484C;  // 'JTHL'
+	}
+
+	return runtime;
+}
+
+uint32_t it_get_song_elapsed_dos_time(song_t *song)
+{
+	struct timeval elapsed;
+
+	{
+		struct timeval savetime;
+		gettimeofday(&savetime, NULL);
+		timersub(&savetime, &song->editstart, &elapsed);
+	}
+
+	return timeval_to_dos_time(&elapsed);
+}
+
+void dos_time_to_timeval(struct timeval *timeval, uint32_t dos_time)
+{
+	// convert to microseconds
+	uint64_t us = (uint64_t)dos_time * 54945;
+
+	timeval->tv_sec = us / 1000000;
+	timeval->tv_usec = us % 1000000;
+}
+
+uint32_t timeval_to_dos_time(const struct timeval *timeval)
+{
+	int64_t dos = ((int64_t)timeval->tv_sec * 182 / 10) + ((int64_t)timeval->tv_usec / 54945);
+
+	// don't overflow!
+	return CLAMP(dos, 0, UINT32_MAX);
+}
+
+void fat_date_time_to_tm(struct tm *tm, uint16_t fat_date, uint16_t fat_time)
+{
+	*tm = (struct tm){
+		/* PRESENT DAY */
+		.tm_mday = fat_date & 0x1F,
+		.tm_mon = ((fat_date >> 5) & 0xF) - 1,
+		.tm_year = (fat_date >> 9) + 80,
+
+		/* PRESENT TIME */
+		.tm_sec = (fat_time & 0x1F) << 1,
+		.tm_min = ((fat_time >> 5) & 0x3F),
+		.tm_hour = fat_time >> 11,
+	};
+
+	// normalize the data in case the fat time was screwed?
+	mktime(tm);
+}
+
+void tm_to_fat_date_time(const struct tm *tm, uint16_t *fat_date, uint16_t *fat_time)
+{
+	struct tm tm_n = *tm;
+
+	// normalize it so we can be sure that the data is valid
+	mktime(&tm_n);
+
+	*fat_date = tm_n.tm_mday | ((tm_n.tm_mon + 1) << 5) | ((tm_n.tm_year - 80) << 9);
+	*fat_time = (tm_n.tm_sec >> 1) | (tm_n.tm_min << 5) | (tm_n.tm_hour << 11);
+}

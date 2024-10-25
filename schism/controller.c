@@ -40,7 +40,7 @@ struct controller_node {
 
 static struct controller_node *game_controller_list = NULL;
 
-static int game_controller_insert(SDL_GameController *controller)
+static void game_controller_insert(SDL_GameController *controller)
 {
 	struct controller_node *node = mem_alloc(sizeof(*node));
 
@@ -109,6 +109,7 @@ int controller_quit(void)
 {
 	game_controller_free();
 	SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
+	return 1;
 }
 
 int controller_sdlevent(SDL_Event *event)

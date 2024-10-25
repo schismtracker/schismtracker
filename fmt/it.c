@@ -32,37 +32,102 @@
 #include "player/sndfile.h"
 #include "midi.h"
 
-// TODO: its/iti loaders should be collapsed into here -- no sense duplicating all of this code
+/* --------------------------------------------------------------------- */
+
+struct it_file {
+	uint32_t id;                    // 0x4D504D49
+	int8_t songname[26];
+	uint8_t hilight_minor;
+	uint8_t hilight_major;
+	uint16_t ordnum;
+	uint16_t insnum;
+	uint16_t smpnum;
+	uint16_t patnum;
+	uint16_t cwtv;
+	uint16_t cmwt;
+	uint16_t flags;
+	uint16_t special;
+	uint8_t globalvol;
+	uint8_t mv;
+	uint8_t speed;
+	uint8_t tempo;
+	uint8_t sep;
+	uint8_t pwd;
+	uint16_t msglength;
+	uint32_t msgoffset;
+	uint32_t reserved;
+	uint8_t chnpan[64];
+	uint8_t chnvol[64];
+};
+
+static int it_load_header(struct it_file *hdr, slurp_t *fp)
+{
+#define LOAD_VALUE(name) do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
+
+	LOAD_VALUE(id);
+	LOAD_VALUE(songname);
+	LOAD_VALUE(hilight_minor);
+	LOAD_VALUE(hilight_major);
+	LOAD_VALUE(ordnum);
+	LOAD_VALUE(insnum);
+	LOAD_VALUE(smpnum);
+	LOAD_VALUE(patnum);
+	LOAD_VALUE(cwtv);
+	LOAD_VALUE(cmwt);
+	LOAD_VALUE(flags);
+	LOAD_VALUE(special);
+	LOAD_VALUE(globalvol);
+	LOAD_VALUE(mv);
+	LOAD_VALUE(speed);
+	LOAD_VALUE(tempo);
+	LOAD_VALUE(sep);
+	LOAD_VALUE(pwd);
+	LOAD_VALUE(msglength);
+	LOAD_VALUE(msgoffset);
+	LOAD_VALUE(reserved);
+	LOAD_VALUE(chnpan);
+	LOAD_VALUE(chnvol);
+
+#undef LOAD_VALUE
+
+	if (memcmp(&hdr->id, "IMPM", 4))
+		return 0;
+
+	hdr->ordnum = bswapLE16(hdr->ordnum);
+	hdr->insnum = bswapLE16(hdr->insnum);
+	hdr->smpnum = bswapLE16(hdr->smpnum);
+	hdr->patnum = bswapLE16(hdr->patnum);
+	hdr->cwtv = bswapLE16(hdr->cwtv);
+	hdr->cmwt = bswapLE16(hdr->cmwt);
+	hdr->flags = bswapLE16(hdr->flags);
+	hdr->special = bswapLE16(hdr->special);
+	hdr->msglength = bswapLE16(hdr->msglength);
+	hdr->msgoffset = bswapLE32(hdr->msgoffset);
+	hdr->reserved = bswapLE32(hdr->reserved);
+
+	/* replace NUL bytes with spaces */
+	for (int n = 0; n < sizeof(hdr->songname); n++)
+		if (!hdr->songname[n])
+			hdr->songname[n] = 0x20;
+
+	return 1;
+}
 
 /* --------------------------------------------------------------------- */
 
 int fmt_it_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	unsigned char magic[4];
-
-	/* "Bart just said I-M-P! He's made of pee!" */
-	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
-		|| memcmp(magic, "IMPM", sizeof(magic)))
+	struct it_file hdr;
+	
+	if (!it_load_header(&hdr, fp))
 		return 0;
 
 	/* This ought to be more particular; if it's not actually made *with* Impulse Tracker,
 	 * it's probably not compressed, irrespective of what the CMWT says. */
-	slurp_seek(fp, 42, SEEK_SET);
-	int cmwt = slurp_getc(fp);
-	file->description = (cmwt >= 0x14) ? "Compressed Impulse Tracker" : "Impulse Tracker";
-
-	unsigned char title[25];
-
-	slurp_seek(fp, 4, SEEK_SET);
-	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
-		return 0;
-
-	for (int n = 0; n < sizeof(title); n++)
-		if (!title[n])
-			title[n] = 0x20;
+	file->description = (hdr.cmwt >= 0x214) ? "Compressed Impulse Tracker" : "Impulse Tracker";
 
 	/*file->extension = str_dup("it");*/
-	file->title = strn_dup(title, sizeof(title));
+	file->title = strn_dup(hdr.songname, sizeof(hdr.songname));
 	str_rtrim(file->title);
 	file->type = TYPE_MODULE_IT;
 	return 1;
@@ -70,9 +135,19 @@ int fmt_it_read_info(dmoz_file_t *file, slurp_t *fp)
 
 /* --------------------------------------------------------------------- */
 
-#include "it_defs.h"
-
 static const uint8_t autovib_import[] = {VIB_SINE, VIB_RAMP_DOWN, VIB_SQUARE, VIB_RANDOM};
+
+/* pattern mask variable bits */
+enum {
+	ITNOTE_NOTE = 1,
+	ITNOTE_SAMPLE = 2,
+	ITNOTE_VOLUME = 4,
+	ITNOTE_EFFECT = 8,
+	ITNOTE_SAME_NOTE = 16,
+	ITNOTE_SAME_SAMPLE = 32,
+	ITNOTE_SAME_VOLUME = 64,
+	ITNOTE_SAME_EFFECT = 128,
+};
 
 /* --------------------------------------------------------------------- */
 
@@ -180,88 +255,6 @@ static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows, uint16_t c
 	}
 }
 
-static void load_it_sample(song_sample_t *sample, slurp_t *fp, uint16_t cwtv)
-{
-	struct it_sample shdr;
-
-	slurp_read(fp, &shdr, sizeof(shdr));
-
-	/* Fun fact: Impulse Tracker doesn't check any of the header data for consistency when loading samples
-	(or instruments, for that matter). If some other data is stored in place of the IMPS/IMPI, it'll
-	happily load it anyway -- and in fact, since the song is manipulated in memory in the same format as
-	on disk, this data is even preserved when the file is saved! */
-
-	memcpy(sample->name, shdr.name, 25);
-	sample->name[25] = '\0';
-
-	memcpy(sample->filename, shdr.filename, 12);
-	sample->filename[12] = '\0';
-
-	if (shdr.dfp & 128) {
-		sample->flags |= CHN_PANNING;
-		shdr.dfp &= 127;
-	}
-
-	sample->global_volume = MIN(shdr.gvl, 64);
-	sample->volume = MIN(shdr.vol, 64) * 4; //mphack
-	sample->panning = MIN(shdr.dfp, 64) * 4; //mphack
-	sample->length = bswapLE32(shdr.length);
-	sample->length = MIN(sample->length, MAX_SAMPLE_LENGTH);
-	sample->loop_start = bswapLE32(shdr.loopbegin);
-	sample->loop_end = bswapLE32(shdr.loopend);
-	sample->c5speed = bswapLE32(shdr.c5speed);
-	sample->sustain_start = bswapLE32(shdr.susloopbegin);
-	sample->sustain_end = bswapLE32(shdr.susloopend);
-
-	sample->vib_speed = MIN(shdr.vis, 64);
-	sample->vib_depth = MIN(shdr.vid, 32);
-	sample->vib_rate = shdr.vir;
-	sample->vib_type = autovib_import[shdr.vit % 4];
-
-	if (shdr.flags & 16)
-		sample->flags |= CHN_LOOP;
-	if (shdr.flags & 32)
-		sample->flags |= CHN_SUSTAINLOOP;
-	if (shdr.flags & 64)
-		sample->flags |= CHN_PINGPONGLOOP;
-	if (shdr.flags & 128)
-		sample->flags |= CHN_PINGPONGSUSTAIN;
-
-	/* IT sometimes didn't clear the flag after loading a stereo sample. This appears to have
-	been fixed sometime before IT 2.14, which is fortunate because that's what a lot of other
-	programs annoyingly identify themselves as. */
-	if (cwtv < 0x0214)
-		shdr.flags &= ~4;
-
-	if ((shdr.flags & 1) && shdr.cvt == 64 && sample->length == 12) {
-		// OPL instruments in OpenMPT MPTM files (which are essentially extended IT files)
-		slurp_seek(fp, bswapLE32(shdr.samplepointer), SEEK_SET);
-		slurp_read(fp, sample->adlib_bytes, 12);
-		sample->flags |= CHN_ADLIB;
-		// dumb hackaround that ought to some day be fixed:
-		sample->length = 1;
-		sample->data = csf_allocate_sample(1);
-	} else if (shdr.flags & 1) {
-		slurp_seek(fp, bswapLE32(shdr.samplepointer), SEEK_SET);
-
-		uint32_t flags = SF_LE;
-		flags |= (shdr.flags & 4) ? SF_SS : SF_M;
-		if (shdr.flags & 8) {
-			flags |= (shdr.cvt & 4) ? SF_IT215 : SF_IT214;
-		} else {
-			// XXX for some reason I had a note in pm/fmt/it.c saying that I had found some
-			// .it files with the signed flag set incorrectly and to assume unsigned when
-			// hdr.cwtv < 0x0202. Why, and for what files?
-			// Do any other players use the header for deciding sample data signedness?
-			flags |= (shdr.cvt & 4) ? SF_PCMD : (shdr.cvt & 1) ? SF_PCMS : SF_PCMU;
-		}
-		flags |= (shdr.flags & 2) ? SF_16 : SF_8;
-		csf_read_sample(sample, flags, fp);
-	} else {
-		sample->length = 0;
-	}
-}
-
 int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
 	struct it_file hdr;
@@ -274,22 +267,8 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint16_t hist = 0; // save history (for IT only)
 	const char *tid = NULL;
 
-	slurp_read(fp, &hdr, sizeof(hdr));
-
-	if (memcmp(&hdr.id, "IMPM", 4) != 0)
+	if (!it_load_header(&hdr, fp))
 		return LOAD_UNSUPPORTED;
-
-	hdr.ordnum = bswapLE16(hdr.ordnum);
-	hdr.insnum = bswapLE16(hdr.insnum);
-	hdr.smpnum = bswapLE16(hdr.smpnum);
-	hdr.patnum = bswapLE16(hdr.patnum);
-	hdr.cwtv = bswapLE16(hdr.cwtv);
-	hdr.cmwt = bswapLE16(hdr.cmwt);
-	hdr.flags = bswapLE16(hdr.flags);
-	hdr.special = bswapLE16(hdr.special);
-	hdr.msglength = bswapLE16(hdr.msglength);
-	hdr.msgoffset = bswapLE32(hdr.msgoffset);
-	hdr.reserved = bswapLE32(hdr.reserved);
 
 	// Screwy limits?
 	if (hdr.insnum > MAX_INSTRUMENTS || hdr.smpnum > MAX_SAMPLES
@@ -297,10 +276,8 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		return LOAD_FORMAT_ERROR;
 	}
 
-	for (n = 0; n < 25; n++) {
-		song->title[n] = hdr.songname[n] ? hdr.songname[n] : 32;
-	}
-	song->title[25] = 0;
+	strncpy(song->title, hdr.songname, sizeof(hdr.songname));
+
 	str_rtrim(song->title);
 
 	if (hdr.cmwt < 0x0214 && hdr.cwtv < 0x0214)
@@ -417,8 +394,30 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 	if (hist) {
 		song->histlen = hist;
-		song->histdata = mem_alloc(8 * song->histlen);
-		slurp_read(fp, song->histdata, 8 * song->histlen);
+		song->history = mem_calloc(song->histlen, sizeof(*song->history));
+		for (size_t i = 0; i < song->histlen; i++) {
+			// handle the date
+			uint16_t fat_date;
+			uint16_t fat_time;
+
+			slurp_read(fp, &fat_date, sizeof(fat_date));
+			fat_date = bswapLE16(fat_date);
+			slurp_read(fp, &fat_time, sizeof(fat_time));
+			fat_time = bswapLE16(fat_time);
+
+			if (fat_date && fat_time) {
+				fat_date_time_to_tm(&song->history[i].time, fat_date, fat_time);
+				song->history[i].time_valid = 1;
+			}
+
+			// now deal with the runtime
+			uint32_t run_time;
+
+			slurp_read(fp, &run_time, sizeof(run_time));
+			run_time = bswapLE32(run_time);
+
+			dos_time_to_timeval(&song->history[i].runtime, run_time);
+		}
 	}
 	if (ignoremidi) {
 		if (hdr.special & 8) {
@@ -431,11 +430,10 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 	if (!hist) {
 		// berotracker check
-		char modu[4];
+		unsigned char modu[4];
 		slurp_read(fp, modu, 4);
-		if (memcmp(modu, "MODU", 4) == 0) {
-			tid = "BeroTracker";
-		}
+		if (!memcmp(modu, "MODU", 4))
+			tid = "BeRoTracker";
 	}
 
 	if ((hdr.special & 1) && hdr.msglength && hdr.msgoffset + hdr.msglength < slurp_length(fp)) {
@@ -456,14 +454,14 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			inst = song->instruments[n + 1] = csf_allocate_instrument();
 			
 			if (hdr.cmwt >= 0x0200)
-				load_it_instrument(inst, fp);
+				load_it_instrument(NULL, inst, fp);
 			else
 				load_it_instrument_old(inst, fp);
 		}
 
 		for (n = 0, sample = song->samples + 1; n < hdr.smpnum; n++, sample++) {
 			slurp_seek(fp, para_smp[n], SEEK_SET);
-			load_it_sample(sample, fp, hdr.cwtv);
+			load_its_sample(fp, sample, hdr.cwtv);
 		}
 	}
 
@@ -584,6 +582,17 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			const char *versions[] = { "1-2", "3", "4-5" };
 			sprintf(song->tracker_id, "Impulse Tracker 2.14p%s", versions[hdr.cwtv - 0x0215]);
 		}
+
+		if (hdr.cwtv >= 0x0207 && !song->histlen && hdr.reserved) {
+			// Starting from version 2.07, IT stores the total edit
+			// time of a module in the "reserved" field
+			song->histlen = 1;
+			song->history = mem_calloc(1, sizeof(*song->history));
+
+			uint32_t runtime = it_decode_edit_timer(hdr.cwtv, hdr.reserved);
+			dos_time_to_timeval(&song->history[0].runtime, runtime);
+		}
+
 		//"saved %d time%s", hist, (hist == 1) ? "" : "s"
 	}
 	if (tid) {
@@ -785,7 +794,7 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 
 	hdr.id = bswapLE32(0x4D504D49); // IMPM
 	strncpy((char *) hdr.songname, song->title, 25);
-	hdr.songname[25] = 0;
+	hdr.songname[25] = 0; // why ?
 	hdr.hilight_major = song->row_highlight_major;
 	hdr.hilight_minor = song->row_highlight_minor;
 	hdr.ordnum = bswapLE16(nord);
@@ -865,35 +874,51 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 	disko_write(fp, para_smp, 4*nsmp);
 	disko_write(fp, para_pat, 4*npat);
 
+
+	uint16_t h;
+
 	// edit history (see scripts/timestamp.py)
 	// Should™ be fully compatible with Impulse Tracker.
-	struct timeval savetime, elapsed;
-	struct tm loadtm;
-	uint16_t h;
-	//x86/x64 compatibility
-	time_t thetime = song->editstart.tv_sec;
-	localtime_r(&thetime, &loadtm);
-	gettimeofday(&savetime, NULL);
-	timersub(&savetime, &song->editstart, &elapsed);
 
 	// item count
-	h = song->histlen + 1;
-	h = bswapLE16(h);
+	h = bswapLE16(song->histlen + 1);
 	disko_write(fp, &h, 2);
+
 	// old data
-	disko_write(fp, song->histdata, 8 * song->histlen);
-	// 16-bit date
-	h = loadtm.tm_mday | ((loadtm.tm_mon + 1) << 5) | ((loadtm.tm_year - 80) << 9);
-	h = bswapLE16(h);
-	disko_write(fp, &h, 2);
-	// 16-bit time
-	h = (loadtm.tm_sec / 2) | (loadtm.tm_min << 5) | (loadtm.tm_hour << 11);
-	h = bswapLE16(h);
-	disko_write(fp, &h, 2);
+	for (size_t i = 0; i < song->histlen; i++) {
+		uint16_t fat_date = 0, fat_time = 0;
+
+		if (song->history[i].time_valid)
+			tm_to_fat_date_time(&song->history[i].time, &fat_date, &fat_time);
+
+		fat_date = bswapLE16(fat_date);
+		disko_write(fp, &fat_date, sizeof(fat_date));
+		fat_time = bswapLE16(fat_time);
+		disko_write(fp, &fat_time, sizeof(fat_time));
+
+		uint32_t run_time = bswapLE32(timeval_to_dos_time(&song->history[i].runtime));
+		disko_write(fp, &run_time, sizeof(run_time));
+	}
+
+	{
+		uint16_t fat_date, fat_time;
+		struct tm loadtm;
+
+		localtime_r(&song->editstart.tv_sec, &loadtm);
+		tm_to_fat_date_time(&loadtm, &fat_date, &fat_time);
+
+		fat_date = bswapLE16(fat_date);
+		disko_write(fp, &fat_date, sizeof(fat_date));
+		fat_time = bswapLE16(fat_time);
+		disko_write(fp, &fat_time, sizeof(fat_time));
+	}
+
 	// 32-bit DOS tick count (tick = 1/18.2 second; 54945 * 18.2 = 999999 which is Close Enough)
-	uint32_t ticks = elapsed.tv_sec * 182 / 10 + elapsed.tv_usec / 54945;
-	ticks = bswapLE32(ticks);
-	disko_write(fp, &ticks, 4);
+	{
+		uint32_t ticks = it_get_song_elapsed_dos_time(song);
+		ticks = bswapLE32(ticks);
+		disko_write(fp, &ticks, sizeof(ticks));
+	}
 
 	// here comes MIDI configuration
 	// here comes MIDI configuration

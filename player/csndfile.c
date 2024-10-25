@@ -204,8 +204,8 @@ void csf_free_sample(void *p)
 
 void csf_forget_history(song_t *csf)
 {
-	free(csf->histdata);
-	csf->histdata = NULL;
+	free(csf->history);
+	csf->history = NULL;
 	csf->histlen = 0;
 	gettimeofday(&csf->editstart, NULL);
 }
