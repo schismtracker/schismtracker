@@ -148,11 +148,4 @@ extern short dB2_power_s(int noisefloor, int db, double correction_dBs);
 /* integer sqrt (very fast; 32 bits limited) */
 unsigned int i_sqrt(unsigned int r);
 
-/* handle dos timestamps */
-void dos_time_to_timeval(struct timeval *timeval, uint32_t dos_time);
-uint32_t timeval_to_dos_time(const struct timeval *timeval);
-
-void fat_date_time_to_tm(struct tm *tm, uint16_t fat_date, uint16_t fat_time);
-void tm_to_fat_date_time(const struct tm *tm, uint16_t *fat_date, uint16_t *fat_time);
-
 #endif /* SCHISM_UTIL_H_ */
