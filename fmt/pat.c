@@ -35,8 +35,6 @@
 
 /* --------------------------------------------------------------------- */
 
-#pragma pack(push, 1)
-
 struct GF1PatchHeader {
 	uint8_t sig[8]; // "GF1PATCH"
 	uint8_t ver[4]; // "100\0" or "110\0"
@@ -168,7 +166,6 @@ static int read_pat_sample_header(struct GF1PatchSampleHeader *hdr, slurp_t *fp)
 
 	return 1;
 }
-#pragma pack(pop)
 
 /* --------------------------------------------------------------------- */
 
