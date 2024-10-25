@@ -218,17 +218,14 @@ static void draw_page(void)
 		widget_draw_widget(ACTIVE_PAGE.widgets + n, n == ACTIVE_PAGE.selected_widget);
 
 	/* redraw the area over the menu if there is one */
+	if (status.dialog_type)
+		a11y_text_reported = 0;
 	if (status.dialog_type & DIALOG_MENU)
 		menu_draw();
 	else if (status.dialog_type & DIALOG_BOX)
 		dialog_draw();
 	else if (!a11y_text_reported) {
-		char buf[512];
-		a11y_get_widget_info(&ACTIVE_WIDGET, INFO_LABEL | INFO_TYPE | INFO_STATE, buf);
-		a11y_output(buf, 0);
-		a11y_get_widget_info(&ACTIVE_WIDGET, INFO_VALUE, buf);
-		a11y_output(buf, 0);
-		a11y_text_reported = 1;
+		a11y_text_reported = a11y_report_widget(&ACTIVE_WIDGET);
 	}
 }
 
@@ -496,6 +493,75 @@ static int handle_key_global(struct key_event * k)
 	if (k->state == KEY_PRESS)
 		a11y_interrupt();
 	switch (k->sym) {
+	case SDLK_BACKSLASH:
+		if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
+			if (k->state == KEY_PRESS)
+				return 1;
+			a11y_toggle_accessibility_mode();
+			return 1;
+		}
+		break;
+	case SDLK_SPACE:
+		if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
+			if (k->state == KEY_RELEASE)
+				return 1;
+			a11y_cursor_report_line(a11y_cursor_get_current_line());
+			return 1;
+		}
+		break;
+	case SDLK_UP:
+		if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
+			if (k->state == KEY_RELEASE)
+				return 1;
+			a11y_cursor_report_previous_line();
+			return 1;
+		}
+		break;
+	case SDLK_DOWN:
+		if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
+			if (k->state == KEY_RELEASE)
+				return 1;
+			a11y_cursor_report_next_line();
+			return 1;
+		}
+		break;
+	case SDLK_LEFT:
+		if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
+			if (k->state == KEY_RELEASE)
+				return 1;
+			a11y_cursor_report_previous_char();
+			return 1;
+		}
+		break;
+	case SDLK_RIGHT:
+		if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
+			if (k->state == KEY_RELEASE)
+				return 1;
+			a11y_cursor_report_next_char();
+			return 1;
+		}
+		break;
+	case SDLK_HOME:
+		if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
+			if (k->state == KEY_RELEASE)
+				return 1;
+			a11y_cursor_report_line(0);
+			return 1;
+		}
+		break;
+	case SDLK_END:
+		if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
+			if (k->state == KEY_RELEASE)
+				return 1;
+			a11y_cursor_report_line(49);
+			return 1;
+		}
+		break;
+	default:
+		break;
+	}
+
+	switch (k->sym) {
 	case SDLK_RETURN:
 		if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
 			if (k->state == KEY_PRESS)
@@ -551,7 +617,7 @@ static int handle_key_global(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 0;
 		kbd_set_current_octave(kbd_get_current_octave() - 1);
-		a11y_outputf("Octave %d", 1, kbd_get_current_octave());
+		a11y_outputf("Octave %u", 1, kbd_get_current_octave());
 		return 1;
 	case SDLK_END:
 		if (!(k->mod & KMOD_ALT)) break;
@@ -559,7 +625,7 @@ static int handle_key_global(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 0;
 		kbd_set_current_octave(kbd_get_current_octave() + 1);
-		a11y_outputf("Octave %d", 1, kbd_get_current_octave());
+		a11y_outputf("Octave %u", 1, kbd_get_current_octave());
 		return 1;
 	default:
 		break;
@@ -1116,7 +1182,7 @@ void handle_key(struct key_event *k)
 			_mp_finish(NULL);
 			if (song_get_mode() == MODE_PLAYING) {
 				song_set_current_order(song_get_current_order() - 1);
-				a11y_outputf("Order %d", 1, song_get_current_order());
+				a11y_report_order();
 			}
 			return;
 		}
@@ -1128,7 +1194,7 @@ void handle_key(struct key_event *k)
 			_mp_finish(NULL);
 			if (song_get_mode() == MODE_PLAYING) {
 				song_set_current_order(song_get_current_order() + 1);
-				a11y_outputf("Order %d", 1, song_get_current_order());
+				a11y_report_order();
 			}
 			return;
 		}
@@ -1156,7 +1222,7 @@ void handle_key(struct key_event *k)
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if (k->orig_sym == SDLK_KP_DIVIDE) {
 			kbd_set_current_octave(kbd_get_current_octave() - 1);
-			a11y_outputf("Octave %d", 1, kbd_get_current_octave());
+			a11y_outputf("Octave %u", 1, kbd_get_current_octave());
 		}
 		return;
 	case SDLK_ASTERISK:
@@ -1164,7 +1230,7 @@ void handle_key(struct key_event *k)
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if (k->orig_sym == SDLK_KP_MULTIPLY) {
 			kbd_set_current_octave(kbd_get_current_octave() + 1);
-			a11y_outputf("Octave %d", 1, kbd_get_current_octave());
+			a11y_outputf("Octave %u", 1, kbd_get_current_octave());
 		}
 		return;
 	case SDLK_LEFTBRACKET:

@@ -1,5 +1,5 @@
 /*
- * Schism Tracker - a cross-platform Impulse Tracker clone
+/  * Schism Tracker - a cross-platform Impulse Tracker clone
  * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
  * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
  * copyright (c) 2009 Storlek & Mrs. Brisby
@@ -125,6 +125,12 @@ static void pated_history_restore(int n);
 /* these should fix the playback tracing position discrepancy */
 static int playing_row = -1;
 static int playing_pattern = -1;
+
+/* Accessibility stuff */
+static int a11y_text_reported = 1;
+static int a11y_pated_insert_event = 0;
+
+static const char* pattern_editor_a11y_get_value(char *buf);
 
 /* the current editing mask (what stuff is copied) */
 static int edit_copy_mask = MASK_NOTE | MASK_INSTRUMENT | MASK_VOLUME;
@@ -805,6 +811,12 @@ static void pattern_selection_system_copyout(void)
 static struct widget undo_widgets[1];
 static int undo_selection = 0;
 
+static const char* history_a11y_get_value(char *buf)
+{
+	a11y_get_text_from_rect(21, 24 + undo_selection, 39, 1, buf);
+	return buf;
+}
+
 static void history_draw_const(void)
 {
 	int i, j;
@@ -823,6 +835,11 @@ static void history_draw_const(void)
 		draw_text_len(undo_history[j].snap_op, 39, 21, 24+i, fg, bg);
 		j--;
 		if (j < 0) j += 10;
+	}
+
+	if (!a11y_text_reported) {
+		char buf[40];
+		a11y_text_reported = a11y_output(history_a11y_get_value(buf), 0);
 	}
 }
 
@@ -847,6 +864,7 @@ static int history_handle_key(struct key_event *k)
 			return 0;
 		undo_selection--;
 		if (undo_selection < 0) undo_selection = 0;
+		a11y_text_reported = 0;
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_DOWN:
@@ -854,6 +872,7 @@ static int history_handle_key(struct key_event *k)
 			return 0;
 		undo_selection++;
 		if (undo_selection > 9) undo_selection = 9;
+		a11y_text_reported = 0;
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_RETURN:
@@ -883,6 +902,7 @@ static void pattern_editor_display_history(void)
 	struct dialog *dialog;
 
 	widget_create_other(undo_widgets + 0, 0, history_handle_key, NULL, NULL);
+	undo_widgets[0].d.other.a11y_type = "List";
 	dialog = dialog_create_custom(17, 21, 47, 16, undo_widgets, 1, 0,
 				      history_draw_const, NULL);
 	dialog->action_yes = history_close;
@@ -2581,6 +2601,137 @@ static void set_view_scheme(int scheme)
 
 /* --------------------------------------------------------------------- */
 
+static char* a11y_get_edit_mask(char *buf)
+{
+	strcpy(buf, "Mask Note");
+	if (edit_copy_mask & MASK_INSTRUMENT)
+		strcat(buf, ", Instrument");
+	if (edit_copy_mask & MASK_VOLUME)
+		strcat(buf, ", Volume");
+	if (edit_copy_mask & MASK_EFFECT)
+		strcat(buf, ", Effect");
+	return buf;
+}
+
+static int a11y_get_column_number(void)
+{
+	switch (current_position) {
+	case 0:
+	case 1:
+		return 0;
+	case 2:
+	case 3:
+		return 2;
+	case 4:
+	case 5:
+		return 4;
+	case 6:
+		return 6;
+	case 7:
+	case 8:
+		return 7;
+	default:
+		return -1; // Shouldn't really happen.
+	}
+}
+
+static char* a11y_get_column_name(char *buf)
+{
+	const char* column_string = "";
+
+	switch (current_position) {
+	case 0:
+	case 1:
+		column_string = "Note";
+		break;
+	case 2:
+	case 3:
+		column_string = "Instrument";
+		break;
+	case 4:
+	case 5:
+		column_string = panning_mode ? "Panning" : "Volume";
+		break;
+	case 6:
+		column_string = "Effect";
+		break;
+	case 7:
+	case 8:
+		column_string = "Parameter";
+		break;
+	default:
+		break;
+	}
+	strcpy(buf, column_string);
+	return buf;
+}
+
+static char* a11y_get_column_value(char *buf)
+{
+	song_note_t *pattern, *cur_note;
+
+	song_get_pattern(current_pattern, &pattern);
+	cur_note = pattern + 64 * current_row + current_channel - 1;
+	buf[0] = '\0';
+
+	switch (current_position) {
+	case 0:
+	case 1:
+		switch (cur_note->note) {
+		case 0:
+			break;
+		case NOTE_CUT:
+			strcpy(buf, "Note cut");
+			break;
+		case NOTE_OFF:
+			strcpy(buf, "Note off");
+			break;
+		case NOTE_FADE:
+			strcpy(buf, "Note FADE");
+			break;
+		default:
+			get_note_string(cur_note->note, buf);
+			break;
+		}
+		break;
+	case 2:
+	case 3:
+		if (cur_note->instrument)
+			str_from_num99(cur_note->instrument, buf);
+		break;
+	case 4:
+	case 5:
+		if (!cur_note->voleffect) break;
+		else if (cur_note->voleffect == VOLFX_PANNING)
+			strcat(buf, "Pan"); // Let's invent something in place of color.
+		get_volume_string(cur_note->volparam, cur_note->voleffect, &buf[strlen(buf)]);
+		break;
+	case 6:
+	case 7:
+	case 8:
+		if (!cur_note->effect) break;
+		sprintf(buf, "%c%02X", get_effect_char(cur_note->effect), cur_note->param);
+		break;
+	default:
+		break;
+	}
+	return buf;
+}
+
+static const char* pattern_editor_a11y_get_value(char *buf)
+{
+	if (is_in_selection(current_channel, current_row))
+		strcat(buf, " Selected ");
+	a11y_get_column_value(&buf[strlen(buf)]);
+	if(strlen(buf)) strcat(buf, " ");
+	sprintf(&buf[strlen(buf)], "%d ", current_row);
+	sprintf(&buf[strlen(buf)], "%d ", current_channel);
+	a11y_get_column_name(&buf[strlen(buf)]);
+	if (marked_pattern == current_pattern && marked_row == current_row)
+		strcat(buf, " Play mark");
+	return buf;
+}
+
 static void pattern_editor_redraw(void)
 {
 	int chan, chan_pos, chan_drawpos = 5;
@@ -3544,13 +3695,16 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			if (selection.first_channel == selection.last_channel) {
 				selection.first_channel = 1;
 				selection.last_channel = 64;
+				a11y_output("All channels selectted", 0);
 			} else {
 				selection.first_channel = selection.last_channel = current_channel;
+				a11y_output("Channel selected", 0);
 			}
 		} else {
 			selection.first_channel = selection.last_channel = current_channel;
 			selection.first_row = 0;
 			selection.last_row = total_rows;
+			a11y_output("Channel selected", 0);
 		}
 		pattern_selection_system_copyout();
 		break;
@@ -3570,11 +3724,13 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			return 1;
 		if (SELECTION_EXISTS) {
 			selection_clear();
+			a11y_output("Selection cleared", 0);
 		} else if (clipboard.data) {
 			clipboard_free();
 
 			clippy_select(NULL, NULL, 0);
 			clippy_yank();
+			a11y_output("Clipboard cleared", 0);
 		} else {
 			dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
 		}
@@ -3632,6 +3788,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 				}
 			}
 		}
+		a11y_output(channel_multi_enabled ? "Multichannel on" : "Multichannel off", 0);
 
 		if (status.last_keysym == SDLK_n) {
 			pattern_editor_display_multichannel();
@@ -3680,6 +3837,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		draw_divisions = !draw_divisions;
+		a11y_output(draw_divisions ? "Draw divisions On" : "Draw divisions Off", 0);
 		recalculate_visible_area();
 		pattern_editor_reposition();
 		break;
@@ -3690,6 +3848,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			transpose_notes(12);
 		else
 			transpose_notes(1);
+		a11y_text_reported = 0;
 		break;
 	case SDLK_a:
 		if (k->state == KEY_RELEASE)
@@ -3698,6 +3857,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			transpose_notes(-12);
 		else
 			transpose_notes(-1);
+		a11y_text_reported = 0;
 		break;
 	case SDLK_i:
 		if (k->state == KEY_RELEASE)
@@ -3708,6 +3868,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			fast_volume_amplify();
 		else
 			template_mode = (template_mode + 1) % TEMPLATE_MODE_MAX; /* cycle */
+		a11y_output(template_mode ? template_mode_names[template_mode] : "Off", 0);
 		break;
 	case SDLK_j:
 		if (k->state == KEY_RELEASE)
@@ -3771,11 +3932,13 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_toggle_channel_mute(current_channel - 1);
+		a11y_output(current_song->channels[current_channel - 1].flags & CHN_MUTE ? "Muted" : "Unmuted", 0);
 		break;
 	case SDLK_F10:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_handle_channel_solo(current_channel - 1);
+		a11y_output(soloed(current_channel - 1) ? "Soloed" : "Unsoloed", 0);
 		break;
 	default:
 		return 0;
@@ -3839,12 +4002,14 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		set_previous_instrument();
+		a11y_report_instrument();
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		set_next_instrument();
+		a11y_report_instrument();
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_PAGEUP:
@@ -3871,12 +4036,14 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selection_roll(ROLL_DOWN);
+		a11y_text_reported = 0;
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_DELETE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selection_roll(ROLL_UP);
+		a11y_text_reported = 0;
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_MINUS:
@@ -3885,6 +4052,7 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 		if (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing)
 			return 1;
 		prev_order_pattern();
+		a11y_report_pattern();
 		return 1;
 	case SDLK_PLUS:
 		if (k->state == KEY_RELEASE)
@@ -3892,6 +4060,7 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 		if (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing)
 			return 1;
 		next_order_pattern();
+		a11y_report_pattern();
 		return 1;
 	case SDLK_c:
 		if (k->state == KEY_RELEASE)
@@ -4019,6 +4188,8 @@ static int pattern_editor_handle_key_default(struct key_event * k)
 			edit_copy_mask ^= MASK_EFFECT;
 			break;
 		}
+		char buf[40];
+		a11y_output(a11y_get_edit_mask(buf), 0);
 		status.flags |= NEED_UPDATE;
 		return 1;
 	}
@@ -4027,6 +4198,8 @@ static int pattern_editor_handle_key_default(struct key_event * k)
 
 	if (!pattern_editor_insert(k))
 		return 0;
+	else
+		a11y_pated_insert_event = 1;
 	return -1;
 }
 static int pattern_editor_handle_key(struct key_event * k)
@@ -4302,6 +4475,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		} else {
 			pattern_insert_rows(current_row, 1, current_channel, 1);
 		}
+		a11y_text_reported = 0;
 		break;
 	case SDLK_DELETE:
 		if (k->state == KEY_RELEASE)
@@ -4315,6 +4489,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		} else {
 			pattern_delete_rows(current_row, 1, current_channel, 1);
 		}
+		a11y_text_reported = 0;
 		break;
 	case SDLK_MINUS:
 		if (k->state == KEY_RELEASE)
@@ -4326,6 +4501,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 				return 1;
 			case MODE_PLAYING:
 				song_set_current_order(song_get_current_order() - 1);
+				a11y_report_order();
 				return 1;
 			default:
 				break;
@@ -4336,6 +4512,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			set_current_pattern(current_pattern - 4);
 		else
 			set_current_pattern(current_pattern - 1);
+		a11y_report_pattern();
 		return 1;
 	case SDLK_PLUS:
 		if (k->state == KEY_RELEASE)
@@ -4347,6 +4524,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 				return 1;
 			case MODE_PLAYING:
 				song_set_current_order(song_get_current_order() + 1);
+				a11y_report_order();
 				return 1;
 			default:
 				break;
@@ -4357,6 +4535,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			set_current_pattern(current_pattern + 4);
 		else
 			set_current_pattern(current_pattern + 1);
+		a11y_report_pattern();
 		return 1;
 	case SDLK_BACKSPACE:
 		if (k->state == KEY_RELEASE)
@@ -4443,6 +4622,11 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 {
 	int ret;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
+	int prev_row = current_row;
+	int prev_chan = current_channel;
+	int prev_pos = current_position;
+	int prev_a11y_col = a11y_get_column_number();
+	char buf[40];
 
 	if (k->mod & KMOD_SHIFT) {
 		switch (k->sym) {
@@ -4470,6 +4654,13 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 	else
 		ret = pattern_editor_handle_key(k);
 
+	if (!a11y_text_reported) {
+		a11y_get_column_value(buf);
+		if (!*buf)
+			pattern_editor_a11y_get_value(buf);
+		a11y_text_reported = a11y_output(buf, 0);
+	}
+
 	if (ret != -1)
 		return ret;
 
@@ -4495,6 +4686,30 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 	if (k->mod & KMOD_SHIFT)
 		shift_selection_update();
 
+	if (current_row == prev_row && current_channel == prev_chan && current_position != prev_pos) {
+		int a11y_col = a11y_get_column_number();
+		a11y_get_column_value(buf);
+		int len = strlen(buf);
+		if (a11y_pated_insert_event) {
+			// Do nothing with the buffer.
+		} else if (a11y_col == prev_a11y_col) {
+			int a11y_cursor_pos = current_position - a11y_col;
+			if (current_position == 0)
+				buf[len - 1] = '\0';
+			else if (len < 8) {
+				buf[0] = buf[len - 2 + a11y_cursor_pos];
+				buf[1] = '\0';
+			} else buf[0] = '\0';
+		} else {
+			if (len > 0) strcat(buf, " ");
+			a11y_get_column_name(&buf[strlen(buf)]);
+		}
+		a11y_output(buf, 0);
+	} else if (k->state != KEY_RELEASE) {
+		pattern_editor_a11y_get_value(buf);
+		a11y_output(buf, 0);
+	}
+	a11y_pated_insert_event = 0;
 	status.flags |= NEED_UPDATE;
 	return 1;
 }
@@ -4568,5 +4783,7 @@ void pattern_editor_load_page(struct page *page)
 	page->help_index = HELP_PATTERN_EDITOR;
 
 	widget_create_other(widgets_pattern + 0, 0, pattern_editor_handle_key_cb, NULL, pattern_editor_redraw);
+	widgets_pattern[0].d.other.a11y_type = "";
+	widgets_pattern[0].d.other.a11y_get_value = pattern_editor_a11y_get_value;
 }
 

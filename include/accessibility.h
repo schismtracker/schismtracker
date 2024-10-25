@@ -53,5 +53,21 @@ int a11y_outputf(const char *format, int interrupt, ...);
 void a11y_interrupt(void);
 void a11y_uninit(void);
 void a11y_delay(int delay_ms);
+int a11y_report_widget(struct widget *w);
+int a11y_report_order(void);
+int a11y_report_pattern(void);
+int a11y_report_instrument(void);
+
+/* Dumb screen reader mode stuff */
+
+int a11y_cursor_get_current_line(void);
+int a11y_cursor_get_current_char(void);
+int a11y_cursor_report_line(int line);
+int a11y_cursor_report_previous_line(void);
+int a11y_cursor_report_next_line(void);
+int a11y_cursor_report_char(int ch);
+int a11y_cursor_report_previous_char(void);
+int a11y_cursor_report_next_char(void);
+void a11y_toggle_accessibility_mode(void);
 
 #endif /* SCHISM_ACCESSIBILITY_H_ */

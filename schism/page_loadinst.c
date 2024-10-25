@@ -374,20 +374,36 @@ static void do_delete_file(UNUSED void *data)
 
 static const char* file_list_a11y_get_value(char *buf)
 {
-	strcpy(buf, flist.files[current_file]->base);
+	dmoz_file_t *file = flist.files[current_file];
+	sprintf(buf, "%s %s ", file->base, file->title);
+	if (file->sampsize > 1) {
+		sprintf(&buf[strlen(buf)], "%d Samples", file->sampsize);
+	} else if (file->sampsize == 1) {
+		strcat(buf, "1 sample");
+	} else if (file->type & TYPE_MODULE_MASK) {
+		strcat(buf, "Module");
+	}
+	if (file->filesize > 1048576) {
+		sprintf(&buf[strlen(buf)], " %lum", (unsigned long)(file->filesize / 1048576));
+	} else if (file->filesize > 1024) {
+		sprintf(&buf[strlen(buf)], " %luk", (unsigned long)(file->filesize / 1024));
+	} else if (file->filesize > 0) {
+		sprintf(&buf[strlen(buf)], " %lu", (unsigned long)(file->filesize));
+	}
 	return buf;
 }
 
 static int file_list_handle_text_input(const uint8_t* text) {
 	dmoz_file_t* f = flist.files[current_file];
 
+	a11y_output_cp437(text, 0);
 	for (; *text; text++) {
 		if (*text >= 32 && (slash_search_mode > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
 			if (slash_search_mode < 0) slash_search_mode = 0;
 			if (slash_search_mode < PATH_MAX) {
 				slash_search_str[slash_search_mode++] = *text;
 				reposition_at_slash_search();
-				char buf[strlen(flist.files[current_file]->base) + 1];
+				char buf[256];
 				file_list_a11y_get_value(buf);
 				a11y_output(buf, 1);
 				status.flags |= NEED_UPDATE;
@@ -494,7 +510,7 @@ static int file_list_handle_key(struct key_event * k)
 	if (new_file != current_file) {
 		current_file = new_file;
 		file_list_reposition();
-		char buf[strlen(flist.files[current_file]->base) + 1];
+		char buf[256];
 		file_list_a11y_get_value(buf);
 		a11y_output(buf, 1);
 		status.flags |= NEED_UPDATE;

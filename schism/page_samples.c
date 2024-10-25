@@ -161,7 +161,7 @@ void sample_set(int n)
 static const char* sample_list_a11y_get_value(char* buf)
 {
 	a11y_get_text_from_rect(2,
-		widgets_samplelist[0].y + (current_sample - top_sample), 33, 1, buf);
+		widgets_samplelist[0].y + (current_sample - top_sample), 25, 1, buf);
 	return buf;
 }
 
@@ -399,6 +399,8 @@ static void do_replace_sample(int n)
 
 static int sample_list_handle_text_input_on_list(const uint8_t* text) {
 	int success = 0;
+
+	a11y_output_cp437(text, 1);
 
 	for (; *text; text++)
 		if (sample_list_cursor_pos < 25 && sample_list_add_char(*text))
@@ -1303,6 +1305,7 @@ static void sample_toggle_mute(int n)
 {
 	song_sample_t *smp = song_get_sample(n);
 	sample_set_mute(n, !(smp->flags & CHN_MUTE));
+	a11y_output(smp->flags & CHN_MUTE ? "Muted" : "Unmuted", 1);
 }
 
 static void sample_toggle_solo(int n)
@@ -1321,6 +1324,7 @@ static void sample_toggle_solo(int n)
 	}
 	for (i = 1; i < MAX_SAMPLES; i++)
 		sample_set_mute(i, solo && i != n);
+	a11y_output(solo ? "Soloed" : "Unsoloed", 1);
 }
 
 /* --------------------------------------------------------------------- */
@@ -1473,7 +1477,7 @@ static void sample_list_handle_key(struct key_event * k)
 			sample->c5speed = calc_halftone(sample->c5speed, 1);
 			status.flags |= SONG_NEEDS_SAVE;
 		}
-		a11y_outputf("Speed %d", 1, sample->c5speed);
+		a11y_outputf("Speed %u", 1, sample->c5speed);
 		status.flags |= NEED_UPDATE;
 		return;
 	case SDLK_MINUS:
@@ -1486,7 +1490,7 @@ static void sample_list_handle_key(struct key_event * k)
 			sample->c5speed = calc_halftone(sample->c5speed, -1);
 			status.flags |= SONG_NEEDS_SAVE;
 		}
-		a11y_outputf("Speed %d", 1, sample->c5speed);
+		a11y_outputf("Speed %u", 1, sample->c5speed);
 		status.flags |= NEED_UPDATE;
 		return;
 

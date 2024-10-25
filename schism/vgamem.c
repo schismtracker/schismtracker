@@ -93,6 +93,8 @@ static struct vgamem_char vgamem_read[4000] = {0};
 typedef uint32_t acbuf_line[80];
 static acbuf_line acbuf[50] = { 0 };
 
+static int acbuf_filter_boxes = 0;
+
 uint32_t* acbuf_get_ptr_to(int x, int y)
 {
 	assert(x >= 0 && y >= 0 && x < 80 && y < 50);
@@ -410,6 +412,9 @@ void draw_char_unicode(uint32_t c, int x, int y, uint32_t fg, uint32_t bg)
 	};
 
 	vgamem[x + (y*80)] = ch;
+#ifdef USE_ACCESSIBILITY
+	acbuf[y][x] = c;
+#endif
 }
 
 void draw_char_bios(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
@@ -429,6 +434,17 @@ void draw_char_bios(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 	};
 
 	vgamem[x + (y*80)] = ch;
+
+#ifdef USE_ACCESSIBILITY
+	char text[2] = { c, '\0' };
+	charset_decode_t decoder = {
+		.in = text,
+		.offset = 0,
+		.size = SIZE_MAX,
+	};
+	for (int i = 0; decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_CP437) && decoder.state != DECODER_STATE_DONE; i++)
+		acbuf[y][x + i] = decoder.codepoint;
+#endif
 }
 
 void draw_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
@@ -448,13 +464,10 @@ void draw_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 	};
 
 	vgamem[x + (y*80)] = ch;
-}
 
-int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
-{
-	int n = 0;
-
-	#ifdef USE_ACCESSIBILITY
+#ifdef USE_ACCESSIBILITY
+	if (acbuf_filter_boxes) return;
+	char text[2] = { c, '\0' };
 	charset_decode_t decoder = {
 		.in = text,
 		.offset = 0,
@@ -462,7 +475,12 @@ int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 	};
 	for (int i = 0; decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_CP437) && decoder.state != DECODER_STATE_DONE; i++)
 		acbuf[y][x + i] = decoder.codepoint;
-	#endif
+#endif
+}
+
+int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
+{
+	int n = 0;
 
 	while (*text) {
 		draw_char(*text, x + n, y, fg, bg);
@@ -476,16 +494,6 @@ int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 int draw_text_bios(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 {
 	int n = 0;
-
-	#ifdef USE_ACCESSIBILITY
-	charset_decode_t decoder = {
-		.in = text,
-		.offset = 0,
-		.size = SIZE_MAX,
-	};
-	for (int i = 0; decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_CP437) && decoder.state != DECODER_STATE_DONE; i++)
-		acbuf[y][x + i] = decoder.codepoint;
-	#endif
 
 	while (*text) {
 		draw_char_bios(*text, x + n, y, fg, bg);
@@ -510,9 +518,6 @@ int draw_text_utf8(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 
 	int n;
 	for (n = 0; decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_UTF8) && decoder.state != DECODER_STATE_DONE; n++) {
-		#ifdef USE_ACCESSIBILITY
-		acbuf[y][x + n] = decoder.codepoint;
-		#endif
 		draw_char_unicode(decoder.codepoint, x + n, y, fg, bg);
 	}
 
@@ -527,13 +532,13 @@ void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t fg, uint32_t bg)
 	len = (xe - xs)+1;
 	ye -= ys;
 
-	#ifdef USE_ACCESSIBILITY
+#ifdef USE_ACCESSIBILITY
 	for (int y = ys; y < ys + ye; y++) {
 		for (x = xs; x < xe; x++) {
 			acbuf[y][x] = 0;
 		}
 	}
-	#endif
+#endif
 
 	do {
 		for (x = 0; x < len; x++) {
@@ -551,16 +556,6 @@ int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_
 {
 	int n = 0;
 
-	#ifdef USE_ACCESSIBILITY
-	charset_decode_t decoder = {
-		.in = text,
-		.offset = 0,
-		.size = SIZE_MAX,
-	};
-	for (int i = 0; i < len && decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_CP437) && decoder.state != DECODER_STATE_DONE; i++)
-		acbuf[y][x + i] = decoder.codepoint;
-	#endif
-
 	while (*text && n < len) {
 		draw_char(*text, x + n, y, fg, bg);
 		n++;
@@ -574,16 +569,6 @@ int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_
 int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
 {
 	int n = 0;
-
-	#ifdef USE_ACCESSIBILITY
-	charset_decode_t decoder = {
-		.in = text,
-		.offset = 0,
-		.size = SIZE_MAX,
-	};
-	for (int i = 0; i < len && decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_CP437) && decoder.state != DECODER_STATE_DONE; i++)
-		acbuf[y][x + i] = decoder.codepoint;
-	#endif
 
 	while (*text && n < len) {
 		draw_char_bios(*text, x + n, y, fg, bg);
@@ -609,9 +594,6 @@ int draw_text_utf8_len(const char * text, int len, int x, int y, uint32_t fg, ui
 
 	int n;
 	for (n = 0; n < len && decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_UTF8) && decoder.state != DECODER_STATE_DONE; n++) {
-		#ifdef USE_ACCESSIBILITY
-		acbuf[y][x + n] = decoder.codepoint;
-		#endif
 		draw_char_unicode(decoder.codepoint, x + n, y, fg, bg);
 	}
 
@@ -755,6 +737,10 @@ void draw_box(int xs, int ys, int xe, int ye, int flags)
 	int tl = colors[flags & BOX_SHADE_MASK][0];
 	int br = colors[flags & BOX_SHADE_MASK][1];
 
+#ifdef USE_ACCESSIBILITY
+	acbuf_filter_boxes = 1;
+#endif
+
 	switch (flags & (BOX_TYPE_MASK | BOX_THICKNESS_MASK)) {
 	case BOX_THIN | BOX_INNER:
 		draw_thin_inner_box(xs, ys, xe, ye, tl, br);
@@ -773,6 +759,10 @@ void draw_box(int xs, int ys, int xe, int ye, int flags)
 		draw_thin_outer_cornered_box(xs, ys, xe, ye, flags & BOX_SHADE_MASK);
 		break;
 	}
+
+#ifdef USE_ACCESSIBILITY
+	acbuf_filter_boxes = 0;
+#endif
 }
 
 /* ----------------------------------------------------------------- */

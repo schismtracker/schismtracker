@@ -205,7 +205,7 @@ static void orderlist_draw(void)
 		if (!a11y_text_reported) {
 			char buf[8];
 			orderlist_a11y_get_value(buf);
-			a11y_text_reported = a11y_output(buf, 1);
+			a11y_text_reported = a11y_output(buf, 0);
 		}
 	}
 
@@ -391,6 +391,7 @@ static int orderlist_handle_char(char sym)
 		cur_pattern = CLAMP(cur_pattern, 0, 199);
 		song_get_pattern(cur_pattern, &tmp); /* make sure it exists */
 		current_song->orderlist[current_order] = cur_pattern;
+		a11y_outputf("%03u", 0, cur_pattern);
 		break;
 	};
 
@@ -399,6 +400,7 @@ static int orderlist_handle_char(char sym)
 			current_order++;
 		orderlist_cursor_pos = 0;
 		orderlist_reposition();
+		a11y_text_reported = 0;
 	} else {
 		orderlist_cursor_pos++;
 	}
@@ -424,6 +426,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 	int new_order = prev_order;
 	int new_cursor_pos = orderlist_cursor_pos;
 	int n, p;
+	char buf[4];
 
 	if (k->mouse != MOUSE_NONE) {
 		if (k->x >= 6 && k->x <= 8 && k->y >= 15 && k->y <= 46) {
@@ -533,6 +536,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 1;
 			sample_set(sample_get_current()-1);
+			a11y_outputf(sample_get_current() ? "Sampple %02u" : "No sample", 0, sample_get_current()) ;
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
@@ -548,6 +552,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 1;
 			sample_set(sample_get_current()+1);
+			a11y_outputf("Sampple %02u", 0, sample_get_current());
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
@@ -577,6 +582,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		orderlist_insert_pos();
+		a11y_text_reported = 0;
 		return 1;
 	case SDLK_DELETE:
 		if (!NO_MODIFIER(k->mod))
@@ -584,6 +590,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		orderlist_delete_pos();
+		a11y_text_reported = 0;
 		return 1;
 	case SDLK_F7:
 		if (!(k->mod & KMOD_CTRL)) return 0;
@@ -608,6 +615,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			if (k->state == KEY_PRESS)
 				return 1;
 			orderlist_cheater();
+			a11y_text_reported = 0;
 			return 1;
 		}
 		if (!NO_MODIFIER(k->mod))
@@ -615,6 +623,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		orderlist_insert_next();
+		a11y_text_reported = 0;
 		return 1;
 	case SDLK_c:
 		if (!NO_MODIFIER(k->mod))
@@ -680,6 +689,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		sample_set(sample_get_current()-1);
+		a11y_outputf(sample_get_current() ? "Sampple %02u" : "No sample", 0, sample_get_current()) ;
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_GREATER:
@@ -689,6 +699,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		sample_set(sample_get_current()+1);
+		a11y_outputf("Sampple %02u", 0, sample_get_current());
 		status.flags |= NEED_UPDATE;
 		return 1;
 	default:
@@ -710,6 +721,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		a11y_text_reported = 0;
 	} else if (new_cursor_pos != orderlist_cursor_pos) {
 		orderlist_cursor_pos = new_cursor_pos;
+		get_pattern_string(current_song->orderlist[get_current_order()], buf);
+		a11y_output_char(buf[orderlist_cursor_pos], 0);
 	} else {
 		return 0;
 	}

@@ -24,6 +24,7 @@
 #include "headers.h" /* always include this one first, kthx */
 #include "it.h"
 #include "page.h"
+#include "song.h"
 #include "vgamem.h"
 #include "widget.h"
 #include "charset.h"
@@ -31,7 +32,9 @@
 
 #include <stdarg.h>
 
-static char* a11y_message = NULL;
+static char* message = NULL;
+static int current_line = 0;
+static int current_char = 0;
 
 const char* a11y_get_widget_info(struct widget *w, enum a11y_info info, char *buf)
 {
@@ -65,8 +68,12 @@ const char* a11y_get_widget_label(struct widget *w, char *buf)
 		});
 		break;
 	case WIDGET_TOGGLEBUTTON:
+		if (*selected_widget == w->d.togglebutton.group[0]) {
+			a11y_try_find_widget_label(w, buf);
+			if (strlen(buf)) strcat(buf, " ");
+		}
 		CHARSET_EASY_MODE_CONST(w->d.togglebutton.text, CHARSET_CP437, CHARSET_CHAR, {
-			strcpy(buf, out);
+			strcat(buf, out);
 		});
 		break;
 	case WIDGET_PANBAR:
@@ -191,60 +198,7 @@ const char* a11y_get_widget_value(struct widget *w, char *buf)
 	return buf;
 }
 
-// Behold the truly terrible heuristic mess!
-const char* a11y_try_find_widget_label(struct widget *w, char* buf)
-{
-	uint32_t *label = NULL;
-	int found = 0;
-	int alternative_method = 0;
-	int i, j;
-	buf[0] = '\0';
-	if (w->x <= 0 || w->x >= 80 || w->y <= 0 || w->y >= 50)
-		return buf;
-	alternative: if (w->type == WIDGET_OTHER || alternative_method) {
-		for (i = 1; i <= 2; i++) {
-			for (j = 0; j < 6 && j < 80 - w->x; j++) {
-				label = acbuf_get_ptr_to(w->x + j, w->y - i);
-				if (label && *label) {
-					found = 1;
-					break;
-				}
-			}
-			if (found) break;
-		}
-		if (!found)
-			return buf;
-		CHARSET_EASY_MODE_CONST((uint8_t*)label, CHARSET_UCS4, CHARSET_CHAR, {
-			strcpy(buf, out);
-		});
-		return buf;
-	}
-	uint32_t *start = acbuf_get_ptr_to(0, w->y);
-	uint32_t *wx = &start[w->x];
-	label = wx - 2;
-	if (label <= start || !*label) {
-		alternative_method = 1;
-		goto alternative;
-	}
-	for ( ; label >= start; label--) {
-		if (label && *label)
-			continue;
-		label++;
-	found = 1;
-		break;
-	}
-	if (found) {
-		CHARSET_EASY_MODE_CONST((uint8_t*)label, CHARSET_UCS4, CHARSET_CHAR, {
-			strcpy(buf, out);
-		});
-	} else {
-		alternative_method = 1;
-		goto alternative;
-	}
-	return buf;
-}
-
-static int _find_first_non_null_index(const uint32_t *arr, size_t len)
+static inline int find_first_non_null_index(const uint32_t *arr, size_t len)
 {
 	for (int i = 0; i < len; i++) {
 		if (arr[i] != 0)
@@ -253,7 +207,7 @@ static int _find_first_non_null_index(const uint32_t *arr, size_t len)
 	return -1;
 }
 
-static uint32_t* _replace_nulls_and_terminate(uint32_t *str, size_t len)
+static inline uint32_t* replace_nulls_and_terminate(uint32_t *str, size_t len)
 {
 	for (uint32_t i = 0; i < len; i++) {
 		if (str[i] == 0)
@@ -261,6 +215,77 @@ static uint32_t* _replace_nulls_and_terminate(uint32_t *str, size_t len)
 	}
 	str[len] = 0;
 	return str;
+}
+
+#define IS_PRINTABLE_ASCII(C) ((C >= 32 && C <= 127) ? 1 : 0)
+
+static inline int get_label_length(uint32_t *label, size_t len)
+{
+	for (int i = 0; i < len; i++) {
+		if (!IS_PRINTABLE_ASCII(label[i]))
+			return i;
+	}
+	return len;
+}
+
+// Behold the truly terrible heuristic mess!
+const char* a11y_try_find_widget_label(struct widget *w, char* buf)
+{
+	uint32_t *label = NULL;
+	uint32_t str[81] = { 0 };
+	int found = 0;
+	int alternative_method = 0;
+	int len = 0;
+	int i, j;
+	buf[0] = '\0';
+	if (w->x <= 0 || w->x >= 80 || w->y <= 0 || w->y >= 50)
+		return buf;
+	alternative: if (w->type == WIDGET_OTHER || alternative_method) {
+		for (i = 1; i <= 2; i++) {
+			for (j = 0; j < 6 && j < 80 - w->x; j++) {
+				label = acbuf_get_ptr_to(w->x + j, w->y - i);
+				if (label && IS_PRINTABLE_ASCII(*label)) {
+					found = 1;
+					break;
+				}
+			}
+			if (found) break;
+		}
+		if (!found) return buf;
+		len = get_label_length(label, 80);
+		memcpy(str, label, len * sizeof(uint32_t));
+		str[len] = 0;
+		CHARSET_EASY_MODE_CONST((uint8_t*)str, CHARSET_UCS4, CHARSET_CHAR, {
+			strcpy(buf, out);
+		});
+		return buf;
+	}
+	uint32_t *start = acbuf_get_ptr_to(0, w->y);
+	uint32_t *wx = &start[w->x];
+	label = wx - 2;
+	if ((label <= start || !IS_PRINTABLE_ASCII(*label)) && w->type != WIDGET_TOGGLEBUTTON) {
+		alternative_method = 1;
+		goto alternative;
+	}
+	for ( ; label >= start; label--) {
+		if (label && IS_PRINTABLE_ASCII(*label))
+			continue;
+		label++;
+	found = 1;
+		break;
+	}
+	if (found) {
+		len = get_label_length(label, 80);
+		memcpy(str, label, len * sizeof(uint32_t));
+		str[len] = 0;
+		CHARSET_EASY_MODE_CONST((uint8_t*)str, CHARSET_UCS4, CHARSET_CHAR, {
+			strcpy(buf, out);
+		});
+	} else if (w->type != WIDGET_TOGGLEBUTTON) {
+		alternative_method = 1;
+		goto alternative;
+	}
+	return buf;
 }
 
 const char* a11y_get_text_from(int x, int y, char* buf)
@@ -289,10 +314,10 @@ const char* a11y_get_text_from_rect(int x, int y, int w, int h, char *buf)
 	for (int i = 0; i < h; i++) {
 		ptr = acbuf_get_ptr_to(x, y + i);
 		memcpy(str, ptr, w * sizeof(uint32_t));
-		start = _find_first_non_null_index(str, w);
+		start = find_first_non_null_index(str, w);
 		if (start == -1)
 			continue;
-		_replace_nulls_and_terminate(&str[start], w - start);
+		replace_nulls_and_terminate(&str[start], w - start);
 		CHARSET_EASY_MODE_CONST((uint8_t*)&str[start], CHARSET_UCS4, CHARSET_CHAR, {
 			strcat(buf, out);
 		});
@@ -301,21 +326,44 @@ const char* a11y_get_text_from_rect(int x, int y, int w, int h, char *buf)
 	return buf;
 }
 
+static void a11y_set_char_mode(int state)
+{
+	if (!(status.flags & ACCESSIBILITY_MODE)) return;
+	int engine = SRAL_GetCurrentEngine();
+	switch (engine) {
+	case ENGINE_NVDA:
+		SRAL_SetEngineParameter(engine, SYMBOL_LEVEL, state ? 1000 : 100); // Character or Some
+		break;
+	case ENGINE_SPEECH_DISPATCHER:
+		SRAL_SetEngineParameter(engine, SYMBOL_LEVEL, state ? 10 : 2); // All or Some
+		break;
+	default:
+		break; // Unsupported
+	}
+}
+
 int a11y_init(void)
 {
-	return SRAL_Initialize(ENGINE_NONE);
+	if (!(status.flags & ACCESSIBILITY_MODE)) return 0;
+	int result = SRAL_Initialize(ENGINE_NONE);
+	if (!result) return 0;
+	a11y_set_char_mode(0);
+	return result;
 }
 
 int a11y_output(const char* text, int interrupt)
 {
+	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
 	if(!strlen(text)) return 0;
 	return SRAL_Output(text, interrupt);
 }
 
 int a11y_output_cp437(const char* text, int interrupt)
 {
+	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
 	int result = 0;
-	if(!strlen(text)) return 0;
+	if (strlen(text) == 0) return 0;
+
 	CHARSET_EASY_MODE_CONST(text, CHARSET_CP437, CHARSET_CHAR, {
 		result = SRAL_Output(out, interrupt);
 	});
@@ -324,40 +372,201 @@ int a11y_output_cp437(const char* text, int interrupt)
 
 int a11y_output_char(char chr, int interrupt)
 {
-	unsigned char text[2] = { chr, '\0' };
-	if (!*text) return 0;
-	return a11y_output_cp437(text, interrupt);
+	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
+	char text[2] = { chr, '\0' };
+	a11y_set_char_mode(1);
+	int result = a11y_output_cp437(*text ? text : "Blank", interrupt);
+	a11y_set_char_mode(0);
+	return result;
 }
 
 int a11y_outputf(const char *format, int interrupt, ...)
 {
 	int result;
 
+	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
 	va_list ap;
 
 	va_start(ap, interrupt);
 
-	if (vasprintf(&a11y_message, format, ap) == -1) abort();
+	if (vasprintf(&message, format, ap) == -1) abort();
 
-	result = a11y_output(a11y_message, interrupt);
+	result = a11y_output(message, interrupt);
 
 	va_end(ap);
-	if (a11y_message)
-		free(a11y_message);
+	if (message)
+		free(message);
 	return result;
 }
 
 void a11y_interrupt(void)
 {
+	if (!(status.flags & ACCESSIBILITY_MODE)) return;
 	SRAL_StopSpeech();
 }
 
 void a11y_uninit(void)
 {
-	SRAL_Uninitialize();
+	if (status.flags & ACCESSIBILITY_MODE)
+		current_line = 0;
+		current_char = 0;
+		SRAL_Uninitialize();
 }
 
 void a11y_delay(int delay_ms)
 {
+	if (!(status.flags & ACCESSIBILITY_MODE)) return;
 	SRAL_Delay(delay_ms);
+}
+
+/* Higher-level convenience functions */
+
+int a11y_report_widget(struct widget *w)
+{
+	char buf[512];
+	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
+	a11y_get_widget_info(w, INFO_LABEL | INFO_TYPE | INFO_STATE, buf);
+	a11y_output(buf, 0);
+	a11y_get_widget_info(w, INFO_VALUE, buf);
+	a11y_output(buf, 0);
+	return 1;
+}
+
+int a11y_report_order(void)
+{
+	char buf[16];
+
+	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
+	strcpy(buf, "Order ");
+	str_from_num(3, get_current_order(), &buf[6]);
+	strcat(buf, "/");
+	str_from_num(3, csf_last_order(current_song), &buf[10]);
+	return a11y_output(buf, 0);
+}
+
+int a11y_report_pattern(void)
+{
+	char buf[16];
+
+	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
+	strcpy(buf, "Pattern ");
+	str_from_num(3, get_current_pattern(), &buf[8]);
+	strcat(buf, "/");
+	str_from_num(3, csf_get_num_patterns(current_song) - 1, &buf[12]);
+	return a11y_output(buf, 0);
+}
+
+int a11y_report_instrument(void)
+{
+	int ins_mode, n;
+	char *name = NULL;
+	char buf[40];
+
+	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
+	if (page_is_instrument_list(status.current_page)
+	|| status.current_page == PAGE_SAMPLE_LIST
+	|| status.current_page == PAGE_LOAD_SAMPLE
+	|| status.current_page == PAGE_LIBRARY_SAMPLE
+	|| (!(status.flags & CLASSIC_MODE)
+		&& (status.current_page == PAGE_ORDERLIST_PANNING
+			|| status.current_page == PAGE_ORDERLIST_VOLUMES)))
+		ins_mode = 0;
+	else
+		ins_mode = song_is_instrument_mode();
+
+	if (ins_mode) {
+		n = instrument_get_current();
+		if (n > 0) {
+			strcpy(buf, "Instrument ");
+			name = song_get_instrument(n)->name;
+		} else strcpy(buf, "No instrument");
+	} else {
+		n = sample_get_current();
+		if (n > 0) {
+			strcpy(buf, "Sample ");
+			name = song_get_sample(n)->name;
+		} else strcpy(buf, "No sample");
+	}
+
+	if (n > 0) {
+		str_from_num99(n, &buf[strlen(buf)]);
+		sprintf(&buf[strlen(buf)], " %s", name);
+	}
+	a11y_output(buf, 0);
+}
+
+/* Oh! I really wanted to avoid making my own crappy screen reader . Sorry. */
+
+int a11y_cursor_get_current_line(void)
+{
+	return current_line;
+}
+
+int a11y_cursor_get_current_char(void)
+{
+	return current_char;
+}
+
+int a11y_cursor_report_line(int line)
+{
+	char buf[256];
+	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
+	if (line < 0 || line >= 50)
+		return 0;
+	a11y_get_text_from_rect(0, line, 80, 1, buf);
+	current_line = line;
+	current_char = 0;
+	return a11y_output(buf, 0);
+}
+
+int a11y_cursor_report_previous_line(void)
+{
+	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
+	if (current_line > 0) current_line--;
+	return a11y_cursor_report_line(current_line);
+}
+
+int a11y_cursor_report_next_line(void)
+{
+	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
+	if (current_line < 49) current_line++;
+	return a11y_cursor_report_line(current_line);
+}
+
+int a11y_cursor_report_char(int ch)
+{
+	char buf[5];
+	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
+	a11y_get_text_from_rect(current_char, current_line, 1, 1, buf);
+	a11y_set_char_mode(1);
+	int result = a11y_output(buf, 0);
+	a11y_set_char_mode(0);
+	return result;
+}
+
+int a11y_cursor_report_previous_char(void)
+{
+	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
+	if (current_char > 0) current_char--;
+	return a11y_cursor_report_char(current_char);
+}
+
+int a11y_cursor_report_next_char(void)
+{
+	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
+	if (current_char < 79) current_char++;
+	return a11y_cursor_report_char(current_char);
+}
+
+void a11y_toggle_accessibility_mode(void)
+{
+	if (status.flags & ACCESSIBILITY_MODE) {
+		status_text_flash("Accessibility mode disabled", 0);
+		status.flags &= ~ACCESSIBILITY_MODE;
+		a11y_uninit();
+	} else {
+		status.flags |= ACCESSIBILITY_MODE;
+		a11y_init();
+		status_text_flash("Accessibility_mode_enabled");
+	}
 }

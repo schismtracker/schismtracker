@@ -1069,6 +1069,7 @@ int csf_read_note(song_t *csf)
 {
 	song_voice_t *chan;
 	unsigned int cn;
+	int firsttick = 0;
 
 	// Checking end of row ?
 	if (csf->flags & SONG_PAUSED) {
@@ -1077,25 +1078,31 @@ int csf_read_note(song_t *csf)
 		if (!csf->current_tempo)
 			csf->current_tempo = csf->initial_tempo ? csf->initial_speed : 125;
 
+		firsttick = csf->tick_count == -1; // Hack for detecting the truly first tick
 		csf->flags &= ~SONG_FIRSTTICK;
 
+		if (firsttick)
+			csf->tick_count = 1;
 		if (--csf->tick_count == 0) {
 			csf->tick_count = csf->current_speed;
 			if (--csf->row_count <= 0) {
 				csf->row_count = 0;
 			}
-			// clear channel values (similar to csf_process_tick)
-			for (cn = 0, chan = csf->voices; cn < MAX_CHANNELS; cn++, chan++) {
-				chan->row_note = 0;
-				chan->row_instr = 0;
-				chan->row_voleffect = 0;
-				chan->row_volparam = 0;
-				chan->row_effect = 0;
-				chan->row_param = 0;
-				chan->n_command = 0;
-			}
+			if (firsttick)
+				csf->flags |= SONG_FIRSTTICK;
+			else
+				// clear channel values (similar to csf_process_tick)
+				for (cn = 0, chan = csf->voices; cn < MAX_CHANNELS; cn++, chan++) {
+					chan->row_note = 0;
+					chan->row_instr = 0;
+					chan->row_voleffect = 0;
+					chan->row_volparam = 0;
+					chan->row_effect = 0;
+					chan->row_param = 0;
+					chan->n_command = 0;
+				};
 		}
-		csf_process_effects(csf, 0);
+		csf_process_effects(csf, firsttick);
 	} else {
 		if (!csf_process_tick(csf))
 			return 0;

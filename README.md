@@ -1,5 +1,11 @@
 # Schism Tracker
 
+This is an experimental fork of Schism Tracker with a self voicing accessibility mode,
+powered by the cross platform [SRAL](https://github.com/m1maker/SRAL) library.
+See [the accessibility readme](docs/accessibility.md) for more information.
+
+-----
+
 Schism Tracker is a free and open-source reimplementation of [Impulse
 Tracker](https://github.com/schismtracker/schismtracker/wiki/Impulse-Tracker),
 a program used to create high quality music without the requirements of

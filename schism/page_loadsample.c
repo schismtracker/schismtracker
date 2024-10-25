@@ -650,21 +650,24 @@ static void do_delete_file(UNUSED void *data)
 
 static const char* file_list_a11y_get_value(char *buf)
 {
-	strcpy(buf, flist.files[current_file]->base);
+	dmoz_file_t* file = flist.files[current_file];
+	sprintf(buf, "%s %s",
+		file->base, file->title);
 	return buf;
 }
 
 static int file_list_handle_text_input(const uint8_t* text) {
 	dmoz_file_t* f = flist.files[current_file];
+	a11y_output_cp437(text, 0);
 	for (; *text; text++) {
 		if (*text >= 32 && (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
 			if (search_pos < 0) search_pos = 0;
 			if (search_pos < PATH_MAX) {
 				search_str[search_pos++] = *text;
 				reposition_at_slash_search();
-				char buf[strlen(flist.files[current_file]->base) + 1];
+				char buf[256];
 				file_list_a11y_get_value(buf);
-				a11y_output(buf, 1);
+				a11y_output(buf, 0);
 				status.flags |= NEED_UPDATE;
 			}
 			return 1;
@@ -790,9 +793,9 @@ static int file_list_handle_key(struct key_event * k)
 		search_pos = -1;
 		current_file = new_file;
 		file_list_reposition();
-		char buf[strlen(flist.files[current_file]->base) + 1];
+		char buf[256];
 		file_list_a11y_get_value(buf);
-		a11y_output(buf, 1);
+		a11y_output(buf, 0);
 		status.flags |= NEED_UPDATE;
 	}
 	return 1;

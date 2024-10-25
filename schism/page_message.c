@@ -618,6 +618,8 @@ static int message_handle_text_input_editmode(const uint8_t* text) {
 	if (clippy_owner(CLIPPY_SELECT) == widgets_message)
 		_delete_selection();
 
+	a11y_output_cp437(text, 1);
+
 	for (; *text; text++)
 		message_insert_char(*text);
 

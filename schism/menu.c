@@ -255,7 +255,6 @@ void menu_hide(void)
 		current_menu[1]->active_item = -1;
 
 	current_menu[0] = current_menu[1] = NULL;
-	a11y_output("Closed", 1);
 
 	/* note! this does NOT redraw the screen; that's up to the caller.
 	 * the reason for this is that so many of the menu items cause a

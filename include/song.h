@@ -175,6 +175,7 @@ song_channel_t *song_get_channel(int n);
 void song_set_channel_mute(int channel, int muted);
 void song_toggle_channel_mute(int channel);
 // Check whether the channel is soloed.
+// This function was originally not exposed, but accessibility really needs it, so, here it goes.
 int soloed(int channel);
 // if channel is the current soloed channel, undo the solo (reset the
 // channel state); otherwise, save the state and solo the channel.

@@ -63,8 +63,8 @@ static struct vgamem_overlay env_overlay = {
  * more of a boolean than a bit mask  -delt.
  */
 static int note_sample_mask = 1;
+
 static int a11y_text_reported = 1;
-static char a11y_env_label[32] = { '\0' };
 static char a11y_env_value[80] = { '\0' };
 
 static struct widget *get_page_widgets(void)
@@ -446,6 +446,9 @@ static void instrument_list_draw_list(void)
 
 static int instrument_list_handle_text_input_on_list(const uint8_t* text) {
 	int success = 0;
+
+	a11y_output_cp437(text, 1);
+
 	for (; *text; text++)
 		if (instrument_cursor_pos < 25 && instrument_list_add_char(*text))
 			success = 1;
@@ -694,8 +697,11 @@ static const char* note_trans_a11y_get_value(char* buf)
 {
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 	a11y_get_text_from_rect(32, 16 + note_trans_sel_line, 7, 1, buf);
-	if (ins->sample_map[note_trans_sel_line])
+	buf[3] = ' ';
+	if (ins->sample_map[note_trans_sel_line]) {
+		strcat(buf, " ");
 		a11y_get_text_from_rect(40, 16 + note_trans_sel_line, 2, 1, &buf[strlen(buf)]);
+	}
 	return buf;
 }
 
@@ -815,7 +821,7 @@ static int note_trans_handle_key(struct key_event * k)
 	int new_pos = prev_pos;
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 	int c, n;
-	char buf[4] = { '\0' };
+	char buf[16] = { '\0' };
 
 	if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
 		if (k->state == KEY_RELEASE)
@@ -1059,13 +1065,23 @@ static int note_trans_handle_key(struct key_event * k)
 		note_trans_sel_line = new_line;
 		note_trans_reposition();
 		a11y_text_reported = 0;
-	} else if (prev_pos <= 1 && note_trans_cursor_pos >= 2) {
-		if (ins->sample_map[note_trans_sel_line])
-			str_from_num99(ins->sample_map[note_trans_sel_line], buf);
-		a11y_output(*buf ? buf : "No sample", 1);
-	} else if (prev_pos >= 2 && note_trans_cursor_pos <= 1) {
+	} else if (note_trans_cursor_pos <= 1) {
 			get_note_string(ins->note_map[note_trans_sel_line], buf);
-			a11y_output(buf, 1);
+			if (prev_pos > 1)
+				a11y_outputf("%s Note", 0, buf);
+			else if (prev_pos == 1) {
+				buf[2] = '\0';
+				a11y_output(buf, 0);
+			} else a11y_output_char(buf[2], 0);
+	} else if (note_trans_cursor_pos >= 2) {
+		if (ins->sample_map[note_trans_sel_line]) {
+			str_from_num99(ins->sample_map[note_trans_sel_line], buf);
+			strcat(buf, " ");
+		}
+		if (prev_pos == 1)
+			a11y_outputf("%sSample", 1, buf);
+		else if (*buf)
+			a11y_output_char(buf[note_trans_cursor_pos - 2], 0);
 	}
 
 	/* this causes unneeded redraws in some cases... oh well :P */
@@ -1922,7 +1938,6 @@ static void _draw_env_label(const char *env_name, int is_selected)
 	pos += draw_text(" Envelope", pos, 16, is_selected ? 3 : 0, 2);
 	if (envelope_edit_mode || envelope_mouse_edit)
 		pos += draw_text(" (Edit)", pos, 16, is_selected ? 3 : 0, 2);
-	a11y_get_text_from_rect(pos - 33, 16, pos, 1, a11y_env_label);
 }
 
 static void volume_envelope_draw(void)
@@ -2304,6 +2319,7 @@ static void instrument_list_handle_alt_key(struct key_event *k)
 		return;
 	case SDLK_w:
 		song_wipe_instrument(current_instrument);
+		a11y_output("Instrument wiped", 0);
 		break;
 	case SDLK_d:
         if (k->mod & KMOD_SHIFT) {
@@ -3013,7 +3029,7 @@ void instrument_list_volume_load_page(struct page *page)
 	widgets_volume[5].width = 45;
 	widgets_volume[5].height = 8;
 	widgets_volume[5].next.down = 6;
-	widgets_volume[5].d.other.a11y_type = a11y_env_label;
+	widgets_volume[5].d.other.a11y_type = "";
 	widgets_volume[5].d.other.a11y_get_value = envelope_a11y_get_value;
 
 	/* 6-7 = envelope switches */
@@ -3081,7 +3097,7 @@ void instrument_list_panning_load_page(struct page *page)
 	widgets_panning[5].width = 45;
 	widgets_panning[5].height = 8;
 	widgets_panning[5].next.down = 6;
-	widgets_panning[5].d.other.a11y_type = a11y_env_label;
+	widgets_panning[5].d.other.a11y_type = "";
 	widgets_panning[5].d.other.a11y_get_value = envelope_a11y_get_value;
 
 	/* 6-7 = envelope switches */
@@ -3162,7 +3178,7 @@ void instrument_list_pitch_load_page(struct page *page)
 	widgets_pitch[5].width = 45;
 	widgets_pitch[5].height = 8;
 	widgets_pitch[5].next.down = 6;
-	widgets_pitch[5].d.other.a11y_type = a11y_env_label;
+	widgets_pitch[5].d.other.a11y_type = "";
 	widgets_pitch[5].d.other.a11y_get_value = envelope_a11y_get_value;
 
 	/* 6-7 = envelope switches */

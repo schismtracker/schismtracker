@@ -387,6 +387,8 @@ void help_load_page(struct page *page)
 	page->pre_handle_key = help_handle_key;
 
 	widget_create_other(widgets_help + 0, 0, help_handle_key, NULL, help_redraw);
+	widgets_help[0].d.other.a11y_type = "";
+	widgets_help[0].d.other.a11y_get_value = help_a11y_get_value;
 	widget_create_button(widgets_help + 1, 35,47,8, 0, 1, 1,1, 0,
 			_help_close, "Done", 3);
 }

@@ -943,6 +943,7 @@ void schism_exit(int status)
 		// Clear to black on exit (nicer on Wii; I suppose it won't hurt elsewhere)
 		video_refresh();
 		video_blit();
+		a11y_uninit();
 		video_shutdown();
 		/*
 		Don't use this function as atexit handler, because that will cause
@@ -1028,6 +1029,7 @@ int main(int argc, char **argv)
 	controller_init();
 #endif
 
+	a11y_init();
 	display_init();
 	palette_apply();
 	font_init();
@@ -1064,7 +1066,6 @@ int main(int argc, char **argv)
 		free(initial_dir);
 	}
 
-	a11y_init();
 	if (startup_flags & SF_FONTEDIT) {
 		status.flags |= STARTUP_FONTEDIT;
 		set_page(PAGE_FONT_EDIT);

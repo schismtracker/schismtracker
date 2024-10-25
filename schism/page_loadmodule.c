@@ -444,8 +444,9 @@ static void search_redraw(void)
 
 static const char* file_list_a11y_get_value(char *buf)
 {
+	dmoz_file_t *file = flist.files[current_file];
 	if (current_file >= 0 && current_file < flist.num_files)
-		strcpy(buf, flist.files[current_file]->base);
+		sprintf(buf, "%s %s", file->base, file->title);
 	else
 		a11y_get_text_from_rect(3, 13, 9, 1, buf);
 	return buf;
@@ -474,9 +475,9 @@ static void search_update(void)
 					search_text, CHARSET_CP437, search_text_length) == 0) {
 				current_file = n;
 				file_list_reposition();
-				char buf[strlen(flist.files[current_file]->base) + 1];
+				char buf[256];
 				file_list_a11y_get_value(buf);
-				a11y_output(buf, 1);
+				a11y_output(buf, 0);
 				break;
 			}
 		}
@@ -488,7 +489,7 @@ static void search_update(void)
 				dir_list_reposition();
 				char buf[strlen(dlist.dirs[current_dir]->base) + 1];
 				dir_list_a11y_get_value(buf);
-				a11y_output(buf, 1);
+				a11y_output(buf, 0);
 				break;
 			}
 		}
@@ -517,6 +518,7 @@ static void search_text_delete_char(void)
 	if (search_text_length == 0)
 		return;
 
+	a11y_output_char(search_text[search_text_length - 1], 0);
 	search_text[--search_text_length] = 0;
 
 	if (search_text_length > 25)
@@ -710,6 +712,7 @@ static void show_selected_song_length(void)
 static int file_list_handle_text_input(const uint8_t* text) {
 	int success = 0;
 
+	a11y_output_cp437(text, 0);
 	for (; *text; text++)
 		if (search_text_add_char(*text))
 			success = 1;
@@ -819,9 +822,9 @@ static int file_list_handle_key(struct key_event * k)
 	if (new_file != current_file) {
 		current_file = new_file;
 		file_list_reposition();
-		char buf[strlen(flist.files[current_file]->base) + 1];
+		char buf[256];
 		file_list_a11y_get_value(buf);
-		a11y_output(buf, 1);
+		a11y_output(buf, 0);
 		status.flags |= NEED_UPDATE;
 	}
 	return 1;
@@ -990,7 +993,7 @@ static int dir_list_handle_key(struct key_event * k, int width)
 		dir_list_reposition();
 		char buf[strlen(dlist.dirs[current_dir]->base) + 1];
 		dir_list_a11y_get_value(buf);
-		a11y_output(buf, 1);
+		a11y_output(buf, 0);
 		status.flags |= NEED_UPDATE;
 	}
 	return 1;

@@ -244,6 +244,10 @@ void cfg_load(void)
 		status.flags |= NUMBERED_BACKUPS;
 	else
 		status.flags &= ~NUMBERED_BACKUPS;
+	if (cfg_get_number(&cfg, "General", "accessibility_mode", 0))
+		status.flags |= ACCESSIBILITY_MODE;
+	else
+		status.flags &= ~ACCESSIBILITY_MODE;
 
 	i = cfg_get_number(&cfg, "General", "time_display", TIME_PLAY_ELAPSED);
 	/* default to play/elapsed for invalid values */
@@ -378,6 +382,7 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "General", "classic_mode", !!(status.flags & CLASSIC_MODE));
 	cfg_set_number(&cfg, "General", "make_backups", !!(status.flags & MAKE_BACKUPS));
 	cfg_set_number(&cfg, "General", "numbered_backups", !!(status.flags & NUMBERED_BACKUPS));
+	cfg_set_number(&cfg, "General", "accessibility_mode", !!(status.flags & ACCESSIBILITY_MODE));
 
 	cfg_set_number(&cfg, "General", "accidentals_as_flats", (kbd_sharp_flat_state() == KBD_SHARP_FLAT_FLATS));
 	cfg_set_number(&cfg, "General", "meta_is_ctrl", !!(status.flags & META_IS_CTRL));

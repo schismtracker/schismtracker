@@ -1126,4 +1126,5 @@ void fontedit_load_page(struct page *page)
 	page->pre_handle_key = fontedit_key_hack;
 	page->widgets = fontedit_widget_hack;
 	widget_create_other(fontedit_widget_hack, 0, fontedit_handle_key, NULL, do_nil);
+	fontedit_widget_hack->d.other.a11y_type = "Font editor";
 }

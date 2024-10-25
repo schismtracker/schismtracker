@@ -251,6 +251,7 @@ static const char* midi_page_a11y_get_value(char *buf)
 	int pos = current_port - top_midi_port;
 	a11y_get_text_from_rect(widgets_midi[0].x + 1, widgets_midi[0].y + pos + 1,
 		widgets_midi[0].width -2, 1, buf);
+	buf[9] = ' ';
 	return buf;
 }
 

@@ -345,6 +345,7 @@ int widget_textentry_add_text(struct widget *w, const uint8_t* text) {
 	if (!text)
 		return 0;
 
+	a11y_output_cp437(text, 1);
 	for (; *text; text++)
 		if (!widget_textentry_add_char(w, *text))
 			return 0;
@@ -610,11 +611,7 @@ void widget_change_focus_to(int new_widget_index)
 		ACTIVE_WIDGET.d.textentry.cursor_pos
 				= strlen(ACTIVE_WIDGET.d.textentry.text);
 
-	char buf[512];
-	a11y_get_widget_info(&ACTIVE_WIDGET, INFO_LABEL | INFO_TYPE | INFO_STATE, buf);
-	a11y_output(buf, 0);
-	a11y_get_widget_info(&ACTIVE_WIDGET, INFO_VALUE, buf);
-	a11y_output(buf, 0);
+	a11y_report_widget(&ACTIVE_WIDGET);
 	status.flags |= NEED_UPDATE;
 }
 
