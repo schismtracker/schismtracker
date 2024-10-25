@@ -138,9 +138,4 @@ struct tm *localtime_r(const time_t *timep, struct tm *result);
       [!!sizeof (struct { int __error_if_negative: (x) ? 2 : -1; })]
 #endif
 
-/* similar to OpenMPT's `MPT_BINARY_STRUCT`, errors out if the
- * size of `type` is not equal to `size` for e.g. packed structures */
-#define SCHISM_BINARY_STRUCT(type, size) \
-	SCHISM_STATIC_ASSERT(sizeof(type) == (size), "ERROR: struct size is different than what was expected (" #size ")");
-
 #endif /* SCHISM_HEADERS_H_ */

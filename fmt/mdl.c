@@ -157,8 +157,6 @@ struct mdl_envelope {
 	uint8_t loop; // lower 4 bits = start, upper 4 bits = end
 };
 
-SCHISM_BINARY_STRUCT(struct mdl_envelope, 1+30+1+1);
-
 /* --------------------------------------------------------------------------------------------------------- */
 /* Internal definitions */
 

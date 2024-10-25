@@ -70,8 +70,6 @@ typedef struct {
     uint32_t id_WAVE;
 } wave_file_header_t;
 
-SCHISM_BINARY_STRUCT(wave_file_header_t, 12);
-
 typedef struct {
     uint16_t format;          // 1
     uint16_t channels;        // 1:mono, 2:stereo
