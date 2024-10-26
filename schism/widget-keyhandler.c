@@ -220,6 +220,7 @@ int widget_handle_text_input(const uint8_t* text_input) {
 				return 1;
 			break;
 		case WIDGET_TEXTENTRY:
+		case WIDGET_DYNTEXTENTRY:
 			if (widget_textentry_add_text(widget, text_input))
 				return 1;
 			break;
@@ -393,7 +394,7 @@ int widget_handle_key(struct key_event * k)
 			n = (k->state == KEY_RELEASE && onw) ? 1 : 0;
 			if (widget->depressed != n) status.flags |= NEED_UPDATE;
 			widget->depressed = n;
-			if (current_type != WIDGET_TEXTENTRY && current_type != WIDGET_NUMENTRY) {
+			if (current_type != WIDGET_TEXTENTRY && current_type != WIDGET_DYNTEXTENTRY && current_type != WIDGET_NUMENTRY) {
 				if (k->state == KEY_PRESS || !onw)
 					return 1;
 			} else if (!onw) {
@@ -427,6 +428,7 @@ int widget_handle_key(struct key_event * k)
 		case WIDGET_OTHER:
 			break;
 		case WIDGET_TEXTENTRY:
+		case WIDGET_DYNTEXTENTRY:
 			if (status.flags & DISKWRITER_ACTIVE) return 0;
 			/* LOL WOW THIS SUCKS */
 			if (k->mouse == MOUSE_CLICK && k->on_target) {
@@ -538,6 +540,7 @@ int widget_handle_key(struct key_event * k)
 			numentry_move_cursor(widget, -1);
 			return 1;
 		case WIDGET_TEXTENTRY:
+		case WIDGET_DYNTEXTENTRY:
 			if (!NO_MODIFIER(k->mod)) {
 				return 0;
 			}
@@ -583,6 +586,7 @@ int widget_handle_key(struct key_event * k)
 			numentry_move_cursor(widget, 1);
 			return 1;
 		case WIDGET_TEXTENTRY:
+		case WIDGET_DYNTEXTENTRY:
 			if (!NO_MODIFIER(k->mod)) {
 				return 0;
 			}
@@ -622,6 +626,7 @@ int widget_handle_key(struct key_event * k)
 			status.flags |= NEED_UPDATE;
 			return 1;
 		case WIDGET_TEXTENTRY:
+		case WIDGET_DYNTEXTENTRY:
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			widget->d.textentry.cursor_pos = 0;
@@ -649,6 +654,7 @@ int widget_handle_key(struct key_event * k)
 			status.flags |= NEED_UPDATE;
 			return 1;
 		case WIDGET_TEXTENTRY:
+		case WIDGET_DYNTEXTENTRY:
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			widget->d.textentry.cursor_pos = strlen(widget->d.textentry.text);
@@ -716,7 +722,7 @@ int widget_handle_key(struct key_event * k)
 		}
 
 		/* this ought to be in a separate function. */
-		if (current_type != WIDGET_TEXTENTRY)
+		if (current_type != WIDGET_TEXTENTRY && current_type != WIDGET_DYNTEXTENTRY)
 			break;
 		if (!widget->d.textentry.text[0]) {
 			/* nothing to do */
@@ -743,7 +749,7 @@ int widget_handle_key(struct key_event * k)
 		return 1;
 	case SDLK_DELETE:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type != WIDGET_TEXTENTRY)
+		if (current_type != WIDGET_TEXTENTRY && current_type != WIDGET_DYNTEXTENTRY)
 			break;
 		if (!widget->d.textentry.text[0]) {
 			/* nothing to do */
@@ -879,6 +885,7 @@ int widget_handle_key(struct key_event * k)
 			return 1;
 		break;
 	case WIDGET_TEXTENTRY:
+	case WIDGET_DYNTEXTENTRY:
 		if ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0 &&
 			k->text && widget_textentry_add_text(widget, k->text))
 			return 1;

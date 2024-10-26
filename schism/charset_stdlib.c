@@ -86,6 +86,36 @@ charsetfail:
 	return strcmp(in1, in2);
 }
 
+int charset_strncpy(uint8_t *out, charset_t outset, const uint8_t *in, charset_t inset, size_t outsize)
+{
+	charset_decode_t decoder = {
+		.in = in,
+		.offset = 0,
+		.size = SIZE_MAX,
+	};
+
+	size_t out_offset = 0;
+
+	for (;;) {
+		charset_decode_next(&decoder, inset);
+		if (decoder.state == DECODER_STATE_ERROR)
+			return -1;
+
+		size_t out_needed = charset_encode(decoder.codepoint, NULL, outset);
+		if (!out_needed)
+			return -1;
+
+		if (out_offset + out_needed >= outsize)
+			break;
+
+		charset_encode(decoder.codepoint, out + out_offset, outset);
+
+		out_offset += out_needed;
+	}
+
+	return out_offset;
+}
+
 /* this IS necessary to actually sort properly. */
 int charset_strcasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set)
 {
