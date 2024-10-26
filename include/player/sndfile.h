@@ -24,12 +24,17 @@
 #define MAX_PATTERNS            240
 #define MAX_SAMPLES             236
 #define MAX_INSTRUMENTS         MAX_SAMPLES
-#define MAX_VOICES              256
 #define MAX_CHANNELS            64
 #define MAX_ENVPOINTS           32
 #define MAX_INFONAME            80
 #define MAX_EQ_BANDS            6
 #define MAX_MESSAGE             8000
+
+// define 64 voices specially for keyjazz
+#define MAX_MODULE_VOICES		256
+#define MAX_KEYJAZZ_VOICES		64
+#define MAX_VOICES              (MAX_MODULE_VOICES + MAX_KEYJAZZ_VOICES)
+#define KEYJAZZ_VOICES_OFFSET	(MAX_MODULE_VOICES)
 
 #define MIX_MAX_CHANNELS		2 /* used for filters and stuff */
 #define MIXBUFFERSIZE           512

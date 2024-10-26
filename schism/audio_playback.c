@@ -283,17 +283,15 @@ int song_is_multichannel_mode(void)
 	return multichannel_mode;
 }
 
-#define MAX_KEYJAZZ_CHANNELS 24
-
 /* Channel corresponding to each note played.
 That is, keyjazz_note_to_chan[66] will indicate in which channel F-5 was played most recently.
 This will break if the same note was keydown'd twice without a keyup, but I think that's a
 fairly unlikely scenario that you'd have to TRY to bring about. */
 static int keyjazz_note_to_chan[NOTE_LAST + 1] = {0};
 /* last note played by channel tracking */
-static int keyjazz_chan_to_note[MAX_KEYJAZZ_CHANNELS] = {0};
+static int keyjazz_chan_to_note[MAX_KEYJAZZ_VOICES + 1] = {0};
 
-/* **** chan ranges from 1 to 64   */
+/* **** chan ranges from 1 to MAX_KEYJAZZ_VOICES   */
 static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int effect, int param)
 {
 	int ins_mode;
@@ -309,17 +307,18 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 			if (multichannel_mode)
 				song_change_current_play_channel(1, 1);
 		} else if (chan == KEYJAZZ_CHAN_AUTO) {
-			chan = 1;
-			do {
+			// search for the first channel that has a free voice
+			for (chan = 1; chan < MAX_KEYJAZZ_VOICES; chan++)
 				if (!keyjazz_chan_to_note[chan])
 					break;
-				chan++;
-			} while (chan < MAX_KEYJAZZ_CHANNELS);
 		}
 	}
 
-    // back to the 128..192 range
-    int chan_internal = chan + 128;
+	// back to the keyjazz range
+	int chan_internal = chan + KEYJAZZ_VOICES_OFFSET - 1;
+
+	// hm
+	assert(chan_internal < MAX_VOICES);
 
 	song_lock_audio();
 
@@ -886,7 +885,7 @@ void song_update_playing_sample(int s_changed)
 				channel->loop_end = inst->loop_end;
 			}
 			if (inst->flags & (CHN_PINGPONGSUSTAIN | CHN_SUSTAINLOOP
-					    | CHN_PINGPONGFLAG | CHN_PINGPONGLOOP|CHN_LOOP)) {
+						| CHN_PINGPONGFLAG | CHN_PINGPONGLOOP|CHN_LOOP)) {
 				if (channel->length != channel->loop_end) {
 					channel->length = channel->loop_end;
 				}
@@ -1065,7 +1064,7 @@ void cfg_load_audio(cfg_file_t *cfg)
 		audio_settings.channels = 2;
 	if (audio_settings.bits != 8 && audio_settings.bits != 16)
 		audio_settings.bits = 16;
-	audio_settings.channel_limit = CLAMP(audio_settings.channel_limit, 4, MAX_VOICES);
+	audio_settings.channel_limit = CLAMP(audio_settings.channel_limit, 4, MAX_MODULE_VOICES);
 	audio_settings.interpolation_mode = CLAMP(audio_settings.interpolation_mode, 0, 3);
 
 	audio_settings.eq_freq[0] = cfg_get_number(cfg, "EQ Low Band", "freq", 0);
@@ -1148,10 +1147,10 @@ static void _schism_midi_out_note(int chan, const song_note_t *starting_note)
 
 	if (!current_song || !song_is_instrument_mode() || (status.flags & MIDI_LIKE_TRACKER)) return;
 
-    /*if(m)
-    fprintf(stderr, "midi_out_note called (ch %d)note(%d)instr(%d)volcmd(%02X)cmd(%02X)vol(%02X)p(%02X)\n",
+	/*if(m)
+	fprintf(stderr, "midi_out_note called (ch %d)note(%d)instr(%d)volcmd(%02X)cmd(%02X)vol(%02X)p(%02X)\n",
 	chan, m->note, m->instrument, m->voleffect, m->effect, m->volparam, m->param);
-    else fprintf(stderr, "midi_out_note called (ch %d) m=%p\n", m);*/
+	else fprintf(stderr, "midi_out_note called (ch %d) m=%p\n", m);*/
 
 	if (!midi_playing) {
 		csf_process_midi_macro(current_song, 0, current_song->midi_config.start, 0, 0, 0, 0); // START!
@@ -1464,7 +1463,7 @@ static int _audio_open_device(const char *device, int verbose)
 
 	/* round to the nearest (kept for compatibility) */
 	if (size_pow2 != audio_settings.buffer_size
-	    && (size_pow2 - audio_settings.buffer_size) > (audio_settings.buffer_size - (size_pow2 >> 1)))
+		&& (size_pow2 - audio_settings.buffer_size) > (audio_settings.buffer_size - (size_pow2 >> 1)))
 		size_pow2 >>= 1;
 
 	/* This is needed in order to coax alsa into actually respecting the buffer size, since it's evidently
