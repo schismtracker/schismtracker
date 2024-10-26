@@ -214,6 +214,9 @@ int fmt_au_load_sample(slurp_t *fp, song_sample_t *smp)
 
 int fmt_au_save_sample(disko_t *fp, song_sample_t *smp)
 {
+	if (smp->flags & CHN_ADLIB)
+		return SAVE_UNSUPPORTED;
+
 	struct au_header au;
 	uint32_t ln;
 

@@ -539,19 +539,18 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
 
 int song_save_sample(const char *filename, const char *type, song_sample_t *smp, int num)
 {
+	static const char *err = "Error: Sample %d NOT saved! (%s)";
 	disko_t fp;
 	int ret;
 	const struct save_format *format = get_save_format(sample_save_formats, type);
+	const char *basename = filename ? dmoz_path_get_basename(filename) : NULL;
 
 	if (!format)
 		return SAVE_INTERNAL_ERROR;
 
-	if (!filename || !filename[0]) {
-		status_text_flash("Error: Sample %d NOT saved! (%s)", num, "No Filename?");
-		return SAVE_INTERNAL_ERROR; // ?
-	}
-
-	if (disko_open(&fp, filename) >= 0) {
+	if (!filename || !filename[0] || !basename[0]) {
+		ret = SAVE_NO_FILENAME;
+	} else if (disko_open(&fp, filename) >= 0) {
 		ret = format->f.save_sample(&fp, smp);
 		if (ret != SAVE_SUCCESS)
 			disko_seterror(&fp, EINVAL);
@@ -567,13 +566,19 @@ int song_save_sample(const char *filename, const char *type, song_sample_t *smp,
 	case SAVE_SUCCESS:
 		status_text_flash("%s sample saved (sample %d)", format->name, num);
 		break;
+	case SAVE_UNSUPPORTED:
+		status_text_flash(err, num, "Unsupported Data");
+		break;
 	case SAVE_FILE_ERROR:
-		status_text_flash("Error: Sample %d NOT saved! (%s)", num, "File Error");
-		log_perror(dmoz_path_get_basename(filename));
+		status_text_flash(err, num, "File Error");
+		log_perror(basename);
+		break;
+	case SAVE_NO_FILENAME:
+		status_text_flash(err, num, "No Filename?");
 		break;
 	case SAVE_INTERNAL_ERROR:
 	default: // ???
-		status_text_flash("Error: Sample %d NOT saved! (%s)", num, "Internal error");
+		status_text_flash(err, num, "Internal error");
 		log_appendf(4, "Internal error saving sample");
 		break;
 	}
@@ -860,19 +865,19 @@ void song_create_host_instrument(int smp)
 
 int song_save_instrument(const char *filename, const char *type, song_instrument_t *ins, int num)
 {
+	static const char *err = "Error: Instrument %d NOT saved! (%s)";
+
 	disko_t fp;
 	int ret;
 	const struct save_format *format = get_save_format(instrument_save_formats, type);
+	const char *basename = filename ? dmoz_path_get_basename(filename) : NULL;
 
 	if (!format)
 		return SAVE_INTERNAL_ERROR;
 
-	if (!filename || !filename[0]) {
-		status_text_flash("Error: Instrument %d NOT saved! (%s)", num, "No Filename?");
-		return SAVE_INTERNAL_ERROR; // ?
-	}
-
-	if (disko_open(&fp, filename) >= 0) {
+	if (!filename || !filename[0] || !basename[0]) {
+		ret = SAVE_NO_FILENAME;
+	} else if (disko_open(&fp, filename) >= 0) {
 		ret = format->f.save_instrument(&fp, current_song, ins);
 		if (ret != SAVE_SUCCESS)
 			disko_seterror(&fp, EINVAL);
@@ -888,14 +893,20 @@ int song_save_instrument(const char *filename, const char *type, song_instrument
 	case SAVE_SUCCESS:
 		status_text_flash("%s instrument saved (instrument %d)", format->name, num);
 		break;
+	case SAVE_UNSUPPORTED:
+		status_text_flash(err, num, "Unsupported Data");
+		break;
 	case SAVE_FILE_ERROR:
-		status_text_flash("Error: Instrument %d NOT saved! (%s)", num, "File Error");
-		log_perror(dmoz_path_get_basename(filename));
+		status_text_flash(err, num, "File Error");
+		log_perror(basename);
+		break;
+	case SAVE_NO_FILENAME:
+		status_text_flash(err, num, "No Filename?");
 		break;
 	case SAVE_INTERNAL_ERROR:
 	default: // ???
-		status_text_flash("Error: Instrument %d NOT saved! (%s)", num, "Internal error");
-		log_appendf(4, "Internal error saving instrument");
+		status_text_flash(err, num, "Internal error");
+		log_appendf(4, "Internal error saving sample");
 		break;
 	}
 

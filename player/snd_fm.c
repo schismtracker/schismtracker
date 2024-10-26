@@ -133,28 +133,17 @@ void Fmdrv_Init(int mixfreq)
 
 void Fmdrv_MixTo(int *target, int count)
 {
-	static short *buf = NULL;
-	static int buf_size = 0;
-
 	if (!fm_active)
 	    return;
 
 #if OPLSOURCE == 2
+	short buf[count];
+
+	memset(buf, 0, sizeof(buf));
+
     // mono. Single buffer.
-	if (buf_size != count * sizeof(short)) {
-		int before = buf_size;
-		buf_size = sizeof(short) * count;
 
-		if (before) {
-			buf = (short *) mem_realloc(buf, buf_size);
-		}
-		else {
-			buf = (short *) mem_alloc(buf_size);
-		}
-	}
-
-	memset(buf, 0, buf_size);
-	OPLUpdateOne(opl, buf, count);
+	OPLUpdateOne(opl, buf, ARRAY_SIZE(buf));
 	/*
 	static int counter = 0;
 
@@ -167,35 +156,23 @@ void Fmdrv_MixTo(int *target, int count)
 	    target[a * 2 + 1] += buf[a] * OPL_VOLUME;
 	}
 #else
-    //stereo. Four buffers (two unused, so allocating 3 is enough)
-	if (buf_size != sizeof(short) * count * 3) {
-		int before = buf_size;
-		buf_size = sizeof(short) * count * 3;
+	short buf[count * 3];
 
-		if (before) {
-			buf = (short *) mem_realloc(buf, buf_size);
-		}
-		else {
-			buf = (short *) mem_alloc(buf_size);
-		}
-	}
-   
-	memset(buf, 0, buf_size);
-    short *bufarray[4]={buf, buf+count,  buf+(count*2), buf+(count*2)};
-	OPLUpdateOne(opl, bufarray, count);
+	memset(buf, 0, sizeof(buf));
+
+	OPLUpdateOne(opl, (short *[]){ buf, buf + count, buf + (count * 2), buf + (count * 2) }, count);
 	/*
 	static int counter = 0;
 
 	for(int a = 0; a < count; ++a)
 		buf[a] = ((counter++) & 0x100) ? -10000 : 10000;
 	*/
-    short *bufleft = buf;
-    short *bufright = buf+count;
+
     // IF we wanted to do the stereo mix in software, we could setup the voices always in mono
     // and do the panning here.
 	for (int a = 0; a < count; ++a) {
-	    target[a * 2 + 0] += bufleft[a] * OPL_VOLUME;
-	    target[a * 2 + 1] += bufright[a] * OPL_VOLUME;
+	    target[a * 2 + 0] += buf[a] * OPL_VOLUME;
+	    target[a * 2 + 1] += buf[count + a] * OPL_VOLUME;
 	}
 #endif
 }
