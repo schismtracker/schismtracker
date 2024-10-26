@@ -687,24 +687,27 @@ static inline void update_vu_meter(song_voice_t *chan)
 		}
 	} else if (vutmp && chan->current_sample_data) {
 		// can't fake the funk
-		int n;
+		int n = 0;
 		int pos = chan->position; // necessary on 64-bit systems (sometimes pos == -1, weird)
 		if (chan->flags & CHN_16BIT) {
 			const signed short *p = (signed short *)(chan->current_sample_data);
-			if (chan->flags & CHN_STEREO)
-				n = p[2 * pos];
-			else
-				n = p[pos];
+			for (int i = 0; i < chan->length * ((chan->flags & CHN_STEREO) ? 2 : 1); i++) {
+				int smp = (p[pos + i] > 0) ? p[pos + i] : -p[pos + i];
+
+				if (smp > n)
+					n = smp;
+			}
 			n >>= 8;
 		} else {
 			const signed char *p = (signed char *)(chan->current_sample_data);
-			if (chan->flags & CHN_STEREO)
-				n = p[2 * pos];
-			else
-				n = p[pos];
+			for (int i = 0; i < chan->length * ((chan->flags & CHN_STEREO) ? 2 : 1); i++) {
+				int smp = (p[pos + i] > 0) ? p[pos + i] : -p[pos + i];
+
+				if (smp > n)
+					n = smp;
+			}
 		}
-		if (n < 0)
-			n = -n;
+
 		vutmp *= n;
 		vutmp >>= 7; // 0..255
 		chan->vu_meter = vutmp;
@@ -1145,9 +1148,9 @@ int csf_read_note(song_t *csf)
 		}
 
 		// Check for unused channel
-		if (cn >= MAX_CHANNELS && !chan->length) {
-			continue;
-		}
+		if (cn >= MAX_CHANNELS)
+			if (!chan->length && !(chan->flags & CHN_ADLIB))
+				continue;
 
 		// Reset channel data
 		chan->increment = 0;

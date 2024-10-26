@@ -298,9 +298,6 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			// next byte is "dsk", what is that?
 			slurp_seek(fp, 3, SEEK_CUR);
 			sample->flags |= CHN_ADLIB;
-			// dumb hackaround that ought to some day be fixed:
-			sample->length = 1;
-			sample->data = csf_allocate_sample(1);
 			break;
 		}
 

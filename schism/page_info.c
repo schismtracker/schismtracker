@@ -166,15 +166,15 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 			int nv, tot;
 			for (nv = tot = 0; nv < MAX_VOICES; nv++) {
 				song_voice_t *v = current_song->voices + nv;
-				if (v->master_channel == (unsigned int) c && v->current_sample_data && v->length)
+				if (v->master_channel == (unsigned int) c && ((v->current_sample_data && v->length) || (v->flags & CHN_ADLIB)))
 					tot++;
 			}
-			if (voice->current_sample_data && voice->length)
+			if ((voice->current_sample_data && voice->length) || (voice->flags & CHN_ADLIB))
 				tot++;
 			draw_text(str_from_num(3, tot, buf), 63, pos, 2, 0);
 		}
 
-		if (voice->current_sample_data && voice->length && voice->ptr_sample) {
+		if (((voice->current_sample_data && voice->length) || (voice->flags & CHN_ADLIB)) && voice->ptr_sample) {
 			// again with the hacks...
 			smp = voice->ptr_sample - current_song->samples;
 			if (smp <= 0 || smp >= MAX_SAMPLES)
@@ -266,7 +266,7 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 			draw_text(str_from_num(2, c, buf), 2, pos, fg, 2);
 		}
 
-		if (!(voice->current_sample_data && voice->length))
+		if ((!(voice->current_sample_data && voice->length) && !(voice->flags & CHN_ADLIB)))
 			continue;
 
 		/* first box: vu meter */
@@ -683,16 +683,17 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
 	draw_fill_chars(5, base + 1, 77, base + height - 2, DEFAULT_FG, 0);
 	draw_box(4, base, 78, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 
-	n = current_song->num_voices;
-	while (n--) {
-		voice = current_song->voices + current_song->voice_mix[n];
+	for (n = 0; n < MAX_VOICES; n++) {
+		voice = current_song->voices + n;
 
 		/* 31 = f#2, 103 = f#8. (i hope ;) */
 		if (!(voice->ptr_sample && voice->note >= 31 && voice->note <= 103))
 			continue;
-		pos = voice->master_channel ? voice->master_channel : (1 + current_song->voice_mix[n]);
+
+		pos = voice->master_channel ? voice->master_channel : (1 + n);
 		if (pos < first_channel)
 			continue;
+
 		pos -= first_channel;
 		if (pos > height - 1)
 			continue;
@@ -703,6 +704,7 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
 			v = (voice->final_volume + 2047) >> 11;
 		else
 			v = (voice->vu_meter + 31) >> 5;
+
 		d = dot_field[voice->note - 31][pos];
 		dn = (v << 4) | fg;
 		if (dn > d)

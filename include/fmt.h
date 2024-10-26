@@ -52,8 +52,10 @@ enum {
 /* return codes for modules savers */
 enum {
 	SAVE_SUCCESS,           /* all's well */
+	SAVE_UNSUPPORTED,       /* unsupported samples, or something */
 	SAVE_FILE_ERROR,        /* couldn't write the file; check errno */
 	SAVE_INTERNAL_ERROR,    /* something unrelated to disk i/o */
+	SAVE_NO_FILENAME,       /* the filename is empty... */
 };
 
 /* --------------------------------------------------------------------------------------------------------- */

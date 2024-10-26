@@ -302,6 +302,9 @@ static int wav_header(disko_t *fp, int bits, int channels, int rate, size_t leng
 
 int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
 {
+	if (smp->flags & CHN_ADLIB)
+		return SAVE_UNSUPPORTED;
+
 	int bps;
 	uint32_t ul;
 	uint32_t flags = SF_LE;

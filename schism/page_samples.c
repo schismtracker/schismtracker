@@ -580,6 +580,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 					a11y_output("Text cleared", 1);
 					return 1;
 				}
+				return 0;
 			} else if ((k->mod & KMOD_CTRL) == 0 && sample_list_cursor_pos < 25) {
 				if (k->state == KEY_RELEASE)
 					return 1;
@@ -855,8 +856,6 @@ static void do_adlibconfig(UNUSED void *data)
 	song_sample_t *sample = song_get_sample(current_sample);
 	if (sample->data)
 		csf_free_sample(sample->data);
-	sample->data = csf_allocate_sample(1);
-	sample->length = 1;
 	if (!(sample->flags & CHN_ADLIB)) {
 		sample->flags |= CHN_ADLIB;
 		status_text_flash("Created adlib sample");
@@ -1336,6 +1335,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
 
 	if (k->state == KEY_RELEASE)
 		return;
+
 	switch (k->sym) {
 	case SDLK_a:
 		if (canmod)
