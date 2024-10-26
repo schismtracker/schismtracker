@@ -297,7 +297,6 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	int ins_mode;
 	int midi_note = note; /* note gets overwritten, possibly NOTE_NONE */
 	song_voice_t *c;
-	song_note_t mc;
 	song_sample_t *s = NULL;
 	song_instrument_t *i = NULL;
 
@@ -432,6 +431,14 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		if (i)
 			c->instrument_volume = (c->instrument_volume * i->global_volume) >> 7;
 		c->global_volume = 64;
+		// use the sample's panning if it's set, or use the default
+		c->channel_panning = (int16_t)(c->panning + 1);
+		if (c->flags & CHN_SURROUND)
+			c->channel_panning |= 0x8000;
+		c->panning = (s->flags & CHN_PANNING) ? s->panning : 128;
+		if (i)
+			c->panning = (i->flags & CHN_PANNING) ? i->panning : 128;
+		c->flags &= ~CHN_SURROUND;
 		// gotta set these by hand, too
 		c->c5speed = s->c5speed;
 		c->new_note = note;
@@ -447,13 +454,16 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 
 	if (!(status.flags & MIDI_LIKE_TRACKER) && i) {
 		/* midi keyjazz shouldn't require a sample */
-		mc.note = note ? note : midi_note;
+		song_note_t mc = {
+			.note = note ? note : midi_note,
 
-		mc.instrument = ins;
-		mc.voleffect = VOLFX_VOLUME;
-		mc.volparam = vol;
-		mc.effect = effect;
-		mc.param = param;
+			.instrument = ins,
+			.voleffect = VOLFX_VOLUME,
+			.volparam = vol,
+			.effect = effect,
+			.param = param,
+		};
+
 		_schism_midi_out_note(chan_internal, &mc);
 	}
 
