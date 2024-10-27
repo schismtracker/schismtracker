@@ -904,7 +904,7 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 		uint16_t fat_date, fat_time;
 		struct tm loadtm;
 
-		localtime_r(&song->editstart.tv_sec, &loadtm);
+		localtime_r((time_t*)&song->editstart.tv_sec, &loadtm);
 		tm_to_fat_date_time(&loadtm, &fat_date, &fat_time);
 
 		fat_date = bswapLE16(fat_date);

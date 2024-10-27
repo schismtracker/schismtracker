@@ -225,6 +225,15 @@ DECODE_UTF16_VARIANT(BE)
 static void cp437_to_ucs4(charset_decode_t *decoder) {
 	DECODER_ASSERT_OVERFLOW(decoder, 1);
 
+	/* We need to handle at least some of these weird symbols in place of control characters. */
+	static const uint16_t cp437_cc_table[32] = {
+		/* 0x00 (NULL only for symmetry) */
+		0x0000, 0x263A, 0x263B, 0x2665, 0x2666, 0x2663, 0x2660, 0x2022,
+		0x25D8, 0x25CB, 0x000A, 0x2642, 0x2640, 0x000D, 0x266B, 0x263C,
+		/* 0x10 */
+		0x25BA, 0x25C4, 0x2195, 0x203C, 0x00B6, 0x00A7, 0x25AC, 0x21A8,
+		0x2191, 0x2193, 0x2192, 0x2190, 0x221F, 0x2194, 0x25B2, 0x25BC,
+	};;
 	static const uint16_t cp437_table[128] = {
 		/* 0x80 */
 		0x00C7, 0x00FC, 0x00E9, 0x00E2, 0x00E4, 0x00E0, 0x00E5, 0x00E7,
@@ -253,7 +262,10 @@ static void cp437_to_ucs4(charset_decode_t *decoder) {
 	};
 
 	uint8_t c = decoder->in[decoder->offset++];
-	decoder->codepoint = (c < 0x80) ? c : cp437_table[c - 0x80];
+	if (c < 0x20) decoder->codepoint = cp437_cc_table[c];
+	else if (c >= 0x20 && c < 0x7F) decoder->codepoint = c;
+	else if (c == 0x7F) decoder->codepoint = 0x2302;
+	else decoder->codepoint = cp437_table[c - 0x80];
 	decoder->state = c ? DECODER_STATE_NEED_MORE : DECODER_STATE_DONE;
 }
 

@@ -492,7 +492,7 @@ int a11y_report_instrument(void)
 		str_from_num99(n, &buf[strlen(buf)]);
 		sprintf(&buf[strlen(buf)], " %s", name);
 	}
-	a11y_output(buf, 0);
+	return a11y_output(buf, 0);
 }
 
 /* Oh! I really wanted to avoid making my own crappy screen reader . Sorry. */

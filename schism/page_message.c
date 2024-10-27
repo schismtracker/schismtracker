@@ -548,7 +548,7 @@ static int message_handle_key_viewmode(struct key_event * k)
 			return 0;
 		current_char++;
 		if (current_char >= line_len) current_char = line_len - 1;
-		a11y_output_char(ptr[current_char], 1);
+		a11y_output_char(line_len ? ptr[current_char] : '\0', 1);
 		return 1;
 		break;
 	case SDLK_t:

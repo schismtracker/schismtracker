@@ -481,7 +481,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	*/
 	if (current_song->flags & SONG_ENDREACHED) {
 		current_song->flags &= ~SONG_ENDREACHED;
-		// current_song->flags |= SONG_PAUSED;
+		current_song->flags |= SONG_PAUSED;
 		current_song->tick_count = -1;
 	}
 
