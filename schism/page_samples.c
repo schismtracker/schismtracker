@@ -836,6 +836,9 @@ static void do_adlibconfig(UNUSED void *data)
 	song_sample_t *sample = song_get_sample(current_sample);
 	if (sample->data)
 		csf_free_sample(sample->data);
+	// dumb hackaround that ought to some day be fixed:
+	sample->data = csf_allocate_sample(1);
+	sample->length = 1;
 	if (!(sample->flags & CHN_ADLIB)) {
 		sample->flags |= CHN_ADLIB;
 		status_text_flash("Created adlib sample");

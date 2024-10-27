@@ -131,6 +131,10 @@ static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 		slurp_seek(fp, 0x10, SEEK_SET);
 		if (slurp_read(fp, smp->adlib_bytes, sizeof(smp->adlib_bytes)) != sizeof(smp->adlib_bytes))
 			return 0;
+
+		// dumb hackaround that ought to some day be fixed:
+		smp->length = 1;
+		smp->data = csf_allocate_sample(1);
 	}
 
 	return 1;

@@ -235,6 +235,9 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 		slurp_seek(fp, its.samplepointer, SEEK_SET);
 		r = slurp_read(fp, smp->adlib_bytes, 12);
 		smp->flags |= CHN_ADLIB;
+		// dumb hackaround that ought to some day be fixed:
+		smp->length = 1;
+		smp->data = csf_allocate_sample(1);
 	} else if (its.flags & 1) {
 		slurp_seek(fp, its.samplepointer, SEEK_SET);
 
