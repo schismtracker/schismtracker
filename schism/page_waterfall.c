@@ -462,6 +462,26 @@ static int waterfall_handle_key(struct key_event *k)
 			song_set_current_order(song_get_current_order() - 1);
 		}
 		return 1;
+	} else if (KEY_PRESSED(waterfall, goto_next_instrument)) {
+		if (song_is_instrument_mode()) {
+			instrument_set(instrument_get_current() + 1);
+		} else {
+			sample_set(sample_get_current() + 1);
+		}
+		return 1;
+	} else if (KEY_PRESSED(waterfall, goto_previous_instrument)) {
+		if (song_is_instrument_mode()) {
+			instrument_set(instrument_get_current() - 1);
+		} else {
+			sample_set(sample_get_current() - 1);
+		}
+		return 1;
+	} else if (KEY_PRESSED(waterfall, goto_next_channel)) {
+		song_change_current_play_channel(1, 0);
+		return 1;
+	} else if (KEY_PRESSED(waterfall, goto_previous_channel)) {
+		song_change_current_play_channel(-1, 0);
+		return 1;
 	} else {
 		return 0;
 	}
@@ -496,8 +516,12 @@ int waterfall_load_keybinds(cfg_file_t* cfg)
 	INIT_BIND(waterfall, view_toggle_mono, "Toggle mono display", "Alt+M");
 	INIT_BIND(waterfall, decrease_sensitivity, "Decrease sensitivity", "LEFT");
 	INIT_BIND(waterfall, increase_sensitivity, "Increase sensitivity", "RIGHT");
-	INIT_BIND(waterfall, goto_previous_order, "Play previous order (while playing)", "KP_MINUS");
-	INIT_BIND(waterfall, goto_next_order, "Play next order (while playing)", "KP_PLUS");
+	INIT_BIND(waterfall, goto_previous_order, "Play previous order (while playing)", "MINUS,KP_MINUS");
+	INIT_BIND(waterfall, goto_next_order, "Play next order (while playing)", "PLUS,KP_PLUS");
+	INIT_BIND(waterfall, goto_previous_instrument, "Play previous instrument/sample (while playing)", "COLON,SEMICOLON");
+	INIT_BIND(waterfall, goto_next_instrument, "Play next instrument/sample (while playing)", "QUOTE,QUOTEDBL");
+	INIT_BIND(waterfall, goto_previous_channel, "Play previous channel (while playing)", "COMMA,LESS");
+	INIT_BIND(waterfall, goto_next_channel, "Play next channel (while playing)", "PERIOD,GREATER");
 	INIT_BIND(waterfall, goto_pattern_edit, "Go to current position in pattern editor", "Alt+G");
 	return 1;
 }
