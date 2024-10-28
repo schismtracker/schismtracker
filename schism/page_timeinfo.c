@@ -116,10 +116,11 @@ static void timeinfo_redraw(void)
 		for (size_t i = 0; i < current_song->histlen; i++) {
 			secs += current_song->history[i].runtime.tv_sec;
 			usecs += current_song->history[i].runtime.tv_usec;
-		}
 
-		// add any missing seconds
-		secs += (usecs / 1000000);
+			// add any missing seconds
+			secs += (usecs / 1000000);
+			usecs %= 1000000;
+		}
 
 		draw_time(secs, 18, 13);
 
@@ -147,11 +148,16 @@ static void timeinfo_redraw(void)
 
 	if (display_session) {
 		uint64_t session_secs = 0;
+		uint64_t session_usecs = 0;
 
 		for (int i = 0; i < current_song->histlen; i++) {
 			char buf[27];
 
 			session_secs += current_song->history[i].runtime.tv_sec;
+			session_usecs += current_song->history[i].runtime.tv_usec;
+
+			session_secs += (session_usecs / 1000000);
+			session_usecs %= 1000000;
 
 			if (i >= top_line && i < top_line + 29) {
 				if (current_song->history[i].time_valid) {
