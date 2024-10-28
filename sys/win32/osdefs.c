@@ -99,22 +99,6 @@ int win32_sdlevent(SDL_Event* event)
 	return 1;
 }
 
-static wchar_t* str_to_wchar(char* string, int free_inputs)
-{
-	wchar_t* out = NULL;
-	charset_error_t result = charset_iconv(string, (uint8_t**)&out, CHARSET_UTF8, CHARSET_WCHAR_T);
-
-	if (result != CHARSET_ERROR_SUCCESS) {
-		printf("Failed converting \"%s\" to wchar. Error: %s.\n", string, charset_iconv_error_lookup(result));
-		return L"";
-	}
-
-	if (free_inputs)
-		free(string);
-
-	return out;
-}
-
 void win32_toggle_menu(SDL_Window* window, int yes)
 {
 	const int flags = SDL_GetWindowFlags(window);
@@ -166,7 +150,7 @@ void win32_create_menu(void) {
 		}
 
 		wchar_t *str = NULL;
-		charset_iconv((const uint8_t *)i->info.regular.name, (uint8_t **)str, CHARSET_UTF8, CHARSET_WCHAR_T);
+		charset_iconv((const uint8_t *)m->info.regular.name, (uint8_t **)str, CHARSET_UTF8, CHARSET_WCHAR_T);
 		AppendMenuW(menu, MF_POPUP, (uintptr_t)submenu, str);
 		free(str);
 	}
