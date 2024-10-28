@@ -749,7 +749,7 @@ struct keybinds_menu_item {
 	union {
 		struct {
 			const char *name;
-			const char *script;  // what gets passed to the event
+			uint16_t id;
 			keybind_bind_t *bind;
 		} regular;
 	} info;
@@ -773,7 +773,7 @@ struct keybinds_menu {
 
 extern struct keybinds_menu keybinds_menus[];
 
-struct keybinds_menu_item *keybinds_menu_find_item_from_id(uint32_t id);
+struct keybinds_menu_item *keybinds_menu_find_item_from_id(uint16_t id);
 void keybinds_menu_item_pressed(struct keybinds_menu_item *i, SDL_Event *event);
 
 /* ------------------------------------------------------------------------------ */
