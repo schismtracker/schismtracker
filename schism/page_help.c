@@ -39,8 +39,10 @@
 enum {
 	LTYPE_NORMAL = '|',
 	LTYPE_BIOS = '+',
+	LTYPE_UTF8 = '"',
 	LTYPE_SCHISM = ':',
 	LTYPE_SCHISM_BIOS = ';',
+	LTYPE_SCHISM_UTF8 = '\'',
 	LTYPE_CLASSIC = '!',
 	LTYPE_SEPARATOR = '%',
 	LTYPE_DISABLED = '#',
@@ -53,6 +55,7 @@ enum {
 
 /* Types that should be rendered with the standard font */
 #define LINE_BIOS(p) (0[p] == LTYPE_BIOS || 0[p] == LTYPE_SCHISM_BIOS)
+#define LINE_UTF8(p) ((p)[0] == LTYPE_UTF8 || (p)[0] == LTYPE_SCHISM_UTF8)
 
 static struct widget widgets_help[2];
 
@@ -118,7 +121,9 @@ static void help_redraw(void)
 		switch (**ptr) {
 		default:
 			lp = strcspn(*ptr+1, "\015\012");
-			if (LINE_BIOS(*ptr)) {
+			if (LINE_UTF8(*ptr)) {
+				draw_text_utf8_len(*ptr + 1, lp, 2, pos, 6, 0);
+			} else if (LINE_BIOS(*ptr)) {
 				draw_text_bios_len(*ptr + 1, lp, 2, pos, 6, 0);
 			} else {
 				draw_text_len(*ptr + 1, lp, 2, pos, **ptr == LTYPE_DISABLED ? 7 : 6, 0);
