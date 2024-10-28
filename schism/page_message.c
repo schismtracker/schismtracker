@@ -487,31 +487,11 @@ static int message_handle_key_viewmode(struct key_event * k)
 		top_line += 35;
 	} else if (KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		top_line = 0;
-<<<<<<< HEAD
 	} else if (KEY_PRESSED_OR_REPEATED(global, nav_end)) {
-		top_line = get_num_lines(current_song->message) - 34;
+		top_line = str_get_num_lines(current_song->message) - 34;
 	} else if (KEY_PRESSED(message_edit, toggle_extended_font)) {
 		message_extfont = !message_extfont;
 	} else if (KEY_PRESSED(message_edit, edit_message)) {
-=======
-		break;
-	case SDLK_END:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		top_line = str_get_num_lines(current_song->message) - 34;
-		break;
-	case SDLK_t:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (k->mod & KMOD_CTRL) {
-			message_extfont = !message_extfont;
-			break;
-		}
-		return 1;
-	case SDLK_RETURN:
-		if (k->state == KEY_PRESS)
-			return 0;
->>>>>>> master
 		message_set_editmode();
 	} else {
 		return 0;
@@ -615,7 +595,7 @@ static int message_handle_key_editmode(struct key_event * k)
 	} else if (KEY_PRESSED(global, nav_end)) {
 		new_cursor_char = line_len;
 	} else if (KEY_PRESSED(message_edit, goto_last_line)) {
-		num_lines = get_num_lines(current_song->message);
+		num_lines = str_get_num_lines(current_song->message);
 		new_cursor_line = num_lines;
 	} else if (KEY_PRESSED(message_edit, finished_editing)) {
 		message_set_viewmode();

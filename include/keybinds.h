@@ -31,11 +31,25 @@
 
 #define KEYBINDS_MAX_SHORTCUTS 3
 
+enum keybind_modifier {
+	/* these are treated as different modifiers */
+	KEYBIND_MOD_NONE = (0),
+	KEYBIND_MOD_LALT = (1 << 0),
+	KEYBIND_MOD_RALT = (1 << 1),
+	KEYBIND_MOD_ALT = (1 << 2),
+	KEYBIND_MOD_LSHIFT = (1 << 3),
+	KEYBIND_MOD_RSHIFT = (1 << 4),
+	KEYBIND_MOD_SHIFT = (1 << 5),
+	KEYBIND_MOD_RCTRL = (1 << 6),
+	KEYBIND_MOD_LCTRL = (1 << 7),
+	KEYBIND_MOD_CTRL = (1 << 8),
+};
+
 typedef struct keybind_shortcut
 {
 	SDL_Scancode scancode;
 	SDL_Keycode keycode;
-	SDL_Keymod modifier;
+	enum keybind_modifier modifier;
 	int pressed;
 	int released;
 	int repeated;
@@ -126,6 +140,13 @@ typedef struct keybind_list
 
 		keybind_bind_t goto_pattern_edit;
 	} waterfall;
+
+	/* *** MIDI *** */
+
+	keybind_section_info_t time_information_info;
+	struct keybinds_time_information {
+		keybind_bind_t toggle_session;
+	} time_information;
 
 	/* *** LOAD MODULE *** */
 
@@ -575,6 +596,7 @@ typedef struct keybind_list
 		keybind_bind_t palette_config;
 		keybind_bind_t font_editor;
 		keybind_bind_t waterfall;
+		keybind_bind_t time_information;
 
 		keybind_bind_t octave_decrease;
 		keybind_bind_t octave_increase;
@@ -688,7 +710,7 @@ typedef struct keybind_list
 
 /* keybinds_codes.c */
 int keybinds_parse_keycode(const char *name, SDL_Keycode *ret);
-int keybinds_parse_modkey(const char *name, SDL_Keymod *ret);
+int keybinds_parse_modkey(const char *name, enum keybind_modifier *ret);
 int keybinds_parse_scancode(const char *name, SDL_Scancode *ret);
 
 /* keybinds_init.c */

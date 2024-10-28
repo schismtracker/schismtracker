@@ -36,7 +36,7 @@ keymods = Keybinds([
 	Keybind("ALT"),
 	Keybind("LALT"),
 	Keybind("RALT"),
-], "SDL_Keymod", "", "KMOD_", "KMOD_NONE")
+], "enum keybind_modifier", "", "KEYBIND_MOD_", "KEYBIND_MOD_NONE")
 
 scancodes = Keybinds([
 	Keybind("A"),

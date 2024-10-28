@@ -160,4 +160,6 @@ extern short dB2_power_s(int noisefloor, int db, double correction_dBs);
 /* integer sqrt (very fast; 32 bits limited) */
 unsigned int i_sqrt(unsigned int r);
 
+uint32_t crc32b(const unsigned char *message);
+
 #endif /* SCHISM_UTIL_H_ */

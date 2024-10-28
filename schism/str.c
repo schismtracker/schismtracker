@@ -26,6 +26,9 @@
 #include "mem.h"
 #include "str.h"
 #include "util.h"
+#include "charset.h"
+
+#include <stddef.h>
 
 /* --------------------------------------------------------------------- */
 /* FORMATTING FUNCTIONS */
@@ -389,22 +392,6 @@ int str_get_num_lines(const char *text)
 }
 
 /* --------------------------------------------------------------------- */
-
-char *str_concat(const char *s, ...)
-{
-	va_list ap;
-	char *out = NULL;
-	int len = 0;
-
-	va_start(ap,s);
-	while (s) {
-		out = mem_realloc(out, (len += strlen(s)+1));
-		strcat(out, s);
-		s = va_arg(ap, const char *);
-	}
-	va_end(ap);
-	return out;
-}
 
 size_t str_count_occurrences(char character, const char *str)
 {

@@ -36,32 +36,49 @@ keybind_list_t global_keybinds_list = {0};
 /* --------------------------------------------------------------------- */
 /* Updating bind state (handling input events) */
 
-static int check_mods(SDL_Keymod needed, SDL_Keymod current)
+static int check_mods(enum keybind_modifier needed, SDL_Keymod current)
 {
-    current &= (KMOD_CTRL | KMOD_SHIFT | KMOD_ALT); // Remove unsupported mods.
-
-    /*
-        On windows there is a strange issue with SDL. It means that RALT will always be sent
-        together with LCTRL and there's no way to tell if LCTRL is actually held or not.
-        That's why LCTRL will be removed while pressing RALT.
-        Issue: https://github.com/libsdl-org/SDL/issues/5685
-    */
 #ifdef SCHISM_WIN32
-    if (current & KMOD_RALT) { current &= ~KMOD_LCTRL; }
+	/* On windows there is a strange issue with SDL. It means that RALT will always be sent
+	 * together with LCTRL and there's no way to tell if LCTRL is actually held or not.
+	 * That's why LCTRL will be removed while pressing RALT.
+	 *
+	 * Issue: https://github.com/libsdl-org/SDL/issues/5685
+	*/
+	if (current & KMOD_RALT) { current &= ~KMOD_LCTRL; }
 #endif
 
-    // If either L or R key needed, fixup the flags so both are active.
+	// If either L or R key needed, fixup the flags so both are active.
 
-    if ((needed & KMOD_LCTRL) && (needed & KMOD_RCTRL) && (current & KMOD_CTRL))
-        current |= KMOD_CTRL;
+	if ((needed & KEYBIND_MOD_LCTRL) && !(current & KMOD_LCTRL))
+		return 0;
 
-    if ((needed & KMOD_LSHIFT) && (needed & KMOD_RSHIFT) && (current & KMOD_SHIFT))
-        current |= KMOD_SHIFT;
+	if ((needed & KEYBIND_MOD_RCTRL) && !(current & KMOD_RCTRL))
+		return 0;
 
-    if ((needed & KMOD_LALT) && (needed & KMOD_RALT) && (current & KMOD_ALT))
-        current |= KMOD_ALT;
+	if ((needed & KEYBIND_MOD_CTRL) && !(current & KMOD_CTRL))
+		return 0;
 
-    return needed == current;
+	if ((needed & KEYBIND_MOD_LSHIFT) && !(current & KMOD_LSHIFT))
+		return 0;
+
+	if ((needed & KEYBIND_MOD_RSHIFT) && !(current & KMOD_RSHIFT))
+		return 0;
+
+	if ((needed & KEYBIND_MOD_SHIFT) && !(current & KMOD_SHIFT))
+		return 0;
+
+	if ((needed & KEYBIND_MOD_LALT) && !(current & KMOD_LALT))
+		return 0;
+
+	if ((needed & KEYBIND_MOD_RALT) && !(current & KMOD_RALT))
+		return 0;
+
+	if ((needed & KEYBIND_MOD_ALT) && !(current & KMOD_ALT))
+		return 0;
+
+	// looks like it fits
+	return 1;
 }
 
 static void update_bind(keybind_bind_t* bind, SDL_Scancode scode, SDL_Keycode kcode, SDL_Keymod mods, const char* text, int is_down)

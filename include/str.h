@@ -46,7 +46,6 @@ char *str_escape(const char *source, int space_hack);
 char *str_unescape(const char *source);
 char *str_pretty_name(const char *filename);
 int str_get_num_lines(const char *text);
-char *str_concat(const char *s, ...);
 
 /* Count how many times character is in str */
 size_t str_count_occurrences(char character, const char* str);

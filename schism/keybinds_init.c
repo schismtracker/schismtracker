@@ -33,6 +33,7 @@ static int init_load_sample_keybinds(cfg_file_t *cfg);
 static int init_load_stereo_sample_dialog_keybinds(cfg_file_t *cfg);
 static int init_message_edit_keybinds(cfg_file_t *cfg);
 static int init_waterfall_keybinds(cfg_file_t *cfg);
+static int init_time_information_keybinds(cfg_file_t *cfg);
 static int init_load_module_keybinds(cfg_file_t *cfg);
 static int init_palette_edit_keybinds(cfg_file_t *cfg);
 static int init_order_list_keybinds(cfg_file_t *cfg);
@@ -94,9 +95,9 @@ static int keybinds_parse_shortcut(keybind_bind_t* bind, const char* shortcut)
 		pch = strchr(last_pch, '+');
 
 		char *trimmed = (pch) ? strn_dup(last_pch, pch - last_pch) : str_dup(last_pch);
-		trim_string(trimmed);
+		str_trim(trimmed);
 
-		SDL_Keymod mod;
+		enum keybind_modifier mod;
 		if (keybinds_parse_modkey(trimmed, &mod)) {
 			mods |= mod;
 			free(trimmed);
@@ -151,27 +152,34 @@ static void set_shortcut_text(keybind_bind_t* bind)
 	for(int i = 0; i < KEYBINDS_MAX_SHORTCUTS && i < bind->shortcuts_count; i++) {
 		keybind_shortcut_t* sc = &bind->shortcuts[i];
 
-		const char* ctrl_text = (sc->modifier & KMOD_CTRL)
-			? "Ctrl"
-			: (sc->modifier & KMOD_LCTRL)
-				? "LCtrl"
-				: (sc->modifier & KMOD_RCTRL)
-					? "RCtrl"
-					: "";
-		const char* alt_text = (sc->modifier & KMOD_ALT)
-			? "Alt"
-			: (sc->modifier & KMOD_LALT)
-				? "LAlt"
-				: (sc->modifier & KMOD_RALT)
-					? "RAlt"
-					: "";
-		const char* shift_text = (sc->modifier & KMOD_SHIFT)
-			? "Shift"
-			: (sc->modifier & KMOD_LSHIFT)
-				? "LShift"
-				: (sc->modifier & KMOD_RSHIFT)
-					? "RShift"
-					: "";
+		static const struct {
+			enum keybind_modifier mod;
+			const char *text;
+		} translation[] = {
+			{KEYBIND_MOD_CTRL, "Ctrl"},
+			{KEYBIND_MOD_LCTRL, "LCtrl"},
+			{KEYBIND_MOD_RCTRL, "RCtrl"},
+			{KEYBIND_MOD_SHIFT, "Shift"},
+			{KEYBIND_MOD_LSHIFT, "LShift"},
+			{KEYBIND_MOD_RSHIFT, "RShift"},
+			{KEYBIND_MOD_ALT, "Alt"},
+			{KEYBIND_MOD_LALT, "LAlt"},
+			{KEYBIND_MOD_RALT, "RAlt"},
+		};
+
+		for (int j = 0; j < ARRAY_SIZE(translation); j++) {
+			// mmm
+			if (!(sc->modifier & translation[j].mod))
+				continue;
+
+			if (out[i]) {
+				char *old = out[i];
+				out[i] = STR_IMPLODE(2, "-", old, translation[j].text);
+				free(old);
+			} else {
+				out[i] = str_dup(translation[j].text);
+			}
+		}
 
 		SDL_Keycode kc = (sc->keycode != SDLK_UNKNOWN)
 			? sc->keycode
@@ -184,7 +192,7 @@ static void set_shortcut_text(keybind_bind_t* bind)
 
 		char *key_text;
 
-		switch(sc->keycode) {
+		switch (kc) {
 		case SDLK_RETURN:
 #ifdef SCHISM_MACOSX
 			key_text = str_dup("Return");
@@ -210,7 +218,14 @@ static void set_shortcut_text(keybind_bind_t* bind)
 		if (!key_text_length)
 			continue;
 
-		out[i] = STR_IMPLODE(4, "-", ctrl_text, alt_text, shift_text, key_text);
+		// mmm
+		if (out[i]) {
+			char *old = out[i];
+			out[i] = STR_IMPLODE(2, "-", old, key_text);
+			free(old);
+		} else {
+			out[i] = str_dup(key_text);
+		}
 
 		if(i == 0) {
 			bind->first_shortcut_text = str_dup(out[i]);
@@ -317,6 +332,7 @@ int keybinds_init(void)
 	KEYBINDS_INIT_ASSERT(init_load_stereo_sample_dialog_keybinds(&cfg));
 	KEYBINDS_INIT_ASSERT(init_message_edit_keybinds(&cfg));
 	KEYBINDS_INIT_ASSERT(init_waterfall_keybinds(&cfg));
+	KEYBINDS_INIT_ASSERT(init_time_information_keybinds(&cfg));
 	KEYBINDS_INIT_ASSERT(init_load_module_keybinds(&cfg));
 	KEYBINDS_INIT_ASSERT(init_palette_edit_keybinds(&cfg));
 	KEYBINDS_INIT_ASSERT(init_order_list_keybinds(&cfg));
@@ -412,6 +428,13 @@ static int init_waterfall_keybinds(cfg_file_t* cfg)
 	INIT_BIND(waterfall, goto_previous_order, "Play previous order (while playing)", "KP_MINUS");
 	INIT_BIND(waterfall, goto_next_order, "Play next order (while playing)", "KP_PLUS");
 	INIT_BIND(waterfall, goto_pattern_edit, "Go to current position in pattern editor", "Alt+G");
+	return 1;
+}
+
+static int init_time_information_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(time_information, "Time Information Keys.", PAGE_TIME_INFORMATION);
+	INIT_BIND(time_information, toggle_session, "Toggle session display", "RShift+RAlt+BACKQUOTE,S");
 	return 1;
 }
 
@@ -902,7 +925,8 @@ static int init_global_keybinds(cfg_file_t* cfg)
 	INIT_BIND(global, song_variables, "Song variables & directory configuration", "F12");
 	INIT_BIND(global, palette_config, "Palette configuration", "Ctrl+F12");
 	INIT_BIND(global, font_editor, "Font editor", "Shift+F12");
-	INIT_BIND(global, waterfall, "Waterfall\n ", "Alt+F12");
+	INIT_BIND(global, waterfall, "Waterfall", "Alt+F12");
+	INIT_BIND(global, time_information, "Time Information\n ", "LShift+LAlt+RAlt+RCtrl+Pause,Ctrl+Shift+T");
 
 	INIT_BIND(global, octave_decrease, "Decrease octave", "KP_DIVIDE,Alt+HOME");
 	INIT_BIND(global, octave_increase, "Increase octave", "KP_MULTIPLY,Alt+END");

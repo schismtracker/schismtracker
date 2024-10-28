@@ -334,7 +334,7 @@ int keybinds_parse_scancode(const char *name, SDL_Scancode *ret)
 	return 0;
 }
 
-int keybinds_parse_modkey(const char *name, SDL_Keymod *ret)
+int keybinds_parse_modkey(const char *name, enum keybind_modifier *ret)
 {
 	char *casefolded_name = charset_case_fold(name, CHARSET_UTF8);
 	uint32_t crc = crc32b(casefolded_name);
@@ -342,37 +342,37 @@ int keybinds_parse_modkey(const char *name, SDL_Keymod *ret)
 
 	switch (crc) {
 	case 0x0222717a: /* ctrl */
-		*ret = KMOD_CTRL;
+		*ret = KEYBIND_MOD_CTRL;
 		return 1;
 	case 0xb986c337: /* lctrl */
-		*ret = KMOD_LCTRL;
+		*ret = KEYBIND_MOD_LCTRL;
 		return 1;
 	case 0x6656ead4: /* rctrl */
-		*ret = KMOD_RCTRL;
+		*ret = KEYBIND_MOD_RCTRL;
 		return 1;
 	case 0xa50b3b45: /* shift */
-		*ret = KMOD_SHIFT;
+		*ret = KEYBIND_MOD_SHIFT;
 		return 1;
 	case 0xaddda2da: /* lshift */
-		*ret = KMOD_LSHIFT;
+		*ret = KEYBIND_MOD_LSHIFT;
 		return 1;
 	case 0x9401c131: /* rshift */
-		*ret = KMOD_RSHIFT;
+		*ret = KEYBIND_MOD_RSHIFT;
 		return 1;
 	case 0x2874e98b: /* alt */
-		*ret = KMOD_ALT;
+		*ret = KEYBIND_MOD_ALT;
 		return 1;
 	case 0x8781a73e: /* lalt */
-		*ret = KMOD_LALT;
+		*ret = KEYBIND_MOD_LALT;
 		return 1;
 	case 0x37478792: /* ralt */
-		*ret = KMOD_RALT;
+		*ret = KEYBIND_MOD_RALT;
 		return 1;
 	default:
 		break;
 	}
 
-	*ret = KMOD_NONE;
+	*ret = KEYBIND_MOD_NONE;
 	return 0;
 }
 

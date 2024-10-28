@@ -273,39 +273,6 @@ static void pattern_editor_reposition(void);
 
 /* --------------------------------------------------------------------- */
 
-void update_current_row(void)
-{
-	char buf[4];
-
-	draw_text(numtostr(3, current_row, buf), 12, 7, 5, 0);
-	draw_text(numtostr(3, song_get_rows_in_pattern(current_pattern), buf), 16, 7, 5, 0);
-}
-
-int get_current_channel(void)
-{
-	return current_channel;
-}
-
-void set_current_channel(int channel)
-{
-	current_channel = CLAMP(channel, 1, 64);
-	pattern_editor_reposition();
-	status.flags |= NEED_UPDATE;
-}
-
-int get_current_row(void)
-{
-	return current_row;
-}
-
-void set_current_row(int row)
-{
-	int total_rows = song_get_rows_in_pattern(current_pattern);
-	current_row = CLAMP(row, 0, total_rows);
-	pattern_editor_reposition();
-	status.flags |= NEED_UPDATE;
-}
-
 void set_current_position(int position)
 {
 	current_position = position;
@@ -3884,6 +3851,8 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 
 		return 0;
 	}
+
+	return 1;
 }
 
 static int mute_toggle_hack[64]; /* mrsbrisby: please explain this one, i don't get why it's necessary... */
