@@ -778,3 +778,17 @@ void message_reset_selection(void)
 {
 	widgets_message[0].clip_start = widgets_message[0].clip_end = 0;
 }
+
+int message_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(message_edit, "Editing Keys.", PAGE_MESSAGE);
+	INIT_BIND(message_edit, edit_message, "Edit message", "ENTER");
+	INIT_BIND(message_edit, finished_editing, "Finished editing", "ESCAPE");
+	INIT_BIND(message_edit, toggle_extended_font, "Toggle extended ASCII font", "Ctrl+T");
+	INIT_BIND(message_edit, delete_line, "Delete line", "Ctrl+Y");
+	INIT_BIND(message_edit, clear_message, "Clear message\n ", "Alt+C");
+
+	INIT_BIND(message_edit, goto_first_line, "Go to first line", "Ctrl+HOME");
+	INIT_BIND(message_edit, goto_last_line, "Go to last line", "Ctrl+END");
+	return 1;
+}

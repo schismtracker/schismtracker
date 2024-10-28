@@ -4372,3 +4372,182 @@ void pattern_editor_load_page(struct page *page)
 
 	widget_create_other(widgets_pattern + 0, 0, pattern_editor_handle_key_cb, NULL, pattern_editor_redraw);
 }
+
+int pattern_editor_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(pattern_edit, "Pattern Edit Keys.", PAGE_PATTERN_EDITOR);
+	INIT_BIND(pattern_edit, next_pattern, "Next pattern (*)", "KP_PLUS");
+	INIT_BIND(pattern_edit, previous_pattern, "Previous pattern (*)", "KP_MINUS");
+	INIT_BIND(pattern_edit, next_4_pattern, "Next 4 pattern (*)", "Shift+KP_PLUS");
+	INIT_BIND(pattern_edit, previous_4_pattern, "Previous 4 pattern (*)", "Shift+KP_MINUS");
+	INIT_BIND(pattern_edit, next_order_pattern, "Next order's pattern (*)", "Ctrl+KP_PLUS");
+	INIT_BIND(pattern_edit, previous_order_pattern,
+		"Previous order's pattern (*)\n"
+		"    0-9               Change octave/volume/instrument\n"
+		"    0-9, A-F          Change effect value\n"
+		"    A-Z               Change effect",
+		"Ctrl+KP_MINUS");
+	INIT_BIND(pattern_edit, clear_field, "Clear field(s)", "PERIOD");
+	INIT_BIND(pattern_edit, note_cut, "Note cut (^^^)", "1");
+	INIT_BIND(pattern_edit, note_off, "Note off (===) / panning toggle", "BACKQUOTE");
+	INIT_BIND(pattern_edit, toggle_volume_panning, "Toggle panning / volume (on volume field)", "BACKQUOTE");
+	INIT_BIND(pattern_edit, note_fade, "Note fade (~~~)", "Shift+BACKQUOTE");
+	INIT_BIND(pattern_edit, use_last_value,
+		"Use last note/instrument/volume/effect/effect value\n"
+		"    Caps Lock+Key     Preview note\n ",
+		"SPACE");
+
+	INIT_BIND(pattern_edit, get_default_value, "Get default note/instrument/volume/effect", "ENTER");
+	INIT_BIND(pattern_edit, decrease_instrument, "Decrease instrument", "Shift+COMMA,Ctrl+UP");
+	INIT_BIND(pattern_edit, increase_instrument, "Increase instrument", "Shift+PERIOD,Ctrl+DOWN");
+	INIT_BIND(pattern_edit, toggle_edit_mask, "Toggle edit mask for current field\n ", "COMMA");
+
+	INIT_BIND(pattern_edit, insert_row, "Insert a row to current channel", "INSERT");
+	INIT_BIND(pattern_edit, delete_row, "Delete a row from current channel\n ", "DELETE");
+
+	INIT_BIND(pattern_edit, insert_pattern_row, "Insert an entire row to pattern (*)", "Alt+INSERT");
+	INIT_BIND(pattern_edit, delete_pattern_row, "Delete an entire row from pattern (*)\n ", "Alt+DELETE");
+
+	INIT_BIND(pattern_edit, up_by_skip, "Move up by the skip value (set with Alt 1-9)", "UP");
+	INIT_BIND(pattern_edit, down_by_skip, "Move down by the skip value", "DOWN");
+	INIT_BIND(pattern_edit, set_skip_1, "Set skip value to 1", "Alt+1");
+	INIT_BIND(pattern_edit, set_skip_2, "Set skip value to 2", "Alt+2");
+	INIT_BIND(pattern_edit, set_skip_3, "Set skip value to 3", "Alt+3");
+	INIT_BIND(pattern_edit, set_skip_4, "Set skip value to 4", "Alt+4");
+	INIT_BIND(pattern_edit, set_skip_5, "Set skip value to 5", "Alt+5");
+	INIT_BIND(pattern_edit, set_skip_6, "Set skip value to 6", "Alt+6");
+	INIT_BIND(pattern_edit, set_skip_7, "Set skip value to 7", "Alt+7");
+	INIT_BIND(pattern_edit, set_skip_8, "Set skip value to 8", "Alt+8");
+	INIT_BIND(pattern_edit, set_skip_9, "Set skip value to 16\n ", "Alt+9");
+
+	INIT_BIND(pattern_edit, up_one_row, "Move up by 1 row", "Ctrl+HOME");
+	INIT_BIND(pattern_edit, down_one_row, "Move down by 1 row", "Ctrl+END");
+	INIT_BIND(pattern_edit, slide_pattern_up, "Slide pattern up by 1 row", "Alt+UP");
+	INIT_BIND(pattern_edit, slide_pattern_down, "Slide pattern down by 1 row", "Alt+DOWN");
+	INIT_BIND(pattern_edit, move_cursor_left, "Move cursor left", "LEFT");
+	INIT_BIND(pattern_edit, move_cursor_right, "Move cursor right", "RIGHT");
+	INIT_BIND(pattern_edit, move_forwards_channel, "Move forwards one channel", "Alt+RIGHT,Ctrl+RIGHT");
+	INIT_BIND(pattern_edit, move_backwards_channel, "Move backwards one channel", "Alt+LEFT,Ctrl+LEFT");
+	INIT_BIND(pattern_edit, move_forwards_note_column, "Move forwards to note column", "TAB");
+	INIT_BIND(pattern_edit, move_backwards_note_column, "Move backwards to note column", "Shift+TAB");
+	INIT_BIND(pattern_edit, move_up_n_lines, "Move up n lines (n=row highlight major)", "PAGEUP");
+	INIT_BIND(pattern_edit, move_down_n_lines, "Move down n lines", "PAGEDOWN");
+	INIT_BIND(pattern_edit, move_pattern_top, "Move to top of pattern", "Ctrl+PAGEUP");
+	INIT_BIND(pattern_edit, move_pattern_bottom, "Move to bottom of pattern", "Ctrl+PAGEDOWN");
+	INIT_BIND(pattern_edit, move_start, "Move to start of column/start of line/start of pattern", "HOME");
+	INIT_BIND(pattern_edit, move_end, "Move to end of column/end of line/end of pattern", "END");
+	INIT_BIND(pattern_edit, move_previous_position, "Move to previous position (accounts for multichannel)", "BACKSPACE");
+	INIT_BIND(pattern_edit, move_previous, "Move to previous note/instrument/volume/effect", "Shift+A");
+	INIT_BIND(pattern_edit, move_next, "Move to next note/instrument/volume/effect\n ", "Shift+F");
+
+	INIT_BIND(pattern_edit, toggle_multichannel,
+		"Toggle multichannel mode for current channel" TEXT_2X
+		"Multichannel selection menu\n ", "Alt+N");
+
+	INIT_BIND(pattern_edit, store_pattern_data, "Store pattern data", "Alt+ENTER");
+	INIT_BIND(pattern_edit, revert_pattern_data, "Revert pattern data (*)", "Alt+BACKSPACE");
+	INIT_BIND(pattern_edit, undo, "Undo - any function with (*) can be undone\n ", "Ctrl+BACKSPACE");
+
+	INIT_BIND(pattern_edit, toggle_centralise_cursor, "Toggle centralise cursor", "Ctrl+C");
+	INIT_BIND(pattern_edit, toggle_highlight_row, "Toggle current row highlight", "Ctrl+H");
+	INIT_BIND(pattern_edit, toggle_volume_display, "Toggle default volume display\n ", "Ctrl+V");
+
+	INIT_BIND(pattern_edit, set_pattern_length, "Set pattern length", "Ctrl+F2");
+	INIT_BIND(pattern_edit, toggle_midi_trigger, "Toggle MIDI trigger", "Ctrl+X,Ctrl+Z");
+
+	INIT_SECTION(track_view, " Track View Functions.", PAGE_PATTERN_EDITOR);
+	INIT_BIND(track_view, cycle_view, "Cycle current track's view", "Alt+T");
+	INIT_BIND(track_view, clear_track_views, "Clear all track views", "Alt+R");
+	INIT_BIND(track_view, toggle_track_view_divisions, "Toggle track view divisions", "Alt+H");
+
+	INIT_BIND(track_view, track_scheme_default, "View current track in scheme default", "Ctrl+0,Ctrl+BACKQUOTE");
+	INIT_BIND(track_view, track_scheme_1, "View current track in scheme 1", "Ctrl+1");
+	INIT_BIND(track_view, track_scheme_2, "View current track in scheme 2", "Ctrl+2");
+	INIT_BIND(track_view, track_scheme_3, "View current track in scheme 3", "Ctrl+3");
+	INIT_BIND(track_view, track_scheme_4, "View current track in scheme 4", "Ctrl+4");
+	INIT_BIND(track_view, track_scheme_5, "View current track in scheme 5", "Ctrl+5");
+	INIT_BIND(track_view, track_scheme_6, "View current track in scheme 6\n ", "Ctrl+6");
+
+	// INIT_BIND(track_view, move_column_left, "Go to channel left (keep column position)", "Ctrl+LEFT");
+	// INIT_BIND(track_view, move_column_right, "Go to channel right (keep column position)\n ", "Ctrl+RIGHT");
+
+	// I added backquote here because Ctrl+Shift+0 is not possible to use on windows. (took me so long to figure this out XD)
+	INIT_BIND(track_view, quick_view_scheme_default, "Quick view scheme setup default", "Ctrl+Shift+0,Ctrl+Shift+BACKQUOTE");
+	INIT_BIND(track_view, quick_view_scheme_1, "Quick view scheme setup 1", "Ctrl+Shift+1");
+	INIT_BIND(track_view, quick_view_scheme_2, "Quick view scheme setup 2", "Ctrl+Shift+2");
+	INIT_BIND(track_view, quick_view_scheme_3, "Quick view scheme setup 3", "Ctrl+Shift+3");
+	INIT_BIND(track_view, quick_view_scheme_4, "Quick view scheme setup 4", "Ctrl+Shift+4");
+	INIT_BIND(track_view, quick_view_scheme_5, "Quick view scheme setup 5", "Ctrl+Shift+5");
+	INIT_BIND(track_view, quick_view_scheme_6, "Quick view scheme setup 6\n ", "Ctrl+Shift+6");
+
+	// Can't find this and can't figure out in previous version
+	// INIT_BIND(track_view, toggle_cursor_tracking, "Toggle View-Channel cursor-tracking\n ", "Ctrl+T");
+
+	INIT_SECTION(block_functions, " Block Functions.", PAGE_PATTERN_EDITOR);
+	INIT_BIND(block_functions, mark_beginning_block, "Mark beginning of block", "Alt+B");
+	INIT_BIND(block_functions, mark_end_block, "Mark end of block", "Alt+E");
+	INIT_BIND(block_functions, quick_mark_lines, "Quick mark n/2n/4n/... lines (n=row highlight major)", "Alt+D");
+	INIT_BIND(block_functions, mark_column_or_pattern, "Mark entire column/pattern", "Alt+L");
+	INIT_BIND(block_functions, mark_block_left, "Mark block left", "Shift+LEFT");
+	INIT_BIND(block_functions, mark_block_right, "Mark block right", "Shift+RIGHT");
+	INIT_BIND(block_functions, mark_block_up, "Mark block up", "Shift+UP");
+	INIT_BIND(block_functions, mark_block_down, "Mark block down\n ", "Shift+DOWN");
+	INIT_BIND(block_functions, mark_block_start_row, "Mark block start of row/rows/pattern", "Shift+HOME");
+	INIT_BIND(block_functions, mark_block_end_row, "Mark block end of row/rows/pattern", "Shift+END");
+	INIT_BIND(block_functions, mark_block_page_up, "Mark block up one page", "Shift+PAGEUP");
+	INIT_BIND(block_functions, mark_block_page_down, "Mark block down one page\n ", "Shift+PAGEDOWN");
+
+	INIT_BIND(block_functions, unmark, "Unmark block/release clipboard memory\n ", "Alt+U");
+
+	INIT_BIND(block_functions, raise_notes_semitone, "Raise notes by a semitone (*)", "Alt+Q");
+	INIT_BIND(block_functions, raise_notes_octave, "Raise notes by an octave (*)", "Alt+Shift+Q");
+	INIT_BIND(block_functions, lower_notes_semitone, "Lower notes by a semitone (*)", "Alt+A");
+	INIT_BIND(block_functions, lower_notes_octave, "Lower notes by an octave (*)", "Alt+Shift+A");
+	INIT_BIND(block_functions, set_instrument, "Set Instrument (*)", "Alt+S");
+	INIT_BIND(block_functions, set_volume_or_panning, "Set volume/panning (*)", "Alt+V");
+	INIT_BIND(block_functions, wipe_volume_or_panning, "Wipe vol/pan not associated with a note/instrument (*)", "Alt+W");
+	INIT_BIND(block_functions, slide_volume_or_panning,
+		"Slide volume/panning column (*)" TEXT_2X
+		"Wipe all volume/panning controls (*)", "Alt+K");
+	INIT_BIND(block_functions, volume_amplifier, "Volume amplifier (*) / fast volume attenuate (*)", "Alt+J");
+	INIT_BIND(block_functions, cut_block, "Cut block (*)", "Alt+Z");
+	INIT_BIND(block_functions, swap_block, "Swap block (*)", "Alt+Y");
+	INIT_BIND(block_functions, slide_effect_value,
+		"Slide effect value (*)" TEXT_2X
+		"Wipe all effect data (*)\n ", "Alt+X");
+
+	INIT_BIND(block_functions, roll_block_down, "Roll block down", "Ctrl+INSERT");
+	INIT_BIND(block_functions, roll_block_up, "Roll block up", "Ctrl+DELETE");
+
+	INIT_BIND(block_functions, copy_block, "Copy block into clipboard", "Alt+C");
+	INIT_BIND(block_functions, copy_block_with_mute, "Copy block to clipboard honoring current mute-settings", "Shift+L");
+	INIT_BIND(block_functions, paste_data, "Paste data from clipboard (*)", "Alt+P");
+	INIT_BIND(block_functions, paste_and_overwrite,
+		"Overwrite with data from clipboard (*)" TEXT_2X
+		"Grow pattern to clipboard length", "Alt+O");
+	INIT_BIND(block_functions, paste_and_mix,
+		"Mix each row from clipboard with pattern data (*)" TEXT_2X
+		"Mix each field from clipboard with pattern data\n ", "Alt+M");
+
+	INIT_BIND(block_functions, double_block_length, "Double block length (*)", "Alt+F");
+	INIT_BIND(block_functions, halve_block_length, "Halve block length (*)\n ", "Alt+G");
+
+	INIT_BIND(block_functions, select_template_mode, "Select template mode / fast volume amplify (*)", "Alt+I");
+	INIT_BIND(block_functions, disable_template_mode, "Disable template mode", "Alt+Shift+I");
+	INIT_BIND(block_functions, toggle_fast_volume, "Toggle fast volume mode", "Ctrl+J");
+	INIT_BIND(block_functions, selection_volume_vary, "Selection volume vary / fast volume vary (*)", "Ctrl+U");
+	INIT_BIND(block_functions, selection_panning_vary, "Selection panning vary / fast panning vary (*)", "Ctrl+Y");
+	INIT_BIND(block_functions, selection_effect_vary, "Selection effect vary / fast effect vary (*)", "Ctrl+K");
+
+	INIT_SECTION(playback_functions, " Playback Functions.", PAGE_PATTERN_EDITOR);
+	INIT_BIND(playback_functions, play_note_cursor, "Play note under cursor", "4");
+	INIT_BIND(playback_functions, play_row, "Play row\n ", "8");
+
+	INIT_BIND(playback_functions, play_from_row, "Play from current row", "Ctrl+F6");
+	INIT_BIND(playback_functions, toggle_playback_mark, "Set/clear playback mark (for use with F7)\n ", "Ctrl+F7");
+
+	INIT_BIND(playback_functions, toggle_current_channel, "Toggle current channel", "Alt+F9");
+	INIT_BIND(playback_functions, solo_current_channel, "Solo current channel", "Alt+F10");
+
+	return 1;
+}

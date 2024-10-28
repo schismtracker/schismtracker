@@ -1696,3 +1696,61 @@ void sample_list_load_page(struct page *page)
 		num_save_formats++;
 }
 
+int sample_list_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(sample_list, "Sample List Keys.", PAGE_SAMPLE_LIST);
+	// Don't really need these, they are better replaced by global navs
+	// INIT_BIND(sample_list, load_new_sample, "Load new sample", "ENTER");
+	// INIT_BIND(sample_list, move_between_options, "Move between options", "TAB");
+	INIT_BIND(sample_list, move_up, "Move up (when not on list)", "PAGEUP");
+	INIT_BIND(sample_list, move_down, "Move down (when not on list)", "PAGEDOWN");
+	INIT_BIND(sample_list, focus_sample_list, "Focus on sample list\n ", "Shift+ESCAPE");
+
+	INIT_BIND(sample_list, goto_first_sample, "Select first sample (when on list)", "Ctrl+PAGEUP");
+	INIT_BIND(sample_list, goto_last_sample, "Select last sample (when on list)\n ", "Ctrl+PAGEDOWN");
+
+	INIT_BIND(sample_list, convert_signed_unsigned, "Convert signed to/from unsigned samples", "Alt+A");
+	INIT_BIND(sample_list, pre_loop_cut, "Pre-loop cut sample", "Alt+B");
+	INIT_BIND(sample_list, clear_name_and_filename, "Clear sample name & filename (only in sample list)", "Alt+C");
+	INIT_BIND(sample_list, delete_sample, "Delete sample", "Alt+D");
+	INIT_BIND(sample_list, downmix_to_mono, "Downmix stero sample to mono", "Alt+Shift+D");
+	INIT_BIND(sample_list, resize_sample_with_interpolation, "Resize sample (with interpolation)", "Alt+E");
+	INIT_BIND(sample_list, resize_sample_without_interpolation, "Resize sample (without interpolation)", "Alt+F");
+	INIT_BIND(sample_list, reverse_sample, "Reverse sample", "Alt+G");
+	INIT_BIND(sample_list, centralise_sample, "Centralise sample", "Alt+H");
+	INIT_BIND(sample_list, invert_sample, "Invert sample", "Alt+I");
+	INIT_BIND(sample_list, post_loop_cut, "Post-loop cut sample", "Alt+L");
+	INIT_BIND(sample_list, sample_amplifier, "Sample amplifier", "ALT+M");
+	INIT_BIND(sample_list, toggle_multichannel_playback, "Toggle multichannel playback", "Alt+N");
+	INIT_BIND(sample_list, save_sample_to_disk_it, "Save current sample to disk (IT format)", "Alt+O");
+	INIT_BIND(sample_list, copy_sample, "Copy sample", "Alt+P");
+	INIT_BIND(sample_list, toggle_sample_quality, "Toggle sample quality", "Alt+Q");
+	INIT_BIND(sample_list, replace_current_sample, "Replace current sample in song", "Alt+R");
+	INIT_BIND(sample_list, swap_sample, "Swap sample (in song also)", "Alt+S");
+	INIT_BIND(sample_list, save_sample_to_disk_format_select, "Save current sample to disk (choose format)", "Alt+T");
+	INIT_BIND(sample_list, save_sample_to_disk_raw, "Save current sample to disk (RAW format)", "Alt+W");
+	INIT_BIND(sample_list, exchange_sample, "Exchange sample (only in sample list)", "Alt+X");
+	INIT_BIND(sample_list, text_to_sample, "Text to sample data", "Alt+Y");
+	INIT_BIND(sample_list, edit_create_adlib_sample, "Edit/create AdLib (FM) sample", "Alt+Z");
+	INIT_BIND(sample_list, load_adlib_sample_by_midi_patch_number, "Load predefined AdLib sample by MIDI patch number\n ", "Alt+Shift+Z");
+
+	INIT_BIND(sample_list, insert_sample_slot, "Insert sample slot (updates pattern data)", "Alt+INSERT");
+	INIT_BIND(sample_list, remove_sample_slot, "Remove sample slot (updates pattern data)", "Alt+DELETE");
+	INIT_BIND(sample_list, swap_sample_with_previous, "Swap sample with previous", "Alt+UP");
+	INIT_BIND(sample_list, swap_sample_with_next, "Swap sample with next\n ", "Alt+DOWN");
+
+	INIT_BIND(sample_list, toggle_current_sample, "Toggle current sample", "Alt+F9");
+	INIT_BIND(sample_list, solo_current_sample, "Solo current sample\n ", "Alt+F10");
+
+	INIT_BIND(sample_list, decrease_playback_channel, "Decrease playback channel", "Alt+Shift+COMMA");
+	INIT_BIND(sample_list, increase_playback_channel, "Increase playback channel\n ", "Alt+Shift+PERIOD");
+
+	INIT_BIND(sample_list, increase_c5_frequency_1_octave, "Increase C-5 frequency by 1 octave", "Alt+KP_PLUS");
+	INIT_BIND(sample_list, decrease_c5_frequency_1_octave, "Decrease C-5 frequency by 1 octave", "Alt+KP_MINUS");
+	INIT_BIND(sample_list, increase_c5_frequency_1_semitone, "Increase C-5 frequency by 1 semitone", "Ctrl+KP_PLUS");
+	INIT_BIND(sample_list, decrease_c5_frequency_1_semitone, "Decrease C-5 frequency by 1 semitone\n ", "Ctrl+KP_MINUS");
+
+	INIT_BIND(sample_list, insert_arrow_up, "Insert arrow up (on list)", "Ctrl+BACKSPACE");
+
+	return 1;
+}

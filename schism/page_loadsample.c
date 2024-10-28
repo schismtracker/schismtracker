@@ -1044,3 +1044,15 @@ void library_sample_load_page(struct page *page)
 	page->help_index = HELP_GLOBAL;
 }
 
+int load_sample_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(load_sample, "Load Sample Keys.", PAGE_LOAD_SAMPLE);
+	INIT_BIND(load_sample, toggle_multichannel, "Toggle multichannel mode", "Alt+N");
+
+	INIT_SECTION(load_stereo_sample_dialog, "Stereo Sample Dialog Keys.", PAGE_LOAD_SAMPLE);
+	INIT_BIND(load_stereo_sample_dialog, load_left, "Load left channel", "L");
+	INIT_BIND(load_stereo_sample_dialog, load_right, "Load right channel", "R");
+	INIT_BIND(load_stereo_sample_dialog, load_both, "Load both channels", "B,S");
+
+	return 1;
+}

@@ -336,3 +336,9 @@ void midi_load_page(struct page *page)
 		cfg_midipage_save, "Save Output Configuration", 2);
 }
 
+int midi_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(midi, "Midi Keys.", PAGE_MIDI);
+	INIT_BIND(midi, toggle_port, "Toggle port", "SPACE");
+	return 1;
+}

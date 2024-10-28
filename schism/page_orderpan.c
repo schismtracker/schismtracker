@@ -820,6 +820,61 @@ void ordervol_load_page(struct page *page)
 	widget_create_thumbbar(widgets_ordervol + 64, 65, 46, 9, 63, 64, 0, ordervol_update_values_in_song, 0, 64);
 }
 
+static int order_list_page_matcher(enum page_numbers page)
+{
+	return page == PAGE_ORDERLIST_PANNING || page == PAGE_ORDERLIST_VOLUMES;
+}
+
+int ordervol_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(order_list, "Order Keys.", PAGE_ORDERLIST_PANNING);
+	global_keybinds_list.order_list_info.page_matcher = order_list_page_matcher;
+
+	INIT_BIND(order_list, goto_selected_pattern, "Goto selected pattern", "ENTER,KP_ENTER,G");
+	INIT_BIND(order_list, play_from_order, "Play from order", "Shift+F6");
+	INIT_BIND(order_list, select_order_for_playback, "Select pattern for playback", "SPACE,Ctrl+F7");
+	INIT_BIND(order_list, insert_next_pattern, "Insert next pattern", "N");
+	INIT_BIND(order_list, duplicate_pattern, "Copy current pattern to new pattern, and insert order", "Shift+N");
+	INIT_BIND(order_list, mark_end_of_song, "End of song mark", "MINUS,KP_MINUS,PERIOD");
+	INIT_BIND(order_list, skip_to_next_order_mark, "Skip to next order mark", "Shift+EQUALS,KP_PLUS");
+	INIT_BIND(order_list, insert_pattern, "Insert a pattern", "INSERT");
+	INIT_BIND(order_list, delete_pattern, "Delete a pattern", "DELETE");
+
+	// Is duplicate
+	// INIT_BIND(order_list, toggle_order_list_locked, "Lock/unlock order list", "Alt+F11");
+	INIT_BIND(order_list, sort_order_list, "Sort order list", "Alt+R");
+	INIT_BIND(order_list, find_unused_patterns, "Search for unused patterns\n ", "Alt+U");
+
+	INIT_BIND(order_list, link_pattern_to_sample, "Link (diskwriter) this pattern to the current sample", "Ctrl+B");
+	INIT_BIND(order_list, copy_pattern_to_sample, "Copy (diskwriter) this pattern to the current sample", "Ctrl+O");
+	INIT_BIND(order_list, copy_pattern_to_sample_with_split, "Copy (diskwriter) to the current sample, with split\n ", "Ctrl+Shift+O");
+
+	INIT_BIND(order_list, continue_next_position_of_pattern, "Continue to next position of current pattern\n ", "C");
+
+	INIT_BIND(order_list, save_order_list, "Save order list", "Alt+ENTER");
+	INIT_BIND(order_list, restore_order_list, "Swap order list with saved order list", "Alt+BACKSPACE");
+
+	// I'm not sure why this is here, but it is
+	INIT_BIND(order_list, decrease_instrument, "Decrease instrument", "Shift+COMMA,Ctrl+UP");
+	INIT_BIND(order_list, increase_instrument, "Increase instrument", "Shift+PERIOD,Ctrl+DOWN");
+
+	INIT_SECTION(order_list_panning, "Panning Keys.", PAGE_ORDERLIST_PANNING);
+	INIT_BIND(order_list_panning, toggle_channel_mute, "Toggle channel muted", "SPACE");
+	INIT_BIND(order_list_panning, set_panning_left, "Set panning left", "L");
+	INIT_BIND(order_list_panning, set_panning_middle, "Set panning middle", "M");
+	INIT_BIND(order_list_panning, set_panning_right, "Set panning right", "R");
+	INIT_BIND(order_list_panning, set_panning_surround, "Set panning surround", "S");
+	INIT_BIND(order_list_panning, pan_unmuted_left, "Pan all unmuted channels left", "Alt+L");
+	INIT_BIND(order_list_panning, pan_unmuted_middle, "Pan all unmuted channels middle", "Alt+M");
+	INIT_BIND(order_list_panning, pan_unmuted_right, "Pan all unmuted channels right", "Alt+R");
+	INIT_BIND(order_list_panning, pan_unmuted_stereo, "Pan all unmuted channels stereo", "Alt+S");
+	INIT_BIND(order_list_panning, pan_unmuted_amiga_stereo, "Pan all unmuted channels amiga stereo", "Alt+A");
+	INIT_BIND(order_list_panning, linear_panning_left_to_right, "Linear panning (left to right)", "Alt+BACKSLASH");
+	INIT_BIND(order_list_panning, linear_panning_right_to_left, "Linear panning (right to left)", "Alt+SLASH,Alt+KP_DIVIDE");
+
+	return 1;
+}
+
 /* --------------------------------------------------------------------- */
 /* this function is a lost little puppy */
 

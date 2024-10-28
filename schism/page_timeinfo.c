@@ -191,3 +191,10 @@ void timeinfo_load_page(struct page *page)
 
 	widget_create_other(widgets_timeinfo + 0, 0, timeinfo_handle_key, NULL, timeinfo_redraw);
 }
+
+int timeinfo_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(time_information, "Time Information Keys.", PAGE_TIME_INFORMATION);
+	INIT_BIND(time_information, toggle_session, "Toggle session display", "RShift+RAlt+BACKQUOTE,S");
+	return 1;
+}
