@@ -322,7 +322,7 @@ static void setApplicationMenu(NSMenu *menu)
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Message Log"
 				action:@selector(_menu_callback:)
 				keyEquivalent:get_key_equivalent(&global_keybinds_list.global.schism_logging)];
-	[menuItem setKeyEquivalentModifierMask:get_key_equivalent(&global_keybinds_list.global.schism_logging)];
+	[menuItem setKeyEquivalentModifierMask:get_key_equivalent_modifier(&global_keybinds_list.global.schism_logging)];
 	[menuItem setRepresentedObject: @"logviewer"];
 	menuItem = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
 	[menuItem setSubmenu:otherMenu];
@@ -379,12 +379,12 @@ static void setApplicationMenu(NSMenu *menu)
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Sample Library"
 				action:@selector(_menu_callback:)
 				keyEquivalent:get_key_equivalent(&global_keybinds_list.global.sample_library)];
-	[menuItem setKeyEquivalentModifierMask:get_key_equivalent(&global_keybinds_list.global.sample_library)];
+	[menuItem setKeyEquivalentModifierMask:get_key_equivalent_modifier(&global_keybinds_list.global.sample_library)];
 	[menuItem setRepresentedObject: @"sample_library"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Reload Soundcard"
 				action:@selector(_menu_callback:)
 				keyEquivalent:get_key_equivalent(&global_keybinds_list.global.audio_reset)];
-	[menuItem setKeyEquivalentModifierMask:get_key_equivalent(&global_keybinds_list.global.audio_reset)];
+	[menuItem setKeyEquivalentModifierMask:get_key_equivalent_modifier(&global_keybinds_list.global.audio_reset)];
 	[menuItem setRepresentedObject: @"init_sound"];
 	menuItem = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
 	[menuItem setSubmenu:otherMenu];
@@ -395,12 +395,12 @@ static void setApplicationMenu(NSMenu *menu)
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Instrument List"
 				action:@selector(_menu_callback:)
 				keyEquivalent:get_key_equivalent(&global_keybinds_list.global.instrument_list)];
-	[menuItem setKeyEquivalentModifierMask:get_key_equivalent(&global_keybinds_list.global.instrument_list)];
+	[menuItem setKeyEquivalentModifierMask:get_key_equivalent_modifier(&global_keybinds_list.global.instrument_list)];
 	[menuItem setRepresentedObject: @"inst_page"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Instrument Library"
 				action:@selector(_menu_callback:)
 				keyEquivalent:get_key_equivalent(&global_keybinds_list.global.instrument_library)];
-	[menuItem setKeyEquivalentModifierMask:get_key_equivalent(&global_keybinds_list.global.instrument_library)];
+	[menuItem setKeyEquivalentModifierMask:get_key_equivalent_modifier(&global_keybinds_list.global.instrument_library)];
 	[menuItem setRepresentedObject: @"inst_library"];
 	menuItem = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
 	[menuItem setSubmenu:otherMenu];
@@ -411,33 +411,33 @@ static void setApplicationMenu(NSMenu *menu)
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Preferences"
 				action:@selector(_menu_callback:)
 				keyEquivalent:get_key_equivalent(&global_keybinds_list.global.preferences)];
-	[menuItem setKeyEquivalentModifierMask:get_key_equivalent(&global_keybinds_list.global.preferences)];
+	[menuItem setKeyEquivalentModifierMask:get_key_equivalent_modifier(&global_keybinds_list.global.preferences)];
 	[menuItem setRepresentedObject: @"preferences"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"MIDI Configuration"
 				action:@selector(_menu_callback:)
 				keyEquivalent:get_key_equivalent(&global_keybinds_list.global.midi)];
-	[menuItem setKeyEquivalentModifierMask:get_key_equivalent(&global_keybinds_list.global.midi)];
+	[menuItem setKeyEquivalentModifierMask:get_key_equivalent_modifier(&global_keybinds_list.global.midi)];
 	[menuItem setRepresentedObject: @"midi_config"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Palette Editor"
 				action:@selector(_menu_callback:)
 				keyEquivalent:get_key_equivalent(&global_keybinds_list.global.palette_config)];
-	[menuItem setKeyEquivalentModifierMask:get_key_equivalent(&global_keybinds_list.global.palette_config)];
+	[menuItem setKeyEquivalentModifierMask:get_key_equivalent_modifier(&global_keybinds_list.global.palette_config)];
 	[menuItem setRepresentedObject: @"palette_page"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Font Editor"
 				action:@selector(_menu_callback:)
 				keyEquivalent:get_key_equivalent(&global_keybinds_list.global.font_editor)];
-	[menuItem setKeyEquivalentModifierMask:get_key_equivalent(&global_keybinds_list.global.font_editor)];
+	[menuItem setKeyEquivalentModifierMask:get_key_equivalent_modifier(&global_keybinds_list.global.font_editor)];
 	[menuItem setRepresentedObject: @"font_editor"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"System Configuration"
 				action:@selector(_menu_callback:)
 				keyEquivalent:get_key_equivalent(&global_keybinds_list.global.system_configure)];
-	[menuItem setKeyEquivalentModifierMask:get_key_equivalent(&global_keybinds_list.global.system_configure)];
+	[menuItem setKeyEquivalentModifierMask:get_key_equivalent_modifier(&global_keybinds_list.global.system_configure)];
 	[menuItem setRepresentedObject: @"system_config"];
 
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Toggle Fullscreen"
 				action:@selector(_menu_callback:)
 				keyEquivalent:get_key_equivalent(&global_keybinds_list.global.fullscreen)];
-	[menuItem setKeyEquivalentModifierMask:get_key_equivalent(&global_keybinds_list.global.fullscreen)];
+	[menuItem setKeyEquivalentModifierMask:get_key_equivalent_modifier(&global_keybinds_list.global.fullscreen)];
 	[menuItem setRepresentedObject: @"fullscreen"];
 	menuItem = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
 	[menuItem setSubmenu:otherMenu];
