@@ -321,7 +321,6 @@ const char* a11y_get_text_from_rect(int x, int y, int w, int h, char *buf)
 		CHARSET_EASY_MODE_CONST((uint8_t*)&str[start], CHARSET_UCS4, CHARSET_CHAR, {
 			strcat(buf, out);
 		});
-		if (strlen(buf)) strcat(buf, " ");
 	}
 	return buf;
 }
