@@ -61,11 +61,13 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_stat win32_stat
 # define os_open win32_open
 # define os_mkdir win32_mkdir
+# define os_create_menu win32_create_menu
 #elif defined(SCHISM_MACOSX)
 # define os_sdlevent macosx_sdlevent
 # define os_sysexit macosx_sysexit
 # define os_sysinit macosx_sysinit
 # define os_get_modkey macosx_get_modkey
+# define os_create_menu macosx_create_menu
 #endif
 
 #if defined(SCHISM_WIN32)
@@ -88,6 +90,9 @@ A return value of 0 indicates that the event should NOT be processed by the main
 #endif
 #ifndef os_get_modkey
 #define os_get_modkey(m)
+#endif
+#ifndef os_create_menu
+# define os_create_menu()
 #endif
 #ifndef os_fopen
 # define os_fopen fopen
@@ -121,6 +126,7 @@ void win32_sysexit(void);
 void win32_sdlinit(void);
 void win32_get_modkey(int *m);
 void win32_filecreated_callback(const char *filename);
+void win32_create_menu(void);
 void win32_toggle_menu(SDL_Window* window);
 int win32_open(const char* path, int flags);
 int win32_wstat(const wchar_t* path, struct stat* st);
@@ -137,5 +143,6 @@ int macosx_sdlevent(SDL_Event* event);
 void macosx_sysexit(void);
 void macosx_sysinit(int *pargc, char ***pargv); /* set up ibook helper */
 void macosx_get_modkey(int *m);
+void macosx_create_menu(void);
 
 #endif /* SCHISM_OSDEFS_H_ */

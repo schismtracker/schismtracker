@@ -1025,9 +1025,7 @@ int main(int argc, char **argv)
 	keybinds_init();
 	menu_init_keybinds();
 
-#ifdef SCHISM_WIN32
-	win32_create_menu();
-#endif
+	os_create_menu();
 
 #ifdef SCHISM_CONTROLLER
 	controller_init();
