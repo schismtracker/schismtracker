@@ -69,25 +69,36 @@ int fmt_stm_read_info(dmoz_file_t *file, slurp_t *fp)
 
 /* --------------------------------------------------------------------- */
 
-#pragma pack(push, 1)
-
 struct stm_sample {
 	char name[12];
-	uint8_t zero;
-	uint8_t inst_disk; // lol disks
 	uint16_t pcmpara; // in the official documentation, this is misleadingly labelled reserved...
 	uint16_t length, loop_start, loop_end;
 	uint8_t volume;
-	uint8_t reserved2;
 	uint16_t c5speed;
-	uint32_t morejunk;
-	uint16_t paragraphs; // what?
 };
 
-SCHISM_BINARY_STRUCT(struct stm_sample, 12+1+1+2+2+2+2+1+1+2+4+2);
+static int read_stm_sample(struct stm_sample *smp, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	if (slurp_read(fp, &smp->name, sizeof(smp->name)) != sizeof(smp->name)) return 0
 
-#pragma pack(pop)
+	READ_VALUE(name);
+	slurp_seek(fp, 1, SEEK_CUR); // zero
+	slurp_seek(fp, 1, SEEK_CUR); // inst_disk
+	READ_VALUE(pcmpara);
+	READ_VALUE(length);
+	READ_VALUE(loop_start);
+	READ_VALUE(loop_end);
+	READ_VALUE(volume);
+	slurp_seek(fp, 1, SEEK_CUR); // reserved
+	READ_VALUE(c5speed);
+	slurp_seek(fp, 4, SEEK_CUR); // morejunk
+	slurp_seek(fp, 2, SEEK_CUR); // paragraphs (? what)
 
+#undef READ_VALUE
+
+	return 1;
+}
 
 /* ST2 says at startup:
 "Remark: the user ID is encoded in over ten places around the file!"
@@ -192,7 +203,8 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		uint16_t blen;
 		song_sample_t *sample = song->samples + n;
 
-		slurp_read(fp, &stmsmp, sizeof(stmsmp));
+		if (!read_stm_sample(&stmsmp, fp))
+			return LOAD_FORMAT_ERROR;
 
 		for (int i = 0; i < 12; i++) {
 			if ((uint8_t)stmsmp.name[i] == 0xFF)

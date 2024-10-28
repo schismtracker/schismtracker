@@ -43,17 +43,17 @@
 #endif
 
 #if defined(__has_attribute)
-# if __has_attribute (unused)
-#  define UNUSED __attribute__((unused))
+# if __has_attribute(__unused__)
+#  define UNUSED __attribute__((__unused__))
 # endif
-# if __has_attribute (packed)
-#  define PACKED __attribute__((packed))
+# if __has_attribute(__packed__)
+#  define PACKED __attribute__((__packed__))
 # endif
-# if __has_attribute (malloc)
-#  define MALLOC __attribute__((malloc))
+# if __has_attribute(__malloc__)
+#  define MALLOC __attribute__((__malloc__))
 # endif
-# if __has_attribute (pure)
-#  define PURE __attribute__((pure))
+# if __has_attribute(__pure__)
+#  define PURE __attribute__((__pure__))
 # endif
 #endif
 

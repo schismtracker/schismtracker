@@ -425,8 +425,9 @@ fi
 dnl --------------------------------------------------------------------------
 
 dnl fortify needs -O; do this early so ADD_OPT can override with higher -O level
+project_CFLAGS=""
 if test x$ADD_FORTIFY \!= xno; then
-	CFLAGS="$CFLAGS -O -D_FORTIFY_SOURCE=2"
+	project_CFLAGS="$project_CFLAGS -O -D_FORTIFY_SOURCE=2"
 fi
 
 dnl place extra optimizations after existing cflags so that they can override
@@ -436,12 +437,12 @@ if test x$ADD_OPT \!= xno; then
 		AC_MSG_NOTICE([You aren't supposed to use --enable-debug or --enable-profiling together with --enable-extra-opt!!])
 	fi
 	ADD_OPT="-Ofast -g0 -s -fno-exceptions -march=native"
-	CFLAGS="$CFLAGS $ADD_OPT"
+	project_CFLAGS="$project_CFLAGS $ADD_OPT"
 fi
 
 if test x$ADD_LUDICROUS \!= xno; then
 	ADD_WARN=yes
-	CFLAGS="$CFLAGS -Werror"
+	project_CFLAGS="$project_CFLAGS -Werror"
 fi
 
 dnl ... but put the warnings first, to make it possible to quiet certain
@@ -449,24 +450,30 @@ dnl warnings if necessary, while still providing most of the benefit
 if test x$ADD_WARN \!= xno; then
 	ADD_WARN="-Wall -Wextra -Winline -Wshadow -Wwrite-strings -Waggregate-return -Wpacked"
 	ADD_WARN="$ADD_WARN -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wnested-externs"
-	CFLAGS="$ADD_WARN $CFLAGS"
+	project_CFLAGS="$ADD_WARN $project_CFLAGS"
 fi
 
+dnl Unlike a grand -Werror, this one could be rather important:
+dnl functions returning random values are no good under any circumstances.
+AS_IF([test ${ac_cv_c_compiler_gnu+y}], [CFLAGS="$CFLAGS -Werror=return-type"])
+
 if test x$ADD_PROFILING \!= xno || test x$ADD_DEBUG \!= xno; then
-	CFLAGS="$CFLAGS -g -O0"
-	OBJCFLAGS="$OBJCFLAGS -g -O0"
+	project_CFLAGS="$project_CFLAGS -g -O0"
+	project_OBJCFLAGS="$project_OBJCFLAGS -g -O0"
 	SDL_LIBS="$SDL_LIBS -g -O0"
 	AC_SUBST(SDL_LIBS)
 fi
 if test x$ADD_PROFILING \!= xno; then
-	CFLAGS="$CFLAGS -pg"
-	OBJCFLAGS="$OBJCFLAGS -pg"
+	project_CFLAGS="$project_CFLAGS -pg"
+	project_OBJCFLAGS="$project_OBJCFLAGS -pg"
 	SDL_LIBS="$SDL_LIBS -pg"
 	AC_SUBST(SDL_LIBS)
 fi
 
 dnl --------------------------------------------------------------------------
 
+AC_SUBST([project_CFLAGS])
+AC_SUBST([project_OBJCFLAGS])
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 

@@ -34,14 +34,10 @@
 
 /* --------------------------------------------------------------------- */
 
-#pragma pack(push, 1)
-
 struct dsm_chunk_patt {
 	uint16_t length;
 	uint8_t data[];
 };
-
-SCHISM_BINARY_STRUCT(struct dsm_chunk_patt, 2);
 
 struct dsm_chunk_song {
 	char title[28];
@@ -53,8 +49,6 @@ struct dsm_chunk_song {
 	uint8_t orders[128];
 };
 
-SCHISM_BINARY_STRUCT(struct dsm_chunk_song, 192);
-
 struct dsm_chunk_inst {
 	char filename[13];
 	uint16_t flags;
@@ -63,10 +57,6 @@ struct dsm_chunk_inst {
 	uint16_t c5speed, period;
 	char name[28];
 };
-
-SCHISM_BINARY_STRUCT(struct dsm_chunk_inst, 64);
-
-#pragma pack(pop)
 
 struct dsm_process_pattern_data {
 	song_note_t *pattern;
@@ -130,31 +120,103 @@ int fmt_dsm_read_info(dmoz_file_t *file, slurp_t *fp)
 	return 1;
 }
 
+static int dsm_chunk_song_read(const void *data, size_t size, void *void_song)
+{
+	struct dsm_chunk_song *song = (struct dsm_chunk_song *)void_song;
+
+	slurp_t fp;
+	slurp_memstream(&fp, (uint8_t *)data, size);
+
+#define READ_VALUE(name) \
+	do { if (slurp_read(&fp, &song->name, sizeof(song->name)) != sizeof(song->name)) { unslurp(&fp); return 0; } } while (0)
+
+	READ_VALUE(title);
+	READ_VALUE(version);
+	READ_VALUE(flags);
+	READ_VALUE(pad);
+	READ_VALUE(ordnum);
+	READ_VALUE(smpnum);
+	READ_VALUE(patnum);
+	READ_VALUE(chnnum);
+	READ_VALUE(gvol);
+	READ_VALUE(mvol);
+	READ_VALUE(is);
+	READ_VALUE(it);
+	READ_VALUE(chnpan);
+	READ_VALUE(orders);
+
+#undef READ_VALUE
+
+	unslurp(&fp);
+
+	return 1;
+}
+
+static int dsm_chunk_inst_read(const void *data, size_t size, void *void_inst)
+{
+	struct dsm_chunk_inst *inst = (struct dsm_chunk_inst *)void_inst;
+
+	slurp_t fp;
+	slurp_memstream(&fp, (uint8_t *)data, size);
+
+#define READ_VALUE(name) \
+	do { if (slurp_read(&fp, &inst->name, sizeof(inst->name)) != sizeof(inst->name)) { unslurp(&fp); return 0; } } while (0)
+
+	char filename[13];
+	uint16_t flags;
+	uint8_t volume;
+	uint32_t length, loop_start, loop_end, address_ptr;
+	uint16_t c5speed, period;
+	char name[28];
+
+	READ_VALUE(filename);
+	READ_VALUE(flags);
+	READ_VALUE(volume);
+	READ_VALUE(length);
+	READ_VALUE(loop_start);
+	READ_VALUE(loop_end);
+	READ_VALUE(address_ptr);
+	READ_VALUE(c5speed);
+	READ_VALUE(period);
+	READ_VALUE(name);
+
+#undef READ_VALUE
+
+	unslurp(&fp);
+
+	return 1;
+}
+
 static int dsm_process_pattern(const void *data, size_t size, void *userdata)
 {
-	const struct dsm_chunk_patt *patt = (const struct dsm_chunk_patt *)data;
 	const struct dsm_process_pattern_data *ppd = userdata;
-	song_note_t *pattern = ppd->pattern;
 
-	if (size < sizeof(*patt))
+	/* grab the header length */
+	slurp_t fp;
+	slurp_memstream(&fp, (uint8_t *)data, size);
+
+	uint16_t hdr_len;
+	if (slurp_read(&fp, &hdr_len, sizeof(hdr_len)) != sizeof(hdr_len))
 		return 0;
 
-	size_t offset = 0;
-	size_t length = size - sizeof(*patt);
-	length = MIN(length, patt->length);
+	unslurp(&fp);
+
+	/* reopen the memstream, but this time limit the size to the
+	 * chunk size or header length, whichever is smaller */
+	slurp_memstream(&fp, ((uint8_t *)data) + 2, MIN(size - 2, hdr_len));
 
 	/* make sure our offset doesn't pass the length */
-#define DSM_ASSERT_OFFSET(o, l) \
-	if ((o) >= (l)) { \
-		log_appendf(4, " WARNING: Offset (%zu) passed length (%zu) while parsing pattern!", (size_t)(o), (size_t)(l)); \
+#define DSM_ASSERT_OFFSET() \
+	if (slurp_eof(&fp)) { \
+		log_appendf(4, " WARNING: Offset (" PRId64 ") passed length (%zu) while parsing pattern!", slurp_tell(&fp), slurp_length(&fp)); \
 		return 0; \
 	}
 
 	int row = 0;
 	while (row < 64) {
-		DSM_ASSERT_OFFSET(offset, length)
+		DSM_ASSERT_OFFSET()
 
-		uint8_t mask = patt->data[offset++];
+		uint8_t mask = slurp_getc(&fp);
 
 		if (!mask) {
 			/* done with the row */
@@ -172,25 +234,25 @@ static int dsm_process_pattern(const void *data, size_t size, void *userdata)
 
 		song_note_t *note = ppd->pattern + 64 * row + chn;
 		if (mask & DSM_PAT_NOTE_PRESENT) {
-			DSM_ASSERT_OFFSET(offset, length)
+			DSM_ASSERT_OFFSET()
 
-			uint8_t c = patt->data[offset++];
+			uint8_t c = slurp_getc(&fp);
 
 			if (c <= 168)
 				note->note = c + 12;
 		}
 
 		if (mask & DSM_PAT_INST_PRESENT) {
-			DSM_ASSERT_OFFSET(offset, length)
+			DSM_ASSERT_OFFSET()
 
-			note->instrument = patt->data[offset++];
+			note->instrument = slurp_getc(&fp);
 		}
 
 		if (mask & DSM_PAT_VOL_PRESENT) {
 			/* volume */
-			DSM_ASSERT_OFFSET(offset, length)
+			DSM_ASSERT_OFFSET()
 
-			uint8_t param = patt->data[offset++];
+			uint8_t param = slurp_getc(&fp);
 
 			if (param != 0xFF) {
 				note->voleffect = VOLFX_VOLUME;
@@ -199,13 +261,13 @@ static int dsm_process_pattern(const void *data, size_t size, void *userdata)
 		}
 
 		if (mask & DSM_PAT_CMD_PRESENT) {
-			DSM_ASSERT_OFFSET(offset, length)
+			DSM_ASSERT_OFFSET()
 
-			note->effect = patt->data[offset++];
+			note->effect = slurp_getc(&fp);
 
-			DSM_ASSERT_OFFSET(offset, length)
+			DSM_ASSERT_OFFSET()
 
-			note->param = patt->data[offset++];
+			note->param = slurp_getc(&fp);
 
 			csf_import_mod_effect(note, 0);
 
@@ -246,7 +308,7 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		case ID_SONG: {
 			struct dsm_chunk_song chunk_song;
 
-			iff_chunk_read(&chunk, fp, &chunk_song, sizeof(chunk_song));
+			iff_chunk_receive(&chunk, fp, dsm_chunk_song_read, &chunk_song);
 
 			nord = bswapLE16(chunk_song.ordnum);
 			nsmp = bswapLE16(chunk_song.smpnum);
@@ -278,43 +340,40 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			if (s > MAX_SAMPLES)
 				return LOAD_UNSUPPORTED; /* punt */
 
-			if (lflags & LOAD_NOSAMPLES) {
-				s++;
-				continue;
+			if (!(lflags & LOAD_NOSAMPLES)) {
+				struct dsm_chunk_inst inst;
+
+				iff_chunk_receive(&chunk, fp, dsm_chunk_inst_read, &inst);
+
+				/* samples internally start at index 1 */
+				song_sample_t *sample = song->samples + s + 1;
+				uint32_t flags = SF_LE | SF_8 | SF_M;
+
+				if (inst.flags & DSM_SMP_LOOP_ACTIVE)
+					sample->flags |= CHN_LOOP;
+
+				/* these are mutually exclusive (?) */
+				if (inst.flags & DSM_SMP_SIGNED_PCM)
+					flags |= SF_PCMS;
+				else if (inst.flags & DSM_SMP_DELTA_PCM)
+					flags |= SF_PCMD;
+				else
+					flags |= SF_PCMU;
+
+				memcpy(sample->name, inst.name, 25);
+				sample->name[25] = '\0';
+
+				memcpy(sample->filename, inst.filename, 12);
+				sample->filename[12] = '\0';
+
+				sample->length = bswapLE32(inst.length);
+				sample->loop_start = bswapLE32(inst.loop_start);
+				sample->loop_end = bswapLE32(inst.loop_end);
+				sample->c5speed = bswapLE16(inst.c5speed);
+				sample->volume = inst.volume * 4; // modplug
+
+				iff_read_sample(&chunk, fp, sample, flags, sizeof(inst));
 			}
-
-			struct dsm_chunk_inst inst;
-
-			iff_chunk_read(&chunk, fp, &inst, sizeof(inst));
-
-			/* samples internally start at index 1 */
-			song_sample_t *sample = song->samples + s + 1;
-			uint32_t flags = SF_LE | SF_8 | SF_M;
-
-			if (inst.flags & DSM_SMP_LOOP_ACTIVE)
-				sample->flags |= CHN_LOOP;
-
-			/* these are mutually exclusive (?) */
-			if (inst.flags & DSM_SMP_SIGNED_PCM)
-				flags |= SF_PCMS;
-			else if (inst.flags & DSM_SMP_DELTA_PCM)
-				flags |= SF_PCMD;
-			else
-				flags |= SF_PCMU;
-
-			memcpy(sample->name, inst.name, 25);
-			sample->name[25] = '\0';
-
-			memcpy(sample->filename, inst.filename, 12);
-			sample->filename[12] = '\0';
-
-			sample->length = bswapLE32(inst.length);
-			sample->loop_start = bswapLE32(inst.loop_start);
-			sample->loop_end = bswapLE32(inst.loop_end);
-			sample->c5speed = bswapLE16(inst.c5speed);
-			sample->volume = inst.volume * 4; // modplug
-
-			iff_read_sample(&chunk, fp, sample, flags, sizeof(inst));
 			s++;
 
 			break;
@@ -323,27 +382,20 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			if (p > MAX_PATTERNS)
 				return LOAD_UNSUPPORTED; /* punt */
 
-			if (lflags & LOAD_NOPATTERNS) {
-				p++;
-				continue;
+			if (!(lflags & LOAD_NOPATTERNS)) {
+				song->patterns[p] = csf_allocate_pattern(64);
+
+				struct dsm_process_pattern_data data = {
+					.pattern = song->patterns[p],
+					.chn_doesnt_match = &chn_doesnt_match,
+					.nchn = nchn,
+				};
+
+				/* hope this succeeds, i guess */
+				iff_chunk_receive(&chunk, fp, dsm_process_pattern, &data);
 			}
 
-			int64_t pos = slurp_tell(fp);
-
-			song->patterns[p] = csf_allocate_pattern(64);
-
-			struct dsm_process_pattern_data data = {
-				.pattern = song->patterns[p],
-				.chn_doesnt_match = &chn_doesnt_match,
-				.nchn = nchn,
-			};
-
-			slurp_seek(fp, chunk.offset, SEEK_SET);
-			slurp_receive(fp, dsm_process_pattern, chunk.size, &data);
-			slurp_seek(fp, pos, SEEK_SET);
-
 			p++;
-
 			break;
 		}
 		default:

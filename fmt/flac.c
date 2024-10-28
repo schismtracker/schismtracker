@@ -582,6 +582,9 @@ int fmt_flac_export_tail(disko_t *fp)
 
 int fmt_flac_save_sample(disko_t *fp, song_sample_t *smp)
 {
+	if (smp->flags & CHN_ADLIB)
+		return SAVE_UNSUPPORTED;
+
 	if (flac_save_init(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1, smp->c5speed, smp->length))
 		return SAVE_INTERNAL_ERROR;
 

@@ -2039,10 +2039,10 @@ static void instrument_list_handle_key(struct key_event * k)
 			}
 
 			if (k->state == KEY_RELEASE) {
-				song_keyup(0, current_instrument, n);
+				song_keyup(KEYJAZZ_NOINST, current_instrument, n);
 				status.last_keysym = 0;
 			} else if (!k->is_repeat) {
-				song_keydown(KEYJAZZ_NOINST, current_instrument, n, v, KEYJAZZ_CHAN_CURRENT);
+				song_keydown(KEYJAZZ_NOINST, current_instrument, n, v, KEYJAZZ_CHAN_AUTO);
 			}
 			last_note = n;
 		}

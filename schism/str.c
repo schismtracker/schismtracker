@@ -30,9 +30,8 @@
 /* --------------------------------------------------------------------- */
 /* FORMATTING FUNCTIONS */
 
-char *str_from_date(time_t when, char *buf)
+char *str_date_from_tm(struct tm *tm, char buf[27])
 {
-	struct tm tmr;
 	const char *month_str[12] = {
 		"January",
 		"February",
@@ -48,20 +47,36 @@ char *str_from_date(time_t when, char *buf)
 		"December",
 	};
 
-	/* DO NOT change this back to localtime(). If some backward platform
-	doesn't have localtime_r, it needs to be implemented separately. */
-	localtime_r(&when, &tmr);
-	snprintf(buf, 27, "%s %d, %d", month_str[tmr.tm_mon], tmr.tm_mday, 1900 + tmr.tm_year);
+	snprintf(buf, 27, "%s %d, %d", month_str[tm->tm_mon], tm->tm_mday, 1900 + tm->tm_year);
+
 	return buf;
 }
 
-char *str_from_time(time_t when, char *buf)
+char *str_time_from_tm(struct tm *tm, char buf[27])
+{
+	snprintf(buf, 27, "%d:%02d%s", (tm->tm_hour % 12) ? (tm->tm_hour % 12) : 12, tm->tm_min, tm->tm_hour < 12 ? "am" : "pm");
+
+	return buf;
+}
+
+char *str_from_date(time_t when, char buf[27])
+{
+	struct tm tmr;
+
+	/* DO NOT change this back to localtime(). If some backward platform
+	 * doesn't have localtime_r, it needs to be implemented separately. */
+	localtime_r(&when, &tmr);
+
+	return str_date_from_tm(&tmr, buf);
+}
+
+char *str_from_time(time_t when, char buf[27])
 {
 	struct tm tmr;
 
 	localtime_r(&when, &tmr);
-	snprintf(buf, 27, "%d:%02d%s", (tmr.tm_hour % 12) ? (tmr.tm_hour % 12) : 12, tmr.tm_min, tmr.tm_hour < 12 ? "am" : "pm");
-	return buf;
+
+	return str_time_from_tm(&tmr, buf);
 }
 
 char *str_from_num99(int n, char *buf)

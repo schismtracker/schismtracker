@@ -30,9 +30,78 @@
 #include "log.h"
 #include "version.h"
 
-#include "it_defs.h"
-
 #include <assert.h>
+
+/* -------------------------------------------------------- */
+
+struct it_envelope {
+	uint8_t flags;
+	uint8_t num;
+	uint8_t lpb;
+	uint8_t lpe;
+	uint8_t slb;
+	uint8_t sle;
+	struct {
+		int8_t value; // signed (-32 -> 32 for pan and pitch; 0 -> 64 for vol and filter)
+		uint16_t tick;
+	} nodes[25];
+	uint8_t reserved;
+};
+
+// Old Impulse Instrument Format (cmwt < 0x200)
+struct it_instrument_old {
+	uint32_t id;                    // IMPI = 0x49504D49
+	int8_t filename[12];    // DOS file name
+	uint8_t zero;
+	uint8_t flags;
+	uint8_t vls;
+	uint8_t vle;
+	uint8_t sls;
+	uint8_t sle;
+	uint16_t reserved1;
+	uint16_t fadeout;
+	uint8_t nna;
+	uint8_t dnc;
+	uint16_t trkvers;
+	uint8_t nos;
+	uint8_t reserved2;
+	int8_t name[26];
+	uint16_t reserved3[3];
+	//struct it_notetrans keyboard[120];
+	uint8_t volenv[200];
+	uint8_t nodes[50];
+};
+
+// Impulse Instrument Format
+struct it_instrument {
+	uint32_t id;
+	int8_t filename[12];
+	uint8_t zero;
+	uint8_t nna;
+	uint8_t dct;
+	uint8_t dca;
+	uint16_t fadeout;
+	signed char pps;
+	uint8_t ppc;
+	uint8_t gbv;
+	uint8_t dfp;
+	uint8_t rv;
+	uint8_t rp;
+	uint16_t trkvers;
+	uint8_t nos;
+	uint8_t reserved1;
+	int8_t name[26];
+	uint8_t ifc;
+	uint8_t ifr;
+	uint8_t mch;
+	uint8_t mpr;
+	uint16_t mbank;
+	//struct it_notetrans keyboard[120];
+	struct it_envelope volenv;
+	struct it_envelope panenv;
+	struct it_envelope pitchenv;
+	uint8_t dummy[4]; // was 7, but IT v2.17 saves 554 bytes
+};
 
 /* --------------------------------------------------------------------- */
 int fmt_iti_read_info(dmoz_file_t *file, slurp_t *fp)
@@ -56,44 +125,69 @@ static const uint32_t env_flags[3][4] = {
 	{ENV_PITCH,   ENV_PITCHLOOP, ENV_PITCHSUSTAIN, ENV_PITCHCARRY},
 };
 
-static void load_it_notetrans(song_instrument_t *instrument, struct it_notetrans *notetrans)
+static int load_it_notetrans(struct instrumentloader *ii, song_instrument_t *instrument, slurp_t *fp)
 {
-	int note, n;
+	int n;
+
 	for (n = 0; n < 120; n++) {
-		note = notetrans[n].note + NOTE_FIRST;
+		int note = slurp_getc(fp);
+		int smp = slurp_getc(fp);
+		if (note == EOF || smp == EOF)
+			return 0;
+
+		note += NOTE_FIRST;
 		// map invalid notes to themselves
 		if (!NOTE_IS_NOTE(note))
 			note = n + NOTE_FIRST;
+
 		instrument->note_map[n] = note;
-		instrument->sample_map[n] = notetrans[n].sample;
+		instrument->sample_map[n] = (ii ? instrument_loader_sample(ii, smp) : smp);
 	}
+
+	return 1;
 }
 
-static uint32_t load_it_envelope(song_envelope_t *env, struct it_envelope *itenv, int envtype, int adj)
+// XXX need to check slurp return values
+static uint32_t load_it_envelope(song_envelope_t *env, slurp_t *fp, int envtype, int adj)
 {
+	struct it_envelope itenv;
+
 	uint32_t flags = 0;
 	int n;
 
-	env->nodes = CLAMP(itenv->num, 2, 25);
-	env->loop_start = MIN(itenv->lpb, env->nodes);
-	env->loop_end = CLAMP(itenv->lpe, env->loop_start, env->nodes);
-	env->sustain_start = MIN(itenv->slb, env->nodes);
-	env->sustain_end = CLAMP(itenv->sle, env->sustain_start, env->nodes);
+	slurp_read(fp, &itenv.flags, sizeof(itenv.flags));
+	slurp_read(fp, &itenv.num, sizeof(itenv.num));
+	slurp_read(fp, &itenv.lpb, sizeof(itenv.lpb));
+	slurp_read(fp, &itenv.lpe, sizeof(itenv.lpe));
+	slurp_read(fp, &itenv.slb, sizeof(itenv.slb));
+	slurp_read(fp, &itenv.sle, sizeof(itenv.sle));
+	for (size_t i = 0; i < ARRAY_SIZE(itenv.nodes); i++) {
+		slurp_read(fp, &itenv.nodes[i].value, sizeof(itenv.nodes[i].value));
+		slurp_read(fp, &itenv.nodes[i].tick, sizeof(itenv.nodes[i].tick));
+		itenv.nodes[i].tick = bswapLE16(itenv.nodes[i].tick);
+	}
+	slurp_read(fp, &itenv.reserved, sizeof(itenv.reserved));
+
+	env->nodes = CLAMP(itenv.num, 2, 25);
+	env->loop_start = MIN(itenv.lpb, env->nodes);
+	env->loop_end = CLAMP(itenv.lpe, env->loop_start, env->nodes);
+	env->sustain_start = MIN(itenv.slb, env->nodes);
+	env->sustain_end = CLAMP(itenv.sle, env->sustain_start, env->nodes);
 
 	for (n = 0; n < env->nodes; n++) {
-		int v = itenv->nodes[n].value + adj;
+		int v = itenv.nodes[n].value + adj;
 		env->values[n] = CLAMP(v, 0, 64);
-		env->ticks[n] = bswapLE16(itenv->nodes[n].tick);
+		env->ticks[n] = bswapLE16(itenv.nodes[n].tick);
 	}
 
 	env->ticks[0] = 0; // sanity check
 
 	for (n = 0; n < 4; n++) {
-		if (itenv->flags & (1 << n))
+		if (itenv.flags & (1 << n))
 			flags |= env_flags[envtype][n];
 	}
 
-	if (envtype == 2 && (itenv->flags & 0x80))
+	if (envtype == 2 && (itenv.flags & 0x80))
 		flags |= ENV_FILTER;
 
 	return flags;
@@ -104,8 +198,25 @@ int load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp)
 	struct it_instrument_old ihdr;
 	int n;
 
-	if (slurp_read(fp, &ihdr, sizeof(ihdr)) != sizeof(ihdr))
-		return 0;
+#define READ_VALUE(name) do { if (slurp_read(fp, &ihdr.name, sizeof(ihdr.name)) != sizeof(ihdr.name)) { return 0; } } while (0)
+
+	READ_VALUE(id);
+	READ_VALUE(filename);
+	READ_VALUE(zero);
+	READ_VALUE(flags);
+	READ_VALUE(vls);
+	READ_VALUE(vle);
+	READ_VALUE(sls);
+	READ_VALUE(sle);
+	READ_VALUE(reserved1);
+	READ_VALUE(fadeout);
+	READ_VALUE(nna);
+	READ_VALUE(dnc);
+	READ_VALUE(trkvers);
+	READ_VALUE(nos);
+	READ_VALUE(reserved2);
+	READ_VALUE(name);
+	READ_VALUE(reserved3);
 
 	/* err */
 	if (ihdr.id != bswapLE32(0x49504D49))
@@ -129,7 +240,8 @@ int load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp)
 	instrument->global_volume = 128;
 	instrument->panning = 32 * 4; //mphack
 
-	load_it_notetrans(instrument, ihdr.keyboard);
+	if (!load_it_notetrans(NULL, instrument, fp))
+		return 0;
 
 	if (ihdr.flags & 1)
 		instrument->flags |= ENV_VOLUME;
@@ -143,6 +255,10 @@ int load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp)
 	instrument->vol_env.sustain_start = ihdr.sls;
 	instrument->vol_env.sustain_end = ihdr.sle;
 	instrument->vol_env.nodes = 25;
+
+	READ_VALUE(volenv);
+	READ_VALUE(nodes);
+
 	// this seems totally wrong... why isn't this using ihdr.vol_env at all?
 	// apparently it works, though.
 	for (n = 0; n < 25; n++) {
@@ -154,14 +270,42 @@ int load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp)
 		instrument->vol_env.ticks[n] = node;
 		instrument->vol_env.values[n] = ihdr.nodes[2 * n + 1];
 	}
+
+#undef READ_VALUE
+
+	return 1;
 }
 
-int load_it_instrument(song_instrument_t *instrument, slurp_t *fp)
+int load_it_instrument(struct instrumentloader* ii, song_instrument_t *instrument, slurp_t *fp)
 {
 	struct it_instrument ihdr;
 
-	if (slurp_read(fp, &ihdr, sizeof(ihdr)) != sizeof(ihdr))
-		return 0;
+#define READ_VALUE(name) do { if (slurp_read(fp, &ihdr.name, sizeof(ihdr.name)) != sizeof(ihdr.name)) { return 0; } } while (0)
+
+	READ_VALUE(id);
+	READ_VALUE(filename);
+	READ_VALUE(zero);
+	READ_VALUE(nna);
+	READ_VALUE(dct);
+	READ_VALUE(dca);
+	READ_VALUE(fadeout);
+	READ_VALUE(pps);
+	READ_VALUE(ppc);
+	READ_VALUE(gbv);
+	READ_VALUE(dfp);
+	READ_VALUE(rv);
+	READ_VALUE(rp);
+	READ_VALUE(trkvers);
+	READ_VALUE(nos);
+	READ_VALUE(reserved1);
+	READ_VALUE(name);
+	READ_VALUE(ifc);
+	READ_VALUE(ifr);
+	READ_VALUE(mch);
+	READ_VALUE(mpr);
+	READ_VALUE(mbank);
+
+#undef READ_VALUE
 
 	/* err */
 	if (ihdr.id != bswapLE32(0x49504D49))
@@ -199,11 +343,16 @@ int load_it_instrument(song_instrument_t *instrument, slurp_t *fp)
 	instrument->midi_program = ihdr.mpr;
 	instrument->midi_bank = bswapLE16(ihdr.mbank);
 
-	load_it_notetrans(instrument, ihdr.keyboard);
+	if (!load_it_notetrans(ii, instrument, fp))
+		return 0;
 
-	instrument->flags |= load_it_envelope(&instrument->vol_env, &ihdr.volenv, 0, 0);
-	instrument->flags |= load_it_envelope(&instrument->pan_env, &ihdr.panenv, 1, 32);
-	instrument->flags |= load_it_envelope(&instrument->pitch_env, &ihdr.pitchenv, 2, 32);
+	instrument->flags |= load_it_envelope(&instrument->vol_env, fp, 0, 0);
+	instrument->flags |= load_it_envelope(&instrument->pan_env, fp, 1, 32);
+	instrument->flags |= load_it_envelope(&instrument->pitch_env, fp, 2, 32);
+
+	slurp_seek(fp, 4, SEEK_CUR);
+
+	return 1;
 }
 
 int fmt_iti_load_instrument(slurp_t *fp, int slot)
@@ -211,25 +360,95 @@ int fmt_iti_load_instrument(slurp_t *fp, int slot)
 	struct instrumentloader ii;
 	song_instrument_t *ins = instrument_loader_init(&ii, slot);
 
-	if (!load_it_instrument(ins, fp))
+	if (!load_it_instrument(&ii, ins, fp))
 		return 0;
 
 	/* okay, on to samples */
-	size_t pos = 554;
 	for (int j = 0; j < ii.expect_samples; j++) {
 		song_sample_t *smp = song_get_sample(ii.sample_map[j+1]);
 		if (!smp)
 			break;
 
-		struct it_sample its;
-		slurp_read(fp, &its, sizeof(its));
-
-		if (!load_its_sample(&its, fp, smp)) {
+		if (!load_its_sample(fp, smp, 0x214)) {
 			log_appendf(4, "Could not load sample %d from ITI file", j);
 			return instrument_loader_abort(&ii);
 		}
-		pos += 80; /* length of ITS header */
 	}
+	return 1;
+}
+
+static int save_iti_envelope(disko_t *fp, struct it_envelope itenv)
+{
+	disko_write(fp, &itenv.flags, sizeof(itenv.flags));
+	disko_write(fp, &itenv.num, sizeof(itenv.num));
+	disko_write(fp, &itenv.lpb, sizeof(itenv.lpb));
+	disko_write(fp, &itenv.lpe, sizeof(itenv.lpe));
+	disko_write(fp, &itenv.slb, sizeof(itenv.slb));
+	disko_write(fp, &itenv.sle, sizeof(itenv.sle));
+	for (size_t i = 0; i < ARRAY_SIZE(itenv.nodes); i++) {
+		disko_write(fp, &itenv.nodes[i].value, sizeof(itenv.nodes[i].value));
+		itenv.nodes[i].tick = bswapLE16(itenv.nodes[i].tick);
+		disko_write(fp, &itenv.nodes[i].tick, sizeof(itenv.nodes[i].tick));
+	}
+	disko_write(fp, &itenv.reserved, sizeof(itenv.reserved));
+
+	return 1;
+}
+
+static int save_iti_envelopes(disko_t *fp, song_instrument_t *ins)
+{
+	struct it_envelope vol = {
+		.flags = ((ins->flags & ENV_VOLUME) ? 0x01 : 0)
+			| ((ins->flags & ENV_VOLLOOP) ? 0x02 : 0)
+			| ((ins->flags & ENV_VOLSUSTAIN) ? 0x04 : 0)
+			| ((ins->flags & ENV_VOLCARRY) ? 0x08 : 0),
+		.num = ins->vol_env.nodes,
+		.lpb = ins->vol_env.loop_start,
+		.lpe = ins->vol_env.loop_end,
+		.slb = ins->vol_env.sustain_start,
+		.sle = ins->vol_env.sustain_end,
+	};
+
+	struct it_envelope pan = {
+		.flags = ((ins->flags & ENV_PANNING) ? 0x01 : 0)
+			| ((ins->flags & ENV_PANLOOP) ? 0x02 : 0)
+			| ((ins->flags & ENV_PANSUSTAIN) ? 0x04 : 0)
+			| ((ins->flags & ENV_PANCARRY) ? 0x08 : 0),
+		.num = ins->pan_env.nodes,
+		.lpb = ins->pan_env.loop_start,
+		.lpe = ins->pan_env.loop_end,
+		.slb = ins->pan_env.sustain_start,
+		.sle = ins->pan_env.sustain_end,
+	};
+
+	struct it_envelope pitch = {
+		.flags = ((ins->flags & ENV_PITCH) ? 0x01 : 0)
+			| ((ins->flags & ENV_PITCHLOOP) ? 0x02 : 0)
+			| ((ins->flags & ENV_PITCHSUSTAIN) ? 0x04 : 0)
+			| ((ins->flags & ENV_PITCHCARRY) ? 0x08 : 0)
+			| ((ins->flags & ENV_FILTER) ? 0x80 : 0),
+		.num = ins->pan_env.nodes,
+		.lpb = ins->pan_env.loop_start,
+		.lpe = ins->pan_env.loop_end,
+		.slb = ins->pan_env.sustain_start,
+		.sle = ins->pan_env.sustain_end,
+	};
+
+	for (int j = 0; j < 25; j++) {
+		vol.nodes[j].value = ins->vol_env.values[j];
+		vol.nodes[j].tick = ins->vol_env.ticks[j];
+
+		pan.nodes[j].value = ins->pan_env.values[j] - 32;
+		pan.nodes[j].tick = ins->pan_env.ticks[j];
+
+		pitch.nodes[j].value = ins->pitch_env.values[j] - 32;
+		pitch.nodes[j].tick = ins->pitch_env.ticks[j];
+	}
+
+	if (!save_iti_envelope(fp, vol))   return 0;
+	if (!save_iti_envelope(fp, pan))   return 0;
+	if (!save_iti_envelope(fp, pitch)) return 0;
+
 	return 1;
 }
 
@@ -285,6 +504,11 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 	iti.mpr = ins->midi_program;
 	iti.mbank = bswapLE16(ins->midi_bank);
 
+	struct {
+		uint8_t note;
+		uint8_t smp;
+	} notetrans[120];
+
 	int iti_map[255];
 	int iti_invmap[255];
 	int iti_nalloc = 0;
@@ -293,6 +517,8 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 		iti_map[j] = -1;
 
 	for (int j = 0; j < 120; j++) {
+		notetrans[j].note = ins->note_map[j] - 1;
+
 		if (iti_file) {
 			int o = ins->sample_map[j];
 			if (o > 0 && o < 255 && iti_map[o] == -1) {
@@ -300,82 +526,68 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 				iti_invmap[iti_nalloc] = o;
 				iti_nalloc++;
 			}
-			iti.keyboard[j].sample = iti_map[o]+1;
+			notetrans[j].smp = iti_map[o]+1;
 		} else {
-			iti.keyboard[j].sample = ins->sample_map[j];
+			notetrans[j].smp = ins->sample_map[j];
 		}
-		iti.keyboard[j].note = ins->note_map[j] - 1;
 	}
 
 	if (iti_file)
 		iti.nos = (uint8_t)iti_nalloc;
 
-	// envelope stuff from modplug
-	iti.volenv.flags = 0;
-	iti.panenv.flags = 0;
-	iti.pitchenv.flags = 0;
-	if (ins->flags & ENV_VOLUME) iti.volenv.flags |= 0x01;
-	if (ins->flags & ENV_VOLLOOP) iti.volenv.flags |= 0x02;
-	if (ins->flags & ENV_VOLSUSTAIN) iti.volenv.flags |= 0x04;
-	if (ins->flags & ENV_VOLCARRY) iti.volenv.flags |= 0x08;
-	iti.volenv.num = ins->vol_env.nodes;
-	iti.volenv.lpb = ins->vol_env.loop_start;
-	iti.volenv.lpe = ins->vol_env.loop_end;
-	iti.volenv.slb = ins->vol_env.sustain_start;
-	iti.volenv.sle = ins->vol_env.sustain_end;
-	if (ins->flags & ENV_PANNING) iti.panenv.flags |= 0x01;
-	if (ins->flags & ENV_PANLOOP) iti.panenv.flags |= 0x02;
-	if (ins->flags & ENV_PANSUSTAIN) iti.panenv.flags |= 0x04;
-	if (ins->flags & ENV_PANCARRY) iti.panenv.flags |= 0x08;
-	iti.panenv.num = ins->pan_env.nodes;
-	iti.panenv.lpb = ins->pan_env.loop_start;
-	iti.panenv.lpe = ins->pan_env.loop_end;
-	iti.panenv.slb = ins->pan_env.sustain_start;
-	iti.panenv.sle = ins->pan_env.sustain_end;
-	if (ins->flags & ENV_PITCH) iti.pitchenv.flags |= 0x01;
-	if (ins->flags & ENV_PITCHLOOP) iti.pitchenv.flags |= 0x02;
-	if (ins->flags & ENV_PITCHSUSTAIN) iti.pitchenv.flags |= 0x04;
-	if (ins->flags & ENV_PITCHCARRY) iti.pitchenv.flags |= 0x08;
-	if (ins->flags & ENV_FILTER) iti.pitchenv.flags |= 0x80;
-	iti.pitchenv.num = ins->pitch_env.nodes;
-	iti.pitchenv.lpb = ins->pitch_env.loop_start;
-	iti.pitchenv.lpe = ins->pitch_env.loop_end;
-	iti.pitchenv.slb = ins->pitch_env.sustain_start;
-	iti.pitchenv.sle = ins->pitch_env.sustain_end;
-	for (int j = 0; j < 25; j++) {
-		iti.volenv.nodes[j].value = ins->vol_env.values[j];
-		iti.volenv.nodes[j].tick = bswapLE16(ins->vol_env.ticks[j]);
+	disko_write(fp, &iti.id, sizeof(iti.id));
+	disko_write(fp, &iti.filename, sizeof(iti.filename));
+	disko_write(fp, &iti.zero, sizeof(iti.zero));
+	disko_write(fp, &iti.nna, sizeof(iti.nna));
+	disko_write(fp, &iti.dct, sizeof(iti.dct));
+	disko_write(fp, &iti.dca, sizeof(iti.dca));
+	disko_write(fp, &iti.fadeout, sizeof(iti.fadeout));
+	disko_write(fp, &iti.pps, sizeof(iti.pps));
+	disko_write(fp, &iti.ppc, sizeof(iti.ppc));
+	disko_write(fp, &iti.gbv, sizeof(iti.gbv));
+	disko_write(fp, &iti.dfp, sizeof(iti.dfp));
+	disko_write(fp, &iti.rv, sizeof(iti.rv));
+	disko_write(fp, &iti.rp, sizeof(iti.rp));
+	disko_write(fp, &iti.trkvers, sizeof(iti.trkvers));
+	disko_write(fp, &iti.nos, sizeof(iti.nos));
+	disko_write(fp, &iti.reserved1, sizeof(iti.reserved1));
+	disko_write(fp, &iti.name, sizeof(iti.name));
+	disko_write(fp, &iti.ifc, sizeof(iti.ifc));
+	disko_write(fp, &iti.ifr, sizeof(iti.ifr));
+	disko_write(fp, &iti.mch, sizeof(iti.mch));
+	disko_write(fp, &iti.mpr, sizeof(iti.mpr));
+	disko_write(fp, &iti.mbank, sizeof(iti.mbank));
 
-		iti.panenv.nodes[j].value = ins->pan_env.values[j] - 32;
-		iti.panenv.nodes[j].tick = bswapLE16(ins->pan_env.ticks[j]);
-
-		iti.pitchenv.nodes[j].value = ins->pitch_env.values[j] - 32;
-		iti.pitchenv.nodes[j].tick = bswapLE16(ins->pitch_env.ticks[j]);
+	for (int i = 0; i < 120; i++) {
+		disko_write(fp, &notetrans[i].note, sizeof(notetrans[i].note));
+		disko_write(fp, &notetrans[i].smp, sizeof(notetrans[i].smp));
 	}
 
-	// ITI files *need* to write 554 bytes due to alignment, but in a song it doesn't matter
-	disko_write(fp, &iti, sizeof(iti));
-	if (iti_file) {
-		if (sizeof(iti) < 554) {
-			for (int j = sizeof(iti); j < 554; j++) {
-				disko_write(fp, "\x0", 1);
-			}
-		}
-		assert(sizeof(iti) <= 554);
+	save_iti_envelopes(fp, ins);
 
-		unsigned int qp = 554;
+	/* unused padding */
+	disko_write(fp, "\0\0\0\0", 4);
+
+	// ITI files *need* to write 554 bytes due to alignment, but in a song it doesn't matter
+	if (iti_file) {
+		int64_t pos = disko_tell(fp);
+
+		// ack
+		assert(pos == 554);
+
 		/* okay, now go through samples */
 		for (int j = 0; j < iti_nalloc; j++) {
-			int o = iti_invmap[ j ];
+			int o = iti_invmap[j];
 
-			iti_map[o] = qp;
-			qp += 80; /* header is 80 bytes */
+			iti_map[o] = pos;
+			pos += 80; /* header is 80 bytes */
 			save_its_header(fp, song->samples + o);
 		}
+
 		for (int j = 0; j < iti_nalloc; j++) {
 			unsigned int op, tmp;
 
-			int o = iti_invmap[ j ];
+			int o = iti_invmap[j];
 
 			song_sample_t *smp = song->samples + o;
 

@@ -31,7 +31,8 @@
 #include "player/sndfile.h"
 
 enum {
-	S3I_TYPE_PCM   = 1,
+	S3I_TYPE_NONE = 0,
+	S3I_TYPE_PCM = 1,
 	S3I_TYPE_ADLIB = 2,
 };
 
@@ -83,6 +84,8 @@ static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 		return 0;
 	smp->loop_end = bswapLE32(dw);
 
+	slurp_seek(fp, 4, SEEK_CUR);
+
 	if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
 		return 0;
 	smp->c5speed = bswapLE32(dw);
@@ -129,17 +132,14 @@ static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 		if (slurp_read(fp, smp->adlib_bytes, sizeof(smp->adlib_bytes)) != sizeof(smp->adlib_bytes))
 			return 0;
 
+		// dumb hackaround that ought to some day be fixed:
 		smp->length = 1;
-		smp->loop_start = 0;
-		smp->loop_end = 0;
-
 		smp->data = csf_allocate_sample(1);
 	}
 
 	return 1;
 }
 
-/* FIXME update this stuff to not use fp->data */
 int fmt_s3i_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	song_sample_t smp;
@@ -165,4 +165,116 @@ int fmt_s3i_load_sample(slurp_t *fp, song_sample_t *smp)
 {
 	// what the crap?
 	return load_s3i_sample(fp, smp, 1);
+}
+
+/* ---------------------------------------------------- */
+
+struct s3i_header {
+	uint8_t type;
+	char filename[12];
+	union {
+		struct {
+			uint8_t memseg[3];
+			uint32_t length;
+			uint32_t loop_start;
+			uint32_t loop_end;
+		} pcm;
+		struct {
+			//uint8_t zero[3];
+			uint8_t data[12];
+		} admel;
+	} spec;
+	uint8_t vol;
+	uint8_t x; // "dsk" for adlib
+	uint8_t pack; // 0
+	uint8_t flags; // 1=loop 2=stereo 4=16-bit / zero for adlib
+	uint32_t c5speed;
+	uint8_t junk[12];
+	char name[28];
+	char tag[4]; // SCRS/SCRI/whatever
+};
+
+void s3i_write_header(disko_t *fp, song_sample_t *smp, uint32_t sdata)
+{
+	struct s3i_header hdr = {0};
+	int n;
+
+	if (smp->flags & CHN_ADLIB) {
+		hdr.type = S3I_TYPE_ADLIB;
+		memcpy(hdr.spec.admel.data, smp->adlib_bytes, 11);
+		memcpy(hdr.tag, "SCRI", 4);
+	} else if (smp->data != NULL) {
+		hdr.type = S3I_TYPE_PCM;
+		hdr.spec.pcm.memseg[0] = (sdata >> 20) & 0xff;
+		hdr.spec.pcm.memseg[1] = (sdata >> 4) & 0xff;
+		hdr.spec.pcm.memseg[2] = (sdata >> 12) & 0xff;
+		hdr.spec.pcm.length = bswapLE32(smp->length);
+		hdr.spec.pcm.loop_start = bswapLE32(smp->loop_start);
+		hdr.spec.pcm.loop_end = bswapLE32(smp->loop_end);
+		hdr.flags = ((smp->flags & CHN_LOOP) ? 1 : 0)
+			| ((smp->flags & CHN_STEREO) ? 2 : 0)
+			| ((smp->flags & CHN_16BIT) ? 4 : 0);
+		memcpy(hdr.tag, "SCRS", 4);
+	} else {
+		hdr.type = S3I_TYPE_NONE;
+	}
+
+	memcpy(hdr.filename, smp->filename, 12);
+	hdr.vol = smp->volume / 4; //mphack
+	hdr.c5speed = bswapLE32(smp->c5speed);
+
+	for (n = 25; n >= 0; n--)
+		if ((smp->name[n] ? smp->name[n] : 32) != 32)
+			break;
+	for (; n >= 0; n--)
+		hdr.name[n] = smp->name[n] ? smp->name[n] : 32;
+
+#define WRITE_VALUE(x) do { disko_write(fp, &hdr.x, sizeof(hdr.x)); } while (0)
+
+	WRITE_VALUE(type);
+	WRITE_VALUE(filename);
+
+	switch (hdr.type) {
+	case S3I_TYPE_ADLIB:
+		disko_seek(fp, 3, SEEK_CUR);
+		WRITE_VALUE(spec.admel.data);
+		break;
+	case S3I_TYPE_PCM:
+		WRITE_VALUE(spec.pcm.memseg);
+		WRITE_VALUE(spec.pcm.length);
+		WRITE_VALUE(spec.pcm.loop_start);
+		WRITE_VALUE(spec.pcm.loop_end);
+		break;
+	default:
+	case S3I_TYPE_NONE:
+		disko_seek(fp, 15, SEEK_CUR);
+		break;
+	}
+
+	WRITE_VALUE(vol);
+	WRITE_VALUE(x);
+	WRITE_VALUE(pack);
+	WRITE_VALUE(flags);
+	WRITE_VALUE(c5speed);
+	disko_seek(fp, 12, SEEK_CUR);
+	WRITE_VALUE(name);
+	WRITE_VALUE(tag); // SCRS/SCRI/whatever
+
+#undef WRITE_VALUE
+}
+
+int fmt_s3i_save_sample(disko_t *fp, song_sample_t *smp)
+{
+	s3i_write_header(fp, smp, 0);
+
+	if (smp->flags & CHN_ADLIB) {
+		return SAVE_SUCCESS; // already done
+	} else if (smp->data != NULL) {
+		uint32_t format = SF_M | SF_LE; // endianness; channels
+		format |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU); // bits; encoding
+
+		csf_write_sample(fp, smp, format, UINT32_MAX);
+	}
+
+	return SAVE_SUCCESS;
 }

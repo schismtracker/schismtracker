@@ -74,6 +74,7 @@ enum {
 	HELP_ADLIB_SAMPLE,
 	HELP_SAMPLE_LIST,
 	HELP_PALETTES,
+	HELP_TIME_INFORMATION,
 
 	HELP_NUM_ITEMS /* needs to be last! */
 };
@@ -371,6 +372,8 @@ enum page_numbers {
 	PAGE_SONG_VARIABLES,
 	PAGE_MESSAGE,
 
+	PAGE_TIME_INFORMATION,
+
 	/* don't use these directly with set_page */
 	PAGE_INSTRUMENT_LIST_GENERAL,
 	PAGE_INSTRUMENT_LIST_VOLUME,
@@ -422,6 +425,7 @@ void library_sample_load_page(struct page *page);
 void library_instrument_load_page(struct page *page);
 void config_load_page(struct page *page);
 void waterfall_load_page(struct page *page);
+void timeinfo_load_page(struct page *page);
 
 /* --------------------------------------------------------------------- */
 

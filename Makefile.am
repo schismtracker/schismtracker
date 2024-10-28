@@ -1,6 +1,8 @@
 ## vi:set bd=syn\ make: for elvis
 
 AUTOMAKE_OPTIONS = foreign dist-bzip2 no-dist-gzip
+AM_CFLAGS = $(project_CFLAGS)
+AM_OBJCFLAGS = $(project_OBJCFLAGS)
 
 ## NOTE: helptexts should be in the same order as the enum in page.h
 docs = \
@@ -20,7 +22,8 @@ helptexts = \
 	helptext/pattern-editor		\
 	helptext/adlib-sample		\
 	helptext/sample-list		\
-	helptext/palettes
+	helptext/palettes			\
+	helptext/time-information
 fonts = \
 	font/default-lower.fnt		\
 	font/default-upper-alt.fnt	\
@@ -115,11 +118,12 @@ noinst_HEADERS = \
 	include/fmt-types.h		\
 	include/fmt.h			\
 	include/headers.h		\
+	include/ieee-float.h    \
 	include/it.h			\
-	include/it_defs.h		\
 	include/keyboard.h      \
 	include/log.h			\
 	include/midi.h			\
+	include/mem.h           \
 	include/osdefs.h		\
 	include/page.h			\
 	include/palettes.h          \
@@ -128,6 +132,7 @@ noinst_HEADERS = \
 	include/sdlmain.h		\
 	include/slurp.h			\
 	include/song.h			\
+	include/str.h           \
 	include/tree.h			\
 	include/util.h			\
 	include/version.h		\
@@ -411,6 +416,7 @@ schismtracker_SOURCES = \
 	schism/page_patedit.c		\
 	schism/page_preferences.c	\
 	schism/page_samples.c		\
+	schism/page_timeinfo.c		\
 	schism/page_vars.c		\
 	schism/page_waterfall.c		\
 	schism/palettes.c		\
@@ -447,14 +453,15 @@ schismtracker_SOURCES = \
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
 
-schismtracker_CPPFLAGS = -I$(srcdir)/include -I. $(cppflags_wii) $(cppflags_wiiu)
-schismtracker_CFLAGS = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
+component_cflags = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
 	$(cflags_version) $(cflags_win32) $(cflags_wii) \
 	$(cflags_macosx) $(cflags_flac) $(cflags_jack) \
 	$(cflags_wiiu) \
 	$(UTF8PROC_CFLAGS)
-schismtracker_OBJCFLAGS = $(schismtracker_CFLAGS)
+schismtracker_CPPFLAGS = -I$(srcdir)/include -I. $(cppflags_wii) $(cppflags_wiiu)
+schismtracker_CFLAGS = $(AM_CFLAGS) $(component_cflags)
+schismtracker_OBJCFLAGS = $(AM_OBJCFLAGS) $(component_cflags)
 
 schismtracker_DEPENDENCIES = $(files_windres)
 schismtracker_LDADD = $(LIB_MATH) $(libs_wii) $(libs_wiiu) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(UTF8PROC_LIBS) $(SDL_LIBS)

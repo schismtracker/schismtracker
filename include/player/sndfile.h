@@ -14,6 +14,8 @@
 
 #include "tables.h"
 
+#include <time.h> // need tm and timeval
+
 
 #define MOD_AMIGAC2             0x1AB
 #define MAX_SAMPLE_LENGTH       16000000
@@ -22,12 +24,20 @@
 #define MAX_PATTERNS            240
 #define MAX_SAMPLES             236
 #define MAX_INSTRUMENTS         MAX_SAMPLES
-#define MAX_VOICES              256
 #define MAX_CHANNELS            64
 #define MAX_ENVPOINTS           32
 #define MAX_INFONAME            80
 #define MAX_EQ_BANDS            6
 #define MAX_MESSAGE             8000
+
+
+#define MAX_MODULE_VOICES		256
+#define MAX_KEYJAZZ_VOICES		64
+
+#define MAX_VOICES              (MAX_MODULE_VOICES + MAX_KEYJAZZ_VOICES)
+
+// absolute offsets
+#define KEYJAZZ_VOICES_OFFSET	(MAX_MODULE_VOICES)
 
 #define MIX_MAX_CHANNELS		2 /* used for filters and stuff */
 #define MIXBUFFERSIZE           512
@@ -468,6 +478,14 @@ typedef struct song_note {
 	uint8_t param;
 } song_note_t;
 
+typedef struct song_history {
+	int time_valid;
+
+	// meh, just use the standard structures
+	struct tm time;
+	struct timeval runtime;
+} song_history_t;
+
 ////////////////////////////////////////////////////////////////////
 
 typedef struct {
@@ -550,8 +568,9 @@ typedef struct song {
 
 	// These store the existing IT save history from prior editing sessions.
 	// Current session data is added at save time, and is NOT a part of histdata.
-	int histlen; // How many session history data entries exist (each entry is eight bytes)
-	uint8_t *histdata; // Preserved entries from prior sessions, might be NULL if histlen = 0
+	size_t histlen; // How many session history data entries exist (each entry is eight bytes)
+	song_history_t *history; // Preserved entries from prior sessions, might be NULL if histlen = 0
+
 	struct timeval editstart; // When the song was loaded
 
 	// mixer stuff

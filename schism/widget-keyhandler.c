@@ -879,7 +879,8 @@ int widget_handle_key(struct key_event * k)
 			return 1;
 		break;
 	case WIDGET_NUMENTRY:
-		if (k->text && widget_numentry_handle_text(widget, k->text))
+		if ((k->mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI)) == 0 &&
+			k->text && widget_numentry_handle_text(widget, k->text))
 			return 1;
 		break;
 	default:

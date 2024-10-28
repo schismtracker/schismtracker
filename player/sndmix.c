@@ -1138,9 +1138,9 @@ int csf_read_note(song_t *csf)
 		}
 
 		// Check for unused channel
-		if (cn >= MAX_CHANNELS && !chan->length) {
-			continue;
-		}
+		if (cn >= MAX_CHANNELS)
+			if (!chan->length && !(chan->flags & CHN_ADLIB))
+				continue;
 
 		// Reset channel data
 		chan->increment = 0;

@@ -30,8 +30,6 @@
 
 /* --------------------------------------------------------------------- */
 
-#pragma pack(push, 1)
-
 struct header_669 {
 	uint8_t sig[2];
 	uint8_t songmessage[108];
@@ -43,15 +41,29 @@ struct header_669 {
 	uint8_t breaks[128];
 };
 
-SCHISM_BINARY_STRUCT(struct header_669, 2+108+1+1+1+128+128+128);
+static int read_header_669(struct header_669 *hdr, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) return 0
 
-#pragma pack(pop)
+	READ_VALUE(sig);
+	READ_VALUE(songmessage);
+	READ_VALUE(samples);
+	READ_VALUE(patterns);
+	READ_VALUE(restartpos);
+	READ_VALUE(orders);
+	READ_VALUE(tempolist);
+	READ_VALUE(breaks);
+
+#undef READ_VALUE
+
+	return 1;
+}
 
 int fmt_669_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	struct header_669 hdr;
-
-	if (slurp_read(fp, &hdr, sizeof(hdr)) != sizeof(hdr))
+	if (!read_header_669(&hdr, fp))
 		return 0;
 
 	unsigned long i;

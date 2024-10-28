@@ -507,13 +507,13 @@ static int handle_key_global(struct key_event * k)
 		return 0;
 	}
 
-	if(handle_key_truly_global(k))
+	if (handle_key_truly_global(k))
 		return 1;
 
 	/* next, if there's no dialog, check the rest of the keys */
 	if (status.flags & DISKWRITER_ACTIVE) return 0;
 
-	if(KEY_PRESSED(global, pattern_edit)) {
+	if (KEY_PRESSED(global, pattern_edit)) {
 		if (status.current_page == PAGE_PATTERN_EDITOR) {
 			if (status.dialog_type != DIALOG_NONE) {
 				dialog_yes_NULL();
@@ -556,8 +556,7 @@ static int handle_key_global(struct key_event * k)
 		set_page(PAGE_LIBRARY_INSTRUMENT);
 	} else if (KEY_PRESSED(global, play_information_or_play_song)) {
 		if (song_get_mode() == MODE_STOPPED ||
-			(song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO)
-		) {
+			(song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO)) {
 			song_start();
 		}
 		set_page(PAGE_INFO);
@@ -628,33 +627,39 @@ static int handle_key_global(struct key_event * k)
 			(midi_flags & MIDI_DISABLE_RECORD)
 			? "Disabled" : "Enabled");
 		return 1;
+	} else if (KEY_PRESSED(global, time_information)) {
+		_mp_finish(NULL);
+		if (k->state == KEY_PRESS)
+			set_page(PAGE_TIME_INFORMATION);
+
+		return 1;
 	} else {
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 	}
 
-	if(KEY_PRESSED(global, toggle_channel_1)) {
+	if (KEY_PRESSED(global, toggle_channel_1)) {
 		song_toggle_channel_mute(0);
 		status.flags |= NEED_UPDATE;
-	} else if(KEY_PRESSED(global, toggle_channel_2)) {
+	} else if (KEY_PRESSED(global, toggle_channel_2)) {
 		song_toggle_channel_mute(1);
 		status.flags |= NEED_UPDATE;
-	} else if(KEY_PRESSED(global, toggle_channel_3)) {
+	} else if (KEY_PRESSED(global, toggle_channel_3)) {
 		song_toggle_channel_mute(2);
 		status.flags |= NEED_UPDATE;
-	} else if(KEY_PRESSED(global, toggle_channel_4)) {
+	} else if (KEY_PRESSED(global, toggle_channel_4)) {
 		song_toggle_channel_mute(3);
 		status.flags |= NEED_UPDATE;
-	} else if(KEY_PRESSED(global, toggle_channel_5)) {
+	} else if (KEY_PRESSED(global, toggle_channel_5)) {
 		song_toggle_channel_mute(4);
 		status.flags |= NEED_UPDATE;
-	} else if(KEY_PRESSED(global, toggle_channel_6)) {
+	} else if (KEY_PRESSED(global, toggle_channel_6)) {
 		song_toggle_channel_mute(5);
 		status.flags |= NEED_UPDATE;
-	} else if(KEY_PRESSED(global, toggle_channel_7)) {
+	} else if (KEY_PRESSED(global, toggle_channel_7)) {
 		song_toggle_channel_mute(6);
 		status.flags |= NEED_UPDATE;
-	} else if(KEY_PRESSED(global, toggle_channel_8)) {
+	} else if (KEY_PRESSED(global, toggle_channel_8)) {
 		song_toggle_channel_mute(7);
 		status.flags |= NEED_UPDATE;
 	} else {
@@ -1395,6 +1400,7 @@ void load_pages(void)
 	about_load_page(pages+PAGE_ABOUT);
 	config_load_page(pages + PAGE_CONFIG);
 	save_module_load_page(pages + PAGE_EXPORT_MODULE, 1);
+	timeinfo_load_page(pages + PAGE_TIME_INFORMATION);
 
 	widgets = pages[PAGE_BLANK].widgets;
 	selected_widget = &(pages[PAGE_BLANK].selected_widget);
