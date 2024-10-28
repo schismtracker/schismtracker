@@ -102,7 +102,7 @@ static int macosx_did_finderlaunch;
 	if (!event || [event type] == NSKeyDown)
 		return;
 
-	struct keybinds_menu_item *i = [sender representedObject];
+	struct keybinds_menu_item *i = (struct keybinds_menu_item *)[sender representedObject];
 
 	SDL_Event e;
 	keybinds_menu_item_pressed(i, &e);
@@ -228,13 +228,16 @@ static int get_key_equivalent_modifier(keybind_bind_t *bind)
 
 static void setApplicationMenu(NSMenu *menu)
 {
-	for (const struct keybinds_menu *m = keybinds_menus; m->type != KEYBINDS_MENU_NULL; m++) {
+	const struct keybinds_menu *m;
+	const struct keybinds_menu_item *i;
+
+	for (m = keybinds_menus; m->type != KEYBINDS_MENU_NULL; m++) {
 		if (m->type != KEYBINDS_MENU_REGULAR && m->type != KEYBINDS_MENU_APPLE)
 			continue;
 
 		NSMenu *submenu = [[NSMenu alloc] init];
 
-		for (const struct keybinds_menu_item *i = m->items; i->type != KEYBINDS_MENU_ITEM_NULL; i++) {
+		for (i = m->items; i->type != KEYBINDS_MENU_ITEM_NULL; i++) {
 			if (i->no_osx)
 				continue;
 
@@ -249,7 +252,7 @@ static void setApplicationMenu(NSMenu *menu)
 							action:@selector(_menu_callback:)
 							keyEquivalent:get_key_equivalent(&global_keybinds_list.global.help)];
 				[item setKeyEquivalentModifierMask:get_key_equivalent_modifier(&global_keybinds_list.global.help)];
-				[item setRepresentedObject: i];
+				[item setRepresentedObject: (id)i];
 				break;
 			}
 			case KEYBINDS_MENU_ITEM_SEPARATOR:
