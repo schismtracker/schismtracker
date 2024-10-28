@@ -687,27 +687,24 @@ static inline void update_vu_meter(song_voice_t *chan)
 		}
 	} else if (vutmp && chan->current_sample_data) {
 		// can't fake the funk
-		int n = 0;
+		int n;
 		int pos = chan->position; // necessary on 64-bit systems (sometimes pos == -1, weird)
 		if (chan->flags & CHN_16BIT) {
 			const signed short *p = (signed short *)(chan->current_sample_data);
-			for (int i = 0; i < chan->length * ((chan->flags & CHN_STEREO) ? 2 : 1); i++) {
-				int smp = (p[pos + i] > 0) ? p[pos + i] : -p[pos + i];
-
-				if (smp > n)
-					n = smp;
-			}
+			if (chan->flags & CHN_STEREO)
+				n = p[2 * pos];
+			else
+				n = p[pos];
 			n >>= 8;
 		} else {
 			const signed char *p = (signed char *)(chan->current_sample_data);
-			for (int i = 0; i < chan->length * ((chan->flags & CHN_STEREO) ? 2 : 1); i++) {
-				int smp = (p[pos + i] > 0) ? p[pos + i] : -p[pos + i];
-
-				if (smp > n)
-					n = smp;
-			}
+			if (chan->flags & CHN_STEREO)
+				n = p[2 * pos];
+			else
+				n = p[pos];
 		}
-
+		if (n < 0)
+			n = -n;
 		vutmp *= n;
 		vutmp >>= 7; // 0..255
 		chan->vu_meter = vutmp;
