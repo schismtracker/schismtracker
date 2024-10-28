@@ -193,7 +193,7 @@ static void set_shortcut_text(keybind_bind_t* bind)
 			key_text = str_dup("Spacebar");
 			break;
 		default:
-			key_text = str_dup(SDL_GetKeyName(sc->keycode));
+			key_text = str_dup(SDL_GetKeyName(kc));
 			break;
 		}
 
