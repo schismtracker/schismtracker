@@ -722,7 +722,7 @@ int keybinds_init(void);
 
 /* keybinds.c */
 int keybinds_append_bind_to_list(keybind_bind_t *bind);
-int keybinds_append_shortcut_to_bind(keybind_bind_t* bind, SDL_Keycode keycode, SDL_Scancode scancode, SDL_Keymod modifier);
+int keybinds_append_shortcut_to_bind(keybind_bind_t* bind, SDL_Keycode keycode, SDL_Scancode scancode, enum keybind_modifier modifier);
 char* keybinds_get_help_text(enum page_numbers page);
 void keybinds_handle_event(struct key_event* event);
 int keybinds_init_failed(void);

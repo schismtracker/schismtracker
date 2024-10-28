@@ -185,6 +185,8 @@ void keybinds_handle_event(struct key_event* event)
 			reset_bind(current_binds[i]);
 
 		return;
+	default:
+		break;
 	}
 
 	int is_down = event->state == KEY_PRESS;
@@ -213,7 +215,7 @@ int keybinds_append_bind_to_list(keybind_bind_t *bind)
 	return 1;
 }
 
-int keybinds_append_shortcut_to_bind(keybind_bind_t* bind, SDL_Keycode keycode, SDL_Scancode scancode, SDL_Keymod modifier)
+int keybinds_append_shortcut_to_bind(keybind_bind_t* bind, SDL_Keycode keycode, SDL_Scancode scancode, enum keybind_modifier modifier)
 {
 	if (bind->shortcuts_count >= KEYBINDS_MAX_SHORTCUTS) {
 		log_appendf(5, " %s/%s: Trying to bind too many shortcuts. Max is %i.", bind->section_info->name, bind->name, KEYBINDS_MAX_SHORTCUTS);
@@ -258,21 +260,21 @@ char *keybinds_get_help_text(enum page_numbers page)
 
 		if (current_title != bind_title) {
 			if (current_title != NULL && bind->section_info == &global_keybinds_list.global_info) {
-				char *new = STR_CONCAT(2, out, "\n \n%\n");
-				free(out);
-				out = new;
+				char *old = out;
+				out = STR_CONCAT(2, old, "\n \n%\n");
+				free(old);
 			}
 
-			char *new = STR_CONCAT(4, out, (current_title) ? "\n \n  " : "\n  ", (char *)bind_title, "\n");
-			free(out);
-			out = new;
+			char *old = out;
+			out = STR_CONCAT(4, old, (current_title) ? "\n \n  " : "\n  ", (char *)bind_title, "\n");
+			free(old);
 
 			current_title = bind_title;
 		}
 
-		char *prev_out = out;
-		out = STR_CONCAT(3, prev_out, (char*)bind->help_text, "\n");
-		free(prev_out);
+		char *old = out;
+		out = STR_CONCAT(3, old, (char*)bind->help_text, "\n");
+		free(old);
 	}
 
 	return out;
