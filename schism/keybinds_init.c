@@ -70,7 +70,7 @@ static int keybinds_parse_shortcut(keybind_bind_t* bind, const char* shortcut)
 {
 	int has_problem = 0;
 
-	SDL_Keymod mods = KMOD_NONE;
+	enum keybind_modifier mods = KEYBIND_MOD_NONE;
 	SDL_Scancode scan_code = SDL_SCANCODE_UNKNOWN;
 	SDL_Keycode key_code = SDLK_UNKNOWN;
 
@@ -130,7 +130,7 @@ static int keybinds_parse_shortcuts(keybind_bind_t* bind, const char* shortcut)
 
 static void set_shortcut_text(keybind_bind_t* bind)
 {
-	char* out[KEYBINDS_MAX_SHORTCUTS] = {0};
+	char *out[KEYBINDS_MAX_SHORTCUTS] = {0};
 
 	for(int i = 0; i < KEYBINDS_MAX_SHORTCUTS && i < bind->shortcuts_count; i++) {
 		keybind_shortcut_t* sc = &bind->shortcuts[i];
@@ -193,7 +193,7 @@ static void set_shortcut_text(keybind_bind_t* bind)
 			key_text = str_dup("Spacebar");
 			break;
 		default:
-			key_text = str_dup(SDL_GetKeyName(sc->keycode));
+			key_text = str_dup(SDL_GetKeyName(kc));
 			break;
 		}
 
@@ -237,8 +237,8 @@ static void set_shortcut_text(keybind_bind_t* bind)
 		free(text);
 	}
 
-	char* help_shortcuts = str_implode_free(KEYBINDS_MAX_SHORTCUTS, "\n", out);
-	bind->help_text = STR_CONCAT(3, help_shortcuts, (char*)bind->description, "\n");
+	char* help_shortcuts = str_implode_free(KEYBINDS_MAX_SHORTCUTS, "\n\"", out);
+	bind->help_text = STR_CONCAT(4, "\"", help_shortcuts, bind->description, "\n");
 	free(help_shortcuts);
 }
 
@@ -246,7 +246,7 @@ void keybinds_init_shortcut(keybind_shortcut_t *sc)
 {
 	sc->scancode = SDL_SCANCODE_UNKNOWN;
 	sc->keycode = SDLK_UNKNOWN;
-	sc->modifier = KMOD_NONE;
+	sc->modifier = KEYBIND_MOD_NONE;
 	sc->pressed = 0;
 	sc->released = 0;
 	sc->repeated = 0;
