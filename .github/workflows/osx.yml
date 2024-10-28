@@ -186,7 +186,7 @@ jobs:
             install_name_tool -change "$HOME/x86_64prefix/lib/lib${i}.dylib" @executable_path/../Resources/lib${i}.dylib build_x86_64/schismtracker
             install_name_tool -change "$HOME/arm64prefix/lib/lib${i}.dylib" @executable_path/../Resources/lib${i}.dylib build_arm64/schismtracker
           done
-          "$HOME/ppc/usr/bin/install_name_tool" -change "@rpath/libutf8proc.3.dylib" @executable_path/../Resources/libutf8proc.3.dylib build_powerpc/schismtracker
+          "$HOME/ppc/usr/bin/install_name_tool" -change "@HOME/ppcprefix/libutf8proc.3.dylib" @executable_path/../Resources/libutf8proc.3.dylib build_powerpc/schismtracker
           install_name_tool -change "@rpath/libutf8proc.3.dylib" @executable_path/../Resources/libutf8proc.3.dylib build_x86_64/schismtracker
           install_name_tool -change "@rpath/libutf8proc.3.dylib" @executable_path/../Resources/libutf8proc.3.dylib build_arm64/schismtracker
           "$HOME/ppc/usr/bin/install_name_tool" -change "$HOME/ppcprefix/lib/libogg.0.dylib" @loader_path/../Resources/libogg.0.dylib "$HOME/ppcprefix/lib/libFLAC.12.dylib"
