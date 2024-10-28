@@ -487,3 +487,17 @@ void waterfall_load_page(struct page *page)
 	page->widgets = waterfall_widget_hack;
 	widget_create_other(waterfall_widget_hack, 0, waterfall_handle_key, NULL, do_nil);
 }
+
+int waterfall_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(waterfall, "Waterfall Keys.", PAGE_WATERFALL);
+	INIT_BIND(waterfall, song_toggle_stereo, "Toggle song stereo/mono", "Alt+S");
+	INIT_BIND(waterfall, song_flip_stereo, "Flip song left/right", "Alt+R");
+	INIT_BIND(waterfall, view_toggle_mono, "Toggle mono display", "Alt+M");
+	INIT_BIND(waterfall, decrease_sensitivity, "Decrease sensitivity", "LEFT");
+	INIT_BIND(waterfall, increase_sensitivity, "Increase sensitivity", "RIGHT");
+	INIT_BIND(waterfall, goto_previous_order, "Play previous order (while playing)", "KP_MINUS");
+	INIT_BIND(waterfall, goto_next_order, "Play next order (while playing)", "KP_PLUS");
+	INIT_BIND(waterfall, goto_pattern_edit, "Go to current position in pattern editor", "Alt+G");
+	return 1;
+}

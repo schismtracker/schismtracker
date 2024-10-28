@@ -24,8 +24,9 @@
 #ifndef SCHISM_KEYBINDS_H_
 #define SCHISM_KEYBINDS_H_
 
-#include "SDL.h"
+#include "sdlmain.h"
 #include "page.h"
+#include "config.h"
 
 /* *** TYPES *** */
 
@@ -756,5 +757,40 @@ extern keybind_list_t global_keybinds_list;
 #define KEY_PRESS_REPEATS(SECTION, NAME) ( \
 	global_keybinds_list.SECTION.NAME.press_repeats \
 )
+
+#define DESCRIPTION_SPACER "                      "
+#define TEXT_2X "\n                  2x: "
+
+#define INIT_SECTION(SECTION, TITLE, PAGE) \
+	keybinds_init_section(&global_keybinds_list.SECTION##_info, #SECTION, TITLE, PAGE);
+
+#define INIT_BIND(SECTION, BIND, DESCRIPTION, DEFAULT_KEYBIND) \
+	do { \
+		const char *shortcut = str_dup(cfg_get_string(cfg, #SECTION, #BIND, NULL, 0, DEFAULT_KEYBIND)); \
+		cfg_set_string(cfg, #SECTION, #BIND, shortcut); \
+	\
+		if (!keybinds_init_bind(&global_keybinds_list.SECTION.BIND, &global_keybinds_list.SECTION ## _info, #BIND, DESCRIPTION, shortcut)) { \
+			free((void *)shortcut); \
+			return 0; \
+		} \
+	\
+		free((void *)shortcut); \
+	\
+		if (!keybinds_append_bind_to_list(&global_keybinds_list.SECTION.BIND)) \
+			return 0; \
+	} while (0)
+
+int info_load_keybinds(cfg_file_t* cfg);
+int instrument_list_load_keybinds(cfg_file_t* cfg);
+int load_module_load_keybinds(cfg_file_t* cfg);
+int load_sample_load_keybinds(cfg_file_t* cfg);
+int message_load_keybinds(cfg_file_t* cfg);
+int midi_load_keybinds(cfg_file_t* cfg);
+int ordervol_load_keybinds(cfg_file_t* cfg);
+int palette_load_keybinds(cfg_file_t* cfg);
+int pattern_editor_load_keybinds(cfg_file_t* cfg);
+int sample_list_load_keybinds(cfg_file_t* cfg);
+int timeinfo_load_keybinds(cfg_file_t* cfg);
+int waterfall_load_keybinds(cfg_file_t* cfg);
 
 #endif /* SCHISM_KEYBINDS_H_ */

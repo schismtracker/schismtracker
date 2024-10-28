@@ -1165,3 +1165,11 @@ void save_module_load_page(struct page *page, int do_export)
 	widgets_exportsave[4 + n - 1].next.down = 2;
 	page->total_widgets += n;
 }
+
+int load_module_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(load_module, "Load Module Keys.", PAGE_LOAD_MODULE);
+	INIT_BIND(load_module, show_song_length, "Show song length", "Alt+P");
+	INIT_BIND(load_module, clear_search_text, "Clear search text", "Ctrl+BACKSPACE");
+	return 1;
+}

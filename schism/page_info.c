@@ -1209,3 +1209,33 @@ void info_load_page(struct page *page)
 
 	widget_create_other(widgets_info + 0, 0, info_page_handle_key, NULL, info_page_redraw);
 }
+
+int info_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(info_page, "Info Page Keys.", PAGE_INFO);
+	INIT_BIND(info_page, add_window, "Add a new window", "INSERT");
+	INIT_BIND(info_page, delete_window, "Delete current window", "DELETE");
+	INIT_BIND(info_page, nav_next_window, "Move to next window", "TAB");
+	INIT_BIND(info_page, nav_previous_window, "Move to previous window", "Shift+TAB");
+	INIT_BIND(info_page, change_window_type_up, "Change window type up", "PAGEUP");
+	INIT_BIND(info_page, change_window_type_down, "Change window type down", "PAGEDOWN");
+	INIT_BIND(info_page, move_window_base_up, "Move window base up", "Alt+UP");
+	INIT_BIND(info_page, move_window_base_down, "Move window base down\n ", "Alt+DOWN");
+
+	INIT_BIND(info_page, toggle_volume_velocity_bars, "Toggle between volume/velocity bars", "V");
+	INIT_BIND(info_page, toggle_sample_instrument_names, "Toggle between sample/instrument names\n ", "I");
+
+	INIT_BIND(info_page, toggle_channel_mute, "Mute/unmute current channel", "Q");
+	INIT_BIND(info_page, toggle_channel_mute_and_go_next, "Mute/unmute current channel and go to next", "SPACE");
+	INIT_BIND(info_page, solo_channel, "Solo current channel\n ", "S");
+
+	INIT_BIND(info_page, goto_next_pattern, "Move forwards one pattern in song", "KP_PLUS");
+	INIT_BIND(info_page, goto_previous_pattern, "Move backwards one pattern in song\n ", "KP_MINUS");
+
+	INIT_BIND(info_page, toggle_stereo_playback, "Toggle stereo playback", "Alt+S");
+	INIT_BIND(info_page, reverse_output_channels, "Reverse output channels\n ", "Alt+R");
+
+	INIT_BIND(info_page, goto_playing_pattern, "Goto pattern currently playing", "G");
+
+	return 1;
+}

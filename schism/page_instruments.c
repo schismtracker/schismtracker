@@ -2836,3 +2836,97 @@ void instrument_list_pitch_load_page(struct page *page)
 		num_save_formats++;
 }
 
+static int instrument_list_page_matcher(enum page_numbers page)
+{
+	return page == PAGE_INSTRUMENT_LIST_GENERAL || page == PAGE_INSTRUMENT_LIST_PANNING || page == PAGE_INSTRUMENT_LIST_PITCH || page == PAGE_INSTRUMENT_LIST_VOLUME;
+}
+
+int instrument_list_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(instrument_list, "Instrument List Keys.", PAGE_INSTRUMENT_LIST);
+	global_keybinds_list.instrument_list_info.page_matcher = instrument_list_page_matcher;
+
+	INIT_BIND(instrument_list, next_page, "Next page", "F4");
+	INIT_BIND(instrument_list, previous_page, "Previous page\n ", "Shift+F4");
+
+	INIT_BIND(instrument_list, move_instrument_up, "Move instrument up (when on list)", "Alt+UP");
+	INIT_BIND(instrument_list, move_instrument_down, "Move instrument down (when on list)\n ", "Alt+DOWN");
+
+	INIT_BIND(instrument_list, goto_first_instrument, "Select first instrument (when on list)", "Ctrl+PAGEUP");
+	INIT_BIND(instrument_list, goto_last_instrument, "Select last instrument (when on list)", "Ctrl+PAGEDOWN");
+
+	// INIT_BIND(instrument_list, load_instrument, "Load new instrument", "ENTER");
+	INIT_BIND(instrument_list, focus_list, "Focus on list", "Shift+ESCAPE");
+	INIT_BIND(instrument_list, goto_instrument_up, "Goto instrument up (when not on list)", "Ctrl+PAGEUP");
+	INIT_BIND(instrument_list, goto_instrument_down, "Goto instrument down (when not on list)", "Ctrl+PAGEDOWN");
+	INIT_BIND(instrument_list, clear_name_and_filename, "Clean instrument name & filename", "Alt+C");
+	INIT_BIND(instrument_list, wipe_data, "Wipe instrument data", "Alt+W");
+	INIT_BIND(instrument_list, edit_name, "Edit instrument name (ESC to exit)\n ", "SPACE");
+
+	INIT_BIND(instrument_list, delete_instrument_and_samples, "Delete instrument & all related samples", "Alt+D");
+	INIT_BIND(instrument_list, delete_instrument_and_unused_samples, "Delete instrument & all related unused samples", "Alt+Shift+D");
+	INIT_BIND(instrument_list, post_loop_cut, "Post-loop cut envelope", "Alt+L");
+	INIT_BIND(instrument_list, toggle_multichannel, "Toggle multichannel playback", "Alt+N");
+	INIT_BIND(instrument_list, save_to_disk, "Save current instrument to disk (IT Format)", "Alt+O");
+	INIT_BIND(instrument_list, save_to_disk_exp, "Save current instrument to disk (Export Format)", "Alt+T");
+	INIT_BIND(instrument_list, copy, "Copy instrument", "Alt+P");
+	INIT_BIND(instrument_list, replace_in_song, "Replace current instrument in song", "Alt+R");
+	INIT_BIND(instrument_list, swap, "Swap instruments (in song also)", "Alt+S");
+	// Can't find this and can't figure out in previous version
+	// INIT_BIND(instrument_list, update_pattern_data, "Update pattern data", "Alt+U");
+	INIT_BIND(instrument_list, exchange, "Exchange instruments (only in instrument list)\n ", "Alt+X");
+
+	INIT_BIND(instrument_list, insert_slot, "Insert instrument slot (updates pattern data)", "Alt+INSERT");
+	INIT_BIND(instrument_list, remove_slot, "Remove instrument slot (updates pattern data)\n ", "Alt+DELETE");
+
+	INIT_BIND(instrument_list, increase_playback_channel, "Increase playback channel", "Shift+PERIOD");
+	INIT_BIND(instrument_list, decrease_playback_channel, "Decrease playback channel", "Shift+COMMA");
+
+	INIT_SECTION(instrument_note_translation, "Note Translation.", PAGE_INSTRUMENT_LIST);
+	global_keybinds_list.instrument_note_translation_info.page_matcher = instrument_list_page_matcher;
+
+	INIT_BIND(instrument_note_translation, pickup_sample_number_and_default_play_note, "Pickup sample number & default play note", "ENTER");
+	INIT_BIND(instrument_note_translation, increase_sample_number, "Increase sample number", "Shift+PERIOD,Ctrl+DOWN");
+	INIT_BIND(instrument_note_translation, decrease_sample_number, "Decrease sample number\n ", "Shift+COMMA,Ctrl+UP");
+
+	INIT_BIND(instrument_note_translation, change_all_samples, "Change all samples", "Alt+A");
+	INIT_BIND(instrument_note_translation, change_all_samples_with_name, "Change all samples, copy name", "Alt+Shift+A");
+	INIT_BIND(instrument_note_translation, enter_next_note, "Enter next note", "Alt+N");
+	INIT_BIND(instrument_note_translation, enter_previous_note, "Enter previous note", "Alt+P");
+	INIT_BIND(instrument_note_translation, transpose_all_notes_semitone_up, "Transpose all notes a semitone up", "Alt+UP");
+	INIT_BIND(instrument_note_translation, transpose_all_notes_semitone_down, "Transpose all notes a semitone down", "Alt+DOWN");
+	INIT_BIND(instrument_note_translation, insert_row_from_table, "Insert a row from the table", "Alt+INSERT");
+	INIT_BIND(instrument_note_translation, delete_row_from_table, "Delete a row from the table", "Alt+DELETE");
+	INIT_BIND(instrument_note_translation, toggle_edit_mask, "Toggle edit mask for current field", "COMMA");
+
+	INIT_SECTION(instrument_envelope, "Envelope Keys.", PAGE_INSTRUMENT_LIST);
+	global_keybinds_list.instrument_envelope_info.page_matcher = instrument_list_page_matcher;
+
+	INIT_BIND(instrument_envelope, pick_up_or_drop_current_node, "Pick up/drop current node", "ENTER");
+	INIT_BIND(instrument_envelope, add_node, "Add node", "INSERT");
+	INIT_BIND(instrument_envelope, delete_node, "Delete node", "DELETE");
+	INIT_BIND(instrument_envelope, nav_node_left, "Go to node left", "Ctrl+LEFT");
+	INIT_BIND(instrument_envelope, nav_node_right, "Go to node right\n ", "Ctrl+RIGHT");
+
+	INIT_BIND(instrument_envelope, move_node_left, "Move node left", "LEFT");
+	INIT_BIND(instrument_envelope, move_node_right, "Move node right", "RIGHT");
+	INIT_BIND(instrument_envelope, move_node_left_fast, "Move node left (fast)", "Alt+LEFT,TAB");
+	INIT_BIND(instrument_envelope, move_node_right_fast, "Move node right (fast)", "Alt+RIGHT,Shift+TAB");
+	INIT_BIND(instrument_envelope, move_node_left_max, "Move node left (max)", "HOME");
+	INIT_BIND(instrument_envelope, move_node_right_max, "Move node right (max)", "END");
+	INIT_BIND(instrument_envelope, move_node_up, "Move node up", "UP");
+	INIT_BIND(instrument_envelope, move_node_down, "Move node down", "DOWN");
+	INIT_BIND(instrument_envelope, move_node_up_fast, "Move node up (fast)", "Alt+UP,PAGEUP");
+	INIT_BIND(instrument_envelope, move_node_down_fast, "Move node down (fast)\n ", "Alt+DOWN,PAGEDOWN");
+
+	INIT_BIND(instrument_envelope, pre_loop_cut_envelope, "Pre-loop cut envelope", "Alt+B");
+	INIT_BIND(instrument_envelope, double_envelope_length, "Double envelope length", "Alt+F");
+	INIT_BIND(instrument_envelope, halve_envelope_length, "Halve envelope length", "Alt+G");
+	INIT_BIND(instrument_envelope, resize_envelope, "Resize envelope", "Alt+E");
+	INIT_BIND(instrument_envelope, generate_envelope_from_ADSR_values, "Generate envelope frome ADSR values\n ", "Alt+Z");
+
+	INIT_BIND(instrument_envelope, play_default_note, "Play default note", "SPACE");
+	// INIT_BIND(instrument_envelope, note_off, "Note off command", "");
+
+	return 1;
+}

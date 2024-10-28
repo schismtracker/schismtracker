@@ -356,3 +356,11 @@ void palette_load_page(struct page *page)
 	widgets_palette[40].next.tab = 49;
 	widgets_palette[41].next.tab = 49;
 }
+
+int palette_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(palette_edit, "Palette Keys.", PAGE_PALETTE_EDITOR);
+	INIT_BIND(palette_edit, copy, "Copy current palette to the clipboard", "Ctrl+C");
+	INIT_BIND(palette_edit, paste, "Paste a palette from the clipboard", "Ctrl+V");
+	return 1;
+}
