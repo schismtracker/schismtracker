@@ -3,6 +3,9 @@
 
 #include <SDL.h>
 #include <SDL_thread.h>
+#ifdef vector
+# undef vector
+#endif
 #include <SDL_syswm.h>
 
 /* use 64-bit functions only if they're available! */
