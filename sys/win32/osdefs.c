@@ -37,37 +37,6 @@
 #include <process.h>
 #include <shlobj.h>
 
-#define IDM_FILE_NEW  101
-#define IDM_FILE_LOAD 102
-#define IDM_FILE_SAVE_CURRENT 103
-#define IDM_FILE_SAVE_AS 104
-#define IDM_FILE_EXPORT 105
-#define IDM_FILE_MESSAGE_LOG 106
-#define IDM_FILE_QUIT 107
-#define IDM_PLAYBACK_SHOW_INFOPAGE 201
-#define IDM_PLAYBACK_PLAY_SONG 202
-#define IDM_PLAYBACK_PLAY_PATTERN 203
-#define IDM_PLAYBACK_PLAY_FROM_ORDER 204
-#define IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR 205
-#define IDM_PLAYBACK_STOP 206
-#define IDM_PLAYBACK_CALCULATE_LENGTH 207
-#define IDM_SAMPLES_SAMPLE_LIST 301
-#define IDM_SAMPLES_SAMPLE_LIBRARY 302
-#define IDM_SAMPLES_RELOAD_SOUNDCARD 303
-#define IDM_INSTRUMENTS_INSTRUMENT_LIST 401
-#define IDM_INSTRUMENTS_INSTRUMENT_LIBRARY 402
-#define IDM_VIEW_HELP 501
-#define IDM_VIEW_VIEW_PATTERNS 502
-#define IDM_VIEW_ORDERS_PANNING 503
-#define IDM_VIEW_VARIABLES 504
-#define IDM_VIEW_MESSAGE_EDITOR 505
-#define IDM_VIEW_TOGGLE_FULLSCREEN 506
-#define IDM_SETTINGS_PREFERENCES 601
-#define IDM_SETTINGS_MIDI_CONFIGURATION 602
-#define IDM_SETTINGS_PALETTE_EDITOR 603
-#define IDM_SETTINGS_FONT_EDITOR 604
-#define IDM_SETTINGS_SYSTEM_CONFIGURATION 605
-
 /* global menu object */
 static HMENU menu = NULL;
 
@@ -120,104 +89,11 @@ int win32_sdlevent(SDL_Event* event)
 		return 1;
 
 	if (event->syswm.msg->msg.win.msg == WM_COMMAND) {
-		SDL_Event e;
-		e.type = SCHISM_EVENT_NATIVE;
-		e.user.code = SCHISM_EVENT_NATIVE_SCRIPT;
-		switch (LOWORD(event->syswm.msg->msg.win.wParam)) {
-			case IDM_FILE_NEW:
-				e.user.data1 = "new";
-				break;
-			case IDM_FILE_LOAD:
-				e.user.data1 = "load";
-				break;
-			case IDM_FILE_SAVE_CURRENT:
-				e.user.data1 = "save";
-				break;
-			case IDM_FILE_SAVE_AS:
-				e.user.data1 = "save_as";
-				break;
-			case IDM_FILE_EXPORT:
-				e.user.data1 = "export_song";
-				break;
-			case IDM_FILE_MESSAGE_LOG:
-				e.user.data1 = "logviewer";
-				break;
-			case IDM_FILE_QUIT:
-				e.type = SDL_QUIT;
-				break;
-			case IDM_PLAYBACK_SHOW_INFOPAGE:
-				e.user.data1 = "info";
-				break;
-			case IDM_PLAYBACK_PLAY_SONG:
-				e.user.data1 = "play";
-				break;
-			case IDM_PLAYBACK_PLAY_PATTERN:
-				e.user.data1 = "play_pattern";
-				break;
-			case IDM_PLAYBACK_PLAY_FROM_ORDER:
-				e.user.data1 = "play_order";
-				break;
-			case IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR:
-				e.user.data1 = "play_mark";
-				break;
-			case IDM_PLAYBACK_STOP:
-				e.user.data1 = "stop";
-				break;
-			case IDM_PLAYBACK_CALCULATE_LENGTH:
-				e.user.data1 = "calc_length";
-				break;
-			case IDM_SAMPLES_SAMPLE_LIST:
-				e.user.data1 = "sample_page";
-				break;
-			case IDM_SAMPLES_SAMPLE_LIBRARY:
-				e.user.data1 = "sample_library";
-				break;
-			case IDM_SAMPLES_RELOAD_SOUNDCARD:
-				e.user.data1 = "init_sound";
-				break;
-			case IDM_INSTRUMENTS_INSTRUMENT_LIST:
-				e.user.data1 = "inst_page";
-				break;
-			case IDM_INSTRUMENTS_INSTRUMENT_LIBRARY:
-				e.user.data1 = "inst_library";
-				break;
-			case IDM_VIEW_HELP:
-				e.user.data1 = "help";
-				break;
-			case IDM_VIEW_VIEW_PATTERNS:
-				e.user.data1 = "pattern";
-				break;
-			case IDM_VIEW_ORDERS_PANNING:
-				e.user.data1 = "orders";
-				break;
-			case IDM_VIEW_VARIABLES:
-				e.user.data1 = "variables";
-				break;
-			case IDM_VIEW_MESSAGE_EDITOR:
-				e.user.data1 = "message_edit";
-				break;
-			case IDM_VIEW_TOGGLE_FULLSCREEN:
-				e.user.data1 = "fullscreen";
-				break;
-			case IDM_SETTINGS_PREFERENCES:
-				e.user.data1 = "preferences";
-				break;
-			case IDM_SETTINGS_MIDI_CONFIGURATION:
-				e.user.data1 = "midi_config";
-				break;
-			case IDM_SETTINGS_PALETTE_EDITOR:
-				e.user.data1 = "palette_page";
-				break;
-			case IDM_SETTINGS_FONT_EDITOR:
-				e.user.data1 = "font_editor";
-				break;
-			case IDM_SETTINGS_SYSTEM_CONFIGURATION:
-				e.user.data1 = "system_config";
-				break;
-			default:
-				break;
-		}
-		*event = e;
+		struct keybinds_menu_item *i = keybinds_menu_find_item_from_id(LOWORD(event->syswm.msg->msg.win.wParam));
+		if (!i)
+			return 1;
+
+		keybinds_menu_item_pressed(i, event);
 	}
 
 	return 1;
@@ -264,71 +140,36 @@ void win32_toggle_menu(SDL_Window* window, int yes)
 void win32_create_menu(void) {
 	menu = CreateMenu();
 
-#define append_menu(MENU, MENU_ITEM, NAME, KEYBIND_NAME) \
-	AppendMenuW(MENU, MF_STRING, MENU_ITEM, \
-		str_to_wchar(STR_CONCAT(2, ("&" NAME "\t"), \
-			global_keybinds_list.global.KEYBIND_NAME.shortcut_text), 1));
+	for (const struct keybinds_menu *m = keybinds_menus; m->type != KEYBINDS_MENU_NULL; m++) {
+		if (m->type != KEYBINDS_MENU_REGULAR && m->type != KEYBINDS_MENU_APPLE)
+			continue;
 
-	{
-		HMENU file = CreatePopupMenu();
-		append_menu(file, IDM_FILE_NEW, "New", new_song);
-		append_menu(file, IDM_FILE_LOAD, "Load", load_module);
-		append_menu(file, IDM_FILE_SAVE_CURRENT, "Save", save);
-		append_menu(file, IDM_FILE_SAVE_AS, "Save &As...", save_module);
-		append_menu(file, IDM_FILE_EXPORT, "Export...", export_module);
-		append_menu(file, IDM_FILE_MESSAGE_LOG, "Message Log", schism_logging);
-		AppendMenuA(file, MF_SEPARATOR, 0, NULL);
-		append_menu(file, IDM_FILE_QUIT, "Quit", quit);
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)file, L"&File");
-	}
-	{
-		/* this is equivalent to the "Schism Tracker" menu on Mac OS X */
-		HMENU view = CreatePopupMenu();
-		append_menu(view, IDM_VIEW_HELP, "Help", help);
-		AppendMenuW(view, MF_SEPARATOR, 0, NULL);
-		append_menu(view, IDM_VIEW_VIEW_PATTERNS, "View Patterns", pattern_edit);
-		append_menu(view, IDM_VIEW_ORDERS_PANNING, "Orders/Panning", order_list);
-		append_menu(view, IDM_VIEW_VARIABLES, "Variables", song_variables);
-		append_menu(view, IDM_VIEW_MESSAGE_EDITOR, "Message Editor", message_editor);
-		AppendMenuW(view, MF_SEPARATOR, 0, NULL);
-		append_menu(view, IDM_VIEW_TOGGLE_FULLSCREEN, "Toggle Fullscreen", fullscreen);
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)view, L"&View");
-	}
-	{
-		HMENU playback = CreatePopupMenu();
-		append_menu(playback, IDM_PLAYBACK_SHOW_INFOPAGE, "Show Infopage", play_information_or_play_song);
-		append_menu(playback, IDM_PLAYBACK_PLAY_SONG, "Play Song", play_song);
-		append_menu(playback, IDM_PLAYBACK_PLAY_PATTERN, "Play Pattern", play_current_pattern);
-		append_menu(playback, IDM_PLAYBACK_PLAY_FROM_ORDER, "Play From Order", play_song_from_order);
-		append_menu(playback, IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR, "Play From Mark / Cursor", play_song_from_mark);
-		append_menu(playback, IDM_PLAYBACK_STOP, "Stop", stop_playback);
-		append_menu(playback, IDM_PLAYBACK_CALCULATE_LENGTH, "Calculate Length", calculate_song_length);
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)playback, L"&Playback");
-	}
-	{
-		HMENU samples = CreatePopupMenu();
-		append_menu(samples, IDM_SAMPLES_SAMPLE_LIST, "Sample List", sample_list);
-		append_menu(samples, IDM_SAMPLES_SAMPLE_LIBRARY, "Sample &Library", sample_library);
-		append_menu(samples, IDM_SAMPLES_RELOAD_SOUNDCARD, "Reload Soundcard", audio_reset);
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)samples, L"&Samples");
-	}
-	{
-		HMENU instruments = CreatePopupMenu();
-		append_menu(instruments, IDM_INSTRUMENTS_INSTRUMENT_LIST, "Instrument List", instrument_list);
-		append_menu(instruments, IDM_INSTRUMENTS_INSTRUMENT_LIBRARY, "Instrument Library", instrument_library);
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)instruments, L"&Instruments");
-	}
-	{
-		HMENU settings = CreatePopupMenu();
-		append_menu(settings, IDM_SETTINGS_PREFERENCES, "Preferences", preferences);
-		append_menu(settings, IDM_SETTINGS_MIDI_CONFIGURATION, "MIDI Configuration", midi);
-		append_menu(settings, IDM_SETTINGS_PALETTE_EDITOR, "Palette Editor", palette_config);
-		append_menu(settings, IDM_SETTINGS_FONT_EDITOR, "Font Editor", font_editor);
-		append_menu(settings, IDM_SETTINGS_SYSTEM_CONFIGURATION, "System Configuration", system_configure);
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)settings, L"S&ettings");
-	}
+		HMENU submenu = CreatePopupMenu();
 
-#undef append_menu
+		for (const struct keybinds_menu_item *i = m->items; i->type != KEYBINDS_MENU_ITEM_NULL; i++) {
+			switch (i->type) {
+			case KEYBINDS_MENU_ITEM_REGULAR: {
+				char *never_back_down_never_what = STR_CONCAT(3, i->info.regular.name, "\t", i->info.regular.bind->shortcut_text);
+				wchar_t *str = NULL;
+				charset_iconv((const uint8_t *)never_back_down_never_what, (uint8_t **)str, CHARSET_UTF8, CHARSET_WCHAR_T);
+				free(never_back_down_never_what);
+				AppendMenuW(submenu, MF_STRING, i->info.regular.id, str);
+				free(str);
+				break;
+			}
+			case KEYBINDS_MENU_ITEM_SEPARATOR:
+				AppendMenuW(submenu, MF_SEPARATOR, 0, NULL);
+				break;
+			default:
+				break;
+			}
+		}
+
+		wchar_t *str = NULL;
+		charset_iconv((const uint8_t *)i->info.regular.name, (uint8_t **)str, CHARSET_UTF8, CHARSET_WCHAR_T);
+		AppendMenuW(menu, MF_POPUP, (uintptr_t)submenu, str);
+		free(str);
+	}
 }
 
 /* -------------------------------------------------------------------- */

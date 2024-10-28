@@ -139,6 +139,12 @@ typedef struct keybind_list
 		keybind_bind_t goto_next_order;
 		keybind_bind_t goto_previous_order;
 
+		keybind_bind_t goto_next_channel;
+		keybind_bind_t goto_previous_channel;
+
+		keybind_bind_t goto_next_instrument;
+		keybind_bind_t goto_previous_instrument;
+
 		keybind_bind_t goto_pattern_edit;
 	} waterfall;
 
@@ -727,6 +733,50 @@ char* keybinds_get_help_text(enum page_numbers page);
 void keybinds_handle_event(struct key_event* event);
 int keybinds_init_failed(void);
 extern keybind_list_t global_keybinds_list;
+
+/* ------------------------------------------------------------------------------ */
+/* generate menus */
+
+enum keybinds_menu_item_type {
+	KEYBINDS_MENU_ITEM_NULL,
+	KEYBINDS_MENU_ITEM_REGULAR,
+	KEYBINDS_MENU_ITEM_SEPARATOR,
+};
+
+struct keybinds_menu_item {
+	enum keybinds_menu_item_type type;
+	int no_osx; // ugh
+	union {
+		struct {
+			const char *name;
+			const char *script;  // what gets passed to the event
+			keybind_bind_t *bind;
+		} regular;
+	} info;
+};
+
+enum keybinds_menu_type {
+	KEYBINDS_MENU_NULL,
+	KEYBINDS_MENU_REGULAR,
+	KEYBINDS_MENU_APPLE, // this menu gets displayed under the "Schism Tracker" menu on OS X
+};
+
+struct keybinds_menu {
+	enum keybinds_menu_type type;
+	union {
+		struct {
+			const char *name;
+		} regular;
+	} info;
+	struct keybinds_menu_item *items;
+};
+
+extern struct keybinds_menu keybinds_menus[];
+
+struct keybinds_menu_item *keybinds_menu_find_item_from_id(uint32_t id);
+void keybinds_menu_item_pressed(struct keybinds_menu_item *i, SDL_Event *event);
+
+/* ------------------------------------------------------------------------------ */
 
 /* Key was pressed this event. Will not trigger on held down repeats. */
 #define KEY_PRESSED(SECTION, NAME) global_keybinds_list.SECTION.NAME.pressed
