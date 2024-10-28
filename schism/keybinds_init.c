@@ -53,22 +53,17 @@ static int parse_shortcut_scancode(keybind_bind_t* bind, const char* shortcut, S
 
 static int parse_shortcut_keycode(keybind_bind_t* bind, const char* shortcut, SDL_Keycode* kcode)
 {
-	if (!shortcut || !shortcut[0])
-		return 0;
-
 	if (keybinds_parse_keycode(shortcut, kcode))
 		return 1;
 
 	*kcode = SDL_GetKeyFromName(shortcut);
+	if (*kcode != SDLK_UNKNOWN)
+		return 1;
 
-	if (*kcode == SDLK_UNKNOWN) {
-		log_appendf(5, " %s/%s: Unknown code '%s'", bind->section_info->name, bind->name, shortcut);
-		printf("%s/%s: Unknown code '%s'\n", bind->section_info->name, bind->name, shortcut);
-		fflush(stdout);
-		return -1;
-	}
-
-	return 1;
+	log_appendf(5, " %s/%s: Unknown code '%s'", bind->section_info->name, bind->name, shortcut);
+	printf("%s/%s: Unknown code '%s'\n", bind->section_info->name, bind->name, shortcut);
+	fflush(stdout);
+	return -1;
 }
 
 static int keybinds_parse_shortcut(keybind_bind_t* bind, const char* shortcut)
@@ -232,8 +227,6 @@ static void set_shortcut_text(keybind_bind_t* bind)
 			continue;
 
 		char *text = out[i];
-
-		puts(text);
 
 		if (text && *text) {
 			char* padded = str_pad_end(text, ' ', 18);
