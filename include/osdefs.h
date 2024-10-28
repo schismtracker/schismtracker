@@ -127,7 +127,7 @@ void win32_sdlinit(void);
 void win32_get_modkey(int *m);
 void win32_filecreated_callback(const char *filename);
 void win32_create_menu(void);
-void win32_toggle_menu(SDL_Window* window);
+void win32_toggle_menu(SDL_Window* window, int yes);
 int win32_open(const char* path, int flags);
 int win32_wstat(const wchar_t* path, struct stat* st);
 int win32_stat(const char* path, struct stat* st);
