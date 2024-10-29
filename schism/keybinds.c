@@ -77,6 +77,33 @@ static int check_mods(enum keybind_modifier needed, SDL_Keymod current)
 	if ((needed & KEYBIND_MOD_ALT) && !(current & KMOD_ALT))
 		return 0;
 
+	if ((current & KMOD_LCTRL) && !(needed & KEYBIND_MOD_LCTRL || needed & KEYBIND_MOD_CTRL))
+		return 0;
+
+	if ((current & KMOD_RCTRL) && !(needed & KEYBIND_MOD_RCTRL || needed & KEYBIND_MOD_CTRL))
+		return 0;
+
+	if ((current & KMOD_CTRL) && !(needed & KEYBIND_MOD_CTRL))
+		return 0;
+
+	if ((current & KMOD_LSHIFT) && !(needed & KEYBIND_MOD_LSHIFT || needed & KEYBIND_MOD_SHIFT))
+		return 0;
+
+	if ((current & KMOD_RSHIFT) && !(needed & KEYBIND_MOD_RSHIFT || needed & KEYBIND_MOD_SHIFT))
+		return 0;
+
+	if ((current & KMOD_SHIFT) && !(needed & KEYBIND_MOD_SHIFT))
+		return 0;
+
+	if ((current & KMOD_LALT) && !(needed & KEYBIND_MOD_LALT || needed & KEYBIND_MOD_ALT))
+		return 0;
+
+	if ((current & KMOD_RALT) && !(needed & KEYBIND_MOD_RALT || needed & KEYBIND_MOD_ALT))
+		return 0;
+
+	if ((current & KMOD_ALT) && !(needed & KEYBIND_MOD_ALT))
+		return 0;
+
 	// looks like it fits
 	return 1;
 }
