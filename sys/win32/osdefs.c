@@ -137,7 +137,7 @@ void win32_create_menu(void) {
 			case KEYBINDS_MENU_ITEM_REGULAR: {
 				char *never_back_down_never_what = STR_CONCAT(3, i->info.regular.name, "\t", i->info.regular.bind->shortcut_text);
 				wchar_t *str = NULL;
-				charset_iconv((const uint8_t *)never_back_down_never_what, (uint8_t **)str, CHARSET_UTF8, CHARSET_WCHAR_T);
+				charset_iconv((const uint8_t *)never_back_down_never_what, (uint8_t **)&str, CHARSET_UTF8, CHARSET_WCHAR_T);
 				free(never_back_down_never_what);
 				AppendMenuW(submenu, MF_STRING, i->info.regular.id, str);
 				free(str);
@@ -152,7 +152,7 @@ void win32_create_menu(void) {
 		}
 
 		wchar_t *str = NULL;
-		charset_iconv((const uint8_t *)m->info.regular.name, (uint8_t **)str, CHARSET_UTF8, CHARSET_WCHAR_T);
+		charset_iconv((const uint8_t *)m->info.regular.name, (uint8_t **)&str, CHARSET_UTF8, CHARSET_WCHAR_T);
 		AppendMenuW(menu, MF_POPUP, (uintptr_t)submenu, str);
 		free(str);
 	}
