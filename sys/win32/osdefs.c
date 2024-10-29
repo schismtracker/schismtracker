@@ -122,15 +122,17 @@ void win32_toggle_menu(SDL_Window* window, int yes)
 }
 
 void win32_create_menu(void) {
+	struct keybinds_menu **mm;
 	menu = CreateMenu();
 
-	for (const struct keybinds_menu *m = keybinds_menus; m->type != KEYBINDS_MENU_NULL; m++) {
+	for (mm = keybinds_menus; (*mm)->type != KEYBINDS_MENU_NULL; mm++) {
+		struct keybinds_menu *m = *mm;
 		if (m->type != KEYBINDS_MENU_REGULAR && m->type != KEYBINDS_MENU_APPLE)
 			continue;
 
 		HMENU submenu = CreatePopupMenu();
 
-		for (const struct keybinds_menu_item *i = m->items; i->type != KEYBINDS_MENU_ITEM_NULL; i++) {
+		for (struct keybinds_menu_item *i = m->items; i->type != KEYBINDS_MENU_ITEM_NULL; i++) {
 			switch (i->type) {
 			case KEYBINDS_MENU_ITEM_REGULAR: {
 				char *never_back_down_never_what = STR_CONCAT(3, i->info.regular.name, "\t", i->info.regular.bind->shortcut_text);

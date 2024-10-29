@@ -57,210 +57,233 @@ enum keybinds_menu_ids {
 	IDM_SETTINGS_SYSTEM_CONFIGURATION = 605,
 };
 
-struct keybinds_menu keybinds_menus[] = {
-	{
-		.type = KEYBINDS_MENU_REGULAR,
-		.info = {
-			.regular = {
-				.name = "&File",
-			},
-		},
-		.items = (struct keybinds_menu_item[]){
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&New", .id = IDM_FILE_NEW, .bind = &global_keybinds_list.global.new_song, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Load", .id = IDM_FILE_LOAD, .bind = &global_keybinds_list.global.load_module, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Save", .id = IDM_FILE_SAVE_CURRENT, .bind = &global_keybinds_list.global.save, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "Save &As...", .id = IDM_FILE_SAVE_AS, .bind = &global_keybinds_list.global.save_module, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Export...", .id = IDM_FILE_EXPORT, .bind = &global_keybinds_list.global.export_module, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Message Log", .id = IDM_FILE_MESSAGE_LOG, .bind = &global_keybinds_list.global.schism_logging, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_SEPARATOR,
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.no_osx = 1, // hax
-				.info = { .regular = { .name = "&Quit", .id = IDM_FILE_QUIT, .bind = &global_keybinds_list.global.quit, }, },
-			},
-			{0},
+static struct keybinds_menu file_menu = {
+	.type = KEYBINDS_MENU_REGULAR,
+	.info = {
+		.regular = {
+			.name = "&File",
 		},
 	},
-	{
-		.type = KEYBINDS_MENU_APPLE,
-		.info = {
-			.regular = {
-				.name = "&View",
-			},
+	.items = (struct keybinds_menu_item[]){
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&New...", .id = IDM_FILE_NEW, .bind = &global_keybinds_list.global.new_song, }, },
 		},
-		.items = (struct keybinds_menu_item[]){
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Help", .id = IDM_VIEW_HELP, .bind = &global_keybinds_list.global.help, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_SEPARATOR,
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&View Patterns", .id = IDM_VIEW_VIEW_PATTERNS, .bind = &global_keybinds_list.global.pattern_edit, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Orders/Panning", .id = IDM_VIEW_ORDERS_PANNING, .bind = &global_keybinds_list.global.order_list, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Variables", .id = IDM_VIEW_VARIABLES, .bind = &global_keybinds_list.global.song_variables, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Message Editor", .id = IDM_VIEW_MESSAGE_EDITOR, .bind = &global_keybinds_list.global.message_editor, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_SEPARATOR,
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Toggle Fullscreen", .id = IDM_VIEW_TOGGLE_FULLSCREEN, .bind = &global_keybinds_list.global.fullscreen, }, },
-			},
-			{0},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Load...", .id = IDM_FILE_LOAD, .bind = &global_keybinds_list.global.load_module, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Save Current", .id = IDM_FILE_SAVE_CURRENT, .bind = &global_keybinds_list.global.save, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "Save &As...", .id = IDM_FILE_SAVE_AS, .bind = &global_keybinds_list.global.save_module, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Export...", .id = IDM_FILE_EXPORT, .bind = &global_keybinds_list.global.export_module, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Message Log", .id = IDM_FILE_MESSAGE_LOG, .bind = &global_keybinds_list.global.schism_logging, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_SEPARATOR,
+		},
+#ifndef SCHISM_MACOSX
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Quit", .id = IDM_FILE_QUIT, .bind = &global_keybinds_list.global.quit, }, },
+		},
+#endif
+		{0},
+	},
+};
+
+static struct keybinds_menu view_menu = {
+	.type = KEYBINDS_MENU_APPLE,
+	.info = {
+		.regular = {
+			.name = "&View",
 		},
 	},
-	{
-		.type = KEYBINDS_MENU_REGULAR,
-		.info = {
-			.regular = {
-				.name = "&Playback",
-			},
+	.items = (struct keybinds_menu_item[]){
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Help", .id = IDM_VIEW_HELP, .bind = &global_keybinds_list.global.help, }, },
 		},
-		.items = (struct keybinds_menu_item[]){
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Show Infopage", .id = IDM_PLAYBACK_SHOW_INFOPAGE, .bind = &global_keybinds_list.global.play_information_or_play_song, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Play Song", .id = IDM_PLAYBACK_PLAY_SONG, .bind = &global_keybinds_list.global.play_song, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "Play Pa&ttern", .id = IDM_PLAYBACK_PLAY_PATTERN, .bind = &global_keybinds_list.global.play_current_pattern, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "Play From &Order", .id = IDM_PLAYBACK_PLAY_FROM_ORDER, .bind = &global_keybinds_list.global.play_song_from_order, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "Play From &Mark / Cursor", .id = IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR, .bind = &global_keybinds_list.global.play_song_from_mark, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Stop", .id = IDM_PLAYBACK_STOP, .bind = &global_keybinds_list.global.stop_playback, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Calculate Length", .id = IDM_PLAYBACK_CALCULATE_LENGTH, .bind = &global_keybinds_list.global.calculate_song_length, }, },
-			},
-			{0},
+		{
+			.type = KEYBINDS_MENU_ITEM_SEPARATOR,
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&View Patterns", .id = IDM_VIEW_VIEW_PATTERNS, .bind = &global_keybinds_list.global.pattern_edit, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Orders/Panning", .id = IDM_VIEW_ORDERS_PANNING, .bind = &global_keybinds_list.global.order_list, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Variables", .id = IDM_VIEW_VARIABLES, .bind = &global_keybinds_list.global.song_variables, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Message Editor", .id = IDM_VIEW_MESSAGE_EDITOR, .bind = &global_keybinds_list.global.message_editor, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_SEPARATOR,
+		},
+#ifndef SCHISM_MACOSX
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Toggle Fullscreen", .id = IDM_VIEW_TOGGLE_FULLSCREEN, .bind = &global_keybinds_list.global.fullscreen, }, },
+		},
+#endif
+		{0},
+	},
+};
+
+static struct keybinds_menu playback_menu = {
+	.type = KEYBINDS_MENU_REGULAR,
+	.info = {
+		.regular = {
+			.name = "&Playback",
 		},
 	},
-	{
-		.type = KEYBINDS_MENU_REGULAR,
-		.info = {
-			.regular = {
-				.name = "&Samples",
-			},
+	.items = (struct keybinds_menu_item[]){
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Show Infopage", .id = IDM_PLAYBACK_SHOW_INFOPAGE, .bind = &global_keybinds_list.global.play_information_or_play_song, }, },
 		},
-		.items = (struct keybinds_menu_item[]){
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Sample List", .id = IDM_SAMPLES_SAMPLE_LIST, .bind = &global_keybinds_list.global.sample_list, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "Sample &Library", .id = IDM_SAMPLES_SAMPLE_LIBRARY, .bind = &global_keybinds_list.global.sample_library, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Reload Soundcard", .id = IDM_SAMPLES_RELOAD_SOUNDCARD, .bind = &global_keybinds_list.global.audio_reset, }, },
-			},
-			{0},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Play Song", .id = IDM_PLAYBACK_PLAY_SONG, .bind = &global_keybinds_list.global.play_song, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "Play Pa&ttern", .id = IDM_PLAYBACK_PLAY_PATTERN, .bind = &global_keybinds_list.global.play_current_pattern, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "Play From &Order", .id = IDM_PLAYBACK_PLAY_FROM_ORDER, .bind = &global_keybinds_list.global.play_song_from_order, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "Play From &Mark / Cursor", .id = IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR, .bind = &global_keybinds_list.global.play_song_from_mark, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Stop", .id = IDM_PLAYBACK_STOP, .bind = &global_keybinds_list.global.stop_playback, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Calculate Length", .id = IDM_PLAYBACK_CALCULATE_LENGTH, .bind = &global_keybinds_list.global.calculate_song_length, }, },
+		},
+		{0},
+	},
+};
+
+static struct keybinds_menu samples_menu = {
+	.type = KEYBINDS_MENU_REGULAR,
+	.info = {
+		.regular = {
+			.name = "&Samples",
 		},
 	},
-	{
-		.type = KEYBINDS_MENU_REGULAR,
-		.info = {
-			.regular = {
-				.name = "&Instruments",
-			},
+	.items = (struct keybinds_menu_item[]){
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Sample List", .id = IDM_SAMPLES_SAMPLE_LIST, .bind = &global_keybinds_list.global.sample_list, }, },
 		},
-		.items = (struct keybinds_menu_item[]){
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Instrument List", .id = IDM_INSTRUMENTS_INSTRUMENT_LIST, .bind = &global_keybinds_list.global.instrument_list, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "Instrument &Library", .id = IDM_INSTRUMENTS_INSTRUMENT_LIBRARY, .bind = &global_keybinds_list.global.instrument_library, }, },
-			},
-			{0},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "Sample &Library", .id = IDM_SAMPLES_SAMPLE_LIBRARY, .bind = &global_keybinds_list.global.sample_library, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Reload Soundcard", .id = IDM_SAMPLES_RELOAD_SOUNDCARD, .bind = &global_keybinds_list.global.audio_reset, }, },
+		},
+		{0},
+	},
+};
+
+static struct keybinds_menu instruments_menu = {
+	.type = KEYBINDS_MENU_REGULAR,
+	.info = {
+		.regular = {
+			.name = "&Instruments",
 		},
 	},
-	{
-		.type = KEYBINDS_MENU_REGULAR,
-		.info = {
-			.regular = {
-				.name = "S&ettings",
-			},
+	.items = (struct keybinds_menu_item[]){
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Instrument List", .id = IDM_INSTRUMENTS_INSTRUMENT_LIST, .bind = &global_keybinds_list.global.instrument_list, }, },
 		},
-		.items = (struct keybinds_menu_item[]){
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Preferences", .id = IDM_SETTINGS_PREFERENCES, .bind = &global_keybinds_list.global.preferences, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&MIDI Configuration", .id = IDM_SETTINGS_MIDI_CONFIGURATION, .bind = &global_keybinds_list.global.midi, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Palette Editor", .id = IDM_SETTINGS_PALETTE_EDITOR, .bind = &global_keybinds_list.global.palette_config, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&Font Editor", .id = IDM_SETTINGS_FONT_EDITOR, .bind = &global_keybinds_list.global.font_editor, }, },
-			},
-			{
-				.type = KEYBINDS_MENU_ITEM_REGULAR,
-				.info = { .regular = { .name = "&System Configuration", .id = IDM_SETTINGS_SYSTEM_CONFIGURATION, .bind = &global_keybinds_list.global.system_configure, }, },
-			},
-			{0},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "Instrument &Library", .id = IDM_INSTRUMENTS_INSTRUMENT_LIBRARY, .bind = &global_keybinds_list.global.instrument_library, }, },
+		},
+		{0},
+	},
+};
+
+static struct keybinds_menu settings_menu = {
+	.type = KEYBINDS_MENU_REGULAR,
+	.info = {
+		.regular = {
+			.name = "S&ettings",
 		},
 	},
-	{0},
+	.items = (struct keybinds_menu_item[]){
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Preferences", .id = IDM_SETTINGS_PREFERENCES, .bind = &global_keybinds_list.global.preferences, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&MIDI Configuration", .id = IDM_SETTINGS_MIDI_CONFIGURATION, .bind = &global_keybinds_list.global.midi, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Palette Editor", .id = IDM_SETTINGS_PALETTE_EDITOR, .bind = &global_keybinds_list.global.palette_config, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&Font Editor", .id = IDM_SETTINGS_FONT_EDITOR, .bind = &global_keybinds_list.global.font_editor, }, },
+		},
+		{
+			.type = KEYBINDS_MENU_ITEM_REGULAR,
+			.info = { .regular = { .name = "&System Configuration", .id = IDM_SETTINGS_SYSTEM_CONFIGURATION, .bind = &global_keybinds_list.global.system_configure, }, },
+		},
+		{0},
+	},
+};
+
+static struct keybinds_menu null_menu = {0};
+
+struct keybinds_menu *keybinds_menus[] = {
+#ifdef SCHISM_MACOSX
+	&view_menu, // apple menu needs to come first
+	&file_menu,
+#else
+	&file_menu,
+	&view_menu,
+#endif
+	&playback_menu,
+	&samples_menu,
+	&instruments_menu,
+	&settings_menu,
+	&null_menu,
 };
 
 struct keybinds_menu_item *keybinds_menu_find_item_from_id(uint16_t id)
 {
-	for (struct keybinds_menu *m = keybinds_menus; m->type != KEYBINDS_MENU_NULL; m++)
-		for (struct keybinds_menu_item *i = m->items; i->type != KEYBINDS_MENU_ITEM_NULL; i++)
+	struct keybinds_menu **mm;
+	for (mm = keybinds_menus; (*mm)->type != KEYBINDS_MENU_NULL; mm++)
+		for (struct keybinds_menu_item *i = (*mm)->items; i->type != KEYBINDS_MENU_ITEM_NULL; i++)
 			if (i->type == KEYBINDS_MENU_REGULAR && i->info.regular.id == id)
 				return i;
 

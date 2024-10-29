@@ -745,7 +745,6 @@ enum keybinds_menu_item_type {
 
 struct keybinds_menu_item {
 	enum keybinds_menu_item_type type;
-	int no_osx; // ugh
 	union {
 		struct {
 			const char *name;
@@ -771,7 +770,7 @@ struct keybinds_menu {
 	struct keybinds_menu_item *items;
 };
 
-extern struct keybinds_menu keybinds_menus[];
+extern struct keybinds_menu *keybinds_menus[];
 
 struct keybinds_menu_item *keybinds_menu_find_item_from_id(uint16_t id);
 void keybinds_menu_item_pressed(struct keybinds_menu_item *i, SDL_Event *event);

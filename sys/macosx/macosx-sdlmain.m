@@ -78,8 +78,18 @@ extern OSErr CPSSetFrontProcess(CPSProcessSerNum *psn);
 
 static int macosx_did_finderlaunch;
 
+@interface SchismTrackerCallbackData : NSObject {
+@public
+	struct keybinds_menu_item *i;
+}
+
+@end
+
+@implementation SchismTrackerCallbackData
+@end
+
 @interface NSApplication(OtherMacOSXExtensions)
--(void)setAppleMenu:(NSMenu*)m;
+- (void)setAppleMenu:(NSMenu*)m;
 @end
 
 @interface SchismTracker : NSApplication
@@ -102,10 +112,10 @@ static int macosx_did_finderlaunch;
 	if (!event || [event type] == NSKeyDown)
 		return;
 
-	struct keybinds_menu_item *i = (struct keybinds_menu_item *)[sender representedObject];
+	SchismTrackerCallbackData *data = (SchismTrackerCallbackData *)[sender representedObject];
 
 	SDL_Event e;
-	keybinds_menu_item_pressed(i, &e);
+	keybinds_menu_item_pressed(data->i, &e);
 	SDL_PushEvent(&e);
 }
 
@@ -228,31 +238,39 @@ static int get_key_equivalent_modifier(keybind_bind_t *bind)
 
 static void setApplicationMenu(NSMenu *menu)
 {
-	const struct keybinds_menu *m;
-	const struct keybinds_menu_item *i;
+	NSMenu *applemenu = NULL;
+	struct keybinds_menu **mm;
+	struct keybinds_menu_item *i;
 
-	for (m = keybinds_menus; m->type != KEYBINDS_MENU_NULL; m++) {
+	for (mm = keybinds_menus; (*mm)->type != KEYBINDS_MENU_NULL; mm++) {
+		struct keybinds_menu *m = *mm;
 		if (m->type != KEYBINDS_MENU_REGULAR && m->type != KEYBINDS_MENU_APPLE)
 			continue;
 
-		NSMenu *submenu = [[NSMenu alloc] init];
+		NSString *title = [NSString stringWithUTF8String: m->info.regular.name];
+		title = [title stringByReplacingOccurrencesOfString:@"&" withString:@""];
+
+		NSMenu *submenu;
+		if (m->type == KEYBINDS_MENU_REGULAR)
+			submenu = [[NSMenu alloc] initWithTitle: title];
+		else
+			submenu = [[NSMenu alloc] init];
 
 		for (i = m->items; i->type != KEYBINDS_MENU_ITEM_NULL; i++) {
-			if (i->no_osx)
-				continue;
-
 			switch (i->type) {
 			case KEYBINDS_MENU_ITEM_REGULAR: {
 				/* get the name, but remove the & symbols for alt crap on other systems */
-				NSString *name = [NSString stringWithUtf8String: i->info.regular.name];
+				NSString *name = [NSString stringWithUTF8String: i->info.regular.name];
 				name = [name stringByReplacingOccurrencesOfString:@"&" withString:@""];
 
 				/* Add menu item */
+				SchismTrackerCallbackData *data = [SchismTrackerCallbackData alloc];
+				data->i = i;
 				NSMenuItem *item = (NSMenuItem*)[submenu addItemWithTitle:name
 							action:@selector(_menu_callback:)
-							keyEquivalent:get_key_equivalent(&global_keybinds_list.global.help)];
-				[item setKeyEquivalentModifierMask:get_key_equivalent_modifier(&global_keybinds_list.global.help)];
-				[item setRepresentedObject: (id)i];
+							keyEquivalent:get_key_equivalent(i->info.regular.bind)];
+				[item setKeyEquivalentModifierMask:get_key_equivalent_modifier(i->info.regular.bind)];
+				[item setRepresentedObject: data];
 				break;
 			}
 			case KEYBINDS_MENU_ITEM_SEPARATOR:
@@ -274,46 +292,43 @@ static void setApplicationMenu(NSMenu *menu)
 			[submenu addItem:[NSMenuItem separatorItem]];
 
 			[submenu addItemWithTitle:@"Quit Schism Tracker" action:@selector(terminate:) keyEquivalent:@"q"];
+
+			[NSApp setAppleMenu: submenu];
 		}
 
-		NSString *name = [NSString stringWithUtf8String: m->info.regular.name];
-		name = [name stringByReplacingOccurrencesOfString:@"&" withString:@""];
-
 		/* put menu into the menubar */
-		NSMenuItem *item = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:name action:nil keyEquivalent:@""];
+		NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
 		[item setSubmenu:submenu];
 		[menu addItem:item];
 
-		[submenu release];
 		[item release];
+		[submenu release];
 	}
 }
 
 /* Create a window menu */
 static void setupWindowMenu(NSMenu *menu)
 {
-	NSMenu      *windowMenu;
-	NSMenuItem  *windowMenuItem;
-	NSMenuItem  *menuItem;
+	NSMenuItem *item;
 
-	windowMenu = [[NSMenu alloc] initWithTitle:@"Window"];
+	NSMenu *window = [[NSMenu alloc] initWithTitle:@"Window"];
 
 	/* "Minimize" item */
-	menuItem = [[NSMenuItem alloc] initWithTitle:@"Minimize" action:@selector(performMiniaturize:) keyEquivalent:@"m"];
-	[windowMenu addItem:menuItem];
-	[menuItem release];
+	item = [[NSMenuItem alloc] initWithTitle:@"Minimize" action:@selector(performMiniaturize:) keyEquivalent:@"m"];
+	[window addItem:item];
+	[item release];
 
 	/* Put menu into the menubar */
-	windowMenuItem = [[NSMenuItem alloc] initWithTitle:@"Window" action:nil keyEquivalent: @""];
-	[windowMenuItem setSubmenu:windowMenu];
-	[menu addItem:windowMenuItem];
+	item = [[NSMenuItem alloc] initWithTitle:@"Window" action:nil keyEquivalent: @""];
+	[item setSubmenu:window];
+	[menu addItem:item];
 
 	/* Tell the application object that this is now the window menu */
-	[NSApp setWindowsMenu:windowMenu];
+	[NSApp setWindowsMenu: window];
 
 	/* Finally give up our references to the objects */
-	[windowMenu release];
-	[windowMenuItem release];
+	[window release];
+	[item release];
 }
 
 #ifdef main
