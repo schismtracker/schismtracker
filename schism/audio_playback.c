@@ -522,39 +522,19 @@ int song_keyup_channel(int samp, int ins, int note, int chan) {
 void song_single_step(int patno, int row)
 {
 	int total_rows;
-	int i, vol, smp, ins;
-	song_note_t *pattern, *cur_note;
-	song_voice_t *cx;
+	song_note_t *pattern;
 
 	total_rows = song_get_pattern(patno, &pattern);
 	if (!pattern || row >= total_rows) return;
 
-	cur_note = pattern + 64 * row;
-	cx = song_get_mix_channel(0);
-	for (i = 1; i <= 64; i++, cx++, cur_note++) {
-		if (cx && (cx->flags & CHN_MUTE)) continue; /* ick */
-		if (cur_note->voleffect == VOLFX_VOLUME) {
-			vol = cur_note->volparam;
-		} else {
-			vol = KEYJAZZ_DEFAULTVOL;
-		}
+	song_lock_audio();
 
-		// look familiar? this is modified slightly from pattern_editor_insert
-		// (and it is wrong for the same reason as described there)
-		smp = ins = cur_note->instrument;
-		if (song_is_instrument_mode()) {
-			if (ins < 1)
-				ins = KEYJAZZ_NOINST;
-			smp = -1;
-		} else {
-			if (smp < 1)
-				smp = KEYJAZZ_NOINST;
-			ins = -1;
-		}
+	current_song->flags &= ~(SONG_PAUSED | SONG_PATTERNLOOP | SONG_ENDREACHED);
 
-		song_keyrecord(smp, ins, cur_note->note,
-			vol, i, cur_note->effect, cur_note->param);
-	}
+	csf_loop_pattern(current_song, patno, row);
+	current_song->flags |= SONG_STEP;
+
+	song_unlock_audio();
 }
 
 // ------------------------------------------------------------------------------------------------------------

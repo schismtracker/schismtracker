@@ -205,7 +205,7 @@
 #define SONG_COMPATGXX          0x0008 // "Compatible Gxx" (handle portamento more like other trackers)
 #define SONG_LINEARSLIDES       0x0010 // Linear slides vs. Amiga slides
 #define SONG_PATTERNPLAYBACK    0x0020 // Only playing current pattern
-//#define SONG_STEP             0x0040
+#define SONG_STEP             0x0040
 #define SONG_PAUSED             0x0080 // Playback paused (Shift-F8)
 //#define SONG_FADINGSONG       0x0100
 #define SONG_ENDREACHED         0x0200 // Song is finished (standalone keyjazz mode)

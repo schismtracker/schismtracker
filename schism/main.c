@@ -46,7 +46,11 @@
 #include "fonts.h"
 #include "dialog.h"
 #include "widget.h"
+<<<<<<< HEAD
 #include "accessibility.h"
+=======
+#include "fmt.h"
+>>>>>>> fa12157ccabbcc3a4b7dec3b0df7d2f3c37a5c19
 #ifdef SCHISM_CONTROLLER
 # include "controller.h"
 #endif
@@ -932,6 +936,10 @@ void schism_exit(int status)
 
 	free_audio_device_list();
 
+#ifdef USE_FLAC
+	flac_quit();
+#endif
+
 	if (shutdown_process & EXIT_SAVECFG)
 		cfg_atexit_save();
 
@@ -1037,6 +1045,10 @@ int main(int argc, char **argv)
 	log_nl();
 	audio_init(audio_driver, audio_device);
 	song_init_modplug();
+
+#ifdef USE_FLAC
+	flac_init();
+#endif
 
 #ifndef SCHISM_WIN32
 	signal(SIGINT, exit);

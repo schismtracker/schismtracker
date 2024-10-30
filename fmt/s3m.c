@@ -175,8 +175,10 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		misc &= ~S3M_CHANPAN;     /* stored pan values */
 
 	slurp_read(fp, &reserved, 8);
-	reserved16 = bswapLE16(*(uint16_t *)(reserved)); // schism & openmpt version info
-	reserved32 = bswapLE32(*(uint32_t *)(reserved + 2)); // impulse tracker edit timer
+	memcpy(&reserved16, reserved, 2);
+	memcpy(&reserved32, reserved + 2, 4);
+	reserved16 = bswapLE16(reserved16); // schism & openmpt version info
+	reserved32 = bswapLE32(reserved32); // impulse tracker edit timer
 	slurp_read(fp, &special, 2); // field not used by st3
 	special = bswapLE16(special);
 
@@ -531,16 +533,21 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			 * OpenMPT started writing full version information with OpenMPT 1.29 and later changed the ultraClicks value from 8 to 16.
 			 * Liquid Tracker writes an ultraClicks value of 16.
 			 * So we assume that a file was saved with Liquid Tracker if the reserved fields are 0 and ultraClicks is 16. */
-			if ((trkvers >> 8) == 0x57)
+			if ((trkvers >> 8) == 0x57) {
 				tid = "NESMusa %" PRIu8 ".%" PRIX8; /* tool by Bisquit */
-			else if (!reserved16 && uc == 16 && channel_types[1] != 1)
+			} else if (!reserved16 && uc == 16 && channel_types[1] != 1) {
 				tid = "Liquid Tracker %" PRIu8 ".%" PRIX8;
-			else if (trkvers == 0x5447)
+			} else if (trkvers == 0x5447) {
 				strcpy(song->tracker_id, "Graoumf Tracker");
-			else if (trkvers >= 0x5129 && reserved16)
-				sprintf(song->tracker_id, "OpenMPT %" PRIu8 ".%02" PRIX8 ".%02" PRIX8 ".%02" PRIX8, (uint8_t)((trkvers & 0xf00) >> 8), (uint8_t)(trkvers & 0xff), reserved[1], reserved[0]);
-			else
+			} else if (trkvers >= 0x5129 && reserved16) {
+				/* e.x. 1.29.01.12 <-> 0x1290112 */
+				const uint32_t ver = (((trkvers & 0xfff) << 16) | reserved16);
+				sprintf(song->tracker_id, "OpenMPT %" PRIu32 ".%02" PRIX32 ".%02" PRIX32 ".%02" PRIX32, ver >> 24, (ver >> 16) & 0xFF, (ver >> 8) & 0xFF, (ver) & 0xFF);
+				if (ver >= UINT32_C(0x01320031))
+					s3m_import_edittime(song, 0x0000, reserved32);
+			} else {
 				tid = "OpenMPT %" PRIu8 ".%02" PRIX8;
+			}
 			break;
 		case 6:
 			strcpy(song->tracker_id, "BeRoTracker");

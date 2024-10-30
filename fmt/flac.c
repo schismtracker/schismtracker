@@ -36,6 +36,33 @@
 
 #include <stdint.h>
 
+static FLAC__StreamDecoder * (*schism_FLAC_stream_decoder_new)(void);
+static FLAC__bool (*schism_FLAC_stream_decoder_set_metadata_respond_all)(FLAC__StreamDecoder *decoder);
+static FLAC__StreamDecoderInitStatus (*schism_FLAC_stream_decoder_init_stream)(FLAC__StreamDecoder *decoder, FLAC__StreamDecoderReadCallback read_callback, FLAC__StreamDecoderSeekCallback seek_callback, FLAC__StreamDecoderTellCallback tell_callback, FLAC__StreamDecoderLengthCallback length_callback, FLAC__StreamDecoderEofCallback eof_callback, FLAC__StreamDecoderWriteCallback write_callback, FLAC__StreamDecoderMetadataCallback metadata_callback, FLAC__StreamDecoderErrorCallback error_callback, void *client_data);
+static FLAC__bool (*schism_FLAC_stream_decoder_process_until_end_of_metadata)(FLAC__StreamDecoder *decoder);
+static FLAC__bool (*schism_FLAC_stream_decoder_process_until_end_of_stream)(FLAC__StreamDecoder *decoder);
+static FLAC__bool (*schism_FLAC_stream_decoder_finish)(FLAC__StreamDecoder *decoder);
+static void (*schism_FLAC_stream_decoder_delete)(FLAC__StreamDecoder *decoder);
+static const char *const *schism_FLAC_StreamDecoderErrorStatusString;
+
+static FLAC__StreamEncoder * (*schism_FLAC_stream_encoder_new)(void);
+static FLAC__bool (*schism_FLAC_stream_encoder_set_channels)(FLAC__StreamEncoder *encoder, uint32_t value);
+static FLAC__bool (*schism_FLAC_stream_encoder_set_bits_per_sample)(FLAC__StreamEncoder *encoder, uint32_t value);
+static FLAC__bool (*schism_FLAC_stream_encoder_set_streamable_subset)(FLAC__StreamEncoder *encoder, FLAC__bool value);
+static FLAC__bool (*schism_FLAC_stream_encoder_set_sample_rate)(FLAC__StreamEncoder *encoder, uint32_t value);
+static FLAC__bool (*schism_FLAC_stream_encoder_set_compression_level)(FLAC__StreamEncoder *encoder, uint32_t value);
+static FLAC__bool (*schism_FLAC_stream_encoder_set_total_samples_estimate)(FLAC__StreamEncoder *encoder, FLAC__uint64 value);
+static FLAC__bool (*schism_FLAC_stream_encoder_set_verify)(FLAC__StreamEncoder *encoder, FLAC__bool value);
+static FLAC__StreamEncoderInitStatus (*schism_FLAC_stream_encoder_init_stream)(FLAC__StreamEncoder *encoder, FLAC__StreamEncoderWriteCallback write_callback, FLAC__StreamEncoderSeekCallback seek_callback, FLAC__StreamEncoderTellCallback tell_callback, FLAC__StreamEncoderMetadataCallback metadata_callback, void *client_data);
+static FLAC__bool (*schism_FLAC_stream_encoder_process_interleaved)(FLAC__StreamEncoder *encoder, const FLAC__int32 buffer[], uint32_t samples);
+static FLAC__bool (*schism_FLAC_stream_encoder_finish)(FLAC__StreamEncoder *encoder);
+static void (*schism_FLAC_stream_encoder_delete)(FLAC__StreamEncoder *encoder);
+static const char *const *schism_FLAC_StreamEncoderInitStatusString;
+
+static FLAC__bool (*schism_FLAC_format_sample_rate_is_subset)(uint32_t sample_rate);
+
+static int flac_wasinit = 0;
+
 /* ----------------------------------------------------------------------------------- */
 /* reading... */
 
@@ -217,7 +244,7 @@ static FLAC__bool read_on_eof(const FLAC__StreamDecoder *decoder, void *client_d
 
 static void read_on_error(const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data)
 {
-	log_appendf(4, "Error loading FLAC: %s", FLAC__StreamDecoderErrorStatusString[status]);
+	log_appendf(4, "Error loading FLAC: %s", schism_FLAC_StreamDecoderErrorStatusString[status]);
 
 	(void)decoder, (void)client_data;
 }
@@ -285,6 +312,10 @@ static FLAC__StreamDecoderWriteStatus read_on_write(const FLAC__StreamDecoder *d
 
 static int flac_load(struct flac_readdata* read_data, int meta_only)
 {
+	// err
+	if (!flac_wasinit)
+		return 0;
+
 	unsigned char magic[4];
 
 	slurp_rewind(read_data->fp); /* paranoia */
@@ -293,14 +324,14 @@ static int flac_load(struct flac_readdata* read_data, int meta_only)
 		|| memcmp(magic, "fLaC", sizeof(magic)))
 		return 0;
 
-	FLAC__StreamDecoder *decoder = FLAC__stream_decoder_new();
+	FLAC__StreamDecoder *decoder = schism_FLAC_stream_decoder_new();
 	if (!decoder)
 		return 0;
 
-	FLAC__stream_decoder_set_metadata_respond_all(decoder);
+	schism_FLAC_stream_decoder_set_metadata_respond_all(decoder);
 
 	FLAC__StreamDecoderInitStatus initStatus =
-		FLAC__stream_decoder_init_stream(
+		schism_FLAC_stream_decoder_init_stream(
 			decoder,
 			read_on_read, read_on_seek,
 			read_on_tell, read_on_length,
@@ -310,13 +341,13 @@ static int flac_load(struct flac_readdata* read_data, int meta_only)
 		);
 
 	/* flac function names are such a yapfest */
-	if (!(meta_only ? FLAC__stream_decoder_process_until_end_of_metadata(decoder) : FLAC__stream_decoder_process_until_end_of_stream(decoder))) {
-		FLAC__stream_decoder_delete(decoder);
+	if (!(meta_only ? schism_FLAC_stream_decoder_process_until_end_of_metadata(decoder) : schism_FLAC_stream_decoder_process_until_end_of_stream(decoder))) {
+		schism_FLAC_stream_decoder_delete(decoder);
 		return 0;
 	}
 
-	FLAC__stream_decoder_finish(decoder);
-	FLAC__stream_decoder_delete(decoder);
+	schism_FLAC_stream_decoder_finish(decoder);
+	schism_FLAC_stream_decoder_delete(decoder);
 
 	return 1;
 }
@@ -467,6 +498,9 @@ static FLAC__StreamEncoderTellStatus write_on_tell(const FLAC__StreamEncoder *en
 
 static int flac_save_init(disko_t *fp, int bits, int channels, int rate, int estimate_num_samples)
 {
+	if (!flac_wasinit)
+		return -9;
+
 	struct flac_writedata *fwd = malloc(sizeof(*fwd));
 	if (!fwd)
 		return -8;
@@ -474,36 +508,36 @@ static int flac_save_init(disko_t *fp, int bits, int channels, int rate, int est
 	fwd->channels = channels;
 	fwd->bits = bits;
 
-	fwd->encoder = FLAC__stream_encoder_new();
+	fwd->encoder = schism_FLAC_stream_encoder_new();
 	if (!fwd->encoder)
 		return -1;
 
-	if (!FLAC__stream_encoder_set_channels(fwd->encoder, channels))
+	if (!schism_FLAC_stream_encoder_set_channels(fwd->encoder, channels))
 		return -2;
 
-	if (!FLAC__stream_encoder_set_bits_per_sample(fwd->encoder, bits))
+	if (!schism_FLAC_stream_encoder_set_bits_per_sample(fwd->encoder, bits))
 		return -3;
 
 	if (rate > FLAC__MAX_SAMPLE_RATE)
 		rate = FLAC__MAX_SAMPLE_RATE;
 
 	// FLAC only supports 10 Hz granularity for frequencies above 65535 Hz if the streamable subset is chosen, and only a maximum frequency of 655350 Hz.
-	if (!FLAC__format_sample_rate_is_subset(rate))
-		FLAC__stream_encoder_set_streamable_subset(fwd->encoder, false);
+	if (!schism_FLAC_format_sample_rate_is_subset(rate))
+		schism_FLAC_stream_encoder_set_streamable_subset(fwd->encoder, false);
 
-	if (!FLAC__stream_encoder_set_sample_rate(fwd->encoder, rate))
+	if (!schism_FLAC_stream_encoder_set_sample_rate(fwd->encoder, rate))
 		return -4;
 
-	if (!FLAC__stream_encoder_set_compression_level(fwd->encoder, 5))
+	if (!schism_FLAC_stream_encoder_set_compression_level(fwd->encoder, 5))
 		return -5;
 
-	if (!FLAC__stream_encoder_set_total_samples_estimate(fwd->encoder, estimate_num_samples))
+	if (!schism_FLAC_stream_encoder_set_total_samples_estimate(fwd->encoder, estimate_num_samples))
 		return -6;
 
-	if (!FLAC__stream_encoder_set_verify(fwd->encoder, false))
+	if (!schism_FLAC_stream_encoder_set_verify(fwd->encoder, false))
 		return -7;
 
-	FLAC__StreamEncoderInitStatus init_status = FLAC__stream_encoder_init_stream(
+	FLAC__StreamEncoderInitStatus init_status = schism_FLAC_stream_encoder_init_stream(
 		fwd->encoder,
 		write_on_write,
 		write_on_seek,
@@ -513,8 +547,8 @@ static int flac_save_init(disko_t *fp, int bits, int channels, int rate, int est
 	);
 
 	if (init_status != FLAC__STREAM_ENCODER_INIT_STATUS_OK) {
-		log_appendf(4, "ERROR: initializing FLAC encoder: %s\n", FLAC__StreamEncoderInitStatusString[init_status]);
-		fprintf(stderr, "ERROR: initializing FLAC encoder: %s\n", FLAC__StreamEncoderInitStatusString[init_status]);
+		log_appendf(4, "ERROR: initializing FLAC encoder: %s\n", schism_FLAC_StreamEncoderInitStatusString[init_status]);
+		fprintf(stderr, "ERROR: initializing FLAC encoder: %s\n", schism_FLAC_StreamEncoderInitStatusString[init_status]);
 		return -8;
 	}
 
@@ -549,7 +583,7 @@ int fmt_flac_export_body(disko_t *fp, const uint8_t *data, size_t length)
 			return DW_ERROR;
 	}
 
-	if (!FLAC__stream_encoder_process_interleaved(fwd->encoder, pcm, length / (bytes_per_sample * fwd->channels)))
+	if (!schism_FLAC_stream_encoder_process_interleaved(fwd->encoder, pcm, length / (bytes_per_sample * fwd->channels)))
 		return DW_ERROR;
 
 	return DW_OK;
@@ -568,8 +602,8 @@ int fmt_flac_export_tail(disko_t *fp)
 {
 	struct flac_writedata *fwd = fp->userdata;
 
-	FLAC__stream_encoder_finish(fwd->encoder);
-	FLAC__stream_encoder_delete(fwd->encoder);
+	schism_FLAC_stream_encoder_finish(fwd->encoder);
+	schism_FLAC_stream_encoder_delete(fwd->encoder);
 
 	free(fwd);
 
@@ -602,4 +636,126 @@ int fmt_flac_save_sample(disko_t *fp, song_sample_t *smp)
 		return SAVE_INTERNAL_ERROR;
 
 	return SAVE_SUCCESS;
+}
+
+/* --------------------------------------------------------------- */
+
+static const char *libflac_so_names[] = {
+#ifdef SCHISM_WIN32
+	"libflac.dll",
+#elif SCHISM_MACOSX
+	"libFLAC.dylib",
+#else
+	"libFLAC.so",
+#endif
+};
+
+static int load_flac_syms(void);
+
+#ifdef FLAC_DYNAMIC_LOAD
+
+void *flac_dltrick_handle_ = NULL;
+
+static void flac_dlend(void) {
+	if (flac_dltrick_handle_) {
+		SDL_UnloadObject(flac_dltrick_handle_);
+		flac_dltrick_handle_ = NULL;
+	}
+}
+
+static int flac_dlinit(void) {
+	int i;
+
+	// already have it?
+	if (flac_dltrick_handle_)
+		return 0;
+
+	for (i = 0; i < ARRAY_SIZE(libflac_so_names) && !flac_dltrick_handle_; i++)
+		flac_dltrick_handle_ = SDL_LoadObject(libflac_so_names[i]);
+
+	if (!flac_dltrick_handle_)
+		return -1;
+
+	int retval = load_flac_syms();
+	if (retval < 0)
+		flac_dlend();
+
+	return retval;
+}
+
+static int load_flac_sym(const char *fn, void **addr) {
+	*addr = SDL_LoadFunction(flac_dltrick_handle_, fn);
+	if (!*addr)
+		return 0;
+
+	return 1;
+}
+
+/* cast funcs to char* first, to please GCC's strict aliasing rules. */
+#define SCHISM_FLAC_SYM(x) \
+	if (!load_flac_sym("FLAC__" #x, (void **)(char *)&schism_FLAC_##x)) \
+	return -1
+
+#else
+
+#define SCHISM_FLAC_SYM(x) schism_FLAC_##x = FLAC__##x
+
+static int flac_dlinit(void) {
+	load_flac_syms();
+	return 0;
+}
+
+#endif
+
+static int load_flac_syms(void) {
+	SCHISM_FLAC_SYM(stream_decoder_new);
+	SCHISM_FLAC_SYM(stream_decoder_set_metadata_respond_all);
+	SCHISM_FLAC_SYM(stream_decoder_init_stream);
+	SCHISM_FLAC_SYM(stream_decoder_process_until_end_of_metadata);
+	SCHISM_FLAC_SYM(stream_decoder_process_until_end_of_stream);
+	SCHISM_FLAC_SYM(stream_decoder_finish);
+	SCHISM_FLAC_SYM(stream_decoder_delete);
+	SCHISM_FLAC_SYM(StreamDecoderErrorStatusString);
+
+	SCHISM_FLAC_SYM(stream_encoder_new);
+	SCHISM_FLAC_SYM(stream_encoder_set_channels);
+	SCHISM_FLAC_SYM(stream_encoder_set_bits_per_sample);
+	SCHISM_FLAC_SYM(stream_encoder_set_streamable_subset);
+	SCHISM_FLAC_SYM(stream_encoder_set_sample_rate);
+	SCHISM_FLAC_SYM(stream_encoder_set_compression_level);
+	SCHISM_FLAC_SYM(stream_encoder_set_total_samples_estimate);
+	SCHISM_FLAC_SYM(stream_encoder_set_verify);
+	SCHISM_FLAC_SYM(stream_encoder_init_stream);
+	SCHISM_FLAC_SYM(stream_encoder_process_interleaved);
+	SCHISM_FLAC_SYM(stream_encoder_finish);
+	SCHISM_FLAC_SYM(stream_encoder_delete);
+	SCHISM_FLAC_SYM(StreamEncoderInitStatusString);
+
+	SCHISM_FLAC_SYM(format_sample_rate_is_subset);
+
+	return 0;
+}
+
+/* ------------------------------------------------- */
+
+int flac_init(void)
+{
+#ifdef FLAC_DYNAMIC_LOAD
+	if (!flac_dltrick_handle_)
+#endif
+		if (flac_dlinit() < 0)
+			return 0;
+
+	audio_enable_flac(1);
+	flac_wasinit = 1;
+	return 1;
+}
+
+int flac_quit(void)
+{
+#ifdef FLAC_DYNAMIC_LOAD
+	if (flac_wasinit)
+		flac_dlend();
+#endif
+	return 1;
 }

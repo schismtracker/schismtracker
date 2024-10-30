@@ -1059,6 +1059,10 @@ int csf_process_tick(song_t *csf)
 		csf_process_effects(csf, 0);
 	}
 
+	if (csf->tick_count == 1 && (csf->flags & SONG_STEP)) {
+		csf->flags &= ~(SONG_STEP | SONG_PATTERNLOOP);
+		csf->flags |= SONG_PAUSED;
+	}
 	return 1;
 }
 
