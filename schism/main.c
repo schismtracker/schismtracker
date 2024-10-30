@@ -932,7 +932,9 @@ void schism_exit(int status)
 
 	free_audio_device_list();
 
+#ifdef USE_FLAC
 	flac_quit();
+#endif
 
 	if (shutdown_process & EXIT_SAVECFG)
 		cfg_atexit_save();
@@ -1042,7 +1044,9 @@ int main(int argc, char **argv)
 	audio_init(audio_driver, audio_device);
 	song_init_modplug();
 
+#ifdef USE_FLAC
 	flac_init();
+#endif
 
 #ifndef SCHISM_WIN32
 	signal(SIGINT, exit);

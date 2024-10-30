@@ -50,7 +50,7 @@ jobs:
           cd build
           export PATH="${DEVKITPRO}/portlibs/wii/bin:${DEVKITPPC}/bin:$PATH"
           # if we don't build with FLAC support it's an error
-          ../configure --host=powerpc-eabi --with-flac --enable-force-wii
+          ../configure --host=powerpc-eabi --with-flac --enable-flac-linking --enable-force-wii
           make
           powerpc-eabi-strip -S schismtracker.elf
           mkdir -p up/apps
