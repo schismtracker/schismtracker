@@ -1058,23 +1058,34 @@ static int export_sample_format = 0;
 
 static void do_export_sample(UNUSED void *data)
 {
-	sample_save(export_sample_filename, sample_save_formats[export_sample_format].label);
+	int exp = export_sample_format;
+	int i;
+
+	for (i = 0; sample_save_formats[i].label; i++)
+		if (sample_save_formats[i].enabled && !sample_save_formats[i].enabled())
+			exp++;
+
+	sample_save(export_sample_filename, sample_save_formats[exp].label);
 }
 
 static void export_sample_list_draw(void)
 {
-	int n, focused = (*selected_widget == 3);
+	int n, focused = (*selected_widget == 3), c;
 
 	draw_fill_chars(53, 24, 56, 31, DEFAULT_FG, 0);
-	for (n = 0; sample_save_formats[n].label; n++) {
+	for (c = 0, n = 0; sample_save_formats[n].label; n++) {
+		if (sample_save_formats[n].enabled && !sample_save_formats[n].enabled())
+			continue;
+
 		int fg = 6, bg = 0;
-		if (focused && n == export_sample_format) {
+		if (focused && c == export_sample_format) {
 			fg = 0;
 			bg = 3;
-		} else if (n == export_sample_format) {
+		} else if (c == export_sample_format) {
 			bg = 14;
 		}
-		draw_text_len(sample_save_formats[n].label, 4, 53, 24 + n, fg, bg);
+		draw_text_len(sample_save_formats[n].label, 4, 53, 24 + c, fg, bg);
+		c++;
 	}
 }
 
@@ -1692,8 +1703,10 @@ void sample_list_load_page(struct page *page)
 
 	/* count how many formats there really are */
 	num_save_formats = 0;
-	while (sample_save_formats[num_save_formats].label)
-		num_save_formats++;
+	int i;
+	for (i = 0; sample_save_formats[i].label; i++)
+		if (!sample_save_formats[i].enabled || sample_save_formats[i].enabled())
+			num_save_formats++;
 }
 
 int sample_list_load_keybinds(cfg_file_t* cfg)

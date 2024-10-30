@@ -334,6 +334,18 @@ int song_load_unchecked(const char *file)
 
 /* ------------------------------------------------------------------------- */
 
+static int flac_enabled = 0;
+
+static int flac_enabled_cb(void)
+{
+	return !!flac_enabled;
+}
+
+void audio_enable_flac(int enabled)
+{
+	flac_enabled = !!enabled;
+}
+
 const struct save_format song_save_formats[] = {
 	{"IT", "Impulse Tracker", ".it", {.save_song = fmt_it_save_song}},
 	{"S3M", "Scream Tracker 3", ".s3m", {.save_song = fmt_s3m_save_song}},
@@ -349,10 +361,8 @@ const struct save_format song_export_formats[] = {
 	{"MWAV", "WAV multi-write", ".wav", {.export = {EXPORT_FUNCS(wav), 1}}},
 	{"AIFF", "Audio IFF", ".aiff", {.export = {EXPORT_FUNCS(aiff), 0}}},
 	{"MAIFF", "Audio IFF multi-write", ".aiff", {.export = {EXPORT_FUNCS(aiff), 1}}},
-#ifdef USE_FLAC
-	{"FLAC", "Free Lossless Audio Codec", ".flac", {.export = {EXPORT_FUNCS(flac), 0}}},
-	{"MFLAC", "Free Lossless Audio Codec multi-write", ".flac", {.export = {EXPORT_FUNCS(flac), 1}}},
-#endif
+	{"FLAC", "Free Lossless Audio Codec", ".flac", {.export = {EXPORT_FUNCS(flac), 0}}, flac_enabled_cb},
+	{"MFLAC", "Free Lossless Audio Codec multi-write", ".flac", {.export = {EXPORT_FUNCS(flac)}}, flac_enabled_cb},
 	{.label = NULL}
 };
 // <distance> and maiff sounds like something you'd want to hug
@@ -364,9 +374,7 @@ const struct save_format sample_save_formats[] = {
 	{"AIFF", "Audio IFF", ".aiff", {.save_sample = fmt_aiff_save_sample}},
 	{"AU", "Sun/NeXT", ".au", {.save_sample = fmt_au_save_sample}},
 	{"WAV", "WAV", ".wav", {.save_sample = fmt_wav_save_sample}},
-#ifdef USE_FLAC
-	{"FLAC", "Free Lossless Audio Codec", ".flac", {.save_sample = fmt_flac_save_sample}},
-#endif
+	{"FLAC", "Free Lossless Audio Codec", ".flac", {.save_sample = fmt_flac_save_sample}, flac_enabled_cb},
 	{"RAW", "Raw", ".raw", {.save_sample = fmt_raw_save_sample}},
 	{.label = NULL}
 };
@@ -388,7 +396,7 @@ static const struct save_format *get_save_format(const struct save_format *forma
 	}
 
 	for (n = 0; formats[n].label; n++)
-		if (strcmp(formats[n].label, label) == 0)
+		if (strcmp(formats[n].label, label) == 0 && (!formats[n].enabled || formats[n].enabled()))
 			return formats + n;
 
 	log_appendf(4, "Unknown save format %s", label);

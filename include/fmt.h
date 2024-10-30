@@ -116,6 +116,10 @@ struct save_format {
 			int multi;
 		} export;
 	} f;
+
+	// for files that can only be loaded with an external library
+	// that is loaded at runtime (or linked to)
+	int (*enabled)(void);
 };
 
 extern const struct save_format song_save_formats[];
@@ -222,6 +226,10 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length);
 
 int win32mf_init(void);
 void win32mf_quit(void);
+
+int flac_init(void);
+int flac_quit(void);
+void audio_enable_flac(int enabled); // should be called by flac_init()
 
 #endif /* SCHISM_FMT_H_ */
 
