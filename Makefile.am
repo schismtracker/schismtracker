@@ -268,7 +268,11 @@ if USE_FLAC
 files_flac = \
 	fmt/flac.c
 cflags_flac=$(FLAC_CFLAGS)
+
+if LINK_TO_FLAC
 libs_flac=$(FLAC_LIBS)
+endif
+
 endif
 
 if USE_JACK

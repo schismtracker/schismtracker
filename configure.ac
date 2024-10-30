@@ -70,6 +70,11 @@ AC_ARG_ENABLE(fortify-source,
 	ADD_FORTIFY=$enableval,
 	ADD_FORTIFY=no)
 
+AC_ARG_ENABLE(flac-linking,
+	AS_HELP_STRING([--enable-flac-linking], [Link to FLAC rather than loading at runtime]),
+	FLAC_LINKING=$enableval,
+	FLAC_LINKING=no)
+
 AC_ARG_ENABLE(jack-linking,
 	AS_HELP_STRING([--enable-jack-linking], [Link to JACK rather than loading at runtime]),
 	JACK_LINKING=$enableval,
@@ -351,14 +356,20 @@ dnl --------------------------------------------------------------------------
 dnl configure flags, optional dependencies
 
 AM_CONDITIONAL([USE_FLAC], false)
+AM_CONDITIONAL([LINK_TO_FLAC], false)
 if test "x$with_flac" = "xcheck" || test "x$with_flac" = "xyes"; then
 	dnl use pkg-config, it'll deal with everything for us
 	PKG_CHECK_MODULES([FLAC], [flac], [libflac_found=yes], [libflac_found=no])
 	if test "x$libflac_found" = "xyes"; then
 		AC_SUBST([FLAC_CFLAGS])
-		AC_SUBST([FLAC_LIBS])
 		AC_DEFINE([USE_FLAC], [1], [FLAC support])
 		AM_CONDITIONAL([USE_FLAC], true)
+		if test "x$FLAC_LINKING" = "xyes"; then
+			AC_SUBST([FLAC_LIBS])
+			AM_CONDITIONAL([LINK_TO_FLAC], true)
+		else
+			AC_DEFINE([FLAC_DYNAMIC_LOAD], [1], [Dynamically load FLAC symbols])
+		fi
 	elif test "x$with_flac" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find libFLAC])
 	fi

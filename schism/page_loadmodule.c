@@ -1108,7 +1108,7 @@ static void save_module_set_page(void)
 
 void save_module_load_page(struct page *page, int do_export)
 {
-	int n;
+	int n, c;
 
 	if (do_export) {
 		page->title = "Export Module (Shift-F10)";
@@ -1161,19 +1161,24 @@ void save_module_load_page(struct page *page, int do_export)
 	widgets_exportsave[4].d.togglebutton.state = 1;
 
 	const struct save_format *formats = (do_export ? song_export_formats : song_save_formats);
-	for (n = 0; formats[n].label; n++) {
-		widget_create_togglebutton(widgets_exportsave + 4 + n,
-				70, 13 + (3 * n), 5,
-				4 + (n == 0 ? 0 : (n - 1)),
-				4 + (n + 1),
+	for (c = 0, n = 0; formats[n].label; n++) {
+		if (formats[n].enabled && !formats[n].enabled())
+			continue;
+
+		widget_create_togglebutton(widgets_exportsave + 4 + c,
+				70, 13 + (3 * c), 5,
+				4 + (c == 0 ? 0 : (c - 1)),
+				4 + (c + 1),
 				1, 2, 2,
 				NULL,
 				formats[n].label,
 				(5 - strlen(formats[n].label)) / 2 + 1,
 				filetype_saves);
 
-		widgets_exportsave[4 + n].next.backtab = 1;
+		widgets_exportsave[4 + c].next.backtab = 1;
+
+		c++;
 	}
-	widgets_exportsave[4 + n - 1].next.down = 2;
-	page->total_widgets += n;
+	widgets_exportsave[4 + c - 1].next.down = 2;
+	page->total_widgets += c;
 }

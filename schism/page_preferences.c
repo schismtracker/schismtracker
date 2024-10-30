@@ -111,11 +111,11 @@ static void preferences_draw_const(void)
 	draw_box(25, 22+i*3, 47, 27+i*3, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(52, 22+i*3, 74, 27+i*3, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	sprintf(buf, "Playback Frequency: %dHz", audio_settings.sample_rate);
+	snprintf(buf, 80, "Playback Frequency: %dHz", audio_settings.sample_rate);
 	draw_text(buf, 2, 48, 0, 2);
 
 #define CORNER_BOTTOM "https://schismtracker.org/"
-	draw_text(CORNER_BOTTOM, 78 - strlen(CORNER_BOTTOM), 48, 1, 2);
+	draw_text(CORNER_BOTTOM, 78 - sizeof(CORNER_BOTTOM) + 1, 48, 1, 2);
 }
 
 /* --------------------------------------------------------------------- */
