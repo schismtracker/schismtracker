@@ -580,7 +580,7 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	int lostfx = 0;
 
 	if (!imf_read_header(&hdr, fp))
-		return 0;
+		return LOAD_UNSUPPORTED;
 
 	if (hdr.ordnum > MAX_ORDERS || hdr.patnum > MAX_PATTERNS || hdr.insnum > MAX_INSTRUMENTS)
 		return LOAD_FORMAT_ERROR;
