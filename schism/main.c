@@ -46,11 +46,7 @@
 #include "fonts.h"
 #include "dialog.h"
 #include "widget.h"
-<<<<<<< HEAD
-#include "accessibility.h"
-=======
 #include "fmt.h"
->>>>>>> fa12157ccabbcc3a4b7dec3b0df7d2f3c37a5c19
 #ifdef SCHISM_CONTROLLER
 # include "controller.h"
 #endif

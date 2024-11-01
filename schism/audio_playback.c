@@ -530,7 +530,6 @@ void song_single_step(int patno, int row)
 	song_lock_audio();
 
 	current_song->flags &= ~(SONG_PAUSED | SONG_PATTERNLOOP | SONG_ENDREACHED);
-
 	csf_loop_pattern(current_song, patno, row);
 	current_song->flags |= SONG_STEP;
 
@@ -750,7 +749,7 @@ enum song_mode song_get_mode(void)
 {
 	if ((current_song->flags & (SONG_ENDREACHED | SONG_PAUSED)) == (SONG_ENDREACHED | SONG_PAUSED))
 		return MODE_STOPPED;
-	if (current_song->flags & SONG_PAUSED)
+	if ((current_song->flags & SONG_PAUSED) || (current_song->flags & SONG_STEP))
 		return MODE_SINGLE_STEP;
 	if (current_song->flags & SONG_PATTERNPLAYBACK)
 		return MODE_PATTERN_LOOP;
