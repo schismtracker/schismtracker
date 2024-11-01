@@ -489,31 +489,27 @@ static void stereo_cvt_dialog(void)
 
 static int stereo_cvt_hk(struct key_event *k)
 {
-	if (!NO_MODIFIER(k->mod))
-		return 0;
-
 	/* trap the default dialog keys - we don't want to escape this dialog without running something */
-	switch (k->sym) {
-	case SDLK_RETURN:
+
+	if (KEY_ACTIVE(global, nav_accept)) {
 		printf("why am I here\n");
-	case SDLK_ESCAPE: case SDLK_o: case SDLK_c:
+	} else if(
+		KEY_ACTIVE(dialog, answer_ok) ||
+		KEY_ACTIVE(dialog, answer_cancel) ||
+		KEY_ACTIVE(dialog, cancel)
+	) {
 		return 1;
-	case SDLK_l:
-		if (k->state == KEY_RELEASE)
-			stereo_cvt_complete_left();
-		return 1;
-	case SDLK_r:
-		if (k->state == KEY_RELEASE)
-			stereo_cvt_complete_right();
-		return 1;
-	case SDLK_s:
-	case SDLK_b:
-		if (k->state == KEY_RELEASE)
-			stereo_cvt_complete_both();
-		return 1;
-	default:
+	} else if(KEY_RELEASED(load_stereo_sample_dialog, load_left)) {
+		stereo_cvt_complete_left();
+	} else if(KEY_RELEASED(load_stereo_sample_dialog, load_right)) {
+		stereo_cvt_complete_right();
+	} else if(KEY_RELEASED(load_stereo_sample_dialog, load_both)) {
+		stereo_cvt_complete_both();
+	} else {
 		return 0;
 	}
+
+	return 1;
 }
 
 static void finish_load(int cur)
@@ -669,7 +665,7 @@ static int file_list_handle_key(struct key_event * k)
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 
-	if (!(status.flags & CLASSIC_MODE) && k->sym == SDLK_n && (k->mod & KMOD_ALT)) {
+	if (!(status.flags & CLASSIC_MODE) && KEY_RELEASED(load_sample, toggle_multichannel)) {
 		if (k->state == KEY_RELEASE)
 			song_toggle_multichannel_mode();
 		return 1;
@@ -687,66 +683,73 @@ static int file_list_handle_key(struct key_event * k)
 			}
 		}
 	}
-	switch (k->sym) {
-	case SDLK_UP:           new_file--; search_pos = -1; break;
-	case SDLK_DOWN:         new_file++; search_pos = -1; break;
-	case SDLK_PAGEUP:       new_file -= 35; search_pos = -1; break;
-	case SDLK_PAGEDOWN:     new_file += 35; search_pos = -1; break;
-	case SDLK_HOME:         new_file = 0; search_pos = -1; break;
-	case SDLK_END:          new_file = flist.num_files - 1; search_pos = -1; break;
 
-	case SDLK_ESCAPE:
-		if (search_pos < 0) {
-			if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod))
-				set_page(PAGE_SAMPLE_LIST);
-			return 1;
-		} /* else fall through */
-	case SDLK_RETURN:
-		if (search_pos < 0) {
-			if (k->state == KEY_PRESS)
-				return 0;
-			handle_enter_key();
-			search_pos = -1;
-		} else {
-			if (k->state == KEY_PRESS)
-				return 1;
-			search_pos = -1;
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
+	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
+		new_file--;
+		search_pos = -1;
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_down)) {
+		new_file++;
+		search_pos = -1;
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
+		new_file -= 35;
+		search_pos = -1;
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
+		new_file += 35;
+		search_pos = -1;
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_home)) {
+		new_file = 0;
+		search_pos = -1;
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_end)) {
+		new_file = flist.num_files - 1;
+		search_pos = -1;
+	} else if (KEY_PRESSED(global, nav_cancel) && (search_pos < 0)) {
+		set_page(PAGE_SAMPLE_LIST);
 		return 1;
-	case SDLK_DELETE:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_RELEASED(global, nav_cancel) && !(search_pos < 0)) {
+		search_pos = -1;
+		status.flags |= NEED_UPDATE;
+		return 1;
+	} else if (KEY_PRESSED(global, nav_accept) && (search_pos < 0)) {
+		handle_enter_key();
+		search_pos = -1;
+		return 1;
+	} else if (KEY_RELEASED(global, nav_accept) && !(search_pos < 0)) {
+		search_pos = -1;
+		status.flags |= NEED_UPDATE;
+		return 1;
+	} else if (KEY_PRESSED(file_list, delete)) {
 		search_pos = -1;
 		if (flist.num_files > 0)
 			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
 		return 1;
-	case SDLK_BACKSPACE:
-		if (search_pos > -1) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-			search_pos--;
-			status.flags |= NEED_UPDATE;
-			reposition_at_slash_search();
-			return 1;
-		}
-	case SDLK_SLASH:
-		if (search_pos < 0) {
-			if (k->orig_sym == SDLK_SLASH) {
-				if (k->state == KEY_PRESS)
-					return 0;
-				search_pos = 0;
+	} else {
+		switch (k->sym) {
+		case SDLK_BACKSPACE:
+			if (search_pos > -1) {
+				if (k->state == KEY_RELEASE)
+					return 1;
+				search_pos--;
 				status.flags |= NEED_UPDATE;
+				reposition_at_slash_search();
 				return 1;
 			}
-			return 0;
-		} /* else fall through */
-	default:
-		if (k->text)
-			file_list_handle_text_input(k->text);
+		case SDLK_SLASH:
+			if (search_pos < 0) {
+				if (k->orig_sym == SDLK_SLASH) {
+					if (k->state == KEY_PRESS)
+						return 0;
+					search_pos = 0;
+					status.flags |= NEED_UPDATE;
+					return 1;
+				}
+				return 0;
+			} /* else fall through */
+		default:
+			if (k->text)
+				file_list_handle_text_input(k->text);
 
-		if (!k->mouse) return 0;
+			if (!k->mouse) return 0;
+		}
 	}
 
 	if (k->mouse == MOUSE_CLICK) {
@@ -789,10 +792,11 @@ static void load_sample_handle_key(struct key_event * k)
 {
 	int n, v;
 
-	if (k->state == KEY_PRESS && k->sym == SDLK_ESCAPE && NO_MODIFIER(k->mod)) {
+	if (KEY_PRESSED(global, nav_cancel)) {
 		set_page(PAGE_SAMPLE_LIST);
 		return;
 	}
+
 	if (!NO_MODIFIER(k->mod)) return;
 
 	if (k->midi_note > -1) {
@@ -1029,8 +1033,9 @@ void load_sample_load_page(struct page *page)
 void library_sample_load_page(struct page *page)
 {
 	/* this shares all the widgets from load_sample */
+	char* shortcut_text = (char*)global_keybinds_list.global.sample_library.shortcut_text_parens;
+	page->title = STR_CONCAT(2, "Sample Library", shortcut_text);
 
-	page->title = "Sample Library (Ctrl-F3)";
 	page->draw_const = load_sample_draw_const;
 	page->set_page = library_sample_set_page;
 	page->handle_key = load_sample_handle_key;
@@ -1039,3 +1044,15 @@ void library_sample_load_page(struct page *page)
 	page->help_index = HELP_GLOBAL;
 }
 
+int load_sample_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(load_sample, "Load Sample Keys.", PAGE_LOAD_SAMPLE);
+	INIT_BIND(load_sample, toggle_multichannel, "Toggle multichannel mode", "Alt+N");
+
+	INIT_SECTION(load_stereo_sample_dialog, "Stereo Sample Dialog Keys.", PAGE_LOAD_SAMPLE);
+	INIT_BIND(load_stereo_sample_dialog, load_left, "Load left channel", "L");
+	INIT_BIND(load_stereo_sample_dialog, load_right, "Load right channel", "R");
+	INIT_BIND(load_stereo_sample_dialog, load_both, "Load both channels", "B,S");
+
+	return 1;
+}

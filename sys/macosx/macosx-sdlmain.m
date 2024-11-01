@@ -42,6 +42,7 @@ extern char *initial_song;
 #include <SDL.h> /* necessary here */
 #include "event.h"
 #include "osdefs.h"
+#include "keybinds.h"
 
 #include <crt_externs.h>
 
@@ -77,10 +78,18 @@ extern OSErr CPSSetFrontProcess(CPSProcessSerNum *psn);
 
 static int macosx_did_finderlaunch;
 
-#define KEQ_FN(n) [NSString stringWithFormat:@"%C", (unichar)(NSF##n##FunctionKey)]
+@interface SchismTrackerCallbackData : NSObject {
+@public
+	struct keybinds_menu_item *i;
+}
+
+@end
+
+@implementation SchismTrackerCallbackData
+@end
 
 @interface NSApplication(OtherMacOSXExtensions)
--(void)setAppleMenu:(NSMenu*)m;
+- (void)setAppleMenu:(NSMenu*)m;
 @end
 
 @interface SchismTracker : NSApplication
@@ -98,26 +107,16 @@ static int macosx_did_finderlaunch;
 
 - (void)_menu_callback:(id)sender
 {
-	SDL_Event e;
-	NSString *px;
-	const char *po;
-
-	/* little hack to ignore keydown events here */
+	/* ignore keydown events here */
 	NSEvent* event = [NSApp currentEvent];
-	if (!event)
+	if (!event || [event type] == NSKeyDown)
 		return;
 
-	if ([event type] == NSKeyDown)
-		return;
+	SchismTrackerCallbackData *data = (SchismTrackerCallbackData *)[sender representedObject];
 
-	px = [sender representedObject];
-	po = [px UTF8String];
-	if (po) {
-		e.type = SCHISM_EVENT_NATIVE;
-		e.user.code = SCHISM_EVENT_NATIVE_SCRIPT;
-		e.user.data1 = strdup(po);
-		SDL_PushEvent(&e);
-	}
+	SDL_Event e;
+	keybinds_menu_item_pressed(data->i, &e);
+	SDL_PushEvent(&e);
 }
 
 @end
@@ -165,7 +164,6 @@ static int macosx_did_finderlaunch;
 		CFRelease(url);
 		CFRelease(url2);
 	}
-
 }
 
 /* Called when the internal event loop has just started running */
@@ -181,254 +179,172 @@ static int macosx_did_finderlaunch;
 
 /* ------------------------------------------------------- */
 
-static void setApplicationMenu(void)
+/* building the menus */
+
+static NSString *get_key_equivalent(keybind_bind_t *bind)
 {
-	/* warning: this code is very odd */
-	NSMenu *appleMenu;
-	NSMenu *otherMenu;
-	NSMenuItem *menuItem;
+	const keybind_shortcut_t* shortcut = &bind->shortcuts[0];
+	const SDL_Keycode kc = (shortcut->keycode != SDLK_UNKNOWN)
+		? (shortcut->keycode)
+		: (shortcut->scancode != SDL_SCANCODE_UNKNOWN)
+			? SDL_GetKeyFromScancode(shortcut->scancode)
+			: SDLK_UNKNOWN;
 
-	appleMenu = [[NSMenu alloc] initWithTitle:@""];
+	if (kc == SDLK_UNKNOWN)
+		return @"";
 
-	/* Add menu items */
-	menuItem = (NSMenuItem*)[appleMenu addItemWithTitle:@"Help"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(1)];
-	[menuItem setKeyEquivalentModifierMask:0];
-	[menuItem setRepresentedObject: @"help"];
+	switch (kc) {
+#define KEQ_FN(n) [NSString stringWithFormat:@"%C", (unichar)(NSF##n##FunctionKey)]
+	case SDLK_F1:  return KEQ_FN(1);
+	case SDLK_F2:  return KEQ_FN(2);
+	case SDLK_F3:  return KEQ_FN(3);
+	case SDLK_F4:  return KEQ_FN(4);
+	case SDLK_F5:  return KEQ_FN(5);
+	case SDLK_F6:  return KEQ_FN(6);
+	case SDLK_F7:  return KEQ_FN(7);
+	case SDLK_F8:  return KEQ_FN(8);
+	case SDLK_F9:  return KEQ_FN(9);
+	case SDLK_F10: return KEQ_FN(10);
+	case SDLK_F11: return KEQ_FN(11);
+	case SDLK_F12: return KEQ_FN(12);
+#undef KEQ_FN
+	default:
+		/* unichar is 16-bit, can't hold more than that */
+		if (kc & 0x80000000 || kc > 0xFFFF)
+			return @"";
 
-	[appleMenu addItem:[NSMenuItem separatorItem]];
-	menuItem = (NSMenuItem*)[appleMenu addItemWithTitle:@"View Patterns"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(2)];
-	[menuItem setKeyEquivalentModifierMask:0];
-	[menuItem setRepresentedObject: @"pattern"];
-	menuItem = (NSMenuItem*)[appleMenu addItemWithTitle:@"Orders/Panning"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(11)];
-	[menuItem setKeyEquivalentModifierMask:0];
-	[menuItem setRepresentedObject: @"orders"];
-	menuItem = (NSMenuItem*)[appleMenu addItemWithTitle:@"Variables"
-					action:@selector(_menu_callback:)
-				 keyEquivalent:KEQ_FN(12)];
-	[menuItem setKeyEquivalentModifierMask:0];
-	[menuItem setRepresentedObject: @"variables"];
-	menuItem = (NSMenuItem*)[appleMenu addItemWithTitle:@"Message Editor"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(9)];
-	[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
-	[menuItem setRepresentedObject: @"message_edit"];
+		return [NSString stringWithFormat:@"%C", (unichar)kc];
+	}
+}
 
-	[appleMenu addItem:[NSMenuItem separatorItem]];
+static int get_key_equivalent_modifier(keybind_bind_t *bind)
+{
+	const enum keybind_modifier mod = bind->shortcuts[0].modifier;
+	int modifiers = 0;
 
-	[appleMenu addItemWithTitle:@"Hide Schism Tracker" action:@selector(hide:) keyEquivalent:@"h"];
+	// TODO L and R variants
 
-	menuItem = (NSMenuItem *)[appleMenu addItemWithTitle:@"Hide Others" action:@selector(hideOtherApplications:) keyEquivalent:@"h"];
-	[menuItem setKeyEquivalentModifierMask:(NSAlternateKeyMask|NSCommandKeyMask)];
+	if (mod & KEYBIND_MOD_CTRL)
+		modifiers |= NSControlKeyMask;
 
-	[appleMenu addItemWithTitle:@"Show All" action:@selector(unhideAllApplications:) keyEquivalent:@""];
+	if (mod & KEYBIND_MOD_SHIFT)
+		modifiers |= NSShiftKeyMask;
 
-	[appleMenu addItem:[NSMenuItem separatorItem]];
+	if (mod & KEYBIND_MOD_ALT)
+		modifiers |= NSAlternateKeyMask;
 
-	[appleMenu addItemWithTitle:@"Quit Schism Tracker" action:@selector(terminate:) keyEquivalent:@"q"];
+	return modifiers;
+}
 
-	/* Put menu into the menubar */
-	menuItem = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
-	[menuItem setSubmenu:appleMenu];
-	[[NSApp mainMenu] addItem:menuItem];
+static void setApplicationMenu(NSMenu *menu)
+{
+	NSMenu *applemenu = NULL;
+	struct keybinds_menu **mm;
+	struct keybinds_menu_item *i;
 
-	/* File menu */
-	otherMenu = [[NSMenu alloc] initWithTitle:@"File"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"New..."
-				action:@selector(_menu_callback:)
-				keyEquivalent:@"n"];
-	[menuItem setKeyEquivalentModifierMask:NSControlKeyMask];
-	[menuItem setRepresentedObject: @"new"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Load..."
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(9)];
-	[menuItem setKeyEquivalentModifierMask:0];
-	[menuItem setRepresentedObject: @"load"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Save Current"
-				action:@selector(_menu_callback:)
-				keyEquivalent:@"s"];
-	[menuItem setKeyEquivalentModifierMask:NSControlKeyMask];
-	[menuItem setRepresentedObject: @"save"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Save As..."
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(10)];
-	[menuItem setKeyEquivalentModifierMask:0];
-	[menuItem setRepresentedObject: @"save_as"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Export..."
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(10)];
-	[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
-	[menuItem setRepresentedObject: @"export_song"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Message Log"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(11)];
-	[menuItem setKeyEquivalentModifierMask:NSFunctionKeyMask|NSControlKeyMask];
-	[menuItem setRepresentedObject: @"logviewer"];
-	menuItem = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
-	[menuItem setSubmenu:otherMenu];
-	[[NSApp mainMenu] addItem:menuItem];
+	for (mm = keybinds_menus; (*mm)->type != KEYBINDS_MENU_NULL; mm++) {
+		struct keybinds_menu *m = *mm;
+		if (m->type != KEYBINDS_MENU_REGULAR && m->type != KEYBINDS_MENU_APPLE)
+			continue;
 
-	/* Playback menu */
-	otherMenu = [[NSMenu alloc] initWithTitle:@"Playback"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Show Infopage"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(5)];
-	[menuItem setKeyEquivalentModifierMask:0];
-	[menuItem setRepresentedObject: @"info"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Play Song"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(5)];
-	[menuItem setKeyEquivalentModifierMask:NSControlKeyMask];
-	[menuItem setRepresentedObject: @"play"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Play Pattern"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(6)];
-	[menuItem setKeyEquivalentModifierMask:0];
-	[menuItem setRepresentedObject: @"play_pattern"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Play from Order"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(6)];
-	[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
-	[menuItem setRepresentedObject: @"play_order"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Play from Mark/Cursor"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(7)];
-	[menuItem setKeyEquivalentModifierMask:0];
-	[menuItem setRepresentedObject: @"play_mark"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Stop"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(8)];
-	[menuItem setKeyEquivalentModifierMask:0];
-	[menuItem setRepresentedObject: @"stop"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Calculate Length"
-				action:@selector(_menu_callback:)
-				keyEquivalent:@"p"];
-	[menuItem setKeyEquivalentModifierMask:(NSFunctionKeyMask|NSControlKeyMask)];
-	[menuItem setRepresentedObject: @"calc_length"];
-	menuItem = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
-	[menuItem setSubmenu:otherMenu];
-	[[NSApp mainMenu] addItem:menuItem];
+		NSString *title = [NSString stringWithUTF8String: m->info.regular.name];
+		title = [title stringByReplacingOccurrencesOfString:@"&" withString:@""];
 
-	/* Sample menu */
-	otherMenu = [[NSMenu alloc] initWithTitle:@"Samples"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Sample List"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(3)];
-	[menuItem setKeyEquivalentModifierMask:0];
-	[menuItem setRepresentedObject: @"sample_page"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Sample Library"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(3)];
-	[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
-	[menuItem setRepresentedObject: @"sample_library"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Reload Soundcard"
-				action:@selector(_menu_callback:)
-				keyEquivalent:@"g"];
-	[menuItem setKeyEquivalentModifierMask:NSControlKeyMask];
-	[menuItem setRepresentedObject: @"init_sound"];
-	menuItem = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
-	[menuItem setSubmenu:otherMenu];
-	[[NSApp mainMenu] addItem:menuItem];
+		NSMenu *submenu;
+		if (m->type == KEYBINDS_MENU_REGULAR)
+			submenu = [[NSMenu alloc] initWithTitle: title];
+		else
+			submenu = [[NSMenu alloc] init];
 
-	/* Instrument menu */
-	otherMenu = [[NSMenu alloc] initWithTitle:@"Instruments"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Instrument List"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(4)];
-	[menuItem setKeyEquivalentModifierMask:0];
-	[menuItem setRepresentedObject: @"inst_page"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Instrument Library"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(4)];
-	[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
-	[menuItem setRepresentedObject: @"inst_library"];
-	menuItem = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
-	[menuItem setSubmenu:otherMenu];
-	[[NSApp mainMenu] addItem:menuItem];
+		for (i = m->items; i->type != KEYBINDS_MENU_ITEM_NULL; i++) {
+			switch (i->type) {
+			case KEYBINDS_MENU_ITEM_REGULAR: {
+				/* get the name, but remove the & symbols for alt crap on other systems */
+				NSString *name = [NSString stringWithUTF8String: i->info.regular.name];
+				name = [name stringByReplacingOccurrencesOfString:@"&" withString:@""];
 
-	/* Settings menu */
-	otherMenu = [[NSMenu alloc] initWithTitle:@"Settings"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Preferences"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(5)];
-	[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
-	[menuItem setRepresentedObject: @"preferences"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"MIDI Configuration"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(1)];
-	[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
-	[menuItem setRepresentedObject: @"midi_config"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Palette Editor"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(12)];
-	[menuItem setKeyEquivalentModifierMask:NSControlKeyMask];
-	[menuItem setRepresentedObject: @"palette_page"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Font Editor"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(12)];
-		[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
-	[menuItem setRepresentedObject: @"font_editor"];
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"System Configuration"
-				action:@selector(_menu_callback:)
-				keyEquivalent:KEQ_FN(1)];
-	[menuItem setKeyEquivalentModifierMask:NSControlKeyMask];
-	[menuItem setRepresentedObject: @"system_config"];
+				/* Add menu item */
+				SchismTrackerCallbackData *data = [SchismTrackerCallbackData alloc];
+				data->i = i;
+				NSMenuItem *item = (NSMenuItem*)[submenu addItemWithTitle:name
+							action:@selector(_menu_callback:)
+							keyEquivalent:get_key_equivalent(i->info.regular.bind)];
+				[item setKeyEquivalentModifierMask:get_key_equivalent_modifier(i->info.regular.bind)];
+				[item setRepresentedObject: data];
+				break;
+			}
+			case KEYBINDS_MENU_ITEM_SEPARATOR:
+				[submenu addItem:[NSMenuItem separatorItem]];
+				break;
+			default:
+				break;
+			}
+		}
 
-	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Toggle Fullscreen"
-				action:@selector(_menu_callback:)
-				keyEquivalent:@"\r"];
-	[menuItem setKeyEquivalentModifierMask:(NSControlKeyMask|NSAlternateKeyMask)];
-	[menuItem setRepresentedObject: @"fullscreen"];
-	menuItem = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
-	[menuItem setSubmenu:otherMenu];
-	[[NSApp mainMenu] addItem:menuItem];
+		if (m->type == KEYBINDS_MENU_APPLE) {
+			[submenu addItemWithTitle:@"Hide Schism Tracker" action:@selector(hide:) keyEquivalent:@"h"];
 
-	/* Tell the application object that this is now the application menu */
-	[NSApp setAppleMenu:appleMenu];
+			NSMenuItem *item = (NSMenuItem *)[submenu addItemWithTitle:@"Hide Others" action:@selector(hideOtherApplications:) keyEquivalent:@"h"];
+			[item setKeyEquivalentModifierMask:(NSAlternateKeyMask|NSCommandKeyMask)];
 
-	/* Finally give up our references to the objects */
-	[appleMenu release];
-	[menuItem release];
+			[submenu addItemWithTitle:@"Show All" action:@selector(unhideAllApplications:) keyEquivalent:@""];
+
+			[submenu addItem:[NSMenuItem separatorItem]];
+
+			[submenu addItemWithTitle:@"Quit Schism Tracker" action:@selector(terminate:) keyEquivalent:@"q"];
+
+			[NSApp setAppleMenu: submenu];
+		}
+
+		/* put menu into the menubar */
+		NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
+		[item setSubmenu:submenu];
+		[menu addItem:item];
+
+		[item release];
+		[submenu release];
+	}
 }
 
 /* Create a window menu */
-static void setupWindowMenu(void)
+static void setupWindowMenu(NSMenu *menu)
 {
-	NSMenu      *windowMenu;
-	NSMenuItem  *windowMenuItem;
-	NSMenuItem  *menuItem;
+	NSMenuItem *item;
 
-	windowMenu = [[NSMenu alloc] initWithTitle:@"Window"];
+	NSMenu *window = [[NSMenu alloc] initWithTitle:@"Window"];
 
 	/* "Minimize" item */
-	menuItem = [[NSMenuItem alloc] initWithTitle:@"Minimize" action:@selector(performMiniaturize:) keyEquivalent:@"m"];
-	[windowMenu addItem:menuItem];
-	[menuItem release];
+	item = [[NSMenuItem alloc] initWithTitle:@"Minimize" action:@selector(performMiniaturize:) keyEquivalent:@"m"];
+	[window addItem:item];
+	[item release];
 
 	/* Put menu into the menubar */
-	windowMenuItem = [[NSMenuItem alloc] initWithTitle:@"Window" action:nil keyEquivalent: @""];
-	[windowMenuItem setSubmenu:windowMenu];
-	[[NSApp mainMenu] addItem:windowMenuItem];
+	item = [[NSMenuItem alloc] initWithTitle:@"Window" action:nil keyEquivalent: @""];
+	[item setSubmenu:window];
+	[menu addItem:item];
 
 	/* Tell the application object that this is now the window menu */
-	[NSApp setWindowsMenu:windowMenu];
+	[NSApp setWindowsMenu: window];
 
 	/* Finally give up our references to the objects */
-	[windowMenu release];
-	[windowMenuItem release];
+	[window release];
+	[item release];
 }
 
 #ifdef main
 #  undef main
 #endif
 
+void macosx_create_menu(void)
+{
+	NSMenu *menu = [[NSMenu alloc] init];
+	setApplicationMenu(menu);
+	setupWindowMenu(menu);
+	[NSApp setMainMenu: menu];
+}
+
 /* Main entry point to executable - should *not* be SDL_main! */
-int main (int argc, char **argv)
+int main(int argc, char **argv)
 {
 	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
@@ -451,11 +367,6 @@ int main (int argc, char **argv)
 
 	/* Ensure the application object is initialised */
 	[SchismTracker sharedApplication];
-
-	/* Set up the menubar */
-	[NSApp setMainMenu:[[NSMenu alloc] init]];
-	setApplicationMenu();
-	setupWindowMenu();
 
 	/* Create the app delegate */
 	SchismTrackerDelegate *delegate = [[SchismTrackerDelegate alloc] init];

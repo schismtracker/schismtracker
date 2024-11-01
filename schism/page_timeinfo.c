@@ -54,74 +54,30 @@ static void timeinfo_draw_const(void)
 
 static int timeinfo_handle_key(struct key_event * k)
 {
-	switch (k->sym) {
-	case SDLK_BACKQUOTE:
-		if (k->state != KEY_RELEASE)
-			return 0;
-
-		if ((k->mod & KMOD_RALT) && (k->mod & KMOD_RSHIFT)) {
-			display_session = !display_session;
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
-		return 0;
-	case SDLK_s:
-		if (k->state != KEY_RELEASE)
-			return 0;
-
-		if (!(status.flags & CLASSIC_MODE)) {
-			display_session = !display_session;
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
-		return 0;
-	default:
-		break;
+	if (KEY_PRESSED_OR_REPEATED(time_information, toggle_session)) {
+		display_session = !display_session;
+		status.flags |= NEED_UPDATE;
+		return 1;
 	}
 
 	if (display_session) {
-		switch (k->sym) {
-		case SDLK_UP:
-			if (k->state == KEY_RELEASE)
-				return 1;
+		if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 			top_line--;
-			break;
-		case SDLK_PAGEUP:
-			if (k->state == KEY_RELEASE)
-				return 1;
+		} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 			top_line -= 15;
-			break;
-		case SDLK_DOWN:
-			if (k->state == KEY_RELEASE)
-				return 1;
+		} else if(KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 			top_line++;
-			break;
-		case SDLK_PAGEDOWN:
-			if (k->state == KEY_RELEASE)
-				return 1;
+		} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 			top_line += 15;
-			break;
-		case SDLK_HOME:
-			if (k->state == KEY_RELEASE)
-				return 1;
+		} else if(KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 			top_line = 0;
-			break;
-		case SDLK_END:
-			if (k->state == KEY_RELEASE)
-				return 1;
+		} else if(KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 			top_line = current_song->histlen;
-			break;
-		default:
-			if (k->state == KEY_PRESS) {
-				if (k->mouse == MOUSE_SCROLL_UP) {
-					top_line -= MOUSE_SCROLL_LINES;
-					break;
-				} else if (k->mouse == MOUSE_SCROLL_DOWN) {
-					top_line += MOUSE_SCROLL_LINES;
-					break;
-				}
-			}
-
+		} else if(k->state == KEY_PRESS && k->mouse == MOUSE_SCROLL_UP) {
+			top_line -= MOUSE_SCROLL_LINES;
+		} else if(k->state == KEY_PRESS && k->mouse == MOUSE_SCROLL_DOWN) {
+			top_line += MOUSE_SCROLL_LINES;
+		} else {
 			return 0;
 		}
 		top_line = MIN(top_line, (ptrdiff_t)current_song->histlen);
@@ -160,10 +116,11 @@ static void timeinfo_redraw(void)
 		for (size_t i = 0; i < current_song->histlen; i++) {
 			secs += current_song->history[i].runtime.tv_sec;
 			usecs += current_song->history[i].runtime.tv_usec;
-		}
 
-		// add any missing seconds
-		secs += (usecs / 1000000);
+			// add any missing seconds
+			secs += (usecs / 1000000);
+			usecs %= 1000000;
+		}
 
 		draw_time(secs, 18, 13);
 
@@ -191,11 +148,16 @@ static void timeinfo_redraw(void)
 
 	if (display_session) {
 		uint64_t session_secs = 0;
+		uint64_t session_usecs = 0;
 
 		for (int i = 0; i < current_song->histlen; i++) {
 			char buf[27];
 
 			session_secs += current_song->history[i].runtime.tv_sec;
+			session_usecs += current_song->history[i].runtime.tv_usec;
+
+			session_secs += (session_usecs / 1000000);
+			session_usecs %= 1000000;
 
 			if (i >= top_line && i < top_line + 29) {
 				if (current_song->history[i].time_valid) {
@@ -234,4 +196,11 @@ void timeinfo_load_page(struct page *page)
 	page->help_index = HELP_TIME_INFORMATION;
 
 	widget_create_other(widgets_timeinfo + 0, 0, timeinfo_handle_key, NULL, timeinfo_redraw);
+}
+
+int timeinfo_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(time_information, "Time Information Keys.", PAGE_TIME_INFORMATION);
+	INIT_BIND(time_information, toggle_session, "Toggle session display", "RShift+RAlt+BACKQUOTE,S");
+	return 1;
 }

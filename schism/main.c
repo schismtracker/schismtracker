@@ -1027,6 +1027,10 @@ int main(int argc, char **argv)
 	SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
 	shutdown_process |= EXIT_SDLQUIT;
 	os_sdlinit();
+	keybinds_init();
+	menu_init_keybinds();
+
+	os_create_menu();
 
 #ifdef SCHISM_CONTROLLER
 	controller_init();

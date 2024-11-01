@@ -37,6 +37,7 @@ struct key_event {
 	SDL_Keymod mod; /* current key modifiers */
 	SDL_Scancode scancode; /* locale-independent key locations */
 	const char* text; /* text input, if any. can be null */
+	const char* orig_text;
 
 	enum { KEY_PRESS=0, KEY_RELEASE } state;
 	enum { MOUSE_NONE=0, MOUSE_CLICK, MOUSE_SCROLL_UP, MOUSE_SCROLL_DOWN, MOUSE_DBLCLICK } mouse;
@@ -389,6 +390,7 @@ enum page_numbers {
 
 	PAGE_WATERFALL,
 
+	PAGE_GLOBAL,
 	PAGE_MAX
 };
 
@@ -458,6 +460,7 @@ int pattern_max_channels(int patno, int opt_bits[64]);
 void update_current_order(void);
 
 /* menu.c */
+void menu_init_keybinds(void);
 void menu_show(void);
 void menu_hide(void);
 void menu_draw(void);

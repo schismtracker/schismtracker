@@ -103,37 +103,28 @@ static void zxx_setpos(int pos)
 
 static int pre_handle_key(struct key_event *k)
 {
-	if (*selected_widget == 25 && k->sym == SDLK_UP) {
+	if (*selected_widget == 25 && KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		/* scroll up */
-		if (k->state == KEY_RELEASE)
-			return 1;
 		if (zxx_top == 0)
 			return 0; /* let the normal key handler catch it and change focus */
 		zxx_setpos(zxx_top - 1);
 		return 1;
 	}
-	if (*selected_widget == 31 && k->sym == SDLK_DOWN) {
+
+	if (*selected_widget == 31 && KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		/* scroll down */
-		if (k->state == KEY_RELEASE)
-			return 1;
 		zxx_setpos(zxx_top + 1);
 		return 1;
 	}
+
 	if ((*selected_widget) >= 25) {
-		switch (k->sym) {
-		case SDLK_PAGEUP:
-			if (k->state == KEY_RELEASE)
-				return 1;
+		if (KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 			zxx_setpos(zxx_top - 7);
 			return 1;
-		case SDLK_PAGEDOWN:
-			if (k->state == KEY_RELEASE)
-				return 1;
+		} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 			zxx_setpos(zxx_top + 7);
 			return 1;
-		default:
-			break;
-		};
+		}
 	}
 	return 0;
 }

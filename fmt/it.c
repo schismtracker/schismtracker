@@ -904,7 +904,11 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 		uint16_t fat_date, fat_time;
 		struct tm loadtm;
 
-		localtime_r(&song->editstart.tv_sec, &loadtm);
+		// struct timeval *should* use a time_t for tv_sec,
+		// but this is not the case on mingw. just copy the
+		// value for now...
+		time_t time = song->editstart.tv_sec;
+		localtime_r(&time, &loadtm);
 		tm_to_fat_date_time(&loadtm, &fat_date, &fat_time);
 
 		fat_date = bswapLE16(fat_date);

@@ -194,7 +194,9 @@ static void dir_instruments_changed(void)
 
 void song_vars_load_page(struct page *page)
 {
-	page->title = "Song Variables & Directory Configuration (F12)";
+	char* shortcut_text = (char*)global_keybinds_list.global.song_variables.shortcut_text_parens;
+	page->title = STR_CONCAT(2, "Song Variables & Directory Configuration", shortcut_text);
+
 	page->draw_const = song_vars_draw_const;
 	page->song_changed_cb = song_changed_cb;
 	page->total_widgets = 18;

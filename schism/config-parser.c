@@ -456,16 +456,16 @@ void cfg_set_string(cfg_file_t *cfg, const char *section_name, const char *key_n
 
 	if (section_name == NULL || key_name == NULL)
 		return;
+
 	section = _get_section(cfg, section_name, 1);
 	section->omit = 0;
 
 	key = _get_key(section, key_name, 1);
 	if (key->value)
 		free(key->value);
-	if (value)
-		key->value = str_dup(value);
-	else
-		key->value = NULL;
+
+	key->value = (value) ? str_dup(value) : NULL;
+
 	cfg->dirty = 1;
 }
 

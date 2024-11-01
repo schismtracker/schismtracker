@@ -178,88 +178,58 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 		if(new_palette == selected_palette)
 			load_selected_palette = 1;
 	} else {
-		if (k->state == KEY_RELEASE)
-			return 0;
 		if (k->mouse == MOUSE_SCROLL_UP)
 			new_palette -= MOUSE_SCROLL_LINES;
 		else if (k->mouse == MOUSE_SCROLL_DOWN)
 			new_palette += MOUSE_SCROLL_LINES;
 	}
 
-	switch (k->sym) {
-	case SDLK_UP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		if (--new_palette < 0) {
 			widget_change_focus_to(47);
 			return 1;
 		}
-		break;
-	case SDLK_DOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		// new_palette++;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		if (++new_palette >= NUM_PALETTES) {
 			widget_change_focus_to(49);
 			return 1;
 		}
-		break;
-	case SDLK_HOME:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		new_palette = 0;
-		break;
-	case SDLK_PAGEUP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 		if (new_palette == 0) {
 			widget_change_focus_to(45);
 			return 1;
 		}
 		new_palette -= 16;
-		break;
-	case SDLK_END:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		new_palette = NUM_PALETTES - 1;
-		break;
-	case SDLK_PAGEDOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 		new_palette += 16;
-		break;
-	case SDLK_RETURN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_accept)) {
 		// if (selected_palette == -1) return 1;
 		palette_load_preset(selected_palette);
 		palette_apply();
 		update_thumbbars();
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_RIGHT:
-	case SDLK_TAB:
-		if (k->mod & KMOD_SHIFT) {
-			widget_change_focus_to(focus_offsets[selected_palette+1] + 29);
-			return 1;
-		}
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if(
+		KEY_PRESSED_OR_REPEATED(global, nav_right) ||
+		KEY_PRESSED_OR_REPEATED(global, nav_tab)
+	) {
 		widget_change_focus_to(focus_offsets[selected_palette+1] + 8);
 		return 1;
-	case SDLK_LEFT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_backtab)) {
 		widget_change_focus_to(focus_offsets[selected_palette+1] + 29);
 		return 1;
-	case SDLK_c:
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_left)) {
+		widget_change_focus_to(focus_offsets[selected_palette+1] + 29);
+		return 1;
+	} else if(KEY_PRESSED_OR_REPEATED(palette_edit, copy)) {
 		/* pasting is handled by the page */
-		if (k->mod & KMOD_CTRL) {
-			palette_copy_palette_to_clipboard(selected_palette);
-			return 1;
-		}
-		return 0;
-	default:
+		palette_copy_palette_to_clipboard(selected_palette);
+		return 1;
+	} else {
 		if (k->mouse == MOUSE_NONE)
 			return 0;
 	}
@@ -287,31 +257,15 @@ static void palette_list_handle_key(struct key_event * k)
 {
 	int n = *selected_widget;
 
-	if (k->state == KEY_RELEASE)
+	if (KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
+		n -= 3;
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
+		n += 3;
+	} else if (KEY_PRESSED_OR_REPEATED(palette_edit, copy)) {
+		palette_copy_current_to_clipboard();
 		return;
-
-	switch (k->sym) {
-	case SDLK_PAGEUP:
-		if (!NO_MODIFIER(k->mod))
-			n -= 3;
-		break;
-	case SDLK_PAGEDOWN:
-		if (!NO_MODIFIER(k->mod))
-			n += 3;
-		break;
-	case SDLK_c:
-		if (k->mod & KMOD_CTRL) {
-			palette_copy_current_to_clipboard();
-			return;
-		}
-		break;
-	case SDLK_v:
-		if (k->mod & KMOD_CTRL) {
-			palette_paste_from_clipboard();
-			return;
-		}
-		break;
-	default:
+	} else if (KEY_PRESSED_OR_REPEATED(palette_edit, paste)) {
+		palette_paste_from_clipboard();
 		return;
 	}
 
@@ -353,7 +307,9 @@ static void update_palette(void)
 
 void palette_load_page(struct page *page)
 {
-	page->title = "Palette Configuration (Ctrl-F12)";
+	char* shortcut_text = (char*)global_keybinds_list.global.palette_config.shortcut_text_parens;
+	page->title = STR_CONCAT(2, "Palette Configuration", shortcut_text);
+
 	page->draw_const = palette_draw_const;
 	page->handle_key = palette_list_handle_key;
 	page->total_widgets = 51;
@@ -399,4 +355,12 @@ void palette_load_page(struct page *page)
 	widgets_palette[39].next.tab = 49;
 	widgets_palette[40].next.tab = 49;
 	widgets_palette[41].next.tab = 49;
+}
+
+int palette_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(palette_edit, "Palette Keys.", PAGE_PALETTE_EDITOR);
+	INIT_BIND(palette_edit, copy, "Copy current palette to the clipboard", "Ctrl+C");
+	INIT_BIND(palette_edit, paste, "Paste a palette from the clipboard", "Ctrl+V");
+	return 1;
 }

@@ -145,7 +145,21 @@ extern short pdB_s(int noisefloor, double power, double correction_dBs);
 /* correction_dBs corrects the dB after converted, but before scaling.*/
 extern short dB2_power_s(int noisefloor, int db, double correction_dBs);
 
+/* Prints last 8 bits of a variable. Used like this: printf("hello = " BYTE_TO_BINARY_PATTERN ".\n", BYTE_TO_BINARY(hello_var)); */
+#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte)  \
+	((byte) & 0x80 ? '1' : '0'), \
+	((byte) & 0x40 ? '1' : '0'), \
+	((byte) & 0x20 ? '1' : '0'), \
+	((byte) & 0x10 ? '1' : '0'), \
+	((byte) & 0x08 ? '1' : '0'), \
+	((byte) & 0x04 ? '1' : '0'), \
+	((byte) & 0x02 ? '1' : '0'), \
+	((byte) & 0x01 ? '1' : '0')
+
 /* integer sqrt (very fast; 32 bits limited) */
 unsigned int i_sqrt(unsigned int r);
+
+uint32_t crc32b(const unsigned char *message);
 
 #endif /* SCHISM_UTIL_H_ */

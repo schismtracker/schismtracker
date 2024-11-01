@@ -35,6 +35,7 @@
 #include "util.h"
 #include "video.h"
 #include "log.h"
+#include "keybinds.h"
 
 /* --------------------------------------------------------------------- */
 /* preprocessor stuff */
@@ -319,6 +320,7 @@ void show_song_timejump(void);
 
 /* Shutdown the SDL2 system from anywhere without having to use atexit() */
 void schism_exit(int status);
+
 
 /* --------------------------------------------------------------------- */
 

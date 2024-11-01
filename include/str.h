@@ -46,6 +46,38 @@ char *str_escape(const char *source, int space_hack);
 char *str_unescape(const char *source);
 char *str_pretty_name(const char *filename);
 int str_get_num_lines(const char *text);
-char *str_concat(const char *s, ...);
+
+/* Count how many times character is in str */
+size_t str_count_occurrences(char character, const char* str);
+
+/* Concatenates strings in array. count is size of array. str_array is the array. */
+char *str_concat(size_t count, const char** str_array);
+/* Concatenates strings in array. count is size of array. str_array is the array. Frees the strings in the array. */
+char *str_concat_free(size_t count, char** str_array);
+
+/* variadic macros for the above function, so one can write e.g. STR_CONCAT(3, "123", "123", "123") and receive "123123123" */
+#define STR_CONCAT(count, ...) \
+	str_concat((count), (const char *[]){ __VA_ARGS__ })
+
+#define STR_CONCAT_FREE(count, ...) \
+	str_concat_free((count), (char *[]){ __VA_ARGS__ })
+
+/* The following two functions are named after the php implode() function. */
+
+/* Concatenates strings in array, putting a delimiter between them. count is size of array. str_array is the array. */
+char *str_implode(size_t count, const char* delim, const char** str_array);
+/* Concatenates strings in array, putting a delimiter between them. count is size of array. str_array is the array. Frees the strings in the array. */
+char *str_implode_free(size_t count, const char* delim, char** str_array);
+
+#define STR_IMPLODE(count, delim, ...) \
+	str_implode((count), (delim), (const char *[]){ __VA_ARGS__ })
+
+#define STR_IMPLODE_FREE(count, delim, ...) \
+	str_implode_free((count), (delim), (char *[]){ __VA_ARGS__ })
+
+/* pad will be placed between str1 and str2 until width is reached.
+ * !!! THIS FUNCTION ASSUMES PROPER UTF-8 ENCODED STRINGS !!! */
+char *str_pad_between(const char* str1, const char* str2, unsigned char pad, int width, int min_padding);
+#define str_pad_end(str, pad, width) str_pad_between(str, "", pad, width, 0)
 
 #endif

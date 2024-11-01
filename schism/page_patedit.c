@@ -87,7 +87,8 @@ static int top_display_channel = 1;             /* one-based */
 static int top_display_row = 0;         /* zero-based */
 
 /* these three tell where the cursor is in the pattern */
-static int current_channel = 1, current_position = 0;
+static int current_channel = 1;
+static int current_position = 0;
 static int current_row = 0;
 
 static int keyjazz_noteoff = 0;       /* issue noteoffs when releasing note */
@@ -267,8 +268,34 @@ static int channel_multi[64];
 static int visible_channels, visible_width;
 
 static void recalculate_visible_area(void);
-static void set_view_scheme(int scheme);
+static void set_quick_view_scheme(int scheme);
 static void pattern_editor_reposition(void);
+
+/* --------------------------------------------------------------------- */
+
+void set_current_position(int position)
+{
+	current_position = position;
+
+	if (current_position > 8) {
+		if (current_channel < 64) {
+			current_position = 0;
+			set_current_channel(current_channel + 1);
+		} else {
+			current_position = 8;
+		}
+	} else if (current_position < 0) {
+		if (current_channel > 1) {
+			current_position = 8;
+			set_current_channel(current_channel - 1);
+		} else {
+			current_position = 0;
+		}
+	}
+
+	pattern_editor_reposition();
+	status.flags |= NEED_UPDATE;
+}
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* options dialog */
@@ -298,7 +325,7 @@ static void options_close(void *data)
 	new_size = options_widgets[4].d.thumbbar.value;
 	if (old_size != new_size) {
 		song_pattern_resize(current_pattern, new_size);
-		current_row = MIN(current_row, new_size - 1);
+		set_current_row(MIN(current_row, new_size - 1));
 		pattern_editor_reposition();
 	}
 }
@@ -402,7 +429,7 @@ static void length_edit_close(UNUSED void *data)
 			song_pattern_resize(i, nl);
 			if (i == current_pattern) {
 				status.flags |= NEED_UPDATE;
-				current_row = MIN(current_row, nl - 1);
+				set_current_row(MIN(current_row, nl - 1));
 				pattern_editor_reposition();
 			}
 		}
@@ -449,15 +476,14 @@ static void multichannel_close(UNUSED void *data)
 }
 static int multichannel_handle_key(struct key_event *k)
 {
-	if (k->sym == SDLK_n) {
-		if ((k->mod & KMOD_ALT) && k->state == KEY_PRESS)
-			dialog_yes(NULL);
-		else if (NO_MODIFIER(k->mod) && k->state == KEY_RELEASE)
-			dialog_cancel(NULL);
+	// CHECK IF WORKING
+	if (KEY_PRESSED(pattern_edit, toggle_multichannel)) {
+		dialog_yes(NULL);
 		return 1;
 	}
 	return 0;
 }
+
 static void multichannel_draw_const(void)
 {
 	char sbuf[16];
@@ -565,9 +591,9 @@ static void copyin_addnote(song_note_t *note, int *copyin_x, int *copyin_y)
 
 	status.flags |= (SONG_NEEDS_SAVE|NEED_UPDATE);
 	num_rows = song_get_pattern(current_pattern, &pattern);
-	if ((*copyin_x + (current_channel-1)) >= 64) return;
+	if ((*copyin_x + (current_channel - 1)) >= 64) return;
 	if ((*copyin_y + current_row) >= num_rows) return;
-	p_note = pattern + 64 * (*copyin_y + current_row) + (*copyin_x + (current_channel-1));
+	p_note = pattern + 64 * (*copyin_y + current_row) + (*copyin_x + (current_channel - 1));
 	*p_note = *note;
 	(*copyin_x) = (*copyin_x) + 1;
 }
@@ -833,31 +859,10 @@ static void history_close(UNUSED void *data)
 static int history_handle_key(struct key_event *k)
 {
 	int i,j;
-	if (! NO_MODIFIER(k->mod)) return 0;
-	switch (k->sym) {
-	case SDLK_ESCAPE:
-		if (k->state == KEY_PRESS)
-			return 0;
+
+	if (KEY_PRESSED(global, nav_cancel)) {
 		dialog_cancel(NULL);
-		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		undo_selection--;
-		if (undo_selection < 0) undo_selection = 0;
-		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		undo_selection++;
-		if (undo_selection > 9) undo_selection = 9;
-		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_RETURN:
-		if (k->state == KEY_RELEASE)
-			return 0;
+	} else if (KEY_PRESSED(global, nav_accept)) {
 		j = undo_history_top;
 		for (i = 0; i < 10; i++) {
 			if (i == undo_selection) {
@@ -868,13 +873,18 @@ static int history_handle_key(struct key_event *k)
 			if (j < 0) j += 10;
 		}
 		dialog_cancel(NULL);
-		status.flags |= NEED_UPDATE;
-		return 1;
-	default:
-		break;
-	};
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
+		undo_selection--;
+		if (undo_selection < 0) undo_selection = 0;
+	} else if (KEY_PRESSED_OR_REPEATED(global, nav_down)) {
+		undo_selection++;
+		if (undo_selection > 9) undo_selection = 9;
+	} else {
+		return 0;
+	}
 
-	return 0;
+	status.flags |= NEED_UPDATE;
+	return 1;
 }
 
 static void pattern_editor_display_history(void)
@@ -944,7 +954,8 @@ static void fast_volume_toggle(void)
 
 static void fast_volume_amplify(void)
 {
-	selection_amplify((100/fast_volume_percent)*100);
+	float percent = (100.0f/(float)fast_volume_percent) * 100.0f;
+	selection_amplify((int)percent);
 }
 
 static void fast_volume_attenuate(void)
@@ -1170,6 +1181,7 @@ static void normalise_block_selection(void)
 
 static void shift_selection_begin(void)
 {
+	if (shift_selection.in_progress) return;
 	shift_selection.in_progress = 1;
 	shift_selection.first_channel = current_channel;
 	shift_selection.first_row = current_row;
@@ -1177,17 +1189,17 @@ static void shift_selection_begin(void)
 
 static void shift_selection_update(void)
 {
-	if (shift_selection.in_progress) {
-		selection.first_channel = shift_selection.first_channel;
-		selection.last_channel = current_channel;
-		selection.first_row = shift_selection.first_row;
-		selection.last_row = current_row;
-		normalise_block_selection();
-	}
+	if (!shift_selection.in_progress) return;
+	selection.first_channel = shift_selection.first_channel;
+	selection.last_channel = current_channel;
+	selection.first_row = shift_selection.first_row;
+	selection.last_row = current_row;
+	normalise_block_selection();
 }
 
 static void shift_selection_end(void)
 {
+	if (!shift_selection.in_progress) return;
 	shift_selection.in_progress = 0;
 	pattern_selection_system_copyout();
 }
@@ -2153,13 +2165,13 @@ static void clipboard_paste_overwrite(int suppress, int grow)
 		num_rows = clipboard.rows;
 
 	if (clipboard.rows > num_rows && grow) {
-		if (current_row+clipboard.rows > 200) {
+		if (current_row + clipboard.rows > 200) {
 			status_text_flash("Resized pattern %d, but clipped to 200 rows", current_pattern);
 			song_pattern_resize(current_pattern, 200);
 		} else {
 			status_text_flash("Resized pattern %d to %d rows", current_pattern,
 					  current_row + clipboard.rows);
-			song_pattern_resize(current_pattern, current_row+clipboard.rows);
+			song_pattern_resize(current_pattern, current_row + clipboard.rows);
 		}
 	}
 
@@ -2366,22 +2378,22 @@ static void advance_cursor(int next_row, int multichannel)
 
 		if (skip_value) {
 			if (current_row + skip_value <= total_rows) {
-				current_row += skip_value;
+				set_current_row(current_row + skip_value);
 				pattern_editor_reposition();
 			}
 		} else {
 			if (current_channel < 64) {
-				current_channel++;
+				set_current_channel(current_channel + 1);
 			} else {
-				current_channel = 1;
+				set_current_channel(1);
 				if (current_row < total_rows)
-					current_row++;
+					set_current_row(current_row + 1);
 			}
 			pattern_editor_reposition();
 		}
 	}
 	if (multichannel) {
-		current_channel = multichannel_get_next(current_channel);
+		set_current_channel(multichannel_get_next(current_channel));
 	}
 }
 
@@ -2461,8 +2473,7 @@ void set_current_pattern(int n)
 	current_pattern = CLAMP(n, 0, 199);
 	total_rows = song_get_rows_in_pattern(current_pattern);
 
-	if (current_row > total_rows)
-		current_row = total_rows;
+	set_current_row(current_row);
 
 	if (SELECTION_EXISTS) {
 		if (selection.first_row > total_rows) {
@@ -2569,6 +2580,14 @@ static void recalculate_visible_area(void)
 
 static void set_view_scheme(int scheme)
 {
+	track_view_scheme[current_channel - top_display_channel] = scheme;
+	recalculate_visible_area();
+	pattern_editor_reposition();
+	status.flags |= NEED_UPDATE;
+}
+
+static void set_quick_view_scheme(int scheme)
+{
 	if (scheme >= NUM_TRACK_VIEWS) {
 		/* shouldn't happen */
 		log_appendf(4, "View scheme %d out of range -- using default scheme", scheme);
@@ -2576,6 +2595,8 @@ static void set_view_scheme(int scheme)
 	}
 	memset(track_view_scheme, scheme, 64);
 	recalculate_visible_area();
+	pattern_editor_reposition();
+	status.flags |= NEED_UPDATE;
 }
 
 /* --------------------------------------------------------------------- */
@@ -3147,7 +3168,7 @@ static int pattern_editor_insert(struct key_event *k)
 			ins = KEYJAZZ_NOINST;
 		}
 
-		if (k->sym == SDLK_4) {
+		if (KEY_PRESSED(playback_functions, play_note_cursor)) {
 			if (k->state == KEY_RELEASE)
 				return 0;
 
@@ -3160,7 +3181,7 @@ static int pattern_editor_insert(struct key_event *k)
 				vol, current_channel, cur_note->effect, cur_note->param);
 			advance_cursor(!(k->mod & KMOD_SHIFT), 1);
 			return 1;
-		} else if (k->sym == SDLK_8) {
+		} else if (KEY_PRESSED(playback_functions, play_row)) {
 			/* note: Impulse Tracker doesn't skip multichannels when pressing "8"  -delt. */
 			if (k->state == KEY_RELEASE)
 				return 0;
@@ -3178,7 +3199,7 @@ static int pattern_editor_insert(struct key_event *k)
 		}
 
 
-		if (k->sym == SDLK_SPACE) {
+		if (KEY_PRESSED(pattern_edit, use_last_value)) {
 			/* copy mask to note */
 			n = mask_note.note;
 
@@ -3210,7 +3231,8 @@ static int pattern_editor_insert(struct key_event *k)
 				/* go to the next row if a note off would overwrite a note
 				 * you (likely) just entered */
 				if (cur_note->note) {
-					if (++current_row >
+					set_current_row(current_row + 1);
+					if (current_row >
 						song_get_rows_in_pattern(current_pattern)) {
 						return 1;
 					}
@@ -3245,7 +3267,7 @@ static int pattern_editor_insert(struct key_event *k)
 
 		/* Never copy the instrument etc. from the mask when inserting control notes or when
 		erasing a note -- but DO write it when inserting a blank note with the space key. */
-		if (!(NOTE_IS_CONTROL(n) || (k->sym != SDLK_SPACE && n == NOTE_NONE)) && !template_mode) {
+		if (!(NOTE_IS_CONTROL(n) || (!KEY_PRESSED(pattern_edit, use_last_value) && n == NOTE_NONE)) && !template_mode) {
 			if (edit_copy_mask & MASK_INSTRUMENT) {
 				if (song_is_instrument_mode())
 					cur_note->instrument = instrument_get_current();
@@ -3278,7 +3300,7 @@ static int pattern_editor_insert(struct key_event *k)
 			// (I have no idea how IT does this, it might wrap)
 			if (current_channel < 64) {
 				shift_chord_channels++;
-				current_channel++;
+				set_current_channel(current_channel + 1);
 				pattern_editor_reposition();
 			}
 		} else {
@@ -3300,7 +3322,7 @@ static int pattern_editor_insert(struct key_event *k)
 		break;
 	case 2:                 /* instrument, first digit */
 	case 3:                 /* instrument, second digit */
-		if (k->sym == SDLK_SPACE) {
+		if (KEY_PRESSED(pattern_edit, use_last_value)) {
 			if (song_is_instrument_mode())
 				n = instrument_get_current();
 			else
@@ -3327,13 +3349,13 @@ static int pattern_editor_insert(struct key_event *k)
 			j = kbd_char_to_99(k);
 			if (j < 0) return 0;
 			n = (j * 10) + (cur_note->instrument % 10);
-			current_position++;
+			set_current_position(current_position + 1);
 		} else {
 			j = kbd_char_to_hex(k);
 			if (j < 0 || j > 9) return 0;
 
 			n = ((cur_note->instrument / 10) * 10) + j;
-			current_position--;
+			set_current_position(current_position - 1);
 			advance_cursor(1, 0);
 		}
 
@@ -3366,7 +3388,7 @@ static int pattern_editor_insert(struct key_event *k)
 		break;
 	case 4:
 	case 5:                 /* volume */
-		if (k->sym == SDLK_SPACE) {
+		if (KEY_PRESSED(pattern_edit, use_last_value)) {
 			cur_note->volparam = mask_note.volparam;
 			cur_note->voleffect = mask_note.voleffect;
 			advance_cursor(1, 0);
@@ -3380,7 +3402,7 @@ static int pattern_editor_insert(struct key_event *k)
 			status.flags |= SONG_NEEDS_SAVE;
 			break;
 		}
-		if (k->scancode == SDL_SCANCODE_GRAVE) {
+		if (KEY_ACTIVE(pattern_edit, toggle_volume_panning)) {
 			panning_mode = !panning_mode;
 			status_text_flash("%s control set", (panning_mode ? "Panning" : "Volume"));
 			return 0;
@@ -3390,16 +3412,16 @@ static int pattern_editor_insert(struct key_event *k)
 		mask_note.volparam = cur_note->volparam;
 		mask_note.voleffect = cur_note->voleffect;
 		if (current_position == 4) {
-			current_position++;
+			set_current_position(current_position + 1);
 		} else {
-			current_position = 4;
+			set_current_position(4);
 			advance_cursor(1, 0);
 		}
 		status.flags |= SONG_NEEDS_SAVE;
 		pattern_selection_system_copyout();
 		break;
 	case 6:                 /* effect */
-		if (k->sym == SDLK_SPACE) {
+		if (KEY_PRESSED(pattern_edit, use_last_value)) {
 			cur_note->effect = mask_note.effect;
 		} else {
 			n = kbd_get_effect_number(k);
@@ -3409,23 +3431,23 @@ static int pattern_editor_insert(struct key_event *k)
 		}
 		status.flags |= SONG_NEEDS_SAVE;
 		if (link_effect_column)
-			current_position++;
+			set_current_position(current_position + 1);
 		else
 			advance_cursor(1, 0);
 		pattern_selection_system_copyout();
 		break;
 	case 7:                 /* param, high nibble */
 	case 8:                 /* param, low nibble */
-		if (k->sym == SDLK_SPACE) {
+		if (KEY_PRESSED(pattern_edit, use_last_value)) {
 			cur_note->param = mask_note.param;
-			current_position = link_effect_column ? 6 : 7;
+			set_current_position(link_effect_column ? 6 : 7);
 			advance_cursor(1, 0);
 			status.flags |= SONG_NEEDS_SAVE;
 			pattern_selection_system_copyout();
 			break;
 		} else if (kbd_get_note(k) == 0) {
 			cur_note->param = mask_note.param = 0;
-			current_position = link_effect_column ? 6 : 7;
+			set_current_position(link_effect_column ? 6 : 7);
 			advance_cursor(1, 0);
 			status.flags |= SONG_NEEDS_SAVE;
 			pattern_selection_system_copyout();
@@ -3439,10 +3461,10 @@ static int pattern_editor_insert(struct key_event *k)
 			return 0;
 		if (current_position == 7) {
 			cur_note->param = (n << 4) | (cur_note->param & 0xf);
-			current_position++;
+			set_current_position(current_position + 1);
 		} else /* current_position == 8 */ {
 			cur_note->param = (cur_note->param & 0xf0) | n;
-			current_position = link_effect_column ? 6 : 7;
+			set_current_position(link_effect_column ? 6 : 7);
 			advance_cursor(1, 0);
 		}
 		status.flags |= SONG_NEEDS_SAVE;
@@ -3461,44 +3483,43 @@ static int pattern_editor_insert(struct key_event *k)
  *         (for keys that move the cursor)
  * 0 = didn't handle the key. */
 
+static void set_skip_value(int n)
+{
+	skip_value = (n == 9) ? 16 : n;
+	status_text_flash("Cursor step set to %d", skip_value);
+}
+
 static int pattern_editor_handle_alt_key(struct key_event * k)
 {
 	int n;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
 
-	/* hack to render this useful :) */
-	if (k->orig_sym == SDLK_KP_9) {
-		k->sym = SDLK_F9;
-	} else if (k->orig_sym == SDLK_KP_0) {
-		k->sym = SDLK_F10;
-	}
-
-	n = numeric_key_event(k, 0);
-	if (n > -1 && n <= 9) {
-		if (k->state == KEY_RELEASE)
-			return 1;
-		skip_value = (n == 9) ? 16 : n;
-		status_text_flash("Cursor step set to %d", skip_value);
-		return 1;
-	}
-
-	switch (k->sym) {
-	case SDLK_RETURN:
-		if (k->state == KEY_PRESS)
-			return 1;
+	if (KEY_PRESSED(pattern_edit, set_skip_1)) {
+		set_skip_value(1);
+	} if (KEY_PRESSED(pattern_edit, set_skip_2)) {
+		set_skip_value(2);
+	} if (KEY_PRESSED(pattern_edit, set_skip_3)) {
+		set_skip_value(3);
+	} if (KEY_PRESSED(pattern_edit, set_skip_4)) {
+		set_skip_value(4);
+	} if (KEY_PRESSED(pattern_edit, set_skip_5)) {
+		set_skip_value(5);
+	} if (KEY_PRESSED(pattern_edit, set_skip_6)) {
+		set_skip_value(6);
+	} if (KEY_PRESSED(pattern_edit, set_skip_7)) {
+		set_skip_value(7);
+	} if (KEY_PRESSED(pattern_edit, set_skip_8)) {
+		set_skip_value(8);
+	} if (KEY_PRESSED(pattern_edit, set_skip_9)) {
+		set_skip_value(9);
+	} else if (KEY_PRESSED(pattern_edit, store_pattern_data)) {
 		fast_save_update();
-		return 1;
-
-	case SDLK_BACKSPACE:
-		if (k->state == KEY_PRESS)
-			return 1;
+		status_text_flash("Pattern data stored");
+	} else if (KEY_PRESSED(pattern_edit, revert_pattern_data)) {
 		pated_save("Undo revert pattern data (Alt-BkSpace)");
 		snap_paste(&fast_save, 0, 0, 0);
-		return 1;
-
-	case SDLK_b:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		status_text_flash("Pattern data reverted");
+	} else if (KEY_PRESSED(block_functions, mark_beginning_block)) {
 		if (!SELECTION_EXISTS) {
 			selection.last_channel = current_channel;
 			selection.last_row = current_row;
@@ -3506,10 +3527,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		selection.first_channel = current_channel;
 		selection.first_row = current_row;
 		normalise_block_selection();
-		break;
-	case SDLK_e:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(block_functions, mark_end_block)) {
 		if (!SELECTION_EXISTS) {
 			selection.first_channel = current_channel;
 			selection.first_row = current_row;
@@ -3517,11 +3535,8 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		selection.last_channel = current_channel;
 		selection.last_row = current_row;
 		normalise_block_selection();
-		break;
-	case SDLK_d:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (status.last_keysym == SDLK_d) {
+	} else if (KEY_PRESSED(block_functions, quick_mark_lines)) {
+		if (KEY_PRESS_REPEATS(block_functions, quick_mark_lines)) {
 			if (total_rows - (current_row - 1) > block_double_size)
 				block_double_size <<= 1;
 		} else {
@@ -3534,11 +3549,8 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		}
 		n = block_double_size + current_row - 1;
 		selection.last_row = MIN(n, total_rows);
-		break;
-	case SDLK_l:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (status.last_keysym == SDLK_l) {
+	} else if (KEY_PRESSED(block_functions, mark_column_or_pattern)) {
+		if (KEY_PRESS_REPEATS(block_functions, mark_column_or_pattern) > 0) {
 			/* 3x alt-l re-selects the current channel */
 			if (selection.first_channel == selection.last_channel) {
 				selection.first_channel = 1;
@@ -3552,73 +3564,42 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			selection.last_row = total_rows;
 		}
 		pattern_selection_system_copyout();
-		break;
-	case SDLK_r:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(track_view, clear_track_views)) {
 		draw_divisions = 1;
-		set_view_scheme(0);
-		break;
-	case SDLK_s:
-		if (k->state == KEY_RELEASE)
-			return 1;
+		set_quick_view_scheme(0);
+	} else if (KEY_PRESSED(block_functions, set_instrument)) {
 		selection_set_sample();
-		break;
-	case SDLK_u:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(block_functions, unmark)) {
 		if (SELECTION_EXISTS) {
 			selection_clear();
 		} else if (clipboard.data) {
 			clipboard_free();
-
 			clippy_select(NULL, NULL, 0);
 			clippy_yank();
 		} else {
 			dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
 		}
-		break;
-	case SDLK_c:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(block_functions, copy_block)) {
 		clipboard_copy(0);
-		break;
-	case SDLK_o:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (status.last_keysym == SDLK_o) {
+	} else if (KEY_PRESSED(block_functions, paste_and_overwrite)) {
+		if (KEY_PRESS_REPEATS(block_functions, paste_and_overwrite) > 0) {
 			clipboard_paste_overwrite(0, 1);
 		} else {
 			clipboard_paste_overwrite(0, 0);
 		}
-		break;
-	case SDLK_p:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(block_functions, paste_data)) {
 		clipboard_paste_insert();
-		break;
-	case SDLK_m:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (status.last_keysym == SDLK_m) {
+	} else if (KEY_PRESSED(block_functions, paste_and_mix)) {
+		if (KEY_PRESS_REPEATS(block_functions, paste_and_mix) > 0) {
 			clipboard_paste_mix_fields(0, 0);
 		} else {
 			clipboard_paste_mix_notes(0, 0);
 		}
-		break;
-	case SDLK_f:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(block_functions, double_block_length)) {
 		block_length_double();
-		break;
-	case SDLK_g:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(block_functions, halve_block_length)) {
 		block_length_halve();
-		break;
-	case SDLK_n:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(pattern_edit, toggle_multichannel)) {
 		channel_multi[current_channel - 1] ^= 1;
 		if (channel_multi[current_channel - 1]) {
 			channel_multi_enabled = 1;
@@ -3632,151 +3613,90 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			}
 		}
 
-		if (status.last_keysym == SDLK_n) {
+		if (KEY_PRESS_REPEATS(pattern_edit, toggle_multichannel) > 0) {
 			pattern_editor_display_multichannel();
 		}
-		break;
-	case SDLK_z:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(block_functions, cut_block)) {
 		clipboard_copy(0);
 		selection_erase();
-		break;
-	case SDLK_y:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(block_functions, swap_block)) {
 		selection_swap();
-		break;
-	case SDLK_v:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(block_functions, set_volume_or_panning)) {
 		selection_set_volume();
-		break;
-	case SDLK_w:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(block_functions, wipe_volume_or_panning)) {
 		selection_wipe_volume(0);
-		break;
-	case SDLK_k:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (status.last_keysym == SDLK_k) {
+	} else if (KEY_PRESSED(block_functions, slide_volume_or_panning)) {
+		if (KEY_PRESS_REPEATS(block_functions, slide_volume_or_panning) > 0) {
 			selection_wipe_volume(1);
 		} else {
 			selection_slide_volume();
 		}
-		break;
-	case SDLK_x:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (status.last_keysym == SDLK_x) {
+	} else if (KEY_PRESSED(block_functions, slide_effect_value)) {
+		if (KEY_PRESS_REPEATS(block_functions, slide_effect_value) > 0) {
 			selection_wipe_effect();
 		} else {
 			selection_slide_effect();
 		}
-		break;
-	case SDLK_h:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(track_view, toggle_track_view_divisions)) {
 		draw_divisions = !draw_divisions;
 		recalculate_visible_area();
 		pattern_editor_reposition();
-		break;
-	case SDLK_q:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (k->mod & KMOD_SHIFT)
-			transpose_notes(12);
-		else
-			transpose_notes(1);
-		break;
-	case SDLK_a:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (k->mod & KMOD_SHIFT)
-			transpose_notes(-12);
-		else
-			transpose_notes(-1);
-		break;
-	case SDLK_i:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (k->mod & KMOD_SHIFT)
-			template_mode = TEMPLATE_OFF;
-		else if (fast_volume_mode)
+	} else if (KEY_PRESSED_OR_REPEATED(block_functions, raise_notes_semitone)) {
+		transpose_notes(1);
+	} else if (KEY_PRESSED_OR_REPEATED(block_functions, raise_notes_octave)) {
+		transpose_notes(12);
+	} else if (KEY_PRESSED_OR_REPEATED(block_functions, lower_notes_semitone)) {
+		transpose_notes(-1);
+	} else if (KEY_PRESSED_OR_REPEATED(block_functions, lower_notes_octave)) {
+		transpose_notes(-12);
+	} else if (KEY_PRESSED(block_functions, select_template_mode)) {
+		if (fast_volume_mode)
 			fast_volume_amplify();
 		else
 			template_mode = (template_mode + 1) % TEMPLATE_MODE_MAX; /* cycle */
-		break;
-	case SDLK_j:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(block_functions, disable_template_mode)) {
+		template_mode = TEMPLATE_OFF;
+	} else if (KEY_PRESSED(block_functions, volume_amplifier)) {
 		if (fast_volume_mode)
 			fast_volume_attenuate();
 		else
 			volume_amplify();
-		break;
-	case SDLK_t:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(track_view, cycle_view)) {
 		n = current_channel - top_display_channel;
 		track_view_scheme[n] = ((track_view_scheme[n] + 1) % NUM_TRACK_VIEWS);
 		recalculate_visible_area();
 		pattern_editor_reposition();
-		break;
-	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, slide_pattern_up)) {
 		if (top_display_row > 0) {
 			top_display_row--;
 			if (current_row > top_display_row + 31)
-				current_row = top_display_row + 31;
+				set_current_row(top_display_row + 31);
 			return -1;
 		}
-		return 1;
-	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, slide_pattern_down)) {
 		if (top_display_row + 31 < total_rows) {
 			top_display_row++;
 			if (current_row < top_display_row)
-				current_row = top_display_row;
+				set_current_row(top_display_row);
 			return -1;
 		}
-		return 1;
-	case SDLK_LEFT:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		current_channel--;
-		return -1;
-	case SDLK_RIGHT:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		current_channel++;
-		return -1;
-	case SDLK_INSERT:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(pattern_edit, move_backwards_channel)) {
+		set_current_channel(current_channel - 1);
+	} else if (KEY_PRESSED(pattern_edit, move_forwards_channel)) {
+		set_current_channel(current_channel + 1);
+	} else if (KEY_PRESSED(pattern_edit, insert_pattern_row)) {
+		// TODO
 		pated_save("Remove inserted row(s)    (Alt-Insert)");
 		pattern_insert_rows(current_row, 1, 1, 64);
-		break;
-	case SDLK_DELETE:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(pattern_edit, delete_pattern_row)) {
+		// TODO
 		pated_save("Replace deleted row(s)    (Alt-Delete)");
 		pattern_delete_rows(current_row, 1, 1, 64);
-		break;
-	case SDLK_F9:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(playback_functions, toggle_current_channel)) {
 		song_toggle_channel_mute(current_channel - 1);
-		break;
-	case SDLK_F10:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(playback_functions, solo_current_channel)) {
 		song_handle_channel_solo(current_channel - 1);
-		break;
-	default:
+	} else {
 		return 0;
 	}
 
@@ -3793,171 +3713,107 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	int n;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
 
-	n = numeric_key_event(k, 0);
-	if (n > -1) {
-		if (n < 0 || n >= NUM_TRACK_VIEWS)
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (k->mod & KMOD_SHIFT) {
-			set_view_scheme(n);
-		} else {
-			track_view_scheme[current_channel - top_display_channel] = n;
-			recalculate_visible_area();
-		}
-		pattern_editor_reposition();
-		status.flags |= NEED_UPDATE;
-		return 1;
-	}
-
-
-	switch (k->sym) {
-	case SDLK_LEFT:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (current_channel > top_display_channel)
-			current_channel--;
-		return -1;
-	case SDLK_RIGHT:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (current_channel < top_display_channel + visible_channels - 1)
-			current_channel++;
-		return -1;
-	case SDLK_F6:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	if(KEY_PRESSED(track_view, track_scheme_default)) {
+		set_view_scheme(0);
+	} else if(KEY_PRESSED(track_view, track_scheme_1)) {
+		set_view_scheme(1);
+	} else if(KEY_PRESSED(track_view, track_scheme_2)) {
+		set_view_scheme(2);
+	} else if(KEY_PRESSED(track_view, track_scheme_3)) {
+		set_view_scheme(3);
+	} else if(KEY_PRESSED(track_view, track_scheme_4)) {
+		set_view_scheme(4);
+	} else if(KEY_PRESSED(track_view, track_scheme_5)) {
+		set_view_scheme(5);
+	} else if(KEY_PRESSED(track_view, track_scheme_6)) {
+		set_view_scheme(6);
+	} else if(KEY_PRESSED(track_view, quick_view_scheme_default)) {
+		set_quick_view_scheme(0);
+	} else if(KEY_PRESSED(track_view, quick_view_scheme_1)) {
+		set_quick_view_scheme(1);
+	} else if(KEY_PRESSED(track_view, quick_view_scheme_2)) {
+		set_quick_view_scheme(2);
+	} else if(KEY_PRESSED(track_view, quick_view_scheme_3)) {
+		set_quick_view_scheme(3);
+	} else if(KEY_PRESSED(track_view, quick_view_scheme_4)) {
+		set_quick_view_scheme(4);
+	} else if(KEY_PRESSED(track_view, quick_view_scheme_5)) {
+		set_quick_view_scheme(5);
+	} else if(KEY_PRESSED(track_view, quick_view_scheme_6)) {
+		set_quick_view_scheme(6);
+	// } else if(key_pressed(track_view, move_column_left)) {
+	// 	if (current_channel > top_display_channel)
+	// 		set_current_channel(current_channel - 1);
+	// } else if(key_pressed(track_view, move_column_right)) {
+	// 	if (current_channel < top_display_channel + visible_channels - 1)
+	// 		set_current_channel(current_channel + 1);
+	} else if(KEY_PRESSED(playback_functions, play_from_row)) {
 		song_loop_pattern(current_pattern, current_row);
-		return 1;
-	case SDLK_F7:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(playback_functions, toggle_playback_mark)) {
 		set_playback_mark();
-		return -1;
-	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(pattern_edit, decrease_instrument)) {
 		set_previous_instrument();
 		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(pattern_edit, increase_instrument)) {
 		set_next_instrument();
 		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_PAGEUP:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		current_row = 0;
-		return -1;
-	case SDLK_PAGEDOWN:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		current_row = total_rows;
-		return -1;
-	case SDLK_HOME:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		current_row--;
-		return -1;
-	case SDLK_END:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		current_row++;
-		return -1;
-	case SDLK_INSERT:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(pattern_edit, move_pattern_top)) {
+		set_current_row(0);
+	} else if(KEY_PRESSED(pattern_edit, move_pattern_bottom)) {
+		set_current_row(total_rows);
+	} else if(KEY_PRESSED(pattern_edit, up_one_row)) {
+		set_current_row(current_row - 1);
+	} else if(KEY_PRESSED(pattern_edit, down_one_row)) {
+		set_current_row(current_row + 1);
+	} else if(KEY_PRESSED(block_functions, roll_block_down)) {
 		selection_roll(ROLL_DOWN);
 		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_DELETE:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(block_functions, roll_block_up)) {
 		selection_roll(ROLL_UP);
 		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_MINUS:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing)
-			return 1;
+	} else if(
+		KEY_PRESSED(pattern_edit, previous_order_pattern) &&
+		!(song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing)
+	) {
 		prev_order_pattern();
-		return 1;
-	case SDLK_PLUS:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing)
-			return 1;
+	} else if(
+		KEY_PRESSED(pattern_edit, next_order_pattern) &&
+		!(song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing)
+	) {
 		next_order_pattern();
-		return 1;
-	case SDLK_c:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(pattern_edit, toggle_centralise_cursor)) {
 		centralise_cursor = !centralise_cursor;
 		status_text_flash("Centralise cursor %s", (centralise_cursor ? "enabled" : "disabled"));
-		return -1;
-	case SDLK_h:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(pattern_edit, toggle_highlight_row)) {
 		highlight_current_row = !highlight_current_row;
 		status_text_flash("Row hilight %s", (highlight_current_row ? "enabled" : "disabled"));
 		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_j:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(block_functions, toggle_fast_volume)) {
 		fast_volume_toggle();
-		return 1;
-	case SDLK_u:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(block_functions, selection_volume_vary)) {
 		if (fast_volume_mode)
 			selection_vary(1, 100-fast_volume_percent, FX_CHANNELVOLUME);
 		else
 			vary_command(FX_CHANNELVOLUME);
 		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_y:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(block_functions, selection_panning_vary)) {
 		if (fast_volume_mode)
 			selection_vary(1, 100-fast_volume_percent, FX_PANBRELLO);
 		else
 			vary_command(FX_PANBRELLO);
 		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_k:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(block_functions, selection_effect_vary)) {
 		if (fast_volume_mode)
 			selection_vary(1, 100-fast_volume_percent, current_effect());
 		else
 			vary_command(current_effect());
 		status.flags |= NEED_UPDATE;
-		return 1;
-
-	case SDLK_b:
-		if (k->mod & KMOD_SHIFT)
-			return 0;
-		/* fall through */
-	case SDLK_o:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		song_pattern_to_sample(current_pattern, !!(k->mod & KMOD_SHIFT), !!(k->sym == SDLK_b));
-		return 1;
-
-	case SDLK_v:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(pattern_edit, toggle_volume_display)) {
 		show_default_volumes = !show_default_volumes;
 		status_text_flash("Default volumes %s", (show_default_volumes ? "enabled" : "disabled"));
-		return 1;
-	case SDLK_x:
-	case SDLK_z:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(pattern_edit, undo)) {
+		pattern_editor_display_history();
+	} else if(KEY_PRESSED(pattern_edit, toggle_midi_trigger)) {
 		midi_start_record++;
 		if (midi_start_record > 2) midi_start_record = 0;
 		switch (midi_start_record) {
@@ -3972,39 +3828,37 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 			break;
 		};
 		return 1;
-	case SDLK_BACKSPACE:
-		if (k->state == KEY_RELEASE)
+	} else {
+		if (!(k->mod & KMOD_CTRL)) {
+			return 0;
+		}
+
+		switch (k->sym) {
+		// TODO: What is this
+		case SDLK_b:
+			if (k->mod & KMOD_SHIFT)
+				return 0;
+			/* fall through */
+		case SDLK_o:
+			if (k->state == KEY_RELEASE)
+				return 1;
+			song_pattern_to_sample(current_pattern, !!(k->mod & KMOD_SHIFT), !!(k->sym == SDLK_b));
 			return 1;
-		pattern_editor_display_history();
-		return 1;
-	default:
+		// TODO END
+		default:
+			return 0;
+		}
+
 		return 0;
 	}
 
-	return 0;
+	return 1;
 }
 
 static int mute_toggle_hack[64]; /* mrsbrisby: please explain this one, i don't get why it's necessary... */
 static int pattern_editor_handle_key_default(struct key_event * k)
 {
-	/* bleah */
-	if (k->sym == SDLK_LESS || k->sym == SDLK_COLON || k->sym == SDLK_SEMICOLON) {
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if ((status.flags & CLASSIC_MODE) || current_position != 4) {
-			set_previous_instrument();
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
-	} else if (k->sym == SDLK_GREATER || k->sym == SDLK_QUOTE || k->sym == SDLK_QUOTEDBL) {
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if ((status.flags & CLASSIC_MODE) || current_position != 4) {
-			set_next_instrument();
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
-	} else if (k->sym == SDLK_COMMA) {
+	if (KEY_ACTIVE(pattern_edit, toggle_edit_mask)) {
 		if (k->state == KEY_RELEASE)
 			return 0;
 		switch (current_position) {
@@ -4028,6 +3882,7 @@ static int pattern_editor_handle_key_default(struct key_event * k)
 		return 0;
 	return -1;
 }
+
 static int pattern_editor_handle_key(struct key_event * k)
 {
 	int n, nx, v;
@@ -4055,16 +3910,16 @@ static int pattern_editor_handle_key(struct key_event * k)
 				if (top_display_row > 0) {
 					top_display_row = MAX(top_display_row - MOUSE_SCROLL_LINES, 0);
 					if (current_row > top_display_row + 31)
-						current_row = top_display_row + 31;
+						set_current_row(top_display_row + 31);
 					if (current_row < 0)
-						current_row = 0;
+						set_current_row(0);
 					return -1;
 				}
 			} else if (k->mouse == MOUSE_SCROLL_DOWN) {
 				if (top_display_row + 31 < total_rows) {
 					top_display_row = MIN(top_display_row + MOUSE_SCROLL_LINES, total_rows);
 					if (current_row < top_display_row)
-						current_row = top_display_row;
+						set_current_row(top_display_row);
 					return -1;
 				}
 			}
@@ -4075,8 +3930,6 @@ static int pattern_editor_handle_key(struct key_event * k)
 			return 1;
 
 		basex = 5;
-		if (current_row < 0) current_row = 0;
-		if (current_row >= total_rows) current_row = total_rows;
 		np = current_position; nc = current_channel; nr = current_row;
 		for (n = top_display_channel, nx = 0; nx <= visible_channels; n++, nx++) {
 			track_view = track_views+track_view_scheme[nx];
@@ -4164,13 +4017,16 @@ static int pattern_editor_handle_key(struct key_event * k)
 			basex += track_view->width;
 			if (draw_divisions) basex++;
 		}
+
 		if (np == current_position && nc == current_channel && nr == current_row) {
 			return 1;
 		}
 
 		if (nr >= total_rows) nr = total_rows;
 		if (nr < 0) nr = 0;
-		current_position = np; current_channel = nc; current_row = nr;
+		set_current_position(np);
+		set_current_channel(nc);
+		set_current_row(nr);
 
 		if (k->state == KEY_PRESS && k->sy > 14) {
 			if (!shift_selection.in_progress) {
@@ -4188,110 +4044,79 @@ static int pattern_editor_handle_key(struct key_event * k)
 		return pattern_editor_insert_midi(k);
 	}
 
-	switch (k->sym) {
-	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 0;
+	if (
+		KEY_PRESSED_OR_REPEATED(pattern_edit, up_by_skip) ||
+		KEY_PRESSED_OR_REPEATED(block_functions, mark_block_up)
+	) {
 		if (skip_value) {
 			if (current_row - skip_value >= 0)
-				current_row -= skip_value;
+				set_current_row(current_row - skip_value);
 		} else {
-			current_row--;
+			set_current_row(current_row - 1);
 		}
-		return -1;
-	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
-			return 0;
+	} else if (
+		KEY_PRESSED_OR_REPEATED(pattern_edit, down_by_skip) ||
+		KEY_PRESSED_OR_REPEATED(block_functions, mark_block_down)
+	) {
 		if (skip_value) {
 			if (current_row + skip_value <= total_rows)
-				current_row += skip_value;
+				set_current_row(current_row + skip_value);
 		} else {
-			current_row++;
+			set_current_row(current_row + 1);
 		}
-		return -1;
-	case SDLK_LEFT:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (k->mod & KMOD_SHIFT) {
-			current_channel--;
-		} else if (link_effect_column && current_position == 0 && current_channel > 1) {
-			current_channel--;
-			current_position = current_effect() ? 8 : 6;
+	} else if (KEY_PRESSED_OR_REPEATED(block_functions, mark_block_left)) {
+		set_current_channel(current_channel - 1);
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_cursor_left)) {
+		if (link_effect_column && current_position == 0 && current_channel > 1) {
+			set_current_channel(current_channel - 1);
+			set_current_position(current_effect() ? 8 : 6);
 		} else {
-			current_position--;
+			set_current_position(current_position - 1);
 		}
-		return -1;
-	case SDLK_RIGHT:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (k->mod & KMOD_SHIFT) {
-			current_channel++;
-		} else if (link_effect_column && current_position == 6 && current_channel < 64) {
-			current_position = current_effect() ? 7 : 10;
+	} else if (KEY_PRESSED_OR_REPEATED(block_functions, mark_block_right)) {
+		set_current_channel(current_channel + 1);
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_cursor_right)) {
+		if (link_effect_column && current_position == 6 && current_channel < 64) {
+			set_current_position(current_effect() ? 7 : 10);
 		} else {
-			current_position++;
+			set_current_position(current_position + 1);
 		}
-		return -1;
-	case SDLK_TAB:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if ((k->mod & KMOD_SHIFT) == 0)
-			current_channel++;
-		else if (current_position == 0)
-			current_channel--;
-		current_position = 0;
-
-		/* hack to keep shift-tab from changing the selection */
-		k->mod &= ~KMOD_SHIFT;
-		shift_selection_end();
-
-		return -1;
-	case SDLK_PAGEUP:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		{
-			int rh = current_song->row_highlight_major ? current_song->row_highlight_major : 16;
-			if (current_row == total_rows)
-				current_row -= (current_row % rh) ? (current_row % rh) : rh;
-			else
-				current_row -= rh;
-		}
-		return -1;
-	case SDLK_PAGEDOWN:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		current_row += current_song->row_highlight_major ? current_song->row_highlight_major : 16;
-		return -1;
-	case SDLK_HOME:
-		if (k->state == KEY_RELEASE)
-			return 0;
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_forwards_note_column)) {
+		set_current_channel(current_channel + 1);
+		set_current_position(0);
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_backwards_note_column)) {
+		set_current_channel(current_channel - 1);
+		set_current_position(0);
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_up_n_lines)) {
+		int rh = current_song->row_highlight_major ? current_song->row_highlight_major : 16;
+		if (current_row == total_rows)
+			set_current_row(current_row - ((current_row % rh) ? (current_row % rh) : rh));
+		else
+			set_current_row(current_row - rh);
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_down_n_lines)) {
+		set_current_row(current_row + (current_song->row_highlight_major ? current_song->row_highlight_major : 16));
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_start)) {
 		if (current_position == 0) {
 			if (invert_home_end ? (current_row != 0) : (current_channel == 1)) {
-				current_row = 0;
+				set_current_row(0);
 			} else {
-				current_channel = 1;
+				set_current_channel(1);
 			}
 		} else {
-			current_position = 0;
+			set_current_position(0);
 		}
-		return -1;
-	case SDLK_END:
-		if (k->state == KEY_RELEASE)
-			return 0;
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_end)) {
 		n = song_find_last_channel();
 		if (current_position == 8) {
 			if (invert_home_end ? (current_row != total_rows) : (current_channel == n)) {
-				current_row = total_rows;
+				set_current_row(total_rows);
 			} else {
-				current_channel = n;
+				set_current_channel(n);
 			}
 		} else {
-			current_position = 8;
+			set_current_position(8);
 		}
-		return -1;
-	case SDLK_INSERT:
-		if (k->state == KEY_RELEASE)
-			return 0;
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, insert_row)) {
 		if (template_mode && clipboard.rows == 1) {
 			n = clipboard.channels;
 			if (n + current_channel > 64) {
@@ -4301,10 +4126,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		} else {
 			pattern_insert_rows(current_row, 1, current_channel, 1);
 		}
-		break;
-	case SDLK_DELETE:
-		if (k->state == KEY_RELEASE)
-			return 0;
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, delete_row)) {
 		if (template_mode && clipboard.rows == 1) {
 			n = clipboard.channels;
 			if (n + current_channel > 64) {
@@ -4314,11 +4136,10 @@ static int pattern_editor_handle_key(struct key_event * k)
 		} else {
 			pattern_delete_rows(current_row, 1, current_channel, 1);
 		}
-		break;
-	case SDLK_MINUS:
-		if (k->state == KEY_RELEASE)
-			return 0;
-
+	} else if (
+		KEY_PRESSED_OR_REPEATED(pattern_edit, previous_pattern) ||
+		KEY_PRESSED_OR_REPEATED(pattern_edit, previous_4_pattern)
+	) {
 		if (playback_tracing) {
 			switch (song_get_mode()) {
 			case MODE_PATTERN_LOOP:
@@ -4327,19 +4148,18 @@ static int pattern_editor_handle_key(struct key_event * k)
 				song_set_current_order(song_get_current_order() - 1);
 				return 1;
 			default:
-				break;
+				return 0;
 			};
 		}
 
-		if (k->mod & KMOD_SHIFT)
+		if (KEY_PRESSED_OR_REPEATED(pattern_edit, previous_4_pattern))
 			set_current_pattern(current_pattern - 4);
 		else
 			set_current_pattern(current_pattern - 1);
-		return 1;
-	case SDLK_PLUS:
-		if (k->state == KEY_RELEASE)
-			return 0;
-
+	} else if (
+		KEY_PRESSED_OR_REPEATED(pattern_edit, next_pattern) ||
+		KEY_PRESSED_OR_REPEATED(pattern_edit, next_4_pattern)
+	) {
 		if (playback_tracing) {
 			switch (song_get_mode()) {
 			case MODE_PATTERN_LOOP:
@@ -4348,78 +4168,83 @@ static int pattern_editor_handle_key(struct key_event * k)
 				song_set_current_order(song_get_current_order() + 1);
 				return 1;
 			default:
-				break;
+				return 0;
 			};
 		}
 
-		if ((k->mod & KMOD_SHIFT) && k->orig_sym == SDLK_KP_PLUS)
+		if (KEY_PRESSED_OR_REPEATED(pattern_edit, next_4_pattern))
 			set_current_pattern(current_pattern + 4);
 		else
 			set_current_pattern(current_pattern + 1);
-		return 1;
-	case SDLK_BACKSPACE:
-		if (k->state == KEY_RELEASE)
-			return 0;
-		current_channel = multichannel_get_previous (current_channel);
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, move_previous_position)) {
+		set_current_channel(multichannel_get_previous(current_channel));
 		if (skip_value)
-			current_row -= skip_value;
+			set_current_row(current_row - skip_value);
 		else
-			current_row--;
-		return -1;
-	case SDLK_RETURN:
-		if (k->state == KEY_RELEASE)
-			return 0;
+			set_current_row(current_row - 1);
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, get_default_value)) {
 		copy_note_to_mask();
 		if (template_mode != TEMPLATE_NOTES_ONLY)
 			template_mode = TEMPLATE_OFF;
-		return 1;
-	case SDLK_l:
-		if (k->mod & KMOD_SHIFT) {
-			if (status.flags & CLASSIC_MODE) return 0;
-			if (k->state == KEY_RELEASE)
-				return 1;
-			clipboard_copy(1);
-			break;
-		}
-		return pattern_editor_handle_key_default(k);
-	case SDLK_a:
-		if (k->mod & KMOD_SHIFT && !(status.flags & CLASSIC_MODE)) {
-			if (k->state == KEY_RELEASE) {
-				return 0;
-			}
-			if (current_row == 0) {
-				return 1;
-			}
+	} else if (
+		KEY_PRESSED_OR_REPEATED(block_functions, copy_block_with_mute) &&
+		!(status.flags & CLASSIC_MODE)
+	) {
+		clipboard_copy(1);
+	} else if (
+		KEY_PRESSED_OR_REPEATED(pattern_edit, move_previous)
+		&& !(status.flags & CLASSIC_MODE)
+	) {
+		if (current_row != 0) {
 			do {
-				current_row--;
+				set_current_row(current_row - 1);
 			} while (!seek_done() && current_row != 0);
-			return -1;
 		}
-		return pattern_editor_handle_key_default(k);
-	case SDLK_f:
-		if (k->mod & KMOD_SHIFT && !(status.flags & CLASSIC_MODE)) {
-			if (k->state == KEY_RELEASE) {
-				return 0;
-			}
-			if (current_row == total_rows) {
-				return 1;
-			}
+	} else if (
+		KEY_PRESSED_OR_REPEATED(pattern_edit, move_next)
+		&& !(status.flags & CLASSIC_MODE)
+	) {
+		if (current_row != total_rows) {
 			do {
-				current_row++;
+				set_current_row(current_row + 1);
 			} while (!seek_done() && current_row != total_rows);
-			return -1;
 		}
-		return pattern_editor_handle_key_default(k);
+	} else if (KEY_PRESSED_OR_REPEATED(pattern_edit, set_pattern_length)) {
+		pattern_editor_length_edit();
+	// } else if (
+	// 	key_released(block_functions, mark_beginning_block) ||
+	// 	key_released(block_functions, mark_end_block) ||
+	// 	key_released(block_functions, quick_mark_lines) ||
+	// 	key_released(block_functions, mark_column_or_pattern) ||
+	// 	key_released(block_functions, mark_block_left) ||
+	// 	key_released(block_functions, mark_block_right) ||
+	// 	key_released(block_functions, mark_block_up) ||
+	// 	key_released(block_functions, mark_block_down) ||
+	// 	key_released(block_functions, mark_block_start_row) ||
+	// 	key_released(block_functions, mark_block_end_row) ||
+	// 	key_released(block_functions, mark_block_page_up) ||
+	// 	key_released(block_functions, mark_block_page_down)
+	// ) {
+	// 	if (shift_selection.in_progress)
+	// 		shift_selection_end();
+	} else {
+		return 0;
+	}
 
+	status.flags |= NEED_UPDATE;
+	return 1;
+
+	switch (k->sym) {
 	case SDLK_LSHIFT:
 	case SDLK_RSHIFT:
-		if (k->state == KEY_PRESS) {
-			if (shift_selection.in_progress)
-				shift_selection_end();
-		} else if (shift_chord_channels) {
-			current_channel -= shift_chord_channels;
+		// if (k->state == KEY_PRESS) {
+		// 	if (shift_selection.in_progress)
+		// 		shift_selection_end();
+		// } else
+		if (shift_chord_channels) {
+			set_current_channel(current_channel - shift_chord_channels);
 			while (current_channel < 1)
-				current_channel += 64;
+				set_current_channel(current_channel + 64);
 			advance_cursor(1, 1);
 			shift_chord_channels = 0;
 		}
@@ -4428,9 +4253,6 @@ static int pattern_editor_handle_key(struct key_event * k)
 	default:
 		return pattern_editor_handle_key_default(k);
 	}
-
-	status.flags |= NEED_UPDATE;
-	return 1;
 }
 
 /* --------------------------------------------------------------------- */
@@ -4440,62 +4262,41 @@ static int pattern_editor_handle_key(struct key_event * k)
 
 static int pattern_editor_handle_key_cb(struct key_event * k)
 {
-	int ret;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
 
-	if (k->mod & KMOD_SHIFT) {
-		switch (k->sym) {
-		case SDLK_LEFT:
-		case SDLK_RIGHT:
-		case SDLK_UP:
-		case SDLK_DOWN:
-		case SDLK_HOME:
-		case SDLK_END:
-		case SDLK_PAGEUP:
-		case SDLK_PAGEDOWN:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!shift_selection.in_progress)
-				shift_selection_begin();
-		default:
-			break;
-		};
+	int previous_current_channel = current_channel;
+	int previous_current_position = current_position;
+	int previous_current_row = current_row;
+	int previous_current_pattern = current_pattern;
+	int is_selecting = 0;
+
+	if(
+		KEY_ACTIVE(block_functions, mark_block_up) ||
+		KEY_ACTIVE(block_functions, mark_block_down) ||
+		KEY_ACTIVE(block_functions, mark_block_left) ||
+		KEY_ACTIVE(block_functions, mark_block_right) ||
+		KEY_ACTIVE(block_functions, mark_block_start_row) ||
+		KEY_ACTIVE(block_functions, mark_block_end_row) ||
+		KEY_ACTIVE(block_functions, mark_block_page_up) ||
+		KEY_ACTIVE(block_functions, mark_block_page_down)
+	) {
+		shift_selection_begin();
+		is_selecting = 1;
 	}
 
-	if (k->mod & KMOD_ALT)
-		ret = pattern_editor_handle_alt_key(k);
-	else if (k->mod & KMOD_CTRL)
-		ret = pattern_editor_handle_ctrl_key(k);
-	else
-		ret = pattern_editor_handle_key(k);
+	int ret = (
+		pattern_editor_handle_alt_key(k) ||
+		pattern_editor_handle_ctrl_key(k) ||
+		pattern_editor_handle_key(k) ||
+		pattern_editor_handle_key_default(k)
+	);
 
-	if (ret != -1)
-		return ret;
+	if(!is_selecting && shift_selection.in_progress)
+		shift_selection_end();
 
-	current_row = CLAMP(current_row, 0, total_rows);
-	if (current_position > 8) {
-		if (current_channel < 64) {
-			current_position = 0;
-			current_channel++;
-		} else {
-			current_position = 8;
-		}
-	} else if (current_position < 0) {
-		if (current_channel > 1) {
-			current_position = 8;
-			current_channel--;
-		} else {
-			current_position = 0;
-		}
-	}
+	shift_selection_update();
 
-	current_channel = CLAMP(current_channel, 1, 64);
-	pattern_editor_reposition();
-	if (k->mod & KMOD_SHIFT)
-		shift_selection_update();
-
-	status.flags |= NEED_UPDATE;
-	return 1;
+	return ret;
 }
 
 /* --------------------------------------------------------------------- */
@@ -4517,7 +4318,7 @@ static void pattern_editor_playback_update(void)
 		if (playback_tracing) {
 			set_current_order(song_get_current_order());
 			set_current_pattern(playing_pattern);
-			current_row = playing_row;
+			set_current_row(playing_row);
 			pattern_editor_reposition();
 			status.flags |= NEED_UPDATE;
 		} else if (current_pattern == playing_pattern) {
@@ -4557,7 +4358,10 @@ void pattern_editor_load_page(struct page *page)
 		undo_history[i].snap_op = "Empty";
 		undo_history[i].snap_op_allocated = 0;
 	}
-	page->title = "Pattern Editor (F2)";
+
+	char* shortcut_text = (char*)global_keybinds_list.global.pattern_edit.shortcut_text_parens;
+	page->title = STR_CONCAT(2, "Pattern Editor", shortcut_text);
+
 	page->playback_update = pattern_editor_playback_update;
 	page->song_changed_cb = pated_song_changed;
 	page->pre_handle_key = _fix_f7;
@@ -4569,3 +4373,181 @@ void pattern_editor_load_page(struct page *page)
 	widget_create_other(widgets_pattern + 0, 0, pattern_editor_handle_key_cb, NULL, pattern_editor_redraw);
 }
 
+int pattern_editor_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(pattern_edit, "Pattern Edit Keys.", PAGE_PATTERN_EDITOR);
+	INIT_BIND(pattern_edit, next_pattern, "Next pattern (*)", "KP_PLUS");
+	INIT_BIND(pattern_edit, previous_pattern, "Previous pattern (*)", "KP_MINUS");
+	INIT_BIND(pattern_edit, next_4_pattern, "Next 4 pattern (*)", "Shift+KP_PLUS");
+	INIT_BIND(pattern_edit, previous_4_pattern, "Previous 4 pattern (*)", "Shift+KP_MINUS");
+	INIT_BIND(pattern_edit, next_order_pattern, "Next order's pattern (*)", "Ctrl+KP_PLUS");
+	INIT_BIND(pattern_edit, previous_order_pattern,
+		"Previous order's pattern (*)\n"
+		"    0-9               Change octave/volume/instrument\n"
+		"    0-9, A-F          Change effect value\n"
+		"    A-Z               Change effect",
+		"Ctrl+KP_MINUS");
+	INIT_BIND(pattern_edit, clear_field, "Clear field(s)", "PERIOD");
+	INIT_BIND(pattern_edit, note_cut, "Note cut (^^^)", "1");
+	INIT_BIND(pattern_edit, note_off, "Note off (===) / panning toggle", "BACKQUOTE");
+	INIT_BIND(pattern_edit, toggle_volume_panning, "Toggle panning / volume (on volume field)", "BACKQUOTE");
+	INIT_BIND(pattern_edit, note_fade, "Note fade (~~~)", "Shift+BACKQUOTE");
+	INIT_BIND(pattern_edit, use_last_value,
+		"Use last note/instrument/volume/effect/effect value\n"
+		"    Caps Lock+Key     Preview note\n ",
+		"SPACE");
+
+	INIT_BIND(pattern_edit, get_default_value, "Get default note/instrument/volume/effect", "ENTER");
+	INIT_BIND(pattern_edit, decrease_instrument, "Decrease instrument", "Shift+COMMA,Ctrl+UP");
+	INIT_BIND(pattern_edit, increase_instrument, "Increase instrument", "Shift+PERIOD,Ctrl+DOWN");
+	INIT_BIND(pattern_edit, toggle_edit_mask, "Toggle edit mask for current field\n ", "COMMA");
+
+	INIT_BIND(pattern_edit, insert_row, "Insert a row to current channel", "INSERT");
+	INIT_BIND(pattern_edit, delete_row, "Delete a row from current channel\n ", "DELETE");
+
+	INIT_BIND(pattern_edit, insert_pattern_row, "Insert an entire row to pattern (*)", "Alt+INSERT");
+	INIT_BIND(pattern_edit, delete_pattern_row, "Delete an entire row from pattern (*)\n ", "Alt+DELETE");
+
+	INIT_BIND(pattern_edit, up_by_skip, "Move up by the skip value (set with Alt 1-9)", "UP");
+	INIT_BIND(pattern_edit, down_by_skip, "Move down by the skip value", "DOWN");
+	INIT_BIND(pattern_edit, set_skip_1, "Set skip value to 1", "Alt+1");
+	INIT_BIND(pattern_edit, set_skip_2, "Set skip value to 2", "Alt+2");
+	INIT_BIND(pattern_edit, set_skip_3, "Set skip value to 3", "Alt+3");
+	INIT_BIND(pattern_edit, set_skip_4, "Set skip value to 4", "Alt+4");
+	INIT_BIND(pattern_edit, set_skip_5, "Set skip value to 5", "Alt+5");
+	INIT_BIND(pattern_edit, set_skip_6, "Set skip value to 6", "Alt+6");
+	INIT_BIND(pattern_edit, set_skip_7, "Set skip value to 7", "Alt+7");
+	INIT_BIND(pattern_edit, set_skip_8, "Set skip value to 8", "Alt+8");
+	INIT_BIND(pattern_edit, set_skip_9, "Set skip value to 16\n ", "Alt+9");
+
+	INIT_BIND(pattern_edit, up_one_row, "Move up by 1 row", "Ctrl+HOME");
+	INIT_BIND(pattern_edit, down_one_row, "Move down by 1 row", "Ctrl+END");
+	INIT_BIND(pattern_edit, slide_pattern_up, "Slide pattern up by 1 row", "Alt+UP");
+	INIT_BIND(pattern_edit, slide_pattern_down, "Slide pattern down by 1 row", "Alt+DOWN");
+	INIT_BIND(pattern_edit, move_cursor_left, "Move cursor left", "LEFT");
+	INIT_BIND(pattern_edit, move_cursor_right, "Move cursor right", "RIGHT");
+	INIT_BIND(pattern_edit, move_forwards_channel, "Move forwards one channel", "Alt+RIGHT,Ctrl+RIGHT");
+	INIT_BIND(pattern_edit, move_backwards_channel, "Move backwards one channel", "Alt+LEFT,Ctrl+LEFT");
+	INIT_BIND(pattern_edit, move_forwards_note_column, "Move forwards to note column", "TAB");
+	INIT_BIND(pattern_edit, move_backwards_note_column, "Move backwards to note column", "Shift+TAB");
+	INIT_BIND(pattern_edit, move_up_n_lines, "Move up n lines (n=row highlight major)", "PAGEUP");
+	INIT_BIND(pattern_edit, move_down_n_lines, "Move down n lines", "PAGEDOWN");
+	INIT_BIND(pattern_edit, move_pattern_top, "Move to top of pattern", "Ctrl+PAGEUP");
+	INIT_BIND(pattern_edit, move_pattern_bottom, "Move to bottom of pattern", "Ctrl+PAGEDOWN");
+	INIT_BIND(pattern_edit, move_start, "Move to start of column/start of line/start of pattern", "HOME");
+	INIT_BIND(pattern_edit, move_end, "Move to end of column/end of line/end of pattern", "END");
+	INIT_BIND(pattern_edit, move_previous_position, "Move to previous position (accounts for multichannel)", "BACKSPACE");
+	INIT_BIND(pattern_edit, move_previous, "Move to previous note/instrument/volume/effect", "Shift+A");
+	INIT_BIND(pattern_edit, move_next, "Move to next note/instrument/volume/effect\n ", "Shift+F");
+
+	INIT_BIND(pattern_edit, toggle_multichannel,
+		"Toggle multichannel mode for current channel" TEXT_2X
+		"Multichannel selection menu\n ", "Alt+N");
+
+	INIT_BIND(pattern_edit, store_pattern_data, "Store pattern data", "Alt+ENTER");
+	INIT_BIND(pattern_edit, revert_pattern_data, "Revert pattern data (*)", "Alt+BACKSPACE");
+	INIT_BIND(pattern_edit, undo, "Undo - any function with (*) can be undone\n ", "Ctrl+BACKSPACE");
+
+	INIT_BIND(pattern_edit, toggle_centralise_cursor, "Toggle centralise cursor", "Ctrl+C");
+	INIT_BIND(pattern_edit, toggle_highlight_row, "Toggle current row highlight", "Ctrl+H");
+	INIT_BIND(pattern_edit, toggle_volume_display, "Toggle default volume display\n ", "Ctrl+V");
+
+	INIT_BIND(pattern_edit, set_pattern_length, "Set pattern length", "Ctrl+F2");
+	INIT_BIND(pattern_edit, toggle_midi_trigger, "Toggle MIDI trigger", "Ctrl+X,Ctrl+Z");
+
+	INIT_SECTION(track_view, " Track View Functions.", PAGE_PATTERN_EDITOR);
+	INIT_BIND(track_view, cycle_view, "Cycle current track's view", "Alt+T");
+	INIT_BIND(track_view, clear_track_views, "Clear all track views", "Alt+R");
+	INIT_BIND(track_view, toggle_track_view_divisions, "Toggle track view divisions", "Alt+H");
+
+	INIT_BIND(track_view, track_scheme_default, "View current track in scheme default", "Ctrl+0,Ctrl+BACKQUOTE");
+	INIT_BIND(track_view, track_scheme_1, "View current track in scheme 1", "Ctrl+1");
+	INIT_BIND(track_view, track_scheme_2, "View current track in scheme 2", "Ctrl+2");
+	INIT_BIND(track_view, track_scheme_3, "View current track in scheme 3", "Ctrl+3");
+	INIT_BIND(track_view, track_scheme_4, "View current track in scheme 4", "Ctrl+4");
+	INIT_BIND(track_view, track_scheme_5, "View current track in scheme 5", "Ctrl+5");
+	INIT_BIND(track_view, track_scheme_6, "View current track in scheme 6\n ", "Ctrl+6");
+
+	// INIT_BIND(track_view, move_column_left, "Go to channel left (keep column position)", "Ctrl+LEFT");
+	// INIT_BIND(track_view, move_column_right, "Go to channel right (keep column position)\n ", "Ctrl+RIGHT");
+
+	// I added backquote here because Ctrl+Shift+0 is not possible to use on windows. (took me so long to figure this out XD)
+	INIT_BIND(track_view, quick_view_scheme_default, "Quick view scheme setup default", "Ctrl+Shift+0,Ctrl+Shift+BACKQUOTE");
+	INIT_BIND(track_view, quick_view_scheme_1, "Quick view scheme setup 1", "Ctrl+Shift+1");
+	INIT_BIND(track_view, quick_view_scheme_2, "Quick view scheme setup 2", "Ctrl+Shift+2");
+	INIT_BIND(track_view, quick_view_scheme_3, "Quick view scheme setup 3", "Ctrl+Shift+3");
+	INIT_BIND(track_view, quick_view_scheme_4, "Quick view scheme setup 4", "Ctrl+Shift+4");
+	INIT_BIND(track_view, quick_view_scheme_5, "Quick view scheme setup 5", "Ctrl+Shift+5");
+	INIT_BIND(track_view, quick_view_scheme_6, "Quick view scheme setup 6\n ", "Ctrl+Shift+6");
+
+	// Can't find this and can't figure out in previous version
+	// INIT_BIND(track_view, toggle_cursor_tracking, "Toggle View-Channel cursor-tracking\n ", "Ctrl+T");
+
+	INIT_SECTION(block_functions, " Block Functions.", PAGE_PATTERN_EDITOR);
+	INIT_BIND(block_functions, mark_beginning_block, "Mark beginning of block", "Alt+B");
+	INIT_BIND(block_functions, mark_end_block, "Mark end of block", "Alt+E");
+	INIT_BIND(block_functions, quick_mark_lines, "Quick mark n/2n/4n/... lines (n=row highlight major)", "Alt+D");
+	INIT_BIND(block_functions, mark_column_or_pattern, "Mark entire column/pattern", "Alt+L");
+	INIT_BIND(block_functions, mark_block_left, "Mark block left", "Shift+LEFT");
+	INIT_BIND(block_functions, mark_block_right, "Mark block right", "Shift+RIGHT");
+	INIT_BIND(block_functions, mark_block_up, "Mark block up", "Shift+UP");
+	INIT_BIND(block_functions, mark_block_down, "Mark block down\n ", "Shift+DOWN");
+	INIT_BIND(block_functions, mark_block_start_row, "Mark block start of row/rows/pattern", "Shift+HOME");
+	INIT_BIND(block_functions, mark_block_end_row, "Mark block end of row/rows/pattern", "Shift+END");
+	INIT_BIND(block_functions, mark_block_page_up, "Mark block up one page", "Shift+PAGEUP");
+	INIT_BIND(block_functions, mark_block_page_down, "Mark block down one page\n ", "Shift+PAGEDOWN");
+
+	INIT_BIND(block_functions, unmark, "Unmark block/release clipboard memory\n ", "Alt+U");
+
+	INIT_BIND(block_functions, raise_notes_semitone, "Raise notes by a semitone (*)", "Alt+Q");
+	INIT_BIND(block_functions, raise_notes_octave, "Raise notes by an octave (*)", "Alt+Shift+Q");
+	INIT_BIND(block_functions, lower_notes_semitone, "Lower notes by a semitone (*)", "Alt+A");
+	INIT_BIND(block_functions, lower_notes_octave, "Lower notes by an octave (*)", "Alt+Shift+A");
+	INIT_BIND(block_functions, set_instrument, "Set Instrument (*)", "Alt+S");
+	INIT_BIND(block_functions, set_volume_or_panning, "Set volume/panning (*)", "Alt+V");
+	INIT_BIND(block_functions, wipe_volume_or_panning, "Wipe vol/pan not associated with a note/instrument (*)", "Alt+W");
+	INIT_BIND(block_functions, slide_volume_or_panning,
+		"Slide volume/panning column (*)" TEXT_2X
+		"Wipe all volume/panning controls (*)", "Alt+K");
+	INIT_BIND(block_functions, volume_amplifier, "Volume amplifier (*) / fast volume attenuate (*)", "Alt+J");
+	INIT_BIND(block_functions, cut_block, "Cut block (*)", "Alt+Z");
+	INIT_BIND(block_functions, swap_block, "Swap block (*)", "Alt+Y");
+	INIT_BIND(block_functions, slide_effect_value,
+		"Slide effect value (*)" TEXT_2X
+		"Wipe all effect data (*)\n ", "Alt+X");
+
+	INIT_BIND(block_functions, roll_block_down, "Roll block down", "Ctrl+INSERT");
+	INIT_BIND(block_functions, roll_block_up, "Roll block up", "Ctrl+DELETE");
+
+	INIT_BIND(block_functions, copy_block, "Copy block into clipboard", "Alt+C");
+	INIT_BIND(block_functions, copy_block_with_mute, "Copy block to clipboard honoring current mute-settings", "Shift+L");
+	INIT_BIND(block_functions, paste_data, "Paste data from clipboard (*)", "Alt+P");
+	INIT_BIND(block_functions, paste_and_overwrite,
+		"Overwrite with data from clipboard (*)" TEXT_2X
+		"Grow pattern to clipboard length", "Alt+O");
+	INIT_BIND(block_functions, paste_and_mix,
+		"Mix each row from clipboard with pattern data (*)" TEXT_2X
+		"Mix each field from clipboard with pattern data\n ", "Alt+M");
+
+	INIT_BIND(block_functions, double_block_length, "Double block length (*)", "Alt+F");
+	INIT_BIND(block_functions, halve_block_length, "Halve block length (*)\n ", "Alt+G");
+
+	INIT_BIND(block_functions, select_template_mode, "Select template mode / fast volume amplify (*)", "Alt+I");
+	INIT_BIND(block_functions, disable_template_mode, "Disable template mode", "Alt+Shift+I");
+	INIT_BIND(block_functions, toggle_fast_volume, "Toggle fast volume mode", "Ctrl+J");
+	INIT_BIND(block_functions, selection_volume_vary, "Selection volume vary / fast volume vary (*)", "Ctrl+U");
+	INIT_BIND(block_functions, selection_panning_vary, "Selection panning vary / fast panning vary (*)", "Ctrl+Y");
+	INIT_BIND(block_functions, selection_effect_vary, "Selection effect vary / fast effect vary (*)", "Ctrl+K");
+
+	INIT_SECTION(playback_functions, " Playback Functions.", PAGE_PATTERN_EDITOR);
+	INIT_BIND(playback_functions, play_note_cursor, "Play note under cursor", "4");
+	INIT_BIND(playback_functions, play_row, "Play row\n ", "8");
+
+	INIT_BIND(playback_functions, play_from_row, "Play from current row", "Ctrl+F6");
+	INIT_BIND(playback_functions, toggle_playback_mark, "Set/clear playback mark (for use with F7)\n ", "Ctrl+F7");
+
+	INIT_BIND(playback_functions, toggle_current_channel, "Toggle current channel", "Alt+F9");
+	INIT_BIND(playback_functions, solo_current_channel, "Solo current channel", "Alt+F10");
+
+	return 1;
+}

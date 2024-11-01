@@ -67,8 +67,6 @@ static int last_note = NOTE_MIDC;
 
 static int num_save_formats = 0;
 
-/* --------------------------------------------------------------------- */
-
 /* woo */
 
 static int _is_magic_sample(int no)
@@ -108,6 +106,18 @@ static int _last_vis_sample(void)
 	while ((j + 34) > n) n += 34;
 	if (n >= MAX_SAMPLES) n = MAX_SAMPLES - 1;
 	return n;
+}
+
+/* --------------------------------------------------------------------- */
+
+static void set_cursor_pos(int new_cursor_pos)
+{
+	if (new_cursor_pos == sample_list_cursor_pos) return;
+
+	new_cursor_pos = CLAMP(new_cursor_pos, 0, 25);
+	sample_list_cursor_pos = new_cursor_pos;
+	_fix_accept_text();
+	status.flags |= NEED_UPDATE;
 }
 
 /* --------------------------------------------------------------------- */
@@ -305,7 +315,7 @@ static int sample_list_add_char(uint8_t c)
 		return 0;
 	smp = song_get_sample(current_sample);
 	text_add_char(smp->name, c, &sample_list_cursor_pos, _is_magic_sample(current_sample) ? 22 : 25);
-	_fix_accept_text();
+	set_cursor_pos(sample_list_cursor_pos);
 
 	status.flags |= NEED_UPDATE;
 	status.flags |= SONG_NEEDS_SAVE;
@@ -316,7 +326,7 @@ static void sample_list_delete_char(void)
 {
 	song_sample_t *smp = song_get_sample(current_sample);
 	text_delete_char(smp->name, &sample_list_cursor_pos, _is_magic_sample(current_sample) ? 23 : 25);
-	_fix_accept_text();
+	set_cursor_pos(sample_list_cursor_pos);
 
 	status.flags |= SONG_NEEDS_SAVE;
 	status.flags |= NEED_UPDATE;
@@ -326,7 +336,7 @@ static void sample_list_delete_next_char(void)
 {
 	song_sample_t *smp = song_get_sample(current_sample);
 	text_delete_next_char(smp->name, &sample_list_cursor_pos, _is_magic_sample(current_sample) ? 23 : 25);
-	_fix_accept_text();
+	set_cursor_pos(sample_list_cursor_pos);
 
 	status.flags |= NEED_UPDATE;
 	status.flags |= SONG_NEEDS_SAVE;
@@ -341,7 +351,7 @@ static void clear_sample_text(void)
 	} else {
 		memset(smp->name, 0, 26);
 	}
-	sample_list_cursor_pos = 0;
+	set_cursor_pos(0);
 	_fix_accept_text();
 
 	status.flags |= NEED_UPDATE;
@@ -395,9 +405,6 @@ static int sample_list_handle_text_input_on_list(const uint8_t* text) {
 
 static int sample_list_handle_key_on_list(struct key_event * k)
 {
-	int new_sample = current_sample;
-	int new_cursor_pos = sample_list_cursor_pos;
-
 	if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
 		if (k->state == KEY_RELEASE)
 			status.flags |= CLIPPY_PASTE_SELECTION;
@@ -415,8 +422,8 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			status.flags |= NEED_UPDATE;
 			return 1;
 		} else {
-			new_sample = (k->y - 13) + top_sample;
-			new_cursor_pos = k->x - 5;
+			sample_set((k->y - 13) + top_sample);
+			set_cursor_pos(k->x - 5);
 			if (k->x <= 29) { /* and button1 */
 				if (k->mouse == MOUSE_DBLCLICK) {
 					/* this doesn't appear to work */
@@ -433,161 +440,106 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 					song_keydown(current_sample, KEYJAZZ_NOINST,
 						last_note, 64, KEYJAZZ_CHAN_CURRENT);
 				}
-				new_cursor_pos = 25;
+				set_cursor_pos(25);
 #endif
 			}
 		}
 	} else {
-		switch (k->sym) {
-		case SDLK_LEFT:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
-			new_cursor_pos--;
-			break;
-		case SDLK_RIGHT:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
-			new_cursor_pos++;
-			break;
-		case SDLK_HOME:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
-			new_cursor_pos = 0;
-			break;
-		case SDLK_END:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (!NO_MODIFIER(k->mod))
-				return 0;
-			new_cursor_pos = 25;
-			break;
-		case SDLK_UP:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (k->mod & KMOD_ALT) {
-				if (current_sample > 1) {
-					new_sample = current_sample - 1;
-					song_swap_samples(current_sample, new_sample);
-				}
-			} else if (!NO_MODIFIER(k->mod)) {
-				return 0;
-			} else {
-				new_sample--;
+		if (KEY_PRESSED_OR_REPEATED(global, nav_left)) {
+			set_cursor_pos(sample_list_cursor_pos - 1);
+		} else if (KEY_PRESSED_OR_REPEATED(global, nav_right)) {
+			set_cursor_pos(sample_list_cursor_pos + 1);
+		} else if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
+			sample_set(current_sample - 1);
+		} else if (KEY_PRESSED_OR_REPEATED(global, nav_down)) {
+			sample_set(current_sample + 1);
+		} else if (KEY_PRESSED(global, nav_home)) {
+			set_cursor_pos(0);
+		} else if (KEY_PRESSED(global, nav_end)) {
+			set_cursor_pos(25);
+		} else if (KEY_PRESSED_OR_REPEATED(sample_list, swap_sample_with_previous)) {
+			if (current_sample > 1) {
+				int new_sample = current_sample - 1;
+				song_swap_samples(current_sample, new_sample);
+				sample_set(new_sample);
 			}
-			break;
-		case SDLK_DOWN:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (k->mod & KMOD_ALT) {
-				// restrict position to the "old" value of _last_vis_sample()
-				// (this is entirely for aesthetic reasons)
-				if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
-					_altswap_lastvis = _last_vis_sample();
-				if (current_sample < _altswap_lastvis) {
-					new_sample = current_sample + 1;
-					song_swap_samples(current_sample, new_sample);
-				}
-			} else if (!NO_MODIFIER(k->mod)) {
-				return 0;
-			} else {
-				new_sample++;
+		} else if (KEY_PRESSED_OR_REPEATED(sample_list, swap_sample_with_next)) {
+			// restrict position to the "old" value of _last_vis_sample()
+			// (this is entirely for aesthetic reasons)
+			// if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
+			// 	_altswap_lastvis = _last_vis_sample();
+
+			if (current_sample < _altswap_lastvis) {
+				int new_sample = current_sample + 1;
+				song_swap_samples(current_sample, new_sample);
+				sample_set(new_sample);
 			}
-			break;
-		case SDLK_PAGEUP:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (k->mod & KMOD_CTRL) {
-				new_sample = 1;
-			} else {
-				new_sample -= 16;
-			}
-			break;
-		case SDLK_PAGEDOWN:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if (k->mod & KMOD_CTRL) {
-				new_sample = _last_vis_sample();
-			} else {
-				new_sample += 16;
-			}
-			break;
-		case SDLK_RETURN:
-			if (k->state == KEY_PRESS)
-				return 0;
+		} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
+			sample_set(current_sample - 16);
+		} else if (KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
+			sample_set(current_sample + 16);
+		} else if (KEY_PRESSED(sample_list, goto_first_sample)) {
+			sample_set(1);
+		} else if (KEY_PRESSED(sample_list, goto_last_sample)) {
+			sample_set(_last_vis_sample());
+		} else if (KEY_PRESSED(global, nav_accept)) {
 			set_page(PAGE_LOAD_SAMPLE);
-			break;
-		case SDLK_BACKSPACE:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) {
-				if (sample_list_cursor_pos < 25) {
-					sample_list_delete_char();
-				}
-				return 1;
-			} else if (k->mod & KMOD_CTRL) {
-				/* just for compatibility with every weird thing
-				 * Impulse Tracker does ^_^ */
-				if (sample_list_cursor_pos < 25) {
-					sample_list_add_char(127);
-				}
-				return 1;
+		} else if (KEY_PRESSED(sample_list, clear_name_and_filename)) {
+			clear_sample_text();
+			return 1;
+		} else if (KEY_PRESSED(sample_list, insert_arrow_up)) {
+			/* just for compatibility with every weird thing
+			* Impulse Tracker does ^_^ */
+			if (sample_list_cursor_pos < 25) {
+				sample_list_add_char(127);
 			}
-			return 0;
-		case SDLK_DELETE:
-			if (k->state == KEY_RELEASE)
-				return 0;
-			if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) {
-				if (sample_list_cursor_pos < 25) {
-					sample_list_delete_next_char();
-				}
-				return 1;
-			}
-			return 0;
-		case SDLK_ESCAPE:
-			if (k->mod & KMOD_SHIFT) {
+			return 1;
+		} else {
+			switch (k->sym) {
+			case SDLK_BACKSPACE:
 				if (k->state == KEY_RELEASE)
-					return 1;
-				new_cursor_pos = 25;
-				break;
-			}
-			return 0;
-		default:
-			if (k->mod & KMOD_ALT) {
-				if (k->sym == SDLK_c) {
-					clear_sample_text();
+					return 0;
+				if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) {
+					if (sample_list_cursor_pos < 25) {
+						sample_list_delete_char();
+					}
 					return 1;
 				}
 				return 0;
-			} else if ((k->mod & KMOD_CTRL) == 0 && sample_list_cursor_pos < 25) {
+			case SDLK_DELETE:
 				if (k->state == KEY_RELEASE)
+					return 0;
+				if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) {
+					if (sample_list_cursor_pos < 25) {
+						sample_list_delete_next_char();
+					}
 					return 1;
+				}
+				return 0;
+			case SDLK_ESCAPE:
+				if (k->mod & KMOD_SHIFT) {
+					if (k->state == KEY_RELEASE)
+						return 1;
+					set_cursor_pos(25);
+					break;
+				}
+				return 0;
+			default:
+				if ((k->mod & KMOD_ALT) == 0 &&
+					(k->mod & KMOD_CTRL) == 0 && sample_list_cursor_pos < 25
+				) {
+					if (k->state == KEY_RELEASE)
+						return 1;
 
-				if (k->text)
-					return sample_list_handle_text_input_on_list(k->text);
+					if (k->text)
+						return sample_list_handle_text_input_on_list(k->text);
 
-				/* ...uhhhhhh */
+					/* ...uhhhhhh */
+					return 0;
+				}
 				return 0;
 			}
-			return 0;
 		}
-	}
-
-	new_sample = CLAMP(new_sample, 1, _last_vis_sample());
-	new_cursor_pos = CLAMP(new_cursor_pos, 0, 25);
-
-	if (new_sample != current_sample) {
-		sample_set(new_sample);
-		sample_list_reposition();
-	}
-	if (new_cursor_pos != sample_list_cursor_pos) {
-		sample_list_cursor_pos = new_cursor_pos;
-		_fix_accept_text();
 	}
 
 	status.flags |= NEED_UPDATE;
@@ -932,15 +884,14 @@ static void sample_adlibconfig_draw_const(void)
 
 static int do_adlib_handlekey(struct key_event *kk)
 {
-	if (kk->sym == SDLK_F1) {
-		if (kk->state == KEY_PRESS)
-			return 1;
+	if (KEY_RELEASED(global, help)) {
 		status.current_help_index = HELP_ADLIB_SAMPLE;
 		dialog_f1_hack = 1;
 		dialog_destroy_all();
 		set_page(PAGE_HELP);
 		return 1;
 	}
+
 	return 0;
 }
 
@@ -1144,42 +1095,22 @@ static int export_sample_list_handle_key(struct key_event * k)
 
 	if (k->state == KEY_RELEASE)
 		return 0;
-	switch (k->sym) {
-	case SDLK_UP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+
+	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		new_format--;
-		break;
-	case SDLK_DOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		new_format++;
-		break;
-	case SDLK_PAGEUP:
-	case SDLK_HOME:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if(KEY_PRESSED(global, nav_home) || KEY_PRESSED(global, nav_page_up)) {
 		new_format = 0;
-		break;
-	case SDLK_PAGEDOWN:
-	case SDLK_END:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if(KEY_PRESSED(global, nav_end) || KEY_PRESSED(global, nav_page_down)) {
 		new_format = num_save_formats - 1;
-		break;
-	case SDLK_TAB:
-		if (k->mod & KMOD_SHIFT) {
-			widget_change_focus_to(0);
-			return 1;
-		}
-		/* fall through */
-	case SDLK_LEFT:
-	case SDLK_RIGHT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if(KEY_PRESSED(global, nav_tab) || KEY_PRESSED(global, nav_left) || KEY_PRESSED(global, nav_right)) {
 		widget_change_focus_to(0); /* should focus 0/1/2 depending on what's closest */
 		return 1;
-	default:
+	} else if(KEY_PRESSED(global, nav_backtab)) {
+		widget_change_focus_to(0);
+		return 1;
+	} else {
 		return 0;
 	}
 
@@ -1309,209 +1240,143 @@ static void sample_toggle_solo(int n)
 
 /* --------------------------------------------------------------------- */
 
-static void sample_list_handle_alt_key(struct key_event * k)
+static int sample_list_handle_alt_key(struct key_event * k)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
 	int canmod = (sample->data != NULL && !(sample->flags & CHN_ADLIB));
 
-	if (k->state == KEY_RELEASE)
-		return;
-
-	switch (k->sym) {
-	case SDLK_a:
+	if (KEY_PRESSED(sample_list, convert_signed_unsigned)) {
 		if (canmod)
 			dialog_create(DIALOG_OK_CANCEL, "Convert sample?", do_sign_convert, NULL, 0, NULL);
-		return;
-	case SDLK_b:
+	} else if (KEY_PRESSED(sample_list, pre_loop_cut)) {
 		if (canmod && (sample->loop_start > 0
 			       || ((sample->flags & CHN_SUSTAINLOOP) && sample->sustain_start > 0))) {
 			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_pre_loop_cut, NULL, 1, NULL);
 		}
-		return;
-	case SDLK_d:
-		if ((k->mod & KMOD_SHIFT) && !(status.flags & CLASSIC_MODE)) {
-			if (canmod && sample->flags & CHN_STEREO) {
-				dialog_create(DIALOG_OK_CANCEL, "Downmix sample to mono?",
-					do_downmix, NULL, 0, NULL);
-			}
-		} else {
-			dialog_create(DIALOG_OK_CANCEL, "Delete sample?", do_delete_sample,
-				NULL, 1, NULL);
+	} else if (KEY_PRESSED(sample_list, pre_loop_cut)) {
+		if (canmod && (sample->loop_start > 0
+			       || ((sample->flags & CHN_SUSTAINLOOP) && sample->sustain_start > 0))) {
+			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_pre_loop_cut, NULL, 1, NULL);
 		}
-		return;
-	case SDLK_e:
+	} else if (KEY_PRESSED(sample_list, delete_sample)) {
+		dialog_create(DIALOG_OK_CANCEL, "Delete sample?", do_delete_sample, NULL, 1, NULL);
+	} else if (KEY_PRESSED(sample_list, downmix_to_mono) && !(status.flags & CLASSIC_MODE)) {
+		if (canmod && sample->flags & CHN_STEREO) {
+			dialog_create(DIALOG_OK_CANCEL, "Downmix sample to mono?",
+				do_downmix, NULL, 0, NULL);
+		}
+	} else if (KEY_PRESSED(sample_list, resize_sample_with_interpolation)) {
 		if (canmod)
 			resize_sample_dialog(1);
-		break;
-	case SDLK_f:
+	} else if (KEY_PRESSED(sample_list, resize_sample_without_interpolation)) {
 		if (canmod)
 			resize_sample_dialog(0);
-		break;
-	case SDLK_g:
+	} else if (KEY_PRESSED(sample_list, reverse_sample)) {
 		if (canmod)
 			sample_reverse(sample);
-		break;
-	case SDLK_h:
+	} else if (KEY_PRESSED(sample_list, centralise_sample)) {
 		if (canmod)
 			dialog_create(DIALOG_YES_NO, "Centralise sample?", do_centralise, NULL, 0, NULL);
-		return;
-	case SDLK_i:
+	} else if (KEY_PRESSED(sample_list, invert_sample)) {
 		if (canmod)
 			sample_invert(sample);
-		break;
-	case SDLK_l:
+	} else if (KEY_PRESSED(sample_list, post_loop_cut)) {
 		if (canmod && (sample->loop_end > 0
 			       || ((sample->flags & CHN_SUSTAINLOOP) && sample->sustain_end > 0))) {
 			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_post_loop_cut, NULL, 1, NULL);
 		}
-		return;
-	case SDLK_m:
+	} else if (KEY_PRESSED(sample_list, sample_amplifier)) {
 		if (canmod)
 			sample_amplify_dialog();
-		return;
-	case SDLK_n:
+	} else if (KEY_PRESSED(sample_list, toggle_multichannel_playback)) {
 		song_toggle_multichannel_mode();
-		return;
-	case SDLK_o:
+	} else if (KEY_PRESSED(sample_list, save_sample_to_disk_it)) {
 		sample_save(NULL, "ITS");
-		return;
-	case SDLK_p:
+	} else if (KEY_PRESSED(sample_list, copy_sample)) {
 		smpprompt_create("Copy sample:", "Sample", do_copy_sample);
-		return;
-	case SDLK_q:
+	} else if (KEY_PRESSED(sample_list, toggle_sample_quality)) {
 		if (canmod) {
 			dialog_create(DIALOG_YES_NO, "Convert sample?",
 			      do_quality_convert, do_quality_toggle, 0, NULL);
 		}
-		return;
-	case SDLK_r:
+	} else if (KEY_PRESSED(sample_list, replace_current_sample)) {
 		smpprompt_create("Replace sample with:", "Sample", do_replace_sample);
-		return;
-	case SDLK_s:
+	} else if (KEY_PRESSED(sample_list, swap_sample)) {
 		smpprompt_create("Swap sample with:", "Sample", do_swap_sample);
-		return;
-	case SDLK_t:
+	} else if (KEY_PRESSED(sample_list, save_sample_to_disk_format_select)) {
 		export_sample_dialog();
-		return;
-	case SDLK_w:
+	} else if (KEY_PRESSED(sample_list, save_sample_to_disk_raw)) {
 		sample_save(NULL, "RAW");
-		return;
-	case SDLK_x:
+	} else if (KEY_PRESSED(sample_list, exchange_sample)) {
 		smpprompt_create("Exchange sample with:", "Sample", do_exchange_sample);
-		return;
-	case SDLK_y:
-		/* hi virt */
+	} else if (KEY_PRESSED(sample_list, text_to_sample)) {
 		txtsynth_dialog();
-		return;
-	case SDLK_z:
-		{ // uguu~
-			void (*dlg)(void *) = (k->mod & KMOD_SHIFT)
-				? sample_adlibpatch_dialog
-				: sample_adlibconfig_dialog;
-			if (canmod) {
-				dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample.",
-					      dlg, NULL, 1, NULL);
-			} else {
-				dlg(NULL);
-			}
+	} else if (KEY_PRESSED(sample_list, load_adlib_sample_by_midi_patch_number)) {
+		// uguu~
+		void (*dlg)(void *) = sample_adlibpatch_dialog;
+		if (canmod) {
+			dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample.",
+						dlg, NULL, 1, NULL);
+		} else {
+			dlg(NULL);
 		}
-		return;
-	case SDLK_INSERT:
+	} else if (KEY_PRESSED(sample_list, edit_create_adlib_sample)) {
+		// uguu~
+		void (*dlg)(void *) = sample_adlibconfig_dialog;
+		if (canmod) {
+			dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample.",
+						dlg, NULL, 1, NULL);
+		} else {
+			dlg(NULL);
+		}
+	} else if (KEY_PRESSED(sample_list, insert_sample_slot)) {
 		song_insert_sample_slot(current_sample);
-		break;
-	case SDLK_DELETE:
+	} else if (KEY_PRESSED(sample_list, remove_sample_slot)) {
 		song_remove_sample_slot(current_sample);
-		break;
-	case SDLK_F9:
+	} else if (KEY_PRESSED(sample_list, toggle_current_sample)) {
 		sample_toggle_mute(current_sample);
-		break;
-	case SDLK_F10:
+	} else if (KEY_PRESSED(sample_list, solo_current_sample)) {
 		sample_toggle_solo(current_sample);
-		break;
-	default:
-		return;
+	} else {
+		return 0;
 	}
 
 	status.flags |= NEED_UPDATE;
+	return 1;
 }
 
 static void sample_list_handle_key(struct key_event * k)
 {
-	int new_sample = current_sample;
 	song_sample_t *sample = song_get_sample(current_sample);
 
-	switch (k->sym) {
-	case SDLK_SPACE:
-		if (k->state == KEY_RELEASE)
-			return;
-		if (selected_widget && *selected_widget == 0) {
-			status.flags |= NEED_UPDATE;
-		}
-		return;
-	case SDLK_PLUS:
-		if (k->state == KEY_RELEASE)
-			return;
-		if (k->mod & KMOD_ALT) {
-			sample->c5speed *= 2;
-			status.flags |= SONG_NEEDS_SAVE;
-		} else if (k->mod & KMOD_CTRL) {
-			sample->c5speed = calc_halftone(sample->c5speed, 1);
-			status.flags |= SONG_NEEDS_SAVE;
-		}
-		status.flags |= NEED_UPDATE;
-		return;
-	case SDLK_MINUS:
-		if (k->state == KEY_RELEASE)
-			return;
-		if (k->mod & KMOD_ALT) {
-			sample->c5speed /= 2;
-			status.flags |= SONG_NEEDS_SAVE;
-		} else if (k->mod & KMOD_CTRL) {
-			sample->c5speed = calc_halftone(sample->c5speed, -1);
-			status.flags |= SONG_NEEDS_SAVE;
-		}
-		status.flags |= NEED_UPDATE;
-		return;
-
-	case SDLK_COMMA:
-	case SDLK_LESS:
-		if (k->state == KEY_RELEASE)
-			return;
+	if (KEY_PRESSED(sample_list, increase_c5_frequency_1_octave)) {
+		sample->c5speed *= 2;
+		status.flags |= SONG_NEEDS_SAVE;
+	} else if (KEY_PRESSED(sample_list, increase_c5_frequency_1_semitone)) {
+		sample->c5speed = calc_halftone(sample->c5speed, 1);
+		status.flags |= SONG_NEEDS_SAVE;
+	} else if (KEY_PRESSED(sample_list, decrease_c5_frequency_1_octave)) {
+		sample->c5speed /= 2;
+		status.flags |= SONG_NEEDS_SAVE;
+	} else if (KEY_PRESSED(sample_list, decrease_c5_frequency_1_semitone)) {
+		sample->c5speed = calc_halftone(sample->c5speed, -1);
+		status.flags |= SONG_NEEDS_SAVE;
+	} else if (KEY_PRESSED(sample_list, decrease_playback_channel)) {
 		song_change_current_play_channel(-1, 0);
-		return;
-	case SDLK_PERIOD:
-	case SDLK_GREATER:
-		if (k->state == KEY_RELEASE)
-			return;
+	} else if (KEY_PRESSED(sample_list, increase_playback_channel)) {
 		song_change_current_play_channel(1, 0);
+	} else if (KEY_PRESSED(sample_list, move_up)) {
+		sample_set(current_sample - 1);
+	} else if (KEY_PRESSED(sample_list, move_down)) {
+		sample_set(current_sample + 1);
+	} else if (KEY_PRESSED(sample_list, focus_sample_list)) {
+		set_cursor_pos(25);
+		_fix_accept_text();
+		widget_change_focus_to(0);
+	} else if(sample_list_handle_alt_key(k)) {
 		return;
-	case SDLK_PAGEUP:
-		if (k->state == KEY_RELEASE)
-			return;
-		new_sample--;
-		break;
-	case SDLK_PAGEDOWN:
-		if (k->state == KEY_RELEASE)
-			return;
-		new_sample++;
-		break;
-	case SDLK_ESCAPE:
-		if (k->mod & KMOD_SHIFT) {
-			if (k->state == KEY_RELEASE)
-				return;
-			sample_list_cursor_pos = 25;
-			_fix_accept_text();
-			widget_change_focus_to(0);
-			status.flags |= NEED_UPDATE;
-			return;
-		}
-		return;
-	default:
-		if (k->mod & KMOD_ALT) {
-			if (k->state == KEY_RELEASE)
-				return;
-			sample_list_handle_alt_key(k);
-		} else if (!k->is_repeat) {
+	} else {
+		if (!k->is_repeat) {
 			int n, v;
 			if (k->midi_note > -1) {
 				n = k->midi_note;
@@ -1521,9 +1386,9 @@ static void sample_list_handle_key(struct key_event * k)
 					v = KEYJAZZ_DEFAULTVOL;
 				}
 			} else {
-				n = (k->sym == SDLK_SPACE)
+				n = (KEY_PRESSED(pattern_edit, use_last_value)
 					? last_note
-					: kbd_get_note(k);
+					: kbd_get_note(k));
 				if (n <= 0 || n > 120)
 					return;
 				v = KEYJAZZ_DEFAULTVOL;
@@ -1538,13 +1403,7 @@ static void sample_list_handle_key(struct key_event * k)
 		return;
 	}
 
-	new_sample = CLAMP(new_sample, 1, _last_vis_sample());
-
-	if (new_sample != current_sample) {
-		sample_set(new_sample);
-		sample_list_reposition();
-		status.flags |= NEED_UPDATE;
-	}
+	status.flags |= NEED_UPDATE;
 }
 
 /* --------------------------------------------------------------------- */
@@ -1786,7 +1645,9 @@ void sample_list_load_page(struct page *page)
 {
 	vgamem_ovl_alloc(&sample_image);
 
-	page->title = "Sample List (F3)";
+	char* shortcut_text = (char*)global_keybinds_list.global.sample_list.shortcut_text_parens;
+	page->title = STR_CONCAT(2, "Sample List", shortcut_text);
+
 	page->draw_const = sample_list_draw_const;
 	page->predraw_hook = sample_list_predraw_hook;
 	page->handle_key = sample_list_handle_key;
@@ -1848,3 +1709,61 @@ void sample_list_load_page(struct page *page)
 			num_save_formats++;
 }
 
+int sample_list_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(sample_list, "Sample List Keys.", PAGE_SAMPLE_LIST);
+	// Don't really need these, they are better replaced by global navs
+	// INIT_BIND(sample_list, load_new_sample, "Load new sample", "ENTER");
+	// INIT_BIND(sample_list, move_between_options, "Move between options", "TAB");
+	INIT_BIND(sample_list, move_up, "Move up (when not on list)", "PAGEUP");
+	INIT_BIND(sample_list, move_down, "Move down (when not on list)", "PAGEDOWN");
+	INIT_BIND(sample_list, focus_sample_list, "Focus on sample list\n ", "Shift+ESCAPE");
+
+	INIT_BIND(sample_list, goto_first_sample, "Select first sample (when on list)", "Ctrl+PAGEUP");
+	INIT_BIND(sample_list, goto_last_sample, "Select last sample (when on list)\n ", "Ctrl+PAGEDOWN");
+
+	INIT_BIND(sample_list, convert_signed_unsigned, "Convert signed to/from unsigned samples", "Alt+A");
+	INIT_BIND(sample_list, pre_loop_cut, "Pre-loop cut sample", "Alt+B");
+	INIT_BIND(sample_list, clear_name_and_filename, "Clear sample name & filename (only in sample list)", "Alt+C");
+	INIT_BIND(sample_list, delete_sample, "Delete sample", "Alt+D");
+	INIT_BIND(sample_list, downmix_to_mono, "Downmix stero sample to mono", "Alt+Shift+D");
+	INIT_BIND(sample_list, resize_sample_with_interpolation, "Resize sample (with interpolation)", "Alt+E");
+	INIT_BIND(sample_list, resize_sample_without_interpolation, "Resize sample (without interpolation)", "Alt+F");
+	INIT_BIND(sample_list, reverse_sample, "Reverse sample", "Alt+G");
+	INIT_BIND(sample_list, centralise_sample, "Centralise sample", "Alt+H");
+	INIT_BIND(sample_list, invert_sample, "Invert sample", "Alt+I");
+	INIT_BIND(sample_list, post_loop_cut, "Post-loop cut sample", "Alt+L");
+	INIT_BIND(sample_list, sample_amplifier, "Sample amplifier", "ALT+M");
+	INIT_BIND(sample_list, toggle_multichannel_playback, "Toggle multichannel playback", "Alt+N");
+	INIT_BIND(sample_list, save_sample_to_disk_it, "Save current sample to disk (IT format)", "Alt+O");
+	INIT_BIND(sample_list, copy_sample, "Copy sample", "Alt+P");
+	INIT_BIND(sample_list, toggle_sample_quality, "Toggle sample quality", "Alt+Q");
+	INIT_BIND(sample_list, replace_current_sample, "Replace current sample in song", "Alt+R");
+	INIT_BIND(sample_list, swap_sample, "Swap sample (in song also)", "Alt+S");
+	INIT_BIND(sample_list, save_sample_to_disk_format_select, "Save current sample to disk (choose format)", "Alt+T");
+	INIT_BIND(sample_list, save_sample_to_disk_raw, "Save current sample to disk (RAW format)", "Alt+W");
+	INIT_BIND(sample_list, exchange_sample, "Exchange sample (only in sample list)", "Alt+X");
+	INIT_BIND(sample_list, text_to_sample, "Text to sample data", "Alt+Y");
+	INIT_BIND(sample_list, edit_create_adlib_sample, "Edit/create AdLib (FM) sample", "Alt+Z");
+	INIT_BIND(sample_list, load_adlib_sample_by_midi_patch_number, "Load predefined AdLib sample by MIDI patch number\n ", "Alt+Shift+Z");
+
+	INIT_BIND(sample_list, insert_sample_slot, "Insert sample slot (updates pattern data)", "Alt+INSERT");
+	INIT_BIND(sample_list, remove_sample_slot, "Remove sample slot (updates pattern data)", "Alt+DELETE");
+	INIT_BIND(sample_list, swap_sample_with_previous, "Swap sample with previous", "Alt+UP");
+	INIT_BIND(sample_list, swap_sample_with_next, "Swap sample with next\n ", "Alt+DOWN");
+
+	INIT_BIND(sample_list, toggle_current_sample, "Toggle current sample", "Alt+F9");
+	INIT_BIND(sample_list, solo_current_sample, "Solo current sample\n ", "Alt+F10");
+
+	INIT_BIND(sample_list, decrease_playback_channel, "Decrease playback channel", "Alt+Shift+COMMA");
+	INIT_BIND(sample_list, increase_playback_channel, "Increase playback channel\n ", "Alt+Shift+PERIOD");
+
+	INIT_BIND(sample_list, increase_c5_frequency_1_octave, "Increase C-5 frequency by 1 octave", "Alt+KP_PLUS");
+	INIT_BIND(sample_list, decrease_c5_frequency_1_octave, "Decrease C-5 frequency by 1 octave", "Alt+KP_MINUS");
+	INIT_BIND(sample_list, increase_c5_frequency_1_semitone, "Increase C-5 frequency by 1 semitone", "Ctrl+KP_PLUS");
+	INIT_BIND(sample_list, decrease_c5_frequency_1_semitone, "Decrease C-5 frequency by 1 semitone\n ", "Ctrl+KP_MINUS");
+
+	INIT_BIND(sample_list, insert_arrow_up, "Insert arrow up (on list)", "Ctrl+BACKSPACE");
+
+	return 1;
+}

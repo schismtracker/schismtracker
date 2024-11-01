@@ -69,50 +69,35 @@ static void log_draw_const(void)
 
 static int log_handle_key(struct key_event * k)
 {
-	switch (k->sym) {
-	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	if (KEY_PRESSED_OR_REPEATED(global, nav_up)) {
 		top_line--;
-		break;
-	case SDLK_PAGEUP:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_up)) {
 		top_line -= 15;
-		break;
-	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_down)) {
 		top_line++;
-		break;
-	case SDLK_PAGEDOWN:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_page_down)) {
 		top_line += 15;
-		break;
-	case SDLK_HOME:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		top_line = 0;
-		break;
-	case SDLK_END:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		top_line = last_line;
-		break;
-	default:
-		if (k->state == KEY_PRESS) {
-			if (k->mouse == MOUSE_SCROLL_UP) {
-				top_line -= MOUSE_SCROLL_LINES;
-				break;
-			} else if (k->mouse == MOUSE_SCROLL_DOWN) {
-				top_line += MOUSE_SCROLL_LINES;
-				break;
+	} else {
+		switch (k->sym) {
+		default:
+			if (k->state == KEY_PRESS) {
+				if (k->mouse == MOUSE_SCROLL_UP) {
+					top_line -= MOUSE_SCROLL_LINES;
+					break;
+				} else if (k->mouse == MOUSE_SCROLL_DOWN) {
+					top_line += MOUSE_SCROLL_LINES;
+					break;
+				}
 			}
-		}
 
-		return 0;
-	};
+			return 0;
+		};
+	}
+
 	top_line = CLAMP(top_line, 0, (last_line-32));
 	if (top_line < 0) top_line = 0;
 	status.flags |= NEED_UPDATE;
@@ -142,7 +127,9 @@ static void log_redraw(void)
 
 void log_load_page(struct page *page)
 {
-	page->title = "Message Log Viewer (Ctrl-F11)";
+	char* shortcut_text = (char*)global_keybinds_list.global.schism_logging.shortcut_text_parens;
+	page->title = STR_CONCAT(2, "Message Log Viewer", shortcut_text);
+
 	page->draw_const = log_draw_const;
 	page->total_widgets = 1;
 	page->widgets = widgets_log;

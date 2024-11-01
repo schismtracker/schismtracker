@@ -100,6 +100,7 @@ uint8_t *charset_case_fold_to_set(const uint8_t *in, charset_t inset, charset_t 
 /* ------------------------------------------------------------------------ */
 
 /* charset-aware replacements for C stdlib functions */
+size_t charset_strlen(const uint8_t* in, charset_t inset);
 int charset_strcmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set);
 int charset_strcasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set);
 int charset_strncasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num);

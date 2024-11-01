@@ -1049,18 +1049,7 @@ static int info_page_handle_key(struct key_event * k)
 		return n;
 	}
 
-	/* hack to render this useful :) */
-	if (k->orig_sym == SDLK_KP_9) {
-		k->sym = SDLK_F9;
-	} else if (k->orig_sym == SDLK_KP_0) {
-		k->sym = SDLK_F10;
-	}
-
-	switch (k->sym) {
-	case SDLK_g:
-		if (k->state == KEY_PRESS)
-			return 1;
-
+	if (KEY_PRESSED(info_page, goto_playing_pattern)) {
 		set_current_channel(selected_channel);
 		order = song_get_current_order();
 
@@ -1075,151 +1064,70 @@ static int info_page_handle_key(struct key_event * k)
 			set_current_row(song_get_current_row());
 			set_page(PAGE_PATTERN_EDITOR);
 		}
-	       return 1;
-	case SDLK_v:
-		if (k->state == KEY_RELEASE)
-			return 1;
-
+	} else if(KEY_PRESSED(info_page, toggle_volume_velocity_bars)) {
 		velocity_mode = !velocity_mode;
 		status_text_flash("Using %s bars", (velocity_mode ? "velocity" : "volume"));
-		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_i:
-		if (k->state == KEY_RELEASE)
-			return 1;
-
+	} else if(KEY_PRESSED(info_page, toggle_sample_instrument_names)) {
 		instrument_names = !instrument_names;
 		status_text_flash("Using %s names", (instrument_names ? "instrument" : "sample"));
-		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_r:
-		if (k->mod & KMOD_ALT) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-
-			song_flip_stereo();
-			status_text_flash("Left/right outputs reversed");
-			return 1;
-		}
-		return 0;
-	case SDLK_PLUS:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(info_page, reverse_output_channels)) {
+		song_flip_stereo();
+		status_text_flash("Left/right outputs reversed");
+	} else if(KEY_PRESSED(info_page, goto_next_pattern)) {
 		if (song_get_mode() == MODE_PLAYING) {
 			song_set_current_order(song_get_current_order() + 1);
 		}
-		return 1;
-	case SDLK_MINUS:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(info_page, goto_previous_pattern)) {
 		if (song_get_mode() == MODE_PLAYING) {
 			song_set_current_order(song_get_current_order() - 1);
 		}
-		return 1;
-	case SDLK_q:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(info_page, toggle_channel_mute)) {
 		song_toggle_channel_mute(selected_channel - 1);
 		orderpan_recheck_muted_channels();
-		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_s:
-		if (k->state == KEY_RELEASE)
-			return 1;
-
-		if (k->mod & KMOD_ALT) {
-			song_toggle_stereo();
-			status_text_flash("Stereo %s", song_is_stereo()
-					  ? "Enabled" : "Disabled");
-		} else {
-			song_handle_channel_solo(selected_channel - 1);
-			orderpan_recheck_muted_channels();
-		}
-		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_SPACE:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(info_page, toggle_channel_mute_and_go_next)) {
 		song_toggle_channel_mute(selected_channel - 1);
 		if (selected_channel < 64)
 			selected_channel++;
 		orderpan_recheck_muted_channels();
-		break;
-	case SDLK_UP:
-		if (k->state == KEY_RELEASE)
+	} else if(KEY_PRESSED(info_page, solo_channel)) {
+		song_handle_channel_solo(selected_channel - 1);
+		orderpan_recheck_muted_channels();
+	} else if(KEY_PRESSED(info_page, toggle_stereo_playback)) {
+		song_toggle_stereo();
+		status_text_flash("Stereo %s", song_is_stereo()
+					? "Enabled" : "Disabled");
+	} else if(KEY_PRESSED_OR_REPEATED(info_page, move_window_base_up)) {
+		/* make the current window one line shorter, and give the line to the next window
+		below it. if the window is already as small as it can get (3 lines) or if it's
+		the last window, don't do anything. */
+		if (selected_window == num_windows - 1 || windows[selected_window].height == 3) {
 			return 1;
-		if (k->mod & KMOD_ALT) {
-			/* make the current window one line shorter, and give the line to the next window
-			below it. if the window is already as small as it can get (3 lines) or if it's
-			the last window, don't do anything. */
-			if (selected_window == num_windows - 1 || windows[selected_window].height == 3) {
-				return 1;
-			}
-			windows[selected_window].height--;
-			windows[selected_window + 1].height++;
-			break;
 		}
+		windows[selected_window].height--;
+		windows[selected_window + 1].height++;
+	} else if(KEY_PRESSED_OR_REPEATED(info_page, move_window_base_down)) {
+		/* expand the current window, taking a line from
+			* the next window down. BUT: don't do anything if
+			* (a) this is the last window, or (b) the next
+			* window is already as small as it can be (three
+			* lines). */
+		if (selected_window == num_windows - 1
+			|| windows[selected_window + 1].height == 3) {
+			return 1;
+		}
+		windows[selected_window].height++;
+		windows[selected_window + 1].height--;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_up) || KEY_PRESSED_OR_REPEATED(global, nav_left)) {
 		if (selected_channel > 1)
 			selected_channel--;
-		break;
-	case SDLK_LEFT:
-		if (!NO_MODIFIER(k->mod) && !(k->mod & KMOD_ALT))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (selected_channel > 1)
-			selected_channel--;
-		break;
-	case SDLK_DOWN:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (k->mod & KMOD_ALT) {
-			/* expand the current window, taking a line from
-			 * the next window down. BUT: don't do anything if
-			 * (a) this is the last window, or (b) the next
-			 * window is already as small as it can be (three
-			 * lines). */
-			if (selected_window == num_windows - 1
-			    || windows[selected_window + 1].height == 3) {
-				return 1;
-			}
-			windows[selected_window].height++;
-			windows[selected_window + 1].height--;
-			break;
-		}
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_down) || KEY_PRESSED_OR_REPEATED(global, nav_right)) {
 		if (selected_channel < 64)
 			selected_channel++;
-		break;
-	case SDLK_RIGHT:
-		if (!NO_MODIFIER(k->mod) && !(k->mod & KMOD_ALT))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (selected_channel < 64)
-			selected_channel++;
-		break;
-	case SDLK_HOME:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_home)) {
 		selected_channel = 1;
-		break;
-	case SDLK_END:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED_OR_REPEATED(global, nav_end)) {
 		selected_channel = song_find_last_channel();
-		break;
-	case SDLK_INSERT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(info_page, add_window)) {
 		/* add a new window, unless there's already five (the maximum)
 		or if the current window isn't big enough to split in half. */
 		if (num_windows == MAX_WINDOWS || (windows[selected_window].height < 6)) {
@@ -1240,12 +1148,7 @@ static int info_page_handle_key(struct key_event * k)
 			/* odd number? compensate. (the selected window gets the extra line) */
 			windows[selected_window + 1].height++;
 		}
-		break;
-	case SDLK_DELETE:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(info_page, delete_window)) {
 		/* delete the current window and give the extra space to the next window down.
 		if this is the only window, well then don't delete it ;) */
 		if (num_windows == 1)
@@ -1263,56 +1166,21 @@ static int info_page_handle_key(struct key_event * k)
 		num_windows--;
 		if (selected_window == num_windows)
 			selected_window--;
-		break;
-	case SDLK_PAGEUP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(info_page, change_window_type_up)) {
 		n = windows[selected_window].type;
 		if (n == 0)
 			n = NUM_WINDOW_TYPES;
 		n--;
 		windows[selected_window].type = n;
-		break;
-	case SDLK_PAGEDOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(info_page, change_window_type_down)) {
 		windows[selected_window].type = (windows[selected_window].type + 1) % NUM_WINDOW_TYPES;
-		break;
-	case SDLK_TAB:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (k->mod & KMOD_SHIFT) {
-			if (selected_window == 0)
-				selected_window = num_windows;
-			selected_window--;
-		} else {
-			selected_window = (selected_window + 1) % num_windows;
-		}
-		status.flags |= NEED_UPDATE;
-		return 1;
-	case SDLK_F9:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (k->mod & KMOD_ALT) {
-			song_toggle_channel_mute(selected_channel - 1);
-			orderpan_recheck_muted_channels();
-			return 1;
-		}
-		return 0;
-	case SDLK_F10:
-		if (k->mod & KMOD_ALT) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-			song_handle_channel_solo(selected_channel - 1);
-			orderpan_recheck_muted_channels();
-			return 1;
-		}
-		return 0;
-	default:
+	} else if(KEY_PRESSED(info_page, nav_next_window)) {
+		selected_window = (selected_window + 1) % num_windows;
+	} else if(KEY_PRESSED(info_page, nav_previous_window)) {
+		if (selected_window == 0)
+			selected_window = num_windows;
+		selected_window--;
+	} else {
 		return 0;
 	}
 
@@ -1331,11 +1199,43 @@ static void info_page_playback_update(void)
 
 void info_load_page(struct page *page)
 {
-	page->title = "Info Page (F5)";
+	char* shortcut_text = (char*)global_keybinds_list.global.play_information_or_play_song.shortcut_text_parens;
+	page->title = STR_CONCAT(2, "Info Page", shortcut_text);
+
 	page->playback_update = info_page_playback_update;
 	page->total_widgets = 1;
 	page->widgets = widgets_info;
 	page->help_index = HELP_INFO_PAGE;
 
 	widget_create_other(widgets_info + 0, 0, info_page_handle_key, NULL, info_page_redraw);
+}
+
+int info_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(info_page, "Info Page Keys.", PAGE_INFO);
+	INIT_BIND(info_page, add_window, "Add a new window", "INSERT");
+	INIT_BIND(info_page, delete_window, "Delete current window", "DELETE");
+	INIT_BIND(info_page, nav_next_window, "Move to next window", "TAB");
+	INIT_BIND(info_page, nav_previous_window, "Move to previous window", "Shift+TAB");
+	INIT_BIND(info_page, change_window_type_up, "Change window type up", "PAGEUP");
+	INIT_BIND(info_page, change_window_type_down, "Change window type down", "PAGEDOWN");
+	INIT_BIND(info_page, move_window_base_up, "Move window base up", "Alt+UP");
+	INIT_BIND(info_page, move_window_base_down, "Move window base down\n ", "Alt+DOWN");
+
+	INIT_BIND(info_page, toggle_volume_velocity_bars, "Toggle between volume/velocity bars", "V");
+	INIT_BIND(info_page, toggle_sample_instrument_names, "Toggle between sample/instrument names\n ", "I");
+
+	INIT_BIND(info_page, toggle_channel_mute, "Mute/unmute current channel", "Q");
+	INIT_BIND(info_page, toggle_channel_mute_and_go_next, "Mute/unmute current channel and go to next", "SPACE");
+	INIT_BIND(info_page, solo_channel, "Solo current channel\n ", "S");
+
+	INIT_BIND(info_page, goto_next_pattern, "Move forwards one pattern in song", "KP_PLUS");
+	INIT_BIND(info_page, goto_previous_pattern, "Move backwards one pattern in song\n ", "KP_MINUS");
+
+	INIT_BIND(info_page, toggle_stereo_playback, "Toggle stereo playback", "Alt+S");
+	INIT_BIND(info_page, reverse_output_channels, "Reverse output channels\n ", "Alt+R");
+
+	INIT_BIND(info_page, goto_playing_pattern, "Goto pattern currently playing", "G");
+
+	return 1;
 }

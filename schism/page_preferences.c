@@ -511,7 +511,9 @@ void preferences_load_page(struct page *page)
 
 	for (interp_modes = 0; interpolation_modes[interp_modes]; interp_modes++);
 
-	page->title = "Preferences (Shift-F5)";
+	char* shortcut_text = (char*)global_keybinds_list.global.preferences.shortcut_text_parens;
+	page->title = STR_CONCAT(2, "Preferences", shortcut_text);
+
 	page->draw_const = preferences_draw_const;
 	page->set_page = preferences_set_page;
 	page->total_widgets = 15 + interp_modes;

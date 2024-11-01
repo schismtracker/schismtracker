@@ -62,12 +62,18 @@ static SDL_atomic_t is_caps_pressed = {0};
 
 static void hid_callback(void *context, IOReturn result, void *sender, IOHIDValueRef value) {
 	IOHIDElementRef elem = IOHIDValueGetElement(value);
-	if (IOHIDElementGetUsagePage(elem) != kHIDPage_KeyboardOrKeypad
-		|| IOHIDElementGetUsage(elem) != kHIDUsage_KeyboardCapsLock)
+	if (IOHIDElementGetUsagePage(elem) != kHIDPage_KeyboardOrKeypad)
 		return;
 
 	const int pressed = IOHIDValueGetIntegerValue(value);
-	SDL_AtomicSet(&is_caps_pressed, !!pressed);
+
+	switch (IOHIDElementGetUsage(elem)) {
+	case kHIDUsage_KeyboardCapsLock:
+		SDL_AtomicSet(&is_caps_pressed, !!pressed);
+		break;
+	default:
+		break;
+	}
 }
 
 static CFDictionaryRef create_hid_device(uint32_t page, uint32_t usage) {
@@ -127,8 +133,13 @@ static void init_hid_callback(void) {
 	IOHIDManagerSetDeviceMatchingMultiple(hid_manager, matches);
 	IOHIDManagerRegisterInputValueCallback(hid_manager, hid_callback, NULL);
 	IOHIDManagerScheduleWithRunLoop(hid_manager, CFRunLoopGetMain(), kCFRunLoopDefaultMode);
-	if (IOHIDManagerOpen(hid_manager, kIOHIDOptionsTypeNone) == kIOReturnSuccess)
+
+	int success = IOHIDManagerOpen(hid_manager, kIOHIDOptionsTypeNone);
+
+	if (success == kIOReturnSuccess)
 		goto cleanup;
+
+	printf("%d\n", success);
 
 fail:
 	quit_hid_callback();

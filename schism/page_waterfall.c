@@ -424,126 +424,71 @@ static int waterfall_handle_key(struct key_event *k)
 		}
 	}
 
-	switch (k->sym) {
-	case SDLK_s:
-		if (k->mod & KMOD_ALT) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-
-			song_toggle_stereo();
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
-		return 0;
-	case SDLK_m:
-		if (k->mod & KMOD_ALT) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-			mono = !mono;
-			return 1;
-		}
-		return 0;
-	case SDLK_LEFT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+	if (KEY_PRESSED(waterfall, song_toggle_stereo)) {
+		song_toggle_stereo();
+		status.flags |= NEED_UPDATE;
+		return 1;
+	} else if (KEY_PRESSED(waterfall, view_toggle_mono)) {
+		mono = !mono;
+		return 1;
+	} else if (KEY_PRESSED_OR_REPEATED(waterfall, decrease_sensitivity)) {
 		noisefloor-=4;
-		break;
-	case SDLK_RIGHT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED_OR_REPEATED(waterfall, increase_sensitivity)) {
 		noisefloor+=4;
-		break;
-	case SDLK_g:
-		if (k->mod & KMOD_ALT) {
-			if (k->state == KEY_PRESS)
-				return 1;
-
-			order = song_get_current_order();
-			if (song_get_mode() == MODE_PLAYING) {
-				n = current_song->orderlist[order];
-			} else {
-				n = song_get_playing_pattern();
-			}
-			if (n < 200) {
-				set_current_order(order);
-				set_current_pattern(n);
-				set_current_row(song_get_current_row());
-				set_page(PAGE_PATTERN_EDITOR);
-			}
-			return 1;
+	} else if (KEY_PRESSED(waterfall, goto_pattern_edit)) {
+		order = song_get_current_order();
+		if (song_get_mode() == MODE_PLAYING) {
+			n = current_song->orderlist[order];
+		} else {
+			n = song_get_playing_pattern();
 		}
-		return 0;
-	case SDLK_r:
-		if (k->mod & KMOD_ALT) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-
-			song_flip_stereo();
-			return 1;
+		if (n < 200) {
+			set_current_order(order);
+			set_current_pattern(n);
+			set_current_row(song_get_current_row());
+			set_page(PAGE_PATTERN_EDITOR);
 		}
-		return 0;
-	case SDLK_PLUS:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+		return 1;
+	} else if (KEY_PRESSED(waterfall, song_flip_stereo)) {
+		song_flip_stereo();
+		return 1;
+	} else if (KEY_PRESSED(waterfall, goto_next_order)) {
 		if (song_get_mode() == MODE_PLAYING) {
 			song_set_current_order(song_get_current_order() + 1);
 		}
 		return 1;
-	case SDLK_MINUS:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(waterfall, goto_previous_order)) {
 		if (song_get_mode() == MODE_PLAYING) {
 			song_set_current_order(song_get_current_order() - 1);
 		}
 		return 1;
-	case SDLK_SEMICOLON:
-	case SDLK_COLON:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		if (song_is_instrument_mode()) {
-			instrument_set(instrument_get_current() - 1);
-		} else {
-			sample_set(sample_get_current() - 1);
-		}
-		return 1;
-	case SDLK_QUOTE:
-	case SDLK_QUOTEDBL:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(waterfall, goto_next_instrument)) {
 		if (song_is_instrument_mode()) {
 			instrument_set(instrument_get_current() + 1);
 		} else {
 			sample_set(sample_get_current() + 1);
 		}
 		return 1;
-	case SDLK_COMMA:
-	case SDLK_LESS:
-		if (k->state == KEY_RELEASE)
-			return 1;
-		song_change_current_play_channel(-1, 0);
+	} else if (KEY_PRESSED(waterfall, goto_previous_instrument)) {
+		if (song_is_instrument_mode()) {
+			instrument_set(instrument_get_current() - 1);
+		} else {
+			sample_set(sample_get_current() - 1);
+		}
 		return 1;
-	case SDLK_PERIOD:
-	case SDLK_GREATER:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if (KEY_PRESSED(waterfall, goto_next_channel)) {
 		song_change_current_play_channel(1, 0);
 		return 1;
-	default:
+	} else if (KEY_PRESSED(waterfall, goto_previous_channel)) {
+		song_change_current_play_channel(-1, 0);
+		return 1;
+	} else {
 		return 0;
-	};
+	}
 
 	noisefloor = CLAMP(noisefloor, 36, 96);
 	return 1;
 }
-
 
 static struct widget waterfall_widget_hack[1];
 static void do_nil(void) {}
@@ -561,4 +506,22 @@ void waterfall_load_page(struct page *page)
 	page->total_widgets = 1;
 	page->widgets = waterfall_widget_hack;
 	widget_create_other(waterfall_widget_hack, 0, waterfall_handle_key, NULL, do_nil);
+}
+
+int waterfall_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(waterfall, "Waterfall Keys.", PAGE_WATERFALL);
+	INIT_BIND(waterfall, song_toggle_stereo, "Toggle song stereo/mono", "Alt+S");
+	INIT_BIND(waterfall, song_flip_stereo, "Flip song left/right", "Alt+R");
+	INIT_BIND(waterfall, view_toggle_mono, "Toggle mono display", "Alt+M");
+	INIT_BIND(waterfall, decrease_sensitivity, "Decrease sensitivity", "LEFT");
+	INIT_BIND(waterfall, increase_sensitivity, "Increase sensitivity", "RIGHT");
+	INIT_BIND(waterfall, goto_previous_order, "Play previous order (while playing)", "MINUS,KP_MINUS");
+	INIT_BIND(waterfall, goto_next_order, "Play next order (while playing)", "PLUS,KP_PLUS");
+	INIT_BIND(waterfall, goto_previous_instrument, "Play previous instrument/sample (while playing)", "COLON,SEMICOLON");
+	INIT_BIND(waterfall, goto_next_instrument, "Play next instrument/sample (while playing)", "QUOTE,QUOTEDBL");
+	INIT_BIND(waterfall, goto_previous_channel, "Play previous channel (while playing)", "COMMA,LESS");
+	INIT_BIND(waterfall, goto_next_channel, "Play next channel (while playing)", "PERIOD,GREATER");
+	INIT_BIND(waterfall, goto_pattern_edit, "Go to current position in pattern editor", "Alt+G");
+	return 1;
 }

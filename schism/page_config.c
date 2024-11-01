@@ -221,7 +221,7 @@ static void change_video_settings(void)
 static void change_menu_bar_settings(void) {
 	cfg_video_want_menu_bar = widgets_config[14].d.togglebutton.state;
 
-	win32_toggle_menu(video_window());
+	win32_toggle_menu(video_window(), cfg_video_want_menu_bar);
 }
 #endif
 
@@ -289,7 +289,9 @@ static void config_set_page(void)
 /* --------------------------------------------------------------------- */
 void config_load_page(struct page *page)
 {
-	page->title = "System Configuration (Ctrl-F1)";
+	char* shortcut_text = (char*)global_keybinds_list.global.system_configure.shortcut_text_parens;
+	page->title = STR_CONCAT(2, "System Configuration", shortcut_text);
+
 	page->draw_const = config_draw_const;
 	page->set_page = config_set_page;
 #ifdef SCHISM_WIN32

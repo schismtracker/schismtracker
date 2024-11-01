@@ -156,42 +156,28 @@ static int midi_page_handle_key(struct key_event * k)
 		}
 	}
 
-	switch (k->sym) {
-	case SDLK_SPACE:
-		if (k->state == KEY_PRESS)
-			return 1;
+	if (KEY_PRESSED(midi, toggle_port)) {
 		toggle_port();
 		return 1;
-	case SDLK_PAGEUP:
+	} else if(KEY_PRESSED(global, nav_page_up)) {
 		new_port -= 13;
-		break;
-	case SDLK_PAGEDOWN:
+	} else if(KEY_PRESSED(global, nav_page_down)) {
 		new_port += 13;
-		break;
-	case SDLK_HOME:
+	} else if(KEY_PRESSED(global, nav_home)) {
 		new_port = 0;
-		break;
-	case SDLK_END:
+	} else if(KEY_PRESSED(global, nav_end)) {
 		new_port = midi_engine_port_count() - 1;
-		break;
-	case SDLK_UP:
+	} else if(KEY_PRESSED(global, nav_up)) {
 		new_port--;
-		break;
-	case SDLK_DOWN:
+	} else if(KEY_PRESSED(global, nav_down)) {
 		new_port++;
-		break;
-	case SDLK_TAB:
-		if (k->state == KEY_RELEASE)
-			return 1;
+	} else if(KEY_PRESSED(global, nav_tab)) {
 		widget_change_focus_to(1);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	default:
+	} else {
 		if (!k->mouse) return 0;
-		break;
-	};
-	if (k->state == KEY_RELEASE)
-		return 0;
+	}
 
 	if (new_port != current_port) {
 		int sz = midi_engine_port_count() - 1;
@@ -313,7 +299,9 @@ static void midi_page_draw_portlist(void)
 
 void midi_load_page(struct page *page)
 {
-	page->title = "MIDI Screen (Shift-F1)";
+	char* shortcut_text = (char*)global_keybinds_list.global.midi.shortcut_text_parens;
+	page->title = STR_CONCAT(2, "MIDI Screen", shortcut_text);
+
 	page->draw_const = midi_page_redraw;
 	page->song_changed_cb = NULL;
 	page->predraw_hook = NULL;
@@ -348,3 +336,9 @@ void midi_load_page(struct page *page)
 		cfg_midipage_save, "Save Output Configuration", 2);
 }
 
+int midi_load_keybinds(cfg_file_t* cfg)
+{
+	INIT_SECTION(midi, "Midi Keys.", PAGE_MIDI);
+	INIT_BIND(midi, toggle_port, "Toggle port", "SPACE");
+	return 1;
+}
