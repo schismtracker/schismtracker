@@ -40,7 +40,7 @@
  * specific key events so we have to do this manually through the
  * HID library. Annoying. */
 
-#define SCHISM_MACOSXHID_DEBUG
+// #define SCHISM_MACOSXHID_DEBUG
 
 struct hid_item_data {
 	IOHIDDeviceInterface **interface; // hm
@@ -72,8 +72,10 @@ static void hid_item_free(void)
 	while (hid_item_list) {
 		temp = hid_item_list;
 		hid_item_list = hid_item_list->next;
-		if (temp->data.interface)
-			IODestroyPlugInInterface((IOCFPlugInInterface **)temp->data.interface);
+		if (temp->data.interface) {
+			(*temp->data.interface)->close(temp->data.interface);
+			(*temp->data.interface)->Release(temp->data.interface);
+		}
 		free(temp);
 	}
 }
