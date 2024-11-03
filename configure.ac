@@ -172,15 +172,13 @@ AC_SUBST([UTF8PROC_CFLAGS])
 AC_SUBST([UTF8PROC_LIBS])
 
 dnl Functions
-AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp mmap nice unsetenv dup fnmatch mkstemp localtime_r umask execl fork)
+AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp nice unsetenv dup fnmatch mkstemp localtime_r umask execl fork)
 AM_CONDITIONAL([NEED_ASPRINTF], [test "x$ac_cv_func_asprintf" = "xno"])
 AM_CONDITIONAL([NEED_VASPRINTF], [test "x$ac_cv_func_vasprintf" = "xno"])
 AM_CONDITIONAL([NEED_MEMCMP], [test "x$ac_cv_func_memcmp" = "xno"])
 AM_CONDITIONAL([NEED_STRPTIME], [test "x$ac_cv_func_strptime" = "xno"])
 AM_CONDITIONAL([NEED_MKSTEMP], [test "x$ac_cv_func_mkstemp" = "xno"])
 AM_CONDITIONAL([NEED_LOCALTIME_R], [test "x$ac_cv_func_localtime_r" = "xno"])
-
-AM_CONDITIONAL([USE_MMAP], [test "$ac_cv_func_mmap" = "yes"])
 
 dnl Headers, typedef crap, et al.
 AC_CHECK_HEADERS(sys/time.h dirent.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/socket.h sys/soundcard.h poll.h sys/poll.h)
@@ -189,6 +187,15 @@ AM_CONDITIONAL([USE_OSS], [false])
 if test "x$ac_cv_header_sys_soundcard_h" = "xyes"; then
 	AM_CONDITIONAL([USE_OSS], [true])
 	AC_DEFINE([USE_OSS], [1], [Open Sound System MIDI support])
+fi
+
+AC_CHECK_FUNC([mmap], [have_mmap=yes], [have_mmap=no])
+AC_CHECK_HEADER([sys/mman.h], [have_sys_mman_h=yes], [have_sys_mman_h=no])
+
+AM_CONDITIONAL([USE_MMAP], [false])
+if test "x$have_mmap" = "xyes" && test "x$have_sys_mman_h" = "xyes"; then
+	AM_CONDITIONAL([USE_MMAP], [true])
+	AC_DEFINE([HAVE_MMAP], [1], [Have mmap system call])
 fi
 
 AC_C_CONST
@@ -200,15 +207,15 @@ AC_STRUCT_TM
 dnl -----------------------------------------------------------------------
 
 dnl -lm
-
-saved_LIBS="$LIBS"
-AC_SEARCH_LIBS([powf], [m])
-LIBS="$saved_LIBS"
-if test "x$ac_cv_search_powf" = "xno"; then
-	AC_MSG_ERROR([*** Couldn't find a standard math library.])
-elif ! test "x$ac_cv_search_powf" = "xnone required"; then
-	AC_SUBST([LIB_MATH], ["$ac_cv_search_powf"])
-fi
+dnl
+dnl saved_LIBS="$LIBS"
+dnl AC_SEARCH_LIBS([powf], [m])
+dnl LIBS="$saved_LIBS"
+dnl if test "x$ac_cv_search_powf" = "xno"; then
+dnl 	AC_MSG_ERROR([*** Couldn't find a standard math library.])
+dnl elif ! test "x$ac_cv_search_powf" = "xnone required"; then
+dnl 	AC_SUBST([LIB_MATH], ["$ac_cv_search_powf"])
+dnl fi
 
 dnl -----------------------------------------------------------------------
 
@@ -225,7 +232,7 @@ case "${host_os}" in
 	darwin*)
 		AC_MSG_RESULT([found Darwin host])
 
-		AC_SUBST([OSX_LDADD], ["-lSDL2main -framework Cocoa -framework CoreAudio -framework CoreMIDI -framework IOKit"])
+		AC_SUBST([OSX_LDADD], ["-framework Cocoa -framework CoreAudio -framework CoreMIDI -framework IOKit"])
 
 		use_macosx=yes
 		AC_DEFINE([SCHISM_MACOSX], [1], [Mac OS X])

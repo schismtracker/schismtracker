@@ -30,60 +30,66 @@
 #include "page.h"
 #include "widget.h"
 
+#include <IOKit/IOCFPlugIn.h>
 #include <IOKit/hid/IOHIDLib.h>
+#include <IOKit/hid/IOHIDKeys.h>
+#include <IOKit/hid/IOHIDUsageTables.h>
 
 /* --------------------------------------------------------- */
-/* Handle Caps Lock and other oddities. Much of the HID code is
- * stolen from SDL. */
+/* Handle Caps Lock and other oddities; Cocoa doesn't send very
+ * specific key events so we have to do this manually through the
+ * HID library. Annoying. */
 
-/*
-  Simple DirectMedia Layer
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+#define SCHISM_MACOSXHID_DEBUG
 
-  This software is provided 'as-is', without any express or implied
-  warranty.  In no event will the authors be held liable for any damages
-  arising from the use of this software.
+struct hid_item_data {
+	IOHIDDeviceInterface **interface; // hm
 
-  Permission is granted to anyone to use this software for any purpose,
-  including commercial applications, and to alter it and redistribute it
-  freely, subject to the following restrictions:
+	struct {
+		IOHIDElementCookie caps_lock;
+	} cookies;
+};
 
-  1. The origin of this software must not be misrepresented; you must not
-	 claim that you wrote the original software. If you use this software
-	 in a product, an acknowledgment in the product documentation would be
-	 appreciated but is not required.
-  2. Altered source versions must be plainly marked as such, and must not be
-	 misrepresented as being the original software.
-  3. This notice may not be removed or altered from any source distribution.
-*/
+struct hid_item_node {
+	struct hid_item_data data;
+	struct hid_item_node *next;
+};
 
-static IOHIDManagerRef hid_manager = NULL;
-static SDL_atomic_t is_caps_pressed = {0};
+static struct hid_item_node *hid_item_list = NULL;
 
-static void hid_callback(void *context, IOReturn result, void *sender, IOHIDValueRef value) {
-	IOHIDElementRef elem = IOHIDValueGetElement(value);
-	if (IOHIDElementGetUsagePage(elem) != kHIDPage_KeyboardOrKeypad
-		|| IOHIDElementGetUsage(elem) != kHIDUsage_KeyboardCapsLock)
-		return;
+static void hid_item_insert(struct hid_item_data *data)
+{
+	struct hid_item_node *node = mem_alloc(sizeof(*node));
+	memcpy(&node->data, data, sizeof(node->data));
+	node->next = hid_item_list;
+	hid_item_list = node;
+}
 
-	const int pressed = IOHIDValueGetIntegerValue(value);
-	SDL_AtomicSet(&is_caps_pressed, !!pressed);
+static void hid_item_free(void)
+{
+	struct hid_item_node* temp;
+
+	while (hid_item_list) {
+		temp = hid_item_list;
+		hid_item_list = hid_item_list->next;
+		if (temp->data.interface)
+			IODestroyPlugInInterface((IOCFPlugInInterface **)temp->data.interface);
+		free(temp);
+	}
 }
 
 static CFDictionaryRef create_hid_device(uint32_t page, uint32_t usage) {
-	CFMutableDictionaryRef dict = CFDictionaryCreateMutable(
-		kCFAllocatorDefault, 0,
-		&kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks
-	);
+	CFMutableDictionaryRef dict = IOServiceMatching(kIOHIDDeviceKey);
 	if (dict) {
 		CFNumberRef number = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &page);
 		if (number) {
-			CFDictionarySetValue(dict, CFSTR(kIOHIDDeviceUsagePageKey), number);
+			CFDictionarySetValue(dict, CFSTR(kIOHIDPrimaryUsagePageKey), number);
 			CFRelease(number);
 			number = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &usage);
 			if (number) {
-				CFDictionarySetValue(dict, CFSTR(kIOHIDDeviceUsageKey), number);
+				CFDictionarySetValue(dict, CFSTR(kIOHIDPrimaryUsageKey), number);
 				CFRelease(number);
+				CFRetain(dict);
 				return dict;
 			}
 		}
@@ -93,55 +99,212 @@ static CFDictionaryRef create_hid_device(uint32_t page, uint32_t usage) {
 }
 
 static void quit_hid_callback(void) {
-	if (!hid_manager)
-		return;
+	hid_item_free();
+}
 
-	IOHIDManagerUnscheduleFromRunLoop(hid_manager, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
-	IOHIDManagerRegisterInputValueCallback(hid_manager, NULL, NULL);
-	IOHIDManagerClose(hid_manager, 0);
-	CFRelease(hid_manager);
-	hid_manager = NULL;
+static void process_hid_element(const void *value, struct hid_item_data *data)
+{
+	if (CFGetTypeID(value) != CFDictionaryGetTypeID()) {
+#ifdef SCHISM_MACOSXHID_DEBUG
+		printf("MACOSX HID HID element isn't a dictionary?\n");
+#endif
+		return; // err
+	}
+
+	CFDictionaryRef dict = (CFDictionaryRef)value;
+
+	uint32_t element_type = 0, usage_page = 0, usage = 0, cookie = 0;
+
+	{
+		CFTypeRef type_ref;
+
+		// element type
+		type_ref = CFDictionaryGetValue(dict, CFSTR(kIOHIDElementTypeKey));
+		if (type_ref) CFNumberGetValue(type_ref, kCFNumberIntType, &element_type);
+
+		// usage page
+		type_ref = CFDictionaryGetValue(dict, CFSTR(kIOHIDElementUsagePageKey));
+		if (type_ref) CFNumberGetValue(type_ref, kCFNumberIntType, &usage_page);
+
+		// usage page
+		type_ref = CFDictionaryGetValue(dict, CFSTR(kIOHIDElementUsageKey));
+		if (type_ref) CFNumberGetValue(type_ref, kCFNumberIntType, &usage);
+
+		// cookie! (mmm delicious...)
+		type_ref = CFDictionaryGetValue(dict, CFSTR(kIOHIDElementCookieKey));
+		if (type_ref) CFNumberGetValue(type_ref, kCFNumberIntType, &cookie);
+	}
+
+#ifdef SCHISM_MACOSXHID_DEBUG
+	printf("got element with type %x, usage page %x, usage %x, and cookie %x\n", element_type, usage_page, usage, cookie);
+#endif
+
+	switch (element_type) {
+	// Mac OS X defines these as buttons, which makes sense
+	// considering a keyboard is in essense just a giant
+	// basket case of buttons...
+	case kIOHIDElementTypeInput_Button:
+		switch (usage_page) {
+		case kHIDUsage_GD_Keyboard:
+		case kHIDUsage_GD_Keypad:
+			switch (usage) {
+			case kHIDUsage_KeyboardCapsLock:
+#ifdef SCHISM_MACOSXHID_DEBUG
+				puts("MACOSX HID: found caps lock key");
+#endif
+				data->cookies.caps_lock = (IOHIDElementCookie)cookie;
+				break;
+			default:
+				// don't care about other cookies for now
+				break;
+			}
+			break;
+		default:
+			// should never ever happen
+			break;
+		}
+		break;
+	case kIOHIDElementTypeCollection: {
+		// ugh
+		CFTypeRef element = CFDictionaryGetValue(dict, CFSTR(kIOHIDElementKey));
+		if (!element || CFGetTypeID(element) != CFArrayGetTypeID())
+			break; // what?
+
+		for (int i = 0; i < CFArrayGetCount(element); i++)
+			process_hid_element(CFArrayGetValueAtIndex(element, i), data);
+
+		break;
+	}
+	default:
+		break;
+	}
+}
+
+static void add_hid_device(io_object_t hid_device)
+{
+	struct hid_item_data item = {0};
+
+	CFMutableDictionaryRef hid_properties = NULL;
+
+	kern_return_t result = IORegistryEntryCreateCFProperties(hid_device, &hid_properties, kCFAllocatorDefault, kNilOptions);
+	if (result != KERN_SUCCESS)
+		goto fail;
+
+	// fill in the interface
+	{
+		SInt32 score = 0; // dunno what this is for
+
+		// receive the interface (this is like IUnknown * on windows or something)
+		IOCFPlugInInterface **plugin_interface = NULL;
+
+		result = IOCreatePlugInInterfaceForService(hid_device, kIOHIDDeviceUserClientTypeID, kIOCFPlugInInterfaceID, &plugin_interface, &score);
+
+		if (result != KERN_SUCCESS) {
+#ifdef SCHISM_MACOSXHID_DEBUG
+			printf("MACOSX HID IOCreatePlugInInterfaceForService failed: %d\n", result);
+#endif
+			goto fail;
+		}
+
+		// yapfest to get the real interface we want
+		if ((*plugin_interface)->QueryInterface(plugin_interface, CFUUIDGetUUIDBytes(kIOHIDDeviceInterfaceID), (void *)&(item.interface)) == S_OK) {
+			// and NOW open it, the option bits are unused I think ?
+			result = (*item.interface)->open(item.interface, 0);
+			if (result != kIOReturnSuccess) {
+#ifdef SCHISM_MACOSXHID_DEBUG
+				printf("MACOSX HID opening interface failed failed: %d\n", result);
+#endif
+				IODestroyPlugInInterface((IOCFPlugInInterface **)item.interface);
+				goto fail;
+			}
+		} else {
+			IODestroyPlugInInterface(plugin_interface);
+			goto fail;
+		}
+	}
+
+	// now fill in the cookies
+	{
+		// search for the caps lock element...
+		CFTypeRef element = CFDictionaryGetValue(hid_properties, CFSTR(kIOHIDElementKey));
+		if (!element || CFGetTypeID(element) != CFArrayGetTypeID()) {
+#ifdef SCHISM_MACOSXHID_DEBUG
+			printf("MACOSX HID no elements?\n");
+#endif
+			goto fail; // whoops
+		}
+
+		for (int i = 0; i < CFArrayGetCount(element); i++)
+			process_hid_element(CFArrayGetValueAtIndex(element, i), &item);
+	}
+
+	hid_item_insert(&item);
+
+fail:
+	if (hid_properties)
+		CFRelease(hid_properties);
+}
+
+static void add_hid_devices(mach_port_t master_port, uint32_t page, uint32_t usage)
+{
+	IOReturn res;
+	io_iterator_t hid_iterator = 0;
+
+	CFDictionaryRef device = create_hid_device(page, usage);
+	if (!device)
+		goto end;
+
+	res = IOServiceGetMatchingServices(master_port, device, &hid_iterator);
+
+	if (res != kIOReturnSuccess) {
+#ifdef SCHISM_MACOSXHID_DEBUG
+		printf("MACOSX HID IOServiceGetMatchingServices: %d\n", res);
+#endif
+		goto end;
+	}
+
+	if (!hid_iterator) // paranoia at its finest
+		goto end;
+
+	{
+		// iterate over each object and add it to our list of HID devices
+		io_object_t hid_object = 0;
+
+		while ((hid_object = IOIteratorNext(hid_iterator))) {
+#ifdef SCHISM_MACOSXHID_DEBUG
+			printf("MACOSX HID device found...\n");
+#endif
+			add_hid_device(hid_object);
+			IOObjectRelease(hid_object);
+		}
+	}
+
+end:
+	if (device)
+		CFRelease(device);
+
+	if (hid_iterator)
+		IOObjectRelease(hid_iterator);
 }
 
 static void init_hid_callback(void) {
-	hid_manager = IOHIDManagerCreate(kCFAllocatorDefault, kIOHIDOptionsTypeNone);
-	if (!hid_manager)
-		return;
+	kern_return_t res;
+	mach_port_t master_port = MACH_PORT_NULL;
 
-	CFDictionaryRef keyboard = NULL, keypad = NULL;
-	CFArrayRef matches = NULL;
+	res = IOMasterPort(MACH_PORT_NULL, &master_port);
 
-	keyboard = create_hid_device(kHIDPage_GenericDesktop, kHIDUsage_GD_Keyboard);
-	if (!keyboard)
+	if (res != kIOReturnSuccess) {
+#ifdef SCHISM_MACOSXHID_DEBUG
+		printf("MACOSX HID failed to get master port: %d\n", res);
+#endif
 		goto fail;
+	}
 
-	keypad = create_hid_device(kHIDPage_GenericDesktop, kHIDUsage_GD_Keypad);
-	if (!keypad)
-		goto fail;
-
-	CFDictionaryRef matches_list[] = { keyboard, keypad };
-	matches = CFArrayCreate(kCFAllocatorDefault, (const void **)matches_list, 2, NULL);
-	if (!matches)
-		goto fail;
-
-	IOHIDManagerSetDeviceMatchingMultiple(hid_manager, matches);
-	IOHIDManagerRegisterInputValueCallback(hid_manager, hid_callback, NULL);
-	IOHIDManagerScheduleWithRunLoop(hid_manager, CFRunLoopGetMain(), kCFRunLoopDefaultMode);
-	if (IOHIDManagerOpen(hid_manager, kIOHIDOptionsTypeNone) == kIOReturnSuccess)
-		goto cleanup;
+	add_hid_devices(master_port, kHIDPage_GenericDesktop, kHIDUsage_GD_Keyboard);
+	add_hid_devices(master_port, kHIDPage_GenericDesktop, kHIDUsage_GD_Keypad);
 
 fail:
-	quit_hid_callback();
-
-cleanup:
-	if (matches)
-		CFRelease(matches);
-
-	if (keypad)
-		CFRelease(keypad);
-
-	if (keyboard)
-		CFRelease(keyboard);
+	return;
 }
 
 /* --------------------------------------------------------- */
@@ -227,9 +390,34 @@ void macosx_sysinit(UNUSED int *pargc, UNUSED char ***pargv) {
 }
 
 void macosx_get_modkey(UNUSED int *mk) {
-	int caps = SDL_AtomicGet(&is_caps_pressed);
+	int caps_pressed = 0;
 
-	if (caps)
+	struct hid_item_node *node;
+
+	for (node = hid_item_list; node; node = node->next) {
+		IOHIDEventStruct event;
+
+#ifdef SCHISM_MACOSXHID_DEBUG
+		printf("MACOSX HID: checking for mods on HID item\n");
+#endif
+
+		IOReturn res = (*node->data.interface)->getElementValue(node->data.interface, node->data.cookies.caps_lock, &event);
+
+		if (res != kIOReturnSuccess) {
+#ifdef SCHISM_MACOSXHID_DEBUG
+			printf("MACOSX HID getElementValue: %d\n", res);
+#endif
+			continue; //huh?
+		}
+
+		caps_pressed |= !!(event.value);
+	}
+
+#ifdef SCHISM_MACOSXHID_DEBUG
+	printf("was caps pressed?: %s\n", caps_pressed ? "yes" : "no");
+#endif
+
+	if (caps_pressed)
 		status.flags |= CAPS_PRESSED;
 	else
 		status.flags &= ~CAPS_PRESSED;
