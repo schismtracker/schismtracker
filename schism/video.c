@@ -149,7 +149,6 @@ struct video_cf {
 	SDL_Window *window;
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
-	unsigned char *framebuf;
 
 	int width, height;
 
@@ -224,7 +223,8 @@ void video_report(void)
 
 void video_redraw_texture(void)
 {
-	SDL_DestroyTexture(video.texture);
+	if (video.texture)
+		SDL_DestroyTexture(video.texture);
 	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
 }
 
@@ -304,8 +304,7 @@ void video_startup(void)
 
 	video.window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width, video.height, SDL_WINDOW_RESIZABLE);
 	video.renderer = SDL_CreateRenderer(video.window, -1, 0);
-	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
-	video.framebuf = calloc(NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT, sizeof(uint32_t));
+	video_redraw_texture();
 
 	/* Aspect ratio correction if it's wanted */
 	if (cfg_video_want_fixed)
@@ -379,7 +378,7 @@ int video_is_wm_available(void)
 	return !!SDL_GetWindowWMInfo(video.window, &info);
 }
 
-static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, unsigned int mouseline[80], unsigned int mouseline_mask[80])
+static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, uint32_t mouseline[80], uint32_t mouseline_mask[80])
 {
 	struct mouse_cursor *cursor = &cursors[video.mouse.shape];
 
@@ -394,8 +393,8 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 		return;
 	}
 
-	unsigned int scenter = ceil(cursor->center_x / 8.0);
-	unsigned int swidth  = ceil(cursor->width    / 8.0);
+	unsigned int scenter = (cursor->center_x / 8) + (cursor->center_x % 8 != 0);
+	unsigned int swidth  = (cursor->width    / 8) + (cursor->width    % 8 != 0);
 	unsigned int centeroffset = cursor->center_x % 8;
 
 	unsigned int z  = cursor->pointer[y - video.mouse.y + cursor->center_y];
@@ -416,7 +415,7 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 	mouseline_mask[x] = zm >> (8 * (swidth - scenter + 1)) & 0xFF;
 
 	// draw the parts of the cursor sticking out to the left
-	unsigned int temp = (cursor->center_x < v) ? 0 : ceil((cursor->center_x - v) / 8.0);
+	unsigned int temp = (cursor->center_x < v) ? 0 : ((cursor->center_x - v) / 8) + ((cursor->center_x - v) % 8 != 0);
 	for (int i = 1; i <= temp && x >= i; i++) {
 		mouseline[x-i]      = z  >> (8 * (swidth - scenter + 1 + i)) & 0xFF;
 		mouseline_mask[x-i] = zm >> (8 * (swidth - scenter + 1 + i)) & 0xFF;
@@ -430,12 +429,12 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 	}
 }
 
-static void _blit11(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
+static void _blit11(unsigned char *pixels, int pitch, unsigned int *tpal)
 {
 	const unsigned int mouseline_x = (video.mouse.x / 8);
 	const unsigned int mouseline_v = (video.mouse.x % 8);
-	unsigned int mouseline[80];
-	unsigned int mouseline_mask[80];
+	uint32_t mouseline[80];
+	uint32_t mouseline_mask[80];
 
 	for (unsigned int y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
 		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask);
@@ -446,7 +445,6 @@ static void _blit11(unsigned char *pixels, unsigned int pitch, unsigned int *tpa
 
 void video_blit(void)
 {
-	static const unsigned int pitch = NATIVE_SCREEN_WIDTH * sizeof(Uint32);
 	SDL_Rect dstrect;
 
 	if (cfg_video_want_fixed) {
@@ -458,10 +456,15 @@ void video_blit(void)
 		};
 	}
 
-	_blit11(video.framebuf, pitch, video.pal);
-
 	SDL_RenderClear(video.renderer);
-	SDL_UpdateTexture(video.texture, NULL, video.framebuf, pitch);
+	{
+		unsigned char *pixels;
+		int pitch;
+
+		SDL_LockTexture(video.texture, NULL, (void **)&pixels, &pitch);
+		_blit11(pixels, pitch, video.pal);
+		SDL_UnlockTexture(video.texture);
+	}
 	SDL_RenderCopy(video.renderer, video.texture, NULL, (cfg_video_want_fixed) ? &dstrect : NULL);
 	SDL_RenderPresent(video.renderer);
 }
