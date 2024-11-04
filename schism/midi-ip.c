@@ -264,7 +264,7 @@ static int _ip_thread(struct midi_provider *p)
 			if (!real_num_ports) {
 				//Since the thread is not finished in this case (maybe it should),
 				//we put a delay to prevent the thread using all the cpu.
-				SDL_Delay(1000);
+				msleep(1000);
 			}
 		}
 
