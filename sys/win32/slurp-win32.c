@@ -82,7 +82,7 @@ static int win32_error_unmap_(slurp_t *slurp, const char *filename, const char *
 int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
 {
 	wchar_t* filename_w = NULL;
-	if (charset_iconv((const uint8_t *)filename, (uint8_t **)&filename_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+	if (charset_iconv(filename, &filename_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
 		return win32_error_unmap_(slurp, filename, "MultiByteToWideChar");
 
 	slurp->internal.memory.interfaces.win32.file = CreateFileW(filename_w, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);

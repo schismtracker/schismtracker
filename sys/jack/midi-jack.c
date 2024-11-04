@@ -173,9 +173,6 @@ struct jack_midi {
 };
 
 static void _jack_send(UNUSED struct midi_port *p, const unsigned char *data, unsigned int len, unsigned int delay) {
-	if (len <= 1) /* ignore real-time messages for now */
-		return;
-
 	if (len + sizeof(len) > ringbuffer_out_max_write)
 		return;
 
@@ -184,6 +181,8 @@ static void _jack_send(UNUSED struct midi_port *p, const unsigned char *data, un
 
 	JACK_jack_ringbuffer_write(ringbuffer_out, (const char*)&len, sizeof(len));
 	JACK_jack_ringbuffer_write(ringbuffer_out, (const char*)data, len);
+
+	(void)delay;
 }
 
 static int _jack_start(struct midi_port *p) {
@@ -276,7 +275,7 @@ static int _jack_thread(struct midi_provider *p)
 			}
 		}
 
-		usleep(1000);
+		msleep(1);
 	}
 
 	return 0;

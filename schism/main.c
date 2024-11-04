@@ -916,7 +916,7 @@ static void event_loop(void)
 		/* delay until there's an event OR 10 ms have passed */
 		int t;
 		for (t = 0; t < 10 && !SDL_PollEvent(NULL); t++)
-			SDL_Delay(1);
+			msleep(1);
 	}
 	
 	schism_exit(0);
