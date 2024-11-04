@@ -299,6 +299,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	song_voice_t *c;
 	song_sample_t *s = NULL;
 	song_instrument_t *i = NULL;
+	int chan_internal = 0;
 
 	if (chan < 1) {
 		if (chan == KEYJAZZ_CHAN_CURRENT) {
@@ -311,10 +312,12 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 				if (!keyjazz_chan_to_note[chan])
 					break;
 		}
+		// Back to the keyjazz range
+		chan_internal = chan + KEYJAZZ_VOICES_OFFSET - 1;
 	}
 
-	// back to the keyjazz range
-	int chan_internal = chan + KEYJAZZ_VOICES_OFFSET - 1;
+	// If no channel was selected, go back to the 0-63 range
+	chan_internal = chan - 1;
 
 	// hm
 	assert(chan_internal < MAX_VOICES);

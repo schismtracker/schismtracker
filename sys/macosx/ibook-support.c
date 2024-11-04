@@ -41,7 +41,6 @@
 
 int macosx_ibook_fnswitch(int setting)
 {
-	/* XXX can this be removed? */
 	kern_return_t kr;
 	mach_port_t mp;
 	io_service_t so;

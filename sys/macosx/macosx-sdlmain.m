@@ -174,7 +174,9 @@ static int macosx_did_finderlaunch;
 	/* Set the working directory to the .app's parent directory */
 	[self setupWorkingDirectory: (BOOL)macosx_did_finderlaunch];
 
-	exit(SDL_main(*_NSGetArgc(), *_NSGetArgv()));
+	/* If we launched from the Finder we have extra arguments that we
+	 * don't care about that will trip up the regular main function. */
+	exit(SDL_main(macosx_did_finderlaunch ? 1 : *_NSGetArgc(), *_NSGetArgv()));
 }
 
 @end /* @implementation SchismTracker */
