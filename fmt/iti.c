@@ -164,7 +164,6 @@ static uint32_t load_it_envelope(song_envelope_t *env, slurp_t *fp, int envtype,
 	for (size_t i = 0; i < ARRAY_SIZE(itenv.nodes); i++) {
 		slurp_read(fp, &itenv.nodes[i].value, sizeof(itenv.nodes[i].value));
 		slurp_read(fp, &itenv.nodes[i].tick, sizeof(itenv.nodes[i].tick));
-		itenv.nodes[i].tick = bswapLE16(itenv.nodes[i].tick);
 	}
 	slurp_read(fp, &itenv.reserved, sizeof(itenv.reserved));
 
