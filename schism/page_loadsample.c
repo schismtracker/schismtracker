@@ -371,7 +371,7 @@ static void library_sample_set_page(void)
 
 static void file_list_draw(void)
 {
-	int n, i, pos, fg, bg;
+	int n, pos, fg, bg;
 	char buf[8];
 	dmoz_file_t *file;
 
@@ -647,7 +647,8 @@ static void do_delete_file(UNUSED void *data)
 	file_list_reposition();
 }
 
-static int file_list_handle_text_input(const uint8_t* text) {
+static int file_list_handle_text_input(const char *text)
+{
 	dmoz_file_t* f = flist.files[current_file];
 	for (; *text; text++) {
 		if (*text >= 32 && (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY)))) {

@@ -184,7 +184,7 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 
 			iff_chunk_read(&name, fp, title, sizeof(title));
 
-			if (file) file->title = strn_dup(title, sizeof(title));
+			if (file) file->title = strn_dup((const char *)title, sizeof(title));
 			if (smp) {
 				size_t len = MIN(sizeof(smp->name), sizeof(title));
 				memcpy(smp->name, title, len);
@@ -243,11 +243,11 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 		}
 
 		if (name.id) {
-			uint8_t title[name.size];
+			unsigned char title[name.size];
 
 			iff_chunk_read(&chunk, fp, title, sizeof(title));
 
-			if (file) file->title = strn_dup(title, sizeof(title));
+			if (file) file->title = strn_dup((const char *)title, sizeof(title));
 			if (smp) {
 				int len = MIN(sizeof(smp->name), sizeof(title));
 				memcpy(smp->name, title, len);

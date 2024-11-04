@@ -113,7 +113,7 @@ int fmt_iti_read_info(dmoz_file_t *file, slurp_t *fp)
 		return 0;
 
 	file->description = "Impulse Tracker Instrument";
-	file->title = strn_dup(iti.name, sizeof(iti.name));
+	file->title = strn_dup((const char *)iti.name, sizeof(iti.name));
 	file->type = TYPE_INST_ITI;
 
 	return 1;

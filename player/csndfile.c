@@ -638,14 +638,11 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 			// 8-bit data. Mostly the same as above, but a little bit simpler since
 			// there's no byteswapping, and the values can be written with putc.
 			const int8_t *data;
-			uint8_t c;
 
 			for (channel = 0; channel < stride; channel++) {
-				int v_old = 0;
-
-				data = (const int8_t *) sample->data + channel;
+				data = (const signed char *) sample->data + channel;
 				for (pos = 0; pos < len; pos++) {
-					disko_putc(fp, *data + add);
+					disko_putc(fp, data[pos] + add);
 					data += stride;
 				}
 			}
@@ -675,7 +672,6 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 			}
 		} else {
 			const int8_t *data;
-			int v_old = 0;
 
 			for (channel = 0; channel < stride; channel++) {
 				int v_old = 0;
@@ -1666,7 +1662,9 @@ void csf_export_s3m_effect(uint8_t *pcmd, uint8_t *pprm, int to_it)
 	case FX_SPEED:                 effect = 'A'; break;
 	case FX_POSITIONJUMP:          effect = 'B'; break;
 	case FX_PATTERNBREAK:          effect = 'C';
-					if (!to_it) param = ((param / 10) << 4) + (param % 10); break;
+		if (!to_it)
+			param = ((param / 10) << 4) + (param % 10);
+		break;
 	case FX_VOLUMESLIDE:           effect = 'D'; break;
 	case FX_PORTAMENTODOWN:        effect = 'E'; break;
 	case FX_PORTAMENTOUP:          effect = 'F'; break;

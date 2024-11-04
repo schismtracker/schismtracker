@@ -204,7 +204,7 @@ static void _backtab(void)
 }
 
 /* return: 1 = handled text, 0 = didn't */
-int widget_handle_text_input(const uint8_t* text_input) {
+int widget_handle_text_input(const char* text_input) {
 	struct widget* widget = &ACTIVE_WIDGET;
 	if (!widget)
 		return 0;

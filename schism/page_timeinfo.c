@@ -173,7 +173,6 @@ static void timeinfo_redraw(void)
 	{
 		// Current session
 		const time_t now = time(NULL);
-		char buf[12];
 
 		double secs_d = difftime(now, current_song->editstart.tv_sec);
 		uint64_t secs = (uint64_t)MAX(secs_d, 0);

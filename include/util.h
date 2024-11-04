@@ -55,6 +55,9 @@
 # if __has_attribute(__pure__)
 #  define PURE __attribute__((__pure__))
 # endif
+# if __has_attribute(__format__)
+#  define SCHISM_FORMAT(x) __attribute__((__format__ x))
+# endif
 #endif
 
 #if defined(__has_builtin)
@@ -81,6 +84,9 @@
 #endif
 #ifndef PURE
 # define PURE
+#endif
+#ifndef SCHISM_FORMAT
+# define SCHISM_FORMAT(x)
 #endif
 
 /* Path stuff that differs by platform */

@@ -51,7 +51,7 @@ int fmt_s3m_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	file->description = "Scream Tracker 3";
 	/*file->extension = str_dup("s3m");*/
-	file->title = strn_dup(title, sizeof(title));
+	file->title = strn_dup((const char *)title, sizeof(title));
 	file->type = TYPE_MODULE_S3M;
 	return 1;
 }

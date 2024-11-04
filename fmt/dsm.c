@@ -87,7 +87,7 @@ enum {
 
 int fmt_dsm_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	unsigned char riff[4], dsmf[4], title[20];
+	unsigned char riff[4], dsmf[4];
 
 	if (!(slurp_length(fp) > 40))
 		return 0;
@@ -109,7 +109,7 @@ int fmt_dsm_read_info(dmoz_file_t *file, slurp_t *fp)
 
 			iff_chunk_read(&chunk, fp, title, sizeof(title));
 
-			file->title = strn_dup(title, sizeof(title));
+			file->title = strn_dup((const char *)title, sizeof(title));
 			break;
 		}
 	}
@@ -162,13 +162,6 @@ static int dsm_chunk_inst_read(const void *data, size_t size, void *void_inst)
 #define READ_VALUE(name) \
 	do { if (slurp_read(&fp, &inst->name, sizeof(inst->name)) != sizeof(inst->name)) { unslurp(&fp); return 0; } } while (0)
 
-	char filename[13];
-	uint16_t flags;
-	uint8_t volume;
-	uint32_t length, loop_start, loop_end, address_ptr;
-	uint16_t c5speed, period;
-	char name[28];
-
 	READ_VALUE(filename);
 	READ_VALUE(flags);
 	READ_VALUE(volume);
@@ -208,7 +201,7 @@ static int dsm_process_pattern(const void *data, size_t size, void *userdata)
 	/* make sure our offset doesn't pass the length */
 #define DSM_ASSERT_OFFSET() \
 	if (slurp_eof(&fp)) { \
-		log_appendf(4, " WARNING: Offset (" PRId64 ") passed length (%zu) while parsing pattern!", slurp_tell(&fp), slurp_length(&fp)); \
+		log_appendf(4, " WARNING: Offset (%" PRId64 ") passed length (%zu) while parsing pattern!", slurp_tell(&fp), slurp_length(&fp)); \
 		return 0; \
 	}
 
@@ -288,8 +281,7 @@ static int dsm_process_pattern(const void *data, size_t size, void *userdata)
 
 int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
-	uint8_t riff[4], dsmf[4], chnpan[16];
-	size_t pos = 0;
+	unsigned char riff[4], dsmf[4], chnpan[16];
 	size_t s = 0, p = 0, n = 0;
 	uint16_t nord = 0, nsmp = 0, npat = 0, nchn = 0;
 	uint8_t chn_doesnt_match = 0;

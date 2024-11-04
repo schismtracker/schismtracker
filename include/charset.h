@@ -72,9 +72,9 @@ enum {
 
 typedef struct {
 	/* -- input, set by the caller */
-	const uint8_t *in;  /* input buffer */
-	size_t size;        /* size of the buffer, can be SIZE_MAX if unknown */
-	size_t offset;      /* current decoding offset, should always be set to zero */
+	const unsigned char *in;  /* input buffer */
+	size_t size;              /* size of the buffer, can be SIZE_MAX if unknown */
+	size_t offset;            /* current decoding offset, should always be set to zero */
 
 	/* -- output, decoder initializes these */
 	uint32_t codepoint; /* decoded codepoint if successful, undefined if not */
@@ -82,13 +82,13 @@ typedef struct {
 } charset_decode_t;
 
 int char_digraph(int k1, int k2);
-uint8_t char_unicode_to_cp437(unsigned int c);
+unsigned char char_unicode_to_cp437(uint32_t c);
 
 /* ------------------------------------------------------------------------ */
 
 /* unicode composing and case folding graciously provided by utf8proc */
-uint8_t *charset_compose_to_set(const uint8_t *in, charset_t inset, charset_t outset);
-uint8_t *charset_case_fold_to_set(const uint8_t *in, charset_t inset, charset_t outset);
+void *charset_compose_to_set(const void *in, charset_t inset, charset_t outset);
+void *charset_case_fold_to_set(const void *in, charset_t inset, charset_t outset);
 
 /* only provided for source compatibility and should be killed with fire */
 #define charset_compose(in, set)         charset_compose_to_set(in, set, set)
@@ -100,10 +100,10 @@ uint8_t *charset_case_fold_to_set(const uint8_t *in, charset_t inset, charset_t 
 /* ------------------------------------------------------------------------ */
 
 /* charset-aware replacements for C stdlib functions */
-int charset_strcmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set);
-int charset_strcasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set);
-int charset_strncasecmp(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num);
-size_t charset_strncasecmplen(const uint8_t* in1, charset_t in1set, const uint8_t* in2, charset_t in2set, size_t num);
+int charset_strcmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set);
+int charset_strcasecmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set);
+int charset_strncasecmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set, size_t num);
+size_t charset_strncasecmplen(const void* in1, charset_t in1set, const void* in2, charset_t in2set, size_t num);
 
 /* basic fnmatch */
 enum {
@@ -111,11 +111,11 @@ enum {
 	CHARSET_FNM_PERIOD   = (1 << 1),
 };
 
-int charset_fnmatch(const uint8_t *match, charset_t match_set, const uint8_t *str, charset_t str_set, int flags);
+int charset_fnmatch(const void *match, charset_t match_set, const void *str, charset_t str_set, int flags);
 
 /* iconv replacement */
 const char* charset_iconv_error_lookup(charset_error_t err);
-charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset);
+charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charset_t outset);
 
 /* character-by-character variant of charset_iconv; use as
  *     charset_decode_t decoder = {
@@ -146,15 +146,15 @@ charset_error_t charset_decode_next(charset_decode_t *decoder, charset_t inset);
  */
 #define CHARSET_EASY_MODE_EX(MOD, in, inset, outset, x) \
 	do { \
-		MOD uint8_t* out; \
-		charset_error_t err = charset_iconv(in, (uint8_t**)&out, inset, outset); \
+		MOD void* out; \
+		charset_error_t err = charset_iconv(in, &out, inset, outset); \
 		if (err) \
 			out = in; \
 	\
 		x \
 	\
 		if (!err) \
-			free((uint8_t*)out); \
+			free((void *)out); \
 	} while (0)
 
 #define CHARSET_EASY_MODE(in, inset, outset, x) CHARSET_EASY_MODE_EX(, in, inset, outset, x)

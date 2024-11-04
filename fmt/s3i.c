@@ -46,7 +46,6 @@ enum {
 static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 {
 	unsigned char magic[4];
-	uint16_t sw;
 	uint32_t dw;
 
 	if (slurp_length(fp) < 0x50)
@@ -78,7 +77,7 @@ static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 
 	if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
 		return 0;
-	smp->loop_start = bswapLE32(sw);
+	smp->loop_start = bswapLE32(dw);
 
 	if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
 		return 0;

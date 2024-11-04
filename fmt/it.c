@@ -127,15 +127,13 @@ int fmt_it_read_info(dmoz_file_t *file, slurp_t *fp)
 	file->description = (hdr.cmwt >= 0x214) ? "Compressed Impulse Tracker" : "Impulse Tracker";
 
 	/*file->extension = str_dup("it");*/
-	file->title = strn_dup(hdr.songname, sizeof(hdr.songname));
+	file->title = strn_dup((const char *)hdr.songname, sizeof(hdr.songname));
 	str_rtrim(file->title);
 	file->type = TYPE_MODULE_IT;
 	return 1;
 }
 
 /* --------------------------------------------------------------------- */
-
-static const uint8_t autovib_import[] = {VIB_SINE, VIB_RAMP_DOWN, VIB_SQUARE, VIB_RANDOM};
 
 /* pattern mask variable bits */
 enum {
@@ -276,7 +274,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		return LOAD_FORMAT_ERROR;
 	}
 
-	strncpy(song->title, hdr.songname, sizeof(hdr.songname));
+	strncpy(song->title, (char *)hdr.songname, sizeof(song->title));
 
 	str_rtrim(song->title);
 
@@ -611,7 +609,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		 * we can't even display those characters correctly anyway.
 		 *
 		 *  - paper */
-		uint8_t* tmp;
+		char *tmp;
 
 #define CONVERT(x, size) \
 	if (!charset_iconv(x, &tmp, CHARSET_WINDOWS1252, CHARSET_CP437)) { \

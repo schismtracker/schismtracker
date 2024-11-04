@@ -25,7 +25,7 @@
 
 #include <utf8proc.h>
 
-static inline uint8_t *charset_map_to_utf8(const uint8_t *in, charset_t inset, utf8proc_option_t option)
+static inline void *charset_map_to_utf8(const void *in, charset_t inset, utf8proc_option_t option)
 {
 	const uint8_t *utf8;
 	uint8_t *alloc_ptr = NULL;
@@ -47,7 +47,7 @@ static inline uint8_t *charset_map_to_utf8(const uint8_t *in, charset_t inset, u
 	return success ? mapped : NULL;
 }
 
-static inline uint8_t *charset_map_to_set(const uint8_t *in, charset_t inset, charset_t outset, utf8proc_option_t option)
+static inline void *charset_map_to_set(const void *in, charset_t inset, charset_t outset, utf8proc_option_t option)
 {
 	uint8_t *mapped_utf8 = charset_map_to_utf8(in, inset, option);
 	if (!mapped_utf8)
@@ -66,12 +66,12 @@ static inline uint8_t *charset_map_to_set(const uint8_t *in, charset_t inset, ch
 	return (success ? mapped : NULL);
 }
 
-uint8_t *charset_compose_to_set(const uint8_t *in, charset_t inset, charset_t outset)
+void *charset_compose_to_set(const void *in, charset_t inset, charset_t outset)
 {
 	return charset_map_to_set(in, inset, outset, UTF8PROC_NULLTERM | UTF8PROC_COMPOSE);
 }
 
-uint8_t *charset_case_fold_to_set(const uint8_t *in, charset_t inset, charset_t outset)
+void *charset_case_fold_to_set(const void *in, charset_t inset, charset_t outset)
 {
 	return charset_map_to_set(in, inset, outset, UTF8PROC_NULLTERM | UTF8PROC_CASEFOLD | UTF8PROC_DECOMPOSE);
 }

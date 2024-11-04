@@ -71,7 +71,7 @@ void kbd_set_key_repeat(int delay, int rate);
 /* text <-> keydowns */
 
 void kbd_push_pending_keydown(struct key_event* kk);
-void kbd_pop_pending_keydown(const uint8_t* text);
+void kbd_pop_pending_keydown(const char* text);
 int kbd_have_pending_keydown(void);
 
 #endif /* SCHISM_KEYBOARD_H_ */

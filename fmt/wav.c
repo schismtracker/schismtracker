@@ -143,7 +143,6 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 	iff_chunk_t fmt_chunk = {0}, data_chunk = {0};
 	wave_format_t fmt;
 	wave_file_header_t phdr;
-	int have_format = 0;
 
 	if (slurp_read(fp, &phdr.id_RIFF, sizeof(phdr.id_RIFF)) != sizeof(phdr.id_RIFF)
 		|| slurp_read(fp, &phdr.filesize, sizeof(phdr.filesize)) != sizeof(phdr.filesize)

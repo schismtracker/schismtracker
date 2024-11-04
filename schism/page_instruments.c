@@ -427,10 +427,10 @@ static void instrument_list_draw_list(void)
 	}
 }
 
-static int instrument_list_handle_text_input_on_list(const uint8_t* text) {
+static int instrument_list_handle_text_input_on_list(const char* text) {
 	int success = 0;
 	for (; *text; text++)
-		if (instrument_cursor_pos < 25 && instrument_list_add_char(*text))
+		if (instrument_cursor_pos < 25 && instrument_list_add_char(*(unsigned char *)text))
 			success = 1;
 	return success;
 }
@@ -696,7 +696,7 @@ static void note_trans_draw(void)
 		if (ins->sample_map[n]) {
 			str_from_num99(ins->sample_map[n], buf);
 		} else {
-			buf[0] = buf[1] = 173;
+			buf[0] = buf[1] = '\xAD';
 			buf[2] = 0;
 		}
 		draw_text(buf, 40, 16 + pos, 2, bg);

@@ -247,7 +247,7 @@ void widget_create_panbar(struct widget *w, int x, int y, int next_up, int next_
 }
 
 void widget_create_other(struct widget *w, int next_tab, int (*i_handle_key) (struct key_event *k),
-		  int (*i_handle_text_input) (const uint8_t* text), void (*i_redraw) (void))
+		  int (*i_handle_text_input) (const char* text), void (*i_redraw) (void))
 {
 	w->type = WIDGET_OTHER;
 	w->accept_text = 0;
@@ -322,12 +322,8 @@ static void textentry_reposition(struct widget *w)
 	}
 }
 
-int widget_textentry_add_char(struct widget *w, uint16_t unicode)
+int widget_textentry_add_char(struct widget *w, unsigned char c)
 {
-	uint8_t c = char_unicode_to_cp437(unicode);
-	if (c == 0)
-		return 0;
-
 	text_add_char(w->d.textentry.text, c, &(w->d.textentry.cursor_pos), w->d.textentry.max_length);
 
 	if (w->changed) w->changed();
@@ -336,12 +332,12 @@ int widget_textentry_add_char(struct widget *w, uint16_t unicode)
 	return 1;
 }
 
-int widget_textentry_add_text(struct widget *w, const uint8_t* text) {
+int widget_textentry_add_text(struct widget *w, const char* text) {
 	if (!text)
 		return 0;
 
 	for (; *text; text++)
-		if (!widget_textentry_add_char(w, *text))
+		if (!widget_textentry_add_char(w, *(unsigned char *)text))
 			return 0;
 
 	return 1;
@@ -365,7 +361,7 @@ static inline int fast_pow10(int n) {
 	return (n < (sizeof(tens)/sizeof(tens[0]))) ? tens[n] : pow(10, n);
 }
 
-int widget_numentry_handle_text(struct widget *w, const uint8_t* text_input) {
+int widget_numentry_handle_text(struct widget *w, const char* text_input) {
 	if (text_input == NULL)
 		return 0;
 

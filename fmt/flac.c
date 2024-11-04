@@ -330,7 +330,7 @@ static int flac_load(struct flac_readdata* read_data, int meta_only)
 
 	schism_FLAC_stream_decoder_set_metadata_respond_all(decoder);
 
-	FLAC__StreamDecoderInitStatus initStatus =
+	FLAC__StreamDecoderInitStatus status =
 		schism_FLAC_stream_decoder_init_stream(
 			decoder,
 			read_on_read, read_on_seek,
@@ -339,6 +339,8 @@ static int flac_load(struct flac_readdata* read_data, int meta_only)
 			read_on_meta, read_on_error,
 			read_data
 		);
+	if (status != FLAC__STREAM_DECODER_INIT_STATUS_OK)
+		return 0;
 
 	/* flac function names are such a yapfest */
 	if (!(meta_only ? schism_FLAC_stream_decoder_process_until_end_of_metadata(decoder) : schism_FLAC_stream_decoder_process_until_end_of_stream(decoder))) {

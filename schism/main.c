@@ -417,7 +417,7 @@ static void _do_clipboard_paste_op(SDL_Event *e)
 	&& ACTIVE_PAGE.clipboard_paste(e->user.code,
 				e->user.data1)) return;
 
-	handle_text_input((uint8_t*)e->user.data1);
+	handle_text_input(e->user.data1);
 }
 
 static void key_event_reset(struct key_event *kk, int start_x, int start_y)
@@ -447,7 +447,6 @@ static void event_loop(void)
 	int downtrip;
 	int wheel_x;
 	int wheel_y;
-	int sawrep;
 	int fix_numlock_key;
 	int screensaver;
 	struct key_event kk;
@@ -482,7 +481,6 @@ static void event_loop(void)
 
 			key_event_reset(&kk, kk.sx, kk.sy);
 
-			sawrep = 0;
 			if (event.type == SDL_KEYDOWN || event.type == SDL_MOUSEBUTTONDOWN) {
 				kk.state = KEY_PRESS;
 			} else if (event.type == SDL_KEYUP || event.type == SDL_MOUSEBUTTONUP) {
@@ -507,9 +505,9 @@ static void event_loop(void)
 #define _ALTTRACKED_KMOD        0
 #endif
 			case SDL_TEXTINPUT: {
-				uint8_t* input_text = NULL;
+				char *input_text = NULL;
 
-				charset_error_t err = charset_iconv((uint8_t*)event.text.text, &input_text, CHARSET_UTF8, CHARSET_CP437);
+				charset_error_t err = charset_iconv(event.text.text, &input_text, CHARSET_UTF8, CHARSET_CP437);
 				if (err || !input_text) {
 					log_appendf(4, " [ERROR] failed to convert SDL text input event");
 					log_appendf(4, "  %s", event.text.text);

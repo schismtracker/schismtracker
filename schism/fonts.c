@@ -152,7 +152,6 @@ static int squeeze_8x16_font(slurp_t *fp)
 /* Hmm. I could've done better with this one. */
 int font_load(const char *filename)
 {
-	int res = -1;
 	uint8_t data[4];
 	char *font_file;
 	{

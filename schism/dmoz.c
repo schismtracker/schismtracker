@@ -1125,7 +1125,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 		path = FAILSAFE_PATH;
 	pathlen = strlen(path);
 
-#ifdef SCHISM_WII /* and Wii U maybe? *?
+#ifdef SCHISM_WII /* and Wii U maybe? */
 	/* awful hack: libfat's file reads bail if a device is given without a slash. */
 	if (strchr(path, ':') != NULL && strchr(path, '/') == NULL) {
 		int i;

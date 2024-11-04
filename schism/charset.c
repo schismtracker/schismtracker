@@ -130,8 +130,8 @@ int char_digraph(int k1, int k2)
 static void utf8_to_ucs4(charset_decode_t *decoder) {
 	DECODER_ASSERT_OVERFLOW(decoder, 1);
 
-	const uint8_t *in = decoder->in + decoder->offset;
-	const uint8_t c = *in;
+	const unsigned char *in = decoder->in + decoder->offset;
+	const unsigned char c = in[0];
 
 	if (c < 0x80) {
 		decoder->codepoint = c;
@@ -189,25 +189,25 @@ static void utf8_to_ucs4(charset_decode_t *decoder) {
 	static void utf16##x##_to_ucs4(charset_decode_t *decoder) { \
 		DECODER_ASSERT_OVERFLOW(decoder, sizeof(uint16_t)); \
 	\
-		const uint16_t* tmp_in = (const uint16_t*)(decoder->in + decoder->offset); \
-	\
-		uint16_t wc = tmp_in[0]; \
+		uint16_t wc; \
+		memcpy(&wc, decoder->in + decoder->offset, sizeof(wc)); \
 		wc = bswap##x##16(wc); \
+		decoder->offset += 2; \
 	\
 		if (wc < 0xD800 || wc > 0xDFFF) { \
 			decoder->codepoint = wc; \
 			if (!wc) \
 				decoder->state = DECODER_STATE_DONE; \
-			decoder->offset += 2; \
 		} else if (wc >= 0xD800 && wc <= 0xDBFF) { \
-			DECODER_ASSERT_OVERFLOW(decoder, sizeof(uint16_t) * 2); \
+			DECODER_ASSERT_OVERFLOW(decoder, sizeof(uint16_t)); \
 	\
-			uint16_t wc2 = tmp_in[1]; \
+			uint16_t wc2; \
+			memcpy(&wc2, decoder->in + decoder->offset, sizeof(wc2)); \
 			wc2 = bswap##x##16(wc2); \
+			decoder->offset += 2; \
 	\
 			if (wc2 >= 0xDC00 && wc2 <= 0xDFFF) { \
 				decoder->codepoint = 0x10000 + ((wc - 0xD800) << 10) + (wc2 - 0xDC00); \
-				decoder->offset += 4; \
 			} else decoder->state = DECODER_STATE_ILL_FORMED; \
 		} \
 	}
@@ -252,7 +252,7 @@ static void cp437_to_ucs4(charset_decode_t *decoder) {
 		0x00B0, 0x2219, 0x00B7, 0x221A, 0x207F, 0x00B2, 0x25A0, 0x00A0,
 	};
 
-	uint8_t c = decoder->in[decoder->offset++];
+	unsigned char c = decoder->in[decoder->offset++];
 	decoder->codepoint = (c < 0x80) ? c : cp437_table[c - 0x80];
 	decoder->state = c ? DECODER_STATE_NEED_MORE : DECODER_STATE_DONE;
 }
@@ -274,7 +274,7 @@ static void windows1252_to_ucs4(charset_decode_t *decoder) {
 		0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0x003F, 0x017E, 0x0178,
 	};
 
-	uint8_t c = decoder->in[decoder->offset++];
+	unsigned char c = decoder->in[decoder->offset++];
 	decoder->codepoint = (c >= 0x80 && c < 0xA0) ? windows1252_table[c - 0x80] : c;
 	decoder->state = c ? DECODER_STATE_NEED_MORE : DECODER_STATE_DONE;
 }
@@ -282,34 +282,33 @@ static void windows1252_to_ucs4(charset_decode_t *decoder) {
 static void do_nothing_ucs4(charset_decode_t *decoder) {
 	DECODER_ASSERT_OVERFLOW(decoder, 4);
 
-	uint32_t codepoint = *(uint32_t*)(decoder->in + decoder->offset);
-	decoder->codepoint = codepoint;
+	memcpy(&decoder->codepoint, decoder->in + decoder->offset, sizeof(uint32_t));
 	decoder->offset += 4;
-	decoder->state = codepoint ? DECODER_STATE_NEED_MORE : DECODER_STATE_DONE;
+	decoder->state = decoder->codepoint ? DECODER_STATE_NEED_MORE : DECODER_STATE_DONE;
 }
 
 /* ----------------------------------------------------- */
 
 #define CHARSET_ENCODE_ERROR (0)
 
-static size_t ucs4_to_utf8(uint32_t ch, uint8_t* out) {
+static size_t ucs4_to_utf8(uint32_t ch, unsigned char* out) {
 	size_t len = 0;
 
 	if (out) {
 		if (ch < 0x80) {
-			out[len++] = (uint8_t)ch;
+			out[len++] = (unsigned char)ch;
 		} else if (ch < 0x800) {
-			out[len++] = (uint8_t)((ch >> 6) | 0xC0);
-			out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
+			out[len++] = (unsigned char)((ch >> 6) | 0xC0);
+			out[len++] = (unsigned char)((ch & 0x3F) | 0x80);
 		} else if (ch < 0x10000) {
-			out[len++] = (uint8_t)((ch >> 12) | 0xE0);
-			out[len++] = (uint8_t)(((ch >> 6) & 0x3F) | 0x80);
-			out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
+			out[len++] = (unsigned char)((ch >> 12) | 0xE0);
+			out[len++] = (unsigned char)(((ch >> 6) & 0x3F) | 0x80);
+			out[len++] = (unsigned char)((ch & 0x3F) | 0x80);
 		} else if (ch < 0x110000) {
-			out[len++] = (uint8_t)((ch >> 18) | 0xF0);
-			out[len++] = (uint8_t)(((ch >> 12) & 0x3F) | 0x80);
-			out[len++] = (uint8_t)(((ch >> 6) & 0x3F) | 0x80);
-			out[len++] = (uint8_t)((ch & 0x3F) | 0x80);
+			out[len++] = (unsigned char)((ch >> 18) | 0xF0);
+			out[len++] = (unsigned char)(((ch >> 12) & 0x3F) | 0x80);
+			out[len++] = (unsigned char)(((ch >> 6) & 0x3F) | 0x80);
+			out[len++] = (unsigned char)((ch & 0x3F) | 0x80);
 		} else return 0; /* ZOMG NO WAY */
 	} else {
 		if (ch < 0x80)      len += 1;
@@ -323,7 +322,7 @@ static size_t ucs4_to_utf8(uint32_t ch, uint8_t* out) {
 }
 
 /* this is useful elsewhere. */
-uint8_t char_unicode_to_cp437(uint32_t ch)
+unsigned char char_unicode_to_cp437(uint32_t ch)
 {
 	/* not really correct, but whatever */
 	if (ch <= 0x80)
@@ -481,7 +480,7 @@ uint8_t char_unicode_to_cp437(uint32_t ch)
 	};
 }
 
-static size_t ucs4_to_cp437(uint32_t ch, uint8_t* out) {
+static size_t ucs4_to_cp437(uint32_t ch, unsigned char* out) {
 	if (out)
 		*out = char_unicode_to_cp437(ch);
 
@@ -489,7 +488,7 @@ static size_t ucs4_to_cp437(uint32_t ch, uint8_t* out) {
 }
 
 #define ENCODE_UTF16_VARIANT(x) \
-	static size_t ucs4_to_utf16##x(uint32_t ch, uint8_t* out) { \
+	static size_t ucs4_to_utf16##x(uint32_t ch, unsigned char* out) { \
 		uint16_t *out16 = (uint16_t*)out; \
 		size_t len = 0; \
 	\
@@ -515,7 +514,7 @@ ENCODE_UTF16_VARIANT(BE)
 
 #undef ENCODE_UTF16_VARIANT
 
-static size_t ucs4_do_nothing(uint32_t ch, uint8_t* out) {
+static size_t ucs4_do_nothing(uint32_t ch, unsigned char* out) {
 	if (out)
 		*(uint32_t*)out = ch;
 
@@ -524,7 +523,7 @@ static size_t ucs4_do_nothing(uint32_t ch, uint8_t* out) {
 
 /* function LUT here */
 typedef void (*charset_conv_to_ucs4_func)(charset_decode_t *decoder);
-typedef size_t (*charset_conv_from_ucs4_func)(uint32_t, uint8_t*);
+typedef size_t (*charset_conv_from_ucs4_func)(uint32_t, unsigned char*);
 
 static charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 	[CHARSET_UTF8] = utf8_to_ucs4,
@@ -596,7 +595,7 @@ const char* charset_iconv_error_lookup(charset_error_t err) {
 }
 
 #define CHARSET_VARIATION(name) \
-	static charset_error_t charset_iconv_##name##_(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset)
+	static charset_error_t charset_iconv_##name##_(const void* in, void* out, charset_t inset, charset_t outset)
 
 /* our version of iconv; this has a much simpler API than the regular
  * iconv() because much of it isn't very necessary for our purposes
@@ -607,7 +606,7 @@ const char* charset_iconv_error_lookup(charset_error_t err) {
  * all input is expected to be NULL-terminated
  *
  * example usage:
- *     uint8_t *cp437 = some_buf, *utf8 = NULL;
+ *     unsigned char *cp437 = some_buf, *utf8 = NULL;
  *     charset_iconv(cp437, &utf8, CHARSET_CP437, CHARSET_UTF8);
  * 
  * [out] must be free'd by the caller */
@@ -637,8 +636,6 @@ CHARSET_VARIATION(internal) {
 			return CHARSET_ERROR_DECODE;
 		}
 
-		/* printf("result: %d, U+%04x, %zu\n", c, ch, in_needed); */
-
 		size_t out_needed = conv_from_ucs4_func(decoder.codepoint, NULL);
 		if (!out_needed) {
 			disko_memclose(&ds, 0);
@@ -654,7 +651,7 @@ CHARSET_VARIATION(internal) {
 
 	disko_memclose(&ds, 1);
 
-	*out = ds.data;
+	memcpy(out, &ds.data, sizeof(void *));
 
 	return CHARSET_ERROR_SUCCESS;
 }
@@ -745,13 +742,15 @@ CHARSET_VARIATION(sdl) {
 
 	disko_memclose(&ds, 1);
 
-	*out = ds.data;
+	memcpy(out, &ds.data, sizeof(void *));
 
 	return CHARSET_ERROR_SUCCESS;
 }
 
 /* XXX need to change this to take length in as well */
-charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset, charset_t outset) {
+charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charset_t outset) {
+	void *const null = NULL;
+
 	charset_error_t state;
 	if (!in)
 		return CHARSET_ERROR_NULLINPUT;
@@ -767,10 +766,10 @@ charset_error_t charset_iconv(const uint8_t* in, uint8_t** out, charset_t inset,
 	if (state == CHARSET_ERROR_SUCCESS) \
 		return state; \
 	if (state == CHARSET_ERROR_NOMEM) { \
-		*out = NULL; \
+		memcpy(out, &null, sizeof(void *)); \
 		return state; \
 	} \
-	*out = NULL;
+	memcpy(out, &null, sizeof(void *));
 
 	TRY_VARIATION(internal);
 	TRY_VARIATION(sdl);

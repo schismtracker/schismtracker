@@ -387,11 +387,9 @@ int fmt_xi_load_instrument(slurp_t *fp, int slot)
 
 int fmt_xi_save_instrument(disko_t *fp, song_t *song, song_instrument_t *ins)
 {
-	struct xi_file_header xi;
-	struct instrumentloader ii;
-	song_instrument_t *g;
+	struct xi_file_header xi = {0};
 	song_sample_t *smp;
-	int k, prevtick;
+	int k;
 
 	/* fill in sample numbers, epicly stolen from the iti code */
 	int xi_map[255];
@@ -418,7 +416,7 @@ int fmt_xi_save_instrument(disko_t *fp, song_t *song, song_instrument_t *ins)
 
 	/* now add header things */
 	memcpy(xi.header, "Extended Instrument: ", sizeof(xi.header));
-	strncpy(xi.name, ins->name, sizeof(ins->name));
+	strncpy((char *)xi.name, ins->name, sizeof(xi.name));
 	xi.magic = 0x1A;
 	memcpy(xi.tracker, "Schism Tracker", 14);
 	xi.version = bswapLE16(0x0102);

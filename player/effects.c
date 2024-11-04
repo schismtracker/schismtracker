@@ -170,7 +170,7 @@ int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, i
 	if (!frequency) return 0;
 	if (flags & SONG_LINEARSLIDES) {
 		int32_t old_frequency = frequency;
-		uint32_t n = abs(slide), delta = 0;
+		uint32_t n = abs(slide);
 		if (n > 255 * 4) n = 255 * 4;
 
 		if (slide > 0) {
@@ -1227,7 +1227,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 		}
 
 		if (penv->note_map[note - 1] > NOTE_LAST) return;
-		uint32_t n = penv->sample_map[note - 1];
+		//uint32_t n = penv->sample_map[note - 1];
 		psmp = csf_translate_keyboard(csf, penv, note, NULL);
 	} else if (csf->flags & SONG_INSTRUMENTMODE) {
 		if (!NOTE_IS_CONTROL(note))
@@ -1640,11 +1640,9 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 	data = chan->current_sample_data;
 	/* OpenMPT test case DNA-NoInstr.it */
 	ptr_instrument = instr > 0 ? csf->instruments[instr] : chan->ptr_instrument;
-	int dna_note = note;
 	if (ptr_instrument != NULL) {
         uint32_t n = ptr_instrument->sample_map[note - 1];
         /* MPT test case dct_smp_note_test.it */
-        dna_note = ptr_instrument->note_map[note - 1];
         if (n > 0 && n < MAX_SAMPLES)
         	data = csf->samples[n].data;
         else /* OpenMPT test case emptyslot.it */
@@ -2276,7 +2274,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 			// Instrument Change ?
 			if (instr) {
 				const song_sample_t *psmp = chan->ptr_sample;
-				const song_instrument_t *penv = chan->ptr_instrument;
+				//const song_instrument_t *penv = chan->ptr_instrument;
 
 				csf_instrument_change(csf, chan, instr, porta, 1);
 				if (csf->samples[instr].flags & CHN_ADLIB) {

@@ -44,7 +44,7 @@ int fmt_mf_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	file->description = "MoonFish";
 	/*file->extension = str_dup("mf");*/
-	file->title = strn_dup(title, title_length);
+	file->title = strn_dup((const char *)title, title_length);
 	file->type = TYPE_MODULE_MOD;    /* ??? */
 	return 1;
 }

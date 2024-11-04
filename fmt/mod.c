@@ -659,7 +659,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 						case FX_OFFSET: mod_fx = 9; break;
 						case FX_VOLUMESLIDE:
 							mod_fx = 0x0a;
-							if( (mod_fx_val & 0xf0) && (mod_fx_val & 0x0f) )
+							if( (mod_fx_val & 0xf0) && (mod_fx_val & 0x0f) ) {
 								if ((mod_fx_val & 0xf0) == 0xf0) { // fine volslide down!
 									mod_fx = 0x0e;
 									mod_fx_val &= 0xbf;
@@ -667,6 +667,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 									mod_fx = 0x0e;
 									mod_fx_val = 0xa0 | (mod_fx_val >> 4);
 								}
+							}
 							break;
 						case FX_POSITIONJUMP: mod_fx = 0x0b; break;
 						case FX_VOLUME: mod_fx = 0x0c; break;
@@ -703,7 +704,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 	// Now writing sample data
 	for (tmp[0] = tmp[1] = n = 0; (n < nsmp) && (n < 31); ++n) {
 		song_sample_t *smp = song->samples + (n + 1);
-		if (smp->data)
+		if (smp->data) {
 			if( (smp->flags & CHN_LOOP) && (smp->loop_start < smp->loop_end) && (smp->loop_end <= MIN(smp->length, 0x1FFFE)) ) {
 				csf_write_sample(fp, smp, SF(PCMS,8,M,LE), 0x1FFFE);
 			} else if (1 < smp->length) { // floor(smp->length / 2) MUST be positive!
@@ -713,6 +714,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 				disko_write(fp, tmp, 2);
 				disko_seek(fp, 0, SEEK_END);
 			}
+		}
 	}
 
 	/* announce all the things we broke - ripped from s3m.c */

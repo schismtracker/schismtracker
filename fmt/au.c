@@ -137,7 +137,7 @@ int fmt_au_read_info(dmoz_file_t *file, slurp_t *fp)
 		if (slurp_read(fp, title, extlen) != extlen)
 			return 0;
 
-		file->title = strn_dup(title, extlen);
+		file->title = strn_dup((const char *)title, extlen);
 	}
 
 	return 1;

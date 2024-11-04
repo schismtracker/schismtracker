@@ -216,7 +216,7 @@ struct widget_other {
 	 * this MUST be set to a valid function.
 	 * return value is 1 if the key was handled, 0 if not. */
 	int (*handle_key) (struct key_event * k);
-	int (*handle_text_input) (const uint8_t* text_input);
+	int (*handle_text_input) (const char* text_input);
 
 	/* also the widget drawing function can't possibly know how to
 	 * draw a custom widget, so it calls this instead.
@@ -300,7 +300,7 @@ struct page {
 	/* this catches any keys that the main handler doesn't deal with */
 	void (*handle_key) (struct key_event * k);
 	/* handle any text input events from SDL */
-	void (*handle_text_input) (const uint8_t* text_input);
+	void (*handle_text_input) (const char* text_input);
 	/* called when the page is set. this is for reloading the
 	 * directory in the file browsers. */
 	void (*set_page) (void);
