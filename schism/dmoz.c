@@ -355,8 +355,8 @@ int dmoz_path_rename(const char *old, const char *new, int overwrite)
 	/* XXX need an os_rename */
 #ifdef SCHISM_WIN32
 	wchar_t* old_w = NULL, *new_w = NULL;
-	if (charset_iconv((const uint8_t*)new, (uint8_t**)&new_w, CHARSET_UTF8, CHARSET_WCHAR_T)
-		|| charset_iconv((const uint8_t*)old, (uint8_t**)&old_w, CHARSET_UTF8, CHARSET_WCHAR_T)) {
+	if (charset_iconv(new, &new_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)
+		|| charset_iconv(old, &old_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
 		free(old_w);
 		free(new_w);
 		return -1;
@@ -445,10 +445,10 @@ char *dmoz_get_current_directory(void)
 {
 #ifdef SCHISM_WIN32
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
-	uint8_t* buf_utf8 = NULL;
+	char *buf_utf8 = NULL;
 
-	if (_wgetcwd(buf, PATH_MAX) && !charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
-		return (char*)buf_utf8;
+	if (_wgetcwd(buf, PATH_MAX) && !charset_iconv(buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
+		return buf_utf8;
 #else
 	char buf[PATH_MAX + 1] = {'\0'};
 
@@ -464,10 +464,10 @@ char *dmoz_get_home_directory(void)
 	return str_dup("PROGDIR:");
 #elif defined(SCHISM_WIN32)
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
-	uint8_t* buf_utf8 = NULL;
+	char *buf_utf8 = NULL;
 
-	if (SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK && !charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
-		return (char*)buf_utf8;
+	if (SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK && !charset_iconv(buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
+		return buf_utf8;
 #else
 	char *ptr = getenv("HOME");
 	if (ptr)
@@ -489,10 +489,10 @@ char *dmoz_get_dot_directory(void)
 {
 #ifdef SCHISM_WIN32
 	wchar_t buf[PATH_MAX + 1] = {L'\0'};
-	uint8_t* buf_utf8 = NULL;
+	char *buf_utf8 = NULL;
 	if (SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) == S_OK
-		&& !charset_iconv((uint8_t*)buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8))
-		return (char*)buf_utf8;
+		&& !charset_iconv(buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(buf)))
+		return buf_utf8;
 
 	// else fall back to home (but if this ever happens, things are really screwed...)
 #endif
@@ -1028,20 +1028,24 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 {
 #ifdef SCHISM_WIN32
 	wchar_t* path_w = NULL;
-	if (charset_iconv((uint8_t*)path, (uint8_t**)&path_w, CHARSET_UTF8, CHARSET_WCHAR_T))
+	if (charset_iconv(path, &path_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
 		return -1;
 
 	DWORD attrib = GetFileAttributesW(path_w);
 	if (attrib & FILE_ATTRIBUTE_DIRECTORY) {
 		free(path_w); /* don't need this anymore */
 
-		char* searchpath = dmoz_path_concat_len(path, "*", strlen(path), 1);
 		wchar_t* searchpath_w = NULL;
-		if (charset_iconv((uint8_t*)searchpath, (uint8_t**)&searchpath_w, CHARSET_UTF8, CHARSET_WCHAR_T)) {
+		{
+			char* searchpath = dmoz_path_concat_len(path, "*", strlen(path), 1);
+			
+			if (charset_iconv(searchpath, &searchpath_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+				free(searchpath);
+				return -1;
+			}
 			free(searchpath);
-			return -1;
 		}
-		free(searchpath);
+
 
 		WIN32_FIND_DATAW ffd = {0};
 		HANDLE find = FindFirstFileW(searchpath_w, &ffd);
@@ -1057,7 +1061,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 				continue;
 
 			char* filename = NULL;
-			if (charset_iconv((uint8_t*)ffd.cFileName, (uint8_t**)&filename, CHARSET_WCHAR_T, CHARSET_UTF8))
+			if (charset_iconv(ffd.cFileName, &filename, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(ffd.cFileName)))
 				continue;
 
 			char* fullpath = dmoz_path_concat_len(path, filename, strlen(path), strlen(filename));
