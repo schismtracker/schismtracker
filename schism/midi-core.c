@@ -618,12 +618,12 @@ void midi_queue_alloc(int buffer_length, int sample_size, int samples_per_second
 
 	// bytes per msec, rounded up
 	midims = sample_size * samples_per_second;
-	midims += (midims % 1000);
+	midims += 1000 - (midims % 1000);
 	midims /= 1000;
 
 	// number of msec in output buffer, rounded up
 	qlen = buffer_length * sample_size;
-	qlen += (qlen % midims);
+	qlen += midims - (qlen % midims);
 	qlen /= midims;
 
 	// ok, now we can allocate one entry for every msec
