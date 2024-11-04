@@ -687,7 +687,7 @@ static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t
 
 			found = 1;
 
-			charset_iconv((uint8_t*)prop_val_str, (uint8_t**)file->title, CHARSET_WCHAR_T, CHARSET_CP437);
+			charset_iconv(prop_val_str, file->title, CHARSET_WCHAR_T, CHARSET_CP437, SIZE_MAX);
 
 			CoTaskMemFree(prop_val_str);
 			PropVariantClear(&propval);
@@ -831,7 +831,7 @@ int fmt_win32mf_read_info(dmoz_file_t *file, slurp_t *fp)
 	if (!media_foundation_initialized)
 		return 0;
 
-	if (!file->path || charset_iconv(file->path, (uint8_t **)&url, CHARSET_UTF8, CHARSET_WCHAR_T))
+	if (!file->path || charset_iconv(file->path, &url, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
 		url = NULL;
 
 	if (!win32mf_start(&data, fp, url)) {
