@@ -269,10 +269,10 @@ int charset_fnmatch(const void *match, charset_t match_set, const void *str, cha
 		if (!str_ucs4)
 			goto charsetfail;
 	} else {
-		if (charset_iconv(match, &match_ucs4, match_set, CHARSET_UCS4))
+		if (charset_iconv(match, &match_ucs4, match_set, CHARSET_UCS4, SIZE_MAX))
 			goto charsetfail;
 
-		if (charset_iconv(str, &str_ucs4, str_set, CHARSET_UCS4))
+		if (charset_iconv(str, &str_ucs4, str_set, CHARSET_UCS4, SIZE_MAX))
 			goto charsetfail;
 	}
 

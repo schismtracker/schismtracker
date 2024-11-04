@@ -115,7 +115,7 @@ int charset_fnmatch(const void *match, charset_t match_set, const void *str, cha
 
 /* iconv replacement */
 const char* charset_iconv_error_lookup(charset_error_t err);
-charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charset_t outset);
+charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charset_t outset, size_t insize);
 
 /* character-by-character variant of charset_iconv; use as
  *     charset_decode_t decoder = {
@@ -147,7 +147,7 @@ charset_error_t charset_decode_next(charset_decode_t *decoder, charset_t inset);
 #define CHARSET_EASY_MODE_EX(MOD, in, inset, outset, x) \
 	do { \
 		MOD void* out; \
-		charset_error_t err = charset_iconv(in, &out, inset, outset); \
+		charset_error_t err = charset_iconv(in, &out, inset, outset, SIZE_MAX); \
 		if (err) \
 			out = in; \
 	\

@@ -81,7 +81,7 @@ static void _clippy_copy_to_sys(int cb)
 	out[j] = 0;
 
 	char *out_utf8 = NULL;
-	if (charset_iconv(out, &out_utf8, CHARSET_CP437, CHARSET_UTF8))
+	if (charset_iconv(out, &out_utf8, CHARSET_CP437, CHARSET_UTF8, SIZE_MAX))
 		return;
 
 	free(out);
@@ -125,7 +125,7 @@ static char *_internal_clippy_paste(int cb)
 
 				char* sel = SDL_GetPrimarySelectionText();
 
-				if (charset_iconv(sel, &_current_selection, CHARSET_UTF8, CHARSET_CP437))
+				if (charset_iconv(sel, &_current_selection, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
 					_current_selection = str_dup(sel);
 
 				SDL_free(sel);
@@ -141,7 +141,7 @@ static char *_internal_clippy_paste(int cb)
 
 				char *cb = SDL_GetClipboardText();
 
-				if (charset_iconv(cb, &_current_clipboard, CHARSET_UTF8, CHARSET_CP437))
+				if (charset_iconv(cb, &_current_clipboard, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
 					_current_clipboard = str_dup(cb);
 
 				SDL_free(cb);

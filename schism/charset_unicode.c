@@ -33,7 +33,7 @@ static inline void *charset_map_to_utf8(const void *in, charset_t inset, utf8pro
 	if (inset == CHARSET_UTF8) {
 		utf8 = in;
 	} else {
-		if (charset_iconv(in, &alloc_ptr, inset, CHARSET_UTF8))
+		if (charset_iconv(in, &alloc_ptr, inset, CHARSET_UTF8, SIZE_MAX))
 			return NULL;
 		utf8 = alloc_ptr;
 	}
@@ -59,7 +59,7 @@ static inline void *charset_map_to_set(const void *in, charset_t inset, charset_
 
 	uint8_t *mapped;
 
-	int success = (charset_iconv(mapped_utf8, &mapped, CHARSET_UTF8, outset) == CHARSET_ERROR_SUCCESS);
+	int success = (charset_iconv(mapped_utf8, &mapped, CHARSET_UTF8, outset, SIZE_MAX) == CHARSET_ERROR_SUCCESS);
 
 	free(mapped_utf8);
 

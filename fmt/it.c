@@ -611,30 +611,32 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		 *  - paper */
 		char *tmp;
 
-#define CONVERT(x, size) \
-	if (!charset_iconv(x, &tmp, CHARSET_WINDOWS1252, CHARSET_CP437)) { \
-		strncpy(x, tmp, size - 1); \
-		tmp[size] = 0; \
-		free(tmp); \
-	}
+#define CONVERT(x, size)  \
+	do { \
+		if (!charset_iconv(x, &tmp, CHARSET_WINDOWS1252, CHARSET_CP437, size)) { \
+			strncpy(x, tmp, size - 1); \
+			tmp[size] = 0; \
+			free(tmp); \
+		} \
+	} while (0)
 
-		CONVERT(song->title, ARRAY_SIZE(song->title))
+		CONVERT(song->title, ARRAY_SIZE(song->title));
 
 		for (n = 0; n < hdr.insnum; n++) {
 			song_instrument_t *inst = song->instruments[n + 1];
 			if (!inst)
 				continue;
 
-			CONVERT(inst->name, ARRAY_SIZE(inst->name))
-			CONVERT(inst->filename, ARRAY_SIZE(inst->filename))
+			CONVERT(inst->name, ARRAY_SIZE(inst->name));
+			CONVERT(inst->filename, ARRAY_SIZE(inst->filename));
 		}
 
 		for (n = 0, sample = song->samples + 1; n < hdr.smpnum; n++, sample++) {
-			CONVERT(sample->name, ARRAY_SIZE(sample->name))
-			CONVERT(sample->filename, ARRAY_SIZE(sample->filename))
+			CONVERT(sample->name, ARRAY_SIZE(sample->name));
+			CONVERT(sample->filename, ARRAY_SIZE(sample->filename));
 		}
 
-		CONVERT(song->message, ARRAY_SIZE(song->message))
+		CONVERT(song->message, ARRAY_SIZE(song->message));
 
 #undef CONVERT
 	}

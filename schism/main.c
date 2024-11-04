@@ -507,7 +507,7 @@ static void event_loop(void)
 			case SDL_TEXTINPUT: {
 				char *input_text = NULL;
 
-				charset_error_t err = charset_iconv(event.text.text, &input_text, CHARSET_UTF8, CHARSET_CP437);
+				charset_error_t err = charset_iconv(event.text.text, &input_text, CHARSET_UTF8, CHARSET_CP437, SDL_TEXTINPUTEVENT_TEXT_SIZE);
 				if (err || !input_text) {
 					log_appendf(4, " [ERROR] failed to convert SDL text input event");
 					log_appendf(4, "  %s", event.text.text);

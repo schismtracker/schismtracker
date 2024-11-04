@@ -595,7 +595,7 @@ const char* charset_iconv_error_lookup(charset_error_t err) {
 }
 
 #define CHARSET_VARIATION(name) \
-	static charset_error_t charset_iconv_##name##_(const void* in, void* out, charset_t inset, charset_t outset)
+	static charset_error_t charset_iconv_##name##_(const void* in, void* out, charset_t inset, charset_t outset, size_t insize)
 
 /* our version of iconv; this has a much simpler API than the regular
  * iconv() because much of it isn't very necessary for our purposes
@@ -614,7 +614,7 @@ CHARSET_VARIATION(internal) {
 	charset_decode_t decoder = {
 		.in = in,
 		.offset = 0,
-		.size = SIZE_MAX, /* FIXME this is wrong */
+		.size = insize,
 	};
 
 	if (inset >= ARRAY_SIZE(conv_to_ucs4_funcs) || outset >= ARRAY_SIZE(conv_from_ucs4_funcs))
@@ -671,7 +671,7 @@ CHARSET_VARIATION(sdl) {
 	};
 
 	/* FIXME this is wrong */
-	size_t src_size = strlen((const char*)in);
+	size_t src_size = insize;
 
 	/* Sanity checks */
 	if (src_size <= 0)
@@ -748,7 +748,7 @@ CHARSET_VARIATION(sdl) {
 }
 
 /* XXX need to change this to take length in as well */
-charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charset_t outset) {
+charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charset_t outset, size_t insize) {
 	void *const null = NULL;
 
 	charset_error_t state;
@@ -762,7 +762,7 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 		return CHARSET_ERROR_INPUTISOUTPUT;
 
 #define TRY_VARIATION(name) \
-	state = charset_iconv_##name##_(in, out, inset, outset); \
+	state = charset_iconv_##name##_(in, out, inset, outset, insize); \
 	if (state == CHARSET_ERROR_SUCCESS) \
 		return state; \
 	if (state == CHARSET_ERROR_NOMEM) { \
