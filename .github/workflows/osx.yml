@@ -73,12 +73,12 @@ jobs:
           path: '/Users/runner/ppcprefix'
           key: mac-powerpc-dependencies-FLAC_${{ env.FLAC_VERSION }}-LIBOGG_${{ env.LIBOGG_VERSION }}-UTF8PROC_${{ env.UTF8PROC_VERSION }}
 
-      - name: 'Restore cached PowerPC files'
-        id: cache-powerpc-restore
-        uses: actions/cache/restore@v4
+      - name: 'Cache powerpc files'
+        id: cache-powerpc-files
+        uses: actions/cache@v4
         with:
-          path: 'schism-macppc-bins'
-          key: mac-powerpc-bins
+          path: '/Users/runner/ppc'
+          key: mac-powerpc-files
 
       - name: 'Download 10.9 SDK for x86_64'
         if: steps.cache-x86_64-files.outputs.cache-hit != 'true'
@@ -101,25 +101,12 @@ jobs:
           popd
 
       - name: 'Grab PowerPC cross compile binaries'
-        if: steps.cache-powerpc-restore.outputs.cache-hit != 'true'
+        if: steps.cache-powerpc-files.outputs.cache-hit != 'true'
         run: |
           wget -O schism-macppc-bins.zip "https://www.dropbox.com/scl/fi/trq99fq51p13nh8tajpwa/schism-macppc-bins.zip?rlkey=xemvhpmm1ci0dnseawmanr749&st=c7jlwru4&dl=1"
           unzip schism-macppc-bins.zip -d "schism-macppc-bins"
           rm schism-macppc-bins.zip
 
-          wget -O sdl2.zip "https://www.dropbox.com/scl/fi/wesknb35a6ctha73t4vgg/sdl2.zip?rlkey=73l6n8682w63e09n8ods33z14&st=s4ipamr0&dl=1"
-          unzip sdl2.zip -d "schism-macppc-bins"
-          rm sdl2.zip
-
-      - name: 'Save PowerPC files in cache'
-        id: cache-powerpc-save
-        uses: actions/cache/save@v4
-        with:
-          path: 'schism-macppc-bins'
-          key: ${{ steps.cache-powerpc-restore.outputs.cache-primary-key }}
-
-      - name: 'Install PowerPC cross compile binaries'
-        run: |
           pushd schism-macppc-bins
           mkdir -p "$HOME/ppc/SDKs"
           tar -xvf "Xcode3as.tar.gz" -C "$HOME/ppc" &
@@ -130,14 +117,12 @@ jobs:
           wait
           curl -L "https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.3.9/MacOSX10.3.9.tar.bz2" | tar -xvf - -C "$HOME/ppc/SDKs"
           curl -L "https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.5/MacOSX10.5.tar.bz2" | tar -xvf - -C "$HOME/ppc/SDKs"
+          popd
 
-          mkdir -p "$HOME/ppcprefix/lib"
-          cp "libSDL2-2.0.0.dylib" "$HOME/ppcprefix/lib"
-          ln -sf "$HOME/ppcprefix/lib/libSDL2-2.0.0.dylib" "$HOME/ppcprefix/lib/libSDL2.dylib"
-
+      - name: 'Install PowerPC cross compile binaries into Xcode'
+        run: |
           mkdir "$(xcrun xcode-select --print-path)/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc"
           cp "$HOME/ppc/usr/libexec/gcc/darwin/ppc/as" "$(xcrun xcode-select --print-path)/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc/as"
-          popd
 
       - name: 'Checkout'
         uses: actions/checkout@v4
@@ -146,13 +131,6 @@ jobs:
         id: date
         run: echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
 
-      - name: 'Download SDL2 sources (x86_64/arm64)'
-        if: steps.cache-x86_64-dependencies.outputs.cache-hit != 'true' || steps.cache-arm64-dependencies.outputs.cache-hit != 'true'
-        run: |
-          wget -O "SDL2-$SDL_VERSION.tar.gz" https://www.libsdl.org/release/SDL2-$SDL_VERSION.tar.gz || wget -O "SDL2-$SDL_VERSION.tar.gz" https://github.com/libsdl-org/SDL/releases/download/release-$SDL_VERSION/SDL2-$SDL_VERSION.tar.gz
-          echo "$SDL_SHA256  SDL2-$SDL_VERSION.tar.gz" | shasum -a 256 -c -
-          tar xvf "SDL2-$SDL_VERSION.tar.gz"
-
       - name: 'Download SDL2 sources (powerpc)'
         if: steps.cache-powerpc-dependencies.outputs.cache-hit != 'true'
         run: |
@@ -160,21 +138,55 @@ jobs:
           echo "$PANTHER_SDL2_SHA256  panther_sdl2-$PANTHER_SDL2_VERSION.tar.gz" | shasum -a 256 -c -
           tar xvf "panther_sdl2-$PANTHER_SDL2_VERSION.tar.gz"
 
+      - name: 'Download SDL2 sources (x86_64/arm64)'
+        if: steps.cache-x86_64-dependencies.outputs.cache-hit != 'true' || steps.cache-arm64-dependencies.outputs.cache-hit != 'true'
+        run: |
+          wget -O "SDL2-$SDL_VERSION.tar.gz" https://www.libsdl.org/release/SDL2-$SDL_VERSION.tar.gz || wget -O "SDL2-$SDL_VERSION.tar.gz" https://github.com/libsdl-org/SDL/releases/download/release-$SDL_VERSION/SDL2-$SDL_VERSION.tar.gz
+          echo "$SDL_SHA256  SDL2-$SDL_VERSION.tar.gz" | shasum -a 256 -c -
+          tar xvf "SDL2-$SDL_VERSION.tar.gz"
+
         # we don't actually build SDL2 on powerpc anymore, since it's locked to an old version
       - name: 'Prepare SDL2 (powerpc)'
         if: steps.cache-powerpc-dependencies.outputs.cache-hit != 'true'
         run: |
-          (export PATH="$PATH:$HOME/ppc/usr/bin" && cd panther_sdl2-20210624 && mkdir -p "$HOME/ppcprefix/include/SDL2" && mkdir -p "$HOME/ppcprefix/share/aclocal" && cp -r include/* "$HOME/ppcprefix/include/SDL2" && cp sdl2.m4 "$HOME/ppcprefix/share/aclocal")
+          export PATH="$PATH:$HOME/ppc/usr/bin"
+          pushd panther_sdl2-20210624
+          mkdir -p "$HOME/ppcprefix/include/SDL2"
+          mkdir -p "$HOME/ppcprefix/share/aclocal"
+          cp -r include/* "$HOME/ppcprefix/include/SDL2"
+          cp sdl2.m4 "$HOME/ppcprefix/share/aclocal"
+
+          wget -O sdl2.zip "https://www.dropbox.com/scl/fi/wesknb35a6ctha73t4vgg/sdl2.zip?rlkey=73l6n8682w63e09n8ods33z14&st=s4ipamr0&dl=1"
+          unzip sdl2.zip
+          rm sdl2.zip
+
+          mkdir -p "$HOME/ppcprefix/lib"
+          cp "libSDL2-2.0.0.dylib" "$HOME/ppcprefix/lib"
+          ln -sf "$HOME/ppcprefix/lib/libSDL2-2.0.0.dylib" "$HOME/ppcprefix/lib/libSDL2.dylib"
+
+          popd
 
       - name: 'Build SDL2 (x86_64)'
         if: steps.cache-x86_64-dependencies.outputs.cache-hit != 'true'
         run: |
-          (export MACOSX_DEPLOYMENT_TARGET="10.9" && cd SDL2-$SDL_VERSION && mkdir build_x86_64 && cd build_x86_64 && ../configure CPPFLAGS="-arch x86_64 -mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.9.sdk" CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64 -F$HOME/x86_64/SDKs/MacOSX10.9.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.9.sdk" --host=x86_64-apple-darwin13 --prefix="$HOME/x86_64prefix" && make && make install)
+          pushd SDL2-$SDL_VERSION
+          mkdir build_x86_64
+          cd build_x86_64
+          ../configure CPPFLAGS="-arch x86_64 -mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.9.sdk" CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64 -F$HOME/x86_64/SDKs/MacOSX10.9.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.9.sdk" --host=x86_64-apple-darwin13 --prefix="$HOME/x86_64prefix"
+          make
+          make install
+          popd
 
       - name: 'Build SDL2 (arm64)'
         if: steps.cache-arm64-dependencies.outputs.cache-hit != 'true'
         run: |
-          (export MACOSX_DEPLOYMENT_TARGET="11.0" && cd SDL2-$SDL_VERSION && mkdir build_arm64 && cd build_arm64 && ../configure CPPFLAGS="-arch arm64 -mmacosx-version-min=11.0 -isysroot $HOME/arm64/SDKs/MacOSX11.0.sdk" CXXFLAGS="-arch arm64" CFLAGS="-arch arm64" LDFLAGS="-arch arm64" --host=aarch64-apple-darwin20 --prefix="$HOME/arm64prefix" && make && make install)
+          pushd SDL2-$SDL_VERSION
+          mkdir build_arm64
+          cd build_arm64
+          ../configure CPPFLAGS="-arch arm64 -mmacosx-version-min=11.0 -isysroot $HOME/arm64/SDKs/MacOSX11.0.sdk" CXXFLAGS="-arch arm64" CFLAGS="-arch arm64" LDFLAGS="-arch arm64" --host=aarch64-apple-darwin20 --prefix="$HOME/arm64prefix"
+          make
+          make install
+          popd
 
       - name: 'Download and prepare libogg sources'
         if: steps.cache-powerpc-dependencies.outputs.cache-hit != 'true' || steps.cache-x86_64-dependencies.outputs.cache-hit != 'true' || steps.cache-arm64-dependencies.outputs.cache-hit != 'true'
@@ -191,21 +203,34 @@ jobs:
         if: steps.cache-powerpc-dependencies.outputs.cache-hit != 'true'
         run: |
           pushd libogg-$LIBOGG_VERSION
-          (export PATH="$PATH:$HOME/ppc/usr/bin" && mkdir build_powerpc && cd build_powerpc && ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.3.9.sdk -mmacosx-version-min=10.3" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.3.9.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.3.9.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" && make && make install)
+          export PATH="$PATH:$HOME/ppc/usr/bin"
+          mkdir build_powerpc
+          cd build_powerpc
+          ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.3.9.sdk -mmacosx-version-min=10.3" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.3.9.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.3.9.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix"
+          make
+          make install
           popd
 
       - name: 'Build libogg (x86_64)'
         if: steps.cache-x86_64-dependencies.outputs.cache-hit != 'true'
         run: |
           pushd libogg-$LIBOGG_VERSION
-          (export MACOSX_DEPLOYMENT_TARGET="10.9" && mkdir build_x86_64 && cd build_x86_64 && ../configure CPPFLAGS="-arch x86_64 -mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.9.sdk" CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64 -F$HOME/x86_64/SDKs/MacOSX10.9.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.9.sdk" --host=x86_64-apple-darwin13 --prefix="$HOME/x86_64prefix" && make && make install)
+          mkdir build_x86_64
+          cd build_x86_64
+          ../configure CPPFLAGS="-arch x86_64 -mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.9.sdk" CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64 -F$HOME/x86_64/SDKs/MacOSX10.9.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.9.sdk" --host=x86_64-apple-darwin13 --prefix="$HOME/x86_64prefix"
+          make
+          make install
           popd
 
       - name: 'Build libogg (arm64)'
         if: steps.cache-arm64-dependencies.outputs.cache-hit != 'true'
         run: |
           pushd libogg-$LIBOGG_VERSION
-          (export MACOSX_DEPLOYMENT_TARGET="11.0" && mkdir build_arm64 && cd build_arm64 && ../configure CPPFLAGS="-arch arm64 -mmacosx-version-min=11.0 -isysroot $HOME/arm64/SDKs/MacOSX11.0.sdk" CFLAGS="-arch arm64" CXXFLAGS="-arch arm64" LDFLAGS="-arch arm64" --host=aarch64-apple-darwin20 --prefix="$HOME/arm64prefix" && make && make install)
+          mkdir build_arm64
+          cd build_arm64
+          ../configure CPPFLAGS="-arch arm64 -mmacosx-version-min=11.0 -isysroot $HOME/arm64/SDKs/MacOSX11.0.sdk" CFLAGS="-arch arm64" CXXFLAGS="-arch arm64" LDFLAGS="-arch arm64" --host=aarch64-apple-darwin20 --prefix="$HOME/arm64prefix"
+          make
+          make install
           popd
 
       - name: 'Download and prepare FLAC sources'
@@ -218,21 +243,26 @@ jobs:
           autoreconf -I"$HOME/x86_64prefix/share/aclocal" -i
           popd
 
-      - name: 'Build libflac (powerpc)'
+      - name: 'Build FLAC (powerpc)'
         if: steps.cache-powerpc-dependencies.outputs.cache-hit != 'true'
         run: |
           pushd flac-$FLAC_VERSION
-          (export PATH="$PATH:$HOME/ppc/usr/bin" && mkdir build_powerpc && cd build_powerpc && ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.3.9.sdk -mmacosx-version-min=10.3" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.3.9.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.3.9.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --disable-cpplibs --disable-programs --disable-examples && make && make install)
+          export PATH="$PATH:$HOME/ppc/usr/bin"
+          mkdir build_powerpc
+          cd build_powerpc
+          ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.3.9.sdk -mmacosx-version-min=10.3" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.3.9.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.3.9.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --disable-cpplibs --disable-programs --disable-examples
+          make
+          make install
           popd
 
-      - name: 'Build libflac (x86_64)'
+      - name: 'Build FLAC (x86_64)'
         if: steps.cache-x86_64-dependencies.outputs.cache-hit != 'true'
         run: |
           pushd flac-$FLAC_VERSION
           (export MACOSX_DEPLOYMENT_TARGET="10.9" && mkdir build_x86_64 && cd build_x86_64 && ../configure CPPFLAGS="-arch x86_64 -mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.9.sdk" CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64 -F$HOME/x86_64/SDKs/MacOSX10.9.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.9.sdk" --host=x86_64-apple-darwin13 --prefix="$HOME/x86_64prefix" --disable-cpplibs --disable-programs --disable-examples && make && make install)
           popd
 
-      - name: 'Build libflac (arm64)'
+      - name: 'Build FLAC (arm64)'
         if: steps.cache-arm64-dependencies.outputs.cache-hit != 'true'
         run: |
           pushd flac-$FLAC_VERSION
@@ -251,21 +281,34 @@ jobs:
         run: |
           pushd utf8proc-$UTF8PROC_VERSION
           patch -p1 < ../.github/patches/utf8proc/2-fix-prefix.patch
-          (export PATH="$PATH:$HOME/ppc/usr/bin" && make CC=powerpc-apple-darwin10-gcc-4.2.1 CFLAGS="-I$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.3.9.sdk -mmacosx-version-min=10.3" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.3.9.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.3.9.sdk" && make install)
+          export PATH="$PATH:$HOME/ppc/usr/bin"
+          make CC=powerpc-apple-darwin10-gcc-4.2.1 CFLAGS="-I$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.3.9.sdk -mmacosx-version-min=10.3" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.3.9.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.3.9.sdk"
+          make install
+          patch -p1 -R < ../.github/patches/utf8proc/2-fix-prefix.patch
           popd
 
       - name: 'Build utf8proc (x86_64)'
         if: steps.cache-x86_64-dependencies.outputs.cache-hit != 'true'
         run: |
           pushd utf8proc-$UTF8PROC_VERSION
-          (export MACOSX_DEPLOYMENT_TARGET="10.9" && mkdir build_x86_64 && cd build_x86_64 && LDFLAGS="-F$HOME/x86_64/SDKs/MacOSX10.9.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.9.sdk" cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$HOME/x86_64prefix" -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET="10.7" -DCMAKE_OSX_SYSROOT="$HOME/x86_64/SDKs/MacOSX10.9.sdk" -DBUILD_SHARED_LIBS=1 && make && make install)
+          patch -p1 < ../.github/patches/utf8proc/2-fix-prefix.patch
+          mkdir build_x86_64
+          cd build_x86_64
+          LDFLAGS="-F$HOME/x86_64/SDKs/MacOSX10.9.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.9.sdk" cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$HOME/x86_64prefix" -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET="10.7" -DCMAKE_OSX_SYSROOT="$HOME/x86_64/SDKs/MacOSX10.9.sdk" -DBUILD_SHARED_LIBS=1
+          make
+          make install
+          patch -p1 -R < ../.github/patches/utf8proc/2-fix-prefix.patch
           popd
 
       - name: 'Build utf8proc (arm64)'
         if: steps.cache-arm64-dependencies.outputs.cache-hit != 'true'
         run: |
           pushd utf8proc-$UTF8PROC_VERSION
-          (export MACOSX_DEPLOYMENT_TARGET="11.0" && mkdir build_arm64 && cd build_arm64 && cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$HOME/arm64prefix" -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET="11.0" -DCMAKE_OSX_SYSROOT="$HOME/arm64/SDKs/MacOSX11.0.sdk" -DBUILD_SHARED_LIBS=1 && make && make install)
+          mkdir build_arm64
+          cd build_arm64
+          cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$HOME/arm64prefix" -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET="11.0" -DCMAKE_OSX_SYSROOT="$HOME/arm64/SDKs/MacOSX11.0.sdk" -DBUILD_SHARED_LIBS=1
+          make
+          make install
           popd
 
       - name: 'Build Schism'
