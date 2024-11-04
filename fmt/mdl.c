@@ -67,8 +67,8 @@ int fmt_mdl_read_info(dmoz_file_t *file, slurp_t *fp)
 				|| slurp_read(fp, &artist, sizeof(artist)) != sizeof(artist))
 				return 0;
 
-			file->title = strn_dup(title, sizeof(title));
-			file->artist = strn_dup(artist, sizeof(artist));
+			file->title = strn_dup((const char *)title, sizeof(title));
+			file->artist = strn_dup((const char *)artist, sizeof(artist));
 			file->description = "Digitrakker";
 			/*file->extension = str_dup("mdl");*/
 			file->type = TYPE_MODULE_XM;

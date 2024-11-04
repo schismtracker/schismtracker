@@ -842,10 +842,6 @@ static void handle_mouse(struct key_event * k)
 	status.flags |= NEED_UPDATE;
 }
 
-static int fontedit_handle_text_input(UNUSED char* text_input) {
-	return 0;
-}
-
 static int fontedit_handle_key(struct key_event * k)
 {
 	int n, ci = current_char << 3;

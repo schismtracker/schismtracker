@@ -296,7 +296,7 @@ char *get_volume_string(int volume, int volume_effect, char *buf)
 	/* '$'=vibratospeed, '<'=panslideleft, '>'=panslideright */
 	switch (volume_effect) {
 	case VOLFX_NONE:
-		buf[0] = buf[1] = 173;
+		buf[0] = buf[1] = '\xAD';
 		break;
 	case VOLFX_VOLUME:
 	case VOLFX_PANNING:
@@ -331,13 +331,13 @@ char *get_note_string(int note, char *buf)
 
 	switch (note) {
 	case 0:        /* nothing */
-		buf[0] = buf[1] = buf[2] = 173;
+		buf[0] = buf[1] = buf[2] = '\xAD';
 		break;
 	case NOTE_CUT:
-		buf[0] = buf[1] = buf[2] = 94;
+		buf[0] = buf[1] = buf[2] = '\x5E';
 		break;
 	case NOTE_OFF:
-		buf[0] = buf[1] = buf[2] = 205;
+		buf[0] = buf[1] = buf[2] = '\xCD';
 		break;
 	case NOTE_FADE:
 		/* this is sure to look "out of place" to anyone
@@ -347,7 +347,7 @@ char *get_note_string(int note, char *buf)
 		buf[1] = 186;
 		buf[2] = 185;
 #else
-		buf[0] = buf[1] = buf[2] = 126;
+		buf[0] = buf[1] = buf[2] = '\x7E';
 #endif
 		break;
 	default:
@@ -375,16 +375,16 @@ char *get_note_string_short(int note, char *buf)
 
 	switch (note) {
 	case 0:        /* nothing */
-		buf[0] = buf[1] = 173;
+		buf[0] = buf[1] = '\xAD';
 		break;
 	case NOTE_CUT:
-		buf[0] = buf[1] = 94;
+		buf[0] = buf[1] = '\x5E';
 		break;
 	case NOTE_OFF:
-		buf[0] = buf[1] = 205;
+		buf[0] = buf[1] = '\xCD';
 		break;
 	case NOTE_FADE:
-		buf[0] = buf[1] = 126;
+		buf[0] = buf[1] = '\x7E';
 		break;
 	default:
 		note--;
@@ -670,7 +670,7 @@ void kbd_push_pending_keydown(struct key_event* kk)
 	}
 }
 
-void kbd_pop_pending_keydown(const uint8_t* text)
+void kbd_pop_pending_keydown(const char* text)
 {
 	/* text is optional, but should be in CP437 if provided */
 	if (have_pending_keydown) {

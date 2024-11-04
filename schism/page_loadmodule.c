@@ -102,13 +102,13 @@ TODO: scroller hack on selected filename
 #define GLOB_DEFAULT GLOB_CLASSIC "; *.dsm; *.mdl; *.mt2; *.stm; *.stx; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf; *.imf; *.sfx; *.mus; *.mid"
 
 /* These are stored as CP437 */
-static uint8_t filename_entry[PATH_MAX + 1] = "";
-static uint8_t dirname_entry[PATH_MAX + 1] = "";
+static char filename_entry[PATH_MAX + 1] = {0};
+static char dirname_entry[PATH_MAX + 1] = {0};
 
 char cfg_module_pattern[PATH_MAX + 1] = GLOB_DEFAULT;
 char cfg_export_pattern[PATH_MAX + 1] = "*.wav; *.aiff; *.aif";
 static char **glob_list = NULL;
-static char glob_list_src[PATH_MAX + 1] = ""; // the pattern used to make glob_list (this is an icky hack)
+static char glob_list_src[PATH_MAX + 1] = {0}; // the pattern used to make glob_list (this is an icky hack)
 
 /* --------------------------------------------------------------------- */
 
@@ -709,12 +709,12 @@ static void show_selected_song_length(void)
 	csf_free(song);
 }
 
-static int file_list_handle_text_input(const uint8_t* text) {
+static int file_list_handle_text_input(const char *text) {
 	int success = 0;
 
 	a11y_output_cp437(text, 0);
 	for (; *text; text++)
-		if (search_text_add_char(*text))
+		if (search_text_add_char(*(unsigned char *)text))
 			success = 1;
 
 	return success;
@@ -870,7 +870,7 @@ static void dir_list_draw_exportsave(void)
 	dir_list_draw(68 - 51);
 }
 
-static int dir_list_handle_text_input(const uint8_t* text) {
+static int dir_list_handle_text_input(const char *text) {
 	for (; *text && search_text_length < NAME_MAX; text++) {
 		if (*text < 32)
 			return 0;
@@ -910,6 +910,8 @@ static int dir_list_handle_key(struct key_event * k, int width)
 					if (top_dir < 0)
 							top_dir = 0;
 					status.flags |= NEED_UPDATE;
+					break;
+				default:
 					break;
 			}
 		} else {

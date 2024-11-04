@@ -70,7 +70,7 @@ static int message_extfont = 1;
 /* --------------------------------------------------------------------- */
 
 static int message_handle_key_editmode(struct key_event * k);
-static int message_handle_text_input_editmode(const uint8_t* text);
+static int message_handle_text_input_editmode(const char *text);
 static int message_handle_key_viewmode(struct key_event * k);
 
 /* --------------------------------------------------------------------- */
@@ -614,7 +614,7 @@ static void _delete_selection(void)
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
-static int message_handle_text_input_editmode(const uint8_t* text) {
+static int message_handle_text_input_editmode(const char *text) {
 	if (clippy_owner(CLIPPY_SELECT) == widgets_message)
 		_delete_selection();
 

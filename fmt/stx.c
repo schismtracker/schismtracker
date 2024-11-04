@@ -59,7 +59,7 @@ int fmt_stx_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	file->description = "ST Music Interface Kit";
 	/*file->extension = str_dup("stx");*/
-	file->title = strn_dup(title, sizeof(title));
+	file->title = strn_dup((const char *)title, sizeof(title));
 	file->type = TYPE_MODULE_MOD;
 	return 1;
 }
@@ -92,7 +92,6 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	int subversion = 1;
 	uint16_t first_pattern_size;
 	uint16_t pattern_size;
-	char any_samples = 0;
 
 	/* check the tag */
 	slurp_seek(fp, 20, SEEK_SET);
@@ -191,8 +190,6 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			c = slurp_getc(fp);  /* flags */
 			if (c & 1)
 				sample->flags |= CHN_LOOP;
-			if (sample->length)
-				any_samples = 1;
 			break;
 
 		default:

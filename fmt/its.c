@@ -98,7 +98,7 @@ int fmt_its_read_info(dmoz_file_t *file, slurp_t *fp)
 	file->smp_sustain_start = bswapLE32(its.susloopbegin);
 	file->smp_sustain_end = bswapLE32(its.susloopend);
 
-	file->smp_filename = strn_dup((const char *)its.filename, 12);
+	file->smp_filename = strn_dup((const char *)its.filename, sizeof(its.filename));
 	file->description = "Impulse Tracker Sample";
 	file->type = TYPE_SAMPLE_EXTD;
 
@@ -106,7 +106,7 @@ int fmt_its_read_info(dmoz_file_t *file, slurp_t *fp)
 	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 
-	file->title = strn_dup(title, sizeof(title));
+	file->title = strn_dup((const char *)title, sizeof(title));
 
 	return 1;
 }
@@ -117,7 +117,6 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 	struct it_sample its;
 
 	uint32_t format;
-	uint32_t bp;
 
 #define READ_VALUE(name) do { if (slurp_read(fp, &its.name, sizeof(its.name)) != sizeof(its.name)) { return 0; } } while (0)
 

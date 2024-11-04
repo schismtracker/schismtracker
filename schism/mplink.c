@@ -228,7 +228,7 @@ int song_find_last_channel(void)
 // in current pattern.
 int song_get_pattern_offset(int * n, song_note_t ** buf, int * row, int offset)
 {
-	int len, tot;
+	int tot;
 	if (song_get_mode() & MODE_PATTERN_LOOP) {
 		// just wrap around current rows
 		*row = (*row + offset) % song_get_rows_in_pattern(*n);
@@ -238,7 +238,7 @@ int song_get_pattern_offset(int * n, song_note_t ** buf, int * row, int offset)
 	tot = song_get_rows_in_pattern(*n);
 	while (offset + *row > tot) {
 		offset -= tot;
-		*n++;
+		(*n)++;
 		tot = song_get_rows_in_pattern(*n);
 		if (!tot) {
 			return 0;

@@ -47,6 +47,7 @@ static void game_controller_insert(SDL_GameController *controller)
 	node->controller = controller;
 	node->id = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controller));
 	node->next = game_controller_list;
+	game_controller_list = node;
 }
 
 static void game_controller_remove(SDL_JoystickID id)

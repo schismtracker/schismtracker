@@ -25,7 +25,7 @@
 
 #include <utf8proc.h>
 
-static inline uint8_t *charset_map_to_utf8(const uint8_t *in, charset_t inset, utf8proc_option_t option)
+static inline void *charset_map_to_utf8(const void *in, charset_t inset, utf8proc_option_t option)
 {
 	const uint8_t *utf8;
 	uint8_t *alloc_ptr = NULL;
@@ -33,7 +33,7 @@ static inline uint8_t *charset_map_to_utf8(const uint8_t *in, charset_t inset, u
 	if (inset == CHARSET_UTF8) {
 		utf8 = in;
 	} else {
-		if (charset_iconv(in, &alloc_ptr, inset, CHARSET_UTF8))
+		if (charset_iconv(in, &alloc_ptr, inset, CHARSET_UTF8, SIZE_MAX))
 			return NULL;
 		utf8 = alloc_ptr;
 	}
@@ -47,7 +47,7 @@ static inline uint8_t *charset_map_to_utf8(const uint8_t *in, charset_t inset, u
 	return success ? mapped : NULL;
 }
 
-static inline uint8_t *charset_map_to_set(const uint8_t *in, charset_t inset, charset_t outset, utf8proc_option_t option)
+static inline void *charset_map_to_set(const void *in, charset_t inset, charset_t outset, utf8proc_option_t option)
 {
 	uint8_t *mapped_utf8 = charset_map_to_utf8(in, inset, option);
 	if (!mapped_utf8)
@@ -59,19 +59,19 @@ static inline uint8_t *charset_map_to_set(const uint8_t *in, charset_t inset, ch
 
 	uint8_t *mapped;
 
-	int success = (charset_iconv(mapped_utf8, &mapped, CHARSET_UTF8, outset) == CHARSET_ERROR_SUCCESS);
+	int success = (charset_iconv(mapped_utf8, &mapped, CHARSET_UTF8, outset, SIZE_MAX) == CHARSET_ERROR_SUCCESS);
 
 	free(mapped_utf8);
 
 	return (success ? mapped : NULL);
 }
 
-uint8_t *charset_compose_to_set(const uint8_t *in, charset_t inset, charset_t outset)
+void *charset_compose_to_set(const void *in, charset_t inset, charset_t outset)
 {
 	return charset_map_to_set(in, inset, outset, UTF8PROC_NULLTERM | UTF8PROC_COMPOSE);
 }
 
-uint8_t *charset_case_fold_to_set(const uint8_t *in, charset_t inset, charset_t outset)
+void *charset_case_fold_to_set(const void *in, charset_t inset, charset_t outset)
 {
 	return charset_map_to_set(in, inset, outset, UTF8PROC_NULLTERM | UTF8PROC_CASEFOLD | UTF8PROC_DECOMPOSE);
 }

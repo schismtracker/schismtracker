@@ -340,7 +340,7 @@ int win32_wstat(const wchar_t* path, struct stat* st)
 int win32_mktemp(char* template, size_t size)
 {
 	wchar_t* wc = NULL;
-	if (charset_iconv((const uint8_t*)template, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
+	if (charset_iconv(template, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
 		return -1;
 
 	if (!_wmktemp(wc)) {
@@ -361,7 +361,7 @@ int win32_mktemp(char* template, size_t size)
 int win32_stat(const char* path, struct stat* st)
 {
 	wchar_t* wc = NULL;
-	if (charset_iconv((const uint8_t*)path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
+	if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
 		return -1;
 
 	int ret = win32_wstat(wc, st);
@@ -372,7 +372,7 @@ int win32_stat(const char* path, struct stat* st)
 int win32_open(const char* path, int flags)
 {
 	wchar_t* wc = NULL;
-	if (charset_iconv((const uint8_t*)path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
+	if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
 		return -1;
 
 	int ret = _wopen(wc, flags);
@@ -383,8 +383,8 @@ int win32_open(const char* path, int flags)
 FILE* win32_fopen(const char* path, const char* flags)
 {
 	wchar_t* wc = NULL, *wc_flags = NULL;
-	if (charset_iconv((const uint8_t*)path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T)
-		|| charset_iconv((const uint8_t*)flags, (uint8_t**)&wc_flags, CHARSET_UTF8, CHARSET_WCHAR_T))
+	if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)
+		|| charset_iconv(flags, &wc_flags, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
 		return NULL;
 
 	FILE* ret = _wfopen(wc, wc_flags);
@@ -396,7 +396,7 @@ FILE* win32_fopen(const char* path, const char* flags)
 int win32_mkdir(const char *path, UNUSED mode_t mode)
 {
 	wchar_t* wc = NULL;
-	if (charset_iconv((const uint8_t*)path, (uint8_t**)&wc, CHARSET_UTF8, CHARSET_WCHAR_T))
+	if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
 		return -1;
 
 	int ret = _wmkdir(wc);
@@ -409,51 +409,66 @@ int win32_mkdir(const char *path, UNUSED mode_t mode)
 
 int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
+#define DOT_BAT L".bat"
 	wchar_t cwd[PATH_MAX] = {L'\0'};
-	const wchar_t *cmd = NULL;
+	if (!GetCurrentDirectoryW(PATH_MAX, cwd))
+		return 0;
+
 	wchar_t batch_file[PATH_MAX] = {L'\0'};
-	struct stat sb = {0};
+
+	{
+		wchar_t* name_w = NULL;
+		if (charset_iconv(name, &name_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+			return 0;
+
+		size_t name_len = wcslen(name_w);
+		if ((name_len * sizeof(wchar_t)) + sizeof(DOT_BAT) >= PATH_MAX) {
+			free(name_w);
+			return 0;
+		}
+
+		memcpy(batch_file, name_w, name_len * sizeof(wchar_t));
+		memcpy(batch_file + name_len, DOT_BAT, sizeof(DOT_BAT));
+
+		free(name_w);
+	}
+
+	{
+		wchar_t* dir_w = NULL;
+		if (charset_iconv(dir, &dir_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+			return 0;
+
+		if (_wchdir(dir_w) == -1) {
+			free(dir_w);
+			return 0;
+		}
+
+		free(dir_w);
+	}
+
 	int r;
 
-	if (!GetCurrentDirectoryW(PATH_MAX-1, cwd))
-		return 0;
+	{
+		wchar_t* maybe_arg_w = NULL;
+		if (charset_iconv(maybe_arg, &maybe_arg_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+			return 0;
 
-	wchar_t* name_w = NULL;
-	if (charset_iconv((const uint8_t*)name, (uint8_t**)&name_w, CHARSET_UTF8, CHARSET_WCHAR_T))
-		return 0;
+		struct stat sb;
+		if (win32_wstat(batch_file, &sb) == -1) {
+			r = 0;
+		} else {
+			const wchar_t *cmd;
 
-	size_t name_len = wcslen(name_w);
-	wcsncpy(batch_file, name_w, name_len);
-	wcscpy(&batch_file[name_len], L".bat");
+			cmd = _wgetenv(L"COMSPEC");
+			if (!cmd)
+				cmd = L"command.com";
 
-	free(name_w);
+			r = _wspawnlp(_P_WAIT, cmd, cmd, "/c", batch_file, maybe_arg_w, 0);
+		}
 
-	wchar_t* dir_w = NULL;
-	if (charset_iconv((const uint8_t*)dir, (uint8_t**)&dir_w, CHARSET_UTF8, CHARSET_WCHAR_T))
-		return 0;
-
-	if (_wchdir(dir_w) == -1) {
-		free(dir_w);
-		return 0;
+		free(maybe_arg_w);
 	}
 
-	free(dir_w);
-
-	wchar_t* maybe_arg_w = NULL;
-	if (charset_iconv((const uint8_t*)maybe_arg, (uint8_t**)&maybe_arg_w, CHARSET_UTF8, CHARSET_WCHAR_T))
-		return 0;
-
-	if (win32_wstat(batch_file, &sb) == -1) {
-		r = 0;
-	} else {
-		cmd = _wgetenv(L"COMSPEC");
-		if (!cmd)
-			cmd = L"command.com";
-
-		r = _wspawnlp(_P_WAIT, cmd, cmd, "/c", batch_file, maybe_arg_w, 0);
-	}
-
-	free(maybe_arg_w);
 
 	_wchdir(cwd);
 	if (r == 0) return 1;

@@ -10,8 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       UTF8PROC_VERSION: 2.9.0
+      UTF8PROC_SHA256: bd215d04313b5bc42c1abedbcb0a6574667e31acee1085543a232204e36384c4
+
     container:
       image: devkitpro/devkitppc:latest
+
     steps:
       - name: 'Checkout'
         uses: actions/checkout@v4
@@ -32,13 +35,23 @@ jobs:
 
       # This uses my own fork of SDL until the keyboard patches get merged
       - name: 'Checkout SDL2'
+        id: checkout
         uses: actions/checkout@v4
         with:
           repository: 'mrpapersonic/SDL'
           ref: 'wiiu-sdl2-2.28'
           path: SDL
 
+      # this has to be after so it can check the current commit from my branch
+      - name: 'Cache dependencies'
+        id: cache-dependencies
+        uses: actions/cache@v4
+        with:
+          path: '/github/home/wiiuprefix'
+          key: wiiu-dependencies-SDL_${{ steps.checkout.outputs.commit }}-UTF8PROC_${{ env.UTF8PROC_VERSION }}
+
       - name: 'Build SDL2'
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
         run: |
           cd SDL
           export PATH="${DEVKITPRO}/portlibs/wiiu/bin:${DEVKITPPC}/bin:$PATH"
@@ -47,9 +60,16 @@ jobs:
           cmake --install build
           cd ..
 
-      - name: 'Build utf8proc'
+      - name: 'Download utf8proc'
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
         run: |
-          (curl -L https://github.com/JuliaStrings/utf8proc/releases/download/v$UTF8PROC_VERSION/utf8proc-$UTF8PROC_VERSION.tar.gz) | tar -xzvf -
+          wget -O "utf8proc-$UTF8PROC_VERSION.tar.gz" "https://github.com/JuliaStrings/utf8proc/releases/download/v$UTF8PROC_VERSION/utf8proc-$UTF8PROC_VERSION.tar.gz"
+          echo "$UTF8PROC_SHA256  utf8proc-$UTF8PROC_VERSION.tar.gz" | sha256sum -c -
+          tar xzvf "utf8proc-$UTF8PROC_VERSION.tar.gz"
+
+      - name: 'Build utf8proc'
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
+        run: |
           cd utf8proc-$UTF8PROC_VERSION
           # PIC is broken under libwut
           patch -p1 < ../schismtracker/.github/patches/utf8proc/1-disable-pic.patch
@@ -68,8 +88,9 @@ jobs:
           mkdir build
           cd build
           export PATH="${DEVKITPRO}/portlibs/wiiu/bin:${DEVKITPPC}/bin:$PATH"
-          # disable FLAC support for now
-          PKG_CONFIG=pkg-config PKG_CONFIG_PATH="$HOME/wiiuprefix/lib/pkgconfig:${DEVKITPRO}/portlibs/ppc/lib/pkgconfig" ../configure --host=powerpc-eabi --without-flac --enable-force-wiiu
+          # disable FLAC support for now, because compiling with it gives
+          # errors when making an rpx (PIC is enabled...)
+          FLAC_LIBS="-L${DEVKITPRO}/portlibs/ppc/lib -lFLAC -logg" PKG_CONFIG=pkg-config PKG_CONFIG_LIBDIR="$HOME/wiiuprefix/lib/pkgconfig:${DEVKITPRO}/portlibs/wiiu/lib/pkgconfig:${DEVKITPRO}/portlibs/ppc/lib/pkgconfig" ../configure --host=powerpc-eabi --without-flac --enable-force-wiiu
           make
           powerpc-eabi-strip -S schismtracker.elf
           make schismtracker.wuhb

@@ -138,7 +138,7 @@ static version_time_t version_mktime(int y, int m, int d)
 	return ret;
 }
 
-static void version_time_format(char* buf, version_time_t ver) {
+static void version_time_format(char buf[11], version_time_t ver) {
 	long long year = EPOCH_YEAR, month = EPOCH_MONTH, days = ver + EPOCH_DAY;
 	int days_in;
 
@@ -171,7 +171,7 @@ static void version_time_format(char* buf, version_time_t ver) {
 		}
 	}
 
-	snprintf(buf, 12, "%04lld-%02lld-%02lld", year, month + 1, days);
+	snprintf(buf, 11, "%04lld-%02lld-%02lld", year, (month + 1), days);
 }
 
 /* ----------------------------------------------------------------- */
@@ -212,7 +212,7 @@ const char *schism_banner(int classic)
 		: top_banner_normal);
 }
 
-void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char *buf)
+void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char buf[11])
 {
 	cwtv &= 0xfff;
 	if (cwtv > 0x050)

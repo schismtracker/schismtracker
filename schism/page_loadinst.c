@@ -208,7 +208,7 @@ static void library_instrument_set_page(void)
 
 static void file_list_draw(void)
 {
-	int n, pos, fg, bg, i;
+	int n, pos, fg, bg;
 	char buf[8];
 	char sbuf[32];
 	dmoz_file_t *file;
@@ -393,7 +393,8 @@ static const char* file_list_a11y_get_value(char *buf)
 	return buf;
 }
 
-static int file_list_handle_text_input(const uint8_t* text) {
+static int file_list_handle_text_input(const char *text)
+{
 	dmoz_file_t* f = flist.files[current_file];
 
 	a11y_output_cp437(text, 0);

@@ -260,7 +260,7 @@ void load_pages(void);  /* called once at start of program */
 void playback_update(void);     /* once per cycle */
 struct key_event;
 void handle_key(struct key_event * k);        /* whenever there's a keypress ;) */
-void handle_text_input(const uint8_t* text_input);
+void handle_text_input(const char *text_input);
 
 /* this should only be called from main.
  * anywhere else, use status.flags |= NEED_UPDATE instead. */

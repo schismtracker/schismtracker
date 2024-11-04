@@ -142,7 +142,6 @@ void cfg_init_dir(void)
 
 /* --------------------------------------------------------------------- */
 
-static const char palette_trans[64] = ".0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 static void cfg_load_palette(cfg_file_t *cfg)
 {
 	const char *palette_text = cfg_get_string(cfg, "General", "palette_cur", NULL, 0, NULL);

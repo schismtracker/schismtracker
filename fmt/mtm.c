@@ -47,7 +47,7 @@ int fmt_mtm_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	file->description = "MultiTracker Module";
 	/*file->extension = str_dup("mtm");*/
-	file->title = strn_dup(title, sizeof(title));
+	file->title = strn_dup((const char *)title, sizeof(title));
 	file->type = TYPE_MODULE_MOD;
 	return 1;
 }

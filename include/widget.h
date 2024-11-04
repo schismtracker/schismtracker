@@ -60,16 +60,16 @@ void widget_create_panbar(struct widget *w, int x, int y, int next_up,
 		   int channel);
 void widget_create_other(struct widget *w, int next_tab,
 		  int (*w_handle_key) (struct key_event * k),
-		  int (*w_handle_text_input) (const uint8_t* text),
+		  int (*w_handle_text_input) (const char* text),
 		  void (*w_redraw) (void));
 
 /* --------------------------------------------------- */
 /* widget.c */
 
-int widget_textentry_add_char(struct widget *widget, uint16_t unicode);
-int widget_textentry_add_text(struct widget *widget, const uint8_t* text);
+int widget_textentry_add_char(struct widget *widget, unsigned char c);
+int widget_textentry_add_text(struct widget *widget, const char* text);
 void widget_numentry_change_value(struct widget *widget, int new_value);
-int widget_numentry_handle_text(struct widget *w, const uint8_t* text_input);
+int widget_numentry_handle_text(struct widget *w, const char* text_input);
 
 int widget_change_focus_to_xy(int x, int y);
 void widget_change_focus_to(int new_widget_index);
@@ -82,7 +82,7 @@ void widget_draw_widget(struct widget *w, int selected);
 /* widget-keyhandler.c
  * [note: these always uses the current widget] */
 
-int widget_handle_text_input(const uint8_t* text_input);
+int widget_handle_text_input(const char *text_input);
 int widget_handle_key(struct key_event * k);
 
 #endif /* SCHISM_WIDGET_H_ */

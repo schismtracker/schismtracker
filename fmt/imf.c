@@ -45,7 +45,7 @@ int fmt_imf_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	file->description = "Imago Orpheus";
 	/*file->extension = str_dup("imf");*/
-	file->title = strn_dup(title, sizeof(title));
+	file->title = strn_dup((const char *)title, sizeof(title));
 	file->type = TYPE_MODULE_IT;
 	return 1;
 }
@@ -692,7 +692,7 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 
 		for (s = 0; s < imfins.smpnum; s++) {
 			struct imf_sample imfsmp;
-			uint32_t blen, sflags = SF_LE | SF_M | SF_PCMS;
+			uint32_t sflags = SF_LE | SF_M | SF_PCMS;
 
 			if (!imf_read_sample(&imfsmp, fp)) {
 				printf("readsmp failed\n");
@@ -726,7 +726,7 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 			if (!(lflags & LOAD_NOSAMPLES))
 				csf_read_sample(sample, sflags, fp);
 			else
-				slurp_seek(fp, blen, SEEK_CUR);
+				slurp_seek(fp, imfsmp.length * ((sflags & SF_16) ? 2 : 1), SEEK_CUR);
 
 			sample++;
 		}

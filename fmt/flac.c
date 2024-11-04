@@ -330,7 +330,7 @@ static int flac_load(struct flac_readdata* read_data, int meta_only)
 
 	schism_FLAC_stream_decoder_set_metadata_respond_all(decoder);
 
-	FLAC__StreamDecoderInitStatus initStatus =
+	FLAC__StreamDecoderInitStatus status =
 		schism_FLAC_stream_decoder_init_stream(
 			decoder,
 			read_on_read, read_on_seek,
@@ -339,6 +339,8 @@ static int flac_load(struct flac_readdata* read_data, int meta_only)
 			read_on_meta, read_on_error,
 			read_data
 		);
+	if (status != FLAC__STREAM_DECODER_INIT_STATUS_OK)
+		return 0;
 
 	/* flac function names are such a yapfest */
 	if (!(meta_only ? schism_FLAC_stream_decoder_process_until_end_of_metadata(decoder) : schism_FLAC_stream_decoder_process_until_end_of_stream(decoder))) {
@@ -640,21 +642,35 @@ int fmt_flac_save_sample(disko_t *fp, song_sample_t *smp)
 
 /* --------------------------------------------------------------- */
 
-static const char *libflac_so_names[] = {
-#ifdef SCHISM_WIN32
-	"libflac.dll",
-#elif SCHISM_MACOSX
-	"libFLAC.dylib",
-#else
-	"libFLAC.so",
-#endif
-};
-
 static int load_flac_syms(void);
 
 #ifdef FLAC_DYNAMIC_LOAD
 
 void *flac_dltrick_handle_ = NULL;
+
+#ifdef SCHISM_WIN32
+# define LIBFLAC_FMT "libFLAC-%d.dll"
+#elif defined(SCHISM_MACOSX)
+# define LIBFLAC_FMT "libFLAC.%d.dylib"
+#else
+# define LIBFLAC_FMT "libFLAC.so.%d"
+#endif
+
+static int try_load_libflac(int revision)
+{
+	char *buf;
+
+	if (asprintf(&buf, LIBFLAC_FMT, revision) < 0)
+		return -1;
+
+	flac_dltrick_handle_ = SDL_LoadObject(buf);
+
+	free(buf);
+
+	return (flac_dltrick_handle_) ? 0 : -1;
+}
+
+#undef LIBFLAC_FMT
 
 static void flac_dlend(void) {
 	if (flac_dltrick_handle_) {
@@ -670,8 +686,10 @@ static int flac_dlinit(void) {
 	if (flac_dltrick_handle_)
 		return 0;
 
-	for (i = 0; i < ARRAY_SIZE(libflac_so_names) && !flac_dltrick_handle_; i++)
-		flac_dltrick_handle_ = SDL_LoadObject(libflac_so_names[i]);
+	// :p
+	for (i = 0; i <= FLAC_API_VERSION_AGE; i++)
+		if (try_load_libflac(FLAC_API_VERSION_CURRENT - i) >= 0)
+			break;
 
 	if (!flac_dltrick_handle_)
 		return -1;

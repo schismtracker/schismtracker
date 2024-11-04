@@ -37,7 +37,7 @@ PURE extern const char *schism_banner(int classic);
 void ver_init(void);
 
 /* get yyyy-mm-dd or 0.nn version from cwtv + reserved (buf should be >=11 chars) */
-void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char *buf);
+void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char buf[11]);
 
 #endif /* SCHISM_VERSION_H_ */
 

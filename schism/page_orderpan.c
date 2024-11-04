@@ -410,7 +410,7 @@ static int orderlist_handle_char(char sym)
 	return 1;
 }
 
-static int orderlist_handle_text_input_on_list(const uint8_t* text) {
+static int orderlist_handle_text_input_on_list(const char *text) {
 	int success = 0;
 
 	for (; *text; text++)

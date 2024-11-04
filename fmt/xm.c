@@ -108,7 +108,7 @@ int fmt_xm_read_info(dmoz_file_t *file, slurp_t *fp)
 	file->description = "Fast Tracker 2 Module";
 	file->type = TYPE_MODULE_XM;
 	/*file->extension = str_dup("xm");*/
-	file->title = strn_dup(hdr.name, sizeof(hdr.name));
+	file->title = strn_dup((const char *)hdr.name, sizeof(hdr.name));
 	return 1;
 }
 
@@ -405,7 +405,6 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 {
 	song_sample_t *smp = first;
-	size_t smpsize;
 	int ns;
 
 	// dontyou: 20 samples starting at 26122

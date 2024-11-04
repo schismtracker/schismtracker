@@ -80,8 +80,8 @@ static void _clippy_copy_to_sys(int cb)
 	}
 	out[j] = 0;
 
-	uint8_t* out_utf8 = NULL;
-	if (charset_iconv(out, &out_utf8, CHARSET_CP437, CHARSET_UTF8))
+	char *out_utf8 = NULL;
+	if (charset_iconv(out, &out_utf8, CHARSET_CP437, CHARSET_UTF8, SIZE_MAX))
 		return;
 
 	free(out);
@@ -89,12 +89,12 @@ static void _clippy_copy_to_sys(int cb)
 	switch (cb) {
 		case CLIPPY_SELECT:
 #if SDL_VERSION_ATLEAST(2, 26, 0)
-			SDL_SetPrimarySelectionText((char*)out_utf8);
+			SDL_SetPrimarySelectionText(out_utf8);
 #endif
 			break;
 		default:
 		case CLIPPY_BUFFER:
-			SDL_SetClipboardText((char*)out_utf8);
+			SDL_SetClipboardText(out_utf8);
 			break;
 	}
 
@@ -124,11 +124,8 @@ static char *_internal_clippy_paste(int cb)
 				_free_current_selection();
 
 				char* sel = SDL_GetPrimarySelectionText();
-				uint8_t* cp437_sel;
 
-				if (!charset_iconv((uint8_t*)sel, (uint8_t**)&cp437_sel, CHARSET_UTF8, CHARSET_CP437))
-					_current_selection = cp437_sel;
-				else
+				if (charset_iconv(sel, &_current_selection, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
 					_current_selection = str_dup(sel);
 
 				SDL_free(sel);
@@ -142,12 +139,9 @@ static char *_internal_clippy_paste(int cb)
 			if (SDL_HasClipboardText()) {
 				_free_current_clipboard();
 
-				char* cb = SDL_GetClipboardText();
-				uint8_t* cp437_cb;
+				char *cb = SDL_GetClipboardText();
 
-				if (!charset_iconv((uint8_t*)cb, (uint8_t**)&cp437_cb, CHARSET_UTF8, CHARSET_CP437))
-					_current_clipboard = (char*)cp437_cb;
-				else
+				if (charset_iconv(cb, &_current_clipboard, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
 					_current_clipboard = str_dup(cb);
 
 				SDL_free(cb);
@@ -171,7 +165,6 @@ void clippy_paste(int cb)
 
 void clippy_select(struct widget *w, char *addr, int len)
 {
-	int i;
 	_free_current_selection();
 
 	if (!addr) {

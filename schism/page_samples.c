@@ -397,7 +397,7 @@ static void do_replace_sample(int n)
 
 /* --------------------------------------------------------------------- */
 
-static int sample_list_handle_text_input_on_list(const uint8_t* text) {
+static int sample_list_handle_text_input_on_list(const char *text) {
 	int success = 0;
 
 	a11y_output_cp437(text, 1);

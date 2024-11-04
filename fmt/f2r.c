@@ -42,7 +42,7 @@ int fmt_f2r_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	file->description = "Farandole 2 (linear)";
 	/*file->extension = str_dup("f2r");*/
-	file->title = strn_dup(title, 40);
+	file->title = strn_dup((const char *)title, 40);
 	file->type = TYPE_MODULE_S3M;
 	return 1;
 }

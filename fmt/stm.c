@@ -63,7 +63,7 @@ int fmt_stm_read_info(dmoz_file_t *file, slurp_t *fp)
 	file->description = "Scream Tracker 2";
 	/*file->extension = str_dup("stm");*/
 	file->type = TYPE_MODULE_MOD;
-	file->title = strn_dup(title, sizeof(title));
+	file->title = strn_dup((const char *)title, sizeof(title));
 	return 1;
 }
 
