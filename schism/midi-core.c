@@ -637,7 +637,12 @@ static int _midi_queue_run(UNUSED void *xtop)
 #ifdef SCHISM_WIN32
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 #endif
+#if SDL_VERSION_ATLEAST(2, 0, 9)
+	/* SDL_THREAD_PRIORITY_TIME_CRITICAL only exists in >= 2.0.9 */
 	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_TIME_CRITICAL);
+#elif SCHISM_WIN32
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#endif
 
 	SDL_LockMutex(midi_play_mutex);
 	for (;;) {
