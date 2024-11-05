@@ -75,9 +75,10 @@ static const char *const midi_modes[] = {
 
 static const int video_fs_group[] = { 9, 10, -1 };
 #ifdef SCHISM_WIN32
-static const int video_menu_bar_group[] = { 14, 15, -1 };
+static const int video_menu_bar_group[] = { 16, 17, -1 };
 #endif
 static int video_group[] = { 11, 12, 13, -1 };
+static int video_renderer_group[] = { 14, 15, -1 };
 
 static void change_mixer_limits(void)
 {
@@ -117,6 +118,7 @@ static int countdown = 10;
 static time_t started = 0;
 static char video_revert_interpolation[8] = {'\0'};
 static int video_revert_fs = 0;
+static int video_revert_hw = 0;
 
 static void video_mode_keep(UNUSED void*ign)
 {
@@ -132,6 +134,8 @@ static void video_mode_cancel(UNUSED void*ign)
 	}
 	if (video_is_fullscreen() != video_revert_fs)
 		video_fullscreen(-1);
+	if (video_is_hardware() != video_revert_hw)
+		video_redraw_renderer(video_revert_hw);
 	palette_apply();
 	font_init();
 	config_set_page();
@@ -171,6 +175,7 @@ static void video_change_dialog(void)
 
 	strncpy(video_revert_interpolation, SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY), 7);
 	video_revert_fs = video_is_fullscreen();
+	video_revert_hw = video_is_hardware();
 
 	countdown = 10;
 	time(&started);
@@ -192,6 +197,7 @@ static void change_video_settings(void)
 {
 	const char *new_video_interpolation;
 	int new_fs_flag;
+	int hw;
 
 	new_video_interpolation = widgets_config[11].d.togglebutton.state ? "nearest" :
 							  widgets_config[12].d.togglebutton.state ? "linear" :
@@ -200,9 +206,11 @@ static void change_video_settings(void)
 
 
 	new_fs_flag = widgets_config[9].d.togglebutton.state;
+	hw = widgets_config[14].d.togglebutton.state;
 
 	if (!SDL_strcasecmp(new_video_interpolation, SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))
-	&& new_fs_flag == video_is_fullscreen()) {
+	&& new_fs_flag == video_is_fullscreen()
+	&& hw == video_is_hardware()) {
 		return;
 	}
 
@@ -213,6 +221,10 @@ static void change_video_settings(void)
 	}
 	if (new_fs_flag != video_is_fullscreen())
 		toggle_display_fullscreen();
+
+	if (hw != video_is_hardware())
+		video_redraw_renderer(hw);
+
 	palette_apply();
 	font_init();
 }
@@ -244,6 +256,7 @@ static void config_draw_const(void)
 	draw_text("MIDI mode", 8,25, 0, 2);
 
 	draw_text("Video Scaling:", 2, 28, 0, 2);
+	draw_text("Video Rendering:", 2, 40, 0, 2);
 	draw_text("Full Screen:", 38, 28, 0, 2);
 #ifdef SCHISM_WIN32
 	draw_text("Menu Bar:", 38, 32, 0, 2);
@@ -280,9 +293,12 @@ static void config_set_page(void)
 	widgets_config[12].d.togglebutton.state = (!hint || *hint == '1' || SDL_strcasecmp(hint, "linear") == 0);
 	widgets_config[13].d.togglebutton.state = (!hint || *hint == '2' || SDL_strcasecmp(hint, "best") == 0);
 
+	widgets_config[14].d.togglebutton.state = video_is_hardware();
+	widgets_config[15].d.togglebutton.state = !video_is_hardware();
+
 #ifdef SCHISM_WIN32
-	widgets_config[14].d.togglebutton.state = !!cfg_video_want_menu_bar;
-	widgets_config[15].d.togglebutton.state = !cfg_video_want_menu_bar;
+	widgets_config[16].d.togglebutton.state = !!cfg_video_want_menu_bar;
+	widgets_config[17].d.togglebutton.state = !cfg_video_want_menu_bar;
 #endif
 }
 
@@ -292,11 +308,7 @@ void config_load_page(struct page *page)
 	page->title = "System Configuration (Ctrl-F1)";
 	page->draw_const = config_draw_const;
 	page->set_page = config_set_page;
-#ifdef SCHISM_WIN32
 	page->total_widgets = 16;
-#else
-	page->total_widgets = 14;
-#endif
 	page->widgets = widgets_config;
 	page->help_index = HELP_GLOBAL;
 
@@ -366,32 +378,45 @@ void config_load_page(struct page *page)
 			change_video_settings,
 			"Nearest",
 			2, video_group);
-
 	widget_create_togglebutton(widgets_config+12,
 			6, 33, 26,
 			11,13,12,9,13,
 			change_video_settings,
 			"Linear",
 			2, video_group);
-
 	widget_create_togglebutton(widgets_config+13,
 			6, 36, 26,
 			12,14,13,9,14,
 			change_video_settings,
 			"Best",
 			2, video_group);
-#ifdef SCHISM_WIN32
+	////
 	widget_create_togglebutton(widgets_config+14,
+			6, 42, 26,
+			13,15,14,9,15,
+			change_video_settings,
+			"Hardware",
+			2, video_renderer_group);
+	widget_create_togglebutton(widgets_config+15,
+			6, 45, 26,
+			14,15,15,9,16,
+			change_video_settings,
+			"Software",
+			2, video_renderer_group);
+	////
+#ifdef SCHISM_WIN32
+	widget_create_togglebutton(widgets_config+16,
 			44, 34, 5,
 			8,9,11,10,10,
 			change_menu_bar_settings,
 			"Yes",
 			2, video_menu_bar_group);
-	widget_create_togglebutton(widgets_config+15,
+	widget_create_togglebutton(widgets_config+17,
 			54, 34, 5,
 			10,10,9,10,0,
 			change_menu_bar_settings,
 			"No",
 			2, video_menu_bar_group);
+	page->total_widgets += 2;
 #endif
 }

@@ -26,6 +26,8 @@
 /* video output routines */
 const char *video_driver_name(void);
 
+void video_redraw_renderer(int hardware);
+
 void video_warp_mouse(unsigned int x, unsigned int y);
 void video_redraw_texture(void);
 void video_setup(const char *quality);
@@ -56,6 +58,7 @@ int video_is_fullscreen(void);
 int video_is_wm_available(void);
 int video_is_focused(void);
 int video_is_visible(void);
+int video_is_hardware(void);
 int video_width(void);
 int video_height(void);
 SDL_Window *video_window(void);

@@ -208,17 +208,27 @@ const char *video_driver_name(void)
 
 void video_report(void)
 {
+	log_append(2, 0, "Video initialised");
+	log_underline(17);
+
 	SDL_DisplayMode display = {0};
 
 	Uint32 format;
 	SDL_QueryTexture(video.texture, &format, NULL, NULL, NULL);
 
-	log_appendf(5, " Using driver '%s'", SDL_GetCurrentVideoDriver());
+	{
+		SDL_RendererInfo renderer;
+		SDL_GetRendererInfo(video.renderer, &renderer);
+		log_appendf(5, " Using driver '%s' with renderer '%s'", SDL_GetCurrentVideoDriver(), renderer.name);
+	}
+	
 
 	log_appendf(5, " Display format: %"PRIu32" bits/pixel", SDL_BITSPERPIXEL(format));
 
 	if (!SDL_GetCurrentDisplayMode(0, &display) && video.fullscreen)
 		log_appendf(5, " Display dimensions: %dx%d", display.w, display.h);
+
+	log_nl();
 }
 
 void video_redraw_texture(void)
@@ -228,11 +238,26 @@ void video_redraw_texture(void)
 	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
 }
 
+void video_redraw_renderer(int hardware)
+{
+	SDL_DestroyTexture(video.texture);
+
+	SDL_DestroyRenderer(video.renderer);
+
+	video.renderer = SDL_CreateRenderer(video.window, -1, hardware ? SDL_RENDERER_ACCELERATED : SDL_RENDERER_SOFTWARE);
+	if (!video.renderer)
+		video.renderer = SDL_CreateRenderer(video.window, -1, 0); // welp
+
+	video_redraw_texture();
+
+	video_report();
+}
+
 void video_shutdown(void)
 {
+	SDL_DestroyTexture(video.texture);
 	SDL_DestroyRenderer(video.renderer);
 	SDL_DestroyWindow(video.window);
-	SDL_DestroyTexture(video.texture);
 }
 
 void video_setup(const char *quality)
@@ -376,6 +401,13 @@ int video_is_wm_available(void)
 	SDL_VERSION(&info.version);
 
 	return !!SDL_GetWindowWMInfo(video.window, &info);
+}
+
+int video_is_hardware(void)
+{
+	SDL_RendererInfo info;
+	SDL_GetRendererInfo(video.renderer, &info);
+	return !!(info.flags & SDL_RENDERER_ACCELERATED);
 }
 
 static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, uint32_t mouseline[80], uint32_t mouseline_mask[80])
