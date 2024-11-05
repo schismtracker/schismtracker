@@ -104,8 +104,6 @@ static void display_init(void)
 {
 	video_startup();
 
-	video_report();
-
 	SDL_StartTextInput();
 }
 
