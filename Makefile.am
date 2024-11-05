@@ -428,7 +428,6 @@ schismtracker_SOURCES = \
 	schism/palettes.c		\
 	schism/pattern-view.c		\
 	schism/sample-edit.c		\
-	schism/sample-view.c		\
 	schism/slurp.c			\
 	schism/status.c			\
 	schism/str.c             \

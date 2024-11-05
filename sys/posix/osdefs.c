@@ -37,11 +37,11 @@ int posix_run_hook(const char *dir, const char *name, const char *maybe_arg)
 	case -1:
 		return 0;
 	case 0:
-		if (chdir(dir) == -1) _exit(255);
-		tmp = malloc(strlen(name)+4);
-		if (!tmp) _exit(255);
-		sprintf(tmp, "./%s", name);
-		execl(tmp, tmp, maybe_arg, NULL);
+		if (chdir(dir) == -1)
+			_exit(255);
+		if (asprintf(&tmp, "./%s", name) < 0)
+			_exit(255);
+		execl(tmp, tmp, maybe_arg, (char *)NULL);
 		free(tmp);
 		_exit(255);
 	};

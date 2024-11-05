@@ -98,20 +98,14 @@ static int did_classic = 0;
 
 /* --------------------------------------------------------------------- */
 
-static void display_print_info(void)
-{
-	log_append(2, 0, "Video initialised");
-	log_underline(17);
-	video_report();
-}
-
 #define SDL_INIT_FLAGS SDL_INIT_TIMER | SDL_INIT_VIDEO
 
 static void display_init(void)
 {
 	video_startup();
 
-	display_print_info();
+	video_report();
+
 	SDL_StartTextInput();
 }
 
@@ -1037,7 +1031,6 @@ int main(int argc, char **argv)
 	palette_apply();
 	font_init();
 	midi_engine_start();
-	log_nl();
 	audio_init(audio_driver, audio_device);
 	song_init_modplug();
 
