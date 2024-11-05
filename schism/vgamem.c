@@ -376,6 +376,7 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 	}
 
 /* write the vgamem routines; currently we only ever use 32-bits per pixel. */
+VGAMEM_SCANNER_VARIANT(16)
 VGAMEM_SCANNER_VARIANT(32)
 
 #undef VGAMEM_SCAN_VARIANT

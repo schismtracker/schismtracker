@@ -34,6 +34,7 @@ extern int cfg_video_want_fixed_width;
 extern int cfg_video_want_fixed_height;
 extern int cfg_video_mousecursor;
 extern int cfg_video_width, cfg_video_height;
+extern int cfg_video_hardware;
 #ifdef SCHISM_WIN32
 extern int cfg_video_want_menu_bar;
 #endif

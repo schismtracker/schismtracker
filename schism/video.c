@@ -149,6 +149,7 @@ struct video_cf {
 	SDL_Window *window;
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
+	SDL_PixelFormat *pixel_format;
 
 	int width, height;
 
@@ -213,17 +214,13 @@ void video_report(void)
 
 	SDL_DisplayMode display = {0};
 
-	Uint32 format;
-	SDL_QueryTexture(video.texture, &format, NULL, NULL, NULL);
-
 	{
 		SDL_RendererInfo renderer;
 		SDL_GetRendererInfo(video.renderer, &renderer);
 		log_appendf(5, " Using driver '%s' with renderer '%s'", SDL_GetCurrentVideoDriver(), renderer.name);
 	}
-	
 
-	log_appendf(5, " Display format: %"PRIu32" bits/pixel", SDL_BITSPERPIXEL(format));
+	log_appendf(5, " Display format: %"PRIu32" bits/pixel", SDL_BITSPERPIXEL(video.pixel_format->format));
 
 	if (!SDL_GetCurrentDisplayMode(0, &display) && video.fullscreen)
 		log_appendf(5, " Display dimensions: %dx%d", display.w, display.h);
@@ -233,9 +230,35 @@ void video_report(void)
 
 void video_redraw_texture(void)
 {
+	// Native formats, in order of preference.
+	static const uint32_t native_formats[] = {
+		SDL_PIXELFORMAT_RGB888,
+		SDL_PIXELFORMAT_ARGB8888,
+		SDL_PIXELFORMAT_RGB444,
+		SDL_PIXELFORMAT_ARGB4444,
+	};
+	int i, j, pref_last = ARRAY_SIZE(native_formats);
+	uint32_t format = SDL_PIXELFORMAT_RGB888;
+
 	if (video.texture)
 		SDL_DestroyTexture(video.texture);
-	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
+
+	if (video.pixel_format)
+		SDL_FreeFormat(video.pixel_format);
+
+	// We want to find the best format we can natively
+	// output to. If we can't, then we fall back to
+	// SDL_PIXELFORMAT_RGB888 and let SDL deal with the
+	// conversion.
+	SDL_RendererInfo info;
+	SDL_GetRendererInfo(video.renderer, &info);
+	for (i = 0; i < info.num_texture_formats; i++)
+		for (j = 0; j < ARRAY_SIZE(native_formats); j++)
+			if (info.texture_formats[i] == native_formats[j] && j < pref_last)
+				format = info.texture_formats[i];
+
+	video.texture = SDL_CreateTexture(video.renderer, format, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
+	video.pixel_format = SDL_AllocFormat(format);
 }
 
 void video_redraw_renderer(int hardware)
@@ -328,8 +351,7 @@ void video_startup(void)
 #endif
 
 	video.window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width, video.height, SDL_WINDOW_RESIZABLE);
-	video.renderer = SDL_CreateRenderer(video.window, -1, 0);
-	video_redraw_texture();
+	video_redraw_renderer(cfg_video_hardware);
 
 	/* Aspect ratio correction if it's wanted */
 	if (cfg_video_want_fixed)
@@ -361,21 +383,18 @@ void video_colors(unsigned char palette[16][3])
 	int i, p;
 
 	/* make our "base" space */
-	for (i = 0; i < 16; i++) {
-		video.pal[i] = palette[i][2]
-			| (palette[i][1] << 8)
-			| (palette[i][0] << 16);
-	}
+	for (i = 0; i < 16; i++)
+		video.pal[i] = SDL_MapRGB(video.pixel_format, palette[i][0], palette[i][1], palette[i][2]);
 
 	/* make our "gradient" space */
 	for (i = 0; i < 128; i++) {
 		p = lastmap[(i>>5)];
 
-		/* voodoo magic */
-		video.pal[i + 128] =
-			   ((int)palette[p][2] + (((int)(palette[p+1][2] - palette[p][2]) * (i & 0x1F)) / 0x20))
-			| (((int)palette[p][1] + (((int)(palette[p+1][1] - palette[p][1]) * (i & 0x1F)) / 0x20)) << 8)
-			| (((int)palette[p][0] + (((int)(palette[p+1][0] - palette[p][0]) * (i & 0x1F)) / 0x20)) << 16);
+		video.pal[i + 128] = SDL_MapRGB(video.pixel_format,
+			(int)palette[p][0] + (((int)(palette[p+1][0] - palette[p][0]) * (i & 0x1F)) / 0x20),
+			(int)palette[p][1] + (((int)(palette[p+1][1] - palette[p][1]) * (i & 0x1F)) / 0x20),
+			(int)palette[p][2] + (((int)(palette[p+1][2] - palette[p][2]) * (i & 0x1F)) / 0x20)
+		);
 	}
 }
 
@@ -461,7 +480,7 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 	}
 }
 
-static void _blit11(unsigned char *pixels, int pitch, unsigned int *tpal)
+static inline void _blit11(unsigned char *pixels, int pitch, unsigned int *tpal)
 {
 	const unsigned int mouseline_x = (video.mouse.x / 8);
 	const unsigned int mouseline_v = (video.mouse.x % 8);
@@ -470,7 +489,18 @@ static void _blit11(unsigned char *pixels, int pitch, unsigned int *tpal)
 
 	for (unsigned int y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
 		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask);
-		vgamem_scan32(y, (uint32_t *)pixels, tpal, mouseline, mouseline_mask);
+		switch (video.pixel_format->BytesPerPixel) {
+		case 2:
+			vgamem_scan16(y, (uint16_t *)pixels, tpal, mouseline, mouseline_mask);
+			break;
+		case 4:
+			vgamem_scan32(y, (uint32_t *)pixels, tpal, mouseline, mouseline_mask);
+			break;
+		default:
+			// should never happen
+			break;
+		}
+
 		pixels += pitch;
 	}
 }
