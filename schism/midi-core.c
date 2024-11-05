@@ -642,11 +642,16 @@ static int _midi_queue_run(UNUSED void *xtop)
 	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_TIME_CRITICAL);
 #elif SCHISM_WIN32
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#else
+	/* just say that it's high priority */
+	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
 #endif
 
 	SDL_LockMutex(midi_play_mutex);
 	for (;;) {
 		SDL_CondWait(midi_play_cond, midi_play_mutex);
+
+		const schism_ticks_t start = SCHISM_GET_TICKS();
 
 		for (i = 0; i < qlen; i++) {
 			SDL_LockMutex(midi_record_mutex);
@@ -656,7 +661,19 @@ static int _midi_queue_run(UNUSED void *xtop)
 				qq[i].b[j].used = 0;
 			}
 			SDL_UnlockMutex(midi_record_mutex);
-			rt_msleep(1); // 1msec
+
+			// Since the sleep function has the possibility of not
+			// *really* being realtime, we have to take into account
+			// that we might not really be on the ms that we want.
+			//
+			// To combat this, we have to check if the current tick
+			// value is greater than or equal to the expected tick
+			// value, and make up for the difference there. It surely
+			// isn't perfect, but it'll get the job done for slow
+			// machines.
+			if (SCHISM_TICKS_PASSED(start + i, SCHISM_GET_TICKS()))
+				msleep(1);
+
 			qq[i].used = 0;
 		}
 	}
