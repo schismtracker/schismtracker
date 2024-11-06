@@ -45,10 +45,10 @@
 
 /* leeto drawing skills */
 struct mouse_cursor {
-	unsigned int pointer[18];
-	unsigned int mask[18];
-	unsigned int height, width;
-	unsigned int center_x, center_y; /* which point of the pointer does actually point */
+	uint32_t pointer[18];
+	uint32_t mask[18];
+	uint32_t height, width;
+	uint32_t center_x, center_y; /* which point of the pointer does actually point */
 };
 
 #if !SDL_VERSION_ATLEAST(2, 0, 4)
@@ -148,7 +148,7 @@ static struct mouse_cursor cursors[] = {
 	},
 };
 
-struct video_cf {
+static struct {
 	SDL_Window *window;
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
@@ -164,7 +164,6 @@ struct video_cf {
 		int visible;
 	} mouse;
 
-#ifdef SCHISM_WIN32
 	struct {
 		/* TODO: need to save the state of the menu bar or else
 		 * these will be wrong if it's toggled while in fullscreen */
@@ -172,7 +171,6 @@ struct video_cf {
 
 		int x, y;
 	} saved;
-#endif
 
 	int fullscreen;
 
@@ -183,10 +181,7 @@ struct video_cf {
 	} yuv;
 
 	uint32_t pal[256];
-};
-
-/* don't stomp defaults */
-static struct video_cf video = {
+} video = {
 	.mouse = {
 		.visible = MOUSE_EMULATED,
 		.shape = CURSOR_SHAPE_ARROW,
@@ -307,6 +302,17 @@ void video_report(void)
 	log_nl();
 }
 
+static void set_icon(void)
+{
+	SDL_SetWindowTitle(video.window, WINDOW_TITLE);
+#ifndef SCHISM_MACOSX
+/* apple/macs use a bundle; this overrides their nice pretty icon */
+	SDL_Surface *icon = xpmdata(_schism_icon_xpm_hires);
+	SDL_SetWindowIcon(video.window, icon);
+	SDL_FreeSurface(icon);
+#endif
+}
+
 void video_redraw_texture(void)
 {
 	int i, j, pref_last = ARRAY_SIZE(native_formats);
@@ -380,43 +386,6 @@ void video_setup(const char *quality)
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
 }
 
-static void set_icon(void)
-{
-	SDL_SetWindowTitle(video.window, WINDOW_TITLE);
-#ifndef SCHISM_MACOSX
-/* apple/macs use a bundle; this overrides their nice pretty icon */
-	SDL_Surface *icon = xpmdata(_schism_icon_xpm_hires);
-	SDL_SetWindowIcon(video.window, icon);
-	SDL_FreeSurface(icon);
-#endif
-}
-
-void video_fullscreen(int new_fs_flag)
-{
-	/* positive new_fs_flag == set, negative == toggle */
-	video.fullscreen = (new_fs_flag >= 0) ? !!new_fs_flag : !video.fullscreen;
-
-	if (video.fullscreen) {
-#ifdef SCHISM_WIN32
-		SDL_GetWindowSize(video.window, &video.saved.width, &video.saved.height);
-		SDL_GetWindowPosition(video.window, &video.saved.x, &video.saved.y);
-#endif
-		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-#ifdef SCHISM_WIN32
-		win32_toggle_menu(video.window);
-#endif
-	} else {
-		SDL_SetWindowFullscreen(video.window, 0);
-#ifdef SCHISM_WIN32
-		/* the menu must be toggled first here */
-		win32_toggle_menu(video.window);
-		SDL_SetWindowSize(video.window, video.saved.width, video.saved.height);
-		SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
-#endif
-		set_icon(); /* XXX is this necessary */
-	}
-}
-
 void video_startup(void)
 {
 	vgamem_clear();
@@ -432,9 +401,7 @@ void video_startup(void)
 
 	video.width = cfg_video_width;
 	video.height = cfg_video_height;
-#ifdef SCHISM_WIN32
 	video.saved.x = video.saved.y = SDL_WINDOWPOS_CENTERED;
-#endif
 
 	video.window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width, video.height, SDL_WINDOW_RESIZABLE);
 	video_redraw_renderer(cfg_video_hardware);
@@ -444,16 +411,40 @@ void video_startup(void)
 		SDL_RenderSetLogicalSize(video.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height);
 
 	video_fullscreen(cfg_video_fullscreen);
-#ifdef SCHISM_WIN32
-	if (!video.fullscreen) {
+	if (video_have_menu() && !video.fullscreen) {
 		SDL_SetWindowSize(video.window, video.width, video.height);
 		SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
 	}
-#endif
 
 	/* okay, i think we're ready */
 	SDL_ShowCursor(SDL_DISABLE);
 	set_icon();
+}
+
+void video_fullscreen(int new_fs_flag)
+{
+	const int have_menu = video_have_menu();
+	/* positive new_fs_flag == set, negative == toggle */
+	video.fullscreen = (new_fs_flag >= 0) ? !!new_fs_flag : !video.fullscreen;
+
+	if (video.fullscreen) {
+		if (have_menu) {
+			SDL_GetWindowSize(video.window, &video.saved.width, &video.saved.height);
+			SDL_GetWindowPosition(video.window, &video.saved.x, &video.saved.y);
+		}
+		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+		if (have_menu)
+			video_toggle_menu();
+	} else {
+		SDL_SetWindowFullscreen(video.window, 0);
+		if (have_menu) {
+			/* the menu must be toggled first here */
+			video_toggle_menu();
+			SDL_SetWindowSize(video.window, video.saved.width, video.saved.height);
+			SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
+		}
+		set_icon(); /* XXX is this necessary */
+	}
 }
 
 void video_resize(unsigned int width, unsigned int height)
@@ -463,18 +454,12 @@ void video_resize(unsigned int width, unsigned int height)
 	status.flags |= (NEED_UPDATE);
 }
 
-static void yuv_create_(unsigned int *y, unsigned int *u, unsigned int *v, unsigned char rgb[3])
-{
-	// YCbCr
-	*y =  0.257 * rgb[0] + 0.504 * rgb[1] + 0.098 * rgb[2] +  16;
-	*u = -0.148 * rgb[0] - 0.291 * rgb[1] + 0.439 * rgb[2] + 128;
-	*v =  0.439 * rgb[0] - 0.368 * rgb[1] - 0.071 * rgb[2] + 128;
-}
-
 static void yuv_pal_(int i, unsigned char rgb[3])
 {
-	unsigned int y, u, v;
-	yuv_create_(&y, &u, &v, rgb);
+	// YCbCr
+	unsigned int y =  0.257 * rgb[0] + 0.504 * rgb[1] + 0.098 * rgb[2] +  16;
+	unsigned int u = -0.148 * rgb[0] - 0.291 * rgb[1] + 0.439 * rgb[2] + 128;
+	unsigned int v =  0.439 * rgb[0] - 0.368 * rgb[1] - 0.071 * rgb[2] + 128;
 
 	switch (video.format) {
 	case SDL_PIXELFORMAT_IYUV:
@@ -555,6 +540,144 @@ int video_is_hardware(void)
 	SDL_GetRendererInfo(video.renderer, &info);
 	return !!(info.flags & SDL_RENDERER_ACCELERATED);
 }
+
+/* -------------------------------------------------------- */
+/* mousecursor */
+
+int video_mousecursor_visible(void)
+{
+	return video.mouse.visible;
+}
+
+void video_set_mousecursor_shape(enum video_mousecursor_shape shape)
+{
+	video.mouse.shape = shape;
+}
+
+void video_mousecursor(int vis)
+{
+	const char *state[] = {
+		"Mouse disabled",
+		"Software mouse cursor enabled",
+		"Hardware mouse cursor enabled",
+	};
+
+	switch (vis) {
+	case MOUSE_CYCLE_STATE:
+		vis = (video.mouse.visible + 1) % MOUSE_CYCLE_STATE;
+		/* fall through */
+	case MOUSE_DISABLED:
+	case MOUSE_SYSTEM:
+	case MOUSE_EMULATED:
+		video.mouse.visible = vis;
+		status_text_flash("%s", state[video.mouse.visible]);
+		break;
+	case MOUSE_RESET_STATE:
+		break;
+	default:
+		video.mouse.visible = MOUSE_EMULATED;
+		break;
+	}
+
+	SDL_ShowCursor(video.mouse.visible == MOUSE_SYSTEM);
+
+	// Totally turn off mouse event sending when the mouse is disabled
+	int evstate = video.mouse.visible == MOUSE_DISABLED ? SDL_DISABLE : SDL_ENABLE;
+	if (evstate != SDL_EventState(SDL_MOUSEMOTION, SDL_QUERY)) {
+		SDL_EventState(SDL_MOUSEMOTION, evstate);
+		SDL_EventState(SDL_MOUSEBUTTONDOWN, evstate);
+		SDL_EventState(SDL_MOUSEBUTTONUP, evstate);
+	}
+}
+
+/* ---------------------------------------------------------- */
+/* coordinate translation */
+
+void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
+{
+	if (video.mouse.visible && (video.mouse.x != vx || video.mouse.y != vy))
+		status.flags |= SOFTWARE_MOUSE_MOVED;
+
+	vx *= NATIVE_SCREEN_WIDTH;
+	vy *= NATIVE_SCREEN_HEIGHT;
+	vx /= (cfg_video_want_fixed) ? cfg_video_want_fixed_width  : video.width;
+	vy /= (cfg_video_want_fixed) ? cfg_video_want_fixed_height : video.height;
+
+	vx = CLAMP(vx, 0, NATIVE_SCREEN_WIDTH - 1);
+	vy = CLAMP(vy, 0, NATIVE_SCREEN_HEIGHT - 1);
+
+	*x = video.mouse.x = vx;
+	*y = video.mouse.y = vy;
+}
+
+void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
+{
+	if (!cfg_video_want_fixed) {
+		*trans_x = x;
+		*trans_y = y;
+	} else {
+		float xx, yy;
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+		SDL_RenderWindowToLogical(video.renderer, x, y, &xx, &yy);
+#else
+		/* Alternative for older SDL versions. MIGHT work with high DPI */
+		float scale_x = 1, scale_y = 1;
+
+		SDL_RenderGetScale(video.renderer, &scale_x, &scale_y);
+
+		xx = x - (video.width / 2) - (((float)cfg_video_want_fixed_width * scale_x) / 2);
+		yy = y - (video.height / 2) - (((float)cfg_video_want_fixed_height * scale_y) / 2);
+
+		xx /= (float)video.width * cfg_video_want_fixed_width;
+		yy /= (float)video.height * cfg_video_want_fixed_height;
+#endif
+		*trans_x = (int)xx;
+		*trans_y = (int)yy;
+	}
+}
+
+/* -------------------------------------------------- */
+/* input grab */
+
+int video_is_input_grabbed(void)
+{
+	return !!SDL_GetWindowGrab(video.window);
+}
+
+void video_set_input_grabbed(int enabled)
+{
+	SDL_SetWindowGrab(video.window, enabled ? SDL_TRUE : SDL_FALSE);
+}
+
+/* -------------------------------------------------- */
+/* warp mouse position */
+
+void video_warp_mouse(int x, int y)
+{
+	SDL_WarpMouseInWindow(video.window, x, y);
+}
+
+/* -------------------------------------------------- */
+/* menu toggling */
+
+int video_have_menu(void)
+{
+#ifdef SCHISM_WIN32
+	return 1;
+#else
+	return 0;
+#endif
+}
+
+void video_toggle_menu(void)
+{
+#ifdef SCHISM_WIN32
+	win32_toggle_menu(video.window);
+#endif
+}
+
+/* -------------------------------------------------- */
+/* mouse drawing */
 
 static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, uint32_t mouseline[80], uint32_t mouseline_mask[80])
 {
@@ -719,98 +842,4 @@ void video_blit(void)
 	SDL_UnlockTexture(video.texture);
 	SDL_RenderCopy(video.renderer, video.texture, NULL, (cfg_video_want_fixed) ? &dstrect : NULL);
 	SDL_RenderPresent(video.renderer);
-}
-
-int video_mousecursor_visible(void)
-{
-	return video.mouse.visible;
-}
-
-void video_set_mousecursor_shape(enum video_mousecursor_shape shape)
-{
-	video.mouse.shape = shape;
-}
-
-void video_mousecursor(int vis)
-{
-	const char *state[] = {
-		"Mouse disabled",
-		"Software mouse cursor enabled",
-		"Hardware mouse cursor enabled",
-	};
-
-	switch (vis) {
-	case MOUSE_CYCLE_STATE:
-		vis = (video.mouse.visible + 1) % MOUSE_CYCLE_STATE;
-		/* fall through */
-	case MOUSE_DISABLED:
-	case MOUSE_SYSTEM:
-	case MOUSE_EMULATED:
-		video.mouse.visible = vis;
-		status_text_flash("%s", state[video.mouse.visible]);
-		break;
-	case MOUSE_RESET_STATE:
-		break;
-	default:
-		video.mouse.visible = MOUSE_EMULATED;
-		break;
-	}
-
-	SDL_ShowCursor(video.mouse.visible == MOUSE_SYSTEM);
-
-	// Totally turn off mouse event sending when the mouse is disabled
-	int evstate = video.mouse.visible == MOUSE_DISABLED ? SDL_DISABLE : SDL_ENABLE;
-	if (evstate != SDL_EventState(SDL_MOUSEMOTION, SDL_QUERY)) {
-		SDL_EventState(SDL_MOUSEMOTION, evstate);
-		SDL_EventState(SDL_MOUSEBUTTONDOWN, evstate);
-		SDL_EventState(SDL_MOUSEBUTTONUP, evstate);
-	}
-}
-
-void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
-{
-	if (video.mouse.visible && (video.mouse.x != vx || video.mouse.y != vy))
-		status.flags |= SOFTWARE_MOUSE_MOVED;
-
-	vx *= NATIVE_SCREEN_WIDTH;
-	vy *= NATIVE_SCREEN_HEIGHT;
-	vx /= (cfg_video_want_fixed) ? cfg_video_want_fixed_width  : video.width;
-	vy /= (cfg_video_want_fixed) ? cfg_video_want_fixed_height : video.height;
-
-	vx = CLAMP(vx, 0, NATIVE_SCREEN_WIDTH - 1);
-	vy = CLAMP(vy, 0, NATIVE_SCREEN_HEIGHT - 1);
-
-	*x = video.mouse.x = vx;
-	*y = video.mouse.y = vy;
-}
-
-void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
-{
-	if (!cfg_video_want_fixed) {
-		*trans_x = x;
-		*trans_y = y;
-	} else {
-		float xx, yy;
-#if SDL_VERSION_ATLEAST(2, 0, 18)
-		SDL_RenderWindowToLogical(video.renderer, x, y, &xx, &yy);
-#else
-		/* Alternative for older SDL versions. MIGHT work with high DPI */
-		float scale_x = 1, scale_y = 1;
-
-		SDL_RenderGetScale(video.renderer, &scale_x, &scale_y);
-
-		xx = x - (video.width / 2) - (((float)cfg_video_want_fixed_width * scale_x) / 2);
-		yy = y - (video.height / 2) - (((float)cfg_video_want_fixed_height * scale_y) / 2);
-
-		xx /= (float)video.width * cfg_video_want_fixed_width;
-		yy /= (float)video.height * cfg_video_want_fixed_height;
-#endif
-		*trans_x = (int)xx;
-		*trans_y = (int)yy;
-	}
-}
-
-SDL_Window * video_window(void)
-{
-	return video.window;
 }

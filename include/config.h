@@ -36,9 +36,7 @@ extern int cfg_video_want_fixed_height;
 extern int cfg_video_mousecursor;
 extern int cfg_video_width, cfg_video_height;
 extern int cfg_video_hardware;
-#ifdef SCHISM_WIN32
 extern int cfg_video_want_menu_bar;
-#endif
 
 extern char cfg_dir_modules[], cfg_dir_samples[], cfg_dir_instruments[];
 extern char cfg_dir_dotschism[]; /* the full path to ~/.schism */

@@ -378,8 +378,7 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 	dialog_create_custom(midx - 10, midy - 3,  20, 6, _mpw, 1, 0, _mp_draw, NULL);
 	/* warp mouse to position of slider knob */
 	if (max == 0) max = 1; /* prevent division by zero */
-	SDL_WarpMouseInWindow(
-		video_window(),
+	video_warp_mouse(
 		video_width()*((midx - 8)*8 + (cv - min)*96.0/(max - min) + 1)/640,
 		video_height()*midy*8/400.0 + 4);
 
@@ -505,8 +504,8 @@ static int handle_key_global(struct key_event * k)
 		if (k->mod & KMOD_CTRL) {
 			if (k->state == KEY_RELEASE)
 				return 1; /* argh */
-			const SDL_bool grabbed = !SDL_GetWindowGrab(video_window());
-			SDL_SetWindowGrab(video_window(), grabbed);
+			const int grabbed = !video_is_input_grabbed();
+			video_set_input_grabbed(grabbed);
 			status_text_flash(grabbed
 				? "Mouse and keyboard grabbed, press Ctrl+D to release"
 				: "Mouse and keyboard released");
