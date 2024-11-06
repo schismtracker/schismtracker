@@ -100,7 +100,6 @@ bin_PROGRAMS = schismtracker
 noinst_HEADERS = \
 	include/auto/logoit.h		\
 	include/auto/logoschism.h	\
-	include/auto/schismico.h	\
 	include/auto/schismico_hires.h	\
 	include/bswap.h			\
 	include/bshift.h        \
