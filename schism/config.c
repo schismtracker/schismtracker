@@ -51,6 +51,7 @@
 char cfg_dir_modules[PATH_MAX + 1], cfg_dir_samples[PATH_MAX + 1], cfg_dir_instruments[PATH_MAX + 1],
 	cfg_dir_dotschism[PATH_MAX + 1], cfg_font[NAME_MAX + 1];
 char cfg_video_interpolation[8];
+char cfg_video_format[9];
 int cfg_video_fullscreen = 0;
 int cfg_video_want_fixed = 0;
 int cfg_video_want_fixed_width = 0;
@@ -177,7 +178,8 @@ void cfg_load(void)
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-	cfg_get_string(&cfg, "Video", "interpolation", cfg_video_interpolation, 7, "nearest");
+	cfg_get_string(&cfg, "Video", "interpolation", cfg_video_interpolation, ARRAY_SIZE(cfg_video_interpolation) - 1, "nearest");
+	cfg_get_string(&cfg, "Video", "format", cfg_video_format, ARRAY_SIZE(cfg_video_format) - 1, "");
 	cfg_video_width = cfg_get_number(&cfg, "Video", "width", 640);
 	cfg_video_height = cfg_get_number(&cfg, "Video", "height", 400);
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);

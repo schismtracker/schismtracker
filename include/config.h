@@ -27,6 +27,7 @@
 #include "headers.h"
 
 extern char cfg_video_interpolation[];
+extern char cfg_video_format[];
 /* TODO: consolidate these into cfg_video_flags */
 extern int cfg_video_fullscreen;
 extern int cfg_video_want_fixed;

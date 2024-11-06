@@ -27,6 +27,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "charset.h"
 #include "bswap.h"
 #include "config.h"
 #include "sdlmain.h"
@@ -192,6 +193,36 @@ static struct video_cf video = {
 	},
 };
 
+// Native formats, in order of preference.
+static const struct {
+	uint32_t format;
+	const char *name;
+} native_formats[] = {
+	// RGB
+	// ----------------
+	{SDL_PIXELFORMAT_RGB888, "RGB888"},
+	{SDL_PIXELFORMAT_ARGB8888, "ARGB8888"},
+	// {SDL_PIXELFORMAT_RGB24, "RGB24"},
+	{SDL_PIXELFORMAT_RGB565, "RGB565"},
+	{SDL_PIXELFORMAT_RGB555, "RGB555"},
+	{SDL_PIXELFORMAT_ARGB1555, "ARGB1555"},
+	{SDL_PIXELFORMAT_RGB444, "RGB444"},
+	{SDL_PIXELFORMAT_ARGB4444, "ARGB4444"},
+	{SDL_PIXELFORMAT_RGB332, "RGB332"},
+	// ----------------
+
+	// YUV
+	// ----------------
+	{SDL_PIXELFORMAT_IYUV, "IYUV"},
+	{SDL_PIXELFORMAT_YV12, "YV12"},
+	// {SDL_PIXELFORMAT_UYVY, "UYVY"},
+	// {SDL_PIXELFORMAT_YVYU, "YVYU"},
+	// {SDL_PIXELFORMAT_YUY2, "YUY2"},
+	// {SDL_PIXELFORMAT_NV12, "NV12"},
+	// {SDL_PIXELFORMAT_NV21, "NV21"},
+	// ----------------
+};
+
 int video_is_fullscreen(void)
 {
 	return video.fullscreen;
@@ -256,6 +287,7 @@ void video_report(void)
 	case SDL_PIXELFORMAT_NV21:
 		while (video.format != layout->num && layout->name != NULL)
 			layout++;
+
 		if (layout->name)
 			log_appendf(5, " Display format: %s (%s)", layout->name, layout->type);
 		else
@@ -277,29 +309,6 @@ void video_report(void)
 
 void video_redraw_texture(void)
 {
-	// Native formats, in order of preference.
-	static const uint32_t native_formats[] = {
-		SDL_PIXELFORMAT_RGB888,
-		SDL_PIXELFORMAT_ARGB8888,
-		// don't care:
-		// SDL_PIXELFORMAT_RGB24
-		SDL_PIXELFORMAT_RGB565,
-		SDL_PIXELFORMAT_RGB555,
-		SDL_PIXELFORMAT_ARGB1555,
-		SDL_PIXELFORMAT_RGB444,
-		SDL_PIXELFORMAT_ARGB4444,
-		SDL_PIXELFORMAT_RGB332,
-		// YUV
-		SDL_PIXELFORMAT_IYUV,
-		SDL_PIXELFORMAT_YV12,
-		// I don't really care about these:
-		//
-		// SDL_PIXELFORMAT_UYVY,
-		// SDL_PIXELFORMAT_YVYU,
-		// SDL_PIXELFORMAT_YUY2,
-		// SDL_PIXELFORMAT_NV12,
-		// SDL_PIXELFORMAT_NV21,
-	};
 	int i, j, pref_last = ARRAY_SIZE(native_formats);
 	uint32_t format = SDL_PIXELFORMAT_RGB888;
 
@@ -309,6 +318,15 @@ void video_redraw_texture(void)
 	if (video.pixel_format)
 		SDL_FreeFormat(video.pixel_format);
 
+	if (*cfg_video_format) {
+		for (i = 0; i < ARRAY_SIZE(native_formats); i++) {
+			if (!charset_strcasecmp(cfg_video_format, CHARSET_UTF8, native_formats[i].name, CHARSET_UTF8)) {
+				format = native_formats[i].format;
+				goto got_format;
+			}
+		}
+	}
+
 	// We want to find the best format we can natively
 	// output to. If we can't, then we fall back to
 	// SDL_PIXELFORMAT_RGB888 and let SDL deal with the
@@ -317,9 +335,10 @@ void video_redraw_texture(void)
 	SDL_GetRendererInfo(video.renderer, &info);
 	for (i = 0; i < info.num_texture_formats; i++)
 		for (j = 0; j < ARRAY_SIZE(native_formats); j++)
-			if (info.texture_formats[i] == native_formats[j] && j < pref_last)
-				format = native_formats[pref_last = j];
+			if (info.texture_formats[i] == native_formats[j].format && j < pref_last)
+				format = native_formats[pref_last = j].format;
 
+got_format:
 	video.texture = SDL_CreateTexture(video.renderer, format, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
 	video.pixel_format = SDL_AllocFormat(format);
 	video.format = format;
