@@ -74,9 +74,7 @@ static const char *const midi_modes[] = {
 };
 
 static const int video_fs_group[] = { 9, 10, -1 };
-#ifdef SCHISM_WIN32
 static const int video_menu_bar_group[] = { 16, 17, -1 };
-#endif
 static int video_group[] = { 11, 12, 13, -1 };
 static int video_renderer_group[] = { 14, 15, -1 };
 
@@ -229,13 +227,11 @@ static void change_video_settings(void)
 	font_init();
 }
 
-#ifdef SCHISM_WIN32
 static void change_menu_bar_settings(void) {
-	cfg_video_want_menu_bar = widgets_config[14].d.togglebutton.state;
+	cfg_video_want_menu_bar = widgets_config[16].d.togglebutton.state;
 
-	win32_toggle_menu(video_window());
+	video_toggle_menu();
 }
-#endif
 
 /* --------------------------------------------------------------------- */
 
@@ -258,9 +254,8 @@ static void config_draw_const(void)
 	draw_text("Video Scaling:", 2, 28, 0, 2);
 	draw_text("Video Rendering:", 2, 40, 0, 2);
 	draw_text("Full Screen:", 38, 28, 0, 2);
-#ifdef SCHISM_WIN32
-	draw_text("Menu Bar:", 38, 32, 0, 2);
-#endif
+	if (video_have_menu())
+		draw_text("Menu Bar:", 38, 32, 0, 2);
 
 	draw_fill_chars(18, 15, 34, 25, DEFAULT_FG, 0);
 	draw_box(17,14,35,26, BOX_THIN | BOX_INNER | BOX_INSET);
@@ -296,10 +291,10 @@ static void config_set_page(void)
 	widgets_config[14].d.togglebutton.state = video_is_hardware();
 	widgets_config[15].d.togglebutton.state = !video_is_hardware();
 
-#ifdef SCHISM_WIN32
-	widgets_config[16].d.togglebutton.state = !!cfg_video_want_menu_bar;
-	widgets_config[17].d.togglebutton.state = !cfg_video_want_menu_bar;
-#endif
+	if (video_have_menu()) {
+		widgets_config[16].d.togglebutton.state = !!cfg_video_want_menu_bar;
+		widgets_config[17].d.togglebutton.state = !cfg_video_want_menu_bar;
+	}
 }
 
 /* --------------------------------------------------------------------- */
@@ -404,19 +399,19 @@ void config_load_page(struct page *page)
 			"Software",
 			2, video_renderer_group);
 	////
-#ifdef SCHISM_WIN32
-	widget_create_togglebutton(widgets_config+16,
-			44, 34, 5,
-			8,9,11,10,10,
-			change_menu_bar_settings,
-			"Yes",
-			2, video_menu_bar_group);
-	widget_create_togglebutton(widgets_config+17,
-			54, 34, 5,
-			10,10,9,10,0,
-			change_menu_bar_settings,
-			"No",
-			2, video_menu_bar_group);
-	page->total_widgets += 2;
-#endif
+	if (video_have_menu()) {
+		widget_create_togglebutton(widgets_config+16,
+				44, 34, 5,
+				8,9,11,10,10,
+				change_menu_bar_settings,
+				"Yes",
+				2, video_menu_bar_group);
+		widget_create_togglebutton(widgets_config+17,
+				54, 34, 5,
+				10,10,9,10,0,
+				change_menu_bar_settings,
+				"No",
+				2, video_menu_bar_group);
+		page->total_widgets += 2;
+	}
 }

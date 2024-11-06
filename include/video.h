@@ -28,7 +28,21 @@ const char *video_driver_name(void);
 
 void video_redraw_renderer(int hardware);
 
-void video_warp_mouse(unsigned int x, unsigned int y);
+int video_is_input_grabbed(void);
+void video_set_input_grabbed(int enabled);
+
+/* -------------------------------------------------- */
+
+void video_warp_mouse(int x, int y);
+
+/* -------------------------------------------------- */
+/* menu toggling */
+
+int video_have_menu(void);
+void video_toggle_menu(void);
+
+/* -------------------------------------------------- */
+
 void video_redraw_texture(void);
 void video_setup(const char *quality);
 void video_startup(void);
@@ -61,7 +75,6 @@ int video_is_visible(void);
 int video_is_hardware(void);
 int video_width(void);
 int video_height(void);
-SDL_Window *video_window(void);
 
 void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y);
 

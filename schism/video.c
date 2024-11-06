@@ -27,6 +27,8 @@
 #include "headers.h"
 
 #include "it.h"
+#include "charset.h"
+#include "bswap.h"
 #include "config.h"
 #include "sdlmain.h"
 #include "video.h"
@@ -38,20 +40,21 @@
 #include <inttypes.h>
 
 #ifndef SCHISM_MACOSX
-#ifdef SCHISM_WIN32
-#include "auto/schismico.h"
-#else
 #include "auto/schismico_hires.h"
-#endif
 #endif
 
 /* leeto drawing skills */
 struct mouse_cursor {
-	unsigned int pointer[18];
-	unsigned int mask[18];
-	unsigned int height, width;
-	unsigned int center_x, center_y; /* which point of the pointer does actually point */
+	uint32_t pointer[18];
+	uint32_t mask[18];
+	uint32_t height, width;
+	uint32_t center_x, center_y; /* which point of the pointer does actually point */
 };
+
+#if !SDL_VERSION_ATLEAST(2, 0, 4)
+#define SDL_PIXELFORMAT_NV12 (SDL_DEFINE_PIXELFOURCC('N', 'V', '1', '2'))
+#define SDL_PIXELFORMAT_NV21 (SDL_DEFINE_PIXELFOURCC('N', 'V', '2', '1'))
+#endif
 
 /* ex. cursors[CURSOR_SHAPE_ARROW] */
 static struct mouse_cursor cursors[] = {
@@ -145,11 +148,13 @@ static struct mouse_cursor cursors[] = {
 	},
 };
 
-struct video_cf {
+static struct {
 	SDL_Window *window;
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
-	SDL_PixelFormat *pixel_format;
+	SDL_PixelFormat *pixel_format; // may be NULL
+	uint32_t format;
+	uint32_t bpp; // BYTES per pixel
 
 	int width, height;
 
@@ -159,7 +164,6 @@ struct video_cf {
 		int visible;
 	} mouse;
 
-#ifdef SCHISM_WIN32
 	struct {
 		/* TODO: need to save the state of the menu bar or else
 		 * these will be wrong if it's toggled while in fullscreen */
@@ -167,19 +171,51 @@ struct video_cf {
 
 		int x, y;
 	} saved;
-#endif
 
 	int fullscreen;
 
-	uint32_t pal[256];
-};
+	struct {
+		uint32_t pal_y[256];
+		uint32_t pal_u[256];
+		uint32_t pal_v[256];
+	} yuv;
 
-/* don't stomp defaults */
-static struct video_cf video = {
+	uint32_t pal[256];
+} video = {
 	.mouse = {
 		.visible = MOUSE_EMULATED,
-		.shape = CURSOR_SHAPE_ARROW
-	}
+		.shape = CURSOR_SHAPE_ARROW,
+	},
+};
+
+// Native formats, in order of preference.
+static const struct {
+	uint32_t format;
+	const char *name;
+} native_formats[] = {
+	// RGB
+	// ----------------
+	{SDL_PIXELFORMAT_RGB888, "RGB888"},
+	{SDL_PIXELFORMAT_ARGB8888, "ARGB8888"},
+	// {SDL_PIXELFORMAT_RGB24, "RGB24"},
+	{SDL_PIXELFORMAT_RGB565, "RGB565"},
+	{SDL_PIXELFORMAT_RGB555, "RGB555"},
+	{SDL_PIXELFORMAT_ARGB1555, "ARGB1555"},
+	{SDL_PIXELFORMAT_RGB444, "RGB444"},
+	{SDL_PIXELFORMAT_ARGB4444, "ARGB4444"},
+	{SDL_PIXELFORMAT_RGB332, "RGB332"},
+	// ----------------
+
+	// YUV
+	// ----------------
+	{SDL_PIXELFORMAT_IYUV, "IYUV"},
+	{SDL_PIXELFORMAT_YV12, "YV12"},
+	// {SDL_PIXELFORMAT_UYVY, "UYVY"},
+	// {SDL_PIXELFORMAT_YVYU, "YVYU"},
+	// {SDL_PIXELFORMAT_YUY2, "YUY2"},
+	// {SDL_PIXELFORMAT_NV12, "NV12"},
+	// {SDL_PIXELFORMAT_NV21, "NV21"},
+	// ----------------
 };
 
 int video_is_fullscreen(void)
@@ -209,34 +245,76 @@ const char *video_driver_name(void)
 
 void video_report(void)
 {
+	struct {
+		uint32_t num;
+		const char *name, *type;
+	} yuv_layouts[] = {
+		{SDL_PIXELFORMAT_YV12, "YV12", "planar+tv"},
+		{SDL_PIXELFORMAT_IYUV, "IYUV", "planar+tv"},
+		{SDL_PIXELFORMAT_YVYU, "YVYU", "packed"},
+		{SDL_PIXELFORMAT_UYVY, "UYVY", "packed"},
+		{SDL_PIXELFORMAT_YUY2, "YUY2", "packed"},
+		{SDL_PIXELFORMAT_NV12, "NV12", "planar"},
+		{SDL_PIXELFORMAT_NV21, "NV21", "planar"},
+		{0, NULL, NULL},
+	}, *layout = yuv_layouts;
+
 	log_append(2, 0, "Video initialised");
 	log_underline(17);
-
-	SDL_DisplayMode display = {0};
 
 	{
 		SDL_RendererInfo renderer;
 		SDL_GetRendererInfo(video.renderer, &renderer);
-		log_appendf(5, " Using driver '%s' with renderer '%s'", SDL_GetCurrentVideoDriver(), renderer.name);
+		log_appendf(5, " Using driver '%s'", SDL_GetCurrentVideoDriver());
+		log_appendf(5, " %sware%s renderer '%s'",
+			(renderer.flags & SDL_RENDERER_SOFTWARE) ? "Soft" : "Hard",
+			(renderer.flags & SDL_RENDERER_ACCELERATED) ? "-accelerated" : "",
+			renderer.name);
 	}
 
-	log_appendf(5, " Display format: %"PRIu32" bits/pixel", SDL_BITSPERPIXEL(video.pixel_format->format));
+	switch (video.format) {
+	case SDL_PIXELFORMAT_IYUV:
+	case SDL_PIXELFORMAT_YV12:
+	case SDL_PIXELFORMAT_YVYU:
+	case SDL_PIXELFORMAT_UYVY:
+	case SDL_PIXELFORMAT_YUY2:
+	case SDL_PIXELFORMAT_NV12:
+	case SDL_PIXELFORMAT_NV21:
+		while (video.format != layout->num && layout->name != NULL)
+			layout++;
 
-	if (!SDL_GetCurrentDisplayMode(0, &display) && video.fullscreen)
-		log_appendf(5, " Display dimensions: %dx%d", display.w, display.h);
+		if (layout->name)
+			log_appendf(5, " Display format: %s (%s)", layout->name, layout->type);
+		else
+			log_appendf(5, " Display format: %" PRIx32, video.format);
+		break;
+	default:
+		log_appendf(5, " Display format: %"PRIu32" bits/pixel", SDL_BITSPERPIXEL(video.format));
+		break;
+	}
+
+	{
+		SDL_DisplayMode display;
+		if (!SDL_GetCurrentDisplayMode(0, &display) && video.fullscreen)
+			log_appendf(5, " Display dimensions: %dx%d", display.w, display.h);
+	}
 
 	log_nl();
 }
 
+static void set_icon(void)
+{
+	SDL_SetWindowTitle(video.window, WINDOW_TITLE);
+#ifndef SCHISM_MACOSX
+/* apple/macs use a bundle; this overrides their nice pretty icon */
+	SDL_Surface *icon = xpmdata(_schism_icon_xpm_hires);
+	SDL_SetWindowIcon(video.window, icon);
+	SDL_FreeSurface(icon);
+#endif
+}
+
 void video_redraw_texture(void)
 {
-	// Native formats, in order of preference.
-	static const uint32_t native_formats[] = {
-		SDL_PIXELFORMAT_RGB888,
-		SDL_PIXELFORMAT_ARGB8888,
-		SDL_PIXELFORMAT_RGB444,
-		SDL_PIXELFORMAT_ARGB4444,
-	};
 	int i, j, pref_last = ARRAY_SIZE(native_formats);
 	uint32_t format = SDL_PIXELFORMAT_RGB888;
 
@@ -246,6 +324,15 @@ void video_redraw_texture(void)
 	if (video.pixel_format)
 		SDL_FreeFormat(video.pixel_format);
 
+	if (*cfg_video_format) {
+		for (i = 0; i < ARRAY_SIZE(native_formats); i++) {
+			if (!charset_strcasecmp(cfg_video_format, CHARSET_UTF8, native_formats[i].name, CHARSET_UTF8)) {
+				format = native_formats[i].format;
+				goto got_format;
+			}
+		}
+	}
+
 	// We want to find the best format we can natively
 	// output to. If we can't, then we fall back to
 	// SDL_PIXELFORMAT_RGB888 and let SDL deal with the
@@ -254,11 +341,22 @@ void video_redraw_texture(void)
 	SDL_GetRendererInfo(video.renderer, &info);
 	for (i = 0; i < info.num_texture_formats; i++)
 		for (j = 0; j < ARRAY_SIZE(native_formats); j++)
-			if (info.texture_formats[i] == native_formats[j] && j < pref_last)
-				format = info.texture_formats[i];
+			if (info.texture_formats[i] == native_formats[j].format && j < pref_last)
+				format = native_formats[pref_last = j].format;
 
+got_format:
 	video.texture = SDL_CreateTexture(video.renderer, format, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
 	video.pixel_format = SDL_AllocFormat(format);
+	video.format = format;
+
+	// find the bytes per pixel
+	switch (video.format) {
+	// irrelevant
+	case SDL_PIXELFORMAT_YV12:
+	case SDL_PIXELFORMAT_IYUV: break;
+
+	default: video.bpp = video.pixel_format->BytesPerPixel; break;
+	}
 }
 
 void video_redraw_renderer(int hardware)
@@ -288,49 +386,6 @@ void video_setup(const char *quality)
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
 }
 
-static void set_icon(void)
-{
-	/* FIXME: is this really necessary? */
-	SDL_SetWindowTitle(video.window, WINDOW_TITLE);
-#ifndef SCHISM_MACOSX
-/* apple/macs use a bundle; this overrides their nice pretty icon */
-#ifdef SCHISM_WIN32
-/* win32 icons must be 32x32 according to SDL 1.2 doc */
-	SDL_Surface *icon = xpmdata(_schism_icon_xpm);
-#else
-	SDL_Surface *icon = xpmdata(_schism_icon_xpm_hires);
-#endif
-	SDL_SetWindowIcon(video.window, icon);
-	SDL_FreeSurface(icon);
-#endif
-}
-
-void video_fullscreen(int new_fs_flag)
-{
-	/* positive new_fs_flag == set, negative == toggle */
-	video.fullscreen = (new_fs_flag >= 0) ? !!new_fs_flag : !video.fullscreen;
-
-	if (video.fullscreen) {
-#ifdef SCHISM_WIN32
-		SDL_GetWindowSize(video.window, &video.saved.width, &video.saved.height);
-		SDL_GetWindowPosition(video.window, &video.saved.x, &video.saved.y);
-#endif
-		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-#ifdef SCHISM_WIN32
-		win32_toggle_menu(video.window);
-#endif
-	} else {
-		SDL_SetWindowFullscreen(video.window, 0);
-#ifdef SCHISM_WIN32
-		/* the menu must be toggled first here */
-		win32_toggle_menu(video.window);
-		SDL_SetWindowSize(video.window, video.saved.width, video.saved.height);
-		SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
-#endif
-		set_icon(); /* XXX is this necessary */
-	}
-}
-
 void video_startup(void)
 {
 	vgamem_clear();
@@ -346,9 +401,7 @@ void video_startup(void)
 
 	video.width = cfg_video_width;
 	video.height = cfg_video_height;
-#ifdef SCHISM_WIN32
 	video.saved.x = video.saved.y = SDL_WINDOWPOS_CENTERED;
-#endif
 
 	video.window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width, video.height, SDL_WINDOW_RESIZABLE);
 	video_redraw_renderer(cfg_video_hardware);
@@ -358,16 +411,40 @@ void video_startup(void)
 		SDL_RenderSetLogicalSize(video.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height);
 
 	video_fullscreen(cfg_video_fullscreen);
-#ifdef SCHISM_WIN32
-	if (!video.fullscreen) {
+	if (video_have_menu() && !video.fullscreen) {
 		SDL_SetWindowSize(video.window, video.width, video.height);
 		SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
 	}
-#endif
 
 	/* okay, i think we're ready */
 	SDL_ShowCursor(SDL_DISABLE);
 	set_icon();
+}
+
+void video_fullscreen(int new_fs_flag)
+{
+	const int have_menu = video_have_menu();
+	/* positive new_fs_flag == set, negative == toggle */
+	video.fullscreen = (new_fs_flag >= 0) ? !!new_fs_flag : !video.fullscreen;
+
+	if (video.fullscreen) {
+		if (have_menu) {
+			SDL_GetWindowSize(video.window, &video.saved.width, &video.saved.height);
+			SDL_GetWindowPosition(video.window, &video.saved.x, &video.saved.y);
+		}
+		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+		if (have_menu)
+			video_toggle_menu();
+	} else {
+		SDL_SetWindowFullscreen(video.window, 0);
+		if (have_menu) {
+			/* the menu must be toggled first here */
+			video_toggle_menu();
+			SDL_SetWindowSize(video.window, video.saved.width, video.saved.height);
+			SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
+		}
+		set_icon(); /* XXX is this necessary */
+	}
 }
 
 void video_resize(unsigned int width, unsigned int height)
@@ -377,24 +454,59 @@ void video_resize(unsigned int width, unsigned int height)
 	status.flags |= (NEED_UPDATE);
 }
 
+static void yuv_pal_(int i, unsigned char rgb[3])
+{
+	// YCbCr
+	unsigned int y =  0.257 * rgb[0] + 0.504 * rgb[1] + 0.098 * rgb[2] +  16;
+	unsigned int u = -0.148 * rgb[0] - 0.291 * rgb[1] + 0.439 * rgb[2] + 128;
+	unsigned int v =  0.439 * rgb[0] - 0.368 * rgb[1] - 0.071 * rgb[2] + 128;
+
+	switch (video.format) {
+	case SDL_PIXELFORMAT_IYUV:
+	case SDL_PIXELFORMAT_YV12:
+		video.yuv.pal_y[i] = y;
+		video.yuv.pal_u[i] = (u >> 4) & 0xF;
+		video.yuv.pal_v[i] = (v >> 4) & 0xF;
+		break;
+	default:
+		break; // err
+	}
+}
+
+static void sdl_pal_(int i, unsigned char rgb[3])
+{
+	video.pal[i] = SDL_MapRGB(video.pixel_format, rgb[0], rgb[1], rgb[2]);
+}
+
 void video_colors(unsigned char palette[16][3])
 {
 	static const int lastmap[] = { 0, 1, 2, 3, 5 };
 	int i, p;
+	void (*fun)(int i, unsigned char rgb[3]);
+
+	switch (video.format) {
+	case SDL_PIXELFORMAT_IYUV:
+	case SDL_PIXELFORMAT_YV12:
+		fun = yuv_pal_;
+		break;
+	default:
+		fun = sdl_pal_;
+		break;
+	}
 
 	/* make our "base" space */
 	for (i = 0; i < 16; i++)
-		video.pal[i] = SDL_MapRGB(video.pixel_format, palette[i][0], palette[i][1], palette[i][2]);
+		fun(i, (unsigned char []){palette[i][0], palette[i][1], palette[i][2]});
 
 	/* make our "gradient" space */
 	for (i = 0; i < 128; i++) {
 		p = lastmap[(i>>5)];
 
-		video.pal[i + 128] = SDL_MapRGB(video.pixel_format,
+		fun(i + 128, (unsigned char []){
 			(int)palette[p][0] + (((int)(palette[p+1][0] - palette[p][0]) * (i & 0x1F)) / 0x20),
 			(int)palette[p][1] + (((int)(palette[p+1][1] - palette[p][1]) * (i & 0x1F)) / 0x20),
-			(int)palette[p][2] + (((int)(palette[p+1][2] - palette[p][2]) * (i & 0x1F)) / 0x20)
-		);
+			(int)palette[p][2] + (((int)(palette[p+1][2] - palette[p][2]) * (i & 0x1F)) / 0x20),
+		});
 	}
 }
 
@@ -428,6 +540,144 @@ int video_is_hardware(void)
 	SDL_GetRendererInfo(video.renderer, &info);
 	return !!(info.flags & SDL_RENDERER_ACCELERATED);
 }
+
+/* -------------------------------------------------------- */
+/* mousecursor */
+
+int video_mousecursor_visible(void)
+{
+	return video.mouse.visible;
+}
+
+void video_set_mousecursor_shape(enum video_mousecursor_shape shape)
+{
+	video.mouse.shape = shape;
+}
+
+void video_mousecursor(int vis)
+{
+	const char *state[] = {
+		"Mouse disabled",
+		"Software mouse cursor enabled",
+		"Hardware mouse cursor enabled",
+	};
+
+	switch (vis) {
+	case MOUSE_CYCLE_STATE:
+		vis = (video.mouse.visible + 1) % MOUSE_CYCLE_STATE;
+		/* fall through */
+	case MOUSE_DISABLED:
+	case MOUSE_SYSTEM:
+	case MOUSE_EMULATED:
+		video.mouse.visible = vis;
+		status_text_flash("%s", state[video.mouse.visible]);
+		break;
+	case MOUSE_RESET_STATE:
+		break;
+	default:
+		video.mouse.visible = MOUSE_EMULATED;
+		break;
+	}
+
+	SDL_ShowCursor(video.mouse.visible == MOUSE_SYSTEM);
+
+	// Totally turn off mouse event sending when the mouse is disabled
+	int evstate = video.mouse.visible == MOUSE_DISABLED ? SDL_DISABLE : SDL_ENABLE;
+	if (evstate != SDL_EventState(SDL_MOUSEMOTION, SDL_QUERY)) {
+		SDL_EventState(SDL_MOUSEMOTION, evstate);
+		SDL_EventState(SDL_MOUSEBUTTONDOWN, evstate);
+		SDL_EventState(SDL_MOUSEBUTTONUP, evstate);
+	}
+}
+
+/* ---------------------------------------------------------- */
+/* coordinate translation */
+
+void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
+{
+	if (video.mouse.visible && (video.mouse.x != vx || video.mouse.y != vy))
+		status.flags |= SOFTWARE_MOUSE_MOVED;
+
+	vx *= NATIVE_SCREEN_WIDTH;
+	vy *= NATIVE_SCREEN_HEIGHT;
+	vx /= (cfg_video_want_fixed) ? cfg_video_want_fixed_width  : video.width;
+	vy /= (cfg_video_want_fixed) ? cfg_video_want_fixed_height : video.height;
+
+	vx = CLAMP(vx, 0, NATIVE_SCREEN_WIDTH - 1);
+	vy = CLAMP(vy, 0, NATIVE_SCREEN_HEIGHT - 1);
+
+	*x = video.mouse.x = vx;
+	*y = video.mouse.y = vy;
+}
+
+void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
+{
+	if (!cfg_video_want_fixed) {
+		*trans_x = x;
+		*trans_y = y;
+	} else {
+		float xx, yy;
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+		SDL_RenderWindowToLogical(video.renderer, x, y, &xx, &yy);
+#else
+		/* Alternative for older SDL versions. MIGHT work with high DPI */
+		float scale_x = 1, scale_y = 1;
+
+		SDL_RenderGetScale(video.renderer, &scale_x, &scale_y);
+
+		xx = x - (video.width / 2) - (((float)cfg_video_want_fixed_width * scale_x) / 2);
+		yy = y - (video.height / 2) - (((float)cfg_video_want_fixed_height * scale_y) / 2);
+
+		xx /= (float)video.width * cfg_video_want_fixed_width;
+		yy /= (float)video.height * cfg_video_want_fixed_height;
+#endif
+		*trans_x = (int)xx;
+		*trans_y = (int)yy;
+	}
+}
+
+/* -------------------------------------------------- */
+/* input grab */
+
+int video_is_input_grabbed(void)
+{
+	return !!SDL_GetWindowGrab(video.window);
+}
+
+void video_set_input_grabbed(int enabled)
+{
+	SDL_SetWindowGrab(video.window, enabled ? SDL_TRUE : SDL_FALSE);
+}
+
+/* -------------------------------------------------- */
+/* warp mouse position */
+
+void video_warp_mouse(int x, int y)
+{
+	SDL_WarpMouseInWindow(video.window, x, y);
+}
+
+/* -------------------------------------------------- */
+/* menu toggling */
+
+int video_have_menu(void)
+{
+#ifdef SCHISM_WIN32
+	return 1;
+#else
+	return 0;
+#endif
+}
+
+void video_toggle_menu(void)
+{
+#ifdef SCHISM_WIN32
+	win32_toggle_menu(video.window);
+#endif
+}
+
+/* -------------------------------------------------- */
+/* mouse drawing */
 
 static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, uint32_t mouseline[80], uint32_t mouseline_mask[80])
 {
@@ -480,16 +730,55 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 	}
 }
 
-static inline void _blit11(unsigned char *pixels, int pitch, unsigned int *tpal)
+/* --------------------------------------------------------------- */
+/* blitters */
+
+static inline void blitUV(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
 {
 	const unsigned int mouseline_x = (video.mouse.x / 8);
 	const unsigned int mouseline_v = (video.mouse.x % 8);
+	unsigned int mouseline[80];
+	unsigned int mouseline_mask[80];
+
+	int y;
+	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask);
+		vgamem_scan8(y, pixels, tpal, mouseline, mouseline_mask);
+		pixels += pitch;
+	}
+}
+
+static inline void blitTV(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
+{
+	const unsigned int mouseline_x = (video.mouse.x / 8);
+	const unsigned int mouseline_v = (video.mouse.x % 8);
+	unsigned char cv8backing[NATIVE_SCREEN_WIDTH];
+	unsigned int mouseline[80];
+	unsigned int mouseline_mask[80];
+	int y, x;
+
+	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y += 2) {
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask);
+		vgamem_scan8(y, cv8backing, tpal, mouseline, mouseline_mask);
+		for (x = 0; x < pitch; x += 2)
+			*pixels++ = cv8backing[x+1] | (cv8backing[x] << 4);
+	}
+}
+
+static inline void blit11(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
+{
+	const unsigned int mouseline_x = (video.mouse.x / 8);
+	const unsigned int mouseline_v = (video.mouse.x % 8);
+	unsigned int y;
 	uint32_t mouseline[80];
 	uint32_t mouseline_mask[80];
 
-	for (unsigned int y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
+	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
 		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask);
-		switch (video.pixel_format->BytesPerPixel) {
+		switch (video.bpp) {
+		case 1:
+			vgamem_scan8(y, (uint8_t *)pixels, tpal, mouseline, mouseline_mask);
+			break;
 		case 2:
 			vgamem_scan16(y, (uint16_t *)pixels, tpal, mouseline, mouseline_mask);
 			break;
@@ -505,6 +794,8 @@ static inline void _blit11(unsigned char *pixels, int pitch, unsigned int *tpal)
 	}
 }
 
+/* ------------------------------------------------------------ */
+
 void video_blit(void)
 {
 	SDL_Rect dstrect;
@@ -519,108 +810,36 @@ void video_blit(void)
 	}
 
 	SDL_RenderClear(video.renderer);
-	{
-		unsigned char *pixels;
-		int pitch;
 
-		SDL_LockTexture(video.texture, NULL, (void **)&pixels, &pitch);
-		_blit11(pixels, pitch, video.pal);
-		SDL_UnlockTexture(video.texture);
+	// regular format blitter
+	unsigned char *pixels;
+	int pitch;
+
+	SDL_LockTexture(video.texture, NULL, (void **)&pixels, &pitch);
+
+	switch (video.format) {
+	case SDL_PIXELFORMAT_IYUV: {
+		blitUV(pixels, pitch, video.yuv.pal_y);
+		pixels += (NATIVE_SCREEN_HEIGHT * pitch);
+		blitTV(pixels, pitch, video.yuv.pal_u);
+		pixels += (NATIVE_SCREEN_HEIGHT * pitch) / 4;
+		blitTV(pixels, pitch, video.yuv.pal_v);
+		break;
 	}
+	case SDL_PIXELFORMAT_YV12: {
+		blitUV(pixels, pitch, video.yuv.pal_y);
+		pixels += (NATIVE_SCREEN_HEIGHT * pitch);
+		blitTV(pixels, pitch, video.yuv.pal_v);
+		pixels += (NATIVE_SCREEN_HEIGHT * pitch) / 4;
+		blitTV(pixels, pitch, video.yuv.pal_u);
+		break;
+	}
+	default: {
+		blit11(pixels, pitch, video.pal);
+		break;
+	}
+	}
+	SDL_UnlockTexture(video.texture);
 	SDL_RenderCopy(video.renderer, video.texture, NULL, (cfg_video_want_fixed) ? &dstrect : NULL);
 	SDL_RenderPresent(video.renderer);
-}
-
-int video_mousecursor_visible(void)
-{
-	return video.mouse.visible;
-}
-
-void video_set_mousecursor_shape(enum video_mousecursor_shape shape)
-{
-	video.mouse.shape = shape;
-}
-
-void video_mousecursor(int vis)
-{
-	const char *state[] = {
-		"Mouse disabled",
-		"Software mouse cursor enabled",
-		"Hardware mouse cursor enabled",
-	};
-
-	switch (vis) {
-	case MOUSE_CYCLE_STATE:
-		vis = (video.mouse.visible + 1) % MOUSE_CYCLE_STATE;
-		/* fall through */
-	case MOUSE_DISABLED:
-	case MOUSE_SYSTEM:
-	case MOUSE_EMULATED:
-		video.mouse.visible = vis;
-		status_text_flash("%s", state[video.mouse.visible]);
-		break;
-	case MOUSE_RESET_STATE:
-		break;
-	default:
-		video.mouse.visible = MOUSE_EMULATED;
-		break;
-	}
-
-	SDL_ShowCursor(video.mouse.visible == MOUSE_SYSTEM);
-
-	// Totally turn off mouse event sending when the mouse is disabled
-	int evstate = video.mouse.visible == MOUSE_DISABLED ? SDL_DISABLE : SDL_ENABLE;
-	if (evstate != SDL_EventState(SDL_MOUSEMOTION, SDL_QUERY)) {
-		SDL_EventState(SDL_MOUSEMOTION, evstate);
-		SDL_EventState(SDL_MOUSEBUTTONDOWN, evstate);
-		SDL_EventState(SDL_MOUSEBUTTONUP, evstate);
-	}
-}
-
-void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
-{
-	if (video.mouse.visible && (video.mouse.x != vx || video.mouse.y != vy))
-		status.flags |= SOFTWARE_MOUSE_MOVED;
-
-	vx *= NATIVE_SCREEN_WIDTH;
-	vy *= NATIVE_SCREEN_HEIGHT;
-	vx /= (cfg_video_want_fixed) ? cfg_video_want_fixed_width  : video.width;
-	vy /= (cfg_video_want_fixed) ? cfg_video_want_fixed_height : video.height;
-
-	vx = CLAMP(vx, 0, NATIVE_SCREEN_WIDTH - 1);
-	vy = CLAMP(vy, 0, NATIVE_SCREEN_HEIGHT - 1);
-
-	*x = video.mouse.x = vx;
-	*y = video.mouse.y = vy;
-}
-
-void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
-{
-	if (!cfg_video_want_fixed) {
-		*trans_x = x;
-		*trans_y = y;
-	} else {
-		float xx, yy;
-#if SDL_VERSION_ATLEAST(2, 0, 18)
-		SDL_RenderWindowToLogical(video.renderer, x, y, &xx, &yy);
-#else
-		/* Alternative for older SDL versions. MIGHT work with high DPI */
-		float scale_x = 1, scale_y = 1;
-
-		SDL_RenderGetScale(video.renderer, &scale_x, &scale_y);
-
-		xx = x - (video.width / 2) - (((float)cfg_video_want_fixed_width * scale_x) / 2);
-		yy = y - (video.height / 2) - (((float)cfg_video_want_fixed_height * scale_y) / 2);
-
-		xx /= (float)video.width * cfg_video_want_fixed_width;
-		yy /= (float)video.height * cfg_video_want_fixed_height;
-#endif
-		*trans_x = (int)xx;
-		*trans_y = (int)yy;
-	}
-}
-
-SDL_Window * video_window(void)
-{
-	return video.window;
 }

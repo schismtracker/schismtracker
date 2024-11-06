@@ -51,6 +51,7 @@
 char cfg_dir_modules[PATH_MAX + 1], cfg_dir_samples[PATH_MAX + 1], cfg_dir_instruments[PATH_MAX + 1],
 	cfg_dir_dotschism[PATH_MAX + 1], cfg_font[NAME_MAX + 1];
 char cfg_video_interpolation[8];
+char cfg_video_format[9];
 int cfg_video_fullscreen = 0;
 int cfg_video_want_fixed = 0;
 int cfg_video_want_fixed_width = 0;
@@ -58,9 +59,7 @@ int cfg_video_want_fixed_height = 0;
 int cfg_video_mousecursor = MOUSE_EMULATED;
 int cfg_video_width, cfg_video_height;
 int cfg_video_hardware = 0;
-#ifdef SCHISM_WIN32
 int cfg_video_want_menu_bar = 1;
-#endif
 
 /* --------------------------------------------------------------------- */
 
@@ -177,7 +176,8 @@ void cfg_load(void)
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-	cfg_get_string(&cfg, "Video", "interpolation", cfg_video_interpolation, 7, "nearest");
+	cfg_get_string(&cfg, "Video", "interpolation", cfg_video_interpolation, ARRAY_SIZE(cfg_video_interpolation) - 1, "nearest");
+	cfg_get_string(&cfg, "Video", "format", cfg_video_format, ARRAY_SIZE(cfg_video_format) - 1, "");
 	cfg_video_width = cfg_get_number(&cfg, "Video", "width", 640);
 	cfg_video_height = cfg_get_number(&cfg, "Video", "height", 400);
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);
@@ -187,9 +187,7 @@ void cfg_load(void)
 	cfg_video_mousecursor = cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
 	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_MAX_STATE);
 	cfg_video_hardware = cfg_get_number(&cfg, "Video", "hardware", 1);
-#ifdef SCHISM_WIN32
 	cfg_video_want_menu_bar = !!cfg_get_number(&cfg, "Video", "want_menu_bar", 1);
-#endif
 
 	tmp = dmoz_get_home_directory();
 	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, tmp);
@@ -375,9 +373,7 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "Video", "mouse_cursor", video_mousecursor_visible());
 	cfg_set_number(&cfg, "Video", "lazy_redraw", !!(status.flags & LAZY_REDRAW));
 	cfg_set_number(&cfg, "Video", "hardware", !!(video_is_hardware()));
-#ifdef SCHISM_WIN32
 	cfg_set_number(&cfg, "Video", "want_menu_bar", !!cfg_video_want_menu_bar);
-#endif
 
 	cfg_set_number(&cfg, "General", "vis_style", status.vis_style);
 	cfg_set_number(&cfg, "General", "time_display", status.time_display);
