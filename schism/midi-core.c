@@ -23,6 +23,7 @@
 
 #include "headers.h"
 
+#include "backend/threads.h"
 #include "events.h"
 #include "util.h"
 #include "midi.h"
@@ -43,11 +44,11 @@ static int _connected = 0;
 midi_port_mutex is for the port thread(s),
 and midi_record_mutex is by the event/sound thread
 */
-static SDL_mutex *midi_mutex = NULL;
-static SDL_mutex *midi_port_mutex = NULL;
-static SDL_mutex *midi_record_mutex = NULL;
-static SDL_mutex *midi_play_mutex = NULL;
-static SDL_cond *midi_play_cond = NULL;
+static schism_mutex_t *midi_mutex = NULL;
+static schism_mutex_t *midi_port_mutex = NULL;
+static schism_mutex_t *midi_record_mutex = NULL;
+static schism_mutex_t *midi_play_mutex = NULL;
+static schism_cond_t *midi_play_cond = NULL;
 
 static struct midi_provider *port_providers = NULL;
 
@@ -203,7 +204,7 @@ void cfg_save_midi(cfg_file_t *cfg)
 
 	/* write out only enabled midi ports */
 	i = 1;
-	SDL_LockMutex(midi_mutex);
+	be_mutex_lock(midi_mutex);
 	q = NULL;
 	for (p = port_providers; p; p = p->next) {
 		while (midi_port_foreach(p, &q)) {
@@ -227,7 +228,7 @@ void cfg_save_midi(cfg_file_t *cfg)
 		}
 	}
 	//TODO: Save number of MIDI-IP ports
-	SDL_UnlockMutex(midi_mutex);
+	be_mutex_unlock(midi_mutex);
 
 	/* delete other MIDI port sections */
 	for (c = cfg->sections; c; c = c->next) {
@@ -271,11 +272,11 @@ void midi_engine_poll_ports(void)
 
 	if (!midi_mutex) return;
 
-	SDL_LockMutex(midi_mutex);
+	be_mutex_lock(midi_mutex);
 	for (n = port_providers; n; n = n->next) {
 		if (n->poll) n->poll(n);
 	}
-	SDL_UnlockMutex(midi_mutex);
+	be_mutex_unlock(midi_mutex);
 }
 
 int midi_engine_start(void)
@@ -283,18 +284,18 @@ int midi_engine_start(void)
 	if (_connected)
 		return 1;
 
-	midi_mutex        = SDL_CreateMutex();
-	midi_record_mutex = SDL_CreateMutex();
-	midi_play_mutex   = SDL_CreateMutex();
-	midi_port_mutex   = SDL_CreateMutex();
-	midi_play_cond    = SDL_CreateCond();
+	midi_mutex        = be_mutex_create();
+	midi_record_mutex = be_mutex_create();
+	midi_play_mutex   = be_mutex_create();
+	midi_port_mutex   = be_mutex_create();
+	midi_play_cond    = be_cond_create();
 
 	if (!(midi_mutex && midi_record_mutex && midi_play_mutex && midi_port_mutex && midi_play_cond)) {
-		if (midi_mutex)        SDL_DestroyMutex(midi_mutex);
-		if (midi_record_mutex) SDL_DestroyMutex(midi_record_mutex);
-		if (midi_play_mutex)   SDL_DestroyMutex(midi_play_mutex);
-		if (midi_port_mutex)   SDL_DestroyMutex(midi_port_mutex);
-		if (midi_play_cond)    SDL_DestroyCond(midi_play_cond);
+		if (midi_mutex)        be_mutex_delete(midi_mutex);
+		if (midi_record_mutex) be_mutex_delete(midi_record_mutex);
+		if (midi_play_mutex)   be_mutex_delete(midi_play_mutex);
+		if (midi_port_mutex)   be_mutex_delete(midi_port_mutex);
+		if (midi_play_cond)    be_cond_delete(midi_play_cond);
 		midi_mutex = midi_record_mutex = midi_play_mutex = midi_port_mutex = NULL;
 		midi_play_cond = NULL;
 		return 0;
@@ -320,7 +321,7 @@ void midi_engine_stop(void)
 	if (!_connected) return;
 	if (!midi_mutex) return;
 
-	SDL_LockMutex(midi_mutex);
+	be_mutex_lock(midi_mutex);
 	for (n = port_providers; n;) {
 		p = n->next;
 
@@ -331,14 +332,14 @@ void midi_engine_stop(void)
 
 		if (n->thread) {
 			n->cancelled = 1;
-			SDL_WaitThread(n->thread, NULL);
+			be_thread_wait(n->thread, NULL);
 		}
 		free(n->name);
 		free(n);
 		n = p;
 	}
 	_connected = 0;
-	SDL_UnlockMutex(midi_mutex);
+	be_mutex_unlock(midi_mutex);
 }
 
 /* ------------------------------------------------------------- */
@@ -353,12 +354,12 @@ struct midi_port *midi_engine_port(int n, const char **name)
 	struct midi_port *pv = NULL;
 
 	if (!midi_port_mutex) return NULL;
-	SDL_LockMutex(midi_port_mutex);
+	be_mutex_lock(midi_port_mutex);
 	if (n >= 0 && n < port_count) {
 		pv = port_top[n];
 		if (name && pv) *name = pv->name;
 	}
-	SDL_UnlockMutex(midi_port_mutex);
+	be_mutex_unlock(midi_port_mutex);
 	return pv;
 }
 
@@ -366,9 +367,9 @@ int midi_engine_port_count(void)
 {
 	int pc;
 	if (!midi_port_mutex) return 0;
-	SDL_LockMutex(midi_port_mutex);
+	be_mutex_lock(midi_port_mutex);
 	pc = port_count;
-	SDL_UnlockMutex(midi_port_mutex);
+	be_mutex_unlock(midi_port_mutex);
 	return pc;
 }
 
@@ -393,14 +394,14 @@ struct midi_provider *midi_provider_register(const char *name,
 		n->send_now = driver->send;
 	}
 
-	SDL_LockMutex(midi_mutex);
+	be_mutex_lock(midi_mutex);
 	n->next = port_providers;
 	port_providers = n;
 
 	if (driver->thread)
-		n->thread = SDL_CreateThread((int (*)(void*))driver->thread, NULL, n);
+		n->thread = be_thread_create((int (*)(void*))driver->thread, NULL, n);
 
-	SDL_UnlockMutex(midi_mutex);
+	be_mutex_unlock(midi_mutex);
 
 	return n;
 }
@@ -409,7 +410,7 @@ void midi_provider_unregister(struct midi_provider* p)
 {
 	struct midi_provider* n;
 
-	SDL_LockMutex(midi_mutex);
+	be_mutex_lock(midi_mutex);
 
 	for (n = port_providers; n; n = n->next) {
 		if (n == p && n->next) {
@@ -418,7 +419,7 @@ void midi_provider_unregister(struct midi_provider* p)
 		}
 	}
 
-	SDL_UnlockMutex(midi_mutex);
+	be_mutex_unlock(midi_mutex);
 }
 
 /* ------------------------------------------------------------- */
@@ -456,13 +457,13 @@ int midi_port_register(struct midi_provider *pv, int inout, const char *name,
 		}
 	}
 
-	SDL_LockMutex(midi_port_mutex);
+	be_mutex_lock(midi_port_mutex);
 	port_alloc += 4;
 	pt = realloc(port_top, sizeof(struct midi_port *) * port_alloc);
 	if (!pt) {
 		free(p->name);
 		free(p);
-		SDL_UnlockMutex(midi_port_mutex);
+		be_mutex_unlock(midi_port_mutex);
 		return -1;
 	}
 	pt[port_count] = p;
@@ -474,7 +475,7 @@ int midi_port_register(struct midi_provider *pv, int inout, const char *name,
 	/* finally, and just before unlocking, load any configuration for it... */
 	_cfg_load_midi_part_locked(p);
 
-	SDL_UnlockMutex(midi_port_mutex);
+	be_mutex_unlock(midi_port_mutex);
 	return p->num;
 }
 
@@ -483,7 +484,7 @@ int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor)
 	int i;
 	if (!midi_port_mutex) return 0;
 
-	SDL_LockMutex(midi_port_mutex);
+	be_mutex_lock(midi_port_mutex);
 	do {
 		if (!*cursor) {
 			i = 0;
@@ -494,13 +495,13 @@ int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor)
 
 		if (i >= port_alloc) {
 			*cursor = NULL;
-			SDL_UnlockMutex(midi_port_mutex);
+			be_mutex_unlock(midi_port_mutex);
 			return 0;
 		}
 
 		*cursor = port_top[i];
 	} while (p && (*cursor)->provider != p);
-	SDL_UnlockMutex(midi_port_mutex);
+	be_mutex_unlock(midi_port_mutex);
 	return 1;
 }
 
@@ -573,9 +574,9 @@ void midi_send_now(const unsigned char *seq, unsigned int len)
 {
 	if (!midi_record_mutex) return;
 
-	SDL_LockMutex(midi_record_mutex);
+	be_mutex_lock(midi_record_mutex);
 	_midi_send_unlocked(seq, len, 0, MIDI_FROM_IMMEDIATE);
-	SDL_UnlockMutex(midi_record_mutex);
+	be_mutex_unlock(midi_record_mutex);
 }
 
 /*----------------------------------------------------------------------------------*/
@@ -637,30 +638,23 @@ static int _midi_queue_run(UNUSED void *xtop)
 #ifdef SCHISM_WIN32
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 #endif
-#if SDL_VERSION_ATLEAST(2, 0, 9)
-	/* SDL_THREAD_PRIORITY_TIME_CRITICAL only exists in >= 2.0.9 */
-	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_TIME_CRITICAL);
-#elif SCHISM_WIN32
-	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-#else
 	/* just say that it's high priority */
-	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
-#endif
+	be_thread_set_priority(BE_THREAD_PRIORITY_HIGH);
 
-	SDL_LockMutex(midi_play_mutex);
+	be_mutex_lock(midi_play_mutex);
 	for (;;) {
-		SDL_CondWait(midi_play_cond, midi_play_mutex);
+		be_cond_wait(midi_play_cond, midi_play_mutex);
 
 		const schism_ticks_t start = be_timer_ticks();
 
 		for (i = 0; i < qlen; i++) {
-			SDL_LockMutex(midi_record_mutex);
+			be_mutex_lock(midi_record_mutex);
 			for (j = 0; j < qq[i].used; j++) {
 				// empty the buffer
 				_midi_send_unlocked(qq[i].b[j].message, qq[i].b[j].used, 0, MIDI_FROM_NOW);
 				qq[i].b[j].used = 0;
 			}
-			SDL_UnlockMutex(midi_record_mutex);
+			be_mutex_unlock(midi_record_mutex);
 
 			// Since the sleep function has the possibility of not
 			// *really* being realtime, we have to take into account
@@ -709,7 +703,7 @@ int midi_need_flush(void)
 void midi_send_flush(void)
 {
 	// this function manages the queue
-	static SDL_Thread *midi_queue_thread = NULL;
+	static schism_thread_t *midi_queue_thread = NULL;
 
 	struct midi_port *ptr = NULL;
 	int need_explicit_flush = 0;
@@ -727,7 +721,7 @@ void midi_send_flush(void)
 	if (!need_explicit_flush) return;
 
 	if (!midi_queue_thread) {
-		midi_queue_thread = SDL_CreateThread(_midi_queue_run, NULL, NULL);
+		midi_queue_thread = be_thread_create(_midi_queue_run, NULL, NULL);
 		if (midi_queue_thread) {
 			log_appendf(3, "Started MIDI queue thread");
 		} else {
@@ -735,16 +729,16 @@ void midi_send_flush(void)
 		}
 	}
 
-	SDL_LockMutex(midi_play_mutex);
-	SDL_CondSignal(midi_play_cond);
-	SDL_UnlockMutex(midi_play_mutex);
+	be_mutex_lock(midi_play_mutex);
+	be_cond_signal(midi_play_cond);
+	be_mutex_unlock(midi_play_mutex);
 }
 
 void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int pos)
 {
 	if (!midi_record_mutex) return;
 
-	SDL_LockMutex(midi_record_mutex);
+	be_mutex_lock(midi_record_mutex);
 
 	/* just for fun... */
 	if (status.current_page == PAGE_MIDI) {
@@ -779,7 +773,7 @@ void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int 
 		}
 	}
 
-	SDL_UnlockMutex(midi_record_mutex);
+	be_mutex_unlock(midi_record_mutex);
 }
 
 /*----------------------------------------------------------------------------------*/
@@ -791,7 +785,7 @@ void midi_port_unregister(int num)
 
 	if (!midi_port_mutex) return;
 
-	SDL_LockMutex(midi_port_mutex);
+	be_mutex_lock(midi_port_mutex);
 	for (i = 0; i < port_alloc; i++) {
 		if (port_top[i] && port_top[i]->num == num) {
 			q = port_top[i];
@@ -808,7 +802,7 @@ void midi_port_unregister(int num)
 			break;
 		}
 	}
-	SDL_UnlockMutex(midi_port_mutex);
+	be_mutex_unlock(midi_port_mutex);
 }
 
 void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int len)
@@ -824,7 +818,7 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int l
 	}
 
 	/* just for fun... */
-	SDL_LockMutex(midi_record_mutex);
+	be_mutex_lock(midi_record_mutex);
 	status.last_midi_real_len = len;
 	if (len > sizeof(status.last_midi_event)) {
 		status.last_midi_len = sizeof(status.last_midi_event);
@@ -835,7 +829,7 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int l
 	status.flags |= MIDI_EVENT_CHANGED;
 	status.last_midi_port = src;
 	status.last_midi_tick = be_timer_ticks();
-	SDL_UnlockMutex(midi_record_mutex);
+	be_mutex_unlock(midi_record_mutex);
 
 	/* pass through midi events when on midi page */
 	if (status.current_page == PAGE_MIDI) {

@@ -24,7 +24,7 @@
 #ifndef SCHISM_IT_H_
 #define SCHISM_IT_H_
 
-#include "sdlmain.h"
+//#include "sdlmain.h"
 #include "backend/timer.h"
 
 #include <stdio.h>
@@ -42,9 +42,9 @@
 /* preprocessor stuff */
 
 #define NO_MODIFIER(mod) \
-	(((mod) & (KMOD_CTRL | KMOD_ALT | KMOD_SHIFT)) == 0)
+	(((mod) & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_SHIFT)) == 0)
 #define NO_CAM_MODS(mod) \
-	(((mod) & (KMOD_CTRL | KMOD_ALT)) == 0)
+	(((mod) & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT)) == 0)
 
 /* --------------------------------------------------------------------- */
 /* structs 'n enums */

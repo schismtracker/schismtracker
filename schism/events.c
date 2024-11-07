@@ -34,42 +34,39 @@
 
 static SDL_mutex *queue_mutex = NULL;
 
-#define EVENTQUEUE_CAPACITY 256
+#define EVENTQUEUE_CAPACITY 128
 static struct {
 	int front, rear, size;
 	schism_event_t events[EVENTQUEUE_CAPACITY];
-} queue;
+} queue = {0};
 
-static inline int queue_is_full(void)
+static inline int queue_enqueue(const schism_event_t *event)
 {
-	return (queue.size == EVENTQUEUE_CAPACITY);
-}
+	if (queue.size == EVENTQUEUE_CAPACITY)
+		return 0;
 
-static inline int queue_is_empty(void)
-{
-	return (queue.size == 0);
-}
-
-static inline void queue_enqueue(const schism_event_t *event)
-{
-	if (queue_is_full())
-		return;
+	queue.events[queue.rear] = *event;
 
 	queue.rear = (queue.rear + 1) % EVENTQUEUE_CAPACITY;
-	queue.events[queue.rear] = *event;
 	queue.size++;
+
+	return 1;
 }
 
 static inline int queue_dequeue(schism_event_t *event)
 {
-	if (queue_is_empty())
+	if (!queue.size)
 		return 0;
 
 	*event = queue.events[queue.front];
+
 	queue.front = (queue.front + 1) % EVENTQUEUE_CAPACITY;
-	queue.size = queue.size - 1;
+	queue.size--;
+
 	return 1;
 }
+
+/* ------------------------------------------------------ */
 
 int schism_init_event(void)
 {
@@ -84,7 +81,7 @@ int schism_have_event(void)
 {
 	SDL_LockMutex(queue_mutex);
 
-	if (!queue_is_empty()) {
+	if (!queue.size) {
 		SDL_UnlockMutex(queue_mutex);
 		return 1;
 	}
@@ -95,7 +92,7 @@ int schism_have_event(void)
 
 	SDL_LockMutex(queue_mutex);
 
-	if (!queue_is_empty()) {
+	if (!queue.size) {
 		SDL_UnlockMutex(queue_mutex);
 		return 1;
 	}
@@ -114,12 +111,8 @@ int schism_poll_event(schism_event_t *event)
 		return 1;
 	}
 
-	SDL_UnlockMutex(queue_mutex);
-
 	// try pumping the events.
 	be_pump_events();
-
-	SDL_LockMutex(queue_mutex);
 
 	if (queue_dequeue(event)) {
 		SDL_UnlockMutex(queue_mutex);
@@ -132,6 +125,7 @@ int schism_poll_event(schism_event_t *event)
 	return 0;
 }
 
+// implicitly fills in the timestamp
 int schism_push_event(const schism_event_t *event)
 {
 	schism_event_t e = *event;

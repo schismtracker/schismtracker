@@ -286,8 +286,8 @@ static void pop_pending_keydown(const char *text)
 	/* text should always be in UTF-8 here */
 	if (have_pending_keydown) {
 		if (text) {
-			strncpy(pending_keydown.text.text, text, ARRAY_SIZE(pending_keydown.text.text));
-			pending_keydown.text.text[ARRAY_SIZE(pending_keydown.text.text)-1] = '\0';
+			strncpy(pending_keydown.key.text, text, ARRAY_SIZE(pending_keydown.text.text));
+			pending_keydown.key.text[ARRAY_SIZE(pending_keydown.text.text)-1] = '\0';
 		}
 		schism_push_event(&pending_keydown);
 		have_pending_keydown = 0;
@@ -296,7 +296,6 @@ static void pop_pending_keydown(const char *text)
 
 void sdl2_pump_events(void)
 {
-	/* Convert our events to Schism's internal representation */
 	SDL_Event e;
 
 	while (SDL_PollEvent(&e)) {
@@ -348,14 +347,17 @@ void sdl2_pump_events(void)
 			}
 			break;
 		case SDL_KEYDOWN:
+			// pop any pending keydowns
 			pop_pending_keydown(NULL);
 
 			schism_event.type = SCHISM_KEYDOWN;
 			schism_event.key.state = KEY_PRESS;
 			schism_event.key.repeat = e.key.repeat;
+
+			// Schism's and SDL2's representation of these are the same.
 			schism_event.key.sym = e.key.keysym.sym;
 			schism_event.key.scancode = e.key.keysym.scancode;
-			schism_event.key.mod = sdl2_modkey_trans(e.key.keysym.mod);
+			schism_event.key.mod = sdl2_modkey_trans(e.key.keysym.mod); // except this one!
 
 			if (!SDL_IsTextInputActive()) {
 				// push it NOW
@@ -366,6 +368,7 @@ void sdl2_pump_events(void)
 
 			break;
 		case SDL_KEYUP:
+			// pop any pending keydowns
 			pop_pending_keydown(NULL);
 
 			schism_event.type = SCHISM_KEYUP;
@@ -428,6 +431,26 @@ void sdl2_pump_events(void)
 			schism_event.wheel.mouse_x = e.wheel.mouseX;
 			schism_event.wheel.mouse_y = e.wheel.mouseY;
 			schism_push_event(&schism_event);
+			break;
+		case SDL_DROPFILE:
+			schism_event.type = SCHISM_DROPFILE;
+
+			schism_event.drop.file = str_dup(e.drop.file);
+
+			SDL_free(e.drop.file);
+
+			schism_push_event(&schism_event);
+			break;
+		/* these two have no structures because we don't use them */
+		case SDL_AUDIODEVICEADDED:
+			schism_event.type = SCHISM_AUDIODEVICEADDED;
+			schism_push_event(&schism_event);
+			break;
+		case SDL_AUDIODEVICEREMOVED:
+			schism_event.type = SCHISM_AUDIODEVICEREMOVED;
+			schism_push_event(&schism_event);
+			break;
+		default:
 			break;
 		}
 	}

@@ -217,14 +217,9 @@ struct video_cf {
 	SDL_Rect clip;
 	SDL_Surface * surface;
 	SDL_Overlay * overlay;
-	/* to convert 32-bit color to 24-bit color */
-	unsigned char cv32backing[NATIVE_SCREEN_WIDTH * 8];
-	/* for tv mode */
-	unsigned char cv8backing[NATIVE_SCREEN_WIDTH];
 	struct {
 		unsigned int x;
 		unsigned int y;
-		int visible;
 	} mouse;
 
 	unsigned int yuv_y[256];
@@ -354,6 +349,9 @@ void video_report(void)
 		{0, NULL, NULL},
 	}, *layout = yuv_layouts;
 
+	log_append(2, 0, "Video initialised");
+	log_underline(17);
+
 	log_appendf(5, " Using driver '%s'", SDL_VideoDriverName(buf, 256));
 
 	switch (video.desktop.type) {
@@ -447,7 +445,7 @@ void video_fullscreen(int tri)
 		} else {
 			video_resize(0, 0);
 		}
-		/* video_report(); - this should be done in main, not here */
+		video_report();
 	}
 }
 
@@ -461,7 +459,7 @@ void video_setup(const char *driver)
 
 	video.draw.width = NATIVE_SCREEN_WIDTH;
 	video.draw.height = NATIVE_SCREEN_HEIGHT;
-	video.mouse.visible = MOUSE_EMULATED;
+	video_mousecursor(MOUSE_EMULATED);
 
 	video.yuvlayout = VIDEO_YUV_NONE;
 	if ((q=getenv("SCHISM_YUVLAYOUT")) || (q=getenv("YUVLAYOUT"))) {
@@ -1405,8 +1403,8 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 	unsigned int z;
 
 	memset(mouseline, 0, 80*sizeof(unsigned int));
-	if (video.mouse.visible != MOUSE_EMULATED
-	    //|| !(status.flags & IS_FOCUSED)
+	if (video_mousecursor_visible() != MOUSE_EMULATED
+	    || !(video_is_focused())
 	    || y < video.mouse.y
 	    || y >= video.mouse.y+MOUSE_HEIGHT) {
 		return;
@@ -1415,24 +1413,6 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 	z = _mouse_pointer[ y - video.mouse.y ];
 	mouseline[x] = z >> v;
 	if (x < 79) mouseline[x+1] = (z << (8-v)) & 0xff;
-}
-
-static void _blitYY(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
-{
-	unsigned int mouseline_x = (video.mouse.x / 8);
-	unsigned int mouseline_v = (video.mouse.x % 8);
-	unsigned int mouseline[80];
-	unsigned int mouseline_mask[80];
-	int y;
-
-	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-		make_mouseline(mouseline_x, mouseline_v, y, mouseline);
-
-		vgamem_scan16(y, (unsigned short *)pixels, tpal, mouseline, mouseline_mask);
-		memcpy(pixels+pitch,pixels,pitch);
-		pixels += pitch;
-		pixels += pitch;
-	}
 }
 
 static void _video_blit_planar(void) {
@@ -1454,13 +1434,13 @@ static void _video_blit_planar(void) {
 
 	case VIDEO_YUV_YV12:
 		/* Y+V+U */
-		_blitYY(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
+		video_blitYY(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
 		video_blitUV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_v);
 		video_blitUV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_u);
 		break;
 	case VIDEO_YUV_IYUV:
 		/* Y+U+V */
-		_blitYY(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
+		video_blitYY(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
 		video_blitUV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_u);
 		video_blitUV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_v);
 		break;
@@ -1604,9 +1584,9 @@ void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
 	vx /= (video.draw.width - (video.draw.width - video.clip.w));
 	vy /= (video.draw.height - (video.draw.height - video.clip.h));
 
-	if (video.mouse.visible && (video.mouse.x != vx || video.mouse.y != vy)) {
+	if (video_mousecursor_visible() && (video.mouse.x != vx || video.mouse.y != vy))
 		status.flags |= SOFTWARE_MOUSE_MOVED;
-	}
+
 	video.mouse.x = vx;
 	video.mouse.y = vy;
 	if (x) *x = vx;

@@ -71,11 +71,13 @@ static int load_jack_syms(void);
 
 #ifdef JACK_DYNAMIC_LOAD
 
+#include "backend/object.h"
+
 void *jack_dltrick_handle_ = NULL;
 
 static void jack_dlend(void) {
 	if (jack_dltrick_handle_) {
-		SDL_UnloadObject(jack_dltrick_handle_);
+		be_object_unload(jack_dltrick_handle_);
 		jack_dltrick_handle_ = NULL;
 	}
 }
@@ -84,7 +86,7 @@ static int jack_dlinit(void) {
 	if (jack_dltrick_handle_)
 		return 0;
 
-	jack_dltrick_handle_ = SDL_LoadObject("libjack.so.0");
+	jack_dltrick_handle_ = be_object_load("libjack.so.0");
 	if (!jack_dltrick_handle_)
 		return -1;
 
@@ -96,7 +98,7 @@ static int jack_dlinit(void) {
 }
 
 static int load_jack_sym(const char *fn, void **addr) {
-	*addr = SDL_LoadFunction(jack_dltrick_handle_, fn);
+	*addr = be_function_load(jack_dltrick_handle_, fn);
 	if (!*addr)
 		return 0;
 

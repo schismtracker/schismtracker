@@ -23,6 +23,8 @@
 #ifndef SCHISM_VIDEO_H_
 #define SCHISM_VIDEO_H_
 
+#include "headers.h"
+
 /* video output routines */
 const char *video_driver_name(void);
 
@@ -85,11 +87,15 @@ int video_gl_bilinear(void);
 
 void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y);
 
-SDL_Surface *xpmdata(const char *xpmdata[]);
+struct SDL_Surface;
+struct SDL_Surface *xpmdata(const char *xpmdata[]);
 
 /* --------------------------------------------------------- */
 
-void video_blit1n(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t pal[256], SDL_PixelFormat *format, int width, int height);
+struct SDL_PixelFormat;
+
+void video_blitYY(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
+void video_blit1n(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t pal[256], struct SDL_PixelFormat *format, int width, int height);
 void video_blitUV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
 void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
 void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);

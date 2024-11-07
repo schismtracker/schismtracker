@@ -646,6 +646,8 @@ static int load_flac_syms(void);
 
 #ifdef FLAC_DYNAMIC_LOAD
 
+#include "backend/object.h"
+
 void *flac_dltrick_handle_ = NULL;
 
 #ifdef SCHISM_WIN32
@@ -663,7 +665,7 @@ static int try_load_libflac(int revision)
 	if (asprintf(&buf, LIBFLAC_FMT, revision) < 0)
 		return -1;
 
-	flac_dltrick_handle_ = SDL_LoadObject(buf);
+	flac_dltrick_handle_ = be_object_load(buf);
 
 	free(buf);
 
@@ -674,7 +676,7 @@ static int try_load_libflac(int revision)
 
 static void flac_dlend(void) {
 	if (flac_dltrick_handle_) {
-		SDL_UnloadObject(flac_dltrick_handle_);
+		be_object_unload(flac_dltrick_handle_);
 		flac_dltrick_handle_ = NULL;
 	}
 }
@@ -702,7 +704,7 @@ static int flac_dlinit(void) {
 }
 
 static int load_flac_sym(const char *fn, void **addr) {
-	*addr = SDL_LoadFunction(flac_dltrick_handle_, fn);
+	*addr = be_function_load(flac_dltrick_handle_, fn);
 	if (!*addr)
 		return 0;
 

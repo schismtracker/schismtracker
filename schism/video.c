@@ -292,7 +292,7 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 
 void video_blit1n(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t pal[256], SDL_PixelFormat *format, int width, int height)
 {
-	unsigned int cv32backing[NATIVE_SCREEN_WIDTH];
+	unsigned char cv32backing[NATIVE_SCREEN_WIDTH * 8];
 
 	unsigned int *csp, *esp, *dp;
 	unsigned int c00, c01, c10, c11;
@@ -429,6 +429,31 @@ void video_blit1n(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 			pixels += bpp;
 		}
 		pixels += pad;
+	}
+}
+
+void video_blitYY(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
+{
+	// this is here because pixels is write only on SDL2
+	uint16_t pixels_r[NATIVE_SCREEN_WIDTH];
+
+	unsigned int mouse_x, mouse_y;
+	video_get_mouse_coordinates(&mouse_x, &mouse_y);
+
+	unsigned int mouseline_x = (mouse_x / 8);
+	unsigned int mouseline_v = (mouse_x % 8);
+	unsigned int mouseline[80];
+	unsigned int mouseline_mask[80];
+	int y;
+
+	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask, mouse_y);
+
+		vgamem_scan16(y, pixels_r, tpal, mouseline, mouseline_mask);
+		memcpy(pixels, pixels_r, pitch);
+		pixels += pitch;
+		memcpy(pixels, pixels_r, pitch);
+		pixels += pitch;
 	}
 }
 

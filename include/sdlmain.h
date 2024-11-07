@@ -7,9 +7,6 @@
 #include <SDL_syswm.h>
 #else
 #include <SDL/SDL.h>
-// hax
-#define SDL_CreateThread(a, b, c) SDL_CreateThread(a, c)
-#define SDL_SetThreadPriority(a)
 #endif
 
 #endif /* SCHISM_SDLMAIN_H_ */

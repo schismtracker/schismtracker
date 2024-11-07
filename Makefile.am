@@ -176,7 +176,7 @@ else
 endif
 
 if USE_SDL2
-files_sdl2 = sys/sdl2/audio.c sys/sdl2/clippy.c sys/sdl2/events.c sys/sdl2/init.c sys/sdl2/timer.c sys/sdl2/video.c
+files_sdl2 = sys/sdl2/audio.c sys/sdl2/clippy.c sys/sdl2/events.c sys/sdl2/init.c sys/sdl2/timer.c sys/sdl2/video.c sys/sdl2/threads.c sys/sdl2/object.c
 
 cflags_sdl2 = $(SDL2_CFLAGS)
 libs_sdl2 = $(SDL2_LIBS)
@@ -184,7 +184,7 @@ libs_sdl2 = $(SDL2_LIBS)
 endif
 
 if USE_SDL12
-files_sdl12 = sys/sdl12/audio.c sys/sdl12/clippy.c sys/sdl12/events.c sys/sdl12/init.c sys/sdl12/timer.c sys/sdl12/video.c
+files_sdl12 = sys/sdl12/audio.c sys/sdl12/clippy.c sys/sdl12/events.c sys/sdl12/init.c sys/sdl12/timer.c sys/sdl12/video.c sys/sdl12/threads.c sys/sdl12/object.c
 
 cflags_sdl12 = $(SDL12_CFLAGS)
 libs_sdl12 = $(SDL12_LIBS)

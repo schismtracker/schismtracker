@@ -389,7 +389,6 @@ static void key_event_reset(struct key_event *kk, int start_x, int start_y)
 
 static void event_loop(void)
 {
-	SDL_Event event;
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
 	schism_ticks_t last_mouse_down, ticker;
 	schism_keysym_t last_key = 0;
@@ -419,17 +418,6 @@ static void event_loop(void)
 	time(&status.now);
 	localtime_r(&status.now, &status.tmnow);
 	for (;;) {
-		while (SDL_PollEvent(&event)) {
-			/* handle the current event queue */
-			if (!os_sdlevent(&event))
-				continue;
-
-#ifdef SCHISM_CONTROLLER
-			if (!controller_sdlevent(&event))
-				continue;
-#endif
-		}
-
 		schism_event_t se;
 		while (schism_poll_event(&se)) {
 			if (midi_engine_handle_event(&se))
@@ -443,7 +431,7 @@ static void event_loop(void)
 				kk.state = KEY_RELEASE;
 			}
 			if (se.type == SCHISM_KEYDOWN || se.type == SCHISM_TEXTINPUT || se.type == SCHISM_KEYUP) {
-				if (event.key.keysym.sym == 0) {
+				if (se.key.sym == 0) {
 					// XXX when does this happen?
 					kk.mouse = MOUSE_NONE;
 					kk.is_repeat = 0;
@@ -553,8 +541,7 @@ static void event_loop(void)
 					if (last_key == kk.sym)
 						kbd_empty_key_repeat();
 				} else {
-					/* reset key repeat regardless */
-					kbd_empty_key_repeat();
+					kbd_cache_key_repeat(&kk);
 
 					status.last_keysym = last_key;
 					last_key = kk.sym;
@@ -644,7 +631,7 @@ static void event_loop(void)
 					} else {
 						kk.on_target = 0;
 					}
-					if (event.type == SCHISM_MOUSEBUTTONUP && downtrip) {
+					if (se.type == SCHISM_MOUSEBUTTONUP && downtrip) {
 						downtrip = 0;
 						break;
 					}
@@ -710,68 +697,68 @@ static void event_loop(void)
 				free(se.clipboard.clipboard);
 				break;
 			case SCHISM_EVENT_NATIVE_OPEN: /* open song */
-				song_load(event.user.data1);
+				song_load(se.open.file);
 				break;
 			case SCHISM_EVENT_NATIVE_SCRIPT:
 				/* destroy any active dialog before changing pages */
 				dialog_destroy();
-				if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "new", CHARSET_UTF8) == 0) {
+				if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "new", CHARSET_UTF8) == 0) {
 					new_song_dialog();
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "save", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "save", CHARSET_UTF8) == 0) {
 					save_song_or_save_as();
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "save_as", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "save_as", CHARSET_UTF8) == 0) {
 					set_page(PAGE_SAVE_MODULE);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "export_song", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "export_song", CHARSET_UTF8) == 0) {
 					set_page(PAGE_EXPORT_MODULE);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "logviewer", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "logviewer", CHARSET_UTF8) == 0) {
 					set_page(PAGE_LOG);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "font_editor", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "font_editor", CHARSET_UTF8) == 0) {
 					set_page(PAGE_FONT_EDIT);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "load", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "load", CHARSET_UTF8) == 0) {
 					set_page(PAGE_LOAD_MODULE);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "help", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "help", CHARSET_UTF8) == 0) {
 					set_page(PAGE_HELP);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "pattern", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "pattern", CHARSET_UTF8) == 0) {
 					set_page(PAGE_PATTERN_EDITOR);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "orders", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "orders", CHARSET_UTF8) == 0) {
 					set_page(PAGE_ORDERLIST_PANNING);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "variables", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "variables", CHARSET_UTF8) == 0) {
 					set_page(PAGE_SONG_VARIABLES);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "message_edit", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "message_edit", CHARSET_UTF8) == 0) {
 					set_page(PAGE_MESSAGE);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "info", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "info", CHARSET_UTF8) == 0) {
 					set_page(PAGE_INFO);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "play", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play", CHARSET_UTF8) == 0) {
 					song_start();
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "play_pattern", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_pattern", CHARSET_UTF8) == 0) {
 					song_loop_pattern(get_current_pattern(), 0);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "play_order", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_order", CHARSET_UTF8) == 0) {
 					song_start_at_order(get_current_order(), 0);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "play_mark", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_mark", CHARSET_UTF8) == 0) {
 					play_song_from_mark();
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "stop", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "stop", CHARSET_UTF8) == 0) {
 					song_stop();
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "calc_length", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "calc_length", CHARSET_UTF8) == 0) {
 					show_song_length();
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "sample_page", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "sample_page", CHARSET_UTF8) == 0) {
 					set_page(PAGE_SAMPLE_LIST);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "sample_library", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "sample_library", CHARSET_UTF8) == 0) {
 					set_page(PAGE_LIBRARY_SAMPLE);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "init_sound", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "init_sound", CHARSET_UTF8) == 0) {
 					/* does nothing :) */
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "inst_page", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "inst_page", CHARSET_UTF8) == 0) {
 					set_page(PAGE_INSTRUMENT_LIST);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "inst_library", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "inst_library", CHARSET_UTF8) == 0) {
 					set_page(PAGE_LIBRARY_INSTRUMENT);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "preferences", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "preferences", CHARSET_UTF8) == 0) {
 					set_page(PAGE_PREFERENCES);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "system_config", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "system_config", CHARSET_UTF8) == 0) {
 					set_page(PAGE_CONFIG);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "midi_config", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "midi_config", CHARSET_UTF8) == 0) {
 					set_page(PAGE_MIDI);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "palette_page", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "palette_page", CHARSET_UTF8) == 0) {
 					set_page(PAGE_PALETTE_EDITOR);
-				} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "fullscreen", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "fullscreen", CHARSET_UTF8) == 0) {
 					toggle_display_fullscreen();
 				}
 				break;

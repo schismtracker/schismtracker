@@ -28,36 +28,6 @@
 
 #include <SDL.h>
 
-/* These are here for linking text input to keyboard inputs.
- * If no keyboard input can be found, then the text will
- * be sent as a SCHISM_TEXTINPUT event.
- *
- * - paper */
-
-static schism_event_t pending_keydown;
-static int have_pending_keydown = 0;
-
-static void push_pending_keydown(schism_event_t *event)
-{
-	if (!have_pending_keydown) {
-		pending_keydown = *event;
-		have_pending_keydown = 1;
-	}
-}
-
-static void pop_pending_keydown(const char *text)
-{
-	/* text should always be in UTF-8 here */
-	if (have_pending_keydown) {
-		if (text) {
-			strncpy(pending_keydown.text.text, text, ARRAY_SIZE(pending_keydown.text.text));
-			pending_keydown.text.text[ARRAY_SIZE(pending_keydown.text.text)-1] = '\0';
-		}
-		schism_push_event(&pending_keydown);
-		have_pending_keydown = 0;
-	}
-}
-
 static schism_keymod_t sdl12_modkey_trans(uint16_t mod)
 {
 	schism_keymod_t res = 0;
@@ -101,10 +71,12 @@ static schism_keymod_t sdl12_modkey_trans(uint16_t mod)
 static schism_keysym_t sdl12_keycode_trans(SDLKey key)
 {
 	if ((int)key <= 255) {
-		if (key == SDLK_PAUSE)
-			return SCHISM_KEYSYM_PAUSE;
-		if (key == SDLK_CLEAR)
-			return SCHISM_KEYSYM_CLEAR;
+		switch (key) {
+		case SDLK_PAUSE: return SCHISM_KEYSYM_PAUSE;
+		case SDLK_CLEAR: return SCHISM_KEYSYM_CLEAR;
+		default: break;
+		}
+
 		return (schism_keysym_t)key;
 	}
 
@@ -527,8 +499,6 @@ void sdl12_pump_events(void)
 			}
 			break;
 		case SDL_KEYDOWN:
-			pop_pending_keydown(NULL);
-
 			schism_event.type = SCHISM_KEYDOWN;
 			schism_event.key.state = KEY_PRESS;
 
@@ -552,13 +522,11 @@ void sdl12_pump_events(void)
 
 			break;
 		case SDL_KEYUP:
-			pop_pending_keydown(NULL);
-
 			schism_event.type = SCHISM_KEYUP;
 			schism_event.key.state = KEY_RELEASE;
-			schism_event.key.sym = e.key.keysym.sym;
-			schism_event.key.scancode = e.key.keysym.scancode;
-			schism_event.key.mod = e.key.keysym.mod;
+			schism_event.key.sym = sdl12_keycode_trans(e.key.keysym.sym);
+			schism_event.key.scancode = sdl12_scancode_trans(e.key.keysym.scancode);
+			schism_event.key.mod = sdl12_modkey_trans(e.key.keysym.mod);
 
 			schism_push_event(&schism_event);
 
@@ -613,6 +581,4 @@ void sdl12_pump_events(void)
 			break;
 		}
 	}
-
-	pop_pending_keydown(NULL);
 }

@@ -120,6 +120,8 @@ static int load_alsa_syms(void);
 
 #ifdef ALSA_DYNAMIC_LOAD
 
+#include "backend/object.h"
+
 /* said inline functions call these... */
 #define snd_seq_client_info_sizeof ALSA_snd_seq_client_info_sizeof
 #define snd_seq_port_info_sizeof ALSA_snd_seq_port_info_sizeof
@@ -130,7 +132,7 @@ void *alsa_dltrick_handle_;
 
 static void alsa_dlend(void) {
 	if (alsa_dltrick_handle_) {
-		SDL_UnloadObject(alsa_dltrick_handle_);
+		be_object_unload(alsa_dltrick_handle_);
 		alsa_dltrick_handle_ = NULL;
 	}
 }
@@ -139,7 +141,7 @@ static int alsa_dlinit(void) {
 	if (alsa_dltrick_handle_)
 		return 0;
 
-	alsa_dltrick_handle_ = SDL_LoadObject("libasound.so");
+	alsa_dltrick_handle_ = be_object_load("libasound.so");
 	if (!alsa_dltrick_handle_)
 		return -1;
 
@@ -151,7 +153,7 @@ static int alsa_dlinit(void) {
 }
 
 static int load_alsa_sym(const char *fn, void **addr) {
-	*addr = SDL_LoadFunction(alsa_dltrick_handle_, fn);
+	*addr = be_function_load(alsa_dltrick_handle_, fn);
 	if (!*addr)
 		return 0;
 
