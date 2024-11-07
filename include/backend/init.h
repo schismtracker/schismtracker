@@ -20,27 +20,26 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef SCHISM_EVENT_H_
-#define SCHISM_EVENT_H_
 
-#include <SDL.h>
+#ifndef SCHISM_BACKEND_INIT_H
+#define SCHISM_BACKEND_INIT_H
 
-#define SCHISM_EVENT_UPDATE_IPMIDI      (SDL_USEREVENT+0)
-#define SCHISM_EVENT_MIDI               (SDL_USEREVENT+1)
-#define SCHISM_EVENT_PLAYBACK           (SDL_USEREVENT+2)
-#define SCHISM_EVENT_NATIVE             (SDL_USEREVENT+3)
-#define SCHISM_EVENT_PASTE              (SDL_USEREVENT+4)
+#ifdef SCHISM_SDL2
+# define be_init sdl2_init
+# define be_quit sdl2_quit
+#elif SCHISM_SDL12
+# define be_init sdl12_init
+# define be_quit sdl12_quit
+#endif
 
-#define SCHISM_EVENT_MIDI_NOTE          1
-#define SCHISM_EVENT_MIDI_CONTROLLER    2
-#define SCHISM_EVENT_MIDI_PROGRAM       3
-#define SCHISM_EVENT_MIDI_AFTERTOUCH    4
-#define SCHISM_EVENT_MIDI_PITCHBEND     5
-#define SCHISM_EVENT_MIDI_TICK          6
-#define SCHISM_EVENT_MIDI_SYSEX         7
-#define SCHISM_EVENT_MIDI_SYSTEM        8
+int sdl2_init(void);
+void sdl2_quit(void);
 
-#define SCHISM_EVENT_NATIVE_OPEN        1
-#define SCHISM_EVENT_NATIVE_SCRIPT      16
+// these are in the events file...
+int sdl2_controller_init(void);
+int sdl2_controller_quit(void);
 
-#endif /* SCHISM_EVENT_H_ */
+int sdl12_init(void);
+void sdl12_quit(void);
+
+#endif /* SCHISM_BACKEND_INIT_H */

@@ -30,6 +30,7 @@
 #include "widget.h"
 #include "pattern-view.h"
 #include "config-parser.h"
+#include "keyboard.h"
 
 #include "sdlmain.h"
 
@@ -1050,14 +1051,14 @@ static int info_page_handle_key(struct key_event * k)
 	}
 
 	/* hack to render this useful :) */
-	if (k->orig_sym == SDLK_KP_9) {
-		k->sym = SDLK_F9;
-	} else if (k->orig_sym == SDLK_KP_0) {
-		k->sym = SDLK_F10;
+	if (k->sym == SCHISM_KEYSYM_KP_9) {
+		k->sym = SCHISM_KEYSYM_F9;
+	} else if (k->sym == SCHISM_KEYSYM_KP_0) {
+		k->sym = SCHISM_KEYSYM_F10;
 	}
 
 	switch (k->sym) {
-	case SDLK_g:
+	case SCHISM_KEYSYM_g:
 		if (k->state == KEY_PRESS)
 			return 1;
 
@@ -1076,7 +1077,7 @@ static int info_page_handle_key(struct key_event * k)
 			set_page(PAGE_PATTERN_EDITOR);
 		}
 	       return 1;
-	case SDLK_v:
+	case SCHISM_KEYSYM_v:
 		if (k->state == KEY_RELEASE)
 			return 1;
 
@@ -1084,7 +1085,7 @@ static int info_page_handle_key(struct key_event * k)
 		status_text_flash("Using %s bars", (velocity_mode ? "velocity" : "volume"));
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_i:
+	case SCHISM_KEYSYM_i:
 		if (k->state == KEY_RELEASE)
 			return 1;
 
@@ -1092,8 +1093,8 @@ static int info_page_handle_key(struct key_event * k)
 		status_text_flash("Using %s names", (instrument_names ? "instrument" : "sample"));
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_r:
-		if (k->mod & KMOD_ALT) {
+	case SCHISM_KEYSYM_r:
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
 
@@ -1102,32 +1103,32 @@ static int info_page_handle_key(struct key_event * k)
 			return 1;
 		}
 		return 0;
-	case SDLK_PLUS:
+	case SCHISM_KEYSYM_PLUS:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (song_get_mode() == MODE_PLAYING) {
 			song_set_current_order(song_get_current_order() + 1);
 		}
 		return 1;
-	case SDLK_MINUS:
+	case SCHISM_KEYSYM_MINUS:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (song_get_mode() == MODE_PLAYING) {
 			song_set_current_order(song_get_current_order() - 1);
 		}
 		return 1;
-	case SDLK_q:
+	case SCHISM_KEYSYM_q:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_toggle_channel_mute(selected_channel - 1);
 		orderpan_recheck_muted_channels();
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_s:
+	case SCHISM_KEYSYM_s:
 		if (k->state == KEY_RELEASE)
 			return 1;
 
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			song_toggle_stereo();
 			status_text_flash("Stereo %s", song_is_stereo()
 					  ? "Enabled" : "Disabled");
@@ -1137,7 +1138,7 @@ static int info_page_handle_key(struct key_event * k)
 		}
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_SPACE:
+	case SCHISM_KEYSYM_SPACE:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 
@@ -1148,10 +1149,10 @@ static int info_page_handle_key(struct key_event * k)
 			selected_channel++;
 		orderpan_recheck_muted_channels();
 		break;
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			/* make the current window one line shorter, and give the line to the next window
 			below it. if the window is already as small as it can get (3 lines) or if it's
 			the last window, don't do anything. */
@@ -1165,18 +1166,18 @@ static int info_page_handle_key(struct key_event * k)
 		if (selected_channel > 1)
 			selected_channel--;
 		break;
-	case SDLK_LEFT:
-		if (!NO_MODIFIER(k->mod) && !(k->mod & KMOD_ALT))
+	case SCHISM_KEYSYM_LEFT:
+		if (!NO_MODIFIER(k->mod) && !(k->mod & SCHISM_KEYMOD_ALT))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (selected_channel > 1)
 			selected_channel--;
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			/* expand the current window, taking a line from
 			 * the next window down. BUT: don't do anything if
 			 * (a) this is the last window, or (b) the next
@@ -1193,29 +1194,29 @@ static int info_page_handle_key(struct key_event * k)
 		if (selected_channel < 64)
 			selected_channel++;
 		break;
-	case SDLK_RIGHT:
-		if (!NO_MODIFIER(k->mod) && !(k->mod & KMOD_ALT))
+	case SCHISM_KEYSYM_RIGHT:
+		if (!NO_MODIFIER(k->mod) && !(k->mod & SCHISM_KEYMOD_ALT))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (selected_channel < 64)
 			selected_channel++;
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selected_channel = 1;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selected_channel = song_find_last_channel();
 		break;
-	case SDLK_INSERT:
+	case SCHISM_KEYSYM_INSERT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -1241,7 +1242,7 @@ static int info_page_handle_key(struct key_event * k)
 			windows[selected_window + 1].height++;
 		}
 		break;
-	case SDLK_DELETE:
+	case SCHISM_KEYSYM_DELETE:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -1264,7 +1265,7 @@ static int info_page_handle_key(struct key_event * k)
 		if (selected_window == num_windows)
 			selected_window--;
 		break;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -1275,17 +1276,17 @@ static int info_page_handle_key(struct key_event * k)
 		n--;
 		windows[selected_window].type = n;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		windows[selected_window].type = (windows[selected_window].type + 1) % NUM_WINDOW_TYPES;
 		break;
-	case SDLK_TAB:
+	case SCHISM_KEYSYM_TAB:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (selected_window == 0)
 				selected_window = num_windows;
 			selected_window--;
@@ -1294,17 +1295,17 @@ static int info_page_handle_key(struct key_event * k)
 		}
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_F9:
+	case SCHISM_KEYSYM_F9:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			song_toggle_channel_mute(selected_channel - 1);
 			orderpan_recheck_muted_channels();
 			return 1;
 		}
 		return 0;
-	case SDLK_F10:
-		if (k->mod & KMOD_ALT) {
+	case SCHISM_KEYSYM_F10:
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
 			song_handle_channel_solo(selected_channel - 1);

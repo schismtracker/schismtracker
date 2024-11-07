@@ -494,20 +494,20 @@ static int stereo_cvt_hk(struct key_event *k)
 
 	/* trap the default dialog keys - we don't want to escape this dialog without running something */
 	switch (k->sym) {
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		printf("why am I here\n");
-	case SDLK_ESCAPE: case SDLK_o: case SDLK_c:
+	case SCHISM_KEYSYM_ESCAPE: case SCHISM_KEYSYM_o: case SCHISM_KEYSYM_c:
 		return 1;
-	case SDLK_l:
+	case SCHISM_KEYSYM_l:
 		if (k->state == KEY_RELEASE)
 			stereo_cvt_complete_left();
 		return 1;
-	case SDLK_r:
+	case SCHISM_KEYSYM_r:
 		if (k->state == KEY_RELEASE)
 			stereo_cvt_complete_right();
 		return 1;
-	case SDLK_s:
-	case SDLK_b:
+	case SCHISM_KEYSYM_s:
+	case SCHISM_KEYSYM_b:
 		if (k->state == KEY_RELEASE)
 			stereo_cvt_complete_both();
 		return 1;
@@ -670,7 +670,7 @@ static int file_list_handle_key(struct key_event * k)
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 
-	if (!(status.flags & CLASSIC_MODE) && k->sym == SDLK_n && (k->mod & KMOD_ALT)) {
+	if (!(status.flags & CLASSIC_MODE) && k->sym == SCHISM_KEYSYM_n && (k->mod & SCHISM_KEYMOD_ALT)) {
 		if (k->state == KEY_RELEASE)
 			song_toggle_multichannel_mode();
 		return 1;
@@ -689,20 +689,20 @@ static int file_list_handle_key(struct key_event * k)
 		}
 	}
 	switch (k->sym) {
-	case SDLK_UP:           new_file--; search_pos = -1; break;
-	case SDLK_DOWN:         new_file++; search_pos = -1; break;
-	case SDLK_PAGEUP:       new_file -= 35; search_pos = -1; break;
-	case SDLK_PAGEDOWN:     new_file += 35; search_pos = -1; break;
-	case SDLK_HOME:         new_file = 0; search_pos = -1; break;
-	case SDLK_END:          new_file = flist.num_files - 1; search_pos = -1; break;
+	case SCHISM_KEYSYM_UP:           new_file--; search_pos = -1; break;
+	case SCHISM_KEYSYM_DOWN:         new_file++; search_pos = -1; break;
+	case SCHISM_KEYSYM_PAGEUP:       new_file -= 35; search_pos = -1; break;
+	case SCHISM_KEYSYM_PAGEDOWN:     new_file += 35; search_pos = -1; break;
+	case SCHISM_KEYSYM_HOME:         new_file = 0; search_pos = -1; break;
+	case SCHISM_KEYSYM_END:          new_file = flist.num_files - 1; search_pos = -1; break;
 
-	case SDLK_ESCAPE:
+	case SCHISM_KEYSYM_ESCAPE:
 		if (search_pos < 0) {
 			if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod))
 				set_page(PAGE_SAMPLE_LIST);
 			return 1;
 		} /* else fall through */
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		if (search_pos < 0) {
 			if (k->state == KEY_PRESS)
 				return 0;
@@ -716,14 +716,14 @@ static int file_list_handle_key(struct key_event * k)
 			return 1;
 		}
 		return 1;
-	case SDLK_DELETE:
+	case SCHISM_KEYSYM_DELETE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		search_pos = -1;
 		if (flist.num_files > 0)
 			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
 		return 1;
-	case SDLK_BACKSPACE:
+	case SCHISM_KEYSYM_BACKSPACE:
 		if (search_pos > -1) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -732,16 +732,13 @@ static int file_list_handle_key(struct key_event * k)
 			reposition_at_slash_search();
 			return 1;
 		}
-	case SDLK_SLASH:
+	case SCHISM_KEYSYM_SLASH:
 		if (search_pos < 0) {
-			if (k->orig_sym == SDLK_SLASH) {
-				if (k->state == KEY_PRESS)
-					return 0;
-				search_pos = 0;
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-			return 0;
+			if (k->state == KEY_PRESS)
+				return 0;
+			search_pos = 0;
+			status.flags |= NEED_UPDATE;
+			return 1;
 		} /* else fall through */
 	default:
 		if (k->text)
@@ -790,7 +787,7 @@ static void load_sample_handle_key(struct key_event * k)
 {
 	int n, v;
 
-	if (k->state == KEY_PRESS && k->sym == SDLK_ESCAPE && NO_MODIFIER(k->mod)) {
+	if (k->state == KEY_PRESS && k->sym == SCHISM_KEYSYM_ESCAPE && NO_MODIFIER(k->mod)) {
 		set_page(PAGE_SAMPLE_LIST);
 		return;
 	}

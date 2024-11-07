@@ -25,6 +25,7 @@
 #define SCHISM_IT_H_
 
 #include "sdlmain.h"
+#include "backend/timer.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -35,11 +36,10 @@
 #include "util.h"
 #include "video.h"
 #include "log.h"
+#include "keyboard.h"
 
 /* --------------------------------------------------------------------- */
 /* preprocessor stuff */
-
-#define SDL_ToggleCursor() SDL_ShowCursor(!SDL_ShowCursor(SDL_QUERY))
 
 #define NO_MODIFIER(mod) \
 	(((mod) & (KMOD_CTRL | KMOD_ALT | KMOD_SHIFT)) == 0)
@@ -158,7 +158,7 @@ struct tracker_status {
 	int flags;
 	enum tracker_time_display time_display;
 	enum tracker_vis_style vis_style;
-	SDL_Keycode last_keysym;
+	schism_keysym_t last_keysym;
 
 	schism_ticks_t last_midi_tick;
 	unsigned char last_midi_event[64];

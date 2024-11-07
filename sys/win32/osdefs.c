@@ -283,26 +283,10 @@ int win32_sdlevent(SDL_Event* event)
 	return 1;
 }
 
-void win32_toggle_menu(SDL_Window* window)
+void win32_toggle_menu(void *window)
 {
-	const int flags = SDL_GetWindowFlags(window);
-	int width, height;
-
-	const int cache_size = !(flags & SDL_WINDOW_MAXIMIZED);
-	if (cache_size)
-		SDL_GetWindowSize(window, &width, &height);
-
-	/* Get the HWND */
-	SDL_SysWMinfo wm_info;
-	SDL_VERSION(&wm_info.version);
-	if (!SDL_GetWindowWMInfo(window, &wm_info))
-		return;
-
 	SetMenu(wm_info.info.win.window, (cfg_video_want_menu_bar && !(flags & SDL_WINDOW_FULLSCREEN)) ? menu : NULL);
 	DrawMenuBar(wm_info.info.win.window);
-
-	if (cache_size)
-		SDL_SetWindowSize(window, width, height);
 }
 
 /* -------------------------------------------------------------------- */

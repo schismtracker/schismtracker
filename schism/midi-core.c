@@ -23,7 +23,7 @@
 
 #include "headers.h"
 
-#include "event.h"
+#include "events.h"
 #include "util.h"
 #include "midi.h"
 #include "song.h"
@@ -651,7 +651,7 @@ static int _midi_queue_run(UNUSED void *xtop)
 	for (;;) {
 		SDL_CondWait(midi_play_cond, midi_play_mutex);
 
-		const schism_ticks_t start = SCHISM_GET_TICKS();
+		const schism_ticks_t start = be_timer_ticks();
 
 		for (i = 0; i < qlen; i++) {
 			SDL_LockMutex(midi_record_mutex);
@@ -671,7 +671,7 @@ static int _midi_queue_run(UNUSED void *xtop)
 			// value, and make up for the difference there. It surely
 			// isn't perfect, but it'll get the job done for slow
 			// machines.
-			if (SCHISM_TICKS_PASSED(start + i, SCHISM_GET_TICKS()))
+			if (be_timer_ticks_passed(start + i, be_timer_ticks()))
 				msleep(1);
 
 			qq[i].used = 0;
@@ -756,7 +756,7 @@ void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int 
 		}
 		memcpy(status.last_midi_event, data, status.last_midi_len);
 		status.last_midi_port = NULL;
-		status.last_midi_tick = SCHISM_GET_TICKS();
+		status.last_midi_tick = be_timer_ticks();
 		status.flags |= NEED_UPDATE | MIDI_EVENT_CHANGED;
 	}
 
@@ -834,7 +834,7 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int l
 	memcpy(status.last_midi_event, data, status.last_midi_len);
 	status.flags |= MIDI_EVENT_CHANGED;
 	status.last_midi_port = src;
-	status.last_midi_tick = SCHISM_GET_TICKS();
+	status.last_midi_tick = be_timer_ticks();
 	SDL_UnlockMutex(midi_record_mutex);
 
 	/* pass through midi events when on midi page */
@@ -877,94 +877,122 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int l
 	}
 }
 
-static void midi_push_event(Uint8 code, void *data1, size_t data1_len, int alloc)
-{
-	SDL_Event e = { .user = { .type = SCHISM_EVENT_MIDI, .code = code, .data1 = data1 } };
-
-	if (data1 && alloc) {
-		e.user.data1 = mem_alloc(data1_len);
-		memcpy(e.user.data1, data1, data1_len);
-	}
-
-	SDL_PushEvent(&e);
-}
-
 void midi_event_note(enum midi_note mnstatus, int channel, int note, int velocity)
 {
-	int st[4] = { mnstatus, channel, note, velocity };
+	schism_event_t event = {
+		.midi_note = {
+			.type = SCHISM_EVENT_MIDI_NOTE,
+			.mnstatus = mnstatus,
+			.channel = channel,
+			.note = note,
+			.velocity = velocity,
+		}
+	};
 
-	midi_push_event(SCHISM_EVENT_MIDI_NOTE, st, sizeof(st), 1);
+	schism_push_event(&event);
 }
 
 void midi_event_controller(int channel, int param, int value)
 {
-	int st[4] = { value, channel, param };
+	schism_event_t event = {
+		.midi_controller = {
+			.type = SCHISM_EVENT_MIDI_CONTROLLER,
+			.value = value,
+			.param = param,
+			.channel = channel,
+		}
+	};
 
-	midi_push_event(SCHISM_EVENT_MIDI_CONTROLLER, st, sizeof(st), 1);
+	schism_push_event(&event);
 }
 
 void midi_event_program(int channel, int value)
 {
-	int st[4] = { value, channel };
+	schism_event_t event = {
+		.midi_program = {
+			.type = SCHISM_EVENT_MIDI_PROGRAM,
+			.value = value,
+			.channel = channel,
+		}
+	};
 
-	midi_push_event(SCHISM_EVENT_MIDI_PROGRAM, st, sizeof(st), 1);
+	schism_push_event(&event);
 }
 
 void midi_event_aftertouch(int channel, int value)
 {
-	int st[4] = { value, channel };
+	schism_event_t event = {
+		.midi_aftertouch = {
+			.type = SCHISM_EVENT_MIDI_AFTERTOUCH,
+			.value = value,
+			.channel = channel,
+		}
+	};
 
-	midi_push_event(SCHISM_EVENT_MIDI_AFTERTOUCH, st, sizeof(st), 1);
+	schism_push_event(&event);
 }
 
 void midi_event_pitchbend(int channel, int value)
 {
-	int st[4] = { value, channel };
+	schism_event_t event = {
+		.midi_pitchbend = {
+			.type = SCHISM_EVENT_MIDI_PITCHBEND,
+			.value = value,
+			.channel = channel,
+		}
+	};
 
-	midi_push_event(SCHISM_EVENT_MIDI_PITCHBEND, st, sizeof(st), 1);
+	schism_push_event(&event);
 }
 
 void midi_event_system(int argv, int param)
 {
-	int st[4] = { argv, param };
+	schism_event_t event = {
+		.midi_system = {
+			.type = SCHISM_EVENT_MIDI_SYSTEM,
+			.argv = argv,
+			.param = param,
+		}
+	};
 
-	midi_push_event(SCHISM_EVENT_MIDI_SYSTEM, st, sizeof(st), 1);
+	schism_push_event(&event);
 }
 
 void midi_event_tick(void)
 {
-	midi_push_event(SCHISM_EVENT_MIDI_TICK, NULL, 0, 0);
+	schism_event_t event = {
+		.midi_tick = {
+			.type = SCHISM_EVENT_MIDI_TICK,
+		}
+	};
+
+	schism_push_event(&event);
 }
 
 void midi_event_sysex(const unsigned char *data, unsigned int len)
 {
-	size_t packet_len = len + sizeof(len);
-	uint8_t *packet = mem_alloc(packet_len);
+	schism_event_t event = {
+		.midi_sysex = {
+			.type = SCHISM_EVENT_MIDI_SYSEX,
+			.len = len,
+		}
+	};
 
-	memcpy(packet, &len, sizeof(len));
-	memcpy(packet + sizeof(len), data, len);
+	memcpy(event.midi_sysex.packet, data, MIN(len, ARRAY_SIZE(event.midi_sysex.packet)));
 
-	midi_push_event(SCHISM_EVENT_MIDI_SYSEX, packet, packet_len, 0);
+	schism_push_event(&event);
 }
 
-int midi_engine_handle_event(void *ev)
+int midi_engine_handle_event(schism_event_t *ev)
 {
 	struct key_event kk = {.is_synthetic = 0};
-	int *st;
-	SDL_Event *e = ev;
 
-	if (e->type != SCHISM_EVENT_MIDI)
+	if (midi_flags & MIDI_DISABLE_RECORD)
 		return 0;
 
-	st = e->user.data1;
-	if (midi_flags & MIDI_DISABLE_RECORD) {
-		free(e->user.data1);
-		return 1;
-	}
-
-	switch (e->user.code) {
+	switch (ev->type) {
 	case SCHISM_EVENT_MIDI_NOTE:
-		if (st[0] == MIDI_NOTEON) {
+		if (ev->midi_note.mnstatus == MIDI_NOTEON) {
 			kk.state = KEY_PRESS;
 		} else {
 			if (!(midi_flags & MIDI_RECORD_NOTEOFF)) {
@@ -973,28 +1001,28 @@ int midi_engine_handle_event(void *ev)
 			}
 			kk.state = KEY_RELEASE;
 		}
-		kk.midi_channel = st[1]+1;
-		kk.midi_note = (st[2]+1 + midi_c5note) - 60;
+		kk.midi_channel = ev->midi_note.channel + 1;
+		kk.midi_note = ((ev->midi_note.note)+1 + midi_c5note) - 60;
 		if (midi_flags & MIDI_RECORD_VELOCITY)
-			kk.midi_volume = st[3];
+			kk.midi_volume = (ev->midi_note.velocity);
 		else
 			kk.midi_volume = 128;
 		kk.midi_volume = (kk.midi_volume * midi_amplification) / 100;
 		handle_key(&kk);
-		break;
+		return 1;
 	case SCHISM_EVENT_MIDI_PITCHBEND:
 		/* wheel */
-		kk.midi_channel = st[1]+1;
+		kk.midi_channel = ev->midi_pitchbend.channel+1;
 		kk.midi_volume = -1;
 		kk.midi_note = -1;
-		kk.midi_bend = st[0];
+		kk.midi_bend = ev->midi_pitchbend.value;
 		handle_key(&kk);
-		break;
+		return 1;
 	case SCHISM_EVENT_MIDI_CONTROLLER:
 		/* controller events */
-		break;
+		return 1;
 	case SCHISM_EVENT_MIDI_SYSTEM:
-		switch (st[0]) {
+		switch (ev->midi_system.argv) {
 		case 0x8: /* MIDI tick */
 			break;
 		case 0xA: /* MIDI start */
@@ -1007,16 +1035,15 @@ int midi_engine_handle_event(void *ev)
 			song_stop();
 			break;
 		};
+		return 1;
 	case SCHISM_EVENT_MIDI_SYSEX:
 		/* but missing the F0 and the stop byte (F7) */
 		//len = *((unsigned int *)e->user.data1);
 		//sysex = ((char *)e->user.data1)+sizeof(unsigned int);
-		break;
-
+		return 1;
 	default:
-		break;
+		return 0;
 	}
-	free(e->user.data1);
 
 	return 1;
 }

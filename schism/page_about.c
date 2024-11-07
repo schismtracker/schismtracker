@@ -30,6 +30,7 @@
 #include "version.h"
 #include "dialog.h"
 #include "widget.h"
+#include "keyboard.h"
 
 /* Eventual TODO: draw the pattern data in the Schism logo in a different color than the words */
 #include "auto/logoit.h"
@@ -56,24 +57,24 @@ static int _fixup_ignore_globals(struct key_event *k)
 {
 	if (k->mouse && k->y > 20) return 0;
 	switch (k->sym) {
-	case SDLK_LEFT:
-	case SDLK_RIGHT:
-	case SDLK_DOWN:
-	case SDLK_UP:
-	case SDLK_TAB:
-	case SDLK_RETURN:
-	case SDLK_ESCAPE:
+	case SCHISM_KEYSYM_LEFT:
+	case SCHISM_KEYSYM_RIGHT:
+	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_KEYSYM_UP:
+	case SCHISM_KEYSYM_TAB:
+	case SCHISM_KEYSYM_RETURN:
+	case SCHISM_KEYSYM_ESCAPE:
 		/* use default handler */
 		return 0;
-	case SDLK_F2: case SDLK_F5: case SDLK_F9: case SDLK_F10:
+	case SCHISM_KEYSYM_F2: case SCHISM_KEYSYM_F5: case SCHISM_KEYSYM_F9: case SCHISM_KEYSYM_F10:
 		// Ctrl + these keys does not lead to a new screen
-		if (k->mod & KMOD_CTRL)
+		if (k->mod & SCHISM_KEYMOD_CTRL)
 			break;
 		// Fall through.
-	case SDLK_F1: case SDLK_F3: case SDLK_F4:
-	case SDLK_F11: case SDLK_F12:
+	case SCHISM_KEYSYM_F1: case SCHISM_KEYSYM_F3: case SCHISM_KEYSYM_F4:
+	case SCHISM_KEYSYM_F11: case SCHISM_KEYSYM_F12:
 		// Ignore Alt and so on.
-		if (k->mod & (KMOD_ALT | KMOD_SHIFT))
+		if (k->mod & (SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_SHIFT))
 			break;
 		dialog_destroy();
 		return 0;

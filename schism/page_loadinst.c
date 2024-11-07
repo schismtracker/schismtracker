@@ -408,20 +408,20 @@ static int file_list_handle_key(struct key_event * k)
 		}
 	}
 	switch (k->sym) {
-	case SDLK_UP:           new_file--; slash_search_mode = -1; break;
-	case SDLK_DOWN:         new_file++; slash_search_mode = -1; break;
-	case SDLK_PAGEUP:       new_file -= 35; slash_search_mode = -1; break;
-	case SDLK_PAGEDOWN:     new_file += 35; slash_search_mode = -1; break;
-	case SDLK_HOME:         new_file = 0; slash_search_mode = -1; break;
-	case SDLK_END:          new_file = flist.num_files - 1; slash_search_mode = -1; break;
+	case SCHISM_KEYSYM_UP:           new_file--; slash_search_mode = -1; break;
+	case SCHISM_KEYSYM_DOWN:         new_file++; slash_search_mode = -1; break;
+	case SCHISM_KEYSYM_PAGEUP:       new_file -= 35; slash_search_mode = -1; break;
+	case SCHISM_KEYSYM_PAGEDOWN:     new_file += 35; slash_search_mode = -1; break;
+	case SCHISM_KEYSYM_HOME:         new_file = 0; slash_search_mode = -1; break;
+	case SCHISM_KEYSYM_END:          new_file = flist.num_files - 1; slash_search_mode = -1; break;
 
-	case SDLK_ESCAPE:
+	case SCHISM_KEYSYM_ESCAPE:
 		if (slash_search_mode < 0) {
 			if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod))
 				set_page(PAGE_SAMPLE_LIST);
 			return 1;
 		} /* else fall through */
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		if (slash_search_mode < 0) {
 			if (k->state == KEY_PRESS)
 				return 0;
@@ -435,14 +435,14 @@ static int file_list_handle_key(struct key_event * k)
 			return 1;
 		}
 		return 1;
-	case SDLK_DELETE:
+	case SCHISM_KEYSYM_DELETE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		slash_search_mode = -1;
 		if (flist.num_files > 0)
 			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
 		return 1;
-	case SDLK_BACKSPACE:
+	case SCHISM_KEYSYM_BACKSPACE:
 		if (slash_search_mode > -1) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -451,16 +451,13 @@ static int file_list_handle_key(struct key_event * k)
 			reposition_at_slash_search();
 			return 1;
 		}
-	case SDLK_SLASH:
+	case SCHISM_KEYSYM_SLASH:
 		if (slash_search_mode < 0) {
-			if (k->orig_sym == SDLK_SLASH) {
-				if (k->state == KEY_PRESS)
-					return 0;
-				slash_search_mode = 0;
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-			return 0;
+			if (k->state == KEY_PRESS)
+				return 0;
+			slash_search_mode = 0;
+			status.flags |= NEED_UPDATE;
+			return 1;
 		} /* else fall through */
 	default:
 		if (k->text)
@@ -494,7 +491,7 @@ static void load_instrument_handle_key(struct key_event * k)
 {
 	if (k->state == KEY_RELEASE)
 		return;
-	if (k->sym == SDLK_ESCAPE && NO_MODIFIER(k->mod))
+	if (k->sym == SCHISM_KEYSYM_ESCAPE && NO_MODIFIER(k->mod))
 		set_page(PAGE_INSTRUMENT_LIST);
 }
 

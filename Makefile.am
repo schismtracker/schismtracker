@@ -110,7 +110,7 @@ noinst_HEADERS = \
 	include/disko.h			\
 	include/dialog.h        \
 	include/dmoz.h			\
-	include/event.h			\
+	include/events.h		\
 	include/fakemem.h       \
 	include/fonts.h         \
 	include/fmt-types.h		\
@@ -175,6 +175,21 @@ else
 	@echo "*** perl is required to regenerate $(@) ***"; exit 1;
 endif
 
+if USE_SDL2
+files_sdl2 = sys/sdl2/audio.c sys/sdl2/clippy.c sys/sdl2/events.c sys/sdl2/init.c sys/sdl2/timer.c sys/sdl2/video.c
+
+cflags_sdl2 = $(SDL2_CFLAGS)
+libs_sdl2 = $(SDL2_LIBS)
+
+endif
+
+if USE_SDL12
+files_sdl12 = sys/sdl12/audio.c sys/sdl12/clippy.c sys/sdl12/events.c sys/sdl12/init.c sys/sdl12/timer.c sys/sdl12/video.c
+
+cflags_sdl12 = $(SDL12_CFLAGS)
+libs_sdl12 = $(SDL12_LIBS)
+endif
+
 if USE_ALSA
 files_alsa = sys/alsa/midi-alsa.c
 
@@ -224,10 +239,6 @@ sys/win32/schismres.$(OBJEXT): icons/schismres.ico build-config.h Makefile.am
 endif # HAVE_WINDRES
 
 endif # USE_WIN32
-
-if USE_CONTROLLER
-files_controller=schism/controller.c
-endif
 
 if USE_WII
 files_wii=sys/wii/isfs.c sys/wii/osdefs.c
@@ -317,7 +328,12 @@ endif
 if NEED_LOCALTIME_R
 files_stdlib += sys/stdlib/localtime_r.c
 endif
-
+if NEED_SETENV
+files_stdlib += sys/stdlib/setenv.c
+endif
+if NEED_UNSETENV
+files_stdlib += sys/stdlib/unsetenv.c
+endif
 
 ## aaaaaaaaahhhhhhhhhhhhhhhhhhh!!!!!!!1
 schismtracker_SOURCES = \
@@ -385,6 +401,7 @@ schismtracker_SOURCES = \
 	schism/dialog.c			\
 	schism/disko.c			\
 	schism/dmoz.c			\
+	schism/events.c  		\
 	schism/fakemem.c		\
 	schism/fonts.c          \
 	schism/ieee-float.c     \
@@ -446,20 +463,22 @@ schismtracker_SOURCES = \
 	$(files_opl)			\
 	$(files_mediafoundation) \
 	$(files_wiiu)           \
-	$(files_controller)
+	$(files_controller) 	\
+	$(files_sdl2)			\
+	$(files_sdl12)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
 
-component_cflags = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
+component_cflags = $(cflags_sdl2) $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
 	$(cflags_version) $(cflags_win32) $(cflags_wii) \
 	$(cflags_macosx) $(cflags_flac) $(cflags_jack) \
-	$(cflags_wiiu) \
+	$(cflags_wiiu) $(cflags_sdl12) \
 	$(UTF8PROC_CFLAGS)
 schismtracker_CPPFLAGS = -I$(srcdir)/include -I. $(cppflags_wii) $(cppflags_wiiu)
 schismtracker_CFLAGS = $(AM_CFLAGS) $(component_cflags)
 schismtracker_OBJCFLAGS = $(AM_OBJCFLAGS) $(component_cflags)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = -lm $(libs_wii) $(libs_wiiu) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(UTF8PROC_LIBS) $(SDL_LIBS)
+schismtracker_LDADD = -lm $(libs_wii) $(libs_wiiu) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(UTF8PROC_LIBS) $(libs_sdl2) $(libs_sdl12)

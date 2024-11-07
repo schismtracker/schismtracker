@@ -29,6 +29,6 @@
 
 int controller_init(void);
 int controller_quit(void);
-int controller_sdlevent(SDL_Event *event);
+int controller_event(schism_event_t *event);
 
 #endif /* SCHISM_CONTROLLER_H_ */

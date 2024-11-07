@@ -28,6 +28,7 @@
 #include "song.h"
 #include "page.h"
 #include "dialog.h"
+#include "events.h"
 
 #include "sdlmain.h"
 

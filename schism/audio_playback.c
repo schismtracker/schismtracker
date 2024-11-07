@@ -30,7 +30,8 @@
 #include "config-parser.h"
 
 #include "disko.h"
-#include "event.h"
+#include "backend/audio.h"
+#include "events.h"
 
 #include <assert.h>
 
@@ -102,7 +103,7 @@ static char cfg_audio_device[256] = { 0 };
 struct audio_device* audio_device_list = NULL;
 int audio_device_list_size = 0;
 
-static SDL_AudioDeviceID current_audio_device = 0;
+static schism_audio_device_t *current_audio_device = NULL;
 
 // ------------------------------------------------------------------------
 // playback
@@ -113,8 +114,8 @@ extern void vis_work_16m(short *in, int inlen);
 extern void vis_work_8s(char *in, int inlen);
 extern void vis_work_8m(char *in, int inlen);
 
-// this gets called from sdl
-static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
+// this gets called from the backend
+static void audio_callback(uint8_t *stream, int len)
 {
 	unsigned int wasrow = current_song->row;
 	unsigned int waspat = current_song->current_order;
@@ -191,12 +192,11 @@ POST_EVENT:
 	}
 
 	/* send at end */
-	SDL_Event e;
-	e.user.type = SCHISM_EVENT_PLAYBACK;
-	e.user.code = 0;
-	e.user.data1 = NULL;
-	e.user.data2 = NULL;
-	SDL_PushEvent(&e);
+	schism_event_t e = {
+		.type = SCHISM_EVENT_PLAYBACK,
+	};
+
+	schism_push_event(&e);
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -212,11 +212,11 @@ void free_audio_device_list(void) {
 	audio_device_list_size = 0;
 }
 
-/* called when SDL_AUDIODEVICEADDED/SDL_AUDIODEVICEREMOVED event received */
+/* called when SCHISM_AUDIODEVICEADDED/SCHISM_AUDIODEVICEREMOVED event received */
 int refresh_audio_device_list(void) {
 	free_audio_device_list();
 
-	const int count = SDL_GetNumAudioDevices(0);
+	const int count = be_audio_device_count();
 	if (count < 0)
 		return 0;
 
@@ -227,7 +227,7 @@ int refresh_audio_device_list(void) {
 	for (int i = 0; i < count; i++) {
 		struct audio_device* dev = audio_device_list + i;
 		dev->id = i;
-		dev->name = str_dup(SDL_GetAudioDeviceName(i, 0));
+		dev->name = str_dup(be_audio_device_name(i));
 	}
 
 	audio_device_list_size = count;
@@ -1320,19 +1320,19 @@ static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, un
 
 void song_lock_audio(void)
 {
-	SDL_LockAudioDevice(current_audio_device);
+	be_audio_lock_device(current_audio_device);
 }
 void song_unlock_audio(void)
 {
-	SDL_UnlockAudioDevice(current_audio_device);
+	be_audio_unlock_device(current_audio_device);
 }
 void song_start_audio(void)
 {
-	SDL_PauseAudioDevice(current_audio_device, 0);
+	be_audio_pause_device(current_audio_device, 0);
 }
 void song_stop_audio(void)
 {
-	SDL_PauseAudioDevice(current_audio_device, 1);
+	be_audio_pause_device(current_audio_device, 1);
 }
 
 
@@ -1354,70 +1354,26 @@ const char *song_audio_device(void)
 static void _cleanup_audio_device(void)
 {
 	if (current_audio_device) {
-		SDL_CloseAudioDevice(current_audio_device);
+		be_audio_close_device(current_audio_device);
 		current_audio_device = 0;
 		free(device_name);
 		device_name = NULL;
 	}
 }
 
-/* explanation for this:
- * in 2.0.18, the logic for SDL's audio initialization functions
- * changed, so that you can use SDL_AudioInit() directly without
- * any repercussions; before that, SDL would do a sanity check
- * calling SDL_WasInit() which surprise surprise doesn't actually
- * get initialized from SDL_AudioInit(). to work around this, we
- * have to use a separate audio driver initialization function
- * under SDL pre-2.0.18. */
-static SDLCALL int schism_init_audio_impl(const char *name)
-{
-	const char *orig_drv = SDL_getenv("SDL_AUDIODRIVER");
-
-	if (name)
-		SDL_setenv("SDL_AUDIODRIVER", name, 1);
-
-	int ret = SDL_InitSubSystem(SDL_INIT_AUDIO);
-
-	/* clean up our dirty work, or empty the var */
-	SDL_setenv("SDL_AUDIODRIVER", orig_drv ? orig_drv : "", 1);
-
-	/* forward any error, if any */
-	return ret;
-}
-
-static SDLCALL void schism_quit_audio_impl(void)
-{
-	SDL_QuitSubSystem(SDL_INIT_AUDIO);
-}
-
 static int _audio_open_driver(const char *driver)
 {
-	int (SDLCALL *sdl_audio_init)(const char *);
-	void (SDLCALL *sdl_audio_quit)(void);
 	const char *n;
-
-	/* see explanation above for why we have to do this */
-	SDL_version ver;
-	SDL_GetVersion(&ver);
-	if ((ver.major >= 2)
-		 && (ver.major > 2 || ver.minor >= 0)
-		 && (ver.major > 2 || ver.minor > 0 || ver.patch >= 18)) {
-		sdl_audio_init = SDL_AudioInit;
-		sdl_audio_quit = SDL_AudioQuit;
-	} else {
-		sdl_audio_init = schism_init_audio_impl;
-		sdl_audio_quit = schism_quit_audio_impl;
-	}
 
 	if (audio_was_init) {
 		_cleanup_audio_device();
 		free(driver_name);
 		driver_name = NULL;
-		sdl_audio_quit();
+		be_audio_quit();
 		audio_was_init = 0;
 	}
 
-	const int cnt = SDL_GetNumAudioDrivers();
+	const int cnt = be_audio_driver_count();
 
 	if (driver && *driver) {
 		/* compatibility! */
@@ -1425,21 +1381,21 @@ static int _audio_open_driver(const char *driver)
 			: (!strcmp(driver, "nosound") || !strcmp(driver, "none")) ? "dummy"
 			: driver;
 
-		if (!sdl_audio_init(n))
+		if (!be_audio_init(n))
 			goto audio_was_init;
 	}
 
-	/* ... */
-	n = SDL_getenv("SDL_AUDIODRIVER");
-	if (n && *n) {
-		if (!sdl_audio_init(n))
-			goto audio_was_init;
-	}
+#if defined(SCHISM_SDL2) || defined(SCHISM_SDL12)
+	/* we ought to allow this envvar to work under SDL */
+	n = getenv("SDL_AUDIODRIVER");
+	if (n && *n && !be_audio_init(n))
+		goto audio_was_init;
+#endif
 
 	for (int i = 0; i < cnt; i++) {
-		n = SDL_GetAudioDriver(i);
+		n = be_audio_driver_name(i);
 
-		if (!sdl_audio_init(n))
+		if (!be_audio_init(n))
 			goto audio_was_init;
 	}
 
@@ -1479,32 +1435,29 @@ static int _audio_open_device(const char *device, int verbose)
 	 *  - paper */
 
 //	if (!strcmp(driver_name, "alsa")) {
-//		char *dev = SDL_getenv("AUDIODEV");
+//		char *dev = getenv("AUDIODEV");
 //		if (!dev || !*dev)
 //			put_env_var("AUDIODEV", "hw");
 //	}
 
-	SDL_AudioSpec desired = {
+	schism_audio_spec_t desired = {
 		.freq = audio_settings.sample_rate,
-		.format = (audio_settings.bits == 8) ? AUDIO_U8 : AUDIO_S16SYS,
+		.bits = audio_settings.bits,
 		.channels = audio_settings.channels,
 		.samples = size_pow2,
 		.callback = audio_callback,
-		.userdata = NULL,
 	};
-	SDL_AudioSpec obtained;
-
-#define SCHISM_CHANGE_ALLOWED (SDL_AUDIO_ALLOW_FREQUENCY_CHANGE)
+	schism_audio_spec_t obtained;
 
 	if (device && *device) {
-		current_audio_device = SDL_OpenAudioDevice(device, 0, &desired, &obtained, SCHISM_CHANGE_ALLOWED);
+		current_audio_device = be_audio_open_device(device, &desired, &obtained);
 		if (current_audio_device) {
 			device_name = str_dup(device);
 			goto success;
 		} else fputs("Failed to open requested audio device! Falling back to default...\n", stderr);
 	}
 
-	current_audio_device = SDL_OpenAudioDevice(NULL, 0, &desired, &obtained, SCHISM_CHANGE_ALLOWED);
+	current_audio_device = be_audio_open_device(NULL, &desired, &obtained);
 	if (current_audio_device) {
 		device_name = str_dup("default"); // ????
 		goto success;
@@ -1517,10 +1470,10 @@ success:
 	song_lock_audio();
 
 	csf_set_wave_config(current_song, obtained.freq,
-		SDL_AUDIO_BITSIZE(obtained.format),
+		obtained.bits,
 		obtained.channels);
 	audio_output_channels = obtained.channels;
-	audio_output_bits = SDL_AUDIO_BITSIZE(obtained.format);
+	audio_output_bits = obtained.bits;
 	audio_sample_size = audio_output_channels * (audio_output_bits / 8);
 	audio_buffer_samples = obtained.samples;
 
@@ -1528,7 +1481,7 @@ success:
 		log_append(2, 0, "Audio initialised");
 		log_underline(17);
 		log_appendf(5, " Using driver '%s'", driver_name);
-		log_appendf(5, " %d Hz, %d bit, %s", obtained.freq, SDL_AUDIO_BITSIZE(obtained.format),
+		log_appendf(5, " %d Hz, %d bit, %s", obtained.freq, obtained.bits,
 			obtained.channels == 1 ? "mono" : "stereo");
 		log_appendf(5, " Buffer size: %d samples", obtained.samples);
 		log_nl();
@@ -1564,8 +1517,8 @@ static int _audio_init_head(const char *driver, const char *device, int verbose)
 fail:
 	/* whoops! */
 	fputs("Couldn't initialize audio!\n", stderr);
-	const char* err = SDL_GetError();
-	if (err) fprintf(stderr, "%s\n", err);
+	//const char* err = SDL_GetError();
+	//if (err) fprintf(stderr, "%s\n", err);
 	schism_exit(1);
 	return 0;
 }

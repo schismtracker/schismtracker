@@ -33,7 +33,8 @@ void video_set_input_grabbed(int enabled);
 
 /* -------------------------------------------------- */
 
-void video_warp_mouse(int x, int y);
+void video_warp_mouse(unsigned int x, unsigned int y);
+void video_get_mouse_coordinates(unsigned int *x, unsigned int *y);
 
 /* -------------------------------------------------- */
 /* menu toggling */
@@ -43,6 +44,7 @@ void video_toggle_menu(void);
 
 /* -------------------------------------------------- */
 
+void video_rgb_to_yuv(unsigned int *y, unsigned int *u, unsigned int *v, unsigned char rgb[3]);
 void video_redraw_texture(void);
 void video_setup(const char *quality);
 void video_startup(void);
@@ -55,6 +57,9 @@ void video_resize(unsigned int width, unsigned int height);
 void video_fullscreen(int new_fs_flag);
 void video_translate(int vx, int vy, unsigned int *x, unsigned int *y);
 void video_blit(void);
+
+int video_is_screensaver_enabled(void);
+void video_toggle_screensaver(int enabled);
 
 /* cursor-specific stuff */
 enum video_mousecursor_shape {
@@ -76,8 +81,17 @@ int video_is_hardware(void);
 int video_width(void);
 int video_height(void);
 
+int video_gl_bilinear(void);
+
 void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y);
 
 SDL_Surface *xpmdata(const char *xpmdata[]);
+
+/* --------------------------------------------------------- */
+
+void video_blit1n(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t pal[256], SDL_PixelFormat *format, int width, int height);
+void video_blitUV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
+void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
+void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
 
 #endif /* SCHISM_VIDEO_H_ */

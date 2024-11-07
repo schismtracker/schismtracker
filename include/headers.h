@@ -121,6 +121,8 @@ int vasprintf(char **strp, const char *fmt, va_list ap);
 char *strptime(const char *buf, const char *fmt, struct tm *tm);
 int mkstemp(char *template);
 struct tm *localtime_r(const time_t *timep, struct tm *result);
+int setenv(const char *name, const char *value, int overwrite);
+int unsetenv(const char *name);
 
 #define INT_SHAPED_PTR(v)               ((intptr_t)(void*)(v))
 #define PTR_SHAPED_INT(i)               ((void*)(i))

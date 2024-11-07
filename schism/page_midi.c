@@ -25,6 +25,7 @@
 
 #include "it.h"
 #include "config.h"
+#include "keyboard.h"
 #include "page.h"
 #include "midi.h"
 #include "widget.h"
@@ -157,30 +158,30 @@ static int midi_page_handle_key(struct key_event * k)
 	}
 
 	switch (k->sym) {
-	case SDLK_SPACE:
+	case SCHISM_KEYSYM_SPACE:
 		if (k->state == KEY_PRESS)
 			return 1;
 		toggle_port();
 		return 1;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		new_port -= 13;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		new_port += 13;
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		new_port = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		new_port = midi_engine_port_count() - 1;
 		break;
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		new_port--;
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		new_port++;
 		break;
-	case SDLK_TAB:
+	case SCHISM_KEYSYM_TAB:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		widget_change_focus_to(1);

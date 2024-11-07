@@ -101,8 +101,9 @@ void midi_send_flush(void);
 /* used by the audio thread */
 int midi_need_flush(void);
 
-/* from the SDL event mechanism (x is really SDL_Event) */
-int midi_engine_handle_event(void *x);
+/* from Schism event handler */
+union schism_event;
+int midi_engine_handle_event(union schism_event *ev);
 
 struct midi_port *midi_engine_port(int n, const char **name);
 int midi_engine_port_count(void);

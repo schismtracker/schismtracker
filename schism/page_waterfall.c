@@ -425,8 +425,8 @@ static int waterfall_handle_key(struct key_event *k)
 	}
 
 	switch (k->sym) {
-	case SDLK_s:
-		if (k->mod & KMOD_ALT) {
+	case SCHISM_KEYSYM_s:
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
 
@@ -435,30 +435,30 @@ static int waterfall_handle_key(struct key_event *k)
 			return 1;
 		}
 		return 0;
-	case SDLK_m:
-		if (k->mod & KMOD_ALT) {
+	case SCHISM_KEYSYM_m:
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
 			mono = !mono;
 			return 1;
 		}
 		return 0;
-	case SDLK_LEFT:
+	case SCHISM_KEYSYM_LEFT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		noisefloor-=4;
 		break;
-	case SDLK_RIGHT:
+	case SCHISM_KEYSYM_RIGHT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		noisefloor+=4;
 		break;
-	case SDLK_g:
-		if (k->mod & KMOD_ALT) {
+	case SCHISM_KEYSYM_g:
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_PRESS)
 				return 1;
 
@@ -477,8 +477,8 @@ static int waterfall_handle_key(struct key_event *k)
 			return 1;
 		}
 		return 0;
-	case SDLK_r:
-		if (k->mod & KMOD_ALT) {
+	case SCHISM_KEYSYM_r:
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
 
@@ -486,7 +486,7 @@ static int waterfall_handle_key(struct key_event *k)
 			return 1;
 		}
 		return 0;
-	case SDLK_PLUS:
+	case SCHISM_KEYSYM_PLUS:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -495,7 +495,7 @@ static int waterfall_handle_key(struct key_event *k)
 			song_set_current_order(song_get_current_order() + 1);
 		}
 		return 1;
-	case SDLK_MINUS:
+	case SCHISM_KEYSYM_MINUS:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -504,8 +504,8 @@ static int waterfall_handle_key(struct key_event *k)
 			song_set_current_order(song_get_current_order() - 1);
 		}
 		return 1;
-	case SDLK_SEMICOLON:
-	case SDLK_COLON:
+	case SCHISM_KEYSYM_SEMICOLON:
+	case SCHISM_KEYSYM_COLON:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (song_is_instrument_mode()) {
@@ -514,8 +514,8 @@ static int waterfall_handle_key(struct key_event *k)
 			sample_set(sample_get_current() - 1);
 		}
 		return 1;
-	case SDLK_QUOTE:
-	case SDLK_QUOTEDBL:
+	case SCHISM_KEYSYM_QUOTE:
+	case SCHISM_KEYSYM_QUOTEDBL:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (song_is_instrument_mode()) {
@@ -524,14 +524,14 @@ static int waterfall_handle_key(struct key_event *k)
 			sample_set(sample_get_current() + 1);
 		}
 		return 1;
-	case SDLK_COMMA:
-	case SDLK_LESS:
+	case SCHISM_KEYSYM_COMMA:
+	case SCHISM_KEYSYM_LESS:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_change_current_play_channel(-1, 0);
 		return 1;
-	case SDLK_PERIOD:
-	case SDLK_GREATER:
+	case SCHISM_KEYSYM_PERIOD:
+	case SCHISM_KEYSYM_GREATER:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_change_current_play_channel(1, 0);

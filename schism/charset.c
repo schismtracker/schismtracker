@@ -656,97 +656,6 @@ CHARSET_VARIATION(internal) {
 	return CHARSET_ERROR_SUCCESS;
 }
 
-CHARSET_VARIATION(sdl) {
-	static const char* charset_iconv_system_lookup[] = {
-		[CHARSET_UTF8] = "UTF-8",
-		[CHARSET_UTF16BE] = "UTF-16BE",
-		[CHARSET_UTF16LE] = "UTF-16LE",
-		[CHARSET_UCS4] = "UCS-4",
-
-		[CHARSET_CP437] = "437",
-		[CHARSET_WINDOWS1252] = "CP1252",
-
-		[CHARSET_CHAR] = "",
-		[CHARSET_WCHAR_T] = "WCHAR_T",
-	};
-
-	/* FIXME this is wrong */
-	size_t src_size = insize;
-
-	/* Sanity checks */
-	if (src_size <= 0)
-		return CHARSET_ERROR_UNIMPLEMENTED;
-
-	if (inset >= ARRAY_SIZE(charset_iconv_system_lookup) || outset >= ARRAY_SIZE(charset_iconv_system_lookup))
-		return CHARSET_ERROR_UNIMPLEMENTED;
-
-	if (!charset_iconv_system_lookup[inset] || !charset_iconv_system_lookup[outset])
-		return CHARSET_ERROR_UNIMPLEMENTED;
-
-	SDL_iconv_t cd = SDL_iconv_open(charset_iconv_system_lookup[inset], charset_iconv_system_lookup[outset]);
-	if (cd == (SDL_iconv_t)(-1))
-		return CHARSET_ERROR_UNIMPLEMENTED;
-
-	disko_t ds = {0};
-	disko_memopen(&ds);
-
-	/* now onto the real conversion */
-	char out_buf[4096];
-	const size_t out_buf_size = 4096;
-
-	const char* in_ = (const char*)in;
-	size_t in_bytes_left = src_size;
-
-	while (in_bytes_left) {
-		const size_t old_in_bytes_left = in_bytes_left;
-		size_t out_bytes_left = out_buf_size;
-		char *out_ = (char *)out_buf;
-
-		size_t rc = SDL_iconv(cd, &in_, &in_bytes_left, &out_, &out_bytes_left);
-		switch (rc) {
-		case SDL_ICONV_E2BIG: {
-			disko_write(&ds, out_buf, out_buf_size - out_bytes_left);
-			continue;
-		}
-		case SDL_ICONV_EILSEQ:
-			/* try skipping? */
-			in_++;
-			in_bytes_left--;
-			break;
-		case SDL_ICONV_EINVAL:
-		case SDL_ICONV_ERROR:
-			/* t'was a good run */
-			in_bytes_left = 0;
-			memset(out_, 0, sizeof(uint32_t));
-			SDL_iconv_close(cd);
-			disko_memclose(&ds, 0);
-			return CHARSET_ERROR_UNIMPLEMENTED;
-		default:
-			break;
-		}
-
-		disko_write(&ds, out_buf, out_buf_size - out_bytes_left);
-
-		/* avoid infinite loops */
-		if (old_in_bytes_left == in_bytes_left)
-			break;
-	}
-
-	{
-		// write at least four NUL bytes
-		unsigned char x[4] = {0};
-		disko_write(&ds, x, sizeof(x));
-	}
-
-	SDL_iconv_close(cd);
-
-	disko_memclose(&ds, 1);
-
-	memcpy(out, &ds.data, sizeof(void *));
-
-	return CHARSET_ERROR_SUCCESS;
-}
-
 /* XXX need to change this to take length in as well */
 charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charset_t outset, size_t insize) {
 	void *const null = NULL;
@@ -772,7 +681,6 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 	memcpy(out, &null, sizeof(void *));
 
 	TRY_VARIATION(internal);
-	TRY_VARIATION(sdl);
 
 #undef TRY_VARIATION
 

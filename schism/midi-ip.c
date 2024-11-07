@@ -26,7 +26,7 @@
 #include "it.h"
 #include "util.h"
 #include "sdlmain.h"
-#include "event.h"
+#include "events.h"
 
 #ifdef USE_NETWORK
 
@@ -60,13 +60,11 @@ static SDL_mutex *blocker = NULL;
 
 static void do_wake_main(void)
 {
-	/* send at end */
-	SDL_Event e;
-	e.user.type = SCHISM_EVENT_UPDATE_IPMIDI;
-	e.user.code = 0;
-	e.user.data1 = NULL;
-	e.user.data2 = NULL;
-	SDL_PushEvent(&e);
+	schism_event_t e = {
+		.type = SCHISM_EVENT_UPDATE_IPMIDI,
+	};
+
+	schism_push_event(&e);
 }
 static void do_wake_midi(void)
 {

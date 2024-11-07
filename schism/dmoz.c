@@ -25,6 +25,10 @@
 
 #include "headers.h"
 
+#ifdef SCHISM_SDL2
+# include <SDL_filesystem.h>
+#endif
+
 #include "it.h"
 #include "config-parser.h"
 #include "charset.h"
@@ -497,6 +501,21 @@ char *dmoz_get_dot_directory(void)
 	// else fall back to home (but if this ever happens, things are really screwed...)
 #endif
 	return dmoz_get_home_directory();
+}
+
+char *dmoz_get_exe_directory(void)
+{
+#ifdef SCHISM_SDL2
+	char *dir = SDL_GetBasePath();
+	if (dir) {
+		char *res = str_dup(dir);
+		SDL_free(dir);
+		return res;
+	}
+#endif
+
+	// unknown
+	return NULL;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

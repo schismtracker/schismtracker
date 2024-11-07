@@ -30,6 +30,7 @@
 #include "page.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "keyboard.h"
 
 #include "sdlmain.h"
 
@@ -161,37 +162,37 @@ static int help_handle_key(struct key_event * k)
 		return 0;
 	}
 	switch (k->sym) {
-	case SDLK_ESCAPE:
+	case SCHISM_KEYSYM_ESCAPE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		set_page(status.previous_page);
 		return 1;
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line--;
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line++;
 		break;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line -= 32;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line += 32;
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line = num_lines - 32;

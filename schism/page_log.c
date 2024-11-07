@@ -30,6 +30,7 @@
 #include "page.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "keyboard.h"
 
 #include "sdlmain.h"
 
@@ -70,32 +71,32 @@ static void log_draw_const(void)
 static int log_handle_key(struct key_event * k)
 {
 	switch (k->sym) {
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line--;
 		break;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line -= 15;
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line++;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line += 15;
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line = last_line;

@@ -28,7 +28,8 @@ and possibly other files as well. Only one osdefs.c should be in use at a time. 
 #define SCHISM_OSDEFS_H_
 
 #include "headers.h"
-#include "event.h"
+#include "events.h"
+#include "sdlmain.h"
 
 /* need stat; TODO autoconf test */
 #include <sys/stat.h> /* roundabout way to get time_t */
@@ -115,13 +116,13 @@ void wiiu_sysexit(void);
 void wii_sysinit(int *pargc, char ***pargv); // set up filesystem
 void wii_sysexit(void); // close filesystem
 
-int win32_sdlevent(SDL_Event* event);
+int win32_event(schism_event_t *event);
 void win32_sysinit(int *pargc, char ***pargv);
 void win32_sysexit(void);
 void win32_sdlinit(void);
 void win32_get_modkey(int *m);
 void win32_filecreated_callback(const char *filename);
-void win32_toggle_menu(SDL_Window* window);
+void win32_toggle_menu(void* window); // window should be a pointer to the window HWND
 int win32_open(const char* path, int flags);
 int win32_wstat(const wchar_t* path, struct stat* st);
 int win32_stat(const char* path, struct stat* st);
@@ -133,7 +134,7 @@ int win32_run_hook(const char *dir, const char *name, const char *maybe_arg);
 
 int posix_run_hook(const char *dir, const char *name, const char *maybe_arg);
 
-int macosx_sdlevent(SDL_Event* event);
+int macosx_event(schism_event_t *event);
 void macosx_sysexit(void);
 void macosx_sysinit(int *pargc, char ***pargv); /* set up ibook helper */
 void macosx_get_modkey(int *m);

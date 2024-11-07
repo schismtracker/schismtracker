@@ -30,6 +30,7 @@
 #include "palettes.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "keyboard.h"
 
 #include "sdlmain.h"
 
@@ -239,7 +240,7 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 		return 1;
 	case SDLK_RIGHT:
 	case SDLK_TAB:
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			widget_change_focus_to(focus_offsets[selected_palette+1] + 29);
 			return 1;
 		}
@@ -254,7 +255,7 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 		return 1;
 	case SDLK_c:
 		/* pasting is handled by the page */
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			palette_copy_palette_to_clipboard(selected_palette);
 			return 1;
 		}
@@ -300,13 +301,13 @@ static void palette_list_handle_key(struct key_event * k)
 			n += 3;
 		break;
 	case SDLK_c:
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			palette_copy_current_to_clipboard();
 			return;
 		}
 		break;
 	case SDLK_v:
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			palette_paste_from_clipboard();
 			return;
 		}

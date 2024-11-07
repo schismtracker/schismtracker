@@ -120,6 +120,16 @@ AC_ARG_WITH([mediafoundation],
 	[],
 	[with_mediafoundation=check])
 
+AC_ARG_WITH([sdl12],
+	[AS_HELP_STRING([--with-sdl12],[Build with SDL 1.2 backend @<:@default=check@:>@])],
+	[],
+	[with_sdl12=check])
+
+AC_ARG_WITH([sdl2],
+	[AS_HELP_STRING([--with-sdl2],[Build with SDL 2 backend @<:@default=check@:>@])],
+	[],
+	[with_sdl2=check])
+
 dnl ------------------------------------------------------------------------
 
 dnl Check for standard programs
@@ -154,11 +164,6 @@ AC_LANG([C])
 dnl check endianness
 AC_C_BIGENDIAN
 
-dnl Check for SDL libs
-AM_PATH_SDL2([2.0.0], [], [AC_MSG_ERROR([*** SDL2 couldn't be found.])])
-AC_SUBST([SDL_CFLAGS])
-AC_SUBST([SDL_LIBS])
-
 dnl Libs
 AC_CHECK_LIB([dl], [dlopen])
 
@@ -172,13 +177,15 @@ AC_SUBST([UTF8PROC_CFLAGS])
 AC_SUBST([UTF8PROC_LIBS])
 
 dnl Functions
-AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp nice unsetenv dup fnmatch mkstemp localtime_r umask execl fork nanosleep usleep)
+AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp nice setenv unsetenv dup fnmatch mkstemp localtime_r umask execl fork nanosleep usleep)
 AM_CONDITIONAL([NEED_ASPRINTF], [test "x$ac_cv_func_asprintf" = "xno"])
 AM_CONDITIONAL([NEED_VASPRINTF], [test "x$ac_cv_func_vasprintf" = "xno"])
 AM_CONDITIONAL([NEED_MEMCMP], [test "x$ac_cv_func_memcmp" = "xno"])
 AM_CONDITIONAL([NEED_STRPTIME], [test "x$ac_cv_func_strptime" = "xno"])
 AM_CONDITIONAL([NEED_MKSTEMP], [test "x$ac_cv_func_mkstemp" = "xno"])
 AM_CONDITIONAL([NEED_LOCALTIME_R], [test "x$ac_cv_func_localtime_r" = "xno"])
+AM_CONDITIONAL([NEED_SETENV], [test "x$ac_cv_func_setenv" = "xno"])
+AM_CONDITIONAL([NEED_UNSETENV], [test "x$ac_cv_func_unsetenv" = "xno"])
 
 dnl Headers, typedef crap, et al.
 AC_CHECK_HEADERS(sys/time.h dirent.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/socket.h sys/soundcard.h poll.h sys/poll.h)
@@ -203,6 +210,52 @@ AC_C_INLINE
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 AC_STRUCT_TM
+
+dnl -----------------------------------------------------------------------
+
+use_sdl2=no
+use_sdl12=no
+
+PKG_CHECK_MODULES([SDL2], [sdl2], [have_sdl2=yes], [have_sdl2=no])
+PKG_CHECK_MODULES([SDL12], [sdl >= 1.2.10], [have_sdl12=yes], [have_sdl12=no])
+
+if test "x$with_sdl2" = "xyes" && test "x$with_sdl12" = "xyes"; then
+	AC_MSG_ERROR([*** Only one backend can be used at a time.])
+elif test "x$with_sdl2" = "xyes"; then
+	if test "x$have_sdl2" = "xyes"; then
+		use_sdl2=yes
+	else
+		AC_MSG_ERROR([*** SDL 2 could not be located])
+	fi
+elif test "x$with_sdl12" = "xyes"; then
+	if test "x$have_sdl12" = "xyes"; then
+		use_sdl12=yes
+	else
+		AC_MSG_ERROR([*** SDL 1.2 could not be located])
+	fi
+else
+	if test "x$have_sdl2" = "xyes"; then
+		use_sdl2=yes
+	elif test "x$have_sdl12" = "xyes"; then
+		use_sdl12=yes
+	else
+		AC_MSG_ERROR([*** No suitable backend (SDL 2 or SDL 1.2) could be found.])
+	fi
+fi
+
+AM_CONDITIONAL([USE_SDL2], [false])
+AM_CONDITIONAL([USE_SDL12], [false])
+if test "x$use_sdl2" = "xyes"; then
+	AC_SUBST([SDL2_CFLAGS])
+	AC_SUBST([SDL2_LIBS])
+	AM_CONDITIONAL([USE_SDL2], [true])
+	AC_DEFINE([SCHISM_SDL2], [1], [Use SDL 2 as a backend])
+elif test "x$use_sdl12" = "xyes"; then
+	AC_SUBST([SDL12_CFLAGS])
+	AC_SUBST([SDL12_LIBS])
+	AM_CONDITIONAL([USE_SDL12], [true])
+	AC_DEFINE([SCHISM_SDL12], [1], [Use SDL 1.2 as a backend])
+fi
 
 dnl -----------------------------------------------------------------------
 

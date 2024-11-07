@@ -171,7 +171,7 @@ static void video_change_dialog(void)
 {
 	struct dialog *d;
 
-	strncpy(video_revert_interpolation, SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY), 7);
+	strncpy(video_revert_interpolation, cfg_video_interpolation, 7);
 	video_revert_fs = video_is_fullscreen();
 	video_revert_hw = video_is_hardware();
 
@@ -206,14 +206,14 @@ static void change_video_settings(void)
 	new_fs_flag = widgets_config[9].d.togglebutton.state;
 	hw = widgets_config[14].d.togglebutton.state;
 
-	if (!SDL_strcasecmp(new_video_interpolation, SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))
+	if (!SDL_strcasecmp(new_video_interpolation, cfg_video_interpolation)
 	&& new_fs_flag == video_is_fullscreen()
 	&& hw == video_is_hardware()) {
 		return;
 	}
 
 	video_change_dialog();
-	if (SDL_strcasecmp(new_video_interpolation, SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))) {
+	if (SDL_strcasecmp(new_video_interpolation, cfg_video_interpolation)) {
 		video_setup(new_video_interpolation);
 		video_redraw_texture();
 	}
@@ -283,7 +283,7 @@ static void config_set_page(void)
 	widgets_config[9].d.togglebutton.state = video_is_fullscreen();
 	widgets_config[10].d.togglebutton.state = !video_is_fullscreen();
 
-	const char* hint = SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY);
+	const char* hint = cfg_video_interpolation;
 	widgets_config[11].d.togglebutton.state = (!hint || *hint == '0' || SDL_strcasecmp(hint, "nearest") == 0);
 	widgets_config[12].d.togglebutton.state = (!hint || *hint == '1' || SDL_strcasecmp(hint, "linear") == 0);
 	widgets_config[13].d.togglebutton.state = (!hint || *hint == '2' || SDL_strcasecmp(hint, "best") == 0);

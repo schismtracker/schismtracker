@@ -29,6 +29,7 @@
 #include "widget.h"
 #include "song.h"
 #include "page.h"
+#include "keyboard.h"
 
 #include "sdlmain.h"
 

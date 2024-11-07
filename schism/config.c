@@ -31,13 +31,12 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <SDL_filesystem.h>
 
 #include "config-parser.h"
 #include "dmoz.h"
 #include "osdefs.h"
 
-#if defined(SCHISM_WII) || defined(SCHISM_WIIU)
+#if defined(SCHISM_WII) || defined(SCHISM_WIIU) || defined(SCHISM_SDL12)
 #define DEFAULT_KEY_REPEAT_DELAY 500
 #define DEFAULT_KEY_REPEAT_RATE  30
 #else // use system defaults
@@ -57,6 +56,7 @@ int cfg_video_want_fixed = 0;
 int cfg_video_want_fixed_width = 0;
 int cfg_video_want_fixed_height = 0;
 int cfg_video_mousecursor = MOUSE_EMULATED;
+int cfg_video_gl_bilinear = 1;
 int cfg_video_width, cfg_video_height;
 int cfg_video_hardware = 0;
 int cfg_video_want_menu_bar = 1;
@@ -87,7 +87,7 @@ void cfg_init_dir(void)
 #else
 	char *portable_file = NULL;
 
-	char *app_dir = SDL_GetBasePath();
+	char *app_dir = dmoz_get_exe_directory();
 	if (app_dir)
 		portable_file = dmoz_path_concat(app_dir, "portable.txt");
 
@@ -186,6 +186,7 @@ void cfg_load(void)
 	cfg_video_want_fixed_height = cfg_get_number(&cfg, "Video", "want_fixed_height", 400 * 6);
 	cfg_video_mousecursor = cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
 	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_MAX_STATE);
+	cfg_video_gl_bilinear = !!cfg_get_number(&cfg, "Video", "gl_bilinear", 1);
 	cfg_video_hardware = cfg_get_number(&cfg, "Video", "hardware", 1);
 	cfg_video_want_menu_bar = !!cfg_get_number(&cfg, "Video", "want_menu_bar", 1);
 
@@ -364,9 +365,10 @@ void cfg_atexit_save(void)
 	/* TODO: move these config options to video.c, this is lame :)
 	Or put everything here, which is what the note in audio_loadsave.cc
 	says. Very well, I contradict myself. */
-	cfg_set_string(&cfg, "Video", "interpolation", SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY));
+	cfg_set_string(&cfg, "Video", "interpolation", cfg_video_interpolation);
 	cfg_set_number(&cfg, "Video", "fullscreen", !!(video_is_fullscreen()));
 	cfg_set_number(&cfg, "Video", "mouse_cursor", video_mousecursor_visible());
+	cfg_set_number(&cfg, "Video", "gl_bilinear", video_gl_bilinear());
 	cfg_set_number(&cfg, "Video", "lazy_redraw", !!(status.flags & LAZY_REDRAW));
 	cfg_set_number(&cfg, "Video", "hardware", !!(video_is_hardware()));
 	cfg_set_number(&cfg, "Video", "want_menu_bar", !!cfg_video_want_menu_bar);

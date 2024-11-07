@@ -31,31 +31,6 @@
 /* How much to scroll. */
 #define MOUSE_SCROLL_LINES       3
 
-struct key_event {
-	SDL_Keycode sym; /* the translated keysym after keyboard.c warps it */
-	SDL_Keycode orig_sym; /* the original keysym from SDL */
-	SDL_Keymod mod; /* current key modifiers */
-	SDL_Scancode scancode; /* locale-independent key locations */
-	const char* text; /* text input, if any. can be null */
-
-	enum { KEY_PRESS=0, KEY_RELEASE } state;
-	enum { MOUSE_NONE=0, MOUSE_CLICK, MOUSE_SCROLL_UP, MOUSE_SCROLL_DOWN, MOUSE_DBLCLICK } mouse;
-	enum { MOUSE_BUTTON_LEFT=0, MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_RIGHT } mouse_button;
-	int midi_note;
-	int midi_channel;
-	int midi_volume; /* -1 for not a midi key otherwise 0...128 */
-	int midi_bend;  /* normally 0; -8192 to +8192  */
-	unsigned int sx, sy; /* start x and y position (character) */
-	unsigned int x, hx, fx; /* x position of mouse (character, halfcharacter, fine) */
-	unsigned int y, fy; /* y position of mouse (character, fine) */
-
-	unsigned int rx, ry; /* x/y resolution */
-
-	int is_repeat;
-	int on_target;
-	int is_synthetic; /* 1 came from paste */
-};
-
 /* --------------------------------------------------------------------- */
 /* help text */
 

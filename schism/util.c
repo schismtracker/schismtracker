@@ -27,6 +27,7 @@ extraneous libraries (i.e. GLib). */
 
 #include "headers.h"
 
+#include "backend/timer.h"
 #include "util.h"
 #include "sdlmain.h"
 
@@ -176,9 +177,9 @@ void rt_usleep(uint64_t usec)
 		return;
 
 	// this sucks, but its portable...
-	const schism_ticks_t next = SCHISM_GET_TICKS() + (usec / 1000);
+	const schism_ticks_t next = be_timer_ticks() + (usec / 1000);
 
-	while (!SCHISM_TICKS_PASSED(SCHISM_GET_TICKS(), next));
+	while (!be_timer_ticks_passed(be_timer_ticks(), next));
 }
 
 // this tries to be as accurate as possible
