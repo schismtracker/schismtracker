@@ -99,17 +99,20 @@ static void audio_check_init_funcs(void)
 {
 	static int sdl_version_checked = 0;
 
-	if (!sdl_version_checked) {
-		// see if we can use the normal audio init and quit functions
-		SDL_version ver;
-		SDL_GetVersion(&ver);
-		if ((ver.major >= 2)
-			 && (ver.major > 2 || ver.minor >= 0)
-			 && (ver.major > 2 || ver.minor > 0 || ver.patch >= 18)) {
-			audio_init_func = SDL_AudioInit;
-			audio_quit_func = SDL_AudioQuit;
-		}
+	if (sdl_version_checked)
+		return;
+
+	// see if we can use the normal audio init and quit functions
+	SDL_version ver;
+	SDL_GetVersion(&ver);
+	if ((ver.major >= 2)
+		 && (ver.major > 2 || ver.minor >= 0)
+		 && (ver.major > 2 || ver.minor > 0 || ver.patch >= 18)) {
+		audio_init_func = SDL_AudioInit;
+		audio_quit_func = SDL_AudioQuit;
 	}
+
+	sdl_version_checked = 1;
 }
 
 int sdl2_audio_init(const char *driver)
