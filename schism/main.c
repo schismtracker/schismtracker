@@ -411,6 +411,9 @@ static void event_loop(void)
 	for (;;) {
 		schism_event_t se;
 		while (schism_poll_event(&se)) {
+			if (!os_event(&se))
+				continue;
+
 			if (midi_engine_handle_event(&se))
 				continue;
 

@@ -41,6 +41,10 @@ int sdl2_init(void)
 	controller_init();
 #endif
 
+#ifdef SCHISM_WIN32
+	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
+#endif
+
 	return r;
 }
 

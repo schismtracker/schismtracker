@@ -82,6 +82,8 @@ enum {
 	SCHISM_EVENT_MIDI_TICK,
 	SCHISM_EVENT_MIDI_SYSEX,
 	SCHISM_EVENT_MIDI_SYSTEM,
+
+	SCHISM_EVENT_WM_MSG			 = 0x1000,
 };
 
 typedef struct {
@@ -242,6 +244,22 @@ typedef struct {
 	char *clipboard;
 } schism_clipboard_paste_event_t;
 
+typedef struct {
+	uint32_t type;
+	schism_ticks_t timestamp;
+
+	union {
+		struct {
+			void *hwnd;
+			uint32_t msg;
+			uintptr_t wparam;
+			uintptr_t lparam;
+		} win;
+
+		/* don't care about others */
+	} msg;
+} schism_wm_msg_event_t;
+
 typedef union schism_event {
 	uint32_t type;
 
@@ -264,6 +282,7 @@ typedef union schism_event {
 	schism_native_open_event_t open;
 	schism_clipboard_paste_event_t clipboard;
 	schism_file_drop_event_t drop;
+	schism_wm_msg_event_t wm_msg;
 } schism_event_t;
 
 /* ------------------------------------ */

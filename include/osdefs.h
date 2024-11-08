@@ -40,7 +40,7 @@ This code is processed right as soon as main() starts.
 os_sdlinit: any platform-dependent setup that needs to occur after SDL is up and running.
 Currently only used on the Wii in order to get the Wiimote working.
 
-os_sdlevent: preprocessing for SDL events.
+os_event: preprocessing for events.
 This is used to hack in system-dependent input methods (e.g. F16 and other scancodes on OS X; Wiimote buttons;
 etc.) If defined, this function will be called after capturing an SDL event.
 A return value of 0 indicates that the event should NOT be processed by the main event handler.
@@ -52,8 +52,7 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_sysinit wiiu_sysinit
 # define os_sysexit wiiu_sysexit
 #elif defined(SCHISM_WIN32)
-# define os_sdlevent win32_sdlevent
-# define os_sdlinit win32_sdlinit
+# define os_event win32_event
 # define os_sysinit win32_sysinit
 # define os_sysexit win32_sysexit
 # define os_get_modkey win32_get_modkey
@@ -62,7 +61,7 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_open win32_open
 # define os_mkdir win32_mkdir
 #elif defined(SCHISM_MACOSX)
-# define os_sdlevent macosx_sdlevent
+# define os_event macosx_event
 # define os_sysexit macosx_sysexit
 # define os_sysinit macosx_sysinit
 # define os_get_modkey macosx_get_modkey
@@ -74,11 +73,8 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_run_hook posix_run_hook
 #endif
 
-#ifndef os_sdlevent
-# define os_sdlevent(ev) 1
-#endif
-#ifndef os_sdlinit
-# define os_sdlinit()
+#ifndef os_event
+# define os_event(ev) 1
 #endif
 #ifndef os_sysinit
 # define os_sysinit(pargc,argv)

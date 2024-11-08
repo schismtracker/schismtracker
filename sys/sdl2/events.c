@@ -27,6 +27,9 @@
 #include "util.h"
 
 #include <SDL.h>
+#ifdef SCHISM_WIN32
+#include <SDL_syswm.h>
+#endif
 
 #ifdef SCHISM_CONTROLLER
 
@@ -457,6 +460,16 @@ void sdl2_pump_events(void)
 			break;
 		case SDL_AUDIODEVICEREMOVED:
 			schism_event.type = SCHISM_AUDIODEVICEREMOVED;
+			schism_push_event(&schism_event);
+			break;
+		case SDL_SYSWMEVENT:
+			schism_event.type = SCHISM_EVENT_WM_MSG;
+#ifdef SCHISM_WIN32
+			schism_event.msg.win.hwnd = e.msg->msg.win.hwnd;
+			schism_event.msg.win.msg = e.msg->msg.win.msg;
+			schism_event.msg.win.wparam = e.msg->msg.win.wparam;
+			schism_event.msg.win.lparam = e.msg->msg.win.lparam;
+#endif
 			schism_push_event(&schism_event);
 			break;
 		default:

@@ -25,7 +25,7 @@
 
 #include "it.h"
 #include "osdefs.h"
-#include "event.h"
+#include "events.h"
 #include "song.h"
 #include "page.h"
 #include "widget.h"
@@ -315,20 +315,14 @@ fail:
  * we tamper with it, so we can restore it on shutdown */
 static int ibook_helper = -1;
 
-int macosx_sdlevent(SDL_Event *event)
+int macosx_sdlevent(schism_event_t *event)
 {
 	switch (event->type) {
-	case SDL_WINDOWEVENT:
-		switch (event->window.event) {
-		case SDL_WINDOWEVENT_FOCUS_GAINED:
-			macosx_ibook_fnswitch(1);
-			break;
-		case SDL_WINDOWEVENT_FOCUS_LOST:
-			macosx_ibook_fnswitch(ibook_helper);
-			break;
-		default:
-			break;
-		}
+	case SCHISM_WINDOWEVENT_FOCUS_GAINED:
+		macosx_ibook_fnswitch(1);
+		return 1;
+	case SCHISM_WINDOWEVENT_FOCUS_LOST:
+		macosx_ibook_fnswitch(ibook_helper);
 		return 1;
 	case SDL_KEYDOWN:
 	case SDL_KEYUP:
@@ -340,9 +334,9 @@ int macosx_sdlevent(SDL_Event *event)
 					&& ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
 					&& ACTIVE_PAGE_WIDGET.accept_text) {
 					/* text is more likely? */
-					event->key.keysym.mod |= KMOD_NUM;
+					event->key.mod |= KMOD_NUM;
 				} else {
-					event->key.keysym.mod &= ~KMOD_NUM;
+					event->key.mod &= ~KMOD_NUM;
 				}
 			} /* otherwise honor it */
 			break;
@@ -351,8 +345,8 @@ int macosx_sdlevent(SDL_Event *event)
 			break;
 		}
 
-		switch (event->key.keysym.scancode) {
-		case SDL_SCANCODE_KP_ENTER:
+		switch (event->key.scancode) {
+		case SCHISM_SCANCODE_KP_ENTER:
 			/* On portables, the regular Insert key
 			 * isn't available. This is equivalent to
 			 * pressing Fn-Return, which just so happens
@@ -364,7 +358,7 @@ int macosx_sdlevent(SDL_Event *event)
 			 * have an Insert key.
 			 *
 			 *   - paper */
-			event->key.keysym.sym = SDLK_INSERT;
+			event->key.sym = SCHISM_KEYSYM_INSERT;
 			break;
 		default:
 			break;
