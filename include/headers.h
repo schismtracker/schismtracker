@@ -25,6 +25,8 @@
 #define SCHISM_HEADERS_H_
 /* This is probably overkill, but it's consistent this way. */
 
+#define _GNU_SOURCE // not necessarily true but whatever
+
 #ifdef HAVE_CONFIG_H
 # include <build-config.h>
 #endif
