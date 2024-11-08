@@ -25,5 +25,5 @@
 
 int unsetenv(const char *name)
 {
-	setenv(name, "", 1);
+	return setenv(name, "", 1);
 }
