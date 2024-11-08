@@ -167,7 +167,7 @@ int schism_main(int argc, char** argv); // main.c
 
 	/* If we launched from the Finder we have extra arguments that we
 	 * don't care about that will trip up the regular main function. */
-	exit(SDL_main(macosx_did_finderlaunch ? 1 : *_NSGetArgc(), *_NSGetArgv()));
+	exit(schism_main(macosx_did_finderlaunch ? 1 : *_NSGetArgc(), *_NSGetArgv()));
 }
 
 @end /* @implementation SchismTracker */
