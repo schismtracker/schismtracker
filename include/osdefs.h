@@ -37,9 +37,6 @@ and possibly other files as well. Only one osdefs.c should be in use at a time. 
 os_sysinit: any platform-dependent setup that needs to occur directly upon startup.
 This code is processed right as soon as main() starts.
 
-os_sdlinit: any platform-dependent setup that needs to occur after SDL is up and running.
-Currently only used on the Wii in order to get the Wiimote working.
-
 os_event: preprocessing for events.
 This is used to hack in system-dependent input methods (e.g. F16 and other scancodes on OS X; Wiimote buttons;
 etc.) If defined, this function will be called after capturing an SDL event.
@@ -117,7 +114,7 @@ void win32_sysexit(void);
 void win32_sdlinit(void);
 void win32_get_modkey(int *m);
 void win32_filecreated_callback(const char *filename);
-void win32_toggle_menu(void* window); // window should be a pointer to the window HWND
+void win32_toggle_menu(void* window, int on); // window should be a pointer to the window HWND
 int win32_open(const char* path, int flags);
 int win32_wstat(const wchar_t* path, struct stat* st);
 int win32_stat(const char* path, struct stat* st);

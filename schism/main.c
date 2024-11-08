@@ -856,9 +856,6 @@ void schism_exit(int status)
 		See long-standing bug: https://github.com/libsdl-org/SDL/issues/3184
 			/ Vanfanel
 		*/
-#ifdef SCHISM_CONTROLLER
-		controller_quit();
-#endif
 		be_quit();
 	}
 
@@ -926,10 +923,6 @@ int main(int argc, char **argv)
 
 	/* make SDL_SetWindowGrab grab the keyboard too */
 	shutdown_process |= EXIT_SDLQUIT;
-
-#ifdef SCHISM_CONTROLLER
-	controller_init();
-#endif
 
 	display_init();
 	palette_apply();
