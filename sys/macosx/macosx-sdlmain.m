@@ -68,6 +68,8 @@ extern OSErr CPSSetFrontProcess(CPSProcessSerNum *psn);
 
 static int macosx_did_finderlaunch;
 
+int schism_main(int argc, char** argv); // main.c
+
 #define KEQ_FN(n) [NSString stringWithFormat:@"%C", (unichar)(NSF##n##FunctionKey)]
 
 @interface NSApplication(OtherMacOSXExtensions)
@@ -81,9 +83,9 @@ static int macosx_did_finderlaunch;
 /* Invoked from the Quit menu item */
 - (void)terminate:(id)sender
 {
-	/* Post a SDL_QUIT event */
+	/* Post a QUIT event */
 	schism_event_t event;
-	event.type = SDL_QUIT;
+	event.type = SCHISM_QUIT;
 	schism_push_event(&event);
 }
 
@@ -106,7 +108,7 @@ static int macosx_did_finderlaunch;
 	if (po) {
 		e.type = SCHISM_EVENT_NATIVE_SCRIPT;
 		e.script.which = str_dup(po);
-		SDL_PushEvent(&e);
+		schism_push_event(&e);
 	}
 }
 

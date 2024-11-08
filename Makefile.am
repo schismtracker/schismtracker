@@ -71,7 +71,6 @@ sysfiles = \
 	sys/macosx/Schism_Tracker.app/Contents/Resources/appIcon.icns		\
 	sys/macosx/Schism_Tracker.app/Contents/Resources/AppSettings.plist	\
 	sys/macosx/Schism_Tracker.app/Contents/Resources/moduleIcon.icns	\
-	sys/sdl/README \
 	sys/wii/schismtracker/icon.png	\
 	sys/wii/schismtracker/meta.xml	\
 	sys/win32/schism.nsis

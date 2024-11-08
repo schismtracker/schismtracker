@@ -871,7 +871,7 @@ extern void vis_init(void);
 
 /* wart */
 #ifdef SCHISM_MACOSX
-int SDL_main(int argc, char** argv)
+int schism_main(int argc, char** argv)
 #else
 int main(int argc, char **argv)
 #endif
