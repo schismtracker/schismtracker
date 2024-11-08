@@ -35,6 +35,7 @@
 
 #include "it.h"
 #include "song.h"
+#include "page.h"
 
 struct controller_node {
 	SDL_GameController *controller;
