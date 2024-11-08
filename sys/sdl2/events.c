@@ -317,7 +317,7 @@ void sdl2_pump_events(void)
 		schism_event.common.timestamp = e.common.timestamp;
 
 #ifdef SCHISM_CONTROLLER
-		if (!sdl2_controller_sdlevent())
+		if (!sdl2_controller_sdlevent(&e))
 			continue;
 #endif
 
