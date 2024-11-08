@@ -31,14 +31,14 @@
 #include "charset.h"
 #include "bswap.h"
 #include "config.h"
-#include "sdlmain.h"
 #include "video.h"
 #include "osdefs.h"
 #include "vgamem.h"
 
 #include <errno.h>
-
 #include <inttypes.h>
+
+#include <SDL.h>
 
 #ifndef SCHISM_MACOSX
 #include "auto/schismico_hires.h"
