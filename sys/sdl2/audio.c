@@ -32,6 +32,10 @@ struct schism_audio_device {
 	void (*callback)(uint8_t *stream, int len);
 };
 
+#ifndef SDL_AUDIO_ALLOW_SAMPLES_CHANGE /* added in SDL 2.0.9 */
+#define SDL_AUDIO_ALLOW_SAMPLES_CHANGE 0x00000008
+#endif
+
 /* ---------------------------------------------------------- */
 /* drivers */
 
