@@ -30,8 +30,6 @@
 #include "vgamem.h"
 #include "keyboard.h"
 
-#include "sdlmain.h"
-
 /* --------------------------------------------------------------------- */
 
 static struct widget widgets_orderpan[65], widgets_ordervol[65];

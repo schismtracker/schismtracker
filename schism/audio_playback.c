@@ -40,8 +40,6 @@
 #include <errno.h>
 #include <math.h>
 
-#include "sdlmain.h"
-
 #include "midi.h"
 
 #include "player/cmixer.h"

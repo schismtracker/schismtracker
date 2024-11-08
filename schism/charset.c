@@ -26,7 +26,6 @@
 #include "bswap.h"
 #include "charset.h"
 #include "util.h"
-#include "sdlmain.h"
 #include "disko.h"
 
 int char_digraph(int k1, int k2)

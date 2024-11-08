@@ -27,8 +27,6 @@
 #include "page.h"
 #include "widget.h"
 
-#include "sdlmain.h"
-
 /* --------------------------------------------------------------------- */
 
 static struct widget widgets_blank[1];

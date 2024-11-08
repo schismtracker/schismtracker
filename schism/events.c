@@ -25,14 +25,14 @@
 
 #include "headers.h"
 #include "events.h"
-#include "sdlmain.h"
 #include "mem.h"
 
+#include "backend/threads.h"
 #include "backend/events.h"
 
 /* ------------------------------------------------------ */
 
-static SDL_mutex *queue_mutex = NULL;
+static schism_mutex_t *queue_mutex = NULL;
 
 #define EVENTQUEUE_CAPACITY 128
 static struct {
@@ -70,7 +70,7 @@ static inline int queue_dequeue(schism_event_t *event)
 
 int schism_init_event(void)
 {
-	queue_mutex = SDL_CreateMutex();
+	queue_mutex = be_mutex_create();
 	if (!queue_mutex)
 		return 0;
 
@@ -79,35 +79,31 @@ int schism_init_event(void)
 
 int schism_have_event(void)
 {
-	SDL_LockMutex(queue_mutex);
+	be_mutex_lock(queue_mutex);
 
 	if (queue.size) {
-		SDL_UnlockMutex(queue_mutex);
+		be_mutex_unlock(queue_mutex);
 		return 1;
 	}
-
-	SDL_UnlockMutex(queue_mutex);
 
 	be_pump_events();
 
-	SDL_LockMutex(queue_mutex);
-
 	if (queue.size) {
-		SDL_UnlockMutex(queue_mutex);
+		be_mutex_unlock(queue_mutex);
 		return 1;
 	}
 
-	SDL_UnlockMutex(queue_mutex);
+	be_mutex_unlock(queue_mutex);
 
 	return 0;
 }
 
 int schism_poll_event(schism_event_t *event)
 {
-	SDL_LockMutex(queue_mutex);
+	be_mutex_lock(queue_mutex);
 
 	if (queue_dequeue(event)) {
-		SDL_UnlockMutex(queue_mutex);
+		be_mutex_unlock(queue_mutex);
 		return 1;
 	}
 
@@ -115,11 +111,11 @@ int schism_poll_event(schism_event_t *event)
 	be_pump_events();
 
 	if (queue_dequeue(event)) {
-		SDL_UnlockMutex(queue_mutex);
+		be_mutex_unlock(queue_mutex);
 		return 1;
 	}
 
-	SDL_UnlockMutex(queue_mutex);
+	be_mutex_unlock(queue_mutex);
 
 	// welp
 	return 0;
@@ -132,11 +128,11 @@ int schism_push_event(const schism_event_t *event)
 
 	e.common.timestamp = be_timer_ticks();
 
-	SDL_LockMutex(queue_mutex);
+	be_mutex_lock(queue_mutex);
 
 	queue_enqueue(&e);
 
-	SDL_UnlockMutex(queue_mutex);
+	be_mutex_unlock(queue_mutex);
 
 	return 1;
 }

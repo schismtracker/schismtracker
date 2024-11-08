@@ -30,7 +30,6 @@
 #include "charset.h"
 #include "bswap.h"
 #include "config.h"
-#include "sdlmain.h"
 #include "video.h"
 #include "osdefs.h"
 #include "vgamem.h"
@@ -50,11 +49,6 @@ struct mouse_cursor {
 	uint32_t height, width;
 	uint32_t center_x, center_y; /* which point of the pointer does actually point */
 };
-
-#if !SDL_VERSION_ATLEAST(2, 0, 4)
-#define SDL_PIXELFORMAT_NV12 (SDL_DEFINE_PIXELFOURCC('N', 'V', '1', '2'))
-#define SDL_PIXELFORMAT_NV21 (SDL_DEFINE_PIXELFOURCC('N', 'V', '2', '1'))
-#endif
 
 /* ex. cursors[CURSOR_SHAPE_ARROW] */
 static struct mouse_cursor cursors[] = {
@@ -213,15 +207,7 @@ void video_mousecursor(int vis)
 		break;
 	}
 
-	SDL_ShowCursor(video.mouse.visible == MOUSE_SYSTEM);
-
-	// Totally turn off mouse event sending when the mouse is disabled
-	int evstate = video.mouse.visible == MOUSE_DISABLED ? SDL_DISABLE : SDL_ENABLE;
-	if (evstate != SDL_EventState(SDL_MOUSEMOTION, SDL_QUERY)) {
-		SDL_EventState(SDL_MOUSEMOTION, evstate);
-		SDL_EventState(SDL_MOUSEBUTTONDOWN, evstate);
-		SDL_EventState(SDL_MOUSEBUTTONUP, evstate);
-	}
+	video_mousecursor_changed();
 }
 
 /* -------------------------------------------------- */
@@ -291,7 +277,7 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 #define FIXED2INT(x) ((x) >> FIXED_BITS)
 #define FRAC(x) ((x) & FIXED_MASK)
 
-void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t pal[256], SDL_PixelFormat *format, int width, int height)
+void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t pal[256], int width, int height, schism_map_rgb_func_t map_rgb, void *map_rgb_data)
 {
 	unsigned char cv32backing[NATIVE_SCREEN_WIDTH * 8];
 
@@ -382,63 +368,15 @@ void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 #undef GREEN
 #undef BLUE
 #endif
-			/* write output "pixel" */
-			switch (bpp) {
-			case 4:
-				/* inline MapRGB */
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-				pixels[0] = outr;
-				pixels[1] = outg;
-				pixels[2] = outb;
-				pixels[3] = 0xFF;
+
+			uint32_t c = map_rgb(map_rgb_data, outr, outg, outb);
+
+			/* write the output pixel */
+#if WORDS_BIGENDIAN
+			memcpy(pixels, ((unsigned char *)&c) + (4 - bpp), bpp);
 #else
-				pixels[3] = 0xFF;
-				pixels[2] = outr;
-				pixels[1] = outg;
-				pixels[0] = outb;
+			memcpy(pixels, &c, bpp);
 #endif
-				break;
-			case 3:
-				/* inline MapRGB */
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-				pixels[0] = outr;
-				pixels[1] = outg;
-				pixels[2] = outb;
-#else
-				pixels[2] = outr;
-				pixels[1] = outg;
-				pixels[0] = outb;
-#endif
-				break;
-			case 2: {
-				uint16_t ergh;
-
-				/* inline MapRGB if possible */
-				if (format->palette) {
-					/* err... */
-					ergh = SDL_MapRGB(format, outr, outg, outb);
-				} else if (format->Gloss == 2) {
-					/* RGB565 */
-					ergh  = ((outr << 8) & 0xF800) |
-						((outg << 3) & 0x07E0) |
-						(outb >> 3);
-				} else {
-					/* RGB555 */
-					ergh = 0x8000 |
-						((outr << 7) & 0x7C00) |
-						((outg << 2) & 0x03E0) |
-						(outb >> 3);
-				}
-
-				memcpy(pixels, &ergh, sizeof(ergh));
-
-				break;
-			}
-			case 1:
-				/* er... */
-				(*pixels) = SDL_MapRGB(format, outr, outg, outb);
-				break;
-			};
 			pixels += bpp;
 		}
 		pixels += pad;

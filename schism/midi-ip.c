@@ -25,8 +25,9 @@
 
 #include "it.h"
 #include "util.h"
-#include "sdlmain.h"
 #include "events.h"
+
+#include "backend/threads.h" // mutexes
 
 #ifdef USE_NETWORK
 
@@ -56,7 +57,7 @@ static int num_ports = 0;
 static int out_fd = -1;
 static int *port_fd = NULL;
 static int *state = NULL;
-static SDL_mutex *blocker = NULL;
+static schism_mutex_t *blocker = NULL;
 
 static void do_wake_main(void)
 {
@@ -179,9 +180,9 @@ void ip_midi_setports(int n)
 	if (out_fd == -1) return;
 	if (status.flags & NO_NETWORK) return;
 
-	SDL_LockMutex(blocker);
+	be_mutex_lock(blocker);
 	num_ports = n;
-	SDL_UnlockMutex(blocker);
+	be_mutex_unlock(blocker);
 	do_wake_midi();
 }
 static void _readin(struct midi_provider *p, int en, int fd)
@@ -215,7 +216,7 @@ static int _ip_thread(struct midi_provider *p)
 	int i, m;
 
 	while (!p->cancelled) {
-		SDL_LockMutex(blocker);
+		be_mutex_lock(blocker);
 		m = (volatile int)num_ports;
 		//If no ports, wait and try again
 		if (m > real_num_ports) {
@@ -241,7 +242,7 @@ static int _ip_thread(struct midi_provider *p)
 				}
 				real_num_ports = num_ports = m;
 			}
-			SDL_UnlockMutex(blocker);
+			be_mutex_unlock(blocker);
 			do_wake_main();
 
 		} else if (m < real_num_ports) {
@@ -255,10 +256,10 @@ static int _ip_thread(struct midi_provider *p)
 			}
 			real_num_ports = num_ports = m;
 
-			SDL_UnlockMutex(blocker);
+			be_mutex_unlock(blocker);
 			do_wake_main();
 		} else {
-			SDL_UnlockMutex(blocker);
+			be_mutex_unlock(blocker);
 			if (!real_num_ports) {
 				//Since the thread is not finished in this case (maybe it should),
 				//we put a delay to prevent the thread using all the cpu.
@@ -325,24 +326,24 @@ static int _ip_thread(struct midi_provider *p)
 static int _ip_start(struct midi_port *p)
 {
 	int n = INT_SHAPED_PTR(p->userdata);
-	SDL_LockMutex(blocker);
+	be_mutex_lock(blocker);
 	if (p->io & MIDI_INPUT)
 		state[n] |= 1;
 	if (p->io & MIDI_OUTPUT)
 		state[n] |= 2;
-	SDL_UnlockMutex(blocker);
+	be_mutex_unlock(blocker);
 	do_wake_midi();
 	return 1;
 }
 static int _ip_stop(struct midi_port *p)
 {
 	int n = INT_SHAPED_PTR(p->userdata);
-	SDL_LockMutex(blocker);
+	be_mutex_lock(blocker);
 	if (p->io & MIDI_INPUT)
 		state[n] &= (~1);
 	if (p->io & MIDI_OUTPUT)
 		state[n] &= (~2);
-	SDL_UnlockMutex(blocker);
+	be_mutex_unlock(blocker);
 	do_wake_midi();
 	return 1;
 }
@@ -382,7 +383,7 @@ static void _ip_poll(struct midi_provider *p)
 	long i = 0;
 	long m;
 
-	SDL_LockMutex(blocker);
+	be_mutex_lock(blocker);
 	m = (volatile int)real_num_ports;
 	if (m < last_buildout) {
 		ptr = NULL;
@@ -412,7 +413,7 @@ static void _ip_poll(struct midi_provider *p)
 		}
 		last_buildout = m;
 	}
-	SDL_UnlockMutex(blocker);
+	be_mutex_unlock(blocker);
 }
 
 int ip_midi_setup(void)
@@ -421,10 +422,9 @@ int ip_midi_setup(void)
 
 	if (status.flags & NO_NETWORK) return 0;
 
-	blocker = SDL_CreateMutex();
-	if (!blocker) {
+	blocker = be_mutex_create();
+	if (!blocker)
 		return 0;
-	}
 
 #ifndef SCHISM_WIN32
 	if (pipe(wakeup) == -1) {
@@ -459,9 +459,9 @@ int ip_midi_getports(void)
 	if (out_fd == -1) return 0;
 	if (status.flags & NO_NETWORK) return 0;
 
-	SDL_LockMutex(blocker);
+	be_mutex_lock(blocker);
 	tmp = (volatile int)real_num_ports;
-	SDL_UnlockMutex(blocker);
+	be_mutex_unlock(blocker);
 	return tmp;
 }
 

@@ -32,9 +32,8 @@
 #include "config-parser.h"
 #include "keyboard.h"
 
-#include "sdlmain.h"
-
 #include <assert.h>
+#include <inttypes.h>
 
 /* --------------------------------------------------------------------- */
 

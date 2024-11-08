@@ -30,10 +30,12 @@
 /* SDL 2 has 64-bit ticks starting with 2.0.18 */
 # define be_timer_ticks sdl2_timer_ticks
 # define be_timer_ticks_passed sdl2_timer_ticks_passed
+# define be_delay sdl2_delay
 typedef uint64_t schism_ticks_t;
 #elif SCHISM_SDL12
 # define be_timer_ticks sdl12_timer_ticks
 # define be_timer_ticks_passed sdl12_timer_ticks_passed
+# define be_delay sdl12_delay
 typedef uint32_t schism_ticks_t;
 #endif
 
@@ -42,5 +44,8 @@ schism_ticks_t sdl12_timer_ticks(void);
 
 int sdl2_timer_ticks_passed(schism_ticks_t a, schism_ticks_t b);
 int sdl12_timer_ticks_passed(schism_ticks_t a, schism_ticks_t b);
+
+void sdl2_delay(uint32_t ms);
+void sdl12_delay(uint32_t ms);
 
 #endif /* SCHISM_BACKEND_TIMER_H_ */

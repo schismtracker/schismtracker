@@ -30,7 +30,6 @@
 #include "song.h"
 #include "page.h"
 #include "osdefs.h"
-#include "sdlmain.h"
 #include "widget.h"
 #include "vgamem.h"
 

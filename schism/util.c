@@ -29,7 +29,6 @@ extraneous libraries (i.e. GLib). */
 
 #include "backend/timer.h"
 #include "util.h"
-#include "sdlmain.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>

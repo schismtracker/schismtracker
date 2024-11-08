@@ -296,9 +296,18 @@ static void set_icon(void)
 	SDL_SetWindowTitle(video.window, WINDOW_TITLE);
 #ifndef SCHISM_MACOSX
 /* apple/macs use a bundle; this overrides their nice pretty icon */
-	SDL_Surface *icon = xpmdata(_schism_icon_xpm_hires);
-	SDL_SetWindowIcon(video.window, icon);
-	SDL_FreeSurface(icon);
+	{
+		uint32_t *pixels;
+		int width, height;
+		if (!xpmdata(_schism_icon_xpm_hires, &pixels, &width, &height)) {
+			SDL_Surface *icon = SDL_CreateRGBSurfaceFrom(pixels, width, height, 32, width * sizeof(uint32_t), 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+			if (icon) {
+				SDL_SetWindowIcon(video.window, icon);
+				SDL_FreeSurface(icon);
+			}
+			free(pixels);
+		}
+	}
 #endif
 }
 
@@ -327,11 +336,12 @@ static void video_redraw_texture(void)
 	// SDL_PIXELFORMAT_RGB888 and let SDL deal with the
 	// conversion.
 	SDL_RendererInfo info;
-	SDL_GetRendererInfo(video.renderer, &info);
-	for (i = 0; i < info.num_texture_formats; i++)
-		for (j = 0; j < ARRAY_SIZE(native_formats); j++)
-			if (info.texture_formats[i] == native_formats[j].format && j < pref_last)
-				format = native_formats[pref_last = j].format;
+	if (!SDL_GetRendererInfo(video.renderer, &info)) {
+		for (i = 0; i < info.num_texture_formats; i++)
+			for (j = 0; j < ARRAY_SIZE(native_formats); j++)
+				if (info.texture_formats[i] == native_formats[j].format && j < pref_last)
+					format = native_formats[pref_last = j].format;
+	}
 
 got_format:
 	video.texture = SDL_CreateTexture(video.renderer, format, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
@@ -726,4 +736,18 @@ int video_gl_bilinear(void)
 {
 	// no-op
 	return cfg_video_gl_bilinear;
+}
+
+void video_mousecursor_changed(void)
+{
+	const int vis = video_mousecursor_visible();
+	SDL_ShowCursor(vis == MOUSE_SYSTEM);
+
+	// Totally turn off mouse event sending when the mouse is disabled
+	int evstate = (vis == MOUSE_DISABLED) ? SDL_DISABLE : SDL_ENABLE;
+	if (evstate != SDL_EventState(SDL_MOUSEMOTION, SDL_QUERY)) {
+		SDL_EventState(SDL_MOUSEMOTION, evstate);
+		SDL_EventState(SDL_MOUSEBUTTONDOWN, evstate);
+		SDL_EventState(SDL_MOUSEBUTTONUP, evstate);
+	}
 }

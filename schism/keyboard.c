@@ -30,7 +30,6 @@
 #include "page.h"
 #include "osdefs.h"
 
-#include "sdlmain.h"
 #include <ctype.h>
 
 /* --------------------------------------------------------------------- */

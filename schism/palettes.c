@@ -26,7 +26,6 @@
 #include "it.h"
 #include "palettes.h"
 #include "config.h"
-#include "sdlmain.h"
 #include "util.h"
 
 /* --------------------------------------------------------------------- */

@@ -42,7 +42,6 @@
 #include "vgamem.h"
 #include "keyboard.h"
 
-#include "sdlmain.h"
 #include "clippy.h"
 #include "disko.h"
 

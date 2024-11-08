@@ -28,7 +28,6 @@
 #include "util.h"
 #include "midi.h"
 #include "song.h"
-#include "sdlmain.h"
 #include "page.h"
 #include "it.h"
 #include "config-parser.h"

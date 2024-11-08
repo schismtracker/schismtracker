@@ -32,8 +32,6 @@
 #include "vgamem.h"
 #include "keyboard.h"
 
-#include "sdlmain.h"
-
 #define NUM_PALETTES 15
 
 /* --------------------------------------------------------------------- */
@@ -188,7 +186,7 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 	}
 
 	switch (k->sym) {
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (--new_palette < 0) {
@@ -196,7 +194,7 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		// new_palette++;
@@ -205,12 +203,12 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_palette = 0;
 		break;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (new_palette == 0) {
@@ -219,17 +217,17 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 		}
 		new_palette -= 16;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_palette = NUM_PALETTES - 1;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_palette += 16;
 		break;
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		// if (selected_palette == -1) return 1;
@@ -238,8 +236,8 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 		update_thumbbars();
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_RIGHT:
-	case SDLK_TAB:
+	case SCHISM_KEYSYM_RIGHT:
+	case SCHISM_KEYSYM_TAB:
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			widget_change_focus_to(focus_offsets[selected_palette+1] + 29);
 			return 1;
@@ -248,12 +246,12 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 			return 0;
 		widget_change_focus_to(focus_offsets[selected_palette+1] + 8);
 		return 1;
-	case SDLK_LEFT:
+	case SCHISM_KEYSYM_LEFT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		widget_change_focus_to(focus_offsets[selected_palette+1] + 29);
 		return 1;
-	case SDLK_c:
+	case SCHISM_KEYSYM_c:
 		/* pasting is handled by the page */
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			palette_copy_palette_to_clipboard(selected_palette);
@@ -292,21 +290,21 @@ static void palette_list_handle_key(struct key_event * k)
 		return;
 
 	switch (k->sym) {
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (!NO_MODIFIER(k->mod))
 			n -= 3;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
 			n += 3;
 		break;
-	case SDLK_c:
+	case SCHISM_KEYSYM_c:
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			palette_copy_current_to_clipboard();
 			return;
 		}
 		break;
-	case SDLK_v:
+	case SCHISM_KEYSYM_v:
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			palette_paste_from_clipboard();
 			return;

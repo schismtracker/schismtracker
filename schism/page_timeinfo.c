@@ -30,9 +30,9 @@
 #include "keyboard.h"
 #include "song.h"
 
-#include "sdlmain.h"
-
 #include <stdarg.h>
+#include <stddef.h>
+#include <inttypes.h>
 #include <errno.h>
 
 /* --------------------------------------------------------------------- */

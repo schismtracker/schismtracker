@@ -32,8 +32,6 @@
 
 #include "player/sndfile.h"
 
-#include "sdlmain.h"
-
 /* --------------------------------------------------------------------- */
 
 static int status_bios = 0;

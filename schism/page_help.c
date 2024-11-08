@@ -32,8 +32,6 @@
 #include "vgamem.h"
 #include "keyboard.h"
 
-#include "sdlmain.h"
-
 /* --------------------------------------------------------------------- */
 
 /* Line type characters (the marker at the start of each line) */

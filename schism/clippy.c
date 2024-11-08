@@ -30,7 +30,6 @@
 
 #include "util.h"
 
-#include "sdlmain.h"
 #include "video.h"
 
 static char* _current_selection = NULL;

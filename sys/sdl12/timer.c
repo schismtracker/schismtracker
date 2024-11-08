@@ -35,3 +35,8 @@ int sdl12_timer_ticks_passed(schism_ticks_t a, schism_ticks_t b)
 {
 	return ((int32_t)(b - a) <= 0);
 }
+
+void sdl12_delay(uint32_t ms)
+{
+	SDL_Delay(ms);
+}

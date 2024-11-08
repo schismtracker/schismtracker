@@ -39,10 +39,9 @@
 #include "dialog.h"
 #include "widget.h"
 
-#include "sdlmain.h"
-
 #include <assert.h>
 #include <math.h>
+#include <inttypes.h>
 
 /* --------------------------------------------------------------------- */
 /* globals */
@@ -995,7 +994,6 @@ static int _handle_ime(struct key_event *k)
 					if (unicode[0] >= 32) {
 						status_text_flash_bios("Enter Unicode: U+%04" PRIX32 " -> %" PRIu8,
 									   cs_unicode, unicode[0]);
-						SDL_SetModState(0);
 						handle_text_input((const char *)unicode);
 					} else {
 						status_text_flash_bios("Enter Unicode: U+%04" PRIX32 " -> INVALID", cs_unicode);

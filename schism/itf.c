@@ -40,7 +40,6 @@
 #include "fonts.h"
 #include "osdefs.h"
 
-#include "sdlmain.h"
 #include <string.h>
 
 static const uint8_t itfmap_chars[] = {
@@ -648,10 +647,8 @@ static void handle_key_itfmap(struct key_event * k)
 static void confirm_font_save_ok(void *vf)
 {
 	char *f = vf;
-	if (font_save(f) != 0) {
-		fprintf(stderr, "%s\n", SDL_GetError());
+	if (font_save(f) != 0)
 		return;
-	}
 	selected_item = EDITBOX;
 }
 
@@ -689,10 +686,8 @@ static void handle_key_fontlist(struct key_event * k)
 		case MODE_LOAD:
 			if (cur_font < flist.num_files
 			&& flist.files[cur_font]
-			&& font_load(flist.files[cur_font]->base) != 0) {
-				fprintf(stderr, "%s\n", SDL_GetError());
+			&& font_load(flist.files[cur_font]->base) != 0)
 				font_reset();
-			}
 			break;
 		case MODE_SAVE:
 			if (cur_font < flist.num_files && flist.files[cur_font]) {

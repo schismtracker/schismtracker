@@ -78,7 +78,7 @@ static int display_native_y = -1;
 #include <errno.h>
 #include <stdio.h>
 
-#include "sdlmain.h"
+#include <SDL.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -626,14 +626,24 @@ void video_startup(void)
 	SDL_WM_SetCaption("Schism Tracker", "Schism Tracker");
 #ifndef SCHISM_MACOSX
 /* apple/macs use a bundle; this overrides their nice pretty icon */
+	{
+		const char **xpm;
 #ifdef SCHISM_WIN32
-/* win32 icons must be 32x32 according to SDL 1.2 doc */
-	SDL_Surface *icon = xpmdata(_schism_icon_xpm);
+		xpm = _schism_icon_xpm;
 #else
-	SDL_Surface *icon = xpmdata(_schism_icon_xpm_hires);
+		xpm = _schism_icon_xpm_hires;
 #endif
-	SDL_WM_SetIcon(icon, NULL);
-	SDL_FreeSurface(icon);
+		uint32_t *pixels;
+		int width, height;
+		if (!xpmdata(xpm, &pixels, &width, &height)) {
+			SDL_Surface *icon = SDL_CreateRGBSurfaceFrom(pixels, width, height, 32, width * sizeof(uint32_t), 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+			if (icon) {
+				SDL_WM_SetIcon(icon, NULL);
+				SDL_FreeSurface(icon);
+			}
+			free(pixels);
+		}
+	}
 #endif
 
 #ifndef SCHISM_MACOSX
@@ -1442,6 +1452,13 @@ static void _video_blit_planar(void) {
 	SDL_DisplayYUVOverlay(video.overlay, &video.clip);
 }
 
+static uint32_t sdl12_map_rgb_callback(void *data, uint8_t r, uint8_t g, uint8_t b)
+{
+	SDL_PixelFormat *format = (SDL_PixelFormat *)data;
+
+	return SDL_MapRGB(format, r, g, b);
+}
+
 void video_blit(void)
 {
 	unsigned char *pixels = NULL;
@@ -1509,7 +1526,7 @@ void video_blit(void)
 		if (!charset_strcasecmp(cfg_video_interpolation, CHARSET_UTF8, "nearest", CHARSET_UTF8)) {
 			video_blitNN(bpp, pixels, pitch, video.pal, video.clip.w, video.clip.h);
 		} else {
-			video_blitLN(bpp, pixels, pitch, video.tc_bgr32, video.surface->format, video.clip.w, video.clip.h);
+			video_blitLN(bpp, pixels, pitch, video.tc_bgr32, video.clip.w, video.clip.h, sdl12_map_rgb_callback, video.surface->format);
 		}
 	}
 
@@ -1668,4 +1685,18 @@ int video_have_menu(void)
 void video_toggle_menu(int on)
 {
 	/* can't have shit in detroit */
+}
+
+void video_mousecursor_changed(void)
+{
+	const int vis = video_mousecursor_visible();
+	SDL_ShowCursor(vis == MOUSE_SYSTEM);
+
+	// Totally turn off mouse event sending when the mouse is disabled
+	int evstate = (vis == MOUSE_DISABLED) ? SDL_DISABLE : SDL_ENABLE;
+	if (evstate != SDL_EventState(SDL_MOUSEMOTION, SDL_QUERY)) {
+		SDL_EventState(SDL_MOUSEMOTION, evstate);
+		SDL_EventState(SDL_MOUSEBUTTONDOWN, evstate);
+		SDL_EventState(SDL_MOUSEBUTTONUP, evstate);
+	}
 }

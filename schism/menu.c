@@ -30,8 +30,6 @@
 #include "dialog.h"
 #include "events.h"
 
-#include "sdlmain.h"
-
 /* --------------------------------------------------------------------- */
 
 /* ENSURE_MENU(optional return value)

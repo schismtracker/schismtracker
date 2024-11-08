@@ -70,6 +70,7 @@ enum video_mousecursor_shape {
 
 void video_mousecursor(int z); /* takes in the MOUSE_* enum from it.h (why is it there?) */
 int video_mousecursor_visible(void);
+void video_mousecursor_changed(void); // used for each backend to do optimizations
 void video_set_mousecursor_shape(enum video_mousecursor_shape shape);
 
 /* getters, will sometimes poll the backend */
@@ -86,13 +87,13 @@ int video_gl_bilinear(void);
 
 void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y);
 
-// this sucks and needs to go away
-struct SDL_Surface;
-struct SDL_Surface *xpmdata(const char *xpmdata[]);
+int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h);
 
 /* --------------------------------------------------------- */
 
-struct SDL_PixelFormat;
+/* function to callback to map an RGB value; used for the linear blitter
+ * but ignored for the other ones */
+typedef uint32_t (*schism_map_rgb_func_t)(void *data, uint8_t r, uint8_t g, uint8_t b);
 
 /* YUV blitters */
 void video_blitYY(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
@@ -102,6 +103,6 @@ void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
 /* RGB blitters */
 void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
 void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height);
-void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t pal[256], struct SDL_PixelFormat *format, int width, int height);
+void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t pal[256], int width, int height, schism_map_rgb_func_t map_rgb, void *map_rgb_data);
 
 #endif /* SCHISM_VIDEO_H_ */

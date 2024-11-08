@@ -32,8 +32,6 @@
 #include "vgamem.h"
 #include "keyboard.h"
 
-#include "sdlmain.h"
-
 #include <stdarg.h>
 #include <errno.h>
 

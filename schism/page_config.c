@@ -36,8 +36,6 @@
 #include "widget.h"
 #include "vgamem.h"
 
-#include "sdlmain.h"
-
 #include "player/snd_gm.h"
 
 #include "disko.h"
@@ -216,7 +214,7 @@ static void change_video_settings(void)
 		return;
 
 	video_change_dialog();
-	if (SDL_strcasecmp(new_video_interpolation, cfg_video_interpolation))
+	if (charset_strcasecmp(new_video_interpolation, CHARSET_UTF8, cfg_video_interpolation, CHARSET_UTF8))
 		video_setup(new_video_interpolation);
 	if (new_fs_flag != video_is_fullscreen())
 		toggle_display_fullscreen();
@@ -285,9 +283,9 @@ static void config_set_page(void)
 	widgets_config[10].d.togglebutton.state = !video_is_fullscreen();
 
 	const char* hint = cfg_video_interpolation;
-	widgets_config[11].d.togglebutton.state = (!hint || *hint == '0' || SDL_strcasecmp(hint, "nearest") == 0);
-	widgets_config[12].d.togglebutton.state = (!hint || *hint == '1' || SDL_strcasecmp(hint, "linear") == 0);
-	widgets_config[13].d.togglebutton.state = (!hint || *hint == '2' || SDL_strcasecmp(hint, "best") == 0);
+	widgets_config[11].d.togglebutton.state = (!hint || *hint == '0' || charset_strcasecmp(hint, CHARSET_UTF8, "nearest", CHARSET_UTF8) == 0);
+	widgets_config[12].d.togglebutton.state = (!hint || *hint == '1' || charset_strcasecmp(hint, CHARSET_UTF8, "linear", CHARSET_UTF8) == 0);
+	widgets_config[13].d.togglebutton.state = (!hint || *hint == '2' || charset_strcasecmp(hint, CHARSET_UTF8, "best", CHARSET_UTF8) == 0);
 
 	widgets_config[14].d.togglebutton.state = video_is_hardware();
 	widgets_config[15].d.togglebutton.state = !video_is_hardware();
