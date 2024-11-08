@@ -31,6 +31,8 @@ int sdl2_clippy_have_selection(void)
 {
 #if SDL_VERSION_ATLEAST(2, 26, 0)
 	return SDL_HasPrimarySelectionText();
+#else
+	return 0;
 #endif
 }
 

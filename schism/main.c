@@ -48,9 +48,6 @@
 #include "dialog.h"
 #include "widget.h"
 #include "fmt.h"
-#ifdef SCHISM_CONTROLLER
-# include "controller.h"
-#endif
 
 #include "osdefs.h"
 
