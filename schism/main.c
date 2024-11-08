@@ -926,7 +926,6 @@ int main(int argc, char **argv)
 
 	/* make SDL_SetWindowGrab grab the keyboard too */
 	shutdown_process |= EXIT_SDLQUIT;
-	os_sdlinit();
 
 #ifdef SCHISM_CONTROLLER
 	controller_init();
