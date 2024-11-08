@@ -31,6 +31,12 @@
 #include <SDL_syswm.h>
 #endif
 
+/* need to redefine these on SDL < 2.0.4 */
+#if !SDL_VERSION_ATLEAST(2, 0, 4)
+#define SDL_AUDIODEVICEADDED (0x1100)
+#define SDL_AUDIODEVICEREMOVED (0x1101)
+#endif
+
 #ifdef SCHISM_CONTROLLER
 
 #include "it.h"
