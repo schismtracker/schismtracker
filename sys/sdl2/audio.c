@@ -147,7 +147,7 @@ static inline int sdl2_audio_open_device_impl(schism_audio_device_t *dev, const 
 	int failed = (new_err && *new_err);
 
 	// reset the original error
-	SDL_SetError(err);
+	SDL_SetError("%s", err);
 
 	if (!failed) {
 		dev->id = id;
@@ -177,7 +177,6 @@ schism_audio_device_t *sdl2_audio_open_device(const char *name, const schism_aud
 
 	for (;;) {
 		if (!sdl2_audio_open_device_impl(dev, name, &sdl_desired, &sdl_obtained, change)) {
-			printf("what\n");
 			free(dev);
 			return NULL;
 		}

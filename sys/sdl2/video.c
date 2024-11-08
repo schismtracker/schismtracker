@@ -302,7 +302,7 @@ static void set_icon(void)
 #endif
 }
 
-void video_redraw_texture(void)
+static void video_redraw_texture(void)
 {
 	int i, j, pref_last = ARRAY_SIZE(native_formats);
 	uint32_t format = SDL_PIXELFORMAT_RGB888;
@@ -348,7 +348,7 @@ got_format:
 	}
 }
 
-void video_redraw_renderer(int hardware)
+void video_set_hardware(int hardware)
 {
 	SDL_DestroyTexture(video.texture);
 
@@ -374,6 +374,7 @@ void video_setup(const char *quality)
 {
 	strncpy(cfg_video_interpolation, quality, 7);
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
+	video_redraw_texture();
 }
 
 void video_startup(void)
@@ -394,7 +395,7 @@ void video_startup(void)
 	video.saved.x = video.saved.y = SDL_WINDOWPOS_CENTERED;
 
 	video.window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width, video.height, SDL_WINDOW_RESIZABLE);
-	video_redraw_renderer(cfg_video_hardware);
+	video_set_hardware(cfg_video_hardware);
 
 	/* Aspect ratio correction if it's wanted */
 	if (cfg_video_want_fixed)
@@ -570,8 +571,10 @@ void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
 	vx = CLAMP(vx, 0, NATIVE_SCREEN_WIDTH - 1);
 	vy = CLAMP(vy, 0, NATIVE_SCREEN_HEIGHT - 1);
 
-	*x = video.mouse.x = vx;
-	*y = video.mouse.y = vy;
+	video.mouse.x = vx;
+	video.mouse.y = vy;
+	if (x) *x = vx;
+	if (y) *y = vy;
 }
 
 void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)

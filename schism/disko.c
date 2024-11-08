@@ -43,6 +43,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <inttypes.h>
 
 #define DW_BUFFER_SIZE 65536
 

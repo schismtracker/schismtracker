@@ -25,14 +25,20 @@
 #define SCHISM_BACKEND_CLIPPY_H_
 
 #include "headers.h"
+#include "keyboard.h"
 
 #ifdef SCHISM_SDL2
 # define be_pump_events sdl2_pump_events
+# define be_event_mod_state sdl2_event_mod_state
 #elif SCHISM_SDL12
 # define be_pump_events sdl12_pump_events
+# define be_event_mod_state sdl12_event_mod_state
 #endif
 
 void sdl2_pump_events(void);
 void sdl12_pump_events(void);
+
+schism_keymod_t sdl2_event_mod_state(void);
+schism_keymod_t sdl12_event_mod_state(void);
 
 #endif /* SCHISM_BACKEND_CLIPPY_H_ */

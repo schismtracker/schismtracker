@@ -29,6 +29,7 @@
 
 #include "headers.h"
 
+#include "backend/events.h"
 #include "events.h"
 
 #include "clippy.h"
@@ -72,12 +73,6 @@
 
 #define NATIVE_SCREEN_WIDTH     640
 #define NATIVE_SCREEN_HEIGHT    400
-
-/* need to redefine these on SDL < 2.0.4 */
-#if !SDL_VERSION_ATLEAST(2, 0, 4)
-#define SDL_AUDIODEVICEADDED (0x1100)
-#define SDL_AUDIODEVICEREMOVED (0x1101)
-#endif
 
 /* --------------------------------------------------------------------- */
 /* globals */
@@ -408,9 +403,8 @@ static void event_loop(void)
 	startdown = 0;
 	status.last_keysym = 0;
 
-	modkey = SDL_GetModState();
+	modkey = be_event_mod_state();
 	os_get_modkey(&modkey);
-	SDL_SetModState(modkey);
 
 	video_toggle_screensaver(1);
 	screensaver = 1;
@@ -558,7 +552,7 @@ static void event_loop(void)
 			case SCHISM_MOUSEBUTTONDOWN:
 			case SCHISM_MOUSEBUTTONUP:
 				if (kk.state == KEY_PRESS) {
-					modkey = SDL_GetModState();
+					modkey = be_event_mod_state();
 					os_get_modkey(&modkey);
 				}
 
@@ -642,10 +636,6 @@ static void event_loop(void)
 			case SCHISM_WINDOWEVENT_SHOWN:
 			case SCHISM_WINDOWEVENT_FOCUS_GAINED:
 				video_mousecursor(MOUSE_RESET_STATE);
-				break;
-			case SCHISM_WINDOWEVENT_FOCUS_LOST:
-				/* XXX why do we need this */
-				SDL_ShowCursor(SDL_ENABLE);
 				break;
 			case SCHISM_WINDOWEVENT_RESIZED:
 			case SCHISM_WINDOWEVENT_SIZE_CHANGED: /* tiling window managers */
@@ -928,10 +918,8 @@ int main(int argc, char **argv)
 
 	shutdown_process |= EXIT_SAVECFG;
 
-	if (be_init() < 0) {
-		fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
+	if (be_init() < 0)
 		schism_exit(1);
-	}
 
 	// initialize our event queue
 	schism_init_event();

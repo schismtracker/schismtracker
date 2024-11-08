@@ -28,7 +28,7 @@
 /* video output routines */
 const char *video_driver_name(void);
 
-void video_redraw_renderer(int hardware);
+void video_set_hardware(int hardware);
 
 int video_is_input_grabbed(void);
 void video_set_input_grabbed(int enabled);
@@ -47,7 +47,6 @@ void video_toggle_menu(void);
 /* -------------------------------------------------- */
 
 void video_rgb_to_yuv(unsigned int *y, unsigned int *u, unsigned int *v, unsigned char rgb[3]);
-void video_redraw_texture(void);
 void video_setup(const char *quality);
 void video_startup(void);
 void video_shutdown(void);
@@ -73,7 +72,7 @@ void video_mousecursor(int z); /* takes in the MOUSE_* enum from it.h (why is it
 int video_mousecursor_visible(void);
 void video_set_mousecursor_shape(enum video_mousecursor_shape shape);
 
-/* getters, will sometimes poll SDL */
+/* getters, will sometimes poll the backend */
 
 int video_is_fullscreen(void);
 int video_is_wm_available(void);
@@ -87,6 +86,7 @@ int video_gl_bilinear(void);
 
 void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y);
 
+// this sucks and needs to go away
 struct SDL_Surface;
 struct SDL_Surface *xpmdata(const char *xpmdata[]);
 
@@ -94,10 +94,14 @@ struct SDL_Surface *xpmdata(const char *xpmdata[]);
 
 struct SDL_PixelFormat;
 
+/* YUV blitters */
 void video_blitYY(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
-void video_blit1n(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t pal[256], struct SDL_PixelFormat *format, int width, int height);
 void video_blitUV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
 void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
+
+/* RGB blitters */
 void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
+void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height);
+void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t pal[256], struct SDL_PixelFormat *format, int width, int height);
 
 #endif /* SCHISM_VIDEO_H_ */

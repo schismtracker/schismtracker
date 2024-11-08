@@ -135,7 +135,7 @@ void cfg_init_dir(void)
 		free(dot_dir);
 	}
 
-	SDL_free(app_dir);
+	free(app_dir);
 	free(portable_file);
 #endif
 }

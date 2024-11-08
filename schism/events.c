@@ -81,7 +81,7 @@ int schism_have_event(void)
 {
 	SDL_LockMutex(queue_mutex);
 
-	if (!queue.size) {
+	if (queue.size) {
 		SDL_UnlockMutex(queue_mutex);
 		return 1;
 	}
@@ -92,7 +92,7 @@ int schism_have_event(void)
 
 	SDL_LockMutex(queue_mutex);
 
-	if (!queue.size) {
+	if (queue.size) {
 		SDL_UnlockMutex(queue_mutex);
 		return 1;
 	}

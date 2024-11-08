@@ -28,8 +28,10 @@
 int sdl2_init(void)
 {
 	int r = SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO);
-	if (r < 0)
+	if (r < 0) {
+		fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
 		return r;
+	}
 
 	SDL_StartTextInput();
 	SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");

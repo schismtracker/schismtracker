@@ -485,7 +485,7 @@ static int handle_key_global(struct key_event * k)
 	 * a dialog's open) */
 	switch (k->sym) {
 	case SCHISM_KEYSYM_RETURN:
-		if ((k->mod & KMOD_CTRL) && k->mod & KMOD_ALT) {
+		if ((k->mod & SCHISM_KEYMOD_CTRL) && k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_PRESS)
 				return 1;
 			toggle_display_fullscreen();
@@ -493,7 +493,7 @@ static int handle_key_global(struct key_event * k)
 		}
 		break;
 	case SCHISM_KEYSYM_m:
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (k->state == KEY_RELEASE)
 				return 1;
 			video_mousecursor(MOUSE_CYCLE_STATE);
@@ -502,7 +502,7 @@ static int handle_key_global(struct key_event * k)
 		break;
 
 	case SCHISM_KEYSYM_d:
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (k->state == KEY_RELEASE)
 				return 1; /* argh */
 			const int grabbed = !video_is_input_grabbed();
@@ -516,7 +516,7 @@ static int handle_key_global(struct key_event * k)
 
 	case SCHISM_KEYSYM_i:
 		/* reset audio stuff? */
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (k->state == KEY_RELEASE)
 				return 1;
 			audio_reinit(NULL);
@@ -525,7 +525,7 @@ static int handle_key_global(struct key_event * k)
 		break;
 	case SCHISM_KEYSYM_e:
 		/* This should reset everything display-related. */
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (k->state == KEY_RELEASE)
 				return 1;
 			font_init();
@@ -534,14 +534,14 @@ static int handle_key_global(struct key_event * k)
 		}
 		break;
 	case SCHISM_KEYSYM_HOME:
-		if (!(k->mod & KMOD_ALT)) break;
+		if (!(k->mod & SCHISM_KEYMOD_ALT)) break;
 		if (status.flags & DISKWRITER_ACTIVE) break;
 		if (k->state == KEY_RELEASE)
 			return 0;
 		kbd_set_current_octave(kbd_get_current_octave() - 1);
 		return 1;
 	case SCHISM_KEYSYM_END:
-		if (!(k->mod & KMOD_ALT)) break;
+		if (!(k->mod & SCHISM_KEYMOD_ALT)) break;
 		if (status.flags & DISKWRITER_ACTIVE) break;
 		if (k->state == KEY_RELEASE)
 			return 0;
@@ -558,10 +558,10 @@ static int handle_key_global(struct key_event * k)
 	case SCHISM_KEYSYM_q:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS) {
-				if (k->mod & KMOD_SHIFT)
+				if (k->mod & SCHISM_KEYMOD_SHIFT)
 					schism_exit(0);
 				show_exit_prompt();
 			}
@@ -571,7 +571,7 @@ static int handle_key_global(struct key_event * k)
 	case SCHISM_KEYSYM_n:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
 				new_song_dialog();
@@ -581,7 +581,7 @@ static int handle_key_global(struct key_event * k)
 	case SCHISM_KEYSYM_g:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
 				show_song_timejump();
@@ -591,7 +591,7 @@ static int handle_key_global(struct key_event * k)
 	case SCHISM_KEYSYM_p:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
 				show_song_length();
@@ -601,11 +601,11 @@ static int handle_key_global(struct key_event * k)
 	case SCHISM_KEYSYM_F1:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
 				set_page(PAGE_CONFIG);
-		} else if (k->mod & KMOD_SHIFT) {
+		} else if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
 				set_page(status.current_page == PAGE_MIDI ? PAGE_MIDI_OUTPUT : PAGE_MIDI);
@@ -618,7 +618,7 @@ static int handle_key_global(struct key_event * k)
 		}
 		return 1;
 	case SCHISM_KEYSYM_F2:
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (status.current_page == PAGE_PATTERN_EDITOR) {
 				_mp_finish(NULL);
 				if (k->state == KEY_PRESS && status.dialog_type == DIALOG_NONE) {
@@ -660,7 +660,7 @@ static int handle_key_global(struct key_event * k)
 				set_page(PAGE_SAMPLE_LIST);
 		} else {
 			_mp_finish(NULL);
-			if (k->mod & KMOD_CTRL) set_page(PAGE_LIBRARY_SAMPLE);
+			if (k->mod & SCHISM_KEYMOD_CTRL) set_page(PAGE_LIBRARY_SAMPLE);
 			break;
 		}
 		return 1;
@@ -673,18 +673,18 @@ static int handle_key_global(struct key_event * k)
 			if (k->state == KEY_PRESS)
 				set_page(PAGE_INSTRUMENT_LIST);
 		} else {
-			if (k->mod & KMOD_SHIFT) return 0;
+			if (k->mod & SCHISM_KEYMOD_SHIFT) return 0;
 			_mp_finish(NULL);
-			if (k->mod & KMOD_CTRL) set_page(PAGE_LIBRARY_INSTRUMENT);
+			if (k->mod & SCHISM_KEYMOD_CTRL) set_page(PAGE_LIBRARY_INSTRUMENT);
 			break;
 		}
 		return 1;
 	case SCHISM_KEYSYM_F5:
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
 				song_start();
-		} else if (k->mod & KMOD_SHIFT) {
+		} else if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (status.dialog_type != DIALOG_NONE)
 				return 0;
 			_mp_finish(NULL);
@@ -708,7 +708,7 @@ static int handle_key_global(struct key_event * k)
 		}
 		return 1;
 	case SCHISM_KEYSYM_F6:
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
 				song_start_at_order(get_current_order(), 0);
@@ -730,7 +730,7 @@ static int handle_key_global(struct key_event * k)
 		}
 		return 1;
 	case SCHISM_KEYSYM_F8:
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (k->state == KEY_PRESS)
 				song_pause();
 		} else if (NO_MODIFIER(k->mod)) {
@@ -745,7 +745,7 @@ static int handle_key_global(struct key_event * k)
 	case SCHISM_KEYSYM_F9:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
 				set_page(PAGE_MESSAGE);
@@ -761,7 +761,7 @@ static int handle_key_global(struct key_event * k)
 	case SCHISM_KEYSYM_r:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			_mp_finish(NULL);
 			if (k->state == KEY_RELEASE)
 				set_page(PAGE_LOAD_MODULE);
@@ -772,7 +772,7 @@ static int handle_key_global(struct key_event * k)
 	case SCHISM_KEYSYM_s:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			_mp_finish(NULL);
 			if (k->state == KEY_RELEASE)
 				save_song_or_save_as();
@@ -784,7 +784,7 @@ static int handle_key_global(struct key_event * k)
 		/* Ctrl-W _IS_ in IT, and hands don't leave home row :) */
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			_mp_finish(NULL);
 			if (k->state == KEY_RELEASE)
 				set_page(PAGE_SAVE_MODULE);
@@ -795,11 +795,11 @@ static int handle_key_global(struct key_event * k)
 	case SCHISM_KEYSYM_F10:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
-		if (k->mod & KMOD_ALT) break;
-		if (k->mod & KMOD_CTRL) break;
+		if (k->mod & SCHISM_KEYMOD_ALT) break;
+		if (k->mod & SCHISM_KEYMOD_CTRL) break;
 
 		_mp_finish(NULL);
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (k->state == KEY_PRESS)
 				set_page(PAGE_EXPORT_MODULE);
 		} else {
@@ -819,7 +819,7 @@ static int handle_key_global(struct key_event * k)
 				if (k->state == KEY_PRESS)
 					set_page(PAGE_ORDERLIST_PANNING);
 			}
-		} else if (k->mod & KMOD_CTRL) {
+		} else if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (k->state == KEY_PRESS) {
 				_mp_finish(NULL);
 				if (status.current_page == PAGE_LOG) {
@@ -828,7 +828,7 @@ static int handle_key_global(struct key_event * k)
 					set_page(PAGE_LOG);
 				}
 			}
-		} else if (k->state == KEY_PRESS && (k->mod & KMOD_ALT)) {
+		} else if (k->state == KEY_PRESS && (k->mod & SCHISM_KEYMOD_ALT)) {
 			_mp_finish(NULL);
 			if (song_toggle_orderlist_locked())
 				status_text_flash("Order list locked");
@@ -841,15 +841,15 @@ static int handle_key_global(struct key_event * k)
 	case SCHISM_KEYSYM_F12:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
-		if ((k->mod & KMOD_ALT) && status.current_page == PAGE_INFO) {
+		if ((k->mod & SCHISM_KEYMOD_ALT) && status.current_page == PAGE_INFO) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
 				set_page(PAGE_WATERFALL);
-		} else if (k->mod & KMOD_CTRL) {
+		} else if (k->mod & SCHISM_KEYMOD_CTRL) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
 				set_page(PAGE_PALETTE_EDITOR);
-		} else if (k->mod & KMOD_SHIFT) {
+		} else if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS) {
 				fontedit_return_page = status.current_page;
@@ -866,14 +866,14 @@ static int handle_key_global(struct key_event * k)
 		return 1;
 	/* hack alert */
 	case SCHISM_KEYSYM_f:
-		if (!(k->mod & KMOD_CTRL))
+		if (!(k->mod & SCHISM_KEYMOD_CTRL))
 			return 0;
 		/* fall through */
 	case SCHISM_KEYSYM_SCROLLLOCK:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		_mp_finish(NULL);
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_PRESS) {
 				midi_flags ^= (MIDI_DISABLE_RECORD);
 				status_text_flash("MIDI Input %s",
@@ -894,7 +894,7 @@ static int handle_key_global(struct key_event * k)
 
 		return 1;
 	case SCHISM_KEYSYM_PAUSE:
-		if ((k->mod & KMOD_LSHIFT) && (k->mod & KMOD_LALT) && (k->mod & KMOD_RALT) && (k->mod & KMOD_RCTRL)) {
+		if ((k->mod & SCHISM_KEYMOD_LSHIFT) && (k->mod & SCHISM_KEYMOD_LALT) && (k->mod & SCHISM_KEYMOD_RALT) && (k->mod & SCHISM_KEYMOD_RCTRL)) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
 				set_page(PAGE_TIME_INFORMATION);
@@ -909,7 +909,7 @@ static int handle_key_global(struct key_event * k)
 	}
 
 	/* got a bit ugly here, sorry */
-	if (k->mod & KMOD_ALT) {
+	if (k->mod & SCHISM_KEYMOD_ALT) {
 		switch (k->sym) {
 		case SCHISM_KEYSYM_F1: i = 0; break;
 		case SCHISM_KEYSYM_F2: i = 1; break;
@@ -957,7 +957,7 @@ static int _handle_ime(struct key_event *k)
 			}
 		} else if (k->sym == SCHISM_KEYSYM_LSHIFT || k->sym == SCHISM_KEYSYM_RSHIFT) {
 			/* do nothing */
-		} else if (!NO_MODIFIER((k->mod&~KMOD_SHIFT)) || (c=(k->text) ? *k->text : k->sym) == 0 || digraph_n < 2) {
+		} else if (!NO_MODIFIER((k->mod&~SCHISM_KEYMOD_SHIFT)) || (c=(k->text) ? *k->text : k->sym) == 0 || digraph_n < 2) {
 			if (k->state == KEY_PRESS && k->mouse == MOUSE_NONE) {
 				if (digraph_n > 0) status_text_flash(" ");
 				digraph_n = -1;
@@ -1006,7 +1006,7 @@ static int _handle_ime(struct key_event *k)
 				}
 				return 1;
 			}
-		} else if (!(status.flags & CLASSIC_MODE) && (k->mod & KMOD_CTRL) && (k->mod & KMOD_SHIFT)) {
+		} else if (!(status.flags & CLASSIC_MODE) && (k->mod & SCHISM_KEYMOD_CTRL) && (k->mod & SCHISM_KEYMOD_SHIFT)) {
 			if (cs_unicode_c >= 0) {
 				/* bleh... */
 				m = k->mod;
@@ -1052,7 +1052,7 @@ static int _handle_ime(struct key_event *k)
 				cs_unicode = cs_unicode_c = 0;
 				return 1;
 			}
-		} else if (k->mod & KMOD_ALT && !(k->mod & (KMOD_CTRL|KMOD_SHIFT))) {
+		} else if (k->mod & SCHISM_KEYMOD_ALT && !(k->mod & (SCHISM_KEYMOD_CTRL|SCHISM_KEYMOD_SHIFT))) {
 			if (alt_numpad_c >= 0) {
 				m = k->mod;
 				k->mod = 0;
@@ -1102,7 +1102,7 @@ void handle_key(struct key_event *k)
 	case SCHISM_KEYSYM_LEFT:
 		if (k->state == KEY_RELEASE) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
-		if ((k->mod & KMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
+		if ((k->mod & SCHISM_KEYMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
 			_mp_finish(NULL);
 			if (song_get_mode() == MODE_PLAYING)
 				song_set_current_order(song_get_current_order() - 1);
@@ -1112,7 +1112,7 @@ void handle_key(struct key_event *k)
 	case SCHISM_KEYSYM_RIGHT:
 		if (k->state == KEY_RELEASE) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
-		if ((k->mod & KMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
+		if ((k->mod & SCHISM_KEYMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
 			_mp_finish(NULL);
 			if (song_get_mode() == MODE_PLAYING)
 				song_set_current_order(song_get_current_order() + 1);
@@ -1158,13 +1158,13 @@ void handle_key(struct key_event *k)
 	case SCHISM_KEYSYM_LEFTBRACKET:
 		if (k->state == KEY_RELEASE) break;
 		if (status.flags & DISKWRITER_ACTIVE) return;
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			song_set_current_speed(song_get_current_speed() - 1);
 			status_text_flash("Speed set to %d frames per row", song_get_current_speed());
 			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
 				song_set_initial_speed(song_get_current_speed());
 			}
-		} else if ((k->mod & KMOD_CTRL) && !(status.flags & CLASSIC_MODE)) {
+		} else if ((k->mod & SCHISM_KEYMOD_CTRL) && !(status.flags & CLASSIC_MODE)) {
 			song_set_current_tempo(song_get_current_tempo() - 1);
 			status_text_flash("Tempo set to %d frames per row", song_get_current_tempo());
 			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
@@ -1181,13 +1181,13 @@ void handle_key(struct key_event *k)
 	case SCHISM_KEYSYM_RIGHTBRACKET:
 		if (k->state == KEY_RELEASE) break;
 		if (status.flags & DISKWRITER_ACTIVE) return;
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			song_set_current_speed(song_get_current_speed() + 1);
 			status_text_flash("Speed set to %d frames per row", song_get_current_speed());
 			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
 				song_set_initial_speed(song_get_current_speed());
 			}
-		} else if ((k->mod & KMOD_CTRL) && !(status.flags & CLASSIC_MODE)) {
+		} else if ((k->mod & SCHISM_KEYMOD_CTRL) && !(status.flags & CLASSIC_MODE)) {
 			song_set_current_tempo(song_get_current_tempo() + 1);
 			status_text_flash("Tempo set to %d frames per row", song_get_current_tempo());
 			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {

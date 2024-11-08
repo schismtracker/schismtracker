@@ -144,6 +144,13 @@ noinst_HEADERS = \
 	include/player/snd_gm.h		\
 	include/player/sndfile.h		\
 	include/player/tables.h		\
+	include/backend/audio.h     \
+	include/backend/clippy.h     \
+	include/backend/events.h     \
+	include/backend/init.h     \
+	include/backend/object.h     \
+	include/backend/threads.h     \
+	include/backend/timer.h     \
 	sys/wii/certs_bin.h		\
 	sys/wii/isfs.h			\
 	sys/wii/su_tik_bin.h		\
@@ -463,7 +470,6 @@ schismtracker_SOURCES = \
 	$(files_opl)			\
 	$(files_mediafoundation) \
 	$(files_wiiu)           \
-	$(files_controller) 	\
 	$(files_sdl2)			\
 	$(files_sdl12)
 

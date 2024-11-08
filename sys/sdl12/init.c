@@ -28,8 +28,10 @@
 int sdl12_init(void)
 {
 	int r = SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
-	if (r < 0)
+	if (r < 0) {
+		fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
 		return r;
+	}
 
 	SDL_EnableUNICODE(1);
 

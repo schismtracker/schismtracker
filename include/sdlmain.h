@@ -5,7 +5,7 @@
 #include <SDL.h>
 #include <SDL_thread.h>
 #include <SDL_syswm.h>
-#else
+#elif defined(SCHISM_SDL12)
 #include <SDL/SDL.h>
 #endif
 

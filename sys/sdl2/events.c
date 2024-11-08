@@ -264,6 +264,11 @@ static schism_keymod_t sdl2_modkey_trans(uint16_t mod)
 	return res;
 }
 
+schism_keymod_t sdl2_event_mod_state(void)
+{
+	return sdl2_modkey_trans(SDL_GetModState());
+}
+
 /* These are here for linking text input to keyboard inputs.
  * If no keyboard input can be found, then the text will
  * be sent as a SCHISM_TEXTINPUT event.
@@ -428,8 +433,12 @@ void sdl2_pump_events(void)
 			schism_event.wheel.x = e.wheel.x;
 			schism_event.wheel.y = e.wheel.y;
 
+#if SDL_VERSION_ATLEAST(2, 26, 0)
 			schism_event.wheel.mouse_x = e.wheel.mouseX;
 			schism_event.wheel.mouse_y = e.wheel.mouseY;
+#else
+			video_get_mouse_coordinates(&schism_event.wheel.mouse_x, &schism_event.wheel.mouse_y);
+#endif
 			schism_push_event(&schism_event);
 			break;
 		case SDL_DROPFILE:

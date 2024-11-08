@@ -37,5 +37,5 @@ void sdl12_object_unload(void *object)
 
 void *sdl12_function_load(void *object, const char *name)
 {
-	return SDL_LoadFunction(name);
+	return SDL_LoadFunction(object, name);
 }

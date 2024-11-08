@@ -24,7 +24,6 @@
 #ifndef SCHISM_IT_H_
 #define SCHISM_IT_H_
 
-//#include "sdlmain.h"
 #include "backend/timer.h"
 
 #include <stdio.h>

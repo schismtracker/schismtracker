@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "charset.h"
 #include "config.h"
 #include "keyboard.h"
 #include "song.h"
@@ -126,14 +127,12 @@ static void video_mode_keep(UNUSED void*ign)
 }
 static void video_mode_cancel(UNUSED void*ign)
 {
-	if (video_revert_interpolation[0]) {
+	if (*video_revert_interpolation)
 		video_setup(video_revert_interpolation);
-		video_redraw_texture();
-	}
 	if (video_is_fullscreen() != video_revert_fs)
 		video_fullscreen(-1);
 	if (video_is_hardware() != video_revert_hw)
-		video_redraw_renderer(video_revert_hw);
+		video_set_hardware(video_revert_hw);
 	palette_apply();
 	font_init();
 	config_set_page();
@@ -196,6 +195,9 @@ static void change_video_settings(void)
 	const char *new_video_interpolation;
 	int new_fs_flag;
 	int hw;
+	int interp_changed;
+	int fs_changed;
+	int hw_changed;
 
 	new_video_interpolation = widgets_config[11].d.togglebutton.state ? "nearest" :
 							  widgets_config[12].d.togglebutton.state ? "linear" :
@@ -206,22 +208,21 @@ static void change_video_settings(void)
 	new_fs_flag = widgets_config[9].d.togglebutton.state;
 	hw = widgets_config[14].d.togglebutton.state;
 
-	if (!SDL_strcasecmp(new_video_interpolation, cfg_video_interpolation)
-	&& new_fs_flag == video_is_fullscreen()
-	&& hw == video_is_hardware()) {
+	interp_changed = charset_strcasecmp(new_video_interpolation, CHARSET_UTF8, cfg_video_interpolation, CHARSET_UTF8);
+	fs_changed = (new_fs_flag != video_is_fullscreen());
+	hw_changed = (hw != video_is_hardware());
+
+	if (!interp_changed && !fs_changed && !hw_changed)
 		return;
-	}
 
 	video_change_dialog();
-	if (SDL_strcasecmp(new_video_interpolation, cfg_video_interpolation)) {
+	if (SDL_strcasecmp(new_video_interpolation, cfg_video_interpolation))
 		video_setup(new_video_interpolation);
-		video_redraw_texture();
-	}
 	if (new_fs_flag != video_is_fullscreen())
 		toggle_display_fullscreen();
 
 	if (hw != video_is_hardware())
-		video_redraw_renderer(hw);
+		video_set_hardware(hw);
 
 	palette_apply();
 	font_init();

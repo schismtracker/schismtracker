@@ -473,7 +473,7 @@ static void handle_key_editbox(struct key_event * k)
 
 	switch (k->sym) {
 	case SCHISM_KEYSYM_UP:
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			int s = ptr[0];
 			for (n = 0; n < 7; n++)
 				ptr[n] = ptr[n + 1];
@@ -484,7 +484,7 @@ static void handle_key_editbox(struct key_event * k)
 		}
 		break;
 	case SCHISM_KEYSYM_DOWN:
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			int s = ptr[7];
 			for (n = 7; n; n--)
 				ptr[n] = ptr[n - 1];
@@ -494,7 +494,7 @@ static void handle_key_editbox(struct key_event * k)
 		}
 		break;
 	case SCHISM_KEYSYM_LEFT:
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			for (n = 0; n < 8; n++, ptr++)
 				*ptr = (*ptr >> 7) | (*ptr << 1);
 		} else {
@@ -503,7 +503,7 @@ static void handle_key_editbox(struct key_event * k)
 		}
 		break;
 	case SCHISM_KEYSYM_RIGHT:
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			for (n = 0; n < 8; n++, ptr++)
 				*ptr = (*ptr << 7) | (*ptr >> 1);
 		} else {
@@ -520,7 +520,7 @@ static void handle_key_editbox(struct key_event * k)
 		ptr[edit_y] ^= (128 >> edit_x);
 		break;
 	case SCHISM_KEYSYM_INSERT:
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			for (n = 0; n < 8; n++)
 				ptr[n] |= (128 >> edit_x);
 		} else {
@@ -528,7 +528,7 @@ static void handle_key_editbox(struct key_event * k)
 		}
 		break;
 	case SCHISM_KEYSYM_DELETE:
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			for (n = 0; n < 8; n++)
 				ptr[n] &= ~(128 >> edit_x);
 		} else {
@@ -870,7 +870,7 @@ static int fontedit_handle_key(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		n = k->sym - SCHISM_KEYSYM_KP_1;
-		if (k->mod & KMOD_SHIFT)
+		if (k->mod & SCHISM_KEYMOD_SHIFT)
 			n += 10;
 		palette_load_preset(n);
 		palette_apply();
@@ -892,7 +892,7 @@ static int fontedit_handle_key(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		n = k->sym - '1';
-		if (k->mod & KMOD_SHIFT)
+		if (k->mod & SCHISM_KEYMOD_SHIFT)
 			n += 10;
 		palette_load_preset(n);
 		palette_apply();
@@ -919,7 +919,7 @@ static int fontedit_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_TAB:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (selected_item == 0)
 				selected_item = (fontlist_mode == MODE_OFF ? 2 : 3);
 			else
@@ -932,7 +932,7 @@ static int fontedit_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_c:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			memcpy(clipboard, ptr, 8);
 			return 1;
 		}
@@ -940,7 +940,7 @@ static int fontedit_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_p:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			memcpy(ptr, clipboard, 8);
 			status.flags |= NEED_UPDATE;
 			return 1;
@@ -949,10 +949,10 @@ static int fontedit_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_m:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			video_mousecursor(video_mousecursor_visible() ? MOUSE_DISABLED : MOUSE_EMULATED);
 			return 1;
-		} else if (k->mod & KMOD_ALT) {
+		} else if (k->mod & SCHISM_KEYMOD_ALT) {
 			for (n = 0; n < 8; n++)
 				ptr[n] |= clipboard[n];
 			status.flags |= NEED_UPDATE;
@@ -962,7 +962,7 @@ static int fontedit_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_z:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			memset(ptr, 0, 8);
 			status.flags |= NEED_UPDATE;
 			return 1;
@@ -971,7 +971,7 @@ static int fontedit_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_h:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			for (n = 0; n < 8; n++) {
 				int r = ptr[n];
 				r = ((r >> 1) & 0x55) | ((r << 1) & 0xaa);
@@ -986,7 +986,7 @@ static int fontedit_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_v:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			for (n = 0; n < 4; n++) {
 				uint8_t r = ptr[n];
 				ptr[n] = ptr[7 - n];
@@ -999,7 +999,7 @@ static int fontedit_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_i:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			for (n = 0; n < 8; n++)
 				font_data[ci + n] ^= 255;
 			status.flags |= NEED_UPDATE;
@@ -1013,7 +1013,7 @@ static int fontedit_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_r:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (!(k->mod & KMOD_CTRL)) break;
+		if (!(k->mod & SCHISM_KEYMOD_CTRL)) break;
 		/* fall through */
 	case SCHISM_KEYSYM_F9:
 		if (k->state == KEY_RELEASE)
@@ -1026,7 +1026,7 @@ static int fontedit_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_s:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (!(k->mod & KMOD_CTRL)) break;
+		if (!(k->mod & SCHISM_KEYMOD_CTRL)) break;
 		/* fall through */
 	case SCHISM_KEYSYM_F10:
 		/* a bit weird, but this ensures that font.cfg
@@ -1044,9 +1044,9 @@ static int fontedit_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_BACKSPACE:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			font_reset_bios();
-		} else if (k->mod & KMOD_ALT) {
+		} else if (k->mod & SCHISM_KEYMOD_ALT) {
 			font_reset_char(current_char);
 		} else {
 			font_reset_upper();
@@ -1056,7 +1056,7 @@ static int fontedit_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_RETURN:
 		return 0;
 	case SCHISM_KEYSYM_q:
-		if (k->mod & KMOD_CTRL)
+		if (k->mod & SCHISM_KEYMOD_CTRL)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;

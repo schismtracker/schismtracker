@@ -283,6 +283,7 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 /* --------------------------------------------------------------- */
 /* blitters */
 
+/* Video with linear interpolation. */
 #define FIXED_BITS 8
 #define FIXED_MASK ((1 << FIXED_BITS) - 1)
 #define ONE_HALF_FIXED (1 << (FIXED_BITS - 1))
@@ -290,7 +291,7 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 #define FIXED2INT(x) ((x) >> FIXED_BITS)
 #define FRAC(x) ((x) & FIXED_MASK)
 
-void video_blit1n(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t pal[256], SDL_PixelFormat *format, int width, int height)
+void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t pal[256], SDL_PixelFormat *format, int width, int height)
 {
 	unsigned char cv32backing[NATIVE_SCREEN_WIDTH * 8];
 
@@ -309,7 +310,7 @@ void video_blit1n(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 	video_get_mouse_coordinates(&mouse_x, &mouse_y);
 
 	mouseline_x = (mouse_x / 8);
-	mouseline_v = (mouse_y % 8);
+	mouseline_v = (mouse_x % 8);
 
 	csp = (unsigned int *)cv32backing;
 	esp = csp + NATIVE_SCREEN_WIDTH;
@@ -329,10 +330,8 @@ void video_blit1n(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 				vgamem_scan32(iny+1, csp, pal, mouseline, mouseline_mask);
 				dp = esp; esp = csp; csp=dp;
 			} else {
-				vgamem_scan32(iny, (csp = (unsigned int *)cv32backing),
-					pal, mouseline, mouseline_mask);
-				vgamem_scan32(iny+1, (esp = (csp + NATIVE_SCREEN_WIDTH)),
-					pal, mouseline, mouseline_mask);
+				vgamem_scan32(iny, (csp = (uint32_t *)cv32backing), pal, mouseline, mouseline_mask);
+				vgamem_scan32(iny+1, (esp = (csp + NATIVE_SCREEN_WIDTH)), pal, mouseline, mouseline_mask);
 			}
 			lasty = iny;
 		}
@@ -387,7 +386,17 @@ void video_blit1n(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 			switch (bpp) {
 			case 4:
 				/* inline MapRGB */
-				(*(unsigned int *)pixels) = 0xFF000000 | (outr << 16) | (outg << 8) | outb;
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+				pixels[0] = outr;
+				pixels[1] = outg;
+				pixels[2] = outb;
+				pixels[3] = 0xFF;
+#else
+				pixels[3] = 0xFF;
+				pixels[2] = outr;
+				pixels[1] = outg;
+				pixels[0] = outb;
+#endif
 				break;
 			case 3:
 				/* inline MapRGB */
@@ -401,33 +410,98 @@ void video_blit1n(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 				pixels[0] = outb;
 #endif
 				break;
-			case 2:
+			case 2: {
+				uint16_t ergh;
+
 				/* inline MapRGB if possible */
 				if (format->palette) {
 					/* err... */
-					(*(unsigned short *)pixels) = SDL_MapRGB(
-						format, outr, outg, outb);
+					ergh = SDL_MapRGB(format, outr, outg, outb);
 				} else if (format->Gloss == 2) {
 					/* RGB565 */
-					(*(unsigned short *)pixels) = ((outr << 8) & 0xF800) |
+					ergh  = ((outr << 8) & 0xF800) |
 						((outg << 3) & 0x07E0) |
 						(outb >> 3);
 				} else {
 					/* RGB555 */
-					(*(unsigned short *)pixels) = 0x8000 |
+					ergh = 0x8000 |
 						((outr << 7) & 0x7C00) |
 						((outg << 2) & 0x03E0) |
 						(outb >> 3);
 				}
+
+				memcpy(pixels, &ergh, sizeof(ergh));
+
 				break;
+			}
 			case 1:
 				/* er... */
-				(*pixels) = SDL_MapRGB(
-					format, outr, outg, outb);
+				(*pixels) = SDL_MapRGB(format, outr, outg, outb);
 				break;
 			};
 			pixels += bpp;
 		}
+		pixels += pad;
+	}
+}
+
+/* Nearest neighbor blitter */
+void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height)
+{
+	// at most 32-bits...
+	unsigned char pixels_u[NATIVE_SCREEN_WIDTH * 4];
+
+	unsigned int mouse_x, mouse_y;
+	video_get_mouse_coordinates(&mouse_x, &mouse_y);
+
+	unsigned int mouseline_x = (mouse_x / 8);
+	unsigned int mouseline_v = (mouse_x % 8);
+	uint32_t mouseline[80];
+	uint32_t mouseline_mask[80];
+	int x, a, y, last_scaled_y = 235438; // some random value
+	int pad = pitch - (width * bpp);
+
+	for (y = 0; y < height; y++) {
+		int scaled_y = (y * NATIVE_SCREEN_HEIGHT / height);
+
+		// only want to scan if we have to
+		if (scaled_y != last_scaled_y) {
+			make_mouseline(mouseline_x, mouseline_v, scaled_y, mouseline, mouseline_mask, mouse_y);
+			switch (bpp) {
+			case 1:
+				vgamem_scan8(scaled_y, (uint8_t *)pixels_u, tpal, mouseline, mouseline_mask);
+				break;
+			case 2:
+				vgamem_scan16(scaled_y, (uint16_t *)pixels_u, tpal, mouseline, mouseline_mask);
+				break;
+			case 3:
+				vgamem_scan32(scaled_y, (uint32_t *)pixels_u, tpal, mouseline, mouseline_mask);
+				for (x = 0; x < NATIVE_SCREEN_WIDTH; x++) {
+					/* move these into place */
+#if WORDS_BIGENDIAN
+					memmove(pixels_u + (x * 3), (pixels_u + (x * 4)) + 1, 3);
+#else
+					memmove(pixels_u + (x * 3), pixels_u + (x * 4), 3);
+#endif
+				}
+				break;
+			case 4:
+				vgamem_scan32(scaled_y, (uint32_t *)pixels_u, tpal, mouseline, mouseline_mask);
+				break;
+			default:
+				// should never happen
+				break;
+			}
+		}
+
+		for (x = 0; x < width; x++) {
+			memcpy(pixels, pixels_u + ((x * NATIVE_SCREEN_WIDTH / width) * bpp), bpp);
+
+			pixels += bpp;
+		}
+
+		last_scaled_y = scaled_y;
+
 		pixels += pad;
 	}
 }
@@ -504,12 +578,11 @@ void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 
 	const unsigned int mouseline_x = (mouse_x / 8);
 	const unsigned int mouseline_v = (mouse_x % 8);
-	unsigned int y, x;
-	unsigned char *pdata;
+	unsigned int y, x, a;
 	uint32_t mouseline[80];
 	uint32_t mouseline_mask[80];
 
-	/* ... */
+	/* wtf */
 	if (bpp == 3) {
 		int pitch24 = pitch - (NATIVE_SCREEN_WIDTH * 3);
 		if (pitch24 < 0)
@@ -528,18 +601,13 @@ void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 			vgamem_scan16(y, (uint16_t *)pixels, tpal, mouseline, mouseline_mask);
 			break;
 		case 3:
-			make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask, mouse_y);
-			vgamem_scan32(y, cv32backing, tpal, mouseline, mouseline_mask);
-			/* okay... */
-			pdata = (unsigned char *)cv32backing;
-			for (x = 0; x < NATIVE_SCREEN_WIDTH; x++) {
+			vgamem_scan32(y, (uint32_t *)cv32backing, tpal, mouseline, mouseline_mask);
+			for (x = 0, a = 0; x < pitch && a < NATIVE_SCREEN_WIDTH; x += 3, a += 4) {
 #if WORDS_BIGENDIAN
-				memcpy(pixels, pdata+1, 3);
+				memcpy(pixels + x, cv32backing + a + 1, 3);
 #else
-				memcpy(pixels, pdata, 3);
+				memcpy(pixels + x, cv32backing + a, 3);
 #endif
-				pdata += 4;
-				pixels += 3;
 			}
 			break;
 		case 4:

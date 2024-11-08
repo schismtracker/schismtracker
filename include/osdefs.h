@@ -29,7 +29,6 @@ and possibly other files as well. Only one osdefs.c should be in use at a time. 
 
 #include "headers.h"
 #include "events.h"
-#include "sdlmain.h"
 
 /* need stat; TODO autoconf test */
 #include <sys/stat.h> /* roundabout way to get time_t */

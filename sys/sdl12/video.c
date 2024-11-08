@@ -93,14 +93,14 @@ static int display_native_y = -1;
 #endif
 #endif
 
+#include "charset.h"
+
 #ifndef APIENTRY
 #define APIENTRY
 #endif
 #ifndef APIENTRYP
 #define APIENTRYP APIENTRY *
 #endif
-
-extern int macosx_did_finderlaunch;
 
 #define NVIDIA_PixelDataRange   1
 
@@ -162,7 +162,7 @@ static const unsigned int _mouse_pointer[] = {
 };
 
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 #include <windows.h>
 #include "wine-ddraw.h"
 struct private_hwdata {
@@ -180,7 +180,6 @@ struct video_cf {
 	} draw;
 	struct {
 		unsigned int width,height,bpp;
-		int want_fixed;
 
 		int swsurface;
 		int fb_hacks;
@@ -206,7 +205,7 @@ struct video_cf {
 		int pixel_data_range;
 #endif
 	} gl;
-#if defined(WIN32)
+#if defined(SCHISM_WIN32)
 	struct {
 		SDL_Surface * surface;
 		RECT rect;
@@ -240,7 +239,7 @@ static int int_log2(int val) {
 }
 #endif
 
-#ifdef MACOSX
+#ifdef SCHISM_MACOSX
 #include <OpenGL/gl.h>
 #include <OpenGL/glu.h>
 #include <OpenGL/glext.h>
@@ -389,12 +388,12 @@ void video_report(void)
 		log_appendf(5, " %s%s DirectDraw interface",
 			(video.surface->flags & SDL_HWSURFACE) ? "Hardware" : "Software",
 			(video.surface->flags & SDL_HWACCEL) ? " accelerated" : "");
+		log_appendf(5, " Display format: %d bits/pixel", video.surface->format->BitsPerPixel);
 		break;
 	};
-	log_appendf(5, " %d bits/pixel", video.surface->format->BitsPerPixel);
-	if (video.desktop.fullscreen || video.desktop.fb_hacks) {
+
+	if (video.desktop.fullscreen || video.desktop.fb_hacks)
 		log_appendf(5, " Display dimensions: %dx%d", video.desktop.width, video.desktop.height);
-	}
 }
 
 // check if w and h are multiples of native res (and by the same multiplier)
@@ -449,7 +448,12 @@ void video_fullscreen(int tri)
 	}
 }
 
-void video_setup(const char *driver)
+void video_setup(const char *interpolation)
+{
+	strncpy(cfg_video_interpolation, interpolation, 7);
+}
+
+static void video_setup_(const char *driver)
 {
 	char *q;
 	/* _SOME_ drivers can be switched to, but not all of them... */
@@ -495,13 +499,8 @@ void video_setup(const char *driver)
 		}
 	}
 
-	q = getenv("SCHISM_DEBUG");
-	if (q && strstr(q,"doublebuf")) {
-		video.desktop.doublebuf = 1;
-	}
-
 	video.desktop.want_type = VIDEO_SURFACE;
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	if (!driver) {
 		/* alright, let's have some fun. */
 		driver = "sdlauto"; /* err... */
@@ -564,7 +563,7 @@ void video_setup(const char *driver)
 	} else if (strncmp(driver, "/dev/fb", 7) == 0) {
 		unsetenv("DISPLAY");
 		putenv((char *) "SDL_VIDEODRIVER=fbcon");
-		put_env_var("SDL_FBDEV", driver);
+		setenv("SDL_FBDEV", driver, 1);
 		video.desktop.want_type = VIDEO_SURFACE;
 
 #endif
@@ -621,13 +620,13 @@ void video_startup(void)
 	}
 
 	/* because first mode is 0 */
-	vgamem_clear();
-	vgamem_flip();
+	//vgamem_clear();
+	//vgamem_flip();
 
 	SDL_WM_SetCaption("Schism Tracker", "Schism Tracker");
-#ifndef MACOSX
+#ifndef SCHISM_MACOSX
 /* apple/macs use a bundle; this overrides their nice pretty icon */
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 /* win32 icons must be 32x32 according to SDL 1.2 doc */
 	SDL_Surface *icon = xpmdata(_schism_icon_xpm);
 #else
@@ -637,7 +636,7 @@ void video_startup(void)
 	SDL_FreeSurface(icon);
 #endif
 
-#ifndef MACOSX
+#ifndef SCHISM_MACOSX
 	if (video.desktop.want_type == VIDEO_GL) {
 #define Z(q) my_ ## q = SDL_GL_GetProcAddress( #q ); \
 	if (! my_ ## q) { video.desktop.want_type = VIDEO_SURFACE; goto SKIP1; }
@@ -791,13 +790,6 @@ SKIP1:
 		y = 480;
 	}
 
-	video.desktop.want_fixed = -1;
-	q = getenv("SCHISM_VIDEO_ASPECT");
-	if (q && (strcasecmp(q,"nofixed") == 0 || strcasecmp(q,"full")==0
-	|| strcasecmp(q,"fit") == 0 || strcasecmp(q,"wide") == 0
-	|| strcasecmp(q,"no-fixed") == 0))
-		video.desktop.want_fixed = 0;
-
 	if ((q = getenv("SCHISM_VIDEO_DEPTH"))) {
 		i=atoi(q);
 		if (i == 32) video.desktop.bpp=32;
@@ -812,24 +804,24 @@ SKIP1:
 
 	switch (video.desktop.want_type) {
 	case VIDEO_YUV:
-#ifdef MACOSX
+#ifdef SCHISM_MACOSX
 		video.desktop.swsurface = 1;
 #else
-		video.desktop.swsurface = 0;
+		video.desktop.swsurface = !cfg_video_hardware;
 #endif
 		break;
 
 	case VIDEO_GL:
-#ifdef MACOSX
+#ifdef SCHISM_MACOSX
 		video.desktop.swsurface = 1;
 #else
-		video.desktop.swsurface = 0;
+		video.desktop.swsurface = !cfg_video_hardware;
 #endif
 		video.gl.bilinear = cfg_video_gl_bilinear;
 		if (video.desktop.bpp == 32 || video.desktop.bpp == 16) break;
 		/* fall through */
 	case VIDEO_DDRAW:
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 		if (video.desktop.bpp == 32 || video.desktop.bpp == 16) {
 			/* good enough for here! */
 			video.desktop.want_type = VIDEO_DDRAW;
@@ -864,7 +856,7 @@ SKIP1:
 
 static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int sdlflags)
 {
-	int want_fixed = video.desktop.want_fixed;
+	int want_fixed = cfg_video_want_fixed;
 
 	if (video.desktop.doublebuf)
 		sdlflags |= (SDL_DOUBLEBUF|SDL_ASYNCBLIT);
@@ -880,14 +872,14 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 	}
 
 	if (want_fixed) {
-		double ratio_w = (double)w / (double)NATIVE_SCREEN_WIDTH;
-		double ratio_h = (double)h / (double)NATIVE_SCREEN_HEIGHT;
+		double ratio_w = (double)w / (double)cfg_video_want_fixed_width;
+		double ratio_h = (double)h / (double)cfg_video_want_fixed_height;
 		if (ratio_w < ratio_h) {
 			video.clip.w = w;
-			video.clip.h = (double)NATIVE_SCREEN_HEIGHT * ratio_w;
+			video.clip.h = (double)cfg_video_want_fixed_height * ratio_w;
 		} else {
 			video.clip.h = h;
-			video.clip.w = (double)NATIVE_SCREEN_WIDTH * ratio_h;
+			video.clip.w = (double)cfg_video_want_fixed_width * ratio_h;
 		}
 		video.clip.x=(w-video.clip.w)/2;
 		video.clip.y=(h-video.clip.h)/2;
@@ -990,7 +982,7 @@ void video_resize(unsigned int width, unsigned int height)
 
 	switch (video.desktop.want_type) {
 	case VIDEO_DDRAW:
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 		if (video.ddblit.surface) {
 			SDL_FreeSurface(video.ddblit.surface);
 			video.ddblit.surface = 0;
@@ -1465,8 +1457,10 @@ void video_blit(void)
 		}
 		bpp = video.surface->format->BytesPerPixel;
 		pixels = (unsigned char *)video.surface->pixels;
-		pixels += video.clip.y * video.surface->pitch;
-		pixels += video.clip.x * bpp;
+		if (cfg_video_want_fixed) {
+			pixels += video.clip.y * video.surface->pitch;
+			pixels += video.clip.x * bpp;
+		}
 		pitch = video.surface->pitch;
 		break;
 	case VIDEO_YUV:
@@ -1492,7 +1486,7 @@ void video_blit(void)
 		bpp = 4;
 		break;
 	case VIDEO_DDRAW:
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 		if (SDL_MUSTLOCK(video.ddblit.surface)) {
 			while (SDL_LockSurface(video.ddblit.surface) == -1) {
 				SDL_Delay(10);
@@ -1512,7 +1506,11 @@ void video_blit(void)
 		/* scaling is provided by the hardware, or isn't necessary */
 		video_blit11(bpp, pixels, pitch, video.pal);
 	} else {
-		video_blit1n(bpp, pixels, pitch, video.tc_bgr32, video.surface->format, video.clip.w, video.clip.h);
+		if (!charset_strcasecmp(cfg_video_interpolation, CHARSET_UTF8, "nearest", CHARSET_UTF8)) {
+			video_blitNN(bpp, pixels, pitch, video.pal, video.clip.w, video.clip.h);
+		} else {
+			video_blitLN(bpp, pixels, pitch, video.tc_bgr32, video.surface->format, video.clip.w, video.clip.h);
+		}
 	}
 
 	switch (video.desktop.type) {
@@ -1522,7 +1520,7 @@ void video_blit(void)
 		}
 		SDL_Flip(video.surface);
 		break;
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	case VIDEO_DDRAW:
 		if (SDL_MUSTLOCK(video.ddblit.surface)) {
 			SDL_UnlockSurface(video.ddblit.surface);
@@ -1570,14 +1568,14 @@ int video_gl_bilinear(void)
 
 void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
 {
-	if ((signed) vx < video.clip.x) vx = video.clip.x;
+	vx = MAX(vx, video.clip.x);
 	vx -= video.clip.x;
 
-	if ((signed) vy < video.clip.y) vy = video.clip.y;
+	vy = MAX(vy, video.clip.y);
 	vy -= video.clip.y;
 
-	if ((signed) vx > video.clip.w) vx = video.clip.w;
-	if ((signed) vy > video.clip.h) vy = video.clip.h;
+	vx = MIN(vx, video.clip.w);
+	vy = MIN(vy, video.clip.h);
 
 	vx *= NATIVE_SCREEN_WIDTH;
 	vy *= NATIVE_SCREEN_HEIGHT;
@@ -1591,6 +1589,12 @@ void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
 	video.mouse.y = vy;
 	if (x) *x = vx;
 	if (y) *y = vy;
+}
+
+void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
+{
+	if (trans_x) *trans_x = x;
+	if (trans_y) *trans_y = y;
 }
 
 int video_is_hardware(void) {
@@ -1629,6 +1633,7 @@ int video_is_visible(void)
 
 void video_toggle_screensaver(int enabled)
 {
+	/* SDL 1.2 doesn't provide this */
 }
 
 int video_is_wm_available(void)
@@ -1641,12 +1646,12 @@ void video_warp_mouse(unsigned int x, unsigned int y)
 	SDL_WarpMouse(x, y);
 }
 
-void video_redraw_renderer(int hardware)
+void video_set_hardware(int hardware)
 {
-}
-
-void video_redraw_texture(void)
-{
+	video.desktop.swsurface = !hardware;
+	// ??? lol
+	video_resize(video.draw.width, video.draw.height);
+	video_report();
 }
 
 void video_get_mouse_coordinates(unsigned int *x, unsigned int *y)
@@ -1662,4 +1667,5 @@ int video_have_menu(void)
 
 void video_toggle_menu(void)
 {
+	/* can't have shit in detroit */
 }
