@@ -33,6 +33,9 @@
 
 #ifdef SCHISM_CONTROLLER
 
+#include "it.h"
+#include "song.h"
+
 struct controller_node {
 	SDL_GameController *controller;
 	SDL_JoystickID id;
@@ -115,7 +118,7 @@ int sdl2_controller_quit(void)
 	return 1;
 }
 
-int sdl2_controller_sdlevent(SDL_Event *event)
+static int sdl2_controller_sdlevent(SDL_Event *event)
 {
 	SDL_Event newev = {0};
 	SDL_Keycode sym;
@@ -313,7 +316,7 @@ void sdl2_pump_events(void)
 		schism_event.common.timestamp = e.common.timestamp;
 
 #ifdef SCHISM_CONTROLLER
-		if (!controller_sdlevent())
+		if (!sdl2_controller_sdlevent())
 			continue;
 #endif
 
