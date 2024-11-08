@@ -315,7 +315,7 @@ fail:
  * we tamper with it, so we can restore it on shutdown */
 static int ibook_helper = -1;
 
-int macosx_sdlevent(schism_event_t *event)
+int macosx_event(schism_event_t *event)
 {
 	switch (event->type) {
 	case SCHISM_WINDOWEVENT_FOCUS_GAINED:
@@ -324,8 +324,8 @@ int macosx_sdlevent(schism_event_t *event)
 	case SCHISM_WINDOWEVENT_FOCUS_LOST:
 		macosx_ibook_fnswitch(ibook_helper);
 		return 1;
-	case SDL_KEYDOWN:
-	case SDL_KEYUP:
+	case SCHISM_KEYDOWN:
+	case SCHISM_KEYUP:
 		switch (status.fix_numlock_setting) {
 		case NUMLOCK_GUESS:
 			/* why is this checking for ibook_helper? */
@@ -334,9 +334,9 @@ int macosx_sdlevent(schism_event_t *event)
 					&& ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
 					&& ACTIVE_PAGE_WIDGET.accept_text) {
 					/* text is more likely? */
-					event->key.mod |= KMOD_NUM;
+					event->key.mod |= SCHISM_KEYMOD_NUM;
 				} else {
-					event->key.mod &= ~KMOD_NUM;
+					event->key.mod &= ~SCHISM_KEYMOD_NUM;
 				}
 			} /* otherwise honor it */
 			break;
