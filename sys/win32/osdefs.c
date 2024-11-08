@@ -277,9 +277,9 @@ int win32_event(schism_event_t *event)
 	return 1;
 }
 
-void win32_toggle_menu(void *window)
+void win32_toggle_menu(void *window, int on)
 {
-	SetMenu((HWND)window, (cfg_video_want_menu_bar && !(flags & SDL_WINDOW_FULLSCREEN)) ? menu : NULL);
+	SetMenu((HWND)window, (cfg_video_want_menu_bar && on) ? menu : NULL);
 	DrawMenuBar((HWND)window);
 }
 

@@ -1665,7 +1665,7 @@ int video_have_menu(void)
 	return 0;
 }
 
-void video_toggle_menu(void)
+void video_toggle_menu(int on)
 {
 	/* can't have shit in detroit */
 }

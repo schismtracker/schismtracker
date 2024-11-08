@@ -42,7 +42,7 @@ void video_get_mouse_coordinates(unsigned int *x, unsigned int *y);
 /* menu toggling */
 
 int video_have_menu(void);
-void video_toggle_menu(void);
+void video_toggle_menu(int on);
 
 /* -------------------------------------------------- */
 

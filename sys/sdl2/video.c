@@ -425,12 +425,12 @@ void video_fullscreen(int new_fs_flag)
 		}
 		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		if (have_menu)
-			video_toggle_menu();
+			video_toggle_menu(0);
 	} else {
 		SDL_SetWindowFullscreen(video.window, 0);
 		if (have_menu) {
 			/* the menu must be toggled first here */
-			video_toggle_menu();
+			video_toggle_menu(1);
 			SDL_SetWindowSize(video.window, video.saved.width, video.saved.height);
 			SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
 		}
@@ -642,7 +642,7 @@ int video_have_menu(void)
 #endif
 }
 
-void video_toggle_menu(void)
+void video_toggle_menu(int on)
 {
 	if (!video_have_menu())
 		return;
@@ -661,7 +661,7 @@ void video_toggle_menu(void)
 	if (!SDL_GetWindowWMInfo(video.window, &wm_info))
 		return;
 
-	win32_toggle_menu(wm_info.info.win.window);
+	win32_toggle_menu(wm_info.info.win.window, on);
 #else
 	/* ... */
 #endif
