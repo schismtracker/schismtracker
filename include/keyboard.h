@@ -24,6 +24,8 @@
 #ifndef SCHISM_KEYBOARD_H_
 #define SCHISM_KEYBOARD_H_
 
+#include "headers.h"
+
 /* locale-independent keyboard positions */
 enum {
 	SCHISM_SCANCODE_UNKNOWN = 0,
