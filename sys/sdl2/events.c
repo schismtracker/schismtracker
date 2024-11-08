@@ -471,8 +471,8 @@ void sdl2_pump_events(void)
 #ifdef SCHISM_WIN32
 			schism_event.wm_msg.msg.win.hwnd = e.syswm->msg.win.hwnd;
 			schism_event.wm_msg.msg.win.msg = e.syswm->msg.win.msg;
-			schism_event.wm_msg.msg.win.wparam = e.syswm->msg.win.wparam;
-			schism_event.wm_msg.msg.win.lparam = e.syswm->msg.win.lparam;
+			schism_event.wm_msg.msg.win.wparam = e.syswm.msg->win.wparam;
+			schism_event.wm_msg.msg.win.lparam = e.syswm.msg->win.lparam;
 #endif
 			schism_push_event(&schism_event);
 			break;
