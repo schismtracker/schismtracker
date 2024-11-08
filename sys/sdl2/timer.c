@@ -40,6 +40,6 @@ int sdl2_timer_ticks_passed(schism_ticks_t a, schism_ticks_t b)
 #if SDL_VERSION_ATLEAST(2, 0, 18)
 	return (a >= b);
 #else
-	return ((int32_t)(B - A) <= 0);
+	return ((int32_t)(b - a) <= 0);
 #endif
 }
