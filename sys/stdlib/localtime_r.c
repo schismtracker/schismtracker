@@ -22,13 +22,13 @@
  */
 
 #include "headers.h"
-#include "sdlmain.h"
+#include "backend/threads.h"
 
-static SDL_mutex *localtime_r_mutex = NULL;
+static schism_mutex_t *localtime_r_mutex = NULL;
 
 static void localtime_r_atexit(void)
 {
-	SDL_DestroyMutex(localtime_r_mutex);
+	be_mutex_delete(localtime_r_mutex);
 }
 
 struct tm *localtime_r(const time_t *timep, struct tm *result)
@@ -37,19 +37,21 @@ struct tm *localtime_r(const time_t *timep, struct tm *result)
 	static int initialized = 0;
 
 	if (!initialized) {
-		localtime_r_mutex = SDL_CreateMutex();
+		localtime_r_mutex = be_mutex_create();
 		if (!localtime_r_mutex)
 			return NULL;
+
+		atexit(localtime_r_atexit);
 
 		initialized = 1;
 	}
 
-	SDL_LockMutex(localtime_r_mutex);
+	be_mutex_lock(localtime_r_mutex);
 
 	our_tm = localtime(timep);
 	memcpy(result, our_tm, sizeof(struct tm));
 
-	SDL_UnlockMutex(localtime_r_mutex);
+	be_mutex_unlock(localtime_r_mutex);
 
 	return result;
 }
