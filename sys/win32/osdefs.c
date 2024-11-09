@@ -36,6 +36,8 @@
 #include <process.h>
 #include <shlobj.h>
 
+#include <direct.h>
+
 #define IDM_FILE_NEW  101
 #define IDM_FILE_LOAD 102
 #define IDM_FILE_SAVE_CURRENT 103
