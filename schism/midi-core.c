@@ -38,6 +38,10 @@
 #include <ctype.h>
 #include <assert.h>
 
+#ifdef SCHISM_WIN32
+# include <windows.h>
+#endif
+
 static int _connected = 0;
 /* midi_mutex is locked by the main thread,
 midi_port_mutex is for the port thread(s),
