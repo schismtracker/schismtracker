@@ -39,6 +39,7 @@
 #include <inttypes.h>
 
 #include <SDL.h>
+#include <SDL_syswm.h>
 
 #ifndef SCHISM_MACOSX
 #include "auto/schismico_hires.h"
