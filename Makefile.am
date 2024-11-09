@@ -126,7 +126,6 @@ noinst_HEADERS = \
 	include/palettes.h          \
 	include/pattern-view.h		\
 	include/sample-edit.h		\
-	include/sdlmain.h		\
 	include/slurp.h			\
 	include/song.h			\
 	include/str.h           \
