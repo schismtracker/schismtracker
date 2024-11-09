@@ -26,7 +26,6 @@
 #include "headers.h"
 
 #include "config.h"
-#include "sdlmain.h"
 #include "it.h"
 #include "osdefs.h"
 #include "fmt.h"
@@ -197,7 +196,7 @@ int win32_event(schism_event_t *event)
 			e.script.which = "logviewer";
 			break;
 		case IDM_FILE_QUIT:
-			e.type = SDL_QUIT;
+			e.type = SCHISM_QUIT;
 			break;
 		case IDM_PLAYBACK_SHOW_INFOPAGE:
 			e.script.which = "info";

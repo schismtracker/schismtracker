@@ -22,7 +22,6 @@
  */
 
 #include "headers.h"
-#include "sdlmain.h"
 
 #include "log.h"
 #include "midi.h"
@@ -138,7 +137,7 @@ static CALLBACK void _win32mm_inputcb(UNUSED HMIDIIN in, UINT wmsg, DWORD_PTR in
 
 	switch (wmsg) {
 	case MIM_OPEN:
-		SDL_Delay(0); /* eh? */
+		msleep(0); /* eh? */
 	case MIM_CLOSE:
 		break;
 	case MIM_DATA:
