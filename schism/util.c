@@ -187,5 +187,5 @@ void msleep(uint64_t msec)
 	if (rt_usleep_impl_(msec * 1000))
 		return;
 
-	SDL_Delay(msec);
+	be_delay(msec);
 }
