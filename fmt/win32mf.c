@@ -556,7 +556,7 @@ static inline int mfbytestream_new(IMFByteStream **imf, slurp_t *fp)
 
 	/* whatever */
 	mfb->fp = fp;
-	mfb->mutex = schism_mutex_create();
+	mfb->mutex = be_mutex_create();
 	if (!mfb->mutex) {
 		free(mfb);
 		return 0;
