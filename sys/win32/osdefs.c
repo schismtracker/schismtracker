@@ -31,8 +31,8 @@
 #include "fmt.h"
 #include "charset.h"
 
-#include <windows.h>
 #include <ws2tcpip.h>
+#include <windows.h>
 #include <process.h>
 #include <shlobj.h>
 
@@ -82,9 +82,9 @@ void win32_get_modkey(int *mk)
 		status.flags &= ~CAPS_PRESSED;
 	}
 
-	(*mk) = ((*mk) & ~(KMOD_NUM|KMOD_CAPS))
-		| ((ks[VK_NUMLOCK]&1) ? KMOD_NUM : 0)
-		| ((ks[VK_CAPITAL]&1) ? KMOD_CAPS : 0);
+	(*mk) = ((*mk) & ~(SCHISM_KEYMOD_NUM|SCHISM_KEYMOD_CAPS))
+		| ((ks[VK_NUMLOCK]&1) ? SCHISM_KEYMOD_NUM : 0)
+		| ((ks[VK_CAPITAL]&1) ? SCHISM_KEYMOD_CAPS : 0);
 }
 
 void win32_sysinit(UNUSED int *pargc, UNUSED char ***pargv)
