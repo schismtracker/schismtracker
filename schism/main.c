@@ -542,15 +542,11 @@ static void event_loop(void)
 				}
 				break;
 			case SCHISM_MOUSEMOTION:
-				// nothing to see here
-				video_translate(se.motion.x, se.motion.y, &kk.fx, &kk.fy);
-				break;
 			case SCHISM_MOUSEWHEEL:
-				kk.state = -1;  /* neither KEY_PRESS nor KEY_RELEASE (???) */
-				video_translate(se.wheel.mouse_x, se.wheel.mouse_y, &kk.fx, &kk.fy);
-				kk.mouse = (se.wheel.y > 0) ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN;
 			case SCHISM_MOUSEBUTTONDOWN:
-			case SCHISM_MOUSEBUTTONUP:
+			case SCHISM_MOUSEBUTTONUP: {
+				int button;
+
 				if (kk.state == KEY_PRESS) {
 					modkey = be_event_mod_state();
 					os_get_modkey(&modkey);
@@ -559,8 +555,33 @@ static void event_loop(void)
 				kk.sym = 0;
 				kk.mod = 0;
 
-				if (se.type != SCHISM_MOUSEWHEEL)
+				// Handle the coordinate translation
+				switch (se.type) {
+				case SCHISM_MOUSEWHEEL:
+					kk.state = -1;  /* neither KEY_PRESS nor KEY_RELEASE (???) */
+					video_translate(se.wheel.mouse_x, se.wheel.mouse_y, &kk.fx, &kk.fy);
+					kk.mouse = (se.wheel.y > 0) ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN;
+					break;
+				case SCHISM_MOUSEMOTION:
+					kk.state = -1;
+					video_translate(se.motion.x, se.motion.y, &kk.fx, &kk.fy);
+					button = kk.mouse_button;
+					break;
+				case SCHISM_MOUSEBUTTONDOWN:
+				case SCHISM_MOUSEBUTTONUP:
 					video_translate(se.button.x, se.button.y, &kk.fx, &kk.fy);
+					// we also have to update the current button
+					if ((modkey & SCHISM_KEYMOD_CTRL)
+					|| se.button.button == MOUSE_BUTTON_RIGHT) {
+						button = MOUSE_BUTTON_RIGHT;
+					} else if ((modkey & (SCHISM_KEYMOD_ALT|SCHISM_KEYMOD_GUI))
+					|| se.button.button == MOUSE_BUTTON_MIDDLE) {
+						button = MOUSE_BUTTON_MIDDLE;
+					} else {
+						button = MOUSE_BUTTON_LEFT;
+					}
+					break;
+				}
 
 				/* character resolution */
 				kk.x = kk.fx / kk.rx;
@@ -571,6 +592,7 @@ static void event_loop(void)
 					kk.hx = 1;
 				}
 				kk.y = kk.fy / kk.ry;
+
 				if (se.type == SCHISM_MOUSEWHEEL) {
 					handle_key(&kk);
 					break; /* nothing else to do here */
@@ -579,21 +601,16 @@ static void event_loop(void)
 					kk.sx = kk.x;
 					kk.sy = kk.y;
 				}
+
+				// what?
 				if (startdown) startdown = 0;
 
-				switch (se.button.button) {
+				switch (button) {
 				case MOUSE_BUTTON_RIGHT:
 				case MOUSE_BUTTON_MIDDLE:
 				case MOUSE_BUTTON_LEFT:
-					if ((modkey & SCHISM_KEYMOD_CTRL)
-					|| se.button.button == MOUSE_BUTTON_RIGHT) {
-						kk.mouse_button = MOUSE_BUTTON_RIGHT;
-					} else if ((modkey & (SCHISM_KEYMOD_ALT|SCHISM_KEYMOD_GUI))
-					|| se.button.button == MOUSE_BUTTON_MIDDLE) {
-						kk.mouse_button = MOUSE_BUTTON_MIDDLE;
-					} else {
-						kk.mouse_button = MOUSE_BUTTON_LEFT;
-					}
+					kk.mouse_button = button;
+
 					if (kk.state == KEY_RELEASE) {
 						ticker = be_timer_ticks();
 						if (lx == kk.x
@@ -633,6 +650,7 @@ static void event_loop(void)
 					break;
 				};
 				break;
+			}
 			case SCHISM_WINDOWEVENT_SHOWN:
 			case SCHISM_WINDOWEVENT_FOCUS_GAINED:
 				video_mousecursor(MOUSE_RESET_STATE);

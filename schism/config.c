@@ -56,7 +56,6 @@ int cfg_video_want_fixed = 0;
 int cfg_video_want_fixed_width = 0;
 int cfg_video_want_fixed_height = 0;
 int cfg_video_mousecursor = MOUSE_EMULATED;
-int cfg_video_gl_bilinear = 1;
 int cfg_video_width, cfg_video_height;
 int cfg_video_hardware = 0;
 int cfg_video_want_menu_bar = 1;
@@ -186,7 +185,6 @@ void cfg_load(void)
 	cfg_video_want_fixed_height = cfg_get_number(&cfg, "Video", "want_fixed_height", 400 * 6);
 	cfg_video_mousecursor = cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
 	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_MAX_STATE);
-	cfg_video_gl_bilinear = !!cfg_get_number(&cfg, "Video", "gl_bilinear", 1);
 	cfg_video_hardware = cfg_get_number(&cfg, "Video", "hardware", 1);
 	cfg_video_want_menu_bar = !!cfg_get_number(&cfg, "Video", "want_menu_bar", 1);
 
@@ -368,7 +366,6 @@ void cfg_atexit_save(void)
 	cfg_set_string(&cfg, "Video", "interpolation", cfg_video_interpolation);
 	cfg_set_number(&cfg, "Video", "fullscreen", !!(video_is_fullscreen()));
 	cfg_set_number(&cfg, "Video", "mouse_cursor", video_mousecursor_visible());
-	cfg_set_number(&cfg, "Video", "gl_bilinear", video_gl_bilinear());
 	cfg_set_number(&cfg, "Video", "lazy_redraw", !!(status.flags & LAZY_REDRAW));
 	cfg_set_number(&cfg, "Video", "hardware", !!(video_is_hardware()));
 	cfg_set_number(&cfg, "Video", "want_menu_bar", !!cfg_video_want_menu_bar);

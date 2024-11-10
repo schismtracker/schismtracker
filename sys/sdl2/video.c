@@ -733,12 +733,6 @@ void video_blit(void)
 
 /* ------------------------------------------------- */
 
-int video_gl_bilinear(void)
-{
-	// no-op
-	return cfg_video_gl_bilinear;
-}
-
 void video_mousecursor_changed(void)
 {
 	const int vis = video_mousecursor_visible();
