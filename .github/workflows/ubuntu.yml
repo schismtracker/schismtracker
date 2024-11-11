@@ -19,6 +19,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'm1maker/SRAL'
+          path: SRAL
 
       - name: 'Build SRAL'
         run: |
