@@ -454,7 +454,9 @@ static const char* file_list_a11y_get_value(char *buf)
 
 static const char* dir_list_a11y_get_value(char *buf)
 {
-	strcpy(buf, dlist.dirs[current_dir]->base);
+	buf[0] = '\0';
+	if (dlist.num_dirs > 0)
+		strcpy(buf, dlist.dirs[current_dir]->base);
 	return buf;
 }
 
@@ -487,7 +489,7 @@ static void search_update(void)
 					search_text, CHARSET_CP437, search_text_length) == 0) {
 				current_dir = n;
 				dir_list_reposition();
-				char buf[strlen(dlist.dirs[current_dir]->base) + 1];
+				char buf[256];
 				dir_list_a11y_get_value(buf);
 				a11y_output(buf, 0);
 				break;
@@ -993,7 +995,7 @@ static int dir_list_handle_key(struct key_event * k, int width)
 	if (new_dir != current_dir) {
 		current_dir = new_dir;
 		dir_list_reposition();
-		char buf[strlen(dlist.dirs[current_dir]->base) + 1];
+		char buf[256];
 		dir_list_a11y_get_value(buf);
 		a11y_output(buf, 0);
 		status.flags |= NEED_UPDATE;

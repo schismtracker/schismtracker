@@ -125,7 +125,23 @@ jobs:
           make
           make install
           cd ../..
-        
+
+      - name: 'Checkout SRAL'
+        uses: actions/checkout@v4
+        with:
+          repository: 'm1maker/SRAL'
+
+      - name: 'Build SRAL'
+        run: |
+          export PATH="$HOME/llvm-mingw/bin:$PATH"
+          cd SRAL
+          mkdir build
+          cd build
+          cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$HOME/prefix" -DCMAKE_C_COMPILER="$TARGET-w64-$SYS-clang" -DCMAKE_SYSTEM_NAME="Windows"
+          make
+          make install
+          cd ../..
+
       - name: 'Get date of latest commit'
         id: date
         run: |
@@ -149,12 +165,15 @@ jobs:
           cp "$HOME/prefix/bin/SDL2.dll" .
           cp "$HOME/prefix/bin/libFLAC-12.dll" .
           cp "$HOME/prefix/bin/libogg-0.dll" .
+          cp "$HOME/prefix/bin/libSRAL.dll" .
+          cp "$HOME/llvm-mingw/$TARGET-w64-$SYS/bin/*.dll" .
           "$TARGET-w64-$SYS-strip" -g "SDL2.dll"
           "$TARGET-w64-$SYS-strip" -g "libFLAC-12.dll"
           "$TARGET-w64-$SYS-strip" -g "libogg-0.dll"
+          "$TARGET-w64-$SYS-strip" -g "libSRAL.dll"
           cp schism/docs/configuration.md schism/README.md schism/COPYING .
           wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
-          unix2dos COPYING.Xiph COPYING README.md configuration.md
+          unix2dos COPYING.Xiph COPYING README.md configuration.md accessibility.md
 
       - name: 'Upload artifact'
         uses: actions/upload-artifact@v4
@@ -165,7 +184,9 @@ jobs:
             SDL2.dll
             libFLAC-12.dll
             libogg-0.dll
+            libSRAL.dll
             COPYING
             COPYING.Xiph
             README.md
             configuration.md
+            accessibility.md

@@ -13,7 +13,22 @@ jobs:
       - name: 'Install dependencies'
         run: |
           sudo apt-get update
-          sudo apt-get install --fix-missing libutf8proc-dev libjack-jackd2-dev build-essential automake autoconf autoconf-archive libxxf86vm-dev libsdl2-dev libasound2-dev libflac-dev git libtool zip wget
+          sudo apt-get install --fix-missing libutf8proc-dev libjack-jackd2-dev build-essential automake autoconf autoconf-archive libxxf86vm-dev libsdl2-dev libasound2-dev libflac-dev libspeechd-dev libx11-dev git libtool zip wget
+
+      - name: 'Checkout SRAL'
+        uses: actions/checkout@v4
+        with:
+          repository: 'm1maker/SRAL'
+
+      - name: 'Build SRAL'
+        run: |
+          cd SRAL
+          mkdir build
+          cd build
+          cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="/usr/local"
+          make
+          sudo make install
+          cd ../..
 
       - name: 'Checkout'
         uses: actions/checkout@v4
@@ -35,10 +50,11 @@ jobs:
           cd ..
           cp build/schismtracker .
           cp docs/configuration.md .
+          cp docs/accessibility.md .
           cp sys/posix/schismtracker.1 .
-          cp /usr/lib/x86_64-linux-gnu/libutf8proc.so.2.5.0 /usr/lib/x86_64-linux-gnu/libFLAC.so.8 /usr/lib/x86_64-linux-gnu/libogg.so.0 /usr/lib/x86_64-linux-gnu/libutf8proc.so .
+          cp /usr/lib/x86_64-linux-gnu/libutf8proc.so.2.5.0 /usr/lib/x86_64-linux-gnu/libFLAC.so.8 /usr/lib/x86_64-linux-gnu/libogg.so.0 /usr/lib/x86_64-linux-gnu/libutf8proc.so /usr/local/lib/libSRAL.so .
           wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
-          zip schismtracker.zip configuration.md COPYING COPYING.Xiph README.md schismtracker.1 schismtracker libFLAC.so.8 libogg.so.0 libutf8proc.so.2.5.0
+          zip schismtracker.zip accessibility.md configuration.md COPYING COPYING.Xiph README.md schismtracker.1 schismtracker libFLAC.so.8 libogg.so.0 libutf8proc.so.2.5.0 libSRAL.so
 
       - name: 'Upload artifact'
         uses: actions/upload-artifact@v4

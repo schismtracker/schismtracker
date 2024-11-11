@@ -1,8 +1,8 @@
-# Schism Tracker
+# Schism Tracker A11y Edition
 
 This is an experimental fork of Schism Tracker with a self voicing accessibility mode,
 powered by the cross platform [SRAL](https://github.com/m1maker/SRAL) library.
-See [the accessibility readme](docs/accessibility.md) for more information.
+See the accessibility readme for more information.
 
 -----
 

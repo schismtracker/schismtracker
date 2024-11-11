@@ -1,5 +1,5 @@
 /*
-/  * Schism Tracker - a cross-platform Impulse Tracker clone
+ *Schism Tracker - a cross-platform Impulse Tracker clone
  * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
  * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
  * copyright (c) 2009 Storlek & Mrs. Brisby
@@ -95,6 +95,7 @@ static int keyjazz_noteoff = 0;       /* issue noteoffs when releasing note */
 static int keyjazz_write_noteoff = 0; /* write noteoffs when releasing note */
 static int keyjazz_repeat = 1;        /* insert multiple notes on key repeat */
 static int keyjazz_capslock = 0;      /* keyjazz when capslock is on, not while it is down */
+static int keyjazz_play_row = 0;       /* play whole row when keyjazzing */
 
 /* this is, of course, what the current pattern is */
 static int current_pattern = 0;
@@ -159,6 +160,8 @@ static int mask_copy_search_mode = COPY_INST_OFF;
 prior to moving to the first/last channel, i.e. operating in a 'z' pattern.
 This is closer to FT2's behavior for the keys. */
 static int invert_home_end = 0;
+
+static int play_row_when_navigating = 0;          /* Play whole row when navigating */
 
 /* --------------------------------------------------------------------- */
 /* undo and clipboard handling */
@@ -1073,8 +1076,10 @@ void cfg_save_patedit(cfg_file_t *cfg)
 	CFG_SET_PE(keyjazz_write_noteoff);
 	CFG_SET_PE(keyjazz_repeat);
 	CFG_SET_PE(keyjazz_capslock);
+	CFG_SET_PE(keyjazz_play_row);
 	CFG_SET_PE(mask_copy_search_mode);
 	CFG_SET_PE(invert_home_end);
+	CFG_SET_PE(play_row_when_navigating);
 
 	cfg_set_number(cfg, "Pattern Editor", "crayola_mode", !!(status.flags & CRAYOLA_MODE));
 	for (n = 0; n < 64; n++)
@@ -1102,12 +1107,14 @@ void cfg_load_patedit(cfg_file_t *cfg)
 	CFG_GET_PE(volume_percent, 100);
 	CFG_GET_PE(fast_volume_percent, 67);
 	CFG_GET_PE(fast_volume_mode, 0);
-	CFG_GET_PE(keyjazz_noteoff, 0);
+	CFG_GET_PE(keyjazz_noteoff, 1);
 	CFG_GET_PE(keyjazz_write_noteoff, 0);
 	CFG_GET_PE(keyjazz_repeat, 1);
-	CFG_GET_PE(keyjazz_capslock, 0);
+	CFG_GET_PE(keyjazz_capslock, 1);
+	CFG_GET_PE(keyjazz_play_row, 1);
 	CFG_GET_PE(mask_copy_search_mode, 0);
 	CFG_GET_PE(invert_home_end, 0);
+	CFG_GET_PE(play_row_when_navigating, 1);
 
 	if (cfg_get_number(cfg, "Pattern Editor", "crayola_mode", 0))
 		status.flags |= CRAYOLA_MODE;
@@ -3390,8 +3397,9 @@ static int pattern_editor_insert(struct key_event *k)
 		/* Be quiet when pasting templates.
 		It'd be nice to "play" a template when pasting it (maybe only for ones that are one row high)
 		so as to hear the chords being inserted etc., but that's a little complicated to do. */
-		if (NOTE_IS_NOTE(n) && !(template_mode && writenote))
-			song_keydown(smp, ins, n, vol, current_channel);
+		// Why so early? Se almost identical code below.
+		// if (NOTE_IS_NOTE(n) && !(template_mode && writenote))
+			// song_keydown(smp, ins, n, vol, current_channel);
 		if (!writenote)
 			break;
 
@@ -3415,8 +3423,12 @@ static int pattern_editor_insert(struct key_event *k)
 		}
 
 		/* try again, now that we have the effect (this is a dumb way to do this...) */
-		if (NOTE_IS_NOTE(n) && !template_mode)
-			song_keyrecord(smp, ins, n, vol, current_channel, cur_note->effect, cur_note->param);
+		if (NOTE_IS_NOTE(n)) {
+			if (keyjazz_play_row && !SONG_PLAYING)
+				song_single_step(current_pattern, current_row);
+			else if (!template_mode)
+				song_keyrecord(smp, ins, n, vol, current_channel, cur_note->effect, cur_note->param);
+		}
 
 		/* copy the note back to the mask */
 		mask_note.note = n;
@@ -4706,6 +4718,8 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 		}
 		a11y_output(buf, 0);
 	} else if (k->state != KEY_RELEASE) {
+		if (play_row_when_navigating && current_channel == prev_chan && !a11y_pated_insert_event)
+			song_single_step(current_pattern, current_row);
 		pattern_editor_a11y_get_value(buf);
 		a11y_output(buf, 0);
 	}
