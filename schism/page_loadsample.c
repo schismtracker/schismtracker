@@ -659,7 +659,8 @@ static const char* file_list_a11y_get_value(char *buf)
 static int file_list_handle_text_input(const char *text)
 {
 	dmoz_file_t* f = flist.files[current_file];
-	a11y_output_cp437(text, 0);
+	if (*text >= 32 && (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY))))
+		a11y_output_cp437(text, 0);
 	for (; *text; text++) {
 		if (*text >= 32 && (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
 			if (search_pos < 0) search_pos = 0;
