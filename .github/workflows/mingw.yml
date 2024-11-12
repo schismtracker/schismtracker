@@ -63,7 +63,7 @@ jobs:
           mv "$HOME/llvm-mingw-$LLVM_MINGW_VERSION-$STDLIB-ubuntu-20.04-x86_64" "$HOME/llvm-mingw"
 
       - name: 'Grab NVDAController'
-        if: target != 'armv7'
+        if: env.TARGET != 'armv7'
         run: |
           export CARCH=$([ $TARGET == aarch64 ] && echo arm64 || [ $TARGET == i686 ] && echo x86 || [ $TARGET == x86_64 ] && echo x64)
           curl -L "https://www.nvaccess.org/files/nvda/releases/stable/nvda_${NVDA_CONTROLLER_VERSION}_controllerClient.zip" > controller.zip
