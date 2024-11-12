@@ -579,3 +579,4 @@ void a11y_toggle_accessibility_mode(void)
 		status_text_flash("Accessibility_mode_enabled");
 	}
 }
+
