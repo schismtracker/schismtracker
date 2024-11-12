@@ -172,7 +172,7 @@ jobs:
           "$TARGET-w64-$SYS-strip" -g "libFLAC-12.dll"
           "$TARGET-w64-$SYS-strip" -g "libogg-0.dll"
           "$TARGET-w64-$SYS-strip" -g "libSRAL.dll"
-          cp schism/docs/configuration.md schism/README.md schism/COPYING .
+          cp schism/docs/accessibility.md schism/docs/configuration.md schism/README.md schism/COPYING .
           wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
           unix2dos COPYING.Xiph COPYING README.md configuration.md accessibility.md
 
@@ -182,10 +182,7 @@ jobs:
           name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.sys }}-${{ matrix.target }}
           path: |
             schismtracker.exe
-            SDL2.dll
-            libFLAC-12.dll
-            libogg-0.dll
-            libSRAL.dll
+            '*.dll'
             COPYING
             COPYING.Xiph
             README.md
