@@ -53,7 +53,7 @@ jobs:
           cp docs/configuration.md .
           cp docs/accessibility.md .
           cp sys/posix/schismtracker.1 .
-          cp /usr/lib/x86_64-linux-gnu/libutf8proc.so.2.5.0 /usr/lib/x86_64-linux-gnu/libFLAC.so.8 /usr/lib/x86_64-linux-gnu/libogg.so.0 /usr/lib/x86_64-linux-gnu/libutf8proc.so /usr/local/lib/libSRAL.so .
+          cp /usr/lib/x86_64-linux-gnu/libutf8proc.so.2.5.0 /usr/lib/x86_64-linux-gnu/libFLAC.so.8 /usr/lib/x86_64-linux-gnu/libogg.so.0 /usr/lib/x86_64-linux-gnu/libutf8proc.so $HOME/prefix/lib/libSRAL.so .
           wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
           zip schismtracker.zip accessibility.md configuration.md COPYING COPYING.Xiph README.md schismtracker.1 schismtracker libFLAC.so.8 libogg.so.0 libutf8proc.so.2.5.0 libSRAL.so
 
