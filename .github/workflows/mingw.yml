@@ -69,7 +69,7 @@ jobs:
           cd "$HOME"
           curl -L "https://www.nvaccess.org/files/nvda/releases/stable/nvda_${NVDA_CONTROLLER_VERSION}_controllerClient.zip" > "controller.zip"
           unzip controller.zip -d controller
-          mv "controller/$CARCH/nvdaControllerClient.dll" .
+          mv controller/$CARCH/nvdaControllerClient.dll prefix/bin
 
       - name: 'Download SDL2 sources'
         if: steps.cache-dependencies.outputs.cache-hit != 'true'
@@ -178,6 +178,7 @@ jobs:
           cp "$HOME/prefix/bin/libogg-0.dll" .
           cp "$HOME/prefix/bin/libSRAL.dll" .
           cp $HOME/llvm-mingw/$TARGET-w64-$SYS/bin/*.dll .
+          [ -f $HOME/prefix/bin/nvdaControllerClient.dll ] && cp $HOME/prefix/bin/nvdaControllerClient.dll .
           "$TARGET-w64-$SYS-strip" -g "SDL2.dll"
           "$TARGET-w64-$SYS-strip" -g "libFLAC-12.dll"
           "$TARGET-w64-$SYS-strip" -g "libogg-0.dll"
