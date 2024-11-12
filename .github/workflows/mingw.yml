@@ -158,7 +158,7 @@ jobs:
           autoreconf -I"$HOME/prefix/share/aclocal" -i
           mkdir build
           cd build
-          ../configure --host="$TARGET-w64-$SYS" --prefix="$HOME/prefix" --with-sdl-prefix="$HOME/prefix" --with-flac --enable-flac-linking CFLAGS="-I$HOME/prefix/include" LDFLAGS="-L$HOME/prefix/lib -Wl,--major-os-version=5,--major-subsystem-version=5"
+          ../configure --host="$TARGET-w64-$SYS" --prefix="$HOME/prefix" --with-sdl-prefix="$HOME/prefix" --with-flac --enable-flac-linking CPPFLAGS="-I$HOME/prefix/include/" LDFLAGS="-L$HOME/prefix/lib -Wl,--major-os-version=5,--major-subsystem-version=5"
           make
           "$TARGET-w64-$SYS-strip" -g schismtracker.exe
           cp schismtracker.exe ../..
@@ -167,8 +167,7 @@ jobs:
           cp "$HOME/prefix/bin/libFLAC-12.dll" .
           cp "$HOME/prefix/bin/libogg-0.dll" .
           cp "$HOME/prefix/bin/libSRAL.dll" .
-          ls $HOME/llvm-mingw/$TARGET-w64-$SYS/bin
-          cp "$HOME/llvm-mingw/$TARGET-w64-$SYS/bin/*.dll" .
+          cp $HOME/llvm-mingw/$TARGET-w64-$SYS/bin/*.dll .
           "$TARGET-w64-$SYS-strip" -g "SDL2.dll"
           "$TARGET-w64-$SYS-strip" -g "libFLAC-12.dll"
           "$TARGET-w64-$SYS-strip" -g "libogg-0.dll"

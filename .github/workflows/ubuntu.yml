@@ -45,7 +45,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          ../configure --with-flac --with-alsa --with-jack --disable-alsa-linking --disable-jack-linking --enable-flac-linking CPPFLAGS="-I$HOME/prefix/include" LDFLAGS="-L$HOME/prefix/lib"
+          ../configure --with-flac --with-alsa --with-jack --disable-alsa-linking --disable-jack-linking --enable-flac-linking CPPFLAGS="-I$HOME/prefix/include/" LDFLAGS="-L$HOME/prefix/lib"
           make
           strip -S schismtracker
           cd ..
