@@ -2727,8 +2727,9 @@ static char* a11y_get_column_value(char *buf)
 
 static const char* pattern_editor_a11y_get_value(char *buf)
 {
+	buf[0] = '\0';
 	if (is_in_selection(current_channel, current_row))
-		strcat(buf, " Selected ");
+		strcpy(buf, " Selected ");
 	a11y_get_column_value(&buf[strlen(buf)]);
 	if(strlen(buf)) strcat(buf, " ");
 	sprintf(&buf[strlen(buf)], "%d ", current_row);
