@@ -347,7 +347,7 @@ static void a11y_set_char_mode(int state)
 int a11y_init(void)
 {
 	if (!(status.flags & ACCESSIBILITY_MODE)) return 0;
-	int result = SRAL_Initialize(ENGINE_NONE);
+	int result = SRAL_Initialize(ENGINE_SAPI);
 	if (!result) return 0;
 	a11y_set_char_mode(0);
 	return result;
@@ -579,7 +579,7 @@ void a11y_toggle_accessibility_mode(void)
 	} else {
 		status.flags |= ACCESSIBILITY_MODE;
 		a11y_init();
-		status_text_flash("Accessibility_mode_enabled");
+		status_text_flash("Accessibility mode enabled");
 	}
 }
 

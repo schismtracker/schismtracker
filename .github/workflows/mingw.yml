@@ -27,6 +27,7 @@ jobs:
       LIBOGG_SHA256: c4d91be36fc8e54deae7575241e03f4211eb102afb3fc0775fbbc1b740016705
       UTF8PROC_VERSION: 2.9.0
       UTF8PROC_SHA256: bd215d04313b5bc42c1abedbcb0a6574667e31acee1085543a232204e36384c4
+      NVDA_CONTROLLER_VERSION: 2024.4.1
       TARGET: ${{ matrix.target }}
       SYS: ${{ matrix.sys }}
       STDLIB: ${{ matrix.stdlib }}
@@ -60,7 +61,16 @@ jobs:
         run: |
           curl -L "https://github.com/mstorsjo/llvm-mingw/releases/download/$LLVM_MINGW_VERSION/llvm-mingw-$LLVM_MINGW_VERSION-$STDLIB-ubuntu-20.04-x86_64.tar.xz" | tar xJvf - -C "$HOME"
           mv "$HOME/llvm-mingw-$LLVM_MINGW_VERSION-$STDLIB-ubuntu-20.04-x86_64" "$HOME/llvm-mingw"
-        
+
+      - name: 'Grab NVDAController'
+        if: target != 'armv7'
+        run: |
+          export CARCH=$([ $TARGET == aarch64 ] && echo arm64 || [ $TARGET == i686 ] && echo x86 || [ $TARGET == x86_64 ] && echo x64)
+          curl -L "https://www.nvaccess.org/files/nvda/releases/stable/nvda_${NVDA_CONTROLLER_VERSION}_controllerClient.zip" > controller.zip
+          unzip controller.zip -d controller
+          mv controller/$CARCH/nvdaControllerClient.dll .
+          rm -rf controller*
+
       - name: 'Download SDL2 sources'
         if: steps.cache-dependencies.outputs.cache-hit != 'true'
         run: |
