@@ -26,9 +26,9 @@ jobs:
           cd SRAL
           mkdir build
           cd build
-          cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="/usr/local"
+          cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$HOME/prefix"
           make
-          sudo make install
+          make install
           cd ../..
 
       - name: 'Checkout'
@@ -43,6 +43,7 @@ jobs:
 
       - name: 'Build package'
         run: |
+          export CPPFLAGS=-I$HOME/prefix/include LDFLAGS=-L$HOMe/prefix/lib
           mkdir -p build
           cd build
           ../configure --with-flac --with-alsa --with-jack --disable-alsa-linking --disable-jack-linking --enable-flac-linking
