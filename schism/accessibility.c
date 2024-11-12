@@ -31,6 +31,9 @@
 #include "accessibility.h"
 
 #include <stdarg.h>
+#include <stdbool.h>
+#include <SRAL.h>
+
 
 static char* message = NULL;
 static int current_line = 0;

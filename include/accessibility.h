@@ -24,9 +24,6 @@
 #ifndef SCHISM_ACCESSIBILITY_H_
 #define SCHISM_ACCESSIBILITY_H_
 
-#include <stdbool.h>
-#include "SRAL.h"
-
 #define MESSAGE_DELAY 3000
 
 enum a11y_info {
