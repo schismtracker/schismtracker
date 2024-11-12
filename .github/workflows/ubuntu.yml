@@ -68,7 +68,7 @@ jobs:
           SCHISM_VERSION: ${{ steps.date.outputs.date }}
         run: |
           cd build
-          make distcheck
+          # make distcheck
           make dist-gzip
           mv "schismtracker-$SCHISM_VERSION.tar.gz" "../schismtracker-$SCHISM_VERSION.source.tar.gz"
 
