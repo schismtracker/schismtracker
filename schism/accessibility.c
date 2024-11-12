@@ -36,6 +36,7 @@ static char* message = NULL;
 static int current_line = 0;
 static int current_char = 0;
 
+
 const char* a11y_get_widget_info(struct widget *w, enum a11y_info info, char *buf)
 {
 	size_t len = 0;
