@@ -143,7 +143,7 @@ const char* a11y_get_widget_value(struct widget *w, char *buf)
 		break;
 	case WIDGET_NUMENTRY:
 		if (w->d.numentry.reverse) {
-			unsigned char *str = str_from_num(w->width, w->d.numentry.value, buf);
+			char *str = str_from_num(w->width, w->d.numentry.value, buf);
 			while (*str == '0') str++;
 			if (*str) strcpy(buf, str);
 			break;
@@ -570,7 +570,7 @@ int a11y_cursor_report_next_char(void)
 void a11y_toggle_accessibility_mode(void)
 {
 	if (status.flags & ACCESSIBILITY_MODE) {
-		status_text_flash("Accessibility mode disabled", 0);
+		status_text_flash("Accessibility mode disabled");
 		status.flags &= ~ACCESSIBILITY_MODE;
 		a11y_uninit();
 	} else {
