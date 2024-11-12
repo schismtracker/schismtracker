@@ -154,12 +154,11 @@ jobs:
         run: |
           export PATH="$HOME/llvm-mingw/bin:$PATH"
           export PKG_CONFIG_PATH="$HOME/prefix/lib/pkgconfig"
-          export CFLAGS="-I$HOME/prefix/include" LDFLAGS="-L$HOMe/prefix/lib"
           cd schism
           autoreconf -I"$HOME/prefix/share/aclocal" -i
           mkdir build
           cd build
-          ../configure --host="$TARGET-w64-$SYS" --prefix="$HOME/prefix" --with-sdl-prefix="$HOME/prefix" --with-flac --enable-flac-linking LDFLAGS="-Wl,--major-os-version=5,--major-subsystem-version=5"
+          ../configure --host="$TARGET-w64-$SYS" --prefix="$HOME/prefix" --with-sdl-prefix="$HOME/prefix" --with-flac --enable-flac-linking CFLAGS="-I$HOME/prefix/include" LDFLAGS="-L$HOME/prefix/lib -Wl,--major-os-version=5,--major-subsystem-version=5"
           make
           "$TARGET-w64-$SYS-strip" -g schismtracker.exe
           cp schismtracker.exe ../..

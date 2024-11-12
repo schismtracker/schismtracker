@@ -43,10 +43,9 @@ jobs:
 
       - name: 'Build package'
         run: |
-          export CFLAGS="-I$HOME/prefix/include" LDFLAGS="-L$HOMe/prefix/lib"
           mkdir -p build
           cd build
-          ../configure --with-flac --with-alsa --with-jack --disable-alsa-linking --disable-jack-linking --enable-flac-linking
+          ../configure --with-flac --with-alsa --with-jack --disable-alsa-linking --disable-jack-linking --enable-flac-linking CFLAGS="-I$HOME/prefix/include" LDFLAGS="-L$HOME/prefix/lib"
           make
           strip -S schismtracker
           cd ..
