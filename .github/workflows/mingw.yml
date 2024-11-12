@@ -167,8 +167,8 @@ jobs:
           cp "$HOME/prefix/bin/libFLAC-12.dll" .
           cp "$HOME/prefix/bin/libogg-0.dll" .
           cp "$HOME/prefix/bin/libSRAL.dll" .
-          ls $HOMe/llvm-mingw/$TARGET-w64-$SYS/bin
-          cp  "$HOME/llvm-mingw/$TARGET-w64-$SYS/bin/*.dll" .
+          ls $HOME/llvm-mingw/$TARGET-w64-$SYS/bin
+          cp "$HOME/llvm-mingw/$TARGET-w64-$SYS/bin/*.dll" .
           "$TARGET-w64-$SYS-strip" -g "SDL2.dll"
           "$TARGET-w64-$SYS-strip" -g "libFLAC-12.dll"
           "$TARGET-w64-$SYS-strip" -g "libogg-0.dll"
