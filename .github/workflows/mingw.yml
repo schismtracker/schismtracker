@@ -154,7 +154,7 @@ jobs:
         run: |
           export PATH="$HOME/llvm-mingw/bin:$PATH"
           export PKG_CONFIG_PATH="$HOME/prefix/lib/pkgconfig"
-          export CPPFLAGS=-I$HOME/prefix/include LDFLAGS=-L$HOMe/prefix/lib
+          export CFLAGS="-I$HOME/prefix/include" LDFLAGS="-L$HOMe/prefix/lib"
           cd schism
           autoreconf -I"$HOME/prefix/share/aclocal" -i
           mkdir build
