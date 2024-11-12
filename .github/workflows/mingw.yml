@@ -182,7 +182,7 @@ jobs:
           name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.sys }}-${{ matrix.target }}
           path: |
             schismtracker.exe
-            '*.dll'
+            *.dll
             COPYING
             COPYING.Xiph
             README.md
