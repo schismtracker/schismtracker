@@ -24,9 +24,8 @@
 /* This is just a collection of some useful functions. None of these use any
 extraneous libraries (i.e. GLib). */
 
-
 #include "headers.h"
-
+#include "backend/object.h"
 #include "backend/timer.h"
 #include "util.h"
 
@@ -188,4 +187,46 @@ void msleep(uint64_t msec)
 		return;
 
 	be_delay(msec);
+}
+
+/* ---------------------------------------------------- */
+
+#ifdef SCHISM_WIN32
+# define LIBTOOL_FMT "lib%s-%d.dll"
+#elif defined(SCHISM_MACOSX)
+# define LIBTOOL_FMT "lib%s.%d.dylib"
+#else
+# define LIBTOOL_FMT "lib%s.so.%d"
+#endif
+
+static void *library_load_revision(const char *name, int revision)
+{
+	char *buf;
+
+	if (asprintf(&buf, LIBTOOL_FMT, name, revision) < 0)
+		return NULL;
+
+	void *res = be_object_load(buf);
+
+	free(buf);
+
+	return res;
+}
+
+#undef LIBTOOL_FMT
+
+/* loads a library using the current and age versions
+ * as documented by GNU libtool. MAKE SURE the objects
+ * you are importing are actually there in the library!
+ * (i.e. check return values) */
+void *library_load(const char *name, int current, int age)
+{
+	int i;
+	void *res = NULL;
+
+	for (i = 0; i <= age; i++)
+		if ((res = library_load_revision(name, current - i)))
+			break;
+
+	return res;
 }

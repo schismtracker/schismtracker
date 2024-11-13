@@ -163,4 +163,7 @@ void rt_usleep(uint64_t usec);
 // system provided option available
 void msleep(uint64_t msec);
 
+// libtool library loading functionality
+void *library_load(const char *name, int current, int age);
+
 #endif /* SCHISM_UTIL_H_ */

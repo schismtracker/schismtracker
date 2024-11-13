@@ -86,7 +86,8 @@ static int jack_dlinit(void) {
 	if (jack_dltrick_handle_)
 		return 0;
 
-	jack_dltrick_handle_ = be_object_load("libjack.so.0");
+	// libjack.so.0
+	jack_dltrick_handle_ = library_load("jack", 0, 0);
 	if (!jack_dltrick_handle_)
 		return -1;
 
@@ -97,18 +98,21 @@ static int jack_dlinit(void) {
 	return retval;
 }
 
-static int load_jack_sym(const char *fn, void **addr) {
-	*addr = be_function_load(jack_dltrick_handle_, fn);
-	if (!*addr)
+// FIXME this is repeated in many places
+SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
+
+static int load_jack_sym(const char *fn, void *addr) {
+	void *func = be_function_load(jack_dltrick_handle_, fn);
+	if (!func)
 		return 0;
+
+	memcpy(addr, &func, sizeof(void *));
 
 	return 1;
 }
 
-/* cast funcs to char* first, to please GCC's strict aliasing rules. */
 #define SCHISM_JACK_SYM(x) \
-	if (!load_jack_sym(#x, (void **)(char *)&JACK_##x)) \
-	return -1
+	if (!load_jack_sym(#x, &JACK_##x)) return -1
 
 #else
 
