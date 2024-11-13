@@ -1359,54 +1359,6 @@ static void _cleanup_audio_device(void)
 	}
 }
 
-static int _audio_open_driver(const char *driver)
-{
-	const char *n;
-
-	if (audio_was_init) {
-		_cleanup_audio_device();
-		free(driver_name);
-		driver_name = NULL;
-		be_audio_quit();
-		audio_was_init = 0;
-	}
-
-	const int cnt = be_audio_driver_count();
-
-	if (driver && *driver) {
-		/* compatibility! */
-		n = !strcmp(driver, "oss") ? "dsp"
-			: (!strcmp(driver, "nosound") || !strcmp(driver, "none")) ? "dummy"
-			: driver;
-
-		if (!be_audio_init(n))
-			goto audio_was_init;
-	}
-
-#if defined(SCHISM_SDL2) || defined(SCHISM_SDL12)
-	/* we ought to allow this envvar to work under SDL */
-	n = getenv("SDL_AUDIODRIVER");
-	if (n && *n && !be_audio_init(n))
-		goto audio_was_init;
-#endif
-
-	for (int i = 0; i < cnt; i++) {
-		n = be_audio_driver_name(i);
-
-		if (!be_audio_init(n))
-			goto audio_was_init;
-	}
-
-	/* really? give up */
-	driver_name = NULL;
-	return 0;
-
-audio_was_init:
-	driver_name = str_dup(n);
-	audio_was_init = 1;
-	return 1;
-}
-
 static int _audio_open_device(const char *device, int verbose)
 {
 	_cleanup_audio_device();
@@ -1488,6 +1440,19 @@ success:
 	return 1;
 }
 
+static int _audio_try_driver(const char *driver, const char *device, int verbose)
+{
+	if (be_audio_init(driver))
+		return 0;
+
+	if (!_audio_open_device(device, verbose)) {
+		be_audio_quit();
+		return 0;
+	}
+
+	return 1;
+}
+
 // Configure a device. (called at startup)
 static int _audio_init_head(const char *driver, const char *device, int verbose)
 {
@@ -1498,27 +1463,55 @@ static int _audio_init_head(const char *driver, const char *device, int verbose)
 	if (!device || !*device)
 		device = cfg_audio_device;
 
-	if (!_audio_open_driver(driver)) {
-		fputs("Failed to open audio driver!\n", stderr);
-		goto fail;
+	const char *n;
+
+	if (audio_was_init) {
+		_cleanup_audio_device();
+		free(driver_name);
+		driver_name = NULL;
+		be_audio_quit();
+		audio_was_init = 0;
 	}
 
-	refresh_audio_device_list();
+	const int cnt = be_audio_driver_count();
 
-	if (!_audio_open_device(device, verbose)) {
-		fputs("Failed to open audio device!\n", stderr);
-		goto fail;
+	if (driver && *driver) {
+		/* compatibility! */
+		n = !strcmp(driver, "oss") ? "dsp"
+			: (!strcmp(driver, "nosound") || !strcmp(driver, "none")) ? "dummy"
+			: driver;
+
+		if (_audio_try_driver(n, device, verbose))
+			goto audio_was_init;
 	}
 
-	return 1;
+#if defined(SCHISM_SDL2) || defined(SCHISM_SDL12)
+	/* we ought to allow this envvar to work under SDL */
+	n = getenv("SDL_AUDIODRIVER");
+	if (n && *n && _audio_try_driver(n, device, verbose))
+		goto audio_was_init;
+#endif
 
-fail:
+	for (int i = 0; i < cnt; i++) {
+		n = be_audio_driver_name(i);
+
+		if (_audio_try_driver(n, device, verbose))
+			goto audio_was_init;
+	}
+
 	/* whoops! */
 	fputs("Couldn't initialize audio!\n", stderr);
 	//const char* err = SDL_GetError();
 	//if (err) fprintf(stderr, "%s\n", err);
 	schism_exit(1);
 	return 0;
+
+audio_was_init:
+	driver_name = str_dup(n);
+	audio_was_init = 1;
+	refresh_audio_device_list();
+
+	return 1;
 }
 
 // Set up audio_buffer, reset the sample count, and kick off the mixer

@@ -391,7 +391,7 @@ static void event_loop(void)
 	int wheel_y;
 	int fix_numlock_key;
 	int screensaver;
-	int button;
+	int button = -1;
 	struct key_event kk;
 
 	fix_numlock_key = status.fix_numlock_setting;

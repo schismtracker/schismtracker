@@ -74,7 +74,7 @@ int sdl12_audio_driver_count()
 const char *sdl12_audio_driver_name(int i)
 {
 	if (i < 0 || i >= ARRAY_SIZE(drivers))
-		return 0;
+		return NULL;
 
 	return drivers[i];
 }
@@ -103,8 +103,14 @@ int sdl12_audio_init(const char *name)
 
 	int ret = SDL_InitSubSystem(SDL_INIT_AUDIO);
 
-	/* clean up our dirty work, or empty the var */
-	setenv("SDL_AUDIODRIVER", orig_drv ? orig_drv : "", 1);
+	/* clean up our dirty work, or unset the var */
+	if (name) {
+		if (orig_drv) {
+			setenv("SDL_AUDIODRIVER", orig_drv, 1);
+		} else {
+			unsetenv("SDL_AUDIODRIVER");
+		}
+	}
 
 	/* forward any error, if any */
 	return ret;
@@ -117,9 +123,7 @@ void sdl12_audio_quit(void)
 
 /* -------------------------------------------------------- */
 
-// This is here to prevent having to put SDLCALL into
-// the original audio callback
-static void SDLCALL sdl12_dummy_callback(void *userdata, uint8_t *stream, int len)
+static void sdl12_dummy_callback(void *userdata, uint8_t *stream, int len)
 {
 	// call our own callback
 	schism_audio_device_t *dev = userdata;
