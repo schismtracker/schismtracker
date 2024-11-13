@@ -534,7 +534,7 @@ enum mouse_state {
 };
 
 enum mouse_button {
-	MOUSE_BUTTON_LEFT,
+	MOUSE_BUTTON_LEFT = 0,
 	MOUSE_BUTTON_MIDDLE,
 	MOUSE_BUTTON_RIGHT,
 };

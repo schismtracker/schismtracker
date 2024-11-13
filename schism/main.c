@@ -391,6 +391,7 @@ static void event_loop(void)
 	int wheel_y;
 	int fix_numlock_key;
 	int screensaver;
+	int button;
 	struct key_event kk;
 
 	fix_numlock_key = status.fix_numlock_setting;
@@ -545,8 +546,6 @@ static void event_loop(void)
 			case SCHISM_MOUSEWHEEL:
 			case SCHISM_MOUSEBUTTONDOWN:
 			case SCHISM_MOUSEBUTTONUP: {
-				int button;
-
 				if (kk.state == KEY_PRESS) {
 					modkey = be_event_mod_state();
 					os_get_modkey(&modkey);
@@ -563,12 +562,9 @@ static void event_loop(void)
 					kk.mouse = (se.wheel.y > 0) ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN;
 					break;
 				case SCHISM_MOUSEMOTION:
-					kk.state = -1;
 					video_translate(se.motion.x, se.motion.y, &kk.fx, &kk.fy);
-					button = kk.mouse_button;
 					break;
 				case SCHISM_MOUSEBUTTONDOWN:
-				case SCHISM_MOUSEBUTTONUP:
 					video_translate(se.button.x, se.button.y, &kk.fx, &kk.fy);
 					// we also have to update the current button
 					if ((modkey & SCHISM_KEYMOD_CTRL)
@@ -580,6 +576,9 @@ static void event_loop(void)
 					} else {
 						button = MOUSE_BUTTON_LEFT;
 					}
+					break;
+				case SCHISM_MOUSEBUTTONUP:
+					video_translate(se.button.x, se.button.y, &kk.fx, &kk.fy);
 					break;
 				}
 
@@ -624,6 +623,9 @@ static void event_loop(void)
 						}
 						lx = kk.x;
 						ly = kk.y;
+
+						// dirty hack
+						button = -1;
 					} else {
 						kk.mouse = MOUSE_CLICK;
 					}
@@ -647,6 +649,8 @@ static void event_loop(void)
 						break;
 					}
 					handle_key(&kk);
+					break;
+				default:
 					break;
 				};
 				break;
