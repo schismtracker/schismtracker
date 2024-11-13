@@ -24,6 +24,12 @@
 #include "headers.h"
 #include "sdlmain.h"
 
+#ifdef win32
+struct tm *localtime_r(const time_t *timep, struct tm *result)
+{
+    return localtime_s(_Tm, _Time) ? NULL : _Tm;
+}
+#else
 static SDL_mutex *localtime_r_mutex = NULL;
 
 static void localtime_r_atexit(void)
@@ -53,3 +59,4 @@ struct tm *localtime_r(const time_t *timep, struct tm *result)
 
 	return result;
 }
+#endif
