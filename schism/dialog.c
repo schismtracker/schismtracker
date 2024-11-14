@@ -82,7 +82,7 @@ void dialog_draw(void)
 			a11y_get_text_from_rect(dialogs[d].x + 1, dialogs[d].y + 1, dialogs[d].w - 2, dialogs[d].h - 6, buf);
 			// Ugly hack here. But I can't think of a better solution for now.
 			for (char *c = buf; *c; c++)
-				if (*c < 32 || *c > 127) *c = ' ';
+				if (!isprint(*c)) *c = ' ';
 			a11y_output(buf, 1);
 		}
 
@@ -128,7 +128,6 @@ void dialog_destroy(void)
 		selected_widget = &(ACTIVE_PAGE.selected_widget);
 		total_widgets = &(ACTIVE_PAGE.total_widgets);
 		status.dialog_type = DIALOG_NONE;
-		a11y_text_reported = 0;
 	}
 
 	/* it's up to the calling function to redraw the page */
@@ -395,6 +394,7 @@ struct dialog *dialog_create(int type, const char *text, void (*action_yes) (voi
 
 	status.dialog_type = type;
 	if (text) a11y_output(text, 1);
+	a11y_text_reported = 0;
 	status.flags |= NEED_UPDATE;
 	return &dialogs[d];
 }
@@ -436,6 +436,7 @@ struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *d
 	selected_widget = &(d->selected_widget);
 	total_widgets = &(d->total_widgets);
 
+	a11y_text_reported = 0;
 	status.flags |= NEED_UPDATE;
 
 	return d;

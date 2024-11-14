@@ -220,12 +220,10 @@ static inline uint32_t* replace_nulls_and_terminate(uint32_t *str, size_t len)
 	return str;
 }
 
-#define IS_PRINTABLE_ASCII(C) ((C >= 32 && C <= 127) ? 1 : 0)
-
 static inline int get_label_length(uint32_t *label, size_t len)
 {
 	for (int i = 0; i < len; i++) {
-		if (!IS_PRINTABLE_ASCII(label[i]))
+		if (!isprint(label[i]))
 			return i;
 	}
 	return len;
@@ -247,7 +245,7 @@ const char* a11y_try_find_widget_label(struct widget *w, char* buf)
 		for (i = 1; i <= 2; i++) {
 			for (j = 0; j < 6 && j < 80 - w->x; j++) {
 				label = acbuf_get_ptr_to(w->x + j, w->y - i);
-				if (label && IS_PRINTABLE_ASCII(*label)) {
+				if (label && isprint(*label)) {
 					found = 1;
 					break;
 				}
@@ -266,12 +264,12 @@ const char* a11y_try_find_widget_label(struct widget *w, char* buf)
 	uint32_t *start = acbuf_get_ptr_to(0, w->y);
 	uint32_t *wx = &start[w->x];
 	label = wx - 2;
-	if ((label <= start || !IS_PRINTABLE_ASCII(*label)) && w->type != WIDGET_TOGGLEBUTTON) {
+	if ((label <= start || !isprint(*label)) && w->type != WIDGET_TOGGLEBUTTON) {
 		alternative_method = 1;
 		goto alternative;
 	}
 	for ( ; label >= start; label--) {
-		if (label && IS_PRINTABLE_ASCII(*label))
+		if (label && isprint(*label))
 			continue;
 		label++;
 	found = 1;
@@ -347,7 +345,7 @@ static void a11y_set_char_mode(int state)
 int a11y_init(void)
 {
 	if (!(status.flags & ACCESSIBILITY_MODE)) return 0;
-	int result = SRAL_Initialize(ENGINE_SAPI);
+	int result = SRAL_Initialize(ENGINE_NONE);
 	if (!result) return 0;
 	a11y_set_char_mode(0);
 	return result;
