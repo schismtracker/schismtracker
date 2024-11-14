@@ -487,12 +487,12 @@ int widget_handle_key(struct key_event * k)
 			if (widget->d.togglebutton.group) {
 				/* this also runs the changed callback and redraws the button(s) */
 				widget_togglebutton_set(widgets, *selected_widget, 1);
+				a11y_output(widget->d.togglebutton.state ? "On" : "Off", 0);
 				return 1;
 			}
 			/* else... */
 			widget->d.togglebutton.state = !widget->d.togglebutton.state;
-			const char *state = a11y_get_widget_state(widget);
-			a11y_output(state, 1);
+			a11y_output(widget->d.togglebutton.state ? "On" : "Off", 0);
 			/* and fall through */
 		case WIDGET_BUTTON:
 			/* maybe buttons should ignore the changed callback, and use activate instead...
