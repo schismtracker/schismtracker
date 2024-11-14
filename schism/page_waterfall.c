@@ -28,6 +28,7 @@
 #include "song.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "accessibility.h"
 
 #include <math.h>
 
@@ -395,6 +396,7 @@ static void draw_screen(void)
 static int waterfall_handle_key(struct key_event *k)
 {
 	int n, v, order, ii;
+	int prev_noisefloor = noisefloor;
 
 	if (NO_MODIFIER(k->mod)) {
 		if (k->midi_note > -1) {
@@ -431,6 +433,8 @@ static int waterfall_handle_key(struct key_event *k)
 				return 1;
 
 			song_toggle_stereo();
+			a11y_outputf("Stereo %s", 0, song_is_stereo()
+					  ? "Enabled" : "Disabled");
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
@@ -440,6 +444,8 @@ static int waterfall_handle_key(struct key_event *k)
 			if (k->state == KEY_RELEASE)
 				return 1;
 			mono = !mono;
+			a11y_outputf("Mono mode %s", 0, mono
+					  ? "Enabled" : "Disabled");
 			return 1;
 		}
 		return 0;
@@ -483,6 +489,7 @@ static int waterfall_handle_key(struct key_event *k)
 				return 1;
 
 			song_flip_stereo();
+			a11y_output("Left/right outputs reversed", 0);
 			return 1;
 		}
 		return 0;
@@ -493,6 +500,7 @@ static int waterfall_handle_key(struct key_event *k)
 			return 1;
 		if (song_get_mode() == MODE_PLAYING) {
 			song_set_current_order(song_get_current_order() + 1);
+			a11y_report_order();
 		}
 		return 1;
 	case SDLK_MINUS:
@@ -502,6 +510,7 @@ static int waterfall_handle_key(struct key_event *k)
 			return 1;
 		if (song_get_mode() == MODE_PLAYING) {
 			song_set_current_order(song_get_current_order() - 1);
+			a11y_report_order();
 		}
 		return 1;
 	case SDLK_SEMICOLON:
@@ -513,6 +522,7 @@ static int waterfall_handle_key(struct key_event *k)
 		} else {
 			sample_set(sample_get_current() - 1);
 		}
+		a11y_report_instrument();
 		return 1;
 	case SDLK_QUOTE:
 	case SDLK_QUOTEDBL:
@@ -523,6 +533,7 @@ static int waterfall_handle_key(struct key_event *k)
 		} else {
 			sample_set(sample_get_current() + 1);
 		}
+		a11y_report_instrument();
 		return 1;
 	case SDLK_COMMA:
 	case SDLK_LESS:
@@ -541,6 +552,8 @@ static int waterfall_handle_key(struct key_event *k)
 	};
 
 	noisefloor = CLAMP(noisefloor, 36, 96);
+	if (noisefloor != prev_noisefloor)
+	   a11y_outputf("Noisefloor %u", 0, noisefloor);
 	return 1;
 }
 

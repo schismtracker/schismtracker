@@ -1116,6 +1116,7 @@ static int info_page_handle_key(struct key_event * k)
 			return 1;
 		if (song_get_mode() == MODE_PLAYING) {
 			song_set_current_order(song_get_current_order() + 1);
+			a11y_report_order();
 		}
 		return 1;
 	case SDLK_MINUS:
@@ -1123,7 +1124,8 @@ static int info_page_handle_key(struct key_event * k)
 			return 1;
 		if (song_get_mode() == MODE_PLAYING) {
 			song_set_current_order(song_get_current_order() - 1);
-		}
+			a11y_report_order();
+}
 		return 1;
 	case SDLK_q:
 		if (k->state == KEY_RELEASE)

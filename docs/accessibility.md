@@ -58,7 +58,7 @@ They are all optional and can be disabled in the configuration file by setting t
 Additionally, some standard hidden options are enabled by default.
 These currently include keyjazz_noteoff and keyjazz_capslock.
 
-Oh, these things make Schism Tracker behave much more like OpenMPT.
+Oh, these things make Schism Tracker behave much more like OpenMPT when it comes to note preview.
 
 ## Bugs and limitations
 
@@ -69,4 +69,6 @@ It's meant only to be an aid for reading otherwise unreachable info, not an adva
 * The accessibility of the info page is very basic. Currently only the channel numbers are reported when navigating with arrow keys.
 As most of the information on this page is very dynamic, I don't know if there's any point in presenting more details to accessibility users in this case.
 * Currently, accessibility support cannot be disabled at compile-time. This makes it impossible to build this fork for platforms like Nintendo Wii. I certainly need to fix this up.
-* Some accessibility announcements can still be missing in a few places.
+* Font editor is completely inaccessible and fixing it is not top priority.
+Its Its utility for screen reader users is quite limited, and most importantly, itt uses its own very weird focus handler instead of the standard one.
+* Some accessibility announcements can still be missing in a few places. They are gradually being added.
