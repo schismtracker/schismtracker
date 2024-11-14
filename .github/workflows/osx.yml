@@ -40,6 +40,13 @@ jobs:
       - name: 'Checkout'
         uses: actions/checkout@v4
 
+      - name: 'Checkout SDL 1.2'
+        id: checkout-sdl12
+        uses: actions/checkout@v4
+        with:
+          path: 'SDL-1.2'
+          repository: 'libsdl-org/SDL-1.2'
+
       - name: 'Cache x86_64 dependencies'
         id: cache-x86_64-dependencies
         uses: actions/cache@v4
@@ -73,7 +80,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: '/Users/runner/ppcprefix'
-          key: mac-powerpc-dependencies-SDL_${{ env.SDL12_VERSION }}-FLAC_${{ env.FLAC_VERSION }}-LIBOGG_${{ env.LIBOGG_VERSION }}-UTF8PROC_${{ env.UTF8PROC_VERSION }}
+          key: mac-powerpc-dependencies-SDL_${{ steps.checkout-sdl12.outputs.commit }}-FLAC_${{ env.FLAC_VERSION }}-LIBOGG_${{ env.LIBOGG_VERSION }}-UTF8PROC_${{ env.UTF8PROC_VERSION }}
 
       - name: 'Cache powerpc files'
         id: cache-powerpc-files
