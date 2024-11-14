@@ -148,6 +148,7 @@ jobs:
         if: steps.cache-powerpc-dependencies.outputs.cache-hit != 'true'
         run: |
           pushd SDL-1.2
+          autoreconf -i
           export PATH="$PATH:$HOME/ppc/usr/bin"
           mkdir build_powerpc
           cd build_powerpc
