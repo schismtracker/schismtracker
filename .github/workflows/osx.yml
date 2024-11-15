@@ -126,7 +126,9 @@ jobs:
           tar -xvf "OSX108INT.tar.gz" -C "$HOME/ppc" &
           wait
           curl -L "https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.3.9/MacOSX10.3.9.tar.bz2" | tar -xvf - -C "$HOME/ppc/SDKs"
-          # curl -L "https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.5/MacOSX10.5.tar.bz2" | tar -xvf - -C "$HOME/ppc/SDKs"
+          curl -L "https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.5/MacOSX10.5.tar.bz2" | tar -xvf - -C "$HOME/ppc/SDKs"
+          # hax to make panther SDK work (yes, 1 -> 1.0)
+          cp -f "$HOME/ppc/SDKs/MacOSX10.5.sdk/usr/lib/libgcc_s.1.dylib" "$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib/libgcc_s.1.0.dylib"
           popd
 
       - name: 'Install PowerPC cross compile binaries into Xcode'
@@ -159,7 +161,7 @@ jobs:
           export PATH="$PATH:$HOME/ppc/usr/bin"
           mkdir build_powerpc
           cd build_powerpc
-          CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CFLAGS="-O2" CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.3.9.sdk -mmacosx-version-min=10.3" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.3.9.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.3.9.sdk -lSystem.B" ../configure --disable-static --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix"
+          CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CFLAGS="-O2" CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.3.9.sdk -mmacosx-version-min=10.3" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.3.9.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.3.9.sdk -lgcc_s.1" ../configure --disable-static --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix"
           make
           make install
           popd
@@ -248,7 +250,7 @@ jobs:
           export PATH="$PATH:$HOME/ppc/usr/bin"
           mkdir build_powerpc
           cd build_powerpc
-          CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CFLAGS="-O2" CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.3.9.sdk -mmacosx-version-min=10.3" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.3.9.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.3.9.sdk -lSystem.B" ../configure --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --disable-cpplibs --disable-programs --disable-examples
+          CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CFLAGS="-O2" CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.3.9.sdk -mmacosx-version-min=10.3" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.3.9.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.3.9.sdk" ../configure --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --disable-cpplibs --disable-programs --disable-examples
           make
           make install
           popd
@@ -350,6 +352,9 @@ jobs:
           install_name_tool -change "$HOME/x86_64prefix/lib/libogg.0.dylib" @executable_path/../Resources/libogg.0.dylib "$HOME/x86_64prefix/lib/libFLAC.12.dylib"
           install_name_tool -change "$HOME/arm64prefix/lib/libogg.0.dylib" @executable_path/../Resources/libogg.0.dylib "$HOME/arm64prefix/lib/libFLAC.12.dylib"
 
+          # powerpc specific crap
+          "$HOME/ppc/usr/bin/install_name_tool" -change "$HOME/ppc/SDKs/MacOSX10.5.sdk/usr/lib/libgcc_s.1.dylib" @executable_path/../Resources/libgcc_s.1.dylib build_powerpc/schismtracker
+
           lipo -create -o schismtracker build_powerpc/schismtracker build_x86_64/schismtracker build_arm64/schismtracker
           cd sys/macosx/Schism_Tracker.app/Contents/
           sed -i .bak "s;<string>CFBundle.*Version.*</string>;<string>$SCHISM_VERSION</string>;" Info.plist
@@ -368,7 +373,9 @@ jobs:
           lipo -create -o "Resources/libSDL2-2.0.0.dylib" "$HOME/x86_64prefix/lib/libSDL2-2.0.0.dylib" "$HOME/arm64prefix/lib/libSDL2-2.0.0.dylib"
 
           cp "$HOME/ppcprefix/lib/libSDL-1.2.0.dylib" "Resources/libSDL-1.2.0.dylib"
+          "$HOME/ppc/usr/bin/install_name_tool" -change "$HOME/ppc/SDKs/MacOSX10.5.sdk/usr/lib/libgcc_s.1.dylib" @executable_path/../Resources/libgcc_s.1.dylib "Resources/libSDL-1.2.0.dylib"
 
+          cp "$HOME/ppc/SDKs/MacOSX10.5.sdk/usr/lib/libgcc_s.1.dylib" "Resources/libgcc_s.1.dylib"
           cd ../../../..
           cp -r sys/macosx/Schism_Tracker.app Schism\ Tracker.app
           cp docs/configuration.md .
