@@ -983,6 +983,7 @@ static int note_trans_handle_key(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 0;
 			sample_set(sample_get_current() - 1);
+			a11y_outputf(sample_get_current() ? "Sample %02u" : "No sample", 0, sample_get_current());
 			return 1;
 		case SDLK_GREATER:
 		case SDLK_QUOTE:
@@ -990,6 +991,7 @@ static int note_trans_handle_key(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 0;
 			sample_set(sample_get_current() + 1);
+			a11y_outputf(sample_get_current() ? "Sample %02u" : "No sample", 0, sample_get_current());
 			return 1;
 
 		default:
@@ -1069,10 +1071,12 @@ static int note_trans_handle_key(struct key_event * k)
 			get_note_string(ins->note_map[note_trans_sel_line], buf);
 			if (prev_pos > 1)
 				a11y_outputf("%s Note", 0, buf);
-			else if (prev_pos == 1) {
+			else if (note_trans_cursor_pos == 1 && prev_pos == 0)
+				a11y_output_char(buf[2], 0);
+			else {
 				buf[2] = '\0';
 				a11y_output(buf, 0);
-			} else a11y_output_char(buf[2], 0);
+			}
 	} else if (note_trans_cursor_pos >= 2) {
 		if (ins->sample_map[note_trans_sel_line]) {
 			str_from_num99(ins->sample_map[note_trans_sel_line], buf);
@@ -1080,8 +1084,10 @@ static int note_trans_handle_key(struct key_event * k)
 		}
 		if (prev_pos == 1)
 			a11y_outputf("%sSample", 1, buf);
-		else if (*buf)
+		else if (*buf && (k->sym == SDLK_LEFT || k->sym == SDLK_RIGHT))
 			a11y_output_char(buf[note_trans_cursor_pos - 2], 0);
+		else
+			a11y_output(buf, 0);
 	}
 
 	/* this causes unneeded redraws in some cases... oh well :P */
