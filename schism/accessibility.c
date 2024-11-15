@@ -332,7 +332,7 @@ static void a11y_set_char_mode(int state)
 	int engine = SRAL_GetCurrentEngine();
 	switch (engine) {
 	case ENGINE_NVDA:
-		SRAL_SetEngineParameter(engine, SYMBOL_LEVEL, state ? 300 : 100); // All or Some
+		SRAL_SetEngineParameter(engine, SYMBOL_LEVEL, state ? 1000 : 100); // Character or Some
 		break;
 	case ENGINE_SPEECH_DISPATCHER:
 		SRAL_SetEngineParameter(engine, SYMBOL_LEVEL, state ? 10 : 2); // All or Some
@@ -361,11 +361,10 @@ int a11y_output(const char* text, int interrupt)
 static int a11y_char_mode_output(const char *text, int interrupt)
 {
 	int result = 0;
-	a11y_set_char_mode(1);
 	if (isupper(*text))
-		result = a11y_outputf("Cap %s", interrupt, text);
-	else
-		result = a11y_output(*text ? text : "Blank", interrupt);
+		return a11y_outputf("Cap %s", interrupt, text);
+	a11y_set_char_mode(1);
+	result = a11y_output(*text ? text : "Blank", interrupt);
 	a11y_set_char_mode(0);
 	return result;
 }
