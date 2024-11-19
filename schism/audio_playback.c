@@ -360,6 +360,18 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 			// is defined for the note in the instrument's note map.
 			s = csf_translate_keyboard(current_song, i, note, ins_mode ? NULL : (current_song->samples + ins));
 		}
+
+		// Remove selected channel from the mix list.
+		// This fixes random cuts at the start of notes
+		// when playing them quickly enough.
+		for (unsigned int nchan = 0; nchan < current_song->num_voices; nchan++) {
+			if (current_song->voice_mix[nchan] != chan_internal)
+				continue;
+			for (int moved = nchan + 1; moved < current_song->num_voices; moved++) {
+				current_song->voice_mix[moved - 1] = current_song->voice_mix[moved];
+			}
+			current_song->num_voices--;
+		}
 	}
 
 	c->row_note = note;
