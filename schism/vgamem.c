@@ -93,8 +93,6 @@ static struct vgamem_char vgamem_read[4000] = {0};
 typedef uint32_t acbuf_line[80];
 static acbuf_line acbuf[50] = { 0 };
 
-static int acbuf_filter_boxes = 0;
-
 uint32_t* acbuf_get_ptr_to(int x, int y)
 {
 	assert(x >= 0 && y >= 0 && x < 80 && y < 50);
@@ -468,15 +466,10 @@ void draw_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 	vgamem[x + (y*80)] = ch;
 
 #ifdef USE_ACCESSIBILITY
-	if (acbuf_filter_boxes) return;
-	char text[2] = { c, '\0' };
-	charset_decode_t decoder = {
-		.in = text,
-		.offset = 0,
-		.size = SIZE_MAX,
-	};
-	for (int i = 0; decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_CP437) && decoder.state != DECODER_STATE_DONE; i++)
-		acbuf[y][x + i] = decoder.codepoint;
+	if (isprint(c))
+		acbuf[y][x] = c;
+	else
+		acbuf[y][x] = 0;
 #endif
 }
 
@@ -739,10 +732,6 @@ void draw_box(int xs, int ys, int xe, int ye, int flags)
 	int tl = colors[flags & BOX_SHADE_MASK][0];
 	int br = colors[flags & BOX_SHADE_MASK][1];
 
-#ifdef USE_ACCESSIBILITY
-	acbuf_filter_boxes = 1;
-#endif
-
 	switch (flags & (BOX_TYPE_MASK | BOX_THICKNESS_MASK)) {
 	case BOX_THIN | BOX_INNER:
 		draw_thin_inner_box(xs, ys, xe, ye, tl, br);
@@ -761,10 +750,6 @@ void draw_box(int xs, int ys, int xe, int ye, int flags)
 		draw_thin_outer_cornered_box(xs, ys, xe, ye, flags & BOX_SHADE_MASK);
 		break;
 	}
-
-#ifdef USE_ACCESSIBILITY
-	acbuf_filter_boxes = 0;
-#endif
 }
 
 /* ----------------------------------------------------------------- */

@@ -413,6 +413,8 @@ static void file_list_draw(void)
 		draw_char(168, 31, pos++, 2, 0);
 }
 
+static const char* file_list_a11y_get_value(char *buf);
+
 /* --------------------------------------------------------------------------------------------------------- */
 /* Nasty mess to load a sample and prompt for stereo convert / create host instrument as necessary. */
 
@@ -587,6 +589,9 @@ static void handle_enter_key(void)
 	if ((file->type & (TYPE_BROWSABLE_MASK|TYPE_INST_MASK))
 	&& !(file->type & TYPE_SAMPLE_MASK)) {
 		change_dir(file->path);
+		char buf[256];
+		file_list_a11y_get_value(buf);
+		a11y_output(buf, 0);
 		status.flags |= NEED_UPDATE;
 	} else if (_library_mode) {
 		return;

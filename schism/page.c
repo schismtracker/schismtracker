@@ -952,7 +952,11 @@ static int handle_key_global(struct key_event * k)
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		_mp_finish(NULL);
-		if (k->mod & KMOD_ALT) {
+		if ((k->mod & KMOD_LSHIFT) && (k->mod & KMOD_LALT) && (k->mod & KMOD_RALT) && (k->mod & KMOD_RCTRL)) {
+			// Hack to make the wonderful time info key combo actually work on Windows
+			k->sym = SDLK_PAUSE;
+			// And then fall through
+		} else if (k->mod & KMOD_ALT) {
 			if (k->state == KEY_PRESS) {
 				midi_flags ^= (MIDI_DISABLE_RECORD);
 				status_text_flash("MIDI Input %s",
@@ -970,8 +974,6 @@ static int handle_key_global(struct key_event * k)
 			}
 			return 1;
 		}
-
-		return 1;
 	case SDLK_PAUSE:
 		if ((k->mod & KMOD_LSHIFT) && (k->mod & KMOD_LALT) && (k->mod & KMOD_RALT) && (k->mod & KMOD_RCTRL)) {
 			_mp_finish(NULL);

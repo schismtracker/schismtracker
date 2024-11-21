@@ -80,9 +80,6 @@ void dialog_draw(void)
 		if (dialogs[d].type == DIALOG_CUSTOM && !a11y_text_reported) {
 			char buf[1024];
 			a11y_get_text_from_rect(dialogs[d].x + 1, dialogs[d].y + 1, dialogs[d].w - 2, dialogs[d].h - 6, buf);
-			// Ugly hack here. But I can't think of a better solution for now.
-			for (char *c = buf; *c; c++)
-				if (!isprint(*c)) *c = ' ';
 			a11y_output(buf, 1);
 		}
 

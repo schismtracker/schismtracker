@@ -28,6 +28,7 @@
 #include "widget.h"
 #include "vgamem.h"
 #include "song.h"
+#include "accessibility.h"
 
 #include "sdlmain.h"
 
@@ -42,6 +43,9 @@ static int display_session = 0;
 
 // list
 static int top_line = 0;
+
+static int current_line = 0;
+static int a11y_text_reported = 0;
 
 /* --------------------------------------------------------------------- */
 
@@ -61,6 +65,8 @@ static int timeinfo_handle_key(struct key_event * k)
 
 		if ((k->mod & KMOD_RALT) && (k->mod & KMOD_RSHIFT)) {
 			display_session = !display_session;
+			a11y_outputf("Display session %s", 0, display_session ? "on" : "off");
+			a11y_text_reported = 0;
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
@@ -71,6 +77,8 @@ static int timeinfo_handle_key(struct key_event * k)
 
 		if (!(status.flags & CLASSIC_MODE)) {
 			display_session = !display_session;
+			a11y_outputf("Display session %s", 0, display_session ? "on" : "off");
+			a11y_text_reported = 0;
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
@@ -126,6 +134,7 @@ static int timeinfo_handle_key(struct key_event * k)
 		}
 		top_line = MIN(top_line, (ptrdiff_t)current_song->histlen);
 		top_line = MAX(top_line, 0);
+		a11y_text_reported = 0;
 		status.flags |= NEED_UPDATE;
 		return 1;
 	} else {
@@ -212,6 +221,11 @@ static void timeinfo_redraw(void)
 				draw_time(session_secs, 64, 20 + i - top_line);
 			}
 		}
+		if (!a11y_text_reported) {
+			char buf[76];
+			a11y_get_text_from_rect(4, 20, 75, 1, buf);
+			a11y_text_reported = a11y_output(buf, 0);
+		}
 	}
 }
 
@@ -233,4 +247,5 @@ void timeinfo_load_page(struct page *page)
 	page->help_index = HELP_TIME_INFORMATION;
 
 	widget_create_other(widgets_timeinfo + 0, 0, timeinfo_handle_key, NULL, timeinfo_redraw);
+	widgets_timeinfo[0].d.other.a11y_type = "";
 }

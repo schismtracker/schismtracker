@@ -715,6 +715,7 @@ static int file_list_handle_text_input(const char *text) {
 	int success = 0;
 
 	a11y_output_cp437(text, 0);
+
 	for (; *text; text++)
 		if (search_text_add_char(*(unsigned char *)text))
 			success = 1;
@@ -873,6 +874,8 @@ static void dir_list_draw_exportsave(void)
 }
 
 static int dir_list_handle_text_input(const char *text) {
+	a11y_output_cp437(text, 0);
+
 	for (; *text && search_text_length < NAME_MAX; text++) {
 		if (*text < 32)
 			return 0;
@@ -945,8 +948,12 @@ static int dir_list_handle_key(struct key_event * k, int width)
 			return 0;
 		/* reset */
 		top_file = current_file = 0;
-		if (current_dir >= 0 && current_dir < dlist.num_dirs)
+		if (current_dir >= 0 && current_dir < dlist.num_dirs) {
 			change_dir(dlist.dirs[current_dir]->path);
+		char buf[256];
+		dir_list_a11y_get_value(buf);
+		a11y_output(buf, 0);
+	}
 
 		if (flist.num_files > 0)
 			*selected_widget = 0;

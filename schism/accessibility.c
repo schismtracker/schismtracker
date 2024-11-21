@@ -73,7 +73,7 @@ const char* a11y_get_widget_label(struct widget *w, char *buf)
 	case WIDGET_TOGGLEBUTTON:
 		if (*selected_widget == w->d.togglebutton.group[0]) {
 			a11y_try_find_widget_label(w, buf);
-			if (strlen(buf)) strcat(buf, " ");
+			if (strlen(buf)) strcat(buf, ": ");
 		}
 		CHARSET_EASY_MODE_CONST(w->d.togglebutton.text, CHARSET_CP437, CHARSET_CHAR, {
 			strcat(buf, out);
@@ -437,6 +437,8 @@ int a11y_report_widget(struct widget *w)
 {
 	char buf[512];
 	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
+	if (w->y)
+		current_line = w->y;
 	a11y_get_widget_info(w, INFO_LABEL | INFO_TYPE | INFO_STATE, buf);
 	a11y_output(buf, 0);
 	a11y_get_widget_info(w, INFO_VALUE, buf);
@@ -550,7 +552,7 @@ int a11y_cursor_report_char(int ch)
 	char buf[5];
 	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
 	a11y_get_text_from_rect(current_char, current_line, 1, 1, buf);
-	return a11y_char_mode_output(buf, 0);
+	return a11y_char_mode_output(*buf ? buf : " ", 0);
 }
 
 int a11y_cursor_report_previous_char(void)

@@ -271,6 +271,8 @@ static void file_list_draw(void)
 		draw_char(168, 31, pos++, 2, 0);
 }
 
+static const char* file_list_a11y_get_value(char *buf);
+
 static void do_enable_inst(UNUSED void *d)
 {
 	song_set_instrument_mode(1);
@@ -321,6 +323,9 @@ static void handle_enter_key(void)
 
 	if (file->type & TYPE_BROWSABLE_MASK) {
 		change_dir(file->path);
+		char buf[256];
+		file_list_a11y_get_value(buf);
+		a11y_output(buf, 0);
 		status.flags |= NEED_UPDATE;
 	} else if (file->type & TYPE_INST_MASK) {
 		if (_library_mode) return;
@@ -406,7 +411,7 @@ static int file_list_handle_text_input(const char *text)
 				reposition_at_slash_search();
 				char buf[256];
 				file_list_a11y_get_value(buf);
-				a11y_output(buf, 1);
+				a11y_output(buf, 0);
 				status.flags |= NEED_UPDATE;
 			}
 			return 1;
@@ -513,7 +518,7 @@ static int file_list_handle_key(struct key_event * k)
 		file_list_reposition();
 		char buf[256];
 		file_list_a11y_get_value(buf);
-		a11y_output(buf, 1);
+		a11y_output(buf, 0);
 		status.flags |= NEED_UPDATE;
 	}
 	return 1;
