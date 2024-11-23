@@ -180,7 +180,10 @@ static void get_pattern_string(unsigned char pattern, char *buf)
 static const char* orderlist_a11y_get_value(char *buf)
 {
 	a11y_get_text_from_rect(2,
-		widgets_orderpan[0].y + (current_order - top_order), 7, 1, buf);
+		widgets_orderpan[0].y + (current_order - top_order), 3, 1, buf);
+	strcat(buf, ": ");
+	a11y_get_text_from_rect(6,
+		widgets_orderpan[0].y + (current_order - top_order), 3, 1, &buf[strlen(buf)]);
 	return buf;
 }
 
@@ -536,7 +539,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 1;
 			sample_set(sample_get_current()-1);
-			a11y_outputf(sample_get_current() ? "Sampple %02u" : "No sample", 0, sample_get_current()) ;
+			a11y_report_instrument();
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
@@ -552,7 +555,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 1;
 			sample_set(sample_get_current()+1);
-			a11y_outputf("Sampple %02u", 0, sample_get_current());
+			a11y_report_instrument();
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
@@ -689,7 +692,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		sample_set(sample_get_current()-1);
-		a11y_outputf(sample_get_current() ? "Sampple %02u" : "No sample", 0, sample_get_current()) ;
+		a11y_report_instrument();
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SDLK_GREATER:
@@ -699,7 +702,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		sample_set(sample_get_current()+1);
-		a11y_outputf("Sampple %02u", 0, sample_get_current());
+		a11y_report_instrument();
 		status.flags |= NEED_UPDATE;
 		return 1;
 	default:

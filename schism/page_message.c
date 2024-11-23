@@ -39,6 +39,7 @@
 #include "dialog.h"
 #include "vgamem.h"
 #include "accessibility.h"
+#include "charset.h"
 
 #include <ctype.h>
 #include <assert.h>
@@ -234,8 +235,10 @@ static const char* message_a11y_get_value(char *buf)
 {
 	char *ptr = NULL;
 	int line_len = get_nth_line(current_song->message, current_line, &ptr);
-	memcpy(buf, ptr, line_len);
-	buf[line_len] = '\0';
+	memcpy(buf, ptr, line_len); buf[line_len] = '\0';
+	CHARSET_EASY_MODE(buf, CHARSET_CP437, CHARSET_CHAR, {
+		strcpy(buf, out);
+	});
 	return buf;
 }
 
@@ -335,7 +338,7 @@ static inline void message_set_editmode(void)
 	widgets_message[0].d.other.handle_key = message_handle_key_editmode;
 	widgets_message[0].d.other.handle_text_input = message_handle_text_input_editmode;
 
-	a11y_output("Edit mode", 1);
+	a11y_output("Edit mode", 0);
 	status.flags |= NEED_UPDATE;
 }
 
@@ -346,7 +349,7 @@ static inline void message_set_viewmode(void)
 	widgets_message[0].d.other.handle_key = message_handle_key_viewmode;
 	widgets_message[0].d.other.handle_text_input = NULL;
 
-	a11y_output("View mode", 1);
+	a11y_output("View mode", 0);
 	status.flags |= NEED_UPDATE;
 }
 
@@ -409,7 +412,7 @@ static void message_delete_char(void)
 
 	if (cursor_pos == 0)
 		return;
-	a11y_output_char(current_song->message[cursor_pos - 1], 1);
+	a11y_output_char(current_song->message[cursor_pos - 1], 0);
 	memmove(current_song->message + cursor_pos - 1, current_song->message + cursor_pos,
 		len - cursor_pos + 1);
 	current_song->message[MAX_MESSAGE] = 0;
@@ -431,7 +434,7 @@ static void message_delete_next_char(void)
 
 	if (cursor_pos == len)
 		return;
-	a11y_output_char(current_song->message[cursor_pos], 1);
+	a11y_output_char(current_song->message[cursor_pos], 0);
 	memmove(current_song->message + cursor_pos, current_song->message + cursor_pos + 1,
 		len - cursor_pos);
 	current_song->message[MAX_MESSAGE] = 0;
@@ -540,7 +543,7 @@ static int message_handle_key_viewmode(struct key_event * k)
 			return 0;
 		current_char--;
 		if (current_char < 0) current_char = 0;
-		a11y_output_char(ptr[current_char], 1);
+		a11y_output_char(ptr[current_char], 0);
 		return 1;
 		break;
 	case SDLK_RIGHT:
@@ -548,7 +551,7 @@ static int message_handle_key_viewmode(struct key_event * k)
 			return 0;
 		current_char++;
 		if (current_char >= line_len) current_char = line_len - 1;
-		a11y_output_char(line_len ? ptr[current_char] : '\0', 1);
+		a11y_output_char(line_len ? ptr[current_char] : '\0', 0);
 		return 1;
 		break;
 	case SDLK_t:
@@ -556,7 +559,7 @@ static int message_handle_key_viewmode(struct key_event * k)
 			return 0;
 		if (k->mod & KMOD_CTRL) {
 			message_extfont = !message_extfont;
-			a11y_output((message_extfont ? "Extended font" : "Normal font"), 1);
+			a11y_output((message_extfont ? "Extended font" : "Normal font"), 0);
 			break;
 		}
 		return 1;
@@ -582,8 +585,8 @@ static int message_handle_key_viewmode(struct key_event * k)
 
 	line_len = get_nth_line(current_song->message, current_line, &ptr);
 	char buf[line_len + sizeof(char)];
-	message_a11y_get_value(buf);
-	a11y_output_cp437(buf, 1);
+	memcpy(buf, ptr, line_len); buf[line_len] = '\0';
+	a11y_output_cp437(buf, 0);
 
 	status.flags |= NEED_UPDATE;
 
@@ -618,7 +621,7 @@ static int message_handle_text_input_editmode(const char *text) {
 	if (clippy_owner(CLIPPY_SELECT) == widgets_message)
 		_delete_selection();
 
-	a11y_output_cp437(text, 1);
+	a11y_output_cp437(text, 0);
 
 	for (; *text; text++)
 		message_insert_char(*text);
@@ -790,7 +793,7 @@ static int message_handle_key_editmode(struct key_event * k)
 
 			if (k->sym == SDLK_t) {
 				message_extfont = !message_extfont;
-				a11y_output((message_extfont ? "Extended font" : "Normal font"), 1);
+				a11y_output((message_extfont ? "Extended font" : "Normal font"), 0);
 				break;
 			} else if (k->sym == SDLK_y) {
 				clippy_select(NULL, NULL, 0);
@@ -868,11 +871,11 @@ static int message_handle_key_editmode(struct key_event * k)
 	cursor_pos = get_absolute_position(current_song->message, cursor_line, cursor_char);
 	if (report_line) {
 		char buf[line_len + sizeof(char)];
-		memcpy(buf, ptr, line_len);
-		a11y_output_cp437(buf, 1);
+		memcpy(buf, ptr, line_len); buf[line_len] = '\0';
+		a11y_output_cp437(buf, 0);
 	} else if (report_char) {
 		get_nth_line(current_song->message, cursor_line, &ptr);
-		a11y_output_char(ptr[cursor_char], 1);
+		a11y_output_char(ptr[cursor_char], 0);
 	}
 
 	if (doing_drag) {

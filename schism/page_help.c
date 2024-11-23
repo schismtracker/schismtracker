@@ -31,6 +31,7 @@
 #include "widget.h"
 #include "vgamem.h"
 #include "accessibility.h"
+#include "charset.h"
 
 #include "sdlmain.h"
 
@@ -168,18 +169,19 @@ static const char* help_a11y_get_value(char *buf)
 		type = "Separator";
 		break;
 	case LTYPE_DISABLED:
-		type = "Disabled";
+		type = "Disabled ";
 		break;
 	default:
 		type = "";
 		break;
 	}
 	strcpy(buf, type);
-	if (**ptr == LTYPE_DISABLED) {
-		strcat(buf, " ");
+	if (!*type || **ptr == LTYPE_DISABLED) {
+		int len = strlen(buf);
 		strncat(buf, *ptr + 2, lp);
-	} else if (!*type) {
-		strncat(buf, *ptr + 2, lp);
+		CHARSET_EASY_MODE(&buf[len], CHARSET_CP437, CHARSET_CHAR, {
+			strcpy(buf, out);
+		});
 	}
 	return buf;
 }
@@ -187,11 +189,8 @@ static const char* help_a11y_get_value(char *buf)
 static char help_a11y_get_char_at(int pos)
 {
 	const char **ptr = lines + current_line;
-	int lp = _get_line_length(current_line);
-	if (pos < 0 || !lp || pos >= lp)
-		return 0;
-	if(**ptr == LTYPE_SEPARATOR || **ptr == LTYPE_GRAPHIC)
-		return 0;
+	if (**ptr == LTYPE_SEPARATOR || **ptr == LTYPE_GRAPHIC)
+		return '\0';
 	return (*ptr + 1)[pos];
 }
 
@@ -201,7 +200,7 @@ static int help_handle_key(struct key_event * k)
 	int new_cur_line = current_line;
 	char buf[100];
 	char ch;
-	int last_char = _get_line_length(new_cur_line) - 1;
+	int last_char = _get_line_length(new_cur_line) - 2;
 
 	if (status.dialog_type != DIALOG_NONE) return 0;
 
@@ -262,7 +261,7 @@ static int help_handle_key(struct key_event * k)
 		current_char--;
 		if (current_char < 0) current_char = 0;
 		ch = help_a11y_get_char_at(current_char);
-		if (ch) a11y_output_char(ch, 1);
+		if (ch) a11y_output_char(ch, 0);
 		return 1;
 	case SDLK_RIGHT:
 		if (k->state == KEY_RELEASE)
@@ -270,7 +269,7 @@ static int help_handle_key(struct key_event * k)
 		current_char++;
 		if (current_char > last_char) current_char = last_char;
 		ch = help_a11y_get_char_at(current_char);
-		if (ch) a11y_output_char(ch, 1);
+		if (ch) a11y_output_char(ch, 0);
 		return 1;
 	default:
 		if (k->mouse != MOUSE_NONE) {
@@ -293,7 +292,7 @@ static int help_handle_key(struct key_event * k)
 		current_char = 0;
 	}
 	help_a11y_get_value(buf);
-	a11y_output_cp437(buf, 1);
+	a11y_output(*buf ? buf : "Blank", 0);
 
 	return 1;
 }
@@ -312,6 +311,8 @@ static void help_set_page(void)
 	lines = CURRENT_HELP_LINECACHE;
 	if (lines) {
 		num_lines = CURRENT_HELP_LINECOUNT;
+		if (top_line > num_lines - 32)
+			top_line = 0;
 		return;
 	}
 
@@ -347,6 +348,7 @@ static void help_set_page(void)
 		lines[cur_line++] = blank_line;
 		lines[cur_line++] = separator_line;
 	}
+
 	lines[cur_line++] = blank_line;
 
 	/* global help text */
@@ -372,6 +374,8 @@ static void help_set_page(void)
 
 	lines[cur_line] = NULL;
 	CURRENT_HELP_LINECOUNT = num_lines = cur_line;
+	if (top_line > num_lines - 32)
+		top_line = 0;
 	current_line = top_line;
 }
 

@@ -35,6 +35,7 @@
 #include "vgamem.h"
 #include "widget.h"
 #include "accessibility.h"
+#include "charset.h"
 #include "osdefs.h"
 
 /* --------------------------------------------------------------------- */
@@ -160,8 +161,12 @@ void sample_set(int n)
 
 static const char* sample_list_a11y_get_value(char* buf)
 {
-	a11y_get_text_from_rect(2,
-		widgets_samplelist[0].y + (current_sample - top_sample), 25, 1, buf);
+	song_sample_t *smp = song_get_sample(current_sample);
+	str_from_num99(current_sample, buf);
+	strcat(buf, ": ");
+	CHARSET_EASY_MODE(smp->name, CHARSET_CP437, CHARSET_CHAR, {
+		strcat(buf, out);
+	});
 	return buf;
 }
 
@@ -233,7 +238,7 @@ static void sample_list_draw_list(void)
 	if (!a11y_text_reported) {
 		char buf[34];
 		sample_list_a11y_get_value(buf);
-		a11y_text_reported = a11y_output(buf, 1);
+		a11y_text_reported = a11y_output(buf, 0);
 	}
 	status.flags |= NEED_UPDATE;
 }
@@ -400,7 +405,7 @@ static void do_replace_sample(int n)
 static int sample_list_handle_text_input_on_list(const char *text) {
 	int success = 0;
 
-	a11y_output_cp437(text, 1);
+	a11y_output_cp437(text, 0);
 
 	for (; *text; text++)
 		if (sample_list_cursor_pos < 25 && sample_list_add_char(*text))
@@ -577,7 +582,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			if (k->mod & KMOD_ALT) {
 				if (k->sym == SDLK_c) {
 					clear_sample_text();
-					a11y_output("Text cleared", 1);
+					a11y_output("Text cleared", 0);
 					return 1;
 				}
 				return 0;
@@ -606,7 +611,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 	if (new_cursor_pos != sample_list_cursor_pos) {
 		sample_list_cursor_pos = new_cursor_pos;
 		song_sample_t *smp = song_get_sample(current_sample);
-		a11y_output_char(smp->name[sample_list_cursor_pos], 1);
+		a11y_output_char(smp->name[sample_list_cursor_pos], 0);
 		_fix_accept_text();
 	}
 
@@ -1215,7 +1220,7 @@ static int export_sample_list_handle_key(struct key_event * k)
 		export_sample_format = new_format;
 		char buf[5];
 		export_sample_list_a11y_get_value(buf);
-		a11y_output(buf, 1);
+		a11y_output(buf, 0);
 		status.flags |= NEED_UPDATE;
 	}
 
@@ -1318,7 +1323,7 @@ static void sample_toggle_mute(int n)
 {
 	song_sample_t *smp = song_get_sample(n);
 	sample_set_mute(n, !(smp->flags & CHN_MUTE));
-	a11y_output(smp->flags & CHN_MUTE ? "Muted" : "Unmuted", 1);
+	a11y_output(smp->flags & CHN_MUTE ? "Muted" : "Unmuted", 0);
 }
 
 static void sample_toggle_solo(int n)
@@ -1337,7 +1342,7 @@ static void sample_toggle_solo(int n)
 	}
 	for (i = 1; i < MAX_SAMPLES; i++)
 		sample_set_mute(i, solo && i != n);
-	a11y_output(solo ? "Soloed" : "Unsoloed", 1);
+	a11y_output(solo ? "Soloed" : "Unsoloed", 0);
 }
 
 /* --------------------------------------------------------------------- */
@@ -1491,7 +1496,7 @@ static void sample_list_handle_key(struct key_event * k)
 			sample->c5speed = calc_halftone(sample->c5speed, 1);
 			status.flags |= SONG_NEEDS_SAVE;
 		}
-		a11y_outputf("Speed %u", 1, sample->c5speed);
+		a11y_outputf("Speed %u", 0, sample->c5speed);
 		status.flags |= NEED_UPDATE;
 		return;
 	case SDLK_MINUS:
@@ -1504,7 +1509,7 @@ static void sample_list_handle_key(struct key_event * k)
 			sample->c5speed = calc_halftone(sample->c5speed, -1);
 			status.flags |= SONG_NEEDS_SAVE;
 		}
-		a11y_outputf("Speed %u", 1, sample->c5speed);
+		a11y_outputf("Speed %u", 0, sample->c5speed);
 		status.flags |= NEED_UPDATE;
 		return;
 

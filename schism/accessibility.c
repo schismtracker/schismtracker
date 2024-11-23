@@ -139,7 +139,6 @@ const char* a11y_get_widget_value(struct widget *w, char *buf)
 	switch (w->type) {
 	case WIDGET_TEXTENTRY:
 		value = w->d.textentry.text;
-		// IS this the only case where something non-ASCII is possible? It seems so.
 		CHARSET_EASY_MODE_CONST(value, CHARSET_CP437, CHARSET_CHAR, {
 			strcpy(buf, out);
 		});
@@ -388,7 +387,7 @@ int a11y_output_char(char chr, int interrupt)
 {
 	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
 	char text[2] = { chr, '\0' };
-	int result = a11y_char_mode_output(text, interrupt);
+	int result = a11y_output_cp437(text, interrupt);
 	return result;
 }
 
@@ -437,8 +436,8 @@ int a11y_report_widget(struct widget *w)
 {
 	char buf[512];
 	if (!(status.flags & ACCESSIBILITY_MODE)) return 1;
-	if (w->y)
-		current_line = w->y;
+	current_line = w->y;
+	current_char = w->x;
 	a11y_get_widget_info(w, INFO_LABEL | INFO_TYPE | INFO_STATE, buf);
 	a11y_output(buf, 0);
 	a11y_get_widget_info(w, INFO_VALUE, buf);
@@ -493,20 +492,20 @@ int a11y_report_instrument(void)
 		if (n > 0) {
 			strcpy(buf, "Instrument ");
 			name = song_get_instrument(n)->name;
-		} else strcpy(buf, "No instrument");
+		} else strcpy(buf, "(No instrument)");
 	} else {
 		n = sample_get_current();
 		if (n > 0) {
 			strcpy(buf, "Sample ");
 			name = song_get_sample(n)->name;
-		} else strcpy(buf, "No sample");
+		} else strcpy(buf, "(No sample)");
 	}
 
 	if (n > 0) {
 		str_from_num99(n, &buf[strlen(buf)]);
-		sprintf(&buf[strlen(buf)], " %s", name);
+		sprintf(&buf[strlen(buf)], ": %s", name);
 	}
-	return a11y_output(buf, 0);
+	return a11y_output_cp437(buf, 0);
 }
 
 /* Oh! I really wanted to avoid making my own crappy screen reader . Sorry. */

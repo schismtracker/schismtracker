@@ -31,6 +31,7 @@
 #include "widget.h"
 #include "vgamem.h"
 #include "accessibility.h"
+#include "charset.h"
 
 #include "sdlmain.h"
 
@@ -70,18 +71,41 @@ static void log_draw_const(void)
 	draw_fill_chars(2, 13, 77, 47, DEFAULT_FG, 0);
 }
 
+static inline int _line_is_separator(int line)
+{
+	if (!lines[line].bios_font && (unsigned char)lines[line].text[0] == 0x81)
+		return 1;
+	return 0;
+}
+
 static const char* log_a11y_get_value(char *buf)
 {
-	if (lines[current_line].text)
-		strcpy(buf, lines[current_line].text);
-	else
+	if (!lines[current_line].text)
 		buf[0] = '\0';
+	else if (_line_is_separator(current_line))
+		strcpy(buf, "Separator");
+	else {
+		strcpy(buf, lines[current_line].text);
+		CHARSET_EASY_MODE(buf, CHARSET_CP437, CHARSET_CHAR, {
+			strcpy(buf, out);
+		});
+	}
 	return buf;
+}
+
+static char log_a11y_get_char_at(int pos)
+{
+	const char *line = lines[current_line].text;
+	if (_line_is_separator(current_line))
+		return '\0';
+	return line[pos];
 }
 
 static int log_handle_key(struct key_event * k)
 {
 	int new_cur_line = current_line;
+	char buf[75];
+	char ch;
 	switch (k->sym) {
 	case SDLK_UP:
 		if (k->state == KEY_RELEASE)
@@ -124,15 +148,17 @@ static int log_handle_key(struct key_event * k)
 			return 1;
 		current_char--;
 		if (current_char < 0) current_char = 0;
-		a11y_output_char(lines[current_line].text[current_char], 1);
+		ch = log_a11y_get_char_at(current_char);
+		if (ch) a11y_output_char(ch, 0);
 		return 1;
 	case SDLK_RIGHT:
 		if (k->state == KEY_RELEASE || !lines[current_line].text)
 			return 1;
 		current_char++;
-		int len = strlen(lines[current_line].text);
-		if (current_char >= len) current_char = len - 1;
-		a11y_output_char(lines[current_line].text[current_char], 1);
+		int last_char = strlen(lines[current_line].text) - 1;
+		if (current_char > last_char) current_char = last_char;
+		ch = log_a11y_get_char_at(current_char);
+		if (ch) a11y_output_char(ch, 0);
 		return 1;
 	default:
 		if (k->state == KEY_PRESS) {
@@ -159,8 +185,8 @@ static int log_handle_key(struct key_event * k)
 		current_line = new_cur_line;
 		current_char = 0;
 	}
-	if (lines[current_line].text)
-		a11y_output_cp437(lines[current_line].text, 1);
+	log_a11y_get_value(buf);
+	a11y_output(*buf ? buf : "Blank", 0);
 	status.flags |= NEED_UPDATE;
 	return 1;
 }

@@ -36,6 +36,7 @@
 #include "dialog.h"
 #include "vgamem.h"
 #include "accessibility.h"
+#include "charset.h"
 #include "osdefs.h"
 
 #include <sys/stat.h>
@@ -386,8 +387,12 @@ static void do_replace_instrument(int n)
 
 static const char* instrument_list_a11y_get_value(char *buf)
 {
-	a11y_get_text_from_rect(2,
-		get_page_widgets()->y + (current_instrument - top_instrument), 28, 1, buf);
+	song_instrument_t *ins = song_get_instrument(current_instrument);
+	str_from_num99(current_instrument, buf);
+	strcat(buf, ": ");
+	CHARSET_EASY_MODE(ins->name, CHARSET_CP437, CHARSET_CHAR, {
+		strcat(buf, out);
+	});
 	return buf;
 }
 
@@ -440,14 +445,14 @@ static void instrument_list_draw_list(void)
 	if (!a11y_text_reported) {
 		char buf[29];
 		instrument_list_a11y_get_value(buf);
-		a11y_text_reported = a11y_output(buf, 1);
+		a11y_text_reported = a11y_output(buf, 0);
 	}
 }
 
 static int instrument_list_handle_text_input_on_list(const char* text) {
 	int success = 0;
 
-	a11y_output_cp437(text, 1);
+	a11y_output_cp437(text, 0);
 
 	for (; *text; text++)
 		if (instrument_cursor_pos < 25 && instrument_list_add_char(*(unsigned char *)text))
@@ -568,7 +573,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				return 0;
 			if (instrument_cursor_pos < 25 && instrument_cursor_pos > 0) {
 				instrument_cursor_pos--;
-				a11y_output_char(ins->name[instrument_cursor_pos], 1);
+				a11y_output_char(ins->name[instrument_cursor_pos], 0);
 				get_page_widgets()->accept_text = 1;
 				status.flags |= NEED_UPDATE;
 			}
@@ -584,7 +589,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			} else if (instrument_cursor_pos < 24) {
 				get_page_widgets()->accept_text = 1;
 				instrument_cursor_pos++;
-				a11y_output_char(ins->name[instrument_cursor_pos], 1);
+				a11y_output_char(ins->name[instrument_cursor_pos], 0);
 				status.flags |= NEED_UPDATE;
 			}
 			return 1;
@@ -650,7 +655,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			if (k->mod & KMOD_ALT) {
 				if (k->sym == SDLK_c) {
 					clear_instrument_text();
-					a11y_output("Text cleared", 1);
+					a11y_output("Text cleared", 0);
 					return 1;
 				}
 			} else if ((k->mod & KMOD_CTRL) == 0) {
@@ -776,7 +781,7 @@ static void note_trans_draw(void)
 	if (is_selected && !a11y_text_reported) {
 		char buf[16];
 		note_trans_a11y_get_value(buf);
-		a11y_text_reported = a11y_output(buf, 1);
+		a11y_text_reported = a11y_output(buf, 0);
 	}
 }
 
@@ -982,7 +987,7 @@ static int note_trans_handle_key(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 0;
 			sample_set(sample_get_current() - 1);
-			a11y_outputf(sample_get_current() ? "Sample %02u" : "No sample", 0, sample_get_current());
+			a11y_outputf(sample_get_current() ? "Sample %02u" : "(No sample)", 0, sample_get_current());
 			return 1;
 		case SDLK_GREATER:
 		case SDLK_QUOTE:
@@ -990,7 +995,7 @@ static int note_trans_handle_key(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 0;
 			sample_set(sample_get_current() + 1);
-			a11y_outputf(sample_get_current() ? "Sample %02u" : "No sample", 0, sample_get_current());
+			a11y_outputf(sample_get_current() ? "Sample %02u" : "(No sample)", 0, sample_get_current());
 			return 1;
 
 		default:
@@ -1034,7 +1039,7 @@ static int note_trans_handle_key(struct key_event * k)
 				}
 				if (k->sym == SDLK_COMMA && NO_MODIFIER(k->mod)) {
 					note_sample_mask = note_sample_mask ? 0 : 1;
-					a11y_output(note_sample_mask ? "Mask Sample" : "Mask Off", 1);
+					a11y_output(note_sample_mask ? "Mask Sample" : "Mask Off", 0);
 					break;
 				}
 
@@ -1082,7 +1087,7 @@ static int note_trans_handle_key(struct key_event * k)
 			strcat(buf, " ");
 		}
 		if (prev_pos == 1)
-			a11y_outputf("%sSample", 1, buf);
+			a11y_outputf("%sSample", 0, buf);
 		else if (*buf && (k->sym == SDLK_LEFT || k->sym == SDLK_RIGHT))
 			a11y_output_char(buf[note_trans_cursor_pos - 2], 0);
 		else
@@ -1267,7 +1272,7 @@ static void _env_draw(const song_envelope_t *env, int middle, int current_node,
 	}
 	int is_selected = (ACTIVE_PAGE.selected_widget == 5);
 	if (is_selected && !a11y_text_reported)
-		a11y_text_reported = a11y_output(a11y_env_value, 1);
+		a11y_text_reported = a11y_output(a11y_env_value, 0);
 }
 
 /* return: the new current node */
@@ -1566,7 +1571,7 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		envelope_edit_mode = 1;
-		a11y_output("Edit mode", 1);
+		a11y_output("Edit mode", 0);
 		status.flags |= NEED_UPDATE;
 		return 1 | 2;
 	case SDLK_l:
@@ -1892,7 +1897,7 @@ static int _env_handle_key_editmode(struct key_event *k, song_envelope_t *env, i
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		envelope_edit_mode = 0;
-		a11y_output("View mode", 1);
+		a11y_output("View mode", 0);
 		memused_songchanged();
 		status.flags |= NEED_UPDATE;
 		break;
@@ -2093,7 +2098,7 @@ static void pitch_pan_center_draw(void)
 
 	draw_text(get_note_string(ins->pitch_pan_center + 1, buf), 54, 45, selected ? 3 : 2, 0);
 	if(selected && !a11y_text_reported) {
-		a11y_text_reported = a11y_output(buf, 1);
+		a11y_text_reported = a11y_output(buf, 0);
 	}
 }
 
@@ -2247,7 +2252,7 @@ static int export_instrument_list_handle_key(struct key_event * k)
 		export_instrument_format = new_format;
 		char buf[5];
 		export_instrument_list_a11y_get_value(buf);
-		a11y_output(buf, 1);
+		a11y_output(buf, 0);
 		status.flags |= NEED_UPDATE;
 	}
 

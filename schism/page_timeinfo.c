@@ -44,7 +44,6 @@ static int display_session = 0;
 // list
 static int top_line = 0;
 
-static int current_line = 0;
 static int a11y_text_reported = 0;
 
 /* --------------------------------------------------------------------- */
@@ -222,7 +221,7 @@ static void timeinfo_redraw(void)
 			}
 		}
 		if (!a11y_text_reported) {
-			char buf[76];
+			char buf[75];
 			a11y_get_text_from_rect(4, 20, 75, 1, buf);
 			a11y_text_reported = a11y_output(buf, 0);
 		}
