@@ -637,12 +637,12 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 		} else {
 			// 8-bit data. Mostly the same as above, but a little bit simpler since
 			// there's no byteswapping, and the values can be written with putc.
-			const int8_t *data;
+			const signed char *data;
 
 			for (channel = 0; channel < stride; channel++) {
 				data = (const signed char *) sample->data + channel;
 				for (pos = 0; pos < len; pos++) {
-					disko_putc(fp, data[pos] + add);
+					disko_putc(fp, *data + add);
 					data += stride;
 				}
 			}
