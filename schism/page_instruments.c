@@ -443,7 +443,7 @@ static void instrument_list_draw_list(void)
 	}
 
 	if (!a11y_text_reported) {
-		char buf[29];
+		char buf[32];
 		instrument_list_a11y_get_value(buf);
 		a11y_text_reported = a11y_output(buf, 0);
 	}

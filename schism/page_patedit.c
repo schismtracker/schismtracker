@@ -4652,7 +4652,7 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 	int prev_chan = current_channel;
 	int prev_pos = current_position;
 	int prev_a11y_col = a11y_get_column_number();
-	char buf[40];
+	char buf[64];
 
 	if (k->mod & KMOD_SHIFT) {
 		switch (k->sym) {

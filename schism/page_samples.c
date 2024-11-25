@@ -236,7 +236,7 @@ static void sample_list_draw_list(void)
 	}
 
 	if (!a11y_text_reported) {
-		char buf[34];
+		char buf[32];
 		sample_list_a11y_get_value(buf);
 		a11y_text_reported = a11y_output(buf, 0);
 	}

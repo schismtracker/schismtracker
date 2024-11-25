@@ -206,7 +206,7 @@ static void orderlist_draw(void)
 		pos = current_order - top_order;
 		draw_char(buf[orderlist_cursor_pos], orderlist_cursor_pos + 6, 15 + pos, 0, 3);
 		if (!a11y_text_reported) {
-			char buf[8];
+			char buf[10];
 			orderlist_a11y_get_value(buf);
 			a11y_text_reported = a11y_output(buf, 0);
 		}
