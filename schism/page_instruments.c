@@ -701,9 +701,11 @@ static void note_trans_reposition(void)
 static const char* note_trans_a11y_get_value(char* buf)
 {
 	song_instrument_t *ins = song_get_instrument(current_instrument);
-	a11y_get_text_from_rect(32, 16 + note_trans_sel_line, 7, 1, buf);
+	a11y_get_text_from_rect(32, 16 + note_trans_sel_line, 3, 1, buf);
+	strcat(buf, ": ");
+	a11y_get_text_from_rect(36, 16 + note_trans_sel_line, 3, 1, &buf[strlen(buf)]);
 	if (ins->sample_map[note_trans_sel_line]) {
-		strcat(buf, " ");
+		strcat(buf, "; ");
 		a11y_get_text_from_rect(40, 16 + note_trans_sel_line, 2, 1, &buf[strlen(buf)]);
 	}
 	return buf;

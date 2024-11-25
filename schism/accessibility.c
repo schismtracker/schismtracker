@@ -263,6 +263,8 @@ const char* a11y_try_find_widget_label(struct widget *w, char* buf)
 	uint32_t *start = acbuf_get_ptr_to(0, w->y);
 	uint32_t *wx = &start[w->x];
 	label = wx - 2;
+	if (!isprint(*label))
+		label--;
 	if ((label <= start || !isprint(*label)) && w->type != WIDGET_TOGGLEBUTTON) {
 		alternative_method = 1;
 		goto alternative;

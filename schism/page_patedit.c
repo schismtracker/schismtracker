@@ -2673,7 +2673,7 @@ static char* a11y_get_column_name(char *buf)
 	return buf;
 }
 
-static char* a11y_get_column_value(char *buf)
+static char* a11y_get_column_value(int column_number, char *buf)
 {
 	song_note_t *pattern, *cur_note;
 
@@ -2681,7 +2681,7 @@ static char* a11y_get_column_value(char *buf)
 	cur_note = pattern + 64 * current_row + current_channel - 1;
 	buf[0] = '\0';
 
-	switch (current_position) {
+	switch (column_number) {
 	case 0:
 	case 1:
 		switch (cur_note->note) {
@@ -2730,8 +2730,21 @@ static const char* pattern_editor_a11y_get_value(char *buf)
 	buf[0] = '\0';
 	if (is_in_selection(current_channel, current_row))
 		strcpy(buf, " Selected ");
-	a11y_get_column_value(&buf[strlen(buf)]);
-	if(strlen(buf)) strcat(buf, " ");
+	if (!highlight_current_row)
+		a11y_get_column_value(current_position, &buf[strlen(buf)]);
+	else {
+		for (int i = 0; i <= 6; i += 2) {
+			char *posptr = &buf[strlen(buf)];
+			a11y_get_column_value(i, posptr);
+			char *new_posptr = posptr + strlen(posptr);
+			if (posptr == new_posptr) continue;
+			if (i < 6)
+				strcat(buf, "; ");
+			else
+				strcat(buf, ";");
+		}
+	}
+	if(*buf) strcat(buf, " ");
 	sprintf(&buf[strlen(buf)], "%d ", current_row);
 	sprintf(&buf[strlen(buf)], "%d ", current_channel);
 	a11y_get_column_name(&buf[strlen(buf)]);
@@ -4668,7 +4681,7 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 		ret = pattern_editor_handle_key(k);
 
 	if (!a11y_text_reported) {
-		a11y_get_column_value(buf);
+		a11y_get_column_value(current_position, buf);
 		if (!*buf)
 			pattern_editor_a11y_get_value(buf);
 		a11y_text_reported = a11y_output(buf, 0);
@@ -4701,7 +4714,7 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 
 	if (current_row == prev_row && current_channel == prev_chan && current_position != prev_pos) {
 		int a11y_col = a11y_get_column_number();
-		a11y_get_column_value(buf);
+		a11y_get_column_value(current_position, buf);
 		int len = strlen(buf);
 		if (a11y_pated_insert_event) {
 			// Do nothing with the buffer.
