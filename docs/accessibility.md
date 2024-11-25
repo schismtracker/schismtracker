@@ -32,7 +32,7 @@ Run the tracker and hit Ctrl-Alt-\ (Backslash) to enable accessibility announcem
 
 This is actually a toggle that can be used to disable/re-enable them at any time.
 
-#### Additional shortcuts
+#### Shortcuts
 
 The accessibility mode doesn't alter the interface in any way, so you can freely use the native help system to get acquainted with the application.
 
