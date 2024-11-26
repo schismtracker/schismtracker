@@ -2,7 +2,7 @@
 
 This is an experimental fork of Schism Tracker with a self voicing accessibility mode,
 powered by the cross platform [SRAL](https://github.com/m1maker/SRAL) library.
-See the accessibility readme for more information.
+See accessibility.md for more information.
 
 -----
 
