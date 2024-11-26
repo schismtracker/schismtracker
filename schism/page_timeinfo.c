@@ -225,6 +225,10 @@ static void timeinfo_redraw(void)
 			a11y_get_text_from_rect(4, 20, 75, 1, buf);
 			a11y_text_reported = a11y_output(buf, 0);
 		}
+	} else if (!a11y_text_reported) {
+		char buf[256];
+		a11y_get_text_from_rect(2, 13, 75, 4, buf);
+		a11y_text_reported = a11y_output(buf, 0);
 	}
 }
 
@@ -232,6 +236,7 @@ static void timeinfo_set_page(void)
 {
 	// reset this
 	display_session = 0;
+	a11y_text_reported = 0;
 }
 
 /* --------------------------------------------------------------------- */
