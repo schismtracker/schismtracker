@@ -21,7 +21,7 @@ Except for the SRAL library dependency, everything should be the same as in vani
 
 The SRAL library should be easy to build and install with CMake.
 
-Note: SRAL is written in ++. It also requires Speech Dispatcher and libx11 to build under *NIX systems.
+Note: SRAL is written in C++. It also requires Speech Dispatcher and libx11 to build under *NIX systems.
 
 After installing SRAL proceed with building the tracker as described in the original Schism Tracker documentation.
 
