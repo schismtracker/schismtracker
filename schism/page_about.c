@@ -30,7 +30,6 @@
 #include "version.h"
 #include "dialog.h"
 #include "widget.h"
-#include "accessibility.h"
 
 /* Eventual TODO: draw the pattern data in the Schism logo in a different color than the words */
 #include "auto/logoit.h"

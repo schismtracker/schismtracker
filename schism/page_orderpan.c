@@ -721,7 +721,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 
 	if (new_order != prev_order) {
 		set_current_order(new_order);
-		a11y_text_reported = 0;
+		if (prev_order != current_order)
+			a11y_text_reported = 0;
 	} else if (new_cursor_pos != orderlist_cursor_pos) {
 		orderlist_cursor_pos = new_cursor_pos;
 		get_pattern_string(current_song->orderlist[get_current_order()], buf);

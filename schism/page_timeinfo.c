@@ -64,7 +64,7 @@ static int timeinfo_handle_key(struct key_event * k)
 
 		if ((k->mod & KMOD_RALT) && (k->mod & KMOD_RSHIFT)) {
 			display_session = !display_session;
-			a11y_outputf("Display session %s", 0, display_session ? "on" : "off");
+			a11y_outputf("Session info %s", 0, display_session ? "on" : "off");
 			a11y_text_reported = 0;
 			status.flags |= NEED_UPDATE;
 			return 1;
@@ -76,7 +76,7 @@ static int timeinfo_handle_key(struct key_event * k)
 
 		if (!(status.flags & CLASSIC_MODE)) {
 			display_session = !display_session;
-			a11y_outputf("Display session %s", 0, display_session ? "on" : "off");
+			a11y_outputf("Session info %s", 0, display_session ? "on" : "off");
 			a11y_text_reported = 0;
 			status.flags |= NEED_UPDATE;
 			return 1;

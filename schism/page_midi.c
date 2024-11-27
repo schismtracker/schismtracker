@@ -138,6 +138,8 @@ static void toggle_port(void)
 static int midi_page_handle_key(struct key_event * k)
 {
 	int new_port = current_port;
+	int prev_port = new_port;
+	
 	int pos;
 
 	if (k->mouse == MOUSE_SCROLL_UP) {
@@ -209,7 +211,8 @@ static int midi_page_handle_key(struct key_event * k)
 		if (pos > 12) top_midi_port = current_port - 12;
 		if (top_midi_port < 0) top_midi_port = 0;
 
-		a11y_text_reported = 0;
+		if (new_port != prev_port)
+			a11y_text_reported = 0;
 		status.flags |= NEED_UPDATE;
 	}
 

@@ -4731,7 +4731,7 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 			a11y_get_column_name(&buf[strlen(buf)]);
 		}
 		a11y_output(buf, 0);
-	} else if (k->state != KEY_RELEASE) {
+	} else if (k->state != KEY_RELEASE && (current_row != prev_row || current_channel != prev_chan)) {
 		if (play_row_when_navigating && current_channel == prev_chan && !a11y_pated_insert_event)
 			song_single_step(current_pattern, current_row);
 		pattern_editor_a11y_get_value(buf);

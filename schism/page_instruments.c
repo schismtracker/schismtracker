@@ -599,6 +599,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			if (instrument_cursor_pos < 25) {
 				instrument_cursor_pos = 25;
 				get_page_widgets()->accept_text = 0;
+				a11y_output("Name editing off", 0);
 				status.flags |= NEED_UPDATE;
 			} else {
 				get_page_widgets()->accept_text = 1;
@@ -611,6 +612,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 					return 1;
 				instrument_cursor_pos = 25;
 				get_page_widgets()->accept_text = 0;
+				a11y_output("Name editing off", 0);
 				status.flags |= NEED_UPDATE;
 				return 1;
 			}
@@ -665,6 +667,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				} else if (k->sym == SDLK_SPACE) {
 					instrument_cursor_pos = 0;
 					get_page_widgets()->accept_text = 0;
+					a11y_output("Name editing on", 0);
 					status.flags |= NEED_UPDATE;
 					memused_songchanged();
 					return 1;
@@ -2426,6 +2429,8 @@ static void instrument_list_handle_key(struct key_event * k)
 		if ((k->mod & KMOD_SHIFT) || instrument_cursor_pos < 25) {
 			if (k->state == KEY_RELEASE)
 				return;
+			if (instrument_cursor_pos < 25)
+				a11y_output("Name editing off", 0);
 			instrument_cursor_pos = 25;
 			get_page_widgets()->accept_text = 0;
 			widget_change_focus_to(0);
