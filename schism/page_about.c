@@ -64,6 +64,7 @@ static int _fixup_ignore_globals(struct key_event *k)
 	case SDLK_TAB:
 	case SDLK_RETURN:
 	case SDLK_ESCAPE:
+	case SDLK_BACKSLASH:
 		/* use default handler */
 		return 0;
 	case SDLK_F2: case SDLK_F5: case SDLK_F9: case SDLK_F10:
