@@ -24,19 +24,68 @@
 #include "headers.h"
 #include "backend/timer.h"
 
-#include <SDL.h>
+#include "init.h"
 
-schism_ticks_t sdl12_timer_ticks(void)
+static int (SDLCALL *sdl12_InitSubSystem)(Uint32 flags);
+static void (SDLCALL *sdl12_QuitSubSystem)(Uint32 flags);
+static uint32_t (SDLCALL *sdl12_GetTicks)(void);
+static void (SDLCALL *sdl12_Delay)(uint32_t ms);
+
+static schism_ticks_t sdl12_timer_ticks(void)
 {
-	return SDL_GetTicks();
+	return sdl12_GetTicks();
 }
 
-int sdl12_timer_ticks_passed(schism_ticks_t a, schism_ticks_t b)
+static int sdl12_timer_ticks_passed(schism_ticks_t a, schism_ticks_t b)
 {
 	return ((int32_t)(b - a) <= 0);
 }
 
-void sdl12_delay(uint32_t ms)
+static void sdl12_delay(uint32_t ms)
 {
-	SDL_Delay(ms);
+	sdl12_Delay(ms);
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+static int sdl12_timer_load_syms(void)
+{
+	SCHISM_SDL12_SYM(InitSubSystem);
+	SCHISM_SDL12_SYM(QuitSubSystem);
+	SCHISM_SDL12_SYM(GetTicks);
+	SCHISM_SDL12_SYM(Delay);
+
+	return 0;
+}
+
+static int sdl12_timer_init(void)
+{
+	if (!sdl12_init())
+		return 0;
+
+	if (sdl12_timer_load_syms())
+		return 0;
+
+	if (sdl12_InitSubSystem(SDL_INIT_TIMER) < 0)
+		return 0;
+
+	return 1;
+}
+
+static void sdl12_timer_quit(void)
+{
+	sdl12_QuitSubSystem(SDL_INIT_TIMER);
+
+	sdl12_quit();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+const schism_timer_backend_t schism_timer_backend_sdl12 = {
+	.init = sdl12_timer_init,
+	.quit = sdl12_timer_quit,
+
+	.ticks = sdl12_timer_ticks,
+	.ticks_passed = sdl12_timer_ticks_passed,
+	.delay = sdl12_delay,
+};

@@ -38,117 +38,68 @@
 #include <errno.h>
 #include <inttypes.h>
 
-#include <SDL.h>
+#include "backend/video.h"
+
+#include "init.h"
 #include <SDL_syswm.h>
 
 #ifndef SCHISM_MACOSX
 #include "auto/schismico_hires.h"
 #endif
 
-/* leeto drawing skills */
-struct mouse_cursor {
-	uint32_t pointer[18];
-	uint32_t mask[18];
-	uint32_t height, width;
-	uint32_t center_x, center_y; /* which point of the pointer does actually point */
-};
+static int (SDLCALL *sdl2_InitSubSystem)(Uint32 flags) = NULL;
+static void (SDLCALL *sdl2_QuitSubSystem)(Uint32 flags) = NULL;
+
+static const char *(SDLCALL *sdl2_GetCurrentVideoDriver)(void);
+static int (SDLCALL *sdl2_GetCurrentDisplayMode)(int displayIndex, SDL_DisplayMode * mode);
+static int (SDLCALL *sdl2_GetRendererInfo)(SDL_Renderer * renderer, SDL_RendererInfo * info);
+static int (SDLCALL *sdl2_ShowCursor)(int toggle);
+static SDL_bool (SDLCALL *sdl2_GetWindowWMInfo)(SDL_Window * window, SDL_SysWMinfo * info);
+static Uint32 (SDLCALL *sdl2_GetWindowFlags)(SDL_Window * window);
+static Uint32 (SDLCALL *sdl2_MapRGB)(const SDL_PixelFormat * format, Uint8 r, Uint8 g, Uint8 b);
+static void (SDLCALL *sdl2_SetWindowPosition)(SDL_Window * window, int x, int y);
+static void (SDLCALL *sdl2_SetWindowSize)(SDL_Window * window, int w, int h);
+static int (SDLCALL *sdl2_SetWindowFullscreen)(SDL_Window * window, Uint32 flags);
+static void (SDLCALL *sdl2_GetWindowPosition)(SDL_Window * window, int *x, int *y);
+static SDL_Window * (SDLCALL *sdl2_CreateWindow)(const char *title, int x, int y, int w, int h, Uint32 flags);
+static SDL_Renderer * (SDLCALL *sdl2_CreateRenderer)(SDL_Window * window, int index, Uint32 flags);
+static SDL_Texture * (SDLCALL *sdl2_CreateTexture)(SDL_Renderer * renderer, Uint32 format, int access, int w, int h);
+static SDL_PixelFormat * (SDLCALL *sdl2_AllocFormat)(Uint32 pixel_format);
+static void (SDLCALL *sdl2_FreeFormat)(SDL_PixelFormat *format);
+static void (SDLCALL *sdl2_DestroyTexture)(SDL_Texture * texture);
+static void (SDLCALL *sdl2_DestroyRenderer)(SDL_Renderer * renderer);
+static void (SDLCALL *sdl2_DestroyWindow)(SDL_Window * window);
+static Uint8 (SDLCALL *sdl2_EventState)(Uint32 type, int state);
+static SDL_bool (SDLCALL *sdl2_IsScreenSaverEnabled)(void);
+static void (SDLCALL *sdl2_EnableScreenSaver)(void);
+static void (SDLCALL *sdl2_DisableScreenSaver)(void);
+static void (SDLCALL *sdl2_RenderGetScale)(SDL_Renderer * renderer, float *scaleX, float *scaleY);
+static void (SDLCALL *sdl2_SetWindowGrab)(SDL_Window * window, SDL_bool grabbed);
+static void (SDLCALL *sdl2_WarpMouseInWindow)(SDL_Window * window, int x, int y);
+static Uint32 (SDLCALL *sdl2_GetWindowFlags)(SDL_Window * window);
+static void (SDLCALL *sdl2_GetWindowSize)(SDL_Window * window, int *w, int *h);
+static void (SDLCALL *sdl2_SetWindowSize)(SDL_Window * window, int w, int h);
+static int (SDLCALL *sdl2_RenderClear)(SDL_Renderer * renderer);
+static int (SDLCALL *sdl2_LockTexture)(SDL_Texture * texture, const SDL_Rect * rect, void **pixels, int *pitch);
+static void (SDLCALL *sdl2_UnlockTexture)(SDL_Texture * texture);
+static int (SDLCALL *sdl2_RenderCopy)(SDL_Renderer * renderer, SDL_Texture * texture, const SDL_Rect * srcrect, const SDL_Rect * dstrect);
+static void (SDLCALL *sdl2_RenderPresent)(SDL_Renderer * renderer);
+static void (SDLCALL *sdl2_SetWindowTitle)(SDL_Window * window, const char *title);
+static SDL_Surface* (SDLCALL *sdl2_CreateRGBSurfaceFrom)(void *pixels, int width, int height, int depth, int pitch, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
+static void (SDLCALL *sdl2_SetWindowIcon)(SDL_Window * window, SDL_Surface * icon);
+static void (SDLCALL *sdl2_FreeSurface)(SDL_Surface * surface);
+static SDL_bool (SDLCALL *sdl2_SetHint)(const char *name, const char *value);
+static int (SDLCALL *sdl2_RenderSetLogicalSize)(SDL_Renderer * renderer, int w, int h);
+static SDL_bool (SDLCALL *sdl2_GetWindowGrab)(SDL_Window * window);
+
+// ONLY in SDL 2.0.18
+static void (SDLCALL *sdl2_RenderWindowToLogical)(SDL_Renderer * renderer, int windowX, int windowY, float *logicalX, float *logicalY);
+
 
 #if !SDL_VERSION_ATLEAST(2, 0, 4)
 #define SDL_PIXELFORMAT_NV12 (SDL_DEFINE_PIXELFOURCC('N', 'V', '1', '2'))
 #define SDL_PIXELFORMAT_NV21 (SDL_DEFINE_PIXELFOURCC('N', 'V', '2', '1'))
 #endif
-
-/* ex. cursors[CURSOR_SHAPE_ARROW] */
-static struct mouse_cursor cursors[] = {
-	[CURSOR_SHAPE_ARROW] = {
-		.pointer = { /* / -|-------------> */
-			0x0000,  /* | ................ */
-			0x4000,  /* - .x.............. */
-			0x6000,  /* | .xx............. */
-			0x7000,  /* | .xxx............ */
-			0x7800,  /* | .xxxx........... */
-			0x7c00,  /* | .xxxxx.......... */
-			0x7e00,  /* | .xxxxxx......... */
-			0x7f00,  /* | .xxxxxxx........ */
-			0x7f80,  /* | .xxxxxxxx....... */
-			0x7f00,  /* | .xxxxxxx........ */
-			0x7c00,  /* | .xxxxx.......... */
-			0x4600,  /* | .x...xx......... */
-			0x0600,  /* | .....xx......... */
-			0x0300,  /* | ......xx........ */
-			0x0300,  /* | ......xx........ */
-			0x0000,  /* v ................ */
-			0,0
-		},
-		.mask = {    /* / -|-------------> */
-			0xc000,  /* | xx.............. */
-			0xe000,  /* - xxx............. */
-			0xf000,  /* | xxxx............ */
-			0xf800,  /* | xxxxx........... */
-			0xfc00,  /* | xxxxxx.......... */
-			0xfe00,  /* | xxxxxxx......... */
-			0xff00,  /* | xxxxxxxx........ */
-			0xff80,  /* | xxxxxxxxx....... */
-			0xffc0,  /* | xxxxxxxxxx...... */
-			0xff80,  /* | xxxxxxxxx....... */
-			0xfe00,  /* | xxxxxxx......... */
-			0xff00,  /* | xxxxxxxx........ */
-			0x4f00,  /* | .x..xxxx........ */
-			0x0780,  /* | .....xxxx....... */
-			0x0780,  /* | .....xxxx....... */
-			0x0300,  /* v ......xx........ */
-			0,0
-		},
-		.height = 16,
-		.width = 10,
-		.center_x = 1,
-		.center_y = 1,
-	},
-	[CURSOR_SHAPE_CROSSHAIR] = {
-		.pointer = {  /* / ---|---> */
-			0x00,     /* | ........ */
-			0x10,     /* | ...x.... */
-			0x7c,     /* - .xxxxx.. */
-			0x10,     /* | ...x.... */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* v ........ */
-			0,0
-		},
-		.mask = {     /* / ---|---> */
-			0x10,     /* | ...x.... */
-			0x7c,     /* | .xxxxx.. */
-			0xfe,     /* - xxxxxxx. */
-			0x7c,     /* | .xxxxx.. */
-			0x10,     /* | ...x.... */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* | ........ */
-			0x00,     /* v ........ */
-			0,0
-		},
-		.height = 5,
-		.width = 7,
-		.center_x = 3,
-		.center_y = 2,
-	},
-};
 
 static struct {
 	SDL_Window *window;
@@ -213,27 +164,27 @@ static const struct {
 	// ----------------
 };
 
-int video_is_fullscreen(void)
+static int sdl2_video_is_fullscreen(void)
 {
 	return video.fullscreen;
 }
 
-int video_width(void)
+int sdl2_video_width(void)
 {
 	return video.width;
 }
 
-int video_height(void)
+int sdl2_video_height(void)
 {
 	return video.height;
 }
 
-const char *video_driver_name(void)
+const char *sdl2_video_driver_name(void)
 {
-	return SDL_GetCurrentVideoDriver();
+	return sdl2_GetCurrentVideoDriver();
 }
 
-void video_report(void)
+void sdl2_video_report(void)
 {
 	struct {
 		uint32_t num;
@@ -249,13 +200,10 @@ void video_report(void)
 		{0, NULL, NULL},
 	}, *layout = yuv_layouts;
 
-	log_append(2, 0, "Video initialised");
-	log_underline(17);
-
 	{
 		SDL_RendererInfo renderer;
-		SDL_GetRendererInfo(video.renderer, &renderer);
-		log_appendf(5, " Using driver '%s'", SDL_GetCurrentVideoDriver());
+		sdl2_GetRendererInfo(video.renderer, &renderer);
+		log_appendf(5, " Using driver '%s'", sdl2_GetCurrentVideoDriver());
 		log_appendf(5, " %sware%s renderer '%s'",
 			(renderer.flags & SDL_RENDERER_SOFTWARE) ? "Soft" : "Hard",
 			(renderer.flags & SDL_RENDERER_ACCELERATED) ? "-accelerated" : "",
@@ -285,26 +233,24 @@ void video_report(void)
 
 	{
 		SDL_DisplayMode display;
-		if (!SDL_GetCurrentDisplayMode(0, &display) && video.fullscreen)
+		if (!sdl2_GetCurrentDisplayMode(0, &display) && video.fullscreen)
 			log_appendf(5, " Display dimensions: %dx%d", display.w, display.h);
 	}
-
-	log_nl();
 }
 
 static void set_icon(void)
 {
-	SDL_SetWindowTitle(video.window, WINDOW_TITLE);
+	sdl2_SetWindowTitle(video.window, WINDOW_TITLE);
 #ifndef SCHISM_MACOSX
 /* apple/macs use a bundle; this overrides their nice pretty icon */
 	{
 		uint32_t *pixels;
 		int width, height;
 		if (!xpmdata(_schism_icon_xpm_hires, &pixels, &width, &height)) {
-			SDL_Surface *icon = SDL_CreateRGBSurfaceFrom(pixels, width, height, 32, width * sizeof(uint32_t), 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+			SDL_Surface *icon = sdl2_CreateRGBSurfaceFrom(pixels, width, height, 32, width * sizeof(uint32_t), 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
 			if (icon) {
-				SDL_SetWindowIcon(video.window, icon);
-				SDL_FreeSurface(icon);
+				sdl2_SetWindowIcon(video.window, icon);
+				sdl2_FreeSurface(icon);
 			}
 			free(pixels);
 		}
@@ -318,10 +264,10 @@ static void video_redraw_texture(void)
 	uint32_t format = SDL_PIXELFORMAT_RGB888;
 
 	if (video.texture)
-		SDL_DestroyTexture(video.texture);
+		sdl2_DestroyTexture(video.texture);
 
 	if (video.pixel_format)
-		SDL_FreeFormat(video.pixel_format);
+		sdl2_FreeFormat(video.pixel_format);
 
 	if (*cfg_video_format) {
 		for (i = 0; i < ARRAY_SIZE(native_formats); i++) {
@@ -337,7 +283,7 @@ static void video_redraw_texture(void)
 	// SDL_PIXELFORMAT_RGB888 and let SDL deal with the
 	// conversion.
 	SDL_RendererInfo info;
-	if (!SDL_GetRendererInfo(video.renderer, &info)) {
+	if (!sdl2_GetRendererInfo(video.renderer, &info)) {
 		for (i = 0; i < info.num_texture_formats; i++)
 			for (j = 0; j < ARRAY_SIZE(native_formats); j++)
 				if (info.texture_formats[i] == native_formats[j].format && j < pref_last)
@@ -345,8 +291,8 @@ static void video_redraw_texture(void)
 	}
 
 got_format:
-	video.texture = SDL_CreateTexture(video.renderer, format, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
-	video.pixel_format = SDL_AllocFormat(format);
+	video.texture = sdl2_CreateTexture(video.renderer, format, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
+	video.pixel_format = sdl2_AllocFormat(format);
 	video.format = format;
 
 	// find the bytes per pixel
@@ -359,36 +305,36 @@ got_format:
 	}
 }
 
-void video_set_hardware(int hardware)
+void sdl2_video_set_hardware(int hardware)
 {
-	SDL_DestroyTexture(video.texture);
+	sdl2_DestroyTexture(video.texture);
 
-	SDL_DestroyRenderer(video.renderer);
+	sdl2_DestroyRenderer(video.renderer);
 
-	video.renderer = SDL_CreateRenderer(video.window, -1, hardware ? SDL_RENDERER_ACCELERATED : SDL_RENDERER_SOFTWARE);
+	video.renderer = sdl2_CreateRenderer(video.window, -1, hardware ? SDL_RENDERER_ACCELERATED : SDL_RENDERER_SOFTWARE);
 	if (!video.renderer)
-		video.renderer = SDL_CreateRenderer(video.window, -1, 0); // welp
+		video.renderer = sdl2_CreateRenderer(video.window, -1, 0); // welp
 
 	video_redraw_texture();
 
 	video_report();
 }
 
-void video_shutdown(void)
+void sdl2_video_shutdown(void)
 {
-	SDL_DestroyTexture(video.texture);
-	SDL_DestroyRenderer(video.renderer);
-	SDL_DestroyWindow(video.window);
+	sdl2_DestroyTexture(video.texture);
+	sdl2_DestroyRenderer(video.renderer);
+	sdl2_DestroyWindow(video.window);
 }
 
-void video_setup(const char *quality)
+void sdl2_video_setup(const char *quality)
 {
 	strncpy(cfg_video_interpolation, quality, 7);
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
+	sdl2_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
 	video_redraw_texture();
 }
 
-void video_startup(void)
+void sdl2_video_startup(void)
 {
 	vgamem_clear();
 	vgamem_flip();
@@ -399,31 +345,31 @@ void video_startup(void)
 /* older SDL2 versions don't define this, don't fail the build for it */
 #define SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR "SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"
 #endif
-	SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
+	sdl2_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
 
 	video.width = cfg_video_width;
 	video.height = cfg_video_height;
 	video.saved.x = video.saved.y = SDL_WINDOWPOS_CENTERED;
 
-	video.window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width, video.height, SDL_WINDOW_RESIZABLE);
+	video.window = sdl2_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width, video.height, SDL_WINDOW_RESIZABLE);
 	video_set_hardware(cfg_video_hardware);
 
 	/* Aspect ratio correction if it's wanted */
 	if (cfg_video_want_fixed)
-		SDL_RenderSetLogicalSize(video.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height);
+		sdl2_RenderSetLogicalSize(video.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height);
 
 	video_fullscreen(cfg_video_fullscreen);
 	if (video_have_menu() && !video.fullscreen) {
-		SDL_SetWindowSize(video.window, video.width, video.height);
-		SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
+		sdl2_SetWindowSize(video.window, video.width, video.height);
+		sdl2_SetWindowPosition(video.window, video.saved.x, video.saved.y);
 	}
 
 	/* okay, i think we're ready */
-	SDL_ShowCursor(SDL_DISABLE);
+	sdl2_ShowCursor(SDL_DISABLE);
 	set_icon();
 }
 
-void video_fullscreen(int new_fs_flag)
+void sdl2_video_fullscreen(int new_fs_flag)
 {
 	const int have_menu = video_have_menu();
 	/* positive new_fs_flag == set, negative == toggle */
@@ -431,25 +377,25 @@ void video_fullscreen(int new_fs_flag)
 
 	if (video.fullscreen) {
 		if (have_menu) {
-			SDL_GetWindowSize(video.window, &video.saved.width, &video.saved.height);
-			SDL_GetWindowPosition(video.window, &video.saved.x, &video.saved.y);
+			sdl2_GetWindowSize(video.window, &video.saved.width, &video.saved.height);
+			sdl2_GetWindowPosition(video.window, &video.saved.x, &video.saved.y);
 		}
-		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+		sdl2_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		if (have_menu)
 			video_toggle_menu(0);
 	} else {
-		SDL_SetWindowFullscreen(video.window, 0);
+		sdl2_SetWindowFullscreen(video.window, 0);
 		if (have_menu) {
 			/* the menu must be toggled first here */
 			video_toggle_menu(1);
-			SDL_SetWindowSize(video.window, video.saved.width, video.saved.height);
-			SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
+			sdl2_SetWindowSize(video.window, video.saved.width, video.saved.height);
+			sdl2_SetWindowPosition(video.window, video.saved.x, video.saved.y);
 		}
 		set_icon(); /* XXX is this necessary */
 	}
 }
 
-void video_resize(unsigned int width, unsigned int height)
+void sdl2_video_resize(unsigned int width, unsigned int height)
 {
 	video.width = width;
 	video.height = height;
@@ -475,10 +421,10 @@ static void yuv_pal_(int i, unsigned char rgb[3])
 
 static void sdl_pal_(int i, unsigned char rgb[3])
 {
-	video.pal[i] = SDL_MapRGB(video.pixel_format, rgb[0], rgb[1], rgb[2]);
+	video.pal[i] = sdl2_MapRGB(video.pixel_format, rgb[0], rgb[1], rgb[2]);
 }
 
-void video_colors(unsigned char palette[16][3])
+void sdl2_video_colors(unsigned char palette[16][3])
 {
 	static const int lastmap[] = { 0, 1, 2, 3, 5 };
 	int i, p;
@@ -510,66 +456,56 @@ void video_colors(unsigned char palette[16][3])
 	}
 }
 
-int video_is_focused(void)
+int sdl2_video_is_focused(void)
 {
-	return !!(SDL_GetWindowFlags(video.window) & SDL_WINDOW_INPUT_FOCUS);
+	return !!(sdl2_GetWindowFlags(video.window) & SDL_WINDOW_INPUT_FOCUS);
 }
 
-int video_is_visible(void)
+int sdl2_video_is_visible(void)
 {
-	return !!(SDL_GetWindowFlags(video.window) & SDL_WINDOW_SHOWN);
+	return !!(sdl2_GetWindowFlags(video.window) & SDL_WINDOW_SHOWN);
 }
 
-int video_is_wm_available(void)
+int sdl2_video_is_wm_available(void)
 {
 	SDL_SysWMinfo info;
 	SDL_VERSION(&info.version);
 
-	return !!SDL_GetWindowWMInfo(video.window, &info);
+	return !!sdl2_GetWindowWMInfo(video.window, &info);
 }
 
-int video_is_hardware(void)
+int sdl2_video_is_hardware(void)
 {
 	SDL_RendererInfo info;
-	SDL_GetRendererInfo(video.renderer, &info);
+	sdl2_GetRendererInfo(video.renderer, &info);
 	return !!(info.flags & SDL_RENDERER_ACCELERATED);
 }
 
 /* -------------------------------------------------------- */
 /* mousecursor */
 
-void video_show_system_cursor(int show)
+void sdl2_video_show_system_cursor(int show)
 {
-	SDL_ShowCursor(show);
-}
-
-void video_toggle_mouse_events(int enabled)
-{
-	int evstate = enabled ? SDL_ENABLE : SDL_DISABLE;
-	if (evstate != SDL_EventState(SDL_MOUSEMOTION, SDL_QUERY)) {
-		SDL_EventState(SDL_MOUSEMOTION, evstate);
-		SDL_EventState(SDL_MOUSEBUTTONDOWN, evstate);
-		SDL_EventState(SDL_MOUSEBUTTONUP, evstate);
-	}
+	sdl2_ShowCursor(show);
 }
 
 /* -------------------------------------------------------- */
 
-int video_is_screensaver_enabled(void)
+int sdl2_video_is_screensaver_enabled(void)
 {
-	return SDL_IsScreenSaverEnabled();
+	return sdl2_IsScreenSaverEnabled();
 }
 
-void video_toggle_screensaver(int enabled)
+void sdl2_video_toggle_screensaver(int enabled)
 {
-	if (enabled) SDL_EnableScreenSaver();
-	else SDL_DisableScreenSaver();
+	if (enabled) sdl2_EnableScreenSaver();
+	else sdl2_DisableScreenSaver();
 }
 
 /* ---------------------------------------------------------- */
 /* coordinate translation */
 
-void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
+void sdl2_video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
 {
 	if (video_mousecursor_visible() && (video.mouse.x != vx || video.mouse.y != vy))
 		status.flags |= SOFTWARE_MOUSE_MOVED;
@@ -588,27 +524,29 @@ void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
 	if (y) *y = vy;
 }
 
-void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
+void sdl2_video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
 {
 	if (!cfg_video_want_fixed) {
 		*trans_x = x;
 		*trans_y = y;
 	} else {
 		float xx, yy;
-#if SDL_VERSION_ATLEAST(2, 0, 18)
-		SDL_RenderWindowToLogical(video.renderer, x, y, &xx, &yy);
-#else
+#if SDL_DYNAMIC_LOAD || SDL_VERSION_ATLEAST(2, 0, 18)
+		if (sdl2_RenderWindowToLogical)
+			sdl2_RenderWindowToLogical(video.renderer, x, y, &xx, &yy);
+#endif
+
 		/* Alternative for older SDL versions. MIGHT work with high DPI */
 		float scale_x = 1, scale_y = 1;
 
-		SDL_RenderGetScale(video.renderer, &scale_x, &scale_y);
+		sdl2_RenderGetScale(video.renderer, &scale_x, &scale_y);
 
 		xx = x - (video.width / 2) - (((float)cfg_video_want_fixed_width * scale_x) / 2);
 		yy = y - (video.height / 2) - (((float)cfg_video_want_fixed_height * scale_y) / 2);
 
 		xx /= (float)video.width * cfg_video_want_fixed_width;
 		yy /= (float)video.height * cfg_video_want_fixed_height;
-#endif
+
 		*trans_x = (int)xx;
 		*trans_y = (int)yy;
 	}
@@ -617,25 +555,25 @@ void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
 /* -------------------------------------------------- */
 /* input grab */
 
-int video_is_input_grabbed(void)
+int sdl2_video_is_input_grabbed(void)
 {
-	return !!SDL_GetWindowGrab(video.window);
+	return !!sdl2_GetWindowGrab(video.window);
 }
 
-void video_set_input_grabbed(int enabled)
+void sdl2_video_set_input_grabbed(int enabled)
 {
-	SDL_SetWindowGrab(video.window, enabled ? SDL_TRUE : SDL_FALSE);
+	sdl2_SetWindowGrab(video.window, enabled ? SDL_TRUE : SDL_FALSE);
 }
 
 /* -------------------------------------------------- */
 /* warp mouse position */
 
-void video_warp_mouse(unsigned int x, unsigned int y)
+void sdl2_video_warp_mouse(unsigned int x, unsigned int y)
 {
-	SDL_WarpMouseInWindow(video.window, x, y);
+	sdl2_WarpMouseInWindow(video.window, x, y);
 }
 
-void video_get_mouse_coordinates(unsigned int *x, unsigned int *y)
+void sdl2_video_get_mouse_coordinates(unsigned int *x, unsigned int *y)
 {
 	*x = video.mouse.x;
 	*y = video.mouse.y;
@@ -644,7 +582,7 @@ void video_get_mouse_coordinates(unsigned int *x, unsigned int *y)
 /* -------------------------------------------------- */
 /* menu toggling */
 
-int video_have_menu(void)
+int sdl2_video_have_menu(void)
 {
 #ifdef SCHISM_WIN32
 	return 1;
@@ -653,23 +591,23 @@ int video_have_menu(void)
 #endif
 }
 
-void video_toggle_menu(int on)
+void sdl2_video_toggle_menu(int on)
 {
 	if (!video_have_menu())
 		return;
 
-	const int flags = SDL_GetWindowFlags(video.window);
+	const int flags = sdl2_GetWindowFlags(video.window);
 	int width, height;
 
 	const int cache_size = !(flags & SDL_WINDOW_MAXIMIZED);
 	if (cache_size)
-		SDL_GetWindowSize(video.window, &width, &height);
+		sdl2_GetWindowSize(video.window, &width, &height);
 
 #ifdef SCHISM_WIN32
 	/* Get the HWND */
 	SDL_SysWMinfo wm_info;
 	SDL_VERSION(&wm_info.version);
-	if (!SDL_GetWindowWMInfo(video.window, &wm_info))
+	if (!sdl2_GetWindowWMInfo(video.window, &wm_info))
 		return;
 
 	win32_toggle_menu(wm_info.info.win.window, on);
@@ -678,12 +616,12 @@ void video_toggle_menu(int on)
 #endif
 
 	if (cache_size)
-		SDL_SetWindowSize(video.window, width, height);
+		sdl2_SetWindowSize(video.window, width, height);
 }
 
 /* ------------------------------------------------------------ */
 
-void video_blit(void)
+void sdl2_video_blit(void)
 {
 	SDL_Rect dstrect;
 
@@ -696,13 +634,13 @@ void video_blit(void)
 		};
 	}
 
-	SDL_RenderClear(video.renderer);
+	sdl2_RenderClear(video.renderer);
 
 	// regular format blitter
 	unsigned char *pixels;
 	int pitch;
 
-	SDL_LockTexture(video.texture, NULL, (void **)&pixels, &pitch);
+	sdl2_LockTexture(video.texture, NULL, (void **)&pixels, &pitch);
 
 	switch (video.format) {
 	case SDL_PIXELFORMAT_IYUV: {
@@ -726,23 +664,143 @@ void video_blit(void)
 		break;
 	}
 	}
-	SDL_UnlockTexture(video.texture);
-	SDL_RenderCopy(video.renderer, video.texture, NULL, (cfg_video_want_fixed) ? &dstrect : NULL);
-	SDL_RenderPresent(video.renderer);
+	sdl2_UnlockTexture(video.texture);
+	sdl2_RenderCopy(video.renderer, video.texture, NULL, (cfg_video_want_fixed) ? &dstrect : NULL);
+	sdl2_RenderPresent(video.renderer);
 }
 
 /* ------------------------------------------------- */
 
-void video_mousecursor_changed(void)
+void sdl2_video_mousecursor_changed(void)
 {
 	const int vis = video_mousecursor_visible();
-	SDL_ShowCursor(vis == MOUSE_SYSTEM);
+	sdl2_ShowCursor(vis == MOUSE_SYSTEM);
 
 	// Totally turn off mouse event sending when the mouse is disabled
 	int evstate = (vis == MOUSE_DISABLED) ? SDL_DISABLE : SDL_ENABLE;
-	if (evstate != SDL_EventState(SDL_MOUSEMOTION, SDL_QUERY)) {
-		SDL_EventState(SDL_MOUSEMOTION, evstate);
-		SDL_EventState(SDL_MOUSEBUTTONDOWN, evstate);
-		SDL_EventState(SDL_MOUSEBUTTONUP, evstate);
+	if (evstate != sdl2_EventState(SDL_MOUSEMOTION, SDL_QUERY)) {
+		sdl2_EventState(SDL_MOUSEMOTION, evstate);
+		sdl2_EventState(SDL_MOUSEBUTTONDOWN, evstate);
+		sdl2_EventState(SDL_MOUSEBUTTONUP, evstate);
 	}
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+static int sdl2_video_load_syms(void)
+{
+	SCHISM_SDL2_SYM(InitSubSystem);
+	SCHISM_SDL2_SYM(QuitSubSystem);
+
+	SCHISM_SDL2_SYM(GetCurrentVideoDriver);
+	SCHISM_SDL2_SYM(GetCurrentDisplayMode);
+	SCHISM_SDL2_SYM(GetRendererInfo);
+	SCHISM_SDL2_SYM(ShowCursor);
+	SCHISM_SDL2_SYM(GetWindowWMInfo);
+	SCHISM_SDL2_SYM(GetWindowFlags);
+	SCHISM_SDL2_SYM(MapRGB);
+	SCHISM_SDL2_SYM(SetWindowPosition);
+	SCHISM_SDL2_SYM(SetWindowSize);
+	SCHISM_SDL2_SYM(SetWindowFullscreen);
+	SCHISM_SDL2_SYM(GetWindowPosition);
+	SCHISM_SDL2_SYM(CreateWindow);
+	SCHISM_SDL2_SYM(CreateRenderer);
+	SCHISM_SDL2_SYM(CreateTexture);
+	SCHISM_SDL2_SYM(AllocFormat);
+	SCHISM_SDL2_SYM(FreeFormat);
+	SCHISM_SDL2_SYM(DestroyTexture);
+	SCHISM_SDL2_SYM(DestroyRenderer);
+	SCHISM_SDL2_SYM(DestroyWindow);
+	SCHISM_SDL2_SYM(EventState);
+	SCHISM_SDL2_SYM(IsScreenSaverEnabled);
+	SCHISM_SDL2_SYM(EnableScreenSaver);
+	SCHISM_SDL2_SYM(DisableScreenSaver);
+	SCHISM_SDL2_SYM(RenderGetScale);
+	SCHISM_SDL2_SYM(SetWindowGrab);
+	SCHISM_SDL2_SYM(WarpMouseInWindow);
+	SCHISM_SDL2_SYM(GetWindowFlags);
+	SCHISM_SDL2_SYM(GetWindowSize);
+	SCHISM_SDL2_SYM(SetWindowSize);
+	SCHISM_SDL2_SYM(RenderClear);
+	SCHISM_SDL2_SYM(LockTexture);
+	SCHISM_SDL2_SYM(UnlockTexture);
+	SCHISM_SDL2_SYM(RenderCopy);
+	SCHISM_SDL2_SYM(RenderPresent);
+	SCHISM_SDL2_SYM(SetWindowTitle);
+	SCHISM_SDL2_SYM(CreateRGBSurfaceFrom);
+	SCHISM_SDL2_SYM(SetWindowIcon);
+	SCHISM_SDL2_SYM(FreeSurface);
+	SCHISM_SDL2_SYM(SetHint);
+	SCHISM_SDL2_SYM(RenderSetLogicalSize);
+	SCHISM_SDL2_SYM(GetWindowGrab);
+
+	return 0;
+}
+
+static int sdl2_0_18_video_load_syms(void)
+{
+	SCHISM_SDL2_SYM(RenderWindowToLogical);
+
+	return 0;
+}
+
+static int sdl2_video_init(void)
+{
+	if (!sdl2_init())
+		return 0;
+
+	if (sdl2_video_load_syms())
+		return 0;
+
+	//  :) 
+	sdl2_0_18_video_load_syms();
+
+	if (sdl2_InitSubSystem(SDL_INIT_VIDEO) < 0)
+		return 0;
+
+	return 1;
+}
+
+static void sdl2_video_quit(void)
+{
+	sdl2_QuitSubSystem(SDL_INIT_VIDEO);
+
+	sdl2_quit();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+const schism_video_backend_t schism_video_backend_sdl2 = {
+	.init = sdl2_video_init,
+	.quit = sdl2_video_quit,
+
+	.startup = sdl2_video_startup,
+	.shutdown = sdl2_video_shutdown,
+
+	.is_fullscreen = sdl2_video_is_fullscreen,
+	.width = sdl2_video_width,
+	.height = sdl2_video_height,
+	.driver_name = sdl2_video_driver_name,
+	.report = sdl2_video_report,
+	.set_hardware = sdl2_video_set_hardware,
+	.setup = sdl2_video_setup,
+	.fullscreen = sdl2_video_fullscreen,
+	.resize = sdl2_video_resize,
+	.colors = sdl2_video_colors,
+	.is_focused = sdl2_video_is_focused,
+	.is_visible = sdl2_video_is_visible,
+	.is_wm_available = sdl2_video_is_wm_available,
+	.is_hardware = sdl2_video_is_hardware,
+	.is_screensaver_enabled = sdl2_video_is_screensaver_enabled,
+	.toggle_screensaver = sdl2_video_toggle_screensaver,
+	.translate = sdl2_video_translate,
+	.get_logical_coordinates = sdl2_video_get_logical_coordinates,
+	.is_input_grabbed = sdl2_video_is_input_grabbed,
+	.set_input_grabbed = sdl2_video_set_input_grabbed,
+	.warp_mouse = sdl2_video_warp_mouse,
+	.get_mouse_coordinates = sdl2_video_get_mouse_coordinates,
+	.have_menu = sdl2_video_have_menu,
+	.toggle_menu = sdl2_video_toggle_menu,
+	.blit = sdl2_video_blit,
+	.mousecursor_changed = sdl2_video_mousecursor_changed,
+};

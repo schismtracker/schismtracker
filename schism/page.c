@@ -109,7 +109,7 @@ static int check_time(void)
 		h = (m = (s = song_get_current_time()) / 60) / 60;
 		break;
 	case TIME_ELAPSED:
-		h = (m = (s = be_timer_ticks() / 1000) / 60) / 60;
+		h = (m = (s = timer_ticks() / 1000) / 60) / 60;
 		break;
 	case TIME_ABSOLUTE:
 		/* absolute time shows the time of the current cursor

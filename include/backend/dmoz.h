@@ -21,25 +21,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_BACKEND_INIT_H
-#define SCHISM_BACKEND_INIT_H
+#ifndef SCHISM_BACKEND_EVENTS_H_
+#define SCHISM_BACKEND_EVENTS_H_
+
+typedef struct {
+	// returns 1 if succeeded, 0 if failed
+	int (*init)(void);
+	void (*quit)(void);
+
+	char * (*get_exe_path)(void);
+} schism_dmoz_backend_t;
 
 #ifdef SCHISM_SDL2
-# define be_init sdl2_init
-# define be_quit sdl2_quit
-#elif SCHISM_SDL12
-# define be_init sdl12_init
-# define be_quit sdl12_quit
+extern const schism_dmoz_backend_t schism_dmoz_backend_sdl2;
 #endif
 
-int sdl2_init(void);
-void sdl2_quit(void);
-
-// these are in the events file...
-int sdl2_controller_init(void);
-int sdl2_controller_quit(void);
-
-int sdl12_init(void);
-void sdl12_quit(void);
-
-#endif /* SCHISM_BACKEND_INIT_H */
+#endif /* SCHISM_BACKEND_EVENTS_H_ */

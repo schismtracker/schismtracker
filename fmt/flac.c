@@ -646,14 +646,14 @@ static int load_flac_syms(void);
 
 #ifdef FLAC_DYNAMIC_LOAD
 
-#include "backend/object.h"
+#include "loadso.h"
 
 void *flac_dltrick_handle_ = NULL;
 
 static void flac_dlend(void)
 {
 	if (flac_dltrick_handle_) {
-		be_object_unload(flac_dltrick_handle_);
+		loadso_object_unload(flac_dltrick_handle_);
 		flac_dltrick_handle_ = NULL;
 	}
 }
@@ -682,7 +682,7 @@ SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code a
 
 static int load_flac_sym(const char *fn, void *addr)
 {
-	void *func = be_function_load(flac_dltrick_handle_, fn);
+	void *func = loadso_function_load(flac_dltrick_handle_, fn);
 	if (!func)
 		return 0;
 

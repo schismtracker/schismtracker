@@ -348,7 +348,7 @@ static void audio_driver_list_draw() {
 	int interp_modes;
 	for (interp_modes = 0; interpolation_modes[interp_modes]; interp_modes++);
 
-	const int num_drivers = be_audio_driver_count();
+	const int num_drivers = audio_driver_count();
 	int n, o = 0, focused = (ACTIVE_PAGE.selected_widget == 14 + interp_modes);
 	int fg, bg;
 	const char* current_audio_driver = song_audio_driver();
@@ -356,7 +356,7 @@ static void audio_driver_list_draw() {
 	draw_fill_chars(AUDIO_DRIVER_BOX_X, AUDIO_DRIVER_BOX_Y, AUDIO_DRIVER_BOX_END_X, AUDIO_DRIVER_BOX_END_Y, DEFAULT_FG, 0);
 
 	for (n = top_audio_driver; n < num_drivers && o < AUDIO_DRIVER_BOX_HEIGHT; n++) {
-		const char* name = be_audio_driver_name(n);
+		const char* name = audio_driver_name(n);
 
 		if ((o + top_audio_driver) == selected_audio_driver) {
 			if (focused) {
@@ -382,7 +382,7 @@ static int audio_driver_list_handle_key_on_list(struct key_event * k)
 	int new_driver = selected_audio_driver;
 	int load_selected_driver = 0;
 	static const int focus_offsets[] = {4, 4, 4, 5, 5, 5};
-	const int num_drivers = be_audio_driver_count();
+	const int num_drivers = audio_driver_count();
 
 	switch (k->mouse) {
 	case MOUSE_DBLCLICK:
@@ -484,7 +484,7 @@ static int audio_driver_list_handle_key_on_list(struct key_event * k)
 	}
 
 	if (load_selected_driver) {
-		audio_flash_reinitialized_text(audio_init(be_audio_driver_name(selected_audio_driver), NULL));
+		audio_flash_reinitialized_text(audio_init(audio_driver_name(selected_audio_driver), NULL));
 		status.flags |= NEED_UPDATE;
 	}
 

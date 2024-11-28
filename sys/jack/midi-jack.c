@@ -27,6 +27,7 @@
 #include "midi.h"
 
 #include "util.h"
+#include "timer.h"
 
 #include <jack/jack.h>
 #include <jack/midiport.h>
@@ -71,13 +72,13 @@ static int load_jack_syms(void);
 
 #ifdef JACK_DYNAMIC_LOAD
 
-#include "backend/object.h"
+#include "loadso.h"
 
 void *jack_dltrick_handle_ = NULL;
 
 static void jack_dlend(void) {
 	if (jack_dltrick_handle_) {
-		be_object_unload(jack_dltrick_handle_);
+		loadso_object_unload(jack_dltrick_handle_);
 		jack_dltrick_handle_ = NULL;
 	}
 }
@@ -102,7 +103,7 @@ static int jack_dlinit(void) {
 SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
 
 static int load_jack_sym(const char *fn, void *addr) {
-	void *func = be_function_load(jack_dltrick_handle_, fn);
+	void *func = loadso_function_load(jack_dltrick_handle_, fn);
 	if (!func)
 		return 0;
 
@@ -281,7 +282,7 @@ static int _jack_thread(struct midi_provider *p)
 			}
 		}
 
-		msleep(1);
+		timer_msleep(1);
 	}
 
 	return 0;

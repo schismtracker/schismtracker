@@ -21,27 +21,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_BACKEND_EVENTS_H_
-#define SCHISM_BACKEND_EVENTS_H_
+#ifndef SCHISM_LOADSO_H_
+#define SCHISM_LOADSO_H_
 
-#include "../events.h"
-#include "../keyboard.h"
+#include "headers.h"
 
-typedef struct {
-	// returns 1 if succeeded, 0 if failed
-	int (*init)(void);
-	void (*quit)(void);
+void *loadso_object_load(const char *name);
+void loadso_object_unload(void *object);
+void *loadso_function_load(void *object, const char *name);
 
-	void (*pump_events)(void);
-	schism_keymod_t (*keymod_state)(void);
-} schism_events_backend_t;
+void *library_load(const char *name, int current, int age);
 
-#ifdef SCHISM_SDL12
-extern const schism_events_backend_t schism_events_backend_sdl12;
-#endif
-
-#ifdef SCHISM_SDL2
-extern const schism_events_backend_t schism_events_backend_sdl2;
-#endif
-
-#endif /* SCHISM_BACKEND_EVENTS_H_ */
+#endif /* SCHISM_LOADSO_H_ */

@@ -287,10 +287,13 @@ typedef union schism_event {
 
 /* ------------------------------------ */
 
-int schism_init_event(void);
+int events_init(void);
+void events_quit(void);
 
-int schism_have_event(void);
-int schism_push_event(const schism_event_t *event);
-int schism_poll_event(schism_event_t *event);
+int events_have_event(void);
+int events_poll_event(schism_event_t *event);
+int events_push_event(const schism_event_t *event);
+
+schism_keymod_t events_get_keymod_state(void);
 
 #endif /* SCHISM_EVENT_H_ */

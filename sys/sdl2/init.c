@@ -21,38 +21,114 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "backend/init.h"
+#include "headers.h"
 
-#include <SDL.h>
+#include "init.h"
 
+static int (SDLCALL *sdl2_Init)(Uint32 flags);
+static void (SDLCALL *sdl2_Quit)(void);
+static const char *(SDLCALL *sdl2_GetError)(void);
+
+static int load_sdl2_syms(void);
+
+#ifdef SDL2_DYNAMIC_LOAD
+
+#include "loadso.h"
+
+static void *sdl2_dltrick_handle_ = NULL;
+
+static void sdl2_dlend(void)
+{
+	if (sdl2_dltrick_handle_) {
+		loadso_object_unload(sdl2_dltrick_handle_);
+		sdl2_dltrick_handle_ = NULL;
+	}
+}
+
+static int sdl2_dlinit(void)
+{
+	int i;
+
+	// already have it?
+	if (sdl2_dltrick_handle_)
+		return 0;
+
+	sdl2_dltrick_handle_ = library_load("SDL2", 0, 0);
+	if (!sdl2_dltrick_handle_)
+		return -1;
+
+	int retval = load_sdl2_syms();
+	if (retval < 0)
+		sdl2_dlend();
+
+	return retval;
+}
+
+SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
+
+int sdl2_load_sym(const char *fn, void *addr)
+{
+	void *func = loadso_function_load(sdl2_dltrick_handle_, fn);
+	if (!func)
+		return 0;
+
+	memcpy(addr, &func, sizeof(void *));
+
+	return 1;
+}
+
+#else
+
+static int sdl2_dlinit(void)
+{
+	load_sdl2_syms();
+	return 0;
+}
+
+#define sdl2_dlend() // nothing
+
+#endif
+
+static int load_sdl2_syms(void)
+{
+	SCHISM_SDL2_SYM(Init);
+	SCHISM_SDL2_SYM(Quit);
+	SCHISM_SDL2_SYM(GetError);
+
+	return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+// this is used so that SDL_Quit is only called
+// once every backend is done
+static int roll = 0;
+
+// returns non-zero on success or zero on error
 int sdl2_init(void)
 {
-	int r = SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO);
-	if (r < 0) {
-		fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
-		return r;
+	if (!roll) {
+		if (sdl2_dlinit())
+			return 0;
+
+		// the subsystems are initialized by the actual backends
+		int r = sdl2_Init(0);
+		if (r < 0) {
+			fprintf(stderr, "SDL2: SDL_Init: %s\n", sdl2_GetError());
+			return 0;
+		}
 	}
-
-	SDL_StartTextInput();
-	SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
-	SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
-
-#ifdef SCHISM_CONTROLLER
-	controller_init();
-#endif
-
-#ifdef SCHISM_WIN32
-	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-#endif
-
-	return r;
+	roll++;
+	return roll;
 }
 
 void sdl2_quit(void)
 {
-#ifdef SCHISM_CONTROLLER
-	controller_quit();
-#endif
+	if (roll > 0)
+		roll--;
 
-	SDL_Quit();
+	if (roll == 0) {
+		sdl2_Quit();
+		sdl2_dlend();
+	}
 }

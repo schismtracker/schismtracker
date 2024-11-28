@@ -27,8 +27,11 @@
 #include "events.h"
 #include "mem.h"
 
-#include "backend/threads.h"
+#include "threads.h"
+
 #include "backend/events.h"
+
+const schism_events_backend_t *events_backend = NULL;
 
 /* ------------------------------------------------------ */
 
@@ -68,71 +71,115 @@ static inline int queue_dequeue(schism_event_t *event)
 
 /* ------------------------------------------------------ */
 
-int schism_init_event(void)
+int events_init(void)
 {
-	queue_mutex = be_mutex_create();
+	static const schism_events_backend_t *backends[] = {
+		// ordered by preference
+#ifdef SCHISM_SDL2
+		&schism_events_backend_sdl2,
+#endif
+#ifdef SCHISM_SDL12
+		&schism_events_backend_sdl12,
+#endif
+		NULL,
+	};
+
+	int i;
+	int success;
+
+	for (i = 0; backends[i]; i++) {
+		if (backends[i]->init()) {
+			events_backend = backends[i];
+			break;
+		}
+	}
+
+	if (!events_backend)
+		return 0;
+
+	queue_mutex = mt_mutex_create();
 	if (!queue_mutex)
 		return 0;
 
 	return 1;
 }
 
-int schism_have_event(void)
+void events_quit(void)
 {
-	be_mutex_lock(queue_mutex);
+	if (queue_mutex)
+		mt_mutex_delete(queue_mutex);
 
-	if (queue.size) {
-		be_mutex_unlock(queue_mutex);
-		return 1;
+	if (events_backend) {
+		events_backend->quit();
+		events_backend = NULL;
 	}
-
-	be_pump_events();
-
-	if (queue.size) {
-		be_mutex_unlock(queue_mutex);
-		return 1;
-	}
-
-	be_mutex_unlock(queue_mutex);
-
-	return 0;
 }
 
-int schism_poll_event(schism_event_t *event)
+int events_have_event(void)
 {
-	be_mutex_lock(queue_mutex);
+	mt_mutex_lock(queue_mutex);
 
-	if (queue_dequeue(event)) {
-		be_mutex_unlock(queue_mutex);
+	if (queue.size) {
+		mt_mutex_unlock(queue_mutex);
 		return 1;
 	}
 
 	// try pumping the events.
-	be_pump_events();
+	events_backend->pump_events();
 
-	if (queue_dequeue(event)) {
-		be_mutex_unlock(queue_mutex);
+	if (queue.size) {
+		mt_mutex_unlock(queue_mutex);
 		return 1;
 	}
 
-	be_mutex_unlock(queue_mutex);
+	mt_mutex_unlock(queue_mutex);
+
+	return 0;
+}
+
+int events_poll_event(schism_event_t *event)
+{
+	if (!event)
+		return events_have_event();
+
+	mt_mutex_lock(queue_mutex);
+
+	if (queue_dequeue(event)) {
+		mt_mutex_unlock(queue_mutex);
+		return 1;
+	}
+
+	// try pumping the events.
+	events_backend->pump_events();
+
+	if (queue_dequeue(event)) {
+		mt_mutex_unlock(queue_mutex);
+		return 1;
+	}
+
+	mt_mutex_unlock(queue_mutex);
 
 	// welp
 	return 0;
 }
 
 // implicitly fills in the timestamp
-int schism_push_event(const schism_event_t *event)
+int events_push_event(const schism_event_t *event)
 {
 	schism_event_t e = *event;
 
-	e.common.timestamp = be_timer_ticks();
+	e.common.timestamp = timer_ticks();
 
-	be_mutex_lock(queue_mutex);
+	mt_mutex_lock(queue_mutex);
 
 	queue_enqueue(&e);
 
-	be_mutex_unlock(queue_mutex);
+	mt_mutex_unlock(queue_mutex);
 
 	return 1;
+}
+
+schism_keymod_t events_get_keymod_state(void)
+{
+	return events_backend->keymod_state();
 }

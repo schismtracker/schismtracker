@@ -24,80 +24,32 @@
 #ifndef SCHISM_BACKEND_THREADS_H_
 #define SCHISM_BACKEND_THREADS_H_
 
-#include "headers.h"
+#include "../threads.h"
 
-/* private to each backend */
-typedef struct schism_thread schism_thread_t;
-typedef struct schism_mutex schism_mutex_t;
-typedef struct schism_cond schism_cond_t;
+typedef struct {
+	int (*init)(void);
+	void (*quit)(void);
 
-typedef int (*schism_thread_function_t)(void *userdata);
+	schism_thread_t *(*thread_create)(schism_thread_function_t func, const char *name, void *userdata);
+	void (*thread_wait)(schism_thread_t *thread, int *status);
+	void (*thread_set_priority)(int priority);
 
-enum {
-	BE_THREAD_PRIORITY_LOW = 0,
-	BE_THREAD_PRIORITY_NORMAL,
-	BE_THREAD_PRIORITY_HIGH,
-	BE_THREAD_PRIORITY_TIME_CRITICAL,
-};
+	schism_mutex_t *(*mutex_create)(void);
+	void (*mutex_delete)(schism_mutex_t *mutex);
+	void (*mutex_lock)(schism_mutex_t *mutex);
+	void (*mutex_unlock)(schism_mutex_t *mutex);
 
-#ifdef SCHISM_SDL2
-# define be_thread_create sdl2_thread_create
-# define be_thread_wait sdl2_thread_wait
-# define be_thread_set_priority sdl2_thread_set_priority
+	schism_cond_t *(*cond_create)(void);
+	void (*cond_delete)(schism_cond_t *cond);
+	void (*cond_signal)(schism_cond_t *cond);
+	void (*cond_wait)(schism_cond_t *cond, schism_mutex_t *mutex);
+} schism_threads_backend_t;
 
-# define be_mutex_create sdl2_mutex_create
-# define be_mutex_delete sdl2_mutex_delete
-# define be_mutex_lock sdl2_mutex_lock
-# define be_mutex_unlock sdl2_mutex_unlock
-
-# define be_cond_create sdl2_cond_create
-# define be_cond_delete sdl2_cond_delete
-# define be_cond_signal sdl2_cond_signal
-# define be_cond_wait sdl2_cond_wait
-#elif defined(SCHISM_SDL12)
-# define be_thread_create sdl12_thread_create
-# define be_thread_wait sdl12_thread_wait
-# define be_thread_set_priority sdl12_thread_set_priority
-
-# define be_mutex_create sdl12_mutex_create
-# define be_mutex_delete sdl12_mutex_delete
-# define be_mutex_lock sdl12_mutex_lock
-# define be_mutex_unlock sdl12_mutex_unlock
-
-# define be_cond_create sdl12_cond_create
-# define be_cond_delete sdl12_cond_delete
-# define be_cond_signal sdl12_cond_signal
-# define be_cond_wait sdl12_cond_wait
-#else
-# error Threads are unimplemented on this backend
+#ifdef SCHISM_SDL12
+extern const schism_threads_backend_t schism_threads_backend_sdl12;
 #endif
-
-schism_thread_t *sdl12_thread_create(schism_thread_function_t func, const char *name, void *userdata);
-void sdl12_thread_wait(schism_thread_t *thread, int *status);
-void sdl12_thread_set_priority(int priority);
-
-schism_mutex_t *sdl12_mutex_create(void);
-void sdl12_mutex_delete(schism_mutex_t *mutex);
-void sdl12_mutex_lock(schism_mutex_t *mutex);
-void sdl12_mutex_unlock(schism_mutex_t *mutex);
-
-schism_cond_t *sdl12_cond_create(void);
-void sdl12_cond_delete(schism_cond_t *cond);
-void sdl12_cond_signal(schism_cond_t *cond);
-void sdl12_cond_wait(schism_cond_t *cond, schism_mutex_t *mutex);
-
-schism_thread_t *sdl2_thread_create(schism_thread_function_t func, const char *name, void *userdata);
-void sdl2_thread_wait(schism_thread_t *thread, int *status);
-void sdl2_thread_set_priority(int priority);
-
-schism_mutex_t *sdl2_mutex_create(void);
-void sdl2_mutex_delete(schism_mutex_t *mutex);
-void sdl2_mutex_lock(schism_mutex_t *mutex);
-void sdl2_mutex_unlock(schism_mutex_t *mutex);
-
-schism_cond_t *sdl2_cond_create(void);
-void sdl2_cond_delete(schism_cond_t *cond);
-void sdl2_cond_signal(schism_cond_t *cond);
-void sdl2_cond_wait(schism_cond_t *cond, schism_mutex_t *mutex);
+#ifdef SCHISM_SDL2
+extern const schism_threads_backend_t schism_threads_backend_sdl2;
+#endif
 
 #endif /* SCHISM_BACKEND_THREADS_H_ */
