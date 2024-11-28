@@ -25,6 +25,7 @@
 
 #include "log.h"
 #include "midi.h"
+#include "timer.h"
 
 #include "util.h"
 
@@ -137,7 +138,7 @@ static CALLBACK void _win32mm_inputcb(UNUSED HMIDIIN in, UINT wmsg, DWORD_PTR in
 
 	switch (wmsg) {
 	case MIM_OPEN:
-		msleep(0); /* eh? */
+		timer_msleep(0); /* eh? */
 	case MIM_CLOSE:
 		break;
 	case MIM_DATA:
