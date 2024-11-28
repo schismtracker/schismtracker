@@ -858,22 +858,10 @@ void schism_exit(int status)
 	flac_quit();
 #endif
 
-	song_lock_audio();
-	song_stop_unlocked(1);
-	song_unlock_audio();
-
-	dmoz_quit();
-	audio_quit();
-	clippy_quit();
-	events_quit();
-	mt_quit();
-	timer_quit();
-
 	if (shutdown_process & EXIT_SAVECFG)
 		cfg_atexit_save();
 
 	if (shutdown_process & EXIT_SDLQUIT) {
-
 		// Clear to black on exit (nicer on Wii; I suppose it won't hurt elsewhere)
 		video_refresh();
 		video_blit();
@@ -888,6 +876,20 @@ void schism_exit(int status)
 		*/
 	}
 
+	song_lock_audio();
+	song_stop_unlocked(1);
+	song_unlock_audio();
+
+	dmoz_quit();
+	audio_quit();
+	clippy_quit();
+	events_quit();
+#ifndef HAVE_LOCALTIME_R
+	localtime_r_quit();
+#endif
+	mt_quit();
+	timer_quit();
+
 	os_sysexit();
 
 	exit(status);
@@ -895,12 +897,8 @@ void schism_exit(int status)
 
 extern void vis_init(void);
 
-/* wart */
-#ifdef SCHISM_MACOSX
+/* the real main function is called per-platform */
 int schism_main(int argc, char** argv)
-#else
-int main(int argc, char **argv)
-#endif
 {
 	os_sysinit(&argc, &argv);
 
@@ -934,6 +932,13 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Failed to initialize a multithreading backend!\n");
 		return 1;
 	}
+
+#ifndef HAVE_LOCALTIME_R
+	if (!localtime_r_init()) {
+		fprintf(stderr, "Failed to initialize localtime_r replacement!\n");
+		return 1;
+	}
+#endif
 
 	if (!events_init()) {
 		fprintf(stderr, "Failed to initialize an events backend!\n");
@@ -1047,3 +1052,35 @@ int main(int argc, char **argv)
 
 	return 0; /* blah */
 }
+
+#if defined(SCHISM_WIN32)
+int wmain(int argc, wchar_t **argv)
+{
+	// we have to convert the filename to our internal representation
+	char *utf8_argv[argc], *utf8_argv_cp[argc];
+	int i;
+
+	for (i = 0; i < argc; i++) {
+		charset_iconv(argv[i], &utf8_argv[i], CHARSET_WCHAR_T, CHARSET_CHAR, SIZE_MAX);
+		if (!utf8_argv[i])
+			utf8_argv[i] = str_dup(""); // ...
+
+		utf8_argv_cp[i] = utf8_argv[i];
+	}
+
+	int r = schism_main(argc, utf8_argv_cp);
+
+	for (i = 0; i < argc; i++)
+		free(utf8_argv[i]);
+
+	return r;
+}
+#elif defined(SCHISM_MACOSX)
+// handled in its own file
+#else
+int main(int argc, char **argv)
+{
+	// do nothing special
+	return schism_main(argc, argv);
+}
+#endif
