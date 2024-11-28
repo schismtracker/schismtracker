@@ -102,24 +102,32 @@ void loadso_object_unload(void *object)
 
 /* ------------------------------------------------------------------------ */
 
+static const char *loadso_libtool_fmts[] = {
 #ifdef SCHISM_WIN32
-# define LIBTOOL_FMT "lib%s-%d.dll"
+	"lib%s-%d.dll",
 #elif defined(SCHISM_MACOSX)
-# define LIBTOOL_FMT "lib%s.%d.dylib"
+	"lib%s.%d.dylib",
 #else
-# define LIBTOOL_FMT "lib%s.so.%d"
+	"lib%s.so.%d",
 #endif
+	NULL,
+};
 
 static void *library_load_revision(const char *name, int revision)
 {
-	char *buf;
+	int i;
+	void *res = NULL;
 
-	if (asprintf(&buf, LIBTOOL_FMT, name, revision) < 0)
-		return NULL;
+	for (i = 0; loadso_libtool_fmts[i] && !res; i++) {
+		char *buf;
 
-	void *res = loadso_object_load(buf);
+		if (asprintf(&buf, loadso_libtool_fmts[i], name, revision) < 0)
+			continue;
 
-	free(buf);
+		res = loadso_object_load(buf);
+
+		free(buf);
+	}
 
 	return res;
 }
@@ -144,29 +152,39 @@ static void *library_load_libtool(const char *name, int current, int age)
 
 /* ------------------------------------------------------------------------ */
 
+static const char *loadso_lib_fmts[] = {
 #ifdef SCHISM_WIN32
-# define LIB_FMT "lib%s.dll"
+	"lib%s.dll",
+	"%s.dll",
 #elif defined(SCHISM_MACOSX)
-# define LIB_FMT "lib%s.dylib"
+	"lib%s.dylib",
 #else
-# define LIB_FMT "lib%s.so"
+	"lib%s.so",
 #endif
+	NULL,
+};
 
 void *library_load(const char *name, int current, int age)
 {
-	void *object = library_load_libtool(name, current, age);
+	void *object = NULL;
+
+	object = library_load_libtool(name, current, age);
 	if (object)
 		return object;
 
 	// ...
-	char *buf;
+	int i;
 
-	if (asprintf(&buf, LIB_FMT, name) < 0)
-		return NULL;
+	for (i = 0; loadso_lib_fmts[i] && !object; i++) {
+		char *buf;
 
-	object = loadso_object_load(buf);
+		if (asprintf(&buf, loadso_libtool_fmts[i], name) < 0)
+			continue;
 
-	free(buf);
+		object = loadso_object_load(buf);
+
+		free(buf);
+	}
 
 	return object;
 }
