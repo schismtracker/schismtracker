@@ -22,13 +22,13 @@
  */
 
 #include "headers.h"
-#include "backend/threads.h"
+#include "threads.h"
 
 static schism_mutex_t *localtime_r_mutex = NULL;
 
 static void localtime_r_atexit(void)
 {
-	be_mutex_delete(localtime_r_mutex);
+	mt_mutex_delete(localtime_r_mutex);
 }
 
 struct tm *localtime_r(const time_t *timep, struct tm *result)
@@ -37,7 +37,7 @@ struct tm *localtime_r(const time_t *timep, struct tm *result)
 	static int initialized = 0;
 
 	if (!initialized) {
-		localtime_r_mutex = be_mutex_create();
+		localtime_r_mutex = mt_mutex_create();
 		if (!localtime_r_mutex)
 			return NULL;
 
@@ -46,12 +46,12 @@ struct tm *localtime_r(const time_t *timep, struct tm *result)
 		initialized = 1;
 	}
 
-	be_mutex_lock(localtime_r_mutex);
+	mt_mutex_lock(localtime_r_mutex);
 
 	our_tm = localtime(timep);
 	memcpy(result, our_tm, sizeof(struct tm));
 
-	be_mutex_unlock(localtime_r_mutex);
+	mt_mutex_unlock(localtime_r_mutex);
 
 	return result;
 }
