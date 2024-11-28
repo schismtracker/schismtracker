@@ -879,8 +879,8 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int l
 void midi_event_note(enum midi_note mnstatus, int channel, int note, int velocity)
 {
 	schism_event_t event = {
+		.type = SCHISM_EVENT_MIDI_NOTE,
 		.midi_note = {
-			.type = SCHISM_EVENT_MIDI_NOTE,
 			.mnstatus = mnstatus,
 			.channel = channel,
 			.note = note,
@@ -894,8 +894,8 @@ void midi_event_note(enum midi_note mnstatus, int channel, int note, int velocit
 void midi_event_controller(int channel, int param, int value)
 {
 	schism_event_t event = {
+		.type = SCHISM_EVENT_MIDI_CONTROLLER,
 		.midi_controller = {
-			.type = SCHISM_EVENT_MIDI_CONTROLLER,
 			.value = value,
 			.param = param,
 			.channel = channel,
@@ -908,8 +908,8 @@ void midi_event_controller(int channel, int param, int value)
 void midi_event_program(int channel, int value)
 {
 	schism_event_t event = {
+		.type = SCHISM_EVENT_MIDI_PROGRAM,
 		.midi_program = {
-			.type = SCHISM_EVENT_MIDI_PROGRAM,
 			.value = value,
 			.channel = channel,
 		}
@@ -921,8 +921,8 @@ void midi_event_program(int channel, int value)
 void midi_event_aftertouch(int channel, int value)
 {
 	schism_event_t event = {
+		.type = SCHISM_EVENT_MIDI_AFTERTOUCH,
 		.midi_aftertouch = {
-			.type = SCHISM_EVENT_MIDI_AFTERTOUCH,
 			.value = value,
 			.channel = channel,
 		}
@@ -934,8 +934,8 @@ void midi_event_aftertouch(int channel, int value)
 void midi_event_pitchbend(int channel, int value)
 {
 	schism_event_t event = {
+		.type = SCHISM_EVENT_MIDI_PITCHBEND,
 		.midi_pitchbend = {
-			.type = SCHISM_EVENT_MIDI_PITCHBEND,
 			.value = value,
 			.channel = channel,
 		}
@@ -947,8 +947,8 @@ void midi_event_pitchbend(int channel, int value)
 void midi_event_system(int argv, int param)
 {
 	schism_event_t event = {
+		.type = SCHISM_EVENT_MIDI_SYSTEM,
 		.midi_system = {
-			.type = SCHISM_EVENT_MIDI_SYSTEM,
 			.argv = argv,
 			.param = param,
 		}
@@ -960,8 +960,9 @@ void midi_event_system(int argv, int param)
 void midi_event_tick(void)
 {
 	schism_event_t event = {
+		.type = SCHISM_EVENT_MIDI_TICK,
 		.midi_tick = {
-			.type = SCHISM_EVENT_MIDI_TICK,
+			
 		}
 	};
 
@@ -971,8 +972,8 @@ void midi_event_tick(void)
 void midi_event_sysex(const unsigned char *data, unsigned int len)
 {
 	schism_event_t event = {
+		.type = SCHISM_EVENT_MIDI_SYSEX,
 		.midi_sysex = {
-			.type = SCHISM_EVENT_MIDI_SYSEX,
 			.len = len,
 		}
 	};

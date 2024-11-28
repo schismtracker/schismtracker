@@ -92,8 +92,7 @@ typedef struct {
 } schism_common_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	// event-specific data
 	union {
@@ -105,8 +104,7 @@ typedef struct {
 } schism_window_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 	enum key_state state;
 	int repeat;
 
@@ -117,22 +115,19 @@ typedef struct {
 } schism_keyboard_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	char text[32]; // always in UTF-8
 } schism_text_input_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	char *file;
 } schism_file_drop_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	/* X and Y coordinates relative to the window */
 	int32_t x;
@@ -140,8 +135,7 @@ typedef struct {
 } schism_mouse_motion_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	enum mouse_button button;
 	int state; // zero if released, non-zero if pressed
@@ -153,8 +147,7 @@ typedef struct {
 } schism_mouse_button_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	int32_t x; // how far on the horizontal axis
 	int32_t y; // how far on the vertical axis
@@ -165,8 +158,7 @@ typedef struct {
 } schism_mouse_wheel_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	int mnstatus;
 	int channel;
@@ -175,44 +167,42 @@ typedef struct {
 } schism_midi_note_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 	int value;
 	int channel;
 	int param;
 } schism_midi_controller_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
+
 	int value;
 	int channel;
 } schism_midi_program_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
+
 	int value;
 	int channel;
 } schism_midi_aftertouch_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
+
 	int value;
 	int channel;
 } schism_midi_pitchbend_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
+
 	int argv;
 	int param;
 } schism_midi_system_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 } schism_midi_tick_event_t;
 
 typedef struct {
@@ -224,29 +214,25 @@ typedef struct {
 } schism_midi_sysex_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	char *which;
 } schism_native_script_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	char *file;
 } schism_native_open_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	char *clipboard;
 } schism_clipboard_paste_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	union {
 		struct {

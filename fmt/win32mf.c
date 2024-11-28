@@ -51,6 +51,7 @@ typedef HRESULT (WINAPI *MF_MFCreateSourceResolverSpec)(IMFSourceResolver **ppIS
 typedef HRESULT (WINAPI *MF_MFGetServiceSpec)(IUnknown *punkObject, REFGUID guidService, REFIID riid, LPVOID *ppvObject);
 typedef HRESULT (WINAPI *MF_PropVariantToStringAllocSpec)(REFPROPVARIANT propvar, PWSTR *ppszOut);
 typedef HRESULT (WINAPI *MF_PropVariantToUInt64Spec)(REFPROPVARIANT propvar, ULONGLONG *pullRet);
+typedef HRESULT (WINAPI *MF_PropVariantClearSpec)(PROPVARIANT *pvar);
 typedef HRESULT (WINAPI *MF_MFCreateSourceReaderFromMediaSourceSpec)(IMFMediaSource *pMediaSource, IMFAttributes *pAttributes, IMFSourceReader **ppSourceReader);
 typedef HRESULT (WINAPI *MF_MFCreateMediaTypeSpec)(IMFMediaType **ppMFType);
 typedef HRESULT (WINAPI *MF_MFCreateAsyncResultSpec)(IUnknown *punkObject, IMFAsyncCallback *pCallback, IUnknown *punkState, IMFAsyncResult **ppAsyncResult);
@@ -59,6 +60,7 @@ typedef HRESULT (WINAPI *MF_MFInvokeCallbackSpec)(IMFAsyncResult *pAsyncResult);
 typedef HRESULT (WINAPI *MF_QISearchSpec)(void     *that,LPCQITAB pqit,REFIID   riid,void     **ppv);
 typedef HRESULT (WINAPI *MF_CoInitializeExSpec)(LPVOID pvReserved, DWORD  dwCoInit);
 typedef void (WINAPI *MF_CoUninitializeSpec)(void);
+typedef void (WINAPI *MF_CoTaskMemFreeSpec)(LPVOID pv);
 
 static MF_MFStartupSpec MF_MFStartup;
 static MF_MFShutdownSpec MF_MFShutdown;
@@ -66,6 +68,7 @@ static MF_MFCreateSourceResolverSpec MF_MFCreateSourceResolver;
 static MF_MFGetServiceSpec MF_MFGetService;
 static MF_PropVariantToStringAllocSpec MF_PropVariantToStringAlloc;
 static MF_PropVariantToUInt64Spec MF_PropVariantToUInt64;
+static MF_PropVariantClearSpec MF_PropVariantClear;
 static MF_MFCreateSourceReaderFromMediaSourceSpec MF_MFCreateSourceReaderFromMediaSource;
 static MF_MFCreateMediaTypeSpec MF_MFCreateMediaType;
 static MF_MFCreateAsyncResultSpec MF_MFCreateAsyncResult;
@@ -74,6 +77,7 @@ static MF_MFInvokeCallbackSpec MF_MFInvokeCallback;
 static MF_QISearchSpec MF_QISearch;
 static MF_CoInitializeExSpec MF_CoInitializeEx;
 static MF_CoUninitializeSpec MF_CoUninitialize;
+static MF_CoTaskMemFreeSpec MF_CoTaskMemFree;
 
 static int media_foundation_initialized = 0;
 
@@ -686,13 +690,13 @@ static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t
 			PropVariantInit(&propval);
 
 			if (FAILED(metadata->lpVtbl->GetProperty(metadata, prop_name, &propval))) {
-				PropVariantClear(&propval);
+				MF_PropVariantClear(&propval);
 				continue;
 			}
 
 			LPWSTR prop_val_str = NULL;
 			if (FAILED(MF_PropVariantToStringAlloc(&propval, &prop_val_str))) {
-				PropVariantClear(&propval);
+				MF_PropVariantClear(&propval);
 				continue;
 			}
 
@@ -700,13 +704,13 @@ static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t
 
 			charset_iconv(prop_val_str, file->title, CHARSET_WCHAR_T, CHARSET_CP437, SIZE_MAX);
 
-			CoTaskMemFree(prop_val_str);
-			PropVariantClear(&propval);
+			MF_CoTaskMemFree(prop_val_str);
+			MF_PropVariantClear(&propval);
 		}
 	}
 
 cleanup:
-	PropVariantClear(&propnames);
+	MF_PropVariantClear(&propnames);
 
 	if (descriptor)
 		descriptor->lpVtbl->Release(descriptor);
@@ -1008,6 +1012,8 @@ int win32mf_init(void)
 
 	LOAD_MF_OBJECT(ole32, CoInitializeEx);
 	LOAD_MF_OBJECT(ole32, CoUninitialize);
+	LOAD_MF_OBJECT(ole32, PropVariantClear);
+	LOAD_MF_OBJECT(ole32, CoTaskMemFree);
 
 	{
 		HRESULT com_init = MF_CoInitializeEx(NULL, COM_INITFLAGS);
