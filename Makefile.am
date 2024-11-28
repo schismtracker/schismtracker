@@ -147,9 +147,11 @@ noinst_HEADERS = \
 	include/player/tables.h		\
 	include/backend/audio.h     \
 	include/backend/clippy.h     \
+	include/backend/dmoz.h       \
 	include/backend/events.h     \
 	include/backend/threads.h     \
 	include/backend/timer.h     \
+	include/backend/video.h     \
 	sys/wii/certs_bin.h		\
 	sys/wii/isfs.h			\
 	sys/wii/su_tik_bin.h		\
