@@ -65,7 +65,7 @@ jobs:
           mkdir build
           cd build
           export PATH="${DEVKITPRO}/portlibs/wii/bin:${DEVKITPPC}/bin:$PATH"
-          FLAC_LIBS="-L${DEVKITPRO}/portlibs/ppc/lib -lFLAC -logg" PKG_CONFIG=pkg-config PKG_CONFIG_LIBDIR="$HOME/wiiprefix/lib/pkgconfig:${DEVKITPRO}/portlibs/wii/lib/pkgconfig:${DEVKITPRO}/portlibs/ppc/lib/pkgconfig" ../configure --host=powerpc-eabi --with-flac --enable-flac-linking --enable-force-wii
+          FLAC_LIBS="-L${DEVKITPRO}/portlibs/ppc/lib -lFLAC -logg" PKG_CONFIG=pkg-config PKG_CONFIG_LIBDIR="$HOME/wiiprefix/lib/pkgconfig:${DEVKITPRO}/portlibs/wii/lib/pkgconfig:${DEVKITPRO}/portlibs/ppc/lib/pkgconfig" ../configure --host=powerpc-eabi --with-flac --without-sdl12 --enable-flac-linking --enable-force-wii --enable-sdl2-linking
           make
           powerpc-eabi-strip -S schismtracker.elf
           mkdir -p up/apps
