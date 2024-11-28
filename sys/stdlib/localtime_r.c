@@ -25,31 +25,36 @@
 #include "threads.h"
 
 static schism_mutex_t *localtime_r_mutex = NULL;
+static int initialized = 0;
 
-static void localtime_r_atexit(void)
+void localtime_r_quit(void)
 {
 	mt_mutex_delete(localtime_r_mutex);
+}
+
+int localtime_r_init(void)
+{
+	localtime_r_mutex = mt_mutex_create();
+	if (!localtime_r_mutex)
+		return 0;
+
+	initialized = 1;
+
+	return 1;
 }
 
 struct tm *localtime_r(const time_t *timep, struct tm *result)
 {
 	static struct tm *our_tm;
-	static int initialized = 0;
 
-	if (!initialized) {
-		localtime_r_mutex = mt_mutex_create();
-		if (!localtime_r_mutex)
-			return NULL;
-
-		atexit(localtime_r_atexit);
-
-		initialized = 1;
-	}
+	// huh?
+	if (!initialized)
+		return NULL;
 
 	mt_mutex_lock(localtime_r_mutex);
 
 	our_tm = localtime(timep);
-	memcpy(result, our_tm, sizeof(struct tm));
+	*result = *our_tm;
 
 	mt_mutex_unlock(localtime_r_mutex);
 

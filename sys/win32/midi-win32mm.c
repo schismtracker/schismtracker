@@ -39,8 +39,8 @@ struct win32mm_midi {
 	HMIDIOUT out;
 	HMIDIIN in;
 
-	MIDIINCAPS icp;
-	MIDIOUTCAPS ocp;
+	MIDIINCAPSA icp;
+	MIDIOUTCAPSA ocp;
 
 	MIDIHDR hh;
 	LPMIDIHDR obuf;
@@ -240,7 +240,7 @@ static void _win32mm_poll(struct midi_provider *p)
 	mmin = midiInGetNumDevs();
 	for (i = last_known_in_port; i < mmin; i++) {
 		data = mem_calloc(1, sizeof(struct win32mm_midi));
-		r = midiInGetDevCaps(i, (LPMIDIINCAPS)&data->icp,
+		r = midiInGetDevCapsA(i, &data->icp,
 					sizeof(MIDIINCAPS));
 		if (r != MMSYSERR_NOERROR) {
 			free(data);
@@ -254,7 +254,7 @@ static void _win32mm_poll(struct midi_provider *p)
 	mmout = midiOutGetNumDevs();
 	for (i = last_known_out_port; i < mmout; i++) {
 		data = mem_calloc(1, sizeof(struct win32mm_midi));
-		r = midiOutGetDevCaps(i, (LPMIDIOUTCAPS)&data->ocp,
+		r = midiOutGetDevCapsA(i, &data->ocp,
 					sizeof(MIDIOUTCAPS));
 		if (r != MMSYSERR_NOERROR) {
 			if (data) free(data);

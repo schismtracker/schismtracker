@@ -179,7 +179,7 @@ void *library_load(const char *name, int current, int age)
 	for (i = 0; loadso_lib_fmts[i] && !object; i++) {
 		char *buf;
 
-		if (asprintf(&buf, loadso_libtool_fmts[i], name) < 0)
+		if (asprintf(&buf, loadso_lib_fmts[i], name) < 0)
 			continue;
 
 		object = loadso_object_load(buf);
