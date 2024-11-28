@@ -210,7 +210,10 @@ int clippy_init(void)
 		backend = NULL;
 	}
 
-	return 0;
+	if (!backend)
+		return 0;
+
+	return 1;
 }
 
 void clippy_quit(void)
