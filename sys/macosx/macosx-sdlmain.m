@@ -127,7 +127,7 @@ int schism_main(int argc, char** argv); // main.c
 	po = [filename UTF8String];
 	if (po) {
 		e.type = SCHISM_EVENT_NATIVE_OPEN;
-		e.script.which = str_dup(po);
+		e.open.file = str_dup(po);
 		/* if we started as a result of a doubleclick on
 		 * a document, then Main still hasn't really started yet. */
 		initial_song = str_dup(po);

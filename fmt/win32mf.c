@@ -56,6 +56,9 @@ typedef HRESULT (WINAPI *MF_MFCreateMediaTypeSpec)(IMFMediaType **ppMFType);
 typedef HRESULT (WINAPI *MF_MFCreateAsyncResultSpec)(IUnknown *punkObject, IMFAsyncCallback *pCallback, IUnknown *punkState, IMFAsyncResult **ppAsyncResult);
 typedef HRESULT (WINAPI *MF_MFPutWorkItemSpec)(DWORD dwQueue, IMFAsyncCallback *pCallback, IUnknown *pState);
 typedef HRESULT (WINAPI *MF_MFInvokeCallbackSpec)(IMFAsyncResult *pAsyncResult);
+typedef HRESULT (WINAPI *MF_QISearchSpec)(void     *that,LPCQITAB pqit,REFIID   riid,void     **ppv);
+typedef HRESULT (WINAPI *MF_CoInitializeExSpec)(LPVOID pvReserved, DWORD  dwCoInit);
+typedef void (WINAPI *MF_CoUninitializeSpec)(void);
 
 static MF_MFStartupSpec MF_MFStartup;
 static MF_MFShutdownSpec MF_MFShutdown;
@@ -68,6 +71,9 @@ static MF_MFCreateMediaTypeSpec MF_MFCreateMediaType;
 static MF_MFCreateAsyncResultSpec MF_MFCreateAsyncResult;
 static MF_MFPutWorkItemSpec MF_MFPutWorkItem;
 static MF_MFInvokeCallbackSpec MF_MFInvokeCallback;
+static MF_QISearchSpec MF_QISearch;
+static MF_CoInitializeExSpec MF_CoInitializeEx;
+static MF_CoUninitializeSpec MF_CoUninitialize;
 
 static int media_foundation_initialized = 0;
 
@@ -102,7 +108,7 @@ static HRESULT STDMETHODCALLTYPE slurp_async_op_QueryInterface(IUnknown *This, R
 		{NULL, 0},
 	};
 
-	return QISearch(This, qit, riid, ppvobj);
+	return MF_QISearch(This, qit, riid, ppvobj);
 }
 
 static ULONG STDMETHODCALLTYPE slurp_async_op_AddRef(IUnknown *This)
@@ -167,7 +173,7 @@ static HRESULT STDMETHODCALLTYPE slurp_async_callback_QueryInterface(IMFAsyncCal
 		{NULL, 0},
 	};
 
-	return QISearch(This, qit, riid, ppobj);
+	return MF_QISearch(This, qit, riid, ppobj);
 }
 
 static ULONG STDMETHODCALLTYPE slurp_async_callback_AddRef(IMFAsyncCallback *This)
@@ -277,7 +283,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_QueryInterface(IMFByteStream *This
 		{NULL, 0},
 	};
 
-	return QISearch(This, qit, riid, ppobj);
+	return MF_QISearch(This, qit, riid, ppobj);
 }
 
 static ULONG STDMETHODCALLTYPE mfbytestream_AddRef(IMFByteStream *This)
@@ -969,6 +975,7 @@ int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 
 /* ----------------------------------------------------------- */
 
+static HMODULE lib_ole32 = NULL;
 static HMODULE lib_shlwapi = NULL;
 static HMODULE lib_mf = NULL;
 static HMODULE lib_mfplat = NULL;
@@ -978,7 +985,7 @@ static HMODULE lib_propsys = NULL;
 /* needs to be called once on startup */
 int win32mf_init(void)
 {
-
+	int com_initialized = 0;
 #ifdef SCHISM_MF_DEBUG
 #define DEBUG_PUTS(x) puts(x)
 #else
@@ -987,7 +994,7 @@ int win32mf_init(void)
 
 #define LOAD_MF_LIBRARY(o) \
 	do { \
-		lib_ ## o = LoadLibraryW(L ## #o L".dll"); \
+		lib_ ## o = LoadLibraryA(#o ".dll"); \
 		if (!(lib_ ## o)) { DEBUG_PUTS("Failed to load library " #o "!"); goto fail; } \
 	} while (0)
 
@@ -997,11 +1004,23 @@ int win32mf_init(void)
 		if (!MF_##x) { DEBUG_PUTS("Failed to load " #x " from library " #o ".dll !"); goto fail; } \
 	} while (0)
 
-	HRESULT com_init = CoInitializeEx(NULL, COM_INITFLAGS);
-	if (com_init != S_OK && com_init != S_FALSE && com_init != RPC_E_CHANGED_MODE) {
+	LOAD_MF_LIBRARY(ole32);
+
+	LOAD_MF_OBJECT(ole32, CoInitializeEx);
+	LOAD_MF_OBJECT(ole32, CoUninitialize);
+
+	{
+		HRESULT com_init = MF_CoInitializeEx(NULL, COM_INITFLAGS);
+		com_initialized = (com_init == S_OK || com_init == S_FALSE || com_init == RPC_E_CHANGED_MODE);
+	}
+	if (!com_initialized) {
 		DEBUG_PUTS("Failed to initialize COM!");
 		goto fail;
 	}
+
+	LOAD_MF_LIBRARY(shlwapi);
+
+	LOAD_MF_OBJECT(shlwapi, QISearch);
 
 	LOAD_MF_LIBRARY(mf);
 
@@ -1045,7 +1064,11 @@ fail:
 	if (lib_propsys)
 		FreeLibrary(lib_propsys);
 
-	CoUninitialize();
+	if (lib_ole32)
+		FreeLibrary(lib_ole32);
+
+	if (com_initialized && MF_CoUninitialize)
+		MF_CoUninitialize();
 
 	return 0;
 }
@@ -1071,5 +1094,5 @@ void win32mf_quit(void)
 		FreeLibrary(lib_propsys);
 
 	MF_MFShutdown();
-	CoUninitialize();
+	MF_CoUninitialize();
 }

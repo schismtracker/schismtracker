@@ -53,10 +53,14 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_sysinit win32_sysinit
 # define os_sysexit win32_sysexit
 # define os_get_modkey win32_get_modkey
-# define os_fopen win32_fopen
-# define os_stat win32_stat
-# define os_open win32_open
-# define os_mkdir win32_mkdir
+# ifdef UNICODE
+#  define os_fopen win32_fopen
+#  define os_stat win32_stat
+#  define os_open win32_open
+#  define os_mkdir win32_mkdir
+# else
+#  define os_mkdir(x, y) mkdir(x)
+# endif
 #elif defined(SCHISM_MACOSX)
 # define os_event macosx_event
 # define os_sysexit macosx_sysexit
@@ -118,7 +122,6 @@ void win32_toggle_menu(void* window, int on); // window should be a pointer to t
 int win32_open(const char* path, int flags);
 int win32_wstat(const wchar_t* path, struct stat* st);
 int win32_stat(const char* path, struct stat* st);
-int win32_mktemp(char* template, size_t size);
 int win32_mkdir(const char* path, mode_t mode);
 FILE* win32_fopen(const char* path, const char* flags);
 #define win32_wmkdir(path, mode) _wmkdir(path)
