@@ -739,9 +739,13 @@ static int sdl2_video_load_syms(void)
 
 static int sdl2_0_18_video_load_syms(void)
 {
+#if SDL_DYNAMIC_LOAD || SDL_VERSION_ATLEAST(2, 0, 18)
 	SCHISM_SDL2_SYM(RenderWindowToLogical);
 
 	return 0;
+#else
+	return -1;
+#endif
 }
 
 static int sdl2_video_init(void)
