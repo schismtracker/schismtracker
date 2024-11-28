@@ -28,7 +28,7 @@
 
 #include "headers.h"
 
-#include "backend/threads.h"
+#include "threads.h"
 #include "charset.h"
 #include "fmt.h"
 #include "util.h"
@@ -293,7 +293,7 @@ static ULONG STDMETHODCALLTYPE mfbytestream_Release(IMFByteStream *This)
 
 	long ref = InterlockedDecrement(&mfb->ref_cnt);
 	if (!ref) {
-		be_mutex_delete(mfb->mutex);
+		mt_mutex_delete(mfb->mutex);
 		free(mfb);
 	}
 
@@ -323,11 +323,11 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_SetCurrentPosition(IMFByteStream *
 {
 	struct mfbytestream *mfb = (struct mfbytestream *)This;
 
-	be_mutex_lock(mfb->mutex);
+	mt_mutex_lock(mfb->mutex);
 
 	slurp_seek(mfb->fp, qwPosition, SEEK_SET);
 
-	be_mutex_unlock(mfb->mutex);
+	mt_mutex_unlock(mfb->mutex);
 
 	return S_OK;
 }
@@ -336,11 +336,11 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_GetCurrentPosition(IMFByteStream *
 {
 	struct mfbytestream *mfb = (struct mfbytestream *)This;
 
-	be_mutex_lock(mfb->mutex);
+	mt_mutex_lock(mfb->mutex);
 
 	int64_t pos = slurp_tell(mfb->fp);
 
-	be_mutex_unlock(mfb->mutex);
+	mt_mutex_unlock(mfb->mutex);
 
 	if (pos < 0)
 		return E_FAIL;
@@ -353,11 +353,11 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_IsEndOfStream(IMFByteStream *This,
 {
 	struct mfbytestream *mfb = (struct mfbytestream *)This;
 
-	be_mutex_lock(mfb->mutex);
+	mt_mutex_lock(mfb->mutex);
 
 	*pfEndOfStream = slurp_eof(mfb->fp);
 
-	be_mutex_unlock(mfb->mutex);
+	mt_mutex_unlock(mfb->mutex);
 
 	return S_OK;
 }
@@ -366,11 +366,11 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_Read(IMFByteStream *This, BYTE *pb
 {
 	struct mfbytestream *mfb = (struct mfbytestream *)This;
 
-	be_mutex_lock(mfb->mutex);
+	mt_mutex_lock(mfb->mutex);
 
 	*pcbRead = slurp_read(mfb->fp, pb, cb);
 
-	be_mutex_unlock(mfb->mutex);
+	mt_mutex_unlock(mfb->mutex);
 
 	return S_OK;
 }
@@ -383,7 +383,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_ReadAtPosition(IMFByteStream *This
 
 	*pcbRead = 0;
 
-	be_mutex_lock(mfb->mutex);
+	mt_mutex_lock(mfb->mutex);
 
 	/* cache the old position */
 	int64_t old_pos = slurp_tell(mfb->fp);
@@ -401,7 +401,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_ReadAtPosition(IMFByteStream *This
 	slurp_seek(mfb->fp, old_pos, SEEK_SET);
 
 done:
-	be_mutex_unlock(mfb->mutex);
+	mt_mutex_unlock(mfb->mutex);
 
 	return hr;
 }
@@ -498,13 +498,13 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_Seek(IMFByteStream *This, MFBYTEST
 
 	// XXX MFBYTESTREAM_SEEK_FLAG_CANCEL_PENDING_IO wtf?
 
-	be_mutex_lock(mfb->mutex);
+	mt_mutex_lock(mfb->mutex);
 
 	slurp_seek(mfb->fp, llSeekOffset, whence);
 
 	*pqwCurrentPosition = slurp_tell(mfb->fp);
 
-	be_mutex_unlock(mfb->mutex);
+	mt_mutex_unlock(mfb->mutex);
 
 	return S_OK;
 }
@@ -556,7 +556,7 @@ static inline int mfbytestream_new(IMFByteStream **imf, slurp_t *fp)
 
 	/* whatever */
 	mfb->fp = fp;
-	mfb->mutex = be_mutex_create();
+	mfb->mutex = mt_mutex_create();
 	if (!mfb->mutex) {
 		free(mfb);
 		return 0;
