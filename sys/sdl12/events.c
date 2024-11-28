@@ -472,11 +472,6 @@ static void sdl12_pump_events(void)
 	while (sdl12_PollEvent(&e)) {
 		schism_event_t schism_event = {0};
 
-#ifdef SCHISM_CONTROLLER
-		if (!controller_sdlevent())
-			continue;
-#endif
-
 		switch (e.type) {
 		case SDL_QUIT:
 			schism_event.type = SCHISM_QUIT;
