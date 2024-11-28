@@ -33,6 +33,7 @@
 #include "slurp.h"
 #include "util.h"
 #include "osdefs.h"
+#include "loadso.h"
 
 #include "backend/dmoz.h"
 
@@ -449,6 +450,12 @@ unsigned long long dmoz_path_get_file_size(const char *filename) {
 /* --------------------------------------------------------------------------------------------------------- */
 /* directories... */
 
+#ifdef SCHISM_WIN32
+// :)
+static HRESULT (WINAPI *WIN32_SHGetFolderPathW)(HWND hwnd,int csidl,HANDLE hToken,DWORD dwFlags,LPWSTR pszPath) = NULL;
+static HRESULT (WINAPI *WIN32_SHGetFolderPathA)(HWND hwnd,int csidl,HANDLE hToken,DWORD dwFlags,LPSTR pszPath) = NULL;
+#endif
+
 char *dmoz_get_current_directory(void)
 {
 #if defined(SCHISM_WIN32) && defined(UNICODE)
@@ -475,18 +482,24 @@ char *dmoz_get_home_directory(void)
 	return str_dup("PROGDIR:");
 #elif defined(SCHISM_WIN32)
 # ifdef UNICODE
-	{
+	if (WIN32_SHGetFolderPathW) {
 		wchar_t buf[PATH_MAX + 1] = {L'\0'};
 		char *buf_utf8 = NULL;
 
-		if (SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK && !charset_iconv(buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
+		if (WIN32_SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK && !charset_iconv(buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
 			return buf_utf8;
 	}
 # endif
 	char buf[PATH_MAX + 1] = {0};
 
-	if (SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK)
+	if (WIN32_SHGetFolderPathA && WIN32_SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK)
 		return str_dup(buf);
+
+	// Else we are probably on some ancient version of Windows.
+	// Maybe NT 4?
+	char *ptr = getenv("USERPROFILE");
+	if (ptr)
+		return str_dup(ptr);
 #else
 	char *ptr = getenv("HOME");
 	if (ptr)
@@ -508,20 +521,20 @@ char *dmoz_get_dot_directory(void)
 {
 #ifdef SCHISM_WIN32
 # ifdef UNICODE
-	{
+	if (WIN32_SHGetFolderPathW) {
 		wchar_t buf[PATH_MAX + 1] = {L'\0'};
 		char *buf_utf8 = NULL;
-		if (SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) == S_OK
+		if (WIN32_SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, buf) == S_OK
 			&& !charset_iconv(buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(buf)))
 			return buf_utf8;
 	}
 # endif
 	char buf[PATH_MAX + 1] = {0};
 
-	if (SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, buf) == S_OK)
+	if (WIN32_SHGetFolderPathA && WIN32_SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, buf) == S_OK)
 		return str_dup(buf);
 
-	// else fall back to home (but if this ever happens, things are really screwed...)
+	// else fall back to home (we're probably on NT 4 or something)
 #endif
 	return dmoz_get_home_directory();
 }
@@ -1347,6 +1360,8 @@ int dmoz_fill_ext_data(dmoz_file_t *file)
 
 /* ------------------------------------------------------------------------ */
 
+static void *lib_shell32 = NULL;
+
 int dmoz_init(void)
 {
 	static const schism_dmoz_backend_t *backends[] = {
@@ -1367,6 +1382,18 @@ int dmoz_init(void)
 		backend = NULL;
 	}
 
+#ifdef SCHISM_WIN32
+	lib_shell32 = loadso_object_load("shell32.dll");
+
+	if (lib_shell32) {
+		WIN32_SHGetFolderPathA = loadso_function_load(lib_shell32, "SHGetFolderPathA");
+		if (!WIN32_SHGetFolderPathA)
+			WIN32_SHGetFolderPathA = loadso_function_load(lib_shell32, "SHGetFolderPath");
+
+		WIN32_SHGetFolderPathW = loadso_function_load(lib_shell32, "SHGetFolderPathW");
+	}
+#endif
+
 	if (!backend)
 		return 0;
 
@@ -1379,4 +1406,9 @@ void dmoz_quit(void)
 		backend->quit();
 		backend = NULL;
 	}
+
+#ifdef SCHISM_WIN32
+	if (lib_shell32)
+		loadso_object_unload(lib_shell32);
+#endif
 }

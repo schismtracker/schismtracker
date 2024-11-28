@@ -388,6 +388,16 @@ static void sdl12_video_startup(void)
 	// resized.
 	if (center_enabled)
 		unsetenv("SDL_VIDEO_WINDOW_POS");
+
+#ifdef SCHISM_WIN32
+	/* We want to edit the window style so it accepts drag & drop */
+	SDL_SysWMinfo wm_info;
+	SDL_VERSION(&wm_info.version);
+	if (sdl12_GetWMInfo(&wm_info)) {
+		LONG x = GetWindowLongA(wm_info.window, GWL_EXSTYLE);
+		SetWindowLongA(wm_info.window, GWL_EXSTYLE, x | WS_EX_ACCEPTFILES);
+	}
+#endif
 }
 
 static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int sdlflags)
@@ -474,7 +484,6 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 				video.clip.x = 0;
 				video.clip.y = 0;
 			}
-			
 		}
 
 		video.surface = sdl12_SetVideoMode(w, h,
@@ -769,7 +778,6 @@ static void sdl12_video_toggle_menu(int on)
 	int cache_size = 0;
 
 #ifdef SCHISM_WIN32
-
 	/* Get the HWND */
 	SDL_SysWMinfo wm_info;
 	SDL_VERSION(&wm_info.version);

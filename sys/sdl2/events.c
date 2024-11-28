@@ -507,6 +507,8 @@ void sdl2_pump_events(void)
 			events_push_event(&schism_event);
 			break;
 		case SDL_DROPFILE:
+			// For some reason this gets obliterated by the time
+			// it actually gets to main().
 			schism_event.type = SCHISM_DROPFILE;
 
 			schism_event.drop.file = str_dup(e.drop.file);

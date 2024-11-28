@@ -248,7 +248,7 @@ lib_win32=-lwinmm
 
 if USE_MEDIAFOUNDATION
 files_mediafoundation=fmt/win32mf.c
-lib_mediafoundation=-lole32 -lmfuuid -lshlwapi -luuid
+lib_mediafoundation=-lmfuuid -luuid
 endif
 
 if USE_WIN32_UNICODE

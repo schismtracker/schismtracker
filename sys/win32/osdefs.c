@@ -272,13 +272,10 @@ int win32_event(schism_event_t *event)
 			e.script.which = str_dup("system_config");
 			break;
 		default:
-			e.type = 0;
-			break;
+			return 0;
 		}
 
-		if (e.type != 0)
-			*event = e;
-	
+		*event = e;
 		return 1;
 	} else if (event->wm_msg.msg.win.msg == WM_DROPFILES) {
 #ifdef SCHISM_SDL12
@@ -290,6 +287,9 @@ int win32_event(schism_event_t *event)
 
 		int needed = DragQueryFile(drop, 0, NULL, 0);
 		e.drop.file = malloc((needed + 1) * sizeof(TCHAR));
+		if (!e.drop.file)
+			return 0;
+
 		DragQueryFile(drop, 0, e.drop.file, needed + 1);
 		e.drop.file[needed] = 0;
 		
