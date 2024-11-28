@@ -41,7 +41,7 @@ void *loadso_object_load(const char *sofile)
 		// Unicode conversion happens here
 		LPWSTR wstr;
 
-		if (charset_iconv(sofile, &wstr, CHARSET_UTF8, CHARSET_WCHAR_T) == CHARSET_ERROR_SUCCESS) {
+		if (charset_iconv(sofile, &wstr, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX) == CHARSET_ERROR_SUCCESS) {
 			module = LoadLibraryW(wstr);
 			free(wstr);
 		} else {
