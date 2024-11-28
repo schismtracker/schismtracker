@@ -23,6 +23,8 @@
 
 #include "headers.h"
 
+#include "loadso.h"
+
 #include "backend/timer.h"
 
 static const schism_timer_backend_t *backend = NULL;
@@ -46,8 +48,14 @@ void timer_delay(uint32_t ms)
 # include <windows.h>
 
 // based off old code from midi-core.c but less obfuscated
+static void *kernel32 = NULL;
+
+// Added in Windows Vista; the flags we use were added in Windows 10 version 1803.
 static HANDLE (WINAPI *WIN32_CreateWaitableTimerExW)(LPSECURITY_ATTRIBUTES, LPCWSTR, DWORD, DWORD) = NULL;
-static HANDLE (WINAPI *WIN32_CreateWaitableTimerW)(LPSECURITY_ATTRIBUTES, BOOL, LPCWSTR) = NULL;
+
+// These are in much, much older versions of Windows.
+// Really, Windows 95 is the only version that doesn't have these symbols.
+static HANDLE (WINAPI *WIN32_CreateWaitableTimer)(LPSECURITY_ATTRIBUTES, BOOL, LPCSTR) = NULL;
 static BOOL (WINAPI *WIN32_SetWaitableTimer)(HANDLE, const LARGE_INTEGER *, LONG, PTIMERAPCROUTINE, LPVOID, BOOL) = NULL;
 static DWORD (WINAPI *WIN32_WaitForSingleObject)(HANDLE, DWORD) = NULL;
 
@@ -68,8 +76,8 @@ static int timer_usleep_impl_(uint64_t usec)
 	}
 
 	// Ok, the high-resolution timer isn't available, fallback:
-	if (WIN32_CreateWaitableTimerW) {
-		timer = WIN32_CreateWaitableTimerW(NULL, TRUE, NULL);
+	if (WIN32_CreateWaitableTimer) {
+		timer = WIN32_CreateWaitableTimer(NULL, TRUE, NULL);
 		if (timer)
 			goto have_timer;
 	}
@@ -77,7 +85,7 @@ static int timer_usleep_impl_(uint64_t usec)
 	goto timer_failed;
 
 have_timer:
-	due.QuadPart = -(10 * (int64_t)u);
+	due.QuadPart = -(10 * (int64_t)usec);
 	if (!WIN32_SetWaitableTimer(timer, &due, 0, NULL, NULL, 0))
 		goto timer_failed;
 
@@ -165,11 +173,26 @@ int timer_init(void)
 	if (!backend)
 		return 0;
 
+#ifdef SCHISM_WIN32
+	kernel32 = loadso_object_load("KERNEL32.DLL");
+
+	if (kernel32) {
+		WIN32_CreateWaitableTimerExW = loadso_function_load(kernel32, "CreateWaitableTimerExW");
+		WIN32_CreateWaitableTimer = loadso_function_load(kernel32, "CreateWaitableTimer");
+		WIN32_SetWaitableTimer = loadso_function_load(kernel32, "SetWaitableTimer");
+		WIN32_WaitForSingleObject = loadso_function_load(kernel32, "WaitForSingleObject");
+	}
+#endif
+
 	return 1;
 }
 
 void timer_quit(void)
 {
+#ifdef SCHISM_WIN32
+	if (kernel32)
+		loadso_object_unload(kernel32);
+#endif
 	if (backend) {
 		backend->quit();
 		backend = NULL;
