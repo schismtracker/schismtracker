@@ -23,6 +23,7 @@
 
 #include "headers.h"
 
+#include "charset.h"
 #include "loadso.h"
 
 #ifdef SCHISM_WIN32
