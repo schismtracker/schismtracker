@@ -120,7 +120,7 @@ static int load_alsa_syms(void);
 
 #ifdef ALSA_DYNAMIC_LOAD
 
-#include "backend/object.h"
+#include "loadso.h"
 
 /* said inline functions call these... */
 #define snd_seq_client_info_sizeof ALSA_snd_seq_client_info_sizeof
@@ -132,7 +132,7 @@ void *alsa_dltrick_handle_;
 
 static void alsa_dlend(void) {
 	if (alsa_dltrick_handle_) {
-		be_object_unload(alsa_dltrick_handle_);
+		loadso_object_unload(alsa_dltrick_handle_);
 		alsa_dltrick_handle_ = NULL;
 	}
 }
@@ -156,7 +156,7 @@ static int alsa_dlinit(void) {
 SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
 
 static int load_alsa_sym(const char *fn, void *addr) {
-	void *func = be_function_load(alsa_dltrick_handle_, fn);
+	void *func = loadso_function_load(alsa_dltrick_handle_, fn);
 	if (!func)
 		return 0;
 

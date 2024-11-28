@@ -29,6 +29,7 @@
 #include "song.h"
 #include "page.h"
 #include "osdefs.h"
+#include "timer.h"
 
 #include <ctype.h>
 
@@ -598,8 +599,8 @@ void kbd_handle_key_repeat(void)
 	if (!key_repeat_next_tick || !key_repeat_enabled)
 		return;
 
-	const schism_ticks_t now = be_timer_ticks();
-	if (be_timer_ticks_passed(now, key_repeat_next_tick)) {
+	const schism_ticks_t now = timer_ticks();
+	if (timer_ticks_passed(now, key_repeat_next_tick)) {
 		/* handle key functions have the ability to
 		 * change the values of the key_event structure.
 		 *
@@ -625,7 +626,7 @@ void kbd_cache_key_repeat(struct key_event* kk)
 	if (cached_key_event.text)
 		cached_key_event.text = str_dup(cached_key_event.text);
 
-	key_repeat_next_tick = be_timer_ticks() + key_repeat_delay + key_repeat_rate;
+	key_repeat_next_tick = timer_ticks() + key_repeat_delay + key_repeat_rate;
 }
 
 void kbd_empty_key_repeat(void)

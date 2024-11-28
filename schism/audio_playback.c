@@ -103,6 +103,8 @@ int audio_device_list_size = 0;
 
 static schism_audio_device_t *current_audio_device = NULL;
 
+static const schism_audio_backend_t *backend = NULL;
+
 // ------------------------------------------------------------------------
 // playback
 
@@ -194,7 +196,7 @@ POST_EVENT:
 		.type = SCHISM_EVENT_PLAYBACK,
 	};
 
-	schism_push_event(&e);
+	events_push_event(&e);
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -214,7 +216,7 @@ void free_audio_device_list(void) {
 int refresh_audio_device_list(void) {
 	free_audio_device_list();
 
-	const int count = be_audio_device_count();
+	const int count = backend ? backend->device_count() : 0;
 	if (count < 0)
 		return 0;
 
@@ -225,12 +227,25 @@ int refresh_audio_device_list(void) {
 	for (int i = 0; i < count; i++) {
 		struct audio_device* dev = audio_device_list + i;
 		dev->id = i;
-		dev->name = str_dup(be_audio_device_name(i));
+		dev->name = str_dup(backend ? backend->device_name(i) : "");
 	}
 
 	audio_device_list_size = count;
 
 	return 1;
+}
+
+// ------------------------------------------------------------------------------------------------------------
+// drivers
+
+int audio_driver_count(void)
+{
+	return backend ? backend->driver_count() : 0;
+}
+
+const char *audio_driver_name(int x)
+{
+	return backend ? backend->driver_name(x) : NULL;
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -1318,19 +1333,19 @@ static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, un
 
 void song_lock_audio(void)
 {
-	be_audio_lock_device(current_audio_device);
+	if (backend) backend->lock_device(current_audio_device);
 }
 void song_unlock_audio(void)
 {
-	be_audio_unlock_device(current_audio_device);
+	if (backend) backend->unlock_device(current_audio_device);
 }
 void song_start_audio(void)
 {
-	be_audio_pause_device(current_audio_device, 0);
+	if (backend) backend->pause_device(current_audio_device, 0);
 }
 void song_stop_audio(void)
 {
-	be_audio_pause_device(current_audio_device, 1);
+	if (backend) backend->pause_device(current_audio_device, 1);
 }
 
 
@@ -1352,8 +1367,9 @@ const char *song_audio_device(void)
 static void _cleanup_audio_device(void)
 {
 	if (current_audio_device) {
-		be_audio_close_device(current_audio_device);
-		current_audio_device = 0;
+		if (backend)
+			backend->close_device(current_audio_device);
+		current_audio_device = NULL;
 		free(device_name);
 		device_name = NULL;
 	}
@@ -1400,14 +1416,14 @@ static int _audio_open_device(const char *device, int verbose)
 	schism_audio_spec_t obtained;
 
 	if (device && *device) {
-		current_audio_device = be_audio_open_device(device, &desired, &obtained);
+		current_audio_device = backend ? backend->open_device(device, &desired, &obtained) : NULL;
 		if (current_audio_device) {
 			device_name = str_dup(device);
 			goto success;
 		} else fputs("Failed to open requested audio device! Falling back to default...\n", stderr);
 	}
 
-	current_audio_device = be_audio_open_device(NULL, &desired, &obtained);
+	current_audio_device = backend ? backend->open_device(NULL, &desired, &obtained) : NULL;
 	if (current_audio_device) {
 		device_name = str_dup("default"); // ????
 		goto success;
@@ -1442,15 +1458,31 @@ success:
 
 static int _audio_try_driver(const char *driver, const char *device, int verbose)
 {
-	if (be_audio_init(driver))
+	if (backend && backend->init_driver(driver))
 		return 0;
 
 	if (!_audio_open_device(device, verbose)) {
-		be_audio_quit();
+		if (backend)
+			backend->quit_driver();
 		return 0;
 	}
 
+	driver_name = str_dup(driver);
+	audio_was_init = 1;
+	refresh_audio_device_list();
+
 	return 1;
+}
+
+static void _audio_quit(void)
+{
+	if (audio_was_init) {
+		_cleanup_audio_device();
+		free(driver_name);
+		driver_name = NULL;
+		if (backend) backend->quit_driver();
+		audio_was_init = 0;
+	}
 }
 
 // Configure a device. (called at startup)
@@ -1465,15 +1497,9 @@ static int _audio_init_head(const char *driver, const char *device, int verbose)
 
 	const char *n;
 
-	if (audio_was_init) {
-		_cleanup_audio_device();
-		free(driver_name);
-		driver_name = NULL;
-		be_audio_quit();
-		audio_was_init = 0;
-	}
+	_audio_quit();
 
-	const int cnt = be_audio_driver_count();
+	const int cnt = backend ? backend->driver_count() : 0;
 
 	if (driver && *driver) {
 		/* compatibility! */
@@ -1482,21 +1508,21 @@ static int _audio_init_head(const char *driver, const char *device, int verbose)
 			: driver;
 
 		if (_audio_try_driver(n, device, verbose))
-			goto audio_was_init;
+			return 1;
 	}
 
 #if defined(SCHISM_SDL2) || defined(SCHISM_SDL12)
 	/* we ought to allow this envvar to work under SDL */
 	n = getenv("SDL_AUDIODRIVER");
 	if (n && *n && _audio_try_driver(n, device, verbose))
-		goto audio_was_init;
+		return 1;
 #endif
 
 	for (int i = 0; i < cnt; i++) {
-		n = be_audio_driver_name(i);
+		n = backend ? backend->driver_name(i) : NULL;
 
 		if (_audio_try_driver(n, device, verbose))
-			goto audio_was_init;
+			return 1;
 	}
 
 	/* whoops! */
@@ -1505,13 +1531,6 @@ static int _audio_init_head(const char *driver, const char *device, int verbose)
 	//if (err) fprintf(stderr, "%s\n", err);
 	schism_exit(1);
 	return 0;
-
-audio_was_init:
-	driver_name = str_dup(n);
-	audio_was_init = 1;
-	refresh_audio_device_list();
-
-	return 1;
 }
 
 // Set up audio_buffer, reset the sample count, and kick off the mixer
@@ -1540,14 +1559,37 @@ void audio_flash_reinitialized_text(int success) {
 /* driver == NULL || device == NULL is fine here */
 int audio_init(const char *driver, const char *device)
 {
+	static const schism_audio_backend_t *backends[] = {
+		// ordered by preference
+#ifdef SCHISM_SDL2
+		&schism_audio_backend_sdl2,
+#endif
+#ifdef SCHISM_SDL12
+		&schism_audio_backend_sdl12,
+#endif
+		NULL,
+	};
+
+	int i;
 	int success;
+
+	for (i = 0; backends[i]; i++) {
+		backend = backends[i];
+		if (backend->init())
+			break;
+
+		backend = NULL;
+	}
+
+	if (!backend)
+		return 0;
 
 	if (status.flags & CLASSIC_MODE)
 		song_stop();
 
-	log_nl();
 	success = _audio_init_head(driver, device, 1);
 	_audio_init_tail();
+
 	return success;
 }
 
@@ -1569,6 +1611,16 @@ int audio_reinit(const char *device)
 	audio_flash_reinitialized_text(success);
 
 	return success;
+}
+
+void audio_quit(void)
+{
+	_audio_quit();
+
+	if (backend) {
+		backend->quit();
+		backend = NULL;
+	}
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

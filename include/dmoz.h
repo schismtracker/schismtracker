@@ -221,4 +221,7 @@ void dmoz_cache_update_names(const char *path, const char *filen, const char *di
 void dmoz_cache_update(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
 void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
 
+int dmoz_init(void);
+void dmoz_quit(void);
+
 #endif /* SCHISM_DMOZ_H_ */

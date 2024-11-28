@@ -27,7 +27,7 @@
 #include "util.h"
 #include "video.h"
 
-#include <SDL.h>
+#include "init.h"
 
 static schism_keymod_t sdl12_modkey_trans(uint16_t mod)
 {
@@ -67,11 +67,6 @@ static schism_keymod_t sdl12_modkey_trans(uint16_t mod)
 		res |= SCHISM_KEYMOD_MODE;
 
 	return res;
-}
-
-schism_keymod_t sdl12_event_mod_state(void)
-{
-	return sdl12_modkey_trans(SDL_GetModState());
 }
 
 static schism_keysym_t sdl12_keycode_trans(SDLKey key)
@@ -459,16 +454,23 @@ static schism_scancode_t sdl12_scancode_trans(uint8_t sc)
 	}
 }
 
-void sdl12_pump_events(void)
+//////////////////////////////////////////////////////////////////////////////
+
+static SDLMod (SDLCALL *sdl12_GetModState)(void);
+static int (SDLCALL *sdl12_PollEvent)(SDL_Event *event);
+
+static schism_keymod_t sdl12_event_mod_state(void)
+{
+	return sdl12_modkey_trans(sdl12_GetModState());
+}
+
+static void sdl12_pump_events(void)
 {
 	/* Convert our events to Schism's internal representation */
 	SDL_Event e;
 
-	while (SDL_PollEvent(&e)) {
+	while (sdl12_PollEvent(&e)) {
 		schism_event_t schism_event = {0};
-
-		// fill this in
-		schism_event.common.timestamp = be_timer_ticks();
 
 #ifdef SCHISM_CONTROLLER
 		if (!controller_sdlevent())
@@ -478,27 +480,27 @@ void sdl12_pump_events(void)
 		switch (e.type) {
 		case SDL_QUIT:
 			schism_event.type = SCHISM_QUIT;
-			schism_push_event(&schism_event);
+			events_push_event(&schism_event);
 			break;
 		case SDL_VIDEORESIZE:
 			schism_event.type = SCHISM_WINDOWEVENT_RESIZED;
 			schism_event.window.data.resized.width = e.resize.w;
 			schism_event.window.data.resized.height = e.resize.h;
-			schism_push_event(&schism_event);
+			events_push_event(&schism_event);
 			break;
 		case SDL_VIDEOEXPOSE:
 			schism_event.type = SCHISM_WINDOWEVENT_EXPOSED;
-			schism_push_event(&schism_event);
+			events_push_event(&schism_event);
 			break;
 		case SDL_ACTIVEEVENT:
 			switch (e.active.state) {
 			case SDL_APPINPUTFOCUS:
 				schism_event.type = (e.active.gain) ? SCHISM_WINDOWEVENT_FOCUS_GAINED : SCHISM_WINDOWEVENT_FOCUS_LOST;
-				schism_push_event(&schism_event);
+				events_push_event(&schism_event);
 				break;
 			case SDL_APPACTIVE:
 				schism_event.type = (e.active.gain) ? SCHISM_WINDOWEVENT_SHOWN : SCHISM_WINDOWEVENT_HIDDEN;
-				schism_push_event(&schism_event);
+				events_push_event(&schism_event);
 				break;
 			default:
 				break;
@@ -524,7 +526,7 @@ void sdl12_pump_events(void)
 				schism_event.key.text[2] = 0x80 |  (e.key.keysym.unicode & 0x3F);
 			}
 
-			schism_push_event(&schism_event);
+			events_push_event(&schism_event);
 
 			break;
 		case SDL_KEYUP:
@@ -534,14 +536,14 @@ void sdl12_pump_events(void)
 			schism_event.key.scancode = sdl12_scancode_trans(e.key.keysym.scancode);
 			schism_event.key.mod = sdl12_modkey_trans(e.key.keysym.mod);
 
-			schism_push_event(&schism_event);
+			events_push_event(&schism_event);
 
 			break;
 		case SDL_MOUSEMOTION:
 			schism_event.type = SCHISM_MOUSEMOTION;
 			schism_event.motion.x = e.motion.x;
 			schism_event.motion.y = e.motion.y;
-			schism_push_event(&schism_event);
+			events_push_event(&schism_event);
 			break;
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
@@ -570,7 +572,7 @@ void sdl12_pump_events(void)
 
 				schism_event.button.x = e.button.x;
 				schism_event.button.y = e.button.y;
-				schism_push_event(&schism_event);
+				events_push_event(&schism_event);
 				break;
 			case SDL_BUTTON_WHEELDOWN:
 			case SDL_BUTTON_WHEELUP:
@@ -578,7 +580,7 @@ void sdl12_pump_events(void)
 				schism_event.wheel.x = 0;
 				schism_event.wheel.y = (e.button.button == SDL_BUTTON_WHEELDOWN) ? -1 : 1;
 				video_get_mouse_coordinates(&schism_event.wheel.mouse_x, &schism_event.wheel.mouse_y);
-				schism_push_event(&schism_event);
+				events_push_event(&schism_event);
 				break;
 			default:
 				break;
@@ -587,3 +589,39 @@ void sdl12_pump_events(void)
 		}
 	}
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+static int sdl12_events_load_syms(void)
+{
+	SCHISM_SDL12_SYM(GetModState);
+	SCHISM_SDL12_SYM(PollEvent);
+
+	return 0;
+}
+
+static int sdl12_events_init(void)
+{
+	if (!sdl12_init())
+		return 0;
+
+	if (sdl12_events_load_syms())
+		return 0;
+
+	return 1;
+}
+
+static void sdl12_events_quit(void)
+{
+	sdl12_quit();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+const schism_events_backend_t schism_events_backend_sdl12 = {
+	.init = sdl12_events_init,
+	.quit = sdl12_events_quit,
+
+	.keymod_state = sdl12_event_mod_state,
+	.pump_events = sdl12_pump_events,
+};

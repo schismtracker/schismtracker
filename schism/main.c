@@ -48,12 +48,12 @@
 #include "dialog.h"
 #include "widget.h"
 #include "fmt.h"
+#include "timer.h"
+#include "threads.h"
 
 #include "osdefs.h"
 
 #include <errno.h>
-
-#include "backend/init.h"
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -322,7 +322,7 @@ static void parse_options(int argc, char **argv)
 static void check_update(void)
 {
 	static schism_ticks_t next = 0;
-	schism_ticks_t now = be_timer_ticks();
+	schism_ticks_t now = timer_ticks();
 
 	/* is there any reason why we'd want to redraw
 	   the screen when it's not even visible? */
@@ -330,12 +330,12 @@ static void check_update(void)
 		status.flags &= ~NEED_UPDATE;
 
 		if (!video_is_focused() && (status.flags & LAZY_REDRAW)) {
-			if (!be_timer_ticks_passed(now, next))
+			if (!timer_ticks_passed(now, next))
 				return;
 
 			next = now + 500;
 		} else if (status.flags & (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN)) {
-			if (!be_timer_ticks_passed(now, next))
+			if (!timer_ticks_passed(now, next))
 				return;
 
 			next = now + 100;
@@ -401,7 +401,7 @@ static void event_loop(void)
 	startdown = 0;
 	status.last_keysym = 0;
 
-	modkey = be_event_mod_state();
+	modkey = events_get_keymod_state();
 	os_get_modkey(&modkey);
 
 	video_toggle_screensaver(1);
@@ -411,7 +411,7 @@ static void event_loop(void)
 	localtime_r(&status.now, &status.tmnow);
 	for (;;) {
 		schism_event_t se;
-		while (schism_poll_event(&se)) {
+		while (events_poll_event(&se)) {
 			if (!os_event(&se))
 				continue;
 
@@ -547,7 +547,7 @@ static void event_loop(void)
 			case SCHISM_MOUSEBUTTONDOWN:
 			case SCHISM_MOUSEBUTTONUP: {
 				if (kk.state == KEY_PRESS) {
-					modkey = be_event_mod_state();
+					modkey = events_get_keymod_state();
 					os_get_modkey(&modkey);
 				}
 
@@ -611,7 +611,7 @@ static void event_loop(void)
 					kk.mouse_button = button;
 
 					if (kk.state == KEY_RELEASE) {
-						ticker = be_timer_ticks();
+						ticker = timer_ticks();
 						if (lx == kk.x
 						&& ly == kk.y
 						&& (ticker - last_mouse_down) < 300) {
@@ -816,7 +816,7 @@ static void event_loop(void)
 
 		if (status.flags & DISKWRITER_ACTIVE) {
 			int q = disko_sync();
-			while (q == DW_SYNC_MORE && !schism_have_event()) {
+			while (q == DW_SYNC_MORE && !events_have_event()) {
 				check_update();
 				q = disko_sync();
 			}
@@ -834,12 +834,12 @@ static void event_loop(void)
 		/* let dmoz build directory lists, etc
 		 *
 		 * as long as there's no user-event going on... */
-		while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !schism_have_event());
+		while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !events_have_event());
 
 		/* delay until there's an event OR 10 ms have passed */
 		int t;
-		for (t = 0; t < 10 && !schism_have_event(); t++)
-			msleep(1);
+		for (t = 0; t < 10 && !events_have_event(); t++)
+			timer_msleep(1);
 	}
 	
 	schism_exit(0);
@@ -858,13 +858,21 @@ void schism_exit(int status)
 	flac_quit();
 #endif
 
+	song_lock_audio();
+	song_stop_unlocked(1);
+	song_unlock_audio();
+
+	dmoz_quit();
+	audio_quit();
+	clippy_quit();
+	events_quit();
+	mt_quit();
+	timer_quit();
+
 	if (shutdown_process & EXIT_SAVECFG)
 		cfg_atexit_save();
 
 	if (shutdown_process & EXIT_SDLQUIT) {
-		song_lock_audio();
-		song_stop_unlocked(1);
-		song_unlock_audio();
 
 		// Clear to black on exit (nicer on Wii; I suppose it won't hurt elsewhere)
 		video_refresh();
@@ -878,7 +886,6 @@ void schism_exit(int status)
 		See long-standing bug: https://github.com/libsdl-org/SDL/issues/3184
 			/ Vanfanel
 		*/
-		be_quit();
 	}
 
 	os_sysexit();
@@ -901,8 +908,6 @@ int main(int argc, char **argv)
 
 	ver_init();
 
-	video_fullscreen(0);
-
 	tzset(); // localtime_r wants this
 	srand(time(NULL));
 	parse_options(argc, argv); /* shouldn't this be like, first? */
@@ -921,6 +926,12 @@ int main(int argc, char **argv)
 	log_nl();
 	log_nl();
 
+	timer_init();
+	mt_init();
+	events_init();
+	clippy_init();
+	dmoz_init();
+
 	song_initialise();
 	cfg_load();
 
@@ -929,24 +940,16 @@ int main(int argc, char **argv)
 		if (startup_flags & SF_CLASSIC) status.flags |= CLASSIC_MODE;
 	}
 
-	if (!did_fullscreen)
-		video_fullscreen(cfg_video_fullscreen);
-
 	if (!(startup_flags & SF_NETWORK))
 		status.flags |= NO_NETWORK;
 
 	shutdown_process |= EXIT_SAVECFG;
-
-	if (be_init() < 0)
-		schism_exit(1);
-
-	// initialize our event queue
-	schism_init_event();
-
-	/* make SDL_SetWindowGrab grab the keyboard too */
 	shutdown_process |= EXIT_SDLQUIT;
 
 	display_init();
+	if (!did_fullscreen)
+		video_fullscreen(cfg_video_fullscreen);
+
 	palette_apply();
 	font_init();
 	midi_engine_start();

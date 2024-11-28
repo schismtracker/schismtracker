@@ -25,10 +25,6 @@
 
 #include "headers.h"
 
-#ifdef SCHISM_SDL2
-# include <SDL_filesystem.h>
-#endif
-
 #include "it.h"
 #include "config-parser.h"
 #include "charset.h"
@@ -37,6 +33,8 @@
 #include "slurp.h"
 #include "util.h"
 #include "osdefs.h"
+
+#include "backend/dmoz.h"
 
 #include "fmt.h"
 
@@ -84,6 +82,9 @@ static const char *devices[] = {
 #else /* POSIX? */
 # define FALLBACK_DIR "/"
 #endif
+
+// backend for stuff
+static const schism_dmoz_backend_t *backend = NULL;
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* constants */
@@ -505,14 +506,11 @@ char *dmoz_get_dot_directory(void)
 
 char *dmoz_get_exe_directory(void)
 {
-#ifdef SCHISM_SDL2
-	char *dir = SDL_GetBasePath();
-	if (dir) {
-		char *res = str_dup(dir);
-		SDL_free(dir);
-		return res;
+	if (backend && backend->get_exe_path) {
+		char *path = backend->get_exe_path();
+		if (path)
+			return path;
 	}
-#endif
 
 	// unknown
 	return NULL;
@@ -1303,3 +1301,35 @@ int dmoz_fill_ext_data(dmoz_file_t *file)
 	return 1;
 }
 
+/* ------------------------------------------------------------------------ */
+
+int dmoz_init(void)
+{
+	static const schism_dmoz_backend_t *backends[] = {
+		// ordered by preference
+#ifdef SCHISM_SDL2
+		&schism_dmoz_backend_sdl2,
+#endif
+		NULL,
+	};
+
+	int i;
+
+	for (i = 0; backends[i]; i++) {
+		backend = backends[i];
+		if (backend->init())
+			break;
+
+		backend = NULL;
+	}
+
+	return 0;
+}
+
+void dmoz_quit(void)
+{
+	if (backend) {
+		backend->quit();
+		backend = NULL;
+	}
+}

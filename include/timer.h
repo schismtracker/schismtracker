@@ -21,36 +21,20 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "headers.h" /* always include this one first, kthx */
-#include "backend/clippy.h"
-#include "mem.h"
+#ifndef SCHISM_TIMER_H_
+#define SCHISM_TIMER_H_
 
-// no-ops
+#include "headers.h"
 
-int sdl12_clippy_have_selection(void)
-{
-	return 0;
-}
+typedef uint64_t schism_ticks_t;
 
-int sdl12_clippy_have_clipboard(void)
-{
-	return 0;
-}
+schism_ticks_t timer_ticks(void);
+int timer_ticks_passed(schism_ticks_t a, schism_ticks_t b);
+void timer_delay(uint32_t ms);
+void timer_usleep(uint64_t usec);
+void timer_msleep(uint64_t msec);
 
-void sdl12_clippy_set_selection(const char *text)
-{
-}
+int timer_init(void);
+void timer_quit(void);
 
-void sdl12_clippy_set_clipboard(const char *text)
-{
-}
-
-char *sdl12_clippy_get_selection(void)
-{
-	return str_dup("");
-}
-
-char *sdl12_clippy_get_clipboard(void)
-{
-	return str_dup("");
-}
+#endif /* SCHISM_TIMER_H_ */

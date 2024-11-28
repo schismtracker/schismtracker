@@ -41,4 +41,8 @@ struct widget *clippy_owner(int cb);
 /* copies the selection to the yank buffer (0 -> 1) */
 void clippy_yank(void);
 
+// initializes the backend
+int clippy_init(void);
+void clippy_quit(void);
+
 #endif /* SCHISM_CLIPPY_H_ */

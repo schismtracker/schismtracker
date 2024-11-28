@@ -26,7 +26,8 @@
 #include "backend/events.h"
 #include "util.h"
 
-#include <SDL.h>
+#include "init.h"
+
 #ifdef SCHISM_WIN32
 #include <SDL_syswm.h>
 #endif
@@ -37,7 +38,33 @@
 #define SDL_AUDIODEVICEREMOVED (0x1101)
 #endif
 
+static int (SDLCALL *sdl2_InitSubSystem)(Uint32 flags) = NULL;
+static void (SDLCALL *sdl2_QuitSubSystem)(Uint32 flags) = NULL;
+
+static SDL_Keymod (SDLCALL *sdl2_GetModState)(void);
+static int (SDLCALL *sdl2_PollEvent)(SDL_Event *event) = NULL;
+static SDL_bool (SDLCALL *sdl2_IsTextInputActive)(void) = NULL;
+
+static void (SDLCALL *sdl2_free)(void *) = NULL;
+
+static void (SDLCALL *sdl2_GetVersion)(SDL_version * ver) = NULL;
+
+// whether SDL's wheel event gives mouse coordinates or not
+static int wheel_have_mouse_coordinates = 0;
+
 #ifdef SCHISM_CONTROLLER
+
+// Okay, this is a bit stupid; unlike the regular events these
+// are actually handled and mapped in this file rather than in the
+// main logic. This really ought to not be the case and the events
+// should just be sent to the main file as-is so it can handle it.
+
+static SDL_bool (SDLCALL *sdl2_IsGameController)(int joystick_index) = NULL;
+static SDL_GameController* (SDLCALL *sdl2_GameControllerOpen)(int joystick_index) = NULL;
+static void (SDLCALL *sdl2_GameControllerClose)(SDL_GameController *gamecontroller) = NULL;
+static SDL_Joystick* (SDLCALL *sdl2_GameControllerGetJoystick)(SDL_GameController *gamecontroller) = NULL;
+static SDL_JoystickID (SDLCALL *sdl2_JoystickInstanceID)(SDL_Joystick *joystick) = NULL;
+static int (SDLCALL *sdl2_NumJoysticks)(void);
 
 #include "it.h"
 #include "song.h"
@@ -57,7 +84,7 @@ static void game_controller_insert(SDL_GameController *controller)
 	struct controller_node *node = mem_alloc(sizeof(*node));
 
 	node->controller = controller;
-	node->id = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controller));
+	node->id = sdl2_JoystickInstanceID(sdl2_GameControllerGetJoystick(controller));
 	node->next = game_controller_list;
 	game_controller_list = node;
 }
@@ -83,7 +110,7 @@ static void game_controller_remove(SDL_JoystickID id)
 
     if (temp) {
         prev->next = temp->next;
-        SDL_GameControllerClose(temp->controller);
+        sdl2_GameControllerClose(temp->controller);
         free(temp);
     }
 
@@ -97,19 +124,40 @@ static void game_controller_free(void)
 	while (game_controller_list) {
 		temp = game_controller_list;
 		game_controller_list = game_controller_list->next;
-		SDL_GameControllerClose(temp->controller);
+		sdl2_GameControllerClose(temp->controller);
 		free(temp);
 	}
 }
 
-int sdl2_controller_init(void)
+static int sdl2_controller_load_syms(void)
 {
-	if (SDL_Init(SDL_INIT_GAMECONTROLLER) < 0)
+	SCHISM_SDL2_SYM(InitSubSystem);
+	SCHISM_SDL2_SYM(QuitSubSystem);
+
+	SCHISM_SDL2_SYM(IsGameController);
+	SCHISM_SDL2_SYM(GameControllerOpen);
+	SCHISM_SDL2_SYM(GameControllerClose);
+	SCHISM_SDL2_SYM(GameControllerGetJoystick);
+	SCHISM_SDL2_SYM(JoystickInstanceID);
+	SCHISM_SDL2_SYM(NumJoysticks);
+
+	return 0;
+}
+
+static int sdl2_controller_init(void)
+{
+	if (!sdl2_init())
 		return 0;
 
-	for (int i = 0; i < SDL_NumJoysticks(); i++) {
-		if (SDL_IsGameController(i)) {
-			SDL_GameController *controller = SDL_GameControllerOpen(i);
+	if (sdl2_controller_load_syms())
+		return 0;
+
+	if (sdl2_InitSubSystem(SDL_INIT_GAMECONTROLLER) < 0)
+		return 0;
+
+	for (int i = 0; i < sdl2_NumJoysticks(); i++) {
+		if (sdl2_IsGameController(i)) {
+			SDL_GameController *controller = sdl2_GameControllerOpen(i);
 			if (controller)
 				game_controller_insert(controller);
 		}
@@ -118,10 +166,11 @@ int sdl2_controller_init(void)
 	return 1;
 }
 
-int sdl2_controller_quit(void)
+static int sdl2_controller_quit(void)
 {
 	game_controller_free();
-	SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
+	sdl2_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
+	sdl2_quit();
 	return 1;
 }
 
@@ -219,7 +268,7 @@ static int sdl2_controller_sdlevent(SDL_Event *event)
 		return 1;
 
 	case SDL_CONTROLLERDEVICEADDED: {
-		SDL_GameController *controller = SDL_GameControllerOpen(event->cdevice.which);
+		SDL_GameController *controller = sdl2_GameControllerOpen(event->cdevice.which);
 		if (controller)
 			game_controller_insert(controller);
 
@@ -279,7 +328,7 @@ static schism_keymod_t sdl2_modkey_trans(uint16_t mod)
 
 schism_keymod_t sdl2_event_mod_state(void)
 {
-	return sdl2_modkey_trans(SDL_GetModState());
+	return sdl2_modkey_trans(sdl2_GetModState());
 }
 
 /* These are here for linking text input to keyboard inputs.
@@ -307,7 +356,7 @@ static void pop_pending_keydown(const char *text)
 			strncpy(pending_keydown.key.text, text, ARRAY_SIZE(pending_keydown.text.text));
 			pending_keydown.key.text[ARRAY_SIZE(pending_keydown.text.text)-1] = '\0';
 		}
-		schism_push_event(&pending_keydown);
+		events_push_event(&pending_keydown);
 		have_pending_keydown = 0;
 	}
 }
@@ -316,7 +365,7 @@ void sdl2_pump_events(void)
 {
 	SDL_Event e;
 
-	while (SDL_PollEvent(&e)) {
+	while (sdl2_PollEvent(&e)) {
 		schism_event_t schism_event = {0};
 
 		// fill this in
@@ -330,37 +379,37 @@ void sdl2_pump_events(void)
 		switch (e.type) {
 		case SDL_QUIT:
 			schism_event.type = SCHISM_QUIT;
-			schism_push_event(&schism_event);
+			events_push_event(&schism_event);
 			break;
 		case SDL_WINDOWEVENT:
 			switch (e.window.event) {
 			case SDL_WINDOWEVENT_SHOWN:
 				schism_event.type = SCHISM_WINDOWEVENT_SHOWN;
-				schism_push_event(&schism_event);
+				events_push_event(&schism_event);
 				break;
 			case SDL_WINDOWEVENT_EXPOSED:
 				schism_event.type = SCHISM_WINDOWEVENT_EXPOSED;
-				schism_push_event(&schism_event);
+				events_push_event(&schism_event);
 				break;
 			case SDL_WINDOWEVENT_FOCUS_LOST:
 				schism_event.type = SCHISM_WINDOWEVENT_FOCUS_LOST;
-				schism_push_event(&schism_event);
+				events_push_event(&schism_event);
 				break;
 			case SDL_WINDOWEVENT_FOCUS_GAINED:
 				schism_event.type = SCHISM_WINDOWEVENT_FOCUS_GAINED;
-				schism_push_event(&schism_event);
+				events_push_event(&schism_event);
 				break;
 			case SDL_WINDOWEVENT_RESIZED:
 				schism_event.type = SCHISM_WINDOWEVENT_RESIZED;
 				schism_event.window.data.resized.width = e.window.data1;
 				schism_event.window.data.resized.height = e.window.data2;
-				schism_push_event(&schism_event);
+				events_push_event(&schism_event);
 				break;
 			case SDL_WINDOWEVENT_SIZE_CHANGED:
 				schism_event.type = SCHISM_WINDOWEVENT_SIZE_CHANGED;
 				schism_event.window.data.resized.width = e.window.data1;
 				schism_event.window.data.resized.height = e.window.data2;
-				schism_push_event(&schism_event);
+				events_push_event(&schism_event);
 				break;
 			}
 			break;
@@ -377,9 +426,9 @@ void sdl2_pump_events(void)
 			schism_event.key.scancode = e.key.keysym.scancode;
 			schism_event.key.mod = sdl2_modkey_trans(e.key.keysym.mod); // except this one!
 
-			if (!SDL_IsTextInputActive()) {
+			if (!sdl2_IsTextInputActive()) {
 				// push it NOW
-				schism_push_event(&schism_event);
+				events_push_event(&schism_event);
 			} else {
 				push_pending_keydown(&schism_event);
 			}
@@ -395,7 +444,7 @@ void sdl2_pump_events(void)
 			schism_event.key.scancode = e.key.keysym.scancode;
 			schism_event.key.mod = sdl2_modkey_trans(e.key.keysym.mod);
 
-			schism_push_event(&schism_event);
+			events_push_event(&schism_event);
 
 			break;
 		case SDL_TEXTINPUT:
@@ -407,7 +456,7 @@ void sdl2_pump_events(void)
 				strncpy(schism_event.text.text, e.text.text, ARRAY_SIZE(schism_event.text.text));
 				schism_event.text.text[ARRAY_SIZE(schism_event.text.text)-1] = '\0';
 
-				schism_push_event(&schism_event);
+				events_push_event(&schism_event);
 			}
 			break;
 
@@ -415,7 +464,7 @@ void sdl2_pump_events(void)
 			schism_event.type = SCHISM_MOUSEMOTION;
 			schism_event.motion.x = e.motion.x;
 			schism_event.motion.y = e.motion.y;
-			schism_push_event(&schism_event);
+			events_push_event(&schism_event);
 			break;
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
@@ -438,7 +487,7 @@ void sdl2_pump_events(void)
 
 			schism_event.button.x = e.button.x;
 			schism_event.button.y = e.button.y;
-			schism_push_event(&schism_event);
+			events_push_event(&schism_event);
 			break;
 		case SDL_MOUSEWHEEL:
 			schism_event.type = SCHISM_MOUSEWHEEL;
@@ -446,31 +495,35 @@ void sdl2_pump_events(void)
 			schism_event.wheel.x = e.wheel.x;
 			schism_event.wheel.y = e.wheel.y;
 
-#if SDL_VERSION_ATLEAST(2, 26, 0)
-			schism_event.wheel.mouse_x = e.wheel.mouseX;
-			schism_event.wheel.mouse_y = e.wheel.mouseY;
+#if SDL_VERSION_ATLEAST(2, 26, 0) // TODO: this #if might not be necessary
+			if (wheel_have_mouse_coordinates) {
+				schism_event.wheel.mouse_x = e.wheel.mouseX;
+				schism_event.wheel.mouse_y = e.wheel.mouseY;
+			} else
 #else
-			video_get_mouse_coordinates(&schism_event.wheel.mouse_x, &schism_event.wheel.mouse_y);
+			{
+				video_get_mouse_coordinates(&schism_event.wheel.mouse_x, &schism_event.wheel.mouse_y);
+			}
 #endif
-			schism_push_event(&schism_event);
+			events_push_event(&schism_event);
 			break;
 		case SDL_DROPFILE:
 			schism_event.type = SCHISM_DROPFILE;
 
 			schism_event.drop.file = str_dup(e.drop.file);
 
-			SDL_free(e.drop.file);
+			sdl2_free(e.drop.file);
 
-			schism_push_event(&schism_event);
+			events_push_event(&schism_event);
 			break;
 		/* these two have no structures because we don't use them */
 		case SDL_AUDIODEVICEADDED:
 			schism_event.type = SCHISM_AUDIODEVICEADDED;
-			schism_push_event(&schism_event);
+			events_push_event(&schism_event);
 			break;
 		case SDL_AUDIODEVICEREMOVED:
 			schism_event.type = SCHISM_AUDIODEVICEREMOVED;
-			schism_push_event(&schism_event);
+			events_push_event(&schism_event);
 			break;
 		case SDL_SYSWMEVENT:
 			schism_event.type = SCHISM_EVENT_WM_MSG;
@@ -480,7 +533,7 @@ void sdl2_pump_events(void)
 			schism_event.wm_msg.msg.win.wparam = e.syswm.msg->msg.win.wParam;
 			schism_event.wm_msg.msg.win.lparam = e.syswm.msg->msg.win.lParam;
 #endif
-			schism_push_event(&schism_event);
+			events_push_event(&schism_event);
 			break;
 		default:
 			break;
@@ -489,3 +542,57 @@ void sdl2_pump_events(void)
 
 	pop_pending_keydown(NULL);
 }
+
+//////////////////////////////////////////////////////////////////////////////
+// dynamic loading
+
+static int sdl2_events_load_syms(void)
+{
+	SCHISM_SDL2_SYM(InitSubSystem);
+	SCHISM_SDL2_SYM(QuitSubSystem);
+
+	SCHISM_SDL2_SYM(GetModState);
+	SCHISM_SDL2_SYM(IsTextInputActive);
+	SCHISM_SDL2_SYM(PollEvent);
+
+	SCHISM_SDL2_SYM(free);
+
+	SCHISM_SDL2_SYM(GetVersion);
+
+	return 0;
+}
+
+static int sdl2_events_init(void)
+{
+	if (!sdl2_init())
+		return 0;
+
+	if (sdl2_events_load_syms())
+		return 0;
+
+	if (sdl2_InitSubSystem(SDL_INIT_EVENTS) < 0)
+		return 0;
+
+	SDL_version ver;
+	sdl2_GetVersion(&ver);
+
+	wheel_have_mouse_coordinates = SDL2_VERSION_ATLEAST(ver, 2, 26, 0);
+
+	return 1;
+}
+
+static void sdl2_events_quit(void)
+{
+	sdl2_QuitSubSystem(SDL_INIT_EVENTS);
+	sdl2_quit();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+const schism_events_backend_t schism_events_backend_sdl2 = {
+	.init = sdl2_events_init,
+	.quit = sdl2_events_quit,
+
+	.keymod_state = sdl2_event_mod_state,
+	.pump_events = sdl2_pump_events,
+};
