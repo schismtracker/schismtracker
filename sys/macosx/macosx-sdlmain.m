@@ -86,7 +86,7 @@ int schism_main(int argc, char** argv); // main.c
 	/* Post a QUIT event */
 	schism_event_t event;
 	event.type = SCHISM_QUIT;
-	schism_push_event(&event);
+	events_push_event(&event);
 }
 
 - (void)_menu_callback:(id)sender
@@ -108,7 +108,7 @@ int schism_main(int argc, char** argv); // main.c
 	if (po) {
 		e.type = SCHISM_EVENT_NATIVE_SCRIPT;
 		e.script.which = str_dup(po);
-		schism_push_event(&e);
+		events_push_event(&e);
 	}
 }
 
@@ -131,7 +131,7 @@ int schism_main(int argc, char** argv); // main.c
 		/* if we started as a result of a doubleclick on
 		 * a document, then Main still hasn't really started yet. */
 		initial_song = str_dup(po);
-		schism_push_event(&e);
+		events_push_event(&e);
 		return YES;
 	} else {
 		return NO;
