@@ -73,6 +73,8 @@ static inline int queue_dequeue(schism_event_t *event)
 
 int events_init(void)
 {
+	// XXX the video backend ought to call back to this
+	// function to initialize the events backend.
 	static const schism_events_backend_t *backends[] = {
 		// ordered by preference
 #ifdef SCHISM_SDL2

@@ -1324,7 +1324,10 @@ int dmoz_init(void)
 		backend = NULL;
 	}
 
-	return 0;
+	if (!backend)
+		return 0;
+
+	return 1;
 }
 
 void dmoz_quit(void)

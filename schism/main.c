@@ -924,13 +924,35 @@ int main(int argc, char **argv)
 	/* Eh. */
 	log_append2(0, 3, 0, schism_banner(0));
 	log_nl();
-	log_nl();
 
-	timer_init();
-	mt_init();
-	events_init();
-	clippy_init();
-	dmoz_init();
+	if (!timer_init()) {
+		fprintf(stderr, "Failed to initialize a timers backend!\n");
+		return 1;
+	}
+
+	if (!mt_init()) {
+		fprintf(stderr, "Failed to initialize a multithreading backend!\n");
+		return 1;
+	}
+
+	if (!events_init()) {
+		fprintf(stderr, "Failed to initialize an events backend!\n");
+		return 1;
+	}
+
+	if (!clippy_init()) {
+		log_appendf(4, "Failed to initialize a clipboard backend!");
+		log_appendf(4, "Copying to the system clipboard will not work properly!");
+		log_nl();
+	}
+
+	if (!dmoz_init()) {
+		log_appendf(4, "Failed to initialize a filesystem backend!");
+		log_appendf(4, "Portable mode will not work properly!");
+		log_nl();
+	}
+
+	log_nl();
 
 	song_initialise();
 	cfg_load();
