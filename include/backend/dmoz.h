@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_BACKEND_EVENTS_H_
-#define SCHISM_BACKEND_EVENTS_H_
+#ifndef SCHISM_BACKEND_DMOZ_H_
+#define SCHISM_BACKEND_DMOZ_H_
 
 typedef struct {
 	// returns 1 if succeeded, 0 if failed
@@ -36,4 +36,4 @@ typedef struct {
 extern const schism_dmoz_backend_t schism_dmoz_backend_sdl2;
 #endif
 
-#endif /* SCHISM_BACKEND_EVENTS_H_ */
+#endif /* SCHISM_BACKEND_DMOZ_H_ */
