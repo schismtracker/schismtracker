@@ -69,6 +69,9 @@ static int display_native_y = -1;
 #include <stdio.h>
 
 #include <SDL.h>
+#ifdef SCHISM_WIN32
+# include <SDL_syswm.h>
+#endif
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -151,6 +154,10 @@ static void (SDLCALL *sdl12_FreeSurface)(SDL_Surface *surface);
 static void (SDLCALL *sdl12_WM_SetIcon)(SDL_Surface *icon, Uint8 *mask);
 static SDL_Surface *(SDLCALL *sdl12_CreateRGBSurfaceFrom)(void *pixels, int width, int height, int depth, int pitch, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
 
+#ifdef SCHISM_WIN32
+static int (SDLCALL *sdl12_GetWMInfo)(SDL_SysWMinfo *);
+#endif
+
 static const char *sdl12_video_driver_name(void)
 {
 	char buf[256];
@@ -218,17 +225,18 @@ static void sdl12_video_fullscreen(int tri)
 {
 	if (tri == 0 || video.desktop.fb_hacks) {
 		video.desktop.fullscreen = 0;
-
 	} else if (tri == 1) {
 		video.desktop.fullscreen = 1;
-
 	} else if (tri < 0) {
-		video.desktop.fullscreen = video.desktop.fullscreen ? 0 : 1;
+		video.desktop.fullscreen = !video.desktop.fullscreen;
 	}
+
 	if (_did_init) {
 		if (video.desktop.fullscreen) {
 			video_resize(video.desktop.width, video.desktop.height);
+			video_toggle_menu(0);
 		} else {
+			video_toggle_menu(1);
 			video_resize(0, 0);
 		}
 		video_report();
@@ -245,6 +253,13 @@ static void sdl12_video_startup(void)
 	char *q;
 	SDL_Rect **modes;
 	int i, j, x = -1, y = -1;
+
+	// center the window on startup by default; this is what the SDL 2 backend does...
+	int center_enabled = 0;
+	if (!getenv("SDL_VIDEO_WINDOW_POS")) {
+		setenv("SDL_VIDEO_WINDOW_POS", "center", 1);
+		center_enabled = 1;
+	}
 
 	/* get monitor native res (assumed to be user's desktop res)
 	 * first time we start video */
@@ -362,8 +377,17 @@ static void sdl12_video_startup(void)
 	/* okay, i think we're ready */
 	sdl12_ShowCursor(SDL_DISABLE);
 
+	video.desktop.fullscreen = cfg_video_fullscreen;
+
 	_did_init = 1;
+
 	video_fullscreen(video.desktop.fullscreen);
+
+	// We have to unset this variable, because otherwise
+	// SDL will re-center the window every time it's
+	// resized.
+	if (center_enabled)
+		unsetenv("SDL_VIDEO_WINDOW_POS");
 }
 
 static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int sdlflags)
@@ -452,7 +476,7 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 			}
 			
 		}
-		
+
 		video.surface = sdl12_SetVideoMode(w, h,
 			video.desktop.bpp, sdlflags);
 	}
@@ -728,12 +752,48 @@ static void sdl12_video_get_mouse_coordinates(unsigned int *x, unsigned int *y)
 
 static int sdl12_video_have_menu(void)
 {
+#ifdef SCHISM_WIN32
+	return 1;
+#else
 	return 0;
+#endif
 }
 
 static void sdl12_video_toggle_menu(int on)
 {
-	/* can't have shit in detroit */
+	if (!video_have_menu())
+		return;
+
+	int width, height;
+
+	int cache_size = 0;
+
+#ifdef SCHISM_WIN32
+
+	/* Get the HWND */
+	SDL_SysWMinfo wm_info;
+	SDL_VERSION(&wm_info.version);
+	if (!sdl12_GetWMInfo(&wm_info))
+		return;
+
+	WINDOWPLACEMENT placement;
+	placement.length = sizeof(placement);
+
+	GetWindowPlacement(wm_info.window, &placement);
+
+	cache_size = (placement.showCmd == SW_MAXIMIZE);
+#endif
+	if (cache_size) {
+		width = video.draw.width;
+		height = video.draw.height;
+	}
+#ifdef SCHISM_WIN32
+	win32_toggle_menu(wm_info.window, on);
+#endif
+
+	if (cache_size) {
+		video_resize(width, height);
+	}
 }
 
 static void sdl12_video_mousecursor_changed(void)
@@ -777,6 +837,10 @@ static int sdl12_video_load_syms(void)
 	SCHISM_SDL12_SYM(FreeSurface);
 	SCHISM_SDL12_SYM(CreateRGBSurfaceFrom);
 
+#ifdef SCHISM_WIN32
+	SCHISM_SDL12_SYM(GetWMInfo);
+#endif
+
 	return 0;
 }
 
@@ -790,6 +854,10 @@ static int sdl12_video_init(void)
 
 	if (sdl12_InitSubSystem(SDL_INIT_VIDEO) < 0)
 		return 0;
+
+#ifdef SCHISM_WIN32
+	sdl12_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
+#endif
 
 	return 1;
 }

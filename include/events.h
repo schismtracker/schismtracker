@@ -227,14 +227,14 @@ typedef struct {
 	uint32_t type;
 	schism_ticks_t timestamp;
 
-	const char *which;
+	char *which;
 } schism_native_script_event_t;
 
 typedef struct {
 	uint32_t type;
 	schism_ticks_t timestamp;
 
-	const char *file;
+	char *file;
 } schism_native_open_event_t;
 
 typedef struct {

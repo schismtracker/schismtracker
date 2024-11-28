@@ -84,7 +84,7 @@ static int shutdown_process = 0;
 static const char *video_driver = NULL;
 static const char *audio_driver = NULL;
 static const char *audio_device = NULL;
-static int did_fullscreen = 0;
+static int want_fullscreen = -1;
 static int did_classic = 0;
 
 /* --------------------------------------------------------------------- */
@@ -234,12 +234,10 @@ static void parse_options(int argc, char **argv)
 			did_classic = 1;
 			break;
 		case O_FULLSCREEN:
-			video_fullscreen(1);
-			did_fullscreen = 1;
+			want_fullscreen = 1;
 			break;
 		case O_NO_FULLSCREEN:
-			video_fullscreen(0);
-			did_fullscreen = 1;
+			want_fullscreen = 0;
 			break;
 		case O_PLAY:
 			startup_flags |= SF_PLAY;
@@ -667,6 +665,7 @@ static void event_loop(void)
 				status.flags |= (NEED_UPDATE);
 				break;
 			case SCHISM_DROPFILE:
+				dialog_destroy();
 				switch(status.current_page) {
 				case PAGE_SAMPLE_LIST:
 				case PAGE_LOAD_SAMPLE:
@@ -710,6 +709,7 @@ static void event_loop(void)
 				break;
 			case SCHISM_EVENT_NATIVE_OPEN: /* open song */
 				song_load(se.open.file);
+				free(se.open.file);
 				break;
 			case SCHISM_EVENT_NATIVE_SCRIPT:
 				/* destroy any active dialog before changing pages */
@@ -773,6 +773,9 @@ static void event_loop(void)
 				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "fullscreen", CHARSET_UTF8) == 0) {
 					toggle_display_fullscreen();
 				}
+				free(se.script.which);
+				break;
+			default:
 				break;
 			}
 		}
@@ -974,8 +977,8 @@ int schism_main(int argc, char** argv)
 	shutdown_process |= EXIT_SDLQUIT;
 
 	display_init();
-	if (!did_fullscreen)
-		video_fullscreen(cfg_video_fullscreen);
+	if (want_fullscreen >= 0)
+		video_fullscreen(want_fullscreen);
 
 	palette_apply();
 	font_init();
@@ -1053,7 +1056,7 @@ int schism_main(int argc, char** argv)
 	return 0; /* blah */
 }
 
-#if defined(SCHISM_WIN32)
+#if defined(SCHISM_WIN32) && defined(UNICODE)
 int wmain(int argc, wchar_t **argv)
 {
 	// we have to convert the filename to our internal representation

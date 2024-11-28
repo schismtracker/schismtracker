@@ -1461,13 +1461,17 @@ static int _audio_try_driver(const char *driver, const char *device, int verbose
 	if (backend && backend->init_driver(driver))
 		return 0;
 
+	driver_name = str_dup(driver);
+
 	if (!_audio_open_device(device, verbose)) {
-		if (backend)
+		if (backend) {
 			backend->quit_driver();
+			free(driver_name);
+			driver_name = NULL;
+		}
 		return 0;
 	}
 
-	driver_name = str_dup(driver);
 	audio_was_init = 1;
 	refresh_audio_device_list();
 
@@ -1499,8 +1503,6 @@ static int _audio_init_head(const char *driver, const char *device, int verbose)
 
 	_audio_quit();
 
-	const int cnt = backend ? backend->driver_count() : 0;
-
 	if (driver && *driver) {
 		/* compatibility! */
 		n = !strcmp(driver, "oss") ? "dsp"
@@ -1518,8 +1520,12 @@ static int _audio_init_head(const char *driver, const char *device, int verbose)
 		return 1;
 #endif
 
+	const int cnt = backend ? backend->driver_count() : 0;
+
 	for (int i = 0; i < cnt; i++) {
 		n = backend ? backend->driver_name(i) : NULL;
+
+		printf("%s\n", n);
 
 		if (_audio_try_driver(n, device, verbose))
 			return 1;

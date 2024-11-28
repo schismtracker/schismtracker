@@ -140,6 +140,11 @@ AC_ARG_ENABLE(sdl2-linking,
 	SDL2_LINKING=$enableval,
 	SDL2_LINKING=no)
 
+AC_ARG_ENABLE([win32-unicode],
+	[AS_HELP_STRING([--enable-win32-unicode], [Use Unicode functions on Windows @<:@default=yes@:>@])],
+	[WIN32_UNICODE=$enableval],
+	[WIN32_UNICODE=yes])
+
 dnl ------------------------------------------------------------------------
 
 dnl Check for standard programs
@@ -368,6 +373,7 @@ else
 fi
 
 AM_CONDITIONAL([USE_WIN32], [test "x$use_win32" = "xyes"])
+AM_CONDITIONAL([USE_WIN32_UNICODE], [test "x$WIN32_UNICODE" = "xyes"])
 AM_CONDITIONAL([USE_WII], [test "x$use_wii" = "xyes"])
 AM_CONDITIONAL([USE_WIIU], [test "x$use_wiiu" = "xyes"])
 AM_CONDITIONAL([USE_CONTROLLER], [test "x$use_controller" = "xyes"])

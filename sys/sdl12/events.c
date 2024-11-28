@@ -29,6 +29,10 @@
 
 #include "init.h"
 
+#ifdef SCHISM_WIN32
+# include <SDL_syswm.h>
+#endif
+
 static schism_keymod_t sdl12_modkey_trans(uint16_t mod)
 {
 	schism_keymod_t res = 0;
@@ -458,6 +462,7 @@ static schism_scancode_t sdl12_scancode_trans(uint8_t sc)
 
 static SDLMod (SDLCALL *sdl12_GetModState)(void);
 static int (SDLCALL *sdl12_PollEvent)(SDL_Event *event);
+static Uint8 (SDLCALL *sdl12_EventState)(Uint8 type, int state);
 
 static schism_keymod_t sdl12_event_mod_state(void)
 {
@@ -581,6 +586,18 @@ static void sdl12_pump_events(void)
 				break;
 			}
 			break;
+		case SDL_SYSWMEVENT:
+			schism_event.type = SCHISM_EVENT_WM_MSG;
+#ifdef SCHISM_WIN32
+			schism_event.wm_msg.msg.win.hwnd = e.syswm.msg->hwnd;
+			schism_event.wm_msg.msg.win.msg = e.syswm.msg->msg;
+			schism_event.wm_msg.msg.win.wparam = e.syswm.msg->wParam;
+			schism_event.wm_msg.msg.win.lparam = e.syswm.msg->lParam;
+#endif
+			events_push_event(&schism_event);
+			break;
+		default:
+			break;
 		}
 	}
 }
@@ -591,6 +608,7 @@ static int sdl12_events_load_syms(void)
 {
 	SCHISM_SDL12_SYM(GetModState);
 	SCHISM_SDL12_SYM(PollEvent);
+	SCHISM_SDL12_SYM(EventState);
 
 	return 0;
 }

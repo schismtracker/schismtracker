@@ -38,6 +38,8 @@
 
 #include <direct.h>
 
+#include <tchar.h>
+
 #define IDM_FILE_NEW  101
 #define IDM_FILE_LOAD 102
 #define IDM_FILE_SAVE_CURRENT 103
@@ -70,7 +72,7 @@
 #define IDM_SETTINGS_SYSTEM_CONFIGURATION 605
 
 /* global menu object */
-HMENU menu = NULL;
+static HMENU menu = NULL;
 
 /* eek... */
 void win32_get_modkey(int *mk)
@@ -180,102 +182,123 @@ int win32_event(schism_event_t *event)
 		e.type = SCHISM_EVENT_NATIVE_SCRIPT;
 		switch (LOWORD(event->wm_msg.msg.win.wparam)) {
 		case IDM_FILE_NEW:
-			e.script.which = "new";
+			e.script.which = str_dup("new");
 			break;
 		case IDM_FILE_LOAD:
-			e.script.which = "load";
+			e.script.which = str_dup("load");
 			break;
 		case IDM_FILE_SAVE_CURRENT:
-			e.script.which = "save";
+			e.script.which = str_dup("save");
 			break;
 		case IDM_FILE_SAVE_AS:
-			e.script.which = "save_as";
+			e.script.which = str_dup("save_as");
 			break;
 		case IDM_FILE_EXPORT:
-			e.script.which = "export_song";
+			e.script.which = str_dup("export_song");
 			break;
 		case IDM_FILE_MESSAGE_LOG:
-			e.script.which = "logviewer";
+			e.script.which = str_dup("logviewer");
 			break;
 		case IDM_FILE_QUIT:
 			e.type = SCHISM_QUIT;
 			break;
 		case IDM_PLAYBACK_SHOW_INFOPAGE:
-			e.script.which = "info";
+			e.script.which = str_dup("info");
 			break;
 		case IDM_PLAYBACK_PLAY_SONG:
-			e.script.which = "play";
+			e.script.which = str_dup("play");
 			break;
 		case IDM_PLAYBACK_PLAY_PATTERN:
-			e.script.which = "play_pattern";
+			e.script.which = str_dup("play_pattern");
 			break;
 		case IDM_PLAYBACK_PLAY_FROM_ORDER:
-			e.script.which = "play_order";
+			e.script.which = str_dup("play_order");
 			break;
 		case IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR:
-			e.script.which = "play_mark";
+			e.script.which = str_dup("play_mark");
 			break;
 		case IDM_PLAYBACK_STOP:
-			e.script.which = "stop";
+			e.script.which = str_dup("stop");
 			break;
 		case IDM_PLAYBACK_CALCULATE_LENGTH:
-			e.script.which = "calc_length";
+			e.script.which = str_dup("calc_length");
 			break;
 		case IDM_SAMPLES_SAMPLE_LIST:
-			e.script.which = "sample_page";
+			e.script.which = str_dup("sample_page");
 			break;
 		case IDM_SAMPLES_SAMPLE_LIBRARY:
-			e.script.which = "sample_library";
+			e.script.which = str_dup("sample_library");
 			break;
 		case IDM_SAMPLES_RELOAD_SOUNDCARD:
-			e.script.which = "init_sound";
+			e.script.which = str_dup("init_sound");
 			break;
 		case IDM_INSTRUMENTS_INSTRUMENT_LIST:
-			e.script.which = "inst_page";
+			e.script.which = str_dup("inst_page");
 			break;
 		case IDM_INSTRUMENTS_INSTRUMENT_LIBRARY:
-			e.script.which = "inst_library";
+			e.script.which = str_dup("inst_library");
 			break;
 		case IDM_VIEW_HELP:
-			e.script.which = "help";
+			e.script.which = str_dup("help");
 			break;
 		case IDM_VIEW_VIEW_PATTERNS:
-			e.script.which = "pattern";
+			e.script.which = str_dup("pattern");
 			break;
 		case IDM_VIEW_ORDERS_PANNING:
-			e.script.which = "orders";
+			e.script.which = str_dup("orders");
 			break;
 		case IDM_VIEW_VARIABLES:
-			e.script.which = "variables";
+			e.script.which = str_dup("variables");
 			break;
 		case IDM_VIEW_MESSAGE_EDITOR:
-			e.script.which = "message_edit";
+			e.script.which = str_dup("message_edit");
 			break;
 		case IDM_VIEW_TOGGLE_FULLSCREEN:
-			e.script.which = "fullscreen";
+			e.script.which = str_dup("fullscreen");
 			break;
 		case IDM_SETTINGS_PREFERENCES:
-			e.script.which = "preferences";
+			e.script.which = str_dup("preferences");
 			break;
 		case IDM_SETTINGS_MIDI_CONFIGURATION:
-			e.script.which = "midi_config";
+			e.script.which = str_dup("midi_config");
 			break;
 		case IDM_SETTINGS_PALETTE_EDITOR:
-			e.script.which = "palette_page";
+			e.script.which = str_dup("palette_page");
 			break;
 		case IDM_SETTINGS_FONT_EDITOR:
-			e.script.which = "font_editor";
+			e.script.which = str_dup("font_editor");
 			break;
 		case IDM_SETTINGS_SYSTEM_CONFIGURATION:
-			e.script.which = "system_config";
+			e.script.which = str_dup("system_config");
 			break;
 		default:
+			e.type = 0;
 			break;
 		}
+
+		if (e.type != 0)
+			*event = e;
+	
+		return 1;
+	} else if (event->wm_msg.msg.win.msg == WM_DROPFILES) {
+#ifdef SCHISM_SDL12
+		/* Drag and drop support */
+		schism_event_t e = {0};
+		e.type = SCHISM_DROPFILE;
+
+		HDROP drop = (HDROP)event->wm_msg.msg.win.wparam;
+
+		int needed = DragQueryFile(drop, 0, NULL, 0);
+		e.drop.file = malloc((needed + 1) * sizeof(TCHAR));
+		DragQueryFile(drop, 0, e.drop.file, needed + 1);
+		e.drop.file[needed] = 0;
+		
 		*event = e;
+		return 1;
+#endif
 	}
 
-	return 1;
+	return 0;
 }
 
 void win32_toggle_menu(void *window, int on)
@@ -286,6 +309,7 @@ void win32_toggle_menu(void *window, int on)
 
 /* -------------------------------------------------------------------- */
 
+#ifdef UNICODE
 int win32_wstat(const wchar_t* path, struct stat* st)
 {
 	struct _stat mstat;
@@ -308,33 +332,6 @@ int win32_wstat(const wchar_t* path, struct stat* st)
 	st->st_uid = mstat.st_uid;
 
 	return ws;
-}
-
-/* you may wonder: why is this needed? can't we just use
- * _mktemp() even on UTF-8 encoded strings?
- *
- * well, you *can*, but it will bite you in the ass once
- * you get a string that has a mysterious "X" stored somewhere
- * in the filename; better to just give it as a wide string */
-int win32_mktemp(char* template, size_t size)
-{
-	wchar_t* wc = NULL;
-	if (charset_iconv(template, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-		return -1;
-
-	if (!_wmktemp(wc)) {
-		free(wc);
-		return -1;
-	}
-
-	/* still have to WideCharToMultiByte here */
-	if (!WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wc, -1, template, size, NULL, NULL)) {
-		free(wc);
-		return -1;
-	}
-
-	free(wc);
-	return 0;
 }
 
 int win32_stat(const char* path, struct stat* st)
@@ -382,74 +379,105 @@ int win32_mkdir(const char *path, UNUSED mode_t mode)
 	free(wc);
 	return ret;
 }
+#endif
 
 /* ------------------------------------------------------------------------------- */
 /* run hook */
 
+#ifdef UNICODE
+#define win32_tstat win32_wstat
+#define tspawnlp _wspawnlp
+#else
+#define win32_tstat stat
+#define tspawnlp _spawnlp
+#endif
+
 int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
 #define DOT_BAT L".bat"
-	wchar_t cwd[PATH_MAX] = {L'\0'};
-	if (!GetCurrentDirectoryW(PATH_MAX, cwd))
+	TCHAR cwd[PATH_MAX] = {0};
+	if (!GetCurrentDirectory(PATH_MAX, cwd))
 		return 0;
 
-	wchar_t batch_file[PATH_MAX] = {L'\0'};
+	TCHAR batch_file[PATH_MAX] = {0};
 
 	{
-		wchar_t* name_w = NULL;
+# ifdef UNICODE
+		wchar_t *name_w;
 		if (charset_iconv(name, &name_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
 			return 0;
+# else
+		const char *name_w = str_dup(name);
+# endif
 
-		size_t name_len = wcslen(name_w);
-		if ((name_len * sizeof(wchar_t)) + sizeof(DOT_BAT) >= PATH_MAX) {
+		size_t name_len = _tcslen(name_w);
+		if ((name_len * sizeof(TCHAR)) + sizeof(DOT_BAT) >= PATH_MAX) {
+# ifdef UNICODE
 			free(name_w);
+# endif
 			return 0;
 		}
 
-		memcpy(batch_file, name_w, name_len * sizeof(wchar_t));
+		memcpy(batch_file, name_w, name_len * sizeof(TCHAR));
 		memcpy(batch_file + name_len, DOT_BAT, sizeof(DOT_BAT));
 
+# ifdef UNICODE
 		free(name_w);
+# endif
 	}
 
 	{
-		wchar_t* dir_w = NULL;
+# ifdef UNICODE
+		wchar_t *dir_w;
 		if (charset_iconv(dir, &dir_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
 			return 0;
+# else
+		const char *dir_w = dir;
+# endif
 
-		if (_wchdir(dir_w) == -1) {
+		if (_tchdir(dir_w) == -1) {
+# ifdef UNICODE
 			free(dir_w);
+# endif
 			return 0;
 		}
 
+# ifdef UNICODE
 		free(dir_w);
+# endif
 	}
 
 	int r;
 
 	{
-		wchar_t* maybe_arg_w = NULL;
+# ifdef UNICODE
+		wchar_t *maybe_arg_w;
 		if (charset_iconv(maybe_arg, &maybe_arg_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
 			return 0;
+# else
+		const char *maybe_arg_w = maybe_arg;
+# endif
 
 		struct stat sb;
-		if (win32_wstat(batch_file, &sb) == -1) {
+		if (win32_tstat(batch_file, &sb) == -1) {
 			r = 0;
 		} else {
-			const wchar_t *cmd;
+			const TCHAR *cmd;
 
-			cmd = _wgetenv(L"COMSPEC");
+			cmd = _tgetenv(TEXT("COMSPEC"));
 			if (!cmd)
-				cmd = L"command.com";
+				cmd = TEXT("command.com");
 
-			r = _wspawnlp(_P_WAIT, cmd, cmd, "/c", batch_file, maybe_arg_w, 0);
+			r = tspawnlp(_P_WAIT, cmd, cmd, "/c", batch_file, maybe_arg_w, 0);
 		}
 
+# ifdef UNICODE
 		free(maybe_arg_w);
+# endif
 	}
 
 
-	_wchdir(cwd);
+	_tchdir(cwd);
 	if (r == 0) return 1;
 	return 0;
 }

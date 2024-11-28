@@ -27,21 +27,21 @@
 
 int setenv(const char *name, const char *value, int overwrite)
 {
-	char *penv;
-
-	if (asprintf(&penv, "%s=%s", name, value) < 0) {
-		errno = ENOMEM;
-		return -1;
-	}
-
 	if (overwrite || !getenv(name)) {
+		char *penv;
+
+		if (asprintf(&penv, "%s=%s", name, value) < 0) {
+			errno = ENOMEM;
+			return -1;
+		}
+
 		if (putenv(penv)) {
 			free(penv);
 			return -1;
 		}
-	}
 
-	// don't free -- penv is part of the environment now
+		// don't free -- penv is part of the environment now
+	}
 
 	return 0;
 }

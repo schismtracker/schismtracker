@@ -243,14 +243,18 @@ files_win32 = \
 	sys/win32/midi-win32mm.c	\
 	sys/win32/osdefs.c		\
 	sys/win32/slurp-win32.c
-cflags_win32=-I$(srcdir)/sys/win32 -municode
+cflags_win32=-I$(srcdir)/sys/win32
 lib_win32=-lwinmm
 
 if USE_MEDIAFOUNDATION
 files_mediafoundation=fmt/win32mf.c
 lib_mediafoundation=-lole32 -lmfuuid -lshlwapi -luuid
-else
+endif
 
+if USE_WIN32_UNICODE
+cflags_win32 += -municode -mwindows -DUNICODE -D_UNICODE
+else
+cflags_win32 += -mwindows
 endif
 
 if HAVE_WINDRES

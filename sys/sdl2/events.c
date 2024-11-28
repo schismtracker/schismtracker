@@ -49,6 +49,8 @@ static void (SDLCALL *sdl2_free)(void *) = NULL;
 
 static void (SDLCALL *sdl2_GetVersion)(SDL_version * ver) = NULL;
 
+static Uint8 (SDLCALL *sdl2_EventState)(Uint32 type, int state) = NULL;
+
 // whether SDL's wheel event gives mouse coordinates or not
 static int wheel_have_mouse_coordinates = 0;
 
@@ -368,9 +370,6 @@ void sdl2_pump_events(void)
 	while (sdl2_PollEvent(&e)) {
 		schism_event_t schism_event = {0};
 
-		// fill this in
-		schism_event.common.timestamp = e.common.timestamp;
-
 #ifdef SCHISM_CONTROLLER
 		if (!sdl2_controller_sdlevent(&e))
 			continue;
@@ -528,12 +527,14 @@ void sdl2_pump_events(void)
 		case SDL_SYSWMEVENT:
 			schism_event.type = SCHISM_EVENT_WM_MSG;
 #ifdef SCHISM_WIN32
-			schism_event.wm_msg.msg.win.hwnd = e.syswm.msg->msg.win.hwnd;
-			schism_event.wm_msg.msg.win.msg = e.syswm.msg->msg.win.msg;
-			schism_event.wm_msg.msg.win.wparam = e.syswm.msg->msg.win.wParam;
-			schism_event.wm_msg.msg.win.lparam = e.syswm.msg->msg.win.lParam;
+			if (e.syswm.msg->subsystem == SDL_SYSWM_WINDOWS) {
+				schism_event.wm_msg.msg.win.hwnd = e.syswm.msg->msg.win.hwnd;
+				schism_event.wm_msg.msg.win.msg = e.syswm.msg->msg.win.msg;
+				schism_event.wm_msg.msg.win.wparam = e.syswm.msg->msg.win.wParam;
+				schism_event.wm_msg.msg.win.lparam = e.syswm.msg->msg.win.lParam;
+				events_push_event(&schism_event);
+			}
 #endif
-			events_push_event(&schism_event);
 			break;
 		default:
 			break;
@@ -554,6 +555,7 @@ static int sdl2_events_load_syms(void)
 	SCHISM_SDL2_SYM(GetModState);
 	SCHISM_SDL2_SYM(IsTextInputActive);
 	SCHISM_SDL2_SYM(PollEvent);
+	SCHISM_SDL2_SYM(EventState);
 
 	SCHISM_SDL2_SYM(free);
 
@@ -577,6 +579,8 @@ static int sdl2_events_init(void)
 	sdl2_GetVersion(&ver);
 
 	wheel_have_mouse_coordinates = SDL2_VERSION_ATLEAST(ver, 2, 26, 0);
+
+	sdl2_EventState(SDL_DROPFILE, SDL_ENABLE);
 
 	return 1;
 }
