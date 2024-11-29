@@ -135,7 +135,7 @@ static int palette_paste_callback(UNUSED int cb, const void *data)
 
 static const char* palete_list_a11y_get_value(char *buf)
 {
-	sprintf(buf, "Palete %d", selected_palette);
+	sprintf(buf, "Palette %u", selected_palette);
 	return buf;
 }
 
