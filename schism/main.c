@@ -1056,7 +1056,7 @@ int schism_main(int argc, char** argv)
 	return 0; /* blah */
 }
 
-#if defined(SCHISM_WIN32) && defined(UNICODE)
+#if defined(SCHISM_WIN32)
 int wmain(int argc, wchar_t **argv)
 {
 	// we have to convert the filename to our internal representation

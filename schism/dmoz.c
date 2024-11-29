@@ -454,11 +454,13 @@ unsigned long long dmoz_path_get_file_size(const char *filename) {
 // :)
 static HRESULT (WINAPI *WIN32_SHGetFolderPathW)(HWND hwnd,int csidl,HANDLE hToken,DWORD dwFlags,LPWSTR pszPath) = NULL;
 static HRESULT (WINAPI *WIN32_SHGetFolderPathA)(HWND hwnd,int csidl,HANDLE hToken,DWORD dwFlags,LPSTR pszPath) = NULL;
+static BOOL (WINAPI *WIN32_SHGetSpecialFolderPathA)(HWND  hwnd, LPSTR pszPath, int   csidl, BOOL  fCreate) = NULL;
+static BOOL (WINAPI *WIN32_SHGetSpecialFolderPathW)(HWND  hwnd, LPWSTR pszPath, int   csidl, BOOL  fCreate) = NULL;
 #endif
 
 char *dmoz_get_current_directory(void)
 {
-#if defined(SCHISM_WIN32) && defined(UNICODE)
+#if defined(SCHISM_WIN32)
 	{
 		wchar_t buf[PATH_MAX + 1] = {L'\0'};
 		char *buf_utf8 = NULL;
@@ -481,22 +483,36 @@ char *dmoz_get_home_directory(void)
 #if defined(__amigaos4__)
 	return str_dup("PROGDIR:");
 #elif defined(SCHISM_WIN32)
-# ifdef UNICODE
-	if (WIN32_SHGetFolderPathW) {
+	if (WIN32_SHGetFolderPathW || WIN32_SHGetSpecialFolderPathW) {
 		wchar_t buf[PATH_MAX + 1] = {L'\0'};
 		char *buf_utf8 = NULL;
 
-		if (WIN32_SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK && !charset_iconv(buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
+		if (WIN32_SHGetFolderPathW && WIN32_SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK && !charset_iconv(buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
+			return buf_utf8;
+
+		if (WIN32_SHGetSpecialFolderPathW && WIN32_SHGetSpecialFolderPathW(NULL, buf, CSIDL_PERSONAL, 1) && !charset_iconv(buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
 			return buf_utf8;
 	}
-# endif
+
 	char buf[PATH_MAX + 1] = {0};
 
 	if (WIN32_SHGetFolderPathA && WIN32_SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, 0, buf) == S_OK)
 		return str_dup(buf);
 
+	if (WIN32_SHGetSpecialFolderPathA && WIN32_SHGetSpecialFolderPathA(NULL, buf, CSIDL_PERSONAL, 1))
+		return str_dup(buf);
+
 	// Else we are probably on some ancient version of Windows.
-	// Maybe NT 4?
+	// Maybe NT 4? :p
+	wchar_t *ptr_w = _wgetenv(L"USERPROFILE");
+	if (ptr_w) {
+		char *utf8 = NULL;
+
+		if (!charset_iconv(ptr_w, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
+			return utf8;
+	}
+
+	// Try again?
 	char *ptr = getenv("USERPROFILE");
 	if (ptr)
 		return str_dup(ptr);
@@ -520,7 +536,6 @@ char *dmoz_get_home_directory(void)
 char *dmoz_get_dot_directory(void)
 {
 #ifdef SCHISM_WIN32
-# ifdef UNICODE
 	if (WIN32_SHGetFolderPathW) {
 		wchar_t buf[PATH_MAX + 1] = {L'\0'};
 		char *buf_utf8 = NULL;
@@ -528,7 +543,7 @@ char *dmoz_get_dot_directory(void)
 			&& !charset_iconv(buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(buf)))
 			return buf_utf8;
 	}
-# endif
+
 	char buf[PATH_MAX + 1] = {0};
 
 	if (WIN32_SHGetFolderPathA && WIN32_SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, buf) == S_OK)
@@ -1090,13 +1105,11 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 #ifdef SCHISM_WIN32
 	DWORD attrib;
 	do {
-# ifdef UNICODE
 		wchar_t* path_w = NULL;
 		if (!charset_iconv(path, &path_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-			attrib = GetFileAttributes(path_w);
+			attrib = GetFileAttributesW(path_w);
 			break;
 		}
-# endif
 
 		attrib = GetFileAttributesA(path);
 	} while (0);
@@ -1106,19 +1119,15 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 
 		{
 			char* searchpath_n = dmoz_path_concat_len(path, "*", strlen(path), 1);
-# ifdef UNICODE
 			if (charset_iconv(searchpath_n, &searchpath, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
 				free(searchpath_n);
 				return -1;
 			}
 			free(searchpath_n);
-# else
-			searchpath = searchpath_n;
-# endif
 		}
 
-		WIN32_FIND_DATA ffd = {0};
-		HANDLE find = FindFirstFile(searchpath, &ffd);
+		WIN32_FIND_DATAW ffd = {0};
+		HANDLE find = FindFirstFileW(searchpath, &ffd);
 
 		free(searchpath);
 
@@ -1128,12 +1137,8 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 		/* do-while to process the first file... */
 		do {
 			char* filename = NULL;
-# ifdef UNICODE
 			if (charset_iconv(ffd.cFileName, &filename, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(ffd.cFileName)))
 				continue;
-# else
-			filename = str_dup(ffd.cFileName);
-# endif
 
 			if (!strcmp(filename, ".") || !strcmp(filename, "..")) {
 				free(filename);
@@ -1166,7 +1171,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 			} else {
 				dmoz_add_file(flist, fullpath, filename, &st, 1);
 			}
-		} while (FindNextFile(find, &ffd));
+		} while (FindNextFileW(find, &ffd));
 
 		FindClose(find);
 
@@ -1391,6 +1396,12 @@ int dmoz_init(void)
 			WIN32_SHGetFolderPathA = loadso_function_load(lib_shell32, "SHGetFolderPath");
 
 		WIN32_SHGetFolderPathW = loadso_function_load(lib_shell32, "SHGetFolderPathW");
+
+		WIN32_SHGetSpecialFolderPathA = loadso_function_load(lib_shell32, "SHSpecialGetFolderPathA");
+		if (!WIN32_SHGetSpecialFolderPathA)
+			WIN32_SHGetSpecialFolderPathA = loadso_function_load(lib_shell32, "SHSpecialGetFolderPath");
+
+		WIN32_SHGetSpecialFolderPathW = loadso_function_load(lib_shell32, "SHSpecialGetFolderPathW");
 	}
 #endif
 

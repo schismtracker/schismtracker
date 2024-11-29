@@ -507,8 +507,6 @@ void sdl2_pump_events(void)
 			events_push_event(&schism_event);
 			break;
 		case SDL_DROPFILE:
-			// For some reason this gets obliterated by the time
-			// it actually gets to main().
 			schism_event.type = SCHISM_DROPFILE;
 
 			schism_event.drop.file = str_dup(e.drop.file);
@@ -528,13 +526,20 @@ void sdl2_pump_events(void)
 			break;
 		case SDL_SYSWMEVENT:
 			schism_event.type = SCHISM_EVENT_WM_MSG;
+			schism_event.wm_msg.backend = SCHISM_WM_MSG_BACKEND_SDL2;
 #ifdef SCHISM_WIN32
 			if (e.syswm.msg->subsystem == SDL_SYSWM_WINDOWS) {
+				schism_event.wm_msg.subsystem = SCHISM_WM_MSG_SUBSYSTEM_WINDOWS;
 				schism_event.wm_msg.msg.win.hwnd = e.syswm.msg->msg.win.hwnd;
 				schism_event.wm_msg.msg.win.msg = e.syswm.msg->msg.win.msg;
 				schism_event.wm_msg.msg.win.wparam = e.syswm.msg->msg.win.wParam;
 				schism_event.wm_msg.msg.win.lparam = e.syswm.msg->msg.win.lParam;
-				events_push_event(&schism_event);
+
+				// ignore WM_DROPFILES messages. these are already handled
+				// by the SDL_DROPFILES event and trying to use our implementation
+				// only results in an empty string which is undesirable
+				if (schism_event.wm_msg.msg.win.msg != WM_DROPFILES)
+					events_push_event(&schism_event);
 			}
 #endif
 			break;
@@ -582,7 +587,9 @@ static int sdl2_events_init(void)
 
 	wheel_have_mouse_coordinates = SDL2_VERSION_ATLEAST(ver, 2, 26, 0);
 
-	sdl2_EventState(SDL_DROPFILE, SDL_ENABLE);
+#ifdef SCHISM_WIN32
+	sdl2_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
+#endif
 
 	return 1;
 }

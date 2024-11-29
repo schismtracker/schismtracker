@@ -153,6 +153,7 @@ static Uint8 (SDLCALL *sdl12_EventState)(Uint8 type, int state);
 static void (SDLCALL *sdl12_FreeSurface)(SDL_Surface *surface);
 static void (SDLCALL *sdl12_WM_SetIcon)(SDL_Surface *icon, Uint8 *mask);
 static SDL_Surface *(SDLCALL *sdl12_CreateRGBSurfaceFrom)(void *pixels, int width, int height, int depth, int pitch, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
+static int (SDLCALL *sdl12_EnableUNICODE)(int enable);
 
 #ifdef SCHISM_WIN32
 static int (SDLCALL *sdl12_GetWMInfo)(SDL_SysWMinfo *);
@@ -844,6 +845,7 @@ static int sdl12_video_load_syms(void)
 	SCHISM_SDL12_SYM(EventState);
 	SCHISM_SDL12_SYM(FreeSurface);
 	SCHISM_SDL12_SYM(CreateRGBSurfaceFrom);
+	SCHISM_SDL12_SYM(EnableUNICODE);
 
 #ifdef SCHISM_WIN32
 	SCHISM_SDL12_SYM(GetWMInfo);
@@ -866,6 +868,8 @@ static int sdl12_video_init(void)
 #ifdef SCHISM_WIN32
 	sdl12_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 #endif
+
+	sdl12_EnableUNICODE(1);
 
 	return 1;
 }
