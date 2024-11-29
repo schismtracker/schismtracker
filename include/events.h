@@ -68,13 +68,13 @@ enum {
 	SCHISM_RENDER_DEVICE_RESET, /* The device has been reset and all textures need to be recreated */
 
 	/* Schism internal events */
-	SCHISM_EVENT_UPDATE_IPMIDI  = 0x8000,
+	SCHISM_EVENT_UPDATE_IPMIDI  = 0x3000,
 	SCHISM_EVENT_PLAYBACK,
 	SCHISM_EVENT_NATIVE_OPEN,
 	SCHISM_EVENT_NATIVE_SCRIPT,
 	SCHISM_EVENT_PASTE,
 
-	SCHISM_EVENT_MIDI_NOTE       = 0x9000,
+	SCHISM_EVENT_MIDI_NOTE       = 0x4000,
 	SCHISM_EVENT_MIDI_CONTROLLER,
 	SCHISM_EVENT_MIDI_PROGRAM,
 	SCHISM_EVENT_MIDI_AFTERTOUCH,
@@ -83,7 +83,7 @@ enum {
 	SCHISM_EVENT_MIDI_SYSEX,
 	SCHISM_EVENT_MIDI_SYSTEM,
 
-	SCHISM_EVENT_WM_MSG			 = 0x1000,
+	SCHISM_EVENT_WM_MSG			 = 0x5000,
 };
 
 typedef struct {
@@ -234,7 +234,11 @@ typedef struct {
 typedef struct {
 	schism_common_event_t common;
 
+	enum {SCHISM_WM_MSG_BACKEND_SDL12, SCHISM_WM_MSG_BACKEND_SDL2} backend;
+	enum {SCHISM_WM_MSG_SUBSYSTEM_WINDOWS} subsystem;
+
 	union {
+		// use generic types when possible, please
 		struct {
 			void *hwnd;
 			uint32_t msg;

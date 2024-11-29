@@ -30,6 +30,7 @@
 #include "osdefs.h"
 #include "fmt.h"
 #include "charset.h"
+#include "loadso.h"
 
 #include <ws2tcpip.h>
 #include <windows.h>
@@ -103,61 +104,61 @@ void win32_sysinit(UNUSED int *pargc, UNUSED char ***pargv)
 	menu = CreateMenu();
 	{
 		HMENU file = CreatePopupMenu();
-		AppendMenuW(file, MF_STRING, IDM_FILE_NEW, L"&New\tCtrl+N");
-		AppendMenuW(file, MF_STRING, IDM_FILE_LOAD, L"&Load\tF9");
-		AppendMenuW(file, MF_STRING, IDM_FILE_SAVE_CURRENT, L"&Save Current\tCtrl+S");
-		AppendMenuW(file, MF_STRING, IDM_FILE_SAVE_AS, L"Save &As...\tF10");
-		AppendMenuW(file, MF_STRING, IDM_FILE_EXPORT, L"&Export...\tShift+F10");
-		AppendMenuW(file, MF_STRING, IDM_FILE_MESSAGE_LOG, L"&Message Log\tCtrl+F11");
-		AppendMenuW(file, MF_SEPARATOR, 0, NULL);
-		AppendMenuW(file, MF_STRING, IDM_FILE_QUIT, L"&Quit\tCtrl+Q");
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)file, L"&File");
+		AppendMenuA(file, MF_STRING, IDM_FILE_NEW, "&New\tCtrl+N");
+		AppendMenuA(file, MF_STRING, IDM_FILE_LOAD, "&Load\tF9");
+		AppendMenuA(file, MF_STRING, IDM_FILE_SAVE_CURRENT, "&Save Current\tCtrl+S");
+		AppendMenuA(file, MF_STRING, IDM_FILE_SAVE_AS, "Save &As...\tF10");
+		AppendMenuA(file, MF_STRING, IDM_FILE_EXPORT, "&Export...\tShift+F10");
+		AppendMenuA(file, MF_STRING, IDM_FILE_MESSAGE_LOG, "&Message Log\tCtrl+F11");
+		AppendMenuA(file, MF_SEPARATOR, 0, NULL);
+		AppendMenuA(file, MF_STRING, IDM_FILE_QUIT, "&Quit\tCtrl+Q");
+		AppendMenuA(menu, MF_POPUP, (uintptr_t)file, "&File");
 	}
 	{
 		/* this is equivalent to the "Schism Tracker" menu on Mac OS X */
 		HMENU view = CreatePopupMenu();
-		AppendMenuW(view, MF_STRING, IDM_VIEW_HELP, L"Help\tF1");
-		AppendMenuW(view, MF_SEPARATOR, 0, NULL);
-		AppendMenuW(view, MF_STRING, IDM_VIEW_VIEW_PATTERNS, L"View Patterns\tF2");
-		AppendMenuW(view, MF_STRING, IDM_VIEW_ORDERS_PANNING, L"Orders/Panning\tF11");
-		AppendMenuW(view, MF_STRING, IDM_VIEW_VARIABLES, L"Variables\tF12");
-		AppendMenuW(view, MF_STRING, IDM_VIEW_MESSAGE_EDITOR, L"Message Editor\tF9");
-		AppendMenuW(view, MF_SEPARATOR, 0, NULL);
-		AppendMenuW(view, MF_STRING, IDM_VIEW_TOGGLE_FULLSCREEN, L"Toggle Fullscreen\tCtrl+Alt+Return");
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)view, L"&View");
+		AppendMenuA(view, MF_STRING, IDM_VIEW_HELP, "Help\tF1");
+		AppendMenuA(view, MF_SEPARATOR, 0, NULL);
+		AppendMenuA(view, MF_STRING, IDM_VIEW_VIEW_PATTERNS, "View Patterns\tF2");
+		AppendMenuA(view, MF_STRING, IDM_VIEW_ORDERS_PANNING, "Orders/Panning\tF11");
+		AppendMenuA(view, MF_STRING, IDM_VIEW_VARIABLES, "Variables\tF12");
+		AppendMenuA(view, MF_STRING, IDM_VIEW_MESSAGE_EDITOR, "Message Editor\tF9");
+		AppendMenuA(view, MF_SEPARATOR, 0, NULL);
+		AppendMenuA(view, MF_STRING, IDM_VIEW_TOGGLE_FULLSCREEN, "Toggle Fullscreen\tCtrl+Alt+Return");
+		AppendMenuA(menu, MF_POPUP, (uintptr_t)view, "&View");
 	}
 	{
 		HMENU playback = CreatePopupMenu();
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_SHOW_INFOPAGE, L"Show Infopage\tF5");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_PLAY_SONG, L"Play Song\tCtrl+F5");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_PLAY_PATTERN, L"Play Pattern\tF6");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_PLAY_FROM_ORDER, L"Play from Order\tShift+F6");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR, L"Play from Mark/Cursor\tF7");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_STOP, L"Stop\tF8");
-		AppendMenuW(playback, MF_STRING, IDM_PLAYBACK_CALCULATE_LENGTH, L"Calculate Length\tCtrl+P");
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)playback, L"&Playback");
+		AppendMenuA(playback, MF_STRING, IDM_PLAYBACK_SHOW_INFOPAGE, "Show Infopage\tF5");
+		AppendMenuA(playback, MF_STRING, IDM_PLAYBACK_PLAY_SONG, "Play Song\tCtrl+F5");
+		AppendMenuA(playback, MF_STRING, IDM_PLAYBACK_PLAY_PATTERN, "Play Pattern\tF6");
+		AppendMenuA(playback, MF_STRING, IDM_PLAYBACK_PLAY_FROM_ORDER, "Play from Order\tShift+F6");
+		AppendMenuA(playback, MF_STRING, IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR, "Play from Mark/Cursor\tF7");
+		AppendMenuA(playback, MF_STRING, IDM_PLAYBACK_STOP, "Stop\tF8");
+		AppendMenuA(playback, MF_STRING, IDM_PLAYBACK_CALCULATE_LENGTH, "Calculate Length\tCtrl+P");
+		AppendMenuA(menu, MF_POPUP, (uintptr_t)playback, "&Playback");
 	}
 	{
 		HMENU samples = CreatePopupMenu();
-		AppendMenuW(samples, MF_STRING, IDM_SAMPLES_SAMPLE_LIST, L"&Sample List\tF3");
-		AppendMenuW(samples, MF_STRING, IDM_SAMPLES_SAMPLE_LIBRARY, L"Sample &Library\tShift+F3");
-		AppendMenuW(samples, MF_STRING, IDM_SAMPLES_RELOAD_SOUNDCARD, L"&Reload Soundcard\tCtrl+G");
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)samples, L"&Samples");
+		AppendMenuA(samples, MF_STRING, IDM_SAMPLES_SAMPLE_LIST, "&Sample List\tF3");
+		AppendMenuA(samples, MF_STRING, IDM_SAMPLES_SAMPLE_LIBRARY, "Sample &Library\tShift+F3");
+		AppendMenuA(samples, MF_STRING, IDM_SAMPLES_RELOAD_SOUNDCARD, "&Reload Soundcard\tCtrl+G");
+		AppendMenuA(menu, MF_POPUP, (uintptr_t)samples, "&Samples");
 	}
 	{
 		HMENU instruments = CreatePopupMenu();
-		AppendMenuW(instruments, MF_STRING, IDM_INSTRUMENTS_INSTRUMENT_LIST, L"Instrument List\tF4");
-		AppendMenuW(instruments, MF_STRING, IDM_INSTRUMENTS_INSTRUMENT_LIBRARY, L"Instrument Library\tShift+F4");
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)instruments, L"&Instruments");
+		AppendMenuA(instruments, MF_STRING, IDM_INSTRUMENTS_INSTRUMENT_LIST, "Instrument List\tF4");
+		AppendMenuA(instruments, MF_STRING, IDM_INSTRUMENTS_INSTRUMENT_LIBRARY, "Instrument Library\tShift+F4");
+		AppendMenuA(menu, MF_POPUP, (uintptr_t)instruments, "&Instruments");
 	}
 	{
 		HMENU settings = CreatePopupMenu();
-		AppendMenuW(settings, MF_STRING, IDM_SETTINGS_PREFERENCES, L"Preferences\tShift+F5");
-		AppendMenuW(settings, MF_STRING, IDM_SETTINGS_MIDI_CONFIGURATION, L"MIDI Configuration\tShift+F1");
-		AppendMenuW(settings, MF_STRING, IDM_SETTINGS_PALETTE_EDITOR, L"Palette Editor\tCtrl+F12");
-		AppendMenuW(settings, MF_STRING, IDM_SETTINGS_FONT_EDITOR, L"Font Editor\tShift+F12");
-		AppendMenuW(settings, MF_STRING, IDM_SETTINGS_SYSTEM_CONFIGURATION, L"System Configuration\tCtrl+F1");
-		AppendMenuW(menu, MF_POPUP, (uintptr_t)settings, L"S&ettings");
+		AppendMenuA(settings, MF_STRING, IDM_SETTINGS_PREFERENCES, "Preferences\tShift+F5");
+		AppendMenuA(settings, MF_STRING, IDM_SETTINGS_MIDI_CONFIGURATION, "MIDI Configuration\tShift+F1");
+		AppendMenuA(settings, MF_STRING, IDM_SETTINGS_PALETTE_EDITOR, "Palette Editor\tCtrl+F12");
+		AppendMenuA(settings, MF_STRING, IDM_SETTINGS_FONT_EDITOR, "Font Editor\tShift+F12");
+		AppendMenuA(settings, MF_STRING, IDM_SETTINGS_SYSTEM_CONFIGURATION, "System Configuration\tCtrl+F1");
+		AppendMenuA(menu, MF_POPUP, (uintptr_t)settings, "S&ettings");
 	}
 
 #ifdef USE_MEDIAFOUNDATION
@@ -175,6 +176,9 @@ void win32_sysexit(void)
 int win32_event(schism_event_t *event)
 {
 	if (event->type != SCHISM_EVENT_WM_MSG)
+		return 1;
+
+	if (event->wm_msg.subsystem != SCHISM_WM_MSG_SUBSYSTEM_WINDOWS)
 		return 1;
 
 	if (event->wm_msg.msg.win.msg == WM_COMMAND) {
@@ -278,24 +282,22 @@ int win32_event(schism_event_t *event)
 		*event = e;
 		return 1;
 	} else if (event->wm_msg.msg.win.msg == WM_DROPFILES) {
-#ifdef SCHISM_SDL12
 		/* Drag and drop support */
 		schism_event_t e = {0};
 		e.type = SCHISM_DROPFILE;
 
 		HDROP drop = (HDROP)event->wm_msg.msg.win.wparam;
 
-		int needed = DragQueryFile(drop, 0, NULL, 0);
-		e.drop.file = malloc((needed + 1) * sizeof(TCHAR));
-		if (!e.drop.file)
-			return 0;
+		int needed = DragQueryFileW(drop, 0, NULL, 0);
 
-		DragQueryFile(drop, 0, e.drop.file, needed + 1);
-		e.drop.file[needed] = 0;
+		wchar_t *f = mem_alloc((needed + 1) * sizeof(wchar_t));
+		DragQueryFileW(drop, 0, f, needed + 1);
+		f[needed] = 0;
+
+		charset_iconv(f, &e.drop.file, CHARSET_WCHAR_T, CHARSET_CHAR, needed + 1);
 		
 		*event = e;
 		return 1;
-#endif
 	}
 
 	return 0;
@@ -309,7 +311,6 @@ void win32_toggle_menu(void *window, int on)
 
 /* -------------------------------------------------------------------- */
 
-#ifdef UNICODE
 int win32_wstat(const wchar_t* path, struct stat* st)
 {
 	struct _stat mstat;
@@ -379,105 +380,75 @@ int win32_mkdir(const char *path, UNUSED mode_t mode)
 	free(wc);
 	return ret;
 }
-#endif
 
 /* ------------------------------------------------------------------------------- */
 /* run hook */
 
-#ifdef UNICODE
-#define win32_tstat win32_wstat
-#define tspawnlp _wspawnlp
-#else
-#define win32_tstat stat
-#define tspawnlp _spawnlp
-#endif
-
 int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
 #define DOT_BAT L".bat"
-	TCHAR cwd[PATH_MAX] = {0};
-	if (!GetCurrentDirectory(PATH_MAX, cwd))
+	WCHAR cwd[PATH_MAX] = {0};
+	if (!_wgetcwd(cwd, PATH_MAX))
 		return 0;
 
-	TCHAR batch_file[PATH_MAX] = {0};
+	WCHAR batch_file[PATH_MAX] = {0};
 
 	{
-# ifdef UNICODE
 		wchar_t *name_w;
 		if (charset_iconv(name, &name_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
 			return 0;
-# else
-		const char *name_w = str_dup(name);
-# endif
 
-		size_t name_len = _tcslen(name_w);
-		if ((name_len * sizeof(TCHAR)) + sizeof(DOT_BAT) >= PATH_MAX) {
-# ifdef UNICODE
+		size_t name_len = wcslen(name_w);
+		if ((name_len * sizeof(WCHAR)) + sizeof(DOT_BAT) >= PATH_MAX) {
 			free(name_w);
-# endif
 			return 0;
 		}
 
-		memcpy(batch_file, name_w, name_len * sizeof(TCHAR));
+		memcpy(batch_file, name_w, name_len * sizeof(WCHAR));
 		memcpy(batch_file + name_len, DOT_BAT, sizeof(DOT_BAT));
 
-# ifdef UNICODE
 		free(name_w);
-# endif
 	}
 
 	{
-# ifdef UNICODE
 		wchar_t *dir_w;
 		if (charset_iconv(dir, &dir_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
 			return 0;
-# else
-		const char *dir_w = dir;
-# endif
 
-		if (_tchdir(dir_w) == -1) {
-# ifdef UNICODE
+		if (_wchdir(dir_w) == -1) {
 			free(dir_w);
-# endif
 			return 0;
 		}
 
-# ifdef UNICODE
 		free(dir_w);
-# endif
 	}
 
 	int r;
 
 	{
-# ifdef UNICODE
 		wchar_t *maybe_arg_w;
 		if (charset_iconv(maybe_arg, &maybe_arg_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
 			return 0;
-# else
-		const char *maybe_arg_w = maybe_arg;
-# endif
 
 		struct stat sb;
-		if (win32_tstat(batch_file, &sb) == -1) {
+		if (win32_wstat(batch_file, &sb) == -1) {
 			r = 0;
 		} else {
-			const TCHAR *cmd;
+			const WCHAR *cmd;
 
-			cmd = _tgetenv(TEXT("COMSPEC"));
+			cmd = _wgetenv(L"COMSPEC");
 			if (!cmd)
-				cmd = TEXT("command.com");
+				cmd = L"command.com";
 
-			r = tspawnlp(_P_WAIT, cmd, cmd, "/c", batch_file, maybe_arg_w, 0);
+			r = _wspawnlp(_P_WAIT, cmd, cmd, "/c", batch_file, maybe_arg_w, 0);
 		}
 
-# ifdef UNICODE
 		free(maybe_arg_w);
-# endif
 	}
 
 
-	_tchdir(cwd);
+	_wchdir(cwd);
 	if (r == 0) return 1;
 	return 0;
+#undef DOT_BAT
 }

@@ -588,7 +588,9 @@ static void sdl12_pump_events(void)
 			break;
 		case SDL_SYSWMEVENT:
 			schism_event.type = SCHISM_EVENT_WM_MSG;
+			schism_event.wm_msg.backend = SCHISM_WM_MSG_BACKEND_SDL12;
 #ifdef SCHISM_WIN32
+			schism_event.wm_msg.subsystem = SCHISM_WM_MSG_SUBSYSTEM_WINDOWS;
 			schism_event.wm_msg.msg.win.hwnd = e.syswm.msg->hwnd;
 			schism_event.wm_msg.msg.win.msg = e.syswm.msg->msg;
 			schism_event.wm_msg.msg.win.wparam = e.syswm.msg->wParam;

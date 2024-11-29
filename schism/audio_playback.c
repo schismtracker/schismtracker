@@ -1525,8 +1525,6 @@ static int _audio_init_head(const char *driver, const char *device, int verbose)
 	for (int i = 0; i < cnt; i++) {
 		n = backend ? backend->driver_name(i) : NULL;
 
-		printf("%s\n", n);
-
 		if (_audio_try_driver(n, device, verbose))
 			return 1;
 	}

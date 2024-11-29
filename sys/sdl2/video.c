@@ -367,10 +367,6 @@ void sdl2_video_startup(void)
 	/* okay, i think we're ready */
 	sdl2_ShowCursor(SDL_DISABLE);
 	set_icon();
-
-#ifdef SCHISM_WIN32
-	sdl2_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-#endif
 }
 
 void sdl2_video_fullscreen(int new_fs_flag)

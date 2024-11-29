@@ -28,7 +28,6 @@
 #include <SDL.h>
 
 static int (SDLCALL *sdl12_Init)(Uint32 flags);
-static int (SDLCALL *sdl12_EnableUNICODE)(int enable);
 static void (SDLCALL *sdl12_Quit)(void);
 static char *(SDLCALL *sdl12_GetError)(void);
 
@@ -98,7 +97,6 @@ static int sdl12_dlinit(void)
 static int load_sdl12_syms(void)
 {
 	SCHISM_SDL12_SYM(Init);
-	SCHISM_SDL12_SYM(EnableUNICODE);
 	SCHISM_SDL12_SYM(Quit);
 	SCHISM_SDL12_SYM(GetError);
 
@@ -124,8 +122,6 @@ int sdl12_init(void)
 			fprintf(stderr, "SDL 1.2: SDL_Init: %s\n", sdl12_GetError());
 			return 0;
 		}
-
-		sdl12_EnableUNICODE(1);
 	}
 	roll++;
 	return roll;
