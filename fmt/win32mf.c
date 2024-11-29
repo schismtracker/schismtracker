@@ -1070,11 +1070,11 @@ fail:
 	if (lib_propsys)
 		FreeLibrary(lib_propsys);
 
-	if (lib_ole32)
-		FreeLibrary(lib_ole32);
-
 	if (com_initialized && MF_CoUninitialize)
 		MF_CoUninitialize();
+
+	if (lib_ole32)
+		FreeLibrary(lib_ole32);
 
 	return 0;
 }
