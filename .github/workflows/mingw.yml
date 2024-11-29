@@ -12,15 +12,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { sys: mingw32, target: i686, stdlib: msvcrt }
-          - { sys: mingw32, target: x86_64, stdlib: msvcrt }
-          - { sys: mingw32, target: armv7, stdlib: msvcrt }
-          - { sys: mingw32, target: aarch64, stdlib: ucrt }
+          - { sys: mingw32, target: i686, stdlib: msvcrt, cflags: '-march=i586 -mtune=generic', ldflags: '-Wl,--major-os-version=0,--major-subsystem-version=0' }
+          - { sys: mingw32, target: x86_64, stdlib: msvcrt, cflags: '', ldflags: '' }
+          - { sys: mingw32, target: armv7, stdlib: msvcrt, cflags: '', ldflags: '' }
+          - { sys: mingw32, target: aarch64, stdlib: ucrt, cflags: '', ldflags: '' }
     name: ${{ matrix.sys }}-${{ matrix.target }}
     env:
       LLVM_MINGW_VERSION: 20240518
       SDL_VERSION: 2.30.9
       SDL_SHA256: 24b574f71c87a763f50704bbb630cbe38298d544a1f890f099a4696b1d6beba4
+      SDL12_VERSION: 1.2.15
+      SDL12_SHA256: d6d316a793e5e348155f0dd93b979798933fb98aa1edebcc108829d6474aad00
       FLAC_VERSION: 1.4.3
       FLAC_SHA256: 6c58e69cd22348f441b861092b825e591d0b822e106de6eb0ee4d05d27205b70
       LIBOGG_VERSION: 1.3.5
@@ -30,6 +32,8 @@ jobs:
       TARGET: ${{ matrix.target }}
       SYS: ${{ matrix.sys }}
       STDLIB: ${{ matrix.stdlib }}
+      CFLAGS: ${{ matrix.cflags }}
+      LDFLAGS: ${{ matrix.ldflags }}
 
     steps:
       - name: 'Checkout'
@@ -53,14 +57,29 @@ jobs:
         uses: actions/cache@v4
         with:
           path: '/home/runner/prefix'
-          key: windows-${{ matrix.sys }}-${{ matrix.target }}-${{ matrix.stdlib }}-dependencies-SDL_${{ env.SDL_VERSION }}-FLAC_${{ env.FLAC_VERSION }}-LIBOGG_${{ env.LIBOGG_VERSION }}-UTF8PROC_${{ env.UTF8PROC_VERSION }}
+          key: windows-${{ matrix.sys }}-${{ matrix.target }}-${{ matrix.stdlib }}-dependencies-SDL_${{ env.SDL_VERSION }}-SDL12_${{ env.SDL12_VERSION }}-FLAC_${{ env.FLAC_VERSION }}-LIBOGG_${{ env.LIBOGG_VERSION }}-UTF8PROC_${{ env.UTF8PROC_VERSION }}
 
       - name: 'Grab llvm-mingw'
         if: steps.cache-llvm-mingw.outputs.cache-hit != 'true'
         run: |
           curl -L "https://github.com/mstorsjo/llvm-mingw/releases/download/$LLVM_MINGW_VERSION/llvm-mingw-$LLVM_MINGW_VERSION-$STDLIB-ubuntu-20.04-x86_64.tar.xz" | tar xJvf - -C "$HOME"
           mv "$HOME/llvm-mingw-$LLVM_MINGW_VERSION-$STDLIB-ubuntu-20.04-x86_64" "$HOME/llvm-mingw"
-        
+
+      - name: 'Download SDL 1.2 sources'
+        if: env.TARGET == 'i686' && steps.cache-dependencies.outputs.cache-hit != 'true'
+          wget -O "SDL-$SDL_VERSION.tar.gz" https://www.libsdl.org/release/SDL2-$SDL_VERSION.tar.gz
+          echo "$SDL_SHA256  SDL2-$SDL_VERSION.tar.gz" | sha256sum -c -
+          tar xvf "SDL2-$SDL_VERSION.tar.gz"
+
+      - name: 'Build SDL 1.2'
+        if: env.TARGET == 'i686' && steps.cache-dependencies.outputs.cache-hit != 'true'
+          export PATH="$HOME/llvm-mingw/bin:$PATH"
+          cd SDL-$SDL12_VERSION
+          ./configure --host="$TARGET-w64-$SYS" --prefix="$HOME/prefix"
+          make
+          make install
+          cd ..
+
       - name: 'Download SDL2 sources'
         if: steps.cache-dependencies.outputs.cache-hit != 'true'
         run: |
@@ -141,7 +160,7 @@ jobs:
           autoreconf -I"$HOME/prefix/share/aclocal" -i
           mkdir build
           cd build
-          ../configure --host="$TARGET-w64-$SYS" --prefix="$HOME/prefix" --with-sdl-prefix="$HOME/prefix" --with-flac --enable-flac-linking LDFLAGS="-Wl,--major-os-version=5,--major-subsystem-version=5"
+          ../configure --host="$TARGET-w64-$SYS" --prefix="$HOME/prefix" --with-flac --enable-flac-linking
           make
           "$TARGET-w64-$SYS-strip" -g schismtracker.exe
           cp schismtracker.exe ../..
