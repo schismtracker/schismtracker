@@ -68,9 +68,9 @@ jobs:
       - name: 'Download SDL 1.2 sources'
         if: env.TARGET == 'i686' && steps.cache-dependencies.outputs.cache-hit != 'true'
         run: |
-          wget -O "SDL-$SDL_VERSION.tar.gz" https://www.libsdl.org/release/SDL2-$SDL_VERSION.tar.gz
-          echo "$SDL_SHA256  SDL2-$SDL_VERSION.tar.gz" | sha256sum -c -
-          tar xvf "SDL2-$SDL_VERSION.tar.gz"
+          wget -O "SDL-$SDL12_VERSION.tar.gz" https://www.libsdl.org/release/SDL-$SDL12_VERSION.tar.gz
+          echo "$SDL12_SHA256  SDL-$SDL12_VERSION.tar.gz" | sha256sum -c -
+          tar xvf "SDL-$SDL12_VERSION.tar.gz"
 
       - name: 'Build SDL 1.2'
         if: env.TARGET == 'i686' && steps.cache-dependencies.outputs.cache-hit != 'true'
