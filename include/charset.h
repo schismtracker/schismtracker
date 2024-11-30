@@ -41,6 +41,11 @@ typedef enum {
 	CHARSET_CP437,
 	CHARSET_WINDOWS1252, /* thanks modplug! */
 
+	/* Windows cludge */
+#ifdef SCHISM_WIN32
+	CHARSET_ANSI,
+#endif
+
 	/* CHARSET_CHAR is special; it first tries UTF-8
 	 * in our internal decoder, then we hand it off
 	 * to SDL, which may or may not actually handle
