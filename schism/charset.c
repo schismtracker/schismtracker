@@ -648,6 +648,10 @@ CHARSET_VARIATION(internal) {
 		disko_write(&ds, conv, out_needed);
 	} while (decoder.state == DECODER_STATE_NEED_MORE);
 
+	// write a NUL terminator always
+	uint32_t x = 0;
+	disko_write(&ds, &x, sizeof(x));
+
 	disko_memclose(&ds, 1);
 
 	memcpy(out, &ds.data, sizeof(void *));
@@ -655,11 +659,22 @@ CHARSET_VARIATION(internal) {
 	return CHARSET_ERROR_SUCCESS;
 }
 
+#ifdef SCHISM_WIN32
+# include <windows.h> // MultiByteToWideChar
+#endif
+
 /* XXX need to change this to take length in as well */
 charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charset_t outset, size_t insize) {
 	void *const null = NULL;
+#ifdef SCHISM_WIN32
+	// this is a hack because windows 9x sucks
+	int in_ansi = (inset == CHARSET_ANSI), out_ansi = (outset == CHARSET_ANSI);
+	wchar_t *ansi_in; // needs free
+	wchar_t *unicode_out; // needs free
+	void *unicode_saved_out;
+#endif
 
-	charset_error_t state;
+	charset_error_t state = CHARSET_ERROR_UNIMPLEMENTED;
 	if (!in)
 		return CHARSET_ERROR_NULLINPUT;
 
@@ -669,13 +684,39 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 	if (inset == outset)
 		return CHARSET_ERROR_INPUTISOUTPUT;
 
+#ifdef SCHISM_WIN32
+	if (in_ansi) {
+		// convert ANSI to Unicode so we can process it
+		int needed = MultiByteToWideChar(CP_ACP, 0, in, (insize == SIZE_MAX) ? -1 : insize, NULL, 0);
+		if (!needed) {
+			printf("what\n");
+			return CHARSET_ERROR_DECODE;
+		}
+
+		size_t len = (needed + 1) * sizeof(wchar_t);
+		ansi_in = mem_alloc(len);
+		MultiByteToWideChar(CP_ACP, 0, in, (insize == SIZE_MAX) ? -1 : insize, ansi_in, len);
+		ansi_in[len] = 0;
+
+		in = ansi_in;
+		inset = CHARSET_WCHAR_T;
+	}
+
+	if (out_ansi) {
+		// save the original out pointer for later conversion
+		unicode_saved_out = out;
+		out = &unicode_out;
+		outset = CHARSET_WCHAR_T;
+	}
+#endif
+
 #define TRY_VARIATION(name) \
 	state = charset_iconv_##name##_(in, out, inset, outset, insize); \
 	if (state == CHARSET_ERROR_SUCCESS) \
-		return state; \
+		goto done; \
 	if (state == CHARSET_ERROR_NOMEM) { \
 		memcpy(out, &null, sizeof(void *)); \
-		return state; \
+		goto done; \
 	} \
 	memcpy(out, &null, sizeof(void *));
 
@@ -683,7 +724,37 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 
 #undef TRY_VARIATION
 
-	return CHARSET_ERROR_UNIMPLEMENTED;
+done:
+
+#ifdef SCHISM_WIN32
+	if (in_ansi) {
+		free(ansi_in);
+	}
+
+	if (out_ansi) {
+		// convert from unicode to ANSI
+		printf("%ls\n", unicode_out);
+
+		int needed = WideCharToMultiByte(CP_ACP, 0, unicode_out, -1, NULL, 0, NULL, NULL);
+		if (!needed) {
+			free(unicode_out);
+			return CHARSET_ERROR_ENCODE;
+		}
+
+		char *ansi_out = mem_alloc(needed + 1);
+
+		WideCharToMultiByte(CP_ACP, 0, unicode_out, -1, ansi_out, needed + 1, NULL, NULL);
+	
+		ansi_out[needed + 1] = 0;
+
+		free(unicode_out);
+
+		// copy the pointer
+		memcpy(unicode_saved_out, &ansi_out, sizeof(ansi_out));
+	}
+#endif
+
+	return state;
 }
 
 charset_error_t charset_decode_next(charset_decode_t *decoder, charset_t inset)
