@@ -81,7 +81,10 @@ static HMENU menu = NULL;
 
 void win32_get_modkey(schism_keymod_t *mk)
 {
-	// Translation from virtual keys to keymods
+	// Translation from virtual keys to keymods. We have to do
+	// this because SDL's key modifier stuff is quite buggy
+	// and has caused weird modifier shenanigans in the past.
+
 	static const struct {
 		uint8_t vk;
 		schism_keymod_t km;
@@ -93,6 +96,7 @@ void win32_get_modkey(schism_keymod_t *mk)
 	} conv[] = {
 		{VK_NUMLOCK, SCHISM_KEYMOD_NUM, 1},
 		{VK_CAPITAL, SCHISM_KEYMOD_CAPS, 1},
+		{VK_CAPITAL, SCHISM_KEYMOD_CAPS_PRESSED, 0},
 		{VK_LSHIFT, SCHISM_KEYMOD_LSHIFT, 0},
 		{VK_RSHIFT, SCHISM_KEYMOD_RSHIFT, 0},
 		{VK_LMENU, SCHISM_KEYMOD_LALT, 0},
@@ -105,14 +109,6 @@ void win32_get_modkey(schism_keymod_t *mk)
 
 	BYTE ks[256] = {0};
 	if (GetKeyboardState(ks) == 0) return;
-
-	// Since we use our own keyboard structures now,
-	// we shouldn't need to have a status flag for this...
-	if (ks[VK_CAPITAL] & 0x80) {
-		status.flags |= CAPS_PRESSED;
-	} else {
-		status.flags &= ~CAPS_PRESSED;
-	}
 
 	for (int i = 0; i < ARRAY_SIZE(conv); i++) {
 		// Clear the original value

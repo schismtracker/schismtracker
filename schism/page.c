@@ -901,6 +901,15 @@ static int handle_key_global(struct key_event * k)
 			return 1;
 		}
 		return 0;
+	case SCHISM_KEYSYM_t:
+		if ((k->mod & SCHISM_KEYMOD_CTRL) && (k->mod & SCHISM_KEYMOD_ALT)) {
+			_mp_finish(NULL);
+			if (k->state == KEY_PRESS)
+				set_page(PAGE_TIME_INFORMATION);
+
+			return 1;
+		}
+		return 0;
 	default:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;

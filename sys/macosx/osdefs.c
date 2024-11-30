@@ -385,7 +385,7 @@ void macosx_sysinit(UNUSED int *pargc, UNUSED char ***pargv) {
 	init_hid_callback();
 }
 
-void macosx_get_modkey(UNUSED schism_keymod_t *mk) {
+void macosx_get_modkey(schism_keymod_t *mk) {
 	int caps_pressed = 0;
 
 	struct hid_item_node *node;
@@ -399,22 +399,20 @@ void macosx_get_modkey(UNUSED schism_keymod_t *mk) {
 
 		IOReturn res = (*node->data.interface)->getElementValue(node->data.interface, node->data.cookies.caps_lock, &event);
 
-		if (res != kIOReturnSuccess) {
-#ifdef SCHISM_MACOSXHID_DEBUG
-			printf("MACOSX HID getElementValue: %d\n", res);
-#endif
-			continue; //huh?
-		}
+		if (res == kIOReturnSuccess)
+			caps_pressed |= !!(event.value);
 
-		caps_pressed |= !!(event.value);
+#ifdef SCHISM_MACOSXHID_DEBUG
+		printf("MACOSX HID getElementValue: %d\n", res);
+#endif
 	}
 
 #ifdef SCHISM_MACOSXHID_DEBUG
 	printf("was caps pressed?: %s\n", caps_pressed ? "yes" : "no");
 #endif
 
+	status.keymod &= ~SCHISM_KEYMOD_CAPS_PRESSED;
+
 	if (caps_pressed)
-		status.flags |= CAPS_PRESSED;
-	else
-		status.flags &= ~CAPS_PRESSED;
+		status.keymod |= SCHISM_KEYMOD_CAPS_PRESSED;
 }

@@ -117,14 +117,8 @@ enum {
 	META_IS_CTRL = (1 << 17),
 	ALTGR_IS_ALT = (1 << 18),
 
-	/* holding shift (used on pattern editor for weird template thing) */
-	SHIFT_KEY_DOWN = (1 << 19),
-
 	/* Devi Ever's hack */
 	CRAYOLA_MODE = (1 << 20),
-
-	/* holding caps */
-	CAPS_PRESSED = (1 << 21),
 
 	NO_NETWORK = (1 << 22),
 
@@ -158,6 +152,8 @@ struct tracker_status {
 	enum tracker_time_display time_display;
 	enum tracker_vis_style vis_style;
 	schism_keysym_t last_keysym;
+
+	schism_keymod_t keymod;
 
 	schism_ticks_t last_midi_tick;
 	unsigned char last_midi_event[64];
