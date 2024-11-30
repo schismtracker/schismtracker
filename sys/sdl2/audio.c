@@ -178,9 +178,18 @@ static schism_audio_device_t *sdl2_audio_open_device(const char *name, const sch
 	schism_audio_device_t *dev = mem_calloc(1, sizeof(*dev));
 	dev->callback = desired->callback;
 
+	uint32_t format;
+
+	switch (desired->bits) {
+	case 8: format = AUDIO_U8; break;
+	default:
+	case 16: format = AUDIO_S16; break;
+	case 32: format = AUDIO_S32; break;
+	}
+
 	SDL_AudioSpec sdl_desired = {
 		.freq = desired->freq,
-		.format = (desired->bits == 8) ? (AUDIO_U8) : (AUDIO_S16),
+		.format = format,
 		.channels = desired->channels,
 		.samples = desired->samples,
 		.callback = sdl2_dummy_callback,
@@ -198,9 +207,9 @@ static schism_audio_device_t *sdl2_audio_open_device(const char *name, const sch
 
 		int need_reopen = 0;
 
-		// hm :)
+		// Try again until we find an audio format we *do* support.
 		switch (sdl_obtained.format) {
-		case AUDIO_U8: case AUDIO_S16: break;
+		case AUDIO_U8: case AUDIO_S16: case AUDIO_S32: break;
 		default: change &= (~SDL_AUDIO_ALLOW_FORMAT_CHANGE); need_reopen = 1; break;
 		}
 
