@@ -382,7 +382,6 @@ static void event_loop(void)
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
 	schism_ticks_t last_mouse_down, ticker;
 	schism_keysym_t last_key = 0;
-	schism_keymod_t modkey;
 	time_t startdown;
 	int downtrip;
 	int wheel_x;
@@ -399,8 +398,8 @@ static void event_loop(void)
 	startdown = 0;
 	status.last_keysym = 0;
 
-	modkey = events_get_keymod_state();
-	os_get_modkey(&modkey);
+	status.keymod = events_get_keymod_state();
+	os_get_modkey(&status.keymod);
 
 	video_toggle_screensaver(1);
 	screensaver = 1;
@@ -470,22 +469,15 @@ static void event_loop(void)
 			case SCHISM_KEYUP:
 				switch (se.key.sym) {
 				case SCHISM_KEYSYM_NUMLOCKCLEAR:
-					modkey ^= SCHISM_KEYMOD_NUM;
+					status.keymod ^= SCHISM_KEYMOD_NUM;
 					break;
 				case SCHISM_KEYSYM_CAPSLOCK:
 					if (se.type == SCHISM_KEYDOWN) {
-						status.flags |= CAPS_PRESSED;
+						status.keymod |= SCHISM_KEYMOD_CAPS_PRESSED;
 					} else {
-						status.flags &= ~CAPS_PRESSED;
+						status.keymod &= ~SCHISM_KEYMOD_CAPS_PRESSED;
 					}
-					modkey ^= SCHISM_KEYMOD_CAPS;
-					break;
-				case SCHISM_KEYSYM_LSHIFT: case SCHISM_KEYSYM_RSHIFT:
-					if (se.type == SCHISM_KEYDOWN) {
-						status.flags |= SHIFT_KEY_DOWN;
-					} else {
-						status.flags &= ~SHIFT_KEY_DOWN;
-					}
+					status.keymod ^= SCHISM_KEYMOD_CAPS;
 					break;
 				default:
 					break;
@@ -497,12 +489,12 @@ static void event_loop(void)
 #define _ALTTRACKED_KMOD        0
 #endif
 				if (kk.state == KEY_PRESS) {
-					modkey = (se.key.mod
+					status.keymod = (se.key.mod
 						& ~(_ALTTRACKED_KMOD))
-						| (modkey & _ALTTRACKED_KMOD);
+						| (status.keymod & _ALTTRACKED_KMOD);
 				}
 
-				os_get_modkey(&modkey);
+				os_get_modkey(&status.keymod);
 
 				kk.sym = se.key.sym;
 				kk.scancode = se.key.scancode;
@@ -512,14 +504,14 @@ static void event_loop(void)
 					/* should be handled per OS */
 					break;
 				case NUMLOCK_ALWAYS_OFF:
-					modkey &= ~SCHISM_KEYMOD_NUM;
+					status.keymod &= ~SCHISM_KEYMOD_NUM;
 					break;
 				case NUMLOCK_ALWAYS_ON:
-					modkey |= SCHISM_KEYMOD_NUM;
+					status.keymod |= SCHISM_KEYMOD_NUM;
 					break;
 				};
 
-				kk.mod = modkey;
+				kk.mod = status.keymod;
 				kk.mouse = MOUSE_NONE;
 				kbd_key_translate(&kk);
 
@@ -545,8 +537,8 @@ static void event_loop(void)
 			case SCHISM_MOUSEBUTTONDOWN:
 			case SCHISM_MOUSEBUTTONUP: {
 				if (kk.state == KEY_PRESS) {
-					modkey = events_get_keymod_state();
-					os_get_modkey(&modkey);
+					status.keymod = events_get_keymod_state();
+					os_get_modkey(&status.keymod);
 				}
 
 				kk.sym = 0;
@@ -565,10 +557,10 @@ static void event_loop(void)
 				case SCHISM_MOUSEBUTTONDOWN:
 					video_translate(se.button.x, se.button.y, &kk.fx, &kk.fy);
 					// we also have to update the current button
-					if ((modkey & SCHISM_KEYMOD_CTRL)
+					if ((status.keymod & SCHISM_KEYMOD_CTRL)
 					|| se.button.button == MOUSE_BUTTON_RIGHT) {
 						button = MOUSE_BUTTON_RIGHT;
-					} else if ((modkey & (SCHISM_KEYMOD_ALT|SCHISM_KEYMOD_GUI))
+					} else if ((status.keymod & (SCHISM_KEYMOD_ALT|SCHISM_KEYMOD_GUI))
 					|| se.button.button == MOUSE_BUTTON_MIDDLE) {
 						button = MOUSE_BUTTON_MIDDLE;
 					} else {
