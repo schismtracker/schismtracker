@@ -72,24 +72,56 @@
 #define IDM_SETTINGS_FONT_EDITOR 604
 #define IDM_SETTINGS_SYSTEM_CONFIGURATION 605
 
+// slurp-win32.c
+int win32_slurp_init(void);
+void win32_slurp_quit(void);
+
 /* global menu object */
 static HMENU menu = NULL;
 
-/* eek... */
-void win32_get_modkey(int *mk)
+void win32_get_modkey(schism_keymod_t *mk)
 {
-	BYTE ks[256];
+	// Translation from virtual keys to keymods
+	static const struct {
+		uint8_t vk;
+		schism_keymod_t km;
+
+		// whether this key is a held modifier (i.e.
+		// ctrl, alt, shift, win) or is toggled (i.e.
+		// numlock, scrolllock)
+		int toggle;
+	} conv[] = {
+		{VK_NUMLOCK, SCHISM_KEYMOD_NUM, 1},
+		{VK_CAPITAL, SCHISM_KEYMOD_CAPS, 1},
+		{VK_LSHIFT, SCHISM_KEYMOD_LSHIFT, 0},
+		{VK_RSHIFT, SCHISM_KEYMOD_RSHIFT, 0},
+		{VK_LMENU, SCHISM_KEYMOD_LALT, 0},
+		{VK_RMENU, SCHISM_KEYMOD_RALT, 0},
+		{VK_LCONTROL, SCHISM_KEYMOD_LCTRL, 0},
+		{VK_RCONTROL, SCHISM_KEYMOD_RCTRL, 0},
+		{VK_LWIN, SCHISM_KEYMOD_LGUI, 0},
+		{VK_RWIN, SCHISM_KEYMOD_RGUI, 0},
+	};
+
+	BYTE ks[256] = {0};
 	if (GetKeyboardState(ks) == 0) return;
 
-	if (ks[VK_CAPITAL] & 128) {
+	// Since we use our own keyboard structures now,
+	// we shouldn't need to have a status flag for this...
+	if (ks[VK_CAPITAL] & 0x80) {
 		status.flags |= CAPS_PRESSED;
 	} else {
 		status.flags &= ~CAPS_PRESSED;
 	}
 
-	(*mk) = ((*mk) & ~(SCHISM_KEYMOD_NUM|SCHISM_KEYMOD_CAPS))
-		| ((ks[VK_NUMLOCK]&1) ? SCHISM_KEYMOD_NUM : 0)
-		| ((ks[VK_CAPITAL]&1) ? SCHISM_KEYMOD_CAPS : 0);
+	for (int i = 0; i < ARRAY_SIZE(conv); i++) {
+		// Clear the original value
+		(*mk) &= ~(conv[i].km);
+
+		// Put in our result
+		if (ks[conv[i].vk] & (conv[i].toggle ? 0x01 : 0x80))
+			(*mk) |= conv[i].km;
+	}
 }
 
 void win32_sysinit(UNUSED int *pargc, UNUSED char ***pargv)
@@ -164,6 +196,8 @@ void win32_sysinit(UNUSED int *pargc, UNUSED char ***pargv)
 #ifdef USE_MEDIAFOUNDATION
 	win32mf_init();
 #endif
+
+	win32_slurp_init();
 }
 
 void win32_sysexit(void)
@@ -171,6 +205,8 @@ void win32_sysexit(void)
 #ifdef USE_MEDIAFOUNDATION
 	win32mf_quit();
 #endif
+	
+	win32_slurp_quit();
 }
 
 int win32_event(schism_event_t *event)

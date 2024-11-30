@@ -382,7 +382,7 @@ static void event_loop(void)
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
 	schism_ticks_t last_mouse_down, ticker;
 	schism_keysym_t last_key = 0;
-	int modkey;
+	schism_keymod_t modkey;
 	time_t startdown;
 	int downtrip;
 	int wheel_x;

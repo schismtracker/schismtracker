@@ -385,7 +385,7 @@ void macosx_sysinit(UNUSED int *pargc, UNUSED char ***pargv) {
 	init_hid_callback();
 }
 
-void macosx_get_modkey(UNUSED int *mk) {
+void macosx_get_modkey(UNUSED schism_keymod_t *mk) {
 	int caps_pressed = 0;
 
 	struct hid_item_node *node;
