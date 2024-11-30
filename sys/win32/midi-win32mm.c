@@ -27,6 +27,7 @@
 #include "midi.h"
 #include "timer.h"
 #include "loadso.h"
+#include "charset.h"
 
 #include "util.h"
 
@@ -40,6 +41,7 @@ struct win32mm_midi {
 	HMIDIOUT out;
 	HMIDIIN in;
 
+	// XXX it would be nice to support unicode here
 	MIDIINCAPSA icp;
 	MIDIOUTCAPSA ocp;
 
@@ -48,10 +50,9 @@ struct win32mm_midi {
 	unsigned char sysx[1024];
 };
 static unsigned int mm_period = 0;
-static unsigned int last_known_in_port = 0;
-static unsigned int last_known_out_port = 0;
 
-// These functions are only available in Windows XP and newer.
+// These functions are only available in Windows 2000 and newer I believe.
+// They are prefixed with "XP_" because I'm too lazy to change them :p
 static MMRESULT (WINAPI *XP_timeGetDevCaps)(LPTIMECAPS ptc, UINT cbtc);
 static MMRESULT (WINAPI *XP_timeSetEvent)(UINT uDelay, UINT uResolution, LPTIMECALLBACK lpTimeProc, DWORD_PTR dwUser, UINT fuEvent);
 static MMRESULT (WINAPI *XP_timeBeginPeriod)(UINT uPeriod) = NULL;
@@ -237,6 +238,9 @@ static int _win32mm_stop(struct midi_port *p)
 
 static void _win32mm_poll(struct midi_provider *p)
 {
+	static unsigned int last_known_in_port = 0;
+	static unsigned int last_known_out_port = 0;
+
 	struct win32mm_midi *data;
 
 	UINT i;
@@ -247,13 +251,20 @@ static void _win32mm_poll(struct midi_provider *p)
 	for (i = last_known_in_port; i < mmin; i++) {
 		data = mem_calloc(1, sizeof(struct win32mm_midi));
 		r = midiInGetDevCapsA(i, &data->icp,
-					sizeof(MIDIINCAPS));
+					sizeof(MIDIINCAPSA));
 		if (r != MMSYSERR_NOERROR) {
 			free(data);
 			continue;
 		}
 		data->id = i;
-		midi_port_register(p, MIDI_INPUT, data->icp.szPname, data, 1);
+
+		char *utf8;
+		if (!charset_iconv(data->icp.szPname, &utf8, CHARSET_ANSI, CHARSET_UTF8, SIZE_MAX)) {
+			midi_port_register(p, MIDI_INPUT, utf8, data, 1);
+			free(utf8);
+		} else {
+			midi_port_register(p, MIDI_INPUT, data->icp.szPname, data, 1);
+		}
 	}
 	last_known_in_port = mmin;
 
@@ -261,13 +272,20 @@ static void _win32mm_poll(struct midi_provider *p)
 	for (i = last_known_out_port; i < mmout; i++) {
 		data = mem_calloc(1, sizeof(struct win32mm_midi));
 		r = midiOutGetDevCapsA(i, &data->ocp,
-					sizeof(MIDIOUTCAPS));
+					sizeof(MIDIOUTCAPSA));
 		if (r != MMSYSERR_NOERROR) {
 			if (data) free(data);
 			continue;
 		}
 		data->id = i;
-		midi_port_register(p, MIDI_OUTPUT, data->ocp.szPname, data, 1);
+
+		char *utf8;
+		if (!charset_iconv(data->ocp.szPname, &utf8, CHARSET_ANSI, CHARSET_UTF8, SIZE_MAX)) {
+			midi_port_register(p, MIDI_OUTPUT, utf8, data, 1);
+			free(utf8);
+		} else {
+			midi_port_register(p, MIDI_OUTPUT, data->ocp.szPname, data, 1);
+		}
 	}
 	last_known_out_port = mmout;
 }
