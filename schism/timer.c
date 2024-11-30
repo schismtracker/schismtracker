@@ -68,6 +68,13 @@ static int timer_usleep_impl_(uint64_t usec)
 	if (!WIN32_SetWaitableTimer || !WIN32_WaitForSingleObject)
 		goto timer_failed;
 
+	// Old toolchains don't have these:
+#ifndef CREATE_WAITABLE_TIMER_MANUAL_RESET
+# define CREATE_WAITABLE_TIMER_MANUAL_RESET 0x00000001
+#endif
+#ifndef CREATE_WAITABLE_TIMER_HIGH_RESOLUTION
+# define CREATE_WAITABLE_TIMER_HIGH_RESOLUTION 0x00000002
+#endif
 	// Create a high-resolution timer if we can.
 	if (WIN32_CreateWaitableTimerExW) {
 		timer = WIN32_CreateWaitableTimerExW(NULL, NULL, CREATE_WAITABLE_TIMER_MANUAL_RESET | CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_MODIFY_STATE);
