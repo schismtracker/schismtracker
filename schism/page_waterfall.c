@@ -303,6 +303,48 @@ static void _vis_process(void)
 	status.flags |= NEED_UPDATE;
 }
 
+void vis_work_32s(uint32_t *in, int inlen)
+{
+	short dl[FFT_BUFFER_SIZE];
+	short dr[FFT_BUFFER_SIZE];
+	int i, j, k;
+
+	if (!inlen) {
+		memset(current_fft_data[0], 0, FFT_OUTPUT_SIZE*2);
+		memset(current_fft_data[1], 0, FFT_OUTPUT_SIZE*2);
+	} else {
+		for (i = 0; i < FFT_BUFFER_SIZE;) {
+			for (k = j = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
+				dl[i] = in[j] / 0x100; j++;
+				dr[i] = in[j] / 0x100; j++;
+			}
+		}
+		_vis_data_work(current_fft_data[0], dl);
+		_vis_data_work(current_fft_data[1], dr);
+	}
+	if (status.current_page == PAGE_WATERFALL) _vis_process();
+}
+
+void vis_work_32m(uint32_t *in, int inlen)
+{
+	short d[FFT_BUFFER_SIZE];
+	int i, k;
+
+	if (!inlen) {
+		memset(current_fft_data[0], 0, FFT_OUTPUT_SIZE*2);
+		memset(current_fft_data[1], 0, FFT_OUTPUT_SIZE*2);
+	} else {
+		for (i = 0; i < FFT_BUFFER_SIZE;) {
+			for (k = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
+				d[i] = in[k] / 0x100;
+			}
+		}
+		_vis_data_work(current_fft_data[0], d);
+		memcpy(current_fft_data[1], current_fft_data[0], FFT_OUTPUT_SIZE * 2);
+	}
+	if (status.current_page == PAGE_WATERFALL) _vis_process();
+}
+
 void vis_work_16s(short *in, int inlen)
 {
 	short dl[FFT_BUFFER_SIZE];
@@ -324,6 +366,7 @@ void vis_work_16s(short *in, int inlen)
 	}
 	if (status.current_page == PAGE_WATERFALL) _vis_process();
 }
+
 void vis_work_16m(short *in, int inlen)
 {
 	short d[FFT_BUFFER_SIZE];
@@ -356,8 +399,8 @@ void vis_work_8s(char *in, int inlen)
 	} else {
 		for (i = 0; i < FFT_BUFFER_SIZE;) {
 			for (k = j = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
-				dl[i] = ((short)in[j]) * 256; j++;
-				dr[i] = ((short)in[j]) * 256; j++;
+				dl[i] = ((short)in[j]) * 0x100; j++;
+				dr[i] = ((short)in[j]) * 0x100; j++;
 			}
 		}
 		_vis_data_work(current_fft_data[0], dl);

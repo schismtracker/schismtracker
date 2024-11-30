@@ -109,6 +109,8 @@ static const schism_audio_backend_t *backend = NULL;
 // playback
 
 extern int midi_bend_hit[64], midi_last_bend_hit[64];
+extern void vis_work_32s(short *in, int inlen);
+extern void vis_work_32m(short *in, int inlen);
 extern void vis_work_16s(short *in, int inlen);
 extern void vis_work_16m(short *in, int inlen);
 extern void vis_work_8s(char *in, int inlen);
@@ -1083,10 +1085,19 @@ void cfg_load_audio(cfg_file_t *cfg)
 	CFG_GET_M(no_ramping, 0);
 	CFG_GET_M(surround_effect, 1);
 
-	if (audio_settings.channels != 1 && audio_settings.channels != 2)
-		audio_settings.channels = 2;
-	if (audio_settings.bits != 8 && audio_settings.bits != 16)
-		audio_settings.bits = 16;
+	switch (audio_settings.channels) {
+	case 1:
+	case 2: break;
+	default: audio_settings.channels = 2;
+	}
+
+	switch (audio_settings.bits) {
+	case 8:
+	case 16:
+	case 32: break;
+	default: audio_settings.bits = 16;
+	}
+
 	audio_settings.channel_limit = CLAMP(audio_settings.channel_limit, 4, MAX_MODULE_VOICES);
 	audio_settings.interpolation_mode = CLAMP(audio_settings.interpolation_mode, 0, 3);
 
