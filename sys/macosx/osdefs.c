@@ -411,8 +411,8 @@ void macosx_get_modkey(schism_keymod_t *mk) {
 	printf("was caps pressed?: %s\n", caps_pressed ? "yes" : "no");
 #endif
 
-	status.keymod &= ~SCHISM_KEYMOD_CAPS_PRESSED;
+	(*mk) &= ~SCHISM_KEYMOD_CAPS_PRESSED;
 
 	if (caps_pressed)
-		status.keymod |= SCHISM_KEYMOD_CAPS_PRESSED;
+		(*mk) |= SCHISM_KEYMOD_CAPS_PRESSED;
 }
