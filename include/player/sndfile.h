@@ -694,16 +694,16 @@ void adlib_patch_apply(song_sample_t *smp, int patchnum);
 ///////////////////////////////////////////////////////////
 
 // Return (a*b)/c - no divide error
-static inline int _muldiv(int a, int b, int c)
+static inline int32_t _muldiv(int32_t a, int32_t b, int32_t c)
 {
-	return ((unsigned long long) a * (unsigned long long) b ) / c;
+	return ((int64_t) a * (int64_t) b ) / c;
 }
 
 
 // Return (a*b+c/2)/c - no divide error
-static inline int _muldivr(int a, int b, int c)
+static inline int32_t _muldivr(int32_t a, int32_t b, int32_t c)
 {
-	return ((unsigned long long) a * (unsigned long long) b + (c >> 1)) / c;
+	return ((int64_t) a * (int64_t) b + (c >> 1)) / c;
 }
 
 
