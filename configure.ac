@@ -140,11 +140,6 @@ AC_ARG_ENABLE(sdl2-linking,
 	SDL2_LINKING=$enableval,
 	SDL2_LINKING=no)
 
-AC_ARG_ENABLE([win32-unicode],
-	[AS_HELP_STRING([--enable-win32-unicode], [Use Unicode functions on Windows @<:@default=yes@:>@])],
-	[WIN32_UNICODE=$enableval],
-	[WIN32_UNICODE=yes])
-
 dnl ------------------------------------------------------------------------
 
 dnl Check for standard programs
@@ -264,11 +259,11 @@ case "${host_os}" in
 		WIN32_LIBS="-lwinmm"
 
 		AC_CHECK_HEADERS([winsock.h winsock2.h])
-		if test "x$ac_cv_header_winsock2_h" = "xyes"; then
-			AC_SUBST([NETWORK_LIBS], [-lws2_32])
+		if test "x$ac_cv_header_winsock_h" = "xyes"; then
+			AC_SUBST([NETWORK_LIBS], [-lwsock32])
 			use_network=yes
-		elif test "x$ac_cv_header_winsock_h" = "xyes"; then
-			AC_SUBST([NETWORK_LIBS], [-lsock32])
+		elif test "x$ac_cv_header_winsock2_h" = "xyes"; then
+			AC_SUBST([NETWORK_LIBS], [-lws2_32])
 			use_network=yes
 		else
 			AC_MSG_ERROR([*** Couldn't find winsock\! (how\?)])
@@ -373,7 +368,6 @@ else
 fi
 
 AM_CONDITIONAL([USE_WIN32], [test "x$use_win32" = "xyes"])
-AM_CONDITIONAL([USE_WIN32_UNICODE], [test "x$WIN32_UNICODE" = "xyes"])
 AM_CONDITIONAL([USE_WII], [test "x$use_wii" = "xyes"])
 AM_CONDITIONAL([USE_WIIU], [test "x$use_wiiu" = "xyes"])
 AM_CONDITIONAL([USE_CONTROLLER], [test "x$use_controller" = "xyes"])

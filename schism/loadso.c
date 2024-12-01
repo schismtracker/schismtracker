@@ -35,20 +35,28 @@
 void *loadso_object_load(const char *sofile)
 {
 #ifdef SCHISM_WIN32
-	HMODULE module;
+	HMODULE module = NULL;
 
-	{
-		// Unicode conversion happens here
-		LPWSTR wstr;
+	if (GetVersion() < 0x80000000) {
+		// Windows 9x
+		char *ansi;
 
-		if (charset_iconv(sofile, &wstr, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX) == CHARSET_ERROR_SUCCESS) {
-			module = LoadLibraryW(wstr);
-			free(wstr);
-		} else {
-			// okay, try just loading the passed filename
-			module = LoadLibraryA(sofile);
+		if (!charset_iconv(sofile, &ansi, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
+			module = LoadLibraryA(ansi);
+			free(ansi);
+		}
+	} else {
+		// Windows NT
+		wchar_t *unicode;
+
+		if (!charset_iconv(sofile, &unicode, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+			module = LoadLibraryW(unicode);
+			free(unicode);
 		}
 	}
+
+	if (!module)
+		module = LoadLibraryA(sofile);
 
 	if (module)
 		return module;

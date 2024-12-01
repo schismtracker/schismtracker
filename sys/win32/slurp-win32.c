@@ -64,10 +64,10 @@ static void win32_unmap_(slurp_t *slurp)
 // file didn't exist.
 // Note: this doesn't bother setting errno; maybe it should?
 
-static int win32_error_unmap_(slurp_t *slurp, const char *filename, const char *function)
+static int win32_error_unmap_(slurp_t *slurp, const char *filename, const char *function, int val)
 {
 	DWORD err = GetLastError();
-	char *ptr;
+	char *ptr = NULL;
 	if (WIN32_FormatMessageW) {
 		LPWSTR errmsg = NULL;
 		WIN32_FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
@@ -92,36 +92,41 @@ static int win32_error_unmap_(slurp_t *slurp, const char *filename, const char *
 		free(ptr);
 	}
 	win32_unmap_(slurp);
-	return 0;
+	return val;
 }
 
 int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
 {
+	slurp->internal.memory.interfaces.win32.file = INVALID_HANDLE_VALUE;
+
 	if (WIN32_CreateFileW) {
 		wchar_t *filename_w;
 		if (charset_iconv(filename, &filename_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			return win32_error_unmap_(slurp, filename, "charset_iconv");
+			return win32_error_unmap_(slurp, filename, "charset_iconv", 0);
 
 		slurp->internal.memory.interfaces.win32.file = WIN32_CreateFileW(filename_w, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		free(filename_w);
-	} else {
+	}
+
+	if (slurp->internal.memory.interfaces.win32.file == INVALID_HANDLE_VALUE) {
 		char *filename_a;
 		if (charset_iconv(filename, &filename_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
-			return win32_error_unmap_(slurp, filename, "charset_iconv");
+			return win32_error_unmap_(slurp, filename, "charset_iconv", 0);
 
 		slurp->internal.memory.interfaces.win32.file = CreateFileA(filename_a, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		free(filename_a);
 	}
+
 	if (slurp->internal.memory.interfaces.win32.file == INVALID_HANDLE_VALUE)
-		return win32_error_unmap_(slurp, filename, "CreateFileW");
+		return win32_error_unmap_(slurp, filename, "CreateFile", 0);
 
 	slurp->internal.memory.interfaces.win32.mapping = CreateFileMapping(slurp->internal.memory.interfaces.win32.file, NULL, PAGE_READONLY, 0, 0, NULL);
 	if (!slurp->internal.memory.interfaces.win32.mapping)
-		return win32_error_unmap_(slurp, filename, "CreateFileMapping");
+		return win32_error_unmap_(slurp, filename, "CreateFileMapping", -1);
 
 	slurp->internal.memory.data = MapViewOfFile(slurp->internal.memory.interfaces.win32.mapping, FILE_MAP_READ, 0, 0, 0);
 	if (!slurp->internal.memory.data)
-		return win32_error_unmap_(slurp, filename, "MapViewOfFile");
+		return win32_error_unmap_(slurp, filename, "MapViewOfFile", -1);
 
 	slurp->internal.memory.length = st;
 	slurp->closure = win32_unmap_;

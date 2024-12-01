@@ -34,10 +34,11 @@ void win32_filecreated_callback(const char *filename)
 	charset_t explorer_charset;
 
 	if (GetVersion() < 0x80000000) {
+		// Windows NT
+		explorer_charset = CHARSET_WCHAR_T;
+	} else {
 		// Windows 9x/ME
 		explorer_charset = CHARSET_ANSI;
-	} else {
-		explorer_charset = CHARSET_WCHAR_T;
 	}
 
 	void* wc = NULL;
