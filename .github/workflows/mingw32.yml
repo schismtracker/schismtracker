@@ -42,12 +42,14 @@ jobs:
         # target extremely old Windows versions that mingw-w64
         # doesn't care about
       - name: 'Setup MinGW'
+        shell:
+          msys2 {0}
         run: |
-          Invoke-WebRequest -OutFile mingw-get.zip "https://osdn.net/dl/mingw/mingw-get-0.6.3-mingw32-pre-20170905-1-bin.zip" -UserAgent "curl/7.55.1"
-          Expand-Archive -Path mingw-get.zip -DestinationPath C:\MinGW
-          Remove-Item -Path mingw-get.zip
-          C:\MinGW\bin\mingw-get.exe install mingw32-base-bin msys-base-bin
-        shell: pwsh
+          wget --no-check-certificate -O mingw-get.zip "https://osdn.net/dl/mingw/mingw-get-0.6.3-mingw32-pre-20170905-1-bin.zip" -UserAgent "curl/7.55.1"
+          mkdir /c/MinGW
+          unzip mingw-get.zip -d/c/MinGW
+          rm mingw-get.zip
+          /c/MinGW/bin/mingw-get.exe install mingw32-base-bin msys-base-bin
 
       - name: 'Download SDL 1.2 sources'
         shell:
