@@ -36,7 +36,7 @@ jobs:
         with:
           msystem: mingw32
           update: true
-          install: git mingw-w64-i686-toolchain mingw-w64-i686-flac mingw-w64-i686-SDL2 libtool autoconf automake make zip dos2unix
+          install: git mingw-w64-i686-toolchain mingw-w64-i686-flac mingw-w64-i686-SDL2 libtool autoconf automake make zip unzip dos2unix
 
         # grab a (quite old) version of mingw32 so that we can
         # target extremely old Windows versions that mingw-w64
