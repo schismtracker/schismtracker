@@ -733,8 +733,6 @@ done:
 
 	if (out_ansi) {
 		// convert from unicode to ANSI
-		printf("%ls\n", unicode_out);
-
 		int needed = WideCharToMultiByte(CP_ACP, 0, unicode_out, -1, NULL, 0, NULL, NULL);
 		if (!needed) {
 			free(unicode_out);
