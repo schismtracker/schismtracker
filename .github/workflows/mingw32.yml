@@ -45,7 +45,7 @@ jobs:
         shell:
           msys2 {0}
         run: |
-          wget --no-check-certificate -O mingw-get.zip "https://osdn.net/dl/mingw/mingw-get-0.6.3-mingw32-pre-20170905-1-bin.zip" -UserAgent "curl/7.55.1"
+          wget --no-check-certificate -O mingw-get.zip "https://osdn.net/dl/mingw/mingw-get-0.6.3-mingw32-pre-20170905-1-bin.zip" -U "curl/7.55.1"
           mkdir /c/MinGW
           unzip mingw-get.zip -d/c/MinGW
           rm mingw-get.zip
