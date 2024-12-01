@@ -30,8 +30,6 @@
 
 #include "player/cmixer.h"
 
-#include "sdlmain.h"
-
 /* --------------------------------------------------------------------- */
 /* helper functions */
 

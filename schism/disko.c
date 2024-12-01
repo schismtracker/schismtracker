@@ -43,6 +43,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <inttypes.h>
 
 #define DW_BUFFER_SIZE 65536
 
@@ -222,22 +223,6 @@ int disko_open(disko_t *ds, const char *filename)
 
 	ds->filename = str_dup(filename);
 
-#ifdef SCHISM_WIN32
-	{
-		if (win32_mktemp(ds->tempname, strlen(ds->tempname) + 1)) {
-			free(ds->tempname);
-			free(ds->filename);
-			return -1;
-		}
-
-		ds->file = win32_fopen(ds->tempname, "wb");
-		if (!ds->file) {
-			free(ds->tempname);
-			free(ds->filename);
-			return -1;
-		}
-	}
-#else
 	fd = mkstemp(ds->tempname);
 	if (fd == -1) {
 		free(ds->tempname);
@@ -254,7 +239,6 @@ int disko_open(disko_t *ds, const char *filename)
 		errno = err;
 		return -1;
 	}
-#endif
 
 	setvbuf(ds->file, NULL, _IOFBF, DW_BUFFER_SIZE);
 

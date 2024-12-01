@@ -76,6 +76,19 @@ extern struct audio_device* audio_device_list;
 extern int audio_device_list_size;
 
 /* --------------------------------------------------------------------- */
+
+typedef struct {
+	int freq; // sample rate
+	uint8_t bits; // 8 or 16, always system byte order
+	uint8_t channels; // channels
+	uint16_t samples; // buffer size
+	void (*callback)(uint8_t *stream, int len);
+} schism_audio_spec_t;
+
+/* An opaque structure that each backend uses for its own data */
+typedef struct schism_audio_device schism_audio_device_t;
+
+/* --------------------------------------------------------------------- */
 /* some enums */
 
 /* for song_get_mode */
@@ -249,6 +262,8 @@ int audio_init(const char *driver, const char *device);
 /* Reconfigure the same device that was opened before. */
 int audio_reinit(const char *device);
 
+void audio_quit(void);
+
 /* eq */
 void song_init_eq(int do_reset, uint32_t mix_freq);
 
@@ -264,6 +279,9 @@ const char *song_audio_device(void);
 
 void free_audio_device_list(void);
 int refresh_audio_device_list(void);
+
+int audio_driver_count(void);
+const char *audio_driver_name(int x);
 
 void song_toggle_multichannel_mode(void);
 int song_is_multichannel_mode(void);

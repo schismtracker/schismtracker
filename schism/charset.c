@@ -26,7 +26,6 @@
 #include "bswap.h"
 #include "charset.h"
 #include "util.h"
-#include "sdlmain.h"
 #include "disko.h"
 
 int char_digraph(int k1, int k2)
@@ -649,107 +648,53 @@ CHARSET_VARIATION(internal) {
 		disko_write(&ds, conv, out_needed);
 	} while (decoder.state == DECODER_STATE_NEED_MORE);
 
+	// write a NUL terminator always
+	uint32_t x = 0;
+	disko_write(&ds, &x, sizeof(x));
+
 	disko_memclose(&ds, 1);
 
-	memcpy(out, &ds.data, sizeof(void *));
+	memcpy(out, &ds.data, sizeof(ds.data));
 
 	return CHARSET_ERROR_SUCCESS;
 }
 
-CHARSET_VARIATION(sdl) {
-	static const char* charset_iconv_system_lookup[] = {
-		[CHARSET_UTF8] = "UTF-8",
-		[CHARSET_UTF16BE] = "UTF-16BE",
-		[CHARSET_UTF16LE] = "UTF-16LE",
-		[CHARSET_UCS4] = "UCS-4",
+#ifdef SCHISM_WIN32
+# include <windows.h> // MultiByteToWideChar
+#endif
 
-		[CHARSET_CP437] = "437",
-		[CHARSET_WINDOWS1252] = "CP1252",
+typedef charset_error_t (*charset_impl)(const void* in, void* out, charset_t inset, charset_t outset, size_t insize);
 
-		[CHARSET_CHAR] = "",
-		[CHARSET_WCHAR_T] = "WCHAR_T",
-	};
+static const charset_impl charset_impls[] = {
+	charset_iconv_internal_,
+};
 
-	/* FIXME this is wrong */
-	size_t src_size = insize;
+static charset_error_t charset_iconv_impl_(const void *in, void *out, charset_t inset, charset_t outset, size_t insize)
+{
+	static void *const null = NULL;
+	charset_error_t state = CHARSET_ERROR_UNIMPLEMENTED;
 
-	/* Sanity checks */
-	if (src_size <= 0)
-		return CHARSET_ERROR_UNIMPLEMENTED;
+	for (int i = 0; i < ARRAY_SIZE(charset_impls); i++) {
+		state = charset_impls[i](in, out, inset, outset, insize);
+		if (state == CHARSET_ERROR_SUCCESS)
+			return state;
 
-	if (inset >= ARRAY_SIZE(charset_iconv_system_lookup) || outset >= ARRAY_SIZE(charset_iconv_system_lookup))
-		return CHARSET_ERROR_UNIMPLEMENTED;
+		memcpy(out, &null, sizeof(void *));
 
-	if (!charset_iconv_system_lookup[inset] || !charset_iconv_system_lookup[outset])
-		return CHARSET_ERROR_UNIMPLEMENTED;
-
-	SDL_iconv_t cd = SDL_iconv_open(charset_iconv_system_lookup[inset], charset_iconv_system_lookup[outset]);
-	if (cd == (SDL_iconv_t)(-1))
-		return CHARSET_ERROR_UNIMPLEMENTED;
-
-	disko_t ds = {0};
-	disko_memopen(&ds);
-
-	/* now onto the real conversion */
-	char out_buf[4096];
-	const size_t out_buf_size = 4096;
-
-	const char* in_ = (const char*)in;
-	size_t in_bytes_left = src_size;
-
-	while (in_bytes_left) {
-		const size_t old_in_bytes_left = in_bytes_left;
-		size_t out_bytes_left = out_buf_size;
-		char *out_ = (char *)out_buf;
-
-		size_t rc = SDL_iconv(cd, &in_, &in_bytes_left, &out_, &out_bytes_left);
-		switch (rc) {
-		case SDL_ICONV_E2BIG: {
-			disko_write(&ds, out_buf, out_buf_size - out_bytes_left);
-			continue;
-		}
-		case SDL_ICONV_EILSEQ:
-			/* try skipping? */
-			in_++;
-			in_bytes_left--;
-			break;
-		case SDL_ICONV_EINVAL:
-		case SDL_ICONV_ERROR:
-			/* t'was a good run */
-			in_bytes_left = 0;
-			memset(out_, 0, sizeof(uint32_t));
-			SDL_iconv_close(cd);
-			disko_memclose(&ds, 0);
-			return CHARSET_ERROR_UNIMPLEMENTED;
-		default:
-			break;
-		}
-
-		disko_write(&ds, out_buf, out_buf_size - out_bytes_left);
-
-		/* avoid infinite loops */
-		if (old_in_bytes_left == in_bytes_left)
-			break;
+		// give up if no memory left
+		if (state == CHARSET_ERROR_NOMEM)
+			return state;
 	}
 
-	{
-		// write at least four NUL bytes
-		unsigned char x[4] = {0};
-		disko_write(&ds, x, sizeof(x));
-	}
-
-	SDL_iconv_close(cd);
-
-	disko_memclose(&ds, 1);
-
-	memcpy(out, &ds.data, sizeof(void *));
-
-	return CHARSET_ERROR_SUCCESS;
+	return state;
 }
 
-/* XXX need to change this to take length in as well */
 charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charset_t outset, size_t insize) {
-	void *const null = NULL;
+	// This is so we can do charset-specific hacks...
+	charset_t insetfake = inset, outsetfake = outset;
+	const void *infake = in;
+	void *outfake;
+	size_t insizefake = insize;
 
 	charset_error_t state;
 	if (!in)
@@ -761,22 +706,79 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 	if (inset == outset)
 		return CHARSET_ERROR_INPUTISOUTPUT;
 
-#define TRY_VARIATION(name) \
-	state = charset_iconv_##name##_(in, out, inset, outset, insize); \
-	if (state == CHARSET_ERROR_SUCCESS) \
-		return state; \
-	if (state == CHARSET_ERROR_NOMEM) { \
-		memcpy(out, &null, sizeof(void *)); \
-		return state; \
-	} \
-	memcpy(out, &null, sizeof(void *));
+	switch (inset) {
+#ifdef WIN32
+	case CHARSET_ANSI: {
+		// convert ANSI to Unicode so we can process it
+		int needed = MultiByteToWideChar(CP_ACP, 0, in, (insize == SIZE_MAX) ? -1 : insize, NULL, 0);
+		if (!needed)
+			return CHARSET_ERROR_DECODE;
 
-	TRY_VARIATION(internal);
-	TRY_VARIATION(sdl);
+		wchar_t *unicode_in = mem_alloc((needed + 1) * sizeof(wchar_t));
+		MultiByteToWideChar(CP_ACP, 0, in, (insize == SIZE_MAX) ? -1 : insize, unicode_in, needed);
+		unicode_in[needed] = 0;
 
-#undef TRY_VARIATION
+		infake = unicode_in;
+		insetfake = CHARSET_WCHAR_T;
+		break;
+	}
+#endif
+	default: break;
+	}
 
-	return CHARSET_ERROR_UNIMPLEMENTED;
+	switch (outset) {
+#ifdef SCHISM_WIN32
+	case CHARSET_ANSI:
+		outsetfake = CHARSET_WCHAR_T;
+		break;
+#endif
+	default: break;
+	}
+
+	state = charset_iconv_impl_(infake, &outfake, insetfake, outsetfake, insizefake);
+
+done:
+
+	switch (inset) {
+#ifdef SCHISM_WIN32
+	case CHARSET_ANSI:
+		free((void *)infake);
+		break;
+#endif
+	default: break;
+	}
+
+	switch (outset) {
+#ifdef SCHISM_WIN32
+	case CHARSET_ANSI: {
+		// convert from unicode to ANSI
+		int needed = WideCharToMultiByte(CP_ACP, 0, (wchar_t *)outfake, -1, NULL, 0, NULL, NULL);
+		if (!needed) {
+			free(outfake);
+			state = CHARSET_ERROR_ENCODE;
+			break;
+		}
+
+		char *ansi_out = mem_alloc(needed + 1);
+
+		WideCharToMultiByte(CP_ACP, 0, (wchar_t *)outfake, -1, ansi_out, needed + 1, NULL, NULL);
+	
+		free(outfake);
+	
+		ansi_out[needed] = 0;
+
+		// copy the pointer
+		memcpy(out, &ansi_out, sizeof(void *));
+
+		break;
+	}
+#endif
+	default:
+		memcpy(out, &outfake, sizeof(outfake));
+		break;
+	}
+
+	return state;
 }
 
 charset_error_t charset_decode_next(charset_decode_t *decoder, charset_t inset)

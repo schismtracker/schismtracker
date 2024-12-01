@@ -27,7 +27,8 @@
 #define _WIN32_WINNT 0x1000
 
 #include "headers.h"
-#include "sdlmain.h"
+
+#include "threads.h"
 #include "charset.h"
 #include "fmt.h"
 #include "util.h"
@@ -35,6 +36,13 @@
 /* we want constant vtables */
 #define CONST_VTABLE
 
+/* include these first */
+#include <windows.h>
+#include <propsys.h>
+#include <mediaobj.h>
+
+/* define the GUIDs here; we don't use stuff outside here anyway */
+#include <initguid.h>
 #include <mfapi.h>
 #include <mfidl.h>
 #include <mfreadwrite.h>
@@ -50,11 +58,16 @@ typedef HRESULT (WINAPI *MF_MFCreateSourceResolverSpec)(IMFSourceResolver **ppIS
 typedef HRESULT (WINAPI *MF_MFGetServiceSpec)(IUnknown *punkObject, REFGUID guidService, REFIID riid, LPVOID *ppvObject);
 typedef HRESULT (WINAPI *MF_PropVariantToStringAllocSpec)(REFPROPVARIANT propvar, PWSTR *ppszOut);
 typedef HRESULT (WINAPI *MF_PropVariantToUInt64Spec)(REFPROPVARIANT propvar, ULONGLONG *pullRet);
+typedef HRESULT (WINAPI *MF_PropVariantClearSpec)(PROPVARIANT *pvar);
 typedef HRESULT (WINAPI *MF_MFCreateSourceReaderFromMediaSourceSpec)(IMFMediaSource *pMediaSource, IMFAttributes *pAttributes, IMFSourceReader **ppSourceReader);
 typedef HRESULT (WINAPI *MF_MFCreateMediaTypeSpec)(IMFMediaType **ppMFType);
 typedef HRESULT (WINAPI *MF_MFCreateAsyncResultSpec)(IUnknown *punkObject, IMFAsyncCallback *pCallback, IUnknown *punkState, IMFAsyncResult **ppAsyncResult);
 typedef HRESULT (WINAPI *MF_MFPutWorkItemSpec)(DWORD dwQueue, IMFAsyncCallback *pCallback, IUnknown *pState);
 typedef HRESULT (WINAPI *MF_MFInvokeCallbackSpec)(IMFAsyncResult *pAsyncResult);
+typedef HRESULT (WINAPI *MF_QISearchSpec)(void     *that,LPCQITAB pqit,REFIID   riid,void     **ppv);
+typedef HRESULT (WINAPI *MF_CoInitializeExSpec)(LPVOID pvReserved, DWORD  dwCoInit);
+typedef void (WINAPI *MF_CoUninitializeSpec)(void);
+typedef void (WINAPI *MF_CoTaskMemFreeSpec)(LPVOID pv);
 
 static MF_MFStartupSpec MF_MFStartup;
 static MF_MFShutdownSpec MF_MFShutdown;
@@ -62,11 +75,16 @@ static MF_MFCreateSourceResolverSpec MF_MFCreateSourceResolver;
 static MF_MFGetServiceSpec MF_MFGetService;
 static MF_PropVariantToStringAllocSpec MF_PropVariantToStringAlloc;
 static MF_PropVariantToUInt64Spec MF_PropVariantToUInt64;
+static MF_PropVariantClearSpec MF_PropVariantClear;
 static MF_MFCreateSourceReaderFromMediaSourceSpec MF_MFCreateSourceReaderFromMediaSource;
 static MF_MFCreateMediaTypeSpec MF_MFCreateMediaType;
 static MF_MFCreateAsyncResultSpec MF_MFCreateAsyncResult;
 static MF_MFPutWorkItemSpec MF_MFPutWorkItem;
 static MF_MFInvokeCallbackSpec MF_MFInvokeCallback;
+static MF_QISearchSpec MF_QISearch;
+static MF_CoInitializeExSpec MF_CoInitializeEx;
+static MF_CoUninitializeSpec MF_CoUninitialize;
+static MF_CoTaskMemFreeSpec MF_CoTaskMemFree;
 
 static int media_foundation_initialized = 0;
 
@@ -101,7 +119,7 @@ static HRESULT STDMETHODCALLTYPE slurp_async_op_QueryInterface(IUnknown *This, R
 		{NULL, 0},
 	};
 
-	return QISearch(This, qit, riid, ppvobj);
+	return MF_QISearch(This, qit, riid, ppvobj);
 }
 
 static ULONG STDMETHODCALLTYPE slurp_async_op_AddRef(IUnknown *This)
@@ -166,7 +184,7 @@ static HRESULT STDMETHODCALLTYPE slurp_async_callback_QueryInterface(IMFAsyncCal
 		{NULL, 0},
 	};
 
-	return QISearch(This, qit, riid, ppobj);
+	return MF_QISearch(This, qit, riid, ppobj);
 }
 
 static ULONG STDMETHODCALLTYPE slurp_async_callback_AddRef(IMFAsyncCallback *This)
@@ -263,7 +281,7 @@ struct mfbytestream {
 	CONST_VTBL IMFByteStreamVtbl *lpvtbl;
 
 	slurp_t *fp;
-	SDL_mutex *mutex;
+	schism_mutex_t *mutex;
 	long ref_cnt;
 };
 
@@ -276,7 +294,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_QueryInterface(IMFByteStream *This
 		{NULL, 0},
 	};
 
-	return QISearch(This, qit, riid, ppobj);
+	return MF_QISearch(This, qit, riid, ppobj);
 }
 
 static ULONG STDMETHODCALLTYPE mfbytestream_AddRef(IMFByteStream *This)
@@ -292,7 +310,7 @@ static ULONG STDMETHODCALLTYPE mfbytestream_Release(IMFByteStream *This)
 
 	long ref = InterlockedDecrement(&mfb->ref_cnt);
 	if (!ref) {
-		SDL_DestroyMutex(mfb->mutex);
+		mt_mutex_delete(mfb->mutex);
 		free(mfb);
 	}
 
@@ -322,11 +340,11 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_SetCurrentPosition(IMFByteStream *
 {
 	struct mfbytestream *mfb = (struct mfbytestream *)This;
 
-	SDL_LockMutex(mfb->mutex);
+	mt_mutex_lock(mfb->mutex);
 
 	slurp_seek(mfb->fp, qwPosition, SEEK_SET);
 
-	SDL_UnlockMutex(mfb->mutex);
+	mt_mutex_unlock(mfb->mutex);
 
 	return S_OK;
 }
@@ -335,11 +353,11 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_GetCurrentPosition(IMFByteStream *
 {
 	struct mfbytestream *mfb = (struct mfbytestream *)This;
 
-	SDL_LockMutex(mfb->mutex);
+	mt_mutex_lock(mfb->mutex);
 
 	int64_t pos = slurp_tell(mfb->fp);
 
-	SDL_UnlockMutex(mfb->mutex);
+	mt_mutex_unlock(mfb->mutex);
 
 	if (pos < 0)
 		return E_FAIL;
@@ -352,11 +370,11 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_IsEndOfStream(IMFByteStream *This,
 {
 	struct mfbytestream *mfb = (struct mfbytestream *)This;
 
-	SDL_LockMutex(mfb->mutex);
+	mt_mutex_lock(mfb->mutex);
 
 	*pfEndOfStream = slurp_eof(mfb->fp);
 
-	SDL_UnlockMutex(mfb->mutex);
+	mt_mutex_unlock(mfb->mutex);
 
 	return S_OK;
 }
@@ -365,11 +383,11 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_Read(IMFByteStream *This, BYTE *pb
 {
 	struct mfbytestream *mfb = (struct mfbytestream *)This;
 
-	SDL_LockMutex(mfb->mutex);
+	mt_mutex_lock(mfb->mutex);
 
 	*pcbRead = slurp_read(mfb->fp, pb, cb);
 
-	SDL_UnlockMutex(mfb->mutex);
+	mt_mutex_unlock(mfb->mutex);
 
 	return S_OK;
 }
@@ -382,7 +400,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_ReadAtPosition(IMFByteStream *This
 
 	*pcbRead = 0;
 
-	SDL_LockMutex(mfb->mutex);
+	mt_mutex_lock(mfb->mutex);
 
 	/* cache the old position */
 	int64_t old_pos = slurp_tell(mfb->fp);
@@ -400,7 +418,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_ReadAtPosition(IMFByteStream *This
 	slurp_seek(mfb->fp, old_pos, SEEK_SET);
 
 done:
-	SDL_UnlockMutex(mfb->mutex);
+	mt_mutex_unlock(mfb->mutex);
 
 	return hr;
 }
@@ -497,9 +515,13 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_Seek(IMFByteStream *This, MFBYTEST
 
 	// XXX MFBYTESTREAM_SEEK_FLAG_CANCEL_PENDING_IO wtf?
 
+	mt_mutex_lock(mfb->mutex);
+
 	slurp_seek(mfb->fp, llSeekOffset, whence);
 
 	*pqwCurrentPosition = slurp_tell(mfb->fp);
+
+	mt_mutex_unlock(mfb->mutex);
 
 	return S_OK;
 }
@@ -551,7 +573,7 @@ static inline int mfbytestream_new(IMFByteStream **imf, slurp_t *fp)
 
 	/* whatever */
 	mfb->fp = fp;
-	mfb->mutex = SDL_CreateMutex();
+	mfb->mutex = mt_mutex_create();
 	if (!mfb->mutex) {
 		free(mfb);
 		return 0;
@@ -675,13 +697,13 @@ static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t
 			PropVariantInit(&propval);
 
 			if (FAILED(metadata->lpVtbl->GetProperty(metadata, prop_name, &propval))) {
-				PropVariantClear(&propval);
+				MF_PropVariantClear(&propval);
 				continue;
 			}
 
 			LPWSTR prop_val_str = NULL;
 			if (FAILED(MF_PropVariantToStringAlloc(&propval, &prop_val_str))) {
-				PropVariantClear(&propval);
+				MF_PropVariantClear(&propval);
 				continue;
 			}
 
@@ -689,13 +711,13 @@ static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t
 
 			charset_iconv(prop_val_str, file->title, CHARSET_WCHAR_T, CHARSET_CP437, SIZE_MAX);
 
-			CoTaskMemFree(prop_val_str);
-			PropVariantClear(&propval);
+			MF_CoTaskMemFree(prop_val_str);
+			MF_PropVariantClear(&propval);
 		}
 	}
 
 cleanup:
-	PropVariantClear(&propnames);
+	MF_PropVariantClear(&propnames);
 
 	if (descriptor)
 		descriptor->lpVtbl->Release(descriptor);
@@ -964,6 +986,7 @@ int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 
 /* ----------------------------------------------------------- */
 
+static HMODULE lib_ole32 = NULL;
 static HMODULE lib_shlwapi = NULL;
 static HMODULE lib_mf = NULL;
 static HMODULE lib_mfplat = NULL;
@@ -973,7 +996,7 @@ static HMODULE lib_propsys = NULL;
 /* needs to be called once on startup */
 int win32mf_init(void)
 {
-
+	int com_initialized = 0;
 #ifdef SCHISM_MF_DEBUG
 #define DEBUG_PUTS(x) puts(x)
 #else
@@ -982,7 +1005,7 @@ int win32mf_init(void)
 
 #define LOAD_MF_LIBRARY(o) \
 	do { \
-		lib_ ## o = LoadLibraryW(L ## #o L".dll"); \
+		lib_ ## o = LoadLibraryA(#o ".dll"); \
 		if (!(lib_ ## o)) { DEBUG_PUTS("Failed to load library " #o "!"); goto fail; } \
 	} while (0)
 
@@ -992,11 +1015,25 @@ int win32mf_init(void)
 		if (!MF_##x) { DEBUG_PUTS("Failed to load " #x " from library " #o ".dll !"); goto fail; } \
 	} while (0)
 
-	HRESULT com_init = CoInitializeEx(NULL, COM_INITFLAGS);
-	if (com_init != S_OK && com_init != S_FALSE && com_init != RPC_E_CHANGED_MODE) {
+	LOAD_MF_LIBRARY(ole32);
+
+	LOAD_MF_OBJECT(ole32, CoInitializeEx);
+	LOAD_MF_OBJECT(ole32, CoUninitialize);
+	LOAD_MF_OBJECT(ole32, PropVariantClear);
+	LOAD_MF_OBJECT(ole32, CoTaskMemFree);
+
+	{
+		HRESULT com_init = MF_CoInitializeEx(NULL, COM_INITFLAGS);
+		com_initialized = (com_init == S_OK || com_init == S_FALSE || com_init == RPC_E_CHANGED_MODE);
+	}
+	if (!com_initialized) {
 		DEBUG_PUTS("Failed to initialize COM!");
 		goto fail;
 	}
+
+	LOAD_MF_LIBRARY(shlwapi);
+
+	LOAD_MF_OBJECT(shlwapi, QISearch);
 
 	LOAD_MF_LIBRARY(mf);
 
@@ -1040,7 +1077,11 @@ fail:
 	if (lib_propsys)
 		FreeLibrary(lib_propsys);
 
-	CoUninitialize();
+	if (com_initialized && MF_CoUninitialize)
+		MF_CoUninitialize();
+
+	if (lib_ole32)
+		FreeLibrary(lib_ole32);
 
 	return 0;
 }
@@ -1066,5 +1107,5 @@ void win32mf_quit(void)
 		FreeLibrary(lib_propsys);
 
 	MF_MFShutdown();
-	CoUninitialize();
+	MF_CoUninitialize();
 }

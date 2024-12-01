@@ -42,10 +42,13 @@ struct midi_driver {
 	void (*drain)(struct midi_port *d);
 };
 
+// implemented in each backend
+struct schism_thread;
+
 struct midi_provider {
 	char *name;
 	void (*poll)(struct midi_provider *);
-	void *thread; /*actually SDL_Thread* */
+	struct schism_thread *thread;
 	volatile int cancelled;
 
 	struct midi_provider *next;
@@ -101,8 +104,9 @@ void midi_send_flush(void);
 /* used by the audio thread */
 int midi_need_flush(void);
 
-/* from the SDL event mechanism (x is really SDL_Event) */
-int midi_engine_handle_event(void *x);
+/* from Schism event handler */
+union schism_event;
+int midi_engine_handle_event(union schism_event *ev);
 
 struct midi_port *midi_engine_port(int n, const char **name);
 int midi_engine_port_count(void);

@@ -154,13 +154,7 @@ extern short dB2_power_s(int noisefloor, int db, double correction_dBs);
 /* integer sqrt (very fast; 32 bits limited) */
 unsigned int i_sqrt(unsigned int r);
 
-void rt_usleep(uint64_t usec);
-
-#define rt_msleep(x) (rt_usleep((uint64_t)(x) * 1000))
-
-// this tries to be as realtime as possible, but will
-// fallback to SDL_Delay() if there is no real-time
-// system provided option available
-void msleep(uint64_t msec);
+// library loading functionality
+void *library_load(const char *name, int current, int age);
 
 #endif /* SCHISM_UTIL_H_ */

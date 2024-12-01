@@ -470,10 +470,10 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 		}
 	} else {
 		switch (k->sym) {
-		case SDLK_UP:
+		case SCHISM_KEYSYM_UP:
 			if (k->state == KEY_RELEASE)
 				return 0;
-			if (k->mod & KMOD_ALT) {
+			if (k->mod & SCHISM_KEYMOD_ALT) {
 				if (current_instrument > 1) {
 					new_ins = current_instrument - 1;
 					song_swap_instruments(current_instrument, new_ins);
@@ -484,13 +484,13 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				new_ins--;
 			}
 			break;
-		case SDLK_DOWN:
+		case SCHISM_KEYSYM_DOWN:
 			if (k->state == KEY_RELEASE)
 				return 0;
-			if (k->mod & KMOD_ALT) {
+			if (k->mod & SCHISM_KEYMOD_ALT) {
 				// restrict position to the "old" value of _last_vis_inst()
 				// (this is entirely for aesthetic reasons)
-				if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
+				if (status.last_keysym != SCHISM_KEYSYM_DOWN && !k->is_repeat)
 					_altswap_lastvis = _last_vis_inst();
 				if (current_instrument < _altswap_lastvis) {
 					new_ins = current_instrument + 1;
@@ -502,23 +502,23 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				new_ins++;
 			}
 			break;
-		case SDLK_PAGEUP:
+		case SCHISM_KEYSYM_PAGEUP:
 			if (k->state == KEY_RELEASE)
 				return 0;
-			if (k->mod & KMOD_CTRL)
+			if (k->mod & SCHISM_KEYMOD_CTRL)
 				new_ins = 1;
 			else
 				new_ins -= 16;
 			break;
-		case SDLK_PAGEDOWN:
+		case SCHISM_KEYSYM_PAGEDOWN:
 			if (k->state == KEY_RELEASE)
 				return 0;
-			if (k->mod & KMOD_CTRL)
+			if (k->mod & SCHISM_KEYMOD_CTRL)
 				new_ins = _last_vis_inst();
 			else
 				new_ins += 16;
 			break;
-		case SDLK_HOME:
+		case SCHISM_KEYSYM_HOME:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
@@ -529,7 +529,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				status.flags |= NEED_UPDATE;
 			}
 			return 1;
-		case SDLK_END:
+		case SCHISM_KEYSYM_END:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
@@ -540,7 +540,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				status.flags |= NEED_UPDATE;
 			}
 			return 1;
-		case SDLK_LEFT:
+		case SCHISM_KEYSYM_LEFT:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
@@ -551,7 +551,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				status.flags |= NEED_UPDATE;
 			}
 			return 1;
-		case SDLK_RIGHT:
+		case SCHISM_KEYSYM_RIGHT:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
@@ -565,7 +565,7 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				status.flags |= NEED_UPDATE;
 			}
 			return 1;
-		case SDLK_RETURN:
+		case SCHISM_KEYSYM_RETURN:
 			if (k->state == KEY_PRESS)
 				return 0;
 			if (instrument_cursor_pos < 25) {
@@ -577,8 +577,8 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				set_page(PAGE_LOAD_INSTRUMENT);
 			}
 			return 1;
-		case SDLK_ESCAPE:
-			if ((k->mod & KMOD_SHIFT) || instrument_cursor_pos < 25) {
+		case SCHISM_KEYSYM_ESCAPE:
+			if ((k->mod & SCHISM_KEYMOD_SHIFT) || instrument_cursor_pos < 25) {
 				if (k->state == KEY_RELEASE)
 					return 1;
 				instrument_cursor_pos = 25;
@@ -587,33 +587,33 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 				return 1;
 			}
 			return 0;
-		case SDLK_BACKSPACE:
+		case SCHISM_KEYSYM_BACKSPACE:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (instrument_cursor_pos == 25)
 				return 0;
-			if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0)
+			if ((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT)) == 0)
 				instrument_list_delete_char();
-			else if (k->mod & KMOD_CTRL)
+			else if (k->mod & SCHISM_KEYMOD_CTRL)
 				instrument_list_add_char(127);
 			return 1;
-		case SDLK_INSERT:
+		case SCHISM_KEYSYM_INSERT:
 			if (k->state == KEY_RELEASE)
 				return 0;
-			if (k->mod & KMOD_ALT) {
+			if (k->mod & SCHISM_KEYMOD_ALT) {
 				song_insert_instrument_slot(current_instrument);
 				status.flags |= NEED_UPDATE;
 				return 1;
 			}
 			return 0;
-		case SDLK_DELETE:
+		case SCHISM_KEYSYM_DELETE:
 			if (k->state == KEY_RELEASE)
 				return 0;
-			if (k->mod & KMOD_ALT) {
+			if (k->mod & SCHISM_KEYMOD_ALT) {
 				song_remove_instrument_slot(current_instrument);
 				status.flags |= NEED_UPDATE;
 				return 1;
-			} else if ((k->mod & KMOD_CTRL) == 0) {
+			} else if ((k->mod & SCHISM_KEYMOD_CTRL) == 0) {
 				if (instrument_cursor_pos == 25)
 					return 0;
 				instrument_list_delete_next_char();
@@ -624,16 +624,16 @@ static int instrument_list_handle_key_on_list(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 0;
 
-			if (k->mod & KMOD_ALT) {
-				if (k->sym == SDLK_c) {
+			if (k->mod & SCHISM_KEYMOD_ALT) {
+				if (k->sym == SCHISM_KEYSYM_c) {
 					clear_instrument_text();
 					return 1;
 				}
-			} else if ((k->mod & KMOD_CTRL) == 0) {
+			} else if ((k->mod & SCHISM_KEYMOD_CTRL) == 0) {
 				if (instrument_cursor_pos < 25) {
 					if (k->text)
 						return instrument_list_handle_text_input_on_list(k->text);
-				} else if (k->sym == SDLK_SPACE) {
+				} else if (k->sym == SCHISM_KEYSYM_SPACE) {
 					instrument_cursor_pos = 0;
 					get_page_widgets()->accept_text = 0;
 					status.flags |= NEED_UPDATE;
@@ -810,23 +810,23 @@ static int note_trans_handle_key(struct key_event * k)
 				};
 			}
 		}
-	} else if (k->mod & KMOD_ALT) {
+	} else if (k->mod & SCHISM_KEYMOD_ALT) {
 		if (k->state == KEY_RELEASE)
 			return 0;
 		switch (k->sym) {
-		case SDLK_UP:
+		case SCHISM_KEYSYM_UP:
 			instrument_note_trans_transpose(ins, 1);
 			break;
-		case SDLK_DOWN:
+		case SCHISM_KEYSYM_DOWN:
 			instrument_note_trans_transpose(ins, -1);
 			break;
-		case SDLK_INSERT:
+		case SCHISM_KEYSYM_INSERT:
 			instrument_note_trans_insert(ins, note_trans_sel_line);
 			break;
-		case SDLK_DELETE:
+		case SCHISM_KEYSYM_DELETE:
 			instrument_note_trans_delete(ins, note_trans_sel_line);
 			break;
-		case SDLK_n:
+		case SCHISM_KEYSYM_n:
 			n = note_trans_sel_line - 1; // the line to copy *from*
 			if (n < 0 || ins->note_map[n] == NOTE_LAST)
 				break;
@@ -834,7 +834,7 @@ static int note_trans_handle_key(struct key_event * k)
 			ins->sample_map[note_trans_sel_line] = ins->sample_map[n];
 			new_line++;
 			break;
-		case SDLK_p:
+		case SCHISM_KEYSYM_p:
 			n = note_trans_sel_line + 1; // the line to copy *from*
 			if (n > (NOTE_LAST - NOTE_FIRST) || ins->note_map[n] == NOTE_FIRST)
 				break;
@@ -842,11 +842,11 @@ static int note_trans_handle_key(struct key_event * k)
 			ins->sample_map[note_trans_sel_line] = ins->sample_map[n];
 			new_line--;
 			break;
-		case SDLK_a:
+		case SCHISM_KEYSYM_a:
 			c = sample_get_current();
 			for (n = 0; n < (NOTE_LAST - NOTE_FIRST + 1); n++)
 				ins->sample_map[n] = c;
-			if (k->mod & KMOD_SHIFT) {
+			if (k->mod & SCHISM_KEYMOD_SHIFT) {
 				// Copy the name too.
 				memcpy(ins->name, current_song->samples[c].name, 32);
 			}
@@ -856,10 +856,10 @@ static int note_trans_handle_key(struct key_event * k)
 		}
 	} else {
 		switch (k->sym) {
-		case SDLK_UP:
+		case SCHISM_KEYSYM_UP:
 			if (k->state == KEY_RELEASE)
 				return 0;
-			if (k->mod & KMOD_CTRL)
+			if (k->mod & SCHISM_KEYMOD_CTRL)
 				sample_set(sample_get_current () - 1);
 			if (!NO_MODIFIER(k->mod))
 				return 0;
@@ -868,62 +868,62 @@ static int note_trans_handle_key(struct key_event * k)
 				return 1;
 			}
 			break;
-		case SDLK_DOWN:
+		case SCHISM_KEYSYM_DOWN:
 			if (k->state == KEY_RELEASE)
 				return 0;
-			if (k->mod & KMOD_CTRL)
+			if (k->mod & SCHISM_KEYMOD_CTRL)
 				sample_set(sample_get_current () + 1);
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			new_line++;
 			break;
-		case SDLK_PAGEUP:
+		case SCHISM_KEYSYM_PAGEUP:
 			if (k->state == KEY_RELEASE)
 				return 0;
-			if (k->mod & KMOD_CTRL) {
+			if (k->mod & SCHISM_KEYMOD_CTRL) {
 				instrument_set(current_instrument - 1);
 				return 1;
 			}
 			new_line -= 16;
 			break;
-		case SDLK_PAGEDOWN:
+		case SCHISM_KEYSYM_PAGEDOWN:
 			if (k->state == KEY_RELEASE)
 				return 0;
-			if (k->mod & KMOD_CTRL) {
+			if (k->mod & SCHISM_KEYMOD_CTRL) {
 				instrument_set(current_instrument + 1);
 				return 1;
 			}
 			new_line += 16;
 			break;
-		case SDLK_HOME:
+		case SCHISM_KEYSYM_HOME:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			new_line = 0;
 			break;
-		case SDLK_END:
+		case SCHISM_KEYSYM_END:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			new_line = 119;
 			break;
-		case SDLK_LEFT:
+		case SCHISM_KEYSYM_LEFT:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			new_pos--;
 			break;
-		case SDLK_RIGHT:
+		case SCHISM_KEYSYM_RIGHT:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			new_pos++;
 			break;
-		case SDLK_RETURN:
+		case SCHISM_KEYSYM_RETURN:
 			if (k->state == KEY_PRESS)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
@@ -931,16 +931,16 @@ static int note_trans_handle_key(struct key_event * k)
 			sample_set(ins->sample_map[note_trans_sel_line]);
 			get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 			return 1;
-		case SDLK_LESS:
-		case SDLK_SEMICOLON:
-		case SDLK_COLON:
+		case SCHISM_KEYSYM_LESS:
+		case SCHISM_KEYSYM_SEMICOLON:
+		case SCHISM_KEYSYM_COLON:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			sample_set(sample_get_current() - 1);
 			return 1;
-		case SDLK_GREATER:
-		case SDLK_QUOTE:
-		case SDLK_QUOTEDBL:
+		case SCHISM_KEYSYM_GREATER:
+		case SCHISM_KEYSYM_QUOTE:
+		case SCHISM_KEYSYM_QUOTEDBL:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			sample_set(sample_get_current() + 1);
@@ -973,19 +973,19 @@ static int note_trans_handle_key(struct key_event * k)
 
 			case 2:        /* instrument, first digit */
 			case 3:        /* instrument, second digit */
-				if (k->sym == SDLK_SPACE) {
+				if (k->sym == SCHISM_KEYSYM_SPACE) {
 					ins->sample_map[note_trans_sel_line] =
 						sample_get_current();
 					new_line++;
 					break;
 				}
 
-				if ((k->sym == SDLK_PERIOD && NO_MODIFIER(k->mod)) || k->sym == SDLK_DELETE) {
+				if ((k->sym == SCHISM_KEYSYM_PERIOD && NO_MODIFIER(k->mod)) || k->sym == SCHISM_KEYSYM_DELETE) {
 					ins->sample_map[note_trans_sel_line] = 0;
-					new_line += (k->sym == SDLK_PERIOD) ? 1 : 0;
+					new_line += (k->sym == SCHISM_KEYSYM_PERIOD) ? 1 : 0;
 					break;
 				}
-				if (k->sym == SDLK_COMMA && NO_MODIFIER(k->mod)) {
+				if (k->sym == SCHISM_KEYSYM_COMMA && NO_MODIFIER(k->mod)) {
 					note_sample_mask = note_sample_mask ? 0 : 1;
 					break;
 				}
@@ -1409,31 +1409,31 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 	int n;
 
 	switch (k->sym) {
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		widget_change_focus_to(1);
 		return 1;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		widget_change_focus_to(6);
 		return 1;
-	case SDLK_LEFT:
+	case SCHISM_KEYSYM_LEFT:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_node--;
 		break;
-	case SDLK_RIGHT:
+	case SCHISM_KEYSYM_RIGHT:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_node++;
 		break;
-	case SDLK_INSERT:
+	case SCHISM_KEYSYM_INSERT:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (!NO_MODIFIER(k->mod))
@@ -1441,7 +1441,7 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 		*current_node = _env_node_add(env, *current_node, -1, -1);
 		status.flags |= NEED_UPDATE;
 		return 1 | 2;
-	case SDLK_DELETE:
+	case SCHISM_KEYSYM_DELETE:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (!NO_MODIFIER(k->mod))
@@ -1449,7 +1449,7 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 		*current_node = _env_node_remove(env, *current_node);
 		status.flags |= NEED_UPDATE;
 		return 1 | 2;
-	case SDLK_SPACE:
+	case SCHISM_KEYSYM_SPACE:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->is_repeat)
@@ -1464,7 +1464,7 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 		}
 
 		return 0;
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		if (k->state == KEY_PRESS)
 			return 0;
 		if (!NO_MODIFIER(k->mod))
@@ -1472,19 +1472,19 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 		envelope_edit_mode = 1;
 		status.flags |= NEED_UPDATE;
 		return 1 | 2;
-	case SDLK_l:
+	case SCHISM_KEYSYM_l:
 		if (k->state == KEY_PRESS)
 			return 0;
-		if (!(k->mod & KMOD_ALT)) return 0;
+		if (!(k->mod & SCHISM_KEYMOD_ALT)) return 0;
 		if (env->loop_end < (env->nodes-1))  {
 			dialog_create(DIALOG_OK_CANCEL, "Cut envelope?", do_post_loop_cut, NULL, 1, env);
 			return 1;
 		}
 		return 0;
-	case SDLK_b:
+	case SCHISM_KEYSYM_b:
 		if (k->state == KEY_PRESS)
 			return 0;
-		if (!(k->mod & KMOD_ALT)) return 0;
+		if (!(k->mod & SCHISM_KEYMOD_ALT)) return 0;
 		if (env->loop_start > 0) {
 			dialog_create(DIALOG_OK_CANCEL, "Cut envelope?", do_pre_loop_cut, NULL, 1, env);
 			return 1;
@@ -1493,29 +1493,29 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 
 	// F/G for key symmetry with pattern double/halve block
 	// E for symmetry with sample resize
-	case SDLK_f:
+	case SCHISM_KEYSYM_f:
 		if (k->state == KEY_PRESS)
 			return 0;
-		if (!(k->mod & KMOD_ALT)) return 0;
+		if (!(k->mod & SCHISM_KEYMOD_ALT)) return 0;
 		env_resize(env, env->ticks[env->nodes - 1] * 2);
 		return 1;
-	case SDLK_g:
+	case SCHISM_KEYSYM_g:
 		if (k->state == KEY_PRESS)
 			return 0;
-		if (!(k->mod & KMOD_ALT)) return 0;
+		if (!(k->mod & SCHISM_KEYMOD_ALT)) return 0;
 		env_resize(env, env->ticks[env->nodes - 1] / 2);
 		return 1;
-	case SDLK_e:
+	case SCHISM_KEYSYM_e:
 		if (k->state == KEY_PRESS)
 			return 0;
-		if (!(k->mod & KMOD_ALT)) return 0;
+		if (!(k->mod & SCHISM_KEYMOD_ALT)) return 0;
 		env_resize_dialog(env);
 		return 1;
 
-	case SDLK_z:
+	case SCHISM_KEYSYM_z:
 		if (k->state == KEY_PRESS)
 			return 0;
-		if (!(k->mod & KMOD_ALT)) return 0;
+		if (!(k->mod & SCHISM_KEYMOD_ALT)) return 0;
 		env_adsr_dialog(env);
 		return 1;
 
@@ -1525,10 +1525,10 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 
 		n = numeric_key_event(k, 0);
 		if (n > -1) {
-			if (k->mod & (KMOD_ALT | KMOD_CTRL)) {
+			if (k->mod & (SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_CTRL)) {
 				save_envelope(n, env, sec);
 				status_text_flash("Envelope copied into slot %d", n);
-			} else if (k->mod & KMOD_SHIFT) {
+			} else if (k->mod & SCHISM_KEYMOD_SHIFT) {
 				restore_envelope(n, env, sec);
 				if (!(status.flags & CLASSIC_MODE))
 					status_text_flash("Pasted envelope from slot %d", n);
@@ -1690,79 +1690,79 @@ static int _env_handle_key_editmode(struct key_event *k, song_envelope_t *env, i
 	/* TODO: when does adding/removing a node alter loop points? */
 
 	switch (k->sym) {
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		if (k->mod & KMOD_ALT)
+		if (k->mod & SCHISM_KEYMOD_ALT)
 			new_value += 16;
 		else
 			new_value++;
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		if (k->mod & KMOD_ALT)
+		if (k->mod & SCHISM_KEYMOD_ALT)
 			new_value -= 16;
 		else
 			new_value--;
 		break;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_value += 16;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_value -= 16;
 		break;
-	case SDLK_LEFT:
+	case SCHISM_KEYSYM_LEFT:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_CTRL)
+		if (k->mod & SCHISM_KEYMOD_CTRL)
 			new_node--;
-		else if (k->mod & KMOD_ALT)
+		else if (k->mod & SCHISM_KEYMOD_ALT)
 			new_tick -= 16;
 		else
 			new_tick--;
 		break;
-	case SDLK_RIGHT:
+	case SCHISM_KEYSYM_RIGHT:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_CTRL)
+		if (k->mod & SCHISM_KEYMOD_CTRL)
 			new_node++;
-		else if (k->mod & KMOD_ALT)
+		else if (k->mod & SCHISM_KEYMOD_ALT)
 			new_tick += 16;
 		else
 			new_tick++;
 		break;
-	case SDLK_TAB:
+	case SCHISM_KEYSYM_TAB:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		if (k->mod & KMOD_SHIFT)
+		if (k->mod & SCHISM_KEYMOD_SHIFT)
 			new_tick -= 16;
 		else
 			new_tick += 16;
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_tick = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_tick = 10000;
 		break;
-	case SDLK_INSERT:
+	case SCHISM_KEYSYM_INSERT:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (!NO_MODIFIER(k->mod))
@@ -1770,7 +1770,7 @@ static int _env_handle_key_editmode(struct key_event *k, song_envelope_t *env, i
 		*current_node = _env_node_add(env, *current_node, -1, -1);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_DELETE:
+	case SCHISM_KEYSYM_DELETE:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (!NO_MODIFIER(k->mod))
@@ -1778,7 +1778,7 @@ static int _env_handle_key_editmode(struct key_event *k, song_envelope_t *env, i
 		*current_node = _env_node_remove(env, *current_node);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_SPACE:
+	case SCHISM_KEYSYM_SPACE:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (!NO_MODIFIER(k->mod))
@@ -1786,7 +1786,7 @@ static int _env_handle_key_editmode(struct key_event *k, song_envelope_t *env, i
 		song_keyup(KEYJAZZ_NOINST, current_instrument, last_note);
 		song_keydown(KEYJAZZ_NOINST, current_instrument, last_note, 64, KEYJAZZ_CHAN_CURRENT);
 		return 1;
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		if (k->state == KEY_PRESS)
 			return 0;
 		if (!NO_MODIFIER(k->mod))
@@ -1946,18 +1946,18 @@ static int pitch_pan_center_handle_key(struct key_event *k)
 	if (k->state == KEY_RELEASE)
 		return 0;
 	switch (k->sym) {
-	case SDLK_LEFT:
+	case SCHISM_KEYSYM_LEFT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		ppc--;
 		break;
-	case SDLK_RIGHT:
+	case SCHISM_KEYSYM_RIGHT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		ppc++;
 		break;
 	default:
-		if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) {
+		if ((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT)) == 0) {
 			ppc = kbd_get_note(k);
 			if (ppc < 1 || ppc > 120)
 				return 0;
@@ -2083,36 +2083,36 @@ static int export_instrument_list_handle_key(struct key_event * k)
 	if (k->state == KEY_RELEASE)
 		return 0;
 	switch (k->sym) {
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_format--;
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_format++;
 		break;
-	case SDLK_PAGEUP:
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_KEYSYM_HOME:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_format = 0;
 		break;
-	case SDLK_PAGEDOWN:
-	case SDLK_END:
+	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_KEYSYM_END:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_format = num_save_formats - 1;
 		break;
-	case SDLK_TAB:
-		if (k->mod & KMOD_SHIFT) {
+	case SCHISM_KEYSYM_TAB:
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			widget_change_focus_to(0);
 			return 1;
 		}
 		/* fall through */
-	case SDLK_LEFT:
-	case SDLK_RIGHT:
+	case SCHISM_KEYSYM_LEFT:
+	case SCHISM_KEYSYM_RIGHT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		widget_change_focus_to(0); /* should focus 0/1/2 depending on what's closest */
@@ -2178,30 +2178,30 @@ static void instrument_list_handle_alt_key(struct key_event *k)
 	if (k->state == KEY_RELEASE)
 		return;
 	switch (k->sym) {
-	case SDLK_n:
+	case SCHISM_KEYSYM_n:
 		song_toggle_multichannel_mode();
 		return;
-	case SDLK_o:
+	case SCHISM_KEYSYM_o:
 		instrument_save(NULL, "ITI");
 		return;
-	case SDLK_r:
+	case SCHISM_KEYSYM_r:
 		smpprompt_create("Replace instrument with:", "Instrument", do_replace_instrument);
 		return;
-	case SDLK_s:
+	case SCHISM_KEYSYM_s:
 		// extra space to align the text like IT
 		smpprompt_create("Swap instrument with: ", "Instrument", do_swap_instrument);
 		return;
-	case SDLK_x:
+	case SCHISM_KEYSYM_x:
 		smpprompt_create("Exchange instrument with:", "Instrument", do_exchange_instrument);
 		return;
-	case SDLK_p:
+	case SCHISM_KEYSYM_p:
 		smpprompt_create("Copy instrument:", "Instrument", do_copy_instrument);
 		return;
-	case SDLK_w:
+	case SCHISM_KEYSYM_w:
 		song_wipe_instrument(current_instrument);
 		break;
-	case SDLK_d:
-        if (k->mod & KMOD_SHIFT) {
+	case SCHISM_KEYSYM_d:
+        if (k->mod & SCHISM_KEYMOD_SHIFT) {
             dialog_create(DIALOG_OK_CANCEL,
                 "Delete Instrument? (preserve shared samples)",
                 do_delete_inst_preserve, NULL, 1, NULL);
@@ -2211,7 +2211,7 @@ static void instrument_list_handle_alt_key(struct key_event *k)
                 do_delete_inst, NULL, 1, NULL);
         }
 		return;
-	case SDLK_t:
+	case SCHISM_KEYSYM_t:
 		export_instrument_dialog();
 		break;
 	default:
@@ -2224,7 +2224,7 @@ static void instrument_list_handle_alt_key(struct key_event *k)
 static int instrument_list_pre_handle_key(struct key_event * k)
 {
 	// Only handle plain F4 key when no dialog is active.
-	if (status.dialog_type != DIALOG_NONE || k->sym != SDLK_F4 || (k->mod & (KMOD_CTRL | KMOD_ALT)))
+	if (status.dialog_type != DIALOG_NONE || k->sym != SCHISM_KEYSYM_F4 || (k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT)))
 		return 0;
 	if (k->state == KEY_RELEASE)
 		return 1;
@@ -2236,7 +2236,7 @@ static int instrument_list_pre_handle_key(struct key_event * k)
 			return 0;
 	}
 
-	if (k->mod & KMOD_SHIFT) {
+	if (k->mod & SCHISM_KEYMOD_SHIFT) {
 		switch (status.current_page) {
 			default:
 			case PAGE_INSTRUMENT_LIST_VOLUME:  set_subpage(PAGE_INSTRUMENT_LIST_GENERAL); break;
@@ -2258,39 +2258,39 @@ static int instrument_list_pre_handle_key(struct key_event * k)
 static void instrument_list_handle_key(struct key_event * k)
 {
 	switch (k->sym) {
-	case SDLK_COMMA:
+	case SCHISM_KEYSYM_COMMA:
 		if (NO_MODIFIER(k->mod)) {
 			if (!(status.flags & CLASSIC_MODE)
 			&& ACTIVE_PAGE.selected_widget == 5) return;
 		}
-	case SDLK_LESS:
+	case SCHISM_KEYSYM_LESS:
 		if (k->state == KEY_RELEASE)
 			return;
 		song_change_current_play_channel(-1, 0);
 		return;
-	case SDLK_PERIOD:
+	case SCHISM_KEYSYM_PERIOD:
 		if (NO_MODIFIER(k->mod)) {
 			if (!(status.flags & CLASSIC_MODE)
 			&& ACTIVE_PAGE.selected_widget == 5) return;
 		}
-	case SDLK_GREATER:
+	case SCHISM_KEYSYM_GREATER:
 		if (k->state == KEY_RELEASE)
 			return;
 		song_change_current_play_channel(1, 0);
 		return;
 
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return;
 		instrument_set(current_instrument - 1);
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return;
 		instrument_set(current_instrument + 1);
 		break;
-	case SDLK_ESCAPE:
-		if ((k->mod & KMOD_SHIFT) || instrument_cursor_pos < 25) {
+	case SCHISM_KEYSYM_ESCAPE:
+		if ((k->mod & SCHISM_KEYMOD_SHIFT) || instrument_cursor_pos < 25) {
 			if (k->state == KEY_RELEASE)
 				return;
 			instrument_cursor_pos = 25;
@@ -2301,7 +2301,7 @@ static void instrument_list_handle_key(struct key_event * k)
 		}
 		return;
 	default:
-		if (k->mod & (KMOD_ALT)) {
+		if (k->mod & (SCHISM_KEYMOD_ALT)) {
 			instrument_list_handle_alt_key(k);
 		} else {
 			int n, v;
@@ -2882,7 +2882,7 @@ static int _fixup_mouse_instpage_volume(struct key_event *k)
 			return 1;
 		}
 	}
-	if ((k->sym == SDLK_l || k->sym == SDLK_b) && (k->mod & KMOD_ALT)) {
+	if ((k->sym == SCHISM_KEYSYM_l || k->sym == SCHISM_KEYSYM_b) && (k->mod & SCHISM_KEYMOD_ALT)) {
 		return _env_handle_key_viewmode(k, &ins->vol_env, &current_node_vol, ENV_VOLUME);
 	}
 	return instrument_list_pre_handle_key(k);
@@ -2949,7 +2949,7 @@ static int _fixup_mouse_instpage_panning(struct key_event *k)
 			return 1;
 		}
 	}
-	if ((k->sym == SDLK_l || k->sym == SDLK_b) && (k->mod & KMOD_ALT)) {
+	if ((k->sym == SCHISM_KEYSYM_l || k->sym == SCHISM_KEYSYM_b) && (k->mod & SCHISM_KEYMOD_ALT)) {
 		return _env_handle_key_viewmode(k, &ins->pan_env, &current_node_pan, ENV_PANNING);
 	}
 	return instrument_list_pre_handle_key(k);
@@ -3024,7 +3024,7 @@ static int _fixup_mouse_instpage_pitch(struct key_event *k)
 			return 1;
 		}
 	}
-	if ((k->sym == SDLK_l || k->sym == SDLK_b) && (k->mod & KMOD_ALT)) {
+	if ((k->sym == SCHISM_KEYSYM_l || k->sym == SCHISM_KEYSYM_b) && (k->mod & SCHISM_KEYMOD_ALT)) {
 		return _env_handle_key_viewmode(k, &ins->pitch_env, &current_node_pitch, ENV_PITCH);
 	}
 	return instrument_list_pre_handle_key(k);

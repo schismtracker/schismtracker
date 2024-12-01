@@ -22,7 +22,6 @@
  */
 
 #include "headers.h"
-#include "controller.h"
 #include "osdefs.h"
 #include "mem.h"
 #include "dmoz.h"
@@ -61,7 +60,7 @@ void wiiu_sysinit(int *pargc, char ***pargv)
 		}
 		chdir(ptr); // Hope that worked, otherwise we're hosed
 	}
-	SDL_setenv("HOME", ptr, 1);
+	setenv("HOME", ptr, 1);
 	free(ptr);
 }
 

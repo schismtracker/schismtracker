@@ -163,7 +163,6 @@ int font_load(const char *filename)
 	slurp_t fp = {0};
 
 	if (slurp(&fp, font_file, NULL, 0) < 0) {
-		SDL_SetError("%s: %s", font_file, strerror(errno));
 		free(font_file);
 		return -1;
 	}
@@ -175,14 +174,11 @@ int font_load(const char *filename)
 	case 2050: /* *probably* an ITF */
 		slurp_seek(&fp, 2048, SEEK_SET);
 		if (slurp_read(&fp, data, 2) != 2) {
-			SDL_SetError("%s: %s", font_file,
-				     slurp_eof(&fp) ? "Unexpected EOF on read" : strerror(errno));
 			unslurp(&fp);
 			free(font_file);
 			return -1;
 		}
 		if (data[1] != 0x2 || (data[0] != 0x12 && data[0] != 9)) {
-			SDL_SetError("%s: Unsupported ITF file version %02x.%20x", font_file, data[1], data[0]);
 			unslurp(&fp);
 			free(font_file);
 			return -1;
@@ -196,23 +192,18 @@ int font_load(const char *filename)
 			free(font_file);
 			return 0;
 		} else {
-			SDL_SetError("%s: %s", font_file,
-				     slurp_eof(&fp) ? "Unexpected EOF on read" : strerror(errno));
 			unslurp(&fp);
 			free(font_file);
 			return -1;
 		}
 		break;
 	default:
-		SDL_SetError("%s: Invalid font file", font_file);
 		unslurp(&fp);
 		free(font_file);
 		return -1;
 	}
 
 	if (slurp_read(&fp, font_normal, 2048) != 2048) {
-		SDL_SetError("%s: %s", font_file,
-			     slurp_eof(&fp) ? "Unexpected EOF on read" : strerror(errno));
 		unslurp(&fp);
 		free(font_file);
 		return -1;
@@ -237,7 +228,6 @@ int font_save(const char *filename)
 
 	disko_t fp = {0};
 	if (disko_open(&fp, font_file) < 0) {
-		SDL_SetError("%s: %s", font_file, strerror(errno));
 		free(font_file);
 		return -1;
 	}
@@ -256,10 +246,8 @@ void font_init(void)
 {
 	memcpy(font_half_data, font_half_width, 1024);
 
-	if (font_load(cfg_font) != 0) {
-		SDL_ClearError();
+	if (font_load(cfg_font) != 0)
 		font_reset();
-	}
 
 	memcpy(font_alt, font_default_lower, 1024);
 	memcpy(font_alt + 1024, font_default_upper_alt, 1024);

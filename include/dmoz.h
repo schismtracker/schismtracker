@@ -194,7 +194,7 @@ unsigned long long dmoz_path_get_file_size(const char *filename);
 char *dmoz_get_current_directory(void);
 char *dmoz_get_home_directory(void);
 char *dmoz_get_dot_directory(void);
-
+char *dmoz_get_exe_directory(void);
 
 /* Adding files and directories
 For all of these, path and base should be free()-able. */
@@ -220,5 +220,8 @@ int dmoz_worker(void);
 void dmoz_cache_update_names(const char *path, const char *filen, const char *dirn);
 void dmoz_cache_update(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
 void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
+
+int dmoz_init(void);
+void dmoz_quit(void);
 
 #endif /* SCHISM_DMOZ_H_ */

@@ -30,18 +30,18 @@
 #include "version.h"
 #include "dialog.h"
 #include "widget.h"
+#include "keyboard.h"
 
 /* Eventual TODO: draw the pattern data in the Schism logo in a different color than the words */
 #include "auto/logoit.h"
 #include "auto/logoschism.h"
 
-#define LOGO_WIDTH 292
-#define LOGO_PITCH 292
-#define LOGO_HEIGHT 50
-
 static int fake_driver = 0;
-static SDL_Surface *it_logo = NULL;
-static SDL_Surface *schism_logo = NULL;
+static struct logo_data {
+	uint32_t *pixels;
+	int width;
+	int height;
+} it_logo = {0}, schism_logo = {0};
 
 static struct widget widgets_about[1];
 
@@ -56,24 +56,24 @@ static int _fixup_ignore_globals(struct key_event *k)
 {
 	if (k->mouse && k->y > 20) return 0;
 	switch (k->sym) {
-	case SDLK_LEFT:
-	case SDLK_RIGHT:
-	case SDLK_DOWN:
-	case SDLK_UP:
-	case SDLK_TAB:
-	case SDLK_RETURN:
-	case SDLK_ESCAPE:
+	case SCHISM_KEYSYM_LEFT:
+	case SCHISM_KEYSYM_RIGHT:
+	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_KEYSYM_UP:
+	case SCHISM_KEYSYM_TAB:
+	case SCHISM_KEYSYM_RETURN:
+	case SCHISM_KEYSYM_ESCAPE:
 		/* use default handler */
 		return 0;
-	case SDLK_F2: case SDLK_F5: case SDLK_F9: case SDLK_F10:
+	case SCHISM_KEYSYM_F2: case SCHISM_KEYSYM_F5: case SCHISM_KEYSYM_F9: case SCHISM_KEYSYM_F10:
 		// Ctrl + these keys does not lead to a new screen
-		if (k->mod & KMOD_CTRL)
+		if (k->mod & SCHISM_KEYMOD_CTRL)
 			break;
 		// Fall through.
-	case SDLK_F1: case SDLK_F3: case SDLK_F4:
-	case SDLK_F11: case SDLK_F12:
+	case SCHISM_KEYSYM_F1: case SCHISM_KEYSYM_F3: case SCHISM_KEYSYM_F4:
+	case SCHISM_KEYSYM_F11: case SCHISM_KEYSYM_F12:
 		// Ignore Alt and so on.
-		if (k->mod & (KMOD_ALT | KMOD_SHIFT))
+		if (k->mod & (SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_SHIFT))
 			break;
 		dialog_destroy();
 		return 0;
@@ -158,37 +158,34 @@ void show_about(void)
 {
 	static int didit = 0;
 	struct dialog *d;
-	unsigned char *p;
+	struct logo_data logo;
 	int x, y;
 
 	fake_driver = (rand() & 3) ? 0 : 1;
 
 	if (!didit) {
+		int fake, fake2;
 		vgamem_ovl_alloc(&logo_image);
-		it_logo = xpmdata(_logo_it_xpm);
-		schism_logo = xpmdata(_logo_schism_xpm);
+		xpmdata(_logo_it_xpm, &it_logo.pixels, &it_logo.width, &it_logo.height);
+		xpmdata(_logo_schism_xpm, &schism_logo.pixels, &schism_logo.width, &schism_logo.height);
 		didit=1;
 	}
 
-	if (status.flags & CLASSIC_MODE) {
-		p = it_logo ? it_logo->pixels : NULL;
-	} else {
-		p = schism_logo ? schism_logo->pixels : NULL;
-	}
+	logo = (status.flags & CLASSIC_MODE) ? it_logo : schism_logo;
 
 	/* this is currently pretty gross */
 	vgamem_ovl_clear(&logo_image, 2);
-	if (p) {
+	if (logo.pixels) {
 		int c = (status.flags & CLASSIC_MODE) ? 11 : 0;
-		for (y = 0; y < LOGO_HEIGHT; y++) {
-			for (x = 0; x < LOGO_WIDTH; x++) {
-				if (p[x]) {
+		for (y = 0; y < logo.height; y++) {
+			for (x = 0; x < logo.width; x++) {
+				if (logo.pixels[x]) {
 					vgamem_ovl_drawpixel(&logo_image, x+2, y+6, c);
 				}
 			}
 			vgamem_ovl_drawpixel(&logo_image, x, y+6, 2);
 			vgamem_ovl_drawpixel(&logo_image, x+1, y+6, 2);
-			p += LOGO_PITCH;
+			logo.pixels += logo.width;
 		}
 	}
 

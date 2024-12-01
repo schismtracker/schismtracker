@@ -24,11 +24,8 @@
 /* This is just a collection of some useful functions. None of these use any
 extraneous libraries (i.e. GLib). */
 
-
 #include "headers.h"
-
 #include "util.h"
-#include "sdlmain.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -122,70 +119,4 @@ unsigned int i_sqrt(unsigned int r)
 		}
 	}
 	return(c);
-}
-
-/* -------------------------------------------------- */
-/* high precision sleep */
-
-#ifdef SCHISM_WIN32
-# include <windows.h>
-#endif
-
-int rt_usleep_impl_(uint64_t usec)
-{
-#ifdef SCHISM_WIN32
-	HANDLE timer = CreateWaitableTimer(NULL, TRUE, NULL);
-	LARGE_INTEGER ft;
-
-	// 100 ns interval, negate to indicate relative time
-	ft.QuadPart = -(10 * usec);
-
-	SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
-	WaitForSingleObject(timer, INFINITE);
-	CloseHandle(timer);
-
-	return 1;
-#elif defined(HAVE_NANOSLEEP)
-	// nanosleep is preferred to usleep
-	struct timespec s = {
-		.tv_sec = usec / 1000000,
-		.tv_nsec = (usec % 1000000) * 1000,
-	};
-
-	while (nanosleep(&s, &s) == -1);
-
-	return 1;
-#elif defined(HAVE_USLEEP)
-	while (usec) {
-		// useconds_t is only guaranteed to contain 0-1000000
-		useconds_t t = MIN(usec, 1000000);
-		usleep(t);
-		usec -= t;
-	}
-
-	return 1;
-#else
-	// :)
-	return 0;
-#endif
-}
-
-void rt_usleep(uint64_t usec)
-{
-	if (rt_usleep_impl_(usec))
-		return;
-
-	// this sucks, but its portable...
-	const schism_ticks_t next = SCHISM_GET_TICKS() + (usec / 1000);
-
-	while (!SCHISM_TICKS_PASSED(SCHISM_GET_TICKS(), next));
-}
-
-// this tries to be as accurate as possible
-void msleep(uint64_t msec)
-{
-	if (rt_usleep_impl_(msec * 1000))
-		return;
-
-	SDL_Delay(msec);
 }

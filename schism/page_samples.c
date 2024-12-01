@@ -439,38 +439,38 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 		}
 	} else {
 		switch (k->sym) {
-		case SDLK_LEFT:
+		case SCHISM_KEYSYM_LEFT:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			new_cursor_pos--;
 			break;
-		case SDLK_RIGHT:
+		case SCHISM_KEYSYM_RIGHT:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			new_cursor_pos++;
 			break;
-		case SDLK_HOME:
+		case SCHISM_KEYSYM_HOME:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			new_cursor_pos = 0;
 			break;
-		case SDLK_END:
+		case SCHISM_KEYSYM_END:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			new_cursor_pos = 25;
 			break;
-		case SDLK_UP:
+		case SCHISM_KEYSYM_UP:
 			if (k->state == KEY_RELEASE)
 				return 0;
-			if (k->mod & KMOD_ALT) {
+			if (k->mod & SCHISM_KEYMOD_ALT) {
 				if (current_sample > 1) {
 					new_sample = current_sample - 1;
 					song_swap_samples(current_sample, new_sample);
@@ -481,13 +481,13 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 				new_sample--;
 			}
 			break;
-		case SDLK_DOWN:
+		case SCHISM_KEYSYM_DOWN:
 			if (k->state == KEY_RELEASE)
 				return 0;
-			if (k->mod & KMOD_ALT) {
+			if (k->mod & SCHISM_KEYMOD_ALT) {
 				// restrict position to the "old" value of _last_vis_sample()
 				// (this is entirely for aesthetic reasons)
-				if (status.last_keysym != SDLK_DOWN && !k->is_repeat)
+				if (status.last_keysym != SCHISM_KEYSYM_DOWN && !k->is_repeat)
 					_altswap_lastvis = _last_vis_sample();
 				if (current_sample < _altswap_lastvis) {
 					new_sample = current_sample + 1;
@@ -499,38 +499,38 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 				new_sample++;
 			}
 			break;
-		case SDLK_PAGEUP:
+		case SCHISM_KEYSYM_PAGEUP:
 			if (k->state == KEY_RELEASE)
 				return 0;
-			if (k->mod & KMOD_CTRL) {
+			if (k->mod & SCHISM_KEYMOD_CTRL) {
 				new_sample = 1;
 			} else {
 				new_sample -= 16;
 			}
 			break;
-		case SDLK_PAGEDOWN:
+		case SCHISM_KEYSYM_PAGEDOWN:
 			if (k->state == KEY_RELEASE)
 				return 0;
-			if (k->mod & KMOD_CTRL) {
+			if (k->mod & SCHISM_KEYMOD_CTRL) {
 				new_sample = _last_vis_sample();
 			} else {
 				new_sample += 16;
 			}
 			break;
-		case SDLK_RETURN:
+		case SCHISM_KEYSYM_RETURN:
 			if (k->state == KEY_PRESS)
 				return 0;
 			set_page(PAGE_LOAD_SAMPLE);
 			break;
-		case SDLK_BACKSPACE:
+		case SCHISM_KEYSYM_BACKSPACE:
 			if (k->state == KEY_RELEASE)
 				return 0;
-			if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) {
+			if ((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT)) == 0) {
 				if (sample_list_cursor_pos < 25) {
 					sample_list_delete_char();
 				}
 				return 1;
-			} else if (k->mod & KMOD_CTRL) {
+			} else if (k->mod & SCHISM_KEYMOD_CTRL) {
 				/* just for compatibility with every weird thing
 				 * Impulse Tracker does ^_^ */
 				if (sample_list_cursor_pos < 25) {
@@ -539,18 +539,18 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 				return 1;
 			}
 			return 0;
-		case SDLK_DELETE:
+		case SCHISM_KEYSYM_DELETE:
 			if (k->state == KEY_RELEASE)
 				return 0;
-			if ((k->mod & (KMOD_CTRL | KMOD_ALT)) == 0) {
+			if ((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT)) == 0) {
 				if (sample_list_cursor_pos < 25) {
 					sample_list_delete_next_char();
 				}
 				return 1;
 			}
 			return 0;
-		case SDLK_ESCAPE:
-			if (k->mod & KMOD_SHIFT) {
+		case SCHISM_KEYSYM_ESCAPE:
+			if (k->mod & SCHISM_KEYMOD_SHIFT) {
 				if (k->state == KEY_RELEASE)
 					return 1;
 				new_cursor_pos = 25;
@@ -558,13 +558,13 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			}
 			return 0;
 		default:
-			if (k->mod & KMOD_ALT) {
-				if (k->sym == SDLK_c) {
+			if (k->mod & SCHISM_KEYMOD_ALT) {
+				if (k->sym == SCHISM_KEYSYM_c) {
 					clear_sample_text();
 					return 1;
 				}
 				return 0;
-			} else if ((k->mod & KMOD_CTRL) == 0 && sample_list_cursor_pos < 25) {
+			} else if ((k->mod & SCHISM_KEYMOD_CTRL) == 0 && sample_list_cursor_pos < 25) {
 				if (k->state == KEY_RELEASE)
 					return 1;
 
@@ -932,7 +932,7 @@ static void sample_adlibconfig_draw_const(void)
 
 static int do_adlib_handlekey(struct key_event *kk)
 {
-	if (kk->sym == SDLK_F1) {
+	if (kk->sym == SCHISM_KEYSYM_F1) {
 		if (kk->state == KEY_PRESS)
 			return 1;
 		status.current_help_index = HELP_ADLIB_SAMPLE;
@@ -1145,36 +1145,36 @@ static int export_sample_list_handle_key(struct key_event * k)
 	if (k->state == KEY_RELEASE)
 		return 0;
 	switch (k->sym) {
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_format--;
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_format++;
 		break;
-	case SDLK_PAGEUP:
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_KEYSYM_HOME:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_format = 0;
 		break;
-	case SDLK_PAGEDOWN:
-	case SDLK_END:
+	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_KEYSYM_END:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_format = num_save_formats - 1;
 		break;
-	case SDLK_TAB:
-		if (k->mod & KMOD_SHIFT) {
+	case SCHISM_KEYSYM_TAB:
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			widget_change_focus_to(0);
 			return 1;
 		}
 		/* fall through */
-	case SDLK_LEFT:
-	case SDLK_RIGHT:
+	case SCHISM_KEYSYM_LEFT:
+	case SCHISM_KEYSYM_RIGHT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		widget_change_focus_to(0); /* should focus 0/1/2 depending on what's closest */
@@ -1318,18 +1318,18 @@ static void sample_list_handle_alt_key(struct key_event * k)
 		return;
 
 	switch (k->sym) {
-	case SDLK_a:
+	case SCHISM_KEYSYM_a:
 		if (canmod)
 			dialog_create(DIALOG_OK_CANCEL, "Convert sample?", do_sign_convert, NULL, 0, NULL);
 		return;
-	case SDLK_b:
+	case SCHISM_KEYSYM_b:
 		if (canmod && (sample->loop_start > 0
 			       || ((sample->flags & CHN_SUSTAINLOOP) && sample->sustain_start > 0))) {
 			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_pre_loop_cut, NULL, 1, NULL);
 		}
 		return;
-	case SDLK_d:
-		if ((k->mod & KMOD_SHIFT) && !(status.flags & CLASSIC_MODE)) {
+	case SCHISM_KEYSYM_d:
+		if ((k->mod & SCHISM_KEYMOD_SHIFT) && !(status.flags & CLASSIC_MODE)) {
 			if (canmod && sample->flags & CHN_STEREO) {
 				dialog_create(DIALOG_OK_CANCEL, "Downmix sample to mono?",
 					do_downmix, NULL, 0, NULL);
@@ -1339,73 +1339,73 @@ static void sample_list_handle_alt_key(struct key_event * k)
 				NULL, 1, NULL);
 		}
 		return;
-	case SDLK_e:
+	case SCHISM_KEYSYM_e:
 		if (canmod)
 			resize_sample_dialog(1);
 		break;
-	case SDLK_f:
+	case SCHISM_KEYSYM_f:
 		if (canmod)
 			resize_sample_dialog(0);
 		break;
-	case SDLK_g:
+	case SCHISM_KEYSYM_g:
 		if (canmod)
 			sample_reverse(sample);
 		break;
-	case SDLK_h:
+	case SCHISM_KEYSYM_h:
 		if (canmod)
 			dialog_create(DIALOG_YES_NO, "Centralise sample?", do_centralise, NULL, 0, NULL);
 		return;
-	case SDLK_i:
+	case SCHISM_KEYSYM_i:
 		if (canmod)
 			sample_invert(sample);
 		break;
-	case SDLK_l:
+	case SCHISM_KEYSYM_l:
 		if (canmod && (sample->loop_end > 0
 			       || ((sample->flags & CHN_SUSTAINLOOP) && sample->sustain_end > 0))) {
 			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_post_loop_cut, NULL, 1, NULL);
 		}
 		return;
-	case SDLK_m:
+	case SCHISM_KEYSYM_m:
 		if (canmod)
 			sample_amplify_dialog();
 		return;
-	case SDLK_n:
+	case SCHISM_KEYSYM_n:
 		song_toggle_multichannel_mode();
 		return;
-	case SDLK_o:
+	case SCHISM_KEYSYM_o:
 		sample_save(NULL, "ITS");
 		return;
-	case SDLK_p:
+	case SCHISM_KEYSYM_p:
 		smpprompt_create("Copy sample:", "Sample", do_copy_sample);
 		return;
-	case SDLK_q:
+	case SCHISM_KEYSYM_q:
 		if (canmod) {
 			dialog_create(DIALOG_YES_NO, "Convert sample?",
 			      do_quality_convert, do_quality_toggle, 0, NULL);
 		}
 		return;
-	case SDLK_r:
+	case SCHISM_KEYSYM_r:
 		smpprompt_create("Replace sample with:", "Sample", do_replace_sample);
 		return;
-	case SDLK_s:
+	case SCHISM_KEYSYM_s:
 		smpprompt_create("Swap sample with:", "Sample", do_swap_sample);
 		return;
-	case SDLK_t:
+	case SCHISM_KEYSYM_t:
 		export_sample_dialog();
 		return;
-	case SDLK_w:
+	case SCHISM_KEYSYM_w:
 		sample_save(NULL, "RAW");
 		return;
-	case SDLK_x:
+	case SCHISM_KEYSYM_x:
 		smpprompt_create("Exchange sample with:", "Sample", do_exchange_sample);
 		return;
-	case SDLK_y:
+	case SCHISM_KEYSYM_y:
 		/* hi virt */
 		txtsynth_dialog();
 		return;
-	case SDLK_z:
+	case SCHISM_KEYSYM_z:
 		{ // uguu~
-			void (*dlg)(void *) = (k->mod & KMOD_SHIFT)
+			void (*dlg)(void *) = (k->mod & SCHISM_KEYMOD_SHIFT)
 				? sample_adlibpatch_dialog
 				: sample_adlibconfig_dialog;
 			if (canmod) {
@@ -1416,16 +1416,16 @@ static void sample_list_handle_alt_key(struct key_event * k)
 			}
 		}
 		return;
-	case SDLK_INSERT:
+	case SCHISM_KEYSYM_INSERT:
 		song_insert_sample_slot(current_sample);
 		break;
-	case SDLK_DELETE:
+	case SCHISM_KEYSYM_DELETE:
 		song_remove_sample_slot(current_sample);
 		break;
-	case SDLK_F9:
+	case SCHISM_KEYSYM_F9:
 		sample_toggle_mute(current_sample);
 		break;
-	case SDLK_F10:
+	case SCHISM_KEYSYM_F10:
 		sample_toggle_solo(current_sample);
 		break;
 	default:
@@ -1441,62 +1441,62 @@ static void sample_list_handle_key(struct key_event * k)
 	song_sample_t *sample = song_get_sample(current_sample);
 
 	switch (k->sym) {
-	case SDLK_SPACE:
+	case SCHISM_KEYSYM_SPACE:
 		if (k->state == KEY_RELEASE)
 			return;
 		if (selected_widget && *selected_widget == 0) {
 			status.flags |= NEED_UPDATE;
 		}
 		return;
-	case SDLK_PLUS:
+	case SCHISM_KEYSYM_PLUS:
 		if (k->state == KEY_RELEASE)
 			return;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			sample->c5speed *= 2;
 			status.flags |= SONG_NEEDS_SAVE;
-		} else if (k->mod & KMOD_CTRL) {
+		} else if (k->mod & SCHISM_KEYMOD_CTRL) {
 			sample->c5speed = calc_halftone(sample->c5speed, 1);
 			status.flags |= SONG_NEEDS_SAVE;
 		}
 		status.flags |= NEED_UPDATE;
 		return;
-	case SDLK_MINUS:
+	case SCHISM_KEYSYM_MINUS:
 		if (k->state == KEY_RELEASE)
 			return;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			sample->c5speed /= 2;
 			status.flags |= SONG_NEEDS_SAVE;
-		} else if (k->mod & KMOD_CTRL) {
+		} else if (k->mod & SCHISM_KEYMOD_CTRL) {
 			sample->c5speed = calc_halftone(sample->c5speed, -1);
 			status.flags |= SONG_NEEDS_SAVE;
 		}
 		status.flags |= NEED_UPDATE;
 		return;
 
-	case SDLK_COMMA:
-	case SDLK_LESS:
+	case SCHISM_KEYSYM_COMMA:
+	case SCHISM_KEYSYM_LESS:
 		if (k->state == KEY_RELEASE)
 			return;
 		song_change_current_play_channel(-1, 0);
 		return;
-	case SDLK_PERIOD:
-	case SDLK_GREATER:
+	case SCHISM_KEYSYM_PERIOD:
+	case SCHISM_KEYSYM_GREATER:
 		if (k->state == KEY_RELEASE)
 			return;
 		song_change_current_play_channel(1, 0);
 		return;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return;
 		new_sample--;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return;
 		new_sample++;
 		break;
-	case SDLK_ESCAPE:
-		if (k->mod & KMOD_SHIFT) {
+	case SCHISM_KEYSYM_ESCAPE:
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (k->state == KEY_RELEASE)
 				return;
 			sample_list_cursor_pos = 25;
@@ -1507,7 +1507,7 @@ static void sample_list_handle_key(struct key_event * k)
 		}
 		return;
 	default:
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return;
 			sample_list_handle_alt_key(k);
@@ -1521,7 +1521,7 @@ static void sample_list_handle_key(struct key_event * k)
 					v = KEYJAZZ_DEFAULTVOL;
 				}
 			} else {
-				n = (k->sym == SDLK_SPACE)
+				n = (k->sym == SCHISM_KEYSYM_SPACE)
 					? last_note
 					: kbd_get_note(k);
 				if (n <= 0 || n > 120)

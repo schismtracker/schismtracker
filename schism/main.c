@@ -29,7 +29,8 @@
 
 #include "headers.h"
 
-#include "event.h"
+#include "backend/events.h"
+#include "events.h"
 
 #include "clippy.h"
 #include "disko.h"
@@ -47,15 +48,12 @@
 #include "dialog.h"
 #include "widget.h"
 #include "fmt.h"
-#ifdef SCHISM_CONTROLLER
-# include "controller.h"
-#endif
+#include "timer.h"
+#include "threads.h"
 
 #include "osdefs.h"
 
 #include <errno.h>
-
-#include "sdlmain.h"
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -73,12 +71,6 @@
 #define NATIVE_SCREEN_WIDTH     640
 #define NATIVE_SCREEN_HEIGHT    400
 
-/* need to redefine these on SDL < 2.0.4 */
-#if !SDL_VERSION_ATLEAST(2, 0, 4)
-#define SDL_AUDIODEVICEADDED (0x1100)
-#define SDL_AUDIODEVICEREMOVED (0x1101)
-#endif
-
 /* --------------------------------------------------------------------- */
 /* globals */
 
@@ -92,7 +84,7 @@ static int shutdown_process = 0;
 static const char *video_driver = NULL;
 static const char *audio_driver = NULL;
 static const char *audio_device = NULL;
-static int did_fullscreen = 0;
+static int want_fullscreen = -1;
 static int did_classic = 0;
 
 /* --------------------------------------------------------------------- */
@@ -102,8 +94,6 @@ static int did_classic = 0;
 static void display_init(void)
 {
 	video_startup();
-
-	SDL_StartTextInput();
 }
 
 static void check_update(void);
@@ -112,45 +102,6 @@ void toggle_display_fullscreen(void)
 {
 	video_fullscreen(-1);
 	status.flags |= (NEED_UPDATE);
-}
-
-/* --------------------------------------------------------------------- */
-
-static void handle_window_event(SDL_WindowEvent *w)
-{
-	switch (w->event) {
-	case SDL_WINDOWEVENT_SHOWN:
-	case SDL_WINDOWEVENT_FOCUS_GAINED:
-		video_mousecursor(MOUSE_RESET_STATE);
-		break;
-	case SDL_WINDOWEVENT_FOCUS_LOST:
-		/* XXX why do we need this */
-		SDL_ShowCursor(SDL_ENABLE);
-		break;
-	case SDL_WINDOWEVENT_RESIZED:
-	case SDL_WINDOWEVENT_SIZE_CHANGED: /* tiling window managers */
-		video_update();
-		/* fallthrough */
-	case SDL_WINDOWEVENT_EXPOSED:
-		status.flags |= (NEED_UPDATE);
-		break;
-	default:
-#if 0
-		/* ignored currently */
-		SDL_WINDOWEVENT_NONE,           /**< Never used */
-		SDL_WINDOWEVENT_HIDDEN,         /**< Window is out of view */
-		SDL_WINDOWEVENT_MINIMIZED,      /**< Window has been minimized */
-		SDL_WINDOWEVENT_MAXIMIZED,      /**< Window has been maximized */
-		SDL_WINDOWEVENT_RESTORED,       /**< Window has been restored to normal size
-						 and position */
-		SDL_WINDOWEVENT_ENTER,          /**< Window has gained mouse focus */
-		SDL_WINDOWEVENT_LEAVE,          /**< Window has lost mouse focus */
-		SDL_WINDOWEVENT_CLOSE,          /**< The window manager requests that the window be closed */
-		SDL_WINDOWEVENT_TAKE_FOCUS,     /**< Window is being offered a focus (should SetWindowInputFocus() on itself or a subwindow, or ignore) */
-		SDL_WINDOWEVENT_HIT_TEST        /**< Window had a hit test that wasn't SDL_HITTEST_NORMAL. */
-#endif
-		break;
-	}
 }
 
 /* --------------------------------------------------------------------- */
@@ -283,12 +234,10 @@ static void parse_options(int argc, char **argv)
 			did_classic = 1;
 			break;
 		case O_FULLSCREEN:
-			video_fullscreen(1);
-			did_fullscreen = 1;
+			want_fullscreen = 1;
 			break;
 		case O_NO_FULLSCREEN:
-			video_fullscreen(0);
-			did_fullscreen = 1;
+			want_fullscreen = 0;
 			break;
 		case O_PLAY:
 			startup_flags |= SF_PLAY;
@@ -371,7 +320,7 @@ static void parse_options(int argc, char **argv)
 static void check_update(void)
 {
 	static schism_ticks_t next = 0;
-	schism_ticks_t now = SCHISM_GET_TICKS();
+	schism_ticks_t now = timer_ticks();
 
 	/* is there any reason why we'd want to redraw
 	   the screen when it's not even visible? */
@@ -379,12 +328,12 @@ static void check_update(void)
 		status.flags &= ~NEED_UPDATE;
 
 		if (!video_is_focused() && (status.flags & LAZY_REDRAW)) {
-			if (!SCHISM_TICKS_PASSED(now, next))
+			if (!timer_ticks_passed(now, next))
 				return;
 
 			next = now + 500;
 		} else if (status.flags & (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN)) {
-			if (!SCHISM_TICKS_PASSED(now, next))
+			if (!timer_ticks_passed(now, next))
 				return;
 
 			next = now + 100;
@@ -399,17 +348,17 @@ static void check_update(void)
 	}
 }
 
-static void _do_clipboard_paste_op(SDL_Event *e)
+static void _do_clipboard_paste_op(schism_event_t *e)
 {
 	if (ACTIVE_WIDGET.clipboard_paste
-	&& ACTIVE_WIDGET.clipboard_paste(e->user.code,
-				e->user.data1)) return;
+	&& ACTIVE_WIDGET.clipboard_paste(e->type,
+				e->clipboard.clipboard)) return;
 
 	if (ACTIVE_PAGE.clipboard_paste
-	&& ACTIVE_PAGE.clipboard_paste(e->user.code,
-				e->user.data1)) return;
+	&& ACTIVE_PAGE.clipboard_paste(e->type,
+				e->clipboard.clipboard)) return;
 
-	handle_text_input(e->user.data1);
+	handle_text_input(e->clipboard.clipboard);
 }
 
 static void key_event_reset(struct key_event *kk, int start_x, int start_y)
@@ -430,17 +379,16 @@ static void key_event_reset(struct key_event *kk, int start_x, int start_y)
 
 static void event_loop(void)
 {
-	SDL_Event event;
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
 	schism_ticks_t last_mouse_down, ticker;
-	SDL_Keycode last_key = 0;
-	int modkey;
+	schism_keysym_t last_key = 0;
 	time_t startdown;
 	int downtrip;
 	int wheel_x;
 	int wheel_y;
 	int fix_numlock_key;
 	int screensaver;
+	int button = -1;
 	struct key_event kk;
 
 	fix_numlock_key = status.fix_numlock_setting;
@@ -450,78 +398,67 @@ static void event_loop(void)
 	startdown = 0;
 	status.last_keysym = 0;
 
-	modkey = SDL_GetModState();
-	os_get_modkey(&modkey);
-	SDL_SetModState(modkey);
+	status.keymod = events_get_keymod_state();
+	os_get_modkey(&status.keymod);
 
-	SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
-	SDL_EnableScreenSaver();
+	video_toggle_screensaver(1);
 	screensaver = 1;
 
 	time(&status.now);
 	localtime_r(&status.now, &status.tmnow);
 	for (;;) {
-		while (SDL_PollEvent(&event)) {
-			/* handle the current event queue */
-			if (!os_sdlevent(&event))
+		schism_event_t se;
+		while (events_poll_event(&se)) {
+			if (!os_event(&se))
 				continue;
 
-#ifdef SCHISM_CONTROLLER
-			if (!controller_sdlevent(&event))
+			if (midi_engine_handle_event(&se))
 				continue;
-#endif
 
 			key_event_reset(&kk, kk.sx, kk.sy);
 
-			if (event.type == SDL_KEYDOWN || event.type == SDL_MOUSEBUTTONDOWN) {
+			if (se.type == SCHISM_KEYDOWN || se.type == SCHISM_MOUSEBUTTONDOWN) {
 				kk.state = KEY_PRESS;
-			} else if (event.type == SDL_KEYUP || event.type == SDL_MOUSEBUTTONUP) {
+			} else if (se.type == SCHISM_KEYUP || se.type == SCHISM_MOUSEBUTTONUP) {
 				kk.state = KEY_RELEASE;
 			}
-			if (event.type == SDL_KEYDOWN || event.type == SDL_TEXTINPUT || event.type == SDL_KEYUP) {
-				if (event.key.keysym.sym == 0) {
+			if (se.type == SCHISM_KEYDOWN || se.type == SCHISM_TEXTINPUT || se.type == SCHISM_KEYUP) {
+				if (se.key.sym == 0) {
 					// XXX when does this happen?
 					kk.mouse = MOUSE_NONE;
 					kk.is_repeat = 0;
 				}
 			}
-			switch (event.type) {
-			case SDL_AUDIODEVICEADDED:
-			case SDL_AUDIODEVICEREMOVED:
+
+			switch (se.type) {
+			case SCHISM_QUIT:
+				show_exit_prompt();
+				break;
+			case SCHISM_AUDIODEVICEADDED:
+			case SCHISM_AUDIODEVICEREMOVED:
 				refresh_audio_device_list();
 				status.flags |= NEED_UPDATE;
 				break;
-#if defined(SCHISM_WIN32)
-#define _ALTTRACKED_KMOD        (KMOD_NUM|KMOD_CAPS)
-#else
-#define _ALTTRACKED_KMOD        0
-#endif
-			case SDL_TEXTINPUT: {
+			case SCHISM_TEXTINPUT: {
 				char *input_text = NULL;
 
-				charset_error_t err = charset_iconv(event.text.text, &input_text, CHARSET_UTF8, CHARSET_CP437, SDL_TEXTINPUTEVENT_TEXT_SIZE);
+				charset_error_t err = charset_iconv(se.text.text, &input_text, CHARSET_UTF8, CHARSET_CP437, ARRAY_SIZE(se.text.text));
 				if (err || !input_text) {
-					log_appendf(4, " [ERROR] failed to convert SDL text input event");
-					log_appendf(4, "  %s", event.text.text);
+					log_appendf(4, " [ERROR] failed to convert text input event");
+					log_appendf(4, "  %s", se.text.text);
 					log_appendf(4, " into CP437 with error %s.", charset_iconv_error_lookup(err));
 					log_appendf(4, " please report this on the github!");
 					break;
 				}
 
-				if (kbd_have_pending_keydown()) {
-					kbd_pop_pending_keydown(input_text);
-				} else {
-					/* wtf? whatever, send it to the text input
-					 * handlers I guess, don't throw it out! */
-					handle_text_input(input_text);
-				}
+				handle_text_input(input_text);
 
 				free(input_text);
 				break;
 			}
-			case SDL_KEYDOWN:
+			case SCHISM_KEYDOWN:
 				/* we have our own repeat handler now */
-				if (event.key.repeat) {
+				if (se.key.repeat) {
 					if (kbd_key_repeat_enabled())
 						break;
 
@@ -529,112 +466,103 @@ static void event_loop(void)
 				}
 
 				/* fallthrough */
-			case SDL_KEYUP:
-				kbd_pop_pending_keydown(NULL);
-				switch (event.key.keysym.sym) {
-				case SDLK_NUMLOCKCLEAR:
-					modkey ^= KMOD_NUM;
+			case SCHISM_KEYUP:
+				switch (se.key.sym) {
+				case SCHISM_KEYSYM_NUMLOCKCLEAR:
+					status.keymod ^= SCHISM_KEYMOD_NUM;
 					break;
-				case SDLK_CAPSLOCK:
-					if (event.type == SDL_KEYDOWN) {
-						status.flags |= CAPS_PRESSED;
+				case SCHISM_KEYSYM_CAPSLOCK:
+					if (se.type == SCHISM_KEYDOWN) {
+						status.keymod |= SCHISM_KEYMOD_CAPS_PRESSED;
 					} else {
-						status.flags &= ~CAPS_PRESSED;
+						status.keymod &= ~SCHISM_KEYMOD_CAPS_PRESSED;
 					}
-					modkey ^= KMOD_CAPS;
-					break;
-				case SDLK_LSHIFT: case SDLK_RSHIFT:
-					if (event.type == SDL_KEYDOWN)
-						status.flags |= SHIFT_KEY_DOWN;
-					else
-						status.flags &= ~SHIFT_KEY_DOWN;
+					status.keymod ^= SCHISM_KEYMOD_CAPS;
 					break;
 				default:
 					break;
 				};
 
-				if (kk.state == KEY_PRESS) {
-					modkey = (event.key.keysym.mod
-						& ~(_ALTTRACKED_KMOD))
-						| (modkey & _ALTTRACKED_KMOD);
-				}
+				// grab the keymod
+				status.keymod = se.key.mod;
+				// fix it
+				os_get_modkey(&status.keymod);
 
-				os_get_modkey(&modkey);
-
-				kk.sym = event.key.keysym.sym;
-				kk.scancode = event.key.keysym.scancode;
+				kk.sym = se.key.sym;
+				kk.scancode = se.key.scancode;
 
 				switch (fix_numlock_key) {
 				case NUMLOCK_GUESS:
 					/* should be handled per OS */
 					break;
 				case NUMLOCK_ALWAYS_OFF:
-					modkey &= ~KMOD_NUM;
+					status.keymod &= ~SCHISM_KEYMOD_NUM;
 					break;
 				case NUMLOCK_ALWAYS_ON:
-					modkey |= KMOD_NUM;
+					status.keymod |= SCHISM_KEYMOD_NUM;
 					break;
 				};
 
-				kk.mod = modkey;
+				kk.mod = status.keymod;
 				kk.mouse = MOUSE_NONE;
 				kbd_key_translate(&kk);
 
-				if (event.type == SDL_KEYUP) {
-					handle_key(&kk);
+				if (*se.key.text)
+					charset_iconv(se.key.text, &kk.text, CHARSET_UTF8, CHARSET_CP437, ARRAY_SIZE(se.key.text));
 
+				handle_key(&kk);
+
+				if (se.type == SCHISM_KEYUP) {
 					/* only empty the key repeat if
 					 * the last keydown is the same sym */
 					if (last_key == kk.sym)
 						kbd_empty_key_repeat();
 				} else {
-					kbd_push_pending_keydown(&kk);
+					kbd_cache_key_repeat(&kk);
 
-					/* reset key repeat regardless */
-					kbd_empty_key_repeat();
-
-					/* TODO this ought to be handled in
-					 * kbd_pop_pending_keydown() */
 					status.last_keysym = last_key;
 					last_key = kk.sym;
 				}
 				break;
-			case SDL_QUIT:
-				show_exit_prompt();
-				break;
-			case SDL_WINDOWEVENT:
-				/* reset this... */
-				modkey = SDL_GetModState();
-				os_get_modkey(&modkey);
-				SDL_SetModState(modkey);
-
-				handle_window_event(&event.window);
-				break;
-			case SDL_MOUSEWHEEL:
-				kk.state = -1;  /* neither KEY_PRESS nor KEY_RELEASE */
-#if SDL_VERSION_ATLEAST(2, 26, 0)
-				/* SDL just sends this to us anyway, don't ask for it again */
-				wheel_x = event.wheel.mouseX;
-				wheel_y = event.wheel.mouseY;
-#else
-				SDL_GetMouseState(&wheel_x, &wheel_y);
-				video_get_logical_coordinates(wheel_x, wheel_y, &wheel_x, &wheel_y);
-#endif
-				video_translate(wheel_x, wheel_y, &kk.fx, &kk.fy);
-				kk.mouse = (event.wheel.y > 0) ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN;
-			case SDL_MOUSEMOTION: // FIXME THIS IS WRONG
-			case SDL_MOUSEBUTTONDOWN:
-			case SDL_MOUSEBUTTONUP:
+			case SCHISM_MOUSEMOTION:
+			case SCHISM_MOUSEWHEEL:
+			case SCHISM_MOUSEBUTTONDOWN:
+			case SCHISM_MOUSEBUTTONUP: {
 				if (kk.state == KEY_PRESS) {
-					modkey = SDL_GetModState();
-					os_get_modkey(&modkey);
+					status.keymod = events_get_keymod_state();
+					os_get_modkey(&status.keymod);
 				}
 
 				kk.sym = 0;
 				kk.mod = 0;
 
-				if (event.type != SDL_MOUSEWHEEL)
-					video_translate(event.button.x, event.button.y, &kk.fx, &kk.fy);
+				// Handle the coordinate translation
+				switch (se.type) {
+				case SCHISM_MOUSEWHEEL:
+					kk.state = -1;  /* neither KEY_PRESS nor KEY_RELEASE (???) */
+					video_translate(se.wheel.mouse_x, se.wheel.mouse_y, &kk.fx, &kk.fy);
+					kk.mouse = (se.wheel.y > 0) ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN;
+					break;
+				case SCHISM_MOUSEMOTION:
+					video_translate(se.motion.x, se.motion.y, &kk.fx, &kk.fy);
+					break;
+				case SCHISM_MOUSEBUTTONDOWN:
+					video_translate(se.button.x, se.button.y, &kk.fx, &kk.fy);
+					// we also have to update the current button
+					if ((status.keymod & SCHISM_KEYMOD_CTRL)
+					|| se.button.button == MOUSE_BUTTON_RIGHT) {
+						button = MOUSE_BUTTON_RIGHT;
+					} else if ((status.keymod & (SCHISM_KEYMOD_ALT|SCHISM_KEYMOD_GUI))
+					|| se.button.button == MOUSE_BUTTON_MIDDLE) {
+						button = MOUSE_BUTTON_MIDDLE;
+					} else {
+						button = MOUSE_BUTTON_LEFT;
+					}
+					break;
+				case SCHISM_MOUSEBUTTONUP:
+					video_translate(se.button.x, se.button.y, &kk.fx, &kk.fy);
+					break;
+				}
 
 				/* character resolution */
 				kk.x = kk.fx / kk.rx;
@@ -645,31 +573,27 @@ static void event_loop(void)
 					kk.hx = 1;
 				}
 				kk.y = kk.fy / kk.ry;
-				if (event.type == SDL_MOUSEWHEEL) {
+
+				if (se.type == SCHISM_MOUSEWHEEL) {
 					handle_key(&kk);
 					break; /* nothing else to do here */
 				}
-				if (event.type == SDL_MOUSEBUTTONDOWN) {
+				if (se.type == SCHISM_MOUSEBUTTONDOWN) {
 					kk.sx = kk.x;
 					kk.sy = kk.y;
 				}
+
+				// what?
 				if (startdown) startdown = 0;
 
-				switch (event.button.button) {
-				case SDL_BUTTON_RIGHT:
-				case SDL_BUTTON_MIDDLE:
-				case SDL_BUTTON_LEFT:
-					if ((modkey & KMOD_CTRL)
-					|| event.button.button == SDL_BUTTON_RIGHT) {
-						kk.mouse_button = MOUSE_BUTTON_RIGHT;
-					} else if ((modkey & (KMOD_ALT|KMOD_GUI))
-					|| event.button.button == SDL_BUTTON_MIDDLE) {
-						kk.mouse_button = MOUSE_BUTTON_MIDDLE;
-					} else {
-						kk.mouse_button = MOUSE_BUTTON_LEFT;
-					}
+				switch (button) {
+				case MOUSE_BUTTON_RIGHT:
+				case MOUSE_BUTTON_MIDDLE:
+				case MOUSE_BUTTON_LEFT:
+					kk.mouse_button = button;
+
 					if (kk.state == KEY_RELEASE) {
-						ticker = SCHISM_GET_TICKS();
+						ticker = timer_ticks();
 						if (lx == kk.x
 						&& ly == kk.y
 						&& (ticker - last_mouse_down) < 300) {
@@ -681,6 +605,9 @@ static void event_loop(void)
 						}
 						lx = kk.x;
 						ly = kk.y;
+
+						// dirty hack
+						button = -1;
 					} else {
 						kk.mouse = MOUSE_CLICK;
 					}
@@ -699,22 +626,35 @@ static void event_loop(void)
 					} else {
 						kk.on_target = 0;
 					}
-					if (event.type == SDL_MOUSEBUTTONUP && downtrip) {
+					if (se.type == SCHISM_MOUSEBUTTONUP && downtrip) {
 						downtrip = 0;
 						break;
 					}
 					handle_key(&kk);
 					break;
+				default:
+					break;
 				};
 				break;
-
-			case SDL_DROPFILE:
-				switch(status.current_page)
-				{
+			}
+			case SCHISM_WINDOWEVENT_SHOWN:
+			case SCHISM_WINDOWEVENT_FOCUS_GAINED:
+				video_mousecursor(MOUSE_RESET_STATE);
+				break;
+			case SCHISM_WINDOWEVENT_RESIZED:
+			case SCHISM_WINDOWEVENT_SIZE_CHANGED: /* tiling window managers */
+				video_resize(se.window.data.resized.width, se.window.data.resized.height);
+				/* fallthrough */
+			case SCHISM_WINDOWEVENT_EXPOSED:
+				status.flags |= (NEED_UPDATE);
+				break;
+			case SCHISM_DROPFILE:
+				dialog_destroy();
+				switch(status.current_page) {
 				case PAGE_SAMPLE_LIST:
 				case PAGE_LOAD_SAMPLE:
 				case PAGE_LIBRARY_SAMPLE:
-					song_load_sample(sample_get_current(), event.drop.file);
+					song_load_sample(sample_get_current(), se.drop.file);
 					memused_songchanged();
 					status.flags |= SONG_NEEDS_SAVE;
 					set_page(PAGE_SAMPLE_LIST);
@@ -725,27 +665,16 @@ static void event_loop(void)
 				case PAGE_INSTRUMENT_LIST_PITCH:
 				case PAGE_LOAD_INSTRUMENT:
 				case PAGE_LIBRARY_INSTRUMENT:
-					song_load_instrument_with_prompt(instrument_get_current(), event.drop.file);
+					song_load_instrument_with_prompt(instrument_get_current(), se.drop.file);
 					memused_songchanged();
 					status.flags |= SONG_NEEDS_SAVE;
 					set_page(PAGE_INSTRUMENT_LIST);
 					break;
 				default:
-					song_load(event.drop.file);
+					song_load(se.drop.file);
 					break;
 				}
-				SDL_free(event.drop.file);
-				break;
-
-			/* Our own custom events.
-			 *
-			 * XXX:
-			 * SDL docs say that we have to register these events.
-			 *
-			 * We can probably get away with doing this though, since
-			 * we don't have any dependencies that use SDL anyway. */
-			case SCHISM_EVENT_MIDI:
-				midi_engine_handle_event(&event);
+				free(se.drop.file);
 				break;
 			case SCHISM_EVENT_UPDATE_IPMIDI:
 				status.flags |= (NEED_UPDATE);
@@ -759,91 +688,81 @@ static void event_loop(void)
 				break;
 			case SCHISM_EVENT_PASTE:
 				/* handle clipboard events */
-				_do_clipboard_paste_op(&event);
-				free(event.user.data1);
+				_do_clipboard_paste_op(&se);
+				free(se.clipboard.clipboard);
 				break;
-			case SCHISM_EVENT_NATIVE:
-				/* used by native system scripting */
-				switch (event.user.code) {
-				case SCHISM_EVENT_NATIVE_OPEN: /* open song */
-					song_load(event.user.data1);
-					break;
-				case SCHISM_EVENT_NATIVE_SCRIPT:
-					/* destroy any active dialog before changing pages */
-					dialog_destroy();
-					if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "new", CHARSET_UTF8) == 0) {
-						new_song_dialog();
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "save", CHARSET_UTF8) == 0) {
-						save_song_or_save_as();
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "save_as", CHARSET_UTF8) == 0) {
-						set_page(PAGE_SAVE_MODULE);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "export_song", CHARSET_UTF8) == 0) {
-						set_page(PAGE_EXPORT_MODULE);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "logviewer", CHARSET_UTF8) == 0) {
-						set_page(PAGE_LOG);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "font_editor", CHARSET_UTF8) == 0) {
-						set_page(PAGE_FONT_EDIT);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "load", CHARSET_UTF8) == 0) {
-						set_page(PAGE_LOAD_MODULE);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "help", CHARSET_UTF8) == 0) {
-						set_page(PAGE_HELP);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "pattern", CHARSET_UTF8) == 0) {
-						set_page(PAGE_PATTERN_EDITOR);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "orders", CHARSET_UTF8) == 0) {
-						set_page(PAGE_ORDERLIST_PANNING);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "variables", CHARSET_UTF8) == 0) {
-						set_page(PAGE_SONG_VARIABLES);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "message_edit", CHARSET_UTF8) == 0) {
-						set_page(PAGE_MESSAGE);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "info", CHARSET_UTF8) == 0) {
-						set_page(PAGE_INFO);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "play", CHARSET_UTF8) == 0) {
-						song_start();
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "play_pattern", CHARSET_UTF8) == 0) {
-						song_loop_pattern(get_current_pattern(), 0);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "play_order", CHARSET_UTF8) == 0) {
-						song_start_at_order(get_current_order(), 0);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "play_mark", CHARSET_UTF8) == 0) {
-						play_song_from_mark();
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "stop", CHARSET_UTF8) == 0) {
-						song_stop();
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "calc_length", CHARSET_UTF8) == 0) {
-						show_song_length();
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "sample_page", CHARSET_UTF8) == 0) {
-						set_page(PAGE_SAMPLE_LIST);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "sample_library", CHARSET_UTF8) == 0) {
-						set_page(PAGE_LIBRARY_SAMPLE);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "init_sound", CHARSET_UTF8) == 0) {
-						/* does nothing :) */
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "inst_page", CHARSET_UTF8) == 0) {
-						set_page(PAGE_INSTRUMENT_LIST);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "inst_library", CHARSET_UTF8) == 0) {
-						set_page(PAGE_LIBRARY_INSTRUMENT);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "preferences", CHARSET_UTF8) == 0) {
-						set_page(PAGE_PREFERENCES);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "system_config", CHARSET_UTF8) == 0) {
-						set_page(PAGE_CONFIG);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "midi_config", CHARSET_UTF8) == 0) {
-						set_page(PAGE_MIDI);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "palette_page", CHARSET_UTF8) == 0) {
-						set_page(PAGE_PALETTE_EDITOR);
-					} else if (charset_strcasecmp(event.user.data1, CHARSET_UTF8, "fullscreen", CHARSET_UTF8) == 0) {
-						toggle_display_fullscreen();
-					}
-					break;
+			case SCHISM_EVENT_NATIVE_OPEN: /* open song */
+				song_load(se.open.file);
+				free(se.open.file);
+				break;
+			case SCHISM_EVENT_NATIVE_SCRIPT:
+				/* destroy any active dialog before changing pages */
+				dialog_destroy();
+				if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "new", CHARSET_UTF8) == 0) {
+					new_song_dialog();
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "save", CHARSET_UTF8) == 0) {
+					save_song_or_save_as();
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "save_as", CHARSET_UTF8) == 0) {
+					set_page(PAGE_SAVE_MODULE);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "export_song", CHARSET_UTF8) == 0) {
+					set_page(PAGE_EXPORT_MODULE);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "logviewer", CHARSET_UTF8) == 0) {
+					set_page(PAGE_LOG);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "font_editor", CHARSET_UTF8) == 0) {
+					set_page(PAGE_FONT_EDIT);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "load", CHARSET_UTF8) == 0) {
+					set_page(PAGE_LOAD_MODULE);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "help", CHARSET_UTF8) == 0) {
+					set_page(PAGE_HELP);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "pattern", CHARSET_UTF8) == 0) {
+					set_page(PAGE_PATTERN_EDITOR);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "orders", CHARSET_UTF8) == 0) {
+					set_page(PAGE_ORDERLIST_PANNING);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "variables", CHARSET_UTF8) == 0) {
+					set_page(PAGE_SONG_VARIABLES);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "message_edit", CHARSET_UTF8) == 0) {
+					set_page(PAGE_MESSAGE);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "info", CHARSET_UTF8) == 0) {
+					set_page(PAGE_INFO);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play", CHARSET_UTF8) == 0) {
+					song_start();
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_pattern", CHARSET_UTF8) == 0) {
+					song_loop_pattern(get_current_pattern(), 0);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_order", CHARSET_UTF8) == 0) {
+					song_start_at_order(get_current_order(), 0);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_mark", CHARSET_UTF8) == 0) {
+					play_song_from_mark();
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "stop", CHARSET_UTF8) == 0) {
+					song_stop();
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "calc_length", CHARSET_UTF8) == 0) {
+					show_song_length();
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "sample_page", CHARSET_UTF8) == 0) {
+					set_page(PAGE_SAMPLE_LIST);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "sample_library", CHARSET_UTF8) == 0) {
+					set_page(PAGE_LIBRARY_SAMPLE);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "init_sound", CHARSET_UTF8) == 0) {
+					/* does nothing :) */
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "inst_page", CHARSET_UTF8) == 0) {
+					set_page(PAGE_INSTRUMENT_LIST);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "inst_library", CHARSET_UTF8) == 0) {
+					set_page(PAGE_LIBRARY_INSTRUMENT);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "preferences", CHARSET_UTF8) == 0) {
+					set_page(PAGE_PREFERENCES);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "system_config", CHARSET_UTF8) == 0) {
+					set_page(PAGE_CONFIG);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "midi_config", CHARSET_UTF8) == 0) {
+					set_page(PAGE_MIDI);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "palette_page", CHARSET_UTF8) == 0) {
+					set_page(PAGE_PALETTE_EDITOR);
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "fullscreen", CHARSET_UTF8) == 0) {
+					toggle_display_fullscreen();
 				}
+				free(se.script.which);
 				break;
 			default:
-				/* SDL provides many other events that we quite frankly
-				 * don't need (or want) to care about. */
 				break;
 			}
 		}
-
-		/* when using a real keyboard SDL will send a keydown first
-		 * and text input after it; if a text input event is NOT sent,
-		 * we should just send the keydown as is */
-		kbd_pop_pending_keydown(NULL);
 
 		/* handle key repeats */
 		kbd_handle_key_repeat();
@@ -870,13 +789,13 @@ static void event_loop(void)
 		case MODE_PLAYING:
 		case MODE_PATTERN_LOOP:
 			if (screensaver) {
-				SDL_DisableScreenSaver();
+				video_toggle_screensaver(0);
 				screensaver = 0;
 			}
 			break;
 		default:
 			if (!screensaver) {
-				SDL_EnableScreenSaver();
+				video_toggle_screensaver(1);
 				screensaver = 1;
 			}
 			break;
@@ -884,7 +803,7 @@ static void event_loop(void)
 
 		if (status.flags & DISKWRITER_ACTIVE) {
 			int q = disko_sync();
-			while (q == DW_SYNC_MORE && !SDL_PollEvent(NULL)) {
+			while (q == DW_SYNC_MORE && !events_have_event()) {
 				check_update();
 				q = disko_sync();
 			}
@@ -902,12 +821,12 @@ static void event_loop(void)
 		/* let dmoz build directory lists, etc
 		 *
 		 * as long as there's no user-event going on... */
-		while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !SDL_PollEvent(NULL));
+		while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !events_have_event());
 
 		/* delay until there's an event OR 10 ms have passed */
 		int t;
-		for (t = 0; t < 10 && !SDL_PollEvent(NULL); t++)
-			msleep(1);
+		for (t = 0; t < 10 && !events_have_event(); t++)
+			timer_msleep(1);
 	}
 	
 	schism_exit(0);
@@ -930,10 +849,6 @@ void schism_exit(int status)
 		cfg_atexit_save();
 
 	if (shutdown_process & EXIT_SDLQUIT) {
-		song_lock_audio();
-		song_stop_unlocked(1);
-		song_unlock_audio();
-
 		// Clear to black on exit (nicer on Wii; I suppose it won't hurt elsewhere)
 		video_refresh();
 		video_blit();
@@ -946,11 +861,21 @@ void schism_exit(int status)
 		See long-standing bug: https://github.com/libsdl-org/SDL/issues/3184
 			/ Vanfanel
 		*/
-#ifdef SCHISM_CONTROLLER
-		controller_quit();
-#endif
-		SDL_Quit();
 	}
+
+	song_lock_audio();
+	song_stop_unlocked(1);
+	song_unlock_audio();
+
+	dmoz_quit();
+	audio_quit();
+	clippy_quit();
+	events_quit();
+#ifndef HAVE_LOCALTIME_R
+	localtime_r_quit();
+#endif
+	mt_quit();
+	timer_quit();
 
 	os_sysexit();
 
@@ -959,20 +884,14 @@ void schism_exit(int status)
 
 extern void vis_init(void);
 
-/* wart */
-#ifdef SCHISM_MACOSX
-int SDL_main(int argc, char** argv)
-#else
-int main(int argc, char **argv)
-#endif
+/* the real main function is called per-platform */
+int schism_main(int argc, char** argv)
 {
 	os_sysinit(&argc, &argv);
 
 	vis_init();
 
 	ver_init();
-
-	video_fullscreen(0);
 
 	tzset(); // localtime_r wants this
 	srand(time(NULL));
@@ -990,6 +909,41 @@ int main(int argc, char **argv)
 	/* Eh. */
 	log_append2(0, 3, 0, schism_banner(0));
 	log_nl();
+
+	if (!timer_init()) {
+		fprintf(stderr, "Failed to initialize a timers backend!\n");
+		return 1;
+	}
+
+	if (!mt_init()) {
+		fprintf(stderr, "Failed to initialize a multithreading backend!\n");
+		return 1;
+	}
+
+#ifndef HAVE_LOCALTIME_R
+	if (!localtime_r_init()) {
+		fprintf(stderr, "Failed to initialize localtime_r replacement!\n");
+		return 1;
+	}
+#endif
+
+	if (!events_init()) {
+		fprintf(stderr, "Failed to initialize an events backend!\n");
+		return 1;
+	}
+
+	if (!clippy_init()) {
+		log_appendf(4, "Failed to initialize a clipboard backend!");
+		log_appendf(4, "Copying to the system clipboard will not work properly!");
+		log_nl();
+	}
+
+	if (!dmoz_init()) {
+		log_appendf(4, "Failed to initialize a filesystem backend!");
+		log_appendf(4, "Portable mode will not work properly!");
+		log_nl();
+	}
+
 	log_nl();
 
 	song_initialise();
@@ -1000,29 +954,16 @@ int main(int argc, char **argv)
 		if (startup_flags & SF_CLASSIC) status.flags |= CLASSIC_MODE;
 	}
 
-	if (!did_fullscreen)
-		video_fullscreen(cfg_video_fullscreen);
-
 	if (!(startup_flags & SF_NETWORK))
 		status.flags |= NO_NETWORK;
 
 	shutdown_process |= EXIT_SAVECFG;
-
-	if (SDL_Init(SDL_INIT_FLAGS) < 0) {
-		fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
-		schism_exit(1);
-	}
-
-	/* make SDL_SetWindowGrab grab the keyboard too */
-	SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
 	shutdown_process |= EXIT_SDLQUIT;
-	os_sdlinit();
-
-#ifdef SCHISM_CONTROLLER
-	controller_init();
-#endif
 
 	display_init();
+	if (want_fullscreen >= 0)
+		video_fullscreen(want_fullscreen);
+
 	palette_apply();
 	font_init();
 	midi_engine_start();
@@ -1098,3 +1039,97 @@ int main(int argc, char **argv)
 
 	return 0; /* blah */
 }
+
+#if defined(SCHISM_WIN32)
+# include "loadso.h"
+# include <windows.h>
+
+static void *lib_kernel32 = NULL;
+static void *lib_shell32 = NULL;
+static char **utf8_argv = NULL;
+static int utf8_argc = 0;
+
+void win32_atexit(void)
+{
+	if (lib_kernel32)
+		loadso_object_unload(lib_kernel32);
+
+	if (lib_shell32)
+		loadso_object_unload(lib_shell32);
+
+	for (int i = 0; i < utf8_argc; i++)
+		free(utf8_argv[i]);
+
+	free(utf8_argv);
+}
+
+int main(int argc, char **argv)
+{
+	int i;
+
+	// We only want to get the Unicode arguments if we are able to
+	LPWSTR *(WINAPI *WIN32_CommandLineToArgvW)(LPCWSTR lpCmdLine,int *pNumArgs);
+	LPWSTR (WINAPI *WIN32_GetCommandLineW)(void);
+
+	lib_kernel32 = loadso_object_load("KERNEL32.DLL");
+	lib_shell32 = loadso_object_load("SHELL32.DLL");
+
+	if (lib_kernel32 && lib_shell32) {
+		WIN32_CommandLineToArgvW = loadso_function_load(lib_shell32, "CommandLineToArgvW");
+		WIN32_GetCommandLineW = loadso_function_load(lib_kernel32, "GetCommandLineW");
+
+		if (WIN32_CommandLineToArgvW && WIN32_GetCommandLineW) {
+			int argcw;
+			LPWSTR *argvw = CommandLineToArgvW(WIN32_GetCommandLineW(), &argcw);
+
+			utf8_argc = argcw;
+
+			if (argvw) {
+				// now we have Unicode arguments!...
+
+				utf8_argv = mem_alloc(sizeof(char *) * utf8_argc);
+
+				for (i = 0; i < argcw; i++) {
+					charset_iconv(argvw[i], &utf8_argv[i], CHARSET_WCHAR_T, CHARSET_CHAR, SIZE_MAX);
+					if (!utf8_argv[i])
+						utf8_argv[i] = str_dup(""); // ...
+				}
+
+				LocalFree(argvw);
+
+				goto have_utf8_args;
+			}
+		}
+	}
+
+	// fallback, ANSI
+	utf8_argc = argc;
+	utf8_argv = mem_alloc(sizeof(char *) * utf8_argc);
+
+	for (i = 0; i < argc; i++) {
+		charset_iconv(argv[i], &utf8_argv[i], CHARSET_ANSI, CHARSET_CHAR, SIZE_MAX);
+		if (!utf8_argv[i])
+			utf8_argv[i] = str_dup(""); // ...
+	}
+
+have_utf8_args: ;
+	// copy so our arguments don't get warped by main
+	char *utf8_argv_cp[utf8_argc];
+
+	for (i = 0; i < utf8_argc; i++)
+		utf8_argv_cp[i] = utf8_argv[i];
+
+	schism_main(argc, utf8_argv_cp);
+
+	// never happens; we use exit()
+	return 0;
+}
+#elif defined(SCHISM_MACOSX)
+// handled in its own file
+#else
+int main(int argc, char **argv)
+{
+	// do nothing special
+	return schism_main(argc, argv);
+}
+#endif

@@ -30,6 +30,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <stddef.h>
 
 #include <errno.h>
 #include <fcntl.h>

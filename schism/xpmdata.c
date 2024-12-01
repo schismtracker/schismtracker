@@ -23,7 +23,6 @@
 
 #include "headers.h"
 
-#include "sdlmain.h"
 #include "video.h" /* for declaration of xpmdata */
 #include "util.h"
 
@@ -221,16 +220,15 @@ static void free_colorhash(struct color_hash *hash)
 }
 
 
-SDL_Surface *xpmdata(const char *data[])
+int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h)
 {
-	SDL_Surface *image = NULL;
 	int n;
 	int x, y;
-	int w, h, ncolors, cpp;
+	int ncolors, cpp;
 	int indexed;
-	Uint8 *dst;
+	uint32_t *dst;
 	struct color_hash *colors = NULL;
-	SDL_Color *im_colors = NULL;
+	uint32_t *im_colors = NULL; // ARGB values
 	char *keystrings = NULL, *nextkey;
 	const char *line;
 	const char ***xpmlines = NULL;
@@ -254,8 +252,8 @@ SDL_Surface *xpmdata(const char *data[])
 	 * Right now we don't use the hotspots but it should be handled
 	 * one day.
 	 */
-	if(sscanf(line, "%d %d %d %d", &w, &h, &ncolors, &cpp) != 4
-	   || w <= 0 || h <= 0 || ncolors <= 0 || cpp <= 0) {
+	if(sscanf(line, "%d %d %d %d", w, h, &ncolors, &cpp) != 4
+	   || *w <= 0 || *h <= 0 || ncolors <= 0 || cpp <= 0) {
 		error = 1;
 		goto done;
 	}
@@ -267,21 +265,9 @@ SDL_Surface *xpmdata(const char *data[])
 	}
 	nextkey = keystrings;
 
-	/* Create the new surface */
-	if(ncolors <= 256) {
-		indexed = 1;
-		image = SDL_CreateRGBSurface(SDL_SWSURFACE, w, h, 8,
-					     0, 0, 0, 0);
-		im_colors = image->format->palette->colors;
-		image->format->palette->ncolors = ncolors;
-	} else {
-		indexed = 0;
-		image = SDL_CreateRGBSurface(SDL_SWSURFACE, w, h, 32,
-					     0xff0000, 0x00ff00, 0x0000ff, 0);
-	}
-	if(!image) {
-		/* Hmm, some SDL error (out of memory?) */
-		error = 3;
+	*pixels = malloc(*w * *h * sizeof(*pixels));
+	if (!*pixels) {
+		error = 2;
 		goto done;
 	}
 
@@ -305,7 +291,6 @@ SDL_Surface *xpmdata(const char *data[])
 			char nametype;
 			const char *colname;
 			uint32_t rgb, pixel;
-			SDL_Color *c;
 			int m;
 
 			SKIPSPACE(p);
@@ -324,62 +309,33 @@ SDL_Surface *xpmdata(const char *data[])
 			if(!color_to_rgb(colname, p - colname, &rgb))
 				continue;
 
-
 			memcpy(nextkey, line, cpp);
-			if(indexed) {
-				/* arrange for None to be color 0 */
-				if (usedn && (rgb == 0xffffffff)) {
-					m = 0;
-					usedn = 0;
-				} else {
-					m = n+usedn;
-				}
 
-				c = im_colors + m;
-				c->r = rgb >> 16;
-				c->g = rgb >> 8;
-				c->b = rgb;
-				pixel = m;
-			} else
-				pixel = rgb;
+			/* UINT32_MAX is transparent */
+			pixel = (rgb == UINT32_C(0xFFFFFFFF) ? 0 : (rgb | UINT32_C(0xFF000000)));
+
 			add_colorhash(colors, nextkey, cpp, pixel);
 			nextkey += cpp;
-			if(rgb == 0xffffffff)
-				SDL_SetColorKey(image, SDL_TRUE, pixel);
+
 			break;
 		}
 	}
 
 	/* Read the pixels */
-	dst = image->pixels;
-	for(y = 0; y < h; y++) {
+	dst = *pixels;
+	for(y = 0; y < *h; y++) {
 		line = get_next_line(xpmlines);
-		if(indexed) {
-			/* optimization for some common cases */
-			if(cpp == 1)
-				for(x = 0; x < w; x++)
-					dst[x] = QUICK_COLORHASH(colors,
-								 line + x);
-			else
-				for(x = 0; x < w; x++)
-					dst[x] = get_colorhash(colors,
-							       line + x * cpp,
-							       cpp);
-		} else {
-			for (x = 0; x < w; x++)
-				((uint32_t*)dst)[x] = get_colorhash(colors,
-								line + x * cpp,
-								  cpp);
-		}
-		dst += image->pitch;
+		for (x = 0; x < *w; x++)
+			dst[x] = get_colorhash(colors, line + x * cpp, cpp);
+		dst += *w;
 	}
 
 done:
-	if(error) {
-		SDL_FreeSurface(image);
-		image = NULL;
+	if (error) {
+		free(*pixels);
+		*pixels = NULL;
 	}
 	free(keystrings);
 	free_colorhash(colors);
-	return image;
+	return error;
 }

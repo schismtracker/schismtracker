@@ -28,6 +28,8 @@
 #include "widget.h"
 #include "vgamem.h"
 
+#include <math.h>
+
 /* --------------------------------------------------------------------- */
 /* create_* functions (the constructors, if you will) */
 

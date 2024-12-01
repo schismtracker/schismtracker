@@ -30,10 +30,11 @@
 #include "charset.h"
 #include "bswap.h"
 #include "config.h"
-#include "sdlmain.h"
 #include "video.h"
 #include "osdefs.h"
 #include "vgamem.h"
+
+#include "backend/video.h"
 
 #include <errno.h>
 
@@ -50,11 +51,6 @@ struct mouse_cursor {
 	uint32_t height, width;
 	uint32_t center_x, center_y; /* which point of the pointer does actually point */
 };
-
-#if !SDL_VERSION_ATLEAST(2, 0, 4)
-#define SDL_PIXELFORMAT_NV12 (SDL_DEFINE_PIXELFOURCC('N', 'V', '1', '2'))
-#define SDL_PIXELFORMAT_NV21 (SDL_DEFINE_PIXELFOURCC('N', 'V', '2', '1'))
-#endif
 
 /* ex. cursors[CURSOR_SHAPE_ARROW] */
 static struct mouse_cursor cursors[] = {
@@ -149,38 +145,10 @@ static struct mouse_cursor cursors[] = {
 };
 
 static struct {
-	SDL_Window *window;
-	SDL_Renderer *renderer;
-	SDL_Texture *texture;
-	SDL_PixelFormat *pixel_format; // may be NULL
-	uint32_t format;
-	uint32_t bpp; // BYTES per pixel
-
-	int width, height;
-
 	struct {
-		unsigned int x, y;
 		enum video_mousecursor_shape shape;
 		int visible;
 	} mouse;
-
-	struct {
-		/* TODO: need to save the state of the menu bar or else
-		 * these will be wrong if it's toggled while in fullscreen */
-		int width, height;
-
-		int x, y;
-	} saved;
-
-	int fullscreen;
-
-	struct {
-		uint32_t pal_y[256];
-		uint32_t pal_u[256];
-		uint32_t pal_v[256];
-	} yuv;
-
-	uint32_t pal[256];
 } video = {
 	.mouse = {
 		.visible = MOUSE_EMULATED,
@@ -188,326 +156,16 @@ static struct {
 	},
 };
 
-// Native formats, in order of preference.
-static const struct {
-	uint32_t format;
-	const char *name;
-} native_formats[] = {
-	// RGB
-	// ----------------
-	{SDL_PIXELFORMAT_RGB888, "RGB888"},
-	{SDL_PIXELFORMAT_ARGB8888, "ARGB8888"},
-	// {SDL_PIXELFORMAT_RGB24, "RGB24"},
-	{SDL_PIXELFORMAT_RGB565, "RGB565"},
-	{SDL_PIXELFORMAT_RGB555, "RGB555"},
-	{SDL_PIXELFORMAT_ARGB1555, "ARGB1555"},
-	{SDL_PIXELFORMAT_RGB444, "RGB444"},
-	{SDL_PIXELFORMAT_ARGB4444, "ARGB4444"},
-	{SDL_PIXELFORMAT_RGB332, "RGB332"},
-	// ----------------
+static const schism_video_backend_t *backend = NULL;
 
-	// YUV
-	// ----------------
-	{SDL_PIXELFORMAT_IYUV, "IYUV"},
-	{SDL_PIXELFORMAT_YV12, "YV12"},
-	// {SDL_PIXELFORMAT_UYVY, "UYVY"},
-	// {SDL_PIXELFORMAT_YVYU, "YVYU"},
-	// {SDL_PIXELFORMAT_YUY2, "YUY2"},
-	// {SDL_PIXELFORMAT_NV12, "NV12"},
-	// {SDL_PIXELFORMAT_NV21, "NV21"},
-	// ----------------
-};
+/* ----------------------------------------------------------- */
 
-int video_is_fullscreen(void)
-{
-	return video.fullscreen;
-}
-
-int video_width(void)
-{
-	return video.width;
-}
-
-int video_height(void)
-{
-	return video.height;
-}
-
-void video_update(void)
-{
-	SDL_GetWindowSize(video.window, &video.width, &video.height);
-}
-
-const char *video_driver_name(void)
-{
-	return SDL_GetCurrentVideoDriver();
-}
-
-void video_report(void)
-{
-	struct {
-		uint32_t num;
-		const char *name, *type;
-	} yuv_layouts[] = {
-		{SDL_PIXELFORMAT_YV12, "YV12", "planar+tv"},
-		{SDL_PIXELFORMAT_IYUV, "IYUV", "planar+tv"},
-		{SDL_PIXELFORMAT_YVYU, "YVYU", "packed"},
-		{SDL_PIXELFORMAT_UYVY, "UYVY", "packed"},
-		{SDL_PIXELFORMAT_YUY2, "YUY2", "packed"},
-		{SDL_PIXELFORMAT_NV12, "NV12", "planar"},
-		{SDL_PIXELFORMAT_NV21, "NV21", "planar"},
-		{0, NULL, NULL},
-	}, *layout = yuv_layouts;
-
-	log_append(2, 0, "Video initialised");
-	log_underline(17);
-
-	{
-		SDL_RendererInfo renderer;
-		SDL_GetRendererInfo(video.renderer, &renderer);
-		log_appendf(5, " Using driver '%s'", SDL_GetCurrentVideoDriver());
-		log_appendf(5, " %sware%s renderer '%s'",
-			(renderer.flags & SDL_RENDERER_SOFTWARE) ? "Soft" : "Hard",
-			(renderer.flags & SDL_RENDERER_ACCELERATED) ? "-accelerated" : "",
-			renderer.name);
-	}
-
-	switch (video.format) {
-	case SDL_PIXELFORMAT_IYUV:
-	case SDL_PIXELFORMAT_YV12:
-	case SDL_PIXELFORMAT_YVYU:
-	case SDL_PIXELFORMAT_UYVY:
-	case SDL_PIXELFORMAT_YUY2:
-	case SDL_PIXELFORMAT_NV12:
-	case SDL_PIXELFORMAT_NV21:
-		while (video.format != layout->num && layout->name != NULL)
-			layout++;
-
-		if (layout->name)
-			log_appendf(5, " Display format: %s (%s)", layout->name, layout->type);
-		else
-			log_appendf(5, " Display format: %" PRIx32, video.format);
-		break;
-	default:
-		log_appendf(5, " Display format: %"PRIu32" bits/pixel", SDL_BITSPERPIXEL(video.format));
-		break;
-	}
-
-	{
-		SDL_DisplayMode display;
-		if (!SDL_GetCurrentDisplayMode(0, &display) && video.fullscreen)
-			log_appendf(5, " Display dimensions: %dx%d", display.w, display.h);
-	}
-
-	log_nl();
-}
-
-static void set_icon(void)
-{
-	SDL_SetWindowTitle(video.window, WINDOW_TITLE);
-#ifndef SCHISM_MACOSX
-/* apple/macs use a bundle; this overrides their nice pretty icon */
-	SDL_Surface *icon = xpmdata(_schism_icon_xpm_hires);
-	SDL_SetWindowIcon(video.window, icon);
-	SDL_FreeSurface(icon);
-#endif
-}
-
-void video_redraw_texture(void)
-{
-	int i, j, pref_last = ARRAY_SIZE(native_formats);
-	uint32_t format = SDL_PIXELFORMAT_RGB888;
-
-	if (video.texture)
-		SDL_DestroyTexture(video.texture);
-
-	if (video.pixel_format)
-		SDL_FreeFormat(video.pixel_format);
-
-	if (*cfg_video_format) {
-		for (i = 0; i < ARRAY_SIZE(native_formats); i++) {
-			if (!charset_strcasecmp(cfg_video_format, CHARSET_UTF8, native_formats[i].name, CHARSET_UTF8)) {
-				format = native_formats[i].format;
-				goto got_format;
-			}
-		}
-	}
-
-	// We want to find the best format we can natively
-	// output to. If we can't, then we fall back to
-	// SDL_PIXELFORMAT_RGB888 and let SDL deal with the
-	// conversion.
-	SDL_RendererInfo info;
-	SDL_GetRendererInfo(video.renderer, &info);
-	for (i = 0; i < info.num_texture_formats; i++)
-		for (j = 0; j < ARRAY_SIZE(native_formats); j++)
-			if (info.texture_formats[i] == native_formats[j].format && j < pref_last)
-				format = native_formats[pref_last = j].format;
-
-got_format:
-	video.texture = SDL_CreateTexture(video.renderer, format, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
-	video.pixel_format = SDL_AllocFormat(format);
-	video.format = format;
-
-	// find the bytes per pixel
-	switch (video.format) {
-	// irrelevant
-	case SDL_PIXELFORMAT_YV12:
-	case SDL_PIXELFORMAT_IYUV: break;
-
-	default: video.bpp = video.pixel_format->BytesPerPixel; break;
-	}
-}
-
-void video_redraw_renderer(int hardware)
-{
-	SDL_DestroyTexture(video.texture);
-
-	SDL_DestroyRenderer(video.renderer);
-
-	video.renderer = SDL_CreateRenderer(video.window, -1, hardware ? SDL_RENDERER_ACCELERATED : SDL_RENDERER_SOFTWARE);
-	if (!video.renderer)
-		video.renderer = SDL_CreateRenderer(video.window, -1, 0); // welp
-
-	video_redraw_texture();
-
-	video_report();
-}
-
-void video_shutdown(void)
-{
-	SDL_DestroyTexture(video.texture);
-	SDL_DestroyRenderer(video.renderer);
-	SDL_DestroyWindow(video.window);
-}
-
-void video_setup(const char *quality)
-{
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
-}
-
-void video_startup(void)
-{
-	vgamem_clear();
-	vgamem_flip();
-
-	video_setup(cfg_video_interpolation);
-
-#ifndef SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR
-/* older SDL2 versions don't define this, don't fail the build for it */
-#define SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR "SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"
-#endif
-	SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
-
-	video.width = cfg_video_width;
-	video.height = cfg_video_height;
-	video.saved.x = video.saved.y = SDL_WINDOWPOS_CENTERED;
-
-	video.window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width, video.height, SDL_WINDOW_RESIZABLE);
-	video_redraw_renderer(cfg_video_hardware);
-
-	/* Aspect ratio correction if it's wanted */
-	if (cfg_video_want_fixed)
-		SDL_RenderSetLogicalSize(video.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height);
-
-	video_fullscreen(cfg_video_fullscreen);
-	if (video_have_menu() && !video.fullscreen) {
-		SDL_SetWindowSize(video.window, video.width, video.height);
-		SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
-	}
-
-	/* okay, i think we're ready */
-	SDL_ShowCursor(SDL_DISABLE);
-	set_icon();
-}
-
-void video_fullscreen(int new_fs_flag)
-{
-	const int have_menu = video_have_menu();
-	/* positive new_fs_flag == set, negative == toggle */
-	video.fullscreen = (new_fs_flag >= 0) ? !!new_fs_flag : !video.fullscreen;
-
-	if (video.fullscreen) {
-		if (have_menu) {
-			SDL_GetWindowSize(video.window, &video.saved.width, &video.saved.height);
-			SDL_GetWindowPosition(video.window, &video.saved.x, &video.saved.y);
-		}
-		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-		if (have_menu)
-			video_toggle_menu();
-	} else {
-		SDL_SetWindowFullscreen(video.window, 0);
-		if (have_menu) {
-			/* the menu must be toggled first here */
-			video_toggle_menu();
-			SDL_SetWindowSize(video.window, video.saved.width, video.saved.height);
-			SDL_SetWindowPosition(video.window, video.saved.x, video.saved.y);
-		}
-		set_icon(); /* XXX is this necessary */
-	}
-}
-
-void video_resize(unsigned int width, unsigned int height)
-{
-	video.width = width;
-	video.height = height;
-	status.flags |= (NEED_UPDATE);
-}
-
-static void yuv_pal_(int i, unsigned char rgb[3])
+void video_rgb_to_yuv(unsigned int *y, unsigned int *u, unsigned int *v, unsigned char rgb[3])
 {
 	// YCbCr
-	unsigned int y =  0.257 * rgb[0] + 0.504 * rgb[1] + 0.098 * rgb[2] +  16;
-	unsigned int u = -0.148 * rgb[0] - 0.291 * rgb[1] + 0.439 * rgb[2] + 128;
-	unsigned int v =  0.439 * rgb[0] - 0.368 * rgb[1] - 0.071 * rgb[2] + 128;
-
-	switch (video.format) {
-	case SDL_PIXELFORMAT_IYUV:
-	case SDL_PIXELFORMAT_YV12:
-		video.yuv.pal_y[i] = y;
-		video.yuv.pal_u[i] = (u >> 4) & 0xF;
-		video.yuv.pal_v[i] = (v >> 4) & 0xF;
-		break;
-	default:
-		break; // err
-	}
-}
-
-static void sdl_pal_(int i, unsigned char rgb[3])
-{
-	video.pal[i] = SDL_MapRGB(video.pixel_format, rgb[0], rgb[1], rgb[2]);
-}
-
-void video_colors(unsigned char palette[16][3])
-{
-	static const int lastmap[] = { 0, 1, 2, 3, 5 };
-	int i, p;
-	void (*fun)(int i, unsigned char rgb[3]);
-
-	switch (video.format) {
-	case SDL_PIXELFORMAT_IYUV:
-	case SDL_PIXELFORMAT_YV12:
-		fun = yuv_pal_;
-		break;
-	default:
-		fun = sdl_pal_;
-		break;
-	}
-
-	/* make our "base" space */
-	for (i = 0; i < 16; i++)
-		fun(i, (unsigned char []){palette[i][0], palette[i][1], palette[i][2]});
-
-	/* make our "gradient" space */
-	for (i = 0; i < 128; i++) {
-		p = lastmap[(i>>5)];
-
-		fun(i + 128, (unsigned char []){
-			(int)palette[p][0] + (((int)(palette[p+1][0] - palette[p][0]) * (i & 0x1F)) / 0x20),
-			(int)palette[p][1] + (((int)(palette[p+1][1] - palette[p][1]) * (i & 0x1F)) / 0x20),
-			(int)palette[p][2] + (((int)(palette[p+1][2] - palette[p][2]) * (i & 0x1F)) / 0x20),
-		});
-	}
+	*y =  0.257 * rgb[0] + 0.504 * rgb[1] + 0.098 * rgb[2] +  16;
+	*u = -0.148 * rgb[0] - 0.291 * rgb[1] + 0.439 * rgb[2] + 128;
+	*v =  0.439 * rgb[0] - 0.368 * rgb[1] - 0.071 * rgb[2] + 128;
 }
 
 void video_refresh(void)
@@ -516,33 +174,7 @@ void video_refresh(void)
 	vgamem_clear();
 }
 
-int video_is_focused(void)
-{
-	return !!(SDL_GetWindowFlags(video.window) & SDL_WINDOW_INPUT_FOCUS);
-}
-
-int video_is_visible(void)
-{
-	return !!(SDL_GetWindowFlags(video.window) & SDL_WINDOW_SHOWN);
-}
-
-int video_is_wm_available(void)
-{
-	SDL_SysWMinfo info;
-	SDL_VERSION(&info.version);
-
-	return !!SDL_GetWindowWMInfo(video.window, &info);
-}
-
-int video_is_hardware(void)
-{
-	SDL_RendererInfo info;
-	SDL_GetRendererInfo(video.renderer, &info);
-	return !!(info.flags & SDL_RENDERER_ACCELERATED);
-}
-
-/* -------------------------------------------------------- */
-/* mousecursor */
+/* -------------------------------------------------- */
 
 int video_mousecursor_visible(void)
 {
@@ -579,118 +211,26 @@ void video_mousecursor(int vis)
 		break;
 	}
 
-	SDL_ShowCursor(video.mouse.visible == MOUSE_SYSTEM);
-
-	// Totally turn off mouse event sending when the mouse is disabled
-	int evstate = video.mouse.visible == MOUSE_DISABLED ? SDL_DISABLE : SDL_ENABLE;
-	if (evstate != SDL_EventState(SDL_MOUSEMOTION, SDL_QUERY)) {
-		SDL_EventState(SDL_MOUSEMOTION, evstate);
-		SDL_EventState(SDL_MOUSEBUTTONDOWN, evstate);
-		SDL_EventState(SDL_MOUSEBUTTONUP, evstate);
-	}
-}
-
-/* ---------------------------------------------------------- */
-/* coordinate translation */
-
-void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
-{
-	if (video.mouse.visible && (video.mouse.x != vx || video.mouse.y != vy))
-		status.flags |= SOFTWARE_MOUSE_MOVED;
-
-	vx *= NATIVE_SCREEN_WIDTH;
-	vy *= NATIVE_SCREEN_HEIGHT;
-	vx /= (cfg_video_want_fixed) ? cfg_video_want_fixed_width  : video.width;
-	vy /= (cfg_video_want_fixed) ? cfg_video_want_fixed_height : video.height;
-
-	vx = CLAMP(vx, 0, NATIVE_SCREEN_WIDTH - 1);
-	vy = CLAMP(vy, 0, NATIVE_SCREEN_HEIGHT - 1);
-
-	*x = video.mouse.x = vx;
-	*y = video.mouse.y = vy;
-}
-
-void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
-{
-	if (!cfg_video_want_fixed) {
-		*trans_x = x;
-		*trans_y = y;
-	} else {
-		float xx, yy;
-#if SDL_VERSION_ATLEAST(2, 0, 18)
-		SDL_RenderWindowToLogical(video.renderer, x, y, &xx, &yy);
-#else
-		/* Alternative for older SDL versions. MIGHT work with high DPI */
-		float scale_x = 1, scale_y = 1;
-
-		SDL_RenderGetScale(video.renderer, &scale_x, &scale_y);
-
-		xx = x - (video.width / 2) - (((float)cfg_video_want_fixed_width * scale_x) / 2);
-		yy = y - (video.height / 2) - (((float)cfg_video_want_fixed_height * scale_y) / 2);
-
-		xx /= (float)video.width * cfg_video_want_fixed_width;
-		yy /= (float)video.height * cfg_video_want_fixed_height;
-#endif
-		*trans_x = (int)xx;
-		*trans_y = (int)yy;
-	}
-}
-
-/* -------------------------------------------------- */
-/* input grab */
-
-int video_is_input_grabbed(void)
-{
-	return !!SDL_GetWindowGrab(video.window);
-}
-
-void video_set_input_grabbed(int enabled)
-{
-	SDL_SetWindowGrab(video.window, enabled ? SDL_TRUE : SDL_FALSE);
-}
-
-/* -------------------------------------------------- */
-/* warp mouse position */
-
-void video_warp_mouse(int x, int y)
-{
-	SDL_WarpMouseInWindow(video.window, x, y);
-}
-
-/* -------------------------------------------------- */
-/* menu toggling */
-
-int video_have_menu(void)
-{
-#ifdef SCHISM_WIN32
-	return 1;
-#else
-	return 0;
-#endif
-}
-
-void video_toggle_menu(void)
-{
-#ifdef SCHISM_WIN32
-	win32_toggle_menu(video.window);
-#endif
+	backend->mousecursor_changed();
 }
 
 /* -------------------------------------------------- */
 /* mouse drawing */
 
-static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, uint32_t mouseline[80], uint32_t mouseline_mask[80])
+static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, uint32_t mouseline[80], uint32_t mouseline_mask[80], unsigned int mouse_y)
 {
 	struct mouse_cursor *cursor = &cursors[video.mouse.shape];
 
 	memset(mouseline,      0, 80 * sizeof(*mouseline));
 	memset(mouseline_mask, 0, 80 * sizeof(*mouseline));
 
-	if (video.mouse.visible != MOUSE_EMULATED
+	video_mousecursor_visible();
+
+	if (video_mousecursor_visible() != MOUSE_EMULATED
 		|| !video_is_focused()
-		|| (video.mouse.y >= cursor->center_y && y < video.mouse.y - cursor->center_y)
+		|| (mouse_y >= cursor->center_y && y < mouse_y - cursor->center_y)
 		|| y < cursor->center_y
-		|| y >= video.mouse.y + cursor->height - cursor->center_y) {
+		|| y >= mouse_y + cursor->height - cursor->center_y) {
 		return;
 	}
 
@@ -698,8 +238,8 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 	unsigned int swidth  = (cursor->width    / 8) + (cursor->width    % 8 != 0);
 	unsigned int centeroffset = cursor->center_x % 8;
 
-	unsigned int z  = cursor->pointer[y - video.mouse.y + cursor->center_y];
-	unsigned int zm = cursor->mask[y - video.mouse.y + cursor->center_y];
+	unsigned int z  = cursor->pointer[y - mouse_y + cursor->center_y];
+	unsigned int zm = cursor->mask[y - mouse_y + cursor->center_y];
 
 	z <<= 8;
 	zm <<= 8;
@@ -733,54 +273,284 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 /* --------------------------------------------------------------- */
 /* blitters */
 
-static inline void blitUV(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
+/* Video with linear interpolation. */
+#define FIXED_BITS 8
+#define FIXED_MASK ((1 << FIXED_BITS) - 1)
+#define ONE_HALF_FIXED (1 << (FIXED_BITS - 1))
+#define INT2FIXED(x) ((x) << FIXED_BITS)
+#define FIXED2INT(x) ((x) >> FIXED_BITS)
+#define FRAC(x) ((x) & FIXED_MASK)
+
+void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t pal[256], int width, int height, schism_map_rgb_func_t map_rgb, void *map_rgb_data)
 {
-	const unsigned int mouseline_x = (video.mouse.x / 8);
-	const unsigned int mouseline_v = (video.mouse.x % 8);
+	unsigned char cv32backing[NATIVE_SCREEN_WIDTH * 8];
+
+	unsigned int *csp, *esp, *dp;
+	unsigned int c00, c01, c10, c11;
+	unsigned int outr, outg, outb;
+	unsigned int pad;
+	int fixedx, fixedy, scalex, scaley;
+	unsigned int y, x,ey,ex,t1,t2;
+	unsigned int mouseline[80];
+	unsigned int mouseline_mask[80];
+	unsigned int mouseline_x, mouseline_v;
+	int iny, lasty;
+
+	unsigned int mouse_x, mouse_y;
+	video_get_mouse_coordinates(&mouse_x, &mouse_y);
+
+	mouseline_x = (mouse_x / 8);
+	mouseline_v = (mouse_x % 8);
+
+	csp = (unsigned int *)cv32backing;
+	esp = csp + NATIVE_SCREEN_WIDTH;
+	lasty = -2;
+	iny = 0;
+	pad = pitch - (width * bpp);
+	scalex = INT2FIXED(NATIVE_SCREEN_WIDTH-1) / width;
+	scaley = INT2FIXED(NATIVE_SCREEN_HEIGHT-1) / height;
+	for (y = 0, fixedy = 0; (y < height); y++, fixedy += scaley) {
+		iny = FIXED2INT(fixedy);
+		if (iny != lasty) {
+			make_mouseline(mouseline_x, mouseline_v, iny, mouseline, mouseline_mask, mouse_y);
+
+			/* we'll downblit the colors later */
+			if (iny == lasty + 1) {
+				/* move up one line */
+				vgamem_scan32(iny+1, csp, pal, mouseline, mouseline_mask);
+				dp = esp; esp = csp; csp=dp;
+			} else {
+				vgamem_scan32(iny, (csp = (uint32_t *)cv32backing), pal, mouseline, mouseline_mask);
+				vgamem_scan32(iny+1, (esp = (csp + NATIVE_SCREEN_WIDTH)), pal, mouseline, mouseline_mask);
+			}
+			lasty = iny;
+		}
+		for (x = 0, fixedx = 0; x < width; x++, fixedx += scalex) {
+			ex = FRAC(fixedx);
+			ey = FRAC(fixedy);
+
+			c00 = csp[FIXED2INT(fixedx)];
+			c01 = csp[FIXED2INT(fixedx) + 1];
+			c10 = esp[FIXED2INT(fixedx)];
+			c11 = esp[FIXED2INT(fixedx) + 1];
+
+#if FIXED_BITS <= 8
+			/* When there are enough bits between blue and
+			 * red, do the RB channels together
+			 * See http://www.virtualdub.org/blog/pivot/entry.php?id=117
+			 * for a quick explanation */
+#define REDBLUE(Q) ((Q) & 0x00FF00FF)
+#define GREEN(Q) ((Q) & 0x0000FF00)
+			t1 = REDBLUE((((REDBLUE(c01)-REDBLUE(c00))*ex) >> FIXED_BITS)+REDBLUE(c00));
+			t2 = REDBLUE((((REDBLUE(c11)-REDBLUE(c10))*ex) >> FIXED_BITS)+REDBLUE(c10));
+			outb = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
+
+			t1 = GREEN((((GREEN(c01)-GREEN(c00))*ex) >> FIXED_BITS)+GREEN(c00));
+			t2 = GREEN((((GREEN(c11)-GREEN(c10))*ex) >> FIXED_BITS)+GREEN(c10));
+			outg = (((((t2-t1)*ey) >> FIXED_BITS) + t1) >> 8) & 0xFF;
+
+			outr = (outb >> 16) & 0xFF;
+			outb &= 0xFF;
+#undef REDBLUE
+#undef GREEN
+#else
+#define BLUE(Q) (Q & 255)
+#define GREEN(Q) ((Q >> 8) & 255)
+#define RED(Q) ((Q >> 16) & 255)
+			t1 = ((((BLUE(c01)-BLUE(c00))*ex) >> FIXED_BITS)+BLUE(c00)) & 0xFF;
+			t2 = ((((BLUE(c11)-BLUE(c10))*ex) >> FIXED_BITS)+BLUE(c10)) & 0xFF;
+			outb = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
+
+			t1 = ((((GREEN(c01)-GREEN(c00))*ex) >> FIXED_BITS)+GREEN(c00)) & 0xFF;
+			t2 = ((((GREEN(c11)-GREEN(c10))*ex) >> FIXED_BITS)+GREEN(c10)) & 0xFF;
+			outg = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
+
+			t1 = ((((RED(c01)-RED(c00))*ex) >> FIXED_BITS)+RED(c00)) & 0xFF;
+			t2 = ((((RED(c11)-RED(c10))*ex) >> FIXED_BITS)+RED(c10)) & 0xFF;
+			outr = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
+#undef RED
+#undef GREEN
+#undef BLUE
+#endif
+
+			uint32_t c = map_rgb(map_rgb_data, outr, outg, outb);
+
+			/* write the output pixel */
+#if WORDS_BIGENDIAN
+			memcpy(pixels, ((unsigned char *)&c) + (4 - bpp), bpp);
+#else
+			memcpy(pixels, &c, bpp);
+#endif
+			pixels += bpp;
+		}
+		pixels += pad;
+	}
+}
+
+/* Nearest neighbor blitter */
+void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height)
+{
+	// at most 32-bits...
+	unsigned char pixels_u[NATIVE_SCREEN_WIDTH * 4];
+
+	unsigned int mouse_x, mouse_y;
+	video_get_mouse_coordinates(&mouse_x, &mouse_y);
+
+	unsigned int mouseline_x = (mouse_x / 8);
+	unsigned int mouseline_v = (mouse_x % 8);
+	uint32_t mouseline[80];
+	uint32_t mouseline_mask[80];
+	int x, a, y, last_scaled_y = 235438; // some random value
+	int pad = pitch - (width * bpp);
+
+	for (y = 0; y < height; y++) {
+		int scaled_y = (y * NATIVE_SCREEN_HEIGHT / height);
+
+		// only want to scan if we have to
+		if (scaled_y != last_scaled_y) {
+			make_mouseline(mouseline_x, mouseline_v, scaled_y, mouseline, mouseline_mask, mouse_y);
+			switch (bpp) {
+			case 1:
+				vgamem_scan8(scaled_y, (uint8_t *)pixels_u, tpal, mouseline, mouseline_mask);
+				break;
+			case 2:
+				vgamem_scan16(scaled_y, (uint16_t *)pixels_u, tpal, mouseline, mouseline_mask);
+				break;
+			case 3:
+				vgamem_scan32(scaled_y, (uint32_t *)pixels_u, tpal, mouseline, mouseline_mask);
+				for (x = 0; x < NATIVE_SCREEN_WIDTH; x++) {
+					/* move these into place */
+#if WORDS_BIGENDIAN
+					memmove(pixels_u + (x * 3), (pixels_u + (x * 4)) + 1, 3);
+#else
+					memmove(pixels_u + (x * 3), pixels_u + (x * 4), 3);
+#endif
+				}
+				break;
+			case 4:
+				vgamem_scan32(scaled_y, (uint32_t *)pixels_u, tpal, mouseline, mouseline_mask);
+				break;
+			default:
+				// should never happen
+				break;
+			}
+		}
+
+		for (x = 0; x < width; x++) {
+			memcpy(pixels, pixels_u + ((x * NATIVE_SCREEN_WIDTH / width) * bpp), bpp);
+
+			pixels += bpp;
+		}
+
+		last_scaled_y = scaled_y;
+
+		pixels += pad;
+	}
+}
+
+void video_blitYY(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
+{
+	// this is here because pixels is write only on SDL2
+	uint16_t pixels_r[NATIVE_SCREEN_WIDTH];
+
+	unsigned int mouse_x, mouse_y;
+	video_get_mouse_coordinates(&mouse_x, &mouse_y);
+
+	unsigned int mouseline_x = (mouse_x / 8);
+	unsigned int mouseline_v = (mouse_x % 8);
+	unsigned int mouseline[80];
+	unsigned int mouseline_mask[80];
+	int y;
+
+	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask, mouse_y);
+
+		vgamem_scan16(y, pixels_r, tpal, mouseline, mouseline_mask);
+		memcpy(pixels, pixels_r, pitch);
+		pixels += pitch;
+		memcpy(pixels, pixels_r, pitch);
+		pixels += pitch;
+	}
+}
+
+void video_blitUV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
+{
+	unsigned int mouse_x, mouse_y;
+	video_get_mouse_coordinates(&mouse_x, &mouse_y);
+
+	const unsigned int mouseline_x = (mouse_x / 8);
+	const unsigned int mouseline_v = (mouse_x % 8);
 	unsigned int mouseline[80];
 	unsigned int mouseline_mask[80];
 
 	int y;
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask);
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask, mouse_y);
 		vgamem_scan8(y, pixels, tpal, mouseline, mouseline_mask);
 		pixels += pitch;
 	}
 }
 
-static inline void blitTV(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
+void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
 {
-	const unsigned int mouseline_x = (video.mouse.x / 8);
-	const unsigned int mouseline_v = (video.mouse.x % 8);
+	unsigned int mouse_x, mouse_y;
+	video_get_mouse_coordinates(&mouse_x, &mouse_y);
+
+	const unsigned int mouseline_x = (mouse_x / 8);
+	const unsigned int mouseline_v = (mouse_x % 8);
 	unsigned char cv8backing[NATIVE_SCREEN_WIDTH];
 	unsigned int mouseline[80];
 	unsigned int mouseline_mask[80];
 	int y, x;
 
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y += 2) {
-		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask);
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask, mouse_y);
 		vgamem_scan8(y, cv8backing, tpal, mouseline, mouseline_mask);
 		for (x = 0; x < pitch; x += 2)
 			*pixels++ = cv8backing[x+1] | (cv8backing[x] << 4);
 	}
 }
 
-static inline void blit11(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
+void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
 {
-	const unsigned int mouseline_x = (video.mouse.x / 8);
-	const unsigned int mouseline_v = (video.mouse.x % 8);
-	unsigned int y;
+	uint32_t cv32backing[NATIVE_SCREEN_WIDTH];
+
+	unsigned int mouse_x, mouse_y;
+	video_get_mouse_coordinates(&mouse_x, &mouse_y);
+
+	const unsigned int mouseline_x = (mouse_x / 8);
+	const unsigned int mouseline_v = (mouse_x % 8);
+	unsigned int y, x, a;
 	uint32_t mouseline[80];
 	uint32_t mouseline_mask[80];
 
+	/* wtf */
+	if (bpp == 3) {
+		int pitch24 = pitch - (NATIVE_SCREEN_WIDTH * 3);
+		if (pitch24 < 0)
+			return; /* eh? */
+
+		pitch = pitch24;
+	}
+
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask);
-		switch (video.bpp) {
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask, mouse_y);
+		switch (bpp) {
 		case 1:
 			vgamem_scan8(y, (uint8_t *)pixels, tpal, mouseline, mouseline_mask);
 			break;
 		case 2:
 			vgamem_scan16(y, (uint16_t *)pixels, tpal, mouseline, mouseline_mask);
+			break;
+		case 3:
+			vgamem_scan32(y, (uint32_t *)cv32backing, tpal, mouseline, mouseline_mask);
+			for (x = 0, a = 0; x < pitch && a < NATIVE_SCREEN_WIDTH; x += 3, a += 4) {
+#if WORDS_BIGENDIAN
+				memcpy(pixels + x, cv32backing + a + 1, 3);
+#else
+				memcpy(pixels + x, cv32backing + a, 3);
+#endif
+			}
 			break;
 		case 4:
 			vgamem_scan32(y, (uint32_t *)pixels, tpal, mouseline, mouseline_mask);
@@ -794,52 +564,191 @@ static inline void blit11(unsigned char *pixels, unsigned int pitch, unsigned in
 	}
 }
 
+// ----------------------------------------------------------------------------------
+
+int video_is_fullscreen(void)
+{
+	return backend->is_fullscreen();
+}
+
+int video_width(void)
+{
+	return backend->width();
+}
+
+int video_height(void)
+{
+	return backend->height();
+}
+
+const char *video_driver_name(void)
+{
+	return backend->driver_name();
+}
+
+void video_report(void)
+{
+	log_append(2, 0, "Video initialised");
+	log_underline(17);
+
+	backend->report();
+
+	log_nl();
+}
+
+void video_set_hardware(int hardware)
+{
+	backend->set_hardware(hardware);
+}
+
+void video_shutdown(void)
+{
+	if (backend) {
+		backend->shutdown();
+		backend->quit();
+		backend = NULL;
+	}
+}
+
+void video_setup(const char *quality)
+{
+	backend->setup(quality);
+}
+
+int video_startup(void)
+{
+	static const schism_video_backend_t *backends[] = {
+		// ordered by preference
+#ifdef SCHISM_SDL2
+		&schism_video_backend_sdl2,
+#endif
+#ifdef SCHISM_SDL12
+		&schism_video_backend_sdl12,
+#endif
+		NULL,
+	};
+
+	int i;
+
+	for (i = 0; backends[i]; i++) {
+		backend = backends[i];
+		if (backend->init())
+			break;
+
+		backend = NULL;
+	}
+
+	if (!backend)
+		return -1;
+
+	// ok, now we can call the backend
+	backend->startup();
+
+	return 0;
+}
+
+void video_fullscreen(int new_fs_flag)
+{
+	backend->fullscreen(new_fs_flag);
+}
+
+void video_resize(unsigned int width, unsigned int height)
+{
+	backend->resize(width, height);
+}
+
+void video_colors(unsigned char palette[16][3])
+{
+	backend->colors(palette);
+}
+
+int video_is_focused(void)
+{
+	return backend->is_focused();
+}
+
+int video_is_visible(void)
+{
+	return backend->is_visible();
+}
+
+int video_is_wm_available(void)
+{
+	return backend->is_wm_available();
+}
+
+int video_is_hardware(void)
+{
+	return backend->is_hardware();
+}
+
+/* -------------------------------------------------------- */
+
+int video_is_screensaver_enabled(void)
+{
+	return backend->is_screensaver_enabled();
+}
+
+void video_toggle_screensaver(int enabled)
+{
+	backend->toggle_screensaver(enabled);
+}
+
+/* ---------------------------------------------------------- */
+/* coordinate translation */
+
+void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
+{
+	backend->translate(vx, vy, x, y);
+}
+
+void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
+{
+	backend->get_logical_coordinates(x, y, trans_x, trans_y);
+}
+
+/* -------------------------------------------------- */
+/* input grab */
+
+int video_is_input_grabbed(void)
+{
+	return backend->is_input_grabbed();
+}
+
+void video_set_input_grabbed(int enabled)
+{
+	backend->set_input_grabbed(enabled);
+}
+
+/* -------------------------------------------------- */
+/* warp mouse position */
+
+void video_warp_mouse(unsigned int x, unsigned int y)
+{
+	backend->warp_mouse(x, y);
+}
+
+void video_get_mouse_coordinates(unsigned int *x, unsigned int *y)
+{
+	backend->get_mouse_coordinates(x, y);
+}
+
+/* -------------------------------------------------- */
+/* menu toggling */
+
+int video_have_menu(void)
+{
+	return backend->have_menu();
+}
+
+void video_toggle_menu(int on)
+{
+	backend->toggle_menu(on);
+}
+
 /* ------------------------------------------------------------ */
 
 void video_blit(void)
 {
-	SDL_Rect dstrect;
-
-	if (cfg_video_want_fixed) {
-		dstrect = (SDL_Rect){
-			.x = 0,
-			.y = 0,
-			.w = cfg_video_want_fixed_width,
-			.h = cfg_video_want_fixed_height,
-		};
-	}
-
-	SDL_RenderClear(video.renderer);
-
-	// regular format blitter
-	unsigned char *pixels;
-	int pitch;
-
-	SDL_LockTexture(video.texture, NULL, (void **)&pixels, &pitch);
-
-	switch (video.format) {
-	case SDL_PIXELFORMAT_IYUV: {
-		blitUV(pixels, pitch, video.yuv.pal_y);
-		pixels += (NATIVE_SCREEN_HEIGHT * pitch);
-		blitTV(pixels, pitch, video.yuv.pal_u);
-		pixels += (NATIVE_SCREEN_HEIGHT * pitch) / 4;
-		blitTV(pixels, pitch, video.yuv.pal_v);
-		break;
-	}
-	case SDL_PIXELFORMAT_YV12: {
-		blitUV(pixels, pitch, video.yuv.pal_y);
-		pixels += (NATIVE_SCREEN_HEIGHT * pitch);
-		blitTV(pixels, pitch, video.yuv.pal_v);
-		pixels += (NATIVE_SCREEN_HEIGHT * pitch) / 4;
-		blitTV(pixels, pitch, video.yuv.pal_u);
-		break;
-	}
-	default: {
-		blit11(pixels, pitch, video.pal);
-		break;
-	}
-	}
-	SDL_UnlockTexture(video.texture);
-	SDL_RenderCopy(video.renderer, video.texture, NULL, (cfg_video_want_fixed) ? &dstrect : NULL);
-	SDL_RenderPresent(video.renderer);
+	backend->blit();
 }

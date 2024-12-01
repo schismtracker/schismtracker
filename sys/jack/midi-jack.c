@@ -27,6 +27,7 @@
 #include "midi.h"
 
 #include "util.h"
+#include "timer.h"
 
 #include <jack/jack.h>
 #include <jack/midiport.h>
@@ -71,11 +72,13 @@ static int load_jack_syms(void);
 
 #ifdef JACK_DYNAMIC_LOAD
 
+#include "loadso.h"
+
 void *jack_dltrick_handle_ = NULL;
 
 static void jack_dlend(void) {
 	if (jack_dltrick_handle_) {
-		SDL_UnloadObject(jack_dltrick_handle_);
+		loadso_object_unload(jack_dltrick_handle_);
 		jack_dltrick_handle_ = NULL;
 	}
 }
@@ -84,7 +87,8 @@ static int jack_dlinit(void) {
 	if (jack_dltrick_handle_)
 		return 0;
 
-	jack_dltrick_handle_ = SDL_LoadObject("libjack.so.0");
+	// libjack.so.0
+	jack_dltrick_handle_ = library_load("jack", 0, 0);
 	if (!jack_dltrick_handle_)
 		return -1;
 
@@ -95,18 +99,21 @@ static int jack_dlinit(void) {
 	return retval;
 }
 
-static int load_jack_sym(const char *fn, void **addr) {
-	*addr = SDL_LoadFunction(jack_dltrick_handle_, fn);
-	if (!*addr)
+// FIXME this is repeated in many places
+SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
+
+static int load_jack_sym(const char *fn, void *addr) {
+	void *func = loadso_function_load(jack_dltrick_handle_, fn);
+	if (!func)
 		return 0;
+
+	memcpy(addr, &func, sizeof(void *));
 
 	return 1;
 }
 
-/* cast funcs to char* first, to please GCC's strict aliasing rules. */
 #define SCHISM_JACK_SYM(x) \
-	if (!load_jack_sym(#x, (void **)(char *)&JACK_##x)) \
-	return -1
+	if (!load_jack_sym(#x, &JACK_##x)) return -1
 
 #else
 
@@ -275,7 +282,7 @@ static int _jack_thread(struct midi_provider *p)
 			}
 		}
 
-		msleep(1);
+		timer_msleep(1);
 	}
 
 	return 0;

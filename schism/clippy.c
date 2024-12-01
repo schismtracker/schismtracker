@@ -22,15 +22,18 @@
  */
 
 #include "headers.h" /* always include this one first, kthx */
+#include "backend/clippy.h"
 
 #include "charset.h"
 #include "clippy.h"
-#include "event.h"
+#include "events.h"
 
 #include "util.h"
 
-#include "sdlmain.h"
 #include "video.h"
+
+// system backend
+static const schism_clippy_backend_t *backend = NULL;
 
 static char* _current_selection = NULL;
 static char* _current_clipboard = NULL;
@@ -88,13 +91,13 @@ static void _clippy_copy_to_sys(int cb)
 
 	switch (cb) {
 		case CLIPPY_SELECT:
-#if SDL_VERSION_ATLEAST(2, 26, 0)
-			SDL_SetPrimarySelectionText(out_utf8);
-#endif
+			if (backend)
+				backend->set_selection(out_utf8);
 			break;
 		default:
 		case CLIPPY_BUFFER:
-			SDL_SetClipboardText(out_utf8);
+			if (backend)
+				backend->set_clipboard(out_utf8);
 			break;
 	}
 
@@ -103,48 +106,41 @@ static void _clippy_copy_to_sys(int cb)
 
 static void _string_paste(UNUSED int cb, const char *cbptr)
 {
-	SDL_Event event = {0};
-
-	event.user.type = SCHISM_EVENT_PASTE;
-	event.user.data1 = str_dup(cbptr); /* current_clipboard... is it safe? */
-	if (!event.user.data1) return; /* eh... */
-	if (SDL_PushEvent(&event) == -1) {
-		free(event.user.data1);
-		event.user.data1 = NULL;
-	}
+	schism_event_t event = {0};
+	event.type = SCHISM_EVENT_PASTE;
+	event.clipboard.clipboard = str_dup(cbptr);
+	events_push_event(&event);
 }
 
 static char *_internal_clippy_paste(int cb)
 {
 	switch (cb) {
 		case CLIPPY_SELECT:
-#if SDL_VERSION_ATLEAST(2, 26, 0)
 			/* is this even remotely useful? */
-			if (SDL_HasPrimarySelectionText()) {
+			if (backend && backend->have_selection()) {
 				_free_current_selection();
 
-				char* sel = SDL_GetPrimarySelectionText();
+				char* sel = backend->get_selection();
 
 				if (charset_iconv(sel, &_current_selection, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
 					_current_selection = str_dup(sel);
 
-				SDL_free(sel);
+				free(sel);
 
 				return _current_selection;
 			}
-#endif
 
 			return _current_selection;
 		case CLIPPY_BUFFER:
-			if (SDL_HasClipboardText()) {
+			if (backend && backend->have_clipboard()) {
 				_free_current_clipboard();
 
-				char *cb = SDL_GetClipboardText();
+				char *cb = backend->get_clipboard();
 
 				if (charset_iconv(cb, &_current_clipboard, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
 					_current_clipboard = str_dup(cb);
 
-				SDL_free(cb);
+				free(cb);
 
 				return _current_clipboard;
 			}
@@ -191,5 +187,39 @@ void clippy_yank(void)
 		_widget_owner[CLIPPY_BUFFER] = _widget_owner[CLIPPY_SELECT];
 		_clippy_copy_to_sys(CLIPPY_BUFFER);
 		status_text_flash("Copied to selection buffer");
+	}
+}
+
+int clippy_init(void)
+{
+	static const schism_clippy_backend_t *backends[] = {
+		// ordered by preference
+#ifdef SCHISM_SDL2
+		&schism_clippy_backend_sdl2,
+#endif
+		NULL,
+	};
+
+	int i;
+
+	for (i = 0; backends[i]; i++) {
+		backend = backends[i];
+		if (backend->init())
+			break;
+
+		backend = NULL;
+	}
+
+	if (!backend)
+		return 0;
+
+	return 1;
+}
+
+void clippy_quit(void)
+{
+	if (backend) {
+		backend->quit();
+		backend = NULL;
 	}
 }

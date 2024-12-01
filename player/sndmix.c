@@ -881,7 +881,6 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
 		vu_max[1] = vu_min[1];
 
 	global_vu_left = (unsigned int)(vu_max[0] - vu_min[0]);
-
 	global_vu_right = (unsigned int)(vu_max[1] - vu_min[1]);
 
 	if (mix_stat) {

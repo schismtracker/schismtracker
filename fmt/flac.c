@@ -646,51 +646,27 @@ static int load_flac_syms(void);
 
 #ifdef FLAC_DYNAMIC_LOAD
 
+#include "loadso.h"
+
 void *flac_dltrick_handle_ = NULL;
 
-#ifdef SCHISM_WIN32
-# define LIBFLAC_FMT "libFLAC-%d.dll"
-#elif defined(SCHISM_MACOSX)
-# define LIBFLAC_FMT "libFLAC.%d.dylib"
-#else
-# define LIBFLAC_FMT "libFLAC.so.%d"
-#endif
-
-static int try_load_libflac(int revision)
+static void flac_dlend(void)
 {
-	char *buf;
-
-	if (asprintf(&buf, LIBFLAC_FMT, revision) < 0)
-		return -1;
-
-	flac_dltrick_handle_ = SDL_LoadObject(buf);
-
-	free(buf);
-
-	return (flac_dltrick_handle_) ? 0 : -1;
-}
-
-#undef LIBFLAC_FMT
-
-static void flac_dlend(void) {
 	if (flac_dltrick_handle_) {
-		SDL_UnloadObject(flac_dltrick_handle_);
+		loadso_object_unload(flac_dltrick_handle_);
 		flac_dltrick_handle_ = NULL;
 	}
 }
 
-static int flac_dlinit(void) {
+static int flac_dlinit(void)
+{
 	int i;
 
 	// already have it?
 	if (flac_dltrick_handle_)
 		return 0;
 
-	// :p
-	for (i = 0; i <= FLAC_API_VERSION_AGE; i++)
-		if (try_load_libflac(FLAC_API_VERSION_CURRENT - i) >= 0)
-			break;
-
+	flac_dltrick_handle_ = library_load("FLAC", FLAC_API_VERSION_CURRENT, FLAC_API_VERSION_AGE);
 	if (!flac_dltrick_handle_)
 		return -1;
 
@@ -701,31 +677,37 @@ static int flac_dlinit(void) {
 	return retval;
 }
 
-static int load_flac_sym(const char *fn, void **addr) {
-	*addr = SDL_LoadFunction(flac_dltrick_handle_, fn);
-	if (!*addr)
+// this is always true under SDL but I'm paranoid
+SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
+
+static int load_flac_sym(const char *fn, void *addr)
+{
+	void *func = loadso_function_load(flac_dltrick_handle_, fn);
+	if (!func)
 		return 0;
+
+	memcpy(addr, &func, sizeof(void *));
 
 	return 1;
 }
 
-/* cast funcs to char* first, to please GCC's strict aliasing rules. */
 #define SCHISM_FLAC_SYM(x) \
-	if (!load_flac_sym("FLAC__" #x, (void **)(char *)&schism_FLAC_##x)) \
-	return -1
+	if (!load_flac_sym("FLAC__" #x, &schism_FLAC_##x)) return -1
 
 #else
 
 #define SCHISM_FLAC_SYM(x) schism_FLAC_##x = FLAC__##x
 
-static int flac_dlinit(void) {
+static int flac_dlinit(void)
+{
 	load_flac_syms();
 	return 0;
 }
 
 #endif
 
-static int load_flac_syms(void) {
+static int load_flac_syms(void)
+{
 	SCHISM_FLAC_SYM(stream_decoder_new);
 	SCHISM_FLAC_SYM(stream_decoder_set_metadata_respond_all);
 	SCHISM_FLAC_SYM(stream_decoder_init_stream);

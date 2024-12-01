@@ -20,27 +20,28 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef SCHISM_EVENT_H_
-#define SCHISM_EVENT_H_
 
-#include <SDL.h>
+#ifndef SCHISM_BACKEND_EVENTS_H_
+#define SCHISM_BACKEND_EVENTS_H_
 
-#define SCHISM_EVENT_UPDATE_IPMIDI      (SDL_USEREVENT+0)
-#define SCHISM_EVENT_MIDI               (SDL_USEREVENT+1)
-#define SCHISM_EVENT_PLAYBACK           (SDL_USEREVENT+2)
-#define SCHISM_EVENT_NATIVE             (SDL_USEREVENT+3)
-#define SCHISM_EVENT_PASTE              (SDL_USEREVENT+4)
+#include "../events.h"
+#include "../keyboard.h"
 
-#define SCHISM_EVENT_MIDI_NOTE          1
-#define SCHISM_EVENT_MIDI_CONTROLLER    2
-#define SCHISM_EVENT_MIDI_PROGRAM       3
-#define SCHISM_EVENT_MIDI_AFTERTOUCH    4
-#define SCHISM_EVENT_MIDI_PITCHBEND     5
-#define SCHISM_EVENT_MIDI_TICK          6
-#define SCHISM_EVENT_MIDI_SYSEX         7
-#define SCHISM_EVENT_MIDI_SYSTEM        8
+typedef struct {
+	// returns 1 if succeeded, 0 if failed
+	int (*init)(void);
+	void (*quit)(void);
 
-#define SCHISM_EVENT_NATIVE_OPEN        1
-#define SCHISM_EVENT_NATIVE_SCRIPT      16
+	void (*pump_events)(void);
+	schism_keymod_t (*keymod_state)(void);
+} schism_events_backend_t;
 
-#endif /* SCHISM_EVENT_H_ */
+#ifdef SCHISM_SDL12
+extern const schism_events_backend_t schism_events_backend_sdl12;
+#endif
+
+#ifdef SCHISM_SDL2
+extern const schism_events_backend_t schism_events_backend_sdl2;
+#endif
+
+#endif /* SCHISM_BACKEND_EVENTS_H_ */

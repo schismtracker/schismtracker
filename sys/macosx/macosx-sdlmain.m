@@ -39,20 +39,11 @@ pruned up some here :) -mrsb
 
 extern char *initial_song;
 
-#include <SDL.h> /* necessary here */
-#include "event.h"
+#include "events.h"
 #include "osdefs.h"
+#include "mem.h"
 
 #include <crt_externs.h>
-
-/* Old versions of SDL define "vector" as a GCC
- * builtin; this causes importing Cocoa to fail,
- * as one struct Cocoa needs is named "vector".
- *
- * This only happens on PowerPC. */
-#ifdef vector
-#undef vector
-#endif
 
 #import <Cocoa/Cocoa.h>
 
@@ -77,6 +68,8 @@ extern OSErr CPSSetFrontProcess(CPSProcessSerNum *psn);
 
 static int macosx_did_finderlaunch;
 
+int schism_main(int argc, char** argv); // main.c
+
 #define KEQ_FN(n) [NSString stringWithFormat:@"%C", (unichar)(NSF##n##FunctionKey)]
 
 @interface NSApplication(OtherMacOSXExtensions)
@@ -90,15 +83,15 @@ static int macosx_did_finderlaunch;
 /* Invoked from the Quit menu item */
 - (void)terminate:(id)sender
 {
-	/* Post a SDL_QUIT event */
-	SDL_Event event;
-	event.type = SDL_QUIT;
-	SDL_PushEvent(&event);
+	/* Post a QUIT event */
+	schism_event_t event;
+	event.type = SCHISM_QUIT;
+	events_push_event(&event);
 }
 
 - (void)_menu_callback:(id)sender
 {
-	SDL_Event e;
+	schism_event_t e;
 	NSString *px;
 	const char *po;
 
@@ -113,10 +106,9 @@ static int macosx_did_finderlaunch;
 	px = [sender representedObject];
 	po = [px UTF8String];
 	if (po) {
-		e.type = SCHISM_EVENT_NATIVE;
-		e.user.code = SCHISM_EVENT_NATIVE_SCRIPT;
-		e.user.data1 = strdup(po);
-		SDL_PushEvent(&e);
+		e.type = SCHISM_EVENT_NATIVE_SCRIPT;
+		e.script.which = str_dup(po);
+		events_push_event(&e);
 	}
 }
 
@@ -127,20 +119,19 @@ static int macosx_did_finderlaunch;
 
 - (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)filename
 {
-	SDL_Event e;
+	schism_event_t e;
 	const char *po;
 
 	if (!filename) return NO;
 
 	po = [filename UTF8String];
 	if (po) {
-		e.type = SCHISM_EVENT_NATIVE;
-		e.user.code = SCHISM_EVENT_NATIVE_OPEN;
-		e.user.data1 = strdup(po);
+		e.type = SCHISM_EVENT_NATIVE_OPEN;
+		e.open.file = str_dup(po);
 		/* if we started as a result of a doubleclick on
 		 * a document, then Main still hasn't really started yet. */
-		initial_song = strdup(po);
-		SDL_PushEvent(&e);
+		initial_song = str_dup(po);
+		events_push_event(&e);
 		return YES;
 	} else {
 		return NO;
@@ -176,7 +167,7 @@ static int macosx_did_finderlaunch;
 
 	/* If we launched from the Finder we have extra arguments that we
 	 * don't care about that will trip up the regular main function. */
-	exit(SDL_main(macosx_did_finderlaunch ? 1 : *_NSGetArgc(), *_NSGetArgv()));
+	exit(schism_main(macosx_did_finderlaunch ? 1 : *_NSGetArgc(), *_NSGetArgv()));
 }
 
 @end /* @implementation SchismTracker */

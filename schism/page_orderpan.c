@@ -28,8 +28,7 @@
 #include "page.h"
 #include "widget.h"
 #include "vgamem.h"
-
-#include "sdlmain.h"
+#include "keyboard.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -435,9 +434,9 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 	}
 
 	switch (k->sym) {
-	case SDLK_BACKSPACE:
+	case SCHISM_KEYSYM_BACKSPACE:
 		if (status.flags & CLASSIC_MODE) return 0;
-		if (!(k->mod & KMOD_ALT)) return 0;
+		if (!(k->mod & SCHISM_KEYMOD_ALT)) return 0;
 		if (k->state == KEY_PRESS)
 			return 1;
 		if (!_did_save_orderlist) return 1;
@@ -445,10 +444,10 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		orderlist_restore();
 		return 1;
 
-	case SDLK_RETURN:
-	case SDLK_KP_ENTER:
+	case SCHISM_KEYSYM_RETURN:
+	case SCHISM_KEYSYM_KP_ENTER:
 		if (status.flags & CLASSIC_MODE) return 0;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_PRESS)
 				return 1;
 			status_text_flash("Saved orderlist");
@@ -457,7 +456,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		}
 		// else fall through
 
-	case SDLK_g:
+	case SCHISM_KEYSYM_g:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_PRESS)
@@ -471,8 +470,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		}
 		return 1;
 
-	case SDLK_TAB:
-		if (k->mod & KMOD_SHIFT) {
+	case SCHISM_KEYSYM_TAB:
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
 			widget_change_focus_to(33);
@@ -483,28 +482,28 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			widget_change_focus_to(1);
 		}
 		return 1;
-	case SDLK_LEFT:
+	case SCHISM_KEYSYM_LEFT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_pos--;
 		break;
-	case SDLK_RIGHT:
+	case SCHISM_KEYSYM_RIGHT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_pos++;
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_order = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -513,8 +512,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		if (current_song->orderlist[new_order] != ORDER_LAST)
 			new_order++;
 		break;
-	case SDLK_UP:
-		if (k->mod & KMOD_CTRL) {
+	case SCHISM_KEYSYM_UP:
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (status.flags & CLASSIC_MODE) return 0;
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -528,8 +527,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			return 1;
 		new_order--;
 		break;
-	case SDLK_DOWN:
-		if (k->mod & KMOD_CTRL) {
+	case SCHISM_KEYSYM_DOWN:
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (status.flags & CLASSIC_MODE) return 0;
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -543,45 +542,45 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			return 1;
 		new_order++;
 		break;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_order -= 16;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_order += 16;
 		break;
-	case SDLK_INSERT:
+	case SCHISM_KEYSYM_INSERT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		orderlist_insert_pos();
 		return 1;
-	case SDLK_DELETE:
+	case SCHISM_KEYSYM_DELETE:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		orderlist_delete_pos();
 		return 1;
-	case SDLK_F7:
-		if (!(k->mod & KMOD_CTRL)) return 0;
+	case SCHISM_KEYSYM_F7:
+		if (!(k->mod & SCHISM_KEYMOD_CTRL)) return 0;
 		/* fall through */
-	case SDLK_SPACE:
+	case SCHISM_KEYSYM_SPACE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_set_next_order(current_order);
 		status_text_flash("Playing order %d next", current_order);
 		return 1;
-	case SDLK_F6:
-		if (k->mod & KMOD_SHIFT) {
+	case SCHISM_KEYSYM_F6:
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
 			song_start_at_order(current_order, 0);
@@ -589,8 +588,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		}
 		return 0;
 
-	case SDLK_n:
-		if (k->mod & KMOD_SHIFT) {
+	case SCHISM_KEYSYM_n:
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (k->state == KEY_PRESS)
 				return 1;
 			orderlist_cheater();
@@ -602,7 +601,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			return 1;
 		orderlist_insert_next();
 		return 1;
-	case SDLK_c:
+	case SCHISM_KEYSYM_c:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (status.flags & CLASSIC_MODE) return 0;
@@ -629,16 +628,16 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		}
 		break;
 
-	case SDLK_r:
-		if (k->mod & KMOD_ALT) {
+	case SCHISM_KEYSYM_r:
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_PRESS)
 				return 1;
 			orderlist_reorder();
 			return 1;
 		}
 		return 0;
-	case SDLK_u:
-		if (k->mod & KMOD_ALT) {
+	case SCHISM_KEYSYM_u:
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
 			orderlist_add_unused_patterns();
@@ -646,31 +645,31 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		}
 		return 0;
 
-	case SDLK_b:
-		if (k->mod & KMOD_SHIFT)
+	case SCHISM_KEYSYM_b:
+		if (k->mod & SCHISM_KEYMOD_SHIFT)
 			return 0;
 		/* fall through */
-	case SDLK_o:
-		if (!(k->mod & KMOD_CTRL))
+	case SCHISM_KEYSYM_o:
+		if (!(k->mod & SCHISM_KEYMOD_CTRL))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_pattern_to_sample(current_song->orderlist[current_order],
-				!!(k->mod & KMOD_SHIFT), !!(k->sym == SDLK_b));
+				!!(k->mod & SCHISM_KEYMOD_SHIFT), !!(k->sym == SCHISM_KEYSYM_b));
 		return 1;
 
-	case SDLK_LESS:
-	case SDLK_SEMICOLON:
-	case SDLK_COLON:
+	case SCHISM_KEYSYM_LESS:
+	case SCHISM_KEYSYM_SEMICOLON:
+	case SCHISM_KEYSYM_COLON:
 		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		sample_set(sample_get_current()-1);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_GREATER:
-	case SDLK_QUOTE:
-	case SDLK_QUOTEDBL:
+	case SCHISM_KEYSYM_GREATER:
+	case SCHISM_KEYSYM_QUOTE:
+	case SCHISM_KEYSYM_QUOTEDBL:
 		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -679,7 +678,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		return 1;
 	default:
 		if (k->mouse == MOUSE_NONE) {
-			if (!(k->mod & (KMOD_CTRL | KMOD_ALT)) && k->text)
+			if (!(k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT)) && k->text)
 				return orderlist_handle_text_input_on_list(k->text);
 
 			return 0;
@@ -846,10 +845,10 @@ static void order_pan_vol_handle_key(struct key_event * k)
 		return;
 
 	switch (k->sym) {
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		n += 8;
 		break;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		n -= 8;
 		break;
 	default:
@@ -870,7 +869,7 @@ static int order_pre_key(struct key_event *k)
 			= ACTIVE_PAGE.selected_widget;
 	}
 
-	if (k->sym == SDLK_F7) {
+	if (k->sym == SCHISM_KEYSYM_F7) {
 		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;

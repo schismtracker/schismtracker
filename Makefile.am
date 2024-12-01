@@ -71,7 +71,6 @@ sysfiles = \
 	sys/macosx/Schism_Tracker.app/Contents/Resources/appIcon.icns		\
 	sys/macosx/Schism_Tracker.app/Contents/Resources/AppSettings.plist	\
 	sys/macosx/Schism_Tracker.app/Contents/Resources/moduleIcon.icns	\
-	sys/sdl/README \
 	sys/wii/schismtracker/icon.png	\
 	sys/wii/schismtracker/meta.xml	\
 	sys/win32/schism.nsis
@@ -110,7 +109,7 @@ noinst_HEADERS = \
 	include/disko.h			\
 	include/dialog.h        \
 	include/dmoz.h			\
-	include/event.h			\
+	include/events.h		\
 	include/fakemem.h       \
 	include/fonts.h         \
 	include/fmt-types.h		\
@@ -120,6 +119,7 @@ noinst_HEADERS = \
 	include/it.h			\
 	include/keyboard.h      \
 	include/log.h			\
+	include/loadso.h        \
 	include/midi.h			\
 	include/mem.h           \
 	include/osdefs.h		\
@@ -127,10 +127,11 @@ noinst_HEADERS = \
 	include/palettes.h          \
 	include/pattern-view.h		\
 	include/sample-edit.h		\
-	include/sdlmain.h		\
 	include/slurp.h			\
 	include/song.h			\
 	include/str.h           \
+	include/threads.h       \
+	include/timer.h         \
 	include/tree.h			\
 	include/util.h			\
 	include/version.h		\
@@ -144,10 +145,19 @@ noinst_HEADERS = \
 	include/player/snd_gm.h		\
 	include/player/sndfile.h		\
 	include/player/tables.h		\
+	include/backend/audio.h     \
+	include/backend/clippy.h     \
+	include/backend/dmoz.h       \
+	include/backend/events.h     \
+	include/backend/threads.h     \
+	include/backend/timer.h     \
+	include/backend/video.h     \
 	sys/wii/certs_bin.h		\
 	sys/wii/isfs.h			\
 	sys/wii/su_tik_bin.h		\
-	sys/wii/su_tmd_bin.h
+	sys/wii/su_tmd_bin.h        \
+	sys/sdl12/init.h \
+	sys/sdl2/init.h
 
 dist_man_MANS = sys/posix/schismtracker.1
 
@@ -173,6 +183,41 @@ if HAVE_PERL
 	$(PERL) $(srcdir)/scripts/genhelp.pl $(srcdir) $(helptexts) >$@
 else
 	@echo "*** perl is required to regenerate $(@) ***"; exit 1;
+endif
+
+if USE_SDL2
+# hax: we want to use specific CFLAGS...
+sys/sdl2/schismtracker-audio.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
+sys/sdl2/schismtracker-dmoz.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
+sys/sdl2/schismtracker-clippy.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
+sys/sdl2/schismtracker-events.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
+sys/sdl2/schismtracker-init.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
+sys/sdl2/schismtracker-timer.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
+sys/sdl2/schismtracker-video.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
+sys/sdl2/schismtracker-threads.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
+
+files_sdl2 = sys/sdl2/audio.c sys/sdl2/dmoz.c sys/sdl2/clippy.c sys/sdl2/events.c sys/sdl2/init.c sys/sdl2/timer.c sys/sdl2/video.c sys/sdl2/threads.c
+
+if LINK_TO_SDL2
+libs_sdl2 = $(SDL2_LIBS)
+endif
+
+endif
+
+if USE_SDL12
+sys/sdl12/schismtracker-audio.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
+sys/sdl12/schismtracker-events.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
+sys/sdl12/schismtracker-init.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
+sys/sdl12/schismtracker-timer.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
+sys/sdl12/schismtracker-video.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
+sys/sdl12/schismtracker-threads.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
+
+files_sdl12 = sys/sdl12/audio.c sys/sdl12/events.c sys/sdl12/init.c sys/sdl12/timer.c sys/sdl12/video.c sys/sdl12/threads.c
+
+if LINK_TO_SDL12
+libs_sdl12 = $(SDL12_LIBS)
+endif
+
 endif
 
 if USE_ALSA
@@ -203,8 +248,10 @@ lib_win32=-lwinmm
 
 if USE_MEDIAFOUNDATION
 files_mediafoundation=fmt/win32mf.c
-lib_mediafoundation=-lole32 -lmfuuid -lshlwapi -luuid
+lib_mediafoundation=-luuid
 endif
+
+cflags_win32 += -mwindows
 
 if HAVE_WINDRES
 
@@ -224,10 +271,6 @@ sys/win32/schismres.$(OBJEXT): icons/schismres.ico build-config.h Makefile.am
 endif # HAVE_WINDRES
 
 endif # USE_WIN32
-
-if USE_CONTROLLER
-files_controller=schism/controller.c
-endif
 
 if USE_WII
 files_wii=sys/wii/isfs.c sys/wii/osdefs.c
@@ -317,7 +360,12 @@ endif
 if NEED_LOCALTIME_R
 files_stdlib += sys/stdlib/localtime_r.c
 endif
-
+if NEED_SETENV
+files_stdlib += sys/stdlib/setenv.c
+endif
+if NEED_UNSETENV
+files_stdlib += sys/stdlib/unsetenv.c
+endif
 
 ## aaaaaaaaahhhhhhhhhhhhhhhhhhh!!!!!!!1
 schismtracker_SOURCES = \
@@ -385,11 +433,13 @@ schismtracker_SOURCES = \
 	schism/dialog.c			\
 	schism/disko.c			\
 	schism/dmoz.c			\
+	schism/events.c  		\
 	schism/fakemem.c		\
 	schism/fonts.c          \
 	schism/ieee-float.c     \
 	schism/itf.c			\
 	schism/keyboard.c		\
+	schism/loadso.c         \
 	schism/main.c			\
 	schism/mem.c           \
 	schism/menu.c			\
@@ -424,6 +474,8 @@ schismtracker_SOURCES = \
 	schism/slurp.c			\
 	schism/status.c			\
 	schism/str.c             \
+	schism/threads.c        \
+	schism/timer.c          \
 	schism/util.c			\
 	schism/version.c		\
 	schism/vgamem.c        \
@@ -446,20 +498,21 @@ schismtracker_SOURCES = \
 	$(files_opl)			\
 	$(files_mediafoundation) \
 	$(files_wiiu)           \
-	$(files_controller)
+	$(files_sdl2)			\
+	$(files_sdl12)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
 
-component_cflags = $(SDL_CFLAGS) $(cflags_alsa) $(cflags_oss) \
+component_cflags = $(cflags_sdl2) $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
 	$(cflags_version) $(cflags_win32) $(cflags_wii) \
 	$(cflags_macosx) $(cflags_flac) $(cflags_jack) \
-	$(cflags_wiiu) \
+	$(cflags_wiiu) $(cflags_sdl12) \
 	$(UTF8PROC_CFLAGS)
 schismtracker_CPPFLAGS = -I$(srcdir)/include -I. $(cppflags_wii) $(cppflags_wiiu)
 schismtracker_CFLAGS = $(AM_CFLAGS) $(component_cflags)
 schismtracker_OBJCFLAGS = $(AM_OBJCFLAGS) $(component_cflags)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = -lm $(libs_wii) $(libs_wiiu) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(UTF8PROC_LIBS) $(SDL_LIBS)
+schismtracker_LDADD = -lm $(libs_wii) $(libs_wiiu) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(UTF8PROC_LIBS) $(libs_sdl2) $(libs_sdl12)

@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "charset.h"
 #include "config.h"
 #include "keyboard.h"
 #include "song.h"
@@ -34,8 +35,6 @@
 #include "dialog.h"
 #include "widget.h"
 #include "vgamem.h"
-
-#include "sdlmain.h"
 
 #include "player/snd_gm.h"
 
@@ -126,14 +125,12 @@ static void video_mode_keep(UNUSED void*ign)
 }
 static void video_mode_cancel(UNUSED void*ign)
 {
-	if (video_revert_interpolation[0]) {
+	if (*video_revert_interpolation)
 		video_setup(video_revert_interpolation);
-		video_redraw_texture();
-	}
 	if (video_is_fullscreen() != video_revert_fs)
 		video_fullscreen(-1);
 	if (video_is_hardware() != video_revert_hw)
-		video_redraw_renderer(video_revert_hw);
+		video_set_hardware(video_revert_hw);
 	palette_apply();
 	font_init();
 	config_set_page();
@@ -171,7 +168,7 @@ static void video_change_dialog(void)
 {
 	struct dialog *d;
 
-	strncpy(video_revert_interpolation, SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY), 7);
+	strncpy(video_revert_interpolation, cfg_video_interpolation, 7);
 	video_revert_fs = video_is_fullscreen();
 	video_revert_hw = video_is_hardware();
 
@@ -196,6 +193,9 @@ static void change_video_settings(void)
 	const char *new_video_interpolation;
 	int new_fs_flag;
 	int hw;
+	int interp_changed;
+	int fs_changed;
+	int hw_changed;
 
 	new_video_interpolation = widgets_config[11].d.togglebutton.state ? "nearest" :
 							  widgets_config[12].d.togglebutton.state ? "linear" :
@@ -206,22 +206,21 @@ static void change_video_settings(void)
 	new_fs_flag = widgets_config[9].d.togglebutton.state;
 	hw = widgets_config[14].d.togglebutton.state;
 
-	if (!SDL_strcasecmp(new_video_interpolation, SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))
-	&& new_fs_flag == video_is_fullscreen()
-	&& hw == video_is_hardware()) {
+	interp_changed = charset_strcasecmp(new_video_interpolation, CHARSET_UTF8, cfg_video_interpolation, CHARSET_UTF8);
+	fs_changed = (new_fs_flag != video_is_fullscreen());
+	hw_changed = (hw != video_is_hardware());
+
+	if (!interp_changed && !fs_changed && !hw_changed)
 		return;
-	}
 
 	video_change_dialog();
-	if (SDL_strcasecmp(new_video_interpolation, SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))) {
+	if (charset_strcasecmp(new_video_interpolation, CHARSET_UTF8, cfg_video_interpolation, CHARSET_UTF8))
 		video_setup(new_video_interpolation);
-		video_redraw_texture();
-	}
 	if (new_fs_flag != video_is_fullscreen())
 		toggle_display_fullscreen();
 
 	if (hw != video_is_hardware())
-		video_redraw_renderer(hw);
+		video_set_hardware(hw);
 
 	palette_apply();
 	font_init();
@@ -230,7 +229,7 @@ static void change_video_settings(void)
 static void change_menu_bar_settings(void) {
 	cfg_video_want_menu_bar = widgets_config[16].d.togglebutton.state;
 
-	video_toggle_menu();
+	video_toggle_menu(video_is_fullscreen());
 }
 
 /* --------------------------------------------------------------------- */
@@ -283,10 +282,10 @@ static void config_set_page(void)
 	widgets_config[9].d.togglebutton.state = video_is_fullscreen();
 	widgets_config[10].d.togglebutton.state = !video_is_fullscreen();
 
-	const char* hint = SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY);
-	widgets_config[11].d.togglebutton.state = (!hint || *hint == '0' || SDL_strcasecmp(hint, "nearest") == 0);
-	widgets_config[12].d.togglebutton.state = (!hint || *hint == '1' || SDL_strcasecmp(hint, "linear") == 0);
-	widgets_config[13].d.togglebutton.state = (!hint || *hint == '2' || SDL_strcasecmp(hint, "best") == 0);
+	const char* hint = cfg_video_interpolation;
+	widgets_config[11].d.togglebutton.state = (!hint || *hint == '0' || charset_strcasecmp(hint, CHARSET_UTF8, "nearest", CHARSET_UTF8) == 0);
+	widgets_config[12].d.togglebutton.state = (!hint || *hint == '1' || charset_strcasecmp(hint, CHARSET_UTF8, "linear", CHARSET_UTF8) == 0);
+	widgets_config[13].d.togglebutton.state = (!hint || *hint == '2' || charset_strcasecmp(hint, CHARSET_UTF8, "best", CHARSET_UTF8) == 0);
 
 	widgets_config[14].d.togglebutton.state = video_is_hardware();
 	widgets_config[15].d.togglebutton.state = !video_is_hardware();

@@ -23,14 +23,11 @@
 
 #include "headers.h"
 #include "osdefs.h"
-#include "event.h"
 #include "song.h"
 #include "it.h" // need for kbd_get_alnum
-#include "page.h" // need for struct key_event
 #include "log.h"
 #include "dmoz.h"
 #include "util.h"
-#include "controller.h"
 
 #include <di/di.h>
 #include <fat.h>
@@ -128,7 +125,7 @@ void wii_sysinit(int *pargc, char ***pargv)
 		}
 		chdir(ptr); // Hope that worked, otherwise we're hosed
 	}
-	SDL_setenv("HOME", ptr, 1);
+	setenv("HOME", ptr, 1);
 	free(ptr);
 }
 

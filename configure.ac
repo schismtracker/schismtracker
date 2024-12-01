@@ -120,6 +120,26 @@ AC_ARG_WITH([mediafoundation],
 	[],
 	[with_mediafoundation=check])
 
+AC_ARG_WITH([sdl12],
+	[AS_HELP_STRING([--with-sdl12],[Build with SDL 1.2 backend @<:@default=check@:>@])],
+	[],
+	[with_sdl12=check])
+
+AC_ARG_WITH([sdl2],
+	[AS_HELP_STRING([--with-sdl2],[Build with SDL 2 backend @<:@default=check@:>@])],
+	[],
+	[with_sdl2=check])
+
+AC_ARG_ENABLE(sdl12-linking,
+	AS_HELP_STRING([--enable-sdl12-linking], [Link to SDL 1.2 rather than loading at runtime]),
+	SDL12_LINKING=$enableval,
+	SDL12_LINKING=no)
+
+AC_ARG_ENABLE(sdl2-linking,
+	AS_HELP_STRING([--enable-sdl2-linking], [Link to SDL 2 rather than loading at runtime]),
+	SDL2_LINKING=$enableval,
+	SDL2_LINKING=no)
+
 dnl ------------------------------------------------------------------------
 
 dnl Check for standard programs
@@ -154,11 +174,6 @@ AC_LANG([C])
 dnl check endianness
 AC_C_BIGENDIAN
 
-dnl Check for SDL libs
-AM_PATH_SDL2([2.0.0], [], [AC_MSG_ERROR([*** SDL2 couldn't be found.])])
-AC_SUBST([SDL_CFLAGS])
-AC_SUBST([SDL_LIBS])
-
 dnl Libs
 AC_CHECK_LIB([dl], [dlopen])
 
@@ -172,16 +187,18 @@ AC_SUBST([UTF8PROC_CFLAGS])
 AC_SUBST([UTF8PROC_LIBS])
 
 dnl Functions
-AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp nice unsetenv dup fnmatch mkstemp localtime_r umask execl fork nanosleep usleep)
+AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp nice setenv unsetenv dup fnmatch mkstemp localtime_r umask execl fork nanosleep usleep)
 AM_CONDITIONAL([NEED_ASPRINTF], [test "x$ac_cv_func_asprintf" = "xno"])
 AM_CONDITIONAL([NEED_VASPRINTF], [test "x$ac_cv_func_vasprintf" = "xno"])
 AM_CONDITIONAL([NEED_MEMCMP], [test "x$ac_cv_func_memcmp" = "xno"])
 AM_CONDITIONAL([NEED_STRPTIME], [test "x$ac_cv_func_strptime" = "xno"])
 AM_CONDITIONAL([NEED_MKSTEMP], [test "x$ac_cv_func_mkstemp" = "xno"])
 AM_CONDITIONAL([NEED_LOCALTIME_R], [test "x$ac_cv_func_localtime_r" = "xno"])
+AM_CONDITIONAL([NEED_SETENV], [test "x$ac_cv_func_setenv" = "xno"])
+AM_CONDITIONAL([NEED_UNSETENV], [test "x$ac_cv_func_unsetenv" = "xno"])
 
 dnl Headers, typedef crap, et al.
-AC_CHECK_HEADERS(sys/time.h dirent.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/socket.h sys/soundcard.h poll.h sys/poll.h)
+AC_CHECK_HEADERS(sys/time.h dirent.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/socket.h sys/soundcard.h poll.h sys/poll.h linux/fb.h)
 
 AM_CONDITIONAL([USE_OSS], [false])
 if test "x$ac_cv_header_sys_soundcard_h" = "xyes"; then
@@ -242,11 +259,11 @@ case "${host_os}" in
 		WIN32_LIBS="-lwinmm"
 
 		AC_CHECK_HEADERS([winsock.h winsock2.h])
-		if test "x$ac_cv_header_winsock2_h" = "xyes"; then
-			AC_SUBST([NETWORK_LIBS], [-lws2_32])
+		if test "x$ac_cv_header_winsock_h" = "xyes"; then
+			AC_SUBST([NETWORK_LIBS], [-lwsock32])
 			use_network=yes
-		elif test "x$ac_cv_header_winsock_h" = "xyes"; then
-			AC_SUBST([NETWORK_LIBS], [-lsock32])
+		elif test "x$ac_cv_header_winsock2_h" = "xyes"; then
+			AC_SUBST([NETWORK_LIBS], [-lws2_32])
 			use_network=yes
 		else
 			AC_MSG_ERROR([*** Couldn't find winsock\! (how\?)])
@@ -431,6 +448,46 @@ if test "x$with_mediafoundation" = "xcheck" || test "x$with_mediafoundation" = "
 		AC_MSG_ERROR([*** Failed to find Media Foundation with MFCreateMFByteStreamOnStream])
 	fi
 fi
+
+AM_CONDITIONAL([USE_SDL2], false)
+AM_CONDITIONAL([LINK_TO_SDL2], false)
+if test "x$with_sdl2" = "xcheck" || test "x$with_sdl2" = "xyes"; then
+	PKG_CHECK_MODULES([SDL2], [sdl2], [sdl2_found=yes], [sdl2_found=no])
+	if test "x$sdl2_found" = "xyes"; then
+		AC_SUBST([SDL2_CFLAGS])
+		AM_CONDITIONAL([USE_SDL2], true)
+		AC_DEFINE([SCHISM_SDL2], [1], [SDL 2 backend])
+		if test "x$SDL2_LINKING" = "xyes"; then
+			AC_SUBST([SDL2_LIBS])
+			AM_CONDITIONAL([LINK_TO_SDL2], true)
+		else
+			AC_DEFINE([SDL2_DYNAMIC_LOAD], [1], [Dynamically load SDL2 symbols])
+		fi
+	elif test "x$with_sdl2" = "xyes"; then
+		AC_MSG_ERROR([*** Failed to find SDL 2])
+	fi
+fi
+
+AM_CONDITIONAL([USE_SDL12], false)
+AM_CONDITIONAL([LINK_TO_SDL12], false)
+if test "x$with_sdl12" = "xcheck" || test "x$with_sdl12" = "xyes"; then
+	PKG_CHECK_MODULES([SDL12], [sdl >= 1.2.10], [sdl12_found=yes], [sdl12_found=no])
+	if test "x$sdl12_found" = "xyes"; then
+		AC_SUBST([SDL12_CFLAGS])
+		AM_CONDITIONAL([USE_SDL12], true)
+		AC_DEFINE([SCHISM_SDL12], [1], [SDL 1.2 backend])
+		if test "x$SDL12_LINKING" = "xyes"; then
+			AC_SUBST([SDL12_LIBS])
+			AM_CONDITIONAL([LINK_TO_SDL12], true)
+		else
+			AC_DEFINE([SDL12_DYNAMIC_LOAD], [1], [Dynamically load SDL 1.2 symbols])
+		fi
+	elif test "x$with_sdl12" = "xyes"; then
+		AC_MSG_ERROR([*** Failed to find SDL 1.2])
+	fi
+fi
+
+dnl --------------------------------------------------------------------------
 
 if test "x$USE_OPL2" = "xyes"; then
 	AC_DEFINE([OPLSOURCE], [2], [Which OPL chip to emulate])

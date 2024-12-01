@@ -120,6 +120,8 @@ static int load_alsa_syms(void);
 
 #ifdef ALSA_DYNAMIC_LOAD
 
+#include "loadso.h"
+
 /* said inline functions call these... */
 #define snd_seq_client_info_sizeof ALSA_snd_seq_client_info_sizeof
 #define snd_seq_port_info_sizeof ALSA_snd_seq_port_info_sizeof
@@ -130,7 +132,7 @@ void *alsa_dltrick_handle_;
 
 static void alsa_dlend(void) {
 	if (alsa_dltrick_handle_) {
-		SDL_UnloadObject(alsa_dltrick_handle_);
+		loadso_object_unload(alsa_dltrick_handle_);
 		alsa_dltrick_handle_ = NULL;
 	}
 }
@@ -139,7 +141,8 @@ static int alsa_dlinit(void) {
 	if (alsa_dltrick_handle_)
 		return 0;
 
-	alsa_dltrick_handle_ = SDL_LoadObject("libasound.so");
+	// libasound.so.2
+	alsa_dltrick_handle_ = library_load("asound", 2, 0);
 	if (!alsa_dltrick_handle_)
 		return -1;
 
@@ -150,18 +153,20 @@ static int alsa_dlinit(void) {
 	return retval;
 }
 
-static int load_alsa_sym(const char *fn, void **addr) {
-	*addr = SDL_LoadFunction(alsa_dltrick_handle_, fn);
-	if (!*addr)
+SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
+
+static int load_alsa_sym(const char *fn, void *addr) {
+	void *func = loadso_function_load(alsa_dltrick_handle_, fn);
+	if (!func)
 		return 0;
+
+	memcpy(addr, &func, sizeof(void *));
 
 	return 1;
 }
 
-/* cast funcs to char* first, to please GCC's strict aliasing rules. */
 #define SCHISM_ALSA_SYM(x) \
-	if (!load_alsa_sym(#x, (void **)(char *)&ALSA_##x)) \
-	return -1
+	if (!load_alsa_sym(#x, &ALSA_##x)) return -1
 
 #else
 

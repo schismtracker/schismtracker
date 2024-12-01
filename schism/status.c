@@ -29,10 +29,9 @@
 #include "song.h"
 #include "page.h"
 #include "vgamem.h"
+#include "timer.h"
 
 #include "player/sndfile.h"
-
-#include "sdlmain.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -44,7 +43,7 @@ static schism_ticks_t text_timeout;
 
 static void status_text_flash_generic(const char *format, int bios, va_list ap)
 {
-	text_timeout = SCHISM_GET_TICKS() + 1000;
+	text_timeout = timer_ticks() + 1000;
 
 	if (status_text)
 		free(status_text);
@@ -156,7 +155,7 @@ static inline void draw_playing_channels(void)
 
 void status_text_redraw(void)
 {
-	schism_ticks_t now = SCHISM_GET_TICKS();
+	schism_ticks_t now = timer_ticks();
 
 	/* if there's a message set, and it's expired, clear it */
 	if (status_text && now > text_timeout) {

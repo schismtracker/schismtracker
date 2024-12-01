@@ -31,8 +31,6 @@
 #include "vgamem.h"
 #include "widget.h"
 
-#include "sdlmain.h"
-
 /* --------------------------------------------------------------------- */
 /* static variables */
 

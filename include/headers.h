@@ -25,6 +25,10 @@
 #define SCHISM_HEADERS_H_
 /* This is probably overkill, but it's consistent this way. */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE // not necessarily true but whatever
+#endif
+
 #ifdef HAVE_CONFIG_H
 # include <build-config.h>
 #endif
@@ -113,14 +117,29 @@ char *strcasestr(const char *haystack, const char *needle);
 	} while (0)
 #endif
 
-/* Prototypes for replacement functions; if the standard library
- * declaration doesn't match these, we're screwed anyway... */
-
+#ifndef HAVE_ASPRINTF
 int asprintf(char **strp, const char *fmt, ...);
+#endif
+#ifndef HAVE_VASPRINTF
 int vasprintf(char **strp, const char *fmt, va_list ap);
+#endif
+#ifndef HAVE_STRPTIME
 char *strptime(const char *buf, const char *fmt, struct tm *tm);
+#endif
+#ifndef HAVE_MKSTEMP
 int mkstemp(char *template);
+#endif
+#ifndef HAVE_LOCALTIME_R
 struct tm *localtime_r(const time_t *timep, struct tm *result);
+void localtime_r_quit(void);
+int localtime_r_init(void);
+#endif
+#ifndef HAVE_SETENV
+int setenv(const char *name, const char *value, int overwrite);
+#endif
+#ifndef HAVE_UNSETENV
+int unsetenv(const char *name);
+#endif
 
 #define INT_SHAPED_PTR(v)               ((intptr_t)(void*)(v))
 #define PTR_SHAPED_INT(i)               ((void*)(i))

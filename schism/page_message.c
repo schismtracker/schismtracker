@@ -33,6 +33,7 @@
 #include "headers.h"
 
 #include "song.h"
+#include "keyboard.h"
 #include "clippy.h"
 #include "fakemem.h"
 #include "widget.h"
@@ -478,45 +479,45 @@ static int message_handle_key_viewmode(struct key_event * k)
 	}
 
 	switch (k->sym) {
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line--;
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line++;
 		break;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line -= 35;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line += 35;
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line = str_get_num_lines(current_song->message) - 34;
 		break;
-	case SDLK_t:
+	case SCHISM_KEYSYM_t:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			message_extfont = !message_extfont;
 			break;
 		}
 		return 1;
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		if (k->state == KEY_PRESS)
 			return 0;
 		message_set_editmode();
@@ -605,67 +606,67 @@ static int message_handle_key_editmode(struct key_event * k)
 
 
 	switch (k->sym) {
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_line--;
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_line++;
 		break;
-	case SDLK_LEFT:
+	case SCHISM_KEYSYM_LEFT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_char--;
 		break;
-	case SDLK_RIGHT:
+	case SCHISM_KEYSYM_RIGHT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_char++;
 		break;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_line -= 35;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_line += 35;
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_CTRL)
+		if (k->mod & SCHISM_KEYMOD_CTRL)
 			new_cursor_line = 0;
 		else
 			new_cursor_char = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			num_lines = str_get_num_lines(current_song->message);
 			new_cursor_line = num_lines;
 		} else {
 			new_cursor_char = line_len;
 		}
 		break;
-	case SDLK_ESCAPE:
+	case SCHISM_KEYSYM_ESCAPE:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -673,7 +674,7 @@ static int message_handle_key_editmode(struct key_event * k)
 		message_set_viewmode();
 		memused_songchanged();
 		return 1;
-	case SDLK_BACKSPACE:
+	case SCHISM_KEYSYM_BACKSPACE:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -684,7 +685,7 @@ static int message_handle_key_editmode(struct key_event * k)
 			message_delete_char();
 		}
 		return 1;
-	case SDLK_DELETE:
+	case SCHISM_KEYSYM_DELETE:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -696,7 +697,7 @@ static int message_handle_key_editmode(struct key_event * k)
 			message_delete_next_char();
 
 		return 1;
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		if (NO_MODIFIER(k->mod)) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -711,23 +712,23 @@ static int message_handle_key_editmode(struct key_event * k)
 		return 0;
 	default:
 		/* keybinds... */
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (k->state == KEY_RELEASE)
 				return 1;
 
-			if (k->sym == SDLK_t) {
+			if (k->sym == SCHISM_KEYSYM_t) {
 				message_extfont = !message_extfont;
 				break;
-			} else if (k->sym == SDLK_y) {
+			} else if (k->sym == SCHISM_KEYSYM_y) {
 				clippy_select(NULL, NULL, 0);
 				message_delete_line();
 				break;
 			}
-		} else if (k->mod & KMOD_ALT) {
+		} else if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
 
-			if (k->sym == SDLK_c) {
+			if (k->sym == SCHISM_KEYSYM_c) {
 				prompt_message_clear();
 				return 1;
 			}

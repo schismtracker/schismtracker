@@ -81,16 +81,19 @@ static void eq_filter(eq_band *pbs, int *buffer, unsigned int count)
 
 void normalize_mono(song_t *csf, int *buffer, unsigned int count)
 {
-	for (unsigned int b = 0; b < count; b++) {
-		buffer[b] *= (((float)audio_settings.master.left + (float)audio_settings.master.right) / 62.0F);
-	}
+	for (unsigned int b = 0; b < count; b++)
+		buffer[b] = _muldiv(buffer[b], audio_settings.master.left + audio_settings.master.right, 62);
 }
 
 void normalize_stereo(song_t *csf, int *buffer, unsigned int count)
 {
-	for (unsigned int b = 0; b < count; b++) {
-		buffer[b] *= ((float)audio_settings.master.left / 31.0F);
-		buffer[++b] *= ((float)audio_settings.master.right / 31.0F);
+	unsigned int b = 0;
+
+	while (b < count) {
+		buffer[b] = _muldiv(buffer[b], audio_settings.master.left, 31);
+		b++;
+		buffer[b] = _muldiv(buffer[b], audio_settings.master.right, 31);
+		b++;
 	}
 }
 

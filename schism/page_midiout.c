@@ -25,6 +25,7 @@
 
 #include "it.h"
 #include "page.h"
+#include "keyboard.h"
 #include "midi.h"
 #include "song.h"
 #include "widget.h"
@@ -103,7 +104,7 @@ static void zxx_setpos(int pos)
 
 static int pre_handle_key(struct key_event *k)
 {
-	if (*selected_widget == 25 && k->sym == SDLK_UP) {
+	if (*selected_widget == 25 && k->sym == SCHISM_KEYSYM_UP) {
 		/* scroll up */
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -112,7 +113,7 @@ static int pre_handle_key(struct key_event *k)
 		zxx_setpos(zxx_top - 1);
 		return 1;
 	}
-	if (*selected_widget == 31 && k->sym == SDLK_DOWN) {
+	if (*selected_widget == 31 && k->sym == SCHISM_KEYSYM_DOWN) {
 		/* scroll down */
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -121,12 +122,12 @@ static int pre_handle_key(struct key_event *k)
 	}
 	if ((*selected_widget) >= 25) {
 		switch (k->sym) {
-		case SDLK_PAGEUP:
+		case SCHISM_KEYSYM_PAGEUP:
 			if (k->state == KEY_RELEASE)
 				return 1;
 			zxx_setpos(zxx_top - 7);
 			return 1;
-		case SDLK_PAGEDOWN:
+		case SCHISM_KEYSYM_PAGEDOWN:
 			if (k->state == KEY_RELEASE)
 				return 1;
 			zxx_setpos(zxx_top + 7);

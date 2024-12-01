@@ -21,14 +21,20 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_CONTROLLER_H_
-#define SCHISM_CONTROLLER_H_
+#ifndef SCHISM_TIMER_H_
+#define SCHISM_TIMER_H_
 
 #include "headers.h"
-#include "sdlmain.h"
 
-int controller_init(void);
-int controller_quit(void);
-int controller_sdlevent(SDL_Event *event);
+typedef uint64_t schism_ticks_t;
 
-#endif /* SCHISM_CONTROLLER_H_ */
+schism_ticks_t timer_ticks(void);
+int timer_ticks_passed(schism_ticks_t a, schism_ticks_t b);
+void timer_delay(uint32_t ms);
+void timer_usleep(uint64_t usec);
+void timer_msleep(uint64_t msec);
+
+int timer_init(void);
+void timer_quit(void);
+
+#endif /* SCHISM_TIMER_H_ */

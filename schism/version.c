@@ -23,7 +23,6 @@
 
 #include "headers.h"
 #include "it.h"
-#include "sdlmain.h"
 #include "version.h"
 
 #include <assert.h>

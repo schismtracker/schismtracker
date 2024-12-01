@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Schism Tracker - a cross-platform Impulse Tracker clone
  * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
  * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
@@ -903,8 +903,9 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 	{
 		uint16_t fat_date, fat_time;
 		struct tm loadtm;
+		time_t hax = song->editstart.tv_sec;
 
-		localtime_r(&song->editstart.tv_sec, &loadtm);
+		localtime_r(&hax, &loadtm);
 		tm_to_fat_date_time(&loadtm, &fat_date, &fat_time);
 
 		fat_date = bswapLE16(fat_date);
