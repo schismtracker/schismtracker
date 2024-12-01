@@ -248,14 +248,10 @@ lib_win32=-lwinmm
 
 if USE_MEDIAFOUNDATION
 files_mediafoundation=fmt/win32mf.c
-lib_mediafoundation=-lmfuuid -luuid
+lib_mediafoundation=-luuid
 endif
 
-if USE_WIN32_UNICODE
-cflags_win32 += -municode -mwindows -DUNICODE -D_UNICODE
-else
 cflags_win32 += -mwindows
-endif
 
 if HAVE_WINDRES
 

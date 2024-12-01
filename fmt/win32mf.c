@@ -36,6 +36,13 @@
 /* we want constant vtables */
 #define CONST_VTABLE
 
+/* include these first */
+#include <windows.h>
+#include <propsys.h>
+#include <mediaobj.h>
+
+/* define the GUIDs here; we don't use stuff outside here anyway */
+#include <initguid.h>
 #include <mfapi.h>
 #include <mfidl.h>
 #include <mfreadwrite.h>

@@ -108,7 +108,7 @@ void win32_get_modkey(schism_keymod_t *mk)
 	};
 
 	BYTE ks[256] = {0};
-	if (GetKeyboardState(ks) == 0) return;
+	if (!GetKeyboardState(ks)) return;
 
 	for (int i = 0; i < ARRAY_SIZE(conv); i++) {
 		// Clear the original value
@@ -343,79 +343,130 @@ void win32_toggle_menu(void *window, int on)
 
 /* -------------------------------------------------------------------- */
 
-int win32_wstat(const wchar_t* path, struct stat* st)
+static void win32_stat_conv(struct _stat *mst, struct stat *st)
 {
-	struct _stat mstat;
-
-	int ws = _wstat(path, &mstat);
-	if (ws < 0)
-		return ws;
-
-	/* copy all the values */
-	st->st_gid = mstat.st_gid;
-	st->st_atime = mstat.st_atime;
-	st->st_ctime = mstat.st_ctime;
-	st->st_dev = mstat.st_dev;
-	st->st_ino = mstat.st_ino;
-	st->st_mode = mstat.st_mode;
-	st->st_mtime = mstat.st_mtime;
-	st->st_nlink = mstat.st_nlink;
-	st->st_rdev = mstat.st_rdev;
-	st->st_size = mstat.st_size;
-	st->st_uid = mstat.st_uid;
-
-	return ws;
+	st->st_gid = mst->st_gid;
+	st->st_atime = mst->st_atime;
+	st->st_ctime = mst->st_ctime;
+	st->st_dev = mst->st_dev;
+	st->st_ino = mst->st_ino;
+	st->st_mode = mst->st_mode;
+	st->st_mtime = mst->st_mtime;
+	st->st_nlink = mst->st_nlink;
+	st->st_rdev = mst->st_rdev;
+	st->st_size = mst->st_size;
+	st->st_uid = mst->st_uid;
 }
 
 int win32_stat(const char* path, struct stat* st)
 {
-	wchar_t* wc = NULL;
-	if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-		return -1;
+	struct _stat mst;
 
-	int ret = win32_wstat(wc, st);
-	free(wc);
-	return ret;
+	if (GetVersion() >= 0x80000000U) {
+		// Windows 9x
+		char* ac = NULL;
+
+		if (!charset_iconv(path, &ac, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
+			int ret = _stat(ac, &mst);
+			free(ac);
+			win32_stat_conv(&mst, st);
+			return ret;
+		}
+	} else {
+		wchar_t* wc = NULL;
+
+		if (!charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+			int ret = _wstat(wc, &mst);
+			free(wc);
+			win32_stat_conv(&mst, st);
+			return ret;
+		}
+	}
+
+	return -1;
 }
 
 int win32_open(const char* path, int flags)
 {
-	wchar_t* wc = NULL;
-	if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-		return -1;
+	if (GetVersion() >= 0x80000000U) {
+		// Windows 9x
+		char* ac = NULL;
+		if (charset_iconv(path, &ac, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
+			return -1;
 
-	int ret = _wopen(wc, flags);
-	free(wc);
-	return ret;
+		int ret = _open(ac, flags);
+		free(ac);
+		return ret;
+	} else {
+		wchar_t* wc = NULL;
+		if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+			return -1;
+
+		int ret = _wopen(wc, flags);
+		free(wc);
+		return ret;
+	}
+
 }
 
 FILE* win32_fopen(const char* path, const char* flags)
 {
-	wchar_t* wc = NULL, *wc_flags = NULL;
-	if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)
-		|| charset_iconv(flags, &wc_flags, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-		return NULL;
+	if (GetVersion() >= 0x80000000U) {
+		// Windows 9x
+		char *ac = NULL, *ac_flags = NULL;
+		if (charset_iconv(path, &ac, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)
+			|| charset_iconv(flags, &ac_flags, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
+			return NULL;
 
-	FILE* ret = _wfopen(wc, wc_flags);
-	free(wc);
-	free(wc_flags);
-	return ret;
+		FILE *ret = fopen(ac, ac_flags);
+		free(ac);
+		free(ac_flags);
+		return ret;
+	} else {
+		// Windows NT
+		wchar_t* wc = NULL, *wc_flags = NULL;
+		if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)
+			|| charset_iconv(flags, &wc_flags, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+			return NULL;
+
+		FILE* ret = _wfopen(wc, wc_flags);
+		free(wc);
+		free(wc_flags);
+		return ret;
+	}
+
+	// err
+	return NULL;
 }
 
 int win32_mkdir(const char *path, UNUSED mode_t mode)
 {
-	wchar_t* wc = NULL;
-	if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-		return -1;
+	if (GetVersion() >= 0x80000000U) {
+		char* ac = NULL;
+		if (charset_iconv(path, &ac, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
+			return -1;
 
-	int ret = _wmkdir(wc);
-	free(wc);
-	return ret;
+		int ret = mkdir(ac);
+		free(ac);
+		return ret;
+
+	} else {
+		wchar_t* wc = NULL;
+		if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+			return -1;
+
+		int ret = _wmkdir(wc);
+		free(wc);
+		return ret;
+	}
+
+	return -1;
 }
 
 /* ------------------------------------------------------------------------------- */
 /* run hook */
 
+// doesn't work on ANSI for now (can't be bothered)
 int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
 #define DOT_BAT L".bat"
@@ -462,8 +513,8 @@ int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 		if (charset_iconv(maybe_arg, &maybe_arg_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
 			return 0;
 
-		struct stat sb;
-		if (win32_wstat(batch_file, &sb) == -1) {
+		struct _stat sb;
+		if (_wstat(batch_file, &sb) < 0) {
 			r = 0;
 		} else {
 			const WCHAR *cmd;

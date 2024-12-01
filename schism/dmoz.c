@@ -485,9 +485,9 @@ char *dmoz_get_current_directory(void)
 
 #ifdef SCHISM_WIN32
 // consolidate this crap into one messy function
-static char *dmoz_win32_get_csidl_directory(int csidl, const wchar_t *envvar)
+static char *dmoz_win32_get_csidl_directory(int csidl, const wchar_t *registryw, const char *registry, const wchar_t *envvarw, const char *envvar)
 {
-	// Try Unicode first.
+	// Prioritize proper Unicode paths first.
 	{
 		wchar_t bufw[PATH_MAX + 1] = {L'\0'};
 		char *utf8 = NULL;
@@ -499,7 +499,46 @@ static char *dmoz_win32_get_csidl_directory(int csidl, const wchar_t *envvar)
 			return utf8;
 	}
 
-	// ANSI
+	// For the most part this is just a bunch of crap to get older Windows versions working...
+	if (registryw) {
+		// This is a whole lot of code to just query the registry...
+		HKEY shell_folders;
+		if (RegOpenKeyExW(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders", 0, KEY_READ, &shell_folders) == ERROR_SUCCESS) {
+			DWORD type;
+			DWORD length;
+
+			if (RegQueryValueExW(shell_folders, registryw, NULL, &type, NULL, &length) == ERROR_SUCCESS) {
+				if (type == REG_EXPAND_SZ) {
+					BYTE *data = mem_alloc(length);
+
+					if (RegQueryValueExW(shell_folders, registryw, NULL, NULL, data, &length) == ERROR_SUCCESS) {
+						WCHAR expanded[PATH_MAX];
+						if (ExpandEnvironmentStringsW((LPCWSTR)data, expanded, PATH_MAX)) {
+							char *utf8;
+							if (!charset_iconv(expanded, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX)) {
+								free(data);
+								return utf8;
+							}
+						}
+					}
+
+					free(data);
+				}
+			}
+		}
+	}
+
+	if (envvarw) {
+		wchar_t *ptr = _wgetenv(envvarw);
+		if (ptr) {
+			char *utf8;
+
+			if (!charset_iconv(ptr, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
+				return utf8;
+		}
+	}
+
+	// Now try ANSI...
 	{
 		char buf[PATH_MAX + 1] = {0};
 
@@ -511,13 +550,39 @@ static char *dmoz_win32_get_csidl_directory(int csidl, const wchar_t *envvar)
 		}
 	}
 
-	// fallback to an environment variable if one is passed
+	if (registry) {
+		HKEY shell_folders;
+		if (RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders", 0, KEY_READ, &shell_folders) == ERROR_SUCCESS) {
+			DWORD type;
+			DWORD length;
+
+			if (RegQueryValueExA(shell_folders, registry, NULL, &type, NULL, &length) == ERROR_SUCCESS) {
+				if (type == REG_EXPAND_SZ) {
+					BYTE *data = mem_alloc(length);
+
+					if (RegQueryValueExA(shell_folders, registry, NULL, NULL, data, &length) == ERROR_SUCCESS) {
+						char expanded[PATH_MAX];
+						if (ExpandEnvironmentStringsA((LPCSTR)data, expanded, PATH_MAX)) {
+							char *utf8;
+							if (!charset_iconv(expanded, &utf8, CHARSET_ANSI, CHARSET_UTF8, PATH_MAX)) {
+								free(data);
+								return utf8;
+							}
+						}
+					}
+
+					free(data);
+				}
+			}
+		}
+	}
+
 	if (envvar) {
-		wchar_t *ptr_w = _wgetenv(envvar);
-		if (ptr_w) {
+		char *ptr = getenv(envvar);
+		if (ptr) {
 			char *utf8;
 
-			if (!charset_iconv(ptr_w, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
+			if (!charset_iconv(ptr, &utf8, CHARSET_ANSI, CHARSET_UTF8, PATH_MAX + 1))
 				return utf8;
 		}
 	}
@@ -525,6 +590,9 @@ static char *dmoz_win32_get_csidl_directory(int csidl, const wchar_t *envvar)
 	// we'll get em next time
 	return NULL;
 }
+
+// convenience macro so we don't have to type it twice
+# define DMOZ_GET_WIN32_DIRECTORY(csidl, registry, envvar) dmoz_win32_get_csidl_directory(csidl, L ## registry, registry, L ## envvar, envvar)
 #endif
 
 char *dmoz_get_home_directory(void)
@@ -532,7 +600,8 @@ char *dmoz_get_home_directory(void)
 #if defined(__amigaos4__)
 	return str_dup("PROGDIR:");
 #elif defined(SCHISM_WIN32)
-	char *ptr = dmoz_win32_get_csidl_directory(CSIDL_PERSONAL, L"USERPROFILE");
+	// NOTE: USERPROFILE is not the documents folder, it's the user folder...
+	char *ptr = DMOZ_GET_WIN32_DIRECTORY(CSIDL_PERSONAL, "Personal", "USERPROFILE");
 	if (ptr)
 		return ptr;
 #else
@@ -555,7 +624,7 @@ char *dmoz_get_home_directory(void)
 char *dmoz_get_dot_directory(void)
 {
 #ifdef SCHISM_WIN32
-	char *ptr = dmoz_win32_get_csidl_directory(CSIDL_APPDATA, L"APPDATA");
+	char *ptr = DMOZ_GET_WIN32_DIRECTORY(CSIDL_APPDATA, "AppData", "APPDATA");
 	if (ptr)
 		return ptr;
 
@@ -1107,12 +1176,6 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 # define FAILSAFE_PATH "/"
 #endif
 
-#ifdef SCHISM_WIN32
-static DWORD (WINAPI *WIN32_GetFileAttributesW)(LPCWSTR path) = NULL;
-static HANDLE (WINAPI *WIN32_FindFirstFileW)(LPCWSTR path, WIN32_FIND_DATAW *lpffd) = NULL;
-static BOOL (WINAPI *WIN32_FindNextFileW)(HANDLE findfile, WIN32_FIND_DATAW *lpffd) = NULL;
-#endif
-
 /* on success, this will fill the lists and return 0. if something goes
 wrong, it adds a 'stub' entry for the root directory, and returns -1. */
 int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
@@ -1120,143 +1183,112 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 {
 #ifdef SCHISM_WIN32
 	DWORD attrib;
-	do {
+	if (GetVersion() < 0x80000000U) {
+		// Windows NT
 		wchar_t* path_w = NULL;
-		if (!charset_iconv(path, &path_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-			attrib = GetFileAttributesW(path_w);
-			break;
-		}
+		if (charset_iconv(path, &path_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+			return -1;
 
-		char* ptr = NULL;
-		if (!charset_iconv(path, &ptr, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
-			attrib = GetFileAttributesA(ptr);
-			break;
-		}
-	
-		printf("???\n");
+		attrib = GetFileAttributesW(path_w);
+	} else {
+		// Windows 9x
+		char* path_a = NULL;
+		if (charset_iconv(path, &path_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
+			return -1;
 
-		return -1;
-	} while (0);
+		attrib = GetFileAttributesA(path_a);
+	}
 
 	if (attrib & FILE_ATTRIBUTE_DIRECTORY) {
-		if (WIN32_FindFirstFileW && WIN32_FindNextFileW) {
-			wchar_t* searchpath = NULL;
+		WIN32_FIND_DATAA ffda;
+		WIN32_FIND_DATAW ffdw;
 
-			{
-				char* searchpath_n = dmoz_path_concat_len(path, "*", strlen(path), 1);
-				if (charset_iconv(searchpath_n, &searchpath, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-					free(searchpath_n);
-					return -1;
-				}
-				free(searchpath_n);
-			}
-
-			WIN32_FIND_DATAW ffd = {0};
-			HANDLE find = WIN32_FindFirstFileW(searchpath, &ffd);
-
-			free(searchpath);
-
-			if (find == INVALID_HANDLE_VALUE)
+		HANDLE find = NULL;
+		{
+			char* searchpath_n = dmoz_path_concat_len(path, "*", strlen(path), 1);
+			if (!searchpath_n)
 				return -1;
 
-			/* do-while to process the first file... */
-			do {
-				if (!wcscmp(ffd.cFileName, L".")
-					|| !wcscmp(ffd.cFileName, L"..")
-					|| ffd.cFileName[wcslen(ffd.cFileName)-1] == L'~'
-					|| ffd.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN)
-					continue;
-
-				char* filename = NULL;
-				if (charset_iconv(ffd.cFileName, &filename, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(ffd.cFileName)))
-					continue;
-
-				char* fullpath = dmoz_path_concat_len(path, filename, strlen(path), strlen(filename));
-
-				struct stat st;
-				if (os_stat(fullpath, &st) < 0) {
-					/* doesn't exist? */
-					log_perror(fullpath);
-					free(fullpath);
-					free(filename);
-					continue; /* better luck next time */
+			if (GetVersion() < 0x80000000U) {
+				wchar_t* searchpath;
+				if (!charset_iconv(searchpath_n, &searchpath, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+					find = FindFirstFileW(searchpath, &ffdw);
+					free(searchpath);
 				}
-		
-				st.st_mtime = MAX(0, st.st_mtime);
-		
-				if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-					dmoz_add_file_or_dir(flist, dlist, fullpath, filename, &st, 0);
-				} else if (ffd.dwFileAttributes == INVALID_FILE_ATTRIBUTES) {
-					free(fullpath);
-					free(filename);
-				} else {
-					dmoz_add_file(flist, fullpath, filename, &st, 1);
+			} else {
+				char *searchpath;
+				if (!charset_iconv(searchpath_n, &searchpath, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
+					find = FindFirstFileA(searchpath, &ffda);
+					free(searchpath);
 				}
-			} while (WIN32_FindNextFileW(find, &ffd));
-
-			FindClose(find);
-		} else {
-			// mostly the same as the above but uses ANSI routines instead of Unicode
-			char* searchpath = NULL;
-
-			{
-				char* searchpath_n = dmoz_path_concat_len(path, "*", strlen(path), 1);
-				if (charset_iconv(searchpath_n, &searchpath, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
-					free(searchpath_n);
-					return -1;
-				}
-				free(searchpath_n);
 			}
 
-			WIN32_FIND_DATAA ffd = {0};
-			HANDLE find = FindFirstFileA(searchpath, &ffd);
-
-			free(searchpath);
-
-			if (find == INVALID_HANDLE_VALUE)
-				return -1;
-
-			/* do-while to process the first file... */
-			do {
-				if (!strcmp(ffd.cFileName, ".")
-					|| !strcmp(ffd.cFileName, "..")
-					|| ffd.cFileName[strlen(ffd.cFileName)-1] == '~'
-					|| ffd.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN)
-					continue;
-
-				char* filename = NULL;
-				if (charset_iconv(ffd.cFileName, &filename, CHARSET_ANSI, CHARSET_UTF8, sizeof(ffd.cFileName)))
-					continue;
-
-				char* fullpath = dmoz_path_concat_len(path, filename, strlen(path), strlen(filename));
-
-				struct stat st;
-				if (os_stat(fullpath, &st) < 0) {
-					/* doesn't exist? */
-					log_perror(fullpath);
-					free(fullpath);
-					free(filename);
-					continue; /* better luck next time */
-				}
-		
-				st.st_mtime = MAX(0, st.st_mtime);
-		
-				if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-					dmoz_add_file_or_dir(flist, dlist, fullpath, filename, &st, 0);
-				} else if (ffd.dwFileAttributes == INVALID_FILE_ATTRIBUTES) {
-					free(fullpath);
-					free(filename);
-				} else {
-					dmoz_add_file(flist, fullpath, filename, &st, 1);
-				}
-			} while (FindNextFileA(find, &ffd));
-
-			FindClose(find);
+			free(searchpath_n);
 		}
 
-		DWORD err = GetLastError();
-		if (err != ERROR_NO_MORE_FILES)
+		// give up
+		if (find == INVALID_HANDLE_VALUE)
 			return -1;
+
+		/* do-while to process the first file... */
+		for (;;) {
+			DWORD file_attrib = 0;
+			char *filename = NULL;
+			char *fullpath = NULL;
+
+			if (GetVersion() < 0x80000000U) {
+				if (FindNextFileW(find, &ffdw)) {
+					file_attrib = ffdw.dwFileAttributes;
+					if (charset_iconv(ffdw.cFileName, &filename, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(ffdw.cFileName)))
+						continue;
+					fullpath = dmoz_path_concat_len(path, filename, strlen(path), strlen(filename));
+				} else {
+					break;
+				}
+			} else {
+				// ANSI
+				if (FindNextFileA(find, &ffda)) {
+					file_attrib = ffda.dwFileAttributes;
+					if (charset_iconv(ffda.cFileName, &filename, CHARSET_ANSI, CHARSET_UTF8, sizeof(ffda.cFileName)))
+						continue;
+					fullpath = dmoz_path_concat_len(path, filename, strlen(path), strlen(filename));
+				} else {
+					// ...
+					break;
+				}
+			}
+			
+			if (!strcmp(filename, ".")
+				|| !strcmp(filename, "..")
+				|| filename[strlen(filename)-1] == '~'
+				|| file_attrib & FILE_ATTRIBUTE_HIDDEN) {
+				free(filename);
+				free(fullpath);
+				continue;
+			}
+
+			struct stat st;
+			if (os_stat(fullpath, &st) < 0) {
+				/* doesn't exist? */
+				log_perror(fullpath);
+				free(fullpath);
+				free(filename);
+				continue; /* better luck next time */
+			}
+	
+			st.st_mtime = MAX(0, st.st_mtime);
+	
+			if (file_attrib & FILE_ATTRIBUTE_DIRECTORY) {
+				dmoz_add_file_or_dir(flist, dlist, fullpath, filename, &st, 0);
+			} else if (file_attrib == INVALID_FILE_ATTRIBUTES) {
+				free(fullpath);
+				free(filename);
+			} else {
+				dmoz_add_file(flist, fullpath, filename, &st, 1);
+			}
+		}
+
+		FindClose(find);
 
 		add_platform_dirs(path, flist, dlist);
 	} else if (attrib == INVALID_FILE_ATTRIBUTES) {
@@ -1446,7 +1478,6 @@ int dmoz_fill_ext_data(dmoz_file_t *file)
 
 #ifdef SCHISM_WIN32
 static void *lib_shell32 = NULL;
-static void *lib_kernel32 = NULL;
 #endif
 
 int dmoz_init(void)
@@ -1470,7 +1501,6 @@ int dmoz_init(void)
 	}
 
 #ifdef SCHISM_WIN32
-	// Dynamically load this crap.
 	lib_shell32 = loadso_object_load("shell32.dll");
 	if (lib_shell32) {
 		WIN32_SHGetFolderPathW = loadso_function_load(lib_shell32, "SHGetFolderPathW");
@@ -1479,13 +1509,6 @@ int dmoz_init(void)
 		WIN32_SHGetSpecialFolderPathA = loadso_function_load(lib_shell32, "SHGetSpecialFolderPathA");
 		if (!WIN32_SHGetSpecialFolderPathA)
 			WIN32_SHGetSpecialFolderPathA = loadso_function_load(lib_shell32, "SHGetSpecialFolderPath");
-	}
-
-	lib_kernel32 = loadso_object_load("kernel32.dll");
-	if (lib_kernel32) {
-		WIN32_FindFirstFileW = loadso_function_load(lib_kernel32, "FindFirstFileW");
-		WIN32_FindNextFileW = loadso_function_load(lib_kernel32, "FindNextFileW");
-		WIN32_GetFileAttributesW = loadso_function_load(lib_kernel32, "GetFileAttributesW");
 	}
 #endif
 
@@ -1505,8 +1528,5 @@ void dmoz_quit(void)
 #ifdef SCHISM_WIN32
 	if (lib_shell32)
 		loadso_object_unload(lib_shell32);
-
-	if (lib_kernel32)
-		loadso_object_unload(lib_kernel32);
 #endif
 }
