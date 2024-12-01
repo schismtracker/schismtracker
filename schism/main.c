@@ -483,17 +483,9 @@ static void event_loop(void)
 					break;
 				};
 
-#if defined(SCHISM_WIN32)
-#define _ALTTRACKED_KMOD        (SCHISM_KEYMOD_NUM|SCHISM_KEYMOD_CAPS)
-#else
-#define _ALTTRACKED_KMOD        0
-#endif
-				if (kk.state == KEY_PRESS) {
-					status.keymod = (se.key.mod
-						& ~(_ALTTRACKED_KMOD))
-						| (status.keymod & _ALTTRACKED_KMOD);
-				}
-
+				// grab the keymod
+				status.keymod = se.key.mod;
+				// fix it
 				os_get_modkey(&status.keymod);
 
 				kk.sym = se.key.sym;
