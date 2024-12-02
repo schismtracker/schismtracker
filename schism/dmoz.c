@@ -360,28 +360,95 @@ int dmoz_path_make_backup(const char *filename, int numbered)
 int dmoz_path_rename(const char *old, const char *new, int overwrite)
 {
 #ifdef SCHISM_WIN32
-# ifdef UNICODE
-	wchar_t* old_w = NULL, *new_w = NULL;
-	if (charset_iconv(new, &new_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)
-		|| charset_iconv(old, &old_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-		goto ANSI;
+	// this is a mess, extracted from the old code
+	// schism had in util.c
+	//
+	// much of this is probably unnecessary for
+	// newer versions of windows, but I've kept
+	// it here for builds compiled for ancient
+	// windows.
+	int ret = -1;
+	DWORD em = SetErrorMode(0);
 
-	if (MoveFileExW(old_w, new_w, overwrite ? MOVEFILE_REPLACE_EXISTING : 0)) {
-		/* yay */
+	if (GetVersion() & UINT32_C(0x80000000)) {
+		// some unnecessary code duplication here
+		char *old_a = NULL, *new_a = NULL;
+		if (!charset_iconv(old, &old_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)
+			&& !charset_iconv(new, &new_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
+			if (MoveFileA(old_a, new_a)) {
+				win32_filecreated_callback(new);
+				ret = 0;
+			} else if (overwrite) {
+				if (MoveFileExA(old_a, new_a, MOVEFILE_REPLACE_EXISTING)) {
+					// no callback here; file already existed
+					ret = 0;
+				} else {
+					/* this sometimes works with win95 and novell shares */
+					_chmod(new_a, 0777);
+					_chmod(old_a, 0777);
+
+					SetFileAttributesA(new_a, FILE_ATTRIBUTE_NORMAL);
+					SetFileAttributesA(new_a, FILE_ATTRIBUTE_TEMPORARY);
+
+					/* wee */
+					if (MoveFileA(old_a, new_a) || (DeleteFileA(new_a) && MoveFileA(old_a, new_a))) {
+						win32_filecreated_callback(new);
+						ret = 0;
+					}
+
+					/* alright, thems the breaks. win95 eats your files,
+					 * and not a damn thing I can do about it. */
+				}
+			}
+		}
+
+		free(new_a);
+		free(old_a);
+	} else {
+		wchar_t *old_w = NULL, *new_w = NULL;
+		if (!charset_iconv(old, &old_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)
+			&& !charset_iconv(new, &new_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+			if (MoveFileW(old_w, new_w)) {
+				win32_filecreated_callback(new);
+				ret = 0;
+			} else if (overwrite) {
+				if (MoveFileExW(old_w, new_w, MOVEFILE_REPLACE_EXISTING)) {
+					// no callback here; file already existed
+					ret = 0;
+				} else {
+					_wchmod(new_w, 0777);
+					_wchmod(old_w, 0777);
+
+					SetFileAttributesW(new_w, FILE_ATTRIBUTE_NORMAL);
+					SetFileAttributesW(new_w, FILE_ATTRIBUTE_TEMPORARY);
+
+					/* wee */
+					if (MoveFileW(old_w, new_w) || (DeleteFileW(new_w) && MoveFileW(old_w, new_w))) {
+						win32_filecreated_callback(new);
+						ret = 0;
+					}
+				}
+			}
+		}
+
 		free(new_w);
 		free(old_w);
-		return 0;
 	}
 
-ANSI:
-	free(old_w);
-	free(new_w);
+	switch (GetLastError()) {
+	case ERROR_ALREADY_EXISTS:
+	case ERROR_FILE_EXISTS:
+		if (!overwrite)
+			errno = EEXIST;
+		break;
+	default:
+		break;
+	}
 
-# endif
-	if (MoveFileExA(old, new, overwrite ? MOVEFILE_REPLACE_EXISTING : 0))
-		return 0;
+	// reset this...
+	SetErrorMode(em);
 
-	return -1;
+	return ret;
 #else
 	if (!overwrite) {
 		if (link(old, new) == -1)
