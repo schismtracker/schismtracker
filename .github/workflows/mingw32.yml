@@ -64,7 +64,7 @@ jobs:
           msys2 {0}
         run: |
           cd SDL-$SDL12_VERSION
-          CC=/c/MinGW/bin/gcc.exe ./configure || (cat config.log && false)
+          CC=/c/MinGW/bin/mingw-gcc.exe ./configure || (cat config.log && false)
           make
           make install
           cd ..
@@ -90,13 +90,13 @@ jobs:
           cd libogg-$LIBOGG_VERSION
           mkdir build
           cd build
-          CC=/c/MinGW/bin/gcc.exe ../configure
+          CC=/c/MinGW/bin/mingw-gcc.exe ../configure
           make
           make install
           cd ../../flac-$FLAC_VERSION
           mkdir build
           cd build
-          CC=/c/MinGW/bin/gcc.exe ../configure --disable-programs --disable-examples --disable-cpplibs
+          CC=/c/MinGW/bin/mingw-gcc.exe ../configure --disable-programs --disable-examples --disable-cpplibs
           make
           make install
           cd ../..
@@ -120,7 +120,7 @@ jobs:
         if: steps.cache-dependencies.outputs.cache-hit != 'true'
         run: |
           cd utf8proc-$UTF8PROC_VERSION
-          make CC=/c/MinGW/bin/gcc.exe
+          make CC=/c/MinGW/bin/mingw-gcc.exe
           make install
           cd ..
         
@@ -147,7 +147,7 @@ jobs:
           cd schism
           mkdir build
           cd build
-          CC=/c/MinGW/bin/gcc.exe PKG_CONFIG="/c/msys64/mingw32/bin/pkg-config" PKG_CONFIG_PATH="/c/msys64/mingw32/lib/pkgconfig" SDL2_CFLAGS="-I/c/msys64/mingw32/include/SDL2" SDL2_LIBS="-L/c/msys64/mingw32/lib -lSDL2" ../configure --with-flac --with-sdl2 CFLAGS="-I/c/msys64/mingw32/include"
+          CC=/c/MinGW/bin/mingw-gcc.exe PKG_CONFIG="/c/msys64/mingw32/bin/pkg-config" PKG_CONFIG_PATH="/c/msys64/mingw32/lib/pkgconfig" SDL2_CFLAGS="-I/c/msys64/mingw32/include/SDL2" SDL2_LIBS="-L/c/msys64/mingw32/lib -lSDL2" ../configure --with-flac --with-sdl2 CFLAGS="-I/c/msys64/mingw32/include"
           make
           strip schismtracker.exe
           cp schismtracker.exe ../..
