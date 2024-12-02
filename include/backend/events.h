@@ -27,10 +27,21 @@
 #include "../events.h"
 #include "../keyboard.h"
 
+// flags
+enum {
+	// Enable this flag if the backend sends its own key repeats
+	// If it doesn't we fall back to our internal representation
+	// and getting key repeat rates from the OS.
+	SCHISM_EVENTS_BACKEND_HAS_KEY_REPEAT = (1 << 0),
+};
+
 typedef struct {
 	// returns 1 if succeeded, 0 if failed
 	int (*init)(void);
 	void (*quit)(void);
+
+	// flags defined above
+	uint32_t flags;
 
 	void (*pump_events)(void);
 	schism_keymod_t (*keymod_state)(void);

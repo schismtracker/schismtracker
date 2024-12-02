@@ -462,3 +462,28 @@ int main (int argc, char **argv)
 
 	return 0;
 }
+
+/* ---------------------------------------------------------------- */
+
+int macosx_get_key_repeat(int *pdelay, int *prate)
+{
+	NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+	if (!defaults)
+		return 0;
+
+	int delay = [defaults integerForKey:@"InitialKeyRepeat"];
+	int rate = [defaults integerForKey:@"KeyRepeat"];
+
+	// apparently these will never be zero.
+	if (!delay || delay < 0 || !rate || rate < 0)
+		return 0;
+
+	// According to this Apple Discussions thread, these
+	// values are milliseconds divided by 15:
+	//
+	// https://discussions.apple.com/thread/1316947
+	*pdelay = delay * 15;
+	*prate = rate * 15;
+
+	return 1;
+}

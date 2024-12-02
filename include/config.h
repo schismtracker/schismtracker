@@ -38,6 +38,9 @@ extern int cfg_video_width, cfg_video_height;
 extern int cfg_video_hardware;
 extern int cfg_video_want_menu_bar;
 
+extern int cfg_kbd_repeat_delay;
+extern int cfg_kbd_repeat_rate;
+
 extern char cfg_dir_modules[], cfg_dir_samples[], cfg_dir_instruments[];
 extern char cfg_dir_dotschism[]; /* the full path to ~/.schism */
 extern char cfg_font[];

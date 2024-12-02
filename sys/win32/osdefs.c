@@ -342,6 +342,35 @@ void win32_toggle_menu(void *window, int on)
 }
 
 /* -------------------------------------------------------------------- */
+/* Key repeat */
+
+int win32_get_key_repeat(int *pdelay, int *prate)
+{
+	DWORD speed, delay;
+	if (!SystemParametersInfoA(SPI_GETKEYBOARDSPEED, 0, &speed, 0)
+		|| !SystemParametersInfoA(SPI_GETKEYBOARDDELAY, 0, &delay, 0))
+		return 0;
+
+	// Sanity check
+	if (speed > 31 || delay > 3)
+		return 0;
+
+	// This value is somewhat odd; it's a value from
+	// 0 - 31, and even weirder is that it's non-linear,
+	// that is, 0 is about a repeat every 400 ms and 31
+	// is a repeat every ~33.33 ms.
+	//
+	// Eventually I came up with this formula to translate
+	// it to the repeat rate in milliseconds.
+	*prate = (int)(1000.0/((speed/(62.0/55.0)) + 2.5));
+
+	// This one is much simpler.
+	*pdelay = (delay + 1) * 250;
+
+	return 1;
+}
+
+/* -------------------------------------------------------------------- */
 
 static void win32_stat_conv(struct _stat *mst, struct stat *st)
 {

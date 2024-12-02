@@ -457,8 +457,8 @@ static void event_loop(void)
 				break;
 			}
 			case SCHISM_KEYDOWN:
-				/* we have our own repeat handler now */
 				if (se.key.repeat) {
+					// Only use the system repeat if we don't have our own configuration
 					if (kbd_key_repeat_enabled())
 						break;
 
@@ -910,6 +910,12 @@ int schism_main(int argc, char** argv)
 	log_append2(0, 3, 0, schism_banner(0));
 	log_nl();
 
+	if (!dmoz_init()) {
+		log_appendf(4, "Failed to initialize a filesystem backend!");
+		log_appendf(4, "Portable mode will not work properly!");
+		log_nl();
+	}
+
 	if (!timer_init()) {
 		fprintf(stderr, "Failed to initialize a timers backend!\n");
 		return 1;
@@ -927,6 +933,9 @@ int schism_main(int argc, char** argv)
 	}
 #endif
 
+	song_initialise();
+	cfg_load();
+
 	if (!events_init()) {
 		fprintf(stderr, "Failed to initialize an events backend!\n");
 		return 1;
@@ -938,16 +947,7 @@ int schism_main(int argc, char** argv)
 		log_nl();
 	}
 
-	if (!dmoz_init()) {
-		log_appendf(4, "Failed to initialize a filesystem backend!");
-		log_appendf(4, "Portable mode will not work properly!");
-		log_nl();
-	}
-
 	log_nl();
-
-	song_initialise();
-	cfg_load();
 
 	if (did_classic) {
 		status.flags &= ~CLASSIC_MODE;

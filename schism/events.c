@@ -26,6 +26,8 @@
 #include "headers.h"
 #include "events.h"
 #include "mem.h"
+#include "osdefs.h"
+#include "config.h" // keyboard crap
 
 #include "threads.h"
 
@@ -98,6 +100,22 @@ int events_init(void)
 
 	if (!events_backend)
 		return 0;
+
+	if (cfg_kbd_repeat_delay && cfg_kbd_repeat_rate) {
+		// Override everything.
+		kbd_set_key_repeat(cfg_kbd_repeat_delay, cfg_kbd_repeat_rate);
+	} else if (!(events_backend->flags & SCHISM_EVENTS_BACKEND_HAS_KEY_REPEAT)) {
+		// Ok, we have to manually configure key repeat.
+
+		int delay = cfg_kbd_repeat_delay, rate = cfg_kbd_repeat_rate;
+
+		if ((!delay || !rate) && !os_get_key_repeat(&delay, &rate)) {
+			delay = 500;
+			rate = 30;
+		}
+
+		kbd_set_key_repeat(delay, rate);
+	}
 
 	queue_mutex = mt_mutex_create();
 	if (!queue_mutex)

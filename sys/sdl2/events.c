@@ -606,6 +606,13 @@ const schism_events_backend_t schism_events_backend_sdl2 = {
 	.init = sdl2_events_init,
 	.quit = sdl2_events_quit,
 
+#if !defined(SCHISM_WII) && !defined(SCHISM_WIIU)
+	/* These ports have no key repeat... */
+	.flags = SCHISM_EVENTS_BACKEND_HAS_KEY_REPEAT,
+#else
+	.flags = 0,
+#endif
+
 	.keymod_state = sdl2_event_mod_state,
 	.pump_events = sdl2_pump_events,
 };

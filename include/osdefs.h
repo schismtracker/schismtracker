@@ -57,11 +57,13 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_stat win32_stat
 # define os_open win32_open
 # define os_mkdir win32_mkdir
+# define os_get_key_repeat win32_get_key_repeat
 #elif defined(SCHISM_MACOSX)
 # define os_event macosx_event
 # define os_sysexit macosx_sysexit
 # define os_sysinit macosx_sysinit
 # define os_get_modkey macosx_get_modkey
+# define os_get_key_repeat macosx_get_key_repeat
 #endif
 
 #if defined(SCHISM_WIN32)
@@ -97,6 +99,9 @@ A return value of 0 indicates that the event should NOT be processed by the main
 #ifndef os_run_hook
 # define os_run_hook(a,b,c) 0
 #endif
+#ifndef os_get_key_repeat
+# define os_get_key_repeat(pdelay, prate) (0)
+#endif
 
 // Implementations for the above, and more.
 
@@ -121,6 +126,7 @@ int win32_mkdir(const char* path, mode_t mode);
 FILE* win32_fopen(const char* path, const char* flags);
 #define win32_wmkdir(path, mode) _wmkdir(path)
 int win32_run_hook(const char *dir, const char *name, const char *maybe_arg);
+int win32_get_key_repeat(int *pdelay, int *prate);
 
 int posix_run_hook(const char *dir, const char *name, const char *maybe_arg);
 
@@ -128,5 +134,6 @@ int macosx_event(schism_event_t *event);
 void macosx_sysexit(void);
 void macosx_sysinit(int *pargc, char ***pargv); /* set up ibook helper */
 void macosx_get_modkey(schism_keymod_t *m);
+int macosx_get_key_repeat(int *pdelay, int *prate);
 
 #endif /* SCHISM_OSDEFS_H_ */
