@@ -36,7 +36,7 @@ jobs:
         with:
           msystem: mingw32
           update: true
-          install: git mingw-w64-i686-toolchain mingw-w64-i686-flac mingw-w64-i686-SDL2 libtool autoconf automake make zip unzip dos2unix
+          install: git mingw-w64-i686-toolchain mingw-w64-i686-flac mingw-w64-i686-SDL2 libtool autoconf automake make zip unzip dos2unix patch
 
         # grab a (quite old) version of mingw32 so that we can
         # target extremely old Windows versions that mingw-w64
@@ -61,10 +61,10 @@ jobs:
 
       - name: 'Build SDL 1.2'
         shell:
-          "C:\\MinGW\\msys\\1.0\\bin\\bash.exe {0}"
+          msys2 {0}
         run: |
           cd SDL-$SDL12_VERSION
-          ./configure
+          CC=/c/MinGW/bin/gcc.exe ./configure
           make
           make install
           cd ..
@@ -84,19 +84,19 @@ jobs:
 
       - name: 'Build libflac'
         shell:
-          "C:\\MinGW\\msys\\1.0\\bin\\bash.exe {0}"
+          msys2 {0}
         if: steps.cache-dependencies.outputs.cache-hit != 'true'
         run: |
           cd libogg-$LIBOGG_VERSION
           mkdir build
           cd build
-          ../configure
+          CC=/c/MinGW/bin/gcc.exe ../configure
           make
           make install
           cd ../../flac-$FLAC_VERSION
           mkdir build
           cd build
-          ../configure --disable-programs --disable-examples --disable-cpplibs
+          CC=/c/MinGW/bin/gcc.exe ../configure --disable-programs --disable-examples --disable-cpplibs
           make
           make install
           cd ../..
@@ -116,11 +116,11 @@ jobs:
 
       - name: 'Build utf8proc'
         shell:
-          "C:\\MinGW\\msys\\1.0\\bin\\bash.exe {0}"
+          msys2 {0}
         if: steps.cache-dependencies.outputs.cache-hit != 'true'
         run: |
           cd utf8proc-$UTF8PROC_VERSION
-          make
+          make CC=/c/MinGW/bin/gcc.exe
           make install
           cd ..
         
@@ -141,13 +141,13 @@ jobs:
 
       - name: 'Compile package'
         shell:
-          "C:\\MinGW\\msys\\1.0\\bin\\bash.exe {0}"
+          msys2 {0}
         run: |
           export PKG_CONFIG_PATH="$HOME/prefix/lib/pkgconfig"
           cd schism
           mkdir build
           cd build
-          PKG_CONFIG="/c/msys64/mingw32/bin/pkg-config" PKG_CONFIG_PATH="/c/msys64/mingw32/lib/pkgconfig" SDL2_CFLAGS="-I/c/msys64/mingw32/include/SDL2" SDL2_LIBS="-L/c/msys64/mingw32/lib -lSDL2" ../configure --with-flac --with-sdl2 CFLAGS="-I/c/msys64/mingw32/include"
+          CC=/c/MinGW/bin/gcc.exe PKG_CONFIG="/c/msys64/mingw32/bin/pkg-config" PKG_CONFIG_PATH="/c/msys64/mingw32/lib/pkgconfig" SDL2_CFLAGS="-I/c/msys64/mingw32/include/SDL2" SDL2_LIBS="-L/c/msys64/mingw32/lib -lSDL2" ../configure --with-flac --with-sdl2 CFLAGS="-I/c/msys64/mingw32/include"
           make
           strip schismtracker.exe
           cp schismtracker.exe ../..
