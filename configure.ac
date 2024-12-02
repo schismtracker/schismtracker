@@ -23,7 +23,7 @@ dnl Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 dnl PACKAGE_VERSION will be either "" if not using git, or date of the last git commit in the form YYYYMMDD
 m4_define([last_git_commit], patsubst(m4_esyscmd([git log -n 1 --date=short --format=format:%cd]), [[^0-9]]))
-AC_INIT([schismtracker], [last_git_commit])
+AC_INIT([schismtracker],[last_git_commit])
 
 last_commit_date=[last_git_commit]
 
@@ -177,6 +177,24 @@ AC_C_BIGENDIAN
 dnl Libs
 AC_CHECK_LIB([dl], [dlopen])
 
+dnl hijacked from libtool
+LIBM=
+case $host in
+*-*-beos* | *-*-cegcc* | *-*-cygwin* | *-*-haiku* | *-*-mingw* | *-*-pw32* | *-*-darwin*)
+  # These system don't have libm, or don't need it
+  ;;
+*-ncr-sysv4.3*)
+  AC_CHECK_LIB(mw, _mwvalidcheckl, LIBM=-lmw)
+  AC_CHECK_LIB(m, cos, LIBM="$LIBM -lm")
+  ;;
+*)
+  AC_CHECK_LIB(m, cos, LIBM=-lm)
+  ;;
+esac
+AC_SUBST([LIBM])
+
+AC_SUBST([LIBM])
+
 dnl Unicode crap
 PKG_CHECK_MODULES([UTF8PROC], [libutf8proc], [utf8proc_found=yes], [utf8proc_found=no])
 if test "x$utf8proc_found" = "xno"; then
@@ -220,19 +238,6 @@ AC_C_INLINE
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 AC_STRUCT_TM
-
-dnl -----------------------------------------------------------------------
-
-dnl -lm
-dnl
-dnl saved_LIBS="$LIBS"
-dnl AC_SEARCH_LIBS([powf], [m])
-dnl LIBS="$saved_LIBS"
-dnl if test "x$ac_cv_search_powf" = "xno"; then
-dnl 	AC_MSG_ERROR([*** Couldn't find a standard math library.])
-dnl elif ! test "x$ac_cv_search_powf" = "xnone required"; then
-dnl 	AC_SUBST([LIB_MATH], ["$ac_cv_search_powf"])
-dnl fi
 
 dnl -----------------------------------------------------------------------
 
