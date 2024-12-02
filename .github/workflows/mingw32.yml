@@ -64,7 +64,7 @@ jobs:
           msys2 {0}
         run: |
           cd SDL-$SDL12_VERSION
-          CC=/c/MinGW/bin/gcc.exe ./configure
+          CC=/c/MinGW/bin/gcc.exe ./configure || (echo config.log && false)
           make
           make install
           cd ..
