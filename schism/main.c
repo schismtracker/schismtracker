@@ -1044,19 +1044,11 @@ int schism_main(int argc, char** argv)
 # include "loadso.h"
 # include <windows.h>
 
-static void *lib_kernel32 = NULL;
-static void *lib_shell32 = NULL;
 static char **utf8_argv = NULL;
 static int utf8_argc = 0;
 
 void win32_atexit(void)
 {
-	if (lib_kernel32)
-		loadso_object_unload(lib_kernel32);
-
-	if (lib_shell32)
-		loadso_object_unload(lib_shell32);
-
 	for (int i = 0; i < utf8_argc; i++)
 		free(utf8_argv[i]);
 
@@ -1071,8 +1063,8 @@ int main(int argc, char **argv)
 	LPWSTR *(WINAPI *WIN32_CommandLineToArgvW)(LPCWSTR lpCmdLine,int *pNumArgs);
 	LPWSTR (WINAPI *WIN32_GetCommandLineW)(void);
 
-	lib_kernel32 = loadso_object_load("KERNEL32.DLL");
-	lib_shell32 = loadso_object_load("SHELL32.DLL");
+	void *lib_kernel32 = loadso_object_load("KERNEL32.DLL");
+	void *lib_shell32 = loadso_object_load("SHELL32.DLL");
 
 	if (lib_kernel32 && lib_shell32) {
 		WIN32_CommandLineToArgvW = loadso_function_load(lib_shell32, "CommandLineToArgvW");
@@ -1113,11 +1105,20 @@ int main(int argc, char **argv)
 	}
 
 have_utf8_args: ;
+	if (lib_kernel32)
+		loadso_object_unload(lib_kernel32);
+
+	if (lib_shell32)
+		loadso_object_unload(lib_shell32);
+
 	// copy so our arguments don't get warped by main
 	char *utf8_argv_cp[utf8_argc];
 
 	for (i = 0; i < utf8_argc; i++)
 		utf8_argv_cp[i] = utf8_argv[i];
+
+	// make sure our arguments actually get free'd
+	atexit(win32_atexit);
 
 	schism_main(argc, utf8_argv_cp);
 

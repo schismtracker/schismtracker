@@ -242,7 +242,8 @@ files_win32 = \
 	sys/win32/filetype.c \
 	sys/win32/midi-win32mm.c	\
 	sys/win32/osdefs.c		\
-	sys/win32/slurp-win32.c
+	sys/win32/slurp-win32.c \
+	sys/win32/dmoz.c
 cflags_win32=-I$(srcdir)/sys/win32
 lib_win32=-lwinmm
 

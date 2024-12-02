@@ -554,103 +554,108 @@ char *dmoz_get_current_directory(void)
 // consolidate this crap into one messy function
 static char *dmoz_win32_get_csidl_directory(int csidl, const wchar_t *registryw, const char *registry, const wchar_t *envvarw, const char *envvar)
 {
-	// Prioritize proper Unicode paths first.
-	{
-		wchar_t bufw[PATH_MAX + 1] = {L'\0'};
-		char *utf8 = NULL;
+	// It would really be nice if we had a way to compile a single object file as
+	// both Unicode and ANSI and just call it from here so we only have to write
+	// this once.
 
-		if (WIN32_SHGetFolderPathW && WIN32_SHGetFolderPathW(NULL, csidl, NULL, 0, bufw) == S_OK && !charset_iconv(bufw, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
-			return utf8;
+	if (GetVersion() & UINT32_C(0x80000000)) {
+		// Windows 9x, ANSI.
+		{
+			char buf[PATH_MAX + 1] = {0};
 
-		if (WIN32_SHGetSpecialFolderPathW && WIN32_SHGetSpecialFolderPathW(NULL, bufw, csidl, 1) && !charset_iconv(bufw, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
-			return utf8;
-	}
+			if (WIN32_SHGetSpecialFolderPathA && WIN32_SHGetSpecialFolderPathA(NULL, buf, csidl, 1)) {
+				char *utf8;
+				if (!charset_iconv(buf, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(buf)))
+					return utf8;
+			}
+		}
 
-	// For the most part this is just a bunch of crap to get older Windows versions working...
-	if (registryw) {
-		// This is a whole lot of code to just query the registry...
-		HKEY shell_folders;
-		if (RegOpenKeyExW(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders", 0, KEY_READ, &shell_folders) == ERROR_SUCCESS) {
-			DWORD type;
-			DWORD length;
+		if (registry) {
+			HKEY shell_folders;
+			if (RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders", 0, KEY_READ, &shell_folders) == ERROR_SUCCESS) {
+				DWORD type;
+				DWORD length;
 
-			if (RegQueryValueExW(shell_folders, registryw, NULL, &type, NULL, &length) == ERROR_SUCCESS) {
-				if (type == REG_EXPAND_SZ) {
-					BYTE *data = mem_alloc(length);
+				if (RegQueryValueExA(shell_folders, registry, NULL, &type, NULL, &length) == ERROR_SUCCESS) {
+					if (type == REG_EXPAND_SZ) {
+						BYTE *data = mem_alloc(length);
 
-					if (RegQueryValueExW(shell_folders, registryw, NULL, NULL, data, &length) == ERROR_SUCCESS) {
-						WCHAR expanded[PATH_MAX];
-						if (ExpandEnvironmentStringsW((LPCWSTR)data, expanded, PATH_MAX)) {
-							char *utf8;
-							if (!charset_iconv(expanded, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX)) {
-								free(data);
-								return utf8;
+						if (RegQueryValueExA(shell_folders, registry, NULL, NULL, data, &length) == ERROR_SUCCESS) {
+							char expanded[PATH_MAX];
+							if (ExpandEnvironmentStringsA((LPCSTR)data, expanded, PATH_MAX)) {
+								char *utf8;
+								if (!charset_iconv(expanded, &utf8, CHARSET_ANSI, CHARSET_UTF8, PATH_MAX)) {
+									free(data);
+									return utf8;
+								}
 							}
 						}
-					}
 
-					free(data);
+						free(data);
+					}
 				}
 			}
 		}
-	}
 
-	if (envvarw) {
-		wchar_t *ptr = _wgetenv(envvarw);
-		if (ptr) {
-			char *utf8;
+		if (envvar) {
+			char *ptr = getenv(envvar);
+			if (ptr) {
+				char *utf8;
 
-			if (!charset_iconv(ptr, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
-				return utf8;
+				if (!charset_iconv(ptr, &utf8, CHARSET_ANSI, CHARSET_UTF8, PATH_MAX + 1))
+					return utf8;
+			}
 		}
-	}
+	} else {
+		// Windows NT.
+		{
+			wchar_t bufw[PATH_MAX + 1] = {L'\0'};
+			char *utf8 = NULL;
 
-	// Now try ANSI...
-	{
-		char buf[PATH_MAX + 1] = {0};
-
-		if (WIN32_SHGetSpecialFolderPathA && WIN32_SHGetSpecialFolderPathA(NULL, buf, csidl, 1)) {
-			char *utf8;
-			if (!charset_iconv(buf, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(buf)))
+			if (WIN32_SHGetFolderPathW && WIN32_SHGetFolderPathW(NULL, csidl, NULL, 0, bufw) == S_OK && !charset_iconv(bufw, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
 				return utf8;
 
+			if (WIN32_SHGetSpecialFolderPathW && WIN32_SHGetSpecialFolderPathW(NULL, bufw, csidl, 1) && !charset_iconv(bufw, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
+				return utf8;
 		}
-	}
 
-	if (registry) {
-		HKEY shell_folders;
-		if (RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders", 0, KEY_READ, &shell_folders) == ERROR_SUCCESS) {
-			DWORD type;
-			DWORD length;
+		// For the most part this is just a bunch of crap to get older Windows versions working...
+		if (registryw) {
+			// This is a whole lot of code to just query the registry...
+			HKEY shell_folders;
+			if (RegOpenKeyExW(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders", 0, KEY_READ, &shell_folders) == ERROR_SUCCESS) {
+				DWORD type;
+				DWORD length;
 
-			if (RegQueryValueExA(shell_folders, registry, NULL, &type, NULL, &length) == ERROR_SUCCESS) {
-				if (type == REG_EXPAND_SZ) {
-					BYTE *data = mem_alloc(length);
+				if (RegQueryValueExW(shell_folders, registryw, NULL, &type, NULL, &length) == ERROR_SUCCESS) {
+					if (type == REG_EXPAND_SZ) {
+						BYTE *data = mem_alloc(length);
 
-					if (RegQueryValueExA(shell_folders, registry, NULL, NULL, data, &length) == ERROR_SUCCESS) {
-						char expanded[PATH_MAX];
-						if (ExpandEnvironmentStringsA((LPCSTR)data, expanded, PATH_MAX)) {
-							char *utf8;
-							if (!charset_iconv(expanded, &utf8, CHARSET_ANSI, CHARSET_UTF8, PATH_MAX)) {
-								free(data);
-								return utf8;
+						if (RegQueryValueExW(shell_folders, registryw, NULL, NULL, data, &length) == ERROR_SUCCESS) {
+							WCHAR expanded[PATH_MAX];
+							if (ExpandEnvironmentStringsW((LPCWSTR)data, expanded, PATH_MAX)) {
+								char *utf8;
+								if (!charset_iconv(expanded, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX)) {
+									free(data);
+									return utf8;
+								}
 							}
 						}
-					}
 
-					free(data);
+						free(data);
+					}
 				}
 			}
 		}
-	}
 
-	if (envvar) {
-		char *ptr = getenv(envvar);
-		if (ptr) {
-			char *utf8;
+		if (envvarw) {
+			wchar_t *ptr = _wgetenv(envvarw);
+			if (ptr) {
+				char *utf8;
 
-			if (!charset_iconv(ptr, &utf8, CHARSET_ANSI, CHARSET_UTF8, PATH_MAX + 1))
-				return utf8;
+				if (!charset_iconv(ptr, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
+					return utf8;
+			}
 		}
 	}
 
@@ -1551,6 +1556,9 @@ int dmoz_init(void)
 {
 	static const schism_dmoz_backend_t *backends[] = {
 		// ordered by preference
+#ifdef SCHISM_WIN32
+		&schism_dmoz_backend_win32,
+#endif
 #ifdef SCHISM_SDL2
 		&schism_dmoz_backend_sdl2,
 #endif

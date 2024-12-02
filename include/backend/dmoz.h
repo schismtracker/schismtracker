@@ -29,9 +29,12 @@ typedef struct {
 	int (*init)(void);
 	void (*quit)(void);
 
-	char * (*get_exe_path)(void);
+	char *(*get_exe_path)(void);
 } schism_dmoz_backend_t;
 
+#ifdef SCHISM_WIN32
+extern const schism_dmoz_backend_t schism_dmoz_backend_win32;
+#endif
 #ifdef SCHISM_SDL2
 extern const schism_dmoz_backend_t schism_dmoz_backend_sdl2;
 #endif
