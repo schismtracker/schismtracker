@@ -520,11 +520,11 @@ struct multi_write {
 	/* this is optimization for channels that haven't had any data yet
 	(nothing to convert/write, just seek ahead in the data stream) */
 	void (*silence)(void *data, long bytes);
-	int buffer[MIXBUFFERSIZE * 2];
+	int32_t buffer[MIXBUFFERSIZE * 2];
 };
 
 typedef struct song {
-	int mix_buffer[MIXBUFFERSIZE * 2];
+	int32_t mix_buffer[MIXBUFFERSIZE * 2];
 
 	song_voice_t voices[MAX_VOICES];                // Channels
 	uint32_t voice_mix[MAX_VOICES];                 // Channels to be mixed
@@ -641,12 +641,12 @@ int csf_set_resampling_mode(song_t *csf, uint32_t mode); // SRCMODE_XXXX
 
 
 // sndmix
-unsigned int csf_read(song_t *csf, void *v_buffer, unsigned int bufsize);
+uint32_t csf_read(song_t *csf, void *v_buffer, uint32_t bufsize);
 int csf_process_tick(song_t *csf);
 int csf_read_note(song_t *csf);
 
 // snd_fx
-unsigned int csf_get_length(song_t *csf); // (in seconds)
+uint32_t csf_get_length(song_t *csf); // (in seconds)
 void csf_instrument_change(song_t *csf, song_voice_t *chn, uint32_t instr, int porta, int instr_column);
 void csf_note_change(song_t *csf, uint32_t chan, int note, int porta, int retrig, int have_inst);
 uint32_t csf_get_nna_channel(song_t *csf, uint32_t chan);
@@ -662,11 +662,11 @@ void csf_process_midi_macro(song_t *csf, uint32_t chan, const char *midi_macro, 
 song_sample_t *csf_translate_keyboard(song_t *csf, song_instrument_t *ins, uint32_t note, song_sample_t *def);
 
 // various utility functions in snd_fx.c
-int get_note_from_frequency(int frequency, unsigned int c5speed);
-int get_frequency_from_note(int note, unsigned int c5speed);
-unsigned int transpose_to_frequency(int transp, int ftune);
-int frequency_to_transpose(unsigned int freq);
-unsigned long calc_halftone(unsigned long hz, int rel);
+int32_t get_note_from_frequency(int32_t frequency, uint32_t c5speed);
+int32_t get_frequency_from_note(int32_t note, uint32_t c5speed);
+uint32_t transpose_to_frequency(int32_t transp, int32_t ftune);
+int32_t frequency_to_transpose(uint32_t freq);
+uint64_t calc_halftone(uint64_t hz, int32_t rel);
 
 
 // sndfile
@@ -694,16 +694,16 @@ void adlib_patch_apply(song_sample_t *smp, int patchnum);
 ///////////////////////////////////////////////////////////
 
 // Return (a*b)/c - no divide error
-static inline int _muldiv(int a, int b, int c)
+static inline int32_t _muldiv(int32_t a, int32_t b, int32_t c)
 {
-	return ((unsigned long long) a * (unsigned long long) b ) / c;
+	return ((uint64_t)a * (uint64_t)b ) / c;
 }
 
 
 // Return (a*b+c/2)/c - no divide error
-static inline int _muldivr(int a, int b, int c)
+static inline int32_t _muldivr(int32_t a, int32_t b, int32_t c)
 {
-	return ((unsigned long long) a * (unsigned long long) b + (c >> 1)) / c;
+	return ((uint64_t)a * (uint64_t)b + (c >> 1)) / c;
 }
 
 

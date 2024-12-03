@@ -60,9 +60,9 @@ static eq_band eq[MAX_EQ_BANDS * 2] =
 };
 
 
-static void eq_filter(eq_band *pbs, int *buffer, unsigned int count)
+static void eq_filter(eq_band *pbs, int32_t *buffer, uint32_t count)
 {
-	int amt = (!!(audio_settings.channels-1)+1); // if 1, amt is 1, else 2
+	int32_t amt = (!!(audio_settings.channels-1)+1); // if 1, amt is 1, else 2
 	for (unsigned int i = 0; i < count; i+=amt) {
 		float x = buffer[i];
 		float y = pbs->a1 * pbs->x1 +
@@ -79,23 +79,23 @@ static void eq_filter(eq_band *pbs, int *buffer, unsigned int count)
 	}
 }
 
-void normalize_mono(song_t *csf, int *buffer, unsigned int count)
+void normalize_mono(song_t *csf, int32_t *buffer, uint32_t count)
 {
-	for (unsigned int b = 0; b < count; b++) {
-		buffer[b] *= (((float)audio_settings.master.left + (float)audio_settings.master.right) / 62.0F);
+	for (uint32_t b = 0; b < count; b++) {
+		buffer[b] = (buffer[b] * ((uint32_t)audio_settings.master.left + (uint32_t)audio_settings.master.right)) / 62;
 	}
 }
 
-void normalize_stereo(song_t *csf, int *buffer, unsigned int count)
+void normalize_stereo(song_t *csf, int32_t *buffer, uint32_t count)
 {
-	for (unsigned int b = 0; b < count; b++) {
-		buffer[b] *= ((float)audio_settings.master.left / 31.0F);
-		buffer[++b] *= ((float)audio_settings.master.right / 31.0F);
+	for (uint32_t b = 0; b < count; b += 2) {
+		buffer[b]     = (buffer[b]     * (uint32_t)audio_settings.master.left  / 31);
+		buffer[b + 1] = (buffer[b + 1] * (uint32_t)audio_settings.master.right / 31);
 	}
 }
 
 
-void eq_mono(song_t *csf, int *buffer, unsigned int count)
+void eq_mono(song_t *csf, int32_t *buffer, uint32_t count)
 {
 	for (unsigned int b = 0; b < MAX_EQ_BANDS; b++)
 	{
@@ -105,7 +105,7 @@ void eq_mono(song_t *csf, int *buffer, unsigned int count)
 }
 
 // XXX: I rolled the two loops into one. Make sure this works.
-void eq_stereo(song_t *csf, int *buffer, unsigned int count)
+void eq_stereo(song_t *csf, int32_t *buffer, uint32_t count)
 {
 	for (unsigned int b = 0; b < MAX_EQ_BANDS; b++) {
 		int br = b + MAX_EQ_BANDS;
@@ -218,14 +218,14 @@ void initialize_eq(int reset, float freq)
 }
 
 
-void set_eq_gains(const unsigned int *gainbuff, unsigned int gains, const unsigned int *freqs,
-		  int reset, int mix_freq)
+void set_eq_gains(const uint32_t *gainbuff, uint32_t gains, const uint32_t *freqs,
+		  int reset, int32_t mix_freq)
 {
-	for (unsigned int i = 0; i < MAX_EQ_BANDS; i++) {
+	for (uint32_t i = 0; i < MAX_EQ_BANDS; i++) {
 		float g, f = 0;
 
 		if (i < gains) {
-			unsigned int n = gainbuff[i];
+			uint32_t n = gainbuff[i];
 
 			//if (n > 32)
 			//        n = 32;

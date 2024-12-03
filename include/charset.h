@@ -36,6 +36,15 @@ typedef enum {
 	CHARSET_UTF8,
 	CHARSET_UTF16LE,
 	CHARSET_UTF16BE,
+	CHARSET_UCS2LE,
+	CHARSET_UCS2BE,
+#ifdef WORDS_BIGENDIAN
+# define CHARSET_UTF16 CHARSET_UTF16BE
+# define CHARSET_UCS2  CHARSET_UCS2BE
+#else
+# define CHARSET_UTF16 CHARSET_UTF16LE
+# define CHARSET_UCS2  CHARSET_UCS2LE
+#endif
 
 	/* European languages */
 	CHARSET_CP437,
@@ -49,6 +58,8 @@ typedef enum {
 	CHARSET_CHAR,
 	CHARSET_WCHAR_T
 } charset_t;
+
+
 
 typedef enum {
 	CHARSET_ERROR_SUCCESS = 0,
@@ -102,6 +113,7 @@ void *charset_case_fold_to_set(const void *in, charset_t inset, charset_t outset
 /* charset-aware replacements for C stdlib functions */
 int charset_strcmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set);
 int charset_strcasecmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set);
+int charset_strverscmp(const void *in1, charset_t in1set, const void *in2, charset_t in2set);
 int charset_strncasecmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set, size_t num);
 size_t charset_strncasecmplen(const void* in1, charset_t in1set, const void* in2, charset_t in2set, size_t num);
 

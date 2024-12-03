@@ -47,9 +47,9 @@ void vgamem_ovl_drawpixel(struct vgamem_overlay *n, int x, int y, int color);
 void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs, int ys, int xe, int ye, int color);
 
 // scanners
-void vgamem_scan8(unsigned int y, uint8_t *out,unsigned int tc[16], unsigned int mouse_line[80], unsigned int mouse_line_mask[80]);
-void vgamem_scan16(unsigned int y, uint16_t *out,unsigned int tc[16], unsigned int mouse_line[80], unsigned int mouse_line_mask[80]);
-void vgamem_scan32(unsigned int y, uint32_t *out,unsigned int tc[16], unsigned int mouse_line[80], unsigned int mouse_line_mask[80]);
+void vgamem_scan8(uint32_t y, uint8_t *out,uint32_t tc[16], uint32_t mouse_line[80], uint32_t mouse_line_mask[80]);
+void vgamem_scan16(uint32_t y, uint16_t *out,uint32_t tc[16], uint32_t mouse_line[80], uint32_t mouse_line_mask[80]);
+void vgamem_scan32(uint32_t y, uint32_t *out,uint32_t tc[16], uint32_t mouse_line[80], uint32_t mouse_line_mask[80]);
 
 /* --------------------------------------------------------------------- */
 /* character drawing routines */

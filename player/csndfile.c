@@ -640,7 +640,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 			const int8_t *data;
 
 			for (channel = 0; channel < stride; channel++) {
-				data = (const signed char *) sample->data + channel;
+				data = (const int8_t *) sample->data + channel;
 				for (pos = 0; pos < len; pos++) {
 					disko_putc(fp, data[pos] + add);
 					data += stride;
@@ -1003,7 +1003,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		int iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? -0x8000 : 0;
 		len = sample->length * 2;
 		if (len*2 > memsize) len = memsize >> 1;
-		short int *data = (short int *)sample->data;
+		int16_t *data = (int16_t *)sample->data;
 		for (uint32_t j=0; j<len; j++) {
 			slurp_read(fp, data + j, sizeof(*data));
 
@@ -1017,8 +1017,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(16,M,LE,PTM): {
 		len = sample->length * 2;
 		if (len > memsize) break;
-		signed char *data = (signed char *)sample->data;
-		signed char delta8 = 0;
+		int8_t *data = (int8_t *)sample->data;
+		int8_t delta8 = 0;
 		for (uint32_t j=0; j<len; j++) {
 			delta8 += slurp_getc(fp);
 			*data++ = delta8;
@@ -1062,13 +1062,13 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 			}
 
 			max = (max / 128) + 1;
-			signed short *dest = (signed short *)sample->data;
+			int16_t *dest = (int16_t *)sample->data;
 
 			for (uint32_t k=0; k<len; k+=slsize) {
 				if ((flags & SF_BIT_MASK) == SF_32) slurp_getc(fp); // meh
 				int8_t src[3] = {slurp_getc(fp), slurp_getc(fp), slurp_getc(fp)};
 				int32_t l = ((((src[2] << 8) + src[1]) << 8) + src[0]) << 8;
-				*dest++ = (signed short)(l / max);
+				*dest++ = (int16_t)(l / max);
 			}
 		}
 		break;
@@ -1092,14 +1092,14 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 				if (-l > max) max = -l;
 			}
 			max = (max / 128) + 1;
-			signed short *dest = (signed short *)sample->data;
+			int16_t *dest = (int16_t *)sample->data;
 			slurp_seek(fp, start, SEEK_SET);
 			for (uint32_t k=0; k<len; k+=slsize) {
 				if ((flags & SF_BIT_MASK) == SF_32) slurp_getc(fp); // meh
 				uint8_t src[3] = {slurp_getc(fp), slurp_getc(fp), slurp_getc(fp)};
 				int32_t l = ((((src[2] << 8) + src[1]) << 8) + src[0]) << 8;
 
-				*dest++ = (signed short)(l/max);
+				*dest++ = (int16_t)(l/max);
 			}
 		}
 		break;
@@ -1122,14 +1122,14 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 				if (-l > max) max = -l;
 			}
 			max = (max / 128) + 1;
-			signed short *dest = (signed short *)sample->data;
+			int16_t *dest = (int16_t *)sample->data;
 			slurp_seek(fp, start, SEEK_SET);
 			for (uint32_t k=0; k<len; k+=slsize) {
 				uint8_t src[3] = {slurp_getc(fp), slurp_getc(fp), slurp_getc(fp)};
 				if (flags == SF(32,SI,BE,PCMS)) slurp_getc(fp); // meh
 				int32_t l = ((((src[0] << 8) + src[1]) << 8) + src[2]) << 8;
 
-				*dest++ = (signed short)(l/max);
+				*dest++ = (int16_t)(l/max);
 			}
 		}
 		break;
@@ -1140,7 +1140,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		len = sample->length * 2;
 		if (len*2 > memsize) len = memsize >> 1;
 
-		short int *data = (short int *)sample->data;
+		int16_t *data = (int16_t *)sample->data;
 		slurp_read(fp, data, len * 2);
 
 		for (uint32_t j=0; j<len; j++)
@@ -1272,7 +1272,7 @@ void csf_adjust_sample_loop(song_sample_t *sample)
 	// so I guess I should rewrite the crap at the end of the sample at least.
 	uint32_t len = sample->length;
 	if (sample->flags & CHN_16BIT) {
-		short int *data = (short int *)sample->data;
+		int16_t *data = (int16_t *)sample->data;
 		// Adjust end of sample
 		if (sample->flags & CHN_STEREO) {
 			data[len*2+6]
@@ -1350,7 +1350,7 @@ void csf_stop_sample(song_t *csf, song_sample_t *smp)
 int csf_destroy_sample(song_t *csf, uint32_t nsmp)
 {
 	song_sample_t *smp = csf->samples + nsmp;
-	signed char *data;
+	int8_t *data;
 
 	if (nsmp >= MAX_SAMPLES)
 		return 0;
@@ -1709,9 +1709,9 @@ void csf_export_s3m_effect(uint8_t *pcmd, uint8_t *pprm, int to_it)
 
 void csf_insert_restart_pos(song_t *csf, uint32_t restart_order)
 {
-	int n, max, row;
-	int ord, pat, newpat;
-	int used; // how many times it was used (if >1, copy it)
+	int32_t n, max, row;
+	int32_t ord, pat, newpat;
+	int32_t used; // how many times it was used (if >1, copy it)
 
 	if (!restart_order)
 		return;

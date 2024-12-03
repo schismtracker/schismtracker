@@ -221,13 +221,13 @@ struct video_cf {
 		unsigned int y;
 	} mouse;
 
-	unsigned int yuv_y[256];
-	unsigned int yuv_u[256];
-	unsigned int yuv_v[256];
+	uint32_t yuv_y[256];
+	uint32_t yuv_u[256];
+	uint32_t yuv_v[256];
 
-	unsigned int pal[256];
+	uint32_t pal[256];
 
-	unsigned int tc_bgr32[256];
+	uint32_t tc_bgr32[256];
 };
 static struct video_cf video;
 
@@ -617,7 +617,11 @@ void video_startup(void)
 		const SDL_VideoInfo* info = SDL_GetVideoInfo();
 		display_native_x = info->current_w;
 		display_native_y = info->current_h;
+		printf("%d, %d\n", display_native_x, display_native_y);
 	}
+
+	/* make a centered window by default */
+	setenv("SDL_VIDEO_WINDOW_POS", "center", 0);
 
 	/* because first mode is 0 */
 	//vgamem_clear();
@@ -1398,23 +1402,6 @@ void video_colors(unsigned char palette[16][3])
 		fun(i, rgb);
 		_bgr32_pal(i, rgb);
 	}
-}
-
-static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, unsigned int mouseline[80])
-{
-	unsigned int z;
-
-	memset(mouseline, 0, 80*sizeof(unsigned int));
-	if (video_mousecursor_visible() != MOUSE_EMULATED
-	    || !(video_is_focused())
-	    || y < video.mouse.y
-	    || y >= video.mouse.y+MOUSE_HEIGHT) {
-		return;
-	}
-
-	z = _mouse_pointer[ y - video.mouse.y ];
-	mouseline[x] = z >> v;
-	if (x < 79) mouseline[x+1] = (z << (8-v)) & 0xff;
 }
 
 static void _video_blit_planar(void) {

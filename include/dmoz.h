@@ -221,4 +221,10 @@ void dmoz_cache_update_names(const char *path, const char *filen, const char *di
 void dmoz_cache_update(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
 void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
 
+#ifdef SCHISM_MACOS
+/* this sucks */
+int dmoz_path_from_fsref(const void *ref, char **path);
+int dmoz_path_to_fsref(const char *path, void *ref);
+#endif
+
 #endif /* SCHISM_DMOZ_H_ */

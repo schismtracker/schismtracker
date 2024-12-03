@@ -177,7 +177,7 @@ AC_SUBST([UTF8PROC_CFLAGS])
 AC_SUBST([UTF8PROC_LIBS])
 
 dnl Functions
-AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp nice setenv unsetenv dup fnmatch mkstemp localtime_r umask execl fork nanosleep usleep)
+AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp nice setenv unsetenv dup fnmatch mkstemp localtime_r umask execl fork nanosleep usleep access)
 AM_CONDITIONAL([NEED_ASPRINTF], [test "x$ac_cv_func_asprintf" = "xno"])
 AM_CONDITIONAL([NEED_VASPRINTF], [test "x$ac_cv_func_vasprintf" = "xno"])
 AM_CONDITIONAL([NEED_MEMCMP], [test "x$ac_cv_func_memcmp" = "xno"])
@@ -275,6 +275,7 @@ dnl -----------------------------------------------------------------------
 dnl Platform-specific behavior
 AC_MSG_CHECKING([host platform])
 use_macosx=no
+use_macos=no
 use_win32=no
 use_wii=no
 use_wiiu=no
@@ -289,6 +290,27 @@ case "${host_os}" in
 
 		use_macosx=yes
 		AC_DEFINE([SCHISM_MACOSX], [1], [Mac OS X])
+		;;
+	macos*)
+		# Retro68 toolchain
+		AC_MSG_RESULT([found Classic Mac OS host])
+
+		use_macos=yes
+		AC_DEFINE([SCHISM_MACOS], [1], [Classic Mac OS])
+
+		# I don't know if this is necessarily true but I'm going with it
+		EXEEXT=.xcoff
+
+		AC_PATH_PROG([REZ], [Rez])
+		if test "x$REZ" = "x"; then
+			AC_MSG_ERROR([*** Couldn't find Rez])
+		fi
+
+		AC_PATH_PROG([MAKE_PEF], [MakePEF])
+		if test "x$MAKE_PEF" = "x"; then
+			AC_MSG_ERROR([*** Couldn't find MakePEF])
+		fi
+
 		;;
 	cygwin*|mingw*)
 		AC_MSG_RESULT([found Windows host])
@@ -408,6 +430,7 @@ AM_CONDITIONAL([USE_WII], [test "x$use_wii" = "xyes"])
 AM_CONDITIONAL([USE_WIIU], [test "x$use_wiiu" = "xyes"])
 AM_CONDITIONAL([USE_CONTROLLER], [test "x$use_controller" = "xyes"])
 AM_CONDITIONAL([USE_MACOSX], [test "x$use_macosx" = "xyes"])
+AM_CONDITIONAL([USE_MACOS], [test "x$use_macos" = "xyes"])
 AM_CONDITIONAL([am__fastdepOBJC], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([USE_NETWORK], [test "x$use_network" = "xyes"])
 

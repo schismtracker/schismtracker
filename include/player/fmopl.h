@@ -27,7 +27,7 @@ void ym3812_set_irq_handler(void *chip, OPL_IRQHANDLER IRQHandler, void *param);
 void ym3812_set_update_handler(void *chip, OPL_UPDATEHANDLER UpdateHandler, void *param);
 
 /* OPL3 */
-void *ymf262_init(int clock, int rate);
+void *ymf262_init(uint32_t clock, uint32_t rate);
 void ymf262_shutdown(void *chip);
 void ymf262_reset_chip(void *chip);
 int  ymf262_write(void *chip, int a, int v);

@@ -62,6 +62,9 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_sysexit macosx_sysexit
 # define os_sysinit macosx_sysinit
 # define os_get_modkey macosx_get_modkey
+#elif defined(SCHISM_MACOS)
+# define os_mkdir macos_mkdir
+# define os_stat macos_stat
 #endif
 
 #if defined(SCHISM_WIN32)
@@ -130,5 +133,8 @@ int macosx_event(schism_event_t *event);
 void macosx_sysexit(void);
 void macosx_sysinit(int *pargc, char ***pargv); /* set up ibook helper */
 void macosx_get_modkey(int *m);
+
+int macos_mkdir(const char *path, mode_t mode);
+int macos_stat(const char *file, struct stat *st);
 
 #endif /* SCHISM_OSDEFS_H_ */

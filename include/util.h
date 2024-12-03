@@ -92,12 +92,18 @@
 /* Path stuff that differs by platform */
 #ifdef SCHISM_WIN32
 # define DIR_SEPARATOR '\\'
-# define DIR_SEPARATOR_STR "\\"
 # define IS_DIR_SEPARATOR(c) ((c) == '/' || (c) == '\\')
+#elif defined(SCHISM_MACOS)
+/* I have no idea if this is right or not. */
+# define DIR_SEPARATOR ':'
+# define IS_DIR_SEPARATOR(c) ((c) == ':')
 #else
 # define DIR_SEPARATOR '/'
-# define DIR_SEPARATOR_STR "/"
 # define IS_DIR_SEPARATOR(c) ((c) == '/')
+#endif
+
+#ifndef DIR_SEPARATOR_STR
+# define DIR_SEPARATOR_STR ((const char []){ DIR_SEPARATOR, '\0' })
 #endif
 
 #include "mem.h" // XXX these includes suck

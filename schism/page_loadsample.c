@@ -835,7 +835,7 @@ static void handle_rename_op(void)
 	handle_preload();
 }
 
-static void handle_load_copy_uint(unsigned int s, unsigned int *d)
+static void handle_load_copy_uint(uint32_t s, uint32_t *d)
 {
 	if (s != *d) {
 		*d = s;
