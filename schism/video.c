@@ -752,3 +752,10 @@ void video_blit(void)
 {
 	backend->blit();
 }
+
+/* ------------------------------------------------------------ */
+
+int video_get_wm_data(video_wm_data_t *wm_data)
+{
+	return backend->get_wm_data(wm_data);
+}

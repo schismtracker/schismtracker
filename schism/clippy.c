@@ -116,7 +116,6 @@ static char *_internal_clippy_paste(int cb)
 {
 	switch (cb) {
 		case CLIPPY_SELECT:
-			/* is this even remotely useful? */
 			if (backend && backend->have_selection()) {
 				_free_current_selection();
 

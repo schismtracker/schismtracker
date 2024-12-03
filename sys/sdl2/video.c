@@ -687,6 +687,26 @@ void sdl2_video_mousecursor_changed(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
+static int sdl2_video_get_wm_data(video_wm_data_t *wm_data)
+{
+	SDL_SysWMinfo info;
+	SDL_VERSION(&info.version);
+
+	if (!sdl2_GetWindowWMInfo(video.window, &info))
+		return 0;
+
+#if defined(SDL_VIDEO_DRIVER_WINDOWS)
+	if (info.subsystem == SDL_SYSWM_WINDOWS) {
+		wm_data->subsystem = VIDEO_WM_DATA_SUBSYSTEM_WINDOWS;
+		wm_data->data.windows.hwnd = info.info.win.window;
+	}
+#endif
+
+	return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 static int sdl2_video_load_syms(void)
 {
 	SCHISM_SDL2_SYM(InitSubSystem);
@@ -807,4 +827,5 @@ const schism_video_backend_t schism_video_backend_sdl2 = {
 	.toggle_menu = sdl2_video_toggle_menu,
 	.blit = sdl2_video_blit,
 	.mousecursor_changed = sdl2_video_mousecursor_changed,
+	.get_wm_data = sdl2_video_get_wm_data,
 };

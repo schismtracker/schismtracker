@@ -119,6 +119,8 @@ enum {
 int charset_fnmatch(const void *match, charset_t match_set, const void *str, charset_t str_set, int flags);
 
 /* iconv replacement */
+#define CHARSET_NUL_TERMINATED SIZE_MAX /* Use this size if you know the input has a NUL terminator character */
+
 const char* charset_iconv_error_lookup(charset_error_t err);
 charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charset_t outset, size_t insize);
 

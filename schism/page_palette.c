@@ -94,6 +94,7 @@ static void update_thumbbars(void)
 static void palette_copy_palette_to_clipboard(int which) {
 	char palette_text[49];
 	palette_to_string(which, palette_text);
+	palette_text[48] = 0;
 
 	clippy_select(widgets_palette + 49, palette_text, 49);
 	clippy_yank();

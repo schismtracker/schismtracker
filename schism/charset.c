@@ -118,9 +118,9 @@ int char_digraph(int k1, int k2)
 /* -----------------------------------------------------------------------------
  * decoders */
 
-/* convenience macros for decoding functions */
+/* Make sure we never overflow the size. */
 #define DECODER_ASSERT_OVERFLOW(decoder, amount) \
-	if ((decoder)->offset + (amount) >= (decoder)->size) { \
+	if ((decoder)->offset + (amount) > (decoder)->size) { \
 		(decoder)->state = DECODER_STATE_OVERFLOWED; \
 		return; \
 	}
@@ -632,6 +632,7 @@ CHARSET_VARIATION(internal) {
 		conv_to_ucs4_func(&decoder);
 		if (decoder.state < 0) {
 			disko_memclose(&ds, 0);
+			log_appendf(4, "%d", decoder.state);
 			return CHARSET_ERROR_DECODE;
 		}
 
@@ -774,7 +775,7 @@ done:
 	}
 #endif
 	default:
-		memcpy(out, &outfake, sizeof(outfake));
+		memcpy(out, &outfake, sizeof(void *));
 		break;
 	}
 

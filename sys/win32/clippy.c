@@ -27,6 +27,8 @@
 #include "loadso.h"
 #include "charset.h"
 #include "mem.h"
+#include "video.h"
+#include "util.h"
 
 #include <windows.h>
 
@@ -37,7 +39,7 @@ static int win32_clippy_have_selection(void)
 
 static int win32_clippy_have_clipboard(void)
 {
-	return 1;
+	return IsClipboardFormatAvailable(CF_UNICODETEXT) || IsClipboardFormatAvailable(CF_TEXT);
 }
 
 static void win32_clippy_set_selection(const char *text)
@@ -47,98 +49,97 @@ static void win32_clippy_set_selection(const char *text)
 
 static void win32_clippy_set_clipboard(const char *text)
 {
-	int result = 0;
+	// Only use CF_UNICODETEXT on Windows NT machines
+	const UINT fmt = (GetVersion() & UINT32_C(0x80000000)) ? CF_TEXT : CF_UNICODETEXT;
+	LPWSTR unicode;
+	LPSTR ansi;
+	size_t i;
+	size_t size = 0;
 
-	UINT fmt = 0;
+	video_wm_data_t wm_data;
+	if (!video_get_wm_data(&wm_data) && wm_data.subsystem != VIDEO_WM_DATA_SUBSYSTEM_WINDOWS)
+		return;
 
-	if (IsClipboardFormatAvailable(CF_UNICODETEXT)) {
-		fmt = CF_UNICODETEXT;
-	} else if (IsClipboardFormatAvailable(CF_TEXT)) {
-		fmt = CF_TEXT;
+	if (!OpenClipboard(wm_data.data.windows.hwnd))
+		return;
+
+	// Convert from LF to CRLF
+	if (fmt == CF_UNICODETEXT && !charset_iconv(text, &unicode, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+		for (i = 0; unicode[i]; i++, size++)
+			if (unicode[i] == L'\n' && (i == 0 || unicode[i - 1] != L'\r'))
+				size++;
+	} else if (fmt == CF_TEXT && !charset_iconv(text, &ansi, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
+		for (i = 0; ansi[i]; i++, size++)
+			if (ansi[i] == '\n' && (i == 0 || ansi[i - 1] != '\r'))
+				size++;
 	} else {
-		// welp
+		// give up
 		return;
 	}
 
-	if (OpenClipboard(NULL)) {
-		size_t i, size;
+	size = (size + 1) * ((fmt == CF_UNICODETEXT) ? sizeof(wchar_t) : sizeof(char));
 
-		/* Find out the size of the data */
-		for (size = 0, i = 0; text[i]; ++i, ++size)
-			if (text[i] == '\n' && (i == 0 || text[i - 1] != '\r'))
-				/* We're going to insert a carriage return */
-				size++;
-
-		size = (size + 1) * (fmt == CF_UNICODETEXT) ? sizeof(wchar_t) : sizeof(char);
-
-		/* Save the data to the clipboard */
-		HANDLE mem = GlobalAlloc(GMEM_MOVEABLE, size);
-		if (mem) {
-			if (fmt == CF_UNICODETEXT) {
-				LPWSTR unicode;
-				if (!charset_iconv(text, &unicode, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-					LPWSTR dst = (LPWSTR)GlobalLock(mem);
-					if (dst) {
-						/* Copy the text over, adding carriage returns as necessary */
-						for (i = 0; unicode[i]; ++i)
-							if (unicode[i] == L'\n' && (i == 0 || unicode[i - 1] != L'\r'))
-								*dst++ = L'\r';
-							*dst++ = unicode[i];
-						*dst = L'\0';
-						GlobalUnlock(mem);
-					}
-					free(unicode);
+	// Copy the result to the clipboard
+	HANDLE mem = GlobalAlloc(GMEM_MOVEABLE, size);
+	if (mem) {
+		if (fmt == CF_UNICODETEXT) {
+			wchar_t *dst = (wchar_t *)GlobalLock(mem);
+			if (dst) {
+				for (i = 0; unicode[i]; i++) {
+					if (unicode[i] == L'\n' && (i == 0 || unicode[i - 1] != L'\r'))
+						*dst++ = L'\r';
+					*dst++ = unicode[i];
 				}
-			} else if (fmt == CF_TEXT) {
-				LPSTR ansi;
-				if (!charset_iconv(text, &ansi, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
-					LPSTR dst = (LPSTR)GlobalLock(mem);
-					if (dst) {
-						/* Copy the text over, adding carriage returns as necessary */
-						for (i = 0; ansi[i]; ++i) {
-							if (ansi[i] == '\n' && (i == 0 || ansi[i - 1] != '\r'))
-								*dst++ = '\r';
-							*dst++ = ansi[i];
-						}
-						*dst = '\0';
-						GlobalUnlock(mem);
-					}
-					free(ansi);
-				}
+				*dst = L'\0';
+				GlobalUnlock(mem);
 			}
-
-			EmptyClipboard();
-			SetClipboardData(fmt, mem);
+			free(unicode);
+		} else if (fmt == CF_TEXT) {
+			char *dst = (char *)GlobalLock(mem);
+			if (dst) {
+				for (i = 0; ansi[i]; i++) {
+					if (ansi[i] == '\n' && (i == 0 || ansi[i - 1] != '\r'))
+						*dst++ = '\r';
+					*dst++ = ansi[i];
+				}
+				*dst = '\0';
+				GlobalUnlock(mem);
+			}
+			free(ansi);
 		}
 
-		CloseClipboard();
+		if (!EmptyClipboard() || !SetClipboardData(fmt, mem))
+			GlobalFree(mem);
 	}
+
+	CloseClipboard();
 }
 
 static char *win32_clippy_get_selection(void)
 {
+	// doesn't exist, ever
 	return str_dup("");
 }
 
 static char *win32_clippy_get_clipboard(void)
 {
 	char *text = NULL;
-	UINT fmt;
 	int i;
 
-	if (IsClipboardFormatAvailable(CF_UNICODETEXT)) {
-		fmt = CF_UNICODETEXT;
-	} else if (IsClipboardFormatAvailable(CF_TEXT)) {
-		fmt = CF_TEXT;
-	} else {
+	video_wm_data_t wm_data;
+	if (!video_get_wm_data(&wm_data) && wm_data.subsystem != VIDEO_WM_DATA_SUBSYSTEM_WINDOWS)
 		return str_dup("");
-	}
+
+	UINT formats[] = {CF_UNICODETEXT, CF_TEXT};
+	int fmt = GetPriorityClipboardFormat(formats, ARRAY_SIZE(formats));
+	if (fmt < 0)
+		return str_dup("");
 
 	// try a couple times to open the clipboard
 	for (i = 0; i < 5; i++) {
-		if (OpenClipboard(NULL)) {
+		if (OpenClipboard(wm_data.data.windows.hwnd)) {
 			HANDLE mem = GetClipboardData(fmt);
-			SIZE_T len = GlobalSize(mem);
+			SIZE_T len = GlobalSize(mem); // no overflow!
 			if (mem) {
 				if (fmt == CF_UNICODETEXT) {
 					LPWSTR str = (LPWSTR)GlobalLock(mem);
@@ -162,10 +163,7 @@ static char *win32_clippy_get_clipboard(void)
 
 static int win32_clippy_init(void)
 {
-	if (!IsClipboardFormatAvailable(CF_UNICODETEXT)
-		&& !IsClipboardFormatAvailable(CF_TEXT))
-		return 0;
-
+	// nothing to do
 	return 1;
 }
 

@@ -104,4 +104,17 @@ void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height);
 void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height, schism_map_rgb_func_t map_rgb, void *map_rgb_data);
 
+/* --------------------------------------------------------- */
+
+typedef struct {
+	enum {VIDEO_WM_DATA_SUBSYSTEM_WINDOWS=0} subsystem;
+	union {
+		struct {
+			void *hwnd; // type is actually HWND
+		} windows;
+	} data;
+} video_wm_data_t;
+
+int video_get_wm_data(video_wm_data_t *wm_data);
+
 #endif /* SCHISM_VIDEO_H_ */

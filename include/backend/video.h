@@ -58,6 +58,7 @@ typedef struct {
 	void (*toggle_menu)(int on);
 	void (*blit)(void);
 	void (*mousecursor_changed)(void);
+	int (*get_wm_data)(video_wm_data_t *wm_data);
 } schism_video_backend_t;
 
 #ifdef SCHISM_SDL12
