@@ -196,7 +196,7 @@ int clippy_init(void)
 #ifdef SCHISM_WIN32
 		&schism_clippy_backend_win32,
 #endif
-#ifdef SCHISM_WIN32
+#ifdef SCHISM_MACOSX
 		&schism_clippy_backend_macosx,
 #endif
 #ifdef SCHISM_SDL2
