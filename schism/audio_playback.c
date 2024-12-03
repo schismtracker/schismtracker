@@ -304,9 +304,9 @@ This will break if the same note was keydown'd twice without a keyup, but I thin
 fairly unlikely scenario that you'd have to TRY to bring about. */
 static int keyjazz_note_to_chan[NOTE_LAST + 1] = {0};
 /* last note played by channel tracking */
-static int keyjazz_chan_to_note[MAX_KEYJAZZ_VOICES + 1] = {0};
+static int keyjazz_chan_to_note[MAX_CHANNELS + 1] = {0};
 
-/* **** chan ranges from 1 to MAX_KEYJAZZ_VOICES   */
+/* **** chan ranges from 1 to MAX_CHANNELS   */
 static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int effect, int param)
 {
 	int ins_mode;
@@ -315,24 +315,26 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	song_sample_t *s = NULL;
 	song_instrument_t *i = NULL;
 
-	if (chan < 1) {
-		if (chan == KEYJAZZ_CHAN_CURRENT) {
-			chan = current_play_channel;
-			if (multichannel_mode)
-				song_change_current_play_channel(1, 1);
-		} else if (chan == KEYJAZZ_CHAN_AUTO) {
-			// search for the first channel that has a free voice
-			for (chan = 1; chan < MAX_KEYJAZZ_VOICES; chan++)
-				if (!keyjazz_chan_to_note[chan])
-					break;
-		}
+	switch (chan) {
+	case KEYJAZZ_CHAN_CURRENT:
+		chan = current_play_channel;
+		if (multichannel_mode)
+			song_change_current_play_channel(1, 1);
+		break;
+	case KEYJAZZ_CHAN_AUTO:
+		for (chan = 1; chan < MAX_CHANNELS; chan++)
+			if (!keyjazz_chan_to_note[chan])
+				break;
+		break;
+	default:
+		break;
 	}
 
-	// back to the keyjazz range
-	int chan_internal = chan + KEYJAZZ_VOICES_OFFSET - 1;
+	// back to the internal range
+	int chan_internal = chan - 1;
 
 	// hm
-	assert(chan_internal < MAX_VOICES);
+	assert(chan_internal < MAX_CHANNELS);
 
 	song_lock_audio();
 
@@ -1098,7 +1100,7 @@ void cfg_load_audio(cfg_file_t *cfg)
 	default: audio_settings.bits = 16;
 	}
 
-	audio_settings.channel_limit = CLAMP(audio_settings.channel_limit, 4, MAX_MODULE_VOICES);
+	audio_settings.channel_limit = CLAMP(audio_settings.channel_limit, 4, MAX_VOICES);
 	audio_settings.interpolation_mode = CLAMP(audio_settings.interpolation_mode, 0, 3);
 
 	audio_settings.eq_freq[0] = cfg_get_number(cfg, "EQ Low Band", "freq", 0);

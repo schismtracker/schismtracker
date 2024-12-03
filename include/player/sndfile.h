@@ -31,13 +31,7 @@
 #define MAX_MESSAGE             8000
 
 
-#define MAX_MODULE_VOICES		256
-#define MAX_KEYJAZZ_VOICES		64
-
-#define MAX_VOICES              (MAX_MODULE_VOICES + MAX_KEYJAZZ_VOICES)
-
-// absolute offsets
-#define KEYJAZZ_VOICES_OFFSET	(MAX_MODULE_VOICES)
+#define MAX_VOICES              256
 
 #define MIX_MAX_CHANNELS		2 /* used for filters and stuff */
 #define MIXBUFFERSIZE           512
