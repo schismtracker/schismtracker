@@ -303,7 +303,8 @@ files_macosx = \
 	sys/macosx/macosx-sdlmain.m	\
 	sys/macosx/ibook-support.c	\
 	sys/macosx/midi-macosx.c	\
-	sys/macosx/osdefs.c
+	sys/macosx/osdefs.c \
+	sys/macosx/clippy.m
 cflags_macosx=
 libs_macosx=$(OSX_LDADD)
 endif
