@@ -322,9 +322,14 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 			song_change_current_play_channel(1, 1);
 		break;
 	case KEYJAZZ_CHAN_AUTO:
-		for (chan = 1; chan < MAX_CHANNELS; chan++)
-			if (!keyjazz_chan_to_note[chan])
-				break;
+		if (multichannel_mode) {
+			chan = current_play_channel;
+			song_change_current_play_channel(1, 1);
+		} else {
+			for (chan = 1; chan < MAX_CHANNELS; chan++)
+				if (!keyjazz_chan_to_note[chan])
+					break;
+		}
 		break;
 	default:
 		break;
