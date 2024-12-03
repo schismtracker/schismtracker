@@ -632,7 +632,6 @@ CHARSET_VARIATION(internal) {
 		conv_to_ucs4_func(&decoder);
 		if (decoder.state < 0) {
 			disko_memclose(&ds, 0);
-			log_appendf(4, "%d", decoder.state);
 			return CHARSET_ERROR_DECODE;
 		}
 
