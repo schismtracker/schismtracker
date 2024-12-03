@@ -125,15 +125,23 @@ static char *win32_clippy_get_clipboard(void)
 {
 	char *text = NULL;
 	int i;
+	int fmt;
 
 	video_wm_data_t wm_data;
 	if (!video_get_wm_data(&wm_data) && wm_data.subsystem != VIDEO_WM_DATA_SUBSYSTEM_WINDOWS)
 		return str_dup("");
 
-	UINT formats[] = {CF_UNICODETEXT, CF_TEXT};
-	int fmt = GetPriorityClipboardFormat(formats, ARRAY_SIZE(formats));
-	if (fmt < 0)
-		return str_dup("");
+	if (GetVersion() & UINT32_C(0x80000000)) {
+		// Believe it or not, CF_UNICODETEXT *does* actually work on
+		// Windows 95. However, practically every application that runs
+		// will completely ignore it and just use CF_TEXT instead.
+		fmt = CF_TEXT;
+	} else {
+		UINT formats[] = {CF_UNICODETEXT, CF_TEXT};
+		fmt = GetPriorityClipboardFormat(formats, ARRAY_SIZE(formats));
+		if (fmt < 0)
+			return str_dup("");
+	}
 
 	// try a couple times to open the clipboard
 	for (i = 0; i < 5; i++) {

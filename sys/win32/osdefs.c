@@ -72,10 +72,6 @@
 #define IDM_SETTINGS_FONT_EDITOR 604
 #define IDM_SETTINGS_SYSTEM_CONFIGURATION 605
 
-// slurp-win32.c
-int win32_slurp_init(void);
-void win32_slurp_quit(void);
-
 /* global menu object */
 static HMENU menu = NULL;
 
@@ -192,8 +188,6 @@ void win32_sysinit(UNUSED int *pargc, UNUSED char ***pargv)
 #ifdef USE_MEDIAFOUNDATION
 	win32mf_init();
 #endif
-
-	win32_slurp_init();
 }
 
 void win32_sysexit(void)
@@ -201,8 +195,6 @@ void win32_sysexit(void)
 #ifdef USE_MEDIAFOUNDATION
 	win32mf_quit();
 #endif
-	
-	win32_slurp_quit();
 }
 
 int win32_event(schism_event_t *event)
@@ -320,14 +312,27 @@ int win32_event(schism_event_t *event)
 
 		HDROP drop = (HDROP)event->wm_msg.msg.win.wparam;
 
-		int needed = DragQueryFileW(drop, 0, NULL, 0);
+		if (GetVersion() & UINT32_C(0x80000000)) {
+			int needed = DragQueryFileW(drop, 0, NULL, 0);
 
-		wchar_t *f = mem_alloc((needed + 1) * sizeof(wchar_t));
-		DragQueryFileW(drop, 0, f, needed + 1);
-		f[needed] = 0;
+			wchar_t *f = mem_alloc((needed + 1) * sizeof(wchar_t));
+			DragQueryFileW(drop, 0, f, needed + 1);
+			f[needed] = 0;
 
-		charset_iconv(f, &e.drop.file, CHARSET_WCHAR_T, CHARSET_CHAR, needed + 1);
-		
+			charset_iconv(f, &e.drop.file, CHARSET_WCHAR_T, CHARSET_CHAR, needed + 1);
+		} else {
+			int needed = DragQueryFileA(drop, 0, NULL, 0);
+
+			char *f = mem_alloc((needed + 1) * sizeof(char));
+			DragQueryFileA(drop, 0, f, needed);
+			f[needed] = 0;
+
+			charset_iconv(f, &e.drop.file, CHARSET_ANSI, CHARSET_CHAR, needed + 1);
+		}
+
+		if (!e.drop.file)
+			return 0;
+
 		*event = e;
 		return 1;
 	}
@@ -391,7 +396,7 @@ int win32_stat(const char* path, struct stat* st)
 {
 	struct _stat mst;
 
-	if (GetVersion() >= 0x80000000U) {
+	if (GetVersion() & UINT32_C(0x80000000)) {
 		// Windows 9x
 		char* ac = NULL;
 
@@ -417,7 +422,7 @@ int win32_stat(const char* path, struct stat* st)
 
 int win32_open(const char* path, int flags)
 {
-	if (GetVersion() >= 0x80000000U) {
+	if (GetVersion() & UINT32_C(0x80000000)) {
 		// Windows 9x
 		char* ac = NULL;
 		if (charset_iconv(path, &ac, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
@@ -440,7 +445,7 @@ int win32_open(const char* path, int flags)
 
 FILE* win32_fopen(const char* path, const char* flags)
 {
-	if (GetVersion() >= 0x80000000U) {
+	if (GetVersion() & UINT32_C(0x80000000)) {
 		// Windows 9x
 		char *ac = NULL, *ac_flags = NULL;
 		if (charset_iconv(path, &ac, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)
@@ -470,7 +475,7 @@ FILE* win32_fopen(const char* path, const char* flags)
 
 int win32_mkdir(const char *path, UNUSED mode_t mode)
 {
-	if (GetVersion() >= 0x80000000U) {
+	if (GetVersion() & UINT32_C(0x80000000)) {
 		char* ac = NULL;
 		if (charset_iconv(path, &ac, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
 			return -1;
@@ -478,7 +483,6 @@ int win32_mkdir(const char *path, UNUSED mode_t mode)
 		int ret = mkdir(ac);
 		free(ac);
 		return ret;
-
 	} else {
 		wchar_t* wc = NULL;
 		if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
@@ -495,8 +499,7 @@ int win32_mkdir(const char *path, UNUSED mode_t mode)
 /* ------------------------------------------------------------------------------- */
 /* run hook */
 
-// doesn't work on ANSI for now (can't be bothered)
-int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
+int win32_run_hook_wide(const char *dir, const char *name, const char *maybe_arg)
 {
 #define DOT_BAT L".bat"
 	WCHAR cwd[PATH_MAX] = {0};
@@ -511,7 +514,7 @@ int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 			return 0;
 
 		size_t name_len = wcslen(name_w);
-		if ((name_len * sizeof(WCHAR)) + sizeof(DOT_BAT) >= PATH_MAX) {
+		if ((name_len * sizeof(WCHAR)) + sizeof(DOT_BAT) >= sizeof(batch_file)) {
 			free(name_w);
 			return 0;
 		}
@@ -563,4 +566,82 @@ int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 	if (r == 0) return 1;
 	return 0;
 #undef DOT_BAT
+}
+
+int win32_run_hook_ansi(const char *dir, const char *name, const char *maybe_arg)
+{
+#define DOT_BAT ".bat"
+	char cwd[PATH_MAX] = {0};
+	if (!getcwd(cwd, PATH_MAX))
+		return 0;
+
+	char batch_file[PATH_MAX] = {0};
+
+	{
+		char *name_w;
+		if (charset_iconv(name, &name_w, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
+			return 0;
+
+		size_t name_len = strlen(name_w);
+		if ((name_len * sizeof(char)) + sizeof(DOT_BAT) >= sizeof(batch_file)) {
+			free(name_w);
+			return 0;
+		}
+
+		memcpy(batch_file, name_w, name_len * sizeof(char));
+		memcpy(batch_file + name_len, DOT_BAT, sizeof(DOT_BAT));
+
+		free(name_w);
+	}
+
+	{
+		char *dir_w;
+		if (charset_iconv(dir, &dir_w, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
+			return 0;
+
+		if (_chdir(dir_w) == -1) {
+			free(dir_w);
+			return 0;
+		}
+
+		free(dir_w);
+	}
+
+	int r;
+
+	{
+		char *maybe_arg_w;
+		if (charset_iconv(maybe_arg, &maybe_arg_w, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
+			return 0;
+
+		struct _stat sb;
+		if (_stat(batch_file, &sb) < 0) {
+			r = 0;
+		} else {
+			const char *cmd;
+
+			cmd = getenv("COMSPEC");
+			if (!cmd)
+				cmd = "command.com";
+
+			r = _spawnlp(_P_WAIT, cmd, cmd, "/c", batch_file, maybe_arg_w, 0);
+		}
+
+		free(maybe_arg_w);
+	}
+
+
+	_chdir(cwd);
+	if (r == 0) return 1;
+	return 0;
+#undef DOT_BAT
+}
+
+int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
+{
+	if (GetVersion() & UINT32_C(0x80000000)) {
+		return win32_run_hook_ansi(dir, name, maybe_arg);
+	} else {
+		return win32_run_hook_wide(dir, name, maybe_arg);
+	}
 }
