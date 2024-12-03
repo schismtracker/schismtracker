@@ -405,3 +405,16 @@ char *str_concat(const char *s, ...)
 	va_end(ap);
 	return out;
 }
+
+/* --------------------------------------------------------------------- */
+
+void str_to_pascal(const char *cstr, unsigned char pstr[256], int *truncated)
+{
+	const size_t len = strlen(cstr);
+
+	if (truncated)
+		*truncated = (len > 255);
+
+	pstr[0] = MIN(len, 255);
+	memcpy(&pstr[1], cstr, pstr[0]);
+}

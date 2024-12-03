@@ -646,15 +646,7 @@ static BOOL (WINAPI *WIN32_SHGetSpecialFolderPathW)(HWND  hwnd, LPWSTR pszPath, 
 
 char *dmoz_get_current_directory(void)
 {
-#if defined(SCHISM_WIN32)
-	{
-		wchar_t buf[PATH_MAX + 1] = {L'\0'};
-		char *buf_utf8 = NULL;
-
-		if (_wgetcwd(buf, PATH_MAX) && !charset_iconv(buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
-			return buf_utf8;
-	}
-#elif defined(SCHISM_MACOS)
+#ifdef SCHISM_MACOS
 	{
 		FSSpec spec;
 
@@ -664,12 +656,22 @@ char *dmoz_get_current_directory(void)
 				return path;
 		}
 	}
-#endif
+#else
+# if defined(SCHISM_WIN32)
+	{
+		wchar_t buf[PATH_MAX + 1] = {L'\0'};
+		char *buf_utf8 = NULL;
+
+		if (_wgetcwd(buf, PATH_MAX) && !charset_iconv(buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
+			return buf_utf8;
+	}
+# endif
 
 	char buf[PATH_MAX + 1] = {'\0'};
 
 	if (getcwd(buf, PATH_MAX))
 		return str_dup(buf);
+#endif
 
 	return str_dup(".");
 }
@@ -1529,8 +1531,8 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 	dmoz_sort(flist, dlist);
 
 	return 0;
-#elif defined(SCHISM_MACOS)
-	return -1;
+//#elif defined(SCHISM_MACOS)
+//	return -1;
 #else
 	DIR *dir;
 	struct dirent *ent;

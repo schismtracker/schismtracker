@@ -22,6 +22,7 @@
  */
 
 #include "headers.h"
+#include "osdefs.h"
 
 #include "init.h"
 
@@ -119,7 +120,7 @@ int sdl12_init(void)
 		// the subsystems are initialized by the actual backends
 		int r = sdl12_Init(0);
 		if (r < 0) {
-			fprintf(stderr, "SDL 1.2: SDL_Init: %s\n", sdl12_GetError());
+			os_show_message_box("Error initializing SDL 1.2:", sdl12_GetError());
 			return 0;
 		}
 	}

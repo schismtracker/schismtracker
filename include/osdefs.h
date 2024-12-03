@@ -65,6 +65,7 @@ A return value of 0 indicates that the event should NOT be processed by the main
 #elif defined(SCHISM_MACOS)
 # define os_mkdir macos_mkdir
 # define os_stat macos_stat
+# define os_show_message_box macos_show_message_box
 #endif
 
 #if defined(SCHISM_WIN32)
@@ -134,5 +135,6 @@ void macosx_get_modkey(schism_keymod_t *m);
 
 int macos_mkdir(const char *path, mode_t mode);
 int macos_stat(const char *file, struct stat *st);
+void macos_show_message_box(const char *title, const char *text);
 
 #endif /* SCHISM_OSDEFS_H_ */

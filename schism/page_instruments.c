@@ -1098,7 +1098,7 @@ static void _env_draw(const song_envelope_t *env, int middle, int current_node,
 			int env_on, int loop_on, int sustain_on, int env_num)
 {
 	song_voice_t *channel;
-	unsigned int *channel_list;
+	uint32_t *channel_list;
 	char buf[16];
 	unsigned int envpos[3];
 	int x, y, n, m, c;

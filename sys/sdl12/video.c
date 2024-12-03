@@ -122,9 +122,9 @@ static struct video_cf {
 		unsigned int y;
 	} mouse;
 
-	unsigned int pal[256];
+	uint32_t pal[256];
 
-	unsigned int tc_bgr32[256];
+	uint32_t tc_bgr32[256];
 } video;
 
 static int _did_init = 0;

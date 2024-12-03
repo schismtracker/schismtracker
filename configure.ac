@@ -262,7 +262,6 @@ case "${host_os}" in
 		use_macos=yes
 		AC_DEFINE([SCHISM_MACOS], [1], [Classic Mac OS])
 
-		# I don't know if this is necessarily true but I'm going with it
 		EXEEXT=.xcoff
 
 		AC_PATH_PROG([REZ], [Rez])

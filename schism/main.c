@@ -887,6 +887,8 @@ extern void vis_init(void);
 /* the real main function is called per-platform */
 int schism_main(int argc, char** argv)
 {
+	os_show_message_box("Hello", "Hello from Mac OS 9!");
+
 	os_sysinit(&argc, &argv);
 
 	vis_init();

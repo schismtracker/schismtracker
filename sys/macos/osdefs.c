@@ -30,11 +30,26 @@
 #include "page.h"
 #include "widget.h"
 #include "dmoz.h"
+#include "errno.h"
 
 #include <Files.h>
 #include <Folders.h>
+#include <Dialogs.h>
 
-/* ------------------------------------------- */
+/* ------------------------------------------------------------------------ */
+
+void macos_show_message_box(const char *title, const char *text)
+{
+	unsigned char err[256], explanation[256];
+	int16_t hit;
+
+	str_to_pascal(title, err, NULL);
+	str_to_pascal(text, explanation, NULL);
+
+	StandardAlert(kAlertDefaultOKText, err, explanation, NULL, &hit);
+}
+
+/* ------------------------------------------------------------------------ */
 
 int macos_mkdir(const char *path, mode_t mode)
 {
@@ -44,14 +59,14 @@ int macos_mkdir(const char *path, mode_t mode)
 	// anyway.
 	HParamBlockRec pb = {0};
 	unsigned char mpath[256]; // Str255 ?
-	int result = 0;
+	int truncated;
 
-	const size_t len = strlen(path);
-	if (len > 255)
-		return -1; // whaaat?
+	str_to_pascal(path, mpath, &truncated);
 
-	mpath[0] = len;
-	memcpy(&mpath[1], path, len);
+	if (truncated) {
+		errno = ENAMETOOLONG;
+		return -1;
+	}
 
 	pb.fileParam.ioNamePtr = mpath;
 
