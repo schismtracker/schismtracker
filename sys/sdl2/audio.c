@@ -25,7 +25,7 @@
 #include "mem.h"
 #include "backend/audio.h"
 
-#include <SDL.h>
+#include "init.h"
 
 struct schism_audio_device {
 	SDL_AudioDeviceID id;
@@ -36,32 +36,29 @@ struct schism_audio_device {
 #define SDL_AUDIO_ALLOW_SAMPLES_CHANGE 0x00000008
 #endif
 
-/* ---------------------------------------------------------- */
-/* drivers */
+static int (SDLCALL *sdl2_InitSubSystem)(uint32_t flags);
+static void (SDLCALL *sdl2_QuitSubSystem)(uint32_t flags);
 
-int sdl2_audio_driver_count()
-{
-	return SDL_GetNumAudioDrivers();
-}
+static int (SDLCALL *sdl2_AudioInit)(const char *driver_name);
+static void (SDLCALL *sdl2_AudioQuit)(void);
 
-const char *sdl2_audio_driver_name(int i)
-{
-	return SDL_GetAudioDriver(i);
-}
+static int (SDLCALL *sdl2_GetNumAudioDrivers)(void) = NULL;
+static const char *(SDLCALL *sdl2_GetAudioDriver)(int i) = NULL;
 
-/* --------------------------------------------------------------- */
+static int (SDLCALL *sdl2_GetNumAudioDevices)(int) = NULL;
+static const char *(SDLCALL *sdl2_GetAudioDeviceName)(int, int) = NULL;
 
-int sdl2_audio_device_count(void)
-{
-	return SDL_GetNumAudioDevices(0);
-}
+static SDL_AudioDeviceID (SDLCALL *sdl2_OpenAudioDevice)(const char *device, int iscapture, const SDL_AudioSpec *desired, SDL_AudioSpec *obtained, int allowed_changes);
+static void (SDLCALL *sdl2_CloseAudioDevice)(SDL_AudioDeviceID dev);
+static void (SDLCALL *sdl2_LockAudioDevice)(SDL_AudioDeviceID dev);
+static void (SDLCALL *sdl2_UnlockAudioDevice)(SDL_AudioDeviceID dev);
+static void (SDLCALL *sdl2_PauseAudioDevice)(SDL_AudioDeviceID dev, int pause_on);
 
-const char *sdl2_audio_device_name(int i)
-{
-	return SDL_GetAudioDeviceName(i, 0);
-}
+static const char * (SDLCALL *sdl2_GetError)(void);
+static void (SDLCALL *sdl2_ClearError)(void);
+static int (SDLCALL *sdl2_SetError)(const char *fmt, ...);
 
-/* ---------------------------------------------------------- */
+static void (SDLCALL *sdl2_GetVersion)(SDL_version * ver);
 
 /* explanation for this:
  * in 2.0.18, the logic for SDL's audio initialization functions
@@ -73,15 +70,21 @@ const char *sdl2_audio_device_name(int i)
  * under SDL pre-2.0.18. */
 static SDLCALL int schism_init_audio_impl(const char *name)
 {
-	const char *orig_drv = SDL_getenv("SDL_AUDIODRIVER");
+	const char *orig_drv = getenv("SDL_AUDIODRIVER");
 
 	if (name)
-		SDL_setenv("SDL_AUDIODRIVER", name, 1);
+		setenv("SDL_AUDIODRIVER", name, 1);
 
-	int ret = SDL_InitSubSystem(SDL_INIT_AUDIO);
+	int ret = sdl2_InitSubSystem(SDL_INIT_AUDIO);
 
 	/* clean up our dirty work, or empty the var */
-	SDL_setenv("SDL_AUDIODRIVER", orig_drv ? orig_drv : "", 1);
+	if (name) {
+		if (orig_drv) {
+			setenv("SDL_AUDIODRIVER", orig_drv, 1);
+		} else {
+			unsetenv("SDL_AUDIODRIVER");
+		}
+	}
 
 	/* forward any error, if any */
 	return ret;
@@ -89,42 +92,48 @@ static SDLCALL int schism_init_audio_impl(const char *name)
 
 static SDLCALL void schism_quit_audio_impl(void)
 {
-	SDL_QuitSubSystem(SDL_INIT_AUDIO);
+	sdl2_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
-static int (SDLCALL *audio_init_func)(const char *) = schism_init_audio_impl;
-static void (SDLCALL *audio_quit_func)(void) = schism_quit_audio_impl;
+//
+static int (SDLCALL *sdl2_audio_init_func)(const char *) = schism_init_audio_impl;
+static void (SDLCALL *sdl2_audio_quit_func)(void) = schism_quit_audio_impl;
 
-static void audio_check_init_funcs(void)
+/* ---------------------------------------------------------- */
+/* drivers */
+
+static int sdl2_audio_driver_count()
 {
-	static int sdl_version_checked = 0;
-
-	if (sdl_version_checked)
-		return;
-
-	// see if we can use the normal audio init and quit functions
-	SDL_version ver;
-	SDL_GetVersion(&ver);
-	if ((ver.major >= 2)
-		 && (ver.major > 2 || ver.minor >= 0)
-		 && (ver.major > 2 || ver.minor > 0 || ver.patch >= 18)) {
-		audio_init_func = SDL_AudioInit;
-		audio_quit_func = SDL_AudioQuit;
-	}
-
-	sdl_version_checked = 1;
+	return sdl2_GetNumAudioDrivers();
 }
 
-int sdl2_audio_init(const char *driver)
+static const char *sdl2_audio_driver_name(int i)
 {
-	audio_check_init_funcs();
-	return audio_init_func(driver);
+	return sdl2_GetAudioDriver(i);
 }
 
-void sdl2_audio_quit(void)
+/* --------------------------------------------------------------- */
+
+static int sdl2_audio_device_count(void)
 {
-	audio_check_init_funcs();
-	audio_quit_func();
+	return sdl2_GetNumAudioDevices(0);
+}
+
+static const char *sdl2_audio_device_name(int i)
+{
+	return sdl2_GetAudioDeviceName(i, 0);
+}
+
+/* ---------------------------------------------------------- */
+
+static int sdl2_audio_init_driver(const char *driver)
+{
+	return sdl2_audio_init_func(driver);
+}
+
+static void sdl2_audio_quit_driver(void)
+{
+	sdl2_audio_quit_func();
 }
 
 /* -------------------------------------------------------- */
@@ -143,18 +152,18 @@ static void SDLCALL sdl2_dummy_callback(void *userdata, uint8_t *stream, int len
 static inline int sdl2_audio_open_device_impl(schism_audio_device_t *dev, const char *name, const SDL_AudioSpec *desired, SDL_AudioSpec *obtained, int change)
 {
 	// cache the current error
-	const char *err = SDL_GetError();
+	const char *err = sdl2_GetError();
 
-	SDL_ClearError();
+	sdl2_ClearError();
 
-	SDL_AudioDeviceID id = SDL_OpenAudioDevice(name, 0, desired, obtained, change);
+	SDL_AudioDeviceID id = sdl2_OpenAudioDevice(name, 0, desired, obtained, change);
 
-	const char *new_err = SDL_GetError();
+	const char *new_err = sdl2_GetError();
 
 	int failed = (new_err && *new_err);
 
 	// reset the original error
-	SDL_SetError("%s", err);
+	sdl2_SetError("%s", err);
 
 	if (!failed) {
 		dev->id = id;
@@ -164,15 +173,23 @@ static inline int sdl2_audio_open_device_impl(schism_audio_device_t *dev, const 
 	return 0;
 }
 
-schism_audio_device_t *sdl2_audio_open_device(const char *name, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+static schism_audio_device_t *sdl2_audio_open_device(const char *name, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
 	schism_audio_device_t *dev = mem_calloc(1, sizeof(*dev));
 	dev->callback = desired->callback;
-	//dev->userdata = desired->userdata;
+
+	uint32_t format;
+
+	switch (desired->bits) {
+	case 8: format = AUDIO_U8; break;
+	default:
+	case 16: format = AUDIO_S16; break;
+	case 32: format = AUDIO_S32; break;
+	}
 
 	SDL_AudioSpec sdl_desired = {
 		.freq = desired->freq,
-		.format = (desired->bits == 8) ? (AUDIO_U8) : (AUDIO_S16),
+		.format = format,
 		.channels = desired->channels,
 		.samples = desired->samples,
 		.callback = sdl2_dummy_callback,
@@ -190,9 +207,9 @@ schism_audio_device_t *sdl2_audio_open_device(const char *name, const schism_aud
 
 		int need_reopen = 0;
 
-		// hm :)
+		// Try again until we find an audio format we *do* support.
 		switch (sdl_obtained.format) {
-		case AUDIO_U8: case AUDIO_S16: break;
+		case AUDIO_U8: case AUDIO_S16: case AUDIO_S32: break;
 		default: change &= (~SDL_AUDIO_ALLOW_FORMAT_CHANGE); need_reopen = 1; break;
 		}
 
@@ -204,7 +221,7 @@ schism_audio_device_t *sdl2_audio_open_device(const char *name, const schism_aud
 		if (!need_reopen)
 			break;
 
-		SDL_CloseAudioDevice(dev->id);
+		sdl2_CloseAudioDevice(dev->id);
 	}
 
 	*obtained = (schism_audio_spec_t){
@@ -217,35 +234,114 @@ schism_audio_device_t *sdl2_audio_open_device(const char *name, const schism_aud
 	return dev;
 }
 
-void sdl2_audio_close_device(schism_audio_device_t *dev)
+static void sdl2_audio_close_device(schism_audio_device_t *dev)
 {
 	if (!dev)
 		return;
 
-	SDL_CloseAudioDevice(dev->id);
+	sdl2_CloseAudioDevice(dev->id);
 	free(dev);
 }
 
-/* lock/unlock/pause */
-
-void sdl2_audio_lock_device(schism_audio_device_t *dev)
-{
-	if (!dev)
-		return;
-	SDL_LockAudioDevice(dev->id);
-}
-
-void sdl2_audio_unlock_device(schism_audio_device_t *dev)
-{
-	if (!dev)
-		return;
-	SDL_UnlockAudioDevice(dev->id);
-}
-
-void sdl2_audio_pause_device(schism_audio_device_t *dev, int paused)
+static void sdl2_audio_lock_device(schism_audio_device_t *dev)
 {
 	if (!dev)
 		return;
 
-	SDL_PauseAudioDevice(dev->id, paused);
+	sdl2_LockAudioDevice(dev->id);
 }
+
+static void sdl2_audio_unlock_device(schism_audio_device_t *dev)
+{
+	if (!dev)
+		return;
+
+	sdl2_UnlockAudioDevice(dev->id);
+}
+
+static void sdl2_audio_pause_device(schism_audio_device_t *dev, int paused)
+{
+	if (!dev)
+		return;
+
+	sdl2_PauseAudioDevice(dev->id, paused);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// dynamic loading
+
+static int sdl2_audio_load_syms(void)
+{
+	SCHISM_SDL2_SYM(InitSubSystem);
+	SCHISM_SDL2_SYM(QuitSubSystem);
+
+	SCHISM_SDL2_SYM(AudioInit);
+	SCHISM_SDL2_SYM(AudioQuit);
+
+	SCHISM_SDL2_SYM(GetNumAudioDrivers);
+	SCHISM_SDL2_SYM(GetAudioDriver);
+
+	SCHISM_SDL2_SYM(GetNumAudioDevices);
+	SCHISM_SDL2_SYM(GetAudioDeviceName);
+
+	SCHISM_SDL2_SYM(GetVersion);
+
+	SCHISM_SDL2_SYM(OpenAudioDevice);
+	SCHISM_SDL2_SYM(CloseAudioDevice);
+	SCHISM_SDL2_SYM(LockAudioDevice);
+	SCHISM_SDL2_SYM(UnlockAudioDevice);
+	SCHISM_SDL2_SYM(PauseAudioDevice);
+
+	SCHISM_SDL2_SYM(GetError);
+	SCHISM_SDL2_SYM(ClearError);
+	SCHISM_SDL2_SYM(SetError);
+
+	return 0;
+}
+
+static int sdl2_audio_init(void)
+{
+	if (!sdl2_init())
+		return 0;
+
+	if (sdl2_audio_load_syms())
+		return 0;
+
+	// see if we can use the normal audio init and quit functions
+	SDL_version ver;
+	sdl2_GetVersion(&ver);
+	if (SDL2_VERSION_ATLEAST(ver, 2, 0, 18)) {
+		sdl2_audio_init_func = sdl2_AudioInit;
+		sdl2_audio_quit_func = sdl2_AudioQuit;
+	}
+
+	return 1;
+}
+
+static void sdl2_audio_quit(void)
+{
+	// the subsystem quitting is handled by the quit driver function
+	sdl2_quit();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+const schism_audio_backend_t schism_audio_backend_sdl2 = {
+	.init = sdl2_audio_init,
+	.quit = sdl2_audio_quit,
+
+	.driver_count = sdl2_audio_driver_count,
+	.driver_name = sdl2_audio_driver_name,
+
+	.device_count = sdl2_audio_device_count,
+	.device_name = sdl2_audio_device_name,
+
+	.init_driver = sdl2_audio_init_driver,
+	.quit_driver = sdl2_audio_quit_driver,
+
+	.open_device = sdl2_audio_open_device,
+	.close_device = sdl2_audio_close_device,
+	.lock_device = sdl2_audio_lock_device,
+	.unlock_device = sdl2_audio_unlock_device,
+	.pause_device = sdl2_audio_pause_device,
+};

@@ -30,11 +30,22 @@
 
 void win32_filecreated_callback(const char *filename)
 {
-	wchar_t* wc = NULL;
-	if (charset_iconv(filename, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+	/* let explorer know when we create a file. */
+	charset_t explorer_charset;
+
+	if (GetVersion() < 0x80000000) {
+		// Windows NT
+		explorer_charset = CHARSET_WCHAR_T;
+	} else {
+		// Windows 9x/ME
+		explorer_charset = CHARSET_ANSI;
+	}
+
+	void* wc = NULL;
+	if (charset_iconv(filename, &wc, CHARSET_UTF8, explorer_charset, SIZE_MAX))
 		return;
 
-	/* let explorer know when we create a file. */
 	SHChangeNotify(SHCNE_CREATE, SHCNF_PATH|SHCNF_FLUSHNOWAIT, wc, NULL);
 	SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATH|SHCNF_FLUSHNOWAIT, wc, NULL);
+	free(wc);
 }

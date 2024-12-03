@@ -130,6 +130,16 @@ AC_ARG_WITH([sdl2],
 	[],
 	[with_sdl2=check])
 
+AC_ARG_ENABLE(sdl12-linking,
+	AS_HELP_STRING([--enable-sdl12-linking], [Link to SDL 1.2 rather than loading at runtime]),
+	SDL12_LINKING=$enableval,
+	SDL12_LINKING=no)
+
+AC_ARG_ENABLE(sdl2-linking,
+	AS_HELP_STRING([--enable-sdl2-linking], [Link to SDL 2 rather than loading at runtime]),
+	SDL2_LINKING=$enableval,
+	SDL2_LINKING=no)
+
 dnl ------------------------------------------------------------------------
 
 dnl Check for standard programs
@@ -213,52 +223,6 @@ AC_STRUCT_TM
 
 dnl -----------------------------------------------------------------------
 
-use_sdl2=no
-use_sdl12=no
-
-PKG_CHECK_MODULES([SDL2], [sdl2], [have_sdl2=yes], [have_sdl2=no])
-PKG_CHECK_MODULES([SDL12], [sdl >= 1.2.10], [have_sdl12=yes], [have_sdl12=no])
-
-if test "x$with_sdl2" = "xyes" && test "x$with_sdl12" = "xyes"; then
-	AC_MSG_ERROR([*** Only one backend can be used at a time.])
-elif test "x$with_sdl2" = "xyes"; then
-	if test "x$have_sdl2" = "xyes"; then
-		use_sdl2=yes
-	else
-		AC_MSG_ERROR([*** SDL 2 could not be located])
-	fi
-elif test "x$with_sdl12" = "xyes"; then
-	if test "x$have_sdl12" = "xyes"; then
-		use_sdl12=yes
-	else
-		AC_MSG_ERROR([*** SDL 1.2 could not be located])
-	fi
-else
-	if test "x$have_sdl2" = "xyes"; then
-		use_sdl2=yes
-	elif test "x$have_sdl12" = "xyes"; then
-		use_sdl12=yes
-	else
-		AC_MSG_ERROR([*** No suitable backend (SDL 2 or SDL 1.2) could be found.])
-	fi
-fi
-
-AM_CONDITIONAL([USE_SDL2], [false])
-AM_CONDITIONAL([USE_SDL12], [false])
-if test "x$use_sdl2" = "xyes"; then
-	AC_SUBST([SDL2_CFLAGS])
-	AC_SUBST([SDL2_LIBS])
-	AM_CONDITIONAL([USE_SDL2], [true])
-	AC_DEFINE([SCHISM_SDL2], [1], [Use SDL 2 as a backend])
-elif test "x$use_sdl12" = "xyes"; then
-	AC_SUBST([SDL12_CFLAGS])
-	AC_SUBST([SDL12_LIBS])
-	AM_CONDITIONAL([USE_SDL12], [true])
-	AC_DEFINE([SCHISM_SDL12], [1], [Use SDL 1.2 as a backend])
-fi
-
-dnl -----------------------------------------------------------------------
-
 dnl -lm
 dnl
 dnl saved_LIBS="$LIBS"
@@ -317,11 +281,11 @@ case "${host_os}" in
 		WIN32_LIBS="-lwinmm"
 
 		AC_CHECK_HEADERS([winsock.h winsock2.h])
-		if test "x$ac_cv_header_winsock2_h" = "xyes"; then
-			AC_SUBST([NETWORK_LIBS], [-lws2_32])
+		if test "x$ac_cv_header_winsock_h" = "xyes"; then
+			AC_SUBST([NETWORK_LIBS], [-lwsock32])
 			use_network=yes
-		elif test "x$ac_cv_header_winsock_h" = "xyes"; then
-			AC_SUBST([NETWORK_LIBS], [-lsock32])
+		elif test "x$ac_cv_header_winsock2_h" = "xyes"; then
+			AC_SUBST([NETWORK_LIBS], [-lws2_32])
 			use_network=yes
 		else
 			AC_MSG_ERROR([*** Couldn't find winsock\! (how\?)])
@@ -507,6 +471,46 @@ if test "x$with_mediafoundation" = "xcheck" || test "x$with_mediafoundation" = "
 		AC_MSG_ERROR([*** Failed to find Media Foundation with MFCreateMFByteStreamOnStream])
 	fi
 fi
+
+AM_CONDITIONAL([USE_SDL2], false)
+AM_CONDITIONAL([LINK_TO_SDL2], false)
+if test "x$with_sdl2" = "xcheck" || test "x$with_sdl2" = "xyes"; then
+	PKG_CHECK_MODULES([SDL2], [sdl2], [sdl2_found=yes], [sdl2_found=no])
+	if test "x$sdl2_found" = "xyes"; then
+		AC_SUBST([SDL2_CFLAGS])
+		AM_CONDITIONAL([USE_SDL2], true)
+		AC_DEFINE([SCHISM_SDL2], [1], [SDL 2 backend])
+		if test "x$SDL2_LINKING" = "xyes"; then
+			AC_SUBST([SDL2_LIBS])
+			AM_CONDITIONAL([LINK_TO_SDL2], true)
+		else
+			AC_DEFINE([SDL2_DYNAMIC_LOAD], [1], [Dynamically load SDL2 symbols])
+		fi
+	elif test "x$with_sdl2" = "xyes"; then
+		AC_MSG_ERROR([*** Failed to find SDL 2])
+	fi
+fi
+
+AM_CONDITIONAL([USE_SDL12], false)
+AM_CONDITIONAL([LINK_TO_SDL12], false)
+if test "x$with_sdl12" = "xcheck" || test "x$with_sdl12" = "xyes"; then
+	PKG_CHECK_MODULES([SDL12], [sdl >= 1.2.10], [sdl12_found=yes], [sdl12_found=no])
+	if test "x$sdl12_found" = "xyes"; then
+		AC_SUBST([SDL12_CFLAGS])
+		AM_CONDITIONAL([USE_SDL12], true)
+		AC_DEFINE([SCHISM_SDL12], [1], [SDL 1.2 backend])
+		if test "x$SDL12_LINKING" = "xyes"; then
+			AC_SUBST([SDL12_LIBS])
+			AM_CONDITIONAL([LINK_TO_SDL12], true)
+		else
+			AC_DEFINE([SDL12_DYNAMIC_LOAD], [1], [Dynamically load SDL 1.2 symbols])
+		fi
+	elif test "x$with_sdl12" = "xyes"; then
+		AC_MSG_ERROR([*** Failed to find SDL 1.2])
+	fi
+fi
+
+dnl --------------------------------------------------------------------------
 
 if test "x$USE_OPL2" = "xyes"; then
 	AC_DEFINE([OPLSOURCE], [2], [Which OPL chip to emulate])

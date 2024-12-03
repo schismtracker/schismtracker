@@ -696,14 +696,22 @@ void adlib_patch_apply(song_sample_t *smp, int patchnum);
 // Return (a*b)/c - no divide error
 static inline int32_t _muldiv(int32_t a, int32_t b, int32_t c)
 {
+<<<<<<< HEAD
 	return ((uint64_t)a * (uint64_t)b ) / c;
+=======
+	return ((int64_t) a * (int64_t) b ) / c;
+>>>>>>> a9b558cd7acfb74132b1cc4289bd5183dc8d065a
 }
 
 
 // Return (a*b+c/2)/c - no divide error
 static inline int32_t _muldivr(int32_t a, int32_t b, int32_t c)
 {
+<<<<<<< HEAD
 	return ((uint64_t)a * (uint64_t)b + (c >> 1)) / c;
+=======
+	return ((int64_t) a * (int64_t) b + (c >> 1)) / c;
+>>>>>>> a9b558cd7acfb74132b1cc4289bd5183dc8d065a
 }
 
 

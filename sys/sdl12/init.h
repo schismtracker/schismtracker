@@ -21,21 +21,29 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "backend/object.h"
+#ifndef SCHISM_SYS_SDL12_INIT_H_
+#define SCHISM_SYS_SDL12_INIT_H_
+
+#include "headers.h"
 
 #include <SDL.h>
 
-void *sdl12_object_load(const char *name)
-{
-	return SDL_LoadObject(name);
-}
+int sdl12_init(void);
+void sdl12_quit(void);
 
-void sdl12_object_unload(void *object)
-{
-	SDL_UnloadObject(object);
-}
+#ifdef SDL12_DYNAMIC_LOAD
 
-void *sdl12_function_load(void *object, const char *name)
-{
-	return SDL_LoadFunction(object, name);
-}
+// must be called AFTER sdl12_init()
+int sdl12_load_sym(const char *fn, void *addr);
+
+# define SCHISM_SDL12_SYM(x) \
+	if (!sdl12_load_sym("SDL_" #x, &sdl12_##x)) return -1
+
+#else
+
+# define SCHISM_SDL12_SYM(x) \
+	sdl12_##x = SDL_##x
+
+#endif
+
+#endif /* SCHISM_SYS_SDL12_INIT_H_ */

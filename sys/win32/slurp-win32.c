@@ -34,6 +34,10 @@
 #include "log.h"
 #include "slurp.h"
 #include "charset.h"
+#include "loadso.h"
+
+static DWORD (WINAPI *WIN32_FormatMessageW)(DWORD dwFlags,LPCVOID lpSource,DWORD dwMessageId,DWORD dwLanguageId,LPWSTR lpBuffer,DWORD nSize,va_list *Arguments) = NULL;
+static HANDLE (WINAPI *WIN32_CreateFileW)(LPCWSTR lpFileName,DWORD dwDesiredAccess,DWORD dwShareMode,LPSECURITY_ATTRIBUTES lpSecurityAttributes,DWORD dwCreationDisposition,DWORD dwFlagsAndAttributes,HANDLE hTemplateFile) = NULL;
 
 static void win32_unmap_(slurp_t *slurp)
 {
@@ -48,7 +52,7 @@ static void win32_unmap_(slurp_t *slurp)
 	if (slurp->internal.memory.interfaces.win32.mapping != NULL)
 		CloseHandle(slurp->internal.memory.interfaces.win32.mapping);
 
-	slurp->internal.memory.interfaces.win32.file = NULL;
+	slurp->internal.memory.interfaces.win32.file = INVALID_HANDLE_VALUE;
 	slurp->internal.memory.interfaces.win32.mapping = NULL;
 }
 
@@ -60,45 +64,90 @@ static void win32_unmap_(slurp_t *slurp)
 // file didn't exist.
 // Note: this doesn't bother setting errno; maybe it should?
 
-static int win32_error_unmap_(slurp_t *slurp, const char *filename, const char *function)
+static int win32_error_unmap_(slurp_t *slurp, const char *filename, const char *function, int val)
 {
 	DWORD err = GetLastError();
-	LPWSTR errmsg = NULL;
-	FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
-		      err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), errmsg, 0, NULL);
+	char *ptr = NULL;
+	if (WIN32_FormatMessageW) {
+		LPWSTR errmsg = NULL;
+		WIN32_FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+				err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&errmsg, 0, NULL);
+		charset_iconv(errmsg, &ptr, CHARSET_WCHAR_T, CHARSET_UTF8, SIZE_MAX);
+		LocalFree(errmsg);
+	} else {
+		LPSTR errmsg = NULL;
+		FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+				err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&errmsg, 0, NULL);
+		charset_iconv(errmsg, &ptr, CHARSET_ANSI, CHARSET_UTF8, SIZE_MAX);
+		LocalFree(errmsg);
+	}
+
 	// I don't particularly want to split this stuff onto two lines, but
 	// it's the only way to make the error message readable in some cases
 	// (though no matter what, the message is still probably going to be
 	// truncated because Windows is excessively verbose)
 	log_appendf(4, "%s: %s: error %lu:", filename, function, err);
-	if (errmsg) {
-		log_appendf(4, "  %ls", errmsg);
-		LocalFree(errmsg);
+	if (ptr) {
+		log_appendf(4, "  %s", ptr);
+		free(ptr);
 	}
 	win32_unmap_(slurp);
-	return 0;
+	return val;
 }
 
 int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
 {
-	wchar_t* filename_w = NULL;
-	if (charset_iconv(filename, &filename_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-		return win32_error_unmap_(slurp, filename, "MultiByteToWideChar");
+	slurp->internal.memory.interfaces.win32.file = INVALID_HANDLE_VALUE;
 
-	slurp->internal.memory.interfaces.win32.file = CreateFileW(filename_w, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	free(filename_w);
+	if (WIN32_CreateFileW) {
+		wchar_t *filename_w;
+		if (charset_iconv(filename, &filename_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+			return win32_error_unmap_(slurp, filename, "charset_iconv", 0);
+
+		slurp->internal.memory.interfaces.win32.file = WIN32_CreateFileW(filename_w, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		free(filename_w);
+	}
+
+	if (slurp->internal.memory.interfaces.win32.file == INVALID_HANDLE_VALUE) {
+		char *filename_a;
+		if (charset_iconv(filename, &filename_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
+			return win32_error_unmap_(slurp, filename, "charset_iconv", 0);
+
+		slurp->internal.memory.interfaces.win32.file = CreateFileA(filename_a, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		free(filename_a);
+	}
+
 	if (slurp->internal.memory.interfaces.win32.file == INVALID_HANDLE_VALUE)
-		return win32_error_unmap_(slurp, filename, "CreateFileW");
+		return win32_error_unmap_(slurp, filename, "CreateFile", 0);
 
 	slurp->internal.memory.interfaces.win32.mapping = CreateFileMapping(slurp->internal.memory.interfaces.win32.file, NULL, PAGE_READONLY, 0, 0, NULL);
 	if (!slurp->internal.memory.interfaces.win32.mapping)
-		return win32_error_unmap_(slurp, filename, "CreateFileMapping");
+		return win32_error_unmap_(slurp, filename, "CreateFileMapping", -1);
 
 	slurp->internal.memory.data = MapViewOfFile(slurp->internal.memory.interfaces.win32.mapping, FILE_MAP_READ, 0, 0, 0);
 	if (!slurp->internal.memory.data)
-		return win32_error_unmap_(slurp, filename, "MapViewOfFile");
+		return win32_error_unmap_(slurp, filename, "MapViewOfFile", -1);
 
 	slurp->internal.memory.length = st;
 	slurp->closure = win32_unmap_;
 	return 1;
+}
+
+static void *lib_kernel32 = NULL;
+
+int win32_slurp_init(void)
+{
+	lib_kernel32 = loadso_object_load("kernel32.dll");
+	if (lib_kernel32) {
+		WIN32_CreateFileW = loadso_function_load(lib_kernel32, "CreateFileW");
+		WIN32_FormatMessageW = loadso_function_load(lib_kernel32, "FormatMessageW");
+	}
+
+	return 1;
+}
+
+void win32_slurp_quit(void)
+{
+	if (lib_kernel32)
+		loadso_object_unload(lib_kernel32);
 }

@@ -32,6 +32,9 @@
 
 #include "video.h"
 
+// system backend
+static const schism_clippy_backend_t *backend = NULL;
+
 static char* _current_selection = NULL;
 static char* _current_clipboard = NULL;
 static struct widget* _widget_owner[16] = {NULL};
@@ -88,11 +91,13 @@ static void _clippy_copy_to_sys(int cb)
 
 	switch (cb) {
 		case CLIPPY_SELECT:
-			be_clippy_set_selection(out_utf8);
+			if (backend)
+				backend->set_selection(out_utf8);
 			break;
 		default:
 		case CLIPPY_BUFFER:
-			be_clippy_set_clipboard(out_utf8);
+			if (backend)
+				backend->set_clipboard(out_utf8);
 			break;
 	}
 
@@ -102,9 +107,9 @@ static void _clippy_copy_to_sys(int cb)
 static void _string_paste(UNUSED int cb, const char *cbptr)
 {
 	schism_event_t event = {0};
-	event.clipboard.type = SCHISM_EVENT_PASTE;
+	event.type = SCHISM_EVENT_PASTE;
 	event.clipboard.clipboard = str_dup(cbptr);
-	schism_push_event(&event);
+	events_push_event(&event);
 }
 
 static char *_internal_clippy_paste(int cb)
@@ -112,10 +117,10 @@ static char *_internal_clippy_paste(int cb)
 	switch (cb) {
 		case CLIPPY_SELECT:
 			/* is this even remotely useful? */
-			if (be_clippy_have_selection()) {
+			if (backend && backend->have_selection()) {
 				_free_current_selection();
 
-				char* sel = be_clippy_get_selection();
+				char* sel = backend->get_selection();
 
 				if (charset_iconv(sel, &_current_selection, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
 					_current_selection = str_dup(sel);
@@ -127,10 +132,10 @@ static char *_internal_clippy_paste(int cb)
 
 			return _current_selection;
 		case CLIPPY_BUFFER:
-			if (be_clippy_have_clipboard()) {
+			if (backend && backend->have_clipboard()) {
 				_free_current_clipboard();
 
-				char *cb = be_clippy_get_clipboard();
+				char *cb = backend->get_clipboard();
 
 				if (charset_iconv(cb, &_current_clipboard, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
 					_current_clipboard = str_dup(cb);
@@ -182,5 +187,39 @@ void clippy_yank(void)
 		_widget_owner[CLIPPY_BUFFER] = _widget_owner[CLIPPY_SELECT];
 		_clippy_copy_to_sys(CLIPPY_BUFFER);
 		status_text_flash("Copied to selection buffer");
+	}
+}
+
+int clippy_init(void)
+{
+	static const schism_clippy_backend_t *backends[] = {
+		// ordered by preference
+#ifdef SCHISM_SDL2
+		&schism_clippy_backend_sdl2,
+#endif
+		NULL,
+	};
+
+	int i;
+
+	for (i = 0; backends[i]; i++) {
+		backend = backends[i];
+		if (backend->init())
+			break;
+
+		backend = NULL;
+	}
+
+	if (!backend)
+		return 0;
+
+	return 1;
+}
+
+void clippy_quit(void)
+{
+	if (backend) {
+		backend->quit();
+		backend = NULL;
 	}
 }

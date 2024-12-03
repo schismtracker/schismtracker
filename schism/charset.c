@@ -671,16 +671,53 @@ CHARSET_VARIATION(internal) {
 		}
 	} while (decoder.state == DECODER_STATE_NEED_MORE);
 
+	// write a NUL terminator always
+	uint32_t x = 0;
+	disko_write(&ds, &x, sizeof(x));
+
 	disko_memclose(&ds, 1);
 
-	memcpy(out, &ds.data, sizeof(void *));
+	memcpy(out, &ds.data, sizeof(ds.data));
 
 	return CHARSET_ERROR_SUCCESS;
 }
 
-/* XXX need to change this to take length in as well */
+#ifdef SCHISM_WIN32
+# include <windows.h> // MultiByteToWideChar
+#endif
+
+typedef charset_error_t (*charset_impl)(const void* in, void* out, charset_t inset, charset_t outset, size_t insize);
+
+static const charset_impl charset_impls[] = {
+	charset_iconv_internal_,
+};
+
+static charset_error_t charset_iconv_impl_(const void *in, void *out, charset_t inset, charset_t outset, size_t insize)
+{
+	static void *const null = NULL;
+	charset_error_t state = CHARSET_ERROR_UNIMPLEMENTED;
+
+	for (int i = 0; i < ARRAY_SIZE(charset_impls); i++) {
+		state = charset_impls[i](in, out, inset, outset, insize);
+		if (state == CHARSET_ERROR_SUCCESS)
+			return state;
+
+		memcpy(out, &null, sizeof(void *));
+
+		// give up if no memory left
+		if (state == CHARSET_ERROR_NOMEM)
+			return state;
+	}
+
+	return state;
+}
+
 charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charset_t outset, size_t insize) {
-	void *const null = NULL;
+	// This is so we can do charset-specific hacks...
+	charset_t insetfake = inset, outsetfake = outset;
+	const void *infake = in;
+	void *outfake;
+	size_t insizefake = insize;
 
 	charset_error_t state;
 	if (!in)
@@ -692,21 +729,79 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 	if (inset == outset)
 		return CHARSET_ERROR_INPUTISOUTPUT;
 
-#define TRY_VARIATION(name) \
-	state = charset_iconv_##name##_(in, out, inset, outset, insize); \
-	if (state == CHARSET_ERROR_SUCCESS) \
-		return state; \
-	if (state == CHARSET_ERROR_NOMEM) { \
-		memcpy(out, &null, sizeof(void *)); \
-		return state; \
-	} \
-	memcpy(out, &null, sizeof(void *));
+	switch (inset) {
+#ifdef WIN32
+	case CHARSET_ANSI: {
+		// convert ANSI to Unicode so we can process it
+		int needed = MultiByteToWideChar(CP_ACP, 0, in, (insize == SIZE_MAX) ? -1 : insize, NULL, 0);
+		if (!needed)
+			return CHARSET_ERROR_DECODE;
 
-	TRY_VARIATION(internal);
+		wchar_t *unicode_in = mem_alloc((needed + 1) * sizeof(wchar_t));
+		MultiByteToWideChar(CP_ACP, 0, in, (insize == SIZE_MAX) ? -1 : insize, unicode_in, needed);
+		unicode_in[needed] = 0;
 
-#undef TRY_VARIATION
+		infake = unicode_in;
+		insetfake = CHARSET_WCHAR_T;
+		break;
+	}
+#endif
+	default: break;
+	}
 
-	return CHARSET_ERROR_UNIMPLEMENTED;
+	switch (outset) {
+#ifdef SCHISM_WIN32
+	case CHARSET_ANSI:
+		outsetfake = CHARSET_WCHAR_T;
+		break;
+#endif
+	default: break;
+	}
+
+	state = charset_iconv_impl_(infake, &outfake, insetfake, outsetfake, insizefake);
+
+done:
+
+	switch (inset) {
+#ifdef SCHISM_WIN32
+	case CHARSET_ANSI:
+		free((void *)infake);
+		break;
+#endif
+	default: break;
+	}
+
+	switch (outset) {
+#ifdef SCHISM_WIN32
+	case CHARSET_ANSI: {
+		// convert from unicode to ANSI
+		int needed = WideCharToMultiByte(CP_ACP, 0, (wchar_t *)outfake, -1, NULL, 0, NULL, NULL);
+		if (!needed) {
+			free(outfake);
+			state = CHARSET_ERROR_ENCODE;
+			break;
+		}
+
+		char *ansi_out = mem_alloc(needed + 1);
+
+		WideCharToMultiByte(CP_ACP, 0, (wchar_t *)outfake, -1, ansi_out, needed + 1, NULL, NULL);
+	
+		free(outfake);
+	
+		ansi_out[needed] = 0;
+
+		// copy the pointer
+		memcpy(out, &ansi_out, sizeof(void *));
+
+		break;
+	}
+#endif
+	default:
+		memcpy(out, &outfake, sizeof(outfake));
+		break;
+	}
+
+	return state;
 }
 
 charset_error_t charset_decode_next(charset_decode_t *decoder, charset_t inset)

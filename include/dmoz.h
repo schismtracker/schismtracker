@@ -227,4 +227,7 @@ int dmoz_path_from_fsref(const void *ref, char **path);
 int dmoz_path_to_fsref(const char *path, void *ref);
 #endif
 
+int dmoz_init(void);
+void dmoz_quit(void);
+
 #endif /* SCHISM_DMOZ_H_ */

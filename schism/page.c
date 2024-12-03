@@ -109,7 +109,7 @@ static int check_time(void)
 		h = (m = (s = song_get_current_time()) / 60) / 60;
 		break;
 	case TIME_ELAPSED:
-		h = (m = (s = be_timer_ticks() / 1000) / 60) / 60;
+		h = (m = (s = timer_ticks() / 1000) / 60) / 60;
 		break;
 	case TIME_ABSOLUTE:
 		/* absolute time shows the time of the current cursor
@@ -901,6 +901,15 @@ static int handle_key_global(struct key_event * k)
 			return 1;
 		}
 		return 0;
+	case SCHISM_KEYSYM_t:
+		if ((k->mod & SCHISM_KEYMOD_CTRL) && (k->mod & SCHISM_KEYMOD_ALT)) {
+			_mp_finish(NULL);
+			if (k->state == KEY_PRESS)
+				set_page(PAGE_TIME_INFORMATION);
+
+			return 1;
+		}
+		return 0;
 	default:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
@@ -1444,22 +1453,25 @@ static void vis_oscilloscope(void)
 	}
 	_draw_vis_box();
 	song_lock_audio();
-	if (status.vis_style == VIS_MONOSCOPE) {
-		if (audio_output_bits == 16) {
-			draw_sample_data_rect_16(&vis_overlay,audio_buffer,
-					audio_buffer_samples,
-					audio_output_channels,1);
-		} else {
-			draw_sample_data_rect_8(&vis_overlay,(void*)audio_buffer,
-					audio_buffer_samples,
-					audio_output_channels,1);
-		}
-	} else if (audio_output_bits == 16) {
-		draw_sample_data_rect_16(&vis_overlay,audio_buffer,audio_buffer_samples,
-					audio_output_channels,audio_output_channels);
-	} else {
-		draw_sample_data_rect_8(&vis_overlay,(void *)audio_buffer,audio_buffer_samples,
-					audio_output_channels,audio_output_channels);
+	int out_chns = (status.vis_style == VIS_MONOSCOPE) ? 1 : audio_output_channels;
+	switch (audio_output_bits) {
+	case 8:
+		draw_sample_data_rect_8(&vis_overlay,(void *)audio_buffer,
+				audio_buffer_samples,
+				audio_output_channels,out_chns);
+		break;
+	case 16:
+		draw_sample_data_rect_16(&vis_overlay,audio_buffer,
+				audio_buffer_samples,
+				audio_output_channels,out_chns);
+		break;
+	case 32:
+		draw_sample_data_rect_32(&vis_overlay,(void *)audio_buffer,
+				audio_buffer_samples,
+				audio_output_channels,out_chns);
+		break;
+	default:
+		break;
 	}
 	song_unlock_audio();
 }

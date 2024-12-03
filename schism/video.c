@@ -34,6 +34,8 @@
 #include "osdefs.h"
 #include "vgamem.h"
 
+#include "backend/video.h"
+
 #include <errno.h>
 
 #include <inttypes.h>
@@ -154,6 +156,8 @@ static struct {
 	},
 };
 
+static const schism_video_backend_t *backend = NULL;
+
 /* ----------------------------------------------------------- */
 
 void video_rgb_to_yuv(unsigned int *y, unsigned int *u, unsigned int *v, unsigned char rgb[3])
@@ -207,7 +211,7 @@ void video_mousecursor(int vis)
 		break;
 	}
 
-	video_mousecursor_changed();
+	backend->mousecursor_changed();
 }
 
 /* -------------------------------------------------- */
@@ -558,4 +562,193 @@ void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 
 		pixels += pitch;
 	}
+}
+
+// ----------------------------------------------------------------------------------
+
+int video_is_fullscreen(void)
+{
+	return backend->is_fullscreen();
+}
+
+int video_width(void)
+{
+	return backend->width();
+}
+
+int video_height(void)
+{
+	return backend->height();
+}
+
+const char *video_driver_name(void)
+{
+	return backend->driver_name();
+}
+
+void video_report(void)
+{
+	log_append(2, 0, "Video initialised");
+	log_underline(17);
+
+	backend->report();
+
+	log_nl();
+}
+
+void video_set_hardware(int hardware)
+{
+	backend->set_hardware(hardware);
+}
+
+void video_shutdown(void)
+{
+	if (backend) {
+		backend->shutdown();
+		backend->quit();
+		backend = NULL;
+	}
+}
+
+void video_setup(const char *quality)
+{
+	backend->setup(quality);
+}
+
+int video_startup(void)
+{
+	static const schism_video_backend_t *backends[] = {
+		// ordered by preference
+#ifdef SCHISM_SDL2
+		&schism_video_backend_sdl2,
+#endif
+#ifdef SCHISM_SDL12
+		&schism_video_backend_sdl12,
+#endif
+		NULL,
+	};
+
+	int i;
+
+	for (i = 0; backends[i]; i++) {
+		backend = backends[i];
+		if (backend->init())
+			break;
+
+		backend = NULL;
+	}
+
+	if (!backend)
+		return -1;
+
+	// ok, now we can call the backend
+	backend->startup();
+
+	return 0;
+}
+
+void video_fullscreen(int new_fs_flag)
+{
+	backend->fullscreen(new_fs_flag);
+}
+
+void video_resize(unsigned int width, unsigned int height)
+{
+	backend->resize(width, height);
+}
+
+void video_colors(unsigned char palette[16][3])
+{
+	backend->colors(palette);
+}
+
+int video_is_focused(void)
+{
+	return backend->is_focused();
+}
+
+int video_is_visible(void)
+{
+	return backend->is_visible();
+}
+
+int video_is_wm_available(void)
+{
+	return backend->is_wm_available();
+}
+
+int video_is_hardware(void)
+{
+	return backend->is_hardware();
+}
+
+/* -------------------------------------------------------- */
+
+int video_is_screensaver_enabled(void)
+{
+	return backend->is_screensaver_enabled();
+}
+
+void video_toggle_screensaver(int enabled)
+{
+	backend->toggle_screensaver(enabled);
+}
+
+/* ---------------------------------------------------------- */
+/* coordinate translation */
+
+void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
+{
+	backend->translate(vx, vy, x, y);
+}
+
+void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
+{
+	backend->get_logical_coordinates(x, y, trans_x, trans_y);
+}
+
+/* -------------------------------------------------- */
+/* input grab */
+
+int video_is_input_grabbed(void)
+{
+	return backend->is_input_grabbed();
+}
+
+void video_set_input_grabbed(int enabled)
+{
+	backend->set_input_grabbed(enabled);
+}
+
+/* -------------------------------------------------- */
+/* warp mouse position */
+
+void video_warp_mouse(unsigned int x, unsigned int y)
+{
+	backend->warp_mouse(x, y);
+}
+
+void video_get_mouse_coordinates(unsigned int *x, unsigned int *y)
+{
+	backend->get_mouse_coordinates(x, y);
+}
+
+/* -------------------------------------------------- */
+/* menu toggling */
+
+int video_have_menu(void)
+{
+	return backend->have_menu();
+}
+
+void video_toggle_menu(int on)
+{
+	backend->toggle_menu(on);
+}
+
+/* ------------------------------------------------------------ */
+
+void video_blit(void)
+{
+	backend->blit();
 }

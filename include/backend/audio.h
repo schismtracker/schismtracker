@@ -24,90 +24,35 @@
 #ifndef SCHISM_BACKEND_AUDIO_H_
 #define SCHISM_BACKEND_AUDIO_H_
 
+#include "../song.h"
+
+// defines the interface for each audio backend
 typedef struct {
-	int freq; // sample rate
-	uint8_t bits; // 8 or 16, always system byte order
-	uint8_t channels; // channels
-	uint16_t samples; // buffer size
-	void (*callback)(uint8_t *stream, int len);
-} schism_audio_spec_t;
+	int (*init)(void);
+	void (*quit)(void);
 
-/* An opaque structure that each backend uses for its own data */
-typedef struct schism_audio_device schism_audio_device_t;
+	int (*driver_count)(void);
+	const char *(*driver_name)(int i);
 
-#ifdef SCHISM_SDL2
-# define be_audio_driver_count sdl2_audio_driver_count
-# define be_audio_driver_name sdl2_audio_driver_name
+	int (*device_count)(void);
+	const char *(*device_name)(int i);
 
-# define be_audio_device_count sdl2_audio_device_count
-# define be_audio_device_name sdl2_audio_device_name
+	int (*init_driver)(const char *driver);
+	void (*quit_driver)(void);
 
-# define be_audio_init sdl2_audio_init
-# define be_audio_quit sdl2_audio_quit
+	schism_audio_device_t *(*open_device)(const char *name, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained);
+	void (*close_device)(schism_audio_device_t *device);
+	void (*lock_device)(schism_audio_device_t *device);
+	void (*unlock_device)(schism_audio_device_t *device);
+	void (*pause_device)(schism_audio_device_t *device, int paused);
+} schism_audio_backend_t;
 
-# define be_audio_open_device sdl2_audio_open_device
-
-# define be_audio_close_device sdl2_audio_close_device
-# define be_audio_lock_device sdl2_audio_lock_device
-# define be_audio_unlock_device sdl2_audio_unlock_device
-# define be_audio_pause_device sdl2_audio_pause_device
-#elif defined(SCHISM_SDL12)
-# define be_audio_driver_count sdl12_audio_driver_count
-# define be_audio_driver_name sdl12_audio_driver_name
-
-# define be_audio_device_count sdl12_audio_device_count
-# define be_audio_device_name sdl12_audio_device_name
-
-# define be_audio_init sdl12_audio_init
-# define be_audio_quit sdl12_audio_quit
-
-# define be_audio_open_device sdl12_audio_open_device
-
-# define be_audio_close_device sdl12_audio_close_device
-# define be_audio_lock_device sdl12_audio_lock_device
-# define be_audio_unlock_device sdl12_audio_unlock_device
-# define be_audio_pause_device sdl12_audio_pause_device
+#ifdef SCHISM_SDL12
+extern const schism_audio_backend_t schism_audio_backend_sdl12;
 #endif
 
-/* ---------------------------------------------------------- */
-/* drivers */
-
-int sdl2_audio_driver_count();
-const char *sdl2_audio_driver_name(int i);
-
-int sdl12_audio_driver_count();
-const char *sdl12_audio_driver_name(int i);
-
-/* --------------------------------------------------------------- */
-/* devices */
-
-int sdl2_audio_device_count(void);
-const char *sdl2_audio_device_name(int i);
-
-int sdl12_audio_device_count(void);
-const char *sdl12_audio_device_name(int i);
-
-/* ---------------------------------------------------------- */
-/* REAL audio init */
-
-int sdl2_audio_init(const char *driver);
-void sdl2_audio_quit(void);
-
-schism_audio_device_t *sdl2_audio_open_device(const char *name, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained);
-
-void sdl2_audio_close_device(schism_audio_device_t *dev);
-void sdl2_audio_lock_device(schism_audio_device_t *dev);
-void sdl2_audio_unlock_device(schism_audio_device_t *dev);
-void sdl2_audio_pause_device(schism_audio_device_t *dev, int paused);
-
-int sdl12_audio_init(const char *driver);
-void sdl12_audio_quit(void);
-
-schism_audio_device_t *sdl12_audio_open_device(const char *name, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained);
-
-void sdl12_audio_close_device(schism_audio_device_t *dev);
-void sdl12_audio_lock_device(schism_audio_device_t *dev);
-void sdl12_audio_unlock_device(schism_audio_device_t *dev);
-void sdl12_audio_pause_device(schism_audio_device_t *dev, int paused);
+#ifdef SCHISM_SDL2
+extern const schism_audio_backend_t schism_audio_backend_sdl2;
+#endif
 
 #endif /* SCHISM_BACKEND_AUDIO_H_ */

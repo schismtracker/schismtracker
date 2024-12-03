@@ -115,13 +115,11 @@ int win32_event(schism_event_t *event);
 void win32_sysinit(int *pargc, char ***pargv);
 void win32_sysexit(void);
 void win32_sdlinit(void);
-void win32_get_modkey(int *m);
+void win32_get_modkey(schism_keymod_t *m);
 void win32_filecreated_callback(const char *filename);
 void win32_toggle_menu(void* window, int on); // window should be a pointer to the window HWND
 int win32_open(const char* path, int flags);
-int win32_wstat(const wchar_t* path, struct stat* st);
 int win32_stat(const char* path, struct stat* st);
-int win32_mktemp(char* template, size_t size);
 int win32_mkdir(const char* path, mode_t mode);
 FILE* win32_fopen(const char* path, const char* flags);
 #define win32_wmkdir(path, mode) _wmkdir(path)
@@ -132,7 +130,7 @@ int posix_run_hook(const char *dir, const char *name, const char *maybe_arg);
 int macosx_event(schism_event_t *event);
 void macosx_sysexit(void);
 void macosx_sysinit(int *pargc, char ***pargv); /* set up ibook helper */
-void macosx_get_modkey(int *m);
+void macosx_get_modkey(schism_keymod_t *m);
 
 int macos_mkdir(const char *path, mode_t mode);
 int macos_stat(const char *file, struct stat *st);

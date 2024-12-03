@@ -278,8 +278,6 @@ int song_load_unchecked(const char *file)
 		song_stop();
 	}
 
-	log_nl();
-	log_nl();
 	log_appendf(2, "Loading %s", base);
 	log_underline(strlen(base) + 8);
 
@@ -327,6 +325,8 @@ int song_load_unchecked(const char *file)
 	if (!nins)
 		*strrchr(fmt, ',') = 0; // cut off 'instruments'
 	log_appendf(5, fmt, csf_get_num_patterns(current_song), nsmp, nins);
+
+	log_nl();
 
 
 	return 1;

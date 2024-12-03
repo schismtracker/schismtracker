@@ -126,6 +126,8 @@ int mkstemp(char *template);
 #endif
 #ifndef HAVE_LOCALTIME_R
 struct tm *localtime_r(const time_t *timep, struct tm *result);
+void localtime_r_quit(void);
+int localtime_r_init(void);
 #endif
 #ifndef HAVE_SETENV
 int setenv(const char *name, const char *value, int overwrite);

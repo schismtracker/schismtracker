@@ -48,7 +48,7 @@ void video_toggle_menu(int on);
 
 void video_rgb_to_yuv(unsigned int *y, unsigned int *u, unsigned int *v, unsigned char rgb[3]);
 void video_setup(const char *quality);
-void video_startup(void);
+int video_startup(void);
 void video_shutdown(void);
 void video_report(void);
 void video_refresh(void);
@@ -91,8 +91,7 @@ int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h);
 
 /* --------------------------------------------------------- */
 
-/* function to callback to map an RGB value; used for the linear blitter
- * but ignored for the other ones */
+/* function to callback to map an RGB value; used for the linear blitter only */
 typedef uint32_t (*schism_map_rgb_func_t)(void *data, uint8_t r, uint8_t g, uint8_t b);
 
 /* YUV blitters */
@@ -103,6 +102,6 @@ void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
 /* RGB blitters */
 void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
 void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height);
-void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t pal[256], int width, int height, schism_map_rgb_func_t map_rgb, void *map_rgb_data);
+void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height, schism_map_rgb_func_t map_rgb, void *map_rgb_data);
 
 #endif /* SCHISM_VIDEO_H_ */

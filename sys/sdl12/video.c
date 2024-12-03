@@ -35,19 +35,9 @@ static int display_native_y = -1;
 #include "vgamem.h"
 #include "config.h"
 
-#define VIDEO_YUV_UYVY          0x59565955
-#define VIDEO_YUV_YUY2          0x32595559
-#define VIDEO_YUV_YV12          0x32315659
-#define VIDEO_YUV_IYUV          0x56555949
-#define VIDEO_YUV_YVYU          0x55595659
-#define VIDEO_YUV_YV12_TV       (VIDEO_YUV_YV12 ^ 0xFFFFFFFF)
-#define VIDEO_YUV_IYUV_TV       (VIDEO_YUV_IYUV ^ 0xFFFFFFFF)
-#define VIDEO_YUV_RGBA          0x41424752
-#define VIDEO_YUV_RGBT          0x54424752
-#define VIDEO_YUV_RGB565        0x32424752
-#define VIDEO_YUV_RGB24         0x0
-#define VIDEO_YUV_RGB32         0x3
-#define VIDEO_YUV_NONE          0xFFFFFFFF
+#include "backend/video.h"
+
+#include "init.h"
 
 /* bugs
  * ... in sdl. not in this file :)
@@ -79,6 +69,9 @@ static int display_native_y = -1;
 #include <stdio.h>
 
 #include <SDL.h>
+#ifdef SCHISM_WIN32
+# include <SDL_syswm.h>
+#endif
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -95,83 +88,16 @@ static int display_native_y = -1;
 
 #include "charset.h"
 
-#ifndef APIENTRY
-#define APIENTRY
-#endif
-#ifndef APIENTRYP
-#define APIENTRYP APIENTRY *
-#endif
+enum {
+	VIDEO_SURFACE = 0,
 
-#define NVIDIA_PixelDataRange   1
-
-#if !defined(USE_OPENGL)
-typedef unsigned int GLuint;
-typedef int GLint;
-typedef int GLenum;
-typedef int GLsizei;
-typedef void GLvoid;
-typedef float GLfloat;
-typedef int GLboolean;
-typedef int GLbitfield;
-typedef float GLclampf;
-typedef unsigned char GLubyte;
-#endif
-
-#if USE_OPENGL && NVIDIA_PixelDataRange
-
-#ifndef WGL_NV_allocate_memory
-#define WGL_NV_allocate_memory 1
-typedef void * (APIENTRY * PFNWGLALLOCATEMEMORYNVPROC)
-	(int size, float readfreq, float writefreq, float priority);
-typedef void (APIENTRY * PFNWGLFREEMEMORYNVPROC) (void *pointer);
-#endif
-
-static PFNWGLALLOCATEMEMORYNVPROC db_glAllocateMemoryNV = NULL;
-static PFNWGLFREEMEMORYNVPROC db_glFreeMemoryNV = NULL;
-
-#ifndef GL_NV_pixel_data_range
-#define GL_NV_pixel_data_range 1
-#define GL_WRITE_PIXEL_DATA_RANGE_NV      0x8878
-typedef void (APIENTRYP PFNGLPIXELDATARANGENVPROC) (GLenum target, GLsizei length, GLvoid *pointer);
-typedef void (APIENTRYP PFNGLFLUSHPIXELDATARANGENVPROC) (GLenum target);
-#endif
-
-static PFNGLPIXELDATARANGENVPROC glPixelDataRangeNV = NULL;
-
-#endif
-
-/* leeto drawing skills */
-#define MOUSE_HEIGHT    14
-static const unsigned int _mouse_pointer[] = {
-	/* x....... */  0x80,
-	/* xx...... */  0xc0,
-	/* xxx..... */  0xe0,
-	/* xxxx.... */  0xf0,
-	/* xxxxx... */  0xf8,
-	/* xxxxxx.. */  0xfc,
-	/* xxxxxxx. */  0xfe,
-	/* xxxxxxxx */  0xff,
-	/* xxxxxxx. */  0xfe,
-	/* xxxxx... */  0xf8,
-	/* x...xx.. */  0x8c,
-	/* ....xx.. */  0x0c,
-	/* .....xx. */  0x06,
-	/* .....xx. */  0x06,
-
-0,0
+	// removed...
+	//VIDEO_DDRAW = 1,
+	//VIDEO_YUV = 2,
+	//VIDEO_GL = 3,
 };
 
-
-#ifdef SCHISM_WIN32
-#include <windows.h>
-#include "wine-ddraw.h"
-struct private_hwdata {
-	LPDIRECTDRAWSURFACE3 dd_surface;
-	LPDIRECTDRAWSURFACE3 dd_writebuf;
-};
-#endif
-
-struct video_cf {
+static struct video_cf {
 	struct {
 		unsigned int width;
 		unsigned int height;
@@ -187,171 +113,64 @@ struct video_cf {
 		int doublebuf;
 		int want_type;
 		int type;
-#define VIDEO_SURFACE           0
-#define VIDEO_DDRAW             1
-#define VIDEO_YUV               2
-#define VIDEO_GL                3
 	} desktop;
-	struct {
-		unsigned int pitch;
-		void * framebuf;
-		GLuint texture;
-		GLuint displaylist;
-		GLint max_texsize;
-		int bilinear;
-		int packed_pixel;
-		int paletted_texture;
-#if defined(NVIDIA_PixelDataRange)
-		int pixel_data_range;
-#endif
-	} gl;
-#if defined(SCHISM_WIN32)
-	struct {
-		SDL_Surface * surface;
-		RECT rect;
-		DDBLTFX fx;
-	} ddblit;
-#endif
-	unsigned int yuvlayout;
 	SDL_Rect clip;
-	SDL_Surface * surface;
-	SDL_Overlay * overlay;
+	SDL_Surface *surface;
+	SDL_Overlay *overlay;
 	struct {
 		unsigned int x;
 		unsigned int y;
 	} mouse;
 
-	uint32_t yuv_y[256];
-	uint32_t yuv_u[256];
-	uint32_t yuv_v[256];
+	unsigned int pal[256];
 
-	uint32_t pal[256];
-
-	uint32_t tc_bgr32[256];
-};
-static struct video_cf video;
-
-#ifdef USE_OPENGL
-static int int_log2(int val) {
-	int l = 0;
-	while ((val >>= 1 ) != 0) l++;
-	return l;
-}
-#endif
-
-#ifdef SCHISM_MACOSX
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
-#include <OpenGL/glext.h>
-
-/* opengl is EVERYWHERE on macosx, and we can't use our dynamic linker mumbo
-jumbo so easily...
-*/
-#define my_glCallList(z)        glCallList(z)
-#define my_glTexSubImage2D(a,b,c,d,e,f,g,h,i)   glTexSubImage2D(a,b,c,d,e,f,g,h,i)
-#define my_glDeleteLists(a,b)   glDeleteLists(a,b)
-#define my_glTexParameteri(a,b,c)       glTexParameteri(a,b,c)
-#define my_glBegin(g)           glBegin(g)
-#define my_glEnd()              glEnd()
-#define my_glEndList()  glEndList()
-#define my_glTexCoord2f(a,b)    glTexCoord2f(a,b)
-#define my_glVertex2f(a,b)      glVertex2f(a,b)
-#define my_glNewList(a,b)       glNewList(a,b)
-#define my_glIsList(a)          glIsList(a)
-#define my_glGenLists(a)        glGenLists(a)
-#define my_glLoadIdentity()     glLoadIdentity()
-#define my_glMatrixMode(a)      glMatrixMode(a)
-#define my_glEnable(a)          glEnable(a)
-#define my_glDisable(a)         glDisable(a)
-#define my_glBindTexture(a,b)   glBindTexture(a,b)
-#define my_glClear(z)           glClear(z)
-#define my_glClearColor(a,b,c,d) glClearColor(a,b,c,d)
-#define my_glGetString(z)       glGetString(z)
-#define my_glTexImage2D(a,b,c,d,e,f,g,h,i)      glTexImage2D(a,b,c,d,e,f,g,h,i)
-#define my_glGetIntegerv(a,b)   glGetIntegerv(a,b)
-#define my_glShadeModel(a)      glShadeModel(a)
-#define my_glGenTextures(a,b)   glGenTextures(a,b)
-#define my_glDeleteTextures(a,b)        glDeleteTextures(a,b)
-#define my_glViewport(a,b,c,d)  glViewport(a,b,c,d)
-#define my_glEnableClientState(z)       glEnableClientState(z)
-#else
-/* again with the dynamic linker nonsense; note these are APIENTRY for compatability
-with win32. */
-static void (APIENTRY *my_glCallList)(GLuint);
-static void (APIENTRY *my_glTexSubImage2D)(GLenum,GLint,GLint,GLint,
-				GLsizei,GLsizei,GLenum,GLenum,
-				const GLvoid *);
-static void (APIENTRY *my_glDeleteLists)(GLuint,GLsizei);
-static void (APIENTRY *my_glTexParameteri)(GLenum,GLenum,GLint);
-static void (APIENTRY *my_glBegin)(GLenum);
-static void (APIENTRY *my_glEnd)(void);
-static void (APIENTRY *my_glEndList)(void);
-static void (APIENTRY *my_glTexCoord2f)(GLfloat,GLfloat);
-static void (APIENTRY *my_glVertex2f)(GLfloat,GLfloat);
-static void (APIENTRY *my_glNewList)(GLuint, GLenum);
-static GLboolean (APIENTRY *my_glIsList)(GLuint);
-static GLuint (APIENTRY *my_glGenLists)(GLsizei);
-static void (APIENTRY *my_glLoadIdentity)(void);
-static void (APIENTRY *my_glMatrixMode)(GLenum);
-static void (APIENTRY *my_glEnable)(GLenum);
-static void (APIENTRY *my_glDisable)(GLenum);
-static void (APIENTRY *my_glBindTexture)(GLenum,GLuint);
-static void (APIENTRY *my_glClear)(GLbitfield mask);
-static void (APIENTRY *my_glClearColor)(GLclampf,GLclampf,GLclampf,GLclampf);
-static const GLubyte* (APIENTRY *my_glGetString)(GLenum);
-static void (APIENTRY *my_glTexImage2D)(GLenum,GLint,GLint,GLsizei,GLsizei,GLint,
-			GLenum,GLenum,const GLvoid *);
-static void (APIENTRY *my_glGetIntegerv)(GLenum, GLint *);
-static void (APIENTRY *my_glShadeModel)(GLenum);
-static void (APIENTRY *my_glGenTextures)(GLsizei,GLuint*);
-static void (APIENTRY *my_glDeleteTextures)(GLsizei, const GLuint *);
-static void (APIENTRY *my_glViewport)(GLint,GLint,GLsizei,GLsizei);
-static void (APIENTRY *my_glEnableClientState)(GLenum);
-#endif
+	unsigned int tc_bgr32[256];
+} video;
 
 static int _did_init = 0;
 
-const char *video_driver_name(void)
-{
-	switch (video.desktop.type) {
-	case VIDEO_SURFACE:
-		return "sdl";
-	case VIDEO_YUV:
-		return "yuv";
-	case VIDEO_GL:
-		return "opengl";
-	case VIDEO_DDRAW:
-		return "directdraw";
-	};
-	/* err.... */
-	return "auto";
-}
+char *SDL_VideoDriverName(char *namebuf, int maxlen);
 
-void video_report(void)
+static int (SDLCALL *sdl12_InitSubSystem)(Uint32 flags);
+static void (SDLCALL *sdl12_QuitSubSystem)(Uint32 flags);
+
+static char *(SDLCALL *sdl12_VideoDriverName)(char *namebuf, int maxlen);
+static const SDL_VideoInfo *(SDLCALL *sdl12_GetVideoInfo)(void);
+static void (SDLCALL *sdl12_WM_SetCaption)(const char *title, const char *icon);
+static SDL_Surface *(SDLCALL *sdl12_SetVideoMode)(int width, int height, int bpp, Uint32 flags);
+static SDL_Rect **(SDLCALL *sdl12_ListModes)(SDL_PixelFormat *format, Uint32 flags);
+static int (SDLCALL *sdl12_ShowCursor)(int toggle);
+static Uint32 (SDLCALL *sdl12_MapRGB)(const SDL_PixelFormat *fmt, Uint8 r, Uint8 g, Uint8 b);
+static int (SDLCALL *sdl12_SetColors)(SDL_Surface *surface, SDL_Color *colors, int firstcolor, int ncolors);
+static int (SDLCALL *sdl12_LockSurface)(SDL_Surface *surface);
+static void (SDLCALL *sdl12_Delay)(Uint32 ms);
+static void (SDLCALL *sdl12_UnlockSurface)(SDL_Surface *surface);
+static int (SDLCALL *sdl12_Flip)(SDL_Surface *screen);
+static SDL_GrabMode (SDLCALL *sdl12_WM_GrabInput)(SDL_GrabMode mode);
+static Uint8 (SDLCALL *sdl12_GetAppState)(void);
+static void (SDLCALL *sdl12_WarpMouse)(Uint16 x, Uint16 y);
+static Uint8 (SDLCALL *sdl12_EventState)(Uint8 type, int state);
+static void (SDLCALL *sdl12_FreeSurface)(SDL_Surface *surface);
+static void (SDLCALL *sdl12_WM_SetIcon)(SDL_Surface *icon, Uint8 *mask);
+static SDL_Surface *(SDLCALL *sdl12_CreateRGBSurfaceFrom)(void *pixels, int width, int height, int depth, int pitch, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
+static int (SDLCALL *sdl12_EnableUNICODE)(int enable);
+
+#ifdef SCHISM_WIN32
+static int (SDLCALL *sdl12_GetWMInfo)(SDL_SysWMinfo *);
+#endif
+
+static const char *sdl12_video_driver_name(void)
 {
 	char buf[256];
-	struct {
-		unsigned int num;
-		const char *name, *type;
-	} yuv_layouts[] = {
-		{VIDEO_YUV_IYUV, "IYUV", "planar"},
-		{VIDEO_YUV_YV12_TV, "YV12", "planar+tv"},
-		{VIDEO_YUV_IYUV_TV, "IYUV", "planar+tv"},
-		{VIDEO_YUV_YVYU, "YVYU", "packed"},
-		{VIDEO_YUV_UYVY, "UYVY", "packed"},
-		{VIDEO_YUV_YUY2, "YUY2", "packed"},
-		{VIDEO_YUV_RGBA, "RGBA", "packed"},
-		{VIDEO_YUV_RGBT, "RGBT", "packed"},
-		{VIDEO_YUV_RGB565, "RGB565", "packed"},
-		{VIDEO_YUV_RGB24, "RGB24", "packed"},
-		{VIDEO_YUV_RGB32, "RGB32", "packed"},
-		{0, NULL, NULL},
-	}, *layout = yuv_layouts;
 
-	log_append(2, 0, "Video initialised");
-	log_underline(17);
+	return str_dup(sdl12_VideoDriverName(buf, 256));
+}
 
-	log_appendf(5, " Using driver '%s'", SDL_VideoDriverName(buf, 256));
+static void sdl12_video_report(void)
+{
+	char buf[256];
+
+	log_appendf(5, " Using driver '%s'", sdl12_VideoDriverName(buf, 256));
 
 	switch (video.desktop.type) {
 	case VIDEO_SURFACE:
@@ -360,34 +179,6 @@ void video_report(void)
 			(video.surface->flags & SDL_HWACCEL) ? " accelerated" : "");
 		if (SDL_MUSTLOCK(video.surface))
 			log_append(4, 0, " Must lock surface");
-		log_appendf(5, " Display format: %d bits/pixel", video.surface->format->BitsPerPixel);
-		break;
-
-	case VIDEO_YUV:
-		/* if an overlay isn't hardware accelerated, what is it? I guess this works */
-		log_appendf(5, " %s-accelerated video overlay",
-			video.overlay->hw_overlay ? "Hardware" : "Non");
-		while (video.yuvlayout != layout->num && layout->name != NULL)
-			layout++;
-		if (layout->name)
-			log_appendf(5, " Display format: %s (%s)", layout->name, layout->type);
-		else
-			log_appendf(5, " Display format: %x", video.yuvlayout);
-		break;
-	case VIDEO_GL:
-		log_appendf(5, " %s%s OpenGL interface",
-			(video.surface->flags & SDL_HWSURFACE) ? "Hardware" : "Software",
-			(video.surface->flags & SDL_HWACCEL) ? " accelerated" : "");
-#if defined(NVIDIA_PixelDataRange)
-		if (video.gl.pixel_data_range)
-			log_append(5, 0, " NVidia pixel range extensions available");
-#endif
-		break;
-	case VIDEO_DDRAW:
-		// is this meaningful?
-		log_appendf(5, " %s%s DirectDraw interface",
-			(video.surface->flags & SDL_HWSURFACE) ? "Hardware" : "Software",
-			(video.surface->flags & SDL_HWACCEL) ? " accelerated" : "");
 		log_appendf(5, " Display format: %d bits/pixel", video.surface->format->BitsPerPixel);
 		break;
 	};
@@ -408,226 +199,79 @@ static int best_resolution(int w, int h)
 	}
 }
 
-int video_is_fullscreen(void)
+static int sdl12_video_is_fullscreen(void)
 {
 	return video.desktop.fullscreen;
 }
-int video_width(void)
+
+static int sdl12_video_width(void)
 {
 	return video.clip.w;
 }
-int video_height(void)
+
+static int sdl12_video_height(void)
 {
 	return video.clip.h;
 }
-void video_shutdown(void)
+
+static void sdl12_video_shutdown(void)
 {
 	if (video.desktop.fullscreen) {
 		video.desktop.fullscreen = 0;
 		video_resize(0,0);
 	}
 }
-void video_fullscreen(int tri)
+
+static void sdl12_video_fullscreen(int tri)
 {
 	if (tri == 0 || video.desktop.fb_hacks) {
 		video.desktop.fullscreen = 0;
-
 	} else if (tri == 1) {
 		video.desktop.fullscreen = 1;
-
 	} else if (tri < 0) {
-		video.desktop.fullscreen = video.desktop.fullscreen ? 0 : 1;
+		video.desktop.fullscreen = !video.desktop.fullscreen;
 	}
+
 	if (_did_init) {
 		if (video.desktop.fullscreen) {
 			video_resize(video.desktop.width, video.desktop.height);
+			video_toggle_menu(0);
 		} else {
+			video_toggle_menu(1);
 			video_resize(0, 0);
 		}
 		video_report();
 	}
 }
 
-void video_setup(const char *interpolation)
+static void sdl12_video_setup(const char *interpolation)
 {
 	strncpy(cfg_video_interpolation, interpolation, 7);
 }
 
-static void video_setup_(const char *driver)
+static void sdl12_video_startup(void)
 {
-	char *q;
-	/* _SOME_ drivers can be switched to, but not all of them... */
-
-	if (driver && strcasecmp(driver, "auto") == 0)
-		driver = NULL;
-
-	video.draw.width = NATIVE_SCREEN_WIDTH;
-	video.draw.height = NATIVE_SCREEN_HEIGHT;
-	video_mousecursor(MOUSE_EMULATED);
-
-	video.yuvlayout = VIDEO_YUV_NONE;
-	if ((q=getenv("SCHISM_YUVLAYOUT")) || (q=getenv("YUVLAYOUT"))) {
-		if (strcasecmp(q, "YUY2") == 0
-		|| strcasecmp(q, "YUNV") == 0
-		|| strcasecmp(q, "V422") == 0
-		|| strcasecmp(q, "YUYV") == 0) {
-			video.yuvlayout = VIDEO_YUV_YUY2;
-		} else if (strcasecmp(q, "UYVY") == 0) {
-			video.yuvlayout = VIDEO_YUV_UYVY;
-		} else if (strcasecmp(q, "YVYU") == 0) {
-			video.yuvlayout = VIDEO_YUV_YVYU;
-		} else if (strcasecmp(q, "YV12") == 0) {
-			video.yuvlayout = VIDEO_YUV_YV12;
-		} else if (strcasecmp(q, "IYUV") == 0) {
-			video.yuvlayout = VIDEO_YUV_IYUV;
-		} else if (strcasecmp(q, "YV12/2") == 0) {
-			video.yuvlayout = VIDEO_YUV_YV12_TV;
-		} else if (strcasecmp(q, "IYUV/2") == 0) {
-			video.yuvlayout = VIDEO_YUV_IYUV_TV;
-		} else if (strcasecmp(q, "RGBA") == 0) {
-			video.yuvlayout = VIDEO_YUV_RGBA;
-		} else if (strcasecmp(q, "RGBT") == 0) {
-			video.yuvlayout = VIDEO_YUV_RGBT;
-		} else if (strcasecmp(q, "RGB565") == 0 || strcasecmp(q, "RGB2") == 0) {
-			video.yuvlayout = VIDEO_YUV_RGB565;
-		} else if (strcasecmp(q, "RGB24") == 0) {
-			video.yuvlayout = VIDEO_YUV_RGB24;
-		} else if (strcasecmp(q, "RGB32") == 0 || strcasecmp(q, "RGB") == 0) {
-			video.yuvlayout = VIDEO_YUV_RGB32;
-		} else if (sscanf(q, "%x", &video.yuvlayout) != 1) {
-			video.yuvlayout = 0;
-		}
-	}
-
-	video.desktop.want_type = VIDEO_SURFACE;
-#ifdef SCHISM_WIN32
-	if (!driver) {
-		/* alright, let's have some fun. */
-		driver = "sdlauto"; /* err... */
-	}
-
-	if (!strcasecmp(driver, "windib")) {
-		putenv("SDL_VIDEODRIVER=windib");
-	} else if (!strcasecmp(driver, "ddraw") || !strcasecmp(driver,"directdraw")) {
-		putenv("SDL_VIDEODRIVER=directx");
-		video.desktop.want_type = VIDEO_DDRAW;
-	} else if (!strcasecmp(driver, "sdlddraw")) {
-		putenv("SDL_VIDEODRIVER=directx");
-	}
-#elif defined(GEKKO)
-	if (!driver) {
-		driver = "yuv";
-	}
-#elif defined(__APPLE__)
-	if (!driver) {
-		driver = "opengl";
-	}
-#else
-	if (!driver) {
-		if (getenv("DISPLAY")) {
-			driver = "x11";
-		} else {
-			driver = "sdlauto";
-		}
-	}
-#endif
-
-	video.desktop.fb_hacks = 0;
-	/* get xv info */
-	//if (video.yuvlayout == VIDEO_YUV_NONE)
-	//	video.yuvlayout = os_yuvlayout();
-	if ((video.yuvlayout != VIDEO_YUV_YV12_TV
-	&& video.yuvlayout != VIDEO_YUV_IYUV_TV
-	&& video.yuvlayout != VIDEO_YUV_NONE && 0) /* don't do this until we figure out how to make it better */
-			 && !strcasecmp(driver, "x11")) {
-		video.desktop.want_type = VIDEO_YUV;
-		putenv((char *) "SDL_VIDEO_YUV_DIRECT=1");
-		putenv((char *) "SDL_VIDEO_YUV_HWACCEL=1");
-		putenv((char *) "SDL_VIDEODRIVER=x11");
-#ifdef USE_X11
-	} else if (!strcasecmp(driver, "dga")) {
-		putenv((char *) "SDL_VIDEODRIVER=dga");
-		video.desktop.want_type = VIDEO_SURFACE;
-	} else if (!strcasecmp(driver, "directfb")) {
-		putenv((char *) "SDL_VIDEODRIVER=directfb");
-		video.desktop.want_type = VIDEO_SURFACE;
-#endif
-#if HAVE_LINUX_FB_H
-	} else if (!strcasecmp(driver, "fbcon")
-	|| !strcasecmp(driver, "linuxfb")
-	|| !strcasecmp(driver, "fb")) {
-		unsetenv("DISPLAY");
-		putenv((char *) "SDL_VIDEODRIVER=fbcon");
-		video.desktop.want_type = VIDEO_SURFACE;
-
-	} else if (strncmp(driver, "/dev/fb", 7) == 0) {
-		unsetenv("DISPLAY");
-		putenv((char *) "SDL_VIDEODRIVER=fbcon");
-		setenv("SDL_FBDEV", driver, 1);
-		video.desktop.want_type = VIDEO_SURFACE;
-
-#endif
-
-	} else if (!strcasecmp(driver, "aalib")
-	|| !strcasecmp(driver, "aa")) {
-		/* SDL needs to have been built this way... */
-		unsetenv("DISPLAY");
-		putenv((char *) "SDL_VIDEODRIVER=aalib");
-		video.desktop.want_type = VIDEO_SURFACE;
-		video.desktop.fb_hacks = 1;
-
-	} else if (video.yuvlayout != VIDEO_YUV_NONE && !strcasecmp(driver, "yuv")) {
-		video.desktop.want_type = VIDEO_YUV;
-		putenv((char *) "SDL_VIDEO_YUV_DIRECT=1");
-		putenv((char *) "SDL_VIDEO_YUV_HWACCEL=1");
-		/* leave everything else alone... */
-	} else if (!strcasecmp(driver, "dummy")
-	|| !strcasecmp(driver, "null")
-	|| !strcasecmp(driver, "none")) {
-
-		unsetenv("DISPLAY");
-		putenv((char *) "SDL_VIDEODRIVER=dummy");
-		video.desktop.want_type = VIDEO_SURFACE;
-		video.desktop.fb_hacks = 1;
-#if HAVE_SIGNAL_H
-		signal(SIGINT, SIG_DFL);
-#endif
-
-	} else if (!strcasecmp(driver, "gl") || !strcasecmp(driver, "opengl")) {
-		video.desktop.want_type = VIDEO_GL;
-	} else if (!strcasecmp(driver, "sdlauto")
-	|| !strcasecmp(driver,"sdl")) {
-		video.desktop.want_type = VIDEO_SURFACE;
-	}
-}
-
-void video_startup(void)
-{
-	UNUSED static int did_this_2 = 0;
-#if USE_OPENGL
-	const char *gl_ext;
-#endif
 	char *q;
 	SDL_Rect **modes;
-	int i, j, x, y;
+	int i, j, x = -1, y = -1;
+
+	// center the window on startup by default; this is what the SDL 2 backend does...
+	int center_enabled = 0;
+	if (!getenv("SDL_VIDEO_WINDOW_POS")) {
+		setenv("SDL_VIDEO_WINDOW_POS", "center", 1);
+		center_enabled = 1;
+	}
 
 	/* get monitor native res (assumed to be user's desktop res)
 	 * first time we start video */
 	if (display_native_x < 0 || display_native_y < 0) {
-		const SDL_VideoInfo* info = SDL_GetVideoInfo();
+		const SDL_VideoInfo* info = sdl12_GetVideoInfo();
 		display_native_x = info->current_w;
 		display_native_y = info->current_h;
 		printf("%d, %d\n", display_native_x, display_native_y);
 	}
 
-	/* make a centered window by default */
-	setenv("SDL_VIDEO_WINDOW_POS", "center", 0);
-
-	/* because first mode is 0 */
-	//vgamem_clear();
-	//vgamem_flip();
-
-	SDL_WM_SetCaption("Schism Tracker", "Schism Tracker");
+	sdl12_WM_SetCaption("Schism Tracker", "Schism Tracker");
 #ifndef SCHISM_MACOSX
 /* apple/macs use a bundle; this overrides their nice pretty icon */
 	{
@@ -640,100 +284,16 @@ void video_startup(void)
 		uint32_t *pixels;
 		int width, height;
 		if (!xpmdata(xpm, &pixels, &width, &height)) {
-			SDL_Surface *icon = SDL_CreateRGBSurfaceFrom(pixels, width, height, 32, width * sizeof(uint32_t), 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+			SDL_Surface *icon = sdl12_CreateRGBSurfaceFrom(pixels, width, height, 32, width * sizeof(uint32_t), 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
 			if (icon) {
-				SDL_WM_SetIcon(icon, NULL);
-				SDL_FreeSurface(icon);
+				sdl12_WM_SetIcon(icon, NULL);
+				sdl12_FreeSurface(icon);
 			}
 			free(pixels);
 		}
 	}
 #endif
 
-#ifndef SCHISM_MACOSX
-	if (video.desktop.want_type == VIDEO_GL) {
-#define Z(q) my_ ## q = SDL_GL_GetProcAddress( #q ); \
-	if (! my_ ## q) { video.desktop.want_type = VIDEO_SURFACE; goto SKIP1; }
-		if (did_this_2) {
-			/* do nothing */
-		} else if (getenv("SDL_VIDEO_GL_DRIVER")
-		&& SDL_GL_LoadLibrary(getenv("SDL_VIDEO_GL_DRIVER")) == 0) {
-			/* ok */
-		} else if (SDL_GL_LoadLibrary("GL") != 0)
-		if (SDL_GL_LoadLibrary("libGL.so") != 0)
-		if (SDL_GL_LoadLibrary("opengl32.dll") != 0)
-		if (SDL_GL_LoadLibrary("opengl.dll") != 0)
-	{ /* do nothing ... because the bottom routines will fail */ }
-		did_this_2 = 1;
-		Z(glCallList)
-		Z(glTexSubImage2D)
-		Z(glDeleteLists)
-		Z(glTexParameteri)
-		Z(glBegin)
-		Z(glEnd)
-		Z(glEndList)
-		Z(glTexCoord2f)
-		Z(glVertex2f)
-		Z(glNewList)
-		Z(glIsList)
-		Z(glGenLists)
-		Z(glLoadIdentity)
-		Z(glMatrixMode)
-		Z(glEnable)
-		Z(glDisable)
-		Z(glBindTexture)
-		Z(glClear)
-		Z(glClearColor)
-		Z(glGetString)
-		Z(glTexImage2D)
-		Z(glGetIntegerv)
-		Z(glShadeModel)
-		Z(glGenTextures)
-		Z(glDeleteTextures)
-		Z(glViewport)
-		Z(glEnableClientState)
-#undef Z
-	}
-SKIP1:
-#endif
-	if (video.desktop.want_type == VIDEO_GL) {
-#if defined(USE_OPENGL)
-		video.surface = SDL_SetVideoMode(640,400,0,SDL_OPENGL|SDL_RESIZABLE);
-		if (!video.surface) {
-			/* fallback */
-			video.desktop.want_type = VIDEO_SURFACE;
-		}
-		video.gl.framebuf = NULL;
-		video.gl.texture = 0;
-		video.gl.displaylist = 0;
-		my_glGetIntegerv(GL_MAX_TEXTURE_SIZE, &video.gl.max_texsize);
-#if defined(NVIDIA_PixelDataRange)
-		glPixelDataRangeNV = (PFNGLPIXELDATARANGENVPROC)
-			SDL_GL_GetProcAddress("glPixelDataRangeNV");
-		db_glAllocateMemoryNV = (PFNWGLALLOCATEMEMORYNVPROC)
-			SDL_GL_GetProcAddress("wglAllocateMemoryNV");
-		db_glFreeMemoryNV = (PFNWGLFREEMEMORYNVPROC)
-			SDL_GL_GetProcAddress("wglFreeMemoryNV");
-#endif
-		gl_ext = (const char *)my_glGetString(GL_EXTENSIONS);
-		if (!gl_ext) gl_ext = (const char *)"";
-		video.gl.packed_pixel=(strstr(gl_ext,"EXT_packed_pixels") != NULL);
-		video.gl.paletted_texture=(strstr(gl_ext,"EXT_paletted_texture") != NULL);
-#if defined(NVIDIA_PixelDataRange)
-		video.gl.pixel_data_range=(strstr(gl_ext,"GL_NV_pixel_data_range") != NULL)
-			&& glPixelDataRangeNV && db_glAllocateMemoryNV && db_glFreeMemoryNV;
-#endif
-#endif // USE_OPENGL
-	}
-
-	x = y = -1;
-	if ((q = getenv("SCHISM_VIDEO_RESOLUTION"))) {
-		i = j = -1;
-		if (sscanf(q,"%dx%d", &i,&j) == 2 && i >= 10 && j >= 10) {
-			x = i;
-			y = j;
-		}
-	}
 #if HAVE_LINUX_FB_H
 	if (!getenv("DISPLAY") && !video.desktop.fb_hacks) {
 		struct fb_var_screeninfo s;
@@ -759,7 +319,7 @@ SKIP1:
 				video.desktop.doublebuf = 1;
 				video.desktop.fullscreen = 0;
 				video.desktop.swsurface = 0;
-				video.surface = SDL_SetVideoMode(x,y,
+				video.surface = sdl12_SetVideoMode(x,y,
 						video.desktop.bpp,
 						SDL_HWSURFACE
 						| SDL_DOUBLEBUF
@@ -771,8 +331,9 @@ SKIP1:
 #endif
 	if (!video.surface) {
 		/* if we already got one... */
-		video.surface = SDL_SetVideoMode(640,400,0,SDL_RESIZABLE);
+		video.surface = sdl12_SetVideoMode(640,400,0,SDL_RESIZABLE);
 		if (!video.surface) {
+			// ok
 			perror("SDL_SetVideoMode");
 			exit(255);
 		}
@@ -780,7 +341,7 @@ SKIP1:
 	video.desktop.bpp = video.surface->format->BitsPerPixel;
 
 	if (x < 0 || y < 0) {
-		modes = SDL_ListModes(NULL, SDL_FULLSCREEN | SDL_HWSURFACE);
+		modes = sdl12_ListModes(NULL, SDL_FULLSCREEN | SDL_HWSURFACE);
 		if (modes != (SDL_Rect**)0 && modes != (SDL_Rect**)-1) {
 			for (i = 0; modes[i]; i++) {
 				if (modes[i]->w < NATIVE_SCREEN_WIDTH) continue;
@@ -804,45 +365,11 @@ SKIP1:
 		y = 480;
 	}
 
-	if ((q = getenv("SCHISM_VIDEO_DEPTH"))) {
-		i=atoi(q);
-		if (i == 32) video.desktop.bpp=32;
-		else if (i == 24) video.desktop.bpp=24;
-		else if (i == 16) video.desktop.bpp=16;
-		else if (i == 8) video.desktop.bpp=8;
-	}
-
 	/*log_appendf(2, "Ideal desktop size: %dx%d", x, y); */
 	video.desktop.width = x;
 	video.desktop.height = y;
 
 	switch (video.desktop.want_type) {
-	case VIDEO_YUV:
-#ifdef SCHISM_MACOSX
-		video.desktop.swsurface = 1;
-#else
-		video.desktop.swsurface = !cfg_video_hardware;
-#endif
-		break;
-
-	case VIDEO_GL:
-#ifdef SCHISM_MACOSX
-		video.desktop.swsurface = 1;
-#else
-		video.desktop.swsurface = !cfg_video_hardware;
-#endif
-		video.gl.bilinear = cfg_video_gl_bilinear;
-		if (video.desktop.bpp == 32 || video.desktop.bpp == 16) break;
-		/* fall through */
-	case VIDEO_DDRAW:
-#ifdef SCHISM_WIN32
-		if (video.desktop.bpp == 32 || video.desktop.bpp == 16) {
-			/* good enough for here! */
-			video.desktop.want_type = VIDEO_DDRAW;
-			break;
-		}
-#endif
-		/* fall through */
 	case VIDEO_SURFACE:
 		/* no scaling when using the SDL surfaces directly */
 		video.desktop.swsurface = 1;
@@ -850,22 +377,29 @@ SKIP1:
 		break;
 	};
 	/* okay, i think we're ready */
-	SDL_ShowCursor(SDL_DISABLE);
-#if 0 /* Do we need these? Everything seems to work just fine without */
-	SDL_EventState(SDL_VIDEORESIZE, SDL_ENABLE);
-	SDL_EventState(SDL_VIDEOEXPOSE, SDL_ENABLE);
-	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-	SDL_EventState(SDL_USEREVENT, SDL_ENABLE);
-	SDL_EventState(SDL_ACTIVEEVENT, SDL_ENABLE);
-	SDL_EventState(SDL_KEYDOWN, SDL_ENABLE);
-	SDL_EventState(SDL_KEYUP, SDL_ENABLE);
-	SDL_EventState(SDL_MOUSEMOTION, SDL_ENABLE);
-	SDL_EventState(SDL_MOUSEBUTTONDOWN, SDL_ENABLE);
-	SDL_EventState(SDL_MOUSEBUTTONUP, SDL_ENABLE);
-#endif
+	sdl12_ShowCursor(SDL_DISABLE);
+
+	video.desktop.fullscreen = cfg_video_fullscreen;
 
 	_did_init = 1;
+
 	video_fullscreen(video.desktop.fullscreen);
+
+	// We have to unset this variable, because otherwise
+	// SDL will re-center the window every time it's
+	// resized.
+	if (center_enabled)
+		unsetenv("SDL_VIDEO_WINDOW_POS");
+
+#ifdef SCHISM_WIN32
+	/* We want to edit the window style so it accepts drag & drop */
+	SDL_SysWMinfo wm_info;
+	SDL_VERSION(&wm_info.version);
+	if (sdl12_GetWMInfo(&wm_info)) {
+		LONG x = GetWindowLongA(wm_info.window, GWL_EXSTYLE);
+		SetWindowLongA(wm_info.window, GWL_EXSTYLE, x | WS_EX_ACCEPTFILES);
+	}
+#endif
 }
 
 static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int sdlflags)
@@ -881,6 +415,7 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 		sdlflags |= SDL_RESIZABLE;
 	}
 
+	// What?
 	if (want_fixed == -1 && best_resolution(w,h)) {
 		want_fixed = 0;
 	}
@@ -951,10 +486,9 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 				video.clip.x = 0;
 				video.clip.y = 0;
 			}
-			
 		}
-		
-		video.surface = SDL_SetVideoMode(w, h,
+
+		video.surface = sdl12_SetVideoMode(w, h,
 			video.desktop.bpp, sdlflags);
 	}
 	if (!video.surface) {
@@ -964,29 +498,8 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 	return video.surface;
 }
 
-#if USE_OPENGL
-static void _set_gl_attributes(void)
+static void sdl12_video_resize(unsigned int width, unsigned int height)
 {
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
-	SDL_GL_SetAttribute(SDL_GL_ACCUM_RED_SIZE, 0);
-	SDL_GL_SetAttribute(SDL_GL_ACCUM_GREEN_SIZE, 0);
-	SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE, 0);
-	SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE, 0);
-#if SDL_VERSION_ATLEAST(1,2,11)
-	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 0);
-#endif
-}
-#endif
-
-void video_resize(unsigned int width, unsigned int height)
-{
-#if USE_OPENGL
-	GLfloat tex_width, tex_height;
-	int texsize;
-#endif
-
 	if (!width) width = cfg_video_width;
 	if (!height) height = cfg_video_height;
 	video.draw.width = width;
@@ -995,34 +508,7 @@ void video_resize(unsigned int width, unsigned int height)
 	video.draw.autoscale = 1;
 
 	switch (video.desktop.want_type) {
-	case VIDEO_DDRAW:
-#ifdef SCHISM_WIN32
-		if (video.ddblit.surface) {
-			SDL_FreeSurface(video.ddblit.surface);
-			video.ddblit.surface = 0;
-		}
-		memset(&video.ddblit.fx, 0, sizeof(DDBLTFX));
-		video.ddblit.fx.dwSize = sizeof(DDBLTFX);
-		_setup_surface(width, height, SDL_DOUBLEBUF);
-		video.ddblit.rect.top = video.clip.y;
-		video.ddblit.rect.left = video.clip.x;
-		video.ddblit.rect.right = video.clip.x + video.clip.w;
-		video.ddblit.rect.bottom = video.clip.y + video.clip.h;
-		video.ddblit.surface = SDL_CreateRGBSurface(SDL_HWSURFACE,
-				NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
-				video.surface->format->BitsPerPixel,
-				video.surface->format->Rmask,
-				video.surface->format->Gmask,
-				video.surface->format->Bmask,0);
-		if (video.ddblit.surface
-		&& ((video.ddblit.surface->flags & SDL_HWSURFACE) == SDL_HWSURFACE)) {
-			video.desktop.type = VIDEO_DDRAW;
-			break;
-		}
-		/* fall through */
-#endif
 	case VIDEO_SURFACE:
-RETRYSURF:      /* use SDL surfaces */
 		video.draw.autoscale = 0;
 		if (video.desktop.fb_hacks
 		&& (video.desktop.width != NATIVE_SCREEN_WIDTH
@@ -1032,295 +518,27 @@ RETRYSURF:      /* use SDL surfaces */
 		_setup_surface(width, height, 0);
 		video.desktop.type = VIDEO_SURFACE;
 		break;
-
-	case VIDEO_YUV:
-		if (video.overlay) {
-			SDL_FreeYUVOverlay(video.overlay);
-			video.overlay = NULL;
-		}
-		_setup_surface(width, height, 0);
-		/* TODO: switch? */
-		switch (video.yuvlayout) {
-		case VIDEO_YUV_YV12_TV:
-			video.overlay = SDL_CreateYUVOverlay
-				(NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
-				 SDL_YV12_OVERLAY, video.surface);
-			break;
-		case VIDEO_YUV_IYUV_TV:
-			video.overlay = SDL_CreateYUVOverlay
-				(NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
-				 SDL_IYUV_OVERLAY, video.surface);
-			break;
-		case VIDEO_YUV_YV12:
-			video.overlay = SDL_CreateYUVOverlay
-				(2 * NATIVE_SCREEN_WIDTH,
-				 2 * NATIVE_SCREEN_HEIGHT,
-				 SDL_YV12_OVERLAY, video.surface);
-			break;
-		case VIDEO_YUV_IYUV:
-			video.overlay = SDL_CreateYUVOverlay
-				(2 * NATIVE_SCREEN_WIDTH,
-				 2 * NATIVE_SCREEN_HEIGHT,
-				 SDL_IYUV_OVERLAY, video.surface);
-			break;
-		case VIDEO_YUV_UYVY:
-			video.overlay = SDL_CreateYUVOverlay
-				(2 * NATIVE_SCREEN_WIDTH,
-				 NATIVE_SCREEN_HEIGHT,
-				 SDL_UYVY_OVERLAY, video.surface);
-			break;
-		case VIDEO_YUV_YVYU:
-			video.overlay = SDL_CreateYUVOverlay
-				(2 * NATIVE_SCREEN_WIDTH,
-				 NATIVE_SCREEN_HEIGHT,
-				 SDL_YVYU_OVERLAY, video.surface);
-			break;
-		case VIDEO_YUV_YUY2:
-			video.overlay = SDL_CreateYUVOverlay
-				(2 * NATIVE_SCREEN_WIDTH,
-				 NATIVE_SCREEN_HEIGHT,
-				 SDL_YUY2_OVERLAY, video.surface);
-			break;
-		case VIDEO_YUV_RGBA:
-		case VIDEO_YUV_RGB32:
-			video.overlay = SDL_CreateYUVOverlay
-				(4*NATIVE_SCREEN_WIDTH,
-				 NATIVE_SCREEN_HEIGHT,
-				 video.yuvlayout, video.surface);
-			break;
-		case VIDEO_YUV_RGB24:
-			video.overlay = SDL_CreateYUVOverlay
-				(3*NATIVE_SCREEN_WIDTH,
-				 NATIVE_SCREEN_HEIGHT,
-				 video.yuvlayout, video.surface);
-			break;
-		case VIDEO_YUV_RGBT:
-		case VIDEO_YUV_RGB565:
-			video.overlay = SDL_CreateYUVOverlay
-				(2*NATIVE_SCREEN_WIDTH,
-				 NATIVE_SCREEN_HEIGHT,
-				 video.yuvlayout, video.surface);
-			break;
-
-		default:
-			/* unknown layout */
-			goto RETRYSURF;
-		}
-		if (!video.overlay) {
-			/* can't get an overlay */
-			goto RETRYSURF;
-		}
-		switch (video.overlay->planes) {
-		case 3:
-		case 1:
-			break;
-		default:
-			/* can't get a recognized planes */
-			SDL_FreeYUVOverlay(video.overlay);
-			video.overlay = NULL;
-			goto RETRYSURF;
-		};
-		video.desktop.type = VIDEO_YUV;
+	default:
 		break;
-#if defined(USE_OPENGL)
-	case VIDEO_GL:
-		_set_gl_attributes();
-		_setup_surface(width, height, SDL_OPENGL);
-		if (video.surface->format->BitsPerPixel < 15) {
-			goto RETRYSURF;
-		}
-		/* grumble... */
-		_set_gl_attributes();
-		my_glViewport(video.clip.x, video.clip.y,
-			video.clip.w, video.clip.h);
-		texsize = 2 << int_log2(NATIVE_SCREEN_WIDTH);
-		if (texsize > video.gl.max_texsize) {
-			/* can't do opengl! */
-			goto RETRYSURF;
-		}
-#if defined(NVIDIA_PixelDataRange)
-		if (video.gl.pixel_data_range) {
-			if (!video.gl.framebuf) {
-				video.gl.framebuf = db_glAllocateMemoryNV(
-						NATIVE_SCREEN_WIDTH*NATIVE_SCREEN_HEIGHT*4,
-						0.0, 1.0, 1.0);
-			}
-			glPixelDataRangeNV(GL_WRITE_PIXEL_DATA_RANGE_NV,
-					NATIVE_SCREEN_WIDTH*NATIVE_SCREEN_HEIGHT*4,
-					video.gl.framebuf);
-			my_glEnableClientState(GL_WRITE_PIXEL_DATA_RANGE_NV);
-		} else
-#endif
-		if (!video.gl.framebuf) {
-			video.gl.framebuf = mem_alloc(NATIVE_SCREEN_WIDTH
-							*NATIVE_SCREEN_HEIGHT*4);
-		}
-
-		video.gl.pitch = NATIVE_SCREEN_WIDTH * 4;
-		my_glMatrixMode(GL_PROJECTION);
-		my_glDeleteTextures(1, &video.gl.texture);
-		my_glGenTextures(1, &video.gl.texture);
-		my_glBindTexture(GL_TEXTURE_2D, video.gl.texture);
-		my_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-		my_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-		if (video.gl.bilinear) {
-			my_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-						GL_LINEAR);
-			my_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-						GL_LINEAR);
-		} else {
-			my_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-						GL_NEAREST);
-			my_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-						GL_NEAREST);
-		}
-		my_glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texsize, texsize,
-			0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, NULL);
-		my_glClearColor(0.0, 0.0, 0.0, 1.0);
-		my_glClear(GL_COLOR_BUFFER_BIT);
-		SDL_GL_SwapBuffers();
-		my_glClear(GL_COLOR_BUFFER_BIT);
-		my_glShadeModel(GL_FLAT);
-		my_glDisable(GL_DEPTH_TEST);
-		my_glDisable(GL_LIGHTING);
-		my_glDisable(GL_CULL_FACE);
-		my_glEnable(GL_TEXTURE_2D);
-		my_glMatrixMode(GL_MODELVIEW);
-		my_glLoadIdentity();
-
-		tex_width = ((GLfloat)(NATIVE_SCREEN_WIDTH)/(GLfloat)texsize);
-		tex_height = ((GLfloat)(NATIVE_SCREEN_HEIGHT)/(GLfloat)texsize);
-		if (my_glIsList(video.gl.displaylist))
-			my_glDeleteLists(video.gl.displaylist, 1);
-		video.gl.displaylist = my_glGenLists(1);
-		my_glNewList(video.gl.displaylist, GL_COMPILE);
-		my_glBindTexture(GL_TEXTURE_2D, video.gl.texture);
-		my_glBegin(GL_QUADS);
-		my_glTexCoord2f(0,tex_height); my_glVertex2f(-1.0f,-1.0f);
-		my_glTexCoord2f(tex_width,tex_height);my_glVertex2f(1.0f,-1.0f);
-		my_glTexCoord2f(tex_width,0); my_glVertex2f(1.0f, 1.0f);
-		my_glTexCoord2f(0,0); my_glVertex2f(-1.0f, 1.0f);
-		my_glEnd();
-		my_glEndList();
-		video.desktop.type = VIDEO_GL;
-		break;
-#endif // USE_OPENGL
 	};
 
 	status.flags |= (NEED_UPDATE);
 }
-static void _make_yuv(unsigned int *y, unsigned int *u, unsigned int *v,
-						int rgb[3])
-{
-	double red, green, blue, yy, cr, cb, ry, ru, rv;
-	int r = rgb[0];
-	int g = rgb[1];
-	int b = rgb[2];
 
-	red = (double)r / 255.0;
-	green = (double)g / 255.0;
-	blue = (double)b / 255.0;
-	yy = 0.299 * red + 0.587 * green + 0.114 * blue;
-	cb = blue - yy;
-	cr = red - yy;
-	ry = 16.0 + 219.0 * yy;
-	ru = 128.0 + 126.0 * cb;
-	rv = 128.0 + 160.0 * cr;
-	*y = (uint8_t) ry;
-	*u = (uint8_t) ru;
-	*v = (uint8_t) rv;
-}
-static void _yuv_pal(int i, int rgb[3])
-{
-	unsigned int y,u,v;
-	_make_yuv(&y, &u, &v, rgb);
-	switch (video.yuvlayout) {
-	/* planar modes */
-	case VIDEO_YUV_YV12:
-	case VIDEO_YUV_IYUV:
-		/* this is fake; we simply record the infomration here */
-		video.yuv_y[i] = y|(y<<8);
-		video.yuv_u[i] = u;
-		video.yuv_v[i] = v;
-		break;
-
-	/* tv planar modes */
-	case VIDEO_YUV_YV12_TV:
-	case VIDEO_YUV_IYUV_TV:
-		/* _blitTV */
-		video.yuv_y[i] = y;
-		video.yuv_u[i] = (u >> 4) & 0xF;
-		video.yuv_v[i] = (v >> 4) & 0xF;
-		break;
-
-	/* packed modes */
-	case VIDEO_YUV_YVYU:
-		/* y0 v0 y1 u0 */
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-		video.pal[i] = u | (y << 8) | (v << 16) | (y << 24);
-#else
-		video.pal[i] = y | (v << 8) | (y << 16) | (u << 24);
-#endif
-		break;
-	case VIDEO_YUV_UYVY:
-		/* u0 y0 v0 y1 */
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-		video.pal[i] = y | (v << 8) | (y << 16) | (u << 24);
-#else
-		video.pal[i] = u | (y << 8) | (v << 16) | (y << 24);
-#endif
-		break;
-	case VIDEO_YUV_YUY2:
-		/* y0 u0 y1 v0 */
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-		video.pal[i] = v | (y << 8) | (u << 16) | (y << 24);
-#else
-		video.pal[i] = y | (u << 8) | (y << 16) | (v << 24);
-#endif
-		break;
-	case VIDEO_YUV_RGBA:
-	case VIDEO_YUV_RGB32:
-		video.pal[i] = rgb[2] |
-			(rgb[1] << 8) |
-			(rgb[0] << 16) | (255 << 24);
-		break;
-	case VIDEO_YUV_RGB24:
-		video.pal[i] = rgb[2] |
-			(rgb[1] << 8) |
-			(rgb[0] << 16);
-		break;
-	case VIDEO_YUV_RGBT:
-		video.pal[i] =
-			((rgb[0] <<  8) & 0x7c00)
-		|       ((rgb[1] <<  3) & 0x3e0)
-		|       ((rgb[2] >>  2) & 0x1f);
-		break;
-	case VIDEO_YUV_RGB565:
-		video.pal[i] =
-			((rgb[0] <<  9) & 0xf800)
-		|       ((rgb[1] <<  4) & 0x7e0)
-		|       ((rgb[2] >>  2) & 0x1f);
-		break;
-	};
-}
 static void _sdl_pal(int i, int rgb[3])
 {
-	video.pal[i] = SDL_MapRGB(video.surface->format,
+	video.pal[i] = sdl12_MapRGB(video.surface->format,
 			rgb[0], rgb[1], rgb[2]);
 }
+
 static void _bgr32_pal(int i, int rgb[3])
 {
 	video.tc_bgr32[i] = rgb[2] |
 			(rgb[1] << 8) |
 			(rgb[0] << 16) | (255 << 24);
 }
-static void _gl_pal(int i, int rgb[3])
-{
-	video.pal[i] = rgb[2] |
-			(rgb[1] << 8) |
-			(rgb[0] << 16) | (255 << 24);
-}
-void video_colors(unsigned char palette[16][3])
+
+static void sdl12_video_colors(unsigned char palette[16][3])
 {
 	static SDL_Color imap[16];
 	void (*fun)(int i,int rgb[3]);
@@ -1364,18 +582,10 @@ void video_colors(unsigned char palette[16][3])
 					- palette[p][2]) * (j&31)) /32);
 				_bgr32_pal(i, rgb);
 			}
-			SDL_SetColors(video.surface, imap, 0, 16);
+			sdl12_SetColors(video.surface, imap, 0, 16);
 			return;
 		}
-		/* fall through */
-	case VIDEO_DDRAW:
 		fun = _sdl_pal;
-		break;
-	case VIDEO_YUV:
-		fun = _yuv_pal;
-		break;
-	case VIDEO_GL:
-		fun = _gl_pal;
 		break;
 	default:
 		/* eh? */
@@ -1404,49 +614,14 @@ void video_colors(unsigned char palette[16][3])
 	}
 }
 
-static void _video_blit_planar(void) {
-	SDL_LockYUVOverlay(video.overlay);
-
-	switch (video.yuvlayout) {
-	case VIDEO_YUV_YV12_TV:
-		/* halfwidth Y+V+U */
-		video_blitUV(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
-		video_blitTV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_v);
-		video_blitTV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_u);
-		break;
-	case VIDEO_YUV_IYUV_TV:
-		/* halfwidth Y+U+V */
-		video_blitUV(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
-		video_blitTV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_u);
-		video_blitTV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_v);
-		break;
-
-	case VIDEO_YUV_YV12:
-		/* Y+V+U */
-		video_blitYY(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
-		video_blitUV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_v);
-		video_blitUV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_u);
-		break;
-	case VIDEO_YUV_IYUV:
-		/* Y+U+V */
-		video_blitYY(video.overlay->pixels[0], video.overlay->pitches[0], video.yuv_y);
-		video_blitUV(video.overlay->pixels[1], video.overlay->pitches[1], video.yuv_u);
-		video_blitUV(video.overlay->pixels[2], video.overlay->pitches[2], video.yuv_v);
-		break;
-	};
-
-	SDL_UnlockYUVOverlay(video.overlay);
-	SDL_DisplayYUVOverlay(video.overlay, &video.clip);
-}
-
 static uint32_t sdl12_map_rgb_callback(void *data, uint8_t r, uint8_t g, uint8_t b)
 {
 	SDL_PixelFormat *format = (SDL_PixelFormat *)data;
 
-	return SDL_MapRGB(format, r, g, b);
+	return sdl12_MapRGB(format, r, g, b);
 }
 
-void video_blit(void)
+static void sdl12_video_blit(void)
 {
 	unsigned char *pixels = NULL;
 	unsigned int bpp = 0;
@@ -1455,8 +630,8 @@ void video_blit(void)
 	switch (video.desktop.type) {
 	case VIDEO_SURFACE:
 		if (SDL_MUSTLOCK(video.surface)) {
-			while (SDL_LockSurface(video.surface) == -1) {
-				SDL_Delay(10);
+			while (sdl12_LockSurface(video.surface) == -1) {
+				sdl12_Delay(10);
 			}
 		}
 		bpp = video.surface->format->BytesPerPixel;
@@ -1467,42 +642,6 @@ void video_blit(void)
 		}
 		pitch = video.surface->pitch;
 		break;
-	case VIDEO_YUV:
-		if (video.overlay->planes == 3) {
-			_video_blit_planar();
-			return;
-		}
-
-		SDL_LockYUVOverlay(video.overlay);
-		pixels = (unsigned char *)*(video.overlay->pixels);
-		pitch = *(video.overlay->pitches);
-		switch (video.yuvlayout) {
-		case VIDEO_YUV_RGBT:   bpp = 2; break;
-		case VIDEO_YUV_RGB565: bpp = 2; break;
-		case VIDEO_YUV_RGB24:  bpp = 3; break;
-		default:
-			bpp = 4;
-		};
-		break;
-	case VIDEO_GL:
-		pixels = (unsigned char *)video.gl.framebuf;
-		pitch = video.gl.pitch;
-		bpp = 4;
-		break;
-	case VIDEO_DDRAW:
-#ifdef SCHISM_WIN32
-		if (SDL_MUSTLOCK(video.ddblit.surface)) {
-			while (SDL_LockSurface(video.ddblit.surface) == -1) {
-				SDL_Delay(10);
-			}
-		}
-		pixels = (unsigned char *)video.ddblit.surface->pixels;
-		pitch = video.ddblit.surface->pitch;
-		bpp = video.surface->format->BytesPerPixel;
-		break;
-#else
-		return; /* eh? */
-#endif
 	};
 
 	if (video.draw.autoscale
@@ -1520,57 +659,14 @@ void video_blit(void)
 	switch (video.desktop.type) {
 	case VIDEO_SURFACE:
 		if (SDL_MUSTLOCK(video.surface)) {
-			SDL_UnlockSurface(video.surface);
+			sdl12_UnlockSurface(video.surface);
 		}
-		SDL_Flip(video.surface);
+		sdl12_Flip(video.surface);
 		break;
-#ifdef SCHISM_WIN32
-	case VIDEO_DDRAW:
-		if (SDL_MUSTLOCK(video.ddblit.surface)) {
-			SDL_UnlockSurface(video.ddblit.surface);
-		}
-		switch (IDirectDrawSurface3_Blt(
-				video.surface->hwdata->dd_writebuf,
-				&video.ddblit.rect,
-				video.ddblit.surface->hwdata->dd_surface,0,
-				DDBLT_WAIT, NULL)) {
-		case DD_OK:
-			break;
-		case DDERR_SURFACELOST:
-			IDirectDrawSurface3_Restore(video.ddblit.surface->hwdata->dd_surface);
-			IDirectDrawSurface3_Restore(video.surface->hwdata->dd_surface);
-			break;
-		default:
-			break;
-		};
-		SDL_Flip(video.surface);
-		break;
-#endif
-	case VIDEO_YUV:
-		SDL_UnlockYUVOverlay(video.overlay);
-		SDL_DisplayYUVOverlay(video.overlay, &video.clip);
-		break;
-#if defined(USE_OPENGL)
-	case VIDEO_GL:
-		my_glBindTexture(GL_TEXTURE_2D, video.gl.texture);
-		my_glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-			NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
-			GL_BGRA_EXT,
-			GL_UNSIGNED_INT_8_8_8_8_REV,
-			video.gl.framebuf);
-		my_glCallList(video.gl.displaylist);
-		SDL_GL_SwapBuffers();
-		break;
-#endif
 	};
 }
 
-int video_gl_bilinear(void)
-{
-	return video.gl.bilinear;
-}
-
-void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
+static void sdl12_video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
 {
 	vx = MAX(vx, video.clip.x);
 	vx -= video.clip.x;
@@ -1595,95 +691,230 @@ void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
 	if (y) *y = vy;
 }
 
-void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
+static void sdl12_video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
 {
 	if (trans_x) *trans_x = x;
 	if (trans_y) *trans_y = y;
 }
 
-int video_is_hardware(void) {
+static int sdl12_video_is_hardware(void) {
 	switch (video.desktop.type) {
 	case VIDEO_SURFACE:
-	case VIDEO_GL:
-	case VIDEO_DDRAW:
 		return !!(video.surface->flags & SDL_HWSURFACE);
-
-	case VIDEO_YUV:
-		return !!(video.overlay->hw_overlay);
 	};
 
 	return 0;
 }
 
-int video_is_input_grabbed(void)
+static int sdl12_video_is_input_grabbed(void)
 {
-	return SDL_WM_GrabInput(SDL_GRAB_QUERY) == SDL_GRAB_ON;
+	return sdl12_WM_GrabInput(SDL_GRAB_QUERY) == SDL_GRAB_ON;
 }
 
-void video_set_input_grabbed(int enabled)
+static void sdl12_video_set_input_grabbed(int enabled)
 {
-	SDL_WM_GrabInput(enabled ? SDL_GRAB_ON : SDL_GRAB_OFF);
+	sdl12_WM_GrabInput(enabled ? SDL_GRAB_ON : SDL_GRAB_OFF);
 }
 
-int video_is_focused(void)
+static int sdl12_video_is_focused(void)
 {
-	return (SDL_GetAppState() & (SDL_APPMOUSEFOCUS | SDL_APPINPUTFOCUS));
+	return (sdl12_GetAppState() & (SDL_APPMOUSEFOCUS | SDL_APPINPUTFOCUS));
 }
 
-int video_is_visible(void)
+static int sdl12_video_is_visible(void)
 {
-	return (SDL_GetAppState() & (SDL_APPACTIVE));
+	return (sdl12_GetAppState() & (SDL_APPACTIVE));
 }
 
-void video_toggle_screensaver(int enabled)
+static int sdl12_video_is_screensaver_enabled(void)
+{
+	// assume its enabled
+	return 1;
+}
+
+static void sdl12_video_toggle_screensaver(int enabled)
 {
 	/* SDL 1.2 doesn't provide this */
 }
 
-int video_is_wm_available(void)
+static int sdl12_video_is_wm_available(void)
 {
-	return (SDL_GetVideoInfo()->wm_available);
+	return (sdl12_GetVideoInfo()->wm_available);
 }
 
-void video_warp_mouse(unsigned int x, unsigned int y)
+static void sdl12_video_warp_mouse(unsigned int x, unsigned int y)
 {
-	SDL_WarpMouse(x, y);
+	sdl12_WarpMouse(x, y);
 }
 
-void video_set_hardware(int hardware)
+static void sdl12_video_set_hardware(int hardware)
 {
 	video.desktop.swsurface = !hardware;
-	// ??? lol
+	// recreate the surface with the same size...
 	video_resize(video.draw.width, video.draw.height);
 	video_report();
 }
 
-void video_get_mouse_coordinates(unsigned int *x, unsigned int *y)
+static void sdl12_video_get_mouse_coordinates(unsigned int *x, unsigned int *y)
 {
 	*x = video.mouse.x;
 	*y = video.mouse.y;
 }
 
-int video_have_menu(void)
+static int sdl12_video_have_menu(void)
 {
+#ifdef SCHISM_WIN32
+	return 1;
+#else
 	return 0;
+#endif
 }
 
-void video_toggle_menu(int on)
+static void sdl12_video_toggle_menu(int on)
 {
-	/* can't have shit in detroit */
+	if (!video_have_menu())
+		return;
+
+	int width, height;
+
+	int cache_size = 0;
+
+#ifdef SCHISM_WIN32
+	/* Get the HWND */
+	SDL_SysWMinfo wm_info;
+	SDL_VERSION(&wm_info.version);
+	if (!sdl12_GetWMInfo(&wm_info))
+		return;
+
+	WINDOWPLACEMENT placement;
+	placement.length = sizeof(placement);
+
+	GetWindowPlacement(wm_info.window, &placement);
+
+	cache_size = (placement.showCmd == SW_MAXIMIZE);
+#endif
+	if (cache_size) {
+		width = video.draw.width;
+		height = video.draw.height;
+	}
+#ifdef SCHISM_WIN32
+	win32_toggle_menu(wm_info.window, on);
+#endif
+
+	if (cache_size) {
+		video_resize(width, height);
+	}
 }
 
-void video_mousecursor_changed(void)
+static void sdl12_video_mousecursor_changed(void)
 {
 	const int vis = video_mousecursor_visible();
-	SDL_ShowCursor(vis == MOUSE_SYSTEM);
+	sdl12_ShowCursor(vis == MOUSE_SYSTEM);
 
 	// Totally turn off mouse event sending when the mouse is disabled
 	int evstate = (vis == MOUSE_DISABLED) ? SDL_DISABLE : SDL_ENABLE;
-	if (evstate != SDL_EventState(SDL_MOUSEMOTION, SDL_QUERY)) {
-		SDL_EventState(SDL_MOUSEMOTION, evstate);
-		SDL_EventState(SDL_MOUSEBUTTONDOWN, evstate);
-		SDL_EventState(SDL_MOUSEBUTTONUP, evstate);
+	if (evstate != sdl12_EventState(SDL_MOUSEMOTION, SDL_QUERY)) {
+		sdl12_EventState(SDL_MOUSEMOTION, evstate);
+		sdl12_EventState(SDL_MOUSEBUTTONDOWN, evstate);
+		sdl12_EventState(SDL_MOUSEBUTTONUP, evstate);
 	}
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+static int sdl12_video_load_syms(void)
+{
+	SCHISM_SDL12_SYM(InitSubSystem);
+	SCHISM_SDL12_SYM(QuitSubSystem);
+
+	SCHISM_SDL12_SYM(VideoDriverName);
+	SCHISM_SDL12_SYM(GetVideoInfo);
+	SCHISM_SDL12_SYM(WM_SetCaption);
+	SCHISM_SDL12_SYM(SetVideoMode);
+	SCHISM_SDL12_SYM(ListModes);
+	SCHISM_SDL12_SYM(ShowCursor);
+	SCHISM_SDL12_SYM(MapRGB);
+	SCHISM_SDL12_SYM(SetColors);
+	SCHISM_SDL12_SYM(LockSurface);
+	SCHISM_SDL12_SYM(UnlockSurface);
+	SCHISM_SDL12_SYM(Delay);
+	SCHISM_SDL12_SYM(Flip);
+	SCHISM_SDL12_SYM(WM_GrabInput);
+	SCHISM_SDL12_SYM(WM_SetIcon);
+	SCHISM_SDL12_SYM(GetAppState);
+	SCHISM_SDL12_SYM(WarpMouse);
+	SCHISM_SDL12_SYM(EventState);
+	SCHISM_SDL12_SYM(FreeSurface);
+	SCHISM_SDL12_SYM(CreateRGBSurfaceFrom);
+	SCHISM_SDL12_SYM(EnableUNICODE);
+
+#ifdef SCHISM_WIN32
+	SCHISM_SDL12_SYM(GetWMInfo);
+#endif
+
+	return 0;
+}
+
+static int sdl12_video_init(void)
+{
+	if (!sdl12_init())
+		return 0;
+
+	if (sdl12_video_load_syms())
+		return 0;
+
+	if (sdl12_InitSubSystem(SDL_INIT_VIDEO) < 0)
+		return 0;
+
+#ifdef SCHISM_WIN32
+	sdl12_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
+#endif
+
+	sdl12_EnableUNICODE(1);
+
+	return 1;
+}
+
+static void sdl12_video_quit(void)
+{
+	sdl12_QuitSubSystem(SDL_INIT_VIDEO);
+
+	sdl12_quit();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+const schism_video_backend_t schism_video_backend_sdl12 = {
+	.init = sdl12_video_init,
+	.quit = sdl12_video_quit,
+
+	.startup = sdl12_video_startup,
+	.shutdown = sdl12_video_shutdown,
+
+	.is_fullscreen = sdl12_video_is_fullscreen,
+	.width = sdl12_video_width,
+	.height = sdl12_video_height,
+	.driver_name = sdl12_video_driver_name,
+	.report = sdl12_video_report,
+	.set_hardware = sdl12_video_set_hardware,
+	.setup = sdl12_video_setup,
+	.fullscreen = sdl12_video_fullscreen,
+	.resize = sdl12_video_resize,
+	.colors = sdl12_video_colors,
+	.is_focused = sdl12_video_is_focused,
+	.is_visible = sdl12_video_is_visible,
+	.is_wm_available = sdl12_video_is_wm_available,
+	.is_hardware = sdl12_video_is_hardware,
+	.is_screensaver_enabled = sdl12_video_is_screensaver_enabled,
+	.toggle_screensaver = sdl12_video_toggle_screensaver,
+	.translate = sdl12_video_translate,
+	.get_logical_coordinates = sdl12_video_get_logical_coordinates,
+	.is_input_grabbed = sdl12_video_is_input_grabbed,
+	.set_input_grabbed = sdl12_video_set_input_grabbed,
+	.warp_mouse = sdl12_video_warp_mouse,
+	.get_mouse_coordinates = sdl12_video_get_mouse_coordinates,
+	.have_menu = sdl12_video_have_menu,
+	.toggle_menu = sdl12_video_toggle_menu,
+	.blit = sdl12_video_blit,
+	.mousecursor_changed = sdl12_video_mousecursor_changed,
+};

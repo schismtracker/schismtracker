@@ -68,13 +68,13 @@ enum {
 	SCHISM_RENDER_DEVICE_RESET, /* The device has been reset and all textures need to be recreated */
 
 	/* Schism internal events */
-	SCHISM_EVENT_UPDATE_IPMIDI  = 0x8000,
+	SCHISM_EVENT_UPDATE_IPMIDI  = 0x3000,
 	SCHISM_EVENT_PLAYBACK,
 	SCHISM_EVENT_NATIVE_OPEN,
 	SCHISM_EVENT_NATIVE_SCRIPT,
 	SCHISM_EVENT_PASTE,
 
-	SCHISM_EVENT_MIDI_NOTE       = 0x9000,
+	SCHISM_EVENT_MIDI_NOTE       = 0x4000,
 	SCHISM_EVENT_MIDI_CONTROLLER,
 	SCHISM_EVENT_MIDI_PROGRAM,
 	SCHISM_EVENT_MIDI_AFTERTOUCH,
@@ -83,7 +83,7 @@ enum {
 	SCHISM_EVENT_MIDI_SYSEX,
 	SCHISM_EVENT_MIDI_SYSTEM,
 
-	SCHISM_EVENT_WM_MSG			 = 0x1000,
+	SCHISM_EVENT_WM_MSG			 = 0x5000,
 };
 
 typedef struct {
@@ -92,8 +92,7 @@ typedef struct {
 } schism_common_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	// event-specific data
 	union {
@@ -105,8 +104,7 @@ typedef struct {
 } schism_window_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 	enum key_state state;
 	int repeat;
 
@@ -117,22 +115,19 @@ typedef struct {
 } schism_keyboard_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	char text[32]; // always in UTF-8
 } schism_text_input_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	char *file;
 } schism_file_drop_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	/* X and Y coordinates relative to the window */
 	int32_t x;
@@ -140,8 +135,7 @@ typedef struct {
 } schism_mouse_motion_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	enum mouse_button button;
 	int state; // zero if released, non-zero if pressed
@@ -153,8 +147,7 @@ typedef struct {
 } schism_mouse_button_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	int32_t x; // how far on the horizontal axis
 	int32_t y; // how far on the vertical axis
@@ -165,8 +158,7 @@ typedef struct {
 } schism_mouse_wheel_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	int mnstatus;
 	int channel;
@@ -175,44 +167,42 @@ typedef struct {
 } schism_midi_note_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 	int value;
 	int channel;
 	int param;
 } schism_midi_controller_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
+
 	int value;
 	int channel;
 } schism_midi_program_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
+
 	int value;
 	int channel;
 } schism_midi_aftertouch_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
+
 	int value;
 	int channel;
 } schism_midi_pitchbend_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
+
 	int argv;
 	int param;
 } schism_midi_system_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 } schism_midi_tick_event_t;
 
 typedef struct {
@@ -224,31 +214,31 @@ typedef struct {
 } schism_midi_sysex_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
-	const char *which;
+	char *which;
 } schism_native_script_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
-	const char *file;
+	char *file;
 } schism_native_open_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
 
 	char *clipboard;
 } schism_clipboard_paste_event_t;
 
 typedef struct {
-	uint32_t type;
-	schism_ticks_t timestamp;
+	schism_common_event_t common;
+
+	enum {SCHISM_WM_MSG_BACKEND_SDL12, SCHISM_WM_MSG_BACKEND_SDL2} backend;
+	enum {SCHISM_WM_MSG_SUBSYSTEM_WINDOWS} subsystem;
 
 	union {
+		// use generic types when possible, please
 		struct {
 			void *hwnd;
 			uint32_t msg;
@@ -287,10 +277,13 @@ typedef union schism_event {
 
 /* ------------------------------------ */
 
-int schism_init_event(void);
+int events_init(void);
+void events_quit(void);
 
-int schism_have_event(void);
-int schism_push_event(const schism_event_t *event);
-int schism_poll_event(schism_event_t *event);
+int events_have_event(void);
+int events_poll_event(schism_event_t *event);
+int events_push_event(const schism_event_t *event);
+
+schism_keymod_t events_get_keymod_state(void);
 
 #endif /* SCHISM_EVENT_H_ */

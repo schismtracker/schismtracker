@@ -21,27 +21,34 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_BACKEND_EVENTS_H_
-#define SCHISM_BACKEND_EVENTS_H_
+#ifndef SCHISM_SYS_SDL2_INIT_H_
+#define SCHISM_SYS_SDL2_INIT_H_
 
-#include "../events.h"
-#include "../keyboard.h"
+#include "headers.h"
 
-typedef struct {
-	// returns 1 if succeeded, 0 if failed
-	int (*init)(void);
-	void (*quit)(void);
+#include <SDL.h>
 
-	void (*pump_events)(void);
-	schism_keymod_t (*keymod_state)(void);
-} schism_events_backend_t;
+int sdl2_init(void);
+void sdl2_quit(void);
 
-#ifdef SCHISM_SDL12
-extern const schism_events_backend_t schism_events_backend_sdl12;
+#ifdef SDL2_DYNAMIC_LOAD
+
+// must be called AFTER sdl2_init()
+int sdl2_load_sym(const char *fn, void *addr);
+
+#define SCHISM_SDL2_SYM(x) \
+	if (!sdl2_load_sym("SDL_" #x, &sdl2_##x)) return -1
+
+#else
+
+#define SCHISM_SDL2_SYM(x) \
+	sdl2_##x = SDL_##x
+
 #endif
 
-#ifdef SCHISM_SDL2
-extern const schism_events_backend_t schism_events_backend_sdl2;
-#endif
+#define SDL2_VERSION_ATLEAST(ver, mmajor, mminor, mpatch) \
+	((ver.major >= mmajor) \
+	 && (ver.major > mmajor || ver.minor >= mminor) \
+	 && (ver.major > mmajor || ver.minor > mminor || ver.patch >= mpatch))
 
-#endif /* SCHISM_BACKEND_EVENTS_H_ */
+#endif /* SCHISM_SYS_SDL2_INIT_H_ */

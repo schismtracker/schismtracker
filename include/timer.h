@@ -21,25 +21,20 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_BACKEND_INIT_H
-#define SCHISM_BACKEND_INIT_H
+#ifndef SCHISM_TIMER_H_
+#define SCHISM_TIMER_H_
 
-#ifdef SCHISM_SDL2
-# define be_init sdl2_init
-# define be_quit sdl2_quit
-#elif SCHISM_SDL12
-# define be_init sdl12_init
-# define be_quit sdl12_quit
-#endif
+#include "headers.h"
 
-int sdl2_init(void);
-void sdl2_quit(void);
+typedef uint64_t schism_ticks_t;
 
-// these are in the events file...
-int sdl2_controller_init(void);
-int sdl2_controller_quit(void);
+schism_ticks_t timer_ticks(void);
+int timer_ticks_passed(schism_ticks_t a, schism_ticks_t b);
+void timer_delay(uint32_t ms);
+void timer_usleep(uint64_t usec);
+void timer_msleep(uint64_t msec);
 
-int sdl12_init(void);
-void sdl12_quit(void);
+int timer_init(void);
+void timer_quit(void);
 
-#endif /* SCHISM_BACKEND_INIT_H */
+#endif /* SCHISM_TIMER_H_ */

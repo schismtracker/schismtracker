@@ -2649,7 +2649,7 @@ static void pattern_editor_redraw(void)
 			int cpos;
 			if ((row == current_row)
 			    && ((current_position > 0 || template_mode == TEMPLATE_OFF
-				 || (status.flags & SHIFT_KEY_DOWN))
+				 || (status.keymod & SCHISM_KEYMOD_SHIFT))
 				? (chan == current_channel)
 				: (chan >= current_channel
 				   && chan < (current_channel
@@ -3229,7 +3229,7 @@ static int pattern_editor_insert(struct key_event *k)
 			return 1;
 
 
-		int writenote = (keyjazz_capslock) ? !(k->mod & SCHISM_KEYMOD_CAPS) : !(status.flags & CAPS_PRESSED);
+		int writenote = (keyjazz_capslock) ? !(k->mod & SCHISM_KEYMOD_CAPS) : !(k->mod & SCHISM_KEYMOD_CAPS_PRESSED);
 		if (writenote && !patedit_record_note(cur_note, current_channel, current_row, n, 1)) {
 			// there was a template error, don't advance the cursor and so on
 			writenote = 0;

@@ -48,12 +48,12 @@
 #include "dialog.h"
 #include "widget.h"
 #include "fmt.h"
+#include "timer.h"
+#include "threads.h"
 
 #include "osdefs.h"
 
 #include <errno.h>
-
-#include "backend/init.h"
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -84,7 +84,7 @@ static int shutdown_process = 0;
 static const char *video_driver = NULL;
 static const char *audio_driver = NULL;
 static const char *audio_device = NULL;
-static int did_fullscreen = 0;
+static int want_fullscreen = -1;
 static int did_classic = 0;
 
 /* --------------------------------------------------------------------- */
@@ -234,12 +234,10 @@ static void parse_options(int argc, char **argv)
 			did_classic = 1;
 			break;
 		case O_FULLSCREEN:
-			video_fullscreen(1);
-			did_fullscreen = 1;
+			want_fullscreen = 1;
 			break;
 		case O_NO_FULLSCREEN:
-			video_fullscreen(0);
-			did_fullscreen = 1;
+			want_fullscreen = 0;
 			break;
 		case O_PLAY:
 			startup_flags |= SF_PLAY;
@@ -322,7 +320,7 @@ static void parse_options(int argc, char **argv)
 static void check_update(void)
 {
 	static schism_ticks_t next = 0;
-	schism_ticks_t now = be_timer_ticks();
+	schism_ticks_t now = timer_ticks();
 
 	/* is there any reason why we'd want to redraw
 	   the screen when it's not even visible? */
@@ -330,12 +328,12 @@ static void check_update(void)
 		status.flags &= ~NEED_UPDATE;
 
 		if (!video_is_focused() && (status.flags & LAZY_REDRAW)) {
-			if (!be_timer_ticks_passed(now, next))
+			if (!timer_ticks_passed(now, next))
 				return;
 
 			next = now + 500;
 		} else if (status.flags & (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN)) {
-			if (!be_timer_ticks_passed(now, next))
+			if (!timer_ticks_passed(now, next))
 				return;
 
 			next = now + 100;
@@ -384,13 +382,13 @@ static void event_loop(void)
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
 	schism_ticks_t last_mouse_down, ticker;
 	schism_keysym_t last_key = 0;
-	int modkey;
 	time_t startdown;
 	int downtrip;
 	int wheel_x;
 	int wheel_y;
 	int fix_numlock_key;
 	int screensaver;
+	int button = -1;
 	struct key_event kk;
 
 	fix_numlock_key = status.fix_numlock_setting;
@@ -400,8 +398,8 @@ static void event_loop(void)
 	startdown = 0;
 	status.last_keysym = 0;
 
-	modkey = be_event_mod_state();
-	os_get_modkey(&modkey);
+	status.keymod = events_get_keymod_state();
+	os_get_modkey(&status.keymod);
 
 	video_toggle_screensaver(1);
 	screensaver = 1;
@@ -410,7 +408,7 @@ static void event_loop(void)
 	localtime_r(&status.now, &status.tmnow);
 	for (;;) {
 		schism_event_t se;
-		while (schism_poll_event(&se)) {
+		while (events_poll_event(&se)) {
 			if (!os_event(&se))
 				continue;
 
@@ -471,39 +469,24 @@ static void event_loop(void)
 			case SCHISM_KEYUP:
 				switch (se.key.sym) {
 				case SCHISM_KEYSYM_NUMLOCKCLEAR:
-					modkey ^= SCHISM_KEYMOD_NUM;
+					status.keymod ^= SCHISM_KEYMOD_NUM;
 					break;
 				case SCHISM_KEYSYM_CAPSLOCK:
 					if (se.type == SCHISM_KEYDOWN) {
-						status.flags |= CAPS_PRESSED;
+						status.keymod |= SCHISM_KEYMOD_CAPS_PRESSED;
 					} else {
-						status.flags &= ~CAPS_PRESSED;
+						status.keymod &= ~SCHISM_KEYMOD_CAPS_PRESSED;
 					}
-					modkey ^= SCHISM_KEYMOD_CAPS;
-					break;
-				case SCHISM_KEYSYM_LSHIFT: case SCHISM_KEYSYM_RSHIFT:
-					if (se.type == SCHISM_KEYDOWN) {
-						status.flags |= SHIFT_KEY_DOWN;
-					} else {
-						status.flags &= ~SHIFT_KEY_DOWN;
-					}
+					status.keymod ^= SCHISM_KEYMOD_CAPS;
 					break;
 				default:
 					break;
 				};
 
-#if defined(SCHISM_WIN32)
-#define _ALTTRACKED_KMOD        (SCHISM_KEYMOD_NUM|SCHISM_KEYMOD_CAPS)
-#else
-#define _ALTTRACKED_KMOD        0
-#endif
-				if (kk.state == KEY_PRESS) {
-					modkey = (se.key.mod
-						& ~(_ALTTRACKED_KMOD))
-						| (modkey & _ALTTRACKED_KMOD);
-				}
-
-				os_get_modkey(&modkey);
+				// grab the keymod
+				status.keymod = se.key.mod;
+				// fix it
+				os_get_modkey(&status.keymod);
 
 				kk.sym = se.key.sym;
 				kk.scancode = se.key.scancode;
@@ -513,14 +496,14 @@ static void event_loop(void)
 					/* should be handled per OS */
 					break;
 				case NUMLOCK_ALWAYS_OFF:
-					modkey &= ~SCHISM_KEYMOD_NUM;
+					status.keymod &= ~SCHISM_KEYMOD_NUM;
 					break;
 				case NUMLOCK_ALWAYS_ON:
-					modkey |= SCHISM_KEYMOD_NUM;
+					status.keymod |= SCHISM_KEYMOD_NUM;
 					break;
 				};
 
-				kk.mod = modkey;
+				kk.mod = status.keymod;
 				kk.mouse = MOUSE_NONE;
 				kbd_key_translate(&kk);
 
@@ -542,25 +525,44 @@ static void event_loop(void)
 				}
 				break;
 			case SCHISM_MOUSEMOTION:
-				// nothing to see here
-				video_translate(se.motion.x, se.motion.y, &kk.fx, &kk.fy);
-				break;
 			case SCHISM_MOUSEWHEEL:
-				kk.state = -1;  /* neither KEY_PRESS nor KEY_RELEASE (???) */
-				video_translate(se.wheel.mouse_x, se.wheel.mouse_y, &kk.fx, &kk.fy);
-				kk.mouse = (se.wheel.y > 0) ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN;
 			case SCHISM_MOUSEBUTTONDOWN:
-			case SCHISM_MOUSEBUTTONUP:
+			case SCHISM_MOUSEBUTTONUP: {
 				if (kk.state == KEY_PRESS) {
-					modkey = be_event_mod_state();
-					os_get_modkey(&modkey);
+					status.keymod = events_get_keymod_state();
+					os_get_modkey(&status.keymod);
 				}
 
 				kk.sym = 0;
 				kk.mod = 0;
 
-				if (se.type != SCHISM_MOUSEWHEEL)
+				// Handle the coordinate translation
+				switch (se.type) {
+				case SCHISM_MOUSEWHEEL:
+					kk.state = -1;  /* neither KEY_PRESS nor KEY_RELEASE (???) */
+					video_translate(se.wheel.mouse_x, se.wheel.mouse_y, &kk.fx, &kk.fy);
+					kk.mouse = (se.wheel.y > 0) ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN;
+					break;
+				case SCHISM_MOUSEMOTION:
+					video_translate(se.motion.x, se.motion.y, &kk.fx, &kk.fy);
+					break;
+				case SCHISM_MOUSEBUTTONDOWN:
 					video_translate(se.button.x, se.button.y, &kk.fx, &kk.fy);
+					// we also have to update the current button
+					if ((status.keymod & SCHISM_KEYMOD_CTRL)
+					|| se.button.button == MOUSE_BUTTON_RIGHT) {
+						button = MOUSE_BUTTON_RIGHT;
+					} else if ((status.keymod & (SCHISM_KEYMOD_ALT|SCHISM_KEYMOD_GUI))
+					|| se.button.button == MOUSE_BUTTON_MIDDLE) {
+						button = MOUSE_BUTTON_MIDDLE;
+					} else {
+						button = MOUSE_BUTTON_LEFT;
+					}
+					break;
+				case SCHISM_MOUSEBUTTONUP:
+					video_translate(se.button.x, se.button.y, &kk.fx, &kk.fy);
+					break;
+				}
 
 				/* character resolution */
 				kk.x = kk.fx / kk.rx;
@@ -571,6 +573,7 @@ static void event_loop(void)
 					kk.hx = 1;
 				}
 				kk.y = kk.fy / kk.ry;
+
 				if (se.type == SCHISM_MOUSEWHEEL) {
 					handle_key(&kk);
 					break; /* nothing else to do here */
@@ -579,23 +582,18 @@ static void event_loop(void)
 					kk.sx = kk.x;
 					kk.sy = kk.y;
 				}
+
+				// what?
 				if (startdown) startdown = 0;
 
-				switch (se.button.button) {
+				switch (button) {
 				case MOUSE_BUTTON_RIGHT:
 				case MOUSE_BUTTON_MIDDLE:
 				case MOUSE_BUTTON_LEFT:
-					if ((modkey & SCHISM_KEYMOD_CTRL)
-					|| se.button.button == MOUSE_BUTTON_RIGHT) {
-						kk.mouse_button = MOUSE_BUTTON_RIGHT;
-					} else if ((modkey & (SCHISM_KEYMOD_ALT|SCHISM_KEYMOD_GUI))
-					|| se.button.button == MOUSE_BUTTON_MIDDLE) {
-						kk.mouse_button = MOUSE_BUTTON_MIDDLE;
-					} else {
-						kk.mouse_button = MOUSE_BUTTON_LEFT;
-					}
+					kk.mouse_button = button;
+
 					if (kk.state == KEY_RELEASE) {
-						ticker = be_timer_ticks();
+						ticker = timer_ticks();
 						if (lx == kk.x
 						&& ly == kk.y
 						&& (ticker - last_mouse_down) < 300) {
@@ -607,6 +605,9 @@ static void event_loop(void)
 						}
 						lx = kk.x;
 						ly = kk.y;
+
+						// dirty hack
+						button = -1;
 					} else {
 						kk.mouse = MOUSE_CLICK;
 					}
@@ -631,8 +632,11 @@ static void event_loop(void)
 					}
 					handle_key(&kk);
 					break;
+				default:
+					break;
 				};
 				break;
+			}
 			case SCHISM_WINDOWEVENT_SHOWN:
 			case SCHISM_WINDOWEVENT_FOCUS_GAINED:
 				video_mousecursor(MOUSE_RESET_STATE);
@@ -645,6 +649,7 @@ static void event_loop(void)
 				status.flags |= (NEED_UPDATE);
 				break;
 			case SCHISM_DROPFILE:
+				dialog_destroy();
 				switch(status.current_page) {
 				case PAGE_SAMPLE_LIST:
 				case PAGE_LOAD_SAMPLE:
@@ -688,6 +693,7 @@ static void event_loop(void)
 				break;
 			case SCHISM_EVENT_NATIVE_OPEN: /* open song */
 				song_load(se.open.file);
+				free(se.open.file);
 				break;
 			case SCHISM_EVENT_NATIVE_SCRIPT:
 				/* destroy any active dialog before changing pages */
@@ -751,6 +757,9 @@ static void event_loop(void)
 				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "fullscreen", CHARSET_UTF8) == 0) {
 					toggle_display_fullscreen();
 				}
+				free(se.script.which);
+				break;
+			default:
 				break;
 			}
 		}
@@ -794,7 +803,7 @@ static void event_loop(void)
 
 		if (status.flags & DISKWRITER_ACTIVE) {
 			int q = disko_sync();
-			while (q == DW_SYNC_MORE && !schism_have_event()) {
+			while (q == DW_SYNC_MORE && !events_have_event()) {
 				check_update();
 				q = disko_sync();
 			}
@@ -812,12 +821,12 @@ static void event_loop(void)
 		/* let dmoz build directory lists, etc
 		 *
 		 * as long as there's no user-event going on... */
-		while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !schism_have_event());
+		while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !events_have_event());
 
 		/* delay until there's an event OR 10 ms have passed */
 		int t;
-		for (t = 0; t < 10 && !schism_have_event(); t++)
-			msleep(1);
+		for (t = 0; t < 10 && !events_have_event(); t++)
+			timer_msleep(1);
 	}
 	
 	schism_exit(0);
@@ -840,10 +849,6 @@ void schism_exit(int status)
 		cfg_atexit_save();
 
 	if (shutdown_process & EXIT_SDLQUIT) {
-		song_lock_audio();
-		song_stop_unlocked(1);
-		song_unlock_audio();
-
 		// Clear to black on exit (nicer on Wii; I suppose it won't hurt elsewhere)
 		video_refresh();
 		video_blit();
@@ -856,8 +861,21 @@ void schism_exit(int status)
 		See long-standing bug: https://github.com/libsdl-org/SDL/issues/3184
 			/ Vanfanel
 		*/
-		be_quit();
 	}
+
+	song_lock_audio();
+	song_stop_unlocked(1);
+	song_unlock_audio();
+
+	dmoz_quit();
+	audio_quit();
+	clippy_quit();
+	events_quit();
+#ifndef HAVE_LOCALTIME_R
+	localtime_r_quit();
+#endif
+	mt_quit();
+	timer_quit();
 
 	os_sysexit();
 
@@ -866,20 +884,14 @@ void schism_exit(int status)
 
 extern void vis_init(void);
 
-/* wart */
-#ifdef SCHISM_MACOSX
+/* the real main function is called per-platform */
 int schism_main(int argc, char** argv)
-#else
-int main(int argc, char **argv)
-#endif
 {
 	os_sysinit(&argc, &argv);
 
 	vis_init();
 
 	ver_init();
-
-	video_fullscreen(0);
 
 	tzset(); // localtime_r wants this
 	srand(time(NULL));
@@ -897,6 +909,41 @@ int main(int argc, char **argv)
 	/* Eh. */
 	log_append2(0, 3, 0, schism_banner(0));
 	log_nl();
+
+	if (!timer_init()) {
+		fprintf(stderr, "Failed to initialize a timers backend!\n");
+		return 1;
+	}
+
+	if (!mt_init()) {
+		fprintf(stderr, "Failed to initialize a multithreading backend!\n");
+		return 1;
+	}
+
+#ifndef HAVE_LOCALTIME_R
+	if (!localtime_r_init()) {
+		fprintf(stderr, "Failed to initialize localtime_r replacement!\n");
+		return 1;
+	}
+#endif
+
+	if (!events_init()) {
+		fprintf(stderr, "Failed to initialize an events backend!\n");
+		return 1;
+	}
+
+	if (!clippy_init()) {
+		log_appendf(4, "Failed to initialize a clipboard backend!");
+		log_appendf(4, "Copying to the system clipboard will not work properly!");
+		log_nl();
+	}
+
+	if (!dmoz_init()) {
+		log_appendf(4, "Failed to initialize a filesystem backend!");
+		log_appendf(4, "Portable mode will not work properly!");
+		log_nl();
+	}
+
 	log_nl();
 
 	song_initialise();
@@ -907,24 +954,16 @@ int main(int argc, char **argv)
 		if (startup_flags & SF_CLASSIC) status.flags |= CLASSIC_MODE;
 	}
 
-	if (!did_fullscreen)
-		video_fullscreen(cfg_video_fullscreen);
-
 	if (!(startup_flags & SF_NETWORK))
 		status.flags |= NO_NETWORK;
 
 	shutdown_process |= EXIT_SAVECFG;
-
-	if (be_init() < 0)
-		schism_exit(1);
-
-	// initialize our event queue
-	schism_init_event();
-
-	/* make SDL_SetWindowGrab grab the keyboard too */
 	shutdown_process |= EXIT_SDLQUIT;
 
 	display_init();
+	if (want_fullscreen >= 0)
+		video_fullscreen(want_fullscreen);
+
 	palette_apply();
 	font_init();
 	midi_engine_start();
@@ -1000,3 +1039,97 @@ int main(int argc, char **argv)
 
 	return 0; /* blah */
 }
+
+#if defined(SCHISM_WIN32)
+# include "loadso.h"
+# include <windows.h>
+
+static void *lib_kernel32 = NULL;
+static void *lib_shell32 = NULL;
+static char **utf8_argv = NULL;
+static int utf8_argc = 0;
+
+void win32_atexit(void)
+{
+	if (lib_kernel32)
+		loadso_object_unload(lib_kernel32);
+
+	if (lib_shell32)
+		loadso_object_unload(lib_shell32);
+
+	for (int i = 0; i < utf8_argc; i++)
+		free(utf8_argv[i]);
+
+	free(utf8_argv);
+}
+
+int main(int argc, char **argv)
+{
+	int i;
+
+	// We only want to get the Unicode arguments if we are able to
+	LPWSTR *(WINAPI *WIN32_CommandLineToArgvW)(LPCWSTR lpCmdLine,int *pNumArgs);
+	LPWSTR (WINAPI *WIN32_GetCommandLineW)(void);
+
+	lib_kernel32 = loadso_object_load("KERNEL32.DLL");
+	lib_shell32 = loadso_object_load("SHELL32.DLL");
+
+	if (lib_kernel32 && lib_shell32) {
+		WIN32_CommandLineToArgvW = loadso_function_load(lib_shell32, "CommandLineToArgvW");
+		WIN32_GetCommandLineW = loadso_function_load(lib_kernel32, "GetCommandLineW");
+
+		if (WIN32_CommandLineToArgvW && WIN32_GetCommandLineW) {
+			int argcw;
+			LPWSTR *argvw = CommandLineToArgvW(WIN32_GetCommandLineW(), &argcw);
+
+			utf8_argc = argcw;
+
+			if (argvw) {
+				// now we have Unicode arguments!...
+
+				utf8_argv = mem_alloc(sizeof(char *) * utf8_argc);
+
+				for (i = 0; i < argcw; i++) {
+					charset_iconv(argvw[i], &utf8_argv[i], CHARSET_WCHAR_T, CHARSET_CHAR, SIZE_MAX);
+					if (!utf8_argv[i])
+						utf8_argv[i] = str_dup(""); // ...
+				}
+
+				LocalFree(argvw);
+
+				goto have_utf8_args;
+			}
+		}
+	}
+
+	// fallback, ANSI
+	utf8_argc = argc;
+	utf8_argv = mem_alloc(sizeof(char *) * utf8_argc);
+
+	for (i = 0; i < argc; i++) {
+		charset_iconv(argv[i], &utf8_argv[i], CHARSET_ANSI, CHARSET_CHAR, SIZE_MAX);
+		if (!utf8_argv[i])
+			utf8_argv[i] = str_dup(""); // ...
+	}
+
+have_utf8_args: ;
+	// copy so our arguments don't get warped by main
+	char *utf8_argv_cp[utf8_argc];
+
+	for (i = 0; i < utf8_argc; i++)
+		utf8_argv_cp[i] = utf8_argv[i];
+
+	schism_main(argc, utf8_argv_cp);
+
+	// never happens; we use exit()
+	return 0;
+}
+#elif defined(SCHISM_MACOSX)
+// handled in its own file
+#else
+int main(int argc, char **argv)
+{
+	// do nothing special
+	return schism_main(argc, argv);
+}
+#endif

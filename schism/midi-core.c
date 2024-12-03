@@ -32,11 +32,17 @@
 #include "it.h"
 #include "config-parser.h"
 #include "config.h"
+#include "threads.h"
+#include "timer.h"
 
 #include "dmoz.h"
 
 #include <ctype.h>
 #include <assert.h>
+
+#ifdef SCHISM_WIN32
+# include <windows.h>
+#endif
 
 static int _connected = 0;
 /* midi_mutex is locked by the main thread,
@@ -203,7 +209,7 @@ void cfg_save_midi(cfg_file_t *cfg)
 
 	/* write out only enabled midi ports */
 	i = 1;
-	be_mutex_lock(midi_mutex);
+	mt_mutex_lock(midi_mutex);
 	q = NULL;
 	for (p = port_providers; p; p = p->next) {
 		while (midi_port_foreach(p, &q)) {
@@ -227,7 +233,7 @@ void cfg_save_midi(cfg_file_t *cfg)
 		}
 	}
 	//TODO: Save number of MIDI-IP ports
-	be_mutex_unlock(midi_mutex);
+	mt_mutex_unlock(midi_mutex);
 
 	/* delete other MIDI port sections */
 	for (c = cfg->sections; c; c = c->next) {
@@ -271,11 +277,11 @@ void midi_engine_poll_ports(void)
 
 	if (!midi_mutex) return;
 
-	be_mutex_lock(midi_mutex);
+	mt_mutex_lock(midi_mutex);
 	for (n = port_providers; n; n = n->next) {
 		if (n->poll) n->poll(n);
 	}
-	be_mutex_unlock(midi_mutex);
+	mt_mutex_unlock(midi_mutex);
 }
 
 int midi_engine_start(void)
@@ -283,18 +289,18 @@ int midi_engine_start(void)
 	if (_connected)
 		return 1;
 
-	midi_mutex        = be_mutex_create();
-	midi_record_mutex = be_mutex_create();
-	midi_play_mutex   = be_mutex_create();
-	midi_port_mutex   = be_mutex_create();
-	midi_play_cond    = be_cond_create();
+	midi_mutex        = mt_mutex_create();
+	midi_record_mutex = mt_mutex_create();
+	midi_play_mutex   = mt_mutex_create();
+	midi_port_mutex   = mt_mutex_create();
+	midi_play_cond    = mt_cond_create();
 
 	if (!(midi_mutex && midi_record_mutex && midi_play_mutex && midi_port_mutex && midi_play_cond)) {
-		if (midi_mutex)        be_mutex_delete(midi_mutex);
-		if (midi_record_mutex) be_mutex_delete(midi_record_mutex);
-		if (midi_play_mutex)   be_mutex_delete(midi_play_mutex);
-		if (midi_port_mutex)   be_mutex_delete(midi_port_mutex);
-		if (midi_play_cond)    be_cond_delete(midi_play_cond);
+		if (midi_mutex)        mt_mutex_delete(midi_mutex);
+		if (midi_record_mutex) mt_mutex_delete(midi_record_mutex);
+		if (midi_play_mutex)   mt_mutex_delete(midi_play_mutex);
+		if (midi_port_mutex)   mt_mutex_delete(midi_port_mutex);
+		if (midi_play_cond)    mt_cond_delete(midi_play_cond);
 		midi_mutex = midi_record_mutex = midi_play_mutex = midi_port_mutex = NULL;
 		midi_play_cond = NULL;
 		return 0;
@@ -320,7 +326,7 @@ void midi_engine_stop(void)
 	if (!_connected) return;
 	if (!midi_mutex) return;
 
-	be_mutex_lock(midi_mutex);
+	mt_mutex_lock(midi_mutex);
 	for (n = port_providers; n;) {
 		p = n->next;
 
@@ -331,14 +337,14 @@ void midi_engine_stop(void)
 
 		if (n->thread) {
 			n->cancelled = 1;
-			be_thread_wait(n->thread, NULL);
+			mt_thread_wait(n->thread, NULL);
 		}
 		free(n->name);
 		free(n);
 		n = p;
 	}
 	_connected = 0;
-	be_mutex_unlock(midi_mutex);
+	mt_mutex_unlock(midi_mutex);
 }
 
 /* ------------------------------------------------------------- */
@@ -353,12 +359,12 @@ struct midi_port *midi_engine_port(int n, const char **name)
 	struct midi_port *pv = NULL;
 
 	if (!midi_port_mutex) return NULL;
-	be_mutex_lock(midi_port_mutex);
+	mt_mutex_lock(midi_port_mutex);
 	if (n >= 0 && n < port_count) {
 		pv = port_top[n];
 		if (name && pv) *name = pv->name;
 	}
-	be_mutex_unlock(midi_port_mutex);
+	mt_mutex_unlock(midi_port_mutex);
 	return pv;
 }
 
@@ -366,9 +372,9 @@ int midi_engine_port_count(void)
 {
 	int pc;
 	if (!midi_port_mutex) return 0;
-	be_mutex_lock(midi_port_mutex);
+	mt_mutex_lock(midi_port_mutex);
 	pc = port_count;
-	be_mutex_unlock(midi_port_mutex);
+	mt_mutex_unlock(midi_port_mutex);
 	return pc;
 }
 
@@ -393,14 +399,14 @@ struct midi_provider *midi_provider_register(const char *name,
 		n->send_now = driver->send;
 	}
 
-	be_mutex_lock(midi_mutex);
+	mt_mutex_lock(midi_mutex);
 	n->next = port_providers;
 	port_providers = n;
 
 	if (driver->thread)
-		n->thread = be_thread_create((int (*)(void*))driver->thread, NULL, n);
+		n->thread = mt_thread_create((int (*)(void*))driver->thread, NULL, n);
 
-	be_mutex_unlock(midi_mutex);
+	mt_mutex_unlock(midi_mutex);
 
 	return n;
 }
@@ -409,7 +415,7 @@ void midi_provider_unregister(struct midi_provider* p)
 {
 	struct midi_provider* n;
 
-	be_mutex_lock(midi_mutex);
+	mt_mutex_lock(midi_mutex);
 
 	for (n = port_providers; n; n = n->next) {
 		if (n == p && n->next) {
@@ -418,7 +424,7 @@ void midi_provider_unregister(struct midi_provider* p)
 		}
 	}
 
-	be_mutex_unlock(midi_mutex);
+	mt_mutex_unlock(midi_mutex);
 }
 
 /* ------------------------------------------------------------- */
@@ -456,13 +462,13 @@ int midi_port_register(struct midi_provider *pv, int inout, const char *name,
 		}
 	}
 
-	be_mutex_lock(midi_port_mutex);
+	mt_mutex_lock(midi_port_mutex);
 	port_alloc += 4;
 	pt = realloc(port_top, sizeof(struct midi_port *) * port_alloc);
 	if (!pt) {
 		free(p->name);
 		free(p);
-		be_mutex_unlock(midi_port_mutex);
+		mt_mutex_unlock(midi_port_mutex);
 		return -1;
 	}
 	pt[port_count] = p;
@@ -474,7 +480,7 @@ int midi_port_register(struct midi_provider *pv, int inout, const char *name,
 	/* finally, and just before unlocking, load any configuration for it... */
 	_cfg_load_midi_part_locked(p);
 
-	be_mutex_unlock(midi_port_mutex);
+	mt_mutex_unlock(midi_port_mutex);
 	return p->num;
 }
 
@@ -483,7 +489,7 @@ int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor)
 	int i;
 	if (!midi_port_mutex) return 0;
 
-	be_mutex_lock(midi_port_mutex);
+	mt_mutex_lock(midi_port_mutex);
 	do {
 		if (!*cursor) {
 			i = 0;
@@ -494,13 +500,13 @@ int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor)
 
 		if (i >= port_alloc) {
 			*cursor = NULL;
-			be_mutex_unlock(midi_port_mutex);
+			mt_mutex_unlock(midi_port_mutex);
 			return 0;
 		}
 
 		*cursor = port_top[i];
 	} while (p && (*cursor)->provider != p);
-	be_mutex_unlock(midi_port_mutex);
+	mt_mutex_unlock(midi_port_mutex);
 	return 1;
 }
 
@@ -573,9 +579,9 @@ void midi_send_now(const unsigned char *seq, unsigned int len)
 {
 	if (!midi_record_mutex) return;
 
-	be_mutex_lock(midi_record_mutex);
+	mt_mutex_lock(midi_record_mutex);
 	_midi_send_unlocked(seq, len, 0, MIDI_FROM_IMMEDIATE);
-	be_mutex_unlock(midi_record_mutex);
+	mt_mutex_unlock(midi_record_mutex);
 }
 
 /*----------------------------------------------------------------------------------*/
@@ -638,22 +644,22 @@ static int _midi_queue_run(UNUSED void *xtop)
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 #endif
 	/* just say that it's high priority */
-	be_thread_set_priority(BE_THREAD_PRIORITY_HIGH);
+	mt_thread_set_priority(BE_THREAD_PRIORITY_HIGH);
 
-	be_mutex_lock(midi_play_mutex);
+	mt_mutex_lock(midi_play_mutex);
 	for (;;) {
-		be_cond_wait(midi_play_cond, midi_play_mutex);
+		mt_cond_wait(midi_play_cond, midi_play_mutex);
 
-		const schism_ticks_t start = be_timer_ticks();
+		const schism_ticks_t start = timer_ticks();
 
 		for (i = 0; i < qlen; i++) {
-			be_mutex_lock(midi_record_mutex);
+			mt_mutex_lock(midi_record_mutex);
 			for (j = 0; j < qq[i].used; j++) {
 				// empty the buffer
 				_midi_send_unlocked(qq[i].b[j].message, qq[i].b[j].used, 0, MIDI_FROM_NOW);
 				qq[i].b[j].used = 0;
 			}
-			be_mutex_unlock(midi_record_mutex);
+			mt_mutex_unlock(midi_record_mutex);
 
 			// Since the sleep function has the possibility of not
 			// *really* being realtime, we have to take into account
@@ -664,8 +670,8 @@ static int _midi_queue_run(UNUSED void *xtop)
 			// value, and make up for the difference there. It surely
 			// isn't perfect, but it'll get the job done for slow
 			// machines.
-			if (be_timer_ticks_passed(start + i, be_timer_ticks()))
-				msleep(1);
+			if (timer_ticks_passed(start + i, timer_ticks()))
+				timer_msleep(1);
 
 			qq[i].used = 0;
 		}
@@ -720,7 +726,7 @@ void midi_send_flush(void)
 	if (!need_explicit_flush) return;
 
 	if (!midi_queue_thread) {
-		midi_queue_thread = be_thread_create(_midi_queue_run, NULL, NULL);
+		midi_queue_thread = mt_thread_create(_midi_queue_run, NULL, NULL);
 		if (midi_queue_thread) {
 			log_appendf(3, "Started MIDI queue thread");
 		} else {
@@ -728,16 +734,16 @@ void midi_send_flush(void)
 		}
 	}
 
-	be_mutex_lock(midi_play_mutex);
-	be_cond_signal(midi_play_cond);
-	be_mutex_unlock(midi_play_mutex);
+	mt_mutex_lock(midi_play_mutex);
+	mt_cond_signal(midi_play_cond);
+	mt_mutex_unlock(midi_play_mutex);
 }
 
 void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int pos)
 {
 	if (!midi_record_mutex) return;
 
-	be_mutex_lock(midi_record_mutex);
+	mt_mutex_lock(midi_record_mutex);
 
 	/* just for fun... */
 	if (status.current_page == PAGE_MIDI) {
@@ -749,7 +755,7 @@ void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int 
 		}
 		memcpy(status.last_midi_event, data, status.last_midi_len);
 		status.last_midi_port = NULL;
-		status.last_midi_tick = be_timer_ticks();
+		status.last_midi_tick = timer_ticks();
 		status.flags |= NEED_UPDATE | MIDI_EVENT_CHANGED;
 	}
 
@@ -772,7 +778,7 @@ void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int 
 		}
 	}
 
-	be_mutex_unlock(midi_record_mutex);
+	mt_mutex_unlock(midi_record_mutex);
 }
 
 /*----------------------------------------------------------------------------------*/
@@ -784,7 +790,7 @@ void midi_port_unregister(int num)
 
 	if (!midi_port_mutex) return;
 
-	be_mutex_lock(midi_port_mutex);
+	mt_mutex_lock(midi_port_mutex);
 	for (i = 0; i < port_alloc; i++) {
 		if (port_top[i] && port_top[i]->num == num) {
 			q = port_top[i];
@@ -801,7 +807,7 @@ void midi_port_unregister(int num)
 			break;
 		}
 	}
-	be_mutex_unlock(midi_port_mutex);
+	mt_mutex_unlock(midi_port_mutex);
 }
 
 void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int len)
@@ -817,7 +823,7 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int l
 	}
 
 	/* just for fun... */
-	be_mutex_lock(midi_record_mutex);
+	mt_mutex_lock(midi_record_mutex);
 	status.last_midi_real_len = len;
 	if (len > sizeof(status.last_midi_event)) {
 		status.last_midi_len = sizeof(status.last_midi_event);
@@ -827,8 +833,8 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int l
 	memcpy(status.last_midi_event, data, status.last_midi_len);
 	status.flags |= MIDI_EVENT_CHANGED;
 	status.last_midi_port = src;
-	status.last_midi_tick = be_timer_ticks();
-	be_mutex_unlock(midi_record_mutex);
+	status.last_midi_tick = timer_ticks();
+	mt_mutex_unlock(midi_record_mutex);
 
 	/* pass through midi events when on midi page */
 	if (status.current_page == PAGE_MIDI) {
@@ -873,8 +879,8 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int l
 void midi_event_note(enum midi_note mnstatus, int channel, int note, int velocity)
 {
 	schism_event_t event = {
+		.type = SCHISM_EVENT_MIDI_NOTE,
 		.midi_note = {
-			.type = SCHISM_EVENT_MIDI_NOTE,
 			.mnstatus = mnstatus,
 			.channel = channel,
 			.note = note,
@@ -882,98 +888,99 @@ void midi_event_note(enum midi_note mnstatus, int channel, int note, int velocit
 		}
 	};
 
-	schism_push_event(&event);
+	events_push_event(&event);
 }
 
 void midi_event_controller(int channel, int param, int value)
 {
 	schism_event_t event = {
+		.type = SCHISM_EVENT_MIDI_CONTROLLER,
 		.midi_controller = {
-			.type = SCHISM_EVENT_MIDI_CONTROLLER,
 			.value = value,
 			.param = param,
 			.channel = channel,
 		}
 	};
 
-	schism_push_event(&event);
+	events_push_event(&event);
 }
 
 void midi_event_program(int channel, int value)
 {
 	schism_event_t event = {
+		.type = SCHISM_EVENT_MIDI_PROGRAM,
 		.midi_program = {
-			.type = SCHISM_EVENT_MIDI_PROGRAM,
 			.value = value,
 			.channel = channel,
 		}
 	};
 
-	schism_push_event(&event);
+	events_push_event(&event);
 }
 
 void midi_event_aftertouch(int channel, int value)
 {
 	schism_event_t event = {
+		.type = SCHISM_EVENT_MIDI_AFTERTOUCH,
 		.midi_aftertouch = {
-			.type = SCHISM_EVENT_MIDI_AFTERTOUCH,
 			.value = value,
 			.channel = channel,
 		}
 	};
 
-	schism_push_event(&event);
+	events_push_event(&event);
 }
 
 void midi_event_pitchbend(int channel, int value)
 {
 	schism_event_t event = {
+		.type = SCHISM_EVENT_MIDI_PITCHBEND,
 		.midi_pitchbend = {
-			.type = SCHISM_EVENT_MIDI_PITCHBEND,
 			.value = value,
 			.channel = channel,
 		}
 	};
 
-	schism_push_event(&event);
+	events_push_event(&event);
 }
 
 void midi_event_system(int argv, int param)
 {
 	schism_event_t event = {
+		.type = SCHISM_EVENT_MIDI_SYSTEM,
 		.midi_system = {
-			.type = SCHISM_EVENT_MIDI_SYSTEM,
 			.argv = argv,
 			.param = param,
 		}
 	};
 
-	schism_push_event(&event);
+	events_push_event(&event);
 }
 
 void midi_event_tick(void)
 {
 	schism_event_t event = {
+		.type = SCHISM_EVENT_MIDI_TICK,
 		.midi_tick = {
-			.type = SCHISM_EVENT_MIDI_TICK,
+			
 		}
 	};
 
-	schism_push_event(&event);
+	events_push_event(&event);
 }
 
 void midi_event_sysex(const unsigned char *data, unsigned int len)
 {
 	schism_event_t event = {
+		.type = SCHISM_EVENT_MIDI_SYSEX,
 		.midi_sysex = {
-			.type = SCHISM_EVENT_MIDI_SYSEX,
 			.len = len,
 		}
 	};
 
 	memcpy(event.midi_sysex.packet, data, MIN(len, ARRAY_SIZE(event.midi_sysex.packet)));
 
-	schism_push_event(&event);
+	events_push_event(&event);
 }
 
 int midi_engine_handle_event(schism_event_t *ev)

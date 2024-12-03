@@ -25,50 +25,134 @@
 #include "backend/clippy.h"
 #include "mem.h"
 
-#include <SDL.h>
+#include "init.h"
 
-int sdl2_clippy_have_selection(void)
+static int enable_primary_selection = 0;
+
+#if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 26, 0)
+static SDL_bool (SDLCALL *sdl2_HasPrimarySelectionText)(void);
+static int (SDLCALL *sdl2_SetPrimarySelectionText)(const char *text);
+static char * (SDLCALL *sdl2_GetPrimarySelectionText)(void);
+#endif
+
+static SDL_bool (SDLCALL *sdl2_HasClipboardText)(void);
+static int (SDLCALL *sdl2_SetClipboardText)(const char *text);
+static char * (SDLCALL *sdl2_GetClipboardText)(void);
+
+static void (SDLCALL *sdl2_free)(void *);
+
+static int sdl2_clippy_have_selection(void)
 {
-#if SDL_VERSION_ATLEAST(2, 26, 0)
-	return SDL_HasPrimarySelectionText();
-#else
+#if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 26, 0)
+	if (enable_primary_selection)
+		return sdl2_HasPrimarySelectionText();
+#endif
+
 	return 0;
+}
+
+static int sdl2_clippy_have_clipboard(void)
+{
+	return sdl2_HasClipboardText();
+}
+
+static void sdl2_clippy_set_selection(const char *text)
+{
+#if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 26, 0)
+	if (enable_primary_selection)
+		sdl2_SetPrimarySelectionText(text);
 #endif
 }
 
-int sdl2_clippy_have_clipboard(void)
+static void sdl2_clippy_set_clipboard(const char *text)
 {
-	return SDL_HasClipboardText();
+	sdl2_SetClipboardText(text);
 }
 
-void sdl2_clippy_set_selection(const char *text)
+static char *sdl2_clippy_get_selection(void)
 {
-#if SDL_VERSION_ATLEAST(2, 26, 0)
-	SDL_SetPrimarySelectionText(text);
+#if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 26, 0)
+	if (enable_primary_selection) {
+		char *sdl = sdl2_GetPrimarySelectionText();
+		if (sdl) {
+			char *us = str_dup(sdl);
+			sdl2_free(sdl);
+			return us;
+		}
+	}
 #endif
-}
 
-void sdl2_clippy_set_clipboard(const char *text)
-{
-	SDL_SetClipboardText(text);
-}
-
-char *sdl2_clippy_get_selection(void)
-{
-#if SDL_VERSION_ATLEAST(2, 26, 0)
-	char *inter = SDL_GetPrimarySelectionText();
-	char *us = str_dup(inter);
-	SDL_free(inter);
-	return us;
-#else
 	return str_dup("");
+}
+
+static char *sdl2_clippy_get_clipboard(void)
+{
+	char *sdl = sdl2_GetClipboardText();
+	if (!sdl)
+		return str_dup("");
+
+	char *us = str_dup(sdl);
+	sdl2_free(sdl);
+	return us;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// dynamic loading
+
+static int sdl2_clippy_load_syms(void)
+{
+	SCHISM_SDL2_SYM(HasClipboardText);
+	SCHISM_SDL2_SYM(SetClipboardText);
+	SCHISM_SDL2_SYM(GetClipboardText);
+
+	SCHISM_SDL2_SYM(free);
+
+	return 0;
+}
+
+static int sdl2_26_0_clippy_load_syms(void)
+{
+#if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 26, 0)
+	SCHISM_SDL2_SYM(HasPrimarySelectionText);
+	SCHISM_SDL2_SYM(SetPrimarySelectionText);
+	SCHISM_SDL2_SYM(GetPrimarySelectionText);
+
+	return 0;
+#else
+	return -1;
 #endif
 }
 
-char *sdl2_clippy_get_clipboard(void)
+static int sdl2_clippy_init(void)
 {
-	char *inter = SDL_GetClipboardText();
-	char *us = str_dup(inter);
-	SDL_free(inter);
-	return us;
+	if (!sdl2_init())
+		return 0;
+
+	if (sdl2_clippy_load_syms())
+		return 0;
+
+	if (!sdl2_26_0_clippy_load_syms())
+		enable_primary_selection = 1;
+
+	return 1;
 }
+
+static void sdl2_clippy_quit(void)
+{
+	sdl2_quit();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+const schism_clippy_backend_t schism_clippy_backend_sdl2 = {
+	.init = sdl2_clippy_init,
+	.quit = sdl2_clippy_quit,
+
+	.have_selection = sdl2_clippy_have_selection,
+	.get_selection = sdl2_clippy_get_selection,
+	.set_selection = sdl2_clippy_set_selection,
+
+	.have_clipboard = sdl2_clippy_have_clipboard,
+	.get_clipboard = sdl2_clippy_get_clipboard,
+	.set_clipboard = sdl2_clippy_set_clipboard,
+};

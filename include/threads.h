@@ -21,24 +21,40 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef SCHISM_THREADS_H_
+#define SCHISM_THREADS_H_
+
 #include "headers.h"
 
-#if defined(SCHISM_SDL2)
-# define be_object_load sdl2_object_load
-# define be_object_unload sdl2_object_unload
-# define be_function_load sdl2_function_load
-#elif defined(SCHISM_SDL12)
-# define be_object_load sdl12_object_load
-# define be_object_unload sdl12_object_unload
-# define be_function_load sdl12_function_load
-#else
-# error Object loading unsupported?
-#endif
+/* private to each backend */
+typedef struct schism_thread schism_thread_t;
+typedef struct schism_mutex schism_mutex_t;
+typedef struct schism_cond schism_cond_t;
 
-void *sdl12_object_load(const char *name);
-void sdl12_object_unload(void *object);
-void *sdl12_function_load(void *object, const char *name);
+typedef int (*schism_thread_function_t)(void *userdata);
 
-void *sdl2_object_load(const char *name);
-void sdl2_object_unload(void *object);
-void *sdl2_function_load(void *object, const char *name);
+enum {
+	BE_THREAD_PRIORITY_LOW = 0,
+	BE_THREAD_PRIORITY_NORMAL,
+	BE_THREAD_PRIORITY_HIGH,
+	BE_THREAD_PRIORITY_TIME_CRITICAL,
+};
+
+schism_thread_t *mt_thread_create(schism_thread_function_t func, const char *name, void *userdata);
+void mt_thread_wait(schism_thread_t *thread, int *status);
+void mt_thread_set_priority(int priority);
+
+schism_mutex_t *mt_mutex_create(void);
+void mt_mutex_delete(schism_mutex_t *mutex);
+void mt_mutex_lock(schism_mutex_t *mutex);
+void mt_mutex_unlock(schism_mutex_t *mutex);
+
+schism_cond_t *mt_cond_create(void);
+void mt_cond_delete(schism_cond_t *cond);
+void mt_cond_signal(schism_cond_t *cond);
+void mt_cond_wait(schism_cond_t *cond, schism_mutex_t *mutex);
+
+int mt_init(void);
+void mt_quit(void);
+
+#endif /* SCHISM_THREADS_H_ */

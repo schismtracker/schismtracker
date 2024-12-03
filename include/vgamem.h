@@ -116,6 +116,8 @@ void draw_sample_data(struct vgamem_overlay *r, struct song_sample *sample);
 /* this works like draw_sample_data, just without having to allocate a
  * song_sample structure, and without caching the waveform.
  * mostly it's just for the oscilloscope view. */
+void draw_sample_data_rect_32(struct vgamem_overlay *r, int32_t *data,
+	int length, unsigned int inputchans, unsigned int outputchans);
 void draw_sample_data_rect_16(struct vgamem_overlay *r, int16_t *data, int length,
 	unsigned int inputchans, unsigned int outputchans);
 void draw_sample_data_rect_8(struct vgamem_overlay *r, int8_t *data, int length,

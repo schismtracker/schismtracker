@@ -21,36 +21,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "headers.h" /* always include this one first, kthx */
-#include "backend/clippy.h"
-#include "mem.h"
+#ifndef SCHISM_BACKEND_DMOZ_H_
+#define SCHISM_BACKEND_DMOZ_H_
 
-// no-ops
+typedef struct {
+	// returns 1 if succeeded, 0 if failed
+	int (*init)(void);
+	void (*quit)(void);
 
-int sdl12_clippy_have_selection(void)
-{
-	return 0;
-}
+	char * (*get_exe_path)(void);
+} schism_dmoz_backend_t;
 
-int sdl12_clippy_have_clipboard(void)
-{
-	return 0;
-}
+#ifdef SCHISM_SDL2
+extern const schism_dmoz_backend_t schism_dmoz_backend_sdl2;
+#endif
 
-void sdl12_clippy_set_selection(const char *text)
-{
-}
-
-void sdl12_clippy_set_clipboard(const char *text)
-{
-}
-
-char *sdl12_clippy_get_selection(void)
-{
-	return str_dup("");
-}
-
-char *sdl12_clippy_get_clipboard(void)
-{
-	return str_dup("");
-}
+#endif /* SCHISM_BACKEND_DMOZ_H_ */

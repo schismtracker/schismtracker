@@ -21,21 +21,60 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "backend/object.h"
+#include "headers.h" /* always include this one first, kthx */
+#include "backend/dmoz.h"
+#include "mem.h"
 
-#include <SDL.h>
+#include "init.h"
 
-void *sdl2_object_load(const char *name)
+static char * (SDLCALL *sdl2_GetBasePath)(void);
+
+static void (SDLCALL *sdl2_free)(void *);
+
+static char *sdl2_dmoz_get_exe_path(void)
 {
-	return SDL_LoadObject(name);
+	char *sdl = sdl2_GetBasePath();
+	if (!sdl)
+		return NULL;
+
+	char *us = str_dup(sdl);
+	sdl2_free(sdl);
+	return us;
 }
 
-void sdl2_object_unload(void *object)
+//////////////////////////////////////////////////////////////////////////////
+// dynamic loading
+
+static int sdl2_dmoz_load_syms(void)
 {
-	SDL_UnloadObject(object);
+	SCHISM_SDL2_SYM(GetBasePath);
+
+	SCHISM_SDL2_SYM(free);
+
+	return 0;
 }
 
-void *sdl2_function_load(void *object, const char *name)
+static int sdl2_dmoz_init(void)
 {
-	return SDL_LoadFunction(object, name);
+	if (!sdl2_init())
+		return 0;
+
+	if (sdl2_dmoz_load_syms())
+		return 0;
+
+	return 1;
 }
+
+static void sdl2_dmoz_quit(void)
+{
+	sdl2_quit();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+const schism_dmoz_backend_t schism_dmoz_backend_sdl2 = {
+	.init = sdl2_dmoz_init,
+	.quit = sdl2_dmoz_quit,
+
+	.get_exe_path = sdl2_dmoz_get_exe_path,
+};

@@ -24,28 +24,22 @@
 #ifndef SCHISM_BACKEND_TIMER_H_
 #define SCHISM_BACKEND_TIMER_H_
 
-#include "headers.h"
+#include "../timer.h"
 
-#ifdef SCHISM_SDL2
-/* SDL 2 has 64-bit ticks starting with 2.0.18 */
-# define be_timer_ticks sdl2_timer_ticks
-# define be_timer_ticks_passed sdl2_timer_ticks_passed
-# define be_delay sdl2_delay
-typedef uint64_t schism_ticks_t;
-#elif SCHISM_SDL12
-# define be_timer_ticks sdl12_timer_ticks
-# define be_timer_ticks_passed sdl12_timer_ticks_passed
-# define be_delay sdl12_delay
-typedef uint32_t schism_ticks_t;
+typedef struct {
+	int (*init)(void);
+	void (*quit)(void);
+
+	schism_ticks_t (*ticks)(void);
+	int (*ticks_passed)(schism_ticks_t a, schism_ticks_t b);
+	void (*delay)(uint32_t ms);
+} schism_timer_backend_t;
+
+#ifdef SCHISM_SDL12
+extern const schism_timer_backend_t schism_timer_backend_sdl12;
 #endif
-
-schism_ticks_t sdl2_timer_ticks(void);
-schism_ticks_t sdl12_timer_ticks(void);
-
-int sdl2_timer_ticks_passed(schism_ticks_t a, schism_ticks_t b);
-int sdl12_timer_ticks_passed(schism_ticks_t a, schism_ticks_t b);
-
-void sdl2_delay(uint32_t ms);
-void sdl12_delay(uint32_t ms);
+#ifdef SCHISM_SDL2
+extern const schism_timer_backend_t schism_timer_backend_sdl2;
+#endif
 
 #endif /* SCHISM_BACKEND_TIMER_H_ */

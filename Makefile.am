@@ -119,6 +119,7 @@ noinst_HEADERS = \
 	include/it.h			\
 	include/keyboard.h      \
 	include/log.h			\
+	include/loadso.h        \
 	include/midi.h			\
 	include/mem.h           \
 	include/osdefs.h		\
@@ -129,6 +130,8 @@ noinst_HEADERS = \
 	include/slurp.h			\
 	include/song.h			\
 	include/str.h           \
+	include/threads.h       \
+	include/timer.h         \
 	include/tree.h			\
 	include/util.h			\
 	include/version.h		\
@@ -144,16 +147,22 @@ noinst_HEADERS = \
 	include/player/tables.h		\
 	include/backend/audio.h     \
 	include/backend/clippy.h     \
+	include/backend/dmoz.h       \
 	include/backend/events.h     \
-	include/backend/init.h     \
-	include/backend/object.h     \
 	include/backend/threads.h     \
 	include/backend/timer.h     \
+	include/backend/video.h     \
 	sys/wii/certs_bin.h		\
 	sys/wii/isfs.h			\
 	sys/wii/su_tik_bin.h		\
+<<<<<<< HEAD
 	sys/wii/su_tmd_bin.h		\
 	sys/macos/dirent/macos-dirent.h
+=======
+	sys/wii/su_tmd_bin.h        \
+	sys/sdl12/init.h \
+	sys/sdl2/init.h
+>>>>>>> a9b558cd7acfb74132b1cc4289bd5183dc8d065a
 
 dist_man_MANS = sys/posix/schismtracker.1
 
@@ -182,18 +191,38 @@ else
 endif
 
 if USE_SDL2
-files_sdl2 = sys/sdl2/audio.c sys/sdl2/clippy.c sys/sdl2/events.c sys/sdl2/init.c sys/sdl2/timer.c sys/sdl2/video.c sys/sdl2/threads.c sys/sdl2/object.c
+# hax: we want to use specific CFLAGS...
+sys/sdl2/schismtracker-audio.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
+sys/sdl2/schismtracker-dmoz.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
+sys/sdl2/schismtracker-clippy.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
+sys/sdl2/schismtracker-events.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
+sys/sdl2/schismtracker-init.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
+sys/sdl2/schismtracker-timer.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
+sys/sdl2/schismtracker-video.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
+sys/sdl2/schismtracker-threads.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
 
-cflags_sdl2 = $(SDL2_CFLAGS)
+files_sdl2 = sys/sdl2/audio.c sys/sdl2/dmoz.c sys/sdl2/clippy.c sys/sdl2/events.c sys/sdl2/init.c sys/sdl2/timer.c sys/sdl2/video.c sys/sdl2/threads.c
+
+if LINK_TO_SDL2
 libs_sdl2 = $(SDL2_LIBS)
+endif
 
 endif
 
 if USE_SDL12
-files_sdl12 = sys/sdl12/audio.c sys/sdl12/clippy.c sys/sdl12/events.c sys/sdl12/init.c sys/sdl12/timer.c sys/sdl12/video.c sys/sdl12/threads.c sys/sdl12/object.c
+sys/sdl12/schismtracker-audio.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
+sys/sdl12/schismtracker-events.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
+sys/sdl12/schismtracker-init.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
+sys/sdl12/schismtracker-timer.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
+sys/sdl12/schismtracker-video.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
+sys/sdl12/schismtracker-threads.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
 
-cflags_sdl12 = $(SDL12_CFLAGS)
+files_sdl12 = sys/sdl12/audio.c sys/sdl12/events.c sys/sdl12/init.c sys/sdl12/timer.c sys/sdl12/video.c sys/sdl12/threads.c
+
+if LINK_TO_SDL12
 libs_sdl12 = $(SDL12_LIBS)
+endif
+
 endif
 
 if USE_ALSA
@@ -224,8 +253,10 @@ lib_win32=-lwinmm
 
 if USE_MEDIAFOUNDATION
 files_mediafoundation=fmt/win32mf.c
-lib_mediafoundation=-lole32 -lmfuuid -lshlwapi -luuid
+lib_mediafoundation=-luuid
 endif
+
+cflags_win32 += -mwindows
 
 if HAVE_WINDRES
 
@@ -432,6 +463,7 @@ schismtracker_SOURCES = \
 	schism/ieee-float.c     \
 	schism/itf.c			\
 	schism/keyboard.c		\
+	schism/loadso.c         \
 	schism/main.c			\
 	schism/mem.c           \
 	schism/menu.c			\
@@ -466,6 +498,8 @@ schismtracker_SOURCES = \
 	schism/slurp.c			\
 	schism/status.c			\
 	schism/str.c             \
+	schism/threads.c        \
+	schism/timer.c          \
 	schism/util.c			\
 	schism/version.c		\
 	schism/vgamem.c        \

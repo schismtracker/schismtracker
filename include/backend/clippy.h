@@ -24,40 +24,21 @@
 #ifndef SCHISM_BACKEND_CLIPPY_H_
 #define SCHISM_BACKEND_CLIPPY_H_
 
-#include "headers.h"
+typedef struct {
+	int (*init)(void);
+	void (*quit)(void);
+
+	int (*have_selection)(void);
+	void (*set_selection)(const char *text);
+	char *(*get_selection)(void);
+
+	int (*have_clipboard)(void);
+	void (*set_clipboard)(const char *text);
+	char *(*get_clipboard)(void);
+} schism_clippy_backend_t;
 
 #ifdef SCHISM_SDL2
-# define be_clippy_have_selection sdl2_clippy_have_selection
-# define be_clippy_have_clipboard sdl2_clippy_have_clipboard
-
-# define be_clippy_set_selection sdl2_clippy_set_selection
-# define be_clippy_set_clipboard sdl2_clippy_set_clipboard
-
-# define be_clippy_get_selection sdl2_clippy_get_selection
-# define be_clippy_get_clipboard sdl2_clippy_get_clipboard
-#elif SCHISM_SDL12
-# define be_clippy_have_selection sdl12_clippy_have_selection
-# define be_clippy_have_clipboard sdl12_clippy_have_clipboard
-
-# define be_clippy_set_selection sdl12_clippy_set_selection
-# define be_clippy_set_clipboard sdl12_clippy_set_clipboard
-
-# define be_clippy_get_selection sdl12_clippy_get_selection
-# define be_clippy_get_clipboard sdl12_clippy_get_clipboard
+extern const schism_clippy_backend_t schism_clippy_backend_sdl2;
 #endif
-
-int sdl12_clippy_have_selection(void);
-int sdl12_clippy_have_clipboard(void);
-void sdl12_clippy_set_selection(const char *text);
-void sdl12_clippy_set_clipboard(const char *text);
-char *sdl12_clippy_get_selection(void);
-char *sdl12_clippy_get_clipboard(void);
-
-int sdl2_clippy_have_selection(void);
-int sdl2_clippy_have_clipboard(void);
-void sdl2_clippy_set_selection(const char *text);
-void sdl2_clippy_set_clipboard(const char *text);
-char *sdl2_clippy_get_selection(void);
-char *sdl2_clippy_get_clipboard(void);
 
 #endif /* SCHISM_BACKEND_CLIPPY_H_ */

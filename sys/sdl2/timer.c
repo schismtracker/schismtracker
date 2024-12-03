@@ -24,27 +24,99 @@
 #include "headers.h"
 #include "backend/timer.h"
 
-#include <SDL.h>
+#include "init.h"
 
-schism_ticks_t sdl2_timer_ticks(void)
+static int (SDLCALL *sdl2_InitSubSystem)(Uint32 flags) = NULL;
+static void (SDLCALL *sdl2_QuitSubSystem)(Uint32 flags) = NULL;
+
+static void (SDLCALL *sdl2_Delay)(uint32_t ms) = NULL;
+static uint32_t (SDLCALL *sdl2_GetTicks)(void) = NULL;
+
+// Introduced in SDL 2.0.18
+static uint64_t (SDLCALL *sdl2_GetTicks64)(void) = NULL;
+
+static int sdl2_have_timer64 = 0;
+
+static schism_ticks_t sdl2_timer_ticks(void)
 {
-#if SDL_VERSION_ATLEAST(2, 0, 18)
-	return SDL_GetTicks64();
-#else
-	return SDL_GetTicks();
+#if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 0, 18)
+	if (sdl2_GetTicks64)
+		return sdl2_GetTicks64();
 #endif
+
+	return sdl2_GetTicks();
 }
 
-int sdl2_timer_ticks_passed(schism_ticks_t a, schism_ticks_t b)
+static int sdl2_timer_ticks_passed(schism_ticks_t a, schism_ticks_t b)
 {
-#if SDL_VERSION_ATLEAST(2, 0, 18)
-	return (a >= b);
-#else
+#if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 0, 18)
+	if (sdl2_GetTicks64)
+		return (a >= b);
+#endif
+
 	return ((int32_t)(b - a) <= 0);
+}
+
+static void sdl2_timer_delay(uint32_t ms)
+{
+	sdl2_Delay(ms);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+static int sdl2_timer_load_syms(void)
+{
+	SCHISM_SDL2_SYM(InitSubSystem);
+	SCHISM_SDL2_SYM(QuitSubSystem);
+
+	SCHISM_SDL2_SYM(GetTicks);
+	SCHISM_SDL2_SYM(Delay);
+
+	return 0;
+}
+
+static int sdl2_timer64_load_syms(void)
+{
+#if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 0, 18)
+	SCHISM_SDL2_SYM(GetTicks64);
+
+	return 0;
+#else
+	return -1;
 #endif
 }
 
-void sdl2_delay(uint32_t ms)
+static int sdl2_timer_init(void)
 {
-	SDL_Delay(ms);
+	if (!sdl2_init())
+		return 0;
+
+	if (sdl2_timer_load_syms())
+		return 0;
+
+	if (!sdl2_timer64_load_syms())
+		sdl2_have_timer64 = 1;
+
+	if (sdl2_InitSubSystem(SDL_INIT_TIMER) < 0)
+		return 0;
+
+	return 1;
 }
+
+static void sdl2_timer_quit(void)
+{
+	sdl2_QuitSubSystem(SDL_INIT_TIMER);
+
+	sdl2_quit();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+const schism_timer_backend_t schism_timer_backend_sdl2 = {
+	.init = sdl2_timer_init,
+	.quit = sdl2_timer_quit,
+
+	.ticks = sdl2_timer_ticks,
+	.ticks_passed = sdl2_timer_ticks_passed,
+	.delay = sdl2_timer_delay,
+};
