@@ -917,18 +917,18 @@ int schism_main(int argc, char** argv)
 	}
 
 	if (!timer_init()) {
-		fprintf(stderr, "Failed to initialize a timers backend!\n");
+		os_show_message_box("Critical error!", "Failed to initialize a timers backend!");
 		return 1;
 	}
 
 	if (!mt_init()) {
-		fprintf(stderr, "Failed to initialize a multithreading backend!\n");
+		os_show_message_box("Critical error!", "Failed to initialize a multithreading backend!");
 		return 1;
 	}
 
 #ifndef HAVE_LOCALTIME_R
 	if (!localtime_r_init()) {
-		fprintf(stderr, "Failed to initialize localtime_r replacement!\n");
+		os_show_message_box("Critical error!", "Failed to initialize localtime_r replacement!");
 		return 1;
 	}
 #endif
@@ -937,7 +937,7 @@ int schism_main(int argc, char** argv)
 	cfg_load();
 
 	if (!events_init()) {
-		fprintf(stderr, "Failed to initialize an events backend!\n");
+		os_show_message_box("Critical error!", "Failed to initialize an events backend!");
 		return 1;
 	}
 

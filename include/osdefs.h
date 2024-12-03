@@ -58,6 +58,7 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_open win32_open
 # define os_mkdir win32_mkdir
 # define os_get_key_repeat win32_get_key_repeat
+# define os_show_message_box win32_show_message_box
 #elif defined(SCHISM_MACOSX)
 # define os_event macosx_event
 # define os_sysexit macosx_sysexit
@@ -102,6 +103,9 @@ A return value of 0 indicates that the event should NOT be processed by the main
 #ifndef os_get_key_repeat
 # define os_get_key_repeat(pdelay, prate) (0)
 #endif
+#ifndef os_show_message_box
+# define os_show_message_box(title, text) ((void)printf("%s: %s\n", title, text))
+#endif
 
 // Implementations for the above, and more.
 
@@ -127,6 +131,7 @@ FILE* win32_fopen(const char* path, const char* flags);
 #define win32_wmkdir(path, mode) _wmkdir(path)
 int win32_run_hook(const char *dir, const char *name, const char *maybe_arg);
 int win32_get_key_repeat(int *pdelay, int *prate);
+void win32_show_message_box(const char *title, const char *text);
 
 int posix_run_hook(const char *dir, const char *name, const char *maybe_arg);
 
