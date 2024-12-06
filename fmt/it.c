@@ -117,14 +117,45 @@ static int it_load_header(struct it_file *hdr, slurp_t *fp)
 
 int fmt_it_read_info(dmoz_file_t *file, slurp_t *fp)
 {
+	int n;
+	uint32_t para_smp[MAX_SAMPLES];
 	struct it_file hdr;
 	
 	if (!it_load_header(&hdr, fp))
 		return 0;
 
-	/* This ought to be more particular; if it's not actually made *with* Impulse Tracker,
-	 * it's probably not compressed, irrespective of what the CMWT says. */
-	file->description = (hdr.cmwt >= 0x214) ? "Compressed Impulse Tracker" : "Impulse Tracker";
+	if (hdr.smpnum >= MAX_SAMPLES)
+		return 0;
+
+	slurp_seek(fp, hdr.ordnum, SEEK_CUR);
+
+	slurp_seek(fp, sizeof(uint32_t) * hdr.insnum, SEEK_CUR);
+	slurp_read(fp, para_smp, sizeof(uint32_t) * hdr.smpnum);
+
+	uint32_t para_min = ((hdr.special & 1) && hdr.msglength) ? hdr.msgoffset : slurp_length(fp);
+	for (n = 0; n < hdr.smpnum; n++) {
+		para_smp[n] = bswapLE32(para_smp[n]);
+		if (para_smp[n] < para_min)
+			para_min = para_smp[n];
+	}
+
+	/* try to find a compressed sample and set
+	 * the description accordingly */
+	file->description = "Impulse Tracker";
+	for (n = 0; n < hdr.smpnum; n++) {
+		slurp_seek(fp, para_smp[n], SEEK_SET);
+
+		slurp_seek(fp, 18, SEEK_CUR); // skip to flags
+		int flags = slurp_getc(fp);
+		if (flags == EOF)
+			return 0;
+
+		// compressed ?
+		if (flags & 8) {
+			file->description = "Compressed Impulse Tracker";
+			break;
+		}
+	}
 
 	/*file->extension = str_dup("it");*/
 	file->title = strn_dup((const char *)hdr.songname, sizeof(hdr.songname));
