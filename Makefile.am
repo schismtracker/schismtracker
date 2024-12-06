@@ -157,7 +157,8 @@ noinst_HEADERS = \
 	sys/wii/su_tik_bin.h		\
 	sys/wii/su_tmd_bin.h        \
 	sys/sdl12/init.h \
-	sys/sdl2/init.h
+	sys/sdl2/init.h \
+	sys/x11/init.h
 
 dist_man_MANS = sys/posix/schismtracker.1
 
