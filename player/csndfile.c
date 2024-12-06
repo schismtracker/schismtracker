@@ -1344,7 +1344,8 @@ PRECOMPUTE_LOOPS_IMPL(16)
 
 void csf_adjust_sample_loop(song_sample_t *smp)
 {
-#if 0
+	if (!smp->data || smp->length < 1) return;
+
 	// sanitize the loop points
 	smp->sustain_end = MIN(smp->sustain_end, smp->length);
 	smp->loop_end = MIN(smp->loop_end, smp->length);
@@ -1357,6 +1358,32 @@ void csf_adjust_sample_loop(song_sample_t *smp)
 	if (smp->loop_start >= smp->loop_end) {
 		smp->loop_start = smp->loop_end = 0;
 		smp->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP);
+	}
+
+#if 0 // This doesn't make any noticeable difference to me now
+	// poopy, removing all that loop-hacking code has produced... very nasty sounding loops!
+	// so I guess I should rewrite the crap at the end of the sample at least.
+	const int channels = (smp->flags & CHN_STEREO) ? 2 : 1; \
+	const uint32_t len = smp->length;
+	if (smp->flags & CHN_16BIT) {
+		int16_t *data = (int16_t *)smp->data;
+		for (int c = 0; c < channels; c++)
+			data[(len + 4) * channels]
+				= data[(len + 3) * channels]
+				= data[(len + 2) * channels]
+				= data[(len + 1) * channels]
+				= data[len * channels]
+				= data[(len - 1) * channels];
+	} else {
+		signed char *data = smp->data;
+		// Adjust end of sample
+		for (int c = 0; c < channels; c++)
+			data[(len + 4) * channels]
+				= data[(len + 3) * channels]
+				= data[(len + 2) * channels]
+				= data[(len + 1) * channels]
+				= data[len * channels]
+				= data[(len - 1) * channels];
 	}
 #endif
 

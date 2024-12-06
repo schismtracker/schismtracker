@@ -869,7 +869,8 @@ uint32_t csf_create_stereo_mix(song_t *csf, int32_t count)
 						int32_t samples_to_read = (channel->increment < 0)
 							? (channel->position - lookahead_start)
 							: (channel->loop_end - channel->position);
-						samples_to_read = MAX(samples_to_read, channel->loop_end - channel->loop_start);
+						// this line causes sample 8 in BUTTERFL.XM to play incorrectly
+						//samples_to_read = MAX(samples_to_read, channel->loop_end - channel->loop_start);
 						smpcount = samples_to_buffer_length(samples_to_read, channel);
 						smpcount = CLAMP(smpcount, 1, oldcount);
 
