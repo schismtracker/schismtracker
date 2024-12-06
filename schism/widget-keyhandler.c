@@ -390,8 +390,11 @@ int widget_handle_key(struct key_event * k)
 			onw = ((signed) k->x < widget->x
 			       || (signed) k->x >= widget->x + widget->width + pad
 			       || (signed) k->y != widget->y) ? 0 : 1;
-			n = (k->state == KEY_RELEASE && onw) ? 1 : 0;
-			if (widget->depressed != n) status.flags |= NEED_UPDATE;
+			n = (k->state == KEY_PRESS && onw) ? 1 : 0;
+			if (widget->depressed != n)
+				status.flags |= NEED_UPDATE;
+			else if (k->state == KEY_RELEASE)
+				return 1; // swallor
 			widget->depressed = n;
 			if (current_type != WIDGET_TEXTENTRY && current_type != WIDGET_NUMENTRY) {
 				if (k->state == KEY_PRESS || !onw)
