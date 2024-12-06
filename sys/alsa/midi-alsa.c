@@ -33,18 +33,7 @@
 
 #include <errno.h>
 
-#include <alsa/asoundef.h>
-#include <alsa/global.h>
-#include <alsa/error.h>
-#include <alsa/input.h>
-#include <alsa/output.h>
-#include <alsa/conf.h>
-#include <alsa/rawmidi.h>
-#include <alsa/timer.h>
-#include <alsa/seq_event.h>
-#include <alsa/seq.h>
-#include <alsa/seqmid.h>
-#include <alsa/seq_midi_event.h>
+#include <alsa/asoundlib.h>
 
 #include <sys/stat.h>
 
