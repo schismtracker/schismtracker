@@ -1,3 +1,29 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
+ * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
+ * copyright (c) 2009 Storlek & Mrs. Brisby
+ * copyright (c) 2010-2012 Storlek
+ * URL: http://schismtracker.org/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#include "headers.h"
+#include "bshift.h"
+
 /**
  * @file   opl-util.cpp
  * @brief  Utility functions related to OPL chips.
@@ -21,10 +47,10 @@
 //Stripped down version for Schismtracker, in C.
 
 // this really should be in a header but it's only used in one other file
-int fnumToMilliHertz(unsigned int fnum, unsigned int block,
-		unsigned int conversionFactor);
-void milliHertzToFnum(unsigned int milliHertz,
-		unsigned int *fnum, unsigned int *block, unsigned int conversionFactor);
+int32_t fnumToMilliHertz(uint32_t fnum, uint32_t block,
+		uint32_t conversionFactor);
+void milliHertzToFnum(uint32_t milliHertz,
+		uint32_t *fnum, uint32_t *block, uint32_t conversionFactor);
 
 
 /// Convert the given f-number and block into a note frequency.
@@ -42,8 +68,7 @@ void milliHertzToFnum(unsigned int milliHertz,
 *
 * @return The converted frequency in milliHertz.
 */
-int fnumToMilliHertz(unsigned int fnum, unsigned int block,
-		unsigned int conversionFactor)
+int32_t fnumToMilliHertz(uint32_t fnum, uint32_t block, uint32_t conversionFactor)
 {
 	// Original formula
 	//return 1000 * conversionFactor * (double)fnum * pow(2, (double)((signed)block - 20));
@@ -77,8 +102,7 @@ int fnumToMilliHertz(unsigned int fnum, unsigned int block,
 * a value to fnum/block and back to milliHertz is not guaranteed to reproduce
 * the original value.
 */
-void milliHertzToFnum(unsigned int milliHertz,
-		unsigned int *fnum, unsigned int *block, unsigned int conversionFactor)
+void milliHertzToFnum(uint32_t milliHertz, uint32_t *fnum, uint32_t *block, uint32_t conversionFactor)
 {
 	// Special case to avoid divide by zero
 	if (milliHertz <= 0) {
@@ -123,11 +147,11 @@ void milliHertzToFnum(unsigned int milliHertz,
 	//*fnum = milliHertz * pow(2, 20 - *block) / 1000 / conversionFactor + 0.5;
 
 	// Slightly more efficient version
-	*fnum = ((unsigned long long)milliHertz << (20 - *block)) / (conversionFactor * 1000.0) + 0.5;
+	*fnum = ((uint64_t)milliHertz << (20 - *block)) / (conversionFactor * 1000.0) + 0.5;
 
 	if (*fnum > 1023) {
 		(*block)++;
-		*fnum = ((unsigned long long)milliHertz << (20 - *block)) / (conversionFactor * 1000.0) + 0.5;
+		*fnum = ((uint64_t)milliHertz << (20 - *block)) / (conversionFactor * 1000.0) + 0.5;
 	}
 
 	return;

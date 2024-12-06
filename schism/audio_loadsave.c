@@ -848,6 +848,7 @@ int song_load_sample(int n, const char *file)
 		// (huhwhat?!)
 		smp.name[23] = ' ';
 	}
+
 	memcpy(&(current_song->samples[n]), &smp, sizeof(song_sample_t));
 	song_unlock_audio();
 
@@ -1115,9 +1116,6 @@ int instrument_loader_sample(struct instrumentloader *ii, int slot)
 	if (ii->sample_map[slot]) return ii->sample_map[slot];
 	for (x = ii->basex; x < MAX_SAMPLES; x++) {
 		song_sample_t *cur = (current_song->samples + x);
-
-//              if (!csf_sample_is_empty(current_song->samples + x))
-//                      continue;
 		if (cur->data != NULL)
 			continue;
 

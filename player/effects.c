@@ -34,14 +34,14 @@
 
 
 // see also csf_midi_out_note in sndmix.c
-void (*csf_midi_out_raw)(const unsigned char *,unsigned int, unsigned int) = NULL;
+void (*csf_midi_out_raw)(const unsigned char *,uint32_t, uint32_t) = NULL;
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* note/freq conversion functions */
 
-int get_note_from_frequency(int frequency, unsigned int c5speed)
+int32_t get_note_from_frequency(int32_t frequency, uint32_t c5speed)
 {
-	int n;
+	int32_t n;
 	if (!frequency)
 		return 0;
 	for (n = 0; n <= 120; n++) {
@@ -53,7 +53,7 @@ int get_note_from_frequency(int frequency, unsigned int c5speed)
 	return 120;
 }
 
-int get_frequency_from_note(int note, unsigned int c5speed)
+int32_t get_frequency_from_note(int32_t note, uint32_t c5speed)
 {
 	if (!note || note > 0xF0)
 		return 0;
@@ -62,18 +62,18 @@ int get_frequency_from_note(int note, unsigned int c5speed)
 }
 
 
-unsigned int transpose_to_frequency(int transp, int ftune)
+uint32_t transpose_to_frequency(int32_t transp, int32_t ftune)
 {
-	return (unsigned int) (8363.0 * pow(2, (transp * 128.0 + ftune) / 1536.0));
+	return (uint32_t) (8363.0 * pow(2, (transp * 128.0 + ftune) / 1536.0));
 }
 
-int frequency_to_transpose(unsigned int freq)
+int32_t frequency_to_transpose(uint32_t freq)
 {
-	return (int) (1536.0 * (log(freq / 8363.0) / log(2)));
+	return (int32_t) (1536.0 * (log(freq / 8363.0) / log(2)));
 }
 
 
-unsigned long calc_halftone(unsigned long hz, int rel)
+uint32_t calc_halftone(uint32_t hz, int32_t rel)
 {
 	return pow(2, rel / 12.0) * hz + 0.5;
 }
@@ -85,7 +85,7 @@ unsigned long calc_halftone(unsigned long hz, int rel)
 ////////////////////////////////////////////////////////////
 // Channels effects
 
-void fx_note_cut(song_t *csf, uint32_t nchan, int clear_note)
+void fx_note_cut(song_t *csf, uint32_t nchan, int32_t clear_note)
 {
 	song_voice_t *chan = &csf->voices[nchan];
 	// stop the current note:
@@ -164,7 +164,7 @@ void fx_key_off(song_t *csf, uint32_t nchan)
 
 
 // negative value for slide = down, positive = up
-int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, int is_tone_portamento)
+int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, int32_t is_tone_portamento)
 {
 	// IT Linear slides
 	if (!frequency) return 0;
@@ -320,7 +320,7 @@ static void fx_tone_portamento(uint32_t flags, song_voice_t *chan, uint32_t para
 
 // Implemented for IMF compatibility, can't actually save this in any formats
 // sign should be 1 (up) or -1 (down)
-static void fx_note_slide(uint32_t flags, song_voice_t *chan, uint32_t param, int sign)
+static void fx_note_slide(uint32_t flags, song_voice_t *chan, uint32_t param, int32_t sign)
 {
 	uint8_t x, y;
 	if (flags & SONG_FIRSTTICK) {
@@ -772,7 +772,7 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 
 
 // Send exactly one MIDI message
-void csf_midi_send(song_t *csf, const unsigned char *data, unsigned int len, uint32_t nchan, int fake)
+void csf_midi_send(song_t *csf, const unsigned char *data, uint32_t len, uint32_t nchan, int32_t fake)
 {
 	song_voice_t *chan = &csf->voices[nchan];
 
@@ -853,9 +853,9 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 			? csf->instruments[use_instr ? use_instr : chan->last_instrument]
 			: NULL;
 	unsigned char outbuffer[64];
-	int midi_channel, fake_midi_channel = 0;
-	int saw_c;
-	int nibble_pos = 0, write_pos = 0;
+	int32_t midi_channel, fake_midi_channel = 0;
+	int32_t saw_c;
+	int32_t nibble_pos = 0, write_pos = 0;
 
 	saw_c = 0;
 	if (!penv || penv->midi_channel_mask == 0) {
@@ -1035,7 +1035,7 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 # error csf_get_length assumes 64 channels
 #endif
 
-unsigned int csf_get_length(song_t *csf)
+uint32_t csf_get_length(song_t *csf)
 {
 	uint32_t elapsed = 0, row = 0, next_row = 0, cur_order = 0, next_order = 0, pat = csf->orderlist[0],
 		speed = csf->initial_speed, tempo = csf->initial_tempo, psize, n;
@@ -1213,7 +1213,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	song_instrument_t *penv = (csf->flags & SONG_INSTRUMENTMODE) ? csf->instruments[instr] : NULL;
 	song_sample_t *psmp = &csf->samples[instr];
 	const song_sample_t *oldsmp = chan->ptr_sample;
-	const int old_instrument_volume = chan->instrument_volume;
+	const int32_t old_instrument_volume = chan->instrument_volume;
 	uint32_t note = chan->new_note;
 
 	if (note == NOTE_NONE)

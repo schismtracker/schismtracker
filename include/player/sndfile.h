@@ -29,6 +29,9 @@
 #define MAX_INFONAME            80
 #define MAX_EQ_BANDS            6
 #define MAX_MESSAGE             8000
+#define MAX_INTERPOLATION_LOOKAHEAD 4
+#define MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE 16 // Borrowed from OpenMPT
+#define MAX_SAMPLING_POINT_SIZE 4
 
 
 #define MAX_VOICES              256
@@ -322,40 +325,40 @@ typedef struct song_sample {
 } song_sample_t;
 
 typedef struct song_envelope {
-	int ticks[32];
+	int32_t ticks[32];
 	uint8_t values[32];
-	int nodes;
-	int loop_start;
-	int loop_end;
-	int sustain_start;
-	int sustain_end;
+	int32_t nodes;
+	int32_t loop_start;
+	int32_t loop_end;
+	int32_t sustain_start;
+	int32_t sustain_end;
 } song_envelope_t;
 
 typedef struct song_instrument {
 	uint32_t fadeout;
 	uint32_t flags;
-	unsigned int global_volume;
-	unsigned int panning;
+	uint32_t global_volume;
+	uint32_t panning;
 	uint8_t sample_map[128];
 	uint8_t note_map[128];
 	song_envelope_t vol_env;
 	song_envelope_t pan_env;
 	song_envelope_t pitch_env;
-	unsigned int nna;
-	unsigned int dct;
-	unsigned int dca;
-	unsigned int pan_swing;
-	unsigned int vol_swing;
-	unsigned int ifc;
-	unsigned int ifr;
-	int midi_bank; // TODO split this?
-	int midi_program;
-	unsigned int midi_channel_mask; // FIXME why is this a mask? why is a mask useful? does 2.15 use a mask?
-	int pitch_pan_separation;
-	unsigned int pitch_pan_center;
+	uint32_t nna;
+	uint32_t dct;
+	uint32_t dca;
+	uint32_t pan_swing;
+	uint32_t vol_swing;
+	uint32_t ifc;
+	uint32_t ifr;
+	int32_t midi_bank; // TODO split this?
+	int32_t midi_program;
+	uint32_t midi_channel_mask; // FIXME why is this a mask? why is a mask useful? does 2.15 use a mask?
+	int32_t pitch_pan_separation;
+	uint32_t pitch_pan_center;
 	char name[32];
 	char filename[16];
-	int played; // for note playback dots
+	int32_t played; // for note playback dots
 } song_instrument_t;
 
 // (TODO write decent descriptions of what the various volume
@@ -401,9 +404,9 @@ typedef struct song_voice {
 	int32_t portamento_target;
 	song_instrument_t *ptr_instrument;      // these two suck, and should
 	song_sample_t *ptr_sample;              // be replaced with numbers
-	int vol_env_position;
-	int pan_env_position;
-	int pitch_env_position;
+	int32_t vol_env_position;
+	int32_t pan_env_position;
+	int32_t pitch_env_position;
 	uint32_t master_channel; // nonzero = background/NNA voice, indicates what channel it "came from"
 	uint32_t vu_meter;
     // TODO: As noted elsewhere, this means current channel volume.
@@ -414,47 +417,50 @@ typedef struct song_voice {
 	int32_t autovib_depth;
 	uint32_t autovib_position, vibrato_position, tremolo_position, panbrello_position;
 	// 16-bit members
-	int vol_swing, pan_swing;
+
+	// these were `int', so I'm keeping them as `int32_t'.
+	//   - paper
+	int32_t vol_swing, pan_swing;
 	uint16_t channel_panning;
 
 	// formally 8-bit members
-	unsigned int note; // the note that's playing
-	unsigned int nna;
-	unsigned int new_note, new_instrument; // ?
+	uint32_t note; // the note that's playing
+	uint32_t nna;
+	uint32_t new_note, new_instrument; // ?
 	// Effect memory and handling
-	unsigned int n_command; // This sucks and needs to go away (dumb "flag" for arpeggio / tremor)
-	unsigned int mem_vc_volslide; // Ax Bx Cx Dx (volume column)
-	unsigned int mem_arpeggio; // Axx
-	unsigned int mem_volslide; // Dxx
-	unsigned int mem_pitchslide; // Exx Fxx (and Gxx maybe)
+	uint32_t n_command; // This sucks and needs to go away (dumb "flag" for arpeggio / tremor)
+	uint32_t mem_vc_volslide; // Ax Bx Cx Dx (volume column)
+	uint32_t mem_arpeggio; // Axx
+	uint32_t mem_volslide; // Dxx
+	uint32_t mem_pitchslide; // Exx Fxx (and Gxx maybe)
 	int32_t mem_portanote; // Gxx (synced with mem_pitchslide if compat gxx is set)
-	unsigned int mem_tremor; // Ixx
-	unsigned int mem_channel_volslide; // Nxx
-	unsigned int mem_offset; // final, combined yxx00h from Oxx and SAy
-	unsigned int mem_panslide; // Pxx
-	unsigned int mem_retrig; // Qxx
-	unsigned int mem_special; // Sxx
-	unsigned int mem_tempo; // Txx
-	unsigned int mem_global_volslide; // Wxx
-	unsigned int note_slide_counter, note_slide_speed, note_slide_step; // IMF effect
-	unsigned int vib_type, vibrato_speed, vibrato_depth;
-	unsigned int tremolo_type, tremolo_speed, tremolo_depth;
-	unsigned int panbrello_type, panbrello_speed, panbrello_depth;
-	int tremolo_delta, panbrello_delta;
+	uint32_t mem_tremor; // Ixx
+	uint32_t mem_channel_volslide; // Nxx
+	uint32_t mem_offset; // final, combined yxx00h from Oxx and SAy
+	uint32_t mem_panslide; // Pxx
+	uint32_t mem_retrig; // Qxx
+	uint32_t mem_special; // Sxx
+	uint32_t mem_tempo; // Txx
+	uint32_t mem_global_volslide; // Wxx
+	uint32_t note_slide_counter, note_slide_speed, note_slide_step; // IMF effect
+	uint32_t vib_type, vibrato_speed, vibrato_depth;
+	uint32_t tremolo_type, tremolo_speed, tremolo_depth;
+	uint32_t panbrello_type, panbrello_speed, panbrello_depth;
+	int32_t tremolo_delta, panbrello_delta;
 
-	unsigned int cutoff;
-	unsigned int resonance;
-	int cd_note_delay; // countdown: note starts when this hits zero
-	int cd_note_cut; // countdown: note stops when this hits zero
-	int cd_retrig; // countdown: note retrigs when this hits zero
-	unsigned int cd_tremor; // (weird) countdown + flag: see snd_fx.c and sndmix.c
-	unsigned int patloop_row; // row number that SB0 was on
-	unsigned int cd_patloop; // countdown: pattern loops back when this hits zero
+	uint32_t cutoff;
+	uint32_t resonance;
+	int32_t cd_note_delay; // countdown: note starts when this hits zero
+	int32_t cd_note_cut; // countdown: note stops when this hits zero
+	int32_t cd_retrig; // countdown: note retrigs when this hits zero
+	uint32_t cd_tremor; // (weird) countdown + flag: see snd_fx.c and sndmix.c
+	uint32_t patloop_row; // row number that SB0 was on
+	uint32_t cd_patloop; // countdown: pattern loops back when this hits zero
 
-	unsigned int row_note, row_instr;
-	unsigned int row_voleffect, row_volparam;
-	unsigned int row_effect, row_param;
-	unsigned int active_macro, last_instrument;
+	uint32_t row_note, row_instr;
+	uint32_t row_voleffect, row_volparam;
+	uint32_t row_effect, row_param;
+	uint32_t active_macro, last_instrument;
 } song_voice_t;
 
 typedef struct song_channel {
@@ -635,12 +641,12 @@ int csf_set_resampling_mode(song_t *csf, uint32_t mode); // SRCMODE_XXXX
 
 
 // sndmix
-unsigned int csf_read(song_t *csf, void *v_buffer, unsigned int bufsize);
+uint32_t csf_read(song_t *csf, void *v_buffer, uint32_t bufsize);
 int csf_process_tick(song_t *csf);
 int csf_read_note(song_t *csf);
 
 // snd_fx
-unsigned int csf_get_length(song_t *csf); // (in seconds)
+uint32_t csf_get_length(song_t *csf); // (in seconds)
 void csf_instrument_change(song_t *csf, song_voice_t *chn, uint32_t instr, int porta, int instr_column);
 void csf_note_change(song_t *csf, uint32_t chan, int note, int porta, int retrig, int have_inst);
 uint32_t csf_get_nna_channel(song_t *csf, uint32_t chan);
@@ -650,17 +656,17 @@ int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, i
 
 void fx_note_cut(song_t *csf, uint32_t chan, int clear_note);
 void fx_key_off(song_t *csf, uint32_t chan);
-void csf_midi_send(song_t *csf, const unsigned char *data, unsigned int len, uint32_t chan, int fake);
+void csf_midi_send(song_t *csf, const unsigned char *data, uint32_t len, uint32_t chan, int fake);
 void csf_process_midi_macro(song_t *csf, uint32_t chan, const char *midi_macro, uint32_t param,
 			uint32_t note, uint32_t velocity, uint32_t use_instr);
 song_sample_t *csf_translate_keyboard(song_t *csf, song_instrument_t *ins, uint32_t note, song_sample_t *def);
 
 // various utility functions in snd_fx.c
-int get_note_from_frequency(int frequency, unsigned int c5speed);
-int get_frequency_from_note(int note, unsigned int c5speed);
-unsigned int transpose_to_frequency(int transp, int ftune);
-int frequency_to_transpose(unsigned int freq);
-unsigned long calc_halftone(unsigned long hz, int rel);
+int32_t get_note_from_frequency(int32_t frequency, uint32_t c5speed);
+int32_t get_frequency_from_note(int32_t note, uint32_t c5speed);
+uint32_t transpose_to_frequency(int32_t transp, int32_t ftune);
+int32_t frequency_to_transpose(uint32_t freq);
+uint32_t calc_halftone(uint32_t hz, int32_t rel);
 
 
 // sndfile
@@ -669,6 +675,7 @@ void csf_free(song_t *csf);
 
 void csf_destroy(song_t *csf); /* erase everything -- equiv. to new song */
 int csf_destroy_sample(song_t *csf, uint32_t smpnum);
+void csf_precompute_sample_loops(song_sample_t *smp);
 
 void csf_stop_sample(song_t *csf, song_sample_t *smp);
 

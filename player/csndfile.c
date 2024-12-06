@@ -187,20 +187,22 @@ void csf_free_pattern(void *pat)
 	free(pat);
 }
 
+#define CSF_ALLOCATE_PREPEND ((MAX_SAMPLING_POINT_SIZE) * (MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE))
+#define CSF_ALLOCATE_APPEND ((1 + 4 + 4) * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE)
+
 signed char *csf_allocate_sample(uint32_t nbytes)
 {
-	/* Sinc interpolation can look forwards or backwards
-	 * 4 samples; the maximum sample size for Schism is
-	 * 4 bytes per sample (16-bit stereo, 2 * 2). 4 * 4 = 16,
-	 * so allocate 16 extra bytes before and after the buffer */
-	return (signed char*)mem_calloc(1, nbytes + 32) + 16;
+	return (signed char*)mem_calloc(1, nbytes + CSF_ALLOCATE_PREPEND + CSF_ALLOCATE_APPEND) + CSF_ALLOCATE_PREPEND;
 }
 
 void csf_free_sample(void *p)
 {
 	if (p)
-		free((signed char*)p - 16);
+		free((signed char*)p - CSF_ALLOCATE_PREPEND);
 }
+
+#undef CSF_ALLOCATE_PREPEND
+#undef CSF_ALLOCATE_APPEND
 
 void csf_forget_history(song_t *csf)
 {
@@ -1259,66 +1261,111 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-void csf_adjust_sample_loop(song_sample_t *sample)
-{
-	if (!sample->data || sample->length < 1) return;
-	if (sample->loop_end > sample->length) sample->loop_end = sample->length;
-	if (sample->loop_start+2 >= sample->loop_end) {
-		sample->loop_start = sample->loop_end = 0;
-		sample->flags &= ~CHN_LOOP;
+#define PRECOMPUTE_LOOPS_IMPL(bits) \
+	static void csf_precompute_loop_copy_loop_impl_##bits##_(int##bits##_t *target, const int##bits##_t *data, uint32_t loop_end, int channels, int bidi, int direction) \
+	{ \
+		int samples = 2 * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE + (direction ? 1 : 0); \
+		int##bits##_t *dest = target + channels * (2 * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE - 1); \
+		uint32_t position = loop_end - 1; \
+		const int write_increment = direction ? 1 : -1; \
+		int read_increment = write_increment; \
+		\
+		for (int i = 0; i < samples; i++) { \
+			for (int c = 0; c < channels; c++) \
+				dest[c] = data[position * channels + c]; \
+		\
+			dest += write_increment * channels; \
+		\
+			if (position == loop_end - 1 && read_increment > 0) { \
+				if (bidi) { \
+					read_increment = -1; \
+					if (position > 0) position--; \
+				} else { \
+					position = 0; \
+				} \
+			} else if (position == 0 && read_increment < 0) { \
+				if (bidi) { \
+					read_increment = 1; \
+				} else { \
+					position = loop_end - 1; \
+				} \
+			} else { \
+				position += read_increment; \
+			} \
+		} \
+	} \
+	\
+	static void csf_precompute_loop_impl_##bits##_(int##bits##_t *target, const int##bits##_t *data, uint32_t loop_end, int channels, int bidi) \
+	{ \
+		csf_precompute_loop_copy_loop_impl_##bits##_(target, data, loop_end, channels, bidi, 1); \
+		csf_precompute_loop_copy_loop_impl_##bits##_(target, data, loop_end, channels, bidi, 0); \
+	} \
+	\
+	static void csf_precompute_loops_impl_##bits##_(song_sample_t *smp) \
+	{ \
+		const int channels = (smp->flags & CHN_STEREO) ? 2 : 1; \
+		const int copy_samples = channels * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE; \
+		\
+		int##bits##_t *smp_data = (int##bits##_t *)smp->data; \
+		int##bits##_t *after_smp_start = smp_data + smp->length * channels; \
+		int##bits##_t *loop_lookahead_start = after_smp_start + copy_samples; \
+		int##bits##_t *sustain_lookahead_start = loop_lookahead_start + 4 * copy_samples; \
+		\
+		/* Hold sample on the same level as the last sampling point at the end to prevent extra pops with interpolation.
+		 * Do the same at the sample start, too. */ \
+		for (int i = 0; i < MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE; i++) { \
+			for (int c = 0; c < channels; c++) { \
+				after_smp_start[i * channels + c] = after_smp_start[-channels + c]; \
+				smp_data[-(i + 1) * channels + c] = smp_data[c]; \
+			} \
+		} \
+	\
+		if(smp->flags & CHN_LOOP) { \
+			csf_precompute_loop_impl_##bits##_(loop_lookahead_start, \
+				smp_data + smp->loop_start * channels, \
+				smp->loop_end - smp->loop_start, \
+				channels, \
+				smp->flags & CHN_PINGPONGLOOP); \
+		} \
+		if(smp->flags & CHN_SUSTAINLOOP) \
+		{ \
+			csf_precompute_loop_impl_##bits##_(sustain_lookahead_start, \
+				smp_data + smp->sustain_start * channels, \
+				smp->sustain_end - smp->sustain_start, \
+				channels, \
+				smp->flags & CHN_PINGPONGSUSTAIN); \
+		} \
 	}
 
-	// poopy, removing all that loop-hacking code has produced... very nasty sounding loops!
-	// so I guess I should rewrite the crap at the end of the sample at least.
-	uint32_t len = sample->length;
-	if (sample->flags & CHN_16BIT) {
-		short int *data = (short int *)sample->data;
-		// Adjust end of sample
-		if (sample->flags & CHN_STEREO) {
-			data[len*2+6]
-				= data[len*2+4]
-				= data[len*2+2]
-				= data[len*2]
-				= data[len*2-2];
-			data[len*2+7]
-				= data[len*2+5]
-				= data[len*2+3]
-				= data[len*2+1]
-				= data[len*2-1];
-		} else {
-			data[len+4]
-				= data[len+3]
-				= data[len+2]
-				= data[len+1]
-				= data[len]
-				= data[len-1];
-		}
+PRECOMPUTE_LOOPS_IMPL(8)
+PRECOMPUTE_LOOPS_IMPL(16)
+
+#undef PRECOMPUTE_LOOPS_IMPL
+
+void csf_adjust_sample_loop(song_sample_t *smp)
+{
+#if 0
+	// sanitize the loop points
+	smp->sustain_end = MIN(smp->sustain_end, smp->length);
+	smp->loop_end = MIN(smp->loop_end, smp->length);
+
+	if (smp->sustain_start >= smp->sustain_end) {
+		smp->sustain_start = smp->sustain_end = 0;
+		smp->flags &= ~(CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
+	}
+
+	if (smp->loop_start >= smp->loop_end) {
+		smp->loop_start = smp->loop_end = 0;
+		smp->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP);
+	}
+#endif
+
+	if (smp->flags & CHN_16BIT) {
+		csf_precompute_loops_impl_16_(smp);
 	} else {
-		signed char *data = sample->data;
-		// Adjust end of sample
-		if (sample->flags & CHN_STEREO) {
-			data[len*2+6]
-				= data[len*2+4]
-				= data[len*2+2]
-				= data[len*2]
-				= data[len*2-2];
-			data[len*2+7]
-				= data[len*2+5]
-				= data[len*2+3]
-				= data[len*2+1]
-				= data[len*2-1];
-		} else {
-			data[len+4]
-				= data[len+3]
-				= data[len+2]
-				= data[len+1]
-				= data[len]
-				= data[len-1];
-		}
+		csf_precompute_loops_impl_8_(smp);
 	}
 }
-
-
 
 void csf_stop_sample(song_t *csf, song_sample_t *smp)
 {

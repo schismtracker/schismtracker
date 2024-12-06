@@ -21,7 +21,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <string.h>
+#include "headers.h"
+#include "bshift.h"
+#include "util.h"
 
 #include "player/sndfile.h"
 #include "player/cmixer.h"
@@ -30,30 +32,30 @@
 #define OFSDECAYMASK  0xFF
 
 
-void init_mix_buffer(int *buffer, unsigned int samples)
+void init_mix_buffer(int32_t *buffer, uint32_t samples)
 {
-    memset(buffer, 0, samples * sizeof(int));
+    memset(buffer, 0, samples * sizeof(int32_t));
 }
 
 
-void stereo_fill(int *buffer, unsigned int samples, int* profs, int *plofs)
+void stereo_fill(int32_t *buffer, uint32_t samples, int32_t* profs, int32_t *plofs)
 {
-    int rofs = *profs;
-    int lofs = *plofs;
+    int32_t rofs = *profs;
+    int32_t lofs = *plofs;
 
     if (!rofs && !lofs) {
 	init_mix_buffer(buffer, samples * 2);
 	return;
     }
 
-    for (unsigned int i = 0; i < samples; i++) {
-	int x_r = (rofs + (((-rofs) >> 31) & OFSDECAYMASK)) >> OFSDECAYSHIFT;
-	int x_l = (lofs + (((-lofs) >> 31) & OFSDECAYMASK)) >> OFSDECAYSHIFT;
+    for (uint32_t i = 0; i < samples; i++) {
+		int32_t x_r = rshift_signed(rofs + (rshift_signed(-rofs, 31) & OFSDECAYMASK), OFSDECAYSHIFT);
+		int32_t x_l = rshift_signed(lofs + (rshift_signed(-lofs, 31) & OFSDECAYMASK), OFSDECAYSHIFT);
 
-	rofs -= x_r;
-	lofs -= x_l;
-	buffer[i * 2 ]    = x_r;
-	buffer[i * 2 + 1] = x_l;
+		rofs -= x_r;
+		lofs -= x_l;
+		buffer[i * 2 ]    = x_r;
+		buffer[i * 2 + 1] = x_l;
     }
 
     *profs = rofs;
@@ -61,22 +63,22 @@ void stereo_fill(int *buffer, unsigned int samples, int* profs, int *plofs)
 }
 
 
-void end_channel_ofs(song_voice_t *channel, int *buffer, unsigned int samples)
+void end_channel_ofs(song_voice_t *channel, int32_t *buffer, uint32_t samples)
 {
-    int rofs = channel->rofs;
-    int lofs = channel->lofs;
+    int32_t rofs = channel->rofs;
+    int32_t lofs = channel->lofs;
 
     if (!rofs && !lofs)
 	return;
 
-    for (unsigned int i = 0; i < samples; i++) {
-	int x_r = (rofs + (((-rofs) >> 31) & OFSDECAYMASK)) >> OFSDECAYSHIFT;
-	int x_l = (lofs + (((-lofs) >> 31) & OFSDECAYMASK)) >> OFSDECAYSHIFT;
+    for (uint32_t i = 0; i < samples; i++) {
+		int32_t x_r = rshift_signed(rofs + (rshift_signed(-rofs, 31) & OFSDECAYMASK), OFSDECAYSHIFT);
+		int32_t x_l = rshift_signed(lofs + (rshift_signed(-lofs, 31) & OFSDECAYMASK), OFSDECAYSHIFT);
 
-	rofs -= x_r;
-	lofs -= x_l;
-	buffer[i * 2]     += x_r;
-	buffer[i * 2 + 1] += x_l;
+		rofs -= x_r;
+		lofs -= x_l;
+		buffer[i * 2]     += x_r;
+		buffer[i * 2 + 1] += x_l;
     }
 
     channel->rofs = rofs;
@@ -84,11 +86,11 @@ void end_channel_ofs(song_voice_t *channel, int *buffer, unsigned int samples)
 }
 
 
-void mono_from_stereo(int *mix_buf, unsigned int samples)
+void mono_from_stereo(int32_t *mix_buf, uint32_t samples)
 {
-    for (unsigned int j, i = 0; i < samples; i++) {
-	j = i << 1;
-	mix_buf[i] = (mix_buf[j] + mix_buf[j + 1]) >> 1;
+    for (uint32_t j, i = 0; i < samples; i++) {
+		j = i << 1;
+		mix_buf[i] = (mix_buf[j] + mix_buf[j + 1]) >> 1;
     }
 }
 
@@ -101,25 +103,20 @@ void mono_from_stereo(int *mix_buf, unsigned int samples)
 
 
 // Clip and convert to 8 bit. mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1] right.
-unsigned int clip_32_to_8(void *ptr, int *buffer, unsigned int samples, int *mins, int *maxs)
+uint32_t clip_32_to_8(void *ptr, int32_t *buffer, uint32_t samples, int32_t *mins, int32_t *maxs)
 {
     unsigned char *p = (unsigned char *) ptr;
 
-    for (unsigned int i = 0; i < samples; i++) {
-	int n = buffer[i];
+    for (uint32_t i = 0; i < samples; i++) {
+		int32_t n = CLAMP(buffer[i], MIXING_CLIPMIN, MIXING_CLIPMAX);
 
-	if (n < MIXING_CLIPMIN)
-	    n = MIXING_CLIPMIN;
-	else if (n > MIXING_CLIPMAX)
-	    n = MIXING_CLIPMAX;
+		if (n < mins[i & 1])
+		    mins[i & 1] = n;
+		else if (n > maxs[i & 1])
+		    maxs[i & 1] = n;
 
-	if (n < mins[i & 1])
-	    mins[i & 1] = n;
-	else if (n > maxs[i & 1])
-	    maxs[i & 1] = n;
-
-	// 8-bit unsigned
-	p[i] = (n >> (24 - MIXING_ATTENUATION)) ^ 0x80;
+		// 8-bit unsigned
+		p[i] = rshift_signed(n, 24 - MIXING_ATTENUATION) ^ 0x80;
     }
 
     return samples;
@@ -127,25 +124,20 @@ unsigned int clip_32_to_8(void *ptr, int *buffer, unsigned int samples, int *min
 
 
 // Clip and convert to 16 bit. mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1] right.
-unsigned int clip_32_to_16(void *ptr, int *buffer, unsigned int samples, int *mins, int *maxs)
+uint32_t clip_32_to_16(void *ptr, int32_t *buffer, uint32_t samples, int32_t *mins, int32_t *maxs)
 {
-    signed short *p = (signed short *) ptr;
+    int16_t *p = (int16_t *) ptr;
 
-    for (unsigned int i = 0; i < samples; i++) {
-	int n = buffer[i];
+    for (uint32_t i = 0; i < samples; i++) {
+		int32_t n = CLAMP(buffer[i], MIXING_CLIPMIN, MIXING_CLIPMAX);
 
-	if (n < MIXING_CLIPMIN)
-	    n = MIXING_CLIPMIN;
-	else if (n > MIXING_CLIPMAX)
-	    n = MIXING_CLIPMAX;
+		if (n < mins[i & 1])
+		    mins[i & 1] = n;
+		else if (n > maxs[i & 1])
+		    maxs[i & 1] = n;
 
-	if (n < mins[i & 1])
-	    mins[i & 1] = n;
-	else if (n > maxs[i & 1])
-	    maxs[i & 1] = n;
-
-	// 16-bit signed
-	p[i] = n >> (16 - MIXING_ATTENUATION);
+		// 16-bit signed
+		p[i] = rshift_signed(n, 16 - MIXING_ATTENUATION);
     }
 
     return samples * 2;
@@ -154,30 +146,25 @@ unsigned int clip_32_to_16(void *ptr, int *buffer, unsigned int samples, int *mi
 
 // Clip and convert to 24 bit. mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1] right.
 // Note, this is 24bit, not 24-in-32bits. The former is used in .wav. The latter is used in audio IO
-unsigned int clip_32_to_24(void *ptr, int *buffer, unsigned int samples, int *mins, int *maxs)
+uint32_t clip_32_to_24(void *ptr, int32_t *buffer, uint32_t samples, int32_t *mins, int32_t *maxs)
 {
     /* the inventor of 24bit anything should be shot */
     unsigned char *p = (unsigned char *) ptr;
 
-    for (unsigned int i = 0; i < samples; i++) {
-	int n = buffer[i];
+    for (uint32_t i = 0; i < samples; i++) {
+		int32_t n = CLAMP(buffer[i], MIXING_CLIPMIN, MIXING_CLIPMAX);
 
-	if (n < MIXING_CLIPMIN)
-	    n = MIXING_CLIPMIN;
-	else if (n > MIXING_CLIPMAX)
-	    n = MIXING_CLIPMAX;
+		if (n < mins[i & 1])
+		    mins[i & 1] = n;
+		else if (n > maxs[i & 1])
+		    maxs[i & 1] = n;
 
-	if (n < mins[i & 1])
-	    mins[i & 1] = n;
-	else if (n > maxs[i & 1])
-	    maxs[i & 1] = n;
+		// 24-bit signed
+		n = rshift_signed(n, 8 - MIXING_ATTENUATION);
 
-	// 24-bit signed
-	n = n >> (8 - MIXING_ATTENUATION);
-
-	/* err, assume same endian */
-	memcpy(p, &n, 3);
-	p += 3;
+		/* err, assume same endian */
+		memcpy(p, &n, 3);
+		p += 3;
     }
 
     return samples * 3;
@@ -185,25 +172,20 @@ unsigned int clip_32_to_24(void *ptr, int *buffer, unsigned int samples, int *mi
 
 
 // Clip and convert to 32 bit(int). mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1] right.
-unsigned int clip_32_to_32(void *ptr, int *buffer, unsigned int samples, int *mins, int *maxs)
+uint32_t clip_32_to_32(void *ptr, int32_t *buffer, uint32_t samples, int32_t *mins, int32_t *maxs)
 {
-    signed int *p = (signed int *) ptr;
+    int32_t *p = (int32_t *) ptr;
 
-    for (unsigned int i = 0; i < samples; i++) {
-	int n = buffer[i];
+    for (uint32_t i = 0; i < samples; i++) {
+		int32_t n = CLAMP(buffer[i], MIXING_CLIPMIN, MIXING_CLIPMAX);
 
-	if (n < MIXING_CLIPMIN)
-	    n = MIXING_CLIPMIN;
-	else if (n > MIXING_CLIPMAX)
-	    n = MIXING_CLIPMAX;
+		if (n < mins[i & 1])
+		    mins[i & 1] = n;
+		else if (n > maxs[i & 1])
+		    maxs[i & 1] = n;
 
-	if (n < mins[i & 1])
-	    mins[i & 1] = n;
-	else if (n > maxs[i & 1])
-	    maxs[i & 1] = n;
-
-	// 32-bit signed
-	p[i] = (n << MIXING_ATTENUATION);
+		// 32-bit signed
+		p[i] = lshift_signed(n, MIXING_ATTENUATION);
     }
 
     return samples * 4;

@@ -69,34 +69,33 @@ Also note when comparing volumes, that Screamtracker output on mono with PCM sam
 The documentation in this file regarding the output ports,
 including the comment "Don't ask me why", are attributed
 to Jeffrey S. Lee's article:
-  Programming the AdLib/Sound Blaster
-	   FM Music Chips
+	Programming the AdLib/Sound Blaster
+		 FM Music Chips
 	 Version 2.0 (24 Feb 1992)
 */
 
-static const int oplbase = 0x388;
+static const uint32_t oplbase = 0x388;
 
 // OPL info
 static struct OPL* opl = NULL;
 static uint32_t oplretval = 0,
-	   oplregno = 0;
+		 oplregno = 0;
 static uint32_t fm_active = 0;
 
-extern int fnumToMilliHertz(unsigned int fnum, unsigned int block,
-	unsigned int conversionFactor);
+extern int32_t fnumToMilliHertz(uint32_t fnum, uint32_t block, uint32_t conversionFactor);
 
-extern void milliHertzToFnum(unsigned int milliHertz,
-	unsigned int *fnum, unsigned int *block, unsigned int conversionFactor);
+extern void milliHertzToFnum(uint32_t milliHertz,
+	uint32_t *fnum, uint32_t *block, uint32_t conversionFactor);
 
 
-static void Fmdrv_Outportb(unsigned port, unsigned value)
+static void Fmdrv_Outportb(uint32_t port, uint32_t value)
 {
 	if (opl == NULL ||
-		((int) port) < oplbase ||
-		((int) port) >= oplbase + 4)
+		((int32_t) port) < oplbase ||
+		((int32_t) port) >= oplbase + 4)
 		return;
 
-	unsigned ind = port - oplbase;
+	uint32_t ind = port - oplbase;
 	OPLWrite(opl, ind, value);
 
 	if (ind & 1) {
@@ -112,14 +111,14 @@ static void Fmdrv_Outportb(unsigned port, unsigned value)
 }
 
 
-static unsigned char Fmdrv_Inportb(unsigned port)
+static unsigned char Fmdrv_Inportb(uint32_t port)
 {
-	return (((int) port) >= oplbase &&
-		((int) port) < oplbase + 4) ? oplretval : 0;
+	return (((int32_t) port) >= oplbase &&
+		((int32_t) port) < oplbase + 4) ? oplretval : 0;
 }
 
 
-void Fmdrv_Init(int mixfreq)
+void Fmdrv_Init(int32_t mixfreq)
 {
 	if (opl != NULL) {
 		OPLCloseChip(opl);
@@ -131,13 +130,13 @@ void Fmdrv_Init(int mixfreq)
 }
 
 
-void Fmdrv_MixTo(int *target, int count)
+void Fmdrv_MixTo(int32_t *target, int32_t count)
 {
 	if (!fm_active)
 		return;
 
 #if OPLSOURCE == 2
-	short buf[count];
+	int16_t buf[count];
 
 	memset(buf, 0, sizeof(buf));
 
@@ -151,16 +150,16 @@ void Fmdrv_MixTo(int *target, int count)
 		buf[a] = ((counter++) & 0x100) ? -10000 : 10000;
 	*/
 
-	for (int a = 0; a < count; ++a) {
+	for (size_t a = 0; a < count; ++a) {
 		target[a * 2 + 0] += buf[a] * OPL_VOLUME;
 		target[a * 2 + 1] += buf[a] * OPL_VOLUME;
 	}
 #else
-	short buf[count * 3];
+	int16_t buf[count * 3];
 
 	memset(buf, 0, sizeof(buf));
 
-	OPLUpdateOne(opl, (short *[]){ buf, buf + count, buf + (count * 2), buf + (count * 2) }, count);
+	OPLUpdateOne(opl, (int16_t *[]){ buf, buf + count, buf + (count * 2), buf + (count * 2) }, count);
 	/*
 	static int counter = 0;
 
@@ -170,7 +169,7 @@ void Fmdrv_MixTo(int *target, int count)
 
 	// IF we wanted to do the stereo mix in software, we could setup the voices always in mono
 	// and do the panning here.
-	for (int a = 0; a < count; ++a) {
+	for (size_t a = 0; a < count; ++a) {
 		target[a * 2 + 0] += buf[a] * OPL_VOLUME;
 		target[a * 2 + 1] += buf[count + a] * OPL_VOLUME;
 	}
@@ -185,17 +184,17 @@ static const char PortBases[9] = {0, 1, 2, 8, 9, 10, 16, 17, 18};
 
 static const unsigned char *Dtab[9];
 static unsigned char Keyontab[9] = {0,0,0,0,0,0,0,0,0};
-static int Pans[MAX_VOICES];
+static int32_t Pans[MAX_VOICES];
 
-static int OPLtoChan[9];
-static int ChantoOPL[MAX_VOICES];
+static int32_t OPLtoChan[9];
+static int32_t ChantoOPL[MAX_VOICES];
 
-static int GetVoice(int c) {
+static int32_t GetVoice(int32_t c) {
 	return ChantoOPL[c];
 }
-static int SetVoice(int c)
+static int32_t SetVoice(int32_t c)
 {
-	int a;
+	int32_t a;
 	if (ChantoOPL[c] == -1) {
 		// Search for unused chans
 		for (a=0;a<9;a++) {
@@ -230,13 +229,13 @@ static void FreeVoice(int c) {
 }
 #endif
 
-static void OPL_Byte(unsigned int idx, unsigned char data)
+static void OPL_Byte(uint32_t idx, unsigned char data)
 {
 	//register int a;
 	Fmdrv_Outportb(oplbase, idx);    // for(a = 0; a < 6;  a++) Fmdrv_Inportb(oplbase);
 	Fmdrv_Outportb(oplbase + 1, data); // for(a = 0; a < 35; a++) Fmdrv_Inportb(oplbase);
 }
-static void OPL_Byte_RightSide(unsigned int idx, unsigned char data)
+static void OPL_Byte_RightSide(uint32_t idx, unsigned char data)
 {
 	//register int a;
 	Fmdrv_Outportb(oplbase + 2, idx);    // for(a = 0; a < 6;  a++) Fmdrv_Inportb(oplbase);
@@ -244,9 +243,9 @@ static void OPL_Byte_RightSide(unsigned int idx, unsigned char data)
 }
 
 
-void OPL_NoteOff(int c)
+void OPL_NoteOff(int32_t c)
 {
-	int oplc = GetVoice(c);
+	int32_t oplc = GetVoice(c);
 	if (oplc == -1)
 		return;
 	Keyontab[oplc]&=~KEYON_BIT;
@@ -255,13 +254,13 @@ void OPL_NoteOff(int c)
 
 
 /* OPL_NoteOn changes the frequency on specified
-   channel and guarantees the key is on. (Doesn't
-   retrig, just turns the note on and sets freq.)
-   If keyoff is nonzero, doesn't even set the note on.
-   Could be used for pitch bending also. */
-void OPL_HertzTouch(int c, int milliHertz, int keyoff)
+	 channel and guarantees the key is on. (Doesn't
+	 retrig, just turns the note on and sets freq.)
+	 If keyoff is nonzero, doesn't even set the note on.
+	 Could be used for pitch bending also. */
+void OPL_HertzTouch(int32_t c, int32_t milliHertz, int32_t keyoff)
 {
-	int oplc = GetVoice(c);
+	int32_t oplc = GetVoice(c);
 	if (oplc == -1)
 		return;
 
@@ -278,29 +277,29 @@ void OPL_HertzTouch(int c, int milliHertz, int keyoff)
 	 |           | On  |                 | most sig. |
 	 +-----+-----+-----+-----+-----+-----+-----+-----+
 */
-	unsigned int outfnum;
-	unsigned int outblock;
-	const int conversion_factor = OPLRATEBASE; // Frequency of OPL.
+	uint32_t outfnum;
+	uint32_t outblock;
+	const int32_t conversion_factor = OPLRATEBASE; // Frequency of OPL.
 	milliHertzToFnum(milliHertz, &outfnum, &outblock, conversion_factor);
 	Keyontab[oplc] = (keyoff ? 0 : KEYON_BIT)      // Key on
-			  | (outblock << 2)                    // Octave
-			  | ((outfnum >> 8) & FNUM_HIGH_MASK); // F-number high 2 bits
+				| (outblock << 2)                    // Octave
+				| ((outfnum >> 8) & FNUM_HIGH_MASK); // F-number high 2 bits
 	OPL_Byte(FNUM_LOW +    oplc, outfnum & 0xFF);  // F-Number low 8 bits
 	OPL_Byte(KEYON_BLOCK + oplc, Keyontab[oplc]);
 }
 
 
-void OPL_Touch(int c, unsigned vol)
+void OPL_Touch(int32_t c, uint32_t vol)
 {
 //fprintf(stderr, "OPL_Touch(%d, %p:%02X.%02X.%02X.%02X-%02X.%02X.%02X.%02X-%02X.%02X.%02X, %d)\n",
 //    c, D,D[0],D[1],D[2],D[3],D[4],D[5],D[6],D[7],D[8],D[9],D[10], Vol);
 
-	int oplc = GetVoice(c);
+	int32_t oplc = GetVoice(c);
 	if (oplc == -1)
 		return;
 
 	const unsigned char *D = Dtab[oplc];
-	int Ope = PortBases[oplc];
+	int32_t Ope = PortBases[oplc];
 
 /*
 	Bytes 40-55 - Level Key Scaling / Total Level
@@ -310,13 +309,13 @@ void OPL_Touch(int c, unsigned vol)
 	 |  Scaling  |             Total Level           |
 	 |   Level   | 24    12     6     3    1.5   .75 | <-- dB
 	 +-----+-----+-----+-----+-----+-----+-----+-----+
-	  bits 7-6 - causes output levels to decrease as the frequency
+		bits 7-6 - causes output levels to decrease as the frequency
 			 rises:
-			  00   -  no change
-			  10   -  1.5 dB/8ve
-			  01   -  3 dB/8ve
-			  11   -  6 dB/8ve
-	  bits 5-0 - controls the total output level of the operator.
+				00   -  no change
+				10   -  1.5 dB/8ve
+				01   -  3 dB/8ve
+				11   -  6 dB/8ve
+		bits 5-0 - controls the total output level of the operator.
 			 all bits CLEAR is loudest; all bits SET is the
 			 softest.  Don't ask me why.
 */
@@ -374,11 +373,11 @@ void OPL_Touch(int c, unsigned vol)
 }
 
 
-void OPL_Pan(int c, int val)
+void OPL_Pan(int32_t c, int32_t val)
 {
 	Pans[c] = CLAMP(val, 0, 256);
 
-	int oplc = GetVoice(c);
+	int32_t oplc = GetVoice(c);
 	if (oplc == -1)
 		return;
 
@@ -394,14 +393,14 @@ void OPL_Pan(int c, int val)
 }
 
 
-void OPL_Patch(int c, const unsigned char *D)
+void OPL_Patch(int32_t c, const unsigned char *D)
 {
-	int oplc = SetVoice(c);
+	int32_t oplc = SetVoice(c);
 	if (oplc == -1)
 		return;
 
 	Dtab[oplc] = D;
-	int Ope = PortBases[oplc];
+	int32_t Ope = PortBases[oplc];
 
 	OPL_Byte(AM_VIB+           Ope, D[0]);
 	OPL_Byte(KSL_LEVEL+        Ope, D[2]);
@@ -427,7 +426,7 @@ void OPL_Patch(int c, const unsigned char *D)
 
 void OPL_Reset(void)
 {
-	int a;
+	int32_t a;
 	if (opl == NULL)
 		return;
 
@@ -452,7 +451,7 @@ void OPL_Reset(void)
 }
 
 
-int OPL_Detect(void)
+int32_t OPL_Detect(void)
 {
 	/* Reset timers 1 and 2 */
 	OPL_Byte(TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK);
@@ -471,7 +470,7 @@ int OPL_Detect(void)
 	OPL_Byte(TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK);
 	OPL_Byte(TIMER_CONTROL_REGISTER, IRQ_RESET);
 
-	int OPLMode = (ST2 & 0xE0) == 0xC0 && !(ST1 & 0xE0);
+	int32_t OPLMode = (ST2 & 0xE0) == 0xC0 && !(ST1 & 0xE0);
 
 	if (!OPLMode)
 		return -1;

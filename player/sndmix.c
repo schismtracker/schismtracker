@@ -37,16 +37,16 @@
 #define VUMETER_DECAY 16
 
 // SNDMIX: These are global flags for playback control
-unsigned int max_voices = 32; // ITT it is 1994
+uint32_t max_voices = 32; // ITT it is 1994
 
 // Mixing data initialized in
-static unsigned int volume_ramp_samples = 64;
-unsigned int global_vu_left = 0;
-unsigned int global_vu_right = 0;
+static uint32_t volume_ramp_samples = 64;
+uint32_t global_vu_left = 0;
+uint32_t global_vu_right = 0;
 int32_t g_dry_rofs_vol = 0;
 int32_t g_dry_lofs_vol = 0;
 
-typedef uint32_t (* convert_t)(void *, int *, uint32_t, int *, int *);
+typedef uint32_t (* convert_t)(void *, int32_t *, uint32_t, int32_t *, int32_t *);
 
 
 // see also csf_midi_out_raw in effects.c
@@ -64,7 +64,7 @@ void (*csf_midi_out_note)(int chan, const song_note_t *m) = NULL;
 // In this table, each value signifies the minimum value
 // that volume must be in order for the result to be
 // that table index.
-static const unsigned short GMvolTransition[128] =
+static const uint16_t GMvolTransition[128] =
 {
     0, 2031, 4039, 5214, 6048, 6694, 7222, 7669,
  8056, 8397, 8702, 8978, 9230, 9462, 9677, 9877,
@@ -87,13 +87,13 @@ static const unsigned short GMvolTransition[128] =
 
 // We use binary search to find the right slot
 // with at most 7 comparisons.
-static unsigned int find_volume(unsigned short vol)
+static uint32_t find_volume(uint16_t vol)
 {
-	unsigned int l = 0, r = 128;
+	uint32_t l = 0, r = 128;
 
 	while (l < r) {
-		unsigned int m = l + ((r - l) / 2);
-		unsigned short p = GMvolTransition[m];
+		uint32_t m = l + ((r - l) / 2);
+		uint16_t p = GMvolTransition[m];
 
 		if (p < vol)
 			l = m + 1;
@@ -114,7 +114,7 @@ static unsigned int find_volume(unsigned short vol)
 //
 
 
-static inline void rn_tremor(song_voice_t *chan, int *vol)
+static inline void rn_tremor(song_voice_t *chan, int32_t *vol)
 {
 	if ((chan->cd_tremor & 192) == 128)
 		*vol = 0;
@@ -123,11 +123,11 @@ static inline void rn_tremor(song_voice_t *chan, int *vol)
 }
 
 
-static inline int rn_vibrato(song_t *csf, song_voice_t *chan, int frequency)
+static inline int32_t rn_vibrato(song_t *csf, song_voice_t *chan, int32_t frequency)
 {
-	unsigned int vibpos = chan->vibrato_position & 0xFF;
-	int vdelta;
-	unsigned int vdepth;
+	uint32_t vibpos = chan->vibrato_position & 0xFF;
+	int32_t vdelta;
+	uint32_t vdepth;
 
 	switch (chan->vib_type) {
 	case VIB_SINE:
@@ -163,10 +163,10 @@ static inline int rn_vibrato(song_t *csf, song_voice_t *chan, int frequency)
 	return frequency;
 }
 
-static inline int rn_sample_vibrato(song_t *csf, song_voice_t *chan, int frequency)
+static inline int32_t rn_sample_vibrato(song_t *csf, song_voice_t *chan, int32_t frequency)
 {
-	unsigned int vibpos = chan->autovib_position & 0xFF;
-	int vdelta, adepth = 1;
+	uint32_t vibpos = chan->autovib_position & 0xFF;
+	int32_t vdelta, adepth = 1;
 	song_sample_t *pins = chan->ptr_sample;
 
 	/*
@@ -208,7 +208,7 @@ static inline int rn_sample_vibrato(song_t *csf, song_voice_t *chan, int frequen
 	}
 	vdelta = (vdelta * adepth) >> 6;
 
-	int l = abs(vdelta);
+	int32_t l = abs(vdelta);
 
 	const uint32_t *linear_slide_table, *fine_linear_slide_table;
 	if (vdelta < 0) {
@@ -228,26 +228,26 @@ static inline int rn_sample_vibrato(song_t *csf, song_voice_t *chan, int frequen
 }
 
 
-static inline void rn_process_vol_env(song_voice_t* chan, int *nvol) {
+static inline void rn_process_vol_env(song_voice_t* chan, int32_t *nvol) {
 	song_instrument_t *penv = chan->ptr_instrument;
-	int vol = *nvol;
+	int32_t vol = *nvol;
 
 	if ((chan->flags & CHN_VOLENV || penv->flags & ENV_VOLUME) && penv->vol_env.nodes) {
-		int envpos = chan->vol_env_position - 1;
-		unsigned int pt = penv->vol_env.nodes - 1;
+		int32_t envpos = chan->vol_env_position - 1;
+		uint32_t pt = penv->vol_env.nodes - 1;
 
 		if (chan->vol_env_position == 0)
 			return;
 
-		for (unsigned int i = 0; i < (unsigned int)(penv->vol_env.nodes - 1); i++) {
+		for (uint32_t i = 0; i < (uint32_t)(penv->vol_env.nodes - 1); i++) {
 			if (envpos <= penv->vol_env.ticks[i]) {
 				pt = i;
 				break;
 			}
 		}
 
-		int x2 = penv->vol_env.ticks[pt];
-		int x1, envvol;
+		int32_t x2 = penv->vol_env.ticks[pt];
+		int32_t x1, envvol;
 
 		if (envpos >= x2) {
 			envvol = penv->vol_env.values[pt] << 2;
@@ -264,7 +264,7 @@ static inline void rn_process_vol_env(song_voice_t* chan, int *nvol) {
 			envpos = x2;
 
 		if (x2 > x1 && envpos > x1) {
-			envvol += ((envpos - x1) * (((int)penv->vol_env.values[pt]<<2) - envvol)) / (x2 - x1);
+			envvol += ((envpos - x1) * (((int32_t)penv->vol_env.values[pt]<<2) - envvol)) / (x2 - x1);
 		}
 
 		envvol = CLAMP(envvol, 0, 256);
@@ -279,21 +279,21 @@ static inline void rn_process_pan_env(song_voice_t* chan) {
 	song_instrument_t *penv = chan->ptr_instrument;
 
 	if ((chan->flags & CHN_PANENV || penv->flags & ENV_PANNING) && (penv->pan_env.nodes)) {
-		int envpos = chan->pan_env_position - 1;
-		unsigned int pt = penv->pan_env.nodes - 1;
+		int32_t envpos = chan->pan_env_position - 1;
+		uint32_t pt = penv->pan_env.nodes - 1;
 
 		if (chan->pan_env_position == 0)
 			return;
 
-		for (unsigned int i=0; i<(unsigned int)(penv->pan_env.nodes-1); i++) {
+		for (uint32_t i=0; i<(uint32_t)(penv->pan_env.nodes-1); i++) {
 			if (envpos <= penv->pan_env.ticks[i]) {
 				pt = i;
 				break;
 			}
 		}
 
-		int x2 = penv->pan_env.ticks[pt], y2 = penv->pan_env.values[pt];
-		int x1, envpan;
+		int32_t x2 = penv->pan_env.ticks[pt], y2 = penv->pan_env.values[pt];
+		int32_t x1, envpan;
 
 		if (envpos >= x2) {
 			envpan = y2;
@@ -325,12 +325,12 @@ static inline void rn_process_pan_env(song_voice_t* chan) {
 }
 
 
-static inline void rn_process_ins_fade(song_voice_t *chan, int *nvol) {
+static inline void rn_process_ins_fade(song_voice_t *chan, int32_t *nvol) {
 	song_instrument_t *penv = chan->ptr_instrument;
-	int vol = *nvol;
+	int32_t vol = *nvol;
 
 	if (chan->flags & CHN_NOTEFADE) {
-		unsigned int fadeout = penv->fadeout;
+		uint32_t fadeout = penv->fadeout;
 
 		if (fadeout) {
 			chan->fadeout_volume -= fadeout << 1;
@@ -347,7 +347,7 @@ static inline void rn_process_ins_fade(song_voice_t *chan, int *nvol) {
 }
 
 
-static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
+static inline void rn_process_envelope(song_voice_t *chan, int32_t *nvol)
 {
 	// Volume Envelope
 	rn_process_vol_env(chan, nvol);
@@ -360,9 +360,9 @@ static inline void rn_process_envelope(song_voice_t *chan, int *nvol)
 }
 
 
-static inline int rn_arpeggio(song_t *csf, song_voice_t *chan, int frequency)
+static inline int32_t rn_arpeggio(song_t *csf, song_voice_t *chan, int32_t frequency)
 {
-	int a = 0;
+	int32_t a = 0;
 
 	const uint32_t real_tick_count = (csf->current_speed + csf->frame_delay) - csf->tick_count;
 	const uint32_t tick = real_tick_count % (csf->current_speed + csf->frame_delay);
@@ -383,34 +383,34 @@ static inline int rn_arpeggio(song_t *csf, song_voice_t *chan, int frequency)
 
 
 static inline void rn_pitch_filter_envelope(song_t *csf, song_voice_t *chan,
-	int *nenvpitch, int *nfrequency)
+	int32_t *nenvpitch, int32_t *nfrequency)
 {
 	song_instrument_t *penv = chan->ptr_instrument;
 
 	if ((chan->flags & CHN_PANENV || penv->flags & (ENV_PITCH | ENV_FILTER)) && (penv->pan_env.nodes)) {
-		int envpos = chan->pitch_env_position - 1;
-		unsigned int pt = penv->pitch_env.nodes - 1;
-		int frequency = *nfrequency;
-		int envpitch = *nenvpitch;
+		int32_t envpos = chan->pitch_env_position - 1;
+		uint32_t pt = penv->pitch_env.nodes - 1;
+		int32_t frequency = *nfrequency;
+		int32_t envpitch = *nenvpitch;
 
 		if (chan->pitch_env_position == 0)
 			return;
 
-		for (unsigned int i = 0; i < (unsigned int)(penv->pitch_env.nodes - 1); i++) {
+		for (uint32_t i = 0; i < (uint32_t)(penv->pitch_env.nodes - 1); i++) {
 			if (envpos <= penv->pitch_env.ticks[i]) {
 				pt = i;
 				break;
 			}
 		}
 
-		int x2 = penv->pitch_env.ticks[pt];
-		int x1;
+		int32_t x2 = penv->pitch_env.ticks[pt];
+		int32_t x1;
 
 		if (envpos >= x2) {
-			envpitch = (((int)penv->pitch_env.values[pt]) - 32) * 8;
+			envpitch = (((int32_t)penv->pitch_env.values[pt]) - 32) * 8;
 			x1 = x2;
 		} else if (pt) {
-			envpitch = (((int)penv->pitch_env.values[pt - 1]) - 32) * 8;
+			envpitch = (((int32_t)penv->pitch_env.values[pt - 1]) - 32) * 8;
 			x1 = penv->pitch_env.ticks[pt - 1];
 		} else {
 			envpitch = 0;
@@ -421,7 +421,7 @@ static inline void rn_pitch_filter_envelope(song_t *csf, song_voice_t *chan,
 			envpos = x2;
 
 		if (x2 > x1 && envpos > x1) {
-			int envpitchdest = (((int)penv->pitch_env.values[pt]) - 32) * 8;
+			int32_t envpitchdest = (((int32_t)penv->pitch_env.values[pt]) - 32) * 8;
 			envpitch += ((envpos - x1) * (envpitchdest - envpitch)) / (x2 - x1);
 		}
 
@@ -430,12 +430,12 @@ static inline void rn_pitch_filter_envelope(song_t *csf, song_voice_t *chan,
 
 		// Pitch Envelope
 		if (!(penv->flags & ENV_FILTER)) {
-			int l = abs(envpitch);
+			int32_t l = abs(envpitch);
 
 			if (l > 255)
 				l = 255;
 
-			int ratio = (envpitch < 0 ? linear_slide_down_table : linear_slide_up_table)[l];
+			int32_t ratio = (envpitch < 0 ? linear_slide_down_table : linear_slide_up_table)[l];
 			frequency = _muldiv(frequency, ratio, 0x10000);
 		}
 
@@ -446,10 +446,10 @@ static inline void rn_pitch_filter_envelope(song_t *csf, song_voice_t *chan,
 
 
 static inline void _process_envelope(song_voice_t *chan, song_instrument_t *penv, song_envelope_t *envelope,
-				     int *position, uint32_t env_flag, uint32_t loop_flag, uint32_t sus_flag,
+				     int32_t *position, uint32_t env_flag, uint32_t loop_flag, uint32_t sus_flag,
 				     uint32_t fade_flag)
 {
-	int start = 0, end = 0x7fffffff;
+	int32_t start = 0, end = 0x7fffffff;
 
 	if (!(chan->flags & env_flag)) {
 		return;
@@ -492,7 +492,7 @@ static inline void rn_increment_env_pos(song_voice_t *chan)
 }
 
 
-static inline int rn_update_sample(song_t *csf, song_voice_t *chan, int nchan, int master_vol)
+static inline int32_t rn_update_sample(song_t *csf, song_voice_t *chan, int32_t nchan, int32_t master_vol)
 {
 	// Adjusting volumes
 	if (csf->mix_channels < 2 || (csf->flags & SONG_NOSTEREO)) {
@@ -502,8 +502,8 @@ static inline int rn_update_sample(song_t *csf, song_voice_t *chan, int nchan, i
 		chan->right_volume_new = (chan->final_volume * master_vol) >> 8;
 		chan->left_volume_new = -chan->right_volume_new;
 	} else {
-		int pan = ((int) chan->final_panning) - 128;
-		pan *= (int) csf->pan_separation;
+		int32_t pan = ((int32_t) chan->final_panning) - 128;
+		pan *= (int32_t) csf->pan_separation;
 		pan /= 128;
 
 		if ((csf->flags & SONG_INSTRUMENTMODE)
@@ -517,7 +517,7 @@ static inline int rn_update_sample(song_t *csf, song_voice_t *chan, int nchan, i
 		if (csf->mix_flags & SNDMIX_REVERSESTEREO)
 			pan = 256 - pan;
 
-		int realvol = (chan->final_volume * master_vol) >> (8 - 1);
+		int32_t realvol = (chan->final_volume * master_vol) >> (8 - 1);
 
 		chan->left_volume_new  = (realvol * pan) >> 8;
 		chan->right_volume_new = (realvol * (256 - pan)) >> 8;
@@ -564,9 +564,9 @@ static inline int rn_update_sample(song_t *csf, song_voice_t *chan, int nchan, i
 	    (chan->right_volume != chan->right_volume_new ||
 	     chan->left_volume  != chan->left_volume_new)) {
 		// Setting up volume ramp
-		int ramp_length = volume_ramp_samples;
-		int right_delta = ((chan->right_volume_new - chan->right_volume) << VOLUMERAMPPRECISION);
-		int left_delta  = ((chan->left_volume_new  - chan->left_volume)  << VOLUMERAMPPRECISION);
+		int32_t ramp_length = volume_ramp_samples;
+		int32_t right_delta = ((chan->right_volume_new - chan->right_volume) << VOLUMERAMPPRECISION);
+		int32_t left_delta  = ((chan->left_volume_new  - chan->left_volume)  << VOLUMERAMPPRECISION);
 
 		if (csf->mix_flags & SNDMIX_HQRESAMPLER) {
 			if (chan->right_volume | chan->left_volume &&
@@ -574,8 +574,8 @@ static inline int rn_update_sample(song_t *csf, song_voice_t *chan, int nchan, i
 			    !(chan->flags & CHN_FASTVOLRAMP)) {
 				ramp_length = csf->buffer_count;
 
-				int l = (1 << (VOLUMERAMPPRECISION - 1));
-				int r =(int) volume_ramp_samples;
+				int32_t l = (1 << (VOLUMERAMPPRECISION - 1));
+				int32_t r =(int32_t) volume_ramp_samples;
 
 				ramp_length = CLAMP(ramp_length, l, r);
 			}
@@ -618,7 +618,7 @@ static inline int rn_update_sample(song_t *csf, song_voice_t *chan, int nchan, i
 // freq = frequency in Hertz
 // vol = 0..16384
 // chan->instrument_volume = 0..64  (corresponds to the sample global volume and instrument global volume)
-static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int chan_num, int freq, int vol)
+static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int32_t chan_num, int32_t freq, int32_t vol)
 {
 	if (chan->flags & CHN_MUTE) {
 		// don't do anything
@@ -632,7 +632,7 @@ static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int chan_num, int
 		 * This can be used to extend the range of MIDI pitch bending.
 		 */
 
-		int volume = vol;
+		int32_t volume = vol;
 
 		if ((chan->flags & CHN_ADLIB) && volume > 0) {
 			// find_volume translates volume from range 0..16384 to range 0..127. But why with that method?
@@ -650,7 +650,7 @@ static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int chan_num, int
 		//Also, note that to be true to ST3, the frequencies should be quantized, like using the glissando control.
 
 		// OPL_Patch is called in csf_process_effects, from csf_read_note or csf_process_tick, before calling this method.
-		int oplmilliHertz = (long long int)freq*261625L/8363L;
+		int32_t oplmilliHertz = (int64_t)freq*261625L/8363L;
 		OPL_HertzTouch(chan_num, oplmilliHertz, chan->flags & CHN_KEYOFF);
 
 		// ST32 ignores global & master volume in adlib mode, guess we should do the same -Bisqwit
@@ -687,10 +687,10 @@ static inline void update_vu_meter(song_voice_t *chan)
 		}
 	} else if (vutmp && chan->current_sample_data) {
 		// can't fake the funk
-		int n;
-		int pos = chan->position; // necessary on 64-bit systems (sometimes pos == -1, weird)
+		int32_t n;
+		int32_t pos = chan->position; // necessary on 64-bit systems (sometimes pos == -1, weird)
 		if (chan->flags & CHN_16BIT) {
-			const signed short *p = (signed short *)(chan->current_sample_data);
+			const int16_t *p = (int16_t *)(chan->current_sample_data);
 			if (chan->flags & CHN_STEREO)
 				n = p[2 * pos];
 			else
@@ -715,7 +715,7 @@ static inline void update_vu_meter(song_voice_t *chan)
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-int csf_init_player(song_t *csf, int reset)
+int32_t csf_init_player(song_t *csf, int32_t reset)
 {
 	if (max_voices > MAX_VOICES)
 		max_voices = MAX_VOICES;
@@ -749,13 +749,13 @@ int csf_init_player(song_t *csf, int reset)
 }
 
 
-unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
+uint32_t csf_read(song_t *csf, void * v_buffer, uint32_t bufsize)
 {
 	uint8_t * buffer = (uint8_t *)v_buffer;
 	convert_t convert_func = clip_32_to_8;
 	int32_t vu_min[2];
 	int32_t vu_max[2];
-	unsigned int bufleft, max, sample_size, count, smpcount, mix_stat=0;
+	uint32_t bufleft, max, sample_size, count, smpcount, mix_stat=0;
 
 	vu_min[0] = vu_min[1] = 0x7FFFFFFF;
 	vu_max[0] = vu_max[1] = -0x7FFFFFFF;
@@ -764,15 +764,15 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
 	csf->mix_stat = 0;
 	sample_size = csf->mix_channels;
 
-	     if (csf->mix_bits_per_sample == 16) { sample_size *= 2; convert_func = clip_32_to_16; }
-	else if (csf->mix_bits_per_sample == 24) { sample_size *= 3; convert_func = clip_32_to_24; }
-	else if (csf->mix_bits_per_sample == 32) { sample_size *= 4; convert_func = clip_32_to_32; }
+	switch (csf->mix_bits_per_sample) {
+	case 16: sample_size *= 2; convert_func = clip_32_to_16; break;
+	case 24: sample_size *= 3; convert_func = clip_32_to_24; break;
+	case 32: sample_size *= 4; convert_func = clip_32_to_32; break;
+	}
 
 	max = bufsize / sample_size;
-
-	if (!max || !buffer) {
+	if (!max || !buffer)
 		return 0;
-	}
 
 	bufleft = max;
 
@@ -842,11 +842,11 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
 		if (csf->multi_write) {
 			/* multi doesn't actually write meaningful data into 'buffer', so we can use that
 			as temp space for converting */
-			for (unsigned int n = 0; n < 64; n++) {
+			for (uint32_t n = 0; n < 64; n++) {
 				if (csf->multi_write[n].used) {
 					if (csf->mix_channels < 2)
 						mono_from_stereo(csf->multi_write[n].buffer, count);
-					unsigned int bytes = convert_func(buffer, csf->multi_write[n].buffer,
+					uint32_t bytes = convert_func(buffer, csf->multi_write[n].buffer,
 						smpcount, vu_min, vu_max);
 					csf->multi_write[n].write(csf->multi_write[n].data, buffer, bytes);
 				} else {
@@ -880,8 +880,8 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
 	if (vu_max[1] < vu_min[1])
 		vu_max[1] = vu_min[1];
 
-	global_vu_left = (unsigned int)(vu_max[0] - vu_min[0]);
-	global_vu_right = (unsigned int)(vu_max[1] - vu_min[1]);
+	global_vu_left = (uint32_t)(vu_max[0] - vu_min[0]);
+	global_vu_right = (uint32_t)(vu_max[1] - vu_min[1]);
 
 	if (mix_stat) {
 		csf->mix_stat += mix_stat - 1;
@@ -896,7 +896,7 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
 /////////////////////////////////////////////////////////////////////////////
 // Handles navigation/effects
 
-static int increment_order(song_t *csf)
+static int32_t increment_order(song_t *csf)
 {
 	csf->process_row = csf->break_row; /* [ProcessRow = BreakRow] */
 	csf->break_row = 0;                  /* [BreakRow = 0] */
@@ -966,7 +966,7 @@ static int increment_order(song_t *csf)
 }
 
 
-int csf_process_tick(song_t *csf)
+int32_t csf_process_tick(song_t *csf)
 {
 	csf->flags &= ~SONG_FIRSTTICK;
 	/* [Decrease tick counter. Is tick counter 0?] */
@@ -1012,7 +1012,7 @@ int csf_process_tick(song_t *csf)
 		song_voice_t *chan = csf->voices;
 		song_note_t *m = csf->patterns[csf->current_pattern] + csf->row * MAX_CHANNELS;
 
-		for (unsigned int nchan=0; nchan<MAX_CHANNELS; chan++, nchan++, m++) {
+		for (uint32_t nchan=0; nchan<MAX_CHANNELS; chan++, nchan++, m++) {
 			// this is where we're going to spit out our midi
 			// commands... ALL WE DO is dump raw midi data to
 			// our super-secret "midi buffer"
@@ -1045,7 +1045,7 @@ int csf_process_tick(song_t *csf)
 		if (csf_midi_out_note) {
 			song_note_t *m = csf->patterns[csf->current_pattern] + csf->row * MAX_CHANNELS;
 
-			for (unsigned int nchan=0; nchan<MAX_CHANNELS; nchan++, m++) {
+			for (uint32_t nchan=0; nchan<MAX_CHANNELS; nchan++, m++) {
 				/* m==NULL allows schism to receive notification of SDx and Scx commands */
 				csf_midi_out_note(nchan, NULL);
 			}
@@ -1064,10 +1064,10 @@ int csf_process_tick(song_t *csf)
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Handles envelopes & mixer setup
 
-int csf_read_note(song_t *csf)
+int32_t csf_read_note(song_t *csf)
 {
 	song_voice_t *chan;
-	unsigned int cn;
+	uint32_t cn;
 
 	// Checking end of row ?
 	if (csf->flags & SONG_PAUSED) {
@@ -1109,8 +1109,8 @@ int csf_read_note(song_t *csf)
 
 	// chaseback hoo hah
 	if (csf->stop_at_order > -1 && csf->stop_at_row > -1) {
-		if (csf->stop_at_order <= (signed) csf->current_order &&
-		    csf->stop_at_row <= (signed) csf->row) {
+		if (csf->stop_at_order <= (int32_t)csf->current_order &&
+		    csf->stop_at_row <= (int32_t)csf->row) {
 			return 0;
 		}
 	}
@@ -1126,7 +1126,7 @@ int csf_read_note(song_t *csf)
 	for (cn = 0, chan = csf->voices; cn < MAX_VOICES; cn++, chan++) {
 		/*if(cn == 0 || cn == 1)
 		fprintf(stderr, "considering channel %d (per %d, pos %d/%d, flags %X)\n",
-			(int)cn, chan->frequency, chan->position, chan->length, chan->flags);*/
+			(int32_t)cn, chan->frequency, chan->position, chan->length, chan->flags);*/
 
 		if (chan->flags & CHN_NOTEFADE &&
 		    !(chan->fadeout_volume | chan->right_volume | chan->left_volume)) {
@@ -1148,13 +1148,13 @@ int csf_read_note(song_t *csf)
 
 		/* Add panbrello delta */
 		if (chan->panbrello_delta)
-			chan->final_panning += (((chan->panbrello_delta * (int)chan->panbrello_depth) + 2) >> 3);
+			chan->final_panning += (((chan->panbrello_delta * (int32_t)chan->panbrello_depth) + 2) >> 3);
 
 		chan->ramp_length = 0;
 
 		// Calc Frequency
 		if (chan->frequency && (chan->length || (chan->flags & CHN_ADLIB))) {
-			int vol = chan->volume;
+			int32_t vol = chan->volume;
 
 			if (chan->flags & CHN_TREMOLO)
 				vol += chan->tremolo_delta;
@@ -1194,7 +1194,7 @@ int csf_read_note(song_t *csf)
 					 1 << 19);
 			}
 
-			int frequency = chan->frequency;
+			int32_t frequency = chan->frequency;
 
 			if ((chan->flags & (CHN_GLISSANDO|CHN_PORTAMENTO)) == (CHN_GLISSANDO|CHN_PORTAMENTO)) {
 				frequency = get_frequency_from_note(get_note_from_frequency(frequency, chan->c5speed), chan->c5speed);
@@ -1205,7 +1205,7 @@ int csf_read_note(song_t *csf)
 				frequency = rn_arpeggio(csf, chan, frequency);
 
 			// Pitch/Filter Envelope
-			int envpitch = 0;
+			int32_t envpitch = 0;
 
 			if ((csf->flags & SONG_INSTRUMENTMODE) && chan->ptr_instrument
 				&& (chan->flags & CHN_PITCHENV) && chan->ptr_instrument->pitch_env.nodes)
@@ -1241,7 +1241,7 @@ int csf_read_note(song_t *csf)
 
 			chan->sample_freq = frequency;
 
-			unsigned int ninc = _muldiv(frequency, 0x10000, csf->mix_frequency);
+			uint32_t ninc = _muldiv(frequency, 0x10000, csf->mix_frequency);
 
 			if (ninc >= 0xFFB0 && ninc <= 0x10090)
 				ninc = 0x10000;
@@ -1267,7 +1267,7 @@ int csf_read_note(song_t *csf)
 			chan->strike--;
 
 		// Check for too big increment
-		if (((chan->increment >> 16) + 1) >= (int)(chan->loop_end - chan->loop_start))
+		if (((chan->increment >> 16) + 1) >= (int32_t)(chan->loop_end - chan->loop_start))
 			chan->flags &= ~CHN_LOOP;
 
 		chan->right_volume_new = chan->left_volume_new = 0;
@@ -1292,14 +1292,14 @@ int csf_read_note(song_t *csf)
 
 	// Checking Max Mix Channels reached: ordering by volume
 	if (csf->num_voices >= max_voices && (!(csf->mix_flags & SNDMIX_DIRECTTODISK))) {
-		for (unsigned int i = 0; i < csf->num_voices; i++) {
-			unsigned int j = i;
+		for (uint32_t i = 0; i < csf->num_voices; i++) {
+			uint32_t j = i;
 
 			while ((j + 1 < csf->num_voices) &&
 			    (csf->voices[csf->voice_mix[j]].final_volume
 			     < csf->voices[csf->voice_mix[j + 1]].final_volume))
 			{
-				unsigned int n = csf->voice_mix[j];
+				uint32_t n = csf->voice_mix[j];
 				csf->voice_mix[j] = csf->voice_mix[j + 1];
 				csf->voice_mix[j + 1] = n;
 				j++;

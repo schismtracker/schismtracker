@@ -99,14 +99,9 @@
 
 #include "player/precomp_lut.h"
 
-/* FIXME: This has lots of undefined behavior (!!) in the form of bit shifts on
- * signed integers... need to look over each variable and find out whether it
- * needs to be signed or unsigned. */
-
 // ----------------------------------------------------------------------------
 // MIXING MACROS
 // ----------------------------------------------------------------------------
-
 
 #define SNDMIX_BEGINSAMPLELOOP(bits) \
 	register song_voice_t * const chan = channel; \
@@ -308,11 +303,11 @@
 //////////////////////////////////////////////////////////
 // Interfaces
 
-typedef void(* mix_interface_t)(song_voice_t *, int *, int *);
+typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 
 
 #define BEGIN_MIX_INTERFACE(func) \
-	static void func(song_voice_t *channel, int *pbuffer, int *pbufmax) \
+	static void func(song_voice_t *channel, int32_t *pbuffer, int32_t *pbufmax) \
 	{ \
 		int_fast32_t position;
 
@@ -413,13 +408,13 @@ typedef void(* mix_interface_t)(song_voice_t *, int *, int *);
 	}
 
 #define BEGIN_RESAMPLE_INTERFACE(func, sampletype, numchannels) \
-	void func(sampletype *oldbuf, sampletype *newbuf, unsigned long oldlen, unsigned long newlen) \
+	void func(sampletype *oldbuf, sampletype *newbuf, uint32_t oldlen, uint32_t newlen) \
 	{ \
-	unsigned long long position = 0; \
+	uint64_t position = 0; \
 	const sampletype *p = oldbuf; \
 	sampletype *pvol = newbuf; \
 	const sampletype *pbufmax = &newbuf[newlen* numchannels]; \
-	unsigned long long increment = (((unsigned long long)oldlen)<<16)/((unsigned long long)newlen); \
+	uint64_t increment = (((uint64_t)oldlen)<<16)/((uint64_t)newlen); \
 	do {
 
 #define END_RESAMPLE_INTERFACE_MONO() \
@@ -556,10 +551,21 @@ static const mix_interface_t fastmix_functions[2 * 2 * 16] = {
 	BUILD_MIX_FUNCTION_TABLE_FAST(FirFilter)
 };
 
-static int get_sample_count(song_voice_t *chan, int samples)
+static inline int32_t buffer_length_to_samples(int32_t mix_buf_cnt, song_voice_t *chan)
 {
-	int loop_start = (chan->flags & CHN_LOOP) ? chan->loop_start : 0;
-	int increment = chan->increment;
+	return (chan->increment * (int32_t)mix_buf_cnt) + (int32_t)chan->position_frac;
+}
+
+static inline int32_t samples_to_buffer_length(int32_t samples, song_voice_t *chan)
+{
+	int32_t x = (lshift_signed(samples, 16)) / abs(chan->increment);
+	return MAX(1, x);
+}
+
+static int32_t get_sample_count(song_voice_t *chan, int32_t samples)
+{
+	int32_t loop_start = (chan->flags & CHN_LOOP) ? chan->loop_start : 0;
+	int32_t increment = chan->increment;
 
 	if (samples <= 0 || !increment || !chan->length)
 		return 0;
@@ -568,11 +574,11 @@ static int get_sample_count(song_voice_t *chan, int samples)
 	if ((int32_t)chan->position < loop_start) {
 		if (increment < 0) {
 			// Invert loop for bidi loops
-			int delta = ((loop_start - chan->position) << 16) - (chan->position_frac & 0xFFFF);
+			int32_t delta = ((loop_start - chan->position) << 16) - (chan->position_frac & 0xFFFF);
 			chan->position = loop_start + (delta >> 16);
 			chan->position_frac = delta & 0xFFFF;
 
-			if ((int) chan->position < loop_start ||
+			if ((int32_t) chan->position < loop_start ||
 				chan->position >= (loop_start + chan->length) / 2) {
 				chan->position = loop_start;
 				chan->position_frac = 0;
@@ -592,7 +598,7 @@ static int get_sample_count(song_voice_t *chan, int samples)
 		}
 		else {
 			// We probably didn't hit the loop end yet (first loop), so we do nothing
-			if ((int) chan->position < 0)
+			if ((int32_t)chan->position < 0)
 				chan->position = 0;
 		}
 	}
@@ -638,7 +644,7 @@ static int get_sample_count(song_voice_t *chan, int samples)
 		}
 	}
 
-	int position = chan->position;
+	int32_t position = chan->position;
 
 	// too big increment, and/or too small loop length
 	if (position < loop_start) {
@@ -646,15 +652,15 @@ static int get_sample_count(song_voice_t *chan, int samples)
 			return 0;
 	}
 
-	if (position < 0 || position >= (int) chan->length)
+	if (position < 0 || position >= (int32_t)chan->length)
 		return 0;
 
-	int position_frac = (unsigned short) chan->position_frac,
+	int position_frac = (uint16_t)chan->position_frac,
 		 sample_count = samples;
 
 	if (increment < 0) {
-		int inv = -increment;
-		int maxsamples = 16384 / ((inv >> 16) + 1);
+		int32_t inv = -increment;
+		int32_t maxsamples = 16384 / ((inv >> 16) + 1);
 
 		if (maxsamples < 2)
 			maxsamples = 2;
@@ -662,19 +668,18 @@ static int get_sample_count(song_voice_t *chan, int samples)
 		if (samples > maxsamples)
 			samples = maxsamples;
 
-		int delta_hi = (inv >> 16) * (samples - 1);
-		int delta_lo = (inv & 0xffff) * (samples - 1);
-		int pos_dest = position - delta_hi + ((position_frac - delta_lo) >> 16);
+		int32_t delta_hi = (inv >> 16) * (samples - 1);
+		int32_t delta_lo = (inv & 0xffff) * (samples - 1);
+		int32_t pos_dest = position - delta_hi + ((position_frac - delta_lo) >> 16);
 
 		if (pos_dest < loop_start) {
 			sample_count =
-				(unsigned int) (((((long long) position -
+				(uint32_t) (((((long long) position -
 					loop_start) << 16) + position_frac -
 					  1) / inv) + 1;
 		}
-	}
-	else {
-		int maxsamples = 16384 / ((increment >> 16) + 1);
+	} else {
+		int32_t maxsamples = 16384 / ((increment >> 16) + 1);
 
 		if (maxsamples < 2)
 			maxsamples = 2;
@@ -682,13 +687,13 @@ static int get_sample_count(song_voice_t *chan, int samples)
 		if (samples > maxsamples)
 			samples = maxsamples;
 
-		int delta_hi = (increment >> 16) * (samples - 1);
-		int delta_lo = (increment & 0xffff) * (samples - 1);
-		int pos_dest = position + delta_hi + ((position_frac + delta_lo) >> 16);
+		int32_t delta_hi = (increment >> 16) * (samples - 1);
+		int32_t delta_lo = (increment & 0xffff) * (samples - 1);
+		int32_t pos_dest = position + delta_hi + ((position_frac + delta_lo) >> 16);
 
-		if (pos_dest >= (int) chan->length) {
-			sample_count = (unsigned int)
-				(((((long long) chan->length - position) << 16) - position_frac - 1) / increment) + 1;
+		if (pos_dest >= (int32_t) chan->length) {
+			sample_count = (uint32_t)
+				(((((int64_t) chan->length - position) << 16) - position_frac - 1) / increment) + 1;
 		}
 	}
 
@@ -701,7 +706,7 @@ static int get_sample_count(song_voice_t *chan, int samples)
 }
 
 
-unsigned int csf_create_stereo_mix(song_t *csf, int count)
+uint32_t csf_create_stereo_mix(song_t *csf, int32_t count)
 {
 	int* ofsl, *ofsr;
 	unsigned int nchused, nchmixed;
@@ -713,17 +718,17 @@ unsigned int csf_create_stereo_mix(song_t *csf, int count)
 
 	// yuck
 	if (csf->multi_write)
-		for (unsigned int nchan = 0; nchan < MAX_CHANNELS; nchan++)
+		for (uint32_t nchan = 0; nchan < MAX_CHANNELS; nchan++)
 			memset(csf->multi_write[nchan].buffer, 0, sizeof(csf->multi_write[nchan].buffer));
 
 	for (unsigned int nchan = 0; nchan < csf->num_voices; nchan++) {
 		const mix_interface_t *mix_func_table;
 		song_voice_t *const channel = &csf->voices[csf->voice_mix[nchan]];
-		unsigned int flags;
-		unsigned int nrampsamples;
-		int smpcount;
-		int nsamples;
-		int *pbuffer;
+		uint32_t flags;
+		uint32_t nrampsamples;
+		int32_t smpcount;
+		int32_t nsamples;
+		int32_t *pbuffer;
 
 		if (!channel->current_sample_data)
 			continue;
@@ -765,7 +770,7 @@ unsigned int csf_create_stereo_mix(song_t *csf, int count)
 		nsamples = count;
 
 		if (csf->multi_write) {
-			int master = (csf->voice_mix[nchan] < MAX_CHANNELS)
+			int32_t master = (csf->voice_mix[nchan] < MAX_CHANNELS)
 				? csf->voice_mix[nchan]
 				: (channel->master_channel - 1);
 			pbuffer = csf->multi_write[master].buffer;
@@ -775,14 +780,39 @@ unsigned int csf_create_stereo_mix(song_t *csf, int count)
 		}
 
 		nchused++;
+
+		// Our loop lookahead buffer is basically the exact same as OpenMPT's.
+		// (in essence, it is mostly just a backport)
+		//
+		// This means that it has the same bugs that are notated in OpenMPT's
+		// `soundlib/Fastmix.cpp' file, which are the following:
+		//
+		// - Playing samples backwards should reverse interpolation LUTs for interpolation modes
+		//   with more than two taps since they're not symmetric. We might need separate LUTs
+		//   because otherwise we will add tons of branches.
+		// - Loop wraparound works pretty well in general, but not at the start of bidi samples.
+		// - The loop lookahead stuff might still fail for samples with backward loops.
+		int8_t *const smp_ptr = (int8_t *const)(channel->ptr_sample->data);
+		int8_t *lookahead_ptr = NULL;
+		const uint32_t lookahead_start = (channel->loop_end < MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE) ? channel->loop_start : MAX(channel->loop_start, channel->loop_end - MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE);
+		if (channel->flags & CHN_LOOP && !(csf->mix_flags & SNDMIX_NORESAMPLING) && !(channel->flags & CHN_NOIDO)) {
+			song_sample_t *pins = channel->ptr_sample;
+
+			uint32_t lookahead_offset = 3 * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE + pins->length - channel->loop_end;
+			if (channel->flags & CHN_SUSTAINLOOP)
+				lookahead_offset += 4 * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE;
+
+			lookahead_ptr = smp_ptr + lookahead_offset * ((pins->flags & CHN_STEREO) ? 2 : 1) * ((pins->flags & CHN_16BIT) ? 2 : 1);
+		}
+
 		////////////////////////////////////////////////////
-		unsigned int naddmix = 0;
+		uint32_t naddmix = 0;
 
 		do {
 			nrampsamples = nsamples;
 
 			if (channel->ramp_length > 0) {
-				if ((int) nrampsamples > channel->ramp_length)
+				if ((int32_t)nrampsamples > channel->ramp_length)
 					nrampsamples = channel->ramp_length;
 			}
 
@@ -815,31 +845,51 @@ unsigned int csf_create_stereo_mix(song_t *csf, int count)
 
 			if ((nchmixed >= max_voices && !(csf->mix_flags & SNDMIX_DIRECTTODISK))
 				|| (!channel->ramp_length && !(channel->left_volume | channel->right_volume))) {
-				int delta = (channel->increment * (int) smpcount) + (int) channel->position_frac;
+				int32_t delta = buffer_length_to_samples(smpcount, channel);
 				channel->position_frac = delta & 0xFFFF;
 				channel->position += (delta >> 16);
 				channel->rofs = channel->lofs = 0;
 				pbuffer += smpcount * 2;
-			} else {
-				// Do mixing
+			} else if (!(channel->flags & CHN_ADLIB)) {
+				// Mix the stream, unless we're in AdLib mode
 
-				/* Mix the stream, unless we're in AdLib mode */
-				if (!(channel->flags & CHN_ADLIB)) {
-					// Choose function for mixing
-					mix_interface_t mix_func;
-					mix_func = channel->ramp_length
-						? mix_func_table[flags | MIXNDX_RAMP]
-						: mix_func_table[flags];
-					int *pbufmax = pbuffer + (smpcount * 2);
-					channel->rofs = -*(pbufmax - 2);
-					channel->lofs = -*(pbufmax - 1);
+				// Choose function for mixing
+				mix_interface_t mix_func;
+				mix_func = channel->ramp_length
+					? mix_func_table[flags | MIXNDX_RAMP]
+					: mix_func_table[flags];
 
-					mix_func(channel, pbuffer, pbufmax);
-					channel->rofs += *(pbufmax - 2);
-					channel->lofs += *(pbufmax - 1);
-					pbuffer = pbufmax;
-					naddmix = 1;
+				if (lookahead_ptr) {
+					const int32_t read_length = rshift_signed(buffer_length_to_samples(smpcount, channel), 16);
+
+					channel->current_sample_data = smp_ptr;
+					if (channel->position >= lookahead_start) {
+						const int32_t oldcount = smpcount;
+
+						int32_t samples_to_read = (channel->increment < 0)
+							? (channel->position - lookahead_start)
+							: (channel->loop_end - channel->position);
+						samples_to_read = MAX(samples_to_read, channel->loop_end - channel->loop_start);
+						smpcount = samples_to_buffer_length(samples_to_read, channel);
+						smpcount = CLAMP(smpcount, 1, oldcount);
+
+						channel->current_sample_data = lookahead_ptr;
+					} else if (channel->increment > 0 && channel->position + read_length >= lookahead_start && smpcount > 1) {
+						const int32_t oldcount = smpcount;
+						smpcount = samples_to_buffer_length(lookahead_start - channel->position, channel);
+						smpcount = CLAMP(smpcount, 1, oldcount - 1);
+					}
 				}
+
+				int32_t *pbufmax = pbuffer + (smpcount * 2);
+				channel->rofs = -*(pbufmax - 2);
+				channel->lofs = -*(pbufmax - 1);
+
+				mix_func(channel, pbuffer, pbufmax);
+				channel->rofs += *(pbufmax - 2);
+				channel->lofs += *(pbufmax - 1);
+				pbuffer = pbufmax;
+				naddmix = 1;
 			}
 
 			nsamples -= smpcount;
