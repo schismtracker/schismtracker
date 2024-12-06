@@ -188,7 +188,7 @@ void csf_free_pattern(void *pat)
 }
 
 #define CSF_ALLOCATE_PREPEND ((MAX_SAMPLING_POINT_SIZE) * (MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE))
-#define CSF_ALLOCATE_APPEND ((1 + 4 + 4) * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE)
+#define CSF_ALLOCATE_APPEND ((1 + 4 + 4) * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE * 4)
 
 signed char *csf_allocate_sample(uint32_t nbytes)
 {
