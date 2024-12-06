@@ -34,6 +34,7 @@
 #include "video.h"
 #include "osdefs.h"
 #include "vgamem.h"
+#include "events.h"
 
 #include <errno.h>
 #include <inttypes.h>
@@ -695,12 +696,25 @@ static int sdl2_video_get_wm_data(video_wm_data_t *wm_data)
 	if (!sdl2_GetWindowWMInfo(video.window, &info))
 		return 0;
 
-#if defined(SDL_VIDEO_DRIVER_WINDOWS)
-	if (info.subsystem == SDL_SYSWM_WINDOWS) {
+	switch (info.subsystem) {
+#ifdef SDL_VIDEO_DRIVER_WINDOWS
+	case SDL_SYSWM_WINDOWS:
 		wm_data->subsystem = VIDEO_WM_DATA_SUBSYSTEM_WINDOWS;
 		wm_data->data.windows.hwnd = info.info.win.window;
-	}
+		break;
 #endif
+#ifdef SDL_VIDEO_DRIVER_X11
+	case SDL_SYSWM_X11:
+		wm_data->subsystem = VIDEO_WM_DATA_SUBSYSTEM_X11;
+		wm_data->data.x11.display = info.info.x11.display;
+		wm_data->data.x11.window = info.info.x11.window;
+		wm_data->data.x11.lock_func = NULL;
+		wm_data->data.x11.unlock_func = NULL;
+		break;
+#endif
+	default:
+		return 0;
+	}
 
 	return 1;
 }
@@ -773,14 +787,24 @@ static int sdl2_video_init(void)
 	if (!sdl2_init())
 		return 0;
 
-	if (sdl2_video_load_syms())
+	if (sdl2_video_load_syms()) {
+		sdl2_quit();
 		return 0;
+	}
 
 	//  :) 
 	sdl2_0_18_video_load_syms();
 
-	if (sdl2_InitSubSystem(SDL_INIT_VIDEO) < 0)
+	if (sdl2_InitSubSystem(SDL_INIT_VIDEO) < 0) {
+		sdl2_quit();
 		return 0;
+	}
+
+	if (!events_init(&schism_events_backend_sdl2)) {
+		sdl2_QuitSubSystem(SDL_INIT_VIDEO);
+		sdl2_quit();
+		return 0;
+	}
 
 	return 1;
 }

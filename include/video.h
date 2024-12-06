@@ -107,11 +107,23 @@ void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 /* --------------------------------------------------------- */
 
 typedef struct {
-	enum {VIDEO_WM_DATA_SUBSYSTEM_WINDOWS=0} subsystem;
+	enum {
+		VIDEO_WM_DATA_SUBSYSTEM_WINDOWS = 0,
+		VIDEO_WM_DATA_SUBSYSTEM_X11 = 1,
+	} subsystem;
+
 	union {
 		struct {
 			void *hwnd; // type is actually HWND
 		} windows;
+		struct {
+			void *display; // type is actually Display *
+			uint32_t window; // type is actually Window
+
+			// These can (and will) be NULL
+			void (*lock_func)(void);
+			void (*unlock_func)(void);
+		} x11;
 	} data;
 } video_wm_data_t;
 

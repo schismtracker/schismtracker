@@ -202,6 +202,11 @@ int clippy_init(void)
 #ifdef SCHISM_SDL2
 		&schism_clippy_backend_sdl2,
 #endif
+#ifdef SCHISM_USE_X11
+		/* Our X11 clipboard overrides the SDL2 clipboard,
+		 * causing copy/paste to fail. */
+		&schism_clippy_backend_x11,
+#endif
 		NULL,
 	};
 

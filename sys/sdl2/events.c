@@ -28,9 +28,7 @@
 
 #include "init.h"
 
-#ifdef SCHISM_WIN32
 #include <SDL_syswm.h>
-#endif
 
 /* need to redefine these on SDL < 2.0.4 */
 #if !SDL_VERSION_ATLEAST(2, 0, 4)
@@ -527,8 +525,9 @@ void sdl2_pump_events(void)
 		case SDL_SYSWMEVENT:
 			schism_event.type = SCHISM_EVENT_WM_MSG;
 			schism_event.wm_msg.backend = SCHISM_WM_MSG_BACKEND_SDL2;
-#ifdef SCHISM_WIN32
-			if (e.syswm.msg->subsystem == SDL_SYSWM_WINDOWS) {
+			switch (e.syswm.msg->subsystem) {
+#if defined(SDL_VIDEO_DRIVER_WINDOWS)
+			case SDL_SYSWM_WINDOWS:
 				schism_event.wm_msg.subsystem = SCHISM_WM_MSG_SUBSYSTEM_WINDOWS;
 				schism_event.wm_msg.msg.win.hwnd = e.syswm.msg->msg.win.hwnd;
 				schism_event.wm_msg.msg.win.msg = e.syswm.msg->msg.win.msg;
@@ -540,11 +539,28 @@ void sdl2_pump_events(void)
 				// only results in an empty string which is undesirable
 				if (schism_event.wm_msg.msg.win.msg != WM_DROPFILES)
 					events_push_event(&schism_event);
-			}
+				break;
 #endif
-			break;
-		default:
-			break;
+#if defined(SDL_VIDEO_DRIVER_X11)
+			case SDL_SYSWM_X11:
+				schism_event.wm_msg.subsystem = SCHISM_WM_MSG_SUBSYSTEM_X11;
+				schism_event.wm_msg.msg.x11.event.type = e.syswm.msg->msg.x11.event.type;
+				if (e.syswm.msg->msg.x11.event.type == SelectionRequest) {
+					schism_event.wm_msg.msg.x11.event.selection_request.serial = e.syswm.msg->msg.x11.event.xselectionrequest.serial;
+					schism_event.wm_msg.msg.x11.event.selection_request.send_event = e.syswm.msg->msg.x11.event.xselectionrequest.send_event;     // `Bool' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.display = e.syswm.msg->msg.x11.event.xselectionrequest.display;      // `Display *' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.owner = e.syswm.msg->msg.x11.event.xselectionrequest.owner;     // `Window' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.requestor = e.syswm.msg->msg.x11.event.xselectionrequest.requestor; // `Window' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.selection = e.syswm.msg->msg.x11.event.xselectionrequest.selection; // `Atom' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.target = e.syswm.msg->msg.x11.event.xselectionrequest.target;    // `Atom' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.property = e.syswm.msg->msg.x11.event.xselectionrequest.property;  // `Atom' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.time = e.syswm.msg->msg.x11.event.xselectionrequest.time;      // `Time' in Xlib
+				}
+				break;
+#endif
+			default:
+				break;
+			}
 		}
 	}
 
@@ -587,7 +603,7 @@ static int sdl2_events_init(void)
 
 	wheel_have_mouse_coordinates = SDL2_VERSION_ATLEAST(ver, 2, 26, 0);
 
-#ifdef SCHISM_WIN32
+#if defined(SCHISM_WIN32) || defined(SCHISM_USE_X11)
 	sdl2_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 #endif
 

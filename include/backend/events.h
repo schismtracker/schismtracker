@@ -24,7 +24,6 @@
 #ifndef SCHISM_BACKEND_EVENTS_H_
 #define SCHISM_BACKEND_EVENTS_H_
 
-#include "../events.h"
 #include "../keyboard.h"
 
 // flags

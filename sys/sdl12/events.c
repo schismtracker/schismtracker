@@ -29,9 +29,7 @@
 
 #include "init.h"
 
-#ifdef SCHISM_WIN32
-# include <SDL_syswm.h>
-#endif
+#include <SDL_syswm.h>
 
 static schism_keymod_t sdl12_modkey_trans(uint16_t mod)
 {
@@ -595,6 +593,22 @@ static void sdl12_pump_events(void)
 			schism_event.wm_msg.msg.win.msg = e.syswm.msg->msg;
 			schism_event.wm_msg.msg.win.wparam = e.syswm.msg->wParam;
 			schism_event.wm_msg.msg.win.lparam = e.syswm.msg->lParam;
+#elif defined(SDL_VIDEO_DRIVER_X11) && defined(SCHISM_USE_X11)
+			if (e.syswm.msg->subsystem == SDL_SYSWM_X11) {
+				schism_event.wm_msg.subsystem = SCHISM_WM_MSG_SUBSYSTEM_X11;
+				schism_event.wm_msg.msg.x11.event.type = e.syswm.msg->event.xevent.type;
+				if (e.syswm.msg->event.xevent.type == SelectionRequest) {
+					schism_event.wm_msg.msg.x11.event.selection_request.serial = e.syswm.msg->event.xevent.xselectionrequest.serial;
+					schism_event.wm_msg.msg.x11.event.selection_request.send_event = e.syswm.msg->event.xevent.xselectionrequest.send_event;     // `Bool' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.display = e.syswm.msg->event.xevent.xselectionrequest.display;      // `Display *' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.owner = e.syswm.msg->event.xevent.xselectionrequest.owner;     // `Window' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.requestor = e.syswm.msg->event.xevent.xselectionrequest.requestor; // `Window' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.selection = e.syswm.msg->event.xevent.xselectionrequest.selection; // `Atom' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.target = e.syswm.msg->event.xevent.xselectionrequest.target;    // `Atom' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.property = e.syswm.msg->event.xevent.xselectionrequest.property;  // `Atom' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.time = e.syswm.msg->event.xevent.xselectionrequest.time;      // `Time' in Xlib
+				}
+			}
 #endif
 			events_push_event(&schism_event);
 			break;
@@ -622,6 +636,10 @@ static int sdl12_events_init(void)
 
 	if (sdl12_events_load_syms())
 		return 0;
+
+#if defined(SCHISM_WIN32) || defined(SCHISM_USE_X11)
+	sdl12_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
+#endif
 
 	return 1;
 }

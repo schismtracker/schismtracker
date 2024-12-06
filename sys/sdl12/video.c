@@ -34,6 +34,7 @@ static int display_native_y = -1;
 #include "osdefs.h"
 #include "vgamem.h"
 #include "config.h"
+#include "events.h"
 
 #include "backend/video.h"
 
@@ -827,6 +828,17 @@ static int sdl12_video_get_wm_data(video_wm_data_t *wm_data)
 #ifdef SCHISM_WIN32
 	wm_data->subsystem = VIDEO_WM_DATA_SUBSYSTEM_WINDOWS;
 	wm_data->data.windows.hwnd = info.window;
+	// don't care about other values for now
+#else
+# ifdef SDL_VIDEO_DRIVER_X11
+	if (info.subsystem == SDL_SYSWM_X11) {
+		wm_data->subsystem = VIDEO_WM_DATA_SUBSYSTEM_X11;
+		wm_data->data.x11.display = info.info.x11.display;
+		wm_data->data.x11.window = info.info.x11.window;
+		wm_data->data.x11.lock_func = info.info.x11.lock_func;
+		wm_data->data.x11.unlock_func = info.info.x11.unlock_func;
+	}
+# endif
 #endif
 
 	return 1;
@@ -869,17 +881,23 @@ static int sdl12_video_init(void)
 	if (!sdl12_init())
 		return 0;
 
-	if (sdl12_video_load_syms())
+	if (sdl12_video_load_syms()) {
+		sdl12_quit();
 		return 0;
+	}
 
-	if (sdl12_InitSubSystem(SDL_INIT_VIDEO) < 0)
+	if (sdl12_InitSubSystem(SDL_INIT_VIDEO) < 0) {
+		sdl12_quit();
 		return 0;
-
-#ifdef SCHISM_WIN32
-	sdl12_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-#endif
+	}
 
 	sdl12_EnableUNICODE(1);
+
+	if (!events_init(&schism_events_backend_sdl12)) {
+		sdl12_QuitSubSystem(SDL_INIT_VIDEO);
+		sdl12_quit();
+		return 0;
+	}
 
 	return 1;
 }

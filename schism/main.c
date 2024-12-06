@@ -389,6 +389,7 @@ static void event_loop(void)
 	int fix_numlock_key;
 	int screensaver;
 	int button = -1;
+	int i;
 	struct key_event kk;
 
 	fix_numlock_key = status.fix_numlock_setting;
@@ -409,9 +410,6 @@ static void event_loop(void)
 	for (;;) {
 		schism_event_t se;
 		while (events_poll_event(&se)) {
-			if (!os_event(&se))
-				continue;
-
 			if (midi_engine_handle_event(&se))
 				continue;
 
@@ -935,11 +933,6 @@ int schism_main(int argc, char** argv)
 
 	song_initialise();
 	cfg_load();
-
-	if (!events_init()) {
-		os_show_message_box("Critical error!", "Failed to initialize an events backend!");
-		return 1;
-	}
 
 	if (!clippy_init()) {
 		log_appendf(4, "Failed to initialize a clipboard backend!");
