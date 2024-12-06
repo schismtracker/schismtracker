@@ -181,7 +181,7 @@ int events_push_event(const schism_event_t *event)
 	// instead of in main is because we need to filter X11 events
 	// *as they are pumped*, and putting win32 and macosx events
 	// here is just a side effect of that.
-	static const int (*event_filters[])(schism_event_t *event) = {
+	static int (*const event_filters[])(schism_event_t *event) = {
 #ifdef SCHISM_WIN32
 		win32_event,
 #endif
