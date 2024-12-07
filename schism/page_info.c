@@ -1102,6 +1102,10 @@ static int info_page_handle_key(struct key_event * k)
 			return 1;
 		}
 		return 0;
+	case SCHISM_KEYSYM_EQUALS:
+		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
+			return 0;
+		// fallthrough
 	case SCHISM_KEYSYM_PLUS:
 		if (k->state == KEY_RELEASE)
 			return 1;
