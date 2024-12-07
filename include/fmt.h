@@ -162,8 +162,8 @@ void s3i_write_header(disko_t *fp, song_sample_t *smp, uint32_t sdata);
 /* --------------------------------------------------------------------------------------------------------- */
 
 /* handle dos timestamps */
-void dos_time_to_timeval(struct timeval *timeval, uint32_t dos_time);
-uint32_t timeval_to_dos_time(const struct timeval *timeval);
+schism_ticks_t dos_time_to_ms(uint32_t dos_time);
+uint32_t ms_to_dos_time(schism_ticks_t ms);
 
 void fat_date_time_to_tm(struct tm *tm, uint16_t fat_date, uint16_t fat_time);
 void tm_to_fat_date_time(const struct tm *tm, uint16_t *fat_date, uint16_t *fat_time);

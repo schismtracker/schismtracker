@@ -26,6 +26,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <assert.h>
+#include <time.h>
 
 #include "bswap.h"
 #include "player/sndfile.h"
@@ -209,7 +210,10 @@ void csf_forget_history(song_t *csf)
 	free(csf->history);
 	csf->history = NULL;
 	csf->histlen = 0;
-	gettimeofday(&csf->editstart, NULL);
+	csf->editstart.runtime = timer_ticks();
+
+	time_t thetime = time(NULL);
+	localtime_r(&thetime, &csf->editstart.time);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

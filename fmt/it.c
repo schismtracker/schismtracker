@@ -445,7 +445,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			slurp_read(fp, &run_time, sizeof(run_time));
 			run_time = bswapLE32(run_time);
 
-			dos_time_to_timeval(&song->history[i].runtime, run_time);
+			song->history[i].runtime = dos_time_to_ms(run_time);
 		}
 	}
 	if (ignoremidi) {
@@ -619,7 +619,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			song->history = mem_calloc(1, sizeof(*song->history));
 
 			uint32_t runtime = it_decode_edit_timer(hdr.cwtv, hdr.reserved);
-			dos_time_to_timeval(&song->history[0].runtime, runtime);
+			song->history[0].runtime = dos_time_to_ms(runtime);
 		}
 
 		//"saved %d time%s", hist, (hist == 1) ? "" : "s"
@@ -927,26 +927,20 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 		fat_time = bswapLE16(fat_time);
 		disko_write(fp, &fat_time, sizeof(fat_time));
 
-		uint32_t run_time = bswapLE32(timeval_to_dos_time(&song->history[i].runtime));
+		uint32_t run_time = bswapLE32(ms_to_dos_time(song->history[i].runtime));
 		disko_write(fp, &run_time, sizeof(run_time));
 	}
 
 	{
 		uint16_t fat_date, fat_time;
-		struct tm loadtm;
-		time_t hax = song->editstart.tv_sec;
 
-		localtime_r(&hax, &loadtm);
-		tm_to_fat_date_time(&loadtm, &fat_date, &fat_time);
+		tm_to_fat_date_time(&song->editstart.time, &fat_date, &fat_time);
 
 		fat_date = bswapLE16(fat_date);
 		disko_write(fp, &fat_date, sizeof(fat_date));
 		fat_time = bswapLE16(fat_time);
 		disko_write(fp, &fat_time, sizeof(fat_time));
-	}
 
-	// 32-bit DOS tick count (tick = 1/18.2 second; 54945 * 18.2 = 999999 which is Close Enough)
-	{
 		uint32_t ticks = it_get_song_elapsed_dos_time(song);
 		ticks = bswapLE32(ticks);
 		disko_write(fp, &ticks, sizeof(ticks));

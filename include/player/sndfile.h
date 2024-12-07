@@ -14,7 +14,8 @@
 
 #include "tables.h"
 
-#include <time.h> // need tm and timeval
+#include <time.h> // struct tm
+#include "timer.h" // schism_ticks_t
 
 
 #define MOD_AMIGAC2             0x1AB
@@ -481,9 +482,11 @@ typedef struct song_note {
 typedef struct song_history {
 	int time_valid;
 
-	// meh, just use the standard structures
+	// what time the file was opened
 	struct tm time;
-	struct timeval runtime;
+
+	// the amount of milliseconds the file was opened for
+	schism_ticks_t runtime;
 } song_history_t;
 
 ////////////////////////////////////////////////////////////////////
@@ -571,7 +574,7 @@ typedef struct song {
 	size_t histlen; // How many session history data entries exist (each entry is eight bytes)
 	song_history_t *history; // Preserved entries from prior sessions, might be NULL if histlen = 0
 
-	struct timeval editstart; // When the song was loaded
+	song_history_t editstart; // When the song was loaded
 
 	// mixer stuff
 	uint32_t mix_flags; // SNDMIX_*

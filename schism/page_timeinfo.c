@@ -155,16 +155,12 @@ static void timeinfo_redraw(void)
 	{
 		// Module time
 
-		uint64_t secs = 0;
-		uint64_t usecs = 0;
+		uint64_t msecs = 0;
 
-		for (size_t i = 0; i < current_song->histlen; i++) {
-			secs += current_song->history[i].runtime.tv_sec;
-			usecs += current_song->history[i].runtime.tv_usec;
-		}
+		for (size_t i = 0; i < current_song->histlen; i++)
+			msecs += current_song->history[i].runtime;
 
-		// add any missing seconds
-		secs += (usecs / 1000000);
+		const uint64_t secs = msecs / 1000;
 
 		draw_time(secs, 18, 13);
 
@@ -174,13 +170,13 @@ static void timeinfo_redraw(void)
 	{
 		// Current session
 		const time_t now = time(NULL);
+		const time_t start = mktime(&current_song->editstart.time);
 
-		double secs_d = difftime(now, current_song->editstart.tv_sec);
-		uint64_t secs = (uint64_t)MAX(secs_d, 0);
+		double secs_d = difftime(now, start);
 
-		draw_time(secs, 18, 14);
+		draw_time(secs_d, 18, 14);
 
-		total_secs += secs;
+		total_secs += secs_d;
 	}
 
 	draw_time(total_secs, 18, 16);
@@ -195,7 +191,9 @@ static void timeinfo_redraw(void)
 		for (int i = 0; i < current_song->histlen; i++) {
 			char buf[27];
 
-			session_secs += current_song->history[i].runtime.tv_sec;
+			const uint64_t runtime_secs = current_song->history[i].runtime / 1000;
+
+			session_secs += runtime_secs;
 
 			if (i >= top_line && i < top_line + 29) {
 				if (current_song->history[i].time_valid) {
@@ -208,8 +206,7 @@ static void timeinfo_redraw(void)
 					draw_text("<unknown date>", 4, 20 + i - top_line, 0, 2);
 				}
 
-				draw_time(current_song->history[i].runtime.tv_sec, 44, 20 + i - top_line);
-
+				draw_time(runtime_secs, 44, 20 + i - top_line);
 				draw_time(session_secs, 64, 20 + i - top_line);
 			}
 		}
