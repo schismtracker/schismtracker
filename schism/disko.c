@@ -570,7 +570,7 @@ static const struct save_format *export_format = NULL; /* NULL == not running */
 static struct widget diskodlg_widgets[1];
 static size_t est_len;
 static int prgh;
-static struct timeval export_start_time;
+static schism_ticks_t export_start_time;
 static int canceled = 0; /* this sucks, but so do I */
 
 static int disko_finish(void);
@@ -677,7 +677,7 @@ int disko_export_song(const char *filename, const struct save_format *format)
 		return DW_ERROR;
 	}
 
-	gettimeofday(&export_start_time, NULL);
+	export_start_time = timer_ticks();
 
 	numfiles = format->f.export.multi ? MAX_CHANNELS : 1;
 
@@ -781,8 +781,6 @@ int disko_sync(void)
 static int disko_finish(void)
 {
 	int ret = DW_OK, n, tmp;
-	struct timeval export_end_time;
-	double elapsed;
 	int num_files = 0;
 	size_t total_size = 0; // in bytes
 	size_t samples_0;
@@ -824,17 +822,15 @@ static int disko_finish(void)
 	status.flags &= ~DISKWRITER_ACTIVE; /* please unsubscribe me from your mailing list */
 
 	switch (ret) {
-	case DW_OK:
-		gettimeofday(&export_end_time, NULL);
-		elapsed = (export_end_time.tv_sec - export_start_time.tv_sec)
-			+ ((export_end_time.tv_usec - export_start_time.tv_usec) / 1000000.0);
+	case DW_OK: {
+		const schism_ticks_t elapsed_ms = (timer_ticks() - export_start_time);
 
-		/* it would be more useful if this actually got the real size of the files */
-		log_appendf(5, " %.2f MiB (%zu:%zu) written in %.2lf sec",
+		log_appendf(5, " %.2f MiB (%zu:%zu) written in %" PRIu64 ".%02" PRIu64 " sec",
 			total_size / 1048576.0,
 			samples_0 / disko_output_rate / 60, (samples_0 / disko_output_rate) % 60,
-			elapsed);
+			(uint64_t)(elapsed_ms / 1000), (uint64_t)(elapsed_ms / 10 % 100));
 		break;
+	}
 	case DW_ERROR:
 		/* hey, what was the filename? oops */
 		if (canceled)
