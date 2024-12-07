@@ -419,10 +419,10 @@ schism_ticks_t dos_time_to_ms(uint32_t dos_time)
 
 uint32_t ms_to_dos_time(schism_ticks_t ms)
 {
-	int64_t dos = round((double)ms / (1000.0 / 18.2));
+	double dos = round((double)ms / (1000.0 / 18.2));
 
 	// no overflow!
-	return CLAMP(dos, 0, UINT32_MAX);
+	return (uint32_t)CLAMP(dos, 0, UINT32_MAX);
 }
 
 void fat_date_time_to_tm(struct tm *tm, uint16_t fat_date, uint16_t fat_time)
