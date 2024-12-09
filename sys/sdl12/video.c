@@ -247,9 +247,8 @@ static void sdl12_video_setup(const char *interpolation)
 
 static void sdl12_video_startup(void)
 {
-	char *q;
 	SDL_Rect **modes;
-	int i, j, x = -1, y = -1;
+	int i, x = -1, y = -1;
 
 	// center the window on startup by default; this is what the SDL 2 backend does...
 	int center_enabled = 0;
@@ -661,7 +660,7 @@ static void sdl12_video_blit(void)
 	};
 }
 
-static void sdl12_video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
+static void sdl12_video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y)
 {
 	vx = MAX(vx, video.clip.x);
 	vx -= video.clip.x;
@@ -706,7 +705,7 @@ static int sdl12_video_is_input_grabbed(void)
 	return sdl12_WM_GrabInput(SDL_GRAB_QUERY) == SDL_GRAB_ON;
 }
 
-static void sdl12_video_set_input_grabbed(int enabled)
+static void sdl12_video_set_input_grabbed(SCHISM_UNUSED int enabled)
 {
 	sdl12_WM_GrabInput(enabled ? SDL_GRAB_ON : SDL_GRAB_OFF);
 }
@@ -765,7 +764,7 @@ static int sdl12_video_have_menu(void)
 #endif
 }
 
-static void sdl12_video_toggle_menu(int on)
+static void sdl12_video_toggle_menu(SCHISM_UNUSED int on)
 {
 	if (!video_have_menu())
 		return;

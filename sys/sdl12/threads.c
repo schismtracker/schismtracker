@@ -71,7 +71,7 @@ static void sdl12_thread_wait(schism_thread_t *thread, int *status)
 	sdl12_WaitThread(thread->thread, status);
 }
 
-static void sdl12_thread_set_priority(int priority)
+static void sdl12_thread_set_priority(SCHISM_UNUSED int priority)
 {
 	/* no-op */
 }

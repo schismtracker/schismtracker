@@ -25,7 +25,7 @@ dnl PACKAGE_VERSION will be either "" if not using git, or date of the last git 
 m4_define([last_git_commit], patsubst(m4_esyscmd([git log -n 1 --date=short --format=format:%cd]), [[^0-9]]))
 AC_INIT([schismtracker],[last_git_commit])
 
-last_commit_date=[last_git_commit]
+last_commit_date="last_git_commit"
 
 AC_CONFIG_SRCDIR([schism/main.c])
 
@@ -36,6 +36,7 @@ AC_CANONICAL_HOST
 
 if test "x$last_commit_date" = "x"; then
 	AC_DEFINE([EMPTY_VERSION], [], [Empty version number (okay if you don't have Git)])
+	echo "*** empty version"
 fi
 
 dnl -----------------------------------------------------------------------

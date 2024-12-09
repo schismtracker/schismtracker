@@ -170,22 +170,22 @@ static int sdl2_video_is_fullscreen(void)
 	return video.fullscreen;
 }
 
-int sdl2_video_width(void)
+static int sdl2_video_width(void)
 {
 	return video.width;
 }
 
-int sdl2_video_height(void)
+static int sdl2_video_height(void)
 {
 	return video.height;
 }
 
-const char *sdl2_video_driver_name(void)
+static const char *sdl2_video_driver_name(void)
 {
 	return sdl2_GetCurrentVideoDriver();
 }
 
-void sdl2_video_report(void)
+static void sdl2_video_report(void)
 {
 	struct {
 		uint32_t num;
@@ -261,7 +261,7 @@ static void set_icon(void)
 
 static void video_redraw_texture(void)
 {
-	int i, j, pref_last = ARRAY_SIZE(native_formats);
+	size_t pref_last = ARRAY_SIZE(native_formats);
 	uint32_t format = SDL_PIXELFORMAT_RGB888;
 
 	if (video.texture)
@@ -271,7 +271,7 @@ static void video_redraw_texture(void)
 		sdl2_FreeFormat(video.pixel_format);
 
 	if (*cfg_video_format) {
-		for (i = 0; i < ARRAY_SIZE(native_formats); i++) {
+		for (size_t i = 0; i < ARRAY_SIZE(native_formats); i++) {
 			if (!charset_strcasecmp(cfg_video_format, CHARSET_UTF8, native_formats[i].name, CHARSET_UTF8)) {
 				format = native_formats[i].format;
 				goto got_format;
@@ -285,8 +285,8 @@ static void video_redraw_texture(void)
 	// conversion.
 	SDL_RendererInfo info;
 	if (!sdl2_GetRendererInfo(video.renderer, &info)) {
-		for (i = 0; i < info.num_texture_formats; i++)
-			for (j = 0; j < ARRAY_SIZE(native_formats); j++)
+		for (uint32_t i = 0; i < info.num_texture_formats; i++)
+			for (size_t j = 0; j < ARRAY_SIZE(native_formats); j++)
 				if (info.texture_formats[i] == native_formats[j].format && j < pref_last)
 					format = native_formats[pref_last = j].format;
 	}
@@ -306,7 +306,7 @@ got_format:
 	}
 }
 
-void sdl2_video_set_hardware(int hardware)
+static void sdl2_video_set_hardware(int hardware)
 {
 	sdl2_DestroyTexture(video.texture);
 
@@ -321,21 +321,21 @@ void sdl2_video_set_hardware(int hardware)
 	video_report();
 }
 
-void sdl2_video_shutdown(void)
+static void sdl2_video_shutdown(void)
 {
 	sdl2_DestroyTexture(video.texture);
 	sdl2_DestroyRenderer(video.renderer);
 	sdl2_DestroyWindow(video.window);
 }
 
-void sdl2_video_setup(const char *quality)
+static void sdl2_video_setup(const char *quality)
 {
 	strncpy(cfg_video_interpolation, quality, 7);
 	sdl2_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
 	video_redraw_texture();
 }
 
-void sdl2_video_startup(void)
+static void sdl2_video_startup(void)
 {
 	vgamem_clear();
 	vgamem_flip();
@@ -370,7 +370,7 @@ void sdl2_video_startup(void)
 	set_icon();
 }
 
-void sdl2_video_fullscreen(int new_fs_flag)
+static void sdl2_video_fullscreen(int new_fs_flag)
 {
 	const int have_menu = video_have_menu();
 	/* positive new_fs_flag == set, negative == toggle */
@@ -396,7 +396,7 @@ void sdl2_video_fullscreen(int new_fs_flag)
 	}
 }
 
-void sdl2_video_resize(unsigned int width, unsigned int height)
+static void sdl2_video_resize(unsigned int width, unsigned int height)
 {
 	video.width = width;
 	video.height = height;
@@ -425,7 +425,7 @@ static void sdl_pal_(int i, unsigned char rgb[3])
 	video.pal[i] = sdl2_MapRGB(video.pixel_format, rgb[0], rgb[1], rgb[2]);
 }
 
-void sdl2_video_colors(unsigned char palette[16][3])
+static void sdl2_video_colors(unsigned char palette[16][3])
 {
 	static const int lastmap[] = { 0, 1, 2, 3, 5 };
 	int i, p;
@@ -457,17 +457,17 @@ void sdl2_video_colors(unsigned char palette[16][3])
 	}
 }
 
-int sdl2_video_is_focused(void)
+static int sdl2_video_is_focused(void)
 {
 	return !!(sdl2_GetWindowFlags(video.window) & SDL_WINDOW_INPUT_FOCUS);
 }
 
-int sdl2_video_is_visible(void)
+static int sdl2_video_is_visible(void)
 {
 	return !!(sdl2_GetWindowFlags(video.window) & SDL_WINDOW_SHOWN);
 }
 
-int sdl2_video_is_wm_available(void)
+static int sdl2_video_is_wm_available(void)
 {
 	SDL_SysWMinfo info;
 	SDL_VERSION(&info.version);
@@ -475,7 +475,7 @@ int sdl2_video_is_wm_available(void)
 	return !!sdl2_GetWindowWMInfo(video.window, &info);
 }
 
-int sdl2_video_is_hardware(void)
+static int sdl2_video_is_hardware(void)
 {
 	SDL_RendererInfo info;
 	sdl2_GetRendererInfo(video.renderer, &info);
@@ -483,21 +483,13 @@ int sdl2_video_is_hardware(void)
 }
 
 /* -------------------------------------------------------- */
-/* mousecursor */
 
-void sdl2_video_show_system_cursor(int show)
-{
-	sdl2_ShowCursor(show);
-}
-
-/* -------------------------------------------------------- */
-
-int sdl2_video_is_screensaver_enabled(void)
+static int sdl2_video_is_screensaver_enabled(void)
 {
 	return sdl2_IsScreenSaverEnabled();
 }
 
-void sdl2_video_toggle_screensaver(int enabled)
+static void sdl2_video_toggle_screensaver(int enabled)
 {
 	if (enabled) sdl2_EnableScreenSaver();
 	else sdl2_DisableScreenSaver();
@@ -506,7 +498,7 @@ void sdl2_video_toggle_screensaver(int enabled)
 /* ---------------------------------------------------------- */
 /* coordinate translation */
 
-void sdl2_video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
+static void sdl2_video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y)
 {
 	if (video_mousecursor_visible() && (video.mouse.x != vx || video.mouse.y != vy))
 		status.flags |= SOFTWARE_MOUSE_MOVED;
@@ -516,8 +508,8 @@ void sdl2_video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
 	vx /= (cfg_video_want_fixed) ? cfg_video_want_fixed_width  : video.width;
 	vy /= (cfg_video_want_fixed) ? cfg_video_want_fixed_height : video.height;
 
-	vx = CLAMP(vx, 0, NATIVE_SCREEN_WIDTH - 1);
-	vy = CLAMP(vy, 0, NATIVE_SCREEN_HEIGHT - 1);
+	vx = MIN(vx, NATIVE_SCREEN_WIDTH - 1);
+	vy = MIN(vy, NATIVE_SCREEN_HEIGHT - 1);
 
 	video.mouse.x = vx;
 	video.mouse.y = vy;
@@ -525,7 +517,7 @@ void sdl2_video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
 	if (y) *y = vy;
 }
 
-void sdl2_video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
+static void sdl2_video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
 {
 	if (!cfg_video_want_fixed) {
 		*trans_x = x;
@@ -556,12 +548,12 @@ void sdl2_video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y
 /* -------------------------------------------------- */
 /* input grab */
 
-int sdl2_video_is_input_grabbed(void)
+static int sdl2_video_is_input_grabbed(void)
 {
 	return !!sdl2_GetWindowGrab(video.window);
 }
 
-void sdl2_video_set_input_grabbed(int enabled)
+static void sdl2_video_set_input_grabbed(int enabled)
 {
 	sdl2_SetWindowGrab(video.window, enabled ? SDL_TRUE : SDL_FALSE);
 }
@@ -569,12 +561,12 @@ void sdl2_video_set_input_grabbed(int enabled)
 /* -------------------------------------------------- */
 /* warp mouse position */
 
-void sdl2_video_warp_mouse(unsigned int x, unsigned int y)
+static void sdl2_video_warp_mouse(unsigned int x, unsigned int y)
 {
 	sdl2_WarpMouseInWindow(video.window, x, y);
 }
 
-void sdl2_video_get_mouse_coordinates(unsigned int *x, unsigned int *y)
+static void sdl2_video_get_mouse_coordinates(unsigned int *x, unsigned int *y)
 {
 	*x = video.mouse.x;
 	*y = video.mouse.y;
@@ -583,7 +575,7 @@ void sdl2_video_get_mouse_coordinates(unsigned int *x, unsigned int *y)
 /* -------------------------------------------------- */
 /* menu toggling */
 
-int sdl2_video_have_menu(void)
+static int sdl2_video_have_menu(void)
 {
 #ifdef SCHISM_WIN32
 	return 1;
@@ -592,7 +584,7 @@ int sdl2_video_have_menu(void)
 #endif
 }
 
-void sdl2_video_toggle_menu(int on)
+static void sdl2_video_toggle_menu(SCHISM_UNUSED int on)
 {
 	if (!video_have_menu())
 		return;
@@ -622,7 +614,7 @@ void sdl2_video_toggle_menu(int on)
 
 /* ------------------------------------------------------------ */
 
-void sdl2_video_blit(void)
+static void sdl2_video_blit(void)
 {
 	SDL_Rect dstrect;
 
@@ -672,7 +664,7 @@ void sdl2_video_blit(void)
 
 /* ------------------------------------------------- */
 
-void sdl2_video_mousecursor_changed(void)
+static void sdl2_video_mousecursor_changed(void)
 {
 	const int vis = video_mousecursor_visible();
 	sdl2_ShowCursor(vis == MOUSE_SYSTEM);

@@ -134,12 +134,12 @@ static char *_internal_clippy_paste(int cb)
 			if (backend && backend->have_clipboard()) {
 				_free_current_clipboard();
 
-				char *cb = backend->get_clipboard();
+				char *c = backend->get_clipboard();
 
-				if (charset_iconv(cb, &_current_clipboard, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
-					_current_clipboard = str_dup(cb);
+				if (charset_iconv(c, &_current_clipboard, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
+					_current_clipboard = str_dup(c);
 
-				free(cb);
+				free(c);
 
 				return _current_clipboard;
 			}

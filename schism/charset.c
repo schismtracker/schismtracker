@@ -571,7 +571,7 @@ static charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 };
 
 /* for debugging */
-const char* charset_iconv_error_lookup(charset_error_t err) {
+SCHISM_CONST const char* charset_iconv_error_lookup(charset_error_t err) {
 	switch (err) {
 		case CHARSET_ERROR_SUCCESS:
 		default:

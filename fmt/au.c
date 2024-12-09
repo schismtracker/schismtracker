@@ -129,15 +129,16 @@ int fmt_au_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	/* now we can grab the title */
 	if (au.data_offset > 24) {
-		int extlen = au.data_offset - 24;
+		size_t extlen = au.data_offset - 24;
 
 		slurp_seek(fp, 24, SEEK_SET);
 
-		unsigned char title[extlen];
+		char *title = mem_alloc(extlen + 1);
 		if (slurp_read(fp, title, extlen) != extlen)
 			return 0;
+		title[extlen] = '\0';
 
-		file->title = strn_dup((const char *)title, extlen);
+		file->title = title;
 	}
 
 	return 1;
@@ -199,7 +200,7 @@ int fmt_au_load_sample(slurp_t *fp, song_sample_t *smp)
 	}
 
 	if (au.data_offset > sizeof(au)) {
-		int extlen = MIN(au.data_offset - sizeof(au), sizeof(smp->name) - 1);
+		size_t extlen = MIN(au.data_offset - sizeof(au), sizeof(smp->name) - 1);
 
 		if (slurp_read(fp, smp->name, extlen) != extlen)
 			return 0;

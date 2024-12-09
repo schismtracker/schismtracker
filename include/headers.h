@@ -36,6 +36,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stddef.h>
 
 #include <stdarg.h>
 
@@ -229,8 +230,15 @@ int unsetenv(const char *name);
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__pure__, 2, 96, 0)
 # define SCHISM_PURE __attribute__((__pure__))
 #endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__const__, 2, 5, 0)
+# define SCHISM_CONST __attribute__((__const__))
+#endif
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__format__, 2, 3, 0)
 # define SCHISM_FORMAT(x) __attribute__((__format__ x))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__alloc_size__, 9, 1, 0)
+# define SCHISM_ALLOC_SIZE(x) __attribute__((__alloc_size__(x)))
+# define SCHISM_ALLOC_SIZE_EX(x, y) __attribute__((__alloc_size__(x, y)))
 #endif
 
 #if SCHISM_GNUC_HAS_BUILTIN(__builtin_expect, 3, 0, 0)
@@ -261,8 +269,17 @@ int unsetenv(const char *name);
 #ifndef SCHISM_PURE
 # define SCHISM_PURE
 #endif
+#ifndef SCHISM_CONST
+# define SCHISM_CONST
+#endif
 #ifndef SCHISM_FORMAT
 # define SCHISM_FORMAT(x)
+#endif
+#ifndef SCHISM_ALLOC_SIZE
+# define SCHISM_ALLOC_SIZE(x)
+#endif
+#ifndef SCHISM_ALLOC_SIZE_EX
+# define SCHISM_ALLOC_SIZE_EX(x, y)
 #endif
 
 #endif /* SCHISM_HEADERS_H_ */

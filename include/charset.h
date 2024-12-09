@@ -23,9 +23,7 @@
 #ifndef SCHISM_CHARSET_H_
 #define SCHISM_CHARSET_H_
 
-#include <stddef.h>
-#include <stdint.h>
-#include <stddef.h>
+#include "headers.h"
 
 /* UCS4 shouldn't ever be used externally; the output depends on endianness.
  * It should only be used as sort of an in-between from UTF-8 to CP437 for use
@@ -86,8 +84,8 @@ typedef struct {
 	int state;          /* one of DECODER_* definitions above; negative values are errors */
 } charset_decode_t;
 
-int char_digraph(int k1, int k2);
-unsigned char char_unicode_to_cp437(uint32_t c);
+SCHISM_CONST int char_digraph(int k1, int k2);
+SCHISM_CONST unsigned char char_unicode_to_cp437(uint32_t c);
 
 /* ------------------------------------------------------------------------ */
 

@@ -34,7 +34,7 @@
  * are written using a very simple macro. */
 
 #define SCHISM_SIGNED_SHIFT_VARIANT(type, typec, PREFIX, OPERATION) \
-	inline int##type##_t schism_signed_##PREFIX##shift_##type##_(int##type##_t x, unsigned int y) \
+	SCHISM_CONST inline int##type##_t schism_signed_##PREFIX##shift_##type##_(int##type##_t x, unsigned int y) \
 	{ \
 		return (x < 0) ? ~(~x OPERATION y) : (x OPERATION y); \
 	}
