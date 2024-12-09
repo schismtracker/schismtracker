@@ -41,11 +41,12 @@ int iff_chunk_peek_ex(iff_chunk_t *chunk, slurp_t *fp, uint32_t flags)
 	chunk->id = bswapBE32(chunk->id);
 	chunk->size = (flags & IFF_CHUNK_SIZE_LE) ? bswapLE32(chunk->size) : bswapBE32(chunk->size);
 
-	if ((chunk->offset = slurp_tell(fp)) < 0)
+	chunk->offset = slurp_tell(fp);
+	if (chunk->offset < 0)
 		return 0;
 
 	// align the offset on a word boundary if desired
-	slurp_seek(fp, (flags & IFF_CHUNK_ALIGNED) ? (chunk->size) : (chunk->size + (chunk->size & 1)), SEEK_CUR);
+	slurp_seek(fp, (flags & IFF_CHUNK_ALIGNED) ? (chunk->size + (chunk->size & 1)) : (chunk->size), SEEK_CUR);
 
 	int64_t pos = slurp_tell(fp);
 	if (pos < 0)
