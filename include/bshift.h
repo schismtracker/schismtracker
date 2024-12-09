@@ -36,18 +36,7 @@
 #define SCHISM_SIGNED_SHIFT_VARIANT(type, typec, PREFIX, OPERATION) \
 	inline int##type##_t schism_signed_##PREFIX##shift_##type##_(int##type##_t x, unsigned int y) \
 	{ \
-		const uint##type##_t roffset = UINT##typec##_C(1) << (sizeof(x) * CHAR_BIT - 1); \
-	\
-		union { \
-			int##type##_t s; \
-			uint##type##_t u; \
-		} rx; \
-	\
-		rx.s = x; \
-		rx.u += roffset; \
-		rx.u OPERATION##= y; \
-		rx.u -= roffset OPERATION y; \
-		return rx.s; \
+		return (x < 0) ? ~(~x OPERATION y) : (x OPERATION y); \
 	}
 
 #define SCHISM_SIGNED_LSHIFT_VARIANT(type, typec) \
