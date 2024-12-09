@@ -121,7 +121,7 @@ int fmt_d00_read_info(dmoz_file_t *file, slurp_t *fp)
 		return 0;
 
 	file->title = strn_dup(hdr.title, sizeof(hdr.title));
-	file->description = "EdLib Tracker D00 file";
+	file->description = "EdLib Tracker D00";
 	file->type = TYPE_MODULE_S3M;
 	return 1;
 }

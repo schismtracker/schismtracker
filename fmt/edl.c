@@ -81,7 +81,7 @@ int fmt_edl_read_info(dmoz_file_t *file, slurp_t *fp)
 	}
 
 	file->title = strn_dup(title, sizeof(title));
-	file->description = "EdLib Tracker EDL file";
+	file->description = "EdLib Tracker EDL";
 	file->type = TYPE_MODULE_S3M;
 
 	unslurp(&fakefp);
