@@ -102,7 +102,7 @@ int fmt_dsm_read_info(dmoz_file_t *file, slurp_t *fp)
 		return 0;
 
 	iff_chunk_t chunk;
-	while (riff_chunk_peek(&chunk, fp)) {
+	while (iff_chunk_peek_ex(&chunk, fp, IFF_CHUNK_SIZE_LE)) {
 		if (chunk.id == ID_SONG) {
 			/* we only need the title, really */
 			unsigned char title[28];
@@ -114,7 +114,7 @@ int fmt_dsm_read_info(dmoz_file_t *file, slurp_t *fp)
 		}
 	}
 
-	file->description = "DSIK Module";
+	file->description = "Digital Sound Interface Kit";
 	/*file->extension = str_dup("dsm");*/
 	file->type = TYPE_MODULE_MOD;
 	return 1;
@@ -423,7 +423,7 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	song->pan_separation = 128;
 	song->flags = SONG_ITOLDEFFECTS | SONG_COMPATGXX;
 
-	sprintf(song->tracker_id, "Digital Sound Interface Kit mod");
+	sprintf(song->tracker_id, "Digital Sound Interface Kit");
 
 	return LOAD_SUCCESS;
 }

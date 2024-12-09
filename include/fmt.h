@@ -181,6 +181,14 @@ typedef struct chunk {
 	int64_t offset;
 } iff_chunk_t;
 
+/* chunk enums */
+enum {
+	IFF_CHUNK_SIZE_LE = (1 << 0), /* for RIFF */
+	IFF_CHUNK_ALIGNED = (1 << 1), /* are the structures word aligned? */
+};
+
+int iff_chunk_peek_ex(iff_chunk_t *chunk, slurp_t *fp, uint32_t flags);
+
 int iff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp);
 int riff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp);
 int iff_chunk_read(iff_chunk_t *chunk, slurp_t *fp, void *data, size_t size);
