@@ -100,7 +100,7 @@ void about_load_page(struct page *page)
 	page->set_page = show_about;
 }
 
-static void about_close(UNUSED void *data)
+static void about_close(SCHISM_UNUSED void *data)
 {
 	if (status.current_page == PAGE_ABOUT) set_page(PAGE_LOAD_MODULE);
 	status.flags |= NEED_UPDATE;

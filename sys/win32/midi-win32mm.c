@@ -75,7 +75,7 @@ static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *d, unsigned int le
 	(*q) = (m);
 }
 static void _win32mm_send(struct midi_port *p, const unsigned char *data,
-		unsigned int len, UNUSED unsigned int delay)
+		unsigned int len, SCHISM_UNUSED unsigned int delay)
 {
 	struct win32mm_midi *m;
 	DWORD q;
@@ -108,11 +108,11 @@ struct curry {
 };
 
 
-static CALLBACK void _win32mm_xp_output(UNUSED UINT uTimerID,
-			UNUSED UINT uMsg,
+static CALLBACK void _win32mm_xp_output(SCHISM_UNUSED UINT uTimerID,
+			SCHISM_UNUSED UINT uMsg,
 			DWORD_PTR dwUser,
-			UNUSED DWORD_PTR dw1,
-			UNUSED DWORD_PTR dw2)
+			SCHISM_UNUSED DWORD_PTR dw1,
+			SCHISM_UNUSED DWORD_PTR dw2)
 {
 	struct curry *c;
 	c = (struct curry *)dwUser;
@@ -136,7 +136,7 @@ static void _win32mm_send_xp(struct midi_port *p, const unsigned char *buf,
 					TIME_ONESHOT | TIME_CALLBACK_FUNCTION);
 }
 
-static CALLBACK void _win32mm_inputcb(UNUSED HMIDIIN in, UINT wmsg, DWORD_PTR inst,
+static CALLBACK void _win32mm_inputcb(SCHISM_UNUSED HMIDIIN in, UINT wmsg, DWORD_PTR inst,
 					   DWORD_PTR param1, DWORD_PTR param2)
 {
 	struct midi_port *p = (struct midi_port *)inst;

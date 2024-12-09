@@ -959,7 +959,7 @@ static void copy_envelope(song_instrument_t *ins, song_envelope_t *ienv, struct 
 	}
 }
 
-int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
+int fmt_mdl_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lflags)
 {
 	struct mdlpat *pat, *patptr = NULL;
 	struct mdlenv *volenvs[64] = {0}, *panenvs[64] = {0}, *freqenvs[64] = {0};

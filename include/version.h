@@ -31,7 +31,7 @@ extern const char *ver_short_based_on;
 extern unsigned short ver_cwtv; /* lower 12 bits of the IT/S3M cwtv field */
 extern unsigned short ver_reserved; /* full version number in case 12 bits are not enough */
 
-PURE extern const char *schism_banner(int classic);
+SCHISM_PURE extern const char *schism_banner(int classic);
 
 /* need to call this at startup */
 void ver_init(void);

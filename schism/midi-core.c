@@ -636,7 +636,7 @@ void midi_queue_alloc(int buffer_length, int sample_size, int samples_per_second
 	qq = mem_calloc(qlen, sizeof(*qq));
 }
 
-static int _midi_queue_run(UNUSED void *xtop)
+static int _midi_queue_run(SCHISM_UNUSED void *xtop)
 {
 	int i, j;
 

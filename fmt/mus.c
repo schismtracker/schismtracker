@@ -108,7 +108,7 @@ Some things yet to tackle:
 #define FRACMASK ((1 << FRACBITS) - 1)
 
 
-int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
+int fmt_mus_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lflags)
 {
 	struct mus_header hdr;
 	int n;

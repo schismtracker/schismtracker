@@ -47,8 +47,6 @@ int sdl2_load_sym(const char *fn, void *addr);
 #endif
 
 #define SDL2_VERSION_ATLEAST(ver, mmajor, mminor, mpatch) \
-	((ver.major >= mmajor) \
-	 && (ver.major > mmajor || ver.minor >= mminor) \
-	 && (ver.major > mmajor || ver.minor > mminor || ver.patch >= mpatch))
+	SCHISM_SEMVER_ATLEAST(ver.major, ver.minor, ver.patch, mmajor, mminor, mpatch)
 
 #endif /* SCHISM_SYS_SDL2_INIT_H_ */

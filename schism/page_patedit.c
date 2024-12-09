@@ -278,7 +278,7 @@ static const int options_link_split[] = { 5, 6, -1 };
 static int options_selected_widget = 0;
 static int options_last_octave = 0;
 
-static void options_close_cancel(UNUSED void *data)
+static void options_close_cancel(SCHISM_UNUSED void *data)
 {
 	kbd_set_current_octave(options_last_octave);
 }
@@ -391,7 +391,7 @@ static void length_edit_draw_const(void)
 	draw_text("Start Pattern", 20, 27, 0, 2);
 	draw_text("End Pattern", 22, 28, 0, 2);
 }
-static void length_edit_close(UNUSED void *data)
+static void length_edit_close(SCHISM_UNUSED void *data)
 {
 	int i, nl;
 	nl = length_edit_widgets[0].d.thumbbar.value;
@@ -408,7 +408,7 @@ static void length_edit_close(UNUSED void *data)
 		}
 	}
 }
-static void length_edit_cancel(UNUSED void *data)
+static void length_edit_cancel(SCHISM_UNUSED void *data)
 {
 	/* do nothing */
 }
@@ -435,7 +435,7 @@ void pattern_editor_length_edit(void)
 /* --------------------------------------------------------------------------------------------------------- */
 /* multichannel dialog */
 static struct widget multichannel_widgets[65];
-static void multichannel_close(UNUSED void *data)
+static void multichannel_close(SCHISM_UNUSED void *data)
 {
 	int i, m = 0;
 
@@ -578,7 +578,7 @@ static void copyin_addrow(int *copyin_x, int *copyin_y)
 	(*copyin_y) = (*copyin_y) + 1;
 }
 
-static int pattern_selection_system_paste(UNUSED int cb, const void *data)
+static int pattern_selection_system_paste(SCHISM_UNUSED int cb, const void *data)
 {
 	int copyin_x, copyin_y;
 	int (*fx_map)(char f);
@@ -825,7 +825,7 @@ static void history_draw_const(void)
 	}
 }
 
-static void history_close(UNUSED void *data)
+static void history_close(SCHISM_UNUSED void *data)
 {
 	/* nothing! */
 }
@@ -901,14 +901,14 @@ static void selection_vary(int fast, int depth, int part);
 /* this is shared by the fast and normal volume dialogs */
 static struct widget volume_setup_widgets[3];
 
-static void fast_volume_setup_ok(UNUSED void *data)
+static void fast_volume_setup_ok(SCHISM_UNUSED void *data)
 {
 	fast_volume_percent = volume_setup_widgets[0].d.thumbbar.value;
 	fast_volume_mode = 1;
 	status_text_flash("Alt-I / Alt-J fast volume changes enabled");
 }
 
-static void fast_volume_setup_cancel(UNUSED void *data)
+static void fast_volume_setup_cancel(SCHISM_UNUSED void *data)
 {
 	status_text_flash("Alt-I / Alt-J fast volume changes not enabled");
 }
@@ -961,7 +961,7 @@ static void volume_setup_draw_const(void)
 	draw_box(25, 29, 52, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
-static void volume_amplify_ok(UNUSED void *data)
+static void volume_amplify_ok(SCHISM_UNUSED void *data)
 {
 	volume_percent = volume_setup_widgets[0].d.thumbbar.value;
 	selection_amplify(volume_percent);
@@ -1001,7 +1001,7 @@ static void vary_setup_draw_const(void)
 	draw_box(25, 29, 52, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
-static void vary_amplify_ok(UNUSED void *data)
+static void vary_amplify_ok(SCHISM_UNUSED void *data)
 {
 	vary_depth = volume_setup_widgets[0].d.thumbbar.value;
 	selection_vary(0, vary_depth, current_vary);
@@ -2894,7 +2894,7 @@ static int note_is_empty(song_note_t *p)
 // FIXME: why the 'row' param? should it be removed, or should the references to current_row be replaced?
 // fwiw, every call to this uses current_row.
 // return: zero if there was a template error, nonzero otherwise
-static int patedit_record_note(song_note_t *cur_note, int channel, UNUSED int row, int note, int force)
+static int patedit_record_note(song_note_t *cur_note, int channel, SCHISM_UNUSED int row, int note, int force)
 {
 	song_note_t *q;
 	int i, r = 1, channels;

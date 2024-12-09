@@ -318,7 +318,7 @@ static ULONG STDMETHODCALLTYPE mfbytestream_Release(IMFByteStream *This)
 }
 
 /* IMFByteStream methods */
-static HRESULT STDMETHODCALLTYPE mfbytestream_GetCapabilities(UNUSED IMFByteStream* This, DWORD *pdwCapabilities)
+static HRESULT STDMETHODCALLTYPE mfbytestream_GetCapabilities(SCHISM_UNUSED IMFByteStream* This, DWORD *pdwCapabilities)
 {
 	*pdwCapabilities = MFBYTESTREAM_IS_READABLE | MFBYTESTREAM_IS_SEEKABLE | MFBYTESTREAM_DOES_NOT_USE_NETWORK;
 	return S_OK;

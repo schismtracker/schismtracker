@@ -23,5 +23,15 @@
 
 #include "bshift.h"
 
-extern inline intmax_t schism_signed_lshift_(intmax_t x, unsigned int y);
-extern inline intmax_t schism_signed_rshift_(intmax_t x, unsigned int y);
+#if (__STDC_VERSION__ >= 201112L)
+extern inline int8_t  schism_signed_lshift_8_(int8_t x, unsigned int y);
+extern inline int8_t  schism_signed_rshift_8_(int8_t x, unsigned int y);
+extern inline int16_t schism_signed_lshift_16_(int16_t x, unsigned int y);
+extern inline int16_t schism_signed_rshift_16_(int16_t x, unsigned int y);
+extern inline int32_t schism_signed_lshift_32_(int32_t x, unsigned int y);
+extern inline int32_t schism_signed_rshift_32_(int32_t x, unsigned int y);
+extern inline int64_t schism_signed_lshift_64_(int64_t x, unsigned int y);
+extern inline int64_t schism_signed_rshift_64_(int64_t x, unsigned int y);
+#endif
+extern inline intmax_t schism_signed_lshift_max_(intmax_t x, unsigned int y);
+extern inline intmax_t schism_signed_rshift_max_(intmax_t x, unsigned int y);

@@ -26,69 +26,6 @@
 
 #include "headers.h"
 
-/* --------------------------------------------------------------------- */
-
-#define ARRAY_SIZE(a) ((signed)(sizeof(a)/sizeof(*(a))))
-
-
-/* macros stolen from glib */
-#ifndef MAX
-# define MAX(X,Y) (((X)>(Y))?(X):(Y))
-#endif
-#ifndef MIN
-# define MIN(X,Y) (((X)<(Y))?(X):(Y))
-#endif
-#ifndef CLAMP
-# define CLAMP(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
-#endif
-
-#if defined(__has_attribute)
-# if __has_attribute(__unused__)
-#  define UNUSED __attribute__((__unused__))
-# endif
-# if __has_attribute(__packed__)
-#  define PACKED __attribute__((__packed__))
-# endif
-# if __has_attribute(__malloc__)
-#  define MALLOC __attribute__((__malloc__))
-# endif
-# if __has_attribute(__pure__)
-#  define PURE __attribute__((__pure__))
-# endif
-# if __has_attribute(__format__)
-#  define SCHISM_FORMAT(x) __attribute__((__format__ x))
-# endif
-#endif
-
-#if defined(__has_builtin)
-# if __has_builtin (__builtin_expect)
-#  define LIKELY(x)   __builtin_expect(!!(x), 1)
-#  define UNLIKELY(x) __builtin_expect(!(x),  1)
-# endif
-#endif
-
-#ifndef LIKELY
-# define LIKELY(x) (x)
-#endif
-#ifndef UNLIKELY
-# define UNLIKELY(x) (x)
-#endif
-#ifndef UNUSED
-# define UNUSED
-#endif
-#ifndef PACKED
-# define PACKED
-#endif
-#ifndef MALLOC
-# define MALLOC
-#endif
-#ifndef PURE
-# define PURE
-#endif
-#ifndef SCHISM_FORMAT
-# define SCHISM_FORMAT(x)
-#endif
-
 /* Path stuff that differs by platform */
 #ifdef SCHISM_WIN32
 # define DIR_SEPARATOR '\\'
@@ -102,11 +39,6 @@
 
 #include "mem.h" // XXX these includes suck
 #include "str.h" // and need to go away
-
-/* --------------------------------------------------------------------- */
-/* functions returning const char * use a static buffer; ones returning char * malloc their return value
-(thus it needs free'd)... except numtostr, get_time_string, and get_date_string, which return the buffer
-passed to them in the 'buf' parameter. */
 
 /*Conversion*/
 /* linear -> deciBell*/

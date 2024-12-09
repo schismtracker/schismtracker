@@ -607,7 +607,7 @@ static void handle_enter_key(void)
 	}
 }
 
-static void do_discard_changes_and_move(UNUSED void *gn)
+static void do_discard_changes_and_move(SCHISM_UNUSED void *gn)
 {
 	fake_slot = KEYJAZZ_NOINST;
 	fake_slot_changed = 0;
@@ -617,7 +617,7 @@ static void do_discard_changes_and_move(UNUSED void *gn)
 	status.flags |= NEED_UPDATE;
 }
 
-static void do_delete_file(UNUSED void *data)
+static void do_delete_file(SCHISM_UNUSED void *data)
 {
 	int old_top_file, old_current_file;
 	char *ptr;

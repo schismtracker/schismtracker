@@ -907,7 +907,7 @@ static int32_t increment_order(song_t *csf)
 		would be incremented as soon as pattern playback started. (this is a stupid hack) */
 		if (csf->process_order) {
 			if (++csf->repeat_count) {
-				if (UNLIKELY(csf->repeat_count < 0)) {
+				if (SCHISM_UNLIKELY(csf->repeat_count < 0)) {
 					csf->repeat_count = 1; // it overflowed!
 				}
 			} else {
@@ -927,7 +927,7 @@ static int32_t increment_order(song_t *csf)
 		/* [if Order[ProcessOrder] = 0xFFh, ProcessOrder = 0] (... or just stop playing) */
 		if (csf->orderlist[csf->process_order] == ORDER_LAST) {
 			if (++csf->repeat_count) {
-				if (UNLIKELY(csf->repeat_count < 0)) {
+				if (SCHISM_UNLIKELY(csf->repeat_count < 0)) {
 					csf->repeat_count = 1; // it overflowed!
 				}
 			} else {

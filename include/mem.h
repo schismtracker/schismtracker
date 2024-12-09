@@ -26,12 +26,10 @@
 
 #include "headers.h"
 
-#include "util.h"
-
-extern MALLOC void *mem_alloc(size_t);
-extern MALLOC void *mem_calloc(size_t, size_t);
-extern MALLOC char *str_dup(const char *);
-extern MALLOC char *strn_dup(const char *, size_t);
+extern SCHISM_MALLOC void *mem_alloc(size_t);
+extern SCHISM_MALLOC void *mem_calloc(size_t, size_t);
+extern SCHISM_MALLOC char *str_dup(const char *);
+extern SCHISM_MALLOC char *strn_dup(const char *, size_t);
 extern void *mem_realloc(void *,size_t);
 extern void mem_free(void *);
 

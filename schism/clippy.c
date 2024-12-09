@@ -104,7 +104,7 @@ static void _clippy_copy_to_sys(int cb)
 	free(out_utf8);
 }
 
-static void _string_paste(UNUSED int cb, const char *cbptr)
+static void _string_paste(SCHISM_UNUSED int cb, const char *cbptr)
 {
 	schism_event_t event = {0};
 	event.type = SCHISM_EVENT_PASTE;

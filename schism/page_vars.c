@@ -116,7 +116,7 @@ static void update_values_in_song(void)
 }
 
 
-static void init_instruments(UNUSED void *data)
+static void init_instruments(SCHISM_UNUSED void *data)
 {
 	song_init_instruments(-1);
 }

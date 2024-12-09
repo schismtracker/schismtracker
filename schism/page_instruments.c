@@ -1381,7 +1381,7 @@ static void env_adsr_draw_const(void)
 	draw_box(33, 23, 51, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 }
 
-static void env_adsr_dialog(UNUSED song_envelope_t *env)
+static void env_adsr_dialog(SCHISM_UNUSED song_envelope_t *env)
 {
 	struct dialog *dialog;
 	song_instrument_t *ins = song_get_instrument(current_instrument); // ARGHHH
@@ -2054,7 +2054,7 @@ static char export_instrument_filename[NAME_MAX + 1] = "";
 static int export_instrument_format = 0;
 static int num_save_formats = 0;
 
-static void do_export_instrument(UNUSED void *data)
+static void do_export_instrument(SCHISM_UNUSED void *data)
 {
 	instrument_save(export_instrument_filename, instrument_save_formats[export_instrument_format].label);
 }
@@ -2161,12 +2161,12 @@ static void export_instrument_dialog(void)
 }
 
 
-static void do_delete_inst(UNUSED void *ign)
+static void do_delete_inst(SCHISM_UNUSED void *ign)
 {
 	song_delete_instrument(current_instrument, 0);
 }
 
-static void do_delete_inst_preserve(UNUSED void *ign)
+static void do_delete_inst_preserve(SCHISM_UNUSED void *ign)
 {
 	song_delete_instrument(current_instrument, 1);
 }

@@ -179,7 +179,7 @@ struct jack_midi {
 	int mark;
 };
 
-static void _jack_send(UNUSED struct midi_port *p, const unsigned char *data, unsigned int len, unsigned int delay) {
+static void _jack_send(SCHISM_UNUSED struct midi_port *p, const unsigned char *data, unsigned int len, unsigned int delay) {
 	if (len + sizeof(len) > ringbuffer_out_max_write)
 		return;
 

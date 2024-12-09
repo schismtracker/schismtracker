@@ -597,7 +597,7 @@ static void diskodlg_draw(void)
 	draw_box(23, 29, 56, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
-static void diskodlg_cancel(UNUSED void *ignored)
+static void diskodlg_cancel(SCHISM_UNUSED void *ignored)
 {
 	canceled = 1;
 	export_dwsong.flags |= SONG_ENDREACHED;
@@ -618,7 +618,7 @@ static void diskodlg_cancel(UNUSED void *ignored)
 static void disko_dialog_setup(size_t len);
 
 // this needs to be done to work around stupid inconsistent key-up code
-static void diskodlg_reset(UNUSED void *ignored)
+static void diskodlg_reset(SCHISM_UNUSED void *ignored)
 {
 	disko_dialog_setup(est_len);
 }
@@ -927,7 +927,7 @@ void song_pattern_to_sample(int pattern, int split, int bind)
 // ---------------------------------------------------------------------------
 
 /* called from audio_playback.c _schism_midi_out_raw() */
-int _disko_writemidi(UNUSED const void *data, UNUSED unsigned int len, UNUSED unsigned int delay)
+int _disko_writemidi(SCHISM_UNUSED const void *data, SCHISM_UNUSED unsigned int len, SCHISM_UNUSED unsigned int delay)
 {
 	return DW_ERROR;
 }

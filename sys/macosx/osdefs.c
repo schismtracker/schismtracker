@@ -378,7 +378,7 @@ void macosx_sysexit(void) {
 	quit_hid_callback();
 }
 
-void macosx_sysinit(UNUSED int *pargc, UNUSED char ***pargv) {
+void macosx_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv) {
 	/* macosx_ibook_fnswitch only sets the value if it's one of (0, 1) */
 	ibook_helper = macosx_ibook_fnswitch(-1);
 

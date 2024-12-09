@@ -570,7 +570,7 @@ static void load_imf_envelope(song_instrument_t *ins, song_envelope_t *env, stru
 }
 
 
-int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
+int fmt_imf_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lflags)
 {
 	struct imf_header hdr;
 	int n, s;

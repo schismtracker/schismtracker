@@ -242,7 +242,7 @@ inline int page_is_instrument_list(int page)
 static struct widget new_song_widgets[10] = {0};
 static const int new_song_groups[4][3] = { {0, 1, -1}, {2, 3, -1}, {4, 5, -1}, {6, 7, -1} };
 
-static void new_song_ok(UNUSED void *data)
+static void new_song_ok(SCHISM_UNUSED void *data)
 {
 	int flags = 0;
 	if (new_song_widgets[0].d.togglebutton.state)
@@ -352,7 +352,7 @@ static void _mp_change(void)
 	_mp_active = 2;
 }
 
-static void _mp_finish(UNUSED void *ign)
+static void _mp_finish(SCHISM_UNUSED void *ign)
 {
 	if (_mp_active) {
 		dialog_destroy_all();
@@ -1741,12 +1741,12 @@ static void savecheck(void (*ok)(void *data), void (*cancel)(void *data), void *
 	}
 }
 
-static void exit_ok_confirm(UNUSED void *data)
+static void exit_ok_confirm(SCHISM_UNUSED void *data)
 {
 	schism_exit(0);
 }
 
-static void exit_ok(UNUSED void *data)
+static void exit_ok(SCHISM_UNUSED void *data)
 {
 	savecheck(exit_ok_confirm, NULL, NULL);
 }
@@ -1824,7 +1824,7 @@ static void _timejump_draw(void)
 	draw_box(43, 25, 49, 27, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
-static void _timejump_ok(UNUSED void *ign)
+static void _timejump_ok(SCHISM_UNUSED void *ign)
 {
 	unsigned long sec;
 	int no, np, nr;

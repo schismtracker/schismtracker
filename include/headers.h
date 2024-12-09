@@ -153,8 +153,116 @@ int unsetenv(const char *name);
 /* should work anywhere and shouldn't dump random stack allocations
  * BUT it fails to provide any sort of useful message to the user */
 # define SCHISM_STATIC_ASSERT(x, msg) \
-    extern int (*schism_static_assert_function_no_touchy_touchy_plz(void)) \
-      [!!sizeof (struct { int __error_if_negative: (x) ? 2 : -1; })]
+	extern int (*schism_static_assert_function_no_touchy_touchy_plz(void)) \
+		[!!sizeof (struct { int __error_if_negative: (x) ? 2 : -1; })]
+#endif
+
+/* -------------------------------------------------------------- */
+/* moved from util.h */
+
+/* A bunch of compiler detection stuff... don't mind this... */
+#define SCHISM_SEMVER_ATLEAST(mmajor, mminor, mpatch, major, minor, patch) \
+	((major >= mmajor) \
+	 && (major > mmajor || minor >= mminor) \
+	 && (major > mmajor || minor > mminor || patch >= mpatch))
+
+// ugh
+#if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
+# define SCHISM_GNUC_ATLEAST(major, minor, patch) \
+	SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
+#elif defined(__GNUC__) && defined(__GNUC_MINOR__)
+# define SCHISM_GNUC_ATLEAST(major, minor, patch) \
+	SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, __GNUC_MINOR__, 0)
+#elif defined(__GNUC__)
+# define SCHISM_GNUC_ATLEAST(major, minor, patch) \
+	SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, 0, 0)
+#else
+# define SCHISM_GNUC_ATLEAST(major, minor, patch) (0)
+#endif
+
+#ifdef __has_attribute
+# define SCHISM_GNUC_HAS_ATTRIBUTE(x, major, minor, patch) \
+	__has_attribute(x)
+#else
+# define SCHISM_GNUC_HAS_ATTRIBUTE(x, major, minor, patch) \
+	SCHISM_GNUC_ATLEAST(major, minor, patch)
+#endif
+
+#ifdef __has_builtin
+# define SCHISM_GNUC_HAS_BUILTIN(x, major, minor, patch) \
+	__has_builtin(x)
+#else
+# define SCHISM_GNUC_HAS_BUILTIN(x, major, minor, patch) \
+	SCHISM_GNUC_ATLEAST(major, minor, patch)
+#endif
+
+#ifdef __has_extension
+# define SCHISM_GNUC_HAS_EXTENSION(x, major, minor, patch) \
+	__has_extension(x)
+#else
+# define SCHISM_GNUC_HAS_EXTENSION(x, major, minor, patch) \
+	SCHISM_GNUC_ATLEAST(major, minor, patch)
+#endif
+
+#define ARRAY_SIZE(a) (sizeof(a)/sizeof(*(a)))
+
+/* macros stolen from glib */
+#ifndef MAX
+# define MAX(X,Y) (((X)>(Y))?(X):(Y))
+#endif
+#ifndef MIN
+# define MIN(X,Y) (((X)<(Y))?(X):(Y))
+#endif
+#ifndef CLAMP
+# define CLAMP(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
+#endif
+
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__unused__, 2, 7, 0)
+# define SCHISM_UNUSED __attribute__((__unused__))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__packed__, 2, 7, 0)
+# define SCHISM_PACKED __attribute__((__packed__))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__malloc__, 3, 0, 0)
+# define SCHISM_MALLOC __attribute__((__malloc__))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__pure__, 2, 96, 0)
+# define SCHISM_PURE __attribute__((__pure__))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__format__, 2, 3, 0)
+# define SCHISM_FORMAT(x) __attribute__((__format__ x))
+#endif
+
+#if SCHISM_GNUC_HAS_BUILTIN(__builtin_expect, 3, 0, 0)
+# define SCHISM_LIKELY(x)   __builtin_expect(!!(x), 1)
+# define SCHISM_UNLIKELY(x) __builtin_expect(!(x),  1)
+#endif
+
+// _Generic
+#if (SCHISM_GNUC_HAS_EXTENSION(c_generic_selections, 4, 9, 0) || __STDC_VERSION__ >= 201112L)
+# define SCHISM_HAVE_GENERIC 1
+#endif
+
+#ifndef SCHISM_LIKELY
+# define SCHISM_LIKELY(x) (x)
+#endif
+#ifndef SCHISM_UNLIKELY
+# define SCHISM_UNLIKELY(x) (x)
+#endif
+#ifndef SCHISM_UNUSED
+# define SCHISM_UNUSED
+#endif
+#ifndef SCHISM_PACKED
+# define SCHISM_PACKED
+#endif
+#ifndef SCHISM_MALLOC
+# define SCHISM_MALLOC
+#endif
+#ifndef SCHISM_PURE
+# define SCHISM_PURE
+#endif
+#ifndef SCHISM_FORMAT
+# define SCHISM_FORMAT(x)
 #endif
 
 #endif /* SCHISM_HEADERS_H_ */

@@ -511,7 +511,7 @@ static int strtonum99(const char *s)
 	return *s >= '0' && *s <= '9' ? n + *s - '0' : -1;
 }
 
-static void smpprompt_value(UNUSED void *data)
+static void smpprompt_value(SCHISM_UNUSED void *data)
 {
 	int n = strtonum99(numprompt_buf);
 	numprompt_finish(n);

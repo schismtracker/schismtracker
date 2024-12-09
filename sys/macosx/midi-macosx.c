@@ -44,7 +44,7 @@ struct macosx_midi {
 	int mark; /* used in polling */
 };
 
-static void readProc(const MIDIPacketList *np, UNUSED void *rc, void *crc)
+static void readProc(const MIDIPacketList *np, SCHISM_UNUSED void *rc, void *crc)
 {
 	struct midi_port *p;
 	struct macosx_midi *m;

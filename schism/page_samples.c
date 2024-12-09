@@ -54,7 +54,7 @@ static int _altswap_lastvis = 99; // for alt-down sample-swapping
 
 static int sample_list_cursor_pos = 25; /* the "play" text */
 
-static void sample_adlibconfig_dialog(UNUSED void *ign);
+static void sample_adlibconfig_dialog(SCHISM_UNUSED void *ign);
 
 /* shared by all the numentry widgets */
 static int sample_numentry_cursor_pos = 0;
@@ -599,19 +599,19 @@ static int sample_list_handle_key_on_list(struct key_event * k)
  * these don't need to do any actual redrawing, because the screen gets
  * redrawn anyway when the dialog is cleared. */
 
-static void do_sign_convert(UNUSED void *data)
+static void do_sign_convert(SCHISM_UNUSED void *data)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
 	sample_sign_convert(sample);
 }
 
-static void do_quality_convert(UNUSED void *data)
+static void do_quality_convert(SCHISM_UNUSED void *data)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
 	sample_toggle_quality(sample, 1);
 }
 
-static void do_quality_toggle(UNUSED void *data)
+static void do_quality_toggle(SCHISM_UNUSED void *data)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
 
@@ -621,19 +621,19 @@ static void do_quality_toggle(UNUSED void *data)
 		sample_toggle_quality(sample, 0);
 }
 
-static void do_delete_sample(UNUSED void *data)
+static void do_delete_sample(SCHISM_UNUSED void *data)
 {
 	song_clear_sample(current_sample);
 	status.flags |= SONG_NEEDS_SAVE;
 }
 
-static void do_downmix(UNUSED void *data)
+static void do_downmix(SCHISM_UNUSED void *data)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
 	sample_downmix(sample);
 }
 
-static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
+static void do_post_loop_cut(SCHISM_UNUSED void *bweh) /* I'm already using 'data'. */
 {
 	song_sample_t *sample = song_get_sample(current_sample);
 	unsigned long pos = ((sample->flags & CHN_SUSTAINLOOP)
@@ -655,7 +655,7 @@ static void do_post_loop_cut(UNUSED void *bweh) /* I'm already using 'data'. */
 	song_unlock_audio();
 }
 
-static void do_pre_loop_cut(UNUSED void *bweh)
+static void do_pre_loop_cut(SCHISM_UNUSED void *bweh)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
 	unsigned long pos = ((sample->flags & CHN_SUSTAINLOOP)
@@ -695,7 +695,7 @@ static void do_pre_loop_cut(UNUSED void *bweh)
 	song_unlock_audio();
 }
 
-static void do_centralise(UNUSED void *data)
+static void do_centralise(SCHISM_UNUSED void *data)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
 	sample_centralise(sample);
@@ -705,7 +705,7 @@ static void do_centralise(UNUSED void *data)
 
 static struct widget sample_amplify_widgets[3];
 
-static void do_amplify(UNUSED void *data)
+static void do_amplify(SCHISM_UNUSED void *data)
 {
 	sample_amplify(song_get_sample(current_sample), sample_amplify_widgets[0].d.thumbbar.value);
 }
@@ -738,7 +738,7 @@ static void sample_amplify_dialog(void)
 static struct widget txtsynth_widgets[3];
 static char txtsynth_entry[65536];
 
-static void do_txtsynth(UNUSED void *data)
+static void do_txtsynth(SCHISM_UNUSED void *data)
 {
 	int len = strlen(txtsynth_entry);
 	if (!len)
@@ -829,7 +829,7 @@ static const struct {
 	{3, 12, B, 0, 7, 1 }, // modulator volume vibrato
 };
 
-static void do_adlibconfig(UNUSED void *data)
+static void do_adlibconfig(SCHISM_UNUSED void *data)
 {
 	//page->help_index = HELP_SAMPLE_LIST;
 
@@ -944,7 +944,7 @@ static int do_adlib_handlekey(struct key_event *kk)
 	return 0;
 }
 
-static void sample_adlibconfig_dialog(UNUSED void *ign)
+static void sample_adlibconfig_dialog(SCHISM_UNUSED void *ign)
 {
 	struct dialog *dialog;
 	song_sample_t *sample = song_get_sample(current_sample);
@@ -1018,7 +1018,7 @@ static void sample_adlibpatch_finish(int n)
 	sample_host_dialog(-1);
 }
 
-static void sample_adlibpatch_dialog(UNUSED void *ign)
+static void sample_adlibpatch_dialog(SCHISM_UNUSED void *ign)
 {
 	numprompt_create("Enter Patch (1-128)", sample_adlibpatch_finish, 0);
 }
@@ -1105,7 +1105,7 @@ static struct widget export_sample_widgets[4];
 static char export_sample_filename[NAME_MAX + 1] = "";
 static int export_sample_format = 0;
 
-static void do_export_sample(UNUSED void *data)
+static void do_export_sample(SCHISM_UNUSED void *data)
 {
 	int exp = export_sample_format;
 	int i;
@@ -1227,14 +1227,14 @@ static void export_sample_dialog(void)
 static struct widget resize_sample_widgets[2];
 static int resize_sample_cursor;
 
-static void do_resize_sample_aa(UNUSED void *data)
+static void do_resize_sample_aa(SCHISM_UNUSED void *data)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
 	unsigned int newlen = resize_sample_widgets[0].d.numentry.value;
 	sample_resize(sample, newlen, 1);
 }
 
-static void do_resize_sample(UNUSED void *data)
+static void do_resize_sample(SCHISM_UNUSED void *data)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
 	unsigned int newlen = resize_sample_widgets[0].d.numentry.value;

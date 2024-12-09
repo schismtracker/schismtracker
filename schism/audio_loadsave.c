@@ -756,7 +756,7 @@ int song_load_instrument(int n, const char* file)
 	return song_load_instrument_ex(n,file,NULL,-1);
 }
 
-static void do_enable_inst(UNUSED void* d)
+static void do_enable_inst(SCHISM_UNUSED void* d)
 {
 	song_set_instrument_mode(1);
 	main_song_changed_cb();
@@ -764,7 +764,7 @@ static void do_enable_inst(UNUSED void* d)
 	memused_songchanged();
 }
 
-static void dont_enable_inst(UNUSED void* d)
+static void dont_enable_inst(SCHISM_UNUSED void* d)
 {
 	set_page(PAGE_INSTRUMENT_LIST);
 }
@@ -947,7 +947,7 @@ static song_t *library = NULL;
 
 
 // TODO: stat the file?
-int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSED dmoz_dirlist_t *dlist)
+int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, SCHISM_UNUSED dmoz_dirlist_t *dlist)
 {
 	unsigned int j;
 	int x;
@@ -996,7 +996,7 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 }
 
 
-int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dmoz_dirlist_t *dlist)
+int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, SCHISM_UNUSED dmoz_dirlist_t *dlist)
 {
 	csf_stop_sample(current_song, current_song->samples + 0);
 	csf_free(library);

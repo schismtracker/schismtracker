@@ -214,7 +214,7 @@ static int load_alsa_syms(void) {
 #undef assert
 #define assert(x)
 
-static void _alsa_drain(struct midi_port *p UNUSED)
+static void _alsa_drain(struct midi_port *p SCHISM_UNUSED)
 {
 	/* not port specific */
 	ALSA_snd_seq_drain_output(seq);

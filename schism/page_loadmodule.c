@@ -635,7 +635,7 @@ static void file_list_draw(void)
 	search_redraw();
 }
 
-static void do_delete_file(UNUSED void *data)
+static void do_delete_file(SCHISM_UNUSED void *data)
 {
 	int old_top_file, old_current_file, old_top_dir, old_current_dir;
 	char *ptr;

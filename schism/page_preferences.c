@@ -493,7 +493,7 @@ static int audio_driver_list_handle_key_on_list(struct key_event * k)
 
 /* --------------------------------------------------------------------- */
 
-static void save_config_now(UNUSED void *ign)
+static void save_config_now(SCHISM_UNUSED void *ign)
 {
 	/* TODO */
 	cfg_midipage_save(); /* what is this doing here? */
