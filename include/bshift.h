@@ -56,19 +56,16 @@
 #define SCHISM_SIGNED_RSHIFT_VARIANT(type, typec) \
 	SCHISM_SIGNED_SHIFT_VARIANT(type, typec, r, >>)
 
-#ifdef SCHISM_HAVE_GENERIC
+#if defined(HAVE_SANE_SIGNED_LSHIFT)
+# define lshift_signed(x, y) ((x) << (y))
+#elif defined(SCHISM_HAVE_GENERIC)
 SCHISM_SIGNED_LSHIFT_VARIANT(8, 8)
 SCHISM_SIGNED_LSHIFT_VARIANT(16, 16)
 SCHISM_SIGNED_LSHIFT_VARIANT(32, 32)
 SCHISM_SIGNED_LSHIFT_VARIANT(64, 64)
 SCHISM_SIGNED_LSHIFT_VARIANT(max, MAX)
-SCHISM_SIGNED_RSHIFT_VARIANT(8, 8)
-SCHISM_SIGNED_RSHIFT_VARIANT(16, 16)
-SCHISM_SIGNED_RSHIFT_VARIANT(32, 32)
-SCHISM_SIGNED_RSHIFT_VARIANT(64, 64)
-SCHISM_SIGNED_RSHIFT_VARIANT(max, MAX)
 
-#define lshift_signed(x, y) \
+# define lshift_signed(x, y) \
 	_Generic((x << y), \
 		int8_t:      schism_signed_lshift_8_(x, y), \
 		int16_t:     schism_signed_lshift_16_(x, y), \
@@ -76,7 +73,23 @@ SCHISM_SIGNED_RSHIFT_VARIANT(max, MAX)
 		int64_t:     schism_signed_lshift_64_(x, y), \
 		default:     schism_signed_lshift_max_(x, y) \
 	)
-#define rshift_signed(x, y) \
+#else
+// we can only use intmax here, unfortunately...
+SCHISM_SIGNED_LSHIFT_VARIANT(max, MAX)
+
+# define lshift_signed(x, y) schism_signed_lshift_max_(x, y)
+#endif
+
+#ifdef HAVE_ARITHMETIC_RSHIFT
+# define rshift_signed(x, y) ((x) >> (y))
+#elif defined(SCHISM_HAVE_GENERIC)
+SCHISM_SIGNED_RSHIFT_VARIANT(8, 8)
+SCHISM_SIGNED_RSHIFT_VARIANT(16, 16)
+SCHISM_SIGNED_RSHIFT_VARIANT(32, 32)
+SCHISM_SIGNED_RSHIFT_VARIANT(64, 64)
+SCHISM_SIGNED_RSHIFT_VARIANT(max, MAX)
+
+# define rshift_signed(x, y) \
 	_Generic((x >> y), \
 		int8_t:      schism_signed_rshift_8_(x, y), \
 		int16_t:     schism_signed_rshift_16_(x, y), \
@@ -85,12 +98,9 @@ SCHISM_SIGNED_RSHIFT_VARIANT(max, MAX)
 		default:     schism_signed_rshift_max_(x, y) \
 	)
 #else
-// we can only use intmax here, unfortunately...
-SCHISM_SIGNED_LSHIFT_VARIANT(max, MAX)
 SCHISM_SIGNED_RSHIFT_VARIANT(max, MAX)
 
-#define lshift_signed(x, y) schism_signed_lshift_max_(x, y)
-#define rshift_signed(x, y) schism_signed_rshift_max_(x, y)
+# define rshift_signed(x, y) schism_signed_rshift_max_(x, y)
 #endif
 
 #undef SCHISM_SIGNED_LSHIFT_VARIANT
