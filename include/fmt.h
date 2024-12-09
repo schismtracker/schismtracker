@@ -145,6 +145,9 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 uint32_t mdl_decompress8(void *dest, uint32_t len, slurp_t *fp);
 uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp);
 
+/* returns 0 on success */
+int32_t huffman_decompress(slurp_t *slurp, disko_t *disko);
+
 /* --------------------------------------------------------------------------------------------------------- */
 
 /* shared by the .it, .its, and .iti saving functions */

@@ -102,6 +102,7 @@ READ_INFO(mus) LOAD_SONG(mus)
 READ_INFO(mf)
 READ_INFO(dsm) LOAD_SONG(dsm)
 READ_INFO(d00)
+READ_INFO(edl)
 
 /* Sample formats with magic at start of file */
 READ_INFO(its)  LOAD_SAMPLE(its)  SAVE_SAMPLE(its)
