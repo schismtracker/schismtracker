@@ -834,6 +834,37 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		break;
 	}
 
+	// 8-bit interleaved stereo samples
+	case SF(8,SI,LE,PCMS):
+	case SF(8,SI,LE,PCMU):
+	case SF(8,SI,LE,PCMD):
+	case SF(8,SI,BE,PCMS):
+	case SF(8,SI,BE,PCMU):
+	case SF(8,SI,BE,PCMD): {
+		int8_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT8_MIN : 0;
+		len = sample->length * 2;
+		if (len > memsize)
+			len = memsize >> 1;
+
+		slurp_read(fp, sample->data, len);
+
+		int8_t *data = (int8_t *)sample->data;
+		for (uint32_t j=0; j < len; j += 2) {
+			data[j] = data[j] + iadd;
+			if ((flags & SF_ENC_MASK) == SF_PCMD)
+				iadd = data[j];
+		}
+
+		data = (int8_t *)sample->data + 1;
+		for (uint32_t j = 0; j < len; j += 2) {
+			data[j] = data[j] + iadd;
+			if ((flags & SF_ENC_MASK) == SF_PCMD)
+				iadd = data[j];
+		}
+
+		break;
+	}
+
 	// 16-bit mono PCM samples
 	case SF(16,M,LE,PCMD):
 	case SF(16,M,LE,PCMS):
@@ -889,37 +920,6 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		}
 
 		len *= 2;
-
-		break;
-	}
-
-	// 8-bit interleaved stereo samples
-	case SF(8,SI,LE,PCMS):
-	case SF(8,SI,LE,PCMU):
-	case SF(8,SI,LE,PCMD):
-	case SF(8,SI,BE,PCMS):
-	case SF(8,SI,BE,PCMU):
-	case SF(8,SI,BE,PCMD): {
-		int8_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT8_MIN : 0;
-		len = sample->length * 2;
-		if (len > memsize)
-			len = memsize >> 1;
-
-		slurp_read(fp, sample->data, len);
-
-		int8_t *data = (int8_t *)sample->data;
-		for (uint32_t j=0; j < len; j += 2) {
-			data[j] = data[j] + iadd;
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				iadd = data[j];
-		}
-
-		data = (int8_t *)sample->data + 1;
-		for (uint32_t j = 0; j < len; j += 2) {
-			data[j] = data[j] + iadd;
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				iadd = data[j];
-		}
 
 		break;
 	}
