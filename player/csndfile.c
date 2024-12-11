@@ -799,7 +799,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		// process
 		int8_t *data = (int8_t *)sample->data;
 		for (uint32_t j = 0; j < len; j++) {
-			data[j] = slurp_getc(fp) + iadd;
+			data[j] += iadd;
 			if ((flags & SF_ENC_MASK) == SF_PCMD)
 				iadd = data[j];
 		}
