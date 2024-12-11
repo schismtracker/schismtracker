@@ -319,7 +319,7 @@ int win32_event(schism_event_t *event)
 			DragQueryFileW(drop, 0, f, needed + 1);
 			f[needed] = 0;
 
-			charset_iconv(f, &e.drop.file, CHARSET_WCHAR_T, CHARSET_CHAR, needed + 1);
+			charset_iconv(f, &e.drop.file, CHARSET_WCHAR_T, CHARSET_CHAR, (needed + 1) * sizeof(wchar_t));
 		} else {
 			int needed = DragQueryFileA(drop, 0, NULL, 0);
 
