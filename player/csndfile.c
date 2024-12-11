@@ -793,6 +793,10 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		if (len > memsize)
 			len = sample->length = memsize;
 
+		// read
+		slurp_read(fp, sample->data, len);
+
+		// process
 		int8_t *data = (int8_t *)sample->data;
 		for (uint32_t j = 0; j < len; j++) {
 			data[j] = slurp_getc(fp) + iadd;
@@ -873,13 +877,18 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(16,M,BE,PCMS):
 	case SF(16,M,BE,PCMU): {
 		int16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT16_MIN : 0;
+
+		len = sample->length;
 		if (len*2 > memsize)
 			break;
 
+		// read
+		slurp_read(fp, sample->data, len * 2);
+
+		// process
 		int16_t *data = (int16_t *)sample->data;
 		for (uint32_t j = 0; j < len; j++) {
-			slurp_read(fp, &data[j], 2);
-			data[j] = ((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j]) + iadd;
+			data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
 			if ((flags & SF_ENC_MASK) == SF_PCMD)
 				iadd = data[j];
 		}
