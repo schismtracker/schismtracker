@@ -295,7 +295,7 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		return LOAD_UNSUPPORTED;
 
 	iff_chunk_t chunk;
-	while (riff_chunk_peek(&chunk, fp)) {
+	while (iff_chunk_peek_ex(&chunk, fp, IFF_CHUNK_SIZE_LE)) {
 		switch(chunk.id) {
 		case ID_SONG: {
 			struct dsm_chunk_song chunk_song;
