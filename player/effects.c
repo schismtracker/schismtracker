@@ -1761,8 +1761,8 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		break;
 
 	case FX_TONEPORTAVOL:
-		fx_volume_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
 		fx_tone_portamento(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, chan->mem_portanote);
+		fx_volume_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
 		break;
 
 	case FX_VIBRATO:
@@ -2319,7 +2319,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 
 		// Initialize portamento command memory (needs to be done in exactly this order)
 		if (firsttick) {
-			const int effect_column_tone_porta = (cmd == FX_TONEPORTAMENTO || cmd == FX_TONEPORTAVOL);
+			const int effect_column_tone_porta = (cmd == FX_TONEPORTAMENTO);
 			if (effect_column_tone_porta) {
 				if (param)
 					chan->mem_portanote = param;
