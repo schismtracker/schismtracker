@@ -297,18 +297,23 @@ static void fx_portamento_down(uint32_t flags, song_voice_t *chan, uint32_t para
 
 static void fx_tone_portamento(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
-	if (!param)
-		return;
-
 	chan->flags |= CHN_PORTAMENTO;
 	if (chan->frequency && chan->portamento_target && !(flags & SONG_FIRSTTICK)) {
-		if (chan->frequency < chan->portamento_target) {
+		if (!param && chan->row_effect == FX_TONEPORTAVOL)
+		{
+			if (chan->frequency > 1 && (flags & SONG_LINEARSLIDES))
+				chan->frequency--;
+			if (chan->frequency < chan->portamento_target) {
+				chan->frequency = chan->portamento_target;
+				chan->portamento_target = 0;
+			}
+		} else if (param && chan->frequency < chan->portamento_target) {
 			chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, param * 4, 1);
 			if (chan->frequency >= chan->portamento_target) {
 				chan->frequency = chan->portamento_target;
 				chan->portamento_target = 0;
 			}
-		} else if (chan->frequency >= chan->portamento_target) {
+		} else if (param && chan->frequency >= chan->portamento_target) {
 			chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, param * -4, 1);
 			if (chan->frequency < chan->portamento_target) {
 				chan->frequency = chan->portamento_target;
