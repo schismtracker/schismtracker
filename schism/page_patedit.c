@@ -3885,6 +3885,10 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 			return 1;
 		prev_order_pattern();
 		return 1;
+	case SCHISM_KEYSYM_EQUALS:
+		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
+			return 0;
+		// fallthrough
 	case SCHISM_KEYSYM_PLUS:
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -4336,6 +4340,10 @@ static int pattern_editor_handle_key(struct key_event * k)
 		else
 			set_current_pattern(current_pattern - 1);
 		return 1;
+	case SCHISM_KEYSYM_EQUALS:
+		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
+			return 0;
+		// fallthrough
 	case SCHISM_KEYSYM_PLUS:
 		if (k->state == KEY_RELEASE)
 			return 0;
