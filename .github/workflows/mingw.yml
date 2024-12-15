@@ -12,7 +12,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { sys: mingw32, target: i686, stdlib: msvcrt, cflags: '-march=i586 -mtune=generic', ldflags: '-Wl,--major-os-version=4,--major-subsystem-version=4' }
+          - { sys: mingw32, target: i686, stdlib: msvcrt, cflags: '-march=i586 -mtune=generic', ldflags: '-Wl,--major-os-version=4,--major-subsystem-version=4 -Wl,--large-address-aware' }
           - { sys: mingw32, target: x86_64, stdlib: msvcrt, cflags: '', ldflags: '' }
           - { sys: mingw32, target: armv7, stdlib: msvcrt, cflags: '', ldflags: '' }
           - { sys: mingw32, target: aarch64, stdlib: ucrt, cflags: '', ldflags: '' }
