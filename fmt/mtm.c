@@ -404,10 +404,12 @@ static struct mtm_track *mtm_track(song_note_t *note, int rows, uint32_t *warn)
 			break;
 		case FX_VOLUMESLIDE:
 			/* storlek never fixed this in the original code! >:( */
-			if (p >> 4 == 0x0F) {
-				e = 0xe; p = 0xb0 | (p & 0xf);
-			} else if ((p & 0x0F) == 0x0F) {
-				e = 0xe; p = 0xa0 | (p >> 4);
+			if ((p >> 4 == 0x0F) && (p & 0x0F)) {
+				e = 0xe;
+				p = 0xb0 | (p & 0xf);
+			} else if (((p & 0x0F) == 0x0F) && p >> 4) {
+				e = 0xe;
+				p = 0xa0 | (p >> 4);
 			} else {
 				e = 0xa;
 			}
