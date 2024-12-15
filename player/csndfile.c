@@ -737,9 +737,16 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	}
 
 	// cap the sample length
-	if (sample->length > MAX_SAMPLE_LENGTH) sample->length = MAX_SAMPLE_LENGTH;
+	if (sample->length > MAX_SAMPLE_LENGTH)
+		sample->length = MAX_SAMPLE_LENGTH;
 
-	mem = sample->length + 6; // XXX why add 6?
+	// libmodplug added 6 to this value. This probably
+	// isn't necessary anymore and it even breaks the loops in
+	// RM-SMOTION.DSM (unrelated to the newly-added loop
+	// wraparound code)
+	//
+	//   - paper
+	mem = sample->length;
 
 	// fix the sample flags
 	sample->flags &= ~(CHN_16BIT|CHN_STEREO);
