@@ -285,6 +285,13 @@ int unsetenv(const char *name);
 # endif
 #endif
 
+#ifdef MAXPATHLEN
+# if MAXPATHLEN > SCHISM_PATH_MAX
+#  undef SCHISM_PATH_MAX
+#  define SCHISM_PATH_MAX MAXPATHLEN
+# endif
+#endif
+
 // SCHISM_PATH_MAX is a safe minimum, i guess
 #define SCHISM_NAME_MAX SCHISM_PATH_MAX
 
@@ -292,13 +299,6 @@ int unsetenv(const char *name);
 # if NAME_MAX > SCHISM_NAME_MAX
 #  undef SCHISM_NAME_MAX
 #  define SCHISM_NAME_MAX NAME_MAX
-# endif
-#endif
-
-#ifdef MAXPATHLEN
-# if MAXPATHLEN > SCHISM_NAME_MAX
-#  undef SCHISM_NAME_MAX
-#  define SCHISM_NAME_MAX MAXPATHLEN
 # endif
 #endif
 
