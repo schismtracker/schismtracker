@@ -420,7 +420,7 @@ static void set_default_glob(int set_filename)
 
 /* --------------------------------------------------------------------- */
 
-static char search_text[NAME_MAX + 1] = "";
+static char search_text[SCHISM_NAME_MAX + 1] = "";
 static int search_first_char = 0;       /* first visible character */
 static int search_text_length = 0;      /* same as strlen(search_text) */
 
@@ -474,7 +474,7 @@ static int search_text_add_char(uint8_t c)
 	if (c < 32)
 		return 0;
 
-	if (search_text_length >= NAME_MAX)
+	if (search_text_length + 1 >= ARRAY_SIZE(search_text))
 		return 1;
 
 	search_text[search_text_length++] = c;
@@ -837,7 +837,7 @@ static void dir_list_draw_exportsave(void)
 }
 
 static int dir_list_handle_text_input(const char *text) {
-	for (; *text && search_text_length < NAME_MAX; text++) {
+	for (; *text && search_text_length < ARRAY_SIZE(search_text) - 1; text++) {
 		if (*text < 32)
 			return 0;
 

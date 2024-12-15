@@ -2050,7 +2050,7 @@ static void instrument_save(const char *filename, const char *format)
 /* export instrument dialog */
 
 static struct widget export_instrument_widgets[4];
-static char export_instrument_filename[NAME_MAX + 1] = "";
+static char export_instrument_filename[SCHISM_NAME_MAX + 1] = "";
 static int export_instrument_format = 0;
 static int num_save_formats = 0;
 
@@ -2147,13 +2147,13 @@ static void export_instrument_dialog(void)
 	struct dialog *dialog;
 
 	widget_create_textentry(export_instrument_widgets + 0, 33, 24, 18, 0, 1, 3, NULL,
-			 export_instrument_filename, NAME_MAX);
+			 export_instrument_filename, ARRAY_SIZE(export_instrument_filename) - 1);
 	widget_create_button(export_instrument_widgets + 1, 31, 35, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
 	widget_create_button(export_instrument_widgets + 2, 42, 35, 6, 3, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 	widget_create_other(export_instrument_widgets + 3, 0, export_instrument_list_handle_key, NULL, export_instrument_list_draw);
 
-	strncpy(export_instrument_filename, instrument->filename, NAME_MAX);
-	export_instrument_filename[NAME_MAX] = 0;
+	strncpy(export_instrument_filename, instrument->filename, ARRAY_SIZE(export_instrument_filename) - 1);
+	export_instrument_filename[ARRAY_SIZE(export_instrument_filename) - 1] = 0;
 
 	dialog = dialog_create_custom(21, 20, 39, 18, export_instrument_widgets, 4, 0,
 				      export_instrument_draw_const, NULL);

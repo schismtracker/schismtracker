@@ -1102,7 +1102,7 @@ static void sample_save(const char *filename, const char *format)
 /* export sample dialog */
 
 static struct widget export_sample_widgets[4];
-static char export_sample_filename[NAME_MAX + 1] = "";
+static char export_sample_filename[SCHISM_NAME_MAX + 1] = "";
 static int export_sample_format = 0;
 
 static void do_export_sample(SCHISM_UNUSED void *data)
@@ -1209,13 +1209,13 @@ static void export_sample_dialog(void)
 	struct dialog *dialog;
 
 	widget_create_textentry(export_sample_widgets + 0, 33, 24, 18, 0, 1, 3, NULL,
-			 export_sample_filename, NAME_MAX);
+			 export_sample_filename, ARRAY_SIZE(export_sample_filename) - 1);
 	widget_create_button(export_sample_widgets + 1, 31, 35, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
 	widget_create_button(export_sample_widgets + 2, 42, 35, 6, 3, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 	widget_create_other(export_sample_widgets + 3, 0, export_sample_list_handle_key, NULL, export_sample_list_draw);
 
-	strncpy(export_sample_filename, sample->filename, NAME_MAX);
-	export_sample_filename[NAME_MAX] = 0;
+	strncpy(export_sample_filename, sample->filename, ARRAY_SIZE(export_sample_filename) - 1);
+	export_sample_filename[ARRAY_SIZE(export_sample_filename) - 1] = 0;
 
 	dialog = dialog_create_custom(21, 20, 39, 18, export_sample_widgets, 4, 0,
 				      export_sample_draw_const, NULL);
