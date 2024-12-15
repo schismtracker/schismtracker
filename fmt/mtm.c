@@ -771,7 +771,7 @@ int fmt_mtm_save_song(disko_t *fp, song_t *song)
 		smp.volume = ss->volume / 4; //mphack
 
 		// convert frequency, then clamp to 8-bit min/max
-		int32_t x = frequency_to_transpose(ss->c5speed) * 16;
+		int32_t x = frequency_to_transpose(ss->c5speed) / 16;
 		smp.finetune = CLAMP(x, INT8_MIN, INT8_MAX);
 
 		write_mtm_sample_header(&smp, fp);
