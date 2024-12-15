@@ -50,8 +50,8 @@
 
 // ------------------------------------------------------------------------
 
-char song_filename[PATH_MAX + 1];
-char song_basename[NAME_MAX + 1];
+char song_filename[SCHISM_PATH_MAX + 1];
+char song_basename[SCHISM_NAME_MAX + 1];
 
 // ------------------------------------------------------------------------
 // replace any '\0' chars with spaces, mostly to make the string handling
@@ -86,11 +86,11 @@ static void song_set_filename(const char *file)
 {
 	if (file && *file) {
 		CHARSET_EASY_MODE_CONST(file, CHARSET_CHAR, CHARSET_CP437, {
-			strncpy(song_filename, out, PATH_MAX);
-			strncpy(song_basename, dmoz_path_get_basename(out), NAME_MAX);
+			strncpy(song_filename, out, ARRAY_SIZE(song_filename) - 1);
+			strncpy(song_basename, dmoz_path_get_basename(out), ARRAY_SIZE(song_basename) - 1);
 		});
-		song_filename[PATH_MAX] = '\0';
-		song_basename[NAME_MAX] = '\0';
+		song_filename[ARRAY_SIZE(song_filename) - 1] = '\0';
+		song_basename[ARRAY_SIZE(song_basename) - 1] = '\0';
 	} else {
 		song_filename[0] = '\0';
 		song_basename[0] = '\0';

@@ -984,12 +984,12 @@ int schism_main(int argc, char** argv)
 		}
 	}
 	if (initial_dir) {
-		strncpy(cfg_dir_modules, initial_dir, PATH_MAX);
-		cfg_dir_modules[PATH_MAX] = 0;
-		strncpy(cfg_dir_samples, initial_dir, PATH_MAX);
-		cfg_dir_samples[PATH_MAX] = 0;
-		strncpy(cfg_dir_instruments, initial_dir, PATH_MAX);
-		cfg_dir_instruments[PATH_MAX] = 0;
+		strncpy(cfg_dir_modules, initial_dir, ARRAY_SIZE(cfg_dir_modules) - 1);
+		cfg_dir_modules[ARRAY_SIZE(cfg_dir_modules) - 1] = 0;
+		strncpy(cfg_dir_samples, initial_dir, ARRAY_SIZE(cfg_dir_samples) - 1);
+		cfg_dir_samples[ARRAY_SIZE(cfg_dir_samples) - 1] = 0;
+		strncpy(cfg_dir_instruments, initial_dir, ARRAY_SIZE(cfg_dir_instruments) - 1);
+		cfg_dir_instruments[ARRAY_SIZE(cfg_dir_instruments) - 1] = 0;
 		free(initial_dir);
 	}
 

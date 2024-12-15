@@ -405,3 +405,20 @@ char *str_concat(const char *s, ...)
 	va_end(ap);
 	return out;
 }
+
+/* if len is zero, this function calls strlen to get the input's
+ * length.
+ *
+ * The input will be free'd if the input isn't a null pointer,
+ * so make sure you initialize your strings properly ;)
+ *
+ * returns 0 on fail or 1 on success */
+int str_realloc(char **output, const char *input, size_t len)
+{
+	if (*output)
+		free(*output);
+	*output = (len) ? strn_dup(input, len) : str_dup(input);
+	if (!*output)
+		return 0;
+	return 1;
+}

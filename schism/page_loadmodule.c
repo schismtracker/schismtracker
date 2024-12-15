@@ -95,13 +95,13 @@ TODO: scroller hack on selected filename
 #define GLOB_DEFAULT GLOB_CLASSIC "; *.dsm; *.mdl; *.mt2; *.stm; *.stx; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf; *.imf; *.sfx; *.mus; *.mid"
 
 /* These are stored as CP437 */
-static char filename_entry[PATH_MAX + 1] = {0};
-static char dirname_entry[PATH_MAX + 1] = {0};
+static char filename_entry[SCHISM_PATH_MAX + 1] = {0};
+static char dirname_entry[SCHISM_PATH_MAX + 1] = {0};
 
-char cfg_module_pattern[PATH_MAX + 1] = GLOB_DEFAULT;
-char cfg_export_pattern[PATH_MAX + 1] = "*.wav; *.aiff; *.aif";
+char cfg_module_pattern[SCHISM_PATH_MAX + 1] = GLOB_DEFAULT;
+char cfg_export_pattern[SCHISM_PATH_MAX + 1] = "*.wav; *.aiff; *.aif";
 static char **glob_list = NULL;
-static char glob_list_src[PATH_MAX + 1] = {0}; // the pattern used to make glob_list (this is an icky hack)
+static char glob_list_src[SCHISM_PATH_MAX + 1] = {0}; // the pattern used to make glob_list (this is an icky hack)
 
 /* --------------------------------------------------------------------- */
 
@@ -395,8 +395,8 @@ static void set_glob(const char *globspec)
 		free(*glob_list);
 		free(glob_list);
 	}
-	strncpy(glob_list_src, globspec, PATH_MAX);
-	glob_list_src[PATH_MAX] = '\0';
+	strncpy(glob_list_src, globspec, ARRAY_SIZE(glob_list_src) - 1);
+	glob_list_src[ARRAY_SIZE(glob_list_src) - 1] = '\0';
 	glob_list = semicolon_split(glob_list_src);
 	/* this is kinda lame. dmoz should have a way to reload the list without rereading the directory.
 	could be done with a "visible" flag, which affects the list's sort order, along with adjusting
@@ -520,8 +520,8 @@ static int change_dir(const char *dir)
 	dmoz_cache_update(cfg_dir_modules, &flist, &dlist);
 
 	CHARSET_EASY_MODE(ptr, CHARSET_CHAR, CHARSET_CP437, {
-		strncpy(cfg_dir_modules, ptr, PATH_MAX);
-		cfg_dir_modules[PATH_MAX] = 0;
+		strncpy(cfg_dir_modules, ptr, ARRAY_SIZE(cfg_dir_modules) - 1);
+		cfg_dir_modules[ARRAY_SIZE(cfg_dir_modules) - 1] = 0;
 		strcpy(dirname_entry, cfg_dir_modules);
 	});
 
@@ -1076,9 +1076,9 @@ void load_module_load_page(struct page *page)
 	widgets_loadmodule[1].width = 27;
 	widgets_loadmodule[1].height = 21;
 
-	widget_create_textentry(widgets_loadmodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
+	widget_create_textentry(widgets_loadmodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, ARRAY_SIZE(filename_entry) - 1);
 	widgets_loadmodule[2].activate = filename_entered;
-	widget_create_textentry(widgets_loadmodule + 3, 13, 47, 64, 2, 3, 0, NULL, dirname_entry, PATH_MAX);
+	widget_create_textentry(widgets_loadmodule + 3, 13, 47, 64, 2, 3, 0, NULL, dirname_entry, ARRAY_SIZE(dirname_entry) - 1);
 	widgets_loadmodule[3].activate = dirname_entered;
 }
 
@@ -1149,9 +1149,9 @@ void save_module_load_page(struct page *page, int do_export)
 	widgets_exportsave[1].width = 18;
 	widgets_exportsave[1].height = 21;
 
-	widget_create_textentry(widgets_exportsave + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
+	widget_create_textentry(widgets_exportsave + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, ARRAY_SIZE(filename_entry) - 1);
 	widgets_exportsave[2].activate = filename_entered;
-	widget_create_textentry(widgets_exportsave + 3, 13, 47, 64, 2, 0, 0, NULL, dirname_entry, PATH_MAX);
+	widget_create_textentry(widgets_exportsave + 3, 13, 47, 64, 2, 0, 0, NULL, dirname_entry, ARRAY_SIZE(dirname_entry) - 1);
 	widgets_exportsave[3].activate = dirname_entered;
 
 	widgets_exportsave[4].d.togglebutton.state = 1;

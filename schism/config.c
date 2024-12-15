@@ -39,8 +39,11 @@
 /* --------------------------------------------------------------------- */
 /* config settings */
 
-char cfg_dir_modules[PATH_MAX + 1], cfg_dir_samples[PATH_MAX + 1], cfg_dir_instruments[PATH_MAX + 1],
-	cfg_dir_dotschism[PATH_MAX + 1], cfg_font[NAME_MAX + 1];
+// cfg_dir_modules, cfg_dir_samples, and cfg_dir_instruments all are only
+// allocated here because otherwise we'd need to refactor the entire text
+// entry widget stuff to be able to use dynamic buffers.
+char cfg_dir_modules[SCHISM_PATH_MAX + 1], cfg_dir_samples[SCHISM_PATH_MAX + 1], cfg_dir_instruments[SCHISM_PATH_MAX + 1],
+	*cfg_dir_dotschism = NULL, *cfg_font = NULL;
 char cfg_video_interpolation[8];
 char cfg_video_format[9];
 int cfg_video_fullscreen = 0;
@@ -79,7 +82,7 @@ static const char *schism_dotfolders[] = {
 void cfg_init_dir(void)
 {
 #if defined(__amigaos4__)
-	strcpy(cfg_dir_dotschism, "PROGDIR:");
+	str_realloc(&cfg_dir_dotschism, "PROGDIR:", sizeof("PROGDIR:"));
 #else
 	char *portable_file = NULL;
 
@@ -90,8 +93,7 @@ void cfg_init_dir(void)
 	if (portable_file && dmoz_path_is_file(portable_file)) {
 		printf("In portable mode.\n");
 
-		strncpy(cfg_dir_dotschism, app_dir, PATH_MAX);
-		cfg_dir_dotschism[PATH_MAX] = 0;
+		str_realloc(&cfg_dir_dotschism, app_dir, 0);
 	} else {
 		int found = 0;
 		char *dot_dir = dmoz_get_dot_directory();
@@ -100,8 +102,7 @@ void cfg_init_dir(void)
 			char *ptr;
 
 			ptr = dmoz_path_concat(dot_dir, schism_dotfolders[i]);
-			strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
-			cfg_dir_dotschism[PATH_MAX] = 0;
+			str_realloc(&cfg_dir_dotschism, ptr, 0);
 
 			free(ptr);
 
@@ -115,8 +116,7 @@ void cfg_init_dir(void)
 			char *ptr;
 
 			ptr = dmoz_path_concat(dot_dir, schism_dotfolders[0]);
-			strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
-			cfg_dir_dotschism[PATH_MAX] = 0;
+			str_realloc(&cfg_dir_dotschism, ptr, 0);
 
 			free(ptr);
 
@@ -186,21 +186,21 @@ void cfg_load(void)
 	cfg_video_want_menu_bar = !!cfg_get_number(&cfg, "Video", "want_menu_bar", 1);
 
 	tmp = dmoz_get_home_directory();
-	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, tmp);
-	cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, PATH_MAX, tmp);
-	cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, PATH_MAX, tmp);
+	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, ARRAY_SIZE(cfg_dir_modules) - 1, tmp);
+	cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, ARRAY_SIZE(cfg_dir_samples) - 1, tmp);
+	cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, ARRAY_SIZE(cfg_dir_instruments) - 1, tmp);
 	free(tmp);
 
 	ptr = cfg_get_string(&cfg, "Directories", "module_pattern", NULL, 0, NULL);
 	if (ptr) {
-		strncpy(cfg_module_pattern, ptr, PATH_MAX);
-		cfg_module_pattern[PATH_MAX] = 0;
+		strncpy(cfg_module_pattern, ptr, ARRAY_SIZE(cfg_module_pattern) - 1);
+		cfg_module_pattern[ARRAY_SIZE(cfg_module_pattern) - 1] = 0;
 	}
 
 	ptr = cfg_get_string(&cfg, "Directories", "export_pattern", NULL, 0, NULL);
 	if (ptr) {
-		strncpy(cfg_export_pattern, ptr, PATH_MAX);
-		cfg_export_pattern[PATH_MAX] = 0;
+		strncpy(cfg_export_pattern, ptr, ARRAY_SIZE(cfg_export_pattern) - 1);
+		cfg_export_pattern[ARRAY_SIZE(cfg_export_pattern) - 1] = 0;
 	}
 
 	ptr = cfg_get_string(&cfg, "General", "numlock_setting", NULL, 0, NULL);
@@ -277,7 +277,7 @@ void cfg_load(void)
 	else
 		status.flags &= ~MIDI_LIKE_TRACKER;
 
-	cfg_get_string(&cfg, "General", "font", cfg_font, NAME_MAX, "font.cfg");
+	str_realloc(&cfg_font, cfg_get_string(&cfg, "General", "font", cfg_font, 0, "font.cfg"), 0);
 
 	cfg_load_palette(&cfg);
 

@@ -75,30 +75,9 @@ char *strcasestr(const char *haystack, const char *needle);
 # define _D_EXACT_NAMLEN(dirent) strlen((dirent)->d_name)
 #endif
 
-/* dumb workaround for dumb devkitppc bug
- *
- * XXX is this still relevant at all? */
-#ifdef SCHISM_WII
-# undef NAME_MAX
-# undef PATH_MAX
-#endif
-
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
 #endif
-
-#ifndef NAME_MAX
-# ifdef MAXPATHLEN
-#  define NAME_MAX MAXPATHLEN /* BSD name */
-# else
-#  ifdef FILENAME_MAX
-#   define NAME_MAX FILENAME_MAX
-#  else
-#   define NAME_MAX 256
-#  endif
-# endif
-#endif
-
 
 #if HAVE_SYS_TIME_H
 # include <sys/time.h>
@@ -281,5 +260,49 @@ int unsetenv(const char *name);
 #ifndef SCHISM_ALLOC_SIZE_EX
 # define SCHISM_ALLOC_SIZE_EX(x, y)
 #endif
+
+/* ------------------------------------------------------------------------ */
+
+/* dumb workaround for dumb devkitppc bug
+ *
+ * XXX is this still relevant at all? */
+#ifdef SCHISM_WII
+# undef NAME_MAX
+# undef PATH_MAX
+#endif
+
+#ifdef SCHISM_WIN32
+# define SCHISM_PATH_MAX (3 + 256 + 1) // drive letter, colon, name components, NUL
+#else
+# define SCHISM_PATH_MAX (8192) // 8 KiB (should be more than enough)
+#endif
+
+// redefine our value if it's smaller than the implementation's
+#ifdef PATH_MAX
+# if PATH_MAX > SCHISM_PATH_MAX
+#  undef SCHISM_PATH_MAX
+#  define SCHISM_PATH_MAX PATH_MAX
+# endif
+#endif
+
+// SCHISM_PATH_MAX is a safe minimum, i guess
+#define SCHISM_NAME_MAX SCHISM_PATH_MAX
+
+#ifdef NAME_MAX
+# if NAME_MAX > SCHISM_NAME_MAX
+#  undef SCHISM_NAME_MAX
+#  define SCHISM_NAME_MAX NAME_MAX
+# endif
+#endif
+
+#ifdef MAXPATHLEN
+# if MAXPATHLEN > SCHISM_NAME_MAX
+#  undef SCHISM_NAME_MAX
+#  define SCHISM_NAME_MAX MAXPATHLEN
+# endif
+#endif
+
+// FILENAME_MAX is not used here because
+// it shouldn't be used for array bounds
 
 #endif /* SCHISM_HEADERS_H_ */

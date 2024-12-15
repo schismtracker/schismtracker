@@ -332,13 +332,7 @@ char *dmoz_path_get_parent_directory(const char *dirname)
 /* 0 = success, !0 = failed (check errno) */
 int dmoz_path_make_backup(const char *filename, int numbered)
 {
-	char buf[PATH_MAX];
-
-	/* ensure plenty of room to breathe */
-	if (strlen(filename) > PATH_MAX - 16) {
-		errno = ENAMETOOLONG;
-		return -1;
-	}
+	char *buf = mem_alloc(strlen(filename) + 7 + 1);
 
 	if (numbered) {
 		/* If some crazy person needs more than 65536 backup files,
@@ -348,10 +342,11 @@ int dmoz_path_make_backup(const char *filename, int numbered)
 			sprintf(buf, "%s.%d~", filename, n++);
 			ret = dmoz_path_rename(filename, buf, 0);
 		} while (ret != 0 && errno == EEXIST && n < 65536);
+		free(buf);
 		return ret;
 	} else {
-		strcpy(buf, filename);
-		strcat(buf, "~");
+		sprintf(buf, "%s~", filename);
+		free(buf);
 		return dmoz_path_rename(filename, buf, 1);
 	}
 }
@@ -542,10 +537,24 @@ char *dmoz_get_current_directory(void)
 	}
 #endif
 
-	char buf[PATH_MAX + 1] = {'\0'};
+    /* Double the buffer size until getcwd() succeeds or we run out
+	 * of memory. Not using get_current_dir_name() and
+	 * getcwd(NULL, n) to only use methods defined by POSIX. */
+	size_t n = SCHISM_PATH_MAX; // good starting point?
+	char *buf = malloc(n);
+	while (buf && !getcwd(buf, n)) {
+		n *= 2;
 
-	if (getcwd(buf, PATH_MAX))
-		return str_dup(buf);
+		free(buf);
+
+		buf = malloc(n);
+		if (!buf)
+			break;
+	}
+
+
+	if (buf)
+		return buf;
 
 	return str_dup(".");
 }
