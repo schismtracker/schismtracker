@@ -588,12 +588,12 @@ const char *video_driver_name(void)
 
 void video_report(void)
 {
+	log_nl();
+
 	log_append(2, 0, "Video initialised");
 	log_underline(17);
 
 	backend->report();
-
-	log_nl();
 }
 
 void video_set_hardware(int hardware)

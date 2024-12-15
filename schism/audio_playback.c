@@ -1462,13 +1462,13 @@ success:
 	audio_buffer_samples = obtained.samples;
 
 	if (verbose) {
+		log_nl();
 		log_append(2, 0, "Audio initialised");
 		log_underline(17);
 		log_appendf(5, " Using driver '%s'", driver_name);
 		log_appendf(5, " %d Hz, %d bit, %s", obtained.freq, obtained.bits,
 			obtained.channels == 1 ? "mono" : "stereo");
 		log_appendf(5, " Buffer size: %d samples", obtained.samples);
-		log_nl();
 	}
 
 	return 1;
