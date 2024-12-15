@@ -1017,11 +1017,8 @@ static int _handle_ime(struct key_event *k)
 			if (cs_unicode_c >= 0) {
 				/* bleh... */
 				m = k->mod;
-
 				k->mod = 0;
-
 				c = kbd_char_to_hex(k);
-
 				k->mod = m;
 
 				if (c == -1) {
