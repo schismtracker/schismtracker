@@ -92,7 +92,7 @@ conflict with other ones. I've organized them pretty much in order of popularity
 READ_INFO(xm) LOAD_SONG(xm)
 READ_INFO(it) LOAD_SONG(it) SAVE_SONG(it)
 READ_INFO(mt2)
-READ_INFO(mtm) LOAD_SONG(mtm)
+READ_INFO(mtm) LOAD_SONG(mtm) SAVE_SONG(mtm)
 READ_INFO(ntk)
 READ_INFO(mdl) LOAD_SONG(mdl)
 READ_INFO(med)

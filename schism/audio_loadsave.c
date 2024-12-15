@@ -278,6 +278,7 @@ int song_load_unchecked(const char *file)
 		song_stop();
 	}
 
+	log_nl();
 	log_appendf(2, "Loading %s", base);
 	log_underline(strlen(base) + 8);
 
@@ -326,9 +327,6 @@ int song_load_unchecked(const char *file)
 		*strrchr(fmt, ',') = 0; // cut off 'instruments'
 	log_appendf(5, fmt, csf_get_num_patterns(current_song), nsmp, nins);
 
-	log_nl();
-
-
 	return 1;
 }
 
@@ -350,6 +348,7 @@ const struct save_format song_save_formats[] = {
 	{"IT", "Impulse Tracker", ".it", {.save_song = fmt_it_save_song}},
 	{"S3M", "Scream Tracker 3", ".s3m", {.save_song = fmt_s3m_save_song}},
 	{"MOD", "Amiga ProTracker", ".mod", {.save_song = fmt_mod_save_song}},
+	{"MTM", "MultiTracker", ".mtm", {.save_song = fmt_mtm_save_song}},
 	{.label = NULL}
 };
 
@@ -481,7 +480,6 @@ int song_save(const char *filename, const char *type)
 
 	mangle = mangle_filename(filename, NULL, format->ext);
 
-	log_nl();
 	log_nl();
 	log_appendf(2, "Saving %s module", format->name);
 	log_underline(strlen(format->name) + 14);

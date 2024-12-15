@@ -55,10 +55,6 @@ static struct widget widgets_exportmodule[16];
 static struct widget widgets_savemodule[16];
 static struct widget *widgets_exportsave;
 
-/* XXX this needs to be kept in sync with diskwriters
-   (FIXME: it shouldn't have to! build it when the savemodule page is built or something, idk -storlek) */
-static const int filetype_saves[] = { 4, 5, 6, 7, 8, 9, -1 };
-
 static int top_file = 0, top_dir = 0;
 static time_t directory_mtime;
 static dmoz_filelist_t flist;
@@ -1161,6 +1157,29 @@ void save_module_load_page(struct page *page, int do_export)
 	widgets_exportsave[4].d.togglebutton.state = 1;
 
 	const struct save_format *formats = (do_export ? song_export_formats : song_save_formats);
+
+	// get the number of formats
+	for (c = 0, n = 0; formats[n].label; n++) {
+		if (formats[n].enabled && !formats[n].enabled())
+			continue;
+
+		c++;
+	}
+
+	// build the filetypes list
+	int *filetypes = mem_alloc((c + 1) * sizeof(int));
+	for (c = 0, n = 0; formats[n].label; n++) {
+		if (formats[n].enabled && !formats[n].enabled())
+			continue;
+
+		filetypes[c] = 4 + c;
+
+		c++;
+	}
+
+	filetypes[c] = -1;
+
+	// create the widgets
 	for (c = 0, n = 0; formats[n].label; n++) {
 		if (formats[n].enabled && !formats[n].enabled())
 			continue;
@@ -1173,12 +1192,13 @@ void save_module_load_page(struct page *page, int do_export)
 				NULL,
 				formats[n].label,
 				(5 - strlen(formats[n].label)) / 2 + 1,
-				filetype_saves);
+				filetypes);
 
 		widgets_exportsave[4 + c].next.backtab = 1;
 
 		c++;
 	}
 	widgets_exportsave[4 + c - 1].next.down = 2;
+
 	page->total_widgets += c;
 }
