@@ -2324,10 +2324,13 @@ void csf_process_effects(song_t *csf, int firsttick)
 
 		// Initialize portamento command memory (needs to be done in exactly this order)
 		if (firsttick) {
-			const int effect_column_tone_porta = (cmd == FX_TONEPORTAMENTO);
+			const int effect_column_tone_porta = (cmd == FX_TONEPORTAMENTO || cmd == FX_TONEPORTAVOL);
 			if (effect_column_tone_porta) {
-				if (param)
-					chan->mem_portanote = param;
+                uint32_t toneporta_param = (cmd != FX_TONEPORTAVOL ? param : 0);
+                if (toneporta_param)
+					chan->mem_portanote = toneporta_param;
+                else if(!toneporta_param && !(csf->flags & SONG_COMPATGXX))
+					chan->mem_portanote = chan->mem_pitchslide;
 				if (!(csf->flags & SONG_COMPATGXX))
 					chan->mem_pitchslide = chan->mem_portanote;
 			}
