@@ -348,7 +348,6 @@ const struct save_format song_save_formats[] = {
 	{"IT", "Impulse Tracker", ".it", {.save_song = fmt_it_save_song}},
 	{"S3M", "Scream Tracker 3", ".s3m", {.save_song = fmt_s3m_save_song}},
 	{"MOD", "Amiga ProTracker", ".mod", {.save_song = fmt_mod_save_song}},
-	{"MTM", "MultiTracker", ".mtm", {.save_song = fmt_mtm_save_song}},
 	{.label = NULL}
 };
 
