@@ -291,13 +291,11 @@ jobs:
         if: steps.cache-x86_64-dependencies.outputs.cache-hit != 'true'
         run: |
           pushd utf8proc-$UTF8PROC_VERSION
-          patch -p1 < ../.github/patches/utf8proc/2-fix-prefix.patch
           mkdir build_x86_64
           cd build_x86_64
           LDFLAGS="-F$HOME/x86_64/SDKs/MacOSX10.9.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.9.sdk" cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$HOME/x86_64prefix" -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET="10.7" -DCMAKE_OSX_SYSROOT="$HOME/x86_64/SDKs/MacOSX10.9.sdk" -DBUILD_SHARED_LIBS=1
           make
           make install
-          patch -p1 -R < ../.github/patches/utf8proc/2-fix-prefix.patch
           popd
 
       - name: 'Build utf8proc (arm64)'
