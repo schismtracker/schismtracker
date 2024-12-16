@@ -364,7 +364,7 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				sample->c5speed = bswapLE16(inst.c5speed);
 				sample->volume = inst.volume * 4; // modplug
 
-				iff_read_sample(&chunk, fp, sample, flags, sizeof(inst));
+				iff_read_sample(&chunk, fp, sample, flags, 64);
 			}
 			s++;
 
