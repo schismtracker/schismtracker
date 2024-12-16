@@ -641,6 +641,8 @@ static int32_t get_sample_count(song_voice_t *chan, int32_t samples)
 
 			if ((int) chan->position < loop_start)
 				chan->position = chan->loop_start;
+
+			chan->flags |= CHN_LOOP_WRAPPED;
 		}
 	}
 
@@ -859,27 +861,33 @@ uint32_t csf_create_stereo_mix(song_t *csf, int32_t count)
 					? mix_func_table[flags | MIXNDX_RAMP]
 					: mix_func_table[flags];
 
+				// Loop wrap-around magic
 				if (lookahead_ptr) {
+					const int32_t oldcount = smpcount;
 					const int32_t read_length = rshift_signed(buffer_length_to_samples(smpcount, channel), 16);
+					const int at_loop_start = (channel->position >= channel->loop_start && channel->position < channel->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE);
+					if (!at_loop_start)
+						channel->flags &= ~CHN_LOOP_WRAPPED;
 
 					channel->current_sample_data = smp_ptr;
 					if (channel->position >= lookahead_start) {
-						const int32_t oldcount = smpcount;
-
 						int32_t samples_to_read = (channel->increment < 0)
 							? (channel->position - lookahead_start)
 							: (channel->loop_end - channel->position);
 						// this line causes sample 8 in BUTTERFL.XM to play incorrectly
 						//samples_to_read = MAX(samples_to_read, channel->loop_end - channel->loop_start);
 						smpcount = samples_to_buffer_length(samples_to_read, channel);
-						smpcount = CLAMP(smpcount, 1, oldcount);
 
 						channel->current_sample_data = lookahead_ptr;
+					} else if ((channel->flags & (CHN_LOOP | CHN_LOOP_WRAPPED)) && at_loop_start) {
+						// Interpolate properly after looping
+						smpcount = samples_to_buffer_length((channel->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE) - channel->position, channel);
+						channel->current_sample_data = lookahead_ptr + (channel->loop_end - channel->loop_start) * ((channel->ptr_sample->flags & CHN_STEREO) ? 2 : 1) * ((channel->ptr_sample->flags & CHN_16BIT) ? 2 : 1);
 					} else if (channel->increment > 0 && channel->position + read_length >= lookahead_start && smpcount > 1) {
-						const int32_t oldcount = smpcount;
 						smpcount = samples_to_buffer_length(lookahead_start - channel->position, channel);
-						smpcount = CLAMP(smpcount, 1, oldcount - 1);
 					}
+
+					smpcount = CLAMP(smpcount, 1, oldcount);
 				}
 
 				int32_t *pbufmax = pbuffer + (smpcount * 2);
