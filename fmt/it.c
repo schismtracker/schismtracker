@@ -682,6 +682,16 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 /* ---------------------------------------------------------------------- */
 /* saving routines */
 
+enum {
+	WARN_ADLIB,
+
+	MAX_WARN,
+};
+
+const char *it_warnings[] = {
+	[WARN_ADLIB] = "AdLib samples",
+};
+
 // NOBODY expects the Spanish Inquisition!
 static void save_it_pattern(disko_t *fp, song_note_t *pat, int patsize)
 {
@@ -799,11 +809,12 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 	int n;
 	int nord, nins, nsmp, npat;
 	int msglen = strlen(song->message);
-	int warned_adlib = 0;
 	uint32_t para_ins[256], para_smp[256], para_pat[256];
 	// how much extra data is stuffed between the parapointers and the rest of the file
 	// (2 bytes for edit history length, and 8 per entry including the current session)
 	uint32_t extra = 2 + 8 * song->histlen + 8;
+	// warnings for unsupported features
+	uint32_t warn = 0;
 
 	// TODO complain about nonstandard stuff? or just stop saving it to begin with
 
@@ -996,11 +1007,13 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 		// done using the pointer internally, so *now* swap it
 		para_smp[n] = bswapLE32(para_smp[n]);
 
-		if (!warned_adlib && smp->flags & CHN_ADLIB) {
-			log_appendf(4, " Warning: AdLib samples unsupported in IT format");
-			warned_adlib = 1;
-		}
+		if (smp->flags & CHN_ADLIB)
+			warn |= (1 << WARN_ADLIB);
 	}
+
+	for (int i = 0; i < ARRAY_SIZE(it_warnings); i++)
+		if (warn & (1 << i))
+			log_appendf(4, " Warning: %s unsupported in IT format", it_warnings[i]);
 
 	// rewrite the parapointers
 	disko_seek(fp, 0xc0 + nord, SEEK_SET);
