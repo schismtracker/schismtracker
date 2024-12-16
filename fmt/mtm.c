@@ -395,7 +395,7 @@ static struct mtm_track *mtm_track(song_note_t *note, int rows, uint32_t *warn)
 			break;
 		case FX_PANNING:
 			e = 0x8;
-			p >>= 1;
+			//p >>= 1;
 			check_effect_memory = 1;
 			break;
 		case FX_OFFSET:
