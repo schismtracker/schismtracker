@@ -66,10 +66,29 @@ static void mtm_unpack_track(const uint8_t *b, song_note_t *note, int rows)
 		note->volparam = 0;
 		note->effect = b[1] & 0xf;
 		note->param = b[2];
+
 		/* From mikmod: volume slide up always overrides slide down */
-		if (note->effect == 0xa && (note->param & 0xf0))
+		if (note->effect == 0xa && (note->param & 0xf0)) {
 			note->param &= 0xf0;
-		csf_import_mod_effect(note, 0);
+		} else if (note->effect == 0x8) {
+			note->effect = note->param = 0;
+		} else if (note->effect == 0xe) {
+			switch (note->param >> 4) {
+			case 0x0:
+			case 0x3:
+			case 0x4:
+			case 0x6:
+			case 0x7:
+			case 0xF:
+				note->effect = note->param = 0;
+				break;
+			default:
+				break;
+			}
+		}
+
+		if (note->effect || note->param)
+			csf_import_mod_effect(note, 0);
 	}
 }
 
@@ -359,7 +378,7 @@ static struct mtm_track *mtm_track(song_note_t *note, int rows, uint32_t *warn)
 
 		switch (note->effect) {
 		default:
-			p = 0;
+			e = p = 0;
 			break;
 		case FX_ARPEGGIO:
 			e = 0x0;
@@ -394,8 +413,8 @@ static struct mtm_track *mtm_track(song_note_t *note, int rows, uint32_t *warn)
 			check_effect_memory = 1;
 			break;
 		case FX_PANNING:
-			e = 0x8;
-			p >>= 1;
+			e = 0xE;
+			p = (0x80 | (p >> 4));
 			check_effect_memory = 1;
 			break;
 		case FX_OFFSET:
@@ -426,11 +445,22 @@ static struct mtm_track *mtm_track(song_note_t *note, int rows, uint32_t *warn)
 		case FX_PATTERNBREAK:
 			e = 0xd; /* XXX decimal? */
 			break;
-		case FX_SPEED: /* XXX check this */
+		// FIXME multitracker is quirky; a speed command resets the
+		// tempo to the default and vice versa. however, many players
+		// didn't actually implement this quirk (MikMod, DMP) which
+		// means files created by us will play fine there.
+		//
+		// I'm not entirely sure what the best way to go about this is.
+		// OpenMPT checks for speed & tempo on the same track before
+		// interpreting it as MultiTracker would, so maybe we should
+		// warn on *any* speed/tempo effects?
+		// For now I'm just going to keep the ProTracker-like behavior
+		// since it makes the most sense to me...
+		case FX_SPEED:
 			e = 0xf;
 			p = MIN(p, 0x1f);
 			break;
-		case FX_TEMPO: /* XXX check this */
+		case FX_TEMPO:
 			e = 0xf;
 			p = MAX(p, 0x20);
 			break;
@@ -445,19 +475,20 @@ static struct mtm_track *mtm_track(song_note_t *note, int rows, uint32_t *warn)
 			default:
 				e = p = 0;
 				break;
-			case 8: case 0xc: case 0xd: case 0xe:
+			case 0x8: case 0xc: case 0xd: case 0xe:
 				/* ok */
 				break;
-			case 3:
-				p = 0x40 | (p & 0xf);
-				break;
-			case 4:
-				p = 0x70 | (p & 0xf);
-				break;
-			case 0xb:
-				p = 0x60 | (p & 0xf);
-				break;
-			case 9:
+			// multitracker doesn't support these -paper
+			//case 0x3:
+			//	p = 0x40 | (p & 0xf);
+			//	break;
+			//case 0x4:
+			//	p = 0x70 | (p & 0xf);
+			//	break;
+			//case 0xb:
+			//	p = 0x60 | (p & 0xf);
+			//	break;
+			case 0x9:
 				if (p == 0x91) {
 					e = 0x8;
 					p = 0xa4;
