@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef PATTERN_VIEW_H
-#define PATTERN_VIEW_H
+#ifndef SCHISM_PATTERN_VIEW_H_
+#define SCHISM_PATTERN_VIEW_H_
 
 /* NOTE: these functions need to be called with the screen LOCKED */
 
@@ -35,14 +35,14 @@ typedef void (*draw_mask_func) (int x, int y, int mask, int cursor_pos, int fg, 
 	void draw_note_##n(int x, int y, const song_note_t *note, int cursor_pos, int fg, int bg); \
 	void draw_mask_##n(int x, int y, int mask, int cursor_pos, int fg, int bg);
 
-PATTERN_VIEW(13);
-PATTERN_VIEW(10);
-PATTERN_VIEW(8); // note: not usable for editing as instrument numbers are not shown (thus no draw_mask)
-PATTERN_VIEW(7);
-PATTERN_VIEW(6);
-PATTERN_VIEW(3);
-PATTERN_VIEW(2);
-PATTERN_VIEW(1);
+PATTERN_VIEW(13)
+PATTERN_VIEW(10)
+PATTERN_VIEW(8) /* note: not usable for editing as instrument numbers are not shown (thus no draw_mask) */
+PATTERN_VIEW(7)
+PATTERN_VIEW(6)
+PATTERN_VIEW(3)
+PATTERN_VIEW(2)
+PATTERN_VIEW(1)
 
 #undef PATTERN_VIEW
 
@@ -52,5 +52,5 @@ PATTERN_VIEW(1);
 #define MASK_VOLUME     4
 #define MASK_EFFECT     8
 
-#endif /* ! PATTERN_VIEW_H */
+#endif /* SCHISM_PATTERN_VIEW_H_ */
 

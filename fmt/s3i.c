@@ -23,136 +23,257 @@
 
 /* FIXME this file is redundant and needs to go away -- s3m.c already does all of this */
 
-#define NEED_BYTESWAP
 #include "headers.h"
+#include "bswap.h"
 #include "fmt.h"
 
 #include "song.h"
-#include "sndfile.h"
+#include "player/sndfile.h"
 
-#pragma pack(push, 1)
-/* Note: This struct must match the disk layout struct */
-struct s3i_header {
-	//00
-	unsigned char type;
-	char dosfn[12];
-	unsigned char memseg[3];
-	//10
-	unsigned int length;  // 32 bits
-	unsigned int loopbeg; // 32 bits
-	unsigned int loopend; // 32 bits
-	unsigned char volume;
-	char dummy1;
-	unsigned char packed;
-	unsigned char flags;
-	//20
-	unsigned int c2spd;   // 32 bits
-	char dummy2[4];
-	unsigned short dummy_gp;
-	unsigned short dummy_512;
-	unsigned int dummy_last;
-	//30
-	char samplename[28];
-	//4C
-	char samplesig[4]; /* SCRS or SCRI */
-	//50
+enum {
+	S3I_TYPE_NONE = 0,
+	S3I_TYPE_PCM = 1,
+	S3I_TYPE_ADLIB = 2,
 };
-#pragma pack(pop)
 
-static int load_s3i_sample(const uint8_t *data, size_t length, song_sample_t *smp)
+enum {
+	S3I_PCM_FLAG_LOOP   = 0x01,
+	S3I_PCM_FLAG_STEREO = 0x02,
+	S3I_PCM_FLAG_16BIT  = 0x04,
+};
+
+/* nonzero on success */
+static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 {
-	const struct s3i_header* header = (const struct s3i_header*) data;
-	/*
-	fprintf(stderr, "%X-%X-%X-%X-%X\n",
-	(((char*)&(header->type     ))-((char*)&(header->type))),
-	(((char*)&(header->length   ))-((char*)&(header->type))),
-	(((char*)&(header->c2spd    ))-((char*)&(header->type))),
-	(((char*)&(header->samplename))-((char*)&(header->type))),
-	(((char*)&(header->samplesig))-((char*)&(header->type)))
-	);
+	unsigned char magic[4];
+	uint32_t dw;
 
-	fprintf(stderr, "Considering %d byte sample (%.4s), %d\n",
-	(int)length,
-	header->samplesig,
-	header->length);
-	*/
-	if(length < 0x50)
-		return 0; // too small
-	if (strncmp(header->samplesig, "SCRS", 4) != 0
-	    && strncmp(header->samplesig, "SCRI", 4) != 0)
-		return 0; // It should be either SCRS or SCRI.
-
-	size_t samp_length = bswapLE32(header->length);
-	int bytes_per_sample = (header->type == 1 ? ((header->flags & 2) ? 2 : 1) : 0); // no sample data
-
-	if (length < 0x50 + smp->length * bytes_per_sample)
+	if (slurp_length(fp) < 0x50)
 		return 0;
 
-	smp->length = samp_length;
-	smp->global_volume = 64;
-	smp->volume = header->volume*256/64;
-	smp->loop_start = header->loopbeg;
-	smp->loop_end = header->loopend;
-	smp->c5speed = header->c2spd;
-	smp->flags = 0;
-	if (header->flags & 1)
-		smp->flags |= CHN_LOOP;
-	if (header->flags & 2)
-		smp->flags |= CHN_STEREO;
-	if (header->flags & 4)
-		smp->flags |= CHN_16BIT;
+	slurp_seek(fp, 0x4C, SEEK_SET);
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic))
+		return 0;
 
-	if (header->type == 2) {
+	if (memcmp(magic, "SCRS", 4) && memcmp(magic, "SCRI", 4))
+		return 0;
+
+	slurp_seek(fp, 0x00, SEEK_SET);
+	int type = slurp_getc(fp);
+	if (type != S3I_TYPE_PCM && type != S3I_TYPE_ADLIB)
+		return 0;
+
+	slurp_seek(fp, 0x1F, SEEK_SET);
+	int flags = slurp_getc(fp);
+	if (flags < 0)
+		return 0;
+
+	slurp_seek(fp, 0x1C, SEEK_SET);
+	smp->flags = 0;
+	smp->global_volume = 64;
+	smp->volume = slurp_getc(fp) * 4; /* mphack */
+
+	slurp_seek(fp, 0x14, SEEK_SET);
+
+	if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
+		return 0;
+	smp->loop_start = bswapLE32(dw);
+
+	if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
+		return 0;
+	smp->loop_end = bswapLE32(dw);
+
+	slurp_seek(fp, 4, SEEK_CUR);
+
+	if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
+		return 0;
+	smp->c5speed = bswapLE32(dw);
+
+	slurp_seek(fp, 0x01, SEEK_SET);
+	slurp_read(fp, smp->filename, MIN(sizeof(smp->filename) - 1, 12));
+
+	slurp_seek(fp, 0x30, SEEK_SET);
+	slurp_read(fp, smp->name, MIN(sizeof(smp->name) - 1, 28));
+
+	if (type == S3I_TYPE_PCM) {
+		int bytes_per_sample = (flags & S3I_PCM_FLAG_STEREO) ? 2 : 1;
+
+		slurp_seek(fp, 0x10, SEEK_SET);
+		if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
+			return 0;
+		smp->length = bswapLE32(dw);
+
+		if (slurp_length(fp) < 0x50 + smp->length * bytes_per_sample)
+			return 0;
+
+		/* convert flags */
+		if (flags & S3I_PCM_FLAG_LOOP)
+			smp->flags |= CHN_LOOP;
+
+		if (flags & S3I_PCM_FLAG_STEREO)
+			smp->flags |= CHN_STEREO;
+
+		if (flags & S3I_PCM_FLAG_16BIT)
+			smp->flags |= CHN_16BIT;
+
+		if (with_data) {
+			int format = SF_M | SF_LE; // endianness; channels
+			format |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU); // bits; encoding
+
+			slurp_seek(fp, 0x50, SEEK_SET);
+			csf_read_sample(smp, format, fp);
+		}
+	} else if (type == S3I_TYPE_ADLIB) {
 		smp->flags |= CHN_ADLIB;
 		smp->flags &= ~(CHN_LOOP|CHN_16BIT);
 
-		memcpy(smp->adlib_bytes, &header->length, 11);
+		slurp_seek(fp, 0x10, SEEK_SET);
+		if (slurp_read(fp, smp->adlib_bytes, sizeof(smp->adlib_bytes)) != sizeof(smp->adlib_bytes))
+			return 0;
 
+		// dumb hackaround that ought to some day be fixed:
 		smp->length = 1;
-		smp->loop_start = 0;
-		smp->loop_end = 0;
-
 		smp->data = csf_allocate_sample(1);
 	}
-
-	int format = SF_M | SF_LE; // endianness; channels
-	format |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU); // bits; encoding
-
-	csf_read_sample((song_sample_t *) smp, format,
-		(const char *) (data + 0x50), (uint32_t) (length - 0x50));
-
-	strncpy(smp->filename, header->dosfn, 11);
-	strncpy(smp->name, header->samplename, 25);
 
 	return 1;
 }
 
-
-int fmt_s3i_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_s3i_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	song_sample_t tmp;
-	song_sample_t *smp = &tmp;
-	if (!load_s3i_sample(data, length, smp))
+	song_sample_t smp;
+	if (!load_s3i_sample(fp, &smp, 0))
 		return 0;
 
-	file->smp_length = smp->length;
-	file->smp_flags = smp->flags;
-	file->smp_defvol = smp->volume;
-	file->smp_gblvol = smp->global_volume;
-	file->smp_loop_start = smp->loop_start;
-	file->smp_loop_end = smp->loop_end;
-	file->smp_speed = smp->c5speed;
-	file->smp_filename = strn_dup(smp->filename, 12);
+	file->smp_length = smp.length;
+	file->smp_flags = smp.flags;
+	file->smp_defvol = smp.volume;
+	file->smp_gblvol = smp.global_volume;
+	file->smp_loop_start = smp.loop_start;
+	file->smp_loop_end = smp.loop_end;
+	file->smp_speed = smp.c5speed;
+	file->smp_filename = strn_dup(smp.filename, 12);
 
 	file->description = "Scream Tracker Sample";
-	file->title = strn_dup(smp->name, 25);
+	file->title = strn_dup(smp.name, 25);
 	file->type = TYPE_SAMPLE_EXTD | TYPE_INST_OTHER;
 	return 1;
 }
 
-int fmt_s3i_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
+int fmt_s3i_load_sample(slurp_t *fp, song_sample_t *smp)
 {
 	// what the crap?
-	return load_s3i_sample(data, length, smp);
+	return load_s3i_sample(fp, smp, 1);
 }
 
+/* ---------------------------------------------------- */
+
+struct s3i_header {
+	uint8_t type;
+	char filename[12];
+	union {
+		struct {
+			uint8_t memseg[3];
+			uint32_t length;
+			uint32_t loop_start;
+			uint32_t loop_end;
+		} pcm;
+		struct {
+			//uint8_t zero[3];
+			uint8_t data[12];
+		} admel;
+	} spec;
+	uint8_t vol;
+	uint8_t x; // "dsk" for adlib
+	uint8_t pack; // 0
+	uint8_t flags; // 1=loop 2=stereo 4=16-bit / zero for adlib
+	uint32_t c5speed;
+	uint8_t junk[12];
+	char name[28];
+	char tag[4]; // SCRS/SCRI/whatever
+};
+
+void s3i_write_header(disko_t *fp, song_sample_t *smp, uint32_t sdata)
+{
+	struct s3i_header hdr = {0};
+	int n;
+
+	if (smp->flags & CHN_ADLIB) {
+		hdr.type = S3I_TYPE_ADLIB;
+		memcpy(hdr.spec.admel.data, smp->adlib_bytes, 11);
+		memcpy(hdr.tag, "SCRI", 4);
+	} else if (smp->data != NULL) {
+		hdr.type = S3I_TYPE_PCM;
+		hdr.spec.pcm.memseg[0] = (sdata >> 20) & 0xff;
+		hdr.spec.pcm.memseg[1] = (sdata >> 4) & 0xff;
+		hdr.spec.pcm.memseg[2] = (sdata >> 12) & 0xff;
+		hdr.spec.pcm.length = bswapLE32(smp->length);
+		hdr.spec.pcm.loop_start = bswapLE32(smp->loop_start);
+		hdr.spec.pcm.loop_end = bswapLE32(smp->loop_end);
+		hdr.flags = ((smp->flags & CHN_LOOP) ? 1 : 0)
+			| ((smp->flags & CHN_STEREO) ? 2 : 0)
+			| ((smp->flags & CHN_16BIT) ? 4 : 0);
+		memcpy(hdr.tag, "SCRS", 4);
+	} else {
+		hdr.type = S3I_TYPE_NONE;
+	}
+
+	memcpy(hdr.filename, smp->filename, 12);
+	hdr.vol = smp->volume / 4; //mphack
+	hdr.c5speed = bswapLE32(smp->c5speed);
+
+	for (n = 25; n >= 0; n--)
+		if ((smp->name[n] ? smp->name[n] : 32) != 32)
+			break;
+	for (; n >= 0; n--)
+		hdr.name[n] = smp->name[n] ? smp->name[n] : 32;
+
+#define WRITE_VALUE(x) do { disko_write(fp, &hdr.x, sizeof(hdr.x)); } while (0)
+
+	WRITE_VALUE(type);
+	WRITE_VALUE(filename);
+
+	switch (hdr.type) {
+	case S3I_TYPE_ADLIB:
+		disko_seek(fp, 3, SEEK_CUR);
+		WRITE_VALUE(spec.admel.data);
+		break;
+	case S3I_TYPE_PCM:
+		WRITE_VALUE(spec.pcm.memseg);
+		WRITE_VALUE(spec.pcm.length);
+		WRITE_VALUE(spec.pcm.loop_start);
+		WRITE_VALUE(spec.pcm.loop_end);
+		break;
+	default:
+	case S3I_TYPE_NONE:
+		disko_seek(fp, 15, SEEK_CUR);
+		break;
+	}
+
+	WRITE_VALUE(vol);
+	WRITE_VALUE(x);
+	WRITE_VALUE(pack);
+	WRITE_VALUE(flags);
+	WRITE_VALUE(c5speed);
+	disko_seek(fp, 12, SEEK_CUR);
+	WRITE_VALUE(name);
+	WRITE_VALUE(tag); // SCRS/SCRI/whatever
+
+#undef WRITE_VALUE
+}
+
+int fmt_s3i_save_sample(disko_t *fp, song_sample_t *smp)
+{
+	s3i_write_header(fp, smp, 0);
+
+	if (smp->flags & CHN_ADLIB) {
+		return SAVE_SUCCESS; // already done
+	} else if (smp->data != NULL) {
+		uint32_t format = SF_M | SF_LE; // endianness; channels
+		format |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU); // bits; encoding
+
+		csf_write_sample(fp, smp, format, UINT32_MAX);
+	}
+
+	return SAVE_SUCCESS;
+}

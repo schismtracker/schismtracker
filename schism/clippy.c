@@ -22,457 +22,214 @@
  */
 
 #include "headers.h" /* always include this one first, kthx */
+#include "backend/clippy.h"
 
+#include "charset.h"
 #include "clippy.h"
-#include "event.h"
+#include "events.h"
 
 #include "util.h"
 
-#include "sdlmain.h"
 #include "video.h"
 
-static char *_current_selection = NULL;
-static char *_current_clipboard = NULL;
-static struct widget *_widget_owner[16] = {NULL};
+// system backend
+static const schism_clippy_backend_t *backend = NULL;
 
-static int has_sys_clip;
-#if defined(WIN32)
-static HWND native_window, _hmem;
-#elif defined(__QNXNTO__)
-static unsigned short inputgroup;
-#elif defined(USE_X11)
-static Display *native_display = NULL;
-static Window native_window;
-static Atom atom_sel;
-static Atom atom_clip;
-static void __noop_v(void){};
-#endif
+static char* _current_selection = NULL;
+static char* _current_clipboard = NULL;
+static struct widget* _widget_owner[16] = {NULL};
 
-#ifdef MACOSX
-extern const char *macosx_clippy_get(void);
-extern void macosx_clippy_put(const char *buf);
-#endif
+static void _free_current_selection(void) {
+	if (_current_selection) {
+		free(_current_selection);
+		_current_selection = NULL;
+	}
+}
 
-static void _clippy_copy_to_sys(int do_sel)
+static void _free_current_clipboard(void) {
+	if (_current_clipboard) {
+		free(_current_clipboard);
+		_current_clipboard = NULL;
+	}
+}
+
+static void _clippy_copy_to_sys(int cb)
 {
-	int j;
-	char *tmp;
-	char *dst;
-	char *freeme;
-#if defined(__QNXNTO__)
-	PhClipboardHdr clheader = {Ph_CLIPBOARD_TYPE_TEXT, 0, NULL};
-	int *cldata;
-	int status;
-#endif
+	if (!_current_selection)
+		return;
 
-	freeme = NULL;
-	if (!_current_selection) {
-		dst = NULL;
-		j = 0;
-	} else
-#if defined(WIN32)
-	{
-		int i;
-		/* need twice the space since newlines are replaced with \r\n */
-		freeme = tmp = malloc(strlen(_current_selection)*2 + 1);
-		if (!tmp) return;
-		for (i = j = 0; _current_selection[i]; i++) {
-			if (_current_selection[i] == '\r' || _current_selection[i] == '\n') {
-				tmp[j++] = '\r';
-				tmp[j++] = '\n';
-			} else {
-				tmp[j++] = _current_selection[i];
-			}
-		}
-		tmp[j] = '\0';
-	}
-#else
-	if (has_sys_clip) {
-		int i;
-		/* convert to local */
-		freeme = dst = malloc(strlen(_current_selection)+4);
-		if (!dst) return;
-		for (i = j = 0; _current_selection[i]; i++) {
-			dst[j] = _current_selection[i];
-			if (dst[j] == '\r') dst[j] = '\n';
-			j++;
-		}
-		dst[j] = '\0';
-	} else {
-		dst = NULL;
-		j = 0;
-	}
-#endif
-#if defined(USE_X11)
-	if (has_sys_clip) {
-		if (!dst) dst = (char *) ""; /* blah */
-		if (j < 0) j = 0;
-		if (do_sel) {
-			if (XGetSelectionOwner(native_display, XA_PRIMARY) != native_window) {
-				XSetSelectionOwner(native_display, XA_PRIMARY, native_window, CurrentTime);
-			}
-			XChangeProperty(native_display,
-				DefaultRootWindow(native_display),
-				XA_CUT_BUFFER0, XA_STRING, 8,
-				PropModeReplace, (unsigned char *)dst, j);
+	/* use calloc() here because we aren't guaranteed to actually
+	 * fill the whole buffer */
+	size_t sel_len = strlen(_current_selection);
+	uint8_t* out = mem_alloc((sel_len + 1) * sizeof(char));
+
+	/* normalize line breaks
+	 *
+	 * TODO: this needs to be done internally as well; every paste
+	 * handler ought to expect Unix LF format. */
+	size_t i = 0, j = 0;
+	for (; i < sel_len && j < sel_len; i++, j++) {
+		if (_current_selection[i] == '\r' && _current_selection[i + 1] == '\n') {
+			/* CRLF -> LF */
+			out[j] = '\n';
+			i++;
+		} else if (_current_selection[i] == '\r') {
+			/* CR -> LF */
+			out[j] = '\n';
 		} else {
-			if (XGetSelectionOwner(native_display, atom_clip) != native_window) {
-				XSetSelectionOwner(native_display, atom_clip, native_window, CurrentTime);
-			}
-			XChangeProperty(native_display,
-				DefaultRootWindow(native_display),
-				XA_CUT_BUFFER0, XA_STRING, 8,
-				PropModeReplace, (unsigned char *)dst, j);
-			XChangeProperty(native_display,
-				DefaultRootWindow(native_display),
-				XA_CUT_BUFFER1, XA_STRING, 8,
-				PropModeReplace, (unsigned char *)dst, j);
+			/* we're good */
+			out[j] = _current_selection[i];
 		}
 	}
-#elif defined(WIN32)
-	if (!do_sel && OpenClipboard(native_window)) {
-		_hmem = GlobalAlloc((GMEM_MOVEABLE|GMEM_DDESHARE), j+1);
-		if (_hmem) {
-			dst = (char *)GlobalLock(_hmem);
-			if (dst) {
-				/* this seems wrong, but msdn does this */
-				memcpy(dst, tmp, j);
-				dst[j] = '\0';
-				GlobalUnlock(_hmem);
-				EmptyClipboard();
-				SetClipboardData(CF_TEXT, _hmem);
-			}
-		}
-		CloseClipboard();
-		_hmem = NULL;
-		dst = 0;
+	out[j] = 0;
+
+	char *out_utf8 = NULL;
+	if (charset_iconv(out, &out_utf8, CHARSET_CP437, CHARSET_UTF8, SIZE_MAX))
+		return;
+
+	free(out);
+
+	switch (cb) {
+		case CLIPPY_SELECT:
+			if (backend)
+				backend->set_selection(out_utf8);
+			break;
+		default:
+		case CLIPPY_BUFFER:
+			if (backend)
+				backend->set_clipboard(out_utf8);
+			break;
 	}
-#elif defined(__QNXNTO__)
-	if (!do_sel) {
-		tmp = (char *)malloc(j+4);
-		if (!tmp) {
-			cldata=(int*)tmp;
-			*cldata = Ph_CL_TEXT;
-			if (dst) memcpy(tmp+4, dst, j);
-			clheader.data = tmp;
-#if (NTO_VERSION < 620)
-			if (clheader.length > 65535) clheader.length=65535;
-#endif
-			clheader.length = j + 4;
-#if (NTO_VERSION < 620)
-			PhClipboardCopy(inputgroup, 1, &clheader);
-#else
-			PhClipboardWrite(inputgroup, 1, &clheader);
-#endif
-			free(tmp);
-		}
-	}
-#elif defined(MACOSX)
-	if (!do_sel) macosx_clippy_put(_current_clipboard);
-#else
-	// some other system -- linux without x11, maybe
-	// pretend we used the param to silence warnings
-	(void) do_sel;
-#endif
-	if (freeme)
-		free(freeme);
+
+	free(out_utf8);
 }
 
-/* TODO: is the first parameter ever going to be used, or can we kill it? */
-static void _string_paste(UNUSED int cb, const char *cbptr)
+static void _string_paste(SCHISM_UNUSED int cb, const char *cbptr)
 {
-	SDL_Event event = {};
-
-	event.user.type = SCHISM_EVENT_PASTE;
-	event.user.data1 = str_dup(cbptr); /* current_clipboard... is it safe? */
-	if (!event.user.data1) return; /* eh... */
-	if (SDL_PushEvent(&event) == -1) {
-		free(event.user.data1);
-	}
-}
-
-
-#if defined(USE_X11)
-static int _x11_clip_filter(void *userdata, SDL_Event *ev)
-{
-	XSelectionRequestEvent *req;
-	XEvent sevent;
-	Atom seln_type, seln_target;
-	int seln_format;
-	unsigned long nbytes;
-	unsigned long overflow;
-	unsigned char *seln_data;
-	unsigned char *src;
-
-	if (ev->type != SDL_SYSWMEVENT) return 1;
-	if (ev->syswm.msg->msg.x11.event.type == SelectionNotify) {
-		sevent = ev->syswm.msg->msg.x11.event;
-		if (sevent.xselection.requestor == native_window) {
-			src = NULL;
-			if (XGetWindowProperty(native_display, native_window, atom_sel,
-						0, 9000, False, XA_STRING,
-						(Atom *)&seln_type,
-						(int *)&seln_format,
-						(unsigned long *)&nbytes,
-						(unsigned long *)&overflow,
-						(unsigned char **)&src) == Success) {
-				if (seln_type == XA_STRING) {
-					if (_current_selection != _current_clipboard) {
-						free(_current_clipboard);
-					}
-					_current_clipboard = strn_dup((const char *)src, nbytes);
-					_string_paste(CLIPPY_BUFFER, _current_clipboard);
-					_widget_owner[CLIPPY_BUFFER]
-							= _widget_owner[CLIPPY_SELECT];
-				}
-				XFree(src);
-			}
-		}
-		return 1;
-	} else if (ev->syswm.msg->msg.x11.event.type == PropertyNotify) {
-		sevent = ev->syswm.msg->msg.x11.event;
-		return 1;
-
-	} else if (ev->syswm.msg->msg.x11.event.type != SelectionRequest) {
-		return 1;
-	}
-
-	req = &ev->syswm.msg->msg.x11.event.xselectionrequest;
-	sevent.xselection.type = SelectionNotify;
-	sevent.xselection.display = req->display;
-	sevent.xselection.selection = req->selection;
-	sevent.xselection.target = req->target;
-	sevent.xselection.property = None;
-	sevent.xselection.requestor = req->requestor;
-	sevent.xselection.time = req->time;
-	if (XGetWindowProperty(native_display, DefaultRootWindow(native_display),
-			XA_CUT_BUFFER0, 0, 9000, False, req->target,
-			&seln_target, &seln_format,
-			&nbytes, &overflow, &seln_data) == Success) {
-		if (seln_target == req->target) {
-			if (seln_target == XA_STRING) {
-				if (nbytes && seln_data[nbytes-1] == '\0')
-					nbytes--;
-			}
-			XChangeProperty(native_display, req->requestor, req->property,
-				seln_target, seln_format, PropModeReplace,
-				seln_data, nbytes);
-			sevent.xselection.property = req->property;
-		}
-		XFree(seln_data);
-	}
-	XSendEvent(native_display, req->requestor, False, 0, &sevent);
-	XSync(native_display, False);
-	return 1;
-}
-
-static int (*orig_xlib_err)(Display *d, XErrorEvent *e) = NULL;
-static int handle_xlib_err(Display *d, XErrorEvent *e)
-{
-	/* X_SetSelectionOwner == 22 */
-	if (e->error_code == BadWindow && e->request_code == 22) {
-		/* return 0 here to avoid dying as the result of a nonfatal race condition */
-		return 0;
-	}
-	if (orig_xlib_err) return orig_xlib_err(d,e);
-	return 0;
-}
-
-#endif
-
-
-void clippy_init(void)
-{
-	SDL_SysWMinfo info = {};
-
-	has_sys_clip = 0;
-	SDL_VERSION(&info.version);
-	if (SDL_GetWindowWMInfo(video_window(), &info)) {
-#if defined(USE_X11)
-		if (info.subsystem == SDL_SYSWM_X11) {
-			native_display = info.info.x11.display;
-			native_window = info.info.x11.window;
-			SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-			SDL_SetEventFilter(_x11_clip_filter, NULL);
-			has_sys_clip = 1;
-
-			atom_sel = XInternAtom(native_display, "SDL_SELECTION", False);
-			atom_clip = XInternAtom(native_display, "CLIPBOARD", False);
-
-			orig_xlib_err = XSetErrorHandler(handle_xlib_err);
-		}
-#elif defined(WIN32)
-		has_sys_clip = 1;
-		native_window = info.info.win.window;
-#elif defined(__QNXNTO__)
-		has_sys_clip = 1;
-		inputgroup = PhInputGroup(NULL);
-#endif
-	}
+	schism_event_t event = {0};
+	event.type = SCHISM_EVENT_PASTE;
+	event.clipboard.clipboard = str_dup(cbptr);
+	events_push_event(&event);
 }
 
 static char *_internal_clippy_paste(int cb)
 {
-#if defined(MACOSX)
-	char *src;
-#endif
-#if defined(USE_X11)
-	Window owner;
-	int getme;
-#elif defined(WIN32)
-	char *src;
-	int clen;
-#elif defined(__QNXNTO__)
-	void *clhandle;
-	PhClipHeader *clheader;
-	int *cldata;
-#endif
+	switch (cb) {
+		case CLIPPY_SELECT:
+			if (backend && backend->have_selection()) {
+				_free_current_selection();
 
-	if (has_sys_clip) {
-#if defined(USE_X11)
-		if (cb == CLIPPY_SELECT) {
-			getme = XA_PRIMARY;
-		} else {
-			getme = atom_clip;
-		}
-		owner = XGetSelectionOwner(native_display, getme);
-		if (owner == None || owner == native_window) {
-			/* fall through to default implementation */
-		} else {
-			XConvertSelection(native_display, getme, XA_STRING, atom_sel, native_window,
-							CurrentTime);
-			/* at some point in the near future, we'll get a SelectionNotify
-			see _x11_clip_filter for more details;
+				char* sel = backend->get_selection();
 
-			because of this (otherwise) oddity, we take the selection immediately...
-			*/
-			return NULL;
-		}
-#else
-		if (cb == CLIPPY_BUFFER) {
-#if defined(WIN32)
-			if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(native_window)) {
-				_hmem  = GetClipboardData(CF_TEXT);
-				if (_hmem) {
-					if (_current_selection != _current_clipboard) {
-						free(_current_clipboard);
-					}
-					_current_clipboard = NULL;
-					src = (char*)GlobalLock(_hmem);
-					if (src) {
-						clen = GlobalSize(_hmem);
-						if (clen > 0) {
-							_current_clipboard = strn_dup(src, clen);
-						}
-						GlobalUnlock(_hmem);
-					}
-				}
-				CloseClipboard();
-				_hmem = NULL;
-			}
-#elif defined(__QNXNTO__)
-			if (_current_selection != _current_clipboard) {
-				free(_current_clipboard);
-			}
-			_current_clipboard = NULL;
-#if (NTO_VERSION < 620)
-			clhandle = PhClipboardPasteStart(inputgroup);
-			if (clhandle) {
-				clheader = PhClipboardPasteType(clhandle,
-								Ph_CLIPBOARD_TYPE_TEXT);
-				if (clheader) {
-					cldata = clheader->data;
-					if (clheader->length > 4 && *cldata == Ph_CL_TEXT) {
-						src = ((char *)clheader->data)+4;
-						clen = clheader->length - 4;
-						_current_clipboard = strn_dup(src, clen);
+				if (charset_iconv(sel, &_current_selection, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
+					_current_selection = str_dup(sel);
 
-					}
-					PhClipboardPasteFinish(clhandle);
-				}
+				free(sel);
+
+				return _current_selection;
 			}
-#else
-			/* argh! qnx */
-			clheader = PhClipboardRead(inputgroup, Ph_CLIPBOARD_TYPE_TEXT);
-			if (clheader) {
-				cldata = clheader->data;
-				if (clheader->length > 4 && *cldata == Ph_CL_TEXT) {
-					src = ((char *)clheader->data)+4;
-					clen = clheader->length - 4;
-					_current_clipboard = strn_dup(src, clen);
-				}
+
+			return _current_selection;
+		case CLIPPY_BUFFER:
+			if (backend && backend->have_clipboard()) {
+				_free_current_clipboard();
+
+				char *c = backend->get_clipboard();
+
+				if (charset_iconv(c, &_current_clipboard, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
+					_current_clipboard = str_dup(c);
+
+				free(c);
+
+				return _current_clipboard;
 			}
-#endif /* NTO version selector */
-		/* okay, we either own the buffer, or it's a selection for folks without */
-#endif /* win32/qnx */
-		}
-#endif /* x11/others */
-		/* fall through; the current window owns it */
+
+			return _current_clipboard;
+		default: break;
 	}
-	if (cb == CLIPPY_SELECT) return _current_selection;
-#ifdef MACOSX
-	if (cb == CLIPPY_BUFFER) {
-		src = str_dup(macosx_clippy_get());
-		if (_current_clipboard != _current_selection) {
-			free(_current_clipboard);
-		}
-		_current_clipboard = src;
-		if (!src) return (char *) ""; /* FIXME: de-const-ing is bad */
-		return _current_clipboard;
-	}
-#else
-	if (cb == CLIPPY_BUFFER) return _current_clipboard;
-#endif
+
 	return NULL;
 }
 
-
 void clippy_paste(int cb)
 {
-	char *q;
-	q = _internal_clippy_paste(cb);
+	char *q = _internal_clippy_paste(cb);
 	if (!q) return;
 	_string_paste(cb, q);
 }
 
 void clippy_select(struct widget *w, char *addr, int len)
 {
-	int i;
+	_free_current_selection();
 
-	if (_current_selection != _current_clipboard) {
-		free(_current_selection);
-	}
 	if (!addr) {
-		_current_selection = NULL;
 		_widget_owner[CLIPPY_SELECT] = NULL;
 	} else {
-		for (i = 0; addr[i] && (len < 0 || i < len); i++) {
-			/* nothing */
-		}
-		_current_selection = strn_dup(addr, i);
+		_current_selection = (len < 0) ? str_dup(addr) : strn_dup(addr, len);
 		_widget_owner[CLIPPY_SELECT] = w;
 
-		/* update x11 Select (for xterms and stuff) */
-		_clippy_copy_to_sys(1);
+		/* notify SDL about our selection change */
+		_clippy_copy_to_sys(CLIPPY_SELECT);
 	}
 }
+
 struct widget *clippy_owner(int cb)
 {
-	if (cb == CLIPPY_SELECT || cb == CLIPPY_BUFFER)
-		return _widget_owner[cb];
-	return NULL;
+	return (cb == CLIPPY_SELECT || cb == CLIPPY_BUFFER) ? _widget_owner[cb] : NULL;
 }
 
 void clippy_yank(void)
 {
-	if (_current_selection != _current_clipboard) {
-		free(_current_clipboard);
-	}
-	_current_clipboard = _current_selection;
-	_widget_owner[CLIPPY_BUFFER] = _widget_owner[CLIPPY_SELECT];
-
 	if (_current_selection && strlen(_current_selection) > 0) {
+		_free_current_clipboard();
+		_current_clipboard = str_dup(_current_selection);
+		_widget_owner[CLIPPY_BUFFER] = _widget_owner[CLIPPY_SELECT];
+		_clippy_copy_to_sys(CLIPPY_BUFFER);
 		status_text_flash("Copied to selection buffer");
-		_clippy_copy_to_sys(0);
+	}
+}
+
+int clippy_init(void)
+{
+	static const schism_clippy_backend_t *backends[] = {
+		// ordered by preference
+#ifdef SCHISM_WIN32
+		&schism_clippy_backend_win32,
+#endif
+#ifdef SCHISM_MACOSX
+		&schism_clippy_backend_macosx,
+#endif
+#ifdef SCHISM_SDL2
+		&schism_clippy_backend_sdl2,
+#endif
+#ifdef SCHISM_USE_X11
+		/* Our X11 clipboard overrides the SDL2 clipboard,
+		 * causing copy/paste to fail. */
+		&schism_clippy_backend_x11,
+#endif
+		NULL,
+	};
+
+	int i;
+
+	for (i = 0; backends[i]; i++) {
+		backend = backends[i];
+		if (backend->init())
+			break;
+
+		backend = NULL;
+	}
+
+	if (!backend)
+		return 0;
+
+	return 1;
+}
+
+void clippy_quit(void)
+{
+	if (backend) {
+		backend->quit();
+		backend = NULL;
 	}
 }

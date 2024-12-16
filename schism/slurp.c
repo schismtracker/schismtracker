@@ -21,313 +21,377 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
+#include "headers.h"
 
 #include "slurp.h"
+#include "fmt.h"
 #include "util.h"
+#include "osdefs.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <stddef.h>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
 
-/* The dup's are because fclose closes its file descriptor even if the FILE* was acquired with fdopen, and when
-the control gets back to slurp, it closes the fd (again). It doesn't seem to exist on Amiga OS though, so... */
-#ifndef HAVE_DUP
-# define dup(fd) fd
-#endif
+static int slurp_stdio_open_(slurp_t *t, const char *filename);
+static int slurp_stdio_open_file_(slurp_t *t, FILE *fp);
+static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence);
+static int64_t slurp_stdio_tell_(slurp_t *t);
+static size_t slurp_stdio_peek_(slurp_t *t, void *ptr, size_t count);
+static size_t slurp_stdio_read_(slurp_t *t, void *ptr, size_t count);
+static int slurp_stdio_eof_(slurp_t *t);
+static int slurp_stdio_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
+static void slurp_stdio_closure_(slurp_t *t);
 
-/* I hate this... */
-#ifndef O_BINARY
-# ifdef O_RAW
-#  define O_BINARY O_RAW
-# else
-#  define O_BINARY 0
-# endif
-#endif
-
-static void _slurp_closure_free(slurp_t *t)
-{
-	free(t->data);
-}
+static int slurp_memory_seek_(slurp_t *t, int64_t offset, int whence);
+static int64_t slurp_memory_tell_(slurp_t *t);
+static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count);
+static size_t slurp_memory_read_(slurp_t *t, void *ptr, size_t count);
+static int slurp_memory_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
+static int slurp_memory_eof_(slurp_t *t);
+static void slurp_memory_closure_free_(slurp_t *t);
 
 /* --------------------------------------------------------------------- */
 
-/* CHUNK is how much memory is allocated at once. Too large a number is a
- * waste of memory; too small means constantly realloc'ing.
- *
- * <mml> also, too large a number might take the OS more than an efficient number of reads to read in one
- *       hit -- which you could be processing/reallocing while waiting for the next bit
- * <mml> we had something for some proggy on the server that was sucking data off stdin
- * <mml> and had our resident c programmer and resident perl programmer competing for the fastest code
- * <mml> but, the c coder found that after a bunch of test runs with time, 64k worked out the best case
- * ...
- * <mml> but, on another system with a different block size, 64 blocks may still be efficient, but 64k
- *       might not be 64 blocks
- * (so maybe this should grab the block size from stat() instead...) */
-#define CHUNK 65536
-
-static int _slurp_stdio_pipe(slurp_t * t, int fd)
+int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 {
-	int old_errno;
-	FILE *fp;
-	uint8_t *read_buf, *realloc_buf;
-	size_t this_len;
-	int chunks = 0;
+	struct stat st;
 
-	t->data = NULL;
-	fp = fdopen(dup(fd), "rb");
-	if (fp == NULL)
-		return 0;
+	if (!t)
+		return -1;
 
-	do {
-		chunks++;
-		/* Have to cast away the const... */
-		realloc_buf = realloc((void *) t->data, CHUNK * chunks);
-		if (realloc_buf == NULL) {
-			old_errno = errno;
-			fclose(fp);
-			free(t->data);
-			errno = old_errno;
-			return 0;
-		}
-		t->data = realloc_buf;
-		read_buf = (void *) (t->data + (CHUNK * (chunks - 1)));
-		this_len = fread(read_buf, 1, CHUNK, fp);
-		if (this_len <= 0) {
-			if (ferror(fp)) {
-				old_errno = errno;
-				fclose(fp);
-				free(t->data);
-				errno = old_errno;
-				return 0;
-			}
-		}
-		t->length += this_len;
-	} while (this_len);
-	fclose(fp);
-	t->closure = _slurp_closure_free;
-	return 1;
-}
+	*t = (slurp_t){0};
 
-static int _slurp_stdio(slurp_t * t, int fd)
-{
-	int old_errno;
-	FILE *fp;
-	size_t got = 0, need, len;
-
-	if (t->length == 0) {
-		/* Hrmph. Probably a pipe or something... gotta do it the REALLY ugly way. */
-		return _slurp_stdio_pipe(t, fd);
+	if (buf) {
+		st = *buf;
+	} else {
+		if (os_stat(filename, &st) < 0)
+			return -1;
 	}
 
-	fp = fdopen(dup(fd), "rb");
+	if (!size)
+		size = st.st_size;
 
-	if (!fp)
-		return 0;
-
-	t->data = (uint8_t *) malloc(t->length);
-	if (t->data == NULL) {
-		old_errno = errno;
-		fclose(fp);
-		errno = old_errno;
-		return 0;
-	}
-
-	/* Read the WHOLE thing -- fread might not get it all at once,
-	 * so keep trying until it returns zero. */
-	need = t->length;
-	do {
-		len = fread(t->data + got, 1, need, fp);
-		if (len <= 0) {
-			if (ferror(fp)) {
-				old_errno = errno;
-				fclose(fp);
-				free(t->data);
-				errno = old_errno;
-				return 0;
-			}
-
-			if (need > 0) {
-				/* short file */
-				need = 0;
-				t->length = got;
-			}
-		} else {
-			got += len;
-			need -= len;
-		}
-	} while (need > 0);
-
-	fclose(fp);
-	t->closure = _slurp_closure_free;
-	return 1;
-}
-
-
-/* --------------------------------------------------------------------- */
-
-static slurp_t *_slurp_open(const char *filename, struct stat * buf, size_t size)
-{
-	slurp_t *t;
-	int fd, old_errno;
-
-	if (buf && S_ISDIR(buf->st_mode)) {
-		errno = EISDIR;
-		return NULL;
-	}
-
-	t = (slurp_t *) mem_alloc(sizeof(slurp_t));
-	if (t == NULL)
-		return NULL;
-	t->pos = 0;
-
-	if (strcmp(filename, "-") == 0) {
-		if (_slurp_stdio(t, STDIN_FILENO))
-			return t;
-		free(t);
-		return NULL;
-	}
-
-	if (size <= 0) {
-		size = (buf ? buf->st_size : file_size(filename));
-	}
-
-#ifdef WIN32
-	switch (slurp_win32(t, filename, size)) {
-	case 0: free(t); return NULL;
-	case 1: return t;
-	};
+	switch (
+#ifdef SCHISM_WIN32
+		slurp_win32(t, filename, size)
+#elif defined(HAVE_MMAP)
+		slurp_mmap(t, filename, size)
+#else
+		SLURP_OPEN_IGNORE
 #endif
-
-#if HAVE_MMAP
-	switch (slurp_mmap(t, filename, size)) {
-	case 0: free(t); return NULL;
-	case 1: return t;
-	};
-#endif
-
-	fd = open(filename, O_RDONLY | O_BINARY);
-
-	if (fd < 0) {
-		free(t);
-		return NULL;
+	) {
+	case SLURP_OPEN_FAIL:
+		return -1;
+	case SLURP_OPEN_SUCCESS:
+		t->seek = slurp_memory_seek_;
+		t->tell = slurp_memory_tell_;
+		t->eof  = slurp_memory_eof_;
+		t->peek = slurp_memory_peek_;
+		t->read = slurp_memory_read_;
+		t->receive = slurp_memory_receive_;
+		goto finished;
+	default:
+	case SLURP_OPEN_IGNORE:
+		break;
 	}
 
-	t->length = size;
-
-	if (_slurp_stdio(t, fd)) {
-		close(fd);
-		return t;
+	switch (slurp_stdio_open_(t, filename)) {
+	case SLURP_OPEN_FAIL:
+		return -1;
+	case SLURP_OPEN_SUCCESS:
+		t->seek = slurp_stdio_seek_;
+		t->tell = slurp_stdio_tell_;
+		t->eof  = slurp_stdio_eof_;
+		t->peek = slurp_stdio_peek_;
+		t->read = slurp_stdio_read_;
+		t->receive = slurp_stdio_receive_;
+		goto finished;
+	default:
+	case SLURP_OPEN_IGNORE:
+		break;
 	}
 
-	old_errno = errno;
-	close(fd);
-	free(t);
-	errno = old_errno;
-	return NULL;
-}
+	/* fail */
+	return -1;
 
-slurp_t *slurp(const char *filename, struct stat * buf, size_t size)
-{
-	slurp_t *t = _slurp_open(filename, buf, size);
+finished: ; /* this semicolon is important because C */
 	uint8_t *mmdata;
 	size_t mmlen;
 
-	if (!t) {
-		return NULL;
+	if (mmcmp_unpack(t, &mmdata, &mmlen)) {
+		// clean up the existing data
+		if (t->closure)
+			t->closure(t);
+
+		// and put the new stuff in
+		t->seek = slurp_memory_seek_;
+		t->tell = slurp_memory_tell_;
+		t->eof  = slurp_memory_eof_;
+		t->peek = slurp_memory_peek_;
+		t->read = slurp_memory_read_;
+		t->receive = slurp_memory_receive_;
+
+		t->internal.memory.length = mmlen;
+		t->internal.memory.data = mmdata;
+		t->closure = slurp_memory_closure_free_;
 	}
 
-	mmdata = t->data;
-	mmlen = t->length;
-	if (mmcmp_unpack(&mmdata, &mmlen)) {
-		// clean up the existing data
-		if (t->data && t->closure) {
-			t->closure(t);
-		}
-		// and put the new stuff in
-		t->length = mmlen;
-		t->data = mmdata;
-		t->closure = _slurp_closure_free;
-	}
+	slurp_rewind(t);
 
 	// TODO re-add PP20 unpacker, possibly also handle other formats?
 
-	return t;
+	return 0;
 }
 
+/* Initializes a slurp structure on an existing memory stream.
+ * Does NOT free the input. */
+int slurp_memstream(slurp_t *t, uint8_t *mem, size_t memsize)
+{
+	*t = (slurp_t){0};
+
+	t->seek = slurp_memory_seek_;
+	t->tell = slurp_memory_tell_;
+	t->eof  = slurp_memory_eof_;
+	t->peek = slurp_memory_peek_;
+	t->read = slurp_memory_read_;
+	t->receive = slurp_memory_receive_;
+
+	t->internal.memory.length = memsize;
+	t->internal.memory.data = mem;
+	t->closure = NULL; // haha
+
+	return 0;
+}
+
+int slurp_memstream_free(slurp_t *t, uint8_t *mem, size_t memsize)
+{
+	slurp_memstream(t, mem, memsize);
+
+	t->closure = slurp_memory_closure_free_;
+
+	return 0;
+}
 
 void unslurp(slurp_t * t)
 {
 	if (!t)
 		return;
-	if (t->data && t->closure) {
+
+	if (t->closure)
 		t->closure(t);
-	}
-	free(t);
+}
+
+/* --------------------------------------------------------------------- */
+/* stdio implementation */
+
+static int slurp_stdio_open_(slurp_t *t, const char *filename)
+{
+	FILE *fp = !strcmp(filename, "-") ? stdin : os_fopen(filename, "rb");
+	if (!fp)
+		return SLURP_OPEN_FAIL;
+
+	t->closure = slurp_stdio_closure_;
+
+	return slurp_stdio_open_file_(t, fp);
+}
+
+static int slurp_stdio_open_file_(slurp_t *t, FILE *fp)
+{
+	t->internal.stdio.fp = fp;
+	return SLURP_OPEN_SUCCESS;
+}
+
+static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence)
+{
+	return fseek(t->internal.stdio.fp, offset, whence);
+}
+
+static int64_t slurp_stdio_tell_(slurp_t *t)
+{
+	return ftell(t->internal.stdio.fp);
+}
+
+static size_t slurp_stdio_peek_(slurp_t *t, void *ptr, size_t count)
+{
+	/* cache current position */
+	int64_t pos = slurp_stdio_tell_(t);
+	if (pos < 0)
+		return 0;
+
+	count = slurp_stdio_read_(t, ptr, count);
+
+	slurp_stdio_seek_(t, pos, SEEK_SET);
+
+	return count;
+}
+
+static size_t slurp_stdio_read_(slurp_t *t, void *ptr, size_t count)
+{
+	size_t read = fread(ptr, 1, count, t->internal.stdio.fp);
+	if (read < count)
+		memset((unsigned char*)ptr + read, 0, count - read);
+
+	return read;
+}
+
+static int slurp_stdio_eof_(slurp_t *t)
+{
+	return feof(t->internal.stdio.fp);
+}
+
+static void slurp_stdio_closure_(slurp_t *t)
+{
+	fclose(t->internal.stdio.fp);
+}
+
+static int slurp_stdio_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata)
+{
+	unsigned char *buf = malloc(count);
+	if (!buf)
+		return -1;
+
+	count = slurp_stdio_peek_(t, buf, count);
+
+	int r = callback(buf, count, userdata);
+
+	free(buf);
+
+	return r;
 }
 
 /* --------------------------------------------------------------------- */
 
-int slurp_seek(slurp_t *t, long offset, int whence)
+static int slurp_memory_seek_(slurp_t *t, int64_t offset, int whence)
 {
 	switch (whence) {
 	default:
 	case SEEK_SET:
 		break;
 	case SEEK_CUR:
-		offset += t->pos;
+		offset += t->internal.memory.pos;
 		break;
 	case SEEK_END:
-		offset += t->length;
+		offset += t->internal.memory.length;
 		break;
 	}
-	if (offset < 0 || (size_t) offset > t->length)
+
+	if (offset < 0 || (size_t)offset > t->internal.memory.length)
 		return -1;
-	t->pos = offset;
+
+	t->internal.memory.pos = offset;
 	return 0;
 }
 
-long slurp_tell(slurp_t *t)
+static int64_t slurp_memory_tell_(slurp_t *t)
 {
-	return (long) t->pos;
+	return t->internal.memory.pos;
 }
 
-size_t slurp_read(slurp_t *t, void *ptr, size_t count)
+static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count)
 {
-	count = slurp_peek(t, ptr, count);
-	t->pos += count;
-	return count;
-}
+	ptrdiff_t bytesleft = (ptrdiff_t)t->internal.memory.length - t->internal.memory.pos;
+	if (bytesleft < 0)
+		return 0;
 
-size_t slurp_peek(slurp_t *t, void *ptr, size_t count)
-{
-	size_t bytesleft = t->length - t->pos;
 	if (count > bytesleft) {
 		// short read -- fill in any extra bytes with zeroes
 		size_t tail = count - bytesleft;
 		count = bytesleft;
-		memset(ptr + count, 0, tail);
+		memset((unsigned char*)ptr + count, 0, tail);
 	}
+
 	if (count)
-		memcpy(ptr, t->data + t->pos, count);
+		memcpy(ptr, t->internal.memory.data + t->internal.memory.pos, count);
+
 	return count;
+}
+
+static size_t slurp_memory_read_(slurp_t *t, void *ptr, size_t count)
+{
+	count = slurp_memory_peek_(t, ptr, count);
+	slurp_memory_seek_(t, count, SEEK_CUR);
+	return count;
+}
+
+static int slurp_memory_eof_(slurp_t *t)
+{
+	return t->internal.memory.pos >= t->internal.memory.length;
+}
+
+static int slurp_memory_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata)
+{
+	/* xd */
+	ptrdiff_t bytesleft = (ptrdiff_t)t->internal.memory.length - t->internal.memory.pos;
+	if (bytesleft < 0)
+		return -1;
+
+	return callback(t->internal.memory.data + t->internal.memory.pos, MIN(bytesleft, count), userdata);
+}
+
+static void slurp_memory_closure_free_(slurp_t *t)
+{
+	free(t->internal.memory.data);
+}
+
+/* --------------------------------------------------------------------- */
+/* these just forward directly to the function pointers */
+
+int slurp_seek(slurp_t *t, int64_t offset, int whence)
+{
+	return t->seek(t, offset, whence);
+}
+
+int64_t slurp_tell(slurp_t *t)
+{
+	return t->tell(t);
+}
+
+size_t slurp_peek(slurp_t *t, void *ptr, size_t count)
+{
+	return t->peek(t, ptr, count);
+}
+
+size_t slurp_read(slurp_t *t, void *ptr, size_t count)
+{
+	return t->read(t, ptr, count);
+}
+
+/* actual implementations */
+
+size_t slurp_length(slurp_t *t)
+{
+	int64_t pos = slurp_tell(t);
+	if (pos < 0)
+		return 0;
+
+	slurp_seek(t, 0, SEEK_END);
+
+	int64_t end = slurp_tell(t);
+
+	/* return to monke */
+	slurp_seek(t, pos, SEEK_SET);
+
+	return MAX(0, end);
 }
 
 int slurp_getc(slurp_t *t)
 {
-	return (t->pos < t->length) ? t->data[t->pos++] : EOF;
+	/* just a wrapper around slurp_read() */
+	unsigned char byte;
+	size_t count = slurp_read(t, &byte, 1);
+
+	return (count) ? (int)byte : EOF;
 }
 
 int slurp_eof(slurp_t *t)
 {
-	return t->pos >= t->length;
+	return t->eof(t);
 }
 
+int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata)
+{
+	return t->receive(t, callback, count, userdata);
+}

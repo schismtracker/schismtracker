@@ -21,32 +21,26 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
+#include "headers.h"
 
-#if HAVE_MMAP
-#include <sys/types.h>
 #include <sys/mman.h>
-#include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #include "slurp.h"
 
-static void _munmap_slurp(slurp_t *useme)
+static void munmap_slurp_(slurp_t *fp)
 {
-	(void)munmap((void*)useme->data, useme->length);
-	(void)close(useme->extra);
+	(void)munmap((void*)fp->internal.memory.data, fp->internal.memory.length);
+	(void)close(fp->internal.memory.interfaces.mmap.fd);
 }
 
-int slurp_mmap(slurp_t *useme, const char *filename, size_t st)
+int slurp_mmap(slurp_t *fp, const char *filename, size_t st)
 {
-	int fd;
-	void *addr;
-
-	fd = open(filename, O_RDONLY);
+	int fd = open(filename, O_RDONLY);
 	if (fd == -1) return 0;
-	addr = mmap(NULL, st, PROT_READ, MAP_SHARED
+
+	void *addr = mmap(NULL, st, PROT_READ, MAP_SHARED
 #if defined(MAP_POPULATE) && defined(MAP_NONBLOCK)
 		| MAP_POPULATE | MAP_NONBLOCK
 #endif
@@ -54,15 +48,16 @@ int slurp_mmap(slurp_t *useme, const char *filename, size_t st)
 		| MAP_NORESERVE
 #endif
 		, fd, 0);
-	if (!addr || addr == ((void*)-1)) {
+
+	if (addr == MAP_FAILED) {
 		(void)close(fd);
-		return -1;
+		return (errno == ENOMEM) ? SLURP_OPEN_FAIL : SLURP_OPEN_IGNORE;
 	}
-	useme->closure = _munmap_slurp;
-	useme->length = st;
-	useme->data = addr;
-	useme->extra = fd;
+
+	fp->closure = munmap_slurp_;
+	fp->internal.memory.length = st;
+	fp->internal.memory.data = addr;
+	fp->internal.memory.interfaces.mmap.fd = fd;
+
 	return 1;
 }
-
-#endif

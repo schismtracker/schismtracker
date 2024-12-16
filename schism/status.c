@@ -21,7 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_TIME
 #include "headers.h"
 
 #include <stdarg.h>
@@ -29,51 +28,53 @@
 #include "it.h"
 #include "song.h"
 #include "page.h"
+#include "vgamem.h"
+#include "timer.h"
 
-#include "sndfile.h"
-
-#include "sdlmain.h"
+#include "player/sndfile.h"
 
 /* --------------------------------------------------------------------- */
 
 static int status_bios = 0;
 static char *status_text = NULL;
-static uint32_t text_timeout;
+static schism_ticks_t text_timeout;
 
 /* --------------------------------------------------------------------- */
+
+static void status_text_flash_generic(const char *format, int bios, va_list ap)
+{
+	text_timeout = timer_ticks() + 1000;
+
+	if (status_text)
+		free(status_text);
+
+	status_bios = bios;
+
+	if (vasprintf(&status_text, format, ap) == -1) abort();
+
+	status.flags |= NEED_UPDATE;
+}
 
 void status_text_flash(const char *format, ...)
 {
 	va_list ap;
 
-	text_timeout = SDL_GetTicks() + 1000;
-
-	if (status_text)
-		free(status_text);
-
-	status_bios = 0;
 	va_start(ap, format);
-	if (vasprintf(&status_text, format, ap) == -1) abort();
-	va_end(ap);
 
-	status.flags |= NEED_UPDATE;
+	status_text_flash_generic(format, 0, ap);
+
+	va_end(ap);
 }
 
 void status_text_flash_bios(const char *format, ...)
 {
 	va_list ap;
 
-	text_timeout = SDL_GetTicks() + 1000;
-
-	if (status_text)
-		free(status_text);
-
-	status_bios = 1;
 	va_start(ap, format);
-	if (vasprintf(&status_text, format, ap) == -1) abort();
-	va_end(ap);
 
-	status.flags |= NEED_UPDATE;
+	status_text_flash_generic(format, 1, ap);
+
+	va_end(ap);
 }
 
 /* --------------------------------------------------------------------- */
@@ -84,7 +85,7 @@ static inline int _loop_count(char *buf, int pos)
 		pos += draw_text("Playing", pos, 9, 0, 2);
 	} else {
 		pos += draw_text("Loop: ", pos, 9, 0, 2);
-		pos += draw_text(numtostr(0, current_song->repeat_count, buf), pos, 9, 3, 2);
+		pos += draw_text(str_from_num(0, current_song->repeat_count, buf), pos, 9, 3, 2);
 	}
 	return pos;
 }
@@ -97,22 +98,22 @@ static inline void draw_song_playing_status(void)
 
 	pos = _loop_count(buf, pos);
 	pos += draw_text(", Order: ", pos, 9, 0, 2);
-	pos += draw_text(numtostr(0, song_get_current_order(), buf), pos, 9, 3, 2);
+	pos += draw_text(str_from_num(0, song_get_current_order(), buf), pos, 9, 3, 2);
 	draw_char('/', pos, 9, 0, 2);
 	pos++;
-	pos += draw_text(numtostr(0, csf_last_order(current_song), buf), pos, 9, 3, 2);
+	pos += draw_text(str_from_num(0, csf_last_order(current_song), buf), pos, 9, 3, 2);
 	pos += draw_text(", Pattern: ", pos, 9, 0, 2);
-	pos += draw_text(numtostr(0, pattern, buf), pos, 9, 3, 2);
+	pos += draw_text(str_from_num(0, pattern, buf), pos, 9, 3, 2);
 	pos += draw_text(", Row: ", pos, 9, 0, 2);
-	pos += draw_text(numtostr(0, song_get_current_row(), buf), pos, 9, 3, 2);
+	pos += draw_text(str_from_num(0, song_get_current_row(), buf), pos, 9, 3, 2);
 	draw_char('/', pos, 9, 0, 2);
 	pos++;
-	pos += draw_text(numtostr(0, song_get_pattern(pattern, NULL), buf), pos, 9, 3, 2);
+	pos += draw_text(str_from_num(0, song_get_pattern(pattern, NULL), buf), pos, 9, 3, 2);
 	draw_char(',', pos, 9, 0, 2);
 	pos++;
 	draw_char(0, pos, 9, 0, 2);
 	pos++;
-	pos += draw_text(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
+	pos += draw_text(str_from_num(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
 
 	if (draw_text_len(" Channels", 62 - pos, pos, 9, 0, 2) < 9)
 		draw_char(16, 61, 9, 1, 2);
@@ -126,17 +127,17 @@ static inline void draw_pattern_playing_status(void)
 
 	pos = _loop_count(buf, pos);
 	pos += draw_text(", Pattern: ", pos, 9, 0, 2);
-	pos += draw_text(numtostr(0, pattern, buf), pos, 9, 3, 2);
+	pos += draw_text(str_from_num(0, pattern, buf), pos, 9, 3, 2);
 	pos += draw_text(", Row: ", pos, 9, 0, 2);
-	pos += draw_text(numtostr(0, song_get_current_row(), buf), pos, 9, 3, 2);
+	pos += draw_text(str_from_num(0, song_get_current_row(), buf), pos, 9, 3, 2);
 	draw_char('/', pos, 9, 0, 2);
 	pos++;
-	pos += draw_text(numtostr(0, song_get_pattern(pattern, NULL), buf), pos, 9, 3, 2);
+	pos += draw_text(str_from_num(0, song_get_pattern(pattern, NULL), buf), pos, 9, 3, 2);
 	draw_char(',', pos, 9, 0, 2);
 	pos++;
 	draw_char(0, pos, 9, 0, 2);
 	pos++;
-	pos += draw_text(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
+	pos += draw_text(str_from_num(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
 
 	if (draw_text_len(" Channels", 62 - pos, pos, 9, 0, 2) < 9)
 		draw_char(16, 61, 9, 1, 2);
@@ -148,13 +149,13 @@ static inline void draw_playing_channels(void)
 	char buf[16];
 
 	pos += draw_text("Playing, ", 2, 9, 0, 2);
-	pos += draw_text(numtostr(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
+	pos += draw_text(str_from_num(0, song_get_playing_channels(), buf), pos, 9, 3, 2);
 	draw_text(" Channels", pos, 9, 0, 2);
 }
 
 void status_text_redraw(void)
 {
-	uint32_t now = SDL_GetTicks();
+	schism_ticks_t now = timer_ticks();
 
 	/* if there's a message set, and it's expired, clear it */
 	if (status_text && now > text_timeout) {

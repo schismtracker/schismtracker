@@ -20,44 +20,35 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef __video_h
-#define __video_h
+#ifndef SCHISM_VIDEO_H_
+#define SCHISM_VIDEO_H_
 
-/* the vgamem implementation lives in draw-char.c
-it needs access to the fonts, and it shrank recently :)
-*/
-void vgamem_clear(void);
-
-struct vgamem_overlay {
-	unsigned int x1, y1, x2, y2; /* in character cells... */
-
-	unsigned char *q;               /* points inside ovl */
-	unsigned int skip;
-
-	int width, height; /* in pixels; signed to avoid bugs elsewhere */
-};
-
-void vgamem_flip(void);
-
-void vgamem_ovl_alloc(struct vgamem_overlay *n);
-void vgamem_ovl_apply(struct vgamem_overlay *n);
-
-void vgamem_ovl_clear(struct vgamem_overlay *n, int color);
-void vgamem_ovl_drawpixel(struct vgamem_overlay *n, int x, int y, int color);
-void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs, int ys, int xe, int ye, int color);
-
-
-void vgamem_scan32(unsigned int y,unsigned int *out,unsigned int tc[16], unsigned int mouse_line[80]);
-void vgamem_scan16(unsigned int y,unsigned short *out,unsigned int tc[16], unsigned int mouse_line[80]);
-void vgamem_scan8(unsigned int y,unsigned char *out,unsigned int tc[16], unsigned int mouse_line[80]);
+#include "headers.h"
 
 /* video output routines */
 const char *video_driver_name(void);
 
+void video_set_hardware(int hardware);
+
+int video_is_input_grabbed(void);
+void video_set_input_grabbed(int enabled);
+
+/* -------------------------------------------------- */
+
 void video_warp_mouse(unsigned int x, unsigned int y);
-void video_redraw_texture(void);
+void video_get_mouse_coordinates(unsigned int *x, unsigned int *y);
+
+/* -------------------------------------------------- */
+/* menu toggling */
+
+int video_have_menu(void);
+void video_toggle_menu(int on);
+
+/* -------------------------------------------------- */
+
+void video_rgb_to_yuv(unsigned int *y, unsigned int *u, unsigned int *v, unsigned char rgb[3]);
 void video_setup(const char *quality);
-void video_startup(void);
+int video_startup(void);
 void video_shutdown(void);
 void video_report(void);
 void video_refresh(void);
@@ -65,37 +56,77 @@ void video_update(void);
 void video_colors(unsigned char palette[16][3]);
 void video_resize(unsigned int width, unsigned int height);
 void video_fullscreen(int new_fs_flag);
-void video_translate(unsigned int vx, unsigned int vy,
-			unsigned int *x, unsigned int *y);
+void video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y);
 void video_blit(void);
-void video_mousecursor(int z);
+
+int video_is_screensaver_enabled(void);
+void video_toggle_screensaver(int enabled);
+
+/* cursor-specific stuff */
+enum video_mousecursor_shape {
+	CURSOR_SHAPE_ARROW,
+	CURSOR_SHAPE_CROSSHAIR,
+};
+
+void video_mousecursor(int z); /* takes in the MOUSE_* enum from it.h (why is it there?) */
 int video_mousecursor_visible(void);
+void video_mousecursor_changed(void); // used for each backend to do optimizations
+void video_set_mousecursor_shape(enum video_mousecursor_shape shape);
+
+/* getters, will sometimes poll the backend */
 
 int video_is_fullscreen(void);
+int video_is_wm_available(void);
+int video_is_focused(void);
+int video_is_visible(void);
+int video_is_hardware(void);
 int video_width(void);
 int video_height(void);
-typedef struct SDL_Window SDL_Window;
-SDL_Window * video_window(void);
 
-typedef struct SDL_Surface SDL_Surface;
-SDL_Surface *xpmdata(const char *xpmdata[]);
+int video_gl_bilinear(void);
 
-#if USE_X11
-unsigned int xv_yuvlayout(void);
-#endif
+void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y);
 
-#define VIDEO_YUV_UYVY          0x59565955
-#define VIDEO_YUV_YUY2          0x32595559
-#define VIDEO_YUV_YV12          0x32315659
-#define VIDEO_YUV_IYUV          0x56555949
-#define VIDEO_YUV_YVYU          0x55595659
-#define VIDEO_YUV_YV12_TV       (VIDEO_YUV_YV12 ^ 0xFFFFFFFF)
-#define VIDEO_YUV_IYUV_TV       (VIDEO_YUV_IYUV ^ 0xFFFFFFFF)
-#define VIDEO_YUV_RGBA          0x41424752
-#define VIDEO_YUV_RGBT          0x54424752
-#define VIDEO_YUV_RGB565        0x32424752
-#define VIDEO_YUV_RGB24         0x0
-#define VIDEO_YUV_RGB32         0x3
-#define VIDEO_YUV_NONE          0xFFFFFFFF
+int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h);
 
-#endif
+/* --------------------------------------------------------- */
+
+/* function to callback to map an RGB value; used for the linear blitter only */
+typedef uint32_t (*schism_map_rgb_func_t)(void *data, uint8_t r, uint8_t g, uint8_t b);
+
+/* YUV blitters */
+void video_blitYY(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
+void video_blitUV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
+void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
+
+/* RGB blitters */
+void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
+void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height);
+void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height, schism_map_rgb_func_t map_rgb, void *map_rgb_data);
+
+/* --------------------------------------------------------- */
+
+typedef struct {
+	enum {
+		VIDEO_WM_DATA_SUBSYSTEM_WINDOWS = 0,
+		VIDEO_WM_DATA_SUBSYSTEM_X11 = 1,
+	} subsystem;
+
+	union {
+		struct {
+			void *hwnd; // type is actually HWND
+		} windows;
+		struct {
+			void *display; // type is actually Display *
+			uint32_t window; // type is actually Window
+
+			// These can (and will) be NULL
+			void (*lock_func)(void);
+			void (*unlock_func)(void);
+		} x11;
+	} data;
+} video_wm_data_t;
+
+int video_get_wm_data(video_wm_data_t *wm_data);
+
+#endif /* SCHISM_VIDEO_H_ */

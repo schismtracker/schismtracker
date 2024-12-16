@@ -23,11 +23,15 @@
 
 #include "headers.h"
 
+#include "backend/audio.h"
 #include "it.h"
+#include "config.h"
+#include "charset.h"
 #include "song.h"
 #include "page.h"
 #include "osdefs.h"
-#include "sdlmain.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include "disko.h"
 
@@ -48,9 +52,30 @@ static const char *interpolation_modes[] = {
 static const int interp_group[] = {
 	2,3,4,5,-1,
 };
+
 static int ramp_group[] = { /* not const because it is modified */
 	-1,-1,-1,
 };
+
+static int selected_audio_device = 0;
+static int top_audio_device = 0;
+
+static int selected_audio_driver = 0;
+static int top_audio_driver = 0;
+
+#define AUDIO_DEVICE_BOX_X 37
+#define AUDIO_DEVICE_BOX_Y 16
+#define AUDIO_DEVICE_BOX_WIDTH 41
+#define AUDIO_DEVICE_BOX_HEIGHT 6
+#define AUDIO_DEVICE_BOX_END_X (AUDIO_DEVICE_BOX_X+AUDIO_DEVICE_BOX_WIDTH-1)
+#define AUDIO_DEVICE_BOX_END_Y (AUDIO_DEVICE_BOX_Y+AUDIO_DEVICE_BOX_HEIGHT-1)
+
+#define AUDIO_DRIVER_BOX_X 37
+#define AUDIO_DRIVER_BOX_Y 25
+#define AUDIO_DRIVER_BOX_WIDTH 41
+#define AUDIO_DRIVER_BOX_HEIGHT 6
+#define AUDIO_DRIVER_BOX_END_X (AUDIO_DRIVER_BOX_X+AUDIO_DRIVER_BOX_WIDTH-1)
+#define AUDIO_DRIVER_BOX_END_Y (AUDIO_DRIVER_BOX_Y+AUDIO_DRIVER_BOX_HEIGHT-1)
 
 /* --------------------------------------------------------------------- */
 
@@ -63,8 +88,15 @@ static void preferences_draw_const(void)
 	draw_text("Master Volume Right", 2, 15, 0, 2);
 	draw_box(21, 13, 27, 16, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	sprintf(buf, "Mixing Mode, Playback Frequency: %dHz", audio_settings.sample_rate);
-	draw_text(buf, 2, 18, 0, 2);
+	draw_text("Mixing Mode", 2, 18, 0, 2);
+
+	draw_text("Available Audio Devices", AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y - 2, 0, 2);
+	draw_box(AUDIO_DEVICE_BOX_X - 1, AUDIO_DEVICE_BOX_Y - 1, AUDIO_DEVICE_BOX_END_X + 1,
+		AUDIO_DEVICE_BOX_END_Y + 1, BOX_THICK | BOX_INNER | BOX_INSET);
+
+	draw_text("Available Audio Drivers", AUDIO_DRIVER_BOX_X, AUDIO_DRIVER_BOX_Y - 2, 0, 2);
+	draw_box(AUDIO_DRIVER_BOX_X - 1, AUDIO_DRIVER_BOX_Y - 1, AUDIO_DRIVER_BOX_END_X + 1,
+		AUDIO_DRIVER_BOX_END_Y + 1, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	for (i = 0; interpolation_modes[i]; i++);
 
@@ -79,8 +111,11 @@ static void preferences_draw_const(void)
 	draw_box(25, 22+i*3, 47, 27+i*3, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(52, 22+i*3, 74, 27+i*3, BOX_THIN | BOX_INNER | BOX_INSET);
 
-#define CORNER_BOTTOM "http://schismtracker.org/"
-	draw_text(CORNER_BOTTOM, 78 - strlen(CORNER_BOTTOM), 48, 1, 2);
+	snprintf(buf, 80, "Playback Frequency: %dHz", audio_settings.sample_rate);
+	draw_text(buf, 2, 48, 0, 2);
+
+#define CORNER_BOTTOM "https://schismtracker.org/"
+	draw_text(CORNER_BOTTOM, 78 - sizeof(CORNER_BOTTOM) + 1, 48, 1, 2);
 }
 
 /* --------------------------------------------------------------------- */
@@ -154,11 +189,316 @@ static void change_mixer(void)
 }
 
 /* --------------------------------------------------------------------- */
-static void save_config_now(UNUSED void *ign)
+
+static void audio_device_list_draw() {
+	int interp_modes;
+
+	for (interp_modes = 0; interpolation_modes[interp_modes]; interp_modes++);
+
+	int n, o = 0, focused = (ACTIVE_PAGE.selected_widget == 13 + interp_modes);
+	int fg, bg;
+	const char* current_audio_device = song_audio_device();
+
+	draw_fill_chars(AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y, AUDIO_DEVICE_BOX_END_X, AUDIO_DEVICE_BOX_END_Y, DEFAULT_FG, 0);
+
+	/* this macro expects the device name to be in UTF-8 */
+#define DRAW_DEVICE(name) \
+	do { \
+		if ((o + top_audio_device) == selected_audio_device) { \
+			if (focused) { \
+				fg = 0; \
+				bg = 3; \
+			} else { \
+				fg = 6; \
+				bg = 14; \
+			} \
+		} else { \
+			fg = 6; \
+			bg = 0; \
+		}\
+	\
+		draw_text_utf8_len(!strcmp(current_audio_device, name) ? "*" : " ", 1, AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y + o, fg, bg); \
+		draw_text_utf8_len(name, AUDIO_DEVICE_BOX_WIDTH - 1, AUDIO_DEVICE_BOX_X + 1, AUDIO_DEVICE_BOX_Y + o, fg, bg); \
+		o++; \
+	} while (0)
+
+	if (top_audio_device < 1)
+		DRAW_DEVICE("default");
+
+	for (n = MAX(0, top_audio_device - 1); n < audio_device_list_size && o < AUDIO_DEVICE_BOX_HEIGHT; n++)
+		DRAW_DEVICE(audio_device_list[n].name);
+
+#undef DRAW_DEVICE
+}
+
+static int audio_device_list_handle_key_on_list(struct key_event * k)
+{
+	int new_device = selected_audio_device;
+	int load_selected_device = 0;
+	static const int focus_offsets[] = {1, 1, 2, 2, 2, 3};
+
+	switch (k->mouse) {
+	case MOUSE_DBLCLICK:
+	case MOUSE_CLICK:
+		if (k->state == KEY_PRESS)
+			return 0;
+		if (k->x < AUDIO_DEVICE_BOX_X || k->y < AUDIO_DEVICE_BOX_Y || k->y > AUDIO_DEVICE_BOX_END_Y || k->x > AUDIO_DEVICE_BOX_END_X) return 0;
+		new_device = top_audio_device + (k->y - AUDIO_DEVICE_BOX_Y);
+		if (k->mouse == MOUSE_DBLCLICK || new_device == selected_audio_device)
+			load_selected_device = 1;
+		break;
+	case MOUSE_SCROLL_UP:
+		new_device -= MOUSE_SCROLL_LINES;
+		break;
+	case MOUSE_SCROLL_DOWN:
+		new_device += MOUSE_SCROLL_LINES;
+		break;
+	default:
+		if (k->state == KEY_RELEASE)
+			return 0;
+	}
+
+	switch (k->sym) {
+	case SCHISM_KEYSYM_UP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		if (--new_device < 0) {
+			widget_change_focus_to(47);
+			return 1;
+		}
+		break;
+	case SCHISM_KEYSYM_DOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		if (++new_device >= audio_device_list_size + 1) {
+			//widget_change_focus_to(49);
+			return 1;
+		}
+		break;
+	case SCHISM_KEYSYM_HOME:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		new_device = 0;
+		break;
+	case SCHISM_KEYSYM_PAGEUP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+
+		if (new_device == 0)
+			return 1;
+
+		new_device -= 16;
+		break;
+	case SCHISM_KEYSYM_END:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		new_device = audio_device_list_size;
+		break;
+	case SCHISM_KEYSYM_PAGEDOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		new_device += 16;
+		break;
+	case SCHISM_KEYSYM_RETURN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		load_selected_device = 1;
+		break;
+	case SCHISM_KEYSYM_TAB:
+		if (!(k->mod & SCHISM_KEYMOD_SHIFT || NO_MODIFIER(k->mod)))
+			return 0;
+
+		widget_change_focus_to(focus_offsets[selected_audio_device]);
+		return 1;
+	case SCHISM_KEYSYM_LEFT: case SCHISM_KEYSYM_RIGHT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+
+		widget_change_focus_to(focus_offsets[selected_audio_device]);
+		return 1;
+	default:
+		if (k->mouse == MOUSE_NONE)
+			return 0;
+	}
+
+	new_device = CLAMP(new_device, 0, audio_device_list_size);
+
+	if (new_device != selected_audio_device) {
+		selected_audio_device = new_device;
+		status.flags |= NEED_UPDATE;
+
+		/* these HAVE to be done separately (and not as a CLAMP) because they aren't
+		 * really guaranteed to be ranges */
+		top_audio_device = MIN(top_audio_device, selected_audio_device);
+		top_audio_device = MAX(top_audio_device, selected_audio_device - AUDIO_DEVICE_BOX_HEIGHT + 1);
+
+		top_audio_device = MIN(top_audio_device, audio_device_list_size - AUDIO_DEVICE_BOX_HEIGHT + 1);
+		top_audio_device = MAX(top_audio_device, 0);
+	}
+
+	if (load_selected_device)
+		audio_reinit(selected_audio_device == 0 ? NULL : audio_device_list[selected_audio_device - 1].name);
+
+	return 1;
+}
+
+/* --------------------------------------------------------------------- */
+
+static void audio_driver_list_draw() {
+	int interp_modes;
+	for (interp_modes = 0; interpolation_modes[interp_modes]; interp_modes++);
+
+	const int num_drivers = audio_driver_count();
+	int n, o = 0, focused = (ACTIVE_PAGE.selected_widget == 14 + interp_modes);
+	int fg, bg;
+	const char* current_audio_driver = song_audio_driver();
+
+	draw_fill_chars(AUDIO_DRIVER_BOX_X, AUDIO_DRIVER_BOX_Y, AUDIO_DRIVER_BOX_END_X, AUDIO_DRIVER_BOX_END_Y, DEFAULT_FG, 0);
+
+	for (n = top_audio_driver; n < num_drivers && o < AUDIO_DRIVER_BOX_HEIGHT; n++) {
+		const char* name = audio_driver_name(n);
+
+		if ((o + top_audio_driver) == selected_audio_driver) {
+			if (focused) {
+				fg = 0;
+				bg = 3;
+			} else {
+				fg = 6;
+				bg = 14;
+			}
+		} else {
+			fg = 6;
+			bg = 0;
+		}
+
+		draw_text_utf8_len(!strcmp(current_audio_driver, name) ? "*" : " ", 1, AUDIO_DRIVER_BOX_X, AUDIO_DRIVER_BOX_Y + o, fg, bg);
+		draw_text_utf8_len(name, AUDIO_DRIVER_BOX_WIDTH - 1, AUDIO_DRIVER_BOX_X + 1, AUDIO_DRIVER_BOX_Y + o, fg, bg);
+		o++;
+	}
+}
+
+static int audio_driver_list_handle_key_on_list(struct key_event * k)
+{
+	int new_driver = selected_audio_driver;
+	int load_selected_driver = 0;
+	static const int focus_offsets[] = {4, 4, 4, 5, 5, 5};
+	const int num_drivers = audio_driver_count();
+
+	switch (k->mouse) {
+	case MOUSE_DBLCLICK:
+	case MOUSE_CLICK:
+		if (k->state == KEY_PRESS)
+			return 0;
+		if (k->x < AUDIO_DRIVER_BOX_X || k->y < AUDIO_DRIVER_BOX_Y || k->y > AUDIO_DRIVER_BOX_END_Y || k->x > AUDIO_DRIVER_BOX_END_X) return 0;
+		new_driver = top_audio_driver + (k->y - AUDIO_DRIVER_BOX_Y);
+		if (k->mouse == MOUSE_DBLCLICK || new_driver == selected_audio_driver)
+			load_selected_driver = 1;
+		break;
+	case MOUSE_SCROLL_UP:
+		new_driver -= MOUSE_SCROLL_LINES;
+		break;
+	case MOUSE_SCROLL_DOWN:
+		new_driver += MOUSE_SCROLL_LINES;
+		break;
+	default:
+		if (k->state == KEY_RELEASE)
+			return 0;
+	}
+
+	switch (k->sym) {
+	case SCHISM_KEYSYM_UP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		if (--new_driver < 0) {
+			widget_change_focus_to(47);
+			return 1;
+		}
+		break;
+	case SCHISM_KEYSYM_DOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		if (++new_driver >= num_drivers + 1) {
+			//widget_change_focus_to(49);
+			return 1;
+		}
+		break;
+	case SCHISM_KEYSYM_HOME:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		new_driver = 0;
+		break;
+	case SCHISM_KEYSYM_PAGEUP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+
+		if (new_driver == 0)
+			return 1;
+
+		new_driver -= 16;
+		break;
+	case SCHISM_KEYSYM_END:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		new_driver = num_drivers;
+		break;
+	case SCHISM_KEYSYM_PAGEDOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		new_driver += 16;
+		break;
+	case SCHISM_KEYSYM_RETURN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		load_selected_driver = 1;
+		break;
+	case SCHISM_KEYSYM_TAB:
+		if (!(k->mod & SCHISM_KEYMOD_SHIFT || NO_MODIFIER(k->mod)))
+			return 0;
+
+		widget_change_focus_to(focus_offsets[selected_audio_driver]);
+		return 1;
+	case SCHISM_KEYSYM_LEFT: case SCHISM_KEYSYM_RIGHT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+
+		widget_change_focus_to(focus_offsets[selected_audio_driver]);
+		return 1;
+	default:
+		if (k->mouse == MOUSE_NONE)
+			return 0;
+	}
+
+	new_driver = CLAMP(new_driver, 0, num_drivers - 1);
+
+	if (new_driver != selected_audio_driver) {
+		selected_audio_driver = new_driver;
+		status.flags |= NEED_UPDATE;
+
+		/* these HAVE to be done separately (and not as a CLAMP) because they aren't
+		 * really guaranteed to be ranges */
+		top_audio_driver = MIN(top_audio_driver, selected_audio_driver);
+		top_audio_driver = MAX(top_audio_driver, selected_audio_driver - AUDIO_DRIVER_BOX_HEIGHT + 1);
+
+		top_audio_driver = MIN(top_audio_driver, num_drivers - AUDIO_DRIVER_BOX_HEIGHT + 1);
+		top_audio_driver = MAX(top_audio_driver, 0);
+	}
+
+	if (load_selected_driver) {
+		audio_flash_reinitialized_text(audio_init(audio_driver_name(selected_audio_driver), NULL));
+		status.flags |= NEED_UPDATE;
+	}
+
+	return 1;
+}
+
+/* --------------------------------------------------------------------- */
+
+static void save_config_now(SCHISM_UNUSED void *ign)
 {
 	/* TODO */
 	cfg_midipage_save(); /* what is this doing here? */
 	cfg_atexit_save();
+	cfg_save_output();
 	status_text_flash("Configuration saved");
 }
 
@@ -167,38 +507,48 @@ void preferences_load_page(struct page *page)
 	char buf[64];
 	char *ptr;
 	int i, j;
-        int interp_modes;
+	int interp_modes;
 
-        for (interp_modes = 0; interpolation_modes[interp_modes]; interp_modes++) {
-                /* nothing */
-        }
+	for (interp_modes = 0; interpolation_modes[interp_modes]; interp_modes++);
 
 	page->title = "Preferences (Shift-F5)";
 	page->draw_const = preferences_draw_const;
 	page->set_page = preferences_set_page;
-        page->total_widgets = 13 + interp_modes;
+	page->total_widgets = 15 + interp_modes;
 	page->widgets = widgets_preferences;
 	page->help_index = HELP_GLOBAL;
 
-	create_thumbbar(widgets_preferences + 0, 22, 14, 5, 0, 1, 1, change_volume, 0, VOLUME_SCALE);
-	create_thumbbar(widgets_preferences + 1, 22, 15, 5, 0, 2, 2, change_volume, 0, VOLUME_SCALE);
+	widget_create_thumbbar(widgets_preferences + 0, 22, 14, 5, 0, 1, 1, change_volume, 0, VOLUME_SCALE);
+	widget_create_thumbbar(widgets_preferences + 1, 22, 15, 5, 0, 2, 2, change_volume, 0, VOLUME_SCALE);
+	widgets_preferences[0].next.left = widgets_preferences[0].next.right =
+		widgets_preferences[0].next.tab = widgets_preferences[0].next.backtab =
+		widgets_preferences[1].next.left = widgets_preferences[1].next.right =
+		widgets_preferences[1].next.tab = widgets_preferences[1].next.backtab =
+			interp_modes + 13;
+
 
 	for (i = 0; interpolation_modes[i]; i++) {
 		sprintf(buf, "%d Bit, %s", audio_settings.bits, interpolation_modes[i]);
 		ptr = str_dup(buf);
-		create_togglebutton(widgets_preferences+i+2,
+		widget_create_togglebutton(widgets_preferences+i+2,
 					6, 20 + (i * 3), 26,
-                                        i+1, i+3, i+2, interp_modes+11, i+3,
+					i+1, i+3, i+2, interp_modes+11, i+3,
 					change_mixer,
 					ptr,
 					2,
 					interp_group);
+		if (i < 1)
+			widgets_preferences[i+2].next.left = widgets_preferences[i+2].next.right =
+				interp_modes + 13;
+		else if (i < 4)
+			widgets_preferences[i+2].next.left = widgets_preferences[i+2].next.right =
+				interp_modes + 14;
 	}
 
 	for (j = 0; j < 4; j++) {
-                int n = i+(j*2);
+		int n = i+(j*2);
 		if (j == 0) n = i+1;
-		create_thumbbar(widgets_preferences+i+2+(j*2),
+		widget_create_thumbbar(widgets_preferences+i+2+(j*2),
 						26, 23+(i*3)+j,
 						21,
 						n, i+(j*2)+4, i+(j*2)+3,
@@ -206,7 +556,7 @@ void preferences_load_page(struct page *page)
 						0, 127);
 		n = i+(j*2)+5;
 		if (j == 3) n--;
-		create_thumbbar(widgets_preferences+i+3+(j*2),
+		widget_create_thumbbar(widgets_preferences+i+3+(j*2),
 						53, 23+(i*3)+j,
 						21,
 						i+(j*2)+1, n, i+(j*2)+4,
@@ -221,24 +571,35 @@ void preferences_load_page(struct page *page)
 
 	ramp_group[0] = i+10;
 	ramp_group[1] = i+11;
-	create_togglebutton(widgets_preferences+i+10,
+	widget_create_togglebutton(widgets_preferences+i+10,
 			33,29+i*3,9,
 			i+9,i+12,i+10,i+11,i+11,
 			change_mixer,
 			"Enabled",2,
 			ramp_group);
 
-	create_togglebutton(widgets_preferences+i+11,
+	widget_create_togglebutton(widgets_preferences+i+11,
 			46,29+i*3,9,
 			i+9,i+12,i+10,i+13,i+13,
 			change_mixer,
 			"Disabled",1,
 			ramp_group);
 
-	create_button(widgets_preferences+i+12,
+	widget_create_button(widgets_preferences+i+12,
 			2, 44, 27,
 			i+10, i+12, i+12, i+13, i+13,
-			(void *) save_config_now,
+			(void (*)(void)) save_config_now,
 			"Save Output Configuration", 2);
-}
 
+	widget_create_other(widgets_preferences+i+13, 0, audio_device_list_handle_key_on_list, NULL, audio_device_list_draw);
+	widgets_preferences[i+13].x = AUDIO_DEVICE_BOX_X;
+	widgets_preferences[i+13].y = AUDIO_DEVICE_BOX_Y;
+	widgets_preferences[i+13].width = AUDIO_DEVICE_BOX_WIDTH;
+	widgets_preferences[i+13].height = AUDIO_DEVICE_BOX_HEIGHT;
+
+	widget_create_other(widgets_preferences+i+14, 0, audio_driver_list_handle_key_on_list, NULL, audio_driver_list_draw);
+	widgets_preferences[i+14].x = AUDIO_DRIVER_BOX_X;
+	widgets_preferences[i+14].y = AUDIO_DRIVER_BOX_Y;
+	widgets_preferences[i+14].width = AUDIO_DRIVER_BOX_WIDTH;
+	widgets_preferences[i+14].height = AUDIO_DRIVER_BOX_HEIGHT;
+}

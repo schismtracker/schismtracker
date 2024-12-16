@@ -24,6 +24,8 @@
 #include "headers.h"
 #include "fmt.h"
 
+#include <math.h>
+
 /* --------------------------------------------------------------------------------------------------------- */
 
 static int _mod_period_to_note(int period)
@@ -137,13 +139,41 @@ int convert_voleffect(uint8_t *e, uint8_t *p, int force)
 			}
 		}
 		return 0;
-	case FX_VIBRATO:
-		if (force)
-			*p = MIN(*p, 9);
-		else if (*p > 9)
+	case FX_VIBRATO: {
+		uint8_t depth = (*p & 0x0F);
+		uint8_t speed = (*p & 0xF0);
+
+		/* can't do this */
+		if (speed && depth && !force)
 			return 0;
-		*e = VOLFX_VIBRATODEPTH;
-		break;
+
+		if (speed) {
+			if (force)
+				speed = MIN(speed, 9);
+			else if (speed > 9)
+				return 0;
+
+			*e = VOLFX_VIBRATOSPEED;
+			*p = speed;
+
+			return 1;
+		} else if (depth || force) {
+			if (force)
+				depth = MIN(depth, 9);
+			else if (depth > 9)
+				return 0;
+
+			*e = VOLFX_VIBRATODEPTH;
+			*p = depth;
+
+			return 1;
+		} else {
+			/* ... */
+			return 0;
+		}
+
+		return 1;
+	}
 	case FX_FINEVIBRATO:
 		if (force)
 			*p = 0;
@@ -214,6 +244,18 @@ int convert_voleffect(uint8_t *e, uint8_t *p, int force)
 			break;
 		}
 		return 0;
+	case FX_PANNINGSLIDE:
+		if (!(*p & 0xF0)) {
+			*e = VOLFX_PANSLIDERIGHT;
+			*p &= 0x0F;
+			return (*p < 10);
+		} else if (!(*p & 0x0F)) {
+			*e = VOLFX_PANSLIDELEFT;
+			*p >>= 4;
+			return (*p < 10);
+		}
+		/* can't convert fine panning */
+		return 0;
 	default:
 		return 0;
 	}
@@ -237,7 +279,7 @@ void read_lined_message(char *msg, slurp_t *fp, int len, int linelen)
 		len -= linesize;
 
 		msg[linesize] = '\0';
-		linesize = rtrim_string(msg);
+		linesize = str_rtrim(msg);
 		msgsize += linesize + 1;
 		msg += linesize;
 		*msg++ = '\n';
@@ -245,3 +287,169 @@ void read_lined_message(char *msg, slurp_t *fp, int len, int linelen)
 	*msg = '\0';
 }
 
+// calculated using this formula from OpenMPT
+// (i range 1-15, j range 0-15);
+// unsigned int st2MixingRate = 23863;
+// const unsigned char tempo_table[18] = {140, 50, 25, 15, 10, 7, 6, 4, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1};
+// long double samplesPerTick = (double) st2MixingRate / ((long double) 50 - ((tempo_table[high_nibble] * low_nibble) / 16));
+// st2MixingRate *= 5; // normally multiplied by the precision beyond the decimal point, however there's no decimal place here. :P
+// st2MixingRate += samplesPerTick;
+// st2MixingRate = (st2MixingRate >= 0)
+//                 ? (int32_t) (st2MixingRate / (samplesPerTick * 2))
+//                 : (int32_t)((st2MixingRate - ((samplesPerTick * 2) - 1)) / (samplesPerTick * 2));
+static uint8_t st2_tempo_table[15][16] = {
+	{ 125,  117,  110,  102,   95,   87,   80,   72,   62,   55,   47,   40,   32,   25,   17,   10, },
+	{ 125,  122,  117,  115,  110,  107,  102,  100,   95,   90,   87,   82,   80,   75,   72,   67, },
+	{ 125,  125,  122,  120,  117,  115,  112,  110,  107,  105,  102,  100,   97,   95,   92,   90, },
+	{ 125,  125,  122,  122,  120,  117,  117,  115,  112,  112,  110,  110,  107,  105,  105,  102, },
+	{ 125,  125,  125,  122,  122,  120,  120,  117,  117,  117,  115,  115,  112,  112,  110,  110, },
+	{ 125,  125,  125,  122,  122,  122,  120,  120,  117,  117,  117,  115,  115,  115,  112,  112, },
+	{ 125,  125,  125,  125,  122,  122,  122,  122,  120,  120,  120,  120,  117,  117,  117,  117, },
+	{ 125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  120,  120,  120,  120,  120, },
+	{ 125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  120,  120,  120,  120,  120, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125, },
+	{ 125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125, },
+};
+
+uint8_t convert_stm_tempo_to_bpm(size_t tempo)
+{
+	size_t tpr = (tempo >> 4) ? (tempo >> 4) : 1;
+	size_t scale = (tempo & 15);
+
+	return st2_tempo_table[tpr - 1][scale];
+}
+
+void handle_stm_tempo_pattern(song_note_t *note, size_t tempo)
+{
+	for (int i = 0; i < 32; i++, note++) {
+		if (note->effect == FX_NONE) {
+			note->effect = FX_TEMPO;
+			note->param = convert_stm_tempo_to_bpm(tempo);
+			break;
+		}
+	}
+}
+
+const uint8_t stm_effects[16] = {
+	FX_NONE,               // .
+	FX_SPEED,              // A
+	FX_POSITIONJUMP,       // B
+	FX_PATTERNBREAK,       // C
+	FX_VOLUMESLIDE,        // D
+	FX_PORTAMENTODOWN,     // E
+	FX_PORTAMENTOUP,       // F
+	FX_TONEPORTAMENTO,     // G
+	FX_VIBRATO,            // H
+	FX_TREMOR,             // I
+	FX_ARPEGGIO,           // J
+	// KLMNO can be entered in the editor but don't do anything
+};
+
+void handle_stm_effects(song_note_t *chan_note) {
+	switch (chan_note->effect) {
+	case FX_SPEED:
+		/* do nothing; this is handled later */
+		break;
+	case FX_VOLUMESLIDE:
+		// Scream Tracker 2 checks for the lower nibble first for some reason...
+		if (chan_note->param & 0x0f && chan_note->param >> 4)
+			chan_note->param &= 0x0f;
+
+	case FX_PORTAMENTODOWN:
+	case FX_PORTAMENTOUP:
+		if (!chan_note->param)
+			chan_note->effect = FX_NONE;
+		break;
+	case FX_PATTERNBREAK:
+		chan_note->param = (chan_note->param & 0xf0) * 10 + (chan_note->param & 0xf);
+		break;
+	case FX_POSITIONJUMP:
+		// This effect is also very weird.
+		// Bxx doesn't appear to cause an immediate break -- it merely
+		// sets the next order for when the pattern ends (either by
+		// playing it all the way through, or via Cxx effect)
+		// I guess I'll "fix" it later...
+		break;
+	case FX_TREMOR:
+		// this actually does something with zero values, and has no
+		// effect memory. which makes SENSE for old-effects tremor,
+		// but ST3 went and screwed it all up by adding an effect
+		// memory and IT followed that, and those are much more popular
+		// than STM so we kind of have to live with this effect being
+		// broken... oh well. not a big loss.
+		break;
+	default:
+		// Anything not listed above is a no-op if there's no value.
+		// (ST2 doesn't have effect memory)
+		if (!chan_note->param)
+			chan_note->effect = FX_NONE;
+		break;
+	}
+}
+
+uint32_t it_decode_edit_timer(uint16_t cwtv, uint32_t runtime)
+{
+	if ((cwtv & 0xFFF) >= 0x0208) {
+		// it's the thirstiest time of the year
+		runtime ^= 0x4954524B;  // 'ITRK'
+		runtime = ((runtime << (32 - 7)) | (runtime >> 7));
+		runtime = ~runtime + 1;
+		runtime = ((runtime >> (32 - 4)) | (runtime << 4));
+		runtime ^= 0x4A54484C;  // 'JTHL'
+	}
+
+	return runtime;
+}
+
+uint32_t it_get_song_elapsed_dos_time(song_t *song)
+{
+	return ms_to_dos_time(timer_ticks() - song->editstart.runtime);
+}
+
+schism_ticks_t dos_time_to_ms(uint32_t dos_time)
+{
+	// convert to milliseconds
+	schism_ticks_t ms = round((double)dos_time * (1000.0 / 18.2));
+	return ms;
+}
+
+uint32_t ms_to_dos_time(schism_ticks_t ms)
+{
+	double dos = round((double)ms / (1000.0 / 18.2));
+
+	// no overflow!
+	return (uint32_t)CLAMP(dos, 0, UINT32_MAX);
+}
+
+void fat_date_time_to_tm(struct tm *tm, uint16_t fat_date, uint16_t fat_time)
+{
+	*tm = (struct tm){
+		/* PRESENT DAY */
+		.tm_mday = fat_date & 0x1F,
+		.tm_mon = ((fat_date >> 5) & 0xF) - 1,
+		.tm_year = (fat_date >> 9) + 80,
+
+		/* PRESENT TIME */
+		.tm_sec = (fat_time & 0x1F) << 1,
+		.tm_min = ((fat_time >> 5) & 0x3F),
+		.tm_hour = fat_time >> 11,
+	};
+
+	// normalize the data in case the fat time was screwed?
+	mktime(tm);
+}
+
+void tm_to_fat_date_time(const struct tm *tm, uint16_t *fat_date, uint16_t *fat_time)
+{
+	struct tm tm_n = *tm;
+
+	// normalize it so we can be sure that the data is valid
+	mktime(&tm_n);
+
+	*fat_date = tm_n.tm_mday | ((tm_n.tm_mon + 1) << 5) | ((tm_n.tm_year - 80) << 9);
+	*fat_time = (tm_n.tm_sec >> 1) | (tm_n.tm_min << 5) | (tm_n.tm_hour << 11);
+}

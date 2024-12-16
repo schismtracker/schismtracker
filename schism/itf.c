@@ -25,13 +25,21 @@
    LARGELY because I can't remember all the font characters. :)
 */
 #include "headers.h"
+
 #include "it.h"
+#include "vgamem.h"
+#include "dialog.h"
+#include "widget.h"
+#include "config.h"
 #include "dmoz.h"
 #include "page.h"
 #include "version.h"
 #include "log.h"
+#include "util.h"
+#include "palettes.h"
+#include "fonts.h"
+#include "osdefs.h"
 
-#include "sdlmain.h"
 #include <string.h>
 
 static const uint8_t itfmap_chars[] = {
@@ -161,21 +169,21 @@ static int fontgrep(dmoz_file_t *f)
 		return 1; /* this is our font.cfg, at the top of the list */
 	if (f->type & TYPE_BROWSABLE_MASK)
 		return 0; /* we don't care about directories and stuff */
-	ext = get_extension(f->base);
+	ext = dmoz_path_get_extension(f->base);
 	return (strcasecmp(ext, ".itf") == 0 || strcasecmp(ext, ".fnt") == 0);
 }
 
 static void load_fontlist(void)
 {
 	char *font_dir, *p;
-	struct stat st = {};
+	struct stat st = {0};
 
 	dmoz_free(&flist, NULL);
 
 	top_font = cur_font = 0;
 
 	font_dir = dmoz_path_concat_len(cfg_dir_dotschism, "fonts", strlen(cfg_dir_dotschism), 5);
-	mkdir(font_dir, 0755);
+	os_mkdir(font_dir, 0755);
 	p = dmoz_path_concat_len(font_dir, "font.cfg", strlen(font_dir), 8);
 	dmoz_add_file(&flist, p, str_dup("font.cfg"), &st, -100); /* put it on top */
 	if (dmoz_read(font_dir, &flist, NULL, NULL) < 0)
@@ -293,7 +301,7 @@ static inline void draw_itfmap(void)
 	uint8_t *ptr;
 
 	if (itfmap_pos < 0 || itfmap_chars[itfmap_pos] != current_char) {
-		ptr = (unsigned char *) strchr((char *) itfmap_chars, current_char);
+		ptr = (unsigned char *) memchr((char *) itfmap_chars, current_char, sizeof(itfmap_chars));
 		if (ptr == NULL)
 			itfmap_pos = -1;
 		else
@@ -425,6 +433,7 @@ extern unsigned int color_set[16];
 
 static void draw_screen(void)
 {
+	draw_fill_chars(0,0,79,49,DEFAULT_FG,0);
 	draw_frame("Edit Box", EDITBOX_X, EDITBOX_Y, 9, 11, !!(selected_item == EDITBOX));
 	draw_editbox();
 
@@ -461,9 +470,9 @@ static void handle_key_editbox(struct key_event * k)
 	int n, bit;
 	uint8_t *ptr = font_data + ci;
 
-	switch (k->sym.sym) {
-	case SDLK_UP:
-		if (k->mod & KMOD_SHIFT) {
+	switch (k->sym) {
+	case SCHISM_KEYSYM_UP:
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			int s = ptr[0];
 			for (n = 0; n < 7; n++)
 				ptr[n] = ptr[n + 1];
@@ -473,8 +482,8 @@ static void handle_key_editbox(struct key_event * k)
 				edit_y = 7;
 		}
 		break;
-	case SDLK_DOWN:
-		if (k->mod & KMOD_SHIFT) {
+	case SCHISM_KEYSYM_DOWN:
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			int s = ptr[7];
 			for (n = 7; n; n--)
 				ptr[n] = ptr[n - 1];
@@ -483,8 +492,8 @@ static void handle_key_editbox(struct key_event * k)
 			edit_y = (edit_y + 1) % 8;
 		}
 		break;
-	case SDLK_LEFT:
-		if (k->mod & KMOD_SHIFT) {
+	case SCHISM_KEYSYM_LEFT:
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			for (n = 0; n < 8; n++, ptr++)
 				*ptr = (*ptr >> 7) | (*ptr << 1);
 		} else {
@@ -492,65 +501,65 @@ static void handle_key_editbox(struct key_event * k)
 				edit_x = 7;
 		}
 		break;
-	case SDLK_RIGHT:
-		if (k->mod & KMOD_SHIFT) {
+	case SCHISM_KEYSYM_RIGHT:
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			for (n = 0; n < 8; n++, ptr++)
 				*ptr = (*ptr << 7) | (*ptr >> 1);
 		} else {
 			edit_x = (edit_x + 1) % 8;
 		}
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		edit_x = edit_y = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		edit_x = edit_y = 7;
 		break;
-	case SDLK_SPACE:
+	case SCHISM_KEYSYM_SPACE:
 		ptr[edit_y] ^= (128 >> edit_x);
 		break;
-	case SDLK_INSERT:
-		if (k->mod & KMOD_SHIFT) {
+	case SCHISM_KEYSYM_INSERT:
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			for (n = 0; n < 8; n++)
 				ptr[n] |= (128 >> edit_x);
 		} else {
 			ptr[edit_y] = 255;
 		}
 		break;
-	case SDLK_DELETE:
-		if (k->mod & KMOD_SHIFT) {
+	case SCHISM_KEYSYM_DELETE:
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			for (n = 0; n < 8; n++)
 				ptr[n] &= ~(128 >> edit_x);
 		} else {
 			ptr[edit_y] = 0;
 		}
 		break;
-	case SDLK_LEFTBRACKET:
+	case SCHISM_KEYSYM_LEFTBRACKET:
 		for (n = 0; n < 8; n++)
 			for (bit = 0; bit < 8; bit++)
 				if (ptr[n] & (1 << bit))
 					tmp[bit] |= 1 << (7 - n);
 		memcpy(ptr, tmp, 8);
 		break;
-	case SDLK_RIGHTBRACKET:
+	case SCHISM_KEYSYM_RIGHTBRACKET:
 		for (n = 0; n < 8; n++)
 			for (bit = 0; bit < 8; bit++)
 				if (ptr[n] & (1 << bit))
 					tmp[7 - bit] |= 1 << n;
 		memcpy(ptr, tmp, 8);
 		break;
-	case SDLK_PLUS:
-	case SDLK_EQUALS:
+	case SCHISM_KEYSYM_PLUS:
+	case SCHISM_KEYSYM_EQUALS:
 		current_char++;
 		break;
-	case SDLK_MINUS:
-	case SDLK_UNDERSCORE:
+	case SCHISM_KEYSYM_MINUS:
+	case SCHISM_KEYSYM_UNDERSCORE:
 		current_char--;
 		break;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		current_char -= 16;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		current_char += 16;
 		break;
 	default:
@@ -562,23 +571,23 @@ static void handle_key_editbox(struct key_event * k)
 
 static void handle_key_charmap(struct key_event * k)
 {
-	switch (k->sym.sym) {
-	case SDLK_UP:
+	switch (k->sym) {
+	case SCHISM_KEYSYM_UP:
 		current_char -= 16;
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		current_char += 16;
 		break;
-	case SDLK_LEFT:
+	case SCHISM_KEYSYM_LEFT:
 		current_char = DECR_WRAPPED(current_char);
 		break;
-	case SDLK_RIGHT:
+	case SCHISM_KEYSYM_RIGHT:
 		current_char = INCR_WRAPPED(current_char);
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		current_char = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		current_char = 255;
 		break;
 	default:
@@ -589,8 +598,8 @@ static void handle_key_charmap(struct key_event * k)
 
 static void handle_key_itfmap(struct key_event * k)
 {
-	switch (k->sym.sym) {
-	case SDLK_UP:
+	switch (k->sym) {
+	case SCHISM_KEYSYM_UP:
 		if (itfmap_pos < 0) {
 			itfmap_pos = 224;
 		} else {
@@ -600,32 +609,32 @@ static void handle_key_itfmap(struct key_event * k)
 		}
 		current_char = itfmap_chars[itfmap_pos];
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (itfmap_pos < 0)
 			itfmap_pos = 16;
 		else
 			itfmap_pos = (itfmap_pos + 16) % 240;
 		current_char = itfmap_chars[itfmap_pos];
 		break;
-	case SDLK_LEFT:
+	case SCHISM_KEYSYM_LEFT:
 		if (itfmap_pos < 0)
 			itfmap_pos = 15;
 		else
 			itfmap_pos = DECR_WRAPPED(itfmap_pos);
 		current_char = itfmap_chars[itfmap_pos];
 		break;
-	case SDLK_RIGHT:
+	case SCHISM_KEYSYM_RIGHT:
 		if (itfmap_pos < 0)
 			itfmap_pos = 0;
 		else
 			itfmap_pos = INCR_WRAPPED(itfmap_pos);
 		current_char = itfmap_chars[itfmap_pos];
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		current_char = itfmap_chars[0];
 		itfmap_pos = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		current_char = itfmap_chars[239];
 		itfmap_pos = 239;
 		break;
@@ -638,10 +647,8 @@ static void handle_key_itfmap(struct key_event * k)
 static void confirm_font_save_ok(void *vf)
 {
 	char *f = vf;
-	if (font_save(f) != 0) {
-		fprintf(stderr, "%s\n", SDL_GetError());
+	if (font_save(f) != 0)
 		return;
-	}
 	selected_item = EDITBOX;
 }
 
@@ -649,40 +656,38 @@ static void handle_key_fontlist(struct key_event * k)
 {
 	int new_font = cur_font;
 
-	switch (k->sym.sym) {
-	case SDLK_HOME:
+	switch (k->sym) {
+	case SCHISM_KEYSYM_HOME:
 		new_font = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		new_font = flist.num_files - 1;
 		break;
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		new_font--;
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		new_font++;
 		break;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		new_font -= VISIBLE_FONTS;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		new_font += VISIBLE_FONTS;
 		break;
-	case SDLK_ESCAPE:
+	case SCHISM_KEYSYM_ESCAPE:
 		selected_item = EDITBOX;
 		fontlist_mode = MODE_OFF;
 		break;
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		if (k->state == KEY_PRESS)
 			return;
 		switch (fontlist_mode) {
 		case MODE_LOAD:
 			if (cur_font < flist.num_files
 			&& flist.files[cur_font]
-			&& font_load(flist.files[cur_font]->base) != 0) {
-				fprintf(stderr, "%s\n", SDL_GetError());
+			&& font_load(flist.files[cur_font]->base) != 0)
 				font_reset();
-			}
 			break;
 		case MODE_SAVE:
 			if (cur_font < flist.num_files && flist.files[cur_font]) {
@@ -832,7 +837,6 @@ static void handle_mouse(struct key_event * k)
 	status.flags |= NEED_UPDATE;
 }
 
-
 static int fontedit_handle_key(struct key_event * k)
 {
 	int n, ci = current_char << 3;
@@ -849,17 +853,19 @@ static int fontedit_handle_key(struct key_event * k)
 	}
 
 	/* kp is special */
-	switch (k->orig_sym.sym) {
-	case SDLK_KP_0:
+	switch (k->sym) {
+	case SCHISM_KEYSYM_KP_0:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		k->sym.sym += 10;
+		k->sym += 10;
 		/* fall through */
-	case SDLK_KP_1...SDLK_KP_9:
+	case SCHISM_KEYSYM_KP_1: case SCHISM_KEYSYM_KP_2: case SCHISM_KEYSYM_KP_3:
+	case SCHISM_KEYSYM_KP_4: case SCHISM_KEYSYM_KP_5: case SCHISM_KEYSYM_KP_6:
+	case SCHISM_KEYSYM_KP_7: case SCHISM_KEYSYM_KP_8: case SCHISM_KEYSYM_KP_9:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		n = k->sym.sym - SDLK_KP_1;
-		if (k->mod & KMOD_SHIFT)
+		n = k->sym - SCHISM_KEYSYM_KP_1;
+		if (k->mod & SCHISM_KEYMOD_SHIFT)
 			n += 10;
 		palette_load_preset(n);
 		palette_apply();
@@ -869,44 +875,46 @@ static int fontedit_handle_key(struct key_event * k)
 		break;
 	};
 
-	switch (k->sym.sym) {
+	switch (k->sym) {
 	case '0':
 		if (k->state == KEY_RELEASE)
 			return 1;
-		k->sym.sym += 10;
+		k->sym += 10;
 		/* fall through */
-	case '1'...'9':
+	case '1': case '2': case '3':
+	case '4': case '5': case '6':
+	case '7': case '8': case '9':
 		if (k->state == KEY_RELEASE)
 			return 1;
-		n = k->sym.sym - '1';
-		if (k->mod & KMOD_SHIFT)
+		n = k->sym - '1';
+		if (k->mod & SCHISM_KEYMOD_SHIFT)
 			n += 10;
 		palette_load_preset(n);
 		palette_apply();
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_F2:
+	case SCHISM_KEYSYM_F2:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selected_item = EDITBOX;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_F3:
+	case SCHISM_KEYSYM_F3:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selected_item = CHARMAP;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_F4:
+	case SCHISM_KEYSYM_F4:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selected_item = ITFMAP;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_TAB:
+	case SCHISM_KEYSYM_TAB:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (selected_item == 0)
 				selected_item = (fontlist_mode == MODE_OFF ? 2 : 3);
 			else
@@ -916,49 +924,49 @@ static int fontedit_handle_key(struct key_event * k)
 		}
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_c:
+	case SCHISM_KEYSYM_c:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			memcpy(clipboard, ptr, 8);
 			return 1;
 		}
 		break;
-	case SDLK_p:
+	case SCHISM_KEYSYM_p:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			memcpy(ptr, clipboard, 8);
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
 		break;
-	case SDLK_m:
+	case SCHISM_KEYSYM_m:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_CTRL) {
-			SDL_ToggleCursor();
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
+			video_mousecursor(video_mousecursor_visible() ? MOUSE_DISABLED : MOUSE_EMULATED);
 			return 1;
-		} else if (k->mod & KMOD_ALT) {
+		} else if (k->mod & SCHISM_KEYMOD_ALT) {
 			for (n = 0; n < 8; n++)
 				ptr[n] |= clipboard[n];
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
 		break;
-	case SDLK_z:
+	case SCHISM_KEYSYM_z:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			memset(ptr, 0, 8);
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
 		break;
-	case SDLK_h:
+	case SCHISM_KEYSYM_h:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			for (n = 0; n < 8; n++) {
 				int r = ptr[n];
 				r = ((r >> 1) & 0x55) | ((r << 1) & 0xaa);
@@ -970,10 +978,10 @@ static int fontedit_handle_key(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SDLK_v:
+	case SCHISM_KEYSYM_v:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			for (n = 0; n < 4; n++) {
 				uint8_t r = ptr[n];
 				ptr[n] = ptr[7 - n];
@@ -983,10 +991,10 @@ static int fontedit_handle_key(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SDLK_i:
+	case SCHISM_KEYSYM_i:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_ALT) {
+		if (k->mod & SCHISM_KEYMOD_ALT) {
 			for (n = 0; n < 8; n++)
 				font_data[ci + n] ^= 255;
 			status.flags |= NEED_UPDATE;
@@ -996,13 +1004,13 @@ static int fontedit_handle_key(struct key_event * k)
 
 		/* ----------------------------------------------------- */
 
-	case SDLK_l:
-	case SDLK_r:
+	case SCHISM_KEYSYM_l:
+	case SCHISM_KEYSYM_r:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (!(k->mod & KMOD_CTRL)) break;
+		if (!(k->mod & SCHISM_KEYMOD_CTRL)) break;
 		/* fall through */
-	case SDLK_F9:
+	case SCHISM_KEYSYM_F9:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		load_fontlist();
@@ -1010,12 +1018,12 @@ static int fontedit_handle_key(struct key_event * k)
 		selected_item = FONTLIST;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_s:
+	case SCHISM_KEYSYM_s:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (!(k->mod & KMOD_CTRL)) break;
+		if (!(k->mod & SCHISM_KEYMOD_CTRL)) break;
 		/* fall through */
-	case SDLK_F10:
+	case SCHISM_KEYSYM_F10:
 		/* a bit weird, but this ensures that font.cfg
 		 * is always the default font to save to, but
 		 * without the annoyance of moving the cursor
@@ -1028,22 +1036,22 @@ static int fontedit_handle_key(struct key_event * k)
 		selected_item = FONTLIST;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_BACKSPACE:
+	case SCHISM_KEYSYM_BACKSPACE:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			font_reset_bios();
-		} else if (k->mod & KMOD_ALT) {
+		} else if (k->mod & SCHISM_KEYMOD_ALT) {
 			font_reset_char(current_char);
 		} else {
 			font_reset_upper();
 		}
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		return 0;
-	case SDLK_q:
-		if (k->mod & KMOD_CTRL)
+	case SCHISM_KEYSYM_q:
+		if (k->mod & SCHISM_KEYMOD_CTRL)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -1078,14 +1086,17 @@ static struct widget fontedit_widget_hack[1];
 
 static int fontedit_key_hack(struct key_event *k)
 {
-	switch (k->sym.sym) {
-	case SDLK_r: case SDLK_l: case SDLK_s:
-	case SDLK_c: case SDLK_p: case SDLK_m:
-	case SDLK_z: case SDLK_v: case SDLK_h:
-	case SDLK_i: case SDLK_q: case SDLK_w:
-	case SDLK_F1...SDLK_F12:
+	switch (k->sym) {
+	case SCHISM_KEYSYM_r: case SCHISM_KEYSYM_l: case SCHISM_KEYSYM_s:
+	case SCHISM_KEYSYM_c: case SCHISM_KEYSYM_p: case SCHISM_KEYSYM_m:
+	case SCHISM_KEYSYM_z: case SCHISM_KEYSYM_v: case SCHISM_KEYSYM_h:
+	case SCHISM_KEYSYM_i: case SCHISM_KEYSYM_q: case SCHISM_KEYSYM_w:
+	case SCHISM_KEYSYM_F1: case SCHISM_KEYSYM_F2: case SCHISM_KEYSYM_F3:
+	case SCHISM_KEYSYM_F4: case SCHISM_KEYSYM_F5: case SCHISM_KEYSYM_F6:
+	case SCHISM_KEYSYM_F7: case SCHISM_KEYSYM_F8: case SCHISM_KEYSYM_F9:
+	case SCHISM_KEYSYM_F10: case SCHISM_KEYSYM_F11: case SCHISM_KEYSYM_F12:
 		return fontedit_handle_key(k);
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		if (status.dialog_type & (DIALOG_MENU|DIALOG_BOX)) return 0;
 		if (selected_item == FONTLIST) {
 			handle_key_fontlist(k);
@@ -1105,5 +1116,5 @@ void fontedit_load_page(struct page *page)
 	page->total_widgets = 1;
 	page->pre_handle_key = fontedit_key_hack;
 	page->widgets = fontedit_widget_hack;
-	create_other(fontedit_widget_hack, 0, fontedit_handle_key, do_nil);
+	widget_create_other(fontedit_widget_hack, 0, fontedit_handle_key, NULL, do_nil);
 }

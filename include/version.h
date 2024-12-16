@@ -20,23 +20,24 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef SCHISM_VERSION_H
-#define SCHISM_VERSION_H
+#ifndef SCHISM_VERSION_H_
+#define SCHISM_VERSION_H_
+
+#include "util.h" // PURE
 
 /* various boilerplate defined in version.c */
 extern const char *ver_short_copyright;
 extern const char *ver_short_based_on;
-extern unsigned short ver_cwtv; /* lower 12 bits of the IT/S3M cwtv field */
-extern unsigned short ver_reserved; /* full version number in case 12 bits are not enough */
+extern uint16_t ver_cwtv; /* lower 12 bits of the IT/S3M cwtv field */
+extern uint16_t ver_reserved; /* full version number in case 12 bits are not enough */
 
-extern const char *schism_banner(int classic)
-	__attribute__((pure));
+SCHISM_PURE extern const char *schism_banner(int classic);
 
-/* little hack, need to call this at startup */
+/* need to call this at startup */
 void ver_init(void);
 
 /* get yyyy-mm-dd or 0.nn version from cwtv + reserved (buf should be >=11 chars) */
-void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char *buf);
+void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char buf[11]);
 
-#endif
+#endif /* SCHISM_VERSION_H_ */
 

@@ -57,7 +57,7 @@ doing weird stuff like hacking the files, but then you're just asking for troubl
 #ifndef LOAD_INSTRUMENT
 # define LOAD_INSTRUMENT(x)
 #endif
-#ifndef SAVE_INSTRUMENT /* not actually used - instrument saving is currently hardcoded to write .iti files */
+#ifndef SAVE_INSTRUMENT
 # define SAVE_INSTRUMENT(x)
 #endif
 #ifndef EXPORT
@@ -92,7 +92,7 @@ conflict with other ones. I've organized them pretty much in order of popularity
 READ_INFO(xm) LOAD_SONG(xm)
 READ_INFO(it) LOAD_SONG(it) SAVE_SONG(it)
 READ_INFO(mt2)
-READ_INFO(mtm) LOAD_SONG(mtm)
+READ_INFO(mtm) LOAD_SONG(mtm) SAVE_SONG(mtm)
 READ_INFO(ntk)
 READ_INFO(mdl) LOAD_SONG(mdl)
 READ_INFO(med)
@@ -100,14 +100,20 @@ READ_INFO(okt) LOAD_SONG(okt)
 READ_INFO(mid) LOAD_SONG(mid)
 READ_INFO(mus) LOAD_SONG(mus)
 READ_INFO(mf)
+READ_INFO(dsm) LOAD_SONG(dsm)
+READ_INFO(d00)
+READ_INFO(edl)
 
 /* Sample formats with magic at start of file */
 READ_INFO(its)  LOAD_SAMPLE(its)  SAVE_SAMPLE(its)
 READ_INFO(au)   LOAD_SAMPLE(au)   SAVE_SAMPLE(au)
 READ_INFO(aiff) LOAD_SAMPLE(aiff) SAVE_SAMPLE(aiff) EXPORT(aiff)
 READ_INFO(wav)  LOAD_SAMPLE(wav)  SAVE_SAMPLE(wav)  EXPORT(wav)
-READ_INFO(iti)  LOAD_INSTRUMENT(iti)
-READ_INFO(xi)   LOAD_INSTRUMENT(xi)
+#ifdef USE_FLAC
+READ_INFO(flac) LOAD_SAMPLE(flac) SAVE_SAMPLE(flac) EXPORT(flac)
+#endif
+READ_INFO(iti)  LOAD_INSTRUMENT(iti) SAVE_INSTRUMENT(iti)
+READ_INFO(xi)   LOAD_INSTRUMENT(xi)  SAVE_INSTRUMENT(xi)
 READ_INFO(pat)  LOAD_INSTRUMENT(pat)
 
 READ_INFO(ult) LOAD_SONG(ult)
@@ -122,6 +128,7 @@ READ_INFO(s3i)  LOAD_SAMPLE(s3i)  SAVE_SAMPLE(s3i) /* FIXME should this be moved
 "reserved" field, Not sure about this positioning, but these are kind of rare formats anyway. */
 READ_INFO(imf) LOAD_SONG(imf)
 READ_INFO(sfx) LOAD_SONG(sfx)
+READ_INFO(stx) LOAD_SONG(stx)
 
 /* bleh */
 #if defined(USE_NON_TRACKED_TYPES) && defined(HAVE_VORBIS)
@@ -136,6 +143,10 @@ READ_INFO(stm) LOAD_SONG(stm)
 at all. I might move this toward the top if I can figure out how to identify an MP3 more precisely. */
 #ifdef USE_NON_TRACKED_TYPES
 READ_INFO(mp3)
+#endif
+
+#if USE_MEDIAFOUNDATION
+READ_INFO(win32mf) LOAD_SAMPLE(win32mf)
 #endif
 
 /* 15-sample mods have literally no identifying information */

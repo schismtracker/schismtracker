@@ -1,0 +1,62 @@
+name: Ubuntu
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ubuntu:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Install dependencies'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --fix-missing libutf8proc-dev libjack-jackd2-dev build-essential automake autoconf autoconf-archive libxxf86vm-dev libsdl2-dev libasound2-dev libflac-dev git libtool zip wget
+
+      - name: 'Checkout'
+        uses: actions/checkout@v4
+
+      - name: 'Get date of latest commit'
+        id: date
+        run: echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
+
+      - name: 'autoreconf -i'
+        run: autoreconf -i
+
+      - name: 'Build package'
+        run: |
+          mkdir -p build
+          cd build
+          ../configure --with-flac --with-alsa --with-jack --disable-alsa-linking --disable-jack-linking --enable-flac-linking
+          make
+          strip -S schismtracker
+          cd ..
+          cp build/schismtracker .
+          cp docs/configuration.md .
+          cp sys/posix/schismtracker.1 .
+          cp /usr/lib/x86_64-linux-gnu/libutf8proc.so.2.5.0 /usr/lib/x86_64-linux-gnu/libFLAC.so.8 /usr/lib/x86_64-linux-gnu/libogg.so.0 /usr/lib/x86_64-linux-gnu/libutf8proc.so .
+          wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
+          zip schismtracker.zip configuration.md COPYING COPYING.Xiph README.md schismtracker.1 schismtracker libFLAC.so.8 libogg.so.0 libutf8proc.so.2.5.0
+
+      - name: 'Upload artifact'
+        uses: actions/upload-artifact@v4
+        with:
+          name: schismtracker-${{ steps.date.outputs.date }}-linux
+          path: schismtracker.zip
+
+      - name: 'Create source tarball'
+        env:
+          SCHISM_VERSION: ${{ steps.date.outputs.date }}
+        run: |
+          cd build
+          make distcheck
+          make dist-gzip
+          mv "schismtracker-$SCHISM_VERSION.tar.gz" "../schismtracker-$SCHISM_VERSION.source.tar.gz"
+
+      - name: 'Upload source tarball'
+        uses: actions/upload-artifact@v4
+        with:
+          name: schismtracker-${{ steps.date.outputs.date }}.source
+          path: schismtracker-${{ steps.date.outputs.date }}.source.tar.gz

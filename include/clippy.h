@@ -20,8 +20,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef clippy_h
-#define clippy_h
+#ifndef SCHISM_CLIPPY_H_
+#define SCHISM_CLIPPY_H_
 
 #include "it.h"
 #include "page.h"
@@ -30,20 +30,19 @@
 #define CLIPPY_BUFFER   1       /* reflects the yank/cut buffer */
 
 /* called when schism needs a paste operation; cb is CLIPPY_SELECT if the middle button is
-used to paste, otherwise if the "paste key" is pressed, this uses CLIPPY_BUFFER
-*/
+used to paste, otherwise if the "paste key" is pressed, this uses CLIPPY_BUFFER */
 void clippy_paste(int cb);
 
 /* updates the clipboard selection; called by various widgets that perform a copy operation;
-stops at the first null, so setting len to <0 means we get the next utf8 or asciiz string
-*/
+stops at the first null, so setting len to <0 means we get the next utf8 or asciiz string */
 void clippy_select(struct widget *w, char *addr, int len);
 struct widget *clippy_owner(int cb);
 
 /* copies the selection to the yank buffer (0 -> 1) */
 void clippy_yank(void);
 
-/* initializes clipboard */
-void clippy_init(void);
+// initializes the backend
+int clippy_init(void);
+void clippy_quit(void);
 
-#endif
+#endif /* SCHISM_CLIPPY_H_ */

@@ -1,0 +1,81 @@
+name: Wii (devkitPro)
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  wii:
+    runs-on: ubuntu-latest
+    env:
+      UTF8PROC_VERSION: 2.9.0
+      UTF8PROC_SHA256: bd215d04313b5bc42c1abedbcb0a6574667e31acee1085543a232204e36384c4
+
+    container:
+      image: devkitpro/devkitppc:latest
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v4
+        with:
+          path: schismtracker
+
+      - name: 'Install build dependencies'
+        run: |
+          apt-get update
+          apt-get install -y ninja-build autoconf automake libtool libsdl2-dev
+
+      - name: 'Cache dependencies'
+        id: cache-dependencies
+        uses: actions/cache@v4
+        with:
+          path: '/github/home/wiiprefix'
+          key: wii-dependencies-UTF8PROC_${{ env.UTF8PROC_VERSION }}
+
+      - name: 'Download utf8proc'
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
+        run: |
+          wget -O "utf8proc-$UTF8PROC_VERSION.tar.gz" "https://github.com/JuliaStrings/utf8proc/releases/download/v$UTF8PROC_VERSION/utf8proc-$UTF8PROC_VERSION.tar.gz"
+          echo "$UTF8PROC_SHA256  utf8proc-$UTF8PROC_VERSION.tar.gz" | sha256sum -c -
+          tar xzvf "utf8proc-$UTF8PROC_VERSION.tar.gz"
+
+      - name: 'Build utf8proc'
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
+        run: |
+          cd utf8proc-$UTF8PROC_VERSION
+          mkdir build
+          cd build
+          export PATH="${DEVKITPRO}/portlibs/wii/bin:${DEVKITPPC}/bin:$PATH"
+          powerpc-eabi-cmake -DCMAKE_INSTALL_PREFIX="$HOME/wiiprefix" ..
+          make
+          make install
+          cd ../..
+
+      - name: 'Get date of latest commit'
+        id: date
+        run: |
+          cd schismtracker
+          echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
+          cd ..
+
+      - name: 'Build Schism'
+        run: |
+          cd schismtracker
+          autoreconf -i
+          mkdir build
+          cd build
+          export PATH="${DEVKITPRO}/portlibs/wii/bin:${DEVKITPPC}/bin:$PATH"
+          FLAC_LIBS="-L${DEVKITPRO}/portlibs/ppc/lib -lFLAC -logg" PKG_CONFIG=pkg-config PKG_CONFIG_LIBDIR="$HOME/wiiprefix/lib/pkgconfig:${DEVKITPRO}/portlibs/wii/lib/pkgconfig:${DEVKITPRO}/portlibs/ppc/lib/pkgconfig" ../configure --host=powerpc-eabi --with-flac --without-sdl12 --enable-flac-linking --enable-force-wii --enable-sdl2-linking
+          make
+          powerpc-eabi-strip -S schismtracker.elf
+          mkdir -p up/apps
+          cp -r ../sys/wii/schismtracker up/apps
+          mv schismtracker.elf up/apps/schismtracker/boot.elf
+          wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
+          cp ../docs/configuration.md ../README.md ../COPYING COPYING.Xiph up/apps/schismtracker
+
+      - name: 'Upload binary'
+        uses: actions/upload-artifact@v4
+        with:
+          name: schismtracker-${{ steps.date.outputs.date }}-wii
+          path: schismtracker/build/up

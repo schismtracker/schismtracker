@@ -21,12 +21,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SONG_H
-#define SONG_H
+#ifndef SCHISM_SONG_H_
+#define SCHISM_SONG_H_
 
 #include <stdint.h>
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 #include "util.h"
 #include "disko.h"
 #include "fmt.h"
@@ -66,6 +66,27 @@ struct audio_settings {
 };
 
 extern struct audio_settings audio_settings;
+
+struct audio_device {
+	int id;
+	char* name; /* UTF-8; must be free'd */
+};
+
+extern struct audio_device* audio_device_list;
+extern int audio_device_list_size;
+
+/* --------------------------------------------------------------------- */
+
+typedef struct {
+	int freq; // sample rate
+	uint8_t bits; // 8 or 16, always system byte order
+	uint8_t channels; // channels
+	uint16_t samples; // buffer size
+	void (*callback)(uint8_t *stream, int len);
+} schism_audio_spec_t;
+
+/* An opaque structure that each backend uses for its own data */
+typedef struct schism_audio_device schism_audio_device_t;
 
 /* --------------------------------------------------------------------- */
 /* some enums */
@@ -126,8 +147,9 @@ int song_load_sample(int n, const char *file);
 void song_create_host_instrument(int smp);
 
 int song_load_instrument(int n, const char *file);
+int song_load_instrument_with_prompt(int n, const char *file);
 int song_load_instrument_ex(int n, const char *file, const char *libf, int nx);
-int song_save_instrument(int n, const char *file);
+int song_save_instrument(const char *filename, const char *type, song_instrument_t *ins, int num);
 
 int song_sample_is_empty(int n);
 
@@ -176,6 +198,7 @@ void song_restore_channel_states(void);
 int song_find_last_channel(void);
 
 int song_get_pattern(int n, song_note_t ** buf);  // return 0 -> error
+int song_get_pattern_offset(int * n, song_note_t ** buf, int * row, int offset);
 uint8_t *song_get_orderlist(void);
 
 int song_pattern_is_empty(int p);
@@ -223,22 +246,23 @@ void song_initialise(void);
 /* called later at startup, and also when the relevant settings are changed */
 void song_init_modplug(void);
 
-/* Called at startup.
-The 'driver_spec' parameter is formatted as driver[:device].
-	'driver' is the name of the SDL driver to use
-		example: "alsa", "dsound"
-		SDL_AUDIODRIVER is set to this value
-	'device' (optional) is the name of the device to use
-		example: "hw:2", "/dev/dsp"
-		SDL_PATH_DSP and AUDIODEV are set to this
+/* parses strings in the old "driver spec" format Schism used in the config
+ * and still uses in the command line */
+void audio_parse_driver_spec(const char* spec, char** driver, char** device);
 
-For the SDL driver, 'nosound' and 'none' are aliases for 'dummy', for
-compatibility with previous Schism Tracker versions, and 'oss' is an
-alias for 'dsp', because 'dsp' is a dumb name for an audio driver. */
-void audio_init(const char *driver_spec);
+void audio_flash_reinitialized_text(int success);
+
+/* Called at startup.
+ *
+ * 'nosound' and 'none' are aliases for 'dummy' for compatibility with previous
+ * schism versions, and 'oss' is an alias for 'dsp', because 'dsp' is a dumb name
+ * for an audio driver. */
+int audio_init(const char *driver, const char *device);
 
 /* Reconfigure the same device that was opened before. */
-void audio_reinit(void);
+int audio_reinit(const char *device);
+
+void audio_quit(void);
 
 /* eq */
 void song_init_eq(int do_reset, uint32_t mix_freq);
@@ -249,7 +273,15 @@ void song_lock_audio(void);
 void song_unlock_audio(void);
 void song_stop_audio(void);
 void song_start_audio(void);
+
 const char *song_audio_driver(void);
+const char *song_audio_device(void);
+
+void free_audio_device_list(void);
+int refresh_audio_device_list(void);
+
+int audio_driver_count(void);
+const char *audio_driver_name(int x);
 
 void song_toggle_multichannel_mode(void);
 int song_is_multichannel_mode(void);
@@ -262,12 +294,15 @@ KEYJAZZ_INST_FAKE to keydown/up, since zero conflicts with the standard "use pre
 behavior which is normally internal, but is exposed on the pattern editor where it's possible to explicitly
 select sample #0. (note: this is a hack to work around another hack) */
 #define KEYJAZZ_CHAN_CURRENT 0
+// For automatic channel allocation when playing chords in the instrument editor.
+#define KEYJAZZ_CHAN_AUTO -1
 #define KEYJAZZ_NOINST -1
 #define KEYJAZZ_DEFAULTVOL -1
 #define KEYJAZZ_INST_FAKE -2
 int song_keydown(int samp, int ins, int note, int vol, int chan);
 int song_keyrecord(int samp, int ins, int note, int vol, int chan, int effect, int param);
 int song_keyup(int samp, int ins, int note);
+int song_keyup_channel(int samp, int ins, int note, int chan);
 
 void song_start(void);
 void song_start_once(void);
@@ -365,9 +400,6 @@ void song_init_instrument_from_sample(int ins, int samp);
 /* --------------------------------------------------------------------- */
 /* misc. */
 
-/* called by audio system when buffer stuff change */
-void midi_queue_alloc(int buffer_size, int channels, int samples_per_second);
-
 void song_flip_stereo(void);
 
 int song_get_surround(void);
@@ -388,5 +420,5 @@ void song_set_pan_scheme(int scheme);
 
 /* --------------------------------------------------------------------- */
 
-#endif /* ! SONG_H */
+#endif /* SCHISM_SONG_H_ */
 

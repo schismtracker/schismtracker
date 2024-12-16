@@ -25,7 +25,7 @@
 (As found in dro2midi.) */
 
 #include "headers.h"
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 static const uint8_t patches[][11] = {
 	{0x00,0x00,0x4F,0x00,0xF1,0xD2,0x51,0x43,0x00,0x00,0x06}, /*1*/
@@ -158,7 +158,7 @@ static const uint8_t patches[][11] = {
 	{0x0C,0x04,0x00,0x00,0xF0,0xF6,0xF0,0xE6,0x02,0x00,0x0E}, /*128*/
 };
 
-void adlib_patch_apply(song_sample_t *smp, int patchnum)
+void adlib_patch_apply(song_sample_t *smp, int32_t patchnum)
 {
 	if (patchnum < 0 || patchnum > 127) {
 		printf("adlib_patch_apply: invalid patch %d\n", patchnum);

@@ -20,12 +20,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
 #include "headers.h"
 #include "util.h"
-
-int macosx_ibook_fnswitch(int setting); /* FIXME: ugliness */
-
-#ifdef MACOSX
 
 #include <IOKit/IOKitLib.h>
 #include <IOKit/IOReturn.h>
@@ -93,11 +90,3 @@ int macosx_ibook_fnswitch(int setting)
 	/* old setting... */
 	return res;
 }
-
-#else
-
-int macosx_ibook_fnswitch(UNUSED int setting)
-{
-	return 0;
-}
-#endif

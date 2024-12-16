@@ -21,74 +21,134 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
 #include "headers.h"
+#include "bswap.h"
 #include "fmt.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 #include "song.h"
-#include "it_defs.h"
 
 /* --------------------------------------------------------------------- */
-int fmt_its_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
-{
-	struct it_sample *its;
 
-	if (!(length > 80 && memcmp(data, "IMPS", 4) == 0))
+// IT Sample Format
+struct it_sample {
+	uint32_t id;            // 0x53504D49
+	int8_t filename[12];
+	uint8_t zero;
+	uint8_t gvl;
+	uint8_t flags;
+	uint8_t vol;
+	int8_t name[26];
+	uint8_t cvt;
+	uint8_t dfp;
+	uint32_t length;
+	uint32_t loopbegin;
+	uint32_t loopend;
+	uint32_t c5speed;
+	uint32_t susloopbegin;
+	uint32_t susloopend;
+	uint32_t samplepointer;
+	uint8_t vis;
+	uint8_t vid;
+	uint8_t vir;
+	uint8_t vit;
+};
+
+/* --------------------------------------------------------------------- */
+
+int fmt_its_read_info(dmoz_file_t *file, slurp_t *fp)
+{
+	struct it_sample its;
+	unsigned char title[25];
+
+	if (slurp_read(fp, &its, sizeof(its)) != sizeof(its)
+		|| memcmp(&its.id, "IMPS", 4))
 		return 0;
 
-	its = (struct it_sample *)data;
-	file->smp_length = bswapLE32(its->length);
+	file->smp_length = bswapLE32(its.length);
 	file->smp_flags = 0;
 
-	if (its->flags & 2) {
+	if (its.flags & 2)
 		file->smp_flags |= CHN_16BIT;
-	}
-	if (its->flags & 16) {
+
+	if (its.flags & 16) {
 		file->smp_flags |= CHN_LOOP;
-		if (its->flags & 64)
+		if (its.flags & 64)
 			file->smp_flags |= CHN_PINGPONGLOOP;
 	}
-	if (its->flags & 32) {
+
+	if (its.flags & 32) {
 		file->smp_flags |= CHN_SUSTAINLOOP;
-		if (its->flags & 128)
+		if (its.flags & 128)
 			file->smp_flags |= CHN_PINGPONGSUSTAIN;
 	}
 
-	if (its->dfp & 128) file->smp_flags |= CHN_PANNING;
-	if (its->flags & 4) file->smp_flags |= CHN_STEREO;
+	if (its.dfp & 128) file->smp_flags |= CHN_PANNING;
+	if (its.flags & 4) file->smp_flags |= CHN_STEREO;
 
-	file->smp_defvol = its->vol;
-	file->smp_gblvol = its->gvl;
-	file->smp_vibrato_speed = its->vis;
-	file->smp_vibrato_depth = its->vid & 0x7f;
-	file->smp_vibrato_rate = its->vir;
+	file->smp_defvol = its.vol;
+	file->smp_gblvol = its.gvl;
+	file->smp_vibrato_speed = its.vis;
+	file->smp_vibrato_depth = its.vid & 0x7f;
+	file->smp_vibrato_rate = its.vir;
 
-	file->smp_loop_start = bswapLE32(its->loopbegin);
-	file->smp_loop_end = bswapLE32(its->loopend);
-	file->smp_speed = bswapLE32(its->C5Speed);
-	file->smp_sustain_start = bswapLE32(its->susloopbegin);
-	file->smp_sustain_end = bswapLE32(its->susloopend);
+	file->smp_loop_start = bswapLE32(its.loopbegin);
+	file->smp_loop_end = bswapLE32(its.loopend);
+	file->smp_speed = bswapLE32(its.c5speed);
+	file->smp_sustain_start = bswapLE32(its.susloopbegin);
+	file->smp_sustain_end = bswapLE32(its.susloopend);
 
-	file->smp_filename = strn_dup((const char *)its->filename, 12);
+	file->smp_filename = strn_dup((const char *)its.filename, sizeof(its.filename));
 	file->description = "Impulse Tracker Sample";
-	file->title = strn_dup((const char *)data + 20, 25);
 	file->type = TYPE_SAMPLE_EXTD;
+
+	slurp_seek(fp, 20, SEEK_SET);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
+		return 0;
+
+	file->title = strn_dup((const char *)title, sizeof(title));
 
 	return 1;
 }
 
-int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, song_sample_t *smp)
+// cwtv should be 0x214 when loading from its or iti
+int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 {
-	struct it_sample *its = (struct it_sample *)header;
-	uint32_t format;
-	uint32_t bp;
+	struct it_sample its;
 
-	if (length < 80 || strncmp((const char *) header, "IMPS", 4) != 0)
+	uint32_t format;
+
+#define READ_VALUE(name) do { if (slurp_read(fp, &its.name, sizeof(its.name)) != sizeof(its.name)) { return 0; } } while (0)
+
+	READ_VALUE(id);
+	READ_VALUE(filename);
+	READ_VALUE(zero);
+	READ_VALUE(gvl);
+	READ_VALUE(flags);
+	READ_VALUE(vol);
+	READ_VALUE(name);
+	READ_VALUE(cvt);
+	READ_VALUE(dfp);
+	READ_VALUE(length);
+	READ_VALUE(loopbegin);
+	READ_VALUE(loopend);
+	READ_VALUE(c5speed);
+	READ_VALUE(susloopbegin);
+	READ_VALUE(susloopend);
+	READ_VALUE(samplepointer);
+	READ_VALUE(vis);
+	READ_VALUE(vid);
+	READ_VALUE(vir);
+	READ_VALUE(vit);
+
+#undef READ_VALUE
+
+	if (its.id != bswapLE32(0x53504D49))
 		return 0;
+
 	/* alright, let's get started */
-	smp->length = bswapLE32(its->length);
-	if ((its->flags & 1) == 0) {
+	smp->length = bswapLE32(its.length);
+	if ((its.flags & 1) == 0) {
 		// sample associated with header
 		return 0;
 	}
@@ -96,44 +156,51 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
 	// endianness (always little)
 	format = SF_LE;
 	// channels
-	format |= (its->flags & 4) ? SF_SS : SF_M;
-	if (its->flags & 8) {
+	format |= (its.flags & 4) ? SF_SS : SF_M;
+	if (its.flags & 8) {
 		// compression algorithm
-		format |= (its->cvt & 4) ? SF_IT215 : SF_IT214;
+		format |= (its.cvt & 4) ? SF_IT215 : SF_IT214;
 	} else {
 		// signedness (or delta?)
-		format |= (its->cvt & 4) ? SF_PCMD : (its->cvt & 1) ? SF_PCMS : SF_PCMU;
+		format |= (its.cvt & 4) ? SF_PCMD : (its.cvt & 1) ? SF_PCMS : SF_PCMU;
 	}
 	// bit width
-	format |= (its->flags & 2) ? SF_16 : SF_8;
+	format |= (its.flags & 2) ? SF_16 : SF_8;
 
-	smp->global_volume = its->gvl;
-	if (its->flags & 16) {
+	smp->global_volume = its.gvl;
+	if (its.flags & 16) {
 		smp->flags |= CHN_LOOP;
-		if (its->flags & 64)
+		if (its.flags & 64)
 			smp->flags |= CHN_PINGPONGLOOP;
 	}
-	if (its->flags & 32) {
+	if (its.flags & 32) {
 		smp->flags |= CHN_SUSTAINLOOP;
-		if (its->flags & 128)
+		if (its.flags & 128)
 			smp->flags |= CHN_PINGPONGSUSTAIN;
 	}
-	smp->volume = its->vol * 4;
-	strncpy(smp->name, (const char *) its->name, 25);
-	smp->panning = (its->dfp & 127) * 4;
-	if (its->dfp & 128)
+
+	/* IT sometimes didn't clear the flag after loading a stereo sample. This appears to have
+	 * been fixed sometime before IT 2.14, which is fortunate because that's what a lot of other
+	 * programs annoyingly identify themselves as. */
+	if (cwtv < 0x0214)
+		its.flags &= ~4;
+
+	smp->volume = its.vol * 4;
+	strncpy(smp->name, (const char *) its.name, 25);
+	smp->panning = (its.dfp & 127) * 4;
+	if (its.dfp & 128)
 		smp->flags |= CHN_PANNING;
-	smp->loop_start = bswapLE32(its->loopbegin);
-	smp->loop_end = bswapLE32(its->loopend);
-	smp->c5speed = bswapLE32(its->C5Speed);
-	smp->sustain_start = bswapLE32(its->susloopbegin);
-	smp->sustain_end = bswapLE32(its->susloopend);
+	smp->loop_start = bswapLE32(its.loopbegin);
+	smp->loop_end = bswapLE32(its.loopend);
+	smp->c5speed = bswapLE32(its.c5speed);
+	smp->sustain_start = bswapLE32(its.susloopbegin);
+	smp->sustain_end = bswapLE32(its.susloopend);
 
 	int vibs[] = {VIB_SINE, VIB_RAMP_DOWN, VIB_SQUARE, VIB_RANDOM};
-	smp->vib_type = vibs[its->vit & 3];
-	smp->vib_rate = its->vir;
-	smp->vib_depth = its->vid;
-	smp->vib_speed = its->vis;
+	smp->vib_type = vibs[its.vit & 3];
+	smp->vib_rate = its.vir;
+	smp->vib_depth = its.vid;
+	smp->vib_speed = its.vis;
 
 	// sanity checks
 	// (I should probably have more of these in general)
@@ -154,22 +221,55 @@ int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, s
 		smp->flags &= ~(CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
 	}
 
-	bp = bswapLE32(its->samplepointer);
+	its.samplepointer = bswapLE32(its.samplepointer);
 
-	// dumb casts :P
-	return csf_read_sample((song_sample_t *) smp, format,
-			(const char *) (data + bp),
-			(uint32_t) (length - bp));
+	const int64_t pos = slurp_tell(fp);
+	if (pos < 0)
+		return 0;
+
+	int r;
+
+	if ((its.flags & 1) && its.cvt == 64 && its.length == 12) {
+		// OPL instruments in OpenMPT MPTM files (which are essentially extended IT files)
+		slurp_seek(fp, its.samplepointer, SEEK_SET);
+		r = slurp_read(fp, smp->adlib_bytes, 12);
+		smp->flags |= CHN_ADLIB;
+		// dumb hackaround that ought to some day be fixed:
+		smp->length = 1;
+		smp->data = csf_allocate_sample(1);
+	} else if (its.flags & 1) {
+		slurp_seek(fp, its.samplepointer, SEEK_SET);
+
+		uint32_t flags = SF_LE;
+		flags |= (its.flags & 4) ? SF_SS : SF_M;
+		if (its.flags & 8) {
+			flags |= (its.cvt & 4) ? SF_IT215 : SF_IT214;
+		} else {
+			// XXX for some reason I had a note in pm/fmt/it.c saying that I had found some
+			// .it files with the signed flag set incorrectly and to assume unsigned when
+			// hdr.cwtv < 0x0202. Why, and for what files?
+			// Do any other players use the header for deciding sample data signedness?
+			flags |= (its.cvt & 4) ? SF_PCMD : (its.cvt & 1) ? SF_PCMS : SF_PCMU;
+		}
+		flags |= (its.flags & 2) ? SF_16 : SF_8;
+		r = csf_read_sample(smp, flags, fp);
+	} else {
+		r = smp->length = 0;
+	}
+
+	slurp_seek(fp, pos, SEEK_SET);
+
+	return r;
 }
 
-int fmt_its_load_sample(const uint8_t *data, size_t length, song_sample_t *smp)
+int fmt_its_load_sample(slurp_t *fp, song_sample_t *smp)
 {
-	return load_its_sample(data, data, length, smp);
+	return load_its_sample(fp, smp, 0x214);
 }
 
 void save_its_header(disko_t *fp, song_sample_t *smp)
 {
-	struct it_sample its = {};
+	struct it_sample its = {0};
 
 	its.id = bswapLE32(0x53504D49); // IMPS
 	strncpy((char *) its.filename, smp->filename, 12);
@@ -198,7 +298,7 @@ void save_its_header(disko_t *fp, song_sample_t *smp)
 	its.length = bswapLE32(smp->length);
 	its.loopbegin = bswapLE32(smp->loop_start);
 	its.loopend = bswapLE32(smp->loop_end);
-	its.C5Speed = bswapLE32(smp->c5speed);
+	its.c5speed = bswapLE32(smp->c5speed);
 	its.susloopbegin = bswapLE32(smp->sustain_start);
 	its.susloopend = bswapLE32(smp->sustain_end);
 	//its.samplepointer = 42; - this will be filled in later
@@ -213,11 +313,37 @@ void save_its_header(disko_t *fp, song_sample_t *smp)
 		case VIB_SINE:      its.vit = 0; break;
 	}
 
-	disko_write(fp, &its, sizeof(its));
+#define WRITE_VALUE(name) do { disko_write(fp, &its.name, sizeof(its.name)); } while (0)
+
+	WRITE_VALUE(id);
+	WRITE_VALUE(filename);
+	WRITE_VALUE(zero);
+	WRITE_VALUE(gvl);
+	WRITE_VALUE(flags);
+	WRITE_VALUE(vol);
+	WRITE_VALUE(name);
+	WRITE_VALUE(cvt);
+	WRITE_VALUE(dfp);
+	WRITE_VALUE(length);
+	WRITE_VALUE(loopbegin);
+	WRITE_VALUE(loopend);
+	WRITE_VALUE(c5speed);
+	WRITE_VALUE(susloopbegin);
+	WRITE_VALUE(susloopend);
+	WRITE_VALUE(samplepointer);
+	WRITE_VALUE(vis);
+	WRITE_VALUE(vid);
+	WRITE_VALUE(vir);
+	WRITE_VALUE(vit);
+
+#undef WRITE_VALUE
 }
 
 int fmt_its_save_sample(disko_t *fp, song_sample_t *smp)
 {
+	if (smp->flags & CHN_ADLIB)
+		return SAVE_UNSUPPORTED;
+
 	save_its_header(fp, smp);
 	csf_write_sample(fp, smp, SF_LE | SF_PCMS
 			| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
@@ -225,7 +351,7 @@ int fmt_its_save_sample(disko_t *fp, song_sample_t *smp)
 			UINT32_MAX);
 
 	/* Write the sample pointer. In an ITS file, the sample data is right after the header,
-	so its position in the file will be the same as the size of the header. */
+	 * so its position in the file will be the same as the size of the header. */
 	unsigned int tmp = bswapLE32(sizeof(struct it_sample));
 	disko_seek(fp, 0x48, SEEK_SET);
 	disko_write(fp, &tmp, 4);

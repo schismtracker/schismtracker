@@ -21,18 +21,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
 #include "headers.h"
+#include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 /* --------------------------------------------------------------------- */
 
 struct header_669 {
-	char sig[2];
-	char songmessage[108];
+	uint8_t sig[2];
+	uint8_t songmessage[108];
 	uint8_t samples;
 	uint8_t patterns;
 	uint8_t restartpos;
@@ -41,33 +41,52 @@ struct header_669 {
 	uint8_t breaks[128];
 };
 
-int fmt_669_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+static int read_header_669(struct header_669 *hdr, slurp_t *fp)
 {
-	struct header_669 *header = (struct header_669 *) data;
+#define READ_VALUE(name) \
+	if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) return 0
+
+	READ_VALUE(sig);
+	READ_VALUE(songmessage);
+	READ_VALUE(samples);
+	READ_VALUE(patterns);
+	READ_VALUE(restartpos);
+	READ_VALUE(orders);
+	READ_VALUE(tempolist);
+	READ_VALUE(breaks);
+
+#undef READ_VALUE
+
+	return 1;
+}
+
+int fmt_669_read_info(dmoz_file_t *file, slurp_t *fp)
+{
+	struct header_669 hdr;
+	if (!read_header_669(&hdr, fp))
+		return 0;
+
 	unsigned long i;
 	const char *desc;
 
-	if (length < sizeof(struct header_669))
-		return 0;
-
 	/* Impulse Tracker identifies any 669 file as a "Composer 669 Module",
 	regardless of the signature tag. */
-	if (memcmp(header->sig, "if", 2) == 0)
+	if (memcmp(hdr.sig, "if", 2) == 0)
 		desc = "Composer 669 Module";
-	else if (memcmp(header->sig, "JN", 2) == 0)
+	else if (memcmp(hdr.sig, "JN", 2) == 0)
 		desc = "Extended 669 Module";
 	else
 		return 0;
 
-	if (header->samples == 0 || header->patterns == 0
-	    || header->samples > 64 || header->patterns > 128
-	    || header->restartpos > 127)
+	if (hdr.samples == 0 || hdr.patterns == 0
+	    || hdr.samples > 64 || hdr.patterns > 128
+	    || hdr.restartpos > 127)
 		return 0;
 	for (i = 0; i < 128; i++)
-		if (header->breaks[i] > 0x3f)
+		if (hdr.breaks[i] > 0x3f)
 			return 0;
 
-	file->title = strn_dup(header->songmessage, 36);
+	file->title = strn_dup((const char*)hdr.songmessage, sizeof(hdr.songmessage));
 	file->description = desc;
 	/*file->extension = str_dup("669");*/
 	file->type = TYPE_MODULE_S3M;
@@ -111,7 +130,7 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	strncpy(titletmp, song->message, 36);
 	titletmp[36] = '\0';
 	titletmp[strcspn(titletmp, "\r\n")] = '\0';
-	trim_string(titletmp);
+	str_trim(titletmp);
 	titletmp[25] = '\0';
 	strcpy(song->title, titletmp);
 
@@ -163,18 +182,28 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	/* patterns */
 	for (pat = 0; pat < npat; pat++) {
-		uint8_t effect[8] = {
-			255, 255, 255, 255, 255, 255, 255, 255
+		static const uint32_t effect_lut[] = {
+			FX_PORTAMENTOUP,   /* slide up (param * 80) hz on every tick */
+			FX_PORTAMENTODOWN, /* slide down (param * 80) hz on every tick */
+			FX_TONEPORTAMENTO, /* slide to note by (param * 40) hz on every tick */
+			0,                 /* add (param * 80) hz to sample frequency */
+			FX_VIBRATO,        /* add (param * 669) hz on every other tick */
+			FX_SPEED,          /* set ticks per row */
+			FX_PANNINGSLIDE,   /* extended UNIS 669 effect */
+			FX_RETRIG,         /* extended UNIS 669 effect */
 		};
-		uint8_t rows = breakpos[pat] + 1;
-		if (rows > 64) {
-			return LOAD_UNSUPPORTED;
-		}
+		uint8_t effect[8] = {255, 255, 255, 255, 255, 255, 255, 255};
 
-		note = song->patterns[pat] = csf_allocate_pattern(CLAMP(rows, 32, 64));
+		uint8_t rows = breakpos[pat] + 1;
+		if (rows > 64)
+			return LOAD_UNSUPPORTED;
+
+		song->patterns[pat] = csf_allocate_pattern(CLAMP(rows, 32, 64));
 		song->pattern_size[pat] = song->pattern_alloc_size[pat] = CLAMP(rows, 32, 64);
 
-		for (row = 0; row < rows; row++, note += 56) {
+		for (row = 0; row < rows; row++) {
+			/* XXX what is 64? */
+			note = song->patterns[pat] + (row * 64);
 			for (chan = 0; chan < 8; chan++, note++) {
 				slurp_read(fp, b, 3);
 
@@ -190,67 +219,64 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					note->instrument = ((b[0] & 3) << 4 | (b[1] >> 4)) + 1;
 					note->voleffect = VOLFX_VOLUME;
 					note->volparam = (b[1] & 0xf) << 2;
+					effect[chan] = 0xff;
 					break;
 				}
-				/* (sloppily) import the stupid effect */
+
+				/* now handle effects */
 				if (b[2] != 0xff)
 					effect[chan] = b[2];
+
+				/* param value of zero = reset */
+				if ((b[2] & 0x0f) == 0 && b[2] != 0x30)
+					effect[chan] = 0xff;
+
 				if (effect[chan] == 0xff)
 					continue;
-				note->param = effect[chan] & 0xf;
-				switch (effect[chan] >> 4) {
+
+				note->param = effect[chan] & 0x0f;
+
+				uint8_t e = effect[chan] >> 4;
+				if (e < ARRAY_SIZE(effect_lut)) {
+					note->effect = effect_lut[e];
+				} else {
+					note->effect = FX_NONE;
+					continue;
+				}
+
+				/* fix some commands */
+				switch (e) {
 				default:
-					/* oops. never mind. */
-					//printf("ignoring effect %X\n", effect[chan]);
-					note->param = 0;
-					break;
-				case 0: /* A - portamento up */
-					note->effect = FX_PORTAMENTOUP;
-					break;
-				case 1: /* B - portamento down */
-					note->effect = FX_PORTAMENTODOWN;
-					break;
-				case 2: /* C - port to note */
-					note->effect = FX_TONEPORTAMENTO;
+					/* do nothing */
 					break;
 				case 3: /* D - frequency adjust (??) */
 					note->effect = FX_PORTAMENTOUP;
-					if (note->param)
-						note->param |= 0xf0;
-					else
-						note->param = 0xf1;
+					note->param |= 0xf0;
 					effect[chan] = 0xff;
 					break;
-				case 4: /* E - frequency vibrato */
-					note->effect = FX_VIBRATO;
-					note->param |= 0x80;
+				case 4: /* E - frequency vibrato - almost like an arpeggio, but does not arpeggiate by a given note but by a frequency amount. */
+					note->effect = FX_ARPEGGIO;
+					note->param |= (note->param << 4);
 					break;
 				case 5: /* F - set tempo */
-					/* TODO: param 0 is a "super fast tempo" in extended mode (?) */
-					if (note->param)
-						note->effect = FX_SPEED;
-					effect[chan] = 0xff;
+					/* TODO: param 0 is a "super fast tempo" in Unis 669 mode (???) */
+					effect[chan] = 0xFF;
 					break;
-				case 6: /* G - subcommands (extended) */
-					switch (note->param) {
-					case 0: /* balance fine slide left */
-						//TODO("test pan slide effect (P%dR%dC%d)", pat, row, chan);
-						note->effect = FX_PANNINGSLIDE;
-						note->param = 0x8F;
+				case 6:
+					// G - subcommands (extended)
+					switch(note->param)
+					{
+					case 0:
+						// balance fine slide left
+						note->param = 0x4F;
 						break;
-					case 1: /* balance fine slide right */
-						//TODO("test pan slide effect (P%dR%dC%d)", pat, row, chan);
-						note->effect = FX_PANNINGSLIDE;
-						note->param = 0xF8;
+					case 1:
+						// balance fine slide right
+						note->param = 0xF4;
 						break;
 					default:
-						/* oops, nothing again */
-						note->param = 0;
+						note->effect = FX_NONE;
 					}
-					break;
-				case 7: /* H - slot retrig */
-					//TODO("test slot retrig (P%dR%dC%d)", pat, row, chan);
-					note->effect = FX_RETRIG;
 					break;
 				}
 			}
@@ -289,14 +315,10 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	/* sample data */
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (smp = 1; smp <= nsmp; smp++) {
-			uint32_t ssize;
-
 			if (song->samples[smp].length == 0)
 				continue;
 
-			ssize = csf_read_sample(song->samples + smp, SF_LE | SF_M | SF_PCMU | SF_8,
-				fp->data + fp->pos, fp->length - fp->pos);
-			slurp_seek(fp, ssize, SEEK_CUR);
+			csf_read_sample(song->samples + smp, SF_LE | SF_M | SF_PCMU | SF_8, fp);
 		}
 	}
 

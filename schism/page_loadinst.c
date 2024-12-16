@@ -21,20 +21,23 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_DIRENT
-#define NEED_TIME
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
+#include "charset.h"
 #include "song.h"
 #include "page.h"
 #include "dmoz.h"
 #include "log.h"
+#include "fakemem.h"
+#include "dialog.h"
+#include "widget.h"
+#include "vgamem.h"
+#include "osdefs.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
-
-#include "sdlmain.h"
 
 #include <fcntl.h>
 #include <ctype.h>
@@ -44,7 +47,7 @@
 /* the locals */
 
 static struct widget widgets_loadinst[1];
-static char inst_cwd[PATH_MAX+1] = "";
+static char inst_cwd[SCHISM_PATH_MAX] = {0};
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -65,7 +68,7 @@ static dmoz_filelist_t flist;
 #define current_file flist.selected
 
 static int slash_search_mode = -1;
-static char slash_search_str[PATH_MAX];
+static char slash_search_str[SCHISM_PATH_MAX];
 
 /* get a color index from a dmoz_file_t 'type' field */
 static inline int get_type_color(int type)
@@ -112,7 +115,7 @@ static void read_directory(void)
 
 	clear_directory();
 
-	if (stat(inst_cwd, &st) < 0)
+	if (os_stat(inst_cwd, &st) < 0)
 		directory_mtime = 0;
 	else
 		directory_mtime = st.st_mtime;
@@ -138,13 +141,12 @@ static int change_dir(const char *dir)
 
 	dmoz_cache_update(inst_cwd, &flist, NULL);
 
-	if (stat(ptr, &buf) == 0 && S_ISDIR(buf.st_mode)) {
-		strncpy(cfg_dir_instruments, ptr, PATH_MAX);
-		cfg_dir_instruments[PATH_MAX] = 0;
-
+	if (os_stat(ptr, &buf) == 0 && S_ISDIR(buf.st_mode)) {
+		strncpy(cfg_dir_instruments, ptr, ARRAY_SIZE(cfg_dir_instruments) - 1);
+		cfg_dir_instruments[ARRAY_SIZE(cfg_dir_instruments) - 1] = 0;
 	}
-	strncpy(inst_cwd, ptr, PATH_MAX);
-	inst_cwd[PATH_MAX] = 0;
+	strncpy(inst_cwd, ptr, ARRAY_SIZE(inst_cwd) - 1);
+	inst_cwd[ARRAY_SIZE(inst_cwd) - 1] = 0;
 	free(ptr);
 
 	read_directory();
@@ -155,8 +157,8 @@ static int change_dir(const char *dir)
 
 static void load_instrument_draw_const(void)
 {
-	draw_fill_chars(6, 13, 67, 47, 0);
-	draw_thin_inner_box(50, 12, 61, 48, 0,0);
+	draw_fill_chars(6, 13, 67, 47, DEFAULT_FG, 0);
+	draw_box(50, 12, 61, 48, BOX_THIN | BOX_INNER | BOX_SHADE_NONE);
 	draw_box(5, 12, 68, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 
 }
@@ -174,7 +176,7 @@ static void _common_set_page(void)
 	/* if we have a list, the directory didn't change, and the mtime is the same, we're set */
 	if (flist.num_files > 0
 	    && (status.flags & DIR_SAMPLES_CHANGED) == 0
-	    && stat(inst_cwd, &st) == 0
+		&& os_stat(inst_cwd, &st) == 0
 	    && st.st_mtime == directory_mtime) {
 		return;
 	}
@@ -203,7 +205,7 @@ static void library_instrument_set_page(void)
 
 static void file_list_draw(void)
 {
-	int n, pos, fg, bg, i;
+	int n, pos, fg, bg;
 	char buf[8];
 	char sbuf[32];
 	dmoz_file_t *file;
@@ -223,25 +225,23 @@ static void file_list_draw(void)
 			bg = 0;
 		}
 
-		draw_text(numtostr(3, n, buf), 2, pos, 0, 2);
+		draw_text(str_from_num(3, n, buf), 2, pos, 0, 2);
 		draw_text_len((file->title ? file->title : ""),
 						25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
-		draw_text_len((file->base ? file->base : ""),
-						18, 32, pos, fg, bg);
-
+		draw_text_utf8_len(file->base ? file->base : "", 18, 32, pos, fg, bg);
 		if (file->base && slash_search_mode > -1) {
-			if (strncasecmp(file->base,slash_search_str,slash_search_mode) == 0) {
-				for (i = 0 ; i < slash_search_mode; i++) {
-					if (tolower(((unsigned)file->base[i]))
-					!= tolower(((unsigned)slash_search_str[i]))) break;
-					draw_char(file->base[i], 32+i, pos, 3,1);
-				}
+			if (charset_strncasecmp(file->base, CHARSET_CHAR,
+					slash_search_str, CHARSET_CP437, slash_search_mode) == 0) {
+				size_t len = charset_strncasecmplen(file->base, CHARSET_CHAR,
+					slash_search_str, CHARSET_CP437, slash_search_mode);
+
+				draw_text_utf8_len(file->base, MIN(len, 18), 32, pos, 3, 1);
 			}
 		}
 
 		if (file->sampsize > 1) {
-			sprintf(sbuf, "%u Samples", file->sampsize);
+			sprintf(sbuf, "%d Samples", file->sampsize);
 			draw_text_len(sbuf, 10, 51, pos, fg, bg);
 		} else if (file->sampsize == 1) {
 			draw_text("1 Sample  ", 51, pos, fg, bg);
@@ -268,7 +268,7 @@ static void file_list_draw(void)
 		draw_char(168, 31, pos++, 2, 0);
 }
 
-static void do_enable_inst(UNUSED void *d)
+static void do_enable_inst(SCHISM_UNUSED void *d)
 {
 	song_set_instrument_mode(1);
 	main_song_changed_cb();
@@ -276,7 +276,7 @@ static void do_enable_inst(UNUSED void *d)
 	memused_songchanged();
 }
 
-static void dont_enable_inst(UNUSED void *d)
+static void dont_enable_inst(SCHISM_UNUSED void *d)
 {
 	set_page(PAGE_INSTRUMENT_LIST);
 }
@@ -288,18 +288,18 @@ static void reposition_at_slash_search(void)
 
 	if (slash_search_mode < 0) return;
 	bl = b = -1;
+
 	for (i = 0; i < flist.num_files; i++) {
 		f = flist.files[i];
 		if (!f || !f->base) continue;
-		for (j = 0; j < slash_search_mode; j++) {
-			if (tolower(((unsigned)f->base[j]))
-			!= tolower(((unsigned)slash_search_str[j]))) break;
-		}
+
+		j = charset_strncasecmplen(f->base, CHARSET_CHAR, slash_search_str, CHARSET_CP437, slash_search_mode);
 		if (bl < j) {
 			bl = j;
 			b = i;
 		}
 	}
+
 	if (bl > -1) {
 		current_file = b;
 		file_list_reposition();
@@ -341,7 +341,7 @@ static void handle_enter_key(void)
 	/* TODO */
 }
 
-static void do_delete_file(UNUSED void *data)
+static void do_delete_file(SCHISM_UNUSED void *data)
 {
 	int old_top_file, old_current_file;
 	char *ptr;
@@ -369,11 +369,27 @@ static void do_delete_file(UNUSED void *data)
 	file_list_reposition();
 }
 
+static int file_list_handle_text_input(const char *text)
+{
+	dmoz_file_t* f = flist.files[current_file];
+
+	for (; *text; text++) {
+		if (*text >= 32 && (slash_search_mode > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
+			if (slash_search_mode < 0) slash_search_mode = 0;
+			if (slash_search_mode + 1 < ARRAY_SIZE(slash_search_str)) {
+				slash_search_str[slash_search_mode++] = *text;
+				reposition_at_slash_search();
+				status.flags |= NEED_UPDATE;
+			}
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static int file_list_handle_key(struct key_event * k)
 {
-	dmoz_file_t *f;
 	int new_file = current_file;
-	int c = unicode_to_ascii(k->unicode);
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 
@@ -389,21 +405,21 @@ static int file_list_handle_key(struct key_event * k)
 			}
 		}
 	}
-	switch (k->sym.sym) {
-	case SDLK_UP:           new_file--; slash_search_mode = -1; break;
-	case SDLK_DOWN:         new_file++; slash_search_mode = -1; break;
-	case SDLK_PAGEUP:       new_file -= 35; slash_search_mode = -1; break;
-	case SDLK_PAGEDOWN:     new_file += 35; slash_search_mode = -1; break;
-	case SDLK_HOME:         new_file = 0; slash_search_mode = -1; break;
-	case SDLK_END:          new_file = flist.num_files - 1; slash_search_mode = -1; break;
+	switch (k->sym) {
+	case SCHISM_KEYSYM_UP:           new_file--; slash_search_mode = -1; break;
+	case SCHISM_KEYSYM_DOWN:         new_file++; slash_search_mode = -1; break;
+	case SCHISM_KEYSYM_PAGEUP:       new_file -= 35; slash_search_mode = -1; break;
+	case SCHISM_KEYSYM_PAGEDOWN:     new_file += 35; slash_search_mode = -1; break;
+	case SCHISM_KEYSYM_HOME:         new_file = 0; slash_search_mode = -1; break;
+	case SCHISM_KEYSYM_END:          new_file = flist.num_files - 1; slash_search_mode = -1; break;
 
-	case SDLK_ESCAPE:
+	case SCHISM_KEYSYM_ESCAPE:
 		if (slash_search_mode < 0) {
 			if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod))
 				set_page(PAGE_SAMPLE_LIST);
 			return 1;
 		} /* else fall through */
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		if (slash_search_mode < 0) {
 			if (k->state == KEY_PRESS)
 				return 0;
@@ -417,14 +433,14 @@ static int file_list_handle_key(struct key_event * k)
 			return 1;
 		}
 		return 1;
-	case SDLK_DELETE:
+	case SCHISM_KEYSYM_DELETE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		slash_search_mode = -1;
 		if (flist.num_files > 0)
 			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
 		return 1;
-	case SDLK_BACKSPACE:
+	case SCHISM_KEYSYM_BACKSPACE:
 		if (slash_search_mode > -1) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -433,30 +449,18 @@ static int file_list_handle_key(struct key_event * k)
 			reposition_at_slash_search();
 			return 1;
 		}
-	case SDLK_SLASH:
+	case SCHISM_KEYSYM_SLASH:
 		if (slash_search_mode < 0) {
-			if (k->orig_sym.sym == SDLK_SLASH) {
-				if (k->state == KEY_PRESS)
-					return 0;
-				slash_search_mode = 0;
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-			return 0;
+			if (k->state == KEY_PRESS)
+				return 0;
+			slash_search_mode = 0;
+			status.flags |= NEED_UPDATE;
+			return 1;
 		} /* else fall through */
 	default:
-		f = flist.files[current_file];
-		if (c >= 32 && (slash_search_mode > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-			if (slash_search_mode < 0) slash_search_mode = 0;
-			if (slash_search_mode < PATH_MAX) {
-				slash_search_str[slash_search_mode++] = c;
-				reposition_at_slash_search();
-				status.flags |= NEED_UPDATE;
-			}
-			return 1;
-		}
+		if (k->text)
+			return file_list_handle_text_input(k->text);
+
 		if (!k->mouse) return 0;
 	}
 
@@ -485,7 +489,7 @@ static void load_instrument_handle_key(struct key_event * k)
 {
 	if (k->state == KEY_RELEASE)
 		return;
-	if (k->sym.sym == SDLK_ESCAPE && NO_MODIFIER(k->mod))
+	if (k->sym == SCHISM_KEYSYM_ESCAPE && NO_MODIFIER(k->mod))
 		set_page(PAGE_INSTRUMENT_LIST);
 }
 
@@ -502,7 +506,7 @@ void load_instrument_load_page(struct page *page)
 	page->total_widgets = 1;
 	page->widgets = widgets_loadinst;
 	page->help_index = HELP_GLOBAL;
-	create_other(widgets_loadinst + 0, 0, file_list_handle_key, file_list_draw);
+	widget_create_other(widgets_loadinst + 0, 0, file_list_handle_key, file_list_handle_text_input, file_list_draw);
 	widgets_loadinst[0].accept_text = 1;
 }
 

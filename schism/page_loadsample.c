@@ -21,21 +21,25 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_DIRENT
-#define NEED_TIME
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
+#include "charset.h"
 #include "song.h"
 #include "page.h"
 #include "dmoz.h"
 #include "sample-edit.h"
+#include "keyboard.h"
+#include "fakemem.h"
 #include "log.h"
+#include "widget.h"
+#include "dialog.h"
+#include "vgamem.h"
+#include "osdefs.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
-
-#include "sdlmain.h"
 
 #include <fcntl.h>
 #include <ctype.h>
@@ -48,7 +52,7 @@ static struct vgamem_overlay sample_image = {
 	NULL, 0, 0, 0,
 };
 
-static char current_filename[PATH_MAX];
+static char current_filename[22];
 static int sample_speed_pos = 0;
 static int sample_loop_beg = 0;
 static int sample_loop_end = 0;
@@ -63,6 +67,8 @@ static int will_move_to = -1;
 static int fake_slot = KEYJAZZ_NOINST;
 static const char *const loop_states[] = {
 		"Off", "On Forwards", "On Ping Pong", NULL };
+
+static char samp_cwd[SCHISM_PATH_MAX] = {0};
 
 static void handle_preload(void);
 
@@ -84,7 +90,7 @@ static dmoz_filelist_t flist;
 #define current_file (flist.selected)
 
 static int search_pos = -1;
-static char search_str[PATH_MAX];
+static char search_str[SCHISM_PATH_MAX];
 
 /* get a color index from a dmoz_file_t 'type' field */
 static inline int get_type_color(int type)
@@ -121,11 +127,11 @@ static void file_list_reposition(void)
 		f = flist.files[current_file];
 
 		if (f && f->smp_filename) {
-			strncpy(current_filename, f->smp_filename,
-					PATH_MAX-1);
+			strncpy(current_filename, f->smp_filename, ARRAY_SIZE(current_filename) - 1);
 		} else if (f && f->base) {
-			strncpy(current_filename, f->base,
-					PATH_MAX-1);
+			CHARSET_EASY_MODE(f->base, CHARSET_CHAR, CHARSET_CP437, {
+				strncpy(current_filename, out, ARRAY_SIZE(current_filename) - 1);
+			});
 		} else {
 			current_filename[0] = '\0';
 		}
@@ -176,17 +182,17 @@ static void read_directory(void)
 	struct stat st;
 
 	clear_directory();
-	if (stat(cfg_dir_samples, &st) < 0)
+	if (os_stat(samp_cwd, &st) < 0)
 		directory_mtime = 0;
 	else
 		directory_mtime = st.st_mtime;
 	/* if the stat call failed, this will probably break as well, but
 	at the very least, it'll add an entry for the root directory. */
-	if (dmoz_read(cfg_dir_samples, &flist, NULL, dmoz_read_sample_library) < 0)
-		log_perror(cfg_dir_samples);
+	if (dmoz_read(samp_cwd, &flist, NULL, dmoz_read_sample_library) < 0)
+		log_perror(samp_cwd);
 
 	dmoz_filter_filelist(&flist, dmoz_fill_ext_data, &current_file, file_list_reposition);
-	dmoz_cache_lookup(cfg_dir_samples, &flist, NULL);
+	dmoz_cache_lookup(samp_cwd, &flist, NULL);
 	file_list_reposition();
 }
 
@@ -195,15 +201,20 @@ TODO: provide some sort of feedback if something went wrong. */
 static int change_dir(const char *dir)
 {
 	char *ptr = dmoz_path_normal(dir);
+	struct stat buf;
 
 	if (!ptr)
 		return 0;
 
 	dmoz_cache_update(cfg_dir_samples, &flist, NULL);
 
-	/* FIXME: need to make sure it exists, and that it's a directory */
-	strncpy(cfg_dir_samples, ptr, PATH_MAX);
-	cfg_dir_samples[PATH_MAX] = 0;
+	if (!os_stat(ptr, &buf) && S_ISDIR(buf.st_mode)) {
+		strncpy(cfg_dir_samples, ptr, ARRAY_SIZE(cfg_dir_samples) - 1);
+		// paranoia
+		cfg_dir_samples[ARRAY_SIZE(cfg_dir_samples) - 1] = '\0';
+	}
+	strncpy(samp_cwd, ptr, ARRAY_SIZE(samp_cwd) - 1);
+	samp_cwd[ARRAY_SIZE(samp_cwd) - 1] = '\0';
 	free(ptr);
 
 	read_directory();
@@ -219,27 +230,27 @@ static void load_sample_draw_const(void)
 	char sbuf[64];
 
 	draw_box(5, 12, 50, 48, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_fill_chars(6, 13, 49, 47, 0);
+	draw_fill_chars(6, 13, 49, 47, DEFAULT_FG, 0);
 
-	draw_fill_chars(64, 13, 77, 22, 0);
+	draw_fill_chars(64, 13, 77, 22, DEFAULT_FG, 0);
 	draw_box(62, 32, 72, 35, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(62, 36, 72, 40, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	draw_box(63, 12, 77, 23, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	draw_box(51, 24, 77, 29, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_fill_chars(52, 25, 76, 28, 0);
+	draw_fill_chars(52, 25, 76, 28, DEFAULT_FG, 0);
 
 	draw_box(51, 30, 77, 42, BOX_THIN | BOX_INNER | BOX_INSET);
 
-	draw_fill_chars(59, 44, 76, 47, 0);
+	draw_fill_chars(59, 44, 76, 47, DEFAULT_FG, 0);
 	draw_box(58, 43, 77, 48, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	f = NULL;
 	if (current_file >= 0 && current_file < flist.num_files && flist.files[current_file]) {
 		f = flist.files[current_file];
 
-		sprintf(sbuf, "%07d", f->smp_length);
+		sprintf(sbuf, "%07u", f->smp_length);
 		draw_text_len(sbuf, 13, 64, 22, 2, 0);
 
 		if (!f->smp_length && !f->smp_filename && !f->smp_flags) {
@@ -273,9 +284,9 @@ static void load_sample_draw_const(void)
 		}
 		sprintf(sbuf, "%07ld", (long)f->filesize);
 		draw_text(sbuf, 59, 45, 5,0);
-		get_date_string(f->timestamp, sbuf);
+		str_from_date(f->timestamp, sbuf);
 		draw_text(sbuf, 59, 46, 5,0);
-		get_time_string(f->timestamp, sbuf);
+		str_from_time(f->timestamp, sbuf);
 		draw_text(sbuf, 59, 47, 5,0);
 	}
 
@@ -320,15 +331,20 @@ static void _common_set_page(void)
 {
 	struct stat st;
 
+	if (!*samp_cwd) {
+		strncpy(samp_cwd, cfg_dir_samples, ARRAY_SIZE(samp_cwd) - 1);
+		samp_cwd[ARRAY_SIZE(samp_cwd) - 1] = '\0';
+	}
+
 	/* if we have a list, the directory didn't change, and the mtime is the same, we're set */
 	if (flist.num_files > 0
 	    && (status.flags & DIR_SAMPLES_CHANGED) == 0
-	    && stat(cfg_dir_samples, &st) == 0
+	    && os_stat(samp_cwd, &st) == 0
 	    && st.st_mtime == directory_mtime) {
 		return;
 	}
 
-	change_dir(cfg_dir_samples);
+	change_dir(samp_cwd);
 
 	status.flags &= ~DIR_SAMPLES_CHANGED;
 	fake_slot = KEYJAZZ_NOINST;
@@ -354,7 +370,7 @@ static void library_sample_set_page(void)
 
 static void file_list_draw(void)
 {
-	int n, i, pos, fg, bg;
+	int n, pos, fg, bg;
 	char buf[8];
 	dmoz_file_t *file;
 
@@ -372,17 +388,19 @@ static void file_list_draw(void)
 			fg = get_type_color(file->type);
 			bg = 0;
 		}
-		draw_text(numtostr(3, n+1, buf), 2, pos, 0, 2);
-		draw_text_len(file->title ?: "", 25, 6, pos, fg, bg);
+		draw_text(str_from_num(3, n+1, buf), 2, pos, 0, 2);
+		draw_text_len(file->title ? file->title : "", 25, 6, pos, fg, bg);
 		draw_char(168, 31, pos, 2, bg);
-		draw_text_len(file->base ?: "", 18, 32, pos, fg, bg);
+		draw_text_utf8_len(file->base ? file->base : "", 18, 32, pos, fg, bg);
+
+		/* this is stupid */
 		if (file->base && search_pos > -1) {
-			if (strncasecmp(file->base,search_str,search_pos) == 0) {
-				for (i = 0 ; i < search_pos; i++) {
-					if (tolower(file->base[i]) != tolower(search_str[i]))
-						break;
-					draw_char(file->base[i], 32+i, pos, 3,1);
-				}
+			if (charset_strncasecmp(file->base, CHARSET_CHAR,
+					search_str, CHARSET_CP437, search_pos) == 0) {
+				size_t len = charset_strncasecmplen(file->base, CHARSET_CHAR,
+					search_str, CHARSET_CP437, search_pos);
+
+				draw_text_utf8_len(file->base, MIN(len, 18), 32, pos, 3, 1);
 			}
 		}
 	}
@@ -474,21 +492,21 @@ static int stereo_cvt_hk(struct key_event *k)
 		return 0;
 
 	/* trap the default dialog keys - we don't want to escape this dialog without running something */
-	switch (k->sym.sym) {
-	case SDLK_RETURN:
+	switch (k->sym) {
+	case SCHISM_KEYSYM_RETURN:
 		printf("why am I here\n");
-	case SDLK_ESCAPE: case SDLK_o: case SDLK_c:
+	case SCHISM_KEYSYM_ESCAPE: case SCHISM_KEYSYM_o: case SCHISM_KEYSYM_c:
 		return 1;
-	case SDLK_l:
+	case SCHISM_KEYSYM_l:
 		if (k->state == KEY_RELEASE)
 			stereo_cvt_complete_left();
 		return 1;
-	case SDLK_r:
+	case SCHISM_KEYSYM_r:
 		if (k->state == KEY_RELEASE)
 			stereo_cvt_complete_right();
 		return 1;
-	case SDLK_s:
-	case SDLK_b:
+	case SCHISM_KEYSYM_s:
+	case SCHISM_KEYSYM_b:
 		if (k->state == KEY_RELEASE)
 			stereo_cvt_complete_both();
 		return 1;
@@ -506,15 +524,15 @@ static void finish_load(int cur)
 	smp = song_get_sample(cur);
 	if (smp->flags & CHN_STEREO) {
 		struct dialog *dd;
-		create_button(stereo_cvt_widgets+0, 27, 30, 6,
+		widget_create_button(stereo_cvt_widgets+0, 27, 30, 6,
 				0, 0, 2, 1, 1,
 				stereo_cvt_complete_left, "Left", 2);
 
-		create_button(stereo_cvt_widgets+1, 37, 30, 6,
+		widget_create_button(stereo_cvt_widgets+1, 37, 30, 6,
 				1, 1, 0, 2, 2,
 				stereo_cvt_complete_both, "Both", 2);
 
-		create_button(stereo_cvt_widgets+2, 47, 30, 6,
+		widget_create_button(stereo_cvt_widgets+2, 47, 30, 6,
 				2, 2, 1, 0, 0,
 				stereo_cvt_complete_right, "Right", 1);
 
@@ -538,10 +556,8 @@ static void reposition_at_slash_search(void)
 	for (i = 0; i < flist.num_files; i++) {
 		f = flist.files[i];
 		if (!f || !f->base) continue;
-		for (j = 0; j < search_pos; j++) {
-			if (tolower(f->base[j]) != tolower(search_str[j]))
-				break;
-		}
+
+		j = charset_strncasecmplen(f->base, CHARSET_CHAR, search_str, CHARSET_CP437, search_pos);
 		if (bl < j) {
 			bl = j;
 			b = i;
@@ -576,9 +592,11 @@ static void handle_enter_key(void)
 		/* it's already been loaded, so copy it */
 		smp = song_get_sample(cur);
 		song_copy_sample(cur, file->sample);
-		strncpy(smp->name, file->title, 25);
+		strncpy(smp->name, file->title, ARRAY_SIZE(smp->name));
 		smp->name[25] = 0;
-		strncpy(smp->filename, file->base, 12);
+		CHARSET_EASY_MODE(file->base, CHARSET_CHAR, CHARSET_CP437, {
+			strncpy(smp->filename, out, ARRAY_SIZE(smp->filename));
+		});
 		smp->filename[12] = 0;
 		finish_load(cur);
 		memused_songchanged();
@@ -590,7 +608,7 @@ static void handle_enter_key(void)
 	}
 }
 
-static void do_discard_changes_and_move(UNUSED void *gn)
+static void do_discard_changes_and_move(SCHISM_UNUSED void *gn)
 {
 	fake_slot = KEYJAZZ_NOINST;
 	fake_slot_changed = 0;
@@ -600,7 +618,7 @@ static void do_discard_changes_and_move(UNUSED void *gn)
 	status.flags |= NEED_UPDATE;
 }
 
-static void do_delete_file(UNUSED void *data)
+static void do_delete_file(SCHISM_UNUSED void *data)
 {
 	int old_top_file, old_current_file;
 	char *ptr;
@@ -628,15 +646,30 @@ static void do_delete_file(UNUSED void *data)
 	file_list_reposition();
 }
 
+static int file_list_handle_text_input(const char *text)
+{
+	dmoz_file_t* f = flist.files[current_file];
+	for (; *text; text++) {
+		if (*text >= 32 && (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
+			if (search_pos < 0) search_pos = 0;
+			if (search_pos + 1 < ARRAY_SIZE(search_str)) {
+				search_str[search_pos++] = *text;
+				reposition_at_slash_search();
+				status.flags |= NEED_UPDATE;
+			}
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static int file_list_handle_key(struct key_event * k)
 {
-	dmoz_file_t *f;
 	int new_file = current_file;
-	int c = unicode_to_ascii(k->unicode);
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 
-	if (!(status.flags & CLASSIC_MODE) && k->sym.sym == SDLK_n && (k->mod & KMOD_ALT)) {
+	if (!(status.flags & CLASSIC_MODE) && k->sym == SCHISM_KEYSYM_n && (k->mod & SCHISM_KEYMOD_ALT)) {
 		if (k->state == KEY_RELEASE)
 			song_toggle_multichannel_mode();
 		return 1;
@@ -654,21 +687,21 @@ static int file_list_handle_key(struct key_event * k)
 			}
 		}
 	}
-	switch (k->sym.sym) {
-	case SDLK_UP:           new_file--; search_pos = -1; break;
-	case SDLK_DOWN:         new_file++; search_pos = -1; break;
-	case SDLK_PAGEUP:       new_file -= 35; search_pos = -1; break;
-	case SDLK_PAGEDOWN:     new_file += 35; search_pos = -1; break;
-	case SDLK_HOME:         new_file = 0; search_pos = -1; break;
-	case SDLK_END:          new_file = flist.num_files - 1; search_pos = -1; break;
+	switch (k->sym) {
+	case SCHISM_KEYSYM_UP:           new_file--; search_pos = -1; break;
+	case SCHISM_KEYSYM_DOWN:         new_file++; search_pos = -1; break;
+	case SCHISM_KEYSYM_PAGEUP:       new_file -= 35; search_pos = -1; break;
+	case SCHISM_KEYSYM_PAGEDOWN:     new_file += 35; search_pos = -1; break;
+	case SCHISM_KEYSYM_HOME:         new_file = 0; search_pos = -1; break;
+	case SCHISM_KEYSYM_END:          new_file = flist.num_files - 1; search_pos = -1; break;
 
-	case SDLK_ESCAPE:
+	case SCHISM_KEYSYM_ESCAPE:
 		if (search_pos < 0) {
 			if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod))
 				set_page(PAGE_SAMPLE_LIST);
 			return 1;
 		} /* else fall through */
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		if (search_pos < 0) {
 			if (k->state == KEY_PRESS)
 				return 0;
@@ -682,14 +715,14 @@ static int file_list_handle_key(struct key_event * k)
 			return 1;
 		}
 		return 1;
-	case SDLK_DELETE:
+	case SCHISM_KEYSYM_DELETE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		search_pos = -1;
 		if (flist.num_files > 0)
 			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
 		return 1;
-	case SDLK_BACKSPACE:
+	case SCHISM_KEYSYM_BACKSPACE:
 		if (search_pos > -1) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -698,30 +731,18 @@ static int file_list_handle_key(struct key_event * k)
 			reposition_at_slash_search();
 			return 1;
 		}
-	case SDLK_SLASH:
+	case SCHISM_KEYSYM_SLASH:
 		if (search_pos < 0) {
-			if (k->orig_sym.sym == SDLK_SLASH) {
-				if (k->state == KEY_PRESS)
-					return 0;
-				search_pos = 0;
-				status.flags |= NEED_UPDATE;
-				return 1;
-			}
-			return 0;
+			if (k->state == KEY_PRESS)
+				return 0;
+			search_pos = 0;
+			status.flags |= NEED_UPDATE;
+			return 1;
 		} /* else fall through */
 	default:
-		f = flist.files[current_file];
-		if (c >= 32 && (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
-			if (k->state == KEY_RELEASE)
-				return 1;
-			if (search_pos < 0) search_pos = 0;
-			if (search_pos < PATH_MAX) {
-				search_str[search_pos++] = c;
-				reposition_at_slash_search();
-				status.flags |= NEED_UPDATE;
-			}
-			return 1;
-		}
+		if (k->text)
+			file_list_handle_text_input(k->text);
+
 		if (!k->mouse) return 0;
 	}
 
@@ -765,7 +786,7 @@ static void load_sample_handle_key(struct key_event * k)
 {
 	int n, v;
 
-	if (k->state == KEY_PRESS && k->sym.sym == SDLK_ESCAPE && NO_MODIFIER(k->mod)) {
+	if (k->state == KEY_PRESS && k->sym == SCHISM_KEYSYM_ESCAPE && NO_MODIFIER(k->mod)) {
 		set_page(PAGE_SAMPLE_LIST);
 		return;
 	}
@@ -905,86 +926,88 @@ void load_sample_load_page(struct page *page)
 	clear_directory();
 
 
-	create_other(widgets_loadsample + 0, 0,
-				file_list_handle_key, file_list_draw);
+	widget_create_other(widgets_loadsample + 0, 0,
+				file_list_handle_key,
+				file_list_handle_text_input,
+				file_list_draw);
 	widgets_loadsample[0].accept_text = 1;
 	widgets_loadsample[0].next.tab = 1;
 
-	create_textentry(widgets_loadsample+1,
+	widget_create_textentry(widgets_loadsample+1,
 			64, 13,
 			13,
 				1,2, 9, handle_rename_op,
 				current_filename, sizeof(current_filename)-1);
 	sample_speed_pos = 0;
-	create_numentry(widgets_loadsample+2,
+	widget_create_numentry(widgets_loadsample+2,
 			64, 14,
 			7,
 			1,3, 9, handle_load_update,
 			0, 9999999,
 			&sample_speed_pos);
 
-	create_menutoggle(widgets_loadsample+3,
+	widget_create_menutoggle(widgets_loadsample+3,
 			64, 15,
 			2, 4,  0,  9,9, handle_load_update,
 			loop_states);
 
 	sample_loop_beg = 0;
-	create_numentry(widgets_loadsample+4,
+	widget_create_numentry(widgets_loadsample+4,
 			64, 16,
 			7,
 			3,5, 9, handle_load_update,
 			0, 9999999,
 			&sample_loop_beg);
 	sample_loop_end = 0;
-	create_numentry(widgets_loadsample+5,
+	widget_create_numentry(widgets_loadsample+5,
 			64, 17,
 			7,
 			4,6, 9, handle_load_update,
 			0, 9999999,
 			&sample_loop_end);
 
-	create_menutoggle(widgets_loadsample+6,
+	widget_create_menutoggle(widgets_loadsample+6,
 			64, 18,
 			5, 7,  0,  9,9, handle_load_update,
 			loop_states);
 
 	sample_susloop_beg = 0;
-	create_numentry(widgets_loadsample+7,
+	widget_create_numentry(widgets_loadsample+7,
 			64, 19,
 			7,
 			6,8, 9, handle_load_update,
 			0, 9999999,
 			&sample_susloop_beg);
 	sample_susloop_end = 0;
-	create_numentry(widgets_loadsample+8,
+	widget_create_numentry(widgets_loadsample+8,
 			64, 20,
 			7,
 			7,9, 9, handle_load_update,
 			0, 9999999,
 			&sample_susloop_end);
 
-	create_thumbbar(widgets_loadsample+9,
+	widget_create_thumbbar(widgets_loadsample+9,
 			63, 33,
 			9,
 			8, 10, 0, handle_load_update,
 			0,64);
-	create_thumbbar(widgets_loadsample+10,
+	widget_create_thumbbar(widgets_loadsample+10,
 			63, 34,
 			9,
 			9, 11, 0, handle_load_update,
 			0,64);
 
-	create_thumbbar(widgets_loadsample+11,
+	widget_create_thumbbar(widgets_loadsample+11,
 			63, 37,
 			9,
 			10, 12, 0, handle_load_update,
 			0,64);
-	create_thumbbar(widgets_loadsample+12,
+	widget_create_thumbbar(widgets_loadsample+12,
 			63, 38,
 			9,
 			11, 13, 0, handle_load_update,
 			0,32);
-	create_thumbbar(widgets_loadsample+13,
+	widget_create_thumbbar(widgets_loadsample+13,
 			63, 39,
 			9,
 			12, 13, 0, handle_load_update,

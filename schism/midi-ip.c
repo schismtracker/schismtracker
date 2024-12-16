@@ -25,12 +25,13 @@
 
 #include "it.h"
 #include "util.h"
-#include "sdlmain.h"
-#include "event.h"
+#include "events.h"
+
+#include "backend/threads.h" // mutexes
 
 #ifdef USE_NETWORK
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 #include <windows.h>
 #include <ws2tcpip.h>
 #else
@@ -39,6 +40,7 @@
 #include <netinet/in.h>
 #include <sys/select.h>
 #include <fcntl.h>
+#include <arpa/inet.h>
 #endif
 
 #include <errno.h>
@@ -47,7 +49,7 @@
 #define MIDI_IP_BASE    21928
 #define MAX_DGRAM_SIZE  1280
 
-#ifndef WIN32
+#ifndef SCHISM_WIN32
 static int wakeup[2];
 #endif
 static int real_num_ports = 0;
@@ -55,21 +57,19 @@ static int num_ports = 0;
 static int out_fd = -1;
 static int *port_fd = NULL;
 static int *state = NULL;
-static SDL_mutex *blocker = NULL;
+static schism_mutex_t *blocker = NULL;
 
 static void do_wake_main(void)
 {
-	/* send at end */
-	SDL_Event e;
-	e.user.type = SCHISM_EVENT_UPDATE_IPMIDI;
-	e.user.code = 0;
-	e.user.data1 = NULL;
-	e.user.data2 = NULL;
-	SDL_PushEvent(&e);
+	schism_event_t e = {
+		.type = SCHISM_EVENT_UPDATE_IPMIDI,
+	};
+
+	events_push_event(&e);
 }
 static void do_wake_midi(void)
 {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	/* anyone want to suggest how this is done? XXX */
 #else
 	if (write(wakeup[1], "\x1", 1) == 1) {
@@ -80,8 +80,8 @@ static void do_wake_midi(void)
 
 static int _get_fd(int pb, int isout)
 {
-	struct ip_mreq mreq = {};
-	struct sockaddr_in asin = {};
+	struct ip_mreq mreq = {0};
+	struct sockaddr_in asin = {0};
 	unsigned char *ipcopy;
 	int fd, opt;
 
@@ -96,7 +96,7 @@ static int _get_fd(int pb, int isout)
 	/* don't loop back what we generate */
 	opt = !isout;
 	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, (void*)&opt, sizeof(opt)) < 0) {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 		closesocket(fd);
 #else
 		close(fd);
@@ -106,7 +106,7 @@ static int _get_fd(int pb, int isout)
 
 	opt = 31;
 	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_TTL, (void*)&opt, sizeof(opt)) < 0) {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 		closesocket(fd);
 #else
 		close(fd);
@@ -117,7 +117,7 @@ static int _get_fd(int pb, int isout)
 	ipcopy = (unsigned char *)&mreq.imr_multiaddr;
 	ipcopy[0] = 225; ipcopy[1] = ipcopy[2] = 0; ipcopy[3] = 37;
 	if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&mreq, sizeof(mreq)) < 0) {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 		closesocket(fd);
 #else
 		close(fd);
@@ -127,7 +127,7 @@ static int _get_fd(int pb, int isout)
 
 	opt = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, (void*)&opt, sizeof(opt)) < 0) {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 		closesocket(fd);
 #else
 		close(fd);
@@ -139,7 +139,7 @@ static int _get_fd(int pb, int isout)
 	ipcopy = (unsigned char *)&asin.sin_addr;
 	if (!isout) {
 		/* all 0s is inaddr_any; but this is for listening */
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 		//JosepMa:On my machine, using the 225.0.0.37 address caused bind to fail.
 		//Didn't look too much to find why.
 		ipcopy[0] = ipcopy[1] = ipcopy[2] = ipcopy[3] = 0;
@@ -149,7 +149,7 @@ static int _get_fd(int pb, int isout)
 		asin.sin_port = htons(MIDI_IP_BASE+pb);
 	}
 	if (bind(fd, (struct sockaddr *)&asin, sizeof(asin)) < 0) {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 
 		int asdf = WSAGetLastError();
 		perror("binderror");
@@ -180,9 +180,9 @@ void ip_midi_setports(int n)
 	if (out_fd == -1) return;
 	if (status.flags & NO_NETWORK) return;
 
-	SDL_mutexP(blocker);
+	mt_mutex_lock(blocker);
 	num_ports = n;
-	SDL_mutexV(blocker);
+	mt_mutex_unlock(blocker);
 	do_wake_midi();
 }
 static void _readin(struct midi_provider *p, int en, int fd)
@@ -190,10 +190,10 @@ static void _readin(struct midi_provider *p, int en, int fd)
 	struct midi_port *ptr, *src;
 	static unsigned char buffer[65536];
 	static struct sockaddr_in asin;
-	unsigned slen = sizeof(asin);
+	socklen_t slen = sizeof(asin);
 	int r;
 
-	r = recvfrom(fd, buffer, sizeof(buffer), 0,
+	r = recvfrom(fd, (char*)buffer, sizeof(buffer), 0,
 		(struct sockaddr *)&asin, &slen);
 	if (r > 0) {
 		ptr = src = NULL;
@@ -206,7 +206,7 @@ static void _readin(struct midi_provider *p, int en, int fd)
 }
 static int _ip_thread(struct midi_provider *p)
 {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 	struct timeval tv;
 #else
 	static unsigned char buffer[4096];
@@ -216,7 +216,7 @@ static int _ip_thread(struct midi_provider *p)
 	int i, m;
 
 	while (!p->cancelled) {
-		SDL_mutexP(blocker);
+		mt_mutex_lock(blocker);
 		m = (volatile int)num_ports;
 		//If no ports, wait and try again
 		if (m > real_num_ports) {
@@ -242,12 +242,12 @@ static int _ip_thread(struct midi_provider *p)
 				}
 				real_num_ports = num_ports = m;
 			}
-			SDL_mutexV(blocker);
+			mt_mutex_unlock(blocker);
 			do_wake_main();
 
 		} else if (m < real_num_ports) {
 			for (i = m; i < real_num_ports; i++) {
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 				closesocket(port_fd[i]);
 #else
 				close(port_fd[i]);
@@ -256,14 +256,14 @@ static int _ip_thread(struct midi_provider *p)
 			}
 			real_num_ports = num_ports = m;
 
-			SDL_mutexV(blocker);
+			mt_mutex_unlock(blocker);
 			do_wake_main();
 		} else {
-			SDL_mutexV(blocker);
+			mt_mutex_unlock(blocker);
 			if (!real_num_ports) {
 				//Since the thread is not finished in this case (maybe it should),
 				//we put a delay to prevent the thread using all the cpu.
-				SDL_Delay(1000);
+				timer_msleep(1);
 			}
 		}
 
@@ -274,7 +274,7 @@ static int _ip_thread(struct midi_provider *p)
 			if (port_fd[i] > m) m = port_fd[i];
 		}
 
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 		tv.tv_sec = 1;
 		tv.tv_usec = 0;
 #else
@@ -283,13 +283,13 @@ static int _ip_thread(struct midi_provider *p)
 #endif
 		do {
 			i = select(m+1, &rfds, NULL, NULL,
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 				&tv
 #else
 				NULL
 #endif
 				);
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 			if (i == SOCKET_ERROR ) {
 				perror("selectError:");
 				int asdf = WSAGetLastError();
@@ -307,7 +307,7 @@ static int _ip_thread(struct midi_provider *p)
 #endif
 		} while (i == -1 && errno == EINTR);
 
-#ifndef WIN32
+#ifndef SCHISM_WIN32
 		if (FD_ISSET(wakeup[0], &rfds)) {
 			if (read(wakeup[0], buffer, sizeof(buffer)) == -1) {
 				/* fortify is stupid */
@@ -326,32 +326,32 @@ static int _ip_thread(struct midi_provider *p)
 static int _ip_start(struct midi_port *p)
 {
 	int n = INT_SHAPED_PTR(p->userdata);
-	SDL_mutexP(blocker);
+	mt_mutex_lock(blocker);
 	if (p->io & MIDI_INPUT)
 		state[n] |= 1;
 	if (p->io & MIDI_OUTPUT)
 		state[n] |= 2;
-	SDL_mutexV(blocker);
+	mt_mutex_unlock(blocker);
 	do_wake_midi();
 	return 1;
 }
 static int _ip_stop(struct midi_port *p)
 {
 	int n = INT_SHAPED_PTR(p->userdata);
-	SDL_mutexP(blocker);
+	mt_mutex_lock(blocker);
 	if (p->io & MIDI_INPUT)
 		state[n] &= (~1);
 	if (p->io & MIDI_OUTPUT)
 		state[n] &= (~2);
-	SDL_mutexV(blocker);
+	mt_mutex_unlock(blocker);
 	do_wake_midi();
 	return 1;
 }
 
 static void _ip_send(struct midi_port *p, const unsigned char *data, unsigned int len,
-				UNUSED unsigned int delay)
+				SCHISM_UNUSED unsigned int delay)
 {
-	struct sockaddr_in asin = {};
+	struct sockaddr_in asin = {0};
 	unsigned char *ipcopy;
 	int n = INT_SHAPED_PTR(p->userdata);
 	int ss;
@@ -366,7 +366,7 @@ static void _ip_send(struct midi_port *p, const unsigned char *data, unsigned in
 
 	while (len) {
 		ss = (len > MAX_DGRAM_SIZE) ?  MAX_DGRAM_SIZE : len;
-		if (sendto(out_fd, data, ss, 0,
+		if (sendto(out_fd, (const char*)data, ss, 0,
 				(struct sockaddr *)&asin,sizeof(asin)) < 0) {
 			state[n] &= (~2); /* turn off output */
 			break;
@@ -383,7 +383,7 @@ static void _ip_poll(struct midi_provider *p)
 	long i = 0;
 	long m;
 
-	SDL_mutexP(blocker);
+	mt_mutex_lock(blocker);
 	m = (volatile int)real_num_ports;
 	if (m < last_buildout) {
 		ptr = NULL;
@@ -400,7 +400,7 @@ static void _ip_poll(struct midi_provider *p)
 	} else if (m > last_buildout) {
 		for (i = last_buildout; i < m; i++) {
 			buffer = NULL;
-			if (asprintf(&buffer, " Multicast/IP MIDI %lu", i+1) == -1) {
+			if (asprintf(&buffer, " Multicast/IP MIDI %ld", i+1) == -1) {
 				perror("asprintf");
 				exit(255);
 			}
@@ -413,7 +413,7 @@ static void _ip_poll(struct midi_provider *p)
 		}
 		last_buildout = m;
 	}
-	SDL_mutexV(blocker);
+	mt_mutex_unlock(blocker);
 }
 
 int ip_midi_setup(void)
@@ -422,12 +422,11 @@ int ip_midi_setup(void)
 
 	if (status.flags & NO_NETWORK) return 0;
 
-	blocker = SDL_CreateMutex();
-	if (!blocker) {
+	blocker = mt_mutex_create();
+	if (!blocker)
 		return 0;
-	}
 
-#ifndef WIN32
+#ifndef SCHISM_WIN32
 	if (pipe(wakeup) == -1) {
 		return 0;
 	}
@@ -460,9 +459,9 @@ int ip_midi_getports(void)
 	if (out_fd == -1) return 0;
 	if (status.flags & NO_NETWORK) return 0;
 
-	SDL_mutexP(blocker);
+	mt_mutex_lock(blocker);
 	tmp = (volatile int)real_num_ports;
-	SDL_mutexV(blocker);
+	mt_mutex_unlock(blocker);
 	return tmp;
 }
 
@@ -473,7 +472,7 @@ int ip_midi_getports(void)
 	return 0;
 }
 
-void ip_midi_setports(UNUSED int n)
+void ip_midi_setports(SCHISM_UNUSED int n)
 {
 }
 

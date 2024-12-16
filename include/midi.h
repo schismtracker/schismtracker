@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef MIDI_H
-#define MIDI_H
+#ifndef SCHISM_MIDI_H_
+#define SCHISM_MIDI_H_
 
 struct midi_provider;
 struct midi_port;
@@ -42,10 +42,13 @@ struct midi_driver {
 	void (*drain)(struct midi_port *d);
 };
 
+// implemented in each backend
+struct schism_thread;
+
 struct midi_provider {
 	char *name;
 	void (*poll)(struct midi_provider *);
-	void *thread; /*actually SDL_Thread* */
+	struct schism_thread *thread;
 	volatile int cancelled;
 
 	struct midi_provider *next;
@@ -61,8 +64,11 @@ struct midi_provider {
 	void (*drain)(struct midi_port *d);
 };
 
-#define MIDI_INPUT      1
-#define MIDI_OUTPUT     2
+enum {
+	MIDI_INPUT = 1,
+	MIDI_OUTPUT = 2,
+};
+
 struct midi_port {
 	int io, iocap;
 	char *name;
@@ -89,24 +95,25 @@ void midi_engine_stop(void);
 void midi_engine_poll_ports(void);
 
 /* some parts of schism call this; it means "immediately" */
-void midi_send_now(const unsigned char *seq, unsigned int len);
+void midi_send_now(const unsigned char seq[3], unsigned int len);
 
 /* ... but the player calls this */
-void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int pos);
+void midi_send_buffer(const unsigned char data[3], unsigned int len, unsigned int pos);
 void midi_send_flush(void);
 
 /* used by the audio thread */
 int midi_need_flush(void);
 
-/* from the SDL event mechanism (x is really SDL_Event) */
-int midi_engine_handle_event(void *x);
+/* from Schism event handler */
+union schism_event;
+int midi_engine_handle_event(union schism_event *ev);
 
 struct midi_port *midi_engine_port(int n, const char **name);
 int midi_engine_port_count(void);
 
 /* midi engines register a provider (one each!) */
 struct midi_provider *midi_provider_register(const char *name, struct midi_driver *f);
-
+void midi_provider_unregister(struct midi_provider* p);
 
 /* midi engines list ports this way */
 int midi_port_register(struct midi_provider *p,
@@ -144,9 +151,12 @@ int ip_midi_getports(void);     // USE_NETWORK
 
 int oss_midi_setup(void);       // USE_OSS
 int alsa_midi_setup(void);      // USE_ALSA
-int win32mm_midi_setup(void);   // WIN32
-int macosx_midi_setup(void);    // MACOSX
+int jack_midi_setup(void);      // USE_JACK
+int win32mm_midi_setup(void);   // SCHISM_WIN32
+int macosx_midi_setup(void);    // SCHISM_MACOSX
 
+/* called by audio system when buffer stuff change */
+void midi_queue_alloc(int buffer_size, int channels, int samples_per_second);
 
 /* MIDI_PITCH_BEND is defined by OSS -- maybe these need more specific names? */
 #define MIDI_TICK_QUANTIZE      0x00000001
@@ -160,4 +170,4 @@ int macosx_midi_setup(void);    // MACOSX
 
 extern int midi_flags, midi_pitch_depth, midi_amplification, midi_c5note;
 
-#endif
+#endif /* SCHISM_MIDI_H_ */

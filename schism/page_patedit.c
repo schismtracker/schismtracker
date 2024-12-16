@@ -29,14 +29,19 @@
 #include <ctype.h>
 
 #include "it.h"
+#include "keyboard.h"
 #include "page.h"
 #include "song.h"
 #include "pattern-view.h"
 #include "config-parser.h"
 #include "midi.h"
 #include "osdefs.h"
+#include "fakemem.h"
+#include "dialog.h"
+#include "widget.h"
+#include "vgamem.h"
+#include "keyboard.h"
 
-#include "sdlmain.h"
 #include "clippy.h"
 #include "disko.h"
 
@@ -45,6 +50,8 @@
 #define ROW_IS_MAJOR(r) (current_song->row_highlight_major != 0 && (r) % current_song->row_highlight_major == 0)
 #define ROW_IS_MINOR(r) (current_song->row_highlight_minor != 0 && (r) % current_song->row_highlight_minor == 0)
 #define ROW_IS_HIGHLIGHT(r) (ROW_IS_MINOR(r) || ROW_IS_MAJOR(r))
+
+#define SONG_PLAYING (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP))
 
 /* this is actually used by pattern-view.c */
 int show_default_volumes = 0;
@@ -86,6 +93,7 @@ static int current_row = 0;
 static int keyjazz_noteoff = 0;       /* issue noteoffs when releasing note */
 static int keyjazz_write_noteoff = 0; /* write noteoffs when releasing note */
 static int keyjazz_repeat = 1;        /* insert multiple notes on key repeat */
+static int keyjazz_capslock = 0;      /* keyjazz when capslock is on, not while it is down */
 
 /* this is, of course, what the current pattern is */
 static int current_pattern = 0;
@@ -270,7 +278,7 @@ static const int options_link_split[] = { 5, 6, -1 };
 static int options_selected_widget = 0;
 static int options_last_octave = 0;
 
-static void options_close_cancel(UNUSED void *data)
+static void options_close_cancel(SCHISM_UNUSED void *data)
 {
 	kbd_set_current_octave(options_last_octave);
 }
@@ -325,20 +333,20 @@ void pattern_editor_display_options(void)
 
 	if (options_widgets[0].width == 0) {
 		/* haven't built it yet */
-		create_thumbbar(options_widgets + 0, 40, 23, 2, 7, 1, 1, options_change_base_octave, 0, 8);
-		create_thumbbar(options_widgets + 1, 40, 26, 3, 0, 2, 2, NULL, 0, 16);
-		create_thumbbar(options_widgets + 2, 40, 29, 5, 1, 3, 3, NULL, 0, 32);
-		create_thumbbar(options_widgets + 3, 40, 32, 17, 2, 4, 4, NULL, 0, 128);
+		widget_create_thumbbar(options_widgets + 0, 40, 23, 2, 7, 1, 1, options_change_base_octave, 0, 8);
+		widget_create_thumbbar(options_widgets + 1, 40, 26, 3, 0, 2, 2, NULL, 0, 16);
+		widget_create_thumbbar(options_widgets + 2, 40, 29, 5, 1, 3, 3, NULL, 0, 32);
+		widget_create_thumbbar(options_widgets + 3, 40, 32, 17, 2, 4, 4, NULL, 0, 128);
 		/* Although patterns as small as 1 row can be edited properly (as of c759f7a0166c), I have
 		discovered it's a bit annoying to hit 'home' here expecting to get 32 rows but end up with
 		just one row instead. so I'll allow editing these patterns, but not really provide a way to
 		set the size, at least until I decide how to present the option nonintrusively. */
-		create_thumbbar(options_widgets + 4, 40, 35, 22, 3, 5, 5, NULL, 32, 200);
-		create_togglebutton(options_widgets + 5, 40, 38, 8, 4, 7, 6, 6, 6,
+		widget_create_thumbbar(options_widgets + 4, 40, 35, 22, 3, 5, 5, NULL, 32, 200);
+		widget_create_togglebutton(options_widgets + 5, 40, 38, 8, 4, 7, 6, 6, 6,
 				    NULL, "Link", 3, options_link_split);
-		create_togglebutton(options_widgets + 6, 52, 38, 9, 4, 7, 5, 5, 5,
+		widget_create_togglebutton(options_widgets + 6, 52, 38, 9, 4, 7, 5, 5, 5,
 				    NULL, "Split", 3, options_link_split);
-		create_button(options_widgets + 7, 35, 41, 8, 5, 0, 7, 7, 7, dialog_yes_NULL, "Done", 3);
+		widget_create_button(options_widgets + 7, 35, 41, 8, 5, 0, 7, 7, 7, dialog_yes_NULL, "Done", 3);
 	}
 
 	options_last_octave = kbd_get_current_octave();
@@ -347,7 +355,7 @@ void pattern_editor_display_options(void)
 	options_widgets[2].d.thumbbar.value = current_song->row_highlight_minor;
 	options_widgets[3].d.thumbbar.value = current_song->row_highlight_major;
 	options_widgets[4].d.thumbbar.value = song_get_pattern(current_pattern, NULL);
-	togglebutton_set(options_widgets, link_effect_column ? 5 : 6, 0);
+	widget_togglebutton_set(options_widgets, link_effect_column ? 5 : 6, 0);
 
 	dialog = dialog_create_custom(10, 18, 60, 26, options_widgets, 8, options_selected_widget,
 				      options_draw_const, NULL);
@@ -383,7 +391,7 @@ static void length_edit_draw_const(void)
 	draw_text("Start Pattern", 20, 27, 0, 2);
 	draw_text("End Pattern", 22, 28, 0, 2);
 }
-static void length_edit_close(UNUSED void *data)
+static void length_edit_close(SCHISM_UNUSED void *data)
 {
 	int i, nl;
 	nl = length_edit_widgets[0].d.thumbbar.value;
@@ -400,7 +408,7 @@ static void length_edit_close(UNUSED void *data)
 		}
 	}
 }
-static void length_edit_cancel(UNUSED void *data)
+static void length_edit_cancel(SCHISM_UNUSED void *data)
 {
 	/* do nothing */
 }
@@ -408,15 +416,15 @@ void pattern_editor_length_edit(void)
 {
 	struct dialog *dialog;
 
-	create_thumbbar(length_edit_widgets + 0, 34, 24, 22, 0, 1, 1, NULL, 32, 200);
+	widget_create_thumbbar(length_edit_widgets + 0, 34, 24, 22, 0, 1, 1, NULL, 32, 200);
 	length_edit_widgets[0].d.thumbbar.value = song_get_pattern(current_pattern, NULL );
-	create_thumbbar(length_edit_widgets + 1, 34, 27, 26, 0, 2, 2, NULL, 0, 199);
-	create_thumbbar(length_edit_widgets + 2, 34, 28, 26, 1, 3, 3, NULL, 0, 199);
+	widget_create_thumbbar(length_edit_widgets + 1, 34, 27, 26, 0, 2, 2, NULL, 0, 199);
+	widget_create_thumbbar(length_edit_widgets + 2, 34, 28, 26, 1, 3, 3, NULL, 0, 199);
 	length_edit_widgets[1].d.thumbbar.value
 		= length_edit_widgets[2].d.thumbbar.value
 		= current_pattern;
 
-	create_button(length_edit_widgets + 3, 35, 31, 8, 2, 3, 3, 3, 0, dialog_yes_NULL, "OK", 4);
+	widget_create_button(length_edit_widgets + 3, 35, 31, 8, 2, 3, 3, 3, 0, dialog_yes_NULL, "OK", 4);
 
 	dialog = dialog_create_custom(15, 19, 51, 15, length_edit_widgets, 4, 0,
 				      length_edit_draw_const, NULL);
@@ -427,7 +435,7 @@ void pattern_editor_length_edit(void)
 /* --------------------------------------------------------------------------------------------------------- */
 /* multichannel dialog */
 static struct widget multichannel_widgets[65];
-static void multichannel_close(UNUSED void *data)
+static void multichannel_close(SCHISM_UNUSED void *data)
 {
 	int i, m = 0;
 
@@ -441,8 +449,8 @@ static void multichannel_close(UNUSED void *data)
 }
 static int multichannel_handle_key(struct key_event *k)
 {
-	if (k->sym.sym == SDLK_n) {
-		if ((k->mod & KMOD_ALT) && k->state == KEY_PRESS)
+	if (k->sym == SCHISM_KEYSYM_n) {
+		if ((k->mod & SCHISM_KEYMOD_ALT) && k->state == KEY_PRESS)
 			dialog_yes(NULL);
 		else if (NO_MODIFIER(k->mod) && k->state == KEY_RELEASE)
 			dialog_cancel(NULL);
@@ -474,7 +482,7 @@ static void multichannel_draw_const(void)
 }
 static void mp_advance_channel(void)
 {
-	change_focus_to(*selected_widget + 1);
+	widget_change_focus_to(*selected_widget + 1);
 }
 
 static void pattern_editor_display_multichannel(void)
@@ -483,7 +491,7 @@ static void pattern_editor_display_multichannel(void)
 	int i;
 
 	for (i = 0; i < 64; i++) {
-		create_toggle(multichannel_widgets+i,
+		widget_create_toggle(multichannel_widgets+i,
 			20 + ((i / 16) * 16), /* X */
 			22 + (i % 16),  /* Y */
 
@@ -496,7 +504,7 @@ static void pattern_editor_display_multichannel(void)
 			mp_advance_channel);
 		multichannel_widgets[i].d.toggle.state = !!channel_multi[i];
 	}
-	create_button(multichannel_widgets + 64, 36, 40, 6, 15, 0, 64, 64, 64, dialog_yes_NULL, "OK", 3);
+	widget_create_button(multichannel_widgets + 64, 36, 40, 6, 15, 0, 64, 64, 64, dialog_yes_NULL, "OK", 3);
 
 	dialog = dialog_create_custom(7, 18, 66, 25, multichannel_widgets, 65, 0,
 				      multichannel_draw_const, NULL);
@@ -570,12 +578,13 @@ static void copyin_addrow(int *copyin_x, int *copyin_y)
 	(*copyin_y) = (*copyin_y) + 1;
 }
 
-static int pattern_selection_system_paste(UNUSED int cb, const void *data)
+static int pattern_selection_system_paste(SCHISM_UNUSED int cb, const void *data)
 {
 	int copyin_x, copyin_y;
 	int (*fx_map)(char f);
 	const char *str;
-	int x, scantmp;
+	int x;
+	unsigned int scantmp;
 
 	if (!data) return 0;
 	str = (const char *)data;
@@ -600,7 +609,7 @@ static int pattern_selection_system_paste(UNUSED int cb, const void *data)
 	copyin_x = copyin_y = 0;
 	/* okay, let's start parsing */
 	while (*str) {
-		song_note_t n = {};
+		song_note_t n = {0};
 
 		if (!str[0] || !str[1] || !str[2]) break;
 		switch (*str) {
@@ -626,7 +635,7 @@ static int pattern_selection_system_paste(UNUSED int cb, const void *data)
 		};
 		str += 3;
 		/* instrument number */
-		if (sscanf(str, "%02d", &scantmp) == 1)
+		if (sscanf(str, "%02u", &scantmp) == 1)
 			n.instrument = scantmp;
 		else
 			n.instrument = 0;
@@ -635,7 +644,7 @@ static int pattern_selection_system_paste(UNUSED int cb, const void *data)
 			if (*str == '|' || *str == '\r' || *str == '\n') break;
 			if (!str[0] || !str[1] || !str[2]) break;
 			if (*str >= 'a' && *str <= 'z') {
-				if (sscanf(str+1, "%02d", &scantmp) == 1)
+				if (sscanf(str+1, "%02u", &scantmp) == 1)
 					n.volparam = scantmp;
 				else
 					n.volparam = 0;
@@ -816,7 +825,7 @@ static void history_draw_const(void)
 	}
 }
 
-static void history_close(UNUSED void *data)
+static void history_close(SCHISM_UNUSED void *data)
 {
 	/* nothing! */
 }
@@ -825,28 +834,28 @@ static int history_handle_key(struct key_event *k)
 {
 	int i,j;
 	if (! NO_MODIFIER(k->mod)) return 0;
-	switch (k->sym.sym) {
-	case SDLK_ESCAPE:
+	switch (k->sym) {
+	case SCHISM_KEYSYM_ESCAPE:
 		if (k->state == KEY_PRESS)
 			return 0;
 		dialog_cancel(NULL);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		undo_selection--;
 		if (undo_selection < 0) undo_selection = 0;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		undo_selection++;
 		if (undo_selection > 9) undo_selection = 9;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		j = undo_history_top;
@@ -872,7 +881,7 @@ static void pattern_editor_display_history(void)
 {
 	struct dialog *dialog;
 
-	create_other(undo_widgets + 0, 0, history_handle_key, NULL);
+	widget_create_other(undo_widgets + 0, 0, history_handle_key, NULL, NULL);
 	dialog = dialog_create_custom(17, 21, 47, 16, undo_widgets, 1, 0,
 				      history_draw_const, NULL);
 	dialog->action_yes = history_close;
@@ -892,14 +901,14 @@ static void selection_vary(int fast, int depth, int part);
 /* this is shared by the fast and normal volume dialogs */
 static struct widget volume_setup_widgets[3];
 
-static void fast_volume_setup_ok(UNUSED void *data)
+static void fast_volume_setup_ok(SCHISM_UNUSED void *data)
 {
 	fast_volume_percent = volume_setup_widgets[0].d.thumbbar.value;
 	fast_volume_mode = 1;
 	status_text_flash("Alt-I / Alt-J fast volume changes enabled");
 }
 
-static void fast_volume_setup_cancel(UNUSED void *data)
+static void fast_volume_setup_cancel(SCHISM_UNUSED void *data)
 {
 	status_text_flash("Alt-I / Alt-J fast volume changes not enabled");
 }
@@ -918,12 +927,12 @@ static void fast_volume_toggle(void)
 		fast_volume_mode = 0;
 		status_text_flash("Alt-I / Alt-J fast volume changes disabled");
 	} else {
-		create_thumbbar(volume_setup_widgets + 0, 33, 30, 11, 0, 1, 1, NULL, 10, 90);
+		widget_create_thumbbar(volume_setup_widgets + 0, 33, 30, 11, 0, 1, 1, NULL, 10, 90);
 
 		volume_setup_widgets[0].d.thumbbar.value = fast_volume_percent;
-		create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2,
+		widget_create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2,
 			      dialog_yes_NULL, "OK", 3);
-		create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1,
+		widget_create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1,
 			      dialog_cancel_NULL, "Cancel", 1);
 
 		dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets,
@@ -952,7 +961,7 @@ static void volume_setup_draw_const(void)
 	draw_box(25, 29, 52, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
-static void volume_amplify_ok(UNUSED void *data)
+static void volume_amplify_ok(SCHISM_UNUSED void *data)
 {
 	volume_percent = volume_setup_widgets[0].d.thumbbar.value;
 	selection_amplify(volume_percent);
@@ -960,7 +969,7 @@ static void volume_amplify_ok(UNUSED void *data)
 
 static int volume_amplify_jj(struct key_event *k)
 {
-	if (k->state == KEY_PRESS && (k->mod & KMOD_ALT) && (k->sym.sym == SDLK_j)) {
+	if (k->state == KEY_PRESS && (k->mod & SCHISM_KEYMOD_ALT) && (k->sym == SCHISM_KEYSYM_j)) {
 		dialog_yes(NULL);
 		return 1;
 	}
@@ -972,10 +981,10 @@ static void volume_amplify(void)
 	struct dialog *dialog;
 
 	CHECK_FOR_SELECTION(return);
-	create_thumbbar(volume_setup_widgets + 0, 26, 30, 26, 0, 1, 1, NULL, 0, 200);
+	widget_create_thumbbar(volume_setup_widgets + 0, 26, 30, 26, 0, 1, 1, NULL, 0, 200);
 	volume_setup_widgets[0].d.thumbbar.value = volume_percent;
-	create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
-	create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
+	widget_create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 	dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets,
 				      3, 0, volume_setup_draw_const, NULL);
 	dialog->handle_key = volume_amplify_jj;
@@ -992,7 +1001,7 @@ static void vary_setup_draw_const(void)
 	draw_box(25, 29, 52, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
-static void vary_amplify_ok(UNUSED void *data)
+static void vary_amplify_ok(SCHISM_UNUSED void *data)
 {
 	vary_depth = volume_setup_widgets[0].d.thumbbar.value;
 	selection_vary(0, vary_depth, current_vary);
@@ -1002,10 +1011,10 @@ static void vary_command(int how)
 {
 	struct dialog *dialog;
 
-	create_thumbbar(volume_setup_widgets + 0, 26, 30, 26, 0, 1, 1, NULL, 0, 50);
+	widget_create_thumbbar(volume_setup_widgets + 0, 26, 30, 26, 0, 1, 1, NULL, 0, 50);
 	volume_setup_widgets[0].d.thumbbar.value = vary_depth;
-	create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
-	create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
+	widget_create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 	dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets,
 				      3, 0, vary_setup_draw_const, NULL);
 	dialog->action_yes = vary_amplify_ok;
@@ -1042,6 +1051,7 @@ void cfg_save_patedit(cfg_file_t *cfg)
 	CFG_SET_PE(keyjazz_noteoff);
 	CFG_SET_PE(keyjazz_write_noteoff);
 	CFG_SET_PE(keyjazz_repeat);
+	CFG_SET_PE(keyjazz_capslock);
 	CFG_SET_PE(mask_copy_search_mode);
 	CFG_SET_PE(invert_home_end);
 
@@ -1074,6 +1084,7 @@ void cfg_load_patedit(cfg_file_t *cfg)
 	CFG_GET_PE(keyjazz_noteoff, 0);
 	CFG_GET_PE(keyjazz_write_noteoff, 0);
 	CFG_GET_PE(keyjazz_repeat, 1);
+	CFG_GET_PE(keyjazz_capslock, 0);
 	CFG_GET_PE(mask_copy_search_mode, 0);
 	CFG_GET_PE(invert_home_end, 0);
 
@@ -2350,7 +2361,7 @@ static void advance_cursor(int next_row, int multichannel)
 {
 	int total_rows;
 
-	if (next_row && !((song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP)) && playback_tracing)) {
+	if (next_row && !(SONG_PLAYING && playback_tracing)) {
 		total_rows = song_get_rows_in_pattern(current_pattern);
 
 		if (skip_value) {
@@ -2380,8 +2391,8 @@ void update_current_row(void)
 {
 	char buf[4];
 
-	draw_text(numtostr(3, current_row, buf), 12, 7, 5, 0);
-	draw_text(numtostr(3, song_get_rows_in_pattern(current_pattern), buf), 16, 7, 5, 0);
+	draw_text(str_from_num(3, current_row, buf), 12, 7, 5, 0);
+	draw_text(str_from_num(3, song_get_rows_in_pattern(current_pattern), buf), 16, 7, 5, 0);
 }
 
 int get_current_channel(void)
@@ -2414,8 +2425,8 @@ void update_current_pattern(void)
 {
 	char buf[4];
 
-	draw_text(numtostr(3, current_pattern, buf), 12, 6, 5, 0);
-	draw_text(numtostr(3, csf_get_num_patterns(current_song) - 1, buf), 16, 6, 5, 0);
+	draw_text(str_from_num(3, current_pattern, buf), 12, 6, 5, 0);
+	draw_text(str_from_num(3, csf_get_num_patterns(current_song) - 1, buf), 16, 6, 5, 0);
 }
 
 int get_current_pattern(void)
@@ -2443,7 +2454,7 @@ void set_current_pattern(int n)
 	int total_rows;
 	char undostr[64];
 
-	if (!playback_tracing || !(song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP))) {
+	if (!playback_tracing || !SONG_PLAYING) {
 		_pattern_update_magic();
 	}
 
@@ -2608,7 +2619,7 @@ static void pattern_editor_redraw(void)
 			if (chan_pos == 0) {
 				fg = pattern_is_playing && row == playing_row ? 3 : 0;
 				bg = (current_pattern == marked_pattern && row == marked_row) ? 11 : 2;
-				draw_text(numtostr(3, row, buf), 1, 15 + row_pos, fg, bg);
+				draw_text(str_from_num(3, row, buf), 1, 15 + row_pos, fg, bg);
 			}
 
 			if (is_in_selection(chan, row)) {
@@ -2638,7 +2649,7 @@ static void pattern_editor_redraw(void)
 			int cpos;
 			if ((row == current_row)
 			    && ((current_position > 0 || template_mode == TEMPLATE_OFF
-				 || (status.flags & SHIFT_KEY_DOWN))
+				 || (status.keymod & SCHISM_KEYMOD_SHIFT))
 				? (chan == current_channel)
 				: (chan >= current_channel
 				   && chan < (current_channel
@@ -2783,39 +2794,39 @@ static int handle_volume(song_note_t * note, struct key_event *k, int pos)
 		if (q >= 0 && q <= 9) {
 			vol = q * 10 + vol % 10;
 			fx = vp;
-		} else if (k->sym.sym == SDLK_a) {
+		} else if (k->sym == SCHISM_KEYSYM_a) {
 			fx = VOLFX_FINEVOLUP;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_b) {
+		} else if (k->sym == SCHISM_KEYSYM_b) {
 			fx = VOLFX_FINEVOLDOWN;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_c) {
+		} else if (k->sym == SCHISM_KEYSYM_c) {
 			fx = VOLFX_VOLSLIDEUP;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_d) {
+		} else if (k->sym == SCHISM_KEYSYM_d) {
 			fx = VOLFX_VOLSLIDEDOWN;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_e) {
+		} else if (k->sym == SCHISM_KEYSYM_e) {
 			fx = VOLFX_PORTADOWN;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_f) {
+		} else if (k->sym == SCHISM_KEYSYM_f) {
 			fx = VOLFX_PORTAUP;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_g) {
+		} else if (k->sym == SCHISM_KEYSYM_g) {
 			fx = VOLFX_TONEPORTAMENTO;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_h) {
+		} else if (k->sym == SCHISM_KEYSYM_h) {
 			fx = VOLFX_VIBRATODEPTH;
 			vol %= 10;
 		} else if (status.flags & CLASSIC_MODE) {
 			return 0;
-		} else if (k->sym.sym == SDLK_DOLLAR) {
+		} else if (k->sym == SCHISM_KEYSYM_DOLLAR) {
 			fx = VOLFX_VIBRATOSPEED;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_LESS) {
+		} else if (k->sym == SCHISM_KEYSYM_LESS) {
 			fx = VOLFX_PANSLIDELEFT;
 			vol %= 10;
-		} else if (k->sym.sym == SDLK_GREATER) {
+		} else if (k->sym == SCHISM_KEYSYM_GREATER) {
 			fx = VOLFX_PANSLIDERIGHT;
 			vol %= 10;
 		} else {
@@ -2883,7 +2894,7 @@ static int note_is_empty(song_note_t *p)
 // FIXME: why the 'row' param? should it be removed, or should the references to current_row be replaced?
 // fwiw, every call to this uses current_row.
 // return: zero if there was a template error, nonzero otherwise
-static int patedit_record_note(song_note_t *cur_note, int channel, UNUSED int row, int note, int force)
+static int patedit_record_note(song_note_t *cur_note, int channel, SCHISM_UNUSED int row, int note, int force)
 {
 	song_note_t *q;
 	int i, r = 1, channels;
@@ -2896,7 +2907,7 @@ static int patedit_record_note(song_note_t *cur_note, int channel, UNUSED int ro
 				dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
 				r = 0;
 			} else if (!q->note) {
-				create_button(template_error_widgets+0,36,32,6,0,0,0,0,0,
+				widget_create_button(template_error_widgets+0,36,32,6,0,0,0,0,0,
 						dialog_yes_NULL,"OK",3);
 				dialog_create_custom(20, 23, 40, 12, template_error_widgets, 1,
 						0, template_error_draw, NULL);
@@ -2956,32 +2967,59 @@ static int patedit_record_note(song_note_t *cur_note, int channel, UNUSED int ro
 static int pattern_editor_insert_midi(struct key_event *k)
 {
 	song_note_t *pattern, *cur_note = NULL;
-	int n, v = 0, c = 0, pd, speed, tick;
+	int n, v = 0, pd, speed, tick, offset = 0;
+	int r = current_row, c = current_channel, p = current_pattern;
+	int quantize_next_row = 0;
+	int ins = KEYJAZZ_NOINST, smp = KEYJAZZ_NOINST;
+	int song_was_playing = SONG_PLAYING;
+
+	if (song_is_instrument_mode()) {
+		ins = instrument_get_current();
+	} else {
+		smp = sample_get_current();
+	}
 
 	status.flags |= SONG_NEEDS_SAVE;
-	song_get_pattern(current_pattern, &pattern);
 
-	if (midi_start_record && !(song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP))) {
+	speed = song_get_current_speed();
+	tick = song_get_current_tick();
+
+	if (midi_start_record && !SONG_PLAYING) {
 		switch (midi_start_record) {
 		case 1: /* pattern loop */
-			song_loop_pattern(current_pattern, current_row);
+			song_loop_pattern(p, r);
 			midi_playback_tracing = playback_tracing;
 			playback_tracing = 1;
 			break;
 		case 2: /* song play */
-			song_start_at_pattern(current_pattern, current_row);
+			song_start_at_pattern(p, r);
 			midi_playback_tracing = playback_tracing;
 			playback_tracing = 1;
 			break;
 		};
 	}
 
-	speed = song_get_current_speed();
-	tick = song_get_current_tick();
+	// this is a long one
+	if (midi_flags & MIDI_TICK_QUANTIZE             // if quantize is on
+			&& song_was_playing                     // and the song was playing
+			&& playback_tracing                     // and we are following the song
+			&& tick > 0 && tick <= speed / 2 + 1) { // and the note is too late
+		/* correct late notes to the next row */
+		/* tick + 1 because processing the keydown itself takes another tick */
+		offset++;
+		quantize_next_row = 1;
+	}
+
+	song_get_pattern_offset(&p, &pattern, &r, offset);
+
 	if (k->midi_note == -1) {
 		/* nada */
 	} else if (k->state == KEY_RELEASE) {
 		c = song_keyup(KEYJAZZ_NOINST, KEYJAZZ_NOINST, k->midi_note);
+		if (c <= 0) {
+			/* song_keyup didn't find find note off channel, abort */
+			return 0;
+		}
 
 		/* don't record noteoffs for no good reason... */
 		if (!((midi_flags & MIDI_RECORD_NOTEOFF)
@@ -2990,9 +3028,9 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			return 0;
 		}
 
-		cur_note = pattern + 64 * current_row + (c-1);
+		cur_note = pattern + 64 * r + (c-1);
 		/* never "overwrite" a note off */
-		patedit_record_note(cur_note, c, current_row, NOTE_OFF, 0);
+		patedit_record_note(cur_note, c, r, NOTE_OFF, 0);
 
 
 	} else {
@@ -3005,9 +3043,13 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			tick = 0;
 		}
 		n = k->midi_note;
-		c = song_keydown(KEYJAZZ_NOINST, KEYJAZZ_NOINST, n, v, current_channel);
-		cur_note = pattern + 64 * current_row + (c-1);
-		patedit_record_note(cur_note, c, current_row, n, 0);
+
+		if (!quantize_next_row) {
+			c = song_keydown(smp, ins, n, v, c);
+		}
+
+		cur_note = pattern + 64 * r + (c-1);
+		patedit_record_note(cur_note, c, r, n, 0);
 
 		if (!template_mode) {
 			cur_note->instrument = song_get_current_instrument();
@@ -3036,7 +3078,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 	/* pitch bend */
 	for (c = 0; c < 64; c++) {
 		if ((channel_multi[c] & 1) && (channel_multi[c] & (~1))) {
-			cur_note = pattern + 64 * current_row + c;
+			cur_note = pattern + 64 * r + c;
 
 			if (cur_note->effect) {
 				if (cur_note->effect != FX_PORTAMENTOUP
@@ -3105,7 +3147,7 @@ static int pattern_editor_insert(struct key_event *k)
 			ins = KEYJAZZ_NOINST;
 		}
 
-		if (k->sym.sym == SDLK_4) {
+		if (k->sym == SCHISM_KEYSYM_4) {
 			if (k->state == KEY_RELEASE)
 				return 0;
 
@@ -3116,14 +3158,14 @@ static int pattern_editor_insert(struct key_event *k)
 			}
 			song_keyrecord(smp, ins, cur_note->note,
 				vol, current_channel, cur_note->effect, cur_note->param);
-			advance_cursor(!(k->mod & KMOD_SHIFT), 1);
+			advance_cursor(!(k->mod & SCHISM_KEYMOD_SHIFT), 1);
 			return 1;
-		} else if (k->sym.sym == SDLK_8) {
+		} else if (k->sym == SCHISM_KEYSYM_8) {
 			/* note: Impulse Tracker doesn't skip multichannels when pressing "8"  -delt. */
 			if (k->state == KEY_RELEASE)
 				return 0;
 			song_single_step(current_pattern, current_row);
-			advance_cursor(!(k->mod & KMOD_SHIFT), 0);
+			advance_cursor(!(k->mod & SCHISM_KEYMOD_SHIFT), 0);
 			return 1;
 		}
 
@@ -3136,7 +3178,7 @@ static int pattern_editor_insert(struct key_event *k)
 		}
 
 
-		if (k->sym.sym == SDLK_SPACE) {
+		if (k->sym == SCHISM_KEYSYM_SPACE) {
 			/* copy mask to note */
 			n = mask_note.note;
 
@@ -3187,7 +3229,7 @@ static int pattern_editor_insert(struct key_event *k)
 			return 1;
 
 
-		int writenote = !(status.flags & CAPS_PRESSED);
+		int writenote = (keyjazz_capslock) ? !(k->mod & SCHISM_KEYMOD_CAPS) : !(k->mod & SCHISM_KEYMOD_CAPS_PRESSED);
 		if (writenote && !patedit_record_note(cur_note, current_channel, current_row, n, 1)) {
 			// there was a template error, don't advance the cursor and so on
 			writenote = 0;
@@ -3203,7 +3245,7 @@ static int pattern_editor_insert(struct key_event *k)
 
 		/* Never copy the instrument etc. from the mask when inserting control notes or when
 		erasing a note -- but DO write it when inserting a blank note with the space key. */
-		if (!(NOTE_IS_CONTROL(n) || (k->sym.sym != SDLK_SPACE && n == NOTE_NONE)) && !template_mode) {
+		if (!(NOTE_IS_CONTROL(n) || (k->sym != SCHISM_KEYSYM_SPACE && n == NOTE_NONE)) && !template_mode) {
 			if (edit_copy_mask & MASK_INSTRUMENT) {
 				if (song_is_instrument_mode())
 					cur_note->instrument = instrument_get_current();
@@ -3231,7 +3273,7 @@ static int pattern_editor_insert(struct key_event *k)
 		n = cur_note->note;
 		if (NOTE_IS_NOTE(n) && cur_note->voleffect == VOLFX_VOLUME)
 			vol = cur_note->volparam;
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			// advance horizontally, stopping at channel 64
 			// (I have no idea how IT does this, it might wrap)
 			if (current_channel < 64) {
@@ -3258,7 +3300,7 @@ static int pattern_editor_insert(struct key_event *k)
 		break;
 	case 2:                 /* instrument, first digit */
 	case 3:                 /* instrument, second digit */
-		if (k->sym.sym == SDLK_SPACE) {
+		if (k->sym == SCHISM_KEYSYM_SPACE) {
 			if (song_is_instrument_mode())
 				n = instrument_get_current();
 			else
@@ -3324,7 +3366,7 @@ static int pattern_editor_insert(struct key_event *k)
 		break;
 	case 4:
 	case 5:                 /* volume */
-		if (k->sym.sym == SDLK_SPACE) {
+		if (k->sym == SCHISM_KEYSYM_SPACE) {
 			cur_note->volparam = mask_note.volparam;
 			cur_note->voleffect = mask_note.voleffect;
 			advance_cursor(1, 0);
@@ -3338,7 +3380,7 @@ static int pattern_editor_insert(struct key_event *k)
 			status.flags |= SONG_NEEDS_SAVE;
 			break;
 		}
-		if (k->scancode == SDL_SCANCODE_GRAVE) {
+		if (k->scancode == SCHISM_SCANCODE_GRAVE) {
 			panning_mode = !panning_mode;
 			status_text_flash("%s control set", (panning_mode ? "Panning" : "Volume"));
 			return 0;
@@ -3357,7 +3399,7 @@ static int pattern_editor_insert(struct key_event *k)
 		pattern_selection_system_copyout();
 		break;
 	case 6:                 /* effect */
-		if (k->sym.sym == SDLK_SPACE) {
+		if (k->sym == SCHISM_KEYSYM_SPACE) {
 			cur_note->effect = mask_note.effect;
 		} else {
 			n = kbd_get_effect_number(k);
@@ -3374,7 +3416,7 @@ static int pattern_editor_insert(struct key_event *k)
 		break;
 	case 7:                 /* param, high nibble */
 	case 8:                 /* param, low nibble */
-		if (k->sym.sym == SDLK_SPACE) {
+		if (k->sym == SCHISM_KEYSYM_SPACE) {
 			cur_note->param = mask_note.param;
 			current_position = link_effect_column ? 6 : 7;
 			advance_cursor(1, 0);
@@ -3425,10 +3467,10 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	int total_rows = song_get_rows_in_pattern(current_pattern);
 
 	/* hack to render this useful :) */
-	if (k->orig_sym.sym == SDLK_KP_9) {
-		k->sym.sym = SDLK_F9;
-	} else if (k->orig_sym.sym == SDLK_KP_0) {
-		k->sym.sym = SDLK_F10;
+	if (k->sym == SCHISM_KEYSYM_KP_9) {
+		k->sym = SCHISM_KEYSYM_F9;
+	} else if (k->sym == SCHISM_KEYSYM_KP_0) {
+		k->sym = SCHISM_KEYSYM_F10;
 	}
 
 	n = numeric_key_event(k, 0);
@@ -3440,20 +3482,21 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		return 1;
 	}
 
-	switch (k->sym.sym) {
-	case SDLK_RETURN:
+	switch (k->sym) {
+	case SCHISM_KEYSYM_RETURN:
 		if (k->state == KEY_PRESS)
 			return 1;
 		fast_save_update();
 		return 1;
 
-	case SDLK_BACKSPACE:
+	case SCHISM_KEYSYM_BACKSPACE:
 		if (k->state == KEY_PRESS)
 			return 1;
+		pated_save("Undo revert pattern data (Alt-BkSpace)");
 		snap_paste(&fast_save, 0, 0, 0);
 		return 1;
 
-	case SDLK_b:
+	case SCHISM_KEYSYM_b:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (!SELECTION_EXISTS) {
@@ -3464,7 +3507,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		selection.first_row = current_row;
 		normalise_block_selection();
 		break;
-	case SDLK_e:
+	case SCHISM_KEYSYM_e:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (!SELECTION_EXISTS) {
@@ -3475,27 +3518,27 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		selection.last_row = current_row;
 		normalise_block_selection();
 		break;
-	case SDLK_d:
+	case SCHISM_KEYSYM_d:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym.sym == SDLK_d) {
+		if (status.last_keysym == SCHISM_KEYSYM_d) {
 			if (total_rows - (current_row - 1) > block_double_size)
 				block_double_size <<= 1;
 		} else {
 			// emulate some weird impulse tracker behavior here:
 			// with row highlight set to zero, alt-d selects the whole channel
 			// if the cursor is at the top, and clears the selection otherwise
-			block_double_size = current_song->row_highlight_major ?: (current_row ? 0 : 65536);
+			block_double_size = current_song->row_highlight_major ? current_song->row_highlight_major : (current_row ? 0 : 65536);
 			selection.first_channel = selection.last_channel = current_channel;
 			selection.first_row = current_row;
 		}
 		n = block_double_size + current_row - 1;
 		selection.last_row = MIN(n, total_rows);
 		break;
-	case SDLK_l:
+	case SCHISM_KEYSYM_l:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym.sym == SDLK_l) {
+		if (status.last_keysym == SCHISM_KEYSYM_l) {
 			/* 3x alt-l re-selects the current channel */
 			if (selection.first_channel == selection.last_channel) {
 				selection.first_channel = 1;
@@ -3510,18 +3553,18 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		}
 		pattern_selection_system_copyout();
 		break;
-	case SDLK_r:
+	case SCHISM_KEYSYM_r:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		draw_divisions = 1;
 		set_view_scheme(0);
 		break;
-	case SDLK_s:
+	case SCHISM_KEYSYM_s:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selection_set_sample();
 		break;
-	case SDLK_u:
+	case SCHISM_KEYSYM_u:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (SELECTION_EXISTS) {
@@ -3535,45 +3578,45 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
 		}
 		break;
-	case SDLK_c:
+	case SCHISM_KEYSYM_c:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		clipboard_copy(0);
 		break;
-	case SDLK_o:
+	case SCHISM_KEYSYM_o:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym.sym == SDLK_o) {
+		if (status.last_keysym == SCHISM_KEYSYM_o) {
 			clipboard_paste_overwrite(0, 1);
 		} else {
 			clipboard_paste_overwrite(0, 0);
 		}
 		break;
-	case SDLK_p:
+	case SCHISM_KEYSYM_p:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		clipboard_paste_insert();
 		break;
-	case SDLK_m:
+	case SCHISM_KEYSYM_m:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym.sym == SDLK_m) {
+		if (status.last_keysym == SCHISM_KEYSYM_m) {
 			clipboard_paste_mix_fields(0, 0);
 		} else {
 			clipboard_paste_mix_notes(0, 0);
 		}
 		break;
-	case SDLK_f:
+	case SCHISM_KEYSYM_f:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		block_length_double();
 		break;
-	case SDLK_g:
+	case SCHISM_KEYSYM_g:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		block_length_halve();
 		break;
-	case SDLK_n:
+	case SCHISM_KEYSYM_n:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		channel_multi[current_channel - 1] ^= 1;
@@ -3589,83 +3632,83 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			}
 		}
 
-		if (status.last_keysym.sym == SDLK_n) {
+		if (status.last_keysym == SCHISM_KEYSYM_n) {
 			pattern_editor_display_multichannel();
 		}
 		break;
-	case SDLK_z:
+	case SCHISM_KEYSYM_z:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		clipboard_copy(0);
 		selection_erase();
 		break;
-	case SDLK_y:
+	case SCHISM_KEYSYM_y:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selection_swap();
 		break;
-	case SDLK_v:
+	case SCHISM_KEYSYM_v:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selection_set_volume();
 		break;
-	case SDLK_w:
+	case SCHISM_KEYSYM_w:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selection_wipe_volume(0);
 		break;
-	case SDLK_k:
+	case SCHISM_KEYSYM_k:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym.sym == SDLK_k) {
+		if (status.last_keysym == SCHISM_KEYSYM_k) {
 			selection_wipe_volume(1);
 		} else {
 			selection_slide_volume();
 		}
 		break;
-	case SDLK_x:
+	case SCHISM_KEYSYM_x:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym.sym == SDLK_x) {
+		if (status.last_keysym == SCHISM_KEYSYM_x) {
 			selection_wipe_effect();
 		} else {
 			selection_slide_effect();
 		}
 		break;
-	case SDLK_h:
+	case SCHISM_KEYSYM_h:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		draw_divisions = !draw_divisions;
 		recalculate_visible_area();
 		pattern_editor_reposition();
 		break;
-	case SDLK_q:
+	case SCHISM_KEYSYM_q:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_SHIFT)
+		if (k->mod & SCHISM_KEYMOD_SHIFT)
 			transpose_notes(12);
 		else
 			transpose_notes(1);
 		break;
-	case SDLK_a:
+	case SCHISM_KEYSYM_a:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_SHIFT)
+		if (k->mod & SCHISM_KEYMOD_SHIFT)
 			transpose_notes(-12);
 		else
 			transpose_notes(-1);
 		break;
-	case SDLK_i:
+	case SCHISM_KEYSYM_i:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_SHIFT)
+		if (k->mod & SCHISM_KEYMOD_SHIFT)
 			template_mode = TEMPLATE_OFF;
 		else if (fast_volume_mode)
 			fast_volume_amplify();
 		else
 			template_mode = (template_mode + 1) % TEMPLATE_MODE_MAX; /* cycle */
 		break;
-	case SDLK_j:
+	case SCHISM_KEYSYM_j:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (fast_volume_mode)
@@ -3673,7 +3716,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		else
 			volume_amplify();
 		break;
-	case SDLK_t:
+	case SCHISM_KEYSYM_t:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		n = current_channel - top_display_channel;
@@ -3681,7 +3724,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		recalculate_visible_area();
 		pattern_editor_reposition();
 		break;
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (top_display_row > 0) {
@@ -3691,7 +3734,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			return -1;
 		}
 		return 1;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (top_display_row + 31 < total_rows) {
@@ -3701,34 +3744,34 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			return -1;
 		}
 		return 1;
-	case SDLK_LEFT:
+	case SCHISM_KEYSYM_LEFT:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		current_channel--;
 		return -1;
-	case SDLK_RIGHT:
+	case SCHISM_KEYSYM_RIGHT:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		current_channel++;
 		return -1;
-	case SDLK_INSERT:
+	case SCHISM_KEYSYM_INSERT:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		pated_save("Remove inserted row(s)    (Alt-Insert)");
 		pattern_insert_rows(current_row, 1, 1, 64);
 		break;
-	case SDLK_DELETE:
+	case SCHISM_KEYSYM_DELETE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		pated_save("Replace deleted row(s)    (Alt-Delete)");
 		pattern_delete_rows(current_row, 1, 1, 64);
 		break;
-	case SDLK_F9:
+	case SCHISM_KEYSYM_F9:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_toggle_channel_mute(current_channel - 1);
 		break;
-	case SDLK_F10:
+	case SCHISM_KEYSYM_F10:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_handle_channel_solo(current_channel - 1);
@@ -3756,7 +3799,7 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			set_view_scheme(n);
 		} else {
 			track_view_scheme[current_channel - top_display_channel] = n;
@@ -3768,106 +3811,110 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	}
 
 
-	switch (k->sym.sym) {
-	case SDLK_LEFT:
+	switch (k->sym) {
+	case SCHISM_KEYSYM_LEFT:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (current_channel > top_display_channel)
 			current_channel--;
 		return -1;
-	case SDLK_RIGHT:
+	case SCHISM_KEYSYM_RIGHT:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (current_channel < top_display_channel + visible_channels - 1)
 			current_channel++;
 		return -1;
-	case SDLK_F6:
+	case SCHISM_KEYSYM_F6:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_loop_pattern(current_pattern, current_row);
 		return 1;
-	case SDLK_F7:
+	case SCHISM_KEYSYM_F7:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		set_playback_mark();
 		return -1;
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		set_previous_instrument();
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		set_next_instrument();
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		current_row = 0;
 		return -1;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		current_row = total_rows;
 		return -1;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		current_row--;
 		return -1;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		current_row++;
 		return -1;
-	case SDLK_INSERT:
+	case SCHISM_KEYSYM_INSERT:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selection_roll(ROLL_DOWN);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_DELETE:
+	case SCHISM_KEYSYM_DELETE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selection_roll(ROLL_UP);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_MINUS:
+	case SCHISM_KEYSYM_MINUS:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing)
 			return 1;
 		prev_order_pattern();
 		return 1;
-	case SDLK_PLUS:
+	case SCHISM_KEYSYM_EQUALS:
+		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
+			return 0;
+		// fallthrough
+	case SCHISM_KEYSYM_PLUS:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing)
 			return 1;
 		next_order_pattern();
 		return 1;
-	case SDLK_c:
+	case SCHISM_KEYSYM_c:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		centralise_cursor = !centralise_cursor;
 		status_text_flash("Centralise cursor %s", (centralise_cursor ? "enabled" : "disabled"));
 		return -1;
-	case SDLK_h:
+	case SCHISM_KEYSYM_h:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		highlight_current_row = !highlight_current_row;
 		status_text_flash("Row hilight %s", (highlight_current_row ? "enabled" : "disabled"));
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_j:
+	case SCHISM_KEYSYM_j:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		fast_volume_toggle();
 		return 1;
-	case SDLK_u:
+	case SCHISM_KEYSYM_u:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (fast_volume_mode)
@@ -3876,7 +3923,7 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 			vary_command(FX_CHANNELVOLUME);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_y:
+	case SCHISM_KEYSYM_y:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (fast_volume_mode)
@@ -3885,7 +3932,7 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 			vary_command(FX_PANBRELLO);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SDLK_k:
+	case SCHISM_KEYSYM_k:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (fast_volume_mode)
@@ -3895,24 +3942,24 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 		status.flags |= NEED_UPDATE;
 		return 1;
 
-	case SDLK_b:
-		if (k->mod & KMOD_SHIFT)
+	case SCHISM_KEYSYM_b:
+		if (k->mod & SCHISM_KEYMOD_SHIFT)
 			return 0;
 		/* fall through */
-	case SDLK_o:
+	case SCHISM_KEYSYM_o:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		song_pattern_to_sample(current_pattern, !!(k->mod & KMOD_SHIFT), !!(k->sym.sym == SDLK_b));
+		song_pattern_to_sample(current_pattern, !!(k->mod & SCHISM_KEYMOD_SHIFT), !!(k->sym == SCHISM_KEYSYM_b));
 		return 1;
 
-	case SDLK_v:
+	case SCHISM_KEYSYM_v:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		show_default_volumes = !show_default_volumes;
 		status_text_flash("Default volumes %s", (show_default_volumes ? "enabled" : "disabled"));
 		return 1;
-	case SDLK_x:
-	case SDLK_z:
+	case SCHISM_KEYSYM_x:
+	case SCHISM_KEYSYM_z:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		midi_start_record++;
@@ -3929,7 +3976,7 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 			break;
 		};
 		return 1;
-	case SDLK_BACKSPACE:
+	case SCHISM_KEYSYM_BACKSPACE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		pattern_editor_display_history();
@@ -3945,7 +3992,7 @@ static int mute_toggle_hack[64]; /* mrsbrisby: please explain this one, i don't 
 static int pattern_editor_handle_key_default(struct key_event * k)
 {
 	/* bleah */
-	if (k->sym.sym == SDLK_LESS || k->sym.sym == SDLK_COLON || k->sym.sym == SDLK_SEMICOLON) {
+	if (k->sym == SCHISM_KEYSYM_LESS || k->sym == SCHISM_KEYSYM_COLON || k->sym == SCHISM_KEYSYM_SEMICOLON) {
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if ((status.flags & CLASSIC_MODE) || current_position != 4) {
@@ -3953,7 +4000,7 @@ static int pattern_editor_handle_key_default(struct key_event * k)
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
-	} else if (k->sym.sym == SDLK_GREATER || k->sym.sym == SDLK_QUOTE || k->sym.sym == SDLK_QUOTEDBL) {
+	} else if (k->sym == SCHISM_KEYSYM_GREATER || k->sym == SCHISM_KEYSYM_QUOTE || k->sym == SCHISM_KEYSYM_QUOTEDBL) {
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if ((status.flags & CLASSIC_MODE) || current_position != 4) {
@@ -3961,7 +4008,7 @@ static int pattern_editor_handle_key_default(struct key_event * k)
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
-	} else if (k->sym.sym == SDLK_COMMA) {
+	} else if (k->sym == SCHISM_KEYSYM_COMMA) {
 		if (k->state == KEY_RELEASE)
 			return 0;
 		switch (current_position) {
@@ -4145,8 +4192,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 		return pattern_editor_insert_midi(k);
 	}
 
-	switch (k->sym.sym) {
-	case SDLK_UP:
+	switch (k->sym) {
+	case SCHISM_KEYSYM_UP:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (skip_value) {
@@ -4156,7 +4203,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			current_row--;
 		}
 		return -1;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (skip_value) {
@@ -4166,10 +4213,10 @@ static int pattern_editor_handle_key(struct key_event * k)
 			current_row++;
 		}
 		return -1;
-	case SDLK_LEFT:
+	case SCHISM_KEYSYM_LEFT:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			current_channel--;
 		} else if (link_effect_column && current_position == 0 && current_channel > 1) {
 			current_channel--;
@@ -4178,10 +4225,10 @@ static int pattern_editor_handle_key(struct key_event * k)
 			current_position--;
 		}
 		return -1;
-	case SDLK_RIGHT:
+	case SCHISM_KEYSYM_RIGHT:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		if (k->mod & KMOD_SHIFT) {
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			current_channel++;
 		} else if (link_effect_column && current_position == 6 && current_channel < 64) {
 			current_position = current_effect() ? 7 : 10;
@@ -4189,37 +4236,37 @@ static int pattern_editor_handle_key(struct key_event * k)
 			current_position++;
 		}
 		return -1;
-	case SDLK_TAB:
+	case SCHISM_KEYSYM_TAB:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		if ((k->mod & KMOD_SHIFT) == 0)
+		if ((k->mod & SCHISM_KEYMOD_SHIFT) == 0)
 			current_channel++;
 		else if (current_position == 0)
 			current_channel--;
 		current_position = 0;
 
 		/* hack to keep shift-tab from changing the selection */
-		k->mod &= ~KMOD_SHIFT;
+		k->mod &= ~SCHISM_KEYMOD_SHIFT;
 		shift_selection_end();
 
 		return -1;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		{
-			int rh = current_song->row_highlight_major ?: 16;
+			int rh = current_song->row_highlight_major ? current_song->row_highlight_major : 16;
 			if (current_row == total_rows)
-				current_row -= (current_row % rh) ?: rh;
+				current_row -= (current_row % rh) ? (current_row % rh) : rh;
 			else
 				current_row -= rh;
 		}
 		return -1;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		current_row += current_song->row_highlight_major ?: 16;
+		current_row += current_song->row_highlight_major ? current_song->row_highlight_major : 16;
 		return -1;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (current_position == 0) {
@@ -4232,7 +4279,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			current_position = 0;
 		}
 		return -1;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		n = song_find_last_channel();
@@ -4246,7 +4293,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			current_position = 8;
 		}
 		return -1;
-	case SDLK_INSERT:
+	case SCHISM_KEYSYM_INSERT:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (template_mode && clipboard.rows == 1) {
@@ -4259,7 +4306,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			pattern_insert_rows(current_row, 1, current_channel, 1);
 		}
 		break;
-	case SDLK_DELETE:
+	case SCHISM_KEYSYM_DELETE:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (template_mode && clipboard.rows == 1) {
@@ -4272,7 +4319,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			pattern_delete_rows(current_row, 1, current_channel, 1);
 		}
 		break;
-	case SDLK_MINUS:
+	case SCHISM_KEYSYM_MINUS:
 		if (k->state == KEY_RELEASE)
 			return 0;
 
@@ -4288,12 +4335,16 @@ static int pattern_editor_handle_key(struct key_event * k)
 			};
 		}
 
-		if (k->mod & KMOD_SHIFT)
+		if (k->mod & SCHISM_KEYMOD_SHIFT)
 			set_current_pattern(current_pattern - 4);
 		else
 			set_current_pattern(current_pattern - 1);
 		return 1;
-	case SDLK_PLUS:
+	case SCHISM_KEYSYM_EQUALS:
+		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
+			return 0;
+		// fallthrough
+	case SCHISM_KEYSYM_PLUS:
 		if (k->state == KEY_RELEASE)
 			return 0;
 
@@ -4309,12 +4360,12 @@ static int pattern_editor_handle_key(struct key_event * k)
 			};
 		}
 
-		if ((k->mod & KMOD_SHIFT) && k->orig_sym.sym == SDLK_KP_PLUS)
+		if ((k->mod & SCHISM_KEYMOD_SHIFT) && k->sym == SCHISM_KEYSYM_KP_PLUS)
 			set_current_pattern(current_pattern + 4);
 		else
 			set_current_pattern(current_pattern + 1);
 		return 1;
-	case SDLK_BACKSPACE:
+	case SCHISM_KEYSYM_BACKSPACE:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		current_channel = multichannel_get_previous (current_channel);
@@ -4323,15 +4374,15 @@ static int pattern_editor_handle_key(struct key_event * k)
 		else
 			current_row--;
 		return -1;
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		copy_note_to_mask();
 		if (template_mode != TEMPLATE_NOTES_ONLY)
 			template_mode = TEMPLATE_OFF;
 		return 1;
-	case SDLK_l:
-		if (k->mod & KMOD_SHIFT) {
+	case SCHISM_KEYSYM_l:
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (status.flags & CLASSIC_MODE) return 0;
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -4339,8 +4390,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 			break;
 		}
 		return pattern_editor_handle_key_default(k);
-	case SDLK_a:
-		if (k->mod & KMOD_SHIFT && !(status.flags & CLASSIC_MODE)) {
+	case SCHISM_KEYSYM_a:
+		if (k->mod & SCHISM_KEYMOD_SHIFT && !(status.flags & CLASSIC_MODE)) {
 			if (k->state == KEY_RELEASE) {
 				return 0;
 			}
@@ -4353,8 +4404,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 			return -1;
 		}
 		return pattern_editor_handle_key_default(k);
-	case SDLK_f:
-		if (k->mod & KMOD_SHIFT && !(status.flags & CLASSIC_MODE)) {
+	case SCHISM_KEYSYM_f:
+		if (k->mod & SCHISM_KEYMOD_SHIFT && !(status.flags & CLASSIC_MODE)) {
 			if (k->state == KEY_RELEASE) {
 				return 0;
 			}
@@ -4368,8 +4419,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 		}
 		return pattern_editor_handle_key_default(k);
 
-	case SDLK_LSHIFT:
-	case SDLK_RSHIFT:
+	case SCHISM_KEYSYM_LSHIFT:
+	case SCHISM_KEYSYM_RSHIFT:
 		if (k->state == KEY_PRESS) {
 			if (shift_selection.in_progress)
 				shift_selection_end();
@@ -4400,16 +4451,16 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 	int ret;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
 
-	if (k->mod & KMOD_SHIFT) {
-		switch (k->sym.sym) {
-		case SDLK_LEFT:
-		case SDLK_RIGHT:
-		case SDLK_UP:
-		case SDLK_DOWN:
-		case SDLK_HOME:
-		case SDLK_END:
-		case SDLK_PAGEUP:
-		case SDLK_PAGEDOWN:
+	if (k->mod & SCHISM_KEYMOD_SHIFT) {
+		switch (k->sym) {
+		case SCHISM_KEYSYM_LEFT:
+		case SCHISM_KEYSYM_RIGHT:
+		case SCHISM_KEYSYM_UP:
+		case SCHISM_KEYSYM_DOWN:
+		case SCHISM_KEYSYM_HOME:
+		case SCHISM_KEYSYM_END:
+		case SCHISM_KEYSYM_PAGEUP:
+		case SCHISM_KEYSYM_PAGEDOWN:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!shift_selection.in_progress)
@@ -4419,9 +4470,9 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 		};
 	}
 
-	if (k->mod & KMOD_ALT)
+	if (k->mod & SCHISM_KEYMOD_ALT)
 		ret = pattern_editor_handle_alt_key(k);
-	else if (k->mod & KMOD_CTRL)
+	else if (k->mod & SCHISM_KEYMOD_CTRL)
 		ret = pattern_editor_handle_ctrl_key(k);
 	else
 		ret = pattern_editor_handle_key(k);
@@ -4448,7 +4499,7 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 
 	current_channel = CLAMP(current_channel, 1, 64);
 	pattern_editor_reposition();
-	if (k->mod & KMOD_SHIFT)
+	if (k->mod & SCHISM_KEYMOD_SHIFT)
 		shift_selection_update();
 
 	status.flags |= NEED_UPDATE;
@@ -4496,7 +4547,7 @@ static void pated_song_changed(void)
 
 static int _fix_f7(struct key_event *k)
 {
-	if (k->sym.sym == SDLK_F7) {
+	if (k->sym == SCHISM_KEYSYM_F7) {
 		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -4523,6 +4574,6 @@ void pattern_editor_load_page(struct page *page)
 	page->widgets = widgets_pattern;
 	page->help_index = HELP_PATTERN_EDITOR;
 
-	create_other(widgets_pattern + 0, 0, pattern_editor_handle_key_cb, pattern_editor_redraw);
+	widget_create_other(widgets_pattern + 0, 0, pattern_editor_handle_key_cb, NULL, pattern_editor_redraw);
 }
 

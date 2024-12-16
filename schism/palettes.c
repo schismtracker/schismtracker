@@ -24,12 +24,31 @@
 #include "headers.h"
 
 #include "it.h"
-#include "sdlmain.h"
+#include "palettes.h"
+#include "config.h"
 #include "util.h"
 
 /* --------------------------------------------------------------------- */
 
 struct it_palette palettes[] = {
+	{"User Defined", {
+		/*  0 */ { 0,  0,  0},
+		/*  1 */ {31, 22, 17},
+		/*  2 */ {45, 37, 30},
+		/*  3 */ {58, 58, 50},
+		/*  4 */ {44,  0, 21},
+		/*  5 */ {63, 63, 21},
+		/*  6 */ {17, 38, 18},
+		/*  7 */ {19,  3,  6},
+		/*  8 */ { 8, 21,  0},
+		/*  9 */ { 6, 29, 11},
+		/* 10 */ {14, 39, 29},
+		/* 11 */ {55, 58, 56},
+		/* 12 */ {40, 40, 40},
+		/* 13 */ {35,  5, 21},
+		/* 14 */ {22, 16, 15},
+		/* 15 */ {13, 12, 11},
+	}},
 	{"Light Blue", {
 		/*  0 */ { 0,  0,  0},
 		/*  1 */ {10, 25, 45},
@@ -48,6 +67,24 @@ struct it_palette palettes[] = {
 		/* 14 */ {18, 16, 15},
 		/* 15 */ {12, 11, 10},
 	}},
+	{"Camouflage (default)", {
+		/*  0 */ { 0,  0,  0},
+		/*  1 */ {31, 22, 17},
+		/*  2 */ {45, 37, 30},
+		/*  3 */ {58, 58, 50},
+		/*  4 */ {44,  0, 21},
+		/*  5 */ {63, 63, 21},
+		/*  6 */ {17, 38, 18},
+		/*  7 */ {19,  3,  6},
+		/*  8 */ { 8, 21,  0},
+		/*  9 */ { 6, 29, 11},
+		/* 10 */ {14, 39, 29},
+		/* 11 */ {55, 58, 56},
+		/* 12 */ {40, 40, 40},
+		/* 13 */ {35,  5, 21},
+		/* 14 */ {22, 16, 15},
+		/* 15 */ {13, 12, 11},
+	}},
 	{"Gold", { /* hey, this is the ST3 palette! (sort of) */
 		/*  0 */ { 0,  0,  0},
 		/*  1 */ {20, 17, 10},
@@ -65,24 +102,6 @@ struct it_palette palettes[] = {
 		/* 13 */ {21, 50, 21},
 		/* 14 */ {18, 16, 15},
 		/* 15 */ {12, 11, 10},
-	}},
-	{"Camouflage", {
-		/*  0 */ { 0,  0,  0},
-		/*  1 */ {31, 22, 17},
-		/*  2 */ {45, 37, 30},
-		/*  3 */ {58, 58, 50},
-		/*  4 */ {44,  0, 21},
-		/*  5 */ {63, 63, 21},
-		/*  6 */ {17, 38, 18},
-		/*  7 */ {19,  3,  6},
-		/*  8 */ { 8, 21,  0},
-		/*  9 */ { 6, 29, 11},
-		/* 10 */ {14, 39, 29},
-		/* 11 */ {55, 58, 56},
-		/* 12 */ {40, 40, 40},
-		/* 13 */ {35,  5, 21},
-		/* 14 */ {22, 16, 15},
-		/* 15 */ {13, 12, 11},
 	}},
 	{"Midnight Tracking", {
 		/*  0 */ { 0,  0,  0},
@@ -314,10 +333,32 @@ uint8_t current_palette[16][3] = {
 	/* 14 */ {63, 63, 21},
 	/* 15 */ {63, 63, 63},
 };
+
+#define USER_PALETTE (&palettes[0].colors)
+
+// uint8_t user_palette[16][3] = {
+// 	/* Defaults to Camouflage */
+// 	/*  0 */ { 0,  0,  0},
+// 	/*  1 */ {31, 22, 17},
+// 	/*  2 */ {45, 37, 30},
+// 	/*  3 */ {58, 58, 50},
+// 	/*  4 */ {44,  0, 21},
+// 	/*  5 */ {63, 63, 21},
+// 	/*  6 */ {17, 38, 18},
+// 	/*  7 */ {19,  3,  6},
+// 	/*  8 */ { 8, 21,  0},
+// 	/*  9 */ { 6, 29, 11},
+// 	/* 10 */ {14, 39, 29},
+// 	/* 11 */ {55, 58, 56},
+// 	/* 12 */ {40, 40, 40},
+// 	/* 13 */ {35,  5, 21},
+// 	/* 14 */ {22, 16, 15},
+// 	/* 15 */ {13, 12, 11},
+// };
+
 /* this should be changed only with palette_load_preset() (which doesn't call
 palette_apply() automatically, so do that as well) */
-int current_palette_index;
-
+int current_palette_index = -1;
 
 void palette_apply(void)
 {
@@ -342,11 +383,38 @@ void palette_apply(void)
 
 void palette_load_preset(int palette_index)
 {
-	if (palette_index < -1 || palette_index >= NUM_PALETTES)
+	if (palette_index < 0 || palette_index >= NUM_PALETTES)
 		return;
 
 	current_palette_index = palette_index;
-	if (palette_index == -1) return;
 	memcpy(current_palette, palettes[palette_index].colors, sizeof(current_palette));
+
+	cfg_save();
 }
 
+static const char* palette_trans = ".0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+
+void palette_to_string(int which, char *str_out) {
+	for (int n = 0; n < 48; n++)
+		str_out[n] = palette_trans[palettes[which].colors[n / 3][n % 3]];
+
+	str_out[48] = '\0';
+}
+
+int set_palette_from_string(const char *str_in) {
+	uint8_t colors[48];
+	const char *ptr;
+
+	// Remove bad characters from beginning (spaces etc.).
+	str_in = strpbrk(str_in, palette_trans);
+	if(!str_in) return 0;
+
+	for (int n = 0; n < 48; n++) {
+		if (str_in[n] == '\0' || (ptr = strchr(palette_trans, str_in[n])) == NULL)
+			return 0;
+		colors[n] = ptr - palette_trans;
+	}
+
+	memcpy(USER_PALETTE, colors, sizeof(colors));
+	return 1;
+}

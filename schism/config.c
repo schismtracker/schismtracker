@@ -24,7 +24,10 @@
 #include "headers.h"
 
 #include "it.h"
-#include "video.h" /* shouldn't need this */
+#include "config.h"
+#include "keyboard.h"
+#include "util.h"
+#include "palettes.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -36,85 +39,121 @@
 /* --------------------------------------------------------------------- */
 /* config settings */
 
-char cfg_dir_modules[PATH_MAX + 1], cfg_dir_samples[PATH_MAX + 1], cfg_dir_instruments[PATH_MAX + 1],
-	cfg_dir_dotschism[PATH_MAX + 1], cfg_font[NAME_MAX + 1];
+// cfg_dir_modules, cfg_dir_samples, and cfg_dir_instruments all are only
+// allocated here because otherwise we'd need to refactor the entire text
+// entry widget stuff to be able to use dynamic buffers.
+char cfg_dir_modules[SCHISM_PATH_MAX + 1], cfg_dir_samples[SCHISM_PATH_MAX + 1], cfg_dir_instruments[SCHISM_PATH_MAX + 1],
+	*cfg_dir_dotschism = NULL, *cfg_font = NULL;
 char cfg_video_interpolation[8];
+char cfg_video_format[9];
 int cfg_video_fullscreen = 0;
 int cfg_video_want_fixed = 0;
+int cfg_video_want_fixed_width = 0;
+int cfg_video_want_fixed_height = 0;
 int cfg_video_mousecursor = MOUSE_EMULATED;
 int cfg_video_width, cfg_video_height;
+int cfg_video_hardware = 0;
+int cfg_video_want_menu_bar = 1;
+
+// If these are set to zero, it means to use the
+// system key repeat or the default fallback values.
+int cfg_kbd_repeat_delay = 0;
+int cfg_kbd_repeat_rate = 0;
 
 /* --------------------------------------------------------------------- */
 
-#if defined(WIN32)
-# define DOT_SCHISM "Schism Tracker"
-#elif defined(MACOSX)
-# define DOT_SCHISM "Library/Application Support/Schism Tracker"
-#elif defined(GEKKO)
-# define DOT_SCHISM "."
+static const char *schism_dotfolders[] = {
+#if defined(SCHISM_WIN32)
+	"Schism Tracker",
+#elif defined(SCHISM_MACOSX)
+	"Library/Application Support/Schism Tracker",
+#elif defined(SCHISM_WII)
+	".",
 #else
-# define DOT_SCHISM ".schism"
+# ifdef __HAIKU__
+	"config/settings/schism",
+# else
+	".config/schism",
+# endif
+	".schism",
 #endif
+};
 
 void cfg_init_dir(void)
 {
 #if defined(__amigaos4__)
-	strcpy(cfg_dir_dotschism, "PROGDIR:");
+	str_realloc(&cfg_dir_dotschism, "PROGDIR:", sizeof("PROGDIR:"));
 #else
-	char *dot_dir, *ptr;
+	char *portable_file = NULL;
 
-	dot_dir = get_dot_directory();
-	ptr = dmoz_path_concat(dot_dir, DOT_SCHISM);
-	strncpy(cfg_dir_dotschism, ptr, PATH_MAX);
-	cfg_dir_dotschism[PATH_MAX] = 0;
-	free(dot_dir);
-	free(ptr);
+	char *app_dir = dmoz_get_exe_directory();
+	if (app_dir)
+		portable_file = dmoz_path_concat(app_dir, "portable.txt");
 
-	if (!is_directory(cfg_dir_dotschism)) {
-		printf("Creating directory %s\n", cfg_dir_dotschism);
-		printf("Schism Tracker uses this directory to store your settings.\n");
-		if (mkdir(cfg_dir_dotschism, 0777) != 0) {
-			perror("Error creating directory");
-			fprintf(stderr, "Everything will still work, but preferences will not be saved.\n");
+	if (portable_file && dmoz_path_is_file(portable_file)) {
+		printf("In portable mode.\n");
+
+		str_realloc(&cfg_dir_dotschism, app_dir, 0);
+	} else {
+		int found = 0;
+		char *dot_dir = dmoz_get_dot_directory();
+
+		for (size_t i = 0; i < ARRAY_SIZE(schism_dotfolders); i++) {
+			char *ptr;
+
+			ptr = dmoz_path_concat(dot_dir, schism_dotfolders[i]);
+			str_realloc(&cfg_dir_dotschism, ptr, 0);
+
+			free(ptr);
+
+			if (dmoz_path_is_directory(cfg_dir_dotschism)) {
+				found = 1;
+				break;
+			}
 		}
+
+		if (!found) {
+			char *ptr;
+
+			ptr = dmoz_path_concat(dot_dir, schism_dotfolders[0]);
+			str_realloc(&cfg_dir_dotschism, ptr, 0);
+
+			free(ptr);
+
+			printf("Creating directory %s\n", cfg_dir_dotschism);
+			printf("Schism Tracker uses this directory to store your settings.\n");
+			if (os_mkdir(cfg_dir_dotschism, 0777) != 0) {
+				perror("Error creating directory");
+				fprintf(stderr, "Everything will still work, but preferences will not be saved.\n");
+			}
+		}
+
+		free(dot_dir);
 	}
+
+	free(app_dir);
+	free(portable_file);
 #endif
 }
 
 /* --------------------------------------------------------------------- */
 
-static const char palette_trans[64] = ".0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 static void cfg_load_palette(cfg_file_t *cfg)
 {
-	uint8_t colors[48];
-	int n;
-	char palette_text[49] = "";
-	const char *ptr;
+	const char *palette_text = cfg_get_string(cfg, "General", "palette_cur", NULL, 0, NULL);
+
+	if (palette_text && strlen(palette_text) >= 48)
+		set_palette_from_string(palette_text);
 
 	palette_load_preset(cfg_get_number(cfg, "General", "palette", 2));
-
-	cfg_get_string(cfg, "General", "palette_cur", palette_text, 48, "");
-	for (n = 0; n < 48; n++) {
-		if (palette_text[n] == '\0' || (ptr = strchr(palette_trans, palette_text[n])) == NULL)
-			return;
-		colors[n] = ptr - palette_trans;
-	}
-	memcpy(current_palette, colors, sizeof(current_palette));
 }
 
 static void cfg_save_palette(cfg_file_t *cfg)
 {
-	int n;
-	char palette_text[49] = "";
-
 	cfg_set_number(cfg, "General", "palette", current_palette_index);
 
-	for (n = 0; n < 48; n++) {
-		/* Changed older implementation for this, since it is not vital
-		to have speed here and the compiler printed a warning */
-		palette_text[n] = palette_trans[current_palette[n/3][n%3]];
-	}
-	palette_text[48] = '\0';
+	char palette_text[48 + 1] = {0};
+	palette_to_string(0, palette_text);
 	cfg_set_string(cfg, "General", "palette_cur", palette_text);
 }
 
@@ -133,33 +172,35 @@ void cfg_load(void)
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-	cfg_get_string(&cfg, "Video", "interpolation", cfg_video_interpolation, 64, "");
+	cfg_get_string(&cfg, "Video", "interpolation", cfg_video_interpolation, ARRAY_SIZE(cfg_video_interpolation) - 1, "nearest");
+	cfg_get_string(&cfg, "Video", "format", cfg_video_format, ARRAY_SIZE(cfg_video_format) - 1, "");
 	cfg_video_width = cfg_get_number(&cfg, "Video", "width", 640);
 	cfg_video_height = cfg_get_number(&cfg, "Video", "height", 400);
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);
 	cfg_video_want_fixed = cfg_get_number(&cfg, "Video", "want_fixed", 0);
+	cfg_video_want_fixed_width = cfg_get_number(&cfg, "Video", "want_fixed_width", 640 * 5);
+	cfg_video_want_fixed_height = cfg_get_number(&cfg, "Video", "want_fixed_height", 400 * 6);
 	cfg_video_mousecursor = cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
 	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_MAX_STATE);
-	ptr = cfg_get_string(&cfg, "Video", "aspect", NULL, 0, NULL);
-	if (ptr && *ptr)
-		put_env_var("SCHISM_VIDEO_ASPECT", ptr);
+	cfg_video_hardware = cfg_get_number(&cfg, "Video", "hardware", 1);
+	cfg_video_want_menu_bar = !!cfg_get_number(&cfg, "Video", "want_menu_bar", 1);
 
-	tmp = get_home_directory();
-	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, PATH_MAX, tmp);
-	cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, PATH_MAX, tmp);
-	cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, PATH_MAX, tmp);
+	tmp = dmoz_get_home_directory();
+	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, ARRAY_SIZE(cfg_dir_modules) - 1, tmp);
+	cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, ARRAY_SIZE(cfg_dir_samples) - 1, tmp);
+	cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, ARRAY_SIZE(cfg_dir_instruments) - 1, tmp);
 	free(tmp);
 
 	ptr = cfg_get_string(&cfg, "Directories", "module_pattern", NULL, 0, NULL);
 	if (ptr) {
-		strncpy(cfg_module_pattern, ptr, PATH_MAX);
-		cfg_module_pattern[PATH_MAX] = 0;
+		strncpy(cfg_module_pattern, ptr, ARRAY_SIZE(cfg_module_pattern) - 1);
+		cfg_module_pattern[ARRAY_SIZE(cfg_module_pattern) - 1] = 0;
 	}
 
 	ptr = cfg_get_string(&cfg, "Directories", "export_pattern", NULL, 0, NULL);
 	if (ptr) {
-		strncpy(cfg_export_pattern, ptr, PATH_MAX);
-		cfg_export_pattern[PATH_MAX] = 0;
+		strncpy(cfg_export_pattern, ptr, ARRAY_SIZE(cfg_export_pattern) - 1);
+		cfg_export_pattern[ARRAY_SIZE(cfg_export_pattern) - 1] = 0;
 	}
 
 	ptr = cfg_get_string(&cfg, "General", "numlock_setting", NULL, 0, NULL);
@@ -171,6 +212,9 @@ void cfg_load(void)
 		status.fix_numlock_setting = NUMLOCK_ALWAYS_OFF;
 	else
 		status.fix_numlock_setting = NUMLOCK_HONOR;
+
+	cfg_kbd_repeat_delay = cfg_get_number(&cfg, "General", "key_repeat_delay", 0);
+	cfg_kbd_repeat_rate = cfg_get_number(&cfg, "General", "key_repeat_rate", 0);
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -210,7 +254,7 @@ void cfg_load(void)
 
 	kbd_sharp_flat_toggle(cfg_get_number(&cfg, "General", "accidentals_as_flats", 0) == 1);
 
-#ifdef MACOSX
+#ifdef SCHISM_MACOSX
 # define DEFAULT_META 1
 #else
 # define DEFAULT_META 0
@@ -233,7 +277,7 @@ void cfg_load(void)
 	else
 		status.flags &= ~MIDI_LIKE_TRACKER;
 
-	cfg_get_string(&cfg, "General", "font", cfg_font, NAME_MAX, "font.cfg");
+	str_realloc(&cfg_font, cfg_get_string(&cfg, "General", "font", cfg_font, 0, "font.cfg"), 0);
 
 	cfg_load_palette(&cfg);
 
@@ -287,6 +331,21 @@ void cfg_save(void)
 	cfg_free(&cfg);
 }
 
+void cfg_save_output(void)
+{
+	char *ptr;
+	cfg_file_t cfg;
+
+	ptr = dmoz_path_concat(cfg_dir_dotschism, "config");
+	cfg_init(&cfg, ptr);
+	free(ptr);
+
+	cfg_save_audio_playback(&cfg);
+
+	cfg_write(&cfg);
+	cfg_free(&cfg);
+}
+
 void cfg_atexit_save(void)
 {
 	char *ptr;
@@ -301,10 +360,12 @@ void cfg_atexit_save(void)
 	/* TODO: move these config options to video.c, this is lame :)
 	Or put everything here, which is what the note in audio_loadsave.cc
 	says. Very well, I contradict myself. */
-	cfg_set_string(&cfg, "Video", "interpolation", SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY));
+	cfg_set_string(&cfg, "Video", "interpolation", cfg_video_interpolation);
 	cfg_set_number(&cfg, "Video", "fullscreen", !!(video_is_fullscreen()));
 	cfg_set_number(&cfg, "Video", "mouse_cursor", video_mousecursor_visible());
 	cfg_set_number(&cfg, "Video", "lazy_redraw", !!(status.flags & LAZY_REDRAW));
+	cfg_set_number(&cfg, "Video", "hardware", !!(video_is_hardware()));
+	cfg_set_number(&cfg, "Video", "want_menu_bar", !!cfg_video_want_menu_bar);
 
 	cfg_set_number(&cfg, "General", "vis_style", status.vis_style);
 	cfg_set_number(&cfg, "General", "time_display", status.time_display);
@@ -312,7 +373,7 @@ void cfg_atexit_save(void)
 	cfg_set_number(&cfg, "General", "make_backups", !!(status.flags & MAKE_BACKUPS));
 	cfg_set_number(&cfg, "General", "numbered_backups", !!(status.flags & NUMBERED_BACKUPS));
 
-	cfg_set_number(&cfg, "General", "accidentals_as_flats", !!(status.flags & ACCIDENTALS_AS_FLATS));
+	cfg_set_number(&cfg, "General", "accidentals_as_flats", (kbd_sharp_flat_state() == KBD_SHARP_FLAT_FLATS));
 	cfg_set_number(&cfg, "General", "meta_is_ctrl", !!(status.flags & META_IS_CTRL));
 	cfg_set_number(&cfg, "General", "altgr_is_alt", !!(status.flags & ALTGR_IS_ALT));
 

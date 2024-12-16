@@ -25,8 +25,11 @@
 
 #include "it.h"
 #include "page.h"
+#include "keyboard.h"
 #include "midi.h"
 #include "song.h"
+#include "widget.h"
+#include "vgamem.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -39,7 +42,7 @@ static midi_config_t editcfg;
 static void midiout_draw_const(void)
 {
 	char buf[4] = "SFx";
-	int i;
+	unsigned int i;
 
 	draw_text(    "MIDI Start", 6, 13, 0, 2);
 	draw_text(     "MIDI Stop", 7, 14, 0, 2);
@@ -101,7 +104,7 @@ static void zxx_setpos(int pos)
 
 static int pre_handle_key(struct key_event *k)
 {
-	if (*selected_widget == 25 && k->sym.sym == SDLK_UP) {
+	if (*selected_widget == 25 && k->sym == SCHISM_KEYSYM_UP) {
 		/* scroll up */
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -110,7 +113,7 @@ static int pre_handle_key(struct key_event *k)
 		zxx_setpos(zxx_top - 1);
 		return 1;
 	}
-	if (*selected_widget == 31 && k->sym.sym == SDLK_DOWN) {
+	if (*selected_widget == 31 && k->sym == SCHISM_KEYSYM_DOWN) {
 		/* scroll down */
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -118,13 +121,13 @@ static int pre_handle_key(struct key_event *k)
 		return 1;
 	}
 	if ((*selected_widget) >= 25) {
-		switch (k->sym.sym) {
-		case SDLK_PAGEUP:
+		switch (k->sym) {
+		case SCHISM_KEYSYM_PAGEUP:
 			if (k->state == KEY_RELEASE)
 				return 1;
 			zxx_setpos(zxx_top - 7);
 			return 1;
-		case SDLK_PAGEDOWN:
+		case SCHISM_KEYSYM_PAGEDOWN:
 			if (k->state == KEY_RELEASE)
 				return 1;
 			zxx_setpos(zxx_top + 7);
@@ -159,17 +162,17 @@ void midiout_load_page(struct page *page)
 	};
 
 	for (i = 0; i < 9; i++) {
-		create_textentry(widgets_midiout + i, 17, 13 + i, 43,
+		widget_create_textentry(widgets_midiout + i, 17, 13 + i, 43,
 				(i == 0 ? 0 : (i - 1)), i + 1, 9,
 				copy_out, editcfg_top[i], 31);
 	}
 	for (i = 0; i < 16; i++) {
-		create_textentry(widgets_midiout + 9 + i, 17, 24 + i, 43,
+		widget_create_textentry(widgets_midiout + 9 + i, 17, 24 + i, 43,
 				9 + i - 1, 9 + i + 1, 25,
 				copy_out, editcfg.sfx[i], 31);
 	}
 	for (i = 0; i < 7; i++) {
-		create_textentry(widgets_midiout + 25 + i, 17, 42 + i, 43,
+		widget_create_textentry(widgets_midiout + 25 + i, 17, 42 + i, 43,
 				25 + i - 1, 25 + ((i == 6) ? 6 : (i + 1)), 0,
 				copy_out, editcfg.zxx[i], 31);
 	}

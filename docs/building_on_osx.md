@@ -8,12 +8,15 @@ in the following command:
 After Homebrew has been successfully installed, you need to install `automake`,
 `autoconf`, `sdl2` and `git`.
 
-    brew install automake autoconf sdl2 git
+    brew install automake autoconf sdl2 git perl pkg-config
 
 Alternatively, if you have MacPorts installed, you can use this command
 instead:
 
-    sudo port install automake autoconf libtool libsdl2 git
+    sudo port install automake autoconf libtool libsdl2 git perl5 pkg-config
+
+For FLAC sample loading support, you will also need development versions of the
+`flac` and `libogg` libraries.
 
 In this case, you may have to open a new terminal shell, or else you may get
 warnings about the version of autoconf/automake you're using.

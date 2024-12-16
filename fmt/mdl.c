@@ -21,42 +21,61 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
 #include "headers.h"
+#include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
 #include "log.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 /* --------------------------------------------------------------------- */
 
 /* MDL is nice, but it's a pain to read the title... */
 
-int fmt_mdl_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_mdl_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	uint32_t position, block_length;
+	unsigned char magic[4];
 
-	/* data[4] = major version number (accept 0 or 1) */
-	if (!(length > 5 && ((data[4] & 0xf0) >> 4) <= 1 && memcmp(data, "DMDL", 4) == 0))
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "DMDL", sizeof(magic)))
 		return 0;
 
-	position = 5;
-	while (position + 6 < length) {
-		memcpy(&block_length, data + position + 2, 4);
-		block_length = bswapLE32(block_length);
-		if (block_length + position > length)
+	/* major version number (accept 0 or 1) */
+	int version = slurp_getc(fp);
+	if (version == EOF)
+		return 0;
+
+	if ((((unsigned char)version & 0xf0) >> 4) > 1)
+		return 0;
+
+	for (;;) {
+		unsigned char id[2];
+		uint32_t block_length;
+
+		if (slurp_read(fp, &id, sizeof(id)) != sizeof(id)
+			|| slurp_read(fp, &block_length, sizeof(block_length)) != sizeof(block_length))
 			return 0;
-		if (memcmp(data + position, "IN", 2) == 0) {
+
+		block_length = bswapLE32(block_length);
+
+		if (!memcmp(id, "IN", 2)) {
 			/* hey! we have a winner */
-			file->title = strn_dup((const char *)data + position + 6, 32);
-			file->artist = strn_dup((const char *)data + position + 38, 20);
+			unsigned char title[32], artist[20];
+
+			if (slurp_read(fp, &title, sizeof(title)) != sizeof(title)
+				|| slurp_read(fp, &artist, sizeof(artist)) != sizeof(artist))
+				return 0;
+
+			file->title = strn_dup((const char *)title, sizeof(title));
+			file->artist = strn_dup((const char *)artist, sizeof(artist));
 			file->description = "Digitrakker";
 			/*file->extension = str_dup("mdl");*/
 			file->type = TYPE_MODULE_XM;
 			return 1;
-		} /* else... */
-		position += 6 + block_length;
+		} else {
+			slurp_seek(fp, SEEK_CUR, block_length);
+		}
 	}
 
 	return 0;
@@ -89,7 +108,6 @@ enum {
 	MDLNOTE_PARAM2          = 1 << 5,
 };
 
-#pragma pack(push,1)
 struct mdl_infoblock {
 	char title[32];
 	char composer[20];
@@ -114,7 +132,6 @@ struct mdl_samplehdr {
 	uint8_t vibdepth;
 	uint8_t vibsweep;
 	uint8_t vibtype;
-	uint8_t reserved; // zero
 	uint8_t freqenv_flags;
 };
 
@@ -126,19 +143,7 @@ struct mdl_sampleinfo {
 	uint32_t length;
 	uint32_t loopstart;
 	uint32_t looplen;
-	uint8_t unused; // was volume in v0.0, why it was changed I have no idea
-	uint8_t flags;
-};
-
-struct mdl_sampleinfo_v0 {
-	uint8_t smpnum;
-	char name[32];
-	char filename[8];
-	uint16_t c4speed;
-	uint32_t length;
-	uint32_t loopstart;
-	uint32_t looplen;
-	uint8_t volume;
+	uint8_t volume; // volume in v0.0, unused after
 	uint8_t flags;
 };
 
@@ -151,7 +156,6 @@ struct mdl_envelope {
 	uint8_t flags;
 	uint8_t loop; // lower 4 bits = start, upper 4 bits = end
 };
-#pragma pack(pop)
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* Internal definitions */
@@ -423,18 +427,31 @@ static int mdl_read_info(song_t *song, slurp_t *fp)
 	int n, songlen;
 	uint8_t b;
 
-	slurp_read(fp, &info, sizeof(info));
+#define READ_VALUE(name) \
+	do { if (slurp_read(fp, &info.name, sizeof(info.name)) != sizeof(info.name)) { return 0; } } while (0)
+
+	READ_VALUE(title);
+	READ_VALUE(composer);
+	READ_VALUE(numorders);
+	READ_VALUE(repeatpos);
+	READ_VALUE(globalvol);
+	READ_VALUE(speed);
+	READ_VALUE(tempo);
+	READ_VALUE(chanpan);
+
+#undef READ_VALUE
+
 	info.numorders = bswapLE16(info.numorders);
 	info.repeatpos = bswapLE16(info.repeatpos);
 
 	// title is space-padded
 	info.title[31] = '\0';
-	trim_string(info.title);
+	str_trim(info.title);
 	strncpy(song->title, info.title, 25);
 	song->title[25] = '\0';
 
 	song->initial_global_volume = (info.globalvol + 1) >> 1;
-	song->initial_speed = info.speed ?: 1;
+	song->initial_speed = info.speed ? info.speed : 1;
 	song->initial_tempo = MAX(info.tempo, 31); // MDL tempo range is actually 4-255
 
 	// channel pannings
@@ -538,80 +555,110 @@ static struct mdlpat *mdl_read_patterns_v0(song_t *song, slurp_t *fp)
 	return pat_head.next;
 }
 
-static song_note_t **mdl_read_tracks(slurp_t *fp)
+struct receive_userdata {
+	song_note_t *track;
+	int *lostfx;
+};
+
+static int mdl_receive_track(const void *data, size_t len, void *userdata)
 {
-	song_note_t **tracks = mem_calloc(65536, sizeof(song_note_t *));
-	int ntrks, trk, row, lostfx = 0;
-	uint16_t h;
+	struct receive_userdata *rec_userdata = userdata;
+	int row = 0;
 	uint8_t b, x, y;
 	uint8_t vol, e1, e2, p1, p2;
-	size_t bytesleft, reallen = fp->length;
+	song_note_t *track = rec_userdata->track;
+	int *lostfx = rec_userdata->lostfx;
 
-	slurp_read(fp, &h, 2);
-	ntrks = bswapLE16(h);
+	slurp_t fake_fp = {0};
+	slurp_memstream(&fake_fp, (uint8_t *)data, len);
+
+	while (row < 256 && !slurp_eof(&fake_fp)) {
+		b = slurp_getc(&fake_fp);
+		x = b >> 2;
+		y = b & 3;
+		switch (y) {
+		case 0: // (x+1) empty notes follow
+			row += x + 1;
+			break;
+		case 1: // Repeat previous note (x+1) times
+			if (row > 0) {
+				do {
+					track[row] = track[row - 1];
+				} while (++row < 256 && x--);
+			}
+			break;
+		case 2: // Copy note from row x
+			if (row > x)
+				track[row] = track[x];
+			row++;
+			break;
+		case 3: // New note data
+			if (x & MDLNOTE_NOTE) {
+				b = slurp_getc(&fake_fp);
+				// convenient! :)
+				// (I don't know what DT does for out of range notes, might be worth
+				// checking some time)
+				track[row].note = (b > 120) ? NOTE_OFF : b;
+			}
+			if (x & MDLNOTE_SAMPLE) {
+				b = slurp_getc(&fake_fp);
+				if (b >= MAX_INSTRUMENTS)
+					b = 0;
+				track[row].instrument = b;
+			}
+			vol = (x & MDLNOTE_VOLUME) ? slurp_getc(&fake_fp) : 0;
+			if (x & MDLNOTE_EFFECTS) {
+				b = slurp_getc(&fake_fp);
+				e1 = b & 0xf;
+				e2 = b >> 4;
+			} else {
+				e1 = e2 = 0;
+			}
+			p1 = (x & MDLNOTE_PARAM1) ? slurp_getc(&fake_fp) : 0;
+			p2 = (x & MDLNOTE_PARAM2) ? slurp_getc(&fake_fp) : 0;
+			*lostfx += cram_mdl_effects(&track[row], vol, e1, e2, p1, p2);
+			row++;
+			break;
+		}
+	}
+
+	return slurp_tell(&fake_fp);
+}
+
+static int mdl_read_tracks(slurp_t *fp, song_note_t *tracks[65536])
+{
+	/* why are we allocating so many of these ? */
+	uint16_t ntrks, trk;
+	int lostfx = 0;
+
+	slurp_read(fp, &ntrks, 2);
+	ntrks = bswapLE16(ntrks);
 
 	// track 0 is always blank
 	for (trk = 1; trk <= ntrks; trk++) {
-		slurp_read(fp, &h, 2);
-		bytesleft = bswapLE16(h);
-		fp->length = MIN(fp->length, fp->pos + bytesleft); // narrow
+		int64_t startpos = slurp_tell(fp);
+		if (startpos < 0)
+			return 0; /* what ? */
+
+		uint16_t bytesleft;
+		slurp_read(fp, &bytesleft, sizeof(bytesleft));
+		bytesleft = bswapLE16(bytesleft);
+
 		tracks[trk] = mem_calloc(256, sizeof(song_note_t));
-		row = 0;
-		while (row < 256 && !slurp_eof(fp)) {
-			b = slurp_getc(fp);
-			x = b >> 2;
-			y = b & 3;
-			switch (y) {
-			case 0: // (x+1) empty notes follow
-				row += x + 1;
-				break;
-			case 1: // Repeat previous note (x+1) times
-				if (row > 0) {
-					do {
-						tracks[trk][row] = tracks[trk][row - 1];
-					} while (++row < 256 && x--);
-				}
-				break;
-			case 2: // Copy note from row x
-				if (row > x)
-					tracks[trk][row] = tracks[trk][x];
-				row++;
-				break;
-			case 3: // New note data
-				if (x & MDLNOTE_NOTE) {
-					b = slurp_getc(fp);
-					// convenient! :)
-					// (I don't know what DT does for out of range notes, might be worth
-					// checking some time)
-					tracks[trk][row].note = (b > 120) ? NOTE_OFF : b;
-				}
-				if (x & MDLNOTE_SAMPLE) {
-					b = slurp_getc(fp);
-					if (b >= MAX_INSTRUMENTS)
-						b = 0;
-					tracks[trk][row].instrument = b;
-				}
-				vol = (x & MDLNOTE_VOLUME) ? slurp_getc(fp) : 0;
-				if (x & MDLNOTE_EFFECTS) {
-					b = slurp_getc(fp);
-					e1 = b & 0xf;
-					e2 = b >> 4;
-				} else {
-					e1 = e2 = 0;
-				}
-				p1 = (x & MDLNOTE_PARAM1) ? slurp_getc(fp) : 0;
-				p2 = (x & MDLNOTE_PARAM2) ? slurp_getc(fp) : 0;
-				lostfx += cram_mdl_effects(&tracks[trk][row], vol, e1, e2, p1, p2);
-				row++;
-				break;
-			}
-		}
-		fp->length = reallen; // widen
+
+		struct receive_userdata data = {
+			.track = tracks[trk],
+			.lostfx = &lostfx,
+		};
+
+		int c = slurp_receive(fp, mdl_receive_track, bytesleft, &data);
+
+		slurp_seek(fp, startpos + c + 2, SEEK_SET);
 	}
 	if (lostfx)
 		log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
 
-	return tracks;
+	return 1;
 }
 
 
@@ -657,13 +704,32 @@ static void mdl_read_instruments(song_t *song, slurp_t *fp)
 
 		while (nsmp--) {
 			// read a sample
-			slurp_read(fp, &shdr, sizeof(shdr));
+#define READ_VALUE(name) slurp_read(fp, &shdr.name, sizeof(shdr.name))
+
+			READ_VALUE(smpnum);
+			READ_VALUE(lastnote);
+			READ_VALUE(volume);
+			READ_VALUE(volenv_flags);
+			READ_VALUE(panning);
+			READ_VALUE(panenv_flags);
+			READ_VALUE(fadeout);
+			READ_VALUE(vibspeed);
+			READ_VALUE(vibdepth);
+			READ_VALUE(vibsweep);
+			READ_VALUE(vibtype);
+			slurp_seek(fp, 1, SEEK_CUR); // reserved, zero
+			READ_VALUE(freqenv_flags);
+
+#undef READ_VALUE
+
 			shdr.fadeout = bswapLE16(shdr.fadeout);
-			if (shdr.smpnum == 0 || shdr.smpnum > MAX_SAMPLES) {
+
+			if (shdr.smpnum == 0 || shdr.smpnum > MAX_SAMPLES)
 				continue;
-			}
+
 			if (!song->instruments[shdr.smpnum])
 				song->instruments[shdr.smpnum] = csf_allocate_instrument();
+
 			sins = song->instruments[shdr.smpnum];
 
 			smp = song->samples + shdr.smpnum;
@@ -718,7 +784,20 @@ static void mdl_read_sampleinfo(song_t *song, slurp_t *fp, uint8_t *packtype)
 
 	nsmp = slurp_getc(fp);
 	while (nsmp--) {
-		slurp_read(fp, &sinfo, sizeof(sinfo));
+#define READ_VALUE(name) slurp_read(fp, &sinfo.name, sizeof(sinfo.name))
+
+		READ_VALUE(smpnum);
+		READ_VALUE(name);
+		READ_VALUE(filename);
+		READ_VALUE(c4speed);
+		READ_VALUE(length);
+		READ_VALUE(loopstart);
+		READ_VALUE(looplen);
+		READ_VALUE(volume);
+		READ_VALUE(flags);
+
+#undef READ_VALUE
+
 		if (sinfo.smpnum == 0 || sinfo.smpnum > MAX_SAMPLES) {
 			continue;
 		}
@@ -756,13 +835,26 @@ static void mdl_read_sampleinfo(song_t *song, slurp_t *fp, uint8_t *packtype)
 // (ughh)
 static void mdl_read_sampleinfo_v0(song_t *song, slurp_t *fp, uint8_t *packtype)
 {
-	struct mdl_sampleinfo_v0 sinfo;
+	struct mdl_sampleinfo sinfo;
 	song_sample_t *smp;
 	int nsmp;
 
 	nsmp = slurp_getc(fp);
 	while (nsmp--) {
-		slurp_read(fp, &sinfo, sizeof(sinfo));
+#define READ_VALUE(name) slurp_read(fp, &sinfo.name, sizeof(sinfo.name))
+
+		READ_VALUE(smpnum);
+		READ_VALUE(name);
+		READ_VALUE(filename);
+		READ_VALUE(c4speed);
+		READ_VALUE(length);
+		READ_VALUE(loopstart);
+		READ_VALUE(looplen);
+		READ_VALUE(volume);
+		READ_VALUE(flags);
+
+#undef READ_VALUE
+
 		if (sinfo.smpnum == 0 || sinfo.smpnum > MAX_SAMPLES) {
 			continue;
 		}
@@ -805,7 +897,20 @@ static void mdl_read_envelopes(slurp_t *fp, struct mdlenv **envs, uint32_t flags
 
 	nenv = slurp_getc(fp);
 	while (nenv--) {
-		slurp_read(fp, &ehdr, sizeof(ehdr));
+#define READ_VALUE(name) slurp_read(fp, &ehdr.name, sizeof(ehdr.name))
+
+		READ_VALUE(envnum);
+
+		for (size_t i = 0; i < ARRAY_SIZE(ehdr.nodes); i++) {
+			READ_VALUE(nodes[i].x);
+			READ_VALUE(nodes[i].y);
+		}
+
+		READ_VALUE(flags);
+		READ_VALUE(loop);
+
+#undef READ_VALUE
+
 		if (ehdr.envnum > 63)
 			continue;
 
@@ -854,12 +959,12 @@ static void copy_envelope(song_instrument_t *ins, song_envelope_t *ienv, struct 
 	}
 }
 
-int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
+int fmt_mdl_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lflags)
 {
 	struct mdlpat *pat, *patptr = NULL;
-	struct mdlenv *volenvs[64] = {NULL}, *panenvs[64] = {NULL}, *freqenvs[64] = {NULL};
+	struct mdlenv *volenvs[64] = {0}, *panenvs[64] = {0}, *freqenvs[64] = {0};
 	uint8_t packtype[MAX_SAMPLES] = {0};
-	song_note_t **tracks = NULL;
+	song_note_t *tracks[65536] = {0};
 	long datapos = 0; // where to seek for the sample data
 	int restartpos = -1;
 	int trk, n;
@@ -905,7 +1010,7 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 		case MDL_BLK_TRACKS:
 			if (!(readflags & MDL_HAS_TRACKS)) {
 				readflags |= MDL_HAS_TRACKS;
-				tracks = mdl_read_tracks(fp);
+				mdl_read_tracks(fp, tracks);
 			}
 			break;
 		case MDL_BLK_INSTRUMENTS:
@@ -985,7 +1090,7 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 			for (n = 1; n < MAX_SAMPLES; n++) {
 				if (!packtype[n] && !song->samples[n].length)
 					continue;
-				uint32_t smpsize, flags;
+				uint32_t flags;
 				if (packtype[n] > 2) {
 					log_appendf(4, " Warning: Sample %d: unknown packing type %d",
 						    n, packtype[n]);
@@ -997,9 +1102,7 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 				flags = SF_LE | SF_M;
 				flags |= packtype[n] ? SF_MDL : SF_PCMS;
 				flags |= (song->samples[n].flags & CHN_16BIT) ? SF_16 : SF_8;
-				smpsize = csf_read_sample(song->samples + n, flags,
-					fp->data + fp->pos, fp->length - fp->pos);
-				slurp_seek(fp, smpsize, SEEK_CUR);
+				csf_read_sample(song->samples + n, flags, fp);
 			}
 		} else {
 			for (n = 1; n < MAX_SAMPLES; n++)
@@ -1044,7 +1147,6 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 		// and clean up
 		for (trk = 1; trk < 65536 && tracks[trk]; trk++)
 			free(tracks[trk]);
-		free(tracks);
 	}
 	while (patptr) {
 		pat = patptr;

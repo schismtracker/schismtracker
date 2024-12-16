@@ -30,14 +30,25 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_mt2_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_mt2_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 106 && memcmp(data, "MT20", 4) == 0))
+	if (slurp_length(fp) <= 106)
+		return 0;
+
+	unsigned char magic[4];
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "MT20", 4))
+		return 0;
+
+	unsigned char title[64];
+
+	slurp_seek(fp, 42, SEEK_SET);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 
 	file->description = "MadTracker 2 Module";
 	/*file->extension = str_dup("mt2");*/
-	file->title = strn_dup((const char *)data + 42, 64);
+	file->title = strn_dup((const char *)title, sizeof(title));
 	file->type = TYPE_MODULE_XM;
 	return 1;
 }

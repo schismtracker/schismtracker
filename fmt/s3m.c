@@ -21,27 +21,37 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
 #include "headers.h"
+#include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
 #include "version.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 #include "disko.h"
 #include "log.h"
 
+#include <inttypes.h>
+
 /* --------------------------------------------------------------------- */
 
-int fmt_s3m_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_s3m_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 48 && memcmp(data + 44, "SCRM", 4) == 0))
+	unsigned char magic[4], title[27];
+	
+	slurp_seek(fp, 44, SEEK_SET);
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "SCRM", sizeof(magic)))
+		return 0;
+
+	slurp_rewind(fp);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 
 	file->description = "Scream Tracker 3";
 	/*file->extension = str_dup("s3m");*/
-	file->title = strn_dup((const char *)data, 27);
+	file->title = strn_dup((const char *)title, sizeof(title));
 	file->type = TYPE_MODULE_S3M;
 	return 1;
 }
@@ -60,6 +70,20 @@ enum {
 #define S3M_UNSIGNED 1
 #define S3M_CHANPAN 2 // the FC byte
 
+static int s3m_import_edittime(song_t *song, uint16_t trkvers, uint32_t reserved32)
+{
+	if (song->histlen)
+		return 0; // ?
+
+	song->histlen = 1;
+	song->history = mem_calloc(1, sizeof(*song->history));
+
+	uint32_t runtime = it_decode_edit_timer(trkvers, reserved32);
+	song->history[0].runtime = dos_time_to_ms(runtime);
+
+	return 1;
+}
+
 int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
 	uint16_t nsmp, nord, npat;
@@ -71,6 +95,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint8_t c;
 	uint32_t tmplong;
 	uint8_t b[4];
+	uint8_t channel_types[32];
 	/* parapointers */
 	uint16_t para_smp[MAX_SAMPLES];
 	uint16_t para_pat[MAX_PATTERNS];
@@ -80,9 +105,12 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	uint16_t trkvers;
 	uint16_t flags;
 	uint16_t special;
-	uint16_t reserved;
+	uint8_t reserved[8];
+	uint16_t reserved16;
+	uint32_t reserved32; // Impulse Tracker edit time
 	uint32_t adlib = 0; // bitset
 	uint16_t gus_addresses = 0;
+	uint8_t mix_volume; /* detect very old modplug tracker */
 	char any_samples = 0;
 	int uc;
 	const char *tid = NULL;
@@ -126,13 +154,16 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	song->initial_global_volume = slurp_getc(fp) << 1;
 	// In the case of invalid data, ST3 uses the speed/tempo value that's set in the player prior to
 	// loading the song, but that's just crazy.
-	song->initial_speed = slurp_getc(fp) ?: 6;
+	song->initial_speed = slurp_getc(fp);
+	if (!song->initial_speed)
+		song->initial_speed = 6;
+
 	song->initial_tempo = slurp_getc(fp);
 	if (song->initial_tempo <= 32) {
 		// (Yes, 32 is ignored by Scream Tracker.)
 		song->initial_tempo = 125;
 	}
-	song->mixing_volume = slurp_getc(fp);
+	mix_volume = song->mixing_volume = slurp_getc(fp);
 	if (song->mixing_volume & 0x80) {
 		song->mixing_volume ^= 0x80;
 	} else {
@@ -143,15 +174,16 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (slurp_getc(fp) != 0xfc)
 		misc &= ~S3M_CHANPAN;     /* stored pan values */
 
-	/* Extended Schism Tracker version information */
-	slurp_read(fp, &reserved, 2);
-	reserved = bswapLE16(reserved);
-	/* Impulse Tracker hides its edit timer in the next four bytes. */
-	slurp_seek(fp, 6, SEEK_CUR);
+	slurp_read(fp, &reserved, 8);
+	memcpy(&reserved16, reserved, 2);
+	memcpy(&reserved32, reserved + 2, 4);
+	reserved16 = bswapLE16(reserved16); // schism & openmpt version info
+	reserved32 = bswapLE32(reserved32); // impulse tracker edit timer
 	slurp_read(fp, &special, 2); // field not used by st3
 	special = bswapLE16(special);
 
 	/* channel settings */
+	slurp_read(fp, channel_types, 32);
 	for (n = 0; n < 32; n++) {
 		/* Channel 'type': 0xFF is a disabled channel, which shows up as (--) in ST3.
 		Any channel with the high bit set is muted.
@@ -165,7 +197,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		Values past 2F seem to display bits of the UI like the copyright and help, strange!
 		These out-of-range channel types will almost certainly hang or crash ST3 or
 		produce other strange behavior. Simply put, don't do it. :) */
-		c = slurp_getc(fp);
+		c = channel_types[n];
 		if (c & 0x80) {
 			song->channels[n].flags |= CHN_MUTE;
 			// ST3 doesn't even play effects in muted channels -- throw them out?
@@ -210,9 +242,9 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	/* default pannings */
 	if (misc & S3M_CHANPAN) {
 		for (n = 0; n < 32; n++) {
-			c = slurp_getc(fp);
-			if ((c & 0x20) && (!(adlib & (1 << n)) || trkvers > 0x1320))
-				song->channels[n].panning = ((c & 0xf) << 2) + 2;
+			int pan = slurp_getc(fp);
+			if ((pan & 0x20) && (!(adlib & (1 << n)) || trkvers > 0x1320))
+				song->channels[n].panning = ((pan & 0xf) * 64) / 15;
 		}
 	}
 
@@ -224,7 +256,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	for (n = 0, sample = song->samples + 1; n < nsmp; n++, sample++) {
 		uint8_t type;
 
-		slurp_seek(fp, (para_smp[n]) << 4, SEEK_SET);
+		slurp_seek(fp, bswapLE16(para_smp[n]) << 4, SEEK_SET);
 
 		type = slurp_getc(fp);
 		slurp_read(fp, sample->filename, 12);
@@ -301,7 +333,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			if (!sample->length || (sample->flags & CHN_ADLIB))
 				continue;
 			slurp_seek(fp, para_sdata[n] << 4, SEEK_SET);
-			csf_read_sample(sample, smp_flags[n], fp->data + fp->pos, fp->length - fp->pos);
+			csf_read_sample(sample, smp_flags[n], fp);
 		}
 	}
 
@@ -389,6 +421,19 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						} else if (note->param == 0xc0) {
 							note->effect = FX_NONE;
 							note->param = 0;
+						} else if ((note->param & 0xf0) == 0xa0) {
+							// Convert the old messy SoundBlaster stereo control command (or an approximation of it, anyway)
+							uint8_t ctype = channel_types[chn] & 0x7f;
+							if (gus_addresses > 1 || ctype >= 0x10)
+								note->effect = FX_NONE;
+							else if (note->param == 0xa0 || note->param == 0xa2)  // Normal panning
+								note->param = (ctype & 8) ? 0x8c : 0x83;
+							else if (note->param == 0xa1 || note->param == 0xa3)  // Swap left / right channel
+								note->param = (ctype & 8) ? 0x83 : 0x8c;
+							else if (note->param <= 0xa7)  // Center
+								note->param = 0x88;
+							else
+								note->effect = FX_NONE;
 						}
 					}
 				}
@@ -404,52 +449,122 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	 * does NOT save channel pannings. Also, it writes a fairly recognizable LRRL pattern for the channels,
 	 * but I'm not checking that. (yet?) */
 	if (trkvers == 0x1320) {
-		if (special == 0 && uc == 0 && (flags & ~0x50) == 0
+		if (!memcmp(reserved, "SCLUB2.0", 8)) {
+			tid = "Sound Club 2";
+		} else if (special == 0 && uc == 0 && (flags & ~0x50) == 0
 		    && misc == (S3M_UNSIGNED | S3M_CHANPAN) && (nord % 16) == 0) {
-			tid = "Modplug Tracker";
-		} else if (special == 0 && uc == 0 && flags == 0 && misc == (S3M_UNSIGNED)) {
-			tid = "Velvet Studio";
+			/* from OpenMPT:
+			 * MPT 1.0 alpha5 doesn't set the stereo flag, but MPT 1.0 alpha6 does. */
+
+			tid = ((mix_volume & 0x80) != 0)
+				? "ModPlug Tracker / OpenMPT 1.17"
+				: "ModPlug Tracker 1.0 alpha";
+		} else if (special == 0 && uc == 0 && flags == 0 && misc == S3M_UNSIGNED) {
+			if (song->initial_global_volume == 128 && mix_volume == 48)
+				tid = "PlayerPRO";
+			else  // Always stereo
+				tid = "Velvet Studio";
+		} else if(special == 0 && uc == 0 && flags == 8 && misc == S3M_UNSIGNED) {
+			tid = "Impulse Tracker < 1.03";  // Not sure if 1.02 saves like this as I don't have it
 		} else if (uc != 16 && uc != 24 && uc != 32) {
 			// sure isn't scream tracker
 			tid = "Unknown tracker";
 		}
 	}
+
 	if (!tid) {
 		switch (trkvers >> 12) {
+		case 0:
+			if (trkvers == 0x0208)
+				strcpy(song->tracker_id, "Akord");
+			break;
 		case 1:
 			if (gus_addresses > 1)
-				tid = "Scream Tracker %d.%02x (GUS)";
+				tid = "Scream Tracker %" PRIu8 ".%02" PRIx8 " (GUS)";
 			else if (gus_addresses == 1 || !any_samples || trkvers == 0x1300)
-				tid = "Scream Tracker %d.%02x (SB)"; // could also be a GUS file with a single sample
-			else
-				tid = "Unknown tracker";
+				tid = "Scream Tracker %" PRIu8 ".%02" PRIx8 " (SB)"; // could also be a GUS file with a single sample
+			else {
+				strcpy(song->tracker_id, "Unknown tracker");
+				if (trkvers == 0x1301 && uc == 0) {
+					if (!(flags & ~0x50) && (mix_volume & 0x80) && (misc & S3M_CHANPAN))
+						strcpy(song->tracker_id, "UNMO3");
+					else if (!flags && song->initial_global_volume == 96 && mix_volume == 176 && song->initial_tempo == 150 && !(misc & S3M_CHANPAN))
+						strcpy(song->tracker_id, "deMODifier");  // SoundSmith to S3M converter
+					else if (!flags && song->initial_global_volume == 128 && song->initial_speed == 6 && song->initial_tempo == 125 && !(misc & S3M_CHANPAN))
+						strcpy(song->tracker_id, "Kosmic To-S3M");  // MTM to S3M converter by Zab/Kosmic
+				}
+			}
 			break;
 		case 2:
-			tid = "Imago Orpheus %d.%02x";
+			if (trkvers == 0x2013) // PlayerPRO on Intel forgets to byte-swap the tracker ID bytes 
+				strcpy(song->tracker_id, "PlayerPRO");
+			else
+				tid = "Imago Orpheus %" PRIu8 ".%02" PRIx8;
 			break;
 		case 3:
 			if (trkvers <= 0x3214) {
-				tid = "Impulse Tracker %d.%02x";
-			} else {
+				tid = "Impulse Tracker %" PRIu8 ".%02" PRIx8;
+			} else if (trkvers == 0x3320) {
+				tid = "Impulse Tracker 1.03";  // Could also be 1.02, maybe? I don't have that one
+			} else if(trkvers >= 0x3215 && trkvers <= 0x3217) {
 				tid = NULL;
-				sprintf(song->tracker_id, "Impulse Tracker 2.14p%d", trkvers - 0x3214);
+				const char *versions[] = { "1-2", "3", "4-5" };
+				sprintf(song->tracker_id, "Impulse Tracker 2.14p%s", versions[trkvers - 0x3215]);
 			}
+
+			if (trkvers >= 0x3207 && trkvers <= 0x3217 && reserved32)
+				s3m_import_edittime(song, trkvers, reserved32);
+
 			break;
 		case 4:
-			tid = NULL;
-			strcpy(song->tracker_id, "Schism Tracker ");
-			ver_decode_cwtv(trkvers, reserved, song->tracker_id + strlen(song->tracker_id));
+			if (trkvers == 0x4100) {
+				strcpy(song->tracker_id, "BeRoTracker");
+			} else {
+				strcpy(song->tracker_id, "Schism Tracker ");
+				ver_decode_cwtv(trkvers, reserved16, song->tracker_id + strlen(song->tracker_id));
+				if (trkvers == 0x4fff && reserved16 >= 0x1560)
+					s3m_import_edittime(song, 0x0000, reserved32);
+			}
 			break;
 		case 5:
-			if (trkvers >= 0x5129 && reserved)
-				sprintf(song->tracker_id, "OpenMPT %d.%02x.%02x.%02x", (trkvers & 0xf00) >> 8, trkvers & 0xff, (reserved >> 8) & 0xff, reserved & 0xff);
-			else
-				tid = "OpenMPT %d.%02x";
+			/* from OpenMPT src:
+			 *
+			 * Liquid Tracker's ID clashes with OpenMPT's.
+			 * OpenMPT started writing full version information with OpenMPT 1.29 and later changed the ultraClicks value from 8 to 16.
+			 * Liquid Tracker writes an ultraClicks value of 16.
+			 * So we assume that a file was saved with Liquid Tracker if the reserved fields are 0 and ultraClicks is 16. */
+			if ((trkvers >> 8) == 0x57) {
+				tid = "NESMusa %" PRIu8 ".%" PRIX8; /* tool by Bisquit */
+			} else if (!reserved16 && uc == 16 && channel_types[1] != 1) {
+				tid = "Liquid Tracker %" PRIu8 ".%" PRIX8;
+			} else if (trkvers == 0x5447) {
+				strcpy(song->tracker_id, "Graoumf Tracker");
+			} else if (trkvers >= 0x5129 && reserved16) {
+				/* e.x. 1.29.01.12 <-> 0x1290112 */
+				const uint32_t ver = (((trkvers & 0xfff) << 16) | reserved16);
+				sprintf(song->tracker_id, "OpenMPT %" PRIu32 ".%02" PRIX32 ".%02" PRIX32 ".%02" PRIX32, ver >> 24, (ver >> 16) & 0xFF, (ver >> 8) & 0xFF, (ver) & 0xFF);
+				if (ver >= UINT32_C(0x01320031))
+					s3m_import_edittime(song, 0x0000, reserved32);
+			} else {
+				tid = "OpenMPT %" PRIu8 ".%02" PRIX8;
+			}
+			break;
+		case 6:
+			strcpy(song->tracker_id, "BeRoTracker");
+			break;
+		case 7:
+			strcpy(song->tracker_id, "CreamTracker");
+			break;
+		case 12:
+			if (trkvers == 0xCA00)
+				strcpy(song->tracker_id, "Camoto");
+			break;
+		default:
 			break;
 		}
 	}
 	if (tid)
-		sprintf(song->tracker_id, tid, (trkvers & 0xf00) >> 8, trkvers & 0xff);
+		sprintf(song->tracker_id, tid, (uint8_t)((trkvers & 0xf00) >> 8), (uint8_t)(trkvers & 0xff));
 
 //      if (ferror(fp)) {
 //              return LOAD_FILE_ERROR;
@@ -508,86 +623,49 @@ static const char *s3m_warnings[] = {
 };
 
 
-#pragma pack(push, 1)
 struct s3m_header {
 	char title[28];
 	char eof; // 0x1a
 	char type; // 16
-	uint8_t x[2]; // junk
 	uint16_t ordnum, smpnum, patnum; // ordnum should be even
 	uint16_t flags, cwtv, ffi; // 0, 0x4nnn, 2 for unsigned
 	char scrm[4]; // "SCRM"
 	uint8_t gv, is, it, mv, uc, dp; // gv is half range of IT, uc should be 8/12/16, dp is 252
 	uint16_t reserved; // extended version information is stored here
 	uint32_t reserved2; // Impulse Tracker hides its edit timer here
-	uint8_t junk[4]; // last 2 bytes are "special", which means "more junk"
 };
-
-struct s3i_header {
-	uint8_t type;
-	char filename[12];
-	union {
-		struct {
-			uint8_t memseg[3];
-			uint32_t length;
-			uint32_t loop_start;
-			uint32_t loop_end;
-		} pcm;
-		struct {
-			uint8_t zero[3];
-			uint8_t data[12];
-		} admel;
-	};
-	uint8_t vol;
-	uint8_t x; // "dsk" for adlib
-	uint8_t pack; // 0
-	uint8_t flags; // 1=loop 2=stereo 4=16-bit / zero for adlib
-	uint32_t c5speed;
-	uint8_t junk[12];
-	char name[28];
-	char tag[4]; // SCRS/SCRI/whatever
-};
-#pragma pack(pop)
 
 #define SEEK_ALIGN(fp) disko_seek((fp), (16 - (disko_tell(fp) & 15)) & 15, SEEK_CUR)
 
-
-static void write_s3i_header(disko_t *fp, song_sample_t *smp, uint32_t sdata)
+static int write_s3m_header(const struct s3m_header *hdr, disko_t *fp)
 {
-	struct s3i_header hdr = {};
-	int n;
+#define WRITE_VALUE(x) do { disko_write(fp, &hdr->x, sizeof(hdr->x)); } while (0)
 
-	if (smp->flags & CHN_ADLIB) {
-		hdr.type = S3I_TYPE_ADMEL;
-		memcpy(hdr.admel.data, smp->adlib_bytes, 11);
-		memcpy(hdr.tag, "SCRI", 4);
-	} else if (smp->data != NULL) {
-		hdr.type = S3I_TYPE_PCM;
-		hdr.pcm.memseg[0] = (sdata >> 20) & 0xff;
-		hdr.pcm.memseg[1] = (sdata >> 4) & 0xff;
-		hdr.pcm.memseg[2] = (sdata >> 12) & 0xff;
-		hdr.pcm.length = bswapLE32(smp->length);
-		hdr.pcm.loop_start = bswapLE32(smp->loop_start);
-		hdr.pcm.loop_end = bswapLE32(smp->loop_end);
-		hdr.flags = ((smp->flags & CHN_LOOP) ? 1 : 0)
-			| ((smp->flags & CHN_STEREO) ? 2 : 0)
-			| ((smp->flags & CHN_16BIT) ? 4 : 0);
-		memcpy(hdr.tag, "SCRS", 4);
-	} else {
-		hdr.type = S3I_TYPE_NONE;
-	}
+	WRITE_VALUE(title);
+	WRITE_VALUE(eof);
+	WRITE_VALUE(type);
+	disko_seek(fp, 2, SEEK_CUR);
+	WRITE_VALUE(ordnum);
+	WRITE_VALUE(smpnum);
+	WRITE_VALUE(patnum);
+	WRITE_VALUE(flags);
+	WRITE_VALUE(cwtv);
+	WRITE_VALUE(ffi);
+	WRITE_VALUE(scrm);
+	WRITE_VALUE(gv);
+	WRITE_VALUE(is);
+	WRITE_VALUE(it);
+	WRITE_VALUE(mv);
+	WRITE_VALUE(uc);
+	WRITE_VALUE(dp);
+	WRITE_VALUE(reserved);
+	WRITE_VALUE(reserved2);
+	disko_seek(fp, 2, SEEK_CUR); // "special"
+	disko_seek(fp, 2, SEEK_CUR); // no idea what this is
 
-	memcpy(hdr.filename, smp->filename, 12);
-	hdr.vol = smp->volume / 4; //mphack
-	hdr.c5speed = bswapLE32(smp->c5speed);
+#undef WRITE_VALUE
 
-	for (n = 25; n >= 0; n--)
-		if ((smp->name[n] ?: 32) != 32)
-			break;
-	for (; n >= 0; n--)
-		hdr.name[n] = smp->name[n] ?: 32;
-
-	disko_write(fp, &hdr, sizeof(hdr));
+	return 1;
 }
 
 static int write_s3m_pattern(disko_t *fp, song_t *song, int pat, uint8_t *chantypes, uint16_t *para_pat)
@@ -642,30 +720,24 @@ static int write_s3m_pattern(disko_t *fp, song_t *song, int pat, uint8_t *chanty
 				}
 			}
 
-			switch (out.note) {
-			case 1 ... 12:
-			case 109 ... 120:
+			/* Translate notes */
+			if ((out.note > 0 && out.note <= 12) || (out.note >= 109 && out.note <= 120)) {
 				// Octave 0/9 (or higher?)
 				warn |= 1 << WARN_NOTERANGE;
 				out.note = 255;
-				break;
-			case 13 ... 108:
+			} else if (out.note > 12 && out.note < 109) {
 				// C-1 through B-8
 				out.note -= 13;
 				out.note = (out.note % 12) + ((out.note / 12) << 4);
 				b |= 32;
-				break;
-			case NOTE_CUT:
-			case NOTE_OFF:
+			} else if (out.note == NOTE_CUT || out.note == NOTE_OFF) {
 				// IT translates === to ^^^ when writing S3M files
 				// (and more importantly, we load ^^^ as === in adlib-channels)
 				out.note = 254;
 				b |= 32;
-				break;
-			default:
+			} else {
 				// Nothing (or garbage values)
 				out.note = 255;
-				break;
 			}
 
 			if (out.instrument != 0) {
@@ -862,7 +934,7 @@ static int fixup_chantypes(song_channel_t *channels, uint8_t *chantypes)
 
 int fmt_s3m_save_song(disko_t *fp, song_t *song)
 {
-	struct s3m_header hdr = {};
+	struct s3m_header hdr = {0};
 	int nord, nsmp, npat;
 	int n;
 	song_sample_t *smp;
@@ -890,13 +962,19 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 	// see note in IT writer -- shouldn't clamp here, but can't save more than we're willing to load
 	nord = CLAMP(nord, 2, MAX_ORDERS);
 
-	nsmp = csf_get_num_samples(song) ?: 1; // ST3 always saves one sample
+	nsmp = csf_get_num_samples(song); // ST3 always saves one sample
+	if (!nsmp)
+		nsmp = 1;
+
 	if (nsmp > 99) {
 		nsmp = 99;
 		warn |= 1 << WARN_MAXSAMPLES;
 	}
 
-	npat = csf_get_num_patterns(song) ?: 1; // ST3 always saves one pattern
+	npat = csf_get_num_patterns(song); // ST3 always saves one pattern
+	if (!npat)
+		npat = 1;
+
 	if (npat > 100) {
 		npat = 100;
 		warn |= 1 << WARN_MAXPATTERNS;
@@ -936,6 +1014,18 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 	hdr.dp = 252;
 	hdr.reserved = bswapLE16(ver_reserved);
 
+	/* Save the edit time in the reserved header, where
+	 * Impulse Tracker also conveniently stores it */
+	hdr.reserved2 = 0;
+
+	for (size_t i = 0; i < song->histlen; i++)
+		hdr.reserved2 += ms_to_dos_time(song->history[i].runtime);
+
+	// 32-bit DOS tick count (tick = 1/18.2 second; 54945 * 18.2 = 999999 which is Close Enough)
+	hdr.reserved2 += it_get_song_elapsed_dos_time(song);
+
+	hdr.reserved2 = bswapLE32(hdr.reserved2);
+
 	/* The sample data parapointers are 24+4 bits, whereas pattern data and sample headers are only 16+4
 	bits -- so while the sample data can be written up to 268 MB within the file (starting at 0xffffff0),
 	the pattern data and sample headers are restricted to the first 1 MB (starting at 0xffff0). In effect,
@@ -954,7 +1044,7 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 	    Sample data
 	*/
 
-	disko_write(fp, &hdr, sizeof(hdr)); // header
+	write_s3m_header(&hdr, fp); // header
 	disko_seek(fp, 32, SEEK_CUR); // channel settings (skipped for now)
 	disko_write(fp, song->orderlist, nord); // orderlist
 
@@ -1027,7 +1117,7 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 
 		//mphack: channel panning range
 		b = ((chantypes[n] & 0x7f) < 0x20)
-			? (0x20 | (((MAX((ch->panning / 4), 2) - 2) >> 2) & 0xf))
+			? ((ch->panning * 15) / 64)
 			: 0;
 		disko_putc(fp, b);
 	}
@@ -1045,7 +1135,7 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 		if (smp->vib_depth != 0) {
 			warn |= 1 << WARN_SAMPLEVIB;
 		}
-		write_s3i_header(fp, smp, para_sdata[n]);
+		s3i_write_header(fp, smp, para_sdata[n]);
 	}
 
 	/* announce all the things we broke */

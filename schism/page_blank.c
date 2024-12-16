@@ -25,8 +25,7 @@
 
 #include "it.h"
 #include "page.h"
-
-#include "sdlmain.h"
+#include "widget.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -34,7 +33,7 @@ static struct widget widgets_blank[1];
 
 /* --------------------------------------------------------------------- */
 
-static int blank_page_handle_key(UNUSED struct key_event * k)
+static int blank_page_handle_key(SCHISM_UNUSED struct key_event * k)
 {
 	return 0;
 }
@@ -52,5 +51,5 @@ void blank_load_page(struct page *page)
 	page->widgets = widgets_blank;
 	page->help_index = HELP_GLOBAL;
 
-	create_other(widgets_blank + 0, 0, blank_page_handle_key, blank_page_redraw);
+	widget_create_other(widgets_blank + 0, 0, blank_page_handle_key, NULL, blank_page_redraw);
 }

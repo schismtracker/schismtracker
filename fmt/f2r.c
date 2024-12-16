@@ -28,14 +28,21 @@
 
 /* TODO: test this code */
 
-int fmt_f2r_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_f2r_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 46 && memcmp(data, "F2R", 3) == 0))
+	unsigned char magic[3];
+
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "F2R", 3))
 		return 0;
+
+	unsigned char title[40];
+	slurp_seek(fp, 6, SEEK_SET);
+	slurp_read(fp, title, sizeof(title));
 
 	file->description = "Farandole 2 (linear)";
 	/*file->extension = str_dup("f2r");*/
-	file->title = strn_dup((const char *)data + 6, 40);
+	file->title = strn_dup((const char *)title, 40);
 	file->type = TYPE_MODULE_S3M;
 	return 1;
 }

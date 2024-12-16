@@ -21,13 +21,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
 #include "headers.h"
+#include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
 #include "log.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -48,12 +48,15 @@ static struct sfxfmt {
 };
 
 
-int fmt_sfx_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_sfx_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	int n;
+	unsigned char tag[4];
+
 	for (n = 0; sfxfmts[n].nsmp; n++) {
-		if (length >= sfxfmts[n].tagpos + 4
-		    && memcmp(data + sfxfmts[n].tagpos, sfxfmts[n].tag, 4) == 0) {
+		slurp_seek(fp, sfxfmts[n].tagpos, SEEK_SET);
+		if (slurp_read(fp, tag, sizeof(tag)) == sizeof(tag)
+			&& !memcmp(tag, sfxfmts[n].tag, 4)) {
 			file->description = sfxfmts[n].id;
 			/*file->extension = str_dup("sfx");*/
 			file->title = strdup(""); // whatever
@@ -74,12 +77,12 @@ Mikmod support SFX (and for good reason; it's a particularly dumb format) */
 int fmt_sfx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
 	uint8_t tag[4];
-	int n, nord, npat, pat, chan, restart, nsmp = 0;
+	int nord, npat, pat, chan, restart, nsmp = 0;
 	uint32_t smpsize[31];
 	uint16_t tmp;
 	song_note_t *note;
 	song_sample_t *sample;
-	unsigned int effwarn = 0;
+	unsigned int effwarn = 0, n;
 	struct sfxfmt *fmt = sfxfmts;
 
 	do {
@@ -237,13 +240,9 @@ int fmt_sfx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	/* sample data */
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (n = 0, sample = song->samples + 1; n < fmt->nsmp; n++, sample++) {
-			uint32_t ssize;
-
 			if (sample->length <= 2)
 				continue;
-			ssize = csf_read_sample(sample, SF_8 | SF_LE | SF_PCMS | SF_M,
-				fp->data + fp->pos, fp->length - fp->pos);
-			slurp_seek(fp, ssize, SEEK_CUR);
+			csf_read_sample(sample, SF_8 | SF_LE | SF_PCMS | SF_M, fp);
 		}
 	}
 

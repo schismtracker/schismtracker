@@ -25,14 +25,13 @@
 
 #include "it.h"
 #include "page.h"
-#include "cmixer.h"
-#include "sndfile.h"
 #include "song.h"
 #include "slurp.h"
 #include "config-parser.h"
 
 #include "disko.h"
-#include "event.h"
+#include "backend/audio.h"
+#include "events.h"
 
 #include <assert.h>
 
@@ -41,22 +40,22 @@
 #include <errno.h>
 #include <math.h>
 
-#include "sdlmain.h"
-
 #include "midi.h"
 
-#include "snd_fm.h"
-#include "snd_gm.h"
+#include "player/cmixer.h"
+#include "player/sndfile.h"
+#include "player/snd_fm.h"
+#include "player/snd_gm.h"
 
 // Default audio configuration
 // (XXX: Can DEF_SAMPLE_RATE be defined to 48000 everywhere?
 // Does any sound card NOT support 48khz decently nowadays?)
-#ifdef GEKKO
+#ifdef SCHISM_WII
 # define DEF_SAMPLE_RATE 48000
 #else
 # define DEF_SAMPLE_RATE 44100
 #endif
-#ifdef WIN32
+#ifdef SCHISM_WIN32
 # define DEF_BUFFER_SIZE 2048
 #else
 # define DEF_BUFFER_SIZE 1024
@@ -87,31 +86,38 @@ static void _schism_midi_out_note(int chan, const song_note_t *m);
 static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, unsigned int delay);
 
 /* Audio driver related stuff */
+/* XXX how much of this is really needed now? */
 
 /* The (short) name of the SDL driver in use, e.g. "alsa" */
-static const char *driver_name = "unknown";
-
-/* This is the full driver spec for whatever device was successfully init'ed when audio was set up.
-When reinitializing the audio, this can be used to reacquire the same device. Hopefully. */
-static char active_audio_driver[256];
+static char *driver_name = NULL;
+static char *device_name = NULL;
 
 /* Whatever was in the config file. This is used if no driver is given to audio_setup. */
 static char cfg_audio_driver[256] = { 0 };
+static char cfg_audio_device[256] = { 0 };
 
-/* Required for updating SDL1.2 -> SDL2 on Windows (WASAPI) */
-static SDL_AudioDeviceID audio_dev;
+// ------------------------------------------------------------------------
+
+struct audio_device* audio_device_list = NULL;
+int audio_device_list_size = 0;
+
+static schism_audio_device_t *current_audio_device = NULL;
+
+static const schism_audio_backend_t *backend = NULL;
 
 // ------------------------------------------------------------------------
 // playback
 
 extern int midi_bend_hit[64], midi_last_bend_hit[64];
+extern void vis_work_32s(short *in, int inlen);
+extern void vis_work_32m(short *in, int inlen);
 extern void vis_work_16s(short *in, int inlen);
 extern void vis_work_16m(short *in, int inlen);
 extern void vis_work_8s(char *in, int inlen);
 extern void vis_work_8m(char *in, int inlen);
 
-// this gets called from sdl
-static void audio_callback(UNUSED void *qq, uint8_t * stream, int len)
+// this gets called from the backend
+static void audio_callback(uint8_t *stream, int len)
 {
 	unsigned int wasrow = current_song->row;
 	unsigned int waspat = current_song->current_order;
@@ -188,12 +194,60 @@ POST_EVENT:
 	}
 
 	/* send at end */
-	SDL_Event e;
-	e.user.type = SCHISM_EVENT_PLAYBACK;
-	e.user.code = 0;
-	e.user.data1 = NULL;
-	e.user.data2 = NULL;
-	SDL_PushEvent(&e);
+	schism_event_t e = {
+		.type = SCHISM_EVENT_PLAYBACK,
+	};
+
+	events_push_event(&e);
+}
+
+// ------------------------------------------------------------------------------------------------------------
+// audio device list
+
+void free_audio_device_list(void) {
+	for (int count = 0; count < audio_device_list_size; count++)
+		free(audio_device_list[count].name);
+
+	free(audio_device_list);
+
+	audio_device_list = NULL;
+	audio_device_list_size = 0;
+}
+
+/* called when SCHISM_AUDIODEVICEADDED/SCHISM_AUDIODEVICEREMOVED event received */
+int refresh_audio_device_list(void) {
+	free_audio_device_list();
+
+	const int count = backend ? backend->device_count() : 0;
+	if (count < 0)
+		return 0;
+
+	audio_device_list = malloc(count * sizeof(*audio_device_list));
+	if (!audio_device_list)
+		return 0;
+
+	for (int i = 0; i < count; i++) {
+		struct audio_device* dev = audio_device_list + i;
+		dev->id = i;
+		dev->name = str_dup(backend ? backend->device_name(i) : "");
+	}
+
+	audio_device_list_size = count;
+
+	return 1;
+}
+
+// ------------------------------------------------------------------------------------------------------------
+// drivers
+
+int audio_driver_count(void)
+{
+	return backend ? backend->driver_count() : 0;
+}
+
+const char *audio_driver_name(int x)
+{
+	return backend ? backend->driver_name(x) : NULL;
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -244,30 +298,48 @@ int song_is_multichannel_mode(void)
 	return multichannel_mode;
 }
 
-
 /* Channel corresponding to each note played.
-That is, keydown_channels[66] will indicate in which channel F-5 was played most recently.
+That is, keyjazz_note_to_chan[66] will indicate in which channel F-5 was played most recently.
 This will break if the same note was keydown'd twice without a keyup, but I think that's a
 fairly unlikely scenario that you'd have to TRY to bring about. */
-static int keyjazz_channels[128];
+static int keyjazz_note_to_chan[NOTE_LAST + 1] = {0};
+/* last note played by channel tracking */
+static int keyjazz_chan_to_note[MAX_CHANNELS + 1] = {0};
 
-/* **** chan ranges from 1 to 64   */
+/* **** chan ranges from 1 to MAX_CHANNELS   */
 static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int effect, int param)
 {
 	int ins_mode;
 	int midi_note = note; /* note gets overwritten, possibly NOTE_NONE */
 	song_voice_t *c;
-	song_note_t mc;
 	song_sample_t *s = NULL;
 	song_instrument_t *i = NULL;
 
-	if (chan == KEYJAZZ_CHAN_CURRENT) {
+	switch (chan) {
+	case KEYJAZZ_CHAN_CURRENT:
 		chan = current_play_channel;
 		if (multichannel_mode)
 			song_change_current_play_channel(1, 1);
+		break;
+	case KEYJAZZ_CHAN_AUTO:
+		if (multichannel_mode) {
+			chan = current_play_channel;
+			song_change_current_play_channel(1, 1);
+		} else {
+			for (chan = 1; chan < MAX_CHANNELS; chan++)
+				if (!keyjazz_chan_to_note[chan])
+					break;
+		}
+		break;
+	default:
+		break;
 	}
-    // back to the 0..63 range
-    int chan_internal = chan -1;
+
+	// back to the internal range
+	int chan_internal = chan - 1;
+
+	// hm
+	assert(chan_internal < MAX_CHANNELS);
 
 	song_lock_audio();
 
@@ -277,17 +349,25 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 
 	if (NOTE_IS_NOTE(note)) {
 		// keep track of what channel this note was played in so we can note-off properly later
-		keyjazz_channels[note] = chan;
+		if (keyjazz_chan_to_note[chan]) {
+			// reset note-off pending state for last note in channel
+			keyjazz_note_to_chan[keyjazz_chan_to_note[chan]] = 0;
+		}
+
+		keyjazz_note_to_chan[note] = chan;
+		keyjazz_chan_to_note[chan] = note;
 
 		// handle blank instrument values and "fake" sample #0 (used by sample loader)
 		if (samp == 0)
 			samp = c->last_instrument;
 		else if (samp == KEYJAZZ_INST_FAKE)
 			samp = 0; // dumb hack
+
 		if (ins == 0)
 			ins = c->last_instrument;
 		else if (ins == KEYJAZZ_INST_FAKE)
 			ins = 0; // dumb hack
+
 		c->last_instrument = ins_mode ? ins : samp;
 
 		// give the channel a sample, and maybe an instrument
@@ -373,6 +453,14 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		if (i)
 			c->instrument_volume = (c->instrument_volume * i->global_volume) >> 7;
 		c->global_volume = 64;
+		// use the sample's panning if it's set, or use the default
+		c->channel_panning = (int16_t)(c->panning + 1);
+		if (c->flags & CHN_SURROUND)
+			c->channel_panning |= 0x8000;
+		c->panning = (s->flags & CHN_PANNING) ? s->panning : 128;
+		if (i)
+			c->panning = (i->flags & CHN_PANNING) ? i->panning : 128;
+		c->flags &= ~CHN_SURROUND;
 		// gotta set these by hand, too
 		c->c5speed = s->c5speed;
 		c->new_note = note;
@@ -388,13 +476,16 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 
 	if (!(status.flags & MIDI_LIKE_TRACKER) && i) {
 		/* midi keyjazz shouldn't require a sample */
-		mc.note = note ? note : midi_note;
+		song_note_t mc = {
+			.note = note ? note : midi_note,
 
-		mc.instrument = ins;
-		mc.voleffect = VOLFX_VOLUME;
-		mc.volparam = vol;
-		mc.effect = effect;
-		mc.param = param;
+			.instrument = ins,
+			.voleffect = VOLFX_VOLUME,
+			.volparam = vol,
+			.effect = effect,
+			.param = param,
+		};
+
 		_schism_midi_out_note(chan_internal, &mc);
 	}
 
@@ -428,7 +519,21 @@ int song_keyrecord(int samp, int ins, int note, int vol, int chan, int effect, i
 
 int song_keyup(int samp, int ins, int note)
 {
-	return song_keydown_ex(samp, ins, NOTE_OFF, KEYJAZZ_DEFAULTVOL, keyjazz_channels[note], 0, 0);
+	int chan = keyjazz_note_to_chan[note];
+	if (!chan) {
+		// could not find channel, drop.
+		return -1;
+	};
+	return song_keyup_channel(samp, ins, note, chan);
+}
+
+int song_keyup_channel(int samp, int ins, int note, int chan) {
+	if (keyjazz_chan_to_note[chan] != note) {
+		return -1;
+	}
+	keyjazz_chan_to_note[chan] = 0;
+	keyjazz_note_to_chan[note] = 0;
+	return song_keydown_ex(samp, ins, NOTE_OFF, KEYJAZZ_DEFAULTVOL, chan, 0, 0);
 }
 
 void song_single_step(int patno, int row)
@@ -476,7 +581,8 @@ static void song_reset_play_state(void)
 {
 	memset(midi_bend_hit, 0, sizeof(midi_bend_hit));
 	memset(midi_last_bend_hit, 0, sizeof(midi_last_bend_hit));
-	memset(keyjazz_channels, 0, sizeof(keyjazz_channels));
+	memset(keyjazz_note_to_chan, 0, sizeof(keyjazz_note_to_chan));
+	memset(keyjazz_chan_to_note, 0, sizeof(keyjazz_chan_to_note));
 
 	// turn this crap off
 	current_song->mix_flags &= ~(SNDMIX_NOBACKWARDJUMPS | SNDMIX_DIRECTTODISK);
@@ -811,7 +917,7 @@ void song_update_playing_sample(int s_changed)
 				channel->loop_end = inst->loop_end;
 			}
 			if (inst->flags & (CHN_PINGPONGSUSTAIN | CHN_SUSTAINLOOP
-					    | CHN_PINGPONGFLAG | CHN_PINGPONGLOOP|CHN_LOOP)) {
+						| CHN_PINGPONGFLAG | CHN_PINGPONGLOOP|CHN_LOOP)) {
 				if (channel->length != channel->loop_end) {
 					channel->length = channel->loop_end;
 				}
@@ -951,6 +1057,13 @@ void song_set_surround(int on)
 // well this is certainly a dopey place to put this, config having nothing to do with playback... maybe i
 // should put all the cfg_ stuff in config.c :/
 
+void audio_parse_driver_spec(const char* spec, char** driver, char** device) {
+	if (!str_break(spec, ':', driver, device)) {
+		*driver = str_dup(spec);
+		*device = NULL;
+	}
+}
+
 #define CFG_GET_A(v,d) audio_settings.v = cfg_get_number(cfg, "Audio", #v, d)
 #define CFG_GET_M(v,d) audio_settings.v = cfg_get_number(cfg, "Mixer Settings", #v, d)
 void cfg_load_audio(cfg_file_t *cfg)
@@ -963,16 +1076,35 @@ void cfg_load_audio(cfg_file_t *cfg)
 	CFG_GET_A(master.right, 31);
 
 	cfg_get_string(cfg, "Audio", "driver", cfg_audio_driver, 255, NULL);
+	if (!cfg_get_string(cfg, "Audio", "device", cfg_audio_device, 255, NULL)) {
+		char *driver, *device;
+		audio_parse_driver_spec(cfg_audio_driver, &driver, &device);
+		if (device) {
+			strncpy(cfg_audio_driver, driver, 255);
+			strncpy(cfg_audio_device, device, 255);
+			free(device);
+		}
+		free(driver);
+	}
 
 	CFG_GET_M(channel_limit, DEF_CHANNEL_LIMIT);
 	CFG_GET_M(interpolation_mode, SRCMODE_LINEAR);
 	CFG_GET_M(no_ramping, 0);
 	CFG_GET_M(surround_effect, 1);
 
-	if (audio_settings.channels != 1 && audio_settings.channels != 2)
-		audio_settings.channels = 2;
-	if (audio_settings.bits != 8 && audio_settings.bits != 16)
-		audio_settings.bits = 16;
+	switch (audio_settings.channels) {
+	case 1:
+	case 2: break;
+	default: audio_settings.channels = 2;
+	}
+
+	switch (audio_settings.bits) {
+	case 8:
+	case 16:
+	case 32: break;
+	default: audio_settings.bits = 16;
+	}
+
 	audio_settings.channel_limit = CLAMP(audio_settings.channel_limit, 4, MAX_VOICES);
 	audio_settings.interpolation_mode = CLAMP(audio_settings.interpolation_mode, 0, 3);
 
@@ -1029,6 +1161,12 @@ void cfg_atexit_save_audio(cfg_file_t *cfg)
 	cfg_set_number(cfg, "EQ High Band", "gain", audio_settings.eq_gain[3]);
 }
 
+void cfg_save_audio_playback(cfg_file_t *cfg)
+{
+	cfg_set_string(cfg, "Audio", "driver", driver_name);
+	cfg_set_string(cfg, "Audio", "device", device_name);
+}
+
 void cfg_save_audio(cfg_file_t *cfg)
 {
 	cfg_atexit_save_audio(cfg);
@@ -1050,10 +1188,10 @@ static void _schism_midi_out_note(int chan, const song_note_t *starting_note)
 
 	if (!current_song || !song_is_instrument_mode() || (status.flags & MIDI_LIKE_TRACKER)) return;
 
-    /*if(m)
-    fprintf(stderr, "midi_out_note called (ch %d)note(%d)instr(%d)volcmd(%02X)cmd(%02X)vol(%02X)p(%02X)\n",
+	/*if(m)
+	fprintf(stderr, "midi_out_note called (ch %d)note(%d)instr(%d)volcmd(%02X)cmd(%02X)vol(%02X)p(%02X)\n",
 	chan, m->note, m->instrument, m->voleffect, m->effect, m->volparam, m->param);
-    else fprintf(stderr, "midi_out_note called (ch %d) m=%p\n", m);*/
+	else fprintf(stderr, "midi_out_note called (ch %d) m=%p\n", m);*/
 
 	if (!midi_playing) {
 		csf_process_midi_macro(current_song, 0, current_song->midi_config.start, 0, 0, 0, 0); // START!
@@ -1193,17 +1331,18 @@ printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 }
 static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, unsigned int pos)
 {
-#if 0
-	i = (8000*(audio_buffer_samples - delay));
-	i /= (current_song->mix_frequency);
-#endif
-#if 0
+#ifdef SCHISM_MIDI_DEBUG
+	/* prints all of the raw midi messages into the terminal; useful for debugging output */
+	int i = (8000*(audio_buffer_samples)) / (current_song->mix_frequency);
+
 	for (int i=0; i < len; i++) {
 		printf("%02x ",data[i]);
-	}puts("");
+	}
+	puts(""); /* newline */
 #endif
 
-	if (!_disko_writemidi(data,len,pos)) midi_send_buffer(data,len,pos);
+	if (!_disko_writemidi(data,len,pos))
+		midi_send_buffer(data,len,pos);
 }
 
 
@@ -1212,142 +1351,122 @@ static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, un
 
 void song_lock_audio(void)
 {
-	SDL_LockAudioDevice(audio_dev);
+	if (backend) backend->lock_device(current_audio_device);
 }
 void song_unlock_audio(void)
 {
-	SDL_UnlockAudioDevice(audio_dev);
+	if (backend) backend->unlock_device(current_audio_device);
 }
 void song_start_audio(void)
 {
-	SDL_PauseAudioDevice(audio_dev, 0);
+	if (backend) backend->pause_device(current_audio_device, 0);
 }
 void song_stop_audio(void)
 {
-	SDL_PauseAudioDevice(audio_dev, 1);
-}
-
-
-static void song_print_info_top(const char *d)
-{
-	log_append(2, 0, "Audio initialised");
-	log_underline(17);
-	log_appendf(5, " Using driver '%s'", d);
+	if (backend) backend->pause_device(current_audio_device, 1);
 }
 
 
 /* --------------------------------------------------------------------------------------------------------- */
-/* Nasty stuff here */
+/* This is completely horrible! :) */
+
+static int audio_was_init = 0;
 
 const char *song_audio_driver(void)
 {
-	return driver_name;
+	return driver_name ? driver_name : "unknown";
 }
 
-/* NOTE: driver_spec must not be NULL here */
-static void _audio_set_envvars(const char *driver_spec)
+const char *song_audio_device(void)
 {
-	char *driver = NULL, *device = NULL;
-
-	if (!*driver_spec) {
-		unset_env_var("SDL_AUDIODRIVER");
-	} else if (str_break(driver_spec, ':', &driver, &device)) {
-		/* "nosound" and "none" are for the sake of older versions: --help suggested using
-		"none", but the name presented in the rest of the interface was "nosound".
-		"oss" is a synonym for "dsp" because everyone should know what "oss" is and "dsp"
-		is a lousy name for an audio driver */
-		put_env_var("SDL_AUDIODRIVER",
-			(strcmp(driver, "oss") == 0) ? "dsp"
-			: (strcmp(driver, "nosound") == 0) ? "dummy"
-			: (strcmp(driver, "none") == 0) ? "dummy"
-			: driver);
-		if (*device) {
-			/* Documentation says that SDL_PATH_DSP overrides AUDIODEV if it's set,
-			but the SDL alsa code only looks at AUDIODEV. Annoying. */
-			put_env_var("AUDIODEV", device);
-			put_env_var("SDL_PATH_DSP", device);
-		}
-
-		free(driver);
-		free(device);
-	} else {
-		/* Assuming just the driver was given.
-		(Old behavior was trying to guess -- selecting 'dsp' driver for /dev/dsp, etc.
-		but this is rather flaky and problematic) */
-		put_env_var("SDL_AUDIODRIVER", driver_spec);
-	}
-
-	strncpy(active_audio_driver, driver_spec, sizeof(active_audio_driver));
-	active_audio_driver[sizeof(active_audio_driver) - 1] = '\0';
+	return device_name ? device_name : "unknown";
 }
 
-/* NOTE: driver_spec must not be NULL here
-'verbose' => print stuff to the log about what device/driver was configured */
-static int _audio_open(const char *driver_spec, int verbose)
+static void _cleanup_audio_device(void)
 {
-	if (!(getenv("SDL_AUDIODRIVER") || getenv("AUDIODEV") || getenv("SDL_PATH_DSP"))
-		&& (cfg_audio_driver[0] == '\0'))
-		_audio_set_envvars(driver_spec);
-
-	if (SDL_WasInit(SDL_INIT_AUDIO))
-		SDL_QuitSubSystem(SDL_INIT_AUDIO);
-	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
-		return 0;
-
-	/* This is needed in order to coax alsa into actually respecting the buffer size, since it's evidently
-	ignored entirely for "fake" devices such as "default" -- which SDL happens to use if no device name
-	is set. (see SDL_alsa_audio.c: http://tinyurl.com/ybf398f)
-	If hw doesn't exist, so be it -- let this fail, we'll fall back to the dummy device, and the
-	user can pick a more reasonable device later. */
-	if ((driver_name = SDL_GetCurrentAudioDriver()) != NULL && !strcmp(driver_name, "alsa")) {
-		char *dev = getenv("AUDIODEV");
-		if (!dev || !*dev)
-			put_env_var("AUDIODEV", "hw");
+	if (current_audio_device) {
+		if (backend)
+			backend->close_device(current_audio_device);
+		current_audio_device = NULL;
+		free(device_name);
+		device_name = NULL;
 	}
+}
 
-	/* ... THIS is needed because, if the buffer size isn't a power of two, the dsp driver will punt since
-	it's not nice enough to fix it for us. (contrast alsa, which is TOO nice and fixes it even when we
-	don't want it to) */
+static int _audio_open_device(const char *device, int verbose)
+{
+	_cleanup_audio_device();
+
+	/* if the buffer size isn't a power of two, the dsp driver will punt since it's not nice enough to fix
+	 * it for us. (contrast alsa, which is TOO nice and fixes it even when we don't want it to) */
 	int size_pow2 = 2;
 	while (size_pow2 < audio_settings.buffer_size)
 		size_pow2 <<= 1;
-	/* Round to nearest, I suppose */
-	if (size_pow2 != audio_settings.buffer_size
-	    && (size_pow2 - audio_settings.buffer_size) > (audio_settings.buffer_size - (size_pow2 >> 1))) {
-		size_pow2 >>= 1;
-	}
 
-	SDL_AudioSpec desired = {
+	/* round to the nearest (kept for compatibility) */
+	if (size_pow2 != audio_settings.buffer_size
+		&& (size_pow2 - audio_settings.buffer_size) > (audio_settings.buffer_size - (size_pow2 >> 1)))
+		size_pow2 >>= 1;
+
+	/* This is needed in order to coax alsa into actually respecting the buffer size, since it's evidently
+	 * ignored entirely for "fake" devices such as "default" -- which SDL happens to use if no device name
+	 * is set. (see SDL_alsa_audio.c: http://tinyurl.com/ybf398f)
+	 * If hw doesn't exist, so be it -- let this fail, we'll fall back to the dummy device, and the
+	 * user can pick a more reasonable device later. */
+
+	/* I can't replicate this issue at all, so I'm just gonna comment this out. If it really *is* still an
+	 * issue, it can be uncommented.
+	 *  - paper */
+
+//	if (!strcmp(driver_name, "alsa")) {
+//		char *dev = getenv("AUDIODEV");
+//		if (!dev || !*dev)
+//			put_env_var("AUDIODEV", "hw");
+//	}
+
+	schism_audio_spec_t desired = {
 		.freq = audio_settings.sample_rate,
-		.format = (audio_settings.bits == 8) ? AUDIO_U8 : AUDIO_S16SYS,
+		.bits = audio_settings.bits,
 		.channels = audio_settings.channels,
 		.samples = size_pow2,
 		.callback = audio_callback,
-		.userdata = NULL,
 	};
-	SDL_AudioSpec obtained;
+	schism_audio_spec_t obtained;
 
-	if (!(audio_dev = SDL_OpenAudioDevice(NULL, 0, &desired, &obtained, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE)))
-		return 0;
+	if (device && *device) {
+		current_audio_device = backend ? backend->open_device(device, &desired, &obtained) : NULL;
+		if (current_audio_device) {
+			device_name = str_dup(device);
+			goto success;
+		} else fputs("Failed to open requested audio device! Falling back to default...\n", stderr);
+	}
 
-	/* I don't know why this would change between SDL_AudioInit and SDL_OpenAudio, but I'm paranoid */
-	driver_name = SDL_GetCurrentAudioDriver();
+	current_audio_device = backend ? backend->open_device(NULL, &desired, &obtained) : NULL;
+	if (current_audio_device) {
+		device_name = str_dup("default"); // ????
+		goto success;
+	}
 
+	/* oops ! */
+	return 0;
+
+success:
 	song_lock_audio();
 
-	/* format&255 is SDL specific... need bits */
 	csf_set_wave_config(current_song, obtained.freq,
-		obtained.format & 255,
+		obtained.bits,
 		obtained.channels);
 	audio_output_channels = obtained.channels;
-	audio_output_bits = obtained.format & 255;
-	audio_sample_size = audio_output_channels * (audio_output_bits/8);
+	audio_output_bits = obtained.bits;
+	audio_sample_size = audio_output_channels * (audio_output_bits / 8);
 	audio_buffer_samples = obtained.samples;
 
 	if (verbose) {
-		song_print_info_top(driver_name);
-
-		log_appendf(5, " %d Hz, %d bit, %s", obtained.freq, (obtained.format & 0xff),
+		log_nl();
+		log_append(2, 0, "Audio initialised");
+		log_underline(17);
+		log_appendf(5, " Using driver '%s'", driver_name);
+		log_appendf(5, " %d Hz, %d bit, %s", obtained.freq, obtained.bits,
 			obtained.channels == 1 ? "mono" : "stereo");
 		log_appendf(5, " Buffer size: %d samples", obtained.samples);
 	}
@@ -1355,64 +1474,85 @@ static int _audio_open(const char *driver_spec, int verbose)
 	return 1;
 }
 
-// Configure a device. (called at startup)
-static void _audio_init_head(const char *driver_spec, int verbose)
+static int _audio_try_driver(const char *driver, const char *device, int verbose)
 {
-	const char *err = NULL, *err_default = NULL;
-	char ugh[256];
+	if (backend && backend->init_driver(driver))
+		return 0;
 
-	/* Use the device from the config if it exists. */
-	if (!driver_spec || !*driver_spec)
-		driver_spec = cfg_audio_driver;
+	driver_name = str_dup(driver);
 
-	if (*driver_spec) {
-		errno = 0;
-
-		if (_audio_open(driver_spec, verbose))
-			return;
-		err = SDL_GetError();
-
-		/* Errors returned only as strings! Environment variables used for everything!
-		Turns out that SDL is actually a very elaborate shell script, so it all makes sense.
-
-		Anyway, this error isn't really accurate because there might be many more devices
-		and it's just as likely that the *driver* name is wrong (e.g. "asla").
-		errno MIGHT be useful, at least on 'nix, and it does tend to provide reasonable
-		messages for common cases such as the device being opened already; plus, we can
-		make a guess if SDL just gave up and didn't do anything because it didn't know the
-		driver name. However, since this is probably just as likely to be wrong as it is
-		right, make a note of it. */
-
-		if (strcmp(err, "No available audio device") == 0) {
-			if (errno == 0) {
-				err = "Device init failed (No SDL driver by that name?)";
-			} else {
-				snprintf(ugh, sizeof(ugh), "Device init failed (%s?)", strerror(errno));
-				ugh[sizeof(ugh) - 1] = '\0';
-				err = ugh;
-			}
+	if (!_audio_open_device(device, verbose)) {
+		if (backend) {
+			backend->quit_driver();
+			free(driver_name);
+			driver_name = NULL;
 		}
-
-		log_appendf(4, "%s: %s", driver_spec, err);
-		log_appendf(4, "Retrying with default device...");
-		log_nl();
+		return 0;
 	}
 
-	/* Try the default device? */
-	if (_audio_open("", verbose))
-		return;
+	audio_was_init = 1;
+	refresh_audio_device_list();
 
-	err_default = SDL_GetError();
-	log_appendf(4, "%s", err_default);
+	return 1;
+}
 
-	if (!_audio_open("dummy", 0)) {
-		/* yarrr, abandon ship! */
-		if (*driver_spec)
-			fprintf(stderr, "%s: %s\n", driver_spec, err);
-		fprintf(stderr, "%s\n", err_default);
-		fprintf(stderr, "Couldn't initialise audio!\n");
-		schism_exit(1);
+static void _audio_quit(void)
+{
+	if (audio_was_init) {
+		_cleanup_audio_device();
+		free(driver_name);
+		driver_name = NULL;
+		if (backend) backend->quit_driver();
+		audio_was_init = 0;
 	}
+}
+
+// Configure a device. (called at startup)
+static int _audio_init_head(const char *driver, const char *device, int verbose)
+{
+	/* Use the driver from the config if it exists. */
+	if (!driver || !*driver)
+		driver = cfg_audio_driver;
+
+	if (!device || !*device)
+		device = cfg_audio_device;
+
+	const char *n;
+
+	_audio_quit();
+
+	if (driver && *driver) {
+		/* compatibility! */
+		n = !strcmp(driver, "oss") ? "dsp"
+			: (!strcmp(driver, "nosound") || !strcmp(driver, "none")) ? "dummy"
+			: driver;
+
+		if (_audio_try_driver(n, device, verbose))
+			return 1;
+	}
+
+#if defined(SCHISM_SDL2) || defined(SCHISM_SDL12)
+	/* we ought to allow this envvar to work under SDL */
+	n = getenv("SDL_AUDIODRIVER");
+	if (n && *n && _audio_try_driver(n, device, verbose))
+		return 1;
+#endif
+
+	const int cnt = backend ? backend->driver_count() : 0;
+
+	for (int i = 0; i < cnt; i++) {
+		n = backend ? backend->driver_name(i) : NULL;
+
+		if (_audio_try_driver(n, device, verbose))
+			return 1;
+	}
+
+	/* whoops! */
+	fputs("Couldn't initialize audio!\n", stderr);
+	//const char* err = SDL_GetError();
+	//if (err) fprintf(stderr, "%s\n", err);
+	schism_exit(1);
+	return 0;
 }
 
 // Set up audio_buffer, reset the sample count, and kick off the mixer
@@ -1427,27 +1567,82 @@ static void _audio_init_tail(void)
 	song_start_audio();
 }
 
-void audio_init(const char *driver_spec)
-{
-	_audio_init_head(driver_spec, 1);
-	_audio_init_tail();
+void audio_flash_reinitialized_text(int success) {
+	if (success) {
+		status_text_flash((status.flags & CLASSIC_MODE)
+			? "Sound Blaster 16 reinitialised"
+			: "Audio output reinitialised");
+	} else {
+		/* ... */
+		status_text_flash("Failed to reinitialise audio!");
+	}
 }
 
-void audio_reinit(void)
+/* driver == NULL || device == NULL is fine here */
+int audio_init(const char *driver, const char *device)
+{
+	static const schism_audio_backend_t *backends[] = {
+		// ordered by preference
+#ifdef SCHISM_SDL2
+		&schism_audio_backend_sdl2,
+#endif
+#ifdef SCHISM_SDL12
+		&schism_audio_backend_sdl12,
+#endif
+		NULL,
+	};
+
+	int i;
+	int success;
+
+	for (i = 0; backends[i]; i++) {
+		backend = backends[i];
+		if (backend->init())
+			break;
+
+		backend = NULL;
+	}
+
+	if (!backend)
+		return 0;
+
+	if (status.flags & CLASSIC_MODE)
+		song_stop();
+
+	success = _audio_init_head(driver, device, 1);
+	_audio_init_tail();
+
+	return success;
+}
+
+int audio_reinit(const char *device)
 {
 	if (status.flags & (DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN)) {
 		/* never allowed */
-		return;
+		return 0;
 	}
-	song_stop();
-	_audio_init_head(active_audio_driver, 0);
-	_audio_init_tail();
+
+	int success;
 
 	if (status.flags & CLASSIC_MODE)
-		// FIXME: but we spontaneously report a GUS card sometimes...
-		status_text_flash("Sound Blaster 16 reinitialised");
-	else
-		status_text_flash("Audio output reinitialised");
+		song_stop();
+
+	success = _audio_open_device(device, 0);
+	_audio_init_tail();
+
+	audio_flash_reinitialized_text(success);
+
+	return success;
+}
+
+void audio_quit(void)
+{
+	_audio_quit();
+
+	if (backend) {
+		backend->quit();
+		backend = NULL;
+	}
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

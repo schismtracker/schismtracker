@@ -52,6 +52,8 @@ static void get_title_from_id3(struct id3_tag const *tag, char **artist_ptr, cha
 
 /* --------------------------------------------------------------------- */
 
+/* This is super old and unused code; and hence has not been updated to use
+ * the new slurp function parameters. aka this file no longer compiles :) */
 int fmt_mp3_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 {
 	signed long id3len;

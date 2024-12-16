@@ -1,13 +1,18 @@
 *.swp
 *.o
+.cache/
 .deps/
 .dirstamp
 .vs/
+.vscode/
 /Makefile
 /Makefile.in
 /aclocal.m4
 /auto/
 /autom4te.cache/
+/build-config.h
+/build-config.h.in
+/build-config.h.in~
 /build/
 /buildx86/
 /buildx64/
@@ -15,6 +20,7 @@
 /config.guess
 /config.h
 /config.h.in
+/config.h.in~
 /config.log
 /config.status
 /config.sub

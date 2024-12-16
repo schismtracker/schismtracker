@@ -26,14 +26,21 @@
 
 /* --------------------------------------------------------------------- */
 
-int fmt_ntk_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_ntk_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 25 && memcmp(data, "TWNNSNG2", 8) == 0))
+	unsigned char magic[8], title[15];
+
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "TWNNSNG2", sizeof(magic)))
+		return 0;
+
+	slurp_seek(fp, 9, SEEK_SET);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 
 	file->description = "NoiseTrekker";
 	/*file->extension = str_dup("ntk");*/
-	file->title = strn_dup((const char *)data + 9, 15);
+	file->title = strn_dup((const char *)title, sizeof(title));
 	file->type = TYPE_MODULE_MOD;    /* ??? */
 	return 1;
 }

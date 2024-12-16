@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef FMT_H
-#define FMT_H
+#ifndef SCHISM_FMT_H_
+#define SCHISM_FMT_H_
 
 #include <stdint.h>
 #include "dmoz.h"
@@ -31,7 +31,7 @@
 
 #include "disko.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* module loaders */
@@ -52,18 +52,21 @@ enum {
 /* return codes for modules savers */
 enum {
 	SAVE_SUCCESS,           /* all's well */
+	SAVE_UNSUPPORTED,       /* unsupported samples, or something */
 	SAVE_FILE_ERROR,        /* couldn't write the file; check errno */
 	SAVE_INTERNAL_ERROR,    /* something unrelated to disk i/o */
+	SAVE_NO_FILENAME,       /* the filename is empty... */
 };
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#define PROTO_READ_INFO         (dmoz_file_t *file, const uint8_t *data, size_t length)
+#define PROTO_READ_INFO         (dmoz_file_t *file, slurp_t *fp)
 #define PROTO_LOAD_SONG         (song_t *song, slurp_t *fp, unsigned int lflags)
 #define PROTO_SAVE_SONG         (disko_t *fp, song_t *song)
-#define PROTO_LOAD_SAMPLE       (const uint8_t *data, size_t length, song_sample_t *smp)
+#define PROTO_LOAD_SAMPLE       (slurp_t *fp, song_sample_t *smp)
 #define PROTO_SAVE_SAMPLE       (disko_t *fp, song_sample_t *smp)
-#define PROTO_LOAD_INSTRUMENT   (const uint8_t *data, size_t length, int slot)
+#define PROTO_LOAD_INSTRUMENT   (slurp_t *fp, int slot)
+#define PROTO_SAVE_INSTRUMENT   (disko_t *fp, song_t *song, song_instrument_t *ins)
 #define PROTO_EXPORT_HEAD       (disko_t *fp, int bits, int channels, int rate)
 #define PROTO_EXPORT_SILENCE    (disko_t *fp, long bytes)
 #define PROTO_EXPORT_BODY       (disko_t *fp, const uint8_t *data, size_t length)
@@ -75,6 +78,7 @@ typedef int (*fmt_save_song_func)       PROTO_SAVE_SONG;
 typedef int (*fmt_load_sample_func)     PROTO_LOAD_SAMPLE;
 typedef int (*fmt_save_sample_func)     PROTO_SAVE_SAMPLE;
 typedef int (*fmt_load_instrument_func) PROTO_LOAD_INSTRUMENT;
+typedef int (*fmt_save_instrument_func) PROTO_SAVE_INSTRUMENT;
 typedef int (*fmt_export_head_func)     PROTO_EXPORT_HEAD;
 typedef int (*fmt_export_silence_func)  PROTO_EXPORT_SILENCE;
 typedef int (*fmt_export_body_func)     PROTO_EXPORT_BODY;
@@ -86,6 +90,7 @@ typedef int (*fmt_export_tail_func)     PROTO_EXPORT_TAIL;
 #define LOAD_SAMPLE(t)          int fmt_##t##_load_sample       PROTO_LOAD_SAMPLE;
 #define SAVE_SAMPLE(t)          int fmt_##t##_save_sample       PROTO_SAVE_SAMPLE;
 #define LOAD_INSTRUMENT(t)      int fmt_##t##_load_instrument   PROTO_LOAD_INSTRUMENT;
+#define SAVE_INSTRUMENT(t)		int fmt_##t##_save_instrument	PROTO_SAVE_INSTRUMENT;
 #define EXPORT(t)               int fmt_##t##_export_head       PROTO_EXPORT_HEAD; \
 				int fmt_##t##_export_silence    PROTO_EXPORT_SILENCE; \
 				int fmt_##t##_export_body       PROTO_EXPORT_BODY; \
@@ -102,6 +107,7 @@ struct save_format {
 	union {
 		fmt_save_song_func save_song;
 		fmt_save_sample_func save_sample;
+		fmt_save_instrument_func save_instrument;
 		struct {
 			fmt_export_head_func head;
 			fmt_export_silence_func silence;
@@ -110,11 +116,16 @@ struct save_format {
 			int multi;
 		} export;
 	} f;
+
+	// for files that can only be loaded with an external library
+	// that is loaded at runtime (or linked to)
+	int (*enabled)(void);
 };
 
 extern const struct save_format song_save_formats[];
 extern const struct save_format song_export_formats[];
 extern const struct save_format sample_save_formats[];
+extern const struct save_format instrument_save_formats[];
 
 /* --------------------------------------------------------------------------------------------------------- */
 struct instrumentloader {
@@ -128,16 +139,61 @@ int instrument_loader_sample(struct instrumentloader *ii, int slot);
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-uint32_t it_decompress8(void *dest, uint32_t len, const void *file, uint32_t filelen, int it215, int channels);
-uint32_t it_decompress16(void *dest, uint32_t len, const void *file, uint32_t filelen, int it215, int channels);
+uint32_t it_decompress8(void *dest, uint32_t len, slurp_t *fp, int it215, int channels);
+uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int channels);
 
-uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, uint8_t **ibuf, int8_t n);
+uint32_t mdl_decompress8(void *dest, uint32_t len, slurp_t *fp);
+uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp);
+
+/* returns 0 on success */
+int32_t huffman_decompress(slurp_t *slurp, disko_t *disko);
 
 /* --------------------------------------------------------------------------------------------------------- */
 
 /* shared by the .it, .its, and .iti saving functions */
 void save_its_header(disko_t *fp, song_sample_t *smp);
-int load_its_sample(const uint8_t *header, const uint8_t *data, size_t length, song_sample_t *smp);
+void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int iti_file);
+int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv);
+int load_it_instrument(struct instrumentloader* ii, song_instrument_t *instrument, slurp_t *fp);
+int load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp);
+uint32_t it_decode_edit_timer(uint16_t cwtv, uint32_t runtime);
+uint32_t it_get_song_elapsed_dos_time(song_t *song);
+
+/* s3i, called from s3m saver */
+void s3i_write_header(disko_t *fp, song_sample_t *smp, uint32_t sdata);
+
+/* --------------------------------------------------------------------------------------------------------- */
+
+/* handle dos timestamps */
+schism_ticks_t dos_time_to_ms(uint32_t dos_time);
+uint32_t ms_to_dos_time(schism_ticks_t ms);
+
+void fat_date_time_to_tm(struct tm *tm, uint16_t fat_date, uint16_t fat_time);
+void tm_to_fat_date_time(const struct tm *tm, uint16_t *fat_date, uint16_t *fat_time);
+
+/* --------------------------------------------------------------------------------------------------------- */
+
+/* [R]IFF helper functions */
+
+typedef struct chunk {
+	uint32_t id;
+	uint32_t size;
+	int64_t offset;
+} iff_chunk_t;
+
+/* chunk enums */
+enum {
+	IFF_CHUNK_SIZE_LE = (1 << 0), /* for RIFF */
+	IFF_CHUNK_ALIGNED = (1 << 1), /* are the structures word aligned? */
+};
+
+int iff_chunk_peek_ex(iff_chunk_t *chunk, slurp_t *fp, uint32_t flags);
+
+int iff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp);
+int riff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp);
+int iff_chunk_read(iff_chunk_t *chunk, slurp_t *fp, void *data, size_t size);
+int iff_read_sample(iff_chunk_t *chunk, slurp_t *fp, song_sample_t *smp, uint32_t flags, size_t offset);
+int iff_chunk_receive(iff_chunk_t *chunk, slurp_t *fp, int (*callback)(const void *, size_t, void *), void *userdata);
 
 /* --------------------------------------------------------------------------------------------------------- */
 // other misc functions...
@@ -162,6 +218,14 @@ void mod_import_note(const uint8_t p[4], song_note_t *note);
 // Read a message with fixed-size line lengths
 void read_lined_message(char *msg, slurp_t *fp, int len, int linelen);
 
+// STM specific tools
+uint8_t convert_stm_tempo_to_bpm(size_t tempo);
+void handle_stm_tempo_pattern(song_note_t *note, size_t tempo);
+void handle_stm_effects(song_note_t *chan_note);
+extern const uint8_t stm_effects[16];
+
+/* used internally by slurp only. nothing else should need this */
+int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length);
 
 // get L-R-R-L panning value from a (zero-based!) channel number
 #define PROTRACKER_PANNING(n) (((((n) + 1) >> 1) & 1) * 256)
@@ -171,5 +235,12 @@ void read_lined_message(char *msg, slurp_t *fp, int len, int linelen);
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#endif /* ! FMT_H */
+int win32mf_init(void);
+void win32mf_quit(void);
+
+int flac_init(void);
+int flac_quit(void);
+void audio_enable_flac(int enabled); // should be called by flac_init()
+
+#endif /* SCHISM_FMT_H_ */
 

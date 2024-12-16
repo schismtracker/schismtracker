@@ -33,7 +33,12 @@
 #include "headers.h"
 
 #include "song.h"
+#include "keyboard.h"
 #include "clippy.h"
+#include "fakemem.h"
+#include "widget.h"
+#include "dialog.h"
+#include "vgamem.h"
 
 #include <ctype.h>
 #include <assert.h>
@@ -63,6 +68,7 @@ static int message_extfont = 1;
 /* --------------------------------------------------------------------- */
 
 static int message_handle_key_editmode(struct key_event * k);
+static int message_handle_text_input_editmode(const char *text);
 static int message_handle_key_viewmode(struct key_event * k);
 
 /* --------------------------------------------------------------------- */
@@ -109,18 +115,13 @@ static void set_absolute_position(char *text, int pos, int *line, int *ch)
 			(*line) = (*line) - 1;
 			if (*line < 0) *line = 0;
 			len = get_nth_line(text, *line, &ptr);
-			if (len < 0) {
-				*ch = 0;
-			} else {
-				*ch = len;
-			}
+			*ch = (len < 0) ? 0 : len;
 			pos = 0;
-
 		} else if (len >= pos) {
 			*ch = pos;
 			pos = 0;
 		} else {
-			pos -= (len+1); /* EOC */
+			pos -= (len + 1); /* EOC */
 			(*line) = (*line) + 1;
 		}
 	}
@@ -234,7 +235,7 @@ static void message_draw(void)
 	int n, cp, clipl, clipr;
 	int skipc, cutc;
 
-	draw_fill_chars(2, 13, 77, 47, 0);
+	draw_fill_chars(2, 13, 77, 47, DEFAULT_FG, 0);
 
 	if (clippy_owner(CLIPPY_SELECT) == widgets_message) {
 		clipl = widgets_message[0].clip_start;
@@ -321,6 +322,7 @@ static inline void message_set_editmode(void)
 	widgets_message[0].accept_text = 1;
 	top_line = cursor_line = cursor_char = cursor_pos = 0;
 	widgets_message[0].d.other.handle_key = message_handle_key_editmode;
+	widgets_message[0].d.other.handle_text_input = message_handle_text_input_editmode;
 
 	status.flags |= NEED_UPDATE;
 }
@@ -330,6 +332,7 @@ static inline void message_set_viewmode(void)
 	edit_mode = 0;
 	widgets_message[0].accept_text = 0;
 	widgets_message[0].d.other.handle_key = message_handle_key_viewmode;
+	widgets_message[0].d.other.handle_text_input = NULL;
 
 	status.flags |= NEED_UPDATE;
 }
@@ -445,7 +448,7 @@ static void message_delete_line(void)
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
-static void message_clear(UNUSED void *data)
+static void message_clear(SCHISM_UNUSED void *data)
 {
 	current_song->message[0] = 0;
 	memused_songchanged();
@@ -475,46 +478,46 @@ static int message_handle_key_viewmode(struct key_event * k)
 		}
 	}
 
-	switch (k->sym.sym) {
-	case SDLK_UP:
+	switch (k->sym) {
+	case SCHISM_KEYSYM_UP:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line--;
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line++;
 		break;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line -= 35;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line += 35;
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		top_line = get_num_lines(current_song->message) - 34;
+		top_line = str_get_num_lines(current_song->message) - 34;
 		break;
-	case SDLK_t:
+	case SCHISM_KEYSYM_t:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		if (k->mod & KMOD_CTRL) {
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			message_extfont = !message_extfont;
 			break;
 		}
 		return 1;
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		if (k->state == KEY_PRESS)
 			return 0;
 		message_set_editmode();
@@ -552,6 +555,16 @@ static void _delete_selection(void)
 	message_reposition();
 
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
+}
+
+static int message_handle_text_input_editmode(const char *text) {
+	if (clippy_owner(CLIPPY_SELECT) == widgets_message)
+		_delete_selection();
+
+	for (; *text; text++)
+		message_insert_char(*text);
+
+	return 1;
 }
 
 static int message_handle_key_editmode(struct key_event * k)
@@ -592,68 +605,68 @@ static int message_handle_key_editmode(struct key_event * k)
 	line_len = get_nth_line(current_song->message, cursor_line, &ptr);
 
 
-	switch (k->sym.sym) {
-	case SDLK_UP:
+	switch (k->sym) {
+	case SCHISM_KEYSYM_UP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_line--;
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_line++;
 		break;
-	case SDLK_LEFT:
+	case SCHISM_KEYSYM_LEFT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_char--;
 		break;
-	case SDLK_RIGHT:
+	case SCHISM_KEYSYM_RIGHT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_char++;
 		break;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_line -= 35;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_line += 35;
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_CTRL)
+		if (k->mod & SCHISM_KEYMOD_CTRL)
 			new_cursor_line = 0;
 		else
 			new_cursor_char = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->mod & KMOD_CTRL) {
-			num_lines = get_num_lines(current_song->message);
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
+			num_lines = str_get_num_lines(current_song->message);
 			new_cursor_line = num_lines;
 		} else {
 			new_cursor_char = line_len;
 		}
 		break;
-	case SDLK_ESCAPE:
+	case SCHISM_KEYSYM_ESCAPE:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -661,62 +674,68 @@ static int message_handle_key_editmode(struct key_event * k)
 		message_set_viewmode();
 		memused_songchanged();
 		return 1;
-	case SDLK_BACKSPACE:
+	case SCHISM_KEYSYM_BACKSPACE:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->sym.sym && clippy_owner(CLIPPY_SELECT) == widgets_message) {
+		if (k->sym && clippy_owner(CLIPPY_SELECT) == widgets_message) {
 			_delete_selection();
 		} else {
 			message_delete_char();
 		}
 		return 1;
-	case SDLK_DELETE:
+	case SCHISM_KEYSYM_DELETE:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (k->sym.sym && clippy_owner(CLIPPY_SELECT) == widgets_message) {
+
+		if (clippy_owner(CLIPPY_SELECT) == widgets_message)
 			_delete_selection();
-		} else {
+		else
 			message_delete_next_char();
-		}
+
 		return 1;
-	default:
-		if (k->mod & KMOD_CTRL) {
+	case SCHISM_KEYSYM_RETURN:
+		if (NO_MODIFIER(k->mod)) {
 			if (k->state == KEY_RELEASE)
 				return 1;
-			if (k->sym.sym == SDLK_t) {
+
+			if (clippy_owner(CLIPPY_SELECT) == widgets_message)
+				_delete_selection();
+
+			message_insert_char('\r');
+
+			return 1;
+		}
+		return 0;
+	default:
+		/* keybinds... */
+		if (k->mod & SCHISM_KEYMOD_CTRL) {
+			if (k->state == KEY_RELEASE)
+				return 1;
+
+			if (k->sym == SCHISM_KEYSYM_t) {
 				message_extfont = !message_extfont;
 				break;
-			} else if (k->sym.sym == SDLK_y) {
+			} else if (k->sym == SCHISM_KEYSYM_y) {
 				clippy_select(NULL, NULL, 0);
 				message_delete_line();
 				break;
 			}
-		} else if (k->mod & KMOD_ALT) {
+		} else if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
-			if (k->sym.sym == SDLK_c) {
+
+			if (k->sym == SCHISM_KEYSYM_c) {
 				prompt_message_clear();
 				return 1;
 			}
 		} else if (k->mouse == MOUSE_NONE) {
-			if (k->unicode == '\r' || k->unicode == '\t'
-			|| k->unicode >= 32) {
-				if (k->state == KEY_RELEASE)
-					return 1;
-				if (k->sym.sym && clippy_owner(CLIPPY_SELECT) == widgets_message) {
-					_delete_selection();
-				}
-				if (k->mod & (KMOD_SHIFT|KMOD_CAPS)) {
-					message_insert_char(toupper((unsigned int)k->unicode));
-				} else {
-					message_insert_char(k->unicode);
-				}
-				return 1;
-			}
+			if (k->text)
+				return message_handle_text_input_editmode(k->text);
+
 			return 0;
 		}
 
@@ -728,11 +747,12 @@ static int message_handle_key_editmode(struct key_event * k)
 		if (!doing_drag) {
 			clippy_select(NULL, NULL, 0);
 		}
+		break;
 	}
 
 	if (new_cursor_line != cursor_line) {
 		if (num_lines == -1)
-			num_lines = get_num_lines(current_song->message);
+			num_lines = str_get_num_lines(current_song->message);
 
 		if (new_cursor_line < 0)
 			new_cursor_line = 0;
@@ -760,7 +780,7 @@ static int message_handle_key_editmode(struct key_event * k)
 
 		} else if (new_cursor_char >
 			   get_nth_line(current_song->message, cursor_line, &ptr)) {
-			if (cursor_line == get_num_lines(current_song->message)) {
+			if (cursor_line == str_get_num_lines(current_song->message)) {
 				new_cursor_char = cursor_char;
 			} else {
 				cursor_line++;
@@ -831,7 +851,7 @@ void message_load_page(struct page *page)
 	page->widgets = widgets_message;
 	page->help_index = HELP_MESSAGE_EDITOR;
 
-	create_other(widgets_message + 0, 0, message_handle_key_viewmode, message_draw);
+	widget_create_other(widgets_message + 0, 0, message_handle_key_viewmode, NULL, message_draw);
 	widgets_message[0].accept_text = edit_mode;
 }
 

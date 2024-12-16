@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "sndfile.h"
-#include "cmixer.h"
+#include "player/sndfile.h"
+#include "player/cmixer.h"
 #include <math.h>
 
 
@@ -68,10 +68,10 @@ static const float resonance_table[128] = {
 // XXX freq WAS unused but is now mix_frequency!
 //
 #define FREQ_PARAM_MULT (128.0 / (24.0 * 256.0))
-void setup_channel_filter(song_voice_t *chan, int reset, int flt_modifier, int freq)
+void setup_channel_filter(song_voice_t *chan, int32_t reset, int32_t flt_modifier, int32_t freq)
 {
-	int cutoff = chan->cutoff;
-	int resonance = chan->resonance;
+	int32_t cutoff = chan->cutoff;
+	int32_t resonance = chan->resonance;
 	float frequency, r, d, e, fg, fb0, fb1;
 
 	cutoff = cutoff * (flt_modifier + 256) / 256;
@@ -82,17 +82,20 @@ void setup_channel_filter(song_voice_t *chan, int reset, int flt_modifier, int f
 	if (resonance > 255)
 		resonance = 255;
 
-        // TODO: The enabling/disabling of channel filter is a bit more complex.
-        // More info in snd_flt.cpp in OpenMPT and filter-reset.it, filter-reset-carry.it
-        // and filter-nna.it from https://wiki.openmpt.org/Development:_Test_Cases/IT
-	// Should be 255, but Zxx cutoff is limited to 127, so...
-	if (cutoff < 254)
-		chan->flags |= CHN_FILTER;
-	else
-		cutoff = 255;
+	if (resonance == 0 && cutoff >= 254)
+	{
+		if (chan->flags & CHN_NEWNOTE)
+		{
+			// Z7F next to a note disables the filter, however in other cases this should not happen.
+			// Test cases: filter-reset.it, filter-reset-carry.it, filter-reset-envelope.it, filter-nna.it, FilterResetPatDelay.it, FilterPortaSmpChange.it, FilterPortaSmpChange-InsMode.it
+			chan->flags &= ~CHN_FILTER;
+		}
+		return;
+	}
+	chan->flags |= CHN_FILTER;
 
 	// 2 ^ (i / 24 * 256)
-	frequency = 110.0 * powf(2.0, (float) cutoff * FREQ_PARAM_MULT + 0.25);
+	frequency = 110.0 * powf(2.0, (float)cutoff * FREQ_PARAM_MULT + 0.25);
 	if (frequency > freq / 2.0)
 		frequency = freq / 2.0;
 	r = freq / (2.0 * M_PI * frequency);
@@ -109,8 +112,8 @@ void setup_channel_filter(song_voice_t *chan, int reset, int flt_modifier, int f
 	chan->filter_b1 = (int32_t)(fb1 * (1 << FILTERPRECISION));
 
 	if (reset) {
-		chan->filter_y1 = chan->filter_y2 = 0;
-		chan->filter_y3 = chan->filter_y4 = 0;
+		chan->filter_y[0][0] = chan->filter_y[0][1] = 0;
+		chan->filter_y[1][0] = chan->filter_y[1][1] = 0;
 	}
 }
 

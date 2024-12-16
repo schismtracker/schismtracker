@@ -21,31 +21,16 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
 #include "headers.h"
+#include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
 
 #include "it.h" // needed for get_effect_char (purely informational)
 #include "log.h"
-#include "sndfile.h"
-#include "tables.h"
 
-/* --------------------------------------------------------------------- */
-
-int fmt_xm_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
-{
-	if (!(length > 38 && memcmp(data, "Extended Module: ", 17) == 0))
-		return 0;
-
-	file->description = "Fast Tracker 2 Module";
-	file->type = TYPE_MODULE_XM;
-	/*file->extension = str_dup("xm");*/
-	file->title = strn_dup((const char *)data + 17, 20);
-	return 1;
-}
-
-/* --------------------------------------------------------------------------------------------------------- */
+#include "player/sndfile.h"
+#include "player/tables.h"
 
 // gloriously stolen from xmp
 struct xm_file_header {
@@ -64,6 +49,70 @@ struct xm_file_header {
 	uint16_t tempo;         // Default tempo
 	uint16_t bpm;           // Default BPM
 };
+
+/* --------------------------------------------------------------------- */
+
+static int read_header_xm(struct xm_file_header *hdr, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) return 0
+
+	READ_VALUE(id);
+	READ_VALUE(name);
+	READ_VALUE(doseof);
+	READ_VALUE(tracker);
+	READ_VALUE(version);
+	READ_VALUE(headersz);
+	READ_VALUE(songlen);
+	READ_VALUE(restart);
+	READ_VALUE(channels);
+	READ_VALUE(patterns);
+	READ_VALUE(instruments);
+	READ_VALUE(flags);
+	READ_VALUE(tempo);
+	READ_VALUE(bpm);
+
+#undef READ_VALUE
+
+	if (memcmp(hdr->id, "Extended Module: ", sizeof(hdr->id))
+		|| hdr->doseof != 0x1a)
+		return 0;
+
+	/* now byteswap */
+	hdr->version = bswapLE16(hdr->version);
+	hdr->headersz = bswapLE32(hdr->headersz);
+	hdr->songlen = bswapLE16(hdr->songlen);
+	hdr->restart = bswapLE16(hdr->restart);
+	hdr->channels = bswapLE16(hdr->channels);
+	hdr->patterns = bswapLE16(hdr->patterns);
+	hdr->instruments = bswapLE16(hdr->instruments);
+	hdr->flags = bswapLE16(hdr->flags);
+	hdr->tempo = bswapLE16(hdr->tempo);
+	hdr->bpm = bswapLE16(hdr->bpm);
+
+	if (hdr->channels > MAX_CHANNELS)
+		return 0;
+
+	return 1;
+}
+
+/* --------------------------------------------------------------------- */
+
+int fmt_xm_read_info(dmoz_file_t *file, slurp_t *fp)
+{
+	struct xm_file_header hdr;
+
+	if (!read_header_xm(&hdr, fp))
+		return 0;
+
+	file->description = "Fast Tracker 2 Module";
+	file->type = TYPE_MODULE_XM;
+	/*file->extension = str_dup("xm");*/
+	file->title = strn_dup((const char *)hdr.name, sizeof(hdr.name));
+	return 1;
+}
+
+/* --------------------------------------------------------------------------------------------------------- */
 
 static uint8_t autovib_import[8] = {
 	VIB_SINE, VIB_SQUARE,
@@ -121,10 +170,10 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 
 		// hack to avoid having to count bytes when reading
 		end = slurp_tell(fp) + bytes;
-		end = MIN(end, fp->length);
+		end = MIN(end, slurp_length(fp));
 
 		for (row = 0; row < rows; row++, note += MAX_CHANNELS - hdr->channels) {
-			for (chan = 0; fp->pos < end && chan < hdr->channels; chan++, note++) {
+			for (chan = 0; slurp_tell(fp) < end && chan < hdr->channels; chan++, note++) {
 				b = slurp_getc(fp);
 				if (b & 128) {
 					if (b & 1) note->note = slurp_getc(fp);
@@ -140,12 +189,21 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 					note->param = slurp_getc(fp);
 				}
 				// translate everything
-				if (note->note > 0 && note->note < 97)
+				if (note->note > 0 && note->note < 97) {
 					note->note += 12;
-				else if (note->note == 97)
+				} else if (note->note == 97) {
+					/* filter out instruments on noteoff;
+					 * this is what IT's importer does, because
+					 * hanging the note is *definitely* not
+					 * intended behavior
+					 *
+					 * see: MPT test case noteoff3.it */
 					note->note = NOTE_OFF;
-				else
+					note->instrument = 0;
+				} else {
 					note->note = NOTE_NONE;
+				}
+
 				if (note->effect || note->param)
 					csf_import_mod_effect(note, 1);
 				if (note->instrument == 0xff)
@@ -168,7 +226,8 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 				switch (note->volparam >> 4) {
 				case 5: // 0x50 = volume 64, 51-5F = nothing
 					if (note->volparam == 0x50) {
-				case 1 ... 4: // Set volume Value-$10
+				case 1: case 2:
+				case 3: case 4: // Set volume Value-$10
 						note->voleffect = FX_VOLUME;
 						note->volparam -= 0x10;
 						break;
@@ -244,11 +303,9 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 				}
 
 				if (note->effect == FX_KEYOFF && note->param == 0) {
-					// FT2 ignores both K00 and its note entirely (but still plays
-					// previous notes and processes the volume column!)
+					// FT2 ignores notes and instruments next to a K00
 					note->note = NOTE_NONE;
 					note->instrument = 0;
-					note->effect = FX_NONE;
 				} else if (note->note == NOTE_OFF && note->effect == FX_SPECIAL
 					   && (note->param >> 4) == 0xd) {
 					// note off with a delay ignores the note off, and also
@@ -339,23 +396,21 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 	}
 
 	if (lostfx)
-		log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
+		log_appendf(4, " Warning: %u effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
 
 	if (lostpat)
-		log_appendf(4, " Warning: Too many patterns in song (%d skipped)", lostpat);
+		log_appendf(4, " Warning: Too many patterns in song (%u skipped)", lostpat);
 }
 
 static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 {
 	song_sample_t *smp = first;
-	size_t smpsize;
 	int ns;
 
 	// dontyou: 20 samples starting at 26122
 	// trnsmix: 31 samples starting at 61946
 	for (ns = 0; ns < total; ns++, smp++) {
-		smpsize = smp->length;
-		if (!smpsize)
+		if (!smp->length)
 			continue;
 		if (smp->flags & CHN_16BIT) {
 			smp->length >>= 1;
@@ -368,14 +423,11 @@ static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 			smp->loop_end >>= 1;
 		}
 		if (smp->adlib_bytes[0] != 0xAD) {
-			csf_read_sample(smp, SF_LE | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M) | SF_PCMD | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8),
-					fp->data + fp->pos, fp->length - fp->pos);
+			csf_read_sample(smp, SF_LE | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M) | SF_PCMD | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8), fp);
 		} else {
 			smp->adlib_bytes[0] = 0;
-			smpsize = 16 + (smpsize + 1) / 2;
-			csf_read_sample(smp, SF_8 | SF_M | SF_LE | SF_PCMD16, fp->data + fp->pos, fp->length - fp->pos);
+			csf_read_sample(smp, SF_8 | SF_M | SF_LE | SF_PCMD16, fp);
 		}
-		slurp_seek(fp, smpsize, SEEK_CUR);
 	}
 }
 
@@ -423,14 +475,14 @@ static void fix_xm_envelope_loop(song_envelope_t *s_env, int sustain_flag)
 }
 
 enum {
-	ID_CONFIRMED = 1, // confirmed with inst/sample header sizes
-	ID_FT2GENERIC = 2, // "FastTracker v2.00", but fasttracker has NOT been ruled out
-	ID_OLDMODPLUG = 4, // "FastTracker v 2.00"
-	ID_OTHER = 8, // something we don't know, testing for digitrakker.
-	ID_FT2CLONE = 16, // NOT FT2: itype changed between instruments, or \0 found in song title
-	ID_MAYBEMODPLUG = 32, // some FT2-ish thing, possibly MPT.
-	ID_DIGITRAK = 64, // probably digitrakker
-	ID_UNKNOWN = 128 | ID_CONFIRMED, // ?????
+	ID_CONFIRMED = 0x01, // confirmed with inst/sample header sizes
+	ID_FT2GENERIC = 0x02, // "FastTracker v2.00", but fasttracker has NOT been ruled out
+	ID_OLDMODPLUG = 0x04, // "FastTracker v 2.00"
+	ID_OTHER = 0x08, // something we don't know, testing for digitrakker.
+	ID_FT2CLONE = 0x10, // NOT FT2: itype changed between instruments, or \0 found in song title
+	ID_MAYBEMODPLUG = 0x20, // some FT2-ish thing, possibly MPT.
+	ID_DIGITRAK = 0x40, // probably digitrakker
+	ID_UNKNOWN = 0x80 | ID_CONFIRMED, // ?????
 };
 
 // TODO: try to identify packers (boobiesqueezer?)
@@ -451,19 +503,15 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 
 	if (strncmp(song->tracker_id, "FastTracker ", 12) == 0) {
 		if (hdr->headersz == 276 && strncmp(song->tracker_id + 12, "v2.00   ", 8) == 0) {
-			// TODO: is it at all possible to tell the precise FT2 version? that'd be a neat trick.
-			// (Answer: unlikely. After some testing, I can't identify any differences between 2.04
-			// and 2.09. Doesn't mean for certain that they're identical, but I would be surprised
-			// if anything did change.)
 			detected = ID_FT2GENERIC | ID_MAYBEMODPLUG;
-			// replace the "v2.00" with just a 2, since it's probably not actually v2.00
-			strcpy(song->tracker_id + 12, "2");
+			/* there is very little change between different versions of FT2, making it
+			 * very difficult (maybe even impossible) to detect them, so here we just
+			 * say it's either FT2 or a compatible tracker */
+			strcpy(song->tracker_id + 12, "2 or compatible");
 		} else if (strncmp(song->tracker_id + 12, "v 2.00  ", 8) == 0) {
-			// Old MPT:
-			// - 1.00a5 (ihdr=245)
-			// - beta 3.3 (ihdr=263)
-			strcpy(song->tracker_id, "Modplug Tracker 1.0");
-			detected = ID_OLDMODPLUG;
+			/* alpha and beta are handled later */
+			detected = ID_OLDMODPLUG | ID_CONFIRMED;
+			strcpy(song->tracker_id, "ModPlug Tracker 1.0");
 		} else {
 			// definitely NOT FastTracker, so let's clear up that misconception
 			detected = ID_UNKNOWN;
@@ -606,7 +654,19 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		vtype = autovib_import[slurp_getc(fp) & 0x7];
 		vsweep = slurp_getc(fp);
 		vdepth = slurp_getc(fp);
-		vrate = slurp_getc(fp) / 4;
+		vdepth = MIN(vdepth, 32);
+		vrate = slurp_getc(fp);
+		vrate = MIN(vrate, 64);
+
+		/* translate the sweep value */
+		if (vrate | vdepth) {
+			if (vsweep) {
+				int s = _muldivr(vdepth, 256, vsweep);
+				vsweep = CLAMP(s, 0, 255);
+			} else {
+				vsweep = 255;
+			}
+		}
 
 		slurp_read(fp, &w, 2);
 		ins->fadeout = bswapLE16(w);
@@ -746,7 +806,7 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 			// no idea how to identify it elsewise.
 			strcpy(song->tracker_id, "FastTracker clone");
 		}
-	} else if ((detected & ID_DIGITRAK) && srsvd_or == 0 && (itype ?: -1) == -1) {
+	} else if ((detected & ID_DIGITRAK) && srsvd_or == 0 && (itype ? itype : -1) == -1) {
 		strcpy(song->tracker_id, "Digitrakker");
 	} else if (detected == ID_UNKNOWN) {
 		strcpy(song->tracker_id, "Unknown tracker");
@@ -755,25 +815,13 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 	return (hdr->version < 0x0104) ? abssamp : 0;
 }
 
-int fmt_xm_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
+int fmt_xm_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lflags)
 {
 	struct xm_file_header hdr;
 	int n;
 	uint8_t b;
 
-	slurp_read(fp, &hdr, sizeof(hdr));
-	hdr.version = bswapLE16(hdr.version);
-	hdr.headersz = bswapLE32(hdr.headersz);
-	hdr.songlen = bswapLE16(hdr.songlen);
-	hdr.restart = bswapLE16(hdr.restart);
-	hdr.channels = bswapLE16(hdr.channels);
-	hdr.patterns = bswapLE16(hdr.patterns);
-	hdr.instruments = bswapLE16(hdr.instruments);
-	hdr.flags = bswapLE16(hdr.flags);
-	hdr.tempo = bswapLE16(hdr.tempo);
-	hdr.bpm = bswapLE16(hdr.bpm);
-
-	if (memcmp(hdr.id, "Extended Module: ", 17) != 0 || hdr.doseof != 0x1a || hdr.channels > MAX_CHANNELS)
+	if (!read_header_xm(&hdr, fp))
 		return LOAD_UNSUPPORTED;
 
 	memcpy(song->title, hdr.name, 20);
@@ -783,8 +831,13 @@ int fmt_xm_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 
 	if (hdr.flags & 1)
 		song->flags |= SONG_LINEARSLIDES;
+
 	song->flags |= SONG_ITOLDEFFECTS | SONG_COMPATGXX | SONG_INSTRUMENTMODE;
-	song->initial_speed = MIN(hdr.tempo, 255) ?: 255;
+
+	song->initial_speed = MIN(hdr.tempo, 255);
+	if (!song->initial_speed)
+		song->initial_speed = 255;
+
 	song->initial_tempo = CLAMP(hdr.bpm, 31, 255);
 	song->initial_global_volume = 128;
 	song->mixing_volume = 48;

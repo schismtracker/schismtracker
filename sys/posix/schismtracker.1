@@ -23,34 +23,12 @@ SDL video driver, such as \fIx11\fP, \fIdga\fP, or \fIfbcon\fP. Note that
 this is different from the video driver setting within the program, and is
 unlikely to be useful.
 .TP
-\fB\-\-video\-yuvlayout\fP=\fILAYOUT\fP
-Specific YUV layout to use: \fIYUY2\fP, \fIYV12\fP, \fIRGBA\fP, etc.
-This is probably best left alone under normal circumstances.
-.TP
-\fB\-\-video\-size\fP=\fIWIDTH\fPx\fIHEIGHT\fP
-Set the size of the video display.
-.TP
-\fB\-\-video\-stretch\fP=\fIVALUE\fP
-Fix the aspect ratio. (Probably does nothing!)
-.TP
-\fB\-\-video\-gl\-path\fP=\fIPATH\fP
-Specify path of OpenGL library.
-.TP
-\fB\-\-video\-depth\fP=\fIDEPTH\fP
-Specify display depth, in bits.
-.TP
-\fB\-\-video\-fb\-device\fP=\fIDEVICE\fP
-Specify path to framebuffer. Typical value is \fI/dev/fb0\fP.
-.TP
 \fB\-\-network\fP, \fB\-\-no\-network\fP
 Enable/disable networking (on by default). Used for MIDI over IP.
 .TP
 \fB\-\-classic\fP, \fB\-\-no\-classic\fP
 Start Schism Tracker in "classic" mode, or don't. This is mostly cosmetic,
 although it does change the program's behavior slightly in a few places.
-.TP
-\fB\-\-display\fP=\fIDISPLAY\fP
-X11 display to use.
 .TP
 \fB\-f\fP, \fB\-F\fP, \fB\-\-fullscreen\fP, \fB\-\-no\-fullscreen\fP
 Enable/disable fullscreen mode at startup.
@@ -68,10 +46,6 @@ Run the font editor (itf). This can also be accessed by pressing Shift-F12.
 .TP
 \fB\-\-hooks\fP, \fB\-\-no\-hooks\fP
 Run hooks. Enabled by default.
-.TP
-\fB\-\-debug\fP=\fIFLAGS\fP
-Enable some debugging flags (separated by commas).
-You probably don't need this.
 .TP
 \fB\-\-version\fP
 Display version information and build date.
@@ -231,6 +205,9 @@ Scream Tracker 3 sample
 .TP
 WAV
 Microsoft WAV audio
+.TP
+FLAC
+Xiph.Org Free Lossless Audio Codec audio
 .TP
 AIFF
 Audio IFF (Apple)

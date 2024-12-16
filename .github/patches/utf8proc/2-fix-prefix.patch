@@ -1,0 +1,34 @@
+From d526df02f56c767ec6b0248fd5593573c36ba4da Mon Sep 17 00:00:00 2001
+From: Paper <paper@tflc.us>
+Date: Sun, 20 Oct 2024 19:50:25 -0400
+Subject: [PATCH] makefile: fix target directory
+
+---
+ Makefile | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 806f441..e3924d7 100644
+--- a/Makefile
++++ b/Makefile
+@@ -11,7 +11,7 @@ PERL=perl
+ CFLAGS ?= -O2
+ PICFLAG = -fPIC
+ C99FLAG = -std=c99
+-WCFLAGS = -Wsign-conversion -Wall -Wextra -pedantic
++WCFLAGS = -Wall -Wextra -pedantic
+ UCFLAGS = $(CPPFLAGS) $(CFLAGS) $(PICFLAG) $(C99FLAG) $(WCFLAGS) -DUTF8PROC_EXPORTS $(UTF8PROC_DEFINES)
+ LDFLAG_SHARED = -shared
+ SOFLAG = -Wl,-soname
+@@ -39,7 +39,7 @@ else # GNU/Linux, at least (Windows should probably use cmake)
+ endif
+ 
+ # installation directories (for 'make install')
+-prefix=/usr/local
++prefix=$(HOME)/ppcprefix
+ libdir=$(prefix)/lib
+ includedir=$(prefix)/include
+ pkgconfigdir=$(libdir)/pkgconfig
+-- 
+2.39.2
+

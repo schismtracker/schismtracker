@@ -24,10 +24,11 @@
 #include "headers.h"
 
 #include "it.h"
+#include "vgamem.h"
 #include "song.h"
 #include "page.h"
-
-#include "sdlmain.h"
+#include "dialog.h"
+#include "events.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -37,7 +38,7 @@
 #ifndef NDEBUG
 # define ENSURE_MENU(q) do {\
 	if ((status.dialog_type & DIALOG_MENU) == 0) {\
-		fprintf(stderr, "%s called with no menu\n", __FUNCTION__);\
+		fprintf(stderr, "%s called with no menu\n", __func__);\
 		q;\
 	}\
 } while(0)
@@ -215,7 +216,7 @@ static void _draw_menu(struct menu *menu)
 		 BOX_THICK | BOX_OUTER | BOX_FLAT_LIGHT);
 	draw_box(menu->x + 1, menu->y + 1, menu->x + menu->w + 6,
 		 menu->y + h - 2, BOX_THIN | BOX_OUTER | BOX_FLAT_DARK);
-	draw_fill_chars(menu->x + 2, menu->y + 2, menu->x + menu->w + 5, menu->y + 3, 2);
+	draw_fill_chars(menu->x + 2, menu->y + 2, menu->x + menu->w + 5, menu->y + 3, DEFAULT_FG, 2);
 	draw_text(menu->title, menu->x + 6, menu->y + 2, 3, 2);
 }
 
@@ -303,7 +304,7 @@ static void main_menu_selected_cb(void)
 		break;
 	case 8: /* settings menu */
 		/* fudge the menu to show/hide the fullscreen toggle as appropriate */
-		if (status.flags & WM_AVAILABLE)
+		if (video_is_wm_available())
 			settings_menu.num_items = 6;
 		else
 			settings_menu.num_items = 5;
@@ -368,7 +369,7 @@ static void playback_menu_selected_cb(void)
 		song_stop();
 		break;
 	case 6: /* reinit soundcard */
-		audio_reinit();
+		audio_reinit(NULL);
 		break;
 	case 7: /* driver screen */
 		set_page(PAGE_PREFERENCES);
@@ -479,8 +480,8 @@ int menu_handle_key(struct key_event *k)
 		return 1;
 	}
 
-	switch (k->sym.sym) {
-	case SDLK_ESCAPE:
+	switch (k->sym) {
+	case SCHISM_KEYSYM_ESCAPE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		current_menu[1] = NULL;
@@ -491,7 +492,7 @@ int menu_handle_key(struct key_event *k)
 			menu_hide();
 		}
 		break;
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (menu->selected_item > 0) {
@@ -499,7 +500,7 @@ int menu_handle_key(struct key_event *k)
 			break;
 		}
 		return 1;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (menu->selected_item < menu->num_items - 1) {
@@ -508,17 +509,17 @@ int menu_handle_key(struct key_event *k)
 		}
 		return 1;
 		/* home/end are new here :) */
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		menu->selected_item = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		menu->selected_item = menu->num_items - 1;
 		break;
-	case SDLK_RETURN:
+	case SCHISM_KEYSYM_RETURN:
 		if (k->state == KEY_PRESS) {
 			menu->active_item = menu->selected_item;
 			status.flags |= NEED_UPDATE;

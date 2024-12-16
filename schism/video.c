@@ -20,320 +20,152 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#define NATIVE_SCREEN_WIDTH             640
-#define NATIVE_SCREEN_HEIGHT            400
+#define NATIVE_SCREEN_WIDTH		640
+#define NATIVE_SCREEN_HEIGHT	400
 #define WINDOW_TITLE			"Schism Tracker"
 
-/* should be the native res of the display (set once and never again)
- * assumes the user starts schism from the desktop and that the desktop
- * is the native res (or at least something with square pixels) */
-static int display_native_x = -1;
-static int display_native_y = -1;
-
 #include "headers.h"
+
 #include "it.h"
-#include "osdefs.h"
-
-/* bugs
- * ... in sdl. not in this file :)
- *
- *  - take special care to call SDL_SetVideoMode _exactly_ once
- *    when on a console (video.desktop.fb_hacks)
- *
- */
-
-#if HAVE_SYS_KD_H
-# include <sys/kd.h>
-#endif
-#if HAVE_LINUX_FB_H
-# include <linux/fb.h>
-#endif
-#include <sys/types.h>
-#include <sys/stat.h>
-#if HAVE_SYS_IOCTL_H
-# include <sys/ioctl.h>
-#endif
-#if HAVE_SIGNAL_H
-#include <signal.h>
-#endif
-
-/* for memcpy */
-#include <string.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <stdio.h>
-
-#include "sdlmain.h"
-
-#include <unistd.h>
-#include <fcntl.h>
-
+#include "charset.h"
+#include "bswap.h"
+#include "config.h"
 #include "video.h"
+#include "osdefs.h"
+#include "vgamem.h"
 
-#ifndef MACOSX
-#ifdef WIN32
-#include "auto/schismico.h"
-#else
+#include "backend/video.h"
+
+#include <errno.h>
+
+#include <inttypes.h>
+
+#ifndef SCHISM_MACOSX
 #include "auto/schismico_hires.h"
 #endif
-#endif
-
-extern int macosx_did_finderlaunch;
 
 /* leeto drawing skills */
-#define MOUSE_HEIGHT    14
-static const unsigned int _mouse_pointer[] = {
-	/* x....... */  0x80,
-	/* xx...... */  0xc0,
-	/* xxx..... */  0xe0,
-	/* xxxx.... */  0xf0,
-	/* xxxxx... */  0xf8,
-	/* xxxxxx.. */  0xfc,
-	/* xxxxxxx. */  0xfe,
-	/* xxxxxxxx */  0xff,
-	/* xxxxxxx. */  0xfe,
-	/* xxxxx... */  0xf8,
-	/* x...xx.. */  0x8c,
-	/* ....xx.. */  0x0c,
-	/* .....xx. */  0x06,
-	/* .....xx. */  0x06,
-
-0,0
+struct mouse_cursor {
+	uint32_t pointer[18];
+	uint32_t mask[18];
+	uint32_t height, width;
+	uint32_t center_x, center_y; /* which point of the pointer does actually point */
 };
 
-struct video_cf {
-	SDL_Window *window;
-	SDL_Renderer *renderer;
-	SDL_Texture *texture;
-	SDL_DisplayMode display;
-	unsigned char *framebuf;
-	unsigned int width;
-	unsigned int height;
-	int x;
-	int y;
-	int width_height_defined;
+/* ex. cursors[CURSOR_SHAPE_ARROW] */
+static struct mouse_cursor cursors[] = {
+	[CURSOR_SHAPE_ARROW] = {
+		.pointer = { /* / -|-------------> */
+			0x0000,  /* | ................ */
+			0x4000,  /* - .x.............. */
+			0x6000,  /* | .xx............. */
+			0x7000,  /* | .xxx............ */
+			0x7800,  /* | .xxxx........... */
+			0x7c00,  /* | .xxxxx.......... */
+			0x7e00,  /* | .xxxxxx......... */
+			0x7f00,  /* | .xxxxxxx........ */
+			0x7f80,  /* | .xxxxxxxx....... */
+			0x7f00,  /* | .xxxxxxx........ */
+			0x7c00,  /* | .xxxxx.......... */
+			0x4600,  /* | .x...xx......... */
+			0x0600,  /* | .....xx......... */
+			0x0300,  /* | ......xx........ */
+			0x0300,  /* | ......xx........ */
+			0x0000,  /* v ................ */
+			0,0
+		},
+		.mask = {    /* / -|-------------> */
+			0xc000,  /* | xx.............. */
+			0xe000,  /* - xxx............. */
+			0xf000,  /* | xxxx............ */
+			0xf800,  /* | xxxxx........... */
+			0xfc00,  /* | xxxxxx.......... */
+			0xfe00,  /* | xxxxxxx......... */
+			0xff00,  /* | xxxxxxxx........ */
+			0xff80,  /* | xxxxxxxxx....... */
+			0xffc0,  /* | xxxxxxxxxx...... */
+			0xff80,  /* | xxxxxxxxx....... */
+			0xfe00,  /* | xxxxxxx......... */
+			0xff00,  /* | xxxxxxxx........ */
+			0x4f00,  /* | .x..xxxx........ */
+			0x0780,  /* | .....xxxx....... */
+			0x0780,  /* | .....xxxx....... */
+			0x0300,  /* v ......xx........ */
+			0,0
+		},
+		.height = 16,
+		.width = 10,
+		.center_x = 1,
+		.center_y = 1,
+	},
+	[CURSOR_SHAPE_CROSSHAIR] = {
+		.pointer = {  /* / ---|---> */
+			0x00,     /* | ........ */
+			0x10,     /* | ...x.... */
+			0x7c,     /* - .xxxxx.. */
+			0x10,     /* | ...x.... */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* v ........ */
+			0,0
+		},
+		.mask = {     /* / ---|---> */
+			0x10,     /* | ...x.... */
+			0x7c,     /* | .xxxxx.. */
+			0xfe,     /* - xxxxxxx. */
+			0x7c,     /* | .xxxxx.. */
+			0x10,     /* | ...x.... */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* | ........ */
+			0x00,     /* v ........ */
+			0,0
+		},
+		.height = 5,
+		.width = 7,
+		.center_x = 3,
+		.center_y = 2,
+	},
+};
 
+static struct {
 	struct {
-		unsigned int width;
-		unsigned int height;
-	} prev;
-
-	struct {
-		unsigned int x;
-		unsigned int y;
+		enum video_mousecursor_shape shape;
 		int visible;
 	} mouse;
-
-	struct {
-		unsigned int width;
-		unsigned int height;
-		int fullscreen;
-	} fullscreen;
-
-	unsigned int pal[256];
-
-	unsigned int tc_bgr32[256];
+} video = {
+	.mouse = {
+		.visible = MOUSE_EMULATED,
+		.shape = CURSOR_SHAPE_ARROW,
+	},
 };
-static struct video_cf video;
 
-int video_is_fullscreen(void)
+static const schism_video_backend_t *backend = NULL;
+
+/* ----------------------------------------------------------- */
+
+void video_rgb_to_yuv(unsigned int *y, unsigned int *u, unsigned int *v, unsigned char rgb[3])
 {
-	return video.fullscreen.fullscreen;
-}
-
-int video_width(void)
-{
-	return video.width;
-}
-
-int video_height(void)
-{
-	return video.height;
-}
-
-void video_update(void)
-{
-	SDL_GetWindowPosition(video.window, &video.x, &video.y);
-}
-
-const char * video_driver_name(void)
-{
-	return "SDL2";
-}
-
-void video_report(void)
-{
-	Uint32 format;
-	SDL_QueryTexture(video.texture, &format, NULL, NULL, NULL);
-
-	log_appendf(5, " Using driver '%s'", SDL_GetCurrentVideoDriver());
-
-	log_appendf(5, " Display format: %d bits/pixel", SDL_BITSPERPIXEL(format));
-	if (video.fullscreen.fullscreen) {
-		log_appendf(5, " Display dimensions: %dx%d", video.display.w, video.display.h);
-	}
-}
-
-void video_redraw_texture(void)
-{
-	SDL_DestroyTexture(video.texture);
-	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
-}
-
-void video_shutdown(void)
-{
-	SDL_GetWindowPosition(video.window, &video.x, &video.y);
-	SDL_DestroyRenderer(video.renderer);
-	SDL_DestroyWindow(video.window);
-	SDL_DestroyTexture(video.texture);
-}
-
-void video_setup(const char* quality)
-{
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
-}
-
-static void set_icon(void)
-{
-	SDL_SetWindowTitle(video.window, WINDOW_TITLE);
-#ifndef MACOSX
-/* apple/macs use a bundle; this overrides their nice pretty icon */
-#ifdef WIN32
-/* win32 icons must be 32x32 according to SDL 1.2 doc */
-	SDL_Surface *icon = xpmdata(_schism_icon_xpm);
-#else
-	SDL_Surface *icon = xpmdata(_schism_icon_xpm_hires);
-#endif
-	SDL_SetWindowIcon(video.window, icon);
-	SDL_FreeSurface(icon);
-#endif
-}
-
-void video_fullscreen(int new_fs_flag)
-{
-	/**
-	 * new_fs_flag has three values:
-	 * >0 being fullscreen,
-	 *  0 being windowed, and
-	 * <0 meaning to switch.
-	**/
-	if (new_fs_flag > 0) {
-		video.fullscreen.fullscreen = 1;
-	} else if (new_fs_flag < 0){
-		if (video.fullscreen.fullscreen > 0) {
-			video.fullscreen.fullscreen = 0;
-		} else {
-			video.fullscreen.fullscreen = 1;
-		}
-	} else {
-		video.fullscreen.fullscreen = 0;
-	}
-	if (video.fullscreen.fullscreen) {
-		SDL_SetWindowSize(video.window, video.display.w, video.display.h);
-		video_resize(video.display.w, video.display.h);
-		SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-		SDL_SetWindowResizable(video.window, SDL_FALSE);
-	} else {
-		SDL_SetWindowFullscreen(video.window, 0);
-		video_resize(video.fullscreen.width, video.fullscreen.height);
-		SDL_SetWindowSize(video.window, video.fullscreen.width, video.fullscreen.height);
-		SDL_SetWindowResizable(video.window, SDL_TRUE);
-		set_icon();
-	}
-	video.fullscreen.width = video.prev.width;
-	video.fullscreen.height = video.prev.height;
-}
-
-void video_startup(void)
-{
-	vgamem_clear();
-	vgamem_flip();
-
-	if (!SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY))
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, cfg_video_interpolation);
-
-	SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
-
-	if (!video.width_height_defined) {
-		video.x = SDL_WINDOWPOS_UNDEFINED;
-		video.y = SDL_WINDOWPOS_UNDEFINED;
-		video.fullscreen.width = video.prev.width = video.width = cfg_video_width;
-		video.fullscreen.height = video.prev.height = video.height = cfg_video_height;
-	}
-
-	SDL_CreateWindowAndRenderer(video.width, video.height, SDL_WINDOW_RESIZABLE, &video.window, &video.renderer);
-	video_resize(video.width, video.height);
-	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
-	video.framebuf = calloc(NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT, sizeof(Uint32));
-
-	SDL_SetWindowPosition(video.window, video.x, video.y);
-	SDL_GetCurrentDisplayMode(0, &video.display);
-	video_fullscreen(cfg_video_fullscreen);
-
-	/* okay, i think we're ready */
-	SDL_ShowCursor(SDL_DISABLE);
-	set_icon();
-	video.width_height_defined = 1;
-}
-
-void video_resize(unsigned int width, unsigned int height)
-{
-	/* Aspect ratio correction if it's wanted */
-	if (cfg_video_want_fixed)
-		SDL_RenderSetLogicalSize(video.renderer,
-					 NATIVE_SCREEN_WIDTH * 5, NATIVE_SCREEN_HEIGHT * 6); // 4:3
-	else 
-		SDL_RenderSetLogicalSize(video.renderer, width, height);
-
-	video.prev.width = video.width;
-	video.prev.height = video.height;
-	video.width = width;
-	video.height = height;
-	status.flags |= (NEED_UPDATE);
-}
-
-static void _bgr32_pal(int i, int rgb[3])
-{
-	video.tc_bgr32[i] = rgb[2] |
-			(rgb[1] << 8) |
-			(rgb[0] << 16) | (255 << 24);
-}
-static void _gl_pal(int i, int rgb[3])
-{
-	video.pal[i] = rgb[2] |
-			(rgb[1] << 8) |
-			(rgb[0] << 16) | (255 << 24);
-}
-
-void video_colors(unsigned char palette[16][3])
-{
-	void (*fun)(int i,int rgb[3]);
-	const int lastmap[] = { 0,1,2,3,5 };
-	int rgb[3], i, j, p;
-
-	fun = _gl_pal;
-
-	/* make our "base" space */
-	for (i = 0; i < 16; i++) {
-		rgb[0]=palette[i][0];
-		rgb[1]=palette[i][1];
-		rgb[2]=palette[i][2];
-		fun(i, rgb);
-		_bgr32_pal(i, rgb);
-	}
-	/* make our "gradient" space */
-	for (i = 128; i < 256; i++) {
-		j = i - 128;
-		p = lastmap[(j>>5)];
-		rgb[0] = (int)palette[p][0] +
-			(((int)(palette[p+1][0] - palette[p][0]) * (j&31)) /32);
-		rgb[1] = (int)palette[p][1] +
-			(((int)(palette[p+1][1] - palette[p][1]) * (j&31)) /32);
-		rgb[2] = (int)palette[p][2] +
-			(((int)(palette[p+1][2] - palette[p][2]) * (j&31)) /32);
-		fun(i, rgb);
-		_bgr32_pal(i, rgb);
-	}
+	// YCbCr
+	*y =  0.257 * rgb[0] + 0.504 * rgb[1] + 0.098 * rgb[2] +  16;
+	*u = -0.148 * rgb[0] - 0.291 * rgb[1] + 0.439 * rgb[2] + 128;
+	*v =  0.439 * rgb[0] - 0.368 * rgb[1] - 0.071 * rgb[2] + 128;
 }
 
 void video_refresh(void)
@@ -342,61 +174,16 @@ void video_refresh(void)
 	vgamem_clear();
 }
 
-static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, unsigned int mouseline[80])
-{
-	int y_int =	(video.mouse.y >= 5368708) ? 0 :
-			(video.mouse.y >= 400)     ? 399 : (int)video.mouse.y;
-	unsigned int z;
-
-	memset(mouseline, 0, 80*sizeof(unsigned int));
-	if (video.mouse.visible != MOUSE_EMULATED
-	    || !(status.flags & IS_FOCUSED)
-	    || y < y_int
-	    || y >= y_int+MOUSE_HEIGHT) {
-		return;
-	}
-
-	z = _mouse_pointer[ y - y_int ];
-	mouseline[x] = z >> v;
-	if (x < 79) mouseline[x+1] = (z << (8-v)) & 0xff;
-}
-
-static void _blit11(unsigned char *pixels, unsigned int pitch, unsigned int *tpal)
-{
-	/* emulates how SDL 1.2 handled it :p */
-	/* effectively handles underflows/overflows */
-	unsigned int mouseline_x =	(video.mouse.x >= 3355443) ? 0  :
-					(video.mouse.x >= 640)     ? 79 : (video.mouse.x / 8);
-	unsigned int mouseline_v =	(video.mouse.x >= 3355443) ? 0  :
-					(video.mouse.x >= 640)     ? 7  : (video.mouse.x % 8);
-	unsigned int mouseline[80];
-	unsigned char *pdata;
-	unsigned int x, y;
-	int pitch24;
-
-	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-		make_mouseline(mouseline_x, mouseline_v, y, mouseline);
-		vgamem_scan32(y, (unsigned int *)pixels, tpal, mouseline);
-		pixels += pitch;
-	}
-}
-
-void video_blit(void)
-{
-	unsigned char *pixels = video.framebuf;
-	unsigned int pitch = NATIVE_SCREEN_WIDTH * sizeof(Uint32);
-
-	_blit11(pixels, pitch, video.pal);
-
-	SDL_RenderClear(video.renderer);
-	SDL_UpdateTexture(video.texture, NULL, pixels, pitch);
-	SDL_RenderCopy(video.renderer, video.texture, NULL, NULL);
-	SDL_RenderPresent(video.renderer);
-}
+/* -------------------------------------------------- */
 
 int video_mousecursor_visible(void)
 {
 	return video.mouse.visible;
+}
+
+void video_set_mousecursor_shape(enum video_mousecursor_shape shape)
+{
+	video.mouse.shape = shape;
 }
 
 void video_mousecursor(int vis)
@@ -407,13 +194,6 @@ void video_mousecursor(int vis)
 		"Hardware mouse cursor enabled",
 	};
 
-	if (status.flags & NO_MOUSE) {
-		// disable it no matter what
-		video.mouse.visible = MOUSE_DISABLED;
-		//SDL_ShowCursor(0);
-		return;
-	}
-
 	switch (vis) {
 	case MOUSE_CYCLE_STATE:
 		vis = (video.mouse.visible + 1) % MOUSE_CYCLE_STATE;
@@ -423,43 +203,559 @@ void video_mousecursor(int vis)
 	case MOUSE_EMULATED:
 		video.mouse.visible = vis;
 		status_text_flash("%s", state[video.mouse.visible]);
+		break;
 	case MOUSE_RESET_STATE:
 		break;
 	default:
 		video.mouse.visible = MOUSE_EMULATED;
+		break;
 	}
 
-	SDL_ShowCursor(video.mouse.visible == MOUSE_SYSTEM);
+	backend->mousecursor_changed();
+}
 
-	// Totally turn off mouse event sending when the mouse is disabled
-	int evstate = video.mouse.visible == MOUSE_DISABLED ? SDL_DISABLE : SDL_ENABLE;
-	if (evstate != SDL_EventState(SDL_MOUSEMOTION, SDL_QUERY)) {
-		SDL_EventState(SDL_MOUSEMOTION, evstate);
-		SDL_EventState(SDL_MOUSEBUTTONDOWN, evstate);
-		SDL_EventState(SDL_MOUSEBUTTONUP, evstate);
+/* -------------------------------------------------- */
+/* mouse drawing */
+
+static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, uint32_t mouseline[80], uint32_t mouseline_mask[80], unsigned int mouse_y)
+{
+	struct mouse_cursor *cursor = &cursors[video.mouse.shape];
+
+	memset(mouseline,      0, 80 * sizeof(*mouseline));
+	memset(mouseline_mask, 0, 80 * sizeof(*mouseline));
+
+	video_mousecursor_visible();
+
+	if (video_mousecursor_visible() != MOUSE_EMULATED
+		|| !video_is_focused()
+		|| (mouse_y >= cursor->center_y && y < mouse_y - cursor->center_y)
+		|| y < cursor->center_y
+		|| y >= mouse_y + cursor->height - cursor->center_y) {
+		return;
+	}
+
+	unsigned int scenter = (cursor->center_x / 8) + (cursor->center_x % 8 != 0);
+	unsigned int swidth  = (cursor->width    / 8) + (cursor->width    % 8 != 0);
+	unsigned int centeroffset = cursor->center_x % 8;
+
+	unsigned int z  = cursor->pointer[y - mouse_y + cursor->center_y];
+	unsigned int zm = cursor->mask[y - mouse_y + cursor->center_y];
+
+	z <<= 8;
+	zm <<= 8;
+	if (v < centeroffset) {
+		z <<= centeroffset - v;
+		zm <<= centeroffset - v;
+	} else {
+		z >>= v - centeroffset;
+		zm >>= v - centeroffset;
+	}
+
+	// always fill the cell the mouse coordinates are in
+	mouseline[x]      = z  >> (8 * (swidth - scenter + 1)) & 0xFF;
+	mouseline_mask[x] = zm >> (8 * (swidth - scenter + 1)) & 0xFF;
+
+	// draw the parts of the cursor sticking out to the left
+	unsigned int temp = (cursor->center_x < v) ? 0 : ((cursor->center_x - v) / 8) + ((cursor->center_x - v) % 8 != 0);
+	for (int i = 1; i <= temp && x >= i; i++) {
+		mouseline[x-i]      = z  >> (8 * (swidth - scenter + 1 + i)) & 0xFF;
+		mouseline_mask[x-i] = zm >> (8 * (swidth - scenter + 1 + i)) & 0xFF;
+	}
+
+	// and to the right
+	temp = swidth - scenter + 1;
+	for (int i = 1; (i <= temp) && (x + i < 80); i++) {
+		mouseline[x+i]      = z  >> (8 * (swidth - scenter + 1 - i)) & 0xff;
+		mouseline_mask[x+i] = zm >> (8 * (swidth - scenter + 1 - i)) & 0xff;
 	}
 }
+
+/* --------------------------------------------------------------- */
+/* blitters */
+
+/* Video with linear interpolation. */
+#define FIXED_BITS 8
+#define FIXED_MASK ((1 << FIXED_BITS) - 1)
+#define ONE_HALF_FIXED (1 << (FIXED_BITS - 1))
+#define INT2FIXED(x) ((x) << FIXED_BITS)
+#define FIXED2INT(x) ((x) >> FIXED_BITS)
+#define FRAC(x) ((x) & FIXED_MASK)
+
+void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t pal[256], int width, int height, schism_map_rgb_func_t map_rgb, void *map_rgb_data)
+{
+	unsigned char cv32backing[NATIVE_SCREEN_WIDTH * 8];
+
+	unsigned int *csp, *esp, *dp;
+	unsigned int c00, c01, c10, c11;
+	unsigned int outr, outg, outb;
+	unsigned int pad;
+	int fixedx, fixedy, scalex, scaley;
+	unsigned int y, x,ey,ex,t1,t2;
+	unsigned int mouseline[80];
+	unsigned int mouseline_mask[80];
+	unsigned int mouseline_x, mouseline_v;
+	int iny, lasty;
+
+	unsigned int mouse_x, mouse_y;
+	video_get_mouse_coordinates(&mouse_x, &mouse_y);
+
+	mouseline_x = (mouse_x / 8);
+	mouseline_v = (mouse_x % 8);
+
+	csp = (unsigned int *)cv32backing;
+	esp = csp + NATIVE_SCREEN_WIDTH;
+	lasty = -2;
+	iny = 0;
+	pad = pitch - (width * bpp);
+	scalex = INT2FIXED(NATIVE_SCREEN_WIDTH-1) / width;
+	scaley = INT2FIXED(NATIVE_SCREEN_HEIGHT-1) / height;
+	for (y = 0, fixedy = 0; (y < height); y++, fixedy += scaley) {
+		iny = FIXED2INT(fixedy);
+		if (iny != lasty) {
+			make_mouseline(mouseline_x, mouseline_v, iny, mouseline, mouseline_mask, mouse_y);
+
+			/* we'll downblit the colors later */
+			if (iny == lasty + 1) {
+				/* move up one line */
+				vgamem_scan32(iny+1, csp, pal, mouseline, mouseline_mask);
+				dp = esp; esp = csp; csp=dp;
+			} else {
+				vgamem_scan32(iny, (csp = (uint32_t *)cv32backing), pal, mouseline, mouseline_mask);
+				vgamem_scan32(iny+1, (esp = (csp + NATIVE_SCREEN_WIDTH)), pal, mouseline, mouseline_mask);
+			}
+			lasty = iny;
+		}
+		for (x = 0, fixedx = 0; x < width; x++, fixedx += scalex) {
+			ex = FRAC(fixedx);
+			ey = FRAC(fixedy);
+
+			c00 = csp[FIXED2INT(fixedx)];
+			c01 = csp[FIXED2INT(fixedx) + 1];
+			c10 = esp[FIXED2INT(fixedx)];
+			c11 = esp[FIXED2INT(fixedx) + 1];
+
+#if FIXED_BITS <= 8
+			/* When there are enough bits between blue and
+			 * red, do the RB channels together
+			 * See http://www.virtualdub.org/blog/pivot/entry.php?id=117
+			 * for a quick explanation */
+#define REDBLUE(Q) ((Q) & 0x00FF00FF)
+#define GREEN(Q) ((Q) & 0x0000FF00)
+			t1 = REDBLUE((((REDBLUE(c01)-REDBLUE(c00))*ex) >> FIXED_BITS)+REDBLUE(c00));
+			t2 = REDBLUE((((REDBLUE(c11)-REDBLUE(c10))*ex) >> FIXED_BITS)+REDBLUE(c10));
+			outb = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
+
+			t1 = GREEN((((GREEN(c01)-GREEN(c00))*ex) >> FIXED_BITS)+GREEN(c00));
+			t2 = GREEN((((GREEN(c11)-GREEN(c10))*ex) >> FIXED_BITS)+GREEN(c10));
+			outg = (((((t2-t1)*ey) >> FIXED_BITS) + t1) >> 8) & 0xFF;
+
+			outr = (outb >> 16) & 0xFF;
+			outb &= 0xFF;
+#undef REDBLUE
+#undef GREEN
+#else
+#define BLUE(Q) (Q & 255)
+#define GREEN(Q) ((Q >> 8) & 255)
+#define RED(Q) ((Q >> 16) & 255)
+			t1 = ((((BLUE(c01)-BLUE(c00))*ex) >> FIXED_BITS)+BLUE(c00)) & 0xFF;
+			t2 = ((((BLUE(c11)-BLUE(c10))*ex) >> FIXED_BITS)+BLUE(c10)) & 0xFF;
+			outb = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
+
+			t1 = ((((GREEN(c01)-GREEN(c00))*ex) >> FIXED_BITS)+GREEN(c00)) & 0xFF;
+			t2 = ((((GREEN(c11)-GREEN(c10))*ex) >> FIXED_BITS)+GREEN(c10)) & 0xFF;
+			outg = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
+
+			t1 = ((((RED(c01)-RED(c00))*ex) >> FIXED_BITS)+RED(c00)) & 0xFF;
+			t2 = ((((RED(c11)-RED(c10))*ex) >> FIXED_BITS)+RED(c10)) & 0xFF;
+			outr = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
+#undef RED
+#undef GREEN
+#undef BLUE
+#endif
+
+			uint32_t c = map_rgb(map_rgb_data, outr, outg, outb);
+
+			/* write the output pixel */
+#if WORDS_BIGENDIAN
+			memcpy(pixels, ((unsigned char *)&c) + (4 - bpp), bpp);
+#else
+			memcpy(pixels, &c, bpp);
+#endif
+			pixels += bpp;
+		}
+		pixels += pad;
+	}
+}
+
+/* Nearest neighbor blitter */
+void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height)
+{
+	// at most 32-bits...
+	unsigned char pixels_u[NATIVE_SCREEN_WIDTH * 4];
+
+	unsigned int mouse_x, mouse_y;
+	video_get_mouse_coordinates(&mouse_x, &mouse_y);
+
+	unsigned int mouseline_x = (mouse_x / 8);
+	unsigned int mouseline_v = (mouse_x % 8);
+	uint32_t mouseline[80];
+	uint32_t mouseline_mask[80];
+	int x, a, y, last_scaled_y = 235438; // some random value
+	int pad = pitch - (width * bpp);
+
+	for (y = 0; y < height; y++) {
+		int scaled_y = (y * NATIVE_SCREEN_HEIGHT / height);
+
+		// only want to scan if we have to
+		if (scaled_y != last_scaled_y) {
+			make_mouseline(mouseline_x, mouseline_v, scaled_y, mouseline, mouseline_mask, mouse_y);
+			switch (bpp) {
+			case 1:
+				vgamem_scan8(scaled_y, (uint8_t *)pixels_u, tpal, mouseline, mouseline_mask);
+				break;
+			case 2:
+				vgamem_scan16(scaled_y, (uint16_t *)pixels_u, tpal, mouseline, mouseline_mask);
+				break;
+			case 3:
+				vgamem_scan32(scaled_y, (uint32_t *)pixels_u, tpal, mouseline, mouseline_mask);
+				for (x = 0; x < NATIVE_SCREEN_WIDTH; x++) {
+					/* move these into place */
+#if WORDS_BIGENDIAN
+					memmove(pixels_u + (x * 3), (pixels_u + (x * 4)) + 1, 3);
+#else
+					memmove(pixels_u + (x * 3), pixels_u + (x * 4), 3);
+#endif
+				}
+				break;
+			case 4:
+				vgamem_scan32(scaled_y, (uint32_t *)pixels_u, tpal, mouseline, mouseline_mask);
+				break;
+			default:
+				// should never happen
+				break;
+			}
+		}
+
+		for (x = 0; x < width; x++) {
+			memcpy(pixels, pixels_u + ((x * NATIVE_SCREEN_WIDTH / width) * bpp), bpp);
+
+			pixels += bpp;
+		}
+
+		last_scaled_y = scaled_y;
+
+		pixels += pad;
+	}
+}
+
+void video_blitYY(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
+{
+	// this is here because pixels is write only on SDL2
+	uint16_t pixels_r[NATIVE_SCREEN_WIDTH];
+
+	unsigned int mouse_x, mouse_y;
+	video_get_mouse_coordinates(&mouse_x, &mouse_y);
+
+	unsigned int mouseline_x = (mouse_x / 8);
+	unsigned int mouseline_v = (mouse_x % 8);
+	unsigned int mouseline[80];
+	unsigned int mouseline_mask[80];
+	int y;
+
+	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask, mouse_y);
+
+		vgamem_scan16(y, pixels_r, tpal, mouseline, mouseline_mask);
+		memcpy(pixels, pixels_r, pitch);
+		pixels += pitch;
+		memcpy(pixels, pixels_r, pitch);
+		pixels += pitch;
+	}
+}
+
+void video_blitUV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
+{
+	unsigned int mouse_x, mouse_y;
+	video_get_mouse_coordinates(&mouse_x, &mouse_y);
+
+	const unsigned int mouseline_x = (mouse_x / 8);
+	const unsigned int mouseline_v = (mouse_x % 8);
+	unsigned int mouseline[80];
+	unsigned int mouseline_mask[80];
+
+	int y;
+	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask, mouse_y);
+		vgamem_scan8(y, pixels, tpal, mouseline, mouseline_mask);
+		pixels += pitch;
+	}
+}
+
+void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
+{
+	unsigned int mouse_x, mouse_y;
+	video_get_mouse_coordinates(&mouse_x, &mouse_y);
+
+	const unsigned int mouseline_x = (mouse_x / 8);
+	const unsigned int mouseline_v = (mouse_x % 8);
+	unsigned char cv8backing[NATIVE_SCREEN_WIDTH];
+	unsigned int mouseline[80];
+	unsigned int mouseline_mask[80];
+	int y, x;
+
+	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y += 2) {
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask, mouse_y);
+		vgamem_scan8(y, cv8backing, tpal, mouseline, mouseline_mask);
+		for (x = 0; x < pitch; x += 2)
+			*pixels++ = cv8backing[x+1] | (cv8backing[x] << 4);
+	}
+}
+
+void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
+{
+	uint32_t cv32backing[NATIVE_SCREEN_WIDTH];
+
+	unsigned int mouse_x, mouse_y;
+	video_get_mouse_coordinates(&mouse_x, &mouse_y);
+
+	const unsigned int mouseline_x = (mouse_x / 8);
+	const unsigned int mouseline_v = (mouse_x % 8);
+	unsigned int y, x, a;
+	uint32_t mouseline[80];
+	uint32_t mouseline_mask[80];
+
+	/* wtf */
+	if (bpp == 3) {
+		int pitch24 = pitch - (NATIVE_SCREEN_WIDTH * 3);
+		if (pitch24 < 0)
+			return; /* eh? */
+
+		pitch = pitch24;
+	}
+
+	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask, mouse_y);
+		switch (bpp) {
+		case 1:
+			vgamem_scan8(y, (uint8_t *)pixels, tpal, mouseline, mouseline_mask);
+			break;
+		case 2:
+			vgamem_scan16(y, (uint16_t *)pixels, tpal, mouseline, mouseline_mask);
+			break;
+		case 3:
+			vgamem_scan32(y, (uint32_t *)cv32backing, tpal, mouseline, mouseline_mask);
+			for (x = 0, a = 0; x < pitch && a < NATIVE_SCREEN_WIDTH; x += 3, a += 4) {
+#if WORDS_BIGENDIAN
+				memcpy(pixels + x, cv32backing + a + 1, 3);
+#else
+				memcpy(pixels + x, cv32backing + a, 3);
+#endif
+			}
+			break;
+		case 4:
+			vgamem_scan32(y, (uint32_t *)pixels, tpal, mouseline, mouseline_mask);
+			break;
+		default:
+			// should never happen
+			break;
+		}
+
+		pixels += pitch;
+	}
+}
+
+// ----------------------------------------------------------------------------------
+
+int video_is_fullscreen(void)
+{
+	return backend->is_fullscreen();
+}
+
+int video_width(void)
+{
+	return backend->width();
+}
+
+int video_height(void)
+{
+	return backend->height();
+}
+
+const char *video_driver_name(void)
+{
+	return backend->driver_name();
+}
+
+void video_report(void)
+{
+	log_nl();
+
+	log_append(2, 0, "Video initialised");
+	log_underline(17);
+
+	backend->report();
+}
+
+void video_set_hardware(int hardware)
+{
+	backend->set_hardware(hardware);
+}
+
+void video_shutdown(void)
+{
+	if (backend) {
+		backend->shutdown();
+		backend->quit();
+		backend = NULL;
+	}
+}
+
+void video_setup(const char *quality)
+{
+	backend->setup(quality);
+}
+
+int video_startup(void)
+{
+	static const schism_video_backend_t *backends[] = {
+		// ordered by preference
+#ifdef SCHISM_SDL2
+		&schism_video_backend_sdl2,
+#endif
+#ifdef SCHISM_SDL12
+		&schism_video_backend_sdl12,
+#endif
+		NULL,
+	};
+
+	int i;
+
+	for (i = 0; backends[i]; i++) {
+		backend = backends[i];
+		if (backend->init())
+			break;
+
+		backend = NULL;
+	}
+
+	if (!backend)
+		return -1;
+
+	// ok, now we can call the backend
+	backend->startup();
+
+	return 0;
+}
+
+void video_fullscreen(int new_fs_flag)
+{
+	backend->fullscreen(new_fs_flag);
+}
+
+void video_resize(unsigned int width, unsigned int height)
+{
+	backend->resize(width, height);
+}
+
+void video_colors(unsigned char palette[16][3])
+{
+	backend->colors(palette);
+}
+
+int video_is_focused(void)
+{
+	return backend->is_focused();
+}
+
+int video_is_visible(void)
+{
+	return backend->is_visible();
+}
+
+int video_is_wm_available(void)
+{
+	return backend->is_wm_available();
+}
+
+int video_is_hardware(void)
+{
+	return backend->is_hardware();
+}
+
+/* -------------------------------------------------------- */
+
+int video_is_screensaver_enabled(void)
+{
+	return backend->is_screensaver_enabled();
+}
+
+void video_toggle_screensaver(int enabled)
+{
+	backend->toggle_screensaver(enabled);
+}
+
+/* ---------------------------------------------------------- */
+/* coordinate translation */
 
 void video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y)
 {
-	if (video.mouse.visible && (video.mouse.x != vx || video.mouse.y != vy))
-		status.flags |= SOFTWARE_MOUSE_MOVED;
-
-	vx *= NATIVE_SCREEN_WIDTH;
-	vy *= NATIVE_SCREEN_HEIGHT;
-	vx /= (video.width - (video.width - video.prev.width));
-	vy /= (video.height - (video.height - video.prev.height));
-
-	video.mouse.x = vx;
-	video.mouse.y = vy;
-	if (x)
-		*x = vx;
-
-	if (y)
-		*y = vy;
+	backend->translate(vx, vy, x, y);
 }
 
-SDL_Window * video_window(void)
+void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
 {
-	return video.window;
+	backend->get_logical_coordinates(x, y, trans_x, trans_y);
+}
+
+/* -------------------------------------------------- */
+/* input grab */
+
+int video_is_input_grabbed(void)
+{
+	return backend->is_input_grabbed();
+}
+
+void video_set_input_grabbed(int enabled)
+{
+	backend->set_input_grabbed(enabled);
+}
+
+/* -------------------------------------------------- */
+/* warp mouse position */
+
+void video_warp_mouse(unsigned int x, unsigned int y)
+{
+	backend->warp_mouse(x, y);
+}
+
+void video_get_mouse_coordinates(unsigned int *x, unsigned int *y)
+{
+	backend->get_mouse_coordinates(x, y);
+}
+
+/* -------------------------------------------------- */
+/* menu toggling */
+
+int video_have_menu(void)
+{
+	return backend->have_menu();
+}
+
+void video_toggle_menu(int on)
+{
+	backend->toggle_menu(on);
+}
+
+/* ------------------------------------------------------------ */
+
+void video_blit(void)
+{
+	backend->blit();
+}
+
+/* ------------------------------------------------------------ */
+
+int video_get_wm_data(video_wm_data_t *wm_data)
+{
+	return backend->get_wm_data(wm_data);
 }

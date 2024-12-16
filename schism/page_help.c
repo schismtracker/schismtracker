@@ -28,8 +28,9 @@
 
 #include "it.h"
 #include "page.h"
-
-#include "sdlmain.h"
+#include "widget.h"
+#include "vgamem.h"
+#include "keyboard.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -95,7 +96,7 @@ static void help_draw_const(void)
 {
 	draw_box(1, 12, 78, 45, BOX_THICK | BOX_INNER | BOX_INSET);
 
-	if (status.dialog_type == DIALOG_NONE) change_focus_to(1);
+	if (status.dialog_type == DIALOG_NONE) widget_change_focus_to(1);
 }
 
 static void help_redraw(void)
@@ -103,10 +104,10 @@ static void help_redraw(void)
 	int n, pos, x;
 	int lp;
 	const char **ptr;
-	const char graphic_chars[] = {0, 0x89, 0x8f, 0x96, 0x84, 0, 0x91, 0x8b, 0x86, 0x8a};
+	const uint8_t graphic_chars[] = {0, 0x89, 0x8f, 0x96, 0x84, 0, 0x91, 0x8b, 0x86, 0x8a};
 	char ch;
 
-	draw_fill_chars(2, 13, 77, 44, 0);
+	draw_fill_chars(2, 13, 77, 44, DEFAULT_FG, 0);
 
 	ptr = lines + top_line;
 	for (pos = 13, n = top_line; pos < 45; pos++, n++) {
@@ -158,38 +159,38 @@ static int help_handle_key(struct key_event * k)
 	} else if (k->mouse != MOUSE_NONE) {
 		return 0;
 	}
-	switch (k->sym.sym) {
-	case SDLK_ESCAPE:
+	switch (k->sym) {
+	case SCHISM_KEYSYM_ESCAPE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		set_page(status.previous_page);
 		return 1;
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line--;
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line++;
 		break;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line -= 32;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line += 32;
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line = num_lines - 32;
@@ -221,7 +222,7 @@ static void help_set_page(void)
 	int local_lines = 0, global_lines = 0, cur_line = 0;
 	int have_local_help = (status.current_help_index != HELP_GLOBAL);
 
-	change_focus_to(1);
+	widget_change_focus_to(1);
 	top_line = help_text_lastpos[status.current_help_index];
 
 	lines = CURRENT_HELP_LINECACHE;
@@ -231,9 +232,9 @@ static void help_set_page(void)
 	}
 
 	/* how many lines? */
-	global_lines = get_num_lines(help_text[HELP_GLOBAL]);
+	global_lines = str_get_num_lines(help_text[HELP_GLOBAL]);
 	if (have_local_help) {
-		local_lines = get_num_lines(help_text[status.current_help_index]);
+		local_lines = str_get_num_lines(help_text[status.current_help_index]);
 		num_lines = local_lines + global_lines + 5;
 	} else {
 		num_lines = global_lines + 2;
@@ -300,8 +301,8 @@ void help_load_page(struct page *page)
 	page->widgets = widgets_help;
 	page->pre_handle_key = help_handle_key;
 
-	create_other(widgets_help + 0, 0, help_handle_key, help_redraw);
-	create_button(widgets_help + 1, 35,47,8, 0, 1, 1,1, 0,
+	widget_create_other(widgets_help + 0, 0, help_handle_key, NULL, help_redraw);
+	widget_create_button(widgets_help + 1, 35,47,8, 0, 1, 1,1, 0,
 			_help_close, "Done", 3);
 }
 

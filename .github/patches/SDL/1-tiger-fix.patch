@@ -1,0 +1,66 @@
+diff -ruN panther_sdl2-20210624-orig/src/video/cocoa/SDL_cocoakeyboard.m panther_sdl2-20210624/src/video/cocoa/SDL_cocoakeyboard.m
+--- panther_sdl2-20210624-orig/src/video/cocoa/SDL_cocoakeyboard.m	2021-06-25 00:00:38.000000000 -0400
++++ panther_sdl2-20210624/src/video/cocoa/SDL_cocoakeyboard.m	2024-10-31 13:26:28.563041678 -0400
+@@ -426,7 +426,7 @@
+ static void
+ UpdateKeymap(SDL_VideoData *data)
+ {
+-#if defined(MAC_OS_X_VERSION_10_5)
++#if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_5
+     TISInputSourceRef key_layout;
+     const void *chr_data;
+     int i;
+diff -ruN panther_sdl2-20210624-orig/src/video/cocoa/SDL_cocoamouse.h panther_sdl2-20210624/src/video/cocoa/SDL_cocoamouse.h
+--- panther_sdl2-20210624-orig/src/video/cocoa/SDL_cocoamouse.h	2021-06-25 00:00:38.000000000 -0400
++++ panther_sdl2-20210624/src/video/cocoa/SDL_cocoamouse.h	2024-10-31 13:25:29.762259094 -0400
+@@ -25,7 +25,7 @@
+ 
+ #include "SDL_cocoavideo.h"
+ 
+-#if !defined(MAC_OS_X_VERSION_10_5)
++#if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_5
+ typedef float CGFloat;
+ #endif
+ 
+diff -ruN panther_sdl2-20210624-orig/src/video/cocoa/SDL_cocoavideo.h panther_sdl2-20210624/src/video/cocoa/SDL_cocoavideo.h
+--- panther_sdl2-20210624-orig/src/video/cocoa/SDL_cocoavideo.h	2021-06-25 00:00:38.000000000 -0400
++++ panther_sdl2-20210624/src/video/cocoa/SDL_cocoavideo.h	2024-10-31 13:25:27.498537161 -0400
+@@ -45,7 +45,7 @@
+ #include "SDL_cocoaopengl.h"
+ #include "SDL_cocoawindow.h"
+ 
+-#if !defined(MAC_OS_X_VERSION_10_5)
++#if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_5
+ typedef long int NSInteger;
+ typedef unsigned int NSUInteger;
+ #endif
+diff -ruN panther_sdl2-20210624-orig/src/video/cocoa/SDL_cocoawindow.m panther_sdl2-20210624/src/video/cocoa/SDL_cocoawindow.m
+--- panther_sdl2-20210624-orig/src/video/cocoa/SDL_cocoawindow.m	2021-06-25 00:00:38.000000000 -0400
++++ panther_sdl2-20210624/src/video/cocoa/SDL_cocoawindow.m	2024-10-31 13:29:26.959250907 -0400
+@@ -102,7 +102,7 @@
+     NSOpenGLContext *currentContext = [NSOpenGLContext currentContext];
+     NSMutableArray *contexts = data->nscontexts;
+     @synchronized (contexts) {
+-#if defined(MAC_OS_X_VERSION_10_5)
++#if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_5
+         for (SDLOpenGLContext *context in contexts) {
+ #else
+         /* old way to iterate */
+@@ -363,7 +363,7 @@
+        !!! FIXME:   http://bugzilla.libsdl.org/show_bug.cgi?id=1825
+     */
+     windows = [NSApp orderedWindows];
+-#if defined(MAC_OS_X_VERSION_10_5)
++#if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_5
+     for (NSWindow *win in windows) {
+ #else
+     /* old way to iterate */
+@@ -1521,7 +1521,7 @@
+         }
+ 
+         NSArray *contexts = [[data->nscontexts copy] autorelease];
+-#if defined(MAC_OS_X_VERSION_10_5)
++#if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_5
+         for (SDLOpenGLContext *context in contexts) {
+ #else
+         /* old way to iterate */

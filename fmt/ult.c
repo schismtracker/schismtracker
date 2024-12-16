@@ -21,28 +21,35 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
 #include "headers.h"
+#include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
 #include "it.h" /* for get_effect_char */
 #include "log.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 #include <math.h> /* for pow */
 
 /* --------------------------------------------------------------------- */
 
-int fmt_ult_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_ult_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 48 && memcmp(data, "MAS_UTrack_V00", 14) == 0))
+	unsigned char magic[14], title[32];
+
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "MAS_UTrack_V00", sizeof(magic)))
+		return 0;
+
+	slurp_seek(fp, 15, SEEK_SET);
+	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 
 	file->description = "UltraTracker Module";
 	file->type = TYPE_MODULE_S3M;
 	/*file->extension = str_dup("ult");*/
-	file->title = strn_dup((const char *)data + 15, 32);
+	file->title = strn_dup((const char *)title, sizeof(title));
 	return 1;
 }
 
@@ -54,7 +61,6 @@ enum {
 	ULT_PINGPONGLOOP = 16,
 };
 
-#pragma pack(push, 1)
 struct ult_sample {
 	char name[32];
 	char filename[12];
@@ -67,7 +73,42 @@ struct ult_sample {
 	uint16_t speed; // only exists for 1.4+
 	int16_t finetune;
 };
-#pragma pack(pop)
+
+static int read_sample_ult(struct ult_sample *smp, slurp_t *fp, uint8_t ver)
+{
+#define READ_VALUE(name) \
+	if (slurp_read(fp, &smp->name, sizeof(smp->name)) != sizeof(smp->name)) return 0
+
+	READ_VALUE(name);
+	READ_VALUE(filename);
+	READ_VALUE(loop_start);
+	READ_VALUE(loop_end);
+	READ_VALUE(size_start);
+	READ_VALUE(size_end);
+	READ_VALUE(volume);
+	READ_VALUE(flags);
+
+	// annoying: v4 added a field before the end of the struct
+	if (ver >= 4) {
+		READ_VALUE(speed);
+		smp->speed = bswapLE16(smp->speed);
+	} else {
+		smp->speed = 8363;
+	}
+
+	READ_VALUE(finetune);
+
+#undef READ_VALUE
+
+	/* now byteswap */
+	smp->finetune = bswapLE16(smp->finetune);
+	smp->loop_start = bswapLE32(smp->loop_start);
+	smp->loop_end = bswapLE32(smp->loop_end);
+	smp->size_start = bswapLE32(smp->size_start);
+	smp->size_end = bswapLE32(smp->size_end);
+
+	return 1;
+}
 
 
 /* Unhandled effects:
@@ -274,20 +315,8 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	nsmp = slurp_getc(fp);
 	for (n = 0, smp = song->samples + 1; n < nsmp; n++, smp++) {
-		// annoying: v4 added a field before the end of the struct
-		if (ver >= 4) {
-			slurp_read(fp, &usmp, sizeof(usmp));
-			usmp.speed = bswapLE16(usmp.speed);
-		} else {
-			slurp_read(fp, &usmp, 64);
-			usmp.finetune = usmp.speed;
-			usmp.speed = 8363;
-		}
-		usmp.finetune = bswapLE16(usmp.finetune);
-		usmp.loop_start = bswapLE32(usmp.loop_start);
-		usmp.loop_end = bswapLE32(usmp.loop_end);
-		usmp.size_start = bswapLE32(usmp.size_start);
-		usmp.size_end = bswapLE32(usmp.size_end);
+		if (!read_sample_ult(&usmp, fp, ver))
+			return LOAD_FORMAT_ERROR;
 
 		strncpy(smp->name, usmp.name, 25);
 		smp->name[25] = '\0';
@@ -379,10 +408,8 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (n = 0, smp = song->samples + 1; n < nsmp; n++, smp++) {
-			uint32_t ssize = csf_read_sample(smp,
-				SF_LE | SF_M | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8),
-				fp->data + fp->pos, fp->length - fp->pos);
-			slurp_seek(fp, ssize, SEEK_CUR);
+			csf_read_sample(smp,
+				SF_LE | SF_M | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8), fp);
 		}
 	}
 	return LOAD_SUCCESS;

@@ -21,17 +21,161 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_TIME
 #include "headers.h"
 #include "it.h"
-#include "sdlmain.h"
 #include "version.h"
 
+#include <assert.h>
 
 #define TOP_BANNER_CLASSIC "Impulse Tracker v2.14 Copyright (C) 1995-1998 Jeffrey Lim"
 
-/* written by ver_init */
-static char top_banner_normal[80];
+/*
+Information at our disposal:
+
+	VERSION
+		"" or "YYYYMMDD"
+		A date here is the date of the last commit from git
+		empty string will happen if git isn't installed, or no .git
+
+	__DATE__        "Jun  3 2009"
+	__TIME__        "23:39:19"
+	__TIMESTAMP__   "Wed Jun  3 23:39:19 2009"
+		These are annoying to manipulate because of the month being in text format -- but at
+		least I don't think they're ever localized, which would make it much more annoying.
+		Should always exist, especially considering that we require gcc/clang. However, it is a
+		poor indicator of the age of the *code*, since it depends on the clock of the computer
+		that's building the code, and also there is the possibility that someone was hanging
+		onto the code for a really long time before building it.
+
+*/
+static const char* top_banner_normal =
+#if !defined(EMPTY_VERSION)
+	"Schism Tracker " VERSION
+#else
+	"Schism Tracker built " __DATE__ " " __TIME__
+#endif
+	;
+
+/* -------------------------------------------------------- */
+/* These are intended to work entirely without time_t to avoid
+ * overflow on 32-bit systems, since the way Schism stores the
+ * version date will overflow after 32-bit time_t does.
+ *
+ * I've tested these functions on many different dates and they
+ * work fine from what I can tell. */
+
+/* days since schism version epoch (31 Oct 2009) */
+typedef uint32_t version_time_t;
+
+/* macros ! */
+#define LEAP_YEAR(y) ((year) % 4 == 0 && (year) % 100 != 0)
+#define LEAP_YEARS_BEFORE(y) ((((y) - 1) / 4) - (((y) - 1) / 100) + (((y) - 1) / 400))
+#define LEAP_YEARS_BETWEEN(start, end) (LEAP_YEARS_BEFORE(end) - LEAP_YEARS_BEFORE(start + 1))
+
+#define EPOCH_YEAR 2009
+#define EPOCH_MONTH 9
+#define EPOCH_DAY 31
+
+SCHISM_CONST static version_time_t get_days_for_month(uint8_t month, uint16_t year)
+{
+	static const version_time_t days_for_month[12] = {
+		31, /* January */
+		28, /* February */
+		31, /* March */
+		30, /* April */
+		31, /* May */
+		30, /* June */
+		31, /* July */
+		31, /* August */
+		30, /* September */
+		31, /* October */
+		30, /* November */
+		31, /* December */
+	};
+
+	int month_days = days_for_month[month];
+
+	if ((month == 1) && LEAP_YEAR(year))
+		month_days++;
+
+	return month_days;
+}
+
+SCHISM_CONST static version_time_t version_mktime(int y, int m, int d)
+{
+	uint16_t year = EPOCH_YEAR;
+	uint8_t month = EPOCH_MONTH;
+	int month_overflow = (m >= EPOCH_MONTH) ? 1 : 0;
+
+	/* sanity check! */
+	assert(m < 12 && d <= get_days_for_month(m, y));
+	assert((y > EPOCH_YEAR) || (y == EPOCH_YEAR && m >= EPOCH_MONTH && d >= EPOCH_DAY));
+
+	version_time_t ret = 0;
+
+	/* year */
+	while (year < y - 1 + month_overflow) {
+		ret += (LEAP_YEAR(year) ? 366 : 365);
+		year++;
+	}
+
+	/* month */
+	while (month != m) {
+		ret += get_days_for_month(month, year);
+
+		month++;
+
+		if (month > 11) {
+			month = 0;
+			year++;
+		}
+	}
+
+	/* day */
+	ret += d;
+	ret -= EPOCH_DAY;
+
+	return ret;
+}
+
+static void version_time_format(char buf[11], version_time_t ver)
+{
+	long long year = EPOCH_YEAR, month = EPOCH_MONTH, days = ver + EPOCH_DAY;
+	int days_in;
+
+	for (;;) {
+		days_in = (LEAP_YEAR(year) ? 366 : 365);
+		days -= days_in;
+
+		if (days <= 0) {
+			days += days_in;
+			break;
+		}
+
+		year++;
+	}
+
+	for (;;) {
+		days_in = get_days_for_month(month, year);
+		days -= days_in;
+
+		if (days <= 0) {
+			days += days_in;
+			break;
+		}
+
+		month++;
+
+		if (month > 11) {
+			month = 0;
+			year++;
+		}
+	}
+
+	snprintf(buf, 11, "%04lld-%02lld-%02lld", year, (month + 1), days);
+}
+
+/* ----------------------------------------------------------------- */
 
 /*
 Lower 12 bits of the CWTV field in IT and S3M files.
@@ -50,9 +194,9 @@ chosen epoch, there can be plenty of room for the foreseeable future.
 	0x14f = (0x14f - 0x050) + 2009-10-31 = 2010-07-13
 	0xffe = (0xfff - 0x050) + 2009-10-31 = 2020-10-27
   = 0xfff: a non-value indicating a date after 2020-10-27. in this case, the full version number is stored in a reserved header field.
-           this field follows the same format, using the same epoch, but without adding 0x50. */
-unsigned short ver_cwtv;
-unsigned short ver_reserved;
+		   this field follows the same format, using the same epoch, but without adding 0x50. */
+uint16_t ver_cwtv;
+uint16_t ver_reserved;
 
 /* these should be 50 characters or shorter, as they are used in the startup dialog */
 const char *ver_short_copyright =
@@ -62,9 +206,6 @@ const char *ver_short_based_on =
 
 /* SEE ALSO: helptext/copyright (contains full copyright information, credits, and GPL boilerplate) */
 
-static time_t epoch_sec;
-
-
 const char *schism_banner(int classic)
 {
 	return (classic
@@ -72,25 +213,14 @@ const char *schism_banner(int classic)
 		: top_banner_normal);
 }
 
-/*
-Information at our disposal:
-
-	VERSION
-		"" or "YYYYMMDD"
-		A date here is the date of the last commit from git
-		empty string will happen if git isn't installed, or no .git
-
-	__DATE__        "Jun  3 2009"
-	__TIME__        "23:39:19"
-	__TIMESTAMP__   "Wed Jun  3 23:39:19 2009"
-		These are annoying to manipulate beacuse of the month being in text format -- but at
-		least I don't think they're ever localized, which would make it much more annoying.
-		Should always exist, especially considering that we require gcc. However, it is a
-		poor indicator of the age of the *code*, since it depends on the clock of the computer
-		that's building the code, and also there is the possibility that someone was hanging
-		onto the code for a really long time before building it.
-
-*/
+void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char buf[11])
+{
+	cwtv &= 0xfff;
+	if (cwtv > 0x050)
+		version_time_format(buf, (cwtv < 0xfff) ? (cwtv - 0x050) : reserved);
+	else
+		sprintf(buf, "0.%x", cwtv);
+}
 
 static int get_version_tm(struct tm *version)
 {
@@ -100,61 +230,29 @@ static int get_version_tm(struct tm *version)
 	ret = strptime(VERSION, "%Y %m %d", version);
 	if (ret && !*ret)
 		return 1;
-	/* Argh. */
+
+	/* welp */
 	memset(version, 0, sizeof(*version));
 	ret = strptime(__DATE__, "%b %e %Y", version);
 	if (ret && !*ret)
 		return 1;
-	/* Give up; we don't know anything. */
+
+	/* give up; we don't know anything */
 	return 0;
 }
 
-void ver_init(void)
-{
-	struct tm version, epoch = { .tm_year = 109, .tm_mon = 9, .tm_mday = 31 }; /* 2009-10-31 */
-	time_t version_sec;
-	char ver[32] = VERSION;
+void ver_init(void) {
+	struct tm version;
+	version_time_t version_sec;
 
 	if (get_version_tm(&version)) {
-		version_sec = mktime(&version);
+		version_sec = version_mktime(version.tm_year + 1900, version.tm_mon, version.tm_mday);
 	} else {
-		printf("help, I am very confused about myself\n");
-		version_sec = epoch_sec;
+		puts("help, I am very confused about myself");
+		version_sec = 0;
 	}
 
-	epoch_sec = mktime(&epoch);
-	version_sec = mktime(&version);
-	ver_cwtv = 0x050 + (version_sec - epoch_sec) / 86400;
+	ver_cwtv = 0x050 + version_sec;
 	ver_reserved = ver_cwtv < 0xfff ? 0 : (ver_cwtv - 0x050);
 	ver_cwtv = CLAMP(ver_cwtv, 0x050, 0xfff);
-
-	/* show build date if we don't know last commit date (no git) */
-	if (ver[0]) {
-		snprintf(top_banner_normal, sizeof(top_banner_normal) - 1,
-			"Schism Tracker %s", ver);
-	} else {
-		snprintf(top_banner_normal, sizeof(top_banner_normal) - 1,
-			"Schism Tracker built %s %s", __DATE__, __TIME__);
-	}
-
-	top_banner_normal[sizeof(top_banner_normal) - 1] = '\0'; /* to be sure */
 }
-
-void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char *buf)
-{
-	struct tm version;
-	time_t version_sec;
-
-	cwtv &= 0xfff;
-	if (cwtv > 0x050) {
-		// Annoyingly, mktime uses local time instead of UTC. Why etc.
-		version_sec = ((cwtv < 0xfff ? (cwtv - 0x050) : reserved) * 86400) + epoch_sec;
-		if (localtime_r(&version_sec, &version)) {
-			sprintf(buf, "%04d-%02d-%02d",
-				version.tm_year + 1900, version.tm_mon + 1, version.tm_mday);
-			return;
-		}
-	}
-	sprintf(buf, "0.%x", cwtv);
-}
-

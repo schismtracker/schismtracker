@@ -23,6 +23,9 @@
 
 #include "headers.h"
 
+#include "dmoz.h"
+#include "osdefs.h"
+#include "charset.h"
 #include "slurp.h"
 #include "util.h"
 #include "config-parser.h"
@@ -47,7 +50,8 @@ static struct cfg_section *_get_section(cfg_file_t *cfg, const char *section_nam
 		return NULL;
 
 	while (section) {
-		if (strcasecmp(section_name, section->name) == 0)
+		/* the config is historically ASCII, but UTF-8 works just fine too */
+		if (charset_strcasecmp(section_name, CHARSET_UTF8, section->name, CHARSET_UTF8) == 0)
 			return section;
 		prev = section;
 		section = section->next;
@@ -73,7 +77,7 @@ static struct cfg_key *_get_key(struct cfg_section *section, const char *key_nam
 		return NULL;
 
 	while (key) {
-		if (strcasecmp(key_name, key->name) == 0)
+		if (charset_strcasecmp(key_name, CHARSET_UTF8, key->name, CHARSET_UTF8) == 0)
 			return key;
 		prev = key;
 		key = key->next;
@@ -181,8 +185,8 @@ static int _parse_keyval(cfg_file_t *cfg, char *line, struct cfg_section *cur_se
 	}
 
 	str_break(line, '=', &k, &v);
-	trim_string(k);
-	trim_string(v);
+	str_trim(k);
+	str_trim(v);
 
 	key = _get_key(cur_section, k, 1);
 	if (key->value) {
@@ -249,31 +253,14 @@ static struct cfg_section *_free_section(struct cfg_section *section)
 /* --------------------------------------------------------------------------------------------------------- */
 /* public functions */
 
-int cfg_read(cfg_file_t *cfg)
+static int cfg_read_receive_impl(const void *data, size_t size, void *userdata)
 {
-	struct stat buf;
-	slurp_t *t;
-	struct cfg_section *cur_section = NULL;
-	const char *pos; /* current position in the buffer */
 	size_t len; /* how far away the end of the token is from the start */
+	struct cfg_section *cur_section = NULL;
 	char *comments = NULL, *tmp;
+	cfg_file_t *cfg = (cfg_file_t *)userdata;
 
-	/* have to do our own stat, because we're going to fiddle with the size. (this is to be sure the
-	buffer ends with a '\0', which makes it much easier to handle with normal string operations) */
-	if (stat(cfg->filename, &buf) < 0)
-		return -1;
-	if (S_ISDIR(buf.st_mode)) {
-		errno = EISDIR;
-		return -1;
-	}
-	if (buf.st_size <= 0)
-		return -1;
-	buf.st_size++;
-	t = slurp(cfg->filename, &buf, 0);
-	if (!t)
-		return -1;
-
-	pos = (const char *)t->data;
+	const char *pos = (const char *)data;
 	do {
 		pos += _parse_comments(pos, &comments);
 
@@ -282,9 +269,8 @@ int cfg_read(cfg_file_t *cfg)
 		semicolon-comments are only handled at the start of lines. */
 		len = strcspn(pos, "#\r\n");
 		if (len) {
-			char *line;
-			line = strn_dup(pos, len);
-			trim_string(line);
+			char *line = strn_dup(pos, len);
+			str_trim(line);
 			if (_parse_section(cfg, line, &cur_section, comments)
 			    || _parse_keyval(cfg, line, cur_section, comments)) {
 				comments = NULL;
@@ -322,11 +308,23 @@ int cfg_read(cfg_file_t *cfg)
 		if (*pos == '\n')
 			pos++;
 	} while (*pos);
+
 	cfg->eof_comments = comments;
+
+	return 1;
+}
+
+int cfg_read(cfg_file_t *cfg)
+{
+	slurp_t fp;
+	if (slurp(&fp, cfg->filename, NULL, 0) < 0)
+		return -1;
+
+	slurp_receive(&fp, cfg_read_receive_impl, slurp_length(&fp) + 1, cfg);
 
 	cfg->dirty = 0;
 
-	unslurp(t);
+	unslurp(&fp);
 
 	return 0;
 }
@@ -335,7 +333,6 @@ int cfg_write(cfg_file_t *cfg)
 {
 	struct cfg_section *section;
 	struct cfg_key *key;
-	FILE *fp;
 
 	if (!cfg->filename) {
 		/* FIXME | don't print a message here! this should be considered library code.
@@ -348,10 +345,8 @@ int cfg_write(cfg_file_t *cfg)
 		return 0;
 	cfg->dirty = 0;
 
-	make_backup_file(cfg->filename, 0);
-
-	fp = fopen(cfg->filename, "wb");
-	if (!fp) {
+	disko_t fp = {0};
+	if (disko_open(&fp, cfg->filename) < 0) {
 		/* FIXME: don't print a message here! */
 		perror(cfg->filename);
 		return -1;
@@ -361,33 +356,49 @@ int cfg_write(cfg_file_t *cfg)
 
 	for (section = cfg->sections; section; section = section->next) {
 		if (section->comments)
-			fprintf(fp, "%s", section->comments);
-		if (section->omit) fputc('#', fp);
-		fprintf(fp, "[%s]\n", section->name);
+			disko_write(&fp, section->comments, strlen(section->comments));
+
+		if (section->omit)
+			disko_putc(&fp, '#');
+
+		disko_putc(&fp, '[');
+		disko_write(&fp, section->name, strlen(section->name));
+		disko_putc(&fp, ']');
+		disko_putc(&fp, '\n');
+
 		for (key = section->keys; key; key = key->next) {
 			/* NOTE: key names are intentionally not escaped in any way;
 			 * it is up to the program to choose names that aren't stupid.
 			 * (cfg_delete_key uses this to comment out a key name) */
 			if (key->comments)
-				fprintf(fp, "%s", key->comments);
-			if (section->omit) fputc('#', fp);
+				disko_write(&fp, key->comments, strlen(key->comments));
+
+			if (section->omit)
+				disko_putc(&fp, '#');
+
 			/* TODO | if no keys in a section have defined values,
 			 * TODO | comment out the section header as well. (this
 			 * TODO | might be difficult since it's already been
 			 * TODO | written to the file) */
 			if (key->value) {
 				char *tmp = str_escape(key->value, 1);
-				fprintf(fp, "%s=%s\n", key->name, tmp);
+				disko_write(&fp, key->name, strlen(key->name));
+				disko_putc(&fp, '=');
+				disko_write(&fp, tmp, strlen(tmp));
+				disko_putc(&fp, '\n');
 				free(tmp);
 			} else {
-				fprintf(fp, "# %s=(undefined)\n", key->name);
+				disko_write(&fp, "# ", ARRAY_SIZE("# "));
+				disko_write(&fp, key->name, strlen(key->name));
+				disko_write(&fp, "=(undefined)\n", ARRAY_SIZE("=(undefined)\n"));
 			}
 		}
 	}
-	if (cfg->eof_comments)
-		fprintf(fp, "%s", cfg->eof_comments);
 
-	fclose(fp);
+	if (cfg->eof_comments)
+		disko_write(&fp, cfg->eof_comments, strlen(cfg->eof_comments));
+
+	disko_close(&fp, 1);
 
 	return 0;
 }

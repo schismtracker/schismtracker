@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef TREE_H
-#define TREE_H
+#ifndef SCHISM_TREE_H_
+#define SCHISM_TREE_H_
 
 /* opaque structure */
 typedef struct tree tree_t;
@@ -56,5 +56,5 @@ void *tree_replace(tree_t *tree, void *value);
 returns NULL. (Only the parts of 'value' relevant to 'cmp' need be filled in.) */
 void *tree_find(tree_t *tree, void *value);
 
-#endif /* ! TREE_H */
+#endif /* SCHISM_TREE_H_ */
 

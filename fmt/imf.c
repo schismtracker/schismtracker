@@ -21,31 +21,37 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
 #include "headers.h"
+#include "bswap.h"
 #include "slurp.h"
 #include "log.h"
 #include "fmt.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 /* --------------------------------------------------------------------- */
 
-int fmt_imf_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_imf_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 64 && memcmp(data + 60, "IM10", 4) == 0))
+	unsigned char magic[4], title[32];
+
+	slurp_seek(fp, 60, SEEK_SET);
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "IM10", sizeof(magic)))
 		return 0;
+
+	slurp_seek(fp, 0, SEEK_SET);
+	slurp_read(fp, title, sizeof(title));
 
 	file->description = "Imago Orpheus";
 	/*file->extension = str_dup("imf");*/
-	file->title = strn_dup((const char *)data, 32);
+	file->title = strn_dup((const char *)title, sizeof(title));
 	file->type = TYPE_MODULE_IT;
 	return 1;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#pragma pack(push, 1)
 struct imf_channel {
 	char name[12];          /* Channelname (ASCIIZ-String, max 11 chars) */
 	uint8_t chorus;         /* Default chorus */
@@ -54,6 +60,21 @@ struct imf_channel {
 	uint8_t status;         /* Channel status: 0 = enabled, 1 = mute, 2 = disabled (ignore effects!) */
 };
 
+static int imf_read_channel(struct imf_channel *chn, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	do { if (slurp_read(fp, &chn->name, sizeof(chn->name)) != sizeof(chn->name)) { return 0; } } while (0)
+
+	READ_VALUE(name);
+	READ_VALUE(chorus);
+	READ_VALUE(reverb);
+	READ_VALUE(panning);
+	READ_VALUE(status);
+
+#undef READ_VALUE
+
+	return 1;
+}
 
 struct imf_header {
 	char title[32];         /* Songname (ASCIIZ-String, max. 31 chars) */
@@ -61,16 +82,53 @@ struct imf_header {
 	uint16_t patnum;        /* Number of patterns saved */
 	uint16_t insnum;        /* Number of instruments saved */
 	uint16_t flags;         /* Module flags (&1 => linear) */
-	uint8_t unused1[8];
+	//uint8_t unused1[8];
 	uint8_t tempo;          /* Default tempo (Axx, 1..255) */
 	uint8_t bpm;            /* Default beats per minute (BPM) (Txx, 32..255) */
 	uint8_t master;         /* Default mastervolume (Vxx, 0..64) */
 	uint8_t amp;            /* Amplification factor (mixing volume, 4..127) */
-	uint8_t unused2[8];
+	//uint8_t unused2[8];
 	char im10[4];           /* 'IM10' */
 	struct imf_channel channels[32]; /* Channel settings */
 	uint8_t orderlist[256]; /* Order list (0xff = +++; blank out anything beyond ordnum) */
 };
+
+static int imf_read_header(struct imf_header *hdr, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
+
+	READ_VALUE(title);
+	READ_VALUE(ordnum);
+	READ_VALUE(patnum);
+	READ_VALUE(insnum);
+	READ_VALUE(flags);
+	slurp_seek(fp, 8, SEEK_CUR);
+	READ_VALUE(tempo);
+	READ_VALUE(bpm);
+	READ_VALUE(master);
+	READ_VALUE(amp);
+	slurp_seek(fp, 8, SEEK_CUR);
+	READ_VALUE(im10);
+
+	for (size_t i = 0; i < ARRAY_SIZE(hdr->channels); i++)
+		if (!imf_read_channel(&hdr->channels[i], fp))
+			return 0;
+
+	READ_VALUE(orderlist);
+
+#undef READ_VALUE
+
+	if (memcmp(hdr->im10, "IM10", 4))
+		return 0;
+
+	hdr->ordnum = bswapLE16(hdr->ordnum);
+	hdr->patnum = bswapLE16(hdr->patnum);
+	hdr->insnum = bswapLE16(hdr->insnum);
+	hdr->flags  = bswapLE16(hdr->flags);
+
+	return 1;
+}
 
 enum {
 	IMF_ENV_VOL = 0,
@@ -84,18 +142,51 @@ struct imf_env {
 	uint8_t loop_start;     /* Envelope loop start point */
 	uint8_t loop_end;       /* Envelope loop end point */
 	uint8_t flags;          /* Envelope flags */
-	uint8_t unused[3];
+	//uint8_t unused[3];
 };
+
+static int imf_read_env(struct imf_env *env, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	do { if (slurp_read(fp, &env->name, sizeof(env->name)) != sizeof(env->name)) { return 0; } } while (0)
+
+	READ_VALUE(points);
+	READ_VALUE(sustain);
+	READ_VALUE(loop_start);
+	READ_VALUE(loop_end);
+	READ_VALUE(flags);
+	slurp_seek(fp, 3, SEEK_CUR);
+
+#undef READ_VALUE
+
+	return 1;
+}
 
 struct imf_envnodes {
 	uint16_t tick;
 	uint16_t value;
 };
 
+static int imf_read_envnodes(struct imf_envnodes *envn, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	do { if (slurp_read(fp, &envn->name, sizeof(envn->name)) != sizeof(envn->name)) { return 0; } } while (0)
+
+	READ_VALUE(tick);
+	READ_VALUE(value);
+
+#undef READ_VALUE
+
+	envn->tick  = bswapLE16(envn->tick);
+	envn->value = bswapLE16(envn->value);
+
+	return 1;
+}
+
 struct imf_instrument {
 	char name[32];          /* Inst. name (ASCIIZ-String, max. 31 chars) */
 	uint8_t map[120];       /* Multisample settings */
-	uint8_t unused[8];
+	//uint8_t unused[8];
 	struct imf_envnodes nodes[3][16];
 	struct imf_env env[3];
 	uint16_t fadeout;       /* Fadeout rate (0...0FFFH) */
@@ -103,9 +194,43 @@ struct imf_instrument {
 	char ii10[4];           /* 'II10' */
 };
 
+static int imf_read_instrument(struct imf_instrument *inst, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	do { if (slurp_read(fp, &inst->name, sizeof(inst->name)) != sizeof(inst->name)) { return 0; } } while (0)
+
+	READ_VALUE(name);
+	READ_VALUE(map);
+
+	slurp_seek(fp, 8, SEEK_CUR);
+
+	for (size_t i = 0; i < ARRAY_SIZE(inst->nodes); i++)
+		for (size_t j = 0; j < ARRAY_SIZE(inst->nodes[i]); j++)
+			if (!imf_read_envnodes(&inst->nodes[i][j], fp))
+				return 0;
+
+	for (size_t i = 0; i < ARRAY_SIZE(inst->env); i++)
+		if (!imf_read_env(&inst->env[i], fp))
+			return 0;
+
+	READ_VALUE(fadeout);
+	READ_VALUE(smpnum);
+	READ_VALUE(ii10);
+
+#undef READ_VALUE
+
+	if (memcmp(inst->ii10, "II10", 4))
+		return 0;
+
+	inst->fadeout = bswapLE16(inst->fadeout);
+	inst->smpnum  = bswapLE16(inst->smpnum);
+
+	return 1;
+}
+
 struct imf_sample {
 	char name[13];          /* Sample filename (12345678.ABC) */
-	uint8_t unused1[3];
+	//uint8_t unused1[3];
 	uint32_t length;        /* Length */
 	uint32_t loop_start;    /* Loop start */
 	uint32_t loop_end;      /* Loop end */
@@ -117,10 +242,44 @@ struct imf_sample {
 	uint8_t unused3[5];
 	uint16_t ems;           /* Reserved for internal usage */
 	uint32_t dram;          /* Reserved for internal usage */
-	char is10[4];           /* 'IS10' */
+	char is10[4];           /* 'IS10' or 'IW10' */
 };
-#pragma pack(pop)
 
+static int imf_read_sample(struct imf_sample *smpl, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	do { if (slurp_read(fp, &smpl->name, sizeof(smpl->name)) != sizeof(smpl->name)) { return 0; } } while (0)
+
+	READ_VALUE(name);
+	slurp_seek(fp, 3, SEEK_CUR);
+	READ_VALUE(length);
+	READ_VALUE(loop_start);
+	READ_VALUE(loop_end);
+	READ_VALUE(c5speed);
+	READ_VALUE(volume);
+	READ_VALUE(panning);
+	slurp_seek(fp, 14, SEEK_CUR);
+	READ_VALUE(flags);
+	slurp_seek(fp, 5, SEEK_CUR);
+	READ_VALUE(ems);
+	READ_VALUE(dram);
+	READ_VALUE(is10);
+
+#undef READ_VALUE
+
+	if (memcmp(smpl->is10, "IS10", 4))
+		return 0;
+
+	smpl->length     = bswapLE32(smpl->length);
+	smpl->loop_start = bswapLE32(smpl->loop_start);
+	smpl->loop_end   = bswapLE32(smpl->loop_end);
+	smpl->c5speed    = bswapLE32(smpl->c5speed);
+
+	smpl->ems  = bswapLE16(smpl->ems);
+	smpl->dram = bswapLE32(smpl->dram);
+
+	return 1;
+}
 
 static uint8_t imf_efftrans[] = {
 	FX_NONE,
@@ -411,7 +570,7 @@ static void load_imf_envelope(song_instrument_t *ins, song_envelope_t *env, stru
 }
 
 
-int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
+int fmt_imf_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lflags)
 {
 	struct imf_header hdr;
 	int n, s;
@@ -420,13 +579,7 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	uint32_t ignore_channels = 0; /* bit set for each channel that's completely disabled */
 	int lostfx = 0;
 
-	slurp_read(fp, &hdr, sizeof(hdr));
-	hdr.ordnum = bswapLE16(hdr.ordnum);
-	hdr.patnum = bswapLE16(hdr.patnum);
-	hdr.insnum = bswapLE16(hdr.insnum);
-	hdr.flags = bswapLE16(hdr.flags);
-
-	if (memcmp(hdr.im10, "IM10", 4) != 0)
+	if (!imf_read_header(&hdr, fp))
 		return LOAD_UNSUPPORTED;
 
 	if (hdr.ordnum > MAX_ORDERS || hdr.patnum > MAX_PATTERNS || hdr.insnum > MAX_INSTRUMENTS)
@@ -488,10 +641,11 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 		// read the ins header
 		struct imf_instrument imfins;
 		song_instrument_t *ins;
-		slurp_read(fp, &imfins, sizeof(imfins));
 
-		imfins.smpnum = bswapLE16(imfins.smpnum);
-		imfins.fadeout = bswapLE16(imfins.fadeout);
+		if (!imf_read_instrument(&imfins, fp)) {
+			printf("readins failed\n");
+			break;
+		}
 
 		ins = song->instruments[n + 1] = csf_allocate_instrument();
 		strncpy(ins->name, imfins.name, 25);
@@ -538,23 +692,20 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 
 		for (s = 0; s < imfins.smpnum; s++) {
 			struct imf_sample imfsmp;
-			uint32_t blen, sflags = SF_LE | SF_M | SF_PCMS;
+			uint32_t sflags = SF_LE | SF_M | SF_PCMS;
 
-			slurp_read(fp, &imfsmp, sizeof(imfsmp));
-
-			if (memcmp(imfsmp.is10, "IS10", 4) != 0) {
-				//printf("is10 says %02x %02x %02x %02x!\n",
-				//      imfsmp.is10[0], imfsmp.is10[1], imfsmp.is10[2], imfsmp.is10[3]);
-				return LOAD_FORMAT_ERROR;
+			if (!imf_read_sample(&imfsmp, fp)) {
+				printf("readsmp failed\n");
+				break;
 			}
 
 			strncpy(sample->filename, imfsmp.name, 12);
 			sample->filename[12] = 0;
 			strcpy(sample->name, sample->filename);
-			blen = sample->length = bswapLE32(imfsmp.length);
-			sample->loop_start = bswapLE32(imfsmp.loop_start);
-			sample->loop_end = bswapLE32(imfsmp.loop_end);
-			sample->c5speed = bswapLE32(imfsmp.c5speed);
+			sample->length = imfsmp.length;
+			sample->loop_start = imfsmp.loop_start;
+			sample->loop_end = imfsmp.loop_end;
+			sample->c5speed = imfsmp.c5speed;
 			sample->volume = imfsmp.volume * 4; //mphack
 			sample->panning = imfsmp.panning; //mphack (IT uses 0-64, IMF uses the full 0-255)
 			if (imfsmp.flags & 1)
@@ -572,9 +723,10 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 			if (imfsmp.flags & 8)
 				sample->flags |= CHN_PANNING;
 
-			if (blen && !(lflags & LOAD_NOSAMPLES))
-				csf_read_sample(sample, sflags, fp->data + fp->pos, fp->length - fp->pos);
-			slurp_seek(fp, blen, SEEK_CUR);
+			if (!(lflags & LOAD_NOSAMPLES))
+				csf_read_sample(sample, sflags, fp);
+			else
+				slurp_seek(fp, imfsmp.length * ((sflags & SF_16) ? 2 : 1), SEEK_CUR);
 
 			sample++;
 		}

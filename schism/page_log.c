@@ -28,8 +28,9 @@
 
 #include "it.h"
 #include "page.h"
-
-#include "sdlmain.h"
+#include "widget.h"
+#include "vgamem.h"
+#include "keyboard.h"
 
 #include <stdarg.h>
 #include <errno.h>
@@ -62,38 +63,38 @@ static int last_line = -1;
 static void log_draw_const(void)
 {
 	draw_box(1, 12, 78, 48, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_fill_chars(2, 13, 77, 47, 0);
+	draw_fill_chars(2, 13, 77, 47, DEFAULT_FG, 0);
 }
 
 static int log_handle_key(struct key_event * k)
 {
-	switch (k->sym.sym) {
-	case SDLK_UP:
+	switch (k->sym) {
+	case SCHISM_KEYSYM_UP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line--;
 		break;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line -= 15;
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line++;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line += 15;
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line = last_line;
@@ -146,12 +147,12 @@ void log_load_page(struct page *page)
 	page->widgets = widgets_log;
 	page->help_index = HELP_COPYRIGHT; /* I guess */
 
-	create_other(widgets_log + 0, 0, log_handle_key, log_redraw);
+	widget_create_other(widgets_log + 0, 0, log_handle_key, NULL, log_redraw);
 }
 
 /* --------------------------------------------------------------------- */
 
-inline void log_append2(int bios_font, int color, int must_free, const char *text)
+void log_append2(int bios_font, int color, int must_free, const char *text)
 {
 	if (last_line < NUM_LINES - 1) {
 		last_line++;
@@ -169,13 +170,13 @@ inline void log_append2(int bios_font, int color, int must_free, const char *tex
 	if (status.current_page == PAGE_LOG)
 		status.flags |= NEED_UPDATE;
 }
-inline void log_append(int color, int must_free, const char *text)
+void log_append(int color, int must_free, const char *text)
 {
 	log_append2(0, color, must_free, text);
 }
-inline void log_nl(void)
+void log_nl(void)
 {
-	log_append(0,0,"");
+	log_append(DEFAULT_FG,0,"");
 }
 void log_appendf(int color, const char *format, ...)
 {

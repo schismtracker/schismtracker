@@ -26,6 +26,8 @@ misrepresented as being the original software.
 [In compliance with the above: I patched this code up somewhat so that it
 builds with all warnings. -- Storlek]
 */
+#include "headers.h"
+
 #include <errno.h>
 #include <ogc/isfs.h>
 #include <ogc/lwp_watchdog.h>
@@ -44,8 +46,6 @@ builds with all warnings. -- Storlek]
 #define DIR_SEPARATOR '/'
 #define SECTOR_SIZE 0x800
 #define BUFFER_SIZE 0x8000
-
-#define UNUSED __attribute__((unused))
 
 typedef struct DIR_ENTRY_STRUCT {
     char *name;
@@ -136,9 +136,9 @@ static DIR_ENTRY *entry_from_path(const char *path) {
     return NULL;
 }
 
-static int _ISFS_open_r(struct _reent *r, void *fileStruct, const char *path,
-			UNUSED int flags, UNUSED int mode) {
-    FILE_STRUCT *file = (FILE_STRUCT *)fileStruct;
+static ssize_t _ISFS_open_r(struct _reent *r, void *fd, const char *path,
+			SCHISM_UNUSED int flags, SCHISM_UNUSED int mode) {
+    FILE_STRUCT *file = (FILE_STRUCT *)fd;
     DIR_ENTRY *entry = entry_from_path(path);
     if (!entry) {
 	r->_errno = ENOENT;
@@ -160,7 +160,7 @@ static int _ISFS_open_r(struct _reent *r, void *fileStruct, const char *path,
     return (int)file;
 }
 
-static int _ISFS_close_r(struct _reent *r, int fd) {
+static ssize_t _ISFS_close_r(struct _reent *r, void* fd) {
     FILE_STRUCT *file = (FILE_STRUCT *)fd;
     if (!file->inUse) {
 	r->_errno = EBADF;
@@ -177,7 +177,7 @@ static int _ISFS_close_r(struct _reent *r, int fd) {
     return 0;
 }
 
-static int _ISFS_read_r(struct _reent *r, int fd, char *ptr, size_t len) {
+static ssize_t _ISFS_read_r(struct _reent *r, void* fd, char *ptr, size_t len) {
     FILE_STRUCT *file = (FILE_STRUCT *)fd;
     if (!file->inUse) {
 	r->_errno = EBADF;
@@ -199,7 +199,7 @@ static int _ISFS_read_r(struct _reent *r, int fd, char *ptr, size_t len) {
     return ret;
 }
 
-static off_t _ISFS_seek_r(struct _reent *r, int fd, off_t pos, int dir) {
+static off_t _ISFS_seek_r(struct _reent *r, void* fd, off_t pos, int dir) {
     FILE_STRUCT *file = (FILE_STRUCT *)fd;
     if (!file->inUse) {
 	r->_errno = EBADF;
@@ -224,18 +224,15 @@ static void stat_entry(DIR_ENTRY *entry, struct stat *st) {
     st->st_rdev = st->st_dev;
     st->st_size = entry->size;
     st->st_atime = 0;
-    st->st_spare1 = 0;
     st->st_mtime = 0;
-    st->st_spare2 = 0;
     st->st_ctime = 0;
-    st->st_spare3 = 0;
     st->st_blksize = SECTOR_SIZE;
     st->st_blocks = (entry->size + SECTOR_SIZE - 1) / SECTOR_SIZE;
     st->st_spare4[0] = 0;
     st->st_spare4[1] = 0;
 }
 
-static int _ISFS_fstat_r(struct _reent *r, int fd, struct stat *st) {
+static int _ISFS_fstat_r(struct _reent *r, void* fd, struct stat *st) {
     FILE_STRUCT *file = (FILE_STRUCT *)fd;
     if (!file->inUse) {
 	r->_errno = EBADF;

@@ -21,12 +21,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_TIME
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
+#include "keyboard.h"
 #include "page.h"
 #include "midi.h"
+#include "widget.h"
+#include "vgamem.h"
 
 #include "song.h"
 
@@ -154,38 +157,34 @@ static int midi_page_handle_key(struct key_event * k)
 		}
 	}
 
-	switch (k->sym.sym) {
-	case SDLK_SPACE:
+	switch (k->sym) {
+	case SCHISM_KEYSYM_SPACE:
 		if (k->state == KEY_PRESS)
 			return 1;
 		toggle_port();
 		return 1;
-	case SDLK_PAGEUP:
+	case SCHISM_KEYSYM_PAGEUP:
 		new_port -= 13;
-		if (new_port < 0) new_port = 0;
 		break;
-	case SDLK_PAGEDOWN:
+	case SCHISM_KEYSYM_PAGEDOWN:
 		new_port += 13;
-		if (new_port >= midi_engine_port_count()) {
-			new_port = midi_engine_port_count() - 1;
-		}
 		break;
-	case SDLK_HOME:
+	case SCHISM_KEYSYM_HOME:
 		new_port = 0;
 		break;
-	case SDLK_END:
+	case SCHISM_KEYSYM_END:
 		new_port = midi_engine_port_count() - 1;
 		break;
-	case SDLK_UP:
+	case SCHISM_KEYSYM_UP:
 		new_port--;
 		break;
-	case SDLK_DOWN:
+	case SCHISM_KEYSYM_DOWN:
 		new_port++;
 		break;
-	case SDLK_TAB:
+	case SCHISM_KEYSYM_TAB:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		change_focus_to(1);
+		widget_change_focus_to(1);
 		status.flags |= NEED_UPDATE;
 		return 1;
 	default:
@@ -196,12 +195,8 @@ static int midi_page_handle_key(struct key_event * k)
 		return 0;
 
 	if (new_port != current_port) {
-		if (new_port < 0 || new_port >= midi_engine_port_count()) {
-			new_port = current_port;
-			if (k->sym.sym == SDLK_DOWN) {
-				change_focus_to(1);
-			}
-		}
+		int sz = midi_engine_port_count() - 1;
+		new_port = CLAMP(new_port, 0, sz);
 
 		current_port = new_port;
 		if (current_port < top_midi_port)
@@ -226,15 +221,15 @@ static void midi_page_redraw(void)
 	draw_text(   "Record Aftertouch", 2, 34, 0, 2);
 	draw_text(        "Cut note off", 7, 35, 0, 2);
 
-	draw_fill_chars(23, 30, 24, 35, 0);
+	draw_fill_chars(23, 30, 24, 35, DEFAULT_FG, 0);
 	draw_box(19,29,25,36, BOX_THIN|BOX_INNER|BOX_INSET);
 
 	draw_box(52,29,73,32, BOX_THIN|BOX_INNER|BOX_INSET);
 
-	draw_fill_chars(56, 34, 72, 34, 0);
+	draw_fill_chars(56, 34, 72, 34, DEFAULT_FG, 0);
 	draw_box(52,33,73,36, BOX_THIN|BOX_INNER|BOX_INSET);
 
-	draw_fill_chars(56, 38, 72, 38, 0);
+	draw_fill_chars(56, 38, 72, 38, DEFAULT_FG, 0);
 	draw_box(52,37,73,39, BOX_THIN|BOX_INNER|BOX_INSET);
 
 	draw_text(    "Amplification", 39, 30, 0, 2);
@@ -249,24 +244,32 @@ static void midi_page_redraw(void)
 
 static void midi_page_draw_portlist(void)
 {
+	/* XXX this can become outdated with the midi code; it can
+	 * and will overflow */
 	struct midi_port *p;
 	const char *name, *state;
 	char buffer[64];
 	int i, n, ct, fg, bg;
 	unsigned long j;
-	time_t now;
+	time_t now = time(NULL);
 
-	draw_fill_chars(3, 15, 76, 28, 0);
-	draw_text("Midi ports:", 2, 13, 0, 2);
+	draw_fill_chars(3, 15, 76, 28, DEFAULT_FG, 0);
+	draw_text("MIDI ports:", 2, 13, 0, 2);
 	draw_box(2,14,77,28, BOX_THIN|BOX_INNER|BOX_INSET);
 
-	time(&now);
-	if ((now - last_midi_poll) > 10) {
+	if (difftime(now, last_midi_poll) > 10.0) {
 		last_midi_poll = now;
 		midi_engine_poll_ports();
 	}
 
 	ct = midi_engine_port_count();
+
+	/* make sure this stuff doesn't overflow! */
+	if (ct > 13 && top_midi_port + 13 >= ct)
+		top_midi_port = ct - 13;
+
+	current_port = MIN(current_port, ct - 1);
+
 	for (i = 0; i < 13; i++) {
 		draw_char(168, 12, i + 15, 2, 0);
 
@@ -284,11 +287,10 @@ static void midi_page_draw_portlist(void)
 		}
 		draw_text_len(name, 64, 13, 15+i, 5, 0);
 
-		/* portability: should use difftime */
 		if (status.flags & MIDI_EVENT_CHANGED
-		    && (time(NULL) - status.last_midi_time) < 3
+		    && (now - status.last_midi_tick) < 3000
 		    && ((!status.last_midi_port && p->io & MIDI_OUTPUT)
-		    || p == (struct midi_port *) status.last_midi_port)) {
+		    || p == status.last_midi_port)) {
 			for (j = n = 0; j < 21 && j < status.last_midi_len; j++) { /* 21 is approx 64/3 */
 				sprintf(buffer + n, "%02X ", status.last_midi_event[j]);
 				n += 3;
@@ -312,7 +314,7 @@ static void midi_page_draw_portlist(void)
 
 void midi_load_page(struct page *page)
 {
-	page->title = "Midi Screen (Shift-F1)";
+	page->title = "MIDI Screen (Shift-F1)";
 	page->draw_const = midi_page_redraw;
 	page->song_changed_cb = NULL;
 	page->predraw_hook = NULL;
@@ -323,27 +325,27 @@ void midi_load_page(struct page *page)
 	page->widgets = widgets_midi;
 	page->help_index = HELP_GLOBAL;
 
-	create_other(widgets_midi + 0, 0, midi_page_handle_key, midi_page_draw_portlist);
+	widget_create_other(widgets_midi + 0, 0, midi_page_handle_key, NULL, midi_page_draw_portlist);
 	widgets_midi[0].x = 2;
 	widgets_midi[0].y = 14;
 	widgets_midi[0].width = 75;
 	widgets_midi[0].height = 15;
 
-	create_toggle(widgets_midi + 1, 20, 30, 0, 2, 7, 7, 7, update_midi_values);
-	create_toggle(widgets_midi + 2, 20, 31, 1, 3, 8, 8, 8, update_midi_values);
-	create_toggle(widgets_midi + 3, 20, 32, 2, 4, 8, 8, 8, update_midi_values);
-	create_toggle(widgets_midi + 4, 20, 33, 3, 5, 9, 9, 9, update_midi_values);
-	create_toggle(widgets_midi + 5, 20, 34, 4, 6, 9, 9, 9, update_midi_values);
-	create_toggle(widgets_midi + 6, 20, 35, 5, 13, 10, 10, 10, update_midi_values);
-	create_thumbbar(widgets_midi + 7, 53, 30, 20, 0, 8, 1, update_midi_values, 0, 200);
-	create_thumbbar(widgets_midi + 8, 53, 31, 20, 7, 9, 2, update_midi_values, 0, 127);
-	create_toggle(widgets_midi + 9, 53, 34, 8, 10, 5, 5, 5, update_midi_values);
-	create_thumbbar(widgets_midi + 10, 53, 35, 20, 9, 11, 6, update_midi_values, 0, 48);
-	create_toggle(widgets_midi + 11, 53, 38, 10, 12, 13, 13, 13, update_midi_values);
-	create_thumbbar(widgets_midi + 12, 53, 41, 20, 11, 12, 13, update_ip_ports, 0, 128);
-	create_button(widgets_midi + 13, 2, 41, 27, 6, 14, 12, 12, 12,
+	widget_create_toggle(widgets_midi + 1, 20, 30, 0, 2, 7, 7, 7, update_midi_values);
+	widget_create_toggle(widgets_midi + 2, 20, 31, 1, 3, 8, 8, 8, update_midi_values);
+	widget_create_toggle(widgets_midi + 3, 20, 32, 2, 4, 8, 8, 8, update_midi_values);
+	widget_create_toggle(widgets_midi + 4, 20, 33, 3, 5, 9, 9, 9, update_midi_values);
+	widget_create_toggle(widgets_midi + 5, 20, 34, 4, 6, 9, 9, 9, update_midi_values);
+	widget_create_toggle(widgets_midi + 6, 20, 35, 5, 13, 10, 10, 10, update_midi_values);
+	widget_create_thumbbar(widgets_midi + 7, 53, 30, 20, 0, 8, 1, update_midi_values, 0, 200);
+	widget_create_thumbbar(widgets_midi + 8, 53, 31, 20, 7, 9, 2, update_midi_values, 0, 127);
+	widget_create_toggle(widgets_midi + 9, 53, 34, 8, 10, 5, 5, 5, update_midi_values);
+	widget_create_thumbbar(widgets_midi + 10, 53, 35, 20, 9, 11, 6, update_midi_values, 0, 48);
+	widget_create_toggle(widgets_midi + 11, 53, 38, 10, 12, 13, 13, 13, update_midi_values);
+	widget_create_thumbbar(widgets_midi + 12, 53, 41, 20, 11, 12, 13, update_ip_ports, 0, 128);
+	widget_create_button(widgets_midi + 13, 2, 41, 27, 6, 14, 12, 12, 12,
 		midi_output_config, "MIDI Output Configuration", 2);
-	create_button(widgets_midi + 14, 2, 44, 27, 13, 14, 12, 12, 12,
+	widget_create_button(widgets_midi + 14, 2, 44, 27, 13, 14, 12, 12, 12,
 		cfg_midipage_save, "Save Output Configuration", 2);
 }
 

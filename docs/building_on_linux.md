@@ -11,16 +11,20 @@ on 64-bit Linux, you can also download a pre-built binary from the release page
 On Ubuntu, run:
 
     sudo apt update
-	sudo apt install build-essential automake autoconf-archive libsdl2-dev \
-	                 git libtool
+	sudo apt install build-essential automake autoconf-archive \
+                     libsdl2-dev git libtool libflac-dev perl \
+                     pkgconf
 
 On Arch Linux:
 
 	sudo pacman -Syu
-	sudo pacman -S base-devel git sdl2 alsa-lib libxv libxxf86vm
+	sudo pacman -S base-devel git sdl2 alsa-lib libxv libxxf86vm flac perl \
+                   pkgconf
 
 Git is not strictly required, but if you don't need it you'll need to download
 a tarball manually, and your build won't have a proper version string.
+
+FLAC libraries are optional and only used for FLAC sample loading support.
 
 On other distros, the package names may be different. In particular, note that
 `build-essential` includes the packages `gcc` and `make` on Debian-based

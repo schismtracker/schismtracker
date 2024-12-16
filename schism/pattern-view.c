@@ -24,7 +24,10 @@
 #include "headers.h"
 
 #include "it.h"
+#include "keyboard.h"
 #include "song.h"
+#include "vgamem.h"
+
 #include "pattern-view.h"
 
 /* this stuff's ugly */
@@ -39,14 +42,14 @@ atnote  (1)  cursor_pos == 0
 masked  (4)  mask & MASK_whatever
 */
 static const char mask_chars[] = {
-	143, // 0
-	143, // atnote
-	169, // over
-	169, // over && atnote
-	170, // masked
-	169, // masked && atnote
-	171, // masked && over
-	171, // masked && over && atnote
+	'\x8F', // 0
+	'\x8F', // atnote
+	'\xA9', // over
+	'\xA9', // over && atnote
+	'\xAA', // masked
+	'\xA9', // masked && atnote
+	'\xAB', // masked && over
+	'\xAB', // masked && over && atnote
 };
 #define MASK_CHAR(field, pos, pos2)              \
 	mask_chars                             [ \
@@ -77,7 +80,7 @@ void draw_note_13(int x, int y, const song_note_t *note, int cursor_pos, int fg,
 	/* come to think of it, maybe the instrument text should be
 	 * created the same way as the volume. */
 	if (note->instrument)
-		num99tostr(note->instrument, instbuf);
+		str_from_num99(note->instrument, instbuf);
 	else
 		strcpy(instbuf, "\xad\xad");
 
@@ -94,10 +97,10 @@ void draw_note_13(int x, int y, const song_note_t *note, int cursor_pos, int fg,
 		if (smp) {
 			/* Modplug-specific hack: volume bit shift */
 			int n = smp->volume >> 2;
-			note_text[6] = 0xbf;
+			note_text[6] = '\xbf';
 			note_text[7] = '0' + n / 10 % 10;
 			note_text[8] = '0' + n / 1 % 10;
-			note_text[9] = 0xc0;
+			note_text[9] = '\xc0';
 		}
 	}
 
@@ -118,24 +121,24 @@ void draw_note_13(int x, int y, const song_note_t *note, int cursor_pos, int fg,
 
 void draw_mask_13(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	char buf[] = {
+	unsigned char buf[] = {
 		MASK_CHAR(MASK_NOTE, 0, 0),
 		MASK_CHAR(MASK_NOTE, 0, 0),
 		MASK_CHAR(MASK_NOTE, 0, 1),
-		143,
+		'\x8F',
 		MASK_CHAR(MASK_INSTRUMENT, 2, 0),
 		MASK_CHAR(MASK_INSTRUMENT, 3, 0),
-		143,
+		'\x8F',
 		MASK_CHAR(MASK_VOLUME, 4, 0),
 		MASK_CHAR(MASK_VOLUME, 5, 0),
-		143,
+		'\x8F',
 		MASK_CHAR(MASK_EFFECT, 6, 0),
 		MASK_CHAR(MASK_EFFECT, 7, 0),
 		MASK_CHAR(MASK_EFFECT, 8, 0),
 		0,
 	};
 
-	draw_text(buf, x, y, fg, bg);
+	draw_text((const char *)buf, x, y, fg, bg);
 }
 
 /* --------------------------------------------------------------------- */
@@ -148,16 +151,16 @@ void draw_channel_header_10(int chan, int x, int y, int fg)
 	draw_text(buf, x, y, fg, 1);
 }
 
-void draw_note_10(int x, int y, const song_note_t *note, int cursor_pos, UNUSED int fg, int bg)
+void draw_note_10(int x, int y, const song_note_t *note, int cursor_pos, SCHISM_UNUSED int fg, int bg)
 {
 	uint8_t c;
 	char note_buf[4], ins_buf[3], vol_buf[3], effect_buf[4];
 
 	get_note_string(note->note, note_buf);
 	if (note->instrument) {
-		num99tostr(note->instrument, ins_buf);
+		str_from_num99(note->instrument, ins_buf);
 	} else {
-		ins_buf[0] = ins_buf[1] = 173;
+		ins_buf[0] = ins_buf[1] = '\xAD';
 		ins_buf[2] = 0;
 	}
 	get_volume_string(note->volparam, note->voleffect, vol_buf);
@@ -220,7 +223,7 @@ void draw_channel_header_8(int chan, int x, int y, int fg)
 	draw_text(buf, x, y, fg, 1);
 }
 
-void draw_note_8(int x, int y, const song_note_t *note, UNUSED int cursor_pos, int fg, int bg)
+void draw_note_8(int x, int y, const song_note_t *note, SCHISM_UNUSED int cursor_pos, int fg, int bg)
 {
 	char buf[4];
 
@@ -250,16 +253,16 @@ void draw_channel_header_7(int chan, int x, int y, int fg)
 	draw_text(buf, x, y, fg, 1);
 }
 
-void draw_note_7(int x, int y, const song_note_t *note, int cursor_pos, UNUSED int fg, int bg)
+void draw_note_7(int x, int y, const song_note_t *note, int cursor_pos, SCHISM_UNUSED int fg, int bg)
 {
 	char note_buf[4], ins_buf[3], vol_buf[3];
 	int fg1, bg1, fg2, bg2;
 
 	get_note_string(note->note, note_buf);
 	if (note->instrument)
-		num99tostr(note->instrument, ins_buf);
+		str_from_num99(note->instrument, ins_buf);
 	else
-		ins_buf[0] = ins_buf[1] = 173;
+		ins_buf[0] = ins_buf[1] = '\xAD';
 	get_volume_string(note->volparam, note->voleffect, vol_buf);
 
 	/* note & instrument */
@@ -399,9 +402,9 @@ void draw_note_3(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 		cursor_pos -= 1;
 		buf[0] = ' ';
 		if (note->instrument) {
-			num99tostr(note->instrument, buf + 1);
+			str_from_num99(note->instrument, buf + 1);
 		} else {
-			buf[1] = buf[2] = 173;
+			buf[1] = buf[2] = '\xAD';
 			buf[3] = 0;
 		}
 		draw_text(buf, x, y, 6, bg);
@@ -438,7 +441,7 @@ void draw_note_3(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 		draw_text(buf, x, y, fg, bg);
 	} else if (note->instrument) {
 		buf[0] = ' ';
-		num99tostr(note->instrument, buf + 1);
+		str_from_num99(note->instrument, buf + 1);
 		draw_text(buf, x, y, fg, bg);
 	} else if (note->voleffect) {
 		buf[0] = ' ';
@@ -450,7 +453,7 @@ void draw_note_3(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 		sprintf(buf, "%c%02X", get_effect_char(note->effect), note->param);
 		draw_text(buf, x, y, fg, bg);
 	} else {
-		buf[0] = buf[1] = buf[2] = 173;
+		buf[0] = buf[1] = buf[2] = '\xAD';
 		buf[3] = 0;
 		draw_text(buf, x, y, fg, bg);
 	}
@@ -458,7 +461,7 @@ void draw_note_3(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 
 void draw_mask_3(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	char buf[] = {143, 143, 143, 0};
+	char buf[] = {'\x8F', '\x8F', '\x8F', 0};
 
 	switch (cursor_pos) {
 	case 0: case 1:
@@ -572,9 +575,9 @@ void draw_note_2(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 	case 3:
 		cursor_pos -= 2;
 		if (note->instrument) {
-			num99tostr(note->instrument, buf);
+			str_from_num99(note->instrument, buf);
 		} else {
-			buf[0] = buf[1] = 173;
+			buf[0] = buf[1] = '\xAD';
 			buf[2] = 0;
 		}
 		draw_text(buf, x, y, 6, bg);
@@ -622,7 +625,7 @@ void draw_note_2(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 		draw_text(buf, x, y, fg, bg);
 		*/
 	} else if (note->instrument) {
-		num99tostr(note->instrument, buf);
+		str_from_num99(note->instrument, buf);
 		draw_text(buf, x, y, fg, bg);
 	} else if (note->voleffect) {
 		get_volume_string(note->volparam, note->voleffect, buf);
@@ -630,14 +633,14 @@ void draw_note_2(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 	} else if (note->effect || note->param) {
 		draw_effect_2(x, y, note, cursor_pos, bg);
 	} else {
-		draw_char(173, x, y, fg, bg);
-		draw_char(173, x + 1, y, fg, bg);
+		draw_char('\xAD', x, y, fg, bg);
+		draw_char('\xAD', x + 1, y, fg, bg);
 	}
 }
 
 void draw_mask_2(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	char buf[] = {143, 143, 0};
+	char buf[] = {'\x8F', '\x8F', 0};
 
 	switch (cursor_pos) {
 	case 0: case 1:
@@ -723,9 +726,9 @@ void draw_note_1(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 	case 3:
 		cursor_pos -= 2;
 		if (note->instrument)
-			num99tostr(note->instrument, buf);
+			str_from_num99(note->instrument, buf);
 		else
-			buf[0] = buf[1] = 173;
+			buf[0] = buf[1] = '\xAD';
 		if (cursor_pos == 0)
 			draw_half_width_chars(buf[0], buf[1], x, y, 0, 3, fg, bg);
 		else
@@ -755,7 +758,7 @@ void draw_note_1(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 		get_note_string_short(note->note, buf);
 		draw_char(buf[0], x, y, fg, bg);
 	} else if (note->instrument) {
-		num99tostr(note->instrument, buf);
+		str_from_num99(note->instrument, buf);
 		draw_half_width_chars(buf[0], buf[1], x, y, fg, bg, fg, bg);
 	} else if (note->voleffect) {
 		if (cursor_pos != 0)
@@ -765,13 +768,13 @@ void draw_note_1(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 	} else if (note->effect || note->param) {
 		draw_effect_1(x, y, note, cursor_pos, fg, bg);
 	} else {
-		draw_char(173, x, y, fg, bg);
+		draw_char('\xAD', x, y, fg, bg);
 	}
 }
 
 void draw_mask_1(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	char c = 143;
+	char c = '\x8F';
 
 	switch (cursor_pos) {
 	case 0: case 1:
@@ -804,7 +807,7 @@ void draw_channel_header_6(int chan, int x, int y, int fg)
 	draw_text(buf, x, y, fg, 1);
 }
 
-void draw_note_6(int x, int y, const song_note_t *note, int cursor_pos, UNUSED int fg, int bg)
+void draw_note_6(int x, int y, const song_note_t *note, int cursor_pos, SCHISM_UNUSED int fg, int bg)
 {
 	char note_buf[4], ins_buf[3], vol_buf[3];
 	int fg1, bg1, fg2, bg2;
@@ -813,9 +816,9 @@ void draw_note_6(int x, int y, const song_note_t *note, int cursor_pos, UNUSED i
 
 	get_note_string_short(note->note, note_buf);
 	if (note->instrument)
-		num99tostr(note->instrument, ins_buf);
+		str_from_num99(note->instrument, ins_buf);
 	else
-		ins_buf[0] = ins_buf[1] = 173;
+		ins_buf[0] = ins_buf[1] = '\xAD';
 	/* note & instrument */
 	draw_text(note_buf, x, y, 6, bg);
 	fg1 = fg2 = (note->instrument ? 10 : 2);
@@ -866,9 +869,9 @@ void draw_note_6(int x, int y, const song_note_t *note, int cursor_pos, UNUSED i
 #endif
 
 	if (note->instrument)
-		num99tostr(note->instrument, ins_buf);
+		str_from_num99(note->instrument, ins_buf);
 	else
-		ins_buf[0] = ins_buf[1] = 173;
+		ins_buf[0] = ins_buf[1] = '\xAD';
 
 	fg1 = fg2 = (note->instrument ? 10 : 2);
 	bg1 = bg2 = bg;

@@ -1,0 +1,214 @@
+name: Windows (i686/x86_64/armv7/aarch64)
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { sys: mingw32, target: i686, stdlib: msvcrt, cflags: '-march=i586 -mtune=generic', ldflags: '-Wl,--major-os-version=4,--major-subsystem-version=4 -Wl,--large-address-aware' }
+          - { sys: mingw32, target: x86_64, stdlib: msvcrt, cflags: '', ldflags: '' }
+          - { sys: mingw32, target: armv7, stdlib: msvcrt, cflags: '', ldflags: '' }
+          - { sys: mingw32, target: aarch64, stdlib: ucrt, cflags: '', ldflags: '' }
+    name: ${{ matrix.sys }}-${{ matrix.target }}
+    env:
+      LLVM_MINGW_VERSION: 20240518
+      SDL_VERSION: 2.30.9
+      SDL_SHA256: 24b574f71c87a763f50704bbb630cbe38298d544a1f890f099a4696b1d6beba4
+      SDL12_VERSION: 1.2.15
+      SDL12_SHA256: d6d316a793e5e348155f0dd93b979798933fb98aa1edebcc108829d6474aad00
+      FLAC_VERSION: 1.4.3
+      FLAC_SHA256: 6c58e69cd22348f441b861092b825e591d0b822e106de6eb0ee4d05d27205b70
+      LIBOGG_VERSION: 1.3.5
+      LIBOGG_SHA256: c4d91be36fc8e54deae7575241e03f4211eb102afb3fc0775fbbc1b740016705
+      UTF8PROC_VERSION: 2.9.0
+      UTF8PROC_SHA256: bd215d04313b5bc42c1abedbcb0a6574667e31acee1085543a232204e36384c4
+      TARGET: ${{ matrix.target }}
+      SYS: ${{ matrix.sys }}
+      STDLIB: ${{ matrix.stdlib }}
+      CFLAGS: ${{ matrix.cflags }}
+      LDFLAGS: ${{ matrix.ldflags }}
+
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v4
+        with:
+          path: schism
+
+      - name: 'Install unix2dos'
+        run: |
+          sudo apt-get install -y dos2unix
+
+      - name: 'Cache llvm-mingw'
+        id: cache-llvm-mingw
+        uses: actions/cache@v4
+        with:
+          path: '/home/runner/llvm-mingw'
+          key: windows-${{ matrix.stdlib }}-llvm-mingw-${{ env.LLVM_MINGW_VERSION }}
+
+      - name: 'Cache dependencies'
+        id: cache-dependencies
+        uses: actions/cache@v4
+        with:
+          path: '/home/runner/prefix'
+          key: windows-${{ matrix.sys }}-${{ matrix.target }}-${{ matrix.stdlib }}-dependencies-SDL_${{ env.SDL_VERSION }}-SDL12_${{ env.SDL12_VERSION }}-FLAC_${{ env.FLAC_VERSION }}-LIBOGG_${{ env.LIBOGG_VERSION }}-UTF8PROC_${{ env.UTF8PROC_VERSION }}
+
+      - name: 'Grab llvm-mingw'
+        if: steps.cache-llvm-mingw.outputs.cache-hit != 'true'
+        run: |
+          curl -L "https://github.com/mstorsjo/llvm-mingw/releases/download/$LLVM_MINGW_VERSION/llvm-mingw-$LLVM_MINGW_VERSION-$STDLIB-ubuntu-20.04-x86_64.tar.xz" | tar xJvf - -C "$HOME"
+          mv "$HOME/llvm-mingw-$LLVM_MINGW_VERSION-$STDLIB-ubuntu-20.04-x86_64" "$HOME/llvm-mingw"
+
+      - name: 'Download SDL 1.2 sources'
+        if: env.TARGET == 'i686' && steps.cache-dependencies.outputs.cache-hit != 'true'
+        run: |
+          wget -O "SDL-$SDL12_VERSION.tar.gz" https://www.libsdl.org/release/SDL-$SDL12_VERSION.tar.gz
+          echo "$SDL12_SHA256  SDL-$SDL12_VERSION.tar.gz" | sha256sum -c -
+          tar xvf "SDL-$SDL12_VERSION.tar.gz"
+
+      - name: 'Build SDL 1.2'
+        if: env.TARGET == 'i686' && steps.cache-dependencies.outputs.cache-hit != 'true'
+        run: |
+          export PATH="$HOME/llvm-mingw/bin:$PATH"
+          cd SDL-$SDL12_VERSION
+          ./configure --host="$TARGET-w64-$SYS" --prefix="$HOME/prefix"
+          make
+          make install
+          cd ..
+
+      - name: 'Download SDL2 sources'
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
+        run: |
+          wget -O "SDL2-$SDL_VERSION.tar.gz" https://www.libsdl.org/release/SDL2-$SDL_VERSION.tar.gz || wget -O "SDL2-$SDL_VERSION.tar.gz" https://github.com/libsdl-org/SDL/releases/download/release-$SDL_VERSION/SDL2-$SDL_VERSION.tar.gz
+          echo "$SDL_SHA256  SDL2-$SDL_VERSION.tar.gz" | sha256sum -c -
+          tar xvf "SDL2-$SDL_VERSION.tar.gz"
+
+      - name: 'Build SDL2'
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
+        run: |
+          export PATH="$HOME/llvm-mingw/bin:$PATH"
+          cd SDL2-$SDL_VERSION
+          ./configure --host="$TARGET-w64-$SYS" --prefix="$HOME/prefix"
+          make
+          make install
+          cd ..
+
+      - name: 'Download libflac and libogg sources'
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
+        run: |
+          wget -O libogg-$LIBOGG_VERSION.tar.xz "https://ftp.osuosl.org/pub/xiph/releases/ogg/libogg-$LIBOGG_VERSION.tar.xz" || wget -O libogg-$LIBOGG_VERSION.tar.xz "https://github.com/xiph/ogg/releases/download/v$LIBOGG_VERSION/libogg-$LIBOGG_VERSION.tar.xz"
+          echo "$LIBOGG_SHA256  libogg-$LIBOGG_VERSION.tar.xz" | sha256sum -c -
+          tar xvf "libogg-$LIBOGG_VERSION.tar.xz"
+
+          wget -O flac-$FLAC_VERSION.tar.xz "https://ftp.osuosl.org/pub/xiph/releases/flac/flac-$FLAC_VERSION.tar.xz" || wget -O flac-$FLAC_VERSION.tar.xz "https://github.com/xiph/flac/releases/download/$FLAC_VERSION/flac-$FLAC_VERSION.tar.xz"
+          echo "$FLAC_SHA256  flac-$FLAC_VERSION.tar.xz" | sha256sum -c -
+          tar xvf "flac-$FLAC_VERSION.tar.xz"
+
+      - name: 'Build libflac'
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
+        run: |
+          export PATH="$HOME/llvm-mingw/bin:$PATH"
+          cd libogg-$LIBOGG_VERSION
+          mkdir build
+          cd build
+          ../configure --host="$TARGET-w64-$SYS" --prefix="$HOME/prefix"
+          make
+          make install
+          cd ../../flac-$FLAC_VERSION
+          mkdir build
+          cd build
+          ../configure --host="$TARGET-w64-$SYS" --prefix="$HOME/prefix" --disable-programs --disable-examples --disable-cpplibs
+          make
+          make install
+          cd ../..
+
+      - name: 'Download utf8proc'
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
+        run: |
+          wget -O "utf8proc-$UTF8PROC_VERSION.tar.gz" "https://github.com/JuliaStrings/utf8proc/releases/download/v$UTF8PROC_VERSION/utf8proc-$UTF8PROC_VERSION.tar.gz"
+          echo "$UTF8PROC_SHA256  utf8proc-$UTF8PROC_VERSION.tar.gz" | sha256sum -c -
+          tar xvf "utf8proc-$UTF8PROC_VERSION.tar.gz"
+
+      - name: 'Build utf8proc'
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
+        run: |
+          export PATH="$HOME/llvm-mingw/bin:$PATH"
+          cd utf8proc-$UTF8PROC_VERSION
+          mkdir build
+          cd build
+          cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$HOME/prefix" -DCMAKE_C_COMPILER="$TARGET-w64-$SYS-clang" -DCMAKE_SYSTEM_NAME="Windows"
+          make
+          make install
+          cd ../..
+        
+      - name: 'Get date of latest commit'
+        id: date
+        run: |
+          cd schism
+          echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
+          cd ..
+
+      - name: 'Build package'
+        run: |
+          export PATH="$HOME/llvm-mingw/bin:$PATH"
+          export PKG_CONFIG_PATH="$HOME/prefix/lib/pkgconfig"
+          cd schism
+          autoreconf -I"$HOME/prefix/share/aclocal" -i
+          mkdir build
+          cd build
+          ../configure --host="$TARGET-w64-$SYS" --prefix="$HOME/prefix" --with-flac --with-sdl2
+          make
+          "$TARGET-w64-$SYS-strip" -g schismtracker.exe
+          cp schismtracker.exe ../..
+          cd ../..
+          if test "x$TARGET" = "xi686"; then
+            cp "$HOME/prefix/bin/SDL.dll" .
+            "$TARGET-w64-$SYS-strip" -g "SDL.dll"
+          fi
+          cp "$HOME/prefix/bin/SDL2.dll" .
+          cp "$HOME/prefix/bin/libFLAC-12.dll" .
+          cp "$HOME/prefix/bin/libogg-0.dll" .
+          "$TARGET-w64-$SYS-strip" -g "SDL2.dll"
+          "$TARGET-w64-$SYS-strip" -g "libFLAC-12.dll"
+          "$TARGET-w64-$SYS-strip" -g "libogg-0.dll"
+          cp schism/docs/configuration.md schism/README.md schism/COPYING .
+          wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
+          unix2dos COPYING.Xiph COPYING README.md configuration.md
+
+      - name: 'Upload artifact'
+        if: env.TARGET == 'i686'
+        uses: actions/upload-artifact@v4
+        with:
+          name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.sys }}-${{ matrix.target }}
+          path: |
+            schismtracker.exe
+            SDL.dll
+            SDL2.dll
+            libFLAC-12.dll
+            libogg-0.dll
+            COPYING
+            COPYING.Xiph
+            README.md
+            configuration.md
+
+      - name: 'Upload artifact'
+        if: env.TARGET != 'i686'
+        uses: actions/upload-artifact@v4
+        with:
+          name: schismtracker-${{ steps.date.outputs.date }}-${{ matrix.sys }}-${{ matrix.target }}
+          path: |
+            schismtracker.exe
+            SDL.dll
+            SDL2.dll
+            libFLAC-12.dll
+            libogg-0.dll
+            COPYING
+            COPYING.Xiph
+            README.md
+            configuration.md

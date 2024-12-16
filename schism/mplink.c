@@ -25,7 +25,6 @@
 
 #include "it.h"
 #include "song.h"
-#include "sndfile.h"
 #include "slurp.h"
 
 #include <stdio.h>
@@ -166,7 +165,7 @@ void song_set_channel_mute(int channel, int muted)
 
 // I don't think this is useful besides undoing a channel solo (a few lines
 // below), but I'm making it extern anyway for symmetry.
-inline void song_restore_channel_states(void)
+void song_restore_channel_states(void)
 {
 	int n = 64;
 
@@ -221,6 +220,34 @@ int song_find_last_channel(void)
 }
 
 // ------------------------------------------------------------------------
+
+// calculates row of offset from passed row.
+// sets actual pattern number, row and optional pattern buffer.
+// returns length of selected patter, or 0 on error.
+// if song mode is pattern loop (MODE_PATTERN_LOOP), offset is mod calculated
+// in current pattern.
+int song_get_pattern_offset(int * n, song_note_t ** buf, int * row, int offset)
+{
+	int tot;
+	if (song_get_mode() & MODE_PATTERN_LOOP) {
+		// just wrap around current rows
+		*row = (*row + offset) % song_get_rows_in_pattern(*n);
+		return song_get_pattern(*n, buf);
+	}
+
+	tot = song_get_rows_in_pattern(*n);
+	while (offset + *row > tot) {
+		offset -= tot;
+		(*n)++;
+		tot = song_get_rows_in_pattern(*n);
+		if (!tot) {
+			return 0;
+		}
+	}
+
+	*row += offset;
+	return song_get_pattern(*n, buf);
+}
 
 // returns length of the pattern, or 0 on error. (this can be used to
 // get a pattern's length by passing NULL for buf.)
@@ -295,7 +322,7 @@ int song_get_rows_in_pattern(int pattern)
 {
 	if (pattern > MAX_PATTERNS)
 		return 0;
-	return (current_song->pattern_size[pattern] ? : 64) - 1;
+	return (current_song->pattern_size[pattern] ? current_song->pattern_size[pattern] : 64) - 1;
 }
 
 // ------------------------------------------------------------------------

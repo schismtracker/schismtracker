@@ -21,36 +21,60 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
 #include "headers.h"
+#include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
 #include "log.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
 
-
-#pragma pack(push,1)
 struct mus_header {
 	char id[4]; // MUS\x1a
 	uint16_t scorelen;
 	uint16_t scorestart;
-	uint16_t channels;
-	uint16_t sec_channels;
-	uint16_t instrcnt;
-	uint16_t dummy;
+	//uint16_t channels;
+	//uint16_t sec_channels;
+	//uint16_t instrcnt;
+	//uint16_t dummy;
 };
-#pragma pack(pop)
+
+static int read_mus_header(struct mus_header *hdr, slurp_t *fp)
+{
+#define READ_VALUE(name) \
+	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
+
+	READ_VALUE(id);
+	READ_VALUE(scorelen);
+	READ_VALUE(scorestart);
+	//READ_VALUE(channels);
+	//READ_VALUE(sec_channels);
+	//READ_VALUE(instrcnt);
+	//READ_VALUE(dummy);
+
+#undef READ_VALUE
+
+	if (memcmp(hdr->id, "MUS\x1a", 4))
+		return 0;
+
+	hdr->scorelen   = bswapLE16(hdr->scorelen);
+	hdr->scorestart = bswapLE16(hdr->scorestart);
+
+	if (((size_t)hdr->scorestart + hdr->scorelen) > slurp_length(fp))
+		return 0;
+
+	slurp_seek(fp, 8, SEEK_CUR); // skip
+
+	return 1;
+}
 
 /* --------------------------------------------------------------------- */
 
-int fmt_mus_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_mus_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	struct mus_header *hdr = (struct mus_header *) data;
+	struct mus_header hdr;
 
-	/* cast necessary for big-endian systems */
-	if (!(length > sizeof(*hdr) && memcmp(hdr->id, "MUS\x1a", 4) == 0
-	      && (size_t) (bswapLE16(hdr->scorestart) + bswapLE16(hdr->scorelen)) <= length))
+	if (!read_mus_header(&hdr, fp))
 		return 0;
 
 	file->description = "Doom Music File";
@@ -65,11 +89,11 @@ never even *played* Doom. Frankly, I'm surprised that this produces something th
 
 Some things yet to tackle:
 - Pitch wheel support is nonexistent. Shouldn't be TOO difficult; keep track of the target pitch value and how
-  much of a slide has already been done, insert EFx/FFx effects, adjust notes when inserting them if the pitch
-  wheel is more than a semitone off, and keep the speed at 1 if there's more sliding to do.
+	much of a slide has already been done, insert EFx/FFx effects, adjust notes when inserting them if the pitch
+	wheel is more than a semitone off, and keep the speed at 1 if there's more sliding to do.
 - Percussion channel isn't handled. Get a few adlib patches from some adlib S3Ms?
 - Volumes for a couple of files are pretty screwy -- don't know whether I'm doing something wrong here, or if
-  adlib's doing something funny with the volume, or maybe it's with the patches I'm using...
+	adlib's doing something funny with the volume, or maybe it's with the patches I'm using...
 - awesomus/d_doom.mus has some very strange timing issues: I'm getting note events with thousands of ticks.
 - Probably ought to clean up the warnings so messages only show once... */
 
@@ -84,34 +108,27 @@ Some things yet to tackle:
 #define FRACMASK ((1 << FRACBITS) - 1)
 
 
-int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
+int fmt_mus_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lflags)
 {
 	struct mus_header hdr;
 	int n;
 	song_note_t *note;
 	int pat, row;
 	int finished = 0;
-	size_t reallen;
 	int tickfrac = 0; // fixed point
 	struct {
 		uint8_t note; // the last note played in this channel
 		uint8_t instrument; // 1 -> 128
 		uint8_t volume; // 0 -> 64
-	} chanstate[16] = {};
+	} chanstate[16] = {0};
 	uint8_t prevspeed = 1;
 	uint8_t patch_samples[128] = {0};
 	uint8_t patch_percussion[128] = {0};
 	uint8_t nsmp = 1; // Next free sample
+	size_t len;
 
-	slurp_read(fp, &hdr, sizeof(hdr));
-	hdr.scorelen = bswapLE16(hdr.scorelen);
-	hdr.scorestart = bswapLE16(hdr.scorestart);
-
-	if (memcmp(hdr.id, "MUS\x1a", 4) != 0)
+	if (!read_mus_header(&hdr, fp))
 		return LOAD_UNSUPPORTED;
-	else if (hdr.scorestart + hdr.scorelen > fp->length)
-		return LOAD_FORMAT_ERROR;
-
 
 	for (n = 16; n < 64; n++)
 		song->channels[n].flags |= CHN_MUTE;
@@ -119,8 +136,8 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	slurp_seek(fp, hdr.scorestart, SEEK_SET);
 
 	// Narrow the data buffer to simplify reading
-	reallen = fp->length;
-	fp->length = MIN(fp->length, hdr.scorestart + hdr.scorelen);
+	len = slurp_length(fp);
+	len = MIN(len, hdr.scorestart + hdr.scorelen);
 
 	/* start the first pattern */
 	pat = 0;
@@ -130,7 +147,7 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 	note = song->patterns[pat];
 	song->orderlist[pat] = pat;
 
-	while (!finished && !slurp_eof(fp)) {
+	while (!finished && slurp_tell(fp) < len) {
 		uint8_t event, b1, b2, type, ch;
 
 		event = slurp_getc(fp);
@@ -359,9 +376,6 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
 			note += 64 * row;
 		}
 	}
-
-	// Widen the buffer again.
-	fp->length = reallen;
 
 	song->flags |= SONG_NOSTEREO;
 	song->initial_speed = 1;

@@ -20,22 +20,24 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef SCHISM_LOG_H
-#define SCHISM_LOG_H
+#ifndef SCHISM_LOG_H_
+#define SCHISM_LOG_H_
+
+#include "headers.h"
+#include "util.h"
 
 void log_nl(void);
 void log_append(int color, int must_free, const char *text);
 void log_append2(int bios_font, int color, int must_free, const char *text);
 void log_appendf(int color, const char *format, ...)
-	__attribute__ ((format(printf, 2, 3)));
+	SCHISM_FORMAT((printf, 2, 3));
 void log_underline(int chars);
 
 void log_perror(const char *prefix);
 
 void status_text_flash(const char *format, ...)
-	__attribute__ ((format(printf, 1, 2)));
+	SCHISM_FORMAT((printf, 1, 2));
 void status_text_flash_bios(const char *format, ...)
-	__attribute__ ((format(printf, 1, 2)));
+	SCHISM_FORMAT((printf, 1, 2));
 
-#endif
-
+#endif /* SCHISM_LOG_H_ */

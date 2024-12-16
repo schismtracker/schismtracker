@@ -24,10 +24,14 @@
 #include "headers.h"
 
 #include "it.h"
+#include "dialog.h"
+#include "vgamem.h"
+#include "widget.h"
 #include "song.h"
 #include "page.h"
+#include "keyboard.h"
 
-#include "sdlmain.h"
+#include <ctype.h>
 
 /* --------------------------------------------------------------------- */
 
@@ -36,7 +40,7 @@
  * if a dialog is not active. */
 #ifndef NDEBUG
 # define ENSURE_DIALOG(q) do { if (!(status.dialog_type & DIALOG_BOX)) { \
-		fprintf(stderr, "%s called with no dialog\n", __FUNCTION__);\
+		fprintf(stderr, "%s called with no dialog\n", __func__);\
 		q; \
 	} \
 } while(0)
@@ -67,7 +71,8 @@ void dialog_draw(void)
 			 dialogs[d].x + dialogs[d].w - 1,
 			 dialogs[d].y + dialogs[d].h - 1, BOX_THICK | BOX_OUTER | BOX_FLAT_LIGHT);
 		draw_fill_chars(dialogs[d].x + 1, dialogs[d].y + 1,
-				dialogs[d].x + dialogs[d].w - 2, dialogs[d].y + dialogs[d].h - 2, 2);
+				dialogs[d].x + dialogs[d].w - 2, dialogs[d].y + dialogs[d].h - 2,
+				DEFAULT_FG, 2);
 
 		/* then the rest of the stuff */
 		if (dialogs[d].draw_const) dialogs[d].draw_const();
@@ -78,7 +83,7 @@ void dialog_draw(void)
 		n = dialogs[d].total_widgets;
 		while (n) {
 			n--;
-			draw_widget(dialogs[d].widgets + n, n == dialogs[d].selected_widget);
+			widget_draw_widget(dialogs[d].widgets + n, n == dialogs[d].selected_widget);
 		}
 	}
 }
@@ -190,8 +195,8 @@ int dialog_handle_key(struct key_event * k)
 
 	/* this SHOULD be handling on k->state press but the widget key handler is stealing that key. */
 	if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod)) {
-		switch (k->sym.sym) {
-		case SDLK_y:
+		switch (k->sym) {
+		case SCHISM_KEYSYM_y:
 			switch (status.dialog_type) {
 			case DIALOG_YES_NO:
 			case DIALOG_OK_CANCEL:
@@ -201,7 +206,7 @@ int dialog_handle_key(struct key_event * k)
 				break;
 			}
 			break;
-		case SDLK_n:
+		case SCHISM_KEYSYM_n:
 			switch (status.dialog_type) {
 			case DIALOG_YES_NO:
 				/* in Impulse Tracker, 'n' means cancel, not "no"!
@@ -217,7 +222,7 @@ int dialog_handle_key(struct key_event * k)
 				break;
 			}
 			break;
-		case SDLK_c:
+		case SCHISM_KEYSYM_c:
 			switch (status.dialog_type) {
 			case DIALOG_YES_NO:
 			case DIALOG_OK_CANCEL:
@@ -225,10 +230,10 @@ int dialog_handle_key(struct key_event * k)
 			default:
 				return 0;
 			} /* and fall through */
-		case SDLK_ESCAPE:
+		case SCHISM_KEYSYM_ESCAPE:
 			dialog_cancel(d->data);
 			return 1;
-		case SDLK_o:
+		case SCHISM_KEYSYM_o:
 			switch (status.dialog_type) {
 			case DIALOG_YES_NO:
 			case DIALOG_OK_CANCEL:
@@ -236,7 +241,7 @@ int dialog_handle_key(struct key_event * k)
 			default:
 				return 0;
 			} /* and fall through */
-		case SDLK_RETURN:
+		case SCHISM_KEYSYM_RETURN:
 			dialog_yes(d->data);
 			return 1;
 		default:
@@ -270,7 +275,7 @@ static void dialog_create_ok(int textlen)
 	dialogs[d].widgets = (struct widget *)mem_alloc(sizeof(struct widget));
 	dialogs[d].total_widgets = 1;
 
-	create_button(dialogs[d].widgets + 0, 36, 30, 6, 0, 0, 0, 0, 0, dialog_yes_NULL, "OK", 3);
+	widget_create_button(dialogs[d].widgets + 0, 36, 30, 6, 0, 0, 0, 0, 0, dialog_yes_NULL, "OK", 3);
 }
 
 static void dialog_create_ok_cancel(int textlen)
@@ -293,8 +298,8 @@ static void dialog_create_ok_cancel(int textlen)
 	dialogs[d].widgets = mem_calloc(2, sizeof(struct widget));
 	dialogs[d].total_widgets = 2;
 
-	create_button(dialogs[d].widgets + 0, 31, 30, 6, 0, 0, 1, 1, 1, dialog_yes_NULL, "OK", 3);
-	create_button(dialogs[d].widgets + 1, 42, 30, 6, 1, 1, 0, 0, 0, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_button(dialogs[d].widgets + 0, 31, 30, 6, 0, 0, 1, 1, 1, dialog_yes_NULL, "OK", 3);
+	widget_create_button(dialogs[d].widgets + 1, 42, 30, 6, 1, 1, 0, 0, 0, dialog_cancel_NULL, "Cancel", 1);
 }
 
 static void dialog_create_yes_no(int textlen)
@@ -315,8 +320,8 @@ static void dialog_create_yes_no(int textlen)
 	dialogs[d].widgets = mem_calloc(2, sizeof(struct widget));
 	dialogs[d].total_widgets = 2;
 
-	create_button(dialogs[d].widgets + 0, 30, 30, 7, 0, 0, 1, 1, 1, dialog_yes_NULL, "Yes", 3);
-	create_button(dialogs[d].widgets + 1, 42, 30, 6, 1, 1, 0, 0, 0, dialog_no_NULL, "No", 3);
+	widget_create_button(dialogs[d].widgets + 0, 30, 30, 7, 0, 0, 1, 1, 1, dialog_yes_NULL, "Yes", 3);
+	widget_create_button(dialogs[d].widgets + 1, 42, 30, 6, 1, 1, 0, 0, 0, dialog_no_NULL, "No", 3);
 }
 
 /* --------------------------------------------------------------------- */
@@ -473,7 +478,7 @@ void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue)
 	dlgx = (80 - dlgwidth) / 2;
 	entryx = dlgx + 4 + numprompt_titlelen;
 
-	create_textentry(numprompt_widgets + 0, entryx, y, 4, 0, 0, 0, NULL, numprompt_buf, 3);
+	widget_create_textentry(numprompt_widgets + 0, entryx, y, 4, 0, 0, 0, NULL, numprompt_buf, 3);
 	numprompt_widgets[0].activate = numprompt_value;
 	numprompt_widgets[0].d.textentry.cursor_pos = initvalue ? 1 : 0;
 	numprompt_finish = finish;
@@ -490,19 +495,23 @@ static int strtonum99(const char *s)
 	if (s[1]) {
 		// two chars
 		int c = tolower(*s);
-		switch (c) {
-			case '0' ... '9': n = c - '0'; break;
-			case 'a' ... 'g': n = c - 'a' + 10; break;
-			case 'h' ... 'z': n = c - 'h' + 10; break;
-			default: return -1;
-		}
+
+		if (c >= '0' && c <= '9')
+			n = c - '0';
+		else if (c >= 'a' && c <= 'g')
+			n = c - 'a' + 10;
+		else if (c >= 'h' && c <= 'z')
+			n = c - 'h' + 10;
+		else
+			return -1;
+
 		n *= 10;
 		s++;
 	}
 	return *s >= '0' && *s <= '9' ? n + *s - '0' : -1;
 }
 
-static void smpprompt_value(UNUSED void *data)
+static void smpprompt_value(SCHISM_UNUSED void *data)
 {
 	int n = strtonum99(numprompt_buf);
 	numprompt_finish(n);
@@ -529,8 +538,8 @@ void smpprompt_create(const char *title, const char *prompt, void (*finish)(int 
 	numprompt_smp_pos2 = 41 - strlen(prompt);
 	numprompt_buf[0] = '\0';
 
-	create_textentry(numprompt_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, numprompt_buf, 2);
-	create_button(numprompt_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_textentry(numprompt_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, numprompt_buf, 2);
+	widget_create_button(numprompt_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 	numprompt_finish = finish;
 	dialog = dialog_create_custom(26, 23, 29, 10, numprompt_widgets, 2, 0, smpprompt_draw_const, NULL);
 	dialog->action_yes = smpprompt_value;

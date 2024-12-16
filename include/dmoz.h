@@ -21,11 +21,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef DMOZ_H
-#define DMOZ_H
+#ifndef SCHISM_DMOZ_H_
+#define SCHISM_DMOZ_H_
 
 #include <stdint.h>
-#include "sndfile.h" /* for song_sample_t */
+#include "player/sndfile.h" /* for song_sample_t */
 
 /* need these for struct stat */
 #include <sys/types.h>
@@ -182,6 +182,19 @@ copy of 'b'. */
 char *dmoz_path_concat(const char *a, const char *b);
 char *dmoz_path_concat_len(const char *a, const char *b, int alen, int blen);
 
+const char *dmoz_path_get_basename(const char *filename);
+const char *dmoz_path_get_extension(const char *filename);
+char *dmoz_path_get_parent_directory(const char *dirname);
+int dmoz_path_make_backup(const char *filename, int numbered);
+int dmoz_path_rename(const char *old, const char *new, int overwrite);
+int dmoz_path_is_file(const char *filename);
+int dmoz_path_is_directory(const char *filename);
+unsigned long long dmoz_path_get_file_size(const char *filename);
+
+char *dmoz_get_current_directory(void);
+char *dmoz_get_home_directory(void);
+char *dmoz_get_dot_directory(void);
+char *dmoz_get_exe_directory(void);
 
 /* Adding files and directories
 For all of these, path and base should be free()-able. */
@@ -208,4 +221,7 @@ void dmoz_cache_update_names(const char *path, const char *filen, const char *di
 void dmoz_cache_update(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
 void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
 
-#endif /* ! DMOZ_H */
+int dmoz_init(void);
+void dmoz_quit(void);
+
+#endif /* SCHISM_DMOZ_H_ */

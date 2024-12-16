@@ -21,19 +21,27 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
 #include "headers.h"
+#include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
 #include "log.h"
 
-#include "sndfile.h"
+#include "player/sndfile.h"
+
+#include <inttypes.h>
 
 /* --------------------------------------------------------------------- */
 
-int fmt_okt_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
+int fmt_okt_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!(length > 16 && memcmp(data, "OKTASONG", 8) == 0))
+	unsigned char magic[8];
+
+	if (slurp_length(fp) < 16)
+		return 0;
+
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
+		|| memcmp(magic, "OKTASONG", sizeof(magic)))
 		return 0;
 
 	file->description = "Amiga Oktalyzer";
@@ -55,7 +63,6 @@ int fmt_okt_read_info(dmoz_file_t *file, const uint8_t *data, size_t length)
 #define OKT_BLK_PBOD    OKT_BLOCK('P','B','O','D')
 #define OKT_BLK_SBOD    OKT_BLOCK('S','B','O','D')
 
-#pragma pack(push,1)
 struct okt_sample {
 	char name[20];
 	uint32_t length;
@@ -64,7 +71,6 @@ struct okt_sample {
 	uint16_t volume;
 	uint16_t mode;
 };
-#pragma pack(pop)
 
 enum {
 	OKT_HAS_CMOD = 1 << 0,
@@ -107,7 +113,13 @@ static void okt_read_samp(song_t *song, slurp_t *fp, uint32_t len, uint32_t smpf
 	}
 
 	for (n = 1; n <= len; n++, ssmp++) {
-		slurp_read(fp, &osmp, sizeof(osmp));
+		slurp_read(fp, &osmp.name, sizeof(osmp.name));
+		slurp_read(fp, &osmp.length, sizeof(osmp.length));
+		slurp_read(fp, &osmp.loop_start, sizeof(osmp.loop_start));
+		slurp_read(fp, &osmp.loop_len, sizeof(osmp.loop_len));
+		slurp_read(fp, &osmp.volume, sizeof(osmp.volume));
+		slurp_read(fp, &osmp.mode, sizeof(osmp.mode));
+
 		osmp.length = bswapBE32(osmp.length);
 		osmp.loop_start = bswapBE16(osmp.loop_start);
 		osmp.loop_len = bswapBE16(osmp.loop_len);
@@ -284,7 +296,8 @@ static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 						break;
 					}
 					// 0x40 is set volume -- fall through
-				case 0 ... 3:
+				case 0: case 1:
+				case 2: case 3:
 					note->voleffect = VOLFX_VOLUME;
 					note->volparam = note->param;
 					note->effect = FX_NONE;
@@ -453,13 +466,13 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				continue;
 
 			if (ssmp->length != smpsize[sd]) {
-				log_appendf(4, " Warning: Sample %d: header/data size mismatch (%d/%d)", sh,
+				log_appendf(4, " Warning: Sample %d: header/data size mismatch (%" PRIu32 "/%" PRIu32 ")", sh,
 					ssmp->length, smpsize[sd]);
 				ssmp->length = MIN(smpsize[sd], ssmp->length);
 			}
 
-			csf_read_sample(ssmp, SF_BE | SF_M | SF_PCMS | smpflag[sd],
-					fp->data + smpseek[sd], ssmp->length);
+			slurp_seek(fp, smpseek[sd], SEEK_SET);
+			csf_read_sample(ssmp, SF_BE | SF_M | SF_PCMS | smpflag[sh], fp);
 			sd++;
 		}
 		// Make sure there's nothing weird going on

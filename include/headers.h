@@ -21,31 +21,22 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __headers_h
-#define __headers_h
+#ifndef SCHISM_HEADERS_H_
+#define SCHISM_HEADERS_H_
 /* This is probably overkill, but it's consistent this way. */
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE // not necessarily true but whatever
 #endif
 
-/* Some stuff was conditionally included only for files that need it, but really it's not like defining
-bswapLE32 or including sys/time.h adversely affects compilation time. This isn't some xboxhueg project
-that takes hours to build, these are little silly overoptimizations, and it's just troublesome to try
-to work out what order headers are supposed to be processed so that all the other files pick up the bits
-of headers.h that they need (song_t, I'm looking at you)
-Eventually I'll do some housekeeping with the headers and get rid of all these silly NEED_*'s, but this
-will do for now. */
-#define NEED_BYTESWAP
-#define NEED_TIME
-#define NEED_DIRENT
-
+#ifdef HAVE_CONFIG_H
+# include <build-config.h>
+#endif
 
 #include <stdio.h>
-
-#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
-#endif
+#include <stdint.h>
+#include <stddef.h>
 
 #include <stdarg.h>
 
@@ -53,23 +44,7 @@ will do for now. */
 #include <sys/param.h>
 #endif
 
-#include <stdint.h>
-
-
-/* Portability is a pain. */
-#if STDC_HEADERS
-# include <string.h>
-#else
-# ifndef HAVE_STRCHR
-#  define strchr index
-#  define strrchr rindex
-# endif
-char *strchr(), *strrchr();
-# ifndef HAVE_MEMMOVE
-#  define memcpy(d, s, n) bcopy ((s), (d), (n))
-#  define memmove(d, s, n) bcopy ((s), (d), (n))
-# endif
-#endif
+#include <string.h>
 
 #if !defined(HAVE_STRCASECMP) && defined(HAVE_STRICMP)
 # define strcasecmp stricmp
@@ -79,8 +54,14 @@ char *strchr(), *strrchr();
 #endif
 #ifndef HAVE_STRVERSCMP
 # define strverscmp strcasecmp
+#else
+/* need to declare this because its a GNU function, and
+ * we specifically don't want to define _GNU_SOURCE */
+int strverscmp(const char *s1, const char *s2);
 #endif
-#ifndef HAVE_STRCASESTR
+#ifdef HAVE_STRCASESTR
+char *strcasestr(const char *haystack, const char *needle);
+#else
 # define strcasestr strstr // derp
 #endif
 
@@ -89,67 +70,23 @@ char *strchr(), *strrchr();
 # include <unistd.h>
 #endif
 
-
-#ifdef NEED_DIRENT
-# if HAVE_DIRENT_H
-#  include <dirent.h>
-#  ifndef _D_EXACT_NAMLEN
-#   define _D_EXACT_NAMLEN(dirent) strlen((dirent)->d_name)
-#  endif
-# else
-#  define dirent direct
-#  ifndef _D_EXACT_NAMLEN
-#   define _D_EXACT_NAMLEN(dirent) strlen((dirent)->d_name)
-#  endif
-#  if HAVE_SYS_NDIR_H
-#   include <sys/ndir.h>
-#  endif
-#  if HAVE_SYS_DIR_H
-#   include <sys/dir.h>
-#  endif
-#  if HAVE_NDIR_H
-#   include <ndir.h>
-#  endif
-# endif
-#endif
-
-/* dumb workaround for dumb devkitppc bug */
-#ifdef GEKKO
-# undef NAME_MAX
-# undef PATH_MAX
+#include <dirent.h>
+#ifndef _D_EXACT_NAMLEN
+# define _D_EXACT_NAMLEN(dirent) strlen((dirent)->d_name)
 #endif
 
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
 #endif
 
-#ifndef NAME_MAX
-# ifdef MAXPATHLEN
-#  define NAME_MAX MAXPATHLEN /* BSD name */
-# else
-#  ifdef FILENAME_MAX
-#   define NAME_MAX FILENAME_MAX
-#  else
-#   define NAME_MAX 256
-#  endif
-# endif
+#if HAVE_SYS_TIME_H
+# include <sys/time.h>
 #endif
+#include <time.h>
 
-
-#ifdef NEED_TIME
-# if TIME_WITH_SYS_TIME
-#  include <sys/time.h>
-#  include <time.h>
-# else
-#  if HAVE_SYS_TIME_H
-#   include <sys/time.h>
-#  else
-#   include <time.h>
-#  endif
-# endif
-# ifndef timersub
+#ifndef timersub
 // from FreeBSD
-#  define timersub(tvp, uvp, vvp)                                       \
+# define timersub(tvp, uvp, vvp)                                       \
 	do {                                                            \
 		(vvp)->tv_sec = (tvp)->tv_sec - (uvp)->tv_sec;          \
 		(vvp)->tv_usec = (tvp)->tv_usec - (uvp)->tv_usec;       \
@@ -158,61 +95,7 @@ char *strchr(), *strrchr();
 			(vvp)->tv_usec += 1000000;                      \
 		}                                                       \
 	} while (0)
-# endif
 #endif
-
-#ifdef REALLY_BIG_ENDIAN
-#ifndef WORDS_BIGENDIAN
-#define WORDS_BIGENDIAN 1
-#endif
-#endif
-
-#ifdef NEED_BYTESWAP
-# if HAVE_BYTESWAP_H
-/* byteswap.h uses inline assembly if possible (faster than bit-shifting) */
-#  include <byteswap.h>
-# else
-#  define bswap_32(x) (((((unsigned int)x) & 0xFF) << 24) | ((((unsigned int)x) & 0xFF00) << 8) \
-		       | (((((unsigned int)x) & 0xFF0000) >> 8) & 0xFF00) \
-		       | ((((((unsigned int)x) & 0xFF000000) >> 24)) & 0xFF))
-#  define bswap_16(x) (((((unsigned short)x) >> 8) & 0xFF) | ((((unsigned short)x) << 8) & 0xFF00))
-# endif
-/* define the endian-related byte swapping (taken from libmodplug sndfile.h, glibc, and sdl) */
-# if defined(ARM) && defined(_WIN32_WCE)
-/* I have no idea what this does, but okay :) */
-
-/* This forces integer operations to only occur on aligned
-   addresses. -mrsb */
-static inline unsigned short int ARM_get16(const void *data)
-{
-	unsigned short int s;
-	memcpy(&s,data,sizeof(s));
-	return s;
-}
-static inline unsigned int ARM_get32(const void *data)
-{
-	unsigned int s;
-	memcpy(&s,data,sizeof(s));
-	return s;
-}
-#  define bswapLE16(x) ARM_get16(&x)
-#  define bswapLE32(x) ARM_get32(&x)
-#  define bswapBE16(x) bswap_16(ARM_get16(&x))
-#  define bswapBE32(x) bswap_32(ARM_get32(&x))
-# elif WORDS_BIGENDIAN
-#  define bswapLE16(x) bswap_16(x)
-#  define bswapLE32(x) bswap_32(x)
-#  define bswapBE16(x) (x)
-#  define bswapBE32(x) (x)
-# else
-#  define bswapBE16(x) bswap_16(x)
-#  define bswapBE32(x) bswap_32(x)
-#  define bswapLE16(x) (x)
-#  define bswapLE32(x) (x)
-# endif
-#endif
-
-/* Prototypes for replacement functions */
 
 #ifndef HAVE_ASPRINTF
 int asprintf(char **strp, const char *fmt, ...);
@@ -220,31 +103,206 @@ int asprintf(char **strp, const char *fmt, ...);
 #ifndef HAVE_VASPRINTF
 int vasprintf(char **strp, const char *fmt, va_list ap);
 #endif
-#ifdef NEED_TIME
-# ifndef HAVE_STRPTIME
+#ifndef HAVE_STRPTIME
 char *strptime(const char *buf, const char *fmt, struct tm *tm);
-# endif
-# ifdef WIN32
-struct tm *localtime_r(const time_t *timep, struct tm *result);
-# endif
 #endif
 #ifndef HAVE_MKSTEMP
 int mkstemp(char *template);
 #endif
-
-#ifdef __APPLE_CC__
-#define MACOSX  1
+#ifndef HAVE_LOCALTIME_R
+struct tm *localtime_r(const time_t *timep, struct tm *result);
+void localtime_r_quit(void);
+int localtime_r_init(void);
+#endif
+#ifndef HAVE_SETENV
+int setenv(const char *name, const char *value, int overwrite);
+#endif
+#ifndef HAVE_UNSETENV
+int unsetenv(const char *name);
 #endif
 
-/* Various other stuff */
-#ifdef WIN32
-# define mkdir(path,mode) mkdir(path)
-# define setenv(a,b,c) /* stupid windows */
-# define fsync _commit
+#define INT_SHAPED_PTR(v)               ((intptr_t)(void*)(v))
+#define PTR_SHAPED_INT(i)               ((void*)(i))
+
+/* -------------------------------------------------------------- */
+/* C99 compatible static assertion */
+
+#if (__STDC_VERSION__ >= 201112L)
+# define SCHISM_STATIC_ASSERT(x, msg) _Static_assert(x, msg)
+#else
+/* should work anywhere and shouldn't dump random stack allocations
+ * BUT it fails to provide any sort of useful message to the user */
+# define SCHISM_STATIC_ASSERT(x, msg) \
+	extern int (*schism_static_assert_function_no_touchy_touchy_plz(void)) \
+		[!!sizeof (struct { int __error_if_negative: (x) ? 2 : -1; })]
 #endif
 
-#define INT_SHAPED_PTR(v)               ((intptr_t)(((void*)(v))))
-#define PTR_SHAPED_INT(i)               ((void*)i)
+/* -------------------------------------------------------------- */
+/* moved from util.h */
 
+/* A bunch of compiler detection stuff... don't mind this... */
+#define SCHISM_SEMVER_ATLEAST(mmajor, mminor, mpatch, major, minor, patch) \
+	((major >= mmajor) \
+	 && (major > mmajor || minor >= mminor) \
+	 && (major > mmajor || minor > mminor || patch >= mpatch))
+
+// ugh
+#if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
+# define SCHISM_GNUC_ATLEAST(major, minor, patch) \
+	SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
+#elif defined(__GNUC__) && defined(__GNUC_MINOR__)
+# define SCHISM_GNUC_ATLEAST(major, minor, patch) \
+	SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, __GNUC_MINOR__, 0)
+#elif defined(__GNUC__)
+# define SCHISM_GNUC_ATLEAST(major, minor, patch) \
+	SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, 0, 0)
+#else
+# define SCHISM_GNUC_ATLEAST(major, minor, patch) (0)
 #endif
 
+#ifdef __has_attribute
+# define SCHISM_GNUC_HAS_ATTRIBUTE(x, major, minor, patch) \
+	__has_attribute(x)
+#else
+# define SCHISM_GNUC_HAS_ATTRIBUTE(x, major, minor, patch) \
+	SCHISM_GNUC_ATLEAST(major, minor, patch)
+#endif
+
+#ifdef __has_builtin
+# define SCHISM_GNUC_HAS_BUILTIN(x, major, minor, patch) \
+	__has_builtin(x)
+#else
+# define SCHISM_GNUC_HAS_BUILTIN(x, major, minor, patch) \
+	SCHISM_GNUC_ATLEAST(major, minor, patch)
+#endif
+
+#ifdef __has_extension
+# define SCHISM_GNUC_HAS_EXTENSION(x, major, minor, patch) \
+	__has_extension(x)
+#else
+# define SCHISM_GNUC_HAS_EXTENSION(x, major, minor, patch) \
+	SCHISM_GNUC_ATLEAST(major, minor, patch)
+#endif
+
+#define ARRAY_SIZE(a) (sizeof(a)/sizeof(*(a)))
+
+/* macros stolen from glib */
+#ifndef MAX
+# define MAX(X,Y) (((X)>(Y))?(X):(Y))
+#endif
+#ifndef MIN
+# define MIN(X,Y) (((X)<(Y))?(X):(Y))
+#endif
+#ifndef CLAMP
+# define CLAMP(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
+#endif
+
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__unused__, 2, 7, 0)
+# define SCHISM_UNUSED __attribute__((__unused__))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__packed__, 2, 7, 0)
+# define SCHISM_PACKED __attribute__((__packed__))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__malloc__, 3, 0, 0)
+# define SCHISM_MALLOC __attribute__((__malloc__))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__pure__, 2, 96, 0)
+# define SCHISM_PURE __attribute__((__pure__))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__const__, 2, 5, 0)
+# define SCHISM_CONST __attribute__((__const__))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__format__, 2, 3, 0)
+# define SCHISM_FORMAT(x) __attribute__((__format__ x))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__alloc_size__, 9, 1, 0)
+# define SCHISM_ALLOC_SIZE(x) __attribute__((__alloc_size__(x)))
+# define SCHISM_ALLOC_SIZE_EX(x, y) __attribute__((__alloc_size__(x, y)))
+#endif
+
+#if SCHISM_GNUC_HAS_BUILTIN(__builtin_expect, 3, 0, 0)
+# define SCHISM_LIKELY(x)   __builtin_expect(!!(x), 1)
+# define SCHISM_UNLIKELY(x) __builtin_expect(!(x),  1)
+#endif
+
+// _Generic
+#if (SCHISM_GNUC_HAS_EXTENSION(c_generic_selections, 4, 9, 0) || __STDC_VERSION__ >= 201112L)
+# define SCHISM_HAVE_GENERIC 1
+#endif
+
+#ifndef SCHISM_LIKELY
+# define SCHISM_LIKELY(x) (x)
+#endif
+#ifndef SCHISM_UNLIKELY
+# define SCHISM_UNLIKELY(x) (x)
+#endif
+#ifndef SCHISM_UNUSED
+# define SCHISM_UNUSED
+#endif
+#ifndef SCHISM_PACKED
+# define SCHISM_PACKED
+#endif
+#ifndef SCHISM_MALLOC
+# define SCHISM_MALLOC
+#endif
+#ifndef SCHISM_PURE
+# define SCHISM_PURE
+#endif
+#ifndef SCHISM_CONST
+# define SCHISM_CONST
+#endif
+#ifndef SCHISM_FORMAT
+# define SCHISM_FORMAT(x)
+#endif
+#ifndef SCHISM_ALLOC_SIZE
+# define SCHISM_ALLOC_SIZE(x)
+#endif
+#ifndef SCHISM_ALLOC_SIZE_EX
+# define SCHISM_ALLOC_SIZE_EX(x, y)
+#endif
+
+/* ------------------------------------------------------------------------ */
+
+/* dumb workaround for dumb devkitppc bug
+ *
+ * XXX is this still relevant at all? */
+#ifdef SCHISM_WII
+# undef NAME_MAX
+# undef PATH_MAX
+#endif
+
+#ifdef SCHISM_WIN32
+# define SCHISM_PATH_MAX (3 + 256 + 1) // drive letter, colon, name components, NUL
+#else
+# define SCHISM_PATH_MAX (8192) // 8 KiB (should be more than enough)
+#endif
+
+// redefine our value if it's smaller than the implementation's
+#ifdef PATH_MAX
+# if PATH_MAX > SCHISM_PATH_MAX
+#  undef SCHISM_PATH_MAX
+#  define SCHISM_PATH_MAX PATH_MAX
+# endif
+#endif
+
+#ifdef MAXPATHLEN
+# if MAXPATHLEN > SCHISM_PATH_MAX
+#  undef SCHISM_PATH_MAX
+#  define SCHISM_PATH_MAX MAXPATHLEN
+# endif
+#endif
+
+// SCHISM_PATH_MAX is a safe minimum, i guess
+#define SCHISM_NAME_MAX SCHISM_PATH_MAX
+
+#ifdef NAME_MAX
+# if NAME_MAX > SCHISM_NAME_MAX
+#  undef SCHISM_NAME_MAX
+#  define SCHISM_NAME_MAX NAME_MAX
+# endif
+#endif
+
+// FILENAME_MAX is not used here because
+// it shouldn't be used for array bounds
+
+#endif /* SCHISM_HEADERS_H_ */

@@ -26,6 +26,10 @@
 /* TODO: test this again since I rearranged the artist/title stuff.
 Can't be bothered actually compiling it now to make sure it works. :P */
 
+/* read info and load sample arguments have changed too, btw. this
+ * will not compile and I honestly don't even know how to compile
+ * it anyway. I'll probably remove this file... */
+
 #include "headers.h"
 #include "fmt.h"
 
@@ -82,7 +86,7 @@ static int fake_seek(void *void_data, ogg_int64_t offset, int whence)
 	return 0;
 }
 
-static int fake_close(UNUSED void *void_data)
+static int fake_close(SCHISM_UNUSED void *void_data)
 {
 	return 0;
 }
