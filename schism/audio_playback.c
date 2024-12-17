@@ -1532,8 +1532,15 @@ static int _audio_init_head(const char *driver, const char *device, int verbose)
 			return 1;
 	}
 
-	// this comparison kind of sucks
-	if (backend == &schism_audio_backend_sdl12 || backend == &schism_audio_backend_sdl2) {
+	if (
+		// hm... this sucks! lol
+#ifdef SCHISM_SDL12
+		backend == &schism_audio_backend_sdl12 ||
+#endif
+#ifdef SCHISM_SDL2
+		backend == &schism_audio_backend_sdl2 ||
+#endif
+		0) {
 		/* we ought to allow this envvar to work under SDL */
 		n = getenv("SDL_AUDIODRIVER");
 		if (n && *n && _audio_try_driver(n, device, verbose))
