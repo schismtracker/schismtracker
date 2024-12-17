@@ -387,7 +387,7 @@ static inline void rn_pitch_filter_envelope(song_t *csf, song_voice_t *chan,
 {
 	song_instrument_t *penv = chan->ptr_instrument;
 
-	if ((chan->flags & CHN_PANENV || penv->flags & (ENV_PITCH | ENV_FILTER)) && (penv->pan_env.nodes)) {
+	if ((chan->flags & CHN_PITCHENV || penv->flags & (ENV_PITCH | ENV_FILTER)) && (penv->pitch_env.nodes)) {
 		int32_t envpos = chan->pitch_env_position - 1;
 		uint32_t pt = penv->pitch_env.nodes - 1;
 		int32_t frequency = *nfrequency;
@@ -432,8 +432,7 @@ static inline void rn_pitch_filter_envelope(song_t *csf, song_voice_t *chan,
 		if (!(penv->flags & ENV_FILTER)) {
 			int32_t l = abs(envpitch);
 
-			if (l > 255)
-				l = 255;
+			l = MIN(l, 255);
 
 			int32_t ratio = (envpitch < 0 ? linear_slide_down_table : linear_slide_up_table)[l];
 			frequency = _muldiv(frequency, ratio, 0x10000);
@@ -1207,8 +1206,7 @@ int32_t csf_read_note(song_t *csf)
 			// Pitch/Filter Envelope
 			int32_t envpitch = 0;
 
-			if ((csf->flags & SONG_INSTRUMENTMODE) && chan->ptr_instrument
-				&& (chan->flags & CHN_PITCHENV) && chan->ptr_instrument->pitch_env.nodes)
+			if ((csf->flags & SONG_INSTRUMENTMODE) && chan->ptr_instrument)
 				rn_pitch_filter_envelope(csf, chan, &envpitch, &frequency);
 
 			// Vibrato
