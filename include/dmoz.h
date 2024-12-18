@@ -173,7 +173,7 @@ the returned string must be free()'d. */
 char *dmoz_path_normal(const char *path);
 
 /* Return nonzero if the path is an absolute path (e.g. /bin, c:\progra~1, sd:/apps, etc.) */
-int dmoz_path_is_absolute(const char *path);
+int dmoz_path_is_absolute(const char *path, int *count);
 
 /* Concatenate two paths, adding separators between them as necessary. The returned string must be free()'d.
 The second version can be used if the string lengths are already known to avoid redundant strlen() calls.
@@ -220,6 +220,12 @@ int dmoz_worker(void);
 void dmoz_cache_update_names(const char *path, const char *filen, const char *dirn);
 void dmoz_cache_update(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
 void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl);
+
+#ifdef SCHISM_MACOS
+/* this sucks */
+int dmoz_path_from_fsspec(const void *spec, char **path);
+int dmoz_path_to_fsspec(const char *path, void *spec);
+#endif
 
 int dmoz_init(void);
 void dmoz_quit(void);

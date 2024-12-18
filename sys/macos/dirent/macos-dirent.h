@@ -21,32 +21,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_SYS_SDL12_INIT_H_
-#define SCHISM_SYS_SDL12_INIT_H_
+#ifndef SCHISM_SYS_MACOS_DIRENT_H_
+#define SCHISM_SYS_MACOS_DIRENT_H_
 
-#include "headers.h"
+typedef struct dir_ DIR;
 
-#include <SDL.h>
+struct dirent {
+	char d_name[256];
+};
 
-int sdl12_init(void);
-void sdl12_quit(void);
+extern DIR *opendir(const char *path);
+extern struct dirent *readdir(DIR *dirp);
+extern void closedir(DIR *dirp);
 
-// eh?
-const char *sdl12_get_error(void);
-
-#ifdef SDL12_DYNAMIC_LOAD
-
-// must be called AFTER sdl12_init()
-int sdl12_load_sym(const char *fn, void *addr);
-
-# define SCHISM_SDL12_SYM(x) \
-	if (!sdl12_load_sym("SDL_" #x, &sdl12_##x)) return -1
-
-#else
-
-# define SCHISM_SDL12_SYM(x) \
-	sdl12_##x = SDL_##x
-
-#endif
-
-#endif /* SCHISM_SYS_SDL12_INIT_H_ */
+#endif /* SCHISM_SYS_MACOS_DIRENT_H_ */

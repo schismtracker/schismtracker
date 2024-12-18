@@ -36,6 +36,9 @@
 #include "charset.h"
 #include "loadso.h"
 
+static DWORD (WINAPI *WIN32_FormatMessageW)(DWORD dwFlags,LPCVOID lpSource,DWORD dwMessageId,DWORD dwLanguageId,LPWSTR lpBuffer,DWORD nSize,va_list *Arguments) = NULL;
+static HANDLE (WINAPI *WIN32_CreateFileW)(LPCWSTR lpFileName,DWORD dwDesiredAccess,DWORD dwShareMode,LPSECURITY_ATTRIBUTES lpSecurityAttributes,DWORD dwCreationDisposition,DWORD dwFlagsAndAttributes,HANDLE hTemplateFile) = NULL;
+
 static void win32_unmap_(slurp_t *slurp)
 {
 	if (slurp->internal.memory.data != NULL) {
@@ -118,6 +121,7 @@ int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
 	// These functions are stubs on Windows 95 & 98, so simply ignore if
 	// they fail and fall back to the stdio implementation
 	slurp->internal.memory.interfaces.win32.mapping = CreateFileMapping(slurp->internal.memory.interfaces.win32.file, NULL, PAGE_READONLY, 0, 0, NULL);
+
 	if (!slurp->internal.memory.interfaces.win32.mapping) {
 		win32_unmap_(slurp);
 		return -1;
@@ -132,4 +136,23 @@ int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
 	slurp->internal.memory.length = st;
 	slurp->closure = win32_unmap_;
 	return 1;
+}
+
+static void *lib_kernel32 = NULL;
+
+int win32_slurp_init(void)
+{
+	lib_kernel32 = loadso_object_load("kernel32.dll");
+	if (lib_kernel32) {
+		WIN32_CreateFileW = loadso_function_load(lib_kernel32, "CreateFileW");
+		WIN32_FormatMessageW = loadso_function_load(lib_kernel32, "FormatMessageW");
+	}
+
+	return 1;
+}
+
+void win32_slurp_quit(void)
+{
+	if (lib_kernel32)
+		loadso_object_unload(lib_kernel32);
 }

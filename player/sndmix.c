@@ -37,16 +37,16 @@
 #define VUMETER_DECAY 16
 
 // SNDMIX: These are global flags for playback control
-unsigned int max_voices = 32; // ITT it is 1994
+uint32_t max_voices = 32; // ITT it is 1994
 
 // Mixing data initialized in
-static unsigned int volume_ramp_samples = 64;
-unsigned int global_vu_left = 0;
-unsigned int global_vu_right = 0;
+static uint32_t volume_ramp_samples = 64;
+uint32_t global_vu_left = 0;
+uint32_t global_vu_right = 0;
 int32_t g_dry_rofs_vol = 0;
 int32_t g_dry_lofs_vol = 0;
 
-typedef uint32_t (* convert_t)(void *, int *, uint32_t, int *, int *);
+typedef uint32_t (* convert_t)(void *, int32_t *, uint32_t, int32_t *, int32_t *);
 
 
 // see also csf_midi_out_raw in effects.c
@@ -749,13 +749,13 @@ int csf_init_player(song_t *csf, int reset)
 }
 
 
-unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
+uint32_t csf_read(song_t *csf, void * v_buffer, uint32_t bufsize)
 {
 	uint8_t * buffer = (uint8_t *)v_buffer;
 	convert_t convert_func = clip_32_to_8;
 	int32_t vu_min[2];
 	int32_t vu_max[2];
-	unsigned int bufleft, max, sample_size, count, smpcount, mix_stat=0;
+	uint32_t bufleft, max, sample_size, count, smpcount, mix_stat=0;
 
 	vu_min[0] = vu_min[1] = 0x7FFFFFFF;
 	vu_max[0] = vu_max[1] = -0x7FFFFFFF;
@@ -770,9 +770,8 @@ unsigned int csf_read(song_t *csf, void * v_buffer, unsigned int bufsize)
 
 	max = bufsize / sample_size;
 
-	if (!max || !buffer) {
+	if (!max || !buffer)
 		return 0;
-	}
 
 	bufleft = max;
 

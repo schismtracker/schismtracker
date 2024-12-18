@@ -207,7 +207,7 @@ int disko_open(disko_t *ds, const char *filename)
 	if (!filename)
 		return -1;
 
-#ifndef SCHISM_WII /* FIXME - make a replacement access() */
+#ifdef HAVE_ACCESS /* FIXME - make a replacement access() */
 	// Attempt to honor read-only (since we're writing them in such a roundabout way)
 	if (access(filename, W_OK) != 0 && errno != ENOENT)
 		return -1;

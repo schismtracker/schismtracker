@@ -371,7 +371,7 @@ song_voice_t *song_get_mix_channel(int n);
  *                 (do something with the channel)
  *         }
  * it's kind of ugly, but it'll do... i hope :) */
-int song_get_mix_state(unsigned int **channel_list);
+int song_get_mix_state(uint32_t **channel_list);
 
 /* --------------------------------------------------------------------- */
 /* rearranging stuff */

@@ -69,11 +69,6 @@ char *strcasestr(const char *haystack, const char *needle);
 # include <unistd.h>
 #endif
 
-#include <dirent.h>
-#ifndef _D_EXACT_NAMLEN
-# define _D_EXACT_NAMLEN(dirent) strlen((dirent)->d_name)
-#endif
-
 /* dumb workaround for dumb devkitppc bug
  *
  * XXX is this still relevant at all? */

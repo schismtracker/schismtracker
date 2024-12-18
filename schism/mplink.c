@@ -114,7 +114,7 @@ song_voice_t *song_get_mix_channel(int n)
 	return (song_voice_t *) current_song->voices + n;
 }
 
-int song_get_mix_state(unsigned int **channel_list)
+int song_get_mix_state(uint32_t **channel_list)
 {
 	if (channel_list)
 		*channel_list = current_song->voice_mix;

@@ -30,7 +30,8 @@
 /* ------------------------------------ */
 
 static SDL_Thread *(SDLCALL *sdl12_CreateThread)(int (*fn)(void *), void *data);
-static void (*sdl12_WaitThread)(SDL_Thread *thread, int *status);
+static void (SDLCALL *sdl12_WaitThread)(SDL_Thread *thread, int *status);
+static uint32_t (SDLCALL *sdl12_ThreadID)(void);
 
 struct schism_thread {
 	SDL_Thread *thread;
@@ -74,6 +75,12 @@ static void sdl12_thread_wait(schism_thread_t *thread, int *status)
 static void sdl12_thread_set_priority(int priority)
 {
 	/* no-op */
+}
+
+// returns the current thread's ID
+static schism_thread_id_t sdl12_thread_id(void)
+{
+	return sdl12_ThreadID();
 }
 
 /* -------------------------------------------------------------- */
@@ -163,6 +170,7 @@ static int sdl12_threads_load_syms(void)
 {
 	SCHISM_SDL12_SYM(CreateThread);
 	SCHISM_SDL12_SYM(WaitThread);
+	SCHISM_SDL12_SYM(ThreadID);
 
 	SCHISM_SDL12_SYM(CreateMutex);
 	SCHISM_SDL12_SYM(DestroyMutex);
@@ -199,9 +207,12 @@ const schism_threads_backend_t schism_threads_backend_sdl12 = {
 	.init = sdl12_threads_init,
 	.quit = sdl12_threads_quit,
 
+	.flags = SCHISM_THREADS_BACKEND_SUPPORTS_MUTEX | SCHISM_THREADS_BACKEND_SUPPORTS_COND,
+
 	.thread_create = sdl12_thread_create,
 	.thread_wait = sdl12_thread_wait,
 	.thread_set_priority = sdl12_thread_set_priority,
+	.thread_id = sdl12_thread_id,
 
 	.mutex_create = sdl12_mutex_create,
 	.mutex_delete = sdl12_mutex_delete,

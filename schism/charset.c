@@ -221,6 +221,22 @@ DECODE_UTF16_VARIANT(BE)
 
 #undef UTF16_DECODER
 
+/* generic ucs-2 decoder macro */
+#define DECODE_UCS2_VARIANT(x) \
+	static void ucs2##x##_to_ucs4(charset_decode_t *decoder) { \
+		DECODER_ASSERT_OVERFLOW(decoder, sizeof(uint16_t)); \
+	\
+		uint16_t wc; \
+		memcpy(&wc, decoder->in + decoder->offset, sizeof(wc)); \
+		decoder->codepoint = bswap##x##16(wc); \
+		decoder->offset += 2; \
+	}
+
+DECODE_UCS2_VARIANT(LE)
+DECODE_UCS2_VARIANT(BE)
+
+#undef UCS2_DECODER
+
 static void cp437_to_ucs4(charset_decode_t *decoder) {
 	DECODER_ASSERT_OVERFLOW(decoder, 1);
 
@@ -288,34 +304,30 @@ static void do_nothing_ucs4(charset_decode_t *decoder) {
 
 /* ----------------------------------------------------- */
 
-#define CHARSET_ENCODE_ERROR (0)
+#define CHARSET_ENCODE_ERROR (-1)
+#define CHARSET_ENCODE_SUCCESS (0)
 
-static size_t ucs4_to_utf8(uint32_t ch, unsigned char* out) {
+static int ucs4_to_utf8(uint32_t ch, disko_t* out) {
+	unsigned char out_b[4];
 	size_t len = 0;
 
-	if (out) {
-		if (ch < 0x80) {
-			out[len++] = (unsigned char)ch;
-		} else if (ch < 0x800) {
-			out[len++] = (unsigned char)((ch >> 6) | 0xC0);
-			out[len++] = (unsigned char)((ch & 0x3F) | 0x80);
-		} else if (ch < 0x10000) {
-			out[len++] = (unsigned char)((ch >> 12) | 0xE0);
-			out[len++] = (unsigned char)(((ch >> 6) & 0x3F) | 0x80);
-			out[len++] = (unsigned char)((ch & 0x3F) | 0x80);
-		} else if (ch < 0x110000) {
-			out[len++] = (unsigned char)((ch >> 18) | 0xF0);
-			out[len++] = (unsigned char)(((ch >> 12) & 0x3F) | 0x80);
-			out[len++] = (unsigned char)(((ch >> 6) & 0x3F) | 0x80);
-			out[len++] = (unsigned char)((ch & 0x3F) | 0x80);
-		} else return 0; /* ZOMG NO WAY */
-	} else {
-		if (ch < 0x80)      len += 1;
-		else if (ch < 0x800)  len += 2;
-		else if (ch < 0x10000)  len += 3;
-		else if (ch < 0x110000) len += 4;
-		else return 0;
-	}
+	if (ch < 0x80) {
+		out_b[len++] = (unsigned char)ch;
+	} else if (ch < 0x800) {
+		out_b[len++] = (unsigned char)((ch >> 6) | 0xC0);
+		out_b[len++] = (unsigned char)((ch & 0x3F) | 0x80);
+	} else if (ch < 0x10000) {
+		out_b[len++] = (unsigned char)((ch >> 12) | 0xE0);
+		out_b[len++] = (unsigned char)(((ch >> 6) & 0x3F) | 0x80);
+		out_b[len++] = (unsigned char)((ch & 0x3F) | 0x80);
+	} else if (ch < 0x110000) {
+		out_b[len++] = (unsigned char)((ch >> 18) | 0xF0);
+		out_b[len++] = (unsigned char)(((ch >> 12) & 0x3F) | 0x80);
+		out_b[len++] = (unsigned char)(((ch >> 6) & 0x3F) | 0x80);
+		out_b[len++] = (unsigned char)((ch & 0x3F) | 0x80);
+	} else return CHARSET_ENCODE_ERROR; /* ZOMG NO WAY */
+
+	disko_write(out, out_b, len);
 
 	return len;
 }
@@ -479,33 +491,32 @@ unsigned char char_unicode_to_cp437(uint32_t ch)
 	};
 }
 
-static size_t ucs4_to_cp437(uint32_t ch, unsigned char* out) {
-	if (out)
-		*out = char_unicode_to_cp437(ch);
+static int ucs4_to_cp437(uint32_t ch, disko_t* out) {
+	uint8_t out_c = char_unicode_to_cp437(ch);
 
-	return 1;
+	disko_write(out, &out_c, sizeof(out_c));
+
+	return CHARSET_ENCODE_SUCCESS;
 }
 
 #define ENCODE_UTF16_VARIANT(x) \
-	static size_t ucs4_to_utf16##x(uint32_t ch, unsigned char* out) { \
-		uint16_t *out16 = (uint16_t*)out; \
+	static int ucs4_to_utf16##x(uint32_t ch, disko_t* out) { \
+		uint16_t out_b[2]; \
 		size_t len = 0; \
 	\
-		if (out) { \
-			if (ch < 0x10000) { \
-				out16[len++] = bswap##x##16(ch); \
-			} else { \
-				uint16_t w1 = 0xD800 + ((ch - 0x10000) >> 10); \
-				uint16_t w2 = 0xDC00 + ((ch - 0x10000) & (1ul << 10)); \
+		if (ch < 0x10000) { \
+			out_b[len++] = bswap##x##16(ch); \
+		} else if (ch < 0x110000) { \
+			uint16_t w1 = 0xD800 + ((ch - 0x10000) >> 10); \
+			uint16_t w2 = 0xDC00 + ((ch - 0x10000) & (1ul << 10)); \
 	\
-				out16[len++] = bswap##x##16(w1); \
-				out16[len++] = bswap##x##16(w2); \
-			} \
-		} else { \
-			len += (ch < 0x10000) ? 1 : 2; \
-		} \
+			out_b[len++] = bswap##x##16(w1); \
+			out_b[len++] = bswap##x##16(w2); \
+		} else return CHARSET_ENCODE_ERROR; \
 	\
-		return len * 2; \
+		disko_write(out, out_b, len * 2);\
+	\
+		return CHARSET_ENCODE_SUCCESS; \
 	}
 
 ENCODE_UTF16_VARIANT(LE)
@@ -513,16 +524,29 @@ ENCODE_UTF16_VARIANT(BE)
 
 #undef ENCODE_UTF16_VARIANT
 
-static size_t ucs4_do_nothing(uint32_t ch, unsigned char* out) {
-	if (out)
-		*(uint32_t*)out = ch;
+#define ENCODE_UCS2_VARIANT(x) \
+	static int ucs4_to_ucs2##x(uint32_t ch, disko_t* out) { \
+		uint16_t ch16 = (ch < 0x10000) ? ch : 0xFFFF; \
+	\
+		disko_write(out, &ch16, 2); \
+	\
+		return CHARSET_ENCODE_SUCCESS; \
+	}
 
-	return 4;
+ENCODE_UCS2_VARIANT(LE)
+ENCODE_UCS2_VARIANT(BE)
+
+#undef ENCODE_UCS2_VARIANT
+
+static int ucs4_do_nothing(uint32_t ch, disko_t* out) {
+	disko_write(out, &ch, sizeof(ch));
+
+	return CHARSET_ENCODE_SUCCESS;
 }
 
 /* function LUT here */
 typedef void (*charset_conv_to_ucs4_func)(charset_decode_t *decoder);
-typedef size_t (*charset_conv_from_ucs4_func)(uint32_t, unsigned char*);
+typedef int (*charset_conv_from_ucs4_func)(uint32_t, disko_t*);
 
 static charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 	[CHARSET_UTF8] = utf8_to_ucs4,
@@ -530,6 +554,9 @@ static charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 	/* primarily used on Windows */
 	[CHARSET_UTF16LE] = utf16LE_to_ucs4,
 	[CHARSET_UTF16BE] = utf16BE_to_ucs4,
+
+	[CHARSET_UCS2LE] = ucs2LE_to_ucs4,
+	[CHARSET_UCS2BE] = ucs2BE_to_ucs4,
 
 	[CHARSET_UCS4] = do_nothing_ucs4,
 
@@ -553,6 +580,8 @@ static charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 	[CHARSET_UTF8] = ucs4_to_utf8,
 	[CHARSET_UTF16LE] = ucs4_to_utf16LE,
 	[CHARSET_UTF16BE] = ucs4_to_utf16BE,
+	[CHARSET_UCS2LE] = ucs4_to_ucs2LE,
+	[CHARSET_UCS2BE] = ucs4_to_ucs2BE,
 	[CHARSET_UCS4] = ucs4_do_nothing,
 
 	[CHARSET_CP437] = ucs4_to_cp437,
@@ -635,17 +664,11 @@ CHARSET_VARIATION(internal) {
 			return CHARSET_ERROR_DECODE;
 		}
 
-		size_t out_needed = conv_from_ucs4_func(decoder.codepoint, NULL);
-		if (!out_needed) {
+		int out_needed = conv_from_ucs4_func(decoder.codepoint, &ds);
+		if (out_needed < 0) {
 			disko_memclose(&ds, 0);
 			return CHARSET_ERROR_ENCODE;
 		}
-
-		unsigned char conv[out_needed];
-
-		conv_from_ucs4_func(decoder.codepoint, conv);
-
-		disko_write(&ds, conv, out_needed);
 	} while (decoder.state == DECODER_STATE_NEED_MORE);
 
 	// write a NUL terminator always

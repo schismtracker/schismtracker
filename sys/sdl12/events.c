@@ -575,13 +575,17 @@ static void sdl12_pump_events(void)
 				events_push_event(&schism_event);
 				break;
 			case SDL_BUTTON_WHEELDOWN:
-			case SDL_BUTTON_WHEELUP:
+			case SDL_BUTTON_WHEELUP: {
 				schism_event.type = SCHISM_MOUSEWHEEL;
 				schism_event.wheel.x = 0;
 				schism_event.wheel.y = (e.button.button == SDL_BUTTON_WHEELDOWN) ? -1 : 1;
-				video_get_mouse_coordinates(&schism_event.wheel.mouse_x, &schism_event.wheel.mouse_y);
+				unsigned int mx, my;
+				video_get_mouse_coordinates(&mx, &my);
+				schism_event.wheel.mouse_x = mx;
+				schism_event.wheel.mouse_y = my;
 				events_push_event(&schism_event);
 				break;
+			}
 			default:
 				break;
 			}

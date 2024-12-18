@@ -884,7 +884,7 @@ static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample_t * sa
 	int n, x, y;
 	int c;
 	song_voice_t *channel;
-	unsigned int *channel_list;
+	uint32_t *channel_list;
 
 	if (song_get_mode() == MODE_STOPPED)
 		return;

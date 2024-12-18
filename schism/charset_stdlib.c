@@ -232,6 +232,135 @@ size_t charset_strncasecmplen(const void* in1, charset_t in1set, const void* in2
 	return i;
 }
 
+int charset_strverscmp(const void *in1, charset_t in1set, const void *in2, charset_t in2set)
+{
+	/* Based off the stdlib version from freebsd */
+#define UCS4_ZERO (48)
+#define UCS4_IS_DIGIT(x) ((x) >= 48 && (x) <= 57)
+	size_t digit_count_1, digit_count_2;
+
+	charset_decode_t decoder1 = {
+		.in = (const unsigned char *)in1,
+		.offset = 0,
+		.size = SIZE_MAX,
+	};
+
+	charset_decode_t decoder2 = {
+		.in = (const unsigned char *)in2,
+		.offset = 0,
+		.size = SIZE_MAX,
+	};
+
+	for (;;) {
+		charset_decode_next(&decoder1, in1set);
+		charset_decode_next(&decoder2, in2set);
+
+		if (decoder1.state == DECODER_STATE_ERROR || decoder2.state == DECODER_STATE_ERROR)
+			return -1; // what ?
+
+		// hm
+	    if (decoder1.state == DECODER_STATE_DONE && decoder2.state == DECODER_STATE_DONE)
+	        return 0;
+
+		if (!UCS4_IS_DIGIT(decoder1.codepoint) || !isdigit(decoder2.codepoint)) {
+			if (decoder1.codepoint != decoder2.codepoint)
+				return (decoder1.codepoint - decoder2.codepoint);
+
+			continue;
+		}
+		if (decoder1.codepoint == UCS4_ZERO || decoder2.codepoint == UCS4_ZERO) {
+			/*
+			 * Treat leading zeros as if they were the fractional
+			 * part of a number, i.e. as if they had a decimal point
+			 * in front. First, count the leading zeros (more zeros
+			 * == smaller number).
+			 */
+			size_t zeros_count_1 = 0, zeros_count_2 = 0;
+
+			for (;;) {
+				charset_decode_next(&decoder1, in1set);
+				if (decoder1.state == DECODER_STATE_ERROR
+					|| decoder1.state == DECODER_STATE_DONE
+					|| decoder1.codepoint != UCS4_ZERO)
+					break;
+				zeros_count_1++;
+			}
+
+			for (;;) {
+				charset_decode_next(&decoder2, in2set);
+				if (decoder2.state == DECODER_STATE_ERROR
+					|| decoder2.state == DECODER_STATE_DONE
+					|| decoder2.codepoint != UCS4_ZERO)
+					break;
+				zeros_count_2++;
+			}
+
+			if (zeros_count_1 != zeros_count_2)
+				return (zeros_count_2 - zeros_count_1);
+
+			/* Handle the case where 0 < 09. */
+			if (!UCS4_IS_DIGIT(decoder1.codepoint) && UCS4_IS_DIGIT(decoder2.codepoint))
+				return (1);
+
+			if (!UCS4_IS_DIGIT(decoder2.codepoint) && UCS4_IS_DIGIT(decoder1.codepoint))
+				return (-1);
+		} else {
+			/*
+			 * No leading zeros; we're simply comparing two numbers.
+			 * It is necessary to first count how many digits there
+			 * are before going back to compare each digit, so that
+			 * e.g. 7 is not considered larger than 60.
+			 */
+			digit_count_1 = 0;
+			digit_count_2 = 0;
+
+			/* Count digits (more digits == larger number). */
+			for (;;) {
+				charset_decode_next(&decoder1, in1set);
+				if (decoder1.state == DECODER_STATE_ERROR
+					|| decoder1.state == DECODER_STATE_DONE
+					|| !UCS4_IS_DIGIT(decoder1.codepoint))
+					break;
+				digit_count_1++;
+			}
+
+			for (;;) {
+				charset_decode_next(&decoder2, in2set);
+				if (decoder2.state == DECODER_STATE_ERROR
+					|| decoder2.state == DECODER_STATE_DONE
+					|| !UCS4_IS_DIGIT(decoder2.codepoint))
+					break;
+				digit_count_2++;
+			}
+
+			if (digit_count_1 != digit_count_2)
+				return (digit_count_1 - digit_count_2);
+
+			/*
+			 * If there are the same number of digits, go back to
+			 * the start of the number.
+			 */
+			decoder1.offset -= digit_count_1;
+			decoder2.offset -= digit_count_2;
+		}
+
+		for (;;) {
+			charset_decode_next(&decoder1, in2set);
+			charset_decode_next(&decoder2, in2set);
+
+			if (decoder1.state == DECODER_STATE_ERROR
+				|| decoder2.state == DECODER_STATE_ERROR
+				|| !UCS4_IS_DIGIT(decoder1.codepoint)
+				|| !UCS4_IS_DIGIT(decoder2.codepoint))
+				break;
+
+			if (decoder1.codepoint != decoder2.codepoint)
+				return (decoder1.codepoint - decoder2.codepoint);
+		}
+	}
+	return (decoder1.codepoint - decoder2.codepoint);
+}
+
 /* ------------------------------------------------------- */
 /* fnmatch... */
 

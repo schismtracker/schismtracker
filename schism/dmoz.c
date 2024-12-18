@@ -52,10 +52,24 @@
 #endif
 
 #ifdef SCHISM_WIN32
-#include <windows.h>
-#include <winbase.h>
-#include <shlobj.h>
-#include <direct.h>
+# include <windows.h>
+# include <winbase.h>
+# include <shlobj.h>
+# include <direct.h>
+#elif defined(SCHISM_MACOS)
+# include <Files.h>
+# include <TextUtils.h>
+# include <Gestalt.h>
+# include <TextEncodingConverter.h>
+# include <Multiprocessing.h>
+# include <DriverSynchronization.h>
+# include <DriverServices.h>
+# include <CFString.h>
+# include <URLAccess.h>
+# include <Folders.h>
+# include "macos-dirent.h"
+#else
+# include <dirent.h>
 #endif
 
 #ifdef SCHISM_WII
@@ -81,6 +95,10 @@ static const char *devices[] = {
 # define FALLBACK_DIR "isfs:/" // always exists, seldom useful
 #elif defined(SCHISM_WIIU)
 # define FALLBACK_DIR "fs:/" // useless but "valid"
+#elif defined(SCHISM_MACOS)
+// resolves to the current working directory.
+// fairly useless but "always" exists ;)
+# define FALLBACK_DIR ":"
 #else /* POSIX? */
 # define FALLBACK_DIR "/"
 #endif
@@ -254,6 +272,183 @@ void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl
 /* --------------------------------------------------------------------------------------------------------- */
 /* get info about paths */
 
+#ifdef SCHISM_MACOS
+/* Okay this is a bit dumb:
+ *
+ * Classic Mac OS's standard file API doesn't take in paths.
+ * This is similar to the way the Wii U's filesystem API works,
+ * and both suck and should be killed with fire.
+ *
+ * unfortunately, unlike the Wii U, there is no compatibility
+ * layer provided by the standard library we're using, which
+ * means we have to do all of this stupid conversion ourselves...
+ *
+ *  - paper */
+int dmoz_path_from_fsspec(const void *pvref, char **path)
+{
+	OSErr err = noErr;
+	FSSpec spec = *(const FSSpec *)pvref;
+
+	// just dynamically allocate, whatever
+	*path = mem_calloc(1, sizeof(char));
+
+	// the length of path INCLUDING the nul terminator
+	size_t path_len = 1;
+
+	short index = 0;
+	do {
+		CInfoPBRec cinfo;
+		cinfo.dirInfo.ioNamePtr = spec.name;
+		cinfo.dirInfo.ioVRefNum = spec.vRefNum;
+		cinfo.dirInfo.ioFDirIndex = index;
+		cinfo.dirInfo.ioDrDirID = spec.parID;
+		err = PBGetCatInfoSync(&cinfo);
+		
+		if (err == noErr) {
+			unsigned char name_len = spec.name[0];
+
+			// reallocate and move existing data
+			*path = mem_realloc(*path, path_len + name_len + 1);
+			memmove(*path + name_len + 1, *path, path_len);
+			path_len += name_len + 1;
+
+			// copy to the start of the buffer
+			memcpy(*path + 1, &spec.name[1], name_len);
+			(*path)[0] = ':';
+
+			// from here on out, ignore the input file name
+			index = -1;
+			
+			// move up to the parent
+			spec.parID = cinfo.dirInfo.ioDrParID;
+		}
+	} while (err == noErr && spec.parID != fsRtParID);
+
+	// remove the preceding colon
+	memmove(*path, *path + 1, --path_len);
+
+	// paranoia...
+	(*path)[path_len] = '\0';
+
+	// we're done here
+	return 0;
+}
+
+int dmoz_path_to_fsspec(const char *path, void *pvref)
+{
+	OSErr err = noErr;
+	FSSpec spec = *(const FSSpec *)pvref;
+	Str255 name; // Must be long enough for a partial pathname consisting of two segments (64 bytes)
+	
+	const char* p = path;
+	const char* pEnd;
+	size_t segLen;
+	// Find the end of the path segment
+	for (pEnd = ++p; *pEnd && *pEnd != ':'; ++pEnd);
+	segLen = pEnd - p;
+	
+	// Try to find a volume that matches this name
+	for (ItemCount volIndex = 1; err == noErr; ++volIndex)
+	{
+		FSVolumeRefNum volRefNum;
+		HParamBlockRec hfsParams;
+		name[0] = 0;
+		hfsParams.volumeParam.ioNamePtr  = name;
+		hfsParams.volumeParam.ioVRefNum  = 0;
+		hfsParams.volumeParam.ioVolIndex = volIndex;
+		err = PBHGetVInfoSync(&hfsParams);
+		volRefNum = hfsParams.volumeParam.ioVRefNum;
+	
+		// Compare against our path segment
+		if (err == noErr && segLen == StrLength(name)) {
+			// FIXME FIXME READ ALL ABOUT IT:
+			// HFS paths are not in codepage 437. The only reason it's like this here
+			// is because we need a simple mostly-ASCII-compatible 8-bit fixed width
+			// encoding, which codepage 437 just happens to be.
+
+			if (!charset_strncasecmp(&name[1], CHARSET_CP437, path, CHARSET_UTF8, name[0])) {
+				// we found our volume: fill in the spec
+				os_show_message_box("found a matching volume!", (const char []){ volIndex + '0', '\0' });
+				err = FSMakeFSSpec(volRefNum, fsRtDirID, NULL, &spec);
+				break;
+			}
+		}
+	}
+	
+	p = pEnd;
+	
+	// okay, now we have the root directory.
+	// NOW, we have to parse the rest of the path.
+	// I have no idea if '.' or '..' are actual real filenames on Mac OS.
+	while (err == noErr && *p) {
+		switch (*p) {
+		case ':': // skip any path separators
+			++p;
+			break;
+	
+		case '.': // "current directory" or "parent directory"
+			if (p[1] == '/' || p[1] == 0) { // "current directory"
+				++p;
+				break;
+			} else if (p[1] == '.' && (p[2] == '/' || p[2] == '\0')) { // "parent directory"
+				p += 2;  // Get the parent of our parent
+
+				CInfoPBRec catInfo;
+				catInfo.dirInfo.ioNamePtr = NULL;
+				catInfo.dirInfo.ioVRefNum = spec.vRefNum;
+				catInfo.dirInfo.ioFDirIndex = -1;
+				catInfo.dirInfo.ioDrDirID = spec.parID;
+				err = PBGetCatInfoSync(&catInfo);
+
+				// Check that we didn't go too far
+				if (err != noErr || catInfo.dirInfo.ioDrParID == fsRtParID)
+					return false;
+
+				// update the FSSpec
+				if (err == noErr)
+					err = FSMakeFSSpec(spec.vRefNum, catInfo.dirInfo.ioDrDirID, NULL, &spec);
+
+				break;
+			}
+			// fallthrough and treat as a regular segment
+		default: {
+			// Find the end of the path segment
+			for (pEnd = p; *pEnd && *pEnd != ':'; ++pEnd) ;
+			segLen = pEnd - p;
+
+			// Check for name length overflow (XXX: what is this magic constant)
+			if (segLen > 31)
+					return 0;
+
+			// Make a partial pathname from our current spec to the new object
+			unsigned char *partial = &name[1];
+
+			// Partial filename leads with :
+			*partial++ = ':';
+			const unsigned char *specName = spec.name; // Copy in spec name
+			for (int cnt = *specName++; cnt > 0; --cnt) // vulgarities in my for loop
+					*partial++ = *specName++;
+
+			*partial++ = ':'; // Separator
+			while (p != pEnd)
+					*partial++ = *p++; // copy in the new element
+			  
+			name[0] = partial - &name[1];   // Set the name length
+
+			// Update the spec
+			err = FSMakeFSSpec(spec.vRefNum, spec.parID, name, &spec);
+			break;
+		}
+		}
+	}
+	
+	// copy the result
+	memcpy(pvref, &spec, sizeof(spec));
+	
+	return err == noErr;
+}
+#endif
+
 const char *dmoz_path_get_basename(const char *filename)
 {
 	const char *base = strrchr(filename, DIR_SEPARATOR);
@@ -299,15 +494,15 @@ char *dmoz_path_get_parent_directory(const char *dirname)
 	const char* root = strchr(dirname, DIR_SEPARATOR);
 	if (!root)
 		return NULL;
-    root++;
+	root++;
 
 	/* okay, now we need to find the final token */
 	const char* pos = root + strlen(root) - 1;
-	if (*pos == DIR_SEPARATOR) /* strip off an excess separator, if any */
+	if (IS_DIR_SEPARATOR(*pos)) /* strip off an excess separator, if any */
 		pos--;
 
 	while (--pos > root) {
-		if (*pos == DIR_SEPARATOR)
+		if (IS_DIR_SEPARATOR(*pos))
 			break;
 	}
 
@@ -532,7 +727,16 @@ static BOOL (WINAPI *WIN32_SHGetSpecialFolderPathW)(HWND  hwnd, LPWSTR pszPath, 
 
 char *dmoz_get_current_directory(void)
 {
-#if defined(SCHISM_WIN32)
+#ifdef SCHISM_MACOS
+	FSSpec spec;
+
+	if (FSMakeFSSpec(0, 0, NULL, &spec) == noErr) {
+		char *path;
+		if (dmoz_path_from_fsspec(&spec, &path))
+			return path;
+	}
+#else
+# ifdef SCHISM_WIN32
 	{
 		wchar_t buf[PATH_MAX + 1] = {L'\0'};
 		char *buf_utf8 = NULL;
@@ -540,12 +744,13 @@ char *dmoz_get_current_directory(void)
 		if (_wgetcwd(buf, PATH_MAX) && !charset_iconv(buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
 			return buf_utf8;
 	}
-#endif
+# endif
 
 	char buf[PATH_MAX + 1] = {'\0'};
 
 	if (getcwd(buf, PATH_MAX))
 		return str_dup(buf);
+#endif
 
 	return str_dup(".");
 }
@@ -676,6 +881,19 @@ char *dmoz_get_home_directory(void)
 	char *ptr = DMOZ_GET_WIN32_DIRECTORY(CSIDL_PERSONAL, "Personal", "USERPROFILE");
 	if (ptr)
 		return ptr;
+#elif defined(SCHISM_MACOS)
+	{
+		FSSpec spec;
+		short vrefnum;
+		long dir_id;
+
+		if (FindFolder(0, kPreferencesFolderType, 1, &vrefnum, &dir_id) == noErr
+			&& FSMakeFSSpec(vrefnum, dir_id, NULL, &spec) == noErr) {
+			char *path;
+			if (dmoz_path_from_fsspec(&spec, &path))
+				return path;
+		}
+	}
 #else
 	char *ptr = getenv("HOME");
 	if (ptr)
@@ -701,6 +919,19 @@ char *dmoz_get_dot_directory(void)
 		return ptr;
 
 	// else fall back to home (mesopotamian era windows I guess)
+#elif defined(SCHISM_MACOS)
+	FSSpec spec;
+	short vrefnum;
+	long dir_id;
+
+	if (FindFolder(0, kApplicationSupportFolderType, 1, &vrefnum, &dir_id) == noErr
+		&& FSMakeFSSpec(vrefnum, dir_id, NULL, &spec) == noErr) {
+		char *path;
+		if (dmoz_path_from_fsspec(&spec, &path))
+			return path;
+	}
+
+	// fall back to home
 #endif
 	return dmoz_get_home_directory();
 }
@@ -713,7 +944,7 @@ char *dmoz_get_exe_directory(void)
 			return path;
 	}
 
-	// unknown
+	// unknown, don't care
 	return NULL;
 }
 
@@ -732,12 +963,13 @@ char *dmoz_path_normal(const char *path)
 	char stub_char;
 	char *result, *p, *q, *base, *dotdot;
 	int rooted;
+	int count;
 
 	/* The result cannot be larger than the input PATH. */
 	result = strdup(path);
 
-	rooted = dmoz_path_is_absolute(path);
-	base = result + rooted;
+	rooted = dmoz_path_is_absolute(path, &count);
+	base = result + (rooted ? count : 0);
 	stub_char = rooted ? DIR_SEPARATOR : '.';
 
 #ifdef SCHISM_WIN32
@@ -796,29 +1028,49 @@ char *dmoz_path_normal(const char *path)
 	return result;
 }
 
-int dmoz_path_is_absolute(const char *path)
+// count is only meaningful if this function returns 1.
+// otherwise, the value should be discarded.
+int dmoz_path_is_absolute(const char *path, int *count)
 {
 	if (!path || !*path)
 		return 0;
+
 #if defined(SCHISM_WIN32)
-	if (isalpha(path[0]) && path[1] == ':')
-		return IS_DIR_SEPARATOR(path[2]) ? 3 : 2;
+	if (isalpha(path[0]) && path[1] == ':') {
+		if (count) *count = IS_DIR_SEPARATOR(path[2]) ? 3 : 2;
+		return 1;
+	}
 #elif defined(__amigaos4__)
 	/* Entirely a guess -- could some fine Amiga user please tell me if this is right or not? */
 	char *colon = strchr(path, ':'), *slash = strchr(path, '/');
-	if (colon && (colon < slash || (colon && !slash && colon[1] == '\0')))
-		return colon - path + 1;
+	if (colon && (colon < slash || (colon && !slash && colon[1] == '\0'))) {
+		if (count) *count = colon - path + 1;
+		return !!count;
+	}
 #elif defined(SCHISM_WII) || defined(SCHISM_WIIU)
 	char *colon = strchr(path, ':'), *slash = strchr(path, '/');
-	if (colon + 1 == slash)
-		return slash - path + 1;
+	if (colon + 1 == slash) {
+		if (count) *count = slash - path + 1
+		return !!count;
+	}
+#elif defined(SCHISM_MACOS)
+	/* From Apple's documentation:
+	 *   A leading colon indicates a relative path, otherwise
+	 *   the first path component denotes the volume. */
+	if (IS_DIR_SEPARATOR(path[0]))
+		return 0;
+
+	if (count) *count = 0;
+	return 1;
 #endif
 	/* presumably, /foo (or \foo) is an absolute path on all platforms */
 	if (!IS_DIR_SEPARATOR(path[0]))
 		return 0;
+
 	/* POSIX says to allow two leading slashes, but not more.
-	(This also catches win32 \\share\blah\blah semantics) */
-	return (IS_DIR_SEPARATOR(path[1]) && !IS_DIR_SEPARATOR(path[2])) ? 2 : 1;
+	 * (This also catches win32 \\share\blah\blah semantics) */
+	if (count) *count = ((IS_DIR_SEPARATOR(path[1]) && !IS_DIR_SEPARATOR(path[2])) ? 2 : 1);
+	return 1;
 }
 
 
@@ -832,10 +1084,12 @@ char *dmoz_path_concat(const char *a, const char *b)
 char *dmoz_path_concat_len(const char *a, const char *b, int alen, int blen)
 {
 	char *ret, *p;
-	if (dmoz_path_is_absolute(b))
-		return strdup(b);
+	if (dmoz_path_is_absolute(b, NULL))
+		return str_dup(b);
 
-	p = ret = mem_alloc(alen + blen + 2);
+	// allocates enough space for a, b, a separator, and a NUL terminator
+	// (the terminator is included with ARRAY_SIZE(literal))
+	p = ret = mem_alloc(alen + blen + ARRAY_SIZE(DIR_SEPARATOR_STR));
 
 	if (alen) {
 		char last = a[alen - 1];
@@ -845,12 +1099,10 @@ char *dmoz_path_concat_len(const char *a, const char *b, int alen, int blen)
 
 		/* need a slash? */
 #if defined(__amigaos4__)
-		if (last != ':' && last != '/') {
-			memcpy(p, "/");
-			p++;
-		}
+		if (last != ':' && last != '/')
+			*(p++) = '/';
 #else
-		if (last != DIR_SEPARATOR) {
+		if (!IS_DIR_SEPARATOR(last)) {
 			memcpy(ret + alen, DIR_SEPARATOR_STR, ARRAY_SIZE(DIR_SEPARATOR_STR) - 1);
 			p += ARRAY_SIZE(DIR_SEPARATOR_STR) - 1;
 		}
@@ -1095,16 +1347,7 @@ void dmoz_add_file_or_dir(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 	}
 _DEF_CMP_CHARSET(strcmp)
 _DEF_CMP_CHARSET(strcasecmp)
-#if HAVE_STRVERSCMP
-static int dmoz_fcmp_strverscmp(const dmoz_file_t *a, const dmoz_file_t *b)
-{
-	return strverscmp(a->base, b->base);
-}
-static int dmoz_dcmp_strverscmp(const dmoz_dir_t *a, const dmoz_dir_t *b)
-{
-	return strverscmp(a->base, b->base);
-}
-#endif
+_DEF_CMP_CHARSET(strverscmp)
 
 /* timestamp only works for files, so can't macro-def it */
 static int dmoz_fcmp_timestamp(const dmoz_file_t *a, const dmoz_file_t *b)
@@ -1200,7 +1443,7 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 					memcpy(pString, pTemp + 1, pTemp[0]);
 					pString[pTemp[0]] = '\0';
 					dmoz_add_file_or_dir(flist, dlist, pString, str_dup(pString),
-							     NULL, order++);
+								 NULL, order++);
 				}
 			}
 		}
@@ -1227,8 +1470,28 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 		closedir(dir);
 		dmoz_add_file_or_dir(flist, dlist, str_dup(devices[i]), str_dup(devices[i]), NULL, -(1024 - i));
 	}
+#elif defined(SCHISM_MACOS)
+	for (ItemCount index = 1; ; index++) {
+		unsigned char ppath[256];
+		ppath[0] = 0;
+
+		HParamBlockRec hfsParams = {
+			.volumeParam = {
+				.ioNamePtr = ppath,
+				.ioVRefNum = 0,
+				.ioVolIndex = index,
+			},
+		};
+
+		OSErr err = PBHGetVInfoSync(&hfsParams);
+		if (err != noErr)
+			break;
+	
+		// FIXME: Need conversion to & from UTF-8
+		dmoz_add_file_or_dir(flist, dlist, strn_dup(&ppath[1], ppath[0]), strn_dup(&ppath[1], ppath[0]), NULL, -(1024 - index + 1));
+	}
 #else /* assume POSIX */
-/*      char *home;
+/*	char *home;
 	home = get_home_directory();*/
 	dmoz_add_file_or_dir(flist, dlist, str_dup("/"), str_dup("/"), NULL, -1024);
 /*      dmoz_add_file_or_dir(flist, dlist, home, str_dup("~"), NULL, -5); */
@@ -1241,12 +1504,6 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
-
-#if defined(SCHISM_WIN32)
-# define FAILSAFE_PATH "C:\\" /* hopefully! */
-#else
-# define FAILSAFE_PATH "/"
-#endif
 
 /* on success, this will fill the lists and return 0. if something goes
 wrong, it adds a 'stub' entry for the root directory, and returns -1. */
@@ -1270,6 +1527,8 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 
 		attrib = GetFileAttributesA(path_a);
 	}
+
+	const size_t pathlen = strlen(path);
 
 	if (attrib & FILE_ATTRIBUTE_DIRECTORY) {
 		WIN32_FIND_DATAA ffda;
@@ -1313,7 +1572,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 					file_attrib = ffdw.dwFileAttributes;
 					if (charset_iconv(ffdw.cFileName, &filename, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(ffdw.cFileName)))
 						continue;
-					fullpath = dmoz_path_concat_len(path, filename, strlen(path), strlen(filename));
+					fullpath = dmoz_path_concat_len(path, filename, pathlen, strlen(filename));
 				} else {
 					break;
 				}
@@ -1323,7 +1582,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 					file_attrib = ffda.dwFileAttributes;
 					if (charset_iconv(ffda.cFileName, &filename, CHARSET_ANSI, CHARSET_UTF8, sizeof(ffda.cFileName)))
 						continue;
-					fullpath = dmoz_path_concat_len(path, filename, strlen(path), strlen(filename));
+					fullpath = dmoz_path_concat_len(path, filename, pathlen, strlen(filename));
 				} else {
 					// ...
 					break;
@@ -1388,7 +1647,8 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 	int pathlen, namlen, lib = 0, err = 0;
 
 	if (!path || !*path)
-		path = FAILSAFE_PATH;
+		path = "/";
+
 	pathlen = strlen(path);
 
 #ifdef SCHISM_WII /* and Wii U maybe? */
@@ -1406,7 +1666,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 	dir = opendir(path);
 	if (dir) {
 		while ((ent = readdir(dir)) != NULL) {
-			namlen = _D_EXACT_NAMLEN(ent);
+			namlen = strlen(ent->d_name);
 			/* ignore hidden/backup files (TODO: make this code more portable;
 			some OSes have different ideas of whether a file is hidden) */
 

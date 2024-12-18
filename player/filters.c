@@ -68,10 +68,10 @@ static const float resonance_table[128] = {
 // XXX freq WAS unused but is now mix_frequency!
 //
 #define FREQ_PARAM_MULT (128.0 / (24.0 * 256.0))
-void setup_channel_filter(song_voice_t *chan, int reset, int flt_modifier, int freq)
+void setup_channel_filter(song_voice_t *chan, int32_t reset, int32_t flt_modifier, int32_t freq)
 {
-	int cutoff = chan->cutoff;
-	int resonance = chan->resonance;
+	int32_t cutoff = chan->cutoff;
+	int32_t resonance = chan->resonance;
 	float frequency, r, d, e, fg, fb0, fb1;
 
 	cutoff = cutoff * (flt_modifier + 256) / 256;

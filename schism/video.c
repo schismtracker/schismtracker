@@ -285,14 +285,14 @@ void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 {
 	unsigned char cv32backing[NATIVE_SCREEN_WIDTH * 8];
 
-	unsigned int *csp, *esp, *dp;
+	uint32_t *csp, *esp, *dp;
 	unsigned int c00, c01, c10, c11;
 	unsigned int outr, outg, outb;
 	unsigned int pad;
 	int fixedx, fixedy, scalex, scaley;
 	unsigned int y, x,ey,ex,t1,t2;
-	unsigned int mouseline[80];
-	unsigned int mouseline_mask[80];
+	uint32_t mouseline[80];
+	uint32_t mouseline_mask[80];
 	unsigned int mouseline_x, mouseline_v;
 	int iny, lasty;
 
@@ -302,7 +302,7 @@ void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 	mouseline_x = (mouse_x / 8);
 	mouseline_v = (mouse_x % 8);
 
-	csp = (unsigned int *)cv32backing;
+	csp = (uint32_t *)cv32backing;
 	esp = csp + NATIVE_SCREEN_WIDTH;
 	lasty = -2;
 	iny = 0;
@@ -458,8 +458,8 @@ void video_blitYY(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
 
 	unsigned int mouseline_x = (mouse_x / 8);
 	unsigned int mouseline_v = (mouse_x % 8);
-	unsigned int mouseline[80];
-	unsigned int mouseline_mask[80];
+	uint32_t mouseline[80];
+	uint32_t mouseline_mask[80];
 	int y;
 
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
@@ -480,8 +480,8 @@ void video_blitUV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
 
 	const unsigned int mouseline_x = (mouse_x / 8);
 	const unsigned int mouseline_v = (mouse_x % 8);
-	unsigned int mouseline[80];
-	unsigned int mouseline_mask[80];
+	uint32_t mouseline[80];
+	uint32_t mouseline_mask[80];
 
 	int y;
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
@@ -499,8 +499,8 @@ void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
 	const unsigned int mouseline_x = (mouse_x / 8);
 	const unsigned int mouseline_v = (mouse_x % 8);
 	unsigned char cv8backing[NATIVE_SCREEN_WIDTH];
-	unsigned int mouseline[80];
-	unsigned int mouseline_mask[80];
+	uint32_t mouseline[80];
+	uint32_t mouseline_mask[80];
 	int y, x;
 
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y += 2) {

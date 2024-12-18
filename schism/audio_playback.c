@@ -80,7 +80,7 @@ static unsigned int audio_sample_size;
 static int audio_buffers_per_second = 0;
 static int audio_writeout_count = 0;
 
-struct audio_settings audio_settings;
+struct audio_settings audio_settings = {0};
 
 static void _schism_midi_out_note(int chan, const song_note_t *m);
 static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, unsigned int delay);

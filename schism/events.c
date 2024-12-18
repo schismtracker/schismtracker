@@ -98,8 +98,10 @@ int events_init(void)
 		}
 	}
 
-	if (!events_backend)
+	if (!events_backend) {
+		os_show_message_box("ugh", "failed to initialize a backend somehow...");
 		return 0;
+	}
 
 	if (cfg_kbd_repeat_delay && cfg_kbd_repeat_rate) {
 		// Override everything.
@@ -118,8 +120,10 @@ int events_init(void)
 	}
 
 	queue_mutex = mt_mutex_create();
-	if (!queue_mutex)
+	if (!queue_mutex) {
+		os_show_message_box("Critical error!", "Failed to create event queue mutex...");
 		return 0;
+	}
 
 	return 1;
 }

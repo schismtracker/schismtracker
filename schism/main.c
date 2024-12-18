@@ -91,11 +91,6 @@ static int did_classic = 0;
 
 #define SDL_INIT_FLAGS SDL_INIT_TIMER | SDL_INIT_VIDEO
 
-static void display_init(void)
-{
-	video_startup();
-}
-
 static void check_update(void);
 
 void toggle_display_fullscreen(void)
@@ -910,12 +905,6 @@ int schism_main(int argc, char** argv)
 	log_append2(0, 3, 0, schism_banner(0));
 	log_nl();
 
-	if (!dmoz_init()) {
-		log_appendf(4, "Failed to initialize a filesystem backend!");
-		log_appendf(4, "Portable mode will not work properly!");
-		log_nl();
-	}
-
 	if (!timer_init()) {
 		os_show_message_box("Critical error!", "Failed to initialize a timers backend!");
 		return 1;
@@ -933,9 +922,6 @@ int schism_main(int argc, char** argv)
 	}
 #endif
 
-	song_initialise();
-	cfg_load();
-
 	if (!events_init()) {
 		os_show_message_box("Critical error!", "Failed to initialize an events backend!");
 		return 1;
@@ -946,6 +932,17 @@ int schism_main(int argc, char** argv)
 		log_appendf(4, "Copying to the system clipboard will not work properly!");
 		log_nl();
 	}
+
+	if (!dmoz_init()) {
+		log_appendf(4, "Failed to initialize a filesystem backend!");
+		log_appendf(4, "Portable mode will not work properly!");
+		log_nl();
+	}
+
+	log_nl();
+
+	song_initialise();
+	cfg_load();
 
 	log_nl();
 
@@ -960,7 +957,7 @@ int schism_main(int argc, char** argv)
 	shutdown_process |= EXIT_SAVECFG;
 	shutdown_process |= EXIT_SDLQUIT;
 
-	display_init();
+	video_startup();
 	if (want_fullscreen >= 0)
 		video_fullscreen(want_fullscreen);
 
@@ -1126,7 +1123,7 @@ have_utf8_args: ;
 	return 0;
 }
 #elif defined(SCHISM_MACOSX)
-// handled in its own file
+// sys/macosx/macosx-sdlmain.m
 #else
 int main(int argc, char **argv)
 {

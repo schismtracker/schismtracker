@@ -112,14 +112,14 @@ static void Fmdrv_Outportb(unsigned port, unsigned value)
 }
 
 
-static unsigned char Fmdrv_Inportb(unsigned port)
+static unsigned char Fmdrv_Inportb(uint32_t port)
 {
 	return (((int) port) >= oplbase &&
 		((int) port) < oplbase + 4) ? oplretval : 0;
 }
 
 
-void Fmdrv_Init(int mixfreq)
+void Fmdrv_Init(int32_t mixfreq)
 {
 	if (opl != NULL) {
 		OPLCloseChip(opl);
@@ -131,7 +131,7 @@ void Fmdrv_Init(int mixfreq)
 }
 
 
-void Fmdrv_MixTo(int *target, int count)
+void Fmdrv_MixTo(int32_t *target, uint32_t count)
 {
 	if (!fm_active)
 		return;

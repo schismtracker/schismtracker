@@ -16,37 +16,37 @@ Revision History:
  - thanks to Olivier Galibert and Chris Hardy for YMF262 and YAC512 chips
  - thanks to Stiletto for the datasheets
 
-   Features as listed in 4MF262A6 data sheet:
-    1. Registers are compatible with YM3812 (OPL2) FM sound source.
-    2. Up to six sounds can be used as four-operator melody sounds for variety.
-    3. 18 simultaneous melody sounds, or 15 melody sounds with 5 rhythm sounds (with two operators).
-    4. 6 four-operator melody sounds and 6 two-operator melody sounds, or 6 four-operator melody
-       sounds, 3 two-operator melody sounds and 5 rhythm sounds (with four operators).
-    5. 8 selectable waveforms.
-    6. 4-channel sound output.
-    7. YMF262 compabile DAC (YAC512) is available.
-    8. LFO for vibrato and tremolo effedts.
-    9. 2 programable timers.
-   10. Shorter register access time compared with YM3812.
-   11. 5V single supply silicon gate CMOS process.
-   12. 24 Pin SOP Package (YMF262-M), 48 Pin SQFP Package (YMF262-S).
+	 Features as listed in 4MF262A6 data sheet:
+		1. Registers are compatible with YM3812 (OPL2) FM sound source.
+		2. Up to six sounds can be used as four-operator melody sounds for variety.
+		3. 18 simultaneous melody sounds, or 15 melody sounds with 5 rhythm sounds (with two operators).
+		4. 6 four-operator melody sounds and 6 two-operator melody sounds, or 6 four-operator melody
+			 sounds, 3 two-operator melody sounds and 5 rhythm sounds (with four operators).
+		5. 8 selectable waveforms.
+		6. 4-channel sound output.
+		7. YMF262 compabile DAC (YAC512) is available.
+		8. LFO for vibrato and tremolo effedts.
+		9. 2 programable timers.
+	 10. Shorter register access time compared with YM3812.
+	 11. 5V single supply silicon gate CMOS process.
+	 12. 24 Pin SOP Package (YMF262-M), 48 Pin SQFP Package (YMF262-S).
 
 
 differences between OPL2 and OPL3 not documented in Yamaha datahasheets:
 - sinus table is a little different: the negative part is off by one...
 
 - in order to enable selection of four different waveforms on OPL2
-  one must set bit 5 in register 0x01(test).
-  on OPL3 this bit is ignored and 4-waveform select works *always*.
-  (Don't confuse this with OPL3's 8-waveform select.)
+	one must set bit 5 in register 0x01(test).
+	on OPL3 this bit is ignored and 4-waveform select works *always*.
+	(Don't confuse this with OPL3's 8-waveform select.)
 
 - Envelope Generator: all 15 x rates take zero time on OPL3
-  (on OPL2 15 0 and 15 1 rates take some time while 15 2 and 15 3 rates
-  take zero time)
+	(on OPL2 15 0 and 15 1 rates take some time while 15 2 and 15 3 rates
+	take zero time)
 
 - channel calculations: output of operator 1 is in perfect sync with
-  output of operator 2 on OPL3; on OPL and OPL2 output of operator 1
-  is always delayed by one sample compared to output of operator 2
+	output of operator 2 on OPL3; on OPL and OPL2 output of operator 1
+	is always delayed by one sample compared to output of operator 2
 
 
 differences between OPL2 and OPL3 shown in datasheets:
@@ -175,14 +175,14 @@ typedef struct
 	uint8_t   kcode;      /* key code (for key scaling)   */
 
 	/*
-	   there are 12 2-operator channels which can be combined in pairs
-	   to form six 4-operator channel, they are:
-	    0 and 3,
-	    1 and 4,
-	    2 and 5,
-	    9 and 12,
-	    10 and 13,
-	    11 and 14
+		 there are 12 2-operator channels which can be combined in pairs
+		 to form six 4-operator channel, they are:
+			0 and 3,
+			1 and 4,
+			2 and 5,
+			9 and 12,
+			10 and 13,
+			11 and 14
 	*/
 	uint8_t   extended;   /* set to 1 if this channel forms up a 4op channel with another channel(only used by first of pair of channels, ie 0,1,2 and 9,10,11) */
 
@@ -198,9 +198,9 @@ typedef struct
 	uint32_t  pan[18*4];              /* channels output masks (0xffffffff = enable); 4 masks per one channel */
 	uint32_t  pan_ctrl_value[18];     /* output control values 1 per one channel (1 value contains 4 masks) */
 
-	signed int chanout[18];
-	signed int phase_modulation;        /* phase modulation input (SLOT 2) */
-	signed int phase_modulation2;   /* phase modulation input (SLOT 3 in 4 operator channels) */
+	int32_t chanout[18];
+	int32_t phase_modulation;        /* phase modulation input (SLOT 2) */
+	int32_t phase_modulation2;   /* phase modulation input (SLOT 3 in 4 operator channels) */
 
 	uint32_t  eg_cnt;                 /* global envelope generator counter    */
 	uint32_t  eg_timer;               /* global envelope generator counter works at frequency = chipclock/288 (288=8*36) */
@@ -246,8 +246,8 @@ typedef struct
 	void *UpdateParam;              /* stream update parameter      */
 
 	uint8_t type;                     /* chip type                    */
-	int clock;                      /* master clock  (Hz)           */
-	int rate;                       /* sampling rate (Hz)           */
+	uint32_t clock;                   /* master clock  (Hz)           */
+	uint32_t rate;                    /* sampling rate (Hz)           */
 	double freqbase;                /* frequency base               */
 	double TimerBase;         /* Timer base time (==sampling time)*/
 } OPL3;
@@ -461,16 +461,16 @@ static unsigned int sin_tab[SIN_LEN * 8];
 
 
 /* LFO Amplitude Modulation table (verified on real YM3812)
-   27 output levels (triangle waveform); 1 level takes one of: 192, 256 or 448 samples
+	 27 output levels (triangle waveform); 1 level takes one of: 192, 256 or 448 samples
 
-   Length: 210 elements.
+	 Length: 210 elements.
 
-    Each of the elements has to be repeated
-    exactly 64 times (on 64 consecutive samples).
-    The whole table takes: 64 * 210 = 13440 samples.
+		Each of the elements has to be repeated
+		exactly 64 times (on 64 consecutive samples).
+		The whole table takes: 64 * 210 = 13440 samples.
 
-    When AM = 1 data is used directly
-    When AM = 0 data is divided by 4 before being used (losing precision is important)
+		When AM = 1 data is used directly
+		When AM = 0 data is divided by 4 before being used (losing precision is important)
 */
 
 #define LFO_AM_TAB_ELEMENTS 210
@@ -806,11 +806,11 @@ static inline void advance(OPL3 *chip)
 		*/
 
 		/*
-		    Instead of doing all the logic operations above, we
-		    use a trick here (and use bit 0 as the noise output).
-		    The difference is only that the noise bit changes one
-		    step ahead. This doesn't matter since we don't know
-		    what is real state of the noise_rng after the reset.
+				Instead of doing all the logic operations above, we
+				use a trick here (and use bit 0 as the noise output).
+				The difference is only that the noise bit changes one
+				step ahead. This doesn't matter since we don't know
+				what is real state of the noise_rng after the reset.
 		*/
 
 		if (chip->noise_rng & 1) chip->noise_rng ^= 0x800302;
@@ -905,9 +905,9 @@ static inline void chan_calc_ext( OPL3 *chip, OPL3_CH *CH )
 }
 
 /*
-    operators used in the rhythm sounds generation process:
+		operators used in the rhythm sounds generation process:
 
-    Envelope Generator:
+		Envelope Generator:
 
 channel  operator  register number   Bass  High  Snare Tom  Top
 / slot   number    TL ARDR SLRR Wave Drum  Hat   Drum  Tom  Cymbal
@@ -918,7 +918,7 @@ channel  operator  register number   Bass  High  Snare Tom  Top
  8 / 0   14        52  72   92   f2                    +
  8 / 1   17        55  75   95   f5                          +
 
-    Phase Generator:
+		Phase Generator:
 
 channel  operator  register number   Bass  High  Snare Tom  Top
 / slot   number    MULTIPLE          Drum  Hat   Drum  Tom  Cymbal
@@ -931,29 +931,29 @@ channel  operator  register number   Bass  High  Snare Tom  Top
 
 channel  operator  register number   Bass  High  Snare Tom  Top
 number   number    BLK/FNUM2 FNUM    Drum  Hat   Drum  Tom  Cymbal
-   6     12,15     B6        A6      +
+	 6     12,15     B6        A6      +
 
-   7     13,16     B7        A7            +     +           +
+	 7     13,16     B7        A7            +     +           +
 
-   8     14,17     B8        A8            +           +     +
+	 8     14,17     B8        A8            +           +     +
 
 */
 
 /* calculate rhythm */
 
-static inline void chan_calc_rhythm( OPL3 *chip, OPL3_CH *CH, unsigned int noise )
+static inline void chan_calc_rhythm( OPL3 *chip, OPL3_CH *CH, uint32_t noise )
 {
 	OPL3_SLOT *SLOT;
-	signed int *chanout = chip->chanout;
-	signed int out;
-	unsigned int env;
+	int32_t *chanout = chip->chanout;
+	int32_t out;
+	uint32_t env;
 
 
 	/* Bass Drum (verified on real YM3812):
-	  - depends on the channel 6 'connect' register:
-	      when connect = 0 it works the same as in normal (non-rhythm) mode (op1->op2->out)
-	      when connect = 1 _only_ operator 2 is present on output (op2->out), operator 1 is ignored
-	  - output sample always is multiplied by 2
+		- depends on the channel 6 'connect' register:
+				when connect = 0 it works the same as in normal (non-rhythm) mode (op1->op2->out)
+				when connect = 1 _only_ operator 2 is present on output (op2->out), operator 1 is ignored
+		- output sample always is multiplied by 2
 	*/
 
 	chip->phase_modulation = 0;
@@ -998,7 +998,7 @@ static inline void chan_calc_rhythm( OPL3 *chip, OPL3_CH *CH, unsigned int noise
 
 
 	/* The following formulas can be well optimized.
-	   I leave them in direct form for now (in case I've missed something).
+		 I leave them in direct form for now (in case I've missed something).
 	*/
 
 	/* High Hat (verified on real YM3812) */
@@ -1006,8 +1006,8 @@ static inline void chan_calc_rhythm( OPL3 *chip, OPL3_CH *CH, unsigned int noise
 	if( env < ENV_QUIET )
 	{
 		/* high hat phase generation:
-		    phase = d0 or 234 (based on frequency only)
-		    phase = 34 or 2d0 (based on noise)
+				phase = d0 or 234 (based on frequency only)
+				phase = 34 or 2d0 (based on noise)
 		*/
 
 		/* base frequency derived from operator 1 in channel 7 */
@@ -1111,8 +1111,8 @@ static inline void chan_calc_rhythm( OPL3 *chip, OPL3_CH *CH, unsigned int noise
 /* generic table initialize */
 static int init_tables(void)
 {
-	signed int i,x;
-	signed int n;
+	int32_t i,x;
+	int32_t n;
 	double o,m;
 
 
@@ -1592,8 +1592,8 @@ static void update_channels(OPL3 *chip, OPL3_CH *CH)
 static void OPL3WriteReg(OPL3 *chip, int r, int v)
 {
 	OPL3_CH *CH;
-	signed int *chanout = chip->chanout;
-	unsigned int ch_offset = 0;
+	int32_t *chanout = chip->chanout;
+	uint32_t ch_offset = 0;
 	int slot;
 	int block_fnum;
 
@@ -2079,7 +2079,7 @@ static void OPL3WriteReg(OPL3 *chip, int r, int v)
 					break;
 					case 1:
 						/* 1 -> 2 -\
-						   3 -> 4 -+- out */
+							 3 -> 4 -+- out */
 
 						CH->SLOT[SLOT1].connect = &chip->phase_modulation;
 						CH->SLOT[SLOT2].connect = &chanout[ chan_no ];
@@ -2088,7 +2088,7 @@ static void OPL3WriteReg(OPL3 *chip, int r, int v)
 					break;
 					case 2:
 						/* 1 -----------\
-						   2 -> 3 -> 4 -+- out */
+							 2 -> 3 -> 4 -+- out */
 
 						CH->SLOT[SLOT1].connect = &chanout[ chan_no ];
 						CH->SLOT[SLOT2].connect = &chip->phase_modulation2;
@@ -2097,8 +2097,8 @@ static void OPL3WriteReg(OPL3 *chip, int r, int v)
 					break;
 					case 3:
 						/* 1 ------\
-						   2 -> 3 -+- out
-						   4 ------/     */
+							 2 -> 3 -+- out
+							 4 ------/     */
 						CH->SLOT[SLOT1].connect = &chanout[ chan_no ];
 						CH->SLOT[SLOT2].connect = &chip->phase_modulation2;
 						(CH+3)->SLOT[SLOT1].connect = &chanout[ chan_no + 3 ];
@@ -2131,7 +2131,7 @@ static void OPL3WriteReg(OPL3 *chip, int r, int v)
 					break;
 					case 1:
 						/* 1 -> 2 -\
-						   3 -> 4 -+- out */
+							 3 -> 4 -+- out */
 
 						(CH-3)->SLOT[SLOT1].connect = &chip->phase_modulation;
 						(CH-3)->SLOT[SLOT2].connect = &chanout[ chan_no - 3 ];
@@ -2140,7 +2140,7 @@ static void OPL3WriteReg(OPL3 *chip, int r, int v)
 					break;
 					case 2:
 						/* 1 -----------\
-						   2 -> 3 -> 4 -+- out */
+							 2 -> 3 -> 4 -+- out */
 
 						(CH-3)->SLOT[SLOT1].connect = &chanout[ chan_no - 3 ];
 						(CH-3)->SLOT[SLOT2].connect = &chip->phase_modulation2;
@@ -2149,8 +2149,8 @@ static void OPL3WriteReg(OPL3 *chip, int r, int v)
 					break;
 					case 3:
 						/* 1 ------\
-						   2 -> 3 -+- out
-						   4 ------/     */
+							 2 -> 3 -+- out
+							 4 ------/     */
 						(CH-3)->SLOT[SLOT1].connect = &chanout[ chan_no - 3 ];
 						(CH-3)->SLOT[SLOT2].connect = &chip->phase_modulation2;
 						CH->SLOT[SLOT1].connect = &chanout[ chan_no ];
@@ -2276,7 +2276,7 @@ static void OPL3ResetChip(OPL3 *chip)
 /* Create one of virtual YMF262 */
 /* 'clock' is chip clock in Hz  */
 /* 'rate'  is sampling rate  */
-static OPL3 *OPL3Create(int clock, int rate, int type)
+static OPL3 *OPL3Create(uint32_t clock, uint32_t rate, int type)
 {
 	char *ptr;
 	OPL3 *chip;
@@ -2289,7 +2289,7 @@ static OPL3 *OPL3Create(int clock, int rate, int type)
 	ptr = (char *)calloc(1, state_size);
 	if (ptr == NULL)
 		return NULL;
-    
+		
 	chip = (OPL3*) ptr;
 	chip->type  = type;
 	chip->clock = clock;
@@ -2350,12 +2350,12 @@ static int OPL3Write(OPL3 *chip, int a, int v)
 
 		/* verified on real YMF262:
 		 in OPL3 mode:
-		   address line A1 is stored during *address* write and ignored during *data* write.
+			 address line A1 is stored during *address* write and ignored during *data* write.
 
 		 in OPL2 mode:
-		   register set#2 writes go to register set#1 (ignoring A1)
-		   verified on registers from set#2: 0x01, 0x04, 0x20-0xef
-		   The only exception is register 0x05.
+			 register set#2 writes go to register set#1 (ignoring A1)
+			 verified on registers from set#2: 0x01, 0x04, 0x20-0xef
+			 The only exception is register 0x05.
 		*/
 		if( chip->OPL3_mode & 1 )
 		{
@@ -2407,7 +2407,7 @@ static int OPL3TimerOver(OPL3 *chip,int c)
 
 
 
-void * ymf262_init(int clock, int rate)
+void * ymf262_init(uint32_t clock, uint32_t rate)
 {
 	return OPL3Create(clock,rate,OPL3_TYPE_YMF262);
 }
@@ -2469,7 +2469,7 @@ void ymf262_update_one(void *_chip, OPLSAMPLE **buffers, int length)
 {
 	int i;
 	OPL3        *chip  = (OPL3 *)_chip;
-	signed int *chanout = chip->chanout;
+	int32_t *chanout = chip->chanout;
 	uint8_t       rhythm = chip->rhythm&0x20;
 
 	OPLSAMPLE  *ch_a = buffers[0];
