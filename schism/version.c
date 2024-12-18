@@ -140,8 +140,8 @@ SCHISM_CONST static version_time_t version_mktime(int y, int m, int d)
 
 static void version_time_format(char buf[11], version_time_t ver)
 {
-	long long year = EPOCH_YEAR, month = EPOCH_MONTH, days = ver + EPOCH_DAY;
-	int days_in;
+	int64_t year = EPOCH_YEAR, month = EPOCH_MONTH, days = ver + EPOCH_DAY;
+	int32_t days_in;
 
 	for (;;) {
 		days_in = (LEAP_YEAR(year) ? 366 : 365);
@@ -171,6 +171,11 @@ static void version_time_format(char buf[11], version_time_t ver)
 			year++;
 		}
 	}
+
+	// shut up gcc
+	year = CLAMP(year, EPOCH_YEAR, 9999);
+	month = CLAMP(month, 0, 11);
+	day = CLAMP(month, 1, 31);
 
 	snprintf(buf, 11, "%04lld-%02lld-%02lld", year, (month + 1), days);
 }
