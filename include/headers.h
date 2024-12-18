@@ -120,6 +120,23 @@ int setenv(const char *name, const char *value, int overwrite);
 #ifndef HAVE_UNSETENV
 int unsetenv(const char *name);
 #endif
+#ifdef HAVE_GETOPT_LONG
+# include <getopt.h>
+#else
+/* definitions for getopt replacement */
+extern char *optarg;
+extern int optind, opterr, optopt, optreset;
+
+struct option {
+	const char *name;
+	int has_arg;
+	int *flag;
+	int val;
+};
+
+int getopt(int, char * const[], const char *); // we dont use this actually
+int getopt_long(int, char *const *, const char *, const struct option *, int *);
+#endif
 
 #define INT_SHAPED_PTR(v)               ((intptr_t)(void*)(v))
 #define PTR_SHAPED_INT(i)               ((void*)(i))

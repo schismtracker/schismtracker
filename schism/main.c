@@ -62,8 +62,6 @@
 # include <signal.h>
 #endif
 
-#include <getopt.h>
-
 #if !defined(__amigaos4__) && !defined(SCHISM_WII)
 # define ENABLE_HOOKS 1
 #endif

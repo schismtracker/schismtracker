@@ -211,7 +211,7 @@ AC_SUBST([UTF8PROC_CFLAGS])
 AC_SUBST([UTF8PROC_LIBS])
 
 dnl Functions
-AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp nice setenv unsetenv dup fnmatch mkstemp localtime_r umask execl fork nanosleep usleep)
+AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr strptime asprintf vasprintf memcmp nice setenv unsetenv dup fnmatch mkstemp localtime_r umask execl fork nanosleep usleep getopt_long)
 AM_CONDITIONAL([NEED_ASPRINTF], [test "x$ac_cv_func_asprintf" = "xno"])
 AM_CONDITIONAL([NEED_VASPRINTF], [test "x$ac_cv_func_vasprintf" = "xno"])
 AM_CONDITIONAL([NEED_MEMCMP], [test "x$ac_cv_func_memcmp" = "xno"])
@@ -220,6 +220,7 @@ AM_CONDITIONAL([NEED_MKSTEMP], [test "x$ac_cv_func_mkstemp" = "xno"])
 AM_CONDITIONAL([NEED_LOCALTIME_R], [test "x$ac_cv_func_localtime_r" = "xno"])
 AM_CONDITIONAL([NEED_SETENV], [test "x$ac_cv_func_setenv" = "xno"])
 AM_CONDITIONAL([NEED_UNSETENV], [test "x$ac_cv_func_unsetenv" = "xno"])
+AM_CONDITIONAL([NEED_GETOPT], [test "x$ac_cv_func_getopt_long" = "xno"])
 
 dnl Headers, typedef crap, et al.
 AC_CHECK_HEADERS(sys/time.h dirent.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/socket.h sys/soundcard.h poll.h sys/poll.h linux/fb.h)
@@ -279,7 +280,7 @@ case "${host_os}" in
 			AC_SUBST([NETWORK_LIBS], [-lws2_32])
 			use_network=yes
 		else
-			AC_MSG_ERROR([*** Couldn't find winsock\! (how\?)])
+			AC_MSG_ERROR([*** Couldn't find winsock (how)])
 		fi
 
 		have_loadso=yes
