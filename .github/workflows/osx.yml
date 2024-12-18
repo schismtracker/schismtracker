@@ -76,7 +76,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: '/Users/runner/ppc'
-          key: mac-powerpc-files
+          key: mac-powerpc-files-jaguar
 
       - name: 'Download 10.9 SDK for x86_64'
         if: steps.cache-x86_64-files.outputs.cache-hit != 'true'
