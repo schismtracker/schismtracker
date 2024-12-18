@@ -69,7 +69,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: '/Users/runner/ppcprefix'
-          key: mac-powerpc-dependencies-SDL_1.2.13-1-FLAC_${{ env.FLAC_VERSION }}-LIBOGG_${{ env.LIBOGG_VERSION }}-UTF8PROC_${{ env.UTF8PROC_VERSION }}
+          key: mac-powerpc-dependencies-jaguar-SDL_1.2.13-1-FLAC_${{ env.FLAC_VERSION }}-LIBOGG_${{ env.LIBOGG_VERSION }}-UTF8PROC_${{ env.UTF8PROC_VERSION }}
 
       - name: 'Cache powerpc files'
         id: cache-powerpc-files
