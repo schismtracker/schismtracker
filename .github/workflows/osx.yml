@@ -159,6 +159,7 @@ jobs:
           # copy the library
           mkdir -p "$HOME/ppcprefix/lib"
           cp "libSDL-1.2.0.dylib" "$HOME/ppcprefix/lib"
+          ln -sf "libSDL-1.2.0.dylib" "$HOME/ppcprefix/lib/libSDL.dylib"
 
           popd
 
