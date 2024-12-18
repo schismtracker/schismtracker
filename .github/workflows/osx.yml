@@ -203,7 +203,7 @@ jobs:
           export PATH="$PATH:$HOME/ppc/usr/bin"
           mkdir build_powerpc
           cd build_powerpc
-          ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.2.8.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.2.8.sdk -mmacosx-version-min=10.2" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.2.8.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.2.8.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.2.8.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.2.8.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" || (cat config.log && false)
+          ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.2.8.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.2.8.sdk -mmacosx-version-min=10.2" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.2.8.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.2.8.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.2.8.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.2.8.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --disable-static || (cat config.log && false)
           make
           make install
           popd
@@ -247,7 +247,7 @@ jobs:
           export PATH="$PATH:$HOME/ppc/usr/bin"
           mkdir build_powerpc
           cd build_powerpc
-          ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.2.8.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.2.8.sdk -mmacosx-version-min=10.2" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.2.8.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.2.8.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.2.8.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.2.8.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --disable-cpplibs --disable-programs --disable-examples
+          ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.2.8.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.2.8.sdk -mmacosx-version-min=10.2" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.2.8.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.2.8.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.2.8.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.2.8.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --disable-cpplibs --disable-programs --disable-examples --disable-static
           make
           make install
           popd
