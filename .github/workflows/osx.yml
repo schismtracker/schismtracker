@@ -336,7 +336,7 @@ jobs:
           install_name_tool -change "$HOME/arm64prefix/lib/libogg.0.dylib" @executable_path/../Resources/libogg.0.dylib "$HOME/arm64prefix/lib/libFLAC.12.dylib"
 
           # powerpc specific crap
-          "$HOME/ppc/usr/bin/install_name_tool" -change "$HOME/ppc/SDKs/MacOSX10.5.sdk/usr/lib/libgcc_s.1.dylib" @executable_path/../Resources/libgcc_s.1.dylib build_powerpc/schismtracker
+          "$HOME/ppc/usr/bin/install_name_tool" -change "/usr/lib/libgcc_s.1.dylib" @executable_path/../Resources/libgcc_s.1.dylib build_powerpc/schismtracker
 
           lipo -create -o schismtracker build_powerpc/schismtracker build_x86_64/schismtracker build_arm64/schismtracker
           cd sys/macosx/Schism_Tracker.app/Contents/
