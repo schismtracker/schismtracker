@@ -209,7 +209,7 @@ static schism_audio_device_t *sdl2_audio_open_device(const char *name, const sch
 
 		// Try again until we find an audio format we *do* support.
 		switch (sdl_obtained.format) {
-		case AUDIO_U8: case AUDIO_S16: case AUDIO_S32: break;
+		case AUDIO_U8: case AUDIO_S16SYS: case AUDIO_S32SYS: break;
 		default: change &= (~SDL_AUDIO_ALLOW_FORMAT_CHANGE); need_reopen = 1; break;
 		}
 
