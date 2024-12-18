@@ -115,6 +115,8 @@ jobs:
           wait
           curl -L "https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.2.8/MacOSX10.2.8.tar.bz2" | tar -xvf - -C "$HOME/ppc/SDKs"
           curl -L "https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.5/MacOSX10.5.tar.bz2" | tar -xvf - -C "$HOME/ppc/SDKs"
+          # hax: gcc 4 automagically links against a mysterious libSystemStubs.a file, copy it from the newer SDK
+          cp "$HOME/ppc/SDKs/MacOSX10.5.sdk/usr/lib/libSystemStubs.a" "$HOME/ppc/SDKs/MacOSX10.5.sdk/usr/lib/libSystemStubs_debug.a" "$HOME/ppc/SDKs/MacOSX10.5.sdk/usr/lib/libSystemStubs_profile.a" "$HOME/ppc/SDKs/MacOSX10.2.8.sdk/usr/lib"
           popd
 
       - name: 'Install PowerPC cross compile binaries into Xcode'
