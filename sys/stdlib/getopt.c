@@ -1,246 +1,315 @@
-/*
- * Schism Tracker - a cross-platform Impulse Tracker clone
- * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
- * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
- * copyright (c) 2009 Storlek & Mrs. Brisby
- * copyright (c) 2010-2012 Storlek
- * URL: http://schismtracker.org/
+/* -*- indent-tabs-mode: nil -*-
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * ya_getopt  - Yet another getopt
+ * https://github.com/kubo/ya_getopt
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Copyright 2015 Kubo Takehiro <kubo@jiubao.org>
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ *
+ *    1. Redistributions of source code must retain the above copyright notice, this list of
+ *       conditions and the following disclaimer.
+ *
+ *    2. Redistributions in binary form must reproduce the above copyright notice, this list
+ *       of conditions and the following disclaimer in the documentation and/or other materials
+ *       provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHORS ''AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+ * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The views and conclusions contained in the software and documentation are those of the
+ * authors and should not be interpreted as representing official policies, either expressed
+ * or implied, of the authors.
+ *
  */
-
-/*
- * Copyright © 2005-2020 Rich Felker, et al.
- * 
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the
- * "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to
- * the following conditions:
- * 
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
 
 #include "headers.h"
 
-char *optarg;
-int optind=1, opterr=1, optopt, optreset=0;
-static int optpos;
+char *ya_optarg = NULL;
+int ya_optind = 1;
+int ya_opterr = 1;
+int ya_optopt = '?';
+static char *ya_optnext = NULL;
+static int posixly_correct = -1;
+static int handle_nonopt_argv = 0;
 
-static void getopt_msg(const char *a, const char *b, const char *c, size_t l)
+static void ya_getopt_error(const char *optstring, const char *format, ...);
+static void check_gnu_extension(const char *optstring);
+static int ya_getopt_internal(int argc, char * const argv[], const char *optstring, const struct option *longopts, int *longindex, int long_only);
+static int ya_getopt_shortopts(int argc, char * const argv[], const char *optstring, int long_only);
+static int ya_getopt_longopts(int argc, char * const argv[], char *arg, const char *optstring, const struct option *longopts, int *longindex, int *long_only_flag);
+
+static void ya_getopt_error(const char *optstring, const char *format, ...)
 {
-	FILE *f = stderr;
-#ifndef SCHISM_WIN32
-	flockfile(f);
-#endif
-	fputs(a, f);
-	fwrite(b, strlen(b), 1, f);
-	fwrite(c, 1, l, f);
-	fputc('\n', f);
-#ifndef SCHISM_WIN32
-	funlockfile(f);
-#endif
+    if (ya_opterr && optstring[0] != ':') {
+        va_list ap;
+        va_start(ap, format);
+        vfprintf(stderr, format, ap);
+        va_end(ap);
+    }
 }
 
-int getopt(int argc, char * const argv[], const char *optstring)
+static void check_gnu_extension(const char *optstring)
 {
-	int i, c, d;
-	int k, l;
-	char *optchar;
-
-	if (!optind || optreset) {
-		optreset = 0;
-		optpos = 0;
-		optind = 1;
-	}
-
-	if (optind >= argc || !argv[optind])
-		return -1;
-
-	if (argv[optind][0] != '-') {
-		if (optstring[0] == '-') {
-			optarg = argv[optind++];
-			return 1;
-		}
-		return -1;
-	}
-
-	if (!argv[optind][1])
-		return -1;
-
-	if (argv[optind][1] == '-' && !argv[optind][2])
-		return optind++, -1;
-
-	if (!optpos) optpos++;
-	c = argv[optind][optpos], k = 1;
-	optchar = argv[optind]+optpos;
-	optopt = c;
-	optpos += k;
-
-	if (!argv[optind][optpos]) {
-		optind++;
-		optpos = 0;
-	}
-
-	if (optstring[0] == '-' || optstring[0] == '+')
-		optstring++;
-
-	i = 0;
-	d = 0;
-	do {
-		d = optstring[i], l = !!d;
-		if (l>0) i+=l; else i++;
-	} while (l && d != c);
-
-	if (d != c) {
-		if (optstring[0] != ':' && opterr)
-			getopt_msg(argv[0], ": unrecognized option: ", optchar, k);
-		return '?';
-	}
-	if (optstring[i] == ':') {
-		if (optstring[i+1] == ':') optarg = 0;
-		else if (optind >= argc) {
-			if (optstring[0] == ':') return ':';
-			if (opterr) getopt_msg(argv[0],
-				": option requires an argument: ",
-				optchar, k);
-			return '?';
-		}
-		if (optstring[i+1] != ':' || optpos) {
-			optarg = argv[optind++] + optpos;
-			optpos = 0;
-		}
-	}
-	return c;
+    if (optstring[0] == '+' || getenv("POSIXLY_CORRECT") != NULL) {
+        posixly_correct = 1;
+    } else {
+        posixly_correct = 0;
+    }
+    if (optstring[0] == '-') {
+        handle_nonopt_argv = 1;
+    } else {
+        handle_nonopt_argv = 0;
+    }
 }
 
-static void permute(char *const *argv, int dest, int src)
+static int is_option(const char *arg)
 {
-	char **av = (char **)argv;
-	char *tmp = av[src];
-	int i;
-	for (i=src; i>dest; i--)
-		av[i] = av[i-1];
-	av[dest] = tmp;
+    return arg[0] == '-' && arg[1] != '\0';
 }
 
-static int getopt_long_impl(int argc, char *const *argv, const char *optstring, const struct option *longopts, int *idx)
+int ya_getopt(int argc, char * const argv[], const char *optstring)
 {
-	optarg = 0;
-	if (longopts && argv[optind][0] == '-' &&
-		((argv[optind][1] == '-' && argv[optind][2]))) {
-		int colon = optstring[optstring[0]=='+'||optstring[0]=='-']==':';
-		int i, cnt, match = -1;
-		char *opt;
-		for (cnt=i=0; longopts[i].name; i++) {
-			const char *name = longopts[i].name;
-			opt = argv[optind]+1;
-			if (*opt == '-') opt++;
-			for (; *name && *name == *opt; name++, opt++);
-			if (*opt && *opt != '=') continue;
-			match = i;
-			if (!*name) {
-				cnt = 1;
-				break;
-			}
-			cnt++;
-		}
-		if (cnt==1) {
-			i = match;
-			optind++;
-			optopt = longopts[i].val;
-			if (*opt == '=') {
-				if (!longopts[i].has_arg) {
-					if (colon || !opterr)
-						return '?';
-					getopt_msg(argv[0],
-						": option does not take an argument: ",
-						longopts[i].name,
-						strlen(longopts[i].name));
-					return '?';
-				}
-				optarg = opt+1;
-			} else if (longopts[i].has_arg == 1) {
-				if (!(optarg = argv[optind])) {
-					if (colon) return ':';
-					if (!opterr) return '?';
-					getopt_msg(argv[0],
-						": option requires an argument: ",
-						longopts[i].name,
-						strlen(longopts[i].name));
-					return '?';
-				}
-				optind++;
-			}
-			if (idx) *idx = i;
-			if (longopts[i].flag) {
-				*longopts[i].flag = longopts[i].val;
-				return 0;
-			}
-			return longopts[i].val;
-		}
-		if (argv[optind][1] == '-') {
-			if (!colon && opterr)
-				getopt_msg(argv[0], cnt ?
-					": option is ambiguous: " :
-					": unrecognized option: ",
-					argv[optind]+2,
-					strlen(argv[optind]+2));
-			optind++;
-			return '?';
-		}
-	}
-	return getopt(argc, argv, optstring);
+    return ya_getopt_internal(argc, argv, optstring, NULL, NULL, 0);
 }
 
-int getopt_long(int argc, char *const *argv, const char *optstring, const struct option *longopts, int *idx)
+int ya_getopt_long(int argc, char * const argv[], const char *optstring, const struct option *longopts, int *longindex)
 {
-	int ret, skipped, resumed;
-	if (!optind || optreset) {
-		optreset = 0;
-		optpos = 0;
-		optind = 1;
-	}
-	if (optind >= argc || !argv[optind]) return -1;
-	skipped = optind;
-	if (optstring[0] != '+' && optstring[0] != '-') {
-		int i;
-		for (i=optind; ; i++) {
-			if (i >= argc || !argv[i]) return -1;
-			if (argv[i][0] == '-' && argv[i][1]) break;
-		}
-		optind = i;
-	}
-	resumed = optind;
-	ret = getopt_long_impl(argc, argv, optstring, longopts, idx);
-	if (resumed > skipped) {
-		int i, cnt = optind-resumed;
-		for (i=0; i<cnt; i++)
-			permute(argv, skipped, optind-1);
-		optind = skipped + cnt;
-	}
-	return ret;
+    return ya_getopt_internal(argc, argv, optstring, longopts, longindex, 0);
+}
+
+int ya_getopt_long_only(int argc, char * const argv[], const char *optstring, const struct option *longopts, int *longindex)
+{
+    return ya_getopt_internal(argc, argv, optstring, longopts, longindex, 1);
+}
+
+static int ya_getopt_internal(int argc, char * const argv[], const char *optstring, const struct option *longopts, int *longindex, int long_only)
+{
+    static int start, end;
+
+    if (ya_optopt == '?') {
+        ya_optopt = 0;
+    }
+
+    if (posixly_correct == -1) {
+        check_gnu_extension(optstring);
+    }
+
+    if (ya_optind == 0) {
+        check_gnu_extension(optstring);
+        ya_optind = 1;
+        ya_optnext = NULL;
+    }
+
+    switch (optstring[0]) {
+    case '+':
+    case '-':
+        optstring++;
+    }
+
+    if (ya_optnext == NULL && start != 0) {
+        int last_pos = ya_optind - 1;
+
+        ya_optind -= end - start;
+        if (ya_optind <= 0) {
+            ya_optind = 1;
+        }
+        while (start < end--) {
+            int i;
+            char *arg = argv[end];
+
+            for (i = end; i < last_pos; i++) {
+                ((char **)argv)[i] = argv[i + 1];
+            }
+            ((char const **)argv)[i] = arg;
+            last_pos--;
+        }
+        start = 0;
+    }
+
+    if (ya_optind >= argc) {
+        ya_optarg = NULL;
+        return -1;
+    }
+    if (ya_optnext == NULL) {
+        const char *arg = argv[ya_optind];
+        if (!is_option(arg)) {
+            if (handle_nonopt_argv) {
+                ya_optarg = argv[ya_optind++];
+                start = 0;
+                return 1;
+            } else if (posixly_correct) {
+                ya_optarg = NULL;
+                return -1;
+            } else {
+                int i;
+
+                start = ya_optind;
+                for (i = ya_optind + 1; i < argc; i++) {
+                    if (is_option(argv[i])) {
+                        end = i;
+                        break;
+                    }
+                }
+                if (i == argc) {
+                    ya_optarg = NULL;
+                    return -1;
+                }
+                ya_optind = i;
+                arg = argv[ya_optind];
+            }
+        }
+        if (strcmp(arg, "--") == 0) {
+            ya_optind++;
+            return -1;
+        }
+        if (longopts != NULL && arg[1] == '-') {
+            return ya_getopt_longopts(argc, argv, argv[ya_optind] + 2, optstring, longopts, longindex, NULL);
+        }
+    }
+
+    if (ya_optnext == NULL) {
+        ya_optnext = argv[ya_optind] + 1;
+    }
+    if (long_only) {
+        int long_only_flag = 0;
+        int rv = ya_getopt_longopts(argc, argv, ya_optnext, optstring, longopts, longindex, &long_only_flag);
+        if (!long_only_flag) {
+            ya_optnext = NULL;
+            return rv;
+        }
+    }
+
+    return ya_getopt_shortopts(argc, argv, optstring, long_only);
+}
+
+static int ya_getopt_shortopts(int argc, char * const argv[], const char *optstring, int long_only)
+{
+    int opt = *ya_optnext;
+    const char *os = strchr(optstring, opt);
+
+    if (os == NULL) {
+        ya_optarg = NULL;
+        if (long_only) {
+            ya_getopt_error(optstring, "%s: unrecognized option '-%s'\n", argv[0], ya_optnext);
+            ya_optind++;
+            ya_optnext = NULL;
+        } else {
+            ya_optopt = opt;
+            ya_getopt_error(optstring, "%s: invalid option -- '%c'\n", argv[0], opt);
+            if (*(++ya_optnext) == 0) {
+                ya_optind++;
+                ya_optnext = NULL;
+            }
+        }
+        return '?';
+    }
+    if (os[1] == ':') {
+        if (ya_optnext[1] == 0) {
+            ya_optind++;
+            ya_optnext = NULL;
+            if (os[2] == ':') {
+                /* optional argument */
+                ya_optarg = NULL;
+            } else {
+                if (ya_optind == argc) {
+                    ya_optarg = NULL;
+                    ya_optopt = opt;
+                    ya_getopt_error(optstring, "%s: option requires an argument -- '%c'\n", argv[0], opt);
+                    if (optstring[0] == ':') {
+                        return ':';
+                    } else {
+                        return '?';
+                    }
+                }
+                ya_optarg = argv[ya_optind];
+                ya_optind++;
+            }
+        } else {
+            ya_optarg = ya_optnext + 1;
+            ya_optind++;
+        }
+        ya_optnext = NULL;
+    } else {
+        ya_optarg = NULL;
+        if (ya_optnext[1] == 0) {
+            ya_optnext = NULL;
+            ya_optind++;
+        } else {
+            ya_optnext++;
+        }
+    }
+    return opt;
+}
+
+static int ya_getopt_longopts(int argc, char * const argv[], char *arg, const char *optstring, const struct option *longopts, int *longindex, int *long_only_flag)
+{
+    char *val = NULL;
+    const struct option *opt;
+    size_t namelen;
+    int idx;
+
+    for (idx = 0; longopts[idx].name != NULL; idx++) {
+        opt = &longopts[idx];
+        namelen = strlen(opt->name);
+        if (strncmp(arg, opt->name, namelen) == 0) {
+            switch (arg[namelen]) {
+            case '\0':
+                switch (opt->has_arg) {
+                case ya_required_argument:
+                    ya_optind++;
+                    if (ya_optind == argc) {
+                        ya_optarg = NULL;
+                        ya_optopt = opt->val;
+                        ya_getopt_error(optstring, "%s: option '--%s' requires an argument\n", argv[0], opt->name);
+                        if (optstring[0] == ':') {
+                            return ':';
+                        } else {
+                            return '?';
+                        }
+                    }
+                    val = argv[ya_optind];
+                    break;
+                }
+                goto found;
+            case '=':
+                if (opt->has_arg == ya_no_argument) {
+                    const char *hyphens = (argv[ya_optind][1] == '-') ? "--" : "-";
+
+                    ya_optind++;
+                    ya_optarg = NULL;
+                    ya_optopt = opt->val;
+                    ya_getopt_error(optstring, "%s: option '%s%s' doesn't allow an argument\n", argv[0], hyphens, opt->name);
+                    return '?';
+                }
+                val = arg + namelen + 1;
+                goto found;
+            }
+        }
+    }
+    if (long_only_flag) {
+        *long_only_flag = 1;
+    } else {
+        ya_getopt_error(optstring, "%s: unrecognized option '%s'\n", argv[0], argv[ya_optind]);
+        ya_optind++;
+    }
+    return '?';
+found:
+    ya_optarg = val;
+    ya_optind++;
+    if (opt->flag) {
+        *opt->flag = opt->val;
+    }
+    if (longindex) {
+        *longindex = idx;
+    }
+    return opt->flag ? 0 : opt->val;
 }
