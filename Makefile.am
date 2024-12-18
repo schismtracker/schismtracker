@@ -380,6 +380,9 @@ endif
 if NEED_UNSETENV
 files_stdlib += sys/stdlib/unsetenv.c
 endif
+if NEED_GETOPT
+files_stdlib += sys/stdlib/getopt.c
+endif
 
 ## aaaaaaaaahhhhhhhhhhhhhhhhhhh!!!!!!!1
 schismtracker_SOURCES = \

@@ -120,6 +120,43 @@ int setenv(const char *name, const char *value, int overwrite);
 #ifndef HAVE_UNSETENV
 int unsetenv(const char *name);
 #endif
+#ifdef HAVE_GETOPT_LONG
+# include <getopt.h>
+#else
+/* getopt replacement defines; these intentionally do not use the names
+ * getopt() and such because a system could have getopt() but not
+ * getopt_long(), and doing this avoids name collisions */
+# define ya_no_argument        0
+# define ya_required_argument  1
+# define ya_optional_argument  2
+
+struct option {
+    const char *name;
+    int has_arg;
+    int *flag;
+    int val;
+};
+
+int ya_getopt(int argc, char * const argv[], const char *optstring);
+int ya_getopt_long(int argc, char * const argv[], const char *optstring,
+                   const struct option *longopts, int *longindex);
+int ya_getopt_long_only(int argc, char * const argv[], const char *optstring,
+                        const struct option *longopts, int *longindex);
+
+extern char *ya_optarg;
+extern int ya_optind, ya_opterr, ya_optopt;
+
+# define getopt ya_getopt
+# define getopt_long ya_getopt_long
+# define getopt_long_only ya_getopt_long_only
+# define optarg ya_optarg
+# define optind ya_optind
+# define opterr ya_opterr
+# define optopt ya_optopt
+# define no_argument ya_no_argument
+# define required_argument ya_required_argument
+# define optional_argument ya_optional_argument
+#endif
 
 #define INT_SHAPED_PTR(v)               ((intptr_t)(void*)(v))
 #define PTR_SHAPED_INT(i)               ((void*)(i))
