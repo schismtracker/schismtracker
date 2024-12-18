@@ -26,8 +26,10 @@
 #include <math.h>
 #include <stdint.h>
 #include <assert.h>
+#include <time.h>
 
 #include "bswap.h"
+#include "bshift.h"
 #include "player/sndfile.h"
 #include "log.h"
 #include "util.h"
@@ -187,27 +189,32 @@ void csf_free_pattern(void *pat)
 	free(pat);
 }
 
+#define CSF_ALLOCATE_PREPEND ((MAX_SAMPLING_POINT_SIZE) * (MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE))
+#define CSF_ALLOCATE_APPEND ((1 + 4 + 4) * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE * 4)
+
 signed char *csf_allocate_sample(uint32_t nbytes)
 {
-	/* Sinc interpolation can look forwards or backwards
-	 * 4 samples; the maximum sample size for Schism is
-	 * 4 bytes per sample (16-bit stereo, 2 * 2). 4 * 4 = 16,
-	 * so allocate 16 extra bytes before and after the buffer */
-	return (signed char*)mem_calloc(1, nbytes + 32) + 16;
+	return (signed char*)mem_calloc(1, nbytes + CSF_ALLOCATE_PREPEND + CSF_ALLOCATE_APPEND) + CSF_ALLOCATE_PREPEND;
 }
 
 void csf_free_sample(void *p)
 {
 	if (p)
-		free((signed char*)p - 16);
+		free((signed char*)p - CSF_ALLOCATE_PREPEND);
 }
+
+#undef CSF_ALLOCATE_PREPEND
+#undef CSF_ALLOCATE_APPEND
 
 void csf_forget_history(song_t *csf)
 {
 	free(csf->history);
 	csf->history = NULL;
 	csf->histlen = 0;
-	gettimeofday(&csf->editstart, NULL);
+	csf->editstart.runtime = timer_ticks();
+
+	time_t thetime = time(NULL);
+	localtime_r(&thetime, &csf->editstart.time);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -730,9 +737,16 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	}
 
 	// cap the sample length
-	if (sample->length > MAX_SAMPLE_LENGTH) sample->length = MAX_SAMPLE_LENGTH;
+	if (sample->length > MAX_SAMPLE_LENGTH)
+		sample->length = MAX_SAMPLE_LENGTH;
 
-	mem = sample->length + 6; // XXX why add 6?
+	// libmodplug added 6 to this value. This probably
+	// isn't necessary anymore and it even breaks the loops in
+	// RM-SMOTION.DSM (unrelated to the newly-added loop
+	// wraparound code)
+	//
+	//   - paper
+	mem = sample->length;
 
 	// fix the sample flags
 	sample->flags &= ~(CHN_16BIT|CHN_STEREO);
@@ -759,126 +773,46 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		return 0;
 	}
 
-	// now actually process the thing
 	switch(flags) {
-	// 1: 8-bit unsigned PCM data
+	// 7-bit (data shifted one bit left)
+	case SF(7,M,BE,PCMS):
+	case SF(7,M,LE,PCMS):
+		sample->flags &= ~(CHN_16BIT | CHN_STEREO);
+		len = sample->length = MIN(sample->length, memsize);
+		for (uint32_t j = 0; j < len; j++)
+			sample->data[j] = CLAMP(slurp_getc(fp) * 2, -128, 127);
+		break;
+
+	// 8-bit mono PCM
+	default:
+		printf("DEFAULT: %d\n", flags);
+		flags = SF(8,M,LE,PCMS);
+		/* fallthrough */
+	case SF(8,M,LE,PCMS):
 	case SF(8,M,LE,PCMU):
-	case SF(8,M,BE,PCMU): {
+	case SF(8,M,LE,PCMD): 
+	case SF(8,M,BE,PCMS):
+	case SF(8,M,BE,PCMU):
+	case SF(8,M,BE,PCMD): {
+		int8_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT8_MIN : 0;
+
 		len = sample->length;
 		if (len > memsize)
 			len = sample->length = memsize;
 
+		// read
 		slurp_read(fp, sample->data, len);
 
-		for (uint32_t j=0; j<len; j++)
-			sample->data[j] = sample->data[j] - 0x80;
-
-		break;
-	}
-
-	// 2: 8-bit ADPCM data with linear table
-	case SF(8,M,LE,PCMD):
-	case SF(8,M,BE,PCMD): {
-		int delta = 0;
-
-		len = sample->length;
-		if (len > memsize)
-			break;
-
-		signed char *data = sample->data;
-		for (uint32_t j=0; j<len; j++)
-			data[j] = (delta += slurp_getc(fp));
-
-		break;
-	}
-
-	// 4: 16-bit ADPCM data with linear table
-	case SF(16,M,LE,PCMD): {
-		int delta16 = 0;
-
-		len = sample->length * 2;
-		if (len > memsize)
-			break;
-
-		int16_t *data = (int16_t *)sample->data;
-
-		for (uint32_t j=0; j<len; j += 2) {
-			uint16_t tmp;
-
-			slurp_read(fp, &tmp, sizeof(tmp));
-
-			*(data++) = (int16_t)(delta16 += bswapLE16(tmp));
-		}
-		break;
-	}
-
-	// 5: 16-bit signed PCM data
-	case SF(16,M,LE,PCMS): {
-		len = sample->length * 2;
-		if (len <= memsize)
-			slurp_read(fp, sample->data, len);
-
-		int16_t *data = (int16_t *)sample->data;
-		for (uint32_t j=0; j<len; j += 2) {
-			*data = bswapLE16(*data);
-			data++;
+		// process
+		int8_t *data = (int8_t *)sample->data;
+		for (uint32_t j = 0; j < len; j++) {
+			data[j] += iadd;
+			if ((flags & SF_ENC_MASK) == SF_PCMD)
+				iadd = data[j];
 		}
 
 		break;
 	}
-
-	// 16-bit signed mono PCM motorola byte order
-	case SF(16,M,BE,PCMD): {
-		len = sample->length * 2;
-		if (len <= memsize)
-			slurp_read(fp, sample->data, len);
-
-		int16_t *data = (int16_t *)sample->data;
-		for (uint32_t j=0; j<len; j += 2) {
-			*data = bswapBE16(*data);
-			data++;
-		}
-
-		break;
-	}
-
-	// 6: 16-bit unsigned PCM data
-	case SF(16,M,LE,PCMU): {
-		len = sample->length * 2;
-		if (len <= memsize)
-			slurp_read(fp, sample->data, len);
-
-		int16_t *data = (int16_t *)sample->data;
-		for (uint32_t j=0; j<len; j += 2) {
-			*data = bswapLE16(*data) - 0x8000;
-			data++;
-		}
-
-		break;
-	}
-
-
-	// 16-bit signed stereo big endian
-	case SF(16,SS,BE,PCMS):
-		len = sample->length * 2;
-		if (len*2 <= memsize) {
-			int16_t *data = (int16_t *)sample->data;
-			for (uint32_t j=0; j<len; j += 2) {
-				slurp_read(fp, data, 2);
-				*data = bswapBE16(*data);
-				data += 2;
-			}
-
-			data = (int16_t *)sample->data + 1;
-			for (uint32_t j=0; j<len; j += 2) {
-				slurp_read(fp, data, 2);
-				*data = bswapBE16(*data);
-				data += 2;
-			}
-
-			len *= 2;
-		}
-		break;
 
 	// 8-bit stereo samples
 	case SF(8,SS,LE,PCMS):
@@ -887,7 +821,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(8,SS,BE,PCMS):
 	case SF(8,SS,BE,PCMU):
 	case SF(8,SS,BE,PCMD): {
-		int iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? -128 : 0;
+		int8_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT8_MIN : 0;
 
 		len = sample->length * 2;
 		if (len > memsize) break;
@@ -899,7 +833,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 				iadd = data[j];
 		}
 
-		iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? -128 : 0;
+		iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT8_MIN : 0;
 
 		data = (int8_t *)sample->data + 1;
 		for (uint32_t j=0; j<len; j+=2) {
@@ -911,252 +845,234 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		break;
 	}
 
-	// 16-bit stereo samples
-	case SF(16,SS,LE,PCMS):
-	case SF(16,SS,LE,PCMU):
-	case SF(16,SS,LE,PCMD): {
-		int iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? -0x8000 : 0;
-		len = sample->length * 2;
-		if (len*2 > memsize) break;
-
-		int16_t *data = (int16_t *)sample->data;
-		for (uint32_t j=0; j<len; j+=2) {
-			slurp_read(fp, &data[j], 2);
-			data[j] = bswapLE16(data[j]) + iadd;
-
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				iadd = data[j];
-		}
-
-		iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? -0x8000 : 0;
-
-		data = (int16_t *)sample->data + 1;
-		for (uint32_t j=0; j<len; j+=2) {
-			slurp_read(fp, &data[j], 2);
-
-			data[j] = bswapLE16(data[j]) + iadd;
-
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				iadd = data[j];
-		}
-
-		len *= 2;
-	}
-	break;
-
-	// IT 2.14 compressed samples
-	case SF(8,M,LE,IT214):
-	case SF(16,M,LE,IT214):
-	case SF(8,M,LE,IT215):
-	case SF(16,M,LE,IT215):
-		len = memsize;
-		if (len < 2) break;
-		if ((flags & SF_BIT_MASK) == SF_8) {
-			it_decompress8(sample->data, sample->length,
-					fp, (flags & SF_ENC_MASK) == SF_IT215, 1);
-		} else {
-			it_decompress16(sample->data, sample->length,
-					fp, (flags & SF_ENC_MASK) == SF_IT215, 1);
-		}
-		break;
-	case SF(8,SS,LE,IT214):
-	case SF(16,SS,LE,IT214):
-	case SF(8,SS,LE,IT215):
-	case SF(16,SS,LE,IT215):
-		len = memsize;
-		if (len < 4) break;
-		if ((flags & SF_BIT_MASK) == SF_8) {
-			it_decompress8(sample->data, sample->length,
-					fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
-			it_decompress8(sample->data + 1, sample->length,
-					fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
-		} else {
-			it_decompress16(sample->data, sample->length,
-					fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
-			it_decompress16(sample->data + 2, sample->length,
-					fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
-		}
-		break;
-
 	// 8-bit interleaved stereo samples
 	case SF(8,SI,LE,PCMS):
-	case SF(8,SI,LE,PCMU): {
-		int iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? -0x80 : 0;
-		len = sample->length;
-		if (len*2 > memsize) len = memsize >> 1;
-		uint8_t *data = (uint8_t *)sample->data;
-		for (uint32_t j=0; j<len; j++) {
-			int8_t w[2];
+	case SF(8,SI,LE,PCMU):
+	case SF(8,SI,LE,PCMD):
+	case SF(8,SI,BE,PCMS):
+	case SF(8,SI,BE,PCMU):
+	case SF(8,SI,BE,PCMD): {
+		int8_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT8_MIN : 0;
+		len = sample->length * 2;
+		if (len > memsize)
+			len = memsize >> 1;
 
-			slurp_read(fp, w, sizeof(w));
+		slurp_read(fp, sample->data, len);
 
-			data[j*2] = w[0] + iadd;
-			data[j*2+1] = w[1] + iadd;
+		int8_t *data = (int8_t *)sample->data;
+		for (uint32_t j=0; j < len; j += 2) {
+			data[j] = data[j] + iadd;
+			if ((flags & SF_ENC_MASK) == SF_PCMD)
+				iadd = data[j];
 		}
-		len *= 2;
+
+		data = (int8_t *)sample->data + 1;
+		for (uint32_t j = 0; j < len; j += 2) {
+			data[j] = data[j] + iadd;
+			if ((flags & SF_ENC_MASK) == SF_PCMD)
+				iadd = data[j];
+		}
+
+		break;
 	}
-	break;
+
+	// 16-bit mono PCM samples
+	case SF(16,M,LE,PCMD):
+	case SF(16,M,LE,PCMS):
+	case SF(16,M,LE,PCMU):
+	case SF(16,M,BE,PCMD):
+	case SF(16,M,BE,PCMS):
+	case SF(16,M,BE,PCMU): {
+		int16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT16_MIN : 0;
+
+		len = sample->length;
+		if (len*2 > memsize)
+			break;
+
+		// read
+		slurp_read(fp, sample->data, len * 2);
+
+		// process
+		int16_t *data = (int16_t *)sample->data;
+		for (uint32_t j = 0; j < len; j++) {
+			data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
+			if ((flags & SF_ENC_MASK) == SF_PCMD)
+				iadd = data[j];
+		}
+
+		len *= 2;
+
+		break;
+	}
+
+	// 16-bit stereo PCM samples
+	case SF(16,SS,LE,PCMD):
+	case SF(16,SS,LE,PCMS):
+	case SF(16,SS,LE,PCMU):
+	case SF(16,SS,BE,PCMD):
+	case SF(16,SS,BE,PCMS):
+	case SF(16,SS,BE,PCMU): {
+		int16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT16_MIN : 0;
+
+		len = sample->length * 2;
+
+		if (len*2 > memsize)
+			break;
+
+		int16_t *data = (int16_t *)sample->data;
+		for (uint32_t j = 0; j < len; j += 2) {
+			slurp_read(fp, &data[j], 2);
+			data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
+			if ((flags & SF_ENC_MASK) == SF_PCMD)
+				iadd = data[j];
+		}
+
+		data = (int16_t *)sample->data + 1;
+		for (uint32_t j = 0; j < len; j += 2) {
+			slurp_read(fp, &data[j], 2);
+			data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
+			if ((flags & SF_ENC_MASK) == SF_PCMD)
+				iadd = data[j];
+		}
+
+		len *= 2;
+
+		break;
+	}
 
 	// 16-bit interleaved stereo samples
 	case SF(16,SI,LE,PCMS):
-	case SF(16,SI,LE,PCMU): {
-		int iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? -0x8000 : 0;
+	case SF(16,SI,LE,PCMU):
+	case SF(16,SI,LE,PCMD):
+	case SF(16,SI,BE,PCMS):
+	case SF(16,SI,BE,PCMU):
+	case SF(16,SI,BE,PCMD): {
+		int16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT16_MIN : 0;
+
 		len = sample->length * 2;
-		if (len*2 > memsize) len = memsize >> 1;
+		if (len * 2 > memsize)
+			len = memsize >> 1;
+
+		slurp_read(fp, sample->data, len * 2);
+
 		int16_t *data = (int16_t *)sample->data;
-		for (uint32_t j=0; j<len; j++) {
-			slurp_read(fp, data + j, sizeof(*data));
-
-			data[j] = bswapLE16(data[j]) + iadd;
+		for (uint32_t j=0; j < len; j += 2) {
+			data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
+			if ((flags & SF_ENC_MASK) == SF_PCMD)
+				iadd = data[j];
 		}
+
+		data = (int16_t *)sample->data + 1;
+		for (uint32_t j = 0; j < len; j += 2) {
+			data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
+			if ((flags & SF_ENC_MASK) == SF_PCMD)
+				iadd = data[j];
+		}
+
 		len *= 2;
-	}
-	break;
 
-	// PTM 8bit delta to 16-bit sample
-	case SF(16,M,LE,PTM): {
-		len = sample->length * 2;
-		if (len > memsize) break;
-		int8_t *data = (int8_t *)sample->data;
-		int8_t delta8 = 0;
-		for (uint32_t j=0; j<len; j++) {
-			delta8 += slurp_getc(fp);
-			*data++ = delta8;
-		}
-		uint16_t *data16 = (uint16_t *)sample->data;
-		for (uint32_t j=0; j<len; j+=2) {
-			*data16 = bswapLE16(*data16);
-			data16++;
-		}
-	}
-	break;
-
-	// Huffman MDL compressed samples
-	case SF(8,M,LE,MDL):
-	case SF(16,M,LE,MDL):
-		if (memsize < 8) break;
-		if ((flags & SF_BIT_MASK) == SF_8) {
-			len = mdl_decompress8(sample->data, sample->length, fp);
-		} else {
-			len = mdl_decompress16(sample->data, sample->length, fp);
-		}
 		break;
+	}
 
-	// PCM 24-bit signed -> load sample, and normalize it to 16-bit
+	// PCM 24-bit -> load sample, and normalize it to 16-bit
 	case SF(24,M,LE,PCMS):
-	case SF(32,M,LE,PCMS):
+	case SF(24,M,LE,PCMU):
+	case SF(24,M,BE,PCMS):
+	case SF(24,M,BE,PCMU):
+	case SF(24,SI,LE,PCMS):
+	case SF(24,SI,LE,PCMU):
+	case SF(24,SI,BE,PCMS):
+	case SF(24,SI,BE,PCMU):
 		len = sample->length * 3;
-		if ((flags & SF_BIT_MASK) == SF_32) len += sample->length;
-		if (len > memsize) break;
-		if (len > 4*8) {
-			uint32_t slsize = ((flags & SF_BIT_MASK) == SF_32) ? 4 : 3;
-			int32_t max = 255;
+		if ((flags & SF_CHN_MASK) == SF_SI)
+			len *= 2;
 
-			for (uint32_t j=0; j<len; j+=slsize) {
-				if ((flags & SF_BIT_MASK) == SF_32) slurp_getc(fp); // meh
-				int8_t src[3] = {slurp_getc(fp), slurp_getc(fp), slurp_getc(fp)};
-				int32_t l = ((((src[2] << 8) + src[1]) << 8) + src[0]) << 8;
-				l /= 256;
+		if (len > memsize) break;
+		if (len > 3*8*(((flags & SF_CHN_MASK) == SF_SI) ? 2 : 1)) {
+			int32_t max = 0xFF;
+			int32_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT32_MIN : 0;
+			const int64_t start = slurp_tell(fp);
+			unsigned char src[3];
+
+			for (uint32_t j = 0; j < len; j += 3) {
+				slurp_read(fp, src, sizeof(src));
+
+				int32_t l = ((flags & SF_END_MASK) == SF_BE)
+					? ((((src[0] << 8) | src[1]) << 8) | src[2]) << 8
+					: ((((src[2] << 8) | src[1]) << 8) | src[0]) << 8;
+				l += iadd;
+
+				l = rshift_signed(l, 8);
+
 				if (l > max) max = l;
 				if (-l > max) max = -l;
 			}
 
-			max = (max / 128) + 1;
-			int16_t *dest = (int16_t *)sample->data;
+			slurp_seek(fp, start, SEEK_SET);
 
-			for (uint32_t k=0; k<len; k+=slsize) {
-				if ((flags & SF_BIT_MASK) == SF_32) slurp_getc(fp); // meh
-				int8_t src[3] = {slurp_getc(fp), slurp_getc(fp), slurp_getc(fp)};
-				int32_t l = ((((src[2] << 8) + src[1]) << 8) + src[0]) << 8;
+			max = rshift_signed(max, 7) + 1;
+			int16_t *dest = (int16_t *)sample->data;
+			iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT32_MIN : 0;
+
+			for (uint32_t k = 0; k < len; k += 3) {
+				slurp_read(fp, src, sizeof(src));
+
+				int32_t l = ((flags & SF_END_MASK) == SF_BE)
+					? ((((src[0] << 8) | src[1]) << 8) | src[2]) << 8
+					: ((((src[2] << 8) | src[1]) << 8) | src[0]) << 8;
+				l += iadd;
+
 				*dest++ = (int16_t)(l / max);
 			}
 		}
 		break;
 
+	// PCM 32-bit -> load sample, and normalize it to 16-bit
+	case SF(32,M,LE,PCMS):
+	case SF(32,M,LE,PCMU):
+	case SF(32,M,BE,PCMS):
+	case SF(32,M,BE,PCMU):
+	case SF(32,SI,LE,PCMS):
+	case SF(32,SI,LE,PCMU):
+	case SF(32,SI,BE,PCMS):
+	case SF(32,SI,BE,PCMU):
+		len = sample->length * 4;
+		if ((flags & SF_CHN_MASK) == SF_SI)
+			len *= 2;
 
-	// Stereo PCM 24-bit signed -> load sample, and normalize it to 16-bit
-	case SF(24,SI,LE,PCMS):
-	case SF(32,SI,LE,PCMS): {
-		const uint32_t slsize = ((flags & SF_BIT_MASK) == SF_32) ? 4 : 3;
-		len = sample->length * slsize * 2;
 		if (len > memsize) break;
-		if (len > 8*8) {
-			int32_t max = 255;
+		if (len > 4*8*(((flags & SF_CHN_MASK) == SF_SI) ? 2 : 1)) {
+			int32_t max = 0xFFFF;
+			int32_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT32_MIN : 0;
 			const int64_t start = slurp_tell(fp);
-			for (uint32_t j=0; j<len; j+=slsize) {
-				if ((flags & SF_BIT_MASK) == SF_32) slurp_getc(fp); // meh
-				uint8_t src[3] = {slurp_getc(fp), slurp_getc(fp), slurp_getc(fp)};
-				int32_t l = ((((src[2] << 8) + src[1]) << 8) + src[0]) << 8;
-				l /= 256;
+
+			for (uint32_t j = 0; j < len; j += 4) {
+				int32_t l;
+				slurp_read(fp, &l, sizeof(&l));
+
+				l = ((flags & SF_END_MASK) == SF_BE) ? bswapBE32(l) : bswapLE32(l);
+				l += iadd;
+
 				if (l > max) max = l;
 				if (-l > max) max = -l;
 			}
-			max = (max / 128) + 1;
-			int16_t *dest = (int16_t *)sample->data;
-			slurp_seek(fp, start, SEEK_SET);
-			for (uint32_t k=0; k<len; k+=slsize) {
-				if ((flags & SF_BIT_MASK) == SF_32) slurp_getc(fp); // meh
-				uint8_t src[3] = {slurp_getc(fp), slurp_getc(fp), slurp_getc(fp)};
-				int32_t l = ((((src[2] << 8) + src[1]) << 8) + src[0]) << 8;
 
-				*dest++ = (int16_t)(l/max);
+			slurp_seek(fp, start, SEEK_SET);
+
+			max = rshift_signed(max, 15) + 1;
+			int16_t *dest = (int16_t *)sample->data;
+			iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT32_MIN : 0;
+
+			for (uint32_t k = 0; k < len; k += 4) {
+				int32_t l;
+				slurp_read(fp, &l, sizeof(l));
+
+				l = ((flags & SF_END_MASK) == SF_BE) ? bswapBE32(l) : bswapLE32(l);
+				l += iadd;
+
+				*dest++ = (int16_t)(l / max);
 			}
 		}
-		break;
-	}
-
-	case SF(24,SI,BE,PCMS):
-	case SF(32,SI,BE,PCMS): {
-		const uint32_t slsize = (flags == SF(32,SI,BE,PCMS)) ? 4 : 3;
-		len = sample->length * slsize * 2;
-		if (len > memsize) break;
-		if (len > 8*8) {
-			int32_t max = 255;
-			const int64_t start = slurp_tell(fp);
-			for (uint32_t j=0; j<len; j+=slsize) {
-				uint8_t src[3] = {slurp_getc(fp), slurp_getc(fp), slurp_getc(fp)};
-				if (flags == SF(32,SI,BE,PCMS)) slurp_getc(fp); // meh
-				int32_t l = ((((src[0] << 8) + src[1]) << 8) + src[2]) << 8;
-				l /= 256;
-				if (l > max) max = l;
-				if (-l > max) max = -l;
-			}
-			max = (max / 128) + 1;
-			int16_t *dest = (int16_t *)sample->data;
-			slurp_seek(fp, start, SEEK_SET);
-			for (uint32_t k=0; k<len; k+=slsize) {
-				uint8_t src[3] = {slurp_getc(fp), slurp_getc(fp), slurp_getc(fp)};
-				if (flags == SF(32,SI,BE,PCMS)) slurp_getc(fp); // meh
-				int32_t l = ((((src[0] << 8) + src[1]) << 8) + src[2]) << 8;
-
-				*dest++ = (int16_t)(l/max);
-			}
-		}
-		break;
-	}
-
-	// 16-bit signed big endian interleaved stereo
-	case SF(16,SI,BE,PCMS): {
-		len = sample->length * 2;
-		if (len*2 > memsize) len = memsize >> 1;
-
-		int16_t *data = (int16_t *)sample->data;
-		slurp_read(fp, data, len * 2);
-
-		for (uint32_t j=0; j<len; j++)
-			data[j] = bswapBE16(data[j]);
-
-		len *= 2;
-	}
-	break;
-
-	// 7-bit (data shifted one bit left)
-	case SF(7,M,BE,PCMS):
-	case SF(7,M,LE,PCMS):
-		sample->flags &= ~(CHN_16BIT | CHN_STEREO);
-		len = sample->length = MIN(sample->length, memsize);
-		for (uint32_t j = 0; j < len; j++)
-			sample->data[j] = CLAMP(slurp_getc(fp) * 2, -128, 127);
 		break;
 
 	// 32-bit IEEE floating point
@@ -1213,6 +1129,69 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		break;
 	}
 
+	// IT 2.14 compressed samples
+	case SF(8,M,LE,IT214):
+	case SF(16,M,LE,IT214):
+	case SF(8,M,LE,IT215):
+	case SF(16,M,LE,IT215):
+		len = memsize;
+		if (len < 2) break;
+		if ((flags & SF_BIT_MASK) == SF_8) {
+			it_decompress8(sample->data, sample->length,
+					fp, (flags & SF_ENC_MASK) == SF_IT215, 1);
+		} else {
+			it_decompress16(sample->data, sample->length,
+					fp, (flags & SF_ENC_MASK) == SF_IT215, 1);
+		}
+		break;
+	case SF(8,SS,LE,IT214):
+	case SF(16,SS,LE,IT214):
+	case SF(8,SS,LE,IT215):
+	case SF(16,SS,LE,IT215):
+		len = memsize;
+		if (len < 4) break;
+		if ((flags & SF_BIT_MASK) == SF_8) {
+			it_decompress8(sample->data, sample->length,
+					fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
+			it_decompress8(sample->data + 1, sample->length,
+					fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
+		} else {
+			it_decompress16(sample->data, sample->length,
+					fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
+			it_decompress16(sample->data + 2, sample->length,
+					fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
+		}
+		break;
+
+	// PTM 8bit delta to 16-bit sample
+	case SF(16,M,LE,PTM): {
+		len = sample->length * 2;
+		if (len > memsize) break;
+		signed char *data = (signed char *)sample->data;
+		signed char delta8 = 0;
+		for (uint32_t j=0; j<len; j++) {
+			delta8 += slurp_getc(fp);
+			*data++ = delta8;
+		}
+		uint16_t *data16 = (uint16_t *)sample->data;
+		for (uint32_t j=0; j<len; j+=2) {
+			*data16 = bswapLE16(*data16);
+			data16++;
+		}
+	}
+	break;
+
+	// Huffman MDL compressed samples
+	case SF(8,M,LE,MDL):
+	case SF(16,M,LE,MDL):
+		if (memsize < 8) break;
+		if ((flags & SF_BIT_MASK) == SF_8) {
+			len = mdl_decompress8(sample->data, sample->length, fp);
+		} else {
+			len = mdl_decompress16(sample->data, sample->length, fp);
+		}
+		break;
+
 	// 8-bit ADPCM data w/ 16-byte table (MOD ADPCM)
 	case SF(PCMD16,8,M,LE): {
 		len = (sample->length + 1) / 2 + 16;
@@ -1231,19 +1210,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 			smpval += table[(c >> 4) & 0xF];
 			*data++ = smpval;
 		}
-	}
-	break;
-
-	// Default: 8-bit signed PCM data
-	default:
-		printf("DEFAULT: %d\n", flags);
-	case SF(8,M,BE,PCMS): /* endianness is irrelevant for 8-bit samples */
-	case SF(8,M,LE,PCMS):
-		sample->flags &= ~(CHN_16BIT | CHN_STEREO);
-		len = sample->length;
-		if (len > memsize) len = sample->length = memsize;
-		slurp_read(fp, sample->data, len);
 		break;
+	}
 	}
 	if (len > memsize) {
 		if (sample->data) {
@@ -1259,66 +1227,111 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-void csf_adjust_sample_loop(song_sample_t *sample)
-{
-	if (!sample->data || sample->length < 1) return;
-	if (sample->loop_end > sample->length) sample->loop_end = sample->length;
-	if (sample->loop_start+2 >= sample->loop_end) {
-		sample->loop_start = sample->loop_end = 0;
-		sample->flags &= ~CHN_LOOP;
+#define PRECOMPUTE_LOOPS_IMPL(bits) \
+	static void csf_precompute_loop_copy_loop_impl_##bits##_(int##bits##_t *target, const int##bits##_t *data, uint32_t loop_end, int channels, int bidi, int direction) \
+	{ \
+		int samples = 2 * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE + (direction ? 1 : 0); \
+		int##bits##_t *dest = target + channels * (2 * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE - 1); \
+		uint32_t position = loop_end - 1; \
+		const int write_increment = direction ? 1 : -1; \
+		int read_increment = write_increment; \
+		\
+		for (int i = 0; i < samples; i++) { \
+			for (int c = 0; c < channels; c++) \
+				dest[c] = data[position * channels + c]; \
+		\
+			dest += write_increment * channels; \
+		\
+			if (position == loop_end - 1 && read_increment > 0) { \
+				if (bidi) { \
+					read_increment = -1; \
+					if (position > 0) position--; \
+				} else { \
+					position = 0; \
+				} \
+			} else if (position == 0 && read_increment < 0) { \
+				if (bidi) { \
+					read_increment = 1; \
+				} else { \
+					position = loop_end - 1; \
+				} \
+			} else { \
+				position += read_increment; \
+			} \
+		} \
+	} \
+	\
+	static void csf_precompute_loop_impl_##bits##_(int##bits##_t *target, const int##bits##_t *data, uint32_t loop_end, int channels, int bidi) \
+	{ \
+		csf_precompute_loop_copy_loop_impl_##bits##_(target, data, loop_end, channels, bidi, 1); \
+		csf_precompute_loop_copy_loop_impl_##bits##_(target, data, loop_end, channels, bidi, 0); \
+	} \
+	\
+	static void csf_precompute_loops_impl_##bits##_(song_sample_t *smp) \
+	{ \
+		const int channels = (smp->flags & CHN_STEREO) ? 2 : 1; \
+		const int copy_samples = channels * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE; \
+		\
+		int##bits##_t *smp_data = (int##bits##_t *)smp->data; \
+		int##bits##_t *after_smp_start = smp_data + smp->length * channels; \
+		int##bits##_t *loop_lookahead_start = after_smp_start + copy_samples; \
+		int##bits##_t *sustain_lookahead_start = loop_lookahead_start + 4 * copy_samples; \
+		\
+		/* Hold sample on the same level as the last sampling point at the end to prevent extra pops with interpolation.
+		 * Do the same at the sample start, too. */ \
+		for (int i = 0; i < MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE; i++) { \
+			for (int c = 0; c < channels; c++) { \
+				after_smp_start[i * channels + c] = after_smp_start[-channels + c]; \
+				smp_data[-(i + 1) * channels + c] = smp_data[c]; \
+			} \
+		} \
+	\
+		if(smp->flags & CHN_LOOP) { \
+			csf_precompute_loop_impl_##bits##_(loop_lookahead_start, \
+				smp_data + smp->loop_start * channels, \
+				smp->loop_end - smp->loop_start, \
+				channels, \
+				smp->flags & CHN_PINGPONGLOOP); \
+		} \
+		if(smp->flags & CHN_SUSTAINLOOP) \
+		{ \
+			csf_precompute_loop_impl_##bits##_(sustain_lookahead_start, \
+				smp_data + smp->sustain_start * channels, \
+				smp->sustain_end - smp->sustain_start, \
+				channels, \
+				smp->flags & CHN_PINGPONGSUSTAIN); \
+		} \
 	}
 
-	// poopy, removing all that loop-hacking code has produced... very nasty sounding loops!
-	// so I guess I should rewrite the crap at the end of the sample at least.
-	uint32_t len = sample->length;
-	if (sample->flags & CHN_16BIT) {
-		int16_t *data = (int16_t *)sample->data;
-		// Adjust end of sample
-		if (sample->flags & CHN_STEREO) {
-			data[len*2+6]
-				= data[len*2+4]
-				= data[len*2+2]
-				= data[len*2]
-				= data[len*2-2];
-			data[len*2+7]
-				= data[len*2+5]
-				= data[len*2+3]
-				= data[len*2+1]
-				= data[len*2-1];
-		} else {
-			data[len+4]
-				= data[len+3]
-				= data[len+2]
-				= data[len+1]
-				= data[len]
-				= data[len-1];
-		}
+PRECOMPUTE_LOOPS_IMPL(8)
+PRECOMPUTE_LOOPS_IMPL(16)
+
+#undef PRECOMPUTE_LOOPS_IMPL
+
+void csf_adjust_sample_loop(song_sample_t *smp)
+{
+	if (!smp->data || smp->length < 1) return;
+
+	// sanitize the loop points
+	smp->sustain_end = MIN(smp->sustain_end, smp->length);
+	smp->loop_end = MIN(smp->loop_end, smp->length);
+
+	if (smp->sustain_start >= smp->sustain_end) {
+		smp->sustain_start = smp->sustain_end = 0;
+		smp->flags &= ~(CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
+	}
+
+	if (smp->loop_start >= smp->loop_end) {
+		smp->loop_start = smp->loop_end = 0;
+		smp->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP);
+	}
+
+	if (smp->flags & CHN_16BIT) {
+		csf_precompute_loops_impl_16_(smp);
 	} else {
-		signed char *data = sample->data;
-		// Adjust end of sample
-		if (sample->flags & CHN_STEREO) {
-			data[len*2+6]
-				= data[len*2+4]
-				= data[len*2+2]
-				= data[len*2]
-				= data[len*2-2];
-			data[len*2+7]
-				= data[len*2+5]
-				= data[len*2+3]
-				= data[len*2+1]
-				= data[len*2-1];
-		} else {
-			data[len+4]
-				= data[len+3]
-				= data[len+2]
-				= data[len+1]
-				= data[len]
-				= data[len-1];
-		}
+		csf_precompute_loops_impl_8_(smp);
 	}
 }
-
-
 
 void csf_stop_sample(song_t *csf, song_sample_t *smp)
 {

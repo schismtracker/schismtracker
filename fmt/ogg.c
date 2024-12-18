@@ -86,7 +86,7 @@ static int fake_seek(void *void_data, ogg_int64_t offset, int whence)
 	return 0;
 }
 
-static int fake_close(UNUSED void *void_data)
+static int fake_close(SCHISM_UNUSED void *void_data)
 {
 	return 0;
 }

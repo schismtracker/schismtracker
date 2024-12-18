@@ -166,6 +166,14 @@ int slurp_memstream(slurp_t *t, uint8_t *mem, size_t memsize)
 	return 0;
 }
 
+int slurp_memstream_free(slurp_t *t, uint8_t *mem, size_t memsize)
+{
+	slurp_memstream(t, mem, memsize);
+
+	t->closure = slurp_memory_closure_free_;
+
+	return 0;
+}
 
 void unslurp(slurp_t * t)
 {

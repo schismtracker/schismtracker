@@ -76,7 +76,8 @@ typedef uint32_t version_time_t;
 #define EPOCH_MONTH 9
 #define EPOCH_DAY 31
 
-static version_time_t get_days_for_month(uint8_t month, uint16_t year) {
+SCHISM_CONST static version_time_t get_days_for_month(uint8_t month, uint16_t year)
+{
 	static const version_time_t days_for_month[12] = {
 		31, /* January */
 		28, /* February */
@@ -100,7 +101,7 @@ static version_time_t get_days_for_month(uint8_t month, uint16_t year) {
 	return month_days;
 }
 
-static version_time_t version_mktime(int y, int m, int d)
+SCHISM_CONST static version_time_t version_mktime(int y, int m, int d)
 {
 	uint16_t year = EPOCH_YEAR;
 	uint8_t month = EPOCH_MONTH;
@@ -137,9 +138,10 @@ static version_time_t version_mktime(int y, int m, int d)
 	return ret;
 }
 
-static void version_time_format(char buf[11], version_time_t ver) {
-	long long year = EPOCH_YEAR, month = EPOCH_MONTH, days = ver + EPOCH_DAY;
-	int days_in;
+static void version_time_format(char buf[11], version_time_t ver)
+{
+	int64_t year = EPOCH_YEAR, month = EPOCH_MONTH, days = ver + EPOCH_DAY;
+	int32_t days_in;
 
 	for (;;) {
 		days_in = (LEAP_YEAR(year) ? 366 : 365);
@@ -170,6 +172,11 @@ static void version_time_format(char buf[11], version_time_t ver) {
 		}
 	}
 
+	// shut up gcc
+	year = CLAMP(year, EPOCH_YEAR, 9999);
+	month = CLAMP(month, 0, 11);
+	days = CLAMP(days, 1, 31);
+
 	snprintf(buf, 11, "%04lld-%02lld-%02lld", year, (month + 1), days);
 }
 
@@ -193,8 +200,8 @@ chosen epoch, there can be plenty of room for the foreseeable future.
 	0xffe = (0xfff - 0x050) + 2009-10-31 = 2020-10-27
   = 0xfff: a non-value indicating a date after 2020-10-27. in this case, the full version number is stored in a reserved header field.
 		   this field follows the same format, using the same epoch, but without adding 0x50. */
-unsigned short ver_cwtv;
-unsigned short ver_reserved;
+uint16_t ver_cwtv;
+uint16_t ver_reserved;
 
 /* these should be 50 characters or shorter, as they are used in the startup dialog */
 const char *ver_short_copyright =

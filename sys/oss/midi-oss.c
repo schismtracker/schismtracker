@@ -50,7 +50,7 @@
 static int opened[MAX_MIDI_PORTS];
 
 static void _oss_send(struct midi_port *p, const unsigned char *data, unsigned int len,
-	UNUSED unsigned int delay)
+	SCHISM_UNUSED unsigned int delay)
 {
 	int fd, r, n;
 	fd = opened[ n = INT_SHAPED_PTR(p->userdata) ];
@@ -71,7 +71,7 @@ static void _oss_send(struct midi_port *p, const unsigned char *data, unsigned i
 	}
 }
 
-static int _oss_start_stop(UNUSED struct midi_port *p) { return 1; /* do nothing */ }
+static int _oss_start_stop(SCHISM_UNUSED struct midi_port *p) { return 1; /* do nothing */ }
 
 static int _oss_thread(struct midi_provider *p)
 {

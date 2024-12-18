@@ -24,7 +24,8 @@
 #define SCHISM_EVENTS_H_
 
 #include "keyboard.h"
-#include "backend/timer.h"
+#include "timer.h" // schism_ticks_t
+#include "backend/events.h" // for the backend typedef
 
 /* types of events delivered by the current backend */
 enum {
@@ -234,19 +235,48 @@ typedef struct {
 typedef struct {
 	schism_common_event_t common;
 
-	enum {SCHISM_WM_MSG_BACKEND_SDL12, SCHISM_WM_MSG_BACKEND_SDL2} backend;
-	enum {SCHISM_WM_MSG_SUBSYSTEM_WINDOWS} subsystem;
+	// which backend
+	enum {
+		SCHISM_WM_MSG_BACKEND_SDL12,
+		SCHISM_WM_MSG_BACKEND_SDL2,
+	} backend;
+
+	// which wm subsystem its using
+	enum {
+		SCHISM_WM_MSG_SUBSYSTEM_WINDOWS,
+		SCHISM_WM_MSG_SUBSYSTEM_X11
+	} subsystem;
 
 	union {
 		// use generic types when possible, please
 		struct {
-			void *hwnd;
-			uint32_t msg;
-			uintptr_t wparam;
-			uintptr_t lparam;
+			void *hwnd;       // `HWND' in Win32
+			uint32_t msg;     // `DWORD' in Win32
+			uintptr_t wparam; // `WPARAM' in Win32
+			uintptr_t lparam; // `LPARAM' in Win32
 		} win;
 
-		/* don't care about others */
+		struct {
+			union {
+				// These are NOT size compatible with the Xlib
+				// event structures...
+				int type;
+
+				// This is the only one used (for now?)
+				struct {
+					int type;
+					uint32_t serial;
+					int send_event;     // `Bool' in Xlib
+					void *display;      // `Display *' in Xlib
+					uint32_t owner;     // `Window' in Xlib
+					uint32_t requestor; // `Window' in Xlib
+					uint32_t selection; // `Atom' in Xlib
+					uint32_t target;    // `Atom' in Xlib
+					uint32_t property;  // `Atom' in Xlib
+					uint32_t time;      // `Time' in Xlib
+				} selection_request;
+			} event;
+		} x11;
 	} msg;
 } schism_wm_msg_event_t;
 
@@ -277,12 +307,13 @@ typedef union schism_event {
 
 /* ------------------------------------ */
 
-int events_init(void);
+int events_init(const schism_events_backend_t *backend);
 void events_quit(void);
 
 int events_have_event(void);
 int events_poll_event(schism_event_t *event);
 int events_push_event(const schism_event_t *event);
+void events_pump_events(void);
 
 schism_keymod_t events_get_keymod_state(void);
 

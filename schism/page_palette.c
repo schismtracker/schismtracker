@@ -108,7 +108,7 @@ static void palette_paste_from_clipboard(void) {
 	clippy_paste(CLIPPY_BUFFER);
 }
 
-static int palette_paste_callback(UNUSED int cb, const void *data)
+static int palette_paste_callback(SCHISM_UNUSED int cb, const void *data)
 {
 	if (!data) return 0;
 

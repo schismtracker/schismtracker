@@ -24,6 +24,8 @@
 #include "headers.h"
 #include "fmt.h"
 
+#include <math.h>
+
 /* --------------------------------------------------------------------------------------------------------- */
 
 static int _mod_period_to_note(int period)
@@ -405,32 +407,22 @@ uint32_t it_decode_edit_timer(uint16_t cwtv, uint32_t runtime)
 
 uint32_t it_get_song_elapsed_dos_time(song_t *song)
 {
-	struct timeval elapsed;
-
-	{
-		struct timeval savetime;
-		gettimeofday(&savetime, NULL);
-		timersub(&savetime, &song->editstart, &elapsed);
-	}
-
-	return timeval_to_dos_time(&elapsed);
+	return ms_to_dos_time(timer_ticks() - song->editstart.runtime);
 }
 
-void dos_time_to_timeval(struct timeval *timeval, uint32_t dos_time)
+schism_ticks_t dos_time_to_ms(uint32_t dos_time)
 {
-	// convert to microseconds
-	uint64_t us = (uint64_t)dos_time * 54945;
-
-	timeval->tv_sec = us / 1000000;
-	timeval->tv_usec = us % 1000000;
+	// convert to milliseconds
+	schism_ticks_t ms = round((double)dos_time * (1000.0 / 18.2));
+	return ms;
 }
 
-uint32_t timeval_to_dos_time(const struct timeval *timeval)
+uint32_t ms_to_dos_time(schism_ticks_t ms)
 {
-	int64_t dos = ((int64_t)timeval->tv_sec * 182 / 10) + ((int64_t)timeval->tv_usec / 54945);
+	double dos = round((double)ms / (1000.0 / 18.2));
 
-	// don't overflow!
-	return CLAMP(dos, 0, UINT32_MAX);
+	// no overflow!
+	return (uint32_t)CLAMP(dos, 0, UINT32_MAX);
 }
 
 void fat_date_time_to_tm(struct tm *tm, uint16_t fat_date, uint16_t fat_time)

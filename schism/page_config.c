@@ -117,13 +117,13 @@ static char video_revert_interpolation[8] = {'\0'};
 static int video_revert_fs = 0;
 static int video_revert_hw = 0;
 
-static void video_mode_keep(UNUSED void*ign)
+static void video_mode_keep(SCHISM_UNUSED void*ign)
 {
 	status_text_flash(SAVED_AT_EXIT);
 	config_set_page();
 	status.flags |= NEED_UPDATE;
 }
-static void video_mode_cancel(UNUSED void*ign)
+static void video_mode_cancel(SCHISM_UNUSED void*ign)
 {
 	if (*video_revert_interpolation)
 		video_setup(video_revert_interpolation);

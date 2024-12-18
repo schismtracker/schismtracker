@@ -49,7 +49,6 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_sysinit wiiu_sysinit
 # define os_sysexit wiiu_sysexit
 #elif defined(SCHISM_WIN32)
-# define os_event win32_event
 # define os_sysinit win32_sysinit
 # define os_sysexit win32_sysexit
 # define os_get_modkey win32_get_modkey
@@ -60,7 +59,6 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_get_key_repeat win32_get_key_repeat
 # define os_show_message_box win32_show_message_box
 #elif defined(SCHISM_MACOSX)
-# define os_event macosx_event
 # define os_sysexit macosx_sysexit
 # define os_sysinit macosx_sysinit
 # define os_get_modkey macosx_get_modkey
@@ -78,9 +76,6 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_run_hook posix_run_hook
 #endif
 
-#ifndef os_event
-# define os_event(ev) 1
-#endif
 #ifndef os_sysinit
 # define os_sysinit(pargc,argv)
 #endif
@@ -150,5 +145,7 @@ int macos_mkdir(const char *path, mode_t mode);
 int macos_stat(const char *file, struct stat *st);
 void macos_show_message_box(const char *title, const char *text);
 void macos_sysinit(int *pargc, char ***pargv);
+
+int x11_event(schism_event_t *event);
 
 #endif /* SCHISM_OSDEFS_H_ */

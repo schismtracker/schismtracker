@@ -40,6 +40,9 @@ typedef struct {
 #ifdef SCHISM_WIN32
 extern const schism_clippy_backend_t schism_clippy_backend_win32;
 #endif
+#ifdef SCHISM_USE_X11
+extern const schism_clippy_backend_t schism_clippy_backend_x11;
+#endif
 #ifdef SCHISM_MACOSX
 extern const schism_clippy_backend_t schism_clippy_backend_macosx;
 #endif

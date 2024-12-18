@@ -36,6 +36,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stddef.h>
 
 #include <stdarg.h>
 
@@ -69,30 +70,9 @@ char *strcasestr(const char *haystack, const char *needle);
 # include <unistd.h>
 #endif
 
-/* dumb workaround for dumb devkitppc bug
- *
- * XXX is this still relevant at all? */
-#ifdef SCHISM_WII
-# undef NAME_MAX
-# undef PATH_MAX
-#endif
-
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
 #endif
-
-#ifndef NAME_MAX
-# ifdef MAXPATHLEN
-#  define NAME_MAX MAXPATHLEN /* BSD name */
-# else
-#  ifdef FILENAME_MAX
-#   define NAME_MAX FILENAME_MAX
-#  else
-#   define NAME_MAX 256
-#  endif
-# endif
-#endif
-
 
 #if HAVE_SYS_TIME_H
 # include <sys/time.h>
@@ -148,8 +128,176 @@ int unsetenv(const char *name);
 /* should work anywhere and shouldn't dump random stack allocations
  * BUT it fails to provide any sort of useful message to the user */
 # define SCHISM_STATIC_ASSERT(x, msg) \
-    extern int (*schism_static_assert_function_no_touchy_touchy_plz(void)) \
-      [!!sizeof (struct { int __error_if_negative: (x) ? 2 : -1; })]
+	extern int (*schism_static_assert_function_no_touchy_touchy_plz(void)) \
+		[!!sizeof (struct { int __error_if_negative: (x) ? 2 : -1; })]
 #endif
+
+/* -------------------------------------------------------------- */
+/* moved from util.h */
+
+/* A bunch of compiler detection stuff... don't mind this... */
+#define SCHISM_SEMVER_ATLEAST(mmajor, mminor, mpatch, major, minor, patch) \
+	((major >= mmajor) \
+	 && (major > mmajor || minor >= mminor) \
+	 && (major > mmajor || minor > mminor || patch >= mpatch))
+
+// ugh
+#if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
+# define SCHISM_GNUC_ATLEAST(major, minor, patch) \
+	SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
+#elif defined(__GNUC__) && defined(__GNUC_MINOR__)
+# define SCHISM_GNUC_ATLEAST(major, minor, patch) \
+	SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, __GNUC_MINOR__, 0)
+#elif defined(__GNUC__)
+# define SCHISM_GNUC_ATLEAST(major, minor, patch) \
+	SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, 0, 0)
+#else
+# define SCHISM_GNUC_ATLEAST(major, minor, patch) (0)
+#endif
+
+#ifdef __has_attribute
+# define SCHISM_GNUC_HAS_ATTRIBUTE(x, major, minor, patch) \
+	__has_attribute(x)
+#else
+# define SCHISM_GNUC_HAS_ATTRIBUTE(x, major, minor, patch) \
+	SCHISM_GNUC_ATLEAST(major, minor, patch)
+#endif
+
+#ifdef __has_builtin
+# define SCHISM_GNUC_HAS_BUILTIN(x, major, minor, patch) \
+	__has_builtin(x)
+#else
+# define SCHISM_GNUC_HAS_BUILTIN(x, major, minor, patch) \
+	SCHISM_GNUC_ATLEAST(major, minor, patch)
+#endif
+
+#ifdef __has_extension
+# define SCHISM_GNUC_HAS_EXTENSION(x, major, minor, patch) \
+	__has_extension(x)
+#else
+# define SCHISM_GNUC_HAS_EXTENSION(x, major, minor, patch) \
+	SCHISM_GNUC_ATLEAST(major, minor, patch)
+#endif
+
+#define ARRAY_SIZE(a) (sizeof(a)/sizeof(*(a)))
+
+/* macros stolen from glib */
+#ifndef MAX
+# define MAX(X,Y) (((X)>(Y))?(X):(Y))
+#endif
+#ifndef MIN
+# define MIN(X,Y) (((X)<(Y))?(X):(Y))
+#endif
+#ifndef CLAMP
+# define CLAMP(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
+#endif
+
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__unused__, 2, 7, 0)
+# define SCHISM_UNUSED __attribute__((__unused__))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__packed__, 2, 7, 0)
+# define SCHISM_PACKED __attribute__((__packed__))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__malloc__, 3, 0, 0)
+# define SCHISM_MALLOC __attribute__((__malloc__))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__pure__, 2, 96, 0)
+# define SCHISM_PURE __attribute__((__pure__))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__const__, 2, 5, 0)
+# define SCHISM_CONST __attribute__((__const__))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__format__, 2, 3, 0)
+# define SCHISM_FORMAT(x) __attribute__((__format__ x))
+#endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__alloc_size__, 9, 1, 0)
+# define SCHISM_ALLOC_SIZE(x) __attribute__((__alloc_size__(x)))
+# define SCHISM_ALLOC_SIZE_EX(x, y) __attribute__((__alloc_size__(x, y)))
+#endif
+
+#if SCHISM_GNUC_HAS_BUILTIN(__builtin_expect, 3, 0, 0)
+# define SCHISM_LIKELY(x)   __builtin_expect(!!(x), 1)
+# define SCHISM_UNLIKELY(x) __builtin_expect(!(x),  1)
+#endif
+
+// _Generic
+#if (SCHISM_GNUC_HAS_EXTENSION(c_generic_selections, 4, 9, 0) || __STDC_VERSION__ >= 201112L)
+# define SCHISM_HAVE_GENERIC 1
+#endif
+
+#ifndef SCHISM_LIKELY
+# define SCHISM_LIKELY(x) (x)
+#endif
+#ifndef SCHISM_UNLIKELY
+# define SCHISM_UNLIKELY(x) (x)
+#endif
+#ifndef SCHISM_UNUSED
+# define SCHISM_UNUSED
+#endif
+#ifndef SCHISM_PACKED
+# define SCHISM_PACKED
+#endif
+#ifndef SCHISM_MALLOC
+# define SCHISM_MALLOC
+#endif
+#ifndef SCHISM_PURE
+# define SCHISM_PURE
+#endif
+#ifndef SCHISM_CONST
+# define SCHISM_CONST
+#endif
+#ifndef SCHISM_FORMAT
+# define SCHISM_FORMAT(x)
+#endif
+#ifndef SCHISM_ALLOC_SIZE
+# define SCHISM_ALLOC_SIZE(x)
+#endif
+#ifndef SCHISM_ALLOC_SIZE_EX
+# define SCHISM_ALLOC_SIZE_EX(x, y)
+#endif
+
+/* ------------------------------------------------------------------------ */
+
+/* dumb workaround for dumb devkitppc bug
+ *
+ * XXX is this still relevant at all? */
+#ifdef SCHISM_WII
+# undef NAME_MAX
+# undef PATH_MAX
+#endif
+
+#ifdef SCHISM_WIN32
+# define SCHISM_PATH_MAX (3 + 256 + 1) // drive letter, colon, name components, NUL
+#else
+# define SCHISM_PATH_MAX (8192) // 8 KiB (should be more than enough)
+#endif
+
+// redefine our value if it's smaller than the implementation's
+#ifdef PATH_MAX
+# if PATH_MAX > SCHISM_PATH_MAX
+#  undef SCHISM_PATH_MAX
+#  define SCHISM_PATH_MAX PATH_MAX
+# endif
+#endif
+
+#ifdef MAXPATHLEN
+# if MAXPATHLEN > SCHISM_PATH_MAX
+#  undef SCHISM_PATH_MAX
+#  define SCHISM_PATH_MAX MAXPATHLEN
+# endif
+#endif
+
+// SCHISM_PATH_MAX is a safe minimum, i guess
+#define SCHISM_NAME_MAX SCHISM_PATH_MAX
+
+#ifdef NAME_MAX
+# if NAME_MAX > SCHISM_NAME_MAX
+#  undef SCHISM_NAME_MAX
+#  define SCHISM_NAME_MAX NAME_MAX
+# endif
+#endif
+
+// FILENAME_MAX is not used here because
+// it shouldn't be used for array bounds
 
 #endif /* SCHISM_HEADERS_H_ */

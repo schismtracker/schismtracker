@@ -655,7 +655,7 @@ static void info_draw_track_64(int base, int height, int active, int first_chann
 	_draw_track_view(base, height, first_channel, nchan, 1, 0, draw_note_1);
 }
 
-static void info_draw_channels(int base, UNUSED int height, int active, UNUSED int first_channel)
+static void info_draw_channels(int base, SCHISM_UNUSED int height, int active, SCHISM_UNUSED int first_channel)
 {
 	char buf[32];
 	int fg = (active ? 3 : 0);
@@ -746,7 +746,7 @@ static void click_chn_x(int x, int w, int skip, int fc)
 	}
 }
 
-static void click_chn_is_x(int x, UNUSED int y, int nc, int fc)
+static void click_chn_is_x(int x, SCHISM_UNUSED int y, int nc, int fc)
 {
 	if (x < 5) return;
 	x -= 4;
@@ -775,18 +775,18 @@ static void click_chn_is_x(int x, UNUSED int y, int nc, int fc)
 	};
 }
 
-static void click_chn_is_y_nohead(UNUSED int x, int y, UNUSED int nc, int fc)
+static void click_chn_is_y_nohead(SCHISM_UNUSED int x, int y, SCHISM_UNUSED int nc, int fc)
 {
 	selected_channel = CLAMP(y+fc, 1, 64);
 }
 
-static void click_chn_is_y(UNUSED int x, int y, UNUSED int nc, int fc)
+static void click_chn_is_y(SCHISM_UNUSED int x, int y, SCHISM_UNUSED int nc, int fc)
 {
 	if (!y) return;
 	selected_channel = CLAMP((y+fc)-1, 1, 64);
 }
 
-static void click_chn_nil(UNUSED int x, UNUSED int y, UNUSED int nc, UNUSED int fc)
+static void click_chn_nil(SCHISM_UNUSED int x, SCHISM_UNUSED int y, SCHISM_UNUSED int nc, SCHISM_UNUSED int fc)
 {
 	/* do nothing */
 }
@@ -1102,6 +1102,10 @@ static int info_page_handle_key(struct key_event * k)
 			return 1;
 		}
 		return 0;
+	case SCHISM_KEYSYM_EQUALS:
+		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
+			return 0;
+		// fallthrough
 	case SCHISM_KEYSYM_PLUS:
 		if (k->state == KEY_RELEASE)
 			return 1;

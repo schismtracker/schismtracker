@@ -79,7 +79,7 @@ static int s3m_import_edittime(song_t *song, uint16_t trkvers, uint32_t reserved
 	song->history = mem_calloc(1, sizeof(*song->history));
 
 	uint32_t runtime = it_decode_edit_timer(trkvers, reserved32);
-	dos_time_to_timeval(&song->history[0].runtime, runtime);
+	song->history[0].runtime = dos_time_to_ms(runtime);
 
 	return 1;
 }
@@ -1019,7 +1019,7 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 	hdr.reserved2 = 0;
 
 	for (size_t i = 0; i < song->histlen; i++)
-		hdr.reserved2 += timeval_to_dos_time(&song->history[i].runtime);
+		hdr.reserved2 += ms_to_dos_time(song->history[i].runtime);
 
 	// 32-bit DOS tick count (tick = 1/18.2 second; 54945 * 18.2 = 999999 which is Close Enough)
 	hdr.reserved2 += it_get_song_elapsed_dos_time(song);

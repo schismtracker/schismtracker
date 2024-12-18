@@ -27,15 +27,10 @@
 
 #include <inttypes.h>
 
-/* chunk enums */
-enum {
-	IFF_CHUNK_SIZE_LE = (1 << 0), /* for RIFF */
-};
-
 // 'chunk' is filled in with the chunk header
 // return: 0 if chunk overflows EOF, 1 if it was successfully read
 // pos is updated to point to the beginning of the next chunk
-static inline int iff_chunk_peek_impl(iff_chunk_t *chunk, slurp_t *fp, uint32_t flags)
+int iff_chunk_peek_ex(iff_chunk_t *chunk, slurp_t *fp, uint32_t flags)
 {
 	if (slurp_read(fp, &chunk->id, sizeof(chunk->id)) != sizeof(chunk->id))
 		return 0;
@@ -46,10 +41,12 @@ static inline int iff_chunk_peek_impl(iff_chunk_t *chunk, slurp_t *fp, uint32_t 
 	chunk->id = bswapBE32(chunk->id);
 	chunk->size = (flags & IFF_CHUNK_SIZE_LE) ? bswapLE32(chunk->size) : bswapBE32(chunk->size);
 
-	if ((chunk->offset = slurp_tell(fp)) < 0)
+	chunk->offset = slurp_tell(fp);
+	if (chunk->offset < 0)
 		return 0;
 
-	slurp_seek(fp, chunk->size, SEEK_CUR);
+	// align the offset on a word boundary if desired
+	slurp_seek(fp, (flags & IFF_CHUNK_ALIGNED) ? (chunk->size + (chunk->size & 1)) : (chunk->size), SEEK_CUR);
 
 	int64_t pos = slurp_tell(fp);
 	if (pos < 0)
@@ -58,14 +55,15 @@ static inline int iff_chunk_peek_impl(iff_chunk_t *chunk, slurp_t *fp, uint32_t 
 	return (pos <= slurp_length(fp));
 }
 
+// really just aliases now
 int iff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp)
 {
-	return iff_chunk_peek_impl(chunk, fp, 0);
+	return iff_chunk_peek_ex(chunk, fp, IFF_CHUNK_ALIGNED);
 }
 
 int riff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp)
 {
-	return iff_chunk_peek_impl(chunk, fp, IFF_CHUNK_SIZE_LE);
+	return iff_chunk_peek_ex(chunk, fp, IFF_CHUNK_ALIGNED | IFF_CHUNK_SIZE_LE);
 }
 
 /* returns the amount of bytes read or zero on error */

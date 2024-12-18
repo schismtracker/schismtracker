@@ -164,8 +164,11 @@ QZA(w);QZA(x);QZA(y);QZA(z);
 
 void kbd_key_translate(struct key_event *k)
 {
-#if 0
-	/* FIXME: this assumes a US keyboard layout */
+	/* This assumes a US keyboard layout. There's no real "easy" way
+	 * to solve this besides possibly using system-specific translate
+	 * functions, but that's clunky and a lot of systems don't even
+	 * provide that IIRC. */
+
 	k->orig_sym = k->sym;
 	if (k->mod & SCHISM_KEYMOD_SHIFT) {
 		switch (k->sym) {
@@ -239,7 +242,6 @@ void kbd_key_translate(struct key_event *k)
 			break;
 		};
 	}
-#endif
 	// do nothing
 }
 
@@ -414,7 +416,7 @@ void kbd_set_current_octave(int new_octave)
 	status.flags |= NEED_UPDATE;
 }
 
-inline int kbd_char_to_99(struct key_event *k)
+int kbd_char_to_99(struct key_event *k)
 {
 	int c;
 	if (!NO_CAM_MODS(k->mod)) return -1;
@@ -424,13 +426,13 @@ inline int kbd_char_to_99(struct key_event *k)
 		return 10 + c - 'h';
 
 	return kbd_char_to_hex(k);
-
 }
+
 int kbd_char_to_hex(struct key_event *k)
 {
 	if (!NO_CAM_MODS(k->mod)) return -1;
 
-	switch (k->sym) {
+	switch (k->orig_sym) {
 	case SCHISM_KEYSYM_KP_0: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1;
 	case SCHISM_KEYSYM_0: return 0;
 	case SCHISM_KEYSYM_KP_1: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1;
@@ -480,15 +482,6 @@ int kbd_get_note(struct key_event *k)
 	int note;
 
 	if (!NO_CAM_MODS(k->mod)) return -1;
-
-	if (k->sym == SCHISM_KEYSYM_KP_PERIOD) {
-		/* lots of systems map an outside scancode for these;
-		 * we may need to simply ignore scancodes > 256
-		 * but i want a narrow change for this for now
-		 * until it is certain we need more...
-		 */
-		return 0;
-	}
 
 	if (k->sym == SCHISM_KEYSYM_KP_1 || k->sym == SCHISM_KEYSYM_KP_PERIOD)
 		if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1;
@@ -546,7 +539,7 @@ int kbd_get_alnum(struct key_event *k)
 		return 0;
 	if (k->mod & SCHISM_KEYMOD_SHIFT) {
 		const char shifted_digits[] = ")!@#$%^&*("; // comical profanity
-		switch (k->sym) {
+		switch (k->orig_sym) {
 			case 'a': case 'b': case 'c':
 			case 'd': case 'e': case 'f':
 			case 'g': case 'h': case 'i':
@@ -573,9 +566,12 @@ int kbd_get_alnum(struct key_event *k)
 			case '/': return '?';
 			case '\\': return '|';
 			case '\'': return '"';
+			// maybe key_translate handled it
 			default: return k->sym; // shift + some weird key = ???
 		}
 	}
+
+	// hm
 	return k->sym;
 }
 

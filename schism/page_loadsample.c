@@ -52,7 +52,7 @@ static struct vgamem_overlay sample_image = {
 	NULL, 0, 0, 0,
 };
 
-static char current_filename[PATH_MAX];
+static char current_filename[22];
 static int sample_speed_pos = 0;
 static int sample_loop_beg = 0;
 static int sample_loop_end = 0;
@@ -68,7 +68,7 @@ static int fake_slot = KEYJAZZ_NOINST;
 static const char *const loop_states[] = {
 		"Off", "On Forwards", "On Ping Pong", NULL };
 
-static char samp_cwd[PATH_MAX+1] = "";
+static char samp_cwd[SCHISM_PATH_MAX] = {0};
 
 static void handle_preload(void);
 
@@ -90,7 +90,7 @@ static dmoz_filelist_t flist;
 #define current_file (flist.selected)
 
 static int search_pos = -1;
-static char search_str[PATH_MAX];
+static char search_str[SCHISM_PATH_MAX];
 
 /* get a color index from a dmoz_file_t 'type' field */
 static inline int get_type_color(int type)
@@ -127,10 +127,10 @@ static void file_list_reposition(void)
 		f = flist.files[current_file];
 
 		if (f && f->smp_filename) {
-			strncpy(current_filename, f->smp_filename, PATH_MAX-1);
+			strncpy(current_filename, f->smp_filename, ARRAY_SIZE(current_filename) - 1);
 		} else if (f && f->base) {
 			CHARSET_EASY_MODE(f->base, CHARSET_CHAR, CHARSET_CP437, {
-				strncpy(current_filename, out, PATH_MAX-1);
+				strncpy(current_filename, out, ARRAY_SIZE(current_filename) - 1);
 			});
 		} else {
 			current_filename[0] = '\0';
@@ -209,11 +209,12 @@ static int change_dir(const char *dir)
 	dmoz_cache_update(cfg_dir_samples, &flist, NULL);
 
 	if (!os_stat(ptr, &buf) && S_ISDIR(buf.st_mode)) {
-		strncpy(cfg_dir_samples, ptr, PATH_MAX);
-		cfg_dir_samples[PATH_MAX] = '\0';
+		strncpy(cfg_dir_samples, ptr, ARRAY_SIZE(cfg_dir_samples) - 1);
+		// paranoia
+		cfg_dir_samples[ARRAY_SIZE(cfg_dir_samples) - 1] = '\0';
 	}
-	strncpy(samp_cwd, ptr, PATH_MAX);
-	samp_cwd[PATH_MAX] = '\0';
+	strncpy(samp_cwd, ptr, ARRAY_SIZE(samp_cwd) - 1);
+	samp_cwd[ARRAY_SIZE(samp_cwd) - 1] = '\0';
 	free(ptr);
 
 	read_directory();
@@ -331,8 +332,8 @@ static void _common_set_page(void)
 	struct stat st;
 
 	if (!*samp_cwd) {
-		strncpy(samp_cwd, cfg_dir_samples, PATH_MAX);
-		samp_cwd[PATH_MAX] = '\0';
+		strncpy(samp_cwd, cfg_dir_samples, ARRAY_SIZE(samp_cwd) - 1);
+		samp_cwd[ARRAY_SIZE(samp_cwd) - 1] = '\0';
 	}
 
 	/* if we have a list, the directory didn't change, and the mtime is the same, we're set */
@@ -591,10 +592,10 @@ static void handle_enter_key(void)
 		/* it's already been loaded, so copy it */
 		smp = song_get_sample(cur);
 		song_copy_sample(cur, file->sample);
-		strncpy(smp->name, file->title, 25);
+		strncpy(smp->name, file->title, ARRAY_SIZE(smp->name));
 		smp->name[25] = 0;
 		CHARSET_EASY_MODE(file->base, CHARSET_CHAR, CHARSET_CP437, {
-			strncpy(smp->filename, out, 12);
+			strncpy(smp->filename, out, ARRAY_SIZE(smp->filename));
 		});
 		smp->filename[12] = 0;
 		finish_load(cur);
@@ -607,7 +608,7 @@ static void handle_enter_key(void)
 	}
 }
 
-static void do_discard_changes_and_move(UNUSED void *gn)
+static void do_discard_changes_and_move(SCHISM_UNUSED void *gn)
 {
 	fake_slot = KEYJAZZ_NOINST;
 	fake_slot_changed = 0;
@@ -617,7 +618,7 @@ static void do_discard_changes_and_move(UNUSED void *gn)
 	status.flags |= NEED_UPDATE;
 }
 
-static void do_delete_file(UNUSED void *data)
+static void do_delete_file(SCHISM_UNUSED void *data)
 {
 	int old_top_file, old_current_file;
 	char *ptr;
@@ -651,7 +652,7 @@ static int file_list_handle_text_input(const char *text)
 	for (; *text; text++) {
 		if (*text >= 32 && (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
 			if (search_pos < 0) search_pos = 0;
-			if (search_pos < PATH_MAX) {
+			if (search_pos + 1 < ARRAY_SIZE(search_str)) {
 				search_str[search_pos++] = *text;
 				reposition_at_slash_search();
 				status.flags |= NEED_UPDATE;

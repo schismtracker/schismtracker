@@ -34,14 +34,14 @@
 
 
 // see also csf_midi_out_note in sndmix.c
-void (*csf_midi_out_raw)(const unsigned char *,unsigned int, unsigned int) = NULL;
+void (*csf_midi_out_raw)(const unsigned char *,uint32_t, uint32_t) = NULL;
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* note/freq conversion functions */
 
 int32_t get_note_from_frequency(int32_t frequency, uint32_t c5speed)
 {
-	int n;
+	int32_t n;
 	if (!frequency)
 		return 0;
 	for (n = 0; n <= 120; n++) {
@@ -64,12 +64,12 @@ int32_t get_frequency_from_note(int32_t note, uint32_t c5speed)
 
 uint32_t transpose_to_frequency(int32_t transp, int32_t ftune)
 {
-	return (unsigned int) (8363.0 * pow(2, (transp * 128.0 + ftune) / 1536.0));
+	return (uint32_t) (8363.0 * pow(2, (transp * 128.0 + ftune) / 1536.0));
 }
 
 int32_t frequency_to_transpose(uint32_t freq)
 {
-	return (int) (1536.0 * (log(freq / 8363.0) / log(2)));
+	return (int32_t) (1536.0 * (log(freq / 8363.0) / log(2)));
 }
 
 
@@ -85,7 +85,7 @@ uint64_t calc_halftone(uint64_t hz, int32_t rel)
 ////////////////////////////////////////////////////////////
 // Channels effects
 
-void fx_note_cut(song_t *csf, uint32_t nchan, int clear_note)
+void fx_note_cut(song_t *csf, uint32_t nchan, int32_t clear_note)
 {
 	song_voice_t *chan = &csf->voices[nchan];
 	// stop the current note:
@@ -164,7 +164,7 @@ void fx_key_off(song_t *csf, uint32_t nchan)
 
 
 // negative value for slide = down, positive = up
-int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, int is_tone_portamento)
+int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, int32_t is_tone_portamento)
 {
 	// IT Linear slides
 	if (!frequency) return 0;
@@ -297,18 +297,23 @@ static void fx_portamento_down(uint32_t flags, song_voice_t *chan, uint32_t para
 
 static void fx_tone_portamento(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
-	if (!param)
-		return;
-
 	chan->flags |= CHN_PORTAMENTO;
 	if (chan->frequency && chan->portamento_target && !(flags & SONG_FIRSTTICK)) {
-		if (chan->frequency < chan->portamento_target) {
+		if (!param && chan->row_effect == FX_TONEPORTAVOL)
+		{
+			if (chan->frequency > 1 && (flags & SONG_LINEARSLIDES))
+				chan->frequency--;
+			if (chan->frequency < chan->portamento_target) {
+				chan->frequency = chan->portamento_target;
+				chan->portamento_target = 0;
+			}
+		} else if (param && chan->frequency < chan->portamento_target) {
 			chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, param * 4, 1);
 			if (chan->frequency >= chan->portamento_target) {
 				chan->frequency = chan->portamento_target;
 				chan->portamento_target = 0;
 			}
-		} else if (chan->frequency >= chan->portamento_target) {
+		} else if (param && chan->frequency >= chan->portamento_target) {
 			chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, param * -4, 1);
 			if (chan->frequency < chan->portamento_target) {
 				chan->frequency = chan->portamento_target;
@@ -320,7 +325,7 @@ static void fx_tone_portamento(uint32_t flags, song_voice_t *chan, uint32_t para
 
 // Implemented for IMF compatibility, can't actually save this in any formats
 // sign should be 1 (up) or -1 (down)
-static void fx_note_slide(uint32_t flags, song_voice_t *chan, uint32_t param, int sign)
+static void fx_note_slide(uint32_t flags, song_voice_t *chan, uint32_t param, int32_t sign)
 {
 	uint8_t x, y;
 	if (flags & SONG_FIRSTTICK) {
@@ -772,7 +777,7 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 
 
 // Send exactly one MIDI message
-void csf_midi_send(song_t *csf, const unsigned char *data, unsigned int len, uint32_t nchan, int fake)
+void csf_midi_send(song_t *csf, const unsigned char *data, uint32_t len, uint32_t nchan, int32_t fake)
 {
 	song_voice_t *chan = &csf->voices[nchan];
 
@@ -853,9 +858,9 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 			? csf->instruments[use_instr ? use_instr : chan->last_instrument]
 			: NULL;
 	unsigned char outbuffer[64];
-	int midi_channel, fake_midi_channel = 0;
-	int saw_c;
-	int nibble_pos = 0, write_pos = 0;
+	int32_t midi_channel, fake_midi_channel = 0;
+	int32_t saw_c;
+	int32_t nibble_pos = 0, write_pos = 0;
 
 	saw_c = 0;
 	if (!penv || penv->midi_channel_mask == 0) {
@@ -1213,7 +1218,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	song_instrument_t *penv = (csf->flags & SONG_INSTRUMENTMODE) ? csf->instruments[instr] : NULL;
 	song_sample_t *psmp = &csf->samples[instr];
 	const song_sample_t *oldsmp = chan->ptr_sample;
-	const int old_instrument_volume = chan->instrument_volume;
+	const int32_t old_instrument_volume = chan->instrument_volume;
 	uint32_t note = chan->new_note;
 
 	if (note == NOTE_NONE)
@@ -1761,8 +1766,8 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		break;
 
 	case FX_TONEPORTAVOL:
-		fx_volume_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
 		fx_tone_portamento(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, chan->mem_portanote);
+		fx_volume_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
 		break;
 
 	case FX_VIBRATO:
@@ -2321,8 +2326,11 @@ void csf_process_effects(song_t *csf, int firsttick)
 		if (firsttick) {
 			const int effect_column_tone_porta = (cmd == FX_TONEPORTAMENTO || cmd == FX_TONEPORTAVOL);
 			if (effect_column_tone_porta) {
-				if (param)
-					chan->mem_portanote = param;
+				uint32_t toneporta_param = (cmd != FX_TONEPORTAVOL ? param : 0);
+				if (toneporta_param)
+					chan->mem_portanote = toneporta_param;
+				else if(!toneporta_param && !(csf->flags & SONG_COMPATGXX))
+					chan->mem_portanote = chan->mem_pitchslide;
 				if (!(csf->flags & SONG_COMPATGXX))
 					chan->mem_pitchslide = chan->mem_portanote;
 			}

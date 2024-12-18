@@ -33,7 +33,7 @@ static struct widget widgets_blank[1];
 
 /* --------------------------------------------------------------------- */
 
-static int blank_page_handle_key(UNUSED struct key_event * k)
+static int blank_page_handle_key(SCHISM_UNUSED struct key_event * k)
 {
 	return 0;
 }

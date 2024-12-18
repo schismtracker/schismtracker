@@ -41,7 +41,8 @@ int fmt_mtm_read_info(dmoz_file_t *file, slurp_t *fp)
 		|| memcmp(magic, "MTM", 3))
 		return 0;
 
-	slurp_seek(fp, 4, SEEK_SET);
+	slurp_seek(fp, 1, SEEK_CUR);
+
 	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
 		return 0;
 
@@ -65,10 +66,29 @@ static void mtm_unpack_track(const uint8_t *b, song_note_t *note, int rows)
 		note->volparam = 0;
 		note->effect = b[1] & 0xf;
 		note->param = b[2];
+
 		/* From mikmod: volume slide up always overrides slide down */
-		if (note->effect == 0xa && (note->param & 0xf0))
+		if (note->effect == 0xa && (note->param & 0xf0)) {
 			note->param &= 0xf0;
-		csf_import_mod_effect(note, 0);
+		} else if (note->effect == 0x8) {
+			note->effect = note->param = 0;
+		} else if (note->effect == 0xe) {
+			switch (note->param >> 4) {
+			case 0x0:
+			case 0x3:
+			case 0x4:
+			case 0x6:
+			case 0x7:
+			case 0xF:
+				note->effect = note->param = 0;
+				break;
+			default:
+				break;
+			}
+		}
+
+		if (note->effect || note->param)
+			csf_import_mod_effect(note, 0);
 	}
 }
 
@@ -149,16 +169,21 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			sample->loop_start = 0;
 			sample->loop_end = 0;
 		}
-		song->samples[n].c5speed = MOD_FINETUNE(slurp_getc(fp));
+
+		// This does what OpenMPT does; it treats the finetune as Fasttracker
+		// units, multiplied by 16 (which I believe makes them the same as MOD
+		// but with a higher range)
+		int8_t finetune;
+		slurp_read(fp, &finetune, sizeof(finetune));
+		song->samples[n].c5speed = transpose_to_frequency(0, finetune * 16);
 		sample->volume = slurp_getc(fp);
 		sample->volume *= 4; //mphack
 		sample->global_volume = 64;
 		if (slurp_getc(fp) & 1) {
-			todo |= 16;
 			sample->flags |= CHN_16BIT;
-			sample->length >>= 1;
-			sample->loop_start >>= 1;
-			sample->loop_end >>= 1;
+			sample->length /= 2;
+			sample->loop_start /= 2;
+			sample->loop_end /= 2;
 		}
 		song->samples[n].vib_type = 0;
 		song->samples[n].vib_rate = 0;
@@ -245,10 +270,7 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	if (todo & 64)
 		log_appendf(2, " TODO: test this file with other players (beats per track != 64)");
-	if (todo & 16)
-		log_appendf(2, " TODO: double check 16 bit sample loading");
 
 	/* done! */
 	return LOAD_SUCCESS;
 }
-

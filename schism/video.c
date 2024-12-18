@@ -588,12 +588,12 @@ const char *video_driver_name(void)
 
 void video_report(void)
 {
+	log_nl();
+
 	log_append(2, 0, "Video initialised");
 	log_underline(17);
 
 	backend->report();
-
-	log_nl();
 }
 
 void video_set_hardware(int hardware)
@@ -697,7 +697,7 @@ void video_toggle_screensaver(int enabled)
 /* ---------------------------------------------------------- */
 /* coordinate translation */
 
-void video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
+void video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y)
 {
 	backend->translate(vx, vy, x, y);
 }

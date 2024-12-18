@@ -56,7 +56,7 @@ void video_update(void);
 void video_colors(unsigned char palette[16][3]);
 void video_resize(unsigned int width, unsigned int height);
 void video_fullscreen(int new_fs_flag);
-void video_translate(int vx, int vy, unsigned int *x, unsigned int *y);
+void video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y);
 void video_blit(void);
 
 int video_is_screensaver_enabled(void);
@@ -107,11 +107,23 @@ void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 /* --------------------------------------------------------- */
 
 typedef struct {
-	enum {VIDEO_WM_DATA_SUBSYSTEM_WINDOWS=0} subsystem;
+	enum {
+		VIDEO_WM_DATA_SUBSYSTEM_WINDOWS = 0,
+		VIDEO_WM_DATA_SUBSYSTEM_X11 = 1,
+	} subsystem;
+
 	union {
 		struct {
 			void *hwnd; // type is actually HWND
 		} windows;
+		struct {
+			void *display; // type is actually Display *
+			uint32_t window; // type is actually Window
+
+			// These can (and will) be NULL
+			void (*lock_func)(void);
+			void (*unlock_func)(void);
+		} x11;
 	} data;
 } video_wm_data_t;
 

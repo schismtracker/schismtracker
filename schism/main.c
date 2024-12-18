@@ -384,6 +384,7 @@ static void event_loop(void)
 	int fix_numlock_key;
 	int screensaver;
 	int button = -1;
+	int i;
 	struct key_event kk;
 
 	fix_numlock_key = status.fix_numlock_setting;
@@ -404,9 +405,6 @@ static void event_loop(void)
 	for (;;) {
 		schism_event_t se;
 		while (events_poll_event(&se)) {
-			if (!os_event(&se))
-				continue;
-
 			if (midi_engine_handle_event(&se))
 				continue;
 
@@ -905,6 +903,12 @@ int schism_main(int argc, char** argv)
 	log_append2(0, 3, 0, schism_banner(0));
 	log_nl();
 
+	if (!dmoz_init()) {
+		log_nl();
+		log_appendf(4, "Failed to initialize a filesystem backend!");
+		log_appendf(4, "Portable mode will not work properly!");
+	}
+
 	if (!timer_init()) {
 		os_show_message_box("Critical error!", "Failed to initialize a timers backend!");
 		return 1;
@@ -922,29 +926,14 @@ int schism_main(int argc, char** argv)
 	}
 #endif
 
-	if (!events_init()) {
-		os_show_message_box("Critical error!", "Failed to initialize an events backend!");
-		return 1;
-	}
-
-	if (!clippy_init()) {
-		log_appendf(4, "Failed to initialize a clipboard backend!");
-		log_appendf(4, "Copying to the system clipboard will not work properly!");
-		log_nl();
-	}
-
-	if (!dmoz_init()) {
-		log_appendf(4, "Failed to initialize a filesystem backend!");
-		log_appendf(4, "Portable mode will not work properly!");
-		log_nl();
-	}
-
-	log_nl();
-
 	song_initialise();
 	cfg_load();
 
-	log_nl();
+	if (!clippy_init()) {
+		log_nl();
+		log_appendf(4, "Failed to initialize a clipboard backend!");
+		log_appendf(4, "Copying to the system clipboard will not work properly!");
+	}
 
 	if (did_classic) {
 		status.flags &= ~CLASSIC_MODE;
@@ -990,12 +979,12 @@ int schism_main(int argc, char** argv)
 		}
 	}
 	if (initial_dir) {
-		strncpy(cfg_dir_modules, initial_dir, PATH_MAX);
-		cfg_dir_modules[PATH_MAX] = 0;
-		strncpy(cfg_dir_samples, initial_dir, PATH_MAX);
-		cfg_dir_samples[PATH_MAX] = 0;
-		strncpy(cfg_dir_instruments, initial_dir, PATH_MAX);
-		cfg_dir_instruments[PATH_MAX] = 0;
+		strncpy(cfg_dir_modules, initial_dir, ARRAY_SIZE(cfg_dir_modules) - 1);
+		cfg_dir_modules[ARRAY_SIZE(cfg_dir_modules) - 1] = 0;
+		strncpy(cfg_dir_samples, initial_dir, ARRAY_SIZE(cfg_dir_samples) - 1);
+		cfg_dir_samples[ARRAY_SIZE(cfg_dir_samples) - 1] = 0;
+		strncpy(cfg_dir_instruments, initial_dir, ARRAY_SIZE(cfg_dir_instruments) - 1);
+		cfg_dir_instruments[ARRAY_SIZE(cfg_dir_instruments) - 1] = 0;
 		free(initial_dir);
 	}
 

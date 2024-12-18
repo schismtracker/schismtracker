@@ -1381,7 +1381,7 @@ static void env_adsr_draw_const(void)
 	draw_box(33, 23, 51, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 }
 
-static void env_adsr_dialog(UNUSED song_envelope_t *env)
+static void env_adsr_dialog(SCHISM_UNUSED song_envelope_t *env)
 {
 	struct dialog *dialog;
 	song_instrument_t *ins = song_get_instrument(current_instrument); // ARGHHH
@@ -2050,11 +2050,11 @@ static void instrument_save(const char *filename, const char *format)
 /* export instrument dialog */
 
 static struct widget export_instrument_widgets[4];
-static char export_instrument_filename[NAME_MAX + 1] = "";
+static char export_instrument_filename[SCHISM_NAME_MAX + 1] = "";
 static int export_instrument_format = 0;
 static int num_save_formats = 0;
 
-static void do_export_instrument(UNUSED void *data)
+static void do_export_instrument(SCHISM_UNUSED void *data)
 {
 	instrument_save(export_instrument_filename, instrument_save_formats[export_instrument_format].label);
 }
@@ -2147,13 +2147,13 @@ static void export_instrument_dialog(void)
 	struct dialog *dialog;
 
 	widget_create_textentry(export_instrument_widgets + 0, 33, 24, 18, 0, 1, 3, NULL,
-			 export_instrument_filename, NAME_MAX);
+			 export_instrument_filename, ARRAY_SIZE(export_instrument_filename) - 1);
 	widget_create_button(export_instrument_widgets + 1, 31, 35, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
 	widget_create_button(export_instrument_widgets + 2, 42, 35, 6, 3, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
 	widget_create_other(export_instrument_widgets + 3, 0, export_instrument_list_handle_key, NULL, export_instrument_list_draw);
 
-	strncpy(export_instrument_filename, instrument->filename, NAME_MAX);
-	export_instrument_filename[NAME_MAX] = 0;
+	strncpy(export_instrument_filename, instrument->filename, ARRAY_SIZE(export_instrument_filename) - 1);
+	export_instrument_filename[ARRAY_SIZE(export_instrument_filename) - 1] = 0;
 
 	dialog = dialog_create_custom(21, 20, 39, 18, export_instrument_widgets, 4, 0,
 				      export_instrument_draw_const, NULL);
@@ -2161,12 +2161,12 @@ static void export_instrument_dialog(void)
 }
 
 
-static void do_delete_inst(UNUSED void *ign)
+static void do_delete_inst(SCHISM_UNUSED void *ign)
 {
 	song_delete_instrument(current_instrument, 0);
 }
 
-static void do_delete_inst_preserve(UNUSED void *ign)
+static void do_delete_inst_preserve(SCHISM_UNUSED void *ign)
 {
 	song_delete_instrument(current_instrument, 1);
 }

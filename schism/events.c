@@ -73,35 +73,18 @@ static inline int queue_dequeue(schism_event_t *event)
 
 /* ------------------------------------------------------ */
 
-int events_init(void)
+// Called back by the video backend;
+int events_init(const schism_events_backend_t *backend)
 {
-	// XXX the video backend ought to call back to this
-	// function to initialize the events backend.
-	static const schism_events_backend_t *backends[] = {
-		// ordered by preference
-#ifdef SCHISM_SDL2
-		&schism_events_backend_sdl2,
-#endif
-#ifdef SCHISM_SDL12
-		&schism_events_backend_sdl12,
-#endif
-		NULL,
-	};
-
 	int i;
 	int success;
 
-	for (i = 0; backends[i]; i++) {
-		if (backends[i]->init()) {
-			events_backend = backends[i];
-			break;
-		}
-	}
-
-	if (!events_backend) {
-		os_show_message_box("ugh", "failed to initialize a backend somehow...");
+	if (!backend)
 		return 0;
-	}
+
+	events_backend = backend;
+	if (!events_backend->init())
+		return 0;
 
 	if (cfg_kbd_repeat_delay && cfg_kbd_repeat_rate) {
 		// Override everything.
@@ -161,6 +144,12 @@ int events_have_event(void)
 	return 0;
 }
 
+void events_pump_events(void)
+{
+	// eh
+	events_backend->pump_events();
+}
+
 int events_poll_event(schism_event_t *event)
 {
 	if (!event)
@@ -190,9 +179,30 @@ int events_poll_event(schism_event_t *event)
 // implicitly fills in the timestamp
 int events_push_event(const schism_event_t *event)
 {
+	// An array of event filters. The reason this is used *here*
+	// instead of in main is because we need to filter X11 events
+	// *as they are pumped*, and putting win32 and macosx events
+	// here is just a side effect of that.
+	static int (*const event_filters[])(schism_event_t *event) = {
+#ifdef SCHISM_WIN32
+		win32_event,
+#endif
+#ifdef SCHISM_MACOSX
+		macosx_event,
+#endif
+#ifdef SCHISM_USE_X11
+		x11_event,
+#endif
+		NULL,
+	};
+	int i;
 	schism_event_t e = *event;
 
 	e.common.timestamp = timer_ticks();
+
+	for (i = 0; event_filters[i]; i++)
+		if (!event_filters[i](&e))
+			continue;
 
 	mt_mutex_lock(queue_mutex);
 

@@ -542,6 +542,7 @@ enum mouse_button {
 
 struct key_event {
 	schism_keysym_t sym; /* A keycode, can be Unicode */
+	schism_keysym_t orig_sym; /* `sym' from before key_translate warps it */
 	schism_scancode_t scancode; /* Locale-independent key locations */
 	schism_keymod_t mod; /* current key modifiers */
 	const char* text; /* text input, if any. can be NULL */

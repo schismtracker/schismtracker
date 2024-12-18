@@ -239,6 +239,16 @@ if USE_MMAP
 files_mmap = sys/posix/slurp-mmap.c
 endif
 
+if USE_X11
+files_x11 = sys/x11/clippy.c sys/x11/init.c sys/x11/events.c
+cflags_x11 = -Isys/x11 $(X_CFLAGS)
+
+if LINK_TO_X11
+libs_x11 = $(X_LIBS) -lX11
+endif
+
+endif
+
 if USE_WIN32
 files_win32 = \
 	sys/win32/filetype.c \
@@ -400,7 +410,9 @@ schismtracker_SOURCES = \
 	fmt/ams.c			\
 	fmt/au.c			\
 	fmt/compression.c		\
+	fmt/d00.c			\
 	fmt/dsm.c			\
+	fmt/edl.c			\
 	fmt/f2r.c			\
 	fmt/far.c			\
 	fmt/generic.c			\
@@ -540,4 +552,4 @@ schismtracker_CFLAGS = $(AM_CFLAGS) $(component_cflags)
 schismtracker_OBJCFLAGS = $(AM_OBJCFLAGS) $(component_cflags)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(LIBM) $(libs_wii) $(libs_wiiu) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(UTF8PROC_LIBS) $(libs_sdl2) $(libs_sdl12) $(libs_macos)
+schismtracker_LDADD = $(LIBM) $(libs_x11) $(libs_wii) $(libs_wiiu) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(UTF8PROC_LIBS) $(libs_sdl2) $(libs_sdl12) $(libs_macos)

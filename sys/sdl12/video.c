@@ -34,6 +34,7 @@ static int display_native_y = -1;
 #include "osdefs.h"
 #include "vgamem.h"
 #include "config.h"
+#include "events.h"
 
 #include "backend/video.h"
 
@@ -256,9 +257,8 @@ static void sdl12_video_setup(const char *interpolation)
 
 static void sdl12_video_startup(void)
 {
-	char *q;
 	SDL_Rect **modes;
-	int i, j, x = -1, y = -1;
+	int i, x = -1, y = -1;
 
 	// center the window on startup by default; this is what the SDL 2 backend does...
 	int center_enabled = 0;
@@ -670,7 +670,7 @@ static void sdl12_video_blit(void)
 	};
 }
 
-static void sdl12_video_translate(int vx, int vy, unsigned int *x, unsigned int *y)
+static void sdl12_video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y)
 {
 	vx = MAX(vx, video.clip.x);
 	vx -= video.clip.x;
@@ -715,7 +715,7 @@ static int sdl12_video_is_input_grabbed(void)
 	return sdl12_WM_GrabInput(SDL_GRAB_QUERY) == SDL_GRAB_ON;
 }
 
-static void sdl12_video_set_input_grabbed(int enabled)
+static void sdl12_video_set_input_grabbed(SCHISM_UNUSED int enabled)
 {
 	sdl12_WM_GrabInput(enabled ? SDL_GRAB_ON : SDL_GRAB_OFF);
 }
@@ -774,7 +774,7 @@ static int sdl12_video_have_menu(void)
 #endif
 }
 
-static void sdl12_video_toggle_menu(int on)
+static void sdl12_video_toggle_menu(SCHISM_UNUSED int on)
 {
 	if (!video_have_menu())
 		return;
@@ -837,6 +837,17 @@ static int sdl12_video_get_wm_data(video_wm_data_t *wm_data)
 #ifdef SCHISM_WIN32
 	wm_data->subsystem = VIDEO_WM_DATA_SUBSYSTEM_WINDOWS;
 	wm_data->data.windows.hwnd = info.window;
+	// don't care about other values for now
+#else
+# ifdef SDL_VIDEO_DRIVER_X11
+	if (info.subsystem == SDL_SYSWM_X11) {
+		wm_data->subsystem = VIDEO_WM_DATA_SUBSYSTEM_X11;
+		wm_data->data.x11.display = info.info.x11.display;
+		wm_data->data.x11.window = info.info.x11.window;
+		wm_data->data.x11.lock_func = info.info.x11.lock_func;
+		wm_data->data.x11.unlock_func = info.info.x11.unlock_func;
+	}
+# endif
 #endif
 
 	return 1;
@@ -882,23 +893,27 @@ static int sdl12_video_init(void)
 	if (!sdl12_init())
 		return 0;
 
-	if (sdl12_video_load_syms())
-		return 0;
-
-	if (sdl12_InitSubSystem(SDL_INIT_VIDEO) < 0) {
-		os_show_message_box("Failed to initialize SDL 1.2 video", sdl12_get_error());
+	if (sdl12_video_load_syms()) {
+		sdl12_quit();
 		return 0;
 	}
 
-#ifdef SCHISM_WIN32
-	sdl12_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-#endif
+	if (sdl12_InitSubSystem(SDL_INIT_VIDEO) < 0) {
+		sdl12_quit();
+		return 0;
+	}
 
 #ifdef SCHISM_MACOS
 	sdl12_InitQuickDraw(&qd);
 #endif
 
 	sdl12_EnableUNICODE(1);
+
+	if (!events_init(&schism_events_backend_sdl12)) {
+		sdl12_QuitSubSystem(SDL_INIT_VIDEO);
+		sdl12_quit();
+		return 0;
+	}
 
 	return 1;
 }

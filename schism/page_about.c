@@ -100,7 +100,7 @@ void about_load_page(struct page *page)
 	page->set_page = show_about;
 }
 
-static void about_close(UNUSED void *data)
+static void about_close(SCHISM_UNUSED void *data)
 {
 	if (status.current_page == PAGE_ABOUT) set_page(PAGE_LOAD_MODULE);
 	status.flags |= NEED_UPDATE;
@@ -164,7 +164,6 @@ void show_about(void)
 	fake_driver = (rand() & 3) ? 0 : 1;
 
 	if (!didit) {
-		int fake, fake2;
 		vgamem_ovl_alloc(&logo_image);
 		xpmdata(_logo_it_xpm, &it_logo.pixels, &it_logo.width, &it_logo.height);
 		xpmdata(_logo_schism_xpm, &schism_logo.pixels, &schism_logo.width, &schism_logo.height);

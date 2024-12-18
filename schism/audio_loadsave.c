@@ -50,8 +50,8 @@
 
 // ------------------------------------------------------------------------
 
-char song_filename[PATH_MAX + 1];
-char song_basename[NAME_MAX + 1];
+char song_filename[SCHISM_PATH_MAX + 1];
+char song_basename[SCHISM_NAME_MAX + 1];
 
 // ------------------------------------------------------------------------
 // replace any '\0' chars with spaces, mostly to make the string handling
@@ -86,11 +86,11 @@ static void song_set_filename(const char *file)
 {
 	if (file && *file) {
 		CHARSET_EASY_MODE_CONST(file, CHARSET_CHAR, CHARSET_CP437, {
-			strncpy(song_filename, out, PATH_MAX);
-			strncpy(song_basename, dmoz_path_get_basename(out), NAME_MAX);
+			strncpy(song_filename, out, ARRAY_SIZE(song_filename) - 1);
+			strncpy(song_basename, dmoz_path_get_basename(out), ARRAY_SIZE(song_basename) - 1);
 		});
-		song_filename[PATH_MAX] = '\0';
-		song_basename[NAME_MAX] = '\0';
+		song_filename[ARRAY_SIZE(song_filename) - 1] = '\0';
+		song_basename[ARRAY_SIZE(song_basename) - 1] = '\0';
 	} else {
 		song_filename[0] = '\0';
 		song_basename[0] = '\0';
@@ -278,6 +278,7 @@ int song_load_unchecked(const char *file)
 		song_stop();
 	}
 
+	log_nl();
 	log_appendf(2, "Loading %s", base);
 	log_underline(strlen(base) + 8);
 
@@ -325,9 +326,6 @@ int song_load_unchecked(const char *file)
 	if (!nins)
 		*strrchr(fmt, ',') = 0; // cut off 'instruments'
 	log_appendf(5, fmt, csf_get_num_patterns(current_song), nsmp, nins);
-
-	log_nl();
-
 
 	return 1;
 }
@@ -481,7 +479,6 @@ int song_save(const char *filename, const char *type)
 
 	mangle = mangle_filename(filename, NULL, format->ext);
 
-	log_nl();
 	log_nl();
 	log_appendf(2, "Saving %s module", format->name);
 	log_underline(strlen(format->name) + 14);
@@ -756,7 +753,7 @@ int song_load_instrument(int n, const char* file)
 	return song_load_instrument_ex(n,file,NULL,-1);
 }
 
-static void do_enable_inst(UNUSED void* d)
+static void do_enable_inst(SCHISM_UNUSED void* d)
 {
 	song_set_instrument_mode(1);
 	main_song_changed_cb();
@@ -764,7 +761,7 @@ static void do_enable_inst(UNUSED void* d)
 	memused_songchanged();
 }
 
-static void dont_enable_inst(UNUSED void* d)
+static void dont_enable_inst(SCHISM_UNUSED void* d)
 {
 	set_page(PAGE_INSTRUMENT_LIST);
 }
@@ -848,6 +845,7 @@ int song_load_sample(int n, const char *file)
 		// (huhwhat?!)
 		smp.name[23] = ' ';
 	}
+
 	memcpy(&(current_song->samples[n]), &smp, sizeof(song_sample_t));
 	song_unlock_audio();
 
@@ -946,7 +944,7 @@ static song_t *library = NULL;
 
 
 // TODO: stat the file?
-int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSED dmoz_dirlist_t *dlist)
+int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, SCHISM_UNUSED dmoz_dirlist_t *dlist)
 {
 	unsigned int j;
 	int x;
@@ -995,7 +993,7 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, UNUSE
 }
 
 
-int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, UNUSED dmoz_dirlist_t *dlist)
+int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, SCHISM_UNUSED dmoz_dirlist_t *dlist)
 {
 	csf_stop_sample(current_song, current_song->samples + 0);
 	csf_free(library);
@@ -1115,9 +1113,6 @@ int instrument_loader_sample(struct instrumentloader *ii, int slot)
 	if (ii->sample_map[slot]) return ii->sample_map[slot];
 	for (x = ii->basex; x < MAX_SAMPLES; x++) {
 		song_sample_t *cur = (current_song->samples + x);
-
-//              if (!csf_sample_is_empty(current_song->samples + x))
-//                      continue;
 		if (cur->data != NULL)
 			continue;
 

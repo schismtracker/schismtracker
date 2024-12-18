@@ -636,9 +636,10 @@ void midi_queue_alloc(int buffer_length, int sample_size, int samples_per_second
 	qq = mem_calloc(qlen, sizeof(*qq));
 }
 
-static int _midi_queue_run(UNUSED void *xtop)
+static int _midi_queue_run(SCHISM_UNUSED void *xtop)
 {
-	int i, j;
+	unsigned int i;
+	int j;
 
 #ifdef SCHISM_WIN32
 	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
@@ -684,7 +685,7 @@ int midi_need_flush(void)
 {
 	struct midi_port *ptr;
 	int need_explicit_flush = 0;
-	int i;
+	unsigned int i;
 
 	if (!midi_record_mutex || !midi_play_mutex) return 0;
 
@@ -878,105 +879,88 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int l
 
 void midi_event_note(enum midi_note mnstatus, int channel, int note, int velocity)
 {
-	schism_event_t event = {
-		.type = SCHISM_EVENT_MIDI_NOTE,
-		.midi_note = {
-			.mnstatus = mnstatus,
-			.channel = channel,
-			.note = note,
-			.velocity = velocity,
-		}
-	};
+	schism_event_t event = {0};
+
+	event.type = SCHISM_EVENT_MIDI_NOTE;
+	event.midi_note.mnstatus = mnstatus;
+	event.midi_note.channel = channel;
+	event.midi_note.note = note;
+	event.midi_note.velocity = velocity;
 
 	events_push_event(&event);
 }
 
 void midi_event_controller(int channel, int param, int value)
 {
-	schism_event_t event = {
-		.type = SCHISM_EVENT_MIDI_CONTROLLER,
-		.midi_controller = {
-			.value = value,
-			.param = param,
-			.channel = channel,
-		}
-	};
+	schism_event_t event = {0};
+
+	event.type = SCHISM_EVENT_MIDI_CONTROLLER,
+	event.midi_controller.value = value;
+	event.midi_controller.param = param;
+	event.midi_controller.channel = channel;
 
 	events_push_event(&event);
 }
 
 void midi_event_program(int channel, int value)
 {
-	schism_event_t event = {
-		.type = SCHISM_EVENT_MIDI_PROGRAM,
-		.midi_program = {
-			.value = value,
-			.channel = channel,
-		}
-	};
+	schism_event_t event = {0};
+
+	event.type = SCHISM_EVENT_MIDI_PROGRAM;
+	event.midi_program.value = value;
+	event.midi_program.channel = channel;
 
 	events_push_event(&event);
 }
 
 void midi_event_aftertouch(int channel, int value)
 {
-	schism_event_t event = {
-		.type = SCHISM_EVENT_MIDI_AFTERTOUCH,
-		.midi_aftertouch = {
-			.value = value,
-			.channel = channel,
-		}
-	};
+	schism_event_t event = {0};
+
+	event.type = SCHISM_EVENT_MIDI_AFTERTOUCH;
+	event.midi_aftertouch.value = value;
+	event.midi_aftertouch.channel = channel;
 
 	events_push_event(&event);
 }
 
 void midi_event_pitchbend(int channel, int value)
 {
-	schism_event_t event = {
-		.type = SCHISM_EVENT_MIDI_PITCHBEND,
-		.midi_pitchbend = {
-			.value = value,
-			.channel = channel,
-		}
-	};
+	schism_event_t event = {0};
+
+	event.type = SCHISM_EVENT_MIDI_PITCHBEND;
+	event.midi_pitchbend.value = value;
+	event.midi_pitchbend.channel = channel;
 
 	events_push_event(&event);
 }
 
 void midi_event_system(int argv, int param)
 {
-	schism_event_t event = {
-		.type = SCHISM_EVENT_MIDI_SYSTEM,
-		.midi_system = {
-			.argv = argv,
-			.param = param,
-		}
-	};
+	schism_event_t event = {0};
+
+	event.type = SCHISM_EVENT_MIDI_SYSTEM;
+	event.midi_system.argv = argv;
+	event.midi_system.param = param;
 
 	events_push_event(&event);
 }
 
 void midi_event_tick(void)
 {
-	schism_event_t event = {
-		.type = SCHISM_EVENT_MIDI_TICK,
-		.midi_tick = {
-			
-		}
-	};
+	schism_event_t event = {0};
+
+	event.type = SCHISM_EVENT_MIDI_TICK;
 
 	events_push_event(&event);
 }
 
 void midi_event_sysex(const unsigned char *data, unsigned int len)
 {
-	schism_event_t event = {
-		.type = SCHISM_EVENT_MIDI_SYSEX,
-		.midi_sysex = {
-			.len = len,
-		}
-	};
+	schism_event_t event = {0};
+
+	event.type = SCHISM_EVENT_MIDI_SYSEX;
+	event.midi_sysex.len = len;
 
 	memcpy(event.midi_sysex.packet, data, MIN(len, ARRAY_SIZE(event.midi_sysex.packet)));
 

@@ -13,7 +13,9 @@
 |   Alt-D        Delete Sample
 :   Alt-Shift-D  Downmix stereo sample to mono
 |   Alt-E        Resize Sample (with interpolation)
+:   Alt-Shift-E  Resample Sample (with interpolation)
 |   Alt-F        Resize Sample (without interpolation)
+:   Alt-Shift-F  Resample Sample (without interpolation)
 |   Alt-G        Reverse Sample
 |   Alt-H        Centralise Sample
 :   Alt-I        Invert Sample

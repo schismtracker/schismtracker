@@ -25,7 +25,7 @@ dnl PACKAGE_VERSION will be either "" if not using git, or date of the last git 
 m4_define([last_git_commit], patsubst(m4_esyscmd([git log -n 1 --date=short --format=format:%cd]), [[^0-9]]))
 AC_INIT([schismtracker],[last_git_commit])
 
-last_commit_date=[last_git_commit]
+last_commit_date="last_git_commit"
 
 AC_CONFIG_SRCDIR([schism/main.c])
 
@@ -36,6 +36,7 @@ AC_CANONICAL_HOST
 
 if test "x$last_commit_date" = "x"; then
 	AC_DEFINE([EMPTY_VERSION], [], [Empty version number (okay if you don't have Git)])
+	echo "*** empty version"
 fi
 
 dnl -----------------------------------------------------------------------
@@ -140,6 +141,11 @@ AC_ARG_ENABLE(sdl2-linking,
 	SDL2_LINKING=$enableval,
 	SDL2_LINKING=no)
 
+AC_ARG_ENABLE(x11-linking,
+	AS_HELP_STRING([--enable-x11-linking], [Link to X11 rather than loading at runtime]),
+	X11_LINKING=$enableval,
+	X11_LINKING=no)
+
 dnl ------------------------------------------------------------------------
 
 dnl Check for standard programs
@@ -152,6 +158,9 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MKDIR_P
+AC_PROG_FGREP
+AC_CHECK_PROGS([SORT], [gsort sort], [false])
+AS_IF([! "$SORT" -V </dev/null >/dev/null], [AC_MSG_WARN([sort(1) that supports the -V option is required to find dynamic libraries])])
 
 dnl do we have Git
 AC_CHECK_TOOL([GIT], [git])
@@ -173,9 +182,6 @@ AC_LANG([C])
 
 dnl check endianness
 AC_C_BIGENDIAN
-
-dnl Libs
-AC_CHECK_LIB([dl], [dlopen])
 
 dnl hijacked from libtool
 LIBM=
@@ -251,6 +257,8 @@ use_wiiu=no
 use_network=no
 use_controller=no
 
+have_loadso=no
+
 case "${host_os}" in
 	darwin*)
 		AC_MSG_RESULT([found Darwin host])
@@ -294,6 +302,8 @@ case "${host_os}" in
 		else
 			AC_MSG_ERROR([*** Couldn't find winsock\! (how\?)])
 		fi
+
+		have_loadso=yes
 
 		use_win32=yes
 		AC_DEFINE([SCHISM_WIN32], [1], [Windows])
@@ -385,6 +395,13 @@ case "${host_os}" in
 		;;
 esac
 
+dnl Libs
+AC_SEARCH_LIBS([dlopen], [dl])
+if test "x$ac_cv_search_dlopen" = "xyes" || test "x$ac_cv_search_dlopen" = "xnone required"; then
+	AC_DEFINE([HAVE_LIBDL], [1], [ ])
+	have_loadso=yes
+fi
+
 if test "x$use_macosx" = "xyes"; then
 	AC_PROG_OBJC
 else
@@ -401,6 +418,28 @@ AM_CONDITIONAL([USE_MACOSX], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([USE_MACOS], [test "x$use_macos" = "xyes"])
 AM_CONDITIONAL([am__fastdepOBJC], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([USE_NETWORK], [test "x$use_network" = "xyes"])
+
+dnl ------------------------------------------------------------------------
+
+AC_MSG_CHECKING([for arithmetic right shift])
+AC_COMPILE_IFELSE([[int xxx[((-1 >> 1) == -1) ? 1 : -1];]],
+	[have_arithmetic_rshift=yes],
+	[have_arithmetic_rshift=no])
+AC_MSG_RESULT([$have_arithmetic_rshift])
+if test "x$have_arithmetic_rshift" = "xyes"; then
+	AC_DEFINE([HAVE_ARITHMETIC_RSHIFT], [1], [ ])
+fi
+
+# An implementation can technically do whatever it wants here...
+AC_MSG_CHECKING([for sane signed left shift])
+AC_RUN_IFELSE([[int main(void) { return ((-1 << 1) != -2); } ]],
+	[have_sane_signed_lshift=yes],
+	[have_sane_signed_lshift=no],
+	[have_sane_signed_lshift=no]) # assume no
+AC_MSG_RESULT([$have_sane_signed_lshift])
+if test "x$have_sane_signed_lshift" = "xyes"; then
+	AC_DEFINE([HAVE_SANE_SIGNED_LSHIFT], [1], [ ])
+fi
 
 dnl --------------------------------------------------------------------------
 
@@ -419,6 +458,9 @@ if test "x$with_flac" = "xcheck" || test "x$with_flac" = "xyes"; then
 			AC_SUBST([FLAC_LIBS])
 			AM_CONDITIONAL([LINK_TO_FLAC], true)
 		else
+			if test "x$have_loadso" != "xyes"; then
+				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
+			fi
 			AC_DEFINE([FLAC_DYNAMIC_LOAD], [1], [Dynamically load FLAC symbols])
 		fi
 	elif test "x$with_flac" = "xyes"; then
@@ -438,6 +480,9 @@ if test "x$with_jack" = "xcheck" || test "x$with_jack" = "xyes"; then
 			AC_SUBST([JACK_LIBS])
 			AM_CONDITIONAL([LINK_TO_JACK], true)
 		else
+			if test "x$have_loadso" != "xyes"; then
+				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
+			fi
 			AC_DEFINE([JACK_DYNAMIC_LOAD], [1], [Dynamically load JACK symbols])
 		fi
 	elif test "x$with_jack" = "xyes"; then
@@ -457,6 +502,9 @@ if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then
 			AM_CONDITIONAL([LINK_TO_ALSA], true)
 		else
 			LIBS="$saved_LIBS"
+			if test "x$have_loadso" != "xyes"; then
+				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
+			fi
 			AC_DEFINE([ALSA_DYNAMIC_LOAD], [1], [Dynamically load ALSA symbols])
 		fi
 	elif test "x$with_alsa" = "xyes"; then
@@ -488,6 +536,9 @@ if test "x$with_sdl2" = "xcheck" || test "x$with_sdl2" = "xyes"; then
 			AC_SUBST([SDL2_LIBS])
 			AM_CONDITIONAL([LINK_TO_SDL2], true)
 		else
+			if test "x$have_loadso" != "xyes"; then
+				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
+			fi
 			AC_DEFINE([SDL2_DYNAMIC_LOAD], [1], [Dynamically load SDL2 symbols])
 		fi
 	elif test "x$with_sdl2" = "xyes"; then
@@ -507,11 +558,74 @@ if test "x$with_sdl12" = "xcheck" || test "x$with_sdl12" = "xyes"; then
 			AC_SUBST([SDL12_LIBS])
 			AM_CONDITIONAL([LINK_TO_SDL12], true)
 		else
+			if test "x$have_loadso" != "xyes"; then
+				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
+			fi
 			AC_DEFINE([SDL12_DYNAMIC_LOAD], [1], [Dynamically load SDL 1.2 symbols])
 		fi
 	elif test "x$with_sdl12" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find SDL 1.2])
 	fi
+fi
+
+dnl Function to find a library in the compiler search path, lifted from SDL
+find_lib()
+{
+	gcc_bin_path=[`$CC -print-search-dirs 2>/dev/null | $FGREP programs: | sed 's/[^=]*=\(.*\)/\1/' | sed 's/:/ /g'`]
+	gcc_lib_path=[`$CC -print-search-dirs 2>/dev/null | $FGREP libraries: | sed 's/[^=]*=\(.*\)/\1/' | sed 's/:/ /g'`]
+	env_lib_path=[`echo $LIBS $LDFLAGS $* | sed 's/-L[ ]*//g'`]
+	if test "$cross_compiling" = yes; then
+		host_lib_path=""
+	else
+		host_lib_path="/usr/$base_libdir /usr/local/$base_libdir"
+	fi
+	for path in $env_lib_path $gcc_bin_path $gcc_lib_path $host_lib_path; do
+		lib=[`ls -- $path/$1 2>/dev/null | sed 's,.*/,,' | "$SORT" -V -r | $AWK 'BEGIN{FS="."}{ print NF, $0 }' | "$SORT" -n -s | sed 's,[0-9]* ,,' | head -1`]
+		if test x$lib != x; then
+			echo $lib
+			return
+		fi
+	done
+}
+
+AM_CONDITIONAL([USE_X11], [false])
+AM_CONDITIONAL([LINK_TO_X11], [false])
+AC_PATH_X
+AC_PATH_XTRA
+if test "x$have_x" = "xyes"; then
+	case "$host" in
+		*-*-darwin*)
+			# Apple now puts this in /opt/X11 ?
+			x11_lib='/opt/X11/lib/libX11.6.dylib'
+			;;
+		*-*-openbsd*)
+			x11_lib='libX11.so'
+			;;
+		*)
+			x11_lib=[`find_lib "libX11.so.*" "$X_LIBS -L/usr/X11/$base_libdir -L/usr/X11R6/$base_libdir" | sed 's/.*\/\(.*\)/\1/; q'`]
+			;;
+	esac
+
+	if test "x$have_loadso" != "xyes" && test "x$X11_LINKING" = "xno"; then
+		AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
+	fi
+
+	AC_DEFINE([SCHISM_USE_X11], [1], [ ])
+
+	AM_CONDITIONAL([USE_X11], [true])
+
+	if test "x$have_loadso" = "xyes" && test "x$X11_LINKING" = "xno" && test "x$x11_lib" != "x"; then
+		echo "-- dynamic libX11 -> $x11_lib"
+		AC_DEFINE_UNQUOTED(X11_LIBRARY_LIBX11_PATH, "$x11_lib", [ ])
+		AC_DEFINE([X11_DYNAMIC_LOAD], [1], [ ])
+	else
+		X11_LINKING=yes
+		EXTRA_LDFLAGS="$EXTRA_LDFLAGS $X_LIBS -lX11"
+		AM_CONDITIONAL([LINK_TO_X11], [true])
+	fi
+
+	AC_SUBST([X_CFLAGS])
+	AC_SUBST([X_LIBS])
 fi
 
 dnl --------------------------------------------------------------------------

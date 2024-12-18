@@ -26,6 +26,8 @@ misrepresented as being the original software.
 [In compliance with the above: I patched this code up somewhat so that it
 builds with all warnings. -- Storlek]
 */
+#include "headers.h"
+
 #include <errno.h>
 #include <ogc/isfs.h>
 #include <ogc/lwp_watchdog.h>
@@ -44,8 +46,6 @@ builds with all warnings. -- Storlek]
 #define DIR_SEPARATOR '/'
 #define SECTOR_SIZE 0x800
 #define BUFFER_SIZE 0x8000
-
-#define UNUSED __attribute__((unused))
 
 typedef struct DIR_ENTRY_STRUCT {
     char *name;
@@ -137,7 +137,7 @@ static DIR_ENTRY *entry_from_path(const char *path) {
 }
 
 static ssize_t _ISFS_open_r(struct _reent *r, void *fd, const char *path,
-			UNUSED int flags, UNUSED int mode) {
+			SCHISM_UNUSED int flags, SCHISM_UNUSED int mode) {
     FILE_STRUCT *file = (FILE_STRUCT *)fd;
     DIR_ENTRY *entry = entry_from_path(path);
     if (!entry) {

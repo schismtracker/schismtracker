@@ -50,9 +50,10 @@ static const char *drivers[] = {
 	 *
 	 * It's possible that we could build this list on startup by
 	 * attempting to open each audio driver with an audio device
-	 * and then appending the ones that work to this list. That's
-	 * kind of worthless though, so I'll refrain from that for
-	 * now... */
+	 * and then appending the ones that work to this list.
+	 * That's a bad idea though, since it just adds to the startup
+	 * time for a list that most people will only look at once.
+	 * I think a static list will be ~just fine~ :) */
 	"openbsd",
 	"dsp",
 	"alsa",
@@ -63,6 +64,7 @@ static const char *drivers[] = {
 	"esd",
 	"nas",
 	"dma",
+	"coreaudio",
 	"dsound",
 	"waveout",
 	"baudio",
@@ -147,7 +149,7 @@ static schism_audio_device_t *sdl12_audio_open_device(const char *name, const sc
 	SDL_AudioSpec sdl_desired = {
 		.freq = desired->freq,
 		// SDL 1.2 has no support for 32-bit audio at all
-		.format = (desired->bits == 8) ? (AUDIO_U8) : (AUDIO_S16),
+		.format = (desired->bits == 8) ? (AUDIO_U8) : (AUDIO_S16SYS),
 		.channels = desired->channels,
 		.samples = desired->samples,
 		.callback = sdl12_dummy_callback,

@@ -33,18 +33,7 @@
 
 #include <errno.h>
 
-#include <alsa/asoundef.h>
-#include <alsa/global.h>
-#include <alsa/error.h>
-#include <alsa/input.h>
-#include <alsa/output.h>
-#include <alsa/conf.h>
-#include <alsa/rawmidi.h>
-#include <alsa/timer.h>
-#include <alsa/seq_event.h>
-#include <alsa/seq.h>
-#include <alsa/seqmid.h>
-#include <alsa/seq_midi_event.h>
+#include <alsa/asoundlib.h>
 
 #include <sys/stat.h>
 
@@ -225,7 +214,7 @@ static int load_alsa_syms(void) {
 #undef assert
 #define assert(x)
 
-static void _alsa_drain(struct midi_port *p UNUSED)
+static void _alsa_drain(struct midi_port *p SCHISM_UNUSED)
 {
 	/* not port specific */
 	ALSA_snd_seq_drain_output(seq);

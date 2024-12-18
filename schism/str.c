@@ -407,6 +407,7 @@ char *str_concat(const char *s, ...)
 }
 
 /* --------------------------------------------------------------------- */
+/* Functions for working with Pascal strings. */
 
 void str_to_pascal(const char *cstr, unsigned char pstr[256], int *truncated)
 {
@@ -423,4 +424,23 @@ void str_from_pascal(const unsigned char pstr[256], char cstr[256])
 {
 	memcpy(cstr, pstr + 1, pstr[0]);
 	cstr[pstr[0]] = 0;
+}
+
+/* --------------------------------------------------------------------- */
+
+/* if len is zero, this function calls strlen to get the input's
+ * length.
+ *
+ * The input will be free'd if the input isn't a null pointer,
+ * so make sure you initialize your strings properly ;)
+ *
+ * returns 0 on fail or 1 on success */
+int str_realloc(char **output, const char *input, size_t len)
+{
+	if (*output)
+		free(*output);
+	*output = (len) ? strn_dup(input, len) : str_dup(input);
+	if (!*output)
+		return 0;
+	return 1;
 }

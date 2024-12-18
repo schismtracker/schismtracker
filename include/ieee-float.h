@@ -24,16 +24,17 @@
 #ifndef SCHISM_FLOAT_H_
 #define SCHISM_FLOAT_H_
 
-/* These functions assume big endian input; you'll have to byteswap
- * if this is not the case. */
+/* These functions work on the raw, big endian versions of IEEE
+ * floating point numbers. If you have little endian input or
+ * output, you'll have to byteswap. */
 
-double float_decode_ieee_32(const unsigned char bytes[4]);
+SCHISM_PURE double float_decode_ieee_32(const unsigned char bytes[4]);
 void float_encode_ieee_32(double num, unsigned char bytes[4]);
 
-double float_decode_ieee_64(const unsigned char bytes[8]);
+SCHISM_PURE double float_decode_ieee_64(const unsigned char bytes[8]);
 void float_encode_ieee_64(double num, unsigned char bytes[8]);
 
-double float_decode_ieee_80(const unsigned char bytes[10]);
+SCHISM_PURE double float_decode_ieee_80(const unsigned char bytes[10]);
 void float_encode_ieee_80(double num, unsigned char bytes[10]);
 
 #endif /* SCHISM_FLOAT_H_ */

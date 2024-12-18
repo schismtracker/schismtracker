@@ -349,7 +349,7 @@ static int _ip_stop(struct midi_port *p)
 }
 
 static void _ip_send(struct midi_port *p, const unsigned char *data, unsigned int len,
-				UNUSED unsigned int delay)
+				SCHISM_UNUSED unsigned int delay)
 {
 	struct sockaddr_in asin = {0};
 	unsigned char *ipcopy;
@@ -472,7 +472,7 @@ int ip_midi_getports(void)
 	return 0;
 }
 
-void ip_midi_setports(UNUSED int n)
+void ip_midi_setports(SCHISM_UNUSED int n)
 {
 }
 

@@ -55,10 +55,6 @@ static struct widget widgets_exportmodule[16];
 static struct widget widgets_savemodule[16];
 static struct widget *widgets_exportsave;
 
-/* XXX this needs to be kept in sync with diskwriters
-   (FIXME: it shouldn't have to! build it when the savemodule page is built or something, idk -storlek) */
-static const int filetype_saves[] = { 4, 5, 6, 7, 8, 9, -1 };
-
 static int top_file = 0, top_dir = 0;
 static time_t directory_mtime;
 static dmoz_filelist_t flist;
@@ -99,13 +95,13 @@ TODO: scroller hack on selected filename
 #define GLOB_DEFAULT GLOB_CLASSIC "; *.dsm; *.mdl; *.mt2; *.stm; *.stx; *.far; *.ult; *.med; *.ptm; *.okt; *.amf; *.dmf; *.imf; *.sfx; *.mus; *.mid"
 
 /* These are stored as CP437 */
-static char filename_entry[PATH_MAX + 1] = {0};
-static char dirname_entry[PATH_MAX + 1] = {0};
+static char filename_entry[SCHISM_PATH_MAX + 1] = {0};
+static char dirname_entry[SCHISM_PATH_MAX + 1] = {0};
 
-char cfg_module_pattern[PATH_MAX + 1] = GLOB_DEFAULT;
-char cfg_export_pattern[PATH_MAX + 1] = "*.wav; *.aiff; *.aif";
+char cfg_module_pattern[SCHISM_PATH_MAX + 1] = GLOB_DEFAULT;
+char cfg_export_pattern[SCHISM_PATH_MAX + 1] = "*.wav; *.aiff; *.aif";
 static char **glob_list = NULL;
-static char glob_list_src[PATH_MAX + 1] = {0}; // the pattern used to make glob_list (this is an icky hack)
+static char glob_list_src[SCHISM_PATH_MAX + 1] = {0}; // the pattern used to make glob_list (this is an icky hack)
 
 /* --------------------------------------------------------------------- */
 
@@ -399,8 +395,8 @@ static void set_glob(const char *globspec)
 		free(*glob_list);
 		free(glob_list);
 	}
-	strncpy(glob_list_src, globspec, PATH_MAX);
-	glob_list_src[PATH_MAX] = '\0';
+	strncpy(glob_list_src, globspec, ARRAY_SIZE(glob_list_src) - 1);
+	glob_list_src[ARRAY_SIZE(glob_list_src) - 1] = '\0';
 	glob_list = semicolon_split(glob_list_src);
 	/* this is kinda lame. dmoz should have a way to reload the list without rereading the directory.
 	could be done with a "visible" flag, which affects the list's sort order, along with adjusting
@@ -424,7 +420,7 @@ static void set_default_glob(int set_filename)
 
 /* --------------------------------------------------------------------- */
 
-static char search_text[NAME_MAX + 1] = "";
+static char search_text[SCHISM_NAME_MAX + 1] = "";
 static int search_first_char = 0;       /* first visible character */
 static int search_text_length = 0;      /* same as strlen(search_text) */
 
@@ -478,7 +474,7 @@ static int search_text_add_char(uint8_t c)
 	if (c < 32)
 		return 0;
 
-	if (search_text_length >= NAME_MAX)
+	if (search_text_length + 1 >= ARRAY_SIZE(search_text))
 		return 1;
 
 	search_text[search_text_length++] = c;
@@ -524,8 +520,8 @@ static int change_dir(const char *dir)
 	dmoz_cache_update(cfg_dir_modules, &flist, &dlist);
 
 	CHARSET_EASY_MODE(ptr, CHARSET_CHAR, CHARSET_CP437, {
-		strncpy(cfg_dir_modules, ptr, PATH_MAX);
-		cfg_dir_modules[PATH_MAX] = 0;
+		strncpy(cfg_dir_modules, ptr, ARRAY_SIZE(cfg_dir_modules) - 1);
+		cfg_dir_modules[ARRAY_SIZE(cfg_dir_modules) - 1] = 0;
 		strcpy(dirname_entry, cfg_dir_modules);
 	});
 
@@ -635,7 +631,7 @@ static void file_list_draw(void)
 	search_redraw();
 }
 
-static void do_delete_file(UNUSED void *data)
+static void do_delete_file(SCHISM_UNUSED void *data)
 {
 	int old_top_file, old_current_file, old_top_dir, old_current_dir;
 	char *ptr;
@@ -841,7 +837,7 @@ static void dir_list_draw_exportsave(void)
 }
 
 static int dir_list_handle_text_input(const char *text) {
-	for (; *text && search_text_length < NAME_MAX; text++) {
+	for (; *text && search_text_length < ARRAY_SIZE(search_text) - 1; text++) {
 		if (*text < 32)
 			return 0;
 
@@ -1080,9 +1076,9 @@ void load_module_load_page(struct page *page)
 	widgets_loadmodule[1].width = 27;
 	widgets_loadmodule[1].height = 21;
 
-	widget_create_textentry(widgets_loadmodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
+	widget_create_textentry(widgets_loadmodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, ARRAY_SIZE(filename_entry) - 1);
 	widgets_loadmodule[2].activate = filename_entered;
-	widget_create_textentry(widgets_loadmodule + 3, 13, 47, 64, 2, 3, 0, NULL, dirname_entry, PATH_MAX);
+	widget_create_textentry(widgets_loadmodule + 3, 13, 47, 64, 2, 3, 0, NULL, dirname_entry, ARRAY_SIZE(dirname_entry) - 1);
 	widgets_loadmodule[3].activate = dirname_entered;
 }
 
@@ -1153,14 +1149,37 @@ void save_module_load_page(struct page *page, int do_export)
 	widgets_exportsave[1].width = 18;
 	widgets_exportsave[1].height = 21;
 
-	widget_create_textentry(widgets_exportsave + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, PATH_MAX);
+	widget_create_textentry(widgets_exportsave + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, ARRAY_SIZE(filename_entry) - 1);
 	widgets_exportsave[2].activate = filename_entered;
-	widget_create_textentry(widgets_exportsave + 3, 13, 47, 64, 2, 0, 0, NULL, dirname_entry, PATH_MAX);
+	widget_create_textentry(widgets_exportsave + 3, 13, 47, 64, 2, 0, 0, NULL, dirname_entry, ARRAY_SIZE(dirname_entry) - 1);
 	widgets_exportsave[3].activate = dirname_entered;
 
 	widgets_exportsave[4].d.togglebutton.state = 1;
 
 	const struct save_format *formats = (do_export ? song_export_formats : song_save_formats);
+
+	// get the number of formats
+	for (c = 0, n = 0; formats[n].label; n++) {
+		if (formats[n].enabled && !formats[n].enabled())
+			continue;
+
+		c++;
+	}
+
+	// build the filetypes list
+	int *filetypes = mem_alloc((c + 1) * sizeof(int));
+	for (c = 0, n = 0; formats[n].label; n++) {
+		if (formats[n].enabled && !formats[n].enabled())
+			continue;
+
+		filetypes[c] = 4 + c;
+
+		c++;
+	}
+
+	filetypes[c] = -1;
+
+	// create the widgets
 	for (c = 0, n = 0; formats[n].label; n++) {
 		if (formats[n].enabled && !formats[n].enabled())
 			continue;
@@ -1173,12 +1192,13 @@ void save_module_load_page(struct page *page, int do_export)
 				NULL,
 				formats[n].label,
 				(5 - strlen(formats[n].label)) / 2 + 1,
-				filetype_saves);
+				filetypes);
 
 		widgets_exportsave[4 + c].next.backtab = 1;
 
 		c++;
 	}
 	widgets_exportsave[4 + c - 1].next.down = 2;
+
 	page->total_widgets += c;
 }

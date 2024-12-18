@@ -120,7 +120,7 @@ void win32_get_modkey(schism_keymod_t *mk)
 	}
 }
 
-void win32_sysinit(UNUSED int *pargc, UNUSED char ***pargv)
+void win32_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv)
 {
 	static WSADATA ignored = {0};
 
@@ -327,7 +327,7 @@ int win32_event(schism_event_t *event)
 			DragQueryFileW(drop, 0, f, needed + 1);
 			f[needed] = 0;
 
-			charset_iconv(f, &e.drop.file, CHARSET_WCHAR_T, CHARSET_CHAR, needed + 1);
+			charset_iconv(f, &e.drop.file, CHARSET_WCHAR_T, CHARSET_CHAR, (needed + 1) * sizeof(wchar_t));
 		} else {
 			int needed = DragQueryFileA(drop, 0, NULL, 0);
 
@@ -502,7 +502,7 @@ FILE* win32_fopen(const char* path, const char* flags)
 	return NULL;
 }
 
-int win32_mkdir(const char *path, UNUSED mode_t mode)
+int win32_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
 {
 	if (GetVersion() & UINT32_C(0x80000000)) {
 		char* ac = NULL;

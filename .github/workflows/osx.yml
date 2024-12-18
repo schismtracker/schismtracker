@@ -22,8 +22,8 @@ jobs:
   osx:
     runs-on: macos-14
     env:
-      SDL_VERSION: 2.30.9
-      SDL_SHA256: 24b574f71c87a763f50704bbb630cbe38298d544a1f890f099a4696b1d6beba4
+      SDL_VERSION: 2.30.10
+      SDL_SHA256: f59adf36a0fcf4c94198e7d3d776c1b3824211ab7aeebeb31fe19836661196aa
       PANTHER_SDL2_VERSION: 20210624
       PANTHER_SDL2_SHA256: 2d7fcbebedd3502f8454bb21f20c8d9cb332c4d0bba124f8be5cb5787beeaa54
       FLAC_VERSION: 1.4.3
@@ -282,7 +282,7 @@ jobs:
           pushd utf8proc-$UTF8PROC_VERSION
           patch -p1 < ../.github/patches/utf8proc/2-fix-prefix.patch
           export PATH="$PATH:$HOME/ppc/usr/bin"
-          make CC=powerpc-apple-darwin10-gcc-4.2.1 CFLAGS="-I$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.3.9.sdk -mmacosx-version-min=10.3" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.3.9.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.3.9.sdk"
+          make CC=powerpc-apple-darwin10-gcc-4.2.1 CFLAGS="-I$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.3.9.sdk -mmacosx-version-min=10.3 -O2" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.3.9.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.3.9.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.3.9.sdk"
           make install
           patch -p1 -R < ../.github/patches/utf8proc/2-fix-prefix.patch
           popd
@@ -291,13 +291,11 @@ jobs:
         if: steps.cache-x86_64-dependencies.outputs.cache-hit != 'true'
         run: |
           pushd utf8proc-$UTF8PROC_VERSION
-          patch -p1 < ../.github/patches/utf8proc/2-fix-prefix.patch
           mkdir build_x86_64
           cd build_x86_64
           LDFLAGS="-F$HOME/x86_64/SDKs/MacOSX10.9.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.9.sdk" cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$HOME/x86_64prefix" -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET="10.7" -DCMAKE_OSX_SYSROOT="$HOME/x86_64/SDKs/MacOSX10.9.sdk" -DBUILD_SHARED_LIBS=1
           make
           make install
-          patch -p1 -R < ../.github/patches/utf8proc/2-fix-prefix.patch
           popd
 
       - name: 'Build utf8proc (arm64)'

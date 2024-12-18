@@ -145,6 +145,9 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 uint32_t mdl_decompress8(void *dest, uint32_t len, slurp_t *fp);
 uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp);
 
+/* returns 0 on success */
+int32_t huffman_decompress(slurp_t *slurp, disko_t *disko);
+
 /* --------------------------------------------------------------------------------------------------------- */
 
 /* shared by the .it, .its, and .iti saving functions */
@@ -162,8 +165,8 @@ void s3i_write_header(disko_t *fp, song_sample_t *smp, uint32_t sdata);
 /* --------------------------------------------------------------------------------------------------------- */
 
 /* handle dos timestamps */
-void dos_time_to_timeval(struct timeval *timeval, uint32_t dos_time);
-uint32_t timeval_to_dos_time(const struct timeval *timeval);
+schism_ticks_t dos_time_to_ms(uint32_t dos_time);
+uint32_t ms_to_dos_time(schism_ticks_t ms);
 
 void fat_date_time_to_tm(struct tm *tm, uint16_t fat_date, uint16_t fat_time);
 void tm_to_fat_date_time(const struct tm *tm, uint16_t *fat_date, uint16_t *fat_time);
@@ -177,6 +180,14 @@ typedef struct chunk {
 	uint32_t size;
 	int64_t offset;
 } iff_chunk_t;
+
+/* chunk enums */
+enum {
+	IFF_CHUNK_SIZE_LE = (1 << 0), /* for RIFF */
+	IFF_CHUNK_ALIGNED = (1 << 1), /* are the structures word aligned? */
+};
+
+int iff_chunk_peek_ex(iff_chunk_t *chunk, slurp_t *fp, uint32_t flags);
 
 int iff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp);
 int riff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp);

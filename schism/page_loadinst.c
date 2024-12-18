@@ -47,7 +47,7 @@
 /* the locals */
 
 static struct widget widgets_loadinst[1];
-static char inst_cwd[PATH_MAX+1] = "";
+static char inst_cwd[SCHISM_PATH_MAX] = {0};
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -68,7 +68,7 @@ static dmoz_filelist_t flist;
 #define current_file flist.selected
 
 static int slash_search_mode = -1;
-static char slash_search_str[PATH_MAX];
+static char slash_search_str[SCHISM_PATH_MAX];
 
 /* get a color index from a dmoz_file_t 'type' field */
 static inline int get_type_color(int type)
@@ -142,11 +142,11 @@ static int change_dir(const char *dir)
 	dmoz_cache_update(inst_cwd, &flist, NULL);
 
 	if (os_stat(ptr, &buf) == 0 && S_ISDIR(buf.st_mode)) {
-		strncpy(cfg_dir_instruments, ptr, PATH_MAX);
-		cfg_dir_instruments[PATH_MAX] = 0;
+		strncpy(cfg_dir_instruments, ptr, ARRAY_SIZE(cfg_dir_instruments) - 1);
+		cfg_dir_instruments[ARRAY_SIZE(cfg_dir_instruments) - 1] = 0;
 	}
-	strncpy(inst_cwd, ptr, PATH_MAX);
-	inst_cwd[PATH_MAX] = 0;
+	strncpy(inst_cwd, ptr, ARRAY_SIZE(inst_cwd) - 1);
+	inst_cwd[ARRAY_SIZE(inst_cwd) - 1] = 0;
 	free(ptr);
 
 	read_directory();
@@ -268,7 +268,7 @@ static void file_list_draw(void)
 		draw_char(168, 31, pos++, 2, 0);
 }
 
-static void do_enable_inst(UNUSED void *d)
+static void do_enable_inst(SCHISM_UNUSED void *d)
 {
 	song_set_instrument_mode(1);
 	main_song_changed_cb();
@@ -276,7 +276,7 @@ static void do_enable_inst(UNUSED void *d)
 	memused_songchanged();
 }
 
-static void dont_enable_inst(UNUSED void *d)
+static void dont_enable_inst(SCHISM_UNUSED void *d)
 {
 	set_page(PAGE_INSTRUMENT_LIST);
 }
@@ -341,7 +341,7 @@ static void handle_enter_key(void)
 	/* TODO */
 }
 
-static void do_delete_file(UNUSED void *data)
+static void do_delete_file(SCHISM_UNUSED void *data)
 {
 	int old_top_file, old_current_file;
 	char *ptr;
@@ -376,7 +376,7 @@ static int file_list_handle_text_input(const char *text)
 	for (; *text; text++) {
 		if (*text >= 32 && (slash_search_mode > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
 			if (slash_search_mode < 0) slash_search_mode = 0;
-			if (slash_search_mode < PATH_MAX) {
+			if (slash_search_mode + 1 < ARRAY_SIZE(slash_search_str)) {
 				slash_search_str[slash_search_mode++] = *text;
 				reposition_at_slash_search();
 				status.flags |= NEED_UPDATE;

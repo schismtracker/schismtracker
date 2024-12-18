@@ -12,15 +12,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { sys: mingw32, target: i686, stdlib: msvcrt, cflags: '-march=i586 -mtune=generic', ldflags: '-Wl,--major-os-version=4,--major-subsystem-version=4' }
-          - { sys: mingw32, target: x86_64, stdlib: msvcrt, cflags: '', ldflags: '' }
-          - { sys: mingw32, target: armv7, stdlib: msvcrt, cflags: '', ldflags: '' }
-          - { sys: mingw32, target: aarch64, stdlib: ucrt, cflags: '', ldflags: '' }
+          - { sys: mingw32, target: i686, stdlib: msvcrt, cflags: '-march=i586 -mtune=generic -O2', ldflags: '-Wl,--major-os-version=4,--major-subsystem-version=4 -Wl,--large-address-aware' }
+          - { sys: mingw32, target: x86_64, stdlib: msvcrt, cflags: '-O2', ldflags: '' }
+          - { sys: mingw32, target: armv7, stdlib: msvcrt, cflags: '-O2', ldflags: '' }
+          - { sys: mingw32, target: aarch64, stdlib: ucrt, cflags: '-O2', ldflags: '' }
     name: ${{ matrix.sys }}-${{ matrix.target }}
     env:
       LLVM_MINGW_VERSION: 20240518
-      SDL_VERSION: 2.30.9
-      SDL_SHA256: 24b574f71c87a763f50704bbb630cbe38298d544a1f890f099a4696b1d6beba4
+      SDL_VERSION: 2.30.10
+      SDL_SHA256: f59adf36a0fcf4c94198e7d3d776c1b3824211ab7aeebeb31fe19836661196aa
       SDL12_VERSION: 1.2.15
       SDL12_SHA256: d6d316a793e5e348155f0dd93b979798933fb98aa1edebcc108829d6474aad00
       FLAC_VERSION: 1.4.3

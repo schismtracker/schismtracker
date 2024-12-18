@@ -48,7 +48,7 @@ typedef struct {
 	void (*show_system_cursor)(int show);
 	int (*is_screensaver_enabled)(void);
 	void (*toggle_screensaver)(int enabled);
-	void (*translate)(int vx, int vy, unsigned int *x, unsigned int *y);
+	void (*translate)(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y);
 	void (*get_logical_coordinates)(int x, int y, int *trans_x, int *trans_y);
 	int (*is_input_grabbed)(void);
 	void (*set_input_grabbed)(int enabled);

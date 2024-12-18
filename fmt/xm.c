@@ -815,7 +815,7 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 	return (hdr->version < 0x0104) ? abssamp : 0;
 }
 
-int fmt_xm_load_song(song_t *song, slurp_t *fp, UNUSED unsigned int lflags)
+int fmt_xm_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lflags)
 {
 	struct xm_file_header hdr;
 	int n;
