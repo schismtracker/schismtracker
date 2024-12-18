@@ -149,7 +149,7 @@ static schism_audio_device_t *sdl12_audio_open_device(const char *name, const sc
 	SDL_AudioSpec sdl_desired = {
 		.freq = desired->freq,
 		// SDL 1.2 has no support for 32-bit audio at all
-		.format = (desired->bits == 8) ? (AUDIO_U8) : (AUDIO_S16),
+		.format = (desired->bits == 8) ? (AUDIO_U8) : (AUDIO_S16SYS),
 		.channels = desired->channels,
 		.samples = desired->samples,
 		.callback = sdl12_dummy_callback,

@@ -183,8 +183,8 @@ static schism_audio_device_t *sdl2_audio_open_device(const char *name, const sch
 	switch (desired->bits) {
 	case 8: format = AUDIO_U8; break;
 	default:
-	case 16: format = AUDIO_S16; break;
-	case 32: format = AUDIO_S32; break;
+	case 16: format = AUDIO_S16SYS; break;
+	case 32: format = AUDIO_S32SYS; break;
 	}
 
 	SDL_AudioSpec sdl_desired = {
