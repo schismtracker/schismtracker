@@ -423,7 +423,7 @@ AM_CONDITIONAL([USE_NETWORK], [test "x$use_network" = "xyes"])
 dnl ------------------------------------------------------------------------
 
 AC_MSG_CHECKING([for arithmetic right shift])
-AC_COMPILE_IFELSE([[int xxx[((-1 >> 1) == -1) ? 1 : -1];]],
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([[int xxx[((-1 >> 1) == -1) ? 1 : -1];]])],
 	[have_arithmetic_rshift=yes],
 	[have_arithmetic_rshift=no])
 AC_MSG_RESULT([$have_arithmetic_rshift])
@@ -433,7 +433,7 @@ fi
 
 # An implementation can technically do whatever it wants here...
 AC_MSG_CHECKING([for sane signed left shift])
-AC_RUN_IFELSE([[int main(void) { return ((-1 << 1) != -2); } ]],
+AC_RUN_IFELSE([AC_LANG_SOURCE([[int main(void) { return ((-1 << 1) != -2); } ]])],
 	[have_sane_signed_lshift=yes],
 	[have_sane_signed_lshift=no],
 	[have_sane_signed_lshift=no]) # assume no
