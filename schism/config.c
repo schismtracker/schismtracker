@@ -93,18 +93,13 @@ void cfg_init_dir(void)
 	if (portable_file && dmoz_path_is_file(portable_file)) {
 		printf("In portable mode.\n");
 
-		str_realloc(&cfg_dir_dotschism, app_dir, 0);
+		cfg_dir_dotschism = str_dup(app_dir);
 	} else {
 		int found = 0;
 		char *dot_dir = dmoz_get_dot_directory();
 
 		for (size_t i = 0; i < ARRAY_SIZE(schism_dotfolders); i++) {
-			char *ptr;
-
-			ptr = dmoz_path_concat(dot_dir, schism_dotfolders[i]);
-			str_realloc(&cfg_dir_dotschism, ptr, 0);
-
-			free(ptr);
+			cfg_dir_dotschism = dmoz_path_concat(dot_dir, schism_dotfolders[i]);
 
 			if (dmoz_path_is_directory(cfg_dir_dotschism)) {
 				found = 1;
@@ -113,12 +108,7 @@ void cfg_init_dir(void)
 		}
 
 		if (!found) {
-			char *ptr;
-
-			ptr = dmoz_path_concat(dot_dir, schism_dotfolders[0]);
-			str_realloc(&cfg_dir_dotschism, ptr, 0);
-
-			free(ptr);
+			cfg_dir_dotschism = dmoz_path_concat(dot_dir, schism_dotfolders[0]);
 
 			printf("Creating directory %s\n", cfg_dir_dotschism);
 			printf("Schism Tracker uses this directory to store your settings.\n");
