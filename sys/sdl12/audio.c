@@ -25,6 +25,7 @@
 #include "mem.h"
 #include "util.h"
 #include "backend/audio.h"
+#include "loadso.h"
 
 #include "init.h"
 
@@ -41,71 +42,26 @@ static void (SDLCALL *sdl12_LockAudio)(void);
 static void (SDLCALL *sdl12_UnlockAudio)(void);
 static void (SDLCALL *sdl12_PauseAudio)(int);
 
+static void (SDLCALL *sdl12_SetError)(const char *fmt, ...);
+static char * (SDLCALL *sdl12_GetError)(void);
+static void (SDLCALL *sdl12_ClearError)(void);
+
+static int (SDLCALL *sdl12_AudioInit)(const char *driver);
+static void (SDLCALL *sdl12_AudioQuit)(void);
+
 /* ---------------------------------------------------------- */
 /* drivers */
 
-static const char *drivers[] = {
-	/* SDL 1.2 doesn't provide an API for this, so we have to
-	 * fake it.
-	 *
-	 * It's possible that we could build this list on startup by
-	 * attempting to open each audio driver with an audio device
-	 * and then appending the ones that work to this list.
-	 * That's a bad idea though, since it just adds to the startup
-	 * time for a list that most people will only look at once.
-	 * I think a static list will be ~just fine~ :) */
-	"openbsd",
-	"dsp",
-	"alsa",
-	"pulse",
-	"audio",
-	"AL",
-	"artsc",
-	"esd",
-	"nas",
-	"dma",
-	"coreaudio",
-	"dsound",
-	"waveout",
-	"baudio",
-	"sndmgr",
-	"paud",
-	"AHI",
-	"disk",
-	"dummy",
-};
-
-static int sdl12_audio_driver_count()
-{
-	return ARRAY_SIZE(drivers);
-}
-
-static const char *sdl12_audio_driver_name(int i)
-{
-	if (i < 0 || i >= ARRAY_SIZE(drivers))
-		return NULL;
-
-	return drivers[i];
-}
-
-/* --------------------------------------------------------------- */
-
-/* SDL 1.2 doesn't have a concept of audio devices */
-static int sdl12_audio_device_count(void)
-{
-	return 0;
-}
-
-static const char *sdl12_audio_device_name(int i)
-{
-	return NULL;
-}
-
-/* ---------------------------------------------------------- */
-
 static int sdl12_audio_init_driver(const char *name)
 {
-	const char *orig_drv = getenv("SDL_AUDIODRIVER");
+	char *orig_drv;
+	{
+		// Calling getenv() with a subsequent setenv() causes
+		// the original pointer to get lost, so we have to
+		// duplicate it.
+		const char *orig_drv_unsafe = getenv("SDL_AUDIODRIVER");
+		orig_drv = (orig_drv_unsafe) ? str_dup(orig_drv_unsafe) : NULL;
+	}
 
 	if (name)
 		setenv("SDL_AUDIODRIVER", name, 1);
@@ -121,6 +77,9 @@ static int sdl12_audio_init_driver(const char *name)
 		}
 	}
 
+	if (orig_drv)
+		free(orig_drv);
+
 	/* forward any error, if any */
 	return ret;
 }
@@ -128,6 +87,122 @@ static int sdl12_audio_init_driver(const char *name)
 static void sdl12_audio_quit_driver(void)
 {
 	sdl12_QuitSubSystem(SDL_INIT_AUDIO);
+}
+
+/* ---------------------------------------------------------- */
+
+/* This method will silently fail for drivers that don't work on startup,
+ * but this can be remedied by simply restarting Schism. */
+
+static struct sdl12_audio_driver_info {
+	const char *driver;
+	int exists;
+} drivers[] = {
+	/* SDL 1.2 doesn't provide an API for this, so we have to
+	 * build this when initializing the audio subsystem. */
+	{"openbsd", 0},
+	{"pulse", 0}, // prefer pulseaudio to alsa, then oss
+	{"alsa", 0},
+	{"dsp", 0},
+	{"audio", 0},
+	{"AL", 0},
+	{"artsc", 0},
+	{"esd", 0},
+	{"nas", 0},
+	{"dma", 0},
+	{"coreaudio", 0},
+	{"dsound", 0},
+	{"waveout", 0},
+	{"baudio", 0},
+	{"sndmgr", 0},
+	{"paud", 0},
+	{"AHI", 0},
+	{"nds", 0},
+	{"dart", 0},
+	{"dcaudio", 0},
+
+	// These two are pretty much guaranteed to exist
+	{"disk", 1},
+	{"dummy", 1},
+};
+
+static int sdl12_audio_driver_info_init()
+{
+	int atleast_one_loaded = 0;
+
+	/* save the last error before we screw with our crap */
+	const char *cached_err = sdl12_GetError();
+
+	for (int i = 0; i < ARRAY_SIZE(drivers); i++) {
+		// Clear any error before starting so we
+		// can check for one later
+		sdl12_ClearError();
+
+		if (sdl12_AudioInit(drivers[i].driver))
+			continue;
+
+		// Make sure there was no error initializing the
+		// driver. (SDL sets the error here to "No available
+		// audio device", but we'll use a more broad test
+		// instead)
+		const char *audio_init_err = sdl12_GetError();
+		if (audio_init_err && *audio_init_err)
+			continue;
+
+		// Ok, the driver was bootstrapped successfully, now
+		// punt and save that info.
+		sdl12_AudioQuit();
+		atleast_one_loaded = drivers[i].exists = 1;
+	}
+
+	/* restore the last error */
+	sdl12_SetError(cached_err);
+
+	return atleast_one_loaded;
+}
+
+static void sdl12_audio_driver_info_quit()
+{
+	// reset
+	for (int i = 0; i < ARRAY_SIZE(drivers); i++)
+		drivers[i].exists = 0;
+}
+
+static int sdl12_audio_driver_count()
+{
+	int c = 0;
+	for (int i = 0; i < ARRAY_SIZE(drivers); i++)
+		if (drivers[i].exists)
+			c++;
+	return c;
+}
+
+static const char *sdl12_audio_driver_name(int x)
+{
+	int i = 0;
+	for (int c = 0; i < ARRAY_SIZE(drivers); i++) {
+		if (!drivers[i].exists)
+			continue;
+
+		if (c == x)
+			break;
+
+		c++;
+	}
+	return (i < ARRAY_SIZE(drivers)) ? drivers[i].driver : NULL;
+}
+
+/* --------------------------------------------------------------- */
+
+/* SDL 1.2 doesn't have a concept of audio devices */
+static int sdl12_audio_device_count(void)
+{
+	return 0;
+}
+
+static const char *sdl12_audio_device_name(int i)
+{
+	return NULL;
 }
 
 /* -------------------------------------------------------- */
@@ -221,6 +296,13 @@ static int sdl12_audio_load_syms(void)
 	SCHISM_SDL12_SYM(UnlockAudio);
 	SCHISM_SDL12_SYM(PauseAudio);
 
+	SCHISM_SDL12_SYM(SetError);
+	SCHISM_SDL12_SYM(GetError);
+	SCHISM_SDL12_SYM(ClearError);
+
+	SCHISM_SDL12_SYM(AudioInit);
+	SCHISM_SDL12_SYM(AudioQuit);
+
 	return 0;
 }
 
@@ -232,12 +314,16 @@ static int sdl12_audio_init(void)
 	if (sdl12_audio_load_syms())
 		return 0;
 
+	if (!sdl12_audio_driver_info_init())
+		return 0;
+
 	return 1;
 }
 
 static void sdl12_audio_quit(void)
 {
 	// the subsystem quitting is handled by the quit driver function
+	sdl12_audio_driver_info_quit();
 	sdl12_quit();
 }
 

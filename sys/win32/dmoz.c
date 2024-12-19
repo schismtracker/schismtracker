@@ -26,54 +26,71 @@
 #include "backend/dmoz.h"
 #include "loadso.h"
 #include "charset.h"
+#include "dmoz.h"
+#include "util.h"
 
 #include <windows.h>
 
-// XXX Is this necessary?
-static DWORD (WINAPI *WIN32_GetModuleFileNameW)(HMODULE hModule, LPWSTR lpFilename, DWORD nSize);
-static DWORD (WINAPI *WIN32_GetModuleFileNameA)(HMODULE hModule, LPSTR  lpFilename, DWORD nSize);
-
 static char *win32_dmoz_get_exe_path(void)
 {
+	char *utf8 = NULL;
+
 	if (GetVersion() & UINT32_C(0x80000000)) {
 		// Windows 9x
-		char path[PATH_MAX];
-		char *utf8;
+		char path[MAX_PATH];
 
-		if (WIN32_GetModuleFileNameA && WIN32_GetModuleFileNameA(NULL, path, PATH_MAX) && !charset_iconv(path, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(path)))
-			return utf8;
+		if (GetModuleFileNameA(NULL, path, ARRAY_SIZE(path)))
+			charset_iconv(path, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(path));
 	} else {
-		// Windows NT
-		wchar_t path[PATH_MAX];
-		char *utf8;
+		// Windows NT. This uses dynamic allocation to account for e.g. UNC paths.
+		DWORD pathsize = MAX_PATH;
+		WCHAR *path = NULL;
 
-		if (WIN32_GetModuleFileNameW && WIN32_GetModuleFileNameW(NULL, path, PATH_MAX) && !charset_iconv(path, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(path)))
-			return utf8;
+		for (;;) {
+			{
+				void *new = mem_realloc(path, pathsize * sizeof(*path));
+				if (!new) {
+					free(path);
+					return NULL;
+				}
+
+				path = new;
+			}
+
+			DWORD len = GetModuleFileNameW(NULL, path, pathsize);
+			if (len < pathsize - 1)
+				break;
+
+			pathsize *= 2;
+		}
+
+		charset_iconv(path, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, pathsize * sizeof(*path));
+
+		free(path);
+	}
+
+	if (utf8) {
+		char *parent = dmoz_path_get_parent_directory(utf8);
+		free(utf8);
+		if (parent)
+			return parent;
 	}
 
 	return NULL;
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// dynamic loading
-
-static void *lib_kernel32 = NULL;
+// init/quit
 
 static int win32_dmoz_init(void)
 {
-	lib_kernel32 = loadso_object_load("KERNEL32.DLL");
-	if (lib_kernel32) {
-		WIN32_GetModuleFileNameA = loadso_function_load(lib_kernel32, "GetModuleFileNameA");
-		WIN32_GetModuleFileNameW = loadso_function_load(lib_kernel32, "GetModuleFileNameW");
-	}
-
+	// nothing to do
 	return 1;
 }
 
 static void win32_dmoz_quit(void)
 {
-	if (lib_kernel32)
-		loadso_object_unload(lib_kernel32);
+	// nothing
 }
 
 const schism_dmoz_backend_t schism_dmoz_backend_win32 = {

@@ -1828,6 +1828,9 @@ int dmoz_init(void)
 #ifdef SCHISM_WIN32
 		&schism_dmoz_backend_win32,
 #endif
+#ifdef SCHISM_MACOSX
+		&schism_dmoz_backend_macosx,
+#endif
 #ifdef SCHISM_SDL2
 		&schism_dmoz_backend_sdl2,
 #endif
