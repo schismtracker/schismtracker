@@ -433,7 +433,7 @@ fi
 
 # An implementation can technically do whatever it wants here...
 AC_MSG_CHECKING([for sane signed left shift])
-AC_RUN_IFELSE([AC_LANG_SOURCE([[int main(void) { return ((-1 << 1) != -2); } ]])],
+AC_RUN_IFELSE([AC_LANG_PROGRAM([[]], [[return ((-1 << 1) != -2);]])],
 	[have_sane_signed_lshift=yes],
 	[have_sane_signed_lshift=no],
 	[have_sane_signed_lshift=no]) # assume no
