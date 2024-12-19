@@ -23,7 +23,7 @@
 
 #include "headers.h"
 
-#include "backend/clippy.h"
+#include "backend/dmoz.h"
 #include "loadso.h"
 #include "charset.h"
 #include "mem.h"
