@@ -400,14 +400,14 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 	unsigned int mouseline_v = (mouse_x % 8);
 	uint32_t mouseline[80];
 	uint32_t mouseline_mask[80];
-	int x, a, y, last_scaled_y = 235438; // some random value
+	int x, a, y, last_scaled_y;
 	int pad = pitch - (width * bpp);
 
 	for (y = 0; y < height; y++) {
 		int scaled_y = (y * NATIVE_SCREEN_HEIGHT / height);
 
-		// only want to scan if we have to
-		if (scaled_y != last_scaled_y) {
+		// only scan again if we have to or if this the first scan
+		if (scaled_y != last_scaled_y || y == 0) {
 			make_mouseline(mouseline_x, mouseline_v, scaled_y, mouseline, mouseline_mask, mouse_y);
 			switch (bpp) {
 			case 1:
