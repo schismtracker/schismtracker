@@ -315,7 +315,8 @@ files_macosx = \
 	sys/macosx/ibook-support.c	\
 	sys/macosx/midi-macosx.c	\
 	sys/macosx/osdefs.c \
-	sys/macosx/clippy.m
+	sys/macosx/clippy.m \
+	sys/macosx/dmoz.m
 cflags_macosx=
 libs_macosx=$(OSX_LDADD)
 endif

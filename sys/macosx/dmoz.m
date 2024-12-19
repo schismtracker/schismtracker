@@ -21,25 +21,45 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_BACKEND_DMOZ_H_
-#define SCHISM_BACKEND_DMOZ_H_
+#include "headers.h"
 
-typedef struct {
-	// returns 1 if succeeded, 0 if failed
-	int (*init)(void);
-	void (*quit)(void);
+#include "backend/dmoz.h"
+#include "loadso.h"
+#include "charset.h"
+#include "mem.h"
+#include "util.h"
 
-	char *(*get_exe_path)(void);
-} schism_dmoz_backend_t;
+#import <Cocoa/Cocoa.h>
+#import <Foundation/Foundation.h>
 
-#ifdef SCHISM_WIN32
-extern const schism_dmoz_backend_t schism_dmoz_backend_win32;
-#endif
-#ifdef SCHISM_MACOSX
-extern const schism_dmoz_backend_t schism_dmoz_backend_macosx;
-#endif
-#ifdef SCHISM_SDL2
-extern const schism_dmoz_backend_t schism_dmoz_backend_sdl2;
-#endif
+// FIXME we need to also get the Application Support directory through
+// NSSearchPathForDirectoriesInDomains() 
+static char *macosx_dmoz_get_exe_path(void)
+{
+	NSBundle *bundle = [NSBundle mainBundle];
 
-#endif /* SCHISM_BACKEND_DMOZ_H_ */
+	/* this returns the exedir for non-bundled and the resourceDir for bundled */
+	const char *base = [[bundle resourcePath] fileSystemRepresentation];
+	if (base)
+		return str_dup(base);
+
+	return NULL;
+}
+
+static int macosx_dmoz_init(void)
+{
+	// do nothing
+	return 1;
+}
+
+static void macosx_dmoz_quit(void)
+{
+	// do nothing
+}
+
+const schism_dmoz_backend_t schism_dmoz_backend_macosx = {
+	.init = macosx_dmoz_init,
+	.quit = macosx_dmoz_quit,
+
+	.get_exe_path = macosx_dmoz_get_exe_path,
+};
