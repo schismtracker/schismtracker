@@ -69,7 +69,7 @@ int macos_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
 		str_to_pascal(normal, mpath, &truncated);
 		if (truncated) {
 			errno = ENAMETOOLONG;
-			return NULL;
+			return -1;
 		}
 
 		free(normal);
@@ -81,7 +81,7 @@ int macos_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
 	if (mpath[mpath[0]] != ':') {
 		if (mpath[0] >= 255) {
 			errno = ENAMETOOLONG;
-			return NULL;
+			return -1;
 		}
 		mpath[++mpath[0]] = ':';
 	}
