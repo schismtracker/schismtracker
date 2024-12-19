@@ -114,10 +114,11 @@ void *charset_case_fold_to_set(const void *in, charset_t inset, charset_t outset
 /* ------------------------------------------------------------------------ */
 
 /* charset-aware replacements for C stdlib functions */
-int charset_strcmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set);
-int charset_strcasecmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set);
-int charset_strverscmp(const void *in1, charset_t in1set, const void *in2, charset_t in2set);
-int charset_strncasecmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set, size_t num);
+int32_t charset_strcmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set);
+int32_t charset_strcasecmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set);
+int32_t charset_strverscmp(const void *in1, charset_t in1set, const void *in2, charset_t in2set);
+int32_t charset_strcaseverscmp(const void *in1, charset_t in1set, const void *in2, charset_t in2set);
+int32_t charset_strncasecmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set, size_t num);
 size_t charset_strncasecmplen(const void* in1, charset_t in1set, const void* in2, charset_t in2set, size_t num);
 
 /* basic fnmatch */

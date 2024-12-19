@@ -334,7 +334,7 @@ schismtracker.pef: schismtracker.xcoff
 
 # this makes a lot more than just schismtracker.bin, but whatever
 .pef.bin:
-	$(REZ) "$(RETRO68_ROOT)/powerpc-apple-macos/RIncludes/RetroPPCAPPL.r" -DCFRAG_NAME="\"schismtracker\"" -o $@ --cc "schismtracker.dsk" --cc "schismtracker.APPL" --cc "%schismtracker.ad" -t "APPL" -c "????" --data $<
+	$(REZ) -I"$(RETRO68_ROOT)/powerpc-apple-macos/RIncludes" "$(top_srcdir)/sys/macos/resource.r" -o $@ -t "APPL" -c "????" --data $<
 
 # "pef" ?? lol
 .xcoff.pef:

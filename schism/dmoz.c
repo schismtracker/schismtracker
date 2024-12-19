@@ -141,18 +141,12 @@ typedef int (*dmoz_dcmp_t) (const dmoz_dir_t *a, const dmoz_dir_t *b);
 	static int dmoz_dcmp_##name(const dmoz_dir_t *a, const dmoz_dir_t *b);
 _DECL_CMP(strcmp)
 _DECL_CMP(strcasecmp)
-#if HAVE_STRVERSCMP
 _DECL_CMP(strverscmp)
-#endif
+_DECL_CMP(strcaseverscmp)
 static int dmoz_fcmp_timestamp(const dmoz_file_t *a, const dmoz_file_t *b);
 
-#if HAVE_STRVERSCMP
-static dmoz_fcmp_t dmoz_file_cmp = dmoz_fcmp_strverscmp;
-static dmoz_dcmp_t dmoz_dir_cmp = dmoz_dcmp_strverscmp;
-#else
-static dmoz_fcmp_t dmoz_file_cmp = dmoz_fcmp_strcasecmp;
-static dmoz_dcmp_t dmoz_dir_cmp = dmoz_dcmp_strcasecmp;
-#endif
+static dmoz_fcmp_t dmoz_file_cmp = dmoz_fcmp_strcaseverscmp;
+static dmoz_dcmp_t dmoz_dir_cmp = dmoz_dcmp_strcaseverscmp;
 
 static struct {
 	const char *name;
@@ -161,12 +155,9 @@ static struct {
 } compare_funcs[] = {
 	{"strcmp", dmoz_fcmp_strcmp, dmoz_dcmp_strcmp},
 	{"strcasecmp", dmoz_fcmp_strcasecmp, dmoz_dcmp_strcasecmp},
-#if HAVE_STRVERSCMP
 	{"strverscmp", dmoz_fcmp_strverscmp, dmoz_dcmp_strverscmp},
 	{"timestamp", dmoz_fcmp_timestamp, dmoz_dcmp_strverscmp},
-#else
-	{"timestamp", dmoz_fcmp_timestamp, dmoz_dcmp_strcasecmp},
-#endif
+	{"strcaseverscmp", dmoz_fcmp_strcaseverscmp, dmoz_dcmp_strcaseverscmp},
 	{NULL, NULL, NULL}
 };
 
@@ -1059,13 +1050,15 @@ int dmoz_path_is_absolute(const char *path, int *count)
 #elif defined(SCHISM_WII) || defined(SCHISM_WIIU)
 	char *colon = strchr(path, ':'), *slash = strchr(path, '/');
 	if (colon + 1 == slash) {
-		if (count) *count = slash - path + 1
+		if (count) *count = slash - path + 1;
 		return !!count;
 	}
 #elif defined(SCHISM_MACOS)
 	/* From Apple's documentation:
 	 *   A leading colon indicates a relative path, otherwise
-	 *   the first path component denotes the volume. */
+	 *   the first path component denotes the volume.
+	 * This is pretty much the opposite of what every other
+	 * OS does, and means the code below is simply wrong. */
 	if (IS_DIR_SEPARATOR(path[0]))
 		return 0;
 
@@ -1093,8 +1086,10 @@ char *dmoz_path_concat(const char *a, const char *b)
 char *dmoz_path_concat_len(const char *a, const char *b, int alen, int blen)
 {
 	char *ret, *p;
+#ifndef SCHISM_MACOS /* blah, this is dumb */
 	if (dmoz_path_is_absolute(b, NULL))
 		return str_dup(b);
+#endif
 
 	// allocates enough space for a, b, a separator, and a NUL terminator
 	// (the terminator is included with ARRAY_SIZE(literal))
@@ -1357,6 +1352,8 @@ void dmoz_add_file_or_dir(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 _DEF_CMP_CHARSET(strcmp)
 _DEF_CMP_CHARSET(strcasecmp)
 _DEF_CMP_CHARSET(strverscmp)
+_DEF_CMP_CHARSET(strcaseverscmp)
+#undef _DEF_CMP_CHARSET
 
 /* timestamp only works for files, so can't macro-def it */
 static int dmoz_fcmp_timestamp(const dmoz_file_t *a, const dmoz_file_t *b)

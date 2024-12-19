@@ -103,7 +103,7 @@ int macos_stat(const char *file, struct stat *st)
 		return -1;
 	}
 
-	if (strcmp(file, ".") == 0) {
+	if (!strcmp(file, ".")) {
 		*st = (struct stat){
 			.st_mode = S_IFDIR,
 			.st_ino = -1,
@@ -111,19 +111,22 @@ int macos_stat(const char *file, struct stat *st)
 	} else {		
 		pb.hFileInfo.ioNamePtr = path;
 
-		if (PBGetCatInfoSync(&pb) != noErr) {
+		OSErr err = PBGetCatInfoSync(&pb);
+		if (err != noErr) {
+			log_appendf(4, "macos_stat: %s returned %d\n", file, (int)err);
 			return -1;
 		} else {
-			memset(st, 0, sizeof(struct stat));
+			*st = (struct stat){
+				.st_mode = (pb.hFileInfo.ioFlAttrib & ioDirMask) ? S_IFDIR : S_IFREG,
+				.st_ino = pb.hFileInfo.ioFlStBlk,
+				.st_dev = pb.hFileInfo.ioVRefNum,
+				.st_nlink = 1,
+				.st_size = pb.hFileInfo.ioFlLgLen,
+				.st_atime = pb.hFileInfo.ioFlMdDat,
+				.st_mtime = pb.hFileInfo.ioFlMdDat,
+				.st_ctime = pb.hFileInfo.ioFlCrDat,
+			};
 
-			st->st_mode = (pb.hFileInfo.ioFlAttrib & ioDirMask) ? S_IFDIR : S_IFREG;
-			st->st_ino = pb.hFileInfo.ioFlStBlk;
-			st->st_dev = pb.hFileInfo.ioVRefNum;
-			st->st_nlink = 1;
-			st->st_size = pb.hFileInfo.ioFlLgLen;
-			st->st_atime = pb.hFileInfo.ioFlMdDat;
-			st->st_mtime = pb.hFileInfo.ioFlMdDat;
-			st->st_ctime = pb.hFileInfo.ioFlCrDat;
 			return 0;
 		}
 	}
@@ -457,7 +460,7 @@ static int writePreferences (PrefsRecord *prefs) {
 static char   **args = NULL;
 static char   *commandLine = NULL;
 
-/* called by main, fixed everything basically */
+/* called by main, fixes ~everything~ basically */
 void macos_sysinit(int *pargc, char ***pargv)
 {
 #define DEFAULT_ARGS {'\0'}                /* pascal string for default args */
