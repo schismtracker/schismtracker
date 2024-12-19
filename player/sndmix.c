@@ -714,7 +714,7 @@ static inline void update_vu_meter(song_voice_t *chan)
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-int32_t csf_init_player(song_t *csf, int32_t reset)
+int32_t csf_init_player(song_t *csf, int reset)
 {
 	if (max_voices > MAX_VOICES)
 		max_voices = MAX_VOICES;

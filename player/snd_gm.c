@@ -494,7 +494,7 @@ void GM_KeyOff(int32_t c)
 }
 
 
-void GM_Bend(int32_t c, unsigned count)
+void GM_Bend(int32_t c, uint32_t count)
 {
        if (c < 0 || ((uint32_t)c) >= MAX_VOICES)
 		return;

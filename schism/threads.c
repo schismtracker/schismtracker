@@ -236,7 +236,7 @@ struct schism_semaphore {
 schism_sem_t *mt_semaphore_create(uint32_t initial_value)
 {
 	if (mt_backend->flags & SCHISM_THREADS_BACKEND_SUPPORTS_SEMAPHORE)
-		return mt_backend->semaphore_create();
+		return mt_backend->semaphore_create(initial_value);
 
 	schism_sem_t *sem = mem_alloc(sizeof(*sem));
 	if (!sem)

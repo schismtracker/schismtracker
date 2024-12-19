@@ -2,11 +2,7 @@
 #define SCHISM_PLAYER_SND_FM_H_
 
 void Fmdrv_Init(int32_t mixfreq);
-<<<<<<< HEAD
 void Fmdrv_MixTo(int32_t* buf, uint32_t count);
-=======
-void Fmdrv_MixTo(int32_t* buf, int32_t count);
->>>>>>> 8a766c72491d9d43d39858e5b22b4530a2a724c6
 
 void OPL_NoteOff(int32_t c);
 void OPL_HertzTouch(int32_t c, int32_t Hertz, int32_t keyoff); // also for pitch bending

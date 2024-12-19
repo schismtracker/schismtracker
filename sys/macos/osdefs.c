@@ -54,46 +54,39 @@ void macos_show_message_box(const char *title, const char *text)
 
 /* ------------------------------------------------------------------------ */
 
-int macos_mkdir(const char *path, UNUSED mode_t mode)
+int macos_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
 {
 	HParamBlockRec pb = {0};
-	unsigned char mpath[257];
+	unsigned char mpath[256];
 	struct stat st;
 
 	{
+		int truncated = 0;
+
 		// Fix the path, then convert it to a pascal string
 		char *normal = dmoz_path_normal(path);
 
-		str_to_pascal(normal, mpath, NULL);
-		mpath[256] = '\0';
+		str_to_pascal(normal, mpath, &truncated);
+		if (truncated) {
+			errno = ENAMETOOLONG;
+			return NULL;
+		}
 
 		free(normal);
 	}
 
-	pb.fileParam.ioNamePtr = mpath;
-
-	// save this
-	const size_t len = mpath[0];
-
-	for (size_t i = 0; i < len; i++) {
-		CInfoPBRec ci;
-
-		if (!IS_DIR_SEPARATOR(path[i]))
-			continue;
-
-		if (PBGetCatInfoSync(&ci)) {
-			if (ci.hFileInfo.ioFlAttrib & ioDirMask)
-				continue;
-
-			return -1;
+	// Append a separator on the end if one isn't there already; I don't
+	// know if this is strictly necessary, but every macos path I've seen
+	// that goes to a folder has an explicit path separator on the end.
+	if (mpath[mpath[0]] != ':') {
+		if (mpath[0] >= 255) {
+			errno = ENAMETOOLONG;
+			return NULL;
 		}
-
-		mpath[0] = i;
-		if (PBDirCreateSync(&pb) != noErr)
-			return -1;
+		mpath[++mpath[0]] = ':';
 	}
 
-	mpath[0] = len;
+	pb.fileParam.ioNamePtr = mpath;
 
 	return (PBDirCreateSync(&pb) == noErr) ? 0 : -1;
 }

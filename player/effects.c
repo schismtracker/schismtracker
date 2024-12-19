@@ -72,8 +72,7 @@ int32_t frequency_to_transpose(uint32_t freq)
 	return (int32_t) (1536.0 * (log(freq / 8363.0) / log(2)));
 }
 
-
-uint64_t calc_halftone(uint64_t hz, int32_t rel)
+uint32_t calc_halftone(uint32_t hz, int32_t rel)
 {
 	return pow(2, rel / 12.0) * hz + 0.5;
 }
@@ -85,7 +84,7 @@ uint64_t calc_halftone(uint64_t hz, int32_t rel)
 ////////////////////////////////////////////////////////////
 // Channels effects
 
-void fx_note_cut(song_t *csf, uint32_t nchan, int32_t clear_note)
+void fx_note_cut(song_t *csf, uint32_t nchan, int clear_note)
 {
 	song_voice_t *chan = &csf->voices[nchan];
 	// stop the current note:
@@ -164,7 +163,7 @@ void fx_key_off(song_t *csf, uint32_t nchan)
 
 
 // negative value for slide = down, positive = up
-int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, int32_t is_tone_portamento)
+int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, int is_tone_portamento)
 {
 	// IT Linear slides
 	if (!frequency) return 0;
@@ -777,7 +776,7 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 
 
 // Send exactly one MIDI message
-void csf_midi_send(song_t *csf, const unsigned char *data, uint32_t len, uint32_t nchan, int32_t fake)
+void csf_midi_send(song_t *csf, const unsigned char *data, uint32_t len, uint32_t nchan, int fake)
 {
 	song_voice_t *chan = &csf->voices[nchan];
 

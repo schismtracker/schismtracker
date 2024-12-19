@@ -53,11 +53,6 @@ static void macos_semaphore_delete(schism_sem_t *sem)
 	free(sem);
 }
 
-static void macos_semaphore_wait_timeout(schism_sem_t *sem, uint32_t timeout)
-{
-	MPWaitOnSemaphore(sem->sem, timeout);
-}
-
 static void macos_semaphore_wait(schism_sem_t *sem)
 {
 	MPWaitOnSemaphore(sem->sem, kDurationForever);
@@ -106,6 +101,7 @@ static schism_thread_t *macos_thread_create(schism_thread_function_t func, const
 		return NULL;
 	}
 
+	// use a 512 KiB stack size, which should be plenty for what we need
 	if (MPCreateTask(macos_dummy_thread_func, thread, UINT32_C(524288), notification_queue, NULL, NULL, 0, &thread->task) != noErr) {
 		MPDeleteSemaphore(thread->sem);
 		free(thread);
@@ -164,6 +160,5 @@ const schism_threads_backend_t schism_threads_backend_macos = {
 	.semaphore_create = macos_semaphore_create,
 	.semaphore_delete = macos_semaphore_delete,
 	.semaphore_wait = macos_semaphore_wait,
-	.semaphore_wait_timeout = macos_semaphore_wait_timeout,
 	.semaphore_post = macos_semaphore_post,
 };

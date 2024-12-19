@@ -608,7 +608,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 void csf_adjust_sample_loop(song_sample_t *sample);
 
 extern void (*csf_midi_out_note)(int chan, const song_note_t *m);
-extern void (*csf_midi_out_raw)(const unsigned char *, unsigned int, unsigned int);
+extern void (*csf_midi_out_raw)(const unsigned char *, uint32_t, uint32_t);
 
 void csf_import_mod_effect(song_note_t *m, int from_xm);
 uint16_t csf_export_mod_effect(const song_note_t *m, int xm);
@@ -640,14 +640,14 @@ int csf_get_highest_used_channel(song_t *csf);
 int csf_set_wave_config(song_t *csf, uint32_t rate, uint32_t bits, uint32_t channels);
 
 // Mixer Config
-int csf_init_player(song_t *csf, int reset); // bReset=false
+int32_t csf_init_player(song_t *csf, int reset); // bReset=false
 int csf_set_resampling_mode(song_t *csf, uint32_t mode); // SRCMODE_XXXX
 
 
 // sndmix
 uint32_t csf_read(song_t *csf, void *v_buffer, uint32_t bufsize);
-int csf_process_tick(song_t *csf);
-int csf_read_note(song_t *csf);
+int32_t csf_process_tick(song_t *csf);
+int32_t csf_read_note(song_t *csf);
 
 // snd_fx
 uint32_t csf_get_length(song_t *csf); // (in seconds)
@@ -670,12 +670,7 @@ int32_t get_note_from_frequency(int32_t frequency, uint32_t c5speed);
 int32_t get_frequency_from_note(int32_t note, uint32_t c5speed);
 uint32_t transpose_to_frequency(int32_t transp, int32_t ftune);
 int32_t frequency_to_transpose(uint32_t freq);
-<<<<<<< HEAD
-uint64_t calc_halftone(uint64_t hz, int32_t rel);
-=======
 uint32_t calc_halftone(uint32_t hz, int32_t rel);
->>>>>>> 8a766c72491d9d43d39858e5b22b4530a2a724c6
-
 
 // sndfile
 song_t *csf_allocate(void);
@@ -698,7 +693,7 @@ void csf_insert_restart_pos(song_t *csf, uint32_t restart_order); // hax
 void csf_forget_history(song_t *csf); // Send the edit log down the memory hole.
 
 /* apply a preset Adlib patch */
-void adlib_patch_apply(song_sample_t *smp, int patchnum);
+void adlib_patch_apply(song_sample_t *smp, int32_t patchnum);
 
 ///////////////////////////////////////////////////////////
 

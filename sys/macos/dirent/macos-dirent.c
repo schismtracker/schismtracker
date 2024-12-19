@@ -28,6 +28,7 @@
 #include "dmoz.h"
 #include "osdefs.h"
 #include "charset.h"
+#include "util.h"
 #include "macos-dirent.h"
 
 #include <errno.h>
@@ -43,42 +44,6 @@ struct dir_ {
 	struct dirent dir;
 };
 
-static int opendir_find_volume(const char *name, WDPBRec *pb)
-{
-	for (ItemCount volIndex = 1; ; ++volIndex) {
-		unsigned char ppath[256];
-		ppath[0] = 0;
-
-		HParamBlockRec hfsParams = {
-			.volumeParam = {
-				.ioNamePtr = ppath,
-				.ioVRefNum = 0,
-				.ioVolIndex = volIndex,
-			},
-		};
-
-		if (PBHGetVInfoSync(&hfsParams) != noErr)
-			break;
-
-		// FIXME FIXME! READ ALL ABOUT IT!
-		// HFS paths are not in codepage 437. The only reason it's like this here
-		// is because we need a simple mostly-ASCII-compatible 8-bit fixed width
-		// encoding, which codepage 437 just happens to be. We'll probably have
-		// to hack in HFS filename conversion to charset_iconv to get this to
-		// function correctly.
-
-		if (charset_strncasecmp(&ppath[1], CHARSET_CP437, name, CHARSET_UTF8, ppath[0]))
-			continue;
-
-		// we found our volume: fill in the spec
-		pb->ioVRefNum = hfsParams.volumeParam.ioVRefNum;
-		pb->ioWDDirID = fsRtDirID;
-		return 1;
-	}
-
-	return 0;
-}
-
 /* Open a directory.  This means calling PBOpenWD. */
 DIR *opendir(const char *path)
 {
@@ -91,20 +56,26 @@ DIR *opendir(const char *path)
 	unsigned char ppath[256];
 	FSSpec spec;
 
-	if (!strchr(path, ':')) {
-		// A volume name.
-		if (!opendir_find_volume(path, &pb)) {
-			errno = ENOENT;
-			return NULL;
-		}
-	} else {
+	{
 		// We can just pass the full path to PBOpenWD
 		int truncated;
 		str_to_pascal(path, ppath, &truncated);
-		if (truncated || (ppath[0] >= 255)) {
+		if (truncated) {
 			errno = ENAMETOOLONG;
 			return NULL;
 		}
+
+		// Append a separator on the end if one isn't there already; I don't
+		// know if this is strictly necessary, but every macos path I've seen
+		// that goes to a folder has an explicit path separator on the end.
+		if (ppath[ppath[0]] != ':') {
+			if (ppath[0] >= 255) {
+				errno = ENAMETOOLONG;
+				return NULL;
+			}
+			ppath[++ppath[0]] = ':';
+		}
+
 		pb.ioNamePtr  = ppath;
 		pb.ioVRefNum  = 0;
 		pb.ioWDProcID = 0;

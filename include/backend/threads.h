@@ -57,7 +57,7 @@ typedef struct {
 	void (*cond_signal)(schism_cond_t *cond);
 	void (*cond_wait)(schism_cond_t *cond, schism_mutex_t *mutex);
 
-	schism_sem_t *(*semaphore_create)(void);
+	schism_sem_t *(*semaphore_create)(uint32_t);
 	void (*semaphore_delete)(schism_sem_t *sem);
 	void (*semaphore_wait)(schism_sem_t *sem);
 	void (*semaphore_post)(schism_sem_t *sem);

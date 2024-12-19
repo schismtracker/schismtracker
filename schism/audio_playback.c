@@ -83,7 +83,7 @@ static int audio_writeout_count = 0;
 struct audio_settings audio_settings = {0};
 
 static void _schism_midi_out_note(int chan, const song_note_t *m);
-static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, unsigned int delay);
+static void _schism_midi_out_raw(const unsigned char *data, uint32_t len, uint32_t delay);
 
 /* Audio driver related stuff */
 /* XXX how much of this is really needed now? */
@@ -1329,7 +1329,7 @@ printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 	}
 
 }
-static void _schism_midi_out_raw(const unsigned char *data, unsigned int len, unsigned int pos)
+static void _schism_midi_out_raw(const unsigned char *data, uint32_t len, uint32_t pos)
 {
 #ifdef SCHISM_MIDI_DEBUG
 	/* prints all of the raw midi messages into the terminal; useful for debugging output */
