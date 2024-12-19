@@ -568,7 +568,10 @@ typedef struct song {
 	uint8_t row_highlight_minor;
 	char message[MAX_MESSAGE + 1];
 	char title[32];
-	char tracker_id[32]; // irrelevant to the song, just used by some loaders (fingerprint)
+
+	// irrelevant to the song, just used by some loaders (fingerprint)
+	// ...expanded this to the size of the log -paper
+	char tracker_id[74];
 
 	// These store the existing IT save history from prior editing sessions.
 	// Current session data is added at save time, and is NOT a part of histdata.

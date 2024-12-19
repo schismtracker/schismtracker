@@ -175,7 +175,23 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			return LOAD_FORMAT_ERROR;
 
 	// and the next two bytes are the tracker version.
-	sprintf(song->tracker_id, "Scream Tracker %d.%02d", tmp[2], tmp[3]);
+	if (!memcmp(id, "!Scream!", 8))
+		// Unfortunately tools never differentiated themselves...
+		if (tmp[3] > 20)
+			// Future Crew chose to never increase their version numbers after 2.21 it seems!
+			sprintf(song->tracker_id, "Scream Tracker 2.2+ or compatible");
+		else
+			sprintf(song->tracker_id, "Scream Tracker %1d.%02d or compatible", CLAMP(tmp[2], 0, 9), CLAMP(tmp[3], 0, 99));
+	else if (!memcmp(id, "BMOD2STM", 8))
+		sprintf(song->tracker_id, "BMOD2STM");
+	else if (!memcmp(id, "WUZAMOD!", 8))
+		sprintf(song->tracker_id, "Wuzamod"); // once a MOD always a MOD
+	else if (!memcmp(id, "SWavePro", 8))
+		sprintf(song->tracker_id, "SoundWave Pro %1d.%02d", CLAMP(tmp[2], 0, 9), CLAMP(tmp[3], 0, 99));
+	else if (!memcmp(id, "!Scrvrt!", 8))
+		sprintf(song->tracker_id, "Screamverter");
+	else
+		sprintf(song->tracker_id, "Unknown");
 
 	slurp_seek(fp, 0, SEEK_SET);
 	slurp_read(fp, song->title, 20);
