@@ -388,9 +388,6 @@ endif
 if NEED_STRPTIME
 files_stdlib += sys/stdlib/strptime.c
 endif
-if NEED_MKSTEMP
-files_stdlib += sys/stdlib/mkstemp.c
-endif
 if NEED_LOCALTIME_R
 files_stdlib += sys/stdlib/localtime_r.c
 endif
