@@ -27,7 +27,6 @@ resource 'SIZE' (-1) {
 	reserved,
 	reserved,
 	reserved,
-	// This should hopefully be enough :)
-	65536u * 1024, // Minimum RAM
-	65536u * 1024  // Recommended RAM
+	65536 * 1024, // Recommended RAM
+	8192 * 1024  // Minimum RAM
 };

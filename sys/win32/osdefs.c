@@ -449,29 +449,6 @@ int win32_stat(const char* path, struct stat* st)
 	return -1;
 }
 
-int win32_open(const char* path, int flags)
-{
-	if (GetVersion() & UINT32_C(0x80000000)) {
-		// Windows 9x
-		char* ac = NULL;
-		if (charset_iconv(path, &ac, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
-			return -1;
-
-		int ret = _open(ac, flags);
-		free(ac);
-		return ret;
-	} else {
-		wchar_t* wc = NULL;
-		if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			return -1;
-
-		int ret = _wopen(wc, flags);
-		free(wc);
-		return ret;
-	}
-
-}
-
 FILE* win32_fopen(const char* path, const char* flags)
 {
 	if (GetVersion() & UINT32_C(0x80000000)) {

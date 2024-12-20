@@ -67,6 +67,7 @@
 # include <CFString.h>
 # include <URLAccess.h>
 # include <Folders.h>
+# include <Resources.h>
 # include "macos-dirent.h"
 #else
 # include <dirent.h>
@@ -322,7 +323,7 @@ int dmoz_path_from_fsspec(const void *pvref, char **path)
 	(*path)[path_len] = '\0';
 
 	// we're done here
-	return 0;
+	return (err == noErr);
 }
 
 int dmoz_path_to_fsspec(const char *path, void *pvref)
@@ -630,6 +631,70 @@ int dmoz_path_rename(const char *old, const char *new, int overwrite)
 	SetErrorMode(em);
 
 	return ret;
+#elif defined(SCHISM_MACOS)
+	// This is stupid, but it's what MacPerl does, so I guess
+	// this is probbaly the only way we can pull this off
+	// sanely.
+	//
+	// Note: there is in fact a HFS function to do exactly this
+	// (namely PBHMoveRename) but unfortunately I think it only
+	// actually works on network shares which is completely
+	// useless for us.
+	OSErr err = noErr;
+	unsigned char pold[256], pnew[256];
+
+	int truncated;
+	str_to_pascal(old, pold, &truncated);
+	if (truncated) {
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+
+	str_to_pascal(new, pnew, &truncated);
+	if (truncated) {
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+
+	FSSpec old_spec, new_spec;
+
+	err = FSMakeFSSpec(0, 0, pold, &old_spec);
+	if (err != noErr) {
+		log_appendf(4, "FSMakeFSSpec: %d", (int)err);
+		return -1;
+	}
+
+	err = FSMakeFSSpec(0, 0, pnew, &new_spec);
+	if (err != noErr && (!overwrite || err != fnfErr)) {
+		log_appendf(4, "FSMakeFSSpec: %d", (int)err);
+		return -1;
+	}
+
+	if (err == fnfErr) {
+		// Create the output file
+		err = FSpCreate(&new_spec, '?\??\?', 'TEXT', smSystemScript);
+		if (err != noErr) {
+			log_appendf(4, "FSpCreate: %d", (int)err);
+			return -1;
+		}
+
+		FSpCreateResFile(&new_spec, '?\??\?', 'TEXT', smSystemScript);
+	}
+
+	// Exchange the data in the two files
+	err = FSpExchangeFiles(&old_spec, &new_spec);
+	if (err != noErr) {
+		log_appendf(4, "FSpExchangeFiles: %d", (int)err);
+		return -1;
+	}
+
+	err = FSpDelete(&old_spec);
+	if (err != noErr) {
+		log_appendf(4, "FSpDelete: %d", (int)err);
+		return -1;
+	}
+
+	return 0;
 #else
 	if (!overwrite) {
 		if (link(old, new) == -1)
@@ -870,6 +935,28 @@ static char *dmoz_win32_get_csidl_directory(int csidl, const wchar_t *registryw,
 
 // convenience macro so we don't have to type it twice
 # define DMOZ_GET_WIN32_DIRECTORY(csidl, registry, envvar) dmoz_win32_get_csidl_directory(csidl, L ## registry, registry, L ## envvar, envvar)
+#elif defined(SCHISM_MACOS)
+static char *dmoz_macos_find_folder(OSType folder_type)
+{
+	FSSpec spec;
+	short vrefnum;
+	long dir_id;
+
+	// kDocumentsFolderType is supported by Mac OS 8 or later; I believe
+	// we're already limited to just Mac OS 9 because we're using the
+	// Multiprocessing library, so I won't add it as a fallback here.
+	//
+	// FIXME: i don't know if this first value should be kOnSystemDisk
+	// or some other constant, since we want to work with multiple users
+	if (FindFolder(kOnSystemDisk, folder_type, kCreateFolder, &vrefnum, &dir_id) == noErr
+		&& FSMakeFSSpec(vrefnum, dir_id, NULL, &spec) == noErr) {
+		char *path;
+		if (dmoz_path_from_fsspec(&spec, &path))
+			return path;
+	}
+
+	return NULL;
+}
 #endif
 
 char *dmoz_get_home_directory(void)
@@ -882,18 +969,10 @@ char *dmoz_get_home_directory(void)
 	if (ptr)
 		return ptr;
 #elif defined(SCHISM_MACOS)
-	{
-		FSSpec spec;
-		short vrefnum;
-		long dir_id;
-
-		if (FindFolder(0, kPreferencesFolderType, 1, &vrefnum, &dir_id) == noErr
-			&& FSMakeFSSpec(vrefnum, dir_id, NULL, &spec) == noErr) {
-			char *path;
-			if (dmoz_path_from_fsspec(&spec, &path))
-				return path;
-		}
-	}
+	// Taking heed from Windows, default to the Documents Folder.
+	char *ptr = dmoz_macos_find_folder(kDocumentsFolderType);
+	if (ptr)
+		return ptr;
 #else
 	char *ptr = getenv("HOME");
 	if (ptr)
@@ -920,19 +999,16 @@ char *dmoz_get_dot_directory(void)
 
 	// else fall back to home (mesopotamian era windows I guess)
 #elif defined(SCHISM_MACOS)
-	FSSpec spec;
-	short vrefnum;
-	long dir_id;
+	char *ptr = dmoz_macos_find_folder(kPreferencesFolderType);
+	if (ptr)
+		return ptr;
 
-	if (FindFolder(0, kApplicationSupportFolderType, 1, &vrefnum, &dir_id) == noErr
-		&& FSMakeFSSpec(vrefnum, dir_id, NULL, &spec) == noErr) {
-		char *path;
-		if (dmoz_path_from_fsspec(&spec, &path))
-			return path;
-	}
-
-	// fall back to home
+	// fall back to home (wtf)
 #endif
+	// FIXME we ought to use the NSSearchPathForDirectoriesInDomains()
+	// function on Mac OS X to retrieve the Application Support folder
+	// rather than hardcoding a path for it
+
 	return dmoz_get_home_directory();
 }
 

@@ -684,6 +684,11 @@ CHARSET_VARIATION(internal) {
 
 #ifdef SCHISM_WIN32
 # include <windows.h> // MultiByteToWideChar
+#elif defined(SCHISM_MACOS)
+# include <TextEncodingConverter.h>
+# ifndef kTECOutputBufferFullStatus
+#  define kTECOutputBufferFullStatus -8785
+# endif
 #endif
 
 typedef charset_error_t (*charset_impl)(const void* in, void* out, charset_t inset, charset_t outset, size_t insize);
@@ -711,6 +716,63 @@ static charset_error_t charset_iconv_impl_(const void *in, void *out, charset_t 
 
 	return state;
 }
+
+#ifdef SCHISM_MACOS
+static charset_error_t charset_iconv_macos_preprocess_(const void *in, size_t insize, TextEncoding inenc, TextEncoding outenc, void *out, size_t *outsize)
+{
+	// aaaaaah!
+	if (insize == SIZE_MAX)
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	OSStatus err = noErr;
+
+	TECObjectRef tec = NULL;
+
+	err = TECCreateConverter(&tec, inenc, outenc);
+	if (err != noErr)
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	const unsigned char *srcptr = in;
+
+	disko_t ds = {0};
+	if (disko_memopen(&ds) < 0) {
+		TECDisposeConverter(tec);
+		return CHARSET_ERROR_NOMEM;
+	}
+
+	do {
+		unsigned char buf[512];
+		ByteCount bytes_consumed; // I love consuming media!
+		ByteCount bytes_produced;
+
+		err = TECConvertText(tec, (ConstTextPtr)srcptr, insize, &bytes_consumed, (TextPtr)buf, sizeof(buf), &bytes_produced);
+		if (err != noErr && err != kTECOutputBufferFullStatus) {
+			TECDisposeConverter(tec);
+			disko_memclose(&ds, 0);
+			return CHARSET_ERROR_DECODE;
+		}
+
+		// append to our heap buffer
+		disko_write(&ds, buf, bytes_produced);
+
+		srcptr += bytes_consumed;
+		insize -= bytes_consumed;
+	} while (err == kTECOutputBufferFullStatus);
+
+	// force write a NUL terminator
+	uint16_t x = 0;
+	disko_write(&ds, &x, sizeof(x));
+
+	disko_memclose(&ds, 1);
+
+	// put the fake stuff in
+	memcpy(out, &ds.data, sizeof(ds.data));
+	if (outsize)
+		*outsize = ds.length;
+
+	return CHARSET_ERROR_SUCCESS;
+}
+#endif
 
 charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charset_t outset, size_t insize) {
 	// This is so we can do charset-specific hacks...
@@ -747,6 +809,18 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 		break;
 	}
 #endif
+#ifdef SCHISM_MACOS
+	case CHARSET_HFS: {
+		TextEncoding hfsenc = CreateTextEncoding(kTextEncodingMacHFS, kTextEncodingDefaultVariant, kTextEncodingDefaultFormat);
+		TextEncoding utf16enc = CreateTextEncoding(kTextEncodingUnicodeDefault, kTextEncodingDefaultVariant, kUnicode16BitFormat);
+
+		state = charset_iconv_macos_preprocess_(in, insize, hfsenc, utf16enc, &infake, &insizefake);
+		if (state != CHARSET_ERROR_SUCCESS)
+			return state;
+
+		insetfake = CHARSET_UTF16;
+	}
+#endif
 	default: break;
 	}
 
@@ -756,16 +830,24 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 		outsetfake = CHARSET_WCHAR_T;
 		break;
 #endif
+#ifdef SCHISM_MACOS
+	case CHARSET_HFS:
+		outsetfake = CHARSET_UTF16;
+		break;
+#endif
 	default: break;
 	}
 
 	state = charset_iconv_impl_(infake, &outfake, insetfake, outsetfake, insizefake);
 
-done:
-
 	switch (inset) {
 #ifdef SCHISM_WIN32
 	case CHARSET_ANSI:
+		free((void *)infake);
+		break;
+#endif
+#ifdef SCHISM_MACOS
+	case CHARSET_HFS:
 		free((void *)infake);
 		break;
 #endif
@@ -795,6 +877,21 @@ done:
 		memcpy(out, &ansi_out, sizeof(void *));
 
 		break;
+	}
+#endif
+#ifdef SCHISM_MACOS
+	case CHARSET_HFS: {
+		/* FIXME This doesn't work? I don't really know why */
+
+		// can we return size so we don't have to do this?
+		size_t len = (charset_strlen(outfake, CHARSET_UTF16) + 1) * sizeof(uint16_t);
+
+		TextEncoding hfsenc = CreateTextEncoding(kTextEncodingMacHFS, kTextEncodingDefaultVariant, kTextEncodingDefaultFormat);
+		TextEncoding utf16enc = CreateTextEncoding(kTextEncodingUnicodeDefault, kTextEncodingDefaultVariant, kUnicode16BitFormat);
+
+		state = charset_iconv_macos_preprocess_(outfake, len, utf16enc, hfsenc, out, NULL);
+		if (state != CHARSET_ERROR_SUCCESS)
+			return state;
 	}
 #endif
 	default:

@@ -32,6 +32,7 @@
 #include "dmoz.h"
 #include "errno.h"
 #include "dmoz.h"
+#include "charset.h"
 
 #include <Files.h>
 #include <Folders.h>
@@ -41,11 +42,36 @@
 
 /* ------------------------------------------------------------------------ */
 
+void macos_get_modkey(schism_keymod_t *mk)
+{
+	// SDL 1.2 treats Command as Control, so switch the values.
+	schism_keymod_t mk_ = (*mk) & ~(SCHISM_KEYMOD_CTRL|SCHISM_KEYMOD_GUI);
+
+	if (*mk & SCHISM_KEYMOD_LCTRL)
+		mk_ |= SCHISM_KEYMOD_LGUI;
+
+	if (*mk & SCHISM_KEYMOD_RCTRL)
+		mk_ |= SCHISM_KEYMOD_RGUI;
+
+	if (*mk & SCHISM_KEYMOD_LGUI)
+		mk_ |= SCHISM_KEYMOD_LCTRL;
+
+	if (*mk & SCHISM_KEYMOD_RGUI)
+		mk_ |= SCHISM_KEYMOD_RCTRL;
+
+	*mk = mk_;
+}
+
+/* ------------------------------------------------------------------------ */
+
 void macos_show_message_box(const char *title, const char *text)
 {
+	// This converts the message to the HFS character set, which
+	// isn't necessarily the system character set, but whatever
 	unsigned char err[256], explanation[256];
 	int16_t hit;
 
+	// These message boxes should really only be taking in ASCII anyway
 	str_to_pascal(title, err, NULL);
 	str_to_pascal(text, explanation, NULL);
 
@@ -65,14 +91,13 @@ int macos_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
 
 		// Fix the path, then convert it to a pascal string
 		char *normal = dmoz_path_normal(path);
-
 		str_to_pascal(normal, mpath, &truncated);
+		free(normal);
+		
 		if (truncated) {
 			errno = ENAMETOOLONG;
 			return -1;
 		}
-
-		free(normal);
 	}
 
 	// Append a separator on the end if one isn't there already; I don't
@@ -94,13 +119,29 @@ int macos_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
 int macos_stat(const char *file, struct stat *st)
 {
 	CInfoPBRec pb = {0};
-	unsigned char path[256];
+	unsigned char ppath[256];
 
-	int truncated;
-	str_to_pascal(file, path, &truncated);
-	if (truncated) {
-		errno = ENAMETOOLONG;
-		return -1;
+	{
+		int truncated;
+
+		char *normal = dmoz_path_normal(file);
+		str_to_pascal(normal, ppath, &truncated);
+		free(normal);
+
+		if (truncated) {
+			errno = ENAMETOOLONG;
+			return -1;
+		}
+	}
+
+	// If our path is just a volume name, PBGetCatInfoSync will
+	// fail, so append a path separator on the end in this case.
+	if (!memchr(ppath + 1, ':', ppath[0])) {
+		if (ppath[0] >= 255) {
+			errno = ENAMETOOLONG;
+			return -1;
+		}
+		ppath[++ppath[0]] = ':';
 	}
 
 	if (!strcmp(file, ".")) {
@@ -109,11 +150,10 @@ int macos_stat(const char *file, struct stat *st)
 			.st_ino = -1,
 		};
 	} else {		
-		pb.hFileInfo.ioNamePtr = path;
+		pb.hFileInfo.ioNamePtr = ppath;
 
 		OSErr err = PBGetCatInfoSync(&pb);
 		if (err != noErr) {
-			log_appendf(4, "macos_stat: %s returned %d\n", file, (int)err);
 			return -1;
 		} else {
 			*st = (struct stat){
@@ -187,6 +227,7 @@ static int CommandKeyIsDown(void)
 
 	GetKeys(theKeyMap);
 
+	// 
 	if (((unsigned char *)theKeyMap)[6] & 0x80)
 		return 1;
 	return 0;
@@ -488,6 +529,7 @@ void macos_sysinit(int *pargc, char ***pargv)
 	InitMenus   ();
 	InitDialogs (nil);
 	InitCursor ();
+	InitContextualMenus();
 	FlushEvents(everyEvent,0);
 	MaxApplZone ();
 	MoreMasters ();

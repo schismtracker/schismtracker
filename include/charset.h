@@ -53,6 +53,11 @@ typedef enum {
 	CHARSET_ANSI,
 #endif
 
+	/* Uses the system's HFS encoding */
+#ifdef SCHISM_MACOS
+	CHARSET_HFS,
+#endif
+
 	/* CHARSET_CHAR is special; it first tries UTF-8
 	 * in our internal decoder, then we hand it off
 	 * to SDL, which may or may not actually handle
@@ -114,6 +119,7 @@ void *charset_case_fold_to_set(const void *in, charset_t inset, charset_t outset
 /* ------------------------------------------------------------------------ */
 
 /* charset-aware replacements for C stdlib functions */
+size_t charset_strlen(const void* in, charset_t inset);
 int32_t charset_strcmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set);
 int32_t charset_strcasecmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set);
 int32_t charset_strverscmp(const void *in1, charset_t in1set, const void *in2, charset_t in2set);

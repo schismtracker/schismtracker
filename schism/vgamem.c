@@ -533,7 +533,7 @@ int draw_text_utf8_len(const char * text, int len, int x, int y, uint32_t fg, ui
 {
 	uint8_t *composed = charset_compose_to_utf8(text, CHARSET_UTF8);
 	if (!composed)
-		return draw_text_bios(text, x, y, fg, bg);
+		return draw_text_bios_len(text, len, x, y, fg, bg);
 
 	charset_decode_t decoder = {
 		.in = composed,

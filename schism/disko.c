@@ -201,7 +201,6 @@ void disko_seterror(disko_t *ds, int err)
 
 int disko_open(disko_t *ds, const char *filename)
 {
-	int fd;
 	int err;
 
 	if (!filename)
@@ -218,25 +217,15 @@ int disko_open(disko_t *ds, const char *filename)
 
 	*ds = (disko_t){0};
 
+	ds->filename = str_dup(filename);
+
 	if (asprintf(&ds->tempname, "%sXXXXXX", filename) < 0)
 		return -1;
 
-	ds->filename = str_dup(filename);
-
-	fd = mkstemp(ds->tempname);
-	if (fd == -1) {
-		free(ds->tempname);
-		free(ds->filename);
-		return -1;
-	}
-	ds->file = fdopen(fd, "wb");
+	ds->file = mkfstemp(ds->tempname);
 	if (!ds->file) {
-		err = errno;
-		close(fd);
-		unlink(ds->tempname);
 		free(ds->tempname);
 		free(ds->filename);
-		errno = err;
 		return -1;
 	}
 
@@ -261,35 +250,18 @@ int disko_close(disko_t *ds, int backup)
 	if (fclose(ds->file) == EOF && !err) {
 		err = errno;
 	} else if (!err) {
-		// preserve file mode, or set it sanely -- mkstemp() sets file mode to 0600.
-		// some operating systems (see: Wii, Wii U) don't have umask, so we can't do
-		// this. boohoo, whatever
-#if HAVE_UMASK
-		struct stat st;
-		if (os_stat(ds->filename, &st) < 0) {
-			/* Probably didn't exist already, let's make something up.
-			0777 is "safer" than 0, so we don't end up throwing around world-writable
-			files in case something weird happens.
-			See also: man 3 getumask */
-			mode_t m = umask(0777);
-			umask(m);
-			st.st_mode = 0666 & ~m;
-		}
-#endif
-		if (backup) {
-			// back up the old file
+		// back up the old file
+		if (backup)
 			dmoz_path_make_backup(ds->filename, (backup != 1));
-		}
-		if (dmoz_path_rename(ds->tempname, ds->filename, 1) != 0) {
+
+		if (dmoz_path_rename(ds->tempname, ds->filename, 1) < 0)
 			err = errno;
-		} else {
-#if HAVE_UMASK
-			// Fix the permissions on the file
-			chmod(ds->filename, st.st_mode);
-#endif
-		}
 	}
 	// If anything failed so far, kill off the temp file
+	//
+	// FIXME we need a dmoz_path_remove, because unlink()
+	// is a stub on mac os, and windows will interpret
+	// the path as ANSI instead of unicode
 	if (err)
 		unlink(ds->tempname);
 

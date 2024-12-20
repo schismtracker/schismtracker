@@ -68,7 +68,7 @@ static const char *schism_dotfolders[] = {
 #elif defined(SCHISM_MACOSX)
 	"Library/Application Support/Schism Tracker",
 #elif defined(SCHISM_MACOS)
-	"Library:Application Support:Schism Tracker",
+	"Schism Tracker",
 #elif defined(SCHISM_WII)
 	".",
 #else

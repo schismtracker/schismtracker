@@ -127,6 +127,7 @@ struct dirent *readdir(DIR *dp)
 		return NULL;
 	}
 
+
 	str_from_pascal(pname, dp->dir.d_name);
 
 	return &dp->dir;

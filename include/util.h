@@ -95,4 +95,6 @@ SCHISM_PURE unsigned int i_sqrt(unsigned int r);
 // library loading functionality
 void *library_load(const char *name, int current, int age);
 
+FILE *mkfstemp(char *template);
+
 #endif /* SCHISM_UTIL_H_ */

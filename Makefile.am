@@ -326,13 +326,12 @@ if USE_MACOS
 files_macos = \
 	sys/macos/osdefs.c sys/macos/dirent/macos-dirent.c sys/macos/threads.c
 cflags_macos=-I$(top_srcdir)/sys/macos/dirent
-libs_macos=-lAppearanceLib -lInputSprocketLib -lControlStripLib -lControlsLib -lCursorDevicesGlue -lMPLibrary
+libs_macos=-lAppearanceLib -lInputSprocketLib -lControlStripLib -lControlsLib -lCursorDevicesGlue -lMPLibrary -lTextEncodingConverter -lTextCommon -lContextualMenu
 
 # Specific to the Retro68 toolchain to create MacBinary files
-schismtracker.bin: schismtracker.pef
+schismtracker.bin: schismtracker.pef $(top_srcdir)/sys/macos/resource.r
 schismtracker.pef: schismtracker.xcoff
 
-# this makes a lot more than just schismtracker.bin, but whatever
 .pef.bin:
 	$(REZ) -I"$(RETRO68_ROOT)/powerpc-apple-macos/RIncludes" "$(top_srcdir)/sys/macos/resource.r" -o $@ -t "APPL" -c "????" --data $<
 
