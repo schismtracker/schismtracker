@@ -797,7 +797,10 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 		int8_t *const smp_ptr = (int8_t *const)(channel->ptr_sample->data);
 		int8_t *lookahead_ptr = NULL;
 		const uint32_t lookahead_start = (channel->loop_end < MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE) ? channel->loop_start : MAX(channel->loop_start, channel->loop_end - MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE);
-		if (channel->flags & CHN_LOOP && !(csf->mix_flags & SNDMIX_NORESAMPLING) && !(channel->flags & CHN_NOIDO)) {
+		// This shouldn't be necessary with interpolation disabled but with that conditional
+		// it causes weird precision loss within the sample, hence why I've removed it. This
+		// shouldn't be that heavy anyway :p
+		if (channel->flags & CHN_LOOP) {
 			song_sample_t *pins = channel->ptr_sample;
 
 			uint32_t lookahead_offset = 3 * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE + pins->length - channel->loop_end;
@@ -864,7 +867,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 				// Loop wrap-around magic
 				if (lookahead_ptr) {
 					const int32_t oldcount = smpcount;
-					const int32_t read_length = rshift_signed(buffer_length_to_samples(smpcount, channel), 16);
+					const int32_t read_length = rshift_signed(buffer_length_to_samples(smpcount - 1, channel), 16);
 					const int at_loop_start = (channel->position >= channel->loop_start && channel->position < channel->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE);
 					if (!at_loop_start)
 						channel->flags &= ~CHN_LOOP_WRAPPED;
