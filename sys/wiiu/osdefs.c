@@ -29,6 +29,8 @@
 #include <whb/proc.h>
 #include <sysapp/launch.h>
 
+#include <dirent.h>
+
 /* fixup HOME envvar */
 void wiiu_sysinit(int *pargc, char ***pargv)
 {

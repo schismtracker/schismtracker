@@ -37,6 +37,7 @@
 #include <ogc/ios.h>
 #include <errno.h>
 #include <sys/dir.h>
+#include <dirent.h>
 #include "isfs.h"
 #define CACHE_PAGES 8
 
