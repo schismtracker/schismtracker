@@ -298,10 +298,10 @@ extern int ya_optind, ya_opterr, ya_optopt;
 /* dumb workaround for dumb devkitppc bug
  *
  * XXX is this still relevant at all? */
-#ifdef SCHISM_WII
-# undef NAME_MAX
-# undef PATH_MAX
-#endif
+//#ifdef SCHISM_WII
+//# undef NAME_MAX
+//# undef PATH_MAX
+//#endif
 
 #ifdef SCHISM_WIN32
 # define SCHISM_PATH_MAX (3 + 256 + 1) // drive letter, colon, name components, NUL
