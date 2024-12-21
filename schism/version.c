@@ -24,6 +24,7 @@
 #include "headers.h"
 #include "it.h"
 #include "version.h"
+#include <inttypes.h>
 
 #include <assert.h>
 
@@ -49,7 +50,7 @@ Information at our disposal:
 
 */
 static const char* top_banner_normal =
-#if !defined(EMPTY_VERSION)
+#ifndef EMPTY_VERSION
 	"Schism Tracker " VERSION
 #else
 	"Schism Tracker built " __DATE__ " " __TIME__
@@ -76,7 +77,7 @@ typedef uint32_t version_time_t;
 #define EPOCH_MONTH 9
 #define EPOCH_DAY 31
 
-SCHISM_CONST static version_time_t get_days_for_month(uint8_t month, uint16_t year)
+SCHISM_CONST static inline version_time_t get_days_for_month(uint8_t month, uint16_t year)
 {
 	static const version_time_t days_for_month[12] = {
 		31, /* January */
@@ -101,7 +102,7 @@ SCHISM_CONST static version_time_t get_days_for_month(uint8_t month, uint16_t ye
 	return month_days;
 }
 
-SCHISM_CONST static version_time_t version_mktime(int y, int m, int d)
+SCHISM_CONST static inline version_time_t version_mktime(int y, int m, int d)
 {
 	uint16_t year = EPOCH_YEAR;
 	uint8_t month = EPOCH_MONTH;
@@ -138,7 +139,7 @@ SCHISM_CONST static version_time_t version_mktime(int y, int m, int d)
 	return ret;
 }
 
-static void version_time_format(char buf[11], version_time_t ver)
+static inline void version_time_format(char buf[11], version_time_t ver)
 {
 	int64_t year = EPOCH_YEAR, month = EPOCH_MONTH, days = ver + EPOCH_DAY;
 	int32_t days_in;
@@ -177,7 +178,7 @@ static void version_time_format(char buf[11], version_time_t ver)
 	month = CLAMP(month, 0, 11);
 	days = CLAMP(days, 1, 31);
 
-	snprintf(buf, 11, "%04lld-%02lld-%02lld", year, (month + 1), days);
+	snprintf(buf, 11, "%04" PRId64 "-%02" PRId64 "-%02" PRId64, year, (month + 1), days);
 }
 
 /* ----------------------------------------------------------------- */
@@ -201,7 +202,7 @@ chosen epoch, there can be plenty of room for the foreseeable future.
   = 0xfff: a non-value indicating a date after 2020-10-27. in this case, the full version number is stored in a reserved header field.
 		   this field follows the same format, using the same epoch, but without adding 0x50. */
 uint16_t ver_cwtv;
-uint16_t ver_reserved;
+uint32_t ver_reserved;
 
 /* these should be 50 characters or shorter, as they are used in the startup dialog */
 const char *ver_short_copyright =
@@ -227,18 +228,21 @@ void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char buf[11])
 		sprintf(buf, "0.%x", cwtv);
 }
 
-static int get_version_tm(struct tm *version)
+static inline int get_version_tm(struct tm *version)
 {
-	char *ret;
-
+	// this was wrong for way too long
 	memset(version, 0, sizeof(*version));
-	ret = strptime(VERSION, "%Y %m %d", version);
-	if (ret && !*ret)
+	// by the time we reach the year 10000 nobody will care that this breaks
+	int amt = sscanf(VERSION, "%04d%02d%02d", &version->tm_year, &version->tm_mon, &version->tm_mday);
+	if (amt == 3) {
+		// fix this
+		version->tm_year -= 1900;
+		version->tm_mon--;
 		return 1;
+	}
 
-	/* welp */
 	memset(version, 0, sizeof(*version));
-	ret = strptime(__DATE__, "%b %e %Y", version);
+	char *ret = strptime(__DATE__, "%b %e %Y", version);
 	if (ret && !*ret)
 		return 1;
 
@@ -246,7 +250,8 @@ static int get_version_tm(struct tm *version)
 	return 0;
 }
 
-void ver_init(void) {
+void ver_init(void)
+{
 	struct tm version;
 	version_time_t version_sec;
 
@@ -258,6 +263,6 @@ void ver_init(void) {
 	}
 
 	ver_cwtv = 0x050 + version_sec;
-	ver_reserved = ver_cwtv < 0xfff ? 0 : (ver_cwtv - 0x050);
+	ver_reserved = (ver_cwtv < 0xfff) ? 0 : version_sec;
 	ver_cwtv = CLAMP(ver_cwtv, 0x050, 0xfff);
 }

@@ -25,7 +25,6 @@
 #include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
-#include "version.h"
 
 #include "player/sndfile.h"
 

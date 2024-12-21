@@ -29,7 +29,7 @@
 extern const char *ver_short_copyright;
 extern const char *ver_short_based_on;
 extern uint16_t ver_cwtv; /* lower 12 bits of the IT/S3M cwtv field */
-extern uint16_t ver_reserved; /* full version number in case 12 bits are not enough */
+extern uint32_t ver_reserved; /* full version number in case 12 bits are not enough */
 
 SCHISM_PURE extern const char *schism_banner(int classic);
 
