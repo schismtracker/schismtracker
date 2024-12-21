@@ -77,7 +77,7 @@ typedef uint32_t version_time_t;
 #define EPOCH_MONTH 9
 #define EPOCH_DAY 31
 
-SCHISM_CONST static inline version_time_t get_days_for_month(uint8_t month, uint16_t year)
+SCHISM_CONST static inline version_time_t get_days_for_month(uint32_t month, uint32_t year)
 {
 	static const version_time_t days_for_month[12] = {
 		31, /* January */
@@ -94,7 +94,7 @@ SCHISM_CONST static inline version_time_t get_days_for_month(uint8_t month, uint
 		31, /* December */
 	};
 
-	int month_days = days_for_month[month];
+	version_time_t month_days = days_for_month[month];
 
 	if ((month == 1) && LEAP_YEAR(year))
 		month_days++;
@@ -104,8 +104,8 @@ SCHISM_CONST static inline version_time_t get_days_for_month(uint8_t month, uint
 
 SCHISM_CONST static inline version_time_t version_mktime(int y, int m, int d)
 {
-	uint16_t year = EPOCH_YEAR;
-	uint8_t month = EPOCH_MONTH;
+	uint32_t year = EPOCH_YEAR;
+	uint32_t month = EPOCH_MONTH;
 	int month_overflow = (m >= EPOCH_MONTH) ? 1 : 0;
 
 	/* sanity check! */
@@ -141,29 +141,29 @@ SCHISM_CONST static inline version_time_t version_mktime(int y, int m, int d)
 
 static inline void version_time_format(char buf[11], version_time_t ver)
 {
+	// FIXME: for some reason, classic mac os interprets this completely
+	// wrong. It doesn't necessarily matter that much though, since it can
+	// save the version info just fine, but it would be nice if this actually
+	// worked over there.
 	int64_t year = EPOCH_YEAR, month = EPOCH_MONTH, days = ver + EPOCH_DAY;
 	int32_t days_in;
 
 	for (;;) {
 		days_in = (LEAP_YEAR(year) ? 366 : 365);
-		days -= days_in;
-
-		if (days <= 0) {
-			days += days_in;
+		if (days < days_in)
 			break;
-		}
+
+		days -= days_in;
 
 		year++;
 	}
 
 	for (;;) {
 		days_in = get_days_for_month(month, year);
-		days -= days_in;
-
-		if (days <= 0) {
-			days += days_in;
+		if (days < days_in)
 			break;
-		}
+
+		days -= days_in;
 
 		month++;
 
