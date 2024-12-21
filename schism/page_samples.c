@@ -658,12 +658,12 @@ static void do_post_loop_cut(SCHISM_UNUSED void *bweh) /* I'm already using 'dat
 static void do_pre_loop_cut(SCHISM_UNUSED void *bweh)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
-	unsigned long pos = ((sample->flags & CHN_SUSTAINLOOP)
+	uint32_t pos = ((sample->flags & CHN_SUSTAINLOOP)
 			     ? MIN(sample->loop_start, sample->sustain_start)
 			     : sample->loop_start);
-	unsigned long start_byte = pos * ((sample->flags & CHN_16BIT) ? 2 : 1)
+	uint32_t start_byte = pos * ((sample->flags & CHN_16BIT) ? 2 : 1)
 				* ((sample->flags & CHN_STEREO) ? 2 : 1);
-	unsigned long  bytes = (sample->length - pos) * ((sample->flags & CHN_16BIT) ? 2 : 1)
+	uint32_t  bytes = (sample->length - pos) * ((sample->flags & CHN_16BIT) ? 2 : 1)
 				* ((sample->flags & CHN_STEREO) ? 2 : 1);
 
 	if (pos == 0 || pos > sample->length)
@@ -692,6 +692,7 @@ static void do_pre_loop_cut(SCHISM_UNUSED void *bweh)
 		sample->sustain_end -= pos;
 	else
 		sample->sustain_end = 0;
+	csf_adjust_sample_loop(sample);
 	song_unlock_audio();
 }
 
@@ -1270,14 +1271,14 @@ static int resample_sample_cursor;
 static void do_resample_sample_aa(SCHISM_UNUSED void *data)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
-	uint32_t newlen = _muldiv(sample->length, resample_sample_widgets[0].d.numentry.value, sample->c5speed);
+	uint32_t newlen = ((double)sample->length * (double)resample_sample_widgets[0].d.numentry.value / (double)sample->c5speed);
 	sample_resize(sample, newlen, 1);
 }
 
 static void do_resample_sample(SCHISM_UNUSED void *data)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
-	uint32_t newlen = _muldiv(sample->length, resample_sample_widgets[0].d.numentry.value, sample->c5speed);
+	uint32_t newlen = ((double)sample->length * (double)resample_sample_widgets[0].d.numentry.value / (double)sample->c5speed);
 	sample_resize(sample, newlen, 0);
 }
 

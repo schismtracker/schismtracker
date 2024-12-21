@@ -24,14 +24,16 @@
 #ifndef SCHISM_SAMPLE_EDIT_H_
 #define SCHISM_SAMPLE_EDIT_H_
 
+#include "headers.h"
+
 void sample_sign_convert(song_sample_t * sample);
 void sample_reverse(song_sample_t * sample);
 void sample_centralise(song_sample_t * sample);
 void sample_downmix(song_sample_t * sample);
-void sample_amplify(song_sample_t *sample, int percent);
+void sample_amplify(song_sample_t *sample, int32_t percent);
 /* Return the maximum amplification that can be done without clipping (as a
  * percentage, suitable to pass to sample_amplify). */
-int sample_get_amplify_amount(song_sample_t *sample);
+int32_t sample_get_amplify_amount(song_sample_t *sample);
 
 /* if convert_data is nonzero, the sample data is modified (so it sounds
  * the same); otherwise, the sample length is changed and the data is
@@ -43,7 +45,7 @@ void sample_toggle_quality(song_sample_t * sample, int convert_data);
 /* resize a sample; if aa is set, attempt to antialias (resample) the
  * output waveform.
  */
-void sample_resize(song_sample_t * sample, unsigned long newlen, int aa);
+void sample_resize(song_sample_t * sample, uint32_t newlen, int aa);
 
 /* AFAIK, this was in some registered versions of IT */
 void sample_invert(song_sample_t * sample);
