@@ -257,6 +257,7 @@ use_wii=no
 use_wiiu=no
 use_network=no
 use_controller=no
+posix_fseek=unknown
 
 have_loadso=no
 
@@ -267,6 +268,7 @@ case "${host_os}" in
 		AC_SUBST([OSX_LDADD], ["-framework Cocoa -framework CoreAudio -framework CoreMIDI -framework IOKit"])
 
 		use_macosx=yes
+		posix_fseek=yes
 		AC_DEFINE([SCHISM_MACOSX], [1], [Mac OS X])
 		;;
 	macos*)
@@ -288,6 +290,7 @@ case "${host_os}" in
 			AC_MSG_ERROR([*** Couldn't find MakePEF])
 		fi
 
+		posix_fseek=no
 		;;
 	cygwin*|mingw*)
 		AC_MSG_RESULT([found Windows host])
@@ -307,6 +310,7 @@ case "${host_os}" in
 		have_loadso=yes
 
 		use_win32=yes
+		posix_fseek=yes
 		AC_DEFINE([SCHISM_WIN32], [1], [Windows])
 		;;
 	*)
@@ -343,6 +347,7 @@ case "${host_os}" in
 			use_controller=yes
 			AC_DEFINE([SCHISM_WII], [1], [Wii])
 			AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
+			posix_fseek=yes
 		elif test "x$which" = "xwiiu"; then
 			WIIU_CPPFLAGS="-I${DEVKITPRO}/wut/include -I${DEVKITPPC}/powerpc-eabi/include"
 			WIIU_LDFLAGS="-lwut -T${DEVKITPRO}/wut/share/wut.ld -Wl,--gc-sections -Wl,--emit-relocs -Wl,--no-eh-frame-hdr -z nocopyreloc -L${DEVKITPRO}/wut/lib -L${DEVKITPPC}/powerpc-eabi/lib"
@@ -369,6 +374,7 @@ case "${host_os}" in
 			use_controller=yes
 			AC_DEFINE([SCHISM_WIIU], [1], [Wii U])
 			AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
+			posix_fseek=yes
 		fi
 
 		dnl Networking...
@@ -440,6 +446,88 @@ AC_RUN_IFELSE([AC_LANG_PROGRAM([[]], [[return ((-1 << 1) != -2);]])],
 AC_MSG_RESULT([$have_sane_signed_lshift])
 if test "x$have_sane_signed_lshift" = "xyes"; then
 	AC_DEFINE([HAVE_SANE_SIGNED_LSHIFT], [1], [ ])
+fi
+
+dnl --------------------------------------------------------------------------
+dnl check whether fseek allows to seek past EOF or not
+
+if test "x$posix_fseek" = "xunknown"; then
+	AC_MSG_CHECKING([if fseek allows to go past EOF])
+	AC_RUN_IFELSE([AC_LANG_PROGRAM([[
+		#include <stdio.h>
+		#include <string.h>
+	]], [[
+		unsigned char expected[] = {0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF};
+		unsigned char buf[sizeof(expected)];
+
+		{
+			FILE *fp = fopen("conftest.bin", "wb");
+			if (!fp)
+				return 1;
+
+			if (fputc('\x80', fp) == EOF) {
+				fclose(fp);
+				return 2;
+			}
+			if (fseek(fp, 5, SEEK_CUR) < 0) {
+				fclose(fp);
+				return 3;
+			}
+			if (fputc('\xFF', fp) == EOF) {
+				fclose(fp);
+				return 4;
+			}
+			if (fclose(fp) == EOF)
+				return 5;
+		}
+
+		{
+			FILE *fp = fopen("conftest.bin", "rb");
+			if (!fp)
+				return 6;
+
+			if (fseek(fp, 0, SEEK_END) < 0) {
+				fclose(fp);
+				return 7;
+			}
+
+			long length = ftell(fp);
+			if (length < 0 || length != sizeof(expected)) {
+				fclose(fp);
+				return 8;
+			}
+
+			// back to the beginning
+			if (fseek(fp, 0, SEEK_SET) < 0) {
+				fclose(fp);
+				return 9;
+			}
+
+			if (fread(buf, 1, sizeof(buf), fp) != sizeof(buf)) {
+				fclose(fp);
+				return 10;
+			}
+
+			if (fclose(fp) == EOF)
+				return 11;
+		}
+
+		// compare what we got
+		if (memcmp(buf, expected, sizeof(buf)))
+			return 12;
+
+		// yay!
+		return 0;
+	]])],
+	[posix_fseek=yes],
+	[posix_fseek=no],
+	[] # err, the existing value above will suffice
+	)
+
+	AC_MSG_RESULT([$posix_fseek])
+	if test "x$posix_fseek" != "xyes"; then
+		AC_DEFINE([HAVE_NONPOSIX_FSEEK], [1], [fseek past EOF is broken])
+	fi
 fi
 
 dnl --------------------------------------------------------------------------

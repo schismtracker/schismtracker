@@ -78,7 +78,7 @@ static void _dw_stdio_write(disko_t *ds, const void *buf, size_t len)
 
 static void _dw_stdio_seek(disko_t *ds, int64_t pos, int whence)
 {
-#ifdef SCHISM_MACOS
+#ifdef HAVE_NONPOSIX_FSEEK
 	// fseek() broken under Retro68. this is "close enough"
 	// to the POSIX behavior, I guess
 
