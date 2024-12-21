@@ -131,7 +131,6 @@ FILE *mkfstemp(char *template)
 	static const char letters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 	static size_t letters_len = ARRAY_SIZE(letters) - 1;
 	static uint64_t value;
-	struct timeval tv;
 	int count;
 
 	size_t len = strlen(template);
