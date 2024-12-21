@@ -48,14 +48,9 @@
 #include "player/snd_gm.h"
 
 // Default audio configuration
-// (XXX: Can DEF_SAMPLE_RATE be defined to 48000 everywhere?
-// Does any sound card NOT support 48khz decently nowadays?)
-#ifdef SCHISM_WII
-# define DEF_SAMPLE_RATE 48000
-#else
-# define DEF_SAMPLE_RATE 44100
-#endif
-#ifdef SCHISM_WIN32
+
+#define DEF_SAMPLE_RATE 48000
+#ifdef SCHISM_WIN32 // uhhh... why?
 # define DEF_BUFFER_SIZE 2048
 #else
 # define DEF_BUFFER_SIZE 1024
