@@ -51,6 +51,11 @@ DIR *opendir(const char *path)
 	 * so we can just one static directory structure. */
 	static DIR dir;
 
+	if (dir.nextfile) {
+		errno = ENFILE;
+		return NULL;
+	}
+
 	OSErr err = noErr;
 	WDPBRec pb;
 	unsigned char ppath[256];
@@ -83,8 +88,20 @@ DIR *opendir(const char *path)
 	}
 
 	err = PBOpenWD(&pb, 0);
-	if (err != noErr) {
+	switch (err) {
+	case noErr:
+		break;
+	case nsvErr:
+	case fnfErr:
 		errno = ENOENT;
+		return NULL;
+	case tmwdoErr:
+		errno = ENFILE;
+		return NULL;
+	case afpAccessDenied:
+		errno = EACCES;
+		return NULL;
+	default:
 		return NULL;
 	}
 
@@ -122,11 +139,30 @@ struct dirent *readdir(DIR *dp)
 	pb.d.ioFDirIndex = dp->nextfile++;
 
 	short err = PBGetCatInfo((CInfoPBPtr)&pb, 0);
-	if (err != noErr) {
+	switch (err) {
+	case noErr:
+		break;
+	case nsvErr:
+	case fnfErr:
+		errno = ENOENT;
+		return NULL;
+	case ioErr:
 		errno = EIO;
 		return NULL;
+	case bdNamErr:
+		errno = EILSEQ;
+		return NULL;
+	case paramErr:
+	case dirNFErr:
+	case afpObjectTypeErr:
+		errno = ENOTDIR;
+		return NULL;
+	case afpAccessDenied:
+		errno = EACCES;
+		return NULL;
+	default:
+		return NULL;
 	}
-
 
 	str_from_pascal(pname, dp->dir.d_name);
 

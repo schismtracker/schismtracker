@@ -113,7 +113,36 @@ int macos_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
 
 	pb.fileParam.ioNamePtr = mpath;
 
-	return (PBDirCreateSync(&pb) == noErr) ? 0 : -1;
+	OSErr err = PBDirCreateSync(&pb);
+	switch (err) {
+	case noErr:
+		return 0;
+	case nsvErr:
+	case fnfErr:
+	case dirNFErr:
+		errno = ENOTDIR;
+		return -1;
+	case dirFulErr:
+	case dskFulErr:
+		errno = ENOSPC;
+		return -1;
+	case bdNamErr:
+		errno = EILSEQ;
+		return -1;
+	case ioErr:
+	case wrgVolTypErr: //FIXME find a more appropriate errno value for this
+		errno = EIO;
+		return -1;
+	case wPrErr:
+	case vLckdErr:
+		errno = EROFS;
+		return -1;
+	case afpAccessDenied:
+		errno = EACCES;
+		return -1;
+	default:
+		return -1;
+	}
 }
 
 int macos_stat(const char *file, struct stat *st)
@@ -153,21 +182,46 @@ int macos_stat(const char *file, struct stat *st)
 		pb.hFileInfo.ioNamePtr = ppath;
 
 		OSErr err = PBGetCatInfoSync(&pb);
-		if (err != noErr) {
-			return -1;
-		} else {
+		switch (err) {
+		case noErr:
 			*st = (struct stat){
 				.st_mode = (pb.hFileInfo.ioFlAttrib & ioDirMask) ? S_IFDIR : S_IFREG,
 				.st_ino = pb.hFileInfo.ioFlStBlk,
 				.st_dev = pb.hFileInfo.ioVRefNum,
 				.st_nlink = 1,
 				.st_size = pb.hFileInfo.ioFlLgLen,
-				.st_atime = pb.hFileInfo.ioFlMdDat,
-				.st_mtime = pb.hFileInfo.ioFlMdDat,
-				.st_ctime = pb.hFileInfo.ioFlCrDat,
+// This assumes that time_t is POSIX-y (i.e. we're under Retro68, or some other
+// toolchain that does this). It also assumes the date is in UTC, which is what
+// Mac OS Extended uses; Mac OS Standard uses good old local time, but I don't
+// really care about that.
+#define CONVERT_TIME_TO_POSIX(x) ((int64_t)(x) - INT64_C(2082844800))
+				.st_atime = CONVERT_TIME_TO_POSIX(pb.hFileInfo.ioFlMdDat),
+				.st_mtime = CONVERT_TIME_TO_POSIX(pb.hFileInfo.ioFlMdDat),
+				.st_ctime = CONVERT_TIME_TO_POSIX(pb.hFileInfo.ioFlCrDat),
+#undef CONVERT_TIME_TO_POSIX
 			};
 
 			return 0;
+		case nsvErr:
+		case fnfErr:
+			errno = ENOENT;
+			return -1;
+		case bdNamErr:
+		case paramErr:
+			errno = EILSEQ;
+			return -1;
+		case ioErr:
+			errno = EIO;
+			return -1;
+		case afpAccessDenied:
+			errno = EACCES;
+			return -1;
+		case dirNFErr:
+		case afpObjectTypeErr:
+			errno = ENOTDIR;
+			return -1;
+		default:
+			return -1;
 		}
 	}
 
