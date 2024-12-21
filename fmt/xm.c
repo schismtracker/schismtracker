@@ -613,14 +613,18 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		};
 
 		for (int i = 0; i < ARRAY_SIZE(envs); i++) {
-			int prevtick = -1;
+			uint16_t prevtick;
 			for (n = 0; n < 12; n++) {
 				slurp_read(fp, &w, 2); // tick
 				w = bswapLE16(w);
-				if (w < prevtick) {
-					// TODO: mikmod source indicates files exist with broken envelope values,
-					// and it does some complicated stuff to adjust them. investigate?
-					w = prevtick + 1;
+				if (n > 0 && w < prevtick & !(w & 0xFF00)) {
+					// libmikmod code says: "Some broken XM editing program will only save the low byte of the position
+					// value. Try to compensate by adding the missing high byte."
+					// Note: MPT 1.07's XI instrument saver omitted the high byte of envelope nodes.
+					// This might be the source for some broken envelopes in IT and XM files.
+					w |= (prevtick & 0xFF00U);
+					if (w < prevtick)
+						w += 0x100;
 				}
 				envs[i].env->ticks[n] = prevtick = w;
 				slurp_read(fp, &w, 2); // value
