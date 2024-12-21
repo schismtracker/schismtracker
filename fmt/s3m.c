@@ -640,8 +640,6 @@ struct s3m_header {
 	uint16_t reserved3; // high bits of extended version information
 };
 
-#define SEEK_ALIGN(fp) disko_seek((fp), (16 - (disko_tell(fp) & 15)) & 15, SEEK_CUR)
-
 static int write_s3m_header(const struct s3m_header *hdr, disko_t *fp)
 {
 #define WRITE_VALUE(x) do { disko_write(fp, &hdr->x, sizeof(hdr->x)); } while (0)
@@ -666,7 +664,7 @@ static int write_s3m_header(const struct s3m_header *hdr, disko_t *fp)
 	WRITE_VALUE(reserved);
 	WRITE_VALUE(reserved2);
 	WRITE_VALUE(reserved3);
-	disko_write(fp, "\0\0", 2); // no idea what this is
+	disko_seek(fp, 2, SEEK_CUR);
 
 #undef WRITE_VALUE
 
@@ -675,12 +673,12 @@ static int write_s3m_header(const struct s3m_header *hdr, disko_t *fp)
 
 static int write_s3m_pattern(disko_t *fp, song_t *song, int pat, uint8_t *chantypes, uint16_t *para_pat)
 {
-	long start, end;
+	int64_t start, end;
 	uint8_t b, type;
 	uint16_t w;
 	int row, rows, chan;
 	song_note_t out, *note;
-	int warn = 0;
+	uint32_t warn = 0;
 
 	if (csf_pattern_is_empty(song, pat)) {
 		// easy!
@@ -693,7 +691,7 @@ static int write_s3m_pattern(disko_t *fp, song_t *song, int pat, uint8_t *chanty
 	}
 	rows = MIN(64, song->pattern_size[pat]);
 
-	SEEK_ALIGN(fp);
+	disko_align(fp, 16);
 
 	start = disko_tell(fp);
 	para_pat[pat] = bswapLE16(start >> 4);
@@ -941,16 +939,16 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 {
 	struct s3m_header hdr = {0};
 	int nord, nsmp, npat;
-	int n;
+	int n, i;
 	song_sample_t *smp;
-	long smphead_pos; /* where to write the sample headers */
-	long patptr_pos; /* where to write pattern pointers */
-	long pos; /* temp */
+	int64_t smphead_pos; /* where to write the sample headers */
+	int64_t patptr_pos; /* where to write pattern pointers */
+	int64_t pos; /* temp */
 	uint16_t w;
 	uint16_t para_pat[MAX_PATTERNS];
 	uint32_t para_sdata[MAX_SAMPLES];
 	uint8_t chantypes[32];
-	unsigned int warn = 0;
+	uint32_t warn = 0;
 
 
 	if (song->flags & SONG_INSTRUMENTMODE)
@@ -1087,7 +1085,7 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 			para_sdata[n] = 0;
 			continue;
 		}
-		SEEK_ALIGN(fp);
+		disko_align(fp, 16);
 		para_sdata[n] = disko_tell(fp);
 		csf_write_sample(fp, smp, SF_LE | SF_PCMU
 			| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)

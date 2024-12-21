@@ -23,15 +23,15 @@
 #ifndef SCHISM_DISKO_H_
 #define SCHISM_DISKO_H_
 
-#include <sys/types.h>
+#include "headers.h"
 
 typedef struct disko disko_t;
 struct disko {
 	// Functions whose implementation depends on the backend in use
 	// Use disko_write et al. instead of these.
 	void (*_write)(disko_t *ds, const void *buf, size_t len);
-	void (*_seek)(disko_t *ds, long offset, int whence);
-	long (*_tell)(disko_t *ds);
+	void (*_seek)(disko_t *ds, int64_t offset, int whence);
+	int64_t (*_tell)(disko_t *ds);
 
 	// Temporary filename that's being written to
 	char *tempname;
@@ -118,13 +118,16 @@ void disko_putc(disko_t *ds, unsigned char c);
 
 /* Change file position. This CAN be used to seek past the end,
 but be cognizant that random data might exist in the "gap". */
-void disko_seek(disko_t *ds, long pos, int whence);
+void disko_seek(disko_t *ds, int64_t pos, int whence);
 
 /* Get the position, as set by seek */
-long disko_tell(disko_t *ds);
+int64_t disko_tell(disko_t *ds);
 
 /* Call this to signal a nonrecoverable error condition. */
 void disko_seterror(disko_t *ds, int err);
+
+/* Call this to seek to an aligned byte boundary */
+void disko_align(disko_t *ds, uint32_t bytes);
 
 /* ------------------------------------------------------------------------- */
 
