@@ -1435,7 +1435,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 	if (NOTE_IS_CONTROL(note)) {
 		// hax: keep random sample numbers from triggering notes (see csf_instrument_change)
 		// NOTE_OFF is a completely arbitrary choice - this could be anything above NOTE_LAST
-		chan->note = chan->new_note = NOTE_OFF;
+		chan->new_note = NOTE_OFF;
 		switch (note) {
 		case NOTE_OFF:
 			fx_key_off(csf, nchan);
@@ -2222,10 +2222,10 @@ void csf_process_effects(song_t *csf, int firsttick)
 
 				if (csf->flags & SONG_INSTRUMENTMODE) {
 					if (instr < MAX_INSTRUMENTS && (chan->ptr_instrument != csf->instruments[instr] || !chan->current_sample_data))
-						note = chan->note;
+						note = chan->new_note;
 				} else {
 					if (instr < MAX_SAMPLES && (chan->ptr_sample != &csf->samples[instr] || !chan->current_sample_data))
-						note = chan->note;
+						note = chan->new_note;
 				}
 			}
 			// Invalid Instrument ?
