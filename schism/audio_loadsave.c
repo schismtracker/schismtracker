@@ -999,7 +999,8 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, SCHISM_UN
 		return -1;
 	}
 
-	/* ask dmoz what type of file we have */
+	/* ask dmoz what type of file we have
+	 * FIXME use slurp and read info funcs manually */
 	dmoz_file_t info_file = {0};
 	info_file.path = str_dup(path);
 	info_file.filesize = st.st_size;
@@ -1023,12 +1024,15 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, SCHISM_UN
 	if (info_file.type & TYPE_MODULE_MASK) {
 		library = song_create_load(path);
 	} else if (info_file.type & TYPE_INST_MASK) {
-		/* temporarily set the current song to the library */
+		/* temporarily set the current song to the library; song_load_instrument
+		 * is hardcoded to it */
+		song_lock_audio();
 		song_t* tmp_ptr = current_song;
 		library = current_song = csf_allocate();
 
 		int ret = song_load_instrument(1, path);
 		current_song = tmp_ptr;
+		song_unlock_audio();
 		if (!ret) {
 			log_appendf(4, "song_load_instrument: %s failed with %d", path, ret);
 			return 1;
