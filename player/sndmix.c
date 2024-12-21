@@ -665,48 +665,24 @@ static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int32_t chan_num,
 	}
 }
 
-
 static inline void update_vu_meter(song_voice_t *chan)
 {
 	// Update VU-Meter (final_volume is 14-bit)
-	// TODO: missing background channels by doing it this way.
-	// need to use nMasterCh, add the vu meters for each physical voice, and bit shift.
-	uint32_t vutmp = chan->final_volume >> (14 - 8);
-	if (vutmp > 0xFF) vutmp = 0xFF;
-	if (chan->flags & CHN_ADLIB) {
-		if (chan->strike>2) { chan->vu_meter=(0xFF*chan->final_volume)>>14;}
+
+	if (chan->current_sample_data) {
+		// check mixer.c
+	} else if (chan->flags & CHN_ADLIB) {
+		if (chan->strike>2)
+			chan->vu_meter=(0xFF*chan->final_volume)>>14;
+
 		// fake VU decay (intentionally similar to ST3)
-		if (chan->vu_meter > VUMETER_DECAY) {
-			chan->vu_meter -= VUMETER_DECAY;
-		} else {
-			chan->vu_meter = 0;
-		}
+		chan->vu_meter = (chan->vu_meter > VUMETER_DECAY) ? (chan->vu_meter - VUMETER_DECAY) : 0;
+
 		if (chan->vu_meter >= 0x100) {
+			uint32_t vutmp = chan->final_volume >> (14 - 8);
+			if (vutmp > 0xFF) vutmp = 0xFF;
 			chan->vu_meter = vutmp;
 		}
-	} else if (vutmp && chan->current_sample_data) {
-		// can't fake the funk
-		int32_t n;
-		int32_t pos = chan->position; // necessary on 64-bit systems (sometimes pos == -1, weird)
-		if (chan->flags & CHN_16BIT) {
-			const int16_t *p = (int16_t *)(chan->current_sample_data);
-			if (chan->flags & CHN_STEREO)
-				n = p[2 * pos];
-			else
-				n = p[pos];
-			n >>= 8;
-		} else {
-			const signed char *p = (signed char *)(chan->current_sample_data);
-			if (chan->flags & CHN_STEREO)
-				n = p[2 * pos];
-			else
-				n = p[pos];
-		}
-		if (n < 0)
-			n = -n;
-		vutmp *= n;
-		vutmp >>= 7; // 0..255
-		chan->vu_meter = vutmp;
 	} else {
 		chan->vu_meter = 0;
 	}

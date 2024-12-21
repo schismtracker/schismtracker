@@ -373,10 +373,10 @@ typedef struct song_voice {
 	uint32_t position; // sample position, fixed-point -- integer part
 	uint32_t position_frac; // fractional part
 	int32_t increment; // 16.16 fixed point, how much to add to position per sample-frame of output
-	int32_t right_volume; // ?
-	int32_t left_volume; // ?
-	int32_t right_ramp; // ?
-	int32_t left_ramp; // ?
+	int32_t right_volume; // volume of the left channel
+	int32_t left_volume; // volume of the right channel
+	int32_t right_ramp; // amount to ramp the left channel
+	int32_t left_ramp; // amount to ramp the right channel
 	// 2nd cache line
 	uint32_t length; // only to the end of the loop
 	uint32_t flags;
@@ -394,6 +394,7 @@ typedef struct song_voice {
 
 	int32_t rofs, lofs; // ?
 	int32_t ramp_length;
+	uint32_t vu_meter; // moved this up -paper
 	// Information not used in the mixer
 	int32_t right_volume_new, left_volume_new; // ?
 	int32_t final_volume; // range 0-16384 (?), accounting for sample+channel+global+etc. volumes
@@ -410,7 +411,6 @@ typedef struct song_voice {
 	int32_t pan_env_position;
 	int32_t pitch_env_position;
 	uint32_t master_channel; // nonzero = background/NNA voice, indicates what channel it "came from"
-	uint32_t vu_meter;
     // TODO: As noted elsewhere, this means current channel volume.
 	int32_t global_volume;
     // FIXME: Here instrument_volume means the value calculated from sample global volume and instrument global volume.
