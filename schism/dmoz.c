@@ -665,7 +665,7 @@ int dmoz_path_rename(const char *old, const char *new, int overwrite)
 	}
 
 	err = FSMakeFSSpec(0, 0, pnew, &new_spec);
-	if (err != noErr && (!overwrite || err != fnfErr)) {
+	if (!(overwrite && err == noErr) || err != fnfErr) {
 		log_appendf(4, "FSMakeFSSpec: %d", (int)err);
 		return -1;
 	}
@@ -688,6 +688,9 @@ int dmoz_path_rename(const char *old, const char *new, int overwrite)
 		return -1;
 	}
 
+	// FIXME: This doesn't seem to work? At least I keep getting random
+	// temp files whenever I save or export.
+	// Even weirder they have super odd filenames: ("likk__¿" from "likk.it")?
 	err = FSpDelete(&old_spec);
 	if (err != noErr) {
 		log_appendf(4, "FSpDelete: %d", (int)err);
