@@ -332,10 +332,16 @@ libs_macos=-lAppearanceLib -lInputSprocketLib -lControlStripLib -lControlsLib -l
 schismtracker.bin: schismtracker.pef $(top_srcdir)/sys/macos/resource.r
 schismtracker.pef: schismtracker.xcoff
 
-.pef.bin:
-	$(REZ) -I"$(RETRO68_ROOT)/powerpc-apple-macos/RIncludes" "$(top_srcdir)/sys/macos/resource.r" -o $@ -t "APPL" -c "????" --data $<
+## use today's date if we didn't get a commit date from git
+if HAVE_GIT
+rezflags_version = -DVERSION=\"`echo $(PACKAGE_VERSION)`\" -DVERSION_YEAR=`echo '$(PACKAGE_VERSION)' | cut -c1-4` -DVERSION_MONTH=`echo '$(PACKAGE_VERSION)' | cut -c5-6` -DVERSION_DAY=`echo '$(PACKAGE_VERSION)' | cut -c7-8`
+else
+rezflags_version = -DVERSION=\"`date +%Y%m%d`\" -DVERSION_YEAR=`date +%Y` -DVERSION_MONTH=`date +%m` -DVERSION_DAY=`date +%d`
+endif # HAVE_GIT
 
-# "pef" ?? lol
+.pef.bin:
+	$(REZ) $(rezflags_version) -I"$(RETRO68_ROOT)/powerpc-apple-macos/RIncludes" "$(top_srcdir)/sys/macos/resource.r" -o $@ -t "APPL" -c "????" --data $<
+
 .xcoff.pef:
 	$(MAKE_PEF) $< -o $@
 endif
