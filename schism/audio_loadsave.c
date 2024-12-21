@@ -408,30 +408,23 @@ static const struct save_format *get_save_format(const struct save_format *forma
 
 static char *mangle_filename(const char *in, const char *mid, const char *ext)
 {
-	char *ret;
-	const char *iext;
-	size_t baselen, rlen;
+	// will always return a valid pointer
+	const char *iext = dmoz_path_get_extension(in);
 
-	iext = dmoz_path_get_extension(in);
-	rlen = baselen = iext - in;
-	if (mid)
-		rlen += strlen(mid);
-	if (iext[0])
-		rlen += strlen(iext);
+	const size_t baselen = iext - in;
+	const size_t midlen = (mid) ? strlen(mid) : 0;
+	const size_t extlen = (*iext) ? strlen(iext) : ((ext) ? strlen(ext) : 0);
+
+	char *ret = mem_alloc(baselen + midlen + extlen + 1); /* room for terminating \0 */
+
+	memcpy(ret, in, baselen);
+	memcpy(ret + baselen, mid, midlen);
+	if (*iext)
+		memcpy(ret + baselen + midlen, iext, extlen);
 	else if (ext)
-		rlen += strlen(ext);
-	ret = malloc(rlen + 1); /* room for terminating \0 */
-	if (!ret)
-		return NULL;
-	strncpy(ret, in, baselen);
-	ret[baselen] = '\0';
-	if (mid)
-		strcat(ret, mid);
-	/* maybe output a warning if iext and ext differ? */
-	if (iext[0])
-		strcat(ret, iext);
-	else if (ext)
-		strcat(ret, ext);
+		memcpy(ret + baselen + midlen, ext, extlen);
+	ret[baselen + midlen + extlen] = '\0';
+
 	return ret;
 }
 
