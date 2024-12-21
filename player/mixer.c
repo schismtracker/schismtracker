@@ -909,10 +909,12 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 						smpcount = samples_to_buffer_length(samples_to_read, channel);
 
 						channel->current_sample_data = lookahead_ptr;
-					} else if ((channel->flags & (CHN_LOOP | CHN_LOOP_WRAPPED)) && at_loop_start) {
-						// Interpolate properly after looping
-						smpcount = samples_to_buffer_length((channel->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE) - channel->position, channel);
-						channel->current_sample_data = lookahead_ptr + (channel->loop_end - channel->loop_start) * ((channel->ptr_sample->flags & CHN_STEREO) ? 2 : 1) * ((channel->ptr_sample->flags & CHN_16BIT) ? 2 : 1);
+					// This code keeps causing clicks with bidi loops, so I'm just gonna comment it out
+					// for now.
+					//} else if ((channel->flags & (CHN_LOOP | CHN_LOOP_WRAPPED)) && at_loop_start) {
+					//	// Interpolate properly after looping
+					//	smpcount = samples_to_buffer_length((channel->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE) - channel->position, channel);
+					//	channel->current_sample_data = lookahead_ptr + (channel->loop_end - channel->loop_start) * ((channel->ptr_sample->flags & CHN_STEREO) ? 2 : 1) * ((channel->ptr_sample->flags & CHN_16BIT) ? 2 : 1);
 					} else if (channel->increment > 0 && channel->position + read_length >= lookahead_start && smpcount > 1) {
 						smpcount = samples_to_buffer_length(lookahead_start - channel->position, channel);
 					}

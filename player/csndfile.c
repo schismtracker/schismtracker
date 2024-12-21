@@ -1263,6 +1263,9 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	\
 	static void csf_precompute_loop_impl_##bits##_(int##bits##_t *target, const int##bits##_t *data, uint32_t loop_end, int channels, int bidi) \
 	{ \
+		if (loop_end <= 0) \
+			return; \
+	\
 		csf_precompute_loop_copy_loop_impl_##bits##_(target, data, loop_end, channels, bidi, 1); \
 		csf_precompute_loop_copy_loop_impl_##bits##_(target, data, loop_end, channels, bidi, 0); \
 	} \
