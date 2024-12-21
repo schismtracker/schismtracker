@@ -113,6 +113,39 @@ static int it_load_header(struct it_file *hdr, slurp_t *fp)
 	return 1;
 }
 
+static int it_write_header(struct it_file *hdr, disko_t *fp)
+{
+#define WRITE_VALUE(name) do { disko_write(fp, &hdr->name, sizeof(hdr->name)); } while (0)
+
+	WRITE_VALUE(id);
+	WRITE_VALUE(songname);
+	WRITE_VALUE(hilight_minor);
+	WRITE_VALUE(hilight_major);
+	WRITE_VALUE(ordnum);
+	WRITE_VALUE(insnum);
+	WRITE_VALUE(smpnum);
+	WRITE_VALUE(patnum);
+	WRITE_VALUE(cwtv);
+	WRITE_VALUE(cmwt);
+	WRITE_VALUE(flags);
+	WRITE_VALUE(special);
+	WRITE_VALUE(globalvol);
+	WRITE_VALUE(mv);
+	WRITE_VALUE(speed);
+	WRITE_VALUE(tempo);
+	WRITE_VALUE(sep);
+	WRITE_VALUE(pwd);
+	WRITE_VALUE(msglength);
+	WRITE_VALUE(msgoffset);
+	WRITE_VALUE(reserved);
+	WRITE_VALUE(chnpan);
+	WRITE_VALUE(chnvol);
+
+#undef LOAD_VALUE
+
+	return 1;
+}
+
 /* --------------------------------------------------------------------- */
 
 int fmt_it_read_info(dmoz_file_t *file, slurp_t *fp)
@@ -908,7 +941,7 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 			hdr.chnpan[n] += 128;
 	}
 
-	disko_write(fp, &hdr, sizeof(hdr));
+	it_write_header(&hdr, fp);
 	disko_write(fp, song->orderlist, nord);
 
 	// we'll get back to these later
