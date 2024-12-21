@@ -601,55 +601,48 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		for (; n < 120; n++)
 			ins->note_map[n] = n + 1;
 
-		// envelopes
-		// (god, xm stores this in such a retarded format, why isn't all the volume stuff
-		// together and THEN the panning, so that this could at least not be so redundant)
+		// envelopes. XM stores this in a hilariously bad format
+		const struct {
+			song_envelope_t *env;
+			uint32_t envflag;
+			uint32_t envsusloopflag;
+			uint32_t envloopflag;
+		} envs[] = {
+			{&ins->vol_env, ENV_VOLUME,  ENV_VOLSUSTAIN, ENV_VOLLOOP},
+			{&ins->pan_env, ENV_PANNING, ENV_PANSUSTAIN, ENV_PANLOOP},
+		};
 
-		int prevtick = -1;
-		for (n = 0; n < 12; n++) {
-			slurp_read(fp, &w, 2); // tick
-			w = bswapLE16(w);
-			if (w < prevtick) {
-				// TODO: mikmod source indicates files exist with broken envelope values,
-				// and it does some complicated stuff to adjust them. investigate?
-				w = prevtick + 1;
+		for (int i = 0; i < ARRAY_SIZE(envs); i++) {
+			int prevtick = -1;
+			for (n = 0; n < 12; n++) {
+				slurp_read(fp, &w, 2); // tick
+				w = bswapLE16(w);
+				if (w < prevtick) {
+					// TODO: mikmod source indicates files exist with broken envelope values,
+					// and it does some complicated stuff to adjust them. investigate?
+					w = prevtick + 1;
+				}
+				envs[i].env->ticks[n] = prevtick = w;
+				slurp_read(fp, &w, 2); // value
+				w = bswapLE16(w);
+				envs[i].env->values[n] = MIN(w, 64);
 			}
-			ins->vol_env.ticks[n] = prevtick = w;
-			slurp_read(fp, &w, 2); // value
-			w = bswapLE16(w);
-			ins->vol_env.values[n] = MIN(w, 64);
 		}
-		// same thing again
-		prevtick = -1;
-		for (n = 0; n < 12; n++) {
-			slurp_read(fp, &w, 2); // tick
-			w = bswapLE16(w);
-			if (w < prevtick) {
-				w = prevtick + 1;
-			}
-			ins->pan_env.ticks[n] = prevtick = w;
-			slurp_read(fp, &w, 2); // value
-			w = bswapLE16(w);
-			ins->pan_env.values[n] = MIN(w, 64);
+		for (int i = 0; i < ARRAY_SIZE(envs); i++) {
+			b = slurp_getc(fp);
+			envs[i].env->nodes = CLAMP(b, 2, 12);
 		}
-		b = slurp_getc(fp);
-		ins->vol_env.nodes = CLAMP(b, 2, 12);
-		b = slurp_getc(fp);
-		ins->pan_env.nodes = CLAMP(b, 2, 12);
-		ins->vol_env.sustain_start = ins->vol_env.sustain_end = slurp_getc(fp);
-		ins->vol_env.loop_start = slurp_getc(fp);
-		ins->vol_env.loop_end = slurp_getc(fp);
-		ins->pan_env.sustain_start = ins->pan_env.sustain_end = slurp_getc(fp);
-		ins->pan_env.loop_start = slurp_getc(fp);
-		ins->pan_env.loop_end = slurp_getc(fp);
-		b = slurp_getc(fp);
-		if ((b & 1) && ins->vol_env.nodes > 0) ins->flags |= ENV_VOLUME;
-		if (b & 2) ins->flags |= ENV_VOLSUSTAIN;
-		if (b & 4) ins->flags |= ENV_VOLLOOP;
-		b = slurp_getc(fp);
-		if ((b & 1) && ins->pan_env.nodes > 0) ins->flags |= ENV_PANNING;
-		if (b & 2) ins->flags |= ENV_PANSUSTAIN;
-		if (b & 4) ins->flags |= ENV_PANLOOP;
+		for (int i = 0; i < ARRAY_SIZE(envs); i++) {
+			envs[i].env->sustain_start = envs[i].env->sustain_end = slurp_getc(fp);
+			envs[i].env->loop_start = slurp_getc(fp);
+			envs[i].env->loop_end = slurp_getc(fp);
+		}
+		for (int i = 0; i < ARRAY_SIZE(envs); i++) {
+			b = slurp_getc(fp);
+			if ((b & 1) && envs[i].env->nodes > 0) ins->flags |= envs[i].envflag;
+			if (b & 2) ins->flags |= envs[i].envsusloopflag;
+			if (b & 4) ins->flags |= envs[i].envloopflag;
+		}
 
 		vtype = autovib_import[slurp_getc(fp) & 0x7];
 		vsweep = slurp_getc(fp);
