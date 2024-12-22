@@ -67,5 +67,5 @@ Enjoy.
 
 ## Building for distribution
 
-See the `build-macos` section of `.github/workflows/build.yml` for how Schism
+See the `macos` section of `.github/workflows/osx.yml` for how Schism
 currently does it.
