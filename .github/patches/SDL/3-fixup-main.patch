@@ -1,0 +1,21 @@
+--- SDL-1.2.15-orig/src/main/macos/SDL_main.c	2012-01-19 01:30:06.000000000 -0500
++++ SDL-1.2.15/src/main/macos/SDL_main.c	2024-12-02 23:40:48.709371758 -0500
+@@ -1,6 +1,6 @@
+ /*
+     SDL - Simple DirectMedia Layer
+-    Copyright (C) 1997-2012 Sam Lantinga
++    Copyright (C) 1997-2006 Sam Lantinga
+ 
+     This library is free software; you can redistribute it and/or
+     modify it under the terms of the GNU Lesser General Public
+@@ -352,8 +352,8 @@
+ #pragma unused(argc, argv)
+ #endif
+ 	
+-#define DEFAULT_ARGS "\p"                /* pascal string for default args */
+-#define DEFAULT_VIDEO_DRIVER "\ptoolbox" /* pascal string for default video driver name */	
++#define DEFAULT_ARGS {'\0'}                /* pascal string for default args */
++#define DEFAULT_VIDEO_DRIVER {'\7', 't', 'o', 'o', 'l', 'b', 'o', 'x'} /* pascal string for default video driver name */	
+ #define DEFAULT_OUTPUT_TO_FILE 1         /* 1 == output to file, 0 == no output */
+ 
+ #define VIDEO_ID_DRAWSPROCKET 1          /* these correspond to popup menu choices */

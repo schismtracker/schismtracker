@@ -1,0 +1,61 @@
+--- SDL-1.2.13-old/configure.in	2007-12-30 20:48:40.000000000 -0500
++++ SDL-1.2.13/configure.in	2024-12-03 00:19:44.149672398 -0500
+@@ -2507,6 +2507,58 @@
+         SOURCES="$srcdir/src/main/beos/*.cc $SOURCES"
+         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lroot -lbe -lmedia -lgame -ldevice -ltextencoding"
+         ;;
++    *-*-macos*)
++        ARCH=macos
++
++        CheckVisibilityHidden
++        CheckDummyVideo
++        CheckDiskAudio
++        CheckDummyAudio
++
++        if test "x$enable_loadso" = "xyes"; then
++            AC_DEFINE(SDL_LOADSO_MACOS)
++            SOURCES="$SOURCES $srcdir/src/loadso/macos/*.c"
++            have_loadso=yes
++        fi
++
++        # this doesn't actually add the carbon crap
++        if test "x$enable_video" = "xyes"; then
++            AC_DEFINE(SDL_VIDEO_DRIVER_TOOLBOX)
++            SOURCES="$SOURCES $srcdir/src/video/maccommon/*.c"
++            SOURCES="$SOURCES $srcdir/src/video/macrom/*.c"
++            SOURCES="$SOURCES $srcdir/src/video/macdsp/*.c"
++            have_video=yes
++        fi
++
++        if test "x$enable_timers" = "xyes"; then
++            AC_DEFINE(SDL_TIMER_MACOS)
++            SOURCES="$SOURCES $srcdir/src/timer/macos/SDL_MPWtimer.c"
++            have_timers=yes
++        fi
++
++        if test "x$enable_joystick" = "xyes"; then
++            AC_DEFINE(SDL_JOYSTICK_MACOS)
++            SOURCES="$SOURCES $srcdir/src/joystick/macos/SDL_sysjoystick.c"
++            have_joystick=yes
++        fi
++
++        if test "x$enable_cdrom" = "xyes"; then
++            AC_DEFINE(SDL_CDROM_MACOS)
++            SOURCES="$SOURCES $srcdir/src/cdrom/macos/SDL_syscdrom.c"
++            have_cdrom=yes
++        fi
++
++        if test "x$enable_audio" = "xyes"; then
++            AC_DEFINE(SDL_AUDIO_DRIVER_SNDMGR)
++            SOURCES="$SOURCES $srcdir/src/audio/macrom/*.c"
++            have_audio=yes
++        fi
++
++        # The Mac OS platform requires special setup.
++        SDLMAIN_SOURCES="$srcdir/src/main/macos/*.c"
++        SDL_LIBS="-lSDLmain $SDL_LIBS"
++
++        ;;
+     *-*-darwin* )
+         # This could be either full "Mac OS X", or plain "Darwin" which is
+         # just the OS X kernel sans upper layers like Carbon and Cocoa.

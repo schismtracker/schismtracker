@@ -1,0 +1,186 @@
+name: Classic Mac OS (powerpc)
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# This file uses the Retro68 toolchain to build
+# a binary of Schism Tracker for the Classic Mac
+# OS. I only care enough to build for powerpc,
+# since 68k machines are way too slow for it to
+# be even remotely usable. Regardless, I'm still
+# putting powerpc files in their own folder in
+# case someone really wants to build a 68k version
+# of schism.
+#
+# We don't do any caching here simply because I'm
+# too lazy to do it :) it can be implemented later
+# if its really necessary
+#
+# There are quite a few hacks in here; for example
+# xz isn't included in the docker image, so we have
+# to make it ourselves, which is annoying. However,
+# liblzma is. Unfortunately this means symbols are
+# screwed up and we need to preload a newer liblzma.
+
+jobs:
+  macos:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/autc04/retro68
+    env:
+      SDL_VERSION: 1.2.15
+      SDL_SHA256: d6d316a793e5e348155f0dd93b979798933fb98aa1edebcc108829d6474aad00
+      XZ_VERSION: 5.6.3
+      XZ_SHA256: b1d45295d3f71f25a4c9101bd7c8d16cb56348bbef3bbc738da0351e17c73317
+      FLAC_VERSION: 1.4.3
+      FLAC_SHA256: 6c58e69cd22348f441b861092b825e591d0b822e106de6eb0ee4d05d27205b70
+      LIBOGG_VERSION: 1.3.5
+      LIBOGG_SHA256: c4d91be36fc8e54deae7575241e03f4211eb102afb3fc0775fbbc1b740016705
+      UTF8PROC_VERSION: 2.9.0
+      UTF8PROC_SHA256: bd215d04313b5bc42c1abedbcb0a6574667e31acee1085543a232204e36384c4
+
+    steps:
+      - name: 'Prepare Universal Interfaces'
+        run: |
+          curl -s "https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" -o "/tmp/MPW-GM.img.bin"
+
+          # extract
+          /Retro68-build/bin/install-universal-interfaces.sh "/tmp" "MPW-GM.img.bin"
+
+          echo "Linking Universal interfaces..."
+          /Retro68-build/bin/interfaces-and-libraries.sh /Retro68-build/toolchain /tmp/InterfacesAndLibraries
+          echo "done"
+
+      - name: 'Checkout'
+        uses: actions/checkout@v4
+        with:
+          path: schism
+
+      - name: 'Downloads XZ utils sources'
+        run: |
+          curl -L -o "xz-$XZ_VERSION.tar.gz" "https://github.com/tukaani-project/xz/releases/download/v$XZ_VERSION/xz-$XZ_VERSION.tar.gz"
+          echo "$XZ_SHA256  xz-$XZ_VERSION.tar.gz" | shasum -a 256 -c -
+          tar xvf "xz-$XZ_VERSION.tar.gz"
+
+      - name: 'Build XZ utils'
+        run: |
+          cd "xz-$XZ_VERSION"
+          mkdir build
+          cd build
+          ../configure
+          make
+          make install
+          cd .. # build
+          cd .. # xz-$XZ_VERSION
+
+      - name: 'Download SDL 1.2 sources (powerpc)'
+        run: |
+          curl -L -o "SDL-$SDL_VERSION.tar.gz" "https://www.libsdl.org/release/SDL-$SDL_VERSION.tar.gz"
+          echo "$SDL_SHA256  SDL-$SDL_VERSION.tar.gz" | shasum -a 256 -c -
+          tar xvf "SDL-$SDL_VERSION.tar.gz"
+          cd "SDL-$SDL_VERSION"
+          # FIXME this patch doesn't compile the drawsprocket driver
+          patch -p1 < ../schism/.github/patches/SDL/2-configure-retro68.patch
+          patch -p1 < ../schism/.github/patches/SDL/3-fixup-main.patch
+          ./autogen.sh
+          cd ..
+
+      - name: 'Download and prepare libogg sources'
+        run: |
+          curl -L -o libogg-$LIBOGG_VERSION.tar.xz "https://ftp.osuosl.org/pub/xiph/releases/ogg/libogg-$LIBOGG_VERSION.tar.xz" || curl -L -o libogg-$LIBOGG_VERSION.tar.xz "https://github.com/xiph/ogg/releases/download/v$LIBOGG_VERSION/libogg-$LIBOGG_VERSION.tar.xz"
+          echo "$LIBOGG_SHA256  libogg-$LIBOGG_VERSION.tar.xz" | shasum -a 256 -c -
+          LD_PRELOAD=/usr/local/lib/liblzma.so.5 tar xvf "libogg-$LIBOGG_VERSION.tar.xz"
+
+      - name: 'Download and prepare FLAC sources'
+        run: |
+          curl -L -o flac-$FLAC_VERSION.tar.xz "https://ftp.osuosl.org/pub/xiph/releases/flac/flac-$FLAC_VERSION.tar.xz" || curl -L -o flac-$FLAC_VERSION.tar.xz "https://github.com/xiph/flac/releases/download/$FLAC_VERSION/flac-$FLAC_VERSION.tar.xz"
+          echo "$FLAC_SHA256  flac-$FLAC_VERSION.tar.xz" | shasum -a 256 -c -
+          LD_PRELOAD=/usr/local/lib/liblzma.so.5 tar xvf "flac-$FLAC_VERSION.tar.xz"
+
+      - name: 'Download utf8proc'
+        run: |
+          curl -L -o "utf8proc-$UTF8PROC_VERSION.tar.gz" "https://github.com/JuliaStrings/utf8proc/releases/download/v$UTF8PROC_VERSION/utf8proc-$UTF8PROC_VERSION.tar.gz"
+          echo "$UTF8PROC_SHA256  utf8proc-$UTF8PROC_VERSION.tar.gz" | shasum -a 256 -c -
+          tar xvf "utf8proc-$UTF8PROC_VERSION.tar.gz"
+
+      - name: 'Build Schism and dependencies (powerpc)'
+        run: |
+          cd SDL-1.2.15
+          mkdir build_powerpc
+          cd build_powerpc
+          ../configure --host=powerpc-apple-macos
+          make
+          make install
+          cd .. # build_powerpc
+          cd .. # SDL-1.2.15
+
+      - name: 'Build libogg (powerpc)'
+        run: |
+          cd libogg-$LIBOGG_VERSION
+          mkdir build_powerpc
+          cd build_powerpc
+          CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" ../configure --host=powerpc-apple-macos
+          make
+          make install
+          cd .. # build_powerpc
+          cd .. # libogg-$LIBOGG_VERSION
+
+      - name: 'Build FLAC (powerpc)'
+        run: |
+          cd flac-$FLAC_VERSION
+          mkdir build_powerpc
+          cd build_powerpc
+          # hax: we need to patch out all calls to chmod, utimensat, and chown, because none of them
+          # exist under retro68, and additionally we don't use anything that's likely to need them
+          CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib"  ../configure --host=powerpc-apple-macos --disable-programs --disable-examples --disable-cpplibs
+          make
+          make install
+          cd .. # build_powerpc
+          cd .. # flac-$FLAC_VERSION
+
+      - name: 'Build utf8proc (powerpc)'
+        run: |
+          cd utf8proc-$UTF8PROC_VERSION
+          mkdir build_powerpc
+          cd build_powerpc
+          CMAKE_TOOLCHAIN_FILE=/Retro68-build/toolchain/powerpc-apple-macos/cmake/retroppc.toolchain.cmake cmake ..
+          make
+          make install
+          cd .. # build_powerpc
+          cd .. # utf8proc-$UTF8PROC_VERSION
+
+      - name: 'Get date of latest commit'
+        id: date
+        run: |
+          cd schism
+          echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
+          cd ..
+
+      - name: 'Build Schism (powerpc)'
+        run: |
+          cd schism
+          mkdir acinclude
+          curl -s "https://raw.githubusercontent.com/pkgconf/pkgconf/refs/tags/pkgconf-2.3.0/pkg.m4" -o "acinclude/pkg.m4"
+          autoreconf -Iacinclude -i
+          mkdir build_powerpc
+          cd build_powerpc
+          CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" UTF8PROC_CFLAGS="-I/Retro68-build/toolchain/powerpc-apple-macos/include" UTF8PROC_LIBS="-lutf8proc" FLAC_CFLAGS="-I/usr/local/include" FLAC_LIBS="-L/usr/local/lib -lFLAC -logg -lm" SDL12_CFLAGS="-I/usr/local/include/SDL" SDL12_LIBS="-L/usr/local/lib -lSDL" ../configure --with-sdl12 --enable-sdl12-linking --with-flac --enable-flac-linking --without-jack --without-sdl2 --host=powerpc-apple-macos
+          make schismtracker.bin RETRO68_ROOT="/Retro68-build/toolchain"
+          cd .. # build_powerpc
+          cd .. # schism
+
+      - name: 'Package Schism'
+        run: |
+          cp schism/build_powerpc/schismtracker.bin .
+          cp schism/docs/configuration.md .
+          cp schism/README.md schism/COPYING .
+          curl -s "https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph" -o "COPYING.Xiph"
+          zip -r schismtracker.zip configuration.md COPYING COPYING.Xiph README.md schismtracker.bin
+
+      - name: 'Upload artifact'
+        uses: actions/upload-artifact@v4
+        with:
+          name: schismtracker-${{ steps.date.outputs.date }}-classic-macos
+          path: schismtracker.zip
