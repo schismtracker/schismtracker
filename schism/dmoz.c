@@ -659,8 +659,15 @@ int dmoz_path_rename(const char *old, const char *new, int overwrite)
 	FSSpec old_spec, new_spec;
 
 	err = FSMakeFSSpec(0, 0, pold, &old_spec);
-	if (err != noErr) {
-		log_appendf(4, "FSMakeFSSpec: %d", (int)err);
+	switch (err) {
+	case noErr:
+		break;
+	case nsvErr:
+	case fnfErr:
+		errno = ENOENT;
+		return -1;
+	default:
+		log_appendf(4, "Unknown FSMakeFSSpec error: %d", (int)err);
 		return -1;
 	}
 
@@ -682,8 +689,18 @@ int dmoz_path_rename(const char *old, const char *new, int overwrite)
 	} else if (overwrite && err == noErr) {
 		// do nothing, exchange the contents and delete
 	} else {
-		log_appendf(4, "FSMakeFSSpec: %d", (int)err);
-		return -1;
+		// handle error value and set error value appropriately
+		switch (err) {
+		case noErr:
+			errno = EEXIST;
+			return -1;
+		case nsvErr:
+			errno = ENOTDIR;
+			return -1;
+		default:
+			log_appendf(4, "Unknown FSMakeFSSpec error: %d", (int)err);
+			return -1;
+		}
 	}
 
 	// Exchange the data in the two files
