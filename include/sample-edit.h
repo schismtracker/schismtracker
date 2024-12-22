@@ -56,5 +56,7 @@ void sample_delta_decode(song_sample_t * sample);
 void sample_mono_left(song_sample_t * sample);
 void sample_mono_right(song_sample_t * sample);
 
+void sample_crossfade(song_sample_t *smp, uint32_t fade_length, int32_t law, int fade_after_loop, int sustain_loop);
+
 
 #endif /* SCHISM_SAMPLE_EDIT_H_ */

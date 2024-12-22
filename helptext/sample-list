@@ -28,6 +28,7 @@
 |   Alt-R        Replace current sample in song
 |   Alt-S        Swap sample (in song also)
 |   Alt-T        Save current sample to disk (Export Format)
+:   Alt-V        Crossfade sample loop
 |   Alt-W        Save current sample to disk (RAW Format)
 |   Alt-X        Exchange sample (only in Sample List)
 :   Alt-Y        Text to sample data

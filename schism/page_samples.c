@@ -1306,6 +1306,80 @@ static void resample_sample_dialog(int aa)
 
 /* --------------------------------------------------------------------- */
 
+// TODO openmpt has post loop fade, and we support it
+// internally, but it's never actually used or exposed
+// to the user.
+
+static struct widget crossfade_sample_widgets[6];
+static int crossfade_sample_length_cursor;
+static int crossfade_sample_priority;
+static const int crossfade_sample_loop_group[] = { 0, 1, -1 };
+
+static void do_crossfade_sample(SCHISM_UNUSED void *data)
+{
+	song_sample_t *smp = song_get_sample(current_sample);
+
+	sample_crossfade(smp, crossfade_sample_widgets[2].d.numentry.value, crossfade_sample_widgets[3].d.thumbbar.value + 50, 0, crossfade_sample_widgets[1].d.togglebutton.state);
+}
+
+static void crossfade_sample_draw_const(void)
+{
+	draw_text("Crossfade Sample", 32, 22, 3, 2);
+	draw_text("Samples To Fade", 28, 27, 0, 2);
+	draw_text("Volume", 28, 29, 0, 2);
+	draw_text("Power", 47, 29, 0, 2);
+	draw_box(27, 30, 48, 32, BOX_THIN | BOX_INNER | BOX_INSET);
+
+	draw_box(44, 26, 52, 28, BOX_THICK | BOX_INNER | BOX_INSET);
+}
+
+// regenerate the sample loop widget based on loop/susloop data
+static void crossfade_sample_loop_changed(void)
+{
+	song_sample_t *smp = song_get_sample(current_sample);
+
+	const int sustain = crossfade_sample_widgets[1].d.togglebutton.state;
+
+	const uint32_t loop_start = (sustain) ? smp->sustain_start : smp->loop_start;
+	const uint32_t loop_end = (sustain) ? smp->sustain_end : smp->loop_end;
+
+	const uint32_t max = MIN(loop_end - loop_start, loop_start);
+
+	widget_create_numentry(crossfade_sample_widgets + 2, 45, 27, 7, 0, 3, 3, NULL, 0, max, &crossfade_sample_length_cursor);
+	crossfade_sample_widgets[2].d.numentry.value = max;
+}
+
+static void crossfade_sample_dialog(void)
+{
+	song_sample_t *smp = song_get_sample(current_sample);
+	struct dialog *dialog;
+
+	// Sample Loop/Sustain Loop
+	// FIXME the buttons for loop/sustain ought to be disabled when their respective loops are not valid
+	widget_create_togglebutton(crossfade_sample_widgets + 0, 31, 24, 6, 0, 2, 1, 1, 1, crossfade_sample_loop_changed, "Loop",    2, crossfade_sample_loop_group);
+	widget_create_togglebutton(crossfade_sample_widgets + 1, 41, 24, 7, 2, 2, 0, 0, 2, crossfade_sample_loop_changed, "Sustain", 1, crossfade_sample_loop_group);
+
+	// Default to sustain loop if there is a sustain loop but no regular loop, or the regular loop is not valid
+	crossfade_sample_widgets[((smp->flags & CHN_SUSTAINLOOP) && !((smp->flags & CHN_LOOP) && smp->loop_start && smp->loop_end)) ? 1 : 0].d.togglebutton.state = 1;
+
+	// Samples To Fade; handled in other function to account for differences between
+	// sample loop and sustain loop
+	crossfade_sample_loop_changed();
+
+	// Priority
+	widget_create_thumbbar(crossfade_sample_widgets + 3, 28, 31, 20, 2, 4, 4, NULL, -50, 50);
+	crossfade_sample_widgets[3].d.thumbbar.value = 0;
+
+	// Cancel/OK
+	widget_create_button(crossfade_sample_widgets + 4, 31, 34, 6, 3, 4, 5, 5, 5, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_button(crossfade_sample_widgets + 5, 41, 34, 6, 3, 5, 4, 4, 0, dialog_yes_NULL, "OK", 3);
+
+	dialog = dialog_create_custom(26, 20, 28, 17, crossfade_sample_widgets, 6, 0, crossfade_sample_draw_const, NULL);
+	dialog->action_yes = do_crossfade_sample;
+}
+
+/* --------------------------------------------------------------------- */
+
 static void sample_set_mute(int n, int mute)
 {
 	song_sample_t *smp = song_get_sample(n);
@@ -1349,6 +1423,11 @@ static void sample_toggle_solo(int n)
 }
 
 /* --------------------------------------------------------------------- */
+
+static void dialog_noop(void *)
+{
+	// dumb
+}
 
 static void sample_list_handle_alt_key(struct key_event * k)
 {
@@ -1441,6 +1520,22 @@ static void sample_list_handle_alt_key(struct key_event * k)
 		return;
 	case SCHISM_KEYSYM_t:
 		export_sample_dialog();
+		return;
+	case SCHISM_KEYSYM_v:
+		if (!canmod || (status.flags & CLASSIC_MODE))
+			return;
+
+		if (!(sample->flags & (CHN_LOOP|CHN_SUSTAINLOOP))) {
+			dialog_create(DIALOG_OK, "Crossfade requires a sample loop to work.", dialog_noop, NULL, 0, NULL);
+			return;
+		}
+
+		if (!sample->loop_start && !sample->sustain_start) {
+			dialog_create(DIALOG_OK, "Crossfade requires data before the sample loop.", dialog_noop, NULL, 0, NULL);
+			return;
+		}
+
+		crossfade_sample_dialog();
 		return;
 	case SCHISM_KEYSYM_w:
 		sample_save(NULL, "RAW");

@@ -31,6 +31,8 @@
 
 #include "player/cmixer.h"
 
+#include <math.h>
+
 #ifndef ABS
 # define ABS(x) ((x) < 0 ? -(x) : x)
 #endif
@@ -558,5 +560,62 @@ void sample_mono_right(song_sample_t * sample)
 		sample->flags &= ~CHN_STEREO;
 	}
 	csf_adjust_sample_loop(sample);
+	song_unlock_audio();
+}
+
+/* ------------------------------------------------------------------------ */
+/* Crossfade sample */
+
+#define CROSSFADE(bits) \
+	static void _crossfade_##bits(const int##bits##_t *src1, const int##bits##_t *src2, int##bits##_t *dest, uint32_t fade_length, double e) \
+	{ \
+		const double len = (1.0 / fade_length); \
+		for (uint32_t i = 0; i < fade_length; i++) { \
+			const double factor1 = pow(i * len, e); \
+			const double factor2 = pow((fade_length - i) * len, e); \
+	\
+			int32_t out = (src1[i] * factor1) + (src2[i] * factor2); \
+			dest[i] = CLAMP(out, INT##bits##_MIN, INT##bits##_MAX); \
+		} \
+	}
+
+CROSSFADE(8)
+CROSSFADE(16)
+
+#undef CROSSFADE
+
+void sample_crossfade(song_sample_t *smp, uint32_t fade_length, int32_t law, int fade_after_loop, int sustain_loop)
+{
+	song_lock_audio();
+	status.flags |= SONG_NEEDS_SAVE;
+	if (!smp->data) return;
+
+	const uint32_t loop_start = (sustain_loop) ? smp->sustain_start : smp->loop_start;
+	const uint32_t loop_end = (sustain_loop) ? smp->sustain_end : smp->loop_end;
+
+	// sanity checks
+	if (loop_end <= loop_start || loop_end > smp->length) return;
+	if (loop_start < fade_length) return;
+
+	const uint32_t channels = (smp->flags & CHN_STEREO) ? 2 : 1;
+	const uint32_t start = (loop_start - fade_length) * channels;
+	const uint32_t end = (loop_end - fade_length) * channels;
+	const uint32_t after_loop_start = loop_start * channels;
+	const uint32_t after_loop_end = loop_end * channels;
+	const uint32_t after_loop_len = MIN(smp->length - loop_end, fade_length) * channels;
+	fade_length *= channels;
+
+	// e=0.5: constant power crossfade (for uncorrelated samples), e=1.0: constant volume crossfade (for perfectly correlated samples)
+	const double e = 1.0 - law / 2000.0;
+
+	if (smp->flags & CHN_16BIT) {
+		_crossfade_16((int16_t *)smp->data + start, (int16_t *)smp->data + end, (int16_t *)smp->data + end, fade_length, e);
+		if (fade_after_loop) _crossfade_16((int16_t *)smp->data + after_loop_start, (int16_t *)smp->data + after_loop_end, (int16_t *)smp->data + after_loop_end, after_loop_len, e);
+	} else {
+		_crossfade_8((int8_t *)smp->data + start, (int8_t *)smp->data + end, (int8_t *)smp->data + end, fade_length, e);
+		if (fade_after_loop) _crossfade_8((int8_t *)smp->data + after_loop_start, (int8_t *)smp->data + after_loop_end, (int8_t *)smp->data + after_loop_end, after_loop_len, e);
+	}
+
+	csf_adjust_sample_loop(smp);
 	song_unlock_audio();
 }
