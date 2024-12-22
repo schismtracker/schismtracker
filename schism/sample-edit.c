@@ -606,7 +606,7 @@ void sample_crossfade(song_sample_t *smp, uint32_t fade_length, int32_t law, int
 	fade_length *= channels;
 
 	// e=0.5: constant power crossfade (for uncorrelated samples), e=1.0: constant volume crossfade (for perfectly correlated samples)
-	const double e = 1.0 - law / 2000.0;
+	const double e = 1.0 - law / 200.0;
 
 	if (smp->flags & CHN_16BIT) {
 		_crossfade_16((int16_t *)smp->data + start, (int16_t *)smp->data + end, (int16_t *)smp->data + end, fade_length, e);
