@@ -103,13 +103,18 @@
 // MIXING MACROS
 // ----------------------------------------------------------------------------
 
+static inline uint32_t safe_abs_32(int32_t x)
+{
+	return (((x) < 0) ? (uint32_t)((~(x)) + 1) : (uint32_t)(x));
+}
+
 #define SNDMIX_BEGINSAMPLELOOP(bits) \
 	register song_voice_t * const chan = channel; \
 	position = chan->position_frac; \
 	const int##bits##_t *p = (int##bits##_t *)(chan->current_sample_data) + chan->position; \
 	if (chan->flags & CHN_STEREO) p += chan->position; \
 	int32_t *pvol = pbuffer; \
-	uint32_t max = 0; \
+	uint32_t max = chan->vu_meter << 16; \
 	do {
 
 
@@ -238,8 +243,7 @@
 	int32_t vol_rx = vol * chan->left_volume; \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	int32_t vol_avg = rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1); \
-	vol_avg = (vol_avg < 0) ? -vol_avg : vol_avg; \
+	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)); \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
@@ -248,8 +252,7 @@
 	int32_t vol_rx = vol_r * chan->left_volume; \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	int32_t vol_avg = rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1); \
-	vol_avg = (vol_avg < 0) ? -vol_avg : vol_avg; \
+	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)); \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
@@ -257,8 +260,8 @@
 	int32_t v = vol * chan->right_volume; \
 	pvol[0] += v; \
 	pvol[1] += v; \
-	v = (v < 0) ? -v : v; \
-	if (v > max) max = v; \
+	uint32_t vol_avg = safe_abs_32(v); \
+	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
 #define SNDMIX_RAMPMONOVOL \
@@ -268,8 +271,7 @@
 	int32_t vol_rx = vol * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	int32_t vol_avg = rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1); \
-	vol_avg = (vol_avg < 0) ? -vol_avg : vol_avg; \
+	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)); \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
@@ -278,8 +280,8 @@
 	int32_t fastvol = vol * rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
 	pvol[0] += fastvol; \
 	pvol[1] += fastvol; \
-	fastvol = (fastvol < 0) ? -fastvol : fastvol; \
-	if (fastvol > max) max = fastvol; \
+	uint32_t fastvolabs = safe_abs_32(fastvol); \
+	if (fastvolabs > max) max = fastvolabs; \
 	pvol += 2;
 
 #define SNDMIX_RAMPSTEREOVOL \
@@ -289,8 +291,7 @@
 	int32_t vol_rx = vol_r * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	int32_t vol_avg = rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1); \
-	vol_avg = (vol_avg < 0) ? -vol_avg : vol_avg; \
+	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)); \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
@@ -840,6 +841,11 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 		////////////////////////////////////////////////////
 		uint32_t naddmix = 0;
 
+		// Reset the VU meter. This is filled in with real
+		// data in the sample loops.
+		if (!(channel->flags & CHN_ADLIB)) // adlib is handled separately
+			channel->vu_meter = 0;
+
 		do {
 			nrampsamples = nsamples;
 
@@ -909,12 +915,10 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 						smpcount = samples_to_buffer_length(samples_to_read, channel);
 
 						channel->current_sample_data = lookahead_ptr;
-					// This code keeps causing clicks with bidi loops, so I'm just gonna comment it out
-					// for now.
-					//} else if ((channel->flags & (CHN_LOOP | CHN_LOOP_WRAPPED)) && at_loop_start) {
-					//	// Interpolate properly after looping
-					//	smpcount = samples_to_buffer_length((channel->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE) - channel->position, channel);
-					//	channel->current_sample_data = lookahead_ptr + (channel->loop_end - channel->loop_start) * ((channel->ptr_sample->flags & CHN_STEREO) ? 2 : 1) * ((channel->ptr_sample->flags & CHN_16BIT) ? 2 : 1);
+					} else if ((channel->flags & (CHN_LOOP_WRAPPED)) && at_loop_start) {
+						// Interpolate properly after looping
+						smpcount = samples_to_buffer_length((channel->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE) - channel->position, channel);
+						channel->current_sample_data = lookahead_ptr + (channel->loop_end - channel->loop_start) * ((channel->ptr_sample->flags & CHN_STEREO) ? 2 : 1) * ((channel->ptr_sample->flags & CHN_16BIT) ? 2 : 1);
 					} else if (channel->increment > 0 && channel->position + read_length >= lookahead_start && smpcount > 1) {
 						smpcount = samples_to_buffer_length(lookahead_start - channel->position, channel);
 					}
@@ -952,6 +956,12 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 			}
 
 		} while (nsamples > 0);
+
+		// While I'd prefer to do this here instead of in the
+		// mixing function, it seems to actually cause weird
+		// unexplainable errors, i.e. the info page sees wildly
+		// different numbers than we do, WEIRD!!
+		//channel->vu_meter >>= 16;
 
 		nchmixed += naddmix;
 	}

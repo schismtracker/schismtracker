@@ -668,23 +668,22 @@ static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int32_t chan_num,
 static inline void update_vu_meter(song_voice_t *chan)
 {
 	// Update VU-Meter (final_volume is 14-bit)
-	uint32_t vutmp = chan->final_volume >> (14 - 8);
-	if (vutmp > 0xFF) vutmp = 0xFF;
 
-	// this check MUST be first
 	if (chan->flags & CHN_ADLIB) {
-		if (chan->strike>2)
-			chan->vu_meter=(0xFF*chan->final_volume)>>14;
+		// fake it
+		if (chan->strike > 2)
+			chan->vu_meter = (0xFF * chan->final_volume) >> 14;
 
 		// fake VU decay (intentionally similar to ST3)
 		chan->vu_meter = (chan->vu_meter > VUMETER_DECAY) ? (chan->vu_meter - VUMETER_DECAY) : 0;
 
-		if (chan->vu_meter >= 0x100)
+		if (chan->vu_meter >= 0x100) {
+			uint32_t vutmp = chan->final_volume >> (14 - 8);
+			if (vutmp > 0xFF) vutmp = 0xFF;
 			chan->vu_meter = vutmp;
-	} else if (vutmp && chan->current_sample_data) {
-		// check mixer.c
+		}
 	} else {
-		chan->vu_meter = 0;
+		// this is handled in the mixer
 	}
 }
 
@@ -1247,8 +1246,6 @@ int32_t csf_read_note(song_t *csf)
 		chan->right_volume_new = chan->left_volume_new = 0;
 		if (!(chan->length && chan->increment))
 			chan->current_sample_data = NULL;
-
-		update_vu_meter(chan);
 
 		if (chan->current_sample_data) {
 			if (!rn_update_sample(csf, chan, cn, master_vol))
