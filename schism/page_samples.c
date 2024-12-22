@@ -1424,9 +1424,9 @@ static void sample_toggle_solo(int n)
 
 /* --------------------------------------------------------------------- */
 
-static void dialog_noop(void *)
+static void dialog_noop(void *x)
 {
-	// dumb
+	(void)x;
 }
 
 static void sample_list_handle_alt_key(struct key_event * k)
