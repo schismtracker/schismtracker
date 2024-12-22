@@ -759,7 +759,7 @@ int widget_handle_key(struct key_event * k)
 		return 1;
 	case SCHISM_KEYSYM_PLUS:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type == WIDGET_NUMENTRY && NO_MODIFIER(k->mod)) {
+		if (current_type == WIDGET_NUMENTRY) {
 			widget_numentry_change_value(widget, widget->d.numentry.value + 1);
 			return 1;
 		}
