@@ -841,11 +841,6 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 		////////////////////////////////////////////////////
 		uint32_t naddmix = 0;
 
-		// Reset the VU meter. This is filled in with real
-		// data in the sample loops.
-		if (!(channel->flags & CHN_ADLIB)) // adlib is handled separately
-			channel->vu_meter = 0;
-
 		do {
 			nrampsamples = nsamples;
 
@@ -954,7 +949,6 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 					}
 				}
 			}
-
 		} while (nsamples > 0);
 
 		// While I'd prefer to do this here instead of in the
@@ -969,7 +963,8 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 	GM_IncrementSongCounter(count);
 
 	if (csf->multi_write) {
-		/* mix all adlib onto track one */
+		// mix all adlib onto track one
+		// FIXME this behavior is stupid
 		Fmdrv_MixTo(csf->multi_write[0].buffer, count);
 	} else {
 		Fmdrv_MixTo(csf->mix_buffer, count);
