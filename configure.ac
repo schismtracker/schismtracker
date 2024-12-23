@@ -201,6 +201,21 @@ AC_SUBST([LIBM])
 
 AC_SUBST([LIBM])
 
+dnl PKG_CHECK_MODULES will abort if pkg-config is not found.
+dnl This is relatively new behavior; what I've decided to do
+dnl is to set PKG_CONFIG to false on failure, warn the user,
+dnl and handle PKG_CHECK_MODULES failing when the time comes.
+dnl
+dnl This allows users to install schism from source without
+dnl having to use pkg-config at all by specifying all of the
+dnl needed cflags and libs manually (which is also what we do
+dnl in many of our builds, since pkg-config is mostly a Unix-y
+dnl thing)
+PKG_PROG_PKG_CONFIG([0.9.0], [
+	PKG_CONFIG=false
+	AC_MSG_WARN([*** Failed to find pkg-config. Some dependencies may not be found even if installed.])
+])
+
 dnl Unicode crap
 PKG_CHECK_MODULES([UTF8PROC], [libutf8proc], [utf8proc_found=yes], [utf8proc_found=no])
 if test "x$utf8proc_found" = "xno"; then
