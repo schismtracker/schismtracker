@@ -146,6 +146,17 @@ AC_ARG_ENABLE(x11-linking,
 	X11_LINKING=$enableval,
 	X11_LINKING=no)
 
+dnl These are used in the Win32 build so that we can intermix mingw32 and mingw-w64 parts.
+dnl This is really a hack, and it would be nicer if we could avoid this, but unfortunately
+dnl there is no real windows toolchain available that allows to target super old windows
+dnl while also supporting new windows as well.
+dnl
+dnl We could also just declare all of what we need inside of the file itself, since we're
+dnl essentially already doing that already by dynamically loading. Oh well. For now this
+dnl will do, and I'll curse at myself when it breaks :)
+AC_ARG_VAR([MEDIAFOUNDATION_CFLAGS], [Extra compiler flags to use when compiling Media Foundation support.])
+AC_ARG_VAR([MEDIAFOUNDATION_LIBS], [Extra linker flags to use when compiling Media Foundation support.])
+
 dnl ------------------------------------------------------------------------
 
 dnl Check for standard programs
@@ -620,11 +631,12 @@ AM_CONDITIONAL([USE_MEDIAFOUNDATION], false)
 if test "x$with_mediafoundation" = "xcheck" || test "x$with_mediafoundation" = "xyes"; then
 	dnl requires Windows 7 or newer, but doesn't link to the libraries to keep
 	dnl XP/Vista also working
+	dnl XXX this ought to be more specific
 	if test "x$use_win32" = "xyes"; then
 		AM_CONDITIONAL([USE_MEDIAFOUNDATION], true)
 		AC_DEFINE([USE_MEDIAFOUNDATION], [1], [Use Media Foundation sample loading])
 	elif test "x$with_mediafoundation" = "xyes"; then
-		AC_MSG_ERROR([*** Failed to find Media Foundation with MFCreateMFByteStreamOnStream])
+		AC_MSG_ERROR([*** Failed to find Media Foundation])
 	fi
 fi
 
