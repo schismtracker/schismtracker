@@ -1,7 +1,7 @@
 Written by Storlek <storlek@rigelseven.com> <http://rigelseven.com/>.
 
 Large swaths of code by Mrs. Brisby <mrs.brisby@nimh.org> <http://nimh.org/>
-and Paper <paper@paper.us.eu.org>.
+and Paper <paper@tflc.us>.
 
 Based (obviously) on Impulse Tracker by Jeffrey Lim <jeff@lim.com.au>.
 
@@ -26,7 +26,7 @@ Fick <webmaster@mark-f.de> (spline mixing, fir-resampler) and Adam Goode
 <adam@evdebs.org> (endian-ness and char fixes).
 
 Further changes to the player code were back-ported from the OpenMPT project
-<https://openmpt.org/> by Storlek and Saga Musix.
+<https://openmpt.org/> by Storlek, Saga Musix, and Paper.
 
 Ben de Graaff rewrote a large portion of libmodplug in C.
 
@@ -80,7 +80,7 @@ HanaMcHanaface contributed fixes for backtabbing (Shift-Tab) and improvements
 to the palettes page.
 
 Vito Caputo <vcaputo@pengaru.com> provided the beginnings of the port to SDL2
-and provided many additional improvements in the general codebase.
+and provided many additional improvements to the code.
 
 See https://github.com/schismtracker/schismtracker/graphs/contributors for a
 list of additional contributors.
