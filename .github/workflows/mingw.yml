@@ -5,8 +5,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-#TODO the i386 job needs caching and stuff.
-
 jobs:
   build-i386:
     runs-on: windows-latest
@@ -44,21 +42,34 @@ jobs:
           install: git mingw-w64-i686-toolchain mingw-w64-i686-flac mingw-w64-i686-SDL2 libtool autoconf automake make zip unzip dos2unix patch
           location: 'C:\\msys2'
 
-        # FIXME this should be in like... RUNNER_TEMP
-        # or something like that, idk, but the problem
-        # is that that variable is in windows form while
-        # we need cygwin form.
+      - name: 'Retrieve runner temp directory'
+        id: temp
+        run: |
+          cd schism
+          echo "temp=$(cygpath -u "$RUNNER_TEMP")" >> $GITHUB_OUTPUT
+          echo "wpath=$RUNNER_TEMP" >> $GITHUB_OUTPUT
+          cd ..
+
+        # FIXME store this in RUNNER_TEMP instead
       - name: 'Cache MinGW'
         id: cache-i386-mingw
         uses: actions/cache@v4
         with:
-          path: '/c/MinGW'
-          key: win32-mingw-SDL12_${{ env.SDL12_VERSION }}-FLAC_${{ env.FLAC_VERSION }}-LIBOGG_${{ env.LIBOGG_VERSION }}-UTF8PROC_${{ env.UTF8PROC_VERSION }}
+          path: 'C:\\MinGW'
+          key: mingw32-i386-install
+
+      - name: 'Cache dependencies'
+        id: cache-i386-dependencies
+        uses: actions/cache@v4
+        with:
+          path: '${{ steps.temp.outputs.wpath }}\\i386prefix'
+          key: mingw32-i386-dependencies-SDL12_${{ env.SDL12_VERSION }}-FLAC_${{ env.FLAC_VERSION }}-LIBOGG_${{ env.LIBOGG_VERSION }}-UTF8PROC_${{ env.UTF8PROC_VERSION }}
 
         # grab a (quite old) version of mingw32 so that we can
         # target extremely old Windows versions that mingw-w64
         # doesn't care about (and doesn't work on)
       - name: 'Setup MinGW'
+        if: steps.cache-i386-mingw.outputs.cache-hit != 'true'
         run: |
           wget --no-check-certificate -O mingw-get.zip "https://sourceforge.net/projects/mingw/files/Installer/mingw-get/mingw-get-0.6.2-beta-20131004-1/mingw-get-0.6.2-mingw32-beta-20131004-1-bin.zip/download"
           mkdir "/c/MinGW"
@@ -72,6 +83,7 @@ jobs:
           echo "$(cygpath -w "/c/MinGW/msys/1.0/bin")" >> $GITHUB_PATH
 
       - name: 'Download SDL 1.2 sources'
+        if: steps.cache-i386-dependencies.outputs.cache-hit != 'true'
         run: |
           which gcc
           wget -O "SDL-$SDL12_VERSION.tar.gz" https://www.libsdl.org/release/SDL-$SDL12_VERSION.tar.gz
@@ -82,16 +94,20 @@ jobs:
           cd ..
 
       - name: 'Build SDL 1.2'
+        if: steps.cache-i386-dependencies.outputs.cache-hit != 'true'
+        env:
+          RUNNER_TEMP_CYGPATH: ${{ steps.temp.outputs.temp }}
         shell:
           "bash.exe {0}"
         run: |
           cd SDL-$SDL12_VERSION
-          CC="mingw32-gcc.exe" ./configure || (cat config.log && false)
+          CC="mingw32-gcc.exe" CPPFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" LDFLAGS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib" ./configure --prefix="$RUNNER_TEMP_CYGPATH/i386prefix" || (cat config.log && false)
           make
           make install
           cd ..
 
       - name: 'Download libflac and libogg sources'
+        if: steps.cache-i386-dependencies.outputs.cache-hit != 'true'
         run: |
           wget -O libogg-$LIBOGG_VERSION.tar.xz "https://ftp.osuosl.org/pub/xiph/releases/ogg/libogg-$LIBOGG_VERSION.tar.xz" || wget -O libogg-$LIBOGG_VERSION.tar.xz "https://github.com/xiph/ogg/releases/download/v$LIBOGG_VERSION/libogg-$LIBOGG_VERSION.tar.xz"
           echo "$LIBOGG_SHA256  libogg-$LIBOGG_VERSION.tar.xz" | sha256sum -c -
@@ -109,24 +125,28 @@ jobs:
           cd ..
 
       - name: 'Build libflac'
+        if: steps.cache-i386-dependencies.outputs.cache-hit != 'true'
+        env:
+          RUNNER_TEMP_CYGPATH: ${{ steps.temp.outputs.temp }}
         shell:
           "bash.exe {0}"
         run: |
           cd libogg-$LIBOGG_VERSION
           mkdir build
           cd build
-          CC="mingw32-gcc.exe" ../configure
+          CC="mingw32-gcc.exe" CPPFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" LDFLAGS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib" ../configure --prefix="$RUNNER_TEMP_CYGPATH/i386prefix"
           make
           make install
           cd ../../flac-$FLAC_VERSION
           mkdir build
           cd build
-          CC="mingw32-gcc.exe" ../configure --with-ogg-includes="/usr/local/include" --with-ogg-libraries="/usr/local/lib" --disable-programs --disable-examples --disable-cpplibs
+          CC="mingw32-gcc.exe" CPPFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" LDFLAGS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib" ../configure --prefix="$RUNNER_TEMP_CYGPATH/i386prefix" --with-ogg-includes="$RUNNER_TEMP_CYGPATH/i386prefix/include" --with-ogg-libraries="$RUNNER_TEMP_CYGPATH/i386prefix/lib" --disable-programs --disable-examples --disable-cpplibs
           make
           make install
           cd ../..
 
       - name: 'Download utf8proc'
+        if: steps.cache-i386-dependencies.outputs.cache-hit != 'true'
         run: |
           wget -O "utf8proc-$UTF8PROC_VERSION.tar.gz" "https://github.com/JuliaStrings/utf8proc/releases/download/v$UTF8PROC_VERSION/utf8proc-$UTF8PROC_VERSION.tar.gz"
           echo "$UTF8PROC_SHA256  utf8proc-$UTF8PROC_VERSION.tar.gz" | sha256sum -c -
@@ -137,14 +157,16 @@ jobs:
           cd ..
 
       - name: 'Build utf8proc'
+        if: steps.cache-i386-dependencies.outputs.cache-hit != 'true'
+        env:
+          RUNNER_TEMP_CYGPATH: ${{ steps.temp.outputs.temp }}
         shell:
           "bash.exe {0}"
         run: |
           cd utf8proc-$UTF8PROC_VERSION
           make CC="mingw32-gcc.exe"
-          make install
-          # hack
-          cp "/usr/local/lib/libutf8proc-3.dll" "/usr/local/lib/libutf8proc.dll"
+          cp "utf8proc.h" "$RUNNER_TEMP_CYGPATH/i386prefix/include"
+          cp "libutf8proc-3.dll" "$RUNNER_TEMP_CYGPATH/i386prefix/lib/libutf8proc-3.dll"
           cd ..
         
       - name: 'Get date of latest commit'
@@ -161,6 +183,8 @@ jobs:
           cd ..
 
       - name: 'Compile package'
+        env:
+          RUNNER_TEMP_CYGPATH: ${{ steps.temp.outputs.temp }}
         shell:
           "bash.exe {0}"
         run: |
@@ -168,19 +192,21 @@ jobs:
           cd schism
           mkdir build
           cd build
-          MEDIAFOUNDATION_CFLAGS="-I/c/msys2/msys64/mingw32/include" CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" CC="mingw32-gcc.exe" UTF8PROC_CFLAGS="-I/usr/local/include" UTF8PROC_LIBS="-L/usr/local/lib -lutf8proc-3" SDL12_CFLAGS="-I/usr/local/include/SDL" SDL12_LIBS="-L/usr/local/lib -lSDL" FLAC_CFLAGS="-I/usr/local/include" FLAC_LIBS="-L/usr/local/lib -lFLAC -logg -lm" SDL2_CFLAGS="-I/c/msys2/msys64/mingw32/include/SDL2" SDL2_LIBS="-L/c/msys2/msys64/mingw32/lib -lSDL2" ../configure --with-flac --with-sdl2 --with-sdl12
+          MEDIAFOUNDATION_CFLAGS="-I/c/msys2/msys64/mingw32/include" CPPFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" LDFLAGS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib" CC="mingw32-gcc.exe" UTF8PROC_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" UTF8PROC_LIBS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -lutf8proc-3" SDL12_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include/SDL" SDL12_LIBS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -lSDL" FLAC_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" FLAC_LIBS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -lFLAC -logg -lm" SDL2_CFLAGS="-I/c/msys2/msys64/mingw32/include/SDL2" SDL2_LIBS="-L/c/msys2/msys64/mingw32/lib -lSDL2" ../configure --with-flac --with-sdl2 --with-sdl12
           make
           strip schismtracker.exe
           cp schismtracker.exe ../..
           cd ../..
 
       - name: 'Create package'
+        env:
+          RUNNER_TEMP_CYGPATH: ${{ steps.temp.outputs.temp }}
         run: |
-          cp "/c/MinGW/msys/1.0/local/bin/SDL.dll" .
+          cp "$RUNNER_TEMP_CYGPATH/i386prefix/bin/SDL.dll" .
           cp "/c/msys2/msys64/mingw32/bin/SDL2.dll" .
-          cp "/c/MinGW/msys/1.0/local/bin/libFLAC-12.dll" .
-          cp "/c/MinGW/msys/1.0/local/bin/libogg-0.dll" .
-          cp "/c/MinGW/msys/1.0/local/lib/libutf8proc-3.dll" .
+          cp "$RUNNER_TEMP_CYGPATH/i386prefix/bin/libFLAC-12.dll" .
+          cp "$RUNNER_TEMP_CYGPATH/i386prefix/bin/libogg-0.dll" .
+          cp "$RUNNER_TEMP_CYGPATH/i386prefix/lib/libutf8proc-3.dll" .
           strip SDL.dll
           strip SDL2.dll
           strip "libFLAC-12.dll"
