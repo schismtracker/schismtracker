@@ -200,6 +200,7 @@ jobs:
             SDL2.dll
             libFLAC-12.dll
             libogg-0.dll
+            libutf8proc-3.dll
             COPYING
             COPYING.Xiph
             README.md
