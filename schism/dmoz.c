@@ -532,9 +532,11 @@ int dmoz_path_make_backup(const char *filename, int numbered)
 		free(buf);
 		return ret;
 	} else {
+		int ret;
 		sprintf(buf, "%s~", filename);
+		ret = dmoz_path_rename(filename, buf, 1);
 		free(buf);
-		return dmoz_path_rename(filename, buf, 1);
+		return ret;
 	}
 }
 
