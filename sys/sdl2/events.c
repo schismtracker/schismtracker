@@ -599,6 +599,11 @@ static int sdl2_events_init(void)
 	if (sdl2_InitSubSystem(SDL_INIT_EVENTS) < 0)
 		return 0;
 
+#ifdef SCHISM_CONTROLLER
+	if (!sdl2_controller_init())
+		return 0;
+#endif
+
 	SDL_version ver;
 	sdl2_GetVersion(&ver);
 
@@ -613,6 +618,9 @@ static int sdl2_events_init(void)
 
 static void sdl2_events_quit(void)
 {
+#ifdef SCHISM_CONTROLLER
+	sdl2_controller_quit();
+#endif
 	sdl2_QuitSubSystem(SDL_INIT_EVENTS);
 	sdl2_quit();
 }
