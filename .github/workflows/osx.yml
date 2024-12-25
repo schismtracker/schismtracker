@@ -316,6 +316,8 @@ jobs:
           cd ../..
 
       - name: 'Package Schism'
+        env:
+          SCHISM_VERSION: ${{ steps.date.output.date }}
         run: |
           for i in FLAC.12 ogg.0; do
             "$HOME/ppc/usr/bin/install_name_tool" -change "$HOME/ppcprefix/lib/lib${i}.dylib" @executable_path/../Resources/lib${i}.dylib build_powerpc/schismtracker
@@ -340,7 +342,7 @@ jobs:
 
           lipo -create -o schismtracker build_powerpc/schismtracker build_x86_64/schismtracker build_arm64/schismtracker
           cd sys/macosx/Schism_Tracker.app/Contents/
-          sed -i .bak "s;<string>CFBundle.*Version.*</string>;<string>$(date +%Y%m%d)</string>;" Info.plist
+          sed -i .bak "s;<string>CFBundle.*Version.*</string>;<string>$SCHISM_VERSION</string>;" Info.plist
           rm Info.plist.bak
           mkdir MacOS
           cp ../../../../schismtracker MacOS
