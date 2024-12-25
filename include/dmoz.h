@@ -166,6 +166,20 @@ int song_preload_sample(dmoz_file_t *f);
 
 
 /* Path handling functions */
+#ifdef SCHISM_WIN32
+# define DIR_SEPARATOR '\\'
+# define IS_DIR_SEPARATOR(c) ((c) == '/' || (c) == '\\')
+#elif defined(SCHISM_MACOS)
+# define DIR_SEPARATOR ':'
+# define IS_DIR_SEPARATOR(c) ((c) == ':')
+#else
+# define DIR_SEPARATOR '/'
+# define IS_DIR_SEPARATOR(c) ((c) == '/')
+#endif
+
+#ifndef DIR_SEPARATOR_STR
+# define DIR_SEPARATOR_STR ((const char []){ DIR_SEPARATOR, '\0' })
+#endif
 
 /* Normalize a path (remove /../ and stuff, condense multiple slashes, etc.)
 this will return NULL if the path could not be normalized (not well-formed?).
@@ -190,6 +204,7 @@ int dmoz_path_rename(const char *old, const char *new, int overwrite);
 int dmoz_path_is_file(const char *filename);
 int dmoz_path_is_directory(const char *filename);
 unsigned long long dmoz_path_get_file_size(const char *filename);
+char *dmoz_path_pretty_name(const char *filename);
 
 char *dmoz_get_current_directory(void);
 char *dmoz_get_home_directory(void);

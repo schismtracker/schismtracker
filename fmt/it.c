@@ -28,6 +28,8 @@
 #include "fmt.h"
 #include "log.h"
 #include "version.h"
+#include "mem.h"
+#include "str.h"
 
 #include "player/sndfile.h"
 #include "midi.h"

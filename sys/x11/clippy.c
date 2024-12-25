@@ -26,6 +26,7 @@
 #include "events.h"
 #include "clippy.h"
 #include "backend/clippy.h"
+#include "mem.h"
 
 #include "init.h"
 

@@ -34,6 +34,7 @@
 #include "config.h"
 #include "threads.h"
 #include "timer.h"
+#include "mem.h"
 
 #include "dmoz.h"
 

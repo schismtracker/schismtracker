@@ -38,6 +38,8 @@
 #include "fonts.h"
 #include "dialog.h"
 #include "widget.h"
+#include "mem.h"
+#include "str.h"
 
 #include <assert.h>
 #include <math.h>

@@ -35,6 +35,8 @@
 #include "dialog.h"
 #include "vgamem.h"
 #include "osdefs.h"
+#include "mem.h"
+#include "str.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>

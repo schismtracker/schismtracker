@@ -26,6 +26,7 @@
 #include "fmt.h"
 #include "song.h"
 #include "log.h"
+#include "mem.h"
 
 #include "player/tables.h"
 

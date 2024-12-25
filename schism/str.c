@@ -90,8 +90,8 @@ char *str_from_num99(int n, char *buf)
 			qv[(n/10)], (n % 10));
 	}
 	return buf;
-
 }
+
 char *str_from_num(int digits, unsigned int n, char *buf)
 {
 	if (digits > 0) {
@@ -106,6 +106,7 @@ char *str_from_num(int digits, unsigned int n, char *buf)
 	}
 	return buf;
 }
+
 char *str_from_num_signed(int digits, int n, char *buf)
 {
 	if (digits > 0) {
@@ -336,36 +337,6 @@ char *str_unescape(const char *s)
 	*d = 0;
 
 	return dest;
-}
-
-char *str_pretty_name(const char *filename)
-{
-	char *ret, *temp;
-	const char *ptr;
-	int len;
-
-	ptr = strrchr(filename, DIR_SEPARATOR);
-	ptr = ((ptr && ptr[1]) ? ptr + 1 : filename);
-	len = strrchr(ptr, '.') - ptr;
-	if (len <= 0) {
-		ret = str_dup(ptr);
-	} else {
-		ret = calloc(len + 1, sizeof(char));
-		strncpy(ret, ptr, len);
-		ret[len] = 0;
-	}
-
-	/* change underscores to spaces (of course, this could be adapted
-	 * to use strpbrk and strip any number of characters) */
-	while ((temp = strchr(ret, '_')) != NULL)
-		*temp = ' ';
-
-	/* TODO | the first letter, and any letter following a space,
-	 * TODO | should be capitalized; multiple spaces should be cut
-	 * TODO | down to one */
-
-	str_trim(ret);
-	return ret;
 }
 
 /* blecch */

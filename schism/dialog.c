@@ -30,6 +30,7 @@
 #include "song.h"
 #include "page.h"
 #include "keyboard.h"
+#include "mem.h"
 
 #include <ctype.h>
 

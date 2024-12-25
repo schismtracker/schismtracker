@@ -23,6 +23,7 @@
 
 #include "headers.h"
 #include "fmt.h"
+#include "str.h"
 
 #include <math.h>
 

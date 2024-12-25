@@ -39,6 +39,7 @@
 #include "palettes.h"
 #include "fonts.h"
 #include "osdefs.h"
+#include "mem.h"
 
 #include <string.h>
 

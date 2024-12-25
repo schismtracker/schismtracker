@@ -29,6 +29,7 @@
 #include "song.h"
 #include "page.h"
 #include "widget.h"
+#include "mem.h"
 
 #include <IOKit/IOCFPlugIn.h>
 #include <IOKit/hid/IOHIDLib.h>

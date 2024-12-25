@@ -30,6 +30,8 @@
 #include "page.h"
 #include "osdefs.h"
 #include "timer.h"
+#include "mem.h"
+#include "str.h"
 
 #include <ctype.h>
 

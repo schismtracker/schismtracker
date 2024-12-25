@@ -28,6 +28,7 @@
 #include "timer.h"
 #include "loadso.h"
 #include "charset.h"
+#include "mem.h"
 
 #include "util.h"
 

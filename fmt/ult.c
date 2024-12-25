@@ -27,6 +27,7 @@
 #include "fmt.h"
 #include "it.h" /* for get_effect_char */
 #include "log.h"
+#include "mem.h"
 
 #include "player/sndfile.h"
 

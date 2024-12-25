@@ -35,6 +35,7 @@
 #include "widget.h"
 #include "vgamem.h"
 #include "osdefs.h"
+#include "str.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>

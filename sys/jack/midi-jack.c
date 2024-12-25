@@ -28,6 +28,7 @@
 
 #include "util.h"
 #include "timer.h"
+#include "mem.h"
 
 #include <jack/jack.h>
 #include <jack/midiport.h>

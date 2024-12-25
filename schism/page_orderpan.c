@@ -29,6 +29,7 @@
 #include "widget.h"
 #include "vgamem.h"
 #include "keyboard.h"
+#include "str.h"
 
 /* --------------------------------------------------------------------- */
 

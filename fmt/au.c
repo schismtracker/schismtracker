@@ -24,6 +24,7 @@
 #include "headers.h"
 #include "bswap.h"
 #include "fmt.h"
+#include "mem.h"
 
 enum {
 	AU_ULAW = 1,                    /* µ-law */

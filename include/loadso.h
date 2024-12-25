@@ -30,6 +30,8 @@ void *loadso_object_load(const char *name);
 void loadso_object_unload(void *object);
 void *loadso_function_load(void *object, const char *name);
 
+// an additive to the above, which automatically uses libtool's
+// versioning.
 void *library_load(const char *name, int current, int age);
 
 #endif /* SCHISM_LOADSO_H_ */

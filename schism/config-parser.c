@@ -28,6 +28,8 @@
 #include "charset.h"
 #include "slurp.h"
 #include "util.h"
+#include "mem.h"
+#include "str.h"
 #include "config-parser.h"
 
 #include <sys/types.h>

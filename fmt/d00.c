@@ -25,6 +25,7 @@
 #include "bswap.h"
 #include "fmt.h"
 #include "util.h"
+#include "mem.h"
 
 struct d00_header {
 	unsigned char id[6];

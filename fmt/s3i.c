@@ -21,11 +21,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/* FIXME this file is redundant and needs to go away -- s3m.c already does all of this */
-
 #include "headers.h"
 #include "bswap.h"
 #include "fmt.h"
+#include "mem.h"
 
 #include "song.h"
 #include "player/sndfile.h"
@@ -42,7 +41,7 @@ enum {
 	S3I_PCM_FLAG_16BIT  = 0x04,
 };
 
-/* nonzero on success */
+/* TODO: s3m.c should use this */
 static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 {
 	unsigned char magic[4];

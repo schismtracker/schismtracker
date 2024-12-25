@@ -25,15 +25,13 @@
 #include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
+#include "mem.h"
 
 #include "player/sndfile.h"
 
 #include "version.h"
 #include "disko.h"
 #include "log.h"
-
-
-
 
 /* --------------------------------------------------------------------- */
 

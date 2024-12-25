@@ -25,6 +25,7 @@
 #include "events.h"
 #include "backend/events.h"
 #include "util.h"
+#include "mem.h"
 #include "video.h"
 
 #include "init.h"

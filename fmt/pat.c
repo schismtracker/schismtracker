@@ -24,14 +24,11 @@
 #include "headers.h"
 #include "bswap.h"
 #include "fmt.h"
+#include "mem.h"
 
 #include "it.h"
 #include "song.h"
 #include "player/sndfile.h"
-
-#include <string.h>
-#include <stdlib.h>
-#include <stdint.h>
 
 /* --------------------------------------------------------------------- */
 

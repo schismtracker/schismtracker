@@ -25,6 +25,7 @@
 #include "bswap.h"
 #include "slurp.h"
 #include "fmt.h"
+#include "mem.h"
 
 #include "it.h" // needed for get_effect_char (purely informational)
 #include "log.h"

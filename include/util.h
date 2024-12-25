@@ -26,26 +26,6 @@
 
 #include "headers.h"
 
-/* Path stuff that differs by platform */
-#ifdef SCHISM_WIN32
-# define DIR_SEPARATOR '\\'
-# define IS_DIR_SEPARATOR(c) ((c) == '/' || (c) == '\\')
-#elif defined(SCHISM_MACOS)
-/* I have no idea if this is right or not. */
-# define DIR_SEPARATOR ':'
-# define IS_DIR_SEPARATOR(c) ((c) == ':')
-#else
-# define DIR_SEPARATOR '/'
-# define IS_DIR_SEPARATOR(c) ((c) == '/')
-#endif
-
-#ifndef DIR_SEPARATOR_STR
-# define DIR_SEPARATOR_STR ((const char []){ DIR_SEPARATOR, '\0' })
-#endif
-
-#include "mem.h" // XXX these includes suck
-#include "str.h" // and need to go away
-
 /*Conversion*/
 /* linear -> deciBell*/
 /* amplitude normalized to 1.0f.*/
@@ -91,9 +71,6 @@ SCHISM_PURE extern short dB2_power_s(int noisefloor, int db, double correction_d
 
 /* integer sqrt (very fast; 32 bits limited) */
 SCHISM_PURE unsigned int i_sqrt(unsigned int r);
-
-// library loading functionality
-void *library_load(const char *name, int current, int age);
 
 FILE *mkfstemp(char *template);
 

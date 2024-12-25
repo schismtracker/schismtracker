@@ -35,6 +35,7 @@
 #include "util.h"
 #include "ieee-float.h"
 #include "fmt.h" // for it_decompress8 / it_decompress16
+#include "mem.h"
 
 
 static void _csf_reset(song_t *csf)

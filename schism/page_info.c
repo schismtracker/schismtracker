@@ -31,6 +31,7 @@
 #include "pattern-view.h"
 #include "config-parser.h"
 #include "keyboard.h"
+#include "str.h"
 
 #include <assert.h>
 #include <inttypes.h>

@@ -31,6 +31,7 @@
 #include "fmt.h"
 #include "charset.h"
 #include "loadso.h"
+#include "mem.h"
 
 #include <ws2tcpip.h>
 #include <windows.h>

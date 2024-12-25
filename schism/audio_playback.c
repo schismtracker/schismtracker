@@ -28,17 +28,14 @@
 #include "song.h"
 #include "slurp.h"
 #include "config-parser.h"
+#include "mem.h"
+#include "str.h"
 
 #include "disko.h"
 #include "backend/audio.h"
 #include "events.h"
 
 #include <assert.h>
-
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
-#include <math.h>
 
 #include "midi.h"
 

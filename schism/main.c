@@ -50,6 +50,7 @@
 #include "fmt.h"
 #include "timer.h"
 #include "threads.h"
+#include "mem.h"
 
 #include "osdefs.h"
 

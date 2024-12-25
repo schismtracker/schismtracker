@@ -27,6 +27,7 @@
 #include "page.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "str.h"
 
 #include <math.h>
 

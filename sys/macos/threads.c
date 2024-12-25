@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/* SDL 1.2 doesn't provide threads; this causes issues for us,
- * so this is a reference implementation using */
+/* SDL 1.2 doesn't provide threads on Mac OS, so we need to implement
+ * them ourselves. */
 
 #include "headers.h"
 #include "mem.h"
@@ -41,8 +41,10 @@ static schism_sem_t *macos_semaphore_create(uint32_t initial_value)
 {
 	schism_sem_t *sem = mem_alloc(sizeof(*sem));
 
-	// TODO check result here
-	MPCreateSemaphore(UINT32_MAX, initial_value, &sem->sem);
+	if (MPCreateSemaphore(UINT32_MAX, initial_value, &sem->sem) != noErr) {
+		free(sem);
+		return NULL;
+	}
 
 	return sem;
 }

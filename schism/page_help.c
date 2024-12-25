@@ -31,6 +31,8 @@
 #include "widget.h"
 #include "vgamem.h"
 #include "keyboard.h"
+#include "mem.h"
+#include "str.h"
 
 /* --------------------------------------------------------------------- */
 

@@ -23,6 +23,7 @@
 
 #include "headers.h" /* always include this one first, kthx */
 #include "backend/clippy.h"
+#include "mem.h"
 
 #include "charset.h"
 #include "clippy.h"

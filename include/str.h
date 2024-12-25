@@ -35,7 +35,7 @@ char *str_from_date(time_t when, char buf[27]);
 char *str_from_time(time_t when, char buf[27]);
 char *str_from_num(int digits, unsigned int n, char *buf); // what size
 char *str_from_num_signed(int digits, int n, char *buf);   // buffer do
-char *str_from_num99(int n, char *buf);                    // these use?
+char *str_from_num99(int n, char buf[3]);
 
 /* string handling */
 int str_ltrim(char *s); // return: length of string after trimming
@@ -44,7 +44,6 @@ int str_trim(char *s);  // ditto
 int str_break(const char *s, char c, char **first, char **second);
 char *str_escape(const char *source, int space_hack);
 char *str_unescape(const char *source);
-char *str_pretty_name(const char *filename);
 int str_get_num_lines(const char *text);
 char *str_concat(const char *s, ...);
 int str_realloc(char **output, const char *input, size_t len);

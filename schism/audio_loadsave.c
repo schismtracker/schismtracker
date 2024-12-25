@@ -33,6 +33,7 @@
 #include "page.h"
 #include "version.h"
 #include "osdefs.h"
+#include "mem.h"
 
 #include "fmt.h"
 #include "dmoz.h"

@@ -26,6 +26,8 @@
 #include "slurp.h"
 #include "fmt.h"
 #include "log.h"
+#include "mem.h"
+#include "str.h"
 
 #include "player/sndfile.h"
 

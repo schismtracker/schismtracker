@@ -27,6 +27,8 @@
 #include "config.h"
 #include "keyboard.h"
 #include "util.h"
+#include "mem.h"
+#include "str.h"
 #include "palettes.h"
 
 #include <sys/types.h>

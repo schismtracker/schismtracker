@@ -30,10 +30,11 @@
 #include "it.h"
 #include "page.h"
 #include "song.h"
-#include "song.h"
 #include "util.h"
 #include "vgamem.h"
 #include "osdefs.h"
+#include "mem.h"
+#include "str.h"
 
 #include "player/sndfile.h"
 #include "player/cmixer.h"

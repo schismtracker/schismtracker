@@ -35,6 +35,7 @@ static int display_native_y = -1;
 #include "vgamem.h"
 #include "config.h"
 #include "events.h"
+#include "mem.h"
 
 #include "backend/video.h"
 

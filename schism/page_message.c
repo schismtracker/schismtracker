@@ -39,6 +39,7 @@
 #include "widget.h"
 #include "dialog.h"
 #include "vgamem.h"
+#include "str.h"
 
 #include <ctype.h>
 #include <assert.h>

@@ -30,6 +30,8 @@
 #include "page.h"
 #include "vgamem.h"
 #include "timer.h"
+#include "mem.h"
+#include "str.h"
 
 #include "player/sndfile.h"
 

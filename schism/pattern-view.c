@@ -27,6 +27,7 @@
 #include "keyboard.h"
 #include "song.h"
 #include "vgamem.h"
+#include "str.h"
 
 #include "pattern-view.h"
 

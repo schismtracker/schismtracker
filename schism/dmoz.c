@@ -34,6 +34,8 @@
 #include "util.h"
 #include "osdefs.h"
 #include "loadso.h"
+#include "mem.h"
+#include "str.h"
 
 #include "backend/dmoz.h"
 
@@ -1218,6 +1220,36 @@ char *dmoz_path_concat_len(const char *a, const char *b, int alen, int blen)
 
 	*p = '\0';
 
+	return ret;
+}
+
+char *dmoz_path_pretty_name(const char *filename)
+{
+	char *ret, *temp;
+	const char *ptr;
+	int len;
+
+	ptr = strrchr(filename, DIR_SEPARATOR);
+	ptr = ((ptr && ptr[1]) ? ptr + 1 : filename);
+	len = strrchr(ptr, '.') - ptr;
+	if (len <= 0) {
+		ret = str_dup(ptr);
+	} else {
+		ret = mem_calloc(len + 1, sizeof(char));
+		strncpy(ret, ptr, len);
+		ret[len] = 0;
+	}
+
+	/* change underscores to spaces (of course, this could be adapted
+	 * to use strpbrk and strip any number of characters) */
+	while ((temp = strchr(ret, '_')) != NULL)
+		*temp = ' ';
+
+	/* TODO | the first letter, and any letter following a space,
+	 * TODO | should be capitalized; multiple spaces should be cut
+	 * TODO | down to one */
+
+	str_trim(ret);
 	return ret;
 }
 

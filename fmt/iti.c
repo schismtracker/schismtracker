@@ -29,6 +29,7 @@
 #include "song.h"
 #include "log.h"
 #include "version.h"
+#include "mem.h"
 
 #include <assert.h>
 

@@ -24,7 +24,7 @@
 #include "headers.h"
 
 #include "midi.h"
-
+#include "mem.h"
 #include "util.h"
 
 #include <CoreServices/CoreServices.h>

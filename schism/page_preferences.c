@@ -32,6 +32,7 @@
 #include "osdefs.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "mem.h"
 
 #include "disko.h"
 

@@ -28,6 +28,7 @@
 #include "ieee-float.h"
 #include "log.h"
 #include "fmt.h"
+#include "mem.h"
 
 #include <stdint.h>
 #include <unistd.h> /* swab */

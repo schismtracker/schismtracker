@@ -27,6 +27,7 @@
 #include "midi.h"
 
 #include "util.h"
+#include "mem.h"
 
 #ifdef USE_ALSA
 #include <sys/poll.h>

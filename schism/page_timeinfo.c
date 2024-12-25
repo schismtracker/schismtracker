@@ -29,6 +29,8 @@
 #include "vgamem.h"
 #include "keyboard.h"
 #include "song.h"
+#include "mem.h"
+#include "str.h"
 
 #include <stdarg.h>
 #include <stddef.h>
