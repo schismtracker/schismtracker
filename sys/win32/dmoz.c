@@ -28,6 +28,7 @@
 #include "charset.h"
 #include "dmoz.h"
 #include "util.h"
+#include "mem.h"
 
 #include <windows.h>
 
