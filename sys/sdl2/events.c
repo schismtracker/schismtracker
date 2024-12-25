@@ -84,6 +84,8 @@ static void game_controller_insert(SDL_GameController *controller)
 {
 	struct controller_node *node = mem_alloc(sizeof(*node));
 
+	// FIXME: A and B are in different places on the Wii
+	// and Wii U ports.
 	node->controller = controller;
 	node->id = sdl2_JoystickInstanceID(sdl2_GameControllerGetJoystick(controller));
 	node->next = game_controller_list;
@@ -175,32 +177,63 @@ static int sdl2_controller_quit(void)
 	return 1;
 }
 
+// the minimum value for schism to handle left axis events
+#define CONTROLLER_LEFT_AXIS_SENSITIVITY (INT16_MAX / 2)
+
 static int sdl2_controller_sdlevent(SDL_Event *event)
 {
 	SDL_Event newev = {0};
-	SDL_Keycode sym;
+	SDL_Keycode sym = SDLK_UNKNOWN;
 
 	switch (event->type) {
-#if 0
-	case SDL_JOYHATMOTION:
-		// TODO key repeat for these, somehow
-		sym = hat_to_keysym(event->jhat.value);
-		if (sym) {
-			newev.type = SDL_KEYDOWN;
-			newev.key.state = SDL_PRESSED;
-			lasthatsym = sym;
-		} else {
-			newev.type = SDL_KEYUP;
-			newev.key.state = SDL_RELEASED;
-			sym = lasthatsym;
-			lasthatsym = 0;
-		}
-		newev.key.keysym.sym = sym;
-		newev.key.type = newev.type; // is this a no-op?
-		*event = newev;
-		return 1;
-#endif
+	case SDL_CONTROLLERAXISMOTION:
+		if (event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTX
+			|| event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
+			// Left axis simply acts as a D-pad
 
+			static SDL_Keycode lastaxissym = SDLK_UNKNOWN;
+
+			switch (event->caxis.axis) {
+			case SDL_CONTROLLER_AXIS_LEFTX:
+				if (event->caxis.value > CONTROLLER_LEFT_AXIS_SENSITIVITY) {
+					sym = SDLK_RIGHT;
+				} else if (event->caxis.value < -CONTROLLER_LEFT_AXIS_SENSITIVITY) {
+					sym = SDLK_LEFT;
+				}
+				break;
+			case SDL_CONTROLLER_AXIS_LEFTY:
+				if (event->caxis.value > CONTROLLER_LEFT_AXIS_SENSITIVITY) {
+					sym = SDLK_DOWN;
+				} else if (event->caxis.value < -CONTROLLER_LEFT_AXIS_SENSITIVITY) {
+					sym = SDLK_UP;
+				}
+				break;
+			}
+
+			if (sym == lastaxissym)
+				return 0;
+
+			if (sym != SDLK_UNKNOWN) {
+				newev.type = SDL_KEYDOWN;
+				newev.key.state = SDL_PRESSED;
+				lastaxissym = sym;
+			} else {
+				newev.type = SDL_KEYUP;
+				newev.key.state = SDL_RELEASED;
+				sym = lastaxissym;
+				lastaxissym = SDLK_UNKNOWN;
+			}
+
+			newev.key.keysym.sym = sym;
+			*event = newev;
+			return 1;
+		} else if (event->caxis.axis == SDL_CONTROLLER_AXIS_RIGHTX
+			|| event->caxis.axis == SDL_CONTROLLER_AXIS_RIGHTY) {
+			// TODO control the mouse here; we'd need access to main()
+			// to do that, so i'm putting it off until this crap
+			// gets moved into events.c/events.h
+		}
+		return 0;
 	case SDL_CONTROLLERBUTTONDOWN:
 	case SDL_CONTROLLERBUTTONUP:
 		switch (event->cbutton.button) {
@@ -600,9 +633,17 @@ static int sdl2_events_init(void)
 		return 0;
 
 #ifdef SCHISM_CONTROLLER
-	if (!sdl2_controller_init())
-		return 0;
+	{
+		int r = sdl2_controller_init();
+# if defined(SCHISM_WII) || defined(SCHISM_WIIU)
+		// only warn the user if controller initialization failed
+		// when on an actual console.
+		if (!r)
+			log_appendf(4, "SDL: Failed to initialize game controllers!");
+# endif
+	}
 #endif
+
 
 	SDL_version ver;
 	sdl2_GetVersion(&ver);
