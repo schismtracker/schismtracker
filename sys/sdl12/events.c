@@ -618,16 +618,21 @@ static void sdl12_pump_events(void)
 			schism_event.key.scancode = sdl12_scancode_trans(e.key.keysym.scancode);
 			schism_event.key.mod = sdl12_modkey_trans(e.key.keysym.mod);
 
-			/* convert UCS-2 to UTF-8 */
-			if (e.key.keysym.unicode < 0x80) {
-				schism_event.key.text[0] = e.key.keysym.unicode;
-			} else if (e.key.keysym.unicode < 0x800) {
-				schism_event.key.text[0] = 0xC0 | (e.key.keysym.unicode >> 6);
-				schism_event.key.text[1] = 0x80 | (e.key.keysym.unicode & 0x3F);
-			} else {
-				schism_event.key.text[0] = 0xE0 |  (e.key.keysym.unicode >> 12);
-				schism_event.key.text[1] = 0x80 | ((e.key.keysym.unicode >> 6) & 0x3F);
-				schism_event.key.text[2] = 0x80 |  (e.key.keysym.unicode & 0x3F);
+			/* Only convert the Unicode if it's actually useful;
+			 * this tripped a bug under mac os x where the left & right
+			 * arrow keys are translated to some odd unicode char. */
+			if (!(schism_event.key.sym & SCHISM_KEYSYM_SCANCODE_MASK)) {
+				/* convert UCS-2 to UTF-8 */
+				if (e.key.keysym.unicode < 0x80) {
+					schism_event.key.text[0] = e.key.keysym.unicode;
+				} else if (e.key.keysym.unicode < 0x800) {
+					schism_event.key.text[0] = 0xC0 | (e.key.keysym.unicode >> 6);
+					schism_event.key.text[1] = 0x80 | (e.key.keysym.unicode & 0x3F);
+				} else {
+					schism_event.key.text[0] = 0xE0 |  (e.key.keysym.unicode >> 12);
+					schism_event.key.text[1] = 0x80 | ((e.key.keysym.unicode >> 6) & 0x3F);
+					schism_event.key.text[2] = 0x80 |  (e.key.keysym.unicode & 0x3F);
+				}
 			}
 
 			events_push_event(&schism_event);
