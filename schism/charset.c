@@ -27,6 +27,7 @@
 #include "charset.h"
 #include "util.h"
 #include "disko.h"
+#include "mem.h"
 
 int char_digraph(int k1, int k2)
 {

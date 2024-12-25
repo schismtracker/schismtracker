@@ -28,6 +28,7 @@
 #include "log.h"
 #include "dmoz.h"
 #include "util.h"
+#include "mem.h"
 
 #include <di/di.h>
 #include <fat.h>
