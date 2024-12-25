@@ -99,27 +99,40 @@ static struct sdl12_audio_driver_info {
 	int exists;
 } drivers[] = {
 	/* SDL 1.2 doesn't provide an API for this, so we have to
-	 * build this when initializing the audio subsystem. */
-	{"openbsd", 0},
-	{"pulse", 0}, // prefer pulseaudio to alsa, then oss
-	{"alsa", 0},
-	{"dsp", 0},
-	{"audio", 0},
-	{"AL", 0},
-	{"artsc", 0},
-	{"esd", 0},
-	{"nas", 0},
-	{"dma", 0},
-	{"coreaudio", 0},
-	{"dsound", 0},
-	{"waveout", 0},
-	{"baudio", 0},
-	{"sndmgr", 0},
-	{"paud", 0},
-	{"AHI", 0},
-	{"nds", 0},
-	{"dart", 0},
-	{"dcaudio", 0},
+	 * build this when initializing the audio subsystem.
+	 * These in the same order as the bootstrap array in
+	 * src/audio/SDL_audio.c to hopefully mimic SDL's original
+	 * behavior. */
+	{"pulse", 0},     // PulseAudio
+	{"alsa", 0},      // ALSA
+	{"sndio", 0},     // OpenBSD sndio
+	{"netbsd", 0},    // NetBSD audio
+	{"openbsd", 0},   // OpenBSD audio (outdated)
+	{"dsp", 0},       // /dev/dsp (OSS)
+	{"dma", 0},       // /dev/dsp DMA audio (OSS)
+	{"qsa-nto", 0},   // QNX NTO audio
+	{"audio", 0},     // Sun Microsystems audio
+	{"AL", 0},        // IRIX DMedia audio
+	{"arts", 0},      // artsc audio (?)
+	{"esd", 0},       // Enlightened Sound Daemon
+	{"nas", 0},       // Network Audio System
+	{"dsound", 0},    // Win32 DirectSound
+#ifdef SCHISM_WIN32
+	{"waveout", 0},   // Win32 WaveOut
+#endif
+	{"paud", 0},      // AIX Paudio
+	{"baudio", 0},    // BeOS
+	{"coreaudio", 0}, // Mac OS X CoreAudio
+	{"sndmgr", 0},    // Mac OS SoundManager 3.0
+	{"AHI", 0},       // AmigaOS
+	{"dcaudio", 0},   // Dreamcast AICA audio
+	{"nds", 0},       // Nintendo DS Audio
+#ifndef SCHISM_WIN32
+	{"waveout", 0},   // Tru64 MME WaveOut
+#endif
+	{"dart", 0},      // OS/2 Direct Audio RouTines 
+	{"epoc", 0},      // EPOC streaming audio
+	{"ums", 0},       // AIX UMS audio
 
 	// These two are pretty much guaranteed to exist
 	{"disk", 1},
