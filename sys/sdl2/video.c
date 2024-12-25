@@ -330,7 +330,9 @@ static void sdl2_video_shutdown(void)
 
 static void sdl2_video_setup(const char *quality)
 {
-	strncpy(cfg_video_interpolation, quality, 7);
+	// lol
+	if (cfg_video_interpolation != quality)
+		strncpy(cfg_video_interpolation, quality, 7);
 	sdl2_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
 	video_redraw_texture();
 }
