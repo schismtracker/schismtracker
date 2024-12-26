@@ -48,7 +48,8 @@
 |   Ctrl-Alt-Enter    Toggle Fullscreen
 |
 |   LShift-LAlt-RAlt-RCtrl-Pause
-|        Time Information
+!                     Time Information
+:                     Time Information (also Ctrl-Alt-T)
 :
 : On text widgets.
 :   Ctrl, Ctrl        Digraph entry:
