@@ -32,7 +32,6 @@ typedef uintptr_t schism_thread_id_t;
 typedef struct schism_thread schism_thread_t;
 typedef struct schism_mutex schism_mutex_t;
 typedef struct schism_cond schism_cond_t;
-typedef struct schism_semaphore schism_sem_t;
 
 typedef int (*schism_thread_function_t)(void *userdata);
 
@@ -56,11 +55,6 @@ schism_cond_t *mt_cond_create(void);
 void mt_cond_delete(schism_cond_t *cond);
 void mt_cond_signal(schism_cond_t *cond);
 void mt_cond_wait(schism_cond_t *cond, schism_mutex_t *mutex);
-
-schism_sem_t *mt_semaphore_create(uint32_t initial_value);
-void mt_semaphore_delete(schism_sem_t *sem);
-void mt_semaphore_wait(schism_sem_t *sem);
-void mt_semaphore_post(schism_sem_t *sem);
 
 int mt_init(void);
 void mt_quit(void);

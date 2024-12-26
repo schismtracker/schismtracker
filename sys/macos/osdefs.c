@@ -155,8 +155,8 @@ int macos_stat(const char *file, struct stat *st)
 		int truncated;
 
 		char *normal = dmoz_path_normal(file);
-		str_to_pascal(buf, ppath, &truncated);
-		free(buf);
+		str_to_pascal(normal, ppath, &truncated);
+		free(normal);
 
 		if (truncated) {
 			errno = ENAMETOOLONG;

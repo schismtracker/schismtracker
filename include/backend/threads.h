@@ -26,21 +26,9 @@
 
 #include "../threads.h"
 
-// Bit flags notating which things a backend actually supports.
-// A valid implementation can implement either only semaphores
-// OR only mutexes and conds.
-
-enum {
-	SCHISM_THREADS_BACKEND_SUPPORTS_MUTEX = (1u << 0),
-	SCHISM_THREADS_BACKEND_SUPPORTS_SEMAPHORE = (1u << 1),
-	SCHISM_THREADS_BACKEND_SUPPORTS_COND = (1u << 2),
-};
-
 typedef struct {
 	int (*init)(void);
 	void (*quit)(void);
-
-	uint32_t flags; // combination of the above enumeration
 
 	schism_thread_t *(*thread_create)(schism_thread_function_t func, const char *name, void *userdata);
 	void (*thread_wait)(schism_thread_t *thread, int *status);
@@ -56,11 +44,6 @@ typedef struct {
 	void (*cond_delete)(schism_cond_t *cond);
 	void (*cond_signal)(schism_cond_t *cond);
 	void (*cond_wait)(schism_cond_t *cond, schism_mutex_t *mutex);
-
-	schism_sem_t *(*semaphore_create)(uint32_t);
-	void (*semaphore_delete)(schism_sem_t *sem);
-	void (*semaphore_wait)(schism_sem_t *sem);
-	void (*semaphore_post)(schism_sem_t *sem);
 } schism_threads_backend_t;
 
 #ifdef SCHISM_MACOS

@@ -166,9 +166,9 @@ static const char *loadso_lib_fmts[] = {
 	"lib%s.dll",
 	"%s.dll",
 #elif defined(SCHISM_MACOSX)
-	"lib%s.dylib",
+	//"lib%s.dylib",
 #else
-	"lib%s.so",
+	//"lib%s.so",
 #endif
 	NULL,
 };

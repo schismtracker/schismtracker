@@ -26,43 +26,79 @@
 
 #include "headers.h"
 #include "mem.h"
+#include "log.h"
 #include "backend/threads.h"
+
+#include <inttypes.h>
 
 #include <Multiprocessing.h>
 
 /* -------------------------------------------------------------- */
-/* semaphore */
 
-struct schism_semaphore {
-	MPSemaphoreID sem;
+struct schism_mutex {
+	MPCriticalRegionID mutex;
 };
 
-static schism_sem_t *macos_semaphore_create(uint32_t initial_value)
+static schism_mutex_t *macos_mutex_create(void)
 {
-	schism_sem_t *sem = mem_alloc(sizeof(*sem));
+	schism_mutex_t *mutex = mem_alloc(sizeof(*mutex));
 
-	if (MPCreateSemaphore(UINT32_MAX, initial_value, &sem->sem) != noErr) {
-		free(sem);
+	OSStatus err = MPCreateCriticalRegion(&mutex->mutex);
+	if (err != noErr) {
+		free(mutex);
 		return NULL;
 	}
 
-	return sem;
+	return mutex;
 }
 
-static void macos_semaphore_delete(schism_sem_t *sem)
+static void macos_mutex_delete(schism_mutex_t *mutex)
 {
-	MPDeleteSemaphore(sem->sem);
-	free(sem);
+	MPDeleteCriticalRegion(mutex->mutex);
 }
 
-static void macos_semaphore_wait(schism_sem_t *sem)
+static void macos_mutex_lock(schism_mutex_t *mutex)
 {
-	MPWaitOnSemaphore(sem->sem, kDurationForever);
+	MPEnterCriticalRegion(mutex->mutex, kDurationForever);
 }
 
-static void macos_semaphore_post(schism_sem_t *sem)
+static void macos_mutex_unlock(schism_mutex_t *mutex)
 {
-	MPSignalSemaphore(sem->sem);
+	MPExitCriticalRegion(mutex->mutex);
+}
+
+/* -------------------------------------------------------------- */
+
+struct schism_cond {
+	MPEventID event;
+};
+
+static schism_cond_t *macos_cond_create(void)
+{
+	schism_cond_t *cond = mem_alloc(sizeof(*cond));
+
+	OSStatus err = MPCreateEvent(&cond->event);
+	if (err != noErr) {
+		free(cond);
+		return NULL;
+	}
+
+	return cond;
+}
+
+static void macos_cond_delete(schism_cond_t *cond)
+{
+	MPDeleteEvent(cond->event);
+}
+
+static void macos_cond_signal(schism_cond_t *cond)
+{
+	MPSetEvent(cond->event, 1);
+}
+
+static void macos_cond_wait(schism_cond_t *cond, schism_mutex_t *mutex)
+{
+	MPWaitForEvent(cond->event, NULL, kDurationForever);
 }
 
 /* -------------------------------------------------------------- */
@@ -72,7 +108,7 @@ static MPQueueID notification_queue = NULL;
 
 struct schism_thread {
 	MPTaskID task;
-	MPSemaphoreID sem;
+	MPCriticalRegionID mutex; // for macos_thread_wait
 
 	char *name;
 	void *userdata;
@@ -84,29 +120,36 @@ static OSStatus macos_dummy_thread_func(void *userdata)
 {
 	schism_thread_t *thread = userdata;
 
+	MPEnterCriticalRegion(thread->mutex, kDurationForever);
+
 	int s = thread->func(thread->userdata);
 
-	MPSignalSemaphore(thread->sem);
+	MPExitCriticalRegion(thread->mutex);
 
 	return s;
 }
 
 static schism_thread_t *macos_thread_create(schism_thread_function_t func, const char *name, void *userdata)
 {
+	OSStatus err = noErr;
 	schism_thread_t *thread = mem_alloc(sizeof(*thread));
 
 	thread->func = func;
 	thread->userdata = userdata;
 
-	if (MPCreateSemaphore(1, 0, &thread->sem) != noErr) {
+	err = MPCreateCriticalRegion(&thread->mutex);
+	if (err != noErr) {
 		free(thread);
+		log_appendf(4, "MPCreateCriticalRegion: %" PRId32, err);
 		return NULL;
 	}
 
-	// use a 512 KiB stack size, which should be plenty for what we need
-	if (MPCreateTask(macos_dummy_thread_func, thread, UINT32_C(524288), notification_queue, NULL, NULL, 0, &thread->task) != noErr) {
-		MPDeleteSemaphore(thread->sem);
+	// use a 512 KiB stack size, which should be plenty for us
+	err = MPCreateTask(macos_dummy_thread_func, thread, UINT32_C(524288), notification_queue, NULL, NULL, 0, &thread->task);
+	if (err != noErr) {
+		MPDeleteCriticalRegion(thread->mutex);
 		free(thread);
+		log_appendf(4, "MPCreateTask: %" PRId32, err);
 		return NULL;
 	}
 
@@ -115,12 +158,26 @@ static schism_thread_t *macos_thread_create(schism_thread_function_t func, const
 
 static void macos_thread_wait(schism_thread_t *thread, int *status)
 {
-	MPWaitOnSemaphore(thread->sem, kDurationForever);
+	// FIXME: there can be race conditions between calling this function
+	// and the invocation of macos_dummy_thread_func_(), which may cause
+	// this function to return immediately.
+	MPEnterCriticalRegion(thread->mutex, kDurationForever);
+	MPExitCriticalRegion(thread->mutex);
 }
 
 static void macos_thread_set_priority(int priority)
 {
-	/* no-op */
+	MPTaskWeight weight;
+
+	switch (priority) {
+	case BE_THREAD_PRIORITY_LOW:           weight = 10;    break;
+	case BE_THREAD_PRIORITY_NORMAL:        weight = 100;   break;
+	case BE_THREAD_PRIORITY_HIGH:          weight = 1000;  break;
+	case BE_THREAD_PRIORITY_TIME_CRITICAL: weight = 10000; break;
+	default: return;
+	}
+
+	MPSetTaskWeight(MPCurrentTaskID(), weight);
 }
 
 static schism_thread_id_t macos_thread_id(void)
@@ -152,15 +209,18 @@ const schism_threads_backend_t schism_threads_backend_macos = {
 	.init = macos_threads_init,
 	.quit = macos_threads_quit,
 
-	.flags = SCHISM_THREADS_BACKEND_SUPPORTS_SEMAPHORE,
-
 	.thread_create = macos_thread_create,
 	.thread_wait = macos_thread_wait,
 	.thread_set_priority = macos_thread_set_priority,
 	.thread_id = macos_thread_id,
 
-	.semaphore_create = macos_semaphore_create,
-	.semaphore_delete = macos_semaphore_delete,
-	.semaphore_wait = macos_semaphore_wait,
-	.semaphore_post = macos_semaphore_post,
+	.mutex_create = macos_mutex_create,
+	.mutex_delete = macos_mutex_delete,
+	.mutex_lock = macos_mutex_lock,
+	.mutex_unlock = macos_mutex_unlock,
+
+	.cond_create = macos_cond_create,
+	.cond_delete = macos_cond_delete,
+	.cond_signal = macos_cond_signal,
+	.cond_wait   = macos_cond_wait,
 };

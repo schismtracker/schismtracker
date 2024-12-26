@@ -207,8 +207,6 @@ const schism_threads_backend_t schism_threads_backend_sdl12 = {
 	.init = sdl12_threads_init,
 	.quit = sdl12_threads_quit,
 
-	.flags = SCHISM_THREADS_BACKEND_SUPPORTS_MUTEX | SCHISM_THREADS_BACKEND_SUPPORTS_COND,
-
 	.thread_create = sdl12_thread_create,
 	.thread_wait = sdl12_thread_wait,
 	.thread_set_priority = sdl12_thread_set_priority,
