@@ -1013,27 +1013,18 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 	switch (inset) {
 #ifdef SCHISM_WIN32
 	case CHARSET_ANSI: {
-		switch (GetACP()) {
-		case 1252:
-			// use our internal decoder
-			inset = CHARSET_WINDOWS1252;
-			break;
-		default: {
-			// convert ANSI to Unicode so we can process it
-			int needed = MultiByteToWideChar(CP_ACP, 0, in, (insize == SIZE_MAX) ? -1 : insize, NULL, 0);
-			if (!needed)
-				return CHARSET_ERROR_DECODE;
+		// convert ANSI to Unicode so we can process it
+		int needed = MultiByteToWideChar(CP_ACP, 0, in, (insize == SIZE_MAX) ? -1 : insize, NULL, 0);
+		if (!needed)
+			return CHARSET_ERROR_DECODE;
 
-			wchar_t *unicode_in = mem_alloc((needed + 1) * sizeof(wchar_t));
-			MultiByteToWideChar(CP_ACP, 0, in, (insize == SIZE_MAX) ? -1 : insize, unicode_in, needed);
-			unicode_in[needed] = 0;
+		wchar_t *unicode_in = mem_alloc((needed + 1) * sizeof(wchar_t));
+		MultiByteToWideChar(CP_ACP, 0, in, (insize == SIZE_MAX) ? -1 : insize, unicode_in, needed);
+		unicode_in[needed] = 0;
 
-			infake = unicode_in;
-			insetfake = CHARSET_WCHAR_T;
-			insizefake = (needed + 1) * sizeof(wchar_t);
-			break;
-		}
-		}
+		infake = unicode_in;
+		insetfake = CHARSET_WCHAR_T;
+		insizefake = (needed + 1) * sizeof(wchar_t);
 		break;
 	}
 #endif
