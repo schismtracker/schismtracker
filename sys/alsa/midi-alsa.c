@@ -315,11 +315,14 @@ static int _alsa_thread(struct midi_provider *p)
 			return 0;
 		}
 
-		(void)poll(pfd, npfd, -1);
+		// wait 10 msec for a midi event
+		if (!poll(pfd, npfd, 10))
+			continue;
+
 		do {
-			if (ALSA_snd_seq_event_input(seq, &ev) < 0) {
+			if (ALSA_snd_seq_event_input(seq, &ev) < 0)
 				break;
-			}
+
 			if (!ev) continue;
 
 			ptr = src = NULL;
@@ -347,7 +350,6 @@ static int _alsa_thread(struct midi_provider *p)
 			ALSA_snd_midi_event_reset_decode(dev);
 			ALSA_snd_seq_free_event(ev);
 		} while (ALSA_snd_seq_event_input_pending(seq, 0) > 0);
-//              snd_seq_drain_output(seq);
 	}
 	return 0;
 }

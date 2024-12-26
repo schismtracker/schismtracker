@@ -859,6 +859,8 @@ void schism_exit(int status)
 	song_stop_unlocked(1);
 	song_unlock_audio();
 
+	midi_engine_stop();
+
 	dmoz_quit();
 	audio_quit();
 	clippy_quit();
