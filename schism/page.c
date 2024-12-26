@@ -1146,21 +1146,13 @@ void handle_key(struct key_event *k)
 	case SCHISM_KEYSYM_SLASH:
 		if (k->state == KEY_RELEASE) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
-		break;
-	case SCHISM_KEYSYM_KP_DIVIDE:
-		if (k->state == KEY_RELEASE) return;
-		if (status.flags & DISKWRITER_ACTIVE) return;
 		kbd_set_current_octave(kbd_get_current_octave() - 1);
-		return;
+		break;
 	case SCHISM_KEYSYM_ASTERISK:
 		if (k->state == KEY_RELEASE) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
-		break;
-	case SCHISM_KEYSYM_KP_MULTIPLY:
-		if (k->state == KEY_RELEASE) return;
-		if (status.flags & DISKWRITER_ACTIVE) return;
 		kbd_set_current_octave(kbd_get_current_octave() + 1);
-		return;
+		break;
 	case SCHISM_KEYSYM_LEFTBRACKET:
 		if (k->state == KEY_RELEASE) break;
 		if (status.flags & DISKWRITER_ACTIVE) return;
