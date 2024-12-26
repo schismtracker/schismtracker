@@ -400,6 +400,7 @@ typedef struct song_voice {
 	int32_t final_volume; // range 0-16384 (?), accounting for sample+channel+global+etc. volumes
 	int32_t final_panning; // range 0-256 (but can temporarily exceed that range during calculations)
 	int32_t volume, panning; // range 0-256 (?); these are the current values set for the channel
+	int32_t calc_volume; // calculated volume for midi macros
 	int32_t fadeout_volume;
 	int32_t frequency;
 	int32_t c5speed;

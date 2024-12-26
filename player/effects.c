@@ -906,9 +906,9 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 			}
 			case 'u': {
 				/* Volume */
-				/* this will definitely be wrong when processing MIDI out */
-				if (!(chan->flags & CHN_MUTE))
-					data = (unsigned char)CLAMP(chan->final_volume >> 7, 0x01, 0x7F);
+				const int32_t vol = _muldiv(chan->calc_volume * csf->current_global_volume, chan->global_volume * chan->instrument_volume, INT32_C(1) << 26);
+				printf("%d\n", vol);
+				data = (unsigned char)CLAMP(vol / 2, 0x01, 0x7F);
 				break;
 			}
 			case 'x':
@@ -1969,11 +1969,11 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		const uint32_t vel =
 		!chan->ptr_sample ? 0 : _muldiv(chan->volume * csf->current_global_volume * chan->global_volume,
 			chan->ptr_sample->global_volume * 2,
-			1 << 21);
+			1 << 20);
 
 		csf_process_midi_macro(csf, nchan,
 			(param < 0x80) ? csf->midi_config.sfx[chan->active_macro] : csf->midi_config.zxx[param & 0x7F],
-			param, chan->note, vel, 0);
+			param, chan->note, vel / 2, 0);
 		break;
 	}
 

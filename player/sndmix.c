@@ -1149,6 +1149,8 @@ int32_t csf_read_note(song_t *csf)
 					 1 << 19);
 			}
 
+			chan->calc_volume = vol;
+
 			int32_t frequency = chan->frequency;
 
 			if ((chan->flags & (CHN_GLISSANDO|CHN_PORTAMENTO)) == (CHN_GLISSANDO|CHN_PORTAMENTO)) {
