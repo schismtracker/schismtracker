@@ -144,6 +144,8 @@ void midi_event_system(int argv, int param);
 /* midi drivers call this when they received an event */
 void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int len);
 
+// lost child
+uint8_t midi_event_length(uint8_t first_byte);
 
 int ip_midi_setup(void);        // USE_NETWORK
 void ip_midi_setports(int n);   // USE_NETWORK

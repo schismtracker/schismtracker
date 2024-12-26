@@ -783,6 +783,31 @@ void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int 
 	mt_mutex_unlock(midi_record_mutex);
 }
 
+// Get the length of a MIDI event in bytes
+uint8_t midi_event_length(uint8_t first_byte)
+{
+	switch(first_byte & 0xF0)
+	{
+	case 0xC0:
+	case 0xD0:
+		return 2;
+	case 0xF0:
+		switch(first_byte)
+		{
+		case 0xF1:
+		case 0xF3:
+			return 2;
+		case 0xF2:
+			return 3;
+		default:
+			return 1;
+		}
+		break;
+	default:
+		return 3;
+	}
+}
+
 /*----------------------------------------------------------------------------------*/
 
 void midi_port_unregister(int num)
