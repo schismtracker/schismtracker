@@ -29,7 +29,11 @@
 
 /* ------------------------------------ */
 
-static SDL_Thread *(SDLCALL *sdl12_CreateThread)(int (*fn)(void *), void *data);
+#ifdef SDL_PASSED_BEGINTHREAD_ENDTHREAD
+static SDL_Thread *(SDLCALL *sdl12_CreateThread)(int (SDLCALL *fn)(void *), void *data, pfnSDL_CurrentBeginThread begin pfnSDL_CurrentEndThread);
+#else
+static SDL_Thread *(SDLCALL *sdl12_CreateThread)(int (SDLCALL *fn)(void *), void *data);
+#endif
 static void (SDLCALL *sdl12_WaitThread)(SDL_Thread *thread, int *status);
 static uint32_t (SDLCALL *sdl12_ThreadID)(void);
 
@@ -56,7 +60,19 @@ static schism_thread_t *sdl12_thread_create(schism_thread_function_t func, const
 	thread->name = name ? str_dup(name) : NULL;
 	thread->userdata = userdata;
 
-	SDL_Thread *sdl_thread = sdl12_CreateThread(sdl12_dummy_thread_func, thread);
+	/* ew */
+	SDL_Thread *sdl_thread = sdl12_CreateThread(sdl12_dummy_thread_func, thread
+#ifdef SDL_PASSED_BEGINTHREAD_ENDTHREAD
+		,
+# ifdef __OS2__
+		_beginthread, _endthread
+# elif defined(_WIN32_WCE)
+		NULL, NULL,
+# else
+		_beginthreadex, _endthreadex
+# endif
+#endif
+	);
 	if (!sdl_thread) {
 		free(thread);
 		return NULL;

@@ -29,7 +29,11 @@
 
 /* ------------------------------------ */
 
+#ifdef SDL_PASSED_BEGINTHREAD_ENDTHREAD
+static SDL_Thread *(SDLCALL *sdl2_CreateThread)(SDL_ThreadFunction fn, const char *name, void *data, pfnSDL_CurrentBeginThread begin, pfnSDL_CurrentEndThread end) = NULL;
+#else
 static SDL_Thread *(SDLCALL *sdl2_CreateThread)(SDL_ThreadFunction fn, const char *name, void *data) = NULL;
+#endif
 static void (SDLCALL *sdl2_WaitThread)(SDL_Thread * thread, int *status) = NULL;
 static int (SDLCALL *sdl2_SetThreadPriority)(SDL_ThreadPriority priority) = NULL;
 static SDL_threadID (SDLCALL *sdl2_ThreadID)(void) = NULL;
@@ -55,7 +59,18 @@ schism_thread_t *sdl2_thread_create(schism_thread_function_t func, const char *n
 	thread->func = func;
 	thread->userdata = userdata;
 
+	/* ew */
+#ifdef SDL_PASSED_BEGINTHREAD_ENDTHREAD
+	SDL_Thread *sdl_thread = sdl2_CreateThread(sdl2_dummy_thread_func, name, thread,
+# ifdef SCHISM_WIN32
+		(pfnSDL_CurrentBeginThread)_beginthreadex, (pfnSDL_CurrentEndThread)_endthreadex
+# elif defined(__OS2__)
+		(pfnSDL_CurrentBeginThread)_beginthread, (pfnSDL_CurrentEndThread)_endthread
+# endif
+	);
+#else
 	SDL_Thread *sdl_thread = sdl2_CreateThread(sdl2_dummy_thread_func, name, thread);
+#endif
 	if (!sdl_thread) {
 		free(thread);
 		return NULL;
