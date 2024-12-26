@@ -907,7 +907,6 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 			case 'u': {
 				/* Volume */
 				const int32_t vol = _muldiv(chan->calc_volume * csf->current_global_volume, chan->global_volume * chan->instrument_volume, INT32_C(1) << 26);
-				printf("%d\n", vol);
 				data = (unsigned char)CLAMP(vol / 2, 0x01, 0x7F);
 				break;
 			}
@@ -1966,14 +1965,14 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		 *
 		 * OpenMPT also doesn't entirely support IT's version of this macro, which is
 		 * just another demotivator for actually implementing it correctly *sigh* */
-		const uint32_t vel =
-		!chan->ptr_sample ? 0 : _muldiv(chan->volume * csf->current_global_volume * chan->global_volume,
-			chan->ptr_sample->global_volume * 2,
-			1 << 20);
+
+		const uint32_t vel = chan->ptr_sample ?
+			_muldiv((chan->volume + chan->vol_swing) * csf->current_global_volume, chan->global_volume * chan->instrument_volume, INT32_C(1) << 20)
+			: 0;
 
 		csf_process_midi_macro(csf, nchan,
 			(param < 0x80) ? csf->midi_config.sfx[chan->active_macro] : csf->midi_config.zxx[param & 0x7F],
-			param, chan->note, vel / 2, 0);
+			param, chan->note, vel, 0);
 		break;
 	}
 
