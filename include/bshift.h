@@ -55,7 +55,7 @@ SCHISM_SIGNED_LSHIFT_VARIANT(64, 64)
 SCHISM_SIGNED_LSHIFT_VARIANT(max, MAX)
 
 # define lshift_signed(x, y) \
-	_Generic((x << y), \
+	_Generic(((x) << (y)), \
 		int8_t:      schism_signed_lshift_8_(x, y), \
 		int16_t:     schism_signed_lshift_16_(x, y), \
 		int32_t:     schism_signed_lshift_32_(x, y), \
@@ -79,7 +79,7 @@ SCHISM_SIGNED_RSHIFT_VARIANT(64, 64)
 SCHISM_SIGNED_RSHIFT_VARIANT(max, MAX)
 
 # define rshift_signed(x, y) \
-	_Generic((x >> y), \
+	_Generic(((x) >> (y)), \
 		int8_t:      schism_signed_rshift_8_(x, y), \
 		int16_t:     schism_signed_rshift_16_(x, y), \
 		int32_t:     schism_signed_rshift_32_(x, y), \
