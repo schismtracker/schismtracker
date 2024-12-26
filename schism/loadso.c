@@ -89,7 +89,7 @@ void *loadso_function_load(void *handle, const char *name)
 	if (asprintf(&p, "_%s", name) < 0)
 		return NULL;
 
-	symbol = dlsym(handle, name);
+	symbol = dlsym(handle, p);
 	if (symbol)
 		return symbol;
 #endif

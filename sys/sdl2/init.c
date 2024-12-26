@@ -53,9 +53,12 @@ static int sdl2_dlinit(void)
 	if (sdl2_dltrick_handle_)
 		return 0;
 
-	sdl2_dltrick_handle_ = library_load("SDL2", 0, 0);
-	if (!sdl2_dltrick_handle_)
-		return -1;
+	sdl2_dltrick_handle_ = library_load("SDL2-2.0", 0, 0);
+	if (!sdl2_dltrick_handle_) {
+		sdl2_dltrick_handle_ = library_load("SDL2", 0, 0);
+		if (!sdl2_dltrick_handle_)
+			return -1;
+	}
 
 	int retval = load_sdl2_syms();
 	if (retval < 0)
