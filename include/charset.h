@@ -30,16 +30,19 @@
  * where the strings can be edited, e.g. in the file selector */
 typedef enum {
 	/* Unicode */
-	CHARSET_UCS4,
-	CHARSET_UTF8,
+	CHARSET_UCS4LE,
+	CHARSET_UCS4BE,
 	CHARSET_UTF16LE,
 	CHARSET_UTF16BE,
 	CHARSET_UCS2LE,
 	CHARSET_UCS2BE,
+	CHARSET_UTF8,
 #ifdef WORDS_BIGENDIAN
+# define CHARSET_UCS4  CHARSET_UCS4BE
 # define CHARSET_UTF16 CHARSET_UTF16BE
 # define CHARSET_UCS2  CHARSET_UCS2BE
 #else
+# define CHARSET_UCS4  CHARSET_UCS4LE
 # define CHARSET_UTF16 CHARSET_UTF16LE
 # define CHARSET_UCS2  CHARSET_UCS2LE
 #endif
@@ -47,6 +50,7 @@ typedef enum {
 	/* European languages */
 	CHARSET_CP437,
 	CHARSET_WINDOWS1252, /* thanks modplug! */
+	CHARSET_MACOSROMAN, // Mac OS Roman
 
 	/* Windows cludge */
 #ifdef SCHISM_WIN32

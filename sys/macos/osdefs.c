@@ -33,6 +33,7 @@
 #include "errno.h"
 #include "dmoz.h"
 #include "charset.h"
+#include "str.h"
 
 #include <Files.h>
 #include <Folders.h>
@@ -154,8 +155,8 @@ int macos_stat(const char *file, struct stat *st)
 		int truncated;
 
 		char *normal = dmoz_path_normal(file);
-		str_to_pascal(normal, ppath, &truncated);
-		free(normal);
+		str_to_pascal(buf, ppath, &truncated);
+		free(buf);
 
 		if (truncated) {
 			errno = ENAMETOOLONG;
@@ -714,6 +715,8 @@ void macos_sysinit(int *pargc, char ***pargv)
 		exit(-1);
 	}
 	ParseCommandLine (commandLine, args);
+
+	// FIXME argc, argv should be in UTF-8
 
 	*pargc = nargs;
 	*pargv = args;
