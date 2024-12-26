@@ -1080,6 +1080,9 @@ int32_t csf_read_note(song_t *csf)
 		fprintf(stderr, "considering channel %d (per %d, pos %d/%d, flags %X)\n",
 			(int32_t)cn, chan->frequency, chan->position, chan->length, chan->flags);*/
 
+		// reset this ~first~
+		chan->vu_meter = 0;
+
 		if (chan->flags & CHN_NOTEFADE &&
 		    !(chan->fadeout_volume | chan->right_volume | chan->left_volume)) {
 			chan->length = 0;
@@ -1225,7 +1228,7 @@ int32_t csf_read_note(song_t *csf)
 		if (!(chan->length && chan->increment))
 			chan->current_sample_data = NULL;
 
-		// Reset the VU meter. This is filled in with real
+		// Process the VU meter. This is filled in with real
 		// data in the mixer loops.
 		if (chan->flags & CHN_ADLIB) {
 			// ...except with AdLib, which fakes it for now
@@ -1240,8 +1243,6 @@ int32_t csf_read_note(song_t *csf)
 				if (vutmp > 0xFF) vutmp = 0xFF;
 				chan->vu_meter = vutmp;
 			}
-		} else {
-			chan->vu_meter = 0;
 		}
 
 		if (chan->current_sample_data) {
