@@ -43,8 +43,14 @@ struct win32mm_midi {
 	HMIDIIN in;
 
 	// XXX it would be nice to support unicode here
-	MIDIINCAPSA icp;
-	MIDIOUTCAPSA ocp;
+	union {
+		MIDIINCAPSA a;
+		MIDIINCAPSW w;
+	} icp;
+	union {
+		MIDIOUTCAPSA a;
+		MIDIOUTCAPSW w;
+	} ocp;
 
 	MIDIHDR hh;
 	LPMIDIHDR obuf;
@@ -57,6 +63,8 @@ static unsigned int mm_period = 0;
 static MMRESULT (WINAPI *XP_timeGetDevCaps)(LPTIMECAPS ptc, UINT cbtc);
 static MMRESULT (WINAPI *XP_timeSetEvent)(UINT uDelay, UINT uResolution, LPTIMECALLBACK lpTimeProc, DWORD_PTR dwUser, UINT fuEvent);
 static MMRESULT (WINAPI *XP_timeBeginPeriod)(UINT uPeriod) = NULL;
+
+static int on_windows_9x = 0;
 
 static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *d, unsigned int len)
 {
@@ -251,8 +259,11 @@ static void _win32mm_poll(struct midi_provider *p)
 	mmin = midiInGetNumDevs();
 	for (i = last_known_in_port; i < mmin; i++) {
 		data = mem_calloc(1, sizeof(struct win32mm_midi));
-		r = midiInGetDevCapsA(i, &data->icp,
-					sizeof(MIDIINCAPSA));
+		if (on_windows_9x) {
+			r = midiInGetDevCapsA(i, &data->icp.a, sizeof(data->icp.a));
+		} else {
+			r = midiInGetDevCapsW(i, &data->icp.w, sizeof(data->icp.w));
+		}
 		if (r != MMSYSERR_NOERROR) {
 			free(data);
 			continue;
@@ -260,11 +271,12 @@ static void _win32mm_poll(struct midi_provider *p)
 		data->id = i;
 
 		char *utf8;
-		if (!charset_iconv(data->icp.szPname, &utf8, CHARSET_ANSI, CHARSET_UTF8, SIZE_MAX)) {
+		if (!charset_iconv((on_windows_9x) ? ((void *)data->icp.a.szPname) : ((void *)data->icp.w.szPname),
+				&utf8, (on_windows_9x) ? CHARSET_ANSI : CHARSET_WCHAR_T, CHARSET_UTF8, SIZE_MAX)) {
 			midi_port_register(p, MIDI_INPUT, utf8, data, 1);
 			free(utf8);
-		} else {
-			midi_port_register(p, MIDI_INPUT, data->icp.szPname, data, 1);
+		} else if (on_windows_9x) {
+			midi_port_register(p, MIDI_INPUT, data->icp.a.szPname, data, 1);
 		}
 	}
 	last_known_in_port = mmin;
@@ -272,8 +284,11 @@ static void _win32mm_poll(struct midi_provider *p)
 	mmout = midiOutGetNumDevs();
 	for (i = last_known_out_port; i < mmout; i++) {
 		data = mem_calloc(1, sizeof(struct win32mm_midi));
-		r = midiOutGetDevCapsA(i, &data->ocp,
-					sizeof(MIDIOUTCAPSA));
+		if (on_windows_9x) {
+			r = midiOutGetDevCapsA(i, &data->ocp.a, sizeof(data->ocp.a));
+		} else {
+			r = midiOutGetDevCapsW(i, &data->ocp.w, sizeof(data->ocp.w));
+		}
 		if (r != MMSYSERR_NOERROR) {
 			if (data) free(data);
 			continue;
@@ -281,11 +296,12 @@ static void _win32mm_poll(struct midi_provider *p)
 		data->id = i;
 
 		char *utf8;
-		if (!charset_iconv(data->ocp.szPname, &utf8, CHARSET_ANSI, CHARSET_UTF8, SIZE_MAX)) {
+		if (!charset_iconv((on_windows_9x) ? ((void *)data->ocp.a.szPname) : ((void *)data->ocp.w.szPname),
+				&utf8, (on_windows_9x) ? CHARSET_ANSI : CHARSET_WCHAR_T, CHARSET_UTF8, SIZE_MAX)) {
 			midi_port_register(p, MIDI_OUTPUT, utf8, data, 1);
 			free(utf8);
-		} else {
-			midi_port_register(p, MIDI_OUTPUT, data->ocp.szPname, data, 1);
+		} else if (on_windows_9x) {
+			midi_port_register(p, MIDI_OUTPUT, data->ocp.a.szPname, data, 1);
 		}
 	}
 	last_known_out_port = mmout;
@@ -329,6 +345,8 @@ int win32mm_midi_setup(void)
 	} else {
 		log_appendf(4, "WINMM is not installed (MIDI output will skip)");
 	}
+
+	on_windows_9x = (GetVersion() & UINT32_C(0x80000000));
 
 	if (!midi_provider_register("Win32MM", &driver)) return 0;
 
