@@ -42,7 +42,6 @@ struct win32mm_midi {
 	HMIDIOUT out;
 	HMIDIIN in;
 
-	// XXX it would be nice to support unicode here
 	union {
 		MIDIINCAPSA a;
 		MIDIINCAPSW w;
