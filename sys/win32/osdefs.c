@@ -90,31 +90,40 @@ void win32_get_modkey(schism_keymod_t *mk)
 		// ctrl, alt, shift, win) or is toggled (i.e.
 		// numlock, scrolllock)
 		int toggle;
+
+		// does this key work on win9x?
+		int win9x;
 	} conv[] = {
-		{VK_NUMLOCK, SCHISM_KEYMOD_NUM, 1},
-		{VK_CAPITAL, SCHISM_KEYMOD_CAPS, 1},
-		{VK_CAPITAL, SCHISM_KEYMOD_CAPS_PRESSED, 0},
-		{VK_LSHIFT, SCHISM_KEYMOD_LSHIFT, 0},
-		{VK_RSHIFT, SCHISM_KEYMOD_RSHIFT, 0},
-		{VK_LMENU, SCHISM_KEYMOD_LALT, 0},
-		{VK_RMENU, SCHISM_KEYMOD_RALT, 0},
-		{VK_LCONTROL, SCHISM_KEYMOD_LCTRL, 0},
-		{VK_RCONTROL, SCHISM_KEYMOD_RCTRL, 0},
-		{VK_LWIN, SCHISM_KEYMOD_LGUI, 0},
-		{VK_RWIN, SCHISM_KEYMOD_RGUI, 0},
+		{VK_NUMLOCK, SCHISM_KEYMOD_NUM, 1, 1},
+		{VK_CAPITAL, SCHISM_KEYMOD_CAPS, 1, 1},
+		{VK_CAPITAL, SCHISM_KEYMOD_CAPS_PRESSED, 0, 1},
+		{VK_LSHIFT, SCHISM_KEYMOD_LSHIFT, 0, 0},
+		{VK_RSHIFT, SCHISM_KEYMOD_RSHIFT, 0, 0},
+		{VK_LMENU, SCHISM_KEYMOD_LALT, 0, 0},
+		{VK_RMENU, SCHISM_KEYMOD_RALT, 0, 0},
+		{VK_LCONTROL, SCHISM_KEYMOD_LCTRL, 0, 0},
+		{VK_RCONTROL, SCHISM_KEYMOD_RCTRL, 0, 0},
+		{VK_LWIN, SCHISM_KEYMOD_LGUI, 0, 0},
+		{VK_RWIN, SCHISM_KEYMOD_RGUI, 0, 0},
 	};
 
-	// In some cases GetKeyboardState will always return the same array,
-	// independent of actual keyboard state. This is due to Windows
-	// not updating the virtual key array internally. It has been found
-	// that declaring and calling GetKeyState on any key before calling
-	// GetKeyboardState will solve this issue.
-	(void)GetKeyState(0);
+	const int on_windows_9x = (GetVersion() & UINT32_C(0x80000000));
+
+	// Sometimes GetKeyboardState is out of date and calling GetKeyState
+	// fixes it. Any random key will work.
+	(void)GetKeyState(VK_CAPITAL);
 
 	BYTE ks[256] = {0};
 	if (!GetKeyboardState(ks)) return;
 
 	for (int i = 0; i < ARRAY_SIZE(conv); i++) {
+		// FIXME: Some keys (notably left and right variations) simply
+		// do not get filled by windows 9x and as such get completely
+		// ignored by this code. In that case just use whatever values
+		// SDL gave and punt.
+		if (on_windows_9x && !conv[i].win9x)
+			continue;
+
 		// Clear the original value
 		(*mk) &= ~(conv[i].km);
 
