@@ -104,6 +104,13 @@ void win32_get_modkey(schism_keymod_t *mk)
 		{VK_RWIN, SCHISM_KEYMOD_RGUI, 0},
 	};
 
+	// In some cases GetKeyboardState will always return the same array,
+	// independent of actual keyboard state. This is due to Windows
+	// not updating the virtual key array internally. It has been found
+	// that declaring and calling GetKeyState on any key before calling
+	// GetKeyboardState will solve this issue.
+	(void)GetKeyState(0);
+
 	BYTE ks[256] = {0};
 	if (!GetKeyboardState(ks)) return;
 
