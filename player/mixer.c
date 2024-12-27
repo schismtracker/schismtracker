@@ -243,8 +243,8 @@ static inline uint32_t safe_abs_32(int32_t x)
 	int32_t vol_rx = vol * chan->left_volume; \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)) >> 16; \
-	if (vol_avg > 0xFF) vol_avg = 0xFF; \
+	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)); \
+	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
@@ -253,8 +253,8 @@ static inline uint32_t safe_abs_32(int32_t x)
 	int32_t vol_rx = vol_r * chan->left_volume; \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)) >> 16; \
-	if (vol_avg > 0xFF) vol_avg = 0xFF; \
+	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)); \
+	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
@@ -262,8 +262,8 @@ static inline uint32_t safe_abs_32(int32_t x)
 	int32_t v = vol * chan->right_volume; \
 	pvol[0] += v; \
 	pvol[1] += v; \
-	uint32_t vol_avg = safe_abs_32(v) >> 16; \
-	if (vol_avg > 0xFF) vol_avg = 0xFF; \
+	uint32_t vol_avg = safe_abs_32(v); \
+	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
@@ -274,8 +274,8 @@ static inline uint32_t safe_abs_32(int32_t x)
 	int32_t vol_rx = vol * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)) >> 16; \
-	if (vol_avg > 0xFF) vol_avg = 0xFF; \
+	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)); \
+	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
@@ -284,8 +284,8 @@ static inline uint32_t safe_abs_32(int32_t x)
 	int32_t fastvol = vol * rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
 	pvol[0] += fastvol; \
 	pvol[1] += fastvol; \
-	uint32_t fastvolabs = safe_abs_32(fastvol) >> 16; \
-	if (fastvolabs > 0xFF) fastvolabs = 0xFF; \
+	uint32_t fastvolabs = safe_abs_32(fastvol); \
+	if (fastvolabs > UINT32_C(0xFF0000)) fastvolabs = UINT32_C(0xFF0000); \
 	if (fastvolabs > max) max = fastvolabs; \
 	pvol += 2;
 
@@ -296,8 +296,8 @@ static inline uint32_t safe_abs_32(int32_t x)
 	int32_t vol_rx = vol_r * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)) >> 16; \
-	if (vol_avg > 0xFF) vol_avg = 0xFF; \
+	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)); \
+	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
@@ -957,11 +957,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 			}
 		} while (nsamples > 0);
 
-		// While I'd prefer to do this here instead of in the
-		// mixing function, it seems to actually cause weird
-		// unexplainable errors, i.e. the info page sees wildly
-		// different numbers than we do, WEIRD!!
-		//channel->vu_meter >>= 16;
+		channel->vu_meter >>= 16;
 
 		nchmixed += naddmix;
 	}
