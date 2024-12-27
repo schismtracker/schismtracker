@@ -317,7 +317,7 @@ jobs:
 
       - name: 'Package Schism'
         env:
-          SCHISM_VERSION: ${{ steps.date.output.date }}
+          SCHISM_VERSION: ${{ steps.date.outputs.date }}
         run: |
           for i in FLAC.12 ogg.0; do
             "$HOME/ppc/usr/bin/install_name_tool" -change "$HOME/ppcprefix/lib/lib${i}.dylib" @executable_path/../Resources/lib${i}.dylib build_powerpc/schismtracker
