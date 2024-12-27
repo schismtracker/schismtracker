@@ -689,7 +689,7 @@ static int handle_key_global(struct key_event * k)
 			if (status.dialog_type != DIALOG_NONE)
 				return 0;
 			_mp_finish(NULL);
-			if (k->state == KEY_RELEASE)
+			if (k->state == KEY_PRESS)
 				set_page(PAGE_PREFERENCES);
 		} else if (NO_MODIFIER(k->mod)) {
 			if (song_get_mode() == MODE_STOPPED
