@@ -847,6 +847,8 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 		////////////////////////////////////////////////////
 		uint32_t naddmix = 0;
 
+		channel->vu_meter <<= 16;
+
 		do {
 			nrampsamples = nsamples;
 
