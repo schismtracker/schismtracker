@@ -57,12 +57,7 @@ struct win32mm_midi {
 };
 static unsigned int mm_period = 0;
 
-// These functions are only available in Windows 2000 and newer I believe.
-// They are prefixed with "XP_" because I'm too lazy to change them :p
-static MMRESULT (WINAPI *XP_timeGetDevCaps)(LPTIMECAPS ptc, UINT cbtc);
-static MMRESULT (WINAPI *XP_timeSetEvent)(UINT uDelay, UINT uResolution, LPTIMECALLBACK lpTimeProc, DWORD_PTR dwUser, UINT fuEvent);
-static MMRESULT (WINAPI *XP_timeBeginPeriod)(UINT uPeriod) = NULL;
-
+// are we on windows 9x? (filled in win32mm_midi_setup)
 static int on_windows_9x = 0;
 
 static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *d, unsigned int len)
@@ -140,7 +135,7 @@ static void _win32mm_send_xp(struct midi_port *p, const unsigned char *buf,
 	c->p = p;
 	c->d = ((unsigned char*)c)+sizeof(struct curry);
 	c->len = len;
-	XP_timeSetEvent(delay, mm_period, _win32mm_xp_output, (DWORD_PTR)c,
+	timeSetEvent(delay, mm_period, _win32mm_xp_output, (DWORD_PTR)c,
 					TIME_ONESHOT | TIME_CALLBACK_FUNCTION);
 }
 
@@ -319,30 +314,14 @@ int win32mm_midi_setup(void)
 	driver.disable = _win32mm_stop;
 	driver.send = _win32mm_send;
 
-	void *winmm = loadso_object_load("winmm.dll");
-
-	if (winmm) {
-		XP_timeBeginPeriod = loadso_function_load(winmm, "timeBeginPeriod");
-		XP_timeGetDevCaps = loadso_function_load(winmm, "timeGetDevCaps");
-		XP_timeSetEvent = loadso_function_load(winmm, "timeSetEvent");
-
-		if (XP_timeSetEvent && XP_timeBeginPeriod && XP_timeGetDevCaps) {
-			if (XP_timeGetDevCaps(&caps, sizeof(caps)) == 0) {
-				mm_period = caps.wPeriodMin;
-				if (XP_timeBeginPeriod(mm_period) == 0) {
-					driver.send = _win32mm_send_xp;
-					driver.flags |= MIDI_PORT_CAN_SCHEDULE;
-				} else {
-					log_appendf(4, "Cannot install WINMM timer (MIDI output will skip)");
-				}
-			} else {
-				log_appendf(4, "Cannot get WINMM timer capabilities (MIDI output will skip)");
-			}
+	if (timeGetDevCaps(&caps, sizeof(caps)) == 0) {
+		mm_period = caps.wPeriodMin;
+		if (timeBeginPeriod(mm_period) == 0) {
+			driver.send = _win32mm_send_xp;
+			driver.flags |= MIDI_PORT_CAN_SCHEDULE;
 		} else {
-			log_appendf(4, "WINMM is too old (MIDI output will skip)");
+			log_appendf(4, "Cannot install WINMM timer (MIDI output will skip)");
 		}
-	} else {
-		log_appendf(4, "WINMM is not installed (MIDI output will skip)");
 	}
 
 	on_windows_9x = (GetVersion() & UINT32_C(0x80000000));
