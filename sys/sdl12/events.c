@@ -621,7 +621,8 @@ static void sdl12_pump_events(void)
 			/* Only convert the Unicode if it's actually useful;
 			 * this tripped a bug under mac os x where the left & right
 			 * arrow keys are translated to some odd unicode char. */
-			if (!(schism_event.key.sym & SCHISM_KEYSYM_SCANCODE_MASK)) {
+			if (!(schism_event.key.sym & SCHISM_KEYSYM_SCANCODE_MASK)
+				&& !(schism_event.key.mod & SCHISM_KEYMOD_CTRL)) {
 				/* convert UCS-2 to UTF-8 */
 				if (e.key.keysym.unicode < 0x80) {
 					schism_event.key.text[0] = e.key.keysym.unicode;
