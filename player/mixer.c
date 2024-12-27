@@ -114,14 +114,14 @@ static inline uint32_t safe_abs_32(int32_t x)
 	const int##bits##_t *p = (int##bits##_t *)(chan->current_sample_data) + chan->position; \
 	if (chan->flags & CHN_STEREO) p += chan->position; \
 	int32_t *pvol = pbuffer; \
-	uint32_t max = chan->vu_meter << 16; \
+	uint32_t max = chan->vu_meter; \
 	do {
 
 
 #define SNDMIX_ENDSAMPLELOOP \
 		position += chan->increment; \
 	} while (pvol < pbufmax); \
-	chan->vu_meter = max >> 16; \
+	chan->vu_meter = max; \
 	chan->position  += position >> 16; \
 	chan->position_frac = position & 0xFFFF;
 
@@ -243,7 +243,8 @@ static inline uint32_t safe_abs_32(int32_t x)
 	int32_t vol_rx = vol * chan->left_volume; \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)); \
+	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)) >> 16; \
+	if (vol_avg > 0xFF) vol_avg = 0xFF; \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
@@ -252,7 +253,8 @@ static inline uint32_t safe_abs_32(int32_t x)
 	int32_t vol_rx = vol_r * chan->left_volume; \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)); \
+	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)) >> 16; \
+	if (vol_avg > 0xFF) vol_avg = 0xFF; \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
@@ -260,7 +262,8 @@ static inline uint32_t safe_abs_32(int32_t x)
 	int32_t v = vol * chan->right_volume; \
 	pvol[0] += v; \
 	pvol[1] += v; \
-	uint32_t vol_avg = safe_abs_32(v); \
+	uint32_t vol_avg = safe_abs_32(v) >> 16; \
+	if (vol_avg > 0xFF) vol_avg = 0xFF; \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
@@ -271,7 +274,8 @@ static inline uint32_t safe_abs_32(int32_t x)
 	int32_t vol_rx = vol * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)); \
+	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)) >> 16; \
+	if (vol_avg > 0xFF) vol_avg = 0xFF; \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
@@ -280,7 +284,8 @@ static inline uint32_t safe_abs_32(int32_t x)
 	int32_t fastvol = vol * rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
 	pvol[0] += fastvol; \
 	pvol[1] += fastvol; \
-	uint32_t fastvolabs = safe_abs_32(fastvol); \
+	uint32_t fastvolabs = safe_abs_32(fastvol) >> 16; \
+	if (fastvolabs > 0xFF) fastvolabs = 0xFF; \
 	if (fastvolabs > max) max = fastvolabs; \
 	pvol += 2;
 
@@ -291,7 +296,8 @@ static inline uint32_t safe_abs_32(int32_t x)
 	int32_t vol_rx = vol_r * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)); \
+	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)) >> 16; \
+	if (vol_avg > 0xFF) vol_avg = 0xFF; \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 

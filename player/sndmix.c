@@ -1081,7 +1081,8 @@ int32_t csf_read_note(song_t *csf)
 			(int32_t)cn, chan->frequency, chan->position, chan->length, chan->flags);*/
 
 		// reset this ~first~
-		chan->vu_meter = 0;
+		if (!(chan->flags & CHN_ADLIB))
+			chan->vu_meter = 0;
 
 		if (chan->flags & CHN_NOTEFADE &&
 		    !(chan->fadeout_volume | chan->right_volume | chan->left_volume)) {
