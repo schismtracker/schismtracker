@@ -220,6 +220,8 @@ static schism_audio_device_t *sdl2_audio_open_device(const char *name, const sch
 		if (!need_reopen)
 			goto got_device;
 
+		sdl2_CloseAudioDevice(dev->id);
+
 		if (sdl2_audio_open_device_impl(dev, name, &sdl_desired, &sdl_obtained, change))
 			goto got_device;
 	}
