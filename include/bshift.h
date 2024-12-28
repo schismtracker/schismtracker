@@ -112,11 +112,11 @@ SCHISM_SIGNED_RSHIFT_VARIANT(max, MAX)
 		default:     schism_signed_rshift_max_(x, y) \
 	)
 #elif SCHISM_GNUC_HAS_BUILTIN(__builtin_types_compatible_p, 3, 1, 3)
-SCHISM_SIGNED_LSHIFT_VARIANT(8, 8)
-SCHISM_SIGNED_LSHIFT_VARIANT(16, 16)
-SCHISM_SIGNED_LSHIFT_VARIANT(32, 32)
-SCHISM_SIGNED_LSHIFT_VARIANT(64, 64)
-SCHISM_SIGNED_LSHIFT_VARIANT(max, MAX)
+SCHISM_SIGNED_RSHIFT_VARIANT(8, 8)
+SCHISM_SIGNED_RSHIFT_VARIANT(16, 16)
+SCHISM_SIGNED_RSHIFT_VARIANT(32, 32)
+SCHISM_SIGNED_RSHIFT_VARIANT(64, 64)
+SCHISM_SIGNED_RSHIFT_VARIANT(max, MAX)
 
 /* This causes integer promotion in `x' that is essentially unavoidable
  * thanks to old gcc not providing __typeof_unqual__
