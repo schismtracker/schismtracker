@@ -211,8 +211,8 @@ void cfg_save_midi(cfg_file_t *cfg)
 	/* write out only enabled midi ports */
 	i = 1;
 	mt_mutex_lock(midi_mutex);
-	q = NULL;
 	for (p = port_providers; p; p = p->next) {
+		q = NULL;
 		while (midi_port_foreach(p, &q)) {
 			ss = q->name;
 			if (!ss) continue;
@@ -220,7 +220,8 @@ void cfg_save_midi(cfg_file_t *cfg)
 			if (!*ss) continue;
 			if (!q->io) continue;
 
-			snprintf(buf, 32, "MIDI Port %u", i); i++;
+			snprintf(buf, 32, "MIDI Port %u", i);
+			i++;
 			cfg_set_string(cfg, buf, "name", ss);
 			ss = p->name;
 			if (ss) {
@@ -239,7 +240,7 @@ void cfg_save_midi(cfg_file_t *cfg)
 	/* delete other MIDI port sections */
 	for (c = cfg->sections; c; c = c->next) {
 		j = -1;
-		sscanf(c->name, "MIDI Port %d", &j);
+		if (sscanf(c->name, "MIDI Port %d", &j) != 1) continue;
 		if (j < i) continue;
 		c->omit = 1;
 	}
