@@ -26,7 +26,7 @@
 #ifdef HAVE_SANE_SIGNED_LSHIFT
 /* nothing */
 #else
-# ifdef SCHISM_HAVE_GENERIC
+# if defined(SCHISM_HAVE_GENERIC) || SCHISM_GNUC_HAS_BUILTIN(__builtin_types_compatible_p, 3, 1, 3)
 SCHISM_CONST extern inline int8_t  schism_signed_lshift_8_(int8_t x, unsigned int y);
 SCHISM_CONST extern inline int16_t schism_signed_lshift_16_(int16_t x, unsigned int y);
 SCHISM_CONST extern inline int32_t schism_signed_lshift_32_(int32_t x, unsigned int y);
@@ -38,7 +38,7 @@ SCHISM_CONST extern inline intmax_t schism_signed_lshift_max_(intmax_t x, unsign
 #ifdef HAVE_ARITHMETIC_RSHIFT
 /* nothing */
 #else
-# ifdef SCHISM_HAVE_GENERIC
+# if defined(SCHISM_HAVE_GENERIC) || SCHISM_GNUC_HAS_BUILTIN(__builtin_types_compatible_p, 3, 1, 3)
 SCHISM_CONST extern inline int8_t  schism_signed_rshift_8_(int8_t x, unsigned int y);
 SCHISM_CONST extern inline int16_t schism_signed_rshift_16_(int16_t x, unsigned int y);
 SCHISM_CONST extern inline int32_t schism_signed_rshift_32_(int32_t x, unsigned int y);

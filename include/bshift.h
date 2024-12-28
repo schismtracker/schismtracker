@@ -62,6 +62,31 @@ SCHISM_SIGNED_LSHIFT_VARIANT(max, MAX)
 		int64_t:     schism_signed_lshift_64_(x, y), \
 		default:     schism_signed_lshift_max_(x, y) \
 	)
+#elif SCHISM_GNUC_HAS_BUILTIN(__builtin_types_compatible_p, 3, 1, 3)
+SCHISM_SIGNED_LSHIFT_VARIANT(8, 8)
+SCHISM_SIGNED_LSHIFT_VARIANT(16, 16)
+SCHISM_SIGNED_LSHIFT_VARIANT(32, 32)
+SCHISM_SIGNED_LSHIFT_VARIANT(64, 64)
+SCHISM_SIGNED_LSHIFT_VARIANT(max, MAX)
+
+/* This causes integer promotion in `x' that is essentially unavoidable
+ * thanks to old gcc not providing __typeof_unqual__
+ * The compiler should be able to kill that off, though */
+# define lshift_signed(x, y) \
+	({ \
+		__typeof__((x) + 0) tmp = x; \
+		if (__builtin_types_compatible_p(__typeof__(x), int8_t)) \
+			tmp = schism_signed_lshift_8_(tmp, y); \
+		else if (__builtin_types_compatible_p(__typeof__(x), int16_t)) \
+			tmp = schism_signed_lshift_16_(tmp, y); \
+		else if (__builtin_types_compatible_p(__typeof__(x), int32_t)) \
+			tmp = schism_signed_lshift_32_(tmp, y); \
+		else if (__builtin_types_compatible_p(__typeof__(x), int64_t)) \
+			tmp = schism_signed_lshift_64_(tmp, y); \
+		else /*if (__builtin_types_compatible_p(__typeof__(x), intmax_t))*/ \
+			tmp = schism_signed_lshift_max_(tmp, y); \
+		tmp; \
+	})
 #else
 // we can only use intmax here, unfortunately...
 SCHISM_SIGNED_LSHIFT_VARIANT(max, MAX)
@@ -86,6 +111,31 @@ SCHISM_SIGNED_RSHIFT_VARIANT(max, MAX)
 		int64_t:     schism_signed_rshift_64_(x, y), \
 		default:     schism_signed_rshift_max_(x, y) \
 	)
+#elif SCHISM_GNUC_HAS_BUILTIN(__builtin_types_compatible_p, 3, 1, 3)
+SCHISM_SIGNED_LSHIFT_VARIANT(8, 8)
+SCHISM_SIGNED_LSHIFT_VARIANT(16, 16)
+SCHISM_SIGNED_LSHIFT_VARIANT(32, 32)
+SCHISM_SIGNED_LSHIFT_VARIANT(64, 64)
+SCHISM_SIGNED_LSHIFT_VARIANT(max, MAX)
+
+/* This causes integer promotion in `x' that is essentially unavoidable
+ * thanks to old gcc not providing __typeof_unqual__
+ * The compiler should be able to kill that off, though */
+# define rshift_signed(x, y) \
+	({ \
+		__typeof__((x) + 0) tmp = x; \
+		if (__builtin_types_compatible_p(__typeof__(x), int8_t)) \
+			tmp = schism_signed_rshift_8_(tmp, y); \
+		else if (__builtin_types_compatible_p(__typeof__(x), int16_t)) \
+			tmp = schism_signed_rshift_16_(tmp, y); \
+		else if (__builtin_types_compatible_p(__typeof__(x), int32_t)) \
+			tmp = schism_signed_rshift_32_(tmp, y); \
+		else if (__builtin_types_compatible_p(__typeof__(x), int64_t)) \
+			tmp = schism_signed_rshift_64_(tmp, y); \
+		else /*if (__builtin_types_compatible_p(__typeof__(x), intmax_t))*/ \
+			tmp = schism_signed_rshift_max_(tmp, y); \
+		tmp; \
+	})
 #else
 SCHISM_SIGNED_RSHIFT_VARIANT(max, MAX)
 

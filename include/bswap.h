@@ -59,17 +59,15 @@ SCHISM_CONST inline uint16_t bswap_16_schism_internal_(uint16_t x)
 	);
 }
 
-/* check for compiler builtins, for gcc >= 10 and probably clang too */
-#ifdef __has_builtin
-# if __has_builtin(__builtin_bswap16)
-#  define bswap_16(x) __builtin_bswap16(x)
-# endif
-# if __has_builtin(__builtin_bswap32)
-#  define bswap_32(x) __builtin_bswap32(x)
-# endif
-# if __has_builtin(__builtin_bswap64)
-#  define bswap_64(x) __builtin_bswap64(x)
-# endif
+/* bswap16 was added later in 4.8.0 */
+#if SCHISM_GNUC_HAS_BUILTIN(__builtin_bswap16, 4, 8, 0)
+# define bswap_16(x) __builtin_bswap16(x)
+#endif
+#if SCHISM_GNUC_HAS_BUILTIN(__builtin_bswap32, 4, 3, 0)
+# define bswap_32(x) __builtin_bswap32(x)
+#endif
+#if SCHISM_GNUC_HAS_BUILTIN(__builtin_bswap64, 4, 3, 0)
+# define bswap_64(x) __builtin_bswap64(x)
 #endif
 
 /* roll our own; it is now safe to assume that all byteswap
