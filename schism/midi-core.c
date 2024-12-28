@@ -97,7 +97,7 @@ static void _cfg_load_midi_part_locked(struct midi_port *q)
 	/* look for MIDI port sections */
 	for (c = cfg.sections; c; c = c->next) {
 		j = -1;
-		sscanf(c->name, "MIDI Port %d", &j);
+		if (sscanf(c->name, "MIDI Port %d", &j) != 1) continue;
 		if (j < 1) continue;
 		sn = cfg_get_string(&cfg, c->name, "name", buf, 255, NULL);
 		if (!sn) continue;
