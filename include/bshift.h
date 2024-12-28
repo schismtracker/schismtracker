@@ -47,99 +47,42 @@
 
 #if defined(HAVE_SANE_SIGNED_LSHIFT)
 # define lshift_signed(x, y) ((x) << (y))
-#elif defined(SCHISM_HAVE_GENERIC)
-SCHISM_SIGNED_LSHIFT_VARIANT(8, 8)
-SCHISM_SIGNED_LSHIFT_VARIANT(16, 16)
-SCHISM_SIGNED_LSHIFT_VARIANT(32, 32)
-SCHISM_SIGNED_LSHIFT_VARIANT(64, 64)
-SCHISM_SIGNED_LSHIFT_VARIANT(max, MAX)
-
-# define lshift_signed(x, y) \
-	_Generic(((x) << (y)), \
-		int8_t:      schism_signed_lshift_8_(x, y), \
-		int16_t:     schism_signed_lshift_16_(x, y), \
-		int32_t:     schism_signed_lshift_32_(x, y), \
-		int64_t:     schism_signed_lshift_64_(x, y), \
-		default:     schism_signed_lshift_max_(x, y) \
-	)
-#elif SCHISM_GNUC_HAS_BUILTIN(__builtin_types_compatible_p, 3, 1, 3)
-SCHISM_SIGNED_LSHIFT_VARIANT(8, 8)
-SCHISM_SIGNED_LSHIFT_VARIANT(16, 16)
-SCHISM_SIGNED_LSHIFT_VARIANT(32, 32)
-SCHISM_SIGNED_LSHIFT_VARIANT(64, 64)
-SCHISM_SIGNED_LSHIFT_VARIANT(max, MAX)
-
-/* This causes integer promotion in `x' that is essentially unavoidable
- * thanks to old gcc not providing __typeof_unqual__
- * The compiler should be able to kill that off, though */
-# define lshift_signed(x, y) \
-	({ \
-		__typeof__((x) + 0) tmp = x; \
-		if (__builtin_types_compatible_p(__typeof__(x), int8_t)) \
-			tmp = schism_signed_lshift_8_(tmp, y); \
-		else if (__builtin_types_compatible_p(__typeof__(x), int16_t)) \
-			tmp = schism_signed_lshift_16_(tmp, y); \
-		else if (__builtin_types_compatible_p(__typeof__(x), int32_t)) \
-			tmp = schism_signed_lshift_32_(tmp, y); \
-		else if (__builtin_types_compatible_p(__typeof__(x), int64_t)) \
-			tmp = schism_signed_lshift_64_(tmp, y); \
-		else /*if (__builtin_types_compatible_p(__typeof__(x), intmax_t))*/ \
-			tmp = schism_signed_lshift_max_(tmp, y); \
-		tmp; \
-	})
 #else
-// we can only use intmax here, unfortunately...
+SCHISM_SIGNED_LSHIFT_VARIANT(8, 8)
+SCHISM_SIGNED_LSHIFT_VARIANT(16, 16)
+SCHISM_SIGNED_LSHIFT_VARIANT(32, 32)
+SCHISM_SIGNED_LSHIFT_VARIANT(64, 64)
 SCHISM_SIGNED_LSHIFT_VARIANT(max, MAX)
-
-# define lshift_signed(x, y) schism_signed_lshift_max_(x, y)
+# define lshift_signed(x, y) \
+	((sizeof(x) == sizeof(int8_t)) \
+		? (schism_signed_lshift_8_(x, y)) \
+		: (sizeof(x) == sizeof(int16_t)) \
+			? (schism_signed_lshift_16_(x, y)) \
+			: (sizeof(x) == sizeof(int32_t)) \
+				? (schism_signed_lshift_32_(x, y)) \
+				: (sizeof(x) == sizeof(int64_t)) \
+					? (schism_signed_lshift_64_(x, y)) \
+					: (schism_signed_lshift_max_(x, y)))
 #endif
 
 #ifdef HAVE_ARITHMETIC_RSHIFT
 # define rshift_signed(x, y) ((x) >> (y))
-#elif defined(SCHISM_HAVE_GENERIC)
-SCHISM_SIGNED_RSHIFT_VARIANT(8, 8)
-SCHISM_SIGNED_RSHIFT_VARIANT(16, 16)
-SCHISM_SIGNED_RSHIFT_VARIANT(32, 32)
-SCHISM_SIGNED_RSHIFT_VARIANT(64, 64)
-SCHISM_SIGNED_RSHIFT_VARIANT(max, MAX)
-
-# define rshift_signed(x, y) \
-	_Generic(((x) >> (y)), \
-		int8_t:      schism_signed_rshift_8_(x, y), \
-		int16_t:     schism_signed_rshift_16_(x, y), \
-		int32_t:     schism_signed_rshift_32_(x, y), \
-		int64_t:     schism_signed_rshift_64_(x, y), \
-		default:     schism_signed_rshift_max_(x, y) \
-	)
-#elif SCHISM_GNUC_HAS_BUILTIN(__builtin_types_compatible_p, 3, 1, 3)
-SCHISM_SIGNED_RSHIFT_VARIANT(8, 8)
-SCHISM_SIGNED_RSHIFT_VARIANT(16, 16)
-SCHISM_SIGNED_RSHIFT_VARIANT(32, 32)
-SCHISM_SIGNED_RSHIFT_VARIANT(64, 64)
-SCHISM_SIGNED_RSHIFT_VARIANT(max, MAX)
-
-/* This causes integer promotion in `x' that is essentially unavoidable
- * thanks to old gcc not providing __typeof_unqual__
- * The compiler should be able to kill that off, though */
-# define rshift_signed(x, y) \
-	({ \
-		__typeof__((x) + 0) tmp = x; \
-		if (__builtin_types_compatible_p(__typeof__(x), int8_t)) \
-			tmp = schism_signed_rshift_8_(tmp, y); \
-		else if (__builtin_types_compatible_p(__typeof__(x), int16_t)) \
-			tmp = schism_signed_rshift_16_(tmp, y); \
-		else if (__builtin_types_compatible_p(__typeof__(x), int32_t)) \
-			tmp = schism_signed_rshift_32_(tmp, y); \
-		else if (__builtin_types_compatible_p(__typeof__(x), int64_t)) \
-			tmp = schism_signed_rshift_64_(tmp, y); \
-		else /*if (__builtin_types_compatible_p(__typeof__(x), intmax_t))*/ \
-			tmp = schism_signed_rshift_max_(tmp, y); \
-		tmp; \
-	})
 #else
+SCHISM_SIGNED_RSHIFT_VARIANT(8, 8)
+SCHISM_SIGNED_RSHIFT_VARIANT(16, 16)
+SCHISM_SIGNED_RSHIFT_VARIANT(32, 32)
+SCHISM_SIGNED_RSHIFT_VARIANT(64, 64)
 SCHISM_SIGNED_RSHIFT_VARIANT(max, MAX)
-
-# define rshift_signed(x, y) schism_signed_rshift_max_(x, y)
+# define rshift_signed(x, y) \
+	((sizeof(x) == sizeof(int8_t)) \
+		? (schism_signed_rshift_8_(x, y)) \
+		: (sizeof(x) == sizeof(int16_t)) \
+			? (schism_signed_rshift_16_(x, y)) \
+			: (sizeof(x) == sizeof(int32_t)) \
+				? (schism_signed_rshift_32_(x, y)) \
+				: (sizeof(x) == sizeof(int64_t)) \
+					? (schism_signed_rshift_64_(x, y)) \
+					: (schism_signed_rshift_max_(x, y)))
 #endif
 
 #undef SCHISM_SIGNED_LSHIFT_VARIANT
