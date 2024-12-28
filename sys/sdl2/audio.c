@@ -197,33 +197,37 @@ static schism_audio_device_t *sdl2_audio_open_device(const char *name, const sch
 	};
 	SDL_AudioSpec sdl_obtained;
 
-	int change = SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_FORMAT_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE | SDL_AUDIO_ALLOW_SAMPLES_CHANGE;
+	// First try opening the device without any change at all.
+	if (sdl2_audio_open_device_impl(dev, name, &sdl_desired, &sdl_obtained, 0))
+		goto got_device;
 
-	for (;;) {
-		if (!sdl2_audio_open_device_impl(dev, name, &sdl_desired, &sdl_obtained, change)) {
-			free(dev);
-			return NULL;
-		}
+	// Ok, try opening it until we find something that fits.
+	int change = SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE | SDL_AUDIO_ALLOW_SAMPLES_CHANGE | SDL_AUDIO_ALLOW_FORMAT_CHANGE;
 
+	if (sdl2_audio_open_device_impl(dev, name, &sdl_desired, &sdl_obtained, change)) {
 		int need_reopen = 0;
 
-		// Try again until we find an audio format we *do* support.
 		switch (sdl_obtained.format) {
 		case AUDIO_U8: case AUDIO_S16SYS: case AUDIO_S32SYS: break;
-		default: change &= (~SDL_AUDIO_ALLOW_FORMAT_CHANGE); need_reopen = 1; break;
+		default: change &= ~(SDL_AUDIO_ALLOW_FORMAT_CHANGE); need_reopen = 1; break;
 		}
 
 		switch (sdl_obtained.channels) {
 		case 1: case 2: break;
-		default: change &= (~SDL_AUDIO_ALLOW_CHANNELS_CHANGE); need_reopen = 1; break;
+		default: change &= ~(SDL_AUDIO_ALLOW_CHANNELS_CHANGE); need_reopen = 1; break;
 		}
 
 		if (!need_reopen)
-			break;
+			goto got_device;
 
-		sdl2_CloseAudioDevice(dev->id);
+		if (sdl2_audio_open_device_impl(dev, name, &sdl_desired, &sdl_obtained, change))
+			goto got_device;
 	}
 
+	free(dev);
+	return NULL;
+
+got_device:
 	*obtained = (schism_audio_spec_t){
 		.freq = sdl_obtained.freq,
 		.bits = SDL_AUDIO_BITSIZE(sdl_obtained.format),
