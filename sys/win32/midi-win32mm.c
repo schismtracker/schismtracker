@@ -305,7 +305,7 @@ int win32mm_midi_setup(void)
 {
 	static struct midi_driver driver = {0};
 
-	driver.flags = 0;
+	driver.flags = MIDI_PORT_CAN_SCHEDULE;
 	driver.poll = _win32mm_poll;
 	driver.thread = NULL;
 	driver.enable = _win32mm_start;
