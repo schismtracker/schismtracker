@@ -62,7 +62,7 @@ static DWORD (WINAPI *WIN32_WaitForSingleObject)(HANDLE, DWORD) = NULL;
 static int timer_usleep_impl_(uint64_t usec)
 {
 	LARGE_INTEGER due;
-	HANDLE timer;
+	HANDLE timer = NULL;
 
 	// If we don't even have these then we're screwed.
 	if (!WIN32_SetWaitableTimer || !WIN32_WaitForSingleObject)
@@ -158,6 +158,9 @@ int timer_init(void)
 {
 	static const schism_timer_backend_t *backends[] = {
 		// ordered by preference
+#ifdef SCHISM_WIN32
+		&schism_timer_backend_win32,
+#endif
 #ifdef SCHISM_SDL2
 		&schism_timer_backend_sdl2,
 #endif

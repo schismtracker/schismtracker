@@ -256,7 +256,8 @@ files_win32 = \
 	sys/win32/osdefs.c		\
 	sys/win32/slurp-win32.c \
 	sys/win32/dmoz.c \
-	sys/win32/clippy.c
+	sys/win32/clippy.c \
+	sys/win32/timer.c
 cflags_win32=-I$(srcdir)/sys/win32
 lib_win32=-lwinmm
 

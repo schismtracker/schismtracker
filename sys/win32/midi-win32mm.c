@@ -305,24 +305,16 @@ int win32mm_midi_setup(void)
 {
 	static struct midi_driver driver = {0};
 
-	TIMECAPS caps;
-
 	driver.flags = 0;
 	driver.poll = _win32mm_poll;
 	driver.thread = NULL;
 	driver.enable = _win32mm_start;
 	driver.disable = _win32mm_stop;
-	driver.send = _win32mm_send;
-
-	if (timeGetDevCaps(&caps, sizeof(caps)) == 0) {
-		mm_period = caps.wPeriodMin;
-		if (timeBeginPeriod(mm_period) == 0) {
-			driver.send = _win32mm_send_xp;
-			driver.flags |= MIDI_PORT_CAN_SCHEDULE;
-		} else {
-			log_appendf(4, "Cannot install WINMM timer (MIDI output will skip)");
-		}
-	}
+	// Originally this did a bunch of timer checks and crap,
+	// but I can't find a single instance where this is actually
+	// necessary, even on ancient windows. The default timer
+	// resolution is probably good enough anyway.
+	driver.send = _win32mm_send_xp;
 
 	on_windows_9x = (GetVersion() & UINT32_C(0x80000000));
 

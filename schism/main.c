@@ -868,8 +868,8 @@ void schism_exit(int status)
 #ifndef HAVE_LOCALTIME_R
 	localtime_r_quit();
 #endif
-	mt_quit();
 	timer_quit();
+	mt_quit();
 
 	os_sysexit();
 
@@ -910,13 +910,13 @@ int schism_main(int argc, char** argv)
 		log_appendf(4, "Portable mode will not work properly!");
 	}
 
-	if (!timer_init()) {
-		os_show_message_box("Critical error!", "Failed to initialize a timers backend!");
+	if (!mt_init()) {
+		os_show_message_box("Critical error!", "Failed to initialize a multithreading backend!");
 		return 1;
 	}
 
-	if (!mt_init()) {
-		os_show_message_box("Critical error!", "Failed to initialize a multithreading backend!");
+	if (!timer_init()) {
+		os_show_message_box("Critical error!", "Failed to initialize a timers backend!");
 		return 1;
 	}
 

@@ -35,6 +35,9 @@ typedef struct {
 	void (*delay)(uint32_t ms);
 } schism_timer_backend_t;
 
+#ifdef SCHISM_WIN32
+extern const schism_timer_backend_t schism_timer_backend_win32;
+#endif
 #ifdef SCHISM_SDL12
 extern const schism_timer_backend_t schism_timer_backend_sdl12;
 #endif
