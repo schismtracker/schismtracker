@@ -38,19 +38,23 @@
 
 static void win32_unmap_(slurp_t *slurp)
 {
-	if (slurp->internal.memory.data != NULL) {
+	if (slurp->internal.memory.data) {
 		UnmapViewOfFile(slurp->internal.memory.data);
 		slurp->internal.memory.data = NULL;
 	}
 
-	if (slurp->internal.memory.interfaces.win32.file != INVALID_HANDLE_VALUE)
-		CloseHandle(slurp->internal.memory.interfaces.win32.file);
+	// collect and free all of the handles
+	HANDLE *handles[] = {
+		&slurp->internal.memory.interfaces.win32.file,
+		&slurp->internal.memory.interfaces.win32.mapping,
+	};
 
-	if (slurp->internal.memory.interfaces.win32.mapping != NULL)
-		CloseHandle(slurp->internal.memory.interfaces.win32.mapping);
+	for (int i = 0; i < ARRAY_SIZE(handles); i++) {
+		if (*handles[i] != NULL && *handles[i] != INVALID_HANDLE_VALUE)
+			CloseHandle(*handles[i]);
 
-	slurp->internal.memory.interfaces.win32.file = INVALID_HANDLE_VALUE;
-	slurp->internal.memory.interfaces.win32.mapping = NULL;
+		*handles[i] = NULL;
+	}
 }
 
 // This reader used to return -1 sometimes, which is kind of a hack to tell the

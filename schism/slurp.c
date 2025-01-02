@@ -27,6 +27,7 @@
 #include "fmt.h"
 #include "util.h"
 #include "osdefs.h"
+#include "mem.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -189,11 +190,9 @@ void unslurp(slurp_t * t)
 
 static int slurp_stdio_open_(slurp_t *t, const char *filename)
 {
-	FILE *fp = !strcmp(filename, "-") ? stdin : os_fopen(filename, "rb");
+	FILE *fp = (!strcmp(filename, "-")) ? stdin : os_fopen(filename, "rb");
 	if (!fp)
 		return SLURP_OPEN_FAIL;
-
-	t->closure = slurp_stdio_closure_;
 
 	return slurp_stdio_open_file_(t, fp);
 }
@@ -201,11 +200,13 @@ static int slurp_stdio_open_(slurp_t *t, const char *filename)
 static int slurp_stdio_open_file_(slurp_t *t, FILE *fp)
 {
 	t->internal.stdio.fp = fp;
+	t->closure = slurp_stdio_closure_;
 	return SLURP_OPEN_SUCCESS;
 }
 
 static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence)
 {
+	// XXX can we use _fseeki64 on Windows?
 	return fseek(t->internal.stdio.fp, offset, whence);
 }
 
@@ -231,15 +232,27 @@ static size_t slurp_stdio_peek_(slurp_t *t, void *ptr, size_t count)
 static size_t slurp_stdio_read_(slurp_t *t, void *ptr, size_t count)
 {
 	size_t read = fread(ptr, 1, count, t->internal.stdio.fp);
-	if (read < count)
-		memset((unsigned char*)ptr + read, 0, count - read);
+	if (count > read)
+		memset((unsigned char *)ptr + read, 0, count - read);
 
 	return read;
 }
 
 static int slurp_stdio_eof_(slurp_t *t)
 {
-	return feof(t->internal.stdio.fp);
+	long pos = slurp_stdio_tell_(t);
+	if (pos < 0)
+		return -1; // what the hell?
+
+	slurp_stdio_seek_(t, 0, SEEK_END);
+
+	long end = slurp_stdio_tell_(t);
+	if (end < 0)
+		return -1;
+
+	slurp_stdio_seek_(t, pos, SEEK_SET);
+
+	return pos >= end;
 }
 
 static void slurp_stdio_closure_(slurp_t *t)
@@ -249,7 +262,7 @@ static void slurp_stdio_closure_(slurp_t *t)
 
 static int slurp_stdio_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata)
 {
-	unsigned char *buf = malloc(count);
+	unsigned char *buf = mem_alloc(count);
 	if (!buf)
 		return -1;
 
@@ -363,6 +376,8 @@ size_t slurp_read(slurp_t *t, void *ptr, size_t count)
 
 size_t slurp_length(slurp_t *t)
 {
+	// FIXME this ought to be cached; seeking all
+	// around the file Kind Of sucks
 	int64_t pos = slurp_tell(t);
 	if (pos < 0)
 		return 0;
