@@ -243,7 +243,7 @@ static inline uint32_t safe_abs_32(int32_t x)
 	int32_t vol_rx = vol * chan->left_volume; \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)); \
+	uint32_t vol_avg = (safe_abs_32(vol_lx) >> 1) + (safe_abs_32(vol_rx) >> 1); \
 	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
@@ -253,7 +253,7 @@ static inline uint32_t safe_abs_32(int32_t x)
 	int32_t vol_rx = vol_r * chan->left_volume; \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)); \
+	uint32_t vol_avg = (safe_abs_32(vol_lx) >> 1) + (safe_abs_32(vol_rx) >> 1); \
 	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
@@ -274,7 +274,7 @@ static inline uint32_t safe_abs_32(int32_t x)
 	int32_t vol_rx = vol * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)); \
+	uint32_t vol_avg = (safe_abs_32(vol_lx) >> 1) + (safe_abs_32(vol_rx) >> 1); \
 	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
@@ -296,7 +296,7 @@ static inline uint32_t safe_abs_32(int32_t x)
 	int32_t vol_rx = vol_r * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	uint32_t vol_avg = safe_abs_32(rshift_signed(vol_lx, 1) + rshift_signed(vol_rx, 1)); \
+	uint32_t vol_avg = (safe_abs_32(vol_lx) >> 1) + (safe_abs_32(vol_rx) >> 1); \
 	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
