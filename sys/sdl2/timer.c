@@ -31,7 +31,6 @@ static int (SDLCALL *sdl2_InitSubSystem)(Uint32 flags) = NULL;
 static void (SDLCALL *sdl2_QuitSubSystem)(Uint32 flags) = NULL;
 
 static void (SDLCALL *sdl2_Delay)(uint32_t ms) = NULL;
-static uint32_t (SDLCALL *sdl2_GetTicks)(void) = NULL;
 
 static uint64_t (SDLCALL *sdl2_GetPerformanceFrequency)(void) = NULL;
 static uint64_t (SDLCALL *sdl2_GetPerformanceCounter)(void) = NULL;
@@ -77,7 +76,6 @@ static int sdl2_timer_load_syms(void)
 	SCHISM_SDL2_SYM(InitSubSystem);
 	SCHISM_SDL2_SYM(QuitSubSystem);
 
-	SCHISM_SDL2_SYM(GetTicks);
 	SCHISM_SDL2_SYM(Delay);
 
 	SCHISM_SDL2_SYM(GetPerformanceCounter);
