@@ -33,34 +33,29 @@ static void (SDLCALL *sdl2_QuitSubSystem)(Uint32 flags) = NULL;
 static void (SDLCALL *sdl2_Delay)(uint32_t ms) = NULL;
 static uint32_t (SDLCALL *sdl2_GetTicks)(void) = NULL;
 
+static uint64_t (SDLCALL *sdl2_GetPerformanceFrequency)(void) = NULL;
+static uint64_t (SDLCALL *sdl2_GetPerformanceCounter)(void) = NULL;
+
 // Introduced in SDL 2.0.18
 static uint64_t (SDLCALL *sdl2_GetTicks64)(void) = NULL;
 
 static int sdl2_have_timer64 = 0;
 
-// ahhh!
-static schism_mutex_t *last_known_ticks_mutex = NULL;
-static uint32_t last_known_ticks = 0;
-static uint32_t ticks_overflow = 0;
+static uint64_t sdl2_performance_start = 0;
+static uint64_t sdl2_performance_frequency = 0;
 
 static schism_ticks_t sdl2_timer_ticks(void)
 {
 #if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 0, 18)
-	if (sdl2_GetTicks64)
+	if (sdl2_have_timer64)
 		return sdl2_GetTicks64();
 #endif
 
-	schism_ticks_t ticks = sdl2_GetTicks();
+	schism_ticks_t ticks = sdl2_GetPerformanceCounter();
 
-	mt_mutex_lock(last_known_ticks_mutex);
-
-	if (ticks < last_known_ticks)
-		ticks_overflow++;
-	last_known_ticks = ticks;
-
-	ticks |= ((uint64_t)ticks_overflow << 32);
-
-	mt_mutex_unlock(last_known_ticks_mutex);
+	ticks -= sdl2_performance_start;
+	ticks *= 1000;
+	ticks /= sdl2_performance_frequency;
 
 	return ticks;
 }
@@ -84,6 +79,9 @@ static int sdl2_timer_load_syms(void)
 
 	SCHISM_SDL2_SYM(GetTicks);
 	SCHISM_SDL2_SYM(Delay);
+
+	SCHISM_SDL2_SYM(GetPerformanceCounter);
+	SCHISM_SDL2_SYM(GetPerformanceFrequency);
 
 	return 0;
 }
@@ -110,9 +108,8 @@ static int sdl2_timer_init(void)
 	if (!sdl2_timer64_load_syms()) {
 		sdl2_have_timer64 = 1;
 	} else {
-		last_known_ticks_mutex = mt_mutex_create();
-		if (!last_known_ticks_mutex)
-			return 0;
+		sdl2_performance_frequency = sdl2_GetPerformanceFrequency();
+		sdl2_performance_start = sdl2_GetPerformanceCounter();
 	}
 
 	if (sdl2_InitSubSystem(SDL_INIT_TIMER) < 0)
