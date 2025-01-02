@@ -22,6 +22,7 @@
  */
 
 #include "headers.h"
+#include "threads.h"
 #include "backend/timer.h"
 
 #include "init.h"
@@ -37,6 +38,11 @@ static uint64_t (SDLCALL *sdl2_GetTicks64)(void) = NULL;
 
 static int sdl2_have_timer64 = 0;
 
+// ahhh!
+static schism_mutex_t *last_known_ticks_mutex = NULL;
+static uint32_t last_known_ticks = 0;
+static uint32_t ticks_overflow = 0;
+
 static schism_ticks_t sdl2_timer_ticks(void)
 {
 #if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 0, 18)
@@ -44,17 +50,24 @@ static schism_ticks_t sdl2_timer_ticks(void)
 		return sdl2_GetTicks64();
 #endif
 
-	return sdl2_GetTicks();
+	schism_ticks_t ticks = sdl2_GetTicks();
+
+	mt_mutex_lock(last_known_ticks_mutex);
+
+	if (ticks < last_known_ticks)
+		ticks_overflow++;
+	last_known_ticks = ticks;
+
+	ticks |= ((uint64_t)ticks_overflow << 32);
+
+	mt_mutex_unlock(last_known_ticks_mutex);
+
+	return ticks;
 }
 
 static int sdl2_timer_ticks_passed(schism_ticks_t a, schism_ticks_t b)
 {
-#if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 0, 18)
-	if (sdl2_GetTicks64)
-		return (a >= b);
-#endif
-
-	return ((int32_t)(b - a) <= 0);
+	return (a >= b);
 }
 
 static void sdl2_timer_delay(uint32_t ms)
@@ -94,8 +107,13 @@ static int sdl2_timer_init(void)
 	if (sdl2_timer_load_syms())
 		return 0;
 
-	if (!sdl2_timer64_load_syms())
+	if (!sdl2_timer64_load_syms()) {
 		sdl2_have_timer64 = 1;
+	} else {
+		last_known_ticks_mutex = mt_mutex_create();
+		if (!last_known_ticks_mutex)
+			return 0;
+	}
 
 	if (sdl2_InitSubSystem(SDL_INIT_TIMER) < 0)
 		return 0;

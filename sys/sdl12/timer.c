@@ -22,6 +22,7 @@
  */
 
 #include "headers.h"
+#include "threads.h"
 #include "backend/timer.h"
 
 #include "init.h"
@@ -31,14 +32,30 @@ static void (SDLCALL *sdl12_QuitSubSystem)(Uint32 flags);
 static uint32_t (SDLCALL *sdl12_GetTicks)(void);
 static void (SDLCALL *sdl12_Delay)(uint32_t ms);
 
+static schism_mutex_t *last_known_ticks_mutex = NULL;
+static uint32_t last_known_ticks = 0;
+static uint32_t ticks_overflow = 0;
+
 static schism_ticks_t sdl12_timer_ticks(void)
 {
-	return sdl12_GetTicks();
+	schism_ticks_t ticks = sdl12_GetTicks();
+
+	mt_mutex_lock(last_known_ticks_mutex);
+
+	if (ticks < last_known_ticks)
+		ticks_overflow++;
+	last_known_ticks = ticks;
+
+	ticks |= ((uint64_t)ticks_overflow << 32);
+
+	mt_mutex_unlock(last_known_ticks_mutex);
+
+	return ticks;
 }
 
 static int sdl12_timer_ticks_passed(schism_ticks_t a, schism_ticks_t b)
 {
-	return ((int32_t)(b - a) <= 0);
+	return (a >= b);
 }
 
 static void sdl12_delay(uint32_t ms)
@@ -67,6 +84,10 @@ static int sdl12_timer_init(void)
 		return 0;
 
 	if (sdl12_InitSubSystem(SDL_INIT_TIMER) < 0)
+		return 0;
+
+	last_known_ticks_mutex = mt_mutex_create();
+	if (!last_known_ticks_mutex)
 		return 0;
 
 	return 1;
