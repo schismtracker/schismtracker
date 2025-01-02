@@ -49,11 +49,10 @@ Information at our disposal:
 		onto the code for a really long time before building it.
 
 */
-static const char* top_banner_normal =
 #ifndef EMPTY_VERSION
-	"Schism Tracker " VERSION
+# define TOP_BANNER_NORMAL "Schism Tracker " VERSION
 #else
-	"Schism Tracker built " __DATE__ " " __TIME__
+# define TOP_BANNER_NORMAL "Schism Tracker built " __DATE__ " " __TIME__
 #endif
 	;
 
@@ -216,7 +215,7 @@ const char *schism_banner(int classic)
 {
 	return (classic
 		? TOP_BANNER_CLASSIC
-		: top_banner_normal);
+		: TOP_BANNER_NORMAL);
 }
 
 void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char buf[11])
