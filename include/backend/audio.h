@@ -47,6 +47,10 @@ typedef struct {
 	void (*pause_device)(schism_audio_device_t *device, int paused);
 } schism_audio_backend_t;
 
+#ifdef SCHISM_WIN32
+extern const schism_audio_backend_t schism_audio_backend_win32;
+#endif
+
 #ifdef SCHISM_SDL12
 extern const schism_audio_backend_t schism_audio_backend_sdl12;
 #endif

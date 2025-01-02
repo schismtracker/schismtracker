@@ -1590,6 +1590,9 @@ int audio_init(const char *driver, const char *device)
 #ifdef SCHISM_SDL12
 		&schism_audio_backend_sdl12,
 #endif
+#ifdef SCHISM_WIN32
+		&schism_audio_backend_win32,
+#endif
 		NULL,
 	};
 
@@ -1598,22 +1601,21 @@ int audio_init(const char *driver, const char *device)
 
 	for (i = 0; backends[i]; i++) {
 		backend = backends[i];
-		if (backend->init())
-			break;
+		if (backend->init()) {
+			if (status.flags & CLASSIC_MODE)
+				song_stop();
 
-		backend = NULL;
+			success = _audio_init_head(driver, device, 1);
+			if (success) {
+				_audio_init_tail();
+				return success;
+			}
+			_audio_quit();
+			backend->quit();
+		}
 	}
 
-	if (!backend)
-		return 0;
-
-	if (status.flags & CLASSIC_MODE)
-		song_stop();
-
-	success = _audio_init_head(driver, device, 1);
-	_audio_init_tail();
-
-	return success;
+	return 0;
 }
 
 int audio_reinit(const char *device)
