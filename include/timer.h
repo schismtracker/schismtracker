@@ -29,10 +29,12 @@
 typedef uint64_t schism_ticks_t;
 
 schism_ticks_t timer_ticks(void);
-int timer_ticks_passed(schism_ticks_t a, schism_ticks_t b);
-void timer_delay(uint32_t ms);
+#define timer_ticks_passed(a, b) ((a) >= (b))
 void timer_usleep(uint64_t usec);
-void timer_msleep(uint64_t msec);
+
+// old functions
+#define timer_msleep(ms) timer_usleep((ms) * 1000)
+#define timer_delay(ms)  timer_msleep(ms)
 
 int timer_init(void);
 void timer_quit(void);

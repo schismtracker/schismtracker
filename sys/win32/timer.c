@@ -25,6 +25,7 @@
 
 #include "headers.h"
 #include "threads.h"
+#include "loadso.h"
 
 #include "backend/timer.h"
 
@@ -77,14 +78,65 @@ static schism_ticks_t win32_timer_ticks(void)
 	return ticks.QuadPart;
 }
 
-static int win32_timer_ticks_passed(schism_ticks_t a, schism_ticks_t b)
-{
-	return (a >= b);
-}
+// based off old code from midi-core.c but less obfuscated
+static void *kernel32 = NULL;
 
-static void win32_timer_delay(uint32_t ms)
+// Added in Windows Vista; the flags we use were added in Windows 10 version 1803.
+static HANDLE (WINAPI *WIN32_CreateWaitableTimerExW)(LPSECURITY_ATTRIBUTES, LPCWSTR, DWORD, DWORD) = NULL;
+
+// These are in much, much older versions of Windows.
+// Really, Windows 95 is the only version that doesn't have these symbols.
+// FIXME is this actually true? Win95 at least has WaitForSingleObject.
+static HANDLE (WINAPI *WIN32_CreateWaitableTimer)(LPSECURITY_ATTRIBUTES, BOOL, LPCSTR) = NULL;
+static BOOL (WINAPI *WIN32_SetWaitableTimer)(HANDLE, const LARGE_INTEGER *, LONG, PTIMERAPCROUTINE, LPVOID, BOOL) = NULL;
+
+static void win32_timer_usleep(uint64_t usec)
 {
-	SleepEx(ms, FALSE);
+	LARGE_INTEGER due;
+	HANDLE timer = NULL;
+
+	// If we don't even have this then we're screwed.
+	if (!WIN32_SetWaitableTimer)
+		goto timer_failed;
+
+	// Old toolchains don't have these:
+#ifndef CREATE_WAITABLE_TIMER_MANUAL_RESET
+# define CREATE_WAITABLE_TIMER_MANUAL_RESET 0x00000001
+#endif
+#ifndef CREATE_WAITABLE_TIMER_HIGH_RESOLUTION
+# define CREATE_WAITABLE_TIMER_HIGH_RESOLUTION 0x00000002
+#endif
+	// Create a high-resolution timer if we can.
+	if (WIN32_CreateWaitableTimerExW) {
+		timer = WIN32_CreateWaitableTimerExW(NULL, NULL, CREATE_WAITABLE_TIMER_MANUAL_RESET | CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_MODIFY_STATE);
+		if (timer)
+			goto have_timer;
+	}
+
+	// Ok, the high-resolution timer isn't available, fallback:
+	if (WIN32_CreateWaitableTimer) {
+		timer = WIN32_CreateWaitableTimer(NULL, TRUE, NULL);
+		if (timer)
+			goto have_timer;
+	}
+
+	goto timer_failed;
+
+have_timer:
+	due.QuadPart = -(10 * (int64_t)usec);
+	if (!WIN32_SetWaitableTimer(timer, &due, 0, NULL, NULL, 0))
+		goto timer_failed;
+
+	if (WaitForSingleObject(timer, INFINITE) == WAIT_FAILED)
+		goto timer_failed;
+
+	return;
+
+timer_failed:
+	if (timer)
+		CloseHandle(timer);
+
+	SleepEx(usec / 1000, FALSE);
 }
 
 static int win32_timer_must_end_period = 0;
@@ -110,6 +162,15 @@ static int win32_timer_init(void)
 		win32_timer_overflow_mutex = mt_mutex_create();
 	}
 
+	kernel32 = loadso_object_load("KERNEL32.DLL");
+	if (kernel32) {
+		WIN32_CreateWaitableTimer = loadso_function_load(kernel32, "CreateWaitableTimerA");
+		if (!WIN32_CreateWaitableTimer)
+			WIN32_CreateWaitableTimer = loadso_function_load(kernel32, "CreateWaitableTimer");
+		WIN32_CreateWaitableTimerExW = loadso_function_load(kernel32, "CreateWaitableTimerExW");
+		WIN32_SetWaitableTimer = loadso_function_load(kernel32, "SetWaitableTimer");
+	}
+
 	// ok
 	return 1;
 }
@@ -118,6 +179,9 @@ static void win32_timer_quit(void)
 {
 	if (win32_timer_must_end_period)
 		timeEndPeriod(win32_timer_caps.wPeriodMin);
+
+	if (kernel32)
+		loadso_object_unload(kernel32);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -127,6 +191,5 @@ const schism_timer_backend_t schism_timer_backend_win32 = {
 	.quit = win32_timer_quit,
 
 	.ticks = win32_timer_ticks,
-	.ticks_passed = win32_timer_ticks_passed,
-	.delay = win32_timer_delay,
+	.usleep = win32_timer_usleep,
 };

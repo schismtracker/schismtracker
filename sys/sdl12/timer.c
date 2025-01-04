@@ -53,14 +53,9 @@ static schism_ticks_t sdl12_timer_ticks(void)
 	return ticks;
 }
 
-static int sdl12_timer_ticks_passed(schism_ticks_t a, schism_ticks_t b)
+static void sdl12_usleep(uint64_t ms)
 {
-	return (a >= b);
-}
-
-static void sdl12_delay(uint32_t ms)
-{
-	sdl12_Delay(ms);
+	sdl12_Delay(ms / 1000);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -107,6 +102,5 @@ const schism_timer_backend_t schism_timer_backend_sdl12 = {
 	.quit = sdl12_timer_quit,
 
 	.ticks = sdl12_timer_ticks,
-	.ticks_passed = sdl12_timer_ticks_passed,
-	.delay = sdl12_delay,
+	.usleep = sdl12_usleep,
 };

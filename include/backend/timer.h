@@ -32,7 +32,7 @@ typedef struct {
 
 	schism_ticks_t (*ticks)(void);
 	int (*ticks_passed)(schism_ticks_t a, schism_ticks_t b);
-	void (*delay)(uint32_t ms);
+	void (*usleep)(uint64_t us);
 } schism_timer_backend_t;
 
 #ifdef SCHISM_WIN32
