@@ -95,6 +95,27 @@ int audio_device_list_size = 0;
 
 static schism_audio_device_t *current_audio_device = NULL;
 
+// compiled backends
+static const schism_audio_backend_t *backends[] = {
+	// ordered by preference
+#ifdef SCHISM_SDL2
+	&schism_audio_backend_sdl2,
+#endif
+#ifdef SCHISM_WIN32
+	// SDL 2 provides wasapi & directsound.
+	// SDL 1.2 has directsound but no devices
+	// so prefer waveout over SDL 1.2 dsound
+	&schism_audio_backend_win32,
+#endif
+#ifdef SCHISM_SDL12
+	&schism_audio_backend_sdl12,
+#endif
+	NULL,
+};
+
+// A list of all currently initialized backends
+static const schism_audio_backend_t *inited_backends[ARRAY_SIZE(backends) - 1] = {0};
+
 static const schism_audio_backend_t *backend = NULL;
 
 // ------------------------------------------------------------------------
@@ -232,14 +253,96 @@ int refresh_audio_device_list(void) {
 // ------------------------------------------------------------------------------------------------------------
 // drivers
 
+// Created when audio_init is called for the first time
+static struct {
+	size_t size;
+	const char **list;
+} full_drivers = {0};
+
+static void _audio_create_drivers_list(void)
+{
+	// This is here so we can skip known duplicate drivers
+	// that were renamed in SDL 2, and also for re-ordering
+	// the drivers after the fact
+	enum {
+		// "dsound" in SDL 1.2, "directsound" in SDL 2
+		DRIVER_DSOUND = 0x01,
+		// "pulse" in SDL 1.2, "pulseaudio" in SDL 2
+		DRIVER_PULSE = 0x02,
+
+		DRIVER_DISK = 0x04,
+		DRIVER_DUMMY = 0x08,
+	};
+	uint32_t drivers = 0;
+
+	// Reset the drivers list
+	full_drivers.list = NULL;
+	full_drivers.size = 0;
+
+	size_t alloc_size = 0;
+	int counts[ARRAY_SIZE(inited_backends)] = {0};
+
+	for (int i = 0; i < ARRAY_SIZE(counts); i++)
+		alloc_size += (counts[i] = inited_backends[i]->driver_count());
+
+	full_drivers.list = mem_alloc(alloc_size * sizeof(const char *));
+
+	for (int i = 0; i < ARRAY_SIZE(counts); i++) {
+		for (int j = 0; j < counts[i]; j++) {
+			const char *n = inited_backends[i]->driver_name(j);
+
+			// Skip known duplicate drivers
+			if (!strcmp(n, "dsound") || !strcmp(n, "directsound")) {
+				if (drivers & DRIVER_DSOUND) continue;
+				drivers |= DRIVER_DSOUND;
+			} else if (!strcmp(n, "pulse") || !strcmp(n, "pulseaudio")) {
+				if (drivers & DRIVER_PULSE) continue;
+				drivers |= DRIVER_PULSE;
+			} else if (!strcmp(n, "dummy")) {
+				drivers |= DRIVER_DUMMY;
+				continue;
+			} else if (!strcmp(n, "disk")) {
+				drivers |= DRIVER_DISK;
+				continue;
+			} else if (!strcmp(n, "winmm")) {
+				// Skip SDL 2 waveout driver; we have our own implementation
+				// and the SDL 2's driver seems to randomly want to hang on
+				// exit
+				continue;
+			}
+
+			// Skip any drivers with a name already in the list
+			{
+				int fnd = 0;
+				for (size_t k = 0; k < full_drivers.size; k++) {
+					if (!strcmp(n, full_drivers.list[k])) {
+						fnd = 1;
+						break;
+					}
+				}
+				if (fnd)
+					continue;
+			}
+
+			full_drivers.list[full_drivers.size++] = n;
+		}
+	}
+
+	if (drivers & DRIVER_DISK)  full_drivers.list[full_drivers.size++] = "disk";
+	if (drivers & DRIVER_DUMMY) full_drivers.list[full_drivers.size++] = "dummy";
+}
+
 int audio_driver_count(void)
 {
-	return backend ? backend->driver_count() : 0;
+	return full_drivers.size;
 }
 
 const char *audio_driver_name(int x)
 {
-	return backend ? backend->driver_name(x) : NULL;
+	if (x >= full_drivers.size || x < 0)
+		return NULL;
+
+	return full_drivers.list[x];
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -1380,6 +1483,7 @@ static void _cleanup_audio_device(void)
 		if (backend)
 			backend->close_device(current_audio_device);
 		current_audio_device = NULL;
+
 		free(device_name);
 		device_name = NULL;
 	}
@@ -1500,29 +1604,21 @@ static void _audio_quit(void)
 	}
 }
 
-// Configure a device. (called at startup)
-static int _audio_init_head(const char *driver, const char *device, int verbose)
+static int _audio_driver_exists(const char *driver)
 {
-	/* Use the driver from the config if it exists. */
-	if (!driver || !*driver)
-		driver = cfg_audio_driver;
+	for (size_t i = 0; i < full_drivers.size; i++)
+		if (!strcmp(full_drivers.list[i], driver))
+			return 1;
 
-	if (!device || !*device)
-		device = cfg_audio_device;
+	return 0;
+}
 
+// Configure a device. (called at startup)
+static int _audio_init_head(const char *device, int verbose)
+{
 	const char *n;
 
 	_audio_quit();
-
-	if (driver && *driver) {
-		/* compatibility! */
-		n = !strcmp(driver, "oss") ? "dsp"
-			: (!strcmp(driver, "nosound") || !strcmp(driver, "none")) ? "dummy"
-			: driver;
-
-		if (_audio_try_driver(n, device, verbose))
-			return 1;
-	}
 
 	if (
 		// hm... this sucks! lol
@@ -1535,24 +1631,17 @@ static int _audio_init_head(const char *driver, const char *device, int verbose)
 		0) {
 		/* we ought to allow this envvar to work under SDL */
 		n = getenv("SDL_AUDIODRIVER");
-		if (n && *n && _audio_try_driver(n, device, verbose))
+		if (n && *n && _audio_driver_exists(n) && _audio_try_driver(n, device, verbose))
 			return 1;
 	}
 
-	const int cnt = backend ? backend->driver_count() : 0;
-
-	for (int i = 0; i < cnt; i++) {
-		n = backend ? backend->driver_name(i) : NULL;
+	for (int i = 0; i < full_drivers.size; i++) {
+		n = audio_driver_name(i);
 
 		if (_audio_try_driver(n, device, verbose))
 			return 1;
 	}
 
-	/* whoops! */
-	fputs("Couldn't initialize audio!\n", stderr);
-	//const char* err = SDL_GetError();
-	//if (err) fprintf(stderr, "%s\n", err);
-	schism_exit(1);
 	return 0;
 }
 
@@ -1582,39 +1671,69 @@ void audio_flash_reinitialized_text(int success) {
 /* driver == NULL || device == NULL is fine here */
 int audio_init(const char *driver, const char *device)
 {
-	static const schism_audio_backend_t *backends[] = {
-		// ordered by preference
-#ifdef SCHISM_SDL2
-		&schism_audio_backend_sdl2,
-#endif
-#ifdef SCHISM_SDL12
-		&schism_audio_backend_sdl12,
-#endif
-#ifdef SCHISM_WIN32
-		&schism_audio_backend_win32,
-#endif
-		NULL,
-	};
-
+	static int backends_initialized = 0;
 	int i;
-	int success;
+	int success = 0;
 
-	for (i = 0; backends[i]; i++) {
-		backend = backends[i];
-		if (backend->init()) {
-			if (status.flags & CLASSIC_MODE)
-				song_stop();
+	_audio_quit();
 
-			success = _audio_init_head(driver, device, 1);
-			if (success) {
-				_audio_init_tail();
-				return success;
-			}
-			_audio_quit();
-			backend->quit();
+	/* Use the driver from the config if it exists. */
+	if (!driver || !*driver)
+		driver = cfg_audio_driver;
+
+	if (!device || !*device)
+		device = cfg_audio_device;
+
+	driver = !strcmp(driver, "oss") ? "dsp"
+		: (!strcmp(driver, "nosound") || !strcmp(driver, "none")) ? "dummy"
+		: (!strcmp(driver, "winmm")) ? "waveout"
+		: driver;
+
+	// Initialize all backends (for audio driver listing)
+	if (!backends_initialized) {
+		for (i = 0; backends[i]; i++) {
+			backend = backends[i]; // hax
+			if (backend->init())
+				inited_backends[i] = backend;
+			backend = NULL;
+		}
+		_audio_create_drivers_list();
+		backends_initialized = 1;
+	}
+
+	if (_audio_driver_exists(driver)) {
+		for (i = 0; i < ARRAY_SIZE(inited_backends); i++) {
+			if (!inited_backends[i])
+				continue;
+
+			backend = inited_backends[i]; // hax
+			if ((success = _audio_try_driver(driver, device, 1)))
+				goto agh;
+			backend = NULL;
 		}
 	}
 
+	for (i = 0; i < ARRAY_SIZE(inited_backends); i++) {
+		if (!inited_backends[i])
+			continue;
+
+		backend = inited_backends[i]; // hax
+		if ((success = _audio_init_head(device, 1)))
+			goto agh;
+		backend = NULL;
+	}
+
+	// FIXME: Try again with no specific driver? or rather,
+	// add fallback stuff to the SDL 1.2 backend?
+
+agh:
+	if (success) {
+		_audio_init_tail();
+		return success;
+	}
+
+	// hmmmmm ? :)
+	schism_exit(0);
 	return 0;
 }
 
@@ -1642,9 +1761,11 @@ void audio_quit(void)
 {
 	_audio_quit();
 
-	if (backend) {
-		backend->quit();
-		backend = NULL;
+	for (int i = 0; i < ARRAY_SIZE(inited_backends); i++) {
+		if (inited_backends[i]) {
+			inited_backends[i]->quit();
+			inited_backends[i] = NULL;
+		}
 	}
 }
 
