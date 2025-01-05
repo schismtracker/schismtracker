@@ -29,7 +29,6 @@
 
 static const schism_threads_backend_t *mt_backend = NULL;
 
-// The backend is required to support this ;)
 schism_thread_t *mt_thread_create(schism_thread_function_t func, const char *name, void *userdata)
 {
 	return mt_backend->thread_create(func, name, userdata);
@@ -93,6 +92,11 @@ void mt_cond_signal(schism_cond_t *cond)
 void mt_cond_wait(schism_cond_t *cond, schism_mutex_t *mutex)
 {
 	mt_backend->cond_wait(cond, mutex);
+}
+
+void mt_cond_wait_timeout(schism_cond_t *cond, schism_mutex_t *mutex, uint32_t timeout)
+{
+	mt_backend->cond_wait_timeout(cond, mutex, timeout);
 }
 
 // ---------------------------------------------------------------------------

@@ -28,14 +28,29 @@
 
 typedef uint64_t schism_ticks_t;
 
+// Get the amount of milliseconds since timer_init() was called
 schism_ticks_t timer_ticks(void);
+
+// Same as the above but in microseconds
+schism_ticks_t timer_ticks_us(void);
+
+// Legacy macro, backends should account for missing bits in the timer
+// by e.g. keeping a global state. See the SDL 1.2 backend for an example
+// of this.
 #define timer_ticks_passed(a, b) ((a) >= (b))
+
+// Sleep for `usec` microseconds. (This may have much much less precision
+// than anticipated!)
 void timer_usleep(uint64_t usec);
 
-// old functions
+// Old functions that are simply macros now.
 #define timer_msleep(ms) timer_usleep((ms) * 1000)
 #define timer_delay(ms)  timer_msleep(ms)
 
+// Run a function after `ms` milliseconds
+void timer_oneshot(uint32_t ms, void (*callback)(void *param), void *param);
+
+// init/quit
 int timer_init(void);
 void timer_quit(void);
 

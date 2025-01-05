@@ -23,6 +23,7 @@
 
 #include "headers.h"
 #include "threads.h"
+#include "mem.h"
 #include "backend/timer.h"
 
 #include "init.h"
@@ -43,6 +44,8 @@ static int sdl2_have_timer64 = 0;
 static uint64_t sdl2_performance_start = 0;
 static uint64_t sdl2_performance_frequency = 0;
 
+static SDL_TimerID (SDLCALL *sdl2_AddTimer)(uint32_t ms, SDL_TimerCallback callback, void *param);
+
 static schism_ticks_t sdl2_timer_ticks(void)
 {
 #if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 0, 18)
@@ -53,15 +56,57 @@ static schism_ticks_t sdl2_timer_ticks(void)
 	schism_ticks_t ticks = sdl2_GetPerformanceCounter();
 
 	ticks -= sdl2_performance_start;
-	ticks *= 1000;
+	ticks *= UINT64_C(1000);
 	ticks /= sdl2_performance_frequency;
 
 	return ticks;
 }
 
-static void sdl2_timer_usleep(uint64_t ms)
+static schism_ticks_t sdl2_timer_ticks_us(void)
 {
-	sdl2_Delay(ms);
+	schism_ticks_t ticks = sdl2_GetPerformanceCounter();
+
+	ticks -= sdl2_performance_start;
+	ticks *= UINT64_C(1000000);
+	ticks /= sdl2_performance_frequency;
+
+	return ticks;
+}
+
+static void sdl2_timer_usleep(uint64_t us)
+{
+	sdl2_Delay(us / 1000);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// oneshot timer
+
+struct _sdl2_timer_oneshot_curry {
+	void (*callback)(void *param);
+	void *param;
+};
+
+static uint32_t _sdl2_timer_oneshot_callback(uint32_t interval, void *param)
+{
+	struct _sdl2_timer_oneshot_curry *curry = (struct _sdl2_timer_oneshot_curry *)param;
+
+	curry->callback(curry->param);
+	free(curry);
+
+	return 0;
+}
+
+static int sdl2_timer_oneshot(uint32_t interval, void (*callback)(void *param), void *param)
+{
+	struct _sdl2_timer_oneshot_curry *curry = mem_alloc(sizeof(*curry));
+
+	curry->callback = callback;
+	curry->param = param;
+	SDL_TimerID id = sdl2_AddTimer(interval, _sdl2_timer_oneshot_callback, curry);
+	if (!id)
+		free(curry);
+
+	return !!id;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -75,6 +120,8 @@ static int sdl2_timer_load_syms(void)
 
 	SCHISM_SDL2_SYM(GetPerformanceCounter);
 	SCHISM_SDL2_SYM(GetPerformanceFrequency);
+
+	SCHISM_SDL2_SYM(AddTimer);
 
 	return 0;
 }
@@ -125,5 +172,8 @@ const schism_timer_backend_t schism_timer_backend_sdl2 = {
 	.quit = sdl2_timer_quit,
 
 	.ticks = sdl2_timer_ticks,
+	.ticks_us = sdl2_timer_ticks_us,
 	.usleep = sdl2_timer_usleep,
+
+	.oneshot = sdl2_timer_oneshot,
 };

@@ -55,6 +55,7 @@ schism_cond_t *mt_cond_create(void);
 void mt_cond_delete(schism_cond_t *cond);
 void mt_cond_signal(schism_cond_t *cond);
 void mt_cond_wait(schism_cond_t *cond, schism_mutex_t *mutex);
+void mt_cond_wait_timeout(schism_cond_t *cond, schism_mutex_t *mutex, uint32_t timeout);
 
 int mt_init(void);
 void mt_quit(void);

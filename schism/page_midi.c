@@ -106,7 +106,9 @@ static void toggle_port(void)
 	if (p) {
 		status.flags |= NEED_UPDATE;
 
-		if (p->disable) if (!p->disable(p)) return;
+		if (p->disable && !midi_port_disable(p))
+			return;
+
 		switch (p->io) {
 		case 0:
 			if (p->iocap & MIDI_INPUT) p->io = MIDI_INPUT;
@@ -125,12 +127,7 @@ static void toggle_port(void)
 			break;
 		};
 
-		if (p->enable) {
-			if (!p->enable(p)) {
-				p->io = 0;
-				return;
-			}
-		}
+		midi_port_enable(p);
 	}
 }
 

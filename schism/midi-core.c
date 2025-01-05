@@ -53,7 +53,6 @@ and midi_record_mutex is by the event/sound thread
 static schism_mutex_t *midi_mutex = NULL;
 static schism_mutex_t *midi_port_mutex = NULL;
 static schism_mutex_t *midi_record_mutex = NULL;
-static schism_mutex_t *midi_play_mutex = NULL;
 static schism_cond_t *midi_play_cond = NULL;
 
 static struct midi_provider *port_providers = NULL;
@@ -293,18 +292,13 @@ int midi_engine_start(void)
 
 	midi_mutex        = mt_mutex_create();
 	midi_record_mutex = mt_mutex_create();
-	midi_play_mutex   = mt_mutex_create();
 	midi_port_mutex   = mt_mutex_create();
-	midi_play_cond    = mt_cond_create();
 
-	if (!(midi_mutex && midi_record_mutex && midi_play_mutex && midi_port_mutex && midi_play_cond)) {
+	if (!(midi_mutex && midi_record_mutex && midi_port_mutex)) {
 		if (midi_mutex)        mt_mutex_delete(midi_mutex);
 		if (midi_record_mutex) mt_mutex_delete(midi_record_mutex);
-		if (midi_play_mutex)   mt_mutex_delete(midi_play_mutex);
 		if (midi_port_mutex)   mt_mutex_delete(midi_port_mutex);
-		if (midi_play_cond)    mt_cond_delete(midi_play_cond);
-		midi_mutex = midi_record_mutex = midi_play_mutex = midi_port_mutex = NULL;
-		midi_play_cond = NULL;
+		midi_mutex = midi_record_mutex = midi_port_mutex = NULL;
 		return 0;
 	}
 
@@ -317,7 +311,7 @@ void midi_engine_reset(void)
 {
 	if (!_connected) return;
 	midi_engine_stop();
-	_midi_engine_connect();
+	midi_engine_start();
 }
 
 void midi_engine_stop(void)
@@ -344,6 +338,11 @@ void midi_engine_stop(void)
 	}
 	_connected = 0;
 	mt_mutex_unlock(midi_mutex);
+
+	// now delete everything
+	mt_mutex_delete(midi_mutex);
+	mt_mutex_delete(midi_record_mutex);
+	mt_mutex_delete(midi_port_mutex);
 }
 
 /* ------------------------------------------------------------- */
@@ -510,6 +509,42 @@ int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor)
 	return 1;
 }
 
+// both of these functions return 1 on success and 0 on failure
+int midi_port_enable(struct midi_port *p)
+{
+	int r = 0;
+
+	mt_mutex_lock(midi_record_mutex);
+	mt_mutex_lock(midi_port_mutex);
+
+	if (p->enable)
+		r = p->enable(p);
+
+	if (!r)
+		p->io = 0; // why
+
+	mt_mutex_unlock(midi_port_mutex);
+	mt_mutex_unlock(midi_record_mutex);
+
+	return r;
+}
+
+int midi_port_disable(struct midi_port *p)
+{
+	int r = 0;
+
+	mt_mutex_lock(midi_record_mutex);
+	mt_mutex_lock(midi_port_mutex);
+
+	if (p->disable)
+		r = p->disable(p);
+
+	mt_mutex_unlock(midi_port_mutex);
+	mt_mutex_unlock(midi_record_mutex);
+
+	return r;
+}
+
 /* ------------------------------------------------------------- */
 /* send exactly one midi message */
 
@@ -585,100 +620,18 @@ void midi_send_now(const unsigned char *seq, unsigned int len)
 }
 
 /*----------------------------------------------------------------------------------*/
+/* for drivers that don't have scheduled midi, use timers */
 
-/* okay, our local queue is a little confusing,
- * but it works on the premise that the people who need it (oss)
- * also have systems with high-speed context switches.
- *
- * this sucks for freebsd/386 users as they've got a high-latency
- * audio system (oss) and slow context switches (x86). someone should
- * port alsa to freebsd. maybe someone else will solve this problem,
- * or maybe the computers that are slow enough to matter simply won't
- * be bothered.
- *
- * midi, that is, real midi, is 31250bps. that's ~312 bits per ms,
- * or ~39 bytes per ms. i use a fixed buffer here because access needs
- * to be fast, and attempting to handle more will simply help people
- * using software-only setups.
- *
- * really, software-only midi, without kernel assistance sucks.
- */
-
-// MIDI messages for one millisecond of audio, normalized.
-struct qent {
-	int used; // how many messages do we have?
-	struct {
-		int used; // how long is *this* message?
-		unsigned char message[3];
-	} b[13];
-};
-static struct qent *qq = NULL;
-static unsigned int midims = 0, qlen = 0;
+static uint32_t midims = 0;
 
 void midi_queue_alloc(int buffer_length, int sample_size, int samples_per_second)
 {
-	if (qq) {
-		free(qq);
-		qq = NULL;
-	}
-
-	// bytes per msec, rounded up
+	// bytes per centisecond, rounded up
 	midims = sample_size * samples_per_second;
-	midims += 1000 - (midims % 1000);
-	midims /= 1000;
+	midims += 100 - (midims % 100);
+	midims /= 100;
 
-	// number of msec in output buffer, rounded up
-	qlen = buffer_length * sample_size;
-	qlen += midims - (qlen % midims);
-	qlen /= midims;
-
-	// ok, now we can allocate one entry for every msec
-	qq = mem_calloc(qlen, sizeof(*qq));
-}
-
-static int _midi_queue_run(SCHISM_UNUSED void *xtop)
-{
-	unsigned int i;
-	int j;
-
-#ifdef SCHISM_WIN32
-	SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
-#endif
-	/* just say that it's high priority */
-	mt_thread_set_priority(BE_THREAD_PRIORITY_HIGH);
-
-	mt_mutex_lock(midi_play_mutex);
-	for (;;) {
-		mt_cond_wait(midi_play_cond, midi_play_mutex);
-
-		const schism_ticks_t start = timer_ticks();
-
-		for (i = 0; i < qlen; i++) {
-			mt_mutex_lock(midi_record_mutex);
-			for (j = 0; j < qq[i].used; j++) {
-				// empty the buffer
-				_midi_send_unlocked(qq[i].b[j].message, qq[i].b[j].used, 0, MIDI_FROM_NOW);
-				qq[i].b[j].used = 0;
-			}
-			mt_mutex_unlock(midi_record_mutex);
-
-			// Since the sleep function has the possibility of not
-			// *really* being realtime, we have to take into account
-			// that we might not really be on the ms that we want.
-			//
-			// To combat this, we have to check if the current tick
-			// value is greater than or equal to the expected tick
-			// value, and make up for the difference there. It surely
-			// isn't perfect, but it'll get the job done for slow
-			// machines.
-			if (timer_ticks_passed(start + i, timer_ticks()))
-				timer_msleep(1);
-
-			qq[i].used = 0;
-		}
-	}
-
-	return 0; /* never happens */
+	// nothing else to do now
 }
 
 int midi_need_flush(void)
@@ -687,57 +640,51 @@ int midi_need_flush(void)
 	int need_explicit_flush = 0;
 	unsigned int i;
 
-	if (!midi_record_mutex || !midi_play_mutex) return 0;
+	if (!midi_record_mutex) return 0;
 
 	ptr = NULL;
-
-	while (midi_port_foreach(NULL, &ptr)) {
-		if ((ptr->io & MIDI_OUTPUT)) {
-			if (!ptr->drain && ptr->send_now)
-				need_explicit_flush = 1;
-		}
-	}
-	if (!need_explicit_flush) return 0;
-
-	for (i = 0; i < qlen; i++) {
-		if (qq[i].used) return 1;
-	}
+	while (midi_port_foreach(NULL, &ptr))
+		if ((ptr->io & MIDI_OUTPUT) && !ptr->drain && ptr->send_now)
+			return 1;
 
 	return 0;
 }
 
 void midi_send_flush(void)
 {
-	// this function manages the queue
-	static schism_thread_t *midi_queue_thread = NULL;
-
 	struct midi_port *ptr = NULL;
-	int need_explicit_flush = 0;
 
-	if (!midi_record_mutex || !midi_play_mutex) return;
+	if (!midi_record_mutex) return;
 
-	while (midi_port_foreach(NULL, &ptr)) {
-		if ((ptr->io & MIDI_OUTPUT)) {
-			if (ptr->drain) ptr->drain(ptr);
-			else if (ptr->send_now) need_explicit_flush=1;
-		}
-	}
+	mt_mutex_lock(midi_record_mutex);
+	while (midi_port_foreach(NULL, &ptr))
+		if ((ptr->io & MIDI_OUTPUT) && ptr->drain)
+			ptr->drain(ptr);
+	mt_mutex_unlock(midi_record_mutex);
+}
 
-	/* no need for midi sync huzzah; driver does it for us... */
-	if (!need_explicit_flush) return;
+// The old queue was kind of dumb and unnecessary. In fact, the Windows version
+// did... exactly this! :)
+//
+// I guess mrsbrisby just didn't know that SDL provided a timer API, or it wasn't
+// provided by that time.
+struct _midi_send_timer_curry {
+	unsigned int len;
+	unsigned char msg[];
+};
 
-	if (!midi_queue_thread) {
-		midi_queue_thread = mt_thread_create(_midi_queue_run, NULL, NULL);
-		if (midi_queue_thread) {
-			log_appendf(3, "Started MIDI queue thread");
-		} else {
-			log_appendf(2, "ACK: Couldn't start MIDI thread; things are likely going to go boom!");
-		}
-	}
+static void _midi_send_timer_callback(void *param)
+{
+	// once more
+	struct _midi_send_timer_curry *curry = (struct _midi_send_timer_curry *)param;
 
-	mt_mutex_lock(midi_play_mutex);
-	mt_cond_signal(midi_play_cond);
-	mt_mutex_unlock(midi_play_mutex);
+	if (!midi_record_mutex) return;
+
+	mt_mutex_lock(midi_record_mutex);
+	_midi_send_unlocked(curry->msg, curry->len, 0, MIDI_FROM_NOW);
+	mt_mutex_unlock(midi_record_mutex);
+
+	free(curry);
 }
 
 void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int pos)
@@ -760,22 +707,23 @@ void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int 
 		status.flags |= NEED_UPDATE | MIDI_EVENT_CHANGED;
 	}
 
-	if (midims > 0) {
+	if (midims > 0) { // should always be true but I'm paranoid
 		pos /= midims;
 
-		if (_midi_send_unlocked(data, len, pos, MIDI_FROM_LATER)) {
-			// ok, we need a timer.
+		if (pos > 0) {
+			if (_midi_send_unlocked(data, len, pos, MIDI_FROM_LATER)) {
+				// ok, we need a timer.
+				struct _midi_send_timer_curry *curry = mem_alloc(sizeof(struct _midi_send_timer_curry) + len);
 
-			// find the nearest position in the buffer that has space for another message
-			pos /= midims;
-			while (pos < qlen && qq[pos].used >= ARRAY_SIZE(qq[pos].b))
-				pos++;
+				memcpy(curry->msg, data, len);
+				curry->len = len;
 
-			if (pos < qlen) {
-				memcpy(&qq[pos].b[qq[pos].used].message, data, len);
-				qq[pos].b[qq[pos].used].used = len;
-				qq[pos].used++;
-			} // else we drop the message (!)
+				// one s'more
+				timer_oneshot(pos, _midi_send_timer_callback, curry);
+			}
+		} else {
+			// put the bread in the basket
+			midi_send_now(data, len);
 		}
 	}
 

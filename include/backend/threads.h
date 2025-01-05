@@ -44,6 +44,7 @@ typedef struct {
 	void (*cond_delete)(schism_cond_t *cond);
 	void (*cond_signal)(schism_cond_t *cond);
 	void (*cond_wait)(schism_cond_t *cond, schism_mutex_t *mutex);
+	void (*cond_wait_timeout)(schism_cond_t *cond, schism_mutex_t *mutex, uint32_t timeout);
 } schism_threads_backend_t;
 
 #ifdef SCHISM_MACOS

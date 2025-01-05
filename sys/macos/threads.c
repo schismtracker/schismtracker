@@ -99,6 +99,11 @@ static void macos_cond_wait(schism_cond_t *cond, schism_mutex_t *mutex)
 	MPWaitForEvent(cond->event, NULL, kDurationForever);
 }
 
+static void macos_cond_wait_timeout(schism_cond_t *cond, schism_mutex_t *mutex, uint32_t timeout)
+{
+	MPWaitForEvent(cond->event, NULL, timeout);
+}
+
 /* -------------------------------------------------------------- */
 
 // what?
@@ -221,4 +226,5 @@ const schism_threads_backend_t schism_threads_backend_macos = {
 	.cond_delete = macos_cond_delete,
 	.cond_signal = macos_cond_signal,
 	.cond_wait   = macos_cond_wait,
+	.cond_wait_timeout = macos_cond_wait_timeout,
 };

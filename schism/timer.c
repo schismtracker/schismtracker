@@ -22,8 +22,9 @@
  */
 
 #include "headers.h"
-
 #include "loadso.h"
+#include "mem.h"
+#include "threads.h"
 
 #include "backend/timer.h"
 
@@ -32,6 +33,11 @@ static const schism_timer_backend_t *backend = NULL;
 schism_ticks_t timer_ticks(void)
 {
 	return backend->ticks();
+}
+
+schism_ticks_t timer_ticks_us(void)
+{
+	return backend->ticks_us();
 }
 
 void timer_usleep(uint64_t usec)
@@ -55,6 +61,110 @@ void timer_usleep(uint64_t usec)
 #else
 	backend->usleep(usec);
 #endif
+}
+
+static schism_thread_t *timer_oneshot_thread = NULL;
+static int timer_oneshot_thread_cancelled = 0;
+
+// A linked list containing all of the stuff.
+struct _timer_oneshot_data {
+	void (*callback)(void *param);
+	void *param;
+
+	// Start time in microseconds.
+	schism_ticks_t start;
+
+	// Time until the oneshot should be called in microseconds.
+	schism_ticks_t us;
+
+	struct _timer_oneshot_data *next;
+} *oneshot_data_list = NULL;
+static schism_mutex_t *timer_oneshot_mutex = NULL;
+static schism_cond_t  *timer_oneshot_cond  = NULL;
+
+static int _timer_oneshot_thread(void *userdata)
+{
+	mt_mutex_lock(timer_oneshot_mutex);
+
+	while (!timer_oneshot_thread_cancelled) {
+		schism_ticks_t now = timer_ticks_us();
+		schism_ticks_t wait = UINT64_MAX;
+
+		// init data pointers
+		struct _timer_oneshot_data *data = oneshot_data_list, *prev = NULL;
+		while (data) {
+			const schism_ticks_t end = data->start + data->us;
+			if (timer_ticks_passed(now, end)) {
+				data->callback(data->param);
+
+				now = timer_ticks_us();
+
+				// Remove the timer from the list
+				if (prev) {
+					prev->next = data->next;
+				} else {
+					oneshot_data_list = data->next;
+				}
+
+				// free the data
+				void *old = data;
+				data = data->next;
+				free(old);
+			} else {
+				wait = MIN(end - now, wait);
+
+				prev = data;
+				data = data->next;
+			}
+		}
+
+		// useconds to mseconds
+		wait /= 1000;
+
+		mt_cond_wait_timeout(timer_oneshot_cond, timer_oneshot_mutex, wait);
+	}
+
+	return 0;
+}
+
+void timer_oneshot(uint32_t ms, void (*callback)(void *param), void *param)
+{
+	if (backend->oneshot && backend->oneshot(ms, callback, param))
+		return;
+
+	// Ok, the backend doesn't support oneshots.
+	// Make a thread which calls it back.
+
+	struct _timer_oneshot_data *data = mem_calloc(1, sizeof(*data));
+
+	data->callback = callback;
+	data->param = param;
+	data->start = timer_ticks_us();
+	data->us = ms * UINT64_C(1000);
+
+	// locks the mutex and starts the thread if necessary
+	if (!timer_oneshot_thread) {
+		oneshot_data_list = NULL;
+
+		timer_oneshot_mutex = mt_mutex_create();
+		timer_oneshot_cond = mt_cond_create();
+
+		// need to lock this before the thread starts
+		mt_mutex_lock(timer_oneshot_mutex);
+
+		timer_oneshot_thread_cancelled = 0;
+		timer_oneshot_thread = mt_thread_create(_timer_oneshot_thread, "Timer oneshot thread", NULL);
+	} else {
+		mt_mutex_lock(timer_oneshot_mutex);
+	}
+
+	// prepend it to the list
+	data->next = oneshot_data_list;
+	oneshot_data_list = data;
+
+	mt_mutex_unlock(timer_oneshot_mutex);
+
+	mt_cond_signal(timer_oneshot_cond);
 }
 
 int timer_init(void)
@@ -86,6 +196,11 @@ int timer_init(void)
 	if (!backend)
 		return 0;
 
+	if (!backend->oneshot) {
+		timer_oneshot_mutex = mt_mutex_create();
+		timer_oneshot_cond = mt_cond_create();
+	}
+
 	return 1;
 }
 
@@ -94,6 +209,23 @@ void timer_quit(void)
 	if (backend) {
 		backend->quit();
 		backend = NULL;
+	}
+
+	// Kill the oneshot stuff if needed.
+	if (timer_oneshot_thread) {
+		timer_oneshot_thread_cancelled = 1;
+		mt_cond_signal(timer_oneshot_cond);
+		mt_thread_wait(timer_oneshot_thread, NULL);
+	}
+
+	if (timer_oneshot_mutex) {
+		mt_mutex_delete(timer_oneshot_mutex);
+		timer_oneshot_mutex = NULL;
+	}
+
+	if (timer_oneshot_cond) {
+		mt_cond_delete(timer_oneshot_cond);
+		timer_oneshot_cond = NULL;
 	}
 }
 

@@ -55,10 +55,10 @@ struct win32mm_midi {
 	LPMIDIHDR obuf;
 	unsigned char sysx[1024];
 };
-static unsigned int mm_period = 0;
 
-// are we on windows 9x? (filled in win32mm_midi_setup)
-static int on_windows_9x = 0;
+// whether to use ANSI or Unicode versions of functions
+// (currently based on whether we're running on win9x or not)
+static int use_ansi_funcs = 0;
 
 static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *d, unsigned int len)
 {
@@ -77,6 +77,7 @@ static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *d, unsigned int le
 	m->dwOffset = 0;
 	(*q) = (m);
 }
+
 static void _win32mm_send(struct midi_port *p, const unsigned char *data,
 		unsigned int len, SCHISM_UNUSED unsigned int delay)
 {
@@ -84,6 +85,9 @@ static void _win32mm_send(struct midi_port *p, const unsigned char *data,
 	DWORD q;
 
 	if (len == 0) return;
+
+	// FIXME this shouldn't be done here!
+	//if (!(p->io & MIDI_OUTPUT)) return;
 
 	m = p->userdata;
 	if (len <= 4) {
@@ -101,43 +105,6 @@ static void _win32mm_send(struct midi_port *p, const unsigned char *data,
 	}
 }
 
-
-
-
-struct curry {
-	struct midi_port *p;
-	unsigned char *d;
-	unsigned int len;
-};
-
-
-static CALLBACK void _win32mm_xp_output(SCHISM_UNUSED UINT uTimerID,
-			SCHISM_UNUSED UINT uMsg,
-			DWORD_PTR dwUser,
-			SCHISM_UNUSED DWORD_PTR dw1,
-			SCHISM_UNUSED DWORD_PTR dw2)
-{
-	struct curry *c;
-	c = (struct curry *)dwUser;
-	_win32mm_send(c->p, c->d, c->len, 0);
-	free(c);
-}
-static void _win32mm_send_xp(struct midi_port *p, const unsigned char *buf,
-		unsigned int len, unsigned int delay)
-{
-	/* version for windows XP */
-	struct curry *c;
-
-	if (!delay) _win32mm_send(p,buf,len,0);
-	if (len == 0) return;
-
-	c = mem_alloc(sizeof(struct curry) + len);
-	c->p = p;
-	c->d = ((unsigned char*)c)+sizeof(struct curry);
-	c->len = len;
-	timeSetEvent(delay, mm_period, _win32mm_xp_output, (DWORD_PTR)c,
-					TIME_ONESHOT | TIME_CALLBACK_FUNCTION);
-}
 
 static CALLBACK void _win32mm_inputcb(SCHISM_UNUSED HMIDIIN in, UINT wmsg, DWORD_PTR inst,
 					   DWORD_PTR param1, DWORD_PTR param2)
@@ -253,7 +220,7 @@ static void _win32mm_poll(struct midi_provider *p)
 	mmin = midiInGetNumDevs();
 	for (i = last_known_in_port; i < mmin; i++) {
 		data = mem_calloc(1, sizeof(struct win32mm_midi));
-		if (on_windows_9x) {
+		if (use_ansi_funcs) {
 			r = midiInGetDevCapsA(i, &data->icp.a, sizeof(data->icp.a));
 		} else {
 			r = midiInGetDevCapsW(i, &data->icp.w, sizeof(data->icp.w));
@@ -265,11 +232,11 @@ static void _win32mm_poll(struct midi_provider *p)
 		data->id = i;
 
 		char *utf8;
-		if (!charset_iconv((on_windows_9x) ? ((void *)data->icp.a.szPname) : ((void *)data->icp.w.szPname),
-				&utf8, (on_windows_9x) ? CHARSET_ANSI : CHARSET_WCHAR_T, CHARSET_UTF8, SIZE_MAX)) {
+		if (!charset_iconv((use_ansi_funcs) ? ((void *)data->icp.a.szPname) : ((void *)data->icp.w.szPname),
+				&utf8, (use_ansi_funcs) ? CHARSET_ANSI : CHARSET_WCHAR_T, CHARSET_UTF8, SIZE_MAX)) {
 			midi_port_register(p, MIDI_INPUT, utf8, data, 1);
 			free(utf8);
-		} else if (on_windows_9x) {
+		} else if (use_ansi_funcs) {
 			midi_port_register(p, MIDI_INPUT, data->icp.a.szPname, data, 1);
 		}
 	}
@@ -278,7 +245,7 @@ static void _win32mm_poll(struct midi_provider *p)
 	mmout = midiOutGetNumDevs();
 	for (i = last_known_out_port; i < mmout; i++) {
 		data = mem_calloc(1, sizeof(struct win32mm_midi));
-		if (on_windows_9x) {
+		if (use_ansi_funcs) {
 			r = midiOutGetDevCapsA(i, &data->ocp.a, sizeof(data->ocp.a));
 		} else {
 			r = midiOutGetDevCapsW(i, &data->ocp.w, sizeof(data->ocp.w));
@@ -290,11 +257,11 @@ static void _win32mm_poll(struct midi_provider *p)
 		data->id = i;
 
 		char *utf8;
-		if (!charset_iconv((on_windows_9x) ? ((void *)data->ocp.a.szPname) : ((void *)data->ocp.w.szPname),
-				&utf8, (on_windows_9x) ? CHARSET_ANSI : CHARSET_WCHAR_T, CHARSET_UTF8, SIZE_MAX)) {
+		if (!charset_iconv((use_ansi_funcs) ? ((void *)data->ocp.a.szPname) : ((void *)data->ocp.w.szPname),
+				&utf8, (use_ansi_funcs) ? CHARSET_ANSI : CHARSET_WCHAR_T, CHARSET_UTF8, SIZE_MAX)) {
 			midi_port_register(p, MIDI_OUTPUT, utf8, data, 1);
 			free(utf8);
-		} else if (on_windows_9x) {
+		} else if (use_ansi_funcs) {
 			midi_port_register(p, MIDI_OUTPUT, data->ocp.a.szPname, data, 1);
 		}
 	}
@@ -304,19 +271,16 @@ static void _win32mm_poll(struct midi_provider *p)
 int win32mm_midi_setup(void)
 {
 	static struct midi_driver driver = {0};
+	TIMECAPS caps;
 
-	driver.flags = MIDI_PORT_CAN_SCHEDULE;
+	driver.flags = 0;
 	driver.poll = _win32mm_poll;
 	driver.thread = NULL;
 	driver.enable = _win32mm_start;
 	driver.disable = _win32mm_stop;
-	// Originally this did a bunch of timer checks and crap,
-	// but I can't find a single instance where this is actually
-	// necessary, even on ancient windows. The default timer
-	// resolution is probably good enough anyway.
-	driver.send = _win32mm_send_xp;
+	driver.send = _win32mm_send;
 
-	on_windows_9x = (GetVersion() & UINT32_C(0x80000000));
+	use_ansi_funcs = (GetVersion() & UINT32_C(0x80000000));
 
 	if (!midi_provider_register("Win32MM", &driver)) return 0;
 

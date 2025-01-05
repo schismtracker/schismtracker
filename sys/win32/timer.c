@@ -21,16 +21,23 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-// TODO move stuff from toplevel timer.c into here
-
 #include "headers.h"
 #include "threads.h"
 #include "loadso.h"
+#include "mem.h"
 
 #include "backend/timer.h"
 
 #include <windows.h>
 #include <mmsystem.h>
+
+// Old toolchains don't have these:
+#ifndef CREATE_WAITABLE_TIMER_MANUAL_RESET
+# define CREATE_WAITABLE_TIMER_MANUAL_RESET 0x00000001
+#endif
+#ifndef CREATE_WAITABLE_TIMER_HIGH_RESOLUTION
+# define CREATE_WAITABLE_TIMER_HIGH_RESOLUTION 0x00000002
+#endif
 
 static enum {
 	WIN32_TIMER_IMPL_QPC,
@@ -48,32 +55,53 @@ static schism_mutex_t *win32_timer_overflow_mutex = NULL;
 static int32_t win32_timer_overflow = 0;
 static uint32_t win32_timer_last_known_ticks = 0;
 
+static uint32_t win32_mm_period = 0;
+
+static inline void _win32_timer_ticks_impl(LARGE_INTEGER *ticks)
+{
+	switch (win32_timer_impl) {
+	case WIN32_TIMER_IMPL_QPC:
+		QueryPerformanceCounter(ticks);
+		break;
+	case WIN32_TIMER_IMPL_WINMM:
+		ticks->LowPart = timeGetTime();
+
+		mt_mutex_lock(win32_timer_overflow_mutex);
+
+		if (ticks->LowPart < win32_timer_last_known_ticks)
+			win32_timer_overflow++;
+		win32_timer_last_known_ticks = ticks->LowPart;
+
+		mt_mutex_unlock(win32_timer_overflow_mutex);
+
+		ticks->HighPart = win32_timer_overflow;
+
+		break;
+	}
+}
+
 static schism_ticks_t win32_timer_ticks(void)
 {
 	LARGE_INTEGER ticks = {0};
 
-	switch (win32_timer_impl) {
-	case WIN32_TIMER_IMPL_QPC:
-		QueryPerformanceCounter(&ticks);
-		break;
-	case WIN32_TIMER_IMPL_WINMM:
-		ticks.LowPart = timeGetTime();
+	_win32_timer_ticks_impl(&ticks);
 
-		mt_mutex_lock(win32_timer_overflow_mutex);
+	ticks.QuadPart -= win32_timer_start.QuadPart;
+	ticks.QuadPart *= INT64_C(1000);
+	ticks.QuadPart /= win32_timer_resolution.QuadPart;
 
-		if (ticks.LowPart < win32_timer_last_known_ticks)
-			win32_timer_overflow++;
-		win32_timer_last_known_ticks = ticks.LowPart;
+	return ticks.QuadPart;
+}
 
-		mt_mutex_unlock(win32_timer_overflow_mutex);
+static schism_ticks_t win32_timer_ticks_us(void)
+{
+	LARGE_INTEGER ticks = {0};
 
-		ticks.HighPart = win32_timer_overflow;
+	_win32_timer_ticks_impl(&ticks);
 
-		break;
-	}
-
-	// floating point here kinda sucks, but whatever
-	ticks.QuadPart = ((double)ticks.QuadPart - win32_timer_start.QuadPart) * 1000.0 / win32_timer_resolution.QuadPart;
+	ticks.QuadPart -= win32_timer_start.QuadPart;
+	ticks.QuadPart *= INT64_C(1000000);
+	ticks.QuadPart /= win32_timer_resolution.QuadPart;
 
 	return ticks.QuadPart;
 }
@@ -99,13 +127,6 @@ static void win32_timer_usleep(uint64_t usec)
 	if (!WIN32_SetWaitableTimer)
 		goto timer_failed;
 
-	// Old toolchains don't have these:
-#ifndef CREATE_WAITABLE_TIMER_MANUAL_RESET
-# define CREATE_WAITABLE_TIMER_MANUAL_RESET 0x00000001
-#endif
-#ifndef CREATE_WAITABLE_TIMER_HIGH_RESOLUTION
-# define CREATE_WAITABLE_TIMER_HIGH_RESOLUTION 0x00000002
-#endif
 	// Create a high-resolution timer if we can.
 	if (WIN32_CreateWaitableTimerExW) {
 		timer = WIN32_CreateWaitableTimerExW(NULL, NULL, CREATE_WAITABLE_TIMER_MANUAL_RESET | CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_MODIFY_STATE);
@@ -139,22 +160,54 @@ timer_failed:
 	SleepEx(usec / 1000, FALSE);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// oneshot timers
+
+struct _win32_timer_oneshot_curry {
+	void (*callback)(void *param);
+	void *param;
+};
+
+static CALLBACK void _win32_timer_oneshot_callback(SCHISM_UNUSED UINT uTimerID, SCHISM_UNUSED UINT uMsg,
+	DWORD_PTR dwUser, SCHISM_UNUSED DWORD_PTR dw1, SCHISM_UNUSED DWORD_PTR dw2)
+{
+	struct _win32_timer_oneshot_curry *curry = (struct _win32_timer_oneshot_curry *)dwUser;
+	curry->callback(curry->param);
+	free(curry);
+}
+
+static int win32_timer_oneshot(uint32_t ms, void (*callback)(void *param), void *param)
+{
+	struct _win32_timer_oneshot_curry *curry = mem_alloc(sizeof(struct _win32_timer_oneshot_curry));
+	LARGE_INTEGER due;
+	HANDLE timer;
+
+	curry->callback = callback;
+	curry->param = param;
+
+	return !!timeSetEvent(ms, win32_mm_period, _win32_timer_oneshot_callback, (DWORD_PTR)curry, TIME_ONESHOT | TIME_CALLBACK_FUNCTION);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 static int win32_timer_must_end_period = 0;
-static TIMECAPS win32_timer_caps = {0};
 
 static int win32_timer_init(void)
 {
+	TIMECAPS caps;
+
+	if (!timeGetDevCaps(&caps, sizeof(caps))) {
+		win32_mm_period = caps.wPeriodMin;
+		if (!timeBeginPeriod(win32_mm_period))
+			win32_timer_must_end_period = 1;
+	}
+
 	if (QueryPerformanceFrequency(&win32_timer_resolution)
 		&& win32_timer_resolution.QuadPart
 		&& QueryPerformanceCounter(&win32_timer_start)) {
 		win32_timer_impl = WIN32_TIMER_IMPL_QPC;
 	} else {
-		// This works everywhere and uses the maximum timer precision
-		// for the physical timer device
-		win32_timer_must_end_period =
-			(!timeGetDevCaps(&win32_timer_caps, sizeof(win32_timer_caps))
-				&& !timeBeginPeriod(win32_timer_caps.wPeriodMin));
-
+		// This works everywhere and is hopefully good enough
 		win32_timer_start.QuadPart = timeGetTime();
 		win32_timer_resolution.QuadPart = 1000;
 
@@ -178,7 +231,7 @@ static int win32_timer_init(void)
 static void win32_timer_quit(void)
 {
 	if (win32_timer_must_end_period)
-		timeEndPeriod(win32_timer_caps.wPeriodMin);
+		timeEndPeriod(win32_mm_period);
 
 	if (kernel32)
 		loadso_object_unload(kernel32);
@@ -191,5 +244,8 @@ const schism_timer_backend_t schism_timer_backend_win32 = {
 	.quit = win32_timer_quit,
 
 	.ticks = win32_timer_ticks,
+	.ticks_us = win32_timer_ticks_us,
 	.usleep = win32_timer_usleep,
+
+	//.oneshot = win32_timer_oneshot,
 };

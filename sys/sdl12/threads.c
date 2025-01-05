@@ -146,6 +146,7 @@ static SDL_cond *(SDLCALL *sdl12_CreateCond)(void);
 static void (SDLCALL *sdl12_DestroyCond)(SDL_cond *cond);
 static int (SDLCALL *sdl12_CondSignal)(SDL_cond *cond);
 static int (SDLCALL *sdl12_CondWait)(SDL_cond *cond, SDL_mutex *mut);
+static int (SDLCALL *sdl12_CondWaitTimeout)(SDL_cond *cond, SDL_mutex *mut, uint32_t timeout);
 
 struct schism_cond {
 	SDL_cond *cond;
@@ -180,6 +181,11 @@ static void sdl12_cond_wait(schism_cond_t *cond, schism_mutex_t *mutex)
 	sdl12_CondWait(cond->cond, mutex->mutex);
 }
 
+static void sdl12_cond_wait_timeout(schism_cond_t *cond, schism_mutex_t *mutex, uint32_t timeout)
+{
+	sdl12_CondWaitTimeout(cond->cond, mutex->mutex, timeout);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 static int sdl12_threads_load_syms(void)
@@ -197,6 +203,7 @@ static int sdl12_threads_load_syms(void)
 	SCHISM_SDL12_SYM(DestroyCond);
 	SCHISM_SDL12_SYM(CondSignal);
 	SCHISM_SDL12_SYM(CondWait);
+	SCHISM_SDL12_SYM(CondWaitTimeout);
 
 	return 0;
 }
@@ -237,4 +244,5 @@ const schism_threads_backend_t schism_threads_backend_sdl12 = {
 	.cond_delete = sdl12_cond_delete,
 	.cond_signal = sdl12_cond_signal,
 	.cond_wait = sdl12_cond_wait,
+	.cond_wait_timeout = sdl12_cond_wait_timeout,
 };

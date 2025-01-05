@@ -23,6 +23,7 @@
 
 #include "headers.h"
 #include "threads.h"
+#include "mem.h"
 #include "backend/timer.h"
 
 #include "init.h"
@@ -31,6 +32,7 @@ static int (SDLCALL *sdl12_InitSubSystem)(Uint32 flags);
 static void (SDLCALL *sdl12_QuitSubSystem)(Uint32 flags);
 static uint32_t (SDLCALL *sdl12_GetTicks)(void);
 static void (SDLCALL *sdl12_Delay)(uint32_t ms);
+static SDL_TimerID (SDLCALL *sdl12_AddTimer)(uint32_t ms, SDL_NewTimerCallback callback, void *param);
 
 static schism_mutex_t *last_known_ticks_mutex = NULL;
 static uint32_t last_known_ticks = 0;
@@ -53,9 +55,48 @@ static schism_ticks_t sdl12_timer_ticks(void)
 	return ticks;
 }
 
+static schism_ticks_t sdl12_timer_ticks_us(void)
+{
+	// wow
+	return sdl12_timer_ticks() * UINT64_C(1000);
+}
+
 static void sdl12_usleep(uint64_t ms)
 {
 	sdl12_Delay(ms / 1000);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// oneshot timer
+
+struct _sdl12_timer_oneshot_curry {
+	void (*callback)(void *param);
+	void *param;
+};
+
+static uint32_t _sdl12_timer_oneshot_callback(uint32_t interval, void *param)
+{
+	// NOTE: treat this stuff as read-only to prevent race conditions
+	// and other weird crap.
+	struct _sdl12_timer_oneshot_curry *curry = (struct _sdl12_timer_oneshot_curry *)param;
+
+	curry->callback(curry->param);
+	free(curry);
+
+	return 0;
+}
+
+static int sdl12_timer_oneshot(uint32_t interval, void (*callback)(void *param), void *param)
+{
+	struct _sdl12_timer_oneshot_curry *curry = mem_alloc(sizeof(*curry));
+
+	curry->callback = callback;
+	curry->param = param;
+	SDL_TimerID id = sdl12_AddTimer(interval, _sdl12_timer_oneshot_callback, curry);
+	if (!id)
+		free(curry);
+
+	return !!id;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -66,6 +107,8 @@ static int sdl12_timer_load_syms(void)
 	SCHISM_SDL12_SYM(QuitSubSystem);
 	SCHISM_SDL12_SYM(GetTicks);
 	SCHISM_SDL12_SYM(Delay);
+
+	SCHISM_SDL12_SYM(AddTimer);
 
 	return 0;
 }
@@ -102,5 +145,8 @@ const schism_timer_backend_t schism_timer_backend_sdl12 = {
 	.quit = sdl12_timer_quit,
 
 	.ticks = sdl12_timer_ticks,
+	.ticks_us = sdl12_timer_ticks_us,
 	.usleep = sdl12_usleep,
+
+	.oneshot = sdl12_timer_oneshot,
 };

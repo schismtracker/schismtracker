@@ -122,6 +122,9 @@ int inout, const char *name, void *userdata, int free_userdata);
 int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor);
 void midi_port_unregister(int num);
 
+int midi_port_enable(struct midi_port *p);
+int midi_port_disable(struct midi_port *p);
+
 /* only call these if the event isn't really MIDI but you want most of the system
    to act like it is...
 
