@@ -1139,3 +1139,5 @@ charset_error_t charset_decode_next(charset_decode_t *decoder, charset_t inset)
 
 	return CHARSET_ERROR_SUCCESS;
 }
+
+extern inline void *charset_iconv_easy(const void *in, charset_t inset, charset_t outset);

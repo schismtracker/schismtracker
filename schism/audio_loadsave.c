@@ -86,10 +86,10 @@ static void _fix_names(song_t *qq)
 static void song_set_filename(const char *file)
 {
 	if (file && *file) {
-		CHARSET_EASY_MODE_CONST(file, CHARSET_CHAR, CHARSET_CP437, {
-			strncpy(song_filename, out, ARRAY_SIZE(song_filename) - 1);
-			strncpy(song_basename, dmoz_path_get_basename(out), ARRAY_SIZE(song_basename) - 1);
-		});
+		void *out = charset_iconv_easy(file, CHARSET_CHAR, CHARSET_CP437);
+		strncpy(song_filename, out, ARRAY_SIZE(song_filename) - 1);
+		strncpy(song_basename, dmoz_path_get_basename(out), ARRAY_SIZE(song_basename) - 1);
+		free(out);
 		song_filename[ARRAY_SIZE(song_filename) - 1] = '\0';
 		song_basename[ARRAY_SIZE(song_basename) - 1] = '\0';
 	} else {

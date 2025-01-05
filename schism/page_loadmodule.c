@@ -413,9 +413,11 @@ static void set_default_glob(int set_filename)
 		: cfg_module_pattern;
 
 	if (set_filename) {
-		CHARSET_EASY_MODE_CONST(s, CHARSET_CHAR, CHARSET_CP437, {
-			strcpy(filename_entry, out);
-		});
+		void *out = charset_iconv_easy(s, CHARSET_CHAR, CHARSET_CP437);
+		if (out) {
+			strncpy(filename_entry, out, ARRAY_SIZE(filename_entry) - 1);
+			free(out);
+		}
 	}
 	set_glob(s);
 }
@@ -521,11 +523,15 @@ static int change_dir(const char *dir)
 
 	dmoz_cache_update(cfg_dir_modules, &flist, &dlist);
 
-	CHARSET_EASY_MODE(ptr, CHARSET_CHAR, CHARSET_CP437, {
-		strncpy(cfg_dir_modules, ptr, ARRAY_SIZE(cfg_dir_modules) - 1);
-		cfg_dir_modules[ARRAY_SIZE(cfg_dir_modules) - 1] = 0;
-		strcpy(dirname_entry, cfg_dir_modules);
-	});
+	strncpy(cfg_dir_modules, ptr, ARRAY_SIZE(cfg_dir_modules) - 1);
+	cfg_dir_modules[ARRAY_SIZE(cfg_dir_modules) - 1] = 0;
+
+	// TODO charset_strncpy ?
+	void *out = charset_iconv_easy(ptr, CHARSET_CHAR, CHARSET_CP437);
+	if (out) {
+		strncpy(dirname_entry, out, ARRAY_SIZE(dirname_entry) - 1);
+		free(out);
+	}
 
 	free(ptr);
 
@@ -984,24 +990,27 @@ static void filename_entered(void)
 	if (strpbrk(filename_entry, "?*")) {
 		set_glob(filename_entry);
 	} else {
-		CHARSET_EASY_MODE(filename_entry, CHARSET_CP437, CHARSET_CHAR, {
-			char *ptr = dmoz_path_concat(cfg_dir_modules, out);
-			handle_file_entered(ptr);
-			free(ptr);
-		});
+		void *fn = charset_iconv_easy(filename_entry, CHARSET_CP437, CHARSET_CHAR);
+		char *ptr = dmoz_path_concat(cfg_dir_modules, fn);
+		free(fn);
+		handle_file_entered(ptr);
+		free(ptr);
 	}
 }
 
 /* strangely similar to the dir list's code :) */
 static void dirname_entered(void)
 {
-	CHARSET_EASY_MODE(dirname_entry, CHARSET_CP437, CHARSET_CHAR, {
-		if (!change_dir(out)) {
-			/* FIXME: need to give some kind of feedback here */
-			free(out); /* ergh */
-			return;
-		}
-	});
+	void *out = charset_iconv_easy(dirname_entry, CHARSET_CP437, CHARSET_CHAR);
+	if (!out)
+		return;
+
+	if (!change_dir(out)) {
+		free(out);
+		return;
+	}
+
+	free(out);
 
 	*selected_widget = (flist.num_files > 0) ? 0 : 1;
 	status.flags |= NEED_UPDATE;
@@ -1040,7 +1049,7 @@ static void load_module_set_page(void)
 		pages[PAGE_LOAD_MODULE].selected_widget = (flist.num_files > 0) ? 0 : 1;
 
 	// Don't reparse the glob if it hasn't changed; that will mess with the cursor position
-	if (charset_strcasecmp(glob_list_src, CHARSET_CHAR, cfg_module_pattern, CHARSET_CHAR) == 0)
+	if (!charset_strcasecmp(glob_list_src, CHARSET_CHAR, cfg_module_pattern, CHARSET_CHAR))
 		strcpy(filename_entry, glob_list_src);
 	else
 		set_default_glob(1);

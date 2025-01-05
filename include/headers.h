@@ -261,6 +261,9 @@ extern int ya_optind, ya_opterr, ya_optopt;
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__always_inline__, 100, 0, 0)
 # define SCHISM_ALWAYS_INLINE __attribute__((__always_inline__))
 #endif
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__deprecated__, 3, 1, 0)
+# define SCHISM_DEPRECATED __attribute__((__deprecated__))
+#endif
 
 #if SCHISM_GNUC_HAS_BUILTIN(__builtin_expect, 3, 0, 0)
 # define SCHISM_LIKELY(x)   __builtin_expect(!!(x), 1)
@@ -304,6 +307,9 @@ extern int ya_optind, ya_opterr, ya_optopt;
 #endif
 #ifndef SCHISM_ALWAYS_INLINE
 # define SCHISM_ALWAYS_INLINE
+#endif
+#ifndef SCHISM_DEPRECATED
+# define SCHISM_DEPRECATED
 #endif
 
 /* ------------------------------------------------------------------------ */

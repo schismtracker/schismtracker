@@ -130,9 +130,12 @@ static void file_list_reposition(void)
 		if (f && f->smp_filename) {
 			strncpy(current_filename, f->smp_filename, ARRAY_SIZE(current_filename) - 1);
 		} else if (f && f->base) {
-			CHARSET_EASY_MODE(f->base, CHARSET_CHAR, CHARSET_CP437, {
-				strncpy(current_filename, out, ARRAY_SIZE(current_filename) - 1);
-			});
+			// FIXME 
+			void *fn = charset_iconv_easy(f->base, CHARSET_CHAR, CHARSET_CP437);
+			if (fn) {
+				strncpy(current_filename, fn, ARRAY_SIZE(current_filename) - 1);
+				free(fn);
+			}
 		} else {
 			current_filename[0] = '\0';
 		}
@@ -595,9 +598,11 @@ static void handle_enter_key(void)
 		song_copy_sample(cur, file->sample);
 		strncpy(smp->name, file->title, ARRAY_SIZE(smp->name));
 		smp->name[25] = 0;
-		CHARSET_EASY_MODE(file->base, CHARSET_CHAR, CHARSET_CP437, {
-			strncpy(smp->filename, out, ARRAY_SIZE(smp->filename));
-		});
+		void *ptr = charset_iconv_easy(file->base, CHARSET_CHAR, CHARSET_CP437);
+		if (ptr) {
+			strncpy(smp->filename, ptr, ARRAY_SIZE(smp->filename));
+			free(ptr);
+		}
 		smp->filename[12] = 0;
 		finish_load(cur);
 		memused_songchanged();
