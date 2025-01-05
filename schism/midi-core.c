@@ -403,7 +403,7 @@ struct midi_provider *midi_provider_register(const char *name,
 	port_providers = n;
 
 	if (driver->thread)
-		n->thread = mt_thread_create((int (*)(void*))driver->thread, NULL, n);
+		n->thread = mt_thread_create((int (*)(void*))driver->thread, n->name, n);
 
 	mt_mutex_unlock(midi_mutex);
 
