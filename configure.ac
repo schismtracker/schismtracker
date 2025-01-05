@@ -164,10 +164,6 @@ AC_PROG_CC
 if test "x$ac_cv_prog_cc_c11" = "xno" && test "x$ac_cv_prog_cc_c99" = "xno"; then
 	AC_MSG_ERROR([*** Failed to find a proper C99 compiler])
 fi
-
-dnl FIXME: this shouldn't have to be done
-OBJCFLAGS = "$CFLAGS $OBJCFLAGS"
-
 AM_PROG_CC_C_O
 AC_PROG_CPP
 AC_PROG_INSTALL
@@ -487,6 +483,29 @@ fi
 
 if test "x$use_macosx" = "xyes"; then
 	AC_PROG_OBJC
+
+	dnl stupid hax to allow C99 and C11 compilation
+	dnl TODO this should try both C11 and C99 in that
+	dnl order since the objective c compiler may be
+	dnl older or newer than the c compiler
+	old_OBJC="$OBJC"
+	if test "x$ac_cv_prog_cc_c11" != "xno"; then
+		OBJC="$OBJC $ac_cv_prog_cc_c11"
+	elif test "x$ac_cv_prog_cc_c99" != "xno"; then
+		OBJC="$OBJC $ac_cv_prog_cc_c99"
+	fi
+
+	AC_LANG_PUSH([Objective C])
+	AC_COMPILE_IFELSE(
+		[AC_LANG_PROGRAM([[]], [[return 0;]])],
+		[objc_hax_works=yes],
+		[objc_hax_works=no])
+	AC_LANG_POP([Objective C])
+
+	dnl whatever, punt
+	if "x$objc_hax_works" = "xno"; then
+		OBJC = "$old_OBJC"
+	fi
 else
 	dnl stupid hack to make Objective-C optional
 	AM_CONDITIONAL([am__fastdepOBJC], [false])
