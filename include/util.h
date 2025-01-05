@@ -70,7 +70,7 @@ SCHISM_PURE extern short pdB_s(int noisefloor, double power, double correction_d
 SCHISM_PURE extern short dB2_power_s(int noisefloor, int db, double correction_dBs);
 
 /* integer sqrt (very fast; 32 bits limited) */
-SCHISM_PURE unsigned int i_sqrt(unsigned int r);
+SCHISM_CONST uint32_t i_sqrt(uint32_t r);
 
 FILE *mkfstemp(char *template);
 

@@ -109,9 +109,9 @@ short dB2_power_s(int noisefloor, int db, double correction_dBs)
 }
 
 /* fast integer sqrt */
-unsigned int i_sqrt(unsigned int r)
+uint32_t i_sqrt(uint32_t r)
 {
-	unsigned int t, b, c=0;
+	uint32_t t, b, c=0;
 	for (b = 0x10000000; b != 0; b >>= 2) {
 		t = c + b;
 		c >>= 1;
@@ -120,7 +120,7 @@ unsigned int i_sqrt(unsigned int r)
 			c += b;
 		}
 	}
-	return(c);
+	return c;
 }
 
 /* This function is roughly equivalent to the mkstemp() function on POSIX
