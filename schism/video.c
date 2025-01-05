@@ -38,8 +38,6 @@
 
 #include <errno.h>
 
-#include <inttypes.h>
-
 #ifndef SCHISM_MACOSX
 #include "auto/schismico_hires.h"
 #endif

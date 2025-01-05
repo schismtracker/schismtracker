@@ -24,7 +24,6 @@
 #include "headers.h"
 #include "it.h"
 #include "version.h"
-#include <inttypes.h>
 
 #include <assert.h>
 
@@ -140,10 +139,6 @@ SCHISM_CONST static inline version_time_t version_mktime(int y, int m, int d)
 
 static inline void version_time_format(char buf[11], version_time_t ver)
 {
-	// FIXME: for some reason, classic mac os interprets this completely
-	// wrong. It doesn't necessarily matter that much though, since it can
-	// save the version info just fine, but it would be nice if this actually
-	// worked over there.
 	int64_t year = EPOCH_YEAR, month = EPOCH_MONTH, days = ver + EPOCH_DAY;
 	int32_t days_in;
 
@@ -172,12 +167,12 @@ static inline void version_time_format(char buf[11], version_time_t ver)
 		}
 	}
 
-	// shut up gcc
-	year = CLAMP(year, EPOCH_YEAR, 9999);
-	month = CLAMP(month, 0, 11);
-	days = CLAMP(days, 1, 31);
-
-	snprintf(buf, 11, "%04" PRId64 "-%02" PRId64 "-%02" PRId64, year, (month + 1), days);
+	// Classic Mac OS's snprintf is not C99 compliant (duh) so we need
+	// to cast our integers to unsigned int first.
+	snprintf(buf, 11, "%04u-%02u-%02u",
+		(unsigned int)CLAMP(year, EPOCH_YEAR, 9999),
+		(unsigned int)(CLAMP(month, 0, 11) + 1),
+		(unsigned int)CLAMP(days, 1, 31));
 }
 
 /* ----------------------------------------------------------------- */

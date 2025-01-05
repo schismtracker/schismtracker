@@ -27,7 +27,7 @@
 #include "headers.h"
 
 /* better than macros, I guess. */
-SCHISM_CONST inline uint64_t bswap_64_schism_internal_(uint64_t x)
+SCHISM_CONST SCHISM_ALWAYS_INLINE inline uint64_t bswap_64_schism_internal_(uint64_t x)
 {
 	return (
 		  ((x & UINT64_C(0x00000000000000FF)) << 56)
@@ -41,7 +41,7 @@ SCHISM_CONST inline uint64_t bswap_64_schism_internal_(uint64_t x)
 	);
 }
 
-SCHISM_CONST inline uint32_t bswap_32_schism_internal_(uint32_t x)
+SCHISM_CONST SCHISM_ALWAYS_INLINE inline uint32_t bswap_32_schism_internal_(uint32_t x)
 {
 	return (
 		  ((x & UINT32_C(0x000000FF)) << 24)
@@ -51,7 +51,7 @@ SCHISM_CONST inline uint32_t bswap_32_schism_internal_(uint32_t x)
 	);
 }
 
-SCHISM_CONST inline uint16_t bswap_16_schism_internal_(uint16_t x)
+SCHISM_CONST SCHISM_ALWAYS_INLINE inline uint16_t bswap_16_schism_internal_(uint16_t x)
 {
 	return (
 		  ((x & UINT16_C(0x00FF)) << 8)

@@ -33,8 +33,6 @@
 #include "disko.h"
 #include "log.h"
 
-#include <inttypes.h>
-
 /* --------------------------------------------------------------------- */
 
 int fmt_s3m_read_info(dmoz_file_t *file, slurp_t *fp)

@@ -29,8 +29,6 @@
 #include "log.h"
 #include "backend/threads.h"
 
-#include <inttypes.h>
-
 #include <Multiprocessing.h>
 
 /* -------------------------------------------------------------- */

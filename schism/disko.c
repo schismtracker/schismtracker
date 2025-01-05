@@ -44,7 +44,6 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <inttypes.h>
 
 #define DW_BUFFER_SIZE 65536
 
@@ -845,7 +844,7 @@ static int disko_finish(void)
 	case DW_OK: {
 		const schism_ticks_t elapsed_ms = (timer_ticks() - export_start_time);
 
-		log_appendf(5, " %.2f MiB (%zu:%zu) written in %" PRIu64 ".%02" PRIu64 " sec",
+		log_appendf(5, " %.2f MiB (%" PRIuSZ ":%" PRIuSZ ") written in %" PRIu64 ".%02" PRIu64 " sec",
 			total_size / 1048576.0,
 			samples_0 / disko_output_rate / 60, (samples_0 / disko_output_rate) % 60,
 			(uint64_t)(elapsed_ms / 1000), (uint64_t)(elapsed_ms / 10 % 100));

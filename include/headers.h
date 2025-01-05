@@ -35,8 +35,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
 #include <stddef.h>
+#ifdef HAVE_INTTYPES_H
+# include <inttypes.h>
+#endif
 
 #include <stdarg.h>
 
@@ -251,6 +256,11 @@ extern int ya_optind, ya_opterr, ya_optopt;
 # define SCHISM_ALLOC_SIZE(x) __attribute__((__alloc_size__(x)))
 # define SCHISM_ALLOC_SIZE_EX(x, y) __attribute__((__alloc_size__(x, y)))
 #endif
+// FIXME what is the real minimum version here? mac os x
+// seems to disagree with the idea that it's in gcc 4.0
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__always_inline__, 100, 0, 0)
+# define SCHISM_ALWAYS_INLINE __attribute__((__always_inline__))
+#endif
 
 #if SCHISM_GNUC_HAS_BUILTIN(__builtin_expect, 3, 0, 0)
 # define SCHISM_LIKELY(x)   __builtin_expect(!!(x), 1)
@@ -291,6 +301,9 @@ extern int ya_optind, ya_opterr, ya_optopt;
 #endif
 #ifndef SCHISM_ALLOC_SIZE_EX
 # define SCHISM_ALLOC_SIZE_EX(x, y)
+#endif
+#ifndef SCHISM_ALWAYS_INLINE
+# define SCHISM_ALWAYS_INLINE
 #endif
 
 /* ------------------------------------------------------------------------ */

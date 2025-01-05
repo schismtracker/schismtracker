@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_FLOAT_H_
-#define SCHISM_FLOAT_H_
+#ifndef SCHISM_IEEE_FLOAT_H_
+#define SCHISM_IEEE_FLOAT_H_
 
 /* These functions work on the raw, big endian versions of IEEE
  * floating point numbers. If you have little endian input or
@@ -37,4 +37,4 @@ void float_encode_ieee_64(double num, unsigned char bytes[8]);
 SCHISM_PURE double float_decode_ieee_80(const unsigned char bytes[10]);
 void float_encode_ieee_80(double num, unsigned char bytes[10]);
 
-#endif /* SCHISM_FLOAT_H_ */
+#endif /* SCHISM_IEEE_FLOAT_H_ */

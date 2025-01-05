@@ -261,7 +261,7 @@ int fmt_far_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	csf_insert_restart_pos(song, restartpos);
 
 	if (!(lflags & LOAD_NOSAMPLES)) {
-		printf("%zu\n", slurp_read(fp, data, 8));
+		printf("%" PRIuSZ "\n", slurp_read(fp, data, 8));
 		smp = song->samples + 1;
 		for (n = 0; n < 64; n++, smp++) {
 			if (!(data[n / 8] & (1 << (n % 8)))) /* LOLWHAT */

@@ -25,8 +25,6 @@
 #include "bswap.h"
 #include "fmt.h"
 
-#include <inttypes.h>
-
 // 'chunk' is filled in with the chunk header
 // return: 0 if chunk overflows EOF, 1 if it was successfully read
 // pos is updated to point to the beginning of the next chunk

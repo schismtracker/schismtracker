@@ -37,7 +37,6 @@
 #include "events.h"
 
 #include <errno.h>
-#include <inttypes.h>
 
 #include "backend/video.h"
 

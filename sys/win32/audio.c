@@ -35,8 +35,6 @@
 
 #include <windows.h>
 
-#include <inttypes.h>
-
 // Define this ourselves; old toolchains don't have it
 struct waveoutcaps2w {
 	WORD wMid;

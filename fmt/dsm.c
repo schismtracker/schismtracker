@@ -31,8 +31,6 @@
 
 #include "player/sndfile.h"
 
-#include <inttypes.h> /* need uint*_t format specifiers */
-
 /* --------------------------------------------------------------------- */
 
 struct dsm_chunk_patt {
@@ -202,7 +200,7 @@ static int dsm_process_pattern(const void *data, size_t size, void *userdata)
 	/* make sure our offset doesn't pass the length */
 #define DSM_ASSERT_OFFSET() \
 	if (slurp_eof(&fp)) { \
-		log_appendf(4, " WARNING: Offset (%" PRId64 ") passed length (%zu) while parsing pattern!", slurp_tell(&fp), slurp_length(&fp)); \
+		log_appendf(4, " WARNING: Offset (%" PRId64 ") passed length (%" PRIuSZ ") while parsing pattern!", slurp_tell(&fp), slurp_length(&fp)); \
 		return 0; \
 	}
 
@@ -402,16 +400,16 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (!num_song_headers)
 		log_appendf(4, " WARNING: No SONG chunk found! (invalid DSM file?\?)");
 	else if (num_song_headers > 1)
-		log_appendf(4, " WARNING: Multiple (%zu) SONG chunks found!", num_song_headers);
+		log_appendf(4, " WARNING: Multiple (%" PRIuSZ ") SONG chunks found!", num_song_headers);
 
 	if (s != nsmp)
-		log_appendf(4, " WARNING: # of samples (%zu) different than expected (%" PRIu16 ")", s, nsmp);
+		log_appendf(4, " WARNING: # of samples (%" PRIuSZ ") different than expected (%" PRIu16 ")", s, nsmp);
 
 	if (p != npat)
-		log_appendf(4, " WARNING: # of patterns (%zu) different than expected (%" PRIu16 ")", p, npat);
+		log_appendf(4, " WARNING: # of patterns (%" PRIuSZ ") different than expected (%" PRIu16 ")", p, npat);
 
 	if (chn_doesnt_match && chn_doesnt_match != nchn)
-		log_appendf(4, " WARNING: # of channels (%"PRIu8") different than expected (%" PRIu16 ")", chn_doesnt_match, nchn);
+		log_appendf(4, " WARNING: # of channels (%" PRIu8 ") different than expected (%" PRIu16 ")", chn_doesnt_match, nchn);
 
 	for (n = 0; n < nchn; n++) {
 		if (chnpan[n & 15] <= 0x80)

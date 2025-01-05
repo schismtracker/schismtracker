@@ -249,7 +249,7 @@ AM_CONDITIONAL([NEED_UNSETENV], [test "x$ac_cv_func_unsetenv" = "xno"])
 AM_CONDITIONAL([NEED_GETOPT], [test "x$ac_cv_func_getopt_long" = "xno"])
 
 dnl Headers, typedef crap, et al.
-AC_CHECK_HEADERS(sys/time.h dirent.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/socket.h sys/soundcard.h poll.h sys/poll.h linux/fb.h sys/kd.h)
+AC_CHECK_HEADERS(sys/time.h dirent.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/socket.h sys/soundcard.h poll.h sys/poll.h linux/fb.h sys/kd.h stdint.h inttypes.h)
 
 AM_CONDITIONAL([USE_OSS], [false])
 if test "x$ac_cv_header_sys_soundcard_h" = "xyes"; then
@@ -268,9 +268,55 @@ fi
 
 AC_C_CONST
 AC_C_INLINE
+AC_TYPE_INT8_T
+AC_TYPE_INT16_T
+AC_TYPE_INT32_T
+AC_TYPE_INT64_T
+AC_TYPE_INTMAX_T
+AC_TYPE_INTPTR_T
+AC_TYPE_UINT8_T
+AC_TYPE_UINT16_T
+AC_TYPE_UINT32_T
+AC_TYPE_UINT64_T
+AC_TYPE_UINTMAX_T
+AC_TYPE_UINTPTR_T
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 AC_STRUCT_TM
+
+dnl --------------------------------------------------------------------------
+dnl Some weird, backwards platforms do not understand "%zu", so we have to
+dnl map it to something that will probably work everywhere.
+
+AC_CHECK_SIZEOF([size_t])
+
+case "x$ac_cv_sizeof_size_t" in
+x1*)
+	AC_DEFINE([PRIuSZ], [PRIu8], [ ])
+	AC_DEFINE([PRIxSZ], [PRIx8], [ ])
+	AC_DEFINE([PRIXSZ], [PRIX8], [ ])
+	;;
+x2*)
+	AC_DEFINE([PRIuSZ], [PRIu16], [ ])
+	AC_DEFINE([PRIxSZ], [PRIx16], [ ])
+	AC_DEFINE([PRIXSZ], [PRIX16], [ ])
+	;;
+x4*)
+	AC_DEFINE([PRIuSZ], [PRIu32], [ ])
+	AC_DEFINE([PRIxSZ], [PRIx32], [ ])
+	AC_DEFINE([PRIXSZ], [PRIX32], [ ])
+	;;
+x8*)
+	AC_DEFINE([PRIuSZ], [PRIu64], [ ])
+	AC_DEFINE([PRIxSZ], [PRIx64], [ ])
+	AC_DEFINE([PRIXSZ], [PRIX64], [ ])
+	;;
+*)
+	AC_DEFINE([PRIuSZ], ["zu"], [ ])
+	AC_DEFINE([PRIxSZ], ["zx"], [ ])
+	AC_DEFINE([PRIXSZ], ["zX"], [ ])
+	;;
+esac
 
 dnl -----------------------------------------------------------------------
 
@@ -536,6 +582,9 @@ if test "x$posix_fseek" = "xunknown"; then
 
 			if (fclose(fp) == EOF)
 				return 11;
+
+			// eh
+			remove("conftest.bin");
 		}
 
 		// compare what we got

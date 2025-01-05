@@ -702,14 +702,14 @@ void adlib_patch_apply(song_sample_t *smp, int32_t patchnum);
 ///////////////////////////////////////////////////////////
 
 // Return (a*b)/c - no divide error
-static inline int32_t _muldiv(int32_t a, int32_t b, int32_t c)
+static inline SCHISM_CONST SCHISM_ALWAYS_INLINE int32_t _muldiv(int32_t a, int32_t b, int32_t c)
 {
 	return ((int64_t) a * (int64_t) b ) / c;
 }
 
 
 // Return (a*b+c/2)/c - no divide error
-static inline int32_t _muldivr(int32_t a, int32_t b, int32_t c)
+static inline SCHISM_CONST SCHISM_ALWAYS_INLINE int32_t _muldivr(int32_t a, int32_t b, int32_t c)
 {
 	return ((int64_t) a * (int64_t) b + (c >> 1)) / c;
 }

@@ -29,8 +29,6 @@
 
 #include "player/sndfile.h"
 
-#include <inttypes.h>
-
 /* --------------------------------------------------------------------- */
 
 int fmt_okt_read_info(dmoz_file_t *file, slurp_t *fp)
