@@ -859,7 +859,17 @@ fi
 
 dnl Unlike a grand -Werror, this one could be rather important:
 dnl functions returning random values are no good under any circumstances.
-AS_IF([test ${ac_cv_c_compiler_gnu+y}], [CFLAGS="$CFLAGS -Werror=return-type"])
+AC_MSG_CHECKING([for -Werror=return-type support])
+old_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Werror=return-type"
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM([[]], [[return 0;]])],
+	[have_error_return_type=yes],
+	[have_error_return_type=no])
+AC_MSG_RESULT([$have_error_return_type])
+if test "x$have_error_return_type" = "xno"; then
+	CFLAGS="$old_CFLAGS"
+fi
 
 if test x$ADD_PROFILING \!= xno || test x$ADD_DEBUG \!= xno; then
 	project_CFLAGS="$project_CFLAGS -g -O0"
