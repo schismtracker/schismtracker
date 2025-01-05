@@ -53,7 +53,7 @@ size_t charset_strlen(const void* in, charset_t inset)
 
 int32_t charset_strcmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set)
 {
-	int result = 0;
+	int32_t result = 0;
 
 	charset_decode_t decoder1 = {
 		.in = (const unsigned char *)in1,
@@ -86,32 +86,92 @@ charsetfail:
 	return strcmp((const char *)in1, (const char *)in2);
 }
 
+int32_t charset_strncmp(const void *in1, charset_t in1set, const void *in2, charset_t in2set, size_t len)
+{
+	int32_t result = 0;
+
+	charset_decode_t decoder1 = {
+		.in = (const unsigned char *)in1,
+		.offset = 0,
+		.size = SIZE_MAX,
+	};
+
+	charset_decode_t decoder2 = {
+		.in = (const unsigned char *)in2,
+		.offset = 0,
+		.size = SIZE_MAX,
+	};
+
+	for (size_t i = 0; i < len; i++) {
+		charset_decode_next(&decoder1, in1set);
+		charset_decode_next(&decoder2, in2set);
+
+		if (decoder1.state < 0 || decoder2.state < 0)
+			goto charsetfail;
+
+		result = decoder1.codepoint - decoder2.codepoint;
+
+		if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE || result)
+			break;
+	}
+
+	return result;
+
+charsetfail:
+	return strncmp((const char *)in1, (const char *)in2, len);
+}
+
+/* ------------------------------------------------------------------------ */
+
 /* this IS necessary to actually sort properly. */
 int32_t charset_strcasecmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set)
 {
-	uint32_t *folded8_1 = NULL, *folded8_2 = NULL;
-	int res;
+	charset_decode_t decoder1 = {
+		.in = (const unsigned char *)in1,
+		.offset = 0,
+		.size = SIZE_MAX,
+	};
 
-	/* takes up more memory than necessary, but whatever */
-	folded8_1 = charset_case_fold_to_set(in1, in1set, CHARSET_UCS4);
-	if (!folded8_1)
-		goto charsetfail;
+	charset_decode_t decoder2 = {
+		.in = (const unsigned char *)in2,
+		.offset = 0,
+		.size = SIZE_MAX,
+	};
 
-	folded8_2 = charset_case_fold_to_set(in2, in2set, CHARSET_UCS4);
-	if (!folded8_2)
-		goto charsetfail;
+	int32_t diff = 0;
 
-	res = charset_strcmp(folded8_1, CHARSET_UCS4, folded8_2, CHARSET_UCS4);
+	for (;;) {
+		charset_decode_next(&decoder1, in1set);
+		charset_decode_next(&decoder2, in2set);
 
-	free(folded8_1);
-	free(folded8_2);
+		if (decoder1.state < 0 || decoder2.state < 0)
+			goto charsetfail;
 
-	return res;
+		uint32_t cp1[2] = {decoder1.codepoint, 0};
+		uint32_t cp2[2] = {decoder2.codepoint, 0};
+
+		uint32_t *cf1 = charset_case_fold_to_set(cp1, CHARSET_UCS4, CHARSET_UCS4);
+		if (!cf1)
+			goto charsetfail;
+
+		uint32_t *cf2 = charset_case_fold_to_set(cp2, CHARSET_UCS4, CHARSET_UCS4);
+		if (!cf2) {
+			free(cf1);
+			goto charsetfail;
+		}
+
+	    diff = charset_strcmp(cf1, CHARSET_UCS4, cf2, CHARSET_UCS4);
+
+	    free(cf1);
+	    free(cf2);
+
+	    if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE || diff)
+	        break;
+	}
+
+	return diff;
 
 charsetfail:
-	free(folded8_1);
-	free(folded8_2);
-
 #if HAVE_STRCASECMP
 	return strcasecmp((const char *)in1, (const char *)in2);
 #else
@@ -230,6 +290,42 @@ size_t charset_strncasecmplen(const void* in1, charset_t in1set, const void* in2
 			break;
 
 	return i;
+}
+
+/* ------------------------------------------------------------------------ */
+/* based off the tiny musl libc implementation */
+
+static inline void *_charset_strxstr_impl(const void *in1, charset_t in1set, const void *in2, charset_t in2set, int32_t (*cmp)(const void *in1, charset_t in1set, const void *in2, charset_t in2set, size_t len))
+{
+	const unsigned char *uc1 = (const unsigned char *)in1;
+
+	charset_decode_t decoder1 = {
+		.in = uc1,
+		.offset = 0,
+		.size = SIZE_MAX,
+	};
+
+	size_t len = charset_strlen(in2, in2set);
+	for (;;) {
+		if (!charset_strncasecmp(uc1 + decoder1.offset, in1set, in2, in2set, len))
+			return (void *)(uc1 + decoder1.offset);
+
+		charset_decode_next(&decoder1, in1set);
+		if (decoder1.state < 0 || decoder1.state == DECODER_STATE_DONE)
+			break;
+	}
+
+	return NULL;
+}
+
+void *charset_strstr(const void *in1, charset_t in1set, const void *in2, charset_t in2set)
+{
+	return _charset_strxstr_impl(in1, in1set, in2, in2set, charset_strncmp);
+}
+
+void *charset_strcasestr(const void *in1, charset_t in1set, const void *in2, charset_t in2set)
+{
+	return _charset_strxstr_impl(in1, in1set, in2, in2set, charset_strncasecmp);
 }
 
 /* ------------------------------------------------------------------------ */
