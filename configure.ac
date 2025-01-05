@@ -164,6 +164,10 @@ AC_PROG_CC
 if test "x$ac_cv_prog_cc_c11" = "xno" && test "x$ac_cv_prog_cc_c99" = "xno"; then
 	AC_MSG_ERROR([*** Failed to find a proper C99 compiler])
 fi
+
+dnl FIXME: this shouldn't have to be done
+OBJCFLAGS = "$CFLAGS $OBJCFLAGS"
+
 AM_PROG_CC_C_O
 AC_PROG_CPP
 AC_PROG_INSTALL
