@@ -139,16 +139,17 @@ static schism_thread_t *macos_thread_create(schism_thread_function_t func, SCHIS
 	thread->func = func;
 	thread->userdata = userdata;
 
-	err = MPCreateCriticalRegion(&thread->mutex);
+	err = MPCreateEvent(&thread->event);
 	if (err != noErr) {
 		free(thread);
-		log_appendf(4, "MPCreateCriticalRegion: %" PRId32, err);
+		log_appendf(4, "MPCreateEvent: %" PRId32, err);
 		return NULL;
 	}
 
 	// use a 512 KiB stack size, which should be plenty for us
 	err = MPCreateTask(macos_dummy_thread_func, thread, UINT32_C(524288), notification_queue, NULL, NULL, 0, &thread->task);
 	if (err != noErr) {
+		MPDeleteEvent(thread->event);
 		free(thread);
 		log_appendf(4, "MPCreateTask: %" PRId32, err);
 		return NULL;
