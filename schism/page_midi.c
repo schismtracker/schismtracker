@@ -282,7 +282,7 @@ static void midi_page_draw_portlist(void)
 			fg = 5;
 			bg = 0;
 		}
-		draw_text_len(name, 64, 13, 15+i, 5, 0);
+		draw_text_utf8_len(name, 64, 13, 15+i, 5, 0);
 
 		if (status.flags & MIDI_EVENT_CHANGED
 		    && (now - status.last_midi_tick) < 3000

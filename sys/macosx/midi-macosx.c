@@ -106,8 +106,8 @@ static void get_ep_name(MIDIEndpointRef ep, char* buf, size_t buf_len)
 		fullName = endpointName;
 	}
 
-	/* copy the string into our buffer as DOS Latin US (CP437) */
-	CFStringGetCString(fullName, buf, buf_len, kCFStringEncodingDOSLatinUS);
+	/* copy the string into our buffer as UTF-8 */
+	CFStringGetCString(fullName, buf, buf_len, kCFStringEncodingUTF8);
 
 	/* clean up */
 	if (fullName && !deviceName) CFRelease(fullName);
@@ -173,6 +173,7 @@ static void _macosx_add_port(struct midi_provider *p, MIDIEndpointRef ep, int in
 	/* 55 is the maximum size for the MIDI page */
 	char name[55];
 	get_ep_name(m->ep, name, 55);
+	name[54] = '\0';
 
 	midi_port_register(p, inout, name, m, 1);
 }
