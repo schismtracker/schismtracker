@@ -132,8 +132,8 @@ void timer_oneshot(uint32_t ms, void (*callback)(void *param), void *param)
 	if (backend->oneshot && backend->oneshot(ms, callback, param))
 		return;
 
-	// Ok, the backend doesn't support oneshots.
-	// Make a thread which calls it back.
+	// Ok, the backend doesn't support oneshots or it failed to make an event.
+	// Make a thread that "emulates" kernel-level events.
 
 	struct _timer_oneshot_data *data = mem_calloc(1, sizeof(*data));
 

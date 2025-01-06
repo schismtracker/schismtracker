@@ -30,9 +30,14 @@ typedef struct {
 	int (*init)(void);
 	void (*quit)(void);
 
+	// Creates a thread. `name` is optional, and if passed may be used to set
+	// the description of a thread in the OS.
 	schism_thread_t *(*thread_create)(schism_thread_function_t func, const char *name, void *userdata);
+	// Waits for a thread to exit, then cleans it up.
 	void (*thread_wait)(schism_thread_t *thread, int *status);
+	// Sets the current threads priority.
 	void (*thread_set_priority)(int priority);
+	// Get the current thread's unique ID. (mostly unused)
 	schism_thread_id_t (*thread_id)(void);
 
 	schism_mutex_t *(*mutex_create)(void);

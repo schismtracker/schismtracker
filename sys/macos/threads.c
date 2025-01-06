@@ -111,9 +111,9 @@ static MPQueueID notification_queue = NULL;
 
 struct schism_thread {
 	MPTaskID task;
-	MPCriticalRegionID mutex; // for macos_thread_wait
+	MPEventID event; // for macos_thread_wait
+	int status;
 
-	char *name;
 	void *userdata;
 
 	int (*func)(void *);
@@ -123,16 +123,15 @@ static OSStatus macos_dummy_thread_func(void *userdata)
 {
 	schism_thread_t *thread = userdata;
 
-	MPEnterCriticalRegion(thread->mutex, kDurationForever);
+	thread->status = thread->func(thread->userdata);
 
-	int s = thread->func(thread->userdata);
+	// Notify any waiting thread
+	MPSetEvent(thread->event, 1);
 
-	MPExitCriticalRegion(thread->mutex);
-
-	return s;
+	return 0;
 }
 
-static schism_thread_t *macos_thread_create(schism_thread_function_t func, const char *name, void *userdata)
+static schism_thread_t *macos_thread_create(schism_thread_function_t func, SCHISM_UNUSED const char *name, void *userdata)
 {
 	OSStatus err = noErr;
 	schism_thread_t *thread = mem_alloc(sizeof(*thread));
@@ -150,7 +149,6 @@ static schism_thread_t *macos_thread_create(schism_thread_function_t func, const
 	// use a 512 KiB stack size, which should be plenty for us
 	err = MPCreateTask(macos_dummy_thread_func, thread, UINT32_C(524288), notification_queue, NULL, NULL, 0, &thread->task);
 	if (err != noErr) {
-		MPDeleteCriticalRegion(thread->mutex);
 		free(thread);
 		log_appendf(4, "MPCreateTask: %" PRId32, err);
 		return NULL;
@@ -161,11 +159,14 @@ static schism_thread_t *macos_thread_create(schism_thread_function_t func, const
 
 static void macos_thread_wait(schism_thread_t *thread, int *status)
 {
-	// FIXME: there can be race conditions between calling this function
-	// and the invocation of macos_dummy_thread_func_(), which may cause
-	// this function to return immediately.
-	MPEnterCriticalRegion(thread->mutex, kDurationForever);
-	MPExitCriticalRegion(thread->mutex);
+	// Wait until the dummy function calls us back
+	MPWaitForEvent(thread->event, NULL, kDurationForever);
+	MPDeleteEvent(thread->event);
+
+	if (status)
+		*status = thread->status;
+
+	free(thread);
 }
 
 static void macos_thread_set_priority(int priority)

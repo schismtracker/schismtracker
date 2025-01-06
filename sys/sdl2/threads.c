@@ -84,6 +84,7 @@ schism_thread_t *sdl2_thread_create(schism_thread_function_t func, const char *n
 void sdl2_thread_wait(schism_thread_t *thread, int *status)
 {
 	sdl2_WaitThread(thread->thread, status);
+	free(thread);
 }
 
 void sdl2_thread_set_priority(int priority)
