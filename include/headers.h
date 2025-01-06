@@ -35,15 +35,22 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #ifdef HAVE_STDINT_H
 # include <stdint.h>
 #endif
-#include <stddef.h>
 #ifdef HAVE_INTTYPES_H
 # include <inttypes.h>
 #endif
 
 #include <stdarg.h>
+#ifndef va_copy
+# ifdef __va_copy
+#  define va_copy(dst, sec) (__va_copy(dst, src))
+# else
+#  define va_copy(dst, src) (memcpy(&dst, &src, sizeof(va_list)))
+# endif
+#endif
 
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
@@ -51,23 +58,29 @@
 
 #include <string.h>
 
-#if !defined(HAVE_STRCASECMP) && defined(HAVE_STRICMP)
-# define strcasecmp stricmp
+#ifndef HAVE_STRCASECMP
+# ifdef HAVE_STRICMP
+#  define strcasecmp(s1, s2) stricmp(s1, s2)
+# else
+#  include <charset.h>
+#  define strcasecmp(s1, s2) charset_strcasecmp(s1, CHARSET_CHAR, s2, CHARSET_CHAR)
+# endif
 #endif
-#if !defined(HAVE_STRNCASECMP) && defined(HAVE_STRNICMP)
-# define strncasecmp strnicmp
+#ifndef HAVE_STRNCASECMP
+# ifdef HAVE_STRNICMP
+#  define strncasecmp(s1, s2, n) strnicmp(s1, s2)
+# else
+#  include <charset.h>
+#  define strncasecmp(s1, s2, n) charset_strncasecmp(s1, CHARSET_CHAR, s2, CHARSET_CHAR)
+# endif
 #endif
 #ifndef HAVE_STRVERSCMP
-# define strverscmp strcasecmp
-#else
-/* need to declare this because its a GNU function, and
- * we specifically don't want to define _GNU_SOURCE */
-int strverscmp(const char *s1, const char *s2);
+# include <charset.h>
+# define strverscmp(s1, s2) charset_strverscmp(s1, CHARSET_CHAR, s2, CHARSET_CHAR)
 #endif
-#ifdef HAVE_STRCASESTR
-char *strcasestr(const char *haystack, const char *needle);
-#else
-# define strcasestr strstr // derp
+#ifndef HAVE_STRCASESTR
+# include <charset.h>
+# define strcasestr(haystack, needle) charset_strcasestr(haystack, CHARSET_CHAR, needle, CHARSET_CHAR)
 #endif
 
 #if HAVE_UNISTD_H
@@ -83,19 +96,6 @@ char *strcasestr(const char *haystack, const char *needle);
 # include <sys/time.h>
 #endif
 #include <time.h>
-
-#ifndef timersub
-// from FreeBSD
-# define timersub(tvp, uvp, vvp)                                       \
-	do {                                                            \
-		(vvp)->tv_sec = (tvp)->tv_sec - (uvp)->tv_sec;          \
-		(vvp)->tv_usec = (tvp)->tv_usec - (uvp)->tv_usec;       \
-		if ((vvp)->tv_usec < 0) {                               \
-			(vvp)->tv_sec--;                                \
-			(vvp)->tv_usec += 1000000;                      \
-		}                                                       \
-	} while (0)
-#endif
 
 #ifndef HAVE_ASPRINTF
 int asprintf(char **strp, const char *fmt, ...);
@@ -131,21 +131,20 @@ int unsetenv(const char *name);
 # define ya_optional_argument  2
 
 struct option {
-    const char *name;
-    int has_arg;
-    int *flag;
-    int val;
+	const char *name;
+	int has_arg;
+	int *flag;
+	int val;
 };
 
 int ya_getopt(int argc, char * const argv[], const char *optstring);
-int ya_getopt_long(int argc, char * const argv[], const char *optstring,
-                   const struct option *longopts, int *longindex);
-int ya_getopt_long_only(int argc, char * const argv[], const char *optstring,
-                        const struct option *longopts, int *longindex);
+int ya_getopt_long(int argc, char * const argv[], const char *optstring, const struct option *longopts, int *longindex);
+int ya_getopt_long_only(int argc, char * const argv[], const char *optstring, const struct option *longopts, int *longindex);
 
 extern char *ya_optarg;
 extern int ya_optind, ya_opterr, ya_optopt;
 
+// yargh
 # define getopt ya_getopt
 # define getopt_long ya_getopt_long
 # define getopt_long_only ya_getopt_long_only
@@ -177,13 +176,26 @@ extern int ya_optind, ya_opterr, ya_optopt;
 /* -------------------------------------------------------------- */
 /* moved from util.h */
 
+#define ARRAY_SIZE(a) (sizeof(a)/sizeof(*(a)))
+
+/* macros stolen from glib */
+#ifndef MAX
+# define MAX(X,Y) (((X)>(Y))?(X):(Y))
+#endif
+#ifndef MIN
+# define MIN(X,Y) (((X)<(Y))?(X):(Y))
+#endif
+#ifndef CLAMP
+# define CLAMP(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
+#endif
+
 /* A bunch of compiler detection stuff... don't mind this... */
 #define SCHISM_SEMVER_ATLEAST(mmajor, mminor, mpatch, major, minor, patch) \
 	((major >= mmajor) \
 	 && (major > mmajor || minor >= mminor) \
 	 && (major > mmajor || minor > mminor || patch >= mpatch))
 
-// ugh
+// GNU C (not GCC!)
 #if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
 # define SCHISM_GNUC_ATLEAST(major, minor, patch) \
 	SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
@@ -195,6 +207,18 @@ extern int ya_optind, ya_opterr, ya_optopt;
 	SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, 0, 0)
 #else
 # define SCHISM_GNUC_ATLEAST(major, minor, patch) (0)
+#endif
+
+// MSVC
+#if defined(_MSC_FULL_VER) && (_MSC_FULL_VER >= 140000000)
+# define SCHISM_MSVC_ATLEAST(major, minor, patch) \
+	SCHISM_SEMVER_ATLEAST(major, minor, patch, _MSC_FULL_VER / 10000000, (_MSC_FULL_VER % 10000000 / 100000), (_MSC_FULL_VER % 100000) / 100)
+#elif defined(_MSC_FULL_VER)
+# define SCHISM_MSVC_ATLEAST(major, minor, patch) \
+	SCHISM_SEMVER_ATLEAST(major, minor, patch, _MSC_FULL_VER / 1000000, (_MSC_FULL_VER % 1000000) / 10000, (_MSC_FULL_VER % 10000) / 10)
+#elif defined(_MSC_VER)
+# define SCHISM_MSVC_ATLEAST(major, minor, patch) \
+	SCHISM_SEMVER_ATLEAST(major, minor, patch, _MSC_VER / 100, _MSC_VER % 100, 0)
 #endif
 
 #ifdef __has_attribute
@@ -221,58 +245,65 @@ extern int ya_optind, ya_opterr, ya_optopt;
 	SCHISM_GNUC_ATLEAST(major, minor, patch)
 #endif
 
-#define ARRAY_SIZE(a) (sizeof(a)/sizeof(*(a)))
-
-/* macros stolen from glib */
-#ifndef MAX
-# define MAX(X,Y) (((X)>(Y))?(X):(Y))
-#endif
-#ifndef MIN
-# define MIN(X,Y) (((X)<(Y))?(X):(Y))
-#endif
-#ifndef CLAMP
-# define CLAMP(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
+/* C23 requires that this exists. maybe compiler versions
+ * ~could~ be used as a fallback but I don't care enough */
+#ifdef __has_c_attribute
+# define SCHISM_HAS_C23_ATTRIBUTE(x) __has_c_attribute(x)
+#else
+# define SCHISM_HAS_C23_ATTRIBUTE(x) (0)
 #endif
 
-#if SCHISM_GNUC_HAS_ATTRIBUTE(__unused__, 2, 7, 0)
+#if SCHISM_HAS_C23_ATTRIBUTE(maybe_unused)
+# define SCHISM_UNUSED [[maybe_unused]]
+#elif SCHISM_GNUC_HAS_ATTRIBUTE(__unused__, 2, 7, 0)
 # define SCHISM_UNUSED __attribute__((__unused__))
 #endif
-#if SCHISM_GNUC_HAS_ATTRIBUTE(__packed__, 2, 7, 0)
-# define SCHISM_PACKED __attribute__((__packed__))
-#endif
+
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__malloc__, 3, 0, 0)
 # define SCHISM_MALLOC __attribute__((__malloc__))
+#elif SCHISM_MSVC_ATLEAST(14, 0, 0)
+# define SCHISM_MALLOC __declspec(allocator)
 #endif
-#if SCHISM_GNUC_HAS_ATTRIBUTE(__pure__, 2, 96, 0)
+
+#if SCHISM_HAS_C23_ATTRIBUTE(reproducible)
+# define SCHISM_PURE [[reproducible]]
+#elif SCHISM_GNUC_HAS_ATTRIBUTE(__pure__, 2, 96, 0)
 # define SCHISM_PURE __attribute__((__pure__))
 #endif
-#if SCHISM_GNUC_HAS_ATTRIBUTE(__const__, 2, 5, 0)
+
+#if SCHISM_HAS_C23_ATTRIBUTE(unsequenced)
+# define SCHISM_CONST [[unsequenced]]
+#elif SCHISM_GNUC_HAS_ATTRIBUTE(__const__, 2, 5, 0)
 # define SCHISM_CONST __attribute__((__const__))
 #endif
+
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__format__, 2, 3, 0)
-# define SCHISM_FORMAT(x) __attribute__((__format__ x))
+# define SCHISM_FORMAT(function, format_index, first_index) \
+	__attribute__((__format__(function, format_index, first_index)))
 #endif
+
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__alloc_size__, 9, 1, 0)
 # define SCHISM_ALLOC_SIZE(x) __attribute__((__alloc_size__(x)))
 # define SCHISM_ALLOC_SIZE_EX(x, y) __attribute__((__alloc_size__(x, y)))
 #endif
+
 // FIXME what is the real minimum version here? mac os x
 // seems to disagree with the idea that it's in gcc 4.0
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__always_inline__, 100, 0, 0)
 # define SCHISM_ALWAYS_INLINE __attribute__((__always_inline__))
 #endif
-#if SCHISM_GNUC_HAS_ATTRIBUTE(__deprecated__, 3, 1, 0)
+
+#if SCHISM_HAS_C23_ATTRIBUTE(deprecated)
+# define SCHISM_DEPRECATED [[deprecated]]
+#elif SCHISM_GNUC_HAS_ATTRIBUTE(__deprecated__, 3, 1, 0)
 # define SCHISM_DEPRECATED __attribute__((__deprecated__))
+#elif SCHISM_MSVC_ATLEAST(13, 10, 0)
+# define SCHISM_DEPRECATED __declspec(deprecated)
 #endif
 
 #if SCHISM_GNUC_HAS_BUILTIN(__builtin_expect, 3, 0, 0)
 # define SCHISM_LIKELY(x)   __builtin_expect(!!(x), 1)
 # define SCHISM_UNLIKELY(x) __builtin_expect(!(x),  1)
-#endif
-
-// _Generic
-#if (SCHISM_GNUC_HAS_EXTENSION(c_generic_selections, 4, 9, 0) || __STDC_VERSION__ >= 201112L)
-# define SCHISM_HAVE_GENERIC 1
 #endif
 
 #ifndef SCHISM_LIKELY
@@ -314,15 +345,9 @@ extern int ya_optind, ya_opterr, ya_optopt;
 
 /* ------------------------------------------------------------------------ */
 
-/* dumb workaround for dumb devkitppc bug
- *
- * XXX is this still relevant at all? */
-//#ifdef SCHISM_WII
-//# undef NAME_MAX
-//# undef PATH_MAX
-//#endif
-
 #ifdef SCHISM_WIN32
+/* TODO We can actually enable long path support on windows in the manifest
+ * https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation */
 # define SCHISM_PATH_MAX (3 + 256 + 1) // drive letter, colon, name components, NUL
 #else
 # define SCHISM_PATH_MAX (8192) // 8 KiB (should be more than enough)
@@ -353,7 +378,6 @@ extern int ya_optind, ya_opterr, ya_optopt;
 # endif
 #endif
 
-// FILENAME_MAX is not used here because
-// it shouldn't be used for array bounds
+// FILENAME_MAX is not used here because it shouldn't be used for array bounds
 
 #endif /* SCHISM_HEADERS_H_ */
