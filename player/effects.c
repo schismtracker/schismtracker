@@ -2058,32 +2058,7 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
 		break;
 
 	case VOLFX_VIBRATOSPEED: // $x (FT2 compat.)
-		/* <rant>
-		 * "Real programmers don't document. If it was hard to write, it
-		 * should be hard to understand."
-		 *
-		 * FT2's replayer is like a box of chocolates, except you never know
-		 * whether the contents of any chocolate is going to be white, milk, or
-		 * dark. In addition, it also has an entirely new form of chocolate
-		 * no one has ever heard of or wanted.
-		 *
-		 * There is nothing consistent at all about *anything* FT2 does. It is
-		 * quite impressive really how incoherent literally everything is.
-		 * Why, for example, does FT2 treat a note off with note delay as a
-		 * envelope retrigger, and ONLY an envelope retrigger (the note off
-		 * is ignored entirely)? And why does FT2 treat a F00 command as
-		 * setting the tick count to 65536? And why does FT2 make pattern loops
-		 * completely unusable (when using E60, the next pattern starts on the
-		 * same row it was on)?
-		 *
-		 * The documentation is no help either, and in some cases is blatantly
-		 * wrong. See:
-		 *     `pub/documents/format_documentation/FastTracker 2 v2.04 (.xm).html`
-		 * for a couple of fun inconsistencies in the XM.DOC file.
-		 * </rant>
-		 *
-		 * Unlike the vibrato depth, this doesn't actually trigger a vibrato.
-		 * Thanks FT2. */
+		/* Unlike the vibrato depth, this doesn't actually trigger a vibrato. */
 		chan->vibrato_speed = vol;
 		break;
 
