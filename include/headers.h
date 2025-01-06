@@ -194,6 +194,8 @@ extern int ya_optind, ya_opterr, ya_optopt;
 #elif defined(_MSC_VER)
 # define SCHISM_MSVC_ATLEAST(major, minor, patch) \
 	SCHISM_SEMVER_ATLEAST(major, minor, patch, _MSC_VER / 100, _MSC_VER % 100, 0)
+#else
+# define SCHISM_MSVC_ATLEAST(major, minor, patch) (0)
 #endif
 
 #ifdef __has_attribute
