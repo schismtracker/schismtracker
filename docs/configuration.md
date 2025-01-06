@@ -104,11 +104,12 @@ or `\073` when saving.
 This was formerly named `filename_pattern`; Schism Tracker ignores the old
 value and comments it out when saving to work around bugs in older versions.
 
-    sort_with=strcasecmp
+    sort_with=strcaseverscmp
 
 Alter the sort order. Possible values are `strcmp` (case-sensitive),
-`strcasecmp` (case-insensitive), and `strverscmp` (case-sensitive, but handles
-numbers smartly e.g. `5.it` will be listed above `10.it`).
+`strcasecmp` (case-insensitive), `strverscmp` (case-sensitive, but handles
+numbers smartly e.g. `5.it` will be listed above `10.it`), and
+`strcaseverscmp` (case-insensitive and handles numbers smartly).
 
 #### Keyjazz
 
