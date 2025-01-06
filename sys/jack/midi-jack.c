@@ -181,14 +181,24 @@ struct jack_midi {
 };
 
 static void _jack_send(SCHISM_UNUSED struct midi_port *p, const unsigned char *data, unsigned int len, unsigned int delay) {
-	if (len + sizeof(len) > ringbuffer_out_max_write)
-		return;
+	while (len > 0) {
+		unsigned int real_len = midi_event_length(*data);
+		if (real_len > len)
+			return;
 
-	while (JACK_jack_ringbuffer_write_space(ringbuffer_out) < len + sizeof(len))
-		timer_msleep(10); /* TODO maybe this could be signaled when _jack_process is done */
+		if (real_len + sizeof(real_len) > ringbuffer_out_max_write)
+			return;
 
-	JACK_jack_ringbuffer_write(ringbuffer_out, (const char*)&len, sizeof(len));
-	JACK_jack_ringbuffer_write(ringbuffer_out, (const char*)data, len);
+		// yield for other threads while the process thread is busy
+		while (JACK_jack_ringbuffer_write_space(ringbuffer_out) < real_len + sizeof(real_len))
+			sched_yield();
+
+		JACK_jack_ringbuffer_write(ringbuffer_out, (const char*)&real_len, sizeof(real_len));
+		JACK_jack_ringbuffer_write(ringbuffer_out, (const char*)data, real_len);
+
+		data += real_len;
+		len -= real_len;
+	}
 
 	(void)delay;
 }
@@ -335,7 +345,7 @@ static int _jack_attempt_connect(struct midi_provider* jack_provider_) {
 		return 1;
 
 	/* create our client */
-	client = JACK_jack_client_open(PORT_NAME, JackNoStartServer, NULL);
+	client = JACK_jack_client_open(PORT_NAME, 0, NULL);
 	if (!client)
 		goto fail;
 
@@ -406,7 +416,7 @@ static void _jack_poll(struct midi_provider* jack_provider_)
 
 static struct midi_driver jack_driver = {
 	.poll = _jack_poll,
-	.flags = 0,
+	.flags = 0, // jack is realtime
 	.thread = _jack_thread,
 	.enable = _jack_start,
 	.disable = _jack_stop,
