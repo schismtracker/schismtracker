@@ -613,10 +613,10 @@ static uint32_t midims = 0;
 
 void midi_queue_alloc(int buffer_length, int sample_size, int samples_per_second)
 {
-	// bytes per centisecond, rounded up
+	// bytes per millisecond, rounded up
 	midims = sample_size * samples_per_second;
-	midims += 100 - (midims % 100);
-	midims /= 100;
+	midims += 1000 - (midims % 1000);
+	midims /= 1000;
 
 	// nothing else to do now
 }
@@ -699,6 +699,7 @@ void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int 
 
 		if (pos > 0) {
 			if (_midi_send_unlocked(data, len, pos, MIDI_FROM_LATER)) {
+
 				// ok, we need a timer.
 				struct _midi_send_timer_curry *curry = mem_alloc(sizeof(struct _midi_send_timer_curry) + len);
 
