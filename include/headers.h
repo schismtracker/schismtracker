@@ -58,31 +58,6 @@
 
 #include <string.h>
 
-#ifndef HAVE_STRCASECMP
-# ifdef HAVE_STRICMP
-#  define strcasecmp(s1, s2) stricmp(s1, s2)
-# else
-#  include <charset.h>
-#  define strcasecmp(s1, s2) charset_strcasecmp(s1, CHARSET_CHAR, s2, CHARSET_CHAR)
-# endif
-#endif
-#ifndef HAVE_STRNCASECMP
-# ifdef HAVE_STRNICMP
-#  define strncasecmp(s1, s2, n) strnicmp(s1, s2)
-# else
-#  include <charset.h>
-#  define strncasecmp(s1, s2, n) charset_strncasecmp(s1, CHARSET_CHAR, s2, CHARSET_CHAR)
-# endif
-#endif
-#ifndef HAVE_STRVERSCMP
-# include <charset.h>
-# define strverscmp(s1, s2) charset_strverscmp(s1, CHARSET_CHAR, s2, CHARSET_CHAR)
-#endif
-#ifndef HAVE_STRCASESTR
-# include <charset.h>
-# define strcasestr(haystack, needle) charset_strcasestr(haystack, CHARSET_CHAR, needle, CHARSET_CHAR)
-#endif
-
 #if HAVE_UNISTD_H
 # include <sys/types.h>
 # include <unistd.h>
@@ -379,5 +354,33 @@ extern int ya_optind, ya_opterr, ya_optopt;
 #endif
 
 // FILENAME_MAX is not used here because it shouldn't be used for array bounds
+// i.e. it can be like, INT_MAX or something huge like that
+
+/* ------------------------------------------------------------------------ */
+
+#ifndef HAVE_STRCASECMP
+# ifdef HAVE_STRICMP
+#  define strcasecmp(s1, s2) stricmp(s1, s2)
+# else
+#  include <charset.h>
+#  define strcasecmp(s1, s2) charset_strcasecmp(s1, CHARSET_CHAR, s2, CHARSET_CHAR)
+# endif
+#endif
+#ifndef HAVE_STRNCASECMP
+# ifdef HAVE_STRNICMP
+#  define strncasecmp(s1, s2, n) strnicmp(s1, s2)
+# else
+#  include <charset.h>
+#  define strncasecmp(s1, s2, n) charset_strncasecmp(s1, CHARSET_CHAR, s2, CHARSET_CHAR)
+# endif
+#endif
+#ifndef HAVE_STRVERSCMP
+# include <charset.h>
+# define strverscmp(s1, s2) charset_strverscmp(s1, CHARSET_CHAR, s2, CHARSET_CHAR)
+#endif
+#ifndef HAVE_STRCASESTR
+# include <charset.h>
+# define strcasestr(haystack, needle) charset_strcasestr(haystack, CHARSET_CHAR, needle, CHARSET_CHAR)
+#endif
 
 #endif /* SCHISM_HEADERS_H_ */
