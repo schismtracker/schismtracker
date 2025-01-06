@@ -174,35 +174,4 @@ inline SCHISM_ALWAYS_INLINE void *charset_iconv_easy(const void *in, charset_t i
 	return NULL;
 }
 
-/* [[DEPRECATED]]: Do not use this in new code.
- * This macro is prone to memory leaks!!!
- * Use the charset_iconv_easy() function instead.
- *
- * This is a simple macro for easy charset conversion.
- *
- * Sample usage:
- *    CHARSET_EASY_MODE(in, CHARSET_CHAR, CHARSET_CP437, {
- *        do_something_with(out);
- *    });
- *
- * The macro will handle freeing the result. It cannot
- * be used outside of the block you feed to it.
- * If you need that, call charset_iconv() directly.
- */
-#define CHARSET_EASY_MODE_EX(MOD, in, inset, outset, x) \
-	do { \
-		SCHISM_DEPRECATED MOD void* out; \
-		charset_error_t err = charset_iconv(in, &out, inset, outset, SIZE_MAX); \
-		if (err) \
-			out = in; \
-	\
-		x \
-	\
-		if (!err) \
-			free((void *)out); \
-	} while (0)
-
-#define CHARSET_EASY_MODE(in, inset, outset, x) CHARSET_EASY_MODE_EX(, in, inset, outset, x)
-#define CHARSET_EASY_MODE_CONST(in, inset, outset, x) CHARSET_EASY_MODE_EX(const, in, inset, outset, x)
-
 #endif /* SCHISM_CHARSET_H_ */
