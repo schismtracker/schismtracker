@@ -216,6 +216,7 @@ void timer_quit(void)
 		timer_oneshot_thread_cancelled = 1;
 		mt_cond_signal(timer_oneshot_cond);
 		mt_thread_wait(timer_oneshot_thread, NULL);
+		timer_oneshot_thread = NULL;
 	}
 
 	if (timer_oneshot_mutex) {
@@ -228,4 +229,3 @@ void timer_quit(void)
 		timer_oneshot_cond = NULL;
 	}
 }
-
