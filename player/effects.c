@@ -2103,7 +2103,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 			if (NOTE_IS_NOTE(note) && csf->instruments[instr]->sample_map[note - NOTE_FIRST] == 0)
 			{
 				chan->new_note = note;
-				chan->row_instr = 0;
+				chan->row_instr = instr;
 				chan->row_voleffect = VOLFX_NONE;
 				chan->row_effect = FX_NONE;
 				continue;
