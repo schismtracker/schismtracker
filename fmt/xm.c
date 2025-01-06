@@ -681,6 +681,14 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 			if (!(ins->flags & ENV_VOLSUSTAIN))
 				ins->vol_env.sustain_start = ins->vol_env.sustain_end = ins->vol_env.nodes - 1;
 			ins->flags |= ENV_VOLLOOP | ENV_VOLSUSTAIN;
+
+			// FT2 loops the first loop found, while IT always does the sustain loop first.
+			// There's not much we can do in this case except for just disabling the sustain
+			// loop :)
+			//
+			// TODO: investigate, see if this breaks anything else
+			if (ins->vol_env.sustain_start > ins->vol_env.loop_start)
+				ins->flags &= ~ENV_VOLSUSTAIN;
 		} else {
 			// fix note-off
 			ins->vol_env.ticks[0] = 0;
