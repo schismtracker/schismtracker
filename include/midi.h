@@ -113,7 +113,6 @@ int midi_engine_port_count(void);
 
 /* midi engines register a provider (one each!) */
 struct midi_provider *midi_provider_register(const char *name, struct midi_driver *f);
-void midi_provider_unregister(struct midi_provider* p);
 
 /* midi engines list ports this way */
 int midi_port_register(struct midi_provider *p,

@@ -185,7 +185,7 @@ static void _jack_send(SCHISM_UNUSED struct midi_port *p, const unsigned char *d
 		return;
 
 	while (JACK_jack_ringbuffer_write_space(ringbuffer_out) < len + sizeof(len))
-		sched_yield(); /* I guess */
+		timer_msleep(10); /* TODO maybe this could be signaled when _jack_process is done */
 
 	JACK_jack_ringbuffer_write(ringbuffer_out, (const char*)&len, sizeof(len));
 	JACK_jack_ringbuffer_write(ringbuffer_out, (const char*)data, len);
@@ -318,14 +318,14 @@ static void _jack_enumerate_ports(const char **port_names, struct midi_provider 
 			continue;
 
 		/* create the UI name... */
-		char ptr[55];
-		snprintf(ptr, 55, " %-*.*s (JACK)", 55 - 9, 55 - 9, *port_name);
+		char name[55];
+		snprintf(name, 55, " %-*.*s (JACK)", 55 - 9, 55 - 9, *port_name);
 
 		m = mem_alloc(sizeof(*m));
 		m->port = port;
 		m->mark = 1;
 
-		midi_port_register(p, inout, ptr, m, 1);
+		midi_port_register(p, inout, name, m, 1);
 	}
 }
 
@@ -388,7 +388,7 @@ static void _jack_poll(struct midi_provider* jack_provider_)
 		m->mark = 0;
 	}
 
-	const char** ports = NULL;
+	const char** ports;
 
 	ports = JACK_jack_get_ports(client, NULL, JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput);
 	_jack_enumerate_ports(ports, jack_provider_, MIDI_INPUT);

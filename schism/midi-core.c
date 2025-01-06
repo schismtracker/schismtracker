@@ -332,9 +332,12 @@ void midi_engine_stop(void)
 			n->cancelled = 1;
 			mt_thread_wait(n->thread, NULL);
 		}
+
 		free(n->name);
+
+		void *prev = n;
 		n = n->next;
-		free(n);
+		free(prev);
 	}
 	_connected = 0;
 	mt_mutex_unlock(midi_mutex);
@@ -408,22 +411,6 @@ struct midi_provider *midi_provider_register(const char *name,
 	mt_mutex_unlock(midi_mutex);
 
 	return n;
-}
-
-void midi_provider_unregister(struct midi_provider* p)
-{
-	struct midi_provider* n;
-
-	mt_mutex_lock(midi_mutex);
-
-	for (n = port_providers; n; n = n->next) {
-		if (n == p && n->next) {
-			n = n->next;
-			free(n);
-		}
-	}
-
-	mt_mutex_unlock(midi_mutex);
 }
 
 /* ------------------------------------------------------------- */
