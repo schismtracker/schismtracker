@@ -184,7 +184,7 @@ extern int ya_optind, ya_opterr, ya_optopt;
 # define SCHISM_GNUC_ATLEAST(major, minor, patch) (0)
 #endif
 
-// MSVC
+// MSVC (untested)
 #if defined(_MSC_FULL_VER) && (_MSC_FULL_VER >= 140000000)
 # define SCHISM_MSVC_ATLEAST(major, minor, patch) \
 	SCHISM_SEMVER_ATLEAST(major, minor, patch, _MSC_FULL_VER / 10000000, (_MSC_FULL_VER % 10000000 / 100000), (_MSC_FULL_VER % 100000) / 100)
@@ -266,6 +266,8 @@ extern int ya_optind, ya_opterr, ya_optopt;
 // seems to disagree with the idea that it's in gcc 4.0
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__always_inline__, 100, 0, 0)
 # define SCHISM_ALWAYS_INLINE __attribute__((__always_inline__))
+#elif SCHISM_MSVC_ATLEAST(12, 0, 0)
+# define SCHISM_ALWAYS_INLINE __forceinline
 #endif
 
 #if SCHISM_HAS_C23_ATTRIBUTE(deprecated)
