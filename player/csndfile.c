@@ -867,6 +867,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 				iadd = data[j];
 		}
 
+		iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT8_MIN : 0;
+
 		data = (int8_t *)sample->data + 1;
 		for (uint32_t j = 0; j < len; j += 2) {
 			data[j] = data[j] + iadd;
@@ -928,6 +930,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 				iadd = data[j];
 		}
 
+		iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT16_MIN : 0;
+
 		data = (int16_t *)sample->data + 1;
 		for (uint32_t j = 0; j < len; j += 2) {
 			slurp_read(fp, &data[j], 2);
@@ -962,6 +966,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 			if ((flags & SF_ENC_MASK) == SF_PCMD)
 				iadd = data[j];
 		}
+
+		iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT16_MIN : 0;
 
 		data = (int16_t *)sample->data + 1;
 		for (uint32_t j = 0; j < len; j += 2) {
