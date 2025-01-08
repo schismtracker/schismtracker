@@ -46,8 +46,8 @@ enum vgamem_font {
 };
 
 struct vgamem_colors {
-	uint_least8_t fg : 4; /* 0...15 */
-	uint_least8_t bg : 4; /* 0...15 */
+	uint8_t fg : 4; /* 0...15 */
+	uint8_t bg : 4; /* 0...15 */
 };
 
 /* contains all the needed information to draw many
@@ -62,14 +62,14 @@ struct vgamem_char {
 		struct {
 			/* two chars here */
 			struct {
-				uint_least8_t c : 8; /* 0...255 */
+				uint8_t c : 8; /* 0...255 */
 
 				struct vgamem_colors colors;
 			} c1, c2;
 		} halfwidth;
 
 		struct {
-			uint_least8_t c : 8; /* 0...255 */
+			uint8_t c : 8; /* 0...255 */
 
 			struct vgamem_colors colors;
 		} cp437, itf; /* cp437 and itf have the same size */
@@ -78,7 +78,7 @@ struct vgamem_char {
 			/* can be any Unicode codepoint; realistically
 			 * only a very small subset of characters can be
 			 * supported though */
-			uint_least32_t c : 32;
+			uint32_t c : 32;
 
 			struct vgamem_colors colors;
 		} unicode;
@@ -375,7 +375,6 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 		} \
 	}
 
-/* write the vgamem routines; currently we only ever use 32-bits per pixel. */
 VGAMEM_SCANNER_VARIANT(8)
 VGAMEM_SCANNER_VARIANT(16)
 VGAMEM_SCANNER_VARIANT(32)
