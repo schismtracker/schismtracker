@@ -45,15 +45,16 @@
 #define SCHISM_SIGNED_RSHIFT_VARIANT(type, typec) \
 	SCHISM_SIGNED_SHIFT_VARIANT(type, typec, r, >>)
 
-#if defined(HAVE_SANE_SIGNED_LSHIFT)
-# define lshift_signed(x, y) ((x) << (y))
-#else
+/* Unlike right shift, left shift is not implementation-defined (that is,
+ * the compiler will do something that makes sense in a platform-defined
+ * manner), but rather is full on undefined behavior, i.e. literally
+ * *anything* could happen, so we use bit complement shifting everywhere. */
 SCHISM_SIGNED_LSHIFT_VARIANT(8, 8)
 SCHISM_SIGNED_LSHIFT_VARIANT(16, 16)
 SCHISM_SIGNED_LSHIFT_VARIANT(32, 32)
 SCHISM_SIGNED_LSHIFT_VARIANT(64, 64)
 SCHISM_SIGNED_LSHIFT_VARIANT(max, MAX)
-# define lshift_signed(x, y) \
+#define lshift_signed(x, y) \
 	((sizeof(x) == sizeof(int8_t)) \
 		? (schism_signed_lshift_8_(x, y)) \
 		: (sizeof(x) == sizeof(int16_t)) \
@@ -63,7 +64,6 @@ SCHISM_SIGNED_LSHIFT_VARIANT(max, MAX)
 				: (sizeof(x) == sizeof(int64_t)) \
 					? (schism_signed_lshift_64_(x, y)) \
 					: (schism_signed_lshift_max_(x, y)))
-#endif
 
 #ifdef HAVE_ARITHMETIC_RSHIFT
 # define rshift_signed(x, y) ((x) >> (y))
