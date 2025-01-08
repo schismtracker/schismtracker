@@ -327,7 +327,7 @@ void sample_amplify(song_sample_t * sample, int32_t percent)
 		int##bits##_t min, max; \
 		_minmax_##bits(data, length, &min, &max); \
 		max = MAX(max, -min); \
-		return max ? 128 * 100 / max : 100; \
+		return max ? ((INT##bits##_MAX + 1) * 100 / max) : 100; \
 	}
 
 GET_AMPLIFY(8)
