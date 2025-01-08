@@ -25,62 +25,66 @@
 #define SCHISM_BSHIFT_H_
 
 #include "headers.h"
-#include <stdint.h>
-#include <assert.h>
-#include <limits.h>
 
 /* Portable replacements for signed integer bit shifting. These share the same
  * implementation and only do different operations in the same manner and as such
  * are written using a very simple macro. */
 
-#define SCHISM_SIGNED_SHIFT_VARIANT(type, typec, PREFIX, OPERATION) \
-	SCHISM_CONST SCHISM_ALWAYS_INLINE inline int##type##_t schism_signed_##PREFIX##shift_##type##_(int##type##_t x, unsigned int y) \
+#define SCHISM_SIGNED_RSHIFT_VARIANT(type) \
+	SCHISM_CONST SCHISM_ALWAYS_INLINE inline int##type##_t schism_signed_rshift_##type##_(int##type##_t x, unsigned int y) \
 	{ \
-		return (x < 0) ? ~(~x OPERATION y) : (x OPERATION y); \
+		return (x < 0) ? ~(~x >> y) : (x >> y); \
 	}
 
-#define SCHISM_SIGNED_LSHIFT_VARIANT(type, typec) \
-	SCHISM_SIGNED_SHIFT_VARIANT(type, typec, l, <<)
-
-#define SCHISM_SIGNED_RSHIFT_VARIANT(type, typec) \
-	SCHISM_SIGNED_SHIFT_VARIANT(type, typec, r, >>)
+/* arithmetic and logical left shift are the same operation */
+#define SCHISM_SIGNED_LSHIFT_VARIANT(type) \
+    SCHISM_CONST SCHISM_ALWAYS_INLINE inline int##type##_t schism_signed_lshift_##type##_(int##type##_t x, unsigned int y) \
+    { \
+        union { \
+            uint##type##_t s; \
+            int##type##_t u; \
+        } xx; \
+        xx.s = x; \
+        xx.u <<= y; \
+        return xx.s; \
+    }
 
 /* Unlike right shift, left shift is not implementation-defined (that is,
  * the compiler will do something that makes sense in a platform-defined
  * manner), but rather is full on undefined behavior, i.e. literally
- * *anything* could happen, so we use bit complement shifting everywhere. */
-SCHISM_SIGNED_LSHIFT_VARIANT(8, 8)
-SCHISM_SIGNED_LSHIFT_VARIANT(16, 16)
-SCHISM_SIGNED_LSHIFT_VARIANT(32, 32)
-SCHISM_SIGNED_LSHIFT_VARIANT(64, 64)
-SCHISM_SIGNED_LSHIFT_VARIANT(max, MAX)
+ * *anything* could happen, so we use our own version everywhere. */
+SCHISM_SIGNED_LSHIFT_VARIANT(8)
+SCHISM_SIGNED_LSHIFT_VARIANT(16)
+SCHISM_SIGNED_LSHIFT_VARIANT(32)
+SCHISM_SIGNED_LSHIFT_VARIANT(64)
+SCHISM_SIGNED_LSHIFT_VARIANT(max)
 #define lshift_signed(x, y) \
-	((sizeof(x) == sizeof(int8_t)) \
+	((sizeof((x) << (y)) == sizeof(int8_t)) \
 		? (schism_signed_lshift_8_(x, y)) \
-		: (sizeof(x) == sizeof(int16_t)) \
+		: (sizeof((x) << (y)) == sizeof(int16_t)) \
 			? (schism_signed_lshift_16_(x, y)) \
-			: (sizeof(x) == sizeof(int32_t)) \
+			: (sizeof((x) << (y)) == sizeof(int32_t)) \
 				? (schism_signed_lshift_32_(x, y)) \
-				: (sizeof(x) == sizeof(int64_t)) \
+				: (sizeof((x) << (y)) == sizeof(int64_t)) \
 					? (schism_signed_lshift_64_(x, y)) \
 					: (schism_signed_lshift_max_(x, y)))
 
 #ifdef HAVE_ARITHMETIC_RSHIFT
 # define rshift_signed(x, y) ((x) >> (y))
 #else
-SCHISM_SIGNED_RSHIFT_VARIANT(8, 8)
-SCHISM_SIGNED_RSHIFT_VARIANT(16, 16)
-SCHISM_SIGNED_RSHIFT_VARIANT(32, 32)
-SCHISM_SIGNED_RSHIFT_VARIANT(64, 64)
-SCHISM_SIGNED_RSHIFT_VARIANT(max, MAX)
+SCHISM_SIGNED_RSHIFT_VARIANT(8)
+SCHISM_SIGNED_RSHIFT_VARIANT(16)
+SCHISM_SIGNED_RSHIFT_VARIANT(32)
+SCHISM_SIGNED_RSHIFT_VARIANT(64)
+SCHISM_SIGNED_RSHIFT_VARIANT(max)
 # define rshift_signed(x, y) \
-	((sizeof(x) == sizeof(int8_t)) \
+	((sizeof((x) >> (y)) == sizeof(int8_t)) \
 		? (schism_signed_rshift_8_(x, y)) \
-		: (sizeof(x) == sizeof(int16_t)) \
+		: (sizeof((x) >> (y)) == sizeof(int16_t)) \
 			? (schism_signed_rshift_16_(x, y)) \
-			: (sizeof(x) == sizeof(int32_t)) \
+			: (sizeof((x) >> (y)) == sizeof(int32_t)) \
 				? (schism_signed_rshift_32_(x, y)) \
-				: (sizeof(x) == sizeof(int64_t)) \
+				: (sizeof((x) >> (y)) == sizeof(int64_t)) \
 					? (schism_signed_rshift_64_(x, y)) \
 					: (schism_signed_rshift_max_(x, y)))
 #endif
