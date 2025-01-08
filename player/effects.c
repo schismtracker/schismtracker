@@ -1280,7 +1280,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 			&& (chan->flags & (CHN_NOTEFADE|CHN_KEYOFF))
 			&& (csf->flags & SONG_ITOLDEFFECTS)
 		)) {
-			env_reset(chan, inst_changed || (chan->flags & CHN_KEYOFF));
+			env_reset(chan, inst_changed || !chan->fadeout_volume || !NOTE_IS_NOTE(chan->row_note));
 		} else if (!(penv->flags & ENV_VOLUME)) {
 			// XXX why is this being done?
 			// I'm pretty sure this is just some stupid IT thing with portamentos
