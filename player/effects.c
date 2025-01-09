@@ -1206,7 +1206,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 		//uint32_t n = penv->sample_map[note - 1];
 		psmp = csf_translate_keyboard(csf, penv, note, NULL);
 	} else if (csf->flags & SONG_INSTRUMENTMODE) {
-		if (!NOTE_IS_CONTROL(note))
+		if (NOTE_IS_CONTROL(note))
 			return;
 		if (!penv) {
 			/* OpenMPT test case emptyslot.it */
