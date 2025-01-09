@@ -66,7 +66,8 @@ extern OSErr CPSEnableForegroundOperation(CPSProcessSerNum *psn, UInt32 _arg2, U
 extern OSErr CPSSetProcessName(CPSProcessSerNum *psn, char *processname);
 extern OSErr CPSSetFrontProcess(CPSProcessSerNum *psn);
 
-static int macosx_did_finderlaunch;
+static int macosx_did_finderlaunch = 0;
+static int macosx_launched = 0;
 
 int schism_main(int argc, char** argv); // main.c
 
@@ -119,19 +120,24 @@ int schism_main(int argc, char** argv); // main.c
 
 - (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)filename
 {
-	const char *po;
-
-	if (!filename) return NO;
-
-	po = [filename UTF8String];
-	if (po) {
-		/* if we started as a result of a doubleclick on
-		 * a document, then main() hasn't been called yet. */
-		initial_song = str_dup(po);
-		return YES;
-	} else {
+	if (!filename)
 		return NO;
+
+	const char *po = [filename UTF8String];
+	if (!po)
+		return NO;
+
+	// If we already launched, add the event.
+	if (macosx_launched) {
+		schism_event_t e;
+		e.type = SCHISM_EVENT_NATIVE_OPEN;
+		e.open.file = str_dup(po);
+		events_push_event(&e);
+	} else {
+		initial_song = str_dup(po);
 	}
+
+	return YES;
 }
 
 /* other interesting ones:
@@ -160,6 +166,8 @@ int schism_main(int argc, char** argv); // main.c
 {
 	/* Set the working directory to the .app's parent directory */
 	[self setupWorkingDirectory: (BOOL)macosx_did_finderlaunch];
+
+	macosx_launched = 1;
 
 	/* If we launched from the Finder we have extra arguments that we
 	 * don't care about that will trip up the regular main function. */
