@@ -53,17 +53,6 @@ int iff_chunk_peek_ex(iff_chunk_t *chunk, slurp_t *fp, uint32_t flags)
 	return (pos <= slurp_length(fp));
 }
 
-// really just aliases now
-int iff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp)
-{
-	return iff_chunk_peek_ex(chunk, fp, IFF_CHUNK_ALIGNED);
-}
-
-int riff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp)
-{
-	return iff_chunk_peek_ex(chunk, fp, IFF_CHUNK_ALIGNED | IFF_CHUNK_SIZE_LE);
-}
-
 /* returns the amount of bytes read or zero on error */
 int iff_chunk_read(iff_chunk_t *chunk, slurp_t *fp, void *data, size_t size)
 {

@@ -65,18 +65,18 @@
 #define IFFID_xtra              0x61727478
 
 typedef struct {
-    uint32_t id_RIFF;           // "RIFF"
-    uint32_t filesize;          // file length-8
-    uint32_t id_WAVE;
+	uint32_t id_RIFF;           // "RIFF"
+	uint32_t filesize;          // file length-8
+	uint32_t id_WAVE;
 } wave_file_header_t;
 
 typedef struct {
-    uint16_t format;          // 1
-    uint16_t channels;        // 1:mono, 2:stereo
-    uint32_t freqHz;          // sampling freq
-    uint32_t bytessec;        // bytes/sec=freqHz*samplesize
-    uint16_t samplesize;      // sizeof(sample)
-    uint16_t bitspersample;   // bits per sample (8/16)
+	uint16_t format;          // 1
+	uint16_t channels;        // 1:mono, 2:stereo
+	uint32_t freqHz;          // sampling freq
+	uint32_t bytessec;        // bytes/sec=freqHz*samplesize
+	uint16_t samplesize;      // sizeof(sample)
+	uint16_t bitspersample;   // bits per sample (8/16)
 } wave_format_t;
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -116,19 +116,22 @@ static int wav_chunk_fmt_read(const void *data, size_t size, void *void_fmt)
 
 		slurp_seek(&fp, 6, SEEK_CUR);
 
-		static const unsigned char subformat_base[12] = {
+		static const unsigned char subformat_base_check[12] = {
 			0x00, 0x00, 0x10, 0x00,
 			0x80, 0x00, 0x00, 0xAA,
 			0x00, 0x38, 0x9B, 0x71,
 		};
 
-		unsigned char subformat[16];
+		uint32_t subformat;
+		unsigned char subformat_base[12];
+
 		READ_VALUE(subformat);
+		READ_VALUE(subformat_base);
 
-        if (memcmp(subformat + sizeof(uint32_t), subformat_base, sizeof(subformat_base)))
-            return 0;
+		if (memcmp(subformat_base, subformat_base_check, 12))
+			return 0;
 
-        fmt->format = bswapLE32(*(uint32_t *)subformat);
+		fmt->format = bswapLE32(subformat);
 	}
 
 #undef READ_VALUE
@@ -154,7 +157,7 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 	phdr.id_WAVE  = bswapLE32(phdr.id_WAVE);
 
 	if (phdr.id_RIFF != IFFID_RIFF ||
-	    phdr.id_WAVE != IFFID_WAVE)
+		phdr.id_WAVE != IFFID_WAVE)
 		return 0;
 
 	iff_chunk_t c;

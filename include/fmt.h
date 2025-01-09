@@ -189,8 +189,10 @@ enum {
 
 int iff_chunk_peek_ex(iff_chunk_t *chunk, slurp_t *fp, uint32_t flags);
 
-int iff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp);
-int riff_chunk_peek(iff_chunk_t *chunk, slurp_t *fp);
+// provided for convenience
+#define iff_chunk_peek(chunk, fp) iff_chunk_peek_ex(chunk, fp, IFF_CHUNK_ALIGNED)
+#define riff_chunk_peek(chunk, fp) iff_chunk_peek_ex(chunk, fp, IFF_CHUNK_ALIGNED | IFF_CHUNK_SIZE_LE)
+
 int iff_chunk_read(iff_chunk_t *chunk, slurp_t *fp, void *data, size_t size);
 int iff_read_sample(iff_chunk_t *chunk, slurp_t *fp, song_sample_t *smp, uint32_t flags, size_t offset);
 int iff_chunk_receive(iff_chunk_t *chunk, slurp_t *fp, int (*callback)(const void *, size_t, void *), void *userdata);
