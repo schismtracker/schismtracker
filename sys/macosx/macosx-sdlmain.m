@@ -119,19 +119,15 @@ int schism_main(int argc, char** argv); // main.c
 
 - (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)filename
 {
-	schism_event_t e;
 	const char *po;
 
 	if (!filename) return NO;
 
 	po = [filename UTF8String];
 	if (po) {
-		e.type = SCHISM_EVENT_NATIVE_OPEN;
-		e.open.file = str_dup(po);
 		/* if we started as a result of a doubleclick on
-		 * a document, then Main still hasn't really started yet. */
+		 * a document, then main() hasn't been called yet. */
 		initial_song = str_dup(po);
-		events_push_event(&e);
 		return YES;
 	} else {
 		return NO;
