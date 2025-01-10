@@ -136,6 +136,7 @@ void macosx_sysexit(void);
 void macosx_sysinit(int *pargc, char ***pargv); /* set up ibook helper */
 void macosx_get_modkey(schism_keymod_t *m);
 int macosx_get_key_repeat(int *pdelay, int *prate);
+char *macosx_get_application_support_dir(void);
 
 int macos_mkdir(const char *path, mode_t mode);
 int macos_stat(const char *file, struct stat *st);

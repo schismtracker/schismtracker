@@ -65,10 +65,8 @@ int cfg_kbd_repeat_rate = 0;
 /* --------------------------------------------------------------------- */
 
 static const char *schism_dotfolders[] = {
-#if defined(SCHISM_WIN32) || defined(SCHISM_MACOS)
+#if defined(SCHISM_WIN32) || defined(SCHISM_MACOS) || defined(SCHISM_MACOSX)
 	"Schism Tracker",
-#elif defined(SCHISM_MACOSX)
-	"Library/Application Support/Schism Tracker",
 #elif defined(SCHISM_WII) || defined(SCHISM_WIIU)
 	".",
 #else

@@ -491,3 +491,16 @@ int macosx_get_key_repeat(int *pdelay, int *prate)
 
 	return 1;
 }
+
+char *macosx_get_application_support_dir(void)
+{
+	NSArray* strings = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, true);
+	if ([strings count] < 1)
+		return NULL;
+
+	NSString *path = [strings objectAtIndex: 0];
+	if (!path)
+		return NULL;
+
+	return str_dup([path UTF8String]);
+}

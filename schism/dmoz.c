@@ -790,13 +790,7 @@ unsigned long long dmoz_path_get_file_size(const char *filename) {
 /* directories... */
 
 #ifdef SCHISM_WIN32
-// SHGetFolderPath only exists under Windows XP and newer.
-// To combat this, we only use SHGetFolderPath if it
-// actually exists. Otherwise, we fallback to the obsolete
-// (and unsupported!) SHGetSpecialFolderPath, which exists
-// under systems with at least Internet Explorer 4 installed.
-// If *that* doesn't work, we'll fallback to standard
-// environment variables. THEN we fallback to FALLBACK_DIR.
+// Functions that only exist on new systems; see dmoz_win32_get_csidl_directory
 static HRESULT (WINAPI *WIN32_SHGetFolderPathW)(HWND hwnd,int csidl,HANDLE hToken,DWORD dwFlags,LPWSTR pszPath) = NULL;
 static BOOL (WINAPI *WIN32_SHGetSpecialFolderPathA)(HWND  hwnd, LPSTR pszPath, int csidl, BOOL  fCreate) = NULL;
 static BOOL (WINAPI *WIN32_SHGetSpecialFolderPathW)(HWND  hwnd, LPWSTR pszPath, int csidl, BOOL  fCreate) = NULL;
@@ -847,6 +841,16 @@ char *dmoz_get_current_directory(void)
 }
 
 #ifdef SCHISM_WIN32
+// SHGetFolderPath only exists under Windows XP and newer.
+// To combat this, we only use SHGetFolderPath if it
+// actually exists. Otherwise, we fallback to the obsolete
+// (and unsupported!) SHGetSpecialFolderPath, which exists
+// under systems with at least Internet Explorer 4 installed.
+// If that also doesn't work, we read the relevant registry
+// keys.
+// If *that* doesn't work, we'll fallback to standard
+// environment variables. THEN we fallback to FALLBACK_DIR.
+
 // consolidate this crap into one messy function
 static char *dmoz_win32_get_csidl_directory(int csidl, const wchar_t *registryw, const char *registry, const wchar_t *envvarw, const char *envvar)
 {
@@ -968,10 +972,6 @@ static char *dmoz_macos_find_folder(OSType folder_type)
 	short vrefnum;
 	long dir_id;
 
-	// kDocumentsFolderType is supported by Mac OS 8 or later; I believe
-	// we're already limited to just Mac OS 9 because we're using the
-	// Multiprocessing library, so I won't add it as a fallback here.
-	//
 	// FIXME: i don't know if this first value should be kOnSystemDisk
 	// or some other constant, since we want to work with multiple users
 	if (FindFolder(kOnSystemDisk, folder_type, kCreateFolder, &vrefnum, &dir_id) == noErr
@@ -996,6 +996,10 @@ char *dmoz_get_home_directory(void)
 		return ptr;
 #elif defined(SCHISM_MACOS)
 	// Taking heed from Windows, default to the Documents Folder.
+	//
+	// kDocumentsFolderType is supported by Mac OS 8 or later; I believe
+	// we're already limited to just Mac OS 9 because we're using the
+	// Multiprocessing library, so I won't add it as a fallback here.
 	char *ptr = dmoz_macos_find_folder(kDocumentsFolderType);
 	if (ptr)
 		return ptr;
@@ -1029,11 +1033,22 @@ char *dmoz_get_dot_directory(void)
 	if (ptr)
 		return ptr;
 
-	// fall back to home (wtf)
+	// fall back to home (what?)
+#elif defined(SCHISM_MACOSX)
+	char *ptr;
+
+	ptr = macosx_get_application_support_dir();
+	if (ptr)
+		return ptr;
+
+	// this should never happen but prepare for it if it does
+	char *home = dmoz_get_home_directory();
+	ptr = dmoz_path_concat(home, "Library/Application Support");
+	free(home);
+
+	if (ptr)
+		return ptr;
 #endif
-	// FIXME we ought to use the NSSearchPathForDirectoriesInDomains()
-	// function on Mac OS X to retrieve the Application Support folder
-	// rather than hardcoding a path for it
 
 	return dmoz_get_home_directory();
 }
