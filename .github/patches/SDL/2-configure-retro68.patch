@@ -1,5 +1,5 @@
---- SDL-1.2.13-old/configure.in	2007-12-30 20:48:40.000000000 -0500
-+++ SDL-1.2.13/configure.in	2024-12-03 00:19:44.149672398 -0500
+--- SDL-1.2.13-old/configure.in 2007-12-30 20:48:40.000000000 -0500
++++ SDL-1.2.13/configure.in	2025-01-09 20:46:51.562601898 -0500
 @@ -2507,6 +2507,58 @@
          SOURCES="$srcdir/src/main/beos/*.cc $SOURCES"
          EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lroot -lbe -lmedia -lgame -ldevice -ltextencoding"
@@ -18,9 +18,9 @@
 +            have_loadso=yes
 +        fi
 +
-+        # this doesn't actually add the carbon crap
 +        if test "x$enable_video" = "xyes"; then
 +            AC_DEFINE(SDL_VIDEO_DRIVER_TOOLBOX)
++            AC_DEFINE(SDL_VIDEO_DRIVER_DRAWSPROCKET)
 +            SOURCES="$SOURCES $srcdir/src/video/maccommon/*.c"
 +            SOURCES="$SOURCES $srcdir/src/video/macrom/*.c"
 +            SOURCES="$SOURCES $srcdir/src/video/macdsp/*.c"

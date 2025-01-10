@@ -81,7 +81,6 @@ jobs:
           echo "$SDL_SHA256  SDL-$SDL_VERSION.tar.gz" | shasum -a 256 -c -
           tar xvf "SDL-$SDL_VERSION.tar.gz"
           cd "SDL-$SDL_VERSION"
-          # FIXME this patch doesn't compile the drawsprocket driver
           patch -p1 < ../schism/.github/patches/SDL/2-configure-retro68.patch
           patch -p1 < ../schism/.github/patches/SDL/3-fixup-main.patch
           ./autogen.sh
