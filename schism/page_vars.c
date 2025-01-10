@@ -231,11 +231,11 @@ void song_vars_load_page(struct page *page)
 			    Amiga, 1, group_slides);
 	/* 14-16 = directories */
 	widget_create_textentry(widgets_vars + 14, 13, 42, 65, 12, 15, 15, dir_modules_changed,
-			 cfg_dir_modules, ARRAY_SIZE(cfg_dir_modules));
+			 cfg_dir_modules, ARRAY_SIZE(cfg_dir_modules) - 1);
 	widget_create_textentry(widgets_vars + 15, 13, 43, 65, 14, 16, 16, dir_samples_changed,
-			 cfg_dir_samples, ARRAY_SIZE(cfg_dir_samples));
+			 cfg_dir_samples, ARRAY_SIZE(cfg_dir_samples) - 1);
 	widget_create_textentry(widgets_vars + 16, 13, 44, 65, 15, 17, 17, dir_instruments_changed,
-			 cfg_dir_instruments, ARRAY_SIZE(cfg_dir_instruments));
+			 cfg_dir_instruments, ARRAY_SIZE(cfg_dir_instruments) - 1);
 	/* 17 = save all preferences */
 	widget_create_button(widgets_vars + 17, 28, 47, 22, 16, 17, 17, 17, 17, cfg_save, "Save all Preferences", 2);
 	widgets_vars[17].next.backtab = 17;
