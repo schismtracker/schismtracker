@@ -534,7 +534,10 @@ void sdl2_pump_events(void)
 			} else
 #endif
 			{
-				video_get_mouse_coordinates(&schism_event.wheel.mouse_x, &schism_event.wheel.mouse_y);
+				unsigned int x, y;
+				video_get_mouse_coordinates(&x, &y);
+				schism_event.wheel.mouse_x = x;
+				schism_event.wheel.mouse_y = y;
 			}
 
 			events_push_event(&schism_event);
