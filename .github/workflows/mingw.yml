@@ -249,9 +249,9 @@ jobs:
           - { sys: mingw32, target: aarch64, stdlib: ucrt, cflags: '-O2', ldflags: '' }
     name: ${{ matrix.sys }}-${{ matrix.target }}
     env:
-      LLVM_MINGW_VERSION: 20240518
-      SDL_VERSION: 2.30.10
-      SDL_SHA256: f59adf36a0fcf4c94198e7d3d776c1b3824211ab7aeebeb31fe19836661196aa
+      LLVM_MINGW_VERSION: 20241227
+      SDL_VERSION: 2.30.11
+      SDL_SHA256: 8b8d4aef2038533da814965220f88f77d60dfa0f32685f80ead65e501337da7f
       SDL12_VERSION: 1.2.15
       SDL12_SHA256: d6d316a793e5e348155f0dd93b979798933fb98aa1edebcc108829d6474aad00
       FLAC_VERSION: 1.4.3
