@@ -30,8 +30,8 @@ jobs:
   osx:
     runs-on: macos-14
     env:
-      SDL_VERSION: 2.30.10
-      SDL_SHA256: f59adf36a0fcf4c94198e7d3d776c1b3824211ab7aeebeb31fe19836661196aa
+      SDL_VERSION: 2.30.11
+      SDL_SHA256: 8b8d4aef2038533da814965220f88f77d60dfa0f32685f80ead65e501337da7f
       FLAC_VERSION: 1.4.3
       FLAC_SHA256: 6c58e69cd22348f441b861092b825e591d0b822e106de6eb0ee4d05d27205b70
       LIBOGG_VERSION: 1.3.5
@@ -86,14 +86,14 @@ jobs:
           path: '/Users/runner/ppc'
           key: mac-powerpc-files
 
-      - name: 'Download 10.9 SDK for x86_64'
+      - name: 'Download 10.7 SDK for x86_64'
         if: steps.cache-x86_64-files.outputs.cache-hit != 'true'
         run: |
           mkdir -p "$HOME/x86_64"
           pushd "$HOME/x86_64"
           mkdir SDKs
           cd SDKs
-          curl -L "https://github.com/joseluisq/macosx-sdks/releases/download/10.9/MacOSX10.9.sdk.tar.xz" | tar -xvf -
+          curl -L "https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.7/MacOSX10.7.tar.bz2" | tar -xvf -
           popd
 
       - name: 'Download 11.0 SDK for arm64'
@@ -175,9 +175,14 @@ jobs:
         if: steps.cache-x86_64-dependencies.outputs.cache-hit != 'true'
         run: |
           pushd SDL2-$SDL_VERSION
+          # Apply compatibility patches from macports
+          # Remove this when SDL 2.30.12 gets released!!
+          curl -o "11827.patch" -L "https://patch-diff.githubusercontent.com/raw/libsdl-org/SDL/pull/11827.patch"
+          patch -p1 < "11827.patch"
+          rm "11827.patch"
           mkdir build_x86_64
           cd build_x86_64
-          ../configure CPPFLAGS="-arch x86_64 -mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.9.sdk" CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64 -F$HOME/x86_64/SDKs/MacOSX10.9.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.9.sdk" --host=x86_64-apple-darwin13 --prefix="$HOME/x86_64prefix"
+          ../configure CPPFLAGS="-arch x86_64 -mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.7.sdk" CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64 -F$HOME/x86_64/SDKs/MacOSX10.7.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.7.sdk" --host=x86_64-apple-darwin13 --prefix="$HOME/x86_64prefix"
           make
           make install
           popd
@@ -222,7 +227,7 @@ jobs:
           pushd libogg-$LIBOGG_VERSION
           mkdir build_x86_64
           cd build_x86_64
-          ../configure CPPFLAGS="-arch x86_64 -mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.9.sdk" CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64 -F$HOME/x86_64/SDKs/MacOSX10.9.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.9.sdk" --host=x86_64-apple-darwin13 --prefix="$HOME/x86_64prefix"
+          ../configure CPPFLAGS="-arch x86_64 -mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.7.sdk" CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64 -F$HOME/x86_64/SDKs/MacOSX10.7.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.7.sdk" --host=x86_64-apple-darwin13 --prefix="$HOME/x86_64prefix"
           make
           make install
           popd
@@ -264,7 +269,7 @@ jobs:
         if: steps.cache-x86_64-dependencies.outputs.cache-hit != 'true'
         run: |
           pushd flac-$FLAC_VERSION
-          (export MACOSX_DEPLOYMENT_TARGET="10.9" && mkdir build_x86_64 && cd build_x86_64 && ../configure CPPFLAGS="-arch x86_64 -mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.9.sdk" CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64 -F$HOME/x86_64/SDKs/MacOSX10.9.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.9.sdk" --host=x86_64-apple-darwin13 --prefix="$HOME/x86_64prefix" --disable-cpplibs --disable-programs --disable-examples && make && make install)
+          (export MACOSX_DEPLOYMENT_TARGET="10.7" && mkdir build_x86_64 && cd build_x86_64 && ../configure CPPFLAGS="-arch x86_64 -mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.7.sdk" CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64 -F$HOME/x86_64/SDKs/MacOSX10.7.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.7.sdk" --host=x86_64-apple-darwin13 --prefix="$HOME/x86_64prefix" --disable-cpplibs --disable-programs --disable-examples && make && make install)
           popd
 
       - name: 'Build FLAC (arm64)'
@@ -298,7 +303,7 @@ jobs:
           pushd utf8proc-$UTF8PROC_VERSION
           mkdir build_x86_64
           cd build_x86_64
-          LDFLAGS="-F$HOME/x86_64/SDKs/MacOSX10.9.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.9.sdk" cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$HOME/x86_64prefix" -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET="10.7" -DCMAKE_OSX_SYSROOT="$HOME/x86_64/SDKs/MacOSX10.9.sdk" -DBUILD_SHARED_LIBS=1
+          LDFLAGS="-F$HOME/x86_64/SDKs/MacOSX10.7.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.7.sdk" cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$HOME/x86_64prefix" -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET="10.7" -DCMAKE_OSX_SYSROOT="$HOME/x86_64/SDKs/MacOSX10.7.sdk" -DBUILD_SHARED_LIBS=1
           make
           make install
           popd
@@ -318,7 +323,7 @@ jobs:
         run: |
           autoreconf -I"$HOME/x86_64prefix/share/aclocal" -i
           (export PATH="$PATH:$HOME/ppc/usr/bin" && export PKG_CONFIG_PATH="$HOME/ppcprefix/lib/pkgconfig" && mkdir build_powerpc && cd build_powerpc && ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.4u.sdk -mmacosx-version-min=10.4" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.4u.sdk -static-libgcc $HOME/ppc/SDKs/MacOSX10.5.sdk/usr/lib/gcc/powerpc-apple-darwin10/4.2.1/libgcc.a" SDL12_CFLAGS="-I$HOME/ppcprefix/include/SDL" SDL12_LIBS="-L$HOME/ppcprefix/lib -lSDL" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --with-flac --with-sdl12 --enable-flac-linking --enable-sdl12-linking --without-sdl2 && make) &
-          (export MACOSX_DEPLOYMENT_TARGET="10.9" && export PKG_CONFIG_PATH="$HOME/x86_64prefix/lib/pkgconfig" && mkdir build_x86_64 && cd build_x86_64 && ../configure CPPFLAGS="-arch x86_64 -mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.9.sdk" CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64 -F$HOME/x86_64/SDKs/MacOSX10.9.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.9.sdk" --host=x86_64-apple-darwin13 --prefix="$HOME/x86_64prefix" --with-sdl-prefix="$HOME/x86_64prefix" --with-flac --without-sdl12 --enable-flac-linking --enable-sdl2-linking && make && strip -S schismtracker) &
+          (export MACOSX_DEPLOYMENT_TARGET="10.7" && export PKG_CONFIG_PATH="$HOME/x86_64prefix/lib/pkgconfig" && mkdir build_x86_64 && cd build_x86_64 && ../configure CPPFLAGS="-arch x86_64 -mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.7.sdk" CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64 -F$HOME/x86_64/SDKs/MacOSX10.7.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.7.sdk" --host=x86_64-apple-darwin13 --prefix="$HOME/x86_64prefix" --with-sdl-prefix="$HOME/x86_64prefix" --with-flac --without-sdl12 --enable-flac-linking --enable-sdl2-linking && make && strip -S schismtracker) &
           (export MACOSX_DEPLOYMENT_TARGET="11.0" && export PKG_CONFIG_PATH="$HOME/arm64prefix/lib/pkgconfig" && mkdir build_arm64 && cd build_arm64 && ../configure CPPFLAGS="-arch arm64 -mmacosx-version-min=11.0 -isysroot $HOME/arm64/SDKs/MacOSX11.0.sdk" OBJCFLAGS="-arch arm64" CFLAGS="-arch arm64" CXXFLAGS="-arch arm64" LDFLAGS="-arch arm64" --host=aarch64-apple-darwin20 --prefix="$HOME/arm64prefix" --with-sdl-prefix="$HOME/arm64prefix" --with-flac --without-sdl12 --enable-flac-linking --enable-sdl2-linking && make && make install) &
           wait
           cd ../..
