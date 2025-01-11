@@ -65,7 +65,7 @@ static const char *const output_channels[] = {
 
 static int sample_rate_cursor = 0;
 
-static const char *const bit_rates[] = { "8 Bit", "16 Bit", //"24 Bit", "32 Bit",
+static const char *const bit_rates[] = { "8 Bit", "16 Bit", /*"24 Bit",*/ "32 Bit",
 			NULL };
 
 static const char *const midi_modes[] = {
@@ -82,7 +82,12 @@ static void change_mixer_limits(void)
 	audio_settings.channel_limit = widgets_config[0].d.thumbbar.value;
 
 	audio_settings.sample_rate = widgets_config[1].d.numentry.value;
-	audio_settings.bits = widgets_config[2].d.menutoggle.state ? 16 : 8;
+	switch (widgets_config[2].d.menutoggle.state) {
+	case 0: audio_settings.bits = 8; break;
+	default:
+	case 1: audio_settings.bits = 16; break;
+	case 2: audio_settings.bits = 32; break;
+	}
 	audio_settings.channels = widgets_config[3].d.menutoggle.state+1;
 
 	song_init_modplug();
@@ -269,7 +274,12 @@ static void config_set_page(void)
 {
 	widgets_config[0].d.thumbbar.value = audio_settings.channel_limit;
 	widgets_config[1].d.numentry.value = audio_settings.sample_rate;
-	widgets_config[2].d.menutoggle.state = !!(audio_settings.bits == 16);
+	switch (audio_settings.bits) {
+	case 8: widgets_config[2].d.menutoggle.state = 0; break;
+	default:
+	case 16: widgets_config[2].d.menutoggle.state = 1; break;
+	case 32: widgets_config[2].d.menutoggle.state = 2; break;
+	}
 	widgets_config[3].d.menutoggle.state = audio_settings.channels-1;
 
 	widgets_config[4].d.menutoggle.state = status.vis_style;
