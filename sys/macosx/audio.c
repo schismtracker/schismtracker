@@ -52,10 +52,6 @@
 #endif
 
 struct schism_audio_device {
-	// The thread where we callback
-	schism_thread_t *thread;
-	int cancelled;
-
 	// The callback and the protecting mutex
 	void (*callback)(uint8_t *stream, int len);
 	schism_mutex_t *mutex;
@@ -125,7 +121,7 @@ static int macosx_audio_device_count(void)
 		free(devices);
 	}
 
-	uint32_t size;
+	UInt32 size;
 	result = AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &addr, 0, NULL, &size);
 	if (result != kAudioHardwareNoError)
 		return 0;
