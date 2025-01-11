@@ -286,7 +286,7 @@ static void _audio_create_drivers_list(void)
 	int counts[ARRAY_SIZE(inited_backends)] = {0};
 
 	for (int i = 0; i < ARRAY_SIZE(counts); i++)
-		alloc_size += (counts[i] = inited_backends[i]->driver_count());
+		alloc_size += (counts[i] = (inited_backends[i] ? inited_backends[i]->driver_count() : 0));
 
 	full_drivers.list = mem_alloc(alloc_size * sizeof(const char *));
 
