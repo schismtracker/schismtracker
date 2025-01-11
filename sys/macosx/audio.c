@@ -37,12 +37,22 @@
 # include <AudioUnit/AUNTComponent.h>
 #endif
 
-#if (MAC_OS_X_VERSION_MIN_REQUIRED < 1060) || \
-	(!defined(AUDIO_UNIT_VERSION) || ((AUDIO_UNIT_VERSION + 0) < 1060))
-# define USE_CARBONCORE_APIS 1
+// Use legacy AudioDevice* APIs when targetting ancient Mac OS X
+// without the AudioObject* API
+#if (MAC_OS_X_VERSION_MIN_REQUIRED < 1040) || \
+	(!defined(AUDIO_UNIT_VERSION) || ((AUDIO_UNIT_VERSION + 0) < 1040))
+# define USE_AUDIODEVICE_APIS 1
 #endif
 
-#ifdef USE_CARBONCORE_APIS
+// Use component managers when targetting less ancient but still
+// ancient Mac OS X (<10.6).
+#if (MAC_OS_X_VERSION_MIN_REQUIRED < 1060) || \
+	(!defined(AUDIO_UNIT_VERSION) || ((AUDIO_UNIT_VERSION + 0) < 1060))
+# define USE_COMPONENT_MANAGER_APIS 1
+#endif
+
+#ifdef USE_COMPONENT_MANAGER_APIS
+// These APIs were just renamed, so we can use #defines here
 # define AudioComponentDescription struct ComponentDescription
 # define AudioComponent Component
 # define AudioComponentInstance AudioUnit
@@ -58,13 +68,14 @@ struct schism_audio_device {
 
 	int paused;
 
-	// what to pass to memset() to generate silence
+	// what to pass to memset() to generate silence.
+	// this is 0x80 for 8-bit audio, and 0 for everything else
 	uint8_t silence;
 
 	// audio unit
 	AudioComponentInstance au;
 
-	// err
+	// The buffer that the callback fills
 	void *buffer;
 	uint32_t buffer_offset;
 	uint32_t buffer_size;
@@ -99,44 +110,58 @@ static struct {
 } *devices = NULL;
 static uint32_t devices_size = 0;
 
+static void _macosx_audio_free_devices(void)
+{
+	if (devices) {
+		for (uint32_t i = 0; i < devices_size; i++)
+			free(devices[i].name);
+		free(devices);
+
+		devices = NULL;
+		devices_size = 0;
+	}
+}
+
 static int macosx_audio_device_count(void)
 {
 	OSStatus result;
+	UInt32 size;
 
-	static const AudioComponentDescription desc = {
-		.componentType = kAudioUnitType_Output,
-		.componentSubType = kAudioUnitSubType_HALOutput,
-		.componentManufacturer = kAudioUnitManufacturer_Apple,
-	};
-
+#ifndef USE_AUDIODEVICE_APIS
 	AudioObjectPropertyAddress addr = {
 		kAudioHardwarePropertyDevices,
 		kAudioObjectPropertyScopeGlobal,
 		kAudioObjectPropertyElementMaster
 	};
+#endif
 
-	if (devices) {
-		for (uint32_t i = 0; i < devices_size; i++)
-			free(devices[i].name);
-		free(devices);
-	}
+	_macosx_audio_free_devices();
 
-	UInt32 size;
+#ifdef USE_AUDIODEVICE_APIS
+	result = AudioHardwareGetPropertyInfo(kAudioHardwarePropertyDevices, &size, NULL);
+#else
 	result = AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &addr, 0, NULL, &size);
+#endif
 	if (result != kAudioHardwareNoError)
 		return 0;
 
 	devices_size = size / sizeof(AudioDeviceID);
+	if (devices_size <= 0)
+		return 0;
 
 	AudioDeviceID device_ids[devices_size];
+#ifdef USE_AUDIODEVICE_APIS
+	// I bought a property in Egypt and what they do for you is they give you the property
+	result = AudioHardwareGetProperty(kAudioHardwarePropertyDevices, &size, device_ids);
+#else
 	result = AudioObjectGetPropertyData(kAudioObjectSystemObject, &addr, 0, NULL, &size, device_ids);
+#endif
 	if (result != kAudioHardwareNoError)
 		return 0;
 
 	devices = mem_calloc(devices_size, sizeof(*devices));
 
-	AudioComponent comp = NULL;
-
+	// final count of all of the devices
 	uint32_t c = 0;
 
 	for (uint32_t i = 0; i < devices_size; i++) {
@@ -146,16 +171,23 @@ static int macosx_audio_device_count(void)
 		CFIndex len = 0;
 
 		{
+#ifdef USE_AUDIODEVICE_APIS
+			result = AudioDeviceGetPropertyInfo(device_ids[i], 0, 0, kAudioDevicePropertyStreamConfiguration, &size, NULL);
+#else
 			addr.mScope = kAudioDevicePropertyScopeOutput;
 			addr.mSelector = kAudioDevicePropertyStreamConfiguration;
-
 			result = AudioObjectGetPropertyDataSize(device_ids[i], &addr, 0, NULL, &size);
+#endif
 			if (result != noErr)
 				continue;
 
 			AudioBufferList *buflist = (AudioBufferList *)mem_alloc(size);
 
+#ifdef USE_AUDIODEVICE_APIS
+			result = AudioDeviceGetProperty(device_ids[i], 0, 0, kAudioDevicePropertyStreamConfiguration, &size, buflist);
+#else
 			result = AudioObjectGetPropertyData(device_ids[i], &addr, 0, NULL, &size, buflist);
+#endif
 			if (result == noErr) {
 				UInt32 j;
 				for (j = 0; j < buflist->mNumberBuffers; j++) {
@@ -173,6 +205,21 @@ static int macosx_audio_device_count(void)
 			continue;
 
 		{
+#ifdef USE_AUDIODEVICE_APIS
+			result = AudioDeviceGetPropertyInfo(device_ids[i], 0, 0, kAudioDevicePropertyDeviceName, &size, NULL);
+			if (result != noErr)
+				continue;
+
+			ptr = mem_alloc(size + 1);
+
+			result = AudioDeviceGetProperty(device_ids[i], 0, 0, kAudioDevicePropertyDeviceName, &size, ptr);
+			if (result != noErr) {
+				free(ptr);
+				continue;
+			}
+
+			ptr[size] = '\0';
+#else
 			addr.mSelector = kAudioObjectPropertyName;
 
 			CFStringRef cfstr;
@@ -188,6 +235,9 @@ static int macosx_audio_device_count(void)
 			usable = ((ptr != NULL) && (CFStringGetCString(cfstr, ptr, len + 1, kCFStringEncodingUTF8)));
 
 			CFRelease(cfstr);
+
+			ptr[len] = '\0';
+#endif
 		}
 
 		if (usable) {
@@ -233,7 +283,7 @@ static int macosx_audio_init_driver(const char *driver)
 
 static void macosx_audio_quit_driver(void)
 {
-	// nothing
+	_macosx_audio_free_devices();
 }
 
 /* -------------------------------------------------------- */
@@ -373,6 +423,7 @@ static schism_audio_device_t *macosx_audio_open_device(const char *name, const s
 	dev->buffer_offset = dev->buffer_size = desired->samples * desired->channels * (desired->bits / 8);
 	dev->buffer = mem_alloc(dev->buffer_size);
 	dev->callback = desired->callback;
+	dev->silence = (desired->bits == 8) ? 0x80 : 0;
 
 	result = AudioOutputUnitStart(dev->au);
 	if (result != noErr) {
