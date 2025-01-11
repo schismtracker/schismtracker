@@ -234,6 +234,16 @@ static const char *win32_audio_device_name(int i)
 
 static int win32_audio_init_driver(const char *driver)
 {
+	int fnd = 0;
+	for (int i = 0; i < ARRAY_SIZE(drivers); i++) {
+		if (!strcmp(drivers[i], driver)) {
+			fnd = 1;
+			break;
+		}
+	}
+	if (!fnd)
+		return -1;
+
 	// Get the devices
 	(void)win32_audio_device_count();
 	return 0;
