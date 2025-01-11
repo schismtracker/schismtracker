@@ -336,7 +336,6 @@ static schism_audio_device_t *win32_audio_open_device(const char *name, const sc
 	case 8: format.wBitsPerSample = 8; break;
 	default:
 	case 16: format.wBitsPerSample = 16; break;
-	// TODO does this actually work
 	case 32: format.wBitsPerSample = 32; break;
 	}
 
@@ -348,8 +347,22 @@ static schism_audio_device_t *win32_audio_open_device(const char *name, const sc
 
 	dev->callback = desired->callback;
 
-	MMRESULT err = waveOutOpen(&dev->hwaveout, device_id, &format, (UINT_PTR)win32_audio_callback, (UINT_PTR)dev, CALLBACK_FUNCTION | WAVE_ALLOWSYNC);
-	if (err != MMSYSERR_NOERROR) {
+	for (;;) {
+		MMRESULT err = waveOutOpen(&dev->hwaveout, device_id, &format, (UINT_PTR)win32_audio_callback, (UINT_PTR)dev, CALLBACK_FUNCTION | WAVE_ALLOWSYNC);
+		if (err == MMSYSERR_NOERROR) {
+			// We're done here
+			break;
+		} else if (err == WAVERR_BADFORMAT) {
+			// Retry with 16-bit. 32-bit samples
+			// don't work everywhere (notably windows xp
+			// is broken and so is everything before it)
+			if (format.wBitsPerSample == 32) {
+				format.wBitsPerSample = 16;
+				continue;
+			}
+		}
+
+		// Punt if we failed and we can't do anything about it
 		free(dev);
 		return NULL;
 	}
