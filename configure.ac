@@ -335,8 +335,6 @@ case "${host_os}" in
 	darwin*)
 		AC_MSG_RESULT([found Darwin host])
 
-		AC_SUBST([OSX_LDADD], ["-framework Cocoa -framework CoreAudio -framework CoreMIDI -framework IOKit"])
-
 		use_macosx=yes
 		posix_fseek=yes
 		AC_DEFINE([SCHISM_MACOSX], [1], [Mac OS X])

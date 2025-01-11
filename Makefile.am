@@ -321,9 +321,11 @@ files_macosx = \
 	sys/macosx/midi-macosx.c	\
 	sys/macosx/osdefs.c \
 	sys/macosx/clippy.m \
-	sys/macosx/dmoz.m
+	sys/macosx/dmoz.m \
+	sys/macosx/audio.c
 cflags_macosx=
-libs_macosx=$(OSX_LDADD)
+libs_macosx=
+ldflags_macosx=-framework Cocoa -framework CoreAudio -framework CoreMIDI -framework IOKit -framework AudioUnit
 endif
 
 if USE_MACOS
@@ -563,3 +565,4 @@ schismtracker_OBJCFLAGS = $(AM_OBJCFLAGS) $(component_cflags)
 
 schismtracker_DEPENDENCIES = $(files_windres)
 schismtracker_LDADD = $(LIBM) $(libs_x11) $(libs_wii) $(libs_wiiu) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(UTF8PROC_LIBS) $(libs_sdl2) $(libs_sdl12) $(libs_macos)
+schismtracker_LDFLAGS = $(ldflags_macosx)

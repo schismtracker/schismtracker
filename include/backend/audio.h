@@ -51,6 +51,10 @@ typedef struct {
 extern const schism_audio_backend_t schism_audio_backend_win32;
 #endif
 
+#ifdef SCHISM_MACOSX
+extern const schism_audio_backend_t schism_audio_backend_macosx;
+#endif
+
 #ifdef SCHISM_SDL12
 extern const schism_audio_backend_t schism_audio_backend_sdl12;
 #endif
