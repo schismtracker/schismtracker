@@ -814,7 +814,7 @@ input channels = number of channels in data
 				co = 0; \
 				level = 0; \
 				do { \
-					level += ceil(data[(pos * inputchans) + cc+co] * nh / (float)UINT##bits##_MAX); \
+					level += ceil((double)data[(pos * inputchans) + cc+co] * nh / UINT##bits##_MAX); \
 				} while (co++ < inputchans-outputchans); \
 				xe = length <= 1 ? r->width - 1 : CLAMP(pos * r->width / length, 0, r->width - 1); \
 				ye = CLAMP((np - 1) - level, 0, r->height - 1); \
