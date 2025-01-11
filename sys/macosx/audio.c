@@ -232,7 +232,7 @@ static int macosx_audio_device_count(void)
 			len = CFStringGetMaximumSizeForEncoding(CFStringGetLength(cfstr), kCFStringEncodingUTF8);
 
 			ptr = mem_alloc(len + 1);
-			usable = ((ptr != NULL) && (CFStringGetCString(cfstr, ptr, len + 1, kCFStringEncodingUTF8)));
+			usable = CFStringGetCString(cfstr, ptr, len + 1, kCFStringEncodingUTF8);
 
 			CFRelease(cfstr);
 
