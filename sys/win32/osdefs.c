@@ -216,145 +216,154 @@ void win32_sysexit(void)
 
 int win32_event(schism_event_t *event)
 {
-	if (event->type != SCHISM_EVENT_WM_MSG)
-		return 1;
+	if (event->type == SCHISM_EVENT_WM_MSG) {
+		if (event->wm_msg.subsystem != SCHISM_WM_MSG_SUBSYSTEM_WINDOWS)
+			return 1;
 
-	if (event->wm_msg.subsystem != SCHISM_WM_MSG_SUBSYSTEM_WINDOWS)
-		return 1;
+		if (event->wm_msg.msg.win.msg == WM_COMMAND) {
+			schism_event_t e = {0};
+			e.type = SCHISM_EVENT_NATIVE_SCRIPT;
+			switch (LOWORD(event->wm_msg.msg.win.wparam)) {
+			case IDM_FILE_NEW:
+				e.script.which = str_dup("new");
+				break;
+			case IDM_FILE_LOAD:
+				e.script.which = str_dup("load");
+				break;
+			case IDM_FILE_SAVE_CURRENT:
+				e.script.which = str_dup("save");
+				break;
+			case IDM_FILE_SAVE_AS:
+				e.script.which = str_dup("save_as");
+				break;
+			case IDM_FILE_EXPORT:
+				e.script.which = str_dup("export_song");
+				break;
+			case IDM_FILE_MESSAGE_LOG:
+				e.script.which = str_dup("logviewer");
+				break;
+			case IDM_FILE_QUIT:
+				e.type = SCHISM_QUIT;
+				break;
+			case IDM_PLAYBACK_SHOW_INFOPAGE:
+				e.script.which = str_dup("info");
+				break;
+			case IDM_PLAYBACK_PLAY_SONG:
+				e.script.which = str_dup("play");
+				break;
+			case IDM_PLAYBACK_PLAY_PATTERN:
+				e.script.which = str_dup("play_pattern");
+				break;
+			case IDM_PLAYBACK_PLAY_FROM_ORDER:
+				e.script.which = str_dup("play_order");
+				break;
+			case IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR:
+				e.script.which = str_dup("play_mark");
+				break;
+			case IDM_PLAYBACK_STOP:
+				e.script.which = str_dup("stop");
+				break;
+			case IDM_PLAYBACK_CALCULATE_LENGTH:
+				e.script.which = str_dup("calc_length");
+				break;
+			case IDM_SAMPLES_SAMPLE_LIST:
+				e.script.which = str_dup("sample_page");
+				break;
+			case IDM_SAMPLES_SAMPLE_LIBRARY:
+				e.script.which = str_dup("sample_library");
+				break;
+			case IDM_SAMPLES_RELOAD_SOUNDCARD:
+				e.script.which = str_dup("init_sound");
+				break;
+			case IDM_INSTRUMENTS_INSTRUMENT_LIST:
+				e.script.which = str_dup("inst_page");
+				break;
+			case IDM_INSTRUMENTS_INSTRUMENT_LIBRARY:
+				e.script.which = str_dup("inst_library");
+				break;
+			case IDM_VIEW_HELP:
+				e.script.which = str_dup("help");
+				break;
+			case IDM_VIEW_VIEW_PATTERNS:
+				e.script.which = str_dup("pattern");
+				break;
+			case IDM_VIEW_ORDERS_PANNING:
+				e.script.which = str_dup("orders");
+				break;
+			case IDM_VIEW_VARIABLES:
+				e.script.which = str_dup("variables");
+				break;
+			case IDM_VIEW_MESSAGE_EDITOR:
+				e.script.which = str_dup("message_edit");
+				break;
+			case IDM_VIEW_TOGGLE_FULLSCREEN:
+				e.script.which = str_dup("fullscreen");
+				break;
+			case IDM_SETTINGS_PREFERENCES:
+				e.script.which = str_dup("preferences");
+				break;
+			case IDM_SETTINGS_MIDI_CONFIGURATION:
+				e.script.which = str_dup("midi_config");
+				break;
+			case IDM_SETTINGS_PALETTE_EDITOR:
+				e.script.which = str_dup("palette_page");
+				break;
+			case IDM_SETTINGS_FONT_EDITOR:
+				e.script.which = str_dup("font_editor");
+				break;
+			case IDM_SETTINGS_SYSTEM_CONFIGURATION:
+				e.script.which = str_dup("system_config");
+				break;
+			default:
+				return 0;
+			}
 
-	if (event->wm_msg.msg.win.msg == WM_COMMAND) {
-		schism_event_t e = {0};
-		e.type = SCHISM_EVENT_NATIVE_SCRIPT;
-		switch (LOWORD(event->wm_msg.msg.win.wparam)) {
-		case IDM_FILE_NEW:
-			e.script.which = str_dup("new");
-			break;
-		case IDM_FILE_LOAD:
-			e.script.which = str_dup("load");
-			break;
-		case IDM_FILE_SAVE_CURRENT:
-			e.script.which = str_dup("save");
-			break;
-		case IDM_FILE_SAVE_AS:
-			e.script.which = str_dup("save_as");
-			break;
-		case IDM_FILE_EXPORT:
-			e.script.which = str_dup("export_song");
-			break;
-		case IDM_FILE_MESSAGE_LOG:
-			e.script.which = str_dup("logviewer");
-			break;
-		case IDM_FILE_QUIT:
-			e.type = SCHISM_QUIT;
-			break;
-		case IDM_PLAYBACK_SHOW_INFOPAGE:
-			e.script.which = str_dup("info");
-			break;
-		case IDM_PLAYBACK_PLAY_SONG:
-			e.script.which = str_dup("play");
-			break;
-		case IDM_PLAYBACK_PLAY_PATTERN:
-			e.script.which = str_dup("play_pattern");
-			break;
-		case IDM_PLAYBACK_PLAY_FROM_ORDER:
-			e.script.which = str_dup("play_order");
-			break;
-		case IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR:
-			e.script.which = str_dup("play_mark");
-			break;
-		case IDM_PLAYBACK_STOP:
-			e.script.which = str_dup("stop");
-			break;
-		case IDM_PLAYBACK_CALCULATE_LENGTH:
-			e.script.which = str_dup("calc_length");
-			break;
-		case IDM_SAMPLES_SAMPLE_LIST:
-			e.script.which = str_dup("sample_page");
-			break;
-		case IDM_SAMPLES_SAMPLE_LIBRARY:
-			e.script.which = str_dup("sample_library");
-			break;
-		case IDM_SAMPLES_RELOAD_SOUNDCARD:
-			e.script.which = str_dup("init_sound");
-			break;
-		case IDM_INSTRUMENTS_INSTRUMENT_LIST:
-			e.script.which = str_dup("inst_page");
-			break;
-		case IDM_INSTRUMENTS_INSTRUMENT_LIBRARY:
-			e.script.which = str_dup("inst_library");
-			break;
-		case IDM_VIEW_HELP:
-			e.script.which = str_dup("help");
-			break;
-		case IDM_VIEW_VIEW_PATTERNS:
-			e.script.which = str_dup("pattern");
-			break;
-		case IDM_VIEW_ORDERS_PANNING:
-			e.script.which = str_dup("orders");
-			break;
-		case IDM_VIEW_VARIABLES:
-			e.script.which = str_dup("variables");
-			break;
-		case IDM_VIEW_MESSAGE_EDITOR:
-			e.script.which = str_dup("message_edit");
-			break;
-		case IDM_VIEW_TOGGLE_FULLSCREEN:
-			e.script.which = str_dup("fullscreen");
-			break;
-		case IDM_SETTINGS_PREFERENCES:
-			e.script.which = str_dup("preferences");
-			break;
-		case IDM_SETTINGS_MIDI_CONFIGURATION:
-			e.script.which = str_dup("midi_config");
-			break;
-		case IDM_SETTINGS_PALETTE_EDITOR:
-			e.script.which = str_dup("palette_page");
-			break;
-		case IDM_SETTINGS_FONT_EDITOR:
-			e.script.which = str_dup("font_editor");
-			break;
-		case IDM_SETTINGS_SYSTEM_CONFIGURATION:
-			e.script.which = str_dup("system_config");
-			break;
-		default:
-			return 0;
+			*event = e;
+			return 1;
+		} else if (event->wm_msg.msg.win.msg == WM_DROPFILES) {
+			/* Drag and drop support */
+			schism_event_t e = {0};
+			e.type = SCHISM_DROPFILE;
+
+			HDROP drop = (HDROP)event->wm_msg.msg.win.wparam;
+
+			if (GetVersion() & UINT32_C(0x80000000)) {
+				int needed = DragQueryFileW(drop, 0, NULL, 0);
+
+				wchar_t *f = mem_alloc((needed + 1) * sizeof(wchar_t));
+				DragQueryFileW(drop, 0, f, needed + 1);
+				f[needed] = 0;
+
+				charset_iconv(f, &e.drop.file, CHARSET_WCHAR_T, CHARSET_CHAR, (needed + 1) * sizeof(wchar_t));
+			} else {
+				int needed = DragQueryFileA(drop, 0, NULL, 0);
+
+				char *f = mem_alloc((needed + 1) * sizeof(char));
+				DragQueryFileA(drop, 0, f, needed);
+				f[needed] = 0;
+
+				charset_iconv(f, &e.drop.file, CHARSET_ANSI, CHARSET_CHAR, needed + 1);
+			}
+
+			if (!e.drop.file)
+				return 0;
+
+			*event = e;
+			return 1;
 		}
 
-		*event = e;
-		return 1;
-	} else if (event->wm_msg.msg.win.msg == WM_DROPFILES) {
-		/* Drag and drop support */
-		schism_event_t e = {0};
-		e.type = SCHISM_DROPFILE;
+		return 0;
+	} else if (event->type == SCHISM_KEYDOWN || event->type == SCHISM_KEYUP) {
+		// We get bogus keydowns for Ctrl-Pause.
+		// As a workaround, we can check what Windows thinks, but only for Right Ctrl.
+		// Left Ctrl just gets completely ignored and there's nothing we can do about it.
+		if (event->key.sym == SCHISM_KEYSYM_SCROLLLOCK && (event->key.mod & SCHISM_KEYMOD_RCTRL) && !(GetKeyState(VK_SCROLL) & 0x80))
+			event->key.sym = SCHISM_KEYSYM_PAUSE;
 
-		HDROP drop = (HDROP)event->wm_msg.msg.win.wparam;
-
-		if (GetVersion() & UINT32_C(0x80000000)) {
-			int needed = DragQueryFileW(drop, 0, NULL, 0);
-
-			wchar_t *f = mem_alloc((needed + 1) * sizeof(wchar_t));
-			DragQueryFileW(drop, 0, f, needed + 1);
-			f[needed] = 0;
-
-			charset_iconv(f, &e.drop.file, CHARSET_WCHAR_T, CHARSET_CHAR, (needed + 1) * sizeof(wchar_t));
-		} else {
-			int needed = DragQueryFileA(drop, 0, NULL, 0);
-
-			char *f = mem_alloc((needed + 1) * sizeof(char));
-			DragQueryFileA(drop, 0, f, needed);
-			f[needed] = 0;
-
-			charset_iconv(f, &e.drop.file, CHARSET_ANSI, CHARSET_CHAR, needed + 1);
-		}
-
-		if (!e.drop.file)
-			return 0;
-
-		*event = e;
 		return 1;
 	}
 
-	return 0;
+	return 1;
 }
 
 void win32_toggle_menu(void *window, int on)
