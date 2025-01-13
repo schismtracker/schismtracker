@@ -92,8 +92,8 @@ static int media_foundation_initialized = 0;
 static HRESULT STDMETHODCALLTYPE mfbytestream_ReadAtPosition(IMFByteStream *This, BYTE *pb, ULONG cb, ULONG *pcbRead, int64_t pos);
 
 /* --------------------------------------------------------------------- */
-/* this is what C++ nonsense looks like in plain C, btw. this api is
- * absolutely diabolical and I yearn to just use function pointers again */
+/* Florida man uses C++ constructs in C and gets brutally murdered by
+ * Linus Torvalds himself */
 
 struct slurp_async_op {
 	/* vtable */
@@ -280,6 +280,7 @@ struct mfbytestream {
 	/* IMFByteStream vtable */
 	CONST_VTBL IMFByteStreamVtbl *lpvtbl;
 
+	/* our stuff... */
 	slurp_t *fp;
 	schism_mutex_t *mutex;
 	long ref_cnt;
@@ -288,7 +289,6 @@ struct mfbytestream {
 /* IUnknown methods */
 static HRESULT STDMETHODCALLTYPE mfbytestream_QueryInterface(IMFByteStream *This, REFIID riid, void **ppobj)
 {
-	/* stupid fucking hack */
 	static const QITAB qit[] = {
 		{&IID_IMFByteStream, 0},
 		{NULL, 0},
@@ -596,6 +596,7 @@ static const char* get_media_type_description(IMFMediaType* media_type)
 		const GUID *guid;
 		const char *description;
 	} guids[] = {
+		// no RealAudio support? for shame, Microsoft.
 		{&MFAudioFormat_AAC, "Advanced Audio Coding"},
 		// {&MFAudioFormat_ADTS, "Not used"},
 		{&MFAudioFormat_ALAC, "Apple Lossless Audio Codec"},
@@ -737,7 +738,7 @@ struct win32mf_data {
 	/* wew */
 	IMFSourceReader *reader;
 	IMFMediaSource *source;
-	IMFByteStream *byte_stream; /* FIXME resolver probably handles this, can maybe remove */
+	IMFByteStream *byte_stream;
 
 	/* info about the output audio data */
 	uint32_t flags, sps, bps, channels;
@@ -1105,6 +1106,9 @@ void win32mf_quit(void)
 
 	if (lib_propsys)
 		FreeLibrary(lib_propsys);
+
+	if (lib_ole32)
+		FreeLibrary(lib_ole32);
 
 	MF_MFShutdown();
 	MF_CoUninitialize();
