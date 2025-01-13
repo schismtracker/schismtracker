@@ -272,7 +272,7 @@ extern int ya_optind, ya_opterr, ya_optopt;
 
 // FIXME what is the real minimum version here? mac os x
 // seems to disagree with the idea that it's in gcc 4.0
-#if SCHISM_GNUC_HAS_ATTRIBUTE(__always_inline__, 100, 0, 0)
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__always_inline__, 3, 1, 1)
 # define SCHISM_ALWAYS_INLINE __attribute__((__always_inline__))
 #elif SCHISM_MSVC_ATLEAST(12, 0, 0)
 # define SCHISM_ALWAYS_INLINE __forceinline
