@@ -43,12 +43,12 @@ struct midi_driver {
 };
 
 // implemented in each backend
-struct schism_thread;
+struct mt_thread;
 
 struct midi_provider {
 	char *name;
 	void (*poll)(struct midi_provider *);
-	struct schism_thread *thread;
+	struct mt_thread *thread;
 	volatile int cancelled;
 
 	struct midi_provider *next;

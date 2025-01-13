@@ -32,24 +32,24 @@ typedef struct {
 
 	// Creates a thread. `name` is optional, and if passed may be used to set
 	// the description of a thread in the OS.
-	schism_thread_t *(*thread_create)(schism_thread_function_t func, const char *name, void *userdata);
+	mt_thread_t *(*thread_create)(schism_thread_function_t func, const char *name, void *userdata);
 	// Waits for a thread to exit, then cleans it up.
-	void (*thread_wait)(schism_thread_t *thread, int *status);
+	void (*thread_wait)(mt_thread_t *thread, int *status);
 	// Sets the current threads priority.
 	void (*thread_set_priority)(int priority);
 	// Get the current thread's unique ID. (mostly unused)
-	schism_thread_id_t (*thread_id)(void);
+	mt_thread_id_t (*thread_id)(void);
 
-	schism_mutex_t *(*mutex_create)(void);
-	void (*mutex_delete)(schism_mutex_t *mutex);
-	void (*mutex_lock)(schism_mutex_t *mutex);
-	void (*mutex_unlock)(schism_mutex_t *mutex);
+	mt_mutex_t *(*mutex_create)(void);
+	void (*mutex_delete)(mt_mutex_t *mutex);
+	void (*mutex_lock)(mt_mutex_t *mutex);
+	void (*mutex_unlock)(mt_mutex_t *mutex);
 
-	schism_cond_t *(*cond_create)(void);
-	void (*cond_delete)(schism_cond_t *cond);
-	void (*cond_signal)(schism_cond_t *cond);
-	void (*cond_wait)(schism_cond_t *cond, schism_mutex_t *mutex);
-	void (*cond_wait_timeout)(schism_cond_t *cond, schism_mutex_t *mutex, uint32_t timeout);
+	mt_cond_t *(*cond_create)(void);
+	void (*cond_delete)(mt_cond_t *cond);
+	void (*cond_signal)(mt_cond_t *cond);
+	void (*cond_wait)(mt_cond_t *cond, mt_mutex_t *mutex);
+	void (*cond_wait_timeout)(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout);
 } schism_threads_backend_t;
 
 #ifdef SCHISM_MACOS

@@ -282,7 +282,7 @@ struct mfbytestream {
 
 	/* our stuff... */
 	slurp_t *fp;
-	schism_mutex_t *mutex;
+	mt_mutex_t *mutex;
 	long ref_cnt;
 };
 

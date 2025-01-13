@@ -26,36 +26,37 @@
 
 #include "headers.h"
 
-typedef uintptr_t schism_thread_id_t;
+typedef uintptr_t mt_thread_id_t;
 
 /* private to each backend */
-typedef struct schism_thread schism_thread_t;
-typedef struct schism_mutex schism_mutex_t;
-typedef struct schism_cond schism_cond_t;
+typedef struct mt_thread mt_thread_t;
+typedef struct mt_mutex mt_mutex_t;
+typedef struct mt_cond mt_cond_t;
 
 typedef int (*schism_thread_function_t)(void *userdata);
 
 enum {
-	BE_THREAD_PRIORITY_LOW = 0,
-	BE_THREAD_PRIORITY_NORMAL,
-	BE_THREAD_PRIORITY_HIGH,
-	BE_THREAD_PRIORITY_TIME_CRITICAL,
+	MT_THREAD_PRIORITY_LOW = 0,
+	MT_THREAD_PRIORITY_NORMAL,
+	MT_THREAD_PRIORITY_HIGH,
+	MT_THREAD_PRIORITY_TIME_CRITICAL,
 };
 
-schism_thread_t *mt_thread_create(schism_thread_function_t func, const char *name, void *userdata);
-void mt_thread_wait(schism_thread_t *thread, int *status);
+mt_thread_t *mt_thread_create(schism_thread_function_t func, const char *name, void *userdata);
+void mt_thread_wait(mt_thread_t *thread, int *status);
 void mt_thread_set_priority(int priority);
+mt_thread_id_t mt_thread_id(void);
 
-schism_mutex_t *mt_mutex_create(void);
-void mt_mutex_delete(schism_mutex_t *mutex);
-void mt_mutex_lock(schism_mutex_t *mutex);
-void mt_mutex_unlock(schism_mutex_t *mutex);
+mt_mutex_t *mt_mutex_create(void);
+void mt_mutex_delete(mt_mutex_t *mutex);
+void mt_mutex_lock(mt_mutex_t *mutex);
+void mt_mutex_unlock(mt_mutex_t *mutex);
 
-schism_cond_t *mt_cond_create(void);
-void mt_cond_delete(schism_cond_t *cond);
-void mt_cond_signal(schism_cond_t *cond);
-void mt_cond_wait(schism_cond_t *cond, schism_mutex_t *mutex);
-void mt_cond_wait_timeout(schism_cond_t *cond, schism_mutex_t *mutex, uint32_t timeout);
+mt_cond_t *mt_cond_create(void);
+void mt_cond_delete(mt_cond_t *cond);
+void mt_cond_signal(mt_cond_t *cond);
+void mt_cond_wait(mt_cond_t *cond, mt_mutex_t *mutex);
+void mt_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout);
 
 int mt_init(void);
 void mt_quit(void);

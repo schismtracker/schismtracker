@@ -34,7 +34,7 @@ static uint32_t (SDLCALL *sdl12_GetTicks)(void);
 static void (SDLCALL *sdl12_Delay)(uint32_t ms);
 static SDL_TimerID (SDLCALL *sdl12_AddTimer)(uint32_t ms, SDL_NewTimerCallback callback, void *param);
 
-static schism_mutex_t *last_known_ticks_mutex = NULL;
+static mt_mutex_t *last_known_ticks_mutex = NULL;
 static uint32_t last_known_ticks = 0;
 static uint32_t ticks_overflow = 0;
 

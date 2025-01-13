@@ -64,7 +64,7 @@
 struct schism_audio_device {
 	// The callback and the protecting mutex
 	void (*callback)(uint8_t *stream, int len);
-	schism_mutex_t *mutex;
+	mt_mutex_t *mutex;
 
 	int paused;
 

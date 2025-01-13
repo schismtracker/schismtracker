@@ -41,7 +41,7 @@ static SDL_Thread *(SDLCALL *sdl12_CreateThread)(int (SDLCALL *fn)(void *), void
 static void (SDLCALL *sdl12_WaitThread)(SDL_Thread *thread, int *status);
 static uint32_t (SDLCALL *sdl12_ThreadID)(void);
 
-struct schism_thread {
+struct mt_thread {
 	SDL_Thread *thread;
 
 	schism_thread_function_t func;
@@ -50,14 +50,14 @@ struct schism_thread {
 
 static int sdl12_dummy_thread_func(void *userdata)
 {
-	schism_thread_t *thread = userdata;
+	mt_thread_t *thread = userdata;
 
 	return thread->func(thread->userdata);
 }
 
-static schism_thread_t *sdl12_thread_create(schism_thread_function_t func, SCHISM_UNUSED const char *name, void *userdata)
+static mt_thread_t *sdl12_thread_create(schism_thread_function_t func, SCHISM_UNUSED const char *name, void *userdata)
 {
-	schism_thread_t *thread = mem_alloc(sizeof(*thread));
+	mt_thread_t *thread = mem_alloc(sizeof(*thread));
 
 	thread->func = func;
 	thread->userdata = userdata;
@@ -85,7 +85,7 @@ static schism_thread_t *sdl12_thread_create(schism_thread_function_t func, SCHIS
 	return thread;
 }
 
-static void sdl12_thread_wait(schism_thread_t *thread, int *status)
+static void sdl12_thread_wait(mt_thread_t *thread, int *status)
 {
 	sdl12_WaitThread(thread->thread, status);
 
@@ -99,7 +99,7 @@ static void sdl12_thread_set_priority(SCHISM_UNUSED int priority)
 	int npri;
 
 	switch (priority) {
-#define PRIORITY(x, y) case BE_THREAD_PRIORITY_##x: npri = THREAD_PRIORITY_##y; break 
+#define PRIORITY(x, y) case MT_THREAD_PRIORITY_##x: npri = THREAD_PRIORITY_##y; break 
 	PRIORITY(LOW, LOWEST);
 	PRIORITY(NORMAL, NORMAL);
 	PRIORITY(HIGH, HIGHEST);
@@ -115,7 +115,7 @@ static void sdl12_thread_set_priority(SCHISM_UNUSED int priority)
 }
 
 // returns the current thread's ID
-static schism_thread_id_t sdl12_thread_id(void)
+static mt_thread_id_t sdl12_thread_id(void)
 {
 	return sdl12_ThreadID();
 }
@@ -128,13 +128,13 @@ static void (SDLCALL *sdl12_DestroyMutex)(SDL_mutex *mutex);
 static int (SDLCALL *sdl12_mutexP)(SDL_mutex *mutex);
 static int (SDLCALL *sdl12_mutexV)(SDL_mutex *mutex);
 
-struct schism_mutex {
+struct mt_mutex {
 	SDL_mutex *mutex;
 };
 
-static schism_mutex_t *sdl12_mutex_create(void)
+static mt_mutex_t *sdl12_mutex_create(void)
 {
-	schism_mutex_t *mutex = mem_alloc(sizeof(*mutex));
+	mt_mutex_t *mutex = mem_alloc(sizeof(*mutex));
 
 	mutex->mutex = sdl12_CreateMutex();
 	if (!mutex->mutex) {
@@ -145,18 +145,18 @@ static schism_mutex_t *sdl12_mutex_create(void)
 	return mutex;
 }
 
-static void sdl12_mutex_delete(schism_mutex_t *mutex)
+static void sdl12_mutex_delete(mt_mutex_t *mutex)
 {
 	sdl12_DestroyMutex(mutex->mutex);
 	free(mutex);
 }
 
-static void sdl12_mutex_lock(schism_mutex_t *mutex)
+static void sdl12_mutex_lock(mt_mutex_t *mutex)
 {
 	sdl12_mutexP(mutex->mutex);
 }
 
-static void sdl12_mutex_unlock(schism_mutex_t *mutex)
+static void sdl12_mutex_unlock(mt_mutex_t *mutex)
 {
 	sdl12_mutexV(mutex->mutex);
 }
@@ -169,13 +169,13 @@ static int (SDLCALL *sdl12_CondSignal)(SDL_cond *cond);
 static int (SDLCALL *sdl12_CondWait)(SDL_cond *cond, SDL_mutex *mut);
 static int (SDLCALL *sdl12_CondWaitTimeout)(SDL_cond *cond, SDL_mutex *mut, uint32_t timeout);
 
-struct schism_cond {
+struct mt_cond {
 	SDL_cond *cond;
 };
 
-static schism_cond_t *sdl12_cond_create(void)
+static mt_cond_t *sdl12_cond_create(void)
 {
-	schism_cond_t *cond = mem_alloc(sizeof(*cond));
+	mt_cond_t *cond = mem_alloc(sizeof(*cond));
 
 	cond->cond = sdl12_CreateCond();
 	if (!cond->cond) {
@@ -186,23 +186,23 @@ static schism_cond_t *sdl12_cond_create(void)
 	return cond;
 }
 
-static void sdl12_cond_delete(schism_cond_t *cond)
+static void sdl12_cond_delete(mt_cond_t *cond)
 {
 	sdl12_DestroyCond(cond->cond);
 	free(cond);
 }
 
-static void sdl12_cond_signal(schism_cond_t *cond)
+static void sdl12_cond_signal(mt_cond_t *cond)
 {
 	sdl12_CondSignal(cond->cond);
 }
 
-static void sdl12_cond_wait(schism_cond_t *cond, schism_mutex_t *mutex)
+static void sdl12_cond_wait(mt_cond_t *cond, mt_mutex_t *mutex)
 {
 	sdl12_CondWait(cond->cond, mutex->mutex);
 }
 
-static void sdl12_cond_wait_timeout(schism_cond_t *cond, schism_mutex_t *mutex, uint32_t timeout)
+static void sdl12_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout)
 {
 	sdl12_CondWaitTimeout(cond->cond, mutex->mutex, timeout);
 }

@@ -63,7 +63,7 @@ void timer_usleep(uint64_t usec)
 #endif
 }
 
-static schism_thread_t *timer_oneshot_thread = NULL;
+static mt_thread_t *timer_oneshot_thread = NULL;
 static int timer_oneshot_thread_cancelled = 0;
 
 // A linked list containing all of the stuff.
@@ -79,8 +79,8 @@ struct _timer_oneshot_data {
 
 	struct _timer_oneshot_data *next;
 } *oneshot_data_list = NULL;
-static schism_mutex_t *timer_oneshot_mutex = NULL;
-static schism_cond_t  *timer_oneshot_cond  = NULL;
+static mt_mutex_t *timer_oneshot_mutex = NULL;
+static mt_cond_t  *timer_oneshot_cond  = NULL;
 
 static int _timer_oneshot_thread(void *userdata)
 {

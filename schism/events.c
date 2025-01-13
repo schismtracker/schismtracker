@@ -37,7 +37,7 @@ const schism_events_backend_t *events_backend = NULL;
 
 /* ------------------------------------------------------ */
 
-static schism_mutex_t *queue_mutex = NULL;
+static mt_mutex_t *queue_mutex = NULL;
 
 #define EVENTQUEUE_CAPACITY 128
 static struct {

@@ -38,7 +38,7 @@ static void (SDLCALL *sdl2_WaitThread)(SDL_Thread * thread, int *status) = NULL;
 static int (SDLCALL *sdl2_SetThreadPriority)(SDL_ThreadPriority priority) = NULL;
 static SDL_threadID (SDLCALL *sdl2_ThreadID)(void) = NULL;
 
-struct schism_thread {
+struct mt_thread {
 	SDL_Thread *thread;
 
 	schism_thread_function_t func;
@@ -47,14 +47,14 @@ struct schism_thread {
 
 static int sdl2_dummy_thread_func(void *userdata)
 {
-	schism_thread_t *thread = userdata;
+	mt_thread_t *thread = userdata;
 
 	return thread->func(thread->userdata);
 }
 
-schism_thread_t *sdl2_thread_create(schism_thread_function_t func, const char *name, void *userdata)
+mt_thread_t *sdl2_thread_create(schism_thread_function_t func, const char *name, void *userdata)
 {
-	schism_thread_t *thread = mem_alloc(sizeof(*thread));
+	mt_thread_t *thread = mem_alloc(sizeof(*thread));
 
 	thread->func = func;
 	thread->userdata = userdata;
@@ -81,7 +81,7 @@ schism_thread_t *sdl2_thread_create(schism_thread_function_t func, const char *n
 	return thread;
 }
 
-void sdl2_thread_wait(schism_thread_t *thread, int *status)
+void sdl2_thread_wait(mt_thread_t *thread, int *status)
 {
 	sdl2_WaitThread(thread->thread, status);
 	free(thread);
@@ -89,11 +89,13 @@ void sdl2_thread_wait(schism_thread_t *thread, int *status)
 
 void sdl2_thread_set_priority(int priority)
 {
+	// !!! FIXME this should use a switch statement,
+	// or this API should be removed altogether
 	sdl2_SetThreadPriority(priority);
 }
 
 // returns the current thread's ID
-static schism_thread_id_t sdl2_thread_id(void)
+static mt_thread_id_t sdl2_thread_id(void)
 {
 	return sdl2_ThreadID();
 }
@@ -106,13 +108,13 @@ static void (SDLCALL *sdl2_DestroyMutex)(SDL_mutex * mutex) = NULL;
 static int (SDLCALL *sdl2_LockMutex)(SDL_mutex * mutex) = NULL;
 static int (SDLCALL *sdl2_UnlockMutex)(SDL_mutex * mutex) = NULL;
 
-struct schism_mutex {
+struct mt_mutex {
 	SDL_mutex *mutex;
 };
 
-schism_mutex_t *sdl2_mutex_create(void)
+mt_mutex_t *sdl2_mutex_create(void)
 {
-	schism_mutex_t *mutex = mem_alloc(sizeof(*mutex));
+	mt_mutex_t *mutex = mem_alloc(sizeof(*mutex));
 
 	mutex->mutex = sdl2_CreateMutex();
 	if (!mutex->mutex) {
@@ -123,18 +125,18 @@ schism_mutex_t *sdl2_mutex_create(void)
 	return mutex;
 }
 
-void sdl2_mutex_delete(schism_mutex_t *mutex)
+void sdl2_mutex_delete(mt_mutex_t *mutex)
 {
 	sdl2_DestroyMutex(mutex->mutex);
 	free(mutex);
 }
 
-void sdl2_mutex_lock(schism_mutex_t *mutex)
+void sdl2_mutex_lock(mt_mutex_t *mutex)
 {
 	sdl2_LockMutex(mutex->mutex);
 }
 
-void sdl2_mutex_unlock(schism_mutex_t *mutex)
+void sdl2_mutex_unlock(mt_mutex_t *mutex)
 {
 	sdl2_UnlockMutex(mutex->mutex);
 }
@@ -147,13 +149,13 @@ static int (SDLCALL *sdl2_CondSignal)(SDL_cond *cond) = NULL;
 static int (SDLCALL *sdl2_CondWait)(SDL_cond *cond, SDL_mutex *mutex) = NULL;
 static int (SDLCALL *sdl2_CondWaitTimeout)(SDL_cond *cond, SDL_mutex *mutex, uint32_t timeout) = NULL;
 
-struct schism_cond {
+struct mt_cond {
 	SDL_cond *cond;
 };
 
-schism_cond_t *sdl2_cond_create(void)
+mt_cond_t *sdl2_cond_create(void)
 {
-	schism_cond_t *cond = mem_alloc(sizeof(*cond));
+	mt_cond_t *cond = mem_alloc(sizeof(*cond));
 
 	cond->cond = sdl2_CreateCond();
 	if (!cond->cond) {
@@ -164,23 +166,23 @@ schism_cond_t *sdl2_cond_create(void)
 	return cond;
 }
 
-void sdl2_cond_delete(schism_cond_t *cond)
+void sdl2_cond_delete(mt_cond_t *cond)
 {
 	sdl2_DestroyCond(cond->cond);
 	free(cond);
 }
 
-void sdl2_cond_signal(schism_cond_t *cond)
+void sdl2_cond_signal(mt_cond_t *cond)
 {
 	sdl2_CondSignal(cond->cond);
 }
 
-void sdl2_cond_wait(schism_cond_t *cond, schism_mutex_t *mutex)
+void sdl2_cond_wait(mt_cond_t *cond, mt_mutex_t *mutex)
 {
 	sdl2_CondWait(cond->cond, mutex->mutex);
 }
 
-void sdl2_cond_wait_timeout(schism_cond_t *cond, schism_mutex_t *mutex, uint32_t timeout)
+void sdl2_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout)
 {
 	sdl2_CondWaitTimeout(cond->cond, mutex->mutex, timeout);
 }

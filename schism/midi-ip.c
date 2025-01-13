@@ -57,7 +57,7 @@ static int num_ports = 0;
 static int out_fd = -1;
 static int *port_fd = NULL;
 static int *state = NULL;
-static schism_mutex_t *blocker = NULL;
+static mt_mutex_t *blocker = NULL;
 
 static void do_wake_main(void)
 {

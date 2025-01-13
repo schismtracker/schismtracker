@@ -50,10 +50,10 @@ static int _connected = 0;
 midi_port_mutex is for the port thread(s),
 and midi_record_mutex is by the event/sound thread
 */
-static schism_mutex_t *midi_mutex = NULL;
-static schism_mutex_t *midi_port_mutex = NULL;
-static schism_mutex_t *midi_record_mutex = NULL;
-static schism_cond_t *midi_play_cond = NULL;
+static mt_mutex_t *midi_mutex = NULL;
+static mt_mutex_t *midi_port_mutex = NULL;
+static mt_mutex_t *midi_record_mutex = NULL;
+static mt_cond_t *midi_play_cond = NULL;
 
 static struct midi_provider *port_providers = NULL;
 

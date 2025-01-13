@@ -57,12 +57,12 @@ SCHISM_STATIC_ASSERT(NUM_BUFFERS >= 2, "NUM_BUFFERS must be at least 2");
 
 struct schism_audio_device {
 	// The thread where we callback
-	schism_thread_t *thread;
+	mt_thread_t *thread;
 	int cancelled;
 
 	// The callback and the protecting mutex
 	void (*callback)(uint8_t *stream, int len);
-	schism_mutex_t *mutex;
+	mt_mutex_t *mutex;
 
 	// This is for synchronizing the audio thread with
 	// the actual audio device

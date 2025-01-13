@@ -33,13 +33,13 @@
 
 /* -------------------------------------------------------------- */
 
-struct schism_mutex {
+struct mt_mutex {
 	MPCriticalRegionID mutex;
 };
 
-static schism_mutex_t *macos_mutex_create(void)
+static mt_mutex_t *macos_mutex_create(void)
 {
-	schism_mutex_t *mutex = mem_alloc(sizeof(*mutex));
+	mt_mutex_t *mutex = mem_alloc(sizeof(*mutex));
 
 	OSStatus err = MPCreateCriticalRegion(&mutex->mutex);
 	if (err != noErr) {
@@ -50,30 +50,30 @@ static schism_mutex_t *macos_mutex_create(void)
 	return mutex;
 }
 
-static void macos_mutex_delete(schism_mutex_t *mutex)
+static void macos_mutex_delete(mt_mutex_t *mutex)
 {
 	MPDeleteCriticalRegion(mutex->mutex);
 }
 
-static void macos_mutex_lock(schism_mutex_t *mutex)
+static void macos_mutex_lock(mt_mutex_t *mutex)
 {
 	MPEnterCriticalRegion(mutex->mutex, kDurationForever);
 }
 
-static void macos_mutex_unlock(schism_mutex_t *mutex)
+static void macos_mutex_unlock(mt_mutex_t *mutex)
 {
 	MPExitCriticalRegion(mutex->mutex);
 }
 
 /* -------------------------------------------------------------- */
 
-struct schism_cond {
+struct mt_cond {
 	MPEventID event;
 };
 
-static schism_cond_t *macos_cond_create(void)
+static mt_cond_t *macos_cond_create(void)
 {
-	schism_cond_t *cond = mem_alloc(sizeof(*cond));
+	mt_cond_t *cond = mem_alloc(sizeof(*cond));
 
 	OSStatus err = MPCreateEvent(&cond->event);
 	if (err != noErr) {
@@ -84,22 +84,22 @@ static schism_cond_t *macos_cond_create(void)
 	return cond;
 }
 
-static void macos_cond_delete(schism_cond_t *cond)
+static void macos_cond_delete(mt_cond_t *cond)
 {
 	MPDeleteEvent(cond->event);
 }
 
-static void macos_cond_signal(schism_cond_t *cond)
+static void macos_cond_signal(mt_cond_t *cond)
 {
 	MPSetEvent(cond->event, 1);
 }
 
-static void macos_cond_wait(schism_cond_t *cond, schism_mutex_t *mutex)
+static void macos_cond_wait(mt_cond_t *cond, mt_mutex_t *mutex)
 {
 	MPWaitForEvent(cond->event, NULL, kDurationForever);
 }
 
-static void macos_cond_wait_timeout(schism_cond_t *cond, schism_mutex_t *mutex, uint32_t timeout)
+static void macos_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout)
 {
 	MPWaitForEvent(cond->event, NULL, timeout);
 }
@@ -109,7 +109,7 @@ static void macos_cond_wait_timeout(schism_cond_t *cond, schism_mutex_t *mutex, 
 // what?
 static MPQueueID notification_queue = NULL;
 
-struct schism_thread {
+struct mt_thread {
 	MPTaskID task;
 	MPEventID event; // for macos_thread_wait
 	int status;
@@ -121,7 +121,7 @@ struct schism_thread {
 
 static OSStatus macos_dummy_thread_func(void *userdata)
 {
-	schism_thread_t *thread = userdata;
+	mt_thread_t *thread = userdata;
 
 	thread->status = thread->func(thread->userdata);
 
@@ -131,10 +131,10 @@ static OSStatus macos_dummy_thread_func(void *userdata)
 	return 0;
 }
 
-static schism_thread_t *macos_thread_create(schism_thread_function_t func, SCHISM_UNUSED const char *name, void *userdata)
+static mt_thread_t *macos_thread_create(schism_thread_function_t func, SCHISM_UNUSED const char *name, void *userdata)
 {
 	OSStatus err = noErr;
-	schism_thread_t *thread = mem_alloc(sizeof(*thread));
+	mt_thread_t *thread = mem_alloc(sizeof(*thread));
 
 	thread->func = func;
 	thread->userdata = userdata;
@@ -158,7 +158,7 @@ static schism_thread_t *macos_thread_create(schism_thread_function_t func, SCHIS
 	return thread;
 }
 
-static void macos_thread_wait(schism_thread_t *thread, int *status)
+static void macos_thread_wait(mt_thread_t *thread, int *status)
 {
 	// Wait until the dummy function calls us back
 	MPWaitForEvent(thread->event, NULL, kDurationForever);
@@ -175,19 +175,19 @@ static void macos_thread_set_priority(int priority)
 	MPTaskWeight weight;
 
 	switch (priority) {
-	case BE_THREAD_PRIORITY_LOW:           weight = 10;    break;
-	case BE_THREAD_PRIORITY_NORMAL:        weight = 100;   break;
-	case BE_THREAD_PRIORITY_HIGH:          weight = 1000;  break;
-	case BE_THREAD_PRIORITY_TIME_CRITICAL: weight = 10000; break;
+	case MT_THREAD_PRIORITY_LOW:           weight = 10;    break;
+	case MT_THREAD_PRIORITY_NORMAL:        weight = 100;   break;
+	case MT_THREAD_PRIORITY_HIGH:          weight = 1000;  break;
+	case MT_THREAD_PRIORITY_TIME_CRITICAL: weight = 10000; break;
 	default: return;
 	}
 
 	MPSetTaskWeight(MPCurrentTaskID(), weight);
 }
 
-static schism_thread_id_t macos_thread_id(void)
+static mt_thread_id_t macos_thread_id(void)
 {
-	return (schism_thread_id_t)MPCurrentTaskID();
+	return (mt_thread_id_t)MPCurrentTaskID();
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -29,12 +29,12 @@
 
 static const schism_threads_backend_t *mt_backend = NULL;
 
-schism_thread_t *mt_thread_create(schism_thread_function_t func, const char *name, void *userdata)
+mt_thread_t *mt_thread_create(schism_thread_function_t func, const char *name, void *userdata)
 {
 	return mt_backend->thread_create(func, name, userdata);
 }
 
-void mt_thread_wait(schism_thread_t *thread, int *status)
+void mt_thread_wait(mt_thread_t *thread, int *status)
 {
 	mt_backend->thread_wait(thread, status);
 }
@@ -45,56 +45,56 @@ void mt_thread_set_priority(int priority)
 }
 
 // returns the current thread's ID
-schism_thread_id_t mt_thread_id(void)
+mt_thread_id_t mt_thread_id(void)
 {
 	return mt_backend->thread_id();
 }
 
 // ---------------------------------------------------------------------------
 
-schism_mutex_t *mt_mutex_create(void)
+mt_mutex_t *mt_mutex_create(void)
 {
 	return mt_backend->mutex_create();
 }
 
-void mt_mutex_delete(schism_mutex_t *mutex)
+void mt_mutex_delete(mt_mutex_t *mutex)
 {
 	mt_backend->mutex_delete(mutex);
 }
 
-void mt_mutex_lock(schism_mutex_t *mutex)
+void mt_mutex_lock(mt_mutex_t *mutex)
 {
 	mt_backend->mutex_lock(mutex);
 }
 
-void mt_mutex_unlock(schism_mutex_t *mutex)
+void mt_mutex_unlock(mt_mutex_t *mutex)
 {
 	mt_backend->mutex_unlock(mutex);
 }
 
 // ---------------------------------------------------------------------------
 
-schism_cond_t *mt_cond_create(void)
+mt_cond_t *mt_cond_create(void)
 {
 	return mt_backend->cond_create();
 }
 
-void mt_cond_delete(schism_cond_t *cond)
+void mt_cond_delete(mt_cond_t *cond)
 {
 	mt_backend->cond_delete(cond);
 }
 
-void mt_cond_signal(schism_cond_t *cond)
+void mt_cond_signal(mt_cond_t *cond)
 {
 	mt_backend->cond_signal(cond);
 }
 
-void mt_cond_wait(schism_cond_t *cond, schism_mutex_t *mutex)
+void mt_cond_wait(mt_cond_t *cond, mt_mutex_t *mutex)
 {
 	mt_backend->cond_wait(cond, mutex);
 }
 
-void mt_cond_wait_timeout(schism_cond_t *cond, schism_mutex_t *mutex, uint32_t timeout)
+void mt_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout)
 {
 	mt_backend->cond_wait_timeout(cond, mutex, timeout);
 }

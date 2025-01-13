@@ -51,7 +51,7 @@ static LARGE_INTEGER win32_timer_start = {0};
 static LARGE_INTEGER win32_timer_resolution = {0};
 
 // This is used to regain some lost precision in timeGetTime()
-static schism_mutex_t *win32_timer_overflow_mutex = NULL;
+static mt_mutex_t *win32_timer_overflow_mutex = NULL;
 static int32_t win32_timer_overflow = 0;
 static uint32_t win32_timer_last_known_ticks = 0;
 
