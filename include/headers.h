@@ -164,11 +164,17 @@ extern int ya_optind, ya_opterr, ya_optopt;
 # define CLAMP(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
 #endif
 
-/* A bunch of compiler detection stuff... don't mind this... */
+/* Compares two version numbers following Semantic Versioning.
+ * For example:
+ *   SCHISM_SEMVER_ATLEAST(1, 2, 3, 1, 2, 2) -> TRUE
+ *   SCHISM_SEMVER_ATLEAST(1, 2, 3, 2, 0, 0) -> TRUE
+ *   SCHISM_SEMVER_ATLEAST(1, 1, 0, 1, 2, 1) -> FALSE */
 #define SCHISM_SEMVER_ATLEAST(mmajor, mminor, mpatch, major, minor, patch) \
-	((major >= mmajor) \
-	 && (major > mmajor || minor >= mminor) \
-	 && (major > mmajor || minor > mminor || patch >= mpatch))
+	(((major) >= (mmajor)) \
+	 && ((major) > (mmajor) || (minor) >= (mminor)) \
+	 && ((major) > (mmajor) || (minor) > (mminor) || (patch) >= (mpatch)))
+
+/* A bunch of compiler detection stuff... don't mind this... */
 
 // GNU C (not GCC!)
 #if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
