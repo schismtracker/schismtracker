@@ -411,14 +411,14 @@ uint32_t it_get_song_elapsed_dos_time(song_t *song)
 	return ms_to_dos_time(timer_ticks() - song->editstart.runtime);
 }
 
-schism_ticks_t dos_time_to_ms(uint32_t dos_time)
+timer_ticks_t dos_time_to_ms(uint32_t dos_time)
 {
 	// convert to milliseconds
-	schism_ticks_t ms = round((double)dos_time * (1000.0 / 18.2));
+	timer_ticks_t ms = round((double)dos_time * (1000.0 / 18.2));
 	return ms;
 }
 
-uint32_t ms_to_dos_time(schism_ticks_t ms)
+uint32_t ms_to_dos_time(timer_ticks_t ms)
 {
 	double dos = round((double)ms / (1000.0 / 18.2));
 

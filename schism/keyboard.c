@@ -583,7 +583,7 @@ int kbd_get_alnum(struct key_event *k)
 static int key_repeat_delay = 0;
 static int key_repeat_rate = 0;
 static int key_repeat_enabled = 0;
-static schism_ticks_t key_repeat_next_tick = 0;
+static timer_ticks_t key_repeat_next_tick = 0;
 
 static struct key_event cached_key_event = {0};
 
@@ -597,7 +597,7 @@ void kbd_handle_key_repeat(void)
 	if (!key_repeat_next_tick || !key_repeat_enabled)
 		return;
 
-	const schism_ticks_t now = timer_ticks();
+	const timer_ticks_t now = timer_ticks();
 	if (timer_ticks_passed(now, key_repeat_next_tick)) {
 		/* handle key functions have the ability to
 		 * change the values of the key_event structure.

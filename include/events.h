@@ -24,7 +24,7 @@
 #define SCHISM_EVENTS_H_
 
 #include "keyboard.h"
-#include "timer.h" // schism_ticks_t
+#include "timer.h" // timer_ticks_t
 #include "backend/events.h" // for the backend typedef
 
 /* types of events delivered by the current backend */
@@ -89,7 +89,7 @@ enum {
 
 typedef struct {
 	uint32_t type;
-	schism_ticks_t timestamp;
+	timer_ticks_t timestamp;
 } schism_common_event_t;
 
 typedef struct {
@@ -208,7 +208,7 @@ typedef struct {
 
 typedef struct {
 	uint32_t type;
-	schism_ticks_t timestamp;
+	timer_ticks_t timestamp;
 
 	unsigned int len;
 	unsigned char packet[3];

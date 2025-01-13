@@ -15,7 +15,7 @@
 #include "tables.h"
 
 #include <time.h> // struct tm
-#include "timer.h" // schism_ticks_t
+#include "timer.h" // timer_ticks_t
 
 
 #define MOD_AMIGAC2             0x1AB
@@ -488,7 +488,7 @@ typedef struct song_history {
 	struct tm time;
 
 	// the amount of milliseconds the file was opened for
-	schism_ticks_t runtime;
+	timer_ticks_t runtime;
 } song_history_t;
 
 ////////////////////////////////////////////////////////////////////

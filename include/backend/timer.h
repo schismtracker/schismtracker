@@ -30,8 +30,8 @@ typedef struct {
 	int (*init)(void);
 	void (*quit)(void);
 
-	schism_ticks_t (*ticks)(void);
-	schism_ticks_t (*ticks_us)(void);
+	timer_ticks_t (*ticks)(void);
+	timer_ticks_t (*ticks_us)(void);
 	void (*usleep)(uint64_t us);
 
 	// returns 1 if a timer was successful

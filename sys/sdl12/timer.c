@@ -38,9 +38,9 @@ static mt_mutex_t *last_known_ticks_mutex = NULL;
 static uint32_t last_known_ticks = 0;
 static uint32_t ticks_overflow = 0;
 
-static schism_ticks_t sdl12_timer_ticks(void)
+static timer_ticks_t sdl12_timer_ticks(void)
 {
-	schism_ticks_t ticks = sdl12_GetTicks();
+	timer_ticks_t ticks = sdl12_GetTicks();
 
 	mt_mutex_lock(last_known_ticks_mutex);
 
@@ -55,7 +55,7 @@ static schism_ticks_t sdl12_timer_ticks(void)
 	return ticks;
 }
 
-static schism_ticks_t sdl12_timer_ticks_us(void)
+static timer_ticks_t sdl12_timer_ticks_us(void)
 {
 	// wow
 	return sdl12_timer_ticks() * UINT64_C(1000);

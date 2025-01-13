@@ -46,14 +46,14 @@ static uint64_t sdl2_performance_frequency = 0;
 
 static SDL_TimerID (SDLCALL *sdl2_AddTimer)(uint32_t ms, SDL_TimerCallback callback, void *param);
 
-static schism_ticks_t sdl2_timer_ticks(void)
+static timer_ticks_t sdl2_timer_ticks(void)
 {
 #if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 0, 18)
 	if (sdl2_have_timer64)
 		return sdl2_GetTicks64();
 #endif
 
-	schism_ticks_t ticks = sdl2_GetPerformanceCounter();
+	timer_ticks_t ticks = sdl2_GetPerformanceCounter();
 
 	ticks -= sdl2_performance_start;
 	ticks *= UINT64_C(1000);
@@ -62,9 +62,9 @@ static schism_ticks_t sdl2_timer_ticks(void)
 	return ticks;
 }
 
-static schism_ticks_t sdl2_timer_ticks_us(void)
+static timer_ticks_t sdl2_timer_ticks_us(void)
 {
-	schism_ticks_t ticks = sdl2_GetPerformanceCounter();
+	timer_ticks_t ticks = sdl2_GetPerformanceCounter();
 
 	ticks -= sdl2_performance_start;
 	ticks *= UINT64_C(1000000);

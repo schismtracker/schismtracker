@@ -155,7 +155,7 @@ struct tracker_status {
 
 	schism_keymod_t keymod;
 
-	schism_ticks_t last_midi_tick;
+	timer_ticks_t last_midi_tick;
 	unsigned char last_midi_event[64];
 	unsigned int last_midi_len;
 	unsigned int last_midi_real_len; /* XXX what is this */

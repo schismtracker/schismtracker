@@ -30,12 +30,12 @@
 
 static const schism_timer_backend_t *backend = NULL;
 
-schism_ticks_t timer_ticks(void)
+timer_ticks_t timer_ticks(void)
 {
 	return backend->ticks();
 }
 
-schism_ticks_t timer_ticks_us(void)
+timer_ticks_t timer_ticks_us(void)
 {
 	return backend->ticks_us();
 }
@@ -72,10 +72,10 @@ struct _timer_oneshot_data {
 	void *param;
 
 	// Start time in microseconds.
-	schism_ticks_t start;
+	timer_ticks_t start;
 
 	// Time until the oneshot should be called in microseconds.
-	schism_ticks_t us;
+	timer_ticks_t us;
 
 	struct _timer_oneshot_data *next;
 } *oneshot_data_list = NULL;
@@ -87,13 +87,13 @@ static int _timer_oneshot_thread(void *userdata)
 	mt_mutex_lock(timer_oneshot_mutex);
 
 	while (!timer_oneshot_thread_cancelled) {
-		schism_ticks_t now = timer_ticks_us();
-		schism_ticks_t wait = UINT64_MAX;
+		timer_ticks_t now = timer_ticks_us();
+		timer_ticks_t wait = UINT64_MAX;
 
 		// init data pointers
 		struct _timer_oneshot_data *data = oneshot_data_list, *prev = NULL;
 		while (data) {
-			const schism_ticks_t end = data->start + data->us;
+			const timer_ticks_t end = data->start + data->us;
 			if (timer_ticks_passed(now, end)) {
 				data->callback(data->param);
 

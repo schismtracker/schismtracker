@@ -39,7 +39,7 @@
 
 static int status_bios = 0;
 static char *status_text = NULL;
-static schism_ticks_t text_timeout;
+static timer_ticks_t text_timeout;
 
 /* --------------------------------------------------------------------- */
 
@@ -157,7 +157,7 @@ static inline void draw_playing_channels(void)
 
 void status_text_redraw(void)
 {
-	schism_ticks_t now = timer_ticks();
+	timer_ticks_t now = timer_ticks();
 
 	/* if there's a message set, and it's expired, clear it */
 	if (status_text && now > text_timeout) {

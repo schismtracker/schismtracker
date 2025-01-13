@@ -157,11 +157,11 @@ static char *x11_get_selection_text(video_wm_data_t *wm_data, Atom selection_typ
 		X11_XConvertSelection(display, selection_type, format, selection, owner, CurrentTime);
 
 		/* Time out if the other window never responds... */
-		schism_ticks_t start = timer_ticks();
+		timer_ticks_t start = timer_ticks();
 		x11_clippy_selection_waiting = 1;
 		do {
 			events_pump_events();
-			schism_ticks_t elapsed = timer_ticks() - start;
+			timer_ticks_t elapsed = timer_ticks() - start;
 			/* Wait one second for a selection response. */
 			if (elapsed > 1000) {
 				x11_clippy_selection_waiting = 0;

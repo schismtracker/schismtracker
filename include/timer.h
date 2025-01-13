@@ -26,13 +26,13 @@
 
 #include "headers.h"
 
-typedef uint64_t schism_ticks_t;
+typedef uint64_t timer_ticks_t;
 
 // Get the amount of milliseconds since timer_init() was called
-schism_ticks_t timer_ticks(void);
+timer_ticks_t timer_ticks(void);
 
 // Same as the above but in microseconds
-schism_ticks_t timer_ticks_us(void);
+timer_ticks_t timer_ticks_us(void);
 
 // Legacy macro, backends should account for missing bits in the timer
 // by e.g. keeping a global state. See the SDL 1.2 backend for an example

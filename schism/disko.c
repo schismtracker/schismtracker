@@ -589,7 +589,7 @@ static const struct save_format *export_format = NULL; /* NULL == not running */
 static struct widget diskodlg_widgets[1];
 static size_t est_len;
 static int prgh;
-static schism_ticks_t export_start_time;
+static timer_ticks_t export_start_time;
 static int canceled = 0; /* this sucks, but so do I */
 
 static int disko_finish(void);
@@ -842,7 +842,7 @@ static int disko_finish(void)
 
 	switch (ret) {
 	case DW_OK: {
-		const schism_ticks_t elapsed_ms = (timer_ticks() - export_start_time);
+		const timer_ticks_t elapsed_ms = (timer_ticks() - export_start_time);
 
 		log_appendf(5, " %.2f MiB (%" PRIuSZ ":%" PRIuSZ ") written in %" PRIu64 ".%02" PRIu64 " sec",
 			total_size / 1048576.0,

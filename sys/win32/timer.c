@@ -80,7 +80,7 @@ static inline void _win32_timer_ticks_impl(LARGE_INTEGER *ticks)
 	}
 }
 
-static schism_ticks_t win32_timer_ticks(void)
+static timer_ticks_t win32_timer_ticks(void)
 {
 	LARGE_INTEGER ticks = {0};
 
@@ -93,7 +93,7 @@ static schism_ticks_t win32_timer_ticks(void)
 	return ticks.QuadPart;
 }
 
-static schism_ticks_t win32_timer_ticks_us(void)
+static timer_ticks_t win32_timer_ticks_us(void)
 {
 	LARGE_INTEGER ticks = {0};
 
