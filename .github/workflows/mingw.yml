@@ -10,11 +10,13 @@ jobs:
     runs-on: windows-latest
     name: mingw32-i386
     env:
-      # TODO would be nice to build this here as well
-      #SDL_VERSION: 2.30.9
+      # TODO we should stop building SDL 1.2 and just use the includes from msys2
+      SDL_VERSION: 2.30.11
       #SDL_SHA256: 24b574f71c87a763f50704bbb630cbe38298d544a1f890f099a4696b1d6beba4
+      SDL_RELEASE_SHA256: 216b2dc1921bbf1e23a4e5d5d89b9c8b9e34ceb5673de7d6d9199b5f20d793dc
       SDL12_VERSION: 1.2.15
       SDL12_SHA256: d6d316a793e5e348155f0dd93b979798933fb98aa1edebcc108829d6474aad00
+      SDL12_RELEASE_SHA256: a28bbe38714ef7817b1c1e8082a48f391f15e4043402444b783952fca939edc1
       FLAC_VERSION: 1.4.3
       FLAC_SHA256: 6c58e69cd22348f441b861092b825e591d0b822e106de6eb0ee4d05d27205b70
       LIBOGG_VERSION: 1.3.5
@@ -39,7 +41,7 @@ jobs:
         with:
           msystem: mingw32
           update: true
-          install: git mingw-w64-i686-toolchain mingw-w64-i686-flac mingw-w64-i686-SDL2 libtool autoconf automake make zip unzip dos2unix patch
+          install: git mingw-w64-i686-toolchain mingw-w64-i686-flac mingw-w64-i686-SDL mingw-w64-i686-SDL2 libtool autoconf automake make zip unzip dos2unix patch
           location: 'C:\\msys2'
 
       - name: 'Retrieve runner temp directory'
@@ -81,30 +83,6 @@ jobs:
         run: |
           echo "$(cygpath -w "/c/MinGW/bin")" >> $GITHUB_PATH
           echo "$(cygpath -w "/c/MinGW/msys/1.0/bin")" >> $GITHUB_PATH
-
-      - name: 'Download SDL 1.2 sources'
-        if: steps.cache-i386-dependencies.outputs.cache-hit != 'true'
-        run: |
-          which gcc
-          wget -O "SDL-$SDL12_VERSION.tar.gz" https://www.libsdl.org/release/SDL-$SDL12_VERSION.tar.gz
-          echo "$SDL12_SHA256  SDL-$SDL12_VERSION.tar.gz" | sha256sum -c -
-          tar xvf "SDL-$SDL12_VERSION.tar.gz"
-          cd "SDL-$SDL12_VERSION"
-          ./autogen.sh
-          cd ..
-
-      - name: 'Build SDL 1.2'
-        if: steps.cache-i386-dependencies.outputs.cache-hit != 'true'
-        env:
-          RUNNER_TEMP_CYGPATH: ${{ steps.temp.outputs.temp }}
-        shell:
-          "bash.exe {0}"
-        run: |
-          cd SDL-$SDL12_VERSION
-          CC="mingw32-gcc.exe" CPPFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" LDFLAGS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib" ./configure --prefix="$RUNNER_TEMP_CYGPATH/i386prefix" || (cat config.log && false)
-          make
-          make install
-          cd ..
 
       - name: 'Download libflac and libogg sources'
         if: steps.cache-i386-dependencies.outputs.cache-hit != 'true'
@@ -194,7 +172,7 @@ jobs:
           cd build
           # We link to SDL 1.2 here since it's universally supported by everything and is
           # useful as a fallback of sorts.
-          MEDIAFOUNDATION_CFLAGS="-I/c/msys2/msys64/mingw32/include" CPPFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" LDFLAGS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib" CC="mingw32-gcc.exe" UTF8PROC_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" UTF8PROC_LIBS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -lutf8proc-3" SDL12_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include/SDL" SDL12_LIBS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -lSDL" FLAC_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" FLAC_LIBS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -lFLAC -logg -lm" SDL2_CFLAGS="-I/c/msys2/msys64/mingw32/include/SDL2" SDL2_LIBS="-L/c/msys2/msys64/mingw32/lib -lSDL2" ../configure --with-flac --with-sdl2 --with-sdl12 --enable-sdl12-linking
+          MEDIAFOUNDATION_CFLAGS="-I/c/msys2/msys64/mingw32/include" CPPFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" LDFLAGS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -L/c/MinGW/lib" CC="mingw32-gcc.exe" UTF8PROC_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" UTF8PROC_LIBS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -lutf8proc-3" SDL12_CFLAGS="-I/c/msys2/msys64/mingw32/include/SDL" SDL12_LIBS="-L/c/msys2/msys64/mingw32/lib -lSDL" FLAC_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" FLAC_LIBS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -lFLAC -logg -lm" SDL2_CFLAGS="-I/c/msys2/msys64/mingw32/include/SDL2" SDL2_LIBS="-L/c/msys2/msys64/mingw32/lib -lSDL2" ../configure --with-flac --with-sdl2 --with-sdl12 --enable-sdl12-linking
           make
           strip schismtracker.exe
           cp schismtracker.exe ../..
@@ -204,18 +182,25 @@ jobs:
         env:
           RUNNER_TEMP_CYGPATH: ${{ steps.temp.outputs.temp }}
         run: |
+          # FIXME these DLLs may not be needed anymore
           cp "/c/MinGW/bin/libgcc_s_dw2-1.dll" .
           cp "/c/MinGW/bin/libssp-0.dll" .
-          cp "$RUNNER_TEMP_CYGPATH/i386prefix/bin/SDL.dll" .
-          cp "/c/msys2/msys64/mingw32/bin/SDL2.dll" .
+          # SDL 1.2
+          wget -O "SDL-$SDL12_VERSION-win32.zip" https://www.libsdl.org/release/SDL-$SDL12_VERSION-win32.zip
+          echo "$SDL12_RELEASE_SHA256  SDL-$SDL12_VERSION-win32.zip" | sha256sum -c -
+          unzip "SDL-$SDL12_VERSION-win32.zip" "SDL.dll"
+          # SDL 2
+          wget -O "SDL2-$SDL_VERSION-win32-x86.zip" https://www.libsdl.org/release/SDL2-$SDL_VERSION-win32-x86.zip
+          echo "$SDL_RELEASE_SHA256  SDL2-$SDL_VERSION-win32-x86.zip" | sha256sum -c -
+          unzip "SDL2-$SDL_VERSION-win32-x86.zip" "SDL2.dll"
           cp "$RUNNER_TEMP_CYGPATH/i386prefix/bin/libFLAC-12.dll" .
           cp "$RUNNER_TEMP_CYGPATH/i386prefix/bin/libogg-0.dll" .
           cp "$RUNNER_TEMP_CYGPATH/i386prefix/lib/libutf8proc-3.dll" .
-          strip SDL.dll
-          strip SDL2.dll
           strip "libFLAC-12.dll"
           strip "libogg-0.dll"
           strip "libutf8proc-3.dll"
+          strip "libssp-0.dll"
+          strip "libgcc_s_dw2-1.dll"
           cp schism/docs/configuration.md schism/README.md schism/COPYING .
           wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
           unix2dos COPYING.Xiph COPYING README.md configuration.md
