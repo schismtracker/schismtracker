@@ -391,4 +391,50 @@ extern int ya_optind, ya_opterr, ya_optopt;
 # define strcasestr(haystack, needle) charset_strcasestr(haystack, CHARSET_CHAR, needle, CHARSET_CHAR)
 #endif
 
+/* ------------------------------------------------------------------------ */
+
+#ifdef SCHISM_WIN32
+static inline SCHISM_ALWAYS_INLINE int _schism_fixup_ms_vsnprintf(char *buffer, size_t count, const char *fmt, va_list ap)
+{
+	va_list ap_cp;
+
+	if (!count)
+		return _vscprintf(fmt, ap);
+
+	// _vsnprintf doesn't add a terminating NUL character.
+	// zero out the array to account for this
+	memset(buffer, 0, count);
+
+	va_copy(ap_cp, ap);
+	int ret = _vsnprintf(buffer, count - 1, fmt, ap_cp);
+	va_end(ap_cp);
+
+	if (ret == -1)
+		ret = _vscprintf(fmt, ap);
+
+	return ret;
+}
+
+static inline SCHISM_ALWAYS_INLINE int _schism_fixup_ms_snprintf(char *buffer, size_t count, const char *fmt, ...) SCHISM_FORMAT(printf, 3, 4);
+static inline int _schism_fixup_ms_snprintf(char *buffer, size_t count, const char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	int x = _schism_fixup_ms_vsnprintf(buffer, count, fmt, ap);
+	va_end(ap);
+	return x;
+}
+
+// just in case
+# undef vsnprintf
+# undef _vsnprintf
+# undef snprintf
+# undef _snprintf
+
+# define vsnprintf _schism_fixup_ms_vsnprintf
+# define _vsnprintf _schism_fixup_ms_vsnprintf
+# define snprintf _schism_fixup_ms_snprintf
+# define _snprintf _schism_fixup_ms_snprintf
+#endif
+
 #endif /* SCHISM_HEADERS_H_ */
