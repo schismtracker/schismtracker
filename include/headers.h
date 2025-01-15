@@ -136,19 +136,6 @@ extern int ya_optind, ya_opterr, ya_optopt;
 #define PTR_SHAPED_INT(i)               ((void*)(i))
 
 /* -------------------------------------------------------------- */
-/* C99 compatible static assertion */
-
-#if (__STDC_VERSION__ >= 201112L)
-# define SCHISM_STATIC_ASSERT(x, msg) _Static_assert(x, msg)
-#else
-/* should work anywhere and shouldn't dump random stack allocations
- * BUT it fails to provide any sort of useful message to the user */
-# define SCHISM_STATIC_ASSERT(x, msg) \
-	extern int (*schism_static_assert_function_no_touchy_touchy_plz(void)) \
-		[!!sizeof (struct { int __error_if_negative: (x) ? 2 : -1; })]
-#endif
-
-/* -------------------------------------------------------------- */
 /* moved from util.h */
 
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof(*(a)))
@@ -223,6 +210,9 @@ extern int ya_optind, ya_opterr, ya_optopt;
 #ifdef __has_extension
 # define SCHISM_GNUC_HAS_EXTENSION(x, major, minor, patch) \
 	__has_extension(x)
+#elif defined(__has_feature)
+# define SCHISM_GNUC_HAS_EXTENSION(x, major, minor, patch) \
+	__has_feature(x)
 #else
 # define SCHISM_GNUC_HAS_EXTENSION(x, major, minor, patch) \
 	SCHISM_GNUC_ATLEAST(major, minor, patch)
@@ -324,6 +314,16 @@ extern int ya_optind, ya_opterr, ya_optopt;
 #endif
 #ifndef SCHISM_DEPRECATED
 # define SCHISM_DEPRECATED
+#endif
+
+#if (__STDC_VERSION__ >= 201112L) || (SCHISM_GNUC_HAS_EXTENSION(c11_static_assert, 4, 6, 0))
+# define SCHISM_STATIC_ASSERT(x, msg) _Static_assert(x, msg)
+#else
+/* should work anywhere and shouldn't dump random stack allocations
+ * BUT it fails to provide any sort of useful message to the user */
+# define SCHISM_STATIC_ASSERT(x, msg) \
+	extern int (*schism_static_assert_function_no_touchy_touchy_plz(void)) \
+		[!!sizeof (struct { int __error_if_negative: (x) ? 2 : -1; })]
 #endif
 
 /* ------------------------------------------------------------------------ */
