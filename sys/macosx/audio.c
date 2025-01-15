@@ -122,7 +122,7 @@ static void _macosx_audio_free_devices(void)
 	}
 }
 
-static int macosx_audio_device_count(void)
+static uint32_t macosx_audio_device_count(void)
 {
 	OSStatus result;
 	UInt32 size;
@@ -265,7 +265,7 @@ static int macosx_audio_device_count(void)
 	return devices_size;
 }
 
-static const char *macosx_audio_device_name(int i)
+static const char *macosx_audio_device_name(uint32_t i)
 {
 	if (i < 0 || i >= devices_size)
 		return NULL;
@@ -337,7 +337,7 @@ static OSStatus macosx_audio_callback(void *inRefCon, AudioUnitRenderActionFlags
 }
 
 // nonzero on success
-static schism_audio_device_t *macosx_audio_open_device(const char *name, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+static schism_audio_device_t *macosx_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
 	schism_audio_device_t *dev = mem_calloc(1, sizeof(schism_audio_device_t));
 
@@ -392,18 +392,8 @@ static schism_audio_device_t *macosx_audio_open_device(const char *name, const s
 		return NULL;
 	}
 
-	if (name) {
-		size_t i;
-		int fnd = 0;
-
-		for (i = 0; i < devices_size; i++) {
-			if (!strcmp(devices[i].name, name)) {
-				fnd = 1;
-				break;
-			}
-		}
-
-		result = AudioUnitSetProperty(dev->au, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &devices[i].id, sizeof(devices[i].id));
+	if (id != AUDIO_BACKEND_DEFAULT) {
+		result = AudioUnitSetProperty(dev->au, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &devices[id].id, sizeof(devices[id].id));
 		if (result != noErr) {
 			mt_mutex_delete(dev->mutex);
 			free(dev);
@@ -460,10 +450,7 @@ static void macosx_audio_close_device(schism_audio_device_t *dev)
 		return;
 
 	// Remove the callback
-	struct AURenderCallbackStruct callback = {
-		.inputProc = NULL,
-		.inputProcRefCon = NULL,
-	};
+	struct AURenderCallbackStruct callback = {0};
 	result = AudioUnitSetProperty(dev->au, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &callback, sizeof(callback));
 	if (result != noErr)
 		return;

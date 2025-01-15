@@ -169,7 +169,7 @@ static int _win32_audio_lookup_device_name(const GUID *nameguid, char **result)
 #undef GUIDX
 }
 
-static int win32_audio_device_count(void)
+static uint32_t win32_audio_device_count(void)
 {
 	const UINT devs = waveOutGetNumDevs();
 
@@ -220,11 +220,11 @@ static int win32_audio_device_count(void)
 	return devs;
 }
 
-static const char *win32_audio_device_name(int i)
+static const char *win32_audio_device_name(uint32_t i)
 {
 	// If this ever happens it is a catastrophic bug and we
 	// should crash before anything bad happens.
-	if (i >= devices_size || i < 0)
+	if (i >= devices_size)
 		return NULL;
 
 	return devices[i];
@@ -301,28 +301,10 @@ static void CALLBACK win32_audio_callback(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwI
 }
 
 // nonzero on success
-static schism_audio_device_t *win32_audio_open_device(const char *name, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+static schism_audio_device_t *win32_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
 	// Default to some device that can handle our output
-	UINT device_id = WAVE_MAPPER;
-	
-	// Lookup the device ID if one is requested
-	if (name) {
-		device_id = 0;
-
-		int fnd = 0;
-		for (; device_id < devices_size; device_id++) {
-			if (!strcmp(devices[device_id], name)) {
-				fnd = 1;
-				break;
-			}
-		}
-		
-		// Fail; the audio code will try again with a
-		// default device
-		if (!fnd)
-			return NULL;
-	}
+	UINT device_id = (id == AUDIO_BACKEND_DEFAULT) ? WAVE_MAPPER : id;
 
 	// Fill in the format structure
 	WAVEFORMATEX format = {

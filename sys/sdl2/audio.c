@@ -114,12 +114,14 @@ static const char *sdl2_audio_driver_name(int i)
 
 /* --------------------------------------------------------------- */
 
-static int sdl2_audio_device_count(void)
+static uint32_t sdl2_audio_device_count(void)
 {
-	return sdl2_GetNumAudioDevices(0);
+	int x = sdl2_GetNumAudioDevices(0);
+
+	return MAX(x, 0);
 }
 
-static const char *sdl2_audio_device_name(int i)
+static const char *sdl2_audio_device_name(uint32_t i)
 {
 	return sdl2_GetAudioDeviceName(i, 0);
 }
@@ -128,7 +130,14 @@ static const char *sdl2_audio_device_name(int i)
 
 static int sdl2_audio_init_driver(const char *driver)
 {
-	return sdl2_audio_init_func(driver);
+	int x = sdl2_audio_init_func(driver);
+	if (x < 0)
+		return x;
+
+	// force poll for audio devices
+	(void)sdl2_GetNumAudioDevices(0);
+
+	return 0;
 }
 
 static void sdl2_audio_quit_driver(void)
@@ -173,7 +182,7 @@ static inline int sdl2_audio_open_device_impl(schism_audio_device_t *dev, const 
 	return 0;
 }
 
-static schism_audio_device_t *sdl2_audio_open_device(const char *name, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+static schism_audio_device_t *sdl2_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
 	schism_audio_device_t *dev = mem_calloc(1, sizeof(*dev));
 	dev->callback = desired->callback;
@@ -197,6 +206,8 @@ static schism_audio_device_t *sdl2_audio_open_device(const char *name, const sch
 	};
 	SDL_AudioSpec sdl_obtained;
 
+	const char *name = (id != AUDIO_BACKEND_DEFAULT) ? sdl2_GetAudioDeviceName(id, 0) : NULL;
+
 	// First try opening the device without any change at all.
 	if (sdl2_audio_open_device_impl(dev, name, &sdl_desired, &sdl_obtained, 0))
 		goto got_device;
@@ -204,6 +215,7 @@ static schism_audio_device_t *sdl2_audio_open_device(const char *name, const sch
 	// Ok, try opening it until we find something that fits.
 	int change = SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE | SDL_AUDIO_ALLOW_SAMPLES_CHANGE | SDL_AUDIO_ALLOW_FORMAT_CHANGE;
 
+	// !!! FIXME: SDL_GetAudioDeviceName might change
 	if (sdl2_audio_open_device_impl(dev, name, &sdl_desired, &sdl_obtained, change)) {
 		int need_reopen = 0;
 

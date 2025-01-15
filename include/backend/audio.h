@@ -26,6 +26,9 @@
 
 #include "../song.h"
 
+// Pass this to open_device to get a default audio device
+#define AUDIO_BACKEND_DEFAULT ~((uint32_t)0)
+
 // defines the interface for each audio backend
 typedef struct {
 	int (*init)(void);
@@ -34,13 +37,13 @@ typedef struct {
 	int (*driver_count)(void);
 	const char *(*driver_name)(int i);
 
-	int (*device_count)(void);
-	const char *(*device_name)(int i);
+	uint32_t (*device_count)(void);
+	const char *(*device_name)(uint32_t i);
 
 	int (*init_driver)(const char *driver);
 	void (*quit_driver)(void);
 
-	schism_audio_device_t *(*open_device)(const char *name, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained);
+	schism_audio_device_t *(*open_device)(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained);
 	void (*close_device)(schism_audio_device_t *device);
 	void (*lock_device)(schism_audio_device_t *device);
 	void (*unlock_device)(schism_audio_device_t *device);

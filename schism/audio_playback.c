@@ -1496,6 +1496,9 @@ static int _audio_open_device(const char *device, int verbose)
 {
 	_cleanup_audio_device();
 
+	if (!backend)
+		return 0;
+
 	/* if the buffer size isn't a power of two, the dsp driver will punt since it's not nice enough to fix
 	 * it for us. (contrast alsa, which is TOO nice and fixes it even when we don't want it to) */
 	int size_pow2 = 2;
@@ -1533,14 +1536,31 @@ static int _audio_open_device(const char *device, int verbose)
 	schism_audio_spec_t obtained;
 
 	if (device && *device) {
-		current_audio_device = backend ? backend->open_device(device, &desired, &obtained) : NULL;
-		if (current_audio_device) {
-			device_name = str_dup(device);
-			goto success;
-		} else fputs("Failed to open requested audio device! Falling back to default...\n", stderr);
+		uint32_t devices_size = backend->device_count();
+		uint32_t i = AUDIO_BACKEND_DEFAULT;
+
+		for (i = 0; i < devices_size; i++) {
+			const char *n = backend->device_name(i);
+			if (!n) // what
+				continue;
+
+			if (!strcmp(n, device))
+				break;
+		}
+
+		if (i != AUDIO_BACKEND_DEFAULT) {
+			current_audio_device = backend->open_device(i, &desired, &obtained);
+			if (current_audio_device) {
+				device_name = str_dup(device);
+				goto success;
+			} else {
+				log_nl();
+				log_appendf(4, "Failed to open configured audio device! Falling back to default...");
+			}
+		}
 	}
 
-	current_audio_device = backend ? backend->open_device(NULL, &desired, &obtained) : NULL;
+	current_audio_device = backend->open_device(AUDIO_BACKEND_DEFAULT, &desired, &obtained);
 	if (current_audio_device) {
 		device_name = str_dup("default"); // ????
 		goto success;

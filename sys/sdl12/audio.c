@@ -208,12 +208,12 @@ static const char *sdl12_audio_driver_name(int x)
 /* --------------------------------------------------------------- */
 
 /* SDL 1.2 doesn't have a concept of audio devices */
-static int sdl12_audio_device_count(void)
+static uint32_t sdl12_audio_device_count(void)
 {
 	return 0;
 }
 
-static const char *sdl12_audio_device_name(int i)
+static const char *sdl12_audio_device_name(uint32_t i)
 {
 	return NULL;
 }
@@ -228,7 +228,7 @@ static void sdl12_dummy_callback(void *userdata, uint8_t *stream, int len)
 	dev->callback(stream, len);
 }
 
-static schism_audio_device_t *sdl12_audio_open_device(const char *name, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+static schism_audio_device_t *sdl12_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
 	schism_audio_device_t *dev = mem_calloc(1, sizeof(*dev));
 	dev->callback = desired->callback;
