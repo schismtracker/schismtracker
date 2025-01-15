@@ -373,23 +373,39 @@ void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 
 			uint32_t c = map_rgb(map_rgb_data, outr, outg, outb);
 
-			/* write the output pixel */
+			/* write the output pixel; we do it this way to hint
+			 * gcc into inlining memcpy, which can (and does) improve
+			 * performance (especially in excessive repeated calls
+			 * such as this one) */
+			switch (bpp) {
 #if WORDS_BIGENDIAN
-			memcpy(pixels, ((unsigned char *)&c) + (4 - bpp), bpp);
+			case 1: memcpy(pixels, ((unsigned char *)&c) + 3, 1); break;
+			case 2: memcpy(pixels, ((unsigned char *)&c) + 2, 2); break;
+			case 3: memcpy(pixels, ((unsigned char *)&c) + 1, 3); break;
 #else
-			memcpy(pixels, &c, bpp);
+			case 1: memcpy(pixels, &c, 1); break;
+			case 2: memcpy(pixels, &c, 2); break;
+			case 3: memcpy(pixels, &c, 3); break;
 #endif
+			case 4: memcpy(pixels, &c, 4); break;
+			default: break;
+			}
+
 			pixels += bpp;
 		}
 		pixels += pad;
 	}
 }
 
-/* Nearest neighbor blitter */
+/* Fast nearest neighbor blitter */
 void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height)
 {
 	// at most 32-bits...
-	unsigned char pixels_u[NATIVE_SCREEN_WIDTH * 4];
+	union {
+		uint8_t uc[NATIVE_SCREEN_WIDTH];
+		uint16_t us[NATIVE_SCREEN_WIDTH];
+		uint32_t ui[NATIVE_SCREEN_WIDTH];
+	} pixels_u;
 
 	unsigned int mouse_x, mouse_y;
 	video_get_mouse_coordinates(&mouse_x, &mouse_y);
@@ -409,24 +425,28 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 			make_mouseline(mouseline_x, mouseline_v, scaled_y, mouseline, mouseline_mask, mouse_y);
 			switch (bpp) {
 			case 1:
-				vgamem_scan8(scaled_y, (uint8_t *)pixels_u, tpal, mouseline, mouseline_mask);
+				vgamem_scan8(scaled_y, pixels_u.uc, tpal, mouseline, mouseline_mask);
 				break;
 			case 2:
-				vgamem_scan16(scaled_y, (uint16_t *)pixels_u, tpal, mouseline, mouseline_mask);
+				vgamem_scan16(scaled_y, pixels_u.us, tpal, mouseline, mouseline_mask);
 				break;
-			case 3:
-				vgamem_scan32(scaled_y, (uint32_t *)pixels_u, tpal, mouseline, mouseline_mask);
+			case 3: {
+				// optimization: store the 32-bit stuff in a temporary buffer, and then
+				// convert it to 24-bit after the fact
+				uint32_t pixels_32_to_24_bit[NATIVE_SCREEN_WIDTH];
+				vgamem_scan32(scaled_y, pixels_32_to_24_bit, tpal, mouseline, mouseline_mask);
 				for (x = 0; x < NATIVE_SCREEN_WIDTH; x++) {
 					/* move these into place */
 #if WORDS_BIGENDIAN
-					memmove(pixels_u + (x * 3), (pixels_u + (x * 4)) + 1, 3);
+					memcpy(pixels_u.uc + (x * 3), ((char *)pixels_32_to_24_bit + (x * 4)) + 1, 3);
 #else
-					memmove(pixels_u + (x * 3), pixels_u + (x * 4), 3);
+					memcpy(pixels_u.uc + (x * 3), ((char *)pixels_32_to_24_bit + (x * 4)), 3);
 #endif
 				}
 				break;
+			}
 			case 4:
-				vgamem_scan32(scaled_y, (uint32_t *)pixels_u, tpal, mouseline, mouseline_mask);
+				vgamem_scan32(scaled_y, pixels_u.ui, tpal, mouseline, mouseline_mask);
 				break;
 			default:
 				// should never happen
@@ -435,7 +455,13 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 		}
 
 		for (x = 0; x < width; x++) {
-			memcpy(pixels, pixels_u + ((x * NATIVE_SCREEN_WIDTH / width) * bpp), bpp);
+			switch (bpp) {
+			case 1: memcpy(pixels, pixels_u.uc + (x * NATIVE_SCREEN_WIDTH / width), 1); break;
+			case 2: memcpy(pixels, pixels_u.us + (x * NATIVE_SCREEN_WIDTH / width), 2); break;
+			case 3: memcpy(pixels, pixels_u.uc + ((x * NATIVE_SCREEN_WIDTH / width) * 3), 3); break;
+			case 4: memcpy(pixels, pixels_u.ui + (x * NATIVE_SCREEN_WIDTH / width), 4); break;
+			default: break; // should never happen
+			}
 
 			pixels += bpp;
 		}
