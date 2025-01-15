@@ -1537,26 +1537,25 @@ static int _audio_open_device(const char *device, int verbose)
 
 	if (device && *device) {
 		uint32_t devices_size = backend->device_count();
-		uint32_t i = AUDIO_BACKEND_DEFAULT;
+		uint32_t x = AUDIO_BACKEND_DEFAULT;
 
-		for (i = 0; i < devices_size; i++) {
+		for (uint32_t i = 0; i < devices_size; i++) {
 			const char *n = backend->device_name(i);
 			if (!n) // what
 				continue;
 
-			if (!strcmp(n, device))
+			if (!strcmp(n, device)) {
+				x = i;
 				break;
+			}
 		}
 
-		if (i != AUDIO_BACKEND_DEFAULT) {
-			current_audio_device = backend->open_device(i, &desired, &obtained);
-			if (current_audio_device) {
-				device_name = str_dup(device);
-				goto success;
-			} else {
-				log_nl();
-				log_appendf(4, "Failed to open configured audio device! Falling back to default...");
-			}
+		if (x != AUDIO_BACKEND_DEFAULT && (current_audio_device = backend->open_device(x, &desired, &obtained))) {
+			device_name = str_dup(device);
+			goto success;
+		} else if (strcmp(device, "default")) { // don't warn if the user wanted default device
+			log_nl();
+			log_appendf(4, "Failed to open configured audio device! Falling back to default...");
 		}
 	}
 
