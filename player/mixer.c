@@ -258,15 +258,6 @@ static inline uint32_t safe_abs_32(int32_t x)
 	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
-#define SNDMIX_STOREFASTMONOVOL \
-	int32_t v = vol * chan->right_volume; \
-	pvol[0] += v; \
-	pvol[1] += v; \
-	uint32_t vol_avg = safe_abs_32(v); \
-	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
-	if (vol_avg > max) max = vol_avg; \
-	pvol += 2;
-
 #define SNDMIX_RAMPMONOVOL \
 	left_ramp_volume += chan->left_ramp; \
 	right_ramp_volume += chan->right_ramp; \
@@ -277,16 +268,6 @@ static inline uint32_t safe_abs_32(int32_t x)
 	uint32_t vol_avg = (safe_abs_32(vol_lx) >> 1) + (safe_abs_32(vol_rx) >> 1); \
 	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
 	if (vol_avg > max) max = vol_avg; \
-	pvol += 2;
-
-#define SNDMIX_RAMPFASTMONOVOL \
-	right_ramp_volume += chan->right_ramp; \
-	int32_t fastvol = vol * rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
-	pvol[0] += fastvol; \
-	pvol[1] += fastvol; \
-	uint32_t fastvolabs = safe_abs_32(fastvol); \
-	if (fastvolabs > UINT32_C(0xFF0000)) fastvolabs = UINT32_C(0xFF0000); \
-	if (fastvolabs > max) max = fastvolabs; \
 	pvol += 2;
 
 #define SNDMIX_RAMPSTEREOVOL \
@@ -343,16 +324,12 @@ typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 #define BEGIN_MIX_INTERFACE(func) \
 	static void func(song_voice_t *channel, int32_t *pbuffer, int32_t *pbufmax) \
 	{ \
-		int_fast32_t position;
+		int32_t position;
 
 
 #define END_MIX_INTERFACE() \
 	SNDMIX_ENDSAMPLELOOP \
 	}
-
-/* aliases here */
-#define BEGIN_FASTMIX_INTERFACE(func) BEGIN_MIX_INTERFACE(func)
-#define END_FASTMIX_INTERFACE()       END_MIX_INTERFACE()
 
 // Volume Ramps
 #define BEGIN_RAMPMIX_INTERFACE(func) \
@@ -367,20 +344,6 @@ typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 	channel->right_volume     = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
 	channel->left_ramp_volume  = left_ramp_volume; \
 	channel->left_volume      = rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
-	}
-
-
-#define BEGIN_FASTRAMPMIX_INTERFACE(func) \
-	BEGIN_MIX_INTERFACE(func) \
-	int32_t right_ramp_volume = channel->right_ramp_volume;
-
-
-#define END_FASTRAMPMIX_INTERFACE() \
-	SNDMIX_ENDSAMPLELOOP \
-	channel->right_ramp_volume = right_ramp_volume; \
-	channel->left_ramp_volume  = right_ramp_volume; \
-	channel->right_volume     = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
-	channel->left_volume      = channel->right_volume; \
 	}
 
 
@@ -470,39 +433,32 @@ typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 /* generate processing functions */
 
 /* This is really just a diet version of C++'s templates. */
-#define DEFINE_MIX_INTERFACE_ALL(bits, chns, chnsupper, resampling, resampupper, fast, fastupper, filter, fltnam, fltint, ramp, rampupper, rmpint) \
-	BEGIN_ ## fastupper ## rmpint ## MIX_ ## fltint ## INTERFACE(fast ## fltnam ## chns ## bits ## Bit ## resampling ## ramp ## Mix) \
+#define DEFINE_MIX_INTERFACE_ALL(bits, chns, chnsupper, resampling, resampupper, filter, fltnam, fltint, ramp, rampupper, rmpint) \
+	BEGIN_ ## rmpint ## MIX_ ## fltint ## INTERFACE(fltnam ## chns ## bits ## Bit ## resampling ## ramp ## Mix) \
 		SNDMIX_BEGINSAMPLELOOP(bits) \
 		SNDMIX_GET ## chnsupper ## VOL ## resampupper(bits) \
 		filter \
-		SNDMIX_ ## rampupper ## fastupper ## chnsupper ## VOL \
-	END_ ## fastupper ## rmpint ## MIX_ ## fltint ## INTERFACE()
+		SNDMIX_ ## rampupper ## chnsupper ## VOL \
+	END_ ## rmpint ## MIX_ ## fltint ## INTERFACE()
 
 /* defines all ramping variations */
-#define DEFINE_MIX_INTERFACE_RAMP(bits, chns, chnsupper, filter, fltnam, fltint, fast, fastupper, resampling, resampupper) \
-	DEFINE_MIX_INTERFACE_ALL(bits, chns, chnsupper, resampling, resampupper, fast, fastupper, filter, fltnam, fltint, /* none */, STORE, /* none */) \
-	DEFINE_MIX_INTERFACE_ALL(bits, chns, chnsupper, resampling, resampupper, fast, fastupper, filter, fltnam, fltint, Ramp,       RAMP,  RAMP)
+#define DEFINE_MIX_INTERFACE_RAMP(bits, chns, chnsupper, filter, fltnam, fltint, resampling, resampupper) \
+	DEFINE_MIX_INTERFACE_ALL(bits, chns, chnsupper, resampling, resampupper, filter, fltnam, fltint, /* none */, STORE, /* none */) \
+	DEFINE_MIX_INTERFACE_ALL(bits, chns, chnsupper, resampling, resampupper, filter, fltnam, fltint, Ramp,       RAMP,  RAMP)
 
 /* defines all resampling variations */
-#define DEFINE_MIX_INTERFACE_RESAMPLING(bits, chns, chnsupper, filter, fltnam, fltint, fast, fastupper) \
-	DEFINE_MIX_INTERFACE_RAMP(bits, chns, chnsupper, filter, fltnam, fltint, fast, fastupper, /* none */, NOIDO) \
-	DEFINE_MIX_INTERFACE_RAMP(bits, chns, chnsupper, filter, fltnam, fltint, fast, fastupper, Linear,     LINEAR) \
-	DEFINE_MIX_INTERFACE_RAMP(bits, chns, chnsupper, filter, fltnam, fltint, fast, fastupper, Spline,     SPLINE) \
-	DEFINE_MIX_INTERFACE_RAMP(bits, chns, chnsupper, filter, fltnam, fltint, fast, fastupper, FirFilter,  FIRFILTER)
+#define DEFINE_MIX_INTERFACE_RESAMPLING(bits, chns, chnsupper, filter, fltnam, fltint) \
+	DEFINE_MIX_INTERFACE_RAMP(bits, chns, chnsupper, filter, fltnam, fltint, /* none */, NOIDO) \
+	DEFINE_MIX_INTERFACE_RAMP(bits, chns, chnsupper, filter, fltnam, fltint, Linear,     LINEAR) \
+	DEFINE_MIX_INTERFACE_RAMP(bits, chns, chnsupper, filter, fltnam, fltint, Spline,     SPLINE) \
+	DEFINE_MIX_INTERFACE_RAMP(bits, chns, chnsupper, filter, fltnam, fltint, FirFilter,  FIRFILTER)
 
 /* defines filter + no-filter variants */
 #define DEFINE_MIX_INTERFACE(bits) \
-	DEFINE_MIX_INTERFACE_RESAMPLING(bits, Mono,   MONO,   /* none */, /* none */, /* none */, /* none */, /* none */) \
-	DEFINE_MIX_INTERFACE_RESAMPLING(bits, Mono,   MONO,   SNDMIX_PROCESSMONOFILTER,   Filter, MONO_FLT_, /* none */, /* none */) \
-	DEFINE_MIX_INTERFACE_RESAMPLING(bits, Stereo, STEREO, /* none */, /* none */, /* none */, /* none */, /* none */) \
-	DEFINE_MIX_INTERFACE_RESAMPLING(bits, Stereo, STEREO, SNDMIX_PROCESSSTEREOFILTER, Filter, STEREO_FLT_, /* none */, /* none */)
-
-/* defines "fast" interfaces; no-filter + mono only */
-#define DEFINE_MIX_INTERFACE_FAST(bits) \
-	DEFINE_MIX_INTERFACE_RESAMPLING(bits, Mono, MONO, /* none */, /* none */, /* none */, Fast, FAST)
-
-DEFINE_MIX_INTERFACE_FAST(8)
-DEFINE_MIX_INTERFACE_FAST(16)
+	DEFINE_MIX_INTERFACE_RESAMPLING(bits, Mono,   MONO,   /* none */,                 /* none */, /* none */) \
+	DEFINE_MIX_INTERFACE_RESAMPLING(bits, Mono,   MONO,   SNDMIX_PROCESSMONOFILTER,   Filter,     MONO_FLT_) \
+	DEFINE_MIX_INTERFACE_RESAMPLING(bits, Stereo, STEREO, /* none */,                 /* none */, /* none */) \
+	DEFINE_MIX_INTERFACE_RESAMPLING(bits, Stereo, STEREO, SNDMIX_PROCESSSTEREOFILTER, Filter,     STEREO_FLT_)
 
 DEFINE_MIX_INTERFACE(8)
 DEFINE_MIX_INTERFACE(16)
@@ -540,6 +496,7 @@ DEFINE_STEREO_RESAMPLE_INTERFACE(16)
 //      [b2]    ramp
 //      [b3]    filter
 //      [b5-b4] src type
+//      [b6]    fast
 
 #define MIXNDX_16BIT        0x01
 #define MIXNDX_STEREO       0x02
@@ -549,26 +506,19 @@ DEFINE_STEREO_RESAMPLE_INTERFACE(16)
 #define MIXNDX_SPLINESRC    0x20
 #define MIXNDX_FIRSRC       0x30
 
-#define BUILD_MIX_FUNCTION_TABLE_RAMP(fast, resampling, filter, ramp) \
-	fast##filter##Mono8Bit##resampling##ramp##Mix, \
-	fast##filter##Mono16Bit##resampling##ramp##Mix, \
+#define BUILD_MIX_FUNCTION_TABLE_RAMP(resampling, filter, ramp) \
+	filter##Mono8Bit##resampling##ramp##Mix, \
+	filter##Mono16Bit##resampling##ramp##Mix, \
 	filter##Stereo8Bit##resampling##ramp##Mix, \
 	filter##Stereo16Bit##resampling##ramp##Mix,
 
-#define BUILD_MIX_FUNCTION_TABLE_FILTER(fast, resampling, filter) \
-	BUILD_MIX_FUNCTION_TABLE_RAMP(fast, resampling, filter, /* none */) \
-	BUILD_MIX_FUNCTION_TABLE_RAMP(fast, resampling, filter, Ramp)
-
-/* diverges for regular and fast variations */
-
-/* no fast filter variant at all, fallback to normal */
-#define BUILD_MIX_FUNCTION_TABLE_FAST(resampling) \
-	BUILD_MIX_FUNCTION_TABLE_FILTER(Fast, resampling, /* none */) \
-	BUILD_MIX_FUNCTION_TABLE_FILTER(/* none */, resampling, Filter)
+#define BUILD_MIX_FUNCTION_TABLE_FILTER(resampling, filter) \
+	BUILD_MIX_FUNCTION_TABLE_RAMP(resampling, filter, /* none */) \
+	BUILD_MIX_FUNCTION_TABLE_RAMP(resampling, filter, Ramp)
 
 #define BUILD_MIX_FUNCTION_TABLE(resampling) \
-	BUILD_MIX_FUNCTION_TABLE_FILTER(/* none */, resampling, /* none */) \
-	BUILD_MIX_FUNCTION_TABLE_FILTER(/* none */, resampling, Filter)
+	BUILD_MIX_FUNCTION_TABLE_FILTER(resampling, /* none */) \
+	BUILD_MIX_FUNCTION_TABLE_FILTER(resampling, Filter)
 
 // mix_(bits)(m/s)[_filt]_(interp/spline/fir/whatever)[_ramp]
 static const mix_interface_t mix_functions[2 * 2 * 16] = {
@@ -576,13 +526,6 @@ static const mix_interface_t mix_functions[2 * 2 * 16] = {
 	BUILD_MIX_FUNCTION_TABLE(Linear)
 	BUILD_MIX_FUNCTION_TABLE(Spline)
 	BUILD_MIX_FUNCTION_TABLE(FirFilter)
-};
-
-static const mix_interface_t fastmix_functions[2 * 2 * 16] = {
-	BUILD_MIX_FUNCTION_TABLE_FAST(/* none */)
-	BUILD_MIX_FUNCTION_TABLE_FAST(Linear)
-	BUILD_MIX_FUNCTION_TABLE_FAST(Spline)
-	BUILD_MIX_FUNCTION_TABLE_FAST(FirFilter)
 };
 
 static inline int32_t buffer_length_to_samples(int32_t mix_buf_cnt, song_voice_t *chan)
@@ -758,7 +701,6 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 			memset(csf->multi_write[nchan].buffer, 0, sizeof(csf->multi_write[nchan].buffer));
 
 	for (uint32_t nchan = 0; nchan < csf->num_voices; nchan++) {
-		const mix_interface_t *mix_func_table;
 		song_voice_t *const channel = &csf->voices[csf->voice_mix[nchan]];
 		uint32_t flags;
 		uint32_t nrampsamples;
@@ -792,15 +734,6 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 				flags |= MIXNDX_SPLINESRC;
 			else
 				flags |= MIXNDX_LINEARSRC;    // use
-		}
-
-		if ((flags < 0x40) &&
-			(channel->left_volume == channel->right_volume) &&
-			((!channel->ramp_length) ||
-			(channel->left_ramp == channel->right_ramp))) {
-			mix_func_table = fastmix_functions;
-		} else {
-			mix_func_table = mix_functions;
 		}
 
 		nsamples = count;
@@ -897,8 +830,8 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 				// Choose function for mixing
 				mix_interface_t mix_func;
 				mix_func = channel->ramp_length
-					? mix_func_table[flags | MIXNDX_RAMP]
-					: mix_func_table[flags];
+					? mix_functions[flags | MIXNDX_RAMP]
+					: mix_functions[flags];
 
 				// Loop wrap-around magic
 				if (lookahead_ptr) {
