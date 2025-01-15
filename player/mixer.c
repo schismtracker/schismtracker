@@ -444,26 +444,26 @@ typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 #define BEGIN_RESAMPLE_INTERFACE(func, sampletype, numchannels) \
 	void func(sampletype *oldbuf, sampletype *newbuf, uint32_t oldlen, uint32_t newlen) \
 	{ \
-	uint64_t position = 0; \
-	const sampletype *p = oldbuf; \
-	sampletype *pvol = newbuf; \
-	const sampletype *pbufmax = &newbuf[newlen* numchannels]; \
-	uint64_t increment = (((uint64_t)oldlen)<<16)/((uint64_t)newlen); \
-	do {
+		uint32_t position = 0; \
+		const sampletype *p = oldbuf; \
+		sampletype *pvol = newbuf; \
+		const sampletype *pbufmax = &newbuf[newlen* numchannels]; \
+		uint32_t increment = (((uint32_t)oldlen)<<16)/((uint32_t)newlen); \
+		do {
 
 #define END_RESAMPLE_INTERFACE_MONO() \
-		*pvol = vol; \
-		pvol++; \
-		position += increment; \
-	} while (pvol < pbufmax); \
+			*pvol = vol; \
+			pvol++; \
+			position += increment; \
+		} while (pvol < pbufmax); \
 	}
 
 #define END_RESAMPLE_INTERFACE_STEREO() \
-		pvol[0] = vol_l; \
-		pvol[1] = vol_r; \
-		pvol += 2; \
-		position += increment; \
-	} while (pvol < pbufmax); \
+			pvol[0] = vol_l; \
+			pvol[1] = vol_r; \
+			pvol += 2; \
+			position += increment; \
+		} while (pvol < pbufmax); \
 	}
 
 /* --------------------------------------------------------------------------- */
