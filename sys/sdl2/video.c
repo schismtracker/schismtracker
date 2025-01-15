@@ -143,7 +143,7 @@ static const struct {
 	// ----------------
 	{SDL_PIXELFORMAT_RGB888, "RGB888"},
 	{SDL_PIXELFORMAT_ARGB8888, "ARGB8888"},
-	// {SDL_PIXELFORMAT_RGB24, "RGB24"},
+	{SDL_PIXELFORMAT_RGB24, "RGB24"},
 	{SDL_PIXELFORMAT_RGB565, "RGB565"},
 	{SDL_PIXELFORMAT_RGB555, "RGB555"},
 	{SDL_PIXELFORMAT_ARGB1555, "ARGB1555"},
@@ -261,7 +261,7 @@ static void set_icon(void)
 static void video_redraw_texture(void)
 {
 	size_t pref_last = ARRAY_SIZE(native_formats);
-	uint32_t format = SDL_PIXELFORMAT_RGB888;
+	uint32_t format = SDL_PIXELFORMAT_RGB24;
 
 	if (video.texture)
 		sdl2_DestroyTexture(video.texture);

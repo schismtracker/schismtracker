@@ -379,13 +379,13 @@ void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 			case 3:
 				// convert 32-bit to 24-bit
 #ifdef WORDS_BIGENDIAN
-				*pixels++ = ((char *)&c)[1]; break;
-				*pixels++ = ((char *)&c)[2]; break;
-				*pixels++ = ((char *)&c)[3]; break;
+				*pixels++ = ((char *)&c)[1];
+				*pixels++ = ((char *)&c)[2];
+				*pixels++ = ((char *)&c)[3];
 #else
-				*pixels++ = ((char *)&c)[0]; break;
-				*pixels++ = ((char *)&c)[1]; break;
-				*pixels++ = ((char *)&c)[2]; break;
+				*pixels++ = ((char *)&c)[0];
+				*pixels++ = ((char *)&c)[1];
+				*pixels++ = ((char *)&c)[2];
 #endif
 				break;
 			case 4: *(uint32_t*)pixels = c; break;
@@ -448,13 +448,13 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 			case 3:
 				// convert 32-bit to 24-bit
 #ifdef WORDS_BIGENDIAN
-				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 1]; break;
-				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 2]; break;
-				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 3]; break;
+				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 1];
+				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 2];
+				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 3];
 #else
-				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 0]; break;
-				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 1]; break;
-				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 2]; break;
+				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 0];
+				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 1];
+				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 2];
 #endif
 				break;
 			case 4:  *(uint32_t *)pixels = pixels_u.ui[x * NATIVE_SCREEN_WIDTH / width]; break;
@@ -546,15 +546,6 @@ void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 	uint32_t mouseline[80];
 	uint32_t mouseline_mask[80];
 
-	/* wtf */
-	if (bpp == 3) {
-		int pitch24 = pitch - (NATIVE_SCREEN_WIDTH * 3);
-		if (pitch24 < 0)
-			return; /* eh? */
-
-		pitch = pitch24;
-	}
-
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
 		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask, mouse_y);
 		switch (bpp) {
@@ -566,11 +557,15 @@ void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 			break;
 		case 3:
 			vgamem_scan32(y, (uint32_t *)cv32backing, tpal, mouseline, mouseline_mask);
-			for (x = 0, a = 0; x < pitch && a < NATIVE_SCREEN_WIDTH; x += 3, a += 4) {
-#if WORDS_BIGENDIAN
-				memcpy(pixels + x, cv32backing + a + 1, 3);
+			for (x = 0; x < NATIVE_SCREEN_WIDTH; x++) {
+#ifdef WORDS_BIGENDIAN
+				pixels[(x * 3) + 0] = ((unsigned char *)cv32backing)[(x * 4) + 1];
+				pixels[(x * 3) + 1] = ((unsigned char *)cv32backing)[(x * 4) + 2];
+				pixels[(x * 3) + 2] = ((unsigned char *)cv32backing)[(x * 4) + 3];
 #else
-				memcpy(pixels + x, cv32backing + a, 3);
+				pixels[(x * 3) + 0] = ((unsigned char *)cv32backing)[(x * 4) + 0];
+				pixels[(x * 3) + 1] = ((unsigned char *)cv32backing)[(x * 4) + 1];
+				pixels[(x * 3) + 2] = ((unsigned char *)cv32backing)[(x * 4) + 2];
 #endif
 			}
 			break;
