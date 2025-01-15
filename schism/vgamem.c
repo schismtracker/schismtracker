@@ -46,8 +46,8 @@ enum vgamem_font {
 };
 
 struct vgamem_colors {
-	uint8_t fg : 4; /* 0...15 */
-	uint8_t bg : 4; /* 0...15 */
+	uint_fast8_t fg; /* 0...15 */
+	uint_fast8_t bg; /* 0...15 */
 };
 
 /* contains all the needed information to draw many
@@ -62,14 +62,14 @@ struct vgamem_char {
 		struct {
 			/* two chars here */
 			struct {
-				uint8_t c : 8; /* 0...255 */
+				uint_fast8_t c; /* 0...255 */
 
 				struct vgamem_colors colors;
 			} c1, c2;
 		} halfwidth;
 
 		struct {
-			uint8_t c : 8; /* 0...255 */
+			uint_fast8_t c; /* 0...255 */
 
 			struct vgamem_colors colors;
 		} cp437, itf; /* cp437 and itf have the same size */
@@ -78,7 +78,7 @@ struct vgamem_char {
 			/* can be any Unicode codepoint; realistically
 			 * only a very small subset of characters can be
 			 * supported though */
-			uint32_t c : 32;
+			uint_fast32_t c;
 
 			struct vgamem_colors colors;
 		} unicode;
@@ -245,96 +245,79 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 	}
 }
 
-/* generic scanner; BITS must be one of 8, 16, 32, 64 */
+/* generic scanner; BITS must be one of 8, 16, 32, 64
+ * I've tried to make this code as small and predictable
+ * as possible in an effort to make it fast as I can. */
 #define VGAMEM_SCANNER_VARIANT(BITS) \
 	void vgamem_scan##BITS(uint32_t ry, uint##BITS##_t *out, uint32_t tc[16], uint32_t mouseline[80], uint32_t mouseline_mask[80]) \
 	{ \
-		struct vgamem_char *bp; \
-		uint32_t dg; \
-		uint8_t *q; \
-		uint8_t *itf, *bios, *bioslow, *hf, *hiragana, *extlatin, *greek; \
-		uint32_t x, y; \
-		int fg, bg; \
+		/* constants */ \
+		const uint_fast32_t y = (ry >> 3), yl = (ry & 7); \
+		const uint8_t *q = ovl + (ry * 640); \
+		const uint8_t *const itf = font_data + yl, \
+			*const bios = font_default_upper_alt + yl, \
+			*const bioslow = font_default_lower + yl, \
+			*const hf = font_half_data + (yl >> 1), \
+			*const hiragana = font_hiragana + yl, \
+			*const extlatin = font_extended_latin + yl, \
+			*const greek = font_greek + yl; \
+		const struct vgamem_char *bp = &vgamem_read[y * 80]; \
 	\
-		q = ovl + (ry * 640); \
-		y = ry >> 3; \
-		bp = &vgamem_read[y * 80]; \
-		itf = font_data + (ry & 7); \
-		bios = ((uint8_t *)font_default_upper_alt) + (ry & 7); \
-		bioslow = ((uint8_t *)font_default_lower) + (ry & 7); \
-		hiragana = ((uint8_t *)font_hiragana) + (ry & 7); \
-		extlatin = ((uint8_t *)font_extended_latin) + (ry & 7); \
-		greek = ((uint8_t *)font_greek) + (ry & 7); \
-		hf = font_half_data + ((ry & 7) >> 1); \
+		uint_fast8_t fg, bg, fg2, bg2; \
+		uint_fast8_t dg, dg1, dg2; \
+		uint_fast8_t x; \
 	\
 		for (x = 0; x < 80; x++, bp++, q += 8) { \
 			switch (bp->font) { \
 			case VGAMEM_FONT_ITF: \
-			case VGAMEM_FONT_BIOS: \
 				/* regular character */ \
+				fg = bp->character.itf.colors.fg; \
+				bg = bp->character.itf.colors.bg; \
+				fg2 = fg; \
+				bg2 = bg; \
+				dg = itf[bp->character.itf.c << 3]; \
+				break; \
+			case VGAMEM_FONT_BIOS: \
+				/* VGA BIOS character */ \
 				fg = bp->character.cp437.colors.fg; \
 				bg = bp->character.cp437.colors.bg; \
-				if (bp->font == VGAMEM_FONT_BIOS) { \
-					dg = (bp->character.cp437.c & 0x80) \
-						? bios[(bp->character.cp437.c & 0x7F) << 3] \
-						: bioslow[(bp->character.cp437.c & 0x7F) << 3]; \
-				} else { \
-					dg = itf[bp->character.itf.c << 3]; \
-				} \
-				dg |= mouseline[x]; \
-				dg &= ~(mouseline_mask[x] ^ mouseline[x]); \
-			\
-				*out++ = tc[(dg & 0x80) ? fg : bg]; \
-				*out++ = tc[(dg & 0x40) ? fg : bg]; \
-				*out++ = tc[(dg & 0x20) ? fg : bg]; \
-				*out++ = tc[(dg & 0x10) ? fg : bg]; \
-				*out++ = tc[(dg & 0x8) ? fg : bg]; \
-				*out++ = tc[(dg & 0x4) ? fg : bg]; \
-				*out++ = tc[(dg & 0x2) ? fg : bg]; \
-				*out++ = tc[(dg & 0x1) ? fg : bg]; \
+				fg2 = fg; \
+				bg2 = bg; \
+				dg = (bp->character.cp437.c & 0x80) \
+					? bios[(bp->character.cp437.c & 0x7F) << 3] \
+					: bioslow[(bp->character.cp437.c & 0x7F) << 3]; \
 				break; \
 			case VGAMEM_FONT_HALFWIDTH: \
-				dg = hf[bp->character.halfwidth.c1.c << 2]; \
-				if (!(ry & 1)) \
-					dg = (dg >> 4); \
-				dg |= mouseline[x] >> 4; \
-				dg &= ~(mouseline_mask[x] ^ mouseline[x]) >> 4; \
-			\
+				/* halfwidth (used for patterns) */ \
+				dg1 = hf[bp->character.halfwidth.c1.c << 2]; \
+				dg2 = hf[bp->character.halfwidth.c2.c << 2]; \
+	\
+				dg = (!(ry & 1)) \
+					? ((dg1 & 0xF0) | dg2 >> 4) \
+					: (dg1 << 4 | (dg2 & 0xF)); \
+	\
 				fg = bp->character.halfwidth.c1.colors.fg; \
 				bg = bp->character.halfwidth.c1.colors.bg; \
-			\
-				*out++ = tc[(dg & 0x8) ? fg : bg]; \
-				*out++ = tc[(dg & 0x4) ? fg : bg]; \
-				*out++ = tc[(dg & 0x2) ? fg : bg]; \
-				*out++ = tc[(dg & 0x1) ? fg : bg]; \
-			\
-				dg = hf[bp->character.halfwidth.c2.c << 2]; \
-				if (!(ry & 1)) \
-					dg = (dg >> 4); \
-				dg |= mouseline[x]; \
-				dg &= ~(mouseline_mask[x] ^ mouseline[x]); \
-			\
-				fg = bp->character.halfwidth.c2.colors.fg; \
-				bg = bp->character.halfwidth.c2.colors.bg; \
-			\
-				*out++ = tc[(dg & 0x8) ? fg : bg]; \
-				*out++ = tc[(dg & 0x4) ? fg : bg]; \
-				*out++ = tc[(dg & 0x2) ? fg : bg]; \
-				*out++ = tc[(dg & 0x1) ? fg : bg]; \
+				fg2 = bp->character.halfwidth.c2.colors.fg; \
+				bg2 = bp->character.halfwidth.c2.colors.bg; \
 				break; \
 			case VGAMEM_FONT_OVERLAY: \
-				*out++ = tc[ (q[0]|((mouseline[x] & 0x80)?15:0)) & 255]; \
-				*out++ = tc[ (q[1]|((mouseline[x] & 0x40)?15:0)) & 255]; \
-				*out++ = tc[ (q[2]|((mouseline[x] & 0x20)?15:0)) & 255]; \
-				*out++ = tc[ (q[3]|((mouseline[x] & 0x10)?15:0)) & 255]; \
-				*out++ = tc[ (q[4]|((mouseline[x] & 0x08)?15:0)) & 255]; \
-				*out++ = tc[ (q[5]|((mouseline[x] & 0x04)?15:0)) & 255]; \
-				*out++ = tc[ (q[6]|((mouseline[x] & 0x02)?15:0)) & 255]; \
-				*out++ = tc[ (q[7]|((mouseline[x] & 0x01)?15:0)) & 255]; \
-				break; \
+				/* raw pixel data, needs special code ;) */ \
+				*out++ = tc[ (q[0]|((mouseline[x] & 0x80)?15:0)) & 0xFF]; \
+				*out++ = tc[ (q[1]|((mouseline[x] & 0x40)?15:0)) & 0xFF]; \
+				*out++ = tc[ (q[2]|((mouseline[x] & 0x20)?15:0)) & 0xFF]; \
+				*out++ = tc[ (q[3]|((mouseline[x] & 0x10)?15:0)) & 0xFF]; \
+				*out++ = tc[ (q[4]|((mouseline[x] & 0x08)?15:0)) & 0xFF]; \
+				*out++ = tc[ (q[5]|((mouseline[x] & 0x04)?15:0)) & 0xFF]; \
+				*out++ = tc[ (q[6]|((mouseline[x] & 0x02)?15:0)) & 0xFF]; \
+				*out++ = tc[ (q[7]|((mouseline[x] & 0x01)?15:0)) & 0xFF]; \
+				continue; \
 			case VGAMEM_FONT_UNICODE: { \
-				uint32_t c = bp->character.unicode.c; \
+				/* Any unicode character. */ \
+				uint_fast32_t c = bp->character.unicode.c; \
 	\
+				/* These are ordered by how often they will probably appear
+				 * for an average user of Schism (i.e., English speakers). */ \
 				if (c >= 0x20 && c <= 0x7F) { \
 					/* ASCII */ \
 					dg = itf[c << 3]; \
@@ -349,29 +332,30 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 					dg = hiragana[(c - 0x3040) << 3]; \
 				} else { \
 					/* will display a ? if no cp437 equivalent found */ \
-					uint32_t cp437 = char_unicode_to_cp437(c); \
-					dg = itf[cp437 << 3]; \
+					dg = itf[char_unicode_to_cp437(c) << 3]; \
 				} \
 	\
 				fg = bp->character.unicode.colors.fg; \
 				bg = bp->character.unicode.colors.bg; \
+				fg2 = fg; \
+				bg2 = bg; \
 	\
-				dg |= mouseline[x]; \
-				dg &= ~(mouseline_mask[x] ^ mouseline[x]); \
-	\
-	\
-				*out++ = tc[(dg & 0x80) ? fg : bg]; \
-				*out++ = tc[(dg & 0x40) ? fg : bg]; \
-				*out++ = tc[(dg & 0x20) ? fg : bg]; \
-				*out++ = tc[(dg & 0x10) ? fg : bg]; \
-				*out++ = tc[(dg & 0x8) ? fg : bg]; \
-				*out++ = tc[(dg & 0x4) ? fg : bg]; \
-				*out++ = tc[(dg & 0x2) ? fg : bg]; \
-				*out++ = tc[(dg & 0x1) ? fg : bg]; \
-	\
-				break; /* unused chars */ \
+				break; \
 			} \
+			default: continue; \
 			} \
+	\
+			dg |= mouseline[x]; \
+			dg &= ~(mouseline_mask[x] ^ mouseline[x]); \
+	\
+			*out++ = tc[(dg & 0x80) ? fg : bg]; \
+			*out++ = tc[(dg & 0x40) ? fg : bg]; \
+			*out++ = tc[(dg & 0x20) ? fg : bg]; \
+			*out++ = tc[(dg & 0x10) ? fg : bg]; \
+			*out++ = tc[(dg & 0x8) ? fg2 : bg2]; \
+			*out++ = tc[(dg & 0x4) ? fg2 : bg2]; \
+			*out++ = tc[(dg & 0x2) ? fg2 : bg2]; \
+			*out++ = tc[(dg & 0x1) ? fg2 : bg2]; \
 		} \
 	}
 
