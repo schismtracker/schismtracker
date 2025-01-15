@@ -101,70 +101,71 @@ static const char *win32_audio_driver_name(int i)
 /* ------------------------------------------------------------------------ */
 
 // devices name cache; refreshed after every call to win32_audio_device_count
-static char **devices = NULL;
+static struct {
+	uint32_t id;
+	char *name;
+} *devices = NULL;
 static size_t devices_size = 0;
 
-// FIXME: Apparently some devices provide a name guid, but nothing seems to
-// actually be put into MediaCategories, which essentially makes this useless.
+// By default, waveout devices are limited to 31 chars, which means we get
+// lovely device names like
+//  > Headphones (USB-C to 3.5mm Head
+// Doing this gives us access to longer and more "general" devices names,
+// such as
+//  > G432 Gaming Headset
+// but only if the device supports it!
 static int _win32_audio_lookup_device_name(const GUID *nameguid, char **result)
 {
-#define GUIDF "%08" PRIx32 "-%04" PRIx16 "-%04" PRIx16 "-%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" PRIx8
+	// format for printing GUIDs with printf
+#define GUIDF "%08" PRIx32 "-%04" PRIx16 "-%04" PRIx16 "-%02" PRIx8 "%02" PRIx8 "-%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" PRIx8
 #define GUIDX(x) (x).Data1, (x).Data2, (x).Data3, (x).Data4[0], (x).Data4[1], (x).Data4[2], (x).Data4[3], (x).Data4[4], (x).Data4[5], (x).Data4[6], (x).Data4[7]
 	// Set this to NULL before doing anything
 	*result = NULL;
 
-	// A list of key formats to try (only one for now, i guess)
-	static const struct {
-		LPCWSTR key, value;
-	} key_fmts[] = {
-		{L"SYSTEM\\CurrentControlSet\\Control\\MediaCategories\\{" GUIDF "}", L"Name"},
-	};
+	WCHAR *strw = NULL;
+	DWORD len = 0;
 
-	for (int i = 0; i < ARRAY_SIZE(key_fmts); i++) {
-		WCHAR *strw = NULL;
-		DWORD len = 0;
+	static const GUID nullguid = {0};
+	if (!memcmp(nameguid, &nullguid, sizeof(nullguid)))
+		return 0;
 
-		static const GUID nullguid = {0};
-		if (!memcmp(nameguid, &nullguid, sizeof(nullguid)))
+	{
+		HKEY hkey;
+		DWORD type;
+
+		WCHAR keystr[256] = {0};
+		_snwprintf(keystr, ARRAY_SIZE(keystr) - 1, L"System\\CurrentControlSet\\Control\\MediaCategories\\{" GUIDF "}", GUIDX(*nameguid));
+
+		if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, keystr, 0, KEY_QUERY_VALUE, &hkey) != ERROR_SUCCESS)
 			return 0;
 
-		{
-			HKEY hkey;
-			WCHAR keystr[256];
-			_snwprintf(keystr, ARRAY_SIZE(keystr), key_fmts[i].key, GUIDX(*nameguid));
-			if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, keystr, 0, KEY_QUERY_VALUE, &hkey) != ERROR_SUCCESS)
-				continue;
-
-			DWORD len;
-			if (RegQueryValueExW(hkey, key_fmts[i].value, NULL, NULL, NULL, &len) != ERROR_SUCCESS) {
-				RegCloseKey(hkey);
-				continue;
-			}
-
-			WCHAR *strw = mem_alloc(len + sizeof(WCHAR));
-
-			if (RegQueryValueExW(hkey, key_fmts[i].value, NULL, NULL, (LPBYTE)strw, &len) != ERROR_SUCCESS) {
-				RegCloseKey(hkey);
-				free(strw);
-				continue;
-			}
-
+		if (RegQueryValueExW(hkey, L"Name", NULL, &type, NULL, &len) != ERROR_SUCCESS || type != REG_SZ) {
 			RegCloseKey(hkey);
+			return 0;
 		}
 
-		// force NUL terminate
-		strw[len >> 1] = L'\0';
+		strw = mem_alloc(len + sizeof(WCHAR));
 
-		if (charset_iconv(strw, result, CHARSET_WCHAR_T, CHARSET_UTF8, len + sizeof(WCHAR))) {
+		if (RegQueryValueExW(hkey, L"Name", NULL, NULL, (LPBYTE)strw, &len) != ERROR_SUCCESS) {
+			RegCloseKey(hkey);
 			free(strw);
-			continue;
+			return 0;
 		}
 
-		free(strw);
-		return 1;
+		RegCloseKey(hkey);
 	}
 
-	return 0;
+	// force NUL terminate
+	strw[len >> 1] = L'\0';
+
+	if (charset_iconv(strw, result, CHARSET_WCHAR_T, CHARSET_UTF8, len + sizeof(WCHAR))) {
+		free(strw);
+		return 0;
+	}
+
+	free(strw);
+	return 1;
+
 #undef GUIDF
 #undef GUIDX
 }
@@ -175,7 +176,7 @@ static uint32_t win32_audio_device_count(void)
 
 	if (devices) {
 		for (size_t i = 0; i < devices_size; i++)
-			free(devices[i]);
+			free(devices[i].name);
 		free(devices);
 	}
 
@@ -200,19 +201,18 @@ static uint32_t win32_audio_device_count(void)
 			// Try WAVEOUTCAPS2 before WAVEOUTCAPS
 			if (waveOutGetDevCapsW(i, (LPWAVEOUTCAPSW)&caps.w2, sizeof(caps.w2)) == MMSYSERR_NOERROR) {
 				// Try receiving based on the name GUID. Otherwise, fall back to the short name.
-				if (!_win32_audio_lookup_device_name(&caps.w2.NameGuid, &devices[devices_size])
-					&& charset_iconv(caps.w2.szPname, &devices[devices_size], CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(caps.w2.szPname)))
+				if (!_win32_audio_lookup_device_name(&caps.w2.NameGuid, &devices[devices_size].name)
+					&& charset_iconv(caps.w2.szPname, &devices[devices_size].name, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(caps.w2.szPname)))
 					continue;
 			} else if (waveOutGetDevCapsW(i, &caps.w, sizeof(caps.w)) == MMSYSERR_NOERROR) {
-				if (charset_iconv(caps.w.szPname, &devices[devices_size], CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(caps.w.szPname)))
+				if (charset_iconv(caps.w.szPname, &devices[devices_size].name, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(caps.w.szPname)))
 					continue;
 			} else {
 				continue;
 			}
 		}
 
-		if (charset_iconv(win9x ? ((void *)caps.a.szPname) : ((void *)caps.w.szPname), &devices[devices_size], win9x ? CHARSET_ANSI : CHARSET_WCHAR_T, CHARSET_UTF8, win9x ? (sizeof(caps.a.szPname)) : (sizeof(caps.w.szPname))))
-			continue;
+		devices[devices_size].id = i;
 
 		devices_size++;
 	}
@@ -227,7 +227,7 @@ static const char *win32_audio_device_name(uint32_t i)
 	if (i >= devices_size)
 		return NULL;
 
-	return devices[i];
+	return devices[i].name;
 }
 
 /* ---------------------------------------------------------- */
@@ -254,7 +254,7 @@ static void win32_audio_quit_driver(void)
 	// Free the devices
 	if (devices) {
 		for (size_t i = 0; i < devices_size; i++)
-			free(devices[i]);
+			free(devices[i].name);
 		free(devices);
 
 		devices = NULL;
@@ -304,7 +304,7 @@ static void CALLBACK win32_audio_callback(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwI
 static schism_audio_device_t *win32_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
 	// Default to some device that can handle our output
-	UINT device_id = (id == AUDIO_BACKEND_DEFAULT) ? WAVE_MAPPER : id;
+	UINT device_id = (id == AUDIO_BACKEND_DEFAULT || id < devices_size) ? (WAVE_MAPPER) : devices[id].id;
 
 	// Fill in the format structure
 	WAVEFORMATEX format = {
