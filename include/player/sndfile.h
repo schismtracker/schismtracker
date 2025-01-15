@@ -8,6 +8,7 @@
 #define SCHISM_PLAYER_SNDFILE_H_
 
 #include "headers.h"
+#include "bshift.h"
 
 #include "disko.h"
 #include "slurp.h"
@@ -711,7 +712,7 @@ static inline SCHISM_CONST SCHISM_ALWAYS_INLINE int32_t _muldiv(int32_t a, int32
 // Return (a*b+c/2)/c - no divide error
 static inline SCHISM_CONST SCHISM_ALWAYS_INLINE int32_t _muldivr(int32_t a, int32_t b, int32_t c)
 {
-	return ((int64_t) a * (int64_t) b + (c >> 1)) / c;
+	return ((int64_t) a * (int64_t) b + rshift_signed(c, 1)) / c;
 }
 
 #endif /* SCHISM_PLAYER_SNDFILE_H_ */
