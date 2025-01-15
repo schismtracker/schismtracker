@@ -1711,8 +1711,10 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 		}
 
 		// give up
-		if (find == INVALID_HANDLE_VALUE)
+		if (find == INVALID_HANDLE_VALUE) {
+			add_platform_dirs(path, flist, dlist);
 			return -1;
+		}
 
 		/* do-while to process the first file... */
 		for (;;) {
@@ -1776,15 +1778,18 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 
 		add_platform_dirs(path, flist, dlist);
 	} else if (attrib == INVALID_FILE_ATTRIBUTES) {
+		add_platform_dirs(path, flist, dlist);
 		return -1;
 	} else {
 		/* file? probably.
 		 * make sure when editing this code to keep it in sync
 		 * with the below code for non-Windows platforms */
-		if (!load_library || !load_library(path, flist, dlist)) {
+		if (load_library && !load_library(path, flist, dlist)) {
 			char* ptr = dmoz_path_get_parent_directory(path);
 			if (ptr)
 				dmoz_add_file_or_dir(flist, dlist, ptr, str_dup("."), NULL, -10);
+			else
+				add_platform_dirs(path, flist, dlist);
 		}
 	}
 
