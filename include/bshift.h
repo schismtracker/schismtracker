@@ -59,13 +59,13 @@ SCHISM_SIGNED_LSHIFT_VARIANT(32)
 SCHISM_SIGNED_LSHIFT_VARIANT(64)
 SCHISM_SIGNED_LSHIFT_VARIANT(max)
 #define lshift_signed(x, y) \
-	((sizeof((x) << (y)) == sizeof(int8_t)) \
+	((sizeof((x) << (y)) <= sizeof(int8_t)) \
 		? (schism_signed_lshift_8_(x, y)) \
-		: (sizeof((x) << (y)) == sizeof(int16_t)) \
+		: (sizeof((x) << (y)) <= sizeof(int16_t)) \
 			? (schism_signed_lshift_16_(x, y)) \
-			: (sizeof((x) << (y)) == sizeof(int32_t)) \
+			: (sizeof((x) << (y)) <= sizeof(int32_t)) \
 				? (schism_signed_lshift_32_(x, y)) \
-				: (sizeof((x) << (y)) == sizeof(int64_t)) \
+				: (sizeof((x) << (y)) <= sizeof(int64_t)) \
 					? (schism_signed_lshift_64_(x, y)) \
 					: (schism_signed_lshift_max_(x, y)))
 
@@ -78,13 +78,13 @@ SCHISM_SIGNED_RSHIFT_VARIANT(32)
 SCHISM_SIGNED_RSHIFT_VARIANT(64)
 SCHISM_SIGNED_RSHIFT_VARIANT(max)
 # define rshift_signed(x, y) \
-	((sizeof((x) >> (y)) == sizeof(int8_t)) \
+	((sizeof((x) >> (y)) <= sizeof(int8_t)) \
 		? (schism_signed_rshift_8_(x, y)) \
-		: (sizeof((x) >> (y)) == sizeof(int16_t)) \
+		: (sizeof((x) >> (y)) <= sizeof(int16_t)) \
 			? (schism_signed_rshift_16_(x, y)) \
-			: (sizeof((x) >> (y)) == sizeof(int32_t)) \
+			: (sizeof((x) >> (y)) <= sizeof(int32_t)) \
 				? (schism_signed_rshift_32_(x, y)) \
-				: (sizeof((x) >> (y)) == sizeof(int64_t)) \
+				: (sizeof((x) >> (y)) <= sizeof(int64_t)) \
 					? (schism_signed_rshift_64_(x, y)) \
 					: (schism_signed_rshift_max_(x, y)))
 #endif
