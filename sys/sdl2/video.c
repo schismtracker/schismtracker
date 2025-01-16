@@ -261,7 +261,7 @@ static void set_icon(void)
 static void video_redraw_texture(void)
 {
 	size_t pref_last = ARRAY_SIZE(native_formats);
-	uint32_t format = SDL_PIXELFORMAT_RGB24;
+	uint32_t format = SDL_PIXELFORMAT_RGB888;
 
 	if (video.texture)
 		sdl2_DestroyTexture(video.texture);
