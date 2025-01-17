@@ -103,9 +103,16 @@
 // MIXING MACROS
 // ----------------------------------------------------------------------------
 
-static inline uint32_t safe_abs_32(int32_t x)
+// Safe absolute value of a 32-bit integer.
+static inline SCHISM_ALWAYS_INLINE uint32_t safe_abs_32(int32_t x)
 {
-	return (((x) < 0) ? (uint32_t)((~(x)) + 1) : (uint32_t)(x));
+	return (x < 0) ? (uint32_t)(~x + 1) : (uint32_t)x;
+}
+
+// Fast average of two unsigned 32-bit integers.
+static inline SCHISM_ALWAYS_INLINE uint32_t avg_u32(uint32_t a, uint32_t b)
+{
+	return (a >> 1) + (b >> 1) + (a & b & 1);
 }
 
 #define SNDMIX_BEGINSAMPLELOOP(bits) \
@@ -237,25 +244,26 @@ static inline uint32_t safe_abs_32(int32_t x)
 			, 1), \
 		WFIR_##bits##SHIFT - 1);
 
+#define SNDMIX_STOREVUMETER \
+	uint32_t vol_avg = avg_u32(safe_abs_32(vol_lx), safe_abs_32(vol_rx)); \
+	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
+	if (vol_avg > max) max = vol_avg;
+
 // FIXME why are these backwards? what?
 #define SNDMIX_STOREMONOVOL \
 	int32_t vol_lx = vol * chan->right_volume; \
 	int32_t vol_rx = vol * chan->left_volume; \
+	SNDMIX_STOREVUMETER \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	uint32_t vol_avg = (safe_abs_32(vol_lx) >> 1) + (safe_abs_32(vol_rx) >> 1); \
-	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
-	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
 #define SNDMIX_STORESTEREOVOL \
 	int32_t vol_lx = vol_l * chan->right_volume; \
 	int32_t vol_rx = vol_r * chan->left_volume; \
+	SNDMIX_STOREVUMETER \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	uint32_t vol_avg = (safe_abs_32(vol_lx) >> 1) + (safe_abs_32(vol_rx) >> 1); \
-	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
-	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
 #define SNDMIX_RAMPMONOVOL \
@@ -263,11 +271,9 @@ static inline uint32_t safe_abs_32(int32_t x)
 	right_ramp_volume += chan->right_ramp; \
 	int32_t vol_lx = vol * rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
 	int32_t vol_rx = vol * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
+	SNDMIX_STOREVUMETER \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	uint32_t vol_avg = (safe_abs_32(vol_lx) >> 1) + (safe_abs_32(vol_rx) >> 1); \
-	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
-	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
 #define SNDMIX_RAMPSTEREOVOL \
@@ -275,11 +281,9 @@ static inline uint32_t safe_abs_32(int32_t x)
 	right_ramp_volume += chan->right_ramp; \
 	int32_t vol_lx = vol_l * rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
 	int32_t vol_rx = vol_r * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
+	SNDMIX_STOREVUMETER \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
-	uint32_t vol_avg = (safe_abs_32(vol_lx) >> 1) + (safe_abs_32(vol_rx) >> 1); \
-	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
-	if (vol_avg > max) max = vol_avg; \
 	pvol += 2;
 
 ///////////////////////////////////////////////////
@@ -876,8 +880,8 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 			nsamples -= smpcount;
 
 			if (channel->ramp_length) {
-				channel->ramp_length -= smpcount;
-				if (channel->ramp_length <= 0) {
+				if (channel->ramp_length <= smpcount) {
+					// Ramping is done
 					channel->ramp_length = 0;
 					channel->right_volume = channel->right_volume_new;
 					channel->left_volume = channel->left_volume_new;
@@ -888,6 +892,8 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 						channel->length = 0;
 						channel->current_sample_data = NULL;
 					}
+				} else {
+					channel->ramp_length -= smpcount;
 				}
 			}
 		} while (nsamples > 0);
