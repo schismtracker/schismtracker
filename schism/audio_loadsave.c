@@ -633,6 +633,7 @@ void song_copy_sample(int n, song_sample_t *src)
 
 		current_song->samples[n].data = csf_allocate_sample(bytelength);
 		memcpy(current_song->samples[n].data, src->data, bytelength);
+		csf_adjust_sample_loop(current_song->samples + n);
 	}
 }
 
@@ -943,8 +944,13 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, SCHIS
 	unsigned int j;
 	int x;
 
+	// FIXME why does this do this
 	csf_stop_sample(current_song, current_song->samples + 0);
-	csf_free(library);
+
+	if (library) {
+		csf_destroy(library);
+		library = NULL;
+	}
 
 	const char *base = dmoz_path_get_basename(path);
 	library = song_create_load(path);
@@ -990,7 +996,11 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, SCHIS
 int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, SCHISM_UNUSED dmoz_dirlist_t *dlist)
 {
 	csf_stop_sample(current_song, current_song->samples + 0);
-	csf_free(library);
+
+	if (library) {
+		csf_destroy(library);
+		library = NULL;
+	}
 
 	const char *base = dmoz_path_get_basename(path);
 
@@ -1028,7 +1038,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, SCHISM_UN
 		/* temporarily set the current song to the library; song_load_instrument
 		 * is hardcoded to it */
 		song_lock_audio();
-		song_t* tmp_ptr = current_song;
+		song_t *tmp_ptr = current_song;
 		library = current_song = csf_allocate();
 
 		int ret = song_load_instrument(1, path);
