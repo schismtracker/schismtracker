@@ -46,37 +46,41 @@ static const char *valid_tags[][2] = {
 	{"M&K!", "Amiga-NoiseTracker"},
 	{"N.T.", "Amiga-NoiseTracker"},
 	{"FEST", "Amiga-NoiseTracker"}, /* jobbig.mod */
-	{"FLT4", "4 Channel Startrekker"}, /* xxx */
-	{"EXO4", "4 Channel Startrekker"}, /* ??? */
-	{"CD81", "8 Channel Falcon"},      /* "Falcon"? */
-	{"FLT8", "8 Channel Startrekker"}, /* xxx */
-	{"EXO8", "8 Channel Startrekker"}, /* ??? */
 
-	{"8CHN", "8 Channel MOD"},  /* what is the difference */
-	{"OCTA", "8 Channel MOD"},  /* between these two? */
-	{"TDZ1", "1 Channel MOD"},
-	{"2CHN", "2 Channel MOD"},
-	{"TDZ2", "2 Channel MOD"},
-	{"TDZ3", "3 Channel MOD"},
-	{"5CHN", "5 Channel MOD"},
-	{"6CHN", "6 Channel MOD"},
-	{"7CHN", "7 Channel MOD"},
-	{"9CHN", "9 Channel MOD"},
-	{"10CH", "10 Channel MOD"},
-	{"11CH", "11 Channel MOD"},
-	{"12CH", "12 Channel MOD"},
-	{"13CH", "13 Channel MOD"},
-	{"14CH", "14 Channel MOD"},
-	{"15CH", "15 Channel MOD"},
-	{"16CH", "16 Channel MOD"},
-	{"18CH", "18 Channel MOD"},
-	{"20CH", "20 Channel MOD"},
-	{"22CH", "22 Channel MOD"},
-	{"24CH", "24 Channel MOD"},
-	{"26CH", "26 Channel MOD"},
-	{"28CH", "28 Channel MOD"},
-	{"30CH", "30 Channel MOD"},
-	{"32CH", "32 Channel MOD"},
+	/* Atari Octalyzer */
+#define FALCON(x) {"CD" #x "1", #x " Channel Falcon"}
+	FALCON(6), FALCON(8),
+#undef FALCON
+
+	/* Startrekker (quite rare...) */
+#define STRTRK(x) {"FLT" #x, #x " Channel Startrekker"}, {"EXO" #x, #x " Channel Startrekker"}
+	STRTRK(4), STRTRK(8),
+#undef STRTRK
+
+	/* Oktalyzer */
+	{"OCTA", "8 Channel MOD"},
+	{"OKTA", "8 Channel MOD"},
+
+#define TDZ(x) {"TDZ" #x, #x " Channel MOD"}
+	TDZ(1), TDZ(2), TDZ(3),
+#undef TDZ
+
+	/* xCHN = generic */
+#define CHN(x) {#x "CHN", #x " Channel MOD"}
+	CHN(1), CHN(2), CHN(3), CHN(4),
+	CHN(5), CHN(6), CHN(7), CHN(8),
+	CHN(9),
+#undef CHN
+
+	/* xxCN/xxCH = generic */
+#define CN(x) {#x "CN", #x " Channel MOD"}, {#x "CH", #x " Channel MOD"}
+	CN(10), CN(11), CN(12), CN(13),
+	CN(14), CN(15), CN(16), CN(17),
+	CN(18), CN(19), CN(20), CN(21),
+	CN(22), CN(23), CN(24), CN(25),
+	CN(26), CN(27), CN(28), CN(29),
+	CN(30), CN(31), CN(32),
+#undef CN
 	{NULL, NULL}
 };
 
@@ -262,10 +266,10 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 		startrekker = (nchan == 8);
 		tid = "%d Channel Startrekker";
 		//log_appendf(4, " Warning: Startrekker AM synth is not supported");
-	} else if (!memcmp(tag, "OCTA", 4)) {
+	} else if (!memcmp(tag, "OCTA", 4) || !memcmp(tag, "OKTA", 4)) {
 		nchan = 8;
 		tid = "Amiga Oktalyzer"; // IT just identifies this as "8 Channel MOD"
-	} else if (!memcmp(tag, "CD81", 4)) {
+	} else if (!memcmp(tag, "CD61", 4) || !memcmp(tag, "CD81", 4)) {
 		nchan = 8;
 		tid = "8 Channel Falcon"; // Atari Oktalyser
 	} else if (tag[0] > '0' && tag[0] <= '9' && !memcmp(tag + 1, "CHN", 3)) {
@@ -310,7 +314,7 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 	}
 
 	/* suppose the tag is 90CH :) */
-	if (nchan > 64) {
+	if (nchan > MAX_CHANNELS) {
 		//fprintf(stderr, "%s: Too many channels!\n", filename);
 		return LOAD_FORMAT_ERROR;
 	}
@@ -322,10 +326,14 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 
 	/* sample headers */
 	for (n = 1; n < nsamples + 1; n++) {
-		slurp_read(fp, song->samples[n].name, 22);
+		if (slurp_read(fp, song->samples[n].name, 22) != 22)
+			return LOAD_UNSUPPORTED;
+
 		song->samples[n].name[22] = 0;
 
-		slurp_read(fp, &tmp, 2);
+		if (slurp_read(fp, &tmp, 2) != 2)
+			return LOAD_UNSUPPORTED;
+
 		song->samples[n].length = bswapBE16(tmp) * 2;
 
 		/* this is only necessary for the wow test... */
@@ -345,9 +353,13 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 		song->samples[n].volume *= 4; //mphack
 		song->samples[n].global_volume = 64;
 
-		slurp_read(fp, &tmp, 2);
+		if (slurp_read(fp, &tmp, 2) != 2)
+			return LOAD_UNSUPPORTED;
+
 		song->samples[n].loop_start = bswapBE16(tmp) * 2;
-		slurp_read(fp, &tmp, 2);
+		if (slurp_read(fp, &tmp, 2) != 2)
+			return LOAD_UNSUPPORTED;
+
 		tmp = bswapBE16(tmp) * 2;
 		if (tmp > 2)
 			song->samples[n].flags |= CHN_LOOP;
@@ -366,7 +378,9 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 	nord = slurp_getc(fp);
 	restart = slurp_getc(fp);
 
-	slurp_read(fp, song->orderlist, 128);
+	if (slurp_read(fp, song->orderlist, 128) != 128)
+		return LOAD_UNSUPPORTED;
+
 	npat = 0;
 	if (startrekker) {
 		/* from mikmod: if the file says FLT8, but the orderlist
@@ -379,16 +393,19 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 			}
 		}
 	}
+
 	if (startrekker) {
 		for (n = 0; n < 128; n++)
 			song->orderlist[n] >>= 1;
 	}
+
 	for (n = 0; n < 128; n++) {
 		if (song->orderlist[n] >= MAX_PATTERNS)
 			song->orderlist[n] = ORDER_SKIP;
 		else if (song->orderlist[n] > npat)
 			npat = song->orderlist[n];
 	}
+
 	/* set all the extra orders to the end-of-song marker */
 	memset(song->orderlist + nord, ORDER_LAST, MAX_ORDERS - nord);
 
@@ -410,10 +427,9 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 		}
 	}
 
-
-	// http://llvm.org/viewvc/llvm-project?view=rev&revision=91888
 	sprintf(song->tracker_id, tid ? tid : "%d Channel MOD", nchan);
-	/* 15-sample mods don't have a 4-byte tag… or the other 16 samples */
+
+	/* 15-sample mods don't have a 4-byte tag... or the other 16 samples */
 	slurp_seek(fp, nsamples == 15 ? 600 : 1084, SEEK_SET);
 
 	/* pattern data */
@@ -424,7 +440,8 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 			for (n = 0; n < 64; n++, note += 60) {
 				for (chan = 0; chan < 4; chan++, note++) {
 					uint8_t p[4];
-					slurp_read(fp, p, 4);
+					if (slurp_read(fp, p, 4) != 4)
+						return LOAD_UNSUPPORTED;
 					mod_import_note(p, note);
 					csf_import_mod_effect(note, 0);
 				}
@@ -433,7 +450,8 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 			for (n = 0; n < 64; n++, note += 60) {
 				for (chan = 0; chan < 4; chan++, note++) {
 					uint8_t p[4];
-					slurp_read(fp, p, 4);
+					if (slurp_read(fp, p, 4) != 4)
+						return LOAD_UNSUPPORTED;
 					mod_import_note(p, note);
 					csf_import_mod_effect(note, 0);
 				}
@@ -446,13 +464,15 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 			for (n = 0; n < 64; n++, note += 64 - nchan) {
 				for (chan = 0; chan < nchan; chan++, note++) {
 					uint8_t p[4];
-					slurp_read(fp, p, 4);
+					if (slurp_read(fp, p, 4) != 4)
+						return LOAD_UNSUPPORTED;
 					mod_import_note(p, note);
 					csf_import_mod_effect(note, 0);
 				}
 			}
 		}
 	}
+
 	if (restart < npat)
 		csf_insert_restart_pos(song, restart);
 
@@ -463,15 +483,17 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 				continue;
 
 			/* check for ADPCM compression */
-			uint32_t pcmflag = SF_PCMS;
-			char sstart[5];
+			uint32_t flags = SF_8 | SF_M | SF_LE;
+			unsigned char sstart[5];
 			slurp_peek(fp, sstart, sizeof(sstart));
-			if (!strncmp(sstart, "ADPCM", sizeof(sstart))) {
+			if (!memcmp(sstart, "ADPCM", sizeof(sstart))) {
 				slurp_seek(fp, sizeof(sstart), SEEK_CUR);
-				pcmflag = SF_PCMD16;
+				flags |= SF_PCMD16;
+			} else {
+				flags |= SF_PCMS;
 			}
 
-			csf_read_sample(song->samples + n, SF_8 | SF_M | SF_LE | pcmflag, fp);
+			csf_read_sample(song->samples + n, flags, fp);
 		}
 	}
 
@@ -483,10 +505,6 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 		song->channels[n].flags = CHN_MUTE;
 
 	song->pan_separation = 64;
-
-//      if (slurp_error(fp)) {
-//              return LOAD_FILE_ERROR;
-//      }
 
 	/* done! */
 	return LOAD_SUCCESS;
