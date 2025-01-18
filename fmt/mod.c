@@ -91,7 +91,6 @@ enum {
 	WARN_SAMPLEVIB,
 	WARN_INSTRUMENTS,
 	WARN_PATTERNLEN,
-	WARN_MAXCHANNELS,
 	WARN_NOTERANGE,
 	WARN_VOLEFFECTS,
 	WARN_MAXSAMPLES,
@@ -108,7 +107,6 @@ static const char *mod_warnings[] = {
 	[WARN_SAMPLEVIB]    = "Sample vibrato",
 	[WARN_INSTRUMENTS]  = "Instrument functions",
 	[WARN_PATTERNLEN]   = "Pattern lengths other than 64 rows",
-	[WARN_MAXCHANNELS]  = "Data outside 32 channels",
 	[WARN_NOTERANGE]    = "Notes outside the range C-4 to B-6",
 	[WARN_VOLEFFECTS]   = "Extended volume column effects",
 	[WARN_MAXSAMPLES]   = "Over 31 samples",
@@ -550,8 +548,6 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 	}
 
 	nchn = csf_get_highest_used_channel(song)+1;
-	if (nchn > 32)
-		warn |= 1 << WARN_MAXCHANNELS;
 
 	memcpy(mod_songtitle, song->title, 20);
 	disko_write(fp, mod_songtitle, 20); // writing song title
