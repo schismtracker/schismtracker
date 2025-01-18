@@ -92,6 +92,30 @@ and save to `font.cfg`.
 If zero, loading a song when another one is playing will start playing the new
 song after it is loaded.
 
+#### Date and time formatting
+
+    [General]
+    time_format=12hr
+    date_format=mmmmdyyyy
+
+If `time_format` is set to `24hr`, all times will display in 24-hour time, i.e.
+as `01:20`, while with `12hr` the same time will be displayed as `1:20 am`.
+
+The valid `date_format` values are as follows, using 2025-01-07 as an example:
+
+| Format value | Result          |
+| ------------ | --------------- |
+| `mmmmdyyyy`  | January 7, 2025 |
+| `dmmmmyyyy`  | 7 January 2025  |
+| `yyyymmmmdd` | 2025 January 07 |
+| `mmddyyyy`   | 01/07/2025      |
+| `ddmmyyyy`   | 07/01/2025      |
+| `yyyymmdd`   | 2025/01/07      |
+| `mdyyyy`     | 1/7/2025        |
+| `dmyyyy`     | 7/1/2025        |
+| `yyyymd`     | 2025/1/7        |
+| `iso8601`    | 2025-01-07      |
+
 #### File browser
 
     [Directories]

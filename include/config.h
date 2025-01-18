@@ -46,6 +46,9 @@ extern char *cfg_dir_dotschism; /* the full path to ~/.schism */
 extern char *cfg_font;
 extern int cfg_palette;
 
+extern int cfg_str_date_format;
+extern int cfg_str_time_format;
+
 extern char cfg_module_pattern[SCHISM_PATH_MAX + 1];
 extern char cfg_export_pattern[SCHISM_PATH_MAX + 1];
 

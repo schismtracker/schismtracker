@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
 #include "page.h"
 #include "widget.h"
 #include "vgamem.h"
@@ -197,10 +198,10 @@ static void timeinfo_redraw(void)
 
 			if (i >= top_line && i < top_line + 29) {
 				if (current_song->history[i].time_valid) {
-					str_date_from_tm(&current_song->history[i].time, buf);
+					str_date_from_tm(&current_song->history[i].time, buf, cfg_str_date_format);
 					draw_text_len(buf, 27, 4, 20 + i - top_line, 0, 2);
 
-					str_time_from_tm(&current_song->history[i].time, buf);
+					str_time_from_tm(&current_song->history[i].time, buf, cfg_str_time_format);
 					draw_text_len(buf, 27, 29, 20 + i - top_line, 0, 2);
 				} else {
 					draw_text("<unknown date>", 4, 20 + i - top_line, 0, 2);

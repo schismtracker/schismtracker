@@ -62,6 +62,10 @@ int cfg_video_want_menu_bar = 1;
 int cfg_kbd_repeat_delay = 0;
 int cfg_kbd_repeat_rate = 0;
 
+// Date & time formats
+int cfg_str_date_format = STR_DATE_FORMAT_DEFAULT;
+int cfg_str_time_format = STR_TIME_FORMAT_DEFAULT;
+
 /* --------------------------------------------------------------------- */
 
 static const char *schism_dotfolders[] = {
@@ -205,6 +209,40 @@ void cfg_load(void)
 
 	cfg_kbd_repeat_delay = cfg_get_number(&cfg, "General", "key_repeat_delay", 0);
 	cfg_kbd_repeat_rate = cfg_get_number(&cfg, "General", "key_repeat_rate", 0);
+
+	ptr = cfg_get_string(&cfg, "General", "date_format", NULL, 0, NULL);
+	if (ptr) {
+		if (!strcasecmp(ptr, "mmmmdyyyy")) {
+			cfg_str_date_format = STR_DATE_FORMAT_MMMMDYYYY;
+		} else if (!strcasecmp(ptr, "dmmmmyyyy")) {
+			cfg_str_date_format = STR_DATE_FORMAT_DMMMMYYYY;
+		} else if (!strcasecmp(ptr, "yyyymmmmdd")) {
+			cfg_str_date_format = STR_DATE_FORMAT_YYYYMMMMDD;
+		} else if (!strcasecmp(ptr, "mdyyyy")) {
+			cfg_str_date_format = STR_DATE_FORMAT_MDYYYY;
+		} else if (!strcasecmp(ptr, "dmyyyy")) {
+			cfg_str_date_format = STR_DATE_FORMAT_DMYYYY;
+		} else if (!strcasecmp(ptr, "yyyymd")) {
+			cfg_str_date_format = STR_DATE_FORMAT_YYYYMD;
+		} else if (!strcasecmp(ptr, "mmddyyyy")) {
+			cfg_str_date_format = STR_DATE_FORMAT_MMDDYYYY;
+		} else if (!strcasecmp(ptr, "ddmmyyyy")) {
+			cfg_str_date_format = STR_DATE_FORMAT_DDMMYYYY;
+		} else if (!strcasecmp(ptr, "yyyymmdd")) {
+			cfg_str_date_format = STR_DATE_FORMAT_YYYYMMDD;
+		} else if (!strcasecmp(ptr, "iso8601")) {
+			cfg_str_date_format = STR_DATE_FORMAT_ISO8601;
+		}
+	}
+
+	ptr = cfg_get_string(&cfg, "General", "time_format", NULL, 0, NULL);
+	if (ptr) {
+		if (!strcasecmp(ptr, "12hr")) {
+			cfg_str_time_format = STR_TIME_FORMAT_12HR;
+		} else if (!strcasecmp(ptr, "24hr")) {
+			cfg_str_time_format = STR_TIME_FORMAT_24HR;
+		}
+	}
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
