@@ -42,12 +42,13 @@ Information at our disposal:
 	__DATE__        "Jun  3 2009"
 	__TIME__        "23:39:19"
 		These are the current date and time of the machine running the compilation. These
-		don't really say anything about the age of the code itself, so we don't use it. ;)
+		don't really say anything about the age of the code itself, so we only use it as a
+		last resort. It's standard though, so it should work everywhere.
 
 	__TIMESTAMP__   "Wed Jun  3 23:39:19 2009"
 		This is a timestamp of when the compilation unit was last edited. This is much more
-		useful than __DATE__ and __TIME__, but is specific to GNU C, so we can't use it
-		everywhere.
+		useful than __DATE__ and __TIME__, but is specific to GNU C, so we can only use it
+		on gcc-like compilers. (not like anyone's really using schism with anything else...)
 
 */
 #if !defined(EMPTY_VERSION) && defined(VERSION)
