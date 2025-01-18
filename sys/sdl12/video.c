@@ -53,6 +53,7 @@ static int display_native_y = -1;
 # include <sys/kd.h>
 #endif
 #if HAVE_LINUX_FB_H
+# include <fcntl.h>
 # include <linux/fb.h>
 #endif
 #include <sys/types.h>
@@ -64,20 +65,11 @@ static int display_native_y = -1;
 #include <signal.h>
 #endif
 
-/* for memcpy */
-#include <string.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <stdio.h>
-
 #include <SDL.h>
 #include <SDL_syswm.h>
 #ifdef SCHISM_MACOS
 # include <SDL_main.h>
 #endif
-
-#include <unistd.h>
-#include <fcntl.h>
 
 #include "video.h"
 
@@ -302,12 +294,14 @@ static void sdl12_video_startup(void)
 #if HAVE_LINUX_FB_H
 	if (!getenv("DISPLAY") && !video.desktop.fb_hacks) {
 		struct fb_var_screeninfo s;
+
 		int fb = -1;
-		if (getenv("SDL_FBDEV")) {
+		if (getenv("SDL_FBDEV"))
 			fb = open(getenv("SDL_FBDEV"), O_RDONLY);
-		}
+
 		if (fb == -1)
 			fb = open("/dev/fb0", O_RDONLY);
+
 		if (fb > -1) {
 			if (ioctl(fb, FBIOGET_VSCREENINFO, &s) < 0) {
 				perror("ioctl FBIOGET_VSCREENINFO");
@@ -318,7 +312,7 @@ static void sdl12_video_startup(void)
 						x = NATIVE_SCREEN_WIDTH;
 					y = s.yres;
 				}
-				putenv((char *) "SDL_VIDEODRIVER=fbcon");
+				setenv("SDL_VIDEODRIVER", "fbcon", 1);
 				video.desktop.bpp = s.bits_per_pixel;
 				video.desktop.fb_hacks = 1;
 				video.desktop.doublebuf = 1;
