@@ -36,21 +36,21 @@ Information at our disposal:
 
 	VERSION
 		"" or "YYYYMMDD"
-		A date here is the date of the last commit from git
-		empty string will happen if git isn't installed, or no .git
+		A date here is the date of the last commit from git.
+		If there is no version, then VERSION is an empty string, and EMPTY_VERSION is defined.
 
 	__DATE__        "Jun  3 2009"
 	__TIME__        "23:39:19"
+		These are the current date and time of the machine running the compilation. These
+		don't really say anything about the age of the code itself, so we don't use it. ;)
+
 	__TIMESTAMP__   "Wed Jun  3 23:39:19 2009"
-		These are annoying to manipulate because of the month being in text format -- but at
-		least I don't think they're ever localized, which would make it much more annoying.
-		Should always exist, especially considering that we require gcc/clang. However, it is a
-		poor indicator of the age of the *code*, since it depends on the clock of the computer
-		that's building the code, and also there is the possibility that someone was hanging
-		onto the code for a really long time before building it.
+		This is a timestamp of when the compilation unit was last edited. This is much more
+		useful than __DATE__ and __TIME__, but is specific to GNU C, so we can't use it
+		everywhere.
 
 */
-#ifndef EMPTY_VERSION
+#if !defined(EMPTY_VERSION) && defined(VERSION)
 # define TOP_BANNER_NORMAL "Schism Tracker " VERSION
 #else
 # define TOP_BANNER_NORMAL "Schism Tracker built " __DATE__ " " __TIME__
@@ -247,68 +247,59 @@ static inline SCHISM_ALWAYS_INLINE int lookup_short_month(char *name)
 	return -1;
 }
 
-static inline int get_version_tm(struct tm *version)
+// Tries multiple methods to get a reasonable date to start with.
+static inline int get_version_date(int *pyear, int *pmonth, int *pday)
 {
+#if !defined(EMPTY_VERSION) && defined(VERSION)
+	{
+		int year, month, day;
 
-	int amt;
-
-	// this was wrong for way too long
-	memset(version, 0, sizeof(*version));
-
-	// by the time we reach the year 10000 nobody will care that this breaks
-	amt = sscanf(VERSION, "%04d%02d%02d", &version->tm_year, &version->tm_mon, &version->tm_mday);
-	if (amt == 3) {
-		// fix this
-		version->tm_year -= 1900;
-		version->tm_mon--;
-		return 1;
+		// by the time we reach the year 10000 nobody will care that this breaks
+		if (sscanf(VERSION, "%04d%02d%02d", &year, &month, &day) == 3) {
+			*pyear = year;
+			*pmonth = month - 1;
+			*pday = day;
+			return 1;
+		}
 	}
+#endif
 
 #ifdef __TIMESTAMP__
 	/* The last time THIS source file was actually edited. */
 	{
-		memset(version, 0, sizeof(*version));
+		char day_of_week[4], month[4];
+		int year, day, hour, minute, second;
 
-		char day_of_week[4];
-		char month[4];
-		int day;
-		int year;
-		int hour;
-		int minute;
-		int second;
-
-		// Account for extra padding on the left of the day when the
-		// value is less than 10.
+		// Account for extra padding on the left of the day when the value is less than 10.
 		if (sscanf(__TIMESTAMP__, "%3s %3s %d %d:%d:%d %d", day_of_week, month, &day, &hour, &minute, &second, &year) == 7
 			|| sscanf(__TIMESTAMP__, "%3s %3s  %d %d:%d:%d %d", day_of_week, month, &day, &hour, &minute, &second, &year) == 7) {
 			int m = lookup_short_month(month);
 			if (m != -1) {
-				version->tm_year = year - 1900;
-				version->tm_mon = m;
-				version->tm_mday = day;
+				*pyear = year;
+				*pmonth = m;
+				*pday = day;
 				return 1;
 			}
 		}
 	}
 #endif
 
-	memset(version, 0, sizeof(*version));
+	{
+		// __DATE__ should be defined everywhere.
+		char month[4];
+		int day, year;
 
-	char month[4];
-	int day;
-	int year;
-
-	// Account for extra padding on the left of the day when the
-	// value is less than 10.
-	if (sscanf(__DATE__, "%3s %d %d", month, &day, &year) == 3
-		|| sscanf(__DATE__, "%3s  %d %d", month, &day, &year) == 3) {
-		int m = lookup_short_month(month);
-		if (m != -1) {
-			version->tm_year = year - 1900;
-			version->tm_mon = m;
-			version->tm_mday = day;
-			return 1;
-		}	
+		// Account for extra padding on the left of the day when the value is less than 10.
+		if (sscanf(__DATE__, "%3s %d %d", month, &day, &year) == 3
+			|| sscanf(__DATE__, "%3s  %d %d", month, &day, &year) == 3) {
+			int m = lookup_short_month(month);
+			if (m != -1) {
+				*pyear = year;
+				*pmonth = m;
+				*pday = day;
+				return 1;
+			}	
+		}
 	}
 
 	/* give up... */
@@ -317,11 +308,11 @@ static inline int get_version_tm(struct tm *version)
 
 void ver_init(void)
 {
-	struct tm version;
+	int year, month, day;
 	version_time_t version_sec;
 
-	if (get_version_tm(&version)) {
-		version_sec = version_mktime(version.tm_year + 1900, version.tm_mon, version.tm_mday);
+	if (get_version_date(&year, &month, &day)) {
+		version_sec = version_mktime(year, month, day);
 	} else {
 		puts("help, I am very confused about myself");
 		version_sec = 0;
