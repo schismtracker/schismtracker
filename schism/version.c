@@ -39,9 +39,9 @@ Information at our disposal:
 		A date here is the date of the last commit from git
 		empty string will happen if git isn't installed, or no .git
 
-	__DATE__        "Jun 3 2009"
+	__DATE__        "Jun  3 2009"
 	__TIME__        "23:39:19"
-	__TIMESTAMP__   "Wed Jun 3 23:39:19 2009"
+	__TIMESTAMP__   "Wed Jun  3 23:39:19 2009"
 		These are annoying to manipulate because of the month being in text format -- but at
 		least I don't think they're ever localized, which would make it much more annoying.
 		Should always exist, especially considering that we require gcc/clang. However, it is a
@@ -277,8 +277,10 @@ static inline int get_version_tm(struct tm *version)
 		int minute;
 		int second;
 
-		amt = sscanf(__TIMESTAMP__, "%3s %3s %d %d:%d:%d %d", day_of_week, month, &day, &hour, &minute, &second, &year);
-		if (amt == 7) {
+		// Account for extra padding on the left of the day when the
+		// value is less than 10.
+		if (sscanf(__TIMESTAMP__, "%3s %3s %d %d:%d:%d %d", day_of_week, month, &day, &hour, &minute, &second, &year) == 7
+			|| sscanf(__TIMESTAMP__, "%3s %3s  %d %d:%d:%d %d", day_of_week, month, &day, &hour, &minute, &second, &year) == 7) {
 			int m = lookup_short_month(month);
 			if (m != -1) {
 				version->tm_year = year - 1900;
@@ -296,8 +298,10 @@ static inline int get_version_tm(struct tm *version)
 	int day;
 	int year;
 
-	amt = sscanf(__DATE__, "%3s %d %d", month, &day, &year);
-	if (amt == 3) {
+	// Account for extra padding on the left of the day when the
+	// value is less than 10.
+	if (sscanf(__DATE__, "%3s %d %d", month, &day, &year) == 3
+		|| sscanf(__DATE__, "%3s  %d %d", month, &day, &year) == 3) {
 		int m = lookup_short_month(month);
 		if (m != -1) {
 			version->tm_year = year - 1900;
