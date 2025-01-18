@@ -30,9 +30,9 @@
 /* --------------------------------------------------------------------- */
 /* FORMATTING FUNCTIONS */
 
-char *str_date_from_tm(struct tm *tm, char buf[27])
+char *str_date_from_tm(struct tm *tm, char buf[27], str_date_format_t format)
 {
-	const char *month_str[12] = {
+	static const char *month_str[12] = {
 		"January",
 		"February",
 		"March",
@@ -47,19 +47,62 @@ char *str_date_from_tm(struct tm *tm, char buf[27])
 		"December",
 	};
 
-	snprintf(buf, 27, "%s %d, %d", month_str[tm->tm_mon], tm->tm_mday, 1900 + tm->tm_year);
+	switch (format) {
+	default:
+	case STR_DATE_FORMAT_DEFAULT:
+	case STR_DATE_FORMAT_MMMMDYYYY:
+		snprintf(buf, 27, "%s %d, %d", month_str[tm->tm_mon], tm->tm_mday, 1900 + tm->tm_year);
+		break;
+	case STR_DATE_FORMAT_DMMMMYYYY:
+		snprintf(buf, 27, "%d %s %d", tm->tm_mday, month_str[tm->tm_mon], 1900 + tm->tm_year);
+		break;
+	case STR_DATE_FORMAT_YYYYMMMMDD:
+		snprintf(buf, 27, "%d %s %02d", 1900 + tm->tm_year, month_str[tm->tm_mon], tm->tm_mday);
+		break;
+	case STR_DATE_FORMAT_MDYYYY:
+		snprintf(buf, 27, "%d/%d/%d", tm->tm_mon + 1, tm->tm_mday, tm->tm_year);
+		break;
+	case STR_DATE_FORMAT_DMYYYY:
+		snprintf(buf, 27, "%d/%d/%d", tm->tm_mday, tm->tm_mon + 1, 1900 + tm->tm_year);
+		break;
+	case STR_DATE_FORMAT_YYYYMD:
+		snprintf(buf, 27, "%d/%d/%d", 1900 + tm->tm_year, tm->tm_mon + 1, tm->tm_mday);
+		break;
+	case STR_DATE_FORMAT_MMDDYYYY:
+		snprintf(buf, 27, "%02d/%02d/%d", tm->tm_mon + 1, tm->tm_mday, 1900 + tm->tm_year);
+		break;
+	case STR_DATE_FORMAT_DDMMYYYY:
+		snprintf(buf, 27, "%02d/%02d/%d", tm->tm_mday, tm->tm_mon + 1, 1900 + tm->tm_year);
+		break;
+	case STR_DATE_FORMAT_YYYYMMDD:
+		snprintf(buf, 27, "%d/%02d/%02d", 1900 + tm->tm_year, tm->tm_mon + 1, tm->tm_mday);
+		break;
+	case STR_DATE_FORMAT_ISO8601:
+		snprintf(buf, 27, "%04d-%02d-%02d", 1900 + tm->tm_year, tm->tm_mon + 1, tm->tm_mday);
+		break;
+	}
 
 	return buf;
 }
 
-char *str_time_from_tm(struct tm *tm, char buf[27])
+char *str_time_from_tm(struct tm *tm, char buf[27], str_time_format_t format)
 {
-	snprintf(buf, 27, "%d:%02d%s", (tm->tm_hour % 12) ? (tm->tm_hour % 12) : 12, tm->tm_min, tm->tm_hour < 12 ? "am" : "pm");
+	switch (format) {
+	default:
+	case STR_TIME_FORMAT_DEFAULT:
+	case STR_TIME_FORMAT_12HR:
+		snprintf(buf, 27, "%d:%02d%s", (tm->tm_hour % 12) ? (tm->tm_hour % 12) : 12, tm->tm_min, tm->tm_hour < 12 ? "am" : "pm");
+		break;
+	case STR_TIME_FORMAT_24HR:
+		// so much easier
+		snprintf(buf, 27, "%d:%02d", tm->tm_hour, tm->tm_min);
+		break;
+	}
 
 	return buf;
 }
 
-char *str_from_date(time_t when, char buf[27])
+char *str_from_date(time_t when, char buf[27], str_date_format_t format)
 {
 	struct tm tmr;
 
@@ -67,16 +110,16 @@ char *str_from_date(time_t when, char buf[27])
 	 * doesn't have localtime_r, it needs to be implemented separately. */
 	localtime_r(&when, &tmr);
 
-	return str_date_from_tm(&tmr, buf);
+	return str_date_from_tm(&tmr, buf, format);
 }
 
-char *str_from_time(time_t when, char buf[27])
+char *str_from_time(time_t when, char buf[27], str_time_format_t format)
 {
 	struct tm tmr;
 
 	localtime_r(&when, &tmr);
 
-	return str_time_from_tm(&tmr, buf);
+	return str_time_from_tm(&tmr, buf, format);
 }
 
 char *str_from_num99(int n, char *buf)

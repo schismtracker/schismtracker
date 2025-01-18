@@ -23,8 +23,10 @@
 
 #include "headers.h"
 #include "it.h"
+#include "mem.h"
 #include "version.h"
 
+#include <locale.h>
 #include <assert.h>
 
 #define TOP_BANNER_CLASSIC "Impulse Tracker v2.14 Copyright (C) 1995-1998 Jeffrey Lim"
@@ -37,9 +39,9 @@ Information at our disposal:
 		A date here is the date of the last commit from git
 		empty string will happen if git isn't installed, or no .git
 
-	__DATE__        "Jun  3 2009"
+	__DATE__        "Jun 3 2009"
 	__TIME__        "23:39:19"
-	__TIMESTAMP__   "Wed Jun  3 23:39:19 2009"
+	__TIMESTAMP__   "Wed Jun 3 23:39:19 2009"
 		These are annoying to manipulate because of the month being in text format -- but at
 		least I don't think they're ever localized, which would make it much more annoying.
 		Should always exist, especially considering that we require gcc/clang. However, it is a
@@ -222,12 +224,39 @@ void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char buf[11])
 		sprintf(buf, "0.%x", cwtv);
 }
 
+static inline SCHISM_ALWAYS_INLINE int lookup_short_month(char *name)
+{
+	static const char *month_names[] = {
+		"Jan",
+		"Feb",
+		"Mar",
+		"Apr",
+		"Jun",
+		"Jul",
+		"Aug",
+		"Sep",
+		"Oct",
+		"Nov",
+		"Dec",
+	};
+
+	for (int i = 0; i < ARRAY_SIZE(month_names); i++)
+		if (!strcmp(month_names[i], name))
+			return i;
+
+	return -1;
+}
+
 static inline int get_version_tm(struct tm *version)
 {
+
+	int amt;
+
 	// this was wrong for way too long
 	memset(version, 0, sizeof(*version));
+
 	// by the time we reach the year 10000 nobody will care that this breaks
-	int amt = sscanf(VERSION, "%04d%02d%02d", &version->tm_year, &version->tm_mon, &version->tm_mday);
+	amt = sscanf(VERSION, "%04d%02d%02d", &version->tm_year, &version->tm_mon, &version->tm_mday);
 	if (amt == 3) {
 		// fix this
 		version->tm_year -= 1900;
@@ -235,12 +264,50 @@ static inline int get_version_tm(struct tm *version)
 		return 1;
 	}
 
-	memset(version, 0, sizeof(*version));
-	char *ret = strptime(__DATE__, "%b %e %Y", version);
-	if (ret && !*ret)
-		return 1;
+#ifdef __TIMESTAMP__
+	/* The last time THIS source file was actually edited. */
+	{
+		memset(version, 0, sizeof(*version));
 
-	/* give up; we don't know anything */
+		char day_of_week[4];
+		char month[4];
+		int day;
+		int year;
+		int hour;
+		int minute;
+		int second;
+
+		amt = sscanf(__TIMESTAMP__, "%3s %3s %d %d:%d:%d %d", day_of_week, month, &day, &hour, &minute, &second, &year);
+		if (amt == 7) {
+			int m = lookup_short_month(month);
+			if (m != -1) {
+				version->tm_year = year - 1900;
+				version->tm_mon = m;
+				version->tm_mday = day;
+				return 1;
+			}
+		}
+	}
+#endif
+
+	memset(version, 0, sizeof(*version));
+
+	char month[4];
+	int day;
+	int year;
+
+	amt = sscanf(__DATE__, "%3s %d %d", month, &day, &year);
+	if (amt == 3) {
+		int m = lookup_short_month(month);
+		if (m != -1) {
+			version->tm_year = year - 1900;
+			version->tm_mon = m;
+			version->tm_mday = day;
+			return 1;
+		}	
+	}
+
+	/* give up... */
 	return 0;
 }
 

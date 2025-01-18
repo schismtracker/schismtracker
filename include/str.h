@@ -29,13 +29,42 @@
 #include <sys/types.h>
 
 /* formatting */
-char *str_date_from_tm(struct tm *tm, char buf[27]);
-char *str_time_from_tm(struct tm *tm, char buf[27]);
-char *str_from_date(time_t when, char buf[27]);
-char *str_from_time(time_t when, char buf[27]);
 char *str_from_num(int digits, unsigned int n, char *buf); // what size
 char *str_from_num_signed(int digits, int n, char *buf);   // buffer do
 char *str_from_num99(int n, char buf[3]);
+
+/* date/time formatting */
+typedef enum {
+	// stolen from Wikipedia:
+	STR_DATE_FORMAT_MMMMDYYYY,  // January 7, 2025  (United States, default)
+	STR_DATE_FORMAT_DMMMMYYYY,  // 7 January 2025   (Most of the world)
+	STR_DATE_FORMAT_YYYYMMMMDD, // 2025 January 07  (Wikipedia has this ?)
+
+	STR_DATE_FORMAT_MDYYYY,   // M/D/YYYY (United States, default)
+	STR_DATE_FORMAT_MMDDYYYY, // M/D/YYYY (United States with leading zeroes)
+	STR_DATE_FORMAT_DMYYYY,   // D/M/YYYY (United Kingdom with no leading zeroes)
+	STR_DATE_FORMAT_DDMMYYYY, // DD/MM/YYYY (United Kingdom)
+	STR_DATE_FORMAT_YYYYMD,   // YYYY/M/D
+	STR_DATE_FORMAT_YYYYMMDD, // YYYY/MM/DD
+
+	STR_DATE_FORMAT_ISO8601, // YYYY-MM-DD
+
+	// special constant.
+	STR_DATE_FORMAT_DEFAULT = -1,
+} str_date_format_t;
+
+typedef enum {
+	STR_TIME_FORMAT_12HR, // 11:27 PM (North America, Australia, default),
+	STR_TIME_FORMAT_24HR, // 23:27    (everyone else)
+
+	// special constant.
+	STR_TIME_FORMAT_DEFAULT = -1,
+} str_time_format_t;
+
+char *str_date_from_tm(struct tm *tm, char buf[27], str_date_format_t format);
+char *str_time_from_tm(struct tm *tm, char buf[27], str_time_format_t format);
+char *str_from_date(time_t when, char buf[27], str_date_format_t format);
+char *str_from_time(time_t when, char buf[27], str_time_format_t format);
 
 /* string handling */
 int str_ltrim(char *s); // return: length of string after trimming

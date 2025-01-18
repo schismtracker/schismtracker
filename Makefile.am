@@ -397,9 +397,6 @@ endif
 if NEED_MEMCMP
 files_stdlib += sys/stdlib/memcmp.c
 endif
-if NEED_STRPTIME
-files_stdlib += sys/stdlib/strptime.c
-endif
 if NEED_LOCALTIME_R
 files_stdlib += sys/stdlib/localtime_r.c
 endif

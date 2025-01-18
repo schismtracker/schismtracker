@@ -27,6 +27,11 @@
 
 int setenv(const char *name, const char *value, int overwrite)
 {
+	if (strchr(name, '=')) {
+		errno = EINVAL;
+		return -1;
+	}
+
 	if (overwrite || !getenv(name)) {
 		char *penv;
 

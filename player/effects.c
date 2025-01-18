@@ -1493,6 +1493,9 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 		chan->panning = CLAMP(chan->panning + delta, 0, 256);
 	}
 
+	if (penv && porta)
+		chan->nna = penv->nna;
+
 	if (!porta) {
 		if (penv) chan->nna = penv->nna;
 		env_reset(chan, 0);
