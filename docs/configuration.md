@@ -16,7 +16,8 @@ The location of this file is dependent on the OS:
 - **AmigaOS 4**
   - `PROGDIR:`
 - **Linux/Unix**
-  - `$HOME/.schism/`
+  - `$HOME/.config/schism/`
+  - `$HOME/.schism/` (legacy, not used on new installs)
 - **Wii**
   - Same directory as `boot.elf` (e.g. `sd:/apps/schismtracker`)
 
