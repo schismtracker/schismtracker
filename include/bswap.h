@@ -26,11 +26,32 @@
 
 #include "headers.h"
 
-/* better than macros, I guess. */
+/* bswap16 was added later in 4.8.0 */
+#if SCHISM_GNUC_HAS_BUILTIN(__builtin_bswap16, 4, 8, 0)
+# define bswap_16(x) __builtin_bswap16(x)
+#elif SCHISM_MSVC_ATLEAST(0, 0, 0) // FIXME which version
+# define bswap_16(x) _byteswap_ushort(x)
+#endif
+
+#if SCHISM_GNUC_HAS_BUILTIN(__builtin_bswap32, 4, 3, 0)
+# define bswap_32(x) __builtin_bswap32(x)
+#elif SCHISM_MSVC_ATLEAST(0, 0, 0) // FIXME which version
+# define bswap_32(x) _byteswap_ulong(x)
+#endif
+
+#if SCHISM_GNUC_HAS_BUILTIN(__builtin_bswap64, 4, 3, 0)
+# define bswap_64(x) __builtin_bswap64(x)
+#elif SCHISM_MSVC_ATLEAST(0, 0, 0) // FIXME which version
+# define bswap_64(x) _byteswap_uint64(x)
+#endif
+
+/* roll our own; it is now safe to assume that all byteswap
+ * routines will act like a function and not like a macro */
+#ifndef bswap_64
 SCHISM_CONST SCHISM_ALWAYS_INLINE inline uint64_t bswap_64_schism_internal_(uint64_t x)
 {
 	return (
-		  ((x & UINT64_C(0x00000000000000FF)) << 56)
+		((x & UINT64_C(0x00000000000000FF)) << 56)
 		| ((x & UINT64_C(0x000000000000FF00)) << 40)
 		| ((x & UINT64_C(0x0000000000FF0000)) << 24)
 		| ((x & UINT64_C(0x00000000FF000000)) << 8)
@@ -38,50 +59,36 @@ SCHISM_CONST SCHISM_ALWAYS_INLINE inline uint64_t bswap_64_schism_internal_(uint
 		| ((x & UINT64_C(0x0000FF0000000000)) << 24)
 		| ((x & UINT64_C(0x00FF000000000000)) << 40)
 		| ((x & UINT64_C(0xFF00000000000000)) << 56)
-	);
+		);
 }
-
-SCHISM_CONST SCHISM_ALWAYS_INLINE inline uint32_t bswap_32_schism_internal_(uint32_t x)
-{
-	return (
-		  ((x & UINT32_C(0x000000FF)) << 24)
-		| ((x & UINT32_C(0x0000FF00)) << 8)
-		| ((x & UINT32_C(0x00FF0000)) >> 8)
-		| ((x & UINT32_C(0xFF000000)) >> 24)
-	);
-}
-
-SCHISM_CONST SCHISM_ALWAYS_INLINE inline uint16_t bswap_16_schism_internal_(uint16_t x)
-{
-	return (
-		  ((x & UINT16_C(0x00FF)) << 8)
-		| ((x & UINT16_C(0xFF00)) >> 8)
-	);
-}
-
-/* bswap16 was added later in 4.8.0 */
-#if SCHISM_GNUC_HAS_BUILTIN(__builtin_bswap16, 4, 8, 0)
-# define bswap_16(x) __builtin_bswap16(x)
-#endif
-#if SCHISM_GNUC_HAS_BUILTIN(__builtin_bswap32, 4, 3, 0)
-# define bswap_32(x) __builtin_bswap32(x)
-#endif
-#if SCHISM_GNUC_HAS_BUILTIN(__builtin_bswap64, 4, 3, 0)
-# define bswap_64(x) __builtin_bswap64(x)
-#endif
-
-/* roll our own; it is now safe to assume that all byteswap
- * routines will act like a function and not like a macro */
-#ifndef bswap_64
 # define bswap_64(x) bswap_64_schism_internal_(x)
+# define SCHISM_NEED_EXTERN_DEFINE_BSWAP_64
 #endif
 
 #ifndef bswap_32
+SCHISM_CONST SCHISM_ALWAYS_INLINE inline uint32_t bswap_32_schism_internal_(uint32_t x)
+{
+	return (
+		((x & UINT32_C(0x000000FF)) << 24)
+		| ((x & UINT32_C(0x0000FF00)) << 8)
+		| ((x & UINT32_C(0x00FF0000)) >> 8)
+		| ((x & UINT32_C(0xFF000000)) >> 24)
+		);
+}
 # define bswap_32(x) bswap_32_schism_internal_(x)
+# define SCHISM_NEED_EXTERN_DEFINE_BSWAP_32
 #endif
 
 #ifndef bswap_16
+SCHISM_CONST SCHISM_ALWAYS_INLINE inline uint16_t bswap_16_schism_internal_(uint16_t x)
+{
+	return (
+		((x & UINT16_C(0x00FF)) << 8)
+		| ((x & UINT16_C(0xFF00)) >> 8)
+		);
+}
 # define bswap_16(x) bswap_16_schism_internal_(x)
+# define SCHISM_NEED_EXTERN_DEFINE_BSWAP_16
 #endif
 
 /* define the endian-related byte swapping (taken from libmodplug sndfile.h, glibc, and sdl) */

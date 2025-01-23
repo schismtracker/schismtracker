@@ -25,6 +25,12 @@
 
 /* these are defined here for compliance with C99's weird
  * inline behavior */
+#ifdef SCHISM_NEED_EXTERN_DEFINE_BSWAP_64
 SCHISM_CONST extern inline uint64_t bswap_64_schism_internal_(uint64_t x);
+#endif
+#ifdef SCHISM_NEED_EXTERN_DEFINE_BSWAP_32
 SCHISM_CONST extern inline uint32_t bswap_32_schism_internal_(uint32_t x);
+#endif
+#ifdef SCHISM_NEED_EXTERN_DEFINE_BSWAP_16
 SCHISM_CONST extern inline uint16_t bswap_16_schism_internal_(uint16_t x);
+#endif
