@@ -233,7 +233,7 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 			SCHISM_VLA_ALLOC(unsigned char, buf, pblk.pk_size - pblk.tt_entries);
 
 			slurp_seek(fp, pblk.tt_entries, SEEK_CUR);
-			if (slurp_read(fp, buf, sizeof(buf)) != sizeof(buf)) {
+			if (slurp_read(fp, buf, SCHISM_VLA_SIZEOF(buf)) != SCHISM_VLA_SIZEOF(buf)) {
 				SCHISM_VLA_FREE(pblk_table);
 				SCHISM_VLA_FREE(psubblk);
 				SCHISM_VLA_FREE(buf);
@@ -305,7 +305,7 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 			SCHISM_VLA_ALLOC(unsigned char, buf, pblk.pk_size - pblk.tt_entries);
 
 			slurp_seek(fp, pblk.tt_entries, SEEK_CUR);
-			if (slurp_read(fp, buf, sizeof(buf)) != sizeof(buf)) {
+			if (slurp_read(fp, buf, SCHISM_VLA_SIZEOF(buf)) != SCHISM_VLA_SIZEOF(buf)) {
 				SCHISM_VLA_FREE(pblk_table);
 				SCHISM_VLA_FREE(psubblk);
 				SCHISM_VLA_FREE(buf);
