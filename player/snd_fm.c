@@ -136,9 +136,9 @@ void Fmdrv_MixTo(int32_t *target, uint32_t count)
 		return;
 
 #if OPLSOURCE == 2
-	int16_t buf[count];
+	SCHISM_VLA_ALLOC(int16_t, buf, count);
 
-	memset(buf, 0, sizeof(buf));
+	memset(buf, 0, SCHISM_VLA_SIZEOF(buf));
 
 	// mono. Single buffer.
 
@@ -154,10 +154,12 @@ void Fmdrv_MixTo(int32_t *target, uint32_t count)
 		target[a * 2 + 0] += buf[a] * OPL_VOLUME;
 		target[a * 2 + 1] += buf[a] * OPL_VOLUME;
 	}
-#else
-	int16_t buf[count * 3];
 
-	memset(buf, 0, sizeof(buf));
+	SCHISM_VLA_FREE(buf);
+#else
+	SCHISM_VLA_ALLOC(int16_t, buf, count * 3);
+
+	memset(buf, 0, SCHISM_VLA_SIZEOF(buf));
 
 	OPLUpdateOne(opl, (int16_t *[]){ buf, buf + count, buf + (count * 2), buf + (count * 2) }, count);
 	/*
@@ -173,6 +175,8 @@ void Fmdrv_MixTo(int32_t *target, uint32_t count)
 		target[a * 2 + 0] += buf[a] * OPL_VOLUME;
 		target[a * 2 + 1] += buf[count + a] * OPL_VOLUME;
 	}
+
+	SCHISM_VLA_FREE(buf);
 #endif
 }
 

@@ -181,9 +181,10 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 	if (!buffer)
 		return 0;
 
-	uint32_t pblk_table[hdr.blocks];
+	SCHISM_VLA_ALLOC(uint32_t, pblk_table, hdr.blocks);
 	slurp_seek(fp, hdr.blktable, SEEK_SET);
-	if (slurp_read(fp, pblk_table, sizeof(pblk_table)) != sizeof(pblk_table)) {
+	if (slurp_read(fp, pblk_table, SCHISM_VLA_SIZEOF(pblk_table)) != SCHISM_VLA_SIZEOF(pblk_table)) {
+		SCHISM_VLA_FREE(pblk_table);
 		free(buffer);
 		return 0;
 	}
@@ -195,12 +196,15 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 
 		mm_block_t pblk;
 		if (!read_mmcmp_block(&pblk, fp)) {
+			SCHISM_VLA_FREE(pblk_table);
 			free(buffer);
 			return 0;
 		}
 
-		mm_subblock_t psubblk[pblk.sub_blk];
+		SCHISM_VLA_ALLOC(mm_subblock_t, psubblk, pblk.sub_blk);
 		if (!read_mmcmp_subblocks(pblk.sub_blk, psubblk, fp)) {
+			SCHISM_VLA_FREE(pblk_table);
+			SCHISM_VLA_FREE(psubblk);
 			free(buffer);
 			return 0;
 		}
@@ -212,6 +216,8 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 					break;
 
 				if (slurp_read(fp, buffer + psubblk[i].unpk_pos, psubblk[i].unpk_size) != psubblk[i].unpk_size) {
+					SCHISM_VLA_FREE(pblk_table);
+					SCHISM_VLA_FREE(psubblk);
 					free(buffer);
 					return 0;
 				}
@@ -224,9 +230,13 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 			uint32_t numbits = pblk.num_bits;
 			uint32_t subblk = 0, oldval = 0;
 
-			unsigned char buf[pblk.pk_size - pblk.tt_entries];
+			SCHISM_VLA_ALLOC(unsigned char, buf, pblk.pk_size - pblk.tt_entries);
+
 			slurp_seek(fp, pblk.tt_entries, SEEK_CUR);
 			if (slurp_read(fp, buf, sizeof(buf)) != sizeof(buf)) {
+				SCHISM_VLA_FREE(pblk_table);
+				SCHISM_VLA_FREE(psubblk);
+				SCHISM_VLA_FREE(buf);
 				free(buffer);
 				return 0;
 			}
@@ -279,6 +289,8 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 					dest = (uint16_t *)(buffer + psubblk[subblk].unpk_pos);
 				}
 			}
+
+			SCHISM_VLA_FREE(buf);
 		} else {
 			/* Data is 8-bit packed */
 			uint8_t *dest = buffer + psubblk->unpk_pos;
@@ -290,9 +302,13 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 
 			slurp_peek(fp, ptable, sizeof(ptable));
 
-			unsigned char buf[pblk.pk_size - pblk.tt_entries];
+			SCHISM_VLA_ALLOC(unsigned char, buf, pblk.pk_size - pblk.tt_entries);
+
 			slurp_seek(fp, pblk.tt_entries, SEEK_CUR);
 			if (slurp_read(fp, buf, sizeof(buf)) != sizeof(buf)) {
+				SCHISM_VLA_FREE(pblk_table);
+				SCHISM_VLA_FREE(psubblk);
+				SCHISM_VLA_FREE(buf);
 				free(buffer);
 				return 0;
 			}
@@ -341,8 +357,14 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 					dest = buffer + psubblk[subblk].unpk_pos;
 				}
 			}
+
+			SCHISM_VLA_FREE(buf);
 		}
+
+		SCHISM_VLA_FREE(psubblk);
 	}
+
+	SCHISM_VLA_FREE(pblk_table);
 
 	*data = buffer;
 	*length = filesize;

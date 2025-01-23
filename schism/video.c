@@ -38,10 +38,6 @@
 
 #include <errno.h>
 
-#ifndef SCHISM_MACOSX
-#include "auto/schismico_hires.h"
-#endif
-
 /* leeto drawing skills */
 struct mouse_cursor {
 	uint32_t pointer[18];

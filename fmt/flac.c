@@ -572,21 +572,25 @@ int fmt_flac_export_body(disko_t *fp, const uint8_t *data, size_t length)
 	struct flac_writedata *fwd = fp->userdata;
 	const int bytes_per_sample = (fwd->bits / 8);
 
-	FLAC__int32 pcm[length / bytes_per_sample];
+	SCHISM_VLA_ALLOC(FLAC__int32, pcm, length / bytes_per_sample);
 
 	/* 8-bit/16-bit PCM -> 32-bit PCM */
 	size_t i;
-	for (i = 0; i < length / bytes_per_sample; i++) {
-		if (bytes_per_sample == 2)
-			pcm[i] = (FLAC__int32)(((const int16_t*)data)[i]);
-		else if (bytes_per_sample == 1)
-			pcm[i] = (FLAC__int32)(((const int8_t*)data)[i]);
-		else
-			return DW_ERROR;
+	for (i = 0; i < SCHISM_VLA_LENGTH(pcm); i++) {
+		switch (bytes_per_sample) {
+		case 1: pcm[i] = (FLAC__int32)(((const int8_t*)data)[i]); break;
+		case 2: pcm[i] = (FLAC__int32)(((const int16_t*)data)[i]); break;
+		case 4: pcm[i] = (FLAC__int32)(((const int32_t*)data)[i]); break;
+		default: SCHISM_VLA_FREE(pcm); return DW_ERROR;
+		}
 	}
 
-	if (!schism_FLAC_stream_encoder_process_interleaved(fwd->encoder, pcm, length / (bytes_per_sample * fwd->channels)))
+	if (!schism_FLAC_stream_encoder_process_interleaved(fwd->encoder, pcm, length / (bytes_per_sample * fwd->channels))) {
+		SCHISM_VLA_FREE(pcm);
 		return DW_ERROR;
+	}
+
+	SCHISM_VLA_FREE(pcm);
 
 	return DW_OK;
 }
@@ -594,10 +598,14 @@ int fmt_flac_export_body(disko_t *fp, const uint8_t *data, size_t length)
 int fmt_flac_export_silence(disko_t *fp, long bytes)
 {
 	/* actually have to generate silence here */
-	uint8_t silence[bytes];
-	memset(silence, 0, sizeof(silence));
+	SCHISM_VLA_ALLOC(uint8_t, silence, bytes);
+	memset(silence, 0, SCHISM_VLA_SIZEOF(silence));
 
-	return fmt_flac_export_body(fp, silence, bytes);
+	int res = fmt_flac_export_body(fp, silence, bytes);
+
+	SCHISM_VLA_FREE(silence);
+
+	return res;
 }
 
 int fmt_flac_export_tail(disko_t *fp)

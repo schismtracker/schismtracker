@@ -391,6 +391,82 @@ extern int ya_optind, ya_opterr, ya_optopt;
 # define strcasestr(haystack, needle) charset_strcasestr(haystack, CHARSET_CHAR, needle, CHARSET_CHAR)
 #endif
 
+// why oh why
+#ifdef alloca
+# define SCHISM_USE_ALLOCA
+#else
+# ifdef HAVE_ALLOCA_H
+#  include <alloca.h>
+#  define SCHISM_USE_ALLOCA
+# elif defined(__NetBSD__) // untested
+#  include <stdlib.h>
+#  define SCHISM_USE_ALLOCA
+# elif SCHISM_GNUC_HAS_BUILTIN(__builtin_alloca, 2, 95, 3)
+#  define alloca __builtin_alloca
+#  define SCHISM_USE_ALLOCA
+# elif SCHISM_MSVC_ATLEAST(0, 0, 0) // untested
+#  include <malloc.h>
+#  define alloca _alloca
+#  define SCHISM_USE_ALLOCA
+# elif defined(__WATCOMC__) // untested
+#  include <malloc.h>
+#  define SCHISM_USE_ALLOCA
+# elif defined(__BORLANDC__) // untested
+#  include <malloc.h>
+#  define SCHISM_USE_ALLOCA
+# elif defined(__DMC__) // untested
+#  include <stdlib.h>
+#  define SCHISM_USE_ALLOCA
+# elif defined(_AIX) && !defined(__GNUC__) // untested
+#  pragma alloca
+#  define SCHISM_USE_ALLOCA
+# elif defined(__MRC__) // untested
+void *alloca(unsigned int size);
+#  define SCHISM_USE_ALLOCA
+# elif defined(HAVE_ALLOCA)
+// we ought to not be assuming this
+void *alloca(size_t size);
+#  define SCHISM_USE_ALLOCA
+# endif
+#endif
+
+// This is an abstraction over VLAs that should work everywhere.
+// Unfortunately, since C99 VLAs are not required in C11 and newer,
+// this is necessary. Most notably MSVC does not have support for
+// VLAs whatsoever.
+// Note that it is indeed possible that this will result in an out
+// of memory crash when using malloc. IMO this is the normal way to
+// handle things since VLAs can, will, and do blow up the stack anyway,
+// which is completely unrecoverable in portable code.
+//
+// usage:
+//   SCHISM_VLA_ALLOC(int, arr, some_integer);
+//   for (int i = 0; i < SCHISM_VLA_LENGTH(arr); i++)
+//       arr[i] = i;
+//   SCHISM_VLA_FREE(arr);
+#ifdef HAVE_C99_VLAS
+# define SCHISM_VLA_ALLOC(type, name, size) type name[size]
+# define SCHISM_VLA_FREE(name) // no-op
+# define SCHISM_VLA_SIZEOF(name) sizeof(name)
+#elif defined(SCHISM_USE_ALLOCA)
+# define SCHISM_VLA_ALLOC(type, name, size) \
+	const size_t _##name##_vla_size = ((size) * sizeof(type)); \
+	type *name = alloca(_##name##_vla_size)
+# define SCHISM_VLA_FREE(name) // no-op
+# define SCHISM_VLA_SIZEOF(name) (_##name##_vla_size)
+#else
+// fallback to the heap
+# include "mem.h"
+# define SCHISM_VLA_ALLOC(type, name, size) \
+	const size_t _##name##_vla_size = ((size) * sizeof(type)); \
+	type *name = mem_alloc(_##name##_vla_size)
+# define SCHISM_VLA_FREE(name) free(name)
+# define SCHISM_VLA_SIZEOF(name) (_##name##_vla_size)
+#endif
+
+// hm :)
+#define SCHISM_VLA_LENGTH(name) (SCHISM_VLA_SIZEOF(name) / sizeof(*name))
+
 /* ------------------------------------------------------------------------ */
 
 #ifdef SCHISM_WIN32

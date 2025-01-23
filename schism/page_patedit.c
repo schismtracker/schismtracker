@@ -1841,14 +1841,14 @@ static void selection_roll(enum roll_dir direction)
 	if (sel_rows < 2) { return; }
 	seldata = pattern + 64 * selection.first_row + selection.first_channel - 1;
 
-	song_note_t temp[sel_chans];
+	SCHISM_VLA_ALLOC(song_note_t, temp, sel_chans);
 	copy_bytes = sizeof(temp);
 	row = (direction == ROLL_DOWN ? sel_rows - 1 : 0);
 	memcpy(temp, seldata + 64 * row, copy_bytes);
-	for (n = 1; n < sel_rows; n++, row += direction) {
+	for (n = 1; n < sel_rows; n++, row += direction)
 		memcpy(seldata + 64 * row, seldata + 64 * (row + direction), copy_bytes);
-	}
 	memcpy(seldata + 64 * row, temp, copy_bytes);
+	SCHISM_VLA_FREE(temp);
 
 	status.flags |= SONG_NEEDS_SAVE;
 }

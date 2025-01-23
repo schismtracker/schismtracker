@@ -235,7 +235,7 @@ AC_SUBST([UTF8PROC_CFLAGS])
 AC_SUBST([UTF8PROC_LIBS])
 
 dnl Functions
-AC_CHECK_FUNCS(strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr asprintf vasprintf memcmp nice setenv unsetenv dup fnmatch mkstemp localtime_r umask execl fork nanosleep usleep access getopt_long fdopen)
+AC_CHECK_FUNCS(alloca strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr asprintf vasprintf memcmp nice setenv unsetenv dup fnmatch mkstemp localtime_r umask execl fork nanosleep usleep access getopt_long fdopen)
 AM_CONDITIONAL([NEED_ASPRINTF], [test "x$ac_cv_func_asprintf" = "xno"])
 AM_CONDITIONAL([NEED_VASPRINTF], [test "x$ac_cv_func_vasprintf" = "xno"])
 AM_CONDITIONAL([NEED_MEMCMP], [test "x$ac_cv_func_memcmp" = "xno"])
@@ -246,7 +246,7 @@ AM_CONDITIONAL([NEED_UNSETENV], [test "x$ac_cv_func_unsetenv" = "xno"])
 AM_CONDITIONAL([NEED_GETOPT], [test "x$ac_cv_func_getopt_long" = "xno"])
 
 dnl Headers, typedef crap, et al.
-AC_CHECK_HEADERS(sys/time.h dirent.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/socket.h sys/soundcard.h poll.h sys/poll.h linux/fb.h sys/kd.h stdint.h inttypes.h)
+AC_CHECK_HEADERS(alloca.h sys/time.h dirent.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/socket.h sys/soundcard.h poll.h sys/poll.h linux/fb.h sys/kd.h stdint.h inttypes.h)
 
 AM_CONDITIONAL([USE_OSS], [false])
 if test "x$ac_cv_header_sys_soundcard_h" = "xyes"; then
@@ -525,6 +525,15 @@ AC_COMPILE_IFELSE([AC_LANG_SOURCE([[int xxx[((-1 >> 1) == -1) ? 1 : -1];]])],
 AC_MSG_RESULT([$have_arithmetic_rshift])
 if test "x$have_arithmetic_rshift" = "xyes"; then
 	AC_DEFINE([HAVE_ARITHMETIC_RSHIFT], [1], [ ])
+fi
+
+AC_MSG_CHECKING([for C99 VLA support])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([[void s(unsigned int x) { char y[x]; }]])],
+	[have_c99_vlas=yes],
+	[have_c99_vlas=no])
+AC_MSG_RESULT($have_c99_vlas)
+if test "x$have_c99_vlas" = "xyes"; then
+	AC_DEFINE([HAVE_C99_VLAS], [1], [C99-style VLA support])
 fi
 
 dnl --------------------------------------------------------------------------
