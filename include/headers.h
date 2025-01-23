@@ -470,7 +470,7 @@ void *alloca(size_t size);
 /* ------------------------------------------------------------------------ */
 
 #ifdef SCHISM_WIN32
-static inline SCHISM_ALWAYS_INLINE int _schism_fixup_ms_vsnprintf(char *buffer, size_t count, const char *fmt, va_list ap)
+static inline int _schism_fixup_ms_vsnprintf(char *buffer, size_t count, const char *fmt, va_list ap)
 {
 	va_list ap_cp;
 
@@ -491,7 +491,7 @@ static inline SCHISM_ALWAYS_INLINE int _schism_fixup_ms_vsnprintf(char *buffer, 
 	return ret;
 }
 
-static inline SCHISM_ALWAYS_INLINE int _schism_fixup_ms_snprintf(char *buffer, size_t count, const char *fmt, ...) SCHISM_FORMAT(printf, 3, 4);
+static inline int _schism_fixup_ms_snprintf(char *buffer, size_t count, const char *fmt, ...) SCHISM_FORMAT(printf, 3, 4);
 static inline int _schism_fixup_ms_snprintf(char *buffer, size_t count, const char *fmt, ...)
 {
 	va_list ap;
