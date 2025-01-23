@@ -840,26 +840,26 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 				// Loop wrap-around magic
 				if (lookahead_ptr) {
 					const int32_t oldcount = smpcount;
-					const int32_t read_length = rshift_signed(buffer_length_to_samples(smpcount - 1, channel), 16);
+					const int32_t pos_dest = rshift_signed((channel->position << 16) + (channel->increment * (nsamples - 1)) + channel->position_frac, 16);
 					const int at_loop_start = (channel->position >= channel->loop_start && channel->position < channel->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE);
 					if (!at_loop_start)
-						channel->flags &= ~CHN_LOOP_WRAPPED;
+						channel->flags &= ~(CHN_LOOP_WRAPPED);
 
 					channel->current_sample_data = smp_ptr;
-					if (channel->position >= lookahead_start) {
+					if ((int32_t)channel->position >= lookahead_start) {
 						int32_t samples_to_read = (channel->increment < 0)
-							? (channel->position - lookahead_start)
-							: (channel->loop_end - channel->position);
+							? ((int32_t)channel->position - lookahead_start)
+							: (channel->loop_end - (int32_t)channel->position);
 						// this line causes sample 8 in BUTTERFL.XM to play incorrectly
 						//samples_to_read = MAX(samples_to_read, channel->loop_end - channel->loop_start);
 						smpcount = samples_to_buffer_length(samples_to_read, channel);
 
 						channel->current_sample_data = lookahead_ptr;
-					} else if ((channel->flags & (CHN_LOOP_WRAPPED)) && at_loop_start) {
+					} else if ((channel->flags & CHN_LOOP_WRAPPED) && at_loop_start) {
 						// Interpolate properly after looping
-						smpcount = samples_to_buffer_length((channel->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE) - channel->position, channel);
+						smpcount = samples_to_buffer_length(channel->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE - channel->position, channel);
 						channel->current_sample_data = lookahead_ptr + (channel->loop_end - channel->loop_start) * ((channel->ptr_sample->flags & CHN_STEREO) ? 2 : 1) * ((channel->ptr_sample->flags & CHN_16BIT) ? 2 : 1);
-					} else if (channel->increment > 0 && channel->position + read_length >= lookahead_start && smpcount > 1) {
+					} else if (channel->increment >= 0 && pos_dest >= lookahead_start && smpcount > 1) {
 						smpcount = samples_to_buffer_length(lookahead_start - channel->position, channel);
 					}
 
