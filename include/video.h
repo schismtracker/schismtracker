@@ -37,6 +37,7 @@ void video_set_input_grabbed(int enabled);
 
 void video_warp_mouse(unsigned int x, unsigned int y);
 void video_get_mouse_coordinates(unsigned int *x, unsigned int *y);
+void video_show_cursor(int enabled);
 
 /* -------------------------------------------------- */
 /* menu toggling */

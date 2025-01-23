@@ -634,6 +634,9 @@ static void event_loop(void)
 			case SCHISM_WINDOWEVENT_FOCUS_GAINED:
 				video_mousecursor(MOUSE_RESET_STATE);
 				break;
+			case SCHISM_WINDOWEVENT_FOCUS_LOST:
+				video_show_cursor(1);
+				break;
 			case SCHISM_WINDOWEVENT_RESIZED:
 			case SCHISM_WINDOWEVENT_SIZE_CHANGED: /* tiling window managers */
 				video_resize(se.window.data.resized.width, se.window.data.resized.height);

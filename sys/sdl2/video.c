@@ -712,6 +712,11 @@ static int sdl2_video_get_wm_data(video_wm_data_t *wm_data)
 	return 1;
 }
 
+static void sdl2_video_show_cursor(int enabled)
+{
+	sdl2_ShowCursor(enabled ? SDL_ENABLE : SDL_DISABLE);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 static int sdl2_video_load_syms(void)
@@ -845,4 +850,5 @@ const schism_video_backend_t schism_video_backend_sdl2 = {
 	.blit = sdl2_video_blit,
 	.mousecursor_changed = sdl2_video_mousecursor_changed,
 	.get_wm_data = sdl2_video_get_wm_data,
+	.show_cursor = sdl2_video_show_cursor,
 };
