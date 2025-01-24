@@ -528,7 +528,6 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 	uint8_t mod_songtitle[20] = {0};
 	uint8_t mod_orders[128] = {0};
 	uint8_t tmp[128];
-	uint8_t* mod_pattern = NULL;
 		
 	int nord, nsmp, nchn, maxpat, jmax, joutpos;
 	long tmppos;
@@ -623,10 +622,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 		disko_write(fp, tag, 4);
 	}
 
-
-	mod_pattern = malloc(nchn * 4 * 64);
-	if (!mod_pattern)
-		return SAVE_INTERNAL_ERROR;
+	uint8_t mod_pattern[MAX_CHANNELS * 4 * 64];
 
 	for(n = 0; n <= maxpat; ++n) {
 		memset(mod_pattern, 0, nchn * 4 * 64);
@@ -725,7 +721,6 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 		}
 		disko_write(fp, mod_pattern, nchn * 64 * 4);
 	}
-	free(mod_pattern);
 
 	// Now writing sample data
 	for (tmp[0] = tmp[1] = n = 0; (n < nsmp) && (n < 31); ++n) {
