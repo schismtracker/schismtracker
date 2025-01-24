@@ -91,7 +91,6 @@ enum {
 	WARN_SAMPLEVIB,
 	WARN_INSTRUMENTS,
 	WARN_PATTERNLEN,
-	WARN_MAXCHANNELS,
 	WARN_NOTERANGE,
 	WARN_VOLEFFECTS,
 	WARN_MAXSAMPLES,
@@ -108,7 +107,6 @@ static const char *mod_warnings[] = {
 	[WARN_SAMPLEVIB]    = "Sample vibrato",
 	[WARN_INSTRUMENTS]  = "Instrument functions",
 	[WARN_PATTERNLEN]   = "Pattern lengths other than 64 rows",
-	[WARN_MAXCHANNELS]  = "Data outside 4 channels",
 	[WARN_NOTERANGE]    = "Notes outside the range C-4 to B-6",
 	[WARN_VOLEFFECTS]   = "Extended volume column effects",
 	[WARN_MAXSAMPLES]   = "Over 31 samples",
@@ -527,13 +525,12 @@ int fmt_mod15_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 /* incomplete 31 sample M.K. amiga mod saving routine */
 int fmt_mod_save_song(disko_t *fp, song_t *song)
 {
-	uint8_t mod_songtitle[20];
-	uint8_t mod_sampleheader[30];
-	uint8_t mod_orders[128];
+	uint8_t mod_songtitle[20] = {0};
+	uint8_t mod_orders[128] = {0};
 	uint8_t tmp[128];
-	uint8_t mod_pattern[1024];
-
-	int nord, nsmp, maxpat, jmax, joutpos;
+	uint8_t* mod_pattern = NULL;
+		
+	int nord, nsmp, nchn, maxpat, jmax, joutpos;
 	long tmppos;
 	int i, j, n, period;
 	unsigned int warn = 0;
@@ -550,15 +547,14 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 		warn |= 1 << WARN_MAXSAMPLES;
 	}
 
-	if (3 < csf_get_highest_used_channel(song))
-		warn |= 1 << WARN_MAXCHANNELS;
+	nchn = csf_get_highest_used_channel(song)+1;
 
 	memcpy(mod_songtitle, song->title, 20);
 	disko_write(fp, mod_songtitle, 20); // writing song title
 
 	// Now writing sample headers
 	for(n = 1; n <= 31; ++n) {
-		for(i = 0; i < 30; ++i) mod_sampleheader[i] = 0;
+		uint8_t mod_sampleheader[30] = {0};
 		if(n <= nsmp) {
 			if(song->samples[n].global_volume != 64)
 				warn |= 1 << WARN_SAMPLEVOL;
@@ -607,20 +603,31 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 	}
 	if (maxpat + 1 < csf_get_num_patterns(song))
 		warn |= 1 << WARN_UNUSEDPATS;
-	for(; i < 128; ++i)
-		mod_orders[i] = 0;
 
 	disko_write(fp, mod_orders, 128);
 
-	if(maxpat < 64)
-		disko_write(fp, valid_tags[0][0], 4);
-	else
-		disko_write(fp, valid_tags[1][0], 4);
+	if (nchn == 4) {
+		if(maxpat < 64)
+			disko_write(fp, valid_tags[0][0], 4);
+		else
+			disko_write(fp, valid_tags[1][0], 4);
+	} else {
+		uint8_t tag[4] = {'0', 'C', 'H', 'N'};
+		if (nchn >= 10) {
+			tag[0] = (nchn / 10) + '0';
+			tag[1] = (nchn % 10) + '0';
+			tag[2] = 'C';
+		} else {
+			tag[0] = nchn + '0';
+		}
+		disko_write(fp, tag, 4);
+	}
 
+
+	mod_pattern = calloc(nchn, 4 * 64);
+	if (mod_pattern == NULL) return SAVE_INTERNAL_ERROR;
 	for(n = 0; n <= maxpat; ++n) {
 		m = song->patterns[n];
-		for(i = 0; i < 1024; ++i)
-			mod_pattern[i] = 0;
 		jmax = song->pattern_size[n];
 		if(jmax != 64) {
 			if(jmax > 64)
@@ -630,8 +637,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 		jmax *= MAX_CHANNELS;
 		for (j = joutpos = 0; j < jmax; ++j, ++m) {
 			uint8_t mod_fx, mod_fx_val;
-			if ((j % MAX_CHANNELS) < 4) {
-				//if (m->note || m->instrument || m->voleffect || m->volparam || m->effect || m->param) {...
+			if ((j % MAX_CHANNELS) < nchn) {
 				period = amigaperiod_table[(m->note) & 0xff];
 				if (((m->note) & 0xff) && ((period < 113) || (period > 856)))
 					warn |= 1 << WARN_NOTERANGE;
@@ -714,8 +720,9 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 				joutpos += 4;
 			}
 		}
-		disko_write(fp, mod_pattern, 1024);
+		disko_write(fp, mod_pattern, nchn * 64 * 4);
 	}
+	free(mod_pattern);
 
 	// Now writing sample data
 	for (tmp[0] = tmp[1] = n = 0; (n < nsmp) && (n < 31); ++n) {
