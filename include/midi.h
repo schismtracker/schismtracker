@@ -95,10 +95,10 @@ void midi_engine_stop(void);
 void midi_engine_poll_ports(void);
 
 /* some parts of schism call this; it means "immediately" */
-void midi_send_now(const unsigned char seq[3], unsigned int len);
+void midi_send_now(const unsigned char *seq, unsigned int len);
 
 /* ... but the player calls this */
-void midi_send_buffer(const unsigned char data[3], unsigned int len, unsigned int pos);
+void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int pos);
 void midi_send_flush(void);
 
 /* used by the audio thread */
