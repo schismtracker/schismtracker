@@ -295,7 +295,7 @@ size_t charset_strncasecmplen(const void* in1, charset_t in1set, const void* in2
 /* ------------------------------------------------------------------------ */
 /* based off the tiny musl libc implementation */
 
-static inline void *_charset_strxstr_impl(const void *in1, charset_t in1set, const void *in2, charset_t in2set, int32_t (*cmp)(const void *in1, charset_t in1set, const void *in2, charset_t in2set, size_t len))
+static inline SCHISM_ALWAYS_INLINE void *_charset_strxstr_impl(const void *in1, charset_t in1set, const void *in2, charset_t in2set, int32_t (*cmp)(const void *in1, charset_t in1set, const void *in2, charset_t in2set, size_t len))
 {
 	const unsigned char *uc1 = (const unsigned char *)in1;
 
@@ -307,7 +307,7 @@ static inline void *_charset_strxstr_impl(const void *in1, charset_t in1set, con
 
 	size_t len = charset_strlen(in2, in2set);
 	for (;;) {
-		if (!charset_strncasecmp(uc1 + decoder1.offset, in1set, in2, in2set, len))
+		if (!cmp(uc1 + decoder1.offset, in1set, in2, in2set, len))
 			return (void *)(uc1 + decoder1.offset);
 
 		charset_decode_next(&decoder1, in1set);
