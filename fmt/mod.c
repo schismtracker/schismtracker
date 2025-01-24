@@ -624,9 +624,12 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 	}
 
 
-	mod_pattern = calloc(nchn, 4 * 64);
-	if (mod_pattern == NULL) return SAVE_INTERNAL_ERROR;
+	mod_pattern = malloc(nchn * 4 * 64);
+	if (!mod_pattern)
+		return SAVE_INTERNAL_ERROR;
+
 	for(n = 0; n <= maxpat; ++n) {
+		memset(mod_pattern, 0, nchn * 4 * 64);
 		m = song->patterns[n];
 		jmax = song->pattern_size[n];
 		if(jmax != 64) {
