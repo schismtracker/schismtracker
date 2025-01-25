@@ -79,8 +79,15 @@ static void _dw_stdio_write(disko_t *ds, const void *buf, size_t len)
 static void _dw_stdio_seek(disko_t *ds, int64_t pos, int whence)
 {
 #ifdef HAVE_NONPOSIX_FSEEK
-	// fseek() broken under Retro68. this is "close enough"
-	// to the POSIX behavior, I guess
+	// On some platforms, fseek() does not conform to the POSIX
+	// ideas of what should happen when you seek beyond EOF. On
+	// those odd platforms we'll "fake" the behavior by seeking
+	// to the end of the file and appending NUL bytes until we
+	// reach the desired position.
+	//
+	// Ideally, we would save the requested position, and shove
+	// the NUL byte crap into _dw_stdio_write, but this is good
+	// enough for now.
 
 	long start = ftell(ds->file);
 	if (fseek(ds->file, 0, SEEK_END) < 0) {
