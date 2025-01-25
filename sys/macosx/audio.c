@@ -37,22 +37,21 @@
 # include <AudioUnit/AUNTComponent.h>
 #endif
 
-// Use legacy AudioDevice* APIs when targetting ancient Mac OS X
-// without the AudioObject* API
+// AudioObject APIs were added in 10.4
 #if (MAC_OS_X_VERSION_MIN_REQUIRED < 1040) || \
 	(!defined(AUDIO_UNIT_VERSION) || ((AUDIO_UNIT_VERSION + 0) < 1040))
 # define USE_AUDIODEVICE_APIS 1
 #endif
 
-// Use component managers when targetting less ancient but still
-// ancient Mac OS X (<10.6).
+// Audio Component APIs were refactored out of Component
+// Manager in 10.6; for older versions we can simply
+// #define the new symbols to the old ones
 #if (MAC_OS_X_VERSION_MIN_REQUIRED < 1060) || \
 	(!defined(AUDIO_UNIT_VERSION) || ((AUDIO_UNIT_VERSION + 0) < 1060))
 # define USE_COMPONENT_MANAGER_APIS 1
 #endif
 
 #ifdef USE_COMPONENT_MANAGER_APIS
-// These APIs were just renamed, so we can use #defines here
 # define AudioComponentDescription struct ComponentDescription
 # define AudioComponent Component
 # define AudioComponentInstance AudioUnit
@@ -122,6 +121,19 @@ static void _macosx_audio_free_devices(void)
 	}
 }
 
+static char *_macosx_cfstring_to_utf8(CFStringRef cfstr)
+{
+	size_t len = CFStringGetMaximumSizeForEncoding(CFStringGetLength(cfstr), kCFStringEncodingUTF8);
+	char *buf = mem_alloc(len + 1);
+	if (!CFStringGetCString(cfstr, buf, len + 1, kCFStringEncodingUTF8)) {
+		free(buf);
+		return NULL;
+	}
+	// nul terminate
+	buf[len] = '\0';
+	return buf;
+}
+
 static uint32_t macosx_audio_device_count(void)
 {
 	OSStatus result;
@@ -131,6 +143,7 @@ static uint32_t macosx_audio_device_count(void)
 	AudioObjectPropertyAddress addr = {
 		kAudioHardwarePropertyDevices,
 		kAudioObjectPropertyScopeGlobal,
+		// FIXME this was renamed to kAudioObjectPropertyElementMain in 12.0
 		kAudioObjectPropertyElementMaster
 	};
 #endif
@@ -205,51 +218,48 @@ static uint32_t macosx_audio_device_count(void)
 			continue;
 
 		{
-#ifdef USE_AUDIODEVICE_APIS
-			result = AudioDeviceGetPropertyInfo(device_ids[i], 0, 0, kAudioDevicePropertyDeviceName, &size, NULL);
-			if (result != noErr)
-				continue;
-
-			ptr = mem_alloc(size + 1);
-
-			result = AudioDeviceGetProperty(device_ids[i], 0, 0, kAudioDevicePropertyDeviceName, &size, ptr);
-			if (result != noErr) {
-				free(ptr);
-				continue;
-			}
-
-			ptr[size] = '\0';
-#else
-			addr.mSelector = kAudioObjectPropertyName;
-
+			// Prioritize CFString so we know we're getting UTF-8
 			CFStringRef cfstr;
 			size = sizeof(cfstr);
 
+#ifdef USE_AUDIODEVICE_APIS
+			result = AudioDeviceGetProperty(device_ids[i], 0, 0, kAudioDevicePropertyDeviceNameCFString, &size, &cfstr);
+#else
+			addr.mSelector = kAudioObjectPropertyName;
 			result = AudioObjectGetPropertyData(device_ids[i], &addr, 0, NULL, &size, &cfstr);
-			if (result != kAudioHardwareNoError)
-				continue;
+#endif
+			if (result == kAudioHardwareNoError) {
+				ptr = _macosx_cfstring_to_utf8(cfstr);
+				CFRelease(cfstr);
+			}
+#ifdef USE_AUDIODEVICE_APIS
+			else {
+				// Fallback to just receiving it as a C string
+				// XXX: what encoding is this in?
+				result = AudioDeviceGetPropertyInfo(device_ids[i], 0, 0, kAudioDevicePropertyDeviceName, &size, NULL);
+				if (result != kAudioHardwareNoError)
+					continue;
 
-			len = CFStringGetMaximumSizeForEncoding(CFStringGetLength(cfstr), kCFStringEncodingUTF8);
+				ptr = mem_alloc(size + 1);
 
-			ptr = mem_alloc(len + 1);
-			usable = CFStringGetCString(cfstr, ptr, len + 1, kCFStringEncodingUTF8);
+				result = AudioDeviceGetProperty(device_ids[i], 0, 0, kAudioDevicePropertyDeviceName, &size, ptr);
+				if (result != kAudioHardwareNoError) {
+					free(ptr);
+					continue;
+				}
 
-			CFRelease(cfstr);
-
-			ptr[len] = '\0';
+				ptr[size] = '\0';
+			}
 #endif
 		}
 
 		if (usable) {
-			/* Some devices have whitespace at the end...trim it. */
+			// Trim any whitespace off the end of the name
 			str_rtrim(ptr);
-			len = strlen(ptr);
-			usable = (len > 0);
+			usable = (strlen(ptr) > 0);
 		}
 
 		if (usable) {
-			ptr[len] = '\0';
-
 			devices[c].id = device_ids[i];
 			devices[c].name = ptr;
 
@@ -349,6 +359,7 @@ static schism_audio_device_t *macosx_audio_open_device(uint32_t id, const schism
 
 	OSStatus result = noErr;
 
+	// build our audio stream
 	AudioStreamBasicDescription desired_ca = {
 		.mFormatID = kAudioFormatLinearPCM,
 		.mFormatFlags =
@@ -392,6 +403,8 @@ static schism_audio_device_t *macosx_audio_open_device(uint32_t id, const schism
 		return NULL;
 	}
 
+	// If a device is provided, try to find it in the list and set the current device
+	// If we can't find it, punt
 	if (id != AUDIO_BACKEND_DEFAULT) {
 		result = AudioUnitSetProperty(dev->au, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &devices[id].id, sizeof(devices[id].id));
 		if (result != noErr) {
