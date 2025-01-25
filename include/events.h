@@ -207,8 +207,7 @@ typedef struct {
 } schism_midi_tick_event_t;
 
 typedef struct {
-	uint32_t type;
-	timer_ticks_t timestamp;
+	schism_common_event_t common;
 
 	unsigned int len;
 	unsigned char packet[3];
