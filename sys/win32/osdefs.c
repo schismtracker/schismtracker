@@ -135,6 +135,7 @@ void win32_get_modkey(schism_keymod_t *mk)
 
 void win32_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv)
 {
+	/* Initialize winsocks */
 	static WSADATA ignored = {0};
 
 	if (WSAStartup(0x202, &ignored) == SOCKET_ERROR) {
@@ -142,6 +143,7 @@ void win32_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv)
 		status.flags |= NO_NETWORK;
 	}
 
+	/* Build the menus */
 	menu = CreateMenu();
 	{
 		HMENU file = CreatePopupMenu();
@@ -205,6 +207,49 @@ void win32_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv)
 #ifdef USE_MEDIAFOUNDATION
 	win32mf_init();
 #endif
+
+	/* Convert command line arguments to UTF-8 */
+	{
+		char **utf8_argv;
+		int utf8_argc;
+
+		int i;
+
+		// Windows NT: use Unicode arguments if available
+		LPWSTR cmdline = GetCommandLineW();
+		if (cmdline) {
+			LPWSTR *argvw = CommandLineToArgvW(cmdline, &utf8_argc);
+
+			if (argvw) {
+				// now we have Unicode arguments, so convert them to UTF-8
+				utf8_argv = mem_alloc(sizeof(char *) * utf8_argc);
+
+				for (i = 0; i < utf8_argc; i++) {
+					charset_iconv(argvw[i], &utf8_argv[i], CHARSET_WCHAR_T, CHARSET_CHAR, SIZE_MAX);
+					if (!utf8_argv[i])
+						utf8_argv[i] = str_dup(""); // ...
+				}
+
+				LocalFree(argvw);
+
+				goto have_utf8_args;
+			}
+		}
+
+		// well, that didn't work, fallback to ANSI.
+		utf8_argc = *pargc;
+		utf8_argv = mem_alloc(sizeof(char *) * utf8_argc);
+
+		for (i = 0; i < utf8_argc; i++) {
+			charset_iconv((*pargv)[i], &utf8_argv[i], CHARSET_ANSI, CHARSET_CHAR, SIZE_MAX);
+			if (!utf8_argv[i])
+				utf8_argv[i] = str_dup(""); // ...
+		}
+
+have_utf8_args: ;
+		*pargv = utf8_argv;
+		*pargc = utf8_argc;
+	}
 }
 
 void win32_sysexit(void)
