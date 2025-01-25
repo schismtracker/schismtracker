@@ -29,6 +29,7 @@
 #include "loadso.h"
 #include "charset.h"
 #include "mem.h"
+#include "osdefs.h"
 
 #include "util.h"
 
@@ -43,11 +44,15 @@ struct win32mm_midi {
 	HMIDIIN in;
 
 	union {
+#ifdef SCHISM_WIN32_COMPILE_ANSI
 		MIDIINCAPSA a;
+#endif
 		MIDIINCAPSW w;
 	} icp;
 	union {
+#ifdef SCHISM_WIN32_COMPILE_ANSI
 		MIDIOUTCAPSA a;
+#endif
 		MIDIOUTCAPSW w;
 	} ocp;
 
@@ -58,6 +63,9 @@ struct win32mm_midi {
 
 // whether to use ANSI or Unicode versions of functions
 // (currently based on whether we're running on win9x or not)
+#ifndef SCHISM_WIN32_COMPILE_ANSI
+const
+#endif
 static int use_ansi_funcs = 0;
 
 static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *d, unsigned int len)
@@ -220,9 +228,12 @@ static void _win32mm_poll(struct midi_provider *p)
 	mmin = midiInGetNumDevs();
 	for (i = last_known_in_port; i < mmin; i++) {
 		data = mem_calloc(1, sizeof(struct win32mm_midi));
+#ifdef SCHISM_WIN32_COMPILE_ANSI
 		if (use_ansi_funcs) {
 			r = midiInGetDevCapsA(i, &data->icp.a, sizeof(data->icp.a));
-		} else {
+		} else
+#endif
+		{
 			r = midiInGetDevCapsW(i, &data->icp.w, sizeof(data->icp.w));
 		}
 		if (r != MMSYSERR_NOERROR) {
@@ -232,22 +243,33 @@ static void _win32mm_poll(struct midi_provider *p)
 		data->id = i;
 
 		char *utf8;
-		if (!charset_iconv((use_ansi_funcs) ? ((void *)data->icp.a.szPname) : ((void *)data->icp.w.szPname),
-				&utf8, (use_ansi_funcs) ? CHARSET_ANSI : CHARSET_WCHAR_T, CHARSET_UTF8, SIZE_MAX)) {
+		if (
+#ifdef SCHISM_WIN32_COMPILE_ANSI
+			(use_ansi_funcs && !charset_iconv(data->icp.a.szPname, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(data->icp.a.szPname)))
+			||
+#endif
+			!charset_iconv(data->icp.w.szPname, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(data->icp.w.szPname))
+		) {
 			midi_port_register(p, MIDI_INPUT, utf8, data, 1);
 			free(utf8);
-		} else if (use_ansi_funcs) {
+		}
+#ifdef SCHISM_WIN32_COMPILE_ANSI
+		else if (use_ansi_funcs) {
 			midi_port_register(p, MIDI_INPUT, data->icp.a.szPname, data, 1);
 		}
+#endif
 	}
 	last_known_in_port = mmin;
 
 	mmout = midiOutGetNumDevs();
 	for (i = last_known_out_port; i < mmout; i++) {
 		data = mem_calloc(1, sizeof(struct win32mm_midi));
+#ifdef SCHISM_WIN32_COMPILE_ANSI
 		if (use_ansi_funcs) {
 			r = midiOutGetDevCapsA(i, &data->ocp.a, sizeof(data->ocp.a));
-		} else {
+		} else
+#endif
+		{
 			r = midiOutGetDevCapsW(i, &data->ocp.w, sizeof(data->ocp.w));
 		}
 		if (r != MMSYSERR_NOERROR) {
@@ -257,13 +279,21 @@ static void _win32mm_poll(struct midi_provider *p)
 		data->id = i;
 
 		char *utf8;
-		if (!charset_iconv((use_ansi_funcs) ? ((void *)data->ocp.a.szPname) : ((void *)data->ocp.w.szPname),
-				&utf8, (use_ansi_funcs) ? CHARSET_ANSI : CHARSET_WCHAR_T, CHARSET_UTF8, SIZE_MAX)) {
+		if (
+#ifdef SCHISM_WIN32_COMPILE_ANSI
+			(use_ansi_funcs && !charset_iconv(data->ocp.a.szPname, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(data->ocp.a.szPname)))
+			||
+#endif
+			!charset_iconv(data->ocp.w.szPname, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(data->ocp.w.szPname))
+		) {
 			midi_port_register(p, MIDI_OUTPUT, utf8, data, 1);
 			free(utf8);
-		} else if (use_ansi_funcs) {
+		}
+#ifdef SCHISM_WIN32_COMPILE_ANSI
+		else if (use_ansi_funcs) {
 			midi_port_register(p, MIDI_OUTPUT, data->ocp.a.szPname, data, 1);
 		}
+#endif
 	}
 	last_known_out_port = mmout;
 }
@@ -280,7 +310,9 @@ int win32mm_midi_setup(void)
 	driver.disable = _win32mm_stop;
 	driver.send = _win32mm_send;
 
+#ifdef SCHISM_WIN32_COMPILE_ANSI
 	use_ansi_funcs = (GetVersion() & UINT32_C(0x80000000));
+#endif
 
 	if (!midi_provider_register("Win32MM", &driver)) return 0;
 

@@ -29,6 +29,7 @@
 #include "dmoz.h"
 #include "util.h"
 #include "mem.h"
+#include "osdefs.h"
 
 #include <windows.h>
 
@@ -36,13 +37,16 @@ static char *win32_dmoz_get_exe_path(void)
 {
 	char *utf8 = NULL;
 
+#ifdef SCHISM_WIN32_COMPILE_ANSI
 	if (GetVersion() & UINT32_C(0x80000000)) {
 		// Windows 9x
 		char path[MAX_PATH];
 
 		if (GetModuleFileNameA(NULL, path, ARRAY_SIZE(path)))
 			charset_iconv(path, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(path));
-	} else {
+	} else
+#endif
+	{
 		// Windows NT. This uses dynamic allocation to account for e.g. UNC paths.
 		DWORD pathsize = MAX_PATH;
 		WCHAR *path = NULL;

@@ -31,6 +31,7 @@
 #include "charset.h"
 #include "threads.h"
 #include "mem.h"
+#include "osdefs.h"
 #include "backend/audio.h"
 
 #include <windows.h>
@@ -186,10 +187,14 @@ static uint32_t win32_audio_device_count(void)
 	UINT i;
 	for (i = 0; i < devs; i++) {
 		union {
+#ifdef SCHISM_WIN32_COMPILE_ANSI
 			WAVEOUTCAPSA a;
+#endif
 			WAVEOUTCAPSW w;
 			struct waveoutcaps2w w2;
 		} caps = {0};
+
+#ifdef SCHISM_WIN32_COMPILE_ANSI
 		int win9x = (GetVersion() & UINT32_C(0x80000000));
 		if (win9x) {
 			if (waveOutGetDevCapsA(i, &caps.a, sizeof(caps.a)) != MMSYSERR_NOERROR)
@@ -197,7 +202,9 @@ static uint32_t win32_audio_device_count(void)
 
 			if (charset_iconv(caps.a.szPname, &devices[devices_size], CHARSET_ANSI, CHARSET_UTF8, sizeof(caps.a.szPname)))
 				continue;
-		} else {
+		} else
+#endif
+		{
 			// Try WAVEOUTCAPS2 before WAVEOUTCAPS
 			if (waveOutGetDevCapsW(i, (LPWAVEOUTCAPSW)&caps.w2, sizeof(caps.w2)) == MMSYSERR_NOERROR) {
 				// Try receiving based on the name GUID. Otherwise, fall back to the short name.

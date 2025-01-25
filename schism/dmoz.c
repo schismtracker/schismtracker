@@ -858,6 +858,7 @@ static char *dmoz_win32_get_csidl_directory(int csidl, const wchar_t *registryw,
 	// both Unicode and ANSI and just call it from here so we only have to write
 	// this once.
 
+#ifdef SCHISM_WIN32_COMPILE_ANSI
 	if (GetVersion() & UINT32_C(0x80000000)) {
 		// Windows 9x, ANSI.
 		{
@@ -906,7 +907,9 @@ static char *dmoz_win32_get_csidl_directory(int csidl, const wchar_t *registryw,
 					return utf8;
 			}
 		}
-	} else {
+	} else
+#endif
+	{
 		// Windows NT.
 		{
 			wchar_t bufw[PATH_MAX + 1] = {L'\0'};
@@ -1665,27 +1668,34 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 {
 #ifdef SCHISM_WIN32
 	DWORD attrib;
-	if (GetVersion() < 0x80000000U) {
-		// Windows NT
-		wchar_t* path_w = NULL;
-		if (charset_iconv(path, &path_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			return -1;
-
-		attrib = GetFileAttributesW(path_w);
-	} else {
+# ifdef SCHISM_WIN32_COMPILE_ANSI
+	if (GetVersion() & 0x80000000U) {
 		// Windows 9x
 		char* path_a = NULL;
 		if (charset_iconv(path, &path_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
 			return -1;
 
 		attrib = GetFileAttributesA(path_a);
+	} else
+# endif
+	{
+		// Windows NT
+		wchar_t* path_w = NULL;
+		if (charset_iconv(path, &path_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+			return -1;
+
+		attrib = GetFileAttributesW(path_w);
 	}
 
 	const size_t pathlen = strlen(path);
 
 	if (attrib & FILE_ATTRIBUTE_DIRECTORY) {
-		WIN32_FIND_DATAA ffda;
-		WIN32_FIND_DATAW ffdw;
+		union {
+# ifdef SCHISM_WIN32_COMPILE_ANSI
+			WIN32_FIND_DATAA a;
+# endif
+			WIN32_FIND_DATAW w;
+		} ffd;
 
 		HANDLE find = NULL;
 		{
@@ -1693,16 +1703,19 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 			if (!searchpath_n)
 				return -1;
 
-			if (GetVersion() < 0x80000000U) {
-				wchar_t* searchpath;
-				if (!charset_iconv(searchpath_n, &searchpath, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-					find = FindFirstFileW(searchpath, &ffdw);
-					free(searchpath);
-				}
-			} else {
+# ifdef SCHISM_WIN32_COMPILE_ANSI
+			if (GetVersion() & 0x80000000U) {
 				char *searchpath;
 				if (!charset_iconv(searchpath_n, &searchpath, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
-					find = FindFirstFileA(searchpath, &ffda);
+					find = FindFirstFileA(searchpath, &ffd.a);
+					free(searchpath);
+				}
+			} else
+# endif
+			{
+				wchar_t* searchpath;
+				if (!charset_iconv(searchpath_n, &searchpath, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+					find = FindFirstFileW(searchpath, &ffd.w);
 					free(searchpath);
 				}
 			}
@@ -1722,24 +1735,27 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 			char *filename = NULL;
 			char *fullpath = NULL;
 
-			if (GetVersion() < 0x80000000U) {
-				if (FindNextFileW(find, &ffdw)) {
-					file_attrib = ffdw.dwFileAttributes;
-					if (charset_iconv(ffdw.cFileName, &filename, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(ffdw.cFileName)))
-						continue;
-					fullpath = dmoz_path_concat_len(path, filename, pathlen, strlen(filename));
-				} else {
-					break;
-				}
-			} else {
+# ifdef SCHISM_WIN32_COMPILE_ANSI
+			if (GetVersion() & 0x80000000U) {
 				// ANSI
-				if (FindNextFileA(find, &ffda)) {
-					file_attrib = ffda.dwFileAttributes;
-					if (charset_iconv(ffda.cFileName, &filename, CHARSET_ANSI, CHARSET_UTF8, sizeof(ffda.cFileName)))
+				if (FindNextFileA(find, &ffd.a)) {
+					file_attrib = ffd.a.dwFileAttributes;
+					if (charset_iconv(ffd.a.cFileName, &filename, CHARSET_ANSI, CHARSET_UTF8, sizeof(ffd.a.cFileName)))
 						continue;
 					fullpath = dmoz_path_concat_len(path, filename, pathlen, strlen(filename));
 				} else {
 					// ...
+					break;
+				}
+			} else
+# endif
+			{
+				if (FindNextFileW(find, &ffd.w)) {
+					file_attrib = ffd.w.dwFileAttributes;
+					if (charset_iconv(ffd.w.cFileName, &filename, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(ffd.w.cFileName)))
+						continue;
+					fullpath = dmoz_path_concat_len(path, filename, pathlen, strlen(filename));
+				} else {
 					break;
 				}
 			}

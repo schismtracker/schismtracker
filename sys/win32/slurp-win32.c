@@ -35,6 +35,7 @@
 #include "slurp.h"
 #include "charset.h"
 #include "loadso.h"
+#include "osdefs.h"
 
 static void win32_unmap_(slurp_t *slurp)
 {
@@ -70,13 +71,16 @@ static int win32_error_unmap_(slurp_t *slurp, const char *filename, const char *
 	DWORD err = GetLastError();
 	char *ptr = NULL;
 
+#ifdef SCHISM_WIN32_COMPILE_ANSI
 	if (GetVersion() & UINT32_C(0x80000000)) {
 		LPSTR errmsg = NULL;
 		FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
 				err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&errmsg, 0, NULL);
 		charset_iconv(errmsg, &ptr, CHARSET_ANSI, CHARSET_UTF8, SIZE_MAX);
 		LocalFree(errmsg);
-	} else {
+	} else
+#endif
+	{
 		LPWSTR errmsg = NULL;
 		FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
 				err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&errmsg, 0, NULL);
@@ -99,6 +103,7 @@ static int win32_error_unmap_(slurp_t *slurp, const char *filename, const char *
 
 int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
 {
+#ifdef SCHISM_WIN32_COMPILE_ANSI
 	if (GetVersion() & UINT32_C(0x80000000)) {
 		// Windows 9x
 		char *filename_a;
@@ -107,7 +112,9 @@ int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
 
 		slurp->internal.memory.interfaces.win32.file = CreateFileA(filename_a, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		free(filename_a);
-	} else {
+	} else
+#endif
+	{
 		wchar_t *filename_w;
 		if (charset_iconv(filename, &filename_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
 			return win32_error_unmap_(slurp, filename, "charset_iconv", 0);

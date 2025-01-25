@@ -29,6 +29,7 @@
 #include "mem.h"
 #include "video.h"
 #include "util.h"
+#include "osdefs.h"
 
 #include <windows.h>
 
@@ -50,9 +51,17 @@ static void win32_clippy_set_selection(const char *text)
 static void win32_clippy_set_clipboard(const char *text)
 {
 	// Only use CF_UNICODETEXT on Windows NT machines
+#ifdef SCHISM_WIN32_COMPILE_ANSI
 	const UINT fmt = (GetVersion() & UINT32_C(0x80000000)) ? CF_TEXT : CF_UNICODETEXT;
-	LPWSTR unicode;
-	LPSTR ansi;
+#else
+	static const UINT fmt = CF_UNICODETEXT;
+#endif
+	union {
+		LPWSTR w;
+#ifdef SCHISM_WIN32_COMPILE_ANSI
+		LPSTR a;
+#endif
+	} str;
 	size_t i;
 	size_t size = 0;
 
@@ -64,14 +73,16 @@ static void win32_clippy_set_clipboard(const char *text)
 		return;
 
 	// Convert from LF to CRLF
-	if (fmt == CF_UNICODETEXT && !charset_iconv(text, &unicode, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-		for (i = 0; unicode[i]; i++, size++)
-			if (unicode[i] == L'\n' && (i == 0 || unicode[i - 1] != L'\r'))
+	if (fmt == CF_UNICODETEXT && !charset_iconv(text, &str.w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+		for (i = 0; str.w[i]; i++, size++)
+			if (str.w[i] == L'\n' && (i == 0 || str.w[i - 1] != L'\r'))
 				size++;
-	} else if (fmt == CF_TEXT && !charset_iconv(text, &ansi, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
-		for (i = 0; ansi[i]; i++, size++)
-			if (ansi[i] == '\n' && (i == 0 || ansi[i - 1] != '\r'))
+#ifdef SCHISM_WIN32_COMPILE_ANSI
+	} else if (fmt == CF_TEXT && !charset_iconv(text, &str.a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
+		for (i = 0; str.a[i]; i++, size++)
+			if (str.a[i] == '\n' && (i == 0 || str.a[i - 1] != '\r'))
 				size++;
+#endif
 	} else {
 		// give up
 		return;
@@ -85,28 +96,31 @@ static void win32_clippy_set_clipboard(const char *text)
 		if (fmt == CF_UNICODETEXT) {
 			wchar_t *dst = (wchar_t *)GlobalLock(mem);
 			if (dst) {
-				for (i = 0; unicode[i]; i++) {
-					if (unicode[i] == L'\n' && (i == 0 || unicode[i - 1] != L'\r'))
+				for (i = 0; str.w[i]; i++) {
+					if (str.w[i] == L'\n' && (i == 0 || str.w[i - 1] != L'\r'))
 						*dst++ = L'\r';
-					*dst++ = unicode[i];
+					*dst++ = str.w[i];
 				}
 				*dst = L'\0';
 				GlobalUnlock(mem);
 			}
-			free(unicode);
-		} else if (fmt == CF_TEXT) {
+			free(str.w);
+		}
+#ifdef SCHISM_WIN32_COMPILE_ANSI
+		else if (fmt == CF_TEXT) {
 			char *dst = (char *)GlobalLock(mem);
 			if (dst) {
-				for (i = 0; ansi[i]; i++) {
-					if (ansi[i] == '\n' && (i == 0 || ansi[i - 1] != '\r'))
+				for (i = 0; str.a[i]; i++) {
+					if (str.a[i] == '\n' && (i == 0 || str.a[i - 1] != '\r'))
 						*dst++ = '\r';
-					*dst++ = ansi[i];
+					*dst++ = str.a[i];
 				}
 				*dst = '\0';
 				GlobalUnlock(mem);
 			}
-			free(ansi);
+			free(str.a);
 		}
+#endif
 
 		if (!EmptyClipboard() || !SetClipboardData(fmt, mem))
 			GlobalFree(mem);
@@ -131,12 +145,15 @@ static char *win32_clippy_get_clipboard(void)
 	if (!video_get_wm_data(&wm_data) && wm_data.subsystem != VIDEO_WM_DATA_SUBSYSTEM_WINDOWS)
 		return str_dup("");
 
+#ifdef SCHISM_WIN32_COMPILE_ANSI
 	if (GetVersion() & UINT32_C(0x80000000)) {
 		// Believe it or not, CF_UNICODETEXT *does* actually work on
 		// Windows 95. However, practically every application that runs
 		// will completely ignore it and just use CF_TEXT instead.
 		fmt = CF_TEXT;
-	} else {
+	} else
+#endif
+	{
 		UINT formats[] = {CF_UNICODETEXT, CF_TEXT};
 		fmt = GetPriorityClipboardFormat(formats, ARRAY_SIZE(formats));
 		if (fmt < 0)

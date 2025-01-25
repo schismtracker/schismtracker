@@ -202,7 +202,7 @@ int events_push_event(const schism_event_t *event)
 
 	for (i = 0; event_filters[i]; i++)
 		if (!event_filters[i](&e))
-			continue;
+			return 1;
 
 	mt_mutex_lock(queue_mutex);
 

@@ -33,12 +33,15 @@ void win32_filecreated_callback(const char *filename)
 	/* let explorer know when we create a file. */
 	charset_t explorer_charset;
 
-	if (GetVersion() < 0x80000000) {
+#ifdef SCHISM_WIN32_COMPILE_ANSI
+	if (GetVersion() & 0x80000000) {
+		// Windows 9x
+		explorer_charset = CHARSET_ANSI;
+	} else
+#endif
+	{
 		// Windows NT
 		explorer_charset = CHARSET_WCHAR_T;
-	} else {
-		// Windows 9x/ME
-		explorer_charset = CHARSET_ANSI;
 	}
 
 	void* wc = NULL;
