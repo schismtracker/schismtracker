@@ -467,8 +467,6 @@ int win32_get_key_repeat(int *pdelay, int *prate)
 	// it to the repeat rate in milliseconds.
 	*prate = (int)(1000.0/((speed/(62.0/55.0)) + 2.5));
 
-	log_appendf(4, "rate: %d", *prate);
-
 	// This one is much simpler.
 	*pdelay = (delay + 1) * 250;
 
