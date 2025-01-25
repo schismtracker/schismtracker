@@ -41,6 +41,11 @@ Render output to a file, and then exit. WAV or AIFF writer is auto-selected
 based on file extension. Include \fI%c\fP somewhere in the name to write each
 channel separately. This is meaningless if no initial filename is given.
 .TP
+\fB\-\-headless\fP
+Run in non-interactive mode for automated rendering. Requires both \fB\-\-diskwrite\fP
+and an input song file to be specified. Useful for batch conversion of songs to
+audio files.
+.TP
 \fB\-\-font\-editor\fP, \fB\-\-no\-font\-editor\fP
 Run the font editor (itf). This can also be accessed by pressing Shift-F12.
 .TP
