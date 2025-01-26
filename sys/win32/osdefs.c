@@ -165,7 +165,7 @@ void win32_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv)
 		AppendMenuA(view, MF_STRING, IDM_VIEW_VIEW_PATTERNS, "View Patterns\tF2");
 		AppendMenuA(view, MF_STRING, IDM_VIEW_ORDERS_PANNING, "Orders/Panning\tF11");
 		AppendMenuA(view, MF_STRING, IDM_VIEW_VARIABLES, "Variables\tF12");
-		AppendMenuA(view, MF_STRING, IDM_VIEW_MESSAGE_EDITOR, "Message Editor\tF9");
+		AppendMenuA(view, MF_STRING, IDM_VIEW_MESSAGE_EDITOR, "Message Editor\tShift+F9");
 		AppendMenuA(view, MF_SEPARATOR, 0, NULL);
 		AppendMenuA(view, MF_STRING, IDM_VIEW_TOGGLE_FULLSCREEN, "Toggle Fullscreen\tCtrl+Alt+Return");
 		AppendMenuA(menu, MF_POPUP, (uintptr_t)view, "&View");
