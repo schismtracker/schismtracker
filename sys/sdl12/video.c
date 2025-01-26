@@ -371,7 +371,7 @@ static void sdl12_video_startup(void)
 	switch (video.desktop.want_type) {
 	case VIDEO_SURFACE:
 		/* no scaling when using the SDL surfaces directly */
-		video.desktop.swsurface = 1;
+		video.desktop.swsurface = !cfg_video_hardware;
 		video.desktop.want_type = VIDEO_SURFACE;
 		break;
 	};
@@ -382,6 +382,7 @@ static void sdl12_video_startup(void)
 
 	_did_init = 1;
 
+	// This call actually creates the surface.
 	video_fullscreen(video.desktop.fullscreen);
 
 	// We have to unset this variable, because otherwise
@@ -395,8 +396,8 @@ static void sdl12_video_startup(void)
 	SDL_SysWMinfo wm_info;
 	SDL_VERSION(&wm_info.version);
 	if (sdl12_GetWMInfo(&wm_info)) {
-		LONG x = GetWindowLongA(wm_info.window, GWL_EXSTYLE);
-		SetWindowLongA(wm_info.window, GWL_EXSTYLE, x | WS_EX_ACCEPTFILES);
+		LONG_PTR x = GetWindowLongPtrA(wm_info.window, GWL_EXSTYLE);
+		SetWindowLongPtrA(wm_info.window, GWL_EXSTYLE, x | WS_EX_ACCEPTFILES);
 	}
 #endif
 }
