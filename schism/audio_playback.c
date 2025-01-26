@@ -232,15 +232,13 @@ void free_audio_device_list(void) {
 int refresh_audio_device_list(void) {
 	free_audio_device_list();
 
-	const int count = backend ? backend->device_count() : 0;
-	if (count < 0)
-		return 0;
+	const uint32_t count = backend ? backend->device_count() : 0;
 
 	audio_device_list = malloc(count * sizeof(*audio_device_list));
 	if (!audio_device_list)
 		return 0;
 
-	for (int i = 0; i < count; i++) {
+	for (uint32_t i = 0; i < count; i++) {
 		struct audio_device* dev = audio_device_list + i;
 		dev->id = i;
 		dev->name = str_dup(backend ? backend->device_name(i) : "");
@@ -1753,6 +1751,7 @@ int audio_init(const char *driver, const char *device)
 agh:
 	if (success) {
 		_audio_init_tail();
+		refresh_audio_device_list();
 		return success;
 	}
 

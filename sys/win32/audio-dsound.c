@@ -115,7 +115,7 @@ static void _dsound_free_devices(void)
 }
 
 // the GUID is copied, but `name` is not!
-static void _dsound_device_append(LPGUID lpguid, char *name)
+static inline SCHISM_ALWAYS_INLINE void _dsound_device_append(LPGUID lpguid, char *name)
 {
 	if (devices_size >= devices_alloc) {
 		devices_alloc = ((!devices_alloc) ? 1 : (devices_alloc * 2));
@@ -137,11 +137,8 @@ static void _dsound_device_append(LPGUID lpguid, char *name)
 		if (lpGuid != NULL) { \
 			char *name = NULL; \
 	\
-			if (!win32_audio_lookup_device_name(lpGuid, &name) \
-				&& charset_iconv(lpcstrDescription, &name, charset, CHARSET_UTF8, SIZE_MAX)) \
-				return FALSE; /* out of memory ? */ \
-	\
-			_dsound_device_append(lpGuid, name); \
+			if (win32_audio_lookup_device_name(lpGuid, &name) || !charset_iconv(lpcstrDescription, &name, charset, CHARSET_UTF8, SIZE_MAX)) \
+				_dsound_device_append(lpGuid, name); \
 	\
 			/* device list takes ownership of `name` */ \
 		} \
@@ -161,12 +158,21 @@ static uint32_t dsound_audio_device_count(void)
 	_dsound_free_devices();
 
 	// Prefer Unicode
-	if (DSOUND_DirectSoundEnumerateW && DSOUND_DirectSoundEnumerateW(_dsound_enumerate_callback_w, NULL) == DS_OK)
-		return devices_size;
+	if (DSOUND_DirectSoundEnumerateW) {
+		if (DSOUND_DirectSoundEnumerateW(_dsound_enumerate_callback_w, NULL) == DS_OK)
+			return devices_size;
+
+		// Free any devices that might have been added
+		_dsound_free_devices();
+	}
 
 #ifdef SCHISM_WIN32_COMPILE_ANSI
-	if (DSOUND_DirectSoundEnumerateA && DSOUND_DirectSoundEnumerateA(_dsound_enumerate_callback_a, NULL) == DS_OK)
-		return devices_size;
+	if (DSOUND_DirectSoundEnumerateA) {
+		if (DSOUND_DirectSoundEnumerateA(_dsound_enumerate_callback_a, NULL) == DS_OK)
+			return devices_size;
+
+		_dsound_free_devices();
+	}
 #endif
 
 	return 0;
@@ -363,11 +369,13 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 	}
 
 	if (IDirectSoundBuffer_SetFormat(dev->lpbuffer, &format) != DS_OK) {
+#if 0 // SDL doesn't error here, and it seems to cause issues on my mac mini
 		mt_mutex_delete(dev->mutex);
 		IDirectSoundBuffer_Release(dev->lpbuffer);
 		IDirectSound_Release(dev->dsound);
 		free(dev);
 		return NULL;
+#endif
 	}
 
 	dev->silence = (format.wBitsPerSample == 8) ? 0x80 : 0;

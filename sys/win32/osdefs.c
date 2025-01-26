@@ -484,8 +484,8 @@ int win32_get_key_repeat(int *pdelay, int *prate)
 //  > G432 Gaming Headset
 // but only if the device supports it!
 //
-// Additionally, DirectSound provides us device names as ANSI, which is
-// pointless, so we look them up here as well.
+// We do this for DirectSound as well mainly to provide some sort of
+// reliability with the device names.
 int win32_audio_lookup_device_name(const void *nameguid, char **result)
 {
 	// format for printing GUIDs with printf
