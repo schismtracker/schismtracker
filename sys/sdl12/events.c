@@ -567,14 +567,43 @@ static schism_scancode_t sdl12_scancode_trans(uint8_t sc)
 static SDLMod (SDLCALL *sdl12_GetModState)(void);
 static int (SDLCALL *sdl12_PollEvent)(SDL_Event *event);
 static Uint8 (SDLCALL *sdl12_EventState)(Uint8 type, int state);
+static Uint8 (SDLCALL *sdl12_GetAppState)(void);
 
 static schism_keymod_t sdl12_event_mod_state(void)
 {
 	return sdl12_modkey_trans(sdl12_GetModState());
 }
 
+static Uint8 app_state = 0;
+
 static void sdl12_pump_events(void)
 {
+	// SDL does send events for this, but they're broken on Windows,
+	// so we have to manually check for changes.
+	{
+		Uint8 app_state_new = sdl12_GetAppState();
+
+		static const struct {
+			Uint8 mask;
+			uint32_t gain;
+			uint32_t lost;
+		} conv[] = {
+			{SDL_APPINPUTFOCUS, SCHISM_WINDOWEVENT_FOCUS_GAINED, SCHISM_WINDOWEVENT_FOCUS_LOST},
+			{SDL_APPACTIVE, SCHISM_WINDOWEVENT_SHOWN, SCHISM_WINDOWEVENT_HIDDEN},
+		};
+
+		for (size_t i = 0; i < ARRAY_SIZE(conv); i++) {
+			if ((app_state & conv[i].mask) == (app_state_new & conv[i].mask))
+				continue;
+
+			schism_event_t e;
+			e.type = (app_state_new & conv[i].mask) ? conv[i].gain : conv[i].lost;
+			events_push_event(&e);
+		}
+
+		app_state = app_state_new;
+	}
+
 	/* Convert our events to Schism's internal representation */
 	SDL_Event e;
 
@@ -596,10 +625,12 @@ static void sdl12_pump_events(void)
 			schism_event.type = SCHISM_WINDOWEVENT_EXPOSED;
 			events_push_event(&schism_event);
 			break;
+#if 0 // This is broken on Windows.
 		case SDL_ACTIVEEVENT:
 			switch (e.active.state) {
 			case SDL_APPINPUTFOCUS:
 				schism_event.type = (e.active.gain) ? SCHISM_WINDOWEVENT_FOCUS_GAINED : SCHISM_WINDOWEVENT_FOCUS_LOST;
+				printf("%d\n", (int)e.active.gain);
 				events_push_event(&schism_event);
 				break;
 			case SDL_APPACTIVE:
@@ -610,6 +641,7 @@ static void sdl12_pump_events(void)
 				break;
 			}
 			break;
+#endif
 		case SDL_KEYDOWN:
 			schism_event.type = SCHISM_KEYDOWN;
 			schism_event.key.state = KEY_PRESS;
@@ -742,6 +774,7 @@ static int sdl12_events_load_syms(void)
 	SCHISM_SDL12_SYM(GetModState);
 	SCHISM_SDL12_SYM(PollEvent);
 	SCHISM_SDL12_SYM(EventState);
+	SCHISM_SDL12_SYM(GetAppState);
 
 	return 0;
 }
@@ -757,6 +790,8 @@ static int sdl12_events_init(void)
 #if defined(SCHISM_WIN32) || defined(SCHISM_USE_X11)
 	sdl12_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 #endif
+
+	app_state = sdl12_GetAppState();
 
 	return 1;
 }
