@@ -973,6 +973,8 @@ int schism_main(int argc, char** argv)
 		}
 
 		// Initialize minimal systems
+		// We need to call video_startup() because it sets up the timer and event
+		// system that is needed for exporting a song
 		video_startup();
 		audio_init(audio_driver, audio_device);
 		song_init_modplug();
