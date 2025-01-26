@@ -43,6 +43,32 @@
 
 /* ------------------------------------------------------------------------ */
 
+static inline SCHISM_ALWAYS_INLINE time_t time_get_macintosh_epoch(void)
+{
+	// This assumes the epoch is in UTC. This is only always true for Mac OS
+	// Extended partitions; I'm not sure about the time functions since I
+	// don't use those...
+    struct tm macintosh_epoch_tm = {
+        .tm_year = 4, // 1904
+        .tm_mon = 0,  // January
+        .tm_mday = 1, // 1st
+    };
+
+    return mktime(&macintosh_epoch_tm);
+}
+
+static inline SCHISM_ALWAYS_INLINE time_t time_convert_from_macintosh(uint32_t macintosh)
+{
+    return ((time_t)macintosh) + time_get_macintosh_epoch();
+}
+
+static inline SCHISM_ALWAYS_INLINE uint32_t time_convert_to_macintosh(time_t c)
+{
+    return (uint32_t)(c - time_get_macintosh_epoch());
+}
+
+/* ------------------------------------------------------------------------ */
+
 void macos_get_modkey(schism_keymod_t *mk)
 {
 	// SDL 1.2 treats Command as Control, so switch the values.
@@ -191,15 +217,9 @@ int macos_stat(const char *file, struct stat *st)
 				.st_dev = pb.hFileInfo.ioVRefNum,
 				.st_nlink = 1,
 				.st_size = pb.hFileInfo.ioFlLgLen,
-// This assumes that time_t is POSIX-y (i.e. we're under Retro68, or some other
-// toolchain that does this). It also assumes the date is in UTC, which is what
-// Mac OS Extended uses; Mac OS Standard uses good old local time, but I don't
-// really care about that.
-#define CONVERT_TIME_TO_POSIX(x) ((int64_t)(x) - INT64_C(2082844800))
-				.st_atime = CONVERT_TIME_TO_POSIX(pb.hFileInfo.ioFlMdDat),
-				.st_mtime = CONVERT_TIME_TO_POSIX(pb.hFileInfo.ioFlMdDat),
-				.st_ctime = CONVERT_TIME_TO_POSIX(pb.hFileInfo.ioFlCrDat),
-#undef CONVERT_TIME_TO_POSIX
+				.st_atime = time_convert_from_macintosh(pb.hFileInfo.ioFlMdDat),
+				.st_mtime = time_convert_from_macintosh(pb.hFileInfo.ioFlMdDat),
+				.st_ctime = time_convert_from_macintosh(pb.hFileInfo.ioFlCrDat),
 			};
 
 			return 0;
