@@ -35,6 +35,7 @@
 
 #include <ws2tcpip.h>
 #include <windows.h>
+#include <winerror.h>
 #include <process.h>
 #include <shlobj.h>
 
