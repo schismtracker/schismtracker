@@ -475,6 +475,74 @@ int win32_get_key_repeat(int *pdelay, int *prate)
 
 /* -------------------------------------------------------------------- */
 
+// By default, waveout devices are limited to 31 chars, which means we get
+// lovely device names like
+//  > Headphones (USB-C to 3.5mm Head
+// Doing this gives us access to longer and more "general" devices names,
+// such as
+//  > G432 Gaming Headset
+// but only if the device supports it!
+//
+// Additionally, DirectSound provides us device names as ANSI, which is
+// pointless, so we look them up here as well.
+int win32_audio_lookup_device_name(const void *nameguid, char **result)
+{
+	// format for printing GUIDs with printf
+#define GUIDF "%08" PRIx32 "-%04" PRIx16 "-%04" PRIx16 "-%02" PRIx8 "%02" PRIx8 "-%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" PRIx8
+#define GUIDX(x) (x).Data1, (x).Data2, (x).Data3, (x).Data4[0], (x).Data4[1], (x).Data4[2], (x).Data4[3], (x).Data4[4], (x).Data4[5], (x).Data4[6], (x).Data4[7]
+	// Set this to NULL before doing anything
+	*result = NULL;
+
+	WCHAR *strw = NULL;
+	DWORD len = 0;
+
+	static const GUID nullguid = {0};
+	if (!memcmp(nameguid, &nullguid, sizeof(nullguid)))
+		return 0;
+
+	{
+		HKEY hkey;
+		DWORD type;
+
+		WCHAR keystr[256] = {0};
+		_snwprintf(keystr, ARRAY_SIZE(keystr) - 1, L"System\\CurrentControlSet\\Control\\MediaCategories\\{" GUIDF "}", GUIDX(*(const GUID *)nameguid));
+
+		if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, keystr, 0, KEY_QUERY_VALUE, &hkey) != ERROR_SUCCESS)
+			return 0;
+
+		if (RegQueryValueExW(hkey, L"Name", NULL, &type, NULL, &len) != ERROR_SUCCESS || type != REG_SZ) {
+			RegCloseKey(hkey);
+			return 0;
+		}
+
+		strw = mem_alloc(len + sizeof(WCHAR));
+
+		if (RegQueryValueExW(hkey, L"Name", NULL, NULL, (LPBYTE)strw, &len) != ERROR_SUCCESS) {
+			RegCloseKey(hkey);
+			free(strw);
+			return 0;
+		}
+
+		RegCloseKey(hkey);
+	}
+
+	// force NUL terminate
+	strw[len >> 1] = L'\0';
+
+	if (charset_iconv(strw, result, CHARSET_WCHAR_T, CHARSET_UTF8, len + sizeof(WCHAR))) {
+		free(strw);
+		return 0;
+	}
+
+	free(strw);
+	return 1;
+
+#undef GUIDF
+#undef GUIDX
+}
+
+/* -------------------------------------------------------------------- */
+
 static inline SCHISM_ALWAYS_INLINE void win32_stat_conv(struct _stat *mst, struct stat *st)
 {
 	st->st_gid = mst->st_gid;

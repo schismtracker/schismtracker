@@ -139,6 +139,7 @@ FILE* win32_fopen(const char* path, const char* flags);
 int win32_run_hook(const char *dir, const char *name, const char *maybe_arg);
 int win32_get_key_repeat(int *pdelay, int *prate);
 void win32_show_message_box(const char *title, const char *text);
+int win32_audio_lookup_device_name(const void *nameguid, char **result);
 
 int posix_run_hook(const char *dir, const char *name, const char *maybe_arg);
 

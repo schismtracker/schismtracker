@@ -258,7 +258,8 @@ files_win32 = \
 	sys/win32/dmoz.c \
 	sys/win32/clippy.c \
 	sys/win32/timer.c \
-	sys/win32/audio.c
+	sys/win32/audio-waveout.c \
+	sys/win32/audio-dsound.c
 cflags_win32=-I$(srcdir)/sys/win32
 lib_win32=-lwinmm
 
