@@ -594,6 +594,8 @@ void sdl2_pump_events(void)
 					schism_event.wm_msg.msg.x11.event.selection_request.property = e.syswm.msg->msg.x11.event.xselectionrequest.property;  // `Atom' in Xlib
 					schism_event.wm_msg.msg.x11.event.selection_request.time = e.syswm.msg->msg.x11.event.xselectionrequest.time;      // `Time' in Xlib
 				}
+				// ...?
+				//events_push_event(&schism_event);
 				break;
 #endif
 			default:

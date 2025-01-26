@@ -587,7 +587,7 @@ static int sdl2_video_have_menu(void)
 
 static void sdl2_video_toggle_menu(SCHISM_UNUSED int on)
 {
-	if (!video_have_menu())
+	if (!sdl2_video_have_menu())
 		return;
 
 	const int flags = sdl2_GetWindowFlags(video.window);

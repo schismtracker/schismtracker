@@ -232,9 +232,9 @@ static void change_video_settings(void)
 }
 
 static void change_menu_bar_settings(void) {
-	cfg_video_want_menu_bar = widgets_config[16].d.togglebutton.state;
+	cfg_video_want_menu_bar = !!widgets_config[16].d.togglebutton.state;
 
-	video_toggle_menu(video_is_fullscreen());
+	video_toggle_menu(!video_is_fullscreen());
 }
 
 /* --------------------------------------------------------------------- */
