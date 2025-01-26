@@ -250,6 +250,7 @@ endif
 endif
 
 if USE_WIN32
+sys/win32/schismtracker-audio-dsound.$(OBJEXT): CFLAGS += $(DSOUND_CFLAGS)
 files_win32 = \
 	sys/win32/filetype.c \
 	sys/win32/midi-win32mm.c	\
@@ -261,7 +262,7 @@ files_win32 = \
 	sys/win32/audio-waveout.c \
 	sys/win32/audio-dsound.c
 cflags_win32=-I$(srcdir)/sys/win32
-lib_win32=-lwinmm
+lib_win32=-lwinmm $(DSOUND_LIBS)
 
 if USE_MEDIAFOUNDATION
 fmt/schismtracker-win32mf.$(OBJEXT): CFLAGS += $(MEDIAFOUNDATION_CFLAGS)

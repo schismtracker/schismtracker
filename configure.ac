@@ -157,6 +157,9 @@ dnl will do, and I'll curse at myself when it breaks :)
 AC_ARG_VAR([MEDIAFOUNDATION_CFLAGS], [Extra compiler flags to use when compiling Media Foundation support.])
 AC_ARG_VAR([MEDIAFOUNDATION_LIBS], [Extra linker flags to use when compiling Media Foundation support.])
 
+AC_ARG_VAR([DSOUND_CFLAGS], [Extra compiler flags to use when compiling DirectSound support.])
+AC_ARG_VAR([DSOUND_LIBS], [Extra linker flags to use when compiling DirectSound support.])
+
 dnl ------------------------------------------------------------------------
 
 dnl Check for standard programs

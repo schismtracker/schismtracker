@@ -172,7 +172,7 @@ jobs:
           cd build
           # We link to SDL 1.2 here since it's universally supported by everything and is
           # useful as a fallback of sorts.
-          MEDIAFOUNDATION_CFLAGS="-I/c/msys2/msys64/mingw32/include" CPPFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" LDFLAGS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -L/c/MinGW/lib" CC="mingw32-gcc.exe" UTF8PROC_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" UTF8PROC_LIBS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -lutf8proc-3" SDL12_CFLAGS="-I/c/msys2/msys64/mingw32/include/SDL" SDL12_LIBS="-L/c/msys2/msys64/mingw32/lib -lSDL" FLAC_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" FLAC_LIBS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -lFLAC -logg -lm" SDL2_CFLAGS="-I/c/msys2/msys64/mingw32/include/SDL2" SDL2_LIBS="-L/c/msys2/msys64/mingw32/lib -lSDL2" ../configure --with-flac --with-sdl2 --with-sdl12 --enable-sdl12-linking
+          MEDIAFOUNDATION_CFLAGS="-I/c/msys2/msys64/mingw32/include" DSOUND_CFLAGS="-I/c/msys2/msys64/mingw32/include" CPPFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" LDFLAGS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -L/c/MinGW/lib" CC="mingw32-gcc.exe" UTF8PROC_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" UTF8PROC_LIBS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -lutf8proc-3" SDL12_CFLAGS="-I/c/msys2/msys64/mingw32/include/SDL" SDL12_LIBS="-L/c/msys2/msys64/mingw32/lib -lSDL" FLAC_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" FLAC_LIBS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -lFLAC -logg -lm" SDL2_CFLAGS="-I/c/msys2/msys64/mingw32/include/SDL2" SDL2_LIBS="-L/c/msys2/msys64/mingw32/lib -lSDL2" ../configure --with-flac --with-sdl2 --with-sdl12 --enable-sdl12-linking
           make
           strip schismtracker.exe
           cp schismtracker.exe ../..
