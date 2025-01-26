@@ -57,14 +57,14 @@ static inline SCHISM_ALWAYS_INLINE time_t time_get_macintosh_epoch(void)
     return mktime(&macintosh_epoch_tm);
 }
 
-static inline SCHISM_ALWAYS_INLINE time_t time_convert_from_macintosh(uint32_t macintosh)
+static inline SCHISM_ALWAYS_INLINE time_t time_convert_from_macintosh(uint32_t x)
 {
-    return ((time_t)macintosh) + time_get_macintosh_epoch();
+    return ((time_t)x) + time_get_macintosh_epoch();
 }
 
-static inline SCHISM_ALWAYS_INLINE uint32_t time_convert_to_macintosh(time_t c)
+static inline SCHISM_ALWAYS_INLINE uint32_t time_convert_to_macintosh(time_t x)
 {
-    return (uint32_t)(c - time_get_macintosh_epoch());
+    return (uint32_t)(x - time_get_macintosh_epoch());
 }
 
 /* ------------------------------------------------------------------------ */
