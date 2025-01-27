@@ -22,9 +22,7 @@
  */
 
 // Win32 Waveout audio backend - written because SDL 1.2 kind of sucks, and
-// this driver is especially terrible there. If it's wanted I can write
-// a directsound backend but tbh I don't care for the few systems that
-// actually need it. (namely, probably win2000 and maybe winme.)
+// this driver is especially terrible there.
 //  - paper
 
 #include "headers.h"

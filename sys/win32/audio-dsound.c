@@ -225,11 +225,8 @@ static int _dsound_audio_thread(void *data)
 		res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, NULL, &cursor);
 	}
 
-	if (res != DS_OK) {
-		// what the fuck?
-		timer_msleep(10);
-		return 0;
-	}
+	if (res != DS_OK)
+		return 0; // I don't know why this would ever happen
 
 	// agh !!!
 	cursor /= dev->size;
@@ -247,7 +244,7 @@ static int _dsound_audio_thread(void *data)
 			res = IDirectSoundBuffer_Lock(dev->lpbuffer, cursor * dev->size, dev->size, &buf, &buflen, NULL, NULL, 0);
 		}
 		if (res != DS_OK) {
-			timer_msleep(10);
+			timer_msleep(5);
 			continue;
 		}
 
@@ -285,7 +282,7 @@ static int _dsound_audio_thread(void *data)
 				res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, NULL, &cursor);
 			}
 			if (res != DS_OK)
-				return 0;
+				continue; // what?
 
 			cursor /= dev->size;
 		} while (cursor == last_chunk && !dev->cancelled);
