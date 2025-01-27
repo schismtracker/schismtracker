@@ -652,154 +652,88 @@ int win32_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
 /* ------------------------------------------------------------------------------- */
 /* run hook */
 
-int win32_run_hook_wide(const char *dir, const char *name, const char *maybe_arg)
-{
-#define DOT_BAT L".bat"
-	WCHAR cwd[PATH_MAX] = {0};
-	if (!_wgetcwd(cwd, PATH_MAX))
-		return 0;
-
-	WCHAR batch_file[PATH_MAX] = {0};
-
-	{
-		wchar_t *name_w;
-		if (charset_iconv(name, &name_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			return 0;
-
-		size_t name_len = wcslen(name_w);
-		if ((name_len * sizeof(WCHAR)) + sizeof(DOT_BAT) >= sizeof(batch_file)) {
-			free(name_w);
-			return 0;
-		}
-
-		memcpy(batch_file, name_w, name_len * sizeof(WCHAR));
-		memcpy(batch_file + name_len, DOT_BAT, sizeof(DOT_BAT));
-
-		free(name_w);
+//
+#define WIN32_RUN_HOOK_VARIANT(name, charset, char_type, char_len_func, char_getcwd, char_chdir, char_getenv, char_spawnlp, char_stat, const_prefix) \
+	static inline SCHISM_ALWAYS_INLINE int _win32_run_hook_##name(const char *dir, const char *name, const char *maybe_arg) \
+	{ \
+		char_type cwd[MAX_PATH] = {0}; \
+		if (!char_getcwd(cwd, MAX_PATH)) \
+			return 0; \
+	\
+		char_type batch_file[MAX_PATH] = {0}; \
+	\
+		{ \
+			char_type *name_w; \
+			if (charset_iconv(name, &name_w, CHARSET_UTF8, charset, SIZE_MAX)) \
+				return 0; \
+	\
+			size_t name_len = char_len_func(name_w); \
+			if ((name_len * sizeof(char_type)) + sizeof(const_prefix##".bat") >= sizeof(batch_file)) { \
+				free(name_w); \
+				return 0; \
+			} \
+	\
+			memcpy(batch_file, name_w, name_len * sizeof(char_type)); \
+			memcpy(batch_file + name_len, const_prefix##".bat", sizeof(const_prefix##".bat")); \
+	\
+			free(name_w); \
+		} \
+	\
+		{ \
+			char_type *dir_w; \
+			if (charset_iconv(dir, &dir_w, CHARSET_UTF8, charset, SIZE_MAX)) \
+				return 0; \
+	\
+			if (char_chdir(dir_w) == -1) { \
+				free(dir_w); \
+				return 0; \
+			} \
+	\
+			free(dir_w); \
+		} \
+	\
+		intptr_t r; \
+	\
+		{ \
+			char_type *maybe_arg_w; \
+			if (charset_iconv(maybe_arg, &maybe_arg_w, CHARSET_UTF8, charset, SIZE_MAX)) \
+				return 0; \
+	\
+			struct _stat sb; \
+			if (char_stat(batch_file, &sb) < 0) { \
+				r = 0; \
+			} else { \
+				const char_type *cmd; \
+	\
+				cmd = char_getenv(const_prefix##"COMSPEC"); \
+				if (!cmd) \
+					cmd = const_prefix##"command.com"; \
+	\
+				r = char_spawnlp(_P_WAIT, cmd, cmd, "/c", batch_file, maybe_arg_w, 0); \
+			} \
+	\
+			free(maybe_arg_w); \
+		} \
+	\
+		char_chdir(cwd); \
+		return (r == 0); \
 	}
 
-	{
-		wchar_t *dir_w;
-		if (charset_iconv(dir, &dir_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			return 0;
-
-		if (_wchdir(dir_w) == -1) {
-			free(dir_w);
-			return 0;
-		}
-
-		free(dir_w);
-	}
-
-	int r;
-
-	{
-		wchar_t *maybe_arg_w;
-		if (charset_iconv(maybe_arg, &maybe_arg_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			return 0;
-
-		struct _stat sb;
-		if (_wstat(batch_file, &sb) < 0) {
-			r = 0;
-		} else {
-			const WCHAR *cmd;
-
-			cmd = _wgetenv(L"COMSPEC");
-			if (!cmd)
-				cmd = L"command.com";
-
-			r = _wspawnlp(_P_WAIT, cmd, cmd, "/c", batch_file, maybe_arg_w, 0);
-		}
-
-		free(maybe_arg_w);
-	}
-
-
-	_wchdir(cwd);
-	if (r == 0) return 1;
-	return 0;
-#undef DOT_BAT
-}
-
+WIN32_RUN_HOOK_VARIANT(wide, CHARSET_WCHAR_T, WCHAR, wcslen, _wgetcwd, _wchdir, _wgetenv, _wspawnlp, _wstat, L)
 #ifdef SCHISM_WIN32_COMPILE_ANSI
-int win32_run_hook_ansi(const char *dir, const char *name, const char *maybe_arg)
-{
-#define DOT_BAT ".bat"
-	char cwd[PATH_MAX] = {0};
-	if (!getcwd(cwd, PATH_MAX))
-		return 0;
-
-	char batch_file[PATH_MAX] = {0};
-
-	{
-		char *name_w;
-		if (charset_iconv(name, &name_w, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
-			return 0;
-
-		size_t name_len = strlen(name_w);
-		if ((name_len * sizeof(char)) + sizeof(DOT_BAT) >= sizeof(batch_file)) {
-			free(name_w);
-			return 0;
-		}
-
-		memcpy(batch_file, name_w, name_len * sizeof(char));
-		memcpy(batch_file + name_len, DOT_BAT, sizeof(DOT_BAT));
-
-		free(name_w);
-	}
-
-	{
-		char *dir_w;
-		if (charset_iconv(dir, &dir_w, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
-			return 0;
-
-		if (_chdir(dir_w) == -1) {
-			free(dir_w);
-			return 0;
-		}
-
-		free(dir_w);
-	}
-
-	int r;
-
-	{
-		char *maybe_arg_w;
-		if (charset_iconv(maybe_arg, &maybe_arg_w, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
-			return 0;
-
-		struct _stat sb;
-		if (_stat(batch_file, &sb) < 0) {
-			r = 0;
-		} else {
-			const char *cmd;
-
-			cmd = getenv("COMSPEC");
-			if (!cmd)
-				cmd = "command.com";
-
-			r = _spawnlp(_P_WAIT, cmd, cmd, "/c", batch_file, maybe_arg_w, 0);
-		}
-
-		free(maybe_arg_w);
-	}
-
-
-	_chdir(cwd);
-	if (r == 0) return 1;
-	return 0;
-#undef DOT_BAT
-}
+WIN32_RUN_HOOK_VARIANT(ansi, CHARSET_ANSI, char, strlen, getcwd, _chdir, getenv, _spawnlp, _stat, /* none */)
 #endif
+
+#undef WIN32_RUN_HOOK_VARIANT
 
 int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
 #ifdef SCHISM_WIN32_COMPILE_ANSI
 	if (GetVersion() & UINT32_C(0x80000000)) {
-		return win32_run_hook_ansi(dir, name, maybe_arg);
+		return _win32_run_hook_ansi(dir, name, maybe_arg);
 	} else
 #endif
 	{
-		return win32_run_hook_wide(dir, name, maybe_arg);
+		return _win32_run_hook_wide(dir, name, maybe_arg);
 	}
 }
