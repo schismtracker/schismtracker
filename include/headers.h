@@ -469,26 +469,28 @@ void *alloca(size_t size);
 
 /* ------------------------------------------------------------------------ */
 
-#ifdef SCHISM_WIN32
+// This is only necessary with MSVC, MinGW uses built in variants that are
+// compatible-ish with C99.
+#if defined(SCHISM_WIN32) && !defined(__MINGW32__)
 static inline int _schism_fixup_ms_vsnprintf(char *buffer, size_t count, const char *fmt, va_list ap)
 {
-	va_list ap_cp;
+	if (count > 0) {
+		int len;
 
-	if (!count)
+		va_list ap_cp;
+
+		va_copy(ap_cp, ap);
+		len = _vsnprintf(buffer, count, fmt, ap_cp);
+		va_end(ap_cp);
+
+		if (len < 0)
+			len = _vscprintf(fmt, ap);
+
+		buffer[count - 1] = '\0';
+		return len;
+	} else {
 		return _vscprintf(fmt, ap);
-
-	// _vsnprintf doesn't add a terminating NUL character.
-	// zero out the array to account for this
-	memset(buffer, 0, count);
-
-	va_copy(ap_cp, ap);
-	int ret = _vsnprintf(buffer, count - 1, fmt, ap_cp);
-	va_end(ap_cp);
-
-	if (ret == -1)
-		ret = _vscprintf(fmt, ap);
-
-	return ret;
+	}
 }
 
 static inline int _schism_fixup_ms_snprintf(char *buffer, size_t count, const char *fmt, ...) SCHISM_FORMAT(printf, 3, 4);
