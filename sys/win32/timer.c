@@ -39,6 +39,12 @@
 # define CREATE_WAITABLE_TIMER_HIGH_RESOLUTION 0x00000002
 #endif
 
+// FIXME:
+// QueryPerformanceCounter always succeeds on XP and up,
+// which means compiling the winmm version as a fallback
+// is redundant for amd64 and arm architectures, since
+// those versions never existed before XP.
+
 static enum {
 	WIN32_TIMER_IMPL_QPC,
 	WIN32_TIMER_IMPL_WINMM,
@@ -50,41 +56,33 @@ static LARGE_INTEGER win32_timer_start = {0};
 // Ticks per second
 static LARGE_INTEGER win32_timer_resolution = {0};
 
-// This is used to regain some lost precision in timeGetTime()
-static mt_mutex_t *win32_timer_overflow_mutex = NULL;
-static int32_t win32_timer_overflow = 0;
-static uint32_t win32_timer_last_known_ticks = 0;
-
 static uint32_t win32_mm_period = 0;
 
-static inline void _win32_timer_ticks_impl(LARGE_INTEGER *ticks)
+static inline SCHISM_ALWAYS_INLINE LARGE_INTEGER _win32_timer_ticks_impl(void)
 {
+	LARGE_INTEGER ticks;
+
 	switch (win32_timer_impl) {
 	case WIN32_TIMER_IMPL_QPC:
-		QueryPerformanceCounter(ticks);
+		QueryPerformanceCounter(&ticks);
 		break;
 	case WIN32_TIMER_IMPL_WINMM:
-		ticks->LowPart = timeGetTime();
-
-		mt_mutex_lock(win32_timer_overflow_mutex);
-
-		if (ticks->LowPart < win32_timer_last_known_ticks)
-			win32_timer_overflow++;
-		win32_timer_last_known_ticks = ticks->LowPart;
-
-		mt_mutex_unlock(win32_timer_overflow_mutex);
-
-		ticks->HighPart = win32_timer_overflow;
-
+	default:
+		// This used to have overflow detection, but in some experiments
+		// with Windows 2000 in Virtual PC timeGetTime() actually seems
+		// to ~fluctuate~, which broke our heuristics. Just get the low
+		// part for now I guess.
+		ticks.LowPart = timeGetTime();
+		ticks.HighPart = 0;
 		break;
 	}
+
+	return ticks;
 }
 
 static timer_ticks_t win32_timer_ticks(void)
 {
-	LARGE_INTEGER ticks = {0};
-
-	_win32_timer_ticks_impl(&ticks);
+	LARGE_INTEGER ticks = _win32_timer_ticks_impl();
 
 	ticks.QuadPart -= win32_timer_start.QuadPart;
 	ticks.QuadPart *= INT64_C(1000);
@@ -95,9 +93,7 @@ static timer_ticks_t win32_timer_ticks(void)
 
 static timer_ticks_t win32_timer_ticks_us(void)
 {
-	LARGE_INTEGER ticks = {0};
-
-	_win32_timer_ticks_impl(&ticks);
+	LARGE_INTEGER ticks = _win32_timer_ticks_impl();
 
 	ticks.QuadPart -= win32_timer_start.QuadPart;
 	ticks.QuadPart *= INT64_C(1000000);
@@ -192,6 +188,18 @@ static int win32_timer_oneshot(uint32_t ms, void (*callback)(void *param), void 
 
 static int win32_timer_must_end_period = 0;
 
+// XXX This should be in osdefs.c, but putting it here is ok for now
+static inline SCHISM_ALWAYS_INLINE int _win32_nt_atleast(int major, int minor, int build)
+{
+	DWORD version = GetVersion();
+
+	// ignore win9x
+	if (version & 0x80000000)
+		return 0;
+
+	return SCHISM_SEMVER_ATLEAST(major, minor, build, LOBYTE(LOWORD(version)), HIBYTE(LOWORD(version)), HIWORD(version));
+}
+
 static int win32_timer_init(void)
 {
 	TIMECAPS caps;
@@ -202,7 +210,8 @@ static int win32_timer_init(void)
 			win32_timer_must_end_period = 1;
 	}
 
-	if (QueryPerformanceFrequency(&win32_timer_resolution)
+	if (_win32_nt_atleast(5, 1, 0) // This is buggy and broken on Win2k
+		&& QueryPerformanceFrequency(&win32_timer_resolution)
 		&& win32_timer_resolution.QuadPart
 		&& QueryPerformanceCounter(&win32_timer_start)) {
 		win32_timer_impl = WIN32_TIMER_IMPL_QPC;
@@ -212,7 +221,6 @@ static int win32_timer_init(void)
 		win32_timer_resolution.QuadPart = 1000;
 
 		win32_timer_impl = WIN32_TIMER_IMPL_WINMM;
-		win32_timer_overflow_mutex = mt_mutex_create();
 	}
 
 	kernel32 = loadso_object_load("KERNEL32.DLL");
