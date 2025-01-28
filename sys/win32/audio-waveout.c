@@ -309,7 +309,7 @@ static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schis
 	}
 
 	// allocate the buffer
-	DWORD buflen = desired->samples * desired->channels * (desired->bits / 8);
+	DWORD buflen = desired->samples * format.nChannels * (format.wBitsPerSample / 8);
 	dev->buffer = mem_alloc(buflen * NUM_BUFFERS);
 
 	// fill in the wavehdrs
