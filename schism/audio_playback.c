@@ -255,7 +255,10 @@ int refresh_audio_device_list(void) {
 // Created when audio_init is called for the first time
 static struct {
 	size_t size;
-	const char **list;
+	struct _audio_driver {
+		const schism_audio_backend_t *backend;
+		const char *name;
+	} *list;
 } full_drivers = {0};
 
 static void _audio_create_drivers_list(void)
@@ -264,15 +267,16 @@ static void _audio_create_drivers_list(void)
 	// that were renamed in SDL 2, and also for re-ordering
 	// the drivers after the fact
 	enum {
-		// "dsound" in SDL 1.2, "directsound" in SDL 2
-		DRIVER_DSOUND = 0x01,
 		// "pulse" in SDL 1.2, "pulseaudio" in SDL 2
-		DRIVER_PULSE = 0x02,
+		DRIVER_PULSE = 0x01,
 
-		DRIVER_DISK = 0x04,
-		DRIVER_DUMMY = 0x08,
+		// should always be at the end
+		DRIVER_DISK = 0x02,
+		DRIVER_DUMMY = 0x04,
 	};
 	uint32_t drivers = 0;
+
+	struct _audio_driver disk = {.name = "disk"}, dummy = {.name = "dummy"};
 
 	// Reset the drivers list
 	full_drivers.list = NULL;
@@ -284,24 +288,23 @@ static void _audio_create_drivers_list(void)
 	for (int i = 0; i < ARRAY_SIZE(counts); i++)
 		alloc_size += (counts[i] = (inited_backends[i] ? inited_backends[i]->driver_count() : 0));
 
-	full_drivers.list = mem_alloc(alloc_size * sizeof(const char *));
+	full_drivers.list = mem_alloc(alloc_size * sizeof(*full_drivers.list));
 
 	for (int i = 0; i < ARRAY_SIZE(counts); i++) {
 		for (int j = 0; j < counts[i]; j++) {
 			const char *n = inited_backends[i]->driver_name(j);
 
 			// Skip known duplicate drivers
-			if (!strcmp(n, "dsound")) {
-				if (drivers & DRIVER_DSOUND) continue;
-				drivers |= DRIVER_DSOUND;
-			} else if (!strcmp(n, "pulse") || !strcmp(n, "pulseaudio")) {
+			if (!strcmp(n, "pulse") || !strcmp(n, "pulseaudio")) {
 				if (drivers & DRIVER_PULSE) continue;
 				drivers |= DRIVER_PULSE;
 			} else if (!strcmp(n, "dummy")) {
 				drivers |= DRIVER_DUMMY;
+				dummy.backend = inited_backends[i];
 				continue;
 			} else if (!strcmp(n, "disk")) {
 				drivers |= DRIVER_DISK;
+				disk.backend = inited_backends[i];
 				continue;
 			} else if (!strcmp(n, "winmm") || !strcmp(n, "directsound")) {
 				// Skip SDL 2 waveout driver; we have our own implementation
@@ -317,7 +320,7 @@ static void _audio_create_drivers_list(void)
 			{
 				int fnd = 0;
 				for (size_t k = 0; k < full_drivers.size; k++) {
-					if (!strcmp(n, full_drivers.list[k])) {
+					if (!strcmp(n, full_drivers.list[k].name)) {
 						fnd = 1;
 						break;
 					}
@@ -326,12 +329,15 @@ static void _audio_create_drivers_list(void)
 					continue;
 			}
 
-			full_drivers.list[full_drivers.size++] = n;
+			full_drivers.list[full_drivers.size].name = n;
+			full_drivers.list[full_drivers.size].backend = inited_backends[i];
+
+			full_drivers.size++;
 		}
 	}
 
-	if (drivers & DRIVER_DISK)  full_drivers.list[full_drivers.size++] = "disk";
-	if (drivers & DRIVER_DUMMY) full_drivers.list[full_drivers.size++] = "dummy";
+	if (drivers & DRIVER_DISK)  full_drivers.list[full_drivers.size++] = disk;
+	if (drivers & DRIVER_DUMMY) full_drivers.list[full_drivers.size++] = dummy;
 }
 
 int audio_driver_count(void)
@@ -344,7 +350,7 @@ const char *audio_driver_name(int x)
 	if (x >= full_drivers.size || x < 0)
 		return NULL;
 
-	return full_drivers.list[x];
+	return full_drivers.list[x].name;
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -1625,47 +1631,6 @@ static void _audio_quit(void)
 	}
 }
 
-static int _audio_driver_exists(const char *driver)
-{
-	for (size_t i = 0; i < full_drivers.size; i++)
-		if (!strcmp(full_drivers.list[i], driver))
-			return 1;
-
-	return 0;
-}
-
-// Configure a device. (called at startup)
-static int _audio_init_head(const char *device, int verbose)
-{
-	const char *n;
-
-	_audio_quit();
-
-	if (
-		// hm... this sucks! lol
-#ifdef SCHISM_SDL12
-		backend == &schism_audio_backend_sdl12 ||
-#endif
-#ifdef SCHISM_SDL2
-		backend == &schism_audio_backend_sdl2 ||
-#endif
-		0) {
-		/* we ought to allow this envvar to work under SDL */
-		n = getenv("SDL_AUDIODRIVER");
-		if (n && *n && _audio_driver_exists(n) && _audio_try_driver(n, device, verbose))
-			return 1;
-	}
-
-	for (int i = 0; i < full_drivers.size; i++) {
-		n = audio_driver_name(i);
-
-		if (_audio_try_driver(n, device, verbose))
-			return 1;
-	}
-
-	return 0;
-}
-
 // Set up audio_buffer, reset the sample count, and kick off the mixer
 // (note: _audio_open will leave the device LOCKED)
 static void _audio_init_tail(void)
@@ -1711,42 +1676,45 @@ int audio_init(const char *driver, const char *device)
 		: (!strcmp(driver, "directsound")) ? "dsound"
 		: driver;
 
+#if defined(SCHISM_SDL12) || defined(SCHISM_SDL2)
+	/* we ought to allow this envvar to work under SDL. */
+	if (!driver || !*driver)
+		driver = getenv("SDL_AUDIODRIVER");
+#endif
+
 	// Initialize all backends (for audio driver listing)
 	if (!backends_initialized) {
-		for (i = 0; backends[i]; i++) {
-			backend = backends[i]; // hax
-			if (backend->init())
-				inited_backends[i] = backend;
-			backend = NULL;
-		}
+		for (i = 0; backends[i]; i++)
+			if (backends[i]->init())
+				inited_backends[i] = backends[i];
+
 		_audio_create_drivers_list();
 		backends_initialized = 1;
 	}
 
-	if (_audio_driver_exists(driver)) {
-		for (i = 0; i < ARRAY_SIZE(inited_backends); i++) {
-			if (!inited_backends[i])
-				continue;
+	if (full_drivers.size > 0) {
+		if (driver && *driver) {
+			for (i = 0; i < full_drivers.size; i++) {
+				if (strcmp(full_drivers.list[i].name, driver))
+					continue;
 
-			backend = inited_backends[i]; // hax
-			if ((success = _audio_try_driver(driver, device, 1)))
+				backend = full_drivers.list[i].backend;
+				if ((success = _audio_try_driver(driver, device, 1)))
+					goto agh;
+				backend = NULL;
+			}
+
+			log_nl();
+			log_appendf(4, "Failed to load requested audio driver `%s`!", driver);
+		}
+
+		for (i = 0; i < full_drivers.size; i++) {
+			backend = full_drivers.list[i].backend;
+			if ((success = _audio_try_driver(full_drivers.list[i].name, device, 1)))
 				goto agh;
 			backend = NULL;
 		}
 	}
-
-	for (i = 0; i < ARRAY_SIZE(inited_backends); i++) {
-		if (!inited_backends[i])
-			continue;
-
-		backend = inited_backends[i]; // hax
-		if ((success = _audio_init_head(device, 1)))
-			goto agh;
-		backend = NULL;
-	}
-
-	// FIXME: Try again with no specific driver? or rather,
-	// add fallback stuff to the SDL 1.2 backend?
 
 agh:
 	if (success) {
