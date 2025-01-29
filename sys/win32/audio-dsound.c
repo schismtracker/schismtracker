@@ -37,6 +37,9 @@
 #include "video.h" // video_get_wm_data
 #include "backend/audio.h"
 
+// request compatibility with DirectX 5
+#define DIRECTSOUND_VERSION 0x0500
+
 #include <windows.h>
 #include <dsound.h>
 
@@ -412,6 +415,11 @@ DS_badformat:
 				continue;
 			}
 		}
+
+		// NOTE: Many VM audio drivers (namely virtual pc and vmware) are broken
+		// under Win2k and return DSERR_CONTROLUNAVAIL. This doesn't seem to be the
+		// full story however, since SDL seems to create the buffer just fine.
+		// I'm just not going to worry about it for now...
 
 		// Punt if nothing worked
 		mt_mutex_delete(dev->mutex);
