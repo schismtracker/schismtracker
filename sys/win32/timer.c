@@ -24,6 +24,7 @@
 #include "headers.h"
 #include "threads.h"
 #include "loadso.h"
+#include "osdefs.h"
 #include "mem.h"
 
 #include "backend/timer.h"
@@ -188,18 +189,6 @@ static int win32_timer_oneshot(uint32_t ms, void (*callback)(void *param), void 
 
 static int win32_timer_must_end_period = 0;
 
-// XXX This should be in osdefs.c, but putting it here is ok for now
-static inline SCHISM_ALWAYS_INLINE int _win32_nt_atleast(int major, int minor, int build)
-{
-	DWORD version = GetVersion();
-
-	// ignore win9x
-	if (version & 0x80000000)
-		return 0;
-
-	return SCHISM_SEMVER_ATLEAST(major, minor, build, LOBYTE(LOWORD(version)), HIBYTE(LOWORD(version)), HIWORD(version));
-}
-
 static int win32_timer_init(void)
 {
 	TIMECAPS caps;
@@ -210,7 +199,7 @@ static int win32_timer_init(void)
 			win32_timer_must_end_period = 1;
 	}
 
-	if (_win32_nt_atleast(5, 1, 0) // This is buggy and broken on Win2k
+	if (win32_ntver_atleast(5, 1, 0) // This is buggy and broken on Win2k
 		&& QueryPerformanceFrequency(&win32_timer_resolution)
 		&& win32_timer_resolution.QuadPart
 		&& QueryPerformanceCounter(&win32_timer_start)) {

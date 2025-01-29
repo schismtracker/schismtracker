@@ -22,6 +22,10 @@
  */
  
 // Win32 directsound backend
+// TODO: We ought to be able to detect changes in the default device and
+// reopen it if necessary.
+// This should be viable via GetDeviceID() in dsound.dll which lets us
+// check the GUID of the current default device.
 
 #include "headers.h"
 #include "charset.h"
@@ -57,7 +61,8 @@ struct schism_audio_device {
 
 	mt_mutex_t *mutex;
 
-	// pass to memset() to make silence
+	// pass to memset() to make silence.
+	// used when paused and when initializing the device buffer
 	uint8_t silence;
 
 	LPDIRECTSOUND dsound;
@@ -115,9 +120,33 @@ static void _dsound_free_devices(void)
 	}
 }
 
-// the GUID is copied, but `name` is not!
-static inline SCHISM_ALWAYS_INLINE void _dsound_device_append(LPGUID lpguid, char *name)
+// This function takes ownership of `name` and is responsible for either freeing it
+// or adding it to a list which will eventually be freed.
+// Note: lpguid AND name must be valid pointers. No null pointers.
+static inline void _dsound_device_append(LPGUID lpguid, char *name)
 {
+	// Filter out waveout emulated devices. If we don't do this, it causes a bit of
+	// CPU overhead and is utterly pointless when we can just use waveout directly
+	// anyway.
+	// Windows Vista marks WASAPI emulated devices with this flag; ignore.
+	if (!win32_ntver_atleast(6, 0, 0)) {
+		LPDIRECTSOUND dsound;
+		if (DSOUND_DirectSoundCreate(lpguid, &dsound, NULL) != DS_OK) {
+			free(name);
+			return;
+		}
+
+		DSCAPS caps;
+		if (IDirectSound_GetCaps(dsound, &caps) != DS_OK
+			|| (caps.dwFlags & DSCAPS_EMULDRIVER)) {
+			free(name);
+			IDirectSound_Release(dsound);
+			return;
+		}
+
+		IDirectSound_Release(dsound);
+	}
+
 	if (devices_size >= devices_alloc) {
 		devices_alloc = ((!devices_alloc) ? 1 : (devices_alloc * 2));
 

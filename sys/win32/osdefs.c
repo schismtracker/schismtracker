@@ -476,6 +476,22 @@ int win32_get_key_repeat(int *pdelay, int *prate)
 
 /* -------------------------------------------------------------------- */
 
+// Checks for at least some NT kernel version.
+// Note that this does NOT work for checking above Windows 8.1 because
+// Microsoft. This also fails for Windows 9x, because it doesn't
+// have an NT kernel at all.
+int win32_ntver_atleast(int major, int minor, int build)
+{
+	DWORD version = GetVersion();
+	if (version & 0x80000000)
+		return 0;
+
+	return SCHISM_SEMVER_ATLEAST(major, minor, build,
+		LOBYTE(LOWORD(version)), HIBYTE(LOWORD(version)), HIWORD(version));
+}
+
+/* -------------------------------------------------------------------- */
+
 // By default, waveout devices are limited to 31 chars, which means we get
 // lovely device names like
 //  > Headphones (USB-C to 3.5mm Head

@@ -218,6 +218,11 @@ POST_EVENT:
 // ------------------------------------------------------------------------------------------------------------
 // audio device list
 
+// FIXME: doing it this way causes for duplicate device names to be handled as the same device; this
+// isn't necessarily true! for example, Boot Camp drivers are weird and buggy, and can (and do) create
+// "dummy" speaker devices. When plugging in an audio device to the headphone port, it results in the
+// driver making two audio devices named "Speakers (High Definition Audio Device)"
+
 void free_audio_device_list(void) {
 	for (int count = 0; count < audio_device_list_size; count++)
 		free(audio_device_list[count].name);
