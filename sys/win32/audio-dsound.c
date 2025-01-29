@@ -129,14 +129,14 @@ static inline void _dsound_device_append(LPGUID lpguid, char *name)
 	// CPU overhead and is utterly pointless when we can just use waveout directly
 	// anyway.
 	// Windows Vista marks WASAPI emulated devices with this flag; ignore.
-	if (!win32_ntver_atleast(6, 0, 0)) {
+	{
 		LPDIRECTSOUND dsound;
 		if (DSOUND_DirectSoundCreate(lpguid, &dsound, NULL) != DS_OK) {
 			free(name);
 			return;
 		}
 
-		DSCAPS caps;
+		DSCAPS caps = {.dwSize = sizeof(DSCAPS)};
 		if (IDirectSound_GetCaps(dsound, &caps) != DS_OK
 			|| (caps.dwFlags & DSCAPS_EMULDRIVER)) {
 			free(name);
