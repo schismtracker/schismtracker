@@ -128,7 +128,6 @@ static inline void _dsound_device_append(LPGUID lpguid, char *name)
 	// Filter out waveout emulated devices. If we don't do this, it causes a bit of
 	// CPU overhead and is utterly pointless when we can just use waveout directly
 	// anyway.
-	// Windows Vista marks WASAPI emulated devices with this flag; ignore.
 	{
 		LPDIRECTSOUND dsound;
 		if (DSOUND_DirectSoundCreate(lpguid, &dsound, NULL) != DS_OK) {
