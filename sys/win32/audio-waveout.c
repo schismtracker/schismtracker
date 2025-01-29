@@ -265,15 +265,16 @@ static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schis
 	case 32: format.wBitsPerSample = 32; break;
 	}
 
-	format.nBlockAlign = format.nChannels * (format.wBitsPerSample / 8);
-	format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
-
 	// ok, now we can allocate the device
 	schism_audio_device_t *dev = mem_calloc(1, sizeof(*dev));
 
 	dev->callback = desired->callback;
 
 	for (;;) {
+		// Recalculate format
+		format.nBlockAlign = format.nChannels * (format.wBitsPerSample / 8);
+		format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
+
 		MMRESULT err = waveOutOpen(&dev->hwaveout, device_id, &format, (UINT_PTR)waveout_audio_callback, (UINT_PTR)dev, CALLBACK_FUNCTION | WAVE_ALLOWSYNC);
 		if (err == MMSYSERR_NOERROR) {
 			// We're done here
