@@ -26,6 +26,8 @@
 #define WINVER 0x1000
 #define _WIN32_WINNT 0x1000
 
+#define COBJMACROS // Get C object macros
+
 #include "headers.h"
 
 #include "threads.h"
@@ -216,15 +218,15 @@ static HRESULT STDMETHODCALLTYPE slurp_async_callback_Invoke(IMFAsyncCallback *T
 	IMFAsyncResult *caller = NULL;
 	HRESULT hr = S_OK;
 
-	hr = pAsyncResult->lpVtbl->GetState(pAsyncResult, &pState);
+	hr = IMFAsyncResult_GetState(pAsyncResult, &pState);
 	if (FAILED(hr))
 		goto done;
 
-	hr = pState->lpVtbl->QueryInterface(pState, &IID_IMFAsyncResult, (void **)&caller);
+	hr = IUnknown_QueryInterface(pState, &IID_IMFAsyncResult, (void **)&caller);
 	if (FAILED(hr))
 		goto done;
 
-	hr = caller->lpVtbl->GetObject(caller, &pUnk);
+	hr = IMFAsyncResult_GetObject(caller, &pUnk);
 	if (FAILED(hr))
 		goto done;
 
@@ -235,15 +237,15 @@ static HRESULT STDMETHODCALLTYPE slurp_async_callback_Invoke(IMFAsyncCallback *T
 
 done:
 	if (caller) {
-		caller->lpVtbl->SetStatus(caller, hr);
+		IMFAsyncResult_SetStatus(caller, hr);
 		MF_MFInvokeCallback(caller);
 	}
 
 	if (pState)
-		pState->lpVtbl->Release(pState);
+		IUnknown_Release(pState);
 
 	if (pUnk)
-		pUnk->lpVtbl->Release(pUnk);
+		IUnknown_Release(pUnk);
 
 	return S_OK;
 }
@@ -450,7 +452,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_BeginRead(IMFByteStream *This, BYT
 
 fail:
 	if (result)
-		result->lpVtbl->Release(result);
+		IMFAsyncResult_Release(result);
 
 	return hr;
 }
@@ -461,11 +463,11 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_EndRead(IMFByteStream *This, IMFAs
 
 	struct slurp_async_op *op = NULL;
 
-	HRESULT hr = pResult->lpVtbl->GetStatus(pResult);
+	HRESULT hr = IMFAsyncResult_GetStatus(pResult);
 	if (FAILED(hr))
 		goto done;
 
-	hr = pResult->lpVtbl->GetObject(pResult, (IUnknown **)&op);
+	hr = IMFAsyncResult_GetObject(pResult, (IUnknown **)&op);
 	if (FAILED(hr))
 		goto done;
 
@@ -475,8 +477,8 @@ done:
 	if (op) {
 		/* need to deal with this crap */
 		if (op->cb)
-			op->cb->lpVtbl->Release(op->cb);
-		op->lpvtbl->Release((IUnknown *)op);
+			IMFAsyncCallback_Release(op->cb);
+		IUnknown_Release((IUnknown *)op);
 	}
 
 	return hr;
@@ -623,7 +625,7 @@ static const char* get_media_type_description(IMFMediaType* media_type)
 	};
 
 	GUID subtype;
-	if (SUCCEEDED(media_type->lpVtbl->GetGUID(media_type, &MF_MT_SUBTYPE, &subtype))) {
+	if (SUCCEEDED(IMFMediaType_GetGUID(media_type, &MF_MT_SUBTYPE, &subtype))) {
 		for (size_t i = 0; i < ARRAY_SIZE(guids); i++)
 			if (IsEqualGUID(&subtype, guids[i].guid))
 				return guids[i].description;
@@ -647,14 +649,14 @@ static int get_source_reader_information(IMFSourceReader *reader, dmoz_file_t *f
 	uint64_t length = 0;
 	BOOL compressed = FALSE;
 
-	if (SUCCEEDED(reader->lpVtbl->GetNativeMediaType(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, MF_SOURCE_READER_CURRENT_TYPE_INDEX, &media_type))) {
-		file->type = (SUCCEEDED(media_type->lpVtbl->IsCompressedFormat(media_type, &compressed)) && compressed)
+	if (SUCCEEDED(IMFSourceReader_GetNativeMediaType(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, MF_SOURCE_READER_CURRENT_TYPE_INDEX, &media_type))) {
+		file->type = (SUCCEEDED(IMFMediaType_IsCompressedFormat(media_type, &compressed)) && compressed)
 			? TYPE_SAMPLE_COMPR
 			: TYPE_SAMPLE_PLAIN;
 
 		file->description = get_media_type_description(media_type);
 
-		media_type->lpVtbl->Release(media_type);
+		IMFMediaType_Release(media_type);
 	}
 
 	return 1;
@@ -673,19 +675,19 @@ static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t
 	/* do this before anything else... */
 	PropVariantInit(&propnames);
 
-	if (FAILED(source->lpVtbl->CreatePresentationDescriptor(source, &descriptor)))
+	if (FAILED(IMFMediaSource_CreatePresentationDescriptor(source, &descriptor)))
 		goto cleanup;
 
-	if (SUCCEEDED(descriptor->lpVtbl->GetUINT64(descriptor, &MF_PD_DURATION, &duration)))
+	if (SUCCEEDED(IMFPresentationDescriptor_GetUINT64(descriptor, &MF_PD_DURATION, &duration)))
 		file->smp_length = (double)duration * file->smp_speed / (10.0 * 1000.0 * 1000.0);
 
 	if (FAILED(MF_MFGetService((IUnknown*)source, &MF_METADATA_PROVIDER_SERVICE, &IID_IMFMetadataProvider, (void**)&provider)))
 		goto cleanup;
 
-	if (FAILED(provider->lpVtbl->GetMFMetadata(provider, descriptor, 0, 0, &metadata)))
+	if (FAILED(IMFMetadataProvider_GetMFMetadata(provider, descriptor, 0, 0, &metadata)))
 		goto cleanup;
 
-	if (FAILED(metadata->lpVtbl->GetAllPropertyNames(metadata, &propnames)))
+	if (FAILED(IMFMetadata_GetAllPropertyNames(metadata, &propnames)))
 		goto cleanup;
 
 	for (DWORD prop_index = 0; prop_index < propnames.calpwstr.cElems; prop_index++) {
@@ -697,7 +699,7 @@ static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t
 			PROPVARIANT propval = {0};
 			PropVariantInit(&propval);
 
-			if (FAILED(metadata->lpVtbl->GetProperty(metadata, prop_name, &propval))) {
+			if (FAILED(IMFMetadata_GetProperty(metadata, prop_name, &propval))) {
 				MF_PropVariantClear(&propval);
 				continue;
 			}
@@ -721,13 +723,13 @@ cleanup:
 	MF_PropVariantClear(&propnames);
 
 	if (descriptor)
-		descriptor->lpVtbl->Release(descriptor);
+		IMFPresentationDescriptor_Release(descriptor);
 
 	if (provider)
-		provider->lpVtbl->Release(provider);
+		IMFMetadataProvider_Release(provider);
 
 	if (metadata)
-		metadata->lpVtbl->Release(metadata);
+		IMFMetadata_Release(metadata);
 
 	return found;
 }
@@ -758,13 +760,13 @@ static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 	if (!mfbytestream_new(&data->byte_stream, fp))
 		goto cleanup;
 
-	if (FAILED(resolver->lpVtbl->CreateObjectFromByteStream(resolver, data->byte_stream, url, MF_RESOLUTION_MEDIASOURCE | MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE | MF_RESOLUTION_READ, NULL, &object_type, &unknown_media_source)))
+	if (FAILED(IMFSourceResolver_CreateObjectFromByteStream(resolver, data->byte_stream, url, MF_RESOLUTION_MEDIASOURCE | MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE | MF_RESOLUTION_READ, NULL, &object_type, &unknown_media_source)))
 		goto cleanup;
 
 	if (object_type != MF_OBJECT_MEDIASOURCE)
 		goto cleanup;
 
-	if (FAILED(unknown_media_source->lpVtbl->QueryInterface(unknown_media_source, &IID_IMFMediaSource, (void**)&data->source)))
+	if (FAILED(IUnknown_QueryInterface(unknown_media_source, &IID_IMFMediaSource, (void**)&data->source)))
 		goto cleanup;
 
 	if (FAILED(MF_MFCreateSourceReaderFromMediaSource(data->source, NULL, &data->reader)))
@@ -773,31 +775,31 @@ static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 	if (FAILED(MF_MFCreateMediaType(&uncompressed_type)))
 		goto cleanup;
 
-	if (FAILED(uncompressed_type->lpVtbl->SetGUID(uncompressed_type, &MF_MT_MAJOR_TYPE, &MFMediaType_Audio)))
+	if (FAILED(IMFMediaType_SetGUID(uncompressed_type, &MF_MT_MAJOR_TYPE, &MFMediaType_Audio)))
 		goto cleanup;
 
-	if (FAILED(uncompressed_type->lpVtbl->SetGUID(uncompressed_type, &MF_MT_SUBTYPE, &MFAudioFormat_PCM)))
+	if (FAILED(IMFMediaType_SetGUID(uncompressed_type, &MF_MT_SUBTYPE, &MFAudioFormat_PCM)))
 		goto cleanup;
 
-	if (FAILED(data->reader->lpVtbl->SetCurrentMediaType(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, NULL, uncompressed_type)))
+	if (FAILED(IMFSourceReader_SetCurrentMediaType(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, NULL, uncompressed_type)))
 		goto cleanup;
 
-	uncompressed_type->lpVtbl->Release(uncompressed_type);
+	IMFMediaType_Release(uncompressed_type);
 
-	if (FAILED(data->reader->lpVtbl->GetCurrentMediaType(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, &uncompressed_type)))
+	if (FAILED(IMFSourceReader_GetCurrentMediaType(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, &uncompressed_type)))
 		goto cleanup;
 
-	if (FAILED(data->reader->lpVtbl->SetStreamSelection(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, TRUE)))
+	if (FAILED(IMFSourceReader_SetStreamSelection(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, TRUE)))
 		goto cleanup;
 
 	/* get output audio track data */
-	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_NUM_CHANNELS, &data->channels)))
+	if (FAILED(IMFMediaType_GetUINT32(uncompressed_type, &MF_MT_AUDIO_NUM_CHANNELS, &data->channels)))
 		goto cleanup;
 
-	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_SAMPLES_PER_SECOND, &data->sps)))
+	if (FAILED(IMFMediaType_GetUINT32(uncompressed_type, &MF_MT_AUDIO_SAMPLES_PER_SECOND, &data->sps)))
 		goto cleanup;
 
-	if (FAILED(uncompressed_type->lpVtbl->GetUINT32(uncompressed_type, &MF_MT_AUDIO_BITS_PER_SAMPLE, &data->bps)))
+	if (FAILED(IMFMediaType_GetUINT32(uncompressed_type, &MF_MT_AUDIO_BITS_PER_SAMPLE, &data->bps)))
 		goto cleanup;
 
 	if (data->sps <= 0)
@@ -823,13 +825,13 @@ static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 
 cleanup:
 	if (resolver)
-		resolver->lpVtbl->Release(resolver);
+		IMFSourceResolver_Release(resolver);
 
 	if (unknown_media_source)
-		unknown_media_source->lpVtbl->Release(unknown_media_source);
+		IUnknown_Release(unknown_media_source);
 
 	if (uncompressed_type)
-		uncompressed_type->lpVtbl->Release(uncompressed_type);
+		IMFMediaType_Release(uncompressed_type);
 
 	return success;
 }
@@ -837,13 +839,13 @@ cleanup:
 static void win32mf_end(struct win32mf_data *data)
 {
 	if (data->reader)
-		data->reader->lpVtbl->Release(data->reader);
+		IMFSourceReader_Release(data->reader);
 
 	if (data->source)
-		data->source->lpVtbl->Release(data->source);
+		IMFMediaSource_Release(data->source);
 
 	if (data->byte_stream)
-		data->byte_stream->lpVtbl->Release(data->byte_stream);
+		IMFByteStream_Release(data->byte_stream);
 }
 
 int fmt_win32mf_read_info(dmoz_file_t *file, slurp_t *fp)
@@ -891,7 +893,7 @@ static int reader_load_sample(IMFSourceReader *reader, disko_t *ds)
 	DWORD sample_flags = 0;
 
 	IMFMediaBuffer *buffer = NULL;
-	if (FAILED(reader->lpVtbl->ReadSample(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, NULL, &sample_flags, NULL, &sample))) {
+	if (FAILED(IMFSourceReader_ReadSample(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, NULL, &sample_flags, NULL, &sample))) {
 		success = READER_LOAD_ERROR;
 		goto cleanup;
 	}
@@ -901,7 +903,7 @@ static int reader_load_sample(IMFSourceReader *reader, disko_t *ds)
 		goto cleanup;
 	}
 
-	if (FAILED(sample->lpVtbl->ConvertToContiguousBuffer(sample, &buffer))) {
+	if (FAILED(IMFSample_ConvertToContiguousBuffer(sample, &buffer))) {
 		success = READER_LOAD_ERROR;
 		goto cleanup;
 	}
@@ -909,24 +911,24 @@ static int reader_load_sample(IMFSourceReader *reader, disko_t *ds)
 	BYTE *buffer_data = NULL;
 	DWORD buffer_data_size = 0;
 
-	if (FAILED(buffer->lpVtbl->Lock(buffer, &buffer_data, NULL, &buffer_data_size))) {
+	if (FAILED(IMFMediaBuffer_Lock(buffer, &buffer_data, NULL, &buffer_data_size))) {
 		success = READER_LOAD_ERROR;
 		goto cleanup;
 	}
 
 	disko_write(ds, buffer_data, buffer_data_size);
 
-	if (FAILED(buffer->lpVtbl->Unlock(buffer))) {
+	if (FAILED(IMFMediaBuffer_Unlock(buffer))) {
 		success = READER_LOAD_ERROR;
 		goto cleanup;
 	}
 
 cleanup:
 	if (sample)
-		sample->lpVtbl->Release(sample);
+		IMFSample_Release(sample);
 
 	if (buffer)
-		buffer->lpVtbl->Release(buffer);
+		IMFMediaBuffer_Release(buffer);
 
 	return success;
 }
