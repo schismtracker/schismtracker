@@ -368,6 +368,26 @@ static inline void rn_process_envelope(song_voice_t *chan, int32_t *nvol)
 	rn_process_ins_fade(chan, nvol);
 }
 
+static inline void rn_process_midi_macro(song_t *csf, song_voice_t *chan)
+{
+	/* this is wrong; see OpenMPT's soundlib/Snd_fx.cpp:
+	 *
+	 *     This is "almost" how IT does it - apparently, IT seems to lag one row
+	 *     behind on global volume or channel volume changes.
+	 *
+	 * OpenMPT also doesn't entirely support IT's version of this macro, which is
+	 * just another demotivator for actually implementing it correctly *sigh* */
+
+	if (chan->row_effect == FX_MIDI && (csf->flags & SONG_FIRSTTICK)) {
+		const uint32_t vel = chan->ptr_sample ?
+			_muldiv((chan->volume + chan->vol_swing) * csf->current_global_volume, chan->global_volume * chan->instrument_volume, INT32_C(1) << 20)
+			: 0;
+
+		csf_process_midi_macro(csf, chan - csf->voices,
+			(chan->row_param < 0x80) ? csf->midi_config.sfx[chan->active_macro] : csf->midi_config.zxx[chan->row_param & 0x7F],
+			chan->row_param, chan->note, vel, 0);
+	}
+}
 
 static inline int32_t rn_arpeggio(song_t *csf, song_voice_t *chan, int32_t frequency)
 {
@@ -1170,6 +1190,9 @@ int32_t csf_read_note(song_t *csf)
 			// Arpeggio ?
 			if (chan->n_command == FX_ARPEGGIO)
 				frequency = rn_arpeggio(csf, chan, frequency);
+
+			// MIDI macros (this is done here in OpenMPT, just take heed from them)
+			rn_process_midi_macro(csf, chan);
 
 			// Pitch/Filter Envelope
 			int32_t envpitch = 0;

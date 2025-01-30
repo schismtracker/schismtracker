@@ -838,7 +838,6 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 		/* okay, there _IS_ no real midi channel. forget this for now... */
 		midi_channel = 15;
 		fake_midi_channel = 1;
-
 	} else if (penv->midi_channel_mask >= 0x10000) {
 		midi_channel = (nchan-1) % 16;
 	} else {
@@ -879,8 +878,8 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 			case 'u': {
 				/* Volume */
 				const int32_t vol = _muldiv(chan->calc_volume * csf->current_global_volume, chan->global_volume * chan->instrument_volume, INT32_C(1) << 26);
-				//printf("%d\n", vol);
-				data = (unsigned char)CLAMP(vol / 2, 0x01, 0x7F);
+				data = (unsigned char)CLAMP(vol, 0x01, 0x7F);
+				//printf("%u\n", data);
 				break;
 			}
 			case 'x':
@@ -1920,28 +1919,6 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 			csf->process_row = PROCESS_NEXT_ORDER;
 		}
 		break;
-
-	case FX_MIDI: {
-		if (!(csf->flags & SONG_FIRSTTICK))
-			break;
-
-		/* this is wrong; see OpenMPT's soundlib/Snd_fx.cpp:
-		 *
-		 *     This is "almost" how IT does it - apparently, IT seems to lag one row
-		 *     behind on global volume or channel volume changes.
-		 *
-		 * OpenMPT also doesn't entirely support IT's version of this macro, which is
-		 * just another demotivator for actually implementing it correctly *sigh* */
-
-		const uint32_t vel = chan->ptr_sample ?
-			_muldiv((chan->volume + chan->vol_swing) * csf->current_global_volume, chan->global_volume * chan->instrument_volume, INT32_C(1) << 20)
-			: 0;
-
-		csf_process_midi_macro(csf, nchan,
-			(param < 0x80) ? csf->midi_config.sfx[chan->active_macro] : csf->midi_config.zxx[param & 0x7F],
-			param, chan->note, vel, 0);
-		break;
-	}
 
 	case FX_NOTESLIDEUP:
 		fx_note_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param, 1);
