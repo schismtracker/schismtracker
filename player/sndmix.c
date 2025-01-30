@@ -1076,18 +1076,18 @@ int32_t csf_read_note(song_t *csf)
 	csf->num_voices = 0;
 
 	for (cn = 0, chan = csf->voices; cn < MAX_VOICES; cn++, chan++) {
-		/*if(cn == 0 || cn == 1)
-		fprintf(stderr, "considering channel %d (per %d, pos %d/%d, flags %X)\n",
+		/*if(cn == 4 || chan->master_channel == 4)
+		fprintf(stderr, "considering voice %d (per %d, pos %d/%d, flags %X)\n",
 			(int32_t)cn, chan->frequency, chan->position, chan->length, chan->flags);*/
 
 		// reset this ~first~
 		if (!(chan->flags & CHN_ADLIB))
 			chan->vu_meter = 0;
 
-		if (chan->flags & CHN_NOTEFADE &&
+		if ((chan->flags & CHN_NOTEFADE) &&
 		    !(chan->fadeout_volume | chan->right_volume | chan->left_volume)) {
 			chan->length = 0;
-			chan->rofs =
+			chan->rofs = 0;
 			chan->lofs = 0;
 			continue;
 		}
@@ -1200,16 +1200,10 @@ int32_t csf_read_note(song_t *csf)
 
 			uint32_t ninc = _muldiv(frequency, 0x10000, csf->mix_frequency);
 
-			if (ninc >= 0xFFB0 && ninc <= 0x10090)
-				ninc = 0x10000;
-
 			if (csf->freq_factor != 128)
 				ninc = (ninc * csf->freq_factor) >> 7;
 
-			if (ninc > 0xFF0000)
-				ninc = 0xFF0000;
-
-			chan->increment = (ninc + 1) & ~3;
+			chan->increment = MAX(1, ninc);
 		}
 
 		chan->final_panning = CLAMP(chan->final_panning, 0, 256);

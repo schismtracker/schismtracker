@@ -532,15 +532,14 @@ static const mix_interface_t mix_functions[2 * 2 * 16] = {
 	BUILD_MIX_FUNCTION_TABLE(FirFilter)
 };
 
-static inline int32_t buffer_length_to_samples(int32_t mix_buf_cnt, song_voice_t *chan)
+static inline SCHISM_ALWAYS_INLINE int32_t buffer_length_to_samples(uint32_t mix_buf_cnt, song_voice_t *chan)
 {
-	return (chan->increment * (int32_t)mix_buf_cnt) + (int32_t)chan->position_frac;
+	return (chan->increment * (int32_t)mix_buf_cnt) + chan->position_frac;
 }
 
-static inline int32_t samples_to_buffer_length(int32_t samples, song_voice_t *chan)
+static inline SCHISM_ALWAYS_INLINE uint32_t samples_to_buffer_length(int32_t samples, song_voice_t *chan)
 {
-	int32_t x = (lshift_signed(samples, 16)) / abs(chan->increment);
-	return MAX(1, x);
+	return (uint32_t)((lshift_signed(samples - 1, 16)) / safe_abs_32(chan->increment)) + 1u;
 }
 
 static int32_t get_sample_count(song_voice_t *chan, int32_t samples)
@@ -576,8 +575,7 @@ static int32_t get_sample_count(song_voice_t *chan, int32_t samples)
 				chan->position_frac = 0;
 				return 0;
 			}
-		}
-		else {
+		} else {
 			// We probably didn't hit the loop end yet (first loop), so we do nothing
 			if ((int32_t)chan->position < 0)
 				chan->position = 0;
@@ -858,7 +856,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 					} else if ((channel->flags & CHN_LOOP_WRAPPED) && at_loop_start) {
 						// Interpolate properly after looping
 						smpcount = samples_to_buffer_length(channel->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE - channel->position, channel);
-						channel->current_sample_data = lookahead_ptr + (channel->loop_end - channel->loop_start) * ((channel->ptr_sample->flags & CHN_STEREO) ? 2 : 1) * ((channel->ptr_sample->flags & CHN_16BIT) ? 2 : 1);
+						channel->current_sample_data = lookahead_ptr + ((channel->loop_end - channel->loop_start) * ((channel->ptr_sample->flags & CHN_STEREO) ? 2 : 1) * ((channel->ptr_sample->flags & CHN_16BIT) ? 2 : 1));
 					} else if (channel->increment >= 0 && pos_dest >= lookahead_start && smpcount > 1) {
 						smpcount = samples_to_buffer_length(lookahead_start - channel->position, channel);
 					}
