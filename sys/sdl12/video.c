@@ -547,44 +547,6 @@ static void sdl12_video_colors(unsigned char palette[16][3])
 
 	switch (video.desktop.type) {
 	case VIDEO_SURFACE:
-		if (video.surface->format->BytesPerPixel == 1) {
-			const int depthmap[] = { 0, 15,14,7,
-						8, 8, 9, 12,
-						6, 1, 2, 2,
-						10, 3, 11, 11 };
-			/* okay, indexed color */
-			for (i = 0; i < 16; i++) {
-				video.pal[i] = i;
-				imap[i].r = palette[i][0];
-				imap[i].g = palette[i][1];
-				imap[i].b = palette[i][2];
-
-				rgb[0]=palette[i][0];
-				rgb[1]=palette[i][1];
-				rgb[2]=palette[i][2];
-				_bgr32_pal(i, rgb);
-
-			}
-			for (i = 128; i < 256; i++) {
-				video.pal[i] = depthmap[(i>>4)];
-			}
-			for (i = 128; i < 256; i++) {
-				j = i - 128;
-				p = lastmap[(j>>5)];
-				rgb[0] = (int)palette[p][0] +
-					(((int)(palette[p+1][0]
-					- palette[p][0]) * (j&31)) /32);
-				rgb[1] = (int)palette[p][1] +
-					(((int)(palette[p+1][1]
-					- palette[p][1]) * (j&31)) /32);
-				rgb[2] = (int)palette[p][2] +
-					(((int)(palette[p+1][2]
-					- palette[p][2]) * (j&31)) /32);
-				_bgr32_pal(i, rgb);
-			}
-			sdl12_SetColors(video.surface, imap, 0, 16);
-			return;
-		}
 		fun = _sdl_pal;
 		break;
 	default:
