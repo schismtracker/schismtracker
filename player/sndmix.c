@@ -116,6 +116,15 @@ static uint32_t find_volume(uint16_t vol)
 
 static inline void rn_tremor(song_voice_t *chan, int32_t *vol)
 {
+	if ((chan->cd_tremor & 128) && chan->length) {
+		if (chan->cd_tremor == 128)
+			chan->cd_tremor = (chan->mem_tremor >> 4) | 192;
+		else if (chan->cd_tremor == 192)
+			chan->cd_tremor = (chan->mem_tremor & 0xf) | 128;
+		else
+			chan->cd_tremor--;
+	}
+
 	if ((chan->cd_tremor & 192) == 128)
 		*vol = 0;
 

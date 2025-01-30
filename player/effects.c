@@ -89,15 +89,20 @@ void fx_note_cut(song_t *csf, uint32_t nchan, int clear_note)
 {
 	song_voice_t *chan = &csf->voices[nchan];
 	// stop the current note:
-	chan->flags |= CHN_FASTVOLRAMP;
+	chan->flags |= CHN_NOTEFADE | CHN_FASTVOLRAMP;
 	//if (chan->ptr_instrument) chan->volume = 0;
-	chan->length = 0; /* tentative fix: tremor breaks without this, but OpenMPT doesn't do this at all (???) */
+
+	// This line fixes tremor after note cut, but evidently
+	// it causes a whole bunch of clicking (due to no actual
+	// ramp down of the sample)
+	//chan->length = 0; /* tentative fix: tremor breaks without this, but OpenMPT doesn't do this at all (???) */
+
 	chan->increment = 0;
 	chan->fadeout_volume = 0;
 	if (clear_note) {
 		// keep instrument numbers from picking up old notes
 		// (SCx doesn't do this)
-		chan->frequency = 0;
+		chan->note = chan->new_note = NOTE_NONE;
 	}
 
 	if (chan->flags & CHN_ADLIB) {
@@ -1826,15 +1831,6 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 			}
 			chan->mem_tremor = param;
 			chan->cd_tremor |= 128;
-		}
-
-		if ((chan->cd_tremor & 128) && chan->length) {
-			if (chan->cd_tremor == 128)
-				chan->cd_tremor = (chan->mem_tremor >> 4) | 192;
-			else if (chan->cd_tremor == 192)
-				chan->cd_tremor = (chan->mem_tremor & 0xf) | 128;
-			else
-				chan->cd_tremor--;
 		}
 
 		chan->n_command = FX_TREMOR;
