@@ -91,12 +91,6 @@ void fx_note_cut(song_t *csf, uint32_t nchan, int clear_note)
 	// stop the current note:
 	chan->flags |= CHN_NOTEFADE | CHN_FASTVOLRAMP;
 	//if (chan->ptr_instrument) chan->volume = 0;
-
-	// This line fixes tremor after note cut, but evidently
-	// it causes a whole bunch of clicking (due to no actual
-	// ramp down of the sample)
-	//chan->length = 0; /* tentative fix: tremor breaks without this, but OpenMPT doesn't do this at all (???) */
-
 	chan->increment = 0;
 	chan->fadeout_volume = 0;
 	if (clear_note) {
