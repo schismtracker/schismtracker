@@ -668,7 +668,6 @@ int win32_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
 /* ------------------------------------------------------------------------------- */
 /* run hook */
 
-//
 #define WIN32_RUN_HOOK_VARIANT(name, charset, char_type, char_len_func, char_getcwd, char_chdir, char_getenv, char_spawnlp, char_stat, const_prefix) \
 	static inline SCHISM_ALWAYS_INLINE int _win32_run_hook_##name(const char *dir, const char *name, const char *maybe_arg) \
 	{ \
@@ -711,9 +710,8 @@ int win32_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
 		intptr_t r; \
 	\
 		{ \
-			char_type *maybe_arg_w; \
-			if (charset_iconv(maybe_arg, &maybe_arg_w, CHARSET_UTF8, charset, SIZE_MAX)) \
-				return 0; \
+			char_type *maybe_arg_w = NULL; \
+			charset_iconv(maybe_arg, &maybe_arg_w, CHARSET_UTF8, charset, SIZE_MAX); \
 	\
 			struct _stat sb; \
 			if (char_stat(batch_file, &sb) < 0) { \
@@ -725,7 +723,7 @@ int win32_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
 				if (!cmd) \
 					cmd = const_prefix##"command.com"; \
 	\
-				r = char_spawnlp(_P_WAIT, cmd, cmd, "/c", batch_file, maybe_arg_w, 0); \
+				r = char_spawnlp(_P_WAIT, cmd, cmd, const_prefix##"/c", batch_file, maybe_arg_w, NULL); \
 			} \
 	\
 			free(maybe_arg_w); \
