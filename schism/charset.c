@@ -765,7 +765,7 @@ static int ucs4_to_macosroman(uint32_t ch, disko_t *out)
 typedef void (*charset_conv_to_ucs4_func)(charset_decode_t *decoder);
 typedef int (*charset_conv_from_ucs4_func)(uint32_t, disko_t*);
 
-static charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
+static const charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 	[CHARSET_UTF8] = utf8_to_ucs4,
 	[CHARSET_UCS4LE] = ucs4LE_to_ucs4,
 	[CHARSET_UCS4BE] = ucs4BE_to_ucs4,
@@ -793,7 +793,7 @@ static charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 #endif
 };
 
-static charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
+static const charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 	[CHARSET_UTF8] = ucs4_to_utf8,
 	[CHARSET_UTF16LE] = ucs4_to_utf16LE,
 	[CHARSET_UTF16BE] = ucs4_to_utf16BE,
@@ -819,25 +819,27 @@ static charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 };
 
 /* for debugging */
-SCHISM_CONST const char* charset_iconv_error_lookup(charset_error_t err) {
+SCHISM_CONST const char* charset_iconv_error_lookup(charset_error_t err)
+{
 	switch (err) {
-		case CHARSET_ERROR_SUCCESS:
-		default:
-			return "Success";
-		case CHARSET_ERROR_UNIMPLEMENTED:
-			return "Conversion unimplemented";
-		case CHARSET_ERROR_NULLINPUT:
-			return "Input pointer is NULL";
-		case CHARSET_ERROR_NULLOUTPUT:
-			return "Output pointer is NULL";
-		case CHARSET_ERROR_INPUTISOUTPUT:
-			return "Input and output charsets are the same";
-		case CHARSET_ERROR_DECODE:
-			return "An error occurred when decoding";
-		case CHARSET_ERROR_ENCODE:
-			return "An error occurred when encoding";
-		case CHARSET_ERROR_NOMEM:
-			return "Out of memory";
+	case CHARSET_ERROR_SUCCESS:
+		return "Success";
+	case CHARSET_ERROR_UNIMPLEMENTED:
+		return "Conversion unimplemented";
+	case CHARSET_ERROR_NULLINPUT:
+		return "Input pointer is NULL";
+	case CHARSET_ERROR_NULLOUTPUT:
+		return "Output pointer is NULL";
+	case CHARSET_ERROR_INPUTISOUTPUT:
+		return "Input and output charsets are the same";
+	case CHARSET_ERROR_DECODE:
+		return "An error occurred when decoding";
+	case CHARSET_ERROR_ENCODE:
+		return "An error occurred when encoding";
+	case CHARSET_ERROR_NOMEM:
+		return "Out of memory";
+	default:
+		return "Unknown error";
 	}
 }
 
@@ -857,7 +859,8 @@ SCHISM_CONST const char* charset_iconv_error_lookup(charset_error_t err) {
  *     charset_iconv(cp437, &utf8, CHARSET_CP437, CHARSET_UTF8);
  * 
  * [out] must be free'd by the caller */
-CHARSET_VARIATION(internal) {
+CHARSET_VARIATION(internal)
+{
 	charset_decode_t decoder = {
 		.in = in,
 		.offset = 0,
