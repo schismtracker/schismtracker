@@ -263,13 +263,21 @@
 /* ------------------------------------------------------------------------ */
 
 #ifndef HAVE_ASPRINTF
-int asprintf(char **strp, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, ...) SCHISM_FORMAT(printf, 2, 3);
+int asprintf(char **strp, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, ...);
 #endif
 #ifndef HAVE_VASPRINTF
 int vasprintf(char **strp, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, va_list ap) SCHISM_FORMAT(printf, 2, 3);
 #endif
+#ifndef HAVE_SNPRINTF
+#undef snprintf // stupid windows
+int snprintf(char *buffer, size_t count, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, ...) SCHISM_FORMAT(printf, 3, 4);
+#endif
+#ifndef HAVE_VSNPRINTF
+#undef vsnprintf // stupid windows
+int vsnprintf(char *buffer, size_t count, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, va_list ap);
+#endif
 #ifndef HAVE_STRPTIME
-char *strptime(const char *buf, const char *fmt, struct tm *tm); // XXX format string
+char *strptime(const char *buf, const char *fmt, struct tm *tm);
 #endif
 #ifndef HAVE_MKSTEMP
 int mkstemp(char *template);
@@ -462,55 +470,5 @@ void *alloca(size_t size);
 
 // hm :)
 #define SCHISM_VLA_LENGTH(name) (SCHISM_VLA_SIZEOF(name) / sizeof(*name))
-
-/* ------------------------------------------------------------------------ */
-
-// This is only necessary with MSVC, MinGW uses built in variants that are
-// compatible-ish with C99. (as in, they have the behavior that we expect.)
-#if defined(SCHISM_WIN32) && !defined(__MINGW32__)
-static inline int _schism_fixup_ms_vsnprintf(char *buffer, size_t count, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, va_list ap);
-static inline int _schism_fixup_ms_snprintf(char *buffer, size_t count, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, ...) SCHISM_FORMAT(printf, 3, 4);
-
-static inline int _schism_fixup_ms_vsnprintf(char *buffer, size_t count, const char *fmt, va_list ap)
-{
-	if (count > 0) {
-		int len;
-
-		va_list ap_cp;
-
-		va_copy(ap_cp, ap);
-		len = _vsnprintf(buffer, count, fmt, ap_cp);
-		va_end(ap_cp);
-
-		if (len < 0)
-			len = _vscprintf(fmt, ap);
-
-		buffer[count - 1] = '\0';
-		return len;
-	} else {
-		return _vscprintf(fmt, ap);
-	}
-}
-
-static inline int _schism_fixup_ms_snprintf(char *buffer, size_t count, const char *fmt, ...)
-{
-	va_list ap;
-	va_start(ap, fmt);
-	int x = _schism_fixup_ms_vsnprintf(buffer, count, fmt, ap);
-	va_end(ap);
-	return x;
-}
-
-// just in case
-# undef vsnprintf
-# undef _vsnprintf
-# undef snprintf
-# undef _snprintf
-
-# define vsnprintf _schism_fixup_ms_vsnprintf
-# define _vsnprintf _schism_fixup_ms_vsnprintf
-# define snprintf _schism_fixup_ms_snprintf
-# define _snprintf _schism_fixup_ms_snprintf
-#endif
 
 #endif /* SCHISM_HEADERS_H_ */

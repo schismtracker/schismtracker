@@ -396,6 +396,12 @@ endif
 if NEED_VASPRINTF
 files_stdlib += sys/stdlib/vasprintf.c
 endif
+if NEED_SNPRINTF
+files_stdlib += sys/stdlib/snprintf.c
+endif
+if NEED_VSNPRINTF
+files_stdlib += sys/stdlib/vsnprintf.c
+endif
 if NEED_MEMCMP
 files_stdlib += sys/stdlib/memcmp.c
 endif

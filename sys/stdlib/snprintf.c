@@ -23,11 +23,11 @@
 
 #include "headers.h"
 
-int asprintf(char **buf, const char *fmt, ...)
+int snprintf(char *buffer, size_t count, const char *fmt, va_list ap)
 {
 	va_list ap;
 	va_start(ap, fmt);
-	int status = vasprintf(buf, fmt, ap);
+	int x = vsnprintf(buffer, count, fmt, ap);
 	va_end(ap);
-	return status;
+	return x;
 }

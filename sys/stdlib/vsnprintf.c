@@ -23,11 +23,44 @@
 
 #include "headers.h"
 
-int asprintf(char **buf, const char *fmt, ...)
+// An implementation of the C99 vsnprintf() function that only uses
+// functions required by C89. It's kind of bloat-y, but I don't see
+// any other way of doing this besides using tmpfile()
+int vsnprintf(char *buffer, size_t count, const char *fmt, va_list ap)
 {
-	va_list ap;
-	va_start(ap, fmt);
-	int status = vasprintf(buf, fmt, ap);
-	va_end(ap);
-	return status;
+	FILE *f;
+	int x;
+
+	f = tmpfile();
+	if (!f)
+		return -1;
+
+	x = vfprintf(f, fmt, ap);
+	if (x < 0) {
+		// that's a wrap!
+		fclose(f);
+		return -1;
+	}
+
+	if (count > 0) {
+		size_t towrite = (count > (x + 1)) ? (x + 1) : count;
+
+		// Now read back the file into our buffer
+		if (fseek(f, 0, SEEK_SET)) {
+			fclose(f);
+			return -1;
+		}
+
+		if (fread(buffer, 1, towrite, f) != towrite) {
+			fclose(f);
+			return -1;
+		}
+
+		// Force nul terminate (towrite is already > 0)
+		buffer[towrite - 1] = '\0';
+	}
+
+	fclose(f);
+
+	return x;
 }
