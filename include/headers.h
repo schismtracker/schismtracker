@@ -72,66 +72,6 @@
 #endif
 #include <time.h>
 
-#ifndef HAVE_ASPRINTF
-int asprintf(char **strp, const char *fmt, ...);
-#endif
-#ifndef HAVE_VASPRINTF
-int vasprintf(char **strp, const char *fmt, va_list ap);
-#endif
-#ifndef HAVE_STRPTIME
-char *strptime(const char *buf, const char *fmt, struct tm *tm);
-#endif
-#ifndef HAVE_MKSTEMP
-int mkstemp(char *template);
-#endif
-#ifndef HAVE_LOCALTIME_R
-struct tm *localtime_r(const time_t *timep, struct tm *result);
-void localtime_r_quit(void);
-int localtime_r_init(void);
-#endif
-#ifndef HAVE_SETENV
-int setenv(const char *name, const char *value, int overwrite);
-#endif
-#ifndef HAVE_UNSETENV
-int unsetenv(const char *name);
-#endif
-#ifdef HAVE_GETOPT_LONG
-# include <getopt.h>
-#else
-/* getopt replacement defines; these intentionally do not use the names
- * getopt() and such because a system could have getopt() but not
- * getopt_long(), and doing this avoids name collisions */
-# define ya_no_argument        0
-# define ya_required_argument  1
-# define ya_optional_argument  2
-
-struct option {
-	const char *name;
-	int has_arg;
-	int *flag;
-	int val;
-};
-
-int ya_getopt(int argc, char * const argv[], const char *optstring);
-int ya_getopt_long(int argc, char * const argv[], const char *optstring, const struct option *longopts, int *longindex);
-int ya_getopt_long_only(int argc, char * const argv[], const char *optstring, const struct option *longopts, int *longindex);
-
-extern char *ya_optarg;
-extern int ya_optind, ya_opterr, ya_optopt;
-
-// yargh
-# define getopt ya_getopt
-# define getopt_long ya_getopt_long
-# define getopt_long_only ya_getopt_long_only
-# define optarg ya_optarg
-# define optind ya_optind
-# define opterr ya_opterr
-# define optopt ya_optopt
-# define no_argument ya_no_argument
-# define required_argument ya_required_argument
-# define optional_argument ya_optional_argument
-#endif
-
 #define INT_SHAPED_PTR(v)               ((intptr_t)(void*)(v))
 #define PTR_SHAPED_INT(i)               ((void*)(i))
 
@@ -163,7 +103,7 @@ extern int ya_optind, ya_opterr, ya_optopt;
 
 /* A bunch of compiler detection stuff... don't mind this... */
 
-// GNU C (not GCC!)
+// GNU C (not necessarily GCC!)
 #if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
 # define SCHISM_GNUC_ATLEAST(major, minor, patch) \
 	SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
@@ -226,44 +166,63 @@ extern int ya_optind, ya_opterr, ya_optopt;
 # define SCHISM_HAS_C23_ATTRIBUTE(x) (0)
 #endif
 
+/* -------------------------------------------------------------- */
+
+// Ok, now after all that mess, we can define these attributes:
+
 #if SCHISM_HAS_C23_ATTRIBUTE(maybe_unused)
 # define SCHISM_UNUSED [[maybe_unused]]
 #elif SCHISM_GNUC_HAS_ATTRIBUTE(__unused__, 2, 7, 0)
 # define SCHISM_UNUSED __attribute__((__unused__))
+#else
+# define SCHISM_UNUSED
 #endif
 
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__malloc__, 3, 0, 0)
 # define SCHISM_MALLOC __attribute__((__malloc__))
 #elif SCHISM_MSVC_ATLEAST(14, 0, 0)
 # define SCHISM_MALLOC __declspec(allocator)
+#else
+# define SCHISM_MALLOC
 #endif
 
 #if SCHISM_HAS_C23_ATTRIBUTE(reproducible)
 # define SCHISM_PURE [[reproducible]]
 #elif SCHISM_GNUC_HAS_ATTRIBUTE(__pure__, 2, 96, 0)
 # define SCHISM_PURE __attribute__((__pure__))
+#else
+# define SCHISM_PURE
 #endif
 
 #if SCHISM_HAS_C23_ATTRIBUTE(unsequenced)
 # define SCHISM_CONST [[unsequenced]]
 #elif SCHISM_GNUC_HAS_ATTRIBUTE(__const__, 2, 5, 0)
 # define SCHISM_CONST __attribute__((__const__))
+#else
+# define SCHISM_CONST
 #endif
 
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__format__, 2, 3, 0)
 # define SCHISM_FORMAT(function, format_index, first_index) \
 	__attribute__((__format__(function, format_index, first_index)))
+#else
+# define SCHISM_FORMAT(function, format_index, first_index)
 #endif
 
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__alloc_size__, 9, 1, 0)
 # define SCHISM_ALLOC_SIZE(x) __attribute__((__alloc_size__(x)))
 # define SCHISM_ALLOC_SIZE_EX(x, y) __attribute__((__alloc_size__(x, y)))
+#else
+# define SCHISM_ALLOC_SIZE(x)
+# define SCHISM_ALLOC_SIZE_EX(x, y)
 #endif
 
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__always_inline__, 3, 1, 1)
 # define SCHISM_ALWAYS_INLINE __attribute__((__always_inline__))
 #elif SCHISM_MSVC_ATLEAST(12, 0, 0)
 # define SCHISM_ALWAYS_INLINE __forceinline
+#else
+# define SCHISM_ALWAYS_INLINE
 #endif
 
 #if SCHISM_HAS_C23_ATTRIBUTE(deprecated)
@@ -272,50 +231,25 @@ extern int ya_optind, ya_opterr, ya_optopt;
 # define SCHISM_DEPRECATED __attribute__((__deprecated__))
 #elif SCHISM_MSVC_ATLEAST(13, 10, 0)
 # define SCHISM_DEPRECATED __declspec(deprecated)
+#else
+# define SCHISM_DEPRECATED
 #endif
 
 #if SCHISM_GNUC_HAS_BUILTIN(__builtin_expect, 3, 0, 0)
 # define SCHISM_LIKELY(x)   __builtin_expect(!!(x), 1)
 # define SCHISM_UNLIKELY(x) __builtin_expect(!(x),  1)
+#else
+# define SCHISM_LIKELY(x)
+# define SCHISM_UNLIKELY(x)
 #endif
 
-#ifndef SCHISM_LIKELY
-# define SCHISM_LIKELY(x) (x)
-#endif
-#ifndef SCHISM_UNLIKELY
-# define SCHISM_UNLIKELY(x) (x)
-#endif
-#ifndef SCHISM_UNUSED
-# define SCHISM_UNUSED
-#endif
-#ifndef SCHISM_PACKED
-# define SCHISM_PACKED
-#endif
-#ifndef SCHISM_MALLOC
-# define SCHISM_MALLOC
-#endif
-#ifndef SCHISM_PURE
-# define SCHISM_PURE
-#endif
-#ifndef SCHISM_CONST
-# define SCHISM_CONST
-#endif
-#ifndef SCHISM_FORMAT
-# define SCHISM_FORMAT(x)
-#endif
-#ifndef SCHISM_ALLOC_SIZE
-# define SCHISM_ALLOC_SIZE(x)
-#endif
-#ifndef SCHISM_ALLOC_SIZE_EX
-# define SCHISM_ALLOC_SIZE_EX(x, y)
-#endif
-#ifndef SCHISM_ALWAYS_INLINE
-# define SCHISM_ALWAYS_INLINE
-#endif
-#ifndef SCHISM_DEPRECATED
-# define SCHISM_DEPRECATED
+#if SCHISM_MSVC_ATLEAST(14, 0, 0)
+# define SCHISM_PRINTF_FORMAT_PARAM _Printf_format_string_
+#else
+# define SCHISM_PRINTF_FORMAT_PARAM
 #endif
 
+// Static assertion. DO NOT use this within structure definitions!
 #if (__STDC_VERSION__ >= 201112L) || (SCHISM_GNUC_HAS_EXTENSION(c11_static_assert, 4, 6, 0))
 # define SCHISM_STATIC_ASSERT(x, msg) _Static_assert(x, msg)
 #else
@@ -324,6 +258,68 @@ extern int ya_optind, ya_opterr, ya_optopt;
 # define SCHISM_STATIC_ASSERT(x, msg) \
 	extern int (*schism_static_assert_function_no_touchy_touchy_plz(void)) \
 		[!!sizeof (struct { int __error_if_negative: (x) ? 2 : -1; })]
+#endif
+
+/* ------------------------------------------------------------------------ */
+
+#ifndef HAVE_ASPRINTF
+int asprintf(char **strp, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, ...) SCHISM_FORMAT(printf, 2, 3);
+#endif
+#ifndef HAVE_VASPRINTF
+int vasprintf(char **strp, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, va_list ap) SCHISM_FORMAT(printf, 2, 3);
+#endif
+#ifndef HAVE_STRPTIME
+char *strptime(const char *buf, const char *fmt, struct tm *tm); // XXX format string
+#endif
+#ifndef HAVE_MKSTEMP
+int mkstemp(char *template);
+#endif
+#ifndef HAVE_LOCALTIME_R
+struct tm *localtime_r(const time_t *timep, struct tm *result);
+void localtime_r_quit(void);
+int localtime_r_init(void);
+#endif
+#ifndef HAVE_SETENV
+int setenv(const char *name, const char *value, int overwrite);
+#endif
+#ifndef HAVE_UNSETENV
+int unsetenv(const char *name);
+#endif
+#ifdef HAVE_GETOPT_LONG
+# include <getopt.h>
+#else
+/* getopt replacement defines; these intentionally do not use the names
+ * getopt() and such because a system could have getopt() but not
+ * getopt_long(), and doing this avoids name collisions */
+# define ya_no_argument        0
+# define ya_required_argument  1
+# define ya_optional_argument  2
+
+struct option {
+	const char *name;
+	int has_arg;
+	int *flag;
+	int val;
+};
+
+int ya_getopt(int argc, char * const argv[], const char *optstring);
+int ya_getopt_long(int argc, char * const argv[], const char *optstring, const struct option *longopts, int *longindex);
+int ya_getopt_long_only(int argc, char * const argv[], const char *optstring, const struct option *longopts, int *longindex);
+
+extern char *ya_optarg;
+extern int ya_optind, ya_opterr, ya_optopt;
+
+// yargh
+# define getopt ya_getopt
+# define getopt_long ya_getopt_long
+# define getopt_long_only ya_getopt_long_only
+# define optarg ya_optarg
+# define optind ya_optind
+# define opterr ya_opterr
+# define optopt ya_optopt
+# define no_argument ya_no_argument
+# define required_argument ya_required_argument
+# define optional_argument ya_optional_argument
 #endif
 
 /* ------------------------------------------------------------------------ */
@@ -470,8 +466,11 @@ void *alloca(size_t size);
 /* ------------------------------------------------------------------------ */
 
 // This is only necessary with MSVC, MinGW uses built in variants that are
-// compatible-ish with C99.
+// compatible-ish with C99. (as in, they have the behavior that we expect.)
 #if defined(SCHISM_WIN32) && !defined(__MINGW32__)
+static inline int _schism_fixup_ms_vsnprintf(char *buffer, size_t count, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, va_list ap);
+static inline int _schism_fixup_ms_snprintf(char *buffer, size_t count, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, ...) SCHISM_FORMAT(printf, 3, 4);
+
 static inline int _schism_fixup_ms_vsnprintf(char *buffer, size_t count, const char *fmt, va_list ap)
 {
 	if (count > 0) {
@@ -493,7 +492,6 @@ static inline int _schism_fixup_ms_vsnprintf(char *buffer, size_t count, const c
 	}
 }
 
-static inline int _schism_fixup_ms_snprintf(char *buffer, size_t count, const char *fmt, ...) SCHISM_FORMAT(printf, 3, 4);
 static inline int _schism_fixup_ms_snprintf(char *buffer, size_t count, const char *fmt, ...)
 {
 	va_list ap;
