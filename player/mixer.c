@@ -103,7 +103,7 @@
 // MIXING MACROS
 // ----------------------------------------------------------------------------
 
-// Safe absolute value of a 32-bit integer.
+// Safe absolute value of a 32-bit signed integer.
 static inline SCHISM_ALWAYS_INLINE uint32_t safe_abs_32(int32_t x)
 {
 	return (x < 0) ? (uint32_t)(~x + 1) : (uint32_t)x;
@@ -332,80 +332,80 @@ typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 
 
 #define END_MIX_INTERFACE() \
-	SNDMIX_ENDSAMPLELOOP \
+		SNDMIX_ENDSAMPLELOOP \
 	}
 
 // Volume Ramps
 #define BEGIN_RAMPMIX_INTERFACE(func) \
 	BEGIN_MIX_INTERFACE(func) \
-	int32_t right_ramp_volume = channel->right_ramp_volume; \
-	int32_t left_ramp_volume = channel->left_ramp_volume;
+		int32_t right_ramp_volume = channel->right_ramp_volume; \
+		int32_t left_ramp_volume  = channel->left_ramp_volume;
 
 
 #define END_RAMPMIX_INTERFACE() \
-	SNDMIX_ENDSAMPLELOOP \
-	channel->right_ramp_volume = right_ramp_volume; \
-	channel->right_volume     = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
-	channel->left_ramp_volume  = left_ramp_volume; \
-	channel->left_volume      = rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
+		SNDMIX_ENDSAMPLELOOP \
+		channel->right_ramp_volume = right_ramp_volume; \
+		channel->right_volume      = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
+		channel->left_ramp_volume  = left_ramp_volume; \
+		channel->left_volume       = rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	}
 
 
 // Mono Resonant Filters
 #define BEGIN_MIX_MONO_FLT_INTERFACE(func) \
 	BEGIN_MIX_INTERFACE(func) \
-	MIX_BEGIN_MONO_FILTER
+		MIX_BEGIN_MONO_FILTER
 
 
 #define END_MIX_MONO_FLT_INTERFACE() \
-	SNDMIX_ENDSAMPLELOOP \
-	MIX_END_MONO_FILTER \
+		SNDMIX_ENDSAMPLELOOP \
+		MIX_END_MONO_FILTER \
 	}
 
 
 #define BEGIN_RAMPMIX_MONO_FLT_INTERFACE(func) \
 	BEGIN_MIX_INTERFACE(func) \
-	int32_t right_ramp_volume = channel->right_ramp_volume; \
-	int32_t left_ramp_volume  = channel->left_ramp_volume; \
-	MIX_BEGIN_MONO_FILTER
+		int32_t right_ramp_volume = channel->right_ramp_volume; \
+		int32_t left_ramp_volume  = channel->left_ramp_volume; \
+		MIX_BEGIN_MONO_FILTER
 
 
 #define END_RAMPMIX_MONO_FLT_INTERFACE() \
-	SNDMIX_ENDSAMPLELOOP \
-	MIX_END_MONO_FILTER \
-	channel->right_ramp_volume = right_ramp_volume; \
-	channel->right_volume     = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
-	channel->left_ramp_volume  = left_ramp_volume; \
-	channel->left_volume      = rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
+		SNDMIX_ENDSAMPLELOOP \
+		MIX_END_MONO_FILTER \
+		channel->right_ramp_volume = right_ramp_volume; \
+		channel->right_volume      = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
+		channel->left_ramp_volume  = left_ramp_volume; \
+		channel->left_volume       = rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	}
 
 
 // Stereo Resonant Filters
 #define BEGIN_MIX_STEREO_FLT_INTERFACE(func) \
 	BEGIN_MIX_INTERFACE(func) \
-	MIX_BEGIN_STEREO_FILTER
+		MIX_BEGIN_STEREO_FILTER
 
 
 #define END_MIX_STEREO_FLT_INTERFACE() \
-	SNDMIX_ENDSAMPLELOOP \
-	MIX_END_STEREO_FILTER \
+		SNDMIX_ENDSAMPLELOOP \
+		MIX_END_STEREO_FILTER \
 	}
 
 
 #define BEGIN_RAMPMIX_STEREO_FLT_INTERFACE(func) \
 	BEGIN_MIX_INTERFACE(func) \
-	int32_t right_ramp_volume = channel->right_ramp_volume; \
-	int32_t left_ramp_volume  = channel->left_ramp_volume; \
-	MIX_BEGIN_STEREO_FILTER
+		int32_t right_ramp_volume = channel->right_ramp_volume; \
+		int32_t left_ramp_volume  = channel->left_ramp_volume; \
+		MIX_BEGIN_STEREO_FILTER
 
 
 #define END_RAMPMIX_STEREO_FLT_INTERFACE() \
-	SNDMIX_ENDSAMPLELOOP \
-	MIX_END_STEREO_FILTER \
-	channel->right_ramp_volume = right_ramp_volume; \
-	channel->right_volume     = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
-	channel->left_ramp_volume  = left_ramp_volume; \
-	channel->left_volume      = rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
+		SNDMIX_ENDSAMPLELOOP \
+		MIX_END_STEREO_FILTER \
+		channel->right_ramp_volume = right_ramp_volume; \
+		channel->right_volume      = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
+		channel->left_ramp_volume  = left_ramp_volume; \
+		channel->left_volume       = rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	}
 
 #define BEGIN_RESAMPLE_INTERFACE(func, sampletype, numchannels) \
@@ -415,7 +415,7 @@ typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 		const sampletype *p = oldbuf; \
 		sampletype *pvol = newbuf; \
 		const sampletype *pbufmax = &newbuf[newlen* numchannels]; \
-		uint32_t increment = (((uint32_t)oldlen)<<16)/((uint32_t)newlen); \
+		uint32_t increment = (((uint64_t)oldlen) << 16) / newlen; \
 		do {
 
 #define END_RESAMPLE_INTERFACE_MONO() \
@@ -776,7 +776,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 			if (channel->flags & CHN_SUSTAINLOOP)
 				lookahead_offset += 4 * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE;
 
-			lookahead_ptr = smp_ptr + lookahead_offset * ((pins->flags & CHN_STEREO) ? 2 : 1) * ((pins->flags & CHN_16BIT) ? 2 : 1);
+			lookahead_ptr = smp_ptr + (lookahead_offset * ((pins->flags & CHN_STEREO) ? 2 : 1) * ((pins->flags & CHN_16BIT) ? 2 : 1));
 		}
 
 		////////////////////////////////////////////////////
