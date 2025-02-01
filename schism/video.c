@@ -407,15 +407,15 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 	unsigned int mouse_x, mouse_y;
 	video_get_mouse_coordinates(&mouse_x, &mouse_y);
 
-	unsigned int mouseline_x = (mouse_x / 8);
-	unsigned int mouseline_v = (mouse_x % 8);
+	const unsigned int mouseline_x = (mouse_x / 8);
+	const unsigned int mouseline_v = (mouse_x % 8);
+	const int pad = pitch - (width * bpp);
 	uint32_t mouseline[80];
 	uint32_t mouseline_mask[80];
-	int x, a, y, last_scaled_y;
-	int pad = pitch - (width * bpp);
+	int x, y, last_scaled_y;
 
 	for (y = 0; y < height; y++) {
-		int scaled_y = (y * NATIVE_SCREEN_HEIGHT / height);
+		const int scaled_y = (y * NATIVE_SCREEN_HEIGHT / height);
 
 		// only scan again if we have to or if this the first scan
 		if (scaled_y != last_scaled_y || y == 0) {
@@ -438,22 +438,24 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 		}
 
 		for (x = 0; x < width; x++) {
+			const int scaled_x = (x * NATIVE_SCREEN_WIDTH / width);
+
 			switch (bpp) {
-			case 1: *pixels = pixels_u.uc[x * NATIVE_SCREEN_WIDTH / width]; break;
-			case 2: *(uint16_t *)pixels = pixels_u.us[x * NATIVE_SCREEN_WIDTH / width]; break;
+			case 1: *pixels = pixels_u.uc[scaled_x]; break;
+			case 2: *(uint16_t *)pixels = pixels_u.us[scaled_x]; break;
 			case 3:
 				// convert 32-bit to 24-bit
 #ifdef WORDS_BIGENDIAN
-				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 1];
-				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 2];
-				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 3];
+				*pixels++ = pixels_u.uc[(scaled_x) * 4 + 1];
+				*pixels++ = pixels_u.uc[(scaled_x) * 4 + 2];
+				*pixels++ = pixels_u.uc[(scaled_x) * 4 + 3];
 #else
-				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 0];
-				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 1];
-				*pixels++ = pixels_u.uc[(x * 640 / width) * 4 + 2];
+				*pixels++ = pixels_u.uc[(scaled_x) * 4 + 0];
+				*pixels++ = pixels_u.uc[(scaled_x) * 4 + 1];
+				*pixels++ = pixels_u.uc[(scaled_x) * 4 + 2];
 #endif
 				break;
-			case 4:  *(uint32_t *)pixels = pixels_u.ui[x * NATIVE_SCREEN_WIDTH / width]; break;
+			case 4:  *(uint32_t *)pixels = pixels_u.ui[scaled_x]; break;
 			default: break; // should never happen
 			}
 
