@@ -202,6 +202,16 @@
 # define SCHISM_CONST
 #endif
 
+#if SCHISM_HAS_C23_ATTRIBUTE(noreturn)
+# define SCHISM_NORETURN [[noreturn]]
+#elif (__STDC_VERSION__ >= 201112L)
+# define SCHISM_NORETURN _Noreturn
+#elif SCHISM_GNUC_HAS_ATTRIBUTE(__noreturn__, 2, 5, 0)
+# define SCHISM_NORETURN __attribute__((__noreturn__))
+#else
+# define SCHISM_NORETURN
+#endif
+
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__format__, 2, 3, 0)
 # define SCHISM_FORMAT(function, format_index, first_index) \
 	__attribute__((__format__(function, format_index, first_index)))

@@ -378,7 +378,7 @@ static void key_event_reset(struct key_event *kk, int start_x, int start_y)
 
 /* -------------------------------------------- */
 
-static void event_loop(void)
+SCHISM_NORETURN static void event_loop(void)
 {
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
 	timer_ticks_t last_mouse_down, ticker, last_audio_poll;
