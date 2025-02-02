@@ -263,10 +263,10 @@
 /* ------------------------------------------------------------------------ */
 
 #ifndef HAVE_ASPRINTF
-int asprintf(char **strp, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, ...);
+int asprintf(char **strp, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, ...) SCHISM_FORMAT(printf, 2, 3);
 #endif
 #ifndef HAVE_VASPRINTF
-int vasprintf(char **strp, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, va_list ap) SCHISM_FORMAT(printf, 2, 3);
+int vasprintf(char **strp, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, va_list ap);
 #endif
 #ifndef HAVE_SNPRINTF
 #undef snprintf // stupid windows
