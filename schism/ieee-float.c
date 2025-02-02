@@ -440,7 +440,8 @@ void float_encode_ieee_80(double num, unsigned char bytes[10])
 	memcpy(bytes, &x, 10);
 #else
 	double fMant, fsMant;
-	uint16_t sign, expon;
+	int expon;
+	uint16_t sign;
 	uint32_t hiMant, loMant;
 
 	if (num < 0) {
