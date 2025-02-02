@@ -131,7 +131,7 @@ double float_decode_ieee_32(const unsigned char bytes[4])
 	return (double)x.f;
 #else
 	double f;
-	long mantissa, expon;
+	uint32_t mantissa, expon;
 	uint32_t bits;
 
 	bits =	((uint32_t)(bytes[0] & 0xFF) << 24)
@@ -179,8 +179,8 @@ void float_encode_ieee_32(double num, unsigned char bytes[4])
 	x.u = bswapBE32(x.u);
 	memcpy(bytes, &x, 4);
 #else
-	long sign;
-	register long bits;
+	uint32_t sign;
+	register uint32_t bits;
 
 	if (num < 0) {	/* Can't distinguish a negative zero */
 		sign = 0x80000000;
@@ -248,7 +248,7 @@ double float_decode_ieee_64(const unsigned char bytes[8])
 	return (double)x.f;
 #else
 	double f;
-	int32_t mantissa, expon;
+	uint32_t mantissa, expon;
 	uint32_t first, second;
 
 	first = ((uint32_t)(bytes[0] & 0xFF) << 24)
@@ -388,7 +388,7 @@ double float_decode_ieee_80(const unsigned char bytes[10])
 	return x.f;
 #else
 	double f;
-	int expon;
+	uint16_t expon;
 	uint32_t hiMant, loMant;
 
 	expon = ((bytes[0] & 0x7F) << 8) | (bytes[1] & 0xFF);
@@ -439,8 +439,8 @@ void float_encode_ieee_80(double num, unsigned char bytes[10])
 # endif
 	memcpy(bytes, &x, 10);
 #else
-	int sign, expon;
 	double fMant, fsMant;
+	uint16_t sign, expon;
 	uint32_t hiMant, loMant;
 
 	if (num < 0) {
