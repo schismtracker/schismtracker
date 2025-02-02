@@ -11,7 +11,7 @@ void GM_Touch(song_t *csf, int32_t c, unsigned char Vol); // range 0..127
 void GM_KeyOn(song_t *csf, int32_t c, unsigned char key, unsigned char Vol); // vol range 0..127
 void GM_KeyOff(song_t *csf, int32_t c);
 void GM_Bend(song_t *csf, int32_t c, uint32_t Count);
-void GM_Reset(song_t *csf, int32_t quitting); // 0=settings that work for us, 1=normal settings
+void GM_Reset(song_t *csf, int quitting); // 0=settings that work for us, 1=normal settings
 
 void GM_Pan(song_t *csf, int32_t ch, signed char val); // param: -128..+127
 
