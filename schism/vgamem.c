@@ -246,8 +246,17 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 }
 
 /* generic scanner; BITS must be one of 8, 16, 32, 64
+ *
  * I've tried to make this code as small and predictable
- * as possible in an effort to make it fast as I can. */
+ * as possible in an effort to make it fast as I can.
+ *
+ * Older versions prioritized memory efficiency over speed,
+ * as in every character was packed into a 32-bit integer.
+ * Arguably this is a bad choice, especially considering
+ * that this is the most taxing function to call in the
+ * whole program (the audio crap doesn't even come close)
+ * In a normal session, this function will probably amount
+ * for ~80% of all processing that Schism does. */
 #define VGAMEM_SCANNER_VARIANT(BITS) \
 	void vgamem_scan##BITS(uint32_t ry, uint##BITS##_t *out, uint32_t tc[16], uint32_t mouseline[80], uint32_t mouseline_mask[80]) \
 	{ \
@@ -263,11 +272,10 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 			*const greek = font_greek + yl; \
 		const struct vgamem_char *bp = &vgamem_read[y * 80]; \
 	\
-		uint_fast8_t fg, bg, fg2, bg2; \
-		uint_fast8_t dg, dg1, dg2; \
-		uint_fast8_t x; \
-	\
+		uint_fast32_t x; \
 		for (x = 0; x < 80; x++, bp++, q += 8) { \
+			uint_fast8_t fg, bg, fg2, bg2, dg; \
+	\
 			switch (bp->font) { \
 			case VGAMEM_FONT_ITF: \
 				/* regular character */ \
@@ -289,12 +297,14 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				break; \
 			case VGAMEM_FONT_HALFWIDTH: \
 				/* halfwidth (used for patterns) */ \
-				dg1 = hf[bp->character.halfwidth.c1.c << 2]; \
-				dg2 = hf[bp->character.halfwidth.c2.c << 2]; \
+				{ \
+					const uint_fast8_t dg1 = hf[bp->character.halfwidth.c1.c << 2]; \
+					const uint_fast8_t dg2 = hf[bp->character.halfwidth.c2.c << 2]; \
 	\
-				dg = (!(ry & 1)) \
-					? ((dg1 & 0xF0) | dg2 >> 4) \
-					: (dg1 << 4 | (dg2 & 0xF)); \
+					dg = (!(ry & 1)) \
+						? ((dg1 & 0xF0) | dg2 >> 4) \
+						: (dg1 << 4 | (dg2 & 0xF)); \
+				} \
 	\
 				fg = bp->character.halfwidth.c1.colors.fg; \
 				bg = bp->character.halfwidth.c1.colors.bg; \
@@ -314,7 +324,7 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				continue; \
 			case VGAMEM_FONT_UNICODE: { \
 				/* Any unicode character. */ \
-				uint_fast32_t c = bp->character.unicode.c; \
+				const uint_fast32_t c = bp->character.unicode.c; \
 	\
 				/* These are ordered by how often they will probably appear
 				 * for an average user of Schism (i.e., English speakers). */ \
