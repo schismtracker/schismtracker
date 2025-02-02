@@ -1,5 +1,5 @@
 [Desktop Entry]
-Actions=Play;FontEditor
+Actions=Play;FontEditor;RenderWAV
 Version=1.0
 Name=Schism Tracker
 Comment=Impulse Tracker clone
@@ -21,6 +21,6 @@ Exec=schismtracker -p %f
 Name=Schism Tracker (font editor)
 Exec=schismtracker --font-editor
 
-[Desktop Action Render WAV]
+[Desktop Action RenderWAV]
 Name=Schism Tracker (render song)
-Exec=schismtracker --diskwrite=%f.wav %f
+Exec=env SCHISM_FILE=%f schismtracker --diskwrite="\\$SCHISM_FILE.wav" "\\$SCHISM_FILE"
