@@ -24,9 +24,49 @@
 /* Routines to portably operate on IEEE floating point numbers. */
 
 #include "headers.h"
+#include "bswap.h"
 #include "ieee-float.h"
 
 #include <math.h>
+
+/* These are used for hardware encoding/decoding of floating point numbers.
+ * Note that even if these types are available and conform to IEEE 754,
+ * this doesn't mean that these operations are done in hardware. */
+#if (SIZEOF_FLOAT == 4)
+typedef float float32;
+# define HAVE_FLOAT32
+#elif (SIZEOF_DOUBLE == 4)
+typedef double float32;
+# define HAVE_FLOAT32
+#elif (SIZEOF_LONG_DOUBLE == 4)
+typedef long double float32;
+# define HAVE_FLOAT32
+#endif
+
+#if (SIZEOF_FLOAT == 8)
+typedef float float64;
+# define HAVE_FLOAT64
+#elif (SIZEOF_DOUBLE == 8)
+typedef double float64;
+# define HAVE_FLOAT64
+#elif (SIZEOF_LONG_DOUBLE == 8)
+typedef long double float64;
+# define HAVE_FLOAT64
+#endif
+
+// FIXME: Intel has 80-bit precision, but many compilers
+// define long double as 128-bit and simply don't use the
+// other 48 bits.
+#if (SIZEOF_FLOAT == 10)
+typedef float float80;
+# define HAVE_FLOAT80
+#elif (SIZEOF_DOUBLE == 10)
+typedef double float80;
+# define HAVE_FLOAT80
+#elif (SIZEOF_LONG_DOUBLE == 10)
+typedef long double float80;
+# define HAVE_FLOAT80
+#endif
 
 /* --------------------------------------------------------------------- */
 /* Copyright (C) 1988-1991 Apple Computer, Inc.
@@ -81,6 +121,15 @@
 
 double float_decode_ieee_32(const unsigned char bytes[4])
 {
+#if defined(__STDC_IEC_559__) && defined(HAVE_FLOAT32)
+	union {
+		uint32_t u;
+		float32 f;
+	} x;
+	memcpy(&x, bytes, 4);
+	x.u = bswapBE32(x.u);
+	return (double)x.f;
+#else
 	double f;
 	long mantissa, expon;
 	uint32_t bits;
@@ -112,6 +161,7 @@ double float_decode_ieee_32(const unsigned char bytes[4])
 	}
 
 	return (bits & 0x80000000) ? -f : f;
+#endif
 }
 
 
@@ -120,6 +170,15 @@ double float_decode_ieee_32(const unsigned char bytes[4])
 
 void float_encode_ieee_32(double num, unsigned char bytes[4])
 {
+#if defined(__STDC_IEC_559__) && defined(HAVE_FLOAT32)
+	union {
+		uint32_t u;
+		float32 f;
+	} x;
+	x.f = num;
+	x.u = bswapBE32(x.u);
+	memcpy(bytes, &x, 4);
+#else
 	long sign;
 	register long bits;
 
@@ -164,6 +223,7 @@ void float_encode_ieee_32(double num, unsigned char bytes[4])
 	bytes[1] = bits >> 16;
 	bytes[2] = bits >> 8;
 	bytes[3] = bits;
+#endif
 }
 
 
@@ -178,6 +238,15 @@ void float_encode_ieee_32(double num, unsigned char bytes[4])
 
 double float_decode_ieee_64(const unsigned char bytes[8])
 {
+#if defined(__STDC_IEC_559__) && defined(HAVE_FLOAT64)
+	union {
+		float64 f;
+		uint64_t u;
+	} x;
+	memcpy(&x, bytes, 8);
+	x.u = bswapBE64(x.u);
+	return (double)x.f;
+#else
 	double f;
 	int32_t mantissa, expon;
 	uint32_t first, second;
@@ -213,6 +282,7 @@ double float_decode_ieee_64(const unsigned char bytes[8])
 	}
 
 	return (first & 0x80000000) ? -f : f;
+#endif
 }
 
 
@@ -221,6 +291,15 @@ double float_decode_ieee_64(const unsigned char bytes[8])
 
 void float_encode_ieee_64(double num, unsigned char bytes[8])
 {
+#if defined(__STDC_IEC_559__) && defined(HAVE_FLOAT64)
+	union {
+		uint64_t u;
+		float64 f;
+	} x;
+	x.f = num;
+	x.u = bswapBE64(x.u);
+	memcpy(bytes, &x, 8);
+#else
 	uint32_t sign;
 	uint32_t first, second;
 
@@ -284,12 +363,30 @@ void float_encode_ieee_64(double num, unsigned char bytes[8])
 	bytes[5] = second >> 16;
 	bytes[6] = second >> 8;
 	bytes[7] = second;
+#endif
 }
 
 /* ------------------------------------------------------------------------  */
 
 double float_decode_ieee_80(const unsigned char bytes[10])
 {
+#if defined(__STDC_IEC_559__) && defined(HAVE_FLOAT80)
+	union {
+		unsigned char b[10];
+		float80 f;
+	} x;
+	memcpy(&x, bytes, 10);
+# ifndef WORDS_BIGENDIAN
+#  define SWAP(y, z) do { u = x.b[y]; x.b[y] = x.b[z]; x.b[y] = u; } while (0)
+	SWAP(0, 9);
+	SWAP(1, 8);
+	SWAP(2, 7);
+	SWAP(3, 6);
+	SWAP(4, 5);
+#  undef SWAP
+# endif
+	return x.f;
+#else
 	double f;
 	int expon;
 	uint32_t hiMant, loMant;
@@ -319,10 +416,29 @@ double float_decode_ieee_80(const unsigned char bytes[10])
 		return -f;
 	else
 		return f;
+#endif
 }
 
 void float_encode_ieee_80(double num, unsigned char bytes[10])
 {
+#if defined(__STDC_IEC_559__) && defined(HAVE_FLOAT80)
+	union {
+		unsigned char b[10];
+		float80 f;
+	} x;
+	unsigned char u;
+	x.f = num;
+# ifndef WORDS_BIGENDIAN
+#  define SWAP(y, z) do { u = x.b[y]; x.b[y] = x.b[z]; x.b[y] = u; } while (0)
+	SWAP(0, 9);
+	SWAP(1, 8);
+	SWAP(2, 7);
+	SWAP(3, 6);
+	SWAP(4, 5);
+#  undef SWAP
+# endif
+	memcpy(bytes, &x, 10);
+#else
 	int sign, expon;
 	double fMant, fsMant;
 	uint32_t hiMant, loMant;
@@ -373,4 +489,5 @@ void float_encode_ieee_80(double num, unsigned char bytes[10])
 	bytes[7] = loMant >> 16;
 	bytes[8] = loMant >> 8;
 	bytes[9] = loMant;
+#endif
 }

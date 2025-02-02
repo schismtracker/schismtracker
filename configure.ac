@@ -321,6 +321,14 @@ x8*)
 esac
 
 dnl -----------------------------------------------------------------------
+dnl Retrieve size of floating point numbers. This is later used to bypass
+dnl binary decoding of IEEE numbers in ieee-float.c
+
+AC_CHECK_SIZEOF([float])
+AC_CHECK_SIZEOF([double])
+AC_CHECK_SIZEOF([long double])
+
+dnl -----------------------------------------------------------------------
 
 dnl Platform-specific behavior
 AC_MSG_CHECKING([host platform])
