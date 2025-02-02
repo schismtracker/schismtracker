@@ -186,18 +186,18 @@
 # define SCHISM_MALLOC
 #endif
 
-#if SCHISM_HAS_C23_ATTRIBUTE(reproducible)
-# define SCHISM_PURE [[reproducible]]
-#elif SCHISM_GNUC_HAS_ATTRIBUTE(__pure__, 2, 96, 0)
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__pure__, 2, 96, 0)
 # define SCHISM_PURE __attribute__((__pure__))
+#elif SCHISM_HAS_C23_ATTRIBUTE(reproducible)
+# define SCHISM_PURE [[reproducible]]
 #else
 # define SCHISM_PURE
 #endif
 
-#if SCHISM_HAS_C23_ATTRIBUTE(unsequenced)
-# define SCHISM_CONST [[unsequenced]]
-#elif SCHISM_GNUC_HAS_ATTRIBUTE(__const__, 2, 5, 0)
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__const__, 2, 5, 0)
 # define SCHISM_CONST __attribute__((__const__))
+#elif SCHISM_HAS_C23_ATTRIBUTE(unsequenced)
+# define SCHISM_CONST [[unsequenced]]
 #else
 # define SCHISM_CONST
 #endif
