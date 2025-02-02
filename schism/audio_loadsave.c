@@ -298,6 +298,7 @@ int song_load_unchecked(const char *file)
 	max_channels_used = 0;
 	_fix_names(current_song);
 	song_stop_unlocked(0);
+	song_init_modplug();
 	song_unlock_audio();
 
 	if (was_playing && (status.flags & PLAY_AFTER_LOAD))
