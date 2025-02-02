@@ -102,6 +102,7 @@ static void _csf_reset(song_t *csf)
 	}
 
 	OPL_Close(csf);
+	GM_Reset(csf, 1);
 }
 
 //////////////////////////////////////////////////////////
