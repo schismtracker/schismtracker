@@ -101,8 +101,8 @@ void fx_note_cut(song_t *csf, uint32_t nchan, int clear_note)
 
 	if (chan->flags & CHN_ADLIB) {
 		//Do this only if really an adlib chan. Important!
-		OPL_NoteOff(nchan);
-		OPL_Touch(nchan, 0);
+		OPL_NoteOff(csf, nchan);
+		OPL_Touch(csf, nchan, 0);
 	}
 	GM_KeyOff(nchan);
 	GM_Touch(nchan, 0);
@@ -116,7 +116,7 @@ void fx_key_off(song_t *csf, uint32_t nchan)
 		tick_count, (unsigned)nchan, chan->flags);*/
 	if (chan->flags & CHN_ADLIB) {
 		//Do this only if really an adlib chan. Important!
-		OPL_NoteOff(nchan);
+		OPL_NoteOff(csf, nchan);
 	}
 	GM_KeyOff(nchan);
 
@@ -1607,8 +1607,8 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 		chan->left_volume = chan->right_volume = 0;
 		if (chan->flags & CHN_ADLIB) {
 			//Do this only if really an adlib chan. Important!
-			OPL_NoteOff(nchan);
-			OPL_Touch(nchan, 0);
+			OPL_NoteOff(csf, nchan);
+			OPL_Touch(csf, nchan, 0);
 		}
 		GM_KeyOff(nchan);
 		GM_Touch(nchan, 0);
@@ -2172,8 +2172,8 @@ void csf_process_effects(song_t *csf, int firsttick)
 				/* Possibly a better bugfix could be devised. --Bisqwit */
 				if (chan->flags & CHN_ADLIB) {
 					//Do this only if really an adlib chan. Important!
-					OPL_NoteOff(nchan);
-					OPL_Touch(nchan, 0);
+					OPL_NoteOff(csf, nchan);
+					OPL_Touch(csf, nchan, 0);
 				}
 				GM_KeyOff(nchan);
 				GM_Touch(nchan, 0);
@@ -2200,7 +2200,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 
 				csf_instrument_change(csf, chan, instr, porta, 1);
 				if (csf->samples[instr].flags & CHN_ADLIB) {
-					OPL_Patch(nchan, csf->samples[instr].adlib_bytes);
+					OPL_Patch(csf, nchan, csf->samples[instr].adlib_bytes);
 				}
 
 				if((csf->flags & SONG_INSTRUMENTMODE) && csf->instruments[instr])
@@ -2227,7 +2227,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 					    && chan->new_instrument < MAX_INSTRUMENTS
 					    && csf->instruments[chan->new_instrument]) {
 						if (csf->samples[chan->new_instrument].flags & CHN_ADLIB) {
-							OPL_Patch(nchan, csf->samples[chan->new_instrument].adlib_bytes);
+							OPL_Patch(csf, nchan, csf->samples[chan->new_instrument].adlib_bytes);
 						}
 						GM_DPatch(nchan, csf->instruments[chan->new_instrument]->midi_program,
 							csf->instruments[chan->new_instrument]->midi_bank,

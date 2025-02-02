@@ -25,10 +25,9 @@
 
 #include "player/fmopl.h"
 #include "player/snd_fm.h"
+#include "player/sndfile.h"
 #include "log.h"
 #include "util.h" /* for clamp */
-
-#define MAX_VOICES 256 /* Must not be less than the setting in sndfile.h */
 
 #include <string.h>
 #include <stdlib.h>
@@ -73,14 +72,7 @@ to Jeffrey S. Lee's article:
 		 FM Music Chips
 	 Version 2.0 (24 Feb 1992)
 */
-
-static const uint32_t oplbase = 0x388;
-
-// OPL info
-static struct OPL* opl = NULL;
-static uint32_t oplretval = 0,
-		 oplregno = 0;
-static uint32_t fm_active = 0;
+#define OPL_BASE 0x388
 
 extern int32_t fnumToMilliHertz(uint32_t fnum, uint32_t block, uint32_t conversionFactor);
 
@@ -88,51 +80,51 @@ extern void milliHertzToFnum(uint32_t milliHertz,
 	uint32_t *fnum, uint32_t *block, uint32_t conversionFactor);
 
 
-static void Fmdrv_Outportb(uint32_t port, uint32_t value)
+static void Fmdrv_Outportb(song_t *csf, uint32_t port, uint32_t value)
 {
-	if (opl == NULL ||
-		((int32_t) port) < oplbase ||
-		((int32_t) port) >= oplbase + 4)
+	if (csf->opl == NULL ||
+		((int32_t) port) < OPL_BASE ||
+		((int32_t) port) >= OPL_BASE + 4)
 		return;
 
-	uint32_t ind = port - oplbase;
-	OPLWrite(opl, ind, value);
+	uint32_t ind = port - OPL_BASE;
+	OPLWrite(csf->opl, ind, value);
 
 	if (ind & 1) {
-		if (oplregno == 4) {
+		if (csf->oplregno == 4) {
 			if (value == 0x80)
-				oplretval = 0x02;
+				csf->oplretval = 0x02;
 			else if (value == 0x21)
-				oplretval = 0xC0;
+				csf->oplretval = 0xC0;
 		}
 	}
 	else
-		oplregno = value;
+		csf->oplregno = value;
 }
 
 
-static unsigned char Fmdrv_Inportb(uint32_t port)
+static unsigned char Fmdrv_Inportb(song_t *csf, uint32_t port)
 {
-	return (((int32_t) port) >= oplbase &&
-		((int32_t) port) < oplbase + 4) ? oplretval : 0;
+	return (((int32_t) port) >= OPL_BASE &&
+		((int32_t) port) < OPL_BASE + 4) ? csf->oplretval : 0;
 }
 
 
-void Fmdrv_Init(int32_t mixfreq)
+void Fmdrv_Init(song_t *csf, int32_t mixfreq)
 {
-	if (opl != NULL) {
-		OPLCloseChip(opl);
-		opl = NULL;
+	if (csf->opl != NULL) {
+		OPLCloseChip(csf->opl);
+		csf->opl = NULL;
 	}
 	// Clock = speed at which the chip works. mixfreq = audio resampler
-	opl = OPLNew(OPLRATEBASE * OPLRATEDIVISOR, mixfreq);
-	OPL_Reset();
+	csf->opl = OPLNew(OPLRATEBASE * OPLRATEDIVISOR, mixfreq);
+	OPL_Reset(csf);
 }
 
 
-void Fmdrv_MixTo(int32_t *target, uint32_t count)
+void Fmdrv_MixTo(song_t *csf, int32_t *target, uint32_t count)
 {
-	if (!fm_active)
+	if (!csf->opl_fm_active)
 		return;
 
 #if OPLSOURCE == 2
@@ -142,7 +134,7 @@ void Fmdrv_MixTo(int32_t *target, uint32_t count)
 
 	// mono. Single buffer.
 
-	OPLUpdateOne(opl, buf, ARRAY_SIZE(buf));
+	OPLUpdateOne(csf->opl, buf, ARRAY_SIZE(buf));
 	/*
 	static int counter = 0;
 
@@ -161,7 +153,7 @@ void Fmdrv_MixTo(int32_t *target, uint32_t count)
 
 	memset(buf, 0, SCHISM_VLA_SIZEOF(buf));
 
-	OPLUpdateOne(opl, (int16_t *[]){ buf, buf + count, buf + (count * 2), buf + (count * 2) }, count);
+	OPLUpdateOne(csf->opl, (int16_t *[]){ buf, buf + count, buf + (count * 2), buf + (count * 2) }, count);
 	/*
 	static int counter = 0;
 
@@ -183,45 +175,42 @@ void Fmdrv_MixTo(int32_t *target, uint32_t count)
 
 /***************************************/
 
-
 static const char PortBases[9] = {0, 1, 2, 8, 9, 10, 16, 17, 18};
 
-static const unsigned char *Dtab[9];
-static unsigned char Keyontab[9] = {0,0,0,0,0,0,0,0,0};
-static int32_t Pans[MAX_VOICES];
-
-static int32_t OPLtoChan[9];
-static int32_t ChantoOPL[MAX_VOICES];
-
-static int32_t GetVoice(int32_t c) {
-	return ChantoOPL[c];
-}
-static int32_t SetVoice(int32_t c)
+static int32_t GetVoice(song_t *csf, int32_t c)
 {
-	int32_t a;
-	if (ChantoOPL[c] == -1) {
+	return csf->opl_from_chan[c];
+}
+
+static int32_t SetVoice(song_t *csf, int32_t c)
+{
+	int a;
+
+	if (csf->opl_from_chan[c] == -1) {
 		// Search for unused chans
-		for (a=0;a<9;a++) {
-			if (OPLtoChan[a]==-1) {
-				OPLtoChan[a]=c;
-				ChantoOPL[c]=a;
+
+		for (a = 0; a < 9; a++) {
+			if (csf->opl_to_chan[a] == -1) {
+				csf->opl_to_chan[a] = c;
+				csf->opl_from_chan[c] = a;
 				break;
 			}
 		}
-		if (ChantoOPL[c] == -1) {
+
+		if (csf->opl_from_chan[c] == -1) {
 			// Search for note-released chans
-			for (a=0;a<9;a++) {
-				if ((Keyontab[a]&KEYON_BIT) == 0) {
-					ChantoOPL[OPLtoChan[a]]=-1;
-					OPLtoChan[a]=c;
-					ChantoOPL[c]=a;
+			for (a = 0; a < 9; a++) {
+				if ((csf->opl_keyontab[a]&KEYON_BIT) == 0) {
+					csf->opl_from_chan[csf->opl_to_chan[a]] = -1;
+					csf->opl_to_chan[a] = c;
+					csf->opl_from_chan[c] = a;
 					break;
 				}
 			}
 		}
 	}
 	//log_appendf(2,"entering with %d. tested? %d. selected %d. Current: %d",c,t,s,ChantoOPL[c]);
-	return GetVoice(c);
+	return GetVoice(csf, c);
 }
 
 #if 0
@@ -233,27 +222,28 @@ static void FreeVoice(int c) {
 }
 #endif
 
-static void OPL_Byte(uint32_t idx, unsigned char data)
+static void OPL_Byte(song_t *csf, uint32_t idx, unsigned char data)
 {
 	//register int a;
-	Fmdrv_Outportb(oplbase, idx);    // for(a = 0; a < 6;  a++) Fmdrv_Inportb(oplbase);
-	Fmdrv_Outportb(oplbase + 1, data); // for(a = 0; a < 35; a++) Fmdrv_Inportb(oplbase);
+	Fmdrv_Outportb(csf, OPL_BASE, idx);    // for(a = 0; a < 6;  a++) Fmdrv_Inportb(OPL_BASE);
+	Fmdrv_Outportb(csf, OPL_BASE + 1, data); // for(a = 0; a < 35; a++) Fmdrv_Inportb(OPL_BASE);
 }
-static void OPL_Byte_RightSide(uint32_t idx, unsigned char data)
+static void OPL_Byte_RightSide(song_t *csf, uint32_t idx, unsigned char data)
 {
 	//register int a;
-	Fmdrv_Outportb(oplbase + 2, idx);    // for(a = 0; a < 6;  a++) Fmdrv_Inportb(oplbase);
-	Fmdrv_Outportb(oplbase + 3, data); // for(a = 0; a < 35; a++) Fmdrv_Inportb(oplbase);
+	Fmdrv_Outportb(csf, OPL_BASE + 2, idx);    // for(a = 0; a < 6;  a++) Fmdrv_Inportb(OPL_BASE);
+	Fmdrv_Outportb(csf, OPL_BASE + 3, data); // for(a = 0; a < 35; a++) Fmdrv_Inportb(OPL_BASE);
 }
 
 
-void OPL_NoteOff(int32_t c)
+void OPL_NoteOff(song_t *csf, int32_t c)
 {
-	int32_t oplc = GetVoice(c);
+	int32_t oplc = GetVoice(csf, c);
 	if (oplc == -1)
 		return;
-	Keyontab[oplc]&=~KEYON_BIT;
-	OPL_Byte(KEYON_BLOCK + oplc, Keyontab[oplc]);
+
+	csf->opl_keyontab[oplc] &= ~(KEYON_BIT);
+	OPL_Byte(csf, KEYON_BLOCK + oplc, csf->opl_keyontab[oplc]);
 }
 
 
@@ -262,13 +252,13 @@ void OPL_NoteOff(int32_t c)
 	 retrig, just turns the note on and sets freq.)
 	 If keyoff is nonzero, doesn't even set the note on.
 	 Could be used for pitch bending also. */
-void OPL_HertzTouch(int32_t c, int32_t milliHertz, int32_t keyoff)
+void OPL_HertzTouch(song_t *csf, int32_t c, int32_t milliHertz, int32_t keyoff)
 {
-	int32_t oplc = GetVoice(c);
+	int32_t oplc = GetVoice(csf, c);
 	if (oplc == -1)
 		return;
 
-	fm_active = 1;
+	csf->opl_fm_active = 1;
 
 /*
 	Bytes A0-B8 - Octave / F-Number / Key-On
@@ -285,24 +275,24 @@ void OPL_HertzTouch(int32_t c, int32_t milliHertz, int32_t keyoff)
 	uint32_t outblock;
 	const int32_t conversion_factor = OPLRATEBASE; // Frequency of OPL.
 	milliHertzToFnum(milliHertz, &outfnum, &outblock, conversion_factor);
-	Keyontab[oplc] = (keyoff ? 0 : KEYON_BIT)      // Key on
+	csf->opl_keyontab[oplc] = (keyoff ? 0 : KEYON_BIT)      // Key on
 				| (outblock << 2)                    // Octave
 				| ((outfnum >> 8) & FNUM_HIGH_MASK); // F-number high 2 bits
-	OPL_Byte(FNUM_LOW +    oplc, outfnum & 0xFF);  // F-Number low 8 bits
-	OPL_Byte(KEYON_BLOCK + oplc, Keyontab[oplc]);
+	OPL_Byte(csf, FNUM_LOW +    oplc, outfnum & 0xFF);  // F-Number low 8 bits
+	OPL_Byte(csf, KEYON_BLOCK + oplc, csf->opl_keyontab[oplc]);
 }
 
 
-void OPL_Touch(int32_t c, uint32_t vol)
+void OPL_Touch(song_t *csf, int32_t c, uint32_t vol)
 {
 //fprintf(stderr, "OPL_Touch(%d, %p:%02X.%02X.%02X.%02X-%02X.%02X.%02X.%02X-%02X.%02X.%02X, %d)\n",
 //    c, D,D[0],D[1],D[2],D[3],D[4],D[5],D[6],D[7],D[8],D[9],D[10], Vol);
 
-	int32_t oplc = GetVoice(c);
+	int32_t oplc = GetVoice(csf, c);
 	if (oplc == -1)
 		return;
 
-	const unsigned char *D = Dtab[oplc];
+	const unsigned char *D = csf->opl_dtab[oplc];
 	int32_t Ope = PortBases[oplc];
 
 /*
@@ -366,113 +356,113 @@ void OPL_Touch(int32_t c, uint32_t vol)
 
 	// Set volume of both operators in additive mode
 	if(D[10] & CONNECTION_BIT)
-		OPL_Byte(KSL_LEVEL + Ope, (D[2] & KSL_MASK) |
+		OPL_Byte(csf, KSL_LEVEL + Ope, (D[2] & KSL_MASK) |
 			(63 + ( (D[2]&TOTAL_LEVEL_MASK)*vol / 63) - vol)
 		);
 
-	OPL_Byte(KSL_LEVEL+   3+Ope, (D[3] & KSL_MASK) |
+	OPL_Byte(csf, KSL_LEVEL+   3+Ope, (D[3] & KSL_MASK) |
 		(63 + ( (D[3]&TOTAL_LEVEL_MASK)*vol / 63) - vol)
 	);
 
 }
 
 
-void OPL_Pan(int32_t c, int32_t val)
+void OPL_Pan(song_t *csf, int32_t c, int32_t val)
 {
-	Pans[c] = CLAMP(val, 0, 256);
+	csf->opl_pans[c] = CLAMP(val, 0, 256);
 
-	int32_t oplc = GetVoice(c);
+	int32_t oplc = GetVoice(csf, c);
 	if (oplc == -1)
 		return;
 
-	const unsigned char *D = Dtab[oplc];
+	const unsigned char *D = csf->opl_dtab[oplc];
 
 	/* feedback, additive synthesis and Panning... */
-	OPL_Byte(FEEDBACK_CONNECTION+oplc, 
+	OPL_Byte(csf, FEEDBACK_CONNECTION+oplc, 
 		(D[10] & ~STEREO_BITS)
-		| (Pans[c]<85 ? VOICE_TO_LEFT
-			: Pans[c]>170 ? VOICE_TO_RIGHT
+		| (csf->opl_pans[c]<85 ? VOICE_TO_LEFT
+			: csf->opl_pans[c]>170 ? VOICE_TO_RIGHT
 			: (VOICE_TO_LEFT | VOICE_TO_RIGHT))
 	);
 }
 
 
-void OPL_Patch(int32_t c, const unsigned char *D)
+void OPL_Patch(song_t *csf, int32_t c, const unsigned char *D)
 {
-	int32_t oplc = SetVoice(c);
+	int32_t oplc = SetVoice(csf, c);
 	if (oplc == -1)
 		return;
 
-	Dtab[oplc] = D;
+	csf->opl_dtab[oplc] = D;
 	int32_t Ope = PortBases[oplc];
 
-	OPL_Byte(AM_VIB+           Ope, D[0]);
-	OPL_Byte(KSL_LEVEL+        Ope, D[2]);
-	OPL_Byte(ATTACK_DECAY+     Ope, D[4]);
-	OPL_Byte(SUSTAIN_RELEASE+  Ope, D[6]);
-	OPL_Byte(WAVE_SELECT+      Ope, D[8]&7);// 5 high bits used elsewhere
+	OPL_Byte(csf, AM_VIB+           Ope, D[0]);
+	OPL_Byte(csf, KSL_LEVEL+        Ope, D[2]);
+	OPL_Byte(csf, ATTACK_DECAY+     Ope, D[4]);
+	OPL_Byte(csf, SUSTAIN_RELEASE+  Ope, D[6]);
+	OPL_Byte(csf, WAVE_SELECT+      Ope, D[8]&7);// 5 high bits used elsewhere
 
-	OPL_Byte(AM_VIB+         3+Ope, D[1]);
-	OPL_Byte(KSL_LEVEL+      3+Ope, D[3]);
-	OPL_Byte(ATTACK_DECAY+   3+Ope, D[5]);
-	OPL_Byte(SUSTAIN_RELEASE+3+Ope, D[7]);
-	OPL_Byte(WAVE_SELECT+    3+Ope, D[9]&7);// 5 high bits used elsewhere
+	OPL_Byte(csf, AM_VIB+         3+Ope, D[1]);
+	OPL_Byte(csf, KSL_LEVEL+      3+Ope, D[3]);
+	OPL_Byte(csf, ATTACK_DECAY+   3+Ope, D[5]);
+	OPL_Byte(csf, SUSTAIN_RELEASE+3+Ope, D[7]);
+	OPL_Byte(csf, WAVE_SELECT+    3+Ope, D[9]&7);// 5 high bits used elsewhere
 
 	/* feedback, additive synthesis and Panning... */
-	OPL_Byte(FEEDBACK_CONNECTION+oplc, 
+	OPL_Byte(csf, FEEDBACK_CONNECTION+oplc, 
 		(D[10] & ~STEREO_BITS)
-		| (Pans[c]<85 ? VOICE_TO_LEFT
-			: Pans[c]>170 ? VOICE_TO_RIGHT
+		| (csf->opl_pans[c]<85 ? VOICE_TO_LEFT
+			: csf->opl_pans[c]>170 ? VOICE_TO_RIGHT
 			: (VOICE_TO_LEFT | VOICE_TO_RIGHT))
 	);
 }
 
 
-void OPL_Reset(void)
+void OPL_Reset(song_t *csf)
 {
 	int32_t a;
-	if (opl == NULL)
+	if (csf->opl == NULL)
 		return;
 
-	OPLResetChip(opl);
-	OPL_Detect();
+	OPLResetChip(csf->opl);
+	OPL_Detect(csf);
 
 	for(a = 0; a < MAX_VOICES; ++a) {
-		ChantoOPL[a]=-1;
+		csf->opl_from_chan[a]=-1;
 	}
 	for(a = 0; a < 9; ++a) {
-		OPLtoChan[a]= -1;
-		Dtab[a] = NULL;
+		csf->opl_to_chan[a]= -1;
+		csf->opl_dtab[a] = NULL;
 	}
 
-	OPL_Byte(TEST_REGISTER, ENABLE_WAVE_SELECT);
+	OPL_Byte(csf, TEST_REGISTER, ENABLE_WAVE_SELECT);
 #if OPLSOURCE == 3
 	//Enable OPL3.
-	OPL_Byte_RightSide(OPL3_MODE_REGISTER, OPL3_ENABLE);
+	OPL_Byte_RightSide(csf, OPL3_MODE_REGISTER, OPL3_ENABLE);
 #endif
 
-	fm_active = 0;
+	csf->opl_fm_active = 0;
 }
 
 
-int32_t OPL_Detect(void)
+int32_t OPL_Detect(song_t *csf)
 {
 	/* Reset timers 1 and 2 */
-	OPL_Byte(TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK);
+	OPL_Byte(csf, TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK);
 
 	/* Reset the IRQ of the FM chip */
-	OPL_Byte(TIMER_CONTROL_REGISTER, IRQ_RESET);
+	OPL_Byte(csf, TIMER_CONTROL_REGISTER, IRQ_RESET);
 
-	unsigned char ST1 = Fmdrv_Inportb(oplbase); /* Status register */
+	unsigned char ST1 = Fmdrv_Inportb(csf, OPL_BASE); /* Status register */
 
-	OPL_Byte(TIMER1_REGISTER, 255);
-	OPL_Byte(TIMER_CONTROL_REGISTER, TIMER2_MASK | TIMER1_START);
+	OPL_Byte(csf, TIMER1_REGISTER, 255);
+	OPL_Byte(csf, TIMER_CONTROL_REGISTER, TIMER2_MASK | TIMER1_START);
 
 	/*_asm xor cx,cx;P1:_asm loop P1*/
-	unsigned char ST2 = Fmdrv_Inportb(oplbase);
+	unsigned char ST2 = Fmdrv_Inportb(csf, OPL_BASE);
 
-	OPL_Byte(TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK);
-	OPL_Byte(TIMER_CONTROL_REGISTER, IRQ_RESET);
+	OPL_Byte(csf, TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK);
+	OPL_Byte(csf, TIMER_CONTROL_REGISTER, IRQ_RESET);
 
 	int32_t OPLMode = (ST2 & 0xE0) == 0xC0 && !(ST1 & 0xE0);
 
@@ -482,11 +472,10 @@ int32_t OPL_Detect(void)
 	return 0;
 }
 
-/* TODO: This should be called from somewhere in schismtracker to free the allocated memory on exit. */
-void OPL_Close(void)
+void OPL_Close(song_t *csf)
 {
-	if (opl != NULL) {
-		OPLCloseChip(opl);
-		opl = NULL;
+	if (csf->opl != NULL) {
+		OPLCloseChip(csf->opl);
+		csf->opl = NULL;
 	}
 }

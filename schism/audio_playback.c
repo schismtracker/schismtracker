@@ -500,8 +500,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		csf_check_nna(current_song, chan_internal, ins, note, 0);
 	if (s) {
 		if (c->flags & CHN_ADLIB) {
-			OPL_NoteOff(chan_internal);
-			OPL_Patch(chan_internal, s->adlib_bytes);
+			OPL_NoteOff(current_song, chan_internal);
+			OPL_Patch(current_song, chan_internal, s->adlib_bytes);
 		}
 
 		c->flags = (s->flags & CHN_SAMPLE_FLAGS) | (c->flags & CHN_MUTE);
@@ -695,7 +695,7 @@ static void song_reset_play_state(void)
 	// turn this crap off
 	current_song->mix_flags &= ~(SNDMIX_NOBACKWARDJUMPS | SNDMIX_DIRECTTODISK);
 
-	OPL_Reset(); /* gruh? */
+	OPL_Reset(current_song); /* gruh? */
 
 	csf_set_current_order(current_song, 0);
 
@@ -810,7 +810,7 @@ void song_stop_unlocked(int quitting)
 		midi_playing = 0;
 	}
 
-	OPL_Reset(); /* Also stop all OPL sounds */
+	OPL_Reset(current_song); /* Also stop all OPL sounds */
 	GM_Reset(quitting);
 	GM_SendSongStopCode();
 

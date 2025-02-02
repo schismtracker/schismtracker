@@ -668,18 +668,14 @@ static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int32_t chan_num,
 
 		// OPL_Patch is called in csf_process_effects, from csf_read_note or csf_process_tick, before calling this method.
 		int32_t oplmilliHertz = (int64_t)freq*261625L/8363L;
-		OPL_HertzTouch(chan_num, oplmilliHertz, chan->flags & CHN_KEYOFF);
+		OPL_HertzTouch(csf, chan_num, oplmilliHertz, chan->flags & CHN_KEYOFF);
 
 		// ST32 ignores global & master volume in adlib mode, guess we should do the same -Bisqwit
 		// This gives a value in the range 0..63.
 		// log_appendf(2,"vol: %d, voiceinsvol: %d", vol , chan->instrument_volume);
-		OPL_Touch(chan_num, vol * chan->instrument_volume * 63 / (INT32_C(1) << 20));
-		if (csf->flags&SONG_NOSTEREO) {
-			OPL_Pan(chan_num, 128);
-		}
-		else {
-			OPL_Pan(chan_num, chan->final_panning);
-		}
+		OPL_Touch(csf, chan_num, vol * chan->instrument_volume * 63 / (INT32_C(1) << 20));
+
+		OPL_Pan(csf, chan_num, (csf->flags & SONG_NOSTEREO) ? 128 : chan->final_panning);
 	}
 }
 
@@ -712,7 +708,7 @@ int32_t csf_init_player(song_t *csf, int reset)
 	// the "4000Hz" value comes from csf_reset, but I don't yet understand why the opl keeps that value, if
 	// each call to Fmdrv_Init generates a new opl.
 	if (csf->mix_frequency != 4000) {
-		Fmdrv_Init(csf->mix_frequency);
+		Fmdrv_Init(csf, csf->mix_frequency);
 	}
 	GM_Reset(0);
 	return 1;

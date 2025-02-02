@@ -31,6 +31,7 @@
 #include "bswap.h"
 #include "bshift.h"
 #include "player/sndfile.h"
+#include "player/snd_fm.h"
 #include "log.h"
 #include "util.h"
 #include "ieee-float.h"
@@ -99,6 +100,8 @@ static void _csf_reset(song_t *csf)
 		csf->channels[i].volume = 64;
 		csf->channels[i].flags = 0;
 	}
+
+	OPL_Close(csf);
 }
 
 //////////////////////////////////////////////////////////

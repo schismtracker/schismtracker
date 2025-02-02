@@ -906,9 +906,9 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 	if (csf->multi_write) {
 		// mix all adlib onto track one
 		// FIXME this behavior is stupid
-		Fmdrv_MixTo(csf->multi_write[0].buffer, count);
+		Fmdrv_MixTo(csf, csf->multi_write[0].buffer, count);
 	} else {
-		Fmdrv_MixTo(csf->mix_buffer, count);
+		Fmdrv_MixTo(csf, csf->mix_buffer, count);
 	}
 
 	return nchused;

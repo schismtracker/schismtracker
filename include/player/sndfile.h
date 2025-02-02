@@ -563,14 +563,6 @@ typedef struct song {
 	uint32_t tempo_factor; // ditto
 	int32_t repeat_count; // 0 = first playback, etc. (note: set to -1 to stop instead of looping)
 
-	// Mixing information initialized in csf_init_player
-	uint32_t ramping_samples; // default: 64
-	uint32_t max_voices;
-	uint32_t vu_left;
-	uint32_t vu_right;
-	int32_t dry_rofs_vol; // un-globalized, didn't care enough
-	int32_t dry_lofs_vol; // to find out what these do  -paper
-
 	uint8_t row_highlight_major;
 	uint8_t row_highlight_minor;
 	char message[MAX_MESSAGE + 1];
@@ -585,11 +577,32 @@ typedef struct song {
 	size_t histlen; // How many session history data entries exist (each entry is eight bytes)
 	song_history_t *history; // Preserved entries from prior sessions, might be NULL if histlen = 0
 
-	song_history_t editstart; // When the song was loaded
+	song_history_t editstart; // When the song was loaded (pending addition to edit history)
 
-	// mixer stuff
+	// mixer stuff -----------------------------------------------------------
 	uint32_t mix_flags; // SNDMIX_*
 	uint32_t mix_frequency, mix_bits_per_sample, mix_channels;
+	uint32_t ramping_samples; // default: 64
+	uint32_t max_voices;
+	uint32_t vu_left;
+	uint32_t vu_right;
+	int32_t dry_rofs_vol; // un-globalized, didn't care enough
+	int32_t dry_lofs_vol; // to find out what these do  -paper
+	// -----------------------------------------------------------------------
+
+	// OPL stuff -------------------------------------------------------------
+	struct OPL *opl;
+	uint32_t oplretval;
+	uint32_t oplregno;
+	uint32_t opl_fm_active;
+
+	const unsigned char *opl_dtab[9];
+	unsigned char opl_keyontab[9];
+	int32_t opl_pans[MAX_VOICES];
+
+	int32_t opl_to_chan[9];
+	int32_t opl_from_chan[MAX_VOICES];
+	// -----------------------------------------------------------------------
 
 	int patloop; // effects.c: need this for stupid pattern break compatibility
 
