@@ -480,7 +480,7 @@ void GM_Bend(song_t *csf, int32_t c, uint32_t count)
 void GM_Reset(song_t *csf, int quitting)
 {
 #ifdef GM_DEBUG
-	resetting = 1;
+	csf->midi_resetting = 1;
 #endif
 	uint32_t a;
 	//fprintf(stderr, "GM_Reset\n");
@@ -526,7 +526,7 @@ void GM_Reset(song_t *csf, int quitting)
 	}
 
 #ifdef GM_DEBUG
-	resetting = 0;
+	csf->midi_resetting = 0;
 	fprintf(stderr, "-------------- GM_Reset completed ---------------\n");
 #endif
 }
