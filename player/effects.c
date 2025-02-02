@@ -104,8 +104,8 @@ void fx_note_cut(song_t *csf, uint32_t nchan, int clear_note)
 		OPL_NoteOff(csf, nchan);
 		OPL_Touch(csf, nchan, 0);
 	}
-	GM_KeyOff(nchan);
-	GM_Touch(nchan, 0);
+	GM_KeyOff(csf, nchan);
+	GM_Touch(csf, nchan, 0);
 }
 
 void fx_key_off(song_t *csf, uint32_t nchan)
@@ -118,7 +118,7 @@ void fx_key_off(song_t *csf, uint32_t nchan)
 		//Do this only if really an adlib chan. Important!
 		OPL_NoteOff(csf, nchan);
 	}
-	GM_KeyOff(nchan);
+	GM_KeyOff(csf, nchan);
 
 	song_instrument_t *penv = (csf->flags & SONG_INSTRUMENTMODE) ? chan->ptr_instrument : NULL;
 
@@ -1610,8 +1610,8 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 			OPL_NoteOff(csf, nchan);
 			OPL_Touch(csf, nchan, 0);
 		}
-		GM_KeyOff(nchan);
-		GM_Touch(nchan, 0);
+		GM_KeyOff(csf, nchan);
+		GM_Touch(csf, nchan, 0);
 		return;
 	}
 	if (instr >= MAX_INSTRUMENTS) instr = 0;
@@ -2175,8 +2175,8 @@ void csf_process_effects(song_t *csf, int firsttick)
 					OPL_NoteOff(csf, nchan);
 					OPL_Touch(csf, nchan, 0);
 				}
-				GM_KeyOff(nchan);
-				GM_Touch(nchan, 0);
+				GM_KeyOff(csf, nchan);
+				GM_Touch(csf, nchan, 0);
 			}
 
 			const int previous_new_note = chan->new_note; 
@@ -2204,7 +2204,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 				}
 
 				if((csf->flags & SONG_INSTRUMENTMODE) && csf->instruments[instr])
-					GM_DPatch(nchan, csf->instruments[instr]->midi_program,
+					GM_DPatch(csf, nchan, csf->instruments[instr]->midi_program,
 						csf->instruments[instr]->midi_bank,
 						csf->instruments[instr]->midi_channel_mask);
 
@@ -2229,7 +2229,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 						if (csf->samples[chan->new_instrument].flags & CHN_ADLIB) {
 							OPL_Patch(csf, nchan, csf->samples[chan->new_instrument].adlib_bytes);
 						}
-						GM_DPatch(nchan, csf->instruments[chan->new_instrument]->midi_program,
+						GM_DPatch(csf, nchan, csf->instruments[chan->new_instrument]->midi_program,
 							csf->instruments[chan->new_instrument]->midi_bank,
 							csf->instruments[chan->new_instrument]->midi_channel_mask);
 					}

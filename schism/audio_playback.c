@@ -525,8 +525,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 
 			if ((status.flags & MIDI_LIKE_TRACKER) && i) {
 				if (i->midi_channel_mask) {
-					GM_KeyOff(chan_internal);
-					GM_DPatch(chan_internal, i->midi_program, i->midi_bank, i->midi_channel_mask);
+					GM_KeyOff(current_song, chan_internal);
+					GM_DPatch(current_song, chan_internal, i->midi_program, i->midi_bank, i->midi_channel_mask);
 				}
 			}
 
@@ -717,7 +717,7 @@ void song_start_once(void)
 	max_channels_used = 0;
 	current_song->repeat_count = -1; // FIXME do this right
 
-	GM_SendSongStartCode();
+	GM_SendSongStartCode(current_song);
 	song_unlock_audio();
 	main_song_mode_changed_cb();
 
@@ -731,7 +731,7 @@ void song_start(void)
 	song_reset_play_state();
 	max_channels_used = 0;
 
-	GM_SendSongStartCode();
+	GM_SendSongStartCode(current_song);
 	song_unlock_audio();
 	main_song_mode_changed_cb();
 
@@ -811,8 +811,8 @@ void song_stop_unlocked(int quitting)
 	}
 
 	OPL_Reset(current_song); /* Also stop all OPL sounds */
-	GM_Reset(quitting);
-	GM_SendSongStopCode();
+	GM_Reset(current_song, quitting);
+	GM_SendSongStopCode(current_song);
 
 	memset(last_row,0,sizeof(last_row));
 	last_row_number = -1;
@@ -847,7 +847,7 @@ void song_loop_pattern(int pattern, int row)
 	max_channels_used = 0;
 	csf_loop_pattern(current_song, pattern, row);
 
-	GM_SendSongStartCode();
+	GM_SendSongStartCode(current_song);
 
 	song_unlock_audio();
 	main_song_mode_changed_cb();
@@ -865,7 +865,7 @@ void song_start_at_order(int order, int row)
 	current_song->break_row = row;
 	max_channels_used = 0;
 
-	GM_SendSongStartCode();
+	GM_SendSongStartCode(current_song);
 	/* TODO: GM_SendSongPositionCode(calculate the number of 1/16 notes) */
 	song_unlock_audio();
 	main_song_mode_changed_cb();

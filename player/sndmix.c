@@ -526,7 +526,7 @@ static inline int32_t rn_update_sample(song_t *csf, song_voice_t *chan, int32_t 
 		if ((csf->flags & SONG_INSTRUMENTMODE)
 		    && chan->ptr_instrument
 		    && chan->ptr_instrument->midi_channel_mask > 0)
-			GM_Pan(nchan, pan);
+			GM_Pan(csf, nchan, pan);
 
 		pan += 128;
 		pan = CLAMP(pan, 0, 256);
@@ -659,7 +659,7 @@ static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int32_t chan_num,
 			volume = volume * chan->instrument_volume / 8192;
 		}
 
-		GM_SetFreqAndVol(chan_num, freq, volume, BendMode, chan->flags & CHN_KEYOFF);
+		GM_SetFreqAndVol(csf, chan_num, freq, volume, BendMode, chan->flags & CHN_KEYOFF);
 	}
 	if (chan->flags & CHN_ADLIB) {
 		// Scaling is needed to get a frequency that matches with ST3 notes.
@@ -710,7 +710,7 @@ int32_t csf_init_player(song_t *csf, int reset)
 	if (csf->mix_frequency != 4000) {
 		Fmdrv_Init(csf, csf->mix_frequency);
 	}
-	GM_Reset(0);
+	GM_Reset(csf, 0);
 	return 1;
 }
 

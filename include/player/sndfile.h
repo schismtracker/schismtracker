@@ -493,6 +493,26 @@ typedef struct song_history {
 } song_history_t;
 
 ////////////////////////////////////////////////////////////////////
+// General MIDI structures
+
+typedef struct song_s3m_channel_info {
+	unsigned char note;    // Which note is playing in this channel (0 = nothing)
+	unsigned char patch;   // Which patch was programmed on this channel (&0x80 = percussion)
+	unsigned char bank;    // Which bank was programmed on this channel
+	signed char pan;       // Which pan level was last selected
+	signed char chan;      // Which MIDI channel was allocated for this channel. -1 = none
+	int32_t pref_chn_mask; // Which MIDI channel was preferred
+} song_s3m_channel_info_t;
+
+typedef struct song_midi_state {
+    unsigned char volume; // Which volume has been configured for this channel
+    unsigned char patch;  // What is the latest patch configured on this channel
+    unsigned char bank;   // What is the latest bank configured on this channel
+    int32_t bend;         // The latest pitchbend on this channel
+    signed char pan;      // Latest pan
+} song_midi_state_t;
+
+////////////////////////////////////////////////////////////////////
 
 typedef struct {
 	char start[32];
@@ -602,6 +622,20 @@ typedef struct song {
 
 	int32_t opl_to_chan[9];
 	int32_t opl_from_chan[MAX_VOICES];
+	// -----------------------------------------------------------------------
+
+	// MIDI stuff ------------------------------------------------------------
+	/* This maps S3M concepts into MIDI concepts */
+	song_s3m_channel_info_t midi_s3m_chans[MAX_VOICES];
+	/* This helps reduce the MIDI traffic, also does some encapsulation */
+	song_midi_state_t midi_chans[16];
+	double midi_last_song_counter;
+
+	uint32_t midi_running_status;
+//#define GM_DEBUG
+#ifdef GM_DEBUG
+	int midi_resetting;
+#endif
 	// -----------------------------------------------------------------------
 
 	int patloop; // effects.c: need this for stupid pattern break compatibility

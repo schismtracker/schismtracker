@@ -901,7 +901,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 		nchmixed += naddmix;
 	}
 
-	GM_IncrementSongCounter(count);
+	GM_IncrementSongCounter(csf, count);
 
 	if (csf->multi_write) {
 		// mix all adlib onto track one

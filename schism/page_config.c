@@ -106,7 +106,7 @@ static void change_ui_settings(void)
 		? KBD_SHARP_FLAT_FLATS
 		: KBD_SHARP_FLAT_SHARPS);
 
-	GM_Reset(0);
+	GM_Reset(current_song, 0);
 	if (widgets_config[8].d.toggle.state) {
 		status.flags |= MIDI_LIKE_TRACKER;
 	} else {
