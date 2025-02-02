@@ -944,7 +944,7 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, SCHIS
 	unsigned int j;
 	int x;
 
-	// FIXME why does this do this
+	// FIXME why does this do this ? seems to be a no-op
 	csf_stop_sample(current_song, current_song->samples + 0);
 
 	if (library) {

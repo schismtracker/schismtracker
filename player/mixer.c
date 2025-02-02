@@ -713,8 +713,8 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 		if (!channel->current_sample_data)
 			continue;
 
-		ofsr = &g_dry_rofs_vol;
-		ofsl = &g_dry_lofs_vol;
+		ofsr = &csf->dry_rofs_vol;
+		ofsl = &csf->dry_lofs_vol;
 		flags = 0;
 
 		if (channel->flags & CHN_16BIT)
@@ -819,7 +819,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 
 			// Should we mix this channel ?
 
-			if ((nchmixed >= max_voices && !(csf->mix_flags & SNDMIX_DIRECTTODISK))
+			if ((nchmixed >= csf->max_voices && !(csf->mix_flags & SNDMIX_DIRECTTODISK))
 				|| (!channel->ramp_length && !(channel->left_volume | channel->right_volume))) {
 				int32_t delta = buffer_length_to_samples(smpcount, channel);
 				channel->position_frac = delta & 0xFFFF;

@@ -377,16 +377,19 @@ static void _export_setup(song_t *dwsong, int *bps)
 	dwsong->multi_write = NULL; /* should be null already, but to be sure... */
 
 	csf_set_current_order(dwsong, 0); /* rather indirect way of resetting playback variables */
-	csf_set_wave_config(dwsong, disko_output_rate, disko_output_bits,
-		(dwsong->flags & SONG_NOSTEREO) ? 1 : disko_output_channels);
+	csf_set_wave_config(dwsong, disko_output_rate, disko_output_bits, (dwsong->flags & SONG_NOSTEREO) ? 1 : disko_output_channels);
 
-	dwsong->mix_flags |= SNDMIX_DIRECTTODISK | SNDMIX_NOBACKWARDJUMPS;
+	dwsong->mix_flags |= (SNDMIX_DIRECTTODISK | SNDMIX_NOBACKWARDJUMPS);
 
 	dwsong->repeat_count = -1; // FIXME do this right
 	dwsong->buffer_count = 0;
 	dwsong->flags &= ~(SONG_PAUSED | SONG_PATTERNLOOP | SONG_ENDREACHED);
 	dwsong->stop_at_order = -1;
 	dwsong->stop_at_row = -1;
+
+	// diskwriter should always output with best available quality, which
+	// means using all available voices.
+	dwsong->max_voices = MAX_VOICES;
 
 	*bps = dwsong->mix_channels * ((dwsong->mix_bits_per_sample + 7) / 8);
 
@@ -395,7 +398,7 @@ static void _export_setup(song_t *dwsong, int *bps)
 
 static void _export_teardown(void)
 {
-	global_vu_left = global_vu_right = 0;
+	// do nothing :)
 }
 
 // ---------------------------------------------------------------------------
@@ -418,6 +421,8 @@ static int close_and_bind(song_t *dwsong, disko_t *ds, song_sample_t *sample, in
 		csf_free_sample(sample->data);
 	sample->data = newdata;
 
+	// FIXME: This should be calling csf_read_sample with a
+	// memory stream.
 	memcpy(newdata, dsshadow.data, dsshadow.length);
 	sample->length = dsshadow.length / bps;
 	sample->flags &= ~(CHN_16BIT | CHN_STEREO | CHN_ADLIB);

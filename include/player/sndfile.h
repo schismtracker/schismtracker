@@ -510,10 +510,6 @@ typedef struct {
 
 extern midi_config_t default_midi_config;
 
-
-extern uint32_t max_voices;
-extern uint32_t global_vu_left, global_vu_right;
-
 extern const song_note_t blank_pattern[64 * 64];
 extern const song_note_t *blank_note;
 
@@ -566,6 +562,15 @@ typedef struct song {
 	uint32_t freq_factor; // not used -- for tweaking the song speed LP-style (interesting!)
 	uint32_t tempo_factor; // ditto
 	int32_t repeat_count; // 0 = first playback, etc. (note: set to -1 to stop instead of looping)
+
+	// Mixing information initialized in csf_init_player
+	uint32_t ramping_samples; // default: 64
+	uint32_t max_voices;
+	uint32_t vu_left;
+	uint32_t vu_right;
+	int32_t dry_rofs_vol; // un-globalized, didn't care enough
+	int32_t dry_lofs_vol; // to find out what these do  -paper
+
 	uint8_t row_highlight_major;
 	uint8_t row_highlight_minor;
 	char message[MAX_MESSAGE + 1];

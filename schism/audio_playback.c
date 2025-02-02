@@ -196,7 +196,7 @@ static void audio_callback(uint8_t *stream, int len)
 	}
 
 	if (current_song->num_voices > max_channels_used)
-		max_channels_used = MIN(current_song->num_voices, max_voices);
+		max_channels_used = MIN(current_song->num_voices, current_song->max_voices);
 POST_EVENT:
 	audio_writeout_count++;
 	if (audio_writeout_count > audio_buffers_per_second) {
@@ -827,11 +827,11 @@ void song_stop_unlocked(int quitting)
 	playback_tracing = midi_playback_tracing;
 
 	song_reset_play_state();
-	// Modplug doesn't actually have a "stop" mode, but if SONG_ENDREACHED is set, current_song->Read just returns.
+	// Modplug doesn't actually have a "stop" mode, but if SONG_ENDREACHED is set, csf_read just returns.
 	current_song->flags |= SONG_PAUSED | SONG_ENDREACHED;
 
-	global_vu_left = 0;
-	global_vu_right = 0;
+	current_song->vu_left = 0;
+	current_song->vu_right = 0;
 	memset(audio_buffer, 0, audio_buffer_samples * audio_sample_size);
 }
 
@@ -950,7 +950,7 @@ int song_get_current_row(void)
 
 int song_get_playing_channels(void)
 {
-	return MIN(current_song->num_voices, max_voices);
+	return MIN(current_song->num_voices, current_song->max_voices);
 }
 
 int song_get_max_channels(void)
@@ -960,8 +960,8 @@ int song_get_max_channels(void)
 // Returns the max value in dBs, scaled as 0 = -40dB and 128 = 0dB.
 void song_get_vu_meter(int *left, int *right)
 {
-	*left = dB_s(40, global_vu_left/256.f, 0.f);
-	*right = dB_s(40, global_vu_right/256.f, 0.f);
+	*left = dB_s(40, current_song->vu_left/256.f, 0.f);
+	*right = dB_s(40, current_song->vu_right/256.f, 0.f);
 }
 
 void song_update_playing_instrument(int i_changed)
@@ -970,7 +970,7 @@ void song_update_playing_instrument(int i_changed)
 	song_instrument_t *inst;
 
 	song_lock_audio();
-	int n = MIN(current_song->num_voices, max_voices);
+	int n = MIN(current_song->num_voices, current_song->max_voices);
 	while (n--) {
 		channel = current_song->voices + current_song->voice_mix[n];
 		if (channel->ptr_instrument && channel->ptr_instrument == current_song->instruments[i_changed]) {
@@ -1009,7 +1009,7 @@ void song_update_playing_sample(int s_changed)
 	song_sample_t *inst;
 
 	song_lock_audio();
-	int n = MIN(current_song->num_voices, max_voices);
+	int n = MIN(current_song->num_voices, current_song->max_voices);
 	while (n--) {
 		channel = current_song->voices + current_song->voice_mix[n];
 		if (channel->ptr_sample && channel->current_sample_data) {
@@ -1058,7 +1058,7 @@ void song_get_playing_samples(int samples[])
 	memset(samples, 0, MAX_SAMPLES * sizeof(int));
 
 	song_lock_audio();
-	int n = MIN(current_song->num_voices, max_voices);
+	int n = MIN(current_song->num_voices, current_song->max_voices);
 	while (n--) {
 		channel = current_song->voices + current_song->voice_mix[n];
 		if (channel->ptr_sample && channel->current_sample_data) {
@@ -1081,7 +1081,7 @@ void song_get_playing_instruments(int instruments[])
 	memset(instruments, 0, MAX_INSTRUMENTS * sizeof(int));
 
 	song_lock_audio();
-	int n = MIN(current_song->num_voices, max_voices);
+	int n = MIN(current_song->num_voices, current_song->max_voices);
 	while (n--) {
 		channel = current_song->voices + current_song->voice_mix[n];
 		int ins = song_get_instrument_number((song_instrument_t *) channel->ptr_instrument);
@@ -1787,7 +1787,7 @@ void song_init_modplug(void)
 {
 	song_lock_audio();
 
-	max_voices = audio_settings.channel_limit;
+	current_song->max_voices = audio_settings.channel_limit;
 	csf_set_resampling_mode(current_song, audio_settings.interpolation_mode);
 	if (audio_settings.no_ramping)
 		current_song->mix_flags |= SNDMIX_NORAMPING;

@@ -118,7 +118,7 @@ int song_get_mix_state(uint32_t **channel_list)
 {
 	if (channel_list)
 		*channel_list = current_song->voice_mix;
-	return MIN(current_song->num_voices, max_voices);
+	return MIN(current_song->num_voices, current_song->max_voices);
 }
 
 // ------------------------------------------------------------------------

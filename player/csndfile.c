@@ -58,6 +58,14 @@ static void _csf_reset(song_t *csf)
 	csf->mixing_volume = 0x30;
 	memset(csf->message, 0, sizeof(csf->message));
 
+	// SNDMIX: These are flags for playback control
+	csf->ramping_samples = 64;
+	csf->vu_left = 0;
+	csf->vu_right = 0;
+	csf->dry_rofs_vol = 0;
+	csf->dry_lofs_vol = 0;
+	csf->max_voices = 32; // ITT it is 1994
+
 	csf->row_highlight_major = 16;
 	csf->row_highlight_minor = 4;
 
