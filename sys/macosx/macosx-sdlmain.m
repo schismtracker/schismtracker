@@ -37,7 +37,9 @@ pruned up some here :) -mrsb
 	Feel free to customize this file to suit your needs
 */
 
+// main.c
 extern char *initial_song;
+int schism_main(int argc, char *argv[]);
 
 #include "events.h"
 #include "osdefs.h"
@@ -45,16 +47,24 @@ extern char *initial_song;
 
 #include <crt_externs.h>
 
-#import <Cocoa/Cocoa.h>
-
-@interface SchismTrackerDelegate : NSObject
-- (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)filename;
-@end
-
 #import <sys/param.h> /* for MAXPATHLEN */
 #import <unistd.h>
 
-/* Portions of CPS.h */
+#import <Cocoa/Cocoa.h>
+
+// These constants were renamed in the Sierra SDK
+#if MAC_OS_X_VERSION_MAX_ALLOWED < 101200
+# define NSEventModifierFlagOption NSAlternateKeyMask
+# define NSEventModifierFlagControl NSControlKeyMask
+# define NSEventModifierFlagCommand NSCommandKeyMask
+# define NSEventModifierFlagShift NSShiftKeyMask
+# define NSEventModifierFlagFunction NSFunctionKeyMask
+
+# define NSEventTypeKeyDown NSKeyDown
+#endif
+
+/* Portions of CPS.h --------------------------------------------------- */
+
 typedef struct CPSProcessSerNum
 {
 	UInt32 lo;
@@ -66,15 +76,19 @@ extern OSErr CPSEnableForegroundOperation(CPSProcessSerNum *psn, UInt32 _arg2, U
 extern OSErr CPSSetProcessName(CPSProcessSerNum *psn, char *processname);
 extern OSErr CPSSetFrontProcess(CPSProcessSerNum *psn);
 
-static int macosx_did_finderlaunch = 0;
-static int macosx_launched = 0;
+/* --------------------------------------------------------------------- */
 
-int schism_main(int argc, char** argv); // main.c
+static int macosx_did_finderlaunch = 0;
+static int macosx_launched = 0; // FIXME this sucks
 
 #define KEQ_FN(n) [NSString stringWithFormat:@"%C", (unichar)(NSF##n##FunctionKey)]
 
 @interface NSApplication(OtherMacOSXExtensions)
 -(void)setAppleMenu:(NSMenu*)m;
+@end
+
+@interface SchismTrackerDelegate : NSObject
+- (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)filename;
 @end
 
 @interface SchismTracker : NSApplication
@@ -101,7 +115,7 @@ int schism_main(int argc, char** argv); // main.c
 	if (!event)
 		return;
 
-	if ([event type] == NSKeyDown)
+	if ([event type] == NSEventTypeKeyDown)
 		return;
 
 	px = [sender representedObject];
@@ -117,6 +131,7 @@ int schism_main(int argc, char** argv); // main.c
 
 /* The main class of the application, the application's delegate */
 @implementation SchismTrackerDelegate
+
 
 - (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)filename
 {
@@ -213,7 +228,7 @@ static void setApplicationMenu(void)
 	menuItem = (NSMenuItem*)[appleMenu addItemWithTitle:@"Message Editor"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(9)];
-	[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
+	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagShift];
 	[menuItem setRepresentedObject: @"message_edit"];
 
 	[appleMenu addItem:[NSMenuItem separatorItem]];
@@ -221,7 +236,7 @@ static void setApplicationMenu(void)
 	[appleMenu addItemWithTitle:@"Hide Schism Tracker" action:@selector(hide:) keyEquivalent:@"h"];
 
 	menuItem = (NSMenuItem *)[appleMenu addItemWithTitle:@"Hide Others" action:@selector(hideOtherApplications:) keyEquivalent:@"h"];
-	[menuItem setKeyEquivalentModifierMask:(NSAlternateKeyMask|NSCommandKeyMask)];
+	[menuItem setKeyEquivalentModifierMask:(NSEventModifierFlagOption|NSEventModifierFlagCommand)];
 
 	[appleMenu addItemWithTitle:@"Show All" action:@selector(unhideAllApplications:) keyEquivalent:@""];
 
@@ -239,7 +254,7 @@ static void setApplicationMenu(void)
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"New..."
 				action:@selector(_menu_callback:)
 				keyEquivalent:@"n"];
-	[menuItem setKeyEquivalentModifierMask:NSControlKeyMask];
+	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagControl];
 	[menuItem setRepresentedObject: @"new"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Load..."
 				action:@selector(_menu_callback:)
@@ -249,7 +264,7 @@ static void setApplicationMenu(void)
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Save Current"
 				action:@selector(_menu_callback:)
 				keyEquivalent:@"s"];
-	[menuItem setKeyEquivalentModifierMask:NSControlKeyMask];
+	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagControl];
 	[menuItem setRepresentedObject: @"save"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Save As..."
 				action:@selector(_menu_callback:)
@@ -259,12 +274,12 @@ static void setApplicationMenu(void)
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Export..."
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(10)];
-	[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
+	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagShift];
 	[menuItem setRepresentedObject: @"export_song"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Message Log"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(11)];
-	[menuItem setKeyEquivalentModifierMask:NSFunctionKeyMask|NSControlKeyMask];
+	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagFunction|NSEventModifierFlagControl];
 	[menuItem setRepresentedObject: @"logviewer"];
 	menuItem = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
 	[menuItem setSubmenu:otherMenu];
@@ -280,7 +295,7 @@ static void setApplicationMenu(void)
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Play Song"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(5)];
-	[menuItem setKeyEquivalentModifierMask:NSControlKeyMask];
+	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagControl];
 	[menuItem setRepresentedObject: @"play"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Play Pattern"
 				action:@selector(_menu_callback:)
@@ -290,7 +305,7 @@ static void setApplicationMenu(void)
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Play from Order"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(6)];
-	[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
+	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagShift];
 	[menuItem setRepresentedObject: @"play_order"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Play from Mark/Cursor"
 				action:@selector(_menu_callback:)
@@ -305,7 +320,7 @@ static void setApplicationMenu(void)
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Calculate Length"
 				action:@selector(_menu_callback:)
 				keyEquivalent:@"p"];
-	[menuItem setKeyEquivalentModifierMask:(NSFunctionKeyMask|NSControlKeyMask)];
+	[menuItem setKeyEquivalentModifierMask:(NSEventModifierFlagFunction|NSEventModifierFlagControl)];
 	[menuItem setRepresentedObject: @"calc_length"];
 	menuItem = [[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
 	[menuItem setSubmenu:otherMenu];
@@ -321,12 +336,12 @@ static void setApplicationMenu(void)
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Sample Library"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(3)];
-	[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
+	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagShift];
 	[menuItem setRepresentedObject: @"sample_library"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Reload Soundcard"
 				action:@selector(_menu_callback:)
 				keyEquivalent:@"g"];
-	[menuItem setKeyEquivalentModifierMask:NSControlKeyMask];
+	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagControl];
 	[menuItem setRepresentedObject: @"init_sound"];
 	menuItem = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
 	[menuItem setSubmenu:otherMenu];
@@ -342,7 +357,7 @@ static void setApplicationMenu(void)
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Instrument Library"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(4)];
-	[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
+	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagShift];
 	[menuItem setRepresentedObject: @"inst_library"];
 	menuItem = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
 	[menuItem setSubmenu:otherMenu];
@@ -353,33 +368,33 @@ static void setApplicationMenu(void)
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Preferences"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(5)];
-	[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
+	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagShift];
 	[menuItem setRepresentedObject: @"preferences"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"MIDI Configuration"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(1)];
-	[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
+	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagShift];
 	[menuItem setRepresentedObject: @"midi_config"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Palette Editor"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(12)];
-	[menuItem setKeyEquivalentModifierMask:NSControlKeyMask];
+	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagControl];
 	[menuItem setRepresentedObject: @"palette_page"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Font Editor"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(12)];
-		[menuItem setKeyEquivalentModifierMask:NSShiftKeyMask];
+		[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagShift];
 	[menuItem setRepresentedObject: @"font_editor"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"System Configuration"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(1)];
-	[menuItem setKeyEquivalentModifierMask:NSControlKeyMask];
+	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagControl];
 	[menuItem setRepresentedObject: @"system_config"];
 
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Toggle Fullscreen"
 				action:@selector(_menu_callback:)
 				keyEquivalent:@"\r"];
-	[menuItem setKeyEquivalentModifierMask:(NSControlKeyMask|NSAlternateKeyMask)];
+	[menuItem setKeyEquivalentModifierMask:(NSEventModifierFlagControl|NSEventModifierFlagOption)];
 	[menuItem setRepresentedObject: @"fullscreen"];
 	menuItem = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
 	[menuItem setSubmenu:otherMenu];
@@ -456,7 +471,7 @@ int main (int argc, char **argv)
 
 	/* Create the app delegate */
 	SchismTrackerDelegate *delegate = [[SchismTrackerDelegate alloc] init];
-	[NSApp setDelegate: delegate];
+	[NSApp setDelegate: (id)delegate]; // stupid cast to silence compiler
 
 	/* Start the main event loop */
 	[NSApp run];
