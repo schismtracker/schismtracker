@@ -725,6 +725,9 @@ int disko_export_song(const char *filename, const struct save_format *format)
 		return DW_ERROR;
 	}
 
+	// Stop any playing song before exporting to keep old behavior
+	song_stop();
+
 	export_start_time = timer_ticks();
 
 	numfiles = format->f.export.multi ? MAX_CHANNELS : 1;
