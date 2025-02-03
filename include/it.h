@@ -208,14 +208,14 @@ extern struct tracker_status status;
 
 extern int playback_tracing, midi_playback_tracing;
 
-extern const char hexdigits[16];        /* in keyboard.c at the moment */
+extern const char hexdigits[16];	/* in keyboard.c at the moment */
 
 /* this used to just translate keys to notes, but it's sort of become the
  * keyboard map... perhaps i should rename it. */
-extern const char *note_trans;  /* keyboard.c */
+extern const char *note_trans;	/* keyboard.c */
 
 
-extern int show_default_volumes;        /* pattern-view.c */
+extern int show_default_volumes;	/* pattern-view.c */
 
 /* --------------------------------------------------------------------- */
 /* text functions */
@@ -228,7 +228,7 @@ void text_delete_next_char(char *text, int *cursor_pos, int max_length);
 static inline unsigned char unicode_to_ascii(uint16_t unicode)
 {
 	return unicode & 0xff;
-//        return ((unicode & 0xff80) ? 0 : (unicode & 0x7f));
+//	return ((unicode & 0xff80) ? 0 : (unicode & 0x7f));
 }
 
 /* --------------------------------------------------------------------- */

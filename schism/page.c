@@ -40,6 +40,7 @@
 #include "widget.h"
 #include "mem.h"
 #include "str.h"
+#include "config.h"
 
 #include <assert.h>
 #include <math.h>
@@ -159,7 +160,7 @@ static int check_time(void)
 
 static inline void draw_time(void)
 {
-	char buf[16];
+	char buf[27];
 	int is_playing = song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP);
 
 	if (status.time_display == TIME_OFF || (status.time_display == TIME_PLAY_OFF && !is_playing))
@@ -167,6 +168,16 @@ static inline void draw_time(void)
 
 	/* this allows for 999 hours... that's like... 41 days...
 	 * who on earth leaves a tracker running for 41 days? */
+	if (status.time_display == TIME_CLOCK) {
+		str_time_from_tm(&status.tmnow, buf, cfg_str_time_format);
+
+		const size_t buflen = strlen(buf);
+		if (buflen > 0) {
+			draw_text(buf, 69 + MIN(9, 9 - (ptrdiff_t)buflen), 9, 0, 2);
+			return;
+		}
+	}
+
 	sprintf(buf, "%3d:%02d:%02d", current_time.h % 1000,
 		current_time.m % 60, current_time.s % 60);
 	draw_text(buf, 69, 9, 0, 2);
