@@ -38,6 +38,8 @@
 
 #include "player/sndfile.h"
 #include "player/cmixer.h"
+#include "player/snd_gm.h"
+#include "player/snd_fm.h"
 
 #include <sys/stat.h>
 
@@ -375,6 +377,10 @@ static void _export_setup(song_t *dwsong, int *bps)
 
 	/* install our own */
 	memcpy(dwsong, current_song, sizeof(song_t)); /* shadow it */
+
+	// !!! FIXME: We should not be messing with this stuff here!
+	dwsong->opl = NULL; // Prevent the current_song OPL being closed
+	GM_Reset(dwsong, 1);
 
 	// Reset the MIDI stuff to our own...
 	//
