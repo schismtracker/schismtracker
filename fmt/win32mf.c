@@ -504,6 +504,10 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_Seek(IMFByteStream *This, MFBYTEST
 	struct mfbytestream *mfb = (struct mfbytestream *)This;
 	int whence;
 
+	// I don't know how to support this
+	if (dwSeekFlags & MFBYTESTREAM_SEEK_FLAG_CANCEL_PENDING_IO)
+		return E_NOTIMPL;
+
 	switch (SeekOrigin) {
 	case msoBegin:
 		whence = SEEK_SET;
@@ -514,8 +518,6 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_Seek(IMFByteStream *This, MFBYTEST
 	default:
 		return E_NOINTERFACE;
 	}
-
-	// XXX MFBYTESTREAM_SEEK_FLAG_CANCEL_PENDING_IO wtf?
 
 	mt_mutex_lock(mfb->mutex);
 
