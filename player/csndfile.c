@@ -32,6 +32,7 @@
 #include "bshift.h"
 #include "player/sndfile.h"
 #include "player/snd_fm.h"
+#include "player/snd_gm.h"
 #include "log.h"
 #include "util.h"
 #include "ieee-float.h"
@@ -103,6 +104,9 @@ static void _csf_reset(song_t *csf)
 
 	OPL_Close(csf);
 	GM_Reset(csf, 1);
+
+	csf->midi_out_note = NULL;
+	csf->midi_out_raw = NULL;
 }
 
 //////////////////////////////////////////////////////////
@@ -228,6 +232,13 @@ void csf_forget_history(song_t *csf)
 
 	time_t thetime = time(NULL);
 	localtime_r(&thetime, &csf->editstart.time);
+}
+
+// Initializes MIDI callback functions
+void csf_init_midi(song_t *csf, song_midi_out_note_spec_t midi_out_note, song_midi_out_raw_spec_t midi_out_raw)
+{
+	csf->midi_out_note = midi_out_note;
+	csf->midi_out_raw  = midi_out_raw;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -421,7 +432,6 @@ int csf_get_highest_used_channel(song_t *csf)
 // Misc functions
 
 midi_config_t default_midi_config = {0};
-
 
 void csf_reset_midi_cfg(song_t *csf)
 {

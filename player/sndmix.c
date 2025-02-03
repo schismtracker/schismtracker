@@ -38,10 +38,6 @@
 
 typedef uint32_t (* convert_t)(void *, int32_t *, uint32_t, int32_t *, int32_t *);
 
-// see also csf_midi_out_raw in effects.c
-void (*csf_midi_out_note)(int chan, const song_note_t *m) = NULL;
-
-
 // The volume we have here is in range 0..(63*255) (0..16065)
 // We should keep that range, but convert it into a logarithmic
 // one such that a change of 256*8 (2048) corresponds to a halving
@@ -983,8 +979,8 @@ int32_t csf_process_tick(song_t *csf)
 			// commands... ALL WE DO is dump raw midi data to
 			// our super-secret "midi buffer"
 			// -mrsb
-			if (csf_midi_out_note)
-				csf_midi_out_note(nchan, m);
+			if (csf->midi_out_note)
+				csf->midi_out_note(csf, nchan, m);
 
 			chan->row_note = m->note;
 
@@ -1008,12 +1004,12 @@ int32_t csf_process_tick(song_t *csf)
 		/* [-- No --] */
 		/* [Update effects for each channel as required.] */
 
-		if (csf_midi_out_note) {
+		if (csf->midi_out_note) {
 			song_note_t *m = csf->patterns[csf->current_pattern] + csf->row * MAX_CHANNELS;
 
 			for (uint32_t nchan=0; nchan<MAX_CHANNELS; nchan++, m++) {
-				/* m==NULL allows schism to receive notification of SDx and Scx commands */
-				csf_midi_out_note(nchan, NULL);
+				/* m == NULL allows schism to receive notification of SDx and Scx commands */
+				csf->midi_out_note(csf, nchan, NULL);
 			}
 		}
 

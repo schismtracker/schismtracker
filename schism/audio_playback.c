@@ -74,8 +74,8 @@ static int audio_writeout_count = 0;
 
 struct audio_settings audio_settings = {0};
 
-static void _schism_midi_out_note(int chan, const song_note_t *m);
-static void _schism_midi_out_raw(const unsigned char *data, uint32_t len, uint32_t delay);
+static void _schism_midi_out_note(song_t *csf, int chan, const song_note_t *m);
+static void _schism_midi_out_raw(song_t *csf, const unsigned char *data, uint32_t len, uint32_t delay);
 
 /* Audio driver related stuff */
 /* XXX how much of this is really needed now? */
@@ -594,7 +594,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 			.param = param,
 		};
 
-		_schism_midi_out_note(chan_internal, &mc);
+		_schism_midi_out_note(current_song, chan_internal, &mc);
 	}
 
 	/*
@@ -1283,8 +1283,10 @@ void cfg_save_audio(cfg_file_t *cfg)
 }
 
 // ------------------------------------------------------------------------------------------------------------
-static void _schism_midi_out_note(int chan, const song_note_t *starting_note)
+static void _schism_midi_out_note(song_t *csf, int chan, const song_note_t *starting_note)
 {
+	assert(current_song == csf); // This should only be run on the current song.
+
 	const song_note_t *m = starting_note;
 	unsigned int tc;
 	int m_note;
@@ -1437,8 +1439,10 @@ printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 	}
 
 }
-static void _schism_midi_out_raw(const unsigned char *data, uint32_t len, uint32_t pos)
+static void _schism_midi_out_raw(song_t *csf, const unsigned char *data, uint32_t len, uint32_t pos)
 {
+	assert(current_song == csf); // AGH!
+
 #ifdef SCHISM_MIDI_DEBUG
 	/* prints all of the raw midi messages into the terminal; useful for debugging output */
 	int i = (8000*(audio_buffer_samples)) / (current_song->mix_frequency);
@@ -1449,7 +1453,7 @@ static void _schism_midi_out_raw(const unsigned char *data, uint32_t len, uint32
 	puts(""); /* newline */
 #endif
 
-	if (!_disko_writemidi(data,len,pos))
+	//if (!_disko_writemidi(data,len,pos)) -- not needed
 		midi_send_buffer(data,len,pos);
 }
 
@@ -1805,15 +1809,13 @@ void song_init_modplug(void)
 	audio_buffers_per_second = (current_song->mix_frequency / (audio_buffer_samples * 8 * audio_sample_size));
 	if (audio_buffers_per_second > 1) audio_buffers_per_second--;
 
+	csf_init_midi(current_song, _schism_midi_out_note, _schism_midi_out_raw);
+
 	song_unlock_audio();
 }
 
 void song_initialise(void)
 {
-	csf_midi_out_note = _schism_midi_out_note;
-	csf_midi_out_raw = _schism_midi_out_raw;
-
-
 	current_song = csf_allocate();
 
 	//song_stop(); <- song_new does this

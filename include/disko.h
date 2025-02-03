@@ -129,10 +129,4 @@ void disko_seterror(disko_t *ds, int err);
 /* Call this to seek to an aligned byte boundary */
 void disko_align(disko_t *ds, uint32_t bytes);
 
-/* ------------------------------------------------------------------------- */
-
-/* this call is used by audio/loadsave to send midi data */
-int _disko_writemidi(const void *data, unsigned int len, unsigned int delay);
-
 #endif /* SCHISM_DISKO_H_ */
-

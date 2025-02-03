@@ -33,10 +33,6 @@
 
 #include <math.h>
 
-
-// see also csf_midi_out_note in sndmix.c
-void (*csf_midi_out_raw)(const unsigned char *,uint32_t, uint32_t) = NULL;
-
 /* --------------------------------------------------------------------------------------------------------- */
 /* note/freq conversion functions */
 
@@ -804,7 +800,7 @@ void csf_midi_send(song_t *csf, const unsigned char *data, uint32_t len, uint32_
 			}
 			break;
 		}
-	} else if (!fake && csf_midi_out_raw) {
+	} else if (!fake && csf->midi_out_raw) {
 		/* okay, this is kind of how it works.
 		we pass buffer_count as here because while
 			1000 * ((8((buffer_size/2) - buffer_count)) / sample_rate)
@@ -815,7 +811,7 @@ void csf_midi_send(song_t *csf, const unsigned char *data, uint32_t len, uint32_
 		fortunately, schism does and can complete this (tags: _schism_midi_out_raw )
 
 		*/
-		csf_midi_out_raw(data, len, csf->buffer_count);
+		csf->midi_out_raw(csf, data, len, csf->buffer_count);
 	}
 }
 

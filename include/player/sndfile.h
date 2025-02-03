@@ -512,6 +512,12 @@ typedef struct song_midi_state {
     signed char pan;      // Latest pan
 } song_midi_state_t;
 
+// forward declare `struct song` to bypass compiler warnings  -paper
+struct song;
+
+typedef void (*song_midi_out_note_spec_t)(struct song *csf, int chan, const song_note_t *m);
+typedef void (*song_midi_out_raw_spec_t)(struct song *csf, const unsigned char *msg, uint32_t msg_len, uint32_t buf_size);
+
 ////////////////////////////////////////////////////////////////////
 
 typedef struct {
@@ -528,6 +534,7 @@ typedef struct {
 	char zxx[128][32];
 } midi_config_t;
 
+// XXX why are these extern? moreover, why is default_midi_config NOT const?
 extern midi_config_t default_midi_config;
 
 extern const song_note_t blank_pattern[64 * 64];
@@ -636,6 +643,10 @@ typedef struct song {
 #ifdef GM_DEBUG
 	int midi_resetting;
 #endif
+
+	/* MIDI callback functions */
+	song_midi_out_note_spec_t midi_out_note;
+	song_midi_out_raw_spec_t midi_out_raw;
 	// -----------------------------------------------------------------------
 
 	int patloop; // effects.c: need this for stupid pattern break compatibility
@@ -663,9 +674,6 @@ void csf_free_instrument(song_instrument_t *p);
 uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp);
 uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, uint32_t maxlengthmask);
 void csf_adjust_sample_loop(song_sample_t *sample);
-
-extern void (*csf_midi_out_note)(int chan, const song_note_t *m);
-extern void (*csf_midi_out_raw)(const unsigned char *, uint32_t, uint32_t);
 
 void csf_import_mod_effect(song_note_t *m, int from_xm);
 uint16_t csf_export_mod_effect(const song_note_t *m, int xm);
@@ -700,6 +708,8 @@ int csf_set_wave_config(song_t *csf, uint32_t rate, uint32_t bits, uint32_t chan
 int32_t csf_init_player(song_t *csf, int reset); // bReset=false
 int csf_set_resampling_mode(song_t *csf, uint32_t mode); // SRCMODE_XXXX
 
+// Initialize MIDI callback functions
+void csf_init_midi(song_t *csf, song_midi_out_note_spec_t midi_out_note, song_midi_out_raw_spec_t midi_out_raw);
 
 // sndmix
 uint32_t csf_read(song_t *csf, void *v_buffer, uint32_t bufsize);
