@@ -7,7 +7,7 @@ on:
 
 jobs:
   ubuntu:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-20.04
 
     steps:
       - name: 'Install dependencies'
@@ -36,9 +36,14 @@ jobs:
           cp build/schismtracker .
           cp docs/configuration.md .
           cp sys/posix/schismtracker.1 .
-          cp /usr/lib/x86_64-linux-gnu/libutf8proc.so.3.0.0 /usr/lib/x86_64-linux-gnu/libFLAC.so.12 /usr/lib/x86_64-linux-gnu/libogg.so.0 .
+          cp /usr/lib/x86_64-linux-gnu/libutf8proc.so.2.3.2 /usr/lib/x86_64-linux-gnu/libFLAC.so.8 /usr/lib/x86_64-linux-gnu/libogg.so.0 .
+          cp sys/fd.org/schism.desktop .
+          cp icons/schism-icon-128.png .
           wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
-          zip schismtracker.zip configuration.md COPYING COPYING.Xiph README.md schismtracker.1 schismtracker libFLAC.so.12 libogg.so.0 libutf8proc.so.3.0.0
+          cp .github/scripts/run.sh .github/scripts/install.sh .
+          chmod +x run.sh
+          chmod +x install.sh
+          zip schismtracker.zip configuration.md COPYING COPYING.Xiph README.md schismtracker.1 schismtracker schism.desktop schism-icon-128.png libFLAC.so.8 libogg.so.0 libutf8proc.so.2.3.2 run.sh install.sh
 
       - name: 'Upload artifact'
         uses: actions/upload-artifact@v4
