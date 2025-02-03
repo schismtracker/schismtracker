@@ -483,11 +483,10 @@ case "${host_os}" in
 esac
 
 dnl Libs
-AC_SEARCH_LIBS([dlopen], [dl])
-if test "x$ac_cv_search_dlopen" = "xyes" || test "x$ac_cv_search_dlopen" = "xnone required"; then
+AC_SEARCH_LIBS([dlopen], [dl], [
 	AC_DEFINE([HAVE_LIBDL], [1], [ ])
 	have_loadso=yes
-fi
+], [])
 
 if test "x$use_macosx" = "xyes"; then
 	AC_PROG_OBJC
