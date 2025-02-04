@@ -377,7 +377,7 @@ double float_decode_ieee_80(const unsigned char bytes[10])
 	} x;
 	memcpy(&x, bytes, 10);
 # ifndef WORDS_BIGENDIAN
-#  define SWAP(y, z) do { u = x.b[y]; x.b[y] = x.b[z]; x.b[y] = u; } while (0)
+#  define SWAP(y, z) do { unsigned char u = x.b[y]; x.b[y] = x.b[z]; x.b[y] = u; } while (0)
 	SWAP(0, 9);
 	SWAP(1, 8);
 	SWAP(2, 7);
@@ -388,7 +388,7 @@ double float_decode_ieee_80(const unsigned char bytes[10])
 	return x.f;
 #else
 	double f;
-	uint16_t expon;
+	int expon;
 	uint32_t hiMant, loMant;
 
 	expon = ((bytes[0] & 0x7F) << 8) | (bytes[1] & 0xFF);
@@ -426,10 +426,9 @@ void float_encode_ieee_80(double num, unsigned char bytes[10])
 		unsigned char b[10];
 		float80 f;
 	} x;
-	unsigned char u;
 	x.f = num;
 # ifndef WORDS_BIGENDIAN
-#  define SWAP(y, z) do { u = x.b[y]; x.b[y] = x.b[z]; x.b[y] = u; } while (0)
+#  define SWAP(y, z) do { unsigned char u = x.b[y]; x.b[y] = x.b[z]; x.b[y] = u; } while (0)
 	SWAP(0, 9);
 	SWAP(1, 8);
 	SWAP(2, 7);
@@ -441,7 +440,7 @@ void float_encode_ieee_80(double num, unsigned char bytes[10])
 #else
 	double fMant, fsMant;
 	int expon;
-	uint16_t sign;
+	int32_t sign;
 	uint32_t hiMant, loMant;
 
 	if (num < 0) {
