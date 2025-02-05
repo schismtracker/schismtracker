@@ -26,51 +26,95 @@
 
 #include "headers.h"
 
+#include <math.h>
+
 /*Conversion*/
 /* linear -> deciBell*/
 /* amplitude normalized to 1.0f.*/
-SCHISM_CONST extern float dB(float amplitude);
+SCHISM_CONST inline SCHISM_ALWAYS_INLINE float dB(float amplitude)
+{
+	return 20.0f * log10f(amplitude);
+}
 
 /// deciBell -> linear*/
-SCHISM_CONST extern float dB2_amp(float db);
+SCHISM_CONST inline SCHISM_ALWAYS_INLINE float dB2_amp(float db)
+{
+	return powf(10.0f, db / 20.0f);
+}
 
 /* linear -> deciBell*/
 /* power normalized to 1.0f.*/
-SCHISM_CONST extern float pdB(float power);
+SCHISM_CONST inline SCHISM_ALWAYS_INLINE float pdB(float power)
+{
+	return 10.0f * log10f(power);
+}
 
 /* deciBell -> linear*/
-SCHISM_CONST extern float dB2_power(float db);
+SCHISM_CONST inline SCHISM_ALWAYS_INLINE float dB2_power(float db)
+{
+	return powf(10.0f, db / 10.0f);
+}
 
 /* linear -> deciBell*/
 /* amplitude normalized to 1.0f.*/
 /* Output scaled (and clipped) to 128 lines with noisefloor range.*/
 /* ([0..128] = [-noisefloor..0dB])*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-SCHISM_CONST extern short dB_s(int noisefloor, float amplitude, float correction_dBs);
+SCHISM_CONST inline SCHISM_ALWAYS_INLINE short dB_s(int noisefloor, float amplitude, float correction_dBs)
+{
+	const float db = dB(amplitude) + correction_dBs;
+	const int x = (int)(128.0f * (db + noisefloor)) / noisefloor;
+	return CLAMP(x, 0, 127);
+}
 
 /* deciBell -> linear*/
 /* Input scaled to 128 lines with noisefloor range.*/
 /* ([0..128] = [-noisefloor..0dB])*/
 /* amplitude normalized to 1.0f.*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-SCHISM_CONST extern short dB2_amp_s(int noisefloor, int db, float correction_dBs);
+SCHISM_CONST inline SCHISM_ALWAYS_INLINE short dB2_amp_s(int noisefloor, int db, float correction_dBs)
+{
+	return dB2_amp((db * noisefloor / 128.0f) - noisefloor - correction_dBs);
+}
 
 /* linear -> deciBell*/
 /* power normalized to 1.0f.*/
 /* Output scaled (and clipped) to 128 lines with noisefloor range.*/
 /* ([0..128] = [-noisefloor..0dB])*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-SCHISM_CONST extern short pdB_s(int noisefloor, float power, float correction_dBs);
+SCHISM_CONST inline SCHISM_ALWAYS_INLINE short pdB_s(int noisefloor, float power, float correction_dBs)
+{
+	const float db = pdB(power) + correction_dBs;
+	const int x = (int)(128.0f * (db + noisefloor)) / noisefloor;
+	return CLAMP(x, 0, 127);
+}
 
 /* deciBell -> linear*/
 /* Input scaled to 128 lines with noisefloor range.*/
 /* ([0..128] = [-noisefloor..0dB])*/
 /* power normalized to 1.0f.*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-SCHISM_CONST extern short dB2_power_s(int noisefloor, int db, float correction_dBs);
+SCHISM_CONST inline SCHISM_ALWAYS_INLINE short dB2_power_s(int noisefloor, int db, float correction_dBs)
+{
+	return dB2_power((db * noisefloor / 128.0f) - noisefloor - correction_dBs);
+}
 
 /* integer sqrt (very fast; 32 bits limited) */
-SCHISM_CONST uint32_t i_sqrt(uint32_t r);
+SCHISM_CONST inline SCHISM_ALWAYS_INLINE uint32_t i_sqrt(uint32_t r)
+{
+	uint32_t t, b, c = 0;
+
+	for (b = 0x10000000; b != 0; b >>= 2) {
+		t = c + b;
+		c >>= 1;
+		if (t <= r) {
+			r -= t;
+			c += b;
+		}
+	}
+
+	return c;
+}
 
 FILE *mkfstemp(char *template);
 
