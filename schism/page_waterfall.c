@@ -33,7 +33,6 @@
 
 #define NATIVE_SCREEN_WIDTH     640
 #define NATIVE_SCREEN_HEIGHT    400
-#define FUDGE_256_TO_WIDTH      4 // what does this do exactly?
 #define SCOPE_ROWS      32
 
 #define PI      ((double)3.14159265358979323846)
@@ -42,9 +41,9 @@ static const float fft_inv_bufsize = 1.0f/(FFT_BUFFER_SIZE>>2);
 /* Scaling for FFT. Input is expected to be int16_t. */
 static const float inv_s_range = 1.f/32768.f;
 
-int16_t current_fft_data[2][FFT_OUTPUT_SIZE];
+static int16_t current_fft_data[2][FFT_OUTPUT_SIZE];
 /*Table to change the scale from linear to log.*/
-uint32_t fftlog[FFT_BANDS_SIZE];
+static uint32_t fftlog[FFT_BANDS_SIZE];
 
 /* variables :) */
 static int mono = 0;
@@ -66,7 +65,8 @@ static float state_real[FFT_BUFFER_SIZE];
 static float state_imag[FFT_BUFFER_SIZE];
 
 
-static int _reverse_bits(uint32_t in) {
+static inline SCHISM_ALWAYS_INLINE uint32_t _reverse_bits(uint32_t in)
+{
 	uint32_t r = 0, n;
 	for (n = 0; n < FFT_BUFFER_SIZE_LOG; n++) {
 		r <<= 1;
@@ -75,6 +75,7 @@ static int _reverse_bits(uint32_t in) {
 	}
 	return r;
 }
+
 void vis_init(void)
 {
 	unsigned int n;
@@ -132,7 +133,7 @@ void vis_init(void)
 * output is a value between 0 and 128 representing 0 = noisefloor variable
 *    and 128 = 0dBFS (deciBell, FullScale) for each band.
 */
-static inline void _vis_data_work(int16_t output[FFT_OUTPUT_SIZE], int16_t input[FFT_BUFFER_SIZE])
+static void _vis_data_work(int16_t output[FFT_OUTPUT_SIZE], int16_t input[FFT_BUFFER_SIZE])
 {
 	uint32_t n, k, y;
 	uint32_t ex = 1, ff = FFT_OUTPUT_SIZE;
@@ -140,13 +141,11 @@ static inline void _vis_data_work(int16_t output[FFT_OUTPUT_SIZE], int16_t input
 	float fr, fi;
 	float tr, ti;
 	float out;
-	float *rp = state_real;
-	float *ip = state_imag;
 
 	for (n = 0; n < FFT_BUFFER_SIZE; n++) {
 		uint32_t nr = bit_reverse[n];
-		*rp++ = (float)input[nr] * inv_s_range * window[nr];
-		*ip++ = 0;
+		state_real[n] = (float)input[nr] * inv_s_range * window[nr];
+		state_imag[n] = 0;
 	}
 
 	for (n = FFT_BUFFER_SIZE_LOG; n != 0; n--) {
@@ -168,18 +167,18 @@ static inline void _vis_data_work(int16_t output[FFT_OUTPUT_SIZE], int16_t input
 	}
 
 	/* collect fft */
-	rp = state_real + 1;
-	ip = state_imag + 1;
+	/* XXX I changed the behavior here since the states were getting overflowed (originally
+	 * was 'n + 1' changed to just 'n'. Hopefully nothing breaks... */
 	const float fft_dbinv_bufsize = dB(fft_inv_bufsize);
-	for (n = 0; n < FFT_OUTPUT_SIZE; n++, rp++, ip++) {
+	for (n = 0; n < FFT_OUTPUT_SIZE; n++) {
 		/* "out" is the total power for each band.
 		 * To get amplitude from "output", use sqrt(out[N])/(sizeBuf>>2)
 		 * To get dB from "output", use powerdB(out[N])+db(1/(sizeBuf>>2)).
 		 * powerdB is = 10 * log10(in)
 		 * dB is = 20 * log10(in) */
-		out = ((*rp) * (*rp)) + ((*ip) * (*ip));
+		out = ((state_real[n]) * (state_real[n])) + ((state_imag[n]) * (state_imag[n]));
 		/* +0.0000000001f is -100dB of power. Used to prevent evaluating powerdB(0.0) */
-		output[n] = pdB_s(noisefloor, out+0.0000000001f, fft_dbinv_bufsize);
+		output[n] = pdB_s(noisefloor, out + 0.0000000001f, fft_dbinv_bufsize);
 	}
 }
 
@@ -204,7 +203,7 @@ void fft_get_columns(uint32_t width, unsigned char out[width], uint32_t chan)
 	uint32_t i, a;
 
 	for (i = 0, a = 0; i < width && a < FFT_OUTPUT_SIZE; i++) {
-		const int fftlog_i = (i * FFT_BANDS_SIZE / width);
+		const uint32_t fftlog_i = (i * FFT_BANDS_SIZE / width);
 		int j;
 
 		uint32_t ax = fftlog[fftlog_i];
@@ -217,18 +216,20 @@ void fft_get_columns(uint32_t width, unsigned char out[width], uint32_t chan)
 			j = _fft_get_value(chan, a);
 		} else {
 			j = _fft_get_value(chan, a);
-			do {
+			while (a <= ax) {
+				a++;
 				int x = _fft_get_value(chan, a);
 				j = MAX(j, x);
-				a++;
-			} while (a <= ax);
+			}
 		}
-		*out++ = j;
+
+		/* FIXME if the FTT data is 16-bits, why are we cutting off the top bits */
+		out[i] = j;
 	}
 }
 
 /* Convert the output of */
-static inline unsigned char *_dobits(unsigned char *q,
+static inline SCHISM_ALWAYS_INLINE unsigned char *_dobits(unsigned char *q,
 			unsigned char *in, int length, int y)
 {
 	int i, c;
@@ -241,15 +242,15 @@ static inline unsigned char *_dobits(unsigned char *q,
 	return q;
 }
 /*x = screen.x, h = 0..128, c = colour */
-static inline void _drawslice(int x, int h, int c)
+static inline SCHISM_ALWAYS_INLINE void _drawslice(int x, int h, int c)
 {
-	int y;
+	int y = ((h>>2) & (SCOPE_ROWS-1))+1;
 
-	y = ((h>>2) & (SCOPE_ROWS-1))+1;
 	vgamem_ovl_drawline(&ovl,
 		x, (NATIVE_SCREEN_HEIGHT-y),
 		x, (NATIVE_SCREEN_HEIGHT-1), c);
 }
+
 static void _vis_process(void)
 {
 	static const int k = NATIVE_SCREEN_WIDTH / 2;
@@ -324,7 +325,9 @@ VIS_WORK(16)
 VIS_WORK(8)
 
 #undef VIS_WORK
-#undef VIS_WORK_X
+#undef VIS_WORK_EX
+#undef VIS_WORK_s_INLOOP
+#undef VIS_WORK_m_INLOOP
 
 static void draw_screen(void)
 {
