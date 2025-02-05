@@ -198,7 +198,7 @@ void fft_get_columns(uint32_t width, unsigned char out[width], uint32_t chan)
 		uint32_t ax = fftlog[fftlog_i];
 
 		/* mmm... this got ugly */
-		if (ax + 1 > fftlog[fftlog_i + 1]) {
+		if ((ax < FFT_OUTPUT_SIZE) && (fftlog_i >= FFT_BANDS_SIZE) && (ax + 1 > fftlog[fftlog_i + 1])) {
 			a = ax;
 			if (chan > 0 && chan <= 2)
 				j = current_fft_data[chan - 1][ax];
