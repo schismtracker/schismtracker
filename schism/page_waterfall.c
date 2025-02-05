@@ -33,30 +33,18 @@
 
 #define NATIVE_SCREEN_WIDTH     640
 #define NATIVE_SCREEN_HEIGHT    400
-#define FUDGE_256_TO_WIDTH      4
+#define FUDGE_256_TO_WIDTH      4 // what does this do exactly?
 #define SCOPE_ROWS      32
 
-
-/* consts */
-#define FFT_BUFFER_SIZE_LOG     11
-#define FFT_BUFFER_SIZE         2048 /*(1 << FFT_BUFFER_SIZE_LOG)*/
-#define FFT_OUTPUT_SIZE         1024 /* FFT_BUFFER_SIZE/2 */  /*WARNING: Hardcoded in page.c when declaring current_fft_data*/
-#define FFT_BANDS_SIZE          256    /*WARNING: Hardcoded in page.c when declaring fftlog and when using it in vis_fft*/
 #define PI      ((double)3.14159265358979323846)
-/*This value is used internally to scale the power output of the FFT to decibells.*/
+/* This value is used internally to scale the power output of the FFT to decibels. */
 static const float fft_inv_bufsize = 1.0f/(FFT_BUFFER_SIZE>>2);
-/*Scaling for FFT. Input is expected to be signed short int.*/
+/* Scaling for FFT. Input is expected to be int16_t. */
 static const float inv_s_range = 1.f/32768.f;
 
-short current_fft_data[2][FFT_OUTPUT_SIZE];
+int16_t current_fft_data[2][FFT_OUTPUT_SIZE];
 /*Table to change the scale from linear to log.*/
-short fftlog[FFT_BANDS_SIZE];
-
-void vis_init(void);
-void vis_work_16s(short *in, int inlen);
-void vis_work_16m(short *in, int inlen);
-void vis_work_8s(char *in, int inlen);
-void vis_work_8m(char *in, int inlen);
+uint32_t fftlog[FFT_BANDS_SIZE];
 
 /* variables :) */
 static int mono = 0;
@@ -68,7 +56,7 @@ static int noisefloor=72;
 static struct vgamem_overlay ovl = { 0, 0, 79, 49, NULL, 0, 0, 0 };
 
 /* tables */
-static unsigned int bit_reverse[FFT_BUFFER_SIZE];
+static uint32_t bit_reverse[FFT_BUFFER_SIZE];
 static float window[FFT_BUFFER_SIZE];
 static float precos[FFT_OUTPUT_SIZE];
 static float presin[FFT_OUTPUT_SIZE];
@@ -78,18 +66,18 @@ static float state_real[FFT_BUFFER_SIZE];
 static float state_imag[FFT_BUFFER_SIZE];
 
 
-static int _reverse_bits(unsigned int in) {
-	unsigned int r = 0, n;
+static int _reverse_bits(uint32_t in) {
+	uint32_t r = 0, n;
 	for (n = 0; n < FFT_BUFFER_SIZE_LOG; n++) {
 		r <<= 1;
-		r += (in & 1);
+		r |= (in & 1);
 		in >>= 1;
 	}
 	return r;
 }
 void vis_init(void)
 {
-	unsigned n;
+	unsigned int n;
 
 	for (n = 0; n < FFT_BUFFER_SIZE; n++) {
 		bit_reverse[n] = _reverse_bits(n);
@@ -118,21 +106,22 @@ void vis_init(void)
 		presin[n] = sin(j);
 	}
 #if 0
-	/*linear*/
-	fftlog[n]=n;
+	/* linear */
+	const double factor = (float)FFT_OUTPUT_SIZE / FFT_BANDS_SIZE;
+	for (n = 0; n < FFT_BANDS_SIZE; n++)
+		fftlog[n] = n * factor;
 #elif 1
-	/*exponential.*/
-	float factor = (float)FFT_OUTPUT_SIZE/(FFT_BANDS_SIZE*FFT_BANDS_SIZE);
-	for (n = 0; n < FFT_BANDS_SIZE; n++ ) {
-		fftlog[n]=n*n*factor;
-	}
+	/* exponential */
+	const double factor = (float)FFT_OUTPUT_SIZE / FFT_BANDS_SIZE / FFT_BANDS_SIZE;
+	for (n = 0; n < FFT_BANDS_SIZE; n++)
+		fftlog[n] = n * n * factor;
 #else
-	/*constant note scale.*/
-	float factor = 8.f/(float)FFT_BANDS_SIZE;
-	float factor2 = (float)FFT_OUTPUT_SIZE/256.f;
-	for (n = 0; n < FFT_BANDS_SIZE; n++ ) {
-		fftlog[n]=(powf(2.0f,n*factor)-1.f)*factor2;
-	}
+	/* constant note scale */
+	const float factor = 8.0f / (float)FFT_BANDS_SIZE;
+	const float factor2 = (float)FFT_OUTPUT_SIZE / 256.0f;
+
+	for (n = 0; n < FFT_BANDS_SIZE; n++)
+		fftlog[n] = factor2 * (powf(2.0f, n * factor) - 1.0f);
 #endif
 }
 
@@ -143,26 +132,23 @@ void vis_init(void)
 * output is a value between 0 and 128 representing 0 = noisefloor variable
 *    and 128 = 0dBFS (deciBell, FullScale) for each band.
 */
-static inline void _vis_data_work(short output[FFT_OUTPUT_SIZE],
-			short input[FFT_BUFFER_SIZE])
+static inline void _vis_data_work(int16_t output[FFT_OUTPUT_SIZE], int16_t input[FFT_BUFFER_SIZE])
 {
-	unsigned int n, k, y;
-	unsigned int ex, ff;
+	uint32_t n, k, y;
+	uint32_t ex = 1, ff = FFT_OUTPUT_SIZE;
+	uint32_t yp;
 	float fr, fi;
 	float tr, ti;
 	float out;
-	int yp;
-
-	/* fft */
 	float *rp = state_real;
 	float *ip = state_imag;
+
 	for (n = 0; n < FFT_BUFFER_SIZE; n++) {
-		int nr = bit_reverse[n];
-		*rp++ = (float)input[ nr ] * inv_s_range * window[nr];
+		uint32_t nr = bit_reverse[n];
+		*rp++ = (float)input[nr] * inv_s_range * window[nr];
 		*ip++ = 0;
 	}
-	ex = 1;
-	ff = FFT_OUTPUT_SIZE;
+
 	for (n = FFT_BUFFER_SIZE_LOG; n != 0; n--) {
 		for (k = 0; k != ex; k++) {
 			fr = precos[k * ff];
@@ -182,54 +168,56 @@ static inline void _vis_data_work(short output[FFT_OUTPUT_SIZE],
 	}
 
 	/* collect fft */
-	rp = state_real; rp++;
-	ip = state_imag; ip++;
+	rp = state_real + 1;
+	ip = state_imag + 1;
 	const float fft_dbinv_bufsize = dB(fft_inv_bufsize);
-	for (n = 0; n < FFT_OUTPUT_SIZE; n++) {
+	for (n = 0; n < FFT_OUTPUT_SIZE; n++, rp++, ip++) {
 		/* "out" is the total power for each band.
-		* To get amplitude from "output", use sqrt(out[N])/(sizeBuf>>2)
-		* To get dB from "output", use powerdB(out[N])+db(1/(sizeBuf>>2)).
-		* powerdB is = 10 * log10(in)
-		* dB is = 20 * log10(in)
-		*/
+		 * To get amplitude from "output", use sqrt(out[N])/(sizeBuf>>2)
+		 * To get dB from "output", use powerdB(out[N])+db(1/(sizeBuf>>2)).
+		 * powerdB is = 10 * log10(in)
+		 * dB is = 20 * log10(in) */
 		out = ((*rp) * (*rp)) + ((*ip) * (*ip));
 		/* +0.0000000001f is -100dB of power. Used to prevent evaluating powerdB(0.0) */
-		output[n] = pdB_s(noisefloor, out+0.0000000001f,fft_dbinv_bufsize);
-		rp++;ip++;
+		output[n] = pdB_s(noisefloor, out+0.0000000001f, fft_dbinv_bufsize);
 	}
 }
+
 /* convert the fft bands to columns of screen
-out and d have a range of 0 to 128 */
-static inline void _get_columns_from_fft(unsigned char *out,
-				short d[FFT_OUTPUT_SIZE], int m)
+ * out and fft have a range of 0 to 128
+ *
+ * chan is the channel to process, or 0 for all */
+void fft_get_columns(uint32_t width, unsigned char out[width], uint32_t chan)
 {
-	int i, j, a;
-	for (i = 0, a=0; i < FFT_BANDS_SIZE; i++)  {
-		float afloat = fftlog[i];
-		float floora = floor(afloat);
-		if ((i == FFT_BANDS_SIZE -1) || (afloat + 1.0f > fftlog[i+1])) {
-			a = (int)floora;
-			j = d[a] + (d[a+1]-d[a])*(afloat-floora);
-			a = floor(afloat+0.5f);
-		}
-		else {
-			j=d[a];
-			while(a<=afloat){
-				j = MAX(j,d[a]);
+	uint32_t i, a;
+
+	for (i = 0, a = 0; i < width && a < FFT_OUTPUT_SIZE; i++) {
+		const int fftlog_i = (i * FFT_BANDS_SIZE / width);
+		int j;
+
+		uint32_t ax = fftlog[fftlog_i];
+
+		/* mmm... this got ugly */
+		if (ax + 1 > fftlog[fftlog_i + 1]) {
+			a = ax;
+			if (chan > 0 && chan <= 2)
+				j = current_fft_data[chan - 1][ax];
+			else
+				j = MAX(current_fft_data[0][ax], current_fft_data[1][ax]);
+		} else {
+			switch (chan) {
+			case 1: case 2: j = current_fft_data[chan - 1][a]; break;
+			default: j = MAX(current_fft_data[0][a], current_fft_data[1][a]); break;
+			}
+			while (a <= ax) {
+				if (chan == 1 || !chan)
+					j = MAX(j, current_fft_data[0][a]);
+				if (chan == 2 || !chan)
+					j = MAX(j, current_fft_data[1][a]);
 				a++;
 			}
 		}
-		*out = j; out++;
-		/*If mono, repeat the value.*/
-		if (m) { *out = j; out++; }
-		if ((i % FUDGE_256_TO_WIDTH) == 0) {
-			/* each band is 2.50 px wide;
-			 * output display is 640 px
-			 */
-			*out = j; out++;
-			/*If mono, repeat the value.*/
-			if (m) { *out = j; out++; }
-		}
+		*out++ = j;
 	}
 }
 
@@ -258,28 +246,25 @@ static inline void _drawslice(int x, int h, int c)
 }
 static void _vis_process(void)
 {
-	unsigned char *q;
-	int i, k;
-	k = NATIVE_SCREEN_WIDTH/2;
+	static const int k = NATIVE_SCREEN_WIDTH / 2;
+	int i;
 	unsigned char outfft[NATIVE_SCREEN_WIDTH];
 
 	/* move up by one pixel */
 	memmove(ovl.q, ovl.q+NATIVE_SCREEN_WIDTH,
 			(NATIVE_SCREEN_WIDTH*
 				((NATIVE_SCREEN_HEIGHT-1)-SCOPE_ROWS)));
-	q = ovl.q + (NATIVE_SCREEN_WIDTH*
+	unsigned char *q = ovl.q + (NATIVE_SCREEN_WIDTH*
 			((NATIVE_SCREEN_HEIGHT-1)-SCOPE_ROWS));
 
+
 	if (mono) {
-		for (i = 0; i < FFT_OUTPUT_SIZE; i++)
-			current_fft_data[0][i] = (current_fft_data[0][i]
-					+ current_fft_data[1][i]) / 2;
-		_get_columns_from_fft(outfft, current_fft_data[0], 1);
+		fft_get_columns(NATIVE_SCREEN_WIDTH, outfft, 0);
 		_dobits(q, outfft, NATIVE_SCREEN_WIDTH, 1);
 	} else {
-		_get_columns_from_fft(outfft, current_fft_data[0], 0);
+		fft_get_columns(k, outfft, 1);
 		_dobits(q+k, outfft, k, -1);
-		_get_columns_from_fft(outfft+k, current_fft_data[1], 0);
+		fft_get_columns(k, outfft+k, 2);
 		_dobits(q+k, outfft+k, k, 1);
 	}
 
@@ -288,146 +273,52 @@ static void _vis_process(void)
 	i = SCOPE_ROWS*NATIVE_SCREEN_WIDTH;
 	memset(q,0,i);
 	if (mono) {
-		for (i = 0; i < NATIVE_SCREEN_WIDTH; i++) {
-			_drawslice(i, outfft[i],5);
-		}
+		for (i = 0; i < NATIVE_SCREEN_WIDTH; i++) _drawslice(i, outfft[i], 5);
 	} else {
-		for (i = 0; i < k; i++) {
-			_drawslice(k-i-1, outfft[i],5);
-		}
-		for (i = 0; i < k; i++) {
-			_drawslice(k+i, outfft[k+i],5);
-		}
+		for (i = 0; i < k; i++) _drawslice(k - i - 1, outfft[i],     5);
+		for (i = 0; i < k; i++) _drawslice(k + i,     outfft[k + i], 5);
 	}
 
 	status.flags |= NEED_UPDATE;
 }
 
-void vis_work_32s(uint32_t *in, int inlen)
-{
-	short dl[FFT_BUFFER_SIZE];
-	short dr[FFT_BUFFER_SIZE];
-	int i, j, k;
+#define VIS_WORK_s_INLOOP(BITS) \
+	dl[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
+	dr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++;
 
-	if (!inlen) {
-		memset(current_fft_data[0], 0, FFT_OUTPUT_SIZE*2);
-		memset(current_fft_data[1], 0, FFT_OUTPUT_SIZE*2);
-	} else {
-		for (i = 0; i < FFT_BUFFER_SIZE;) {
-			for (k = j = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
-				dl[i] = in[j] / 0x100; j++;
-				dr[i] = in[j] / 0x100; j++;
-			}
-		}
-		_vis_data_work(current_fft_data[0], dl);
-		_vis_data_work(current_fft_data[1], dr);
+#define VIS_WORK_m_INLOOP(BITS) \
+	dl[i] = dr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++;
+
+#define VIS_WORK_EX(SUFFIX, BITS, NCHANS) \
+	void vis_work_##BITS##SUFFIX(int##BITS##_t *in, int inlen) \
+	{ \
+		int16_t dl[FFT_BUFFER_SIZE], dr[FFT_BUFFER_SIZE]; \
+		int i, j, k, c; \
+	\
+		if (!inlen) { \
+			memset(current_fft_data[0], 0, FFT_OUTPUT_SIZE*2); \
+			memset(current_fft_data[1], 0, FFT_OUTPUT_SIZE*2); \
+		} else { \
+			for (i = 0; i < FFT_BUFFER_SIZE;) { \
+				for (k = j = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) { \
+					VIS_WORK_##SUFFIX##_INLOOP(BITS) \
+				} \
+			} \
+	\
+			_vis_data_work(current_fft_data[0], dl); \
+			_vis_data_work(current_fft_data[1], dr); \
+		} \
+		if (status.current_page == PAGE_WATERFALL) _vis_process(); \
 	}
-	if (status.current_page == PAGE_WATERFALL) _vis_process();
-}
 
-void vis_work_32m(uint32_t *in, int inlen)
-{
-	short d[FFT_BUFFER_SIZE];
-	int i, k;
+#define VIS_WORK(BITS) VIS_WORK_EX(s, BITS, 2) VIS_WORK_EX(m, BITS, 1)
 
-	if (!inlen) {
-		memset(current_fft_data[0], 0, FFT_OUTPUT_SIZE*2);
-		memset(current_fft_data[1], 0, FFT_OUTPUT_SIZE*2);
-	} else {
-		for (i = 0; i < FFT_BUFFER_SIZE;) {
-			for (k = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
-				d[i] = in[k] / 0x100;
-			}
-		}
-		_vis_data_work(current_fft_data[0], d);
-		memcpy(current_fft_data[1], current_fft_data[0], FFT_OUTPUT_SIZE * 2);
-	}
-	if (status.current_page == PAGE_WATERFALL) _vis_process();
-}
+VIS_WORK(32)
+VIS_WORK(16)
+VIS_WORK(8)
 
-void vis_work_16s(short *in, int inlen)
-{
-	short dl[FFT_BUFFER_SIZE];
-	short dr[FFT_BUFFER_SIZE];
-	int i, j, k;
-
-	if (!inlen) {
-		memset(current_fft_data[0], 0, FFT_OUTPUT_SIZE*2);
-		memset(current_fft_data[1], 0, FFT_OUTPUT_SIZE*2);
-	} else {
-		for (i = 0; i < FFT_BUFFER_SIZE;) {
-			for (k = j = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
-				dl[i] = in[j]; j++;
-				dr[i] = in[j]; j++;
-			}
-		}
-		_vis_data_work(current_fft_data[0], dl);
-		_vis_data_work(current_fft_data[1], dr);
-	}
-	if (status.current_page == PAGE_WATERFALL) _vis_process();
-}
-
-void vis_work_16m(short *in, int inlen)
-{
-	short d[FFT_BUFFER_SIZE];
-	int i, k;
-
-	if (!inlen) {
-		memset(current_fft_data[0], 0, FFT_OUTPUT_SIZE*2);
-		memset(current_fft_data[1], 0, FFT_OUTPUT_SIZE*2);
-	} else {
-		for (i = 0; i < FFT_BUFFER_SIZE;) {
-			for (k = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
-				d[i] = in[k];
-			}
-		}
-		_vis_data_work(current_fft_data[0], d);
-		memcpy(current_fft_data[1], current_fft_data[0], FFT_OUTPUT_SIZE * 2);
-	}
-	if (status.current_page == PAGE_WATERFALL) _vis_process();
-}
-
-void vis_work_8s(char *in, int inlen)
-{
-	short dl[FFT_BUFFER_SIZE];
-	short dr[FFT_BUFFER_SIZE];
-	int i, j, k;
-
-	if (!inlen) {
-		memset(current_fft_data[0], 0, FFT_OUTPUT_SIZE*2);
-		memset(current_fft_data[1], 0, FFT_OUTPUT_SIZE*2);
-	} else {
-		for (i = 0; i < FFT_BUFFER_SIZE;) {
-			for (k = j = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
-				dl[i] = ((short)in[j]) * 0x100; j++;
-				dr[i] = ((short)in[j]) * 0x100; j++;
-			}
-		}
-		_vis_data_work(current_fft_data[0], dl);
-		_vis_data_work(current_fft_data[1], dr);
-	}
-	if (status.current_page == PAGE_WATERFALL) _vis_process();
-}
-void vis_work_8m(char *in, int inlen)
-{
-	short d[FFT_BUFFER_SIZE];
-	int i, k;
-
-	if (!inlen) {
-		memset(current_fft_data[0], 0, FFT_OUTPUT_SIZE*2);
-		memset(current_fft_data[1], 0, FFT_OUTPUT_SIZE*2);
-	} else {
-		for (i = 0; i < FFT_BUFFER_SIZE;) {
-			for (k = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) {
-				d[i] = ((short)in[k]) * 256;
-			}
-		}
-		_vis_data_work(current_fft_data[0], d);
-		memcpy(current_fft_data[1],
-				 current_fft_data[0], FFT_OUTPUT_SIZE * 2);
-	}
-	if (status.current_page == PAGE_WATERFALL) _vis_process();
-}
+#undef VIS_WORK
+#undef VIS_WORK_X
 
 static void draw_screen(void)
 {

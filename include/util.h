@@ -29,45 +29,45 @@
 /*Conversion*/
 /* linear -> deciBell*/
 /* amplitude normalized to 1.0f.*/
-SCHISM_PURE extern double dB(double amplitude);
+SCHISM_CONST extern float dB(float amplitude);
 
 /// deciBell -> linear*/
-SCHISM_PURE extern double dB2_amp(double db);
+SCHISM_CONST extern float dB2_amp(float db);
 
 /* linear -> deciBell*/
 /* power normalized to 1.0f.*/
-SCHISM_PURE extern double pdB(double power);
+SCHISM_CONST extern float pdB(float power);
 
 /* deciBell -> linear*/
-SCHISM_PURE extern double dB2_power(double db);
+SCHISM_CONST extern float dB2_power(float db);
 
 /* linear -> deciBell*/
 /* amplitude normalized to 1.0f.*/
 /* Output scaled (and clipped) to 128 lines with noisefloor range.*/
 /* ([0..128] = [-noisefloor..0dB])*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-SCHISM_PURE extern short dB_s(int noisefloor, double amplitude, double correction_dBs);
+SCHISM_CONST extern short dB_s(int noisefloor, float amplitude, float correction_dBs);
 
 /* deciBell -> linear*/
 /* Input scaled to 128 lines with noisefloor range.*/
 /* ([0..128] = [-noisefloor..0dB])*/
 /* amplitude normalized to 1.0f.*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-SCHISM_PURE extern short dB2_amp_s(int noisefloor, int db, double correction_dBs);
+SCHISM_CONST extern short dB2_amp_s(int noisefloor, int db, float correction_dBs);
 
 /* linear -> deciBell*/
 /* power normalized to 1.0f.*/
 /* Output scaled (and clipped) to 128 lines with noisefloor range.*/
 /* ([0..128] = [-noisefloor..0dB])*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-SCHISM_PURE extern short pdB_s(int noisefloor, double power, double correction_dBs);
+SCHISM_CONST extern short pdB_s(int noisefloor, float power, float correction_dBs);
 
 /* deciBell -> linear*/
 /* Input scaled to 128 lines with noisefloor range.*/
 /* ([0..128] = [-noisefloor..0dB])*/
 /* power normalized to 1.0f.*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-SCHISM_PURE extern short dB2_power_s(int noisefloor, int db, double correction_dBs);
+SCHISM_CONST extern short dB2_power_s(int noisefloor, int db, float correction_dBs);
 
 /* integer sqrt (very fast; 32 bits limited) */
 SCHISM_CONST uint32_t i_sqrt(uint32_t r);

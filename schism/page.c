@@ -1388,39 +1388,11 @@ static struct vgamem_overlay vis_overlay = {
 	NULL, 0, 0, 0,
 };
 
-extern short current_fft_data[2][1024];
-extern short fftlog[256];
-/* convert the fft bands to columns of the vis box
-out and d have a range of 0 to 128 */
-static inline void _get_columns_from_fft(unsigned char *out, short d[2][1024])
-{
-	int i, j, jbis, t, a;
-	/*this assumes out of size 120. */
-	for (i = 0, t= 0 , a=0; i < 120; i++, t+=2)  {
-		float afloat = fftlog[t];
-		float floora = floor(afloat);
-		if (afloat + 1.0f > fftlog[t+1]) {
-			a = (int)floora;
-			j = d[0][a] + (d[0][a+1]-d[0][a])*(afloat-floora);
-			jbis = d[1][a] + (d[1][a+1]-d[1][a])*(afloat-floora);
-			j = MAX(j,jbis);
-			a = floor(afloat+0.5f);
-		}
-		else {
-			j=d[0][a];
-			j = MAX(j,d[1][a]);
-			while(a<=afloat){
-				j = MAX(j,d[0][a]);
-				j = MAX(j,d[1][a]);
-				a++;
-			}
-		}
-		*out = j; out++;
-	}
-}
 static void vis_fft(void)
 {
-	int i, y;
+	int i;
+	int32_t y;
+
 	/*this is the size of vis_overlay.width*/
 	unsigned char outfft[120];
 
@@ -1432,15 +1404,13 @@ static void vis_fft(void)
 	song_lock_audio();
 
 	vgamem_ovl_clear(&vis_overlay,0);
-	_get_columns_from_fft(outfft,current_fft_data);
+	fft_get_columns(120, outfft, 0);
 	for (i = 0; i < 120; i++) {
 		y = outfft[i];
-		/*reduce range */
-		y >>= 3;
+		/* reduce range */
+		y = rshift_signed(y, 3);
 		if (y > 15) y = 15;
-		if (y > 0) {
-		       vgamem_ovl_drawline(&vis_overlay,i,15-y,i,15,5);
-		}
+		if (y > 0) vgamem_ovl_drawline(&vis_overlay, i, 15 - y, i, 15, 5);
 	}
 	vgamem_ovl_apply(&vis_overlay);
 

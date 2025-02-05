@@ -316,6 +316,34 @@ void show_song_timejump(void);
 SCHISM_NORETURN void schism_exit(int status);
 
 /* --------------------------------------------------------------------- */
+/* page_waterfall.c */
+
+void vis_init(void);
+void vis_work_32s(int32_t *in, int inlen);
+void vis_work_32m(int32_t *in, int inlen);
+void vis_work_16s(int16_t *in, int inlen);
+void vis_work_16m(int16_t *in, int inlen);
+void vis_work_8s(int8_t *in, int inlen);
+void vis_work_8m(int8_t *in, int inlen);
+
+/* more stupid visual stuff:
+ * I've reverted these to the values that they were at before the "Visuals"
+ * patch from JosepMa, since the newer ones seem to cause weird holes within
+ * the graph. Maybe this should be investigated further ;) */
+#define FFT_BUFFER_SIZE_LOG     10
+#define FFT_BUFFER_SIZE         (1 << FFT_BUFFER_SIZE_LOG)
+#define FFT_OUTPUT_SIZE         (FFT_BUFFER_SIZE / 2)
+#define FFT_BANDS_SIZE          1024 // this is enough to fill the screen and more
+
+SCHISM_STATIC_ASSERT(FFT_BUFFER_SIZE_LOG < 32, "FFT buffer code uses 32-bit integers");
+
+extern int16_t current_fft_data[2][FFT_OUTPUT_SIZE];
+/*Table to change the scale from linear to log.*/
+extern uint32_t fftlog[FFT_BANDS_SIZE];
+
+void fft_get_columns(uint32_t width, unsigned char out[width], uint32_t chan);
+
+/* --------------------------------------------------------------------- */
 
 #endif /* SCHISM_IT_H_ */
 

@@ -123,18 +123,12 @@ static const schism_audio_backend_t *backend = NULL;
 // playback
 
 extern int midi_bend_hit[64], midi_last_bend_hit[64];
-extern void vis_work_32s(short *in, int inlen);
-extern void vis_work_32m(short *in, int inlen);
-extern void vis_work_16s(short *in, int inlen);
-extern void vis_work_16m(short *in, int inlen);
-extern void vis_work_8s(char *in, int inlen);
-extern void vis_work_8m(char *in, int inlen);
 
 // this gets called from the backend
 static void audio_callback(uint8_t *stream, int len)
 {
-	unsigned int wasrow = current_song->row;
-	unsigned int waspat = current_song->current_order;
+	uint32_t wasrow = current_song->row;
+	uint32_t waspat = current_song->current_order;
 	int i, n;
 
 	memset(stream, 0, len);
@@ -158,10 +152,9 @@ static void audio_callback(uint8_t *stream, int len)
 	} else {
 		n = csf_read(current_song, stream, len);
 		if (!n) {
-			if (status.current_page == PAGE_WATERFALL
-			|| status.vis_style == VIS_FFT) {
+			if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT)
 				vis_work_8m(NULL, 0);
-			}
+
 			song_stop_unlocked(0);
 			goto POST_EVENT;
 		}
@@ -170,28 +163,19 @@ static void audio_callback(uint8_t *stream, int len)
 
 	memcpy(audio_buffer, stream, n * audio_sample_size);
 
-	if (audio_output_bits == 8) {
-		/* libmodplug emits unsigned 8bit output...
-		*/
-		stream = (uint8_t *) audio_buffer;
-		n *= audio_output_channels;
-		for (i = 0; i < n; i++) {
-			stream[i] ^= 128;
-		}
-		if (status.current_page == PAGE_WATERFALL
-		|| status.vis_style == VIS_FFT) {
-			if (audio_output_channels == 2) {
-				vis_work_8s((char*)stream, n/2);
-			} else {
-				vis_work_8m((char*)stream, n);
-			}
-		}
-	} else if (status.current_page == PAGE_WATERFALL
-				|| status.vis_style == VIS_FFT) {
-		if (audio_output_channels == 2) {
-			vis_work_16s((short*)stream, n);
-		} else {
-			vis_work_16m((short*)stream, n);
+	/* convert 8-bit unsigned to signed by XORing the high bit */
+	if (audio_output_bits == 8)
+		for (i = 0; i < n * 2; i++)
+			audio_buffer[i] ^= 0x80;
+
+	if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT) {
+		// I don't really like this...
+		switch (audio_output_bits) {
+#define BITSCASE(BITS) case BITS: if (audio_output_channels == 2) { vis_work_##BITS##s((void *)audio_buffer, n / 2); } else { vis_work_##BITS##m((void *)audio_buffer, n); } break;
+		BITSCASE(8)
+		BITSCASE(16)
+		BITSCASE(32)
+#undef BITSCASE
 		}
 	}
 
