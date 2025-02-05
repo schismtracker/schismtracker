@@ -183,10 +183,22 @@ static inline void _vis_data_work(int16_t output[FFT_OUTPUT_SIZE], int16_t input
 	}
 }
 
+// "chan" is either zero for all, or nonzero for a specific output channel
+static inline SCHISM_ALWAYS_INLINE int16_t _fft_get_value(uint32_t chan, uint32_t offset)
+{
+	switch (chan) {
+	case 1: case 2: return current_fft_data[chan - 1][offset];
+	default: break;
+	}
+
+	const uint32_t x1 = current_fft_data[0][offset], x2 = current_fft_data[1][offset];
+	return (x1 >> 1) + (x2 >> 1) + (x1 & x2 & 1);
+}
+
 /* convert the fft bands to columns of screen
  * out and fft have a range of 0 to 128
  *
- * chan is the channel to process, or 0 for all */
+ * "chan" is the channel to process, or 0 for all */
 void fft_get_columns(uint32_t width, unsigned char out[width], uint32_t chan)
 {
 	uint32_t i, a;
@@ -196,26 +208,20 @@ void fft_get_columns(uint32_t width, unsigned char out[width], uint32_t chan)
 		int j;
 
 		uint32_t ax = fftlog[fftlog_i];
+		if (ax >= FFT_OUTPUT_SIZE)
+			break; // NOW JUST WHO SAY THEY AINT GOT MANY BLOOD?
 
 		/* mmm... this got ugly */
-		if ((ax < FFT_OUTPUT_SIZE) && (fftlog_i >= FFT_BANDS_SIZE) && (ax + 1 > fftlog[fftlog_i + 1])) {
+		if ((fftlog_i + 1 >= FFT_BANDS_SIZE) && (ax + 1 > fftlog[fftlog_i + 1])) {
 			a = ax;
-			if (chan > 0 && chan <= 2)
-				j = current_fft_data[chan - 1][ax];
-			else
-				j = MAX(current_fft_data[0][ax], current_fft_data[1][ax]);
+			j = _fft_get_value(chan, a);
 		} else {
-			switch (chan) {
-			case 1: case 2: j = current_fft_data[chan - 1][a]; break;
-			default: j = MAX(current_fft_data[0][a], current_fft_data[1][a]); break;
-			}
-			while (a <= ax) {
-				if (chan == 1 || !chan)
-					j = MAX(j, current_fft_data[0][a]);
-				if (chan == 2 || !chan)
-					j = MAX(j, current_fft_data[1][a]);
+			j = _fft_get_value(chan, a);
+			do {
+				int x = _fft_get_value(chan, a);
+				j = MAX(j, x);
 				a++;
-			}
+			} while (a <= ax);
 		}
 		*out++ = j;
 	}
