@@ -170,6 +170,8 @@
 
 // Ok, now after all that mess, we can define these attributes:
 
+/* This is used for variables or parameters that are
+ * known to be unused. */
 #if SCHISM_HAS_C23_ATTRIBUTE(maybe_unused)
 # define SCHISM_UNUSED [[maybe_unused]]
 #elif SCHISM_GNUC_HAS_ATTRIBUTE(__unused__, 2, 7, 0)
@@ -178,6 +180,9 @@
 # define SCHISM_UNUSED
 #endif
 
+/* Functions with this attribute must return a pointer
+ * that is guaranteed to never alias any other pointer
+ * still valid when the function returns. */
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__malloc__, 3, 0, 0)
 # define SCHISM_MALLOC __attribute__((__malloc__))
 #elif SCHISM_MSVC_ATLEAST(14, 0, 0)
@@ -186,6 +191,9 @@
 # define SCHISM_MALLOC
 #endif
 
+/* Used to declare a function that has no effects except
+ * for the return value, which only depends on parameters
+ * and/or global variables. */
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__pure__, 2, 96, 0)
 # define SCHISM_PURE __attribute__((__pure__))
 #elif SCHISM_HAS_C23_ATTRIBUTE(reproducible)
@@ -194,6 +202,10 @@
 # define SCHISM_PURE
 #endif
 
+/* Used to declare a function that:
+ * 1. do not examine any arguments except their parameters
+ * 2. have no effects except for the return value
+ * 3. return (i.e., never hang ever) */
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__const__, 2, 5, 0)
 # define SCHISM_CONST __attribute__((__const__))
 #elif SCHISM_HAS_C23_ATTRIBUTE(unsequenced)
@@ -202,6 +214,7 @@
 # define SCHISM_CONST
 #endif
 
+/* Used to declare a function that never returns. */
 #if SCHISM_HAS_C23_ATTRIBUTE(noreturn)
 # define SCHISM_NORETURN [[noreturn]]
 #elif (__STDC_VERSION__ >= 201112L)
@@ -212,6 +225,9 @@
 # define SCHISM_NORETURN
 #endif
 
+/* Used for declaring format.
+ * This ought to be separated into different macros to
+ * ease adding different compiler support... */
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__format__, 2, 3, 0)
 # define SCHISM_FORMAT(function, format_index, first_index) \
 	__attribute__((__format__(function, format_index, first_index)))
@@ -219,6 +235,9 @@
 # define SCHISM_FORMAT(function, format_index, first_index)
 #endif
 
+/* Used for declaring malloc functions that take in an
+ * allocation size in bytes (malloc), or in the case of
+ * _EX, an allocation size in objects (calloc). */
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__alloc_size__, 9, 1, 0)
 # define SCHISM_ALLOC_SIZE(x) __attribute__((__alloc_size__(x)))
 # define SCHISM_ALLOC_SIZE_EX(x, y) __attribute__((__alloc_size__(x, y)))
@@ -227,6 +246,8 @@
 # define SCHISM_ALLOC_SIZE_EX(x, y)
 #endif
 
+/* Use along with "static inline" to make a function that is
+ * always inlined by the compiler. */
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__always_inline__, 3, 1, 1)
 # define SCHISM_ALWAYS_INLINE __attribute__((__always_inline__))
 #elif SCHISM_MSVC_ATLEAST(12, 0, 0)
@@ -235,6 +256,9 @@
 # define SCHISM_ALWAYS_INLINE
 #endif
 
+/* Use this for functions that we'd like to not use anymore,
+ * but for some reason or another (for example, a downstream
+ * fork using it heavily) we have to keep it. */
 #if SCHISM_HAS_C23_ATTRIBUTE(deprecated)
 # define SCHISM_DEPRECATED [[deprecated]]
 #elif SCHISM_GNUC_HAS_ATTRIBUTE(__deprecated__, 3, 1, 0)
@@ -245,6 +269,32 @@
 # define SCHISM_DEPRECATED
 #endif
 
+/* Used for functions that are "hot-spots" of the program.
+ * For example, the vgamem scanners are a giant hot-spot,
+ * taking up lots of precious processing time. As such,
+ * those functions, along with the blitter functions that
+ * call them, have been marked as HOT. */
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__hot__, 4, 3, 0)
+# define SCHISM_HOT __attribute__((__hot__))
+#else
+# define SCHISM_HOT
+#endif
+
+/* Use this attribute to generate one or more function
+ * variations that use SIMD instructions to process
+ * multiple values at once. This is used within the
+ * vgamem scanner, though it's not super useful, since
+ * the systems with these instructions will likely
+ * already run schism fast enough anyway... */
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__simd__, 6, 1, 0)
+# define SCHISM_SIMD __attribute__((__simd__))
+#else
+# define SCHISM_SIMD
+#endif
+
+/* Wrapped around an expression to hint to the compiler
+ * whether it is likely to happen or not. Can often help
+ * with branch prediction on newer processors. */
 #if SCHISM_GNUC_HAS_BUILTIN(__builtin_expect, 3, 0, 0)
 # define SCHISM_LIKELY(x)   __builtin_expect(!!(x), 1)
 # define SCHISM_UNLIKELY(x) __builtin_expect(!(x),  1)
@@ -253,6 +303,8 @@
 # define SCHISM_UNLIKELY(x)
 #endif
 
+/* Used to mark a printf format parameter. Currently only MSVC really
+ * has this, and GCC has the much more useful "format" attribute */
 #if SCHISM_MSVC_ATLEAST(14, 0, 0)
 # define SCHISM_PRINTF_FORMAT_PARAM _Printf_format_string_
 #else

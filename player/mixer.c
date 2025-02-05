@@ -409,7 +409,7 @@ typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 	}
 
 #define BEGIN_RESAMPLE_INTERFACE(func, sampletype, numchannels) \
-	void func(sampletype *oldbuf, sampletype *newbuf, uint32_t oldlen, uint32_t newlen) \
+	SCHISM_SIMD void func(sampletype *oldbuf, sampletype *newbuf, uint32_t oldlen, uint32_t newlen) \
 	{ \
 		uint32_t position = 0; \
 		const sampletype *p = oldbuf; \

@@ -58,7 +58,7 @@ void video_colors(unsigned char palette[16][3]);
 void video_resize(unsigned int width, unsigned int height);
 void video_fullscreen(int new_fs_flag);
 void video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y);
-void video_blit(void);
+SCHISM_HOT void video_blit(void);
 
 int video_is_screensaver_enabled(void);
 void video_toggle_screensaver(int enabled);
@@ -96,14 +96,14 @@ int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h);
 typedef uint32_t (*schism_map_rgb_func_t)(void *data, uint8_t r, uint8_t g, uint8_t b);
 
 /* YUV blitters */
-void video_blitYY(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
-void video_blitUV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
-void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
+SCHISM_HOT void video_blitYY(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
+SCHISM_HOT void video_blitUV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
+SCHISM_HOT void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
 
 /* RGB blitters */
-void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
-void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height);
-void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height, schism_map_rgb_func_t map_rgb, void *map_rgb_data);
+SCHISM_HOT void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
+SCHISM_HOT void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height);
+SCHISM_HOT void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height, schism_map_rgb_func_t map_rgb, void *map_rgb_data);
 
 /* --------------------------------------------------------- */
 

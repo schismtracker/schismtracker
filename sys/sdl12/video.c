@@ -621,7 +621,7 @@ static uint32_t sdl12_map_rgb_callback(void *data, uint8_t r, uint8_t g, uint8_t
 	return sdl12_MapRGB(format, r, g, b);
 }
 
-static void sdl12_video_blit(void)
+SCHISM_HOT static void sdl12_video_blit(void)
 {
 	unsigned char *pixels = NULL;
 	unsigned int bpp = 0;

@@ -615,7 +615,7 @@ static void sdl2_video_toggle_menu(SCHISM_UNUSED int on)
 
 /* ------------------------------------------------------------ */
 
-static void sdl2_video_blit(void)
+SCHISM_HOT static void sdl2_video_blit(void)
 {
 	SDL_Rect dstrect;
 
