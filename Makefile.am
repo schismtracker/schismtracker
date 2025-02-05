@@ -86,7 +86,7 @@ scripts = \
 	scripts/palette.py
 
 EXTRA_DIST = \
-	include/auto/README		\
+	README.md include/auto/README	\
 	$(docs)	\
 	$(helptexts)			\
 	$(fonts)			\
