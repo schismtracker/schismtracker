@@ -34,6 +34,8 @@
 
 #include <windows.h>
 
+#define WAVEHDR_DWUSER_PREPARED (~((DWORD_PTR)0))
+
 // Define this ourselves; old toolchains don't have it
 struct waveoutcaps2w {
 	WORD wMid;
@@ -215,7 +217,7 @@ static int waveout_audio_thread(void *data)
 		// FIXME add a timeout here
 		mt_mutex_lock(dev->mutex);
 
-		dev->callback(dev->wavehdr[dev->next_buffer].lpData, dev->wavehdr[dev->next_buffer].dwBufferLength);
+		dev->callback((uint8_t *)dev->wavehdr[dev->next_buffer].lpData, dev->wavehdr[dev->next_buffer].dwBufferLength);
 
 		mt_mutex_unlock(dev->mutex);
 
@@ -243,6 +245,9 @@ static void CALLBACK waveout_audio_callback(HWAVEOUT hwo, UINT uMsg, DWORD_PTR d
 	default: return;
 	}
 }
+
+// decl
+static void waveout_audio_close_device(schism_audio_device_t *dev);
 
 // nonzero on success
 static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
@@ -290,24 +295,16 @@ static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schis
 		}
 
 		// Punt if we failed and we can't do anything about it
-		free(dev);
-		return NULL;
+		goto fail;
 	}
 
 	dev->mutex = mt_mutex_create();
-	if (!dev->mutex) {
-		waveOutClose(dev->hwaveout);
-		free(dev);
-		return NULL;
-	}
+	if (!dev->mutex)
+		goto fail;
 
 	dev->sem = CreateSemaphoreA(NULL, 1, NUM_BUFFERS, "WinMM audio sync semaphore");
-	if (!dev->sem) {
-		waveOutClose(dev->hwaveout);
-		mt_mutex_delete(dev->mutex);
-		free(dev);
-		return NULL;
-	}
+	if (!dev->sem)
+		goto fail;
 
 	// allocate the buffer
 	DWORD buflen = desired->samples * format.nChannels * (format.wBitsPerSample / 8);
@@ -315,28 +312,20 @@ static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schis
 
 	// fill in the wavehdrs
 	for (int i = 0; i < NUM_BUFFERS; i++) {
-		dev->wavehdr[i].lpData = dev->buffer + (buflen * i);
+		dev->wavehdr[i].lpData = (LPSTR)dev->buffer + (buflen * i);
 		dev->wavehdr[i].dwBufferLength = buflen;
 		dev->wavehdr[i].dwFlags = WHDR_DONE;
 
-		if (waveOutPrepareHeader(dev->hwaveout, &dev->wavehdr[i], sizeof(dev->wavehdr[i])) != MMSYSERR_NOERROR) {
-			waveOutClose(dev->hwaveout);
-			mt_mutex_delete(dev->mutex);
-			free(dev->buffer);
-			free(dev);
-			return NULL;
-		}
+		if (waveOutPrepareHeader(dev->hwaveout, &dev->wavehdr[i], sizeof(dev->wavehdr[i])) != MMSYSERR_NOERROR)
+			goto fail;
+
+		dev->wavehdr[i].dwUser = WAVEHDR_DWUSER_PREPARED;
 	}
 
 	// ok, now start the full thread
 	dev->thread = mt_thread_create(waveout_audio_thread, "WinMM audio thread", dev);
-	if (!dev->thread) {
-		waveOutClose(dev->hwaveout);
-		CloseHandle(dev->sem);
-		mt_mutex_delete(dev->mutex);
-		free(dev);
-		return NULL;
-	}
+	if (!dev->thread)
+		goto fail;
 
 	obtained->freq = format.nSamplesPerSec;
 	obtained->channels = format.nChannels;
@@ -344,6 +333,11 @@ static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schis
 	obtained->samples = desired->samples;
 
 	return dev;
+
+fail:
+	waveout_audio_close_device(dev);
+
+	return NULL;
 }
 
 static void waveout_audio_close_device(schism_audio_device_t *dev)
@@ -352,13 +346,19 @@ static void waveout_audio_close_device(schism_audio_device_t *dev)
 		return;
 
 	// kill the thread before doing anything else
-	dev->cancelled = 1;
-	mt_thread_wait(dev->thread, NULL);
+	if (dev->thread) {
+		dev->cancelled = 1;
+		mt_thread_wait(dev->thread, NULL);
+	}
 
 	// close the device
-	waveOutClose(dev->hwaveout);
+	if (dev->hwaveout)
+		waveOutClose(dev->hwaveout);
 
 	for (int i = 0; i < NUM_BUFFERS; i++) {
+		if (dev->wavehdr[i].dwUser != WAVEHDR_DWUSER_PREPARED)
+			continue;
+
 		// sleep until the device is done with our buffer
 		while (!(dev->wavehdr[i].dwFlags & WHDR_DONE))
 			timer_delay(10);
@@ -366,10 +366,15 @@ static void waveout_audio_close_device(schism_audio_device_t *dev)
 		waveOutUnprepareHeader(dev->hwaveout, &dev->wavehdr[i], sizeof(dev->wavehdr[i]));
 	}
 
-	free(dev->buffer);
+	if (dev->buffer)
+		free(dev->buffer);
 
-	CloseHandle(dev->sem);
-	mt_mutex_delete(dev->mutex);
+	if (dev->sem)
+		CloseHandle(dev->sem);
+
+	if (dev->mutex)
+		mt_mutex_delete(dev->mutex);
+
 	free(dev);
 }
 

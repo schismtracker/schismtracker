@@ -323,6 +323,8 @@ static int _dsound_audio_thread(void *data)
 	return 0;
 }
 
+static void dsound_audio_close_device(schism_audio_device_t *dev);
+
 // nonzero on success
 static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
@@ -350,15 +352,11 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 	dev->callback = desired->callback;
 
 	dev->mutex = mt_mutex_create();
-	if (!dev->mutex) {
-		free(dev);
-		return NULL;
-	}
+	if (!dev->mutex)
+		goto fail;
 
 	if (DSOUND_DirectSoundCreate(guid, &dev->dsound, NULL) != DS_OK) {
-		mt_mutex_delete(dev->mutex);
-		free(dev);
-		return NULL;
+		goto fail;
 	}
 
 	// Set the cooperative level
@@ -375,12 +373,8 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 			dwlevel = DSSCL_NORMAL;
 		}
 
-		if (IDirectSound_SetCooperativeLevel(dev->dsound, hwnd, dwlevel) != DS_OK) {
-			IDirectSound_Release(dev->dsound);
-			mt_mutex_delete(dev->mutex);
-			free(dev);
-			return NULL;
-		}
+		if (IDirectSound_SetCooperativeLevel(dev->dsound, hwnd, dwlevel) != DS_OK)
+			goto fail;
 	}
 
 	DSBUFFERDESC dsformat;
@@ -422,19 +416,12 @@ DS_badformat:
 		// I'm just not going to worry about it for now...
 
 		// Punt if nothing worked
-		mt_mutex_delete(dev->mutex);
-		IDirectSound_Release(dev->dsound);
-		free(dev);
-		return NULL;
+		goto fail;
 	}
 
 	if (IDirectSoundBuffer_SetFormat(dev->lpbuffer, &format) != DS_OK) {
 #if 0 // SDL doesn't error here, and it seems to cause issues on my mac mini
-		mt_mutex_delete(dev->mutex);
-		IDirectSoundBuffer_Release(dev->lpbuffer);
-		IDirectSound_Release(dev->dsound);
-		free(dev);
-		return NULL;
+		goto fail;
 #endif
 	}
 
@@ -454,13 +441,8 @@ DS_badformat:
 
 	// ok, now start the full thread
 	dev->thread = mt_thread_create(_dsound_audio_thread, "DirectSound audio thread", dev);
-	if (!dev->thread) {
-		mt_mutex_delete(dev->mutex);
-		IDirectSoundBuffer_Release(dev->lpbuffer);
-		IDirectSound_Release(dev->dsound);
-		free(dev);
-		return NULL;
-	}
+	if (!dev->thread)
+		goto fail;
 
 	obtained->freq = format.nSamplesPerSec;
 	obtained->channels = format.nChannels;
@@ -468,6 +450,11 @@ DS_badformat:
 	obtained->samples = desired->samples;
 
 	return dev;
+
+fail:
+	dsound_audio_close_device(dev);
+
+	return NULL;
 }
 
 static void dsound_audio_close_device(schism_audio_device_t *dev)
@@ -475,9 +462,10 @@ static void dsound_audio_close_device(schism_audio_device_t *dev)
 	if (!dev)
 		return;
 
-	dev->cancelled = 1;
-	mt_thread_wait(dev->thread, NULL);
-
+	if (dev->thread) {
+		dev->cancelled = 1;
+		mt_thread_wait(dev->thread, NULL);
+	}
 	if (dev->lpbuffer) {
 		IDirectSoundBuffer_Stop(dev->lpbuffer);
 		IDirectSoundBuffer_Release(dev->lpbuffer);
@@ -485,7 +473,9 @@ static void dsound_audio_close_device(schism_audio_device_t *dev)
 	if (dev->dsound) {
 		IDirectSound_Release(dev->dsound);
 	}
-	mt_mutex_delete(dev->mutex);
+	if (dev->mutex) {
+		mt_mutex_delete(dev->mutex);
+	}
 	free(dev);
 }
 
