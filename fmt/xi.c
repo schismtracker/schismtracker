@@ -495,14 +495,10 @@ int fmt_xi_save_instrument(disko_t *fp, song_t *song, song_instrument_t *ins)
 		smp = song->samples + o;
 		strncpy(xmss.name, smp->name, sizeof(xmss.name));
 
-		const uint32_t samplesize = smp->length * ((smp->flags & CHN_16BIT) ? 2 : 1) * ((smp->flags & CHN_STEREO) ? 2 : 1);
-		xmss.samplen = bswapLE32(samplesize);
+		xmss.samplen = smp->length;
 
 		xmss.loopstart = smp->loop_start;
 		xmss.looplen = smp->loop_end - smp->loop_start;
-
-		xmss.loopstart = bswapLE32(xmss.loopstart);
-		xmss.looplen = bswapLE32(xmss.looplen);
 
 		if (smp->flags & CHN_PINGPONGLOOP) {
 			xmss.type |= 0x03;
@@ -510,18 +506,28 @@ int fmt_xi_save_instrument(disko_t *fp, song_t *song, song_instrument_t *ins)
 			xmss.type |= 0x01;
 		}
 
-		if (smp->flags & CHN_16BIT)
+		if (smp->flags & CHN_16BIT) {
 			xmss.type |= 0x10;
+			xmss.looplen <<= 1;
+			xmss.loopstart <<= 1;
+			xmss.samplen <<= 1;
+		}
 
-		if (smp->flags & CHN_STEREO)
+		if (smp->flags & CHN_STEREO) {
 			xmss.type |= 0x20;
+			xmss.looplen <<= 1;
+			xmss.loopstart <<= 1;
+			xmss.samplen <<= 1;
+		}
+
+		xmss.samplen = bswapLE32(xmss.samplen);
+		xmss.loopstart = bswapLE32(xmss.loopstart);
+		xmss.looplen = bswapLE32(xmss.looplen);
 
 		xmss.vol = smp->volume >> 2;
 		xmss.pan = smp->panning;
 
-		int transp = frequency_to_transpose(smp->c5speed);
-
-		log_appendf(4, "%d", transp);
+		int32_t transp = frequency_to_transpose(smp->c5speed);
 
 		xmss.relnote = transp / 128;
 		xmss.finetune = transp % 128;
