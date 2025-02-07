@@ -89,10 +89,14 @@ void fx_note_cut(song_t *csf, uint32_t nchan, int clear_note)
 	//if (chan->ptr_instrument) chan->volume = 0;
 	chan->increment = 0;
 	chan->fadeout_volume = 0;
+	//chan->length = 0;
 	if (clear_note) {
 		// keep instrument numbers from picking up old notes
 		// (SCx doesn't do this)
-		chan->note = chan->new_note = NOTE_NONE;
+		// Apparently this isn't necessary at all anymore?
+		// Note cuts seem to work perfectly fine without it.
+		// SCx plays fine too.  -paper
+		//chan->frequency = 0;
 	}
 
 	if (chan->flags & CHN_ADLIB) {
@@ -1502,8 +1506,8 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 
 	// Enable Ramping
 	if (!porta) {
-		chan->vu_meter = 0x0;
-		chan->strike = 4; /* this affects how long the initial hit on the playback marks lasts (bigger dot in instrument and sample list windows)*/
+		//chan->vu_meter = 0x0;
+		chan->strike = 4; /* this affects how long the initial hit on the playback marks lasts (bigger dot in instrument and sample list windows) */
 		chan->flags &= ~CHN_FILTER;
 		chan->flags |= CHN_FASTVOLRAMP | CHN_NEWNOTE;
 		if (!retrig) {
@@ -1694,7 +1698,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 				p->flags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
 			}
 			// Stop this channel
-			chan->length = chan->position = chan->position_frac = 0;
+			/*chan->length = */chan->position = chan->position_frac = 0;
 			chan->rofs = chan->lofs = 0;
 		}
 	}
