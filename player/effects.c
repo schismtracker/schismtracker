@@ -1698,7 +1698,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 				p->flags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
 			}
 			// Stop this channel
-			/*chan->length = */chan->position = chan->position_frac = 0;
+			chan->length = chan->position = chan->position_frac = 0;
 			chan->rofs = chan->lofs = 0;
 		}
 	}
