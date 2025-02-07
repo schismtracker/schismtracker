@@ -574,22 +574,16 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 	uint32_t pos, len = sample->length;
 	if(maxlengthmask != UINT32_MAX)
 		len = len > maxlengthmask ? maxlengthmask : (len & maxlengthmask);
-	int stride = 1;           // how much to add to the left/right pointer per sample written
-	int byteswap = 0;         // should the sample data be byte-swapped?
-	int add = 0;              // how much to add to the sample data (for converting to unsigned/delta)
-	int channel;              // counter.
+
+	if (sample->flags & CHN_16BIT)
+		len *= 2;
 
 	// validate the write flags, and set up the save params
 	switch (flags & SF_CHN_MASK) {
 	case SF_SI:
-		if (!(sample->flags & CHN_STEREO))
-			SF_FAIL("channel mask", flags & SF_CHN_MASK);
-		len *= 2;
-		break;
 	case SF_SS:
 		if (!(sample->flags & CHN_STEREO))
 			SF_FAIL("channel mask", flags & SF_CHN_MASK);
-		stride = 2;
 		break;
 	case SF_M:
 		if (sample->flags & CHN_STEREO)
@@ -603,36 +597,11 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 	if ((flags & SF_BIT_MASK) != ((sample->flags & CHN_16BIT) ? SF_16 : SF_8))
 		SF_FAIL("bit width", flags & SF_BIT_MASK);
 
-	switch (flags & SF_END_MASK) {
-#if WORDS_BIGENDIAN
-	case SF_LE:
-		byteswap = 1;
-		break;
-	case SF_BE:
-		break;
-#else
-	case SF_LE:
-		break;
-	case SF_BE:
-		byteswap = 1;
-		break;
-#endif
-	default:
-		SF_FAIL("endianness", flags & SF_END_MASK);
-	}
-
 	switch (flags & SF_ENC_MASK) {
 	case SF_PCMU:
-		add = ((flags & SF_BIT_MASK) == SF_16) ? 32768 : 128;
-		break;
 	case SF_PCMS:
-		break;
-	case SF_PCMD:
-		if ((flags & SF_CHN_MASK) == SF_SS || (flags & SF_CHN_MASK) == SF_M)
-			break;
-		/* fallthrough */
-	default:
-		SF_FAIL("encoding", flags & SF_ENC_MASK);
+	case SF_PCMD: break;
+	default: SF_FAIL("encoding", flags & SF_ENC_MASK);
 	}
 
 	if ((flags & ~(SF_BIT_MASK | SF_CHN_MASK | SF_END_MASK | SF_ENC_MASK)) != 0) {
@@ -642,86 +611,158 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 	if (!sample || sample->length < 1 || sample->length > MAX_SAMPLE_LENGTH || !sample->data)
 		return 0;
 
-	// No point buffering the processing here -- the disk output already SHOULD have a 64kb buffer
-	switch (flags & SF_ENC_MASK) {
-	case SF_PCMU:
-	case SF_PCMS:
-		if ((flags & SF_BIT_MASK) == SF_16) {
-			// 16-bit data.
-			const int16_t *data;
+	// No point buffering the processing here -- the disk output already has a 64kb buffer
+	// NOTE: These use unsigned integers for a reason (signed integer overflow is undefined)
+	// Please don't change them back to signed ;)
+	switch (flags) {
+	case SF(8,M,LE,PCMS):
+	case SF(8,M,LE,PCMD):
+	case SF(8,M,LE,PCMU):
+	case SF(8,M,BE,PCMS):
+	case SF(8,M,BE,PCMD):
+	case SF(8,M,BE,PCMU): {
+		// 8-bit mono
+		uint8_t delta = (((flags & SF_ENC_MASK) == SF_PCMU) ? (1u << 7) : 0);
 
-			for (channel = 0; channel < stride; channel++) {
-				data = (const int16_t *) sample->data + channel;
-				for (pos = 0; pos < len; pos++) {
-					uint16_t v = *data + add;
-					if (byteswap)
-						v = bswap_16(v);
-
-					disko_write(fp, &v, 2);
-					
-					data += stride;
-				}
-			}
-
-			len *= 2;
-		} else {
-			// 8-bit data. Mostly the same as above, but a little bit simpler since
-			// there's no byteswapping, and the values can be written with putc.
-			const signed char *data;
-
-			for (channel = 0; channel < stride; channel++) {
-				data = (const int8_t *) sample->data + channel;
-				for (pos = 0; pos < len; pos++) {
-					disko_putc(fp, *data + add);
-					data += stride;
-				}
-			}
+		const uint8_t *data = (const uint8_t *)sample->data;
+		for (pos = 0; pos < len; pos++) {
+			disko_putc(fp, data[pos] - delta);
+			if ((flags & SF_ENC_MASK) == SF_PCMD)
+				delta = data[pos];
 		}
-		break;
-	case SF_PCMD:
-		if ((flags & SF_BIT_MASK) == SF_16) {
-			const int16_t *data;
 
-			for (channel = 0; channel < stride; channel++) {
-				int v_old = 0;
-
-				data = (const int16_t *)sample->data + channel;
-				for (pos = 0; pos < len; pos++) {
-					int v_new = *data + add;
-
-					int16_t c = v_new - v_old;
-					if (byteswap)
-						c = bswap_16(c);
-
-					disko_write(fp, &c, 2);
-
-					v_old = v_new;
-
-					data += stride;
-				}
-			}
-		} else {
-			const int8_t *data;
-
-			for (channel = 0; channel < stride; channel++) {
-				int v_old = 0;
-
-				data = (const int8_t *)sample->data + channel;
-				for (pos = 0; pos < len; pos++) {
-					int v_new = *data + add;
-
-					disko_putc(fp, (int8_t)(v_new - v_old));
-
-					v_old = v_new;
-
-					data += stride;
-				}
-			}
-		}
 		break;
 	}
+	case SF(8,SS,LE,PCMS):
+	case SF(8,SS,LE,PCMD):
+	case SF(8,SS,LE,PCMU):
+	case SF(8,SS,BE,PCMS):
+	case SF(8,SS,BE,PCMD):
+	case SF(8,SS,BE,PCMU): {
+		// 8-bit stereo
+		uint8_t delta = (((flags & SF_ENC_MASK) == SF_PCMU) ? (1u << 7) : 0);
 
-	len *= stride;
+		for (int i = 0; i < 2; i++) {
+			const uint8_t *data = (const uint8_t *)sample->data + i;
+			for (pos = 0; pos < len; pos += 2) {
+				disko_putc(fp, data[pos] - delta);
+				if ((flags & SF_ENC_MASK) == SF_PCMD)
+					delta = data[pos];
+			}
+		}
+
+		len *= 2;
+
+		break;
+	}
+	case SF(8,SI,LE,PCMS):
+	case SF(8,SI,LE,PCMD):
+	case SF(8,SI,LE,PCMU):
+	case SF(8,SI,BE,PCMS):
+	case SF(8,SI,BE,PCMD):
+	case SF(8,SI,BE,PCMU): {
+		// 8-bit interleaved stereo
+		uint8_t deltas[2];
+
+		for (int i = 0; i < ARRAY_SIZE(deltas); i++)
+			deltas[i] = (((flags & SF_ENC_MASK) == SF_PCMU) ? (1u << 7) : 0);
+
+		len *= 2;
+
+		const uint8_t *data = (const uint8_t *)sample->data;
+		for (pos = 0; pos < len; pos++) {
+			const uint32_t deltapos = (pos % ARRAY_SIZE(deltas));
+
+			disko_putc(fp, data[pos] - deltas[deltapos]);
+			if ((flags & SF_ENC_MASK) == SF_PCMD)
+				deltas[deltapos] = data[pos];
+		}
+
+		break;
+	}
+	case SF(16,M,LE,PCMS):
+	case SF(16,M,LE,PCMD):
+	case SF(16,M,LE,PCMU):
+	case SF(16,M,BE,PCMS):
+	case SF(16,M,BE,PCMD):
+	case SF(16,M,BE,PCMU): {
+		// 16-bit mono
+		uint16_t delta = (((flags & SF_ENC_MASK) == SF_PCMU) ? (1u << 15) : 0);
+
+		const uint16_t *data = (const uint16_t *)sample->data;
+		for (pos = 0; pos < len; pos++) {
+			uint16_t x = data[pos] - delta;
+			x = ((flags & SF_END_MASK) == SF_BE) ? bswapBE16(x) : bswapLE16(x);
+
+			disko_write(fp, &x, sizeof(x));
+
+			if ((flags & SF_ENC_MASK) == SF_PCMD)
+				delta = data[pos];
+		}
+
+		break;
+	}
+	case SF(16,SS,LE,PCMS):
+	case SF(16,SS,LE,PCMD):
+	case SF(16,SS,LE,PCMU):
+	case SF(16,SS,BE,PCMS):
+	case SF(16,SS,BE,PCMD):
+	case SF(16,SS,BE,PCMU): {
+		// 16-bit stereo
+		uint16_t delta = (((flags & SF_ENC_MASK) == SF_PCMU) ? (1u << 15) : 0);
+
+		for (int i = 0; i < 2; i++) {
+			const uint16_t *data = (const uint16_t *)sample->data + i;
+			for (pos = 0; pos < len; pos += 2) {
+				uint16_t x = data[pos] - delta;
+				x = ((flags & SF_END_MASK) == SF_BE) ? bswapBE16(x) : bswapLE16(x);
+
+				printf("%u\n", x);
+
+				disko_write(fp, &x, sizeof(x));
+
+				if ((flags & SF_ENC_MASK) == SF_PCMD)
+					delta = data[pos];
+			}
+		}
+
+		len *= 2;
+
+		break;
+	}
+	case SF(16,SI,LE,PCMS):
+	case SF(16,SI,LE,PCMD):
+	case SF(16,SI,LE,PCMU):
+	case SF(16,SI,BE,PCMS):
+	case SF(16,SI,BE,PCMD):
+	case SF(16,SI,BE,PCMU): {
+		// 16-bit interleaved stereo
+		uint16_t deltas[2];
+
+		for (int i = 0; i < ARRAY_SIZE(deltas); i++)
+			deltas[i] = (((flags & SF_ENC_MASK) == SF_PCMU) ? (1u << 15) : 0);
+
+		len *= 2;
+
+		const uint16_t *data = (const uint16_t *)sample->data;
+		for (pos = 0; pos < len; pos++) {
+			const uint32_t deltapos = (pos % ARRAY_SIZE(deltas));
+
+			uint16_t x = data[pos] - deltas[deltapos];
+			x = ((flags & SF_END_MASK) == SF_BE) ? bswapBE16(x) : bswapLE16(x);
+
+			disko_write(fp, &x, sizeof(x));
+
+			if ((flags & SF_ENC_MASK) == SF_PCMD)
+				deltas[deltapos] = data[pos];
+		}
+
+		break;
+	}
+	default:
+		SF_FAIL("unknown flags", flags);
+	}
+
 	return len;
 }
 
@@ -763,12 +804,6 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	if (sample->length > MAX_SAMPLE_LENGTH)
 		sample->length = MAX_SAMPLE_LENGTH;
 
-	// libmodplug added 6 to this value. This probably
-	// isn't necessary anymore and it even breaks the loops in
-	// RM-SMOTION.DSM (unrelated to the newly-added loop
-	// wraparound code)
-	//
-	//   - paper
 	mem = sample->length;
 
 	// fix the sample flags
