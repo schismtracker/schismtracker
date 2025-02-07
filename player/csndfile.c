@@ -852,7 +852,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(8,M,BE,PCMS):
 	case SF(8,M,BE,PCMU):
 	case SF(8,M,BE,PCMD): {
-		int8_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT8_MIN : 0;
+		uint8_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? 0x80 : 0;
 
 		len = sample->length;
 		if (len > memsize)
@@ -862,7 +862,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		slurp_read(fp, sample->data, len);
 
 		// process
-		int8_t *data = (int8_t *)sample->data;
+		uint8_t *data = (uint8_t *)sample->data;
 		for (uint32_t j = 0; j < len; j++) {
 			data[j] += iadd;
 			if ((flags & SF_ENC_MASK) == SF_PCMD)
@@ -879,25 +879,20 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(8,SS,BE,PCMS):
 	case SF(8,SS,BE,PCMU):
 	case SF(8,SS,BE,PCMD): {
-		int8_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT8_MIN : 0;
+		
 
 		len = sample->length * 2;
 		if (len > memsize) break;
 
-		int8_t *data = (int8_t *)sample->data;
-		for (uint32_t j=0; j<len; j+=2) {
-			data[j] = slurp_getc(fp) + iadd;
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				iadd = data[j];
-		}
+		for (int c = 0; c < 2; c++) {
+			uint8_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? 0x80 : 0;
 
-		iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT8_MIN : 0;
-
-		data = (int8_t *)sample->data + 1;
-		for (uint32_t j=0; j<len; j+=2) {
-			data[j] = slurp_getc(fp) + iadd;
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				iadd = data[j];
+			uint8_t *data = (uint8_t *)sample->data + c;
+			for (uint32_t j = 0; j < len; j += 2) {
+				data[j] = slurp_getc(fp) + iadd;
+				if ((flags & SF_ENC_MASK) == SF_PCMD)
+					iadd = data[j];
+			}
 		}
 
 		break;
@@ -910,27 +905,21 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(8,SI,BE,PCMS):
 	case SF(8,SI,BE,PCMU):
 	case SF(8,SI,BE,PCMD): {
-		int8_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT8_MIN : 0;
 		len = sample->length * 2;
 		if (len > memsize)
 			len = memsize >> 1;
 
 		slurp_read(fp, sample->data, len);
 
-		int8_t *data = (int8_t *)sample->data;
-		for (uint32_t j=0; j < len; j += 2) {
-			data[j] = data[j] + iadd;
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				iadd = data[j];
-		}
+		for (int c = 0; c < 2; c++) {
+			uint8_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? 0x80 : 0;
 
-		iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT8_MIN : 0;
-
-		data = (int8_t *)sample->data + 1;
-		for (uint32_t j = 0; j < len; j += 2) {
-			data[j] = data[j] + iadd;
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				iadd = data[j];
+			uint8_t *data = (uint8_t *)sample->data + c;
+			for (uint32_t j = 0; j < len; j += 2) {
+				data[j] += iadd;
+				if ((flags & SF_ENC_MASK) == SF_PCMD)
+					iadd = data[j];
+			}
 		}
 
 		break;
@@ -943,17 +932,17 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(16,M,BE,PCMD):
 	case SF(16,M,BE,PCMS):
 	case SF(16,M,BE,PCMU): {
-		int16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT16_MIN : 0;
+		uint16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT16_MIN : 0;
 
 		len = sample->length;
-		if (len*2 > memsize)
+		if (len * 2 > memsize)
 			break;
 
 		// read
 		slurp_read(fp, sample->data, len * 2);
 
 		// process
-		int16_t *data = (int16_t *)sample->data;
+		uint16_t *data = (uint16_t *)sample->data;
 		for (uint32_t j = 0; j < len; j++) {
 			data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
 			if ((flags & SF_ENC_MASK) == SF_PCMD)
@@ -972,29 +961,21 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(16,SS,BE,PCMD):
 	case SF(16,SS,BE,PCMS):
 	case SF(16,SS,BE,PCMU): {
-		int16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT16_MIN : 0;
-
 		len = sample->length * 2;
 
 		if (len*2 > memsize)
 			break;
 
-		int16_t *data = (int16_t *)sample->data;
-		for (uint32_t j = 0; j < len; j += 2) {
-			slurp_read(fp, &data[j], 2);
-			data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				iadd = data[j];
-		}
+		for (int c = 0; c < 2; c++) {
+			uint16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT16_MIN : 0;
 
-		iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT16_MIN : 0;
-
-		data = (int16_t *)sample->data + 1;
-		for (uint32_t j = 0; j < len; j += 2) {
-			slurp_read(fp, &data[j], 2);
-			data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				iadd = data[j];
+			uint16_t *data = (uint16_t *)sample->data + c;
+			for (uint32_t j = 0; j < len; j += 2) {
+				slurp_read(fp, &data[j], 2);
+				data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
+				if ((flags & SF_ENC_MASK) == SF_PCMD)
+					iadd = data[j];
+			}
 		}
 
 		len *= 2;
@@ -1009,28 +990,21 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(16,SI,BE,PCMS):
 	case SF(16,SI,BE,PCMU):
 	case SF(16,SI,BE,PCMD): {
-		int16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT16_MIN : 0;
-
 		len = sample->length * 2;
 		if (len * 2 > memsize)
 			len = memsize >> 1;
 
 		slurp_read(fp, sample->data, len * 2);
 
-		int16_t *data = (int16_t *)sample->data;
-		for (uint32_t j=0; j < len; j += 2) {
-			data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				iadd = data[j];
-		}
+		for (int c = 0; c < 2; c++) {
+			uint16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? 0x8000 : 0;
 
-		iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT16_MIN : 0;
-
-		data = (int16_t *)sample->data + 1;
-		for (uint32_t j = 0; j < len; j += 2) {
-			data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				iadd = data[j];
+			uint16_t *data = (uint16_t *)sample->data + c;
+			for (uint32_t j = 0; j < len; j += 2) {
+				data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
+				if ((flags & SF_ENC_MASK) == SF_PCMD)
+					iadd = data[j];
+			}
 		}
 
 		len *= 2;
