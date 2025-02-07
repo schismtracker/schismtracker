@@ -1119,7 +1119,7 @@ int32_t csf_read_note(song_t *csf)
 		chan->ramp_length = 0;
 
 		// Calc Frequency
-		if (chan->frequency && (chan->length || (chan->flags & CHN_ADLIB))) {
+		if (chan->frequency && chan->length) {
 			int32_t vol = chan->volume;
 
 			if (chan->flags & CHN_TREMOLO)
@@ -1211,7 +1211,7 @@ int32_t csf_read_note(song_t *csf)
 
 			chan->sample_freq = frequency;
 
-			uint32_t ninc = _muldiv(frequency, 0x10000, csf->mix_frequency);
+			int32_t ninc = _muldiv(frequency, 0x10000, csf->mix_frequency);
 
 			if (csf->freq_factor != 128)
 				ninc = (ninc * csf->freq_factor) >> 7;
@@ -1263,6 +1263,10 @@ int32_t csf_read_note(song_t *csf)
 			//if (chan->vu_meter > 0xFF) chan->vu_meter = 0;
 			chan->left_volume = chan->right_volume = 0;
 			chan->length = 0;
+			// Put the channel back into the mixer for end-of-sample pop reduction
+			// stolen from openmpt
+			if (chan->lofs || chan->rofs)
+				csf->voice_mix[csf->num_voices++] = cn;
 		}
 
 		chan->old_flags = chan->flags;
