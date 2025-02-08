@@ -1460,7 +1460,23 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
 	case 0x07:      effect = FX_TREMOLO; break;
 	case 0x08:      effect = FX_PANNING; break;
 	case 0x09:      effect = FX_OFFSET; break;
-	case 0x0A:      effect = FX_VOLUMESLIDE; if (param & 0xF0) param &= 0xF0; break;
+	case 0x0A:
+		effect = FX_VOLUMESLIDE;
+		if (param & 0xF0)
+			param &= 0xF0;
+		else
+			param &= 0x0F;
+
+		// IT does D0F/DF0 on the first tick, while MOD/XM does not.
+		// This is very noticeable in e.g. Dubmood's "FFF keygen intro"
+		// where the chords play much shorter than in FT2.
+		// So, compensate by reducing to D0E/DE0. Hopefully this
+		// doesn't make other mods sound bad in comparison.
+
+		if (param == 0xF0) param = 0xE0;
+		else if (param == 0x0F) param = 0x0E;
+
+		break;
 	case 0x0B:      effect = FX_POSITIONJUMP; break;
 	case 0x0C:
 		if (from_xm) {
