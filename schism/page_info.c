@@ -221,7 +221,7 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 
 static void info_draw_samples(int base, int height, int active, int first_channel)
 {
-	int vu, smp, ins, n, pos, fg, fg2, c = first_channel;
+	int vu, smp, ins, n, pos, fg, fg2, c;
 	char buf[8];
 	char *ptr;
 
@@ -238,7 +238,7 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 	}
 
 	if (song_get_mode() == MODE_STOPPED) {
-		for (pos = base + 1; pos < base + height - 1; pos++, c++) {
+		for (pos = base + 1, c = first_channel; pos < base + height - 1; pos++, c++) {
 			song_channel_t *channel = song_get_channel(c - 1);
 
 			if (c == selected_channel) {
@@ -253,7 +253,18 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 		return;
 	}
 
-	for (pos = base + 1; pos < base + height - 1; pos++, c++) {
+	// FIXME: This stuff should really be calculated using the dB stuff in util.h.
+	uint32_t vu_meters[MAX_CHANNELS] = {0};
+	for (c = 0; c < MAX_VOICES; c++) {
+		int x = current_song->voices[c].master_channel ? (current_song->voices[c].master_channel - 1) : c;
+		vu_meters[x] += current_song->voices[c].vu_meter;
+	}
+
+	// now clamp
+	for (c = 0; c < MAX_CHANNELS; c++)
+		vu_meters[c] = CLAMP(vu_meters[c], 0, 0xFF);
+
+	for (pos = base + 1, c = first_channel; pos < base + height - 1; pos++, c++) {
 		song_voice_t *voice = current_song->voices + c - 1;
 		/* always draw the channel number */
 
@@ -272,7 +283,7 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 		if (velocity_mode)
 			vu = voice->final_volume >> 8;
 		else
-			vu = voice->vu_meter >> 2;
+			vu = vu_meters[c - 1] >> 2;
 		if (voice->flags & CHN_MUTE) {
 			fg = 1; fg2 = 2;
 		} else {
