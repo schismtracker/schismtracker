@@ -74,6 +74,12 @@ to Jeffrey S. Lee's article:
 */
 #define OPL_BASE 0x388
 
+/* The following two functions are
+ * Copyright (C) 2010-2013 Adam Nielsen <malvineous@shikadi.net>
+ * and originally under the GPL3, but the author has agreed over
+ * private e-mail to relicense as GPL2.
+ *   -paper */
+
 /// Convert the given f-number and block into a note frequency.
 /**
 * @param fnum
