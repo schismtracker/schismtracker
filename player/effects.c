@@ -1651,7 +1651,16 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 		if (apply_dna) {
 			switch(p->ptr_instrument->dca) {
 			case DCA_NOTECUT:
-				fx_note_cut(csf, i, 1);
+				fx_key_off(csf, i);
+				p->volume = 0;
+				if (chan->flags & CHN_ADLIB) {
+					//Do this only if really an adlib chan. Important!
+					//
+					// This isn't very useful really since we can't save
+					// Adlib songs with instruments anyway, but whatever.
+					OPL_NoteOff(csf, nchan);
+					OPL_Touch(csf, nchan, 0);
+				}
 				break;
 			case DCA_NOTEOFF:
 				fx_key_off(csf, i);
@@ -1689,6 +1698,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 				break;
 			case NNA_NOTECUT:
 				p->fadeout_volume = 0;
+				/* fallthrough */
 			case NNA_NOTEFADE:
 				p->flags |= CHN_NOTEFADE;
 				break;
