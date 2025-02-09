@@ -253,17 +253,6 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 		return;
 	}
 
-	// FIXME: This stuff should really be calculated using the dB stuff in util.h.
-	uint32_t vu_meters[MAX_CHANNELS] = {0};
-	for (c = 0; c < MAX_VOICES; c++) {
-		int x = current_song->voices[c].master_channel ? (current_song->voices[c].master_channel - 1) : c;
-		vu_meters[x] += current_song->voices[c].vu_meter;
-	}
-
-	// now clamp
-	for (c = 0; c < MAX_CHANNELS; c++)
-		vu_meters[c] = CLAMP(vu_meters[c], 0, 0xFF);
-
 	for (pos = base + 1, c = first_channel; pos < base + height - 1; pos++, c++) {
 		song_voice_t *voice = current_song->voices + c - 1;
 		/* always draw the channel number */
@@ -283,7 +272,7 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 		if (velocity_mode)
 			vu = voice->final_volume >> 8;
 		else
-			vu = vu_meters[c - 1] >> 2;
+			vu = voice->vu_meter >> 2;
 		if (voice->flags & CHN_MUTE) {
 			fg = 1; fg2 = 2;
 		} else {
