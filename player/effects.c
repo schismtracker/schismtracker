@@ -1501,7 +1501,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 	}
 
 	/* OpenMPT test cases Off-Porta.it, Off-Porta-CompatGxx.it */
-	if (porta && (csf->flags & SONG_COMPATGXX && chan->row_instr))
+	if (!(porta && (!(csf->flags & SONG_COMPATGXX) || !chan->row_instr)))
 		chan->flags &= ~CHN_KEYOFF;
 
 	// Enable Ramping
