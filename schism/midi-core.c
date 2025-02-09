@@ -544,9 +544,6 @@ enum midi_from {
 static int _midi_send_unlocked(const unsigned char *data, unsigned int len, unsigned int delay,
 			enum midi_from from)
 {
-	// we can send only ONE midi message at a time.
-	assert(len <= 3);
-
 	struct midi_port *ptr = NULL;
 	int need_timer = 0;
 #if 0
@@ -922,8 +919,7 @@ void midi_event_sysex(const unsigned char *data, unsigned int len)
 
 	event.type = SCHISM_EVENT_MIDI_SYSEX;
 	event.midi_sysex.len = len;
-
-	memcpy(event.midi_sysex.packet, data, MIN(len, ARRAY_SIZE(event.midi_sysex.packet)));
+	event.midi_sysex.packet = strn_dup(data, len);
 
 	events_push_event(&event);
 }
@@ -981,10 +977,9 @@ int midi_engine_handle_event(schism_event_t *ev)
 			break;
 		};
 		return 1;
-	case SCHISM_EVENT_MIDI_SYSEX:
-		/* but missing the F0 and the stop byte (F7) */
-		//len = *((unsigned int *)e->user.data1);
-		//sysex = ((char *)e->user.data1)+sizeof(unsigned int);
+	case SCHISM_EVENT_MIDI_SYSEX: /* but missing the F0 and the stop byte (F7) */
+		/* tfw midi ports just hand us friggin packets yo */
+		free(ev->midi_sysex.packet);
 		return 1;
 	default:
 		return 0;

@@ -210,7 +210,7 @@ typedef struct {
 	schism_common_event_t common;
 
 	unsigned int len;
-	unsigned char packet[3];
+	unsigned char *packet;
 } schism_midi_sysex_event_t;
 
 typedef struct {
