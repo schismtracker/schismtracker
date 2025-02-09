@@ -208,8 +208,9 @@ static schism_audio_device_t *sdl2_audio_open_device(uint32_t id, const schism_a
 
 	const char *name = (id != AUDIO_BACKEND_DEFAULT) ? sdl2_GetAudioDeviceName(id, 0) : NULL;
 
-	// First try opening the device without any change at all.
-	if (sdl2_audio_open_device_impl(dev, name, &sdl_desired, &sdl_obtained, 0))
+	// First try opening the device without any change at all
+	// (well, except frequencies ;))
+	if (sdl2_audio_open_device_impl(dev, name, &sdl_desired, &sdl_obtained, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE))
 		goto got_device;
 
 	// Ok, try opening it until we find something that fits.
