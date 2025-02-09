@@ -114,7 +114,7 @@ static void _win32mm_send(struct midi_port *p, const unsigned char *data,
 }
 
 
-static CALLBACK void _win32mm_inputcb(SCHISM_UNUSED HMIDIIN in, UINT wmsg, DWORD_PTR inst,
+static CALLBACK void _win32mm_inputcb(HMIDIIN in, UINT wmsg, DWORD_PTR inst,
 					   DWORD_PTR param1, DWORD_PTR param2)
 {
 	struct midi_port *p = (struct midi_port *)inst;
@@ -140,8 +140,9 @@ static CALLBACK void _win32mm_inputcb(SCHISM_UNUSED HMIDIIN in, UINT wmsg, DWORD
 				/* long data */
 				m = p->userdata;
 				midi_received_cb(p, (unsigned char *) m->hh.lpData, m->hh.dwBytesRecorded);
-				//TODO: The event for the midi sysex (midi-core.c SCHISM_EVENT_MIDI_SYSEX) should
-				// call us back so that we can add the buffer back with midiInAddBuffer().
+				// I don't see any reason we can't do this here (midi_received_cb does not
+				// retain the pointer to the data after it returns)
+				midiInAddBuffer(in, &m->hh, sizeof(m->hh));
 			}
 			break;
 		}
@@ -243,21 +244,18 @@ static void _win32mm_poll(struct midi_provider *p)
 		data->id = i;
 
 		char *utf8;
-		if (
 #ifdef SCHISM_WIN32_COMPILE_ANSI
-			(use_ansi_funcs && !charset_iconv(data->icp.a.szPname, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(data->icp.a.szPname)))
-			||
+		if (use_ansi_funcs) {
+			if (charset_iconv(data->ocp.a.szPname, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(data->ocp.a.szPname)))
+				continue;
+		} else
 #endif
-			!charset_iconv(data->icp.w.szPname, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(data->icp.w.szPname))
-		) {
-			midi_port_register(p, MIDI_INPUT, utf8, data, 1);
-			free(utf8);
+		{
+			if (charset_iconv(data->ocp.w.szPname, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(data->ocp.w.szPname)))
+				continue;
 		}
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-		else if (use_ansi_funcs) {
-			midi_port_register(p, MIDI_INPUT, data->icp.a.szPname, data, 1);
-		}
-#endif
+
+		midi_port_register(p, MIDI_INPUT, utf8, data, 1);
 	}
 	last_known_in_port = mmin;
 
@@ -279,21 +277,18 @@ static void _win32mm_poll(struct midi_provider *p)
 		data->id = i;
 
 		char *utf8;
-		if (
 #ifdef SCHISM_WIN32_COMPILE_ANSI
-			(use_ansi_funcs && !charset_iconv(data->ocp.a.szPname, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(data->ocp.a.szPname)))
-			||
+		if (use_ansi_funcs) {
+			if (charset_iconv(data->ocp.a.szPname, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(data->ocp.a.szPname)))
+				continue;
+		} else
 #endif
-			!charset_iconv(data->ocp.w.szPname, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(data->ocp.w.szPname))
-		) {
-			midi_port_register(p, MIDI_OUTPUT, utf8, data, 1);
-			free(utf8);
+		{
+			if (charset_iconv(data->ocp.w.szPname, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(data->ocp.w.szPname)))
+				continue;
 		}
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-		else if (use_ansi_funcs) {
-			midi_port_register(p, MIDI_OUTPUT, data->ocp.a.szPname, data, 1);
-		}
-#endif
+		
+		midi_port_register(p, MIDI_OUTPUT, utf8, data, 1);
 	}
 	last_known_out_port = mmout;
 }
