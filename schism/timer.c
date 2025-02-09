@@ -86,6 +86,8 @@ static int _timer_oneshot_thread(void *userdata)
 {
 	mt_mutex_lock(timer_oneshot_mutex);
 
+	mt_thread_set_priority(MT_THREAD_PRIORITY_HIGH);
+
 	while (!timer_oneshot_thread_cancelled) {
 		timer_ticks_t now = timer_ticks_us();
 		timer_ticks_t wait = UINT64_MAX;
