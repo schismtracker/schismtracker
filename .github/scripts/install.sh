@@ -37,7 +37,7 @@ mkdir -p "$PREFIX/bin" "$PREFIX/lib" "$PREFIX/share/applications" "$PREFIX/share
 
 # basic binary stuff
 cp "$SCRIPTPATH/schismtracker" "$PREFIX/bin/schismtracker"
-for i in FLAC.so.8 utf8proc.so.2.3.2 ogg.so.0; do
+for i in FLAC.so.8 utf8proc.so.2 ogg.so.0; do
 	cp "$SCRIPTPATH/lib$i" "$PREFIX/lib/lib$i"
 done
 
