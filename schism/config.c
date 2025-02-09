@@ -244,6 +244,19 @@ void cfg_load(void)
 		}
 	}
 
+	// Poll the system if it's available
+	if (cfg_str_date_format == STR_DATE_FORMAT_DEFAULT || cfg_str_time_format == STR_TIME_FORMAT_DEFAULT) {
+		str_date_format_t date;
+		str_time_format_t time;
+
+		if (os_get_locale_format(&date, &time)) {
+			if (cfg_str_date_format == STR_DATE_FORMAT_DEFAULT)
+				cfg_str_date_format = date;
+			if (cfg_str_time_format == STR_TIME_FORMAT_DEFAULT)
+				cfg_str_time_format = time;
+		}
+	}
+
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 	cfg_load_info(&cfg);

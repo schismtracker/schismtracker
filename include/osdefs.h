@@ -100,6 +100,9 @@ A return value of 0 indicates that the event should NOT be processed by the main
 #ifndef os_get_key_repeat
 # define os_get_key_repeat(pdelay, prate) (0)
 #endif
+#ifndef os_get_locale_format
+# define os_get_locale_format(pdate, ptime) (0)
+#endif
 #ifndef os_show_message_box
 # define os_show_message_box(title, text) ((void)printf("%s: %s\n", title, text))
 #endif
