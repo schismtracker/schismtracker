@@ -1061,7 +1061,7 @@ static void sample_save(const char *filename, const char *format)
 	struct stat buf;
 	int tmp;
 
-	if ((filename && !*filename) || (!filename && !*sample->filename)) {
+	if (!*(filename ? filename : sample->filename)) {
 		status_text_flash("Sample NOT saved! (No Filename?)");
 		return;
 	}
