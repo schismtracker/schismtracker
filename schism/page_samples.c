@@ -1061,6 +1061,11 @@ static void sample_save(const char *filename, const char *format)
 	struct stat buf;
 	int tmp;
 
+	if (!filename || !*filename || !*sample->filename) {
+		status_text_flash("Sample NOT saved! (No Filename?)");
+		return;
+	}
+
 	if (os_stat(cfg_dir_samples, &buf) == -1) {
 		status_text_flash("Sample directory \"%s\" unreachable", filename);
 		return;
@@ -1116,11 +1121,6 @@ static void do_export_sample(SCHISM_UNUSED void *data)
 	for (i = 0; sample_save_formats[i].label; i++)
 		if (sample_save_formats[i].enabled && !sample_save_formats[i].enabled())
 			exp++;
-
-	if (!*export_sample_filename) {
-		status_text_flash("Empty filename; can't save sample");
-		return;
-	}
 
 	sample_save(export_sample_filename, sample_save_formats[exp].label);
 }
@@ -1508,10 +1508,6 @@ static void sample_list_handle_alt_key(struct key_event * k)
 		song_toggle_multichannel_mode();
 		return;
 	case SCHISM_KEYSYM_o:
-		if (!*song_get_sample(current_sample)->filename) {
-			status_text_flash("\"filename\" field must be non-empty to save");
-			return;
-		}
 		sample_save(NULL, "ITS");
 		return;
 	case SCHISM_KEYSYM_p:
@@ -1549,10 +1545,6 @@ static void sample_list_handle_alt_key(struct key_event * k)
 		crossfade_sample_dialog();
 		return;
 	case SCHISM_KEYSYM_w:
-		if (!*song_get_sample(current_sample)->filename) {
-			status_text_flash("\"filename\" field must be non-empty to save");
-			return;
-		}
 		sample_save(NULL, "RAW");
 		return;
 	case SCHISM_KEYSYM_x:
