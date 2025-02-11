@@ -41,6 +41,10 @@
 #define DIRECTSOUND_VERSION 0x0500
 
 #include <windows.h>
+
+// define GUIDs locally:
+#include <initguid.h>
+
 #include <dsound.h>
 
 // ripped from SDL
@@ -64,6 +68,12 @@ struct schism_audio_device {
 
 	mt_mutex_t *mutex;
 
+	// A semaphore we use for notifications under DX6 and higher
+	HANDLE event;
+
+	// A pointer to the function we use to wait for audio to finish playing
+	void (*audio_wait)(schism_audio_device_t *dev);
+
 	// pass to memset() to make silence.
 	// used when paused and when initializing the device buffer
 	uint8_t silence;
@@ -72,7 +82,7 @@ struct schism_audio_device {
 	LPDIRECTSOUNDBUFFER lpbuffer;
 
 	// ...
-	int next_chunk;
+	DWORD last_chunk;
 	int paused;
 
 	// wah, size of one audio buffer
@@ -242,6 +252,61 @@ static void dsound_audio_quit_driver(void)
 
 /* -------------------------------------------------------- */
 
+static void _dsound_audio_wait_dx5(schism_audio_device_t *dev)
+{
+	DWORD cursor;
+	HRESULT res;
+
+	do {
+		timer_msleep(1);
+
+		DWORD status;
+		IDirectSoundBuffer_GetStatus(dev->lpbuffer, &status);
+		if (status & DSBSTATUS_BUFFERLOST) {
+			IDirectSoundBuffer_Restore(dev->lpbuffer);
+			IDirectSoundBuffer_GetStatus(dev->lpbuffer, &status);
+			if (status & DSBSTATUS_BUFFERLOST)
+				break;
+		}
+
+		if (!(status & DSBSTATUS_PLAYING)) {
+			if (IDirectSoundBuffer_Play(dev->lpbuffer, 0, 0, DSBPLAY_LOOPING) != DS_OK)
+				// This should never happen
+				break;
+		}
+
+		res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, NULL, &cursor);
+		if (res == DSERR_BUFFERLOST) {
+			IDirectSoundBuffer_Restore(dev->lpbuffer);
+			res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, NULL, &cursor);
+		}
+		if (res != DS_OK)
+			continue; // what?
+
+		cursor /= dev->size;
+	} while (cursor == dev->last_chunk && !dev->cancelled);
+}
+
+static void _dsound_audio_wait_dx6(schism_audio_device_t *dev)
+{
+	DWORD status;
+	IDirectSoundBuffer_GetStatus(dev->lpbuffer, &status);
+	if (status & DSBSTATUS_BUFFERLOST) {
+		IDirectSoundBuffer_Restore(dev->lpbuffer);
+		IDirectSoundBuffer_GetStatus(dev->lpbuffer, &status);
+		if (status & DSBSTATUS_BUFFERLOST)
+			return;
+	}
+
+	if (!(status & DSBSTATUS_PLAYING)) {
+		if (IDirectSoundBuffer_Play(dev->lpbuffer, 0, 0, DSBPLAY_LOOPING) != DS_OK)
+			// This should never happen
+			return;
+	}
+
+	while (!dev->cancelled && (WaitForSingleObject(dev->event, 10) == WAIT_TIMEOUT));
+}
+
 static int _dsound_audio_thread(void *data)
 {
 	schism_audio_device_t *dev = data;
@@ -267,7 +332,7 @@ static int _dsound_audio_thread(void *data)
 		void *buf;
 		DWORD buflen;
 
-		DWORD last_chunk = cursor;
+		dev->last_chunk = cursor;
 		cursor = (cursor + 1) % NUM_CHUNKS;
 
 		res = IDirectSoundBuffer_Lock(dev->lpbuffer, cursor * dev->size, dev->size, &buf, &buflen, NULL, NULL, 0);
@@ -290,40 +355,50 @@ static int _dsound_audio_thread(void *data)
 
 		IDirectSoundBuffer_Unlock(dev->lpbuffer, buf, buflen, NULL, 0);
 
-		do {
-			timer_msleep(1);
-
-			DWORD status;
-			IDirectSoundBuffer_GetStatus(dev->lpbuffer, &status);
-			if (status & DSBSTATUS_BUFFERLOST) {
-				IDirectSoundBuffer_Restore(dev->lpbuffer);
-				IDirectSoundBuffer_GetStatus(dev->lpbuffer, &status);
-				if (status & DSBSTATUS_BUFFERLOST)
-					break;
-			}
-
-			if (!(status & DSBSTATUS_PLAYING)) {
-				if (IDirectSoundBuffer_Play(dev->lpbuffer, 0, 0, DSBPLAY_LOOPING) != DS_OK)
-					// This should never happen
-					break;
-			}
-
-			res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, NULL, &cursor);
-			if (res == DSERR_BUFFERLOST) {
-				IDirectSoundBuffer_Restore(dev->lpbuffer);
-				res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, NULL, &cursor);
-			}
-			if (res != DS_OK)
-				continue; // what?
-
-			cursor /= dev->size;
-		} while (cursor == last_chunk && !dev->cancelled);
+		dev->audio_wait(dev);
 	}
 
 	return 0;
 }
 
 static void dsound_audio_close_device(schism_audio_device_t *dev);
+
+static int _dsound_dx6_init_notify_position(schism_audio_device_t *dev)
+{
+	LPDIRECTSOUNDNOTIFY notify = NULL;
+	int res = -1; // default to failing
+	size_t i;
+
+	// first, allocate the position notify structures
+	SCHISM_VLA_ALLOC(DSBPOSITIONNOTIFY, notify_positions, NUM_CHUNKS);
+	if (!notify_positions)
+		goto done;
+
+	if (IDirectSoundBuffer_QueryInterface(dev->lpbuffer, &IID_IDirectSoundNotify, (void *)&notify) != DS_OK)
+		goto done;
+
+	dev->event = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (!dev->event)
+		goto done;
+
+	for (i = 0; i < SCHISM_VLA_LENGTH(notify_positions); i++) {
+		notify_positions[i].dwOffset = i * dev->size;
+		notify_positions[i].hEventNotify = dev->event;
+	}
+
+	if (IDirectSoundNotify_SetNotificationPositions(notify, SCHISM_VLA_LENGTH(notify_positions), notify_positions) != DS_OK)
+		goto done;
+
+	res = 0;
+
+done:
+	if (notify)
+		IDirectSoundNotify_Release(notify);
+
+	SCHISM_VLA_FREE(notify_positions);
+
+	return res;
+}
 
 // nonzero on success
 static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
@@ -377,7 +452,11 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 			goto fail;
 	}
 
-	DSBUFFERDESC dsformat;
+	DSBUFFERDESC dsformat = {
+		.dwSize = sizeof(DSBUFFERDESC),
+		.dwFlags = DSBCAPS_GLOBALFOCUS | DSBCAPS_STATIC | DSBCAPS_GETCURRENTPOSITION2 | DSBCAPS_CTRLPOSITIONNOTIFY,
+		.lpwfxFormat = &format,
+	};
 
 	for (;;) {
 		// Recalculate wave format
@@ -386,16 +465,9 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 
 		dev->size = desired->samples * format.nChannels * (format.wBitsPerSample / 8);
 
-		DWORD bufsize = NUM_CHUNKS * dev->size;
-		if ((bufsize < DSBSIZE_MIN) || (bufsize > DSBSIZE_MAX))
+		dsformat.dwBufferBytes = NUM_CHUNKS * dev->size;
+		if ((dsformat.dwBufferBytes < DSBSIZE_MIN) || (dsformat.dwBufferBytes > DSBSIZE_MAX))
 			goto DS_badformat; // UGH!
-
-		dsformat = (DSBUFFERDESC){
-			.dwSize = sizeof(DSBUFFERDESC),
-			.dwFlags = DSBCAPS_GLOBALFOCUS | DSBCAPS_STATIC | DSBCAPS_GETCURRENTPOSITION2,
-			.lpwfxFormat = &format,
-			.dwBufferBytes = NUM_CHUNKS * dev->size,
-		};
 
 		HRESULT err = IDirectSound_CreateSoundBuffer(dev->dsound, &dsformat, &dev->lpbuffer, NULL);
 		if (err == DS_OK) {
@@ -406,6 +478,12 @@ DS_badformat:
 				// Retry again, with 16-bit audio. 32-bit audio doesn't seem
 				// to work on Win2k at all...
 				format.wBitsPerSample = 16;
+				continue;
+			}
+
+			// Maybe we're on DX5 or lower?
+			if (dsformat.dwFlags & DSBCAPS_CTRLPOSITIONNOTIFY) {
+				dsformat.dwFlags &= ~(DSBCAPS_CTRLPOSITIONNOTIFY);
 				continue;
 			}
 		}
@@ -438,6 +516,11 @@ DS_badformat:
 			IDirectSoundBuffer_Unlock(dev->lpbuffer, ptr1, bytes1, ptr2, bytes2);
 		}
 	}
+
+	// Use position notify events to wait for audio to finish under DX6
+	dev->audio_wait = ((dsformat.dwFlags & DSBCAPS_CTRLPOSITIONNOTIFY) && !_dsound_dx6_init_notify_position(dev))
+		? _dsound_audio_wait_dx6
+		: _dsound_audio_wait_dx5;
 
 	// ok, now start the full thread
 	dev->thread = mt_thread_create(_dsound_audio_thread, "DirectSound audio thread", dev);
