@@ -50,6 +50,11 @@
 // ripped from SDL
 #define NUM_CHUNKS 8
 
+// Define this to use DirectX 6 position notify events when available.
+// This is turned off here because they cause weird dislocation in the
+// audio buffer when moving/resizing/changing the window at all.
+//#define COMPILE_POSITION_NOTIFY
+
 static HRESULT (WINAPI *DSOUND_DirectSoundCreate)(LPGUID lpGuid, LPDIRECTSOUND* ppDS, LPUNKNOWN pUnkOuter) = NULL;
 
 // https://source.winehq.org/WineAPI/dsound.html
@@ -291,15 +296,12 @@ static void _dsound_audio_wait_dx5(schism_audio_device_t *dev)
 
 			uint32_t ms = (cursor / dev->bps / dev->channels) * 1000UL / dev->rate;
 
-			// do NOT replace this with timer_msleep! it takes up a crapload more
-			// CPU time (because it wants to be as accurate as possible), however
-			// here we would prefer better performance over accuracy, because this
-			// is called many many times
-			Sleep(ms);
+			timer_msleep(ms);
 		}
 	}
 }
 
+#ifdef COMPILE_POSITION_NOTIFY
 static void _dsound_audio_wait_dx6(schism_audio_device_t *dev)
 {
 	DWORD status;
@@ -319,6 +321,7 @@ static void _dsound_audio_wait_dx6(schism_audio_device_t *dev)
 
 	while (!dev->cancelled && (WaitForSingleObject(dev->event, 10) == WAIT_TIMEOUT));
 }
+#endif
 
 static int _dsound_audio_thread(void *data)
 {
@@ -354,7 +357,7 @@ static int _dsound_audio_thread(void *data)
 			res = IDirectSoundBuffer_Lock(dev->lpbuffer, cursor * dev->size, dev->size, &buf, &buflen, NULL, NULL, 0);
 		}
 		if (res != DS_OK) {
-			Sleep(5);
+			timer_msleep(5);
 			continue;
 		}
 
@@ -376,6 +379,7 @@ static int _dsound_audio_thread(void *data)
 
 static void dsound_audio_close_device(schism_audio_device_t *dev);
 
+#ifdef COMPILE_POSITION_NOTIFY
 static int _dsound_dx6_init_notify_position(schism_audio_device_t *dev)
 {
 	LPDIRECTSOUNDNOTIFY notify = NULL;
@@ -412,6 +416,7 @@ done:
 
 	return res;
 }
+#endif
 
 // nonzero on success
 static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
@@ -467,7 +472,11 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 
 	DSBUFFERDESC dsformat = {
 		.dwSize = sizeof(DSBUFFERDESC),
-		.dwFlags = DSBCAPS_GLOBALFOCUS | DSBCAPS_STATIC | DSBCAPS_GETCURRENTPOSITION2 | DSBCAPS_CTRLPOSITIONNOTIFY,
+		.dwFlags = DSBCAPS_GLOBALFOCUS | DSBCAPS_STATIC | DSBCAPS_GETCURRENTPOSITION2
+#ifdef COMPILE_POSITION_NOTIFY
+			| DSBCAPS_CTRLPOSITIONNOTIFY
+#endif
+			,
 		.lpwfxFormat = &format,
 	};
 
@@ -498,11 +507,13 @@ DS_badformat:
 				continue;
 			}
 
+#ifdef COMPILE_POSITION_NOTIFY
 			// Maybe we're on DX5 or lower?
 			if (dsformat.dwFlags & DSBCAPS_CTRLPOSITIONNOTIFY) {
 				dsformat.dwFlags &= ~(DSBCAPS_CTRLPOSITIONNOTIFY);
 				continue;
 			}
+#endif
 		}
 
 		// NOTE: Many VM audio drivers (namely virtual pc and vmware) are broken
@@ -534,10 +545,14 @@ DS_badformat:
 		}
 	}
 
+#ifdef COMPILE_POSITION_NOTIFY
 	// Use position notify events to wait for audio to finish under DX6
 	dev->audio_wait = ((dsformat.dwFlags & DSBCAPS_CTRLPOSITIONNOTIFY) && !_dsound_dx6_init_notify_position(dev))
 		? _dsound_audio_wait_dx6
 		: _dsound_audio_wait_dx5;
+#else
+	dev->audio_wait = _dsound_audio_wait_dx5;
+#endif
 
 	// ok, now start the full thread
 	dev->thread = mt_thread_create(_dsound_audio_thread, "DirectSound audio thread", dev);
