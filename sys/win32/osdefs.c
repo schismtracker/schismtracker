@@ -33,6 +33,9 @@
 #include "loadso.h"
 #include "mem.h"
 
+// Define all basic GUIDs HERE.
+#include <initguid.h>
+
 #include <ws2tcpip.h>
 #include <windows.h>
 #include <winerror.h>

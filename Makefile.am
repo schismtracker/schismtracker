@@ -268,7 +268,7 @@ if USE_MEDIAFOUNDATION
 fmt/schismtracker-win32mf.$(OBJEXT): CFLAGS += $(MEDIAFOUNDATION_CFLAGS)
 
 files_mediafoundation=fmt/win32mf.c
-lib_mediafoundation=-luuid $(MEDIAFOUNDATION_LIBS)
+lib_mediafoundation=$(MEDIAFOUNDATION_LIBS)
 endif
 
 cflags_win32 += -mwindows
