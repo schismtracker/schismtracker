@@ -43,8 +43,12 @@ timer_ticks_t timer_ticks_us(void);
 // than anticipated!)
 void timer_usleep(uint64_t usec);
 
+// sleep for `msec` microseconds. This call in general is much less expensive
+// than timer_usleep(), for good reason, since it is meant for performance,
+// not accuracy.
+void timer_msleep(uint32_t msec);
+
 // Old functions that are simply macros now.
-#define timer_msleep(ms) timer_usleep((ms) * 1000)
 #define timer_delay(ms)  timer_msleep(ms)
 
 // Run a function after `ms` milliseconds

@@ -78,6 +78,11 @@ static void sdl2_timer_usleep(uint64_t us)
 	sdl2_Delay(us / 1000);
 }
 
+static void sdl2_timer_msleep(uint32_t ms)
+{
+	sdl2_Delay(ms);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 // oneshot timer
 
@@ -173,6 +178,7 @@ const schism_timer_backend_t schism_timer_backend_sdl2 = {
 	.ticks = sdl2_timer_ticks,
 	.ticks_us = sdl2_timer_ticks_us,
 	.usleep = sdl2_timer_usleep,
+	.msleep = sdl2_timer_msleep,
 
 	.oneshot = sdl2_timer_oneshot,
 };

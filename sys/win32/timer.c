@@ -157,6 +157,11 @@ timer_failed:
 	SleepEx(usec / 1000, FALSE);
 }
 
+static void win32_timer_msleep(uint32_t msec)
+{
+	SleepEx(msec, FALSE);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 // oneshot timers
 
@@ -243,6 +248,7 @@ const schism_timer_backend_t schism_timer_backend_win32 = {
 	.ticks = win32_timer_ticks,
 	.ticks_us = win32_timer_ticks_us,
 	.usleep = win32_timer_usleep,
+	.msleep = win32_timer_msleep,
 
-	//.oneshot = win32_timer_oneshot,
+	.oneshot = win32_timer_oneshot,
 };

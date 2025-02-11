@@ -61,9 +61,14 @@ static timer_ticks_t sdl12_timer_ticks_us(void)
 	return sdl12_timer_ticks() * UINT64_C(1000);
 }
 
-static void sdl12_usleep(uint64_t ms)
+static void sdl12_usleep(uint64_t us)
 {
-	sdl12_Delay(ms / 1000);
+	sdl12_Delay(us / 1000);
+}
+
+static void sdl12_msleep(uint32_t ms)
+{
+	sdl12_Delay(ms);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -147,6 +152,7 @@ const schism_timer_backend_t schism_timer_backend_sdl12 = {
 	.ticks = sdl12_timer_ticks,
 	.ticks_us = sdl12_timer_ticks_us,
 	.usleep = sdl12_usleep,
+	.msleep = sdl12_msleep,
 
 	.oneshot = sdl12_timer_oneshot,
 };

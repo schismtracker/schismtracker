@@ -63,6 +63,11 @@ void timer_usleep(uint64_t usec)
 #endif
 }
 
+void timer_msleep(uint32_t ms)
+{
+	backend->msleep(ms);
+}
+
 static mt_thread_t *timer_oneshot_thread = NULL;
 static int timer_oneshot_thread_cancelled = 0;
 
