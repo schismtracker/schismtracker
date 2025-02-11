@@ -85,8 +85,12 @@ struct schism_audio_device {
 	DWORD last_chunk;
 	int paused;
 
-	// wah, size of one audio buffer
-	size_t size;
+	// audio buffer info
+	uint32_t bps; // bits per sample
+	uint32_t channels; // channels
+	uint32_t samples; // samples per chunk
+	uint32_t size; // size in bytes of one chunk (bps * channels * samples)
+	uint32_t rate; // sample rate
 };
 
 /* ---------------------------------------------------------- */
@@ -257,9 +261,7 @@ static void _dsound_audio_wait_dx5(schism_audio_device_t *dev)
 	DWORD cursor;
 	HRESULT res;
 
-	do {
-		timer_msleep(1);
-
+	while (!dev->cancelled) {
 		DWORD status;
 		IDirectSoundBuffer_GetStatus(dev->lpbuffer, &status);
 		if (status & DSBSTATUS_BUFFERLOST) {
@@ -273,18 +275,29 @@ static void _dsound_audio_wait_dx5(schism_audio_device_t *dev)
 			if (IDirectSoundBuffer_Play(dev->lpbuffer, 0, 0, DSBPLAY_LOOPING) != DS_OK)
 				// This should never happen
 				break;
-		}
-
-		res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, NULL, &cursor);
-		if (res == DSERR_BUFFERLOST) {
-			IDirectSoundBuffer_Restore(dev->lpbuffer);
+		} else {
 			res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, NULL, &cursor);
-		}
-		if (res != DS_OK)
-			continue; // what?
+			if (res == DSERR_BUFFERLOST) {
+				IDirectSoundBuffer_Restore(dev->lpbuffer);
+				res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, NULL, &cursor);
+			}
+			if (res != DS_OK)
+				continue; // what?
 
-		cursor /= dev->size;
-	} while (cursor == dev->last_chunk && !dev->cancelled);
+			if ((cursor / dev->size) != dev->last_chunk)
+				break;
+
+			cursor -= (dev->last_chunk * dev->size);
+
+			uint32_t ms = (cursor / dev->bps / dev->channels) * 1000UL / dev->rate;
+
+			// do NOT replace this with timer_msleep! it takes up a crapload more
+			// CPU time (because it wants to be as accurate as possible), however
+			// here we would prefer better performance over accuracy, because this
+			// is called many many times
+			Sleep(ms);
+		}
+	}
 }
 
 static void _dsound_audio_wait_dx6(schism_audio_device_t *dev)
@@ -341,7 +354,7 @@ static int _dsound_audio_thread(void *data)
 			res = IDirectSoundBuffer_Lock(dev->lpbuffer, cursor * dev->size, dev->size, &buf, &buflen, NULL, NULL, 0);
 		}
 		if (res != DS_OK) {
-			timer_msleep(5);
+			Sleep(5);
 			continue;
 		}
 
@@ -463,7 +476,11 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 		format.nBlockAlign = format.nChannels * (format.wBitsPerSample / 8);
 		format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
 
-		dev->size = desired->samples * format.nChannels * (format.wBitsPerSample / 8);
+		dev->bps = format.wBitsPerSample;
+		dev->channels = format.nChannels;
+		dev->samples = desired->samples;
+		dev->size = dev->samples * dev->channels * (dev->bps / 8);
+		dev->rate = format.nSamplesPerSec;
 
 		dsformat.dwBufferBytes = NUM_CHUNKS * dev->size;
 		if ((dsformat.dwBufferBytes < DSBSIZE_MIN) || (dsformat.dwBufferBytes > DSBSIZE_MAX))
@@ -558,6 +575,9 @@ static void dsound_audio_close_device(schism_audio_device_t *dev)
 	}
 	if (dev->mutex) {
 		mt_mutex_delete(dev->mutex);
+	}
+	if (dev->event) {
+		CloseHandle(dev->event);
 	}
 	free(dev);
 }
