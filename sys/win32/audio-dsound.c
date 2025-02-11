@@ -246,7 +246,7 @@ static int _dsound_audio_thread(void *data)
 {
 	schism_audio_device_t *dev = data;
 
-	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+	mt_thread_set_priority(MT_THREAD_PRIORITY_TIME_CRITICAL);
 
 	DWORD cursor = 0;
 	HRESULT res = DS_OK;
