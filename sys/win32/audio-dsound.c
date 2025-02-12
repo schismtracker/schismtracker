@@ -295,6 +295,7 @@ static void _dsound_audio_wait_dx5(schism_audio_device_t *dev)
 			cursor -= (dev->last_chunk * dev->size);
 
 			uint32_t ms = (cursor / dev->bps / dev->channels) * 1000UL / dev->rate;
+			ms = MAX(1, ms);
 
 			timer_msleep(ms);
 		}
@@ -443,6 +444,7 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 	schism_audio_device_t *dev = mem_calloc(1, sizeof(*dev));
 
 	dev->callback = desired->callback;
+	dev->paused = 1; // always start paused
 
 	dev->mutex = mt_mutex_create();
 	if (!dev->mutex)
