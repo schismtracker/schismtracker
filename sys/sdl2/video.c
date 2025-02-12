@@ -525,21 +525,23 @@ static void sdl2_video_get_logical_coordinates(int x, int y, int *trans_x, int *
 		*trans_y = y;
 	} else {
 		float xx, yy;
-#if SDL_DYNAMIC_LOAD || SDL_VERSION_ATLEAST(2, 0, 18)
-		if (sdl2_RenderWindowToLogical)
+#if SDL2_DYNAMIC_LOAD || SDL_VERSION_ATLEAST(2, 0, 18)
+		if (sdl2_RenderWindowToLogical) {
 			sdl2_RenderWindowToLogical(video.renderer, x, y, &xx, &yy);
+		} else
 #endif
+		{
+			/* Alternative for older SDL versions. MIGHT work with high DPI */
+			float scale_x = 1, scale_y = 1;
 
-		/* Alternative for older SDL versions. MIGHT work with high DPI */
-		float scale_x = 1, scale_y = 1;
+			sdl2_RenderGetScale(video.renderer, &scale_x, &scale_y);
 
-		sdl2_RenderGetScale(video.renderer, &scale_x, &scale_y);
+			xx = x - (video.width / 2) - (((float)cfg_video_want_fixed_width * scale_x) / 2);
+			yy = y - (video.height / 2) - (((float)cfg_video_want_fixed_height * scale_y) / 2);
 
-		xx = x - (video.width / 2) - (((float)cfg_video_want_fixed_width * scale_x) / 2);
-		yy = y - (video.height / 2) - (((float)cfg_video_want_fixed_height * scale_y) / 2);
-
-		xx /= (float)video.width * cfg_video_want_fixed_width;
-		yy /= (float)video.height * cfg_video_want_fixed_height;
+			xx /= (float)video.width * cfg_video_want_fixed_width;
+			yy /= (float)video.height * cfg_video_want_fixed_height;
+		}
 
 		*trans_x = (int)xx;
 		*trans_y = (int)yy;
@@ -771,7 +773,7 @@ static int sdl2_video_load_syms(void)
 
 static int sdl2_0_18_video_load_syms(void)
 {
-#if SDL_DYNAMIC_LOAD || SDL_VERSION_ATLEAST(2, 0, 18)
+#if SDL2_DYNAMIC_LOAD || SDL_VERSION_ATLEAST(2, 0, 18)
 	SCHISM_SDL2_SYM(RenderWindowToLogical);
 
 	return 0;
@@ -803,6 +805,9 @@ static int sdl2_video_init(void)
 		sdl2_quit();
 		return 0;
 	}
+
+	// also grab the keyboard as well
+	sdl2_SetHint("SDL_GRAB_KEYBOARD", "1");
 
 	return 1;
 }
