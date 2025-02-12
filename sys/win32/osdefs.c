@@ -38,6 +38,8 @@
 #include <winerror.h>
 #include <process.h>
 #include <shlobj.h>
+#include <vsstyle.h>
+#include <uxtheme.h>
 
 #include <direct.h>
 
@@ -76,6 +78,32 @@
 
 /* global menu object */
 static HMENU menu = NULL;
+
+/* used for dark theme crap. */
+static void *lib_dwmapi = NULL;
+static HRESULT (WINAPI *DWMAPI_DwmSetWindowAttribute)(HWND hwnd, DWORD key, LPCVOID data, DWORD sz_data) = NULL;
+
+/* `bool`, which is 1 byte, call that `unsigned char` ;) */
+static void *lib_uxtheme = NULL;
+static unsigned char (WINAPI *UXTHEME_ShouldAppsUseDarkMode)(void) = NULL;
+static unsigned char (WINAPI *UXTHEME_AllowDarkModeForWindow)(HWND hwnd, unsigned char allow) = NULL;
+static DWORD (WINAPI *UXTHEME_SetPreferredAppMode)(DWORD app_mode) = NULL;
+static HTHEME (WINAPI *UXTHEME_OpenThemeData)(HWND hwnd, LPCWSTR pszClassList) = NULL;
+static HRESULT (WINAPI *UXTHEME_DrawThemeTextEx)(HTHEME hTheme, HDC hdc, int iPartId, int iStateId, LPCWSTR pszText, int cchText, DWORD dwTextFlags, LPRECT pRect, const DTTOPTS *pOptions) = NULL;
+#define APPMODE_DEFAULT    0
+#define APPMODE_ALLOWDARK  1
+#define APPMODE_FORCEDARK  2
+#define APPMODE_FORCELIGHT 3
+
+static void *lib_ntdll = NULL;
+static NTSTATUS (WINAPI *NTDLL_RtlGetVersion)(OSVERSIONINFOEXW *info) = NULL;
+
+#ifndef DWMWA_USE_IMMERSIVE_DARK_MODE_OLD
+# define DWMWA_USE_IMMERSIVE_DARK_MODE_OLD 19
+#endif
+#ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
+# define DWMWA_USE_IMMERSIVE_DARK_MODE 20
+#endif
 
 void win32_get_modkey(schism_keymod_t *mk)
 {
@@ -209,6 +237,28 @@ void win32_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv)
 	win32mf_init();
 #endif
 
+	lib_ntdll = loadso_object_load("ntdll.dll");
+	if (lib_ntdll) {
+		NTDLL_RtlGetVersion = loadso_function_load(lib_ntdll, "RtlGetVersion");
+	}
+
+	// Load dark mode cruft on Win10 >=19041
+	if (win32_ntver_atleast(10, 0, 19041)) {
+		lib_dwmapi = loadso_object_load("dwmapi.dll");
+		if (lib_dwmapi) {
+			DWMAPI_DwmSetWindowAttribute = loadso_function_load(lib_dwmapi, "DwmSetWindowAttribute");
+		}
+
+		lib_uxtheme = loadso_object_load("uxtheme.dll");
+		if (lib_uxtheme) {
+			UXTHEME_ShouldAppsUseDarkMode = loadso_function_load(lib_uxtheme, MAKEINTRESOURCE(132));
+			UXTHEME_AllowDarkModeForWindow = loadso_function_load(lib_uxtheme, MAKEINTRESOURCE(133));
+			//UXTHEME_SetPreferredAppMode = loadso_function_load(lib_uxtheme, MAKEINTRESOURCE(135));
+			UXTHEME_OpenThemeData = loadso_function_load(lib_uxtheme, "OpenThemeData");
+			UXTHEME_DrawThemeTextEx = loadso_function_load(lib_uxtheme, "DrawThemeTextEx");
+		}
+	}
+
 	/* Convert command line arguments to UTF-8 */
 	{
 		char **utf8_argv;
@@ -257,6 +307,190 @@ void win32_sysexit(void)
 {
 #ifdef USE_MEDIAFOUNDATION
 	win32mf_quit();
+#endif
+
+	if (lib_dwmapi)
+		loadso_object_unload(lib_dwmapi);
+
+	if (lib_uxtheme)
+		loadso_object_unload(lib_uxtheme);
+
+	if (lib_ntdll)
+		loadso_object_unload(lib_ntdll);
+}
+
+static LRESULT (CALLBACK *old_wndproc)(HWND, UINT, WPARAM, LPARAM) = NULL;
+
+//
+// Hijacked from wxWidgets
+// Copyright (c) 2022 Vadim Zeitlin <vadim@wxwidgets.org>
+// This code should only be run on Windows 10 v2004 and newer!
+//
+static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+{
+#if 1
+	// I can't really test this code because I'm still on Windows 10 v1809
+	// (the LTSC release). Once this code is properly tested I'll enable it...
+	return old_wndproc(hwnd, msg, wparam, lparam);
+#else
+	if (!UXTHEME_ShouldAppsUseDarkMode || !UXTHEME_ShouldAppsUseDarkMode())
+		return old_wndproc(hwnd, msg, wparam, lparam);
+
+#ifndef WM_MENUBAR_DRAWMENUITEM
+# define WM_MENUBAR_DRAWMENUITEM 0x92
+#endif
+#ifndef WM_MENUBAR_DRAWMENU
+# define WM_MENUBAR_DRAWMENU 0x91
+#endif
+
+	// This is passed via LPARAM of WM_MENUBAR_DRAWMENU.
+	struct MenuBarDrawMenu {
+		HMENU hmenu;
+		HDC hdc;
+		DWORD dwReserved;
+	};
+
+	struct MenuBarMenuItem {
+		int iPosition;
+
+		// There are more fields in this (undocumented) struct but we don't
+		// currently need them, so don't bother with declaring them.
+	};
+
+	struct MenuBarDrawMenuItem {
+		DRAWITEMSTRUCT dis;
+		struct MenuBarDrawMenu mbdm;
+		struct MenuBarMenuItem mbmi;
+	};
+
+	switch (msg) {
+	case WM_NCPAINT:
+	case WM_NCACTIVATE: {
+		// Drawing the menu bar background in WM_MENUBAR_DRAWMENU somehow
+		// leaves a single pixel line unpainted (and increasing the size of
+		// the rectangle doesn't help, i.e. drawing is clipped to an area
+		// which is one pixel too small), so we have to draw over it here
+		// to get rid of it.
+	
+		LRESULT result = DefWindowProc(hwnd, msg, wparam, lparam);
+
+		// Create a RECT one pixel above the client area: note that we
+		// have to use window (and not client) coordinates for this as
+		// this is outside of the client area of the window.
+		RECT rcWindow, rc;
+		if (!GetWindowRect(hwnd, &rcWindow) || !GetClientRect(hwnd, &rc))
+			break;
+
+		// Convert client coordinates to window ones.
+		MapWindowPoints(hwnd, HWND_DESKTOP, (LPPOINT)&rc, 2);
+		OffsetRect(&rc, -rcWindow.left, -rcWindow.top);
+
+		rc.bottom = rc.top;
+		rc.top--;
+
+		HDC hdc = GetDC(hwnd);
+		HBRUSH hbr = CreateSolidBrush(0x2B2B2B);
+		FillRect(hdc, &rc, hbr);
+		DeleteObject(hbr);
+		ReleaseDC(hwnd, hdc);
+
+		return result;
+	}
+	case WM_MENUBAR_DRAWMENU: {
+		// Erase the menu bar background using custom brush.
+		struct MenuBarDrawMenu *drawmenu = (struct MenuBarDrawMenu *)lparam;
+		
+		if (drawmenu) {
+			MENUBARINFO mbi;
+			if (!GetMenuBarInfo(hwnd, OBJID_MENU, 0, &mbi))
+				break;
+
+			RECT rcWindow;
+			if (!GetWindowRect(hwnd, &rcWindow))
+				break;
+
+			// rcBar is expressed in screen coordinates.
+			OffsetRect(&mbi.rcBar, -rcWindow.left, -rcWindow.top);
+
+			HBRUSH hbr = CreateSolidBrush(0x2B2B2B);
+			FillRect(drawmenu->hdc, &mbi.rcBar, hbr);
+			DeleteObject(hbr);
+		}
+
+		return 1;
+	}
+	case WM_MENUBAR_DRAWMENUITEM: {
+		struct MenuBarDrawMenuItem *drawmenuitem = (struct MenuBarDrawMenuItem *)lparam;
+
+		if (drawmenuitem) {
+			// Just a sanity check.
+			if (drawmenuitem->dis.CtlType != ODT_MENU)
+				break;
+
+			WCHAR buf[256];
+			MENUITEMINFOW mii = {
+				.fMask = MIIM_STRING,
+				.dwTypeData = buf,
+				.cch = sizeof(buf) - 2,
+			};
+
+			// Note that we need to use the iPosition field of the
+			// undocumented struct here because DRAWITEMSTRUCT::itemID is
+			// not initialized in the struct passed to us here, so this is
+			// the only way to identify the item we're dealing with.
+			if (!GetMenuItemInfoW((HMENU)drawmenuitem->dis.hwndItem, drawmenuitem->mbmi.iPosition, TRUE, &mii))
+				break;
+
+			const UINT itemState = drawmenuitem->dis.itemState;
+
+			int partState;
+			uint32_t colText = 0xFFFFFF, colBg = 0x2b2b2b;
+			if (itemState & ODS_INACTIVE) {
+				partState = MBI_DISABLED;
+				colText = 0x6D6D6D;
+			} else if ((itemState & (ODS_GRAYED|ODS_HOTLIGHT)) == (ODS_GRAYED|ODS_HOTLIGHT)) {
+				partState = MBI_DISABLEDHOT;
+			} else if (itemState & ODS_GRAYED ) {
+				partState = MBI_DISABLED;
+				colText = 0x6D6D6D;
+			} else if (itemState & (ODS_HOTLIGHT | ODS_SELECTED)) {
+				partState = MBI_HOT;
+				colBg = 0x414141;
+			} else {
+				partState = MBI_NORMAL;
+			}
+
+			// Don't use DrawThemeBackground() here, as it doesn't use the
+			// correct colours in the dark mode, at least not when using
+			// the "Menu" theme.
+			{
+				HBRUSH hbr = CreateSolidBrush(colBg);
+				FillRect(drawmenuitem->dis.hDC, &drawmenuitem->dis.rcItem, hbr);
+				DeleteObject(hbr);
+			}
+
+			// We have to specify the text colour explicitly as by default
+			// black would be used, making the menu label unreadable on the
+			// (almost) black background.
+			DTTOPTS textOpts;
+			textOpts.dwSize = sizeof(textOpts);
+			textOpts.dwFlags = DTT_TEXTCOLOR;
+			textOpts.crText = colText;
+
+			DWORD drawTextFlags = DT_CENTER | DT_SINGLELINE | DT_VCENTER;
+			if (itemState & ODS_NOACCEL)
+				drawTextFlags |= DT_HIDEPREFIX;
+
+			HTHEME theme = UXTHEME_OpenThemeData(hwnd, L"Menu");
+			UXTHEME_DrawThemeTextEx(theme, drawmenuitem->dis.hDC, MENU_BARITEM, partState,
+							  buf, mii.cch, drawTextFlags, &drawmenuitem->dis.rcItem,
+							  &textOpts);
+		}
+		return 0;
+	}
+	}
+
+	return old_wndproc(hwnd, msg, lparam, wparam);
 #endif
 }
 
@@ -415,10 +649,42 @@ int win32_event(schism_event_t *event)
 	return 1;
 }
 
+static inline SCHISM_ALWAYS_INLINE int win32_toggle_dark_title_bar(void *window, int on)
+{
+	const BOOL b = on;
+
+	// Initialize dark theme
+	if (SUCCEEDED(DWMAPI_DwmSetWindowAttribute((HWND)window, 20, &b, sizeof(b))))
+		return 1;
+
+	if (SUCCEEDED(DWMAPI_DwmSetWindowAttribute((HWND)window, 19, &b, sizeof(b))))
+		return 1;
+
+	return 0;
+}
+
 void win32_toggle_menu(void *window, int on)
 {
+	// hax
+	static int init = 0;
 	SetMenu((HWND)window, (cfg_video_want_menu_bar && on) ? menu : NULL);
 	DrawMenuBar((HWND)window);
+
+	if (!init) {
+		init = 1;
+
+		// Only run this code on Windows 10 v2004 or newer!
+		if (win32_ntver_atleast(10, 0, 19041)) {
+			win32_toggle_dark_title_bar(window, 1);
+
+			old_wndproc = (WNDPROC)GetWindowLongPtrW((HWND)window, GWLP_WNDPROC);
+			(void)SetWindowLongPtrW((HWND)window, GWLP_WNDPROC, (LONG_PTR)win32_wndproc);
+		} else if (DWMAPI_DwmSetWindowAttribute) {
+			// SDL 3 sets this to true, even on older versions, which means the
+			// color of the menu bar and title bar clash. Reset it to zero.
+			win32_toggle_dark_title_bar(window, 0);
+		}
+	}
 }
 
 /* -------------------------------------------------------------------- */
@@ -477,17 +743,30 @@ int win32_get_key_repeat(int *pdelay, int *prate)
 /* -------------------------------------------------------------------- */
 
 // Checks for at least some NT kernel version.
-// Note that this does NOT work for checking above Windows 8.1 because
-// Microsoft. This also fails for Windows 9x, because it doesn't
-// have an NT kernel at all.
+// Calls NTDLL.DLL directly because Microsoft artificially
+// caps GetVersion() to Windows 8.1 for some reason.
 int win32_ntver_atleast(int major, int minor, int build)
 {
-	DWORD version = GetVersion();
-	if (version & 0x80000000)
-		return 0;
+	// why the hell do they have to make this so difficult?
+	union {
+		OSVERSIONINFOA a;
+		OSVERSIONINFOEXW w;
+	} ver;
 
-	return SCHISM_SEMVER_ATLEAST(major, minor, build,
-		LOBYTE(LOWORD(version)), HIBYTE(LOWORD(version)), HIWORD(version));
+	ver.w.dwOSVersionInfoSize = sizeof(ver.w);
+	if (NTDLL_RtlGetVersion && !NTDLL_RtlGetVersion(&ver.w)) {
+		return SCHISM_SEMVER_ATLEAST(major, minor, build,
+			ver.w.dwMajorVersion, ver.w.dwMinorVersion, ver.w.dwBuildNumber);
+	}
+
+	// fallback to GetVersionExA
+	ver.a.dwOSVersionInfoSize = sizeof(ver.a);
+	if (GetVersionExA(&ver.a) && ver.a.dwPlatformId == VER_PLATFORM_WIN32_NT)
+		return SCHISM_SEMVER_ATLEAST(major, minor, build,
+			ver.a.dwMajorVersion, ver.a.dwMinorVersion, ver.a.dwBuildNumber);
+
+	// Probably win9x or something.
+	return 0;
 }
 
 /* -------------------------------------------------------------------- */
