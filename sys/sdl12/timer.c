@@ -42,7 +42,7 @@ static timer_ticks_t sdl12_timer_ticks(void)
 static timer_ticks_t sdl12_timer_ticks_us(void)
 {
 	// wow
-	return sdl12_timer_ticks();
+	return sdl12_timer_ticks() * 1000LL;
 }
 
 static void sdl12_usleep(uint64_t us)
