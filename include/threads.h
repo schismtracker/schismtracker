@@ -26,7 +26,7 @@
 
 #include "headers.h"
 
-typedef uintptr_t mt_thread_id_t;
+typedef uint64_t mt_thread_id_t;
 
 /* private to each backend */
 typedef struct mt_thread mt_thread_t;
