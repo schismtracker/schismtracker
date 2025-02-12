@@ -397,7 +397,9 @@ extern int ya_optind, ya_opterr, ya_optopt;
 #ifdef SCHISM_WIN32
 /* TODO We can actually enable long path support on windows in the manifest
  * https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation */
-# define SCHISM_PATH_MAX (3 + 256 + 1) // drive letter, colon, name components, NUL
+# define SCHISM_PATH_MAX ((3 + 256 + 1) * 4) // drive letter, colon, name components, NUL, multiplied by 4 for UTF-8
+#elif defined(SCHISM_MACOS)
+# define SCHISM_PATH_MAX (255 + 1) // 255 bytes in Pascal-string + NUL terminator (encoding conversions do not happen here yet)
 #else
 # define SCHISM_PATH_MAX (8192) // 8 KiB (should be more than enough)
 #endif
