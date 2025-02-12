@@ -187,6 +187,25 @@ else
 	@echo "*** perl is required to regenerate $(@) ***"; exit 1;
 endif
 
+if USE_SDL3
+# hax: we want to use specific CFLAGS...
+sys/sdl3/schismtracker-audio.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
+sys/sdl3/schismtracker-dmoz.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
+sys/sdl3/schismtracker-clippy.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
+sys/sdl3/schismtracker-events.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
+sys/sdl3/schismtracker-init.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
+sys/sdl3/schismtracker-timer.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
+sys/sdl3/schismtracker-video.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
+sys/sdl3/schismtracker-threads.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
+
+files_sdl3 = sys/sdl3/audio.c sys/sdl3/dmoz.c sys/sdl3/clippy.c sys/sdl3/events.c sys/sdl3/init.c sys/sdl3/timer.c sys/sdl3/video.c sys/sdl3/threads.c
+
+if LINK_TO_SDL3
+libs_sdl3 = $(SDL3_LIBS)
+endif
+
+endif
+
 if USE_SDL2
 # hax: we want to use specific CFLAGS...
 sys/sdl2/schismtracker-audio.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
@@ -550,6 +569,7 @@ schismtracker_SOURCES = \
 	$(files_opl)			\
 	$(files_mediafoundation) \
 	$(files_wiiu)           \
+	$(files_sdl3)			\
 	$(files_sdl2)			\
 	$(files_sdl12)			\
 	$(files_macos)
@@ -557,16 +577,15 @@ schismtracker_SOURCES = \
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
 
-component_cflags = $(cflags_sdl2) $(cflags_alsa) $(cflags_oss) \
+component_cflags = $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
 	$(cflags_version) $(cflags_win32) $(cflags_wii) \
 	$(cflags_macosx) $(cflags_flac) $(cflags_jack) \
-	$(cflags_wiiu) $(cflags_sdl12) $(cflags_macos) \
-	$(UTF8PROC_CFLAGS)
+	$(cflags_wiiu) $(cflags_macos) $(UTF8PROC_CFLAGS)
 schismtracker_CPPFLAGS = -I$(srcdir)/include -I. $(cppflags_wii) $(cppflags_wiiu)
 schismtracker_CFLAGS = $(AM_CFLAGS) $(component_cflags)
 schismtracker_OBJCFLAGS = $(AM_OBJCFLAGS) $(component_cflags)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(LIBM) $(libs_x11) $(libs_wii) $(libs_wiiu) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(UTF8PROC_LIBS) $(libs_sdl2) $(libs_sdl12) $(libs_macos)
+schismtracker_LDADD = $(LIBM) $(libs_sdl3) $(libs_x11) $(libs_wii) $(libs_wiiu) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(UTF8PROC_LIBS) $(libs_sdl2) $(libs_sdl12) $(libs_macos)
 schismtracker_LDFLAGS = $(ldflags_macosx)

@@ -200,6 +200,9 @@ int clippy_init(void)
 #ifdef SCHISM_MACOSX
 		&schism_clippy_backend_macosx,
 #endif
+#ifdef SCHISM_SDL3
+		&schism_clippy_backend_sdl3,
+#endif
 #ifdef SCHISM_SDL2
 		&schism_clippy_backend_sdl2,
 #endif

@@ -49,5 +49,8 @@ extern const schism_timer_backend_t schism_timer_backend_sdl12;
 #ifdef SCHISM_SDL2
 extern const schism_timer_backend_t schism_timer_backend_sdl2;
 #endif
+#ifdef SCHISM_SDL3
+extern const schism_timer_backend_t schism_timer_backend_sdl3;
+#endif
 
 #endif /* SCHISM_BACKEND_TIMER_H_ */

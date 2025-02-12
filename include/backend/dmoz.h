@@ -41,5 +41,8 @@ extern const schism_dmoz_backend_t schism_dmoz_backend_macosx;
 #ifdef SCHISM_SDL2
 extern const schism_dmoz_backend_t schism_dmoz_backend_sdl2;
 #endif
+#ifdef SCHISM_SDL3
+extern const schism_dmoz_backend_t schism_dmoz_backend_sdl3;
+#endif
 
 #endif /* SCHISM_BACKEND_DMOZ_H_ */

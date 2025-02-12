@@ -54,4 +54,8 @@ extern const schism_events_backend_t schism_events_backend_sdl12;
 extern const schism_events_backend_t schism_events_backend_sdl2;
 #endif
 
+#ifdef SCHISM_SDL3
+extern const schism_events_backend_t schism_events_backend_sdl3;
+#endif
+
 #endif /* SCHISM_BACKEND_EVENTS_H_ */

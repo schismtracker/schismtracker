@@ -21,36 +21,60 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_BACKEND_CLIPPY_H_
-#define SCHISM_BACKEND_CLIPPY_H_
+#include "headers.h" /* always include this one first, kthx */
+#include "backend/dmoz.h"
+#include "mem.h"
 
-typedef struct {
-	int (*init)(void);
-	void (*quit)(void);
+#include "init.h"
 
-	int (*have_selection)(void);
-	void (*set_selection)(const char *text);
-	char *(*get_selection)(void);
+static char * (SDLCALL *sdl3_GetBasePath)(void);
 
-	int (*have_clipboard)(void);
-	void (*set_clipboard)(const char *text);
-	char *(*get_clipboard)(void);
-} schism_clippy_backend_t;
+static void (SDLCALL *sdl3_free)(void *);
 
-#ifdef SCHISM_WIN32
-extern const schism_clippy_backend_t schism_clippy_backend_win32;
-#endif
-#ifdef SCHISM_USE_X11
-extern const schism_clippy_backend_t schism_clippy_backend_x11;
-#endif
-#ifdef SCHISM_MACOSX
-extern const schism_clippy_backend_t schism_clippy_backend_macosx;
-#endif
-#ifdef SCHISM_SDL2
-extern const schism_clippy_backend_t schism_clippy_backend_sdl2;
-#endif
-#ifdef SCHISM_SDL3
-extern const schism_clippy_backend_t schism_clippy_backend_sdl3;
-#endif
+static char *sdl3_dmoz_get_exe_path(void)
+{
+	char *sdl = sdl3_GetBasePath();
+	if (!sdl)
+		return NULL;
 
-#endif /* SCHISM_BACKEND_CLIPPY_H_ */
+	char *us = str_dup(sdl);
+	sdl3_free(sdl);
+	return us;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// dynamic loading
+
+static int sdl3_dmoz_load_syms(void)
+{
+	SCHISM_SDL3_SYM(GetBasePath);
+
+	SCHISM_SDL3_SYM(free);
+
+	return 0;
+}
+
+static int sdl3_dmoz_init(void)
+{
+	if (!sdl3_init())
+		return 0;
+
+	if (sdl3_dmoz_load_syms())
+		return 0;
+
+	return 1;
+}
+
+static void sdl3_dmoz_quit(void)
+{
+	sdl3_quit();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+const schism_dmoz_backend_t schism_dmoz_backend_sdl3 = {
+	.init = sdl3_dmoz_init,
+	.quit = sdl3_dmoz_quit,
+
+	.get_exe_path = sdl3_dmoz_get_exe_path,
+};

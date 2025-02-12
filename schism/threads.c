@@ -108,6 +108,9 @@ int mt_init(void)
 #ifdef SCHISM_MACOS
 		&schism_threads_backend_macos,
 #endif
+#ifdef SCHISM_SDL3
+		&schism_threads_backend_sdl3,
+#endif
 #ifdef SCHISM_SDL2
 		&schism_threads_backend_sdl2,
 #endif

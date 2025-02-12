@@ -634,6 +634,9 @@ int video_startup(void)
 {
 	static const schism_video_backend_t *backends[] = {
 		// ordered by preference
+#ifdef SCHISM_SDL3
+		&schism_video_backend_sdl3,
+#endif
 #ifdef SCHISM_SDL2
 		&schism_video_backend_sdl2,
 #endif

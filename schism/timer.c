@@ -181,6 +181,9 @@ int timer_init(void)
 #ifdef SCHISM_WIN32
 		&schism_timer_backend_win32,
 #endif
+#ifdef SCHISM_SDL3
+		&schism_timer_backend_sdl3,
+#endif
 #ifdef SCHISM_SDL2
 		&schism_timer_backend_sdl2,
 #endif

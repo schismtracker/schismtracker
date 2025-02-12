@@ -358,7 +358,7 @@ uint8_t current_palette[16][3] = {
 
 /* this should be changed only with palette_load_preset() (which doesn't call
 palette_apply() automatically, so do that as well) */
-int current_palette_index = -1;
+int current_palette_index = 0;
 
 void palette_apply(void)
 {

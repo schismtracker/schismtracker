@@ -68,5 +68,8 @@ extern const schism_video_backend_t schism_video_backend_sdl12;
 #ifdef SCHISM_SDL2
 extern const schism_video_backend_t schism_video_backend_sdl2;
 #endif
+#ifdef SCHISM_SDL3
+extern const schism_video_backend_t schism_video_backend_sdl3;
+#endif
 
 #endif /* SCHISM_BACKEND_VIDEO_H_ */

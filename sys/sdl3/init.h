@@ -21,36 +21,32 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_BACKEND_CLIPPY_H_
-#define SCHISM_BACKEND_CLIPPY_H_
+#ifndef SCHISM_SYS_SDL3_INIT_H_
+#define SCHISM_SYS_SDL3_INIT_H_
 
-typedef struct {
-	int (*init)(void);
-	void (*quit)(void);
+#include "headers.h"
 
-	int (*have_selection)(void);
-	void (*set_selection)(const char *text);
-	char *(*get_selection)(void);
+#include <SDL3/SDL.h>
 
-	int (*have_clipboard)(void);
-	void (*set_clipboard)(const char *text);
-	char *(*get_clipboard)(void);
-} schism_clippy_backend_t;
+int sdl3_init(void);
+void sdl3_quit(void);
 
-#ifdef SCHISM_WIN32
-extern const schism_clippy_backend_t schism_clippy_backend_win32;
-#endif
-#ifdef SCHISM_USE_X11
-extern const schism_clippy_backend_t schism_clippy_backend_x11;
-#endif
-#ifdef SCHISM_MACOSX
-extern const schism_clippy_backend_t schism_clippy_backend_macosx;
-#endif
-#ifdef SCHISM_SDL2
-extern const schism_clippy_backend_t schism_clippy_backend_sdl2;
-#endif
-#ifdef SCHISM_SDL3
-extern const schism_clippy_backend_t schism_clippy_backend_sdl3;
+#ifdef SDL3_DYNAMIC_LOAD
+
+// must be called AFTER sdl3_init()
+int sdl3_load_sym(const char *fn, void *addr);
+
+#define SCHISM_SDL3_SYM(x) \
+	if (!sdl3_load_sym("SDL_" #x, &sdl3_##x)) return -1
+
+#else
+
+#define SCHISM_SDL3_SYM(x) \
+	sdl3_##x = SDL_##x
+
 #endif
 
-#endif /* SCHISM_BACKEND_CLIPPY_H_ */
+#define SDL3_VERSION_ATLEAST(ver, mmajor, mminor, mpatch) \
+	SCHISM_SEMVER_ATLEAST(mmajor, mminor, mpatch, ver.major, ver.minor, ver.patch)
+
+#endif /* SCHISM_SYS_SDL3_INIT_H_ */

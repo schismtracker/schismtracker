@@ -131,6 +131,11 @@ AC_ARG_WITH([sdl2],
 	[],
 	[with_sdl2=check])
 
+AC_ARG_WITH([sdl3],
+	[AS_HELP_STRING([--with-sdl3],[Build with SDL 3 backend @<:@default=check@:>@])],
+	[],
+	[with_sdl3=check])
+
 AC_ARG_ENABLE(sdl12-linking,
 	AS_HELP_STRING([--enable-sdl12-linking], [Link to SDL 1.2 rather than loading at runtime]),
 	SDL12_LINKING=$enableval,
@@ -138,6 +143,11 @@ AC_ARG_ENABLE(sdl12-linking,
 
 AC_ARG_ENABLE(sdl2-linking,
 	AS_HELP_STRING([--enable-sdl2-linking], [Link to SDL 2 rather than loading at runtime]),
+	SDL2_LINKING=$enableval,
+	SDL2_LINKING=no)
+
+AC_ARG_ENABLE(sdl3-linking,
+	AS_HELP_STRING([--enable-sdl3-linking], [Link to SDL 3 rather than loading at runtime]),
 	SDL2_LINKING=$enableval,
 	SDL2_LINKING=no)
 
@@ -714,6 +724,28 @@ if test "x$with_mediafoundation" = "xcheck" || test "x$with_mediafoundation" = "
 		AC_DEFINE([USE_MEDIAFOUNDATION], [1], [Use Media Foundation sample loading])
 	elif test "x$with_mediafoundation" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find Media Foundation])
+	fi
+fi
+
+AM_CONDITIONAL([USE_SDL3], false)
+AM_CONDITIONAL([LINK_TO_SDL3], false)
+if test "x$with_sdl3" = "xcheck" || test "x$with_sdl3" = "xyes"; then
+	PKG_CHECK_MODULES([SDL3], [sdl3], [sdl3_found=yes], [sdl3_found=no])
+	if test "x$sdl3_found" = "xyes"; then
+		AC_SUBST([SDL3_CFLAGS])
+		AM_CONDITIONAL([USE_SDL3], true)
+		AC_DEFINE([SCHISM_SDL3], [1], [SDL 3 backend])
+		if test "x$SDL3_LINKING" = "xyes"; then
+			AC_SUBST([SDL3_LIBS])
+			AM_CONDITIONAL([LINK_TO_SDL3], true)
+		else
+			if test "x$have_loadso" != "xyes"; then
+				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
+			fi
+			AC_DEFINE([SDL3_DYNAMIC_LOAD], [1], [Dynamically load SDL3 symbols])
+		fi
+	elif test "x$with_sdl3" = "xyes"; then
+		AC_MSG_ERROR([*** Failed to find SDL 3])
 	fi
 fi
 

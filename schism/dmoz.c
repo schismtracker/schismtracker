@@ -1996,6 +1996,9 @@ int dmoz_init(void)
 #ifdef SCHISM_MACOSX
 		&schism_dmoz_backend_macosx,
 #endif
+#ifdef SCHISM_SDL3
+		&schism_dmoz_backend_sdl3,
+#endif
 #ifdef SCHISM_SDL2
 		&schism_dmoz_backend_sdl2,
 #endif

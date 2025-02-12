@@ -61,5 +61,8 @@ extern const schism_threads_backend_t schism_threads_backend_sdl12;
 #ifdef SCHISM_SDL2
 extern const schism_threads_backend_t schism_threads_backend_sdl2;
 #endif
+#ifdef SCHISM_SDL3
+extern const schism_threads_backend_t schism_threads_backend_sdl3;
+#endif
 
 #endif /* SCHISM_BACKEND_THREADS_H_ */
