@@ -97,21 +97,85 @@ typedef struct _DTTOPTS {
 } DTTOPTS, *PDTTOPTS;
 
 /* DTTOPTS.dwFlags bits */
+#ifndef DTT_TEXTCOLOR
 #define DTT_TEXTCOLOR    0x00000001
+#endif
+#ifndef DTT_BORDERCOLOR
 #define DTT_BORDERCOLOR  0x00000002
+#endif
+#ifndef DTT_SHADOWCOLOR
 #define DTT_SHADOWCOLOR  0x00000004
+#endif
+#ifndef DTT_SHADOWTYPE
 #define DTT_SHADOWTYPE   0x00000008
+#endif
+#ifndef DTT_SHADOWOFFSET
 #define DTT_SHADOWOFFSET 0x00000010
+#endif
+#ifndef DTT_BORDERSIZE
 #define DTT_BORDERSIZE   0x00000020
+#endif
+#ifndef DTT_FONTPROP
 #define DTT_FONTPROP     0x00000040
+#endif
+#ifndef DTT_COLORPROP
 #define DTT_COLORPROP    0x00000080
+#endif
+#ifndef DTT_STATEID
 #define DTT_STATEID      0x00000100
+#endif
+#ifndef DTT_CALCRECT
 #define DTT_CALCRECT     0x00000200
+#endif
+#ifndef DTT_APPLYOVERLAY
 #define DTT_APPLYOVERLAY 0x00000400
+#endif
+#ifndef DTT_GLOWSIZE
 #define DTT_GLOWSIZE     0x00000800
+#endif
+#ifndef DTT_CALLBACK
 #define DTT_CALLBACK     0x00001000
+#endif
+#ifndef DTT_COMPOSITED
 #define DTT_COMPOSITED   0x00002000
+#endif
+#ifndef DTT_VALIDBITS
 #define DTT_VALIDBITS    0x00003fff
+#endif
+
+#ifndef ODS_SELECTED
+#define ODS_SELECTED     0x0001 /* Selected */
+#endif
+#ifndef ODS_GRAYED
+#define ODS_GRAYED       0x0002 /* Grayed (Menus only) */
+#endif
+#ifndef ODS_DISABLED
+#define ODS_DISABLED     0x0004 /* Disabled */
+#endif
+#ifndef ODS_CHECKED
+#define ODS_CHECKED      0x0008 /* Checked (Menus only) */
+#endif
+#ifndef ODS_FOCUS
+#define ODS_FOCUS        0x0010 /* Has focus */
+#endif
+#ifndef ODS_DEFAULT
+#define ODS_DEFAULT      0x0020 /* Default */
+#endif
+#ifndef ODS_HOTLIGHT
+#define ODS_HOTLIGHT     0x0040 /* Highlighted when under mouse */
+#endif
+#ifndef ODS_INACTIVE
+#define ODS_INACTIVE     0x0080 /* Inactive */
+#endif
+#ifndef ODS_NOACCEL
+#define ODS_NOACCEL      0x0100 /* No keyboard accelerator */
+#endif
+#ifndef ODS_NOFOCUSRECT
+#define ODS_NOFOCUSRECT  0x0200 /* No focus rectangle */
+#endif
+#ifndef ODS_COMBOBOXEDIT
+#define ODS_COMBOBOXEDIT 0x1000 /* Edit of a combo box */
+#endif
 
 enum BARITEMSTATES {
     MBI_NORMAL = 1,
@@ -145,8 +209,12 @@ enum MENUPARTS {
     MENU_SYSTEMRESTORE = 20,
 };
 
-// --------------------------------------------------------
+// Hopefully this doesn't clash with mingw-w64 definitions?
+// They should at least have C11 I guess, which makes this
+// technically legal...
+typedef HANDLE HTHEME;
 
+// --------------------------------------------------------
 
 typedef enum {
     WCA_UNDEFINED = 0,
@@ -185,7 +253,7 @@ static void (WINAPI *UXTHEME_RefreshImmersiveColorPolicyState)(void) = NULL;
 #define APPMODE_FORCELIGHT 3
 
 static void *lib_ntdll = NULL;
-static NTSTATUS (WINAPI *NTDLL_RtlGetVersion)(OSVERSIONINFOEXW *info) = NULL;
+static long /*NTSTATUS*/ (WINAPI *NTDLL_RtlGetVersion)(OSVERSIONINFOEXW *info) = NULL;
 
 #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE_OLD
 # define DWMWA_USE_IMMERSIVE_DARK_MODE_OLD 19
