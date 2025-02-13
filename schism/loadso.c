@@ -37,7 +37,7 @@ void *loadso_object_load(const char *sofile)
 #ifdef SCHISM_WIN32
 	HMODULE module = NULL;
 
-	if (GetVersion() < 0x80000000) {
+	if (GetVersion() & 0x80000000) {
 		// Windows 9x
 		char *ansi;
 
