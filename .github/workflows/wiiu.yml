@@ -90,7 +90,7 @@ jobs:
           export PATH="${DEVKITPRO}/portlibs/wiiu/bin:${DEVKITPPC}/bin:$PATH"
           # disable FLAC support for now, because compiling with it gives
           # errors when making an rpx (PIC is enabled...)
-          FLAC_LIBS="-L${DEVKITPRO}/portlibs/ppc/lib -lFLAC -logg" PKG_CONFIG=pkg-config PKG_CONFIG_LIBDIR="$HOME/wiiuprefix/lib/pkgconfig:${DEVKITPRO}/portlibs/wiiu/lib/pkgconfig:${DEVKITPRO}/portlibs/ppc/lib/pkgconfig" ../configure --host=powerpc-eabi --without-flac --enable-force-wiiu --enable-sdl2-linking
+          FLAC_LIBS="-L${DEVKITPRO}/portlibs/ppc/lib -lFLAC -logg" PKG_CONFIG=pkg-config PKG_CONFIG_LIBDIR="$HOME/wiiuprefix/lib/pkgconfig:${DEVKITPRO}/portlibs/wiiu/lib/pkgconfig:${DEVKITPRO}/portlibs/ppc/lib/pkgconfig" ../configure --host=powerpc-eabi --without-flac --without-sdl12 --without-sdl3 --enable-force-wiiu --enable-sdl2-linking
           make
           powerpc-eabi-strip -S schismtracker.elf
           make schismtracker.wuhb

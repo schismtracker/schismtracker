@@ -148,8 +148,8 @@ AC_ARG_ENABLE(sdl2-linking,
 
 AC_ARG_ENABLE(sdl3-linking,
 	AS_HELP_STRING([--enable-sdl3-linking], [Link to SDL 3 rather than loading at runtime]),
-	SDL2_LINKING=$enableval,
-	SDL2_LINKING=no)
+	SDL3_LINKING=$enableval,
+	SDL3_LINKING=no)
 
 AC_ARG_ENABLE(x11-linking,
 	AS_HELP_STRING([--enable-x11-linking], [Link to X11 rather than loading at runtime]),
