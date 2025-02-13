@@ -44,14 +44,18 @@ static void (SDLCALL *sdl3_QuitSubSystem)(SDL_InitFlags flags) = NULL;
 static int (SDLCALL *sdl3_GetNumAudioDrivers)(void) = NULL;
 static const char *(SDLCALL *sdl3_GetAudioDriver)(int i) = NULL;
 
-static int (SDLCALL *sdl3_GetNumAudioDevices)(int) = NULL;
-static const char *(SDLCALL *sdl3_GetAudioDeviceName)(int, int) = NULL;
+static bool (SDLCALL *sdl3_GetAudioDeviceFormat)(SDL_AudioDeviceID devid, SDL_AudioSpec *spec, int *sample_frames) = NULL;
+static const char * (SDLCALL *sdl3_GetAudioDeviceName)(SDL_AudioDeviceID devid) = NULL;
+static SDL_AudioDeviceID * (SDLCALL *sdl3_GetAudioPlaybackDevices)(int *count) = NULL;
 
 static SDL_AudioStream *(SDLCALL *sdl3_OpenAudioDeviceStream)(SDL_AudioDeviceID devid, const SDL_AudioSpec *spec, SDL_AudioStreamCallback callback, void *userdata) = NULL;
 static void (SDLCALL *sdl3_DestroyAudioStream)(SDL_AudioStream *stream) = NULL;
-static void (SDLCALL *sdl3_PauseAudioDevice)(SDL_AudioDeviceID dev, int pause_on) = NULL;
+static bool (SDLCALL *sdl3_PauseAudioDevice)(SDL_AudioDeviceID dev) = NULL;
+static bool (SDLCALL *sdl3_ResumeAudioDevice)(SDL_AudioDeviceID dev) = NULL;
 static SDL_AudioDeviceID (SDLCALL *sdl3_GetAudioStreamDevice)(SDL_AudioStream *stream) = NULL;
 static bool (SDLCALL *sdl3_PutAudioStreamData)(SDL_AudioStream *stream, const void *buf, int len) = NULL;
+
+static void (SDLCALL *sdl3_free)(void *ptr) = NULL;
 
 /* SDL_AudioInit and SDL_AudioQuit were completely removed
  * in SDL3, which means we have to do this always regardless. */
@@ -97,16 +101,31 @@ static const char *sdl3_audio_driver_name(int i)
 
 /* --------------------------------------------------------------- */
 
+static SDL_AudioDeviceID *devices = NULL;
+static int device_count = 0;
+
+static inline SCHISM_ALWAYS_INLINE void _free_devices(void)
+{
+	if (devices) {
+		sdl3_free(devices);
+		devices = NULL;
+	}
+}
+
 static uint32_t sdl3_audio_device_count(void)
 {
-	int x = sdl3_GetNumAudioDevices(0);
+	_free_devices();
 
-	return MAX(x, 0);
+	devices = sdl3_GetAudioPlaybackDevices(&device_count);
+
+	return device_count;
 }
 
 static const char *sdl3_audio_device_name(uint32_t i)
 {
-	return sdl3_GetAudioDeviceName(i, 0);
+	if (i < 0 || i >= device_count) return NULL;
+
+	return sdl3_GetAudioDeviceName(devices[i]);
 }
 
 /* ---------------------------------------------------------- */
@@ -117,7 +136,7 @@ static int sdl3_audio_init_driver(const char *driver)
 		return -1;
 
 	// force poll for audio devices
-	(void)sdl3_GetNumAudioDevices(0);
+	sdl3_audio_device_count();
 
 	return 0;
 }
@@ -125,6 +144,8 @@ static int sdl3_audio_init_driver(const char *driver)
 static void sdl3_audio_quit_driver(void)
 {
 	schism_quit_audio_impl();
+
+	devices = NULL;
 }
 
 /* -------------------------------------------------------- */
@@ -177,10 +198,15 @@ static schism_audio_device_t *sdl3_audio_open_device(uint32_t id, const schism_a
 		goto fail;
 
 	// PAUSE!
-	sdl3_PauseAudioDevice(sdl3_GetAudioStreamDevice(dev->stream), 1);
+	sdl3_PauseAudioDevice(sdl3_GetAudioStreamDevice(dev->stream));
 
 	// lolwut
 	memcpy(obtained, desired, sizeof(schism_audio_spec_t));
+
+	// We can't actually request a buffer size anymore. Boohoo.
+	int samples;
+	sdl3_GetAudioDeviceFormat(id, NULL, &samples);
+	obtained->samples = samples;
 
 	return dev;
 
@@ -221,12 +247,12 @@ static void sdl3_audio_unlock_device(schism_audio_device_t *dev)
 	mt_mutex_unlock(dev->mutex);
 }
 
-static void sdl3_audio_pause_device(schism_audio_device_t *dev, int paused)
+static void sdl3_audio_pause_device(schism_audio_device_t *dev, int pause)
 {
 	if (!dev)
 		return;
 
-	sdl3_PauseAudioDevice(sdl3_GetAudioStreamDevice(dev->stream), paused);
+	(pause ? sdl3_PauseAudioDevice : sdl3_ResumeAudioDevice)(sdl3_GetAudioStreamDevice(dev->stream));
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -240,12 +266,14 @@ static int sdl3_audio_load_syms(void)
 	SCHISM_SDL3_SYM(GetNumAudioDrivers);
 	SCHISM_SDL3_SYM(GetAudioDriver);
 
-	SCHISM_SDL3_SYM(GetNumAudioDevices);
+	SCHISM_SDL3_SYM(GetAudioPlaybackDevices);
 	SCHISM_SDL3_SYM(GetAudioDeviceName);
 
 	SCHISM_SDL3_SYM(OpenAudioDeviceStream);
 	SCHISM_SDL3_SYM(DestroyAudioStream);
 	SCHISM_SDL3_SYM(PauseAudioDevice);
+
+	SCHISM_SDL3_SYM(free);
 
 	return 0;
 }

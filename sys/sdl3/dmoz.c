@@ -27,18 +27,15 @@
 
 #include "init.h"
 
-static char * (SDLCALL *sdl3_GetBasePath)(void);
-
-static void (SDLCALL *sdl3_free)(void *);
+static const char * (SDLCALL *sdl3_GetBasePath)(void);
 
 static char *sdl3_dmoz_get_exe_path(void)
 {
-	char *sdl = sdl3_GetBasePath();
+	const char *sdl = sdl3_GetBasePath();
 	if (!sdl)
 		return NULL;
 
 	char *us = str_dup(sdl);
-	sdl3_free(sdl);
 	return us;
 }
 
@@ -48,8 +45,6 @@ static char *sdl3_dmoz_get_exe_path(void)
 static int sdl3_dmoz_load_syms(void)
 {
 	SCHISM_SDL3_SYM(GetBasePath);
-
-	SCHISM_SDL3_SYM(free);
 
 	return 0;
 }

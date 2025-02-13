@@ -34,9 +34,7 @@ static bool (SDLCALL *sdl3_InitSubSystem)(SDL_InitFlags flags) = NULL;
 static void (SDLCALL *sdl3_QuitSubSystem)(SDL_InitFlags flags) = NULL;
 
 static SDL_Keymod (SDLCALL *sdl3_GetModState)(void) = NULL;
-static int (SDLCALL *sdl3_PollEvent)(SDL_Event *event) = NULL;
-static bool (SDLCALL *sdl3_TextInputActive)(void) = NULL;
-static bool (SDLCALL *sdl3_StartTextInput)(SDL_Window *window) = NULL;
+static bool (SDLCALL *sdl3_PollEvent)(SDL_Event *event) = NULL;
 
 static void (SDLCALL *sdl3_free)(void *) = NULL;
 
@@ -236,12 +234,12 @@ void sdl3_pump_events(void)
 			schism_event.key.scancode = e.key.scancode;
 			schism_event.key.mod = sdl3_modkey_trans(e.key.mod); // except this one!
 
-			if (!sdl3_TextInputActive()) {
+			//if (!sdl3_TextInputActive()) {
 				// push it NOW
-				events_push_event(&schism_event);
-			} else {
+			//	events_push_event(&schism_event);
+			//} else {
 				push_pending_keydown(&schism_event);
-			}
+			//}
 
 			break;
 		case SDL_EVENT_KEY_UP:
@@ -346,9 +344,7 @@ static int sdl3_events_load_syms(void)
 	SCHISM_SDL3_SYM(QuitSubSystem);
 
 	SCHISM_SDL3_SYM(GetModState);
-	SCHISM_SDL3_SYM(TextInputActive);
 	SCHISM_SDL3_SYM(PollEvent);
-	SCHISM_SDL3_SYM(StartTextInput);
 	SCHISM_SDL3_SYM(SetWindowsMessageHook);
 	SCHISM_SDL3_SYM(SetX11EventHook);
 

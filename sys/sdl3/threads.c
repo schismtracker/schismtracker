@@ -31,7 +31,7 @@
 
 static SDL_Thread *(SDLCALL *sdl3_CreateThreadRuntime)(SDL_ThreadFunction fn, const char *name, void *data, SDL_FunctionPointer begin, SDL_FunctionPointer end) = NULL;
 static void (SDLCALL *sdl3_WaitThread)(SDL_Thread * thread, int *status) = NULL;
-static int (SDLCALL *sdl3_SetCurrentThreadPriority)(SDL_ThreadPriority priority) = NULL;
+static bool (SDLCALL *sdl3_SetCurrentThreadPriority)(SDL_ThreadPriority priority) = NULL;
 static Uint64 (SDLCALL *sdl3_GetCurrentThreadID)(void) = NULL;
 
 struct mt_thread {
@@ -91,8 +91,8 @@ static mt_thread_id_t sdl3_thread_id(void)
 
 static SDL_Mutex *(SDLCALL *sdl3_CreateMutex)(void) = NULL;
 static void (SDLCALL *sdl3_DestroyMutex)(SDL_Mutex * mutex) = NULL;
-static int (SDLCALL *sdl3_LockMutex)(SDL_Mutex * mutex) = NULL;
-static int (SDLCALL *sdl3_UnlockMutex)(SDL_Mutex * mutex) = NULL;
+static void (SDLCALL *sdl3_LockMutex)(SDL_Mutex * mutex) = NULL;
+static void (SDLCALL *sdl3_UnlockMutex)(SDL_Mutex * mutex) = NULL;
 
 struct mt_mutex {
 	SDL_Mutex *mutex;
@@ -131,9 +131,9 @@ void sdl3_mutex_unlock(mt_mutex_t *mutex)
 
 static SDL_Condition *(SDLCALL *sdl3_CreateCondition)(void) = NULL;
 static void (SDLCALL *sdl3_DestroyCondition)(SDL_Condition *cond) = NULL;
-static int (SDLCALL *sdl3_SignalCondition)(SDL_Condition *cond) = NULL;
-static int (SDLCALL *sdl3_WaitCondition)(SDL_Condition *cond, SDL_Mutex *mutex) = NULL;
-static int (SDLCALL *sdl3_WaitConditionTimeout)(SDL_Condition *cond, SDL_Mutex *mutex, uint32_t timeout) = NULL;
+static void (SDLCALL *sdl3_SignalCondition)(SDL_Condition *cond) = NULL;
+static void (SDLCALL *sdl3_WaitCondition)(SDL_Condition *cond, SDL_Mutex *mutex) = NULL;
+static bool (SDLCALL *sdl3_WaitConditionTimeout)(SDL_Condition *cond, SDL_Mutex *mutex, int32_t timeout) = NULL;
 
 struct mt_cond {
 	SDL_Condition *cond;
