@@ -2234,8 +2234,10 @@ static int instrument_list_pre_handle_key(struct key_event * k)
 	if (song_is_instrument_mode()) {
 		int csamp = sample_get_current();
 		sample_synchronize_to_instrument();
-		if (csamp != sample_get_current())
+		if (csamp != sample_get_current()) {
+			status.flags |= NEED_UPDATE;
 			return 0;
+		}
 	}
 
 	if (k->mod & SCHISM_KEYMOD_SHIFT) {
