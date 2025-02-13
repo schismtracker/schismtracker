@@ -101,6 +101,9 @@ static const schism_audio_backend_t *backends[] = {
 #ifdef SCHISM_MACOSX
 	&schism_audio_backend_macosx,
 #endif
+#ifdef SCHISM_SDL3
+	&schism_audio_backend_sdl3,
+#endif
 #ifdef SCHISM_SDL2
 	&schism_audio_backend_sdl2,
 #endif

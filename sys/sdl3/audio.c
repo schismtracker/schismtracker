@@ -157,7 +157,9 @@ static void SDLCALL sdl3_audio_callback(void *userdata, SDL_AudioStream *stream,
 	if (additional_amount > 0) {
 		SCHISM_VLA_ALLOC(uint8_t, data, additional_amount);
 		if (data) {
+			mt_mutex_lock(dev->mutex);
 			dev->callback(data, additional_amount);
+			mt_mutex_unlock(dev->mutex);
 			sdl3_PutAudioStreamData(stream, data, additional_amount);
 			SCHISM_VLA_FREE(data);
 		}
@@ -205,7 +207,10 @@ static schism_audio_device_t *sdl3_audio_open_device(uint32_t id, const schism_a
 
 	// We can't actually request a buffer size anymore. Boohoo.
 	int samples;
-	sdl3_GetAudioDeviceFormat(id, NULL, &samples);
+	{
+		SDL_AudioSpec xyzzy;
+		sdl3_GetAudioDeviceFormat(id, &xyzzy, &samples);
+	}
 	obtained->samples = samples;
 
 	return dev;
@@ -272,6 +277,10 @@ static int sdl3_audio_load_syms(void)
 	SCHISM_SDL3_SYM(OpenAudioDeviceStream);
 	SCHISM_SDL3_SYM(DestroyAudioStream);
 	SCHISM_SDL3_SYM(PauseAudioDevice);
+	SCHISM_SDL3_SYM(ResumeAudioDevice);
+	SCHISM_SDL3_SYM(GetAudioStreamDevice);
+	SCHISM_SDL3_SYM(GetAudioDeviceFormat);
+	SCHISM_SDL3_SYM(PutAudioStreamData);
 
 	SCHISM_SDL3_SYM(free);
 
