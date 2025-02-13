@@ -310,6 +310,8 @@ static HRESULT (WINAPI *DWMAPI_DwmSetWindowAttribute)(HWND hwnd, DWORD key, LPCV
 
 static void *lib_user32 = NULL;
 static BOOL (WINAPI *USER32_SetWindowCompositionAttribute)(HWND, const WINDOWCOMPOSITIONATTRIBDATA *) = NULL;
+static BOOL (WINAPI *USER32_GetMenuItemInfoW)(HMENU, UINT, BOOL, LPMENUITEMINFOW);
+static BOOL (WINAPI *USER32_GetMenuBarInfo)(HWND, LONG, LONG, PMENUBARINFO);
 
 /* `bool`, which is 1 byte, call that `unsigned char` ;) */
 static void *lib_uxtheme = NULL;
@@ -508,6 +510,8 @@ void win32_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv)
 		lib_user32 = loadso_object_load("user32.dll");
 		if (lib_user32) {
 			USER32_SetWindowCompositionAttribute = loadso_function_load(lib_user32, "SetWindowCompositionAttribute");
+			USER32_GetMenuItemInfoW = loadso_function_load(lib_user32, "GetMenuItemInfoW");
+			USER32_GetMenuBarInfo = loadso_function_load(lib_user32, "GetMenuBarInfo");
 		}
 	}
 
@@ -656,7 +660,7 @@ static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 		
 		if (drawmenu) {
 			MENUBARINFO mbi = {.cbSize = sizeof(MENUBARINFO)};
-			if (!GetMenuBarInfo(hwnd, OBJID_MENU, 0, &mbi))
+			if (!USER32_GetMenuBarInfo || !USER32_GetMenuBarInfo(hwnd, OBJID_MENU, 0, &mbi))
 				break;
 
 			RECT rcWindow;
@@ -693,7 +697,7 @@ static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 			// undocumented struct here because DRAWITEMSTRUCT::itemID is
 			// not initialized in the struct passed to us here, so this is
 			// the only way to identify the item we're dealing with.
-			if (!GetMenuItemInfoW((HMENU)drawmenuitem->dis.hwndItem, drawmenuitem->mbmi.iPosition, TRUE, &mii))
+			if (!USER32_GetMenuItemInfoW || !USER32_GetMenuItemInfoW((HMENU)drawmenuitem->dis.hwndItem, drawmenuitem->mbmi.iPosition, TRUE, &mii))
 				break;
 
 			const UINT itemState = drawmenuitem->dis.itemState;
