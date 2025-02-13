@@ -177,6 +177,79 @@ typedef struct _DTTOPTS {
 #define ODS_COMBOBOXEDIT 0x1000 /* Edit of a combo box */
 #endif
 
+#ifndef DT_TOP
+#define DT_TOP                  0x00000000
+#endif
+#ifndef DT_LEFT
+#define DT_LEFT                 0x00000000
+#endif
+#ifndef DT_CENTER
+#define DT_CENTER               0x00000001
+#endif
+#ifndef DT_RIGHT
+#define DT_RIGHT                0x00000002
+#endif
+#ifndef DT_VCENTER
+#define DT_VCENTER              0x00000004
+#endif
+#ifndef DT_BOTTOM
+#define DT_BOTTOM               0x00000008
+#endif
+#ifndef DT_WORDBREAK
+#define DT_WORDBREAK            0x00000010
+#endif
+#ifndef DT_SINGLELINE
+#define DT_SINGLELINE           0x00000020
+#endif
+#ifndef DT_EXPANDTABS
+#define DT_EXPANDTABS           0x00000040
+#endif
+#ifndef DT_TABSTOP
+#define DT_TABSTOP              0x00000080
+#endif
+#ifndef DT_NOCLIP
+#define DT_NOCLIP               0x00000100
+#endif
+#ifndef DT_EXTERNALLEADING
+#define DT_EXTERNALLEADING      0x00000200
+#endif
+#ifndef DT_CALCRECT
+#define DT_CALCRECT             0x00000400
+#endif
+#ifndef DT_NOPREFIX
+#define DT_NOPREFIX             0x00000800
+#endif
+#ifndef DT_INTERNAL
+#define DT_INTERNAL             0x00001000
+#endif
+#ifndef DT_EDITCONTROL
+#define DT_EDITCONTROL          0x00002000
+#endif
+#ifndef DT_PATH_ELLIPSIS
+#define DT_PATH_ELLIPSIS        0x00004000
+#endif
+#ifndef DT_END_ELLIPSIS
+#define DT_END_ELLIPSIS         0x00008000
+#endif
+#ifndef DT_MODIFYSTRING
+#define DT_MODIFYSTRING         0x00010000
+#endif
+#ifndef DT_RTLREADING
+#define DT_RTLREADING           0x00020000
+#endif
+#ifndef DT_WORD_ELLIPSIS
+#define DT_WORD_ELLIPSIS        0x00040000
+#endif
+#ifndef DT_NOFULLWIDTHCHARBREAK
+#define DT_NOFULLWIDTHCHARBREAK 0x00080000
+#endif
+#ifndef DT_HIDEPREFIX
+#define DT_HIDEPREFIX           0x00100000
+#endif
+#ifndef DT_PREFIXONLY
+#define DT_PREFIXONLY           0x00200000
+#endif
+
 enum BARITEMSTATES {
     MBI_NORMAL = 1,
     MBI_HOT = 2,
