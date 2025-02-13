@@ -21,7 +21,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/* Predominantly this file is keyboard crap, but we also get the network configured here */
+/* WOW this file got ugly */
 
 #include "headers.h"
 
@@ -38,8 +38,6 @@
 #include <winerror.h>
 #include <process.h>
 #include <shlobj.h>
-#include <vsstyle.h>
-#include <uxtheme.h>
 
 #include <direct.h>
 
@@ -76,6 +74,80 @@
 #define IDM_SETTINGS_FONT_EDITOR 604
 #define IDM_SETTINGS_SYSTEM_CONFIGURATION 605
 
+// MinGW32 doesn't have <vsstyles.h> nor <uxtheme.h> ------
+
+typedef int (WINAPI *DTT_CALLBACK_PROC)(HDC,LPWSTR,int,RECT*,UINT,LPARAM);
+
+typedef struct _DTTOPTS {
+    DWORD dwSize;
+    DWORD dwFlags;
+    COLORREF crText;
+    COLORREF crBorder;
+    COLORREF crShadow;
+    int iTextShadowType;
+    POINT ptShadowOffset;
+    int iBorderSize;
+    int iFontPropId;
+    int iColorPropId;
+    int iStateId;
+    BOOL fApplyOverlay;
+    int iGlowSize;
+    DTT_CALLBACK_PROC pfnDrawTextCallback;
+    LPARAM lParam;
+} DTTOPTS, *PDTTOPTS;
+
+/* DTTOPTS.dwFlags bits */
+#define DTT_TEXTCOLOR    0x00000001
+#define DTT_BORDERCOLOR  0x00000002
+#define DTT_SHADOWCOLOR  0x00000004
+#define DTT_SHADOWTYPE   0x00000008
+#define DTT_SHADOWOFFSET 0x00000010
+#define DTT_BORDERSIZE   0x00000020
+#define DTT_FONTPROP     0x00000040
+#define DTT_COLORPROP    0x00000080
+#define DTT_STATEID      0x00000100
+#define DTT_CALCRECT     0x00000200
+#define DTT_APPLYOVERLAY 0x00000400
+#define DTT_GLOWSIZE     0x00000800
+#define DTT_CALLBACK     0x00001000
+#define DTT_COMPOSITED   0x00002000
+#define DTT_VALIDBITS    0x00003fff
+
+enum BARITEMSTATES {
+    MBI_NORMAL = 1,
+    MBI_HOT = 2,
+    MBI_PUSHED = 3,
+    MBI_DISABLED = 4,
+    MBI_DISABLEDHOT = 5,
+    MBI_DISABLEDPUSHED = 6,
+};
+
+enum MENUPARTS {
+    MENU_MENUITEM_TMSCHEMA = 1,
+    MENU_MENUDROPDOWN_TMSCHEMA = 2,
+    MENU_MENUBARITEM_TMSCHEMA = 3,
+    MENU_MENUBARDROPDOWN_TMSCHEMA = 4,
+    MENU_CHEVRON_TMSCHEMA = 5,
+    MENU_SEPARATOR_TMSCHEMA = 6,
+    MENU_BARBACKGROUND = 7,
+    MENU_BARITEM = 8,
+    MENU_POPUPBACKGROUND = 9,
+    MENU_POPUPBORDERS = 10,
+    MENU_POPUPCHECK = 11,
+    MENU_POPUPCHECKBACKGROUND = 12,
+    MENU_POPUPGUTTER = 13,
+    MENU_POPUPITEM = 14,
+    MENU_POPUPSEPARATOR = 15,
+    MENU_POPUPSUBMENU = 16,
+    MENU_SYSTEMCLOSE = 17,
+    MENU_SYSTEMMAXIMIZE = 18,
+    MENU_SYSTEMMINIMIZE = 19,
+    MENU_SYSTEMRESTORE = 20,
+};
+
+// --------------------------------------------------------
+
+
 typedef enum {
     WCA_UNDEFINED = 0,
     WCA_USEDARKMODECOLORS = 26,
@@ -96,7 +168,7 @@ static void *lib_dwmapi = NULL;
 static HRESULT (WINAPI *DWMAPI_DwmSetWindowAttribute)(HWND hwnd, DWORD key, LPCVOID data, DWORD sz_data) = NULL;
 
 static void *lib_user32 = NULL;
-static BOOL (WINAPI *USER32_SetWindowCompositionAttribute)(HWND, const WINDOWCOMPOSITIONATTRIBDATA *);
+static BOOL (WINAPI *USER32_SetWindowCompositionAttribute)(HWND, const WINDOWCOMPOSITIONATTRIBDATA *) = NULL;
 
 /* `bool`, which is 1 byte, call that `unsigned char` ;) */
 static void *lib_uxtheme = NULL;
@@ -106,7 +178,7 @@ static void (WINAPI *UXTHEME_AllowDarkModeForApp)(unsigned char allow) = NULL; /
 static DWORD (WINAPI *UXTHEME_SetPreferredAppMode)(DWORD app_mode) = NULL; // v1903
 static HTHEME (WINAPI *UXTHEME_OpenThemeData)(HWND hwnd, LPCWSTR pszClassList) = NULL;
 static HRESULT (WINAPI *UXTHEME_DrawThemeTextEx)(HTHEME hTheme, HDC hdc, int iPartId, int iStateId, LPCWSTR pszText, int cchText, DWORD dwTextFlags, LPRECT pRect, const DTTOPTS *pOptions) = NULL;
-static void (WINAPI *UXTHEME_RefreshImmersiveColorPolicyState)(void);
+static void (WINAPI *UXTHEME_RefreshImmersiveColorPolicyState)(void) = NULL;
 #define APPMODE_DEFAULT    0
 #define APPMODE_ALLOWDARK  1
 #define APPMODE_FORCEDARK  2
