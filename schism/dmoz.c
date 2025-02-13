@@ -852,121 +852,116 @@ char *dmoz_get_current_directory(void)
 // environment variables. THEN we fallback to FALLBACK_DIR.
 
 // consolidate this crap into one messy function
+#define DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL(TYPE, CHARSET, SUFFIX, GETENV, LITERAL) \
+	static char *dmoz_win32_get_csidl_directory##SUFFIX(int csidl, const TYPE *registry, const TYPE *envvar) \
+	{ \
+		{ \
+			TYPE buf[MAX_PATH]; \
+	\
+			if (WIN32_SHGetSpecialFolderPath##SUFFIX && WIN32_SHGetSpecialFolderPath##SUFFIX(NULL, buf, csidl, 1)) { \
+				char *utf8; \
+				if (!charset_iconv(buf, &utf8, CHARSET, CHARSET_UTF8, sizeof(buf))) \
+					return utf8; \
+			} \
+		} \
+	\
+		if (registry) { \
+			static const TYPE *regpaths[] = { \
+				LITERAL##"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders", \
+				LITERAL##"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders", /* Win95 */ \
+			}; \
+			int i; \
+			for (i = 0; i < ARRAY_SIZE(regpaths); i++) {\
+				HKEY shell_folders; \
+				if (RegOpenKeyEx##SUFFIX(HKEY_CURRENT_USER, regpaths[i], 0, KEY_READ, &shell_folders) != ERROR_SUCCESS) \
+					continue; \
+	\
+				DWORD type; \
+				DWORD length; \
+	\
+				if (RegQueryValueEx##SUFFIX(shell_folders, registry, NULL, &type, NULL, &length) != ERROR_SUCCESS \
+					|| (type != REG_EXPAND_SZ && type != REG_SZ)) \
+					continue; \
+	\
+				TYPE *data = mem_alloc(length); \
+	\
+				if (RegQueryValueEx##SUFFIX(shell_folders, registry, NULL, NULL, (LPBYTE)data, &length) != ERROR_SUCCESS) { \
+					free(data); \
+					continue; \
+				} \
+	\
+				if (type == REG_EXPAND_SZ) {\
+					TYPE expanded[MAX_PATH]; \
+					if (ExpandEnvironmentStrings##SUFFIX((void *)data, expanded, ARRAY_SIZE(expanded))) { \
+						char *utf8; \
+						if (!charset_iconv(expanded, &utf8, CHARSET, CHARSET_UTF8, sizeof(expanded))) { \
+							free(data); \
+							return utf8; \
+						} \
+					} \
+				} else if (type == REG_SZ) { \
+					char *utf8; \
+					if (!charset_iconv(data, &utf8, CHARSET, CHARSET_UTF8, length)) { \
+						free(data); \
+						return utf8; \
+					} \
+				} \
+	\
+				free(data); \
+			} \
+		} \
+	\
+		if (envvar) { \
+			TYPE *ptr = GETENV(envvar); \
+			if (ptr) { \
+				char *utf8; \
+	\
+				if (!charset_iconv(ptr, &utf8, CHARSET_ANSI, CHARSET_UTF8, MAX_PATH * sizeof(TYPE))) \
+					return utf8; \
+			} \
+		} \
+	\
+		return NULL; \
+	}
+
+DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL(char, CHARSET_ANSI, A, getenv, /* none */)
+DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL(WCHAR, CHARSET_WCHAR_T, W, _wgetenv, L)
+
+#undef DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL
+
+// Don't use this function directly! see the macro defined below
 static char *dmoz_win32_get_csidl_directory(int csidl, const wchar_t *registryw, const char *registry, const wchar_t *envvarw, const char *envvar)
 {
-	// It would really be nice if we had a way to compile a single object file as
-	// both Unicode and ANSI and just call it from here so we only have to write
-	// this once.
-
 #ifdef SCHISM_WIN32_COMPILE_ANSI
 	if (GetVersion() & UINT32_C(0x80000000)) {
-		// Windows 9x, ANSI.
-		{
-			char buf[PATH_MAX + 1] = {0};
-
-			if (WIN32_SHGetSpecialFolderPathA && WIN32_SHGetSpecialFolderPathA(NULL, buf, csidl, 1)) {
-				char *utf8;
-				if (!charset_iconv(buf, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(buf)))
-					return utf8;
-			}
-		}
-
-		if (registry) {
-			HKEY shell_folders;
-			if (RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders", 0, KEY_READ, &shell_folders) == ERROR_SUCCESS) {
-				DWORD type;
-				DWORD length;
-
-				if (RegQueryValueExA(shell_folders, registry, NULL, &type, NULL, &length) == ERROR_SUCCESS) {
-					if (type == REG_EXPAND_SZ) {
-						BYTE *data = mem_alloc(length);
-
-						if (RegQueryValueExA(shell_folders, registry, NULL, NULL, data, &length) == ERROR_SUCCESS) {
-							char expanded[PATH_MAX];
-							if (ExpandEnvironmentStringsA((LPCSTR)data, expanded, PATH_MAX)) {
-								char *utf8;
-								if (!charset_iconv(expanded, &utf8, CHARSET_ANSI, CHARSET_UTF8, PATH_MAX)) {
-									free(data);
-									return utf8;
-								}
-							}
-						}
-
-						free(data);
-					}
-				}
-			}
-		}
-
-		if (envvar) {
-			char *ptr = getenv(envvar);
-			if (ptr) {
-				char *utf8;
-
-				if (!charset_iconv(ptr, &utf8, CHARSET_ANSI, CHARSET_UTF8, PATH_MAX + 1))
-					return utf8;
-			}
-		}
+		char *utf8 = dmoz_win32_get_csidl_directoryA(csidl, registry, envvar);
+		if (utf8)
+			return utf8;
 	} else
 #endif
 	{
 		// Windows NT.
 		{
-			wchar_t bufw[PATH_MAX + 1] = {L'\0'};
-			char *utf8 = NULL;
+			// special case: SHGetFolderPathW
+			wchar_t bufw[MAX_PATH];
+			char *utf8;
 
-			if (WIN32_SHGetFolderPathW && WIN32_SHGetFolderPathW(NULL, csidl, NULL, 0, bufw) == S_OK && !charset_iconv(bufw, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
-				return utf8;
-
-			if (WIN32_SHGetSpecialFolderPathW && WIN32_SHGetSpecialFolderPathW(NULL, bufw, csidl, 1) && !charset_iconv(bufw, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
+			if (WIN32_SHGetFolderPathW && WIN32_SHGetFolderPathW(NULL, csidl, NULL, 0, bufw) == S_OK && !charset_iconv(bufw, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, MAX_PATH))
 				return utf8;
 		}
 
-		// For the most part this is just a bunch of crap to get older Windows versions working...
-		if (registryw) {
-			// This is a whole lot of code to just query the registry...
-			HKEY shell_folders;
-			if (RegOpenKeyExW(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders", 0, KEY_READ, &shell_folders) == ERROR_SUCCESS) {
-				DWORD type;
-				DWORD length;
-
-				if (RegQueryValueExW(shell_folders, registryw, NULL, &type, NULL, &length) == ERROR_SUCCESS) {
-					if (type == REG_EXPAND_SZ) {
-						BYTE *data = mem_alloc(length);
-
-						if (RegQueryValueExW(shell_folders, registryw, NULL, NULL, data, &length) == ERROR_SUCCESS) {
-							WCHAR expanded[PATH_MAX];
-							if (ExpandEnvironmentStringsW((LPCWSTR)data, expanded, PATH_MAX)) {
-								char *utf8;
-								if (!charset_iconv(expanded, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX)) {
-									free(data);
-									return utf8;
-								}
-							}
-						}
-
-						free(data);
-					}
-				}
-			}
-		}
-
-		if (envvarw) {
-			wchar_t *ptr = _wgetenv(envvarw);
-			if (ptr) {
-				char *utf8;
-
-				if (!charset_iconv(ptr, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
-					return utf8;
-			}
-		}
+		char *utf8 = dmoz_win32_get_csidl_directoryW(csidl, registryw, envvarw);
+		if (utf8)
+			return utf8;
 	}
 
 	// we'll get em next time
 	return NULL;
 }
 
-// convenience macro so we don't have to type it twice
+// this just makes stuff simpler.
+// registry and envvar need to be compile time constants,
+// but really they should already be that anyway
 # define DMOZ_GET_WIN32_DIRECTORY(csidl, registry, envvar) dmoz_win32_get_csidl_directory(csidl, L ## registry, registry, L ## envvar, envvar)
 #elif defined(SCHISM_MACOS)
 static char *dmoz_macos_find_folder(OSType folder_type)
