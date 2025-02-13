@@ -953,10 +953,12 @@ void win32_toggle_menu(void *window, int on)
 
 		// Enable Dark Mode support on Windows 10 >= 1809
 		if (win32_ntver_atleast(10, 0, 17763)) {
+			const BOOL unicode = IsWindowUnicode((HWND)window);
+
 			win32_toggle_dark_title_bar(window, 1);
 
-			old_wndproc = (WNDPROC)GetWindowLongPtrW((HWND)window, GWLP_WNDPROC);
-			(void)SetWindowLongPtrW((HWND)window, GWLP_WNDPROC, (LONG_PTR)win32_wndproc);
+			old_wndproc = (WNDPROC)(unicode ? GetWindowLongPtrW : GetWindowLongPtrA)((HWND)window, GWLP_WNDPROC);
+			(void)(unicode ? SetWindowLongPtrW : SetWindowLongPtrA)((HWND)window, GWLP_WNDPROC, (LONG_PTR)win32_wndproc);
 		} else {
 			// SDL 3 sets this to true, even on older versions, which means the
 			// color of the menu bar and title bar clash. Reset it to zero.
