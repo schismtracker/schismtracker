@@ -354,13 +354,13 @@ static void sdl2_video_startup(void)
 	video.saved.x = video.saved.y = SDL_WINDOWPOS_CENTERED;
 
 	video.window = sdl2_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width, video.height, SDL_WINDOW_RESIZABLE);
+	video_fullscreen(cfg_video_fullscreen);
 	video_set_hardware(cfg_video_hardware);
 
 	/* Aspect ratio correction if it's wanted */
 	if (cfg_video_want_fixed)
 		sdl2_RenderSetLogicalSize(video.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height);
 
-	video_fullscreen(cfg_video_fullscreen);
 	if (video_have_menu() && !video.fullscreen) {
 		sdl2_SetWindowSize(video.window, video.width, video.height);
 		sdl2_SetWindowPosition(video.window, video.saved.x, video.saved.y);
