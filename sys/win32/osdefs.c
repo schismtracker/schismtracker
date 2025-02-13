@@ -76,6 +76,18 @@
 #define IDM_SETTINGS_FONT_EDITOR 604
 #define IDM_SETTINGS_SYSTEM_CONFIGURATION 605
 
+typedef enum {
+    WCA_UNDEFINED = 0,
+    WCA_USEDARKMODECOLORS = 26,
+    WCA_LAST = 27
+} WINDOWCOMPOSITIONATTRIB;
+
+typedef struct {
+    WINDOWCOMPOSITIONATTRIB Attrib;
+    PVOID pvData;
+    SIZE_T cbData;
+} WINDOWCOMPOSITIONATTRIBDATA;
+
 /* global menu object */
 static HMENU menu = NULL;
 
@@ -83,13 +95,18 @@ static HMENU menu = NULL;
 static void *lib_dwmapi = NULL;
 static HRESULT (WINAPI *DWMAPI_DwmSetWindowAttribute)(HWND hwnd, DWORD key, LPCVOID data, DWORD sz_data) = NULL;
 
+static void *lib_user32 = NULL;
+static BOOL (WINAPI *USER32_SetWindowCompositionAttribute)(HWND, const WINDOWCOMPOSITIONATTRIBDATA *);
+
 /* `bool`, which is 1 byte, call that `unsigned char` ;) */
 static void *lib_uxtheme = NULL;
 static unsigned char (WINAPI *UXTHEME_ShouldAppsUseDarkMode)(void) = NULL;
 static unsigned char (WINAPI *UXTHEME_AllowDarkModeForWindow)(HWND hwnd, unsigned char allow) = NULL;
-static DWORD (WINAPI *UXTHEME_SetPreferredAppMode)(DWORD app_mode) = NULL;
+static void (WINAPI *UXTHEME_AllowDarkModeForApp)(unsigned char allow) = NULL; // v1809
+static DWORD (WINAPI *UXTHEME_SetPreferredAppMode)(DWORD app_mode) = NULL; // v1903
 static HTHEME (WINAPI *UXTHEME_OpenThemeData)(HWND hwnd, LPCWSTR pszClassList) = NULL;
 static HRESULT (WINAPI *UXTHEME_DrawThemeTextEx)(HTHEME hTheme, HDC hdc, int iPartId, int iStateId, LPCWSTR pszText, int cchText, DWORD dwTextFlags, LPRECT pRect, const DTTOPTS *pOptions) = NULL;
+static void (WINAPI *UXTHEME_RefreshImmersiveColorPolicyState)(void);
 #define APPMODE_DEFAULT    0
 #define APPMODE_ALLOWDARK  1
 #define APPMODE_FORCEDARK  2
@@ -242,8 +259,8 @@ void win32_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv)
 		NTDLL_RtlGetVersion = loadso_function_load(lib_ntdll, "RtlGetVersion");
 	}
 
-	// Load dark mode cruft on Win10 >=19041
-	if (win32_ntver_atleast(10, 0, 19041)) {
+	// Load dark mode cruft
+	if (win32_ntver_atleast(10, 0, 17763)) {
 		lib_dwmapi = loadso_object_load("dwmapi.dll");
 		if (lib_dwmapi) {
 			DWMAPI_DwmSetWindowAttribute = loadso_function_load(lib_dwmapi, "DwmSetWindowAttribute");
@@ -251,11 +268,33 @@ void win32_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv)
 
 		lib_uxtheme = loadso_object_load("uxtheme.dll");
 		if (lib_uxtheme) {
-			UXTHEME_ShouldAppsUseDarkMode = loadso_function_load(lib_uxtheme, MAKEINTRESOURCE(132));
-			UXTHEME_AllowDarkModeForWindow = loadso_function_load(lib_uxtheme, MAKEINTRESOURCE(133));
-			//UXTHEME_SetPreferredAppMode = loadso_function_load(lib_uxtheme, MAKEINTRESOURCE(135));
+			// Just in case MS decides to actually export these functions, I'm attempting
+			// to load functions by name before trying exact ordinals.
+#define LOAD_UNDOCUMENTED_FUNC(name, ordinal) \
+	do { \
+		UXTHEME_##name = loadso_function_load(lib_uxtheme, #name); \
+		if (!UXTHEME_##name) UXTHEME_##name = loadso_function_load(lib_uxtheme, MAKEINTRESOURCEA(ordinal)); \
+	} while (0)
+
+			LOAD_UNDOCUMENTED_FUNC(RefreshImmersiveColorPolicyState, 104);
+			LOAD_UNDOCUMENTED_FUNC(ShouldAppsUseDarkMode, 132);
+			LOAD_UNDOCUMENTED_FUNC(AllowDarkModeForWindow, 133);
 			UXTHEME_OpenThemeData = loadso_function_load(lib_uxtheme, "OpenThemeData");
 			UXTHEME_DrawThemeTextEx = loadso_function_load(lib_uxtheme, "DrawThemeTextEx");
+
+			// SDL 3 enables dark mode, even when we don't want it.
+			if (win32_ntver_atleast(10, 0, 18362)) {
+				LOAD_UNDOCUMENTED_FUNC(SetPreferredAppMode, 135);
+			} else {
+				LOAD_UNDOCUMENTED_FUNC(AllowDarkModeForApp, 135);
+			}
+
+#undef LOAD_UNDOCUMENTED_FUNC
+		}
+
+		lib_user32 = loadso_object_load("user32.dll");
+		if (lib_user32) {
+			USER32_SetWindowCompositionAttribute = loadso_function_load(lib_user32, "SetWindowCompositionAttribute");
 		}
 	}
 
@@ -317,6 +356,9 @@ void win32_sysexit(void)
 
 	if (lib_ntdll)
 		loadso_object_unload(lib_ntdll);
+
+	if (lib_user32)
+		loadso_object_unload(lib_user32);
 }
 
 static LRESULT (CALLBACK *old_wndproc)(HWND, UINT, WPARAM, LPARAM) = NULL;
@@ -324,11 +366,10 @@ static LRESULT (CALLBACK *old_wndproc)(HWND, UINT, WPARAM, LPARAM) = NULL;
 //
 // Hijacked from wxWidgets
 // Copyright (c) 2022 Vadim Zeitlin <vadim@wxwidgets.org>
-// This code should only be run on Windows 10 v2004 and newer!
 //
 static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-#if 1
+#if 0
 	// I can't really test this code because I'm still on Windows 10 v1809
 	// (the LTSC release). Once this code is properly tested I'll enable it...
 	return old_wndproc(hwnd, msg, wparam, lparam);
@@ -388,7 +429,7 @@ static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 		rc.bottom = rc.top;
 		rc.top--;
 
-		HDC hdc = GetDC(hwnd);
+		HDC hdc = GetWindowDC(hwnd);
 		HBRUSH hbr = CreateSolidBrush(0x2B2B2B);
 		FillRect(hdc, &rc, hbr);
 		DeleteObject(hbr);
@@ -401,7 +442,7 @@ static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 		struct MenuBarDrawMenu *drawmenu = (struct MenuBarDrawMenu *)lparam;
 		
 		if (drawmenu) {
-			MENUBARINFO mbi;
+			MENUBARINFO mbi = {.cbSize = sizeof(MENUBARINFO)};
 			if (!GetMenuBarInfo(hwnd, OBJID_MENU, 0, &mbi))
 				break;
 
@@ -429,6 +470,7 @@ static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 
 			WCHAR buf[256];
 			MENUITEMINFOW mii = {
+				.cbSize = sizeof(MENUITEMINFOW),
 				.fMask = MIIM_STRING,
 				.dwTypeData = buf,
 				.cch = sizeof(buf) - 2,
@@ -488,9 +530,11 @@ static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 		}
 		return 0;
 	}
+	default:
+		break;
 	}
 
-	return old_wndproc(hwnd, msg, lparam, wparam);
+	return old_wndproc(hwnd, msg, wparam, lparam);
 #endif
 }
 
@@ -651,14 +695,35 @@ int win32_event(schism_event_t *event)
 
 static inline SCHISM_ALWAYS_INLINE int win32_toggle_dark_title_bar(void *window, int on)
 {
-	const BOOL b = on;
+	const BOOL b = (on && (UXTHEME_ShouldAppsUseDarkMode && UXTHEME_ShouldAppsUseDarkMode()));
 
-	// Initialize dark theme
-	if (SUCCEEDED(DWMAPI_DwmSetWindowAttribute((HWND)window, 20, &b, sizeof(b))))
-		return 1;
+	if (DWMAPI_DwmSetWindowAttribute) {
+		// Initialize dark theme on title bar
+		if (FAILED(DWMAPI_DwmSetWindowAttribute((HWND)window, 20, &b, sizeof(b))))
+			DWMAPI_DwmSetWindowAttribute((HWND)window, 19, &b, sizeof(b));
+	}
 
-	if (SUCCEEDED(DWMAPI_DwmSetWindowAttribute((HWND)window, 19, &b, sizeof(b))))
-		return 1;
+	if (UXTHEME_AllowDarkModeForWindow) {
+		UXTHEME_AllowDarkModeForWindow((HWND)window, on);
+	}
+
+	if (win32_ntver_atleast(10, 0, 18362)) {
+		BOOL v = b; // this value isn't const ?
+		if (USER32_SetWindowCompositionAttribute) {
+			WINDOWCOMPOSITIONATTRIBDATA data = { WCA_USEDARKMODECOLORS, &v, sizeof(v) };
+			USER32_SetWindowCompositionAttribute((HWND)window, &data);
+		}
+	} else {
+		SetPropW((HWND)window, L"UseImmersiveDarkModeColors", (HANDLE)(INT_PTR)on);
+	}
+
+	if (UXTHEME_SetPreferredAppMode) // 1904
+		UXTHEME_SetPreferredAppMode(b ? APPMODE_FORCEDARK : APPMODE_FORCELIGHT);
+	else if (UXTHEME_AllowDarkModeForApp) // old win10
+		UXTHEME_AllowDarkModeForApp(b);
+
+	if (UXTHEME_RefreshImmersiveColorPolicyState)
+		UXTHEME_RefreshImmersiveColorPolicyState();
 
 	return 0;
 }
@@ -673,13 +738,13 @@ void win32_toggle_menu(void *window, int on)
 	if (!init) {
 		init = 1;
 
-		// Only run this code on Windows 10 v2004 or newer!
-		if (win32_ntver_atleast(10, 0, 19041)) {
+		// Enable Dark Mode support on Windows 10 >= 1809
+		if (win32_ntver_atleast(10, 0, 17763)) {
 			win32_toggle_dark_title_bar(window, 1);
 
 			old_wndproc = (WNDPROC)GetWindowLongPtrW((HWND)window, GWLP_WNDPROC);
 			(void)SetWindowLongPtrW((HWND)window, GWLP_WNDPROC, (LONG_PTR)win32_wndproc);
-		} else if (DWMAPI_DwmSetWindowAttribute) {
+		} else {
 			// SDL 3 sets this to true, even on older versions, which means the
 			// color of the menu bar and title bar clash. Reset it to zero.
 			win32_toggle_dark_title_bar(window, 0);
