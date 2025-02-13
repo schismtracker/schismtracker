@@ -263,7 +263,7 @@ static void dsound_audio_quit_driver(void)
 
 static void _dsound_audio_wait_dx5(schism_audio_device_t *dev)
 {
-	DWORD cursor;
+	DWORD cursor, xyzzy;
 	HRESULT res;
 
 	while (!dev->cancelled) {
@@ -281,10 +281,10 @@ static void _dsound_audio_wait_dx5(schism_audio_device_t *dev)
 				// This should never happen
 				break;
 		} else {
-			res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, NULL, &cursor);
+			res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, &xyzzy, &cursor);
 			if (res == DSERR_BUFFERLOST) {
 				IDirectSoundBuffer_Restore(dev->lpbuffer);
-				res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, NULL, &cursor);
+				res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, &xyzzy, &cursor);
 			}
 			if (res != DS_OK)
 				continue; // what?
@@ -333,29 +333,17 @@ static int _dsound_audio_thread(void *data)
 	DWORD cursor = 0;
 	HRESULT res = DS_OK;
 
-	res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, NULL, &cursor);
-	if (res == DSERR_BUFFERLOST) {
-		IDirectSoundBuffer_Restore(dev->lpbuffer);
-		res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, NULL, &cursor);
-	}
-
-	if (res != DS_OK)
-		return 0; // I don't know why this would ever happen
-
-	// agh !!!
-	cursor /= dev->size;
-
 	while (!dev->cancelled) {
 		void *buf;
-		DWORD buflen;
+		DWORD buflen, xyzzy;
 
 		dev->last_chunk = cursor;
 		cursor = (cursor + 1) % NUM_CHUNKS;
 
-		res = IDirectSoundBuffer_Lock(dev->lpbuffer, cursor * dev->size, dev->size, &buf, &buflen, NULL, NULL, 0);
+		res = IDirectSoundBuffer_Lock(dev->lpbuffer, cursor * dev->size, dev->size, &buf, &buflen, NULL, &xyzzy, 0);
 		if (res == DSERR_BUFFERLOST) {
-			IDirectSoundBuffer_Release(dev->lpbuffer);
-			res = IDirectSoundBuffer_Lock(dev->lpbuffer, cursor * dev->size, dev->size, &buf, &buflen, NULL, NULL, 0);
+			IDirectSoundBuffer_Restore(dev->lpbuffer);
+			res = IDirectSoundBuffer_Lock(dev->lpbuffer, cursor * dev->size, dev->size, &buf, &buflen, NULL, &xyzzy, 0);
 		}
 		if (res != DS_OK) {
 			timer_msleep(5);
@@ -632,11 +620,12 @@ static void *lib_dsound = NULL;
 
 static int dsound_audio_init(void)
 {
-	// XXX:
-	// SDL also checks for at least Windows 2000 here, citing
-	// that the audio subsystem on NT 4 is somewhat high latency
-	// while using DirectSound. I don't know whether this is
-	// entirely true...
+	// Most audio drivers on NT 4 are just waveout
+	// in disguise, so punt here. Possibly a better
+	// solution could be contrived...
+	if (!win32_ntver_atleast(5, 0, 0))
+		return 0;
+
 	lib_dsound = loadso_object_load("DSOUND.DLL");
 	if (!lib_dsound)
 		return 0;
@@ -647,8 +636,7 @@ static int dsound_audio_init(void)
 #endif
 	DSOUND_DirectSoundEnumerateW = loadso_function_load(lib_dsound, "DirectSoundEnumerateW");
 
-	// DirectSoundCaptureCreate was added in DirectX 5
-	if (!DSOUND_DirectSoundCreate) {
+	if (!DSOUND_DirectSoundCreate || !loadso_function_load(lib_dsound, "DirectSoundCaptureCreate")) {
 		loadso_object_unload(lib_dsound);
 		return 0;
 	}
