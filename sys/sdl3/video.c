@@ -50,7 +50,8 @@ static bool (SDLCALL *sdl3_InitSubSystem)(SDL_InitFlags flags) = NULL;
 static void (SDLCALL *sdl3_QuitSubSystem)(SDL_InitFlags flags) = NULL;
 
 static const char *(SDLCALL *sdl3_GetCurrentVideoDriver)(void);
-static int (SDLCALL *sdl3_GetCurrentDisplayMode)(int displayIndex, SDL_DisplayMode * mode);
+static SDL_DisplayID (SDLCALL *sdl3_GetDisplayForWindow)(SDL_Window *window);
+static const SDL_DisplayMode *(SDLCALL *sdl3_GetCurrentDisplayMode)(SDL_DisplayID id);
 static const char * (SDLCALL *sdl3_GetRendererName)(SDL_Renderer * renderer);
 static bool (SDLCALL *sdl3_ShowCursor)(void);
 static bool (SDLCALL *sdl3_HideCursor)(void);
@@ -122,6 +123,8 @@ static SDL_PixelFormat (SDLCALL *sdl3_GetPixelFormatForMasks)(int bpp, Uint32 Rm
 #define SDL_PIXELFORMAT_NV12 (SDL_DEFINE_PIXELFOURCC('N', 'V', '1', '2'))
 #define SDL_PIXELFORMAT_NV21 (SDL_DEFINE_PIXELFOURCC('N', 'V', '2', '1'))
 #endif
+
+static void sdl3_video_setup(const char *quality);
 
 static struct {
 	SDL_Window *window;
@@ -252,10 +255,13 @@ static void sdl3_video_report(void)
 		break;
 	}
 
-	{
-		SDL_DisplayMode display;
-		if (!sdl3_GetCurrentDisplayMode(0, &display) && video.fullscreen)
-			log_appendf(5, " Display dimensions: %dx%d", display.w, display.h);
+	if (video.fullscreen) {
+		const SDL_DisplayID id = sdl3_GetDisplayForWindow(video.window);
+		if (id) {
+			const SDL_DisplayMode *display = sdl3_GetCurrentDisplayMode(id);
+			if (display)
+				log_appendf(5, " Display dimensions: %dx%d", display->w, display->h);
+		}
 	}
 }
 
@@ -279,7 +285,7 @@ static void set_icon(void)
 #endif
 }
 
-static void video_redraw_texture(void)
+static void sdl3_video_redraw_texture(void)
 {
 	size_t pref_last = ARRAY_SIZE(native_formats);
 	uint32_t format = SDL_PIXELFORMAT_XRGB8888;
@@ -318,6 +324,9 @@ got_format:
 	video.pixel_format = sdl3_GetPixelFormatDetails(format);
 	video.format = format;
 
+	// fix interpolation setting
+	sdl3_video_setup(cfg_video_interpolation);
+
 	// find the bytes per pixel
 	switch (video.format) {
 	// irrelevant
@@ -334,13 +343,11 @@ static void sdl3_video_set_hardware(int hardware)
 
 	sdl3_DestroyRenderer(video.renderer);
 
-	video.renderer = NULL;
-
 	video.renderer = sdl3_CreateRenderer(video.window, (hardware) ? (const char *)NULL : SDL_SOFTWARE_RENDERER);
 
 	// hope that all worked!
 
-	video_redraw_texture();
+	sdl3_video_redraw_texture();
 
 	video_report();
 }
@@ -367,8 +374,6 @@ static void sdl3_video_setup(const char *quality)
 		strncpy(cfg_video_interpolation, quality, 7);
 
 	sdl3_SetTextureScaleMode(video.texture, mode);
-	// i dont think we need this anymore:
-	//video_redraw_texture();
 }
 
 static void sdl3_video_startup(void)
@@ -376,12 +381,6 @@ static void sdl3_video_startup(void)
 	vgamem_clear();
 	vgamem_flip();
 
-	video_setup(cfg_video_interpolation);
-
-#ifndef SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR
-/* older SDL3 versions don't define this, don't fail the build for it */
-#define SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR "SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"
-#endif
 	sdl3_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
 
 	video.width = cfg_video_width;
@@ -389,13 +388,13 @@ static void sdl3_video_startup(void)
 	video.saved.x = video.saved.y = SDL_WINDOWPOS_CENTERED;
 
 	video.window = sdl3_CreateWindow(WINDOW_TITLE, video.width, video.height, SDL_WINDOW_RESIZABLE);
+	video_fullscreen(cfg_video_fullscreen);
 	video_set_hardware(cfg_video_hardware);
 
 	/* Aspect ratio correction if it's wanted */
 	if (cfg_video_want_fixed)
 		sdl3_SetRenderLogicalPresentation(video.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
-	video_fullscreen(cfg_video_fullscreen);
 	if (video_have_menu() && !video.fullscreen) {
 		sdl3_SetWindowSize(video.window, video.width, video.height);
 		sdl3_SetWindowPosition(video.window, video.saved.x, video.saved.y);
@@ -432,11 +431,10 @@ static void sdl3_video_fullscreen(int new_fs_flag)
 	}
 }
 
-static void sdl3_video_resize(SCHISM_UNUSED unsigned int width, SCHISM_UNUSED unsigned int height)
+static void sdl3_video_resize(unsigned int width, unsigned int height)
 {
-	sdl3_GetWindowSize(video.window, &video.width, &video.height);
-	//video.width = width;
-	//video.height = height;
+	video.width = width;
+	video.height = height;
 	status.flags |= (NEED_UPDATE);
 }
 
@@ -781,6 +779,8 @@ static int sdl3_video_load_syms(void)
 	SCHISM_SDL3_SYM(GetRendererProperties);
 	SCHISM_SDL3_SYM(GetWindowProperties);
 	SCHISM_SDL3_SYM(GetPointerProperty);
+
+	SCHISM_SDL3_SYM(GetDisplayForWindow);
 
 	SCHISM_SDL3_SYM(SetWindowKeyboardGrab);
 	SCHISM_SDL3_SYM(GetWindowKeyboardGrab);

@@ -131,6 +131,7 @@ static bool SDLCALL sdl3_win32_msg_hook(SCHISM_UNUSED void *userdata, MSG *msg)
 {
 	schism_event_t e;
 
+	e.type = SCHISM_EVENT_WM_MSG;
 	e.wm_msg.subsystem = SCHISM_WM_MSG_SUBSYSTEM_WINDOWS;
 	e.wm_msg.msg.win.hwnd = msg->hwnd;
 	e.wm_msg.msg.win.msg = msg->message;
@@ -210,13 +211,11 @@ void sdl3_pump_events(void)
 			events_push_event(&schism_event);
 			break;
 		case SDL_EVENT_WINDOW_RESIZED:
+			// the RESIZED event was changed in SDL 3 and now
+			// is basically what SDL_WINDOWEVENT_SIZE_CHANGED
+			// once was. doesn't matter for us, we handled
+			// both events the same anyway.
 			schism_event.type = SCHISM_WINDOWEVENT_RESIZED;
-			schism_event.window.data.resized.width = e.window.data1;
-			schism_event.window.data.resized.height = e.window.data2;
-			events_push_event(&schism_event);
-			break;
-		case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-			schism_event.type = SCHISM_WINDOWEVENT_SIZE_CHANGED;
 			schism_event.window.data.resized.width = e.window.data1;
 			schism_event.window.data.resized.height = e.window.data2;
 			events_push_event(&schism_event);
