@@ -542,6 +542,53 @@ int dmoz_path_make_backup(const char *filename, int numbered)
 	}
 }
 
+#ifdef SCHISM_WIN32
+# define DMOZ_PATH_RENAME_IMPL(TYPE, CHARSET, SUFFIX, CHMOD) \
+	static int dmoz_path_rename##SUFFIX(const char *old, const char *new, int overwrite) \
+	{ \
+		int res = -1; \
+	\
+		TYPE *old_w = NULL, *new_w = NULL; \
+		if (!charset_iconv(old, &old_w, CHARSET_UTF8, CHARSET, SIZE_MAX) \
+			&& !charset_iconv(new, &new_w, CHARSET_UTF8, CHARSET, SIZE_MAX)) { \
+			if (MoveFile##SUFFIX(old_w, new_w)) { \
+				win32_filecreated_callback(new); \
+				res = 0; \
+			} else if (overwrite) { \
+				if (MoveFileEx##SUFFIX(old_w, new_w, MOVEFILE_REPLACE_EXISTING)) { \
+					/* no callback here; file already existed */ \
+					res = 0; \
+				} else { \
+					CHMOD(new_w, 0777); \
+					CHMOD(old_w, 0777); \
+	\
+					SetFileAttributes##SUFFIX(new_w, FILE_ATTRIBUTE_NORMAL); \
+					SetFileAttributes##SUFFIX(new_w, FILE_ATTRIBUTE_TEMPORARY); \
+	\
+					/* wee */ \
+					if (MoveFile##SUFFIX(old_w, new_w) || (DeleteFile##SUFFIX(new_w) && MoveFile##SUFFIX(old_w, new_w))) { \
+						win32_filecreated_callback(new); \
+						res = 0; \
+					} \
+				} \
+			} \
+		} \
+	\
+		free(new_w); \
+		free(old_w); \
+	\
+		return res; \
+	}
+
+# ifdef SCHISM_WIN32_COMPILE_ANSI
+DMOZ_PATH_RENAME_IMPL(char, CHARSET_ANSI, A, _chmod)
+# endif
+DMOZ_PATH_RENAME_IMPL(WCHAR, CHARSET_WCHAR_T, W, _wchmod)
+
+# undef DMOZ_PATH_RENAME_IMPL
+
+#endif
+
 /* 0 = success, !0 = failed (check errno) */
 int dmoz_path_rename(const char *old, const char *new, int overwrite)
 {
@@ -556,69 +603,13 @@ int dmoz_path_rename(const char *old, const char *new, int overwrite)
 	int ret = -1;
 	DWORD em = SetErrorMode(0);
 
+# ifdef SCHISM_WIN32_COMPILE_ANSI
 	if (GetVersion() & UINT32_C(0x80000000)) {
-		// some unnecessary code duplication here
-		char *old_a = NULL, *new_a = NULL;
-		if (!charset_iconv(old, &old_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)
-			&& !charset_iconv(new, &new_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
-			if (MoveFileA(old_a, new_a)) {
-				win32_filecreated_callback(new);
-				ret = 0;
-			} else if (overwrite) {
-				if (MoveFileExA(old_a, new_a, MOVEFILE_REPLACE_EXISTING)) {
-					// no callback here; file already existed
-					ret = 0;
-				} else {
-					/* this sometimes works with win95 and novell shares */
-					_chmod(new_a, 0777);
-					_chmod(old_a, 0777);
-
-					SetFileAttributesA(new_a, FILE_ATTRIBUTE_NORMAL);
-					SetFileAttributesA(new_a, FILE_ATTRIBUTE_TEMPORARY);
-
-					/* wee */
-					if (MoveFileA(old_a, new_a) || (DeleteFileA(new_a) && MoveFileA(old_a, new_a))) {
-						win32_filecreated_callback(new);
-						ret = 0;
-					}
-
-					/* alright, thems the breaks. win95 eats your files,
-					 * and not a damn thing I can do about it. */
-				}
-			}
-		}
-
-		free(new_a);
-		free(old_a);
-	} else {
-		wchar_t *old_w = NULL, *new_w = NULL;
-		if (!charset_iconv(old, &old_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)
-			&& !charset_iconv(new, &new_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-			if (MoveFileW(old_w, new_w)) {
-				win32_filecreated_callback(new);
-				ret = 0;
-			} else if (overwrite) {
-				if (MoveFileExW(old_w, new_w, MOVEFILE_REPLACE_EXISTING)) {
-					// no callback here; file already existed
-					ret = 0;
-				} else {
-					_wchmod(new_w, 0777);
-					_wchmod(old_w, 0777);
-
-					SetFileAttributesW(new_w, FILE_ATTRIBUTE_NORMAL);
-					SetFileAttributesW(new_w, FILE_ATTRIBUTE_TEMPORARY);
-
-					/* wee */
-					if (MoveFileW(old_w, new_w) || (DeleteFileW(new_w) && MoveFileW(old_w, new_w))) {
-						win32_filecreated_callback(new);
-						ret = 0;
-					}
-				}
-			}
-		}
-
-		free(new_w);
-		free(old_w);
+		ret = dmoz_path_renameA(old, new, overwrite);
+	} else
+# endif
+	{
+		ret = dmoz_path_renameW(old, new, overwrite);
 	}
 
 	switch (GetLastError()) {
@@ -847,11 +838,10 @@ char *dmoz_get_current_directory(void)
 // (and unsupported!) SHGetSpecialFolderPath, which exists
 // under systems with at least Internet Explorer 4 installed.
 // If that also doesn't work, we read the relevant registry
-// keys.
-// If *that* doesn't work, we'll fallback to standard
+// keys. If *that* doesn't work, we'll fallback to standard
 // environment variables. THEN we fallback to FALLBACK_DIR.
 
-// consolidate this crap into one messy function
+// wow this sucks
 #define DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL(TYPE, CHARSET, SUFFIX, GETENV, LITERAL) \
 	static char *dmoz_win32_get_csidl_directory##SUFFIX(int csidl, const TYPE *registry, const TYPE *envvar) \
 	{ \
