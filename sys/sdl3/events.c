@@ -38,13 +38,18 @@ static bool (SDLCALL *sdl3_PollEvent)(SDL_Event *event) = NULL;
 
 static void (SDLCALL *sdl3_free)(void *) = NULL;
 
+#ifdef SCHISM_WIN32
 static void (SDLCALL *sdl3_SetWindowsMessageHook)(SDL_WindowsMessageHook callback, void *userdata);
+#endif
+#ifdef SCHISM_USE_X11
 static void (SDLCALL *sdl3_SetX11EventHook)(SDL_X11EventHook callback, void *userdata);
+#endif
 
-// whether SDL's wheel event gives mouse coordinates or not
-static int wheel_have_mouse_coordinates = 0;
+#ifndef SDLK_EXTENDED_MASK // Debian doesn't have this for some reason
+#define SDLK_EXTENDED_MASK (1u << 29)
+#endif
 
-// !!! FIXME: Re-add controller support, preferably in a global controller.c
+// TODO: Re-add controller support, preferably in a global controller.c
 // that only receives raw events to translate them into keyboard/mouse events
 
 static schism_keymod_t sdl3_modkey_trans(SDL_Keymod mod)
@@ -345,8 +350,12 @@ static int sdl3_events_load_syms(void)
 
 	SCHISM_SDL3_SYM(GetModState);
 	SCHISM_SDL3_SYM(PollEvent);
+#ifdef SCHISM_WIN32
 	SCHISM_SDL3_SYM(SetWindowsMessageHook);
+#endif
+#ifdef SCHISM_USE_X11
 	SCHISM_SDL3_SYM(SetX11EventHook);
+#endif
 
 	SCHISM_SDL3_SYM(free);
 

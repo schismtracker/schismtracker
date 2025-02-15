@@ -103,6 +103,7 @@ static bool (SDLCALL *sdl3_SetTextureScaleMode)(SDL_Texture * texture, SDL_Scale
 static SDL_PropertiesID (SDLCALL *sdl3_GetRendererProperties)(SDL_Renderer *renderer);
 static SDL_PropertiesID (SDLCALL *sdl3_GetWindowProperties)(SDL_Window *window);
 static void *(SDLCALL *sdl3_GetPointerProperty)(SDL_PropertiesID props, const char *name, void *default_value);
+static Sint64 (SDLCALL *sdl3_GetNumberProperty)(SDL_PropertiesID props, const char *name, Sint64 default_value);
 
 static bool (SDLCALL *sdl3_StartTextInput)(SDL_Window *window) = NULL;
 
@@ -780,6 +781,7 @@ static int sdl3_video_load_syms(void)
 	SCHISM_SDL3_SYM(GetRendererProperties);
 	SCHISM_SDL3_SYM(GetWindowProperties);
 	SCHISM_SDL3_SYM(GetPointerProperty);
+	SCHISM_SDL3_SYM(GetNumberProperty);
 	SCHISM_SDL3_SYM(StartTextInput);
 
 	SCHISM_SDL3_SYM(GetDisplayForWindow);
