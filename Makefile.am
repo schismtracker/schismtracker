@@ -130,7 +130,7 @@ noinst_HEADERS = \
 	include/slurp.h			\
 	include/song.h			\
 	include/str.h           \
-	include/threads.h       \
+	include/mt.h       \
 	include/timer.h         \
 	include/tree.h			\
 	include/util.h			\
@@ -149,7 +149,7 @@ noinst_HEADERS = \
 	include/backend/clippy.h     \
 	include/backend/dmoz.h       \
 	include/backend/events.h     \
-	include/backend/threads.h     \
+	include/backend/mt.h     \
 	include/backend/timer.h     \
 	include/backend/video.h     \
 	sys/wii/certs_bin.h		\
@@ -196,9 +196,9 @@ sys/sdl3/schismtracker-events.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
 sys/sdl3/schismtracker-init.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
 sys/sdl3/schismtracker-timer.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
 sys/sdl3/schismtracker-video.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
-sys/sdl3/schismtracker-threads.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
+sys/sdl3/schismtracker-mt.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
 
-files_sdl3 = sys/sdl3/audio.c sys/sdl3/dmoz.c sys/sdl3/clippy.c sys/sdl3/events.c sys/sdl3/init.c sys/sdl3/timer.c sys/sdl3/video.c sys/sdl3/threads.c
+files_sdl3 = sys/sdl3/audio.c sys/sdl3/dmoz.c sys/sdl3/clippy.c sys/sdl3/events.c sys/sdl3/init.c sys/sdl3/timer.c sys/sdl3/video.c sys/sdl3/mt.c
 
 if LINK_TO_SDL3
 libs_sdl3 = $(SDL3_LIBS)
@@ -215,9 +215,9 @@ sys/sdl2/schismtracker-events.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
 sys/sdl2/schismtracker-init.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
 sys/sdl2/schismtracker-timer.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
 sys/sdl2/schismtracker-video.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
-sys/sdl2/schismtracker-threads.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
+sys/sdl2/schismtracker-mt.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
 
-files_sdl2 = sys/sdl2/audio.c sys/sdl2/dmoz.c sys/sdl2/clippy.c sys/sdl2/events.c sys/sdl2/init.c sys/sdl2/timer.c sys/sdl2/video.c sys/sdl2/threads.c
+files_sdl2 = sys/sdl2/audio.c sys/sdl2/dmoz.c sys/sdl2/clippy.c sys/sdl2/events.c sys/sdl2/init.c sys/sdl2/timer.c sys/sdl2/video.c sys/sdl2/mt.c
 
 if LINK_TO_SDL2
 libs_sdl2 = $(SDL2_LIBS)
@@ -231,9 +231,9 @@ sys/sdl12/schismtracker-events.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
 sys/sdl12/schismtracker-init.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
 sys/sdl12/schismtracker-timer.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
 sys/sdl12/schismtracker-video.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
-sys/sdl12/schismtracker-threads.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
+sys/sdl12/schismtracker-mt.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
 
-files_sdl12 = sys/sdl12/audio.c sys/sdl12/events.c sys/sdl12/init.c sys/sdl12/timer.c sys/sdl12/video.c sys/sdl12/threads.c
+files_sdl12 = sys/sdl12/audio.c sys/sdl12/events.c sys/sdl12/init.c sys/sdl12/timer.c sys/sdl12/video.c sys/sdl12/mt.c
 
 if LINK_TO_SDL12
 libs_sdl12 = $(SDL12_LIBS)
@@ -351,7 +351,7 @@ endif
 
 if USE_MACOS
 files_macos = \
-	sys/macos/osdefs.c sys/macos/dirent/macos-dirent.c sys/macos/threads.c
+	sys/macos/osdefs.c sys/macos/dirent/macos-dirent.c sys/macos/mt.c
 cflags_macos=-I$(top_srcdir)/sys/macos/dirent
 libs_macos=-lAppearanceLib -lInputSprocketLib -lControlStripLib -lControlsLib -lCursorDevicesGlue -lMPLibrary -lTextEncodingConverter -lTextCommon -lContextualMenu -lDrawSprocketLib -lDialogsLib
 
@@ -545,7 +545,7 @@ schismtracker_SOURCES = \
 	schism/slurp.c			\
 	schism/status.c			\
 	schism/str.c             \
-	schism/threads.c        \
+	schism/mt.c        \
 	schism/timer.c          \
 	schism/util.c			\
 	schism/version.c		\

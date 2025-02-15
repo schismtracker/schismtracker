@@ -22,7 +22,7 @@
  */
 
 #include "headers.h"
-#include "threads.h"
+#include "mt.h"
 
 static mt_mutex_t *localtime_r_mutex = NULL;
 static int initialized = 0;

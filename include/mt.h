@@ -21,8 +21,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_THREADS_H_
-#define SCHISM_THREADS_H_
+/* "mt" stands for "multithreading" ;)
+ *
+ * this was heavily "inspired" by the SDL 2 threading API, which has remained
+ * largely unchanged in SDL 3. if you don't know what a certain function does
+ * or even what a type is for (like the condition variables) see SDL's API
+ * docs for how all this stuff goes together. */
+
+#ifndef SCHISM_MT_H_
+#define SCHISM_MT_H_
 
 #include "headers.h"
 
@@ -61,4 +68,4 @@ void mt_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout);
 int mt_init(void);
 void mt_quit(void);
 
-#endif /* SCHISM_THREADS_H_ */
+#endif /* SCHISM_MT_H_ */

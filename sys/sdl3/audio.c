@@ -24,7 +24,7 @@
 #include "headers.h"
 #include "mem.h"
 #include "backend/audio.h"
-#include "threads.h"
+#include "mt.h"
 
 #include "init.h"
 

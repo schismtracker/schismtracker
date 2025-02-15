@@ -23,7 +23,7 @@
 
 #include "headers.h"
 
-#include "backend/threads.h"
+//#include "backend/mt.h"
 #include "events.h"
 #include "util.h"
 #include "midi.h"
@@ -32,7 +32,7 @@
 #include "it.h"
 #include "config-parser.h"
 #include "config.h"
-#include "threads.h"
+#include "mt.h"
 #include "timer.h"
 #include "mem.h"
 

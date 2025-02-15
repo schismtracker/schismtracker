@@ -30,7 +30,7 @@
 
 #include "headers.h"
 
-#include "threads.h"
+#include "mt.h"
 #include "charset.h"
 #include "fmt.h"
 #include "util.h"

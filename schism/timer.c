@@ -24,7 +24,7 @@
 #include "headers.h"
 #include "loadso.h"
 #include "mem.h"
-#include "threads.h"
+#include "mt.h"
 
 #include "backend/timer.h"
 

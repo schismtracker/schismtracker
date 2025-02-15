@@ -27,7 +27,7 @@
 
 #include "headers.h"
 #include "charset.h"
-#include "threads.h"
+#include "mt.h"
 #include "mem.h"
 #include "osdefs.h"
 #include "backend/audio.h"

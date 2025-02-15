@@ -27,7 +27,7 @@
 #include "util.h"
 #include "events.h"
 
-#include "backend/threads.h" // mutexes
+#include "mt.h" // mutexes
 
 #ifdef USE_NETWORK
 

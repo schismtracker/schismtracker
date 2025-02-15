@@ -49,7 +49,7 @@
 #include "widget.h"
 #include "fmt.h"
 #include "timer.h"
-#include "threads.h"
+#include "mt.h"
 #include "mem.h"
 
 #include "osdefs.h"

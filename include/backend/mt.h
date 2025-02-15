@@ -21,10 +21,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_BACKEND_THREADS_H_
-#define SCHISM_BACKEND_THREADS_H_
+#ifndef SCHISM_BACKEND_MT_H_
+#define SCHISM_BACKEND_MT_H_
 
-#include "../threads.h"
+#include "../mt.h"
 
 typedef struct {
 	int (*init)(void);
@@ -50,19 +50,19 @@ typedef struct {
 	void (*cond_signal)(mt_cond_t *cond);
 	void (*cond_wait)(mt_cond_t *cond, mt_mutex_t *mutex);
 	void (*cond_wait_timeout)(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout);
-} schism_threads_backend_t;
+} schism_mt_backend_t;
 
 #ifdef SCHISM_MACOS
-extern const schism_threads_backend_t schism_threads_backend_macos;
+extern const schism_mt_backend_t schism_mt_backend_macos;
 #endif
 #ifdef SCHISM_SDL12
-extern const schism_threads_backend_t schism_threads_backend_sdl12;
+extern const schism_mt_backend_t schism_mt_backend_sdl12;
 #endif
 #ifdef SCHISM_SDL2
-extern const schism_threads_backend_t schism_threads_backend_sdl2;
+extern const schism_mt_backend_t schism_mt_backend_sdl2;
 #endif
 #ifdef SCHISM_SDL3
-extern const schism_threads_backend_t schism_threads_backend_sdl3;
+extern const schism_mt_backend_t schism_mt_backend_sdl3;
 #endif
 
-#endif /* SCHISM_BACKEND_THREADS_H_ */
+#endif /* SCHISM_BACKEND_MT_H_ */

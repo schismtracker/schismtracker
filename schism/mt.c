@@ -25,9 +25,9 @@
 #include "mem.h"
 #include "timer.h"
 
-#include "backend/threads.h"
+#include "backend/mt.h"
 
-static const schism_threads_backend_t *mt_backend = NULL;
+static const schism_mt_backend_t *mt_backend = NULL;
 
 mt_thread_t *mt_thread_create(schism_thread_function_t func, const char *name, void *userdata)
 {
@@ -103,19 +103,19 @@ void mt_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout)
 
 int mt_init(void)
 {
-	static const schism_threads_backend_t *backends[] = {
+	static const schism_mt_backend_t *backends[] = {
 		// ordered by preference
 #ifdef SCHISM_MACOS
-		&schism_threads_backend_macos,
+		&schism_mt_backend_macos,
 #endif
 #ifdef SCHISM_SDL3
-		&schism_threads_backend_sdl3,
+		&schism_mt_backend_sdl3,
 #endif
 #ifdef SCHISM_SDL2
-		&schism_threads_backend_sdl2,
+		&schism_mt_backend_sdl2,
 #endif
 #ifdef SCHISM_SDL12
-		&schism_threads_backend_sdl12,
+		&schism_mt_backend_sdl12,
 #endif
 		NULL,
 	};

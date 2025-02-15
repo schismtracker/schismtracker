@@ -27,7 +27,7 @@
 #include "headers.h"
 #include "mem.h"
 #include "log.h"
-#include "backend/threads.h"
+#include "backend/mt.h"
 
 #include <Multiprocessing.h>
 
@@ -210,7 +210,7 @@ static void macos_threads_quit(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-const schism_threads_backend_t schism_threads_backend_macos = {
+const schism_mt_backend_t schism_mt_backend_macos = {
 	.init = macos_threads_init,
 	.quit = macos_threads_quit,
 

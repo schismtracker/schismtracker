@@ -22,7 +22,7 @@
  */
 
 #include "headers.h"
-#include "threads.h"
+#include "mt.h"
 #include "mem.h"
 #include "backend/timer.h"
 

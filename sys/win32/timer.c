@@ -22,7 +22,7 @@
  */
 
 #include "headers.h"
-#include "threads.h"
+#include "mt.h"
 #include "loadso.h"
 #include "osdefs.h"
 #include "mem.h"

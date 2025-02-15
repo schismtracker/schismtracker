@@ -29,7 +29,7 @@
 #include "osdefs.h"
 #include "config.h" // keyboard crap
 
-#include "threads.h"
+#include "mt.h"
 
 #include "backend/events.h"
 

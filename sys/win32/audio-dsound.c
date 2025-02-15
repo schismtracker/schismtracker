@@ -29,11 +29,10 @@
 
 #include "headers.h"
 #include "charset.h"
-#include "threads.h"
+#include "mt.h"
 #include "mem.h"
 #include "osdefs.h"
 #include "loadso.h"
-#include "threads.h"
 #include "video.h" // video_get_wm_data
 #include "backend/audio.h"
 

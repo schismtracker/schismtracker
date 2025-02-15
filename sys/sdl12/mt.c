@@ -23,7 +23,7 @@
 
 #include "headers.h"
 #include "mem.h"
-#include "backend/threads.h"
+#include "backend/mt.h"
 
 #include "init.h"
 
@@ -247,7 +247,7 @@ static void sdl12_threads_quit(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-const schism_threads_backend_t schism_threads_backend_sdl12 = {
+const schism_mt_backend_t schism_mt_backend_sdl12 = {
 	.init = sdl12_threads_init,
 	.quit = sdl12_threads_quit,
 
