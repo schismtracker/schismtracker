@@ -1661,6 +1661,8 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 			return -1;
 
 		attrib = GetFileAttributesA(path_a);
+
+		free(path_a);
 	} else
 # endif
 	{
@@ -1670,6 +1672,8 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 			return -1;
 
 		attrib = GetFileAttributesW(path_w);
+
+		free(path_w);
 	}
 
 	const size_t pathlen = strlen(path);
