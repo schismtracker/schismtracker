@@ -282,10 +282,8 @@ enum MENUPARTS {
     MENU_SYSTEMRESTORE = 20,
 };
 
-// Hopefully this doesn't clash with mingw-w64 definitions?
-// They should at least have C11 I guess, which makes this
-// technically legal...
-typedef HANDLE HTHEME;
+// This sucks
+#define HTHEME HANDLE
 
 // --------------------------------------------------------
 
@@ -329,6 +327,9 @@ static void (WINAPI *UXTHEME_RefreshImmersiveColorPolicyState)(void) = NULL;
 
 static void *lib_ntdll = NULL;
 static long /*NTSTATUS*/ (WINAPI *NTDLL_RtlGetVersion)(OSVERSIONINFOEXW *info) = NULL;
+
+// Set on video startup.
+static int win32_dark_mode_enabled = 0;
 
 #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE_OLD
 # define DWMWA_USE_IMMERSIVE_DARK_MODE_OLD 19
@@ -586,12 +587,7 @@ static LRESULT (CALLBACK *old_wndproc)(HWND, UINT, WPARAM, LPARAM) = NULL;
 //
 static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-#if 0
-	// I can't really test this code because I'm still on Windows 10 v1809
-	// (the LTSC release). Once this code is properly tested I'll enable it...
-	return old_wndproc(hwnd, msg, wparam, lparam);
-#else
-	if (!UXTHEME_ShouldAppsUseDarkMode || !UXTHEME_ShouldAppsUseDarkMode())
+	if (!win32_dark_mode_enabled)
 		return old_wndproc(hwnd, msg, wparam, lparam);
 
 #ifndef WM_MENUBAR_DRAWMENUITEM
@@ -752,7 +748,6 @@ static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 	}
 
 	return old_wndproc(hwnd, msg, wparam, lparam);
-#endif
 }
 
 int win32_event(schism_event_t *event)
@@ -910,12 +905,17 @@ int win32_event(schism_event_t *event)
 	return 1;
 }
 
-static inline SCHISM_ALWAYS_INLINE int win32_toggle_dark_title_bar(void *window, int on)
+// TODO: Check for changes in theme settings.
+static inline SCHISM_ALWAYS_INLINE void win32_toggle_dark_title_bar(void *window, int on)
 {
-	const BOOL b = (on && (UXTHEME_ShouldAppsUseDarkMode && UXTHEME_ShouldAppsUseDarkMode()));
+	// wow
+	win32_dark_mode_enabled = (on && (UXTHEME_ShouldAppsUseDarkMode && UXTHEME_ShouldAppsUseDarkMode()));
+
+	const BOOL b = win32_dark_mode_enabled;
 
 	if (DWMAPI_DwmSetWindowAttribute) {
-		// Initialize dark theme on title bar
+		// Initialize dark theme on title bar. 20 is used on newer versions of Windows 10,
+		// but 19 was used before they switched to 20 for some reason.
 		if (FAILED(DWMAPI_DwmSetWindowAttribute((HWND)window, 20, &b, sizeof(b))))
 			DWMAPI_DwmSetWindowAttribute((HWND)window, 19, &b, sizeof(b));
 	}
@@ -930,7 +930,7 @@ static inline SCHISM_ALWAYS_INLINE int win32_toggle_dark_title_bar(void *window,
 			WINDOWCOMPOSITIONATTRIBDATA data = { WCA_USEDARKMODECOLORS, &v, sizeof(v) };
 			USER32_SetWindowCompositionAttribute((HWND)window, &data);
 		}
-	} else {
+	} else if (win32_ntver_atleast(10, 0, 17763)) {
 		SetPropW((HWND)window, L"UseImmersiveDarkModeColors", (HANDLE)(INT_PTR)on);
 	}
 
@@ -941,8 +941,6 @@ static inline SCHISM_ALWAYS_INLINE int win32_toggle_dark_title_bar(void *window,
 
 	if (UXTHEME_RefreshImmersiveColorPolicyState)
 		UXTHEME_RefreshImmersiveColorPolicyState();
-
-	return 0;
 }
 
 void win32_toggle_menu(void *window, int on)
