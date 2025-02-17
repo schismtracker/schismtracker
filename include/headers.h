@@ -303,6 +303,13 @@
 # define SCHISM_UNLIKELY(x)
 #endif
 
+/* Win32, used for threads */
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__force_align_arg_pointer__, 4, 2, 0)
+# define SCHISM_FORCE_ALIGN_ARG_POINTER __attribute__((__force_align_arg_pointer__))
+#else
+# define SCHISM_FORCE_ALIGN_ARG_POINTER
+#endif
+
 /* Used to mark a printf format parameter. Currently only MSVC really
  * has this, and GCC has the much more useful "format" attribute */
 #if SCHISM_MSVC_ATLEAST(14, 0, 0)

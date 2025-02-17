@@ -105,6 +105,9 @@ int mt_init(void)
 {
 	static const schism_mt_backend_t *backends[] = {
 		// ordered by preference
+#ifdef SCHISM_WIN32
+		&schism_mt_backend_win32,
+#endif
 #ifdef SCHISM_MACOS
 		&schism_mt_backend_macos,
 #endif
