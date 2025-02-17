@@ -32,22 +32,94 @@
 #include <windows.h>
 #include <assert.h>
 
-// This file consists of a mostly-working-ish multithreading implementation
-// for win32
+#define MSVC_EXCEPTION_NAME_CODE UINT32_C(0x406D1388)
 
 /* ------------------------------------ */
+
+static PVOID (WINAPI *KERNEL32_AddVectoredExceptionHandler)(ULONG, PVECTORED_EXCEPTION_HANDLER);
+static ULONG (WINAPI *KERNEL32_RemoveVectoredExceptionHandler)(PVOID);
+
+// not necessarily kernel32, but most likely. sometimes it can be kernelbase!
+static HRESULT (WINAPI *KERNEL32_SetThreadDescription)(HANDLE, PCWSTR); // win10+
 
 struct mt_thread {
 	HANDLE thread;
 	int status;
 
+	char *name;
+
 	schism_thread_function_t func;
 	void *userdata;
 };
 
+static LONG __stdcall win32_exception_handler_noop(EXCEPTION_POINTERS *info)
+{
+	return (info && info->ExceptionRecord && info->ExceptionRecord->ExceptionCode == MSVC_EXCEPTION_NAME_CODE)
+		? EXCEPTION_CONTINUE_EXECUTION
+		: EXCEPTION_CONTINUE_SEARCH;
+}
+
+// This raises an exception that notifies the current debugger
+// about a name change.
+static inline void win32_raise_name_exception(const char *name)
+{
+	char *name_a = charset_iconv_easy(name, CHARSET_UTF8, CHARSET_ANSI);
+
+	if (name_a) {
+		// Based on other code that uses ugly non-standard packing; this is only
+		// tested for x86 and x86_64, no idea about arm.
+
+		SCHISM_STATIC_ASSERT(sizeof(ULONG_PTR) >= sizeof(DWORD), "This code assumes ULONG_PTR is at least the size of a DWORD");
+		SCHISM_STATIC_ASSERT(sizeof(ULONG_PTR) % sizeof(DWORD) == 0, "This code assumes the size of ULONG_PTR is a multiple of the size of a DWORD");
+
+#define DIVIDE_ROUNDING_UP(x, y) (((x) + (y) - 1) / (y))
+		union {
+			DWORD dw;
+			ULONG_PTR ulp;
+		} info[2 + DIVIDE_ROUNDING_UP(sizeof(DWORD) * 2, sizeof(ULONG_PTR))] = {0};
+#undef DIVIDE_ROUNDING_UP
+
+		info[0].dw = 0x1000; // Magic number
+		info[1].ulp = (ULONG_PTR)name_a; // ANSI string w/ the name of the thread
+		{
+			// These two DWORDs are either packed into one or two ULONG_PTRs, depending
+			// on whether it's 32 or 64-bit; either way, they're just right beside each
+			// other in memory, so we can just do this.
+
+			static const DWORD dw[2] = { -1 /* Thread ID (-1 for current thread) */, 0 /* Reserved */};
+			memcpy(info + 2, dw, sizeof(dw));
+		}
+
+		RaiseException(MSVC_EXCEPTION_NAME_CODE, 0, ARRAY_SIZE(info), (const ULONG_PTR *)&info);
+
+		free(name_a);
+	}
+}
+
 static unsigned int __stdcall SCHISM_FORCE_ALIGN_ARG_POINTER win32_dummy_thread_func(void *userdata)
 {
 	mt_thread_t *thread = userdata;
+
+	if (thread->name) {
+		if (KERNEL32_SetThreadDescription) {
+			LPWSTR strw = charset_iconv_easy(thread->name, CHARSET_UTF8, CHARSET_WCHAR_T);
+			if (strw) {
+				KERNEL32_SetThreadDescription(GetCurrentThread(), strw);
+				free(strw);
+			}
+		}
+
+		// SOMEBODY TOUCHA MY SPAGHET!
+		if (KERNEL32_AddVectoredExceptionHandler && KERNEL32_RemoveVectoredExceptionHandler) {
+			PVOID handler = KERNEL32_AddVectoredExceptionHandler(1, win32_exception_handler_noop);
+			if (handler) {
+				win32_raise_name_exception(thread->name);
+				KERNEL32_RemoveVectoredExceptionHandler(handler);
+			} // else ... ?
+		} else if (IsDebuggerPresent()) { // Win9x ?
+			win32_raise_name_exception(thread->name);
+		}
+	}
 
 	thread->status = thread->func(thread->userdata);
 
@@ -58,13 +130,14 @@ static unsigned int __stdcall SCHISM_FORCE_ALIGN_ARG_POINTER win32_dummy_thread_
 
 mt_thread_t *win32_thread_create(schism_thread_function_t func, const char *name, void *userdata)
 {
-	mt_thread_t *thread = mem_alloc(sizeof(*thread));
+	mt_thread_t *thread = mem_calloc(1, sizeof(*thread));
 
 	thread->func = func;
 	thread->userdata = userdata;
+	thread->name = (name) ? str_dup(name) : NULL;
 
-	unsigned int xyzzy;
-	thread->thread = (HANDLE)_beginthreadex(NULL, 0, win32_dummy_thread_func, thread, 0, &xyzzy);
+	unsigned int threadid;
+	thread->thread = (HANDLE)_beginthreadex(NULL, 0, win32_dummy_thread_func, thread, 0, &threadid);
 	if (!thread->thread) {
 		free(thread);
 		return NULL;
@@ -79,6 +152,8 @@ void win32_thread_wait(mt_thread_t *thread, int *status)
 
 	WaitForSingleObject(thread->thread, INFINITE);
 	CloseHandle(thread->thread);
+
+	free(thread->name);
 
 	if (status) *status = thread->status;
 
@@ -113,15 +188,15 @@ static mt_thread_id_t win32_thread_id(void)
 /* mutexes */
 
 // Critical section pointers
-static void (WINAPI *KERNEL32_InitializeCriticalSection)(LPCRITICAL_SECTION) = NULL;
-static DWORD (WINAPI *KERNEL32_SetCriticalSectionSpinCount)(LPCRITICAL_SECTION, DWORD) = NULL;
-static void (WINAPI *KERNEL32_DeleteCriticalSection)(LPCRITICAL_SECTION) = NULL;
-static void (WINAPI *KERNEL32_EnterCriticalSection)(LPCRITICAL_SECTION) = NULL;
-static void (WINAPI *KERNEL32_LeaveCriticalSection)(LPCRITICAL_SECTION) = NULL;
+static void (WINAPI *KERNEL32_InitializeCriticalSection)(LPCRITICAL_SECTION);
+static DWORD (WINAPI *KERNEL32_SetCriticalSectionSpinCount)(LPCRITICAL_SECTION, DWORD);
+static void (WINAPI *KERNEL32_DeleteCriticalSection)(LPCRITICAL_SECTION);
+static void (WINAPI *KERNEL32_EnterCriticalSection)(LPCRITICAL_SECTION);
+static void (WINAPI *KERNEL32_LeaveCriticalSection)(LPCRITICAL_SECTION);
 
-static void (WINAPI *KERNEL32_InitializeSRWLock)(PSRWLOCK) = NULL;
-static void (WINAPI *KERNEL32_AcquireSRWLockExclusive)(PSRWLOCK) = NULL;
-static void (WINAPI *KERNEL32_ReleaseSRWLockExclusive)(PSRWLOCK) = NULL;
+static void (WINAPI *KERNEL32_InitializeSRWLock)(PSRWLOCK);
+static void (WINAPI *KERNEL32_AcquireSRWLockExclusive)(PSRWLOCK);
+static void (WINAPI *KERNEL32_ReleaseSRWLockExclusive)(PSRWLOCK);
 
 // Should be set on init and never touched again until quit.
 static enum {
@@ -131,7 +206,7 @@ static enum {
 } win32_mutex_impl = WIN32_MUTEX_IMPL_MUTEX;
 
 struct mt_mutex {
-	/* union ? */struct {
+	union {
 		HANDLE mutex;
 
 		CRITICAL_SECTION critsec;
@@ -152,7 +227,7 @@ struct mt_mutex {
 
 mt_mutex_t *win32_mutex_create(void)
 {
-	mt_mutex_t *mutex = mem_alloc(sizeof(*mutex));
+	mt_mutex_t *mutex = mem_calloc(1, sizeof(*mutex));
 
 	switch (win32_mutex_impl) {
 	case WIN32_MUTEX_IMPL_MUTEX:
@@ -164,7 +239,10 @@ mt_mutex_t *win32_mutex_create(void)
 		break;
 	case WIN32_MUTEX_IMPL_CRITICALSECTION:
 		KERNEL32_InitializeCriticalSection(&mutex->impl.critsec);
-		KERNEL32_SetCriticalSectionSpinCount(&mutex->impl.critsec, 2000u);
+		// Setting a higher spin count generally results in better
+		// performance on multi-core/multi-processor systems.
+		if (KERNEL32_SetCriticalSectionSpinCount)
+			KERNEL32_SetCriticalSectionSpinCount(&mutex->impl.critsec, 2000u);
 		break;
 	case WIN32_MUTEX_IMPL_SRWLOCK:
 		KERNEL32_InitializeSRWLock(&mutex->impl.srwlock.srw);
@@ -247,6 +325,11 @@ void win32_mutex_unlock(mt_mutex_t *mutex)
 
 /* -------------------------------------------------------------- */
 
+// Condition variables, emulated using semaphores on systems prior
+// to Vista. Implementation using semaphores heavily borrowed from
+// the BeOS condition variable emulation, by Christopher Tate and
+// Owen Smith, including most comments.
+
 static void (WINAPI *KERNEL32_InitializeConditionVariable)(PCONDITION_VARIABLE);
 static BOOL (WINAPI *KERNEL32_SleepConditionVariableCS)(PCONDITION_VARIABLE, PCRITICAL_SECTION, DWORD);
 static BOOL (WINAPI *KERNEL32_SleepConditionVariableSRW)(PCONDITION_VARIABLE, PSRWLOCK, DWORD, ULONG);
@@ -275,7 +358,7 @@ void win32_cond_delete(mt_cond_t *cond);
 
 mt_cond_t *win32_cond_create(void)
 {
-	mt_cond_t *cond = mem_alloc(sizeof(*cond));
+	mt_cond_t *cond = mem_calloc(1, sizeof(*cond));
 
 	switch (win32_cond_impl) {
 	case WIN32_COND_IMPL_FAKE:
@@ -448,23 +531,60 @@ void win32_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeou
 
 //////////////////////////////////////////////////////////////////////////////
 
-void *lib_kernel32 = NULL;
+static void *lib_kernel32 = NULL;
+static void *lib_kernelbase = NULL;
 
 static int win32_threads_init(void)
 {
 	lib_kernel32 = loadso_object_load("KERNEL32.DLL");
+	lib_kernelbase = loadso_object_load("KERNELBASE.DLL");
 
-	KERNEL32_InitializeCriticalSection = loadso_function_load(lib_kernel32, "InitializeCriticalSection");
-	KERNEL32_SetCriticalSectionSpinCount = loadso_function_load(lib_kernel32, "SetCriticalSectionSpinCount");
-	KERNEL32_DeleteCriticalSection = loadso_function_load(lib_kernel32, "DeleteCriticalSection");
-	KERNEL32_EnterCriticalSection = loadso_function_load(lib_kernel32, "EnterCriticalSection");
-	KERNEL32_LeaveCriticalSection = loadso_function_load(lib_kernel32, "LeaveCriticalSection");
+	if (lib_kernel32) {
+		KERNEL32_AddVectoredExceptionHandler = loadso_function_load(lib_kernel32, "AddVectoredExceptionHandler");
+		KERNEL32_RemoveVectoredExceptionHandler = loadso_function_load(lib_kernel32, "RemoveVectoredExceptionHandler");
+		KERNEL32_SetThreadDescription = loadso_function_load(lib_kernel32, "SetThreadDescription");
 
-	KERNEL32_InitializeSRWLock = loadso_function_load(lib_kernel32, "InitializeSRWLock");
-	KERNEL32_AcquireSRWLockExclusive = loadso_function_load(lib_kernel32, "AcquireSRWLockExclusive");
-	KERNEL32_ReleaseSRWLockExclusive = loadso_function_load(lib_kernel32, "ReleaseSRWLockExclusive");
+		KERNEL32_InitializeCriticalSection = loadso_function_load(lib_kernel32, "InitializeCriticalSection");
+		KERNEL32_SetCriticalSectionSpinCount = loadso_function_load(lib_kernel32, "SetCriticalSectionSpinCount");
+		KERNEL32_DeleteCriticalSection = loadso_function_load(lib_kernel32, "DeleteCriticalSection");
+		KERNEL32_EnterCriticalSection = loadso_function_load(lib_kernel32, "EnterCriticalSection");
+		KERNEL32_LeaveCriticalSection = loadso_function_load(lib_kernel32, "LeaveCriticalSection");
 
-	const int critsec_ok = KERNEL32_InitializeCriticalSection && KERNEL32_SetCriticalSectionSpinCount && KERNEL32_DeleteCriticalSection && KERNEL32_EnterCriticalSection && KERNEL32_LeaveCriticalSection;
+		KERNEL32_InitializeSRWLock = loadso_function_load(lib_kernel32, "InitializeSRWLock");
+		KERNEL32_AcquireSRWLockExclusive = loadso_function_load(lib_kernel32, "AcquireSRWLockExclusive");
+		KERNEL32_ReleaseSRWLockExclusive = loadso_function_load(lib_kernel32, "ReleaseSRWLockExclusive");
+
+		KERNEL32_InitializeConditionVariable = loadso_function_load(lib_kernel32, "InitializeConditionVariable");
+		KERNEL32_WakeConditionVariable = loadso_function_load(lib_kernel32, "WakeConditionVariable");
+		KERNEL32_SleepConditionVariableSRW = loadso_function_load(lib_kernel32, "SleepConditionVariableSRW");
+		KERNEL32_SleepConditionVariableCS = loadso_function_load(lib_kernel32, "SleepConditionVariableCS");
+	} else {
+		// reset all to null.
+		KERNEL32_AddVectoredExceptionHandler = NULL;
+		KERNEL32_RemoveVectoredExceptionHandler = NULL;
+		KERNEL32_SetThreadDescription = NULL;
+
+		KERNEL32_InitializeCriticalSection = NULL;
+		KERNEL32_SetCriticalSectionSpinCount = NULL;
+		KERNEL32_DeleteCriticalSection = NULL;
+		KERNEL32_EnterCriticalSection = NULL;
+		KERNEL32_LeaveCriticalSection = NULL;
+
+		KERNEL32_InitializeSRWLock = NULL;
+		KERNEL32_AcquireSRWLockExclusive = NULL;
+		KERNEL32_ReleaseSRWLockExclusive = NULL;
+
+		KERNEL32_InitializeConditionVariable = NULL;
+		KERNEL32_WakeConditionVariable = NULL;
+		KERNEL32_SleepConditionVariableSRW = NULL;
+		KERNEL32_SleepConditionVariableCS = NULL;
+	}
+
+	if (lib_kernelbase && !KERNEL32_SetThreadDescription) {
+		KERNEL32_SetThreadDescription = loadso_function_load(lib_kernelbase, "SetThreadDescription");
+	}
+
+	const int critsec_ok = KERNEL32_InitializeCriticalSection && KERNEL32_DeleteCriticalSection && KERNEL32_EnterCriticalSection && KERNEL32_LeaveCriticalSection;
 	const int srwlock_ok = KERNEL32_InitializeSRWLock && KERNEL32_AcquireSRWLockExclusive && KERNEL32_ReleaseSRWLockExclusive;
 
 	if (srwlock_ok) {
@@ -474,11 +594,6 @@ static int win32_threads_init(void)
 	} else {
 		win32_mutex_impl = WIN32_MUTEX_IMPL_MUTEX;
 	}
-
-	KERNEL32_InitializeConditionVariable = loadso_function_load(lib_kernel32, "InitializeConditionVariable");
-	KERNEL32_WakeConditionVariable = loadso_function_load(lib_kernel32, "WakeConditionVariable");
-	KERNEL32_SleepConditionVariableSRW = loadso_function_load(lib_kernel32, "SleepConditionVariableSRW");
-	KERNEL32_SleepConditionVariableCS = loadso_function_load(lib_kernel32, "SleepConditionVariableCS");
 
 	if (KERNEL32_InitializeConditionVariable && KERNEL32_WakeConditionVariable) {
 		win32_cond_impl = WIN32_COND_IMPL_VISTA;
@@ -524,6 +639,11 @@ static void win32_threads_quit(void)
 	if (lib_kernel32) {
 		loadso_object_unload(lib_kernel32);
 		lib_kernel32 = NULL;
+	}
+
+	if (lib_kernelbase) {
+		loadso_object_unload(lib_kernelbase);
+		lib_kernelbase = NULL;
 	}
 }
 
