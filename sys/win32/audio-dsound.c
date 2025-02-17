@@ -374,11 +374,7 @@ static int _dsound_dx6_init_notify_position(schism_audio_device_t *dev)
 	int res = -1; // default to failing
 	size_t i;
 
-	// first, allocate the position notify structures
-	SCHISM_VLA_ALLOC(DSBPOSITIONNOTIFY, notify_positions, NUM_CHUNKS);
-	if (!notify_positions)
-		goto done;
-
+	DSBPOSITIONNOTIFY notify_positions[NUM_CHUNKS];
 	if (IDirectSoundBuffer_QueryInterface(dev->lpbuffer, &IID_IDirectSoundNotify, (void *)&notify) != DS_OK)
 		goto done;
 
@@ -386,12 +382,12 @@ static int _dsound_dx6_init_notify_position(schism_audio_device_t *dev)
 	if (!dev->event)
 		goto done;
 
-	for (i = 0; i < SCHISM_VLA_LENGTH(notify_positions); i++) {
+	for (i = 0; i < ARRAY_SIZE(notify_positions); i++) {
 		notify_positions[i].dwOffset = i * dev->size;
 		notify_positions[i].hEventNotify = dev->event;
 	}
 
-	if (IDirectSoundNotify_SetNotificationPositions(notify, SCHISM_VLA_LENGTH(notify_positions), notify_positions) != DS_OK)
+	if (IDirectSoundNotify_SetNotificationPositions(notify, ARRAY_SIZE(notify_positions), notify_positions) != DS_OK)
 		goto done;
 
 	res = 0;
@@ -399,8 +395,6 @@ static int _dsound_dx6_init_notify_position(schism_audio_device_t *dev)
 done:
 	if (notify)
 		IDirectSoundNotify_Release(notify);
-
-	SCHISM_VLA_FREE(notify_positions);
 
 	return res;
 }
@@ -608,7 +602,7 @@ static void dsound_audio_pause_device(schism_audio_device_t *dev, int paused)
 		return;
 
 	mt_mutex_lock(dev->mutex);
-	dev->paused = paused;
+	dev->paused = !!paused;
 	mt_mutex_unlock(dev->mutex);
 }
 
