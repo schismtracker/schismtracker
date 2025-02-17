@@ -45,7 +45,7 @@ struct mt_thread {
 	void *userdata;
 };
 
-static unsigned int SCHISM_FORCE_ALIGN_ARG_POINTER win32_dummy_thread_func(void *userdata)
+static unsigned int __stdcall SCHISM_FORCE_ALIGN_ARG_POINTER win32_dummy_thread_func(void *userdata)
 {
 	mt_thread_t *thread = userdata;
 
