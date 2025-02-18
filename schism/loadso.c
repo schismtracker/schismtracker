@@ -37,6 +37,10 @@ void *loadso_object_load(const char *sofile)
 #ifdef SCHISM_WIN32
 	HMODULE module = NULL;
 
+	// Suppress "library failed to load" errors on Win9x and NT 4
+	DWORD em = SetErrorMode(0);
+	SetErrorMode(em | SEM_FAILCRITICALERRORS);
+
 	if (GetVersion() & 0x80000000) {
 		// Windows 9x
 		char *ansi;
@@ -57,6 +61,8 @@ void *loadso_object_load(const char *sofile)
 
 	if (!module)
 		module = LoadLibraryA(sofile);
+
+	SetErrorMode(em);
 
 	if (module)
 		return module;
