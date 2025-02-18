@@ -71,60 +71,76 @@ void timer_msleep(uint32_t ms)
 static mt_thread_t *timer_oneshot_thread = NULL;
 static int timer_oneshot_thread_cancelled = 0;
 
-// A linked list containing all of the stuff.
-struct _timer_oneshot_data {
+// A linked list of timers.
+struct timer_oneshot_data_ {
 	void (*callback)(void *param);
 	void *param;
 
 	// Ticks until the oneshot should be called, in microseconds.
 	timer_ticks_t trigger;
 
-	struct _timer_oneshot_data *next;
-} *oneshot_data_list = NULL;
+	struct timer_oneshot_data_ *next;
+};
+
+// A list of pending timers that will be added to the real list
+// by the running thread.
+struct timer_oneshot_data_ *oneshot_data_pending = NULL;
 static mt_mutex_t *timer_oneshot_mutex = NULL;
-static mt_cond_t  *timer_oneshot_cond  = NULL;
 
-static int _timer_oneshot_thread(void *userdata)
+// This should never be edited by any thread except for the oneshot thread!
+struct timer_oneshot_data_ *oneshot_data_list = NULL;
+
+static int timer_oneshot_thread_func(void *userdata)
 {
-	mt_mutex_lock(timer_oneshot_mutex);
-
 	mt_thread_set_priority(MT_THREAD_PRIORITY_HIGH);
 
 	while (!timer_oneshot_thread_cancelled) {
-		timer_ticks_t now = timer_ticks_us();
-		timer_ticks_t wait = UINT64_MAX;
+		mt_mutex_lock(timer_oneshot_mutex);
 
-		// init data pointers
-		struct _timer_oneshot_data *data = oneshot_data_list, *prev = NULL;
-		while (data) {
-			if (timer_ticks_passed(now, data->trigger)) {
-				data->callback(data->param);
 
-				now = timer_ticks_us();
+		// Add any pending timers waiting to get added to the list.
+		if (oneshot_data_pending) {
+			struct timer_oneshot_data_ *tail = oneshot_data_pending;
+			while (tail->next)
+				tail = tail->next;
+			tail->next = oneshot_data_list;
 
-				// Remove the timer from the list
-				if (prev) {
-					prev->next = data->next;
+			oneshot_data_list = oneshot_data_pending;
+			oneshot_data_pending = NULL;
+		}
+
+		mt_mutex_unlock(timer_oneshot_mutex);
+
+		if (oneshot_data_list) {
+			struct timer_oneshot_data_ *data = oneshot_data_list, *prev = NULL;
+			timer_ticks_t now = timer_ticks_us();
+
+			while (data) {
+				if (timer_ticks_passed(now, data->trigger)) {
+					data->callback(data->param);
+
+					now = timer_ticks_us();
+
+					// Remove the timer from the list
+					if (prev) {
+						prev->next = data->next;
+					} else {
+						oneshot_data_list = data->next;
+					}
+
+					// free the data
+					void *old = data;
+					data = data->next;
+					free(old);
 				} else {
-					oneshot_data_list = data->next;
+					prev = data;
+					data = data->next;
 				}
-
-				// free the data
-				void *old = data;
-				data = data->next;
-				free(old);
-			} else {
-				wait = MIN(data->trigger - now, wait);
-
-				prev = data;
-				data = data->next;
 			}
 		}
 
-		// useconds to mseconds
-		wait /= 1000;
-
-		mt_cond_wait_timeout(timer_oneshot_cond, timer_oneshot_mutex, wait);
+		// TODO use semaphores to signal this thread.
+		timer_msleep(1);
 	}
 
 	return 0;
@@ -138,35 +154,28 @@ void timer_oneshot(uint32_t ms, void (*callback)(void *param), void *param)
 	// Ok, the backend doesn't support oneshots or it failed to make an event.
 	// Make a thread that "emulates" kernel-level events.
 
-	struct _timer_oneshot_data *data = mem_calloc(1, sizeof(*data));
+	struct timer_oneshot_data_ *data = mem_calloc(1, sizeof(*data));
 
 	data->callback = callback;
 	data->param = param;
 	data->trigger = timer_ticks_us() + (ms * UINT64_C(1000));
 
-	// locks the mutex and starts the thread if necessary
+	mt_mutex_lock(timer_oneshot_mutex);
+
+	// initialize everything
 	if (!timer_oneshot_thread) {
 		oneshot_data_list = NULL;
-
-		timer_oneshot_mutex = mt_mutex_create();
-		timer_oneshot_cond = mt_cond_create();
-
-		// need to lock this before the thread starts
-		mt_mutex_lock(timer_oneshot_mutex);
+		oneshot_data_pending = NULL;
 
 		timer_oneshot_thread_cancelled = 0;
-		timer_oneshot_thread = mt_thread_create(_timer_oneshot_thread, "Timer oneshot thread", NULL);
-	} else {
-		mt_mutex_lock(timer_oneshot_mutex);
+		timer_oneshot_thread = mt_thread_create(timer_oneshot_thread_func, "Timer oneshot thread", NULL);
 	}
 
 	// prepend it to the list
-	data->next = oneshot_data_list;
-	oneshot_data_list = data;
+	data->next = oneshot_data_pending;
+	oneshot_data_pending = data;
 
 	mt_mutex_unlock(timer_oneshot_mutex);
-
-	mt_cond_signal(timer_oneshot_cond);
 }
 
 int timer_init(void)
@@ -201,10 +210,7 @@ int timer_init(void)
 	if (!backend)
 		return 0;
 
-	if (!backend->oneshot) {
-		timer_oneshot_mutex = mt_mutex_create();
-		timer_oneshot_cond = mt_cond_create();
-	}
+	timer_oneshot_mutex = mt_mutex_create();
 
 	return 1;
 }
@@ -219,7 +225,6 @@ void timer_quit(void)
 	// Kill the oneshot stuff if needed.
 	if (timer_oneshot_thread) {
 		timer_oneshot_thread_cancelled = 1;
-		mt_cond_signal(timer_oneshot_cond);
 		mt_thread_wait(timer_oneshot_thread, NULL);
 		timer_oneshot_thread = NULL;
 	}
@@ -227,10 +232,5 @@ void timer_quit(void)
 	if (timer_oneshot_mutex) {
 		mt_mutex_delete(timer_oneshot_mutex);
 		timer_oneshot_mutex = NULL;
-	}
-
-	if (timer_oneshot_cond) {
-		mt_cond_delete(timer_oneshot_cond);
-		timer_oneshot_cond = NULL;
 	}
 }
