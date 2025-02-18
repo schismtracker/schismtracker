@@ -163,34 +163,6 @@ static void win32_timer_msleep(uint32_t msec)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// oneshot timers
-
-struct _win32_timer_oneshot_curry {
-	void (*callback)(void *param);
-	void *param;
-};
-
-static CALLBACK void _win32_timer_oneshot_callback(SCHISM_UNUSED UINT uTimerID, SCHISM_UNUSED UINT uMsg,
-	DWORD_PTR dwUser, SCHISM_UNUSED DWORD_PTR dw1, SCHISM_UNUSED DWORD_PTR dw2)
-{
-	struct _win32_timer_oneshot_curry *curry = (struct _win32_timer_oneshot_curry *)dwUser;
-	curry->callback(curry->param);
-	free(curry);
-}
-
-static int win32_timer_oneshot(uint32_t ms, void (*callback)(void *param), void *param)
-{
-	struct _win32_timer_oneshot_curry *curry = mem_alloc(sizeof(struct _win32_timer_oneshot_curry));
-	LARGE_INTEGER due;
-	HANDLE timer;
-
-	curry->callback = callback;
-	curry->param = param;
-
-	return !!timeSetEvent(ms, win32_mm_period, _win32_timer_oneshot_callback, (DWORD_PTR)curry, TIME_ONESHOT | TIME_CALLBACK_FUNCTION);
-}
-
-//////////////////////////////////////////////////////////////////////////////
 
 static int win32_timer_must_end_period = 0;
 
@@ -249,6 +221,4 @@ const schism_timer_backend_t schism_timer_backend_win32 = {
 	.ticks_us = win32_timer_ticks_us,
 	.usleep = win32_timer_usleep,
 	.msleep = win32_timer_msleep,
-
-	.oneshot = win32_timer_oneshot,
 };
