@@ -323,6 +323,7 @@ void midi_engine_stop(void)
 	if (!midi_mutex) return;
 
 	mt_mutex_lock(midi_mutex);
+	_connected = 0;
 	for (n = port_providers; n; ) {
 		q = NULL;
 		while (midi_port_foreach(n, &q))
@@ -339,7 +340,6 @@ void midi_engine_stop(void)
 		n = n->next;
 		free(prev);
 	}
-	_connected = 0;
 	mt_mutex_unlock(midi_mutex);
 
 	// now delete everything
@@ -481,7 +481,7 @@ int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor)
 			i = 0;
 		} else {
 			i = ((*cursor)->num) + 1;
-			while (i < port_count && !port_top[i]) i++;
+			while (i >= 0 && i < port_count && !port_top[i]) i++;
 		}
 
 		if (i >= port_count) {
@@ -662,7 +662,9 @@ static void _midi_send_timer_callback(void *param)
 	// once more
 	struct _midi_send_timer_curry *curry = (struct _midi_send_timer_curry *)param;
 
-	if (!midi_record_mutex) return;
+	// make sure the midi system is actually still running to prevent
+	// a crash on exit
+	if (!midi_record_mutex || !_connected) return;
 
 	mt_mutex_lock(midi_record_mutex);
 	_midi_send_unlocked(curry->msg, curry->len, 0, MIDI_FROM_NOW);
