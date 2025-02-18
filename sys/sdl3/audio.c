@@ -23,6 +23,7 @@
 
 #include "headers.h"
 #include "mem.h"
+#include "str.h"
 #include "backend/audio.h"
 #include "mt.h"
 
@@ -54,6 +55,10 @@ static bool (SDLCALL *sdl3_PauseAudioDevice)(SDL_AudioDeviceID dev) = NULL;
 static bool (SDLCALL *sdl3_ResumeAudioDevice)(SDL_AudioDeviceID dev) = NULL;
 static SDL_AudioDeviceID (SDLCALL *sdl3_GetAudioStreamDevice)(SDL_AudioStream *stream) = NULL;
 static bool (SDLCALL *sdl3_PutAudioStreamData)(SDL_AudioStream *stream, const void *buf, int len) = NULL;
+
+// used to request a specific sample frame size
+static bool (SDLCALL *sdl3_SetHint)(const char *name, const char *value);
+static bool (SDLCALL *sdl3_ResetHint)(const char *name);
 
 static void (SDLCALL *sdl3_free)(void *ptr) = NULL;
 
@@ -186,16 +191,28 @@ static schism_audio_device_t *sdl3_audio_open_device(uint32_t id, const schism_a
 		.freq = desired->freq,
 		.format = format,
 		.channels = desired->channels,
-		//.samples = desired->samples,
 	};
 
 	dev->mutex = mt_mutex_create();
 	if (!dev->mutex)
 		goto fail;
 
+	{
+		// As it turns out, SDL is still just a shell script in disguise, and requires you to
+		// pass everything as strings in order to change behavior. As for why they don't just
+		// include this in the spec structure anymore is beyond me.
+		char buf[64];
+		str_from_num(0, desired->samples, buf);
+		sdl3_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, buf);
+	}
+
 	// SDL3's magic constant for "pick a default playback device" just so happens to align perfectly
 	// with *our* magic constant which means we can just pass it directly in without changing anything.
 	dev->stream = sdl3_OpenAudioDeviceStream(id, &sdl_desired, sdl3_audio_callback, dev);
+
+	// reset this before checking if opening succeeded
+	sdl3_ResetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES);
+
 	if (!dev->stream)
 		goto fail;
 
@@ -205,7 +222,7 @@ static schism_audio_device_t *sdl3_audio_open_device(uint32_t id, const schism_a
 	// lolwut
 	memcpy(obtained, desired, sizeof(schism_audio_spec_t));
 
-	// We can't actually request a buffer size anymore. Boohoo.
+	// Retrieve the actual buffer size SDL is using (i.e., don't lie to the user)
 	int samples;
 	{
 		SDL_AudioSpec xyzzy;
@@ -281,6 +298,9 @@ static int sdl3_audio_load_syms(void)
 	SCHISM_SDL3_SYM(GetAudioStreamDevice);
 	SCHISM_SDL3_SYM(GetAudioDeviceFormat);
 	SCHISM_SDL3_SYM(PutAudioStreamData);
+
+	SCHISM_SDL3_SYM(SetHint);
+	SCHISM_SDL3_SYM(ResetHint);
 
 	SCHISM_SDL3_SYM(free);
 
