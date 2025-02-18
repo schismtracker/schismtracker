@@ -38,6 +38,7 @@
 
 static PVOID (WINAPI *KERNEL32_AddVectoredExceptionHandler)(ULONG, PVECTORED_EXCEPTION_HANDLER);
 static ULONG (WINAPI *KERNEL32_RemoveVectoredExceptionHandler)(PVOID);
+static BOOL (WINAPI *KERNEL32_IsDebuggerPresent)(void); // NT 4+
 
 // not necessarily kernel32, but most likely. sometimes it can be kernelbase!
 static HRESULT (WINAPI *KERNEL32_SetThreadDescription)(HANDLE, PCWSTR); // win10+
@@ -116,7 +117,7 @@ static unsigned int __stdcall SCHISM_FORCE_ALIGN_ARG_POINTER win32_dummy_thread_
 				win32_raise_name_exception(thread->name);
 				KERNEL32_RemoveVectoredExceptionHandler(handler);
 			} // else ... ?
-		} else if (IsDebuggerPresent()) { // Win9x ?
+		} else if (KERNEL32_IsDebuggerPresent && KERNEL32_IsDebuggerPresent()) {
 			win32_raise_name_exception(thread->name);
 		}
 	}
@@ -543,6 +544,7 @@ static int win32_threads_init(void)
 		KERNEL32_AddVectoredExceptionHandler = loadso_function_load(lib_kernel32, "AddVectoredExceptionHandler");
 		KERNEL32_RemoveVectoredExceptionHandler = loadso_function_load(lib_kernel32, "RemoveVectoredExceptionHandler");
 		KERNEL32_SetThreadDescription = loadso_function_load(lib_kernel32, "SetThreadDescription");
+		KERNEL32_IsDebuggerPresent = loadso_function_load(lib_kernel32, "IsDebuggerPresent");
 
 		KERNEL32_InitializeCriticalSection = loadso_function_load(lib_kernel32, "InitializeCriticalSection");
 		KERNEL32_SetCriticalSectionSpinCount = loadso_function_load(lib_kernel32, "SetCriticalSectionSpinCount");
@@ -563,6 +565,7 @@ static int win32_threads_init(void)
 		KERNEL32_AddVectoredExceptionHandler = NULL;
 		KERNEL32_RemoveVectoredExceptionHandler = NULL;
 		KERNEL32_SetThreadDescription = NULL;
+		KERNEL32_IsDebuggerPresent = NULL;
 
 		KERNEL32_InitializeCriticalSection = NULL;
 		KERNEL32_SetCriticalSectionSpinCount = NULL;

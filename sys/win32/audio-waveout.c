@@ -137,7 +137,7 @@ static uint32_t waveout_audio_device_count(void)
 			if (waveOutGetDevCapsA(i, &caps.a, sizeof(caps.a)) != MMSYSERR_NOERROR)
 				continue;
 
-			if (charset_iconv(caps.a.szPname, &devices[devices_size], CHARSET_ANSI, CHARSET_UTF8, sizeof(caps.a.szPname)))
+			if (charset_iconv(caps.a.szPname, &devices[devices_size].name, CHARSET_ANSI, CHARSET_UTF8, sizeof(caps.a.szPname)))
 				continue;
 		} else
 #endif
