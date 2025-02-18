@@ -58,6 +58,13 @@ static void sdl12_msleep(uint32_t ms)
 //////////////////////////////////////////////////////////////////////////////
 // oneshot timer
 
+#if 0
+// XXX: Need to check whether oneshot timers are evaluated FIFO.
+// From the looks of it this seems to be dependent on the
+// platform.
+// SDL 2.0+ uses threaded timers everywhere, which means they are
+// always FIFO.
+
 struct _sdl12_timer_oneshot_curry {
 	void (*callback)(void *param);
 	void *param;
@@ -87,6 +94,7 @@ static int sdl12_timer_oneshot(uint32_t interval, void (*callback)(void *param),
 
 	return !!id;
 }
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -134,5 +142,5 @@ const schism_timer_backend_t schism_timer_backend_sdl12 = {
 	.usleep = sdl12_usleep,
 	.msleep = sdl12_msleep,
 
-	.oneshot = sdl12_timer_oneshot,
+	//.oneshot = sdl12_timer_oneshot,
 };
