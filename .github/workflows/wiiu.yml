@@ -38,7 +38,7 @@ jobs:
         id: checkout
         uses: actions/checkout@v4
         with:
-          repository: 'mrpapersonic/SDL'
+          repository: 'devkitPro/SDL'
           ref: 'wiiu-sdl2-2.28'
           path: SDL
 
