@@ -29,6 +29,7 @@
 static bool (SDLCALL *sdl3_Init)(SDL_InitFlags flags);
 static void (SDLCALL *sdl3_Quit)(void);
 static const char *(SDLCALL *sdl3_GetError)(void);
+static int (SDLCALL *sdl3_GetVersion)(void);
 
 static int load_sdl3_syms(void);
 
@@ -100,6 +101,7 @@ static int load_sdl3_syms(void)
 	SCHISM_SDL3_SYM(Init);
 	SCHISM_SDL3_SYM(Quit);
 	SCHISM_SDL3_SYM(GetError);
+	SCHISM_SDL3_SYM(GetVersion);
 
 	return 0;
 }
@@ -115,6 +117,13 @@ int sdl3_init(void)
 {
 	if (!roll) {
 		if (sdl3_dlinit())
+			return 0;
+
+		// versions prior to the first stable release (3.2.0) have not been tested at all,
+		// and will likely have serious issues if we even attempt to use them, so punt,
+		// and fallback to an older version of SDL, possibly sdl2-compat or sdl12-compat.
+		const int ver = sdl3_GetVersion();
+		if (!SCHISM_SEMVER_ATLEAST(3, 2, 0, SDL_VERSIONNUM_MAJOR(ver), SDL_VERSIONNUM_MINOR(ver), SDL_VERSIONNUM_MICRO(ver)))
 			return 0;
 
 		// the subsystems are initialized by the actual backends
