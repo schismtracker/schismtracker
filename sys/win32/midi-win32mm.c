@@ -63,10 +63,9 @@ struct win32mm_midi {
 
 // whether to use ANSI or Unicode versions of functions
 // (currently based on whether we're running on win9x or not)
-#ifndef SCHISM_WIN32_COMPILE_ANSI
-const
-#endif
+#ifdef SCHISM_WIN32_COMPILE_ANSI
 static int use_ansi_funcs = 0;
+#endif
 
 static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *d, unsigned int len)
 {
