@@ -34,6 +34,18 @@
 
 #define MSVC_EXCEPTION_NAME_CODE UINT32_C(0x406D1388)
 
+// Multithreading implementation for Win32
+//
+// For the most part, this was created because of SDL 1.2 using the CreateMutex() API,
+// even though critical sections existed within Windows since NT 3.1 (and possibly
+// this can be attributed to MSDN for having wrong minimum system requirements)
+// In short, Win32 mutexes are kernel-level, while critical sections are process-level.
+// This means, theoretically, there should be no calling into the kernel when using
+// any multithreading structures (including mutexes, which we use quite a lot in the
+// source, especially for MIDI and events) making in particular MIDI quite a bit faster
+// on older windows systems. Additionally we implement the SRWlock API that SDL uses
+// as well (though I can't say for sure exactly how performant it is. mileage may vary)
+
 /* ------------------------------------ */
 
 static PVOID (WINAPI *KERNEL32_AddVectoredExceptionHandler)(ULONG, PVECTORED_EXCEPTION_HANDLER);
@@ -517,7 +529,7 @@ void win32_cond_wait(mt_cond_t *cond, mt_mutex_t *mutex)
 	}
 }
 
-// this function is useless if we don't know whether we timed out or not
+// this function is somewhat useless if we don't know whether we timed out or not
 void win32_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout)
 {
 	switch (win32_cond_impl) {
@@ -525,7 +537,7 @@ void win32_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeou
 		win32_cond_wait_fake_impl_(cond, mutex, &timeout);
 		break;
 	case WIN32_COND_IMPL_VISTA:
-		win32_cond_wait_vista_impl_(cond, mutex, NULL);
+		win32_cond_wait_vista_impl_(cond, mutex, &timeout);
 		break;
 	}
 }
@@ -621,6 +633,7 @@ static int win32_threads_init(void)
 		win32_cond_impl = WIN32_COND_IMPL_FAKE;
 	}
 
+#if 0
 	static const char *mutex_impl_names[] = {
 		[WIN32_MUTEX_IMPL_MUTEX] = "Mutex",
 		[WIN32_MUTEX_IMPL_CRITICALSECTION] = "CriticalSection",
@@ -633,6 +646,7 @@ static int win32_threads_init(void)
 	};
 
 	log_appendf(1, "WIN32: using %s mutexes and %s condition variables", mutex_impl_names[win32_mutex_impl], cond_impl_names[win32_cond_impl]);
+#endif
 
 	return 1;
 }
