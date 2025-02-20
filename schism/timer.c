@@ -86,16 +86,17 @@ struct timer_oneshot_data_ {
 // by the running thread.
 static struct timer_oneshot_data_ *oneshot_data_pending = NULL;
 static mt_mutex_t *timer_oneshot_mutex = NULL;
+static mt_cond_t *timer_oneshot_cond = NULL;
 
 static int timer_oneshot_thread_func(void *userdata)
 {
 	struct timer_oneshot_data_ *oneshot_data_list = NULL;
 
+	mt_mutex_lock(timer_oneshot_mutex);
+
 	mt_thread_set_priority(MT_THREAD_PRIORITY_HIGH);
 
 	while (!timer_oneshot_thread_cancelled) {
-		mt_mutex_lock(timer_oneshot_mutex);
-
 		// Add any pending timers waiting to get added to the list.
 		if (oneshot_data_pending) {
 			if (oneshot_data_list) {
@@ -111,6 +112,8 @@ static int timer_oneshot_thread_func(void *userdata)
 		}
 
 		mt_mutex_unlock(timer_oneshot_mutex);
+
+		timer_ticks_t wait = UINT64_MAX;
 
 		if (oneshot_data_list) {
 			struct timer_oneshot_data_ *data = oneshot_data_list, *prev = NULL;
@@ -134,14 +137,19 @@ static int timer_oneshot_thread_func(void *userdata)
 					data = data->next;
 					free(old);
 				} else {
+					wait = MIN(wait, data->trigger - now);
+
 					prev = data;
 					data = data->next;
 				}
 			}
 		}
 
-		// TODO use semaphores to signal this thread.
-		timer_msleep(1);
+		wait /= 1000; //usec to msec
+
+		mt_mutex_lock(timer_oneshot_mutex);
+
+		mt_cond_wait_timeout(timer_oneshot_cond, timer_oneshot_mutex, wait);
 	}
 
 	return 0;
@@ -183,6 +191,8 @@ void timer_oneshot(uint32_t ms, void (*callback)(void *param), void *param)
 	}
 
 	mt_mutex_unlock(timer_oneshot_mutex);
+
+	mt_cond_signal(timer_oneshot_cond);
 }
 
 int timer_init(void)
@@ -218,6 +228,7 @@ int timer_init(void)
 		return 0;
 
 	timer_oneshot_mutex = mt_mutex_create();
+	timer_oneshot_cond = mt_cond_create();
 
 	return 1;
 }
@@ -232,6 +243,7 @@ void timer_quit(void)
 	// Kill the oneshot stuff if needed.
 	if (timer_oneshot_thread) {
 		timer_oneshot_thread_cancelled = 1;
+		mt_cond_signal(timer_oneshot_cond);
 		mt_thread_wait(timer_oneshot_thread, NULL);
 		timer_oneshot_thread = NULL;
 	}
