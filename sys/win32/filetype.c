@@ -31,24 +31,16 @@
 void win32_filecreated_callback(const char *filename)
 {
 	/* let explorer know when we create a file. */
-	charset_t explorer_charset;
-
+	const charset_t explorer_charset =
 #ifdef SCHISM_WIN32_COMPILE_ANSI
-	if (GetVersion() & 0x80000000) {
-		// Windows 9x
-		explorer_charset = CHARSET_ANSI;
-	} else
+		(GetVersion() & 0x80000000) ? CHARSET_ANSI :
 #endif
-	{
-		// Windows NT
-		explorer_charset = CHARSET_WCHAR_T;
+		CHARSET_WCHAR_T;
+
+	void *wc = charset_iconv_easy(filename, CHARSET_UTF8, explorer_charset);
+	if (wc) {
+		SHChangeNotify(SHCNE_CREATE, SHCNF_PATH|SHCNF_FLUSHNOWAIT, wc, NULL);
+		SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATH|SHCNF_FLUSHNOWAIT, wc, NULL);
+		free(wc);
 	}
-
-	void* wc = NULL;
-	if (charset_iconv(filename, &wc, CHARSET_UTF8, explorer_charset, SIZE_MAX))
-		return;
-
-	SHChangeNotify(SHCNE_CREATE, SHCNF_PATH|SHCNF_FLUSHNOWAIT, wc, NULL);
-	SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATH|SHCNF_FLUSHNOWAIT, wc, NULL);
-	free(wc);
 }

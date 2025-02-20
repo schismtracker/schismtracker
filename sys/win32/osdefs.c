@@ -1054,16 +1054,11 @@ int win32_ntver_atleast(int major, int minor, int build)
 /* -------------------------------------------------------------------- */
 
 // By default, waveout devices are limited to 31 chars, which means we get
-// lovely device names like
-//  > Headphones (USB-C to 3.5mm Head
-// Doing this gives us access to longer and more "general" devices names,
-// such as
-//  > G432 Gaming Headset
-// but only if the device supports it!
+// lovely device names like "Headphones (USB-C to 3.5mm Head".
 //
-// We do this for DirectSound as well mainly to provide some sort of
-// reliability with the device names.
-int win32_audio_lookup_device_name(const void *nameguid, char **result)
+// Doing this gives us access to longer and more "general" devices names,
+// such as "G432 Gaming Headset", but only if the device supports it!
+static int win32_audio_lookup_device_name_registry_(const void *nameguid, char **result)
 {
 	// format for printing GUIDs with printf
 #define GUIDF "%08" PRIx32 "-%04" PRIx16 "-%04" PRIx16 "-%02" PRIx8 "%02" PRIx8 "-%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" PRIx8
@@ -1117,6 +1112,25 @@ int win32_audio_lookup_device_name(const void *nameguid, char **result)
 
 #undef GUIDF
 #undef GUIDX
+}
+
+// win32_audio_lookup_device_name: look up a device name based on
+// some given data.
+// "nameguid" is a directsound device GUID.
+// "waveoutname" is a waveout device name. this will be parsed
+// as an ANSI string on Windows 9x and a Unicode string on Windows NT.
+// MAKE SURE you're passing the right type in regard to OS!
+// "result" should point to a `char *` that receives the resulting
+// device name, if any.
+int win32_audio_lookup_device_name(const void *nameguid, const void *waveoutname, char **result)
+{
+	if (nameguid && win32_audio_lookup_device_name_registry_(nameguid, result))
+		return 1;
+
+	if (waveoutname && win32_dsound_audio_lookup_waveout_name(waveoutname, result))
+		return 1;
+
+	return 0;
 }
 
 /* -------------------------------------------------------------------- */

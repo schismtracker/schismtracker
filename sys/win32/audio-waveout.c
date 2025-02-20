@@ -137,7 +137,9 @@ static uint32_t waveout_audio_device_count(void)
 			if (waveOutGetDevCapsA(i, &caps.a, sizeof(caps.a)) != MMSYSERR_NOERROR)
 				continue;
 
-			if (charset_iconv(caps.a.szPname, &devices[devices_size].name, CHARSET_ANSI, CHARSET_UTF8, sizeof(caps.a.szPname)))
+			// Try receiving based on the name GUID. Otherwise, fall back to the short name.
+			if (!win32_audio_lookup_device_name(NULL, caps.a.szPname, &devices[devices_size].name)
+				&& charset_iconv(caps.a.szPname, &devices[devices_size].name, CHARSET_ANSI, CHARSET_UTF8, sizeof(caps.a.szPname)))
 				continue;
 		} else
 #endif
@@ -145,11 +147,12 @@ static uint32_t waveout_audio_device_count(void)
 			// Try WAVEOUTCAPS2 before WAVEOUTCAPS
 			if (waveOutGetDevCapsW(i, (LPWAVEOUTCAPSW)&caps.w2, sizeof(caps.w2)) == MMSYSERR_NOERROR) {
 				// Try receiving based on the name GUID. Otherwise, fall back to the short name.
-				if (!win32_audio_lookup_device_name(&caps.w2.NameGuid, &devices[devices_size].name)
+				if (!win32_audio_lookup_device_name(&caps.w2.NameGuid, caps.w2.szPname, &devices[devices_size].name)
 					&& charset_iconv(caps.w2.szPname, &devices[devices_size].name, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(caps.w2.szPname)))
 					continue;
 			} else if (waveOutGetDevCapsW(i, &caps.w, sizeof(caps.w)) == MMSYSERR_NOERROR) {
-				if (charset_iconv(caps.w.szPname, &devices[devices_size].name, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(caps.w.szPname)))
+				if (!win32_audio_lookup_device_name(NULL, caps.w.szPname, &devices[devices_size].name)
+					&& charset_iconv(caps.w.szPname, &devices[devices_size].name, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(caps.w.szPname)))
 					continue;
 			} else {
 				continue;
