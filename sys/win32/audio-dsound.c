@@ -787,7 +787,9 @@ struct dsound_audio_lookup_callback_data {
 		return 0; \
 	}
 
+#ifdef SCHISM_WIN32_COMPILE_ANSI
 WIN32_DSOUND_AUDIO_LOOKUP_WAVEOUT_NAME_IMPL(A, char, CHARSET_ANSI, strncpy)
+#endif
 WIN32_DSOUND_AUDIO_LOOKUP_WAVEOUT_NAME_IMPL(W, WCHAR, CHARSET_WCHAR_T, wcsncpy)
 
 #undef WIN32_DSOUND_AUDIO_LOOKUP_WAVEOUT_NAME_IMPL
@@ -797,9 +799,12 @@ int win32_dsound_audio_lookup_waveout_name(const void *waveoutnamev, char **resu
 	if (!waveoutnamev || !dsound_propset)
 		return 0;
 
+#ifdef SCHISM_WIN32_COMPILE_ANSI
 	if (GetVersion() & 0x80000000U) { // Win9x
 		return win32_dsound_audio_lookup_waveout_name_A(waveoutnamev, result);
-	} else { // WinNT
+	} else
+#endif
+	{ // WinNT
 		return win32_dsound_audio_lookup_waveout_name_W(waveoutnamev, result);
 	}
 }
