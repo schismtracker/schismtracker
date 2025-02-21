@@ -775,7 +775,6 @@ struct dsound_audio_lookup_private_callback_data {
 		/*assert(pcbdata);*/ \
 	\
 		if (pdata && (pdata->WaveDeviceId == pcbdata->id)) { \
-			printf("found! %ls\n", pdata->Description); \
 			memcpy(&pcbdata->guid, &pdata->DeviceId, sizeof(GUID)); \
 			return FALSE; \
 		} \
