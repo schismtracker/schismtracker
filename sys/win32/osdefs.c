@@ -1117,17 +1117,14 @@ static int win32_audio_lookup_device_name_registry_(const void *nameguid, char *
 // win32_audio_lookup_device_name: look up a device name based on
 // some given data.
 // "nameguid" is a directsound device GUID.
-// "waveoutname" is a waveout device name. this will be parsed
-// as an ANSI string on Windows 9x and a Unicode string on Windows NT.
-// MAKE SURE you're passing the right type in regard to OS!
-// "result" should point to a `char *` that receives the resulting
-// device name, if any.
-int win32_audio_lookup_device_name(const void *nameguid, const void *waveoutname, char **result)
+// "waveoutdevid" is a waveout device ID, which is looked up in the
+// directsound DLL to find a long device name if provided
+int win32_audio_lookup_device_name(const void *nameguid, const uint32_t *waveoutdevid, char **result)
 {
 	if (nameguid && win32_audio_lookup_device_name_registry_(nameguid, result))
 		return 1;
 
-	if (waveoutname && win32_dsound_audio_lookup_waveout_name(waveoutname, result))
+	if (waveoutdevid && win32_dsound_audio_lookup_waveout_name(waveoutdevid, result))
 		return 1;
 
 	return 0;

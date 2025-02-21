@@ -142,11 +142,11 @@ FILE* win32_fopen(const char* path, const char* flags);
 int win32_run_hook(const char *dir, const char *name, const char *maybe_arg);
 int win32_get_key_repeat(int *pdelay, int *prate);
 void win32_show_message_box(const char *title, const char *text);
-int win32_audio_lookup_device_name(const void *nameguid, const void *waveoutname, char **result);
+int win32_audio_lookup_device_name(const void *nameguid, const uint32_t *waveoutdevid, char **result);
 int win32_ntver_atleast(int major, int minor, int build);
 
 // audio-dsound.c
-int win32_dsound_audio_lookup_waveout_name(const void *waveoutnamev, char **result);
+int win32_dsound_audio_lookup_waveout_name(const uint32_t *waveoutnamev, char **result);
 
 int posix_run_hook(const char *dir, const char *name, const char *maybe_arg);
 
