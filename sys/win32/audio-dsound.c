@@ -178,6 +178,10 @@ static inline void _dsound_device_append(LPGUID lpguid, char *name)
 		IDirectSound_Release(dsound);
 	}
 
+	for (size_t i = 0; i < devices_size; i++)
+		if (!memcmp(&devices[i].guid, lpguid, sizeof(GUID)))
+			return;
+
 	if (devices_size >= devices_alloc) {
 		devices_alloc = ((!devices_alloc) ? 1 : (devices_alloc * 2));
 
@@ -216,24 +220,13 @@ DSOUND_ENUMERATE_CALLBACK_VARIANT(LPCWSTR, CHARSET_WCHAR_T, w)
 
 static uint32_t dsound_audio_device_count(void)
 {
-	_dsound_free_devices();
-
 	// Prefer Unicode
-	if (DSOUND_DirectSoundEnumerateW) {
-		if (DSOUND_DirectSoundEnumerateW(_dsound_enumerate_callback_w, NULL) == DS_OK)
-			return devices_size;
-
-		// Free any devices that might have been added
-		_dsound_free_devices();
-	}
+	if (DSOUND_DirectSoundEnumerateW && DSOUND_DirectSoundEnumerateW(_dsound_enumerate_callback_w, NULL) == DS_OK)
+		return devices_size;
 
 #ifdef SCHISM_WIN32_COMPILE_ANSI
-	if (DSOUND_DirectSoundEnumerateA) {
-		if (DSOUND_DirectSoundEnumerateA(_dsound_enumerate_callback_a, NULL) == DS_OK)
-			return devices_size;
-
-		_dsound_free_devices();
-	}
+	if (DSOUND_DirectSoundEnumerateA && DSOUND_DirectSoundEnumerateA(_dsound_enumerate_callback_a, NULL) == DS_OK)
+		return devices_size;
 #endif
 
 	return 0;

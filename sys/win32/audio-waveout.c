@@ -108,6 +108,13 @@ static struct {
 } *devices = NULL;
 static size_t devices_size = 0;
 
+// FIXME: This screws up the GUI royally if someone hotplugs a device.
+// The IDs of waveout devices aren't necessarily "unique", so we can't
+// use those; they change any time an audio device is added or removed
+// (annoying!!)
+// The only thing I can think of is opening literally every single
+// device and then calling waveOutGetID() to check if it changed,
+// which is obviously stupid and a waste of resources.
 static uint32_t waveout_audio_device_count(void)
 {
 	const UINT devs = waveOutGetNumDevs();
