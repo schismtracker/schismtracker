@@ -30,10 +30,10 @@ jobs:
   osx:
     runs-on: macos-14
     env:
-      SDL_VERSION: 2.30.11
-      SDL_SHA256: 8b8d4aef2038533da814965220f88f77d60dfa0f32685f80ead65e501337da7f
-      FLAC_VERSION: 1.4.3
-      FLAC_SHA256: 6c58e69cd22348f441b861092b825e591d0b822e106de6eb0ee4d05d27205b70
+      SDL_VERSION: 2.32.0
+      SDL_SHA256: f5c2b52498785858f3de1e2996eba3c1b805d08fe168a47ea527c7fc339072d0
+      FLAC_VERSION: 1.5.0
+      FLAC_SHA256: f2c1c76592a82ffff8413ba3c4a1299b6c7ab06c734dee03fd88630485c2b920
       LIBOGG_VERSION: 1.3.5
       LIBOGG_SHA256: c4d91be36fc8e54deae7575241e03f4211eb102afb3fc0775fbbc1b740016705
       UTF8PROC_VERSION: 2.9.0
@@ -175,11 +175,6 @@ jobs:
         if: steps.cache-x86_64-dependencies.outputs.cache-hit != 'true'
         run: |
           pushd SDL2-$SDL_VERSION
-          # Apply compatibility patches from macports
-          # Remove this when SDL 2.30.12 gets released!!
-          curl -o "11827.patch" -L "https://patch-diff.githubusercontent.com/raw/libsdl-org/SDL/pull/11827.patch"
-          patch -p1 < "11827.patch"
-          rm "11827.patch"
           mkdir build_x86_64
           cd build_x86_64
           ../configure CPPFLAGS="-arch x86_64 -mmacosx-version-min=10.7 -DMAC_OS_X_VERSION_MIN_REQUIRED=1070 -isysroot $HOME/x86_64/SDKs/MacOSX10.7.sdk" CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64 -F$HOME/x86_64/SDKs/MacOSX10.7.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.7.sdk" --host=x86_64-apple-darwin13 --prefix="$HOME/x86_64prefix"
@@ -334,7 +329,7 @@ jobs:
         env:
           SCHISM_VERSION: ${{ steps.date.outputs.date }}
         run: |
-          for i in FLAC.12 ogg.0; do
+          for i in FLAC.14 ogg.0; do
             "$HOME/ppc/usr/bin/install_name_tool" -change "$HOME/ppcprefix/lib/lib${i}.dylib" @executable_path/../Resources/lib${i}.dylib build_powerpc/schismtracker
             "$HOME/ppc/usr/bin/install_name_tool" -change "$HOME/ppcprefix/lib/lib${i}.dylib" @executable_path/../Resources/lib${i}.dylib build_ppc7400/schismtracker
             install_name_tool -change "$HOME/x86_64prefix/lib/lib${i}.dylib" @executable_path/../Resources/lib${i}.dylib build_x86_64/schismtracker
@@ -351,9 +346,9 @@ jobs:
           install_name_tool -change "@rpath/libutf8proc.3.dylib" @executable_path/../Resources/libutf8proc.3.dylib build_x86_64/schismtracker
           install_name_tool -change "@rpath/libutf8proc.3.dylib" @executable_path/../Resources/libutf8proc.3.dylib build_arm64/schismtracker
 
-          "$HOME/ppc/usr/bin/install_name_tool" -change "$HOME/ppcprefix/lib/libogg.0.dylib" @executable_path/../Resources/libogg.0.dylib "$HOME/ppcprefix/lib/libFLAC.12.dylib"
-          install_name_tool -change "$HOME/x86_64prefix/lib/libogg.0.dylib" @executable_path/../Resources/libogg.0.dylib "$HOME/x86_64prefix/lib/libFLAC.12.dylib"
-          install_name_tool -change "$HOME/arm64prefix/lib/libogg.0.dylib" @executable_path/../Resources/libogg.0.dylib "$HOME/arm64prefix/lib/libFLAC.12.dylib"
+          "$HOME/ppc/usr/bin/install_name_tool" -change "$HOME/ppcprefix/lib/libogg.0.dylib" @executable_path/../Resources/libogg.0.dylib "$HOME/ppcprefix/lib/libFLAC.14.dylib"
+          install_name_tool -change "$HOME/x86_64prefix/lib/libogg.0.dylib" @executable_path/../Resources/libogg.0.dylib "$HOME/x86_64prefix/lib/libFLAC.14.dylib"
+          install_name_tool -change "$HOME/arm64prefix/lib/libogg.0.dylib" @executable_path/../Resources/libogg.0.dylib "$HOME/arm64prefix/lib/libFLAC.14.dylib"
 
           lipo -create -o schismtracker build_powerpc/schismtracker build_ppc7400/schismtracker build_x86_64/schismtracker build_arm64/schismtracker
           cd sys/macosx/Schism_Tracker.app/Contents/
@@ -361,7 +356,7 @@ jobs:
           rm Info.plist.bak
           mkdir MacOS
           cp ../../../../schismtracker MacOS
-          for i in FLAC.12 ogg.0 utf8proc.3; do
+          for i in FLAC.14 ogg.0 utf8proc.3; do
             lipo -create -o "Resources/lib${i}.dylib" "$HOME/x86_64prefix/lib/lib${i}.dylib" "$HOME/ppcprefix/lib/lib${i}.dylib" "$HOME/arm64prefix/lib/lib${i}.dylib"
           done
           lipo -create -o "Resources/libSDL2-2.0.0.dylib" "$HOME/x86_64prefix/lib/libSDL2-2.0.0.dylib" "$HOME/arm64prefix/lib/libSDL2-2.0.0.dylib"

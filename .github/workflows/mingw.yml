@@ -10,15 +10,12 @@ jobs:
     runs-on: windows-latest
     name: mingw32-i386
     env:
-      # TODO we should stop building SDL 1.2 and just use the includes from msys2
-      SDL_VERSION: 2.30.11
-      #SDL_SHA256: 24b574f71c87a763f50704bbb630cbe38298d544a1f890f099a4696b1d6beba4
-      SDL_RELEASE_SHA256: 216b2dc1921bbf1e23a4e5d5d89b9c8b9e34ceb5673de7d6d9199b5f20d793dc
+      SDL_VERSION: 2.32.0
+      SDL_SHA256: b31fc1ec1a22e6449ec2f5496d6f8d2832a4b8c27da94ae7db211418be2869a4
       SDL12_VERSION: 1.2.15
-      SDL12_SHA256: d6d316a793e5e348155f0dd93b979798933fb98aa1edebcc108829d6474aad00
-      SDL12_RELEASE_SHA256: a28bbe38714ef7817b1c1e8082a48f391f15e4043402444b783952fca939edc1
-      FLAC_VERSION: 1.4.3
-      FLAC_SHA256: 6c58e69cd22348f441b861092b825e591d0b822e106de6eb0ee4d05d27205b70
+      SDL12_SHA256: a28bbe38714ef7817b1c1e8082a48f391f15e4043402444b783952fca939edc1
+      FLAC_VERSION: 1.5.0
+      FLAC_SHA256: f2c1c76592a82ffff8413ba3c4a1299b6c7ab06c734dee03fd88630485c2b920
       LIBOGG_VERSION: 1.3.5
       LIBOGG_SHA256: c4d91be36fc8e54deae7575241e03f4211eb102afb3fc0775fbbc1b740016705
       UTF8PROC_VERSION: 2.9.0
@@ -187,16 +184,16 @@ jobs:
           cp "/c/MinGW/bin/libssp-0.dll" .
           # SDL 1.2
           wget -O "SDL-$SDL12_VERSION-win32.zip" https://www.libsdl.org/release/SDL-$SDL12_VERSION-win32.zip
-          echo "$SDL12_RELEASE_SHA256  SDL-$SDL12_VERSION-win32.zip" | sha256sum -c -
+          echo "$SDL12_SHA256  SDL-$SDL12_VERSION-win32.zip" | sha256sum -c -
           unzip "SDL-$SDL12_VERSION-win32.zip" "SDL.dll"
           # SDL 2
           wget -O "SDL2-$SDL_VERSION-win32-x86.zip" https://www.libsdl.org/release/SDL2-$SDL_VERSION-win32-x86.zip
-          echo "$SDL_RELEASE_SHA256  SDL2-$SDL_VERSION-win32-x86.zip" | sha256sum -c -
+          echo "$SDL_SHA256  SDL2-$SDL_VERSION-win32-x86.zip" | sha256sum -c -
           unzip "SDL2-$SDL_VERSION-win32-x86.zip" "SDL2.dll"
-          cp "$RUNNER_TEMP_CYGPATH/i386prefix/bin/libFLAC-12.dll" .
+          cp "$RUNNER_TEMP_CYGPATH/i386prefix/bin/libFLAC-14.dll" .
           cp "$RUNNER_TEMP_CYGPATH/i386prefix/bin/libogg-0.dll" .
           cp "$RUNNER_TEMP_CYGPATH/i386prefix/lib/libutf8proc-3.dll" .
-          strip "libFLAC-12.dll"
+          strip "libFLAC-14.dll"
           strip "libogg-0.dll"
           strip "libutf8proc-3.dll"
           strip "libssp-0.dll"
@@ -213,7 +210,7 @@ jobs:
             schismtracker.exe
             SDL.dll
             SDL2.dll
-            libFLAC-12.dll
+            libFLAC-14.dll
             libogg-0.dll
             libutf8proc-3.dll
             libgcc_s_dw2-1.dll
@@ -235,12 +232,12 @@ jobs:
     name: ${{ matrix.sys }}-${{ matrix.target }}
     env:
       LLVM_MINGW_VERSION: 20250114
-      SDL_VERSION: 2.30.11
-      SDL_SHA256: 8b8d4aef2038533da814965220f88f77d60dfa0f32685f80ead65e501337da7f
+      SDL_VERSION: 2.32.0
+      SDL_SHA256: f5c2b52498785858f3de1e2996eba3c1b805d08fe168a47ea527c7fc339072d0
       SDL12_VERSION: 1.2.15
       SDL12_SHA256: d6d316a793e5e348155f0dd93b979798933fb98aa1edebcc108829d6474aad00
-      FLAC_VERSION: 1.4.3
-      FLAC_SHA256: 6c58e69cd22348f441b861092b825e591d0b822e106de6eb0ee4d05d27205b70
+      FLAC_VERSION: 1.5.0
+      FLAC_SHA256: f2c1c76592a82ffff8413ba3c4a1299b6c7ab06c734dee03fd88630485c2b920
       LIBOGG_VERSION: 1.3.5
       LIBOGG_SHA256: c4d91be36fc8e54deae7575241e03f4211eb102afb3fc0775fbbc1b740016705
       UTF8PROC_VERSION: 2.9.0
@@ -368,10 +365,10 @@ jobs:
           cp schismtracker.exe ../..
           cd ../..
           cp "$HOME/prefix/bin/SDL2.dll" .
-          cp "$HOME/prefix/bin/libFLAC-12.dll" .
+          cp "$HOME/prefix/bin/libFLAC-14.dll" .
           cp "$HOME/prefix/bin/libogg-0.dll" .
           "$TARGET-w64-$SYS-strip" -g "SDL2.dll"
-          "$TARGET-w64-$SYS-strip" -g "libFLAC-12.dll"
+          "$TARGET-w64-$SYS-strip" -g "libFLAC-14.dll"
           "$TARGET-w64-$SYS-strip" -g "libogg-0.dll"
           cp schism/docs/configuration.md schism/README.md schism/COPYING .
           wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
@@ -384,7 +381,7 @@ jobs:
           path: |
             schismtracker.exe
             SDL2.dll
-            libFLAC-12.dll
+            libFLAC-14.dll
             libogg-0.dll
             COPYING
             COPYING.Xiph
