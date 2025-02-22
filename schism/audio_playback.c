@@ -1709,8 +1709,10 @@ int audio_init(const char *driver, const char *device)
 
 #if defined(SCHISM_SDL12) || defined(SCHISM_SDL2) || defined(SCHISM_SDL3)
 	/* we ought to allow this envvar to work under SDL. */
-	if (!*driver)
-		driver = getenv("SDL_AUDIODRIVER");
+	if (!*driver) {
+		const char *n = getenv("SDL_AUDIODRIVER");
+		if (n) driver = n;
+	}
 #endif
 
 	// Initialize all backends (for audio driver listing)
@@ -1724,9 +1726,9 @@ int audio_init(const char *driver, const char *device)
 	}
 
 	if (full_drivers.size > 0) {
-		const schism_audio_backend_t *backend_driver = *driver ? audio_driver_in_list_(driver) : NULL;
+		const schism_audio_backend_t *backend_driver = (driver && *driver) ? audio_driver_in_list_(driver) : NULL;
 
-		if (*driver) {
+		if (backend_driver) {
 			if ((success = _audio_try_driver(backend_driver, driver, device, 1)))
 				goto agh;
 
