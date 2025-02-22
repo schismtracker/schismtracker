@@ -206,9 +206,7 @@ static schism_audio_device_t *sdl3_audio_open_device(uint32_t id, const schism_a
 		sdl3_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, buf);
 	}
 
-	// SDL3's magic constant for "pick a default playback device" just so happens to align perfectly
-	// with *our* magic constant which means we can just pass it directly in without changing anything.
-	dev->stream = sdl3_OpenAudioDeviceStream(id, &sdl_desired, sdl3_audio_callback, dev);
+	dev->stream = sdl3_OpenAudioDeviceStream((id == AUDIO_BACKEND_DEFAULT || id >= device_count) ? SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK : devices[id], &sdl_desired, sdl3_audio_callback, dev);
 
 	// reset this before checking if opening succeeded
 	sdl3_ResetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES);

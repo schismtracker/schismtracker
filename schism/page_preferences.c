@@ -203,7 +203,7 @@ static void audio_device_list_draw() {
 	draw_fill_chars(AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y, AUDIO_DEVICE_BOX_END_X, AUDIO_DEVICE_BOX_END_Y, DEFAULT_FG, 0);
 
 	/* this macro expects the device name to be in UTF-8 */
-#define DRAW_DEVICE(name) \
+#define DRAW_DEVICE(id, name) \
 	do { \
 		if ((o + top_audio_device) == selected_audio_device) { \
 			if (focused) { \
@@ -218,16 +218,17 @@ static void audio_device_list_draw() {
 			bg = 0; \
 		}\
 	\
-		draw_text_utf8_len(!strcmp(current_audio_device, name) ? "*" : " ", 1, AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y + o, fg, bg); \
+		/* stupid dirty hack for default device */ \
+		draw_text_utf8_len((id == song_audio_device_id()) ? "*" : " ", 1, AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y + o, fg, bg); \
 		draw_text_utf8_len(name, AUDIO_DEVICE_BOX_WIDTH - 1, AUDIO_DEVICE_BOX_X + 1, AUDIO_DEVICE_BOX_Y + o, fg, bg); \
 		o++; \
 	} while (0)
 
 	if (top_audio_device < 1)
-		DRAW_DEVICE("default");
+		DRAW_DEVICE(AUDIO_BACKEND_DEFAULT, "default");
 
 	for (n = MAX(0, top_audio_device - 1); n < audio_device_list_size && o < AUDIO_DEVICE_BOX_HEIGHT; n++)
-		DRAW_DEVICE(audio_device_list[n].name);
+		DRAW_DEVICE(audio_device_list[n].id, audio_device_list[n].name);
 
 #undef DRAW_DEVICE
 }
@@ -337,8 +338,10 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 		top_audio_device = MAX(top_audio_device, 0);
 	}
 
-	if (load_selected_device)
-		audio_reinit(selected_audio_device == 0 ? NULL : audio_device_list[selected_audio_device - 1].name);
+	if (load_selected_device) {
+		uint32_t id = !selected_audio_device ? AUDIO_BACKEND_DEFAULT : audio_device_list[selected_audio_device - 1].id;
+		audio_reinit(&id);
+	}
 
 	return 1;
 }

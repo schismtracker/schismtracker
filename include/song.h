@@ -68,12 +68,12 @@ struct audio_settings {
 extern struct audio_settings audio_settings;
 
 struct audio_device {
-	int id;
+	uint32_t id;
 	char* name; /* UTF-8; must be free'd */
 };
 
 extern struct audio_device* audio_device_list;
-extern int audio_device_list_size;
+extern size_t audio_device_list_size;
 
 /* --------------------------------------------------------------------- */
 
@@ -259,8 +259,9 @@ void audio_flash_reinitialized_text(int success);
  * for an audio driver. */
 int audio_init(const char *driver, const char *device);
 
-/* Reconfigure the same device that was opened before. */
-int audio_reinit(const char *device);
+/* Reconfigure the same device that was opened before, or a device specified by
+ * device ID `device` (see audio_device_list) */
+int audio_reinit(uint32_t *device);
 
 void audio_quit(void);
 
@@ -276,6 +277,7 @@ void song_start_audio(void);
 
 const char *song_audio_driver(void);
 const char *song_audio_device(void);
+uint32_t song_audio_device_id(void);
 
 void free_audio_device_list(void);
 int refresh_audio_device_list(void);
@@ -414,7 +416,7 @@ enum {
 	PANS_MONO,
 	PANS_SLASH,
 	PANS_BACKSLASH,
-//      PANS_CROSS,
+//	PANS_CROSS,
 };
 void song_set_pan_scheme(int scheme);
 
