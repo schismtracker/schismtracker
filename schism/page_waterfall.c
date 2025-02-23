@@ -289,14 +289,7 @@ static void _vis_process(void)
 	status.flags |= NEED_UPDATE;
 }
 
-#define VIS_WORK_s_INLOOP(BITS) \
-	dl[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
-	dr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++;
-
-#define VIS_WORK_m_INLOOP(BITS) \
-	dl[i] = dr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++;
-
-#define VIS_WORK_EX(SUFFIX, BITS, NCHANS) \
+#define VIS_WORK_EX(SUFFIX, BITS, NCHANS, INLOOP) \
 	void vis_work_##BITS##SUFFIX(const int##BITS##_t *in, int inlen) \
 	{ \
 		int16_t dl[FFT_BUFFER_SIZE], dr[FFT_BUFFER_SIZE]; \
@@ -308,7 +301,7 @@ static void _vis_process(void)
 		} else { \
 			for (i = 0; i < FFT_BUFFER_SIZE;) { \
 				for (k = j = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) { \
-					VIS_WORK_##SUFFIX##_INLOOP(BITS) \
+					INLOOP \
 				} \
 			} \
 	\
@@ -318,7 +311,15 @@ static void _vis_process(void)
 		if (status.current_page == PAGE_WATERFALL) _vis_process(); \
 	}
 
-#define VIS_WORK(BITS) VIS_WORK_EX(s, BITS, 2) VIS_WORK_EX(m, BITS, 1)
+#define VIS_WORK(BITS) \
+	VIS_WORK_EX(s, BITS, 2, { \
+		dl[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
+		dr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
+	}) \
+	\
+	VIS_WORK_EX(m, BITS, 1, { \
+		dl[i] = dr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
+	})
 
 VIS_WORK(32)
 VIS_WORK(16)
@@ -326,8 +327,6 @@ VIS_WORK(8)
 
 #undef VIS_WORK
 #undef VIS_WORK_EX
-#undef VIS_WORK_s_INLOOP
-#undef VIS_WORK_m_INLOOP
 
 static void draw_screen(void)
 {
