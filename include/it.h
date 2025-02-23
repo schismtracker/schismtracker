@@ -319,12 +319,12 @@ SCHISM_NORETURN void schism_exit(int status);
 /* page_waterfall.c */
 
 void vis_init(void);
-void vis_work_32s(int32_t *in, int inlen);
-void vis_work_32m(int32_t *in, int inlen);
-void vis_work_16s(int16_t *in, int inlen);
-void vis_work_16m(int16_t *in, int inlen);
-void vis_work_8s(int8_t *in, int inlen);
-void vis_work_8m(int8_t *in, int inlen);
+void vis_work_32s(const int32_t *in, int inlen);
+void vis_work_32m(const int32_t *in, int inlen);
+void vis_work_16s(const int16_t *in, int inlen);
+void vis_work_16m(const int16_t *in, int inlen);
+void vis_work_8s(const int8_t *in, int inlen);
+void vis_work_8m(const int8_t *in, int inlen);
 
 /* more stupid visual stuff:
  * I've reverted these to the values that they were at before the "Visuals"

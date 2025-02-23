@@ -297,7 +297,7 @@ static void _vis_process(void)
 	dl[i] = dr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++;
 
 #define VIS_WORK_EX(SUFFIX, BITS, NCHANS) \
-	void vis_work_##BITS##SUFFIX(int##BITS##_t *in, int inlen) \
+	void vis_work_##BITS##SUFFIX(const int##BITS##_t *in, int inlen) \
 	{ \
 		int16_t dl[FFT_BUFFER_SIZE], dr[FFT_BUFFER_SIZE]; \
 		int i, j, k, c; \
