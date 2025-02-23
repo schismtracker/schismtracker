@@ -68,6 +68,7 @@ static void (*JACK_jack_midi_clear_buffer)(void *);
 static jack_time_t (*JACK_jack_frames_to_time)(const jack_client_t *client, jack_nframes_t);
 static jack_nframes_t (*JACK_jack_time_to_frames)(const jack_client_t *, jack_time_t);
 static jack_time_t (*JACK_jack_get_time)(void);
+static void (*JACK_jack_free)(void *ptr);
 
 static int load_jack_syms(void);
 
@@ -156,6 +157,7 @@ static int load_jack_syms(void) {
 	SCHISM_JACK_SYM(jack_get_time);
 	SCHISM_JACK_SYM(jack_time_to_frames);
 	SCHISM_JACK_SYM(jack_frames_to_time);
+	SCHISM_JACK_SYM(jack_free);
 
 	return 0;
 }
@@ -402,11 +404,11 @@ static void _jack_poll(struct midi_provider* jack_provider_)
 
 	ports = JACK_jack_get_ports(client, NULL, JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput);
 	_jack_enumerate_ports(ports, jack_provider_, MIDI_INPUT);
-	free(ports);
+	JACK_jack_free(ports);
 
 	ports = JACK_jack_get_ports(client, NULL, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput);
 	_jack_enumerate_ports(ports, jack_provider_, MIDI_OUTPUT);
-	free(ports);
+	JACK_jack_free(ports);
 
 	while (midi_port_foreach(jack_provider_, &ptr)) {
 		m = (struct jack_midi*)ptr->userdata;
