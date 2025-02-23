@@ -94,12 +94,12 @@ static int media_foundation_initialized = 0;
 static HRESULT STDMETHODCALLTYPE mfbytestream_ReadAtPosition(IMFByteStream *This, BYTE *pb, ULONG cb, ULONG *pcbRead, int64_t pos);
 
 /* --------------------------------------------------------------------- */
-/* Florida man uses C++ constructs in C and gets brutally murdered by
- * Linus Torvalds himself */
+/* "Fun things are fun" says who? */
 
 struct slurp_async_op {
 	/* vtable */
 	CONST_VTBL IUnknownVtbl *lpvtbl;
+	ULONG ref_cnt;
 
 	/* things we have to free, or whatever */
 	IMFAsyncCallback *cb;
@@ -110,8 +110,6 @@ struct slurp_async_op {
 	ULONG req_length;
 	ULONG actual_length;
 	int64_t pos;
-
-	long ref_cnt;
 };
 
 static HRESULT STDMETHODCALLTYPE slurp_async_op_QueryInterface(IUnknown *This, REFIID riid, void **ppvobj)
@@ -131,7 +129,7 @@ static ULONG STDMETHODCALLTYPE slurp_async_op_AddRef(IUnknown *This)
 
 static ULONG STDMETHODCALLTYPE slurp_async_op_Release(IUnknown *This)
 {
-	long ref = InterlockedDecrement(&(((struct slurp_async_op *)This)->ref_cnt));
+	ULONG ref = InterlockedDecrement(&(((struct slurp_async_op *)This)->ref_cnt));
 	if (!ref)
 		free(This);
 
@@ -175,7 +173,7 @@ struct slurp_async_callback {
 	/* vtable */
 	CONST_VTBL IMFAsyncCallbackVtbl *lpvtbl;
 
-	long ref_cnt;
+	ULONG ref_cnt;
 };
 
 /* IUnknown */
@@ -196,7 +194,7 @@ static ULONG STDMETHODCALLTYPE slurp_async_callback_AddRef(IMFAsyncCallback *Thi
 
 static ULONG STDMETHODCALLTYPE slurp_async_callback_Release(IMFAsyncCallback *This)
 {
-	long ref = InterlockedDecrement(&(((struct slurp_async_callback *)This)->ref_cnt));
+	ULONG ref = InterlockedDecrement(&(((struct slurp_async_callback *)This)->ref_cnt));
 	if (!ref)
 		free(This);
 
@@ -285,7 +283,7 @@ struct mfbytestream {
 	/* our stuff... */
 	slurp_t *fp;
 	mt_mutex_t *mutex;
-	long ref_cnt;
+	ULONG ref_cnt;
 };
 
 /* IUnknown methods */
@@ -1002,6 +1000,7 @@ static HMODULE lib_propsys = NULL;
 int win32mf_init(void)
 {
 	int com_initialized = 0;
+
 #ifdef SCHISM_MF_DEBUG
 #define DEBUG_PUTS(x) puts(x)
 #else
@@ -1026,15 +1025,6 @@ int win32mf_init(void)
 	LOAD_MF_OBJECT(ole32, CoUninitialize);
 	LOAD_MF_OBJECT(ole32, PropVariantClear);
 	LOAD_MF_OBJECT(ole32, CoTaskMemFree);
-
-	{
-		HRESULT com_init = MF_CoInitializeEx(NULL, COM_INITFLAGS);
-		com_initialized = (com_init == S_OK || com_init == S_FALSE || com_init == RPC_E_CHANGED_MODE);
-	}
-	if (!com_initialized) {
-		DEBUG_PUTS("Failed to initialize COM!");
-		goto fail;
-	}
 
 	LOAD_MF_LIBRARY(shlwapi);
 
@@ -1063,8 +1053,26 @@ int win32mf_init(void)
 	LOAD_MF_OBJECT(propsys, PropVariantToStringAlloc);
 	LOAD_MF_OBJECT(propsys, PropVariantToUInt64);
 
+	HRESULT com_init = MF_CoInitializeEx(NULL, COM_INITFLAGS);
+	switch (com_init) {
+	case S_OK: case S_FALSE: case RPC_E_CHANGED_MODE:
+		com_initialized = 1;
+		break;
+	default:
+		goto fail;
+	}
+
+	// Vista SDK version, 
+#define SCHISM_MF_VERSION ((0x0001U << 16) | 0x0070U)
+
 	/* MFSTARTUP_LITE == no sockets */
-	return (media_foundation_initialized = SUCCEEDED(MF_MFStartup(MF_VERSION, MFSTARTUP_LITE)));
+	if (FAILED(MF_MFStartup(SCHISM_MF_VERSION, MFSTARTUP_LITE)))
+		goto fail;
+
+#undef SCHISM_MF_VERSION
+
+	media_foundation_initialized = 1;
+	return 1;
 
 fail:
 	if (lib_shlwapi)
@@ -1082,11 +1090,11 @@ fail:
 	if (lib_propsys)
 		FreeLibrary(lib_propsys);
 
-	if (com_initialized && MF_CoUninitialize)
-		MF_CoUninitialize();
-
-	if (lib_ole32)
+	if (lib_ole32) {
+		if (com_initialized && MF_CoUninitialize)
+			MF_CoUninitialize();
 		FreeLibrary(lib_ole32);
+	}
 
 	return 0;
 }
@@ -1095,6 +1103,9 @@ void win32mf_quit(void)
 {
 	if (!media_foundation_initialized)
 		return;
+
+	MF_MFShutdown();
+	MF_CoUninitialize();
 
 	if (lib_shlwapi)
 		FreeLibrary(lib_shlwapi);
@@ -1113,7 +1124,4 @@ void win32mf_quit(void)
 
 	if (lib_ole32)
 		FreeLibrary(lib_ole32);
-
-	MF_MFShutdown();
-	MF_CoUninitialize();
 }
