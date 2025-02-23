@@ -267,8 +267,10 @@ static int _jack_process(jack_nframes_t nframes, void *user_data) {
 
 		jack_midi_data_t* data = JACK_jack_midi_event_reserve(midi_out_buffer, 0, size);
 
-		if (data) return (JACK_jack_ringbuffer_read(ringbuffer_out, (char*)data, size) != size);
-		else JACK_jack_ringbuffer_read_advance(ringbuffer_out, size);
+		if (data)
+			JACK_jack_ringbuffer_read(ringbuffer_out, (char*)data, size);
+		else
+			JACK_jack_ringbuffer_read_advance(ringbuffer_out, size);
 	}
 
 	return 0;
