@@ -35,6 +35,8 @@
 #define MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE 16 // Borrowed from OpenMPT
 #define MAX_SAMPLING_POINT_SIZE 4
 
+#define MAX_MIDI_CHANNELS       16
+#define MAX_MIDI_MACRO          32
 
 #define MAX_VOICES              256
 
@@ -55,7 +57,7 @@
 #define CHN_NOTEFADE            0x400 // fade note (~~~ or end of instrument envelope)
 #define CHN_SURROUND            0x800 // use surround channel (S91)
 #define CHN_NOIDO               0x1000 // near enough to an exact multiple of c5speed that interpolation
-				       // won't be noticeable (or interpolation is disabled completely)
+                                       // won't be noticeable (or interpolation is disabled completely)
 #define CHN_HQSRC               0x2000 // ???
 #define CHN_FILTER              0x4000 // filtered output (i.e., Zxx)
 #define CHN_VOLUMERAMP          0x8000 // ramp volume
@@ -515,23 +517,22 @@ typedef struct song_midi_state {
 // forward declare `struct song` to bypass compiler warnings  -paper
 struct song;
 
-typedef void (*song_midi_out_note_spec_t)(struct song *csf, int chan, const song_note_t *m);
 typedef void (*song_midi_out_raw_spec_t)(struct song *csf, const unsigned char *msg, uint32_t msg_len, uint32_t buf_size);
 
 ////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	char start[32];
-	char stop[32];
-	char tick[32];
-	char note_on[32];
-	char note_off[32];
-	char set_volume[32];
-	char set_panning[32];
-	char set_bank[32];
-	char set_program[32];
-	char sfx[16][32];
-	char zxx[128][32];
+	char start[MAX_MIDI_MACRO];
+	char stop[MAX_MIDI_MACRO];
+	char tick[MAX_MIDI_MACRO];
+	char note_on[MAX_MIDI_MACRO];
+	char note_off[MAX_MIDI_MACRO];
+	char set_volume[MAX_MIDI_MACRO];
+	char set_panning[MAX_MIDI_MACRO];
+	char set_bank[MAX_MIDI_MACRO];
+	char set_program[MAX_MIDI_MACRO];
+	char sfx[16][MAX_MIDI_MACRO];
+	char zxx[128][MAX_MIDI_MACRO];
 } midi_config_t;
 
 // XXX why are these extern? moreover, why is default_midi_config NOT const?
@@ -635,7 +636,7 @@ typedef struct song {
 	/* This maps S3M concepts into MIDI concepts */
 	song_s3m_channel_info_t midi_s3m_chans[MAX_VOICES];
 	/* This helps reduce the MIDI traffic, also does some encapsulation */
-	song_midi_state_t midi_chans[16];
+	song_midi_state_t midi_chans[MAX_MIDI_CHANNELS];
 	double midi_last_song_counter;
 
 	uint32_t midi_running_status;
@@ -644,8 +645,20 @@ typedef struct song {
 	int midi_resetting;
 #endif
 
-	/* MIDI callback functions */
-	song_midi_out_note_spec_t midi_out_note;
+	/* for midi translation, memberized from audio_playback.c */
+	int midi_note_tracker[MAX_CHANNELS];
+	int midi_vol_tracker[MAX_CHANNELS];
+	int midi_ins_tracker[MAX_CHANNELS];
+	int midi_was_program[MAX_MIDI_CHANNELS];
+	int midi_was_banklo[MAX_MIDI_CHANNELS];
+	int midi_was_bankhi[MAX_MIDI_CHANNELS];
+
+	const song_note_t *midi_last_row[MAX_CHANNELS];
+	int midi_last_row_number;
+
+	int midi_playing;
+
+	/* MIDI callback function */
 	song_midi_out_raw_spec_t midi_out_raw;
 	// -----------------------------------------------------------------------
 
@@ -708,8 +721,8 @@ int csf_set_wave_config(song_t *csf, uint32_t rate, uint32_t bits, uint32_t chan
 int32_t csf_init_player(song_t *csf, int reset); // bReset=false
 int csf_set_resampling_mode(song_t *csf, uint32_t mode); // SRCMODE_XXXX
 
-// Initialize MIDI callback functions
-void csf_init_midi(song_t *csf, song_midi_out_note_spec_t midi_out_note, song_midi_out_raw_spec_t midi_out_raw);
+// Initialize MIDI callback
+void csf_init_midi(song_t *csf, song_midi_out_raw_spec_t midi_out_raw);
 
 // sndmix
 uint32_t csf_read(song_t *csf, void *v_buffer, uint32_t bufsize);
@@ -728,6 +741,7 @@ int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, i
 void fx_note_cut(song_t *csf, uint32_t chan, int clear_note);
 void fx_key_off(song_t *csf, uint32_t chan);
 void csf_midi_send(song_t *csf, const unsigned char *data, uint32_t len, uint32_t chan, int fake);
+void csf_midi_out_note(song_t *csf, int chan, const song_note_t *starting_note);
 void csf_process_midi_macro(song_t *csf, uint32_t chan, const char *midi_macro, uint32_t param,
 			uint32_t note, uint32_t velocity, uint32_t use_instr);
 song_sample_t *csf_translate_keyboard(song_t *csf, song_instrument_t *ins, uint32_t note, song_sample_t *def);

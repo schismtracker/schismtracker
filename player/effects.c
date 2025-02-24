@@ -31,6 +31,8 @@
 #include "midi.h" /* midi_event_length */
 #include "util.h" /* for clamp/min */
 
+#include "it.h" // needed for status.flags (UGH)
+
 #include <math.h>
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -819,6 +821,159 @@ void csf_midi_send(song_t *csf, const unsigned char *data, uint32_t len, uint32_
 	}
 }
 
+void csf_midi_out_note(song_t *csf, int chan, const song_note_t *starting_note)
+{
+	const song_note_t *m = starting_note;
+	unsigned int tc;
+	int m_note;
+
+	unsigned char buf[4];
+	int ins, mc, mg, mbl, mbh;
+	int need_note, need_velocity;
+	song_voice_t *c;
+
+	if (!csf || !(csf->flags & SONG_INSTRUMENTMODE) || (status.flags & MIDI_LIKE_TRACKER))
+		return;
+
+	/*if(m)
+	fprintf(stderr, "midi_out_note called (ch %d)note(%d)instr(%d)volcmd(%02X)cmd(%02X)vol(%02X)p(%02X)\n",
+	chan, m->note, m->instrument, m->voleffect, m->effect, m->volparam, m->param);
+	else fprintf(stderr, "midi_out_note called (ch %d) m=%p\n", m);*/
+
+	if (!csf->midi_playing) {
+		csf_process_midi_macro(csf, 0, csf->midi_config.start, 0, 0, 0, 0); // START!
+		csf->midi_playing = 1;
+	}
+
+	if (chan < 0)
+		return;
+
+	c = &csf->voices[chan];
+
+	chan %= 64;
+
+	if (!m) {
+		if (csf->midi_last_row_number != (signed)csf->row) return;
+		m = csf->midi_last_row[chan];
+		if (!m) return;
+	} else {
+		csf->midi_last_row[chan] = m;
+		csf->midi_last_row_number = csf->row;
+	}
+
+	ins = csf->midi_ins_tracker[chan];
+	if (m->instrument > 0)
+		ins = m->instrument;
+
+	if (ins < 0 || ins >= MAX_INSTRUMENTS || !csf->instruments[ins])
+		return; /* err...  almost certainly */
+
+	if (csf->instruments[ins]->midi_channel_mask >= 0x10000) {
+		mc = chan % 16;
+	} else {
+		mc = 0;
+		if(csf->instruments[ins]->midi_channel_mask > 0)
+			while(!(csf->instruments[ins]->midi_channel_mask & (1 << mc)))
+				++mc;
+	}
+
+	m_note = m->note;
+	tc = csf->tick_count % csf->current_speed;
+#if 0
+printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
+#endif
+	if (m->effect == FX_SPECIAL) {
+		switch (m->param & 0xF0) {
+		case 0xC0: /* note cut */
+			if (tc == (((unsigned)m->param) & 15)) {
+				m_note = NOTE_CUT;
+			} else if (tc != 0) return;
+			break;
+
+		case 0xD0: /* note delay */
+			if (tc != (((unsigned)m->param) & 15)) return;
+			break;
+		default:
+			if (tc != 0) return;
+		};
+	} else {
+		if (tc != 0 && !starting_note) return;
+	}
+
+	need_note = need_velocity = -1;
+	if (m_note > 120) {
+		if (csf->midi_note_tracker[chan] != 0) {
+			csf_process_midi_macro(csf, chan, csf->midi_config.note_off,
+				0, csf->midi_note_tracker[chan], 0, csf->midi_ins_tracker[chan]);
+		}
+
+		csf->midi_note_tracker[chan] = 0;
+		if (m->voleffect != VOLFX_VOLUME) {
+			csf->midi_vol_tracker[chan] = 64;
+		} else {
+			csf->midi_vol_tracker[chan] = m->voleffect;
+		}
+	} else if (!m->note && m->voleffect == VOLFX_VOLUME) {
+		csf->midi_vol_tracker[chan] = m->volparam;
+		need_velocity = csf->midi_vol_tracker[chan];
+	} else if (m->note) {
+		if (csf->midi_note_tracker[chan] != 0) {
+			csf_process_midi_macro(csf, chan, csf->midi_config.note_off,
+				0, csf->midi_note_tracker[chan], 0, csf->midi_ins_tracker[chan]);
+		}
+		csf->midi_note_tracker[chan] = m_note;
+		if (m->voleffect != VOLFX_VOLUME) {
+			csf->midi_vol_tracker[chan] = 64;
+		} else {
+			csf->midi_vol_tracker[chan] = m->volparam;
+		}
+		need_note = csf->midi_note_tracker[chan];
+		need_velocity = csf->midi_vol_tracker[chan];
+	}
+
+	if (m->instrument > 0) {
+		csf->midi_ins_tracker[chan] = ins;
+	}
+
+	mg = (csf->instruments[ins]->midi_program)
+		+ ((midi_flags & MIDI_BASE_PROGRAM1) ? 1 : 0);
+	mbl = csf->instruments[ins]->midi_bank;
+	mbh = (csf->instruments[ins]->midi_bank >> 7) & 127;
+
+	if (mbh > -1 && csf->midi_was_bankhi[mc] != mbh) {
+		buf[0] = 0xB0 | (mc & 15); // controller
+		buf[1] = 0x00; // corse bank/select
+		buf[2] = mbh; // corse bank/select
+		csf_midi_send(csf, buf, 3, 0, 0);
+		csf->midi_was_bankhi[mc] = mbh;
+	}
+	if (mbl > -1 && csf->midi_was_banklo[mc] != mbl) {
+		buf[0] = 0xB0 | (mc & 15); // controller
+		buf[1] = 0x20; // fine bank/select
+		buf[2] = mbl; // fine bank/select
+		csf_midi_send(csf, buf, 3, 0, 0);
+		csf->midi_was_banklo[mc] = mbl;
+	}
+	if (mg > -1 && csf->midi_was_program[mc] != mg) {
+		csf->midi_was_program[mc] = mg;
+		csf_process_midi_macro(csf, chan, csf->midi_config.set_program,
+			mg, 0, 0, ins); // program change
+	}
+	if (c->flags & CHN_MUTE) {
+		// don't send noteon events when muted
+	} else if (need_note > 0) {
+		if (need_velocity == -1) need_velocity = 64; // eh?
+		need_velocity = CLAMP(need_velocity*2,0,127);
+		csf_process_midi_macro(csf, chan, csf->midi_config.note_on,
+			0, need_note, need_velocity, ins); // noteon
+	} else if (need_velocity > -1 && csf->midi_note_tracker[chan] > 0) {
+		need_velocity = CLAMP(need_velocity*2,0,127);
+		csf_process_midi_macro(csf, chan, csf->midi_config.set_volume,
+			need_velocity, csf->midi_note_tracker[chan], need_velocity, ins); // volume-set
+	}
+
+}
+
 void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uint32_t param,
 			uint32_t note, uint32_t velocity, uint32_t use_instr)
 {
@@ -828,7 +983,7 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 				   && chan->last_instrument < MAX_INSTRUMENTS)
 			? csf->instruments[use_instr ? use_instr : chan->last_instrument]
 			: NULL;
-	unsigned char outbuffer[64];
+	unsigned char outbuffer[MAX_MIDI_MACRO * 2];
 	int32_t midi_channel, fake_midi_channel = 0;
 	int32_t saw_c;
 	int32_t nibble_pos = 0, write_pos = 0;
@@ -845,7 +1000,7 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 		while(!(penv->midi_channel_mask & (1 << midi_channel))) ++midi_channel;
 	}
 
-	for (int read_pos = 0; read_pos <= 32 && macro[read_pos]; read_pos++) {
+	for (int read_pos = 0; read_pos <= MAX_MIDI_MACRO && macro[read_pos]; read_pos++) {
 		unsigned char data = 0;
 		int is_nibble = 0;
 		switch (macro[read_pos]) {
@@ -1006,9 +1161,8 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 ////////////////////////////////////////////////////////////
 // Length
 
-#if MAX_CHANNELS != 64
-# error csf_get_length assumes 64 channels
-#endif
+// XXX Is this still true?
+SCHISM_STATIC_ASSERT(MAX_CHANNELS == 64, "csf_get_length assumes 64 channels");
 
 uint32_t csf_get_length(song_t *csf)
 {

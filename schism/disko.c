@@ -383,13 +383,7 @@ static void _export_setup(song_t *dwsong, int *bps)
 	GM_Reset(dwsong, 1);
 
 	// Reset the MIDI stuff to our own...
-	//
-	// NOTE: _schism_midi_out_note in audio_playback.c does some
-	// extra stuff. I don't know exactly whether its useful for
-	// disk output though, especially considering that midi out
-	// hasn't existed in the codebase since like 2010 or so.
-	//   -paper
-	csf_init_midi(dwsong, NULL, _disko_midi_out_raw);
+	csf_init_midi(dwsong, _disko_midi_out_raw);
 
 	dwsong->multi_write = NULL; /* should be null already, but to be sure... */
 
@@ -976,9 +970,9 @@ void song_pattern_to_sample(int pattern, int split, int bind)
 }
 
 // ---------------------------------------------------------------------------
-// stupid MIDI crap that we can't do anything with anymore really
+// MIDI export (unused for now)
 
 static void _disko_midi_out_raw(SCHISM_UNUSED song_t *csf, SCHISM_UNUSED const unsigned char *data, SCHISM_UNUSED uint32_t len, SCHISM_UNUSED uint32_t delay)
 {
-	// nothing, none of our diskwriters even support MIDI anymore.
+	// nothing
 }

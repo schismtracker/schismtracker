@@ -979,8 +979,7 @@ int32_t csf_process_tick(song_t *csf)
 			// commands... ALL WE DO is dump raw midi data to
 			// our super-secret "midi buffer"
 			// -mrsb
-			if (csf->midi_out_note)
-				csf->midi_out_note(csf, nchan, m);
+			csf_midi_out_note(csf, nchan, m);
 
 			chan->row_note = m->note;
 
@@ -1004,13 +1003,11 @@ int32_t csf_process_tick(song_t *csf)
 		/* [-- No --] */
 		/* [Update effects for each channel as required.] */
 
-		if (csf->midi_out_note) {
-			song_note_t *m = csf->patterns[csf->current_pattern] + csf->row * MAX_CHANNELS;
+		song_note_t *m = csf->patterns[csf->current_pattern] + csf->row * MAX_CHANNELS;
 
-			for (uint32_t nchan=0; nchan<MAX_CHANNELS; nchan++, m++) {
-				/* m == NULL allows schism to receive notification of SDx and Scx commands */
-				csf->midi_out_note(csf, nchan, NULL);
-			}
+		for (uint32_t nchan=0; nchan<MAX_CHANNELS; nchan++, m++) {
+			/* m == NULL allows schism to receive notification of SDx and Scx commands */
+			csf_midi_out_note(csf, nchan, NULL);
 		}
 
 		if (!(csf->tick_count % (csf->current_speed + csf->frame_delay))) {

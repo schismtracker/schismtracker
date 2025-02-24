@@ -54,7 +54,6 @@
 #endif
 #define DEF_CHANNEL_LIMIT 128
 
-static int midi_playing;
 // ------------------------------------------------------------------------
 
 #define SMP_INIT (UINT_MAX - 1) /* for a click noise on init */
@@ -74,7 +73,6 @@ static int audio_writeout_count = 0;
 
 struct audio_settings audio_settings = {0};
 
-static void _schism_midi_out_note(song_t *csf, int chan, const song_note_t *m);
 static void _schism_midi_out_raw(song_t *csf, const unsigned char *data, uint32_t len, uint32_t delay);
 
 /* Audio driver related stuff */
@@ -126,6 +124,7 @@ static const schism_audio_backend_t *backend = NULL;
 // ------------------------------------------------------------------------
 // playback
 
+// page_patedit.c
 extern int midi_bend_hit[64], midi_last_bend_hit[64];
 
 // this gets called from the backend
@@ -205,11 +204,6 @@ POST_EVENT:
 
 // ------------------------------------------------------------------------------------------------------------
 // audio device list
-
-// FIXME: doing it this way causes for duplicate device names to be handled as the same device; this
-// isn't necessarily true! for example, Boot Camp drivers are weird and buggy, and can (and do) create
-// "dummy" speaker devices. When plugging in an audio device to the headphone port, it results in the
-// driver making two audio devices named "Speakers (High Definition Audio Device)"
 
 void free_audio_device_list(void) {
 	for (size_t count = 0; count < audio_device_list_size; count++)
@@ -581,7 +575,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 			.param = param,
 		};
 
-		_schism_midi_out_note(current_song, chan_internal, &mc);
+		csf_midi_out_note(current_song, chan_internal, &mc);
 	}
 
 	/*
@@ -743,38 +737,27 @@ void song_stop(void)
 	main_song_mode_changed_cb();
 }
 
-/* for midi translation */
-static int note_tracker[64];
-static int vol_tracker[64];
-static int ins_tracker[64];
-static int was_program[16];
-static int was_banklo[16];
-static int was_bankhi[16];
-
-static const song_note_t *last_row[64];
-static int last_row_number = -1;
-
 void song_stop_unlocked(int quitting)
 {
 	if (!current_song) return;
 
-	if (midi_playing) {
+	if (current_song->midi_playing) {
 		unsigned char moff[4];
 
 		/* shut off everything; not IT like, but less annoying */
 		for (int chan = 0; chan < 64; chan++) {
-			if (note_tracker[chan] != 0) {
-				for (int j = 0; j < 16; j++) {
+			if (current_song->midi_note_tracker[chan] != 0) {
+				for (int j = 0; j < MAX_MIDI_CHANNELS; j++) {
 					csf_process_midi_macro(current_song, chan,
 						current_song->midi_config.note_off,
-						0, note_tracker[chan], 0, j);
+						0, current_song->midi_note_tracker[chan], 0, j);
 				}
 				moff[0] = 0x80 + chan;
-				moff[1] = note_tracker[chan];
+				moff[1] = current_song->midi_note_tracker[chan];
 				csf_midi_send(current_song, (unsigned char *) moff, 2, 0, 0);
 			}
 		}
-		for (int j = 0; j < 16; j++) {
+		for (int j = 0; j < MAX_MIDI_CHANNELS; j++) {
 			moff[0] = 0xe0 + j;
 			moff[1] = 0;
 			csf_midi_send(current_song, (unsigned char *) moff, 2, 0, 0);
@@ -794,22 +777,22 @@ void song_stop_unlocked(int quitting)
 		csf_process_midi_macro(current_song, 0, current_song->midi_config.stop, 0, 0, 0, 0); // STOP!
 		midi_send_flush(); // NOW!
 
-		midi_playing = 0;
+		current_song->midi_playing = 0;
 	}
 
 	OPL_Reset(current_song); /* Also stop all OPL sounds */
 	GM_Reset(current_song, quitting);
 	GM_SendSongStopCode(current_song);
 
-	memset(last_row,0,sizeof(last_row));
-	last_row_number = -1;
+	memset(current_song->midi_last_row,0,sizeof(current_song->midi_last_row));
+	current_song->midi_last_row_number = -1;
 
-	memset(note_tracker,0,sizeof(note_tracker));
-	memset(vol_tracker,0,sizeof(vol_tracker));
-	memset(ins_tracker,0,sizeof(ins_tracker));
-	memset(was_program,0,sizeof(was_program));
-	memset(was_banklo,0,sizeof(was_banklo));
-	memset(was_bankhi,0,sizeof(was_bankhi));
+	memset(current_song->midi_note_tracker,0,sizeof(current_song->midi_note_tracker));
+	memset(current_song->midi_vol_tracker,0,sizeof(current_song->midi_vol_tracker));
+	memset(current_song->midi_ins_tracker,0,sizeof(current_song->midi_ins_tracker));
+	memset(current_song->midi_was_program,0,sizeof(current_song->midi_was_program));
+	memset(current_song->midi_was_banklo,0,sizeof(current_song->midi_was_banklo));
+	memset(current_song->midi_was_bankhi,0,sizeof(current_song->midi_was_bankhi));
 
 	playback_tracing = midi_playback_tracing;
 
@@ -821,9 +804,6 @@ void song_stop_unlocked(int quitting)
 	current_song->vu_right = 0;
 	memset(audio_buffer, 0, audio_buffer_samples * audio_sample_size);
 }
-
-
-
 
 void song_loop_pattern(int pattern, int row)
 {
@@ -1270,162 +1250,7 @@ void cfg_save_audio(cfg_file_t *cfg)
 }
 
 // ------------------------------------------------------------------------------------------------------------
-static void _schism_midi_out_note(song_t *csf, int chan, const song_note_t *starting_note)
-{
-	assert(current_song == csf); // This should only be run on the current song.
 
-	const song_note_t *m = starting_note;
-	unsigned int tc;
-	int m_note;
-
-	unsigned char buf[4];
-	int ins, mc, mg, mbl, mbh;
-	int need_note, need_velocity;
-	song_voice_t *c;
-
-	if (!current_song || !song_is_instrument_mode() || (status.flags & MIDI_LIKE_TRACKER)) return;
-
-	/*if(m)
-	fprintf(stderr, "midi_out_note called (ch %d)note(%d)instr(%d)volcmd(%02X)cmd(%02X)vol(%02X)p(%02X)\n",
-	chan, m->note, m->instrument, m->voleffect, m->effect, m->volparam, m->param);
-	else fprintf(stderr, "midi_out_note called (ch %d) m=%p\n", m);*/
-
-	if (!midi_playing) {
-		csf_process_midi_macro(current_song, 0, current_song->midi_config.start, 0, 0, 0, 0); // START!
-		midi_playing = 1;
-	}
-
-	if (chan < 0) {
-		return;
-	}
-
-	c = &current_song->voices[chan];
-
-	chan %= 64;
-
-	if (!m) {
-		if (last_row_number != (signed) current_song->row) return;
-		m = last_row[chan];
-		if (!m) return;
-	} else {
-		last_row[chan] = m;
-		last_row_number = current_song->row;
-	}
-
-	ins = ins_tracker[chan];
-	if (m->instrument > 0) {
-		ins = m->instrument;
-	}
-	if (ins < 0 || ins >= MAX_INSTRUMENTS)
-		return; /* err...  almost certainly */
-	if (!current_song->instruments[ins]) return;
-
-	if (current_song->instruments[ins]->midi_channel_mask >= 0x10000) {
-		mc = chan % 16;
-	} else {
-		mc = 0;
-		if(current_song->instruments[ins]->midi_channel_mask > 0)
-			while(!(current_song->instruments[ins]->midi_channel_mask & (1 << mc)))
-				++mc;
-	}
-
-	m_note = m->note;
-	tc = current_song->tick_count % current_song->current_speed;
-#if 0
-printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
-#endif
-	if (m->effect == FX_SPECIAL) {
-		switch (m->param & 0xF0) {
-		case 0xC0: /* note cut */
-			if (tc == (((unsigned)m->param) & 15)) {
-				m_note = NOTE_CUT;
-			} else if (tc != 0) return;
-			break;
-
-		case 0xD0: /* note delay */
-			if (tc != (((unsigned)m->param) & 15)) return;
-			break;
-		default:
-			if (tc != 0) return;
-		};
-	} else {
-		if (tc != 0 && !starting_note) return;
-	}
-
-	need_note = need_velocity = -1;
-	if (m_note > 120) {
-		if (note_tracker[chan] != 0) {
-			csf_process_midi_macro(current_song, chan, current_song->midi_config.note_off,
-				0, note_tracker[chan], 0, ins_tracker[chan]);
-		}
-
-		note_tracker[chan] = 0;
-		if (m->voleffect != VOLFX_VOLUME) {
-			vol_tracker[chan] = 64;
-		} else {
-			vol_tracker[chan] = m->voleffect;
-		}
-	} else if (!m->note && m->voleffect == VOLFX_VOLUME) {
-		vol_tracker[chan] = m->volparam;
-		need_velocity = vol_tracker[chan];
-
-	} else if (m->note) {
-		if (note_tracker[chan] != 0) {
-			csf_process_midi_macro(current_song, chan, current_song->midi_config.note_off,
-				0, note_tracker[chan], 0, ins_tracker[chan]);
-		}
-		note_tracker[chan] = m_note;
-		if (m->voleffect != VOLFX_VOLUME) {
-			vol_tracker[chan] = 64;
-		} else {
-			vol_tracker[chan] = m->volparam;
-		}
-		need_note = note_tracker[chan];
-		need_velocity = vol_tracker[chan];
-	}
-
-	if (m->instrument > 0) {
-		ins_tracker[chan] = ins;
-	}
-
-	mg = (current_song->instruments[ins]->midi_program)
-		+ ((midi_flags & MIDI_BASE_PROGRAM1) ? 1 : 0);
-	mbl = current_song->instruments[ins]->midi_bank;
-	mbh = (current_song->instruments[ins]->midi_bank >> 7) & 127;
-
-	if (mbh > -1 && was_bankhi[mc] != mbh) {
-		buf[0] = 0xB0 | (mc & 15); // controller
-		buf[1] = 0x00; // corse bank/select
-		buf[2] = mbh; // corse bank/select
-		csf_midi_send(current_song, buf, 3, 0, 0);
-		was_bankhi[mc] = mbh;
-	}
-	if (mbl > -1 && was_banklo[mc] != mbl) {
-		buf[0] = 0xB0 | (mc & 15); // controller
-		buf[1] = 0x20; // fine bank/select
-		buf[2] = mbl; // fine bank/select
-		csf_midi_send(current_song, buf, 3, 0, 0);
-		was_banklo[mc] = mbl;
-	}
-	if (mg > -1 && was_program[mc] != mg) {
-		was_program[mc] = mg;
-		csf_process_midi_macro(current_song, chan, current_song->midi_config.set_program,
-			mg, 0, 0, ins); // program change
-	}
-	if (c->flags & CHN_MUTE) {
-		// don't send noteon events when muted
-	} else if (need_note > 0) {
-		if (need_velocity == -1) need_velocity = 64; // eh?
-		need_velocity = CLAMP(need_velocity*2,0,127);
-		csf_process_midi_macro(current_song, chan, current_song->midi_config.note_on,
-			0, need_note, need_velocity, ins); // noteon
-	} else if (need_velocity > -1 && note_tracker[chan] > 0) {
-		need_velocity = CLAMP(need_velocity*2,0,127);
-		csf_process_midi_macro(current_song, chan, current_song->midi_config.set_volume,
-			need_velocity, note_tracker[chan], need_velocity, ins); // volume-set
-	}
-
-}
 static void _schism_midi_out_raw(song_t *csf, const unsigned char *data, uint32_t len, uint32_t pos)
 {
 	assert(current_song == csf); // AGH!
@@ -1835,7 +1660,7 @@ void song_init_modplug(void)
 	audio_buffers_per_second = (current_song->mix_frequency / (audio_buffer_samples * 8 * audio_sample_size));
 	if (audio_buffers_per_second > 1) audio_buffers_per_second--;
 
-	csf_init_midi(current_song, _schism_midi_out_note, _schism_midi_out_raw);
+	csf_init_midi(current_song, _schism_midi_out_raw);
 
 	song_unlock_audio();
 }
