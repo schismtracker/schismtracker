@@ -843,7 +843,7 @@ char *dmoz_get_current_directory(void)
 
 // wow this sucks
 #define DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL(TYPE, CHARSET, SUFFIX, GETENV, LITERAL) \
-	static char *dmoz_win32_get_csidl_directory##SUFFIX(int csidl, const TYPE *registry, const TYPE *envvar) \
+	static inline SCHISM_ALWAYS_INLINE char *dmoz_win32_get_csidl_directory##SUFFIX(int csidl, const TYPE *registry, const TYPE *envvar) \
 	{ \
 		{ \
 			TYPE buf[MAX_PATH]; \
@@ -914,7 +914,7 @@ char *dmoz_get_current_directory(void)
 		return NULL; \
 	}
 
-DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL(char, CHARSET_ANSI, A, getenv, /* none */)
+DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL(CHAR, CHARSET_ANSI, A, getenv, /* none */)
 DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL(WCHAR, CHARSET_WCHAR_T, W, _wgetenv, L)
 
 #undef DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL
