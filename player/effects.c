@@ -850,7 +850,7 @@ void csf_midi_out_note(song_t *csf, int chan, const song_note_t *starting_note)
 
 	c = &csf->voices[chan];
 
-	chan %= 64;
+	chan %= MAX_CHANNELS;
 
 	if (!m) {
 		if (csf->midi_last_row_number != (signed)csf->row) return;
@@ -971,7 +971,6 @@ printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 		csf_process_midi_macro(csf, chan, csf->midi_config.set_volume,
 			need_velocity, csf->midi_note_tracker[chan], need_velocity, ins); // volume-set
 	}
-
 }
 
 void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uint32_t param,

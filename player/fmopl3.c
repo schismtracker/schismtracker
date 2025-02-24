@@ -2649,5 +2649,94 @@ void ymf262_update_one(void *_chip, OPLSAMPLE **buffers, int length)
 
 		advance(chip);
 	}
+}
 
+// `buffers` is an array of 18 pointers, all pointing to separate 32-bit interlaced stereo
+// buffers of `length` size in samples.
+void ymf262_update_multi(void *_chip, int32_t **buffers, int length)
+{
+	int i;
+	OPL3        *chip  = (OPL3 *)_chip;
+	int32_t *chanout = chip->chanout;
+	uint8_t       rhythm = chip->rhythm&0x20;
+
+	for(i = 0; i < length; i++) {
+		int j, k;
+
+		advance_lfo(chip);
+
+		/* clear channel outputs */
+		memset(chip->chanout, 0, sizeof(chip->chanout));
+
+		/* register set #1 */
+		chan_calc(chip, &chip->P_CH[0]);            /* extended 4op ch#0 part 1 or 2op ch#0 */
+		if (chip->P_CH[0].extended)
+			chan_calc_ext(chip, &chip->P_CH[3]);    /* extended 4op ch#0 part 2 */
+		else
+			chan_calc(chip, &chip->P_CH[3]);        /* standard 2op ch#3 */
+
+
+		chan_calc(chip, &chip->P_CH[1]);            /* extended 4op ch#1 part 1 or 2op ch#1 */
+		if (chip->P_CH[1].extended)
+			chan_calc_ext(chip, &chip->P_CH[4]);    /* extended 4op ch#1 part 2 */
+		else
+			chan_calc(chip, &chip->P_CH[4]);        /* standard 2op ch#4 */
+
+
+		chan_calc(chip, &chip->P_CH[2]);            /* extended 4op ch#2 part 1 or 2op ch#2 */
+		if (chip->P_CH[2].extended)
+			chan_calc_ext(chip, &chip->P_CH[5]);    /* extended 4op ch#2 part 2 */
+		else
+			chan_calc(chip, &chip->P_CH[5]);        /* standard 2op ch#5 */
+
+
+		if(!rhythm) {
+			chan_calc(chip, &chip->P_CH[6]);
+			chan_calc(chip, &chip->P_CH[7]);
+			chan_calc(chip, &chip->P_CH[8]);
+		} else {
+			/* Rhythm part */
+			chan_calc_rhythm(chip, &chip->P_CH[0], (chip->noise_rng>>0)&1 );
+		}
+
+		/* register set #2 */
+		chan_calc(chip, &chip->P_CH[ 9]);
+		if (chip->P_CH[9].extended)
+			chan_calc_ext(chip, &chip->P_CH[12]);
+		else
+			chan_calc(chip, &chip->P_CH[12]);
+
+
+		chan_calc(chip, &chip->P_CH[10]);
+		if (chip->P_CH[10].extended)
+			chan_calc_ext(chip, &chip->P_CH[13]);
+		else
+			chan_calc(chip, &chip->P_CH[13]);
+
+
+		chan_calc(chip, &chip->P_CH[11]);
+		if (chip->P_CH[11].extended)
+			chan_calc_ext(chip, &chip->P_CH[14]);
+		else
+			chan_calc(chip, &chip->P_CH[14]);
+
+
+		/* channels 15,16,17 are fixed 2-operator channels only */
+		chan_calc(chip, &chip->P_CH[15]);
+		chan_calc(chip, &chip->P_CH[16]);
+		chan_calc(chip, &chip->P_CH[17]);
+
+		/* accumulator register set #1 */
+		for (j = 0, k = 0; j < 18; j++) {
+			if (buffers[j]) {
+				buffers[j][i * 2 + 0] += chanout[j] & chip->pan[k++];
+				buffers[j][i * 2 + 1] += chanout[j] & chip->pan[k++];
+				k += 2; // skip next two pans
+			} else {
+				k += 4;
+			}
+		}
+
+		advance(chip);
+	}
 }

@@ -4,7 +4,7 @@
 #include "player/sndfile.h"
 
 void Fmdrv_Init(song_t *csf, int32_t mixfreq);
-void Fmdrv_MixTo(song_t *csf, int32_t* buf, uint32_t count);
+void Fmdrv_Mix(song_t *csf, uint32_t count);
 
 void OPL_NoteOff(song_t *csf, int32_t c);
 void OPL_HertzTouch(song_t *csf, int32_t c, int32_t Hertz, int32_t keyoff); // also for pitch bending

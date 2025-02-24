@@ -226,13 +226,15 @@ void Fmdrv_Init(song_t *csf, int32_t mixfreq)
 	OPL_Reset(csf);
 }
 
-
-void Fmdrv_MixTo(song_t *csf, int32_t *target, uint32_t count)
+// count, like csf_create_stereo_mix, is in samples
+void Fmdrv_Mix(song_t *csf, uint32_t count)
 {
 	if (!csf->opl_fm_active)
 		return;
 
 #if OPLSOURCE == 2
+	int32_t *const target = (csf->multi_write) ? (csf->multi_write[0].buffer) : (csf->mix_buffer);
+
 	SCHISM_VLA_ALLOC(int16_t, buf, count);
 
 	memset(buf, 0, SCHISM_VLA_SIZEOF(buf));
@@ -254,11 +256,6 @@ void Fmdrv_MixTo(song_t *csf, int32_t *target, uint32_t count)
 
 	SCHISM_VLA_FREE(buf);
 #else
-	SCHISM_VLA_ALLOC(int16_t, buf, count * 3);
-
-	memset(buf, 0, SCHISM_VLA_SIZEOF(buf));
-
-	OPLUpdateOne(csf->opl, (int16_t *[]){ buf, buf + count, buf + (count * 2), buf + (count * 2) }, count);
 	/*
 	static int counter = 0;
 
@@ -268,12 +265,42 @@ void Fmdrv_MixTo(song_t *csf, int32_t *target, uint32_t count)
 
 	// IF we wanted to do the stereo mix in software, we could setup the voices always in mono
 	// and do the panning here.
-	for (size_t a = 0; a < count; ++a) {
-		target[a * 2 + 0] += buf[a] * OPL_VOLUME;
-		target[a * 2 + 1] += buf[count + a] * OPL_VOLUME;
-	}
+	if (csf->multi_write) {
+		const uint32_t sz = count * 2;
 
-	SCHISM_VLA_FREE(buf);
+		uint32_t i, j;
+		int32_t *buffers[18] = {0};
+
+		for (i = 0; i < MAX_CHANNELS; i++) {
+			int32_t opl_v = csf->opl_from_chan[i];
+			if (opl_v < 0 || opl_v >= 18)
+				continue;
+
+			buffers[opl_v] = csf->multi_write[i].buffer;
+		}
+
+		ymf262_update_multi(csf->opl, buffers, count);
+
+		for (i = 0; i < ARRAY_SIZE(buffers); i++) {
+			if (!buffers[i]) continue;
+
+			for (j = 0; j < sz; j++)
+				buffers[i][j] *= OPL_VOLUME;
+		}
+	} else {
+		SCHISM_VLA_ALLOC(int16_t, buf, count * 3);
+
+		//memset(buf, 0, SCHISM_VLA_SIZEOF(buf));
+
+		OPLUpdateOne(csf->opl, (int16_t *[]){ buf, buf + count, buf + (count * 2), buf + (count * 2) }, count);
+
+		for (size_t a = 0; a < count; ++a) {
+			csf->mix_buffer[a * 2 + 0] += buf[a] * OPL_VOLUME;
+			csf->mix_buffer[a * 2 + 1] += buf[count + a] * OPL_VOLUME;
+		}
+
+		SCHISM_VLA_FREE(buf);
+	}
 #endif
 }
 

@@ -842,9 +842,13 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(7,M,BE,PCMS):
 	case SF(7,M,LE,PCMS):
 		sample->flags &= ~(CHN_16BIT | CHN_STEREO);
+
 		len = sample->length = MIN(sample->length, memsize);
+
+		slurp_read(fp, sample->data, len);
 		for (uint32_t j = 0; j < len; j++)
-			sample->data[j] = CLAMP(slurp_getc(fp) * 2, -128, 127);
+			sample->data[j] = CLAMP(sample->data[j] * 2, -128, 127);
+
 		break;
 
 	// 8-bit mono PCM
@@ -885,8 +889,6 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(8,SS,BE,PCMS):
 	case SF(8,SS,BE,PCMU):
 	case SF(8,SS,BE,PCMD): {
-		
-
 		len = sample->length * 2;
 		if (len > memsize) break;
 
@@ -938,7 +940,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(16,M,BE,PCMD):
 	case SF(16,M,BE,PCMS):
 	case SF(16,M,BE,PCMU): {
-		uint16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT16_MIN : 0;
+		uint16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? 0x8000 : 0;
 
 		len = sample->length;
 		if (len * 2 > memsize)
@@ -973,7 +975,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 			break;
 
 		for (int c = 0; c < 2; c++) {
-			uint16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT16_MIN : 0;
+			uint16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? 0x8000 : 0;
 
 			uint16_t *data = (uint16_t *)sample->data + c;
 			for (uint32_t j = 0; j < len; j += 2) {

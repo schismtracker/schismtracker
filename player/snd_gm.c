@@ -416,8 +416,7 @@ void GM_KeyOn(song_t *csf, int32_t c, unsigned char key, unsigned char vol)
 		msi_set_volume(csf, &csf->midi_chans[mc], mc, GM_volume(vol));
 		csf->midi_s3m_chans[c].note = key;
 		MPU_NoteOn(csf, mc, csf->midi_s3m_chans[c].note = percu, 127);
-	}
-	else {
+	} else {
 		// Allocate a MIDI channel for this key.
 		// Note: If you need to transpone the key, do it before allocating the channel.
 
