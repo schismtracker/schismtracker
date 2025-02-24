@@ -693,9 +693,7 @@ static char *get_filename(const char *template, int n)
 {
 	char *s, *sub, buf[4];
 
-	s = strdup(template);
-	if (!s)
-		return NULL;
+	s = str_dup(template);
 	sub = strcasestr(s, "%c");
 	if (!sub) {
 		errno = EINVAL;

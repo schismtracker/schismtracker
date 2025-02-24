@@ -1071,7 +1071,7 @@ char *dmoz_path_normal(const char *path)
 	int count;
 
 	/* The result cannot be larger than the input PATH. */
-	result = strdup(path);
+	result = str_dup(path);
 
 	rooted = dmoz_path_is_absolute(path, &count);
 	base = result + (rooted ? count : 0);

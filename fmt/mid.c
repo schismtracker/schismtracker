@@ -169,7 +169,7 @@ int fmt_mid_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	if (fmt_mid_load_song(tmpsong, fp, LOAD_NOSAMPLES | LOAD_NOPATTERNS) == LOAD_SUCCESS) {
 		file->description = "Standard MIDI File";
-		file->title = strdup(tmpsong->title);
+		file->title = str_dup(tmpsong->title);
 		file->type = TYPE_MODULE_MOD;
 		csf_free(tmpsong);
 		return 1;
