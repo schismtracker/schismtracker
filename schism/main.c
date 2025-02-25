@@ -1021,7 +1021,7 @@ int schism_main(int argc, char** argv)
 	flac_init();
 #endif
 
-#ifndef SCHISM_WIN32
+#if !defined(SCHISM_WIN32) && !defined(SCHISM_OS2)
 	signal(SIGINT, exit);
 	signal(SIGQUIT, exit);
 	signal(SIGTERM, exit);

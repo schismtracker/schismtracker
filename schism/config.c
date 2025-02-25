@@ -69,7 +69,7 @@ int cfg_str_time_format = STR_TIME_FORMAT_DEFAULT;
 /* --------------------------------------------------------------------- */
 
 static const char *schism_dotfolders[] = {
-#if defined(SCHISM_WIN32) || defined(SCHISM_MACOS) || defined(SCHISM_MACOSX)
+#if defined(SCHISM_WIN32) || defined(SCHISM_MACOS) || defined(SCHISM_MACOSX) || defined(SCHISM_OS2)
 	"Schism Tracker",
 #elif defined(SCHISM_WII) || defined(SCHISM_WIIU)
 	".",
@@ -116,7 +116,7 @@ void cfg_init_dir(void)
 
 			printf("Creating directory %s\n", cfg_dir_dotschism);
 			printf("Schism Tracker uses this directory to store your settings.\n");
-			if (os_mkdir(cfg_dir_dotschism, 0777) != 0) {
+			if (dmoz_path_mkdir_recursive(cfg_dir_dotschism, 0777) != 0) {
 				perror("Error creating directory");
 				fprintf(stderr, "Everything will still work, but preferences will not be saved.\n");
 			}

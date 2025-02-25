@@ -782,5 +782,5 @@ int video_get_wm_data(video_wm_data_t *wm_data)
 
 void video_show_cursor(int enabled)
 {
-	return backend->show_cursor(enabled);
+	backend->show_cursor(enabled);
 }

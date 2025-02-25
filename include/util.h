@@ -28,6 +28,12 @@
 
 #include <math.h>
 
+#ifdef SCHISM_OS2
+// TODO autoconf check for this
+# define log10f log10
+# define powf pow
+#endif
+
 /*Conversion*/
 /* linear -> deciBell*/
 /* amplitude normalized to 1.0f.*/

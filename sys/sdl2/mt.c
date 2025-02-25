@@ -45,7 +45,7 @@ struct mt_thread {
 	void *userdata;
 };
 
-static int sdl2_dummy_thread_func(void *userdata)
+static int SDLCALL sdl2_dummy_thread_func(void *userdata)
 {
 	mt_thread_t *thread = userdata;
 
@@ -64,7 +64,7 @@ mt_thread_t *sdl2_thread_create(schism_thread_function_t func, const char *name,
 	SDL_Thread *sdl_thread = sdl2_CreateThread(sdl2_dummy_thread_func, name, thread,
 # ifdef SCHISM_WIN32
 		(pfnSDL_CurrentBeginThread)_beginthreadex, (pfnSDL_CurrentEndThread)_endthreadex
-# elif defined(__OS2__)
+# elif defined(SCHISM_OS2)
 		(pfnSDL_CurrentBeginThread)_beginthread, (pfnSDL_CurrentEndThread)_endthread
 # endif
 	);

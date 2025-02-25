@@ -376,11 +376,11 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			if (!(lflags & LOAD_NOPATTERNS)) {
 				song->patterns[p] = csf_allocate_pattern(64);
 
-				struct dsm_process_pattern_data data = {
-					.pattern = song->patterns[p],
-					.chn_doesnt_match = &chn_doesnt_match,
-					.nchn = nchn,
-				};
+				struct dsm_process_pattern_data data = {0};
+
+				data.pattern = song->patterns[p];
+				data.chn_doesnt_match = &chn_doesnt_match;
+				data.nchn = nchn;
 
 				/* hope this succeeds, i guess */
 				iff_chunk_receive(&chunk, fp, dsm_process_pattern, &data);

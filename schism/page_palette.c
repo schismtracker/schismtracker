@@ -365,7 +365,9 @@ void palette_load_page(struct page *page)
 	selected_palette = current_palette_index;
 
 	for (int n = 0; n < 16; n++) {
-		int tabs[3] = { 3 * n + 21, 3 * n + 22, 3 * n + 23 };
+		int tabs[3];
+		for (int x = 0; x < 3; x++)
+			tabs[x] = 3 * n + (21 + x);
 		if (n >= 9 && n <= 13) {
 			tabs[0] = tabs[1] = tabs[2] = 48;
 		} else if (n > 13) {

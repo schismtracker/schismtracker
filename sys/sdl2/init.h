@@ -26,6 +26,12 @@
 
 #include "headers.h"
 
+#ifdef SCHISM_OS2
+// Work around weird compiler bug?
+# undef __386__
+# include <SDL_endian.h>
+# define __386__
+#endif
 #include <SDL.h>
 
 int sdl2_init(void);

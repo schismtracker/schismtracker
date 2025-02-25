@@ -273,7 +273,7 @@ int disko_open(disko_t *ds, const char *filename)
 	if (!ds)
 		return -1;
 
-	*ds = (disko_t){0};
+	memset(ds, 0, sizeof(*ds));
 
 	ds->filename = str_dup(filename);
 
@@ -340,7 +340,7 @@ int disko_memopen(disko_t *ds)
 	if (!ds)
 		return -1;
 
-	*ds = (disko_t){0};
+	memset(ds, 0, sizeof(*ds));
 
 	ds->data = calloc(DW_BUFFER_SIZE, sizeof(uint8_t));
 	if (!ds->data)

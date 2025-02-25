@@ -443,18 +443,22 @@ static void sdl2_video_colors(unsigned char palette[16][3])
 	}
 
 	/* make our "base" space */
-	for (i = 0; i < 16; i++)
-		fun(i, (unsigned char []){palette[i][0], palette[i][1], palette[i][2]});
+	for (i = 0; i < 16; i++) {
+		unsigned char b[3];
+		for (int j = 0; j < ARRAY_SIZE(b); j++)
+			b[j] = palette[i][j];
+		fun(i, b);
+	}
 
 	/* make our "gradient" space */
 	for (i = 0; i < 128; i++) {
 		p = lastmap[(i>>5)];
 
-		fun(i + 128, (unsigned char []){
-			(int)palette[p][0] + (((int)(palette[p+1][0] - palette[p][0]) * (i & 0x1F)) / 0x20),
-			(int)palette[p][1] + (((int)(palette[p+1][1] - palette[p][1]) * (i & 0x1F)) / 0x20),
-			(int)palette[p][2] + (((int)(palette[p+1][2] - palette[p][2]) * (i & 0x1F)) / 0x20),
-		});
+		unsigned char b[3];
+		for (int j = 0; j < ARRAY_SIZE(b); j++)
+			b[j] = (int)palette[p][j] + (((int)(palette[p+1][j] - palette[p][j]) * (i & 0x1F)) / 0x20);
+
+		fun(i + 128, b);
 	}
 }
 
@@ -622,12 +626,10 @@ SCHISM_HOT static void sdl2_video_blit(void)
 	SDL_Rect dstrect;
 
 	if (cfg_video_want_fixed) {
-		dstrect = (SDL_Rect){
-			.x = 0,
-			.y = 0,
-			.w = cfg_video_want_fixed_width,
-			.h = cfg_video_want_fixed_height,
-		};
+		dstrect.x = 0;
+		dstrect.y = 0;
+		dstrect.w = cfg_video_want_fixed_width;
+		dstrect.h = cfg_video_want_fixed_height;
 	}
 
 	sdl2_RenderClear(video.renderer);

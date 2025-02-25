@@ -89,14 +89,15 @@ const uint8_t effect_weight[FX_MAX] = {
 
 void swap_effects(song_note_t *note)
 {
-	song_note_t tmp = {
-		.note = note->note,
-		.instrument = note->instrument,
-		.voleffect = note->effect,
-		.volparam = note->param,
-		.effect = note->voleffect,
-		.param = note->volparam,
-	};
+	song_note_t tmp = {0};
+	
+	tmp.note = note->note;
+	tmp.instrument = note->instrument;
+	tmp.voleffect = note->effect;
+	tmp.volparam = note->param;
+	tmp.effect = note->voleffect;
+	tmp.param = note->volparam;
+
 	*note = tmp;
 }
 
@@ -428,17 +429,17 @@ uint32_t ms_to_dos_time(timer_ticks_t ms)
 
 void fat_date_time_to_tm(struct tm *tm, uint16_t fat_date, uint16_t fat_time)
 {
-	*tm = (struct tm){
-		/* PRESENT DAY */
-		.tm_mday = fat_date & 0x1F,
-		.tm_mon = ((fat_date >> 5) & 0xF) - 1,
-		.tm_year = (fat_date >> 9) + 80,
+	memset(tm, 0, sizeof(*tm));
 
-		/* PRESENT TIME */
-		.tm_sec = (fat_time & 0x1F) << 1,
-		.tm_min = ((fat_time >> 5) & 0x3F),
-		.tm_hour = fat_time >> 11,
-	};
+	/* PRESENT DAY */
+	tm->tm_mday = fat_date & 0x1F;
+	tm->tm_mon = ((fat_date >> 5) & 0xF) - 1;
+	tm->tm_year = (fat_date >> 9) + 80;
+
+	/* PRESENT TIME */
+	tm->tm_sec = (fat_time & 0x1F) << 1;
+	tm->tm_min = ((fat_time >> 5) & 0x3F);
+	tm->tm_hour = fat_time >> 11;
 
 	// normalize the data in case the fat time was screwed?
 	mktime(tm);

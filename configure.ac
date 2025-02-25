@@ -175,7 +175,7 @@ dnl ------------------------------------------------------------------------
 dnl Check for standard programs
 AC_PROG_CC
 if test "x$ac_cv_prog_cc_c11" = "xno" && test "x$ac_cv_prog_cc_c99" = "xno"; then
-	AC_MSG_ERROR([*** Failed to find a proper C99 compiler])
+	AC_MSG_WARN([*** Failed to find a proper C99 compiler])
 fi
 AM_PROG_CC_C_O
 AC_PROG_CPP
@@ -345,6 +345,7 @@ AC_MSG_CHECKING([host platform])
 use_macosx=no
 use_macos=no
 use_win32=no
+use_os2=no
 use_wii=no
 use_wiiu=no
 use_network=no
@@ -381,6 +382,14 @@ case "${host_os}" in
 		fi
 
 		posix_fseek=no
+		;;
+	os2*)
+		AC_MSG_RESULT([found OS/2 host])
+
+		have_loadso=yes
+		use_os2=yes
+
+		AC_DEFINE([SCHISM_OS2], [1], [OS/2])
 		;;
 	cygwin*|mingw*)
 		AC_MSG_RESULT([found Windows host])
@@ -535,6 +544,7 @@ AM_CONDITIONAL([USE_WIIU], [test "x$use_wiiu" = "xyes"])
 AM_CONDITIONAL([USE_CONTROLLER], [test "x$use_controller" = "xyes"])
 AM_CONDITIONAL([USE_MACOSX], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([USE_MACOS], [test "x$use_macos" = "xyes"])
+AM_CONDITIONAL([USE_OS2], [test "x$use_os2" = "xyes"])
 AM_CONDITIONAL([am__fastdepOBJC], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([USE_NETWORK], [test "x$use_network" = "xyes"])
 

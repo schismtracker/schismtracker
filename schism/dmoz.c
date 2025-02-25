@@ -59,6 +59,7 @@
 # include <shlobj.h>
 # include <direct.h>
 #elif defined(SCHISM_MACOS)
+// FIXME clean this up
 # include <Files.h>
 # include <TextUtils.h>
 # include <Gestalt.h>
@@ -71,6 +72,11 @@
 # include <Folders.h>
 # include <Resources.h>
 # include "macos-dirent.h"
+#elif defined(SCHISM_OS2)
+# include <dirent.h> // TODO we shouldn't need this
+
+# define INCL_DOSFILEMGR
+# include <os2.h>
 #else
 # include <dirent.h>
 #endif
@@ -92,7 +98,7 @@ static const char *devices[] = {
 
 #if defined(__amigaos4__)
 # define FALLBACK_DIR "." /* not used... */
-#elif defined(SCHISM_WIN32)
+#elif defined(SCHISM_WIN32) || defined(SCHISM_OS2)
 # define FALLBACK_DIR "C:\\"
 #elif defined(SCHISM_WII)
 # define FALLBACK_DIR "isfs:/" // always exists, seldom useful
@@ -713,6 +719,13 @@ int dmoz_path_rename(const char *old, const char *new, int overwrite)
 
 	return 0;
 #else
+# ifdef SCHISM_OS2
+	// XXX maybe this should be the regular implementation too?
+	if (!overwrite && (access(new, F_OK) == -1)) {
+		errno = EEXIST;
+		return -1;
+	}
+# else
 	if (!overwrite) {
 		if (link(old, new) == -1)
 			return -1;
@@ -727,7 +740,9 @@ int dmoz_path_rename(const char *old, const char *new, int overwrite)
 			fprintf(stderr, "link() succeeded, but unlink() failed. something is very wrong\n");
 
 		return 0;
-	} else {
+	} else
+# endif
+	{
 		int r = rename(old, new);
 
 		/* Broken rename()? Try smashing the old file first,
@@ -738,6 +753,65 @@ int dmoz_path_rename(const char *old, const char *new, int overwrite)
 		return r;
 	}
 #endif
+}
+
+// recursive mkdir (equivalent to `mkdir -p`)
+int dmoz_path_mkdir_recursive(const char *path, int mode)
+{
+	size_t i;
+	int first = 0; // ugly hack: skip the first separator
+
+	char *npath = dmoz_path_normal(path);
+	if (!npath) {
+		printf("nope\n");
+		return -1;
+	}
+
+	for (i = 0; npath[i]; i++) {
+		struct stat st;
+
+		if (!IS_DIR_SEPARATOR(npath[i]))
+			continue;
+
+		if (!first) {
+			first = 1;
+			continue;
+		}
+
+		// cut
+		npath[i] = '\0';
+
+		printf("%s\n", npath);
+
+		if (os_stat(npath, &st) < 0) {
+			// path doesn't exist
+			if (os_mkdir(npath, mode)) {
+				free(npath);
+				// errno is already useful here
+				return -1;
+			}
+		} else {
+			// path exists already, make sure it's a directory
+			if (!S_ISDIR(st.st_mode)) {
+				free(npath);
+				errno = ENOTDIR;
+				return -1;
+			}
+		}
+
+		// paste
+		npath[i] = DIR_SEPARATOR;
+	}
+
+	if (os_mkdir(npath, mode)) {
+		free(npath);
+		// errno is already useful here
+		return -1;
+	}
+
+	free(npath);
+
+	return 0;
 }
 
 int dmoz_path_is_file(const char *filename)
@@ -991,6 +1065,17 @@ char *dmoz_get_home_directory(void)
 	char *ptr = dmoz_macos_find_folder(kDocumentsFolderType);
 	if (ptr)
 		return ptr;
+#elif defined(SCHISM_OS2)
+	{
+		// First try these (this is what SDL does...)
+		char *ptr;
+
+		ptr = getenv("HOME");
+		if (ptr) return str_dup(ptr);
+
+		ptr = getenv("ETC");
+		if (ptr) return str_dup(ptr);
+	}
 #else
 	char *ptr = getenv("HOME");
 	if (ptr)
@@ -1077,7 +1162,7 @@ char *dmoz_path_normal(const char *path)
 	base = result + (rooted ? count : 0);
 	stub_char = rooted ? DIR_SEPARATOR : '.';
 
-#ifdef SCHISM_WIN32
+#if defined(SCHISM_WIN32) || defined(SCHISM_OS2)
 	/* Stupid hack -- fix up any initial slashes in the absolute part of the path.
 	(The rest of them will be handled as the path components are processed.) */
 	for (q = result; q < base; q++)
@@ -1140,7 +1225,7 @@ int dmoz_path_is_absolute(const char *path, int *count)
 	if (!path || !*path)
 		return 0;
 
-#if defined(SCHISM_WIN32)
+#if defined(SCHISM_WIN32) || defined(SCHISM_OS2)
 	if (isalpha(path[0]) && path[1] == ':') {
 		if (count) *count = IS_DIR_SEPARATOR(path[2]) ? 3 : 2;
 		return 1;
@@ -1590,9 +1675,14 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 		}
 		IDOS->UnLockDosList(LDF_VOLUMES);
 	}
-#elif defined(SCHISM_WIN32)
+#elif defined(SCHISM_WIN32) || defined(SCHISM_OS2)
+# ifdef SCHISM_WIN32
 	const DWORD x = GetLogicalDrives();
 	UINT em = SetErrorMode(0);
+# elif defined(SCHISM_OS2)
+	ULONG drive, x;
+	DosQueryCurrentDisk(&drive, &x);
+# endif
 	char sbuf[] = "A:\\";
 
 	for (; x && sbuf[0] <= 'Z'; sbuf[0]++) {
@@ -1601,7 +1691,9 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 						str_dup(sbuf), NULL, -(1024 - 'A' - sbuf[0]));
 		}
 	}
+# ifdef SCHISM_WIN32
 	em = SetErrorMode(em);
+# endif
 #elif defined(SCHISM_WII) || defined(SCHISM_WIIU)
 	int i;
 	for (i = 0; devices[i]; i++) {
@@ -1839,7 +1931,18 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 			if (ent->d_name[namlen - 1] == '~')
 				continue;
 
-			ptr = dmoz_path_concat_len(path, ent->d_name, pathlen, namlen);
+			{
+				char *utf8;
+#ifdef SCHISM_OS2
+				utf8 = charset_iconv_easy(ent->d_name, CHARSET_DOSCP, CHARSET_UTF8);
+#else
+				utf8 = ent->d_name;
+#endif
+				ptr = dmoz_path_concat_len(path, utf8, pathlen, namlen);
+#ifdef SCHISM_OS2
+				free(utf8);
+#endif
+			}
 
 			if (os_stat(ptr, &st) < 0) {
 				/* doesn't exist? */

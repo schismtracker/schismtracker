@@ -28,11 +28,11 @@
 
 size_t charset_strlen(const void* in, charset_t inset)
 {
-	charset_decode_t decoder = {
-		.in = (unsigned char *)in,
-		.offset = 0,
-		.size = SIZE_MAX, /* this is ok here */
-	};
+	charset_decode_t decoder = {0};
+	
+	decoder.in = (unsigned char *)in;
+	decoder.offset = 0;
+	decoder.size = SIZE_MAX; /* this is ok here */
 
 	size_t count = 0;
 
@@ -54,17 +54,15 @@ size_t charset_strlen(const void* in, charset_t inset)
 #define CHARSET_STRCMP_VARIANT(CONDITIONS) \
 	int32_t result = 0; \
 \
-	charset_decode_t decoder1 = { \
-		.in = (const unsigned char *)in1, \
-		.offset = 0, \
-		.size = SIZE_MAX, \
-	}; \
+	charset_decode_t decoder1 = {0}; \
+	decoder1.in = (const unsigned char *)in1; \
+	decoder1.offset = 0; \
+	decoder1.size = SIZE_MAX; \
 \
-	charset_decode_t decoder2 = { \
-		.in = (const unsigned char *)in2, \
-		.offset = 0, \
-		.size = SIZE_MAX, \
-	}; \
+	charset_decode_t decoder2 = {0}; \
+	decoder2.in = (const unsigned char *)in2; \
+	decoder2.offset = 0; \
+	decoder2.size = SIZE_MAX; \
 \
 	for (CONDITIONS) { \
 		charset_decode_next(&decoder1, in1set); \
@@ -105,17 +103,15 @@ struct strxcasecmp_impl_struct {
 #define CHARSET_STRCASECMP_VARIANT(CONDITION) \
 	struct strxcasecmp_impl_struct result = {0}; \
 \
-	charset_decode_t decoder1 = { \
-		.in = (const unsigned char *)in1, \
-		.offset = 0, \
-		.size = SIZE_MAX, \
-	}; \
+	charset_decode_t decoder1 = {0}; \
+	decoder1.in = (const unsigned char *)in1; \
+	decoder1.offset = 0; \
+	decoder1.size = SIZE_MAX; \
 \
-	charset_decode_t decoder2 = { \
-		.in = (const unsigned char *)in2, \
-		.offset = 0, \
-		.size = SIZE_MAX, \
-	}; \
+	charset_decode_t decoder2 = {0}; \
+	decoder2.in = (const unsigned char *)in2; \
+	decoder2.offset = 0; \
+	decoder2.size = SIZE_MAX; \
 \
 	for (; CONDITION; result.count++) { \
 		charset_decode_next(&decoder1, in1set); \
@@ -124,8 +120,11 @@ struct strxcasecmp_impl_struct {
 		if (decoder1.state < 0 || decoder2.state < 0) \
 			return result; \
 \
-		uint32_t cp1[2] = {decoder1.codepoint, 0}; \
-		uint32_t cp2[2] = {decoder2.codepoint, 0}; \
+		uint32_t cp1[2] = {0}; \
+		cp1[0] = decoder1.codepoint; \
+\
+		uint32_t cp2[2] = {0}; \
+		cp2[0] = decoder2.codepoint; \
 \
 		uint32_t *cf1 = charset_case_fold_to_set(cp1, CHARSET_UCS4, CHARSET_UCS4); \
 		if (!cf1) \
@@ -243,20 +242,19 @@ typedef int32_t (*charset_cmp_spec)(const void *in1, charset_t in1set, const voi
 static inline SCHISM_ALWAYS_INLINE void *_charset_strxstr_impl(const void *in1, charset_t in1set, const void *in2, charset_t in2set, charset_cmp_spec cmp)
 {
 	const unsigned char *uc1 = (const unsigned char *)in1;
-	const size_t len = charset_strlen(in2, in2set);
+	/*const*/ size_t len = charset_strlen(in2, in2set); /* OpenWatcom bug here */
 
-	charset_decode_t decoder1 = {
-		.in = uc1,
-		.offset = 0,
-		.size = SIZE_MAX,
-	};
+	charset_decode_t decoder = {0};
+	decoder.in = uc1;
+	decoder.offset = 0;
+	decoder.size = SIZE_MAX;
 
 	for (;;) {
-		if (!cmp(uc1 + decoder1.offset, in1set, in2, in2set, len))
-			return (void *)(uc1 + decoder1.offset);
+		if (!cmp(uc1 + decoder.offset, in1set, in2, in2set, len))
+			return (void *)(uc1 + decoder.offset);
 
-		charset_decode_next(&decoder1, in1set);
-		if (decoder1.state < 0 || decoder1.state == DECODER_STATE_DONE)
+		charset_decode_next(&decoder, in1set);
+		if (decoder.state < 0 || decoder.state == DECODER_STATE_DONE)
 			break;
 	}
 
@@ -288,17 +286,15 @@ int32_t charset_strverscmp(const void *in1, charset_t in1set, const void *in2, c
 {
 #define UCS4_ZERO (UINT32_C(48))
 #define UCS4_IS_DIGIT(x) ((x) >= UINT32_C(48) && (x) <= UINT32_C(57))
-	charset_decode_t decoder1 = {
-		.in = (const unsigned char *)in1,
-		.offset = 0,
-		.size = SIZE_MAX,
-	};
+	charset_decode_t decoder1 = {0};
+	decoder1.in = (const unsigned char *)in1;
+	decoder1.offset = 0;
+	decoder1.size = SIZE_MAX;
 
-	charset_decode_t decoder2 = {
-		.in = (const unsigned char *)in2,
-		.offset = 0,
-		.size = SIZE_MAX,
-	};
+	charset_decode_t decoder2 = {0};
+	decoder2.in = (const unsigned char *)in2;
+	decoder2.offset = 0;
+	decoder2.size = SIZE_MAX;
 
 	static const uint8_t next_state[] = {
 		/* state    x    d    0  */

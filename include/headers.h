@@ -299,8 +299,8 @@
 # define SCHISM_LIKELY(x)   __builtin_expect(!!(x), 1)
 # define SCHISM_UNLIKELY(x) __builtin_expect(!(x),  1)
 #else
-# define SCHISM_LIKELY(x)
-# define SCHISM_UNLIKELY(x)
+# define SCHISM_LIKELY(x)   (x)
+# define SCHISM_UNLIKELY(x) (x)
 #endif
 
 /* Win32, used for threads */

@@ -124,7 +124,10 @@ static void MPU_Ctrl(song_t *csf, int32_t c, int32_t i, int32_t v)
 	if (!(status.flags & MIDI_LIKE_TRACKER))
 		return;
 
-	unsigned char buf[3] = {0xB0 + c, i, v};
+	unsigned char buf[3];
+	buf[0] = 0xB0 + c;
+	buf[1] = i;
+	buf[2] = v;
 	MPU_SendCommand(csf, buf, 3, c);
 }
 
@@ -134,7 +137,9 @@ static void MPU_Patch(song_t *csf, int32_t c, int32_t p)
 	if (!(status.flags & MIDI_LIKE_TRACKER))
 		return;
 
-	unsigned char buf[2] = {0xC0 + c, p};
+	unsigned char buf[2];
+	buf[0] = 0xC0 + c;
+	buf[1] = p;
 	MPU_SendCommand(csf, buf, 2, c);
 }
 
@@ -144,7 +149,10 @@ static void MPU_Bend(song_t *csf, int32_t c, int32_t w)
 	if (!(status.flags & MIDI_LIKE_TRACKER))
 		return;
 
-	unsigned char buf[3] = {0xE0 + c, w & 127, w >> 7};
+	unsigned char buf[3];
+	buf[0] = 0xE0 + c; 
+	buf[1] = w & 127;
+	buf[2] = w >> 7;
 	MPU_SendCommand(csf, buf, 3, c);
 }
 
@@ -154,7 +162,10 @@ static void MPU_NoteOn(song_t *csf, int32_t c, int32_t k, int32_t v)
 	if (!(status.flags & MIDI_LIKE_TRACKER))
 		return;
 
-	unsigned char buf[3] = {0x90 + c, k, v};
+	unsigned char buf[3];
+	buf[0] = 0x90 + c;
+	buf[1] = k;
+	buf[2] = v;
 	MPU_SendCommand(csf, buf, 3, c);
 }
 
@@ -168,7 +179,10 @@ static void MPU_NoteOff(song_t *csf, int32_t c, int32_t k, int32_t v)
 		// send a zero-velocity keyoff instead for optimization
 		MPU_NoteOn(csf, c, k, 0);
 	} else {
-		unsigned char buf[3] = {0x80+c, k, v};
+		unsigned char buf[3];
+		buf[0] = 0x80 + c;
+		buf[1] = k;
+		buf[2] = v;
 		MPU_SendCommand(csf, buf, 3, c);
 	}
 }
@@ -268,7 +282,7 @@ static void msi_set_pan(song_t *csf, song_midi_state_t *msi, int32_t c, int32_t 
 static unsigned char GM_volume(unsigned char vol) // Converts the volume
 {
 	/* Converts volume in range 0..127 to range 0..127 with clamping */
-	return CLAMP(vol, 0, 127);
+	return MIN(vol, 127);
 }
 
 
@@ -655,7 +669,10 @@ void GM_SendSongTickCode(song_t *csf)     { unsigned char c = 0xF8; MPU_SendComm
 
 void GM_SendSongPositionCode(song_t *csf, uint32_t note16pos)
 {
-	unsigned char buf[3] = {0xF2, note16pos & 127, (note16pos >> 7) & 127};
+	unsigned char buf[3];
+	buf[0] = 0xF2;
+	buf[1] = note16pos & 127;
+	buf[2] = (note16pos >> 7) & 127;
 	MPU_SendCommand(csf, buf, 3, 0);
 	csf->midi_last_song_counter = 0.0;
 }

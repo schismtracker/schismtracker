@@ -236,7 +236,7 @@ static void draw_page(void)
 
 /* --------------------------------------------------------------------- */
 
-inline int page_is_instrument_list(int page)
+int page_is_instrument_list(int page)
 {
 	switch (page) {
 	case PAGE_INSTRUMENT_LIST_GENERAL:
@@ -989,7 +989,9 @@ static int _handle_ime(struct key_event *k)
 				digraph_c = c;
 				status_text_flash_bios("Enter digraph: %c", c);
 			} else {
-				uint8_t digraph_input[2] = {char_digraph(digraph_c, c), '\0'};
+				uint8_t digraph_input[2] = {0};
+				digraph_input[0] = char_digraph(digraph_c, c);
+
 				if (digraph_input[0]) {
 					status_text_flash_bios("Enter digraph: %c%c -> %c",
 							       digraph_c, c, digraph_input[0]);
@@ -1010,7 +1012,8 @@ static int _handle_ime(struct key_event *k)
 		if (k->sym==SCHISM_KEYSYM_LCTRL || k->sym==SCHISM_KEYSYM_RCTRL || k->sym==SCHISM_KEYSYM_LSHIFT || k->sym==SCHISM_KEYSYM_RSHIFT) {
 			if (k->state == KEY_RELEASE) {
 				if (cs_unicode_c > 0) {
-					uint8_t unicode[2] = {(uint8_t)(char_unicode_to_cp437(cs_unicode)), '\0'};
+					uint8_t unicode[2] = {0};
+					unicode[0] = (uint8_t)(char_unicode_to_cp437(cs_unicode));
 
 					if (unicode[0] >= 32) {
 						status_text_flash_bios("Enter Unicode: U+%04" PRIX32 " -> %" PRIu8,
@@ -1058,7 +1061,8 @@ static int _handle_ime(struct key_event *k)
 			if (k->state == KEY_RELEASE && alt_numpad_c > 0 && (alt_numpad & 255) > 0) {\
 				if (alt_numpad < 32)
 					return 0;
-				uint8_t unicode[2] = {(uint8_t)(alt_numpad & 255), '\0'};
+				uint8_t unicode[2] = {0};
+				unicode[0] = (alt_numpad & 255);
 				if (!(status.flags & CLASSIC_MODE))
 					status_text_flash_bios("Enter DOS/ASCII: %d -> %c",
 							       (int)unicode[0], (int)unicode[0]);

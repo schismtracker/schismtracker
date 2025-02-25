@@ -126,7 +126,7 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	slurp_seek(fp, 4, SEEK_CUR);
 	song->initial_global_volume = slurp_getc(fp) << 1;
 	int tempo = slurp_getc(fp);
-	song->initial_speed = tempo >> 4 ?: 6;
+	song->initial_speed = (tempo >> 4) ? (tempo >> 4) : 6;
 	song->initial_tempo = convert_stm_tempo_to_bpm(tempo);
 	slurp_seek(fp, 4, SEEK_CUR);
 

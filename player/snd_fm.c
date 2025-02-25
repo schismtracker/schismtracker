@@ -290,9 +290,14 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 	} else {
 		SCHISM_VLA_ALLOC(int16_t, buf, count * 3);
 
-		//memset(buf, 0, SCHISM_VLA_SIZEOF(buf));
+		{
+			int16_t *bufs[4];
+			bufs[0] = buf;
+			bufs[1] = buf + count;
+			bufs[2] = bufs[3] = buf + (count * 2);
 
-		OPLUpdateOne(csf->opl, (int16_t *[]){ buf, buf + count, buf + (count * 2), buf + (count * 2) }, count);
+			OPLUpdateOne(csf->opl, bufs, count);
+		}
 
 		for (size_t a = 0; a < count; ++a) {
 			csf->mix_buffer[a * 2 + 0] += buf[a] * OPL_VOLUME;

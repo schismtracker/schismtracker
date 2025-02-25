@@ -68,7 +68,7 @@ static void (SDLCALL *sdl2_GetVersion)(SDL_version * ver);
  * get initialized from SDL_AudioInit(). to work around this, we
  * have to use a separate audio driver initialization function
  * under SDL pre-2.0.18. */
-static SDLCALL int schism_init_audio_impl(const char *name)
+static int SDLCALL schism_init_audio_impl(const char *name)
 {
 	const char *orig_drv = getenv("SDL_AUDIODRIVER");
 
@@ -90,7 +90,7 @@ static SDLCALL int schism_init_audio_impl(const char *name)
 	return ret;
 }
 
-static SDLCALL void schism_quit_audio_impl(void)
+static void SDLCALL schism_quit_audio_impl(void)
 {
 	sdl2_QuitSubSystem(SDL_INIT_AUDIO);
 }
@@ -196,14 +196,14 @@ static schism_audio_device_t *sdl2_audio_open_device(uint32_t id, const schism_a
 	case 32: format = AUDIO_S32SYS; break;
 	}
 
-	SDL_AudioSpec sdl_desired = {
-		.freq = desired->freq,
-		.format = format,
-		.channels = desired->channels,
-		.samples = desired->samples,
-		.callback = sdl2_dummy_callback,
-		.userdata = dev,
-	};
+	SDL_AudioSpec sdl_desired = {0};
+	sdl_desired.freq = desired->freq;
+	sdl_desired.format = format;
+	sdl_desired.channels = desired->channels;
+	sdl_desired.samples = desired->samples;
+	sdl_desired.callback = sdl2_dummy_callback;
+	sdl_desired.userdata = dev;
+
 	SDL_AudioSpec sdl_obtained;
 
 	const char *name = (id != AUDIO_BACKEND_DEFAULT) ? sdl2_GetAudioDeviceName(id, 0) : NULL;
@@ -243,12 +243,12 @@ static schism_audio_device_t *sdl2_audio_open_device(uint32_t id, const schism_a
 	return NULL;
 
 got_device:
-	*obtained = (schism_audio_spec_t){
-		.freq = sdl_obtained.freq,
-		.bits = SDL_AUDIO_BITSIZE(sdl_obtained.format),
-		.channels = sdl_obtained.channels,
-		.samples = sdl_obtained.samples,
-	};
+	memset(obtained, 0, sizeof(*obtained));
+	
+	obtained->freq = sdl_obtained.freq;
+	obtained->bits = SDL_AUDIO_BITSIZE(sdl_obtained.format);
+	obtained->channels = sdl_obtained.channels;
+	obtained->samples = sdl_obtained.samples;
 
 	return dev;
 }

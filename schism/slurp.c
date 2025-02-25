@@ -63,7 +63,7 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 	if (!t)
 		return -1;
 
-	*t = (slurp_t){0};
+	memset(t, 0, sizeof(*t));
 
 	if (buf) {
 		st = *buf;
@@ -151,7 +151,7 @@ finished: ; /* this semicolon is important because C */
  * Does NOT free the input. */
 int slurp_memstream(slurp_t *t, uint8_t *mem, size_t memsize)
 {
-	*t = (slurp_t){0};
+	memset(t, 0, sizeof(*t));
 
 	t->seek = slurp_memory_seek_;
 	t->tell = slurp_memory_tell_;

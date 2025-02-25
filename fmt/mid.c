@@ -213,7 +213,9 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	require PPQN to be very ridiculously high, or a file that's several *hours* long.
 
 	Stuff a useless event at the start of the event queue. */
-	note = (song_note_t) {.note = NOTE_NONE};
+	memset(&note, 0, sizeof(note));
+	note.note = NOTE_NONE;
+
 	event_queue = alloc_event(0, 0, &note, NULL);
 
 	for (int trknum = 0; trknum < mthd.num_tracks; trknum++) {
@@ -249,7 +251,8 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				continue;
 			}
 
-			note = (song_note_t) {.note = NOTE_NONE};
+			memset(&note, 0, sizeof(note));
+			note.note = NOTE_NONE;
 			hi = status >> 4;
 			lo = status & 0xf;
 			cn = lo; //or: trknum * CHANNELS_PER_TRACK + lo % CHANNELS_PER_TRACK;
@@ -264,11 +267,14 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				// otherwise, if there is a note playing, assume our note got backgrounded
 				// and write S71 (past note off)
 				if (midich[cn].fg_note == x) {
-					note = (song_note_t) {.note = NOTE_OFF};
+					memset(&note, 0, sizeof(note));
+					note.note = NOTE_OFF;
 					midich[cn].fg_note = NOTE_NONE;
 				} else {
 					// S71, past note off
-					note = (song_note_t) {.effect = FX_SPECIAL, .param = 0x71};
+					memset(&note, 0, sizeof(note));
+					note.effect = FX_SPECIAL;
+					note.param = 0x71;
 					midich[cn].bg_note = NOTE_NONE;
 				}
 				break;
@@ -284,11 +290,14 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					// this is actually another note-off, see above
 					// (maybe that stuff should be split into a function or blahblah)
 					if (midich[cn].fg_note == x) {
-						note = (song_note_t) {.note = NOTE_OFF};
+						memset(&note, 0, sizeof(note));
+						note.note = NOTE_OFF;
 						midich[cn].fg_note = NOTE_NONE;
 					} else {
 						// S71, past note off
-						note = (song_note_t) {.effect = FX_SPECIAL, .param = 0x71};
+						memset(&note, 0, sizeof(note));
+						note.effect = FX_SPECIAL;
+						note.param = 0x71;
 						midich[cn].bg_note = NOTE_NONE;
 					}
 				} else {
@@ -299,12 +308,12 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						nsmp++;
 					}
 
-					note = (song_note_t) {
-						.note = x,
-						.instrument = patch_samples[midich[cn].instrument],
-						.voleffect = VOLFX_VOLUME,
-						.volparam = (y & 0x7f) * 64 / 127,
-					};
+					memset(&note, 0, sizeof(note));
+					note.note = x;
+					note.instrument = patch_samples[midich[cn].instrument];
+					note.voleffect = VOLFX_VOLUME;
+					note.volparam = (y & 0x7f) * 64 / 127;
+
 					midich[cn].fg_note = x;
 					midich[cn].bg_note = midich[cn].fg_note;
 				}
@@ -338,7 +347,8 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						log_appendf(4, " Warning: Too many samples");
 					}
 				}
-				note = (song_note_t) {.instrument = patch_samples[x]};
+				memset(&note, 0, sizeof(note));
+				note.instrument = patch_samples[x];
 				break;
 			case 0xd: // channel pressure (aftertouch) - x
 				rs = status;
@@ -397,7 +407,9 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 						slurp_read(fp, buf + (4 - y), y);
 						bpm = buf[0] << 24 | (buf[1] << 16) | (buf[2] << 8) | buf[3];
 						bpm = CLAMP(60000000 / (bpm ? bpm : 1), 0x20, 0xff);
-						note = (song_note_t) {.effect = FX_TEMPO, .param = bpm};
+						memset(&note, 0, sizeof(note));
+						note.effect = FX_TEMPO;
+						note.param = bpm;
 						vlen -= y;
 						break;
 					case 0x54: // SMPTE offset (what time in the song this track starts)

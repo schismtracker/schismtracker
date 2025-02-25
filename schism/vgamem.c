@@ -378,18 +378,12 @@ VGAMEM_SCANNER_VARIANT(32)
 void draw_char_unicode(uint32_t c, int x, int y, uint32_t fg, uint32_t bg)
 {
 	assert(x >= 0 && y >= 0 && x < 80 && y < 50);
-	struct vgamem_char ch = {
-		.font = VGAMEM_FONT_UNICODE,
-		.character = {
-			.unicode = {
-				.c = c,
-				.colors = {
-					.fg = fg,
-					.bg = bg,
-				},
-			},
-		},
-	};
+
+	struct vgamem_char ch;
+	ch.font = VGAMEM_FONT_UNICODE;
+	ch.character.unicode.c = c;
+	ch.character.unicode.colors.fg = fg;
+	ch.character.unicode.colors.bg = bg;
 
 	vgamem[x + (y*80)] = ch;
 }
@@ -397,18 +391,12 @@ void draw_char_unicode(uint32_t c, int x, int y, uint32_t fg, uint32_t bg)
 void draw_char_bios(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 {
 	assert(x >= 0 && y >= 0 && x < 80 && y < 50);
-	struct vgamem_char ch = {
-		.font = VGAMEM_FONT_BIOS,
-		.character = {
-			.cp437 = {
-				.c = c,
-				.colors = {
-					.fg = fg,
-					.bg = bg,
-				},
-			},
-		},
-	};
+
+	struct vgamem_char ch;
+	ch.font = VGAMEM_FONT_BIOS;
+	ch.character.cp437.c = c;
+	ch.character.cp437.colors.fg = fg;
+	ch.character.cp437.colors.bg = bg;
 
 	vgamem[x + (y*80)] = ch;
 }
@@ -416,18 +404,13 @@ void draw_char_bios(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 void draw_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 {
 	assert(x >= 0 && y >= 0 && x < 80 && y < 50);
-	struct vgamem_char ch = {
-		.font = VGAMEM_FONT_ITF,
-		.character = {
-			.itf = {
-				.c = c,
-				.colors = {
-					.fg = fg,
-					.bg = bg,
-				},
-			},
-		},
-	};
+
+	struct vgamem_char ch;
+
+	ch.font = VGAMEM_FONT_ITF,
+	ch.character.itf.c = c;
+	ch.character.itf.colors.fg = fg;
+	ch.character.itf.colors.bg = bg;
 
 	vgamem[x + (y*80)] = ch;
 }
@@ -464,11 +447,10 @@ int draw_text_utf8(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 	if (!composed)
 		return draw_text_bios(text, x, y, fg, bg);
 
-	charset_decode_t decoder = {
-		.in = composed,
-		.offset = 0,
-		.size = SIZE_MAX,
-	};
+	charset_decode_t decoder = {0};
+	decoder.in = composed;
+	decoder.offset = 0;
+	decoder.size = SIZE_MAX;
 
 	int n;
 	for (n = 0; decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_UTF8) && decoder.state != DECODER_STATE_DONE; n++)
@@ -528,11 +510,10 @@ int draw_text_utf8_len(const char * text, int len, int x, int y, uint32_t fg, ui
 	if (!composed)
 		return draw_text_bios_len(text, len, x, y, fg, bg);
 
-	charset_decode_t decoder = {
-		.in = composed,
-		.offset = 0,
-		.size = SIZE_MAX,
-	};
+	charset_decode_t decoder = {0};
+	decoder.in = composed;
+	decoder.offset = 0;
+	decoder.size = SIZE_MAX;
 
 	int n;
 	for (n = 0; n < len && decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_UTF8) && decoder.state != DECODER_STATE_DONE; n++)
@@ -550,27 +531,14 @@ void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
 {
 	assert(x >= 0 && y >= 0 && x < 80 && y < 50);
 
-	struct vgamem_char ch = {
-		.font = VGAMEM_FONT_HALFWIDTH,
-		.character = {
-			.halfwidth = {
-				.c1 = {
-					.c = c1,
-					.colors = {
-						.fg = fg1,
-						.bg = bg1,
-					},
-				},
-				.c2 = {
-					.c = c2,
-					.colors = {
-						.fg = fg2,
-						.bg = bg2,
-					},
-				},
-			},
-		},
-	};
+	struct vgamem_char ch;
+	ch.font = VGAMEM_FONT_HALFWIDTH,
+	ch.character.halfwidth.c1.c = c1;
+	ch.character.halfwidth.c1.colors.fg = fg1;
+	ch.character.halfwidth.c1.colors.bg = bg1;
+	ch.character.halfwidth.c2.c = c2;
+	ch.character.halfwidth.c2.colors.fg = fg2;
+	ch.character.halfwidth.c2.colors.bg = bg2;
 
 	vgamem[x + (y*80)] = ch;
 }

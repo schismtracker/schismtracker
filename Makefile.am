@@ -312,6 +312,14 @@ endif # HAVE_WINDRES
 
 endif # USE_WIN32
 
+if USE_OS2
+
+files_os2 = sys/os2/osdefs.c
+cflags_os2=
+libs_os2=mmpm2.lib libuls.lib libconv.lib
+
+endif # USE_OS2
+
 if USE_WII
 files_wii=sys/wii/isfs.c sys/wii/osdefs.c
 cflags_wii=-mrvl -mcpu=750 -meabi -mhard-float
@@ -573,7 +581,8 @@ schismtracker_SOURCES = \
 	$(files_sdl3)			\
 	$(files_sdl2)			\
 	$(files_sdl12)			\
-	$(files_macos)
+	$(files_macos)			\
+	$(files_os2)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
@@ -582,11 +591,18 @@ component_cflags = $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
 	$(cflags_version) $(cflags_win32) $(cflags_wii) \
 	$(cflags_macosx) $(cflags_flac) $(cflags_jack) \
-	$(cflags_wiiu) $(cflags_macos) $(UTF8PROC_CFLAGS)
+	$(cflags_wiiu) $(cflags_macos) $(cflags_os2) \
+	$(UTF8PROC_CFLAGS)
 schismtracker_CPPFLAGS = -I$(srcdir)/include -I. $(cppflags_wii) $(cppflags_wiiu)
 schismtracker_CFLAGS = $(AM_CFLAGS) $(component_cflags)
 schismtracker_OBJCFLAGS = $(AM_OBJCFLAGS) $(component_cflags)
 
 schismtracker_DEPENDENCIES = $(files_windres)
-schismtracker_LDADD = $(LIBM) $(libs_sdl3) $(libs_x11) $(libs_wii) $(libs_wiiu) $(libs_jack) $(libs_macosx) $(lib_asound) $(lib_win32) $(libs_network) $(libs_flac) $(lib_mediafoundation) $(UTF8PROC_LIBS) $(libs_sdl2) $(libs_sdl12) $(libs_macos)
+schismtracker_LDADD = $(LIBM) $(libs_sdl3) \
+	$(libs_x11) $(libs_wii) $(libs_wiiu) \
+	$(libs_jack) $(libs_macosx) $(lib_asound) \
+	$(lib_win32) $(libs_network) $(libs_flac) \
+	$(lib_mediafoundation) $(UTF8PROC_LIBS) \
+	$(libs_sdl2) $(libs_sdl12) $(libs_macos) \
+	$(libs_os2)
 schismtracker_LDFLAGS = $(ldflags_macosx)

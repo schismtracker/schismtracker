@@ -603,15 +603,19 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 			ins->note_map[n] = n + 1;
 
 		// envelopes. XM stores this in a hilariously bad format
-		const struct {
+		struct {
 			song_envelope_t *env;
 			uint32_t envflag;
 			uint32_t envsusloopflag;
 			uint32_t envloopflag;
-		} envs[] = {
-			{&ins->vol_env, ENV_VOLUME,  ENV_VOLSUSTAIN, ENV_VOLLOOP},
-			{&ins->pan_env, ENV_PANNING, ENV_PANSUSTAIN, ENV_PANLOOP},
+		} envs[2] = {
+			{NULL, ENV_VOLUME,  ENV_VOLSUSTAIN, ENV_VOLLOOP},
+			{NULL, ENV_PANNING, ENV_PANSUSTAIN, ENV_PANLOOP},
 		};
+
+		// openwatcom bug
+		envs[0].env = &ins->vol_env;
+		envs[1].env = &ins->pan_env;
 
 		for (int i = 0; i < ARRAY_SIZE(envs); i++) {
 			uint16_t prevtick;

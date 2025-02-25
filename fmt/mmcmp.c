@@ -241,12 +241,13 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 				return 0;
 			}
 
-			mm_bit_buffer_t bb = {
-				.bits = 0,
-				.buffer = 0,
-				.src = buf,
-				.end = buf + pblk.pk_size,
-			};
+			
+			mm_bit_buffer_t bb = {0};
+	
+			bb.bits = 0;
+			bb.buffer = 0;
+			bb.src = buf;
+			bb.end = buf + pblk.pk_size;
 
 			while (subblk < pblk.sub_blk) {
 				uint32_t newval = 0x10000;
@@ -313,12 +314,12 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 				return 0;
 			}
 
-			mm_bit_buffer_t bb = {
-				.bits = 0,
-				.buffer = 0,
-				.src = buf,
-				.end = buf + pblk.pk_size,
-			};
+			mm_bit_buffer_t bb = {0};
+
+			bb.bits = 0;
+			bb.buffer = 0;
+			bb.src = buf;
+			bb.end = buf + pblk.pk_size;
 
 			while (subblk < pblk.sub_blk) {
 				uint32_t newval = 0x100;

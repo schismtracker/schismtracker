@@ -565,15 +565,15 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 
 	if (!(status.flags & MIDI_LIKE_TRACKER) && i) {
 		/* midi keyjazz shouldn't require a sample */
-		song_note_t mc = {
-			.note = note ? note : midi_note,
+		song_note_t mc = {0};
 
-			.instrument = ins,
-			.voleffect = VOLFX_VOLUME,
-			.volparam = vol,
-			.effect = effect,
-			.param = param,
-		};
+		mc.note = note ? note : midi_note;
+
+		mc.instrument = ins;
+		mc.voleffect = VOLFX_VOLUME;
+		mc.volparam = vol;
+		mc.effect = effect;
+		mc.param = param;
 
 		csf_midi_out_note(current_song, chan_internal, &mc);
 	}
@@ -1377,13 +1377,13 @@ static int _audio_open_device(uint32_t device, int verbose)
 //			put_env_var("AUDIODEV", "hw");
 //	}
 
-	schism_audio_spec_t desired = {
-		.freq = audio_settings.sample_rate,
-		.bits = audio_settings.bits,
-		.channels = audio_settings.channels,
-		.samples = size_pow2,
-		.callback = audio_callback,
-	};
+	schism_audio_spec_t desired = {0};
+	desired.freq = audio_settings.sample_rate;
+	desired.bits = audio_settings.bits;
+	desired.channels = audio_settings.channels;
+	desired.samples = size_pow2;
+	desired.callback = audio_callback;
+
 	schism_audio_spec_t obtained;
 
 	if (device != AUDIO_BACKEND_DEFAULT) {

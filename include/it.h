@@ -337,7 +337,8 @@ void vis_work_8m(const int8_t *in, int inlen);
 
 SCHISM_STATIC_ASSERT(FFT_BUFFER_SIZE_LOG < 32, "FFT buffer code uses 32-bit integers");
 
-void fft_get_columns(uint32_t width, unsigned char out[width], uint32_t chan);
+// "unsigned char out[width]" ...
+void fft_get_columns(uint32_t width, unsigned char *out, uint32_t chan);
 
 /* --------------------------------------------------------------------- */
 

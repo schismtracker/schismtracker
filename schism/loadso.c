@@ -25,9 +25,14 @@
 
 #include "charset.h"
 #include "loadso.h"
+#include "mem.h"
 
 #ifdef SCHISM_WIN32
 # include <windows.h>
+#elif defined(SCHISM_OS2)
+# define INCL_DOS
+# include <os2.h>
+# include <meerror.h>
 #elif defined(HAVE_LIBDL)
 # include <dlfcn.h>
 #endif
@@ -66,6 +71,28 @@ void *loadso_object_load(const char *sofile)
 
 	if (module)
 		return module;
+#elif defined(SCHISM_OS2)
+	CHAR error_str[256];
+	HMODULE module;
+	ULONG rc;
+
+	// TODO add charset_iconv support for OS/2
+	rc = DosLoadModule(error_str, sizeof(error_str), sofile, &module);
+
+	if (rc != NO_ERROR && !strrchr(sofile, '\\') && !strrchr(sofile, '/')) {
+		/* strip .DLL extension and retry if there is no path
+		 * (this is what SDL does; I suppose it won't hurt here) */
+		size_t len = strlen(sofile);
+
+		if (len > 4 && charset_strcasecmp(&sofile[len - 4], CHARSET_UTF8, ".dll", CHARSET_UTF8)) {
+			char *sofile_strip = strn_dup(sofile, len - 4);
+			rc = DosLoadModule(error_str, sizeof(error_str), sofile, &module);
+			free(sofile_strip);
+		}
+	}
+
+	if (rc == NO_ERROR)
+		return (void *)module;
 #elif defined(HAVE_LIBDL)
 	void *object = dlopen(sofile, RTLD_NOW | RTLD_LOCAL);
 	if (object)
@@ -83,6 +110,21 @@ void *loadso_function_load(void *handle, const char *name)
 	symbol = GetProcAddress(handle, name);
 	if (symbol)
 		return symbol;
+#elif defined(SCHISM_OS2)
+	ULONG rc;
+	PFN pfn;
+
+	rc = DosQueryProcAddr((HMODULE)handle, 0, name, &pfn);
+	if (rc != NO_ERROR) {
+		char *p;
+		if (asprintf(&p, "_%s", name) >= 0) {
+			rc = DosQueryProcAddr((HMODULE)handle, 0, p, &pfn);
+			free(p);
+		}
+	}
+
+	if (rc == NO_ERROR)
+		return (void *)pfn;
 #elif defined(HAVE_LIBDL)
 	void *symbol;
 
@@ -92,10 +134,11 @@ void *loadso_function_load(void *handle, const char *name)
 
 	// some platforms require extra work.
 	char *p;
-	if (asprintf(&p, "_%s", name) < 0)
-		return NULL;
+	if (asprintf(&p, "_%s", name) >= 0) {
+		symbol = dlsym(handle, p);
+		free(p);
+	}
 
-	symbol = dlsym(handle, p);
 	if (symbol)
 		return symbol;
 #endif

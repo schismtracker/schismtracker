@@ -122,22 +122,22 @@ void draw_note_13(int x, int y, const song_note_t *note, int cursor_pos, int fg,
 
 void draw_mask_13(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	unsigned char buf[] = {
-		MASK_CHAR(MASK_NOTE, 0, 0),
-		MASK_CHAR(MASK_NOTE, 0, 0),
-		MASK_CHAR(MASK_NOTE, 0, 1),
-		'\x8F',
-		MASK_CHAR(MASK_INSTRUMENT, 2, 0),
-		MASK_CHAR(MASK_INSTRUMENT, 3, 0),
-		'\x8F',
-		MASK_CHAR(MASK_VOLUME, 4, 0),
-		MASK_CHAR(MASK_VOLUME, 5, 0),
-		'\x8F',
-		MASK_CHAR(MASK_EFFECT, 6, 0),
-		MASK_CHAR(MASK_EFFECT, 7, 0),
-		MASK_CHAR(MASK_EFFECT, 8, 0),
-		0,
-	};
+	unsigned char buf[14];
+
+	buf[0] = MASK_CHAR(MASK_NOTE, 0, 0);
+	buf[1] = MASK_CHAR(MASK_NOTE, 0, 0);
+	buf[2] = MASK_CHAR(MASK_NOTE, 0, 1);
+	buf[3] = '\x8F';
+	buf[4] = MASK_CHAR(MASK_INSTRUMENT, 2, 0);
+	buf[5] = MASK_CHAR(MASK_INSTRUMENT, 3, 0);
+	buf[6] = '\x8F';
+	buf[7] = MASK_CHAR(MASK_VOLUME, 4, 0);
+	buf[8] = MASK_CHAR(MASK_VOLUME, 5, 0);
+	buf[9] = '\x8F';
+	buf[10] = MASK_CHAR(MASK_EFFECT, 6, 0);
+	buf[11] = MASK_CHAR(MASK_EFFECT, 7, 0);
+	buf[12] = MASK_CHAR(MASK_EFFECT, 8, 0);
+	buf[13] = 0;
 
 	draw_text((const char *)buf, x, y, fg, bg);
 }
@@ -197,19 +197,19 @@ void draw_note_10(int x, int y, const song_note_t *note, int cursor_pos, SCHISM_
 
 void draw_mask_10(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	char buf[] = {
-		MASK_CHAR(MASK_NOTE, 0, 0),
-		MASK_CHAR(MASK_NOTE, 0, 0),
-		MASK_CHAR(MASK_NOTE, 0, 1),
-		MASK_CHAR(MASK_INSTRUMENT, 2, 0),
-		MASK_CHAR(MASK_INSTRUMENT, 3, 0),
-		MASK_CHAR(MASK_VOLUME, 4, 0),
-		MASK_CHAR(MASK_VOLUME, 5, 0),
-		MASK_CHAR(MASK_EFFECT, 6, 0),
-		MASK_CHAR(MASK_EFFECT, 7, 0),
-		MASK_CHAR(MASK_EFFECT, 8, 0),
-		0,
-	};
+	char buf[11];
+
+	buf[0] = MASK_CHAR(MASK_NOTE, 0, 0);
+	buf[1] = MASK_CHAR(MASK_NOTE, 0, 0);
+	buf[2] = MASK_CHAR(MASK_NOTE, 0, 1);
+	buf[3] = MASK_CHAR(MASK_INSTRUMENT, 2, 0);
+	buf[4] = MASK_CHAR(MASK_INSTRUMENT, 3, 0);
+	buf[5] = MASK_CHAR(MASK_VOLUME, 4, 0);
+	buf[6] = MASK_CHAR(MASK_VOLUME, 5, 0);
+	buf[7] = MASK_CHAR(MASK_EFFECT, 6, 0);
+	buf[8] = MASK_CHAR(MASK_EFFECT, 7, 0);
+	buf[9] = MASK_CHAR(MASK_EFFECT, 8, 0);
+	buf[10] = 0;
 
 	draw_text(buf, x, y, fg, bg);
 }
@@ -350,16 +350,16 @@ void draw_note_7(int x, int y, const song_note_t *note, int cursor_pos, SCHISM_U
 
 void draw_mask_7(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	char buf[] = {
-		MASK_CHAR(MASK_NOTE, 0, 0),
-		MASK_CHAR(MASK_NOTE, 0, 0),
-		MASK_CHAR(MASK_NOTE, 0, 1),
-		MASK_CHAR(MASK_INSTRUMENT, 2, 3),
-		MASK_CHAR(MASK_VOLUME, 4, 5),
-		MASK_CHAR(MASK_EFFECT, 6, 0),
-		MASK_CHAR(MASK_EFFECT, 7, 8),
-		0,
-	};
+	char buf[8];
+
+	buf[0] = MASK_CHAR(MASK_NOTE, 0, 0);
+	buf[1] = MASK_CHAR(MASK_NOTE, 0, 0);
+	buf[2] = MASK_CHAR(MASK_NOTE, 0, 1);
+	buf[3] = MASK_CHAR(MASK_INSTRUMENT, 2, 3);
+	buf[4] = MASK_CHAR(MASK_VOLUME, 4, 5);
+	buf[5] = MASK_CHAR(MASK_EFFECT, 6, 0);
+	buf[6] = MASK_CHAR(MASK_EFFECT, 7, 8);
+	buf[7] = 0;
 
 	draw_text(buf, x, y, fg, bg);
 }
@@ -369,7 +369,13 @@ void draw_mask_7(int x, int y, int mask, int cursor_pos, int fg, int bg)
 
 void draw_channel_header_3(int chan, int x, int y, int fg)
 {
-	char buf[4] = { ' ', '0' + chan / 10, '0' + chan % 10, '\0' };
+	char buf[4];
+
+	buf[0] = ' ';
+	buf[1] = '0' + chan / 10;
+	buf[2] = '0' + chan % 10;
+	buf[3] = '\0';
+
 	draw_text(buf, x, y, fg, 1);
 }
 
@@ -492,7 +498,12 @@ void draw_mask_3(int x, int y, int mask, int cursor_pos, int fg, int bg)
 
 void draw_channel_header_2(int chan, int x, int y, int fg)
 {
-	char buf[4] = { '0' + chan / 10, '0' + chan % 10, 0 };
+	char buf[3];
+
+	buf[0] = '0' + chan / 10;
+	buf[1] = '0' + chan % 10;
+	buf[2] = 0;
+
 	draw_text(buf, x, y, fg, 1);
 }
 
@@ -951,15 +962,15 @@ void draw_note_6(int x, int y, const song_note_t *note, int cursor_pos, SCHISM_U
 
 void draw_mask_6(int x, int y, int mask, int cursor_pos, int fg, int bg)
 {
-	char buf[] = {
-		MASK_CHAR(MASK_NOTE, 0, 0),
-		MASK_CHAR(MASK_NOTE, 0, 1),
-		MASK_CHAR(MASK_INSTRUMENT, 2, 3),
-		MASK_CHAR(MASK_VOLUME, 4, 5),
-		MASK_CHAR(MASK_EFFECT, 6, 0),
-		MASK_CHAR(MASK_EFFECT, 7, 8),
-		0,
-	};
+	char buf[7];
+
+	buf[0] = MASK_CHAR(MASK_NOTE, 0, 0);
+	buf[1] = MASK_CHAR(MASK_NOTE, 0, 1);
+	buf[2] = MASK_CHAR(MASK_INSTRUMENT, 2, 3);
+	buf[3] = MASK_CHAR(MASK_VOLUME, 4, 5);
+	buf[4] = MASK_CHAR(MASK_EFFECT, 6, 0);
+	buf[5] = MASK_CHAR(MASK_EFFECT, 7, 8);
+	buf[6] = 0;
 
 	draw_text(buf, x, y, fg, bg);
 }

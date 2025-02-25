@@ -397,42 +397,38 @@ static int save_iti_envelope(disko_t *fp, struct it_envelope itenv)
 
 static int save_iti_envelopes(disko_t *fp, song_instrument_t *ins)
 {
-	struct it_envelope vol = {
-		.flags = ((ins->flags & ENV_VOLUME) ? 0x01 : 0)
-			| ((ins->flags & ENV_VOLLOOP) ? 0x02 : 0)
-			| ((ins->flags & ENV_VOLSUSTAIN) ? 0x04 : 0)
-			| ((ins->flags & ENV_VOLCARRY) ? 0x08 : 0),
-		.num = ins->vol_env.nodes,
-		.lpb = ins->vol_env.loop_start,
-		.lpe = ins->vol_env.loop_end,
-		.slb = ins->vol_env.sustain_start,
-		.sle = ins->vol_env.sustain_end,
-	};
+	struct it_envelope vol = {0}, pan = {0}, pitch = {0};
 
-	struct it_envelope pan = {
-		.flags = ((ins->flags & ENV_PANNING) ? 0x01 : 0)
-			| ((ins->flags & ENV_PANLOOP) ? 0x02 : 0)
-			| ((ins->flags & ENV_PANSUSTAIN) ? 0x04 : 0)
-			| ((ins->flags & ENV_PANCARRY) ? 0x08 : 0),
-		.num = ins->pan_env.nodes,
-		.lpb = ins->pan_env.loop_start,
-		.lpe = ins->pan_env.loop_end,
-		.slb = ins->pan_env.sustain_start,
-		.sle = ins->pan_env.sustain_end,
-	};
+	vol.flags = ((ins->flags & ENV_VOLUME) ? 0x01 : 0)
+		| ((ins->flags & ENV_VOLLOOP) ? 0x02 : 0)
+		| ((ins->flags & ENV_VOLSUSTAIN) ? 0x04 : 0)
+		| ((ins->flags & ENV_VOLCARRY) ? 0x08 : 0);
+	vol.num = ins->vol_env.nodes;
+	vol.lpb = ins->vol_env.loop_start;
+	vol.lpe = ins->vol_env.loop_end;
+	vol.slb = ins->vol_env.sustain_start;
+	vol.sle = ins->vol_env.sustain_end;
 
-	struct it_envelope pitch = {
-		.flags = ((ins->flags & ENV_PITCH) ? 0x01 : 0)
-			| ((ins->flags & ENV_PITCHLOOP) ? 0x02 : 0)
-			| ((ins->flags & ENV_PITCHSUSTAIN) ? 0x04 : 0)
-			| ((ins->flags & ENV_PITCHCARRY) ? 0x08 : 0)
-			| ((ins->flags & ENV_FILTER) ? 0x80 : 0),
-		.num = ins->pan_env.nodes,
-		.lpb = ins->pan_env.loop_start,
-		.lpe = ins->pan_env.loop_end,
-		.slb = ins->pan_env.sustain_start,
-		.sle = ins->pan_env.sustain_end,
-	};
+	pan.flags = ((ins->flags & ENV_PANNING) ? 0x01 : 0)
+		| ((ins->flags & ENV_PANLOOP) ? 0x02 : 0)
+		| ((ins->flags & ENV_PANSUSTAIN) ? 0x04 : 0)
+		| ((ins->flags & ENV_PANCARRY) ? 0x08 : 0);
+	pan.num = ins->pan_env.nodes;
+	pan.lpb = ins->pan_env.loop_start;
+	pan.lpe = ins->pan_env.loop_end;
+	pan.slb = ins->pan_env.sustain_start;
+	pan.sle = ins->pan_env.sustain_end;
+
+	pitch.flags = ((ins->flags & ENV_PITCH) ? 0x01 : 0)
+		| ((ins->flags & ENV_PITCHLOOP) ? 0x02 : 0)
+		| ((ins->flags & ENV_PITCHSUSTAIN) ? 0x04 : 0)
+		| ((ins->flags & ENV_PITCHCARRY) ? 0x08 : 0)
+		| ((ins->flags & ENV_FILTER) ? 0x80 : 0);
+	pitch.num = ins->pan_env.nodes;
+	pitch.lpb = ins->pan_env.loop_start;
+	pitch.lpe = ins->pan_env.loop_end;
+	pitch.slb = ins->pan_env.sustain_start;
+	pitch.sle = ins->pan_env.sustain_end;
 
 	for (int j = 0; j < 25; j++) {
 		vol.nodes[j].value = ins->vol_env.values[j];

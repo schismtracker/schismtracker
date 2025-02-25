@@ -198,7 +198,7 @@ static inline SCHISM_ALWAYS_INLINE int16_t _fft_get_value(uint32_t chan, uint32_
  * out and fft have a range of 0 to 128
  *
  * "chan" is the channel to process, or 0 for all */
-void fft_get_columns(uint32_t width, unsigned char out[width], uint32_t chan)
+void fft_get_columns(uint32_t width, unsigned char *out, uint32_t chan)
 {
 	uint32_t i, a;
 

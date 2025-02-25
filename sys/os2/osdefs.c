@@ -20,21 +20,58 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef SCHISM_FAKEMEM_H_
-#define SCHISM_FAKEMEM_H_
 
-/* memory usage */
-unsigned int memused_lowmem(void);
-unsigned int memused_ems(void);
-unsigned int memused_songmessage(void);
-unsigned int memused_instruments(void);
-unsigned int memused_samples(void);
-unsigned int memused_clipboard(void);
-unsigned int memused_patterns(void);
-unsigned int memused_history(void);
-/* clears the memory lookup cache */
-void memused_songchanged(void);
+#include "headers.h"
+#include "osdefs.h"
 
-void memused_get_pattern_saved(unsigned int *a, unsigned int *b); /* wtf */
+#define INCL_DOS
+#include <os2.h>
 
-#endif /* SCHISM_FAKEMEM_H_ */
+int os2_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
+{
+	USHORT rc;
+	char *sys;
+
+	sys = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_DOSCP);
+	if (!sys)
+		return -1;
+
+	rc = DosMkDir(sys, 0UL);
+
+	free(sys);
+
+	return rc ? -1 : 0;
+}
+
+FILE *os2_fopen(const char *path, const char *rw)
+{
+	FILE *fp;
+	char *sys;
+
+	sys = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_DOSCP);
+	if (!sys)
+		return NULL;
+
+	fp = fopen(sys, rw);
+
+	free(sys);
+
+	return fp;
+}
+
+int os2_stat(const char* path, struct stat* st)
+{
+	// Windows 9x
+	int rc;
+	char *sys;
+
+	sys = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_DOSCP);
+	if (!sys)
+		return -1;
+
+	rc = stat(path, st);
+
+	free(sys);
+
+	return rc;
+}

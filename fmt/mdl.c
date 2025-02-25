@@ -648,10 +648,10 @@ static int mdl_read_tracks(slurp_t *fp, song_note_t *tracks[65536])
 
 		tracks[trk] = mem_calloc(256, sizeof(song_note_t));
 
-		struct receive_userdata data = {
-			.track = tracks[trk],
-			.lostfx = &lostfx,
-		};
+		struct receive_userdata data = {0};
+
+		data.track = tracks[trk];
+		data.lostfx = &lostfx;
 
 		int c = slurp_receive(fp, mdl_receive_track, bytesleft, &data);
 

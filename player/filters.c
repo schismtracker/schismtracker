@@ -25,6 +25,13 @@
 #include "player/cmixer.h"
 #include <math.h>
 
+#ifndef M_PI
+# define M_PI 3.1415926535897932
+#endif
+
+#ifdef SCHISM_OS2
+# define powf pow
+#endif
 
 // LUT for 2 * damping factor
 static const float resonance_table[128] = {

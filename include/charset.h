@@ -57,6 +57,10 @@ typedef enum {
 	CHARSET_ANSI,
 #endif
 
+#ifdef SCHISM_OS2
+	CHARSET_DOSCP,
+#endif
+
 	/* Uses the system's HFS encoding */
 #ifdef SCHISM_MACOS
 	CHARSET_HFS,
