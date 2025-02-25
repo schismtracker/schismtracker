@@ -72,6 +72,7 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_mkdir os2_mkdir
 # define os_stat os2_stat
 # define os_fopen os2_fopen
+# define os_get_key_repeat os2_get_key_repeat
 #endif
 
 #if defined(SCHISM_WIN32)
@@ -172,5 +173,6 @@ int x11_event(schism_event_t *event);
 int os2_stat(const char* path, struct stat* st);
 int os2_mkdir(const char* path, mode_t mode);
 FILE* os2_fopen(const char* path, const char* flags);
+int os2_get_key_repeat(int *pdelay, int *prate);
 
 #endif /* SCHISM_OSDEFS_H_ */
