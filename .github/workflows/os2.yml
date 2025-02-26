@@ -121,7 +121,7 @@ jobs:
           cd build
           # We link to SDL 1.2 here since it's universally supported by everything and is
           # useful as a fallback of sorts.
-          ../configure 'CPP=owcc -E' 'CPPFLAGS=-I/c/WATCOM/h -I/c/WATCOM/h/os2 -b OS2V2' CC=owcc 'CFLAGS=-b OS2V2 -O2 -za99 -fno-short-enum -march=i386' 'LDFLAGS=-b OS2V2' --host=i386-pc-os2 OBJEXT=obj EXEEXT=exe --without-jack --with-sdl2 --enable-sdl2-linking PKG_CONFIG=false SDL2_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/h/SDL2" SDL2_LIBS="$RUNNER_TEMP_CYGPATH/i386prefix/lib/SDL2.lib" UTF8PROC_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/h" UTF8PROC_LIBS="$RUNNER_TEMP_CYGPATH/i386prefix/lib/utf8proc.lib"
+          ../configure 'CPP=owcc -E' 'CPPFLAGS=-I/c/WATCOM/h -I/c/WATCOM/h/os2 -b OS2V2_PM' CC=owcc 'CFLAGS=-b OS2V2_PM -O2 -za99 -fno-short-enum -march=i386 -mthreads' 'LDFLAGS=-b OS2V2_PM' --host=i386-pc-os2 OBJEXT=obj EXEEXT=exe --without-jack --with-sdl2 --enable-sdl2-linking PKG_CONFIG=false SDL2_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/h/SDL2" SDL2_LIBS="$RUNNER_TEMP_CYGPATH/i386prefix/lib/SDL2.lib" UTF8PROC_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/h" UTF8PROC_LIBS="$RUNNER_TEMP_CYGPATH/i386prefix/lib/utf8proc.lib"
           make
           wstrip schismtracker.exe
           cp schismtracker.exe ../..
