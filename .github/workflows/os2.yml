@@ -133,6 +133,7 @@ jobs:
         run: |
           cp "$RUNNER_TEMP_CYGPATH/i386prefix/dll/SDL2.dll" .
           cp schism/docs/configuration.md schism/README.md schism/COPYING .
+          cp schism/icons/schism-icon-os2.ico schismtracker.ico
           wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
           unix2dos COPYING.Xiph COPYING README.md configuration.md
 
@@ -142,6 +143,7 @@ jobs:
           name: schismtracker-${{ steps.date.outputs.date }}-os2
           path: |
             schismtracker.exe
+            schismtracker.ico
             SDL2.dll
             COPYING
             COPYING.Xiph
