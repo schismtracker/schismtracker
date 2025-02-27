@@ -28,6 +28,7 @@
 
 #define INCL_DOS
 #define INCL_PM
+#define INCL_WINDIALOGS
 #include <os2.h>
 
 int os2_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
@@ -180,4 +181,25 @@ int os2_get_key_repeat(int *pdelay, int *prate)
 	}
 
 	return 1;
+}
+
+void os2_show_message_box(const char *title, const char *text)
+{
+	char *sys_title, *sys_text;
+
+	sys_title = charset_iconv_easy(title, CHARSET_UTF8, CHARSET_DOSCP);
+	if (!sys_title)
+		return;
+
+	sys_text = charset_iconv_easy(text, CHARSET_UTF8, CHARSET_DOSCP);
+	if (!sys_text) {
+		free(sys_title);
+		return;
+	}
+
+	// untested:
+	WinMessageBox(HWND_DESKTOP, HWND_DESKTOP, sys_text, sys_title, 0L, MB_OK | MB_INFORMATION);
+
+	free(sys_title);
+	free(sys_text);
 }
