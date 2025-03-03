@@ -31,6 +31,13 @@ int vsnprintf(char *buffer, size_t count, const char *fmt, va_list ap)
 	FILE *f;
 	int x;
 
+	// Add a NUL terminator to the buffer before anything else,
+	// as to prevent cases where this function fails and the
+	// surrounding code always expects the result to be a valid
+	// C string.
+	if (count > 0)
+		buffer[0] = '\0';
+
 	f = tmpfile();
 	if (!f)
 		return -1;
@@ -43,7 +50,7 @@ int vsnprintf(char *buffer, size_t count, const char *fmt, va_list ap)
 	}
 
 	if (count > 0) {
-		size_t towrite = (count > (x + 1)) ? (x + 1) : count;
+		count = CLAMP(x, 0, count - 1);
 
 		// Now read back the file into our buffer
 		if (fseek(f, 0, SEEK_SET)) {
@@ -51,13 +58,14 @@ int vsnprintf(char *buffer, size_t count, const char *fmt, va_list ap)
 			return -1;
 		}
 
-		if (fread(buffer, 1, towrite, f) != towrite) {
+		if (fread(buffer, 1, count, f) != count) {
 			fclose(f);
+			buffer[count] = '\0'; // WUH?
 			return -1;
 		}
 
-		// Force nul terminate (towrite is already > 0)
-		buffer[towrite - 1] = '\0';
+		// Force NUL terminate
+		buffer[count] = '\0';
 	}
 
 	fclose(f);
