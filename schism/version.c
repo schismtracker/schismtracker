@@ -103,79 +103,47 @@ SCHISM_CONST static inline version_time_t get_days_for_month(uint32_t month, uin
 	return month_days;
 }
 
-SCHISM_CONST static inline version_time_t version_mktime(int y, int m, int d)
+/* -------------------------------------------------------------- */
+
+// only used by ver_mktime, do not use directly
+// see https://alcor.concordia.ca/~gpkatch/gdate-algorithm.html
+// for a description of the algorithm used here
+static inline SCHISM_ALWAYS_INLINE SCHISM_CONST int64_t ver_date_encode(uint32_t y, uint32_t m, uint32_t d)
 {
-	uint32_t year = EPOCH_YEAR;
-	uint32_t month = EPOCH_MONTH;
-	int month_overflow = (m >= EPOCH_MONTH) ? 1 : 0;
+	int64_t mm, yy;
 
-	/* sanity check! */
-	assert(m < 12 && d <= get_days_for_month(m, y));
-	assert((y > EPOCH_YEAR) || (y == EPOCH_YEAR && m >= EPOCH_MONTH && d >= EPOCH_DAY));
+	mm = (m + 9LL) % 12LL;
+	yy = y - (mm / 10LL);
 
-	version_time_t ret = 0;
-
-	/* year */
-	while (year < y - 1 + month_overflow) {
-		ret += (LEAP_YEAR(year) ? 366 : 365);
-		year++;
-	}
-
-	/* month */
-	while (month != m) {
-		ret += get_days_for_month(month, year);
-
-		month++;
-
-		if (month > 11) {
-			month = 0;
-			year++;
-		}
-	}
-
-	/* day */
-	ret += d;
-	ret -= EPOCH_DAY;
-
-	return ret;
+	return (yy * 365LL) + (yy / 4LL) - (yy / 100LL) + (yy / 400LL) + ((mm * 306LL + 5LL) / 10LL) + (d - 1LL);
 }
 
-static inline void version_time_format(char buf[11], version_time_t ver)
+uint32_t ver_mktime(uint32_t y, uint32_t m, uint32_t d)
 {
-	int64_t year = EPOCH_YEAR, month = EPOCH_MONTH, days = ver + EPOCH_DAY;
-	int32_t days_in;
+	int64_t date, res;
 
-	for (;;) {
-		days_in = (LEAP_YEAR(year) ? 366 : 365);
-		if (days < days_in)
-			break;
+	date = ver_date_encode(y, m, d);
+	res = date - ver_date_encode(2009, 10, 31);
 
-		days -= days_in;
+	return (uint32_t)CLAMP(res, 0U, UINT32_MAX);
+}
 
-		year++;
+static inline SCHISM_ALWAYS_INLINE void ver_date_decode(uint32_t ver, uint32_t *py, uint32_t *pm, uint32_t *pd)
+{
+	int64_t date, y, ddd, mi, mm, dd;
+
+	date = (int64_t)ver + ver_date_encode(2009, 10, 31);
+	y = ((date * 10000LL) + 14780LL) / 3652425LL;
+	ddd = date - ((365LL * y) + (y / 4LL) - (y / 100LL) + (y / 400LL));
+	if (ddd < 0) {
+		y--;
+		ddd = date - ((365LL * y) + (y / 4LL) - (y / 100LL) + (y / 400LL));
 	}
+	mi = ((100LL * ddd) + 52LL) / 3060LL;
 
-	for (;;) {
-		days_in = get_days_for_month(month, year);
-		if (days < days_in)
-			break;
-
-		days -= days_in;
-
-		month++;
-
-		if (month > 11) {
-			month = 0;
-			year++;
-		}
-	}
-
-	// Classic Mac OS's snprintf is not C99 compliant (duh) so we need
-	// to cast our integers to unsigned int first.
-	snprintf(buf, 11, "%04u-%02u-%02u",
-		(unsigned int)CLAMP(year, EPOCH_YEAR, 9999),
-		(unsigned int)(CLAMP(month, 0, 11) + 1),
-		(unsigned int)CLAMP(days, 1, 31));
+	*py = (y + ((mi + 2LL) / 12LL));
+	*pm = ((mi + 2LL) % 12LL) + 1LL;
+	*pd = ddd - ((mi * 306LL + 5LL) / 10LL) + 1LL;
 }
 
 /* ----------------------------------------------------------------- */
@@ -219,10 +187,22 @@ const char *schism_banner(int classic)
 void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char buf[11])
 {
 	cwtv &= 0xfff;
-	if (cwtv > 0x050)
-		version_time_format(buf, (cwtv < 0xfff) ? (cwtv - 0x050) : reserved);
-	else
-		sprintf(buf, "0.%x", cwtv);
+	if (cwtv > 0x050) {
+		uint32_t y, m, d;
+
+		ver_date_decode((cwtv == 0xFFF) ? reserved : cwtv, &y, &m, &d);
+
+		// Classic Mac OS's snprintf is not C99 compliant (duh) so we need
+		// to cast our integers to unsigned long first.
+		// We should probably have a replacement snprintf in case we don't
+		// actually have a standard one.
+		snprintf(buf, 11, "%04lu-%02lu-%02lu",
+			(unsigned long)CLAMP(y, EPOCH_YEAR, 9999),
+			(unsigned long)(CLAMP(m, 0, 11) + 1),
+			(unsigned long)CLAMP(d, 1, 31));
+	} else {
+		snprintf(buf, 11, "0.%x", cwtv);
+	}
 }
 
 static inline SCHISM_ALWAYS_INLINE int lookup_short_month(char *name)
@@ -299,7 +279,7 @@ static inline int get_version_date(int *pyear, int *pmonth, int *pday)
 				*pmonth = m;
 				*pday = day;
 				return 1;
-			}	
+			}
 		}
 	}
 
@@ -313,7 +293,7 @@ void ver_init(void)
 	version_time_t version_sec;
 
 	if (get_version_date(&year, &month, &day)) {
-		version_sec = version_mktime(year, month, day);
+		version_sec = ver_mktime(year, month, day);
 	} else {
 		puts("help, I am very confused about myself");
 		version_sec = 0;

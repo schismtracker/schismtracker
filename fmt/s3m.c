@@ -525,7 +525,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				uint32_t full_version = (((uint32_t)reserved16high) << 16) | (reserved16low);
 				strcpy(song->tracker_id, "Schism Tracker ");
 				ver_decode_cwtv(trkvers, full_version, song->tracker_id + strlen(song->tracker_id));
-				if (trkvers == 0x4fff && full_version >= 0x1560)
+				if (trkvers == 0x4fff && full_version >= ver_mktime(2024, 11, 24))
 					s3m_import_edittime(song, 0x0000, reserved32);
 			}
 			break;
