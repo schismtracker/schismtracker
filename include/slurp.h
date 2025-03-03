@@ -44,6 +44,7 @@ struct slurp_struct_ {
 	int64_t (*tell)(slurp_t *);
 	size_t (*peek)(slurp_t *, void *, size_t);
 	size_t (*read)(slurp_t *, void *, size_t);
+	size_t (*length)(slurp_t *);
 	int (*eof)(slurp_t *);
 
 	/* clean up after ourselves */
