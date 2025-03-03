@@ -190,7 +190,7 @@ void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char buf[11])
 	if (cwtv > 0x050) {
 		uint32_t y, m, d;
 
-		ver_date_decode((cwtv == 0xFFF) ? reserved : cwtv, &y, &m, &d);
+		ver_date_decode((cwtv < 0xFFF) ? (cwtv - 0x050) : reserved, &y, &m, &d);
 
 		// Classic Mac OS's snprintf is not C99 compliant (duh) so we need
 		// to cast our integers to unsigned long first.
