@@ -75,6 +75,12 @@ struct slurp_struct_ {
 		struct {
 			/* only contains this (for now i guess) */
 			FILE *fp;
+
+			/* in lieu of a simple and fast way to get the
+			 * length of a stream (have to do gymnastics)
+			 * cache this on open. if it gets changed, we'll
+			 * probably fail anyway. */
+			size_t length;
 		} stdio;
 	} internal;
 };

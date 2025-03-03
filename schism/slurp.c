@@ -77,13 +77,14 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 	if (!size)
 		size = st.st_size;
 
+#if defined(SCHISM_WIN32) || defined(HAVE_MMAP)
 	switch (
 #ifdef SCHISM_WIN32
 		slurp_win32(t, filename, size)
 #elif defined(HAVE_MMAP)
 		slurp_mmap(t, filename, size)
 #else
-		SLURP_OPEN_IGNORE
+# error Where are we now?
 #endif
 	) {
 	case SLURP_OPEN_FAIL:
@@ -101,6 +102,7 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 	case SLURP_OPEN_IGNORE:
 		break;
 	}
+#endif
 
 	switch (slurp_stdio_open_(t, filename)) {
 	case SLURP_OPEN_FAIL:
@@ -186,7 +188,16 @@ void unslurp(slurp_t * t)
 
 static int slurp_stdio_open_(slurp_t *t, const char *filename)
 {
-	FILE *fp = (!strcmp(filename, "-")) ? stdin : os_fopen(filename, "rb");
+	FILE *fp;
+
+	if (!strcmp(filename, "-")) {
+		fp = stdin;
+		t->closure = NULL;
+	} else {
+		fp = os_fopen(filename, "rb");
+		t->closure = slurp_stdio_closure_;
+	}
+
 	if (!fp)
 		return SLURP_OPEN_FAIL;
 
@@ -195,8 +206,23 @@ static int slurp_stdio_open_(slurp_t *t, const char *filename)
 
 static int slurp_stdio_open_file_(slurp_t *t, FILE *fp)
 {
+	long end;
+
 	t->internal.stdio.fp = fp;
-	t->closure = slurp_stdio_closure_;
+
+	if (fseek(t->internal.stdio.fp, 0, SEEK_END))
+		return SLURP_OPEN_FAIL;
+
+	end = ftell(t->internal.stdio.fp);
+	if (end < 0)
+		return SLURP_OPEN_FAIL;
+
+	/* return to monke */
+	if (fseek(t->internal.stdio.fp, 0, SEEK_SET))
+		return SLURP_OPEN_FAIL;
+
+	t->internal.stdio.length = MAX(0, end);
+
 	return SLURP_OPEN_SUCCESS;
 }
 
@@ -213,19 +239,7 @@ static int64_t slurp_stdio_tell_(slurp_t *t)
 
 static size_t slurp_stdio_length_(slurp_t *t)
 {
-	/* Can this just be cached on file open? */
-	long pos = ftell(t->internal.stdio.fp);
-	if (pos < 0)
-		return 0;
-
-	fseek(t->internal.stdio.fp, 0, SEEK_END);
-
-	long end = ftell(t->internal.stdio.fp);
-
-	/* return to monke */
-	fseek(t->internal.stdio.fp, pos, SEEK_SET);
-
-	return MAX(0, end);
+	return t->internal.stdio.length;
 }
 
 static size_t slurp_stdio_peek_(slurp_t *t, void *ptr, size_t count)
