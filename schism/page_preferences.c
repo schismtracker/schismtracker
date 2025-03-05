@@ -218,7 +218,6 @@ static void audio_device_list_draw() {
 			bg = 0; \
 		}\
 	\
-		/* stupid dirty hack for default device */ \
 		draw_text_utf8_len((id == song_audio_device_id()) ? "*" : " ", 1, AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y + o, fg, bg); \
 		draw_text_utf8_len(name, AUDIO_DEVICE_BOX_WIDTH - 1, AUDIO_DEVICE_BOX_X + 1, AUDIO_DEVICE_BOX_Y + o, fg, bg); \
 		o++; \
