@@ -677,11 +677,11 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		 *  - paper */
 		char *tmp;
 
-#define CONVERT(x, size)  \
+#define CONVERT(X, SIZE)  \
 	do { \
-		if (!charset_iconv(x, &tmp, CHARSET_WINDOWS1252, CHARSET_CP437, size)) { \
-			strncpy(x, tmp, size - 1); \
-			tmp[size] = 0; \
+		if (!charset_iconv((X), &tmp, CHARSET_WINDOWS1252, CHARSET_CP437, SIZE)) { \
+			strncpy((X), tmp, (SIZE) - 1); \
+			tmp[(SIZE) - 1] = 0; \
 			free(tmp); \
 		} \
 	} while (0)
