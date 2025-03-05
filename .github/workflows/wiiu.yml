@@ -94,6 +94,9 @@ jobs:
           make
           powerpc-eabi-strip -S schismtracker.elf
           make schismtracker.wuhb
+          cd ../..
+          wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
+          cp schismtracker/docs/configuration.md schismtracker/README.md schismtracker/COPYING .
 
       - name: 'Upload binaries'
         uses: actions/upload-artifact@v4
@@ -102,3 +105,7 @@ jobs:
           path: |
             schismtracker/build/schismtracker.elf
             schismtracker/build/schismtracker.wuhb
+            COPYING.Xiph
+            COPYING
+            configuration.md
+            README.md
