@@ -980,7 +980,7 @@ char *dmoz_get_current_directory(void)
 			if (ptr) { \
 				char *utf8; \
 	\
-				if (!charset_iconv(ptr, &utf8, CHARSET_ANSI, CHARSET_UTF8, MAX_PATH * sizeof(TYPE))) \
+				if (!charset_iconv(ptr, &utf8, CHARSET, CHARSET_UTF8, MAX_PATH * sizeof(TYPE))) \
 					return utf8; \
 			} \
 		} \
@@ -1235,13 +1235,13 @@ int dmoz_path_is_absolute(const char *path, int *count)
 	char *colon = strchr(path, ':'), *slash = strchr(path, '/');
 	if (colon && (colon < slash || (colon && !slash && colon[1] == '\0'))) {
 		if (count) *count = colon - path + 1;
-		return !!count;
+		return !!*count;
 	}
 #elif defined(SCHISM_WII) || defined(SCHISM_WIIU)
 	char *colon = strchr(path, ':'), *slash = strchr(path, '/');
 	if (colon + 1 == slash) {
 		if (count) *count = slash - path + 1;
-		return !!count;
+		return !!*count;
 	}
 #elif defined(SCHISM_MACOS)
 	/* From Apple's documentation:
