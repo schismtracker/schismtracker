@@ -40,14 +40,16 @@ static char* _current_selection = NULL;
 static char* _current_clipboard = NULL;
 static struct widget* _widget_owner[16] = {NULL};
 
-static void _free_current_selection(void) {
+static void _free_current_selection(void)
+{
 	if (_current_selection) {
 		free(_current_selection);
 		_current_selection = NULL;
 	}
 }
 
-static void _free_current_clipboard(void) {
+static void _free_current_clipboard(void)
+{
 	if (_current_clipboard) {
 		free(_current_clipboard);
 		_current_clipboard = NULL;
@@ -91,15 +93,15 @@ static void _clippy_copy_to_sys(int cb)
 	free(out);
 
 	switch (cb) {
-		case CLIPPY_SELECT:
-			if (backend)
-				backend->set_selection(out_utf8);
-			break;
-		default:
-		case CLIPPY_BUFFER:
-			if (backend)
-				backend->set_clipboard(out_utf8);
-			break;
+	case CLIPPY_SELECT:
+		if (backend)
+			backend->set_selection(out_utf8);
+		break;
+	default:
+	case CLIPPY_BUFFER:
+		if (backend)
+			backend->set_clipboard(out_utf8);
+		break;
 	}
 
 	free(out_utf8);
@@ -116,37 +118,37 @@ static void _string_paste(SCHISM_UNUSED int cb, const char *cbptr)
 static char *_internal_clippy_paste(int cb)
 {
 	switch (cb) {
-		case CLIPPY_SELECT:
-			if (backend && backend->have_selection()) {
-				_free_current_selection();
+	case CLIPPY_SELECT:
+		if (backend && backend->have_selection()) {
+			_free_current_selection();
 
-				char* sel = backend->get_selection();
+			char* sel = backend->get_selection();
 
-				if (charset_iconv(sel, &_current_selection, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
-					_current_selection = str_dup(sel);
+			if (charset_iconv(sel, &_current_selection, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
+				_current_selection = str_dup(sel);
 
-				free(sel);
-
-				return _current_selection;
-			}
+			free(sel);
 
 			return _current_selection;
-		case CLIPPY_BUFFER:
-			if (backend && backend->have_clipboard()) {
-				_free_current_clipboard();
+		}
 
-				char *c = backend->get_clipboard();
+		return _current_selection;
+	case CLIPPY_BUFFER:
+		if (backend && backend->have_clipboard()) {
+			_free_current_clipboard();
 
-				if (charset_iconv(c, &_current_clipboard, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
-					_current_clipboard = str_dup(c);
+			char *c = backend->get_clipboard();
 
-				free(c);
+			if (charset_iconv(c, &_current_clipboard, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
+				_current_clipboard = str_dup(c);
 
-				return _current_clipboard;
-			}
+			free(c);
 
 			return _current_clipboard;
-		default: break;
+		}
+
+		return _current_clipboard;
+	default: break;
 	}
 
 	return NULL;
