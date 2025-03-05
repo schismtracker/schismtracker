@@ -1241,7 +1241,7 @@ int dmoz_path_is_absolute(const char *path, int *count)
 #elif defined(SCHISM_WII) || defined(SCHISM_WIIU)
 	char *colon = strchr(path, ':'), *slash = strchr(path, '/');
 	if (colon + 1 == slash) {
-		int x = colon - path + 1;
+		int x = slash - path + 1;
 		if (count) *count = x;
 		return !!x;
 	}
