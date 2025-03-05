@@ -20,6 +20,14 @@ The location of this file is dependent on the OS:
   - `$HOME/.schism/` (legacy, not used on new installs)
 - **Wii**
   - Same directory as `boot.elf` (e.g. `sd:/apps/schismtracker`)
+- **Mac OS**
+  - `Macintosh HD:System Folder:Preferences` <!-- I think ??? -->
+- **OS/2**
+  - `%HOME%\Schism Tracker`
+  - `%ETC%\Schism Tracker`, if the `%HOME%` variable is not defined
+- **Haiku**
+  - `$HOME/config/settings/schism/`
+  - `$HOME/.schism/` (legacy, not used on new installs)
 
 Aside from `config`, you may also add a `fonts` subdirectory for custom font
 files. By default, `font.cfg` is automatically loaded on startup, and other
