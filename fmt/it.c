@@ -707,9 +707,9 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 #undef CONVERT
 	}
 
-//      if (ferror(fp)) {
-//              return LOAD_FILE_ERROR;
-//      }
+//	if (ferror(fp)) {
+//		return LOAD_FILE_ERROR;
+//	}
 
 	return LOAD_SUCCESS;
 }

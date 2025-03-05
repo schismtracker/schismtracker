@@ -117,8 +117,6 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 {
 	struct it_sample its;
 
-	uint32_t format;
-
 #define READ_VALUE(name) do { if (slurp_read(fp, &its.name, sizeof(its.name)) != sizeof(its.name)) { return 0; } } while (0)
 
 	READ_VALUE(id);
@@ -154,20 +152,6 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 		return 0;
 	}
 
-	// endianness (always little)
-	format = SF_LE;
-	// channels
-	format |= (its.flags & 4) ? SF_SS : SF_M;
-	if (its.flags & 8) {
-		// compression algorithm
-		format |= (its.cvt & 4) ? SF_IT215 : SF_IT214;
-	} else {
-		// signedness (or delta?)
-		format |= (its.cvt & 4) ? SF_PCMD : (its.cvt & 1) ? SF_PCMS : SF_PCMU;
-	}
-	// bit width
-	format |= (its.flags & 2) ? SF_16 : SF_8;
-
 	smp->global_volume = its.gvl;
 	if (its.flags & 16) {
 		smp->flags |= CHN_LOOP;
@@ -186,8 +170,12 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 	if (cwtv < 0x0214)
 		its.flags &= ~4;
 
+	strncpy(smp->name, (const char *)its.name, 25);
+	smp->name[25] = '\0';
+	strncpy(smp->filename, (const char *)its.filename, 12);
+	smp->filename[12] = '\0';
+
 	smp->volume = its.vol * 4;
-	strncpy(smp->name, (const char *) its.name, 25);
 	smp->panning = (its.dfp & 127) * 4;
 	if (its.dfp & 128)
 		smp->flags |= CHN_PANNING;
@@ -203,24 +191,7 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 	smp->vib_depth = its.vid;
 	smp->vib_speed = its.vis;
 
-	// sanity checks
-	// (I should probably have more of these in general)
-	if (smp->loop_start > smp->length) {
-		smp->loop_start = smp->length;
-		smp->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP);
-	}
-	if (smp->loop_end > smp->length) {
-		smp->loop_end = smp->length;
-		smp->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP);
-	}
-	if (smp->sustain_start > smp->length) {
-		smp->sustain_start = smp->length;
-		smp->flags &= ~(CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
-	}
-	if (smp->sustain_end > smp->length) {
-		smp->sustain_end = smp->length;
-		smp->flags &= ~(CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
-	}
+	// sanity checks purged, csf_adjust_sample_loop already does them  -paper
 
 	its.samplepointer = bswapLE32(its.samplepointer);
 
@@ -241,18 +212,25 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 	} else if (its.flags & 1) {
 		slurp_seek(fp, its.samplepointer, SEEK_SET);
 
+		// endianness (always zero)
 		uint32_t flags = SF_LE;
+		// channels
 		flags |= (its.flags & 4) ? SF_SS : SF_M;
 		if (its.flags & 8) {
+			// compression algorithm
 			flags |= (its.cvt & 4) ? SF_IT215 : SF_IT214;
 		} else {
+			// signedness (or delta?)
+
 			// XXX for some reason I had a note in pm/fmt/it.c saying that I had found some
 			// .it files with the signed flag set incorrectly and to assume unsigned when
 			// hdr.cwtv < 0x0202. Why, and for what files?
 			// Do any other players use the header for deciding sample data signedness?
 			flags |= (its.cvt & 4) ? SF_PCMD : (its.cvt & 1) ? SF_PCMS : SF_PCMU;
 		}
+		// bit width
 		flags |= (its.flags & 2) ? SF_16 : SF_8;
+
 		r = csf_read_sample(smp, flags, fp);
 	} else {
 		r = smp->length = 0;
@@ -265,7 +243,7 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 
 int fmt_its_load_sample(slurp_t *fp, song_sample_t *smp)
 {
-	return load_its_sample(fp, smp, 0x214);
+	return load_its_sample(fp, smp, 0x0214);
 }
 
 void save_its_header(disko_t *fp, song_sample_t *smp)
