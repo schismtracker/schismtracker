@@ -449,9 +449,9 @@ static int close_and_bind(song_t *dwsong, disko_t *ds, song_sample_t *sample, in
 
 	sample->length = dsshadow.length / bps;
 	sample->c5speed = dwsong->mix_frequency;
-	sample->volume = 64 * 4;
-	sample->global_volume = 64;
-	sample->panning = 32 * 4;
+	//sample->volume = 64 * 4;
+	//sample->global_volume = 64;
+	//sample->panning = 32 * 4;
 
 	{
 		slurp_t slurp;
