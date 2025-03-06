@@ -292,16 +292,6 @@ static void _jack_disconnect(void)
 		JACK_jack_client_close(client);
 		client = NULL;
 	}
-
-	if (ringbuffer_in) {
-		JACK_jack_ringbuffer_free(ringbuffer_in);
-		ringbuffer_in = NULL;
-	}
-
-	if (ringbuffer_out) {
-		JACK_jack_ringbuffer_free(ringbuffer_out);
-		ringbuffer_out = NULL;
-	}
 }
 
 static int _jack_thread(struct midi_provider *p)
