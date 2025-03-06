@@ -166,6 +166,11 @@
 |   Ctrl-V           Toggle default volume display
 |
 |   Ctrl-F2          Set pattern length
+:
+:   Ctrl-O           Export current pattern to selected sample
+:   Ctrl-Shift-O     Export current pattern to unused samples by channel
+:   Ctrl-B           Bind current pattern to selected sample
+:   Ctrl-Shift-B     Bind current pattern to unused samples by channel
 |
 |  Track View Functions.
 |   Alt-T            Cycle current track's view
