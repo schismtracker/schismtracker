@@ -418,31 +418,48 @@ static int close_and_bind(song_t *dwsong, disko_t *ds, song_sample_t *sample, in
 {
 	disko_t dsshadow = *ds;
 	int8_t *newdata;
+	uint32_t flags;
 
 	if (disko_memclose(ds, 1) == DW_ERROR)
 		return DW_ERROR;
 
-	free(ds);
+	// kill the sample
+	csf_destroy_sample(current_song, sample - current_song->samples);
 
-	newdata = csf_allocate_sample(dsshadow.length);
-	if (!newdata)
-		return DW_ERROR;
-	csf_stop_sample(current_song, sample);
-	if (sample->data)
-		csf_free_sample(sample->data);
-	sample->data = newdata;
+	// and now, read in the data
+#ifdef WORDS_BIGENDIAN
+	flags = SF_BE;
+#else
+	flags = SF_LE;
+#endif
+	switch (dwsong->mix_channels) {
+	case 1: flags |= SF_M;  break;
+	case 2: flags |= SF_SI; break;
+	default: free(dsshadow.data); return DW_ERROR;
+	}
 
-	// FIXME: This should be calling csf_read_sample with a
-	// memory stream.
-	memcpy(newdata, dsshadow.data, dsshadow.length);
+	// I think this is right? IDFK
+	switch (dwsong->mix_bits_per_sample) {
+	case 8:  flags |= SF_PCMU | SF_8;  break;
+	case 16: flags |= SF_PCMS | SF_16; break;
+	case 24: flags |= SF_PCMS | SF_24; break;
+	case 32: flags |= SF_PCMS | SF_32; break;
+	default: free(dsshadow.data); return DW_ERROR;
+	}
+
 	sample->length = dsshadow.length / bps;
-	sample->flags &= ~(CHN_16BIT | CHN_STEREO | CHN_ADLIB);
-	if (dwsong->mix_channels > 1)
-		sample->flags |= CHN_STEREO;
-	if (dwsong->mix_bits_per_sample > 8)
-		sample->flags |= CHN_16BIT;
 	sample->c5speed = dwsong->mix_frequency;
-	sample->name[0] = '\0';
+	sample->volume = 64 * 4;
+	sample->global_volume = 64;
+	sample->panning = 32 * 4;
+
+	{
+		slurp_t slurp;
+
+		slurp_memstream_free(&slurp, dsshadow.data, dsshadow.length);
+		csf_read_sample(sample, flags, &slurp);
+		unslurp(&slurp);
+	}
 
 	return DW_OK;
 }
@@ -499,7 +516,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 	song_t dwsong;
 	song_sample_t *sample;
 	uint8_t buf[DW_BUFFER_SIZE];
-	disko_t *ds[MAX_CHANNELS] = {NULL};
+	disko_t ds[MAX_CHANNELS] = {0};
 	int bps;
 	size_t smpsize = 0;
 	int smpnum = CLAMP(firstsmp, 1, MAX_SAMPLES);
@@ -514,7 +531,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 
 	if (!err) {
 		for (n = 0; n < MAX_CHANNELS; n++) {
-			if (disko_memopen(ds[n]) < 0) {
+			if (disko_memopen(&ds[n]) < 0) {
 				err = errno ? errno : EINVAL;
 				break;
 			}
@@ -527,16 +544,14 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 		_export_teardown();
 		err = err ? err : errno;
 		free(dwsong.multi_write);
-		for (n = 0; n < MAX_CHANNELS; n++) {
-			disko_memclose(ds[n], 0);
-			free(ds[n]);
-		}
+		for (n = 0; n < MAX_CHANNELS; n++)
+			disko_memclose(&ds[n], 0);
 		errno = err;
 		return DW_ERROR;
 	}
 
 	for (n = 0; n < MAX_CHANNELS; n++) {
-		dwsong.multi_write[n].data = ds[n];
+		dwsong.multi_write[n].data = &ds[n];
 		/* Dumb casts. (written this way to make the definition of song_t independent of disko) */
 		dwsong.multi_write[n].write = (void(*)(void*, const uint8_t*, size_t))disko_write;
 		dwsong.multi_write[n].silence = (void(*)(void*, long))disko_seekcur;
@@ -556,7 +571,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 		}
 
 		for (n = 0; n < MAX_CHANNELS; n++) {
-			if (ds[n]->error) {
+			if (ds[n].error) {
 				// Kill the write, but leave the other files alone
 				dwsong.flags |= SONG_ENDREACHED;
 				break;
@@ -567,17 +582,16 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 	for (n = 0; n < MAX_CHANNELS; n++) {
 		if (!dwsong.multi_write[n].used) {
 			/* this channel was completely empty - don't bother with it */
-			disko_memclose(ds[n], 0);
-			free(ds[n]);
+			disko_memclose(&ds[n], 0);
 			continue;
 		}
 
-		ds[n]->length = MIN(ds[n]->length, smpsize * bps);
+		ds[n].length = MIN(ds[n].length, smpsize * bps);
 		smpnum = csf_first_blank_sample(current_song, smpnum);
 		if (smpnum < 0)
 			break;
 		sample = current_song->samples + smpnum;
-		if (close_and_bind(&dwsong, ds[n], sample, bps) == DW_OK) {
+		if (close_and_bind(&dwsong, &ds[n], sample, bps) == DW_OK) {
 			sprintf(sample->name, "Pattern %03d, channel %02d", pattern, n + 1);
 		} else {
 			/* Balls. Something died. */
@@ -586,10 +600,8 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 	}
 
 	for (; n < MAX_CHANNELS; n++) {
-		if (disko_memclose(ds[n], 0) != DW_OK)
+		if (disko_memclose(&ds[n], 0) != DW_OK)
 			err = errno;
-
-		free(ds[n]);
 	}
 
 	_export_teardown();
