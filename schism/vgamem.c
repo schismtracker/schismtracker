@@ -746,52 +746,67 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 
 /* --------------------------------------------------------------------- */
 /* sample drawing
-there are only two changes between 8- and 16-bit samples:
-- the type of 'data'
-- the amount to divide (note though, this number is used twice!)
-
-output channels = number of oscis
-input channels = number of channels in data
+ * 
+ * output channels = number of oscis
+ * input channels = number of channels in data
 */
 
-/* C++ nerds and their templates... */
-#define DRAW_SAMPLE_DATA_VARIANT(bits) \
+/* somewhat heavily based on CViewSample::DrawSampleData2 in modplug */
+#define DRAW_SAMPLE_DATA_VARIANT(bits, doublebits) \
 	static void _draw_sample_data_##bits(struct vgamem_overlay *r, \
-		int##bits##_t *data, unsigned long length, unsigned int inputchans, unsigned int outputchans) \
+		int##bits##_t *data, uint32_t length, unsigned int inputchans, unsigned int outputchans) \
 	{ \
-		length /= inputchans; \
-		const int nh = r->height / outputchans; \
-		const int step = MAX(1, (length / r->width) >> 8); \
+		const int32_t nh = r->height / outputchans; \
+		int32_t np = r->height - nh / 2; \
+		uint32_t step, cc; \
 	\
-		unsigned long pos; \
-		unsigned int cc, co; \
-		int level, xs, ys, xe, ye; \
-		int np = r->height - nh / 2; \
+		length /= inputchans; \
+		step = (length << 16) / r->width; \
 	\
 		for (cc = 0; cc < outputchans; cc++) { \
-			pos = 0; \
-			xs = 0; \
-			ys = 0; \
-			do { \
-				co = 0; \
-				level = 0; \
-				do { \
-					level += ceil((double)data[(pos * inputchans) + cc+co] * nh / UINT##bits##_MAX); \
-				} while (co++ < inputchans-outputchans); \
-				xe = length <= 1 ? r->width - 1 : CLAMP(pos * r->width / length, 0, r->width - 1); \
-				ye = CLAMP((np - 1) - level, 0, r->height - 1); \
-				vgamem_ovl_drawline(r, xs, !pos ? ye : ys, xe, ye, SAMPLE_DATA_COLOR); \
-				xs = xe; \
-				ys = ye; \
-				pos += step; \
-			} while (pos < length); \
+			uint32_t x, poshi = 0, poslo = 0; \
+			int##bits##_t oldmin = *data, oldmax = *data; \
+	\
+			for (x = 0; x < r->width; x++) { \
+				uint32_t scanlength, i; \
+				int##bits##_t min = INT##bits##_MAX, max = INT##bits##_MIN; \
+	\
+				poslo += step; \
+				scanlength = ((poslo + 0xFFFF) >> 16); \
+				if (poshi >= length) poshi = length - 1; \
+				if (poshi + scanlength > length) scanlength = length - poshi; \
+				scanlength = MAX(scanlength, 1); \
+	\
+				for (i = 0; i < scanlength; i++) { \
+					uint32_t co = 0; \
+	\
+					do { \
+						int##bits##_t s = data[((poshi + i) * inputchans) + cc + co]; \
+						if (s < min) min = s; \
+						if (s > max) max = s; \
+					} while (co++ < inputchans - outputchans); \
+				} \
+	\
+				/* XXX is doing this with integers faster than say, floating point?
+				 * I mean, it sure is a bit more ~accurate~ at least, and it'll work the same everywhere. */ \
+				min = rshift_signed((int##doublebits##_t)min * nh, bits); \
+				max = rshift_signed((int##doublebits##_t)max * nh, bits); \
+	\
+				vgamem_ovl_drawline(r, x, np - 1 - max, x, np - 1 - min, SAMPLE_DATA_COLOR); \
+	\
+				oldmin = min; \
+				oldmax = max; \
+				poshi += (poslo >> 16); \
+				poslo &= 0xFFFF; \
+			} \
+	\
 			np -= nh; \
 		} \
 	}
 
-DRAW_SAMPLE_DATA_VARIANT(8)
-DRAW_SAMPLE_DATA_VARIANT(16)
-DRAW_SAMPLE_DATA_VARIANT(32)
+DRAW_SAMPLE_DATA_VARIANT(8, 16)
+DRAW_SAMPLE_DATA_VARIANT(16, 32)
+DRAW_SAMPLE_DATA_VARIANT(32, 64)
 
 #undef DRAW_SAMPLE_DATA_VARIANT
 
