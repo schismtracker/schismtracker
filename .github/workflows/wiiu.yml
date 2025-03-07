@@ -96,15 +96,17 @@ jobs:
           make schismtracker.wuhb
           cd ../..
           wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
-          cp schismtracker/docs/configuration.md schismtracker/README.md schismtracker/COPYING .
+          cp schismtracker/docs/configuration.md schismtracker/README.md schismtracker/COPYING schismtracker/build/schismtracker.elf schismtracker/build/schismtracker.wuhb .
 
+        # XXX I'm pretty sure including the elf file is completely useless
+        # since it doesn't seem to work anyway
       - name: 'Upload binaries'
         uses: actions/upload-artifact@v4
         with:
           name: schismtracker-${{ steps.date.outputs.date }}-wiiu
           path: |
-            schismtracker/build/schismtracker.elf
-            schismtracker/build/schismtracker.wuhb
+            schismtracker.elf
+            schismtracker.wuhb
             COPYING.Xiph
             COPYING
             configuration.md
