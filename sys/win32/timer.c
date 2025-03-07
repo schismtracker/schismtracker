@@ -104,10 +104,6 @@ static timer_ticks_t win32_timer_ticks_us(void)
 }
 
 // based off old code from midi-core.c but less obfuscated
-static void *kernel32 = NULL;
-
-// Added in Windows Vista; the flags we use were added in Windows 10 version 1803.
-static HANDLE (WINAPI *WIN32_CreateWaitableTimerExW)(LPSECURITY_ATTRIBUTES, LPCWSTR, DWORD, DWORD) = NULL;
 
 // These are in much, much older versions of Windows.
 // Really, Windows 95 is the only version that doesn't have these symbols.
@@ -115,46 +111,60 @@ static HANDLE (WINAPI *WIN32_CreateWaitableTimerExW)(LPSECURITY_ATTRIBUTES, LPCW
 static HANDLE (WINAPI *WIN32_CreateWaitableTimer)(LPSECURITY_ATTRIBUTES, BOOL, LPCSTR) = NULL;
 static BOOL (WINAPI *WIN32_SetWaitableTimer)(HANDLE, const LARGE_INTEGER *, LONG, PTIMERAPCROUTINE, LPVOID, BOOL) = NULL;
 
-static void win32_timer_usleep(uint64_t usec)
+// internal NTDLL functions; this is what SleepEx actually calls under the hood
+// on NT 4 and newer.
+static LONG /*NTSTATUS*/ (__stdcall /*NTAPI*/ *NTDLL_NtDelayExecution)(BOOLEAN Alertable, PLARGE_INTEGER Interval) = NULL;
+
+// FIXME: we're leaking timers here on thread exit
+static DWORD dw_timer_tls_index = TLS_OUT_OF_INDEXES;
+
+static inline SCHISM_ALWAYS_INLINE int win32_timer_usleep_timer_impl(uint64_t usec)
 {
 	LARGE_INTEGER due;
-	HANDLE timer = NULL;
+	HANDLE timer;
 
-	// If we don't even have this then we're screwed.
-	if (!WIN32_SetWaitableTimer)
-		goto timer_failed;
+	if (!WIN32_SetWaitableTimer || !WIN32_CreateWaitableTimer || dw_timer_tls_index == TLS_OUT_OF_INDEXES)
+		return 0; // NOPE
 
-	// Create a high-resolution timer if we can.
-	if (WIN32_CreateWaitableTimerExW) {
-		timer = WIN32_CreateWaitableTimerExW(NULL, NULL, CREATE_WAITABLE_TIMER_MANUAL_RESET | CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_MODIFY_STATE);
-		if (timer)
-			goto have_timer;
-	}
-
-	// Ok, the high-resolution timer isn't available, fallback:
-	if (WIN32_CreateWaitableTimer) {
+	timer = TlsGetValue(dw_timer_tls_index);
+	if (!timer) {
 		timer = WIN32_CreateWaitableTimer(NULL, TRUE, NULL);
-		if (timer)
-			goto have_timer;
+		if (!timer)
+			return 0;
+		TlsSetValue(dw_timer_tls_index, timer);
 	}
 
-	goto timer_failed;
-
-have_timer:
 	due.QuadPart = -(10 * (int64_t)usec);
 	if (!WIN32_SetWaitableTimer(timer, &due, 0, NULL, NULL, 0))
-		goto timer_failed;
+		return 0;
 
 	if (WaitForSingleObject(timer, INFINITE) == WAIT_FAILED)
-		goto timer_failed;
+		return 0;
 
-	return;
+	return 1;
+}
 
-timer_failed:
-	if (timer)
-		CloseHandle(timer);
+static void win32_timer_usleep(uint64_t usec)
+{
+	// Prioritize NtDelayExecution, it's what SleepEx actually uses
+	// under the hood and removes the overhead of alerting.
+	if (NTDLL_NtDelayExecution) {
+		LARGE_INTEGER due;
+		due.QuadPart = -(10 * (int64_t)usec);
+		if (!NTDLL_NtDelayExecution(FALSE, &due))
+			return;
+	}
 
-	SleepEx(usec / 1000, FALSE);
+	// Do we even *need* the timer implementation?
+	if (usec % 1000) {
+		if (win32_timer_usleep_timer_impl(usec))
+			return;
+
+		// divide, rounding up
+		SleepEx((usec + 999) / 1000, FALSE);
+	} else {
+		SleepEx(usec / 1000, FALSE);
+	}
 }
 
 static void win32_timer_msleep(uint32_t msec)
@@ -164,11 +174,17 @@ static void win32_timer_msleep(uint32_t msec)
 
 //////////////////////////////////////////////////////////////////////////////
 
+static void *kernel32 = NULL;
+static void *ntdll = NULL;
+
 static int win32_timer_must_end_period = 0;
 
 static int win32_timer_init(void)
 {
 	TIMECAPS caps;
+
+	// we check if this is valid in the timer impl
+	dw_timer_tls_index = TlsAlloc();
 
 	if (!timeGetDevCaps(&caps, sizeof(caps))) {
 		win32_mm_period = caps.wPeriodMin;
@@ -194,8 +210,12 @@ static int win32_timer_init(void)
 		WIN32_CreateWaitableTimer = loadso_function_load(kernel32, "CreateWaitableTimerA");
 		if (!WIN32_CreateWaitableTimer)
 			WIN32_CreateWaitableTimer = loadso_function_load(kernel32, "CreateWaitableTimer");
-		WIN32_CreateWaitableTimerExW = loadso_function_load(kernel32, "CreateWaitableTimerExW");
 		WIN32_SetWaitableTimer = loadso_function_load(kernel32, "SetWaitableTimer");
+	}
+
+	ntdll = loadso_object_load("NTDLL.DLL");
+	if (ntdll) {
+		NTDLL_NtDelayExecution = loadso_function_load(ntdll, "NtDelayExecution");
 	}
 
 	// ok
@@ -209,6 +229,12 @@ static void win32_timer_quit(void)
 
 	if (kernel32)
 		loadso_object_unload(kernel32);
+
+	if (ntdll)
+		loadso_object_unload(ntdll);
+
+	if (dw_timer_tls_index == TLS_OUT_OF_INDEXES)
+		TlsFree(dw_timer_tls_index);
 }
 
 //////////////////////////////////////////////////////////////////////////////

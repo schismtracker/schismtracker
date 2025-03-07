@@ -42,8 +42,7 @@ timer_ticks_t timer_ticks_us(void)
 
 void timer_usleep(uint64_t usec)
 {
-	// FIXME move this into a sys/posix/timer.c
-#if defined(HAVE_NANOSLEEP)
+#if defined(HAVE_NANOSLEEP) && !defined(SCHISM_WIN32)
 	// nanosleep is newer and preferred to usleep
 	struct timespec s = {
 		.tv_sec = usec / 1000000,
@@ -51,7 +50,7 @@ void timer_usleep(uint64_t usec)
 	};
 
 	while (nanosleep(&s, &s) == -1);
-#elif defined(HAVE_USLEEP)
+#elif defined(HAVE_USLEEP) && !defined(SCHISM_WIN32)
 	while (usec) {
 		// useconds_t is only guaranteed to contain 0-1000000
 		useconds_t t = MIN(usec, 1000000);
