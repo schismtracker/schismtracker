@@ -66,9 +66,6 @@ Information at our disposal:
  * I've tested these functions on many different dates and they
  * work fine from what I can tell. */
 
-/* days since schism version epoch (31 Oct 2009) */
-typedef uint32_t version_time_t;
-
 /* macros ! */
 #define LEAP_YEAR(y) ((year) % 4 == 0 && (year) % 100 != 0)
 #define LEAP_YEARS_BEFORE(y) ((((y) - 1) / 4) - (((y) - 1) / 100) + (((y) - 1) / 400))
@@ -77,31 +74,6 @@ typedef uint32_t version_time_t;
 #define EPOCH_YEAR 2009
 #define EPOCH_MONTH 9
 #define EPOCH_DAY 31
-
-SCHISM_CONST static inline version_time_t get_days_for_month(uint32_t month, uint32_t year)
-{
-	static const version_time_t days_for_month[12] = {
-		31, /* January */
-		28, /* February */
-		31, /* March */
-		30, /* April */
-		31, /* May */
-		30, /* June */
-		31, /* July */
-		31, /* August */
-		30, /* September */
-		31, /* October */
-		30, /* November */
-		31, /* December */
-	};
-
-	version_time_t month_days = days_for_month[month];
-
-	if ((month == 1) && LEAP_YEAR(year))
-		month_days++;
-
-	return month_days;
-}
 
 /* -------------------------------------------------------------- */
 
@@ -123,7 +95,7 @@ uint32_t ver_mktime(uint32_t y, uint32_t m, uint32_t d)
 	int64_t date, res;
 
 	date = ver_date_encode(y, m, d);
-	res = date - ver_date_encode(2009, 10, 31);
+	res = date - ver_date_encode(EPOCH_YEAR, EPOCH_MONTH, EPOCH_DAY);
 
 	return (uint32_t)CLAMP(res, 0U, UINT32_MAX);
 }
@@ -132,7 +104,7 @@ static inline SCHISM_ALWAYS_INLINE void ver_date_decode(uint32_t ver, uint32_t *
 {
 	int64_t date, y, ddd, mi, mm, dd;
 
-	date = (int64_t)ver + ver_date_encode(2009, 10, 31);
+	date = (int64_t)ver + ver_date_encode(EPOCH_YEAR, EPOCH_MONTH, EPOCH_DAY);
 	y = ((date * 10000LL) + 14780LL) / 3652425LL;
 	ddd = date - ((365LL * y) + (y / 4LL) - (y / 100LL) + (y / 400LL));
 	if (ddd < 0) {
@@ -290,7 +262,7 @@ static inline int get_version_date(int *pyear, int *pmonth, int *pday)
 void ver_init(void)
 {
 	int year, month, day;
-	version_time_t version_sec;
+	uint32_t version_sec;
 
 	if (get_version_date(&year, &month, &day)) {
 		version_sec = ver_mktime(year, month, day);
