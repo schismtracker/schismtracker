@@ -384,6 +384,7 @@ static void sdl3_video_startup(void)
 	vgamem_flip();
 
 	sdl3_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
+	sdl3_SetHint("SDL_WINDOWS_DPI_AWARENESS", "unaware");
 
 	video.width = cfg_video_width;
 	video.height = cfg_video_height;
@@ -699,30 +700,32 @@ static void sdl3_video_mousecursor_changed(void)
 
 static int sdl3_video_get_wm_data(video_wm_data_t *wm_data)
 {
-	SDL_PropertiesID wprops = sdl3_GetWindowProperties(video.window);
+	SDL_PropertiesID wprops;
+
+	if (!wm_data)
+		return 0;
+
+	wprops = sdl3_GetWindowProperties(video.window);
 	if (!wprops)
 		return 0;
 
-#ifdef SCHISM_WIN32
-	wm_data->subsystem = VIDEO_WM_DATA_SUBSYSTEM_WINDOWS;
-	wm_data->data.windows.hwnd = sdl3_GetPointerProperty(wprops, SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
-	if (!wm_data->data.windows.hwnd)
-		return 0;
-#else
-	if (!strcmp(sdl3_GetCurrentVideoDriver(), "x11")) {
+	if (!strcmp(sdl3_GetCurrentVideoDriver(), "windows")) {
+		wm_data->subsystem = VIDEO_WM_DATA_SUBSYSTEM_WINDOWS;
+		wm_data->data.windows.hwnd = sdl3_GetPointerProperty(wprops, SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+
+		return !!wm_data->data.windows.hwnd;
+	} else if (!strcmp(sdl3_GetCurrentVideoDriver(), "x11")) {
 		wm_data->subsystem = VIDEO_WM_DATA_SUBSYSTEM_X11;
 		wm_data->data.x11.display = sdl3_GetPointerProperty(wprops, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
 		wm_data->data.x11.window = sdl3_GetNumberProperty(wprops, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0);
 		wm_data->data.x11.lock_func = NULL;
 		wm_data->data.x11.unlock_func = NULL;
-		if (!wm_data->data.x11.display || !wm_data->data.x11.window)
-			return 0;
-	} else {
-		// maybe the real WM data was the friends we made along the way
-	}
-#endif
 
-	return 1;
+		return (wm_data->data.x11.display && wm_data->data.x11.window);
+	}
+
+	// maybe the real WM data was the friends we made along the way
+	return 0;
 }
 
 static void sdl3_video_show_cursor(int enabled)

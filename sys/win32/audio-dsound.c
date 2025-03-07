@@ -22,19 +22,6 @@
  */
  
 // Win32 directsound backend
-// TODO: We ought to be able to detect changes in the default device and
-// reopen it if necessary.
-// This should be viable via GetDeviceID() in dsound.dll which lets us
-// check the GUID of the current default device.
-
-// TODO: We should also detect whether a device opened is just emulating
-// waveout, and use the APIs directly if so. It looks like this can be
-// accomplished via DSPROPERTY_DIRECTSOUNDDEVICE_WAVEDEVICEMAPPING_DATA
-// and IKsPropertySet, which involves dynamic loading (we are already
-// doing that anyway)
-// Additionally, we should also use that API to retrieve full device names
-// when using waveout, since the method we are currently using doesn't
-// seem to work all too well.
 
 #define COBJMACROS
 
