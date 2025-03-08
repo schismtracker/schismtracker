@@ -256,29 +256,28 @@ static void _vis_process(void)
 	static const int k = NATIVE_SCREEN_WIDTH / 2;
 	int i;
 	unsigned char outfft[NATIVE_SCREEN_WIDTH];
+	unsigned char *q;
 
-	/* move up by one pixel */
-	memmove(ovl.q, ovl.q+NATIVE_SCREEN_WIDTH,
-			(NATIVE_SCREEN_WIDTH*
-				((NATIVE_SCREEN_HEIGHT-1)-SCOPE_ROWS)));
-	unsigned char *q = ovl.q + (NATIVE_SCREEN_WIDTH*
-			((NATIVE_SCREEN_HEIGHT-1)-SCOPE_ROWS));
-
+	/* move up previous line by one pixel */
+	memmove(ovl.q, ovl.q + NATIVE_SCREEN_WIDTH, (NATIVE_SCREEN_WIDTH * ((NATIVE_SCREEN_HEIGHT - 1) - SCOPE_ROWS)));
+	q = ovl.q + (NATIVE_SCREEN_WIDTH * ((NATIVE_SCREEN_HEIGHT - 1) - SCOPE_ROWS));
 
 	if (mono) {
 		fft_get_columns(NATIVE_SCREEN_WIDTH, outfft, 0);
 		_dobits(q, outfft, NATIVE_SCREEN_WIDTH, 1);
 	} else {
-		fft_get_columns(k, outfft, 1);
-		_dobits(q+k, outfft, k, -1);
-		fft_get_columns(k, outfft+k, 2);
-		_dobits(q+k, outfft+k, k, 1);
+		fft_get_columns(k, outfft,     1);
+		fft_get_columns(k, outfft + k, 2);
+
+		_dobits(q + k - 1, outfft,     k, -1);
+		_dobits(q + k,     outfft + k, k, 1);
 	}
 
 	/* draw the scope at the bottom */
-	q = ovl.q + (NATIVE_SCREEN_WIDTH*(NATIVE_SCREEN_HEIGHT-SCOPE_ROWS));
-	i = SCOPE_ROWS*NATIVE_SCREEN_WIDTH;
-	memset(q,0,i);
+	q = ovl.q + (NATIVE_SCREEN_WIDTH * (NATIVE_SCREEN_HEIGHT - SCOPE_ROWS));
+	i = SCOPE_ROWS * NATIVE_SCREEN_WIDTH;
+	memset(q, 0, i);
+
 	if (mono) {
 		for (i = 0; i < NATIVE_SCREEN_WIDTH; i++) _drawslice(i, outfft[i], 5);
 	} else {
