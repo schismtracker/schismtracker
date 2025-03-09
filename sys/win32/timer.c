@@ -40,16 +40,20 @@
 # define CREATE_WAITABLE_TIMER_HIGH_RESOLUTION 0x00000002
 #endif
 
-// FIXME:
 // QueryPerformanceCounter always succeeds on XP and up,
 // which means compiling the winmm version as a fallback
 // is redundant for amd64 and arm architectures, since
 // those versions never existed before XP.
+#if defined(__386__) || defined(__i386) || defined(__i386__) || defined(i386) || defined(_M_IX86)
+# define WIN32_TIMER_COMPILE_WINMM 1
+#endif
 
+#ifdef WIN32_TIMER_COMPILE_WINMM
 static enum {
 	WIN32_TIMER_IMPL_QPC,
 	WIN32_TIMER_IMPL_WINMM,
 } win32_timer_impl = WIN32_TIMER_IMPL_WINMM;
+#endif
 
 // The counter value when we init
 static LARGE_INTEGER win32_timer_start = {0};
@@ -63,9 +67,12 @@ static inline SCHISM_ALWAYS_INLINE LARGE_INTEGER _win32_timer_ticks_impl(void)
 {
 	LARGE_INTEGER ticks;
 
+#ifdef WIN32_TIMER_COMPILE_WINMM
 	switch (win32_timer_impl) {
 	case WIN32_TIMER_IMPL_QPC:
+#endif
 		QueryPerformanceCounter(&ticks);
+#ifdef WIN32_TIMER_COMPILE_WINMM
 		break;
 	case WIN32_TIMER_IMPL_WINMM:
 	default:
@@ -77,6 +84,7 @@ static inline SCHISM_ALWAYS_INLINE LARGE_INTEGER _win32_timer_ticks_impl(void)
 		ticks.HighPart = 0;
 		break;
 	}
+#endif
 
 	return ticks;
 }
@@ -113,6 +121,10 @@ static BOOL (WINAPI *WIN32_SetWaitableTimer)(HANDLE, const LARGE_INTEGER *, LONG
 
 // internal NTDLL functions; this is what SleepEx actually calls under the hood
 // on NT 4 and newer.
+//
+// XXX For architectures that never had 9x (namely, amd64, arm, arm64, ppc, alpha)
+// should we only compile NtDelayExecution and simply not bother with the timer
+// crap?
 static LONG /*NTSTATUS*/ (__stdcall /*NTAPI*/ *NTDLL_NtDelayExecution)(BOOLEAN Alertable, PLARGE_INTEGER Interval) = NULL;
 
 // FIXME: we're leaking timers here on thread exit
@@ -192,6 +204,7 @@ static int win32_timer_init(void)
 			win32_timer_must_end_period = 1;
 	}
 
+#ifdef WIN32_TIMER_COMPILE_WINMM
 	if (win32_ntver_atleast(5, 1, 0) // This is buggy and broken on Win2k
 		&& QueryPerformanceFrequency(&win32_timer_resolution)
 		&& win32_timer_resolution.QuadPart
@@ -204,6 +217,10 @@ static int win32_timer_init(void)
 
 		win32_timer_impl = WIN32_TIMER_IMPL_WINMM;
 	}
+#else
+	QueryPerformanceFrequency(&win32_timer_resolution);
+	QueryPerformanceCounter(&win32_timer_start);
+#endif
 
 	kernel32 = loadso_object_load("KERNEL32.DLL");
 	if (kernel32) {
