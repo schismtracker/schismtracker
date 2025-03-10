@@ -21,11 +21,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "init.h"
+
 #include "headers.h"
 #include "mem.h"
 #include "backend/audio.h"
-
-#include "init.h"
 
 struct schism_audio_device {
 	SDL_AudioDeviceID id;

@@ -24,8 +24,9 @@
 #ifndef SCHISM_SYS_SDL2_INIT_H_
 #define SCHISM_SYS_SDL2_INIT_H_
 
-#include "headers.h"
-
+// We have to include this **before** headers.h because
+// otherwise tgmath.h doesn't work quite right combined
+// with intrin.h under Win32. What the hell.
 #ifdef SCHISM_OS2
 // Work around weird compiler bug?
 # undef __386__
@@ -33,6 +34,8 @@
 # define __386__
 #endif
 #include <SDL.h>
+
+#include "headers.h"
 
 int sdl2_init(void);
 void sdl2_quit(void);

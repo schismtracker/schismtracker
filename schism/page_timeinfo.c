@@ -33,9 +33,6 @@
 #include "mem.h"
 #include "str.h"
 
-#include <stdarg.h>
-#include <errno.h>
-
 /* --------------------------------------------------------------------- */
 
 static struct widget widgets_timeinfo[1];

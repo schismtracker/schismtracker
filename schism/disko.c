@@ -41,12 +41,6 @@
 #include "player/snd_gm.h"
 #include "player/snd_fm.h"
 
-#include <sys/stat.h>
-
-#include <stdio.h>
-#include <fcntl.h>
-#include <errno.h>
-
 #define DW_BUFFER_SIZE 65536
 
 static void _disko_midi_out_raw(SCHISM_UNUSED song_t *csf, SCHISM_UNUSED const unsigned char *data, SCHISM_UNUSED uint32_t len, SCHISM_UNUSED uint32_t delay);
@@ -449,9 +443,9 @@ static int close_and_bind(song_t *dwsong, disko_t *ds, song_sample_t *sample, in
 
 	sample->length = dsshadow.length / bps;
 	sample->c5speed = dwsong->mix_frequency;
-	//sample->volume = 64 * 4;
-	//sample->global_volume = 64;
-	//sample->panning = 32 * 4;
+	sample->volume = 64 * 4;
+	sample->global_volume = 64;
+	sample->panning = 32 * 4;
 
 	{
 		slurp_t slurp;

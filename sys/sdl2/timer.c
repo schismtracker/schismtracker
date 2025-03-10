@@ -21,12 +21,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "init.h"
+
 #include "headers.h"
 #include "mt.h"
 #include "mem.h"
 #include "backend/timer.h"
-
-#include "init.h"
 
 static int (SDLCALL *sdl2_InitSubSystem)(Uint32 flags) = NULL;
 static void (SDLCALL *sdl2_QuitSubSystem)(Uint32 flags) = NULL;

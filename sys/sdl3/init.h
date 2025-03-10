@@ -24,9 +24,9 @@
 #ifndef SCHISM_SYS_SDL3_INIT_H_
 #define SCHISM_SYS_SDL3_INIT_H_
 
-#include "headers.h"
-
 #include <SDL3/SDL.h>
+
+#include "headers.h"
 
 int sdl3_init(void);
 void sdl3_quit(void);

@@ -21,11 +21,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "init.h"
+
 #include "headers.h" /* always include this one first, kthx */
 #include "backend/clippy.h"
 #include "mem.h"
-
-#include "init.h"
 
 static int enable_primary_selection = 0;
 

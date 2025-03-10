@@ -23,11 +23,6 @@
 
 #include "headers.h"
 
-#include <math.h>
-#include <stdint.h>
-#include <assert.h>
-#include <time.h>
-
 #include "bswap.h"
 #include "bshift.h"
 #include "player/sndfile.h"

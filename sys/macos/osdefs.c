@@ -30,8 +30,6 @@
 #include "page.h"
 #include "widget.h"
 #include "dmoz.h"
-#include "errno.h"
-#include "dmoz.h"
 #include "charset.h"
 #include "str.h"
 

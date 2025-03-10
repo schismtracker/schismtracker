@@ -42,9 +42,6 @@
 #include "str.h"
 #include "config.h"
 
-#include <assert.h>
-#include <math.h>
-
 /* --------------------------------------------------------------------- */
 /* globals */
 

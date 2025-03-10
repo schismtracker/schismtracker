@@ -55,16 +55,9 @@ differences between OPL2 and OPL3 shown in datasheets:
 
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
+#include "headers.h"
 
 #include "player/fmopl.h"
-
-#ifndef M_PI
-# define M_PI 3.14159265358979323846
-#endif
 
 /* output final shift */
 #define FINAL_SH    (0)

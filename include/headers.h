@@ -21,12 +21,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/* this file includes general C language headers that are useful everywhere,
+ * along with some stupid stuff for broken toolchains that don't fully comply
+ * to C99, like VLA support, va_copy stuff, etc
+ *
+ * In other projects this header is usually called "stdinc.h" ;) */
+
 #ifndef SCHISM_HEADERS_H_
 #define SCHISM_HEADERS_H_
 /* This is probably overkill, but it's consistent this way. */
 
 #ifndef _GNU_SOURCE
-#define _GNU_SOURCE // not necessarily true but whatever
+#define _GNU_SOURCE /* need this for some stupid gnu crap */
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -36,6 +42,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
+
+#include <errno.h>
+
+/* TODO we should handle this stuff ourselves, rather than giving it off
+ * to autoconf, since we use the PRIx* and INT*_C macros. but that's for
+ * another day. */
 #ifdef HAVE_STDINT_H
 # include <stdint.h>
 #endif
@@ -43,9 +55,31 @@
 # include <inttypes.h>
 #endif
 
+#include <math.h>
+#ifdef HAVE_TGMATH_H /* This is C99, but prepare for broken toolchains!! */
+# include <tgmath.h>
+#endif
+
+#ifdef HAVE_ASSERT_H
+# include <assert.h>
+#else
+# ifndef NDEBUG
+/* untested. does this work? */
+#  define assert(x) do { if (!(x)) { fprintf(stderr, "%s: assertion failed", #x); exit(1); } } while (0)
+# else
+#  define assert(x)
+# endif
+#endif
+
+/* Math constants, not standard but in most toolchains, notably
+ * OpenWatcom doesn't have them. */
+#ifndef M_PI
+# define M_PI 3.14159265358979323846
+#endif
+
 #include <stdarg.h>
 #ifndef va_copy
-# ifdef __va_copy
+# ifdef __va_copy /* GNU */
 #  define va_copy(dst, sec) (__va_copy(dst, src))
 # else
 #  define va_copy(dst, src) (memcpy(&dst, &src, sizeof(va_list)))
@@ -90,12 +124,15 @@
 #ifndef CLAMP
 # define CLAMP(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
 #endif
+#ifndef ABS
+# define ABS(x) ((x) < 0 ? -(x) : x)
+#endif
 
 /* Compares two version numbers following Semantic Versioning.
  * For example:
- *   SCHISM_SEMVER_ATLEAST(1, 2, 3, 1, 2, 2) -> TRUE
+ *   SCHISM_SEMVER_ATLEAST(1, 2, 3, 1, 2, 4) -> TRUE
  *   SCHISM_SEMVER_ATLEAST(1, 2, 3, 2, 0, 0) -> TRUE
- *   SCHISM_SEMVER_ATLEAST(1, 1, 0, 1, 2, 1) -> FALSE */
+ *   SCHISM_SEMVER_ATLEAST(1, 2, 1, 1, 1, 0) -> FALSE */
 #define SCHISM_SEMVER_ATLEAST(mmajor, mminor, mpatch, major, minor, patch) \
 	(((major) >= (mmajor)) \
 	 && ((major) > (mmajor) || (minor) >= (mminor)) \

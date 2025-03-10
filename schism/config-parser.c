@@ -32,15 +32,6 @@
 #include "str.h"
 #include "config-parser.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <errno.h>
-
 /* --------------------------------------------------------------------------------------------------------- */
 /* some utilities for reading the config structure in memory */
 

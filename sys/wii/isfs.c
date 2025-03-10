@@ -28,13 +28,9 @@ builds with all warnings. -- Storlek]
 */
 #include "headers.h"
 
-#include <errno.h>
 #include <ogc/isfs.h>
 #include <ogc/lwp_watchdog.h>
 #include <ogcsys.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/dir.h>
 #include <sys/iosupport.h>
 

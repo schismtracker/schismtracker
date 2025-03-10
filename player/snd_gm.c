@@ -32,9 +32,6 @@
 #include "player/snd_gm.h"
 #include "song.h" // for 'current_song', which we shouldn't need
 
-#include <math.h> // for log
-
-
 #define LinearMidivol 1
 #define PitchBendCenter 0x2000
 

@@ -23,8 +23,6 @@
 
 #include "headers.h"
 
-#include <errno.h>
-
 int setenv(const char *name, const char *value, int overwrite)
 {
 	if (strchr(name, '=')) {

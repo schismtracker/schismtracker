@@ -24,8 +24,6 @@
 #ifndef SCHISM_PLAYER_TABLES_H_
 #define SCHISM_PLAYER_TABLES_H_
 
-#include <stdint.h>
-
 // <eightbitbubsy> better than having a table.
 #define SHORT_PANNING(i) (((((i) << 4) | (i)) + 2) >> 2)
 

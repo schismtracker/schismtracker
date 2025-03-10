@@ -54,12 +54,10 @@
 
 #include "osdefs.h"
 
-#include <errno.h>
-
 #include <fcntl.h>
 #include <unistd.h>
 
-#ifndef SCHISM_WIN32
+#if !defined(SCHISM_WIN32) && !defined(SCHISM_OS2)
 # include <signal.h>
 #endif
 

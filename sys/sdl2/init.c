@@ -21,9 +21,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "headers.h"
-
 #include "init.h"
+
+#include "headers.h"
 
 static int (SDLCALL *sdl2_Init)(Uint32 flags);
 static void (SDLCALL *sdl2_Quit)(void);

@@ -43,8 +43,6 @@
 #include <arpa/inet.h>
 #endif
 
-#include <errno.h>
-
 #define DEFAULT_IP_PORT_COUNT   5
 #define MIDI_IP_BASE    21928
 #define MAX_DGRAM_SIZE  1280

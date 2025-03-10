@@ -21,11 +21,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "init.h"
+
 #include "headers.h" /* always include this one first, kthx */
 #include "backend/dmoz.h"
 #include "mem.h"
-
-#include "init.h"
 
 static char * (SDLCALL *sdl2_GetBasePath)(void);
 

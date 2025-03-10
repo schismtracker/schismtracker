@@ -21,11 +21,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "headers.h"
+
 #include "player/sndfile.h"
 #include "player/cmixer.h"
 #include "song.h"
-#include <math.h>
-
 
 #define EQ_BANDWIDTH    2.0
 #define EQ_ZERO         0.000001

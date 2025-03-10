@@ -21,17 +21,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "headers.h"
+
 #include "player/sndfile.h"
 #include "player/cmixer.h"
-#include <math.h>
-
-#ifndef M_PI
-# define M_PI 3.1415926535897932
-#endif
-
-#ifdef SCHISM_OS2
-# define powf pow
-#endif
 
 // LUT for 2 * damping factor
 static const float resonance_table[128] = {
@@ -102,17 +95,17 @@ void setup_channel_filter(song_voice_t *chan, int32_t reset, int32_t flt_modifie
 	chan->flags |= CHN_FILTER;
 
 	// 2 ^ (i / 24 * 256)
-	frequency = 110.0 * powf(2.0, (float)cutoff * FREQ_PARAM_MULT + 0.25);
-	if (frequency > freq / 2.0)
-		frequency = freq / 2.0;
-	r = freq / (2.0 * M_PI * frequency);
+	frequency = 110.0F * pow(2.0F, (float)cutoff * FREQ_PARAM_MULT + 0.25F);
+	if (frequency > freq / 2.0F)
+		frequency = freq / 2.0F;
+	r = freq / (2.0F * M_PI * frequency);
 
-	d = resonance_table[resonance] * r + resonance_table[resonance] - 1.0;
+	d = resonance_table[resonance] * r + resonance_table[resonance] - 1.0F;
 	e = r * r;
 
-	fg = 1.0 / (1.0 + d + e);
-	fb0 = (d + e + e) / (1.0 + d + e);
-	fb1 = -e / (1.0 + d + e);
+	fg = 1.0F / (1.0F + d + e);
+	fb0 = (d + e + e) / (1.0F + d + e);
+	fb1 = -e / (1.0F + d + e);
 
 	chan->filter_a0 = (int32_t)(fg * (1 << FILTERPRECISION));
 	chan->filter_b0 = (int32_t)(fb0 * (1 << FILTERPRECISION));

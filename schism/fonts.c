@@ -29,8 +29,6 @@
 #include "util.h"
 #include "osdefs.h"
 
-#include <errno.h>
-
 /* --------------------------------------------------------------------- */
 /* globals */
 

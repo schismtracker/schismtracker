@@ -24,10 +24,9 @@
 #ifndef SCHISM_IT_H_
 #define SCHISM_IT_H_
 
-#include "backend/timer.h"
+#include "headers.h"
 
-#include <stdio.h>
-#include <stdint.h>
+#include "backend/timer.h"
 
 #include <sys/types.h>
 #include <sys/stat.h> /* roundabout way to get time_t */

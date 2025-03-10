@@ -32,8 +32,6 @@
 #ifdef USE_ALSA
 #include <sys/poll.h>
 
-#include <errno.h>
-
 #include <alsa/asoundlib.h>
 
 #include <sys/stat.h>

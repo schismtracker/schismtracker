@@ -27,8 +27,6 @@
 #include "bswap.h"
 #include "ieee-float.h"
 
-#include <math.h>
-
 /* These are used for hardware encoding/decoding of floating point numbers.
  * Note that even if these types are available and conform to IEEE 754,
  * this doesn't mean that these operations are done in hardware. */

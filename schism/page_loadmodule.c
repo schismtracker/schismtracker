@@ -43,7 +43,6 @@
 
 #include <fcntl.h>
 #include <ctype.h>
-#include <errno.h>
 
 #include "disko.h"
 

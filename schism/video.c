@@ -36,8 +36,6 @@
 
 #include "backend/video.h"
 
-#include <errno.h>
-
 /* leeto drawing skills */
 struct mouse_cursor {
 	uint32_t pointer[18];

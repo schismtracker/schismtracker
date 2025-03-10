@@ -40,7 +40,6 @@
 # include <sys/poll.h>
 #endif
 
-#include <errno.h>
 #include <fcntl.h>
 
 /* this is stupid; oss doesn't have a concept of ports... */

@@ -21,10 +21,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <stdlib.h>
-
 #include "tree.h"
-
 
 typedef struct treenode {
 	struct treenode *left, *right;
@@ -151,9 +148,6 @@ void *tree_find(tree_t *tree, void *value)
 
 
 #ifdef TEST
-#include <stdio.h>
-#include <string.h>
-
 struct node {
 	char *k, *v;
 };

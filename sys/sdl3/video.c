@@ -36,8 +36,6 @@
 #include "vgamem.h"
 #include "events.h"
 
-#include <errno.h>
-
 #include "backend/video.h"
 
 #include "init.h"

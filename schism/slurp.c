@@ -33,7 +33,6 @@
 #include <sys/stat.h>
 #include <stddef.h>
 
-#include <errno.h>
 #include <fcntl.h>
 
 static int slurp_stdio_open_(slurp_t *t, const char *filename);

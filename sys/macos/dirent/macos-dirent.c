@@ -31,8 +31,6 @@
 #include "util.h"
 #include "macos-dirent.h"
 
-#include <errno.h>
-
 #include <Files.h>
 #include <TextUtils.h>
 

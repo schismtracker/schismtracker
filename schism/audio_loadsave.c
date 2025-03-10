@@ -44,11 +44,6 @@
 #include "midi.h"
 #include "disko.h"
 
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
-#include <assert.h>
-
 // ------------------------------------------------------------------------
 
 char song_filename[SCHISM_PATH_MAX + 1];

@@ -28,20 +28,10 @@ extraneous libraries (i.e. GLib). */
 #include "util.h"
 #include "osdefs.h"
 
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-
-#include <errno.h>
-
-#include <stdarg.h>
-
-#include <math.h>
-
 /* --------------------------------------------------------------------- */
 /* CONVERSION FUNCTIONS */
 
-/* inline stuff defined in math.h */
+/* inline stuff defined in util.h */
 extern inline float dB(float amplitude);
 extern inline float dB2_amp(float db);
 extern inline float pdB(float power);

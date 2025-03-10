@@ -21,6 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "init.h"
+
 #define NATIVE_SCREEN_WIDTH		640
 #define NATIVE_SCREEN_HEIGHT	400
 #define WINDOW_TITLE			"Schism Tracker"
@@ -36,11 +38,8 @@
 #include "vgamem.h"
 #include "events.h"
 
-#include <errno.h>
-
 #include "backend/video.h"
 
-#include "init.h"
 #include <SDL_syswm.h>
 
 #ifndef SCHISM_MACOSX

@@ -21,6 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "headers.h"
+
 #include "player/sndfile.h"
 
 #include "player/cmixer.h"
@@ -32,8 +34,6 @@
 #include "util.h" /* for clamp/min */
 
 #include "it.h" // needed for status.flags (UGH)
-
-#include <math.h>
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* note/freq conversion functions */
@@ -1349,13 +1349,14 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 
 	if (penv && NOTE_IS_NOTE(note)) {
 		/* OpenMPT test case emptyslot.it */
-		if (penv->sample_map[note - 1] == 0) {
+		if (!penv->sample_map[note - NOTE_FIRST]) {
 			chan->ptr_instrument = penv;
+			printf("punt\n");
 			return;
 		}
 
-		if (penv->note_map[note - 1] > NOTE_LAST) return;
-		//uint32_t n = penv->sample_map[note - 1];
+		if (penv->note_map[note - NOTE_FIRST] > NOTE_LAST) return;
+		//uint32_t n = penv->sample_map[note - NOTE_FIRST];
 		psmp = csf_translate_keyboard(csf, penv, note, NULL);
 	} else if (csf->flags & SONG_INSTRUMENTMODE) {
 		if (NOTE_IS_CONTROL(note))
@@ -2231,11 +2232,9 @@ void csf_process_effects(song_t *csf, int firsttick)
 		// This is probably the single biggest WTF replayer bug in Impulse Tracker.
 		// In instrument mode, when an note + instrument is triggered that does not map to any sample, the entire cell (including potentially present global effects!)
 		// is ignored. Even better, if on a following row another instrument number (this time without a note) is encountered, we end up in the same situation!
-		if (csf->flags & SONG_INSTRUMENTMODE && instr > 0 && instr < MAX_INSTRUMENTS && csf->instruments[instr] != NULL)
-		{
+		if (csf->flags & SONG_INSTRUMENTMODE && instr > 0 && instr < MAX_INSTRUMENTS && csf->instruments[instr] != NULL) {
 			uint8_t note = (chan->row_note != NOTE_NONE) ? chan->row_note : chan->new_note;
-			if (NOTE_IS_NOTE(note) && csf->instruments[instr]->sample_map[note - NOTE_FIRST] == 0)
-			{
+			if (NOTE_IS_NOTE(note) && csf->instruments[instr]->sample_map[note - NOTE_FIRST] == 0) {
 				chan->new_note = note;
 				chan->row_instr = instr;
 				chan->row_voleffect = VOLFX_NONE;
@@ -2342,7 +2341,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 				GM_Touch(csf, nchan, 0);
 			}
 
-			const int previous_new_note = chan->new_note; 
+			const uint8_t previous_new_note = chan->new_note;
 			if (NOTE_IS_NOTE(note)) {
 				chan->new_note = note;
 
@@ -2381,11 +2380,10 @@ void csf_process_effects(song_t *csf, int firsttick)
 			// New Note ?
 			if (note != NOTE_NONE) {
 				if (!instr && chan->new_instrument && NOTE_IS_NOTE(note)) {
-					if (NOTE_IS_NOTE(previous_new_note)) {
+					if (NOTE_IS_NOTE(previous_new_note))
 						chan->new_note = previous_new_note;
-					}
+
 					csf_instrument_change(csf, chan, chan->new_instrument, porta, 0);
-					chan->new_note = note;
 					if ((csf->flags & SONG_INSTRUMENTMODE)
 					    && chan->new_instrument < MAX_INSTRUMENTS
 					    && csf->instruments[chan->new_instrument]) {
@@ -2396,6 +2394,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 							csf->instruments[chan->new_instrument]->midi_bank,
 							csf->instruments[chan->new_instrument]->midi_channel_mask);
 					}
+					chan->new_note = note;
 					chan->new_instrument = 0;
 				}
 				csf_note_change(csf, nchan, note, porta, 0, !instr);

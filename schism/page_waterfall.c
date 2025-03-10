@@ -29,13 +29,10 @@
 #include "widget.h"
 #include "vgamem.h"
 
-#include <math.h>
-
 #define NATIVE_SCREEN_WIDTH     640
 #define NATIVE_SCREEN_HEIGHT    400
 #define SCOPE_ROWS      32
 
-#define PI      ((double)3.14159265358979323846)
 /* This value is used internally to scale the power output of the FFT to decibels. */
 static const float fft_inv_bufsize = 1.0f/(FFT_BUFFER_SIZE>>2);
 /* Scaling for FFT. Input is expected to be int16_t. */
@@ -86,23 +83,23 @@ void vis_init(void)
 		/*Rectangular/none*/
 		window[n] = 1;
 		/*Cosine/sine window*/
-		window[n] = sin(PI * n/ FFT_BUFFER_SIZE -1);
+		window[n] = sin(M_PI * n/ FFT_BUFFER_SIZE -1);
 		/*Hann Window*/
-		window[n] = 0.50f - 0.50f * cos(2.0*PI * n / (FFT_BUFFER_SIZE - 1));
+		window[n] = 0.50f - 0.50f * cos(2.0*M_PI * n / (FFT_BUFFER_SIZE - 1));
 		/*Hamming Window*/
-		window[n] = 0.54f - 0.46f * cos(2.0*PI * n / (FFT_BUFFER_SIZE - 1));
+		window[n] = 0.54f - 0.46f * cos(2.0*M_PI * n / (FFT_BUFFER_SIZE - 1));
 		/*Gaussian*/
 		window[n] = powf(M_E,-0.5f *pow((n-(FFT_BUFFER_SIZE-1)/2.f)/(0.4*(FFT_BUFFER_SIZE-1)/2.f),2.f));
 		/*Blackmann*/
-		window[n] = 0.42659 - 0.49656 * cos(2.0*PI * n/ (FFT_BUFFER_SIZE-1)) + 0.076849 * cos(4.0*PI * n /(FFT_BUFFER_SIZE-1));
+		window[n] = 0.42659 - 0.49656 * cos(2.0*M_PI * n/ (FFT_BUFFER_SIZE-1)) + 0.076849 * cos(4.0*M_PI * n /(FFT_BUFFER_SIZE-1));
 		/*Blackman-Harris*/
-		window[n] = 0.35875 - 0.48829 * cos(2.0*PI * n/ (FFT_BUFFER_SIZE-1)) + 0.14128 * cos(4.0*PI * n /(FFT_BUFFER_SIZE-1)) - 0.01168 * cos(6.0*PI * n /(FFT_BUFFER_SIZE-1));
+		window[n] = 0.35875 - 0.48829 * cos(2.0*M_PI * n/ (FFT_BUFFER_SIZE-1)) + 0.14128 * cos(4.0*M_PI * n /(FFT_BUFFER_SIZE-1)) - 0.01168 * cos(6.0*M_PI * n /(FFT_BUFFER_SIZE-1));
 #endif
 		/*Hann Window*/
-		window[n] = 0.50f - 0.50f * cos(2.0*PI * n / (FFT_BUFFER_SIZE - 1));
+		window[n] = 0.50f - 0.50f * cos(2.0*M_PI * n / (FFT_BUFFER_SIZE - 1));
 	}
 	for (n = 0; n < FFT_OUTPUT_SIZE; n++) {
-		float j = (2.0*PI) * n / FFT_BUFFER_SIZE;
+		float j = (2.0*M_PI) * n / FFT_BUFFER_SIZE;
 		precos[n] = cos(j);
 		presin[n] = sin(j);
 	}

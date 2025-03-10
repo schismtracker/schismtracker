@@ -29,10 +29,6 @@
 #include "log.h"
 #include "util.h" /* for clamp */
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-
 #define OPLRATEBASE 49716 // It's not a good idea to deviate from this.
 
 #if OPLSOURCE == 2
@@ -54,7 +50,7 @@
 	// OPL3 = 14318208Hz
 	#define OPLRATEDIVISOR 288
 #else
-# error "The current value of OPLSOURCE isn't supported! Check config.h."
+# error "The current value of OPLSOURCE isn't supported! Check build-config.h."
 #endif
 
 /* Schismtracker output buffer works in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]

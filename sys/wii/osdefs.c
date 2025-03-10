@@ -36,7 +36,6 @@
 #include <ogc/system.h>
 #include <ogc/es.h>
 #include <ogc/ios.h>
-#include <errno.h>
 #include <sys/dir.h>
 #include <dirent.h>
 #include "isfs.h"

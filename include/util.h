@@ -26,39 +26,31 @@
 
 #include "headers.h"
 
-#include <math.h>
-
-#ifdef SCHISM_OS2
-// TODO autoconf check for this
-# define log10f log10
-# define powf pow
-#endif
-
 /*Conversion*/
 /* linear -> deciBell*/
 /* amplitude normalized to 1.0f.*/
 SCHISM_CONST inline SCHISM_ALWAYS_INLINE float dB(float amplitude)
 {
-	return 20.0f * log10f(amplitude);
+	return 20.0f * log10(amplitude);
 }
 
 /// deciBell -> linear*/
 SCHISM_CONST inline SCHISM_ALWAYS_INLINE float dB2_amp(float db)
 {
-	return powf(10.0f, db / 20.0f);
+	return pow(10.0f, db / 20.0f);
 }
 
 /* linear -> deciBell*/
 /* power normalized to 1.0f.*/
 SCHISM_CONST inline SCHISM_ALWAYS_INLINE float pdB(float power)
 {
-	return 10.0f * log10f(power);
+	return 10.0f * log10(power);
 }
 
 /* deciBell -> linear*/
 SCHISM_CONST inline SCHISM_ALWAYS_INLINE float dB2_power(float db)
 {
-	return powf(10.0f, db / 10.0f);
+	return pow(10.0f, db / 10.0f);
 }
 
 /* linear -> deciBell*/
