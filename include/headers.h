@@ -56,7 +56,7 @@
 #endif
 
 #include <math.h>
-#ifdef HAVE_TGMATH_H /* This is C99, but prepare for broken toolchains!! */
+#if defined(HAVE_TGMATH_H) && !defined(SCHISM_MACOS) /* Macintosh toolchain has tgmath.h, but it's broken as shit */
 # include <tgmath.h>
 #endif
 

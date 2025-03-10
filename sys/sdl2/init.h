@@ -27,6 +27,8 @@
 // We have to include this **before** headers.h because
 // otherwise tgmath.h doesn't work quite right combined
 // with intrin.h under Win32. What the hell.
+#include <build-config.h>
+
 #ifdef SCHISM_OS2
 // Work around weird compiler bug?
 # undef __386__
