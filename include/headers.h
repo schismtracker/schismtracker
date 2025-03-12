@@ -268,14 +268,15 @@
 # define SCHISM_NORETURN
 #endif
 
-/* Used for declaring format.
- * This ought to be separated into different macros to
- * ease adding different compiler support... */
+/* Used for declaring functions that take in a printf-style
+ * format string. If there are vararg params, the first index
+ * gets specified in the last parameter of this macro, else
+ * it should be 0. */
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__format__, 2, 3, 0)
-# define SCHISM_FORMAT(function, format_index, first_index) \
-	__attribute__((__format__(function, format_index, first_index)))
+# define SCHISM_FORMAT_PRINTF(format_index, first_index) \
+	__attribute__((__format__(printf, format_index, first_index)))
 #else
-# define SCHISM_FORMAT(function, format_index, first_index)
+# define SCHISM_FORMAT_PRINTF(format_index, first_index)
 #endif
 
 /* Used for declaring malloc functions that take in an
@@ -375,18 +376,18 @@
 /* ------------------------------------------------------------------------ */
 
 #ifndef HAVE_ASPRINTF
-int asprintf(char **strp, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, ...) SCHISM_FORMAT(printf, 2, 3);
+int asprintf(char **strp, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, ...) SCHISM_FORMAT_PRINTF(2, 3);
 #endif
 #ifndef HAVE_VASPRINTF
-int vasprintf(char **strp, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, va_list ap) SCHISM_FORMAT(printf, 2, 0);
+int vasprintf(char **strp, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, va_list ap) SCHISM_FORMAT_PRINTF(2, 0);
 #endif
 #ifndef HAVE_SNPRINTF
 #undef snprintf // stupid windows
-int snprintf(char *buffer, size_t count, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, ...) SCHISM_FORMAT(printf, 3, 4);
+int snprintf(char *buffer, size_t count, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, ...) SCHISM_FORMAT_PRINTF(3, 4);
 #endif
 #ifndef HAVE_VSNPRINTF
 #undef vsnprintf // stupid windows
-int vsnprintf(char *buffer, size_t count, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, va_list ap) SCHISM_FORMAT(printf, 2, 0);
+int vsnprintf(char *buffer, size_t count, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, va_list ap) SCHISM_FORMAT_PRINTF(2, 0);
 #endif
 #ifndef HAVE_STRPTIME
 char *strptime(const char *buf, const char *fmt, struct tm *tm);
