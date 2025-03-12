@@ -48,8 +48,8 @@
 #define MAX_MIDI_PORTS  (MAX_OSS_MIDI + 2)
 static int opened[MAX_MIDI_PORTS];
 
-static void _oss_send(struct midi_port *p, const unsigned char *data, unsigned int len,
-	SCHISM_UNUSED unsigned int delay)
+static void _oss_send(struct midi_port *p, const unsigned char *data, uint32_t len,
+	SCHISM_UNUSED uint32_t delay)
 {
 	int fd, r, n;
 	fd = opened[ n = INT_SHAPED_PTR(p->userdata) ];

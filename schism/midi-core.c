@@ -122,7 +122,7 @@ void cfg_load_midi(cfg_file_t *cfg)
 {
 	midi_config_t *md, *mc;
 	char buf[17], buf2[33];
-	unsigned int i;
+	uint32_t i;
 
 	CFG_GET_MI(flags, MIDI_TICK_QUANTIZE | MIDI_RECORD_NOTEOFF
 		| MIDI_RECORD_VELOCITY | MIDI_RECORD_AFTERTOUCH
@@ -173,7 +173,7 @@ void cfg_save_midi(cfg_file_t *cfg)
 	midi_config_t *md, *mc;
 	char buf[33];
 	char *ss;
-	unsigned int i;
+	uint32_t i;
 	int j;
 
 	CFG_SET_MI(flags);
@@ -541,13 +541,13 @@ enum midi_from {
 	MIDI_FROM_LATER = 2,
 };
 
-static int _midi_send_unlocked(const unsigned char *data, unsigned int len, unsigned int delay,
+static int _midi_send_unlocked(const unsigned char *data, uint32_t len, uint32_t delay,
 			enum midi_from from)
 {
 	struct midi_port *ptr = NULL;
 	int need_timer = 0;
 #if 0
-	unsigned int i;
+	uint32_t i;
 printf("MIDI: ");
 	for (i = 0; i < len; i++) {
 		printf("%02x ", data[i]);
@@ -594,7 +594,7 @@ fflush(stdout);
 	return need_timer;
 }
 
-void midi_send_now(const unsigned char *seq, unsigned int len)
+void midi_send_now(const unsigned char *seq, uint32_t len)
 {
 	if (!midi_record_mutex) return;
 
@@ -622,7 +622,6 @@ int midi_need_flush(void)
 {
 	struct midi_port *ptr;
 	int need_explicit_flush = 0;
-	unsigned int i;
 
 	if (!midi_record_mutex) return 0;
 
@@ -653,7 +652,7 @@ void midi_send_flush(void)
 // I guess mrsbrisby just didn't know that SDL provided a timer API, or it wasn't
 // provided by that time.
 struct _midi_send_timer_curry {
-	unsigned int len;
+	uint32_t len;
 	unsigned char msg[];
 };
 
@@ -673,7 +672,7 @@ static void _midi_send_timer_callback(void *param)
 	free(curry);
 }
 
-void midi_send_buffer(const unsigned char *data, unsigned int len, unsigned int pos)
+void midi_send_buffer(const unsigned char *data, uint32_t len, uint32_t pos)
 {
 	if (!midi_record_mutex) return;
 
@@ -771,7 +770,7 @@ void midi_port_unregister(int num)
 	mt_mutex_unlock(midi_port_mutex);
 }
 
-void midi_received_cb(struct midi_port *src, unsigned char *data, unsigned int len)
+void midi_received_cb(struct midi_port *src, unsigned char *data, uint32_t len)
 {
 	unsigned char d4[4];
 	int cmd;
@@ -915,7 +914,7 @@ void midi_event_tick(void)
 	events_push_event(&event);
 }
 
-void midi_event_sysex(const unsigned char *data, unsigned int len)
+void midi_event_sysex(const unsigned char *data, uint32_t len)
 {
 	schism_event_t event = {0};
 

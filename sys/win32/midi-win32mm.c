@@ -86,7 +86,7 @@ static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *data, uint32_t len
 }
 
 static void _win32mm_send(struct midi_port *p, const unsigned char *data,
-		unsigned int len, SCHISM_UNUSED unsigned int delay)
+		uint32_t len, SCHISM_UNUSED uint32_t delay)
 {
 	struct win32mm_midi *m;
 	DWORD q;
@@ -216,8 +216,8 @@ static int _win32mm_stop(struct midi_port *p)
 
 static void _win32mm_poll(struct midi_provider *p)
 {
-	static unsigned int last_known_in_port = 0;
-	static unsigned int last_known_out_port = 0;
+	static uint32_t last_known_in_port = 0;
+	static uint32_t last_known_out_port = 0;
 
 	struct win32mm_midi *data;
 

@@ -182,9 +182,9 @@ struct jack_midi {
 	int mark;
 };
 
-static void _jack_send(SCHISM_UNUSED struct midi_port *p, const unsigned char *data, unsigned int len, unsigned int delay) {
+static void _jack_send(SCHISM_UNUSED struct midi_port *p, const unsigned char *data, uint32_t len, uint32_t delay) {
 	while (len > 0) {
-		unsigned int real_len = midi_event_length(*data);
+		uint32_t real_len = midi_event_length(*data);
 		if (real_len > len)
 			return;
 
@@ -242,7 +242,7 @@ static int _jack_process(jack_nframes_t nframes, void *user_data) {
 		if (JACK_jack_midi_event_get(&event, midi_in_buffer, i))
 			break;
 
-		const unsigned int len = event.size;
+		const uint32_t len = event.size;
 
 		if (len + sizeof(len) > ringbuffer_out_max_write)
 			break;
@@ -259,7 +259,7 @@ static int _jack_process(jack_nframes_t nframes, void *user_data) {
 
 	JACK_jack_midi_clear_buffer(midi_out_buffer);
 
-	unsigned int size = 0;
+	uint32_t size = 0;
 
 	while (JACK_jack_ringbuffer_peek(ringbuffer_out, (char*)&size, sizeof(size)) == sizeof(size)
 	       && JACK_jack_ringbuffer_read_space(ringbuffer_out) >= sizeof(size) + size) {
@@ -298,7 +298,7 @@ static int _jack_thread(struct midi_provider *p)
 {
 	/* processes midi in events... */
 	while (!p->cancelled) {
-		unsigned int size = 0;
+		uint32_t size = 0;
 
 		while (JACK_jack_ringbuffer_peek(ringbuffer_in, (char*)&size, sizeof(size)) == sizeof(size)
 		       && JACK_jack_ringbuffer_read_space(ringbuffer_in) >= sizeof(size) + size) {
