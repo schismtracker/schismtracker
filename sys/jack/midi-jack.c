@@ -426,17 +426,17 @@ static void _jack_poll(struct midi_provider* jack_provider_)
 	}
 }
 
-static struct midi_driver jack_driver = {
-	.poll = _jack_poll,
-	.flags = 0, // jack is realtime
-	.thread = _jack_thread,
-	.enable = _jack_start,
-	.disable = _jack_stop,
-	.send = _jack_send,
-};
-
 int jack_midi_setup(void)
 {
+	static const struct midi_driver jack_driver = {
+		.poll = _jack_poll,
+		.flags = 0, // jack is realtime
+		.thread = _jack_thread,
+		.enable = _jack_start,
+		.disable = _jack_stop,
+		.send = _jack_send,
+	};
+
 #ifdef JACK_DYNAMIC_LOAD
 	if (!jack_dltrick_handle_)
 #endif

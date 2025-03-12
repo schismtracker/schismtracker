@@ -161,15 +161,15 @@ static void _oss_poll(struct midi_provider *_oss_provider)
 }
 int oss_midi_setup(void)
 {
-	static struct midi_driver driver;
+	static const struct midi_driver driver = {
+		.flags = 0,
+		.poll = _oss_poll,
+		.thread = _oss_thread,
+		.enable = _oss_start_stop,
+		.disable = _oss_start_stop,
+		.send = _oss_send,
+	};
 	int i;
-
-	driver.flags = 0;
-	driver.poll = _oss_poll;
-	driver.thread = _oss_thread;
-	driver.enable = _oss_start_stop;
-	driver.disable = _oss_start_stop;
-	driver.send = _oss_send;
 
 	for (i = 0; i < MAX_MIDI_PORTS; i++) opened[i] = -1;
 	if (!midi_provider_register("OSS", &driver)) return 0;

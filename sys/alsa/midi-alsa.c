@@ -450,18 +450,18 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 	}
 }
 
-static struct midi_driver alsa_driver = {
-	.poll = _alsa_poll,
-	.thread = _alsa_thread,
-	.enable = _alsa_start,
-	.disable = _alsa_stop,
-	.send = _alsa_send,
-	.flags = MIDI_PORT_CAN_SCHEDULE,
-	.drain = _alsa_drain,
-};
-
 int alsa_midi_setup(void)
 {
+	static const struct midi_driver alsa_driver = {
+		.poll = _alsa_poll,
+		.thread = _alsa_thread,
+		.enable = _alsa_start,
+		.disable = _alsa_stop,
+		.send = _alsa_send,
+		.flags = MIDI_PORT_CAN_SCHEDULE,
+		.drain = _alsa_drain,
+	};
+
 	snd_seq_queue_tempo_t *tempo;
 
 	/* only bother if alsa midi actually exists, otherwise this will

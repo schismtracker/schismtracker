@@ -224,16 +224,15 @@ static void _macosx_poll(struct midi_provider *p)
 
 int macosx_midi_setup(void)
 {
-	static struct midi_driver driver;
-
-	memset(&driver,0,sizeof(driver));
-	driver.flags = MIDI_PORT_CAN_SCHEDULE;
-	driver.poll = _macosx_poll;
-	driver.thread = NULL;
-	driver.enable = _macosx_start;
-	driver.disable = _macosx_stop;
-	driver.send = _macosx_send;
-	driver.drain = _macosx_drain;
+	static const struct midi_driver driver = {
+		.flags = MIDI_PORT_CAN_SCHEDULE,
+		.poll = _macosx_poll,
+		.thread = NULL,
+		.enable = _macosx_start,
+		.disable = _macosx_stop,
+		.send = _macosx_send,
+		.drain = _macosx_drain,
+	};
 
 	if (MIDIClientCreate(CFSTR("Schism Tracker"), NULL, NULL, &client) != noErr)
 		return 0;

@@ -382,7 +382,7 @@ int midi_engine_port_count(void)
 /* ------------------------------------------------------------- */
 /* midi engines register a provider (one each!) */
 struct midi_provider *midi_provider_register(const char *name,
-		struct midi_driver *driver)
+	const struct midi_driver *driver)
 {
 	struct midi_provider *n;
 

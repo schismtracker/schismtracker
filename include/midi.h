@@ -29,7 +29,7 @@ struct midi_port;
 
 #define MIDI_PORT_CAN_SCHEDULE  1
 struct midi_driver {
-	unsigned int flags;
+	uint32_t flags;
 
 	void (*poll)(struct midi_provider *m);
 	int (*thread)(struct midi_provider *m);
@@ -112,7 +112,7 @@ struct midi_port *midi_engine_port(int n, const char **name);
 int midi_engine_port_count(void);
 
 /* midi engines register a provider (one each!) */
-struct midi_provider *midi_provider_register(const char *name, struct midi_driver *f);
+struct midi_provider *midi_provider_register(const char *name, const struct midi_driver *f);
 
 /* midi engines list ports this way */
 int midi_port_register(struct midi_provider *p,

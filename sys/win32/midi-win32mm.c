@@ -67,7 +67,7 @@ struct win32mm_midi {
 static int use_ansi_funcs = 0;
 #endif
 
-static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *d, unsigned int len)
+static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *data, uint32_t len)
 {
 	char *z;
 	LPMIDIHDR m;
@@ -294,15 +294,14 @@ static void _win32mm_poll(struct midi_provider *p)
 
 int win32mm_midi_setup(void)
 {
-	static struct midi_driver driver = {0};
-	TIMECAPS caps;
-
-	driver.flags = 0;
-	driver.poll = _win32mm_poll;
-	driver.thread = NULL;
-	driver.enable = _win32mm_start;
-	driver.disable = _win32mm_stop;
-	driver.send = _win32mm_send;
+	static const struct midi_driver driver = {
+		.flags = 0,
+		.poll = _win32mm_poll,
+		.thread = NULL,
+		.enable = _win32mm_start,
+		.disable = _win32mm_stop,
+		.send = _win32mm_send,
+	};
 
 #ifdef SCHISM_WIN32_COMPILE_ANSI
 	use_ansi_funcs = (GetVersion() & UINT32_C(0x80000000));
