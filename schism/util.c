@@ -31,17 +31,6 @@ extraneous libraries (i.e. GLib). */
 /* --------------------------------------------------------------------- */
 /* CONVERSION FUNCTIONS */
 
-/* inline stuff defined in util.h */
-extern inline float dB(float amplitude);
-extern inline float dB2_amp(float db);
-extern inline float pdB(float power);
-extern inline float dB2_power(float db);
-extern inline short dB_s(int noisefloor, float amplitude, float correction_dBs);
-extern inline short dB2_amp_s(int noisefloor, int db, float correction_dBs);
-extern inline short pdB_s(int noisefloor, float power, float correction_dBs);
-extern inline short dB2_power_s(int noisefloor, int db, float correction_dBs);
-extern inline uint32_t i_sqrt(uint32_t r);
-
 /* This function is roughly equivalent to the mkstemp() function on POSIX
  * operating systems, but instead of returning a file descriptor it returns
  * a C stdio file pointer. */
