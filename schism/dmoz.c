@@ -54,26 +54,21 @@
 # include <shlobj.h>
 # include <direct.h>
 #elif defined(SCHISM_MACOS)
-// FIXME clean this up
 # include <Files.h>
-# include <TextUtils.h>
-# include <Gestalt.h>
-# include <TextEncodingConverter.h>
-# include <Multiprocessing.h>
-# include <DriverSynchronization.h>
-# include <DriverServices.h>
-# include <CFString.h>
-# include <URLAccess.h>
 # include <Folders.h>
 # include <Resources.h>
+# include <Script.h>
+
 # include "macos-dirent.h"
 #elif defined(SCHISM_OS2)
 # include <dirent.h> // TODO we shouldn't need this
 
 # define INCL_DOSFILEMGR
 # include <os2.h>
-#else
+#elif defined(HAVE_DIRENT_H)
 # include <dirent.h>
+#else
+# error Unknown platform. Add code for this platform, or make a wrapper for dirent.h.
 #endif
 
 #ifdef SCHISM_WII
@@ -276,7 +271,7 @@ void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl
  *
  * unfortunately, unlike the Wii U, there is no compatibility
  * layer provided by the standard library we're using, which
- * means we have to do all of this stupid conversion ourselves...
+ * means we have to do all of this stupid conversion ourselves.
  *
  *  - paper */
 int dmoz_path_from_fsspec(const void *pvref, char **path)
@@ -363,7 +358,6 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 
 			if (!charset_strncasecmp(&name[1], CHARSET_CP437, path, CHARSET_UTF8, name[0])) {
 				// we found our volume: fill in the spec
-				os_show_message_box("found a matching volume!", (const char []){ volIndex + '0', '\0' });
 				err = FSMakeFSSpec(volRefNum, fsRtDirID, NULL, &spec);
 				break;
 			}
@@ -422,13 +416,13 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 			*partial++ = ':';
 			const unsigned char *specName = spec.name; // Copy in spec name
 			for (int cnt = *specName++; cnt > 0; --cnt) // vulgarities in my for loop
-					*partial++ = *specName++;
+				*partial++ = *specName++;
 
 			*partial++ = ':'; // Separator
 			while (p != pEnd)
-					*partial++ = *p++; // copy in the new element
+				*partial++ = *p++; // copy in the new element
 			  
-			name[0] = partial - &name[1];   // Set the name length
+			name[0] = partial - &name[1]; // Set the name length
 
 			// Update the spec
 			err = FSMakeFSSpec(spec.vRefNum, spec.parID, name, &spec);
@@ -439,7 +433,7 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 	
 	// copy the result
 	memcpy(pvref, &spec, sizeof(spec));
-	
+
 	return err == noErr;
 }
 #endif

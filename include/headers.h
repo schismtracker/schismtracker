@@ -29,7 +29,6 @@
 
 #ifndef SCHISM_HEADERS_H_
 #define SCHISM_HEADERS_H_
-/* This is probably overkill, but it's consistent this way. */
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE /* need this for some stupid gnu crap */
@@ -39,11 +38,21 @@
 # include <build-config.h>
 #endif
 
+/* ------------------------------------------------------------------------ */
+/* Actual standard C stuff */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <string.h>
 
 #include <errno.h>
+
+#include <time.h>
+
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#endif
 
 /* TODO we should handle this stuff ourselves, rather than giving it off
  * to autoconf, since we use the PRIx* and INT*_C macros. but that's for
@@ -60,6 +69,12 @@
 # include <tgmath.h>
 #endif
 
+/* Math constants, not standard but in most toolchains, notably
+ * OpenWatcom doesn't have them. */
+#ifndef M_PI
+# define M_PI 3.1415926535897932384626433832795028841971
+#endif
+
 #ifdef HAVE_ASSERT_H
 # include <assert.h>
 #else
@@ -71,12 +86,6 @@
 # endif
 #endif
 
-/* Math constants, not standard but in most toolchains, notably
- * OpenWatcom doesn't have them. */
-#ifndef M_PI
-# define M_PI 3.14159265358979323846
-#endif
-
 #include <stdarg.h>
 #ifndef va_copy
 # ifdef __va_copy /* GNU */
@@ -86,30 +95,24 @@
 # endif
 #endif
 
+/* ------------------------------------------------------------------------ */
+/* POSIX/UNIX/BSD crap */
+
+/* This defines MAXPATHLEN (used later in this file for the definition of
+ * SCHISM_PATH_MAX) */
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
 
-#include <string.h>
-
+/* These files provide struct stat, which we currently require to be
+ * provided by the implementation. Ideally we shouldn't need this and we
+ * would use our own "schism-stat" instead but this is okay for now. */
 #if HAVE_UNISTD_H
 # include <sys/types.h>
 # include <unistd.h>
 #endif
 
-#ifdef HAVE_LIMITS_H
-#include <limits.h>
-#endif
-
-#if HAVE_SYS_TIME_H
-# include <sys/time.h>
-#endif
-#include <time.h>
-
-#define INT_SHAPED_PTR(v)               ((intptr_t)(void*)(v))
-#define PTR_SHAPED_INT(i)               ((void*)(i))
-
-/* -------------------------------------------------------------- */
+/* ------------------------------------------------------------------------ */
 /* moved from util.h */
 
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof(*(a)))
@@ -127,6 +130,9 @@
 #ifndef ABS
 # define ABS(x) ((x) < 0 ? -(x) : x)
 #endif
+
+#define INT_SHAPED_PTR(v)               ((intptr_t)(void*)(v))
+#define PTR_SHAPED_INT(i)               ((void*)(i))
 
 /* Compares two version numbers following Semantic Versioning.
  * For example:
@@ -203,7 +209,7 @@
 # define SCHISM_HAS_C23_ATTRIBUTE(x) (0)
 #endif
 
-/* -------------------------------------------------------------- */
+/* ------------------------------------------------------------------------ */
 
 // Ok, now after all that mess, we can define these attributes:
 
@@ -477,6 +483,8 @@ extern int ya_optind, ya_opterr, ya_optopt;
 // i.e. it can be like, INT_MAX or something huge like that
 
 /* ------------------------------------------------------------------------ */
+/* GNU string comparison functions, and charset_stdlib.c replacements for
+ * them */
 
 #ifndef HAVE_STRCASECMP
 # ifdef HAVE_STRICMP
@@ -503,14 +511,17 @@ extern int ya_optind, ya_opterr, ya_optopt;
 # define strcasestr(haystack, needle) charset_strcasestr(haystack, CHARSET_CHAR, needle, CHARSET_CHAR)
 #endif
 
-// why oh why
+/* ------------------------------------------------------------------------ */
+/* VLA abstraction; see the definitions below for details */
+
+/* Giant ifdef tower that's literally only for alloca() */
 #ifdef alloca
 # define SCHISM_USE_ALLOCA
 #else
 # ifdef HAVE_ALLOCA_H
 #  include <alloca.h>
 #  define SCHISM_USE_ALLOCA
-# elif defined(__NetBSD__) // untested
+# elif defined(__NetBSD__) || defined(__DMC__) // untested
 #  include <stdlib.h>
 #  define SCHISM_USE_ALLOCA
 # elif SCHISM_GNUC_HAS_BUILTIN(__builtin_alloca, 2, 95, 3)
@@ -520,14 +531,8 @@ extern int ya_optind, ya_opterr, ya_optopt;
 #  include <malloc.h>
 #  define alloca _alloca
 #  define SCHISM_USE_ALLOCA
-# elif defined(__WATCOMC__) // untested
+# elif defined(__WATCOMC__) || defined(__BORLANDC__) // untested
 #  include <malloc.h>
-#  define SCHISM_USE_ALLOCA
-# elif defined(__BORLANDC__) // untested
-#  include <malloc.h>
-#  define SCHISM_USE_ALLOCA
-# elif defined(__DMC__) // untested
-#  include <stdlib.h>
 #  define SCHISM_USE_ALLOCA
 # elif defined(_AIX) && !defined(__GNUC__) // untested
 #  pragma alloca
@@ -536,7 +541,7 @@ extern int ya_optind, ya_opterr, ya_optopt;
 void *alloca(unsigned int size);
 #  define SCHISM_USE_ALLOCA
 # elif defined(HAVE_ALLOCA)
-// we ought to not be assuming this
+// we ought to not be assuming this; eh
 void *alloca(size_t size);
 #  define SCHISM_USE_ALLOCA
 # endif
