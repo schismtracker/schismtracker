@@ -174,8 +174,13 @@ dnl ------------------------------------------------------------------------
 
 dnl Check for standard programs
 AC_PROG_CC
+
+dnl DEPRECATED in 2.70 - re-added so old autoconf versions don't screw up and
+dnl neglect to put the compiler in C99 mode
+AC_PROG_CC_C99
+
 if test "x$ac_cv_prog_cc_c11" = "xno" && test "x$ac_cv_prog_cc_c99" = "xno"; then
-	AC_MSG_WARN([*** Failed to find a proper C99 compiler])
+	AC_MSG_WARN([*** Failed to find a proper C99/C11 compiler])
 fi
 AM_PROG_CC_C_O
 AC_PROG_CPP
