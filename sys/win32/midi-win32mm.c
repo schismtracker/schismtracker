@@ -72,11 +72,11 @@ static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *data, uint32_t len
 	char *z;
 	LPMIDIHDR m;
 
-	if (!d) len=0;
+	if (!data) len=0;
 	z = mem_calloc(1, sizeof(MIDIHDR) + len);
 	m = (LPMIDIHDR)z;
 
-	if (len) memcpy(z + sizeof(MIDIHDR), d, len);
+	if (len) memcpy(z + sizeof(MIDIHDR), data, len);
 
 	m->lpData = (z+sizeof(MIDIHDR));
 	m->dwBufferLength = len;
