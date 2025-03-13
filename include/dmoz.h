@@ -24,7 +24,6 @@
 #ifndef SCHISM_DMOZ_H_
 #define SCHISM_DMOZ_H_
 
-#include <stdint.h>
 #include "player/sndfile.h" /* for song_sample_t */
 
 /* need these for struct stat */

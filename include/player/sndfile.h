@@ -15,7 +15,6 @@
 
 #include "tables.h"
 
-#include <time.h> // struct tm
 #include "timer.h" // timer_ticks_t
 
 

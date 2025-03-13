@@ -24,7 +24,6 @@
 #ifndef SCHISM_FMT_H_
 #define SCHISM_FMT_H_
 
-#include <stdint.h>
 #include "dmoz.h"
 #include "slurp.h"
 #include "util.h"

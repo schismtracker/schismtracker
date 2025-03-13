@@ -26,8 +26,6 @@
 
 #include "headers.h"
 
-#include <sys/types.h>
-
 /* formatting */
 char *str_from_num(int digits, unsigned int n, char *buf); // what size
 char *str_from_num_signed(int digits, int n, char *buf);   // buffer do

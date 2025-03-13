@@ -24,8 +24,6 @@
 #ifndef SCHISM_SONG_H_
 #define SCHISM_SONG_H_
 
-#include <stdint.h>
-
 #include "player/sndfile.h"
 #include "util.h"
 #include "disko.h"

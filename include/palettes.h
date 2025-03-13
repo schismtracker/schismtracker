@@ -24,8 +24,6 @@
 #ifndef SCHISM_PALETTES_H_
 #define SCHISM_PALETTES_H_
 
-#include <stdint.h>
-
 struct it_palette {
 	char name[21];
 	uint8_t colors[16][3];

@@ -1,7 +1,7 @@
 #ifndef SCHISM_PLAYER_FMOPL_H_
 #define SCHISM_PLAYER_FMOPL_H_
 
-#include <stdint.h>
+#include "headers.h"
 
 #define logerror(...) /**/
 

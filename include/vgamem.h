@@ -24,8 +24,6 @@
 #ifndef SCHISM_VGAMEM_H_
 #define SCHISM_VGAMEM_H_
 
-#include <stdint.h>
-
 void vgamem_clear(void);
 
 struct vgamem_overlay {

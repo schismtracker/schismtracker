@@ -26,7 +26,6 @@
 
 #include "headers.h"
 
-#include <stdint.h>
 #include <sys/stat.h> /* struct stat */
 
 /* --------------------------------------------------------------------- */
