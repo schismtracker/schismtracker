@@ -170,10 +170,10 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 	if (cwtv < 0x0214)
 		its.flags &= ~4;
 
-	strncpy(smp->name, (const char *)its.name, 25);
-	smp->name[25] = '\0';
-	strncpy(smp->filename, (const char *)its.filename, 12);
-	smp->filename[12] = '\0';
+	memcpy(smp->name, (const char *)its.name, MIN(sizeof(smp->name), sizeof(its.name)));
+	smp->name[ARRAY_SIZE(smp->name) - 1] = '\0';
+	memcpy(smp->filename, (const char *)its.filename, MIN(sizeof(smp->filename), sizeof(its.filename)));
+	smp->filename[ARRAY_SIZE(smp->filename) - 1] = '\0';
 
 	smp->volume = its.vol * 4;
 	smp->panning = (its.dfp & 127) * 4;

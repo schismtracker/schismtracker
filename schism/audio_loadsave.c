@@ -61,14 +61,14 @@ static void _fix_names(song_t *qq)
 	int c, n;
 
 	for (n = 1; n < MAX_INSTRUMENTS; n++) {
-		for (c = 0; c < 25; c++)
-			if (qq->samples[n].name[c] == 0)
+		for (c = 0; c < ARRAY_SIZE(qq->samples[n].name); c++)
+			if (!qq->samples[n].name[c])
 				qq->samples[n].name[c] = 32;
 		qq->samples[n].name[25] = 0;
 
 		if (!qq->instruments[n])
 			continue;
-		for (c = 0; c < 25; c++)
+		for (c = 0; c < ARRAY_SIZE(qq->instruments[n]->name); c++)
 			if (qq->instruments[n]->name[c] == 0)
 				qq->instruments[n]->name[c] = 32;
 		qq->instruments[n]->name[25] = 0;
