@@ -591,4 +591,33 @@ void *alloca(size_t size);
 // hm :)
 #define SCHISM_VLA_LENGTH(name) (SCHISM_VLA_SIZEOF(name) / sizeof(*name))
 
+/* ------------------------------------------------------------------------ */
+
+/* Used in the brackets of a flexible array member. Meant to be used as so:
+ *
+ * struct foo {
+ *   ...
+ *   int b[SCHISM_FAM_SIZE];
+ * } foo;
+ * int *b;
+ *
+ * // proper ways of accessing `b`:
+ * b = &foo.b;
+ * b = (int *)((unsigned char *)foo + offsetof(struct foo, b));
+ *
+ * // undefined behavior:
+ * b = (int *)((unsigned char *)foo + sizeof(foo));
+ *
+ * Flexible array members should be used as defined in the C99 spec (as in,
+ * only ever at the end of a struct).
+ */
+#ifdef HAVE_C99_FAMS
+# define SCHISM_FAM_SIZE
+#elif SCHISM_GNUC_ATLEAST(2, 7, 0)
+# define SCHISM_FAM_SIZE 0
+#else
+/* Hmph. */
+# define SCHISM_FAM_SIZE 1
+#endif
+
 #endif /* SCHISM_HEADERS_H_ */

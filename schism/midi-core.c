@@ -653,7 +653,7 @@ void midi_send_flush(void)
 // provided by that time.
 struct _midi_send_timer_curry {
 	uint32_t len;
-	unsigned char msg[];
+	unsigned char msg[SCHISM_FAM_SIZE];
 };
 
 static void _midi_send_timer_callback(void *param)
@@ -699,7 +699,7 @@ void midi_send_buffer(const unsigned char *data, uint32_t len, uint32_t pos)
 			if (_midi_send_unlocked(data, len, pos, MIDI_FROM_LATER)) {
 
 				// ok, we need a timer.
-				struct _midi_send_timer_curry *curry = mem_alloc(sizeof(struct _midi_send_timer_curry) + len);
+				struct _midi_send_timer_curry *curry = mem_alloc(sizeof(*curry) + len);
 
 				memcpy(curry->msg, data, len);
 				curry->len = len;

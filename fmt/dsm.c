@@ -35,7 +35,7 @@
 
 struct dsm_chunk_patt {
 	uint16_t length;
-	uint8_t data[];
+	uint8_t data[SCHISM_FAM_SIZE];
 };
 
 struct dsm_chunk_song {
@@ -199,14 +199,16 @@ static int dsm_process_pattern(const void *data, size_t size, void *userdata)
 
 	/* make sure our offset doesn't pass the length */
 #define DSM_ASSERT_OFFSET() \
-	if (slurp_eof(&fp)) { \
-		log_appendf(4, " WARNING: Offset (%" PRId64 ") passed length (%" PRIuSZ ") while parsing pattern!", slurp_tell(&fp), slurp_length(&fp)); \
-		return 0; \
-	}
+	do { \
+		if (slurp_eof(&fp)) { \
+			log_appendf(4, " WARNING: Offset (%" PRId64 ") passed length (%" PRIuSZ ") while parsing pattern!", slurp_tell(&fp), slurp_length(&fp)); \
+			return 0; \
+		} \
+	} while (0)
 
 	int row = 0;
 	while (row < 64) {
-		DSM_ASSERT_OFFSET()
+		DSM_ASSERT_OFFSET();
 
 		uint8_t mask = slurp_getc(&fp);
 
@@ -226,7 +228,7 @@ static int dsm_process_pattern(const void *data, size_t size, void *userdata)
 
 		song_note_t *note = ppd->pattern + 64 * row + chn;
 		if (mask & DSM_PAT_NOTE_PRESENT) {
-			DSM_ASSERT_OFFSET()
+			DSM_ASSERT_OFFSET();
 
 			uint8_t c = slurp_getc(&fp);
 
@@ -235,14 +237,14 @@ static int dsm_process_pattern(const void *data, size_t size, void *userdata)
 		}
 
 		if (mask & DSM_PAT_INST_PRESENT) {
-			DSM_ASSERT_OFFSET()
+			DSM_ASSERT_OFFSET();
 
 			note->instrument = slurp_getc(&fp);
 		}
 
 		if (mask & DSM_PAT_VOL_PRESENT) {
 			/* volume */
-			DSM_ASSERT_OFFSET()
+			DSM_ASSERT_OFFSET();
 
 			uint8_t param = slurp_getc(&fp);
 
@@ -253,11 +255,11 @@ static int dsm_process_pattern(const void *data, size_t size, void *userdata)
 		}
 
 		if (mask & DSM_PAT_CMD_PRESENT) {
-			DSM_ASSERT_OFFSET()
+			DSM_ASSERT_OFFSET();
 
 			note->effect = slurp_getc(&fp);
 
-			DSM_ASSERT_OFFSET()
+			DSM_ASSERT_OFFSET();
 
 			note->param = slurp_getc(&fp);
 

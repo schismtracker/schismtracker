@@ -573,6 +573,15 @@ if test "x$have_c99_vlas" = "xyes"; then
 	AC_DEFINE([HAVE_C99_VLAS], [1], [C99-style VLA support])
 fi
 
+AC_MSG_CHECKING([for C99 flexible array member support])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([[struct flex { int a; int b[]; }; ]])],
+	[have_c99_fams=yes],
+	[have_c99_fams=no])
+AC_MSG_RESULT($have_c99_fams)
+if test "x$have_c99_fams" = "xyes"; then
+	AC_DEFINE([HAVE_C99_FAMS], [1], [C99-style flexible array member support])
+fi
+
 dnl --------------------------------------------------------------------------
 dnl check whether fseek allows to seek past EOF or not
 

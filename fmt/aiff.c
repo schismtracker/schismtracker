@@ -30,13 +30,6 @@
 #include "fmt.h"
 #include "mem.h"
 
-#include <stdint.h>
-#include <unistd.h> /* swab */
-
-#ifdef SCHISM_WIN32
-# define swab(a,b,c) swab((const char*)(a),(char*)(b),(size_t)(c))
-#endif
-
 /* --------------------------------------------------------------------- */
 
 struct aiff_chunk_vhdr {

@@ -69,20 +69,23 @@ static int use_ansi_funcs = 0;
 
 static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *data, uint32_t len)
 {
-	char *z;
-	LPMIDIHDR m;
+	struct {
+		MIDIHDR hdr;
+		char data[SCHISM_FAM_SIZE];
+	} *m;
 
-	if (!data) len=0;
-	z = mem_calloc(1, sizeof(MIDIHDR) + len);
-	m = (LPMIDIHDR)z;
+	if (!data) len = 0;
 
-	if (len) memcpy(z + sizeof(MIDIHDR), data, len);
+	m = mem_calloc(1, sizeof(*m) + len);
 
-	m->lpData = (z+sizeof(MIDIHDR));
-	m->dwBufferLength = len;
-	m->lpNext = *q;
-	m->dwOffset = 0;
-	(*q) = (m);
+	if (len) memcpy(m->data, data, len);
+
+	m->hdr.lpData = m->data;
+	m->hdr.dwBufferLength = len;
+	m->hdr.lpNext = *q;
+	m->hdr.dwOffset = 0;
+
+	*q = &m->hdr;
 }
 
 static void _win32mm_send(struct midi_port *p, const unsigned char *data,
