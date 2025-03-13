@@ -29,19 +29,19 @@
 /* bswap16 was added later in 4.8.0 */
 #if SCHISM_GNUC_HAS_BUILTIN(__builtin_bswap16, 4, 8, 0)
 # define bswap_16(x) __builtin_bswap16(x)
-#elif SCHISM_MSVC_ATLEAST(0, 0, 0) // FIXME which version
+#elif SCHISM_MSVC_ATLEAST(8, 0, 0)
 # define bswap_16(x) _byteswap_ushort(x)
 #endif
 
 #if SCHISM_GNUC_HAS_BUILTIN(__builtin_bswap32, 4, 3, 0)
 # define bswap_32(x) __builtin_bswap32(x)
-#elif SCHISM_MSVC_ATLEAST(0, 0, 0) // FIXME which version
+#elif SCHISM_MSVC_ATLEAST(8, 0, 0)
 # define bswap_32(x) _byteswap_ulong(x)
 #endif
 
 #if SCHISM_GNUC_HAS_BUILTIN(__builtin_bswap64, 4, 3, 0)
 # define bswap_64(x) __builtin_bswap64(x)
-#elif SCHISM_MSVC_ATLEAST(0, 0, 0) // FIXME which version
+#elif SCHISM_MSVC_ATLEAST(8, 0, 0)
 # define bswap_64(x) _byteswap_uint64(x)
 #endif
 

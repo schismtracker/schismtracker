@@ -229,7 +229,9 @@
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__malloc__, 3, 0, 0)
 # define SCHISM_MALLOC __attribute__((__malloc__))
 #elif SCHISM_MSVC_ATLEAST(14, 0, 0)
-# define SCHISM_MALLOC __declspec(allocator)
+# define SCHISM_MALLOC __declspec(allocator) __declspec(restrict)
+#elif SCHISM_MSVC_ATLEAST(8, 0, 0)
+# define SCHISM_MALLOC __declspec(restrict)
 #else
 # define SCHISM_MALLOC
 #endif
@@ -253,6 +255,8 @@
 # define SCHISM_CONST __attribute__((__const__))
 #elif SCHISM_HAS_C23_ATTRIBUTE(unsequenced)
 # define SCHISM_CONST [[unsequenced]]
+#elif SCHISM_MSVC_ATLEAST(8, 0, 0)
+# define SCHISM_CONST __declspec(noalias)
 #else
 # define SCHISM_CONST
 #endif
@@ -264,6 +268,8 @@
 # define SCHISM_NORETURN _Noreturn
 #elif SCHISM_GNUC_HAS_ATTRIBUTE(__noreturn__, 2, 5, 0)
 # define SCHISM_NORETURN __attribute__((__noreturn__))
+#elif SCHISM_MSVC_ATLEAST(7, 1, 0)
+# define SCHISM_NORETURN __declspec(noreturn)
 #else
 # define SCHISM_NORETURN
 #endif
@@ -307,7 +313,7 @@
 # define SCHISM_DEPRECATED [[deprecated]]
 #elif SCHISM_GNUC_HAS_ATTRIBUTE(__deprecated__, 3, 1, 0)
 # define SCHISM_DEPRECATED __attribute__((__deprecated__))
-#elif SCHISM_MSVC_ATLEAST(13, 10, 0)
+#elif SCHISM_MSVC_ATLEAST(6, 0, 0)
 # define SCHISM_DEPRECATED __declspec(deprecated)
 #else
 # define SCHISM_DEPRECATED
@@ -356,7 +362,7 @@
 
 /* Used to mark a printf format parameter. Currently only MSVC really
  * has this, and GCC has the much more useful "format" attribute */
-#if SCHISM_MSVC_ATLEAST(14, 0, 0)
+#if SCHISM_MSVC_ATLEAST(8, 0, 0)
 # define SCHISM_PRINTF_FORMAT_PARAM _Printf_format_string_
 #else
 # define SCHISM_PRINTF_FORMAT_PARAM
