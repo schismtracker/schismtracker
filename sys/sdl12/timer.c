@@ -70,7 +70,7 @@ struct _sdl12_timer_oneshot_curry {
 	void *param;
 };
 
-static uint32_t _sdl12_timer_oneshot_callback(uint32_t interval, void *param)
+static uint32_t SDLCALL _sdl12_timer_oneshot_callback(uint32_t interval, void *param)
 {
 	// NOTE: treat this stuff as read-only to prevent race conditions
 	// and other weird crap.

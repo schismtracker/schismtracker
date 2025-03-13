@@ -220,7 +220,7 @@ static const char *sdl12_audio_device_name(uint32_t i)
 
 /* -------------------------------------------------------- */
 
-static void sdl12_dummy_callback(void *userdata, uint8_t *stream, int len)
+static void SDLCALL sdl12_dummy_callback(void *userdata, uint8_t *stream, int len)
 {
 	// call our own callback
 	schism_audio_device_t *dev = userdata;
