@@ -538,7 +538,13 @@ int fmt_xi_save_instrument(disko_t *fp, song_t *song, song_instrument_t *ins)
 		xmss.looplen = bswapLE32(xmss.looplen);
 
 		xmss.vol = smp->volume >> 2;
-		xmss.pan = smp->panning;
+
+		if(smp->flags & CHN_PANNING) {
+			xmss.pan = smp->panning;
+		} else {
+			// Default panning enabled--pan to center.
+			xmss.pan = 0x80;
+		}
 
 		int32_t transp = frequency_to_transpose(smp->c5speed);
 
