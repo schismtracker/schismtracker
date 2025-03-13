@@ -228,6 +228,7 @@ int fmt_xi_load_instrument(slurp_t *fp, int slot)
 	struct instrumentloader ii;
 	song_instrument_t *g;
 	int k, prevtick;
+	int smpdataoffset;
 
 	if (!xi_file_header_read(&xi, fp))
 		return 0;
@@ -307,6 +308,9 @@ int fmt_xi_load_instrument(slurp_t *fp, int slot)
 	xi.xish.volfade = bswapLE16(xi.xish.volfade);
 	xi.xish.nsamples = bswapLE16(xi.xish.nsamples);
 
+	// Determine where the sample data starts.
+	smpdataoffset = sizeof(xi) + (sizeof(struct xm_sample_header) * xi.xish.nsamples);
+
 	for (k = 0; k < xi.xish.nsamples; k++) {
 		struct xm_sample_header xmss;
 		song_sample_t *smp;
@@ -378,7 +382,16 @@ int fmt_xi_load_instrument(slurp_t *fp, int slot)
 		}
 
 		smp->c5speed = transpose_to_frequency(xmss.relnote, xmss.finetune);
-		slurp_seek(fp, csf_read_sample(current_song->samples + n, rs, fp), SEEK_CUR);
+
+		if(smp->length) {
+			// Save our spot, read the sample data, then jump back.
+			uint64_t smpheaderoffset;
+
+			smpheaderoffset = slurp_tell(fp);
+			slurp_seek(fp, smpdataoffset, SEEK_SET);
+			smpdataoffset += csf_read_sample(current_song->samples + n, rs, fp);
+			slurp_seek(fp, smpheaderoffset, SEEK_SET);
+		}
 	}
 
 	return 1;
