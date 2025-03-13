@@ -422,7 +422,7 @@ int fmt_xi_save_instrument(disko_t *fp, song_t *song, song_instrument_t *ins)
 			xi_nalloc++;
 		}
 
-		xi.xish.snum[j] = xi_map[o]+1;
+		xi.xish.snum[j] = xi_map[o];
 	}
 
 	if (xi_nalloc < 1)
