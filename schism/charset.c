@@ -319,43 +319,6 @@ static void windows1252_to_ucs4(charset_decode_t *decoder)
 	decoder->state = c ? DECODER_STATE_NEED_MORE : DECODER_STATE_DONE;
 }
 
-static void macosroman_to_ucs4(charset_decode_t *decoder)
-{
-	// https://www.unicode.org/Public/MAPPINGS/VENDORS/APPLE/ROMAN.TXT
-	static const uint16_t macosroman_table[128] = {
-		/* 0x80 */
-		0x00C4, 0x00C5, 0x00C7, 0x00C9, 0x00D1, 0x00D6, 0x00DC, 0x00E1,
-		0x00E0, 0x00E2, 0x00E4, 0x00E3, 0x00E5, 0x00E7, 0x00E9, 0x00E8,
-		/* 0x90 */
-		0x00EA, 0x00EB, 0x00ED, 0x00EC, 0x00EE, 0x00EF, 0x00F1, 0x00F3,
-		0x00F2, 0x00F4, 0x00F6, 0x00F5, 0x00FA, 0x00F9, 0x00FB, 0x00FC,
-		/* 0xA0 */
-		0x2020, 0x00B0, 0x00A2, 0x00A3, 0x00A7, 0x2022, 0x00B6, 0x00DF,
-		0x00AE, 0x00A9, 0x2122, 0x00B4, 0x00A8, 0x2260, 0x00C6, 0x00D8,
-		/* 0xB0 */
-		0x221E, 0x00B1, 0x2264, 0x2265, 0x00A5, 0x00B5, 0x2202, 0x2211,
-		0x220F, 0x03C0, 0x222B, 0x00AA, 0x00BA, 0x03A9, 0x00E6, 0x00F8,
-		/* 0xC0 */
-		0x00BF, 0x00A1, 0x00AC, 0x221A, 0x0192, 0x2248, 0x2206, 0x00AB,
-		0x00BB, 0x2026, 0x00A0, 0x00C0, 0x00C3, 0x00D5, 0x0152, 0x0153,
-		/* 0xD0 */
-		0x2013, 0x2014, 0x201C, 0x201D, 0x2018, 0x2019, 0x00F7, 0x25CA,
-		0x00FF, 0x0178, 0x2044, 0x20AC, 0x2039, 0x203A, 0xFB01, 0xFB02,
-		/* 0xE0 */
-		0x2021, 0x00B7, 0x201A, 0x201E, 0x2030, 0x00C2, 0x00CA, 0x00C1,
-		0x00CB, 0x00C8, 0x00CD, 0x00CE, 0x00CF, 0x00CC, 0x00D3, 0x00D4,
-		/* 0xF0 */
-		0xF8FF, 0x00D2, 0x00DA, 0x00DB, 0x00D9, 0x0131, 0x02C6, 0x02DC,
-		0x00AF, 0x02D8, 0x02D9, 0x02DA, 0x00B8, 0x02DD, 0x02DB, 0x02C7,
-	};
-
-	DECODER_ASSERT_OVERFLOW(decoder, 1);
-
-	unsigned char c = decoder->in[decoder->offset++];
-	decoder->codepoint = (c >= 0x80) ? macosroman_table[c - 0x80] : c;
-	decoder->state = c ? DECODER_STATE_NEED_MORE : DECODER_STATE_DONE;
-}
-
 /* ----------------------------------------------------- */
 
 #define CHARSET_ENCODE_ERROR (-1)
@@ -612,153 +575,6 @@ ENCODE_UCS4_VARIANT(BE)
 
 #undef ENCODE_UCS4_VARIANT
 
-static int ucs4_to_macosroman(uint32_t ch, disko_t *out)
-{
-	// https://www.unicode.org/Public/MAPPINGS/VENDORS/APPLE/ROMAN.TXT
-	unsigned char c = 0;
-
-	if (ch < 0x80) {
-		c = ch;
-	} else {
-		switch (ch) {
-#define UCS4_EQUIV(y, x) case UINT32_C(x): c = (y); break;
-		UCS4_EQUIV(0x80, 0x00C4); // LATIN CAPITAL LETTER A WITH DIAERESIS
-		UCS4_EQUIV(0x81, 0x00C5); // LATIN CAPITAL LETTER A WITH RING ABOVE
-		UCS4_EQUIV(0x82, 0x00C7); // LATIN CAPITAL LETTER C WITH CEDILLA
-		UCS4_EQUIV(0x83, 0x00C9); // LATIN CAPITAL LETTER E WITH ACUTE
-		UCS4_EQUIV(0x84, 0x00D1); // LATIN CAPITAL LETTER N WITH TILDE
-		UCS4_EQUIV(0x85, 0x00D6); // LATIN CAPITAL LETTER O WITH DIAERESIS
-		UCS4_EQUIV(0x86, 0x00DC); // LATIN CAPITAL LETTER U WITH DIAERESIS
-		UCS4_EQUIV(0x87, 0x00E1); // LATIN SMALL LETTER A WITH ACUTE
-		UCS4_EQUIV(0x88, 0x00E0); // LATIN SMALL LETTER A WITH GRAVE
-		UCS4_EQUIV(0x89, 0x00E2); // LATIN SMALL LETTER A WITH CIRCUMFLEX
-		UCS4_EQUIV(0x8A, 0x00E4); // LATIN SMALL LETTER A WITH DIAERESIS
-		UCS4_EQUIV(0x8B, 0x00E3); // LATIN SMALL LETTER A WITH TILDE
-		UCS4_EQUIV(0x8C, 0x00E5); // LATIN SMALL LETTER A WITH RING ABOVE
-		UCS4_EQUIV(0x8D, 0x00E7); // LATIN SMALL LETTER C WITH CEDILLA
-		UCS4_EQUIV(0x8E, 0x00E9); // LATIN SMALL LETTER E WITH ACUTE
-		UCS4_EQUIV(0x8F, 0x00E8); // LATIN SMALL LETTER E WITH GRAVE
-		UCS4_EQUIV(0x90, 0x00EA); // LATIN SMALL LETTER E WITH CIRCUMFLEX
-		UCS4_EQUIV(0x91, 0x00EB); // LATIN SMALL LETTER E WITH DIAERESIS
-		UCS4_EQUIV(0x92, 0x00ED); // LATIN SMALL LETTER I WITH ACUTE
-		UCS4_EQUIV(0x93, 0x00EC); // LATIN SMALL LETTER I WITH GRAVE
-		UCS4_EQUIV(0x94, 0x00EE); // LATIN SMALL LETTER I WITH CIRCUMFLEX
-		UCS4_EQUIV(0x95, 0x00EF); // LATIN SMALL LETTER I WITH DIAERESIS
-		UCS4_EQUIV(0x96, 0x00F1); // LATIN SMALL LETTER N WITH TILDE
-		UCS4_EQUIV(0x97, 0x00F3); // LATIN SMALL LETTER O WITH ACUTE
-		UCS4_EQUIV(0x98, 0x00F2); // LATIN SMALL LETTER O WITH GRAVE
-		UCS4_EQUIV(0x99, 0x00F4); // LATIN SMALL LETTER O WITH CIRCUMFLEX
-		UCS4_EQUIV(0x9A, 0x00F6); // LATIN SMALL LETTER O WITH DIAERESIS
-		UCS4_EQUIV(0x9B, 0x00F5); // LATIN SMALL LETTER O WITH TILDE
-		UCS4_EQUIV(0x9C, 0x00FA); // LATIN SMALL LETTER U WITH ACUTE
-		UCS4_EQUIV(0x9D, 0x00F9); // LATIN SMALL LETTER U WITH GRAVE
-		UCS4_EQUIV(0x9E, 0x00FB); // LATIN SMALL LETTER U WITH CIRCUMFLEX
-		UCS4_EQUIV(0x9F, 0x00FC); // LATIN SMALL LETTER U WITH DIAERESIS
-		UCS4_EQUIV(0xA0, 0x2020); // DAGGER
-		UCS4_EQUIV(0xA1, 0x00B0); // DEGREE SIGN
-		UCS4_EQUIV(0xA2, 0x00A2); // CENT SIGN
-		UCS4_EQUIV(0xA3, 0x00A3); // POUND SIGN
-		UCS4_EQUIV(0xA4, 0x00A7); // SECTION SIGN
-		UCS4_EQUIV(0xA5, 0x2022); // BULLET
-		UCS4_EQUIV(0xA6, 0x00B6); // PILCROW SIGN
-		UCS4_EQUIV(0xA7, 0x00DF); // LATIN SMALL LETTER SHARP S
-		UCS4_EQUIV(0xA8, 0x00AE); // REGISTERED SIGN
-		UCS4_EQUIV(0xA9, 0x00A9); // COPYRIGHT SIGN
-		UCS4_EQUIV(0xAA, 0x2122); // TRADE MARK SIGN
-		UCS4_EQUIV(0xAB, 0x00B4); // ACUTE ACCENT
-		UCS4_EQUIV(0xAC, 0x00A8); // DIAERESIS
-		UCS4_EQUIV(0xAD, 0x2260); // NOT EQUAL TO
-		UCS4_EQUIV(0xAE, 0x00C6); // LATIN CAPITAL LETTER AE
-		UCS4_EQUIV(0xAF, 0x00D8); // LATIN CAPITAL LETTER O WITH STROKE
-		UCS4_EQUIV(0xB0, 0x221E); // INFINITY
-		UCS4_EQUIV(0xB1, 0x00B1); // PLUS-MINUS SIGN
-		UCS4_EQUIV(0xB2, 0x2264); // LESS-THAN OR EQUAL TO
-		UCS4_EQUIV(0xB3, 0x2265); // GREATER-THAN OR EQUAL TO
-		UCS4_EQUIV(0xB4, 0x00A5); // YEN SIGN
-		UCS4_EQUIV(0xB5, 0x00B5); // MICRO SIGN
-		UCS4_EQUIV(0xB6, 0x2202); // PARTIAL DIFFERENTIAL
-		UCS4_EQUIV(0xB7, 0x2211); // N-ARY SUMMATION
-		UCS4_EQUIV(0xB8, 0x220F); // N-ARY PRODUCT
-		UCS4_EQUIV(0xB9, 0x03C0); // GREEK SMALL LETTER PI
-		UCS4_EQUIV(0xBA, 0x222B); // INTEGRAL
-		UCS4_EQUIV(0xBB, 0x00AA); // FEMININE ORDINAL INDICATOR
-		UCS4_EQUIV(0xBC, 0x00BA); // MASCULINE ORDINAL INDICATOR
-		UCS4_EQUIV(0xBD, 0x03A9); // GREEK CAPITAL LETTER OMEGA
-		UCS4_EQUIV(0xBE, 0x00E6); // LATIN SMALL LETTER AE
-		UCS4_EQUIV(0xBF, 0x00F8); // LATIN SMALL LETTER O WITH STROKE
-		UCS4_EQUIV(0xC0, 0x00BF); // INVERTED QUESTION MARK
-		UCS4_EQUIV(0xC1, 0x00A1); // INVERTED EXCLAMATION MARK
-		UCS4_EQUIV(0xC2, 0x00AC); // NOT SIGN
-		UCS4_EQUIV(0xC3, 0x221A); // SQUARE ROOT
-		UCS4_EQUIV(0xC4, 0x0192); // LATIN SMALL LETTER F WITH HOOK
-		UCS4_EQUIV(0xC5, 0x2248); // ALMOST EQUAL TO
-		UCS4_EQUIV(0xC6, 0x2206); // INCREMENT
-		UCS4_EQUIV(0xC7, 0x00AB); // LEFT-POINTING DOUBLE ANGLE QUOTATION MARK
-		UCS4_EQUIV(0xC8, 0x00BB); // RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK
-		UCS4_EQUIV(0xC9, 0x2026); // HORIZONTAL ELLIPSIS
-		UCS4_EQUIV(0xCA, 0x00A0); // NO-BREAK SPACE
-		UCS4_EQUIV(0xCB, 0x00C0); // LATIN CAPITAL LETTER A WITH GRAVE
-		UCS4_EQUIV(0xCC, 0x00C3); // LATIN CAPITAL LETTER A WITH TILDE
-		UCS4_EQUIV(0xCD, 0x00D5); // LATIN CAPITAL LETTER O WITH TILDE
-		UCS4_EQUIV(0xCE, 0x0152); // LATIN CAPITAL LIGATURE OE
-		UCS4_EQUIV(0xCF, 0x0153); // LATIN SMALL LIGATURE OE
-		UCS4_EQUIV(0xD0, 0x2013); // EN DASH
-		UCS4_EQUIV(0xD1, 0x2014); // EM DASH
-		UCS4_EQUIV(0xD2, 0x201C); // LEFT DOUBLE QUOTATION MARK
-		UCS4_EQUIV(0xD3, 0x201D); // RIGHT DOUBLE QUOTATION MARK
-		UCS4_EQUIV(0xD4, 0x2018); // LEFT SINGLE QUOTATION MARK
-		UCS4_EQUIV(0xD5, 0x2019); // RIGHT SINGLE QUOTATION MARK
-		UCS4_EQUIV(0xD6, 0x00F7); // DIVISION SIGN
-		UCS4_EQUIV(0xD7, 0x25CA); // LOZENGE
-		UCS4_EQUIV(0xD8, 0x00FF); // LATIN SMALL LETTER Y WITH DIAERESIS
-		UCS4_EQUIV(0xD9, 0x0178); // LATIN CAPITAL LETTER Y WITH DIAERESIS
-		UCS4_EQUIV(0xDA, 0x2044); // FRACTION SLASH
-		UCS4_EQUIV(0xDB, 0x20AC); // EURO SIGN
-		UCS4_EQUIV(0xDC, 0x2039); // SINGLE LEFT-POINTING ANGLE QUOTATION MARK
-		UCS4_EQUIV(0xDD, 0x203A); // SINGLE RIGHT-POINTING ANGLE QUOTATION MARK
-		UCS4_EQUIV(0xDE, 0xFB01); // LATIN SMALL LIGATURE FI
-		UCS4_EQUIV(0xDF, 0xFB02); // LATIN SMALL LIGATURE FL
-		UCS4_EQUIV(0xE0, 0x2021); // DOUBLE DAGGER
-		UCS4_EQUIV(0xE1, 0x00B7); // MIDDLE DOT
-		UCS4_EQUIV(0xE2, 0x201A); // SINGLE LOW-9 QUOTATION MARK
-		UCS4_EQUIV(0xE3, 0x201E); // DOUBLE LOW-9 QUOTATION MARK
-		UCS4_EQUIV(0xE4, 0x2030); // PER MILLE SIGN
-		UCS4_EQUIV(0xE5, 0x00C2); // LATIN CAPITAL LETTER A WITH CIRCUMFLEX
-		UCS4_EQUIV(0xE6, 0x00CA); // LATIN CAPITAL LETTER E WITH CIRCUMFLEX
-		UCS4_EQUIV(0xE7, 0x00C1); // LATIN CAPITAL LETTER A WITH ACUTE
-		UCS4_EQUIV(0xE8, 0x00CB); // LATIN CAPITAL LETTER E WITH DIAERESIS
-		UCS4_EQUIV(0xE9, 0x00C8); // LATIN CAPITAL LETTER E WITH GRAVE
-		UCS4_EQUIV(0xEA, 0x00CD); // LATIN CAPITAL LETTER I WITH ACUTE
-		UCS4_EQUIV(0xEB, 0x00CE); // LATIN CAPITAL LETTER I WITH CIRCUMFLEX
-		UCS4_EQUIV(0xEC, 0x00CF); // LATIN CAPITAL LETTER I WITH DIAERESIS
-		UCS4_EQUIV(0xED, 0x00CC); // LATIN CAPITAL LETTER I WITH GRAVE
-		UCS4_EQUIV(0xEE, 0x00D3); // LATIN CAPITAL LETTER O WITH ACUTE
-		UCS4_EQUIV(0xEF, 0x00D4); // LATIN CAPITAL LETTER O WITH CIRCUMFLEX
-		UCS4_EQUIV(0xF0, 0xF8FF); // Apple logo
-		UCS4_EQUIV(0xF1, 0x00D2); // LATIN CAPITAL LETTER O WITH GRAVE
-		UCS4_EQUIV(0xF2, 0x00DA); // LATIN CAPITAL LETTER U WITH ACUTE
-		UCS4_EQUIV(0xF3, 0x00DB); // LATIN CAPITAL LETTER U WITH CIRCUMFLEX
-		UCS4_EQUIV(0xF4, 0x00D9); // LATIN CAPITAL LETTER U WITH GRAVE
-		UCS4_EQUIV(0xF5, 0x0131); // LATIN SMALL LETTER DOTLESS I
-		UCS4_EQUIV(0xF6, 0x02C6); // MODIFIER LETTER CIRCUMFLEX ACCENT
-		UCS4_EQUIV(0xF7, 0x02DC); // SMALL TILDE
-		UCS4_EQUIV(0xF8, 0x00AF); // MACRON
-		UCS4_EQUIV(0xF9, 0x02D8); // BREVE
-		UCS4_EQUIV(0xFA, 0x02D9); // DOT ABOVE
-		UCS4_EQUIV(0xFB, 0x02DA); // RING ABOVE
-		UCS4_EQUIV(0xFC, 0x00B8); // CEDILLA
-		UCS4_EQUIV(0xFD, 0x02DD); // DOUBLE ACUTE ACCENT
-		UCS4_EQUIV(0xFE, 0x02DB); // OGONEK
-		UCS4_EQUIV(0xFF, 0x02C7); // CARON
-#undef UCS4_EQUIV
-		default: return CHARSET_ENCODE_ERROR;
-		}
-	}
-
-	disko_write(out, &c, sizeof(c));
-	return CHARSET_ENCODE_SUCCESS;
-}
-
 /* ----------------------------------------------------------------------- */
 
 /* function LUT here */
@@ -777,7 +593,6 @@ static const charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 
 	[CHARSET_CP437] = cp437_to_ucs4,
 	[CHARSET_WINDOWS1252] = windows1252_to_ucs4,
-	[CHARSET_MACOSROMAN] = macosroman_to_ucs4,
 
 	[CHARSET_CHAR] = utf8_to_ucs4,
 #ifdef SCHISM_WIN32
@@ -803,7 +618,6 @@ static const charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 	[CHARSET_UCS4BE] = ucs4_to_ucs4BE,
 
 	[CHARSET_CP437] = ucs4_to_cp437,
-	[CHARSET_MACOSROMAN] = ucs4_to_macosroman,
 
 	[CHARSET_CHAR] = ucs4_to_utf8,
 #ifdef SCHISM_WIN32
@@ -908,6 +722,8 @@ CHARSET_VARIATION(internal)
 # include <windows.h> // MultiByteToWideChar
 #elif defined(SCHISM_MACOS)
 # include <TextEncodingConverter.h>
+# include <Script.h>
+
 # ifndef kTECOutputBufferFullStatus
 #  define kTECOutputBufferFullStatus -8785
 # endif
@@ -944,11 +760,21 @@ static charset_error_t charset_iconv_impl_(const void *in, void *out, charset_t 
 }
 
 #ifdef SCHISM_MACOS
+static inline SCHISM_ALWAYS_INLINE int charset_iconv_get_system_encoding_(TextEncoding *penc)
+{
+	if (UpgradeScriptInfoToTextEncoding(smSystemScript, kTextLanguageDontCare, kTextRegionDontCare, NULL, penc) == noErr)
+		return 1;
+
+	/* Assume Mac OS Roman. */
+	*penc = CreateTextEncoding(kTextEncodingMacRoman, kTextEncodingDefaultVariant, kTextEncodingDefaultFormat);
+
+	return 1;
+}
+
 static charset_error_t charset_iconv_macos_preprocess_(const void *in, size_t insize, TextEncoding inenc, TextEncoding outenc, void *out, size_t *outsize)
 {
-	// aaaaaah!
 	if (insize == SIZE_MAX)
-		return CHARSET_ERROR_UNIMPLEMENTED;
+		insize = strlen((char *)in) + 1; //ok
 
 	OSStatus err = noErr;
 
@@ -1116,8 +942,14 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 	}
 #endif
 #ifdef SCHISM_MACOS
-	case CHARSET_HFS: {
-		TextEncoding hfsenc = CreateTextEncoding(kTextEncodingMacHFS, kTextEncodingDefaultVariant, kTextEncodingDefaultFormat);
+	case CHARSET_SYSTEMSCRIPT: {
+		/* FIXME: We have built in Mac OS Roman encoders and decoders...
+		 * we really ought to just be using those if the system encoding
+		 * is Mac OS Roman, which is probably the case. */
+		TextEncoding hfsenc;
+		if (!charset_iconv_get_system_encoding_(&hfsenc))
+			return CHARSET_ERROR_UNIMPLEMENTED;
+
 		TextEncoding utf16enc = CreateTextEncoding(kTextEncodingUnicodeDefault, kTextEncodingDefaultVariant, kUnicode16BitFormat);
 
 		state = charset_iconv_macos_preprocess_(in, insize, hfsenc, utf16enc, &infake, &insizefake);
@@ -1146,7 +978,7 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 	}
 #endif
 #ifdef SCHISM_MACOS
-	case CHARSET_HFS:
+	case CHARSET_SYSTEMSCRIPT:
 		outsetfake = CHARSET_UTF16;
 		break;
 #endif
@@ -1176,7 +1008,7 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 		break;
 #endif
 #ifdef SCHISM_MACOS
-	case CHARSET_HFS:
+	case CHARSET_SYSTEMSCRIPT:
 		free((void *)infake);
 		break;
 #endif
@@ -1250,13 +1082,14 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 	}
 #endif
 #ifdef SCHISM_MACOS
-	case CHARSET_HFS: {
-		/* FIXME This doesn't work? I don't really know why */
-
-		// can we return size so we don't have to do this?
+	case CHARSET_SYSTEMSCRIPT: {
+		/* can we return size so we don't have to do this? */
 		size_t len = (charset_strlen(outfake, CHARSET_UTF16) + 1) * sizeof(uint16_t);
 
-		TextEncoding hfsenc = CreateTextEncoding(kTextEncodingMacHFS, kTextEncodingDefaultVariant, kTextEncodingDefaultFormat);
+		TextEncoding hfsenc;
+		if (!charset_iconv_get_system_encoding_(&hfsenc))
+			return CHARSET_ERROR_UNIMPLEMENTED;
+
 		TextEncoding utf16enc = CreateTextEncoding(kTextEncodingUnicodeDefault, kTextEncodingDefaultVariant, kUnicode16BitFormat);
 
 		state = charset_iconv_macos_preprocess_(outfake, len, utf16enc, hfsenc, out, NULL);

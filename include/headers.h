@@ -473,7 +473,7 @@ extern int ya_optind, ya_opterr, ya_optopt;
  * https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation */
 # define SCHISM_PATH_MAX ((3 + 256 + 1) * 4) // drive letter, colon, name components, NUL, multiplied by 4 for UTF-8
 #elif defined(SCHISM_MACOS)
-# define SCHISM_PATH_MAX (255 + 1) // 255 bytes in Pascal-string + NUL terminator (encoding conversions do not happen here yet)
+# define SCHISM_PATH_MAX ((255 + 1) * 4) // 255 bytes in Pascal-string + NUL terminator times 4 for UTF-8
 #else
 # define SCHISM_PATH_MAX (8192) // 8 KiB (should be more than enough)
 #endif

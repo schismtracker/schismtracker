@@ -32,6 +32,8 @@
 #include "dmoz.h"
 #include "charset.h"
 #include "str.h"
+#include "config.h"
+#include "config-parser.h"
 
 #include <Files.h>
 #include <Folders.h>
@@ -96,9 +98,17 @@ void macos_show_message_box(const char *title, const char *text)
 	unsigned char err[256], explanation[256];
 	int16_t hit;
 
-	// These message boxes should really only be taking in ASCII anyway
-	str_to_pascal(title, err, NULL);
-	str_to_pascal(text, explanation, NULL);
+	{
+		char *ntitle = charset_iconv_easy(title, CHARSET_UTF8, CHARSET_SYSTEMSCRIPT);
+		str_to_pascal(ntitle, err, NULL);
+		free(ntitle);
+	}
+
+	{
+		char *ntext = charset_iconv_easy(text, CHARSET_UTF8, CHARSET_SYSTEMSCRIPT);
+		str_to_pascal(ntext, explanation, NULL);
+		free(ntext);
+	}
 
 	StandardAlert(kAlertDefaultOKText, err, explanation, NULL, &hit);
 }
@@ -116,8 +126,10 @@ int macos_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
 
 		// Fix the path, then convert it to a pascal string
 		char *normal = dmoz_path_normal(path);
-		str_to_pascal(normal, mpath, &truncated);
+		char *npath = charset_iconv_easy(normal, CHARSET_UTF8, CHARSET_SYSTEMSCRIPT);
 		free(normal);
+		str_to_pascal(npath, mpath, &truncated);
+		free(npath);
 		
 		if (truncated) {
 			errno = ENAMETOOLONG;
@@ -179,8 +191,10 @@ int macos_stat(const char *file, struct stat *st)
 		int truncated;
 
 		char *normal = dmoz_path_normal(file);
-		str_to_pascal(normal, ppath, &truncated);
+		char *npath = charset_iconv_easy(normal, CHARSET_UTF8, CHARSET_SYSTEMSCRIPT);
 		free(normal);
+		str_to_pascal(npath, ppath, &truncated);
+		free(npath);
 
 		if (truncated) {
 			errno = ENAMETOOLONG;
@@ -247,6 +261,26 @@ int macos_stat(const char *file, struct stat *st)
 	return -1;
 }
 
+FILE *macos_fopen(const char* path, const char* flags)
+{
+	char *npath;
+
+	{
+		char *normal = dmoz_path_normal(path);
+		npath = charset_iconv_easy(normal, CHARSET_UTF8, CHARSET_SYSTEMSCRIPT);
+		free(normal);
+	}
+
+	if (!npath)
+		return NULL;
+
+	FILE* ret = fopen(npath, flags);
+
+	free(npath);
+
+	return ret;
+}
+
 /* ------------------------------------------------------------------------ */
 /* MacOS initialization code stolen from SDL and removed Mac OS X code */
 
@@ -300,10 +334,9 @@ static int CommandKeyIsDown(void)
 
 	GetKeys(theKeyMap);
 
-	// 
-	if (((unsigned char *)theKeyMap)[6] & 0x80)
-		return 1;
-	return 0;
+	// FIXME why is this checking 6? that's not even the
+	// proper scancode value for the command key
+	return !!(((unsigned char *)theKeyMap)[6] & 0x80);
 }
 
 /* Parse a command line buffer into arguments */
@@ -313,47 +346,61 @@ static int ParseCommandLine(char *cmdline, char **argv)
 	int argc;
 
 	argc = 0;
-	for ( bufp = cmdline; *bufp; ) {
+	for (bufp = cmdline; *bufp; /* none */) {
 		/* Skip leading whitespace */
 		while (isspace(*bufp))
 			++bufp;
 
 		/* Skip over argument */
-		if ( *bufp == '"' ) {
+		if (*bufp == '"') {
 			++bufp;
-			if ( *bufp ) {
-				if ( argv ) {
+			if (*bufp) {
+				if (argv)
 					argv[argc] = bufp;
-				}
+
 				++argc;
 			}
 			/* Skip over word */
-			while ( *bufp && (*bufp != '"') ) {
+			while (*bufp && (*bufp != '"'))
 				++bufp;
-			}
 		} else {
-			if ( *bufp ) {
-				if ( argv ) {
+			if (*bufp) {
+				if (argv)
 					argv[argc] = bufp;
-				}
+
 				++argc;
 			}
+
 			/* Skip over word */
-			while ( *bufp && !isspace(*bufp) ) {
+			while (*bufp && !isspace(*bufp))
 				++bufp;
-			}
 		}
-		if ( *bufp ) {
-			if ( argv ) {
+		if (*bufp ) {
+			if (argv)
 				*bufp = '\0';
-			}
+
 			++bufp;
 		}
 	}
-	if ( argv ) {
+
+	if (argv)
 		argv[argc] = NULL;
-	}
-	return(argc);
+
+	return argc;
+}
+
+static inline SCHISM_ALWAYS_INLINE void cleanup_output_file(FILE *fp, const char *name)
+{
+	long ft = ftell(fp);
+
+	fclose(fp);
+
+	/* If fp has not changed, nothing will happen, since
+	 * ftell will fail and return <0. In addition we don't
+	 * want to delete anything possibly valuable, so no
+	 * deleting if it's over 0. */
+	if (!ft)
+		remove(name);
 }
 
 /* Remove the output files if there was no output written */
@@ -363,30 +410,16 @@ static void cleanup_output(void)
 	int empty;
 
 	/* Flush the output in case anything is queued */
-	fclose(stdout);
-	fclose(stderr);
+	fflush(stdout);
+	fflush(stderr);
 
-	/* See if the files have any output in them */
-	file = fopen(STDOUT_FILE, "rb");
-	if ( file ) {
-		empty = (fgetc(file) == EOF) ? 1 : 0;
-		fclose(file);
-		if ( empty ) {
-			remove(STDOUT_FILE);
-		}
-	}
-	file = fopen(STDERR_FILE, "rb");
-	if ( file ) {
-		empty = (fgetc(file) == EOF) ? 1 : 0;
-		fclose(file);
-		if ( empty ) {
-			remove(STDERR_FILE);
-		}
-	}
+	cleanup_output_file(stdout, STDOUT_FILE);
+	cleanup_output_file(stderr, STDERR_FILE);
 }
 
 // XXX this should be adapted for a dmoz.c
-static int getCurrentAppName (StrFileName name) {
+static int getCurrentAppName(StrFileName name)
+{
 	ProcessSerialNumber process;
 	ProcessInfoRec      process_info;
 	FSSpec              process_fsp;
@@ -404,337 +437,208 @@ static int getCurrentAppName (StrFileName name) {
 	return 1;
 }
 
-static int getPrefsFile (FSSpec *prefs_fsp, int create) {
-	/* The prefs file name is the application name, possibly truncated, */
-	/* plus " Preferences */
+/* Hacked together from older crap */
+static void macos_cfg_load(PrefsRecord *prefs)
+{
+	char *tmp;
+	cfg_file_t cfg;
 
-	#define  SUFFIX   " Preferences"
-	#define  MAX_NAME 19             /* 31 - strlen (SUFFIX) */
-	
-	short  volume_ref_number;
-	long   directory_id;
-	StrFileName  prefs_name;
-	StrFileName  app_name;
+	tmp = dmoz_path_concat(cfg_dir_dotschism, "config");
+	cfg_init(&cfg, tmp);
+	free(tmp);
 
-	/* Get Preferences folder - works with Multiple Users */
-	if ( noErr != FindFolder ( kOnSystemDisk, kPreferencesFolderType, kDontCreateFolder,
-							   &volume_ref_number, &directory_id) )
-		exit (-1);
+	str_to_pascal(cfg_get_string(&cfg, "MacOS", "command_line", NULL, 0, ""), prefs->command_line, NULL);
+	str_to_pascal(cfg_get_string(&cfg, "MacOS", "video_driver_name", NULL, 0, ""), prefs->video_driver_name, NULL);
+	prefs->output_to_file = cfg_get_number(&cfg, "MacOS", "output_to_file", 1);
 
-	if ( ! getCurrentAppName (app_name) )
-		exit (-1);
-	
-	/* Truncate if name is too long */
-	if (app_name[0] > MAX_NAME )
-		app_name[0] = MAX_NAME;
-		
-	memcpy(prefs_name + 1, app_name + 1, app_name[0]);    
-	memcpy(prefs_name + app_name[0] + 1, SUFFIX, strlen (SUFFIX));
-	prefs_name[0] = app_name[0] + strlen (SUFFIX);
-   
-	/* Make the file spec for prefs file */
-	if ( noErr != FSMakeFSSpec (volume_ref_number, directory_id, prefs_name, prefs_fsp) ) {
-		if ( !create )
-			return 0;
-		else {
-			/* Create the prefs file */
-			memcpy(prefs_fsp->name, prefs_name, prefs_name[0] + 1);
-			prefs_fsp->parID   = directory_id;
-			prefs_fsp->vRefNum = volume_ref_number;
-				
-			FSpCreateResFile (prefs_fsp, 0x3f3f3f3f, 'pref', 0); // '????' parsed as trigraph
-			
-			if ( noErr != ResError () )
-				return 0;
-		}
-	 }
-	return 1;
+	cfg_free(&cfg);
 }
 
-static int readPrefsResource (PrefsRecord *prefs) {
-	
-	Handle prefs_handle;
-	
-	prefs_handle = Get1Resource( 'CLne', 128 );
+static void macos_cfg_save(PrefsRecord *prefs)
+{
+	char buf[256];
+	char *tmp;
+	cfg_file_t cfg;
 
-	if (prefs_handle != NULL) {
-		int offset = 0;
-//		int j      = 0;
-		
-		HLock(prefs_handle);
-		
-		/* Get command line string */	
-		memcpy(prefs->command_line, *prefs_handle, (*prefs_handle)[0]+1);
+	tmp = dmoz_path_concat(cfg_dir_dotschism, "config");
+	cfg_init(&cfg, tmp);
+	free(tmp);
 
-		/* Get video driver name */
-		offset += (*prefs_handle)[0] + 1;	
-		memcpy(prefs->video_driver_name, *prefs_handle + offset, (*prefs_handle)[offset] + 1);		
-		
-		/* Get save-to-file option (1 or 0) */
-		offset += (*prefs_handle)[offset] + 1;
-		prefs->output_to_file = (*prefs_handle)[offset];
-		
-		ReleaseResource( prefs_handle );
-	
-		return ResError() == noErr;
-	}
+	str_from_pascal(prefs->command_line, buf);
+	cfg_set_string(&cfg, "MacOS", "command_line", buf);
 
-	return 0;
+	str_from_pascal(prefs->video_driver_name, buf);
+	cfg_set_string(&cfg, "MacOS", "video_driver_name", buf);
+
+	cfg_set_number(&cfg, "MacOS", "output_to_file", prefs->output_to_file);
+
+	cfg_free(&cfg);
 }
 
-static int writePrefsResource (PrefsRecord *prefs, short resource_file) {
+static char **args = NULL;
 
-	Handle prefs_handle;
-	
-	UseResFile (resource_file);
-	
-	prefs_handle = Get1Resource ( 'CLne', 128 );
-	if (prefs_handle != NULL)
-		RemoveResource (prefs_handle);
-	
-	prefs_handle = NewHandle ( prefs->command_line[0] + prefs->video_driver_name[0] + 4 );
-	if (prefs_handle != NULL) {
-	
-		int offset;
-		
-		HLock (prefs_handle);
-		
-		/* Command line text */
-		offset = 0;
-		memcpy(*prefs_handle, prefs->command_line, prefs->command_line[0] + 1);
-		
-		/* Video driver name */
-		offset += prefs->command_line[0] + 1;
-		memcpy(*prefs_handle + offset, prefs->video_driver_name, prefs->video_driver_name[0] + 1);
-		
-		/* Output-to-file option */
-		offset += prefs->video_driver_name[0] + 1;
-		*( *((char**)prefs_handle) + offset)     = (char)prefs->output_to_file;
-		*( *((char**)prefs_handle) + offset + 1) = 0;
-			  
-		AddResource   (prefs_handle, 'CLne', 128, "\pCommand Line");
-		WriteResource (prefs_handle);
-		UpdateResFile (resource_file);
-		DisposeHandle (prefs_handle);
-		
-		return ResError() == noErr;
-	}
-	
-	return 0;
-}
+#define DEFAULT_ARGUMENTS ""
+#define DEFAULT_VIDEO_DRIVER "toolbox"
+#define DEFAULT_REDIRECT_STDIO 1
 
-static int readPreferences (PrefsRecord *prefs) {
-
-	int    no_error = 1;
-	FSSpec prefs_fsp;
-
-	/* Check for prefs file first */
-	if ( getPrefsFile (&prefs_fsp, 0) ) {
-	
-		short  prefs_resource;
-		
-		prefs_resource = FSpOpenResFile (&prefs_fsp, fsRdPerm);
-		if ( prefs_resource == -1 ) /* this shouldn't happen, but... */
-			return 0;
-	
-		UseResFile   (prefs_resource);
-		no_error = readPrefsResource (prefs);     
-		CloseResFile (prefs_resource);
-	}
-	
-	/* Fall back to application's resource fork (reading only, so this is safe) */
-	else {
-	
-		  no_error = readPrefsResource (prefs);
-	 }
-
-	return no_error;
-}
-
-static int writePreferences (PrefsRecord *prefs) {
-	
-	int    no_error = 1;
-	FSSpec prefs_fsp;
-	
-	/* Get prefs file, create if it doesn't exist */
-	if ( getPrefsFile (&prefs_fsp, 1) ) {
-	
-		short  prefs_resource;
-		
-		prefs_resource = FSpOpenResFile (&prefs_fsp, fsRdWrPerm);
-		if (prefs_resource == -1)
-			return 0;
-		no_error = writePrefsResource (prefs, prefs_resource);
-		CloseResFile (prefs_resource);
-	}
-	
-	return no_error;
-}
-
-static char   **args = NULL;
-static char   *commandLine = NULL;
-
-/* called by main, fixes ~everything~ basically */
+/* called by main; */
 void macos_sysinit(int *pargc, char ***pargv)
 {
-#define DEFAULT_ARGS {'\0'}                /* pascal string for default args */
-#define DEFAULT_VIDEO_DRIVER {'\7', 't', 'o', 'o', 'l', 'b', 'o', 'x'} /* pascal string for default video driver name */	
-#define DEFAULT_OUTPUT_TO_FILE 1         /* 1 == output to file, 0 == no output */
+	PrefsRecord prefs = {0};
+	size_t i;
+	int settingsChanged = 0, nargs;
+	char commandLine[256];
+	enum {
+		/* these correspond to popup menu choices */
+		VIDEO_ID_DRAWSPROCKET = 1,
+		VIDEO_ID_TOOLBOX = 2,
+	} videodriver = VIDEO_ID_TOOLBOX;
 
-#define VIDEO_ID_DRAWSPROCKET 1          /* these correspond to popup menu choices */
-#define VIDEO_ID_TOOLBOX      2
+	cfg_init_dir();
 
-	PrefsRecord prefs = { DEFAULT_ARGS, DEFAULT_VIDEO_DRIVER, DEFAULT_OUTPUT_TO_FILE }; 
-
-	int     nargs;
-	
-	StrFileName  appNameText;
-
-	int     videodriver     = VIDEO_ID_TOOLBOX;
-	int     settingsChanged = 0;
-	
-	long	i;
+	str_to_pascal(DEFAULT_ARGUMENTS, prefs.command_line, NULL);
+	str_to_pascal(DEFAULT_VIDEO_DRIVER, prefs.video_driver_name, NULL);
+	prefs.output_to_file = DEFAULT_REDIRECT_STDIO;
 
 	/* Kyle's SDL command-line dialog code ... */
-	InitGraf    (&qd.thePort);
-	InitFonts   ();
-	InitWindows ();
-	InitMenus   ();
-	InitDialogs (nil);
-	InitCursor ();
+	InitGraf(&qd.thePort);
+	InitFonts();
+	InitWindows();
+	InitMenus();
+	InitDialogs(nil);
+	InitCursor();
 	InitContextualMenus();
 	FlushEvents(everyEvent,0);
-	MaxApplZone ();
-	MoreMasters ();
-	MoreMasters ();
+	MaxApplZone();
+	MoreMasters();
+	MoreMasters();
 
-	 if ( readPreferences (&prefs) ) {
-		
-		if (memcmp(prefs.video_driver_name+1, "DSp", 3) == 0)
-			videodriver = 1;
-		else if (memcmp(prefs.video_driver_name+1, "toolbox", 7) == 0)
-			videodriver = 2;
-	 }
-		
-	if ( CommandKeyIsDown() ) {
+	macos_cfg_load(&prefs);
 
-#define kCL_OK		1
-#define kCL_Cancel	2
-#define kCL_Text	3
-#define kCL_File	4
-#define kCL_Video   6
-	   
+	if (memcmp(prefs.video_driver_name+1, "DSp", 3) == 0) {
+		videodriver = VIDEO_ID_DRAWSPROCKET;
+	} else if (memcmp(prefs.video_driver_name+1, "toolbox", 7) == 0) {
+		videodriver = VIDEO_ID_TOOLBOX;
+	} else {
+		/* Where are we now ? */
+	}
+		
+	if (CommandKeyIsDown()) {
+		/* enum-ified  --paper */
+		enum {
+			kCL_OK = 1,
+			kCL_Cancel = 2,
+			kCL_Text = 3,
+			kCL_File = 4,
+			kCL_Video = 6,
+		};
+
 		DialogPtr commandDialog;
-		short	  dummyType;
-		Rect	  dummyRect;
-		Handle    dummyHandle;
-		short     itemHit;
-		
+		short dummyType;
+		Rect dummyRect;
+		Handle dummyHandle;
+		short itemHit;
+
 		/* Assume that they will change settings, rather than do exhaustive check */
 		settingsChanged = 1;
-		
+
 		/* Create dialog and display it */
-		commandDialog = GetNewDialog (1000, nil, (WindowPtr)-1);
-		SetPort (commandDialog);
-		   
+		commandDialog = GetNewDialog(1000, nil, (WindowPtr)-1);
+		SetPort(commandDialog);
+
 		/* Setup controls */
-		GetDialogItem   (commandDialog, kCL_File, &dummyType, &dummyHandle, &dummyRect); /* MJS */
-		SetControlValue ((ControlHandle)dummyHandle, prefs.output_to_file );
+		GetDialogItem(commandDialog, kCL_File, &dummyType, &dummyHandle, &dummyRect); /* MJS */
+		SetControlValue((ControlHandle)dummyHandle, prefs.output_to_file);
 
-		GetDialogItem     (commandDialog, kCL_Text, &dummyType, &dummyHandle, &dummyRect);
-		SetDialogItemText (dummyHandle, prefs.command_line);
+		GetDialogItem(commandDialog, kCL_Text, &dummyType, &dummyHandle, &dummyRect);
+		SetDialogItemText(dummyHandle, prefs.command_line);
 
-		GetDialogItem   (commandDialog, kCL_Video, &dummyType, &dummyHandle, &dummyRect);
-		SetControlValue ((ControlRef)dummyHandle, videodriver);
+		GetDialogItem(commandDialog, kCL_Video, &dummyType, &dummyHandle, &dummyRect);
+		SetControlValue((ControlRef)dummyHandle, videodriver);
 
-		SetDialogDefaultItem (commandDialog, kCL_OK);
-		SetDialogCancelItem  (commandDialog, kCL_Cancel);
+		SetDialogDefaultItem(commandDialog, kCL_OK);
+		SetDialogCancelItem(commandDialog, kCL_Cancel);
 
 		do {
-				
 			ModalDialog(nil, &itemHit); /* wait for user response */
 			
 			/* Toggle command-line output checkbox */	
-			if ( itemHit == kCL_File ) {
+			if (itemHit == kCL_File) {
 				GetDialogItem(commandDialog, kCL_File, &dummyType, &dummyHandle, &dummyRect); /* MJS */
-				SetControlValue((ControlHandle)dummyHandle, !GetControlValue((ControlHandle)dummyHandle) );
+				SetControlValue((ControlHandle)dummyHandle, !GetControlValue((ControlHandle)dummyHandle));
 			}
-
 		} while (itemHit != kCL_OK && itemHit != kCL_Cancel);
 
 		/* Get control values, even if they did not change */
-		GetDialogItem     (commandDialog, kCL_Text, &dummyType, &dummyHandle, &dummyRect); /* MJS */
-		GetDialogItemText (dummyHandle, prefs.command_line);
+		GetDialogItem(commandDialog, kCL_Text, &dummyType, &dummyHandle, &dummyRect); /* MJS */
+		GetDialogItemText(dummyHandle, prefs.command_line);
 
-		GetDialogItem (commandDialog, kCL_File, &dummyType, &dummyHandle, &dummyRect); /* MJS */
-		prefs.output_to_file = GetControlValue ((ControlHandle)dummyHandle);
+		GetDialogItem(commandDialog, kCL_File, &dummyType, &dummyHandle, &dummyRect); /* MJS */
+		prefs.output_to_file = GetControlValue((ControlHandle)dummyHandle);
 
-		GetDialogItem (commandDialog, kCL_Video, &dummyType, &dummyHandle, &dummyRect);
-		videodriver = GetControlValue ((ControlRef)dummyHandle);
+		GetDialogItem(commandDialog, kCL_Video, &dummyType, &dummyHandle, &dummyRect);
+		videodriver = GetControlValue((ControlRef)dummyHandle);
 
-		DisposeDialog (commandDialog);
+		DisposeDialog(commandDialog);
 
-		if (itemHit == kCL_Cancel ) {
-			exit (0);
-		}
+		if (itemHit == kCL_Cancel)
+			exit(0);
 	}
 	
 	/* Set pseudo-environment variables for video driver, update prefs */
-	switch ( videodriver ) {
-	   case VIDEO_ID_DRAWSPROCKET: 
-		  setenv("SDL_VIDEODRIVER", "DSp", 1);
-		  memcpy(prefs.video_driver_name, "\pDSp", 4);
-		  break;
-	   case VIDEO_ID_TOOLBOX:
-		  setenv("SDL_VIDEODRIVER", "toolbox", 1);
-		  memcpy(prefs.video_driver_name, "\ptoolbox", 8);
-		  break;
+	switch (videodriver) {
+	case VIDEO_ID_DRAWSPROCKET: 
+		setenv("SDL_VIDEODRIVER", "DSp", 1);
+		str_to_pascal("DSp", prefs.video_driver_name, NULL);
+		break;
+	case VIDEO_ID_TOOLBOX:
+		setenv("SDL_VIDEODRIVER", "toolbox", 1);
+		str_to_pascal("toolbox", prefs.video_driver_name, NULL);
+		break;
 	}
 
 	/* Redirect standard I/O to files */
-	if ( prefs.output_to_file ) {
-		freopen (STDOUT_FILE, "w", stdout);
-		freopen (STDERR_FILE, "w", stderr);
+	if (prefs.output_to_file) {
+		freopen(STDOUT_FILE, "w+", stdout);
+		freopen(STDERR_FILE, "w+", stderr);
 	} else {
-		fclose (stdout);
-		fclose (stderr);
+		// No! Bad!
+		//fclose(stdout);
+		//fclose(stderr);
 	}
 
 	if (settingsChanged) {
 		/* Save the prefs, even if they might not have changed (but probably did) */
-		if ( ! writePreferences (&prefs) )
-			fprintf (stderr, "WARNING: Could not save preferences!\n");
+		macos_cfg_save(&prefs);
 	}
 
-	appNameText[0] = 0;
-	getCurrentAppName (appNameText); /* check for error here ? */
+	/* Convert the command line into a C-string */
+	str_from_pascal(prefs.command_line, commandLine);
 
-	commandLine = (char*) malloc (appNameText[0] + prefs.command_line[0] + 2);
-	if ( commandLine == NULL ) {
-	   exit(-1);
+	/* Parse command line into argc,argv */
+	nargs = ParseCommandLine(commandLine, NULL) + 1;
+	args = mem_alloc((nargs + 1) * (sizeof(*args)));
+	ParseCommandLine(commandLine, args + 1);
+
+	{
+		/* Convert the app name to a C-string, and shove it into the start of the args array */
+		StrFileName app_name_pascal;
+		char app_name[256];
+
+		if (getCurrentAppName(app_name_pascal)) {
+			str_from_pascal(app_name_pascal, app_name);
+			args[0] = app_name;
+		} else {
+			args[0] = "";
+		}
+
+		/* Thus, everything was UTF-8 */
+		for (i = 0; i < nargs; i++)
+			args[i] = charset_iconv_easy(args[i], CHARSET_SYSTEMSCRIPT, CHARSET_UTF8);
 	}
 
-	/* Rather than rewrite ParseCommandLine method, let's replace  */
-	/* any spaces in application name with underscores,            */
-	/* so that the app name is only 1 argument                     */   
-	for (i = 1; i < 1+appNameText[0]; i++)
-		if ( appNameText[i] == ' ' ) appNameText[i] = '_';
-
-	/* Copy app name & full command text to command-line C-string */      
-	memcpy(commandLine, appNameText + 1, appNameText[0]);
-	commandLine[appNameText[0]] = ' ';
-	memcpy(commandLine + appNameText[0] + 1, prefs.command_line + 1, prefs.command_line[0]);
-	commandLine[ appNameText[0] + 1 + prefs.command_line[0] ] = '\0';
-
-	/* Parse C-string into argv and argc */
-	nargs = ParseCommandLine (commandLine, NULL);
-	args = (char **)malloc((nargs+1)*(sizeof *args));
-	if ( args == NULL ) {
-		exit(-1);
-	}
-	ParseCommandLine (commandLine, args);
-
-	// FIXME argc, argv should be in UTF-8
+	/* NOW we can free the command line, since nothing of value points to it anymore */
+	free(commandLine);
 
 	*pargc = nargs;
 	*pargv = args;
@@ -742,8 +646,6 @@ void macos_sysinit(int *pargc, char ***pargv)
 
 void macos_sysexit(void)
 {
-	free(args);
-	free(commandLine);
-
+	/* free(args)  <- don't really need this  --paper */
 	cleanup_output();
 }
