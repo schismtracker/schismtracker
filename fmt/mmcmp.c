@@ -12,8 +12,7 @@
 #include "headers.h"
 
 #include "bswap.h"
-
-#include "slurp.h" // for declaration of mmcmp_unpack
+#include "fmt.h"
 
 typedef struct mm_header {
 	char zirconia[8]; // "ziRCONia"

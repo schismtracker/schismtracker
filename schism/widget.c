@@ -360,7 +360,7 @@ static inline int fast_pow10(int n) {
 	static const int tens[] = { 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000 };
 
 	/* use our cache if we can to avoid buffer overrun */
-	return (n < (sizeof(tens)/sizeof(tens[0]))) ? tens[n] : pow(10, n);
+	return (n < (int)ARRAY_SIZE(tens)) ? tens[n] : pow(10, n);
 }
 
 int widget_numentry_handle_text(struct widget *w, const char* text_input) {

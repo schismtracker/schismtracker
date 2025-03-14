@@ -928,7 +928,7 @@ static charset_error_t charset_iconv_impl_(const void *in, void *out, charset_t 
 	static void *const null = NULL;
 	charset_error_t state = CHARSET_ERROR_UNIMPLEMENTED;
 
-	for (int i = 0; i < ARRAY_SIZE(charset_impls); i++) {
+	for (size_t i = 0; i < ARRAY_SIZE(charset_impls); i++) {
 		state = charset_impls[i](in, out, inset, outset, insize);
 		if (state == CHARSET_ERROR_SUCCESS)
 			return state;

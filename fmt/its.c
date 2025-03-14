@@ -251,7 +251,7 @@ void save_its_header(disko_t *fp, song_sample_t *smp)
 	struct it_sample its = {0};
 
 	its.id = bswapLE32(0x53504D49); // IMPS
-	strncpy((char *) its.filename, smp->filename, 12);
+	memcpy(its.filename, smp->filename, MIN(sizeof(smp->filename), sizeof(its.filename)));
 	its.gvl = smp->global_volume;
 	if (smp->data && smp->length)
 		its.flags |= 1;
@@ -268,7 +268,7 @@ void save_its_header(disko_t *fp, song_sample_t *smp)
 	if (smp->flags & CHN_PINGPONGSUSTAIN)
 		its.flags |= 128;
 	its.vol = smp->volume / 4;
-	strncpy((char *) its.name, smp->name, 25);
+	memcpy(its.name, smp->name, MIN(sizeof(smp->filename), sizeof(its.filename)));
 	its.name[25] = 0;
 	its.cvt = 1;                    // signed samples
 	its.dfp = smp->panning / 4;

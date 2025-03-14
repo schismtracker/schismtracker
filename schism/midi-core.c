@@ -53,7 +53,6 @@ and midi_record_mutex is by the event/sound thread
 static mt_mutex_t *midi_mutex = NULL;
 static mt_mutex_t *midi_port_mutex = NULL;
 static mt_mutex_t *midi_record_mutex = NULL;
-static mt_cond_t *midi_play_cond = NULL;
 
 static struct midi_provider *port_providers = NULL;
 
@@ -173,8 +172,7 @@ void cfg_save_midi(cfg_file_t *cfg)
 	midi_config_t *md, *mc;
 	char buf[33];
 	char *ss;
-	uint32_t i;
-	int j;
+	uint32_t i, j;
 
 	CFG_SET_MI(flags);
 	CFG_SET_MI(pitch_depth);
@@ -219,7 +217,7 @@ void cfg_save_midi(cfg_file_t *cfg)
 			if (!*ss) continue;
 			if (!q->io) continue;
 
-			snprintf(buf, 32, "MIDI Port %u", i);
+			snprintf(buf, 32, "MIDI Port %" SCNu32, i);
 			i++;
 			cfg_set_string(cfg, buf, "name", ss);
 			ss = p->name;
@@ -238,8 +236,7 @@ void cfg_save_midi(cfg_file_t *cfg)
 
 	/* delete other MIDI port sections */
 	for (c = cfg->sections; c; c = c->next) {
-		j = -1;
-		if (sscanf(c->name, "MIDI Port %d", &j) != 1) continue;
+		if (sscanf(c->name, "MIDI Port %" SCNu32, &j) != 1) continue;
 		if (j < i) continue;
 		c->omit = 1;
 	}
@@ -608,7 +605,7 @@ void midi_send_now(const unsigned char *seq, uint32_t len)
 
 static uint32_t midims = 0;
 
-void midi_queue_alloc(int buffer_length, int sample_size, int samples_per_second)
+void midi_queue_alloc(SCHISM_UNUSED int buffer_length, int sample_size, int samples_per_second)
 {
 	// bytes per millisecond, rounded up
 	midims = sample_size * samples_per_second;
@@ -621,7 +618,6 @@ void midi_queue_alloc(int buffer_length, int sample_size, int samples_per_second
 int midi_need_flush(void)
 {
 	struct midi_port *ptr;
-	int need_explicit_flush = 0;
 
 	if (!midi_record_mutex) return 0;
 
@@ -920,7 +916,7 @@ void midi_event_sysex(const unsigned char *data, uint32_t len)
 
 	event.type = SCHISM_EVENT_MIDI_SYSEX;
 	event.midi_sysex.len = len;
-	event.midi_sysex.packet = strn_dup(data, len);
+	event.midi_sysex.packet = (unsigned char *)strn_dup((const char *)data, len);
 
 	events_push_event(&event);
 }

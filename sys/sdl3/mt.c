@@ -41,14 +41,14 @@ struct mt_thread {
 	void *userdata;
 };
 
-static int sdl3_dummy_thread_func(void *userdata)
+static int SDLCALL sdl3_dummy_thread_func(void *userdata)
 {
 	mt_thread_t *thread = userdata;
 
 	return thread->func(thread->userdata);
 }
 
-mt_thread_t *sdl3_thread_create(schism_thread_function_t func, const char *name, void *userdata)
+static mt_thread_t *sdl3_thread_create(schism_thread_function_t func, const char *name, void *userdata)
 {
 	mt_thread_t *thread = mem_alloc(sizeof(*thread));
 
@@ -67,13 +67,13 @@ mt_thread_t *sdl3_thread_create(schism_thread_function_t func, const char *name,
 	return thread;
 }
 
-void sdl3_thread_wait(mt_thread_t *thread, int *status)
+static void sdl3_thread_wait(mt_thread_t *thread, int *status)
 {
 	sdl3_WaitThread(thread->thread, status);
 	free(thread);
 }
 
-void sdl3_thread_set_priority(int priority)
+static void sdl3_thread_set_priority(int priority)
 {
 	// !!! FIXME this should use a switch statement,
 	// or this API should be removed altogether
@@ -98,7 +98,7 @@ struct mt_mutex {
 	SDL_Mutex *mutex;
 };
 
-mt_mutex_t *sdl3_mutex_create(void)
+static mt_mutex_t *sdl3_mutex_create(void)
 {
 	mt_mutex_t *mutex = mem_alloc(sizeof(*mutex));
 
@@ -111,18 +111,18 @@ mt_mutex_t *sdl3_mutex_create(void)
 	return mutex;
 }
 
-void sdl3_mutex_delete(mt_mutex_t *mutex)
+static void sdl3_mutex_delete(mt_mutex_t *mutex)
 {
 	sdl3_DestroyMutex(mutex->mutex);
 	free(mutex);
 }
 
-void sdl3_mutex_lock(mt_mutex_t *mutex)
+static void sdl3_mutex_lock(mt_mutex_t *mutex)
 {
 	sdl3_LockMutex(mutex->mutex);
 }
 
-void sdl3_mutex_unlock(mt_mutex_t *mutex)
+static void sdl3_mutex_unlock(mt_mutex_t *mutex)
 {
 	sdl3_UnlockMutex(mutex->mutex);
 }
@@ -139,7 +139,7 @@ struct mt_cond {
 	SDL_Condition *cond;
 };
 
-mt_cond_t *sdl3_cond_create(void)
+static mt_cond_t *sdl3_cond_create(void)
 {
 	mt_cond_t *cond = mem_alloc(sizeof(*cond));
 
@@ -152,23 +152,23 @@ mt_cond_t *sdl3_cond_create(void)
 	return cond;
 }
 
-void sdl3_cond_delete(mt_cond_t *cond)
+static void sdl3_cond_delete(mt_cond_t *cond)
 {
 	sdl3_DestroyCondition(cond->cond);
 	free(cond);
 }
 
-void sdl3_cond_signal(mt_cond_t *cond)
+static void sdl3_cond_signal(mt_cond_t *cond)
 {
 	sdl3_SignalCondition(cond->cond);
 }
 
-void sdl3_cond_wait(mt_cond_t *cond, mt_mutex_t *mutex)
+static void sdl3_cond_wait(mt_cond_t *cond, mt_mutex_t *mutex)
 {
 	sdl3_WaitCondition(cond->cond, mutex->mutex);
 }
 
-void sdl3_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout)
+static void sdl3_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout)
 {
 	sdl3_WaitConditionTimeout(cond->cond, mutex->mutex, timeout);
 }

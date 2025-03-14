@@ -79,13 +79,13 @@ static void eq_filter(eq_band *pbs, int32_t *buffer, uint32_t count)
 	}
 }
 
-void normalize_mono(song_t *csf, int32_t *buffer, uint32_t count)
+void normalize_mono(SCHISM_UNUSED song_t *csf, int32_t *buffer, uint32_t count)
 {
 	for (uint32_t b = 0; b < count; b++)
 		buffer[b] = _muldiv(buffer[b], audio_settings.master.left + audio_settings.master.right, 62);
 }
 
-void normalize_stereo(song_t *csf, int32_t *buffer, uint32_t count)
+void normalize_stereo(SCHISM_UNUSED song_t *csf, int32_t *buffer, uint32_t count)
 {
 	uint32_t b = 0;
 
@@ -98,7 +98,7 @@ void normalize_stereo(song_t *csf, int32_t *buffer, uint32_t count)
 }
 
 
-void eq_mono(song_t *csf, int32_t *buffer, uint32_t count)
+void eq_mono(SCHISM_UNUSED song_t *csf, int32_t *buffer, uint32_t count)
 {
 	for (uint32_t b = 0; b < MAX_EQ_BANDS; b++)
 		if (eq[b].enabled && eq[b].gain != 1.0f)
@@ -106,7 +106,7 @@ void eq_mono(song_t *csf, int32_t *buffer, uint32_t count)
 }
 
 // XXX: I rolled the two loops into one. Make sure this works.
-void eq_stereo(song_t *csf, int32_t *buffer, uint32_t count)
+void eq_stereo(SCHISM_UNUSED song_t *csf, int32_t *buffer, uint32_t count)
 {
 	for (uint32_t b = 0; b < MAX_EQ_BANDS; b++) {
 		int32_t br = b + MAX_EQ_BANDS;

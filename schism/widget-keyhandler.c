@@ -102,7 +102,7 @@ static int thumbbar_prompt_value(struct widget *widget, struct key_event *k)
 /* --------------------------------------------------------------------- */
 /* Find backtabs. */
 
-int find_tab_to(int target)
+static inline int find_tab_to(int target)
 {
 	for (int i = 0; i < *total_widgets; i++) {
 		if (widgets[i].next.tab == target && i != target) {
@@ -113,7 +113,7 @@ int find_tab_to(int target)
 	return -1;
 }
 
-int find_down_to(int target)
+static inline int find_down_to(int target)
 {
 	for (int i = 0; i < *total_widgets; i++) {
 		if (widgets[i].next.down == target && i != target) {
@@ -124,7 +124,7 @@ int find_down_to(int target)
 	return -1;
 }
 
-int find_right_to(int target)
+static inline int find_right_to(int target)
 {
 	for (int i = 0; i < *total_widgets; i++) {
 		if (widgets[i].next.right == target && i != target) {
@@ -135,7 +135,7 @@ int find_right_to(int target)
 	return -1;
 }
 
-int find_right_or_down_to(int target, int checkNotEqual)
+static inline int find_right_or_down_to(int target, int checkNotEqual)
 {
 	if (status.flags & CLASSIC_MODE) {
 		int right_to = find_right_to(target);
@@ -162,7 +162,7 @@ int find_right_or_down_to(int target, int checkNotEqual)
 	return -1;
 }
 
-int find_tab_to_recursive(int target)
+static inline int find_tab_to_recursive(int target)
 {
 	int current = target;
 
@@ -476,7 +476,7 @@ int widget_handle_key(struct key_event * k)
 			}
 			/* else... */
 			widget->d.togglebutton.state = !widget->d.togglebutton.state;
-			/* and fall through */
+			SCHISM_FALLTHROUGH;
 		case WIDGET_BUTTON:
 			/* maybe buttons should ignore the changed callback, and use activate instead...
 			(but still call the changed callback for togglebuttons if they *actually* changed) */

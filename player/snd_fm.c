@@ -91,7 +91,7 @@ to Jeffrey S. Lee's article:
 *
 * @return The converted frequency in milliHertz.
 */
-static int32_t fnumToMilliHertz(uint32_t fnum, uint32_t block, uint32_t conversionFactor)
+SCHISM_UNUSED static int32_t fnumToMilliHertz(uint32_t fnum, uint32_t block, uint32_t conversionFactor)
 {
 	// Original formula
 	//return 1000 * conversionFactor * (double)fnum * pow(2, (double)((signed)block - 20));

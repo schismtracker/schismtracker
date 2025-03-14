@@ -557,6 +557,7 @@ void draw_note_2(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 	case 0:
 		vfg = fg = 0;
 		bg = 3;
+		/* FIXME Is this supposed to fallthrough here? */
 	case 1: /* Mini-accidentals on 2-col. view */
 		get_note_string(note->note, buf);
 		draw_char(buf[0], x, y, fg, bg);

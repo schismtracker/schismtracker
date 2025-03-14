@@ -87,7 +87,7 @@ static struct timer_oneshot_data_ *oneshot_data_pending = NULL;
 static mt_mutex_t *timer_oneshot_mutex = NULL;
 static mt_cond_t *timer_oneshot_cond = NULL;
 
-static int timer_oneshot_thread_func(void *userdata)
+static int timer_oneshot_thread_func(SCHISM_UNUSED void *userdata)
 {
 	struct timer_oneshot_data_ *oneshot_data_list = NULL;
 

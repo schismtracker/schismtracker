@@ -261,6 +261,7 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 			switch (bswapBE16(chunk_comm.num_channels)) {
 			default:
 				log_appendf(4, "warning: multichannel AIFF is unsupported");
+				SCHISM_FALLTHROUGH;
 			case 1:
 				flags |= SF_M;
 				break;
@@ -272,6 +273,7 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 			switch ((bswapBE16(chunk_comm.sample_size) + 7) & ~7) {
 			default:
 				log_appendf(4, "warning: AIFF has unsupported bit-width");
+				SCHISM_FALLTHROUGH;
 			case 8:
 				flags |= SF_8;
 				break;

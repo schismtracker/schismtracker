@@ -102,7 +102,7 @@ static void (SDLCALL *sdl2_audio_quit_func)(void) = schism_quit_audio_impl;
 /* ---------------------------------------------------------- */
 /* drivers */
 
-static int sdl2_audio_driver_count()
+static int sdl2_audio_driver_count(void)
 {
 	return sdl2_GetNumAudioDrivers();
 }

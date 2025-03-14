@@ -444,7 +444,7 @@ static void sdl2_video_colors(unsigned char palette[16][3])
 	/* make our "base" space */
 	for (i = 0; i < 16; i++) {
 		unsigned char b[3];
-		for (int j = 0; j < ARRAY_SIZE(b); j++)
+		for (size_t j = 0; j < ARRAY_SIZE(b); j++)
 			b[j] = palette[i][j];
 		fun(i, b);
 	}
@@ -454,7 +454,7 @@ static void sdl2_video_colors(unsigned char palette[16][3])
 		p = lastmap[(i>>5)];
 
 		unsigned char b[3];
-		for (int j = 0; j < ARRAY_SIZE(b); j++)
+		for (size_t j = 0; j < ARRAY_SIZE(b); j++)
 			b[j] = (int)palette[p][j] + (((int)(palette[p+1][j] - palette[p][j]) * (i & 0x1F)) / 0x20);
 
 		fun(i + 128, b);

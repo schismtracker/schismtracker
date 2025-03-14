@@ -299,9 +299,9 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				for (chn = 0; chn < 32; chn++) {
 					song_note_t* chan_note = note + chn;
 					if (chan_note->effect == FX_SPEED) {
-						uint32_t tempo = chan_note->param;
+						uint32_t param = chan_note->param;
 						chan_note->param >>= 4;
-						handle_stm_tempo_pattern(note, tempo);
+						handle_stm_tempo_pattern(note, param);
 					}
 				}
 				/* ... next note, same row */

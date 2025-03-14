@@ -361,7 +361,7 @@ static schism_keymod_t sdl2_modkey_trans(uint16_t mod)
 	return res;
 }
 
-schism_keymod_t sdl2_event_mod_state(void)
+static schism_keymod_t sdl2_event_mod_state(void)
 {
 	return sdl2_modkey_trans(sdl2_GetModState());
 }
@@ -396,7 +396,7 @@ static void pop_pending_keydown(const char *text)
 	}
 }
 
-void sdl2_pump_events(void)
+static void sdl2_pump_events(void)
 {
 	SDL_Event e;
 

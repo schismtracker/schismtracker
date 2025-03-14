@@ -213,6 +213,23 @@
 
 // Ok, now after all that mess, we can define these attributes:
 
+/* Used to designate a fallthrough case in a switch statement, such as:
+ *
+ * switch (whatever) {
+ * case 0: ...; SCHISM_FALLTHROUGH;
+ * default: ...; break;
+ * }
+ */
+#if SCHISM_HAS_C23_ATTRIBUTE(fallthrough)
+# define SCHISM_FALLTHROUGH [[fallthrough]]
+#elif SCHISM_GNUC_HAS_ATTRIBUTE(__fallthrough__, 7, 0, 0)
+# define SCHISM_FALLTHROUGH __attribute__((__fallthrough__))
+#elif SCHISM_MSVC_ATLEAST(16, 5, 0)
+# define SCHISM_FALLTHROUGH __fallthrough
+#else
+# define SCHISM_FALLTHROUGH
+#endif
+
 /* This is used for variables or parameters that are
  * known to be unused. */
 #if SCHISM_HAS_C23_ATTRIBUTE(maybe_unused)

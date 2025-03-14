@@ -340,7 +340,7 @@ static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count)
 	if (bytesleft < 0)
 		return 0;
 
-	if (count > bytesleft) {
+	if ((ptrdiff_t)count > bytesleft) {
 		// short read -- fill in any extra bytes with zeroes
 		size_t tail = count - bytesleft;
 		count = bytesleft;

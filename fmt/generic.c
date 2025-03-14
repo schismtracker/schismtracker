@@ -360,7 +360,7 @@ void handle_stm_effects(song_note_t *chan_note) {
 		// Scream Tracker 2 checks for the lower nibble first for some reason...
 		if (chan_note->param & 0x0f && chan_note->param >> 4)
 			chan_note->param &= 0x0f;
-
+		SCHISM_FALLTHROUGH;
 	case FX_PORTAMENTODOWN:
 	case FX_PORTAMENTOUP:
 		if (!chan_note->param)

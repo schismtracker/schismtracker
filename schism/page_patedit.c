@@ -29,6 +29,7 @@
 #include <ctype.h>
 
 #include "it.h"
+#include "config.h"
 #include "keyboard.h"
 #include "page.h"
 #include "song.h"
@@ -261,7 +262,7 @@ static const struct track_view track_views[] = {
 #undef  TRACK_VIEW
 };
 
-#define NUM_TRACK_VIEWS ARRAY_SIZE(track_views)
+#define NUM_TRACK_VIEWS (int)ARRAY_SIZE(track_views)
 
 static uint8_t track_view_scheme[64];
 static int channel_multi_enabled = 0;
@@ -3890,7 +3891,7 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	case SCHISM_KEYSYM_EQUALS:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
 			return 0;
-		// fallthrough
+		SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_PLUS:
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -4345,7 +4346,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_EQUALS:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
 			return 0;
-		// fallthrough
+		SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_PLUS:
 		if (k->state == KEY_RELEASE)
 			return 0;

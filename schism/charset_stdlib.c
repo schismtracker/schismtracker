@@ -419,7 +419,7 @@ static inline int charset_fnmatch_impl(const uint32_t *m, const uint32_t *s)
 				return 0;
 
 	return (!*s || !(*m == UCS4_QUESTION || *s == *m))
-		? (*m | *s) : charset_fnmatch_impl(m + 1, s + 1);
+		? (int)(*m | *s) : charset_fnmatch_impl(m + 1, s + 1);
 }
 
 int charset_fnmatch(const void *match, charset_t match_set, const void *str, charset_t str_set, int flags)

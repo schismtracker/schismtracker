@@ -36,11 +36,15 @@ int fmt_mf_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	unsigned char title[32];
 
-	slurp_seek(fp, 33, SEEK_SET);
+	slurp_seek(fp, 25, SEEK_CUR);
+
 	int title_length = slurp_getc(fp);
+	if (title_length == EOF)
+		return 0;
+
 	title_length = MIN(sizeof(title), title_length);
 
-	if (slurp_read(fp, title, title_length) != title_length)
+	if (slurp_read(fp, title, title_length) != (size_t)title_length)
 		return 0;
 
 	file->description = "MoonFish";

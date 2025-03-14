@@ -27,6 +27,7 @@
 
 #include "it.h"
 #include "config-parser.h"
+#include "config.h"
 #include "charset.h"
 #include "song.h"
 #include "dmoz.h"
@@ -399,7 +400,7 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 
 				break;
 			}
-			// fallthrough and treat as a regular segment
+			SCHISM_FALLTHROUGH;
 		default: {
 			// Find the end of the path segment
 			for (pEnd = p; *pEnd && *pEnd != ':'; ++pEnd) ;

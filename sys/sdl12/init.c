@@ -50,8 +50,6 @@ static void sdl12_dlend(void)
 
 static int sdl12_dlinit(void)
 {
-	int i;
-
 	// already have it?
 	if (sdl12_dltrick_handle_)
 		return 0;

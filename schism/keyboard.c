@@ -146,14 +146,17 @@ QZA(w);QZA(x);QZA(y);QZA(z);
 		return get_effect_number('.');
 	case SCHISM_KEYSYM_1:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT)) return -1;
+		SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_EXCLAIM:
 		return get_effect_number('!');
 	case SCHISM_KEYSYM_4:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT)) return -1;
+		SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_DOLLAR:
 		return get_effect_number('$');
 	case SCHISM_KEYSYM_7:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT)) return -1;
+		SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_AMPERSAND:
 		return get_effect_number('&');
 
@@ -435,25 +438,25 @@ int kbd_char_to_hex(struct key_event *k)
 	if (!NO_CAM_MODS(k->mod)) return -1;
 
 	switch (k->orig_sym) {
-	case SCHISM_KEYSYM_KP_0: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1;
+	case SCHISM_KEYSYM_KP_0: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_0: return 0;
-	case SCHISM_KEYSYM_KP_1: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1;
+	case SCHISM_KEYSYM_KP_1: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_1: return 1;
-	case SCHISM_KEYSYM_KP_2: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1;
+	case SCHISM_KEYSYM_KP_2: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_2: return 2;
-	case SCHISM_KEYSYM_KP_3: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1;
+	case SCHISM_KEYSYM_KP_3: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_3: return 3;
-	case SCHISM_KEYSYM_KP_4: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1;
+	case SCHISM_KEYSYM_KP_4: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_4: return 4;
-	case SCHISM_KEYSYM_KP_5: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1;
+	case SCHISM_KEYSYM_KP_5: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_5: return 5;
-	case SCHISM_KEYSYM_KP_6: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1;
+	case SCHISM_KEYSYM_KP_6: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_6: return 6;
-	case SCHISM_KEYSYM_KP_7: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1;
+	case SCHISM_KEYSYM_KP_7: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_7: return 7;
-	case SCHISM_KEYSYM_KP_8: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1;
+	case SCHISM_KEYSYM_KP_8: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_8: return 8;
-	case SCHISM_KEYSYM_KP_9: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1;
+	case SCHISM_KEYSYM_KP_9: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_9: return 9;
 	case SCHISM_KEYSYM_a: return 10;
 	case SCHISM_KEYSYM_b: return 11;
@@ -491,6 +494,7 @@ int kbd_get_note(struct key_event *k)
 	switch (k->scancode) {
 	case SCHISM_SCANCODE_GRAVE:
 		if (k->mod & SCHISM_KEYMOD_SHIFT) return NOTE_FADE;
+		SCHISM_FALLTHROUGH;
 	case SCHISM_SCANCODE_NONUSHASH: /* for delt */
 	case SCHISM_SCANCODE_KP_HASH:
 		return NOTE_OFF;

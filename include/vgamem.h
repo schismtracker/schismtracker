@@ -54,6 +54,7 @@ SCHISM_SIMD SCHISM_HOT void vgamem_scan32(uint32_t y, uint32_t *out, uint32_t tc
 #define DEFAULT_FG 3
 void draw_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg);
 void draw_char_bios(uint8_t c, int x, int y, uint32_t fg, uint32_t bg);
+void draw_char_unicode(uint32_t c, int x, int y, uint32_t fg, uint32_t bg);
 
 /* return value is the number of characters drawn */
 int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg);
@@ -107,7 +108,6 @@ void draw_box(int xs, int ys, int xe, int ye, int flags);
 
 /* ------------------------------------------------------------ */
 
-
 struct song_sample;
 void draw_sample_data(struct vgamem_overlay *r, struct song_sample *sample);
 
@@ -120,5 +120,17 @@ void draw_sample_data_rect_16(struct vgamem_overlay *r, int16_t *data, int lengt
 	unsigned int inputchans, unsigned int outputchans);
 void draw_sample_data_rect_8(struct vgamem_overlay *r, int8_t *data, int length,
 	unsigned int inputchans, unsigned int outputchans);
+
+/* ------------------------------------------------------------ */
+
+/* draw-misc.c */
+void draw_thumb_bar(int x, int y, int width, int min, int max, int val,
+		    int selected);
+/* vu meter values should range from 0 to 64. the color is generally 5
+ * unless the channel is disabled (in which case it's 1). impulse tracker
+ * doesn't do peak color; st3 style, use color 4 (unless it's disabled,
+ * in which case it should probably be 2, or maybe 3).
+ * the width should be a multiple of three. */
+void draw_vu_meter(int x, int y, int val, int width, int color, int peak_color);
 
 #endif /* SCHISM_VGAMEM_H_ */

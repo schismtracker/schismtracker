@@ -477,7 +477,7 @@ static int search_text_add_char(uint8_t c)
 	if (c < 32)
 		return 0;
 
-	if (search_text_length + 1 >= ARRAY_SIZE(search_text))
+	if (search_text_length + 1 >= (int)ARRAY_SIZE(search_text))
 		return 1;
 
 	search_text[search_text_length++] = c;
@@ -844,7 +844,7 @@ static void dir_list_draw_exportsave(void)
 }
 
 static int dir_list_handle_text_input(const char *text) {
-	for (; *text && search_text_length < ARRAY_SIZE(search_text) - 1; text++) {
+	for (; *text && search_text_length < (int)ARRAY_SIZE(search_text) - 1; text++) {
 		if (*text < 32)
 			return 0;
 
@@ -856,7 +856,7 @@ static int dir_list_handle_text_input(const char *text) {
 	return 1;
 }
 
-static int dir_list_handle_key(struct key_event * k, int width)
+static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 {
 	int new_dir = current_dir;
 

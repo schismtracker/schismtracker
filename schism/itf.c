@@ -446,12 +446,8 @@ static void draw_screen(void)
 
 	switch (fontlist_mode) {
 	case MODE_LOAD:
-		draw_frame("Load/Browse", FONTLIST_X, FONTLIST_Y, 9,
-			   VISIBLE_FONTS, !!(selected_item == FONTLIST));
-		draw_fontlist();
-		break;
 	case MODE_SAVE:
-		draw_frame("Save As...", FONTLIST_X, FONTLIST_Y, 9,
+		draw_frame((fontlist_mode == MODE_LOAD) ? "Load/Browse" : "Save As...", FONTLIST_X, FONTLIST_Y, 9,
 			   VISIBLE_FONTS, !!(selected_item == FONTLIST));
 		draw_fontlist();
 		break;

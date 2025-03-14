@@ -111,7 +111,7 @@ static void read_on_meta(const FLAC__StreamDecoder *decoder, const FLAC__StreamM
 
 #define STRING_TAG(name, outvar, outvarsize) \
 	CHECK_TAG_SIZE(name) { \
-		strncpy(outvar, tag + sizeof(name "="), outvarsize); \
+		strncpy((outvar), tag + sizeof(name "="), (outvarsize) - 1); \
 		continue; \
 	}
 
@@ -205,7 +205,7 @@ static FLAC__StreamDecoderReadStatus read_on_read(const FLAC__StreamDecoder *dec
 	(void)decoder;
 }
 
-static FLAC__StreamDecoderSeekStatus read_on_seek(const FLAC__StreamDecoder *decoder, FLAC__uint64 absolute_byte_offset, void *client_data)
+static FLAC__StreamDecoderSeekStatus read_on_seek(SCHISM_UNUSED const FLAC__StreamDecoder *decoder, FLAC__uint64 absolute_byte_offset, void *client_data)
 {
 	slurp_t *fp = ((struct flac_readdata *)client_data)->fp;
 
@@ -218,7 +218,7 @@ static FLAC__StreamDecoderSeekStatus read_on_seek(const FLAC__StreamDecoder *dec
 		: FLAC__STREAM_DECODER_SEEK_STATUS_ERROR;
 }
 
-static FLAC__StreamDecoderTellStatus read_on_tell(const FLAC__StreamDecoder *decoder, FLAC__uint64 *absolute_byte_offset, void *client_data)
+static FLAC__StreamDecoderTellStatus read_on_tell(SCHISM_UNUSED const FLAC__StreamDecoder *decoder, FLAC__uint64 *absolute_byte_offset, void *client_data)
 {
 	slurp_t *fp = ((struct flac_readdata *)client_data)->fp;
 
@@ -230,21 +230,21 @@ static FLAC__StreamDecoderTellStatus read_on_tell(const FLAC__StreamDecoder *dec
 	return FLAC__STREAM_DECODER_TELL_STATUS_OK;
 }
 
-static FLAC__StreamDecoderLengthStatus read_on_length(const FLAC__StreamDecoder *decoder, FLAC__uint64 *stream_length, void *client_data)
+static FLAC__StreamDecoderLengthStatus read_on_length(SCHISM_UNUSED const FLAC__StreamDecoder *decoder, FLAC__uint64 *stream_length, void *client_data)
 {
 	/* XXX need a slurp_length() */
 	*stream_length = (FLAC__uint64)slurp_length(((struct flac_readdata*)client_data)->fp);
 	return FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
 }
 
-static FLAC__bool read_on_eof(const FLAC__StreamDecoder *decoder, void *client_data)
+static FLAC__bool read_on_eof(SCHISM_UNUSED const FLAC__StreamDecoder *decoder, void *client_data)
 {
 	return slurp_eof(((struct flac_readdata*)client_data)->fp);
 }
 
-static void read_on_error(const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *client_data)
+static void read_on_error(SCHISM_UNUSED const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus xx, void *client_data)
 {
-	log_appendf(4, "Error loading FLAC: %s", schism_FLAC_StreamDecoderErrorStatusString[status]);
+	log_appendf(4, "Error loading FLAC: %s", schism_FLAC_StreamDecoderErrorStatusString[xx]);
 
 	(void)decoder, (void)client_data;
 }
@@ -330,7 +330,7 @@ static int flac_load(struct flac_readdata* read_data, int meta_only)
 
 	schism_FLAC_stream_decoder_set_metadata_respond_all(decoder);
 
-	FLAC__StreamDecoderInitStatus status =
+	FLAC__StreamDecoderInitStatus xx =
 		schism_FLAC_stream_decoder_init_stream(
 			decoder,
 			read_on_read, read_on_seek,
@@ -339,7 +339,7 @@ static int flac_load(struct flac_readdata* read_data, int meta_only)
 			read_on_meta, read_on_error,
 			read_data
 		);
-	if (status != FLAC__STREAM_DECODER_INIT_STATUS_OK)
+	if (xx != FLAC__STREAM_DECODER_INIT_STATUS_OK)
 		return 0;
 
 	/* flac function names are such a yapfest */
@@ -469,8 +469,8 @@ struct flac_writedata {
 	int channels;
 };
 
-static FLAC__StreamEncoderWriteStatus write_on_write(const FLAC__StreamEncoder *encoder, const FLAC__byte buffer[],
-	size_t bytes, uint32_t samples, uint32_t current_frame, void *client_data)
+static FLAC__StreamEncoderWriteStatus write_on_write(SCHISM_UNUSED const FLAC__StreamEncoder *encoder, const FLAC__byte buffer[],
+	size_t bytes, SCHISM_UNUSED uint32_t samples, SCHISM_UNUSED uint32_t current_frame, void *client_data)
 {
 	disko_t* fp = (disko_t*)client_data;
 
@@ -478,7 +478,7 @@ static FLAC__StreamEncoderWriteStatus write_on_write(const FLAC__StreamEncoder *
 	return FLAC__STREAM_ENCODER_WRITE_STATUS_OK;
 }
 
-static FLAC__StreamEncoderSeekStatus write_on_seek(const FLAC__StreamEncoder *encoder, FLAC__uint64 absolute_byte_offset, void *client_data)
+static FLAC__StreamEncoderSeekStatus write_on_seek(SCHISM_UNUSED const FLAC__StreamEncoder *encoder, FLAC__uint64 absolute_byte_offset, void *client_data)
 {
 	disko_t* fp = (disko_t*)client_data;
 
@@ -486,7 +486,7 @@ static FLAC__StreamEncoderSeekStatus write_on_seek(const FLAC__StreamEncoder *en
 	return FLAC__STREAM_ENCODER_SEEK_STATUS_OK;
 }
 
-static FLAC__StreamEncoderTellStatus write_on_tell(const FLAC__StreamEncoder *encoder, FLAC__uint64 *absolute_byte_offset, void *client_data)
+static FLAC__StreamEncoderTellStatus write_on_tell(SCHISM_UNUSED const FLAC__StreamEncoder *encoder, FLAC__uint64 *absolute_byte_offset, void *client_data)
 {
 	disko_t* fp = (disko_t*)client_data;
 
@@ -520,8 +520,8 @@ static int flac_save_init(disko_t *fp, int bits, int channels, int rate, int est
 	if (!schism_FLAC_stream_encoder_set_bits_per_sample(fwd->encoder, bits))
 		return -3;
 
-	if (rate > FLAC__MAX_SAMPLE_RATE)
-		rate = FLAC__MAX_SAMPLE_RATE;
+	if (rate > (int)FLAC__MAX_SAMPLE_RATE)
+		rate = (int)FLAC__MAX_SAMPLE_RATE;
 
 	// FLAC only supports 10 Hz granularity for frequencies above 65535 Hz if the streamable subset is chosen, and only a maximum frequency of 655350 Hz.
 	if (!schism_FLAC_format_sample_rate_is_subset(rate))
@@ -668,8 +668,6 @@ static void flac_dlend(void)
 
 static int flac_dlinit(void)
 {
-	int i;
-
 	// already have it?
 	if (flac_dltrick_handle_)
 		return 0;

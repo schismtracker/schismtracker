@@ -147,7 +147,7 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lfla
 	note = song->patterns[pat];
 	song->orderlist[pat] = pat;
 
-	while (!finished && slurp_tell(fp) < len) {
+	while (!finished && slurp_tell(fp) < (int64_t)len) {
 		uint8_t event, b1, b2, type, ch;
 
 		event = slurp_getc(fp);

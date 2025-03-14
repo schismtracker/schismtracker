@@ -119,7 +119,7 @@ static int color_to_rgb(const char *spec, int speclen, uint32_t *rgb)
 		*rgb = strtol(buf, NULL, 16);
 		return 1;
 	} else {
-		int i;
+		size_t i;
 		for(i = 0; i < ARRAY_SIZE(known); i++)
 			if(string_equal(known[i].name, spec, speclen)) {
 				*rgb = known[i].rgb;
@@ -225,16 +225,13 @@ int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h)
 	int n;
 	int x, y;
 	int ncolors, cpp;
-	int indexed;
 	uint32_t *dst;
 	struct color_hash *colors = NULL;
-	uint32_t *im_colors = NULL; // ARGB values
 	char *keystrings = NULL, *nextkey;
 	const char *line;
 	const char ***xpmlines = NULL;
 #define get_next_line(q) *(*q)++
 	int error;
-	int usedn;
 
 	error = 0;
 
@@ -277,7 +274,7 @@ int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h)
 		error = 2;
 		goto done;
 	}
-	usedn = 1;
+
 	for(n = 0; n < ncolors; ++n) {
 		const char *p;
 		line = get_next_line(xpmlines);
@@ -291,7 +288,6 @@ int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h)
 			char nametype;
 			const char *colname;
 			uint32_t rgb, pixel;
-			int m;
 
 			SKIPSPACE(p);
 			if(!*p) {

@@ -139,14 +139,14 @@ static struct sdl12_audio_driver_info {
 	{"dummy", 1},
 };
 
-static int sdl12_audio_driver_info_init()
+static int sdl12_audio_driver_info_init(void)
 {
 	int atleast_one_loaded = 0;
 
 	/* save the last error before we screw with our crap */
 	const char *cached_err = sdl12_GetError();
 
-	for (int i = 0; i < ARRAY_SIZE(drivers); i++) {
+	for (size_t i = 0; i < ARRAY_SIZE(drivers); i++) {
 		// Clear any error before starting so we
 		// can check for one later
 		sdl12_ClearError();
@@ -174,17 +174,17 @@ static int sdl12_audio_driver_info_init()
 	return atleast_one_loaded;
 }
 
-static void sdl12_audio_driver_info_quit()
+static void sdl12_audio_driver_info_quit(void)
 {
 	// reset
-	for (int i = 0; i < ARRAY_SIZE(drivers); i++)
+	for (size_t i = 0; i < ARRAY_SIZE(drivers); i++)
 		drivers[i].exists = 0;
 }
 
-static int sdl12_audio_driver_count()
+static int sdl12_audio_driver_count(void)
 {
 	int c = 0;
-	for (int i = 0; i < ARRAY_SIZE(drivers); i++)
+	for (size_t i = 0; i < ARRAY_SIZE(drivers); i++)
 		if (drivers[i].exists)
 			c++;
 	return c;
@@ -192,7 +192,7 @@ static int sdl12_audio_driver_count()
 
 static const char *sdl12_audio_driver_name(int x)
 {
-	int i = 0;
+	size_t i = 0;
 	for (int c = 0; i < ARRAY_SIZE(drivers); i++) {
 		if (!drivers[i].exists)
 			continue;
@@ -213,7 +213,7 @@ static uint32_t sdl12_audio_device_count(void)
 	return 0;
 }
 
-static const char *sdl12_audio_device_name(uint32_t i)
+static const char *sdl12_audio_device_name(SCHISM_UNUSED uint32_t i)
 {
 	return NULL;
 }
@@ -228,8 +228,14 @@ static void SDLCALL sdl12_dummy_callback(void *userdata, uint8_t *stream, int le
 	dev->callback(stream, len);
 }
 
-static schism_audio_device_t *sdl12_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+static int sdl12_audio_opened = 0;
+
+static schism_audio_device_t *sdl12_audio_open_device(SCHISM_UNUSED uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
+	/* SDL 1.2 only supports opening one device at a time! */
+	if (sdl12_audio_opened)
+		return NULL;
+
 	schism_audio_device_t *dev = mem_calloc(1, sizeof(*dev));
 	dev->callback = desired->callback;
 	//dev->userdata = desired->userdata;
@@ -257,6 +263,8 @@ static schism_audio_device_t *sdl12_audio_open_device(uint32_t id, const schism_
 		.samples = sdl_obtained.samples,
 	};
 
+	sdl12_audio_opened = 1;
+
 	return dev;
 }
 
@@ -267,6 +275,7 @@ static void sdl12_audio_close_device(schism_audio_device_t *dev)
 
 	sdl12_CloseAudio();
 	free(dev);
+	sdl12_audio_opened = 0;
 }
 
 /* lock/unlock/pause */

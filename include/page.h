@@ -402,16 +402,6 @@ void timeinfo_load_page(struct page *page);
 
 /* --------------------------------------------------------------------- */
 
-/* draw-misc.c */
-void draw_thumb_bar(int x, int y, int width, int min, int max, int val,
-		    int selected);
-/* vu meter values should range from 0 to 64. the color is generally 5
- * unless the channel is disabled (in which case it's 1). impulse tracker
- * doesn't do peak color; st3 style, use color 4 (unless it's disabled,
- * in which case it should probably be 2, or maybe 3).
- * the width should be a multiple of three. */
-void draw_vu_meter(int x, int y, int val, int width, int color, int peak_color);
-
 /* page.c */
 int page_is_instrument_list(int page);
 void update_current_instrument(void);

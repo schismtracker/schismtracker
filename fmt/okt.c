@@ -295,6 +295,7 @@ static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 						break;
 					}
 					// 0x40 is set volume -- fall through
+					SCHISM_FALLTHROUGH;
 				case 0: case 1:
 				case 2: case 3:
 					note->voleffect = VOLFX_VOLUME;

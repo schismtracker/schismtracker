@@ -186,14 +186,14 @@ static void timeinfo_redraw(void)
 	if (display_session) {
 		uint64_t session_secs = 0;
 
-		for (int i = 0; i < current_song->histlen; i++) {
+		for (size_t i = 0; i < current_song->histlen; i++) {
 			char buf[27];
 
 			const uint64_t runtime_secs = current_song->history[i].runtime / 1000;
 
 			session_secs += runtime_secs;
 
-			if (i >= top_line && i < top_line + 29) {
+			if ((int)i >= top_line && (int)i < top_line + 29) {
 				if (current_song->history[i].time_valid) {
 					str_date_from_tm(&current_song->history[i].time, buf, cfg_str_date_format);
 					draw_text_len(buf, 27, 4, 20 + i - top_line, 0, 2);

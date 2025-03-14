@@ -319,10 +319,10 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		if (!read_sample_ult(&usmp, fp, ver))
 			return LOAD_FORMAT_ERROR;
 
-		strncpy(smp->name, usmp.name, 25);
-		smp->name[25] = '\0';
-		strncpy(smp->filename, usmp.filename, 12);
-		smp->filename[12] = '\0';
+		memcpy(smp->name, usmp.name, MIN(sizeof(smp->name), sizeof(usmp.name)));
+		smp->name[ARRAY_SIZE(smp->name) - 1] = '\0';
+		memcpy(smp->filename, usmp.filename, MIN(sizeof(smp->filename), sizeof(usmp.filename)));
+		smp->filename[ARRAY_SIZE(smp->filename) - 1] = '\0';
 		if (usmp.size_end <= usmp.size_start)
 			continue;
 		smp->length = usmp.size_end - usmp.size_start;

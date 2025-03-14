@@ -662,7 +662,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 		// 8-bit interleaved stereo
 		uint8_t deltas[2];
 
-		for (int i = 0; i < ARRAY_SIZE(deltas); i++)
+		for (size_t i = 0; i < ARRAY_SIZE(deltas); i++)
 			deltas[i] = (((flags & SF_ENC_MASK) == SF_PCMU) ? (1u << 7) : 0);
 
 		len *= 2;
@@ -737,7 +737,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 		// 16-bit interleaved stereo
 		uint16_t deltas[2];
 
-		for (int i = 0; i < ARRAY_SIZE(deltas); i++)
+		for (size_t i = 0; i < ARRAY_SIZE(deltas); i++)
 			deltas[i] = (((flags & SF_ENC_MASK) == SF_PCMU) ? (1u << 15) : 0);
 
 		len *= 2;
@@ -847,7 +847,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	default:
 		printf("DEFAULT: %d\n", flags);
 		flags = SF(8,M,LE,PCMS);
-		/* fallthrough */
+		SCHISM_FALLTHROUGH;
 	case SF(8,M,LE,PCMS):
 	case SF(8,M,LE,PCMU):
 	case SF(8,M,LE,PCMD): 
@@ -1441,6 +1441,7 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
 			case 0xA0:
 			case 0xB0:
 				if (from_xm) break;
+				SCHISM_FALLTHROUGH;
 			case 0x90:
 				effect = param = 0;
 				break;

@@ -52,7 +52,7 @@ static int SDLCALL sdl2_dummy_thread_func(void *userdata)
 	return thread->func(thread->userdata);
 }
 
-mt_thread_t *sdl2_thread_create(schism_thread_function_t func, const char *name, void *userdata)
+static mt_thread_t *sdl2_thread_create(schism_thread_function_t func, const char *name, void *userdata)
 {
 	mt_thread_t *thread = mem_alloc(sizeof(*thread));
 
@@ -81,13 +81,13 @@ mt_thread_t *sdl2_thread_create(schism_thread_function_t func, const char *name,
 	return thread;
 }
 
-void sdl2_thread_wait(mt_thread_t *thread, int *status)
+static void sdl2_thread_wait(mt_thread_t *thread, int *status)
 {
 	sdl2_WaitThread(thread->thread, status);
 	free(thread);
 }
 
-void sdl2_thread_set_priority(int priority)
+static void sdl2_thread_set_priority(int priority)
 {
 	// !!! FIXME this should use a switch statement,
 	// or this API should be removed altogether
@@ -112,7 +112,7 @@ struct mt_mutex {
 	SDL_mutex *mutex;
 };
 
-mt_mutex_t *sdl2_mutex_create(void)
+static mt_mutex_t *sdl2_mutex_create(void)
 {
 	mt_mutex_t *mutex = mem_alloc(sizeof(*mutex));
 
@@ -125,18 +125,18 @@ mt_mutex_t *sdl2_mutex_create(void)
 	return mutex;
 }
 
-void sdl2_mutex_delete(mt_mutex_t *mutex)
+static void sdl2_mutex_delete(mt_mutex_t *mutex)
 {
 	sdl2_DestroyMutex(mutex->mutex);
 	free(mutex);
 }
 
-void sdl2_mutex_lock(mt_mutex_t *mutex)
+static void sdl2_mutex_lock(mt_mutex_t *mutex)
 {
 	sdl2_LockMutex(mutex->mutex);
 }
 
-void sdl2_mutex_unlock(mt_mutex_t *mutex)
+static void sdl2_mutex_unlock(mt_mutex_t *mutex)
 {
 	sdl2_UnlockMutex(mutex->mutex);
 }
@@ -153,7 +153,7 @@ struct mt_cond {
 	SDL_cond *cond;
 };
 
-mt_cond_t *sdl2_cond_create(void)
+static mt_cond_t *sdl2_cond_create(void)
 {
 	mt_cond_t *cond = mem_alloc(sizeof(*cond));
 
@@ -166,23 +166,23 @@ mt_cond_t *sdl2_cond_create(void)
 	return cond;
 }
 
-void sdl2_cond_delete(mt_cond_t *cond)
+static void sdl2_cond_delete(mt_cond_t *cond)
 {
 	sdl2_DestroyCond(cond->cond);
 	free(cond);
 }
 
-void sdl2_cond_signal(mt_cond_t *cond)
+static void sdl2_cond_signal(mt_cond_t *cond)
 {
 	sdl2_CondSignal(cond->cond);
 }
 
-void sdl2_cond_wait(mt_cond_t *cond, mt_mutex_t *mutex)
+static void sdl2_cond_wait(mt_cond_t *cond, mt_mutex_t *mutex)
 {
 	sdl2_CondWait(cond->cond, mutex->mutex);
 }
 
-void sdl2_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout)
+static void sdl2_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout)
 {
 	sdl2_CondWaitTimeout(cond->cond, mutex->mutex, timeout);
 }

@@ -2267,6 +2267,7 @@ static void instrument_list_handle_key(struct key_event * k)
 			if (!(status.flags & CLASSIC_MODE)
 			&& ACTIVE_PAGE.selected_widget == 5) return;
 		}
+		SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_LESS:
 		if (k->state == KEY_RELEASE)
 			return;
@@ -2277,12 +2278,12 @@ static void instrument_list_handle_key(struct key_event * k)
 			if (!(status.flags & CLASSIC_MODE)
 			&& ACTIVE_PAGE.selected_widget == 5) return;
 		}
+		SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_GREATER:
 		if (k->state == KEY_RELEASE)
 			return;
 		song_change_current_play_channel(1, 0);
 		return;
-
 	case SCHISM_KEYSYM_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return;
@@ -2597,12 +2598,10 @@ static void instrument_list_pitch_update_values(void)
 	ins->flags &= ~(ENV_PITCH | ENV_PITCHCARRY | ENV_PITCHLOOP | ENV_PITCHSUSTAIN | ENV_FILTER);
 
 	switch (widgets_pitch[6].d.menutoggle.state) {
-	case 2: ins->flags |= ENV_FILTER;
-	case 1: ins->flags |= ENV_PITCH;
+	case 2: ins->flags |= ENV_FILTER; SCHISM_FALLTHROUGH;
+	case 1: ins->flags |= ENV_PITCH; break;
 	}
 
-	if (widgets_pitch[6].d.menutoggle.state)
-		ins->flags |= ENV_PITCH;
 	if (widgets_pitch[7].d.toggle.state)
 		ins->flags |= ENV_PITCHCARRY;
 	if (widgets_pitch[8].d.toggle.state)

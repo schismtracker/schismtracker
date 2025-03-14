@@ -159,7 +159,7 @@ static inline int32_t rn_vibrato(song_t *csf, song_voice_t *chan, int32_t freque
 	return frequency;
 }
 
-static inline int32_t rn_sample_vibrato(song_t *csf, song_voice_t *chan, int32_t frequency)
+static inline int32_t rn_sample_vibrato(SCHISM_UNUSED song_t *csf, song_voice_t *chan, int32_t frequency)
 {
 	uint32_t vibpos = chan->autovib_position & 0xFF;
 	int32_t vdelta, adepth = 1;
@@ -398,7 +398,7 @@ static inline int32_t rn_arpeggio(song_t *csf, song_voice_t *chan, int32_t frequ
 }
 
 
-static inline void rn_pitch_filter_envelope(song_t *csf, song_voice_t *chan,
+static inline void rn_pitch_filter_envelope(SCHISM_UNUSED song_t *csf, song_voice_t *chan,
 	int32_t *nenvpitch, int32_t *nfrequency)
 {
 	song_instrument_t *penv = chan->ptr_instrument;

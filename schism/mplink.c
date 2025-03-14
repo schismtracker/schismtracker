@@ -721,9 +721,9 @@ void song_wipe_instrument(int n)
 // Returns 1 if sample `n` is used by the specified instrument; 0 otherwise.
 static int _song_sample_used_by_instrument(int n, const song_instrument_t *instrument)
 {
-	int i;
+	size_t i;
 
-	for (i = 0; i < sizeof instrument->sample_map; i++) {
+	for (i = 0; i < sizeof(instrument->sample_map); i++) {
 		if (instrument->sample_map[i] == n) {
 			return 1;
 		}

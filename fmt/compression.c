@@ -82,7 +82,7 @@ uint32_t it_decompress8(void *dest, uint32_t len, slurp_t *fp, int it215, int ch
 				return 0;
 
 			if (c1 == EOF || c2 == EOF
-				|| pos + (c1 | (c2 << 8)) > filelen)
+				|| pos + (c1 | (c2 << 8)) > (int64_t)filelen)
 				return pos - startpos;
 		}
 		bitbuf = bitnum = 0;
@@ -186,7 +186,7 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 				return 0;
 
 			if (c1 == EOF || c2 == EOF
-				|| pos + (c1 | (c2 << 8)) > filelen)
+				|| pos + (c1 | (c2 << 8)) > (int64_t)filelen)
 				return pos;
 		}
 

@@ -50,7 +50,7 @@ int iff_chunk_peek_ex(iff_chunk_t *chunk, slurp_t *fp, uint32_t flags)
 	if (pos < 0)
 		return 0;
 
-	return (pos <= slurp_length(fp));
+	return ((size_t)pos <= slurp_length(fp));
 }
 
 /* returns the amount of bytes read or zero on error */

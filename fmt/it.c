@@ -64,6 +64,8 @@ struct it_file {
 
 static int it_load_header(struct it_file *hdr, slurp_t *fp)
 {
+	size_t n;
+
 #define LOAD_VALUE(name) do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
 
 	LOAD_VALUE(id);
@@ -108,7 +110,7 @@ static int it_load_header(struct it_file *hdr, slurp_t *fp)
 	hdr->reserved = bswapLE32(hdr->reserved);
 
 	/* replace NUL bytes with spaces */
-	for (int n = 0; n < sizeof(hdr->songname); n++)
+	for (n = 0; n < sizeof(hdr->songname); n++)
 		if (!hdr->songname[n])
 			hdr->songname[n] = 0x20;
 
@@ -1046,7 +1048,7 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 			warn |= (1 << WARN_ADLIB);
 	}
 
-	for (int i = 0; i < ARRAY_SIZE(it_warnings); i++)
+	for (size_t i = 0; i < ARRAY_SIZE(it_warnings); i++)
 		if (warn & (1 << i))
 			log_appendf(4, " Warning: %s unsupported in IT format", it_warnings[i]);
 

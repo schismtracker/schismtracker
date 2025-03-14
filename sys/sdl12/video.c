@@ -454,8 +454,8 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 				: SDL_HWSURFACE);
 		
 		/* if using swsurface, get a surface the size of the whole native monitor res
-		/* to avoid issues with weirdo display modes
-		/* get proper aspect ratio and surface of correct size */
+		 * to avoid issues with weirdo display modes
+		 * get proper aspect ratio and surface of correct size */
 		if (video.desktop.fullscreen && video.desktop.swsurface) {
 			
 			double ar = NATIVE_SCREEN_WIDTH / (double) NATIVE_SCREEN_HEIGHT;
@@ -479,7 +479,7 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 			h = display_native_y;
 			
 			/* if we don't care about getting the right aspect ratio,
-			/* sod letterboxing and just get a surface the size of the entire display */
+			 * sod letterboxing and just get a surface the size of the entire display */
 			if (!want_fixed) {
 				video.clip.w = display_native_x;
 				video.clip.h = display_native_y;
@@ -540,7 +540,6 @@ static void _bgr32_pal(int i, int rgb[3])
 
 static void sdl12_video_colors(unsigned char palette[16][3])
 {
-	static SDL_Color imap[16];
 	void (*fun)(int i,int rgb[3]);
 	const int lastmap[] = { 0,1,2,3,5 };
 	int rgb[3], i, j, p;
@@ -694,7 +693,7 @@ static int sdl12_video_is_screensaver_enabled(void)
 	return 1;
 }
 
-static void sdl12_video_toggle_screensaver(int enabled)
+static void sdl12_video_toggle_screensaver(SCHISM_UNUSED int enabled)
 {
 	/* SDL 1.2 doesn't provide this */
 }

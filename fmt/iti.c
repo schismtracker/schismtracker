@@ -461,7 +461,7 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 	// envelope: flags num lpb lpe slb sle data[25*3] reserved
 
 	iti.id = bswapLE32(0x49504D49); // IMPI
-	strncpy((char *) iti.filename, (char *) ins->filename, 12);
+	memcpy((char *) iti.filename, (char *) ins->filename, MIN(sizeof(ins->filename), sizeof(iti.filename)));
 	iti.zero = 0;
 	iti.nna = ins->nna;
 	iti.dct = ins->dct;
@@ -482,7 +482,7 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 		iti.trkvers = bswapLE16(0x1000 | ver_cwtv);
 
 	// reserved1
-	strncpy((char *) iti.name, (char *) ins->name, 25);
+	memcpy((char *) iti.name, (char *) ins->name, MIN(sizeof(ins->name), sizeof(iti.name)));
 	iti.name[25] = 0;
 	iti.ifc = ins->ifc;
 	iti.ifr = ins->ifr;

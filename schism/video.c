@@ -249,14 +249,14 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 
 	// draw the parts of the cursor sticking out to the left
 	unsigned int temp = (cursor->center_x < v) ? 0 : ((cursor->center_x - v) / 8) + ((cursor->center_x - v) % 8 != 0);
-	for (int i = 1; i <= temp && x >= i; i++) {
+	for (unsigned int i = 1; i <= temp && x >= i; i++) {
 		mouseline[x-i]      = z  >> (8 * (swidth - scenter + 1 + i)) & 0xFF;
 		mouseline_mask[x-i] = zm >> (8 * (swidth - scenter + 1 + i)) & 0xFF;
 	}
 
 	// and to the right
 	temp = swidth - scenter + 1;
-	for (int i = 1; (i <= temp) && (x + i < 80); i++) {
+	for (unsigned int i = 1; (i <= temp) && (x + i < 80); i++) {
 		mouseline[x+i]      = z  >> (8 * (swidth - scenter + 1 - i)) & 0xff;
 		mouseline_mask[x+i] = zm >> (8 * (swidth - scenter + 1 - i)) & 0xff;
 	}
@@ -538,7 +538,7 @@ void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 
 	const unsigned int mouseline_x = (mouse_x / 8);
 	const unsigned int mouseline_v = (mouse_x % 8);
-	unsigned int y, x, a;
+	unsigned int y, x;
 	uint32_t mouseline[80];
 	uint32_t mouseline_mask[80];
 

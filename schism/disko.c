@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "config-parser.h"
+#include "config.h"
 #include "dialog.h"
 #include "disko.h"
 #include "dmoz.h"
@@ -253,8 +254,6 @@ void disko_seterror(disko_t *ds, int err)
 
 int disko_open(disko_t *ds, const char *filename)
 {
-	int err;
-
 	if (!filename)
 		return -1;
 
@@ -271,8 +270,10 @@ int disko_open(disko_t *ds, const char *filename)
 
 	ds->filename = str_dup(filename);
 
-	if (asprintf(&ds->tempname, "%sXXXXXX", filename) < 0)
+	if (asprintf(&ds->tempname, "%sXXXXXX", filename) < 0) {
+		free(ds->filename);
 		return -1;
+	}
 
 	ds->file = mkfstemp(ds->tempname);
 	if (!ds->file) {
@@ -411,7 +412,6 @@ static void _export_teardown(void)
 static int close_and_bind(song_t *dwsong, disko_t *ds, song_sample_t *sample, int bps)
 {
 	disko_t dsshadow = *ds;
-	int8_t *newdata;
 	uint32_t flags;
 
 	if (disko_memclose(ds, 1) == DW_ERROR)

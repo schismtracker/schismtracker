@@ -617,14 +617,14 @@ static int win32_threads_init(void)
 		case WIN32_MUTEX_IMPL_SRWLOCK:
 			if (KERNEL32_SleepConditionVariableSRW)
 				break;
-			// fallthrough
+			SCHISM_FALLTHROUGH;
 		case WIN32_MUTEX_IMPL_CRITICALSECTION:
 			if (KERNEL32_SleepConditionVariableCS && critsec_ok) {
 				// This might be srwlock, so set it to critical section to be safe
 				win32_mutex_impl = WIN32_MUTEX_IMPL_CRITICALSECTION;
 				break;
 			}
-			// fallthrough
+			SCHISM_FALLTHROUGH;
 		default:
 			win32_cond_impl = WIN32_COND_IMPL_FAKE;
 			break;

@@ -76,9 +76,6 @@ static inline int queue_dequeue(schism_event_t *event)
 // Called back by the video backend;
 int events_init(const schism_events_backend_t *backend)
 {
-	int i;
-	int success;
-
 	if (!backend)
 		return 0;
 

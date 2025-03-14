@@ -761,8 +761,8 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 		step = (length << 16) / r->width; \
 	\
 		for (cc = 0; cc < outputchans; cc++) { \
-			uint32_t x, poshi = 0, poslo = 0; \
-			int##bits##_t oldmin = *data, oldmax = *data; \
+			int x; \
+			uint32_t poshi = 0, poslo = 0; \
 	\
 			for (x = 0; x < r->width; x++) { \
 				uint32_t scanlength, i; \
@@ -791,8 +791,6 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 	\
 				vgamem_ovl_drawline(r, x, np - 1 - max, x, np - 1 - min, SAMPLE_DATA_COLOR); \
 	\
-				oldmin = min; \
-				oldmax = max; \
 				poshi += (poslo >> 16); \
 				poslo &= 0xFFFF; \
 			} \

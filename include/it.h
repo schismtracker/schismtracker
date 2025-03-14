@@ -311,6 +311,11 @@ void show_exit_prompt(void);
 void show_song_length(void);
 void show_song_timejump(void);
 
+/* some platforms have different entrypoints (see: macosx) which set up
+ * platform-specific stuff, and eventually call this function to actually
+ * run schism */
+int schism_main(int argc, char** argv);
+
 /* Shutdown the SDL2 system from anywhere without having to use atexit() */
 SCHISM_NORETURN void schism_exit(int status);
 

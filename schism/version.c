@@ -102,7 +102,7 @@ uint32_t ver_mktime(uint32_t y, uint32_t m, uint32_t d)
 
 static inline SCHISM_ALWAYS_INLINE void ver_date_decode(uint32_t ver, uint32_t *py, uint32_t *pm, uint32_t *pd)
 {
-	int64_t date, y, ddd, mi, mm, dd;
+	int64_t date, y, ddd, mi;
 
 	date = (int64_t)ver + ver_date_encode(EPOCH_YEAR, EPOCH_MONTH, EPOCH_DAY);
 	y = ((date * 10000LL) + 14780LL) / 3652425LL;
@@ -162,7 +162,7 @@ void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char buf[11])
 	if (cwtv > 0x050) {
 		uint32_t y, m, d;
 
-		ver_date_decode((cwtv < 0xFFF) ? (cwtv - 0x050) : reserved, &y, &m, &d);
+		ver_date_decode((cwtv < 0xFFF) ? ((uint32_t)cwtv - 0x050) : reserved, &y, &m, &d);
 
 		// Classic Mac OS's snprintf is not C99 compliant (duh) so we need
 		// to cast our integers to unsigned long first.
@@ -193,7 +193,7 @@ static inline SCHISM_ALWAYS_INLINE int lookup_short_month(char *name)
 		"Dec",
 	};
 
-	for (int i = 0; i < ARRAY_SIZE(month_names); i++)
+	for (size_t i = 0; i < ARRAY_SIZE(month_names); i++)
 		if (!strcmp(month_names[i], name))
 			return i;
 

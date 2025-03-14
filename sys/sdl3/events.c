@@ -92,7 +92,7 @@ static schism_keymod_t sdl3_modkey_trans(SDL_Keymod mod)
 	return res;
 }
 
-schism_keymod_t sdl3_event_mod_state(void)
+static schism_keymod_t sdl3_event_mod_state(void)
 {
 	return sdl3_modkey_trans(sdl3_GetModState());
 }
@@ -154,8 +154,9 @@ static bool SDLCALL sdl3_win32_msg_hook(SCHISM_UNUSED void *userdata, MSG *msg)
 #ifdef SCHISM_USE_X11
 # include <X11/Xlib.h>
 
-static bool SDLCALL sdl3_x11_msg_hook(SCHISM_UNUSED void *userdata, XEvent *xevent)
+static bool SDLCALL sdl3_x11_msg_hook(SCHISM_UNUSED void *userdata, SCHISM_UNUSED XEvent *xevent)
 {
+#if 0
 	schism_event_t e;
 
 	e.type = SCHISM_EVENT_WM_MSG;
@@ -175,12 +176,13 @@ static bool SDLCALL sdl3_x11_msg_hook(SCHISM_UNUSED void *userdata, XEvent *xeve
 		events_push_event(&e);
 	}
 #endif
+#endif
 
 	return true;
 }
 #endif
 
-void sdl3_pump_events(void)
+static void sdl3_pump_events(void)
 {
 	SDL_Event e;
 

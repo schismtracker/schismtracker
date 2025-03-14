@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
 #include "vgamem.h"
 #include "song.h"
 #include "page.h"
@@ -673,7 +674,7 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
 {
 	int fg, v;
 	int c, pos;
-	int n;
+	uint32_t n;
 	song_voice_t *voice;
 	char buf[4];
 	uint8_t d, dn;
@@ -811,7 +812,7 @@ static const struct info_window_type window_types[] = {
 };
 #undef TRACK_VIEW
 
-#define NUM_WINDOW_TYPES ARRAY_SIZE(window_types)
+#define NUM_WINDOW_TYPES ((int)ARRAY_SIZE(window_types))
 
 /* --------------------------------------------------------------------- */
 
@@ -1105,7 +1106,7 @@ static int info_page_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_EQUALS:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
 			return 0;
-		// fallthrough
+		SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_PLUS:
 		if (k->state == KEY_RELEASE)
 			return 1;

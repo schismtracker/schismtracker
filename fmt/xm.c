@@ -174,7 +174,7 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 		end = MIN(end, slurp_length(fp));
 
 		for (row = 0; row < rows; row++, note += MAX_CHANNELS - hdr->channels) {
-			for (chan = 0; slurp_tell(fp) < end && chan < hdr->channels; chan++, note++) {
+			for (chan = 0; slurp_tell(fp) < (int64_t)end && chan < hdr->channels; chan++, note++) {
 				b = slurp_getc(fp);
 				if (b & 128) {
 					if (b & 1) note->note = slurp_getc(fp);
@@ -233,6 +233,7 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 						note->volparam -= 0x10;
 						break;
 					} // NOTE: falls through from case 5 when vol != 0x50
+					SCHISM_FALLTHROUGH;
 				case 0: // Do nothing
 					note->voleffect = FX_NONE;
 					note->volparam = 0;
@@ -529,6 +530,8 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		detected = ID_FT2CLONE | ID_MAYBEMODPLUG;
 
 	for (ni = 1; ni <= hdr->instruments; ni++) {
+		size_t i;
+
 		int vtype, vsweep, vdepth, vrate;
 		song_instrument_t *ins;
 		uint16_t nsmp;
@@ -617,8 +620,8 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		envs[0].env = &ins->vol_env;
 		envs[1].env = &ins->pan_env;
 
-		for (int i = 0; i < ARRAY_SIZE(envs); i++) {
-			uint16_t prevtick;
+		for (i = 0; i < ARRAY_SIZE(envs); i++) {
+			uint16_t prevtick = 0;
 			for (n = 0; n < 12; n++) {
 				slurp_read(fp, &w, 2); // tick
 				w = bswapLE16(w);
@@ -637,16 +640,16 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 				envs[i].env->values[n] = MIN(w, 64);
 			}
 		}
-		for (int i = 0; i < ARRAY_SIZE(envs); i++) {
+		for (i = 0; i < ARRAY_SIZE(envs); i++) {
 			b = slurp_getc(fp);
 			envs[i].env->nodes = CLAMP(b, 2, 12);
 		}
-		for (int i = 0; i < ARRAY_SIZE(envs); i++) {
+		for (i = 0; i < ARRAY_SIZE(envs); i++) {
 			envs[i].env->sustain_start = envs[i].env->sustain_end = slurp_getc(fp);
 			envs[i].env->loop_start = slurp_getc(fp);
 			envs[i].env->loop_end = slurp_getc(fp);
 		}
-		for (int i = 0; i < ARRAY_SIZE(envs); i++) {
+		for (i = 0; i < ARRAY_SIZE(envs); i++) {
 			b = slurp_getc(fp);
 			if ((b & 1) && envs[i].env->nodes > 0) ins->flags |= envs[i].envflag;
 			if (b & 2) ins->flags |= envs[i].envsusloopflag;
@@ -770,8 +773,8 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 				doesn't seem to be reliable enough to declare "THIS WAS MPT" because it seems
 				FT2 would also SAVE that broken data after loading an instrument with loop
 				type 3 was set. I have no idea. */
-				case 3: case 2: smp->flags |= CHN_PINGPONGLOOP;
-				case 1: smp->flags |= CHN_LOOP;
+				case 3: case 2: smp->flags |= CHN_PINGPONGLOOP; SCHISM_FALLTHROUGH;
+				case 1: smp->flags |= CHN_LOOP; break;
 			}
 			if (b & 0x10) {
 				smp->flags |= CHN_16BIT;

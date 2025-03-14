@@ -119,11 +119,6 @@ static SDL_PixelFormat (SDLCALL *sdl3_GetPixelFormatForMasks)(int bpp, Uint32 Rm
 #define sdl3_compat_ShowCursor(x) \
 	((int)((x) ? sdl3_ShowCursor() : sdl3_HideCursor()))
 
-#if !SDL_VERSION_ATLEAST(2, 0, 4)
-#define SDL_PIXELFORMAT_NV12 (SDL_DEFINE_PIXELFOURCC('N', 'V', '1', '2'))
-#define SDL_PIXELFORMAT_NV21 (SDL_DEFINE_PIXELFOURCC('N', 'V', '2', '1'))
-#endif
-
 static void sdl3_video_setup(const char *quality);
 
 static struct {
@@ -466,12 +461,15 @@ static void sdl3_video_colors(unsigned char palette[16][3])
 {
 	static const int lastmap[] = { 0, 1, 2, 3, 5 };
 	int i;
-	void (*fun)(int i, unsigned char rgb[3]) = sdl_pal_;
+	void (*fun)(int i, unsigned char rgb[3]);
 
 	switch (video.format) {
 	case SDL_PIXELFORMAT_IYUV:
 	case SDL_PIXELFORMAT_YV12:
 		fun = yuv_pal_;
+		break;
+	default:
+		fun = sdl_pal_;
 		break;
 	}
 

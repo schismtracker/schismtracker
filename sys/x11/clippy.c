@@ -198,7 +198,8 @@ static char *x11_get_selection_text(video_wm_data_t *wm_data, Atom selection_typ
 
 static void x11_clippy_set_clipboard(const char *text)
 {
-	int x_needs_close = 0;
+	// XXX what was this used for? what?
+	//int x_needs_close = 0;
 
 	video_wm_data_t wm_data;
 	if (!video_get_wm_data(&wm_data) || wm_data.subsystem != VIDEO_WM_DATA_SUBSYSTEM_X11)

@@ -360,8 +360,8 @@ int fmt_xi_load_instrument(slurp_t *fp, int slot)
 		if (smp->loop_start >= smp->loop_end)
 			smp->loop_start = smp->loop_end = 0;
 		switch (xmss.type & 3) {
-			case 3: case 2: smp->flags |= CHN_PINGPONGLOOP;
-			case 1: smp->flags |= CHN_LOOP;
+			case 3: case 2: smp->flags |= CHN_PINGPONGLOOP; SCHISM_FALLTHROUGH;
+			case 1: smp->flags |= CHN_LOOP; break;
 		}
 		smp->volume = xmss.vol << 2;
 		if (smp->volume > 256)
@@ -430,7 +430,7 @@ int fmt_xi_save_instrument(disko_t *fp, song_t *song, song_instrument_t *ins)
 
 	/* now add header things */
 	memcpy(xi.header, "Extended Instrument: ", sizeof(xi.header));
-	strncpy((char *)xi.name, ins->name, sizeof(xi.name));
+	memcpy(xi.name, ins->name, MIN(sizeof(xi.name), sizeof(ins->name)));
 	xi.magic = 0x1A;
 	memcpy(xi.tracker, "Schism Tracker", 14);
 	xi.version = bswapLE16(0x0102);
@@ -506,7 +506,7 @@ int fmt_xi_save_instrument(disko_t *fp, song_t *song, song_instrument_t *ins)
 		int o = xi_invmap[k];
 		struct xm_sample_header xmss;
 		smp = song->samples + o;
-		strncpy(xmss.name, smp->name, sizeof(xmss.name));
+		memcpy(xmss.name, smp->name, MIN(sizeof(xmss.name), sizeof(smp->name)));
 
 		xmss.samplen = smp->length;
 

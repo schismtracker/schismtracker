@@ -122,10 +122,12 @@ char *str_from_time(time_t when, char buf[27], str_time_format_t format)
 	return str_time_from_tm(&tmr, buf, format);
 }
 
-char *str_from_num99(int n, char *buf)
+char *str_from_num99(int n, char buf[3])
 {
 	static const char *qv = "HIJKLMNOPQRSTUVWXYZ";
-	if (n < 100) {
+	if (n < 0) {
+		/* This is a bug */
+	} else if (n < 100) {
 		sprintf(buf, "%02d", n);
 	} else if (n <= 256) {
 		n -= 100;

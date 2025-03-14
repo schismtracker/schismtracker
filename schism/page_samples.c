@@ -862,7 +862,7 @@ static void do_adlibconfig(SCHISM_UNUSED void *data)
 
 static void adlibconfig_refresh(void)
 {
-	int a;
+	size_t a;
 	song_sample_t *sample = song_get_sample(current_sample);
 
 	draw_sample_data(&sample_image, sample);
@@ -916,7 +916,7 @@ static void sample_adlibconfig_draw_const(void)
 		{43, 12, "Volume Vibrato"},
 	};
 
-	int a;
+	size_t a;
 
 	// 39 33
 	draw_box(38, 2 + 30, 40, 5 + 30, BOX_THIN | BOX_INNER | BOX_INSET);
@@ -952,7 +952,7 @@ static void sample_adlibconfig_dialog(SCHISM_UNUSED void *ign)
 	struct dialog *dialog;
 	song_sample_t *sample = song_get_sample(current_sample);
 
-	int a;
+	size_t a;
 
 	//page->help_index = HELP_ADLIB_SAMPLES;
 	// Eh, what page? Where am I supposed to get a reference to page?
@@ -1319,7 +1319,6 @@ static void resample_sample_dialog(int aa)
 
 static struct widget crossfade_sample_widgets[6];
 static int crossfade_sample_length_cursor;
-static int crossfade_sample_priority;
 static const int crossfade_sample_loop_group[] = { 0, 1, -1 };
 
 static void do_crossfade_sample(SCHISM_UNUSED void *data)
@@ -1602,7 +1601,7 @@ static void sample_list_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_EQUALS:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
 			return;
-		// fallthrough
+		SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_PLUS:
 		if (k->state == KEY_RELEASE)
 			return;
@@ -1763,12 +1762,12 @@ static void update_sample_loop_flags(void)
 	/* these switch statements fall through */
 	sample->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP | CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
 	switch (widgets_samplelist[9].d.menutoggle.state) {
-	case 2: sample->flags |= CHN_PINGPONGLOOP;
+	case 2: sample->flags |= CHN_PINGPONGLOOP; SCHISM_FALLTHROUGH;
 	case 1: sample->flags |= CHN_LOOP;
 	}
 
 	switch (widgets_samplelist[12].d.menutoggle.state) {
-	case 2: sample->flags |= CHN_PINGPONGSUSTAIN;
+	case 2: sample->flags |= CHN_PINGPONGSUSTAIN; SCHISM_FALLTHROUGH;
 	case 1: sample->flags |= CHN_SUSTAINLOOP;
 	}
 

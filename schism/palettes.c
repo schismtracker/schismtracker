@@ -383,7 +383,7 @@ void palette_apply(void)
 
 void palette_load_preset(int palette_index)
 {
-	if (palette_index < 0 || palette_index >= NUM_PALETTES)
+	if (palette_index < 0 || palette_index >= (int)NUM_PALETTES)
 		return;
 
 	current_palette_index = palette_index;

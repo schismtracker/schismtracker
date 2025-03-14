@@ -56,23 +56,33 @@ char song_basename[SCHISM_NAME_MAX + 1];
 // TODO | as well? (though I've never come across any cases of either of
 // TODO | these having null characters in them...)
 
+static inline SCHISM_ALWAYS_INLINE void _fix_name(char *buf, size_t n)
+{
+	size_t c;
+
+	for (c = 0; c < n; c++)
+		if (!buf[c])
+			buf[c] = 0x20;
+
+	buf[n - 1] = 0;
+}
+
 static void _fix_names(song_t *qq)
 {
-	int c, n;
+	int n;
 
-	for (n = 1; n < MAX_INSTRUMENTS; n++) {
-		for (c = 0; c < ARRAY_SIZE(qq->samples[n].name); c++)
-			if (!qq->samples[n].name[c])
-				qq->samples[n].name[c] = 32;
-		qq->samples[n].name[25] = 0;
+	_fix_name(qq->title, ARRAY_SIZE(qq->title));
 
-		if (!qq->instruments[n])
-			continue;
-		for (c = 0; c < ARRAY_SIZE(qq->instruments[n]->name); c++)
-			if (qq->instruments[n]->name[c] == 0)
-				qq->instruments[n]->name[c] = 32;
-		qq->instruments[n]->name[25] = 0;
+	for (n = 1; n < MAX_SAMPLES; n++) {
+		_fix_name(qq->samples[n].name, ARRAY_SIZE(qq->samples[n].name));
+		_fix_name(qq->samples[n].filename, ARRAY_SIZE(qq->samples[n].filename));
 	}
+
+	for (n = 1; n < MAX_INSTRUMENTS; n++)
+		if (qq->instruments[n]) {
+			_fix_name(qq->instruments[n]->name, ARRAY_SIZE(qq->instruments[n]->name));
+			_fix_name(qq->instruments[n]->filename, ARRAY_SIZE(qq->instruments[n]->filename));
+		}
 }
 
 // ------------------------------------------------------------------------
@@ -186,7 +196,7 @@ const char *fmt_strerror(int n)
 }
 
 // IT uses \r in song messages; replace errant \n's
-void message_convert_newlines(song_t *song) {
+static void message_convert_newlines(song_t *song) {
 	int i = 0, len = strlen(song->message);
 	for (i = 0; i < len; i++) {
 		if (song->message[i] == '\n') {
@@ -342,9 +352,9 @@ void audio_enable_flac(int enabled)
 }
 
 const struct save_format song_save_formats[] = {
-	{"IT", "Impulse Tracker", ".it", {.save_song = fmt_it_save_song}},
-	{"S3M", "Scream Tracker 3", ".s3m", {.save_song = fmt_s3m_save_song}},
-	{"MOD", "Amiga ProTracker", ".mod", {.save_song = fmt_mod_save_song}},
+	{"IT", "Impulse Tracker", ".it", {.save_song = fmt_it_save_song}, NULL},
+	{"S3M", "Scream Tracker 3", ".s3m", {.save_song = fmt_s3m_save_song}, NULL},
+	{"MOD", "Amiga ProTracker", ".mod", {.save_song = fmt_mod_save_song}, NULL},
 	{.label = NULL}
 };
 
@@ -352,10 +362,10 @@ const struct save_format song_save_formats[] = {
 	fmt_##t##_export_head, fmt_##t##_export_silence, fmt_##t##_export_body, fmt_##t##_export_tail
 
 const struct save_format song_export_formats[] = {
-	{"WAV", "WAV", ".wav", {.export = {EXPORT_FUNCS(wav), 0}}},
-	{"MWAV", "WAV multi-write", ".wav", {.export = {EXPORT_FUNCS(wav), 1}}},
-	{"AIFF", "Audio IFF", ".aiff", {.export = {EXPORT_FUNCS(aiff), 0}}},
-	{"MAIFF", "Audio IFF multi-write", ".aiff", {.export = {EXPORT_FUNCS(aiff), 1}}},
+	{"WAV", "WAV", ".wav", {.export = {EXPORT_FUNCS(wav), 0}}, NULL},
+	{"MWAV", "WAV multi-write", ".wav", {.export = {EXPORT_FUNCS(wav), 1}}, NULL},
+	{"AIFF", "Audio IFF", ".aiff", {.export = {EXPORT_FUNCS(aiff), 0}}, NULL},
+	{"MAIFF", "Audio IFF multi-write", ".aiff", {.export = {EXPORT_FUNCS(aiff), 1}}, NULL},
 #ifdef USE_FLAC
 	{"FLAC", "Free Lossless Audio Codec", ".flac", {.export = {EXPORT_FUNCS(flac), 0}}, flac_enabled_cb},
 	{"MFLAC", "Free Lossless Audio Codec multi-write", ".flac", {.export = {EXPORT_FUNCS(flac)}}, flac_enabled_cb},
@@ -366,21 +376,21 @@ const struct save_format song_export_formats[] = {
 // <distance> .. dont ask
 
 const struct save_format sample_save_formats[] = {
-	{"ITS", "Impulse Tracker", ".its", {.save_sample = fmt_its_save_sample}},
-	{"S3I", "Scream Tracker", ".s3i", {.save_sample = fmt_s3i_save_sample}},
-	{"AIFF", "Audio IFF", ".aiff", {.save_sample = fmt_aiff_save_sample}},
-	{"AU", "Sun/NeXT", ".au", {.save_sample = fmt_au_save_sample}},
-	{"WAV", "WAV", ".wav", {.save_sample = fmt_wav_save_sample}},
+	{"ITS", "Impulse Tracker", ".its", {.save_sample = fmt_its_save_sample}, NULL},
+	{"S3I", "Scream Tracker", ".s3i", {.save_sample = fmt_s3i_save_sample}, NULL},
+	{"AIFF", "Audio IFF", ".aiff", {.save_sample = fmt_aiff_save_sample}, NULL},
+	{"AU", "Sun/NeXT", ".au", {.save_sample = fmt_au_save_sample}, NULL},
+	{"WAV", "WAV", ".wav", {.save_sample = fmt_wav_save_sample}, NULL},
 #ifdef USE_FLAC
 	{"FLAC", "Free Lossless Audio Codec", ".flac", {.save_sample = fmt_flac_save_sample}, flac_enabled_cb},
 #endif
-	{"RAW", "Raw", ".raw", {.save_sample = fmt_raw_save_sample}},
+	{"RAW", "Raw", ".raw", {.save_sample = fmt_raw_save_sample}, NULL},
 	{.label = NULL}
 };
 
 const struct save_format instrument_save_formats[] = {
-	{"ITI", "Impulse Tracker", ".iti", {.save_instrument = fmt_iti_save_instrument}},
-	{"XI", "Fasttracker II", ".xi", {.save_instrument = fmt_xi_save_instrument}},
+	{"ITI", "Impulse Tracker", ".iti", {.save_instrument = fmt_iti_save_instrument}, NULL},
+	{"XI", "Fasttracker II", ".xi", {.save_instrument = fmt_xi_save_instrument}, NULL},
 	{.label = NULL}
 };
 

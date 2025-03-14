@@ -383,12 +383,9 @@ SCHISM_NORETURN static void event_loop(void)
 	schism_keysym_t last_key = 0;
 	time_t startdown;
 	int downtrip;
-	int wheel_x;
-	int wheel_y;
 	int fix_numlock_key;
 	int screensaver;
 	int button = -1;
-	int i;
 	struct key_event kk;
 
 	fix_numlock_key = status.fix_numlock_setting;
@@ -463,7 +460,7 @@ SCHISM_NORETURN static void event_loop(void)
 					kk.is_repeat = 1;
 				}
 
-				/* fallthrough */
+				SCHISM_FALLTHROUGH;
 			case SCHISM_KEYUP:
 				switch (se.key.sym) {
 				case SCHISM_KEYSYM_NUMLOCKCLEAR:
@@ -645,7 +642,7 @@ SCHISM_NORETURN static void event_loop(void)
 			case SCHISM_WINDOWEVENT_RESIZED:
 			case SCHISM_WINDOWEVENT_SIZE_CHANGED: /* tiling window managers */
 				video_resize(se.window.data.resized.width, se.window.data.resized.height);
-				/* fallthrough */
+				SCHISM_FALLTHROUGH;
 			case SCHISM_WINDOWEVENT_EXPOSED:
 				status.flags |= (NEED_UPDATE);
 				break;
@@ -839,7 +836,7 @@ SCHISM_NORETURN static void event_loop(void)
 	schism_exit(0);
 }
 
-void schism_exit(int status)
+void schism_exit(int x)
 {
 #if ENABLE_HOOKS
 	if (shutdown_process & EXIT_HOOK)
@@ -888,7 +885,7 @@ void schism_exit(int status)
 
 	os_sysexit();
 
-	exit(status);
+	exit(x);
 }
 
 extern void vis_init(void);

@@ -938,7 +938,7 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 {
 	struct s3m_header hdr = {0};
 	int nord, nsmp, npat;
-	int n, i;
+	int n;
 	song_sample_t *smp;
 	int64_t smphead_pos; /* where to write the sample headers */
 	int64_t patptr_pos; /* where to write pattern pointers */
@@ -1021,8 +1021,8 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 	 * Impulse Tracker also conveniently stores it */
 	hdr.reserved2 = 0;
 
-	for (size_t i = 0; i < song->histlen; i++)
-		hdr.reserved2 += ms_to_dos_time(song->history[i].runtime);
+	for (size_t j = 0; j < song->histlen; j++)
+		hdr.reserved2 += ms_to_dos_time(song->history[j].runtime);
 
 	// 32-bit DOS tick count (tick = 1/18.2 second; 54945 * 18.2 = 999999 which is Close Enough)
 	hdr.reserved2 += it_get_song_elapsed_dos_time(song);

@@ -94,7 +94,7 @@ static void schism_quit_audio_impl(void)
 /* ---------------------------------------------------------- */
 /* drivers */
 
-static int sdl3_audio_driver_count()
+static int sdl3_audio_driver_count(void)
 {
 	return sdl3_GetNumAudioDrivers();
 }
@@ -128,7 +128,8 @@ static uint32_t sdl3_audio_device_count(void)
 
 static const char *sdl3_audio_device_name(uint32_t i)
 {
-	if (i < 0 || i >= device_count) return NULL;
+	if (i >= INT_MAX) return NULL;
+	if ((int)i >= device_count) return NULL;
 
 	return sdl3_GetAudioDeviceName(devices[i]);
 }
@@ -155,19 +156,20 @@ static void sdl3_audio_quit_driver(void)
 
 /* -------------------------------------------------------- */
 
-static void SDLCALL sdl3_audio_callback(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount)
+static void SDLCALL sdl3_audio_callback(void *userdata, SDL_AudioStream *stream, int additional_amount, SCHISM_UNUSED int total_amount)
 {
 	schism_audio_device_t *dev = (schism_audio_device_t *)userdata;
 
 	if (additional_amount > 0) {
 		SCHISM_VLA_ALLOC(uint8_t, data, additional_amount);
-		if (data) {
-			mt_mutex_lock(dev->mutex);
-			dev->callback(data, additional_amount);
-			mt_mutex_unlock(dev->mutex);
-			sdl3_PutAudioStreamData(stream, data, additional_amount);
-			SCHISM_VLA_FREE(data);
-		}
+
+		mt_mutex_lock(dev->mutex);
+		dev->callback(data, additional_amount);
+		mt_mutex_unlock(dev->mutex);
+
+		sdl3_PutAudioStreamData(stream, data, additional_amount);
+
+		SCHISM_VLA_FREE(data);
 	}
 }
 
@@ -206,7 +208,7 @@ static schism_audio_device_t *sdl3_audio_open_device(uint32_t id, const schism_a
 		sdl3_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, buf);
 	}
 
-	dev->stream = sdl3_OpenAudioDeviceStream((id == AUDIO_BACKEND_DEFAULT || id >= device_count) ? SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK : devices[id], &sdl_desired, sdl3_audio_callback, dev);
+	dev->stream = sdl3_OpenAudioDeviceStream((id == AUDIO_BACKEND_DEFAULT || id >= (uint32_t)device_count) ? SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK : devices[id], &sdl_desired, sdl3_audio_callback, dev);
 
 	// reset this before checking if opening succeeded
 	sdl3_ResetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES);

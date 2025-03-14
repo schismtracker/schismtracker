@@ -700,7 +700,7 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lfla
 				break;
 			}
 
-			strncpy(sample->filename, imfsmp.name, 12);
+			memcpy(sample->filename, imfsmp.name, MIN(sizeof(sample->filename), sizeof(imfsmp.name)));
 			sample->filename[12] = 0;
 			strcpy(sample->name, sample->filename);
 			sample->length = imfsmp.length;

@@ -71,7 +71,8 @@ static struct {
 
 static void x11_dlend(void)
 {
-	int i;
+	size_t i;
+
 	for (i = 0; i < ARRAY_SIZE(x11_dltrick_handles_); i++) {
 		// unload
 		if (x11_dltrick_handles_[i].lib) {
@@ -83,7 +84,7 @@ static void x11_dlend(void)
 
 static int x11_dlinit(void)
 {
-	int i;
+	size_t i;
 
 	for (i = 0; i < ARRAY_SIZE(x11_dltrick_handles_); i++) {
 		// do we already have it and does the library exist?

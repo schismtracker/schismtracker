@@ -246,7 +246,7 @@ static struct cfg_section *_free_section(struct cfg_section *section)
 /* --------------------------------------------------------------------------------------------------------- */
 /* public functions */
 
-static int cfg_read_receive_impl(const void *data, size_t size, void *userdata)
+static int cfg_read_receive_impl(const void *data, SCHISM_UNUSED size_t size, void *userdata)
 {
 	size_t len; /* how far away the end of the token is from the start */
 	struct cfg_section *cur_section = NULL;

@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "it.h"
+#include "config.h"
 #include "page.h"
 #include "song.h"
 #include "slurp.h"
@@ -271,12 +272,12 @@ static void _audio_create_drivers_list(void)
 	size_t alloc_size = 0;
 	int counts[ARRAY_SIZE(inited_backends)] = {0};
 
-	for (int i = 0; i < ARRAY_SIZE(counts); i++)
+	for (size_t i = 0; i < ARRAY_SIZE(counts); i++)
 		alloc_size += (counts[i] = (inited_backends[i] ? inited_backends[i]->driver_count() : 0));
 
 	full_drivers.list = mem_alloc(alloc_size * sizeof(*full_drivers.list));
 
-	for (int i = 0; i < ARRAY_SIZE(counts); i++) {
+	for (size_t i = 0; i < ARRAY_SIZE(counts); i++) {
 		for (int j = 0; j < counts[i]; j++) {
 			const char *n = inited_backends[i]->driver_name(j);
 
@@ -333,7 +334,7 @@ int audio_driver_count(void)
 
 const char *audio_driver_name(int x)
 {
-	if (x >= full_drivers.size || x < 0)
+	if ((size_t)x >= full_drivers.size || x < 0)
 		return NULL;
 
 	return full_drivers.list[x].name;
@@ -1312,7 +1313,7 @@ uint32_t song_audio_device_id(void)
 	return device_id;
 }
 
-static int audio_lookup_device_name(const char *device, uint32_t *device_id)
+static int audio_lookup_device_name(const char *device, uint32_t *pdevid)
 {
 	const uint32_t devices_size = backend->device_count();
 
@@ -1321,7 +1322,7 @@ static int audio_lookup_device_name(const char *device, uint32_t *device_id)
 		if (!n) continue; // should never happen, hopefully...
 
 		if (!strcmp(n, device)) {
-			*device_id = i;
+			*pdevid = i;
 			return 1;
 		}
 	}
@@ -1514,7 +1515,7 @@ static const schism_audio_backend_t *audio_driver_in_list_(const char *driver)
 int audio_init(const char *driver, const char *device)
 {
 	static int backends_initialized = 0;
-	int i;
+	size_t i;
 	int success = 0;
 
 	_audio_quit();
@@ -1610,9 +1611,11 @@ int audio_reinit(uint32_t *device)
 
 void audio_quit(void)
 {
+	size_t i;
+
 	_audio_quit();
 
-	for (int i = 0; i < ARRAY_SIZE(inited_backends); i++) {
+	for (i = 0; i < ARRAY_SIZE(inited_backends); i++) {
 		if (inited_backends[i]) {
 			inited_backends[i]->quit();
 			inited_backends[i] = NULL;

@@ -245,7 +245,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		para_sdata[n] = bswapLE16(stmsmp.pcmpara);
 	}
 
-	size_t orderlist_size = tmp[3] ? 128 : 64;
+	int orderlist_size = tmp[3] ? 128 : 64;
 
 	slurp_read(fp, song->orderlist, orderlist_size);
 	for (n = 0; n < orderlist_size; n++) {

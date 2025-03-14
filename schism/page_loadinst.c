@@ -376,7 +376,7 @@ static int file_list_handle_text_input(const char *text)
 	for (; *text; text++) {
 		if (*text >= 32 && (slash_search_mode > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
 			if (slash_search_mode < 0) slash_search_mode = 0;
-			if (slash_search_mode + 1 < ARRAY_SIZE(slash_search_str)) {
+			if (slash_search_mode + 1 < (int)ARRAY_SIZE(slash_search_str)) {
 				slash_search_str[slash_search_mode++] = *text;
 				reposition_at_slash_search();
 				status.flags |= NEED_UPDATE;
@@ -449,6 +449,7 @@ static int file_list_handle_key(struct key_event * k)
 			reposition_at_slash_search();
 			return 1;
 		}
+		SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_SLASH:
 		if (slash_search_mode < 0) {
 			if (k->state == KEY_PRESS)
@@ -456,7 +457,8 @@ static int file_list_handle_key(struct key_event * k)
 			slash_search_mode = 0;
 			status.flags |= NEED_UPDATE;
 			return 1;
-		} /* else fall through */
+		}
+		SCHISM_FALLTHROUGH;
 	default:
 		if (k->text)
 			return file_list_handle_text_input(k->text);

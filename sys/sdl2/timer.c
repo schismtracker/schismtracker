@@ -91,7 +91,7 @@ struct _sdl2_timer_oneshot_curry {
 	void *param;
 };
 
-static uint32_t SDLCALL _sdl2_timer_oneshot_callback(uint32_t interval, void *param)
+static uint32_t SDLCALL _sdl2_timer_oneshot_callback(SCHISM_UNUSED uint32_t interval, void *param)
 {
 	struct _sdl2_timer_oneshot_curry *curry = (struct _sdl2_timer_oneshot_curry *)param;
 

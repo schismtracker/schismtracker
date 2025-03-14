@@ -985,7 +985,8 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 	unsigned char outbuffer[MAX_MIDI_MACRO * 2];
 	int32_t midi_channel, fake_midi_channel = 0;
 	int32_t saw_c;
-	int32_t nibble_pos = 0, write_pos = 0;
+	int32_t nibble_pos = 0;
+	uint32_t write_pos = 0;
 
 	saw_c = 0;
 	if (!penv || penv->midi_channel_mask == 0) {
@@ -1252,11 +1253,13 @@ uint32_t csf_get_length(song_t *csf)
 				if (param)
 					speed = param;
 				break;
-			case FX_TEMPO:
+			case FX_TEMPO: {
 				if (param)
 					mem_tempo[n] = param;
 				else
 					param = mem_tempo[n];
+
+				// WTF is this doing? --paper
 				int d = (param & 0xf);
 				switch (param >> 4) {
 				default:
@@ -1264,12 +1267,14 @@ uint32_t csf_get_length(song_t *csf)
 					break;
 				case 0:
 					d = -d;
+					SCHISM_FALLTHROUGH;
 				case 1:
 					d = d * (speed - 1) + tempo;
 					tempo = CLAMP(d, 32, 255);
 					break;
 				}
 				break;
+			}
 			case FX_SPECIAL:
 				switch (param >> 4) {
 				case 0x6:
@@ -1351,7 +1356,6 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 		/* OpenMPT test case emptyslot.it */
 		if (!penv->sample_map[note - NOTE_FIRST]) {
 			chan->ptr_instrument = penv;
-			printf("punt\n");
 			return;
 		}
 
@@ -1852,7 +1856,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 				break;
 			case NNA_NOTECUT:
 				p->fadeout_volume = 0;
-				/* fallthrough */
+				SCHISM_FALLTHROUGH;
 			case NNA_NOTEFADE:
 				p->flags |= CHN_NOTEFADE;
 				break;
@@ -1868,9 +1872,8 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 	}
 }
 
-
-
-static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t param, int porta, int firsttick)
+// XXX why is `porta` here, and what was it used for?
+static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t param, SCHISM_UNUSED int porta, int firsttick)
 {
 	song_voice_t *chan = csf->voices + nchan;
 

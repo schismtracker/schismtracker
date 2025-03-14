@@ -49,8 +49,6 @@ static void sdl3_dlend(void)
 
 static int sdl3_dlinit(void)
 {
-	int i;
-
 	// already have it?
 	if (sdl3_dltrick_handle_)
 		return 0;
