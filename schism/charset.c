@@ -722,6 +722,8 @@ CHARSET_VARIATION(internal)
 # include <windows.h> // MultiByteToWideChar
 #elif defined(SCHISM_MACOS)
 # include <TextEncodingConverter.h>
+# include <Script.h>
+
 # ifndef kTECOutputBufferFullStatus
 #  define kTECOutputBufferFullStatus -8785
 # endif
@@ -940,7 +942,7 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 	}
 #endif
 #ifdef SCHISM_MACOS
-	case CHARSET_HFS: {
+	case CHARSET_SYSTEMSCRIPT: {
 		/* FIXME: We have built in Mac OS Roman encoders and decoders...
 		 * we really ought to just be using those if the system encoding
 		 * is Mac OS Roman, which is probably the case. */
@@ -976,7 +978,7 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 	}
 #endif
 #ifdef SCHISM_MACOS
-	case CHARSET_HFS:
+	case CHARSET_SYSTEMSCRIPT:
 		outsetfake = CHARSET_UTF16;
 		break;
 #endif
@@ -1006,7 +1008,7 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 		break;
 #endif
 #ifdef SCHISM_MACOS
-	case CHARSET_HFS:
+	case CHARSET_SYSTEMSCRIPT:
 		free((void *)infake);
 		break;
 #endif
@@ -1080,7 +1082,7 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 	}
 #endif
 #ifdef SCHISM_MACOS
-	case CHARSET_HFS: {
+	case CHARSET_SYSTEMSCRIPT: {
 		/* can we return size so we don't have to do this? */
 		size_t len = (charset_strlen(outfake, CHARSET_UTF16) + 1) * sizeof(uint16_t);
 
