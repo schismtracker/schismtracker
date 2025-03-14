@@ -285,7 +285,7 @@ static void _vis_process(void)
 	status.flags |= NEED_UPDATE;
 }
 
-#define VIS_WORK_EX(SUFFIX, BITS, NCHANS, INLOOP) \
+#define VIS_WORK_EX(SUFFIX, BITS, INLOOP) \
 	void vis_work_##BITS##SUFFIX(const int##BITS##_t *in, int inlen) \
 	{ \
 		int16_t dl[FFT_BUFFER_SIZE], dr[FFT_BUFFER_SIZE]; \
@@ -308,12 +308,12 @@ static void _vis_process(void)
 	}
 
 #define VIS_WORK(BITS) \
-	VIS_WORK_EX(s, BITS, 2, { \
+	VIS_WORK_EX(s, BITS, { \
 		dl[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
 		dr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
 	}) \
 	\
-	VIS_WORK_EX(m, BITS, 1, { \
+	VIS_WORK_EX(m, BITS, { \
 		dl[i] = dr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
 	})
 
