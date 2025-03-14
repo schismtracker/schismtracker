@@ -37,10 +37,9 @@ pruned up some here :) -mrsb
 	Feel free to customize this file to suit your needs
 */
 
-// main.c
-extern char *initial_song;
-int schism_main(int argc, char *argv[]);
+#include "headers.h"
 
+#include "it.h"
 #include "events.h"
 #include "osdefs.h"
 #include "mem.h"
@@ -51,6 +50,9 @@ int schism_main(int argc, char *argv[]);
 #import <unistd.h>
 
 #import <Cocoa/Cocoa.h>
+
+// main.c
+extern char *initial_song;
 
 // These constants were renamed in the Sierra SDK
 #if MAC_OS_X_VERSION_MAX_ALLOWED < 101200
@@ -65,8 +67,7 @@ int schism_main(int argc, char *argv[]);
 
 /* Portions of CPS.h --------------------------------------------------- */
 
-typedef struct CPSProcessSerNum
-{
+typedef struct CPSProcessSerNum {
 	UInt32 lo;
 	UInt32 hi;
 } CPSProcessSerNum;
@@ -127,7 +128,7 @@ static int macosx_launched = 0; // FIXME this sucks
 	}
 }
 
-@end
+@end /* @implementation SchismTracker */
 
 /* The main class of the application, the application's delegate */
 @implementation SchismTrackerDelegate
@@ -189,13 +190,13 @@ static int macosx_launched = 0; // FIXME this sucks
 	exit(schism_main(macosx_did_finderlaunch ? 1 : *_NSGetArgc(), *_NSGetArgv()));
 }
 
-@end /* @implementation SchismTracker */
+@end /* @implementation SchismTrackerDelegate */
 
 /* ------------------------------------------------------- */
 
 static void setApplicationMenu(void)
 {
-	/* warning: this code is very odd */
+	/* this really needs to be cleaned up  --paper */
 	NSMenu *appleMenu;
 	NSMenu *otherMenu;
 	NSMenuItem *menuItem;
@@ -413,14 +414,19 @@ static void setupWindowMenu(void)
 {
 	NSMenu      *windowMenu;
 	NSMenuItem  *windowMenuItem;
-	NSMenuItem  *menuItem;
 
 	windowMenu = [[NSMenu alloc] initWithTitle:@"Window"];
 
 	/* "Minimize" item */
-	menuItem = [[NSMenuItem alloc] initWithTitle:@"Minimize" action:@selector(performMiniaturize:) keyEquivalent:@"m"];
-	[windowMenu addItem:menuItem];
-	[menuItem release];
+	{
+		NSMenuItem  *menuItem;
+
+		menuItem = [[NSMenuItem alloc] initWithTitle:@"Minimize" action:@selector(performMiniaturize:) keyEquivalent:@"m"];
+		[windowMenu addItem:menuItem];
+
+		/* DON'T WORRY! I'M GONNA CUSHION OUR FALL WITH THIS WATER BUCKET! */
+		[menuItem release];
+	}
 
 	/* Put menu into the menubar */
 	windowMenuItem = [[NSMenuItem alloc] initWithTitle:@"Window" action:nil keyEquivalent: @""];
@@ -444,19 +450,20 @@ int main (int argc, char **argv)
 {
 	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
-	/* Copy the arguments into a global variable */
-	/* This is passed if we are launched by double-clicking */
+	/* Copy the arguments into a global variable -- this
+	 * is passed if we are launched by double-clicking */
 	macosx_did_finderlaunch = (argc >= 2 && strncmp (argv[1], "-psn", 4) == 0);
 
 	{
-		CPSProcessSerNum PSN;
-		/* Tell the dock about us */
-		if (!CPSGetCurrentProcess(&PSN)) {
-			if (!macosx_did_finderlaunch)
-				CPSSetProcessName(&PSN,"Schism Tracker");
+		CPSProcessSerNum psn;
 
-			if (!CPSEnableForegroundOperation(&PSN,0x03,0x3C,0x2C,0x1103))
-				if (!CPSSetFrontProcess(&PSN))
+		/* Tell the dock about us */
+		if (!CPSGetCurrentProcess(&psn)) {
+			if (!macosx_did_finderlaunch)
+				CPSSetProcessName(&psn, "Schism Tracker");
+
+			if (!CPSEnableForegroundOperation(&psn, 0x03, 0x3C, 0x2C, 0x1103))
+				if (!CPSSetFrontProcess(&psn))
 					[SchismTracker sharedApplication];
 		}
 	}
@@ -471,7 +478,7 @@ int main (int argc, char **argv)
 
 	/* Create the app delegate */
 	SchismTrackerDelegate *delegate = [[SchismTrackerDelegate alloc] init];
-	[NSApp setDelegate: (id)delegate]; // stupid cast to silence compiler
+	[NSApp setDelegate: (id)delegate]; /* stupid cast to silence compiler */
 
 	/* Start the main event loop */
 	[NSApp run];
