@@ -50,7 +50,6 @@ typedef enum {
 	/* European languages */
 	CHARSET_CP437,
 	CHARSET_WINDOWS1252, /* thanks modplug! */
-	CHARSET_MACOSROMAN, // Mac OS Roman
 
 	/* Windows cludge */
 #ifdef SCHISM_WIN32
@@ -61,9 +60,9 @@ typedef enum {
 	CHARSET_DOSCP,
 #endif
 
-	/* Uses the system's HFS encoding */
+	/* Uses the system's value for smSystemScript */
 #ifdef SCHISM_MACOS
-	CHARSET_HFS,
+	CHARSET_SYSTEMSCRIPT,
 #endif
 
 	/* CHARSET_CHAR is special; it first tries UTF-8

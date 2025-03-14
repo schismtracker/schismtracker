@@ -903,7 +903,9 @@ int schism_main(int argc, char** argv)
 	srand(time(NULL));
 	parse_options(argc, argv); /* shouldn't this be like, first? */
 
+#ifndef SCHISM_MACOS /* done in macos_sysinit */
 	cfg_init_dir();
+#endif
 
 #if ENABLE_HOOKS
 	if (startup_flags & SF_HOOKS) {

@@ -96,12 +96,22 @@ static void macos_cond_signal(mt_cond_t *cond)
 
 static void macos_cond_wait(mt_cond_t *cond, mt_mutex_t *mutex)
 {
+	/* FIXME This is not atomic! */
+	MPExitCriticalRegion(mutex->mutex);
+
 	MPWaitForEvent(cond->event, NULL, kDurationForever);
+
+	MPEnterCriticalRegion(mutex->mutex);
 }
 
 static void macos_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout)
 {
+	/* FIXME This is not atomic! */
+	MPExitCriticalRegion(mutex->mutex);
+
 	MPWaitForEvent(cond->event, NULL, timeout);
+
+	MPEnterCriticalRegion(mutex->mutex);
 }
 
 /* -------------------------------------------------------------- */

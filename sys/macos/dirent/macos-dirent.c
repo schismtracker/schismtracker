@@ -39,6 +39,7 @@ struct dir_ {
 	long dirid;
 	int nextfile;
 
+	// dynamically allocated
 	struct dirent dir;
 };
 
@@ -47,7 +48,7 @@ DIR *opendir(const char *path)
 {
 	/* Schism never opens more than one directory at a time,
 	 * so we can just one static directory structure. */
-	static DIR dir;
+	static DIR dir = {0};
 
 	if (dir.nextfile) {
 		errno = ENFILE;
@@ -62,7 +63,11 @@ DIR *opendir(const char *path)
 	{
 		// We can just pass the full path to PBOpenWD
 		int truncated;
-		str_to_pascal(path, ppath, &truncated);
+		{
+			char *npath = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_SYSTEMSCRIPT);
+			str_to_pascal(npath, ppath, &truncated);
+			free(npath);
+		}
 		if (truncated) {
 			errno = ENAMETOOLONG;
 			return NULL;
@@ -163,6 +168,13 @@ struct dirent *readdir(DIR *dp)
 	}
 
 	str_from_pascal(pname, dp->dir.d_name);
+
+	{
+		/* UGH. */
+		char *npath = charset_iconv_easy(dp->dir.d_name, CHARSET_SYSTEMSCRIPT, CHARSET_UTF8);
+		strncpy(dp->dir.d_name, npath, SCHISM_NAME_MAX - 1);
+		dp->dir.d_name[SCHISM_NAME_MAX - 1] = '\0';
+	}
 
 	return &dp->dir;
 }

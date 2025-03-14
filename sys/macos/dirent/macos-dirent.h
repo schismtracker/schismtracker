@@ -24,10 +24,12 @@
 #ifndef SCHISM_SYS_MACOS_DIRENT_H_
 #define SCHISM_SYS_MACOS_DIRENT_H_
 
+#include "headers.h"
+
 typedef struct dir_ DIR;
 
 struct dirent {
-	char d_name[256];
+	char d_name[SCHISM_NAME_MAX];
 };
 
 extern DIR *opendir(const char *path);
