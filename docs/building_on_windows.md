@@ -53,7 +53,7 @@ If asked to "enter a selection", hit Enter to go with the default.
 
 Also, you need the following specific dependencies:
 
-	pacman -S mingw-w64-x86_64-SDL2 mingw-w64-x86_64-pkgconf
+	pacman -S mingw-w64-x86_64-SDL2 mingw-w64-x86_64-pkgconf mingw-w64-x86_64-libutf8proc
 
 For optional FLAC sample loading, you'll also need the following dependency:
 
