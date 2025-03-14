@@ -52,9 +52,9 @@
 #endif
 
 #ifdef USE_COMPONENT_MANAGER_APIS
-# define AudioComponentDescription struct ComponentDescription
-# define AudioComponent Component
-# define AudioComponentInstance AudioUnit
+typedef struct ComponentDescription AudioComponentDescription;
+typedef Component AudioComponent;
+typedef AudioUnit AudioComponentInstance;
 # define AudioComponentInstanceNew OpenAComponent
 # define AudioComponentInstanceDispose CloseComponent
 # define AudioComponentFindNext FindNextComponent
