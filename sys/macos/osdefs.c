@@ -447,6 +447,7 @@ static void macos_cfg_load(PrefsRecord *prefs)
 	cfg_init(&cfg, tmp);
 	free(tmp);
 
+	/* I guess it's okay to save these in system encoding, since they're not touched by anything else anyway */
 	str_to_pascal(cfg_get_string(&cfg, "MacOS", "command_line", NULL, 0, ""), prefs->command_line, NULL);
 	str_to_pascal(cfg_get_string(&cfg, "MacOS", "video_driver_name", NULL, 0, ""), prefs->video_driver_name, NULL);
 	prefs->output_to_file = cfg_get_number(&cfg, "MacOS", "output_to_file", 1);
@@ -472,6 +473,7 @@ static void macos_cfg_save(PrefsRecord *prefs)
 
 	cfg_set_number(&cfg, "MacOS", "output_to_file", prefs->output_to_file);
 
+	cfg_write(&cfg);
 	cfg_free(&cfg);
 }
 

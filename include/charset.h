@@ -25,12 +25,9 @@
 
 #include "headers.h"
 
-/* UCS4 shouldn't ever be used externally; the output depends on endianness.
- * It should only be used as sort of an in-between from UTF-8 to CP437 for use
- * where the strings can be edited, e.g. in the file selector */
 typedef enum {
 	/* Unicode */
-	CHARSET_UCS4LE,
+	CHARSET_UCS4LE = 0,
 	CHARSET_UCS4BE,
 	CHARSET_UTF16LE,
 	CHARSET_UTF16BE,
@@ -51,7 +48,22 @@ typedef enum {
 	CHARSET_CP437,
 	CHARSET_WINDOWS1252, /* thanks modplug! */
 
-	/* Windows cludge */
+	/* NOTE: CHARSET_CHAR is actually just a synonym for CHARSET_UTF8 now.
+	 *
+	 * Originally, it was supposed to sort-of represent the system encoding,
+	 * which on Windows would be ANSI, MacOS the system script, Unix-like
+	 * the actual encoding of `char`... but that plan fell out after I dumped
+	 * SDL out of the main source tree. So now it just serves as a stupid ugly
+	 * wart in the source that doesn't mean what it ought to mean.
+	 *
+	 * Really every place that uses CHARSET_CHAR actually does mean UTF-8
+	 * because we handle file paths internally as UTF-8 on all platforms.
+	 * (or at least expect them to be in UTF-8, maybe some weird old linux
+	 * systems use latin-1 or whatever) */
+	CHARSET_CHAR,
+	CHARSET_WCHAR_T,
+
+	/* START SYSTEM-SPECIFIC HACKS */
 #ifdef SCHISM_WIN32
 	CHARSET_ANSI,
 #endif
@@ -64,14 +76,7 @@ typedef enum {
 #ifdef SCHISM_MACOS
 	CHARSET_SYSTEMSCRIPT,
 #endif
-
-	/* CHARSET_CHAR is special; it first tries UTF-8
-	 * in our internal decoder, then we hand it off
-	 * to SDL, which may or may not actually handle
-	 * it correctly, depending on whether it uses
-	 * the system iconv or its own. */
-	CHARSET_CHAR,
-	CHARSET_WCHAR_T
+	/* END SYSTEM-SPECIFIC HACKS */
 } charset_t;
 
 

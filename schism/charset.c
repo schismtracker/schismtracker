@@ -28,6 +28,10 @@
 #include "util.h"
 #include "disko.h"
 #include "mem.h"
+#include "log.h"
+#ifdef SCHISM_WIN32
+# include "osdefs.h"
+#endif
 
 int char_digraph(int k1, int k2)
 {
@@ -577,6 +581,22 @@ ENCODE_UCS4_VARIANT(BE)
 
 /* ----------------------------------------------------------------------- */
 
+#ifdef SCHISM_WIN32
+/* Before Windows 2000, wchar_t was actually UCS-2, and not UTF-16. */
+
+static void wchar_to_ucs4(charset_decode_t *decoder)
+{
+	return (win32_ntver_atleast(5, 0, 0) ? utf16LE_to_ucs4 : ucs2LE_to_ucs4)(decoder);
+}
+
+static int ucs4_to_wchar(uint32_t ch, disko_t *out)
+{
+	return (win32_ntver_atleast(5, 0, 0) ? ucs4_to_utf16LE : ucs4_to_ucs2LE)(ch, out);
+}
+#endif
+
+/* ----------------------------------------------------------------------- */
+
 /* function LUT here */
 typedef void (*charset_conv_to_ucs4_func)(charset_decode_t *decoder);
 typedef int (*charset_conv_from_ucs4_func)(uint32_t, disko_t*);
@@ -596,12 +616,7 @@ static const charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 
 	[CHARSET_CHAR] = utf8_to_ucs4,
 #ifdef SCHISM_WIN32
-// XXX this is only true in Windows 2000 and newer
-# if WORDS_BIGENDIAN
-	[CHARSET_WCHAR_T] = utf16BE_to_ucs4,
-# else
-	[CHARSET_WCHAR_T] = utf16LE_to_ucs4,
-# endif
+	[CHARSET_WCHAR_T] = wchar_to_ucs4,
 #else
 	/* unimplemented */
 	[CHARSET_WCHAR_T] = NULL,
@@ -621,11 +636,7 @@ static const charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 
 	[CHARSET_CHAR] = ucs4_to_utf8,
 #ifdef SCHISM_WIN32
-# if WORDS_BIGENDIAN
-	[CHARSET_WCHAR_T] = ucs4_to_utf16BE,
-# else
-	[CHARSET_WCHAR_T] = ucs4_to_utf16LE,
-# endif
+	[CHARSET_WCHAR_T] = ucs4_to_wchar,
 #else
 	/* unimplemented */
 	[CHARSET_WCHAR_T] = NULL,
@@ -725,7 +736,7 @@ CHARSET_VARIATION(internal)
 # include <Script.h>
 
 # ifndef kTECOutputBufferFullStatus
-#  define kTECOutputBufferFullStatus -8785
+#  define kTECOutputBufferFullStatus (-8785)
 # endif
 #elif defined(SCHISM_OS2)
 # include <uconv.h>
@@ -799,6 +810,9 @@ static charset_error_t charset_iconv_macos_preprocess_(const void *in, size_t in
 
 		err = TECConvertText(tec, (ConstTextPtr)srcptr, insize, &bytes_consumed, (TextPtr)buf, sizeof(buf), &bytes_produced);
 		if (err != noErr && err != kTECOutputBufferFullStatus) {
+#ifdef SCHISM_CHARSET_DEBUG
+			log_appendf(4, "[MacOS] TECConvertText returned %d; giving up", (int)err);
+#endif
 			TECDisposeConverter(tec);
 			disko_memclose(&ds, 0);
 			return CHARSET_ERROR_DECODE;
@@ -856,7 +870,12 @@ static inline int charset_os2_uconv_build(ULONG cp, UconvObject *puconv)
 #endif
 
 charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charset_t outset, size_t insize) {
-	// This is so we can do charset-specific hacks...
+	// This hacky mess is here, specifically for being able to handle system-specific volatile charsets like:
+	//  Win32 - CHARSET_ANSI
+	//  OS/2  - CHARSET_DOSCP
+	//  MacOS - CHARSET_SYSTEMSCRIPT
+	// TODO: We also have to be able to handle this in charset_decode_next, since charset_stdlib uses it.
+	// Oh well.
 	charset_t insetfake = inset, outsetfake = outset;
 	const void *infake = in;
 	void *outfake;
@@ -943,9 +962,6 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 #endif
 #ifdef SCHISM_MACOS
 	case CHARSET_SYSTEMSCRIPT: {
-		/* FIXME: We have built in Mac OS Roman encoders and decoders...
-		 * we really ought to just be using those if the system encoding
-		 * is Mac OS Roman, which is probably the case. */
 		TextEncoding hfsenc;
 		if (!charset_iconv_get_system_encoding_(&hfsenc))
 			return CHARSET_ERROR_UNIMPLEMENTED;
