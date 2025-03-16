@@ -21,31 +21,55 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_BACKEND_DMOZ_H_
-#define SCHISM_BACKEND_DMOZ_H_
+#include "headers.h"
 
-typedef struct {
-	// returns 1 if succeeded, 0 if failed
-	int (*init)(void);
-	void (*quit)(void);
+#include "backend/dmoz.h"
+#include "dmoz.h"
+#include "log.h"
 
-	char *(*get_exe_path)(void);
-} schism_dmoz_backend_t;
+#include <Folders.h>
+#include <Processes.h>
 
-#ifdef SCHISM_WIN32
-extern const schism_dmoz_backend_t schism_dmoz_backend_win32;
-#endif
-#ifdef SCHISM_MACOSX
-extern const schism_dmoz_backend_t schism_dmoz_backend_macosx;
-#endif
-#ifdef SCHISM_MACOS
-extern const schism_dmoz_backend_t schism_dmoz_backend_macos;
-#endif
-#ifdef SCHISM_SDL2
-extern const schism_dmoz_backend_t schism_dmoz_backend_sdl2;
-#endif
-#ifdef SCHISM_SDL3
-extern const schism_dmoz_backend_t schism_dmoz_backend_sdl3;
-#endif
+static char *macos_dmoz_get_exe_path(void)
+{
+	ProcessSerialNumber process;
+	ProcessInfoRec process_info;
+	FSSpec process_fsp;
+	char *path, *parent;
 
-#endif /* SCHISM_BACKEND_DMOZ_H_ */
+	process.highLongOfPSN = 0;
+	process.lowLongOfPSN = kCurrentProcess;
+	process_info.processInfoLength = sizeof(process_info);
+	process_info.processName = NULL;
+	process_info.processAppSpec = &process_fsp;
+
+	if (GetProcessInformation(&process, &process_info) != noErr)
+		return NULL;
+
+	if (!dmoz_path_from_fsspec(&process_fsp, &path))
+		return NULL;
+
+	parent = dmoz_path_get_parent_directory(path);
+
+	free(path);
+
+	return parent;
+}
+
+static int macos_dmoz_init(void)
+{
+	// do nothing
+	return 1;
+}
+
+static void macos_dmoz_quit(void)
+{
+	// do nothing
+}
+
+const schism_dmoz_backend_t schism_dmoz_backend_macos = {
+	.init = macos_dmoz_init,
+	.quit = macos_dmoz_quit,
+
+	.get_exe_path = macos_dmoz_get_exe_path,
+};

@@ -360,7 +360,7 @@ endif
 
 if USE_MACOS
 files_macos = \
-	sys/macos/osdefs.c sys/macos/dirent/macos-dirent.c sys/macos/mt.c
+	sys/macos/osdefs.c sys/macos/dirent/macos-dirent.c sys/macos/mt.c sys/macos/dmoz.c
 cflags_macos=-I$(top_srcdir)/sys/macos/dirent
 libs_macos=-lAppearanceLib -lInputSprocketLib -lControlStripLib -lControlsLib -lCursorDevicesGlue -lMPLibrary -lTextEncodingConverter -lTextCommon -lContextualMenu -lDrawSprocketLib -lDialogsLib
 

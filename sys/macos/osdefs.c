@@ -417,12 +417,15 @@ static void cleanup_output(void)
 	cleanup_output_file(stderr, STDERR_FILE);
 }
 
-// XXX this should be adapted for a dmoz.c
-static int getCurrentAppName(StrFileName name)
+// this is duplicated in dmoz.c, whatever
+static int get_app_file_name(char name[64])
 {
 	ProcessSerialNumber process;
 	ProcessInfoRec      process_info;
 	FSSpec              process_fsp;
+
+	// ok
+	name[0] = '\0';
 
 	process.highLongOfPSN = 0;
 	process.lowLongOfPSN  = kCurrentProcess;
@@ -430,10 +433,15 @@ static int getCurrentAppName(StrFileName name)
 	process_info.processName    = NULL;
 	process_info.processAppSpec = &process_fsp;
 
-	if ( noErr != GetProcessInformation (&process, &process_info) )
+	if (GetProcessInformation(&process, &process_info) != noErr)
 	   return 0;
 
-	memcpy(name, process_fsp.name, process_fsp.name[0] + 1);
+	/* should never ever happen */
+	assert(process_fsp.name[0] < 64);
+
+	/* bogus warning here */
+	str_from_pascal(process_fsp.name, name);
+
 	return 1;
 }
 
@@ -623,24 +631,18 @@ void macos_sysinit(int *pargc, char ***pargv)
 	ParseCommandLine(commandLine, args + 1);
 
 	{
-		/* Convert the app name to a C-string, and shove it into the start of the args array */
-		StrFileName app_name_pascal;
+		/* Get the app name */
 		char app_name[256];
 
-		if (getCurrentAppName(app_name_pascal)) {
-			str_from_pascal(app_name_pascal, app_name);
-			args[0] = app_name;
-		} else {
-			args[0] = "";
-		}
+		get_app_file_name(app_name);
+
+		/* Cram it into argv[0] */
+		args[0] = app_name;
 
 		/* Thus, everything was UTF-8 */
 		for (i = 0; i < nargs; i++)
 			args[i] = charset_iconv_easy(args[i], CHARSET_SYSTEMSCRIPT, CHARSET_UTF8);
 	}
-
-	/* NOW we can free the command line, since nothing of value points to it anymore */
-	free(commandLine);
 
 	*pargc = nargs;
 	*pargv = args;
