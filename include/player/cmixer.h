@@ -37,11 +37,6 @@ void eq_stereo(song_t *, int32_t *, uint32_t);
 void initialize_eq(int32_t, float);
 void set_eq_gains(const uint32_t *, uint32_t, const uint32_t *, int32_t, int32_t);
 
-// sndmix.c
-extern int32_t g_dry_rofs_vol;
-extern int32_t g_dry_lofs_vol;
-
-
 // mixer.c
 void ResampleMono8BitFirFilter(signed char *oldbuf, signed char *newbuf, uint32_t oldlen, uint32_t newlen);
 void ResampleMono16BitFirFilter(signed short *oldbuf, signed short *newbuf, uint32_t oldlen, uint32_t newlen);
