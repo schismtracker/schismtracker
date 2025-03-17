@@ -364,7 +364,7 @@
  * with branch prediction on newer processors. */
 #if SCHISM_GNUC_HAS_BUILTIN(__builtin_expect, 3, 0, 0)
 # define SCHISM_LIKELY(x)   __builtin_expect(!!(x), 1)
-# define SCHISM_UNLIKELY(x) __builtin_expect(!(x),  1)
+# define SCHISM_UNLIKELY(x) __builtin_expect(!!(x), 0)
 #else
 # define SCHISM_LIKELY(x)   (x)
 # define SCHISM_UNLIKELY(x) (x)
