@@ -42,15 +42,28 @@ jobs:
       UTF8PROC_SHA256: bd215d04313b5bc42c1abedbcb0a6574667e31acee1085543a232204e36384c4
 
     steps:
-      - name: 'Prepare Universal Interfaces'
+      - name: 'Retrieve runner temp directory'
+        id: temp
         run: |
-          curl -s "https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" -o "/tmp/MPW-GM.img.bin"
+          echo "temp=$RUNNER_TEMP" >> $GITHUB_OUTPUT
 
-          # extract
-          /Retro68-build/bin/install-universal-interfaces.sh "/tmp" "MPW-GM.img.bin"
+      - name: 'Cache Universal Interfaces'
+        id: cache-universal-interfaces
+        uses: actions/cache@v4
+        with:
+          path: '${{ steps.temp.outputs.temp }}/InterfacesAndLibraries'
+          key: macos-cache-universal-interfaces
 
+      - name: 'Prepare Universal Interfaces'
+        if: steps.cache-universal-interfaces.outputs.cache-hit != 'true'
+        run: |
+          curl -s "https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" -o "$RUNNER_TEMP/MPW-GM.img.bin"
+          /Retro68-build/bin/install-universal-interfaces.sh "$RUNNER_TEMP" "MPW-GM.img.bin"
+
+      - name: 'Link Universal Interfaces'
+        run: |
           echo "Linking Universal interfaces..."
-          /Retro68-build/bin/interfaces-and-libraries.sh /Retro68-build/toolchain /tmp/InterfacesAndLibraries
+          /Retro68-build/bin/interfaces-and-libraries.sh /Retro68-build/toolchain "$RUNNER_TEMP/InterfacesAndLibraries"
           echo "done"
 
       - name: 'Checkout'
@@ -58,24 +71,47 @@ jobs:
         with:
           path: schism
 
+        # FIXME store this in RUNNER_TEMP instead
+      - name: 'Cache XZ utils sources and binaries'
+        id: cache-xz
+        uses: actions/cache@v4
+        with:
+          path: xz-${{ env.XZ_VERSION }}
+          key: macos-cache-xz
+
       - name: 'Downloads XZ utils sources'
+        if: steps.cache-xz.outputs.cache-hit != 'true'
         run: |
           curl -L -o "xz-$XZ_VERSION.tar.gz" "https://github.com/tukaani-project/xz/releases/download/v$XZ_VERSION/xz-$XZ_VERSION.tar.gz"
           echo "$XZ_SHA256  xz-$XZ_VERSION.tar.gz" | shasum -a 256 -c -
           tar xvf "xz-$XZ_VERSION.tar.gz"
 
       - name: 'Build XZ utils'
+        if: steps.cache-xz.outputs.cache-hit != 'true'
         run: |
           cd "xz-$XZ_VERSION"
           mkdir build
           cd build
           ../configure
           make
-          make install
           cd .. # build
           cd .. # xz-$XZ_VERSION
 
+      - name: 'Install XZ utils'
+        run: |
+          cd "xz-$XZ_VERSION/build"
+          make install
+          cd ../.. # xz-$XZ_VERSION/build
+
+      - name: 'Cache dependencies'
+        id: cache-ppc-dependencies
+        uses: actions/cache@v4
+        with:
+          path: '${{ steps.temp.outputs.temp }}/ppcprefix'
+          key: macos-cache-powerpc-flac_${{ env.FLAC_VERSION }}-libogg_${{ env.LIBOGG_VERSION }}-SDL_${{ env.SDL_VERSION }}-UTF8PROC_${{ env.UTF8PROC_VERSION }}
+
       - name: 'Download SDL 1.2 sources (powerpc)'
+        if: steps.cache-ppc-dependencies.outputs.cache-hit != 'true'
         run: |
           curl -L -o "SDL-$SDL_VERSION.tar.gz" "https://www.libsdl.org/release/SDL-$SDL_VERSION.tar.gz"
           echo "$SDL_SHA256  SDL-$SDL_VERSION.tar.gz" | shasum -a 256 -c -
@@ -86,65 +122,72 @@ jobs:
           ./autogen.sh
           cd ..
 
-      - name: 'Download and prepare libogg sources'
-        run: |
-          curl -L -o libogg-$LIBOGG_VERSION.tar.xz "https://ftp.osuosl.org/pub/xiph/releases/ogg/libogg-$LIBOGG_VERSION.tar.xz" || curl -L -o libogg-$LIBOGG_VERSION.tar.xz "https://github.com/xiph/ogg/releases/download/v$LIBOGG_VERSION/libogg-$LIBOGG_VERSION.tar.xz"
-          echo "$LIBOGG_SHA256  libogg-$LIBOGG_VERSION.tar.xz" | shasum -a 256 -c -
-          LD_PRELOAD=/usr/local/lib/liblzma.so.5 tar xvf "libogg-$LIBOGG_VERSION.tar.xz"
-
-      - name: 'Download and prepare FLAC sources'
-        run: |
-          curl -L -o flac-$FLAC_VERSION.tar.xz "https://ftp.osuosl.org/pub/xiph/releases/flac/flac-$FLAC_VERSION.tar.xz" || curl -L -o flac-$FLAC_VERSION.tar.xz "https://github.com/xiph/flac/releases/download/$FLAC_VERSION/flac-$FLAC_VERSION.tar.xz"
-          echo "$FLAC_SHA256  flac-$FLAC_VERSION.tar.xz" | shasum -a 256 -c -
-          LD_PRELOAD=/usr/local/lib/liblzma.so.5 tar xvf "flac-$FLAC_VERSION.tar.xz"
-
-      - name: 'Download utf8proc'
-        run: |
-          curl -L -o "utf8proc-$UTF8PROC_VERSION.tar.gz" "https://github.com/JuliaStrings/utf8proc/releases/download/v$UTF8PROC_VERSION/utf8proc-$UTF8PROC_VERSION.tar.gz"
-          echo "$UTF8PROC_SHA256  utf8proc-$UTF8PROC_VERSION.tar.gz" | shasum -a 256 -c -
-          tar xvf "utf8proc-$UTF8PROC_VERSION.tar.gz"
-
-      - name: 'Build Schism and dependencies (powerpc)'
+      - name: 'Build SDL 1.2.15 (powerpc)'
+        if: steps.cache-ppc-dependencies.outputs.cache-hit != 'true'
         run: |
           cd SDL-1.2.15
           mkdir build_powerpc
           cd build_powerpc
-          ../configure --host=powerpc-apple-macos
+          ../configure --host=powerpc-apple-macos --prefix="$RUNNER_TEMP/ppcprefix"
           make
           make install
           cd .. # build_powerpc
           cd .. # SDL-1.2.15
 
+      - name: 'Download and prepare libogg sources'
+        if: steps.cache-ppc-dependencies.outputs.cache-hit != 'true'
+        run: |
+          curl -L -o libogg-$LIBOGG_VERSION.tar.xz "https://ftp.osuosl.org/pub/xiph/releases/ogg/libogg-$LIBOGG_VERSION.tar.xz" || curl -L -o libogg-$LIBOGG_VERSION.tar.xz "https://github.com/xiph/ogg/releases/download/v$LIBOGG_VERSION/libogg-$LIBOGG_VERSION.tar.xz"
+          echo "$LIBOGG_SHA256  libogg-$LIBOGG_VERSION.tar.xz" | shasum -a 256 -c -
+          LD_PRELOAD=/usr/local/lib/liblzma.so.5 tar xvf "libogg-$LIBOGG_VERSION.tar.xz"
+
       - name: 'Build libogg (powerpc)'
+        if: steps.cache-ppc-dependencies.outputs.cache-hit != 'true'
         run: |
           cd libogg-$LIBOGG_VERSION
           mkdir build_powerpc
           cd build_powerpc
-          CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" ../configure --host=powerpc-apple-macos
+          CPPFLAGS="-I$RUNNER_TEMP/ppcprefix/include" LDFLAGS="-L$RUNNER_TEMP/ppcprefix/lib" ../configure --host=powerpc-apple-macos --prefix="$RUNNER_TEMP/ppcprefix"
           make
           make install
           cd .. # build_powerpc
           cd .. # libogg-$LIBOGG_VERSION
 
+      - name: 'Download and prepare FLAC sources'
+        if: steps.cache-ppc-dependencies.outputs.cache-hit != 'true'
+        run: |
+          curl -L -o flac-$FLAC_VERSION.tar.xz "https://ftp.osuosl.org/pub/xiph/releases/flac/flac-$FLAC_VERSION.tar.xz" || curl -L -o flac-$FLAC_VERSION.tar.xz "https://github.com/xiph/flac/releases/download/$FLAC_VERSION/flac-$FLAC_VERSION.tar.xz"
+          echo "$FLAC_SHA256  flac-$FLAC_VERSION.tar.xz" | shasum -a 256 -c -
+          LD_PRELOAD=/usr/local/lib/liblzma.so.5 tar xvf "flac-$FLAC_VERSION.tar.xz"
+
       - name: 'Build FLAC (powerpc)'
+        if: steps.cache-ppc-dependencies.outputs.cache-hit != 'true'
         run: |
           cd flac-$FLAC_VERSION
           mkdir build_powerpc
           cd build_powerpc
           # hax: we need to patch out all calls to chmod, utimensat, and chown, because none of them
           # exist under retro68, and additionally we don't use anything that's likely to need them
-          CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib"  ../configure --host=powerpc-apple-macos --disable-programs --disable-examples --disable-cpplibs
+          CPPFLAGS="-I$RUNNER_TEMP/ppcprefix/include" LDFLAGS="-L$RUNNER_TEMP/ppcprefix/lib" ../configure --host=powerpc-apple-macos --disable-programs --disable-examples --disable-cpplibs --prefix="$RUNNER_TEMP/ppcprefix"
           make
           make install
           cd .. # build_powerpc
           cd .. # flac-$FLAC_VERSION
 
+      - name: 'Download utf8proc'
+        if: steps.cache-ppc-dependencies.outputs.cache-hit != 'true'
+        run: |
+          curl -L -o "utf8proc-$UTF8PROC_VERSION.tar.gz" "https://github.com/JuliaStrings/utf8proc/releases/download/v$UTF8PROC_VERSION/utf8proc-$UTF8PROC_VERSION.tar.gz"
+          echo "$UTF8PROC_SHA256  utf8proc-$UTF8PROC_VERSION.tar.gz" | shasum -a 256 -c -
+          tar xvf "utf8proc-$UTF8PROC_VERSION.tar.gz"
+
       - name: 'Build utf8proc (powerpc)'
+        if: steps.cache-ppc-dependencies.outputs.cache-hit != 'true'
         run: |
           cd utf8proc-$UTF8PROC_VERSION
           mkdir build_powerpc
           cd build_powerpc
-          CMAKE_TOOLCHAIN_FILE=/Retro68-build/toolchain/powerpc-apple-macos/cmake/retroppc.toolchain.cmake cmake ..
+          CMAKE_TOOLCHAIN_FILE=/Retro68-build/toolchain/powerpc-apple-macos/cmake/retroppc.toolchain.cmake cmake .. -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/ppcprefix"
           make
           make install
           cd .. # build_powerpc
@@ -165,7 +208,7 @@ jobs:
           autoreconf -Iacinclude -i
           mkdir build_powerpc
           cd build_powerpc
-          CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib" UTF8PROC_CFLAGS="-I/Retro68-build/toolchain/powerpc-apple-macos/include" UTF8PROC_LIBS="-lutf8proc" FLAC_CFLAGS="-I/usr/local/include" FLAC_LIBS="-L/usr/local/lib -lFLAC -logg -lm" SDL12_CFLAGS="-I/usr/local/include/SDL" SDL12_LIBS="-L/usr/local/lib -lSDL" ../configure --with-sdl12 --enable-sdl12-linking --with-flac --enable-flac-linking --without-jack --without-sdl2 --host=powerpc-apple-macos
+          CPPFLAGS="-I$RUNNER_TEMP/ppcprefix/include" LDFLAGS="-L$RUNNER_TEMP/ppcprefix/lib" UTF8PROC_CFLAGS="-I/Retro68-build/toolchain/powerpc-apple-macos/include" UTF8PROC_LIBS="-lutf8proc" FLAC_CFLAGS="-I$RUNNER_TEMP/ppcprefix/include" FLAC_LIBS="-L$RUNNER_TEMP/ppcprefix/lib -lFLAC -logg -lm" SDL12_CFLAGS="-I$RUNNER_TEMP/ppcprefix/include/SDL" SDL12_LIBS="-L$RUNNER_TEMP/ppcprefix/lib -lSDL" ../configure --with-sdl12 --enable-sdl12-linking --with-flac --enable-flac-linking --without-jack --without-sdl2 --host=powerpc-apple-macos --prefix="$RUNNER_TEMP/ppcprefix"
           make schismtracker.bin RETRO68_ROOT="/Retro68-build/toolchain"
           cd .. # build_powerpc
           cd .. # schism
