@@ -903,7 +903,17 @@ int schism_main(int argc, char** argv)
 	srand(time(NULL));
 	parse_options(argc, argv); /* shouldn't this be like, first? */
 
+	/* Eh. */
+	log_append2(0, 3, 0, schism_banner(0));
+	log_nl();
+
 #ifndef SCHISM_MACOS /* done in macos_sysinit */
+	if (!dmoz_init()) {
+		log_appendf(4, "Failed to initialize a filesystem backend!");
+		log_appendf(4, "Portable mode will not work properly!");
+		log_nl();
+	}
+
 	cfg_init_dir();
 #endif
 
@@ -913,16 +923,6 @@ int schism_main(int argc, char** argv)
 		shutdown_process |= EXIT_HOOK;
 	}
 #endif
-
-	/* Eh. */
-	log_append2(0, 3, 0, schism_banner(0));
-	log_nl();
-
-	if (!dmoz_init()) {
-		log_nl();
-		log_appendf(4, "Failed to initialize a filesystem backend!");
-		log_appendf(4, "Portable mode will not work properly!");
-	}
 
 	if (!mt_init()) {
 		os_show_message_box("Critical error!", "Failed to initialize a multithreading backend!");
@@ -945,9 +945,9 @@ int schism_main(int argc, char** argv)
 	cfg_load();
 
 	if (!clippy_init()) {
-		log_nl();
 		log_appendf(4, "Failed to initialize a clipboard backend!");
 		log_appendf(4, "Copying to the system clipboard will not work properly!");
+		log_nl();
 	}
 
 	if (did_classic) {

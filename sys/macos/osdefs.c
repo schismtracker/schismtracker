@@ -504,6 +504,9 @@ void macos_sysinit(int *pargc, char ***pargv)
 		VIDEO_ID_TOOLBOX = 2,
 	} videodriver = VIDEO_ID_TOOLBOX;
 
+	/* ok */
+	dmoz_init();
+
 	cfg_init_dir();
 
 	str_to_pascal(DEFAULT_ARGUMENTS, prefs.command_line, NULL);
