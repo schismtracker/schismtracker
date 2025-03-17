@@ -504,6 +504,16 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
 	return ret;
 }
 
+static void disko_multiwrite_write(void *userdata, const uint8_t *data, size_t len)
+{
+	disko_write(userdata, data, len);
+}
+
+static void disko_multiwrite_silence(void *userdata, long len)
+{
+	disko_seekcur(userdata, len);
+}
+
 int disko_multiwrite_samples(int firstsmp, int pattern)
 {
 	int err = 0;
@@ -547,8 +557,8 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 	for (n = 0; n < MAX_CHANNELS; n++) {
 		dwsong.multi_write[n].data = &ds[n];
 		/* Dumb casts. (written this way to make the definition of song_t independent of disko) */
-		dwsong.multi_write[n].write = (void(*)(void*, const uint8_t*, size_t))disko_write;
-		dwsong.multi_write[n].silence = (void(*)(void*, long))disko_seekcur;
+		dwsong.multi_write[n].write = disko_multiwrite_write;
+		dwsong.multi_write[n].silence = disko_multiwrite_silence;
 	}
 
 	do {
@@ -712,6 +722,17 @@ static char *get_filename(const char *template, int n)
 	return s;
 }
 
+// disko and multiwrite functions are not compatible, so we have to do this
+static void disko_export_write(void *userdata, const uint8_t *data, size_t len)
+{
+	export_format->f.export.body(userdata, data, len);
+}
+
+static void disko_export_silence(void *userdata, long len)
+{
+	export_format->f.export.silence(userdata, len);
+}
+
 int disko_export_song(const char *filename, const struct save_format *format)
 {
 	int err = 0;
@@ -772,9 +793,8 @@ int disko_export_song(const char *filename, const struct save_format *format)
 	if (numfiles > 1) {
 		for (n = 0; n < numfiles; n++) {
 			export_dwsong.multi_write[n].data = export_ds[n];
-			/* Dumb casts, again */
-			export_dwsong.multi_write[n].write = (void(*)(void*, const uint8_t*, size_t))format->f.export.body;
-			export_dwsong.multi_write[n].silence = (void(*)(void*, long))format->f.export.silence;
+			export_dwsong.multi_write[n].write = disko_export_write;
+			export_dwsong.multi_write[n].silence = disko_export_silence;
 		}
 	}
 
