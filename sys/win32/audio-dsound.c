@@ -70,8 +70,11 @@ struct schism_audio_device {
 
 	mt_mutex_t *mutex;
 
-	// A semaphore we use for notifications under DX6 and higher
+#ifdef COMPILE_POSITION_NOTIFY
+	// An event where we get notifications under DX6 and higher
+	// Disabled by default; see anti-definition of COMPILE_POSITION_NOTIFY above.
 	HANDLE event;
+#endif
 
 	// A pointer to the function we use to wait for audio to finish playing
 	void (*audio_wait)(schism_audio_device_t *dev);
@@ -565,9 +568,11 @@ static void dsound_audio_close_device(schism_audio_device_t *dev)
 	if (dev->mutex) {
 		mt_mutex_delete(dev->mutex);
 	}
+#ifdef COMPILE_POSITION_NOTIFY
 	if (dev->event) {
 		CloseHandle(dev->event);
 	}
+#endif
 	free(dev);
 }
 
