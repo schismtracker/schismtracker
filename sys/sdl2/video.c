@@ -312,6 +312,38 @@ static void set_icon(void)
 #endif
 }
 
+static inline void video_recalculate_fixed_width(void)
+{
+	/* Aspect ratio correction if it's wanted */
+	if (cfg_video_want_fixed) {
+		switch (video.type) {
+		case VIDEO_TYPE_RENDERER:
+			sdl2_RenderSetLogicalSize(video.u.r.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height);
+			break;
+		case VIDEO_TYPE_SURFACE: {
+			const double ratio_w = (double)video.width  / (double)cfg_video_want_fixed_width;
+			const double ratio_h = (double)video.height / (double)cfg_video_want_fixed_height;
+
+			if (ratio_w < ratio_h) {
+				video.u.s.clip.w = video.width;
+				video.u.s.clip.h = (double)cfg_video_want_fixed_height * ratio_w;
+			} else {
+				video.u.s.clip.h = video.height;
+				video.u.s.clip.w = (double)cfg_video_want_fixed_width  * ratio_h;
+			}
+
+			video.u.s.clip.x = (video.width  - video.u.s.clip.w) / 2;
+			video.u.s.clip.y = (video.height - video.u.s.clip.h) / 2;
+			break;
+		}
+		}
+	} else if (video.type == VIDEO_TYPE_SURFACE) {
+		video.u.s.clip.x = video.u.s.clip.y = 0;
+		video.u.s.clip.w = video.width;
+		video.u.s.clip.h = video.height;
+	}
+}
+
 static void video_redraw_texture(void)
 {
 	if (video.pixel_format)
@@ -321,9 +353,6 @@ static void video_redraw_texture(void)
 	case VIDEO_TYPE_RENDERER: {
 		size_t pref_last = ARRAY_SIZE(native_formats);
 		uint32_t format = SDL_PIXELFORMAT_RGB888;
-
-		if (video.u.r.texture)
-			sdl2_DestroyTexture(video.u.r.texture);
 
 		if (*cfg_video_format) {
 			size_t i;
@@ -353,23 +382,25 @@ static void video_redraw_texture(void)
 
 got_format:
 		video.u.r.texture = sdl2_CreateTexture(video.u.r.renderer, format, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
-		video.pixel_format = sdl2_AllocFormat(format);
 		video.format = format;
 		break;
 	}
 	case VIDEO_TYPE_SURFACE:
 		video.format = video.u.s.surface->format->format;
-		video.pixel_format = sdl2_AllocFormat(video.format);
 		break;
 	}
 
+	video.pixel_format = sdl2_AllocFormat(video.format);
+
 	// ok
 	video.bpp = SDL_BYTESPERPIXEL(video.format);
+
+	video_recalculate_fixed_width();
 }
 
 static void sdl2_video_set_hardware(int hardware)
 {
-	int ask_for_no_acceleration = !hardware && !getenv("SDL_FRAMEBUFFER_ACCELERATION");
+	int ask_for_no_acceleration = (!hardware && !getenv("SDL_FRAMEBUFFER_ACCELERATION"));
 
 	/* do all the necessary cleanup HERE */
 	switch (video.type) {
@@ -458,7 +489,8 @@ static void sdl2_video_setup(const char *quality)
 #endif
 		{
 			// this is stupid
-			sdl2_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
+			if (video.u.r.texture)
+				sdl2_DestroyTexture(video.u.r.texture);
 			video_redraw_texture();
 		}
 		break;
@@ -470,6 +502,8 @@ static void sdl2_video_setup(const char *quality)
 
 	if (cfg_video_interpolation != quality)
 		strncpy(cfg_video_interpolation, quality, 7);
+
+	sdl2_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
 }
 
 static void sdl2_video_startup(void)
@@ -493,34 +527,7 @@ static void sdl2_video_startup(void)
 	video_fullscreen(cfg_video_fullscreen);
 	video_set_hardware(cfg_video_hardware);
 
-	/* Aspect ratio correction if it's wanted */
-	if (cfg_video_want_fixed) {
-		switch (video.type) {
-		case VIDEO_TYPE_RENDERER:
-			sdl2_RenderSetLogicalSize(video.u.r.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height);
-			break;
-		case VIDEO_TYPE_SURFACE: {
-			const double ratio_w = (double)video.width  / (double)cfg_video_want_fixed_width;
-			const double ratio_h = (double)video.height / (double)cfg_video_want_fixed_height;
-
-			if (ratio_w < ratio_h) {
-				video.u.s.clip.w = video.width;
-				video.u.s.clip.h = (double)cfg_video_want_fixed_height * ratio_w;
-			} else {
-				video.u.s.clip.h = video.height;
-				video.u.s.clip.w = (double)cfg_video_want_fixed_width  * ratio_h;
-			}
-
-			video.u.s.clip.x = (video.width  - video.u.s.clip.w) / 2;
-			video.u.s.clip.y = (video.height - video.u.s.clip.h) / 2;
-			break;
-		}
-		}
-	} else if (video.type == VIDEO_TYPE_SURFACE) {
-		video.u.s.clip.x = video.u.s.clip.y = 0;
-		video.u.s.clip.w = video.width;
-		video.u.s.clip.h = video.height;
-	}
+	video_recalculate_fixed_width();
 
 	if (video_have_menu() && !video.fullscreen) {
 		sdl2_SetWindowSize(video.window, video.width, video.height);
@@ -562,11 +569,9 @@ static void sdl2_video_resize(unsigned int width, unsigned int height)
 {
 	video.width = width;
 	video.height = height;
-	if (video.type == VIDEO_TYPE_SURFACE) {
+	video_recalculate_fixed_width();
+	if (video.type == VIDEO_TYPE_SURFACE)
 		video.u.s.surface = sdl2_GetWindowSurface(video.window);
-		video.u.s.clip.w = width;
-		video.u.s.clip.h = height;
-	}
 	status.flags |= (NEED_UPDATE);
 }
 

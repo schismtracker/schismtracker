@@ -407,6 +407,7 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 	unsigned int mouse_x, mouse_y;
 	video_get_mouse_coordinates(&mouse_x, &mouse_y);
 
+	const register int width_div_2 = (width / 2);
 	const unsigned int mouseline_x = (mouse_x / 8);
 	const unsigned int mouseline_v = (mouse_x % 8);
 	const int pad = pitch - (width * bpp);
@@ -438,7 +439,7 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 		}
 
 		for (x = 0; x < width; x++) {
-			const int scaled_x = (x * NATIVE_SCREEN_WIDTH / width);
+			const int scaled_x = (((x * NATIVE_SCREEN_WIDTH) + width_div_2) / width);
 
 			switch (bpp) {
 			case 1: *pixels = pixels_u.uc[scaled_x]; break;
@@ -701,7 +702,7 @@ void video_colors(unsigned char palette[16][3])
 		for (j = 0; j < ARRAY_SIZE(rgb); j++)
 			rgb[j] = (int)palette[p][j] + (((int)(palette[p+1][j] - palette[p][j]) * (i & 0x1F)) / 0x20);
 
-		video.tc_bgr32[i] = rgb[2] |
+		video.tc_bgr32[i + 128] = rgb[2] |
 			(rgb[1] << 8) |
 			(rgb[0] << 16) | (0xFF << 24);
 	}

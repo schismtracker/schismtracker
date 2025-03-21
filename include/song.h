@@ -77,9 +77,9 @@ extern size_t audio_device_list_size;
 
 typedef struct {
 	int freq; // sample rate
-	uint8_t bits; // 8 or 16, always system byte order
+	uint8_t bits; // one of [8, 16, 32], always system byte order
 	uint8_t channels; // channels
-	uint16_t samples; // buffer size
+	uint16_t samples; // buffer size in samples
 	void (*callback)(uint8_t *stream, int len);
 } schism_audio_spec_t;
 
