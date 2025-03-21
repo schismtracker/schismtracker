@@ -37,7 +37,7 @@ typedef struct {
 	void (*set_hardware)(int hardware);
 	void (*shutdown)(void);
 	void (*setup)(int interpolation);
-	void (*startup)(void);
+	int (*startup)(void);
 	void (*fullscreen)(int new_fs_flag);
 	void (*resize)(unsigned int width, unsigned int height);
 	void (*colors)(unsigned char palette[16][3]);

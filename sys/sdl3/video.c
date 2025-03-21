@@ -352,7 +352,7 @@ static void sdl3_video_setup(int interpolation)
 	sdl3_SetTextureScaleMode(video.texture, modes[interpolation]);
 }
 
-static void sdl3_video_startup(void)
+static int sdl3_video_startup(void)
 {
 	vgamem_clear();
 	vgamem_flip();
@@ -365,6 +365,9 @@ static void sdl3_video_startup(void)
 	video.saved.x = video.saved.y = SDL_WINDOWPOS_CENTERED;
 
 	video.window = sdl3_CreateWindow(WINDOW_TITLE, video.width, video.height, SDL_WINDOW_RESIZABLE);
+	if (!video.window)
+		return 0;
+
 	video_fullscreen(cfg_video_fullscreen);
 	video_set_hardware(cfg_video_hardware);
 
@@ -381,6 +384,8 @@ static void sdl3_video_startup(void)
 	sdl3_HideCursor();
 	sdl3_StartTextInput(video.window);
 	set_icon();
+
+	return 1;
 }
 
 static void sdl3_video_fullscreen(int new_fs_flag)

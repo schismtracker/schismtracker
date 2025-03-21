@@ -525,7 +525,7 @@ static void sdl2_video_setup(int quality)
 	}
 }
 
-static void sdl2_video_startup(void)
+static int sdl2_video_startup(void)
 {
 	vgamem_clear();
 	vgamem_flip();
@@ -543,6 +543,9 @@ static void sdl2_video_startup(void)
 	video.saved.x = video.saved.y = SDL_WINDOWPOS_CENTERED;
 
 	video.window = sdl2_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width, video.height, SDL_WINDOW_RESIZABLE);
+	if (!video.window)
+		return 0;
+
 	video_fullscreen(cfg_video_fullscreen);
 	video_set_hardware(cfg_video_hardware);
 
@@ -554,6 +557,8 @@ static void sdl2_video_startup(void)
 	/* okay, i think we're ready */
 	sdl2_ShowCursor(SDL_DISABLE);
 	set_icon();
+
+	return 1;
 }
 
 static void sdl2_video_fullscreen(int new_fs_flag)

@@ -97,34 +97,29 @@ enum {
 };
 
 static struct video_cf {
-	struct {
-		unsigned int width;
-		unsigned int height;
+	SDL_Surface *surface;
 
-		int autoscale;
-	} draw;
+	/* actual window/screen coordinates */
 	struct {
-		unsigned int width,height,bpp;
+		unsigned int width, height;
+	} draw;
+
+	/* desktop info */
+	struct {
+		unsigned int width, height, bpp;
 
 		int swsurface;
 		int fb_hacks;
 		int fullscreen;
 		int doublebuf;
-		int want_type;
-		int type;
 	} desktop;
 	SDL_Rect clip;
-	SDL_Surface *surface;
-	SDL_Overlay *overlay;
 	struct {
-		unsigned int x;
-		unsigned int y;
+		unsigned int x, y;
 	} mouse;
 
 	uint32_t pal[256];
 } video;
-
-static int _did_init = 0;
 
 char *SDL_VideoDriverName(char *namebuf, int maxlen);
 
@@ -169,31 +164,23 @@ static void sdl12_video_report(void)
 {
 	log_appendf(5, " Using driver '%s'", sdl12_video_driver_name());
 
-	switch (video.desktop.type) {
-	case VIDEO_SURFACE:
-		log_appendf(5, " %s%s video surface",
-			(video.surface->flags & SDL_HWSURFACE) ? "Hardware" : "Software",
-			(video.surface->flags & SDL_HWACCEL) ? " accelerated" : "");
-		if (SDL_MUSTLOCK(video.surface))
-			log_append(4, 0, " Must lock surface");
-		log_appendf(5, " Display format: %d bits/pixel", (int)video.surface->format->BitsPerPixel);
-		break;
-	};
+	log_appendf(5, " %s%s video surface",
+		(video.surface->flags & SDL_HWSURFACE) ? "Hardware" : "Software",
+		(video.surface->flags & SDL_HWACCEL) ? " accelerated" : "");
+	if (SDL_MUSTLOCK(video.surface))
+		log_append(4, 0, " Must lock surface");
+	log_appendf(5, " Display format: %d bits/pixel", (int)video.surface->format->BitsPerPixel);
 
 	if (video.desktop.fullscreen || video.desktop.fb_hacks)
 		log_appendf(5, " Display dimensions: %dx%d", video.desktop.width, video.desktop.height);
 }
 
 // check if w and h are multiples of native res (and by the same multiplier)
-static int best_resolution(int w, int h)
+static inline SCHISM_ALWAYS_INLINE int best_resolution(int w, int h)
 {
-	if ((w % NATIVE_SCREEN_WIDTH == 0)
-	&&  (h % NATIVE_SCREEN_HEIGHT == 0)
-	&& ((w / NATIVE_SCREEN_WIDTH) == (h / NATIVE_SCREEN_HEIGHT))) {
-		return 1;
-	} else {
-		return 0;
-	}
+	return (w % NATIVE_SCREEN_WIDTH == 0)
+		&& (h % NATIVE_SCREEN_HEIGHT == 0)
+		&& ((w / NATIVE_SCREEN_WIDTH) == (h / NATIVE_SCREEN_HEIGHT));
 }
 
 static int sdl12_video_is_fullscreen(void)
@@ -229,16 +216,14 @@ static void sdl12_video_fullscreen(int tri)
 		video.desktop.fullscreen = !video.desktop.fullscreen;
 	}
 
-	if (_did_init) {
-		if (video.desktop.fullscreen) {
-			video_resize(video.desktop.width, video.desktop.height);
-			video_toggle_menu(0);
-		} else {
-			video_toggle_menu(1);
-			video_resize(0, 0);
-		}
-		video_report();
+	if (video.desktop.fullscreen) {
+		video_resize(video.desktop.width, video.desktop.height);
+		video_toggle_menu(0);
+	} else {
+		video_toggle_menu(1);
+		video_resize(0, 0);
 	}
+	video_report();
 }
 
 static void sdl12_video_setup(int interpolation)
@@ -246,7 +231,7 @@ static void sdl12_video_setup(int interpolation)
 	// nothing
 }
 
-static void sdl12_video_startup(void)
+static int sdl12_video_startup(void)
 {
 	SDL_Rect **modes;
 	int i, x = -1, y = -1;
@@ -289,6 +274,10 @@ static void sdl12_video_startup(void)
 	}
 #endif
 
+	/* no scaling when using the SDL surfaces directly */
+	video.desktop.swsurface = !cfg_video_hardware;
+	video.desktop.fullscreen = cfg_video_fullscreen;
+
 #if HAVE_LINUX_FB_H
 	if (!getenv("DISPLAY") && !video.desktop.fb_hacks) {
 		struct fb_var_screeninfo s;
@@ -328,11 +317,11 @@ static void sdl12_video_startup(void)
 #endif
 	if (!video.surface) {
 		/* if we already got one... */
-		video.surface = sdl12_SetVideoMode(640,400,0,SDL_RESIZABLE);
+		video.surface = sdl12_SetVideoMode(640, 400, 0, SDL_RESIZABLE);
 		if (!video.surface) {
 			// ok
 			perror("SDL_SetVideoMode");
-			exit(255);
+			return 0;
 		}
 	}
 	video.desktop.bpp = video.surface->format->BitsPerPixel;
@@ -366,19 +355,8 @@ static void sdl12_video_startup(void)
 	video.desktop.width = x;
 	video.desktop.height = y;
 
-	switch (video.desktop.want_type) {
-	case VIDEO_SURFACE:
-		/* no scaling when using the SDL surfaces directly */
-		video.desktop.swsurface = !cfg_video_hardware;
-		video.desktop.want_type = VIDEO_SURFACE;
-		break;
-	};
 	/* okay, i think we're ready */
 	sdl12_ShowCursor(SDL_DISABLE);
-
-	video.desktop.fullscreen = cfg_video_fullscreen;
-
-	_did_init = 1;
 
 	// This call actually creates the surface.
 	video_fullscreen(video.desktop.fullscreen);
@@ -398,9 +376,11 @@ static void sdl12_video_startup(void)
 		SetWindowLongPtrA(wm_info.window, GWL_EXSTYLE, x | WS_EX_ACCEPTFILES);
 	}
 #endif
+
+	return 1;
 }
 
-static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int sdlflags)
+static SDL_Surface *setup_surface_(unsigned int w, unsigned int h, unsigned int sdlflags)
 {
 	int want_fixed = cfg_video_want_fixed;
 
@@ -414,9 +394,8 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 	}
 
 	// What?
-	if (want_fixed == -1 && best_resolution(w,h)) {
+	if (want_fixed == -1 && best_resolution(w, h))
 		want_fixed = 0;
-	}
 
 	if (want_fixed) {
 		double ratio_w = (double)w / (double)cfg_video_want_fixed_width;
@@ -441,12 +420,13 @@ static SDL_Surface *_setup_surface(unsigned int w, unsigned int h, unsigned int 
 		/* the original one will be _just fine_ */
 	} else {
 		if (video.desktop.fullscreen) {
-			sdlflags &=~SDL_RESIZABLE;
-			sdlflags |= SDL_FULLSCREEN;
+			sdlflags &= ~(SDL_RESIZABLE);
+			sdlflags |= (SDL_FULLSCREEN);
 		} else {
-			sdlflags &=~SDL_FULLSCREEN;
-			sdlflags |= SDL_RESIZABLE;
+			sdlflags &= ~(SDL_FULLSCREEN);
+			sdlflags |= (SDL_RESIZABLE);
 		}
+
 		sdlflags |= (video.desktop.swsurface
 				? SDL_SWSURFACE
 				: SDL_HWSURFACE);
@@ -503,22 +483,7 @@ static void sdl12_video_resize(unsigned int width, unsigned int height)
 	video.draw.width = width;
 	video.draw.height = height;
 
-	video.draw.autoscale = 1;
-
-	switch (video.desktop.want_type) {
-	case VIDEO_SURFACE:
-		video.draw.autoscale = 0;
-		if (video.desktop.fb_hacks
-		&& (video.desktop.width != NATIVE_SCREEN_WIDTH
-			|| video.desktop.height != NATIVE_SCREEN_HEIGHT)) {
-			video.draw.autoscale = 1;
-		}
-		_setup_surface(width, height, 0);
-		video.desktop.type = VIDEO_SURFACE;
-		break;
-	default:
-		break;
-	};
+	setup_surface_(width, height, 0);
 
 	status.flags |= (NEED_UPDATE);
 }
@@ -547,16 +512,23 @@ SCHISM_HOT static void sdl12_video_blit(void)
 		while (sdl12_LockSurface(video.surface) < 0)
 			sdl12_Delay(10);
 
-	video_blitSC(video.surface->format->BytesPerPixel,
-		video.surface->pixels,
-		video.surface->pitch,
-		video.pal,
-		sdl12_map_rgb_callback,
-		video.surface->format,
-		video.clip.x,
-		video.clip.y,
-		video.clip.w,
-		video.clip.h);
+	if (video.desktop.fb_hacks) {
+		video_blit11(video.surface->format->BytesPerPixel,
+			video.surface->pixels,
+			video.surface->pitch,
+			video.pal);
+	} else {
+		video_blitSC(video.surface->format->BytesPerPixel,
+			video.surface->pixels,
+			video.surface->pitch,
+			video.pal,
+			sdl12_map_rgb_callback,
+			video.surface->format,
+			video.clip.x,
+			video.clip.y,
+			video.clip.w,
+			video.clip.h);
+	}
 
 	if (SDL_MUSTLOCK(video.surface))
 		sdl12_UnlockSurface(video.surface);
@@ -596,12 +568,7 @@ static void sdl12_video_get_logical_coordinates(int x, int y, int *trans_x, int 
 }
 
 static int sdl12_video_is_hardware(void) {
-	switch (video.desktop.type) {
-	case VIDEO_SURFACE:
-		return !!(video.surface->flags & SDL_HWSURFACE);
-	};
-
-	return 0;
+	return !!(video.surface->flags & SDL_HWSURFACE);
 }
 
 static int sdl12_video_is_input_grabbed(void)

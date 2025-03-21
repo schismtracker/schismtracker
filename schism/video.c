@@ -675,7 +675,7 @@ int video_startup(void)
 
 	for (i = 0; backends[i]; i++) {
 		backend = backends[i];
-		if (backend->init())
+		if (backend->init() && backend->startup())
 			break;
 
 		backend = NULL;
@@ -683,9 +683,6 @@ int video_startup(void)
 
 	if (!backend)
 		return -1;
-
-	// ok, now we can call the backend
-	backend->startup();
 
 	return 0;
 }
