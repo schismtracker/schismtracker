@@ -141,6 +141,8 @@ static struct {
 		enum video_mousecursor_shape shape;
 		int visible;
 	} mouse;
+
+	uint32_t tc_bgr32[256];
 } video = {
 	.mouse = {
 		.visible = MOUSE_EMULATED,
@@ -152,7 +154,7 @@ static const schism_video_backend_t *backend = NULL;
 
 /* ----------------------------------------------------------- */
 
-void video_rgb_to_yuv(unsigned int *y, unsigned int *u, unsigned int *v, unsigned char rgb[3])
+void video_rgb_to_yuv(uint32_t *y, uint32_t *u, uint32_t *v, unsigned char rgb[3])
 {
 	// YCbCr
 	*y =  0.257 * rgb[0] + 0.504 * rgb[1] + 0.098 * rgb[2] +  16;
@@ -273,7 +275,7 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 #define FIXED2INT(x) ((x) >> FIXED_BITS)
 #define FRAC(x) ((x) & FIXED_MASK)
 
-void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t pal[256], int width, int height, schism_map_rgb_func_t map_rgb, void *map_rgb_data)
+void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, schism_map_rgb_func_t map_rgb, void *map_rgb_data, int width, int height)
 {
 	unsigned char cv32backing[NATIVE_SCREEN_WIDTH * 8];
 
@@ -309,11 +311,11 @@ void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 			/* we'll downblit the colors later */
 			if (iny == lasty + 1) {
 				/* move up one line */
-				vgamem_scan32(iny+1, csp, pal, mouseline, mouseline_mask);
+				vgamem_scan32(iny+1, csp, video.tc_bgr32, mouseline, mouseline_mask);
 				dp = esp; esp = csp; csp=dp;
 			} else {
-				vgamem_scan32(iny, (csp = (uint32_t *)cv32backing), pal, mouseline, mouseline_mask);
-				vgamem_scan32(iny+1, (esp = (csp + NATIVE_SCREEN_WIDTH)), pal, mouseline, mouseline_mask);
+				vgamem_scan32(iny, (csp = (uint32_t *)cv32backing), video.tc_bgr32, mouseline, mouseline_mask);
+				vgamem_scan32(iny+1, (esp = (csp + NATIVE_SCREEN_WIDTH)), video.tc_bgr32, mouseline, mouseline_mask);
 			}
 			lasty = iny;
 		}
@@ -675,6 +677,35 @@ void video_resize(unsigned int width, unsigned int height)
 
 void video_colors(unsigned char palette[16][3])
 {
+	static const int lastmap[] = { 0, 1, 2, 3, 5 };
+	int i, p;
+
+	/* make our "base" space */
+	for (i = 0; i < 16; i++) {
+		unsigned char rgb[3];
+		for (size_t j = 0; j < ARRAY_SIZE(rgb); j++)
+			rgb[j] = palette[i][j];
+
+		video.tc_bgr32[i] = rgb[2] |
+			(rgb[1] << 8) |
+			(rgb[0] << 16) | (0xFF << 24);
+	}
+
+	/* make our "gradient" space */
+	for (i = 0; i < 128; i++) {
+		size_t j;
+		unsigned char rgb[3];
+
+		p = lastmap[(i>>5)];
+
+		for (j = 0; j < ARRAY_SIZE(rgb); j++)
+			rgb[j] = (int)palette[p][j] + (((int)(palette[p+1][j] - palette[p][j]) * (i & 0x1F)) / 0x20);
+
+		video.tc_bgr32[i] = rgb[2] |
+			(rgb[1] << 8) |
+			(rgb[0] << 16) | (0xFF << 24);
+	}
+
 	backend->colors(palette);
 }
 

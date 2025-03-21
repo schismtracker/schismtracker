@@ -58,8 +58,6 @@ static const char * (SDLCALL *sdl2_GetError)(void);
 static void (SDLCALL *sdl2_ClearError)(void);
 static int (SDLCALL *sdl2_SetError)(const char *fmt, ...);
 
-static void (SDLCALL *sdl2_GetVersion)(SDL_version * ver);
-
 /* explanation for this:
  * in 2.0.18, the logic for SDL's audio initialization functions
  * changed, so that you can use SDL_AudioInit() directly without
@@ -303,8 +301,6 @@ static int sdl2_audio_load_syms(void)
 	SCHISM_SDL2_SYM(GetNumAudioDevices);
 	SCHISM_SDL2_SYM(GetAudioDeviceName);
 
-	SCHISM_SDL2_SYM(GetVersion);
-
 	SCHISM_SDL2_SYM(OpenAudioDevice);
 	SCHISM_SDL2_SYM(CloseAudioDevice);
 	SCHISM_SDL2_SYM(LockAudioDevice);
@@ -327,9 +323,7 @@ static int sdl2_audio_init(void)
 		return 0;
 
 	// see if we can use the normal audio init and quit functions
-	SDL_version ver;
-	sdl2_GetVersion(&ver);
-	if (SDL2_VERSION_ATLEAST(ver, 2, 0, 18)) {
+	if (sdl2_ver_atleast(2, 0, 18)) {
 		sdl2_audio_init_func = sdl2_AudioInit;
 		sdl2_audio_quit_func = sdl2_AudioQuit;
 	}

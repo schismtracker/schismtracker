@@ -437,7 +437,7 @@ static void sdl3_video_resize(unsigned int width, unsigned int height)
 
 static void yuv_pal_(int i, unsigned char rgb[3])
 {
-	unsigned int y, u, v;
+	uint32_t y, u, v;
 	video_rgb_to_yuv(&y, &u, &v, rgb);
 
 	switch (video.format) {

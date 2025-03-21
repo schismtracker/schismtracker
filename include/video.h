@@ -47,7 +47,7 @@ void video_toggle_menu(int on);
 
 /* -------------------------------------------------- */
 
-void video_rgb_to_yuv(unsigned int *y, unsigned int *u, unsigned int *v, unsigned char rgb[3]);
+void video_rgb_to_yuv(uint32_t *y, uint32_t *u, uint32_t *v, unsigned char rgb[3]);
 void video_setup(const char *quality);
 int video_startup(void);
 void video_shutdown(void);
@@ -100,10 +100,13 @@ SCHISM_HOT void video_blitYY(unsigned char *pixels, unsigned int pitch, uint32_t
 SCHISM_HOT void video_blitUV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
 SCHISM_HOT void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
 
-/* RGB blitters */
+/* RGB blitters;
+ *
+ * video_blitLN is special because it does all of its internal processing with 24-bit color, so it needs
+ * a callback function to convert RGB values into a proper format. */
 SCHISM_HOT void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
 SCHISM_HOT void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height);
-SCHISM_HOT void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height, schism_map_rgb_func_t map_rgb, void *map_rgb_data);
+SCHISM_HOT void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, schism_map_rgb_func_t map_rgb, void *map_rgb_data, int width, int height);
 
 /* --------------------------------------------------------- */
 

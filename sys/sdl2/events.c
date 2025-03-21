@@ -47,8 +47,6 @@ static SDL_bool (SDLCALL *sdl2_IsTextInputActive)(void) = NULL;
 
 static void (SDLCALL *sdl2_free)(void *) = NULL;
 
-static void (SDLCALL *sdl2_GetVersion)(SDL_version * ver) = NULL;
-
 static Uint8 (SDLCALL *sdl2_EventState)(Uint32 type, int state) = NULL;
 
 // whether SDL's wheel event gives mouse coordinates or not
@@ -622,8 +620,6 @@ static int sdl2_events_load_syms(void)
 
 	SCHISM_SDL2_SYM(free);
 
-	SCHISM_SDL2_SYM(GetVersion);
-
 	return 0;
 }
 
@@ -650,11 +646,7 @@ static int sdl2_events_init(void)
 	}
 #endif
 
-
-	SDL_version ver;
-	sdl2_GetVersion(&ver);
-
-	wheel_have_mouse_coordinates = SDL2_VERSION_ATLEAST(ver, 2, 26, 0);
+	wheel_have_mouse_coordinates = sdl2_ver_atleast(2, 26, 0);
 
 #if defined(SCHISM_WIN32) || defined(SCHISM_USE_X11)
 	sdl2_EventState(SDL_SYSWMEVENT, SDL_ENABLE);

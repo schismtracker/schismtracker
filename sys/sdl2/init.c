@@ -28,6 +28,7 @@
 static int (SDLCALL *sdl2_Init)(Uint32 flags);
 static void (SDLCALL *sdl2_Quit)(void);
 static const char *(SDLCALL *sdl2_GetError)(void);
+static void (SDLCALL *sdl2_GetVersion)(SDL_version * ver);
 
 static int load_sdl2_syms(void);
 
@@ -95,6 +96,7 @@ static int load_sdl2_syms(void)
 	SCHISM_SDL2_SYM(Init);
 	SCHISM_SDL2_SYM(Quit);
 	SCHISM_SDL2_SYM(GetError);
+	SCHISM_SDL2_SYM(GetVersion);
 
 	return 0;
 }
@@ -104,6 +106,7 @@ static int load_sdl2_syms(void)
 // this is used so that SDL_Quit is only called
 // once every backend is done
 static int roll = 0;
+static SDL_version ver = {0};
 
 // returns non-zero on success or zero on error
 int sdl2_init(void)
@@ -118,6 +121,8 @@ int sdl2_init(void)
 			fprintf(stderr, "SDL2: SDL_Init: %s\n", sdl2_GetError());
 			return 0;
 		}
+
+		sdl2_GetVersion(&ver);
 	}
 	roll++;
 	return roll;
@@ -131,5 +136,11 @@ void sdl2_quit(void)
 	if (roll == 0) {
 		sdl2_Quit();
 		sdl2_dlend();
+		memset(&ver, 0, sizeof(ver));
 	}
+}
+
+int sdl2_ver_atleast(int major, int minor, int patch)
+{
+	return SCHISM_SEMVER_ATLEAST(major, minor, patch, ver.major, ver.minor, ver.patch);
 }

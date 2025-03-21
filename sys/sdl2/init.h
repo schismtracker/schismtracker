@@ -42,6 +42,10 @@
 int sdl2_init(void);
 void sdl2_quit(void);
 
+/* simple wrapper around SDL2_VERSION_ATLEAST, to remove the need for each backend
+ * to look up SDL_GetVersion itself */
+int sdl2_ver_atleast(int major, int minor, int patch);
+
 #ifdef SDL2_DYNAMIC_LOAD
 
 // must be called AFTER sdl2_init()
@@ -56,8 +60,5 @@ int sdl2_load_sym(const char *fn, void *addr);
 	sdl2_##x = SDL_##x
 
 #endif
-
-#define SDL2_VERSION_ATLEAST(ver, mmajor, mminor, mpatch) \
-	SCHISM_SEMVER_ATLEAST(mmajor, mminor, mpatch, ver.major, ver.minor, ver.patch)
 
 #endif /* SCHISM_SYS_SDL2_INIT_H_ */

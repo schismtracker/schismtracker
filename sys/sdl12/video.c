@@ -122,8 +122,6 @@ static struct video_cf {
 	} mouse;
 
 	uint32_t pal[256];
-
-	uint32_t tc_bgr32[256];
 } video;
 
 static int _did_init = 0;
@@ -178,7 +176,7 @@ static void sdl12_video_report(void)
 			(video.surface->flags & SDL_HWACCEL) ? " accelerated" : "");
 		if (SDL_MUSTLOCK(video.surface))
 			log_append(4, 0, " Must lock surface");
-		log_appendf(5, " Display format: %d bits/pixel", video.surface->format->BitsPerPixel);
+		log_appendf(5, " Display format: %d bits/pixel", (int)video.surface->format->BitsPerPixel);
 		break;
 	};
 
@@ -525,17 +523,10 @@ static void sdl12_video_resize(unsigned int width, unsigned int height)
 	status.flags |= (NEED_UPDATE);
 }
 
-static void _sdl_pal(int i, int rgb[3])
+static void sdl_pal_(int i, int rgb[3])
 {
 	video.pal[i] = sdl12_MapRGB(video.surface->format,
 			rgb[0], rgb[1], rgb[2]);
-}
-
-static void _bgr32_pal(int i, int rgb[3])
-{
-	video.tc_bgr32[i] = rgb[2] |
-			(rgb[1] << 8) |
-			(rgb[0] << 16) | (255 << 24);
 }
 
 static void sdl12_video_colors(unsigned char palette[16][3])
@@ -546,7 +537,7 @@ static void sdl12_video_colors(unsigned char palette[16][3])
 
 	switch (video.desktop.type) {
 	case VIDEO_SURFACE:
-		fun = _sdl_pal;
+		fun = sdl_pal_;
 		break;
 	default:
 		/* eh? */
@@ -558,7 +549,6 @@ static void sdl12_video_colors(unsigned char palette[16][3])
 		rgb[1]=palette[i][1];
 		rgb[2]=palette[i][2];
 		fun(i, rgb);
-		_bgr32_pal(i, rgb);
 	}
 	/* make our "gradient" space */
 	for (i = 128; i < 256; i++) {
@@ -571,7 +561,6 @@ static void sdl12_video_colors(unsigned char palette[16][3])
 		rgb[2] = (int)palette[p][2] +
 			(((int)(palette[p+1][2] - palette[p][2]) * (j&31)) /32);
 		fun(i, rgb);
-		_bgr32_pal(i, rgb);
 	}
 }
 
@@ -613,7 +602,7 @@ SCHISM_HOT static void sdl12_video_blit(void)
 		if (!charset_strcasecmp(cfg_video_interpolation, CHARSET_UTF8, "nearest", CHARSET_UTF8)) {
 			video_blitNN(bpp, pixels, pitch, video.pal, video.clip.w, video.clip.h);
 		} else {
-			video_blitLN(bpp, pixels, pitch, video.tc_bgr32, video.clip.w, video.clip.h, sdl12_map_rgb_callback, video.surface->format);
+			video_blitLN(bpp, pixels, pitch, sdl12_map_rgb_callback, video.surface->format, video.clip.w, video.clip.h);
 		}
 	}
 
