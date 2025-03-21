@@ -247,7 +247,7 @@ static void sdl2_video_report(void)
 	log_appendf(5, " Using driver '%s'", sdl2_GetCurrentVideoDriver());
 
 	switch (video.type) {
-	case VIDEO_TYPE_RENDERER:
+	case VIDEO_TYPE_RENDERER: {
 		SDL_RendererInfo renderer;
 		sdl2_GetRendererInfo(video.u.r.renderer, &renderer);
 		log_appendf(5, " %sware%s renderer '%s'",
@@ -255,6 +255,7 @@ static void sdl2_video_report(void)
 			(renderer.flags & SDL_RENDERER_ACCELERATED) ? "-accelerated" : "",
 			renderer.name);
 		break;
+	}
 	case VIDEO_TYPE_SURFACE:
 		/* these should always be in software */
 		log_appendf(5, " Software video surface");
@@ -317,7 +318,7 @@ static void video_redraw_texture(void)
 		sdl2_FreeFormat(video.pixel_format);
 
 	switch (video.type) {
-	case VIDEO_TYPE_RENDERER:
+	case VIDEO_TYPE_RENDERER: {
 		size_t pref_last = ARRAY_SIZE(native_formats);
 		uint32_t format = SDL_PIXELFORMAT_RGB888;
 
@@ -355,6 +356,7 @@ got_format:
 		video.pixel_format = sdl2_AllocFormat(format);
 		video.format = format;
 		break;
+	}
 	case VIDEO_TYPE_SURFACE:
 		video.format = video.u.s.surface->format->format;
 		video.pixel_format = sdl2_AllocFormat(video.format);
