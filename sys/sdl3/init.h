@@ -30,6 +30,7 @@
 
 int sdl3_init(void);
 void sdl3_quit(void);
+int sdl3_ver_atleast(int major, int minor, int patch);
 
 #ifdef SDL3_DYNAMIC_LOAD
 

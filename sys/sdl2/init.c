@@ -115,14 +115,18 @@ int sdl2_init(void)
 		if (sdl2_dlinit())
 			return 0;
 
-		// the subsystems are initialized by the actual backends
+		sdl2_GetVersion(&ver);
+
+		/* sanity check: */
+		if (!sdl2_ver_atleast(2, 0, 0))
+			return 0;
+
+		/* the subsystems are initialized by the actual backends */
 		int r = sdl2_Init(0);
 		if (r < 0) {
 			fprintf(stderr, "SDL2: SDL_Init: %s\n", sdl2_GetError());
 			return 0;
 		}
-
-		sdl2_GetVersion(&ver);
 	}
 	roll++;
 	return roll;

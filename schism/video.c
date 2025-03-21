@@ -275,7 +275,7 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 #define FIXED2INT(x) ((x) >> FIXED_BITS)
 #define FRAC(x) ((x) & FIXED_MASK)
 
-void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, schism_map_rgb_func_t map_rgb, void *map_rgb_data, int width, int height)
+void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, schism_map_rgb_spec map_rgb, void *map_rgb_data, int width, int height)
 {
 	unsigned char cv32backing[NATIVE_SCREEN_WIDTH * 8];
 
@@ -676,10 +676,12 @@ void video_resize(unsigned int width, unsigned int height)
 	backend->resize(width, height);
 }
 
-void video_colors(unsigned char palette[16][3])
+/* calls back to a function receiving all the colors :) */
+void video_colors_iterate(unsigned char palette[16][3], video_colors_callback_spec fun)
 {
-	static const int lastmap[] = { 0, 1, 2, 3, 5 };
-	int i, p;
+	/* this handles all of the ACTUAL color stuff, and the callback handles the backend-specific stuff */
+	static const unsigned int lastmap[] = { 0, 1, 2, 3, 5 };
+	unsigned int i, p;
 
 	/* make our "base" space */
 	for (i = 0; i < 16; i++) {
@@ -687,12 +689,10 @@ void video_colors(unsigned char palette[16][3])
 		for (size_t j = 0; j < ARRAY_SIZE(rgb); j++)
 			rgb[j] = palette[i][j];
 
-		video.tc_bgr32[i] = rgb[2] |
-			(rgb[1] << 8) |
-			(rgb[0] << 16) | (0xFF << 24);
+		fun(i, rgb);
 	}
 
-	/* make our "gradient" space */
+	/* make our "gradient" space; this is used exclusively for the waterfall page (Alt-F12) */
 	for (i = 0; i < 128; i++) {
 		size_t j;
 		unsigned char rgb[3];
@@ -702,10 +702,20 @@ void video_colors(unsigned char palette[16][3])
 		for (j = 0; j < ARRAY_SIZE(rgb); j++)
 			rgb[j] = (int)palette[p][j] + (((int)(palette[p+1][j] - palette[p][j]) * (i & 0x1F)) / 0x20);
 
-		video.tc_bgr32[i + 128] = rgb[2] |
-			(rgb[1] << 8) |
-			(rgb[0] << 16) | (0xFF << 24);
+		fun(i + 128, rgb);
 	}
+}
+
+static void bgr32_fun_(unsigned int i, unsigned char rgb[3])
+{
+	video.tc_bgr32[i] = rgb[2] |
+		(rgb[1] << 8) |
+		(rgb[0] << 16) | (0xFF << 24);
+}
+
+void video_colors(unsigned char palette[16][3])
+{
+	video_colors_iterate(palette, bgr32_fun_);
 
 	backend->colors(palette);
 }

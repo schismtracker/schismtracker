@@ -109,6 +109,7 @@ static int load_sdl3_syms(void)
 // this is used so that SDL_Quit is only called
 // once every backend is done
 static int roll = 0;
+static int ver = 0;
 
 // returns non-zero on success or zero on error
 int sdl3_init(void)
@@ -120,8 +121,8 @@ int sdl3_init(void)
 		// versions prior to the first stable release (3.2.0) have not been tested at all,
 		// and will likely have serious issues if we even attempt to use them, so punt,
 		// and fallback to an older version of SDL, possibly sdl2-compat or sdl12-compat.
-		const int ver = sdl3_GetVersion();
-		if (!SCHISM_SEMVER_ATLEAST(3, 2, 0, SDL_VERSIONNUM_MAJOR(ver), SDL_VERSIONNUM_MINOR(ver), SDL_VERSIONNUM_MICRO(ver)))
+		ver = sdl3_GetVersion();
+		if (!sdl3_ver_atleast(3, 2, 0))
 			return 0;
 
 		// the subsystems are initialized by the actual backends
@@ -143,5 +144,11 @@ void sdl3_quit(void)
 	if (roll == 0) {
 		sdl3_Quit();
 		sdl3_dlend();
+		ver = 0;
 	}
+}
+
+int sdl3_ver_atleast(int major, int minor, int patch)
+{
+	return SCHISM_SEMVER_ATLEAST(major, minor, patch, SDL_VERSIONNUM_MAJOR(ver), SDL_VERSIONNUM_MINOR(ver), SDL_VERSIONNUM_MICRO(ver));
 }

@@ -158,16 +158,16 @@ static void (SDLCALL *sdl12_InitQuickDraw)(struct QDGlobals *the_qd);
 
 static const char *sdl12_video_driver_name(void)
 {
-	char buf[256];
+	static char buf[256];
 
-	return str_dup(sdl12_VideoDriverName(buf, 256));
+	sdl12_VideoDriverName(buf, 256);
+
+	return buf;
 }
 
 static void sdl12_video_report(void)
 {
-	char buf[256];
-
-	log_appendf(5, " Using driver '%s'", sdl12_VideoDriverName(buf, 256));
+	log_appendf(5, " Using driver '%s'", sdl12_video_driver_name());
 
 	switch (video.desktop.type) {
 	case VIDEO_SURFACE:
@@ -523,7 +523,7 @@ static void sdl12_video_resize(unsigned int width, unsigned int height)
 	status.flags |= (NEED_UPDATE);
 }
 
-static void sdl_pal_(int i, int rgb[3])
+static void sdl_pal_(unsigned int i, unsigned char rgb[3])
 {
 	video.pal[i] = sdl12_MapRGB(video.surface->format,
 			rgb[0], rgb[1], rgb[2]);
@@ -531,37 +531,7 @@ static void sdl_pal_(int i, int rgb[3])
 
 static void sdl12_video_colors(unsigned char palette[16][3])
 {
-	void (*fun)(int i,int rgb[3]);
-	const int lastmap[] = { 0,1,2,3,5 };
-	int rgb[3], i, j, p;
-
-	switch (video.desktop.type) {
-	case VIDEO_SURFACE:
-		fun = sdl_pal_;
-		break;
-	default:
-		/* eh? */
-		return;
-	};
-	/* make our "base" space */
-	for (i = 0; i < 16; i++) {
-		rgb[0]=palette[i][0];
-		rgb[1]=palette[i][1];
-		rgb[2]=palette[i][2];
-		fun(i, rgb);
-	}
-	/* make our "gradient" space */
-	for (i = 128; i < 256; i++) {
-		j = i - 128;
-		p = lastmap[(j>>5)];
-		rgb[0] = (int)palette[p][0] +
-			(((int)(palette[p+1][0] - palette[p][0]) * (j&31)) /32);
-		rgb[1] = (int)palette[p][1] +
-			(((int)(palette[p+1][1] - palette[p][1]) * (j&31)) /32);
-		rgb[2] = (int)palette[p][2] +
-			(((int)(palette[p+1][2] - palette[p][2]) * (j&31)) /32);
-		fun(i, rgb);
-	}
+	video_colors_iterate(palette, sdl_pal_);
 }
 
 static uint32_t sdl12_map_rgb_callback(void *data, uint8_t r, uint8_t g, uint8_t b)

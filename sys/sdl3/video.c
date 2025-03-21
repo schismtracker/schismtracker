@@ -105,26 +105,21 @@ static Sint64 (SDLCALL *sdl3_GetNumberProperty)(SDL_PropertiesID props, const ch
 
 static bool (SDLCALL *sdl3_StartTextInput)(SDL_Window *window) = NULL;
 
-// this is used in multiple parts here
+// this is used in multiple places here.
 static int sdl3_video_get_wm_data(video_wm_data_t *wm_data);
 
 static SDL_Surface *(SDLCALL *sdl3_CreateSurfaceFrom)(int width, int height, SDL_PixelFormat format, void *pixels, int pitch);
 static SDL_PixelFormat (SDLCALL *sdl3_GetPixelFormatForMasks)(int bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
 
-#define sdl3_CreateRGBSurfaceFrom(pixels, width, height, depth, pitch, Rmask, Gmask, Bmask, Amask) \
-	sdl3_CreateSurfaceFrom(width, height, sdl3_GetPixelFormatForMasks(depth, Rmask, Gmask, Bmask, Amask), pixels, pitch);
-
-// This is just a macro that emulates the old SDL_ShowCursor behavior,
-// excluding SDL_QUERY.
-#define sdl3_compat_ShowCursor(x) \
-	((int)((x) ? sdl3_ShowCursor() : sdl3_HideCursor()))
-
 static void sdl3_video_setup(const char *quality);
 
 static struct {
 	SDL_Window *window;
+
+	/* renderer */
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
+
 	const SDL_PixelFormatDetails *pixel_format; // may be NULL
 	SDL_PixelFormat format;
 	uint32_t bpp; // BYTES per pixel
@@ -269,7 +264,7 @@ static void set_icon(void)
 		uint32_t *pixels;
 		int width, height;
 		if (!xpmdata(_schism_icon_xpm_hires, &pixels, &width, &height)) {
-			SDL_Surface *icon = sdl3_CreateRGBSurfaceFrom(pixels, width, height, 32, width * sizeof(uint32_t), 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+			SDL_Surface *icon = sdl3_CreateSurfaceFrom(width, height, sdl3_GetPixelFormatForMasks(32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000), pixels, width * sizeof(uint32_t));
 			if (icon) {
 				sdl3_SetWindowIcon(video.window, icon);
 				sdl3_DestroySurface(icon);
@@ -301,8 +296,6 @@ static void sdl3_video_redraw_texture(void)
 	// output to. If we can't, then we fall back to
 	// SDL_PIXELFORMAT_RGB888 and let SDL deal with the
 	// conversion.
-
-	// LOL WOW THIS API SUCKS
 	SDL_PropertiesID rprop = sdl3_GetRendererProperties(video.renderer);
 	if (rprop) {
 		const SDL_PixelFormat *formats = sdl3_GetPointerProperty(rprop, SDL_PROP_RENDERER_TEXTURE_FORMATS_POINTER, NULL);
@@ -316,20 +309,14 @@ static void sdl3_video_redraw_texture(void)
 
 got_format:
 	video.texture = sdl3_CreateTexture(video.renderer, format, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
-	video.pixel_format = sdl3_GetPixelFormatDetails(format);
 	video.format = format;
 
-	// fix interpolation setting
-	sdl3_video_setup(cfg_video_interpolation);
+	video.pixel_format = sdl3_GetPixelFormatDetails(video.format);
 
-	// find the bytes per pixel
-	switch (video.format) {
-	// irrelevant
-	case SDL_PIXELFORMAT_YV12:
-	case SDL_PIXELFORMAT_IYUV: break;
+	// ok
+	video.bpp = SDL_BYTESPERPIXEL(video.format);
 
-	default: video.bpp = video.pixel_format->bytes_per_pixel; break;
-	}
+	sdl3_video_setup(cfg_video_interpolation); // ew
 }
 
 static void sdl3_video_set_hardware(int hardware)
@@ -435,7 +422,7 @@ static void sdl3_video_resize(unsigned int width, unsigned int height)
 	status.flags |= (NEED_UPDATE);
 }
 
-static void yuv_pal_(int i, unsigned char rgb[3])
+static void yuv_pal_(unsigned int i, unsigned char rgb[3])
 {
 	uint32_t y, u, v;
 	video_rgb_to_yuv(&y, &u, &v, rgb);
@@ -452,40 +439,21 @@ static void yuv_pal_(int i, unsigned char rgb[3])
 	}
 }
 
-static void sdl_pal_(int i, unsigned char rgb[3])
+static void sdl_pal_(unsigned int i, unsigned char rgb[3])
 {
 	video.pal[i] = sdl3_MapRGB(video.pixel_format, NULL, rgb[0], rgb[1], rgb[2]);
 }
 
 static void sdl3_video_colors(unsigned char palette[16][3])
 {
-	static const int lastmap[] = { 0, 1, 2, 3, 5 };
-	int i;
-	void (*fun)(int i, unsigned char rgb[3]);
-
 	switch (video.format) {
 	case SDL_PIXELFORMAT_IYUV:
 	case SDL_PIXELFORMAT_YV12:
-		fun = yuv_pal_;
+		video_colors_iterate(palette, yuv_pal_);
 		break;
 	default:
-		fun = sdl_pal_;
+		video_colors_iterate(palette, sdl_pal_);
 		break;
-	}
-
-	/* make our "base" space */
-	for (i = 0; i < 16; i++)
-		fun(i, (unsigned char []){palette[i][0], palette[i][1], palette[i][2]});
-
-	/* make our "gradient" space */
-	for (i = 0; i < 128; i++) {
-		int p = lastmap[(i>>5)];
-
-		fun(i + 128, (unsigned char []){
-			(int)palette[p][0] + (((int)(palette[p+1][0] - palette[p][0]) * (i & 0x1F)) / 0x20),
-			(int)palette[p][1] + (((int)(palette[p+1][1] - palette[p][1]) * (i & 0x1F)) / 0x20),
-			(int)palette[p][2] + (((int)(palette[p+1][2] - palette[p][2]) * (i & 0x1F)) / 0x20),
-		});
 	}
 }
 
@@ -681,7 +649,9 @@ SCHISM_HOT static void sdl3_video_blit(void)
 static void sdl3_video_mousecursor_changed(void)
 {
 	const int vis = video_mousecursor_visible();
-	sdl3_compat_ShowCursor(vis == MOUSE_SYSTEM);
+
+	if (vis == MOUSE_SYSTEM) sdl3_ShowCursor();
+	else sdl3_HideCursor();
 
 	// Totally turn off mouse event sending when the mouse is disabled
 	bool evstate = !(vis == MOUSE_DISABLED);
@@ -726,7 +696,8 @@ static int sdl3_video_get_wm_data(video_wm_data_t *wm_data)
 
 static void sdl3_video_show_cursor(int enabled)
 {
-	sdl3_compat_ShowCursor(enabled);
+	if (enabled) sdl3_ShowCursor();
+	else sdl3_HideCursor();
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -548,7 +548,8 @@ static void sdl2_video_startup(void)
 	video_fullscreen(cfg_video_fullscreen);
 	video_set_hardware(cfg_video_hardware);
 
-	video_recalculate_fixed_width();
+	// handled in video_set_hardware
+	//video_recalculate_fixed_width();
 
 	if (video_have_menu() && !video.fullscreen) {
 		sdl2_SetWindowSize(video.window, video.width, video.height);
@@ -596,7 +597,7 @@ static void sdl2_video_resize(unsigned int width, unsigned int height)
 	status.flags |= (NEED_UPDATE);
 }
 
-static void yuv_pal_(int i, unsigned char rgb[3])
+static void yuv_pal_(unsigned int i, unsigned char rgb[3])
 {
 	uint32_t y, u, v;
 	video_rgb_to_yuv(&y, &u, &v, rgb);
@@ -613,44 +614,21 @@ static void yuv_pal_(int i, unsigned char rgb[3])
 	}
 }
 
-static inline void sdl_pal_(int i, unsigned char rgb[3])
+static void sdl_pal_(unsigned int i, unsigned char rgb[3])
 {
 	video.pal[i] = sdl2_MapRGB(video.pixel_format, rgb[0], rgb[1], rgb[2]);
 }
 
 static void sdl2_video_colors(unsigned char palette[16][3])
 {
-	static const int lastmap[] = { 0, 1, 2, 3, 5 };
-	int i, p;
-	void (*fun)(int i, unsigned char rgb[3]);
-
 	switch (video.format) {
 	case SDL_PIXELFORMAT_IYUV:
 	case SDL_PIXELFORMAT_YV12:
-		fun = yuv_pal_;
+		video_colors_iterate(palette, yuv_pal_);
 		break;
 	default:
-		fun = sdl_pal_;
+		video_colors_iterate(palette, sdl_pal_);
 		break;
-	}
-
-	/* make our "base" space */
-	for (i = 0; i < 16; i++) {
-		unsigned char b[3];
-		for (size_t j = 0; j < ARRAY_SIZE(b); j++)
-			b[j] = palette[i][j];
-		fun(i, b);
-	}
-
-	/* make our "gradient" space */
-	for (i = 0; i < 128; i++) {
-		p = lastmap[(i>>5)];
-
-		unsigned char b[3];
-		for (size_t j = 0; j < ARRAY_SIZE(b); j++)
-			b[j] = (int)palette[p][j] + (((int)(palette[p+1][j] - palette[p][j]) * (i & 0x1F)) / 0x20);
-
-		fun(i + 128, b);
 	}
 }
 
