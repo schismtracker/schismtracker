@@ -262,6 +262,9 @@ static void sdl2_video_report(void)
 		if (SDL_MUSTLOCK(video.u.s.surface))
 			log_append(4, 0, " Must lock surface");
 		break;
+	case VIDEO_TYPE_UNINITIALIZED:
+		/* ? */
+		break;
 	}
 
 	switch (video.format) {
@@ -336,6 +339,9 @@ static inline void video_recalculate_fixed_width(void)
 			video.u.s.clip.y = (video.height - video.u.s.clip.h) / 2;
 			break;
 		}
+		case VIDEO_TYPE_UNINITIALIZED:
+			/* WUT */
+			break;
 		}
 	} else if (video.type == VIDEO_TYPE_SURFACE) {
 		video.u.s.clip.x = video.u.s.clip.y = 0;
@@ -388,6 +394,9 @@ got_format:
 	case VIDEO_TYPE_SURFACE:
 		video.format = video.u.s.surface->format->format;
 		break;
+	case VIDEO_TYPE_UNINITIALIZED:
+		/* ? */
+		break;
 	}
 
 	video.pixel_format = sdl2_AllocFormat(video.format);
@@ -413,6 +422,8 @@ static void sdl2_video_set_hardware(int hardware)
 	case VIDEO_TYPE_SURFACE:
 		assert(sdl2_HasWindowSurface(video.window));
 		sdl2_DestroyWindowSurface(video.window);
+		break;
+	case VIDEO_TYPE_UNINITIALIZED:
 		break;
 	}
 
@@ -441,6 +452,9 @@ static void sdl2_video_set_hardware(int hardware)
 			video.u.r.renderer = sdl2_CreateRenderer(video.window, -1, 0); // welp
 		assert(!!video.u.r.renderer);
 		break;
+	case VIDEO_TYPE_UNINITIALIZED:
+		/* should never ever happen */
+		break;
 	}
 
 	if (ask_for_no_acceleration)
@@ -465,6 +479,8 @@ static void sdl2_video_shutdown(void)
 		assert(sdl2_HasWindowSurface(video.window));
 		sdl2_DestroyWindowSurface(video.window);
 		break;
+	case VIDEO_TYPE_UNINITIALIZED:
+		break;
 	}
 
 	sdl2_DestroyWindow(video.window);
@@ -472,6 +488,9 @@ static void sdl2_video_shutdown(void)
 
 static void sdl2_video_setup(const char *quality)
 {
+	/* hint for later, in case we switch from software -> hardware */
+	sdl2_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
+
 	switch (video.type) {
 	case VIDEO_TYPE_RENDERER: {
 #if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 0, 12)
@@ -491,6 +510,7 @@ static void sdl2_video_setup(const char *quality)
 			// this is stupid
 			if (video.u.r.texture)
 				sdl2_DestroyTexture(video.u.r.texture);
+
 			video_redraw_texture();
 		}
 		break;
@@ -498,12 +518,13 @@ static void sdl2_video_setup(const char *quality)
 	case VIDEO_TYPE_SURFACE:
 		// nothing to do
 		break;
+	case VIDEO_TYPE_UNINITIALIZED:
+		break;
 	}
 
+	/* set the hint for later */
 	if (cfg_video_interpolation != quality)
 		strncpy(cfg_video_interpolation, quality, 7);
-
-	sdl2_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
 }
 
 static void sdl2_video_startup(void)
@@ -662,6 +683,8 @@ static int sdl2_video_is_hardware(void)
 	case VIDEO_TYPE_SURFACE:
 		// never
 		return 0;
+	case VIDEO_TYPE_UNINITIALIZED:
+		break;
 	}
 
 	// WUT?
@@ -885,6 +908,8 @@ SCHISM_HOT static void sdl2_video_blit(void)
 			sdl2_UnlockSurface(video.u.s.surface);
 
 		sdl2_UpdateWindowSurface(video.window);
+		break;
+	case VIDEO_TYPE_UNINITIALIZED:
 		break;
 	}
 }
