@@ -10,8 +10,8 @@ jobs:
     runs-on: windows-latest
     name: mingw32-i386
     env:
-      SDL_VERSION: 2.32.0
-      SDL_SHA256: b31fc1ec1a22e6449ec2f5496d6f8d2832a4b8c27da94ae7db211418be2869a4
+      SDL_VERSION: 2.32.2
+      SDL_SHA256: c33a513b36f896e0e1c32e3be56f491029793a8f4bafbff3b8f7cf58ab538a06
       SDL12_VERSION: 1.2.15
       SDL12_SHA256: a28bbe38714ef7817b1c1e8082a48f391f15e4043402444b783952fca939edc1
       FLAC_VERSION: 1.5.0
@@ -232,8 +232,8 @@ jobs:
     name: ${{ matrix.sys }}-${{ matrix.target }}
     env:
       LLVM_MINGW_VERSION: 20250114
-      SDL_VERSION: 2.32.0
-      SDL_SHA256: f5c2b52498785858f3de1e2996eba3c1b805d08fe168a47ea527c7fc339072d0
+      SDL_VERSION: 2.32.2
+      SDL_SHA256: c5f30c427fd8107ee4a400c84d4447dd211352512eaf0b6e89cc6a50a2821922
       SDL12_VERSION: 1.2.15
       SDL12_SHA256: d6d316a793e5e348155f0dd93b979798933fb98aa1edebcc108829d6474aad00
       FLAC_VERSION: 1.5.0
