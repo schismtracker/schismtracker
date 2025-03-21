@@ -30,6 +30,7 @@
 #include "mem.h"
 #include "str.h"
 #include "palettes.h"
+#include "video.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -46,7 +47,7 @@
 // entry widget stuff to be able to use dynamic buffers.
 char cfg_dir_modules[SCHISM_PATH_MAX + 1], cfg_dir_samples[SCHISM_PATH_MAX + 1], cfg_dir_instruments[SCHISM_PATH_MAX + 1],
 	*cfg_dir_dotschism = NULL, *cfg_font = NULL;
-char cfg_video_interpolation[8];
+int cfg_video_interpolation = VIDEO_INTERPOLATION_NEAREST;
 char cfg_video_format[9];
 int cfg_video_fullscreen = 0;
 int cfg_video_want_fixed = 0;
@@ -166,7 +167,17 @@ void cfg_load(void)
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-	cfg_get_string(&cfg, "Video", "interpolation", cfg_video_interpolation, ARRAY_SIZE(cfg_video_interpolation) - 1, "nearest");
+	ptr = cfg_get_string(&cfg, "Video", "interpolation", NULL, 0, NULL);
+	if (ptr) {
+		if (!strcasecmp(ptr, "nearest")) {
+			cfg_video_interpolation = VIDEO_INTERPOLATION_NEAREST;
+		} else if (!strcasecmp(ptr, "linear")) {
+			cfg_video_interpolation = VIDEO_INTERPOLATION_LINEAR;
+		} else if (!strcasecmp(ptr, "best")) {
+			cfg_video_interpolation = VIDEO_INTERPOLATION_BEST;
+		}
+	}
+
 	cfg_get_string(&cfg, "Video", "format", cfg_video_format, ARRAY_SIZE(cfg_video_format) - 1, "");
 	cfg_video_width = cfg_get_number(&cfg, "Video", "width", 640);
 	cfg_video_height = cfg_get_number(&cfg, "Video", "height", 400);
@@ -401,7 +412,16 @@ void cfg_atexit_save(void)
 	/* TODO: move these config options to video.c, this is lame :)
 	Or put everything here, which is what the note in audio_loadsave.cc
 	says. Very well, I contradict myself. */
-	cfg_set_string(&cfg, "Video", "interpolation", cfg_video_interpolation);
+	{
+		const char *names[] = {
+			[VIDEO_INTERPOLATION_NEAREST] = "nearest",
+			[VIDEO_INTERPOLATION_LINEAR] = "linear",
+			[VIDEO_INTERPOLATION_BEST] = "best",
+		};
+
+		cfg_set_string(&cfg, "Video", "interpolation", names[cfg_video_interpolation]);
+	}
+	
 	cfg_set_number(&cfg, "Video", "fullscreen", !!(video_is_fullscreen()));
 	cfg_set_number(&cfg, "Video", "mouse_cursor", video_mousecursor_visible());
 	cfg_set_number(&cfg, "Video", "lazy_redraw", !!(status.flags & LAZY_REDRAW));

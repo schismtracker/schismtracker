@@ -111,7 +111,7 @@ static int sdl3_video_get_wm_data(video_wm_data_t *wm_data);
 static SDL_Surface *(SDLCALL *sdl3_CreateSurfaceFrom)(int width, int height, SDL_PixelFormat format, void *pixels, int pitch);
 static SDL_PixelFormat (SDLCALL *sdl3_GetPixelFormatForMasks)(int bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
 
-static void sdl3_video_setup(const char *quality);
+static void sdl3_video_setup(int quality);
 
 static struct {
 	SDL_Window *window;
@@ -341,21 +341,15 @@ static void sdl3_video_shutdown(void)
 	sdl3_DestroyWindow(video.window);
 }
 
-static void sdl3_video_setup(const char *quality)
+static void sdl3_video_setup(int interpolation)
 {
-	SDL_ScaleMode mode;
+	static const SDL_ScaleMode modes[] = {
+		[VIDEO_INTERPOLATION_NEAREST] = SDL_SCALEMODE_NEAREST,
+		[VIDEO_INTERPOLATION_LINEAR]  = SDL_SCALEMODE_LINEAR,
+		[VIDEO_INTERPOLATION_BEST]    = SDL_SCALEMODE_LINEAR,
+	};
 
-	if (!strcmp(quality, "nearest")) {
-		mode = SDL_SCALEMODE_NEAREST;
-	} else /*if (!strcmp(quality, "linear") || !strcmp(quality, "best"))*/ {
-		mode = SDL_SCALEMODE_LINEAR;
-	}
-
-	// XXX Can we not have this option as a string?
-	if (cfg_video_interpolation != quality)
-		strncpy(cfg_video_interpolation, quality, 7);
-
-	sdl3_SetTextureScaleMode(video.texture, mode);
+	sdl3_SetTextureScaleMode(video.texture, modes[interpolation]);
 }
 
 static void sdl3_video_startup(void)

@@ -88,7 +88,13 @@ int video_is_fullscreen(void);
 /* ------------------------------------------------------------------------ */
 /* setup interpolation (THIS IS IN DESPERATE NEED OF A BETTER NAME) */
 
-void video_setup(const char *quality);
+enum {
+	VIDEO_INTERPOLATION_NEAREST, // nearest neighbor
+	VIDEO_INTERPOLATION_LINEAR,  // linear
+	VIDEO_INTERPOLATION_BEST,    // best
+};
+
+void video_setup(int interpolation);
 
 /* ------------------------------------------------------------------------ */
 /* hardware/software rendering */
@@ -157,6 +163,9 @@ SCHISM_HOT void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t
 SCHISM_HOT void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
 SCHISM_HOT void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height);
 SCHISM_HOT void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, schism_map_rgb_spec map_rgb, void *map_rgb_data, int width, int height);
+
+/* scaled blit, according to user settings (lots of params here) */
+SCHISM_HOT void video_blitSC(uint32_t bpp, unsigned char *pixels, uint32_t pitch, uint32_t pal[256], schism_map_rgb_spec fun, void *fun_data, uint32_t x, uint32_t y, uint32_t w, uint32_t h);
 
 /* ------------------------------------------------------------------------ */
 /* helper function to convert RGB values to YUV */

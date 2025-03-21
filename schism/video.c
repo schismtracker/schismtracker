@@ -580,6 +580,28 @@ void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 	}
 }
 
+/* scaled blit, according to user settings (lots of params here) */
+void video_blitSC(uint32_t bpp, unsigned char *pixels, uint32_t pitch, uint32_t pal[256], schism_map_rgb_spec fun, void *fun_data, uint32_t x, uint32_t y, uint32_t w, uint32_t h)
+{
+	pixels += y * pitch;
+	pixels += x * bpp;
+
+	if (w == NATIVE_SCREEN_WIDTH && h == NATIVE_SCREEN_HEIGHT) {
+		/* scaling isn't necessary */
+		video_blit11(bpp, pixels, pitch, pal);
+	} else {
+		switch (cfg_video_interpolation) {
+		case VIDEO_INTERPOLATION_NEAREST:
+			video_blitNN(bpp, pixels, pitch, pal, w, h);
+			break;
+		case VIDEO_INTERPOLATION_LINEAR:
+		case VIDEO_INTERPOLATION_BEST:
+			video_blitLN(bpp, pixels, pitch, fun, fun_data, w, h);
+			break;
+		}
+	}
+}
+
 // ----------------------------------------------------------------------------------
 
 int video_is_fullscreen(void)
@@ -626,9 +648,11 @@ void video_shutdown(void)
 	}
 }
 
-void video_setup(const char *quality)
+void video_setup(int interpolation)
 {
-	backend->setup(quality);
+	cfg_video_interpolation = interpolation;
+
+	backend->setup(interpolation);
 }
 
 int video_startup(void)

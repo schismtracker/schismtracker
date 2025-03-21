@@ -241,9 +241,9 @@ static void sdl12_video_fullscreen(int tri)
 	}
 }
 
-static void sdl12_video_setup(const char *interpolation)
+static void sdl12_video_setup(int interpolation)
 {
-	strncpy(cfg_video_interpolation, interpolation, 7);
+	// nothing
 }
 
 static void sdl12_video_startup(void)
@@ -543,47 +543,25 @@ static uint32_t sdl12_map_rgb_callback(void *data, uint8_t r, uint8_t g, uint8_t
 
 SCHISM_HOT static void sdl12_video_blit(void)
 {
-	unsigned char *pixels = NULL;
-	unsigned int bpp = 0;
-	unsigned int pitch = 0;
+	if (SDL_MUSTLOCK(video.surface))
+		while (sdl12_LockSurface(video.surface) < 0)
+			sdl12_Delay(10);
 
-	switch (video.desktop.type) {
-	case VIDEO_SURFACE:
-		if (SDL_MUSTLOCK(video.surface)) {
-			while (sdl12_LockSurface(video.surface) == -1) {
-				sdl12_Delay(10);
-			}
-		}
-		bpp = video.surface->format->BytesPerPixel;
-		pixels = (unsigned char *)video.surface->pixels;
-		if (cfg_video_want_fixed) {
-			pixels += video.clip.y * video.surface->pitch;
-			pixels += video.clip.x * bpp;
-		}
-		pitch = video.surface->pitch;
-		break;
-	};
+	video_blitSC(video.surface->format->BytesPerPixel,
+		video.surface->pixels,
+		video.surface->pitch,
+		video.pal,
+		sdl12_map_rgb_callback,
+		video.surface->format,
+		video.clip.x,
+		video.clip.y,
+		video.clip.w,
+		video.clip.h);
 
-	if (video.draw.autoscale
-	    || (video.clip.w == NATIVE_SCREEN_WIDTH && video.clip.h == NATIVE_SCREEN_HEIGHT)) {
-		/* scaling is provided by the hardware, or isn't necessary */
-		video_blit11(bpp, pixels, pitch, video.pal);
-	} else {
-		if (!charset_strcasecmp(cfg_video_interpolation, CHARSET_UTF8, "nearest", CHARSET_UTF8)) {
-			video_blitNN(bpp, pixels, pitch, video.pal, video.clip.w, video.clip.h);
-		} else {
-			video_blitLN(bpp, pixels, pitch, sdl12_map_rgb_callback, video.surface->format, video.clip.w, video.clip.h);
-		}
-	}
+	if (SDL_MUSTLOCK(video.surface))
+		sdl12_UnlockSurface(video.surface);
 
-	switch (video.desktop.type) {
-	case VIDEO_SURFACE:
-		if (SDL_MUSTLOCK(video.surface)) {
-			sdl12_UnlockSurface(video.surface);
-		}
-		sdl12_Flip(video.surface);
-		break;
-	};
+	sdl12_Flip(video.surface);
 }
 
 static void sdl12_video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y)

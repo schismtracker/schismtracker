@@ -486,25 +486,27 @@ static void sdl2_video_shutdown(void)
 	sdl2_DestroyWindow(video.window);
 }
 
-static void sdl2_video_setup(const char *quality)
+static void sdl2_video_setup(int quality)
 {
 	/* hint for later, in case we switch from software -> hardware */
-	sdl2_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, quality);
+	static const char *names[] = {
+		[VIDEO_INTERPOLATION_NEAREST] = "nearest",
+		[VIDEO_INTERPOLATION_LINEAR]  = "linear",
+		[VIDEO_INTERPOLATION_BEST]    = "best",
+	};
+
+	sdl2_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, names[quality]);
 
 	switch (video.type) {
 	case VIDEO_TYPE_RENDERER: {
 #if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 0, 12)
-		SDL_ScaleMode mode = SDL_ScaleModeNearest;
+		static const SDL_ScaleMode modes[] = {
+			[VIDEO_INTERPOLATION_NEAREST] = SDL_ScaleModeNearest,
+			[VIDEO_INTERPOLATION_LINEAR]  = SDL_ScaleModeLinear,
+			[VIDEO_INTERPOLATION_BEST]    = SDL_ScaleModeBest,
+		};
 
-		if (!strcmp(quality, "nearest")) {
-			mode = SDL_ScaleModeNearest;
-		} else if (!strcmp(quality, "linear")) {
-			mode = SDL_ScaleModeLinear;
-		} else if (!strcmp(quality, "best")) {
-			mode = SDL_ScaleModeBest;
-		}
-
-		if (!sdl2_SetTextureScaleMode || sdl2_SetTextureScaleMode(video.u.r.texture, mode))
+		if (!sdl2_SetTextureScaleMode || sdl2_SetTextureScaleMode(video.u.r.texture, modes[quality]))
 #endif
 		{
 			// this is stupid
@@ -521,10 +523,6 @@ static void sdl2_video_setup(const char *quality)
 	case VIDEO_TYPE_UNINITIALIZED:
 		break;
 	}
-
-	/* set the hint for later */
-	if (cfg_video_interpolation != quality)
-		strncpy(cfg_video_interpolation, quality, 7);
 }
 
 static void sdl2_video_startup(void)
@@ -547,9 +545,6 @@ static void sdl2_video_startup(void)
 	video.window = sdl2_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width, video.height, SDL_WINDOW_RESIZABLE);
 	video_fullscreen(cfg_video_fullscreen);
 	video_set_hardware(cfg_video_hardware);
-
-	// handled in video_set_hardware
-	//video_recalculate_fixed_width();
 
 	if (video_have_menu() && !video.fullscreen) {
 		sdl2_SetWindowSize(video.window, video.width, video.height);
@@ -864,23 +859,16 @@ SCHISM_HOT static void sdl2_video_blit(void)
 			while (sdl2_LockSurface(video.u.s.surface) < 0)
 				timer_msleep(10);
 
-		pixels = (unsigned char *)video.u.s.surface->pixels;
-		if (cfg_video_want_fixed) {
-			pixels += video.u.s.clip.y * video.u.s.surface->pitch;
-			pixels += video.u.s.clip.x * video.bpp;
-		}
-		pitch = video.u.s.surface->pitch;
-
-		if (video.u.s.clip.w == NATIVE_SCREEN_WIDTH && video.u.s.clip.h == NATIVE_SCREEN_HEIGHT) {
-			/* scaling isn't necessary */
-			video_blit11(video.bpp, pixels, pitch, video.pal);
-		} else {
-			if (!charset_strcasecmp(cfg_video_interpolation, CHARSET_UTF8, "nearest", CHARSET_UTF8)) {
-				video_blitNN(video.bpp, pixels, pitch, video.pal, video.u.s.clip.w, video.u.s.clip.h);
-			} else {
-				video_blitLN(video.bpp, pixels, pitch, sdl2_map_rgb_callback, video.pixel_format, video.u.s.clip.w, video.u.s.clip.h);
-			}
-		}
+		video_blitSC(video.u.s.surface->format->BytesPerPixel,
+			video.u.s.surface->pixels,
+			video.u.s.surface->pitch,
+			video.pal,
+			sdl2_map_rgb_callback,
+			video.pixel_format,
+			video.u.s.clip.x,
+			video.u.s.clip.y,
+			video.u.s.clip.w,
+			video.u.s.clip.h);
 
 		if (SDL_MUSTLOCK(video.u.s.surface))
 			sdl2_UnlockSurface(video.u.s.surface);
