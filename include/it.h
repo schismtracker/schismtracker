@@ -127,6 +127,9 @@ enum {
 	/* if true, don't stop playing on load, and start playing new song afterward
 	(but only if the last song was already playing before loading) */
 	PLAY_AFTER_LOAD = (1 << 24),
+
+	/* --headless passed (generally this should be default with --diskwrite) */
+	STATUS_IS_HEADLESS = (1 << 25),
 };
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */

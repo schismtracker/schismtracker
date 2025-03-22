@@ -78,9 +78,9 @@ enum {
 };
 static int shutdown_process = 0;
 
-static const char *video_driver = NULL;
-static const char *audio_driver = NULL;
-static const char *audio_device = NULL;
+static char *video_driver = NULL;
+static char *audio_driver = NULL;
+static char *audio_device = NULL;
 static int want_fullscreen = -1;
 static int did_classic = 0;
 
@@ -903,6 +903,9 @@ int schism_main(int argc, char** argv)
 	srand(time(NULL));
 	parse_options(argc, argv); /* shouldn't this be like, first? */
 
+	if (startup_flags & SF_HEADLESS)
+		status.flags |= STATUS_IS_HEADLESS; // for the log
+
 	/* Eh. */
 	log_append2(0, 3, 0, schism_banner(0));
 	log_nl();
@@ -961,7 +964,7 @@ int schism_main(int argc, char** argv)
 	shutdown_process |= EXIT_SAVECFG;
 	shutdown_process |= EXIT_SDLQUIT;
 
-	if ((startup_flags & SF_HEADLESS)) {
+	if (startup_flags & SF_HEADLESS) {
 		if (!diskwrite_to) {
 			fprintf(stderr, "Error: --headless requires --diskwrite\n");
 			return 1;
@@ -971,11 +974,7 @@ int schism_main(int argc, char** argv)
 			return 1;
 		}
 
-		// Initialize minimal systems
-		// We need to call video_startup() because it sets up the timer and event
-		// system that is needed for exporting a song
-		video_startup();
-		audio_init(audio_driver, audio_device);
+		// Initialize modplug only
 		song_init_modplug();
 
 		// Load and export song
@@ -999,9 +998,10 @@ int schism_main(int argc, char** argv)
 				}
 			}
 			schism_exit(0);
+		} else {
+			fprintf(stderr, "Error: Failed to load song %s\n", initial_song);
+			schism_exit(1);
 		}
-		fprintf(stderr, "Error: Failed to load song %s\n", initial_song);
-		schism_exit(1);
 	}
 
 	video_startup();

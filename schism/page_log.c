@@ -31,6 +31,7 @@
 #include "widget.h"
 #include "vgamem.h"
 #include "keyboard.h"
+#include "charset.h"
 
 struct log_line {
 	int color;
@@ -151,21 +152,29 @@ void log_load_page(struct page *page)
 
 void log_append2(int bios_font, int color, int must_free, const char *text)
 {
-	if (last_line < NUM_LINES - 1) {
-		last_line++;
-	} else {
-		if (lines[0].must_free)
-			free((void *) lines[0].text);
-		memmove(lines, lines + 1, last_line * sizeof(struct log_line));
-	}
-	lines[last_line].text = text;
-	lines[last_line].color = color;
-	lines[last_line].must_free = must_free;
-	lines[last_line].bios_font = bios_font;
-	top_line = CLAMP(last_line - 32, 0, NUM_LINES-32);
+	if (status.flags & STATUS_IS_HEADLESS) {
+		// XXX: Maybe stdout should always get all of the log messages,
+		// regardless of whether we're headless or not? Hm.
+		char *conv = charset_iconv_easy(text, CHARSET_ITF, CHARSET_UTF8);
 
-	if (status.current_page == PAGE_LOG)
-		status.flags |= NEED_UPDATE;
+		puts(conv);
+	} else {
+		if (last_line < NUM_LINES - 1) {
+			last_line++;
+		} else {
+			if (lines[0].must_free)
+				free((void *) lines[0].text);
+			memmove(lines, lines + 1, last_line * sizeof(struct log_line));
+		}
+		lines[last_line].text = text;
+		lines[last_line].color = color;
+		lines[last_line].must_free = must_free;
+		lines[last_line].bios_font = bios_font;
+		top_line = CLAMP(last_line - 32, 0, NUM_LINES-32);
+
+		if (status.current_page == PAGE_LOG)
+			status.flags |= NEED_UPDATE;
+	}
 }
 void log_append(int color, int must_free, const char *text)
 {

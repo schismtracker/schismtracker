@@ -76,17 +76,16 @@ static inline int queue_dequeue(schism_event_t *event)
 // Called back by the video backend;
 int events_init(const schism_events_backend_t *backend)
 {
-	if (!backend)
-		return 0;
-
-	events_backend = backend;
-	if (!events_backend->init())
-		return 0;
+	if (backend) {
+		events_backend = backend;
+		if (!events_backend->init())
+			return 0;
+	}
 
 	if (cfg_kbd_repeat_delay && cfg_kbd_repeat_rate) {
 		// Override everything.
 		kbd_set_key_repeat(cfg_kbd_repeat_delay, cfg_kbd_repeat_rate);
-	} else if (!(events_backend->flags & SCHISM_EVENTS_BACKEND_HAS_KEY_REPEAT)) {
+	} else if (events_backend && !(events_backend->flags & SCHISM_EVENTS_BACKEND_HAS_KEY_REPEAT)) {
 		// Ok, we have to manually configure key repeat.
 
 		int delay = cfg_kbd_repeat_delay, rate = cfg_kbd_repeat_rate;
@@ -129,7 +128,7 @@ int events_have_event(void)
 	}
 
 	// try pumping the events.
-	events_backend->pump_events();
+	events_pump_events();
 
 	if (queue.size) {
 		mt_mutex_unlock(queue_mutex);
@@ -144,7 +143,7 @@ int events_have_event(void)
 void events_pump_events(void)
 {
 	// eh
-	events_backend->pump_events();
+	if (events_backend) events_backend->pump_events();
 }
 
 int events_poll_event(schism_event_t *event)
@@ -160,7 +159,7 @@ int events_poll_event(schism_event_t *event)
 	}
 
 	// try pumping the events.
-	events_backend->pump_events();
+	events_pump_events();
 
 	if (queue_dequeue(event)) {
 		mt_mutex_unlock(queue_mutex);
@@ -212,5 +211,5 @@ int events_push_event(const schism_event_t *event)
 
 schism_keymod_t events_get_keymod_state(void)
 {
-	return events_backend->keymod_state();
+	return (events_backend ? events_backend->keymod_state() : 0);
 }

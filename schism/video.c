@@ -606,22 +606,22 @@ void video_blitSC(uint32_t bpp, unsigned char *pixels, uint32_t pitch, uint32_t 
 
 int video_is_fullscreen(void)
 {
-	return backend->is_fullscreen();
+	return backend ? backend->is_fullscreen() : 0;
 }
 
 int video_width(void)
 {
-	return backend->width();
+	return backend ? backend->width() : 0;
 }
 
 int video_height(void)
 {
-	return backend->height();
+	return backend ? backend->height() : 0;
 }
 
 const char *video_driver_name(void)
 {
-	return backend->driver_name();
+	return backend ? backend->driver_name() : "";
 }
 
 void video_report(void)
@@ -743,22 +743,22 @@ void video_colors(unsigned char palette[16][3])
 
 int video_is_focused(void)
 {
-	return backend->is_focused();
+	return backend ? backend->is_focused() : 0;
 }
 
 int video_is_visible(void)
 {
-	return backend->is_visible();
+	return backend ? backend->is_visible() : 0;
 }
 
 int video_is_wm_available(void)
 {
-	return backend->is_wm_available();
+	return backend ? backend->is_wm_available() : 0;
 }
 
 int video_is_hardware(void)
 {
-	return backend->is_hardware();
+	return backend ? backend->is_hardware() : 0;
 }
 
 /* -------------------------------------------------------- */
@@ -829,7 +829,7 @@ void video_toggle_menu(int on)
 
 void video_blit(void)
 {
-	backend->blit();
+	if (backend) backend->blit();
 }
 
 /* ------------------------------------------------------------ */

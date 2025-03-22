@@ -44,6 +44,9 @@ typedef enum {
 # define CHARSET_UCS2  CHARSET_UCS2LE
 #endif
 
+	/* Impulse Tracker built in font */
+	CHARSET_ITF,
+
 	/* European languages */
 	CHARSET_CP437,
 	CHARSET_WINDOWS1252, /* thanks modplug! */

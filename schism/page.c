@@ -50,7 +50,6 @@ struct tracker_status status = {
 	.previous_page = PAGE_BLANK,
 	.current_help_index = HELP_GLOBAL,
 	.dialog_type = DIALOG_NONE,
-	.flags = 0,
 	.time_display = TIME_PLAY_ELAPSED,
 	.vis_style = VIS_VU_METER,
 	.last_midi_event = "",

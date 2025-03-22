@@ -1660,8 +1660,11 @@ void song_init_modplug(void)
 	midi_queue_alloc(audio_buffer_samples, audio_sample_size, current_song->mix_frequency);
 
 	// timelimit the playback_update() calls when midi isn't actively going on
-	audio_buffers_per_second = (current_song->mix_frequency / (audio_buffer_samples * 8 * audio_sample_size));
-	if (audio_buffers_per_second > 1) audio_buffers_per_second--;
+	{
+		const int divisor = audio_buffer_samples * 8 * audio_sample_size;
+		audio_buffers_per_second = (divisor) ? (current_song->mix_frequency / divisor) : 0;
+		if (audio_buffers_per_second > 1) audio_buffers_per_second--;
+	}
 
 	csf_init_midi(current_song, _schism_midi_out_raw);
 
