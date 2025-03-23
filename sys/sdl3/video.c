@@ -670,6 +670,7 @@ static void sdl3_video_mousecursor_changed(void)
 
 static int sdl3_video_get_wm_data(video_wm_data_t *wm_data)
 {
+	const char *driver;
 	SDL_PropertiesID wprops;
 
 	if (!wm_data)
@@ -679,12 +680,14 @@ static int sdl3_video_get_wm_data(video_wm_data_t *wm_data)
 	if (!wprops)
 		return 0;
 
-	if (!strcmp(sdl3_GetCurrentVideoDriver(), "windows")) {
+	driver = sdl3_GetCurrentVideoDriver();
+
+	if (!strcmp(driver, "windows")) {
 		wm_data->subsystem = VIDEO_WM_DATA_SUBSYSTEM_WINDOWS;
 		wm_data->data.windows.hwnd = sdl3_GetPointerProperty(wprops, SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
 
 		return !!wm_data->data.windows.hwnd;
-	} else if (!strcmp(sdl3_GetCurrentVideoDriver(), "x11")) {
+	} else if (!strcmp(driver, "x11")) {
 		wm_data->subsystem = VIDEO_WM_DATA_SUBSYSTEM_X11;
 		wm_data->data.x11.display = sdl3_GetPointerProperty(wprops, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
 		wm_data->data.x11.window = sdl3_GetNumberProperty(wprops, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0);
