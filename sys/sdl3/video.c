@@ -645,12 +645,17 @@ SCHISM_HOT static void sdl3_video_blit(void)
 
 /* ------------------------------------------------- */
 
+static void sdl3_video_show_cursor(int enabled)
+{
+	if (enabled) sdl3_ShowCursor();
+	else sdl3_HideCursor();
+}
+
 static void sdl3_video_mousecursor_changed(void)
 {
 	const int vis = video_mousecursor_visible();
 
-	if (vis == MOUSE_SYSTEM) sdl3_ShowCursor();
-	else sdl3_HideCursor();
+	sdl3_video_show_cursor(vis == MOUSE_SYSTEM);
 
 	// Totally turn off mouse event sending when the mouse is disabled
 	bool evstate = !(vis == MOUSE_DISABLED);
@@ -691,12 +696,6 @@ static int sdl3_video_get_wm_data(video_wm_data_t *wm_data)
 
 	// maybe the real WM data was the friends we made along the way
 	return 0;
-}
-
-static void sdl3_video_show_cursor(int enabled)
-{
-	if (enabled) sdl3_ShowCursor();
-	else sdl3_HideCursor();
 }
 
 //////////////////////////////////////////////////////////////////////////////

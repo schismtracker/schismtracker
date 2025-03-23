@@ -30,61 +30,66 @@
 /* types of events delivered by the current backend */
 enum {
 	/* Application events */
-	SCHISM_QUIT           = 0x100, /* User-requested quit */
+	SCHISM_QUIT = 0x100, /* User-requested quit */
 
 	/* Window events */
-	SCHISM_WINDOWEVENT_SHOWN  = 0x200,
-	SCHISM_WINDOWEVENT_HIDDEN,
-	SCHISM_WINDOWEVENT_EXPOSED,
-	SCHISM_WINDOWEVENT_RESIZED,
-	SCHISM_WINDOWEVENT_SIZE_CHANGED,
-	SCHISM_WINDOWEVENT_FOCUS_GAINED,
-	SCHISM_WINDOWEVENT_FOCUS_LOST,
-
-	//SCHISM_SYSWMEVENT,             /* System specific event */
+	SCHISM_WINDOWEVENT_SHOWN = 0x200, /* The window has been shown */
+	SCHISM_WINDOWEVENT_HIDDEN, /* The window has been hidden */
+	SCHISM_WINDOWEVENT_EXPOSED, /* The window has been exposed and/or should be redrawn */
+	SCHISM_WINDOWEVENT_RESIZED, /* The window has been resized */
+	SCHISM_WINDOWEVENT_SIZE_CHANGED, /* The window size has changed */
+	SCHISM_WINDOWEVENT_ENTER, /* The mouse has entered the window */
+	SCHISM_WINDOWEVENT_LEAVE, /* The mouse has left the window */
+	SCHISM_WINDOWEVENT_FOCUS_GAINED, /* The window has gained keyboard focus */
+	SCHISM_WINDOWEVENT_FOCUS_LOST, /* The window has lost keyboard focus */
 
 	/* Keyboard events */
-	SCHISM_KEYDOWN        = 0x300, /* Key pressed */
-	SCHISM_KEYUP,                  /* Key released */
-	SCHISM_TEXTINPUT,              /* Keyboard text input, sent if it wasn't mapped to a keydown */
+	SCHISM_KEYDOWN = 0x300, /* Key pressed */
+	SCHISM_KEYUP, /* Key released */
+	SCHISM_TEXTINPUT, /* Keyboard text input, sent if it wasn't mapped to a keydown */
 
 	/* Mouse events */
-	SCHISM_MOUSEMOTION    = 0x400, /* Mouse moved */
-	SCHISM_MOUSEBUTTONDOWN,        /* Mouse button pressed */
-	SCHISM_MOUSEBUTTONUP,          /* Mouse button released */
-	SCHISM_MOUSEWHEEL,             /* Mouse wheel motion */
+	SCHISM_MOUSEMOTION = 0x400, /* Mouse moved */
+	SCHISM_MOUSEBUTTONDOWN, /* Mouse button pressed */
+	SCHISM_MOUSEBUTTONUP, /* Mouse button released */
+	SCHISM_MOUSEWHEEL, /* Mouse wheel motion */
 
 	/* Clipboard events */
-	SCHISM_CLIPBOARDUPDATE = 0x900,  /* The clipboard or primary selection changed */
+	SCHISM_CLIPBOARDUPDATE = 0x900, /* The clipboard or primary selection changed (I don't think this is actually used anywhere) */
 
 	/* Drag and drop */
-	SCHISM_DROPFILE        = 0x1000, /* The system requests a file open */
+	SCHISM_DROPFILE = 0x1000, /* The system requests a file open */
 
 	/* Audio hotplug */
 	SCHISM_AUDIODEVICEADDED = 0x1100, /* A new audio device is available */
-	SCHISM_AUDIODEVICEREMOVED,        /* An audio device has been removed. */
+	SCHISM_AUDIODEVICEREMOVED, /* An audio device has been removed */
 
 	/* Render events */
 	SCHISM_RENDER_TARGETS_RESET = 0x2000, /* The render targets have been reset and their contents need to be updated */
 	SCHISM_RENDER_DEVICE_RESET, /* The device has been reset and all textures need to be recreated */
 
 	/* Schism internal events */
-	SCHISM_EVENT_UPDATE_IPMIDI  = 0x3000,
-	SCHISM_EVENT_PLAYBACK,
-	SCHISM_EVENT_NATIVE_OPEN,
-	SCHISM_EVENT_NATIVE_SCRIPT,
-	SCHISM_EVENT_PASTE,
+	SCHISM_EVENT_UPDATE_IPMIDI = 0x3000, /* IPMIDI should rescan MIDI ports */
+	SCHISM_EVENT_PLAYBACK, /* The playback callback (audio_callback.c) has finished filling the buffer */
+	SCHISM_EVENT_NATIVE_OPEN, /* The operating system or window manager has requested a file open */
+	SCHISM_EVENT_NATIVE_SCRIPT, /* The operating system requests a specific action (see main.c for all available) */
+	SCHISM_EVENT_PASTE, /* A paste has been requested */
 
-	SCHISM_EVENT_MIDI_NOTE       = 0x4000,
-	SCHISM_EVENT_MIDI_CONTROLLER,
-	SCHISM_EVENT_MIDI_PROGRAM,
-	SCHISM_EVENT_MIDI_AFTERTOUCH,
-	SCHISM_EVENT_MIDI_PITCHBEND,
-	SCHISM_EVENT_MIDI_TICK,
-	SCHISM_EVENT_MIDI_SYSEX,
-	SCHISM_EVENT_MIDI_SYSTEM,
+	/* Internal MIDI events! */
+	SCHISM_EVENT_MIDI_NOTE = 0x4000, /* note on/off */
+	SCHISM_EVENT_MIDI_CONTROLLER, /* controller select */
+	SCHISM_EVENT_MIDI_PROGRAM, /* program select */
+	SCHISM_EVENT_MIDI_AFTERTOUCH, /* aftertouch */
+	SCHISM_EVENT_MIDI_PITCHBEND, /* pitchbend */
+	SCHISM_EVENT_MIDI_TICK, /* clock */
+	SCHISM_EVENT_MIDI_SYSEX, /* system exclusive message */
+	SCHISM_EVENT_MIDI_SYSTEM, /* some other system message */
 
-	SCHISM_EVENT_WM_MSG			 = 0x5000,
+	/* Window manager-specific message;
+	 *
+	 * Usually used to extend existing platforms (e.g. drag & drop on SDL 1.2),
+	 * or to implement other crap like menu bars etc */
+	SCHISM_EVENT_WM_MSG = 0x5000,
 };
 
 typedef struct {

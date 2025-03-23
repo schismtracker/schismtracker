@@ -191,7 +191,8 @@ void video_mousecursor(int vis)
 	switch (vis) {
 	case MOUSE_CYCLE_STATE:
 		vis = (video.mouse.visible + 1) % MOUSE_CYCLE_STATE;
-		/* fall through */
+
+		SCHISM_FALLTHROUGH;
 	case MOUSE_DISABLED:
 	case MOUSE_SYSTEM:
 	case MOUSE_EMULATED:

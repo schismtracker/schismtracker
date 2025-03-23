@@ -429,6 +429,14 @@ static void sdl2_pump_events(void)
 				schism_event.type = SCHISM_WINDOWEVENT_FOCUS_GAINED;
 				events_push_event(&schism_event);
 				break;
+			case SDL_WINDOWEVENT_ENTER:
+				schism_event.type = SCHISM_WINDOWEVENT_ENTER;
+				events_push_event(&schism_event);
+				break;
+			case SDL_WINDOWEVENT_LEAVE:
+				schism_event.type = SCHISM_WINDOWEVENT_LEAVE;
+				events_push_event(&schism_event);
+				break;
 			case SDL_WINDOWEVENT_RESIZED:
 				schism_event.type = SCHISM_WINDOWEVENT_RESIZED;
 				schism_event.window.data.resized.width = e.window.data1;

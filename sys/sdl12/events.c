@@ -250,7 +250,7 @@ static schism_scancode_t sdl12_scancode_trans(uint8_t sc)
 	case (0x1D - 8): return SCHISM_SCANCODE_Y;
 	case (0x34 - 8): return SCHISM_SCANCODE_Z;
 #elif defined(SCHISM_MACOSX)
-	/* Mac OS X */
+	/* Mac OS X (This is largely the same as Mac OS) */
 	case 0x1D: return SCHISM_SCANCODE_0;
 	case 0x12: return SCHISM_SCANCODE_1;
 	case 0x13: return SCHISM_SCANCODE_2;
@@ -261,13 +261,13 @@ static schism_scancode_t sdl12_scancode_trans(uint8_t sc)
 	case 0x1A: return SCHISM_SCANCODE_7;
 	case 0x1C: return SCHISM_SCANCODE_8;
 	case 0x19: return SCHISM_SCANCODE_9;
-	//case 0x00: return SCHISM_SCANCODE_A;
+	case 0x00: return SCHISM_SCANCODE_A;
 	case 0x27: return SCHISM_SCANCODE_APOSTROPHE;
 	case 0x0B: return SCHISM_SCANCODE_B;
 	case 0x2A: return SCHISM_SCANCODE_BACKSLASH;
 	case 0x33: return SCHISM_SCANCODE_BACKSPACE;
 	case 0x08: return SCHISM_SCANCODE_C;
-	//case 0x00: return SCHISM_SCANCODE_CAPSLOCK;
+	case 0x39: return SCHISM_SCANCODE_CAPSLOCK;
 	case 0x2B: return SCHISM_SCANCODE_COMMA;
 	case 0x02: return SCHISM_SCANCODE_D;
 	case 0x75: return SCHISM_SCANCODE_DELETE;
@@ -348,7 +348,7 @@ static schism_scancode_t sdl12_scancode_trans(uint8_t sc)
 	case 0x10: return SCHISM_SCANCODE_Y;
 	case 0x06: return SCHISM_SCANCODE_Z;
 #elif defined(SCHISM_MACOS)
-	// Taken from Inside Macintosh
+	/* Taken from Inside Macintosh */
 	case 0x35: return SCHISM_SCANCODE_ESCAPE;
 	case 0x7A: return SCHISM_SCANCODE_F1;
 	case 0x78: return SCHISM_SCANCODE_F2;
@@ -574,21 +574,23 @@ static schism_keymod_t sdl12_event_mod_state(void)
 	return sdl12_modkey_trans(sdl12_GetModState());
 }
 
-static Uint8 app_state = 0;
+static uint8_t app_state = 0;
 
 static void sdl12_pump_events(void)
 {
-	// SDL does send events for this, but they're broken on Windows,
-	// so we have to manually check for changes.
+	// SDL_ACTIVEEVENT is broken on Windows, and probably others too.
+	// This just brute forces the app state each time we pump events
+	// which fixes it (ugh)
 	{
-		Uint8 app_state_new = sdl12_GetAppState();
+		uint8_t app_state_new = sdl12_GetAppState();
 
 		static const struct {
-			Uint8 mask;
+			uint8_t mask;
 			uint32_t gain;
 			uint32_t lost;
 		} conv[] = {
 			{SDL_APPINPUTFOCUS, SCHISM_WINDOWEVENT_FOCUS_GAINED, SCHISM_WINDOWEVENT_FOCUS_LOST},
+			{SDL_APPMOUSEFOCUS, SCHISM_WINDOWEVENT_ENTER, SCHISM_WINDOWEVENT_LEAVE},
 			{SDL_APPACTIVE, SCHISM_WINDOWEVENT_SHOWN, SCHISM_WINDOWEVENT_HIDDEN},
 		};
 
@@ -625,23 +627,6 @@ static void sdl12_pump_events(void)
 			schism_event.type = SCHISM_WINDOWEVENT_EXPOSED;
 			events_push_event(&schism_event);
 			break;
-#if 0 // This is broken on Windows.
-		case SDL_ACTIVEEVENT:
-			switch (e.active.state) {
-			case SDL_APPINPUTFOCUS:
-				schism_event.type = (e.active.gain) ? SCHISM_WINDOWEVENT_FOCUS_GAINED : SCHISM_WINDOWEVENT_FOCUS_LOST;
-				printf("%d\n", (int)e.active.gain);
-				events_push_event(&schism_event);
-				break;
-			case SDL_APPACTIVE:
-				schism_event.type = (e.active.gain) ? SCHISM_WINDOWEVENT_SHOWN : SCHISM_WINDOWEVENT_HIDDEN;
-				events_push_event(&schism_event);
-				break;
-			default:
-				break;
-			}
-			break;
-#endif
 		case SDL_KEYDOWN:
 			schism_event.type = SCHISM_KEYDOWN;
 			schism_event.key.state = KEY_PRESS;

@@ -215,6 +215,14 @@ static void sdl3_pump_events(void)
 			schism_event.type = SCHISM_WINDOWEVENT_FOCUS_GAINED;
 			events_push_event(&schism_event);
 			break;
+		case SDL_EVENT_WINDOW_MOUSE_ENTER:
+			schism_event.type = SCHISM_WINDOWEVENT_ENTER;
+			events_push_event(&schism_event);
+			break;
+		case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+			schism_event.type = SCHISM_WINDOWEVENT_LEAVE;
+			events_push_event(&schism_event);
+			break;
 		case SDL_EVENT_WINDOW_RESIZED:
 			// the RESIZED event was changed in SDL 3 and now
 			// is basically what SDL_WINDOWEVENT_SIZE_CHANGED

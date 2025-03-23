@@ -388,6 +388,8 @@ SCHISM_NORETURN static void event_loop(void)
 	int button = -1;
 	struct key_event kk;
 
+	int keyboard_focus = 0;
+
 	fix_numlock_key = status.fix_numlock_setting;
 
 	downtrip = 0;
@@ -632,11 +634,21 @@ SCHISM_NORETURN static void event_loop(void)
 				};
 				break;
 			}
-			case SCHISM_WINDOWEVENT_SHOWN:
+			/* this logic sucks, but it does what should probably be considered the "right" thing to do */
 			case SCHISM_WINDOWEVENT_FOCUS_GAINED:
+				keyboard_focus = 1;
+				SCHISM_FALLTHROUGH;
+			case SCHISM_WINDOWEVENT_SHOWN:
 				video_mousecursor(MOUSE_RESET_STATE);
 				break;
+			case SCHISM_WINDOWEVENT_ENTER:
+				if (keyboard_focus)
+					video_mousecursor(MOUSE_RESET_STATE);
+				break;
 			case SCHISM_WINDOWEVENT_FOCUS_LOST:
+				keyboard_focus = 0;
+				SCHISM_FALLTHROUGH;
+			case SCHISM_WINDOWEVENT_LEAVE:
 				video_show_cursor(1);
 				break;
 			case SCHISM_WINDOWEVENT_RESIZED:
