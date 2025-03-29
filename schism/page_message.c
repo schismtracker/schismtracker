@@ -41,9 +41,6 @@
 #include "vgamem.h"
 #include "str.h"
 
-#include <ctype.h>
-#include <assert.h>
-
 /* --------------------------------------------------------------------- */
 
 static struct widget widgets_message[1];
@@ -83,7 +80,7 @@ static int get_nth_line(char *text, int n, char **ptr)
 {
 	char *tmp;
 
-	assert(text != NULL);
+	SCHISM_RUNTIME_ASSERT(text != NULL, "should never get a NULL pointer here");
 
 	*ptr = text;
 	while (n > 0) {

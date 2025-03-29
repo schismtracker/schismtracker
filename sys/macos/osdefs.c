@@ -429,7 +429,7 @@ static int get_app_file_name(char name[64])
 
 	process.highLongOfPSN = 0;
 	process.lowLongOfPSN  = kCurrentProcess;
-	process_info.processInfoLength = sizeof (process_info);
+	process_info.processInfoLength = sizeof(process_info);
 	process_info.processName    = NULL;
 	process_info.processAppSpec = &process_fsp;
 
@@ -437,7 +437,7 @@ static int get_app_file_name(char name[64])
 	   return 0;
 
 	/* should never ever happen */
-	assert(process_fsp.name[0] < 64);
+	SCHISM_RUNTIME_ASSERT(process_fsp.name[0] < 64, "GetProcessInformation() returned an invalid filename");
 
 	/* bogus warning here */
 	str_from_pascal(process_fsp.name, name);

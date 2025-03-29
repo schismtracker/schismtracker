@@ -45,6 +45,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
+#include <ctype.h>
 
 #include <errno.h>
 
@@ -385,8 +386,23 @@
 # define SCHISM_PRINTF_FORMAT_PARAM
 #endif
 
-// Static assertion. DO NOT use this within structure definitions!
-#if (__STDC_VERSION__ >= 201112L) || (SCHISM_GNUC_HAS_EXTENSION(c11_static_assert, 4, 6, 0))
+/* ------------------------------------------------------------------------ */
+/* Assertion */
+
+/* Runtime assertion. This abuses the fact that on many platforms, the
+ * condition that raised the assertion is printed. Generally this ought
+ * to be replaced with a function calling os_show_message_box and
+ * a message similar to the Win32 one. */
+#define SCHISM_RUNTIME_ASSERT(x, msg) \
+	do { \
+		/* Make sure the message is actually a string.. */ \
+		SCHISM_STATIC_ASSERT(sizeof((msg)[0]) == 1u, "Assertion message must be a string"); \
+		assert((msg) && (x)); \
+	} while (0) \
+
+/* Static assertion. DO NOT use this within structure definitions! */
+#if (__STDC_VERSION__ >= 201112L) \
+	|| (SCHISM_GNUC_HAS_EXTENSION(c11_static_assert, 4, 6, 0))
 # define SCHISM_STATIC_ASSERT(x, msg) _Static_assert(x, msg)
 #else
 /* should work anywhere and shouldn't dump random stack allocations

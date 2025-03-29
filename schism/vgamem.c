@@ -374,7 +374,7 @@ VGAMEM_SCANNER_VARIANT(32)
 
 void draw_char_unicode(uint32_t c, int x, int y, uint32_t fg, uint32_t bg)
 {
-	assert(x >= 0 && y >= 0 && x < 80 && y < 50);
+	SCHISM_RUNTIME_ASSERT(x >= 0 && y >= 0 && x < 80 && y < 50, "Coordinates should always be inbounds");
 
 	struct vgamem_char ch;
 	ch.font = VGAMEM_FONT_UNICODE;
@@ -387,7 +387,7 @@ void draw_char_unicode(uint32_t c, int x, int y, uint32_t fg, uint32_t bg)
 
 void draw_char_bios(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 {
-	assert(x >= 0 && y >= 0 && x < 80 && y < 50);
+	SCHISM_RUNTIME_ASSERT(x >= 0 && y >= 0 && x < 80 && y < 50, "Coordinates should always be inbounds");
 
 	struct vgamem_char ch;
 	ch.font = VGAMEM_FONT_BIOS;
@@ -400,7 +400,7 @@ void draw_char_bios(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 
 void draw_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 {
-	assert(x >= 0 && y >= 0 && x < 80 && y < 50);
+	SCHISM_RUNTIME_ASSERT(x >= 0 && y >= 0 && x < 80 && y < 50, "Coordinates should always be inbounds");
 
 	struct vgamem_char ch;
 
@@ -526,7 +526,7 @@ int draw_text_utf8_len(const char * text, int len, int x, int y, uint32_t fg, ui
 void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
 			   uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2)
 {
-	assert(x >= 0 && y >= 0 && x < 80 && y < 50);
+	SCHISM_RUNTIME_ASSERT(x >= 0 && y >= 0 && x < 80 && y < 50, "Coordinates should always be inbounds");
 
 	struct vgamem_char ch;
 	ch.font = VGAMEM_FONT_HALFWIDTH,

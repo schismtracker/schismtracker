@@ -34,8 +34,6 @@
 #include "keyboard.h"
 #include "str.h"
 
-#include <assert.h>
-
 /* --------------------------------------------------------------------- */
 
 static struct widget widgets_info[1];
@@ -640,7 +638,7 @@ static void info_draw_track_64(int base, int height, int active, int first_chann
 	/* IT draws nine more blank "channels" on the right */
 	int nchan = (status.flags & CLASSIC_MODE) ? 73 : 64;
 
-	assert(first_channel == 1);
+	SCHISM_RUNTIME_ASSERT(first_channel == 1, "Only 64 channels allowed; first channel must always be the real first channel.");
 
 	draw_box(4, base, nchan + 5, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 	for (chan = first_channel, chan_pos = 0; chan_pos < 64; chan++, chan_pos++) {
@@ -870,7 +868,7 @@ static void recalculate_windows(void)
 			num_windows = n;
 		}
 	}
-	assert(num_windows > 0);
+	SCHISM_RUNTIME_ASSERT(num_windows > 0, "Should always have at least one window.");
 	windows[n].height = 50 - pos;
 	_fix_channels(n);
 }

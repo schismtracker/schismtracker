@@ -209,10 +209,6 @@ static int load_alsa_syms(void) {
 	return 0;
 }
 
-/* see mixer-alsa.c */
-#undef assert
-#define assert(x)
-
 static void _alsa_drain(struct midi_port *p SCHISM_UNUSED)
 {
 	/* not port specific */

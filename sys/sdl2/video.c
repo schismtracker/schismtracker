@@ -420,7 +420,7 @@ static void sdl2_video_set_hardware(int hardware)
 			sdl2_DestroyRenderer(video.u.r.renderer);
 		break;
 	case VIDEO_TYPE_SURFACE:
-		assert(sdl2_HasWindowSurface(video.window));
+		SCHISM_RUNTIME_ASSERT(sdl2_HasWindowSurface(video.window), "Internal video type says surface, but the window doesn't have one");
 		sdl2_DestroyWindowSurface(video.window);
 		break;
 	case VIDEO_TYPE_UNINITIALIZED:
@@ -450,7 +450,7 @@ static void sdl2_video_set_hardware(int hardware)
 		video.u.r.renderer = sdl2_CreateRenderer(video.window, -1, (hardware) ? SDL_RENDERER_ACCELERATED : SDL_RENDERER_SOFTWARE);
 		if (!video.u.r.renderer)
 			video.u.r.renderer = sdl2_CreateRenderer(video.window, -1, 0); // welp
-		assert(!!video.u.r.renderer);
+		SCHISM_RUNTIME_ASSERT(!!video.u.r.renderer, "Failed to create a renderer!");
 		break;
 	case VIDEO_TYPE_UNINITIALIZED:
 		/* should never ever happen */
@@ -476,7 +476,7 @@ static void sdl2_video_shutdown(void)
 			sdl2_DestroyRenderer(video.u.r.renderer);
 		break;
 	case VIDEO_TYPE_SURFACE:
-		assert(sdl2_HasWindowSurface(video.window));
+		SCHISM_RUNTIME_ASSERT(sdl2_HasWindowSurface(video.window), "Internal video type says surface, but window doesn't have one");
 		sdl2_DestroyWindowSurface(video.window);
 		break;
 	case VIDEO_TYPE_UNINITIALIZED:

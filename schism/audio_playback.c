@@ -36,8 +36,6 @@
 #include "backend/audio.h"
 #include "events.h"
 
-#include <assert.h>
-
 #include "midi.h"
 
 #include "player/cmixer.h"
@@ -429,7 +427,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	int chan_internal = chan - 1;
 
 	// hm
-	assert(chan_internal < MAX_CHANNELS);
+	SCHISM_RUNTIME_ASSERT(chan_internal < MAX_CHANNELS, "This is surely a bug");
 
 	song_lock_audio();
 
@@ -1254,7 +1252,7 @@ void cfg_save_audio(cfg_file_t *cfg)
 
 static void _schism_midi_out_raw(song_t *csf, const unsigned char *data, uint32_t len, uint32_t pos)
 {
-	assert(current_song == csf); // AGH!
+	SCHISM_RUNTIME_ASSERT(current_song == csf, "Hardware MIDI out should only be processed for the current playing song"); // AGH!
 
 #ifdef SCHISM_MIDI_DEBUG
 	/* prints all of the raw midi messages into the terminal; useful for debugging output */

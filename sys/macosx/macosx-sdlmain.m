@@ -169,7 +169,7 @@ static int macosx_launched = 0; // FIXME this sucks
 		CFURLRef url = CFBundleCopyBundleURL(CFBundleGetMainBundle());
 		CFURLRef url2 = CFURLCreateCopyDeletingLastPathComponent(0, url);
 		if (CFURLGetFileSystemRepresentation(url2, true, (unsigned char *) parentdir, MAXPATHLEN)) {
-			assert ( chdir (parentdir) == 0 );   /* chdir to the binary app's parent */
+			SCHISM_RUNTIME_ASSERT(chdir (parentdir) == 0, "Failed to chdir to the .app parent directory");   /* This should never fail */
 		}
 		CFRelease(url);
 		CFRelease(url2);

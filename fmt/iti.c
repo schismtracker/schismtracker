@@ -31,8 +31,6 @@
 #include "version.h"
 #include "mem.h"
 
-#include <assert.h>
-
 /* -------------------------------------------------------- */
 
 struct it_envelope {
@@ -569,7 +567,7 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 		int64_t pos = disko_tell(fp);
 
 		// ack
-		assert(pos == 554);
+		SCHISM_RUNTIME_ASSERT(pos == 554, "ITI file headers should always be 554 bytes long");
 
 		/* okay, now go through samples */
 		for (int j = 0; j < iti_nalloc; j++) {

@@ -26,9 +26,6 @@
 #include "mem.h"
 #include "version.h"
 
-#include <locale.h>
-#include <assert.h>
-
 #define TOP_BANNER_CLASSIC "Impulse Tracker v2.14 Copyright (C) 1995-1998 Jeffrey Lim"
 
 /*

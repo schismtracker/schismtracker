@@ -214,7 +214,7 @@ void video_mousecursor(int vis)
 
 static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, uint32_t mouseline[80], uint32_t mouseline_mask[80], unsigned int mouse_y)
 {
-	struct mouse_cursor *cursor = &cursors[video.mouse.shape];
+	const struct mouse_cursor *cursor = &cursors[video.mouse.shape];
 
 	memset(mouseline,      0, 80 * sizeof(*mouseline));
 	memset(mouseline_mask, 0, 80 * sizeof(*mouseline));
@@ -229,12 +229,12 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 		return;
 	}
 
-	unsigned int scenter = (cursor->center_x / 8) + (cursor->center_x % 8 != 0);
-	unsigned int swidth  = (cursor->width    / 8) + (cursor->width    % 8 != 0);
-	unsigned int centeroffset = cursor->center_x % 8;
+	uint32_t scenter = (cursor->center_x / 8) + (cursor->center_x % 8 != 0);
+	uint32_t swidth  = (cursor->width    / 8) + (cursor->width    % 8 != 0);
+	uint32_t centeroffset = cursor->center_x % 8;
 
-	unsigned int z  = cursor->pointer[y - mouse_y + cursor->center_y];
-	unsigned int zm = cursor->mask[y - mouse_y + cursor->center_y];
+	uint32_t z  = cursor->pointer[y - mouse_y + cursor->center_y];
+	uint32_t zm = cursor->mask[y - mouse_y + cursor->center_y];
 
 	z <<= 8;
 	zm <<= 8;

@@ -30,7 +30,6 @@
 #include "backend/mt.h"
 
 #include <windows.h>
-#include <assert.h>
 
 #define MSVC_EXCEPTION_NAME_CODE UINT32_C(0x406D1388)
 
@@ -292,7 +291,7 @@ void win32_mutex_lock(mt_mutex_t *mutex)
 
 	switch (win32_mutex_impl) {
 	case WIN32_MUTEX_IMPL_MUTEX:
-		assert(WaitForSingleObject(mutex->impl.mutex, INFINITE) == WAIT_OBJECT_0);
+		SCHISM_RUNTIME_ASSERT(WaitForSingleObject(mutex->impl.mutex, INFINITE) == WAIT_OBJECT_0, "Mutex locks should never fail");
 		break;
 	case WIN32_MUTEX_IMPL_CRITICALSECTION:
 		KERNEL32_EnterCriticalSection(&mutex->impl.critsec);
@@ -303,7 +302,7 @@ void win32_mutex_lock(mt_mutex_t *mutex)
 			++mutex->impl.srwlock.count;
 		} else {
 			KERNEL32_AcquireSRWLockExclusive(&mutex->impl.srwlock.srw);
-			assert(!mutex->impl.srwlock.count && !mutex->impl.srwlock.owner);
+			SCHISM_RUNTIME_ASSERT(!mutex->impl.srwlock.count && !mutex->impl.srwlock.owner, "Mutex is not empty? Schism bug!");
 			mutex->impl.srwlock.count = 1;
 			mutex->impl.srwlock.owner = id;
 		}
@@ -318,7 +317,7 @@ void win32_mutex_unlock(mt_mutex_t *mutex)
 
 	switch (win32_mutex_impl) {
 	case WIN32_MUTEX_IMPL_MUTEX:
-		assert(ReleaseMutex(mutex->impl.mutex));
+		SCHISM_RUNTIME_ASSERT(ReleaseMutex(mutex->impl.mutex), "Mutex unlocks are assumed to never fail");
 		break;
 	case WIN32_MUTEX_IMPL_CRITICALSECTION:
 		KERNEL32_LeaveCriticalSection(&mutex->impl.critsec);
@@ -330,7 +329,7 @@ void win32_mutex_unlock(mt_mutex_t *mutex)
 				KERNEL32_ReleaseSRWLockExclusive(&mutex->impl.srwlock.srw);
 			}
 		} else {
-			assert(!"You are in a maze of twisty little passages, all alike.");
+			SCHISM_RUNTIME_ASSERT(0, "You are in a maze of twisty little passages, all alike.");
 		}
 		break;
 	}
@@ -503,7 +502,7 @@ static inline SCHISM_ALWAYS_INLINE int win32_cond_wait_vista_impl_(mt_cond_t *co
 		int result = KERNEL32_SleepConditionVariableSRW(&cond->impl.vista, &mutex->impl.srwlock.srw, timeout ? *timeout : INFINITE, 0);
 
 		// Mutex is always owned by us now
-		assert(!mutex->impl.srwlock.count && !mutex->impl.srwlock.owner);
+		SCHISM_RUNTIME_ASSERT(!mutex->impl.srwlock.count && !mutex->impl.srwlock.owner, "SRWlock should not have an internal owner after a condition variable wait");
 		mutex->impl.srwlock.count = 1;
 		mutex->impl.srwlock.owner = id;
 
