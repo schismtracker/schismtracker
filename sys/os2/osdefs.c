@@ -205,7 +205,7 @@ void os2_show_message_box(const char *title, const char *text, int style)
 	}
 
 	// untested:
-	WinMessageBox(HWND_DESKTOP, HWND_DESKTOP, sys_text, sys_title, 0L, MB_OK | MB_INFORMATION);
+	WinMessageBox(HWND_DESKTOP, HWND_DESKTOP, sys_text, sys_title, 0L, os2style);
 
 	free(sys_title);
 	free(sys_text);
