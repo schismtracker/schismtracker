@@ -102,7 +102,7 @@ void wii_sysinit(int *pargc, char ***pargv)
 	if (!*pargc || !*pargv) {
 		// loader didn't bother setting these
 		*pargc = 1;
-		*pargv = malloc(sizeof(char **));
+		*pargv = mem_alloc(sizeof(char **));
 		*pargv[0] = str_dup("?");
 	} else if (strchr(*pargv[0], '/') != NULL) {
 		// presumably launched from hbc menu - put stuff in the boot dir

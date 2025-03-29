@@ -418,8 +418,13 @@ void macosx_get_modkey(schism_keymod_t *mk) {
 		(*mk) |= SCHISM_KEYMOD_CAPS_PRESSED;
 }
 
-void macosx_show_message_box(const char *title, const char *text)
+void macosx_show_message_box(const char *title, const char *text, int style)
 {
+	const CFOptionFlags levels[] = {
+		[OS_MESSAGE_BOX_INFO] = kCFUserNotificationNoteAlertLevel,
+		[OS_MESSAGE_BOX_ERROR] = kCFUserNotificationStopAlertLevel,
+		[OS_MESSAGE_BOX_WARNING] = kCFUserNotificationCautionAlertLevel,
+	};
 	CFStringRef cfs_title, cfs_text;
 	CFOptionFlags flags;
 
@@ -427,7 +432,7 @@ void macosx_show_message_box(const char *title, const char *text)
 	if (cfs_title) {
 		cfs_text = CFStringCreateWithCString(kCFAllocatorDefault, text, kCFStringEncodingUTF8);
 		if (cfs_text) {
-			CFUserNotificationDisplayAlert(0, kCFUserNotificationNoteAlertLevel, NULL, NULL, NULL, cfs_title, cfs_text, NULL, NULL, NULL, &flags);
+			CFUserNotificationDisplayAlert(0, levels[style], NULL, NULL, NULL, cfs_title, cfs_text, NULL, NULL, NULL, &flags);
 			CFRelease(cfs_text);
 		}
 		CFRelease(cfs_title);

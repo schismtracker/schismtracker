@@ -128,11 +128,7 @@ struct event {
 
 static struct event *alloc_event(unsigned int pulse, uint8_t chan, const song_note_t *note, struct event *next)
 {
-	struct event *ev = malloc(sizeof(struct event));
-	if (!ev) {
-		perror("malloc");
-		return NULL;
-	}
+	struct event *ev = mem_alloc(sizeof(struct event));
 	ev->pulse = pulse;
 	ev->chan = chan;
 	ev->note = *note;

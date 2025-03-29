@@ -183,9 +183,10 @@ int os2_get_key_repeat(int *pdelay, int *prate)
 	return 1;
 }
 
-void os2_show_message_box(const char *title, const char *text)
+void os2_show_message_box(const char *title, const char *text, int style)
 {
 	char *sys_title, *sys_text;
+	USHORT os2style = MB_OK;
 
 	sys_title = charset_iconv_easy(title, CHARSET_UTF8, CHARSET_DOSCP);
 	if (!sys_title)
@@ -195,6 +196,12 @@ void os2_show_message_box(const char *title, const char *text)
 	if (!sys_text) {
 		free(sys_title);
 		return;
+	}
+
+	switch (style) {
+	case OS_MESSAGE_BOX_INFO: os2style |= MB_ICONASTERISK; break;
+	case OS_MESSAGE_BOX_ERROR: os2style |= MB_ICONHAND; break;
+	case OS_MESSAGE_BOX_WARNING: os2style |= MB_ICONEXCLAMATION; break;
 	}
 
 	// untested:

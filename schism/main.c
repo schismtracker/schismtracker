@@ -869,7 +869,7 @@ void schism_assert_fail(const char *msg, const char *exp, const char *file, int 
 
 	if (asprintf(&s, format, msg, file, line, exp) >= 0) {
 		/* Hopefully this doesn't fail */
-		os_show_message_box("Schism Tracker", s);
+		os_show_message_box("Assertion triggered!", s, OS_MESSAGE_BOX_ERROR);
 		free(s);
 	} else {
 		/* fall back to printing to stderr, I guess */
@@ -877,6 +877,9 @@ void schism_assert_fail(const char *msg, const char *exp, const char *file, int 
 		fputc('\n', stderr);
 	}
 
+	/* XXX should this use schism_exit ?
+	 * I mean, it's not like it's totally necessary to exit everything.
+	 * Especially if we're coming from mem.c or something. */
 	exit(1);
 }
 
@@ -971,21 +974,11 @@ int schism_main(int argc, char** argv)
 	}
 #endif
 
-	if (!mt_init()) {
-		os_show_message_box("Critical error!", "Failed to initialize a multithreading backend!");
-		return 1;
-	}
-
-	if (!timer_init()) {
-		os_show_message_box("Critical error!", "Failed to initialize a timers backend!");
-		return 1;
-	}
+	SCHISM_RUNTIME_ASSERT(mt_init(), "Failed to initialize a multithreading backend!");
+	SCHISM_RUNTIME_ASSERT(timer_init(), "Failed to initialize a timers backend!");
 
 #ifndef HAVE_LOCALTIME_R
-	if (!localtime_r_init()) {
-		os_show_message_box("Critical error!", "Failed to initialize localtime_r replacement!");
-		return 1;
-	}
+	SCHISM_RUNTIME_ASSERT(localtime_r_init(), "Failed to initialize localtime_r replacement!");
 #endif
 
 	song_initialise();
@@ -1048,7 +1041,7 @@ int schism_main(int argc, char** argv)
 		}
 	}
 
-	video_startup();
+	SCHISM_RUNTIME_ASSERT(video_startup(), "Failed to initialize video!");
 	if (want_fullscreen >= 0)
 		video_fullscreen(want_fullscreen);
 

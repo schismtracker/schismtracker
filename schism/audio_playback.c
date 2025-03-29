@@ -220,9 +220,7 @@ int refresh_audio_device_list(void) {
 
 	const uint32_t count = backend ? backend->device_count() : 0;
 
-	audio_device_list = malloc(count * sizeof(*audio_device_list));
-	if (!audio_device_list)
-		return 0;
+	audio_device_list = mem_alloc(count * sizeof(*audio_device_list));
 
 	for (uint32_t i = 0; i < count; i++) {
 		audio_device_list[i].id = i;

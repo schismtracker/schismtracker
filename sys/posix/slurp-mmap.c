@@ -37,7 +37,7 @@ static void munmap_slurp_(slurp_t *fp)
 int slurp_mmap(slurp_t *fp, const char *filename, size_t st)
 {
 	int fd = open(filename, O_RDONLY);
-	if (fd == -1) return 0;
+	if (fd == -1) return SLURP_OPEN_FAIL;
 
 	void *addr = mmap(NULL, st, PROT_READ, MAP_SHARED
 #if defined(MAP_POPULATE) && defined(MAP_NONBLOCK)
@@ -58,5 +58,5 @@ int slurp_mmap(slurp_t *fp, const char *filename, size_t st)
 	fp->internal.memory.data = addr;
 	fp->internal.memory.interfaces.mmap.fd = fd;
 
-	return 1;
+	return SLURP_OPEN_SUCCESS;
 }

@@ -128,7 +128,7 @@ int sdl3_init(void)
 		// the subsystems are initialized by the actual backends
 		int r = sdl3_Init(0);
 		if (!r) {
-			os_show_message_box("SDL3: SDL_Init failed!", sdl3_GetError());
+			os_show_message_box("SDL3: SDL_Init failed!", sdl3_GetError(), OS_MESSAGE_BOX_ERROR);
 			return 0;
 		}
 	}

@@ -91,12 +91,26 @@ void macos_get_modkey(schism_keymod_t *mk)
 
 /* ------------------------------------------------------------------------ */
 
-void macos_show_message_box(const char *title, const char *text)
+void macos_show_message_box(const char *title, const char *text, int style)
 {
-	// This converts the message to the HFS character set, which
-	// isn't necessarily the system character set, but whatever
+	const AlertType types[] = {
+		[OS_MESSAGE_BOX_INFO] = kAlertNoteAlert,
+		[OS_MESSAGE_BOX_ERROR] = kAlertStopAlert,
+		[OS_MESSAGE_BOX_WARNING] = kAlertCautionAlert,
+	};
+	AlertStdAlertParamRec rec;
 	unsigned char err[256], explanation[256];
 	int16_t hit;
+
+	rec.movable = 0; /* Nope */
+	rec.helpButton = 0;
+	rec.filterProc = NULL;
+	rec.defaultText = (StringPtr)-1; /* ...ok */
+	rec.cancelText = NULL;
+	rec.otherText = NULL;
+	rec.defaultButton = kAlertStdAlertOKButton;
+	rec.cancelButton = 0; /* don't have one */
+	rec.position = kWindowDefaultPosition;
 
 	{
 		char *ntitle = charset_iconv_easy(title, CHARSET_UTF8, CHARSET_SYSTEMSCRIPT);
@@ -110,7 +124,7 @@ void macos_show_message_box(const char *title, const char *text)
 		free(ntext);
 	}
 
-	StandardAlert(kAlertDefaultOKText, err, explanation, NULL, &hit);
+	StandardAlert(types[style], err, explanation, &rec, &hit);
 }
 
 /* ------------------------------------------------------------------------ */

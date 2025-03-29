@@ -971,14 +971,20 @@ void win32_toggle_menu(void *window, int on)
 
 /* -------------------------------------------------------------------- */
 
-void win32_show_message_box(const char *title, const char *text)
+void win32_show_message_box(const char *title, const char *text, int style)
 {
+	const DWORD styles[] = {
+		[OS_MESSAGE_BOX_INFO] = (MB_OK | MB_ICONINFORMATION),
+		[OS_MESSAGE_BOX_ERROR] = (MB_OK | MB_ICONERROR),
+		[OS_MESSAGE_BOX_WARNING] = (MB_OK | MB_ICONEXCLAMATION),
+	};
+
 #ifdef SCHISM_WIN32_COMPILE_ANSI
 	if (GetVersion() & UINT32_C(0x80000000)) {
 		char *title_a = NULL, *text_a = NULL;
 		if (!charset_iconv(title, &title_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)
 			&& !charset_iconv(text, &text_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
-			MessageBoxA(NULL, text_a, title_a, MB_OK | MB_ICONINFORMATION);
+			MessageBoxA(NULL, text_a, title_a, styles[style]);
 		free(title_a);
 		free(text_a);
 	} else
@@ -987,7 +993,7 @@ void win32_show_message_box(const char *title, const char *text)
 		wchar_t *title_w = NULL, *text_w = NULL;
 		if (!charset_iconv(title, &title_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)
 			&& !charset_iconv(text, &text_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			MessageBoxW(NULL, text_w, title_w, MB_OK | MB_ICONINFORMATION);
+			MessageBoxW(NULL, text_w, title_w, styles[style]);
 		free(title_w);
 		free(text_w);
 	}

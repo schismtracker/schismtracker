@@ -118,7 +118,7 @@ int sdl12_init(void)
 		// the subsystems are initialized by the actual backends
 		int r = sdl12_Init(0);
 		if (r < 0) {
-			os_show_message_box("Error initializing SDL 1.2:", sdl12_get_error());
+			os_show_message_box("Error initializing SDL 1.2:", sdl12_get_error(), OS_MESSAGE_BOX_ERROR);
 			return 0;
 		}
 	}

@@ -24,6 +24,7 @@
 #include "init.h"
 
 #include "headers.h"
+#include "osdefs.h" /* os_show_message_box */
 
 static int (SDLCALL *sdl2_Init)(Uint32 flags);
 static void (SDLCALL *sdl2_Quit)(void);
@@ -124,7 +125,7 @@ int sdl2_init(void)
 		/* the subsystems are initialized by the actual backends */
 		int r = sdl2_Init(0);
 		if (r < 0) {
-			fprintf(stderr, "SDL2: SDL_Init: %s\n", sdl2_GetError());
+			os_show_message_box("SDL2 failed to initialize!", sdl2_GetError(), OS_MESSAGE_BOX_ERROR);
 			return 0;
 		}
 	}

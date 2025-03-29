@@ -25,8 +25,7 @@
 
 #include "video.h" /* for declaration of xpmdata */
 #include "util.h"
-
-#include <ctype.h>
+#include "mem.h"
 
 /*
 ** This came from SDL_image's IMG_xpm.c
@@ -162,9 +161,7 @@ static struct color_hash *create_colorhash(int maxnum)
 
 	/* we know how many entries we need, so we can allocate
 	   everything here */
-	hash = malloc(sizeof *hash);
-	if(!hash)
-		return NULL;
+	hash = mem_alloc(sizeof *hash);
 
 	/* use power-of-2 sized hash table for decoding speed */
 	for(s = STARTING_HASH_SIZE; s < maxnum; s <<= 1)
@@ -172,14 +169,9 @@ static struct color_hash *create_colorhash(int maxnum)
 	hash->size = s;
 	hash->maxnum = maxnum;
 	bytes = hash->size * sizeof(struct hash_entry **);
-	hash->entries = NULL;   /* in case malloc fails */
-	hash->table = malloc(bytes);
-	if(!hash->table)
-		return NULL;
+	hash->table = mem_alloc(bytes);
 	memset(hash->table, 0, bytes);
-	hash->entries = malloc(maxnum * sizeof(struct hash_entry));
-	if(!hash->entries)
-		return NULL;
+	hash->entries = mem_alloc(maxnum * sizeof(struct hash_entry));
 	hash->next_free = hash->entries;
 	return hash;
 }
@@ -255,25 +247,13 @@ int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h)
 		goto done;
 	}
 
-	keystrings = malloc(ncolors * cpp);
-	if(!keystrings) {
-		error = 2;
-		goto done;
-	}
+	keystrings = mem_alloc(ncolors * cpp);
 	nextkey = keystrings;
 
-	*pixels = malloc(*w * *h * sizeof(*pixels));
-	if (!*pixels) {
-		error = 2;
-		goto done;
-	}
+	*pixels = mem_alloc(*w * *h * sizeof(*pixels));
 
 	/* Read the colors */
 	colors = create_colorhash(ncolors);
-	if (!colors) {
-		error = 2;
-		goto done;
-	}
 
 	for(n = 0; n < ncolors; ++n) {
 		const char *p;

@@ -58,14 +58,6 @@ static void win32_unmap_(slurp_t *slurp)
 	}
 }
 
-// This reader used to return -1 sometimes, which is kind of a hack to tell the
-// the rest of the loading code to try some other means of opening the file,
-// which on win32 is basically just fopen + malloc + fread. If MapViewOfFile
-// won't work, chances are pretty good that stdio is going to fail as well, so
-// I'm just writing these cases off as every bit as unrecoverable as if the
-// file didn't exist.
-// Note: this doesn't bother setting errno; maybe it should?
-
 static int win32_error_unmap_(slurp_t *slurp, const char *filename, const char *function, int val)
 {
 	DWORD err = GetLastError();
@@ -108,7 +100,7 @@ int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
 		// Windows 9x
 		char *filename_a;
 		if (charset_iconv(filename, &filename_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
-			return win32_error_unmap_(slurp, filename, "charset_iconv", 0);
+			return win32_error_unmap_(slurp, filename, "charset_iconv", SLURP_OPEN_FAIL);
 
 		slurp->internal.memory.interfaces.win32.file = CreateFileA(filename_a, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		free(filename_a);
@@ -117,14 +109,14 @@ int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
 	{
 		wchar_t *filename_w;
 		if (charset_iconv(filename, &filename_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			return win32_error_unmap_(slurp, filename, "charset_iconv", 0);
+			return win32_error_unmap_(slurp, filename, "charset_iconv", SLURP_OPEN_FAIL);
 
 		slurp->internal.memory.interfaces.win32.file = CreateFileW(filename_w, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		free(filename_w);
 	}
 
 	if (slurp->internal.memory.interfaces.win32.file == INVALID_HANDLE_VALUE)
-		return win32_error_unmap_(slurp, filename, "CreateFile", 0);
+		return win32_error_unmap_(slurp, filename, "CreateFile", SLURP_OPEN_FAIL);
 
 	// These functions are stubs on Windows 95 & 98, so simply ignore if
 	// they fail and fall back to the stdio implementation
@@ -132,16 +124,17 @@ int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
 
 	if (!slurp->internal.memory.interfaces.win32.mapping) {
 		win32_unmap_(slurp);
-		return -1;
+		return SLURP_OPEN_IGNORE;
 	}
 
 	slurp->internal.memory.data = MapViewOfFile(slurp->internal.memory.interfaces.win32.mapping, FILE_MAP_READ, 0, 0, 0);
 	if (!slurp->internal.memory.data) {
 		win32_unmap_(slurp);
-		return -1;
+		return SLURP_OPEN_IGNORE;
 	}
 
 	slurp->internal.memory.length = st;
 	slurp->closure = win32_unmap_;
-	return 1;
+
+	return SLURP_OPEN_SUCCESS;
 }

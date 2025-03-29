@@ -33,6 +33,11 @@ and possibly other files as well. Only one osdefs.c should be in use at a time. 
 /* need stat; TODO autoconf test */
 #include <sys/stat.h> /* roundabout way to get time_t */
 
+/* message box styles. */
+#define OS_MESSAGE_BOX_INFO     (0)
+#define OS_MESSAGE_BOX_ERROR    (1)
+#define OS_MESSAGE_BOX_WARNING  (2)
+
 /*
 os_sysinit: any platform-dependent setup that needs to occur directly upon startup.
 This code is processed right as soon as main() starts.
@@ -111,7 +116,16 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_get_locale_format(pdate, ptime) (0)
 #endif
 #ifndef os_show_message_box
-# define os_show_message_box(title, text) ((void)printf("%s: %s\n", title, text))
+static inline void msgbox_printf_impl(const char *title, const char *text, int style)
+{
+	const char *styles[] = {
+		[OS_MESSAGE_BOX_INFO] = "INFO",
+		[OS_MESSAGE_BOX_ERROR] = "ERROR",
+	};
+
+	printf("[%s] %s: %s", styles[style], title, text);
+}
+# define os_show_message_box(title, text, style) (msgbox_printf_impl(title, text, style))
 #endif
 
 /* Whether or not to compile ANSI variants of functions; we only actually do
@@ -138,17 +152,15 @@ void wii_sysexit(void); // close filesystem
 int win32_event(schism_event_t *event);
 void win32_sysinit(int *pargc, char ***pargv);
 void win32_sysexit(void);
-void win32_sdlinit(void);
 void win32_get_modkey(schism_keymod_t *m);
 void win32_filecreated_callback(const char *filename);
-void win32_toggle_menu(void* window, int on); // window should be a pointer to the window HWND
-int win32_stat(const char* path, struct stat* st);
-int win32_mkdir(const char* path, mode_t mode);
-FILE* win32_fopen(const char* path, const char* flags);
-#define win32_wmkdir(path, mode) _wmkdir(path)
+void win32_toggle_menu(void *window, int on); // window should be a pointer to the window HWND
+int win32_stat(const char *path, struct stat *st);
+int win32_mkdir(const char *path, mode_t mode);
+FILE* win32_fopen(const char *path, const char *flags);
 int win32_run_hook(const char *dir, const char *name, const char *maybe_arg);
 int win32_get_key_repeat(int *pdelay, int *prate);
-void win32_show_message_box(const char *title, const char *text);
+void win32_show_message_box(const char *title, const char *text, int style);
 int win32_audio_lookup_device_name(const void *nameguid, const uint32_t *waveoutdevid, char **result);
 int win32_ntver_atleast(int major, int minor, int build);
 
@@ -163,11 +175,11 @@ void macosx_sysinit(int *pargc, char ***pargv); /* set up ibook helper */
 void macosx_get_modkey(schism_keymod_t *m);
 int macosx_get_key_repeat(int *pdelay, int *prate);
 char *macosx_get_application_support_dir(void);
-void macosx_show_message_box(const char *title, const char *text);
+void macosx_show_message_box(const char *title, const char *text, int style);
 
 int macos_mkdir(const char *path, mode_t mode);
 int macos_stat(const char *file, struct stat *st);
-void macos_show_message_box(const char *title, const char *text);
+void macos_show_message_box(const char *title, const char *text, int style);
 void macos_sysinit(int *pargc, char ***pargv);
 void macos_get_modkey(schism_keymod_t *mk);
 
@@ -177,6 +189,6 @@ int os2_stat(const char* path, struct stat* st);
 int os2_mkdir(const char* path, mode_t mode);
 FILE* os2_fopen(const char* path, const char* flags);
 int os2_get_key_repeat(int *pdelay, int *prate);
-void os2_show_message_box(const char *title, const char *text);
+void os2_show_message_box(const char *title, const char *text, int style);
 
 #endif /* SCHISM_OSDEFS_H_ */

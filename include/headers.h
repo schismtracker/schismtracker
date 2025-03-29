@@ -378,10 +378,11 @@
 /* ------------------------------------------------------------------------ */
 /* Assertion */
 
-/* Runtime assertion. This abuses the fact that on many platforms, the
- * condition that raised the assertion is printed. Generally this ought
- * to be replaced with a function calling os_show_message_box and
- * a message similar to the Win32 one. */
+/* SCHISM_RUNTIME_ASSERT() is our replacement for the assert() macro in
+ * standard C. It essentially replicates the Visual C++ assertions, which
+ * show a message box with the line, file, etc.
+ * This version allows for custom messages to be printed as part of the
+ * assertion. */
 
 /* helper function, defined in main.c */
 SCHISM_NORETURN void schism_assert_fail(const char *msg, const char *exp, const char *file, int line);
