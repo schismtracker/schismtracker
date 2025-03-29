@@ -316,14 +316,16 @@
 /* Use this for functions that we'd like to not use anymore,
  * but for some reason or another (for example, a downstream
  * fork using it heavily) we have to keep it. */
-#if SCHISM_HAS_C23_ATTRIBUTE(deprecated)
-# define SCHISM_DEPRECATED [[deprecated]]
+#if SCHISM_HAS_C23_ATTRIBUTE(__deprecated__)
+# define SCHISM_DEPRECATED(msg) [[__deprecated__(msg)]]
+#elif SCHISM_GNUC_ATLEAST(4, 5, 0)
+# define SCHISM_DEPRECATED(msg) __attribute__((__deprecated__(msg)))
 #elif SCHISM_GNUC_HAS_ATTRIBUTE(__deprecated__, 3, 1, 0)
-# define SCHISM_DEPRECATED __attribute__((__deprecated__))
+# define SCHISM_DEPRECATED(msg) __attribute__((__deprecated__))
 #elif SCHISM_MSVC_ATLEAST(6, 0, 0)
-# define SCHISM_DEPRECATED __declspec(deprecated)
+# define SCHISM_DEPRECATED(msg) __declspec(deprecated(msg))
 #else
-# define SCHISM_DEPRECATED
+# define SCHISM_DEPRECATED(msg)
 #endif
 
 /* Used for functions that are "hot-spots" of the program.
