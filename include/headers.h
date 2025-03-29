@@ -210,8 +210,8 @@
  * default: ...; break;
  * }
  */
-#if SCHISM_HAS_C23_ATTRIBUTE(fallthrough)
-# define SCHISM_FALLTHROUGH [[fallthrough]]
+#if SCHISM_HAS_C23_ATTRIBUTE(__fallthrough__)
+# define SCHISM_FALLTHROUGH [[__fallthrough__]]
 #elif SCHISM_GNUC_HAS_ATTRIBUTE(__fallthrough__, 7, 0, 0)
 # define SCHISM_FALLTHROUGH __attribute__((__fallthrough__))
 #elif SCHISM_MSVC_ATLEAST(16, 5, 0)
@@ -222,8 +222,8 @@
 
 /* This is used for variables or parameters that are
  * known to be unused. */
-#if SCHISM_HAS_C23_ATTRIBUTE(maybe_unused)
-# define SCHISM_UNUSED [[maybe_unused]]
+#if SCHISM_HAS_C23_ATTRIBUTE(__maybe_unused__)
+# define SCHISM_UNUSED [[__maybe_unused__]]
 #elif SCHISM_GNUC_HAS_ATTRIBUTE(__unused__, 2, 7, 0)
 # define SCHISM_UNUSED __attribute__((__unused__))
 #else
@@ -248,8 +248,8 @@
  * and/or global variables. */
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__pure__, 2, 96, 0)
 # define SCHISM_PURE __attribute__((__pure__))
-#elif SCHISM_HAS_C23_ATTRIBUTE(reproducible)
-# define SCHISM_PURE [[reproducible]]
+#elif SCHISM_HAS_C23_ATTRIBUTE(__reproducible__)
+# define SCHISM_PURE [[__reproducible__]]
 #else
 # define SCHISM_PURE
 #endif
@@ -260,8 +260,8 @@
  * 3. return (i.e., never hang ever) */
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__const__, 2, 5, 0)
 # define SCHISM_CONST __attribute__((__const__))
-#elif SCHISM_HAS_C23_ATTRIBUTE(unsequenced)
-# define SCHISM_CONST [[unsequenced]]
+#elif SCHISM_HAS_C23_ATTRIBUTE(__unsequenced__)
+# define SCHISM_CONST [[__unsequenced__]]
 #elif SCHISM_MSVC_ATLEAST(8, 0, 0)
 # define SCHISM_CONST __declspec(noalias)
 #else
@@ -269,8 +269,8 @@
 #endif
 
 /* Used to declare a function that never returns. */
-#if SCHISM_HAS_C23_ATTRIBUTE(noreturn)
-# define SCHISM_NORETURN [[noreturn]]
+#if SCHISM_HAS_C23_ATTRIBUTE(__noreturn__)
+# define SCHISM_NORETURN [[__noreturn__]]
 #elif (__STDC_VERSION__ >= 201112L)
 # define SCHISM_NORETURN _Noreturn
 #elif SCHISM_GNUC_HAS_ATTRIBUTE(__noreturn__, 2, 5, 0)
