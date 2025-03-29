@@ -848,6 +848,38 @@ SCHISM_NORETURN static void event_loop(void)
 	schism_exit(0);
 }
 
+/* schism equivalent to built-in C assert() macro.
+ *
+ * In general this mimics the Visual C++ assert() implementation, which
+ * also tries (but seemingly fails) to include the current process name.
+ * We don't care about that, so we just give the file, line, and the
+ * expression that caused the assertion. */
+void schism_assert_fail(const char *msg, const char *exp, const char *file, int line)
+{
+	const char *format =
+		"Assertion failed: \"%s\".\n"
+		"\n"
+		"File: %s\n"
+		"Line: %d\n"
+		"\n"
+		"Expression: %s\n"
+		"\n"
+		"Schism Tracker will now terminate.";
+	char *s;
+
+	if (asprintf(&s, format, msg, file, line, exp) >= 0) {
+		/* Hopefully this doesn't fail */
+		os_show_message_box("Schism Tracker", s);
+		free(s);
+	} else {
+		/* fall back to printing to stderr, I guess */
+		fprintf(stderr, format, msg, file, line, exp);
+		fputc('\n', stderr);
+	}
+
+	exit(1);
+}
+
 void schism_exit(int x)
 {
 #if ENABLE_HOOKS

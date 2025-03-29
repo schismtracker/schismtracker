@@ -28,36 +28,26 @@
 void *mem_alloc(size_t amount)
 {
 	void *q = malloc(amount);
-	if (!q) {
-		/* throw out of memory exception */
-		perror("malloc");
-		exit(255);
-	}
+	SCHISM_RUNTIME_ASSERT(q, "Failed to allocate heap memory.");
 	return q;
 }
 
 void *mem_calloc(size_t nmemb, size_t size)
 {
-	void *q;
-	q = calloc(nmemb, size);
-	if (!q) {
-		/* throw out of memory exception */
-		perror("calloc");
-		exit(255);
-	}
+	void *q = calloc(nmemb, size);
+	SCHISM_RUNTIME_ASSERT(q, "Failed to allocate initialized heap memory.");
 	return q;
 }
 
 void *mem_realloc(void *orig, size_t amount)
 {
 	void *q;
-	if (!orig) return mem_alloc(amount);
+
+	if (!orig)
+		return mem_alloc(amount);
+
 	q = realloc(orig, amount);
-	if (!q) {
-		/* throw out of memory exception */
-		perror("malloc");
-		exit(255);
-	}
+	SCHISM_RUNTIME_ASSERT(q, "Failed to reallocate heap memory.");
 	return q;
 }
 

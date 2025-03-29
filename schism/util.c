@@ -29,7 +29,6 @@ extraneous libraries (i.e. GLib). */
 #include "osdefs.h"
 
 /* --------------------------------------------------------------------- */
-/* CONVERSION FUNCTIONS */
 
 /* This function is roughly equivalent to the mkstemp() function on POSIX
  * operating systems, but instead of returning a file descriptor it returns

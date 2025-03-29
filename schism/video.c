@@ -215,6 +215,11 @@ void video_mousecursor(int vis)
 static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, uint32_t mouseline[80], uint32_t mouseline_mask[80], unsigned int mouse_y)
 {
 	const struct mouse_cursor *cursor = &cursors[video.mouse.shape];
+	uint32_t i;
+
+	uint32_t scenter, swidth, centeroffset;
+	uint32_t z, zm;
+	uint32_t temp;
 
 	memset(mouseline,      0, 80 * sizeof(*mouseline));
 	memset(mouseline_mask, 0, 80 * sizeof(*mouseline));
@@ -229,12 +234,12 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 		return;
 	}
 
-	uint32_t scenter = (cursor->center_x / 8) + (cursor->center_x % 8 != 0);
-	uint32_t swidth  = (cursor->width    / 8) + (cursor->width    % 8 != 0);
-	uint32_t centeroffset = cursor->center_x % 8;
+	scenter = (cursor->center_x / 8) + (cursor->center_x % 8 != 0);
+	swidth  = (cursor->width    / 8) + (cursor->width    % 8 != 0);
+	centeroffset = cursor->center_x % 8;
 
-	uint32_t z  = cursor->pointer[y - mouse_y + cursor->center_y];
-	uint32_t zm = cursor->mask[y - mouse_y + cursor->center_y];
+	z  = cursor->pointer[y - mouse_y + cursor->center_y];
+	zm = cursor->mask[y - mouse_y + cursor->center_y];
 
 	z <<= 8;
 	zm <<= 8;
@@ -251,15 +256,15 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 	mouseline_mask[x] = zm >> (8 * (swidth - scenter + 1)) & 0xFF;
 
 	// draw the parts of the cursor sticking out to the left
-	unsigned int temp = (cursor->center_x < v) ? 0 : ((cursor->center_x - v) / 8) + ((cursor->center_x - v) % 8 != 0);
-	for (unsigned int i = 1; i <= temp && x >= i; i++) {
+	temp = (cursor->center_x < v) ? 0 : ((cursor->center_x - v) / 8) + ((cursor->center_x - v) % 8 != 0);
+	for (i = 1; i <= temp && x >= i; i++) {
 		mouseline[x-i]      = z  >> (8 * (swidth - scenter + 1 + i)) & 0xFF;
 		mouseline_mask[x-i] = zm >> (8 * (swidth - scenter + 1 + i)) & 0xFF;
 	}
 
 	// and to the right
 	temp = swidth - scenter + 1;
-	for (unsigned int i = 1; (i <= temp) && (x + i < 80); i++) {
+	for (i = 1; (i <= temp) && (x + i < 80); i++) {
 		mouseline[x+i]      = z  >> (8 * (swidth - scenter + 1 - i)) & 0xff;
 		mouseline_mask[x+i] = zm >> (8 * (swidth - scenter + 1 - i)) & 0xff;
 	}
@@ -408,7 +413,7 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 	unsigned int mouse_x, mouse_y;
 	video_get_mouse_coordinates(&mouse_x, &mouse_y);
 
-	const register int width_div_2 = (width / 2);
+	const int width_div_2 = (width / 2);
 	const unsigned int mouseline_x = (mouse_x / 8);
 	const unsigned int mouseline_v = (mouse_x % 8);
 	const int pad = pitch - (width * bpp);

@@ -76,17 +76,6 @@
 # define M_PI 3.1415926535897932384626433832795028841971
 #endif
 
-#ifdef HAVE_ASSERT_H
-# include <assert.h>
-#else
-# ifndef NDEBUG
-/* untested. does this work? */
-#  define assert(x) do { if (!(x)) { fprintf(stderr, "%s: assertion failed", #x); exit(1); } } while (0)
-# else
-#  define assert(x)
-# endif
-#endif
-
 #include <stdarg.h>
 #ifndef va_copy
 # ifdef __va_copy /* GNU */
@@ -393,11 +382,14 @@
  * condition that raised the assertion is printed. Generally this ought
  * to be replaced with a function calling os_show_message_box and
  * a message similar to the Win32 one. */
+
+/* helper function, defined in main.c */
+SCHISM_NORETURN void schism_assert_fail(const char *msg, const char *exp, const char *file, int line);
 #define SCHISM_RUNTIME_ASSERT(x, msg) \
 	do { \
 		/* Make sure the message is actually a string.. */ \
 		SCHISM_STATIC_ASSERT(sizeof((msg)[0]) == 1u, "Assertion message must be a string"); \
-		assert((msg) && (x)); \
+		if (!(x)) schism_assert_fail((msg), #x, __FILE__, __LINE__); \
 	} while (0) \
 
 /* Static assertion. DO NOT use this within structure definitions! */
