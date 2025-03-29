@@ -918,19 +918,30 @@ if test x$ADD_WARN \!= xno; then
 	project_CFLAGS="$ADD_WARN $project_CFLAGS"
 fi
 
+# SCHISM_CHECK_COMPILE_FLAG(FLAG)
+# -------------------------------
+AC_DEFUN([SCHISM_CHECK_COMPILE_FLAG], [
+	AC_MSG_CHECKING([for $1 support])
+	old_CFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS $1"
+	AC_COMPILE_IFELSE(
+		[AC_LANG_PROGRAM([[]], [[return 0;]])],
+		[have_compile_flag=yes],
+		[have_compile_flag=no])
+	AC_MSG_RESULT([$have_compile_flag])
+	if test "x$have_compile_flag" = "xno"; then
+		CFLAGS="$old_CFLAGS"
+	fi
+])
+
 dnl Unlike a grand -Werror, this one could be rather important:
 dnl functions returning random values are no good under any circumstances.
-AC_MSG_CHECKING([for -Werror=return-type support])
-old_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS -Werror=return-type"
-AC_COMPILE_IFELSE(
-	[AC_LANG_PROGRAM([[]], [[return 0;]])],
-	[have_error_return_type=yes],
-	[have_error_return_type=no])
-AC_MSG_RESULT([$have_error_return_type])
-if test "x$have_error_return_type" = "xno"; then
-	CFLAGS="$old_CFLAGS"
-fi
+SCHISM_CHECK_COMPILE_FLAG([-Werror=return-type])
+
+dnl GCC by default does not error for mesopotamian pre-ANSI C constructs
+dnl before GCC 14. Enforce C99 function and variable declarations.
+SCHISM_CHECK_COMPILE_FLAG([-Werror=implicit-int])
+SCHISM_CHECK_COMPILE_FLAG([-Werror=implicit-function-declaration])
 
 if test x$ADD_PROFILING \!= xno || test x$ADD_DEBUG \!= xno; then
 	project_CFLAGS="$project_CFLAGS -g -O0"

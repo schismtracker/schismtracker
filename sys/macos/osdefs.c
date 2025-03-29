@@ -34,6 +34,7 @@
 #include "str.h"
 #include "config.h"
 #include "config-parser.h"
+#include "mem.h"
 
 #include <Files.h>
 #include <Folders.h>
