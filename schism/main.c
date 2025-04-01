@@ -1041,7 +1041,7 @@ int schism_main(int argc, char** argv)
 		}
 	}
 
-	SCHISM_RUNTIME_ASSERT(video_startup(), "Failed to initialize video!");
+	SCHISM_RUNTIME_ASSERT(!video_startup(), "Failed to initialize video!");
 	if (want_fullscreen >= 0)
 		video_fullscreen(want_fullscreen);
 
