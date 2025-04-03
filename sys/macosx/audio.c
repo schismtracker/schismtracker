@@ -87,7 +87,7 @@ static const char *drivers[] = {
 	"coreaudio",
 };
 
-static int macosx_audio_driver_count()
+static int macosx_audio_driver_count(void)
 {
 	return ARRAY_SIZE(drivers);
 }
