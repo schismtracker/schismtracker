@@ -495,9 +495,9 @@ static int audio_driver_list_handle_key_on_list(struct key_event * k)
 
 /* --------------------------------------------------------------------- */
 
-static void save_config_now(SCHISM_UNUSED void *ign)
+static void save_config_now(void)
 {
-	/* TODO */
+	/* TODO */ /* uhhh, todo what? */
 	cfg_midipage_save(); /* what is this doing here? */
 	cfg_atexit_save();
 	cfg_save_output();
@@ -590,7 +590,7 @@ void preferences_load_page(struct page *page)
 	widget_create_button(widgets_preferences+i+12,
 			2, 44, 27,
 			i+10, i+12, i+12, i+13, i+13,
-			(void (*)(void)) save_config_now,
+			save_config_now,
 			"Save Output Configuration", 2);
 
 	widget_create_other(widgets_preferences+i+13, 0, audio_device_list_handle_key_on_list, NULL, audio_device_list_draw);
