@@ -918,6 +918,26 @@ if test x$ADD_WARN \!= xno; then
 	project_CFLAGS="$ADD_WARN $project_CFLAGS"
 fi
 
+if test x$ADD_PROFILING \!= xno || test x$ADD_DEBUG \!= xno; then
+	project_CFLAGS="$project_CFLAGS -g -O0"
+	project_OBJCFLAGS="$project_OBJCFLAGS -g -O0"
+	SDL_LIBS="$SDL_LIBS -g -O0"
+	AC_SUBST(SDL_LIBS)
+fi
+if test x$ADD_PROFILING \!= xno; then
+	project_CFLAGS="$project_CFLAGS -pg"
+	project_OBJCFLAGS="$project_OBJCFLAGS -pg"
+	SDL_LIBS="$SDL_LIBS -pg"
+	AC_SUBST(SDL_LIBS)
+fi
+
+AC_SUBST([project_CFLAGS])
+AC_SUBST([project_OBJCFLAGS])
+
+dnl --------------------------------------------------------------------------
+dnl We error on these things everywhere, simply because they make sense for
+dnl Schism's case.
+
 # SCHISM_CHECK_COMPILE_FLAG(FLAG)
 # -------------------------------
 AC_DEFUN([SCHISM_CHECK_COMPILE_FLAG], [
@@ -942,24 +962,17 @@ dnl GCC by default does not error for mesopotamian pre-ANSI C constructs
 dnl before GCC 14. Enforce C99 function and variable declarations.
 SCHISM_CHECK_COMPILE_FLAG([-Werror=implicit-int])
 SCHISM_CHECK_COMPILE_FLAG([-Werror=implicit-function-declaration])
+SCHISM_CHECK_COMPILE_FLAG([-Werror=old-style-declaration])
+SCHISM_CHECK_COMPILE_FLAG([-Werror=old-style-definition])
 
-if test x$ADD_PROFILING \!= xno || test x$ADD_DEBUG \!= xno; then
-	project_CFLAGS="$project_CFLAGS -g -O0"
-	project_OBJCFLAGS="$project_OBJCFLAGS -g -O0"
-	SDL_LIBS="$SDL_LIBS -g -O0"
-	AC_SUBST(SDL_LIBS)
-fi
-if test x$ADD_PROFILING \!= xno; then
-	project_CFLAGS="$project_CFLAGS -pg"
-	project_OBJCFLAGS="$project_OBJCFLAGS -pg"
-	SDL_LIBS="$SDL_LIBS -pg"
-	AC_SUBST(SDL_LIBS)
-fi
+dnl Error for misc. undefined behavior.
+SCHISM_CHECK_COMPILE_FLAG([-Werror=cast-function-type])
+SCHISM_CHECK_COMPILE_FLAG([-Werror=write-strings])
+SCHISM_CHECK_COMPILE_FLAG([-Werror=restrict])
+SCHISM_CHECK_COMPILE_FLAG([-Werror=overlength-strings])
 
 dnl --------------------------------------------------------------------------
 
-AC_SUBST([project_CFLAGS])
-AC_SUBST([project_OBJCFLAGS])
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 

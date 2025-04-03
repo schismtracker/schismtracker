@@ -106,7 +106,7 @@ static const char *drivers[] = {
 	"dsound",
 };
 
-static int dsound_audio_driver_count()
+static int dsound_audio_driver_count(void)
 {
 	return ARRAY_SIZE(drivers);
 }

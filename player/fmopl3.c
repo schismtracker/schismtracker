@@ -2200,7 +2200,7 @@ static void OPL3WriteReg(OPL3 *chip, int r, int v)
 }
 
 /* lock/unlock for common table */
-static int OPL3_LockTable()
+static int OPL3_LockTable(void)
 {
 	num_lock++;
 	if(num_lock>1) return 0;
