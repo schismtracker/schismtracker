@@ -966,10 +966,12 @@ SCHISM_CHECK_COMPILE_FLAG([-Werror=old-style-declaration])
 SCHISM_CHECK_COMPILE_FLAG([-Werror=old-style-definition])
 
 dnl Error for misc. undefined behavior.
-SCHISM_CHECK_COMPILE_FLAG([-Werror=cast-function-type])
 SCHISM_CHECK_COMPILE_FLAG([-Werror=write-strings])
 SCHISM_CHECK_COMPILE_FLAG([-Werror=restrict])
 SCHISM_CHECK_COMPILE_FLAG([-Werror=overlength-strings])
+
+dnl disable this for now, clang's implementation is incorrect  --paper
+dnl SCHISM_CHECK_COMPILE_FLAG([-Werror=cast-function-type])
 
 dnl --------------------------------------------------------------------------
 
