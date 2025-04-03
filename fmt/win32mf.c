@@ -760,7 +760,7 @@ static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 	if (!mfbytestream_new(&data->byte_stream, fp))
 		goto cleanup;
 
-	if (FAILED(IMFSourceResolver_CreateObjectFromByteStream(resolver, data->byte_stream, url, MF_RESOLUTION_MEDIASOURCE | MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE | MF_RESOLUTION_READ, NULL, &object_type, &unknown_media_source)))
+	if (FAILED(IMFSourceResolver_CreateObjectFromByteStream(resolver, data->byte_stream, url, MF_RESOLUTION_MEDIASOURCE | (!url ? MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE : 0) | MF_RESOLUTION_READ, NULL, &object_type, &unknown_media_source)))
 		goto cleanup;
 
 	if (object_type != MF_OBJECT_MEDIASOURCE)
