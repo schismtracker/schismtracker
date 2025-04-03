@@ -26,17 +26,18 @@
 #define WINVER 0x1000
 #define _WIN32_WINNT 0x1000
 
-#define COBJMACROS // Get C object macros
-
 #include "headers.h"
 
 #include "mt.h"
 #include "charset.h"
 #include "fmt.h"
 #include "util.h"
+#include "loadso.h"
 
 /* we want constant vtables */
 #define CONST_VTABLE
+/* ... and C-like macros */
+#define COBJMACROS
 
 /* include these first */
 #include <windows.h>
@@ -989,12 +990,12 @@ int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 
 /* ----------------------------------------------------------- */
 
-static HMODULE lib_ole32 = NULL;
-static HMODULE lib_shlwapi = NULL;
-static HMODULE lib_mf = NULL;
-static HMODULE lib_mfplat = NULL;
-static HMODULE lib_mfreadwrite = NULL;
-static HMODULE lib_propsys = NULL;
+static void *lib_ole32 = NULL;
+static void *lib_shlwapi = NULL;
+static void *lib_mf = NULL;
+static void *lib_mfplat = NULL;
+static void *lib_mfreadwrite = NULL;
+static void *lib_propsys = NULL;
 
 /* needs to be called once on startup */
 int win32mf_init(void)
@@ -1009,13 +1010,14 @@ int win32mf_init(void)
 
 #define LOAD_MF_LIBRARY(o) \
 	do { \
-		lib_ ## o = LoadLibraryA(#o ".dll"); \
+		lib_ ## o = loadso_object_load(#o ".dll"); \
 		if (!(lib_ ## o)) { DEBUG_PUTS("Failed to load library " #o "!"); goto fail; } \
 	} while (0)
 
 #define LOAD_MF_OBJECT(o, x) \
 	do { \
-		MF_##x = (MF_##x##Spec)GetProcAddress(lib_ ## o, #x); \
+		/* the first cast to `void (*)(void)` is simply to make gcc shut up */ \
+		MF_##x = (MF_##x##Spec)loadso_function_load(lib_ ## o, #x); \
 		if (!MF_##x) { DEBUG_PUTS("Failed to load " #x " from library " #o ".dll !"); goto fail; } \
 	} while (0)
 
@@ -1076,24 +1078,24 @@ int win32mf_init(void)
 
 fail:
 	if (lib_shlwapi)
-		FreeLibrary(lib_shlwapi);
+		loadso_object_unload(lib_shlwapi);
 
 	if (lib_mfplat)
-		FreeLibrary(lib_mfplat);
+		loadso_object_unload(lib_mfplat);
 
 	if (lib_mf)
-		FreeLibrary(lib_mf);
+		loadso_object_unload(lib_mf);
 
 	if (lib_mfreadwrite)
-		FreeLibrary(lib_mfreadwrite);
+		loadso_object_unload(lib_mfreadwrite);
 
 	if (lib_propsys)
-		FreeLibrary(lib_propsys);
+		loadso_object_unload(lib_propsys);
 
 	if (lib_ole32) {
 		if (com_initialized && MF_CoUninitialize)
 			MF_CoUninitialize();
-		FreeLibrary(lib_ole32);
+		loadso_object_unload(lib_ole32);
 	}
 
 	return 0;
@@ -1108,20 +1110,20 @@ void win32mf_quit(void)
 	MF_CoUninitialize();
 
 	if (lib_shlwapi)
-		FreeLibrary(lib_shlwapi);
+		loadso_object_unload(lib_shlwapi);
 
 	if (lib_mfplat)
-		FreeLibrary(lib_mfplat);
+		loadso_object_unload(lib_mfplat);
 
 	if (lib_mf)
-		FreeLibrary(lib_mf);
+		loadso_object_unload(lib_mf);
 
 	if (lib_mfreadwrite)
-		FreeLibrary(lib_mfreadwrite);
+		loadso_object_unload(lib_mfreadwrite);
 
 	if (lib_propsys)
-		FreeLibrary(lib_propsys);
+		loadso_object_unload(lib_propsys);
 
 	if (lib_ole32)
-		FreeLibrary(lib_ole32);
+		loadso_object_unload(lib_ole32);
 }
