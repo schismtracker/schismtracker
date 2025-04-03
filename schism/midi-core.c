@@ -370,6 +370,24 @@ int midi_engine_port_count(void)
 }
 
 /* ------------------------------------------------------------- */
+
+struct midi_provider_thread_info {
+	const struct midi_driver *d;
+	struct midi_provider *n;
+};
+
+int midi_provider_thread_func(void *z)
+{
+	struct midi_provider_thread_info *i = z;
+
+	const struct midi_driver *d = i->d;
+	struct midi_provider *n = i->n;
+
+	free(i);
+
+	return d->thread(n);
+}
+
 /* midi engines register a provider (one each!) */
 struct midi_provider *midi_provider_register(const char *name,
 	const struct midi_driver *driver)
@@ -395,8 +413,14 @@ struct midi_provider *midi_provider_register(const char *name,
 	n->next = port_providers;
 	port_providers = n;
 
-	if (driver->thread)
-		n->thread = mt_thread_create((int (*)(void*))driver->thread, n->name, n);
+	if (driver->thread) {
+		struct midi_provider_thread_info *i = mem_alloc(sizeof(*i));
+
+		i->d = driver;
+		i->n = n;
+
+		n->thread = mt_thread_create(midi_provider_thread_func, n->name, i);
+	}
 
 	mt_mutex_unlock(midi_mutex);
 
