@@ -1827,11 +1827,11 @@ void show_song_timejump(void)
 	_timejump_widgets[0].d.numentry.handle_unknown_key = _timejump_keyh;
 	_timejump_widgets[0].d.numentry.reverse = 1;
 	_timejump_widgets[1].d.numentry.reverse = 1;
-	widget_create_button(_timejump_widgets+2, 30, 29, 8, 0, 2, 2, 3, 3, _timejump_ok_ptr, "OK", 4);
+	widget_create_button(_timejump_widgets+2, 30, 29, 8, 0, 2, 2, 3, 3, _timejump_ok, "OK", 4);
 	widget_create_button(_timejump_widgets+3, 42, 29, 8, 1, 3, 3, 3, 0, dialog_cancel_NULL, "Cancel", 2);
 	d = dialog_create_custom(26, 24, 30, 8, _timejump_widgets, 4, 0, _timejump_draw, NULL);
 	d->handle_key = _timejump_keyh;
-	d->action_yes = _timejump_ok;
+	d->action_yes = _timejump_ok_ptr;
 }
 
 void show_length_dialog(const char *label, unsigned int length)
