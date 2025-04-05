@@ -34,6 +34,7 @@
 
 #include <FLAC/stream_decoder.h>
 #include <FLAC/stream_encoder.h>
+#include <FLAC/metadata.h>
 
 /* used by reading functions */
 static FLAC__StreamDecoder * (*schism_FLAC_stream_decoder_new)(void);
