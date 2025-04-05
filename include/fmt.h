@@ -188,13 +188,26 @@ enum {
 
 int iff_chunk_peek_ex(iff_chunk_t *chunk, slurp_t *fp, uint32_t flags);
 
-// provided for convenience
+/* provided for convenience */
 #define iff_chunk_peek(chunk, fp) iff_chunk_peek_ex(chunk, fp, IFF_CHUNK_ALIGNED)
 #define riff_chunk_peek(chunk, fp) iff_chunk_peek_ex(chunk, fp, IFF_CHUNK_ALIGNED | IFF_CHUNK_SIZE_LE)
 
 int iff_chunk_read(iff_chunk_t *chunk, slurp_t *fp, void *data, size_t size);
 int iff_read_sample(iff_chunk_t *chunk, slurp_t *fp, song_sample_t *smp, uint32_t flags, size_t offset);
 int iff_chunk_receive(iff_chunk_t *chunk, slurp_t *fp, int (*callback)(const void *, size_t, void *), void *userdata);
+
+/* functions to deal with IFF chunks containing sample info */
+
+/* chunk id (4), length (4), flags (4), pan (2), vol (2) */
+#define IFF_XTRA_CHUNK_SIZE 16
+/* hm */
+#define IFF_SMPL_CHUNK_SIZE 68
+
+void iff_fill_xtra_chunk(song_sample_t *smp, unsigned char xtra_data[IFF_XTRA_CHUNK_SIZE], uint32_t *length);
+void iff_fill_smpl_chunk(song_sample_t *smp, unsigned char smpl_data[IFF_SMPL_CHUNK_SIZE], uint32_t *length);
+
+int iff_read_xtra_chunk(slurp_t *fp, song_sample_t *smp);
+int iff_read_smpl_chunk(slurp_t *fp, song_sample_t *smp);
 
 /* --------------------------------------------------------------------------------------------------------- */
 // other misc functions...

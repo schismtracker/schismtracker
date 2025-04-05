@@ -143,7 +143,7 @@ static int wav_chunk_fmt_read(const void *data, size_t size, void *void_fmt)
 
 static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 {
-	iff_chunk_t fmt_chunk = {0}, data_chunk = {0};
+	iff_chunk_t fmt_chunk = {0}, data_chunk = {0}, smpl_chunk = {0}, xtra_chunk = {0};
 	wave_format_t fmt;
 	wave_file_header_t phdr;
 
@@ -174,6 +174,12 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 				return 0;
 
 			data_chunk = c;
+			break;
+		case UINT32_C(0x61727478): /* "xtra" */
+			xtra_chunk = c;
+			break;
+		case UINT32_C(0x6C706D73): /* "smpl" */
+			smpl_chunk = c;
 			break;
 		default:
 			break;
@@ -220,6 +226,17 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 	smp->c5speed       = fmt.freqHz;
 	smp->length        = data_chunk.size / ((fmt.bitspersample / 8) * fmt.channels);
 
+	/* if we have XTRA or SMPL chunks, fill them in as well. */
+	if (xtra_chunk.id) {
+		slurp_seek(fp, xtra_chunk.offset, SEEK_SET);
+		iff_read_xtra_chunk(fp, smp);
+	}
+
+	if (smpl_chunk.id) {
+		slurp_seek(fp, smpl_chunk.offset, SEEK_SET);
+		iff_read_smpl_chunk(fp, smp);
+	}
+
 	if (load_sample) {
 		return iff_read_sample(&data_chunk, fp, smp, flags, 0);
 	} else {
@@ -246,9 +263,11 @@ int fmt_wav_read_info(dmoz_file_t *file, slurp_t *fp)
 	if (!wav_load(&smp, fp, 0))
 		return 0;
 
-	file->smp_flags  = smp.flags;
-	file->smp_speed  = smp.c5speed;
-	file->smp_length = smp.length;
+	file->smp_flags      = smp.flags;
+	file->smp_speed      = smp.c5speed;
+	file->smp_length     = smp.length;
+	file->smp_loop_start = smp.loop_start;
+	file->smp_loop_end   = smp.loop_end;
 
 	file->description  = "IBM/Microsoft RIFF Audio";
 	file->type         = TYPE_SAMPLE_PLAIN;
@@ -304,12 +323,13 @@ static int wav_header(disko_t *fp, int bits, int channels, int rate, size_t leng
 
 int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
 {
-	if (smp->flags & CHN_ADLIB)
-		return SAVE_UNSUPPORTED;
-
 	int bps;
 	uint32_t ul;
 	uint32_t flags = SF_LE;
+
+	if (smp->flags & CHN_ADLIB)
+		return SAVE_UNSUPPORTED;
+
 	flags |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU);
 	flags |= (smp->flags & CHN_STEREO) ? SF_SI : SF_M;
 
@@ -319,6 +339,24 @@ int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
 	if (csf_write_sample(fp, smp, flags, UINT32_MAX) != smp->length * bps) {
 		log_appendf(4, "WAV: unexpected data size written");
 		return SAVE_INTERNAL_ERROR;
+	}
+
+	{
+		unsigned char xtra[IFF_XTRA_CHUNK_SIZE];
+		uint32_t length;
+
+		iff_fill_xtra_chunk(smp, xtra, &length);
+
+		disko_write(fp, xtra, length);
+	}
+
+	{
+		unsigned char smpl[IFF_SMPL_CHUNK_SIZE];
+		uint32_t length;
+
+		iff_fill_smpl_chunk(smp, smpl, &length);
+
+		disko_write(fp, smpl, length);
 	}
 
 	/* fix the length in the file header */

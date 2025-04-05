@@ -60,7 +60,14 @@ static FLAC__StreamEncoderInitStatus (*schism_FLAC_stream_encoder_init_stream)(F
 static FLAC__bool (*schism_FLAC_stream_encoder_process_interleaved)(FLAC__StreamEncoder *encoder, const FLAC__int32 buffer[], uint32_t samples);
 static FLAC__bool (*schism_FLAC_stream_encoder_finish)(FLAC__StreamEncoder *encoder);
 static void (*schism_FLAC_stream_encoder_delete)(FLAC__StreamEncoder *encoder);
+static FLAC__bool (*schism_FLAC_stream_encoder_set_metadata)(FLAC__StreamEncoder *encoder, FLAC__StreamMetadata **metadata, uint32_t num_blocks);
+static FLAC__StreamEncoderState (*schism_FLAC_stream_encoder_get_state)(const FLAC__StreamEncoder *encoder);
 static const char *const *schism_FLAC_StreamEncoderInitStatusString;
+static const char *const *schism_FLAC_StreamEncoderStateString;
+
+static FLAC__StreamMetadata *(*schism_FLAC_metadata_object_new)(FLAC__MetadataType type); 	
+static void (*schism_FLAC_metadata_object_delete)(FLAC__StreamMetadata *object); 	
+static FLAC__bool (*schism_FLAC_metadata_object_application_set_data)(FLAC__StreamMetadata *object, FLAC__byte *data, uint32_t length, FLAC__bool copy);
 
 static FLAC__bool (*schism_FLAC_format_sample_rate_is_subset)(uint32_t sample_rate);
 
@@ -181,70 +188,12 @@ static void read_on_meta(SCHISM_UNUSED const FLAC__StreamDecoder *decoder, const
 			chunk_len = bswapLE32(chunk_len);
 
 			switch (chunk_id) {
-			case UINT32_C(0x61727478): { /* "xtra" */
-				uint32_t xtra_flags;
-				uint16_t vol;
-
-				if (slurp_read(&app_fp, &xtra_flags, 4) != 4)
-					break;
-
-				xtra_flags = bswapLE32(xtra_flags);
-
-				if (xtra_flags & 0x20) {
-					uint16_t pan;
-
-					if (slurp_read(&app_fp, &pan, 2) != 2)
-						break;
-
-					pan = bswapLE16(pan);
-
-					read_data->smp->panning = MIN(pan, 255);
-					read_data->smp->flags |= CHN_PANNING;
-				}
-
-				if (slurp_read(&app_fp, &vol, 2) != 2)
-					break;
-
-				vol = bswapLE16(vol);
-				vol = ((vol + 2) / 4) * 4; // round to nearest multiple of 64
-
-				read_data->smp->volume = MIN(vol, 256);
-
+			case UINT32_C(0x61727478): /* "xtra" */
+				iff_read_xtra_chunk(&app_fp, read_data->smp);
 				break;
-			}
-			case UINT32_C(0x6C706D73): { /* "smpl" */
-				uint32_t num_loops;
-
-				slurp_seek(&app_fp, 28, SEEK_CUR);
-
-				if (slurp_read(&app_fp, &num_loops, 4) != 4)
-					break;
-
-				num_loops = bswapLE32(num_loops);
-
-				if (num_loops == 1) {
-					uint32_t type, start, end;
-
-					/* skip "samplerData" and "identifier" */
-					slurp_seek(&app_fp, 8, SEEK_CUR);
-
-					if (slurp_read(&app_fp, &type, 4) != 4
-						|| slurp_read(&app_fp, &start, 4) != 4
-						|| slurp_read(&app_fp, &end, 4) != 4) break;
-					type = bswapLE32(type);
-					start = bswapLE32(start);
-					end = bswapLE32(end);
-
-					/* this is an ultra giga mega guesstimate */
-					read_data->smp->flags |= CHN_LOOP;
-					if (type) read_data->smp->flags |= CHN_PINGPONGLOOP;
-
-					read_data->smp->loop_start = start;
-					read_data->smp->loop_end = end + 1; /* old code did this... */
-				}
-				
+			case UINT32_C(0x6C706D73): /* "smpl" */
+				iff_read_smpl_chunk(&app_fp, read_data->smp);
 				break;
-			}
 			default:
 				break;
 			}
@@ -525,7 +474,7 @@ static FLAC__StreamEncoderTellStatus write_on_tell(SCHISM_UNUSED const FLAC__Str
 	return FLAC__STREAM_ENCODER_TELL_STATUS_OK;
 }
 
-static int flac_save_init(disko_t *fp, int bits, int channels, int rate, int estimate_num_samples)
+static inline int flac_save_init_head(disko_t *fp, int bits, int channels, int rate, int estimate_num_samples)
 {
 	if (!flac_wasinit)
 		return -9;
@@ -566,6 +515,15 @@ static int flac_save_init(disko_t *fp, int bits, int channels, int rate, int est
 	if (!schism_FLAC_stream_encoder_set_verify(fwd->encoder, false))
 		return -7;
 
+	fp->userdata = fwd;
+
+	return 0;
+}
+
+static inline int flac_save_init_tail(disko_t *fp)
+{
+	struct flac_writedata *fwd = fp->userdata;
+
 	FLAC__StreamEncoderInitStatus init_status = schism_FLAC_stream_encoder_init_stream(
 		fwd->encoder,
 		write_on_write,
@@ -581,7 +539,13 @@ static int flac_save_init(disko_t *fp, int bits, int channels, int rate, int est
 		return -8;
 	}
 
-	fp->userdata = fwd;
+	return 0;
+}
+
+static int flac_save_init(disko_t *fp, int bits, int channels, int rate, int estimate_num_samples)
+{
+	if (flac_save_init_head(fp, bits, channels, rate, estimate_num_samples) || flac_save_init_tail(fp))
+		return -1;
 
 	return 0;
 }
@@ -603,11 +567,11 @@ int fmt_flac_export_body(disko_t *fp, const uint8_t *data, size_t length)
 		if (!schism_FLAC_stream_encoder_process_interleaved(fwd->encoder, (FLAC__int32 *)data, length / (4 * fwd->channels)))
 			return DW_ERROR;
 	} else {
-		FLAC__int32 *pcm = mem_alloc(length);
+		FLAC__int32 *pcm = mem_alloc(length * 4);
 
 		/* 8-bit/16-bit PCM -> 32-bit PCM */
 		size_t i;
-		for (i = 0; i < SCHISM_VLA_LENGTH(pcm); i++) {
+		for (i = 0; i < length; i++) {
 			switch (bytes_per_sample) {
 			case 1: pcm[i] = (FLAC__int32)(((const int8_t*)data)[i]); break;
 			case 2: pcm[i] = (FLAC__int32)(((const int16_t*)data)[i]); break;
@@ -656,24 +620,75 @@ int fmt_flac_export_tail(disko_t *fp)
 
 int fmt_flac_save_sample(disko_t *fp, song_sample_t *smp)
 {
+	struct flac_writedata *fwd;
+
+	/* metadata structures & the amount */
+	FLAC__StreamMetadata *metadata_ptrs[2] = {0};
+	uint32_t num_metadata = 0, i;
+
+	/* these are the actual data to be put in the metadata structures */
+	
+	/*unsigned char smpl_data[]*/
+
 	if (smp->flags & CHN_ADLIB)
 		return SAVE_UNSUPPORTED;
 
-	if (flac_save_init(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1, smp->c5speed, smp->length))
+	if (flac_save_init_head(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1, smp->c5speed, smp->length))
 		return SAVE_INTERNAL_ERROR;
 
-	/* need to buffer this or else we'll make a HUGE array when
-	 * saving huge samples */
+	/* okay, now we have to hijack the writedata, so we can set metadata */
+	fwd = fp->userdata;
+
+	metadata_ptrs[num_metadata] = schism_FLAC_metadata_object_new(FLAC__METADATA_TYPE_APPLICATION);
+	if (metadata_ptrs[num_metadata]) {
+		uint32_t length;
+		unsigned char xtra[IFF_XTRA_CHUNK_SIZE];
+
+		iff_fill_xtra_chunk(smp, xtra, &length);
+
+		/* now shove it into the metadata */
+		if (schism_FLAC_metadata_object_application_set_data(metadata_ptrs[num_metadata], xtra, length, 1))
+			num_metadata++;
+	}
+
+	metadata_ptrs[num_metadata] = schism_FLAC_metadata_object_new(FLAC__METADATA_TYPE_APPLICATION);
+	if (metadata_ptrs[num_metadata]) {
+		uint32_t length;
+		unsigned char smpl[IFF_SMPL_CHUNK_SIZE];
+
+		iff_fill_smpl_chunk(smp, smpl, &length);
+
+		if (schism_FLAC_metadata_object_application_set_data(metadata_ptrs[num_metadata], smpl, length, 1))
+			num_metadata++;
+	}
+
+	if (!schism_FLAC_stream_encoder_set_metadata(fwd->encoder, metadata_ptrs, num_metadata)) {
+		log_appendf(4, " FLAC__stream_encoder_set_metadata: %s", schism_FLAC_StreamEncoderStateString[schism_FLAC_stream_encoder_get_state(fwd->encoder)]);
+		return SAVE_INTERNAL_ERROR;
+	}
+
+	if (flac_save_init_tail(fp)) {
+		log_appendf(4, " flac_save_init_tail: %s", schism_FLAC_StreamEncoderStateString[schism_FLAC_stream_encoder_get_state(fwd->encoder)]);
+		return SAVE_INTERNAL_ERROR;
+	}
+
+	/* buffer this */
 	size_t offset;
 	const size_t total_bytes = smp->length * ((smp->flags & CHN_16BIT) ? 2 : 1) * ((smp->flags & CHN_STEREO) ? 2 : 1);
 	for (offset = 0; offset < total_bytes; offset += SAMPLE_BUFFER_LENGTH) {
 		size_t needed = total_bytes - offset;
-		if (fmt_flac_export_body(fp, (uint8_t*)smp->data + offset, MIN(needed, SAMPLE_BUFFER_LENGTH)) != DW_OK)
+		if (fmt_flac_export_body(fp, (uint8_t*)smp->data + offset, MIN(needed, SAMPLE_BUFFER_LENGTH)) != DW_OK) {
+			log_appendf(4, " fmt_flac_export_body: %s", schism_FLAC_StreamEncoderStateString[schism_FLAC_stream_encoder_get_state(fwd->encoder)]);
 			return SAVE_INTERNAL_ERROR;
+		}
 	}
 
 	if (fmt_flac_export_tail(fp) != DW_OK)
 		return SAVE_INTERNAL_ERROR;
+
+	/* cleanup the metadata crap */
+	for (i = 0; i < num_metadata; i++)
+		schism_FLAC_metadata_object_delete(metadata_ptrs[i]);
 
 	return SAVE_SUCCESS;
 }
@@ -767,7 +782,14 @@ static int load_flac_syms(void)
 	SCHISM_FLAC_SYM(stream_encoder_process_interleaved);
 	SCHISM_FLAC_SYM(stream_encoder_finish);
 	SCHISM_FLAC_SYM(stream_encoder_delete);
+	SCHISM_FLAC_SYM(stream_encoder_set_metadata);
+	SCHISM_FLAC_SYM(stream_encoder_get_state);
 	SCHISM_FLAC_SYM(StreamEncoderInitStatusString);
+	SCHISM_FLAC_SYM(StreamEncoderStateString);
+
+	SCHISM_FLAC_SYM(metadata_object_new);
+	SCHISM_FLAC_SYM(metadata_object_delete);
+	SCHISM_FLAC_SYM(metadata_object_application_set_data);
 
 	SCHISM_FLAC_SYM(format_sample_rate_is_subset);
 
