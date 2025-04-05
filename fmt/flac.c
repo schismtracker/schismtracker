@@ -627,10 +627,6 @@ int fmt_flac_save_sample(disko_t *fp, song_sample_t *smp)
 	FLAC__StreamMetadata *metadata_ptrs[2] = {0};
 	uint32_t num_metadata = 0, i;
 
-	/* these are the actual data to be put in the metadata structures */
-	
-	/*unsigned char smpl_data[]*/
-
 	if (smp->flags & CHN_ADLIB)
 		return SAVE_UNSUPPORTED;
 

@@ -28,7 +28,6 @@
 #include "disko.h"
 #include "player/sndfile.h"
 #include "log.h"
-#include <stdint.h>
 
 #define WAVE_FORMAT_PCM             0x0001
 #define WAVE_FORMAT_IEEE_FLOAT      0x0003 // IEEE float
