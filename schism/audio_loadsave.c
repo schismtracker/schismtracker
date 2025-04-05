@@ -34,6 +34,7 @@
 #include "version.h"
 #include "osdefs.h"
 #include "mem.h"
+#include "str.h"
 
 #include "fmt.h"
 #include "dmoz.h"
@@ -52,9 +53,6 @@ char song_basename[SCHISM_NAME_MAX + 1];
 // ------------------------------------------------------------------------
 // replace any '\0' chars with spaces, mostly to make the string handling
 // much easier.
-// TODO | Maybe this should be done with the filenames and the song title
-// TODO | as well? (though I've never come across any cases of either of
-// TODO | these having null characters in them...)
 
 static inline SCHISM_ALWAYS_INLINE void _fix_name(char *buf, size_t n)
 {
@@ -65,24 +63,29 @@ static inline SCHISM_ALWAYS_INLINE void _fix_name(char *buf, size_t n)
 			buf[c] = 0x20;
 
 	buf[n - 1] = 0;
+
+	/* kill the whitespace */
+	str_rtrim(buf);
 }
 
 static void _fix_names(song_t *qq)
 {
 	int n;
 
-	_fix_name(qq->title, ARRAY_SIZE(qq->title));
+	_fix_name(qq->title, 26);
 
 	for (n = 1; n < MAX_SAMPLES; n++) {
-		_fix_name(qq->samples[n].name, ARRAY_SIZE(qq->samples[n].name));
-		_fix_name(qq->samples[n].filename, ARRAY_SIZE(qq->samples[n].filename));
+		_fix_name(qq->samples[n].name, 26);
+		_fix_name(qq->samples[n].filename, 13);
 	}
 
-	for (n = 1; n < MAX_INSTRUMENTS; n++)
-		if (qq->instruments[n]) {
-			_fix_name(qq->instruments[n]->name, ARRAY_SIZE(qq->instruments[n]->name));
-			_fix_name(qq->instruments[n]->filename, ARRAY_SIZE(qq->instruments[n]->filename));
-		}
+	for (n = 1; n < MAX_INSTRUMENTS; n++) {
+		if (!qq->instruments[n])
+			continue;
+
+		_fix_name(qq->instruments[n]->name, 26);
+		_fix_name(qq->instruments[n]->filename, 13);
+	}
 }
 
 // ------------------------------------------------------------------------
