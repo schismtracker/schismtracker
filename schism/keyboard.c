@@ -175,19 +175,21 @@ void kbd_key_translate(struct key_event *k)
 	 * provide that IIRC. */
 
 	k->orig_sym = k->sym;
-	if (k->mod & SCHISM_KEYMOD_SHIFT) {
-		switch (k->sym) {
-		case SCHISM_KEYSYM_COMMA: k->sym = SCHISM_KEYSYM_LESS; break;
-		case SCHISM_KEYSYM_PERIOD: k->sym = SCHISM_KEYSYM_GREATER; break;
-		case SCHISM_KEYSYM_4: k->sym = SCHISM_KEYSYM_DOLLAR; break;
+	if (k->text) {
+		/* TODO: k->text should be Unicode, not CP437. */
+		switch (*k->text) {
+		/* there are likely more cases than this...*/
+		case '<': k->sym = SCHISM_KEYSYM_LESS; break;
+		case '>': k->sym = SCHISM_KEYSYM_GREATER; break;
+		case '$': k->sym = SCHISM_KEYSYM_DOLLAR; break;
 
-		case SCHISM_KEYSYM_EQUALS: k->sym = SCHISM_KEYSYM_PLUS; break;
-		case SCHISM_KEYSYM_SEMICOLON: k->sym = SCHISM_KEYSYM_COLON; break;
+		case '+': k->sym = SCHISM_KEYSYM_PLUS; break;
+		case ';': k->sym = SCHISM_KEYSYM_COLON; break;
 
-		case SCHISM_KEYSYM_8: k->sym = SCHISM_KEYSYM_ASTERISK; break;
-		default:
-			break;
-		};
+		case '*': k->sym = SCHISM_KEYSYM_ASTERISK; break;
+
+		default: break;
+		}
 	}
 	if (k->mod & SCHISM_KEYMOD_GUI) {
 		k->mod = ((k->mod & ~SCHISM_KEYMOD_GUI)

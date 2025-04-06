@@ -502,10 +502,11 @@ SCHISM_NORETURN static void event_loop(void)
 
 				kk.mod = status.keymod;
 				kk.mouse = MOUSE_NONE;
-				kbd_key_translate(&kk);
 
 				if (*se.key.text)
 					charset_iconv(se.key.text, &kk.text, CHARSET_UTF8, CHARSET_CP437, ARRAY_SIZE(se.key.text));
+
+				kbd_key_translate(&kk);
 
 				handle_key(&kk);
 
