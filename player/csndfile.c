@@ -698,6 +698,8 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 				delta = data[pos];
 		}
 
+		len *= 2;
+
 		break;
 	}
 	case SF(16,SS,LE,PCMS):
@@ -724,7 +726,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 			}
 		}
 
-		len *= 2;
+		len *= 4;
 
 		break;
 	}
@@ -754,6 +756,8 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 			if ((flags & SF_ENC_MASK) == SF_PCMD)
 				deltas[deltapos] = data[pos];
 		}
+
+		len *= 2;
 
 		break;
 	}
