@@ -198,9 +198,7 @@ int iff_chunk_receive(iff_chunk_t *chunk, slurp_t *fp, int (*callback)(const voi
 
 /* functions to deal with IFF chunks containing sample info */
 
-/* chunk id (4), length (4), flags (4), pan (2), vol (2) */
-#define IFF_XTRA_CHUNK_SIZE 16
-/* hm */
+#define IFF_XTRA_CHUNK_SIZE 24
 #define IFF_SMPL_CHUNK_SIZE 68
 
 void iff_fill_xtra_chunk(song_sample_t *smp, unsigned char xtra_data[IFF_XTRA_CHUNK_SIZE], uint32_t *length);

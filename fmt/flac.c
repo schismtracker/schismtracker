@@ -174,6 +174,10 @@ static void read_on_meta(SCHISM_UNUSED const FLAC__StreamDecoder *decoder, const
 			slurp_t app_fp;
 			uint32_t chunk_id, chunk_len;
 
+			/* All chunks we read have the application ID "riff" */
+			if (memcmp(&metadata->data.application.id, "riff", 4))
+				break;
+
 			if (metadata->length < 4)
 				break;
 
@@ -644,8 +648,10 @@ int fmt_flac_save_sample(disko_t *fp, song_sample_t *smp)
 		iff_fill_xtra_chunk(smp, xtra, &length);
 
 		/* now shove it into the metadata */
-		if (schism_FLAC_metadata_object_application_set_data(metadata_ptrs[num_metadata], xtra, length, 1))
+		if (schism_FLAC_metadata_object_application_set_data(metadata_ptrs[num_metadata], xtra, length, 1)) {
+			memcpy(metadata_ptrs[num_metadata]->data.application.id, "riff", 4);
 			num_metadata++;
+		}
 	}
 
 	metadata_ptrs[num_metadata] = schism_FLAC_metadata_object_new(FLAC__METADATA_TYPE_APPLICATION);
@@ -655,8 +661,10 @@ int fmt_flac_save_sample(disko_t *fp, song_sample_t *smp)
 
 		iff_fill_smpl_chunk(smp, smpl, &length);
 
-		if (schism_FLAC_metadata_object_application_set_data(metadata_ptrs[num_metadata], smpl, length, 1))
+		if (schism_FLAC_metadata_object_application_set_data(metadata_ptrs[num_metadata], smpl, length, 1)) {
+			memcpy(metadata_ptrs[num_metadata]->data.application.id, "riff", 4);
 			num_metadata++;
+		}
 	}
 
 	if (!schism_FLAC_stream_encoder_set_metadata(fwd->encoder, metadata_ptrs, num_metadata)) {

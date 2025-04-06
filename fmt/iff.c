@@ -113,24 +113,24 @@ int iff_read_sample(iff_chunk_t *chunk, slurp_t *fp, song_sample_t *smp, uint32_
 int iff_read_xtra_chunk(slurp_t *fp, song_sample_t *smp)
 {
 	uint32_t xtra_flags;
-	uint16_t vol;
+	uint16_t vol, pan, gbv;
 
 	if (slurp_read(fp, &xtra_flags, 4) != 4)
 		return 0;
 
 	xtra_flags = bswapLE32(xtra_flags);
 
-	if (xtra_flags & 0x20) {
-		uint16_t pan;
-
-		if (slurp_read(fp, &pan, 2) != 2)
-			return 0;
-
-		pan = bswapLE16(pan);
-
-		smp->panning = MIN(pan, 255);
+	if (xtra_flags & 0x20)
 		smp->flags |= CHN_PANNING;
-	}
+
+	/* FIXME is this data just garbage if the pan flag isn't toggled? */
+	if (slurp_read(fp, &pan, 2) != 2)
+		return 0;
+
+	pan = bswapLE16(pan);
+	pan = ((pan + 2) / 4) * 4; // round to nearest multiple of 64
+
+	smp->panning = MIN(pan, 256);
 
 	if (slurp_read(fp, &vol, 2) != 2)
 		return 0;
@@ -139,6 +139,21 @@ int iff_read_xtra_chunk(slurp_t *fp, song_sample_t *smp)
 	vol = ((vol + 2) / 4) * 4; // round to nearest multiple of 64
 
 	smp->volume = MIN(vol, 256);
+
+	if (slurp_read(fp, &gbv, 2) != 2)
+		return 0;
+
+	gbv = bswapLE16(gbv);
+
+	smp->global_volume = MIN(gbv, 64);
+
+	/* reserved chunk (always zero) */
+	slurp_seek(fp, 2, SEEK_CUR);
+
+	smp->vib_type = slurp_getc(fp);
+	smp->vib_speed = slurp_getc(fp);
+	smp->vib_depth = slurp_getc(fp);
+	smp->vib_rate = slurp_getc(fp);
 
 	return 1;
 }
@@ -195,38 +210,52 @@ void iff_fill_xtra_chunk(song_sample_t *smp, unsigned char xtra_data[IFF_XTRA_CH
 	uint32_t dw;
 	uint16_t w;
 	uint32_t offset;
-	int save_panning = !!(smp->flags & CHN_PANNING);
 
 	/* Identifier :) */
 	memcpy(xtra_data, "xtra", 4);
 
-	/* FLAGS */
+	/* always 16 bytes... */
+	dw = bswapLE32(IFF_XTRA_CHUNK_SIZE - 8);
+	memcpy(xtra_data + 4, &dw, 4);
+
+	/* flags */
 	dw = 0;
-	if (save_panning)
+	if (smp->flags & CHN_PANNING)
 		dw |= 0x20;
 	dw = bswapLE32(dw);
 	memcpy(xtra_data + 8, &dw, 4);
 
-	/* from now on, some parts are optional. */
-	offset = 12;
+	/* default pan -- 0..256 */
+	w = bswapLE16(smp->panning);
+	memcpy(xtra_data + 12, &w, 2);
 
-	/* PAN */
-	if (save_panning) {
-		w = bswapLE16(smp->panning);
-		memcpy(xtra_data + offset, &w, 2);
-		offset += 2;
-	}
-
-	/* VOLUME */
+	/* default volume -- 0..256 */
 	w = bswapLE16(smp->volume);
-	memcpy(xtra_data + offset, &w, 2);
-	offset += 2;
+	memcpy(xtra_data + 14, &w, 2);
 
-	*length = offset;
+	/* global volume -- 0..64 */
+	w = bswapLE16(smp->global_volume);
+	memcpy(xtra_data + 16, &w, 2);
 
-	/* now, go back and fill in the chunk length. */
-	dw = bswapLE32(offset - 8u);
-	memcpy(xtra_data + 4, &dw, 4);
+	/* reserved (always zero) */
+	memset(xtra_data + 18, 0, 2);
+
+	/* autovibrato type */
+	xtra_data[20] = smp->vib_type;
+
+	/* autovibrato sweep (speed) */
+	xtra_data[21] = smp->vib_speed;
+
+	/* autovibrato depth */
+	xtra_data[22] = smp->vib_depth;
+
+	/* autovibrato rate */
+	xtra_data[23] = smp->vib_rate;
+
+	/* after this can be a sample name and filename -- but it doesn't
+	 * matter for our use case */
+
+	*length = IFF_XTRA_CHUNK_SIZE;
 }
 
 void iff_fill_smpl_chunk(song_sample_t *smp, unsigned char smpl_data[IFF_SMPL_CHUNK_SIZE], uint32_t *length)
