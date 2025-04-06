@@ -42,18 +42,6 @@
 #define IFFID_LIST              0x5453494C
 #define IFFID_INFO              0x4F464E49
 
-// IFF Info fields
-#define IFFID_ICOP              0x504F4349
-#define IFFID_IART              0x54524149
-#define IFFID_IPRD              0x44525049
-#define IFFID_INAM              0x4D414E49
-#define IFFID_ICMT              0x544D4349
-#define IFFID_IENG              0x474E4549
-#define IFFID_ISFT              0x54465349
-#define IFFID_ISBJ              0x4A425349
-#define IFFID_IGNR              0x524E4749
-#define IFFID_ICRD              0x44524349
-
 // Wave IFF chunks IDs
 #define IFFID_wave              0x65766177
 #define IFFID_fmt               0x20746D66
@@ -174,10 +162,10 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 
 			data_chunk = c;
 			break;
-		case UINT32_C(0x61727478): /* "xtra" */
+		case IFFID_xtra:
 			xtra_chunk = c;
 			break;
-		case UINT32_C(0x6C706D73): /* "smpl" */
+		case IFFID_smpl:
 			smpl_chunk = c;
 			break;
 		default:
@@ -320,6 +308,61 @@ static int wav_header(disko_t *fp, int bits, int channels, int rate, size_t leng
 	return bps;
 }
 
+/* len should not include a nul terminator */
+static inline void fmt_wav_write_INFO_chunk(disko_t *fp, const char chunk[4], const char *text, uint32_t len)
+{
+	uint32_t dw;
+
+	disko_write(fp, chunk, 4);
+
+	dw = bswapLE32(len + (len & 1));
+	disko_write(fp, &dw, 4);
+
+	disko_write(fp, text, len);
+
+	/* word align; I'm not sure if this is the "correct" way
+	 * to do this, but eh */
+	if (len & 1) disko_putc(fp, ' ');
+}
+
+static void fmt_wav_write_LIST(disko_t *fp, const char *title)
+{
+	/* this is used to "fix" the */
+	int64_t start, end;
+	uint32_t dw;
+
+	start = disko_tell(fp);
+
+	disko_write(fp, "LIST", 4);
+
+	disko_seek(fp, 4, SEEK_CUR);
+
+	disko_write(fp, "INFO", 4);
+
+	{
+		/* ISFT (Software) chunk */
+		const char ver[] = "Schism Tracker " VERSION;
+
+		fmt_wav_write_INFO_chunk(fp, "ISFT", ver, sizeof(ver) - 1);
+	}
+
+	if (title && *title) {
+		/* INAM (title/name) chunk */
+		fmt_wav_write_INFO_chunk(fp, "INAM", title, strlen(title));
+	}
+
+	end = disko_tell(fp);
+
+	/* now we can fill in the length */
+	disko_seek(fp, start + 4, SEEK_SET);
+
+	dw = bswapLE32(end - start - 8);
+	disko_write(fp, &dw, 4);
+
+	/* back to the end */
+	disko_seek(fp, 0, SEEK_END);
+}
+
 int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
 {
 	int bps;
@@ -357,6 +400,9 @@ int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
 
 		disko_write(fp, smpl, length);
 	}
+
+	/* FIXME we should be able to set the title here :) */
+	fmt_wav_write_LIST(fp, NULL);
 
 	/* fix the length in the file header */
 	ul = disko_tell(fp) - 8;
@@ -428,6 +474,8 @@ int fmt_wav_export_tail(disko_t *fp)
 	struct wav_writedata *wwd = fp->userdata;
 	uint32_t ul;
 
+	fmt_wav_write_LIST(fp, NULL);
+
 	/* fix the length in the file header */
 	ul = disko_tell(fp) - 8;
 	ul= bswapLE32(ul);
@@ -443,4 +491,3 @@ int fmt_wav_export_tail(disko_t *fp)
 
 	return DW_OK;
 }
-
