@@ -539,127 +539,77 @@ void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
 
 	vgamem[x + (y*80)] = ch;
 }
+
 /* --------------------------------------------------------------------- */
 /* boxes */
 
-enum box_type {
-	BOX_THIN_INNER = 0, BOX_THIN_OUTER, BOX_THICK_OUTER
-};
-
-static const uint8_t boxes[4][8] = {
-	{139, 138, 137, 136, 134, 129, 132, 131},       /* thin inner */
-	{128, 130, 133, 135, 129, 134, 131, 132},       /* thin outer */
-	{142, 144, 147, 149, 143, 148, 145, 146},       /* thick outer */
-};
-
-static void _draw_box_internal(int xs, int ys, int xe, int ye, uint32_t tl, uint32_t br, const uint8_t ch[8])
+void draw_box(int xs, int ys, int xe, int ye, uint32_t flags)
 {
-	int n;
+	static const uint8_t colors[5][2] = { {3, 1}, {1, 3}, {3, 3}, {1, 1}, {0, 0} };
 
-	CHECK_INVERT(tl, br, n);
+	enum {
+		BOX_THIN_INNER = 0,
+		BOX_THIN_OUTER,
+		BOX_CORNER_OUTER,
+		BOX_THICK_INNER,
+		BOX_THICK_OUTER,
+	};
 
-	draw_char(ch[0], xs, ys, tl, 2);       /* TL corner */
-	draw_char(ch[1], xe, ys, br, 2);       /* TR corner */
-	draw_char(ch[2], xs, ye, br, 2);       /* BL corner */
-	draw_char(ch[3], xe, ye, br, 2);       /* BR corner */
+	static const uint8_t boxes[5][8] = {
+		[BOX_THIN_INNER]   = {139, 138, 137, 136, 134, 129, 132, 131},
+		[BOX_THIN_OUTER]   = {128, 130, 133, 135, 129, 134, 131, 132},
+		[BOX_CORNER_OUTER] = {128, 141, 140, 135, 129, 134, 131, 132},
+		[BOX_THICK_INNER]  = {153, 152, 151, 150, 148, 143, 146, 145},
+		[BOX_THICK_OUTER]  = {142, 144, 147, 149, 143, 148, 145, 146},
+	};
 
-	for (n = xs + 1; n < xe; n++) {
-		draw_char(ch[4], n, ys, tl, 2);        /* top */
-		draw_char(ch[5], n, ye, br, 2);        /* bottom */
-	}
-	for (n = ys + 1; n < ye; n++) {
-		draw_char(ch[6], xs, n, tl, 2);        /* left */
-		draw_char(ch[7], xe, n, br, 2);        /* right */
-	}
-}
-
-static void draw_thin_inner_box(int xs, int ys, int xe, int ye, uint32_t tl, uint32_t br)
-{
-	_draw_box_internal(xs, ys, xe, ye, tl, br, boxes[BOX_THIN_INNER]);
-}
-
-static void draw_thick_inner_box(int xs, int ys, int xe, int ye, uint32_t tl, uint32_t br)
-{
-	/* this one can't use _draw_box_internal because the corner
-	 * colors are different */
+	uint8_t tl = colors[flags & BOX_SHADE_MASK][0];
+	uint8_t br = colors[flags & BOX_SHADE_MASK][1];
+	uint8_t trbl;
+	uint32_t box;
 
 	int n;
-
 	CHECK_INVERT(tl, br, n);
-
-	draw_char(153, xs, ys, tl, 2); /* TL corner */
-	draw_char(152, xe, ys, tl, 2); /* TR corner */
-	draw_char(151, xs, ye, tl, 2); /* BL corner */
-	draw_char(150, xe, ye, br, 2); /* BR corner */
-
-	for (n = xs + 1; n < xe; n++) {
-		draw_char(148, n, ys, tl, 2);  /* top */
-		draw_char(143, n, ye, br, 2);  /* bottom */
-	}
-	for (n = ys + 1; n < ye; n++) {
-		draw_char(146, xs, n, tl, 2);  /* left */
-		draw_char(145, xe, n, br, 2);  /* right */
-	}
-}
-
-static void draw_thin_outer_box(int xs, int ys, int xe, int ye, uint32_t c)
-{
-	_draw_box_internal(xs, ys, xe, ye, c, c, boxes[BOX_THIN_OUTER]);
-}
-
-static void draw_thin_outer_cornered_box(int xs, int ys, int xe, int ye, int flags)
-{
-	const int colors[4][2] = { {3, 1}, {1, 3}, {3, 3}, {1, 1} };
-	int tl = colors[flags & BOX_SHADE_MASK][0];
-	int br = colors[flags & BOX_SHADE_MASK][1];
-	int n;
-
-	CHECK_INVERT(tl, br, n);
-
-	draw_char(128, xs, ys, tl, 2); /* TL corner */
-	draw_char(141, xe, ys, 1, 2);  /* TR corner */
-	draw_char(140, xs, ye, 1, 2);  /* BL corner */
-	draw_char(135, xe, ye, br, 2); /* BR corner */
-
-	for (n = xs + 1; n < xe; n++) {
-		draw_char(129, n, ys, tl, 2);  /* top */
-		draw_char(134, n, ye, br, 2);  /* bottom */
-	}
-
-	for (n = ys + 1; n < ye; n++) {
-		draw_char(131, xs, n, tl, 2);  /* left */
-		draw_char(132, xe, n, br, 2);  /* right */
-	}
-}
-
-static void draw_thick_outer_box(int xs, int ys, int xe, int ye, uint32_t c)
-{
-	_draw_box_internal(xs, ys, xe, ye, c, c, boxes[BOX_THICK_OUTER]);
-}
-
-void draw_box(int xs, int ys, int xe, int ye, int flags)
-{
-	const int colors[5][2] = { {3, 1}, {1, 3}, {3, 3}, {1, 1}, {0, 0} };
-	int tl = colors[flags & BOX_SHADE_MASK][0];
-	int br = colors[flags & BOX_SHADE_MASK][1];
 
 	switch (flags & (BOX_TYPE_MASK | BOX_THICKNESS_MASK)) {
 	case BOX_THIN | BOX_INNER:
-		draw_thin_inner_box(xs, ys, xe, ye, tl, br);
+		trbl = br;
+		box = BOX_THIN_INNER;
 		break;
 	case BOX_THICK | BOX_INNER:
-		draw_thick_inner_box(xs, ys, xe, ye, tl, br);
+		trbl = tl;
+		box = BOX_THICK_INNER;
 		break;
 	case BOX_THIN | BOX_OUTER:
-		draw_thin_outer_box(xs, ys, xe, ye, tl);
+		trbl = br = tl;
+		box = BOX_THIN_OUTER;
 		break;
 	case BOX_THICK | BOX_OUTER:
-		draw_thick_outer_box(xs, ys, xe, ye, tl);
+		trbl = br = tl;
+		box = BOX_THICK_OUTER;
 		break;
 	case BOX_THIN | BOX_CORNER:
 	case BOX_THICK | BOX_CORNER:
-		draw_thin_outer_cornered_box(xs, ys, xe, ye, flags & BOX_SHADE_MASK);
+		trbl = br = tl = 1;
+		box = BOX_CORNER_OUTER;
 		break;
+	default:
+		return; // ?
+	}
+
+	/* now, the actual magic :) */
+	draw_char(boxes[box][0], xs, ys, tl, 2);       /* TL corner */
+	draw_char(boxes[box][1], xe, ys, trbl, 2);     /* TR corner */
+	draw_char(boxes[box][2], xs, ye, trbl, 2);     /* BL corner */
+	draw_char(boxes[box][3], xe, ye, br, 2);       /* BR corner */
+
+	for (n = xs + 1; n < xe; n++) {
+		draw_char(boxes[box][4], n, ys, tl, 2);        /* top */
+		draw_char(boxes[box][5], n, ye, br, 2);        /* bottom */
+	}
+	for (n = ys + 1; n < ye; n++) {
+		draw_char(boxes[box][6], xs, n, tl, 2);        /* left */
+		draw_char(boxes[box][7], xe, n, br, 2);        /* right */
 	}
 }
 

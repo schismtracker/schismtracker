@@ -24,18 +24,35 @@
 #ifndef SCHISM_VGAMEM_H_
 #define SCHISM_VGAMEM_H_
 
+/* ---------------------------------------------------------------------------
+ * standard crap */
+
+/* clears the internal screen */
 void vgamem_clear(void);
 
+/* applies all edits to the internal screen */
+void vgamem_flip(void);
+
+/* scan to pixel data */
+SCHISM_SIMD SCHISM_HOT void vgamem_scan8 (uint32_t y, uint8_t  *out, uint32_t tc[16], uint32_t mouseline[80], uint32_t mouseline_mask[80]);
+SCHISM_SIMD SCHISM_HOT void vgamem_scan16(uint32_t y, uint16_t *out, uint32_t tc[16], uint32_t mouseline[80], uint32_t mouseline_mask[80]);
+SCHISM_SIMD SCHISM_HOT void vgamem_scan32(uint32_t y, uint32_t *out, uint32_t tc[16], uint32_t mouseline[80], uint32_t mouseline_mask[80]);
+
+/* ---------------------------------------------------------------------------
+ * drawing overlays; can draw practically anything given the length
+ * and height are a multiple of 8 (i.e. the size of a single character) */
+
 struct vgamem_overlay {
+	/* set by the user */
 	unsigned int x1, y1, x2, y2; /* in character cells... */
 
-	unsigned char *q;               /* points inside ovl */
-	unsigned int skip;
+	/* these next ones are filled in with a call to vgamem_ovl_alloc,
+	 * (as in, they are READ ONLY) so don't edit them pl0x thx */
+	unsigned char *q; /* points inside ovl */
+	unsigned int skip; /* (640 - width) (this is stupid and needs to go away) */
 
-	int width, height; /* in pixels; signed to avoid bugs elsewhere */ /* XXX what bugs? */
+	int width, height; /* in pixels; signed to avoid bugs elsewhere */
 };
-
-void vgamem_flip(void);
 
 void vgamem_ovl_alloc(struct vgamem_overlay *n);
 void vgamem_ovl_apply(struct vgamem_overlay *n);
@@ -44,13 +61,9 @@ void vgamem_ovl_clear(struct vgamem_overlay *n, int color);
 void vgamem_ovl_drawpixel(struct vgamem_overlay *n, int x, int y, int color);
 void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs, int ys, int xe, int ye, int color);
 
-// scanners
-SCHISM_SIMD SCHISM_HOT void vgamem_scan8 (uint32_t y, uint8_t  *out, uint32_t tc[16], uint32_t mouse_line[80], uint32_t mouse_line_mask[80]);
-SCHISM_SIMD SCHISM_HOT void vgamem_scan16(uint32_t y, uint16_t *out, uint32_t tc[16], uint32_t mouse_line[80], uint32_t mouse_line_mask[80]);
-SCHISM_SIMD SCHISM_HOT void vgamem_scan32(uint32_t y, uint32_t *out, uint32_t tc[16], uint32_t mouse_line[80], uint32_t mouse_line_mask[80]);
-
 /* --------------------------------------------------------------------- */
 /* character drawing routines */
+
 #define DEFAULT_FG 3
 void draw_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg);
 void draw_char_bios(uint8_t c, int x, int y, uint32_t fg, uint32_t bg);
@@ -104,9 +117,11 @@ enum {
 };
 #define BOX_THICKNESS_MASK (1 << 6)
 
-void draw_box(int xs, int ys, int xe, int ye, int flags);
+void draw_box(int xs, int ys, int xe, int ye, uint32_t flags);
 
 /* ------------------------------------------------------------ */
+/* drawing sample data... or really just any audio stream for
+ * that matter */
 
 struct song_sample;
 void draw_sample_data(struct vgamem_overlay *r, struct song_sample *sample);
@@ -122,6 +137,7 @@ void draw_sample_data_rect_8(struct vgamem_overlay *r, int8_t *data, int length,
 	unsigned int inputchans, unsigned int outputchans);
 
 /* ------------------------------------------------------------ */
+/* I think these are the visualizers in the top right ... ? */
 
 /* draw-misc.c */
 void draw_thumb_bar(int x, int y, int width, int min, int max, int val,
