@@ -250,11 +250,13 @@ int fmt_wav_read_info(dmoz_file_t *file, slurp_t *fp)
 	if (!wav_load(&smp, fp, 0))
 		return 0;
 
-	file->smp_flags      = smp.flags;
-	file->smp_speed      = smp.c5speed;
-	file->smp_length     = smp.length;
-	file->smp_loop_start = smp.loop_start;
-	file->smp_loop_end   = smp.loop_end;
+	file->smp_flags         = smp.flags;
+	file->smp_speed         = smp.c5speed;
+	file->smp_length        = smp.length;
+	file->smp_loop_start    = smp.loop_start;
+	file->smp_loop_end      = smp.loop_end;
+	file->smp_sustain_start = smp.sustain_start;
+	file->smp_sustain_end   = smp.sustain_end;
 
 	file->description  = "IBM/Microsoft RIFF Audio";
 	file->type         = TYPE_SAMPLE_PLAIN;

@@ -123,7 +123,6 @@ int iff_read_xtra_chunk(slurp_t *fp, song_sample_t *smp)
 	if (xtra_flags & 0x20)
 		smp->flags |= CHN_PANNING;
 
-	/* FIXME is this data just garbage if the pan flag isn't toggled? */
 	if (slurp_read(fp, &pan, 2) != 2)
 		return 0;
 
@@ -158,6 +157,45 @@ int iff_read_xtra_chunk(slurp_t *fp, song_sample_t *smp)
 	return 1;
 }
 
+static inline SCHISM_ALWAYS_INLINE int iff_read_smpl_loop_chunk(slurp_t *fp, uint32_t loopflag, uint32_t bidiflag, uint32_t *loopstart, uint32_t *loopend, uint32_t *flags)
+{
+	uint32_t type, start, end;
+
+	/* skip "samplerData" and "identifier" */
+	slurp_seek(fp, 8, SEEK_CUR);
+
+	if (slurp_read(fp, &type, 4) != 4
+		|| slurp_read(fp, &start, 4) != 4
+		|| slurp_read(fp, &end, 4) != 4)
+		return 0;
+	type = bswapLE32(type);
+	start = bswapLE32(start);
+	end = bswapLE32(end);
+
+	/* loop is bogus? */
+	if (!(start | end))
+		return 0;
+
+	switch (type) {
+	case 1:
+		*flags |= bidiflag;
+		SCHISM_FALLTHROUGH;
+	case 0:
+		*flags |= loopflag;
+		break;
+	case 2:
+		/* unsupported */
+		SCHISM_FALLTHROUGH;
+	default:
+		return 0;
+	}
+
+	*loopstart = start;
+	*loopend = end + 1;
+
+	return 1;
+}
+
 int iff_read_smpl_chunk(slurp_t *fp, song_sample_t *smp)
 {
 	uint32_t num_loops;
@@ -169,37 +207,14 @@ int iff_read_smpl_chunk(slurp_t *fp, song_sample_t *smp)
 
 	num_loops = bswapLE32(num_loops);
 
-	if (num_loops == 1) {
-		uint32_t type, start, end;
+	/* sustain loop */
+	if (num_loops >= 2
+		&& !iff_read_smpl_loop_chunk(fp, CHN_SUSTAINLOOP, CHN_PINGPONGSUSTAIN, &smp->sustain_start, &smp->sustain_end, &smp->flags))
+		return 0;
 
-		/* skip "samplerData" and "identifier" */
-		slurp_seek(fp, 8, SEEK_CUR);
-
-		if (slurp_read(fp, &type, 4) != 4
-			|| slurp_read(fp, &start, 4) != 4
-			|| slurp_read(fp, &end, 4) != 4)
-			return 0;
-		type = bswapLE32(type);
-		start = bswapLE32(start);
-		end = bswapLE32(end);
-
-		switch (type) {
-		case 1:
-			smp->flags |= CHN_PINGPONGLOOP;
-			SCHISM_FALLTHROUGH;
-		case 0:
-			smp->flags |= CHN_LOOP;
-			break;
-		case 2:
-			/* unsupported */
-			SCHISM_FALLTHROUGH;
-		default:
-			return 0;
-		}
-
-		smp->loop_start = start;
-		smp->loop_end = end + 1; /* old code did this... */
-	}
+	if (num_loops >= 1
+		&& !iff_read_smpl_loop_chunk(fp, CHN_LOOP, CHN_PINGPONGLOOP, &smp->loop_start, &smp->loop_end, &smp->flags))
+		return 0;
 
 	return 1;
 }
@@ -258,11 +273,42 @@ void iff_fill_xtra_chunk(song_sample_t *smp, unsigned char xtra_data[IFF_XTRA_CH
 	*length = IFF_XTRA_CHUNK_SIZE;
 }
 
+static inline SCHISM_ALWAYS_INLINE void iff_fill_smpl_chunk_loop(unsigned char smpl_data[IFF_SMPL_CHUNK_SIZE], uint32_t *offset,
+	uint32_t loop_start, uint32_t loop_end, int bidi)
+{
+	uint32_t dw;
+
+	/* The FOOLY COOLY Constant */
+	memcpy(smpl_data + *offset, "FLCL", 4);
+	*offset += 4;
+
+	dw = bswapLE32((bidi) ? 1 : 0);
+	memcpy(smpl_data + *offset, &dw, 4);
+	*offset += 4;
+
+	dw = bswapLE32(loop_start);
+	memcpy(smpl_data + *offset, &dw, 4);
+	*offset += 4;
+
+	dw = bswapLE32(loop_end - 1);
+	memcpy(smpl_data + *offset, &dw, 4);
+	*offset += 4;
+
+	/* no finetune ? */
+	memset(smpl_data + *offset, 0, 4);
+	*offset += 4;
+
+	/* loop infinitely */
+	memset(smpl_data + *offset, 0, 4);
+	*offset += 4;
+}
+
 void iff_fill_smpl_chunk(song_sample_t *smp, unsigned char smpl_data[IFF_SMPL_CHUNK_SIZE], uint32_t *length)
 {
 	uint32_t offset = 0;
 	uint32_t dw;
-	uint32_t loops = !!(smp->flags & CHN_LOOP);
+	int write_loop = !!(smp->flags & CHN_LOOP);
+	int write_sustain_loop = !!(smp->flags & CHN_SUSTAINLOOP);
 
 	memcpy(smpl_data + offset, "smpl", 4);
 	offset += 4;
@@ -301,7 +347,7 @@ void iff_fill_smpl_chunk(song_sample_t *smp, unsigned char smpl_data[IFF_SMPL_CH
 	offset += 4;
 
 	/* finally... the sample loops */
-	dw = bswapLE32(loops);
+	dw = bswapLE32(write_sustain_loop ? 2u : write_loop ? 1u : 0u);
 	memcpy(smpl_data + offset, &dw, 4);
 	offset += 4;
 
@@ -309,31 +355,18 @@ void iff_fill_smpl_chunk(song_sample_t *smp, unsigned char smpl_data[IFF_SMPL_CH
 	memset(smpl_data + offset, 0, 4);
 	offset += 4;
 
-	if (loops) {
-		/* The FOOLY COOLY Constant */
-		memcpy(smpl_data + offset, "FLCL", 4);
-		offset += 4;
+	if (write_sustain_loop)
+		iff_fill_smpl_chunk_loop(smpl_data, &offset, smp->sustain_start, smp->sustain_end, !!(smp->flags & CHN_PINGPONGSUSTAIN));
 
-		dw = bswapLE32((smp->flags & CHN_PINGPONGLOOP) ? 1 : 0);
-		memcpy(smpl_data + offset, &dw, 4);
-		offset += 4;
-
-		dw = bswapLE32(smp->loop_start);
-		memcpy(smpl_data + offset, &dw, 4);
-		offset += 4;
-
-		/* TODO: Is this right? */
-		dw = bswapLE32(smp->loop_end - 1);
-		memcpy(smpl_data + offset, &dw, 4);
-		offset += 4;
-
-		/* no finetune ? */
-		memset(smpl_data + offset, 0, 4);
-		offset += 4;
-
-		/* loop infinitely */
-		memset(smpl_data + offset, 0, 4);
-		offset += 4;
+	if (write_loop) {
+		iff_fill_smpl_chunk_loop(smpl_data, &offset, smp->loop_start, smp->loop_end, !!(smp->flags & CHN_PINGPONGLOOP));
+	} else if (write_sustain_loop) {
+		/* legendary hackaround from OpenMPT:
+		 *
+		 * Since there are no "loop types" to distinguish between sustain and normal loops, OpenMPT assumes
+		 * that the first loop is a sustain loop if there are two loops. If we only want a sustain loop,
+		 * we will have to write a second bogus loop. */
+		iff_fill_smpl_chunk_loop(smpl_data, &offset, 0, 0, 0);
 	}
 
 	*length = offset;

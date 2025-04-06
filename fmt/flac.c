@@ -431,6 +431,8 @@ int fmt_flac_read_info(dmoz_file_t *file, slurp_t *fp)
 	file->smp_length = smp.length;
 	file->smp_loop_start = smp.loop_start;
 	file->smp_loop_end = smp.loop_end;
+	file->smp_sustain_start = smp.sustain_start;
+	file->smp_sustain_end = smp.sustain_end;
 
 	file->description  = "FLAC Audio File";
 	file->type         = TYPE_SAMPLE_COMPR;
@@ -734,7 +736,7 @@ static int flac_dlinit(void)
 }
 
 // this is always true under SDL but I'm paranoid
-SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
+SCHISM_STATIC_ASSERT(sizeof(void (*)(void)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
 
 static int load_flac_sym(const char *fn, void *addr)
 {
