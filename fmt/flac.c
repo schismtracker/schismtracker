@@ -116,93 +116,93 @@ static void read_on_meta(SCHISM_UNUSED const FLAC__StreamDecoder *decoder, const
 	song_sample_t *smp = read_data->smp;
 
 	switch (metadata->type) {
-		case FLAC__METADATA_TYPE_STREAMINFO: {
-			/* supposedly, this is always first */
-			const FLAC__StreamMetadata_StreamInfo *streaminfo = &metadata->data.stream_info;
+	case FLAC__METADATA_TYPE_STREAMINFO: {
+		/* supposedly, this is always first */
+		const FLAC__StreamMetadata_StreamInfo *streaminfo = &metadata->data.stream_info;
 
-			/* copy */
-			smp->c5speed = streaminfo->sample_rate;
-			smp->length = streaminfo->total_samples;
-			read_data->stream_bits = streaminfo->bits_per_sample;
-			read_data->channels = streaminfo->channels;
+		/* copy */
+		smp->c5speed = streaminfo->sample_rate;
+		smp->length = streaminfo->total_samples;
+		read_data->stream_bits = streaminfo->bits_per_sample;
+		read_data->channels = streaminfo->channels;
 
-			read_data->bits = ceil_pow2_32(read_data->stream_bits);
+		read_data->bits = ceil_pow2_32(read_data->stream_bits);
 
-			break;
-		}
-		case FLAC__METADATA_TYPE_VORBIS_COMMENT: {
-			int32_t loop_start = -1, loop_length = -1;
-			size_t i;
+		break;
+	}
+	case FLAC__METADATA_TYPE_VORBIS_COMMENT: {
+		int32_t loop_start = -1, loop_length = -1;
+		size_t i;
 
-			for (i = 0; i < metadata->data.vorbis_comment.num_comments; i++) {
-				char *s;
+		for (i = 0; i < metadata->data.vorbis_comment.num_comments; i++) {
+			char *s;
 
-				{
-					const char *tag = (const char*)metadata->data.vorbis_comment.comments[i].entry;
-					const FLAC__uint32 length = metadata->data.vorbis_comment.comments[i].length;
+			{
+				const char *tag = (const char*)metadata->data.vorbis_comment.comments[i].entry;
+				const FLAC__uint32 length = metadata->data.vorbis_comment.comments[i].length;
 
-					/* copy, adding a NUL terminator (guarantee nul termination) */
-					s = strn_dup(tag, length);
-				}
+				/* copy, adding a NUL terminator (guarantee nul termination) */
+				s = strn_dup(tag, length);
+			}
 
-				if (sscanf(s, "TITLE=%25s", smp->name) == 1);
-				else if (sscanf(s, "SAMPLERATE=%" SCNu32, &smp->c5speed) == 1);
-				else if (sscanf(s, "LOOPSTART=%" SCNd32, &loop_start) == 1);
-				else if (sscanf(s, "LOOPLENGTH=%" SCNd32, &loop_length) == 1);
-				else {
+			if (sscanf(s, "TITLE=%25s", smp->name) == 1);
+			else if (sscanf(s, "SAMPLERATE=%" SCNu32, &smp->c5speed) == 1);
+			else if (sscanf(s, "LOOPSTART=%" SCNd32, &loop_start) == 1);
+			else if (sscanf(s, "LOOPLENGTH=%" SCNd32, &loop_length) == 1);
+			else {
 #if 0
-					log_appendf(5, " FLAC: unknown vorbis comment '%s'\n", s);
+				log_appendf(5, " FLAC: unknown vorbis comment '%s'\n", s);
 #endif
-				}
-
-				free(s);
 			}
 
-			if (loop_start > 0 && loop_length > 1) {
-				smp->flags |= CHN_LOOP;
-
-				smp->loop_start = loop_start;
-				smp->loop_end = loop_start + loop_length;
-			}
-
-			break;
+			free(s);
 		}
-		case FLAC__METADATA_TYPE_APPLICATION: {
-			slurp_t app_fp;
-			uint32_t chunk_id, chunk_len;
 
-			/* All chunks we read have the application ID "riff" */
-			if (memcmp(&metadata->data.application.id, "riff", 4))
-				break;
+		if (loop_start > 0 && loop_length > 1) {
+			smp->flags |= CHN_LOOP;
 
-			if (metadata->length < 4)
-				break;
-
-			slurp_memstream(&app_fp, metadata->data.application.data, metadata->length - 4);
-			const uint8_t *data = (const uint8_t *)metadata->data.application.data;
-
-			if (slurp_read(&app_fp, &chunk_id, 4) != 4)
-				break;
-			if (slurp_read(&app_fp, &chunk_len, 4) != 4)
-				break;
-
-			chunk_id = bswapLE32(chunk_id);
-			chunk_len = bswapLE32(chunk_len);
-
-			switch (chunk_id) {
-			case UINT32_C(0x61727478): /* "xtra" */
-				iff_read_xtra_chunk(&app_fp, read_data->smp);
-				break;
-			case UINT32_C(0x6C706D73): /* "smpl" */
-				iff_read_smpl_chunk(&app_fp, read_data->smp);
-				break;
-			default:
-				break;
-			}
-			break;
+			smp->loop_start = loop_start;
+			smp->loop_end = loop_start + loop_length;
 		}
+
+		break;
+	}
+	case FLAC__METADATA_TYPE_APPLICATION: {
+		slurp_t app_fp;
+		uint32_t chunk_id, chunk_len;
+
+		/* All chunks we read have the application ID "riff" */
+		if (memcmp(&metadata->data.application.id, "riff", 4))
+			break;
+
+		if (metadata->length < 4)
+			break;
+
+		slurp_memstream(&app_fp, metadata->data.application.data, metadata->length - 4);
+		const uint8_t *data = (const uint8_t *)metadata->data.application.data;
+
+		if (slurp_read(&app_fp, &chunk_id, 4) != 4)
+			break;
+		if (slurp_read(&app_fp, &chunk_len, 4) != 4)
+			break;
+
+		chunk_id = bswapLE32(chunk_id);
+		chunk_len = bswapLE32(chunk_len);
+
+		switch (chunk_id) {
+		case UINT32_C(0x61727478): /* "xtra" */
+			iff_read_xtra_chunk(&app_fp, read_data->smp);
+			break;
+		case UINT32_C(0x6C706D73): /* "smpl" */
+			iff_read_smpl_chunk(&app_fp, read_data->smp);
+			break;
 		default:
 			break;
+		}
+		break;
+	}
+	default:
+		break;
 	}
 }
 
