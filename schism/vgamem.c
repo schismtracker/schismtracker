@@ -705,21 +705,22 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 	{ \
 		const int32_t nh = r->height / outputchans; \
 		int32_t np = r->height - nh / 2; \
-		uint32_t step, cc; \
+		uint32_t cc; \
+		uint64_t step; \
 	\
 		length /= inputchans; \
-		step = (length << 16) / r->width; \
+		step = ((uint64_t)length << 32) / r->width; \
 	\
 		for (cc = 0; cc < outputchans; cc++) { \
 			int x; \
-			uint32_t poshi = 0, poslo = 0; \
+			uint64_t poshi = 0, poslo = 0; \
 	\
 			for (x = 0; x < r->width; x++) { \
 				uint32_t scanlength, i; \
 				int##bits##_t min = INT##bits##_MAX, max = INT##bits##_MIN; \
 	\
 				poslo += step; \
-				scanlength = ((poslo + 0xFFFF) >> 16); \
+				scanlength = ((poslo + UINT32_C(0xFFFFFFFF)) >> 32); \
 				if (poshi >= length) poshi = length - 1; \
 				if (poshi + scanlength > length) scanlength = length - poshi; \
 				scanlength = MAX(scanlength, 1); \
@@ -741,8 +742,8 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 	\
 				vgamem_ovl_drawline(r, x, np - 1 - max, x, np - 1 - min, SAMPLE_DATA_COLOR); \
 	\
-				poshi += (poslo >> 16); \
-				poslo &= 0xFFFF; \
+				poshi += (poslo >> 32); \
+				poslo &= UINT32_C(0xFFFFFFFF); \
 			} \
 	\
 			np -= nh; \
