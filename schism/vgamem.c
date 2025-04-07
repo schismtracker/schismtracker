@@ -590,7 +590,7 @@ void draw_box(int xs, int ys, int xe, int ye, uint32_t flags)
 		break;
 	case BOX_THIN | BOX_CORNER:
 	case BOX_THICK | BOX_CORNER:
-		trbl = br = tl = 1;
+		trbl = 1;
 		box = BOX_CORNER_OUTER;
 		break;
 	default:
