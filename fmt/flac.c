@@ -69,6 +69,7 @@ static const char *const *schism_FLAC_StreamEncoderStateString;
 static FLAC__StreamMetadata *(*schism_FLAC_metadata_object_new)(FLAC__MetadataType type); 	
 static void (*schism_FLAC_metadata_object_delete)(FLAC__StreamMetadata *object); 	
 static FLAC__bool (*schism_FLAC_metadata_object_application_set_data)(FLAC__StreamMetadata *object, FLAC__byte *data, uint32_t length, FLAC__bool copy);
+static FLAC__bool (*schism_FLAC_metadata_object_vorbiscomment_append_comment)(FLAC__StreamMetadata *object, FLAC__StreamMetadata_VorbisComment_Entry entry, FLAC__bool copy);
 
 static FLAC__bool (*schism_FLAC_format_sample_rate_is_subset)(uint32_t sample_rate);
 
@@ -116,6 +117,7 @@ static void read_on_meta(SCHISM_UNUSED const FLAC__StreamDecoder *decoder, const
 
 	switch (metadata->type) {
 		case FLAC__METADATA_TYPE_STREAMINFO: {
+			/* supposedly, this is always first */
 			const FLAC__StreamMetadata_StreamInfo *streaminfo = &metadata->data.stream_info;
 
 			/* copy */
@@ -130,35 +132,30 @@ static void read_on_meta(SCHISM_UNUSED const FLAC__StreamDecoder *decoder, const
 		}
 		case FLAC__METADATA_TYPE_VORBIS_COMMENT: {
 			int32_t loop_start = -1, loop_length = -1;
+			size_t i;
 
-			for (size_t i = 0; i < metadata->data.vorbis_comment.num_comments; i++) {
-				const char *tag = (const char*)metadata->data.vorbis_comment.comments[i].entry;
-				const FLAC__uint32 length = metadata->data.vorbis_comment.comments[i].length;
+			for (i = 0; i < metadata->data.vorbis_comment.num_comments; i++) {
+				char *s;
 
-/* "name" must be a string literal for both of these */
-#define CHECK_TAG_SIZE(name) \
-	if (length > (sizeof(name "=")) && !strncasecmp(tag, name "=", sizeof(name "=")))
+				{
+					const char *tag = (const char*)metadata->data.vorbis_comment.comments[i].entry;
+					const FLAC__uint32 length = metadata->data.vorbis_comment.comments[i].length;
 
-#define STRING_TAG(name, outvar, outvarsize) \
-	CHECK_TAG_SIZE(name) { \
-		strncpy((outvar), tag + sizeof(name "="), (outvarsize) - 1); \
-		continue; \
-	}
+					/* copy, adding a NUL terminator (guarantee nul termination) */
+					s = strn_dup(tag, length);
+				}
 
-#define INTEGER_TAG(name, outvar) \
-	CHECK_TAG_SIZE(name) { \
-		outvar = strtol(tag + sizeof(name "="), NULL, 10); \
-		continue; \
-	}
+				if (sscanf(s, "TITLE=%25s", smp->name) == 1);
+				else if (sscanf(s, "SAMPLERATE=%" SCNu32, &smp->c5speed) == 1);
+				else if (sscanf(s, "LOOPSTART=%" SCNd32, &loop_start) == 1);
+				else if (sscanf(s, "LOOPLENGTH=%" SCNd32, &loop_length) == 1);
+				else {
+#if 0
+					log_appendf(5, " FLAC: unknown vorbis comment '%s'\n", s);
+#endif
+				}
 
-				STRING_TAG("TITLE", smp->name, sizeof(smp->name));
-				INTEGER_TAG("SAMPLERATE", read_data->smp->c5speed);
-				INTEGER_TAG("LOOPSTART", read_data->smp->loop_start);
-				INTEGER_TAG("LOOPLENGTH", read_data->smp->loop_start);
-
-#undef INTEGER_TAG
-#undef STRING_TAG
-#undef CHECK_TAG_SIZE
+				free(s);
 			}
 
 			if (loop_start > 0 && loop_length > 1) {
@@ -445,7 +442,6 @@ int fmt_flac_read_info(dmoz_file_t *file, slurp_t *fp)
 /* Now onto the writing stuff */
 
 struct flac_writedata {
-	/* TODO would be nice to save some metadata */
 	FLAC__StreamEncoder *encoder;
 
 	int bits;
@@ -625,12 +621,40 @@ int fmt_flac_export_tail(disko_t *fp)
  * currently this is the same size as the buffer length in disko.c */
 #define SAMPLE_BUFFER_LENGTH 65536
 
+static SCHISM_FORMAT_PRINTF(2, 3) int flac_append_vorbis_comment(FLAC__StreamMetadata *metadata, const char *format, ...)
+{
+	char *s;
+	int x;
+	va_list ap;
+
+	va_start(ap, format);
+
+	x = vasprintf(&s, format, ap);
+
+	va_end(ap);
+
+	if (x > 0) {
+		FLAC__StreamMetadata_VorbisComment_Entry e;
+
+		e.length = x;
+		e.entry = s;
+
+		schism_FLAC_metadata_object_vorbiscomment_append_comment(metadata, e, 1);
+
+		free(s);
+
+		return 1;
+	}
+
+	return 0;
+}
+
 int fmt_flac_save_sample(disko_t *fp, song_sample_t *smp)
 {
 	struct flac_writedata *fwd;
 
 	/* metadata structures & the amount */
-	FLAC__StreamMetadata *metadata_ptrs[2] = {0};
+	FLAC__StreamMetadata *metadata_ptrs[3] = {0};
 	uint32_t num_metadata = 0, i;
 
 	if (smp->flags & CHN_ADLIB)
@@ -667,6 +691,14 @@ int fmt_flac_save_sample(disko_t *fp, song_sample_t *smp)
 			memcpy(metadata_ptrs[num_metadata]->data.application.id, "riff", 4);
 			num_metadata++;
 		}
+	}
+
+	/* this shouldn't be needed for export */
+	metadata_ptrs[num_metadata] = schism_FLAC_metadata_object_new(FLAC__METADATA_TYPE_VORBIS_COMMENT);
+	if (metadata_ptrs[num_metadata]) {
+		if (flac_append_vorbis_comment(metadata_ptrs[num_metadata], "SAMPLERATE=%" PRIu32, smp->c5speed)
+			&& flac_append_vorbis_comment(metadata_ptrs[num_metadata], "TITLE=%.*s", (int)sizeof(smp->name), smp->name))
+			num_metadata++;
 	}
 
 	if (!schism_FLAC_stream_encoder_set_metadata(fwd->encoder, metadata_ptrs, num_metadata)) {
@@ -797,6 +829,7 @@ static int load_flac_syms(void)
 	SCHISM_FLAC_SYM(metadata_object_new);
 	SCHISM_FLAC_SYM(metadata_object_delete);
 	SCHISM_FLAC_SYM(metadata_object_application_set_data);
+	SCHISM_FLAC_SYM(metadata_object_vorbiscomment_append_comment);
 
 	SCHISM_FLAC_SYM(format_sample_rate_is_subset);
 
