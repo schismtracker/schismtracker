@@ -184,11 +184,13 @@ int str_ltrim(char *s)
 
 int str_rtrim(char *s)
 {
-	int len = strlen(s);
+	ptrdiff_t len = (ptrdiff_t)strlen(s) - 1;
 
-	while (--len > 0 && strchr(whitespace, s[len]));
+	while (len >= 0 && strchr(whitespace, s[len]))
+		len--;
+	len++;
 
-	s[++len] = '\0';
+	s[len] = '\0';
 	return len;
 }
 
