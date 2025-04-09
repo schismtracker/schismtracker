@@ -425,8 +425,6 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 		}
 	}
 
-	sprintf(song->tracker_id, tid ? tid : "%d Channel MOD", nchan);
-
 	/* 15-sample mods don't have a 4-byte tag... or the other 16 samples */
 	slurp_seek(fp, nsamples == 15 ? 600 : 1084, SEEK_SET);
 
@@ -474,8 +472,24 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 	if (restart < npat)
 		csf_insert_restart_pos(song, restart);
 
-	/* sample data */
-	if (!(lflags & LOAD_NOSAMPLES)) {
+	{
+		/* "TakeTrackered with version 0.9E!!!!!" XOR with 0xDF. */
+		static const unsigned char taketracker[] = {
+			0x8B, 0xBE, 0xB4, 0xBA, 0x8B, 0xAD, 0xBE, 0xBC,
+			0xB4, 0xBA, 0xAD, 0xBA, 0xBB, 0xFF, 0xA8, 0xB6,
+			0xAB, 0xB7, 0xFF, 0xA9, 0xBA, 0xAD, 0xAC, 0xB6,
+			0xB0, 0xB1, 0xFF, 0xEF, 0xF1, 0xE6, 0xBA, 0xFE,
+			0xFE, 0xFE, 0xFE, 0xFE,
+		};
+
+		/* NOTE: OpenMPT's detection of this is slightly different, with the final value being
+		 * 0x01 instead of 0x00, though the file I have (snake_charmer.mod) indeed has 0x00 in
+		 * that spot. Possibly there are some files with 0x01 as the last value instead? */
+		static const unsigned char tetramed[] = {0x00, 0x11, 0x55, 0x33, 0x22, 0x11, 0x04, 0x01, 0x00};
+
+		unsigned char magicEOF[MAX(sizeof(taketracker), sizeof(tetramed))];
+		size_t len;
+
 		for (n = 1; n < nsamples + 1; n++) {
 			if (song->samples[n].length == 0)
 				continue;
@@ -491,8 +505,29 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 				flags |= SF_PCMS;
 			}
 
-			csf_read_sample(song->samples + n, flags, fp);
+			if (lflags & LOAD_NOSAMPLES) {
+				/* just skip the data, I guess */
+				slurp_seek(fp, song->samples[n].length, SEEK_CUR);
+			} else {
+				csf_read_sample(song->samples + n, flags, fp);
+			}
 		}
+
+		len = slurp_read(fp, magicEOF, sizeof(magicEOF));
+
+		/* Some trackers dump extra data at the end of the file. */
+		if (nchan <= 16 && len >= sizeof(taketracker) && !memcmp(taketracker, magicEOF, sizeof(taketracker))) {
+			tid = "%d Channel TakeTracker";
+		} else if (mk && len >= sizeof(tetramed) && !memcmp(tetramed, magicEOF, sizeof(tetramed))) {
+			tid = "%d Channel Tetramed";
+		}
+#if 0
+		else if (len >= 0) {
+			size_t z;
+			for (z = 0; z < len; z++)
+				printf("%02x ", magicEOF[z]);
+		}
+#endif
 	}
 
 	/* set some other header info that's always the same for .mod files */
@@ -503,6 +538,8 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 		song->channels[n].flags = CHN_MUTE;
 
 	song->pan_separation = 64;
+
+	sprintf(song->tracker_id, tid ? tid : "%d Channel MOD", nchan);
 
 	/* done! */
 	return LOAD_SUCCESS;

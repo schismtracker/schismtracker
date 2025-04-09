@@ -178,12 +178,12 @@ void tm_to_fat_date_time(const struct tm *tm, uint16_t *fat_date, uint16_t *fat_
 /* [R]IFF helper functions */
 
 typedef struct chunk {
-	uint32_t id;
+	uint32_t id; /* the ID, as a big endian integer. e.g. "wave" == 0x77617665 */
 	uint32_t size;
-	int64_t offset;
+	int64_t offset; /* where in the file the data actually starts */
 } iff_chunk_t;
 
-/* chunk enums */
+/* flags to iff_chunk_peek_ex */
 enum {
 	IFF_CHUNK_SIZE_LE = (1 << 0), /* for RIFF */
 	IFF_CHUNK_ALIGNED = (1 << 1), /* are the structures word aligned? */
@@ -191,7 +191,7 @@ enum {
 
 int iff_chunk_peek_ex(iff_chunk_t *chunk, slurp_t *fp, uint32_t flags);
 
-/* provided for convenience */
+/* provided for convenience, and backwards compatibility. */
 #define iff_chunk_peek(chunk, fp) iff_chunk_peek_ex(chunk, fp, IFF_CHUNK_ALIGNED)
 #define riff_chunk_peek(chunk, fp) iff_chunk_peek_ex(chunk, fp, IFF_CHUNK_ALIGNED | IFF_CHUNK_SIZE_LE)
 
