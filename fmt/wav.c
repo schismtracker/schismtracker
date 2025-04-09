@@ -29,27 +29,27 @@
 #include "player/sndfile.h"
 #include "log.h"
 
-#define WAVE_FORMAT_PCM             0x0001
-#define WAVE_FORMAT_IEEE_FLOAT      0x0003 // IEEE float
-#define WAVE_FORMAT_ALAW            0x0006 // 8-bit ITU-T G.711 A-law
-#define WAVE_FORMAT_MULAW           0x0007 // 8-bit ITU-T G.711 µ-law
-#define WAVE_FORMAT_EXTENSIBLE      0xFFFE
+#define WAVE_FORMAT_PCM        UINT16_C(0x0001)
+#define WAVE_FORMAT_IEEE_FLOAT UINT16_C(0x0003) // IEEE float
+#define WAVE_FORMAT_ALAW       UINT16_C(0x0006) // 8-bit ITU-T G.711 A-law
+#define WAVE_FORMAT_MULAW      UINT16_C(0x0007) // 8-bit ITU-T G.711 µ-law
+#define WAVE_FORMAT_EXTENSIBLE UINT16_C(0xFFFE)
 
 // Standard IFF chunks IDs
-#define IFFID_FORM              0x4d524f46
-#define IFFID_RIFF              0x46464952
-#define IFFID_WAVE              0x45564157
-#define IFFID_LIST              0x5453494C
-#define IFFID_INFO              0x4F464E49
+#define IFFID_FORM UINT32_C(0x464f524d)
+#define IFFID_RIFF UINT32_C(0x52494646)
+#define IFFID_WAVE UINT32_C(0x57415645)
+#define IFFID_LIST UINT32_C(0x4C495354)
+#define IFFID_INFO UINT32_C(0x494E464F)
 
 // Wave IFF chunks IDs
-#define IFFID_wave              0x65766177
-#define IFFID_fmt               0x20746D66
-#define IFFID_wsmp              0x706D7377
-#define IFFID_pcm               0x206d6370
-#define IFFID_data              0x61746164
-#define IFFID_smpl              0x6C706D73
-#define IFFID_xtra              0x61727478
+#define IFFID_wave UINT32_C(0x77617665)
+#define IFFID_fmt  UINT32_C(0x666D7420)
+#define IFFID_wsmp UINT32_C(0x77736D70)
+#define IFFID_pcm  UINT32_C(0x70636d20)
+#define IFFID_data UINT32_C(0x64617461)
+#define IFFID_smpl UINT32_C(0x736D706C)
+#define IFFID_xtra UINT32_C(0x78747261)
 
 typedef struct {
 	uint32_t id_RIFF;           // "RIFF"
@@ -139,9 +139,9 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 		|| slurp_read(fp, &phdr.id_WAVE, sizeof(phdr.id_WAVE)) != sizeof(phdr.id_WAVE))
 		return 0;
 
-	phdr.id_RIFF  = bswapLE32(phdr.id_RIFF);
+	phdr.id_RIFF  = bswapBE32(phdr.id_RIFF);
 	phdr.filesize = bswapLE32(phdr.filesize);
-	phdr.id_WAVE  = bswapLE32(phdr.id_WAVE);
+	phdr.id_WAVE  = bswapBE32(phdr.id_WAVE);
 
 	if (phdr.id_RIFF != IFFID_RIFF ||
 		phdr.id_WAVE != IFFID_WAVE)
@@ -149,7 +149,7 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 
 	iff_chunk_t c;
 	while (riff_chunk_peek(&c, fp)) {
-		switch (bswapBE32(c.id)) {
+		switch (c.id) {
 		case IFFID_fmt:
 			if (fmt_chunk.id)
 				return 0;
