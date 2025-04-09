@@ -878,15 +878,52 @@ int fmt_xm_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lflag
 	}
 	csf_insert_restart_pos(song, hdr.restart);
 
-	// ModPlug song message
-	char text[4];
-	if (slurp_read(fp, text, sizeof(text)) == sizeof(text) && !memcmp(text, "text", 4)) {
-		uint32_t len = 0;
-		slurp_read(fp, &len, 4);
-		len = bswapLE32(len);
-		len = MIN(MAX_MESSAGE, len);
-		slurp_read(fp, song->message, len);
-		song->message[len] = '\0';
+	{
+		/* Okay, now we have non-standard, Modplug extensions.
+		 * These are in RIFF format, without any word-alignment. */
+		iff_chunk_t text, midi;
+
+		{
+			int xtpm = 0;
+			iff_chunk_t c;
+
+			while (iff_chunk_peek_ex(&c, fp, IFF_CHUNK_SIZE_LE)) {
+				switch (c.id) {
+				case UINT32_C(0x74657874): /* text */
+					text = c;
+					break;
+				case UINT32_C(0x4D494449): /* MIDI */
+					midi = c;
+					break;
+				case UINT32_C(0x5854504D): /* XTPM */
+					/* marks the start of the instrument extensions block;
+					 * we should stop parsing here, because everything
+					 * after is just going to be stuff we probably don't
+					 * care about. */
+					xtpm = 1;
+					break;
+				default:
+#if 0
+					printf("unknown chunk ID: %" PRIx32 "\n", c.id);
+#endif
+					break;
+				}
+
+				if (xtpm) break;
+			}
+		}
+
+		if (text.id) {
+			uint32_t len = MIN(MAX_MESSAGE, text.size);
+
+			iff_chunk_read(&text, fp, song->message, len);
+			song->message[len] = '\0';
+		}
+
+		if (midi.id) {
+			slurp_seek(fp, midi.offset, SEEK_SET);
+			it_read_midi_config(&song->midi_config, fp);
+		}
 	}
 
 	return LOAD_SUCCESS;

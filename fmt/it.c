@@ -321,6 +321,39 @@ static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows, uint16_t c
 	}
 }
 
+SCHISM_STATIC_ASSERT(MAX_MIDI_MACRO == 32, "MIDI config reading code assumes macros are exactly 32 bytes");
+
+int it_read_midi_config(midi_config_t *midi, slurp_t *fp)
+{
+	/* preserving this just for compat with old behavior  --paper */
+	if ((slurp_tell(fp) + 4896) > slurp_length(fp))
+		return 0;
+
+#define READ_VALUE(x) \
+	do { if (slurp_read(fp, midi->x, sizeof(midi->x)) != sizeof(midi->x)) return 0; } while (0)
+
+	/* everything in this structure *should* be word
+	 * aligned on basically every platform imaginable,
+	 * but its trivial to get around the implementation
+	 * defined behavior here if some stupid back-asswards
+	 * platform decides to put random padding. */
+	READ_VALUE(start);
+	READ_VALUE(stop);
+	READ_VALUE(tick);
+	READ_VALUE(note_on);
+	READ_VALUE(note_off);
+	READ_VALUE(set_volume);
+	READ_VALUE(set_panning);
+	READ_VALUE(set_bank);
+	READ_VALUE(set_program);
+	READ_VALUE(sfx);
+	READ_VALUE(zxx);
+
+#undef READ_VALUE
+
+	return 1;
+}
+
 int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 {
 	struct it_file hdr;
@@ -488,11 +521,11 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (ignoremidi) {
 		if (hdr.special & 8) {
 			log_appendf(4, " Warning: ignoring embedded MIDI data (CWTV/CMWT is too old)");
-			slurp_seek(fp, sizeof(midi_config_t), SEEK_CUR);
+			slurp_seek(fp, 4896, SEEK_CUR);
 		}
 		memset(&song->midi_config, 0, sizeof(midi_config_t));
-	} else if ((hdr.special & 8) && slurp_tell(fp) + sizeof(midi_config_t) <= slurp_length(fp)) {
-		slurp_read(fp, &song->midi_config, sizeof(midi_config_t));
+	} else if (hdr.special & 8) {
+		it_read_midi_config(&song->midi_config, fp);
 	}
 	if (!hist) {
 		// berotracker check
