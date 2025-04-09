@@ -559,83 +559,90 @@ int fmt_mod15_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	return fmt_mod_load_song(song, fp, lflags, 1);
 }
 
-/* incomplete 31 sample M.K. amiga mod saving routine */
+/* .MOD saving routines */
 int fmt_mod_save_song(disko_t *fp, song_t *song)
 {
-	uint8_t mod_songtitle[20] = {0};
 	uint8_t mod_orders[128] = {0};
 	uint8_t tmp[128];
 		
 	int nord, nsmp, nchn, maxpat, jmax, joutpos;
 	long tmppos;
 	int i, j, n, period;
-	unsigned int warn = 0;
-	song_note_t *m;
+	uint32_t warn = 0;
 
 	if (song->flags & SONG_INSTRUMENTMODE)
 		warn |= 1 << WARN_INSTRUMENTS;
 	if (song->flags & SONG_LINEARSLIDES)
 		warn |= 1 << WARN_LINEARSLIDES;
 
-	nsmp = csf_get_num_samples(song); // Getting number of samples
+	nsmp = csf_get_num_samples(song);
 	if (nsmp > 31) {
+		printf("%d\n", nsmp);
 		nsmp = 31;
 		warn |= 1 << WARN_MAXSAMPLES;
 	}
 
-	nchn = csf_get_highest_used_channel(song)+1;
+	nchn = csf_get_highest_used_channel(song) + 1;
 
-	memcpy(mod_songtitle, song->title, 20);
-	disko_write(fp, mod_songtitle, 20); // writing song title
+	SCHISM_STATIC_ASSERT(sizeof(song->title) >= 20, "song->title is assumed to be at least 20 bytes long");
+	disko_write(fp, song->title, 20);
 
 	// Now writing sample headers
-	for(n = 1; n <= 31; ++n) {
-		uint8_t mod_sampleheader[30] = {0};
-		if(n <= nsmp) {
-			if(song->samples[n].global_volume != 64)
-				warn |= 1 << WARN_SAMPLEVOL;
-			if((song->samples[n].flags & (CHN_LOOP | CHN_PINGPONGLOOP)) == (CHN_LOOP | CHN_PINGPONGLOOP) || (song->samples[n].flags & CHN_SUSTAINLOOP))
-				warn |= 1 << WARN_LOOPS;
-			if(song->samples[n].vib_depth != 0)
-				warn |= 1 << WARN_SAMPLEVIB;
-			memcpy(mod_sampleheader, song->samples[n].name, 22); // sample name
-			if(song->samples[n].length <= 0x1FFFE) {
-				mod_sampleheader[22] = song->samples[n].length >> 9; // sample 11th word MSB length/2
-				mod_sampleheader[23] = song->samples[n].length >> 1; // sample 11th word LSB length/2
-				if(1 & song->samples[n].length)
-					warn |= 1 << WARN_LONGSAMPLES;
-			} else {
-				mod_sampleheader[22] = 0xFF;
-				mod_sampleheader[23] = 0xFF;
-				warn |= 1 << WARN_LONGSAMPLES;
-			}
-			for(j = 15; j && (finetune_table[j] > song->samples[n].c5speed); --j)
-				if(((song->samples[n].c5speed) > 10000) && (j == 8))
-					break; // determine from finetune_table entry
-			mod_sampleheader[24] = (j ^ 8) & 0x0f; // sample 24th byte finetune value
-			mod_sampleheader[25] = (song->samples[n].volume + 1) / 4; // sample 25th byte sample volume value 0..64 scaled
-			if( (song->samples[n].flags & CHN_LOOP) && (song->samples[n].loop_start < song->samples[n].loop_end) && (song->samples[n].loop_end <= MIN(song->samples[n].length, 0x1FFFE)) ) {
-				mod_sampleheader[26] = song->samples[n].loop_start >> 9;// loop start MSB /2
-				mod_sampleheader[27] = song->samples[n].loop_start >> 1;// loop start LSB /2
-				mod_sampleheader[28] = (song->samples[n].loop_end - song->samples[n].loop_start) >> 9;// loop length MSB /2
-				mod_sampleheader[29] = (song->samples[n].loop_end - song->samples[n].loop_start) >> 1;// loop length LSB /2
-			} else {
-				mod_sampleheader[26] = 0;
-				mod_sampleheader[27] = 0;
-				mod_sampleheader[28] = 0;
-				mod_sampleheader[29] = 1;
-			}
+	for (n = 1; n <= 31; ++n) {
+		uint16_t w;
+
+		if (n > nsmp) {
+			disko_seek(fp, 30, SEEK_CUR);
+			continue;
 		}
-		disko_write(fp, mod_sampleheader, 30); // writing current sample header
+
+		if (song->samples[n].global_volume != 64)
+			warn |= 1 << WARN_SAMPLEVOL;
+		if ((song->samples[n].flags & (CHN_LOOP | CHN_PINGPONGLOOP)) == (CHN_LOOP | CHN_PINGPONGLOOP) || (song->samples[n].flags & CHN_SUSTAINLOOP))
+			warn |= 1 << WARN_LOOPS;
+		if (song->samples[n].vib_depth != 0)
+			warn |= 1 << WARN_SAMPLEVIB;
+		/* these should be separate warnings. */
+		if ((1 & song->samples[n].length) || (song->samples[n].length > 0x1FFFE))
+			warn |= 1 << WARN_LONGSAMPLES;
+
+		SCHISM_STATIC_ASSERT(sizeof(song->samples[n].name) >= 22, "song->samples[n].name is assumed to be at least 22 bytes long");
+		disko_write(fp, song->samples[n].name, 22);
+
+		/* sample length. */
+		w = MIN(song->samples[n].length >> 1, 0xFFFF);
+		w = bswapBE16(w);
+		disko_write(fp, &w, 2);
+
+		/* ...this seems rather stupid. why aren't we just finding the
+		 * value with the least difference? */
+		for (j = 15; j && (finetune_table[j] > song->samples[n].c5speed); --j)
+			if ((song->samples[n].c5speed > 10000) && (j == 8))
+				break; /* determine from finetune_table entry */
+
+		disko_putc(fp, (j ^ 8) & 0x0f); /* finetune value */
+		disko_putc(fp, (song->samples[n].volume + 1) / 4); /* volume, 0..64 */
+
+		if (song->samples[n].flags & CHN_LOOP) {
+			w = MIN(song->samples[n].loop_start >> 1, 0xFFFF);
+			w = bswapBE16(w);
+			disko_write(fp, &w, 2);
+
+			w = MIN((song->samples[n].loop_end - song->samples[n].loop_start) >> 1, 0xFFFF);
+			w = bswapBE16(w);
+			disko_write(fp, &w, 2);
+		} else {
+			disko_write(fp, "\x00\x00\x00\x01", 4);
+		}
 	}
 
-	tmp[0] = nord = csf_get_num_orders(song); // or "csf_get_num_orders(song_t *csf);"
+	tmp[0] = nord = csf_get_num_orders(song);
 	tmp[1] = 0x7f;
 	disko_write(fp, tmp, 2);
 
-	for(maxpat = i = 0; (i < nord) && (i < 128); ++i) {
+	for (maxpat = i = 0; (i < nord) && (i < 128); ++i) {
 		mod_orders[i] = song->orderlist[i];
-		if(maxpat < mod_orders[i]) maxpat = mod_orders[i];
+		maxpat = MAX(maxpat, mod_orders[i]);
 	}
 	if (maxpat + 1 < csf_get_num_patterns(song))
 		warn |= 1 << WARN_UNUSEDPATS;
@@ -643,31 +650,38 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 	disko_write(fp, mod_orders, 128);
 
 	if (nchn == 4) {
-		if(maxpat < 64)
-			disko_write(fp, valid_tags[0][0], 4);
-		else
-			disko_write(fp, valid_tags[1][0], 4);
+		disko_write(fp, (maxpat < 64) ? "M.K." : "M!K!", 4);
 	} else {
-		uint8_t tag[4] = {'0', 'C', 'H', 'N'};
+		unsigned char tag[4];
+
 		if (nchn >= 10) {
 			tag[0] = (nchn / 10) + '0';
 			tag[1] = (nchn % 10) + '0';
 			tag[2] = 'C';
+			tag[3] = 'N';
 		} else {
 			tag[0] = nchn + '0';
+			tag[1] = 'C';
+			tag[2] = 'H';
+			tag[3] = 'N';
 		}
+
+		/* guten tag */
 		disko_write(fp, tag, 4);
 	}
 
-	uint8_t mod_pattern[MAX_CHANNELS * 4 * 64];
-
 	for(n = 0; n <= maxpat; ++n) {
+		/* this is a 16KiB stack variable. we REALLY ought to be
+		 * putting stuff directly into the file especially because
+		 * most of this array won't even be touched normally */
+		uint8_t mod_pattern[MAX_CHANNELS * 4 * 64];
+		song_note_t *m;
+
 		memset(mod_pattern, 0, nchn * 4 * 64);
 		m = song->patterns[n];
 		jmax = song->pattern_size[n];
-		if(jmax != 64) {
-			if(jmax > 64)
-				jmax = 64;
+		if (jmax != 64) {
+			jmax = MIN(jmax, 64);
 			warn |= 1 << WARN_PATTERNLEN;
 		}
 		jmax *= MAX_CHANNELS;
@@ -677,78 +691,83 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 				period = amigaperiod_table[(m->note) & 0xff];
 				if (((m->note) & 0xff) && ((period < 113) || (period > 856)))
 					warn |= 1 << WARN_NOTERANGE;
+
 				mod_pattern[joutpos] = ((m->instrument) & 0x10) | (period >> 8);
 				mod_pattern[joutpos + 1] = period & 0xff;
 				mod_pattern[joutpos + 2] = (m->instrument & 0xf) << 4;
-				mod_fx = 0; mod_fx_val = m->param;
-				if(m->voleffect == VOLFX_VOLUME) {
+
+				mod_fx = 0;
+				mod_fx_val = m->param;
+
+				if (m->voleffect == VOLFX_VOLUME) {
 					mod_fx = 0x0c;
 					mod_fx_val = m->volparam;
 				} else if (m->voleffect == VOLFX_NONE) {
-					switch(m->effect) {
-						case FX_NONE: mod_fx_val = 0; break;
-						case FX_ARPEGGIO: mod_fx = 0; break;
-						case FX_PORTAMENTOUP:
-							mod_fx = 1;
-							if ((mod_fx_val & 0xf0) == 0xe0) {
-								mod_fx = 0x0e;
-								mod_fx_val = 0x10 | ((mod_fx_val & 0xf) >> 2);
-							} else if ((mod_fx_val & 0xf0) == 0xf0) {
-								mod_fx = 0x0e;
-								mod_fx_val = 0x10 | (mod_fx_val & 0xf);
-							}
-							break;
-						case FX_PORTAMENTODOWN:
-							mod_fx = 2;
-							if ((mod_fx_val & 0xf0) == 0xe0) {
-								mod_fx = 0x0e;
-								mod_fx_val = 0x20 | ((mod_fx_val & 0xf) >> 2);
-							} else if ((mod_fx_val & 0xf0) == 0xf0) {
-								mod_fx = 0x0e;
-								mod_fx_val = 0x20 | (mod_fx_val & 0xf);
-							}
-							break;
-						case FX_TONEPORTAMENTO: mod_fx = 3; break;
-						case FX_VIBRATO: mod_fx = 4; break;
-						case FX_TONEPORTAVOL: mod_fx = 5; break;
-						case FX_VIBRATOVOL: mod_fx = 6; break;
-						case FX_TREMOLO: mod_fx = 7; break;
-						case FX_PANNING: mod_fx = 8; break;
-						case FX_OFFSET: mod_fx = 9; break;
-						case FX_VOLUMESLIDE:
-							mod_fx = 0x0a;
-							if( (mod_fx_val & 0xf0) && (mod_fx_val & 0x0f) ) {
-								if ((mod_fx_val & 0xf0) == 0xf0) { // fine volslide down!
-									mod_fx = 0x0e;
-									mod_fx_val &= 0xbf;
-								} else if ((mod_fx_val & 0x0f) == 0x0f) { // fine volslide up!
-									mod_fx = 0x0e;
-									mod_fx_val = 0xa0 | (mod_fx_val >> 4);
-								}
-							}
-							break;
-						case FX_POSITIONJUMP: mod_fx = 0x0b; break;
-						case FX_VOLUME: mod_fx = 0x0c; break;
-						case FX_PATTERNBREAK: mod_fx = 0x0d; mod_fx_val = ((mod_fx_val / 10) << 4) | (mod_fx_val % 10); break;
-						case FX_SPEED: mod_fx = 0x0f; break;
-						case FX_TEMPO: mod_fx = 0x0f; break;
-						case FX_SPECIAL:
+					switch (m->effect) {
+					case FX_NONE: mod_fx_val = 0; break;
+					case FX_ARPEGGIO: mod_fx = 0; break;
+					case FX_PORTAMENTOUP:
+						mod_fx = 1;
+						if ((mod_fx_val & 0xf0) == 0xe0) {
 							mod_fx = 0x0e;
-							switch (mod_fx_val & 0xf0) {
-								case 0x10: mod_fx_val = (mod_fx_val & 0x0f) | 0x30; break;
-								case 0x20: mod_fx_val = (mod_fx_val & 0x0f) | 0x50; break; // there is an error in Protracker 2.1 docs!
-								case 0x30: mod_fx_val = (mod_fx_val & 0x0f) | 0x40; break;
-								case 0x40: mod_fx_val = (mod_fx_val & 0x0f) | 0x70; break;
-								case 0xb0: mod_fx_val = (mod_fx_val & 0x0f) | 0x60; break;
-								default: break; // handling silently E0x,E6x,E8x,ECx,EDx,EEx,(?EFx)
+							mod_fx_val = 0x10 | ((mod_fx_val & 0xf) >> 2);
+						} else if ((mod_fx_val & 0xf0) == 0xf0) {
+							mod_fx = 0x0e;
+							mod_fx_val = 0x10 | (mod_fx_val & 0xf);
+						}
+						break;
+					case FX_PORTAMENTODOWN:
+						mod_fx = 2;
+						if ((mod_fx_val & 0xf0) == 0xe0) {
+							mod_fx = 0x0e;
+							mod_fx_val = 0x20 | ((mod_fx_val & 0xf) >> 2);
+						} else if ((mod_fx_val & 0xf0) == 0xf0) {
+							mod_fx = 0x0e;
+							mod_fx_val = 0x20 | (mod_fx_val & 0xf);
+						}
+						break;
+					case FX_TONEPORTAMENTO: mod_fx = 3; break;
+					case FX_VIBRATO: mod_fx = 4; break;
+					case FX_TONEPORTAVOL: mod_fx = 5; break;
+					case FX_VIBRATOVOL: mod_fx = 6; break;
+					case FX_TREMOLO: mod_fx = 7; break;
+					case FX_PANNING: mod_fx = 8; break;
+					case FX_OFFSET: mod_fx = 9; break;
+					case FX_VOLUMESLIDE:
+						mod_fx = 0x0a;
+						if( (mod_fx_val & 0xf0) && (mod_fx_val & 0x0f) ) {
+							if ((mod_fx_val & 0xf0) == 0xf0) { // fine volslide down!
+								mod_fx = 0x0e;
+								mod_fx_val &= 0xbf;
+							} else if ((mod_fx_val & 0x0f) == 0x0f) { // fine volslide up!
+								mod_fx = 0x0e;
+								mod_fx_val = 0xa0 | (mod_fx_val >> 4);
 							}
-							break;
-						case FX_RETRIG: mod_fx = 0x0e; mod_fx_val = 0x90 | (mod_fx_val & 0x0f); break;
-						default:
-							warn |= 1 << WARN_VOLEFFECTS;
-							break;
+						}
+						break;
+					case FX_POSITIONJUMP: mod_fx = 0x0b; break;
+					case FX_VOLUME: mod_fx = 0x0c; break;
+					case FX_PATTERNBREAK: mod_fx = 0x0d; mod_fx_val = ((mod_fx_val / 10) << 4) | (mod_fx_val % 10); break;
+					case FX_SPEED: mod_fx = 0x0f; break;
+					case FX_TEMPO: mod_fx = 0x0f; break;
+					case FX_SPECIAL:
+						mod_fx = 0x0e;
+						switch (mod_fx_val & 0xf0) {
+							case 0x10: mod_fx_val = (mod_fx_val & 0x0f) | 0x30; break;
+							case 0x20: mod_fx_val = (mod_fx_val & 0x0f) | 0x50; break; // there is an error in Protracker 2.1 docs!
+							case 0x30: mod_fx_val = (mod_fx_val & 0x0f) | 0x40; break;
+							case 0x40: mod_fx_val = (mod_fx_val & 0x0f) | 0x70; break;
+							case 0xb0: mod_fx_val = (mod_fx_val & 0x0f) | 0x60; break;
+							default: break; // handling silently E0x,E6x,E8x,ECx,EDx,EEx,(?EFx)
+						}
+						break;
+					case FX_RETRIG: mod_fx = 0x0e; mod_fx_val = 0x90 | (mod_fx_val & 0x0f); break;
+					default:
+						warn |= 1 << WARN_VOLEFFECTS;
+						break;
 					}
 				} else {
+					/* TODO: try harder */
 					warn |= 1 << WARN_VOLEFFECTS;
 				}
 				mod_pattern[joutpos + 2] |= mod_fx & 0x0f;
@@ -765,7 +784,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 		if (smp->data) {
 			if( (smp->flags & CHN_LOOP) && (smp->loop_start < smp->loop_end) && (smp->loop_end <= MIN(smp->length, 0x1FFFE)) ) {
 				csf_write_sample(fp, smp, SF(PCMS,8,M,LE), 0x1FFFE);
-			} else if (1 < smp->length) { // floor(smp->length / 2) MUST be positive!
+			} else if (smp->length >= 1) { // floor(smp->length / 2) MUST be positive!
 				tmppos = disko_tell(fp);
 				csf_write_sample(fp, smp, SF(PCMS,8,M,LE), 0x1FFFE);
 				disko_seek(fp, tmppos, SEEK_SET);
