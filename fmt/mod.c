@@ -482,12 +482,12 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 			0xFE, 0xFE, 0xFE, 0xFE,
 		};
 
-		/* NOTE: OpenMPT's detection of this is slightly different, with the final value being
-		 * 0x01 instead of 0x00, though the file I have (snake_charmer.mod) indeed has 0x00 in
-		 * that spot. Possibly there are some files with 0x01 as the last value instead? */
-		static const unsigned char tetramed[] = {0x00, 0x11, 0x55, 0x33, 0x22, 0x11, 0x04, 0x01, 0x00};
+		/* This is actually nine bytes, but the final three vary between
+		 * Tetramed versions.
+		 * Possibly they could be used to fingerprint versions?? */
+		static const unsigned char tetramed[] = {0x00, 0x11, 0x55, 0x33, 0x22, 0x11};
 
-		unsigned char magicEOF[MAX(sizeof(taketracker), sizeof(tetramed))];
+		unsigned char magicEOF[MAX(sizeof(taketracker), sizeof(tetramed) + 3u)];
 		size_t len;
 
 		for (n = 1; n < nsamples + 1; n++) {
@@ -518,7 +518,7 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 		/* Some trackers dump extra data at the end of the file. */
 		if (nchan <= 16 && len >= sizeof(taketracker) && !memcmp(taketracker, magicEOF, sizeof(taketracker))) {
 			tid = "%d Channel TakeTracker";
-		} else if (mk && len >= sizeof(tetramed) && !memcmp(tetramed, magicEOF, sizeof(tetramed))) {
+		} else if (mk && len >= (sizeof(tetramed) + 3u) && !memcmp(tetramed, magicEOF, sizeof(tetramed))) {
 			tid = "%d Channel Tetramed";
 		}
 #if 0
@@ -539,7 +539,7 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 
 	song->pan_separation = 64;
 
-	sprintf(song->tracker_id, tid ? tid : "%d Channel MOD", nchan);
+	snprintf(song->tracker_id, sizeof(song->tracker_id), tid ? tid : "%d Channel MOD", nchan);
 
 	/* done! */
 	return LOAD_SUCCESS;
