@@ -93,9 +93,8 @@ static void SDLCALL schism_quit_audio_impl(void)
 	sdl2_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
-//
-static int (SDLCALL *sdl2_audio_init_func)(const char *) = schism_init_audio_impl;
-static void (SDLCALL *sdl2_audio_quit_func)(void) = schism_quit_audio_impl;
+static int (SDLCALL *sdl2_audio_init_func)(const char *);
+static void (SDLCALL *sdl2_audio_quit_func)(void);
 
 /* ---------------------------------------------------------- */
 /* drivers */
@@ -182,10 +181,11 @@ static inline int sdl2_audio_open_device_impl(schism_audio_device_t *dev, const 
 
 static schism_audio_device_t *sdl2_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
-	schism_audio_device_t *dev = mem_calloc(1, sizeof(*dev));
-	dev->callback = desired->callback;
-
+	schism_audio_device_t *dev;
 	uint32_t format;
+
+	dev = mem_calloc(1, sizeof(*dev));
+	dev->callback = desired->callback;
 
 	switch (desired->bits) {
 	case 8: format = AUDIO_U8; break;
@@ -326,6 +326,9 @@ static int sdl2_audio_init(void)
 	if (sdl2_ver_atleast(2, 0, 18)) {
 		sdl2_audio_init_func = sdl2_AudioInit;
 		sdl2_audio_quit_func = sdl2_AudioQuit;
+	} else {
+		sdl2_audio_init_func = schism_init_audio_impl;
+		sdl2_audio_quit_func = schism_quit_audio_impl;
 	}
 
 	return 1;

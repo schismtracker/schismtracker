@@ -21,9 +21,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-// Win32 Waveout audio backend - written because SDL 1.2 kind of sucks, and
-// this driver is especially terrible there.
-//  - paper
+/* Win32 Waveout audio backend - written because SDL 1.2 kind of sucks, and
+ * this driver is especially terrible there.
+ *  - paper */
 
 #include "headers.h"
 #include "charset.h"
@@ -36,7 +36,7 @@
 
 #define WAVEHDR_DWUSER_PREPARED (~((DWORD_PTR)0))
 
-// Define this ourselves; old toolchains don't have it
+/* Define this ourselves; old toolchains don't have it */
 struct waveoutcaps2w {
 	WORD wMid;
 	WORD wPid;
@@ -51,27 +51,27 @@ struct waveoutcaps2w {
 	GUID NameGuid;
 };
 
-// This is needed because waveout is weird, and the WAVEHDR buffers need
-// some time to "cool down", so we cycle between buffers.
+/* This is needed because waveout is weird, and the WAVEHDR buffers need
+ * some time to "cool down", so we cycle between buffers. */
 #define NUM_BUFFERS 2
 SCHISM_STATIC_ASSERT(NUM_BUFFERS >= 2, "NUM_BUFFERS must be at least 2");
 
 struct schism_audio_device {
-	// The thread where we callback
+	/* The thread where we callback */
 	mt_thread_t *thread;
 	int cancelled;
 
-	// The callback and the protecting mutex
+	/* The callback and the protecting mutex */
 	void (*callback)(uint8_t *stream, int len);
 	mt_mutex_t *mutex;
 
-	// This is for synchronizing the audio thread with
-	// the actual audio device
+	/* This is for synchronizing the audio thread with
+	 * the actual audio device */
 	HANDLE sem;
 
 	HWAVEOUT hwaveout;
 
-	// The allocated raw mixing buffer
+	/* The allocated raw mixing buffer */
 	uint8_t *buffer;
 
 	WAVEHDR wavehdr[NUM_BUFFERS];
@@ -81,7 +81,7 @@ struct schism_audio_device {
 /* ---------------------------------------------------------- */
 /* drivers */
 
-// lol
+/* lol */
 static const char *drivers[] = {
 	"waveout",
 };
@@ -101,20 +101,20 @@ static const char *waveout_audio_driver_name(int i)
 
 /* ------------------------------------------------------------------------ */
 
-// devices name cache; refreshed after every call to waveout_audio_device_count
+/* devices name cache; refreshed after every call to waveout_audio_device_count */
 static struct {
 	uint32_t id;
 	char *name;
 } *devices = NULL;
 static size_t devices_size = 0;
 
-// FIXME: This screws up the GUI royally if someone hotplugs a device.
-// The IDs of waveout devices aren't necessarily "unique", so we can't
-// use those; they change any time an audio device is added or removed
-// (annoying!!)
-// The only thing I can think of is opening literally every single
-// device and then calling waveOutGetID() to check if it changed,
-// which is obviously stupid and a waste of resources.
+/* FIXME: This screws up the GUI royally if someone hotplugs a device.
+ * The IDs of waveout devices aren't necessarily "unique", so we can't
+ * use those; they change any time an audio device is added or removed
+ * (annoying!!)
+ * The only thing I can think of is opening literally every single
+ * device and then calling waveOutGetID() to check if it changed,
+ * which is obviously stupid and a waste of resources. */
 static uint32_t waveout_audio_device_count(void)
 {
 	const UINT devs = waveOutGetNumDevs();
@@ -144,16 +144,16 @@ static uint32_t waveout_audio_device_count(void)
 			if (waveOutGetDevCapsA(i, &caps.a, sizeof(caps.a)) != MMSYSERR_NOERROR)
 				continue;
 
-			// Try receiving based on the name GUID. Otherwise, fall back to the short name.
+			/* Try receiving based on the name GUID. Otherwise, fall back to the short name. */
 			if (!win32_audio_lookup_device_name(NULL, &i, &devices[devices_size].name)
 				&& charset_iconv(caps.a.szPname, &devices[devices_size].name, CHARSET_ANSI, CHARSET_UTF8, sizeof(caps.a.szPname)))
 				continue;
 		} else
 #endif
 		{
-			// Try WAVEOUTCAPS2 before WAVEOUTCAPS
+			/* Try WAVEOUTCAPS2 before WAVEOUTCAPS */
 			if (waveOutGetDevCapsW(i, (LPWAVEOUTCAPSW)&caps.w2, sizeof(caps.w2)) == MMSYSERR_NOERROR) {
-				// Try receiving based on the name GUID. Otherwise, fall back to the short name.
+				/* Try receiving based on the name GUID. Otherwise, fall back to the short name. */
 				if (!win32_audio_lookup_device_name(&caps.w2.NameGuid, &i, &devices[devices_size].name)
 					&& charset_iconv(caps.w2.szPname, &devices[devices_size].name, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(caps.w2.szPname)))
 					continue;
@@ -176,8 +176,8 @@ static uint32_t waveout_audio_device_count(void)
 
 static const char *waveout_audio_device_name(uint32_t i)
 {
-	// If this ever happens it is a catastrophic bug and we
-	// should crash before anything bad happens.
+	/* If this ever happens it is a catastrophic bug and we
+	 * should crash before anything bad happens. */
 	if (i >= devices_size)
 		return NULL;
 
@@ -198,14 +198,14 @@ static int waveout_audio_init_driver(const char *driver)
 	if (!fnd)
 		return -1;
 
-	// Get the devices
+	/* Get the devices */
 	(void)waveout_audio_device_count();
 	return 0;
 }
 
 static void waveout_audio_quit_driver(void)
 {
-	// Free the devices
+	/* Free the devices */
 	if (devices) {
 		for (size_t i = 0; i < devices_size; i++)
 			free(devices[i].name);
@@ -224,7 +224,7 @@ static int waveout_audio_thread(void *data)
 	mt_thread_set_priority(MT_THREAD_PRIORITY_TIME_CRITICAL);
 
 	while (!dev->cancelled) {
-		// FIXME add a timeout here
+		/* FIXME add a timeout here */
 		mt_mutex_lock(dev->mutex);
 
 		dev->callback((uint8_t *)dev->wavehdr[dev->next_buffer].lpData, dev->wavehdr[dev->next_buffer].dwBufferLength);
@@ -234,9 +234,9 @@ static int waveout_audio_thread(void *data)
 		waveOutWrite(dev->hwaveout, &dev->wavehdr[dev->next_buffer], sizeof(dev->wavehdr[dev->next_buffer]));
 		dev->next_buffer = (dev->next_buffer + 1) % NUM_BUFFERS;
 
-		// Wait until either the semaphore is polled or we've been asked to exit
-		// This prevents a hang on device close, since after waveOutClose is called
-		// the semaphore is never released, which will cause us to wait forever.
+		/* Wait until either the semaphore is polled or we've been asked to exit.
+		 * This prevents a hang on device close, since after waveOutClose is called
+		 * the semaphore is never released, which will cause us to wait forever. */
 		while (!dev->cancelled && (WaitForSingleObject(dev->sem, 10) == WAIT_TIMEOUT));
 	}
 
@@ -247,7 +247,7 @@ static void CALLBACK waveout_audio_callback(HWAVEOUT hwo, UINT uMsg, DWORD_PTR d
 {
 	schism_audio_device_t *dev = (schism_audio_device_t *)dwInstance;
 
-	// don't care about other messages
+	/* don't care about other messages */
 	switch (uMsg) {
 	case WOM_DONE:
 	case WOM_CLOSE:
@@ -256,23 +256,23 @@ static void CALLBACK waveout_audio_callback(HWAVEOUT hwo, UINT uMsg, DWORD_PTR d
 	}
 }
 
-// decl
+/* decl */
 static void waveout_audio_close_device(schism_audio_device_t *dev);
 
-// nonzero on success
+/* nonzero on success */
 static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
-	// Default to some device that can handle our output
+	/* Default to some device that can handle our output */
 	UINT device_id = (id == AUDIO_BACKEND_DEFAULT || id < devices_size) ? (WAVE_MAPPER) : devices[id].id;
 
-	// Fill in the format structure
+	/* Fill in the format structure */
 	WAVEFORMATEX format = {
 		.wFormatTag = WAVE_FORMAT_PCM,
 		.nChannels = desired->channels,
 		.nSamplesPerSec = desired->freq,
 	};
 
-	// filter invalid bps values (should never happen, but eh...)
+	/* filter invalid bps values (should never happen, but eh...) */
 	switch (desired->bits) {
 	case 8: format.wBitsPerSample = 8; break;
 	default:
@@ -280,31 +280,30 @@ static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schis
 	case 32: format.wBitsPerSample = 32; break;
 	}
 
-	// ok, now we can allocate the device
+	/* ok, now we can allocate the device */
 	schism_audio_device_t *dev = mem_calloc(1, sizeof(*dev));
 
 	dev->callback = desired->callback;
 
 	for (;;) {
-		// Recalculate format
+		/* Recalculate format */
 		format.nBlockAlign = format.nChannels * (format.wBitsPerSample / 8);
 		format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
 
 		MMRESULT err = waveOutOpen(&dev->hwaveout, device_id, &format, (UINT_PTR)waveout_audio_callback, (UINT_PTR)dev, CALLBACK_FUNCTION | WAVE_ALLOWSYNC);
 		if (err == MMSYSERR_NOERROR) {
-			// We're done here
+			/* We're done here */
 			break;
 		} else if (err == WAVERR_BADFORMAT) {
-			// Retry with 16-bit. 32-bit samples
-			// don't work everywhere (notably windows xp
-			// is broken and so is everything before it)
+			/* Retry with 16-bit. 32-bit samples don't work everywhere
+			 * (notably windows xp is broken and so is everything before it) */
 			if (format.wBitsPerSample == 32) {
 				format.wBitsPerSample = 16;
 				continue;
 			}
 		}
 
-		// Punt if we failed and we can't do anything about it
+		/* Punt if we failed and we can't do anything about it */
 		goto fail;
 	}
 
@@ -316,11 +315,11 @@ static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schis
 	if (!dev->sem)
 		goto fail;
 
-	// allocate the buffer
+	/* allocate the buffer */
 	DWORD buflen = desired->samples * format.nChannels * (format.wBitsPerSample / 8);
 	dev->buffer = mem_alloc(buflen * NUM_BUFFERS);
 
-	// fill in the wavehdrs
+	/* fill in the wavehdrs */
 	for (int i = 0; i < NUM_BUFFERS; i++) {
 		dev->wavehdr[i].lpData = (LPSTR)dev->buffer + (buflen * i);
 		dev->wavehdr[i].dwBufferLength = buflen;
@@ -332,7 +331,7 @@ static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schis
 		dev->wavehdr[i].dwUser = WAVEHDR_DWUSER_PREPARED;
 	}
 
-	// ok, now start the full thread
+	/* ok, now start the full thread */
 	dev->thread = mt_thread_create(waveout_audio_thread, "WinMM audio thread", dev);
 	if (!dev->thread)
 		goto fail;
@@ -355,13 +354,13 @@ static void waveout_audio_close_device(schism_audio_device_t *dev)
 	if (!dev)
 		return;
 
-	// kill the thread before doing anything else
+	/* kill the thread before doing anything else */
 	if (dev->thread) {
 		dev->cancelled = 1;
 		mt_thread_wait(dev->thread, NULL);
 	}
 
-	// close the device
+	/* close the device */
 	if (dev->hwaveout)
 		waveOutClose(dev->hwaveout);
 
@@ -369,7 +368,7 @@ static void waveout_audio_close_device(schism_audio_device_t *dev)
 		if (dev->wavehdr[i].dwUser != WAVEHDR_DWUSER_PREPARED)
 			continue;
 
-		// sleep until the device is done with our buffer
+		/* sleep until the device is done with our buffer */
 		while (!(dev->wavehdr[i].dwFlags & WHDR_DONE))
 			timer_delay(10);
 
@@ -418,8 +417,8 @@ static void waveout_audio_pause_device(schism_audio_device_t *dev, int paused)
 	mt_mutex_unlock(dev->mutex);
 }
 
-//////////////////////////////////////////////////////////////////////////////
-// dynamic loading
+/* -------------------------------------------------------------------- */
+/* dynamic loading */
 
 static int waveout_audio_init(void)
 {
@@ -428,10 +427,10 @@ static int waveout_audio_init(void)
 
 static void waveout_audio_quit(void)
 {
-	// dont do anything
+	/* dont do anything */
 }
 
-//////////////////////////////////////////////////////////////////////////////
+/* -------------------------------------------------------------------- */
 
 const schism_audio_backend_t schism_audio_backend_waveout = {
 	.init = waveout_audio_init,

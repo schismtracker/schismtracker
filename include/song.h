@@ -75,16 +75,21 @@ extern size_t audio_device_list_size;
 
 /* --------------------------------------------------------------------- */
 
+/* 8-bit audio is always unsigned; everything else is signed. */
 typedef struct {
-	int freq; // sample rate
-	uint8_t bits; // one of [8, 16, 32], always system byte order
-	uint8_t channels; // channels
-	uint16_t samples; // buffer size in samples
+	uint32_t freq; /* sample rate */
+	uint8_t bits; /* one of [8, 16, 32], always system byte order */
+	uint8_t channels; /* channels */
+	uint16_t samples; /* buffer size in samples */
 	void (*callback)(uint8_t *stream, int len);
 } schism_audio_spec_t;
 
 /* An opaque structure that each backend uses for its own data */
 typedef struct schism_audio_device schism_audio_device_t;
+
+/* The value to pass to memset to generate silence. */
+#define AUDIO_SPEC_SILENCE(spec) \
+	(((spec).bits == 8) ? 0x80 : 0)
 
 /* --------------------------------------------------------------------- */
 /* some enums */

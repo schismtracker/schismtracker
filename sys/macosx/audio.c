@@ -72,8 +72,8 @@ struct schism_audio_device {
 
 	int paused;
 
-	/* what to pass to memset() to generate silence.
-	 * this is 0x80 for 8-bit audio, and 0 for everything else */
+	/* memset() silence value, obtained via
+	 * a macro in song.h */
 	uint8_t silence;
 
 	/* audio unit */
@@ -129,12 +129,20 @@ static void _macosx_audio_free_devices(void)
 
 static char *_macosx_cfstring_to_utf8(CFStringRef cfstr)
 {
-	size_t len = CFStringGetMaximumSizeForEncoding(CFStringGetLength(cfstr), kCFStringEncodingUTF8);
-	char *buf = mem_alloc(len + 1);
+	size_t len;
+	char *buf;
+
+	/* paranoia: */
+	SCHISM_RUNTIME_ASSERT(CFGetTypeID(cfstr) == CFStringGetTypeID(), "_macosx_cfstring_to_utf8 received a pointer that isn't a CFString!");
+
+	len = CFStringGetMaximumSizeForEncoding(CFStringGetLength(cfstr), kCFStringEncodingUTF8);
+	buf = mem_alloc(len + 1);
+
 	if (!CFStringGetCString(cfstr, buf, len + 1, kCFStringEncodingUTF8)) {
 		free(buf);
 		return NULL;
 	}
+
 	/* nul terminate */
 	buf[len] = '\0';
 	return buf;
@@ -144,6 +152,8 @@ static uint32_t macosx_audio_device_count(void)
 {
 	OSStatus result;
 	UInt32 size;
+	uint32_t c; /* final count of all devices */
+	uint32_t i;
 
 #ifndef USE_AUDIODEVICE_APIS
 	AudioObjectPropertyAddress addr = {
@@ -179,10 +189,9 @@ static uint32_t macosx_audio_device_count(void)
 
 	devices = mem_calloc(devices_size, sizeof(*devices));
 
-	/* final count of all of the devices */
-	uint32_t c = 0;
+	c = 0;
 
-	for (uint32_t i = 0; i < devices_size; i++) {
+	for (i = 0; i < devices_size; i++) {
 		char *ptr = NULL;
 		int usable = 0;
 		CFIndex len = 0;
@@ -224,6 +233,7 @@ static uint32_t macosx_audio_device_count(void)
 		{
 			/* Prioritize CFString so we know we're getting UTF-8 */
 			CFStringRef cfstr;
+
 			size = sizeof(cfstr);
 
 #ifdef USE_AUDIODEVICE_APIS
@@ -315,7 +325,6 @@ static void macosx_audio_quit_driver(void)
 static OSStatus macosx_audio_callback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData)
 {
 	schism_audio_device_t *dev = (schism_audio_device_t *)inRefCon;
-	void *ptr;
 	uint32_t i;
 
 	if (dev->paused) {
@@ -328,7 +337,10 @@ static OSStatus macosx_audio_callback(void *inRefCon, AudioUnitRenderActionFlags
 	for (i = 0; i < ioData->mNumberBuffers; i++) {
 		uint32_t remaining = ioData->mBuffers[i].mDataByteSize;
 		void *ptr = ioData->mBuffers[i].mData;
+
 		while (remaining > 0) {
+			uint32_t len;
+
 			if (dev->buffer_offset >= dev->buffer_size) {
 				memset(dev->buffer, dev->silence, dev->buffer_size);
 				mt_mutex_lock(dev->mutex);
@@ -337,9 +349,9 @@ static OSStatus macosx_audio_callback(void *inRefCon, AudioUnitRenderActionFlags
 				dev->buffer_offset = 0;
 			}
 
-			uint32_t len = dev->buffer_size - dev->buffer_offset;
-			if (len > remaining)
-				len = remaining;
+			len = dev->buffer_size - dev->buffer_offset;
+			len = MIN(len, remaining);
+
 			memcpy(ptr, (char *)dev->buffer + dev->buffer_offset, len);
 			ptr = (char *)ptr + len;
 			remaining -= len;
@@ -441,7 +453,7 @@ static schism_audio_device_t *macosx_audio_open_device(uint32_t id, const schism
 	dev->buffer_offset = dev->buffer_size = desired->samples * desired->channels * (desired->bits / 8);
 	dev->buffer = mem_alloc(dev->buffer_size);
 	dev->callback = desired->callback;
-	dev->silence = (desired->bits == 8) ? 0x80 : 0;
+	dev->silence = AUDIO_SPEC_SILENCE(*desired);
 
 	result = AudioOutputUnitStart(dev->au);
 	if (result != noErr) {

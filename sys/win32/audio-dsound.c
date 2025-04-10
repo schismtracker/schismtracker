@@ -21,7 +21,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
  
-// Win32 directsound backend
+/* Win32 directsound backend */
 
 #define COBJMACROS
 
@@ -31,77 +31,78 @@
 #include "mem.h"
 #include "osdefs.h"
 #include "loadso.h"
-#include "video.h" // video_get_wm_data
+#include "video.h" /* video_get_wm_data */
 #include "backend/audio.h"
 
-// request compatibility with DirectX 5
+/* request compatibility with DirectX 5 */
 #define DIRECTSOUND_VERSION 0x0500
 
 #include <windows.h>
 
-// define GUIDs locally:
+/* define GUIDs locally: */
 #include <initguid.h>
 
 #include <dsound.h>
 
-// ripped from SDL
+/* ripped from SDL */
 #define NUM_CHUNKS 8
 
-// Define this to use DirectX 6 position notify events when available.
-// This is turned off here because they cause weird dislocation in the
-// audio buffer when moving/resizing/changing the window at all.
-//#define COMPILE_POSITION_NOTIFY
+/* Define this to use DirectX 6 position notify events when available.
+ * This is turned off here because they cause weird dislocation in the
+ * audio buffer when moving/resizing/changing the window at all. */
+
+/* #define COMPILE_POSITION_NOTIFY */
 
 static HRESULT (WINAPI *DSOUND_DirectSoundCreate)(LPGUID lpGuid, LPDIRECTSOUND* ppDS, LPUNKNOWN pUnkOuter) = NULL;
 
-// https://source.winehq.org/WineAPI/dsound.html
+/* https://source.winehq.org/WineAPI/dsound.html */
 #ifdef SCHISM_WIN32_COMPILE_ANSI
 static HRESULT (WINAPI *DSOUND_DirectSoundEnumerateA)(LPDSENUMCALLBACKA lpDSEnumCallback, LPVOID lpContext) = NULL;
 #endif
 static HRESULT (WINAPI *DSOUND_DirectSoundEnumerateW)(LPDSENUMCALLBACKW lpDSEnumCallback, LPVOID lpContext) = NULL;
 
 struct schism_audio_device {
-	// The thread where we callback
+	/* The thread where we callback */
 	mt_thread_t *thread;
 	int cancelled;
 
-	// Kid named callback:
+	/* Kid named callback: */
 	void (*callback)(uint8_t *stream, int len);
 
 	mt_mutex_t *mutex;
 
 #ifdef COMPILE_POSITION_NOTIFY
-	// An event where we get notifications under DX6 and higher
-	// Disabled by default; see anti-definition of COMPILE_POSITION_NOTIFY above.
+	/* An event where we get notifications under DX6 and higher
+	 * Disabled by default; see anti-definition of COMPILE_POSITION_NOTIFY above. */
 	HANDLE event;
 #endif
 
-	// A pointer to the function we use to wait for audio to finish playing
+	/* A pointer to the function we use to wait for audio to finish playing */
 	void (*audio_wait)(schism_audio_device_t *dev);
 
-	// pass to memset() to make silence.
-	// used when paused and when initializing the device buffer
+	/* pass to memset() to make silence.
+	 * used when paused and when initializing the device buffer */
 	uint8_t silence;
 
 	LPDIRECTSOUND dsound;
 	LPDIRECTSOUNDBUFFER lpbuffer;
 
-	// ...
+	/* ... */
 	DWORD last_chunk;
 	int paused;
 
-	// audio buffer info
-	uint32_t bps; // bits per sample
-	uint32_t channels; // channels
-	uint32_t samples; // samples per chunk
-	uint32_t size; // size in bytes of one chunk (bps * channels * samples)
-	uint32_t rate; // sample rate
+	/* audio buffer info */
+	uint32_t bps; /* bits per sample */
+	uint32_t channels; /* channels */
+	uint32_t samples; /* samples per chunk */
+	uint32_t size; /* size in bytes of one chunk (bps * channels * samples) */
+	uint32_t rate; /* sample rate */
 };
 
 /* ---------------------------------------------------------- */
 /* drivers */
 
-// lol
+/* lol */
 static const char *drivers[] = {
 	"dsound",
 };
@@ -121,7 +122,7 @@ static const char *dsound_audio_driver_name(int i)
 
 /* ------------------------------------------------------------------------ */
 
-// devices name cache; refreshed after every call to dsound_audio_device_count
+/* devices name cache; refreshed after every call to dsound_audio_device_count */
 static struct {
 	GUID guid;
 	char *name;
@@ -142,14 +143,14 @@ static void _dsound_free_devices(void)
 	}
 }
 
-// This function takes ownership of `name` and is responsible for either freeing it
-// or adding it to a list which will eventually be freed.
-// Note: lpguid AND name must be valid pointers. No null pointers.
+/* This function takes ownership of `name` and is responsible for either freeing it
+ * or adding it to a list which will eventually be freed.
+ * Note: lpguid AND name must be valid pointers. No null pointers. */
 static inline void _dsound_device_append(LPGUID lpguid, char *name)
 {
-	// Filter out waveout emulated devices. If we don't do this, it causes a bit of
-	// CPU overhead and is utterly pointless when we can just use waveout directly
-	// anyway.
+	/* Filter out waveout emulated devices. If we don't do this, it causes a bit of
+	 * CPU overhead and is utterly pointless when we can just use waveout directly
+	 * anyway. */
 	{
 		LPDIRECTSOUND dsound;
 		if (DSOUND_DirectSoundCreate(lpguid, &dsound, NULL) != DS_OK) {
@@ -178,14 +179,14 @@ static inline void _dsound_device_append(LPGUID lpguid, char *name)
 		devices = mem_realloc(devices, devices_alloc * sizeof(*devices));
 	}
 
-	// put the bread in the basket
+	/* put the bread in the basket */
 	memcpy(&devices[devices_size].guid, lpguid, sizeof(GUID));
 	devices[devices_size].name = name;
 
 	devices_size++;
 }
 
-// We need two different callbacks for ANSI and UNICODE variants
+/* We need two different callbacks for ANSI and UNICODE variants */
 #define DSOUND_ENUMERATE_CALLBACK_VARIANT(type, charset, suffix) \
 	static BOOL CALLBACK _dsound_enumerate_callback_##suffix(LPGUID lpGuid, type lpcstrDescription, SCHISM_UNUSED type lpcstrModule, SCHISM_UNUSED LPVOID lpContext) \
 	{ \
@@ -210,7 +211,7 @@ DSOUND_ENUMERATE_CALLBACK_VARIANT(LPCWSTR, CHARSET_WCHAR_T, w)
 
 static uint32_t dsound_audio_device_count(void)
 {
-	// Prefer Unicode
+	/* Prefer Unicode */
 	if (DSOUND_DirectSoundEnumerateW && DSOUND_DirectSoundEnumerateW(_dsound_enumerate_callback_w, NULL) == DS_OK)
 		return devices_size;
 
@@ -224,8 +225,8 @@ static uint32_t dsound_audio_device_count(void)
 
 static const char *dsound_audio_device_name(uint32_t i)
 {
-	// If this ever happens it is a catastrophic bug and we
-	// should crash before anything bad happens.
+	/* If this ever happens it is a catastrophic bug and we
+	 * should crash before anything bad happens. */
 	if (i >= devices_size)
 		return NULL;
 
@@ -238,7 +239,7 @@ static int dsound_audio_init_driver(const char *driver)
 {
 	for (int i = 0; i < ARRAY_SIZE(drivers); i++) {
 		if (!strcmp(drivers[i], driver)) {
-			// Get the devices
+			/* Get the devices */
 			(void)dsound_audio_device_count();
 			return 0;
 		}
@@ -271,7 +272,7 @@ static void _dsound_audio_wait_dx5(schism_audio_device_t *dev)
 
 		if (!(status & DSBSTATUS_PLAYING)) {
 			if (IDirectSoundBuffer_Play(dev->lpbuffer, 0, 0, DSBPLAY_LOOPING) != DS_OK)
-				// This should never happen
+				/* This should never happen */
 				break;
 		} else {
 			res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, &xyzzy, &cursor);
@@ -280,7 +281,7 @@ static void _dsound_audio_wait_dx5(schism_audio_device_t *dev)
 				res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, &xyzzy, &cursor);
 			}
 			if (res != DS_OK)
-				continue; // what?
+				continue; /* what? */
 
 			if ((cursor / dev->size) != dev->last_chunk)
 				break;
@@ -309,7 +310,7 @@ static void _dsound_audio_wait_dx6(schism_audio_device_t *dev)
 
 	if (!(status & DSBSTATUS_PLAYING)) {
 		if (IDirectSoundBuffer_Play(dev->lpbuffer, 0, 0, DSBPLAY_LOOPING) != DS_OK)
-			// This should never happen
+			/* This should never happen */
 			return;
 	}
 
@@ -365,7 +366,7 @@ static void dsound_audio_close_device(schism_audio_device_t *dev);
 static int _dsound_dx6_init_notify_position(schism_audio_device_t *dev)
 {
 	LPDIRECTSOUNDNOTIFY notify = NULL;
-	int res = -1; // default to failing
+	int res = -1; /* default to failing */
 	size_t i;
 
 	DSBPOSITIONNOTIFY notify_positions[NUM_CHUNKS];
@@ -394,20 +395,20 @@ done:
 }
 #endif
 
-// nonzero on success
+/* nonzero on success */
 static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
-	// If no device is specified pass NULL to DirectSoundCreate
+	/* If no device is specified pass NULL to DirectSoundCreate */
 	LPGUID guid = (id != AUDIO_BACKEND_DEFAULT) ? &devices[id].guid : NULL;
 
-	// Fill in the format structure
+	/* Fill in the format structure */
 	WAVEFORMATEX format = {
 		.wFormatTag = WAVE_FORMAT_PCM,
 		.nChannels = desired->channels,
 		.nSamplesPerSec = desired->freq,
 	};
 
-	// filter invalid bps values (should never happen, but eh...)
+	/* filter invalid bps values (should never happen, but eh...) */
 	switch (desired->bits) {
 	case 8: format.wBitsPerSample = 8; break;
 	default:
@@ -415,11 +416,11 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 	case 32: format.wBitsPerSample = 32; break;
 	}
 
-	// ok, now allocate
+	/* ok, now allocate */
 	schism_audio_device_t *dev = mem_calloc(1, sizeof(*dev));
 
 	dev->callback = desired->callback;
-	dev->paused = 1; // always start paused
+	dev->paused = 1; /* always start paused */
 
 	dev->mutex = mt_mutex_create();
 	if (!dev->mutex)
@@ -429,7 +430,7 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 		goto fail;
 	}
 
-	// Set the cooperative level
+	/* Set the cooperative level */
 	{
 		DWORD dwlevel;
 		HWND hwnd;
@@ -458,7 +459,7 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 	};
 
 	for (;;) {
-		// Recalculate wave format
+		/* Recalculate wave format */
 		format.nBlockAlign = format.nChannels * (format.wBitsPerSample / 8);
 		format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
 
@@ -470,7 +471,7 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 
 		dsformat.dwBufferBytes = NUM_CHUNKS * dev->size;
 		if ((dsformat.dwBufferBytes < DSBSIZE_MIN) || (dsformat.dwBufferBytes > DSBSIZE_MAX))
-			goto DS_badformat; // UGH!
+			goto DS_badformat; /* UGH! */
 
 		HRESULT err = IDirectSound_CreateSoundBuffer(dev->dsound, &dsformat, &dev->lpbuffer, NULL);
 		if (err == DS_OK) {
@@ -478,14 +479,14 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 		} else if (err == DSERR_BADFORMAT || err == DSERR_INVALIDPARAM /* Win2K */) {
 DS_badformat:
 			if (format.wBitsPerSample == 32) {
-				// Retry again, with 16-bit audio. 32-bit audio doesn't seem
-				// to work on Win2k at all...
+				/* Retry again, with 16-bit audio. 32-bit audio doesn't seem
+				 * to work on Win2k at all... */
 				format.wBitsPerSample = 16;
 				continue;
 			}
 
 #ifdef COMPILE_POSITION_NOTIFY
-			// Maybe we're on DX5 or lower?
+			/* Maybe we're on DX5 or lower? */
 			if (dsformat.dwFlags & DSBCAPS_CTRLPOSITIONNOTIFY) {
 				dsformat.dwFlags &= ~(DSBCAPS_CTRLPOSITIONNOTIFY);
 				continue;
@@ -493,26 +494,31 @@ DS_badformat:
 #endif
 		}
 
-		// NOTE: Many VM audio drivers (namely virtual pc and vmware) are broken
-		// under Win2k and return DSERR_CONTROLUNAVAIL. This doesn't seem to be the
-		// full story however, since SDL seems to create the buffer just fine.
-		// I'm just not going to worry about it for now...
+		/* NOTE: Many VM audio drivers (namely virtual pc and vmware) are broken
+		 * under Win2k and return DSERR_CONTROLUNAVAIL. This doesn't seem to be the
+		 * full story however, since SDL seems to create the buffer just fine.
+		 * I'm just not going to worry about it for now... */
 
-		// Punt if nothing worked
+		/* Punt if nothing worked */
 		goto fail;
 	}
 
 	if (IDirectSoundBuffer_SetFormat(dev->lpbuffer, &format) != DS_OK) {
-#if 0 // SDL doesn't error here, and it seems to cause issues on my mac mini
+#if 0 /* SDL doesn't error here, and it seems to cause issues on my mac mini */
 		goto fail;
 #endif
 	}
 
-	dev->silence = (format.wBitsPerSample == 8) ? 0x80 : 0;
+	obtained->freq = format.nSamplesPerSec;
+	obtained->channels = format.nChannels;
+	obtained->bits = format.wBitsPerSample;
+	obtained->samples = desired->samples;
+
+	dev->silence = AUDIO_SPEC_SILENCE(*obtained);
 
 	{
-		// Silence the initial buffer (ripped from SDL)
-		// FIXME why are we retrieving ptr2 and bytes2?
+		/* Silence the initial buffer (ripped from SDL)
+		 * FIXME why are we retrieving ptr2 and bytes2? */
 		LPVOID ptr1, ptr2;
 		DWORD bytes1, bytes2;
 
@@ -523,7 +529,7 @@ DS_badformat:
 	}
 
 #ifdef COMPILE_POSITION_NOTIFY
-	// Use position notify events to wait for audio to finish under DX6
+	/* Use position notify events to wait for audio to finish under DX6 */
 	dev->audio_wait = ((dsformat.dwFlags & DSBCAPS_CTRLPOSITIONNOTIFY) && !_dsound_dx6_init_notify_position(dev))
 		? _dsound_audio_wait_dx6
 		: _dsound_audio_wait_dx5;
@@ -531,15 +537,10 @@ DS_badformat:
 	dev->audio_wait = _dsound_audio_wait_dx5;
 #endif
 
-	// ok, now start the full thread
+	/* ok, now start the full thread */
 	dev->thread = mt_thread_create(_dsound_audio_thread, "DirectSound audio thread", dev);
 	if (!dev->thread)
 		goto fail;
-
-	obtained->freq = format.nSamplesPerSec;
-	obtained->channels = format.nChannels;
-	obtained->bits = format.wBitsPerSample;
-	obtained->samples = desired->samples;
 
 	return dev;
 
@@ -602,8 +603,8 @@ static void dsound_audio_pause_device(schism_audio_device_t *dev, int paused)
 	mt_mutex_unlock(dev->mutex);
 }
 
-//////////////////////////////////////////////////////////////////////////////
-// dynamic loading
+/* -------------------------------------------------------------------- */
+/* dynamic loading */
 
 #include <dsconf.h>
 #include <unknwn.h>
@@ -656,7 +657,7 @@ static int dsound_audio_init(void)
 
 	dsound_propset = NULL;
 
-	// wuh?
+	/* wuh? */
 	HRESULT (WINAPI *DSOUND_DllGetClassObject)(REFCLSID, REFIID, LPVOID *) = loadso_function_load(lib_dsound, "DllGetClassObject");
 	if (DSOUND_DllGetClassObject) {
 		IClassFactory *factory;
@@ -699,7 +700,7 @@ static void dsound_audio_quit(void)
 	}
 }
 
-//////////////////////////////////////////////////////////////////////////////
+/* -------------------------------------------------------------------- */
 
 const schism_audio_backend_t schism_audio_backend_dsound = {
 	.init = dsound_audio_init,
@@ -721,13 +722,13 @@ const schism_audio_backend_t schism_audio_backend_dsound = {
 	.pause_device = dsound_audio_pause_device,
 };
 
-//////////////////////////////////////////////////////////////////////////////
+/* -------------------------------------------------------------------- */
 
-// no charset-specific stuff here, that cruft is handled in the callbacks
+/* no charset-specific stuff here, that cruft is handled in the callbacks */
 struct dsound_audio_lookup_callback_data {
-	UINT id;      // input
-	GUID guid;    // output for description callback, input for device callback
-	char *result; // output
+	UINT id;      /* input */
+	GUID guid;    /* output for description callback, input for device callback */
+	char *result; /* output */
 };
 
 #define WIN32_DSOUND_AUDIO_LOOKUP_WAVEOUT_NAME_IMPL(AorW, TYPE, CHARSET) \
@@ -794,11 +795,11 @@ int win32_dsound_audio_lookup_waveout_name(const uint32_t *waveoutdevid, char **
 		return 0;
 
 #ifdef SCHISM_WIN32_COMPILE_ANSI
-	if (GetVersion() & 0x80000000U) { // Win9x
+	if (GetVersion() & 0x80000000U) { /* Win9x */
 		return win32_dsound_audio_lookup_waveout_name_A(*waveoutdevid, result);
 	} else
 #endif
-	{ // WinNT
+	{ /* WinNT */
 		return win32_dsound_audio_lookup_waveout_name_W(*waveoutdevid, result);
 	}
 }

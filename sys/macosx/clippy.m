@@ -31,7 +31,46 @@
 
 #import <Cocoa/Cocoa.h>
 
-static char *macosx_clippy_get_clipboard(void);
+/* I think this is right ? */
+#if MAC_OS_X_VERSION_MIN_REQUIRED < 1060
+# define NSPasteboardTypeString NSStringPboardType
+#endif
+
+static void macosx_clippy_set_selection(const char *text)
+{
+	/* nonexistent */
+}
+
+static void macosx_clippy_set_clipboard(const char *text)
+{
+	NSString *contents = [NSString stringWithUTF8String: text];
+	NSPasteboard *pb = [NSPasteboard generalPasteboard];
+	[pb declareTypes:[NSArray arrayWithObject: NSPasteboardTypeString] owner:nil];
+	[pb setString:contents forType: NSPasteboardTypeString];
+}
+
+static char *macosx_clippy_get_selection(void)
+{
+	/* doesn't exist, ever */
+	return str_dup("");
+}
+
+static char *macosx_clippy_get_clipboard(void)
+{
+	NSPasteboard *pb = [NSPasteboard generalPasteboard];
+	NSString *type = [pb availableTypeFromArray:[NSArray arrayWithObject: NSPasteboardTypeString]];
+
+	if (type != nil) {
+		NSString *contents = [pb stringForType: type];
+		if (contents != nil) {
+			const char *po = [contents UTF8String];
+			if (po)
+				return str_dup(po);
+		}
+	}
+
+	return str_dup("");
+}
 
 static int macosx_clippy_have_selection(void)
 {
@@ -44,42 +83,6 @@ static int macosx_clippy_have_clipboard(void)
 	int res = (text && text[0]);
 	free(text);
 	return res;
-}
-
-static void macosx_clippy_set_selection(const char *text)
-{
-	// nonexistent
-}
-
-static void macosx_clippy_set_clipboard(const char *text)
-{
-	NSString *contents = [NSString stringWithUTF8String: text];
-	NSPasteboard *pb = [NSPasteboard generalPasteboard];
-	[pb declareTypes:[NSArray arrayWithObject: NSStringPboardType] owner:nil];
-	[pb setString:contents forType:NSStringPboardType];
-}
-
-static char *macosx_clippy_get_selection(void)
-{
-	// doesn't exist, ever
-	return str_dup("");
-}
-
-static char *macosx_clippy_get_clipboard(void)
-{
-	NSPasteboard *pb = [NSPasteboard generalPasteboard];
-	NSString *type = [pb availableTypeFromArray:[NSArray arrayWithObject: NSStringPboardType]];
-
-	if (type != nil) {
-		NSString *contents = [pb stringForType: type];
-		if (contents != nil) {
-			const char *po = [contents UTF8String];
-			if (po)
-				return str_dup(po);
-		}
-	}
-
-	return str_dup("");
 }
 
 static int macosx_clippy_init(void)
