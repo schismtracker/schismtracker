@@ -175,13 +175,28 @@ void cfg_load(void)
 		}
 	}
 
+#ifdef SCHISM_XBOX
+/* This should be adapted to other consoles :) */
+# define WIDTH_DEFAULT 640
+# define HEIGHT_DEFAULT 480
+# define WANT_FIXED_DEFAULT 1
+# define WANT_FIXED_WIDTH_DEFAULT 640
+# define WANT_FIXED_HEIGHT_DEFAULT 400
+#else
+# define WIDTH_DEFAULT 640
+# define HEIGHT_DEFAULT 400
+# define WANT_FIXED_DEFAULT 0
+# define WANT_FIXED_WIDTH_DEFAULT (640 * 5)
+# define WANT_FIXED_HEIGHT_DEFAULT (400 * 6)
+#endif
+
 	cfg_get_string(&cfg, "Video", "format", cfg_video_format, ARRAY_SIZE(cfg_video_format) - 1, "");
-	cfg_video_width = cfg_get_number(&cfg, "Video", "width", 640);
-	cfg_video_height = cfg_get_number(&cfg, "Video", "height", 400);
+	cfg_video_width = cfg_get_number(&cfg, "Video", "width", WIDTH_DEFAULT);
+	cfg_video_height = cfg_get_number(&cfg, "Video", "height", HEIGHT_DEFAULT);
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);
-	cfg_video_want_fixed = cfg_get_number(&cfg, "Video", "want_fixed", 0);
-	cfg_video_want_fixed_width = cfg_get_number(&cfg, "Video", "want_fixed_width", 640 * 5);
-	cfg_video_want_fixed_height = cfg_get_number(&cfg, "Video", "want_fixed_height", 400 * 6);
+	cfg_video_want_fixed = cfg_get_number(&cfg, "Video", "want_fixed", WANT_FIXED_DEFAULT);
+	cfg_video_want_fixed_width = cfg_get_number(&cfg, "Video", "want_fixed_width", WANT_FIXED_WIDTH_DEFAULT);
+	cfg_video_want_fixed_height = cfg_get_number(&cfg, "Video", "want_fixed_height", WANT_FIXED_HEIGHT_DEFAULT);
 	cfg_video_mousecursor = cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
 	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_MAX_STATE);
 	cfg_video_hardware = cfg_get_number(&cfg, "Video", "hardware", 1);
