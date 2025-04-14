@@ -29,12 +29,6 @@
 #include "osdefs.h"
 #include "mem.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <stddef.h>
-
-#include <fcntl.h>
-
 static int slurp_stdio_open_(slurp_t *t, const char *filename);
 static int slurp_stdio_open_file_(slurp_t *t, FILE *fp);
 static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence);

@@ -30,6 +30,7 @@
 #include "backend/mt.h"
 
 #include <windows.h>
+#include <process.h>
 
 #define MSVC_EXCEPTION_NAME_CODE UINT32_C(0x406D1388)
 
@@ -46,6 +47,14 @@
 // as well (though I can't say for sure exactly how performant it is. mileage may vary)
 
 /* ------------------------------------ */
+
+#ifdef SCHISM_XBOX
+# undef WINAPI
+# define WINAPI
+# define CreateSemaphoreA CreateSemaphore /* bug */
+
+typedef void *PVECTORED_EXCEPTION_HANDLER;
+#endif
 
 static PVOID (WINAPI *KERNEL32_AddVectoredExceptionHandler)(ULONG, PVECTORED_EXCEPTION_HANDLER);
 static ULONG (WINAPI *KERNEL32_RemoveVectoredExceptionHandler)(PVOID);
@@ -64,6 +73,7 @@ struct mt_thread {
 	void *userdata;
 };
 
+#ifndef SCHISM_XBOX
 static LONG __stdcall win32_exception_handler_noop(EXCEPTION_POINTERS *info)
 {
 	return (info && info->ExceptionRecord && info->ExceptionRecord->ExceptionCode == MSVC_EXCEPTION_NAME_CODE)
@@ -107,11 +117,13 @@ static inline void win32_raise_name_exception(const char *name)
 		free(name_a);
 	}
 }
+#endif
 
 static unsigned int __stdcall SCHISM_FORCE_ALIGN_ARG_POINTER win32_dummy_thread_func(void *userdata)
 {
 	mt_thread_t *thread = userdata;
 
+#ifndef SCHISM_XBOX
 	if (thread->name) {
 		if (KERNEL32_SetThreadDescription) {
 			LPWSTR strw = charset_iconv_easy(thread->name, CHARSET_UTF8, CHARSET_WCHAR_T);
@@ -132,6 +144,7 @@ static unsigned int __stdcall SCHISM_FORCE_ALIGN_ARG_POINTER win32_dummy_thread_
 			win32_raise_name_exception(thread->name);
 		}
 	}
+#endif
 
 	thread->status = thread->func(thread->userdata);
 
@@ -548,55 +561,46 @@ static void *lib_kernelbase = NULL;
 
 static int win32_threads_init(void)
 {
+#ifdef SCHISM_WIN32
 	lib_kernel32 = loadso_object_load("KERNEL32.DLL");
 	lib_kernelbase = loadso_object_load("KERNELBASE.DLL");
 
-	if (lib_kernel32) {
-		KERNEL32_AddVectoredExceptionHandler = loadso_function_load(lib_kernel32, "AddVectoredExceptionHandler");
-		KERNEL32_RemoveVectoredExceptionHandler = loadso_function_load(lib_kernel32, "RemoveVectoredExceptionHandler");
-		KERNEL32_SetThreadDescription = loadso_function_load(lib_kernel32, "SetThreadDescription");
-		KERNEL32_IsDebuggerPresent = loadso_function_load(lib_kernel32, "IsDebuggerPresent");
+	SCHISM_RUNTIME_ASSERT(lib_kernel32, "This should never ever happen");
+#endif
 
-		KERNEL32_InitializeCriticalSection = loadso_function_load(lib_kernel32, "InitializeCriticalSection");
-		KERNEL32_SetCriticalSectionSpinCount = loadso_function_load(lib_kernel32, "SetCriticalSectionSpinCount");
-		KERNEL32_DeleteCriticalSection = loadso_function_load(lib_kernel32, "DeleteCriticalSection");
-		KERNEL32_EnterCriticalSection = loadso_function_load(lib_kernel32, "EnterCriticalSection");
-		KERNEL32_LeaveCriticalSection = loadso_function_load(lib_kernel32, "LeaveCriticalSection");
+#ifdef SCHISM_XBOX
+# define KERNEL32_FUNC_XBOX(x) KERNEL32_##x = x
+# define KERNEL32_FUNC_WIN32(x) KERNEL32_##x = NULL
+#else
+# define KERNEL32_FUNC_XBOX(x) KERNEL32_##x = loadso_function_load(lib_kernel32, #x)
+# define KERNEL32_FUNC_WIN32(x) KERNEL32_FUNC_XBOX(x)
+#endif
 
-		KERNEL32_InitializeSRWLock = loadso_function_load(lib_kernel32, "InitializeSRWLock");
-		KERNEL32_AcquireSRWLockExclusive = loadso_function_load(lib_kernel32, "AcquireSRWLockExclusive");
-		KERNEL32_ReleaseSRWLockExclusive = loadso_function_load(lib_kernel32, "ReleaseSRWLockExclusive");
+	KERNEL32_FUNC_WIN32(AddVectoredExceptionHandler);
+	KERNEL32_FUNC_WIN32(RemoveVectoredExceptionHandler);
+	KERNEL32_FUNC_WIN32(SetThreadDescription);
+	KERNEL32_FUNC_WIN32(IsDebuggerPresent);
 
-		KERNEL32_InitializeConditionVariable = loadso_function_load(lib_kernel32, "InitializeConditionVariable");
-		KERNEL32_WakeConditionVariable = loadso_function_load(lib_kernel32, "WakeConditionVariable");
-		KERNEL32_SleepConditionVariableSRW = loadso_function_load(lib_kernel32, "SleepConditionVariableSRW");
-		KERNEL32_SleepConditionVariableCS = loadso_function_load(lib_kernel32, "SleepConditionVariableCS");
-	} else {
-		// reset all to null.
-		KERNEL32_AddVectoredExceptionHandler = NULL;
-		KERNEL32_RemoveVectoredExceptionHandler = NULL;
-		KERNEL32_SetThreadDescription = NULL;
-		KERNEL32_IsDebuggerPresent = NULL;
+	KERNEL32_FUNC_XBOX(InitializeCriticalSection);
+	KERNEL32_FUNC_WIN32(SetCriticalSectionSpinCount);
+	KERNEL32_FUNC_XBOX(DeleteCriticalSection);
+	KERNEL32_FUNC_XBOX(EnterCriticalSection);
+	KERNEL32_FUNC_XBOX(LeaveCriticalSection);
 
-		KERNEL32_InitializeCriticalSection = NULL;
-		KERNEL32_SetCriticalSectionSpinCount = NULL;
-		KERNEL32_DeleteCriticalSection = NULL;
-		KERNEL32_EnterCriticalSection = NULL;
-		KERNEL32_LeaveCriticalSection = NULL;
+	KERNEL32_FUNC_XBOX(InitializeSRWLock);
+	KERNEL32_FUNC_XBOX(AcquireSRWLockExclusive);
+	KERNEL32_FUNC_XBOX(ReleaseSRWLockExclusive);
 
-		KERNEL32_InitializeSRWLock = NULL;
-		KERNEL32_AcquireSRWLockExclusive = NULL;
-		KERNEL32_ReleaseSRWLockExclusive = NULL;
+	KERNEL32_FUNC_XBOX(InitializeConditionVariable);
+	KERNEL32_FUNC_XBOX(WakeConditionVariable);
+	KERNEL32_FUNC_XBOX(SleepConditionVariableSRW);
+	KERNEL32_FUNC_XBOX(SleepConditionVariableCS);
 
-		KERNEL32_InitializeConditionVariable = NULL;
-		KERNEL32_WakeConditionVariable = NULL;
-		KERNEL32_SleepConditionVariableSRW = NULL;
-		KERNEL32_SleepConditionVariableCS = NULL;
-	}
-
+#ifdef SCHISM_WIN32
 	if (lib_kernelbase && !KERNEL32_SetThreadDescription) {
 		KERNEL32_SetThreadDescription = loadso_function_load(lib_kernelbase, "SetThreadDescription");
 	}
+#endif
 
 	const int critsec_ok = KERNEL32_InitializeCriticalSection && KERNEL32_DeleteCriticalSection && KERNEL32_EnterCriticalSection && KERNEL32_LeaveCriticalSection;
 	const int srwlock_ok = KERNEL32_InitializeSRWLock && KERNEL32_AcquireSRWLockExclusive && KERNEL32_ReleaseSRWLockExclusive;

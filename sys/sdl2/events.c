@@ -645,7 +645,7 @@ static int sdl2_events_init(void)
 #ifdef SCHISM_CONTROLLER
 	{
 		int r = sdl2_controller_init();
-# if defined(SCHISM_WII) || defined(SCHISM_WIIU)
+# if defined(SCHISM_WII) || defined(SCHISM_WIIU) || defined(SCHISM_XBOX)
 		// only warn the user if controller initialization failed
 		// when on an actual console.
 		if (!r)

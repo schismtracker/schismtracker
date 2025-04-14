@@ -312,11 +312,11 @@ int disko_close(disko_t *ds, int backup)
 	}
 	// If anything failed so far, kill off the temp file
 	//
-	// FIXME we need a dmoz_path_remove, because unlink()
+	// FIXME we need a dmoz_path_remove, because remove()
 	// is a stub on mac os, and windows will interpret
 	// the path as ANSI instead of unicode
 	if (err)
-		unlink(ds->tempname);
+		remove(ds->tempname);
 
 	free(ds->tempname);
 	free(ds->filename);

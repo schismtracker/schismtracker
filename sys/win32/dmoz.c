@@ -37,16 +37,13 @@ static char *win32_dmoz_get_exe_path(void)
 {
 	char *utf8 = NULL;
 
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-	if (GetVersion() & UINT32_C(0x80000000)) {
+	SCHISM_ANSI_UNICODE({
 		// Windows 9x
 		char path[MAX_PATH];
 
 		if (GetModuleFileNameA(NULL, path, ARRAY_SIZE(path)))
 			charset_iconv(path, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(path));
-	} else
-#endif
-	{
+	}, {
 		// Windows NT. This uses dynamic allocation to account for e.g. UNC paths.
 		DWORD pathsize = MAX_PATH;
 		WCHAR *path = NULL;
@@ -72,7 +69,7 @@ static char *win32_dmoz_get_exe_path(void)
 		charset_iconv(path, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, pathsize * sizeof(*path));
 
 		free(path);
-	}
+	})
 
 	if (utf8) {
 		char *parent = dmoz_path_get_parent_directory(utf8);

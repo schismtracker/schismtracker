@@ -137,6 +137,7 @@ static char *win32_clippy_get_selection(void)
 
 static char *win32_clippy_get_clipboard(void)
 {
+	static const UINT formats[] = {CF_UNICODETEXT, CF_TEXT};
 	char *text = NULL;
 	int i;
 	int fmt;
@@ -145,20 +146,16 @@ static char *win32_clippy_get_clipboard(void)
 	if (!video_get_wm_data(&wm_data) && wm_data.subsystem != VIDEO_WM_DATA_SUBSYSTEM_WINDOWS)
 		return str_dup("");
 
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-	if (GetVersion() & UINT32_C(0x80000000)) {
+	SCHISM_ANSI_UNICODE({
 		// Believe it or not, CF_UNICODETEXT *does* actually work on
 		// Windows 95. However, practically every application that runs
 		// will completely ignore it and just use CF_TEXT instead.
 		fmt = CF_TEXT;
-	} else
-#endif
-	{
-		UINT formats[] = {CF_UNICODETEXT, CF_TEXT};
+	}, {
 		fmt = GetPriorityClipboardFormat(formats, ARRAY_SIZE(formats));
 		if (fmt < 0)
 			return str_dup("");
-	}
+	})
 
 	// try a couple times to open the clipboard
 	for (i = 0; i < 5; i++) {

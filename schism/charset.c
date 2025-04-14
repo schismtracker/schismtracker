@@ -655,6 +655,8 @@ static const charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 	[CHARSET_CHAR] = utf8_to_ucs4,
 #ifdef SCHISM_WIN32
 	[CHARSET_WCHAR_T] = wchar_to_ucs4,
+#elif defined(SCHISM_XBOX)
+	[CHARSET_WCHAR_T] = utf16LE_to_ucs4,
 #else
 	/* unimplemented */
 	[CHARSET_WCHAR_T] = NULL,
@@ -677,6 +679,8 @@ static const charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 	[CHARSET_CHAR] = ucs4_to_utf8,
 #ifdef SCHISM_WIN32
 	[CHARSET_WCHAR_T] = ucs4_to_wchar,
+#elif defined(SCHISM_XBOX)
+	[CHARSET_WCHAR_T] = ucs4_to_utf16LE,
 #else
 	/* unimplemented */
 	[CHARSET_WCHAR_T] = NULL,
@@ -771,6 +775,8 @@ CHARSET_VARIATION(internal)
 
 #ifdef SCHISM_WIN32
 # include <windows.h> // MultiByteToWideChar
+#elif defined(SCHISM_XBOX)
+# include <xboxkrnl/xboxkrnl.h>
 #elif defined(SCHISM_MACOS)
 # include <TextEncodingConverter.h>
 # include <Script.h>
@@ -957,6 +963,32 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 		break;
 	}
 #endif
+#ifdef SCHISM_XBOX
+	case CHARSET_ANSI: {
+		size_t source_size = (insize != SIZE_MAX) ? insize : strlen(in);
+		ULONG size; /* in bytes */
+		WCHAR *wstr;
+
+		if (!NT_SUCCESS(RtlMultiByteToUnicodeSize(&size, (CHAR *)in, source_size)))
+			return CHARSET_ERROR_DECODE;
+
+		/* ReactOS source code doesn't append a NUL terminator.
+		 * I assume this is the Win32 behavior as well. */
+		wstr = mem_alloc(size + sizeof(WCHAR));
+
+		if (!NT_SUCCESS(RtlMultiByteToUnicodeN(wstr, size, NULL, (CHAR *)in, source_size))) {
+			free(wstr);
+			return CHARSET_ERROR_DECODE;
+		}
+
+		wstr[size >> 1] = '\0';
+
+		infake = wstr;
+		insetfake = CHARSET_WCHAR_T;
+		insizefake = (size + sizeof(WCHAR));
+		break;
+	}
+#endif
 #ifdef SCHISM_OS2
 	case CHARSET_DOSCP: {
 		ULONG cp;
@@ -1033,6 +1065,11 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 		break;
 	}
 #endif
+#ifdef SCHISM_XBOX
+	case CHARSET_ANSI:
+		outsetfake = CHARSET_WCHAR_T;
+		break;
+#endif
 #ifdef SCHISM_MACOS
 	case CHARSET_SYSTEMSCRIPT:
 		outsetfake = CHARSET_UTF16;
@@ -1062,6 +1099,12 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 	case CHARSET_ANSI:
 		free((void *)infake);
 		break;
+#endif
+#ifdef SCHISM_XBOX
+	case CHARSET_ANSI: {
+		free((void *)infake);
+		break;
+	}
 #endif
 #ifdef SCHISM_MACOS
 	case CHARSET_SYSTEMSCRIPT:
@@ -1097,6 +1140,36 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 
 		// copy the pointer
 		memcpy(out, &ansi_out, sizeof(void *));
+
+		break;
+	}
+#endif
+#ifdef SCHISM_XBOX
+	case CHARSET_ANSI: {
+		size_t source_size = wcslen(outfake) * sizeof(WCHAR);
+		ULONG size; /* in bytes */
+		CHAR *astr;
+
+		if (!NT_SUCCESS(RtlUnicodeToMultiByteSize(&size, outfake, source_size))) {
+			free(outfake);
+			return CHARSET_ERROR_ENCODE;
+		}
+
+		/* ReactOS source code doesn't append a NUL terminator.
+		 * I assume this is the Win32 behavior as well. */
+		astr = mem_alloc(size + sizeof(CHAR));
+
+		if (!NT_SUCCESS(RtlUnicodeToMultiByteN(astr, size, NULL, outfake, source_size))) {
+			free(outfake);
+			free(astr);
+			return CHARSET_ERROR_ENCODE;
+		}
+
+		astr[size] = '\0';
+
+		free(outfake);
+
+		memcpy(out, &astr, sizeof(void *));
 
 		break;
 	}

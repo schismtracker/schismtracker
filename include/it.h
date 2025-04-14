@@ -28,9 +28,6 @@
 
 #include "backend/timer.h"
 
-#include <sys/types.h>
-#include <sys/stat.h> /* roundabout way to get time_t */
-
 #include "util.h"
 #include "video.h"
 #include "log.h"

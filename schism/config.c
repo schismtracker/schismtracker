@@ -32,9 +32,6 @@
 #include "palettes.h"
 #include "video.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-
 #include "config-parser.h"
 #include "dmoz.h"
 #include "osdefs.h"
@@ -72,7 +69,7 @@ int cfg_str_time_format = STR_TIME_FORMAT_DEFAULT;
 static const char *schism_dotfolders[] = {
 #if defined(SCHISM_WIN32) || defined(SCHISM_MACOS) || defined(SCHISM_MACOSX) || defined(SCHISM_OS2)
 	"Schism Tracker",
-#elif defined(SCHISM_WII) || defined(SCHISM_WIIU)
+#elif defined(SCHISM_WII) || defined(SCHISM_WIIU) || defined(SCHISM_XBOX)
 	".",
 #else
 # ifdef __HAIKU__

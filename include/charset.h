@@ -67,7 +67,7 @@ typedef enum {
 	CHARSET_WCHAR_T,
 
 	/* START SYSTEM-SPECIFIC HACKS */
-#ifdef SCHISM_WIN32
+#if defined(SCHISM_WIN32) || defined(SCHISM_XBOX)
 	CHARSET_ANSI,
 #endif
 

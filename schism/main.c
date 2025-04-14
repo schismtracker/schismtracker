@@ -54,10 +54,7 @@
 
 #include "osdefs.h"
 
-#include <fcntl.h>
-#include <unistd.h>
-
-#if !defined(SCHISM_WIN32) && !defined(SCHISM_OS2)
+#if !defined(SCHISM_WIN32) && !defined(SCHISM_OS2) && !defined(SCHISM_XBOX)
 # include <signal.h>
 #endif
 
@@ -947,7 +944,9 @@ int schism_main(int argc, char** argv)
 
 	ver_init();
 
+#ifdef HAVE_TZSET
 	tzset(); // localtime_r wants this
+#endif
 	srand(time(NULL));
 	parse_options(argc, argv); /* shouldn't this be like, first? */
 
@@ -1056,7 +1055,7 @@ int schism_main(int argc, char** argv)
 	flac_init();
 #endif
 
-#if !defined(SCHISM_WIN32) && !defined(SCHISM_OS2)
+#if !defined(SCHISM_WIN32) && !defined(SCHISM_OS2) && !defined(SCHISM_XBOX)
 	signal(SIGINT, exit);
 	signal(SIGQUIT, exit);
 	signal(SIGTERM, exit);

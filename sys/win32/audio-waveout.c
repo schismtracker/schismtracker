@@ -138,9 +138,7 @@ static uint32_t waveout_audio_device_count(void)
 			struct waveoutcaps2w w2;
 		} caps = {0};
 
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-		int win9x = (GetVersion() & UINT32_C(0x80000000));
-		if (win9x) {
+		SCHISM_ANSI_UNICODE({
 			if (waveOutGetDevCapsA(i, &caps.a, sizeof(caps.a)) != MMSYSERR_NOERROR)
 				continue;
 
@@ -148,9 +146,7 @@ static uint32_t waveout_audio_device_count(void)
 			if (!win32_audio_lookup_device_name(NULL, &i, &devices[devices_size].name)
 				&& charset_iconv(caps.a.szPname, &devices[devices_size].name, CHARSET_ANSI, CHARSET_UTF8, sizeof(caps.a.szPname)))
 				continue;
-		} else
-#endif
-		{
+		}, {
 			/* Try WAVEOUTCAPS2 before WAVEOUTCAPS */
 			if (waveOutGetDevCapsW(i, (LPWAVEOUTCAPSW)&caps.w2, sizeof(caps.w2)) == MMSYSERR_NOERROR) {
 				/* Try receiving based on the name GUID. Otherwise, fall back to the short name. */
@@ -164,7 +160,7 @@ static uint32_t waveout_audio_device_count(void)
 			} else {
 				continue;
 			}
-		}
+		})
 
 		devices[devices_size].id = i;
 

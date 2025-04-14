@@ -52,7 +52,7 @@ typedef struct {
 	void (*cond_wait_timeout)(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout);
 } schism_mt_backend_t;
 
-#ifdef SCHISM_WIN32
+#if defined(SCHISM_WIN32) || defined(SCHISM_XBOX)
 extern const schism_mt_backend_t schism_mt_backend_win32;
 #endif
 #ifdef SCHISM_MACOS

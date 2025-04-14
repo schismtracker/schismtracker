@@ -30,9 +30,6 @@ and possibly other files as well. Only one osdefs.c should be in use at a time. 
 #include "headers.h"
 #include "events.h"
 
-/* need stat; TODO autoconf test */
-#include <sys/stat.h> /* roundabout way to get time_t */
-
 /* message box styles. */
 #define OS_MESSAGE_BOX_INFO     (0)
 #define OS_MESSAGE_BOX_ERROR    (1)
@@ -80,6 +77,11 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_fopen os2_fopen
 # define os_get_key_repeat os2_get_key_repeat
 # define os_show_message_box os2_show_message_box
+#elif defined(SCHISM_XBOX)
+# define os_sysinit xbox_sysinit
+# define os_stat xbox_stat
+# define os_mkdir xbox_mkdir
+# define os_fopen xbox_fopen
 #endif
 
 #if defined(SCHISM_WIN32)
@@ -116,6 +118,11 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_get_locale_format(pdate, ptime) (0)
 #endif
 #ifndef os_show_message_box
+
+# ifdef SCHISM_XBOX
+#  include <hal/debug.h>
+# endif
+
 static inline void msgbox_printf_impl(const char *title, const char *text, int style)
 {
 	const char *styles[] = {
@@ -123,7 +130,12 @@ static inline void msgbox_printf_impl(const char *title, const char *text, int s
 		[OS_MESSAGE_BOX_ERROR] = "ERROR",
 	};
 
-	printf("[%s] %s: %s", styles[style], title, text);
+#ifdef SCHISM_XBOX
+	debugPrint
+#else
+	printf
+#endif
+		("[%s] %s: %s", styles[style], title, text);
 }
 # define os_show_message_box(title, text, style) (msgbox_printf_impl(title, text, style))
 #endif
@@ -190,5 +202,36 @@ int os2_mkdir(const char* path, mode_t mode);
 FILE* os2_fopen(const char* path, const char* flags);
 int os2_get_key_repeat(int *pdelay, int *prate);
 void os2_show_message_box(const char *title, const char *text, int style);
+
+int xbox_stat(const char *path, struct stat *st);
+int xbox_mkdir(const char *path, mode_t mode);
+FILE* xbox_fopen(const char* path, const char* flags);
+void xbox_sysinit(int *pargc, char ***pargv);
+
+/* ------------------------------------------------------------------------ */
+/* stupid ugly windows/xbox crap */
+
+/* okay, some explanation for this.
+ * nxdk (xbox toolchain) doesn't support the unicode API AT ALL, which
+ * means we need to build only the ANSI bits of schism. however, we want
+ * to be able to support winnt clients as well. thus, I created this macro
+ * which does what we want in all cases, without sprinkling stupid preprocessor
+ * crap everywhere (see dmoz.c for some fun) */
+#ifdef SCHISM_XBOX
+# define SCHISM_ANSI_UNICODE(ansiblock, uniblock) \
+	{ ansiblock }
+#elif defined(SCHISM_WIN32)
+# ifdef SCHISM_WIN32_COMPILE_ANSI
+#  define SCHISM_ANSI_UNICODE(ansiblock, uniblock) \
+	if (GetVersion() & 0x80000000U) {
+		ansiblock
+	} else {
+		uniblock
+	}
+# else
+#  define SCHISM_ANSI_UNICODE(ansiblock, uniblock) \
+	{ uniblock }
+# endif
+#endif
 
 #endif /* SCHISM_OSDEFS_H_ */

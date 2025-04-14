@@ -344,6 +344,14 @@ schismtracker.rpx: schismtracker.elf
 	$(ELF2RPL) $< $@
 endif
 
+if USE_XBOX
+files_xbox = \
+	sys/xbox/osdefs.c \
+	sys/win32/mt.c
+cflags_xbox =
+libs_xbox =
+endif
+
 if USE_MACOSX
 files_macosx = \
 	sys/macosx/macosx-sdlmain.m	\
@@ -582,7 +590,8 @@ schismtracker_SOURCES = \
 	$(files_sdl2)			\
 	$(files_sdl12)			\
 	$(files_macos)			\
-	$(files_os2)
+	$(files_os2)			\
+	$(files_xbox)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
@@ -592,7 +601,7 @@ component_cflags = $(cflags_alsa) $(cflags_oss) \
 	$(cflags_version) $(cflags_win32) $(cflags_wii) \
 	$(cflags_macosx) $(cflags_flac) $(cflags_jack) \
 	$(cflags_wiiu) $(cflags_macos) $(cflags_os2) \
-	$(UTF8PROC_CFLAGS)
+	$(cflags_xbox) $(UTF8PROC_CFLAGS)
 schismtracker_CPPFLAGS = -I$(srcdir)/include -I. $(cppflags_wii) $(cppflags_wiiu)
 schismtracker_CFLAGS = $(AM_CFLAGS) $(component_cflags)
 schismtracker_OBJCFLAGS = $(AM_OBJCFLAGS) $(component_cflags)
@@ -604,5 +613,5 @@ schismtracker_LDADD = $(LIBM) $(libs_sdl3) \
 	$(lib_win32) $(libs_network) $(libs_flac) \
 	$(lib_mediafoundation) $(UTF8PROC_LIBS) \
 	$(libs_sdl2) $(libs_sdl12) $(libs_macos) \
-	$(libs_os2)
+	$(libs_os2) $(libs_xbox)
 schismtracker_LDFLAGS = $(ldflags_macosx)

@@ -39,12 +39,6 @@
 #include "osdefs.h"
 #include "str.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-
-#include <fcntl.h>
-#include <ctype.h>
-
 /* --------------------------------------------------------------------------------------------------------- */
 /* the locals */
 static struct vgamem_overlay sample_image = {
@@ -635,7 +629,7 @@ static void do_delete_file(SCHISM_UNUSED void *data)
 	ptr = flist.files[current_file]->path;
 
 	/* would be neat to send it to the trash can if there is one */
-	unlink(ptr);
+	remove(ptr);
 
 	/* remember the list positions */
 	old_top_file = top_file;

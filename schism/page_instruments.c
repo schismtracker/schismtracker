@@ -39,8 +39,6 @@
 #include "mem.h"
 #include "str.h"
 
-#include <sys/stat.h>
-
 /* --------------------------------------------------------------------- */
 /* just one global variable... */
 

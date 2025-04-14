@@ -26,10 +26,6 @@
 
 #include "player/sndfile.h" /* for song_sample_t */
 
-/* need these for struct stat */
-#include <sys/types.h>
-#include <sys/stat.h>
-
 enum {
 	TYPE_BROWSABLE_MASK   = 0x1, /* if (type & TYPE_BROWSABLE_MASK) it's readable as a library */
 	TYPE_FILE_MASK        = 0x2, /* if (type & TYPE_FILE_MASK) it's a regular file */
@@ -165,7 +161,7 @@ int song_preload_sample(dmoz_file_t *f);
 
 
 /* Path handling functions */
-#if defined(SCHISM_WIN32) || defined(SCHISM_OS2)
+#if defined(SCHISM_WIN32) || defined(SCHISM_OS2) || defined(SCHISM_XBOX)
 # define DIR_SEPARATOR '\\'
 # define DIR_SEPARATOR_STR "\\"
 # define IS_DIR_SEPARATOR(c) ((c) == '/' || (c) == '\\')

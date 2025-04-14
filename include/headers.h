@@ -97,9 +97,77 @@
 /* These files provide struct stat, which we currently require to be
  * provided by the implementation. Ideally we shouldn't need this and we
  * would use our own "schism-stat" instead but this is okay for now. */
-#if HAVE_UNISTD_H
-# include <sys/types.h>
+#ifdef HAVE_UNISTD_H
 # include <unistd.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+
+#ifdef HAVE_STAT
+# include <sys/stat.h>
+#else
+/* This only defines the stuff we actually use.
+ * Raw stat() should never be called; osdefs.h defines
+ * the actual stat implementations.  */
+struct stat {
+	/* dev_t st_dev; */
+	/* ino_t st_ino; */
+	uint32_t st_mode;
+	/* nlink_t st_nlink; */
+	/* uid_t st_uid; */
+	/* gid_t st_gid; */
+	/* dev_t st_rdev; */
+	uint64_t st_size; /* no reason for this to be signed */
+	int64_t st_atime; /* these three are all unix time. */
+	int64_t st_mtime;
+	int64_t st_ctime;
+	/* blksize_t st_blksize; */
+	/* blkcnt_t st_blocks; */
+};
+
+# define S_IFREG (0x01)
+# define S_IFBLK (0x02)
+# define S_IFCHR (0x04)
+# define S_IFIFO (0x08)
+# define S_IFDIR (0x10)
+# define S_IFLNK (0x20)
+# define S_IFSOCK (0x40)
+
+# define S_IFMT (0x7F) /* format mask */
+
+/* If we aren't on a POSIX system, these probably can't be filled;
+ * generally these should be ignored anyhow.  :) */
+# define S_IRUSR (0x80)
+# define S_IWUSR (0x100)
+# define S_IXUSR (0x200)
+# define S_IRGRP (0x400)
+# define S_IWGRP (0x800)
+# define S_IXGRP (0x1000)
+# define S_IROTH (0x2000)
+# define S_IWOTH (0x4000)
+# define S_IXOTH (0x8000)
+# define S_ISUID (0x10000)
+# define S_ISGID (0x20000)
+
+# define S_IRWXU (S_IRUSR | S_IWUSR | S_IXUSR)
+# define S_IRWXG (S_IRGRP | S_IWGRP | S_IXGRP)
+# define S_IRWXO (S_IROTH | S_IWOTH | S_IXOTH)
+
+/* Convenience macros as defined by POSIX */
+# define S_ISREG(x)  (!!((x) & S_IFREG))
+# define S_ISBLK(x)  (!!((x) & S_IFBLK))
+# define S_ISCHR(x)  (!!((x) & S_IFCHR))
+# define S_ISFIFO(x) (!!((x) & S_IFIFO))
+# define S_ISDIR(x)  (!!((x) & S_IFDIR))
+# define S_ISLNK(x)  (!!((x) & S_IFLNK))
+# define S_ISSOCK(x) (!!((x) & S_IFSOCK))
+
+# define S_TYPEISMQ(x)  (0)
+# define S_TYPEISSEM(x) (0)
+# define S_TYPEISSHM(x) (0)
+# define S_TYPEISTMO(x) (0)
+
 #endif
 
 /* ------------------------------------------------------------------------ */
@@ -371,7 +439,7 @@
 
 /* Used to mark a printf format parameter. Currently only MSVC really
  * has this, and GCC has the much more useful "format" attribute */
-#if SCHISM_MSVC_ATLEAST(8, 0, 0)
+#if SCHISM_MSVC_ATLEAST(8, 0, 0) && defined(HAVE_SAL_H)
 # define SCHISM_PRINTF_FORMAT_PARAM _Printf_format_string_
 #else
 # define SCHISM_PRINTF_FORMAT_PARAM
@@ -646,6 +714,46 @@ void *alloca(size_t size);
 #else
 /* Hmph. */
 # define SCHISM_FAM_SIZE 1
+#endif
+
+/* ------------------------------------------------------------------------ */
+
+#ifdef SCHISM_XBOX
+
+/* le sigh */
+
+#include <xboxkrnl/xboxkrnl.h>
+
+static inline struct tm *xbox_localtime(const time_t *t)
+{
+	static struct tm our_tm = {0};
+
+	LARGE_INTEGER ft;
+	TIME_FIELDS st;
+	uint64_t ul;
+
+	ul = (*t * 10000000ULL) + 116444736000000000ULL;
+
+	ft.HighPart = (ul >> 32);
+	ft.LowPart = (ul & 0xFFFFFFFFU);
+
+	RtlTimeToTimeFields(&ft, &st);
+
+	our_tm.tm_year = st.Year - 1900;
+	our_tm.tm_mon = st.Month - 1;
+	our_tm.tm_wday = st.Weekday;
+	our_tm.tm_mday = st.Day;
+	our_tm.tm_hour = st.Hour;
+	our_tm.tm_min = st.Minute;
+	our_tm.tm_sec = st.Second;
+	/* our_tm.tm_yday = ??? */
+	/* our_tm.tm_isdst = ??? */
+
+	return &our_tm;
+}
+
+# define localtime xbox_localtime
+
 #endif
 
 #endif /* SCHISM_HEADERS_H_ */

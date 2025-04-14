@@ -32,10 +32,22 @@ AC_CONFIG_SRCDIR([schism/main.c])
 AM_INIT_AUTOMAKE([-Wall subdir-objects])
 AC_CONFIG_HEADERS([build-config.h])
 
-AC_CANONICAL_HOST
+AC_CANONICAL_BUILD
+
+dnl prevent config.sub error when building for xbox
+dnl this is a stupid hack and is entirely unsupported
+dnl things might break
+case "$host" in
+*-*-xbox*)
+	host_os="xbox"
+	;;
+*)
+	AC_CANONICAL_HOST
+	;;
+esac
 
 if test "x$last_commit_date" = "x"; then
-	AC_DEFINE([EMPTY_VERSION], [], [Empty version number (okay if you don't have Git)])
+	AC_DEFINE([EMPTY_VERSION], [1], [Empty version number (okay if you don't have Git)])
 	echo "*** empty version"
 fi
 
@@ -192,7 +204,7 @@ AC_CHECK_PROGS([SORT], [gsort sort], [false])
 AS_IF([! "$SORT" -V </dev/null >/dev/null], [AC_MSG_WARN([sort(1) that supports the -V option is required to find dynamic libraries])])
 
 dnl do we have Git
-AC_CHECK_TOOL([GIT], [git])
+AC_CHECK_PROG([GIT], [git])
 AC_SUBST(GIT)
 AM_CONDITIONAL([HAVE_GIT], [test "x$GIT" != "x"])
 
@@ -216,15 +228,15 @@ dnl hijacked from libtool
 LIBM=
 case $host in
 *-*-beos* | *-*-cegcc* | *-*-cygwin* | *-*-haiku* | *-*-mingw* | *-*-pw32* | *-*-darwin*)
-  # These system don't have libm, or don't need it
-  ;;
+	# These system don't have libm, or don't need it
+	;;
 *-ncr-sysv4.3*)
-  AC_CHECK_LIB(mw, _mwvalidcheckl, LIBM=-lmw)
-  AC_CHECK_LIB(m, cos, LIBM="$LIBM -lm")
-  ;;
+	AC_CHECK_LIB(mw, _mwvalidcheckl, LIBM=-lmw)
+	AC_CHECK_LIB(m, cos, LIBM="$LIBM -lm")
+	;;
 *)
-  AC_CHECK_LIB(m, cos, LIBM=-lm)
-  ;;
+	AC_CHECK_LIB(m, cos, LIBM=-lm)
+	;;
 esac
 AC_SUBST([LIBM])
 
@@ -253,7 +265,7 @@ AC_SUBST([UTF8PROC_CFLAGS])
 AC_SUBST([UTF8PROC_LIBS])
 
 dnl Functions
-AC_CHECK_FUNCS(alloca strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr asprintf vasprintf snprintf vsnprintf memcmp nice setenv unsetenv dup fnmatch mkstemp localtime_r umask execl fork nanosleep usleep access getopt_long fdopen)
+AC_CHECK_FUNCS(alloca strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp strcasestr asprintf vasprintf snprintf vsnprintf memcmp nice setenv unsetenv dup fnmatch mkstemp localtime_r umask execl fork nanosleep usleep access getopt_long fdopen tzset putenv)
 AM_CONDITIONAL([NEED_ASPRINTF], [test "x$ac_cv_func_asprintf" = "xno"])
 AM_CONDITIONAL([NEED_VASPRINTF], [test "x$ac_cv_func_vasprintf" = "xno"])
 AM_CONDITIONAL([NEED_SNPRINTF], [test "x$ac_cv_func_snprintf" = "xno"])
@@ -266,7 +278,7 @@ AM_CONDITIONAL([NEED_UNSETENV], [test "x$ac_cv_func_unsetenv" = "xno"])
 AM_CONDITIONAL([NEED_GETOPT], [test "x$ac_cv_func_getopt_long" = "xno"])
 
 dnl Headers, typedef crap, et al.
-AC_CHECK_HEADERS(assert.h alloca.h dirent.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/socket.h sys/soundcard.h poll.h sys/poll.h linux/fb.h sys/kd.h stdint.h inttypes.h tgmath.h)
+AC_CHECK_HEADERS(assert.h alloca.h dirent.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/socket.h sys/soundcard.h poll.h sys/poll.h linux/fb.h sys/kd.h stdint.h inttypes.h tgmath.h sys/types.h sal.h)
 
 AM_CONDITIONAL([USE_OSS], [false])
 if test "x$ac_cv_header_sys_soundcard_h" = "xyes"; then
@@ -299,7 +311,18 @@ AC_TYPE_UINTMAX_T
 AC_TYPE_UINTPTR_T
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
+AC_TYPE_MODE_T
 AC_STRUCT_TM
+
+dnl --------------------------------------------------------------------------
+dnl XBOX doesn't have this.
+
+dnl this is a POSIX thing.
+AC_CHECK_TYPE([struct stat], [have_stat=yes], [have_stat=no], [#include <sys/stat.h>])
+
+if test "x$have_stat" = "xyes"; then
+	AC_DEFINE([HAVE_STAT], [1], [ ])
+fi
 
 dnl --------------------------------------------------------------------------
 dnl Some weird, backwards platforms do not understand "%zu", so we have to
@@ -355,155 +378,173 @@ use_wii=no
 use_wiiu=no
 use_network=no
 use_controller=no
+use_xbox=no
 posix_fseek=unknown
 
 have_loadso=no
 
-case "${host_os}" in
-	darwin*)
-		AC_MSG_RESULT([found Darwin host])
+case "$host_os" in
+darwin*)
+	AC_MSG_RESULT([found Darwin host])
 
-		use_macosx=yes
+	use_macosx=yes
+	posix_fseek=yes
+	AC_DEFINE([SCHISM_MACOSX], [1], [Mac OS X])
+	;;
+macos*)
+	# Retro68 toolchain
+	AC_MSG_RESULT([found Classic Mac OS host])
+
+	use_macos=yes
+	AC_DEFINE([SCHISM_MACOS], [1], [Classic Mac OS])
+
+	EXEEXT=.xcoff
+
+	AC_PATH_PROG([REZ], [Rez])
+	if test "x$REZ" = "x"; then
+		AC_MSG_ERROR([*** Couldn't find Rez])
+	fi
+
+	AC_PATH_PROG([MAKE_PEF], [MakePEF])
+	if test "x$MAKE_PEF" = "x"; then
+		AC_MSG_ERROR([*** Couldn't find MakePEF])
+	fi
+
+	posix_fseek=no
+	;;
+os2*)
+	AC_MSG_RESULT([found OS/2 host])
+
+	have_loadso=yes
+	use_os2=yes
+
+	AC_DEFINE([SCHISM_OS2], [1], [OS/2])
+	;;
+cygwin*|mingw*)
+	AC_MSG_RESULT([found Windows host])
+	WIN32_LIBS="-lwinmm"
+
+	AC_CHECK_HEADERS([winsock.h winsock2.h])
+	if test "x$ac_cv_header_winsock_h" = "xyes"; then
+		AC_SUBST([NETWORK_LIBS], [-lwsock32])
+		use_network=yes
+	elif test "x$ac_cv_header_winsock2_h" = "xyes"; then
+		AC_SUBST([NETWORK_LIBS], [-lws2_32])
+		use_network=yes
+	else
+		AC_MSG_ERROR([*** Couldn't find winsock (how)])
+	fi
+
+	have_loadso=yes
+
+	use_win32=yes
+	posix_fseek=yes
+	AC_DEFINE([SCHISM_WIN32], [1], [Windows])
+	;;
+xbox*)
+	AC_MSG_RESULT([found XBOX host])
+	dnl For all intents and purposes, the Xbox is a completely different
+	dnl operating system to Windows, with a similar (but not identical)
+	dnl API.
+	dnl For now, I'm assuming anyone building this is probably using
+	dnl nxdk. Really, I don't care to support ancient MSVC. clang
+	dnl is a much easier target for schism to reach. :)
+
+	dnl I highly doubt xbox has winsocks.
+
+	use_xbox=yes
+	dnl posix_fseek=yes
+	use_controller=yes
+	AC_DEFINE([SCHISM_XBOX], [1], [Original Xbox])
+	AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
+	;;
+*)
+	AC_MSG_RESULT([nothing to do here])
+
+	dnl now check for other stuff
+	saved_LIBS="$LIBS"
+	AC_CHECK_LIB([ogc], [IOS_ReloadIOS], [libogc_found=yes], [libogc_found=no], [-mrvl -L${DEVKITPRO}/libogc/lib/wii])
+	AC_CHECK_LIB([wut], [OSDynLoad_Acquire], [libwut_found=yes], [libwut_found=no], [-L${DEVKITPRO}/wut/lib])
+	LIBS="$saved_LIBS"
+
+	which=none
+
+	if test "x$FORCE_WIIU" = "xyes"; then
+		which=wiiu
+	elif test "x$FORCE_WII" = "xyes"; then
+		which=wii
+	elif test "x$libogc_found" = "xyes"; then
+		which=wii
+	elif test "x$libwut_found" = "xyes"; then
+		which=wiiu
+	fi
+
+	if test "x$which" = "xwii"; then
+		WII_CPPFLAGS="-I${DEVKITPRO}/libogc/include -I${DEVKITPPC}/powerpc-eabi/include"
+		WII_LDFLAGS="-logc -L${DEVKITPRO}/libogc/lib/wii -L${DEVKITPPC}/powerpc-eabi/lib"
+		AC_SUBST([WII_CPPFLAGS])
+		AC_SUBST([WII_LDFLAGS])
+
+		EXEEXT=.elf
+		AC_SUBST([EXEEXT])
+
+		use_wii=yes
+		use_controller=yes
+		AC_DEFINE([SCHISM_WII], [1], [Wii])
+		AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
 		posix_fseek=yes
-		AC_DEFINE([SCHISM_MACOSX], [1], [Mac OS X])
-		;;
-	macos*)
-		# Retro68 toolchain
-		AC_MSG_RESULT([found Classic Mac OS host])
+	elif test "x$which" = "xwiiu"; then
+		WIIU_CPPFLAGS="-I${DEVKITPRO}/wut/include -I${DEVKITPPC}/powerpc-eabi/include"
+		WIIU_LDFLAGS="-lwut -T${DEVKITPRO}/wut/share/wut.ld -Wl,--gc-sections -Wl,--emit-relocs -Wl,--no-eh-frame-hdr -z nocopyreloc -L${DEVKITPRO}/wut/lib -L${DEVKITPPC}/powerpc-eabi/lib"
+		AC_SUBST([WIIU_CPPFLAGS])
+		AC_SUBST([WIIU_LDFLAGS])
 
-		use_macos=yes
-		AC_DEFINE([SCHISM_MACOS], [1], [Classic Mac OS])
-
-		EXEEXT=.xcoff
-
-		AC_PATH_PROG([REZ], [Rez])
-		if test "x$REZ" = "x"; then
-			AC_MSG_ERROR([*** Couldn't find Rez])
+		AC_PATH_PROG([WUHBTOOL], [wuhbtool])
+		if test "x$WUHBTOOL" = "x"; then
+			AC_MSG_ERROR([*** Couldn't find wuhbtool])
 		fi
 
-		AC_PATH_PROG([MAKE_PEF], [MakePEF])
-		if test "x$MAKE_PEF" = "x"; then
-			AC_MSG_ERROR([*** Couldn't find MakePEF])
+		AC_PATH_PROG([ELF2RPL],  [elf2rpl])
+		if test "x$ELF2RPL" = "x"; then
+			AC_MSG_ERROR([*** Couldn't find elf2rpl])
 		fi
 
-		posix_fseek=no
-		;;
-	os2*)
-		AC_MSG_RESULT([found OS/2 host])
+		AC_SUBST([WUHBTOOL])
+		AC_SUBST([ELF2RPL])
 
-		have_loadso=yes
-		use_os2=yes
+		EXEEXT=.elf
+		AC_SUBST([EXEEXT])
 
-		AC_DEFINE([SCHISM_OS2], [1], [OS/2])
-		;;
-	cygwin*|mingw*)
-		AC_MSG_RESULT([found Windows host])
-		WIN32_LIBS="-lwinmm"
-
-		AC_CHECK_HEADERS([winsock.h winsock2.h])
-		if test "x$ac_cv_header_winsock_h" = "xyes"; then
-			AC_SUBST([NETWORK_LIBS], [-lwsock32])
-			use_network=yes
-		elif test "x$ac_cv_header_winsock2_h" = "xyes"; then
-			AC_SUBST([NETWORK_LIBS], [-lws2_32])
-			use_network=yes
-		else
-			AC_MSG_ERROR([*** Couldn't find winsock (how)])
-		fi
-
-		have_loadso=yes
-
-		use_win32=yes
+		use_wiiu=yes
+		use_controller=yes
+		AC_DEFINE([SCHISM_WIIU], [1], [Wii U])
+		AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
 		posix_fseek=yes
-		AC_DEFINE([SCHISM_WIN32], [1], [Windows])
-		;;
-	*)
-		AC_MSG_RESULT([nothing to do here])
+	fi
 
-		dnl now check for other stuff
-		saved_LIBS="$LIBS"
-		AC_CHECK_LIB([ogc], [IOS_ReloadIOS], [libogc_found=yes], [libogc_found=no], [-mrvl -L${DEVKITPRO}/libogc/lib/wii])
-		AC_CHECK_LIB([wut], [OSDynLoad_Acquire], [libwut_found=yes], [libwut_found=no], [-L${DEVKITPRO}/wut/lib])
-		LIBS="$saved_LIBS"
+	dnl Networking...
 
-		which=none
+	saved_LIBS="$LIBS"
+	AC_SEARCH_LIBS([socket], [socket network])
+	LIBS="$saved_LIBS"
 
-		if test "x$FORCE_WIIU" = "xyes"; then
-			which=wiiu
-		elif test "x$FORCE_WII" = "xyes"; then
-			which=wii
-		elif test "x$libogc_found" = "xyes"; then
-			which=wii
-		elif test "x$libwut_found" = "xyes"; then
-			which=wiiu
-		fi
-
-		if test "x$which" = "xwii"; then
-			WII_CPPFLAGS="-I${DEVKITPRO}/libogc/include -I${DEVKITPPC}/powerpc-eabi/include"
-			WII_LDFLAGS="-logc -L${DEVKITPRO}/libogc/lib/wii -L${DEVKITPPC}/powerpc-eabi/lib"
-			AC_SUBST([WII_CPPFLAGS])
-			AC_SUBST([WII_LDFLAGS])
-
-			EXEEXT=.elf
-			AC_SUBST([EXEEXT])
-
-			use_wii=yes
-			use_controller=yes
-			AC_DEFINE([SCHISM_WII], [1], [Wii])
-			AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
-			posix_fseek=yes
-		elif test "x$which" = "xwiiu"; then
-			WIIU_CPPFLAGS="-I${DEVKITPRO}/wut/include -I${DEVKITPPC}/powerpc-eabi/include"
-			WIIU_LDFLAGS="-lwut -T${DEVKITPRO}/wut/share/wut.ld -Wl,--gc-sections -Wl,--emit-relocs -Wl,--no-eh-frame-hdr -z nocopyreloc -L${DEVKITPRO}/wut/lib -L${DEVKITPPC}/powerpc-eabi/lib"
-			AC_SUBST([WIIU_CPPFLAGS])
-			AC_SUBST([WIIU_LDFLAGS])
-
-			AC_PATH_PROG([WUHBTOOL], [wuhbtool])
-			if test "x$WUHBTOOL" = "x"; then
-				AC_MSG_ERROR([*** Couldn't find wuhbtool])
-			fi
-
-			AC_PATH_PROG([ELF2RPL],  [elf2rpl])
-			if test "x$ELF2RPL" = "x"; then
-				AC_MSG_ERROR([*** Couldn't find elf2rpl])
-			fi
-
-			AC_SUBST([WUHBTOOL])
-			AC_SUBST([ELF2RPL])
-
-			EXEEXT=.elf
-			AC_SUBST([EXEEXT])
-
-			use_wiiu=yes
-			use_controller=yes
-			AC_DEFINE([SCHISM_WIIU], [1], [Wii U])
-			AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
-			posix_fseek=yes
-		fi
-
-		dnl Networking...
-
-		saved_LIBS="$LIBS"
-		AC_SEARCH_LIBS([socket], [socket network])
-		LIBS="$saved_LIBS"
-
-		if test "x$ac_cv_search_socket" = "xno"; then
-			AC_MSG_WARN([*** Couldn't find a proper sockets library])
-		elif test "x$ac_cv_search_socket" = "xnone required"; then
-			if test "x$ac_cv_header_sys_socket_h" = "xyes"; then
-				dnl free networking
-				AC_DEFINE([USE_NETWORK], [1], [Networking])
-				use_network=yes
-			else
-				use_network=no
-			fi
-		else
-			AC_SUBST([NETWORK_LIBS], [$ac_cv_search_socket])
+	if test "x$ac_cv_search_socket" = "xno"; then
+		AC_MSG_WARN([*** Couldn't find a proper sockets library])
+	elif test "x$ac_cv_search_socket" = "xnone required"; then
+		if test "x$ac_cv_header_sys_socket_h" = "xyes"; then
+			dnl free networking
 			AC_DEFINE([USE_NETWORK], [1], [Networking])
 			use_network=yes
+		else
+			use_network=no
 		fi
+	else
+		AC_SUBST([NETWORK_LIBS], [$ac_cv_search_socket])
+		AC_DEFINE([USE_NETWORK], [1], [Networking])
+		use_network=yes
+	fi
 
-		;;
+	;;
 esac
 
 dnl Libs
@@ -552,6 +593,7 @@ AM_CONDITIONAL([USE_MACOS], [test "x$use_macos" = "xyes"])
 AM_CONDITIONAL([USE_OS2], [test "x$use_os2" = "xyes"])
 AM_CONDITIONAL([am__fastdepOBJC], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([USE_NETWORK], [test "x$use_network" = "xyes"])
+AM_CONDITIONAL([USE_XBOX], [test "x$use_xbox" = "xyes"])
 
 dnl ------------------------------------------------------------------------
 
@@ -844,7 +886,7 @@ AC_PATH_XTRA
 if test "x$have_x" = "xyes"; then
 	case "$host" in
 		*-*-darwin*)
-			# Apple now puts this in /opt/X11 ?
+			dnl Apple now puts this in /opt/X11 ?
 			x11_lib='/opt/X11/lib/libX11.6.dylib'
 			;;
 		*-*-openbsd*)

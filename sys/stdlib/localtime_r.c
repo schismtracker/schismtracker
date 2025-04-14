@@ -54,6 +54,11 @@ struct tm *localtime_r(const time_t *timep, struct tm *result)
 	mt_mutex_lock(localtime_r_mutex);
 
 	our_tm = localtime(timep);
+
+	/* regular localtime() returns NULL pointer on XBOX; make sure
+	 * it doesn't happen again ;) */
+	SCHISM_RUNTIME_ASSERT(our_tm, "localtime() returned a NULL pointer");
+
 	*result = *our_tm;
 
 	mt_mutex_unlock(localtime_r_mutex);
