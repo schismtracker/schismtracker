@@ -1,0 +1,25 @@
+From 5fba733fa1582c14d4756fbcba1769f3878a1ec9 Mon Sep 17 00:00:00 2001
+From: Paper <paper@tflc.us>
+Date: Sun, 13 Apr 2025 22:08:35 -0400
+Subject: [PATCH] makefile: fix xbox building
+
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 94f76e3..d7297b9 100644
+--- a/Makefile
++++ b/Makefile
+@@ -9,7 +9,7 @@ PERL=perl
+ 
+ # compiler settings
+ CFLAGS ?= -O2
+-PICFLAG = -fPIC
++PICFLAG = 
+ C99FLAG = -std=c99
+ WCFLAGS = -Wsign-conversion -Wall -Wextra -pedantic
+ UCFLAGS = $(CPPFLAGS) $(CFLAGS) $(PICFLAG) $(C99FLAG) $(WCFLAGS) -DUTF8PROC_EXPORTS $(UTF8PROC_DEFINES)
+-- 
+2.39.5
+

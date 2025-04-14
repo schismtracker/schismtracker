@@ -1,0 +1,99 @@
+name: XBOX (i686)
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  xbox:
+    runs-on: ubuntu-latest
+    env:
+      UTF8PROC_VERSION: 2.10.0
+      UTF8PROC_SHA256: 276a37dc4d1dd24d7896826a579f4439d1e5fe33603add786bb083cab802e23e
+
+    steps:
+      - name: 'Install dependencies'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --fix-missing llvm lld clang build-essential automake autoconf autoconf-archive git libtool zip wget
+
+      - name: 'Checkout'
+        uses: actions/checkout@v4
+
+      - name: 'Get date of latest commit'
+        id: date
+        run: echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
+
+      - name: 'Checkout nxdk'
+        uses: actions/checkout@v4
+        with:
+          repository: 'XboxDev/nxdk'
+          path: nxdk
+          submodules: true
+
+        # this is super simple :)
+      - name: 'Compile nxdk and SDL'
+        run: |
+          cd nxdk
+          # side quest - apply keyboard patches
+          cd lib/sdl/SDL2
+          wget -O "kbd.patch" "https://github.com/mrpapersonic/nxdk-sdl/commit/9e1649113ecb94f3732c531d57ff00e65d8ef903.patch"
+          patch -p1 < "kbd.patch"
+          rm "kbd.patch"
+          cd ../../..
+          eval $(bin/activate -s)
+          cd samples/sdl
+          make NXDK_USB_ENABLE_HID=yes
+          cd ../../..
+          echo "NXDK_DIR=$(pwd)/nxdk" >> $GITHUB_ENV
+
+      - name: 'Download utf8proc'
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
+        run: |
+          wget -O "utf8proc-$UTF8PROC_VERSION.tar.gz" "https://github.com/JuliaStrings/utf8proc/releases/download/v$UTF8PROC_VERSION/utf8proc-$UTF8PROC_VERSION.tar.gz"
+          echo "$UTF8PROC_SHA256  utf8proc-$UTF8PROC_VERSION.tar.gz" | sha256sum -c -
+          tar xzvf "utf8proc-$UTF8PROC_VERSION.tar.gz"
+
+      - name: 'Build utf8proc'
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
+        run: |
+          # activate nxdk
+          eval $("$NXDK_DIR/bin/activate" -s)
+          cd utf8proc-$UTF8PROC_VERSION
+          patch -p1 < ../.github/patches/utf8proc/4-xbox.patch
+          make CC=nxdk-cc libutf8proc.a
+          mkdir -p "$HOME/xboxprefix/lib"
+          mkdir -p "$HOME/xboxprefix/include"
+          cp libutf8proc.a "$HOME/xboxprefix/lib/utf8proc.lib"
+          cp utf8proc.h "$HOME/xboxprefix/include"
+          cd ..
+
+      - name: 'autoreconf -i'
+        run: autoreconf -i
+
+        # unfortunately, this part is not :(
+      - name: 'Build package'
+        run: |
+          eval $("$NXDK_DIR/bin/activate" -s)
+          mkdir -p build
+          cd build
+          # all of these libraries ought to be in the configure.ac file :)
+          ../configure --host i686-unknown-xbox CPPFLAGS="-I$HOME/xboxprefix/include -DUTF8PROC_STATIC" CC='nxdk-cc -fuse-ld=nxdk-link' PKG_CONFIG=nxdk-pkg-config LDFLAGS="$NXDK_DIR/lib/libpdclib.lib $NXDK_DIR/lib/libwinapi.lib $NXDK_DIR/lib/libnxdk_hal.lib $NXDK_DIR/lib/libnxdk.lib $NXDK_DIR/lib/libxboxrt.lib $NXDK_DIR/lib/xboxkrnl/libxboxkrnl.lib $HOME/xboxprefix/lib/utf8proc.lib $NXDK_DIR/lib/nxdk_usb.lib" --without-flac --without-jack --without-sdl3 --without-sdl12 --enable-sdl2-linking
+          make
+          $NXDK_DIR/tools/cxbe/cxbe -OUT:'default.xbe' -TITLE:'Schism Tracker' schismtracker.exe
+          cd ..
+          cp build/default.xbe .
+          cp docs/configuration.md .
+          wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
+
+      - name: 'Upload artifact'
+        uses: actions/upload-artifact@v4
+        with:
+          name: schismtracker-${{ steps.date.outputs.date }}-xbox
+          path: |
+            configuration.md
+            COPYING
+            COPYING.Xiph
+            README.md
+            default.xbe
