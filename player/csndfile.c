@@ -640,6 +640,8 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 		// 8-bit stereo
 		uint8_t delta = (((flags & SF_ENC_MASK) == SF_PCMU) ? (1u << 7) : 0);
 
+		len *= 2;
+
 		for (int i = 0; i < 2; i++) {
 			const uint8_t *data = (const uint8_t *)sample->data + i;
 			for (pos = 0; pos < len; pos += 2) {
@@ -648,8 +650,6 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 					delta = data[pos];
 			}
 		}
-
-		len *= 2;
 
 		break;
 	}
@@ -711,13 +711,13 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 		// 16-bit stereo
 		uint16_t delta = (((flags & SF_ENC_MASK) == SF_PCMU) ? (1u << 15) : 0);
 
+		len *= 2;
+
 		for (int i = 0; i < 2; i++) {
 			const uint16_t *data = (const uint16_t *)sample->data + i;
 			for (pos = 0; pos < len; pos += 2) {
 				uint16_t x = data[pos] - delta;
 				x = ((flags & SF_END_MASK) == SF_BE) ? bswapBE16(x) : bswapLE16(x);
-
-				printf("%u\n", x);
 
 				disko_write(fp, &x, sizeof(x));
 
@@ -726,7 +726,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 			}
 		}
 
-		len *= 4;
+		len *= 2;
 
 		break;
 	}
