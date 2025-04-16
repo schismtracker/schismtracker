@@ -211,6 +211,26 @@ int iff_read_xtra_chunk(slurp_t *fp, song_sample_t *smp);
 int iff_read_smpl_chunk(slurp_t *fp, song_sample_t *smp);
 
 /* --------------------------------------------------------------------------------------------------------- */
+/* .wav crap. Shared between Wave64 and regular .wav loaders */
+
+struct wave_format {
+	uint16_t format;          // 1
+	uint16_t channels;        // 1:mono, 2:stereo
+	uint32_t freqHz;          // sampling freq
+	uint32_t bytessec;        // bytes/sec=freqHz*samplesize
+	uint16_t samplesize;      // sizeof(sample)
+	uint16_t bitspersample;   // bits per sample (8/16)
+};
+
+#define WAVE_FORMAT_PCM        UINT16_C(0x0001)
+#define WAVE_FORMAT_IEEE_FLOAT UINT16_C(0x0003) // IEEE float
+#define WAVE_FORMAT_ALAW       UINT16_C(0x0006) // 8-bit ITU-T G.711 A-law
+#define WAVE_FORMAT_MULAW      UINT16_C(0x0007) // 8-bit ITU-T G.711 µ-law
+#define WAVE_FORMAT_EXTENSIBLE UINT16_C(0xFFFE)
+
+int wav_chunk_fmt_read(const void *data, size_t size, void *void_fmt /* struct wave_format * */);
+
+/* --------------------------------------------------------------------------------------------------------- */
 // other misc functions...
 
 /* effect_weight[FX_something] => how "important" the effect is. */

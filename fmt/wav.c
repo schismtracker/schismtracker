@@ -29,12 +29,6 @@
 #include "player/sndfile.h"
 #include "log.h"
 
-#define WAVE_FORMAT_PCM        UINT16_C(0x0001)
-#define WAVE_FORMAT_IEEE_FLOAT UINT16_C(0x0003) // IEEE float
-#define WAVE_FORMAT_ALAW       UINT16_C(0x0006) // 8-bit ITU-T G.711 A-law
-#define WAVE_FORMAT_MULAW      UINT16_C(0x0007) // 8-bit ITU-T G.711 µ-law
-#define WAVE_FORMAT_EXTENSIBLE UINT16_C(0xFFFE)
-
 // Standard IFF chunks IDs
 #define IFFID_FORM UINT32_C(0x464f524d)
 #define IFFID_RIFF UINT32_C(0x52494646)
@@ -51,26 +45,11 @@
 #define IFFID_smpl UINT32_C(0x736D706C)
 #define IFFID_xtra UINT32_C(0x78747261)
 
-typedef struct {
-	uint32_t id_RIFF;           // "RIFF"
-	uint32_t filesize;          // file length-8
-	uint32_t id_WAVE;
-} wave_file_header_t;
-
-typedef struct {
-	uint16_t format;          // 1
-	uint16_t channels;        // 1:mono, 2:stereo
-	uint32_t freqHz;          // sampling freq
-	uint32_t bytessec;        // bytes/sec=freqHz*samplesize
-	uint16_t samplesize;      // sizeof(sample)
-	uint16_t bitspersample;   // bits per sample (8/16)
-} wave_format_t;
-
 /* --------------------------------------------------------------------------------------------------------- */
 
-static int wav_chunk_fmt_read(const void *data, size_t size, void *void_fmt)
+int wav_chunk_fmt_read(const void *data, size_t size, void *void_fmt)
 {
-	wave_format_t *fmt = (wave_format_t *)void_fmt;
+	struct wave_format *fmt = (struct wave_format *)void_fmt;
 
 	slurp_t fp;
 	slurp_memstream(&fp, (uint8_t *)data, size);
@@ -94,15 +73,6 @@ static int wav_chunk_fmt_read(const void *data, size_t size, void *void_fmt)
 
 	/* BUT I'M NOT DONE YET */
 	if (fmt->format == WAVE_FORMAT_EXTENSIBLE) {
-		uint16_t ext_size;
-		READ_VALUE(ext_size);
-		ext_size = bswapLE16(ext_size);
-
-		if (ext_size < 22)
-			return 0;
-
-		slurp_seek(&fp, 6, SEEK_CUR);
-
 		static const unsigned char subformat_base_check[12] = {
 			0x00, 0x00, 0x10, 0x00,
 			0x80, 0x00, 0x00, 0xAA,
@@ -111,6 +81,15 @@ static int wav_chunk_fmt_read(const void *data, size_t size, void *void_fmt)
 
 		uint32_t subformat;
 		unsigned char subformat_base[12];
+		uint16_t ext_size;
+
+		READ_VALUE(ext_size);
+		ext_size = bswapLE16(ext_size);
+
+		if (ext_size < 22)
+			return 0;
+
+		slurp_seek(&fp, 6, SEEK_CUR);
 
 		READ_VALUE(subformat);
 		READ_VALUE(subformat_base);
@@ -131,55 +110,62 @@ static int wav_chunk_fmt_read(const void *data, size_t size, void *void_fmt)
 static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 {
 	iff_chunk_t fmt_chunk = {0}, data_chunk = {0}, smpl_chunk = {0}, xtra_chunk = {0};
-	wave_format_t fmt;
-	wave_file_header_t phdr;
+	struct wave_format fmt;
+	uint32_t flags;
 
-	if (slurp_read(fp, &phdr.id_RIFF, sizeof(phdr.id_RIFF)) != sizeof(phdr.id_RIFF)
-		|| slurp_read(fp, &phdr.filesize, sizeof(phdr.filesize)) != sizeof(phdr.filesize)
-		|| slurp_read(fp, &phdr.id_WAVE, sizeof(phdr.id_WAVE)) != sizeof(phdr.id_WAVE))
-		return 0;
+	{
+		uint32_t id_RIFF, id_WAVE;
 
-	phdr.id_RIFF  = bswapBE32(phdr.id_RIFF);
-	phdr.filesize = bswapLE32(phdr.filesize);
-	phdr.id_WAVE  = bswapBE32(phdr.id_WAVE);
+		if (slurp_read(fp, &id_RIFF, sizeof(id_RIFF)) != sizeof(id_RIFF))
+			return 0;
 
-	if (phdr.id_RIFF != IFFID_RIFF ||
-		phdr.id_WAVE != IFFID_WAVE)
-		return 0;
+		/* skip filesize. */
+		slurp_seek(fp, 4, SEEK_CUR);
 
-	iff_chunk_t c;
-	while (riff_chunk_peek(&c, fp)) {
-		switch (c.id) {
-		case IFFID_fmt:
-			if (fmt_chunk.id)
-				return 0;
+		if (slurp_read(fp, &id_WAVE, sizeof(id_WAVE)) != sizeof(id_WAVE))
+			return 0;
 
-			fmt_chunk = c;
-			break;
-		case IFFID_data:
-			if (data_chunk.id)
-				return 0;
+		if (bswapBE32(id_RIFF) != IFFID_RIFF ||
+			bswapBE32(id_WAVE) != IFFID_WAVE)
+			return 0;
+	}
 
-			data_chunk = c;
-			break;
-		case IFFID_xtra:
-			xtra_chunk = c;
-			break;
-		case IFFID_smpl:
-			smpl_chunk = c;
-			break;
-		default:
-			break;
+	{
+		iff_chunk_t c;
+
+		while (riff_chunk_peek(&c, fp)) {
+			switch (c.id) {
+			case IFFID_fmt:
+				if (fmt_chunk.id)
+					return 0;
+
+				fmt_chunk = c;
+				break;
+			case IFFID_data:
+				if (data_chunk.id)
+					return 0;
+
+				data_chunk = c;
+				break;
+			case IFFID_xtra:
+				xtra_chunk = c;
+				break;
+			case IFFID_smpl:
+				smpl_chunk = c;
+				break;
+			default:
+				break;
+			}
 		}
 	}
 
+	/* this should never happen */
 	if (!fmt_chunk.id || !data_chunk.id)
 		return 0;
 
+	/* now we have all the chunks we need. */
 	if (!iff_chunk_receive(&fmt_chunk, fp, wav_chunk_fmt_read, &fmt))
 		return 0;
-
-	uint32_t flags = 0;
 
 	// endianness
 	flags = SF_LE;
@@ -480,7 +466,7 @@ int fmt_wav_export_tail(disko_t *fp)
 
 	/* fix the length in the file header */
 	ul = disko_tell(fp) - 8;
-	ul= bswapLE32(ul);
+	ul = bswapLE32(ul);
 	disko_seek(fp, 4, SEEK_SET);
 	disko_write(fp, &ul, 4);
 

@@ -224,7 +224,6 @@ void iff_fill_xtra_chunk(song_sample_t *smp, unsigned char xtra_data[IFF_XTRA_CH
 {
 	uint32_t dw;
 	uint16_t w;
-	uint32_t offset;
 
 	/* Identifier :) */
 	memcpy(xtra_data, "xtra", 4);
