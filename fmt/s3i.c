@@ -46,9 +46,12 @@ static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 {
 	unsigned char magic[4];
 	uint32_t dw;
+	int type, flags;
 
+	/*
 	if (slurp_length(fp) < 0x50)
 		return 0;
+	*/
 
 	slurp_seek(fp, 0x4C, SEEK_SET);
 	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic))
@@ -57,22 +60,15 @@ static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 	if (memcmp(magic, "SCRS", 4) && memcmp(magic, "SCRI", 4))
 		return 0;
 
-	slurp_seek(fp, 0x00, SEEK_SET);
-	int type = slurp_getc(fp);
+	slurp_rewind(fp);
+
+	type = slurp_getc(fp);
 	if (type != S3I_TYPE_PCM && type != S3I_TYPE_ADLIB)
 		return 0;
 
-	slurp_seek(fp, 0x1F, SEEK_SET);
-	int flags = slurp_getc(fp);
-	if (flags < 0)
-		return 0;
+	slurp_read(fp, smp->filename, MIN(sizeof(smp->filename) - 1, 12));
 
-	slurp_seek(fp, 0x1C, SEEK_SET);
-	smp->flags = 0;
-	smp->global_volume = 64;
-	smp->volume = slurp_getc(fp) * 4; /* mphack */
-
-	slurp_seek(fp, 0x14, SEEK_SET);
+	slurp_seek(fp, 20, SEEK_SET);
 
 	if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
 		return 0;
@@ -82,22 +78,26 @@ static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 		return 0;
 	smp->loop_end = bswapLE32(dw);
 
-	slurp_seek(fp, 4, SEEK_CUR);
+	smp->volume = slurp_getc(fp) * 4; /* mphack */
+
+	slurp_seek(fp, 2, SEEK_CUR); /* skip "dsk" and "pack" */
+
+	flags = slurp_getc(fp);
 
 	if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
 		return 0;
 	smp->c5speed = bswapLE32(dw);
 
-	slurp_seek(fp, 0x01, SEEK_SET);
-	slurp_read(fp, smp->filename, MIN(sizeof(smp->filename) - 1, 12));
-
-	slurp_seek(fp, 0x30, SEEK_SET);
+	slurp_seek(fp, 12, SEEK_CUR);
 	slurp_read(fp, smp->name, MIN(sizeof(smp->name) - 1, 28));
+
+	smp->flags = 0;
+	smp->global_volume = 64;
 
 	if (type == S3I_TYPE_PCM) {
 		int bytes_per_sample = (flags & S3I_PCM_FLAG_STEREO) ? 2 : 1;
 
-		slurp_seek(fp, 0x10, SEEK_SET);
+		slurp_seek(fp, 16, SEEK_SET);
 		if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
 			return 0;
 		smp->length = bswapLE32(dw);
@@ -119,14 +119,14 @@ static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 			int format = SF_M | SF_LE; // endianness; channels
 			format |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU); // bits; encoding
 
-			slurp_seek(fp, 0x50, SEEK_SET);
+			slurp_seek(fp, 80, SEEK_SET);
 			csf_read_sample(smp, format, fp);
 		}
 	} else if (type == S3I_TYPE_ADLIB) {
 		smp->flags |= CHN_ADLIB;
 		smp->flags &= ~(CHN_LOOP|CHN_16BIT);
 
-		slurp_seek(fp, 0x10, SEEK_SET);
+		slurp_seek(fp, 16, SEEK_SET);
 		if (slurp_read(fp, smp->adlib_bytes, sizeof(smp->adlib_bytes)) != sizeof(smp->adlib_bytes))
 			return 0;
 
