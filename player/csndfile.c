@@ -613,154 +613,103 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 	// NOTE: These use unsigned integers for a reason (signed integer overflow is undefined)
 	// Please don't change them back to signed ;)
 	switch (flags) {
-	case SF(8,M,LE,PCMS):
-	case SF(8,M,LE,PCMD):
-	case SF(8,M,LE,PCMU):
-	case SF(8,M,BE,PCMS):
-	case SF(8,M,BE,PCMD):
-	case SF(8,M,BE,PCMU): {
-		// 8-bit mono
-		uint8_t delta = (((flags & SF_ENC_MASK) == SF_PCMU) ? (1u << 7) : 0);
 
-		const uint8_t *data = (const uint8_t *)sample->data;
-		for (pos = 0; pos < len; pos++) {
-			disko_putc(fp, data[pos] - delta);
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				delta = data[pos];
-		}
+#define WRITE_FULL_SAMPLE(BITS, VARS, PRE, LOOPPRE, LOOPPOST) \
+	do { \
+		const uint##BITS##_t *data; \
+		VARS \
+	\
+		PRE \
+	\
+		data = (const uint##BITS##_t *)sample->data; \
+		for (pos = 0; pos < len; pos++) { \
+			uint##BITS##_t x = data[pos]; \
+	\
+			LOOPPRE \
+	\
+			disko_write(fp, &x, sizeof(x)); \
+	\
+			LOOPPOST \
+		} \
+	} while (0)
 
-		break;
-	}
-	case SF(8,SS,LE,PCMS):
-	case SF(8,SS,LE,PCMD):
-	case SF(8,SS,LE,PCMU):
-	case SF(8,SS,BE,PCMS):
-	case SF(8,SS,BE,PCMD):
-	case SF(8,SS,BE,PCMU): {
-		// 8-bit stereo
-		uint8_t delta = (((flags & SF_ENC_MASK) == SF_PCMU) ? (1u << 7) : 0);
+#define WRITE_MONO_SAMPLE_EX(BITS, VARS, LOOPPRE, LOOPPOST) WRITE_FULL_SAMPLE(BITS, VARS, /* none */, LOOPPRE, LOOPPOST)
 
-		len *= 2;
+#define WRITE_MONO_SAMPLE_PCMS(BITS, LOOPPRE) WRITE_MONO_SAMPLE_EX(BITS, /* none */, /* none */, /* none */)
+#define WRITE_MONO_SAMPLE_PCMU(BITS, LOOPPRE) WRITE_MONO_SAMPLE_EX(BITS, /* none */, { x ^= (UINT##BITS##_C(1) << (BITS - 1)); LOOPPRE }, /* none */)
+#define WRITE_MONO_SAMPLE_PCMD(BITS, LOOPPRE) WRITE_MONO_SAMPLE_EX(BITS, uint##BITS##_t delta;, { x -= delta; LOOPPRE }, { delta = data[pos]; })
 
-		for (int i = 0; i < 2; i++) {
-			const uint8_t *data = (const uint8_t *)sample->data + i;
-			for (pos = 0; pos < len; pos += 2) {
-				disko_putc(fp, data[pos] - delta);
-				if ((flags & SF_ENC_MASK) == SF_PCMD)
-					delta = data[pos];
-			}
-		}
+#define WRITE_STEREO_SAMPLE_EX(BITS, VARS, LOOPPRE, LOOPPOST) \
+	do { \
+		int i; \
+		VARS \
+	\
+		len *= 2; \
+	\
+		for (i = 0; i < 2; i++) { \
+			const uint##BITS##_t *data = (const uint##BITS##_t *)sample->data + i; \
+	\
+			for (pos = 0; pos < len; pos += 2) { \
+				uint##BITS##_t x = data[pos]; \
+	\
+				LOOPPRE \
+	\
+				disko_write(fp, &x, sizeof(x)); \
+	\
+				LOOPPOST \
+			} \
+		} \
+	} while (0)
 
-		break;
-	}
-	case SF(8,SI,LE,PCMS):
-	case SF(8,SI,LE,PCMD):
-	case SF(8,SI,LE,PCMU):
-	case SF(8,SI,BE,PCMS):
-	case SF(8,SI,BE,PCMD):
-	case SF(8,SI,BE,PCMU): {
-		// 8-bit interleaved stereo
-		uint8_t deltas[2];
+#define WRITE_STEREO_SAMPLE_PCMS(BITS, LOOPPRE) WRITE_STEREO_SAMPLE_EX(BITS, /* none */, /* none */, /* none */)
+#define WRITE_STEREO_SAMPLE_PCMU(BITS, LOOPPRE) WRITE_STEREO_SAMPLE_EX(BITS, /* none */, { x ^= (UINT##BITS##_C(1) << (BITS - 1)); LOOPPRE }, /* none */)
+#define WRITE_STEREO_SAMPLE_PCMD(BITS, LOOPPRE) WRITE_STEREO_SAMPLE_EX(BITS, uint##BITS##_t delta[2]; uint32_t deltapos;, { deltapos = (pos % 2); x -= delta[deltapos]; LOOPPRE }, { delta[deltapos] = data[pos]; })
 
-		for (size_t i = 0; i < ARRAY_SIZE(deltas); i++)
-			deltas[i] = (((flags & SF_ENC_MASK) == SF_PCMU) ? (1u << 7) : 0);
+#define WRITE_STEREO_INTERLEAVED_SAMPLE_EX(BITS, VARS, LOOPPRE, LOOPPOST) WRITE_FULL_SAMPLE(BITS, VARS, { len *= 2; }, LOOPPRE, LOOPPOST)
 
-		len *= 2;
+#define WRITE_STEREO_INTERLEAVED_SAMPLE_PCMS(BITS, LOOPPRE) WRITE_STEREO_INTERLEAVED_SAMPLE_EX(BITS, /* none */, /* none */, /* none */)
+#define WRITE_STEREO_INTERLEAVED_SAMPLE_PCMU(BITS, LOOPPRE) WRITE_STEREO_INTERLEAVED_SAMPLE_EX(BITS, /* none */, { x ^= (UINT##BITS##_C(1) << (BITS - 1)); LOOPPRE }, /* none */)
+#define WRITE_STEREO_INTERLEAVED_SAMPLE_PCMD(BITS, LOOPPRE) WRITE_STEREO_INTERLEAVED_SAMPLE_EX(BITS, uint##BITS##_t delta[2]; uint32_t deltapos;, { deltapos = (pos % 2); x -= delta[deltapos]; LOOPPRE }, { delta[deltapos] = data[pos]; })
 
-		const uint8_t *data = (const uint8_t *)sample->data;
-		for (pos = 0; pos < len; pos++) {
-			const uint32_t deltapos = (pos % ARRAY_SIZE(deltas));
+#define WRITE_SAMPLE_EX(BITS, ENDIAN, LOOPPRE, CHNS, NAME) \
+	case SF(BITS,CHNS,ENDIAN,PCMS): \
+		WRITE_##NAME##_SAMPLE_PCMS(BITS, LOOPPRE); \
+		break; \
+	case SF(BITS,CHNS,ENDIAN,PCMU): \
+		WRITE_##NAME##_SAMPLE_PCMU(BITS, LOOPPRE); \
+		break; \
+	case SF(BITS,CHNS,ENDIAN,PCMD): \
+		WRITE_##NAME##_SAMPLE_PCMD(BITS, LOOPPRE); \
+		break;	
 
-			disko_putc(fp, data[pos] - deltas[deltapos]);
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				deltas[deltapos] = data[pos];
-		}
+#define WRITE_SAMPLE(BITS, ENDIAN, LOOPPRE) \
+	WRITE_SAMPLE_EX(BITS, ENDIAN, LOOPPRE, M, MONO) \
+	WRITE_SAMPLE_EX(BITS, ENDIAN, LOOPPRE, SS, STEREO) \
+	WRITE_SAMPLE_EX(BITS, ENDIAN, LOOPPRE, SI, STEREO_INTERLEAVED)
 
-		break;
-	}
-	case SF(16,M,LE,PCMS):
-	case SF(16,M,LE,PCMD):
-	case SF(16,M,LE,PCMU):
-	case SF(16,M,BE,PCMS):
-	case SF(16,M,BE,PCMD):
-	case SF(16,M,BE,PCMU): {
-		// 16-bit mono
-		uint16_t delta = (((flags & SF_ENC_MASK) == SF_PCMU) ? (1u << 15) : 0);
+	/* okay. */
+	WRITE_SAMPLE(8, LE, /* none */)
+	WRITE_SAMPLE(8, BE, /* none */)
 
-		const uint16_t *data = (const uint16_t *)sample->data;
-		for (pos = 0; pos < len; pos++) {
-			uint16_t x = data[pos] - delta;
-			x = ((flags & SF_END_MASK) == SF_BE) ? bswapBE16(x) : bswapLE16(x);
+	WRITE_SAMPLE(16, LE, { x = bswapLE16(x); })
+	WRITE_SAMPLE(16, BE, { x = bswapBE16(x); })
 
-			disko_write(fp, &x, sizeof(x));
+#undef WRITE_FULL_SAMPLE
+#undef WRITE_MONO_SAMPLE_EX
+#undef WRITE_MONO_SAMPLE_PCMS
+#undef WRITE_MONO_SAMPLE_PCMU
+#undef WRITE_MONO_SAMPLE_PCMD
+#undef WRITE_STEREO_SAMPLE_EX
+#undef WRITE_STEREO_SAMPLE_PCMS
+#undef WRITE_STEREO_SAMPLE_PCMU
+#undef WRITE_STEREO_SAMPLE_PCMD
+#undef WRITE_STEREO_INTERLEAVED_SAMPLE_EX
+#undef WRITE_STEREO_INTERLEAVED_SAMPLE_PCMS
+#undef WRITE_STEREO_INTERLEAVED_SAMPLE_PCMU
+#undef WRITE_STEREO_INTERLEAVED_SAMPLE_PCMD
+#undef WRITE_SAMPLE_EX
+#undef WRITE_SAMPLE
 
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				delta = data[pos];
-		}
-
-		len *= 2;
-
-		break;
-	}
-	case SF(16,SS,LE,PCMS):
-	case SF(16,SS,LE,PCMD):
-	case SF(16,SS,LE,PCMU):
-	case SF(16,SS,BE,PCMS):
-	case SF(16,SS,BE,PCMD):
-	case SF(16,SS,BE,PCMU): {
-		// 16-bit stereo
-		uint16_t delta = (((flags & SF_ENC_MASK) == SF_PCMU) ? (1u << 15) : 0);
-
-		len *= 2;
-
-		for (int i = 0; i < 2; i++) {
-			const uint16_t *data = (const uint16_t *)sample->data + i;
-			for (pos = 0; pos < len; pos += 2) {
-				uint16_t x = data[pos] - delta;
-				x = ((flags & SF_END_MASK) == SF_BE) ? bswapBE16(x) : bswapLE16(x);
-
-				disko_write(fp, &x, sizeof(x));
-
-				if ((flags & SF_ENC_MASK) == SF_PCMD)
-					delta = data[pos];
-			}
-		}
-
-		len *= 2;
-
-		break;
-	}
-	case SF(16,SI,LE,PCMS):
-	case SF(16,SI,LE,PCMD):
-	case SF(16,SI,LE,PCMU):
-	case SF(16,SI,BE,PCMS):
-	case SF(16,SI,BE,PCMD):
-	case SF(16,SI,BE,PCMU): {
-		// 16-bit interleaved stereo
-		uint16_t deltas[2];
-
-		for (size_t i = 0; i < ARRAY_SIZE(deltas); i++)
-			deltas[i] = (((flags & SF_ENC_MASK) == SF_PCMU) ? (1u << 15) : 0);
-
-		len *= 2;
-
-		const uint16_t *data = (const uint16_t *)sample->data;
-		for (pos = 0; pos < len; pos++) {
-			const uint32_t deltapos = (pos % ARRAY_SIZE(deltas));
-
-			uint16_t x = data[pos] - deltas[deltapos];
-			x = ((flags & SF_END_MASK) == SF_BE) ? bswapBE16(x) : bswapLE16(x);
-
-			disko_write(fp, &x, sizeof(x));
-
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				deltas[deltapos] = data[pos];
-		}
-
-		len *= 2;
-
-		break;
-	}
 	default:
 		SF_FAIL("unknown flags", flags);
 	}
