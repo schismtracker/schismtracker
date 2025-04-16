@@ -223,10 +223,10 @@ void xbox_sysinit(int *pargc, char ***pargv);
 #elif defined(SCHISM_WIN32)
 # ifdef SCHISM_WIN32_COMPILE_ANSI
 #  define SCHISM_ANSI_UNICODE(ansiblock, uniblock) \
-	if (GetVersion() & 0x80000000U) {
-		ansiblock
-	} else {
-		uniblock
+	if (GetVersion() & 0x80000000U) { \
+		ansiblock \
+	} else { \
+		uniblock \
 	}
 # else
 #  define SCHISM_ANSI_UNICODE(ansiblock, uniblock) \
