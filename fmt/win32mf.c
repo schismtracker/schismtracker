@@ -885,44 +885,36 @@ enum {
 /* uncompressed MUST point to NULL (or some other allocated memory) before the first pass! */
 static int reader_load_sample(IMFSourceReader *reader, disko_t *ds)
 {
-	if (!reader)
-		return READER_LOAD_ERROR;
-
-	int success = READER_LOAD_MORE;
-
+	int success = READER_LOAD_ERROR;
 	IMFSample *sample = NULL;
-	DWORD sample_flags = 0;
-
 	IMFMediaBuffer *buffer = NULL;
-	if (FAILED(IMFSourceReader_ReadSample(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, NULL, &sample_flags, NULL, &sample))) {
-		success = READER_LOAD_ERROR;
+	DWORD sample_flags;
+	BYTE *buffer_data;
+	DWORD buffer_data_size;
+
+	if (!reader)
 		goto cleanup;
-	}
+
+	if (FAILED(IMFSourceReader_ReadSample(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, NULL, &sample_flags, NULL, &sample)))
+		goto cleanup;
 
 	if (sample_flags & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED || sample_flags & MF_SOURCE_READERF_ENDOFSTREAM) {
 		success = READER_LOAD_DONE;
 		goto cleanup;
 	}
 
-	if (FAILED(IMFSample_ConvertToContiguousBuffer(sample, &buffer))) {
-		success = READER_LOAD_ERROR;
+	if (FAILED(IMFSample_ConvertToContiguousBuffer(sample, &buffer)))
 		goto cleanup;
-	}
 
-	BYTE *buffer_data = NULL;
-	DWORD buffer_data_size = 0;
-
-	if (FAILED(IMFMediaBuffer_Lock(buffer, &buffer_data, NULL, &buffer_data_size))) {
-		success = READER_LOAD_ERROR;
+	if (FAILED(IMFMediaBuffer_Lock(buffer, &buffer_data, NULL, &buffer_data_size)))
 		goto cleanup;
-	}
 
 	disko_write(ds, buffer_data, buffer_data_size);
 
-	if (FAILED(IMFMediaBuffer_Unlock(buffer))) {
-		success = READER_LOAD_ERROR;
+	if (FAILED(IMFMediaBuffer_Unlock(buffer)))
 		goto cleanup;
-	}
+
+	success = READER_LOAD_MORE;
 
 cleanup:
 	if (sample)
