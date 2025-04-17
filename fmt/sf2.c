@@ -260,15 +260,13 @@ int fmt_sf2_load_instrument(slurp_t *fp, int slot)
 			break;
 		case 2: /* right stereo */
 		case 8: /* linked sample (will never support this) */
-			printf("invalid type\n");
+		default: /* ??? */
 			continue; /* unsupported */
 		}
 
 		/* invalid ?? */
-		if (smpl_offset + smpl_end > (cs[SF2_CHUNK_smpl].size / 2)) {
-			printf("%u, %u > %u; invalid size\n", smpl_offset, smpl_end, cs[SF2_CHUNK_smpl].size);
+		if (smpl_offset + smpl_end > (cs[SF2_CHUNK_smpl].size / 2))
 			continue;
-		}
 
 		/* NOW, allocate a sample number. */
 		n = instrument_loader_sample(&ii, i + 1);
