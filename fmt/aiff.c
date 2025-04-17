@@ -174,18 +174,14 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 		if (!name.id) name = auth;
 		if (!name.id) name = anno;
 		if (name.id) {
-			SCHISM_VLA_ALLOC(unsigned char, title, name.size);
-
-			iff_chunk_read(&name, fp, title, sizeof(title));
-
-			if (file) file->title = strn_dup((const char *)title, sizeof(title));
-			if (smp) {
-				size_t len = MIN(sizeof(smp->name), sizeof(title));
-				memcpy(smp->name, title, len);
-				smp->name[len] = '\0';
+			if (file) {
+				file->title = mem_alloc(name.size + 1);
+				iff_chunk_read(&name, fp, file->title, name.size);
+				file->title[name.size] = '\0';
 			}
-
-			SCHISM_VLA_FREE(title);
+			if (smp) {
+				iff_chunk_read(&name, fp, smp->name, sizeof(smp->name));
+			}
 		}
 
 		if (smp) {
@@ -239,18 +235,14 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 		}
 
 		if (name.id) {
-			SCHISM_VLA_ALLOC(unsigned char, title, name.size);
-
-			iff_chunk_read(&chunk, fp, title, SCHISM_VLA_SIZEOF(title));
-
-			if (file) file->title = strn_dup((const char *)title, SCHISM_VLA_SIZEOF(title));
-			if (smp) {
-				int len = MIN(sizeof(smp->name), SCHISM_VLA_SIZEOF(title));
-				memcpy(smp->name, title, len);
-				smp->name[len] = 0;
+			if (file) {
+				file->title = mem_alloc(name.size + 1);
+				iff_chunk_read(&name, fp, file->title, name.size);
+				file->title[name.size] = '\0';
 			}
-
-			SCHISM_VLA_FREE(title);
+			if (smp) {
+				iff_chunk_read(&name, fp, smp->name, sizeof(smp->name));
+			}
 		}
 
 		/* TODO loop points */
