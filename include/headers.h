@@ -173,25 +173,6 @@ struct stat {
 /* ------------------------------------------------------------------------ */
 /* moved from util.h */
 
-#define ARRAY_SIZE(a) (sizeof(a)/sizeof(*(a)))
-
-/* macros stolen from glib */
-#ifndef MAX
-# define MAX(X,Y) (((X)>(Y))?(X):(Y))
-#endif
-#ifndef MIN
-# define MIN(X,Y) (((X)<(Y))?(X):(Y))
-#endif
-#ifndef CLAMP
-# define CLAMP(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
-#endif
-#ifndef ABS
-# define ABS(x) ((x) < 0 ? -(x) : x)
-#endif
-
-#define INT_SHAPED_PTR(v)               ((intptr_t)(void*)(v))
-#define PTR_SHAPED_INT(i)               ((void*)(i))
-
 /* Compares two version numbers following Semantic Versioning.
  * For example:
  *   SCHISM_SEMVER_ATLEAST(1, 2, 3, 1, 2, 4) -> TRUE
@@ -266,6 +247,40 @@ struct stat {
 #else
 # define SCHISM_HAS_C23_ATTRIBUTE(x) (0)
 #endif
+
+/* ------------------------------------------------------------------------ */
+
+#if SCHISM_GNUC_HAS_BUILTIN(__builtin_types_compatible_p, 3, 1, 0)
+/* use GCC extensions to make sure that the type we're looking at
+ * is in fact, an array type. if `a` is not an array, it will do
+ * __typeof__ on an int[-1], causing a compiler error. else, it
+ * simply does nothing, and the result is a compile-time add of
+ * zero, which gets optimized to nothing. :) */
+# define ARRAY_SIZE(a) \
+	(sizeof(a) / sizeof(*(a)) \
+    	+ sizeof(__typeof__(int[1 - 2 * \
+			!!__builtin_types_compatible_p(__typeof__(a), \
+				__typeof__(&(*(a))))])) * 0)
+#else
+# define ARRAY_SIZE(a) (sizeof(a)/sizeof(*(a)))
+#endif
+
+/* macros stolen from glib */
+#ifndef MAX
+# define MAX(X,Y) (((X)>(Y))?(X):(Y))
+#endif
+#ifndef MIN
+# define MIN(X,Y) (((X)<(Y))?(X):(Y))
+#endif
+#ifndef CLAMP
+# define CLAMP(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
+#endif
+#ifndef ABS
+# define ABS(x) ((x) < 0 ? -(x) : x)
+#endif
+
+#define INT_SHAPED_PTR(v) ((intptr_t)(void*)(v))
+#define PTR_SHAPED_INT(i) ((void*)(i))
 
 /* ------------------------------------------------------------------------ */
 
