@@ -122,11 +122,12 @@ static int sf2_read(slurp_t *fp, iff_chunk_t cs[SF2_CHUNK_SIZE_])
 			 * high word = minor */
 
 			switch (ver & UINT32_C(0xFFFF)) {
-			case 2: break;
+			case 2:
+				break;
 			case 1:
-				/* TODO: maybe handle version 1? as well?
-				 * I don't have any on hand to figure out */
-				SCHISM_FALLTHROUGH;
+			case 3:
+				/* v1 and v3 are not tested; they'll probably
+				 * send back garbage. */
 			default:
 				return 0;
 			}
@@ -151,6 +152,12 @@ static int sf2_read(slurp_t *fp, iff_chunk_t cs[SF2_CHUNK_SIZE_])
 		}
 	}
 
+	/* we always assume this chunk is 46 bytes large.
+	 * maybe different major versions have different structures for this
+	 * format. for now I'm not going to care :) */
+	if (cs[SF2_CHUNK_shdr].size % 46)
+		return 0;
+
 	slurp_seek(fp, csdta.offset + 4, SEEK_SET);
 
 	while (riff_chunk_peek(&c, fp) && slurp_tell(fp) <= csdta.offset + csdta.size) {
@@ -164,7 +171,6 @@ static int sf2_read(slurp_t *fp, iff_chunk_t cs[SF2_CHUNK_SIZE_])
 		 * We don't even support 24-bit though, so I don't
 		 * care. :) */
 		default:
-			printf("%08x %.4s\n", c.id, (char *)&c.id);
 			/* don't care */
 			break;
 		}
@@ -208,12 +214,7 @@ int fmt_sf2_load_instrument(slurp_t *fp, int slot)
 	if (!sf2_read(fp, cs))
 		return 0;
 
-	/* this size should always be a multiple of 46 */
-	if (cs[SF2_CHUNK_shdr].size % 46)
-		return 0;
-
 	nsmp = cs[SF2_CHUNK_shdr].size / 46;
-
 	nsmp = MIN(nsmp, MAX_SAMPLES);
 
 	g = instrument_loader_init(&ii, slot);
