@@ -34,7 +34,10 @@
 #import <Cocoa/Cocoa.h>
 #import <AVFoundation/AVFoundation.h>
 
-static int avfoundation_initialized = 0;
+/* these aren't defined in older SDKs; define them here. */
+#define kAudioFormatFLAC 'flac'
+#define kAudioFormatMPEGD_USAC 'usac'
+#define kAudioFormatOpus 'opus'
 
 /* AVFoundation, like MediaFoundation is ridiculous when it comes to
  * implementing custom read/tell/seek implementations. Thus, here
