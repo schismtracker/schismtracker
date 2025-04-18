@@ -36,11 +36,12 @@ enum {
 
 typedef struct slurp_struct_ slurp_t;
 struct slurp_struct_ {
-	/* stdio-style interfaces
-	 *
+	/* stdio-style interfaces:
 	 * seek, tell, length, and eof are all required to be implemented.
+	 * peek can be NULL if read is implemented, and vice versa.
 	 *
-	 * peek can be NULL if read is implemented, and vice versa. */
+	 * peek is a custom schism construct that is like fread, but the
+	 * file position does not change after it is done. */
 	int (*seek)(slurp_t *, int64_t, int);
 	int64_t (*tell)(slurp_t *);
 	size_t (*peek)(slurp_t *, void *, size_t);
@@ -48,12 +49,11 @@ struct slurp_struct_ {
 	size_t (*length)(slurp_t *);
 	int (*eof)(slurp_t *);
 
-	/* clean up after ourselves */
+	/* clean up after ourselves (optional, can be NULL) */
 	void (*closure)(slurp_t *);
 
 	/* receive data in a callback function; keeps away useless allocation for memory mapping.
-	 * this function is optional, if it is not provided the data will be allocated and sent
-	 * as a call to slurp_peek */
+	 * (optional, can be NULL) */
 	int (*receive)(slurp_t *, int (*callback)(const void *, size_t, void *), size_t length, void *userdata);
 
 	union {
@@ -86,6 +86,21 @@ struct slurp_struct_ {
 			 * probably fail anyway. */
 			size_t length;
 		} stdio;
+
+		struct {
+			/* only used for sf2 */
+			slurp_t *src;
+
+			int64_t pos;
+
+			struct {
+				int64_t off;
+				size_t len;
+			} data[2];
+
+			/* original position from before we mutilated it */
+			int64_t origpos;
+		} sf2;
 	} internal;
 };
 
@@ -106,6 +121,11 @@ int slurp_memstream_free(slurp_t *t, uint8_t *mem, size_t memsize);
  * Both streams must be of the exact same size. */
 int slurp_2memstream(slurp_t *t, uint8_t *mem1, uint8_t *mem2, size_t memsize);
 
+/* Binds two separate parts of an existing stream together.
+ * unslurp() should be called here. */
+void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
+	int64_t off2, size_t len2);
+
 void unslurp(slurp_t *t);
 
 #ifdef SCHISM_WIN32
@@ -121,8 +141,11 @@ int slurp_seek(slurp_t *t, int64_t offset, int whence); /* whence => SEEK_SET, S
 int64_t slurp_tell(slurp_t *t);
 #define slurp_rewind(t) slurp_seek((t), 0, SEEK_SET)
 
-size_t slurp_read(slurp_t *t, void *ptr, size_t count); /* i never really liked fread */
+/* these two functions will always fill in the entire buffer pointed to by ptr (any data not covered
+ * by the backend will be memset to zero) */
+size_t slurp_read(slurp_t *t, void *ptr, size_t count);
 size_t slurp_peek(slurp_t *t, void *ptr, size_t count);
+
 int slurp_getc(slurp_t *t); /* returns unsigned char cast to int, or EOF */
 int slurp_eof(slurp_t *t);  /* 1 = end of file */
 int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);

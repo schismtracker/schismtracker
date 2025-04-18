@@ -215,7 +215,7 @@ int fmt_sf2_load_instrument(slurp_t *fp, int slot)
 		return 0;
 
 	nsmp = cs[SF2_CHUNK_shdr].size / 46;
-	nsmp = MIN(nsmp, MAX_SAMPLES);
+	/* nsmp = MIN(nsmp, MAX_SAMPLES); -- some samples may be ignored */
 
 	g = instrument_loader_init(&ii, slot);
 	iff_chunk_read(&cs[SF2_CHUNK_INAM], fp, g->name, sizeof(g->name));
@@ -234,6 +234,8 @@ int fmt_sf2_load_instrument(slurp_t *fp, int slot)
 		int n;
 		uint32_t smpl_offset, smpl_end, loop_start, loop_end, rate;
 		uint16_t link, type;
+		uint8_t note;
+		int8_t cents;
 
 		slurp_read(fp, name, 20);
 
@@ -242,8 +244,8 @@ int fmt_sf2_load_instrument(slurp_t *fp, int slot)
 		slurp_read(fp, &loop_start, 4);
 		slurp_read(fp, &loop_end, 4);
 		slurp_read(fp, &rate, 4);
-		slurp_seek(fp, 1, SEEK_CUR); /* uint8_t -- original pitch midi note (should not be ignoring this...) */
-		slurp_seek(fp, 1, SEEK_CUR); /* int8_t -- finetune (cents) */
+		slurp_read(fp, &note, 1);
+		slurp_read(fp, &cents, 1);
 		slurp_read(fp, &link, 2);
 		slurp_read(fp, &type, 2);
 
@@ -252,21 +254,21 @@ int fmt_sf2_load_instrument(slurp_t *fp, int slot)
 		loop_start  = bswapLE32(loop_start);
 		loop_end    = bswapLE32(loop_end);
 		rate        = bswapLE32(rate);
-		link        = bswapLE16(link); /* this will be useful for stereo support.. */
+		link        = bswapLE16(link); /* used for stereo samples */
 		type        = bswapLE16(type);
 
 		switch (type) {
 		case 1: /* mono */
-		case 4: /* left stereo (treated as mono) */
+		case 2: /* right stereo (FIXME: which one contains the useful info?) */
 			break;
-		case 2: /* right stereo */
+		case 4: /* left stereo */
 		case 8: /* linked sample (will never support this) */
 		default: /* ??? */
 			continue; /* unsupported */
 		}
 
 		/* invalid ?? */
-		if (smpl_offset + smpl_end > (cs[SF2_CHUNK_smpl].size / 2))
+		if (smpl_end > (cs[SF2_CHUNK_smpl].size / 2))
 			continue;
 
 		/* NOW, allocate a sample number. */
@@ -286,10 +288,65 @@ int fmt_sf2_load_instrument(slurp_t *fp, int slot)
 			smp->loop_start = loop_start;
 			smp->loop_end = loop_end;
 		}
-		smp->c5speed = rate;
 
-		iff_read_sample(&cs[SF2_CHUNK_smpl], fp, smp,
-			SF_16 | SF_M | SF_LE | SF_PCMS, smpl_offset << 1);
+		/* now, transpose the frequency; also account for the cents as well.
+		 * hopefully at this point the sample is an actual middle C. */
+		smp->c5speed = (double)rate * pow(2, ((60 - note) - ((double)cents / 100.0)) / 12.0);
+
+		switch (type) {
+		case 1: /* mono */
+			iff_read_sample(&cs[SF2_CHUNK_smpl], fp, smp,
+				SF_16 | SF_M | SF_LE | SF_PCMS, smpl_offset << 1);
+			break;
+		case 2: { /* stereo */
+			/* I HATE SF2 :))) */
+			int64_t roffset, rend, loffset, lend;
+
+			roffset = smpl_offset;
+			rend = smpl_end;
+
+			{
+				uint32_t loffset32, lend32;
+
+				/* seek to the offsets */
+				slurp_seek(fp, cs[SF2_CHUNK_shdr].offset + (link * 46) + 20, SEEK_SET);
+
+				slurp_read(fp, &loffset32, 4);
+				slurp_read(fp, &lend32, 4);
+
+				loffset = bswapLE32(loffset32);
+				lend = bswapLE32(lend32);
+			}
+
+			/* meh */
+			roffset = (roffset * 2) + cs[SF2_CHUNK_smpl].offset;
+			rend    = (rend * 2)    + cs[SF2_CHUNK_smpl].offset;
+			loffset = (loffset * 2) + cs[SF2_CHUNK_smpl].offset;
+			lend    = (lend * 2)    + cs[SF2_CHUNK_smpl].offset;
+
+			/* so far I haven't found any files where lend == roffset,
+			 * so I'm not going to add a special case for it ;) */
+			{
+				slurp_t sf2sl;
+
+				/* left channel comes first when reading split stereo */
+				slurp_sf2(&sf2sl, fp, (loffset), (lend - loffset),
+					roffset, (rend - roffset));
+
+				csf_read_sample(smp, SF_16 | SF_SS | SF_LE | SF_PCMS, &sf2sl);
+
+				unslurp(&sf2sl);
+			}
+
+			/* seek back to the next sample */
+			slurp_seek(fp, cs[SF2_CHUNK_shdr].offset + ((i + 1) * 46), SEEK_SET);
+
+			break;
+		}
+		default:
+			/* ??? */
+			break;
+		}
 	}
 
 	return 1;
