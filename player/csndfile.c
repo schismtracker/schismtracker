@@ -1093,6 +1093,33 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		break;
 	}
 
+	case SF(32,SS,BE,IEEE):
+	case SF(32,SS,LE,IEEE): {
+		int i;
+
+		len = sample->length;
+
+		len *= 2;
+
+		for (i = 0; i < 2; i++) {
+			int16_t *data = (int16_t *)sample->data + i;
+
+			for (uint32_t k = 0; k < len; k += 2) {
+				uint32_t bytes;
+				slurp_read(fp, &bytes, sizeof(bytes));
+				if ((flags & SF_END_MASK) == SF_LE)
+					bytes = bswap_32(bytes);
+
+				double num = float_decode_ieee_32((const unsigned char *)&bytes) * (INT16_MAX + 1);
+				data[k] = (int16_t)CLAMP(num, INT16_MIN, INT16_MAX);
+			}
+		}
+
+		len *= 4;
+
+		break;
+	}
+
 	// 64-bit IEEE floating point
 	case SF(64,M,LE,IEEE):
 	case SF(64,M,BE,IEEE):
@@ -1116,6 +1143,33 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		}
 
 		len *= 8;
+
+		break;
+	}
+
+	case SF(64,SS,BE,IEEE):
+	case SF(64,SS,LE,IEEE): {
+		int i;
+
+		len = sample->length;
+
+		len *= 2;
+
+		for (i = 0; i < 2; i++) {
+			int16_t *data = (int16_t *)sample->data + i;
+
+			for (uint32_t k = 0; k < len; k += 2) {
+				uint64_t bytes;
+				slurp_read(fp, &bytes, sizeof(bytes));
+				if ((flags & SF_END_MASK) == SF_LE)
+					bytes = bswap_64(bytes);
+
+				double num = float_decode_ieee_64((const unsigned char *)&bytes) * (INT16_MAX + 1);
+				data[k] = (int16_t)CLAMP(num, INT16_MIN, INT16_MAX);
+			}
+		}
+
+		len *= 4;
 
 		break;
 	}
