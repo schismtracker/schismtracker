@@ -188,6 +188,7 @@ void macosx_get_modkey(schism_keymod_t *m);
 int macosx_get_key_repeat(int *pdelay, int *prate);
 char *macosx_get_application_support_dir(void);
 void macosx_show_message_box(const char *title, const char *text, int style);
+int macosx_ver_atleast(int major, int minor, int patch);
 
 int macos_mkdir(const char *path, mode_t mode);
 int macos_stat(const char *file, struct stat *st);

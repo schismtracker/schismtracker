@@ -364,6 +364,14 @@ files_macosx = \
 cflags_macosx=
 libs_macosx=
 ldflags_macosx=-framework Cocoa -framework CoreAudio -framework CoreMIDI -framework IOKit -framework AudioUnit
+
+if USE_AVFOUNDATION
+files_avfoundation = \
+	fmt/macosxavf.m
+cflags_avfoundation=
+libs_avfoundation=
+ldflags_avfoundation=-framework AVFoundation
+endif
 endif
 
 if USE_MACOS
@@ -593,7 +601,8 @@ schismtracker_SOURCES = \
 	$(files_sdl12)			\
 	$(files_macos)			\
 	$(files_os2)			\
-	$(files_xbox)
+	$(files_xbox)			\
+	$(files_avfoundation)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
@@ -603,7 +612,7 @@ component_cflags = $(cflags_alsa) $(cflags_oss) \
 	$(cflags_version) $(cflags_win32) $(cflags_wii) \
 	$(cflags_macosx) $(cflags_flac) $(cflags_jack) \
 	$(cflags_wiiu) $(cflags_macos) $(cflags_os2) \
-	$(cflags_xbox) $(UTF8PROC_CFLAGS)
+	$(cflags_xbox) $(cflags_avfoundation) $(UTF8PROC_CFLAGS)
 schismtracker_CPPFLAGS = -I$(srcdir)/include -I. $(cppflags_wii) $(cppflags_wiiu)
 schismtracker_CFLAGS = $(AM_CFLAGS) $(component_cflags)
 schismtracker_OBJCFLAGS = $(AM_OBJCFLAGS) $(component_cflags)
@@ -615,5 +624,6 @@ schismtracker_LDADD = $(LIBM) $(libs_sdl3) \
 	$(lib_win32) $(libs_network) $(libs_flac) \
 	$(lib_mediafoundation) $(UTF8PROC_LIBS) \
 	$(libs_sdl2) $(libs_sdl12) $(libs_macos) \
-	$(libs_os2) $(libs_xbox)
-schismtracker_LDFLAGS = $(ldflags_macosx)
+	$(libs_os2) $(libs_xbox) $(libs_avfoundation)
+schismtracker_LDFLAGS = $(ldflags_macosx) \
+	$(ldflags_avfoundation)

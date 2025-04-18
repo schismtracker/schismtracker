@@ -151,8 +151,12 @@ READ_INFO(mp3)
 READ_INFO(win32mf) LOAD_SAMPLE(win32mf)
 #endif
 
+#ifdef SCHISM_AVFOUNDATION
+READ_INFO(macosxavf) LOAD_SAMPLE(macosxavf)
+#endif
+
 /* 15-sample mods have literally no identifying information */
-READ_INFO(mod) LOAD_SONG(mod15)
+LOAD_SONG(mod15)
 
 /* not really a type, so no info reader for these */
 LOAD_SAMPLE(raw) SAVE_SAMPLE(raw)
