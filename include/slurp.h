@@ -36,7 +36,11 @@ enum {
 
 typedef struct slurp_struct_ slurp_t;
 struct slurp_struct_ {
-	/* stdio-style interfaces */
+	/* stdio-style interfaces
+	 *
+	 * seek, tell, length, and eof are all required to be implemented.
+	 *
+	 * peek can be NULL if read is implemented, and vice versa. */
 	int (*seek)(slurp_t *, int64_t, int);
 	int64_t (*tell)(slurp_t *);
 	size_t (*peek)(slurp_t *, void *, size_t);
@@ -47,12 +51,15 @@ struct slurp_struct_ {
 	/* clean up after ourselves */
 	void (*closure)(slurp_t *);
 
-	/* receive data in a callback function; keeps away useless allocation for memory mapping */
+	/* receive data in a callback function; keeps away useless allocation for memory mapping.
+	 * this function is optional, if it is not provided the data will be allocated and sent
+	 * as a call to slurp_peek */
 	int (*receive)(slurp_t *, int (*callback)(const void *, size_t, void *), size_t length, void *userdata);
 
 	union {
 		struct {
 			unsigned char *data;
+			unsigned char *data2; /* for 2mem */
 			size_t length;
 			size_t pos;
 
@@ -94,6 +101,10 @@ int slurp(slurp_t *t, const char *filename, struct stat *buf, size_t size);
 /* initializes a slurp_t over an existing memory stream */
 int slurp_memstream(slurp_t *t, uint8_t *mem, size_t memsize);
 int slurp_memstream_free(slurp_t *t, uint8_t *mem, size_t memsize);
+
+/* Binds two memory streams together.
+ * Both streams must be of the exact same size. */
+int slurp_2memstream(slurp_t *t, uint8_t *mem1, uint8_t *mem2, size_t memsize);
 
 void unslurp(slurp_t *t);
 

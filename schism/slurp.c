@@ -34,20 +34,19 @@ static int slurp_stdio_open_file_(slurp_t *t, FILE *fp);
 static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence);
 static int64_t slurp_stdio_tell_(slurp_t *t);
 static size_t slurp_stdio_length_(slurp_t *t);
-static size_t slurp_stdio_peek_(slurp_t *t, void *ptr, size_t count);
 static size_t slurp_stdio_read_(slurp_t *t, void *ptr, size_t count);
 static int slurp_stdio_eof_(slurp_t *t);
-static int slurp_stdio_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
 static void slurp_stdio_closure_(slurp_t *t);
 
 static int slurp_memory_seek_(slurp_t *t, int64_t offset, int whence);
 static int64_t slurp_memory_tell_(slurp_t *t);
 static size_t slurp_memory_length_(slurp_t *t);
 static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count);
-static size_t slurp_memory_read_(slurp_t *t, void *ptr, size_t count);
 static int slurp_memory_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
 static int slurp_memory_eof_(slurp_t *t);
 static void slurp_memory_closure_free_(slurp_t *t);
+
+static size_t slurp_2mem_peek_(slurp_t *t, void *ptr, size_t count);
 
 /* --------------------------------------------------------------------- */
 
@@ -87,7 +86,6 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 		t->tell = slurp_memory_tell_;
 		t->eof  = slurp_memory_eof_;
 		t->peek = slurp_memory_peek_;
-		t->read = slurp_memory_read_;
 		t->receive = slurp_memory_receive_;
 		t->length = slurp_memory_length_;
 		goto finished;
@@ -104,9 +102,7 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 		t->seek = slurp_stdio_seek_;
 		t->tell = slurp_stdio_tell_;
 		t->eof  = slurp_stdio_eof_;
-		t->peek = slurp_stdio_peek_;
 		t->read = slurp_stdio_read_;
-		t->receive = slurp_stdio_receive_;
 		t->length = slurp_stdio_length_;
 		goto finished;
 	default:
@@ -147,7 +143,6 @@ int slurp_memstream(slurp_t *t, uint8_t *mem, size_t memsize)
 	t->tell = slurp_memory_tell_;
 	t->eof  = slurp_memory_eof_;
 	t->peek = slurp_memory_peek_;
-	t->read = slurp_memory_read_;
 	t->receive = slurp_memory_receive_;
 	t->length = slurp_memory_length_;
 
@@ -163,6 +158,24 @@ int slurp_memstream_free(slurp_t *t, uint8_t *mem, size_t memsize)
 	slurp_memstream(t, mem, memsize);
 
 	t->closure = slurp_memory_closure_free_;
+
+	return 0;
+}
+
+int slurp_2memstream(slurp_t *t, uint8_t *mem1, uint8_t *mem2, size_t memsize)
+{
+	memset(t, 0, sizeof(*t));
+
+	t->seek = slurp_memory_seek_;
+	t->tell = slurp_memory_tell_;
+	t->eof  = slurp_memory_eof_;
+	t->peek = slurp_2mem_peek_;
+	t->length = slurp_memory_length_;
+
+	t->internal.memory.length = memsize * 2;
+	t->internal.memory.data = mem1;
+	t->internal.memory.data2 = mem2;
+	t->closure = NULL;
 
 	return 0;
 }
@@ -235,20 +248,6 @@ static size_t slurp_stdio_length_(slurp_t *t)
 	return t->internal.stdio.length;
 }
 
-static size_t slurp_stdio_peek_(slurp_t *t, void *ptr, size_t count)
-{
-	/* cache current position */
-	int64_t pos = slurp_stdio_tell_(t);
-	if (pos < 0)
-		return 0;
-
-	count = slurp_stdio_read_(t, ptr, count);
-
-	slurp_stdio_seek_(t, pos, SEEK_SET);
-
-	return count;
-}
-
 static size_t slurp_stdio_read_(slurp_t *t, void *ptr, size_t count)
 {
 	size_t read = fread(ptr, 1, count, t->internal.stdio.fp);
@@ -278,21 +277,6 @@ static int slurp_stdio_eof_(slurp_t *t)
 static void slurp_stdio_closure_(slurp_t *t)
 {
 	fclose(t->internal.stdio.fp);
-}
-
-static int slurp_stdio_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata)
-{
-	unsigned char *buf = mem_alloc(count);
-	if (!buf)
-		return -1;
-
-	count = slurp_stdio_peek_(t, buf, count);
-
-	int r = callback(buf, count, userdata);
-
-	free(buf);
-
-	return r;
 }
 
 /* --------------------------------------------------------------------- */
@@ -338,19 +322,12 @@ static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count)
 		// short read -- fill in any extra bytes with zeroes
 		size_t tail = count - bytesleft;
 		count = bytesleft;
-		memset((unsigned char*)ptr + count, 0, tail);
+		memset((unsigned char *)ptr + count, 0, tail);
 	}
 
 	if (count)
 		memcpy(ptr, t->internal.memory.data + t->internal.memory.pos, count);
 
-	return count;
-}
-
-static size_t slurp_memory_read_(slurp_t *t, void *ptr, size_t count)
-{
-	count = slurp_memory_peek_(t, ptr, count);
-	slurp_memory_seek_(t, count, SEEK_CUR);
 	return count;
 }
 
@@ -375,6 +352,60 @@ static void slurp_memory_closure_free_(slurp_t *t)
 }
 
 /* --------------------------------------------------------------------- */
+
+/* 2mem puts two separate memory streams next to each other, and
+ * acts as if they were one stream.
+ *
+ * This is useful for AVFoundation, as well as SoundFont2, and
+ * likely others as well, as more stuff gets added. */
+
+static size_t slurp_2mem_peek_(slurp_t *t, void *ptr, size_t count)
+{
+	size_t leneach, which, pos;
+	ptrdiff_t bytesleft = (ptrdiff_t)t->internal.memory.length - t->internal.memory.pos;
+	if (bytesleft < 0)
+		return 0;
+
+	if ((ptrdiff_t)count > bytesleft) {
+		// short read -- fill in any extra bytes with zeroes
+		size_t tail = count - bytesleft;
+		count = bytesleft;
+		memset((unsigned char *)ptr + count, 0, tail);
+	}
+
+	if (!count)
+		return 0;
+
+	/* okay -- now we have to do our magic :) */
+
+	leneach = t->internal.memory.length / 2;
+
+	which = t->internal.memory.pos / leneach;
+	pos = t->internal.memory.pos % leneach;
+
+	if (pos + count < leneach) {
+		if (which == 0) {
+			memcpy(ptr, t->internal.memory.data + pos, count);
+		} else if (which == 1) {
+			memcpy(ptr, t->internal.memory.data2 + pos, count);
+		}
+	} else {
+		/* UGH */
+		ptrdiff_t left1 = leneach - pos;
+
+		/* this is a bug */
+		SCHISM_RUNTIME_ASSERT(left1 >= 0, "logic error in 2mem implementation");
+
+		if (left1)
+			memcpy(ptr, t->internal.memory.data + pos, left1);
+
+		memcpy(ptr, t->internal.memory.data2, MIN(left1, count));
+	}
+
+	return count;
+}
+
+/* --------------------------------------------------------------------- */
 /* these just forward directly to the function pointers */
 
 int slurp_seek(slurp_t *t, int64_t offset, int whence)
@@ -389,12 +420,31 @@ int64_t slurp_tell(slurp_t *t)
 
 size_t slurp_peek(slurp_t *t, void *ptr, size_t count)
 {
-	return t->peek(t, ptr, count);
+	if (t->peek) {
+		return t->peek(t, ptr, count);
+	} else {
+		/* cache current position */
+		int64_t pos = slurp_stdio_tell_(t);
+		if (pos < 0)
+			return 0;
+
+		count = slurp_read(t, ptr, count);
+
+		slurp_seek(t, pos, SEEK_SET);
+
+		return count;
+	}
 }
 
 size_t slurp_read(slurp_t *t, void *ptr, size_t count)
 {
-	return t->read(t, ptr, count);
+	if (t->read) {
+		return t->read(t, ptr, count);
+	} else {
+		count = slurp_peek(t, ptr, count);
+		slurp_seek(t, count, SEEK_CUR);
+		return count;
+	}
 }
 
 size_t slurp_length(slurp_t *t)
@@ -420,5 +470,19 @@ int slurp_eof(slurp_t *t)
 
 int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata)
 {
-	return t->receive(t, callback, count, userdata);
+	if (t->receive) {
+		return t->receive(t, callback, count, userdata);
+	} else {
+		unsigned char *buf = mem_alloc(count);
+		if (!buf)
+			return -1;
+
+		count = slurp_peek(t, buf, count);
+
+		int r = callback(buf, count, userdata);
+
+		free(buf);
+
+		return r;
+	}
 }
