@@ -410,11 +410,11 @@ typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 #define BEGIN_RESAMPLE_INTERFACE(func, sampletype, numchannels) \
 	SCHISM_SIMD void func(sampletype *oldbuf, sampletype *newbuf, uint32_t oldlen, uint32_t newlen) \
 	{ \
-		uint32_t position = 0; \
+		uint64_t position = 0; \
 		const sampletype *p = oldbuf; \
 		sampletype *pvol = newbuf; \
 		const sampletype *pbufmax = &newbuf[newlen* numchannels]; \
-		uint32_t increment = (((uint64_t)oldlen) << 16) / newlen; \
+		uint64_t increment = (((uint64_t)oldlen) << 16) / newlen; \
 		do {
 
 #define END_RESAMPLE_INTERFACE_MONO() \
