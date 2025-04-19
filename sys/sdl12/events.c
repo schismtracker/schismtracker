@@ -828,7 +828,7 @@ static int sdl12_events_init(void)
 	sdl12_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 #endif
 
-	app_state = sdl12_GetAppState();
+	app_state = 0; /*sdl12_GetAppState();*/
 
 	return 1;
 }
