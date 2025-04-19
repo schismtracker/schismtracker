@@ -232,7 +232,8 @@ int video_opengl_init(video_opengl_object_load_spec object_load,
 	video_opengl_extension_supported_spec extension_supported,
 	video_opengl_object_unload_spec object_unload,
 	video_opengl_set_attribute_spec set_attribute,
-	video_opengl_swap_buffers_spec swap_buffers);
+	video_opengl_swap_buffers_spec swap_buffers,
+	int (*setup_callback)(void));
 int video_opengl_setup(uint32_t w, uint32_t h,
 	int (*callback)(uint32_t *px, uint32_t *py, uint32_t *pw, uint32_t *ph));
 void video_opengl_blit(void);
@@ -241,6 +242,8 @@ void video_opengl_quit(void);
 int video_opengl_used(void);
 
 /* reports info to the log */
-void video_opengl_report(void);
+void video_opengl_report(int hw, int accel);
+
+void video_opengl_reset_interpolation(void);
 
 #endif /* SCHISM_VIDEO_H_ */
