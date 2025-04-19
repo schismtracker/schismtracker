@@ -625,13 +625,16 @@ static SCHISM_FORMAT_PRINTF(2, 3) int flac_append_vorbis_comment(FLAC__StreamMet
 {
 	char *s;
 	int x;
-	va_list ap;
 
-	va_start(ap, format);
+	{
+		va_list ap;
 
-	x = vasprintf(&s, format, ap);
+		va_start(ap, format);
 
-	va_end(ap);
+		x = vasprintf(&s, format, ap);
+
+		va_end(ap);
+	}
 
 	if (x > 0) {
 		FLAC__StreamMetadata_VorbisComment_Entry e;
