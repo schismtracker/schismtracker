@@ -388,24 +388,23 @@ case "$host_os" in
 darwin*)
 	AC_MSG_RESULT([found Darwin host])
 
+	AC_MSG_CHECKING([for Mac OS X El Capitan SDK])
+	AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+		#include <AvailabilityMacros.h>
 
-		AC_MSG_CHECKING([for Mac OS X El Capitan SDK])
-		AC_COMPILE_IFELSE([
-			#include <AvailabilityMacros.h>
+		#if MAC_OS_X_VERSION_MAX_ALLOWED < 101100
+		# error "too old"
+		#endif
+	]])], [use_avfoundation=yes], [])
+	AC_MSG_RESULT([$use_avfoundation])
 
-			#if MAC_OS_X_VERSION_MAX_ALLOWED < 101100
-			# error "too old"
-			#endif
-		], [use_avfoundation=yes], [])
-		AC_MSG_RESULT([$use_avfoundation])
-
-		use_macosx=yes
-		posix_fseek=yes
-		AC_DEFINE([SCHISM_MACOSX], [1], [Mac OS X])
-		;;
-	macos*)
-		# Retro68 toolchain
-		AC_MSG_RESULT([found Classic Mac OS host])
+	use_macosx=yes
+	posix_fseek=yes
+	AC_DEFINE([SCHISM_MACOSX], [1], [Mac OS X])
+	;;
+macos*)
+	# Retro68 toolchain
+	AC_MSG_RESULT([found Classic Mac OS host])
 
 	use_macos=yes
 	AC_DEFINE([SCHISM_MACOS], [1], [Classic Mac OS])
