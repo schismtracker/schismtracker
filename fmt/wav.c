@@ -372,25 +372,17 @@ int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
 	}
 
 	{
-		unsigned char xtra[IFF_XTRA_CHUNK_SIZE];
+		unsigned char data[MAX(IFF_XTRA_CHUNK_SIZE, IFF_SMPL_CHUNK_SIZE)];
 		uint32_t length;
 
-		iff_fill_xtra_chunk(smp, xtra, &length);
+		iff_fill_xtra_chunk(smp, data, &length);
+		disko_write(fp, data, length);
 
-		disko_write(fp, xtra, length);
+		iff_fill_smpl_chunk(smp, data, &length);
+		disko_write(fp, data, length);
 	}
 
-	{
-		unsigned char smpl[IFF_SMPL_CHUNK_SIZE];
-		uint32_t length;
-
-		iff_fill_smpl_chunk(smp, smpl, &length);
-
-		disko_write(fp, smpl, length);
-	}
-
-	/* FIXME we should be able to set the title here :) */
-	fmt_wav_write_LIST(fp, NULL);
+	fmt_wav_write_LIST(fp, smp->name);
 
 	/* fix the length in the file header */
 	ul = disko_tell(fp) - 8;
