@@ -144,6 +144,7 @@ static struct {
 	} mouse;
 
 	uint32_t tc_bgr32[256];
+	uint32_t pal_opengl[256];
 } video = {
 	.mouse = {
 		.visible = MOUSE_EMULATED,
@@ -741,9 +742,18 @@ static void bgr32_fun_(unsigned int i, unsigned char rgb[3])
 		(rgb[0] << 16) | (0xFF << 24);
 }
 
+static void gl_fun_(unsigned int i, unsigned char rgb[3])
+{
+	video.pal_opengl[i] = rgb[2]
+		| (rgb[1] << 8)
+		| (rgb[0] << 16)
+		| (0xFF << 24);
+}
+
 void video_colors(unsigned char palette[16][3])
 {
 	video_colors_iterate(palette, bgr32_fun_);
+	video_colors_iterate(palette, gl_fun_);
 
 	backend->colors(palette);
 }
@@ -1100,6 +1110,25 @@ fail:
 	return 0;
 }
 
+void video_opengl_reset_interpolation(void)
+{
+	uint32_t x;
+
+	switch (cfg_video_interpolation) {
+	case VIDEO_INTERPOLATION_NEAREST:
+		x = GL_NEAREST;
+		break;
+	case VIDEO_INTERPOLATION_LINEAR:
+	case VIDEO_INTERPOLATION_BEST:
+	default:
+		x = GL_LINEAR;
+		break;
+	}
+
+	schism_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, x);
+	schism_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, x);
+}
+
 int video_opengl_setup(uint32_t w, uint32_t h,
 	int (*callback)(uint32_t *px, uint32_t *py, uint32_t *pw, uint32_t *ph))
 {
@@ -1166,24 +1195,10 @@ int video_opengl_setup(uint32_t w, uint32_t h,
 	schism_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	schism_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-	switch (cfg_video_interpolation) {
-	case VIDEO_INTERPOLATION_NEAREST:
-		schism_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-			GL_NEAREST);
-		schism_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-			GL_NEAREST);
-		break;
-	case VIDEO_INTERPOLATION_LINEAR:
-	case VIDEO_INTERPOLATION_BEST:
-		schism_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-			GL_LINEAR);
-		schism_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-			GL_LINEAR);
-		break;
-	}
+	video_opengl_reset_interpolation();
 
 	schism_glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texsize, texsize,
-		0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, 0);
+		0, GL_BGRA_EXT, GL_UNSIGNED_INT_8_8_8_8_REV, 0);
 	if (schism_glGetError() != GL_NO_ERROR)
 		return 0; /* nope */
 
@@ -1225,10 +1240,13 @@ int video_opengl_setup(uint32_t w, uint32_t h,
 	return 1;
 }
 
-void video_opengl_blit(void)
+SCHISM_HOT void video_opengl_blit(void)
 {
 	if (!video_gl.init || !video_gl.framebuffer)
 		return;
+
+	/* we should probably be using RGBA and not BGRA */
+	video_blit11(4, video_gl.framebuffer, VIDEO_GL_PITCH, video.tc_bgr32);
 
 	schism_glBindTexture(GL_TEXTURE_2D, video_gl.texture);
 	schism_glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
