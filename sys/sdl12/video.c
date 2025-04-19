@@ -107,7 +107,7 @@ static struct video_cf {
 	struct {
 		unsigned int width, height, bpp;
 
-		int swsurface;
+		int swsurface; /* this is stupid and needs to go away */
 #ifdef HAVE_LINUX_FB_H
 		int fb_hacks;
 #endif
@@ -564,37 +564,39 @@ static uint32_t sdl12_map_rgb_callback(void *data, uint8_t r, uint8_t g, uint8_t
 
 SCHISM_HOT static void sdl12_video_blit(void)
 {
-	if (SDL_MUSTLOCK(video.surface))
-		while (sdl12_LockSurface(video.surface) < 0)
-			sdl12_Delay(10);
-
-#ifdef HAVE_LINUX_FB_H
-	if (video.desktop.fb_hacks) {
-		video_blit11(video.surface->format->BytesPerPixel,
-			video.surface->pixels,
-			video.surface->pitch,
-			video.pal);
-	} else
-#endif
 	if (video_opengl_used()) {
 		video_opengl_blit();
 	} else {
-		video_blitSC(video.surface->format->BytesPerPixel,
-			video.surface->pixels,
-			video.surface->pitch,
-			video.pal,
-			sdl12_map_rgb_callback,
-			video.surface->format,
-			video.clip.x,
-			video.clip.y,
-			video.clip.w,
-			video.clip.h);
+		if (SDL_MUSTLOCK(video.surface))
+			while (sdl12_LockSurface(video.surface) < 0)
+				sdl12_Delay(10);
+
+#ifdef HAVE_LINUX_FB_H
+		if (video.desktop.fb_hacks) {
+			video_blit11(video.surface->format->BytesPerPixel,
+				video.surface->pixels,
+				video.surface->pitch,
+				video.pal);
+		} else
+#endif
+		{
+			video_blitSC(video.surface->format->BytesPerPixel,
+				video.surface->pixels,
+				video.surface->pitch,
+				video.pal,
+				sdl12_map_rgb_callback,
+				video.surface->format,
+				video.clip.x,
+				video.clip.y,
+				video.clip.w,
+				video.clip.h);
+		}
+
+		if (SDL_MUSTLOCK(video.surface))
+			sdl12_UnlockSurface(video.surface);
+
+		sdl12_Flip(video.surface);
 	}
-
-	if (SDL_MUSTLOCK(video.surface))
-		sdl12_UnlockSurface(video.surface);
-
-	sdl12_Flip(video.surface);
 }
 
 static void sdl12_video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y)
@@ -675,7 +677,7 @@ static void sdl12_video_warp_mouse(unsigned int x, unsigned int y)
 
 static void sdl12_video_set_hardware(int hardware)
 {
-	video.desktop.swsurface = !hardware;
+	cfg_video_hardware = !hardware;
 	// recreate the surface with the same size...
 	video_resize(video.draw.width, video.draw.height);
 	video_report();
