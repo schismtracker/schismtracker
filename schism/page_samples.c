@@ -1116,13 +1116,21 @@ static int export_sample_format = 0;
 static void do_export_sample(SCHISM_UNUSED void *data)
 {
 	int exp = export_sample_format;
-	int i;
+	int i, c;
 
-	for (i = 0; sample_save_formats[i].label; i++)
+	for (i = 0, c = 0; sample_save_formats[i].label; i++) {
 		if (sample_save_formats[i].enabled && !sample_save_formats[i].enabled())
-			exp++;
+			continue;
 
-	sample_save(export_sample_filename, sample_save_formats[exp].label);
+		if (c == exp)
+			break;
+
+		c++;
+	}
+
+	if (!sample_save_formats[i].label) return; /* ??? */
+
+	sample_save(export_sample_filename, sample_save_formats[i].label);
 }
 
 static void export_sample_list_draw(void)
