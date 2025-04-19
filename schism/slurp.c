@@ -406,9 +406,20 @@ static inline size_t sf2_slurp_length(slurp_t *s)
 	return s->internal.sf2.data[0].len + s->internal.sf2.data[1].len;
 }
 
-static int sf2_slurp_seek(slurp_t *s, int64_t off, int whence)
+static inline int64_t sf2_slurp_tell(slurp_t *s)
 {
-	size_t len;
+	int64_t len;
+	int i;
+
+	for (i = 0, len = 0; i < s->internal.sf2.current; i++)
+		len += s->internal.sf2.data[i].len;
+
+	return len + slurp_tell(s->internal.sf2.src) - s->internal.sf2.data[s->internal.sf2.current].off;
+}
+
+static inline int sf2_slurp_seek(slurp_t *s, int64_t off, int whence)
+{
+	size_t i, len;
 
 	len = sf2_slurp_length(s);
 
@@ -417,7 +428,7 @@ static int sf2_slurp_seek(slurp_t *s, int64_t off, int whence)
 	case SEEK_SET:
 		break;
 	case SEEK_CUR:
-		off += s->internal.sf2.pos;
+		off += sf2_slurp_tell(s);
 		break;
 	case SEEK_END:
 		off += len;
@@ -427,50 +438,44 @@ static int sf2_slurp_seek(slurp_t *s, int64_t off, int whence)
 	if (off < 0 || (size_t)off > len)
 		return -1;
 
-	s->internal.sf2.pos = off;
-	return 0;
-}
-
-static int64_t sf2_slurp_tell(slurp_t *s)
-{
-	return s->internal.sf2.pos;
-}
-
-static size_t sf2_slurp_peek(slurp_t *s, void *data, size_t count)
-{
-	/* FIXME this is extremely inefficient */
-	int64_t pos;
-	size_t read;
-
-	pos = s->internal.sf2.pos;
-
-	if (pos >= s->internal.sf2.data[0].len) {
-		slurp_seek(s->internal.sf2.src, s->internal.sf2.data[1].off + (pos - s->internal.sf2.data[0].len), SEEK_SET);
-
-		read = slurp_read(s->internal.sf2.src, data, count);
-	} else if (pos + count < s->internal.sf2.data[0].len) {
-		slurp_seek(s->internal.sf2.src, s->internal.sf2.data[0].off + pos, SEEK_SET);
-
-		read = slurp_read(s->internal.sf2.src, data, count);
-	} else {
-		/* this needs more testing but seems fine for now */
-		ptrdiff_t left1 = (ptrdiff_t)s->internal.sf2.data[0].len - pos;
-
-		read = 0;
-
-		/* this is a bug */
-		SCHISM_RUNTIME_ASSERT(left1 >= 0, "logic error in sf2 implementation");
-
-		if (left1 > 0) {
-			slurp_seek(s->internal.sf2.src, s->internal.sf2.data[0].off + pos, SEEK_SET);
-			read += slurp_read(s->internal.sf2.src, data, left1);
+	for (i = 0, len = 0; i < ARRAY_SIZE(s->internal.sf2.data); i++) {
+		if (off >= len && off < len + s->internal.sf2.data[i].len) {
+			s->internal.sf2.current = i;
+			return slurp_seek(s->internal.sf2.src, s->internal.sf2.data[i].off + off - len, SEEK_SET);
 		}
 
-		if ((ptrdiff_t)count - left1 > 0) { /* only bother if there is more data to read */
-			slurp_seek(s->internal.sf2.src, s->internal.sf2.data[1].off, SEEK_SET);
-			read += slurp_read(s->internal.sf2.src, data + left1, count - left1);
+		len += s->internal.sf2.data[i].len;
+	}
+
+	/* ? */
+	s->internal.sf2.current = ARRAY_SIZE(s->internal.sf2.data) - 1;
+	return slurp_seek(s->internal.sf2.src, s->internal.sf2.data[s->internal.sf2.current].off + off - len, SEEK_SET);
+}
+
+static size_t sf2_slurp_read(slurp_t *s, void *data, size_t count)
+{
+	size_t read = 0;
+
+	if (s->internal.sf2.current < (ARRAY_SIZE(s->internal.sf2.data) - 1)) {
+		int64_t left = sf2_slurp_tell(s) + count;
+		if (left < 0)
+			return 0; /* ??? */
+
+		if ((size_t)left < count) {
+			size_t tread = slurp_read(s->internal.sf2.src, data, left);
+			if (tread != left)
+				return tread;
+
+			read += tread;
+			count -= tread;
+
+			/* start over at the new offset */
+			slurp_seek(s->internal.sf2.src, s->internal.sf2.data[++s->internal.sf2.current].off, SEEK_SET);
 		}
 	}
+
+	if (count)
+		read += slurp_read(s->internal.sf2.src, (char *)data + read, count);
 
 	return read;
 }
@@ -479,7 +484,7 @@ static int sf2_slurp_eof(slurp_t *s)
 {
 	struct slurp_sf2_data *sf = (struct slurp_sf2_data *)s->internal.memory.data;
 
-	return (s->internal.sf2.pos >= sf2_slurp_length(s));
+	return (sf2_slurp_tell(s) >= sf2_slurp_length(s));
 }
 
 static void sf2_slurp_closure(slurp_t *s)
@@ -493,7 +498,6 @@ void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
 	memset(s, 0, sizeof(slurp_t));
 
 	s->internal.sf2.src = in;
-	s->internal.sf2.pos = 0;
 	s->internal.sf2.data[0].off = off1;
 	s->internal.sf2.data[0].len = len1;
 	s->internal.sf2.data[1].off = off2;
@@ -504,9 +508,11 @@ void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
 	s->length = sf2_slurp_length;
 	s->seek = sf2_slurp_seek;
 	s->tell = sf2_slurp_tell;
-	s->peek = sf2_slurp_peek;
+	s->read = sf2_slurp_read;
 	s->eof = sf2_slurp_eof;
 	s->closure = sf2_slurp_closure;
+
+	slurp_rewind(s);
 }
 
 /* --------------------------------------------------------------------- */

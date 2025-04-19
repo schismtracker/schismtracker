@@ -97,6 +97,7 @@ struct slurp_struct_ {
 				int64_t off;
 				size_t len;
 			} data[2];
+			int current; /* which data is currently being used */
 
 			/* original position from before we mutilated it */
 			int64_t origpos;
