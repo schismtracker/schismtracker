@@ -246,7 +246,7 @@ static void sdl12_video_fullscreen(int tri)
 
 static void sdl12_video_setup(int interpolation)
 {
-	if (video_opengl_used())
+	if (video.surface->flags & SDL_OPENGL)
 		video_opengl_reset_interpolation();
 }
 
@@ -527,7 +527,11 @@ static void sdl12_video_resize(unsigned int width, unsigned int height)
 	video.draw.width = width;
 	video.draw.height = height;
 
-	if (cfg_video_hardware && !video_opengl_used()) {
+	if (cfg_video_hardware) {
+		/* any previous opengl crap is presumably garbage here? */
+		if (video_opengl_used())
+			video_opengl_quit();
+
 		video_opengl_init(sdl12_opengl_object_load,
 			sdl12_opengl_function_load, NULL, NULL,
 			sdl12_opengl_set_attribute, sdl12_opengl_swap_buffers,
@@ -537,6 +541,10 @@ static void sdl12_video_resize(unsigned int width, unsigned int height)
 	}
 
 	if (cfg_video_hardware
+#ifdef SCHISM_WIN32
+		/* opengl fullscreen is buggy on windows */
+		&& !video.desktop.fullscreen
+#endif
 		&& video_opengl_used()
 		&& video_opengl_setup(width, height,
 			sdl12_video_opengl_setup_callback)) {
@@ -568,7 +576,7 @@ static uint32_t sdl12_map_rgb_callback(void *data, uint8_t r, uint8_t g, uint8_t
 
 SCHISM_HOT static void sdl12_video_blit(void)
 {
-	if (video_opengl_used()) {
+	if (video.surface->flags & SDL_OPENGL) {
 		video_opengl_blit();
 	} else {
 		if (SDL_MUSTLOCK(video.surface))
@@ -734,9 +742,9 @@ static void sdl12_video_toggle_menu(SCHISM_UNUSED int on)
 #endif
 
 #ifdef SCHISM_WIN32
-	if (!cache_size && video_opengl_used()) {
-		/* stupid hack, menu bar behavior when opengl is used is the OPPOSITE
-		 * of when regular surfaces are used */
+	if (!cache_size && (video.surface->flags & SDL_OPENGL)) {
+		/* stupid hack, menu bar behavior when opengl is used
+		 * is the OPPOSITE of when regular surfaces are used */
 		int a, b, h;
 		RECT w, c;
 
@@ -822,7 +830,17 @@ static void sdl12_opengl_swap_buffers(void)
 
 static int sdl12_opengl_setup_callback(void)
 {
-	video.surface = sdl12_SetVideoMode(640,400,0,SDL_OPENGL|SDL_RESIZABLE);
+	int width, height;
+
+	width = video.draw.width;
+	height = video.draw.height;
+
+	if (!width) width = 640;
+	if (!height) height = 400;
+
+	video.surface = sdl12_SetVideoMode(width,height,0,SDL_OPENGL|SDL_RESIZABLE);
+	if (!video.surface)
+		fprintf(stderr, "SDL_SetVideoMode: %s", sdl12_get_error());
 
 	return !!video.surface;
 }
