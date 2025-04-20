@@ -277,5 +277,8 @@ int flac_init(void);
 int flac_quit(void);
 void audio_enable_flac(int enabled); // should be called by flac_init()
 
+int avformat_init(void);
+void avformat_quit(void);
+
 #endif /* SCHISM_FMT_H_ */
 

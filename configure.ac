@@ -148,6 +148,11 @@ AC_ARG_WITH([sdl3],
 	[],
 	[with_sdl3=check])
 
+AC_ARG_WITH([avformat],
+	[AS_HELP_STRING([--with-avformat],[Build with libavformat support @<:default=check@:>@])],
+	[],
+	[with_avformat=check])
+
 AC_ARG_ENABLE(sdl12-linking,
 	AS_HELP_STRING([--enable-sdl12-linking], [Link to SDL 1.2 rather than loading at runtime]),
 	SDL12_LINKING=$enableval,
@@ -167,6 +172,11 @@ AC_ARG_ENABLE(x11-linking,
 	AS_HELP_STRING([--enable-x11-linking], [Link to X11 rather than loading at runtime]),
 	X11_LINKING=$enableval,
 	X11_LINKING=no)
+	
+AC_ARG_ENABLE(avformat-linking,
+	AS_HELP_STRING([--enable-avformat-linking], [Link to libavformat rather than loading at runtime]),
+	AVFORMAT_LINKING=$enableval,
+	AVFORMAT_LINKING=no)
 
 dnl These are used in the Win32 build so that we can intermix mingw32 and mingw-w64 parts.
 dnl This is really a hack, and it would be nicer if we could avoid this, but unfortunately
@@ -796,6 +806,34 @@ if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then
 		fi
 	elif test "x$with_alsa" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find ALSA])
+	fi
+fi
+
+AM_CONDITIONAL([USE_AVFORMAT], false)
+AM_CONDITIONAL([LINK_TO_AVFORMAT], false)
+if test "x$with_avformat" = "xcheck" || test "x$with_avformat" = "xyes"; then
+	PKG_CHECK_MODULES([AVFORMAT], [libavformat], [avformat_found=yes], [avformat_found=no])
+	PKG_CHECK_MODULES([AVUTIL], [libavutil], [avutil_found=yes], [avutil_found=no])
+	PKG_CHECK_MODULES([AVCODEC], [libavcodec], [avcodec_found=yes], [avcodec_found=no])
+	if test "x$avformat_found" = "xyes" && test "x$avcodec_found" = "xyes" && test "x$avutil_found" = "xyes"; then
+		AC_SUBST([AVFORMAT_CFLAGS])
+		AC_SUBST([AVCODEC_CFLAGS])
+		AC_SUBST([AVUTIL_CFLAGS])
+		AM_CONDITIONAL([USE_AVFORMAT], true)
+		AC_DEFINE([USE_AVFORMAT], [1], [libavformat support])
+		if test "x$AVFORMAT_LINKING" = "xyes"; then
+			AC_SUBST([AVFORMAT_LIBS])
+			AC_SUBST([AVUTIL_LIBS])
+			AC_SUBST([AVCODEC_LIBS])
+			AM_CONDITIONAL([LINK_TO_AVFORMAT], true)
+		else
+			if test "x$have_loadso" != "xyes"; then
+				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
+			fi
+			AC_DEFINE([AVFORMAT_DYNAMIC_LOAD], [1], [Dynamically load libavformat symbols])
+		fi
+	elif test "x$with_avformat" = "xyes"; then
+		AC_MSG_ERROR([*** Failed to find libavformat])
 	fi
 fi
 

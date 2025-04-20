@@ -147,7 +147,15 @@ at all. I might move this toward the top if I can figure out how to identify an 
 READ_INFO(mp3)
 #endif
 
-#if USE_MEDIAFOUNDATION
+/* avformat actually seems to work faster than the native library
+ * on windows (not sure about macosx though, might be comparable?)
+ * I used an ~800 MB MP4 file with AAC encoded audio to compare.
+ *   --paper */
+#ifdef USE_AVFORMAT
+READ_INFO(avformat) LOAD_SAMPLE(avformat)
+#endif
+
+#ifdef USE_MEDIAFOUNDATION
 READ_INFO(win32mf) LOAD_SAMPLE(win32mf)
 #endif
 

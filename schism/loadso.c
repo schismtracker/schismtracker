@@ -163,6 +163,7 @@ void loadso_object_unload(void *object)
 static const char *loadso_libtool_fmts[] = {
 #ifdef SCHISM_WIN32
 	"lib%s-%d.dll",
+	"%s-%d.dll", /* avformat-61.dll */
 #elif defined(SCHISM_MACOSX)
 	"lib%s.%d.dylib",
 #else
@@ -189,8 +190,6 @@ static void *library_load_revision(const char *name, int revision)
 
 	return res;
 }
-
-#undef LIBTOOL_FMT
 
 /* loads a library using the current and age versions
  * as documented by GNU libtool. MAKE SURE the objects

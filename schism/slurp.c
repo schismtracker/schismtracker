@@ -539,11 +539,11 @@ size_t slurp_peek(slurp_t *t, void *ptr, size_t count)
 		read_bytes = t->peek(t, ptr, count);
 	} else {
 		/* cache current position */
-		int64_t pos = slurp_stdio_tell_(t);
+		int64_t pos = slurp_tell(t);
 		if (pos < 0)
 			return 0;
 
-		read_bytes = slurp_read(t, ptr, count);
+		read_bytes = t->read(t, ptr, count);
 
 		slurp_seek(t, pos, SEEK_SET);
 	}
@@ -565,13 +565,14 @@ size_t slurp_read(slurp_t *t, void *ptr, size_t count)
 	if (t->read) {
 		read_bytes = t->read(t, ptr, count);
 	} else {
-		read_bytes = slurp_peek(t, ptr, count);
+		read_bytes = t->peek(t, ptr, count);
 		slurp_seek(t, count, SEEK_CUR);
 	}
 
-	if (count > read_bytes)
+	if (count > read_bytes) {
 		/* short read -- fill in any extra bytes with zeroes */
 		memset((unsigned char *)ptr + read_bytes, 0, count - read_bytes);
+	}
 
 	return read_bytes;
 }

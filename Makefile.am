@@ -409,6 +409,23 @@ endif
 
 endif
 
+if USE_AVFORMAT
+files_avformat = \
+	fmt/avformat.c
+cflags_avformat= \
+	$(AVFORMAT_CFLAGS) \
+	$(AVCODEC_CFLAGS) \
+	$(AVUTIL_CFLAGS)
+
+if LINK_TO_AVFORMAT
+libs_avformat= \
+	$(AVFORMAT_LIBS) \
+	$(AVCODEC_LIBS) \
+	$(AVUTIL_LIBS)
+endif
+
+endif
+
 if USE_JACK
 files_jack = \
 	sys/jack/midi-jack.c
@@ -602,7 +619,8 @@ schismtracker_SOURCES = \
 	$(files_macos)			\
 	$(files_os2)			\
 	$(files_xbox)			\
-	$(files_avfoundation)
+	$(files_avfoundation)	\
+	$(files_avformat)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
@@ -612,7 +630,8 @@ component_cflags = $(cflags_alsa) $(cflags_oss) \
 	$(cflags_version) $(cflags_win32) $(cflags_wii) \
 	$(cflags_macosx) $(cflags_flac) $(cflags_jack) \
 	$(cflags_wiiu) $(cflags_macos) $(cflags_os2) \
-	$(cflags_xbox) $(cflags_avfoundation) $(UTF8PROC_CFLAGS)
+	$(cflags_xbox) $(cflags_avfoundation) $(UTF8PROC_CFLAGS) \
+	$(cflags_avformat)
 schismtracker_CPPFLAGS = -I$(srcdir)/include -I. $(cppflags_wii) $(cppflags_wiiu)
 schismtracker_CFLAGS = $(AM_CFLAGS) $(component_cflags)
 schismtracker_OBJCFLAGS = $(AM_OBJCFLAGS) $(component_cflags)
@@ -624,6 +643,7 @@ schismtracker_LDADD = $(LIBM) $(libs_sdl3) \
 	$(lib_win32) $(libs_network) $(libs_flac) \
 	$(lib_mediafoundation) $(UTF8PROC_LIBS) \
 	$(libs_sdl2) $(libs_sdl12) $(libs_macos) \
-	$(libs_os2) $(libs_xbox) $(libs_avfoundation)
+	$(libs_os2) $(libs_xbox) $(libs_avfoundation) \
+	$(libs_avformat)
 schismtracker_LDFLAGS = $(ldflags_macosx) \
 	$(ldflags_avfoundation)
