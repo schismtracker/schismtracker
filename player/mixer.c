@@ -709,7 +709,9 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 		int32_t nsamples;
 		int32_t *pbuffer;
 
-		if (!channel->current_sample_data && !channel->lofs && !channel->rofs)
+		if ((!channel->current_sample_data || !channel->ptr_sample /* HAX */)
+			&& !channel->lofs
+			&& !channel->rofs)
 			continue;
 
 		ofsr = &csf->dry_rofs_vol;
