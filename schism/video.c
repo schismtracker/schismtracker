@@ -925,7 +925,7 @@ typedef double GLclampd;	/* double precision float in [0,1] */
 #define GL_INVALID_ENUM 0x0500
 #define GL_NO_ERROR 0
 
-#define SCHISM_NVIDIA_PIXELDATARANGE 1
+/*#define SCHISM_NVIDIA_PIXELDATARANGE 1*/
 
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 
@@ -1097,6 +1097,7 @@ int video_opengl_init(video_opengl_object_load_spec object_load,
 		if (!setup_callback())
 			goto fail;
 
+#ifdef SCHISM_NVIDIA_PIXELDATARANGE
 		if (extension_supported("GL_NV_pixel_data_range")) {
 			schism_glPixelDataRangeNV = function_load("glPixelDataRangeNV");
 			schism_wglAllocateMemoryNV = function_load("wglAllocateMemoryNV");
@@ -1106,6 +1107,7 @@ int video_opengl_init(video_opengl_object_load_spec object_load,
 				&& schism_wglAllocateMemoryNV
 				&& schism_wglFreeMemoryNV);
 		}
+#endif
 
 		video_gl.object_unload = object_unload;
 		video_gl.set_attribute = set_attribute;
@@ -1280,9 +1282,12 @@ void video_opengl_quit(void)
 	if (!video_gl.init)
 		return;
 
+#ifdef SCHISM_NVIDIA_PIXELDATARANGE
 	if (video_gl.pixel_data_range) {
 		schism_wglFreeMemoryNV(video_gl.framebuffer);
-	} else {
+	} else
+#endif
+	{
 		free(video_gl.framebuffer);
 	}
 
