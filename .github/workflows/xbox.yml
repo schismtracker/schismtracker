@@ -79,7 +79,7 @@ jobs:
           mkdir -p build
           cd build
           # all of these libraries ought to be in the configure.ac file :)
-          ../configure --host i686-unknown-xbox CPPFLAGS="-I$HOME/xboxprefix/include -DUTF8PROC_STATIC" CC='nxdk-cc -fuse-ld=nxdk-link' PKG_CONFIG=nxdk-pkg-config LDFLAGS="$NXDK_DIR/lib/libpdclib.lib $NXDK_DIR/lib/libwinapi.lib $NXDK_DIR/lib/libnxdk_hal.lib $NXDK_DIR/lib/libnxdk.lib $NXDK_DIR/lib/libxboxrt.lib $NXDK_DIR/lib/xboxkrnl/libxboxkrnl.lib $HOME/xboxprefix/lib/utf8proc.lib $NXDK_DIR/lib/nxdk_usb.lib" --without-flac --without-jack --without-sdl3 --without-sdl12 --enable-sdl2-linking
+          ../configure --host i686-unknown-xbox CPPFLAGS="-I$HOME/xboxprefix/include -DUTF8PROC_STATIC" CC='nxdk-cc -fuse-ld=nxdk-link' PKG_CONFIG=nxdk-pkg-config LDFLAGS="$NXDK_DIR/lib/libpdclib.lib $NXDK_DIR/lib/libwinapi.lib $NXDK_DIR/lib/libnxdk_hal.lib $NXDK_DIR/lib/libnxdk.lib $NXDK_DIR/lib/libxboxrt.lib $NXDK_DIR/lib/xboxkrnl/libxboxkrnl.lib $HOME/xboxprefix/lib/utf8proc.lib $NXDK_DIR/lib/nxdk_usb.lib" --without-flac --without-jack --without-sdl3 --without-sdl12 --without-avformat --enable-sdl2-linking
           make
           $NXDK_DIR/tools/cxbe/cxbe -OUT:'default.xbe' -TITLE:'Schism Tracker' schismtracker.exe
           cd ..
