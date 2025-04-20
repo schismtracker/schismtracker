@@ -343,15 +343,6 @@ static int sdl12_video_startup(void)
 	}
 #endif
 
-	if (cfg_video_hardware) {
-		video_opengl_init(sdl12_opengl_object_load,
-			sdl12_opengl_function_load, NULL, NULL,
-			sdl12_opengl_set_attribute, sdl12_opengl_swap_buffers,
-			sdl12_opengl_setup_callback);
-		video.draw.width = cfg_video_width;
-		video.draw.height = cfg_video_height;
-	}
-
 	if (!video.surface) {
 		/* if we already got one... */
 		video.surface = sdl12_SetVideoMode(640, 400, 0, SDL_RESIZABLE);
@@ -536,15 +527,21 @@ static void sdl12_video_resize(unsigned int width, unsigned int height)
 	video.draw.width = width;
 	video.draw.height = height;
 
-	if (video_opengl_used() && video_opengl_setup(width, height,
+	if (cfg_video_hardware && !video_opengl_used()) {
+		video_opengl_init(sdl12_opengl_object_load,
+			sdl12_opengl_function_load, NULL, NULL,
+			sdl12_opengl_set_attribute, sdl12_opengl_swap_buffers,
+			sdl12_opengl_setup_callback);
+		video.draw.width = cfg_video_width;
+		video.draw.height = cfg_video_height;
+	}
+
+	if (cfg_video_hardware
+		&& video_opengl_used()
+		&& video_opengl_setup(width, height,
 			sdl12_video_opengl_setup_callback)) {
 		/* nothing */
 	} else {
-		/* if an opengl init failed, it probably will fail again,
-		 * so don't try it again */
-		if (video_opengl_used())
-			video_opengl_quit();
-
 		setup_surface_(width, height, 0);
 	}
 
@@ -684,7 +681,7 @@ static void sdl12_video_warp_mouse(unsigned int x, unsigned int y)
 
 static void sdl12_video_set_hardware(int hardware)
 {
-	cfg_video_hardware = !hardware;
+	cfg_video_hardware = hardware;
 	// recreate the surface with the same size...
 	video_resize(video.draw.width, video.draw.height);
 	video_report();
