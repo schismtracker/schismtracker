@@ -343,7 +343,7 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 	 * so I think we're fine just pointing to it */
 	if (file) {
 		uint32_t length;
-		file->description = fmtctx->iformat->long_name;
+		file->description = fmtctx->iformat->long_name ? fmtctx->iformat->long_name : "FFMPEG";
 		length = fmtctx->streams[astr]->nb_frames * fmtctx->streams[astr]->codecpar->frame_size;
 		file->smp_length = MIN(length, MAX_SAMPLE_LENGTH);
 		file->smp_speed = fmtctx->streams[astr]->codecpar->sample_rate;
