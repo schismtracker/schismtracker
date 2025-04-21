@@ -24,6 +24,9 @@
 #ifndef SCHISM_SYS_SDL3_INIT_H_
 #define SCHISM_SYS_SDL3_INIT_H_
 
+/* win32 */
+#define NO_OLDNAMES
+
 #include <SDL3/SDL.h>
 
 #include "headers.h"

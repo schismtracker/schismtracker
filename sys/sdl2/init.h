@@ -29,6 +29,9 @@
 // with intrin.h under Win32. What the hell.
 #include <build-config.h>
 
+/* stupid win32 crap */
+#define NO_OLDNAMES
+
 #ifdef SCHISM_OS2
 // Work around weird compiler bug?
 # undef __386__
