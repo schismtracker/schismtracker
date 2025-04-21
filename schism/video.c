@@ -911,6 +911,7 @@ typedef double GLclampd;	/* double precision float in [0,1] */
 #define GL_TEXTURE_MAG_FILTER       0x2800
 #define GL_TEXTURE_MIN_FILTER       0x2801
 #define GL_NEAREST                  0x2600
+#define GL_TRIANGLES				0x0004
 #define GL_QUADS				0x0007
 #define GL_COMPILE				0x1300
 #define GL_MODELVIEW				0x1700
@@ -923,6 +924,9 @@ typedef double GLclampd;	/* double precision float in [0,1] */
 #define GL_CLAMP				0x2900
 #define GL_EXTENSIONS				0x1F03
 #define GL_INVALID_ENUM 0x0500
+#define GL_VERSION				0x1F02
+#define GL_MAJOR_VERSION                  0x821B
+#define GL_MINOR_VERSION                  0x821C
 #define GL_NO_ERROR 0
 
 /*#define SCHISM_NVIDIA_PIXELDATARANGE 1*/
@@ -977,6 +981,9 @@ static struct {
 
 	int init;
 
+	/* version */
+	uint32_t major, minor;
+
 	void *framebuffer;
 	GLuint texture;
 	GLuint displaylist;
@@ -1027,6 +1034,41 @@ static int opengl_extension_supported_default(const char *extension)
 	}
 
 	return 0;
+}
+
+static int opengl_ver_init(void)
+{
+	const char *ver;
+
+	{
+		/* GL_NO_ERROR is 0 */
+		GLenum error = GL_NO_ERROR;
+		GLint major, minor;
+
+		schism_glGetIntegerv(GL_MAJOR_VERSION, &major);
+		error |= schism_glGetError();
+		schism_glGetIntegerv(GL_MINOR_VERSION, &minor);
+		error |= schism_glGetError();
+
+		/* if we didn't get any errors, use those values */
+		if (!error) {
+			video_gl.major = major;
+			video_gl.minor = minor;
+			return 1;
+		}
+	}
+
+	ver = schism_glGetString(GL_VERSION);
+	if (ver && sscanf(ver, "%" SCNu32 ".%" SCNu32, &video_gl.major, &video_gl.minor) == 2)
+		return 1;
+
+	return 0;
+}
+
+static inline int opengl_ver_atleast(uint32_t major, uint32_t minor)
+{
+	return SCHISM_SEMVER_ATLEAST(major, minor, 0,
+		video_gl.major, video_gl.minor, 0);
 }
 
 int video_opengl_init(video_opengl_object_load_spec object_load,
@@ -1095,6 +1137,9 @@ int video_opengl_init(video_opengl_object_load_spec object_load,
 #undef Z
 
 		if (!setup_callback())
+			goto fail;
+
+		if (!opengl_ver_init())
 			goto fail;
 
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
@@ -1240,16 +1285,37 @@ int video_opengl_setup(uint32_t w, uint32_t h,
 	video_gl.displaylist = schism_glGenLists(1);
 	schism_glNewList(video_gl.displaylist, GL_COMPILE);
 	schism_glBindTexture(GL_TEXTURE_2D, video_gl.texture);
-	schism_glBegin(GL_QUADS);
 
-	schism_glTexCoord2f(0, tex_height);
-	schism_glVertex2f(-1.0f, -1.0f);
-	schism_glTexCoord2f(tex_width, tex_height);
-	schism_glVertex2f(1.0f, -1.0f);
-	schism_glTexCoord2f(tex_width, 0);
-	schism_glVertex2f(1.0f, 1.0f);
-	schism_glTexCoord2f(0, 0);
-	schism_glVertex2f(-1.0f, 1.0f);
+	if (opengl_ver_atleast(3, 1)) {
+		/* GL_QUADS was removed in OpenGL 3.1 */
+		schism_glBegin(GL_TRIANGLES);
+
+		schism_glTexCoord2f(0, tex_height);
+		schism_glVertex2f(-1.0f, -1.0f);
+		schism_glTexCoord2f(tex_width, tex_height);
+		schism_glVertex2f(1.0f, -1.0f);
+		schism_glTexCoord2f(tex_width, 0);
+		schism_glVertex2f(1.0f, 1.0f);
+
+		schism_glTexCoord2f(0, tex_height);
+		schism_glVertex2f(-1.0f, -1.0f);
+		schism_glTexCoord2f(tex_width, 0);
+		schism_glVertex2f(1.0f, 1.0f);
+		schism_glTexCoord2f(0, 0);
+		schism_glVertex2f(-1.0f, 1.0f);
+	} else {
+		/* use quads */
+		schism_glBegin(GL_QUADS);
+
+		schism_glTexCoord2f(0, tex_height);
+		schism_glVertex2f(-1.0f, -1.0f);
+		schism_glTexCoord2f(tex_width, tex_height);
+		schism_glVertex2f(1.0f, -1.0f);
+		schism_glTexCoord2f(tex_width, 0);
+		schism_glVertex2f(1.0f, 1.0f);
+		schism_glTexCoord2f(0, 0);
+		schism_glVertex2f(-1.0f, 1.0f);
+	}
 
 	schism_glEnd();
 	schism_glEndList();
@@ -1305,9 +1371,11 @@ int video_opengl_used(void)
 
 void video_opengl_report(int hw, int accel)
 {
-	log_appendf(5, " %s%s OpenGL interface",
+	log_appendf(5, " %s%s OpenGL %" PRIu32 ".%" PRIu32 " interface",
 		(hw) ? "Hardware" : "Software",
-		(accel) ? " accelerated" : "");
+		(accel) ? " accelerated" : "",
+		video_gl.major,
+		video_gl.minor);
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 	if (video_gl.pixel_data_range)
 		log_append(5,0, " NVidia pixel range extensions available");
