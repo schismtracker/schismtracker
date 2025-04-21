@@ -233,27 +233,82 @@ static int avfmt_read_to_sample(slurp_t *s, AVFormatContext *fmtctx, int astr, s
 		AVPacket *packet; /* friggin packet yo */
 		AVFrame *frame;
 		uint32_t total_samples = 0;
+		int bps = schism_av_get_bytes_per_sample(cctx->sample_fmt);
+
+		if (bps < 0)
+			goto fail; /* ??? */
 
 		packet = schism_av_packet_alloc();
 		frame = schism_av_frame_alloc();
 
-		disko_memopen(&ds[0]);
-		disko_memopen(&ds[1]);
+		switch (flags & SF_CHN_MASK) {
+		case SF_SS:
+			disko_memopen(&ds[1]);
+			SCHISM_FALLTHROUGH;
+		case SF_SI:
+		case SF_M:
+			disko_memopen(&ds[0]);
+			break;
+		}
+
+		/* special case: if we already know the amount of frames,
+		 * we can preallocate the space for it. this generally
+		 * improves speeds quite a bit since we don't have to keep
+		 * reallocating */
+		if (fmtctx->streams[astr]->nb_frames > 0) {
+			uint32_t bpc = fmtctx->streams[astr]->nb_frames * fmtctx->streams[astr]->codecpar->frame_size;
+			bpc = MIN(bpc, MAX_SAMPLE_LENGTH);
+			bpc *= bps;
+
+			free(ds[0].data);
+			free(ds[1].data);
+
+			switch (flags & SF_CHN_MASK) {
+			case SF_M:
+			case SF_SI: {
+				uint32_t space = bpc * cctx->ch_layout.nb_channels;
+
+				ds[0].data = malloc(space);
+				if (!ds[0].data)
+					goto fail; /* ??? */
+				ds[0].allocated = space;
+				ds[1].data = NULL;
+				break;
+			}
+			case SF_SS:
+				ds[0].data = malloc(bpc);
+				if (!ds[0].data)
+					goto fail;
+
+				ds[1].data = malloc(bpc);
+				if (!ds[1].data) {
+					free(ds[0].data);
+					goto fail;
+				}
+
+				ds[0].allocated = bpc;
+				ds[1].allocated = bpc;
+
+				break;
+			}
+		} else {
+		}
 
 		for (; schism_av_read_frame(fmtctx, packet) >= 0 && total_samples <= MAX_SAMPLE_LENGTH; schism_av_packet_unref(packet)) {
+			int finished = 0;
+
 			if (packet->stream_index != astr)
-				continue; /* ok */
+				continue;
 
 			schism_avcodec_send_packet(cctx, packet);
 
 			while (!schism_avcodec_receive_frame(cctx, frame)) {
-				int bps = schism_av_get_bytes_per_sample(cctx->sample_fmt);
-				if (bps < 0)
+				if (total_samples + frame->nb_samples > MAX_SAMPLE_LENGTH) {
+					finished = 1;
 					break;
+				}
 
 				total_samples += frame->nb_samples;
-				if (total_samples > MAX_SAMPLE_LENGTH)
-					break;
 
 				switch (flags & SF_CHN_MASK) {
 				case SF_M:
@@ -271,6 +326,9 @@ static int avfmt_read_to_sample(slurp_t *s, AVFormatContext *fmtctx, int astr, s
 					break;
 				}
 			}
+
+			if (finished)
+				break;
 		}
 
 		schism_av_frame_free(&frame);
@@ -282,7 +340,11 @@ static int avfmt_read_to_sample(slurp_t *s, AVFormatContext *fmtctx, int astr, s
 		SCHISM_RUNTIME_ASSERT(ds[0].length == ds[1].length || !ds[1].length, "memory streams should have the same length, or the latter should have nothing at all");
 
 		/* okaaay, now read in everything :) */
-		slurp_2memstream(&memstream, ds[0].data, ds[1].data, ds[0].length);
+		if ((flags & SF_CHN_MASK) == SF_SS) {
+			slurp_2memstream(&memstream, ds[0].data, ds[1].data, ds[0].length);
+		} else {
+			slurp_memstream(&memstream, ds[0].data, ds[0].length);
+		}
 
 		smp->length = total_samples;
 		smp->flags = 0; /* empty */
@@ -290,7 +352,8 @@ static int avfmt_read_to_sample(slurp_t *s, AVFormatContext *fmtctx, int astr, s
 
 		csf_read_sample(smp, flags, &memstream);
 
-		unslurp(&memstream);
+		free(ds[0].data);
+		free(ds[1].data);
 	}
 
 	success = 1;
