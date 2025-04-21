@@ -335,25 +335,30 @@ int disko_close(disko_t *ds, int backup)
 	}
 }
 
-
-int disko_memopen(disko_t *ds)
+int disko_memopen_estimate(disko_t *ds, size_t estimated_size)
 {
 	if (!ds)
 		return -1;
 
 	memset(ds, 0, sizeof(*ds));
 
-	ds->data = /*c*/malloc(DW_BUFFER_SIZE * sizeof(uint8_t));
+	ds->data = malloc(estimated_size * sizeof(uint8_t));
 	if (!ds->data)
 		return -1;
 
-	ds->allocated = DW_BUFFER_SIZE;
+	ds->allocated = estimated_size;
 
 	ds->_write = _dw_mem_write;
 	ds->_seek = _dw_mem_seek;
 	ds->_tell = _dw_mem_tell;
 
 	return 0;
+}
+
+int disko_memopen(disko_t *ds)
+{
+	/* ok */
+	return disko_memopen_estimate(ds, DW_BUFFER_SIZE);
 }
 
 int disko_memclose(disko_t *ds, int keep_buffer)
@@ -367,6 +372,10 @@ int disko_memclose(disko_t *ds, int keep_buffer)
 		return DW_ERROR;
 	} else {
 		if (keep_buffer) {
+#if 0
+			/* some code somewhere may pull ds->data out and
+			 * rely on it to stay working after close, so I'm
+			 * commenting this out for now.. */
 			if (ds->allocated > ds->length) {
 				/* try to shrink it to the length. if we can't,
 				 * fine, keep the buffer we already have */
@@ -376,6 +385,7 @@ int disko_memclose(disko_t *ds, int keep_buffer)
 					ds->allocated = ds->length;
 				}
 			}
+#endif
 		} else {
 			free(ds->data);
 			ds->data = NULL;

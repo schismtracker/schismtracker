@@ -713,7 +713,7 @@ static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t
 
 			found = 1;
 
-			charset_iconv(prop_val_str, file->title, CHARSET_WCHAR_T, CHARSET_CP437, SIZE_MAX);
+			charset_iconv(prop_val_str, &file->title, CHARSET_WCHAR_T, CHARSET_CP437, SIZE_MAX);
 
 			MF_CoTaskMemFree(prop_val_str);
 			MF_PropVariantClear(&propval);
@@ -928,19 +928,36 @@ cleanup:
 
 int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 {
+	disko_t ds;
+	struct win32mf_data data = {0};
+	dmoz_file_t df = {0};
+
 	if (!media_foundation_initialized)
 		return 0;
 
-	disko_t ds = {0};
-	if (disko_memopen(&ds) < 0)
+	if (!win32mf_start(&data, fp, NULL))
 		return 0;
 
-	struct win32mf_data data = {0};
+	convert_media_foundation_metadata(data.source, &df);
 
-	if (!win32mf_start(&data, fp, NULL)) {
-		win32mf_end(&data);
-		disko_memclose(&ds, 0);
-		return 0;
+	free(df.title);
+
+	{
+		int r;
+
+		if (df.smp_length > 0) {
+			r = disko_memopen_estimate(&ds,
+				df.smp_length
+					* ((data.flags & SF_BIT_MASK) / 8)
+					* (((data.flags & SF_CHN_MASK) == SF_SI) ? 2 : 1));
+		} else {
+			r = disko_memopen(&ds);
+		}
+
+		if (r < 0) {
+			win32mf_end(&data);
+			return 0;
+		}
 	}
 
 	for (;;) {

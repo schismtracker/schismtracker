@@ -241,16 +241,6 @@ static int avfmt_read_to_sample(slurp_t *s, AVFormatContext *fmtctx, int astr, s
 		packet = schism_av_packet_alloc();
 		frame = schism_av_frame_alloc();
 
-		switch (flags & SF_CHN_MASK) {
-		case SF_SS:
-			disko_memopen(&ds[1]);
-			SCHISM_FALLTHROUGH;
-		case SF_SI:
-		case SF_M:
-			disko_memopen(&ds[0]);
-			break;
-		}
-
 		/* special case: if we already know the amount of frames,
 		 * we can preallocate the space for it. this generally
 		 * improves speeds quite a bit since we don't have to keep
@@ -260,38 +250,28 @@ static int avfmt_read_to_sample(slurp_t *s, AVFormatContext *fmtctx, int astr, s
 			bpc = MIN(bpc, MAX_SAMPLE_LENGTH);
 			bpc *= bps;
 
-			free(ds[0].data);
-			free(ds[1].data);
-
 			switch (flags & SF_CHN_MASK) {
 			case SF_M:
 			case SF_SI: {
-				uint32_t space = bpc * cctx->ch_layout.nb_channels;
-
-				ds[0].data = malloc(space);
-				if (!ds[0].data)
-					goto fail; /* ??? */
-				ds[0].allocated = space;
-				ds[1].data = NULL;
+				disko_memopen_estimate(&ds[0], bpc * cctx->ch_layout.nb_channels);
 				break;
 			}
 			case SF_SS:
-				ds[0].data = malloc(bpc);
-				if (!ds[0].data)
-					goto fail;
-
-				ds[1].data = malloc(bpc);
-				if (!ds[1].data) {
-					free(ds[0].data);
-					goto fail;
-				}
-
-				ds[0].allocated = bpc;
-				ds[1].allocated = bpc;
-
+				disko_memopen_estimate(&ds[0], bpc);
+				disko_memopen_estimate(&ds[1], bpc);
 				break;
 			}
 		} else {
+			/* can't estimate output size; use defaults */
+			switch (flags & SF_CHN_MASK) {
+			case SF_SS:
+				disko_memopen(&ds[1]);
+				SCHISM_FALLTHROUGH;
+			case SF_SI:
+			case SF_M:
+				disko_memopen(&ds[0]);
+				break;
+			}
 		}
 
 		for (; schism_av_read_frame(fmtctx, packet) >= 0 && total_samples <= MAX_SAMPLE_LENGTH; schism_av_packet_unref(packet)) {
@@ -392,8 +372,10 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 
 	/* okay, we need to pass a dummy filepath that will not parse
 	 * correctly on 99% of systems, so it uses the pb struct */
-	if (schism_avformat_open_input(&fmtctx, NULL, NULL, NULL) < 0)
+	if (schism_avformat_open_input(&fmtctx, NULL, NULL, NULL) < 0) {
+		log_appendf(1, "nope");
 		goto fail;
+	}
 
 	if (schism_avformat_find_stream_info(fmtctx, NULL) < 0)
 		goto fail;

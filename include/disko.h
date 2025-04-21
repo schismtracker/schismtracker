@@ -86,6 +86,11 @@ so that it can continue to be used later */
 int disko_memopen(disko_t *f);
 int disko_memclose(disko_t *f, int free_buffer);
 
+/* alloc a memory buffer with an estimated final size
+ * the actual length of the stream may be larger/smaller than
+ * that :) */
+int disko_memopen_estimate(disko_t *ds, size_t estimated_size);
+
 
 /* copy a pattern into a sample */
 int disko_writeout_sample(int smpnum, int pattern, int bind);
