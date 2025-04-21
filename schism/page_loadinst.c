@@ -201,7 +201,7 @@ static void file_list_draw(void)
 {
 	int n, pos, fg, bg;
 	char buf[8];
-	char sbuf[32];
+	char sbuf[64];
 	dmoz_file_t *file;
 
 	/* there's no need to have if (files) { ... } like in the load-module page,
@@ -245,11 +245,11 @@ static void file_list_draw(void)
 			draw_text("          ", 51, pos, fg, bg);
 		}
 		if (file->filesize > 1048576) {
-			sprintf(sbuf, "%lum", (unsigned long)(file->filesize / 1048576));
+			sprintf(sbuf, "%llum", (unsigned long long)(file->filesize / 1048576));
 		} else if (file->filesize > 1024) {
-			sprintf(sbuf, "%luk", (unsigned long)(file->filesize / 1024));
+			sprintf(sbuf, "%lluk", (unsigned long long)(file->filesize / 1024));
 		} else if (file->filesize > 0) {
-			sprintf(sbuf, "%lu", (unsigned long)(file->filesize));
+			sprintf(sbuf, "%llu", (unsigned long long)(file->filesize));
 		} else {
 			*sbuf = 0;
 		}

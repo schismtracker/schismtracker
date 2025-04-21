@@ -23,6 +23,10 @@
 
 #include "headers.h"
 
+#ifdef SCHISM_WIN32
+# define putenv _putenv
+#endif
+
 int setenv(const char *name, const char *value, int overwrite)
 {
 #ifdef HAVE_PUTENV

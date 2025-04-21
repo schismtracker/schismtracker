@@ -279,7 +279,7 @@ static void load_sample_draw_const(void)
 				break;
 			};
 		}
-		sprintf(sbuf, "%07ld", (long)f->filesize);
+		sprintf(sbuf, "%07llu", (unsigned long long)f->filesize);
 		draw_text(sbuf, 59, 45, 5,0);
 		str_from_date(f->timestamp, sbuf, cfg_str_date_format);
 		draw_text(sbuf, 59, 46, 5,0);

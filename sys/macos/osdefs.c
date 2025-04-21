@@ -130,7 +130,7 @@ void macos_show_message_box(const char *title, const char *text, int style)
 
 /* ------------------------------------------------------------------------ */
 
-int macos_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
+int macos_mkdir(const char *path, SCHISM_UNUSED uint32_t mode)
 {
 	HParamBlockRec pb = {0};
 	unsigned char mpath[256];

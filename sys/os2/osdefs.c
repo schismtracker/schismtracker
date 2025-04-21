@@ -31,7 +31,7 @@
 #define INCL_WINDIALOGS
 #include <os2.h>
 
-int os2_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
+int os2_mkdir(const char *path, SCHISM_UNUSED uint32_t mode)
 {
 	USHORT rc;
 	char *sys;

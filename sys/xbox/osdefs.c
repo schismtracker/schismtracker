@@ -168,7 +168,7 @@ int xbox_stat(const char *path, struct stat *st)
 	return 0;
 }
 
-int xbox_mkdir(const char *path, mode_t mode)
+int xbox_mkdir(const char *path, uint32_t mode)
 {
 	LPSTR wpath;
 	BOOL b;

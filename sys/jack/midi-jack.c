@@ -34,6 +34,11 @@
 #include <jack/midiport.h>
 #include <jack/ringbuffer.h>
 
+#ifdef SCHISM_WIN32
+/* we shouldn't need this actually */
+# define pid_t _pid_t
+#endif
+
 #include <sched.h>
 
 #define PORT_NAME "Schism Tracker"

@@ -192,6 +192,26 @@ void unslurp(slurp_t * t)
 /* --------------------------------------------------------------------- */
 /* stdio implementation */
 
+#if defined(SCHISM_WIN32) && SCHISM_GNUC_HAS_ATTRIBUTE(__weak__, 3, 1, 0)
+/* use GNU weak functions so we can fallback to regular ftell/fseek on
+ * older systems */
+__attribute__((__weak__)) __declspec(dllimport) __int64 _ftelli64(FILE *f)
+{
+	return ftell(f);
+}
+
+__attribute__((__weak__)) __declspec(dllimport) int _fseeki64(FILE *f, __int64 offset, int whence)
+{
+	return fseek(f, offset, whence);
+}
+
+# define os_fseek _fseeki64
+# define os_ftell _ftelli64
+#else
+# define os_fseek fseek
+# define os_ftell ftell
+#endif
+
 static int slurp_stdio_open_(slurp_t *t, const char *filename)
 {
 	FILE *fp;
@@ -216,15 +236,15 @@ static int slurp_stdio_open_file_(slurp_t *t, FILE *fp)
 
 	t->internal.stdio.fp = fp;
 
-	if (fseek(t->internal.stdio.fp, 0, SEEK_END))
+	if (os_fseek(t->internal.stdio.fp, 0, SEEK_END))
 		return SLURP_OPEN_FAIL;
 
-	end = ftell(t->internal.stdio.fp);
+	end = os_ftell(t->internal.stdio.fp);
 	if (end < 0)
 		return SLURP_OPEN_FAIL;
 
 	/* return to monke */
-	if (fseek(t->internal.stdio.fp, 0, SEEK_SET))
+	if (os_fseek(t->internal.stdio.fp, 0, SEEK_SET))
 		return SLURP_OPEN_FAIL;
 
 	t->internal.stdio.length = MAX(0, end);
@@ -235,12 +255,12 @@ static int slurp_stdio_open_file_(slurp_t *t, FILE *fp)
 static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence)
 {
 	// XXX can we use _fseeki64 on Windows?
-	return fseek(t->internal.stdio.fp, offset, whence);
+	return os_fseek(t->internal.stdio.fp, offset, whence);
 }
 
 static int64_t slurp_stdio_tell_(slurp_t *t)
 {
-	return ftell(t->internal.stdio.fp);
+	return os_ftell(t->internal.stdio.fp);
 }
 
 static size_t slurp_stdio_length_(slurp_t *t)

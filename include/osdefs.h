@@ -57,6 +57,7 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_fopen win32_fopen
 # define os_stat win32_stat
 # define os_mkdir win32_mkdir
+# define os_access win32_access
 # define os_get_key_repeat win32_get_key_repeat
 # define os_show_message_box win32_show_message_box
 #elif defined(SCHISM_MACOSX)
@@ -107,6 +108,20 @@ A return value of 0 indicates that the event should NOT be processed by the main
 #endif
 #ifndef os_mkdir
 # define os_mkdir mkdir
+#endif
+#ifndef os_access
+# define os_access access
+#else
+# undef R_OK
+# undef W_OK
+# undef X_OK
+# undef F_OK
+
+# define R_OK 0x01
+# define W_OK 0x02
+# define X_OK 0x04
+
+# define F_OK 0x00 /* ok */
 #endif
 #ifndef os_run_hook
 # define os_run_hook(a,b,c) 0
@@ -168,13 +183,14 @@ void win32_get_modkey(schism_keymod_t *m);
 void win32_filecreated_callback(const char *filename);
 void win32_toggle_menu(void *window, int on); // window should be a pointer to the window HWND
 int win32_stat(const char *path, struct stat *st);
-int win32_mkdir(const char *path, mode_t mode);
+int win32_mkdir(const char *path, uint32_t mode);
 FILE* win32_fopen(const char *path, const char *flags);
 int win32_run_hook(const char *dir, const char *name, const char *maybe_arg);
 int win32_get_key_repeat(int *pdelay, int *prate);
 void win32_show_message_box(const char *title, const char *text, int style);
 int win32_audio_lookup_device_name(const void *nameguid, const uint32_t *waveoutdevid, char **result);
 int win32_ntver_atleast(int major, int minor, int build);
+int win32_access(const char *path, int amode);
 
 // audio-dsound.c
 int win32_dsound_audio_lookup_waveout_name(const uint32_t *waveoutnamev, char **result);
@@ -190,7 +206,7 @@ char *macosx_get_application_support_dir(void);
 void macosx_show_message_box(const char *title, const char *text, int style);
 int macosx_ver_atleast(int major, int minor, int patch);
 
-int macos_mkdir(const char *path, mode_t mode);
+int macos_mkdir(const char *path, uint32_t mode);
 int macos_stat(const char *file, struct stat *st);
 void macos_show_message_box(const char *title, const char *text, int style);
 void macos_sysinit(int *pargc, char ***pargv);
@@ -199,13 +215,13 @@ void macos_get_modkey(schism_keymod_t *mk);
 int x11_event(schism_event_t *event);
 
 int os2_stat(const char* path, struct stat* st);
-int os2_mkdir(const char* path, mode_t mode);
+int os2_mkdir(const char* path, uint32_t mode);
 FILE* os2_fopen(const char* path, const char* flags);
 int os2_get_key_repeat(int *pdelay, int *prate);
 void os2_show_message_box(const char *title, const char *text, int style);
 
 int xbox_stat(const char *path, struct stat *st);
-int xbox_mkdir(const char *path, mode_t mode);
+int xbox_mkdir(const char *path, uint32_t mode);
 FILE* xbox_fopen(const char* path, const char* flags);
 void xbox_sysinit(int *pargc, char ***pargv);
 

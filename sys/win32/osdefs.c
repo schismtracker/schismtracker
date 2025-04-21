@@ -41,7 +41,8 @@
 
 #include <direct.h>
 
-#include <tchar.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #define IDM_FILE_NEW  101
 #define IDM_FILE_LOAD 102
@@ -1138,24 +1139,59 @@ int win32_audio_lookup_device_name(const void *nameguid, const uint32_t *waveout
 
 /* -------------------------------------------------------------------- */
 
-static inline SCHISM_ALWAYS_INLINE void win32_stat_conv(struct _stat *mst, struct stat *st)
+static inline SCHISM_ALWAYS_INLINE void win32_stat_conv(struct __stat64 *mst, struct stat *st)
 {
-	st->st_gid = mst->st_gid;
 	st->st_atime = mst->st_atime;
 	st->st_ctime = mst->st_ctime;
-	st->st_dev = mst->st_dev;
-	st->st_ino = mst->st_ino;
-	st->st_mode = mst->st_mode;
 	st->st_mtime = mst->st_mtime;
-	st->st_nlink = mst->st_nlink;
-	st->st_rdev = mst->st_rdev;
 	st->st_size = mst->st_size;
-	st->st_uid = mst->st_uid;
+
+	st->st_mode = 0;
+
+	if (mst->st_mode & _S_IFREG)
+		st->st_mode |= S_IFREG;
+
+	if (mst->st_mode & _S_IFDIR)
+		st->st_mode |= S_IFDIR;
 }
+
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__weak__, 3, 1, 0)
+__attribute__((__weak__)) __declspec(dllimport) int _stat64(const char *path, struct __stat64 *buf)
+{
+	struct _stat st;
+
+	if (_stat(path, &st) < 0)
+		return -1;
+
+	buf->st_atime = st.st_atime;
+	buf->st_mtime = st.st_mtime;
+	buf->st_ctime = st.st_ctime;
+	buf->st_size = st.st_size;
+	buf->st_mode = st.st_mode;
+
+	return 0;
+}
+
+__attribute__((__weak__)) __declspec(dllimport) int _wstat64(const wchar_t *path, struct __stat64 *buf)
+{
+	struct _stat st;
+
+	if (_wstat(path, &st) < 0)
+		return -1;
+
+	buf->st_atime = st.st_atime;
+	buf->st_mtime = st.st_mtime;
+	buf->st_ctime = st.st_ctime;
+	buf->st_size = st.st_size;
+	buf->st_mode = st.st_mode;
+
+	return 0;
+}
+#endif
 
 int win32_stat(const char* path, struct stat* st)
 {
-	struct _stat mst;
+	struct __stat64 mst;
 
 #ifdef SCHISM_WIN32_COMPILE_ANSI
 	if (GetVersion() & UINT32_C(0x80000000)) {
@@ -1163,7 +1199,7 @@ int win32_stat(const char* path, struct stat* st)
 		char* ac = NULL;
 
 		if (!charset_iconv(path, &ac, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
-			int ret = _stat(ac, &mst);
+			int ret = _stat64(ac, &mst);
 			free(ac);
 			win32_stat_conv(&mst, st);
 			return ret;
@@ -1174,7 +1210,7 @@ int win32_stat(const char* path, struct stat* st)
 		wchar_t* wc = NULL;
 
 		if (!charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-			int ret = _wstat(wc, &mst);
+			int ret = _wstat64(wc, &mst);
 			free(wc);
 			win32_stat_conv(&mst, st);
 			return ret;
@@ -1217,7 +1253,7 @@ FILE* win32_fopen(const char* path, const char* flags)
 	return NULL;
 }
 
-int win32_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
+int win32_mkdir(const char *path, SCHISM_UNUSED uint32_t mode)
 {
 #ifdef SCHISM_WIN32_COMPILE_ANSI
 	if (GetVersion() & UINT32_C(0x80000000)) {
@@ -1237,6 +1273,43 @@ int win32_mkdir(const char *path, SCHISM_UNUSED mode_t mode)
 
 		int ret = _wmkdir(wc);
 		free(wc);
+		return ret;
+	}
+
+	return -1;
+}
+
+int win32_access(const char *path, int amode)
+{
+	int winamode = 0;
+
+	if (amode & X_OK)
+		return -1; /* ok */
+
+	if (amode & R_OK)
+		winamode |= 0x04;
+
+	if (amode & W_OK)
+		winamode |= 0x02;
+
+#ifdef SCHISM_WIN32_COMPILE_ANSI
+	if (GetVersion() & UINT32_C(0x80000000)) {
+		char* ac = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_ANSI);
+		if (!ac)
+			return -1;
+
+		int ret = _access(ac, winamode);
+		free(ac);
+		return ret;
+	} else
+#endif
+	{
+		wchar_t* ac = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_WCHAR_T);
+		if (!ac)
+			return -1;
+
+		int ret = _waccess(ac, winamode);
+		free(ac);
 		return ret;
 	}
 

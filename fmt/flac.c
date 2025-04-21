@@ -32,6 +32,11 @@
 #include "util.h"
 #include "mem.h"
 
+#ifdef SCHISM_WIN32
+/* i hate nonportable APIs */
+# define off_t _off_t
+#endif
+
 #include <FLAC/stream_decoder.h>
 #include <FLAC/stream_encoder.h>
 #include <FLAC/metadata.h>

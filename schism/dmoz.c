@@ -884,17 +884,35 @@ char *dmoz_get_current_directory(void)
 		if (dmoz_path_from_fsspec(&spec, &path))
 			return path;
 	}
-#elif !defined(SCHISM_XBOX)
-# ifdef SCHISM_WIN32
+#elif defined(SCHISM_XBOX)
+	/* nothing */
+#elif defined(SCHISM_WIN32)
 	{
-		wchar_t buf[PATH_MAX + 1] = {L'\0'};
-		char *buf_utf8 = NULL;
+#define TRY_GETCWD(TYPE, SUFFIX, CHARSET) \
+	do { \
+		DWORD bufsize; \
+		TYPE *buf; \
+		char *utf8; \
+	\
+		bufsize = GetCurrentDirectory##SUFFIX(0, NULL); \
+		if (!bufsize) \
+			break; \
+	\
+		buf = mem_alloc((bufsize + 1) * sizeof(TYPE)); \
+	\
+		GetCurrentDirectory##SUFFIX(bufsize + 1, buf); \
+	\
+		utf8 = charset_iconv_easy(buf, CHARSET, CHARSET_UTF8); \
+		if (utf8) \
+			return utf8; \
+	} while (0)
 
-		if (_wgetcwd(buf, PATH_MAX) && !charset_iconv(buf, &buf_utf8, CHARSET_WCHAR_T, CHARSET_UTF8, PATH_MAX + 1))
-			return buf_utf8;
+		TRY_GETCWD(WCHAR, W, CHARSET_WCHAR_T);
+		TRY_GETCWD(CHAR, A, CHARSET_ANSI);
+
+#undef TRY_GETCWD
 	}
-# endif
-
+#else
     /* Double the buffer size until getcwd() succeeds or we run out
 	 * of memory. Not using get_current_dir_name() and
 	 * getcwd(NULL, n) to only use methods defined by POSIX. */

@@ -83,7 +83,7 @@ struct dmoz_file {
 
 	/*struct stat stat;*/
 	time_t timestamp; /* stat.st_mtime */
-	size_t filesize; /* stat.st_size */
+	uint64_t filesize; /* stat.st_size */
 
 	/* if ((type & TYPE_EXT_DATA_MASK) == 0) nothing below this point will
 	be defined (call dmoz_{fill,filter}_ext_data to define it) */
