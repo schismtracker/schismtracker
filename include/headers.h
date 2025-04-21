@@ -34,6 +34,10 @@
 #define _GNU_SOURCE /* need this for some stupid gnu crap */
 #endif
 
+#ifndef NO_OLDNAMES
+# define NO_OLDNAMES
+#endif
+
 #ifdef HAVE_CONFIG_H
 # include <build-config.h>
 #endif
@@ -75,6 +79,9 @@
 #ifndef M_PI
 # define M_PI 3.1415926535897932384626433832795028841971
 #endif
+#ifndef M_PHI
+# define M_PHI 1.6180339887498948482045868343656381177203
+#endif
 
 #include <stdarg.h>
 #ifndef va_copy
@@ -104,7 +111,7 @@
 # include <sys/types.h>
 #endif
 
-#ifdef HAVE_STAT
+#if defined(HAVE_STAT) && !defined(SCHISM_WIN32)
 # include <sys/stat.h>
 #else
 /* This only defines the stuff we actually use.
@@ -604,17 +611,21 @@ extern int ya_optind, ya_opterr, ya_optopt;
 /* GNU string comparison functions, and charset_stdlib.c replacements for
  * them */
 
-#ifndef HAVE_STRCASECMP
-# ifdef HAVE_STRICMP
+#if !defined(HAVE_STRCASECMP) || defined(SCHISM_WIN32)
+# ifdef HAVE__STRICMP
+#  define strcasecmp(s1, s2) _stricmp(s1, s2)
+# elif defined(HAVE_STRICMP)
 #  define strcasecmp(s1, s2) stricmp(s1, s2)
 # else
 #  include <charset.h>
 #  define strcasecmp(s1, s2) charset_strcasecmp(s1, CHARSET_CHAR, s2, CHARSET_CHAR)
 # endif
 #endif
-#ifndef HAVE_STRNCASECMP
-# ifdef HAVE_STRNICMP
-#  define strncasecmp(s1, s2, n) strnicmp(s1, s2)
+#if !defined(HAVE_STRNCASECMP) || defined(SCHISM_WIN32)
+# ifdef HAVE__STRNICMP
+#  define strncasecmp(s1, s2, n) _strnicmp(s1, s2, n)
+# elif defined(HAVE_STRNICMP)
+#  define strncasecmp(s1, s2, n) strnicmp(s1, s2, n)
 # else
 #  include <charset.h>
 #  define strncasecmp(s1, s2, n) charset_strncasecmp(s1, CHARSET_CHAR, s2, CHARSET_CHAR)

@@ -143,22 +143,28 @@ static int64_t _dw_stdio_tell(disko_t *ds)
 // 0 => memory error, abandon ship
 static int _dw_bufcheck(disko_t *ds, size_t extend)
 {
+	if (ds->error)
+		return 0; /* punt */
+
 	if (ds->pos + extend <= ds->length)
 		return 1;
 
 	ds->length = MAX(ds->length, ds->pos + extend);
 
 	if (ds->length >= ds->allocated) {
-		size_t newsize = MAX(ds->allocated + DW_BUFFER_SIZE, ds->length);
+		/* grow the buffer by the golden ratio; this is different
+		 * than file streams, but they are different anyhow.
+		 * both Java and Python also use phi here. */
+		size_t newsize = MAX(ds->allocated * M_PHI, ds->length);
 		uint8_t *new = realloc(ds->data, newsize);
 		if (!new) {
-			// Eek
+			/* would it be better to just keep the same buffer? */
 			free(ds->data);
 			ds->data = NULL;
 			disko_seterror(ds, errno);
 			return 0;
 		}
-		memset(new + ds->allocated, 0, newsize - ds->allocated);
+		/*memset(new + ds->allocated, 0, newsize - ds->allocated);*/
 		ds->data = new;
 		ds->allocated = newsize;
 	}
@@ -259,7 +265,7 @@ int disko_open(disko_t *ds, const char *filename)
 
 #ifdef HAVE_ACCESS /* FIXME - make a replacement access() */
 	// Attempt to honor read-only (since we're writing them in such a roundabout way)
-	if (access(filename, W_OK) != 0 && errno != ENOENT)
+	if (os_access(filename, W_OK) != 0 && errno != ENOENT)
 		return -1;
 #endif
 
@@ -337,7 +343,7 @@ int disko_memopen(disko_t *ds)
 
 	memset(ds, 0, sizeof(*ds));
 
-	ds->data = calloc(DW_BUFFER_SIZE, sizeof(uint8_t));
+	ds->data = /*c*/malloc(DW_BUFFER_SIZE * sizeof(uint8_t));
 	if (!ds->data)
 		return -1;
 
@@ -353,13 +359,27 @@ int disko_memopen(disko_t *ds)
 int disko_memclose(disko_t *ds, int keep_buffer)
 {
 	int err = ds->error;
-	if (!keep_buffer || err)
-		free(ds->data);
 
 	if (err) {
+		free(ds->data);
+		ds->data = NULL;
 		errno = err;
 		return DW_ERROR;
 	} else {
+		if (keep_buffer) {
+			if (ds->allocated > ds->length) {
+				/* try to shrink it to the length. if we can't,
+				 * fine, keep the buffer we already have */
+				uint8_t *n = realloc(ds->data, ds->length);
+				if (n) {
+					ds->data = n;
+					ds->allocated = ds->length;
+				}
+			}
+		} else {
+			free(ds->data);
+			ds->data = NULL;
+		}
 		return DW_OK;
 	}
 }
