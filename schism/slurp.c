@@ -192,7 +192,9 @@ void unslurp(slurp_t * t)
 /* --------------------------------------------------------------------- */
 /* stdio implementation */
 
-#if defined(SCHISM_WIN32) && SCHISM_GNUC_HAS_ATTRIBUTE(__weak__, 3, 1, 0)
+#if defined(SCHISM_WIN32) \
+	&& SCHISM_GNUC_HAS_ATTRIBUTE(__weak__, 3, 1, 0) \
+	&& !defined(__clang__)
 /* use GNU weak functions so we can fallback to regular ftell/fseek on
  * older systems */
 __attribute__((__weak__)) __declspec(dllimport) __int64 _ftelli64(FILE *f)

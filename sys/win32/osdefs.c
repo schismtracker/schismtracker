@@ -1155,7 +1155,8 @@ static inline SCHISM_ALWAYS_INLINE void win32_stat_conv(struct __stat64 *mst, st
 		st->st_mode |= S_IFDIR;
 }
 
-#if SCHISM_GNUC_HAS_ATTRIBUTE(__weak__, 3, 1, 0)
+/* this works on gcc, but not clang */
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__weak__, 3, 1, 0) && !defined(__clang__)
 __attribute__((__weak__)) __declspec(dllimport) int _stat64(const char *path, struct __stat64 *buf)
 {
 	struct _stat st;
