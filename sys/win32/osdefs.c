@@ -1262,7 +1262,7 @@ int win32_mkdir(const char *path, SCHISM_UNUSED uint32_t mode)
 		if (charset_iconv(path, &ac, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
 			return -1;
 
-		int ret = mkdir(ac);
+		int ret = _mkdir(ac);
 		free(ac);
 		return ret;
 	} else
@@ -1387,7 +1387,7 @@ int win32_access(const char *path, int amode)
 
 WIN32_RUN_HOOK_VARIANT(wide, CHARSET_WCHAR_T, WCHAR, wcslen, _wgetcwd, _wchdir, _wgetenv, _wspawnlp, _wstat, L)
 #ifdef SCHISM_WIN32_COMPILE_ANSI
-WIN32_RUN_HOOK_VARIANT(ansi, CHARSET_ANSI, char, strlen, getcwd, _chdir, getenv, _spawnlp, _stat, /* none */)
+WIN32_RUN_HOOK_VARIANT(ansi, CHARSET_ANSI,    CHAR,  strlen, _getcwd,  _chdir,  getenv,   _spawnlp,  _stat, /* none */)
 #endif
 
 #undef WIN32_RUN_HOOK_VARIANT
