@@ -947,7 +947,7 @@ int schism_main(int argc, char** argv)
 
 	ver_init();
 
-#ifdef HAVE_TZSET
+#if defined(HAVE_TZSET) && !defined(SCHISM_WIN32) /* ok */
 	tzset(); // localtime_r wants this
 #endif
 	srand(time(NULL));
