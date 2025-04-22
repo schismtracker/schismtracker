@@ -882,21 +882,28 @@ void video_show_cursor(int enabled)
 # define APIENTRY
 #endif
 
-typedef unsigned int GLenum;
 typedef unsigned char GLboolean;
-typedef unsigned int GLbitfield;
+typedef int8_t GLbyte;
+typedef uint8_t GLubyte;
+typedef int16_t GLshort;
+typedef uint16_t GLushort;
+typedef int32_t GLint;
+typedef uint32_t GLuint;
+typedef int32_t GLfixed; /* 16.16 */
+typedef int64_t GLint64;
+typedef uint64_t GLuint64;
+typedef int32_t GLsizei;
+typedef uint32_t GLenum;
+typedef intptr_t GLintptr;
+typedef intptr_t GLsizeiptr;
+typedef /*u?*/intptr_t GLsync;
+typedef uint32_t GLbitfield;
+typedef uint16_t GLhalf; /* 16-bit floating point ??? */
+typedef float GLfloat;
+typedef float GLclampf;
+typedef double GLdouble;
+typedef double GLclampd;
 typedef void GLvoid;
-typedef signed char GLbyte;		/* 1-byte signed */
-typedef short GLshort;	/* 2-byte signed */
-typedef int GLint;		/* 4-byte signed */
-typedef unsigned char GLubyte;	/* 1-byte unsigned */
-typedef unsigned short GLushort;	/* 2-byte unsigned */
-typedef unsigned int GLuint;		/* 4-byte unsigned */
-typedef int GLsizei;	/* 4-byte signed */
-typedef float GLfloat;	/* single precision float */
-typedef float GLclampf;	/* single precision float in [0,1] */
-typedef double GLdouble;	/* double precision float */
-typedef double GLclampd;	/* double precision float in [0,1] */
 
 /* hm? */
 #define GL_BGRA_EXT                       0x80E1
@@ -927,6 +934,7 @@ typedef double GLclampd;	/* double precision float in [0,1] */
 #define GL_VERSION				0x1F02
 #define GL_MAJOR_VERSION                  0x821B
 #define GL_MINOR_VERSION                  0x821C
+#define GL_NUM_EXTENSIONS 0x821D
 #define GL_NO_ERROR 0
 
 /*#define SCHISM_NVIDIA_PIXELDATARANGE 1*/
@@ -963,6 +971,7 @@ static void (APIENTRY *schism_glBindTexture)(GLenum,GLuint) = NULL;
 static void (APIENTRY *schism_glClear)(GLbitfield mask) = NULL;
 static void (APIENTRY *schism_glClearColor)(GLclampf,GLclampf,GLclampf,GLclampf) = NULL;
 static const GLubyte* (APIENTRY *schism_glGetString)(GLenum) = NULL;
+static const GLubyte *(APIENTRY *schism_glGetStringi)(GLenum, GLuint) = NULL;
 static void (APIENTRY *schism_glTexImage2D)(GLenum,GLint,GLint,GLsizei,GLsizei,GLint,GLenum,GLenum,const GLvoid *) = NULL;
 static void (APIENTRY *schism_glGetIntegerv)(GLenum, GLint *) = NULL;
 static void (APIENTRY *schism_glShadeModel)(GLenum) = NULL;
@@ -1001,41 +1010,6 @@ static int32_t int32_log2(int32_t val) {
 	return l;
 }
 
-static int opengl_extension_supported_default(const char *extension)
-{
-	const char *start, *extensions;
-	const char *where, *terminator;
-
-	/* Extension names should not have spaces. */
-	where = strchr(extension, ' ');
-	if (where || *extension == '\0')
-		return 0;
-
-	extensions = (const char *)schism_glGetString(GL_EXTENSIONS);
-	if (!extensions)
-		return 0;
-
-	/* It takes a bit of care to be fool-proof about parsing the
-	 * OpenGL extensions string. Don't be fooled by sub-strings,
-	 * etc. */
-	start = extensions;
-
-	for (;;) {
-		where = strstr(start, extension);
-		if (!where)
-			break;
-
-		terminator = where + strlen(extension);
-		if (where == start || *(where - 1) == ' ')
-			if (*terminator == ' ' || *terminator == '\0')
-				return 1;
-
-		start = terminator;
-	}
-
-	return 0;
-}
-
 static int opengl_ver_init(void)
 {
 	const char *ver;
@@ -1069,6 +1043,64 @@ static inline int opengl_ver_atleast(uint32_t major, uint32_t minor)
 {
 	return SCHISM_SEMVER_ATLEAST(major, minor, 0,
 		video_gl.major, video_gl.minor, 0);
+}
+
+static int opengl_extension_supported_default(const char *extension)
+{
+	const char *start, *extensions;
+	const char *where, *terminator;
+
+	if (opengl_ver_atleast(3, 0)) {
+		GLint i, count;
+
+		schism_glGetIntegerv(GL_NUM_EXTENSIONS, &count);
+		if (schism_glGetError() == GL_NO_ERROR) {
+			for (i = 0; i < count; i++) {
+				const char *ext = schism_glGetStringi(GL_EXTENSIONS, i);
+				if (!ext)
+					break; /* ??? */
+
+				if (!strcmp(ext, extension))
+					return 1;
+			}
+
+			return 0;
+		}
+
+		/* fallback */
+	}
+
+	/* version for opengl < 3.0 */
+
+	/* Extension names should not have spaces. */
+	where = strchr(extension, ' ');
+	if (where || *extension == '\0')
+		return 0;
+
+	/* TODO: GL_EXTENSIONS was removed in OpenGL 3.1 */
+	extensions = (const char *)schism_glGetString(GL_EXTENSIONS);
+	if (!extensions)
+		return 0;
+
+	/* It takes a bit of care to be fool-proof about parsing the
+	 * OpenGL extensions string. Don't be fooled by sub-strings,
+	 * etc. */
+	start = extensions;
+
+	for (;;) {
+		where = strstr(start, extension);
+		if (!where)
+			break;
+
+		terminator = where + strlen(extension);
+		if (where == start || *(where - 1) == ' ')
+			if (*terminator == ' ' || *terminator == '\0')
+				return 1;
+
+		start = terminator;
+	}
+
+	return 0;
 }
 
 int video_opengl_init(video_opengl_object_load_spec object_load,
@@ -1136,6 +1168,19 @@ int video_opengl_init(video_opengl_object_load_spec object_load,
 
 #undef Z
 
+#define Z(q) \
+	schism_##q = function_load(#q)
+
+		Z(glGetStringi);
+
+#ifdef SCHISM_NVIDIA_PIXELDATARANGE
+		Z(glPixelDataRangeNV);
+		Z(wglAllocateMemoryNV);
+		Z(wglFreeMemoryNV);
+#endif
+
+#undef Z
+
 		if (!setup_callback())
 			goto fail;
 
@@ -1144,10 +1189,6 @@ int video_opengl_init(video_opengl_object_load_spec object_load,
 
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 		if (extension_supported("GL_NV_pixel_data_range")) {
-			schism_glPixelDataRangeNV = function_load("glPixelDataRangeNV");
-			schism_wglAllocateMemoryNV = function_load("wglAllocateMemoryNV");
-			schism_wglFreeMemoryNV = function_load("wglFreeMemoryNV");
-
 			video_gl.pixel_data_range = (schism_glPixelDataRangeNV
 				&& schism_wglAllocateMemoryNV
 				&& schism_wglFreeMemoryNV);
