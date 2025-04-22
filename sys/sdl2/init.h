@@ -31,6 +31,7 @@
 
 /* stupid win32 crap */
 #define NO_OLDNAMES
+#define _NO_OLDNAMES
 
 #ifdef SCHISM_OS2
 // Work around weird compiler bug?

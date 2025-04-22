@@ -35,7 +35,12 @@
 #endif
 
 #ifndef NO_OLDNAMES
+/* Mingw-w64 */
 # define NO_OLDNAMES
+#endif
+#ifndef _NO_OLDNAMES
+/* Mingw.org */
+# define _NO_OLDNAMES
 #endif
 
 #ifdef HAVE_CONFIG_H

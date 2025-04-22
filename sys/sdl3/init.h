@@ -26,6 +26,7 @@
 
 /* win32 */
 #define NO_OLDNAMES
+#define _NO_OLDNAMES
 
 #include <SDL3/SDL.h>
 
