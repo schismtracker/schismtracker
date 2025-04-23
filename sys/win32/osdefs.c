@@ -1155,70 +1155,85 @@ static inline SCHISM_ALWAYS_INLINE void win32_stat_conv(struct __stat64 *mst, st
 		st->st_mode |= S_IFDIR;
 }
 
-/* this works on gcc, but not clang */
-#if SCHISM_GNUC_HAS_ATTRIBUTE(__weak__, 3, 1, 0) && !defined(__clang__)
-__attribute__((__weak__)) __declspec(dllimport) int _stat64(const char *path, struct __stat64 *buf)
-{
-	struct _stat st;
-
-	if (_stat(path, &st) < 0)
-		return -1;
-
-	buf->st_atime = st.st_atime;
-	buf->st_mtime = st.st_mtime;
-	buf->st_ctime = st.st_ctime;
-	buf->st_size = st.st_size;
-	buf->st_mode = st.st_mode;
-
-	return 0;
+/* converts FILETIME to unix time_t */
+static inline int64_t win32_filetime_to_unix_time(FILETIME *ft) {
+	uint64_t ul = ((uint64_t)ft->dwHighDateTime << 32) | ft->dwLowDateTime;
+	return ((int64_t)(ul - 116444736000000000ULL) / 10000000);
 }
 
-__attribute__((__weak__)) __declspec(dllimport) int _wstat64(const wchar_t *path, struct __stat64 *buf)
-{
-	struct _stat st;
-
-	if (_wstat(path, &st) < 0)
-		return -1;
-
-	buf->st_atime = st.st_atime;
-	buf->st_mtime = st.st_mtime;
-	buf->st_ctime = st.st_ctime;
-	buf->st_size = st.st_size;
-	buf->st_mode = st.st_mode;
-
-	return 0;
-}
-#endif
-
+/* this is highly related to the XBOX code */
 int win32_stat(const char* path, struct stat* st)
 {
-	struct __stat64 mst;
+	void *wpath;
 
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-	if (GetVersion() & UINT32_C(0x80000000)) {
-		// Windows 9x
-		char* ac = NULL;
+	SCHISM_ANSI_UNICODE({
+		wpath = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_ANSI);
+	}, {
+		wpath = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_WCHAR_T);
+	})
+	if (!wpath)
+		return -1;
 
-		if (!charset_iconv(path, &ac, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
-			int ret = _stat64(ac, &mst);
-			free(ac);
-			win32_stat_conv(&mst, st);
-			return ret;
-		}
-	} else
-#endif
 	{
-		wchar_t* wc = NULL;
+		DWORD dw;
 
-		if (!charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-			int ret = _wstat64(wc, &mst);
-			free(wc);
-			win32_stat_conv(&mst, st);
-			return ret;
+		st->st_mode = 0;
+
+		SCHISM_ANSI_UNICODE({
+			dw = GetFileAttributesA(wpath);
+		}, {
+			dw = GetFileAttributesW(wpath);
+		})
+		if (dw == INVALID_FILE_ATTRIBUTES) {
+			free(wpath);
+			return -1;
+		} else if (dw & FILE_ATTRIBUTE_DIRECTORY) {
+			st->st_mode |= S_IFDIR;
+		} else {
+			st->st_mode |= S_IFREG;
 		}
 	}
 
-	return -1;
+	/* CreateFileA returns INVALID_HANDLE_VALUE if file is not actually a file */
+	if (S_ISREG(st->st_mode)) {
+		HANDLE fh;
+		FILETIME ctime, atime, wtime;
+		DWORD lo, hi;
+		int fail = 0;
+
+		/* we could possibly be more lenient with the access rights here */
+		SCHISM_ANSI_UNICODE({
+			fh = CreateFileA(wpath, 0, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		}, {
+			fh = CreateFileW(wpath, 0, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		})
+		if (fh == INVALID_HANDLE_VALUE) {
+			free(wpath);
+			return -1;
+		}
+
+		lo = GetFileSize(fh, &hi);
+
+		fail |= (lo == INVALID_FILE_SIZE && GetLastError() != NO_ERROR);
+		fail |= !GetFileTime(fh, &ctime, &atime, &wtime);
+
+		CloseHandle(fh);
+
+		if (fail) {
+			free(wpath);
+			return -1;
+		}
+
+		/* now, copy everything into the stat structure. */
+		st->st_mtime = win32_filetime_to_unix_time(&wtime);
+		st->st_atime = win32_filetime_to_unix_time(&atime);
+		st->st_ctime = win32_filetime_to_unix_time(&ctime);
+
+		st->st_size = ((uint64_t)hi << 32 | lo);
+	}
+
+	free(wpath);
+	return 0;
 }
 
 FILE* win32_fopen(const char* path, const char* flags)

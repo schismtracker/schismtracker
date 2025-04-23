@@ -43,7 +43,6 @@ static int64_t slurp_memory_tell_(slurp_t *t);
 static size_t slurp_memory_length_(slurp_t *t);
 static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count);
 static int slurp_memory_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
-static int slurp_memory_eof_(slurp_t *t);
 static void slurp_memory_closure_free_(slurp_t *t);
 
 static size_t slurp_2mem_peek_(slurp_t *t, void *ptr, size_t count);
@@ -69,10 +68,10 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 	if (!size)
 		size = st.st_size;
 
-#if defined(SCHISM_WIN32) || defined(HAVE_MMAP)
+#if defined(SCHISM_WIN32) || defined(SCHISM_MMAP)
 	switch (
 #ifdef SCHISM_WIN32
-		slurp_win32(t, filename, size)
+		slurp_win32_mmap(t, filename, size)
 #elif defined(HAVE_MMAP)
 		slurp_mmap(t, filename, size)
 #else
@@ -84,12 +83,23 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 	case SLURP_OPEN_SUCCESS:
 		t->seek = slurp_memory_seek_;
 		t->tell = slurp_memory_tell_;
-		t->eof  = slurp_memory_eof_;
 		t->peek = slurp_memory_peek_;
 		t->receive = slurp_memory_receive_;
 		t->length = slurp_memory_length_;
 		goto finished;
 	default:
+	case SLURP_OPEN_IGNORE:
+		break;
+	}
+#endif
+
+#ifdef SCHISM_WIN32
+	switch (slurp_win32(t, filename)) {
+	case SLURP_OPEN_FAIL:
+		return -1;
+	case SLURP_OPEN_SUCCESS:
+		/* function pointers already filled in */
+		goto finished;
 	case SLURP_OPEN_IGNORE:
 		break;
 	}
@@ -141,7 +151,6 @@ int slurp_memstream(slurp_t *t, uint8_t *mem, size_t memsize)
 
 	t->seek = slurp_memory_seek_;
 	t->tell = slurp_memory_tell_;
-	t->eof  = slurp_memory_eof_;
 	t->peek = slurp_memory_peek_;
 	t->receive = slurp_memory_receive_;
 	t->length = slurp_memory_length_;
@@ -168,7 +177,6 @@ int slurp_2memstream(slurp_t *t, uint8_t *mem1, uint8_t *mem2, size_t memsize)
 
 	t->seek = slurp_memory_seek_;
 	t->tell = slurp_memory_tell_;
-	t->eof  = slurp_memory_eof_;
 	t->peek = slurp_2mem_peek_;
 	t->length = slurp_memory_length_;
 
@@ -191,28 +199,6 @@ void unslurp(slurp_t * t)
 
 /* --------------------------------------------------------------------- */
 /* stdio implementation */
-
-#if defined(SCHISM_WIN32) \
-	&& SCHISM_GNUC_HAS_ATTRIBUTE(__weak__, 3, 1, 0) \
-	&& !defined(__clang__)
-/* use GNU weak functions so we can fallback to regular ftell/fseek on
- * older systems */
-__attribute__((__weak__)) __declspec(dllimport) __int64 _ftelli64(FILE *f)
-{
-	return ftell(f);
-}
-
-__attribute__((__weak__)) __declspec(dllimport) int _fseeki64(FILE *f, __int64 offset, int whence)
-{
-	return fseek(f, offset, whence);
-}
-
-# define os_fseek _fseeki64
-# define os_ftell _ftelli64
-#else
-# define os_fseek fseek
-# define os_ftell ftell
-#endif
 
 static int slurp_stdio_open_(slurp_t *t, const char *filename)
 {
@@ -238,15 +224,15 @@ static int slurp_stdio_open_file_(slurp_t *t, FILE *fp)
 
 	t->internal.stdio.fp = fp;
 
-	if (os_fseek(t->internal.stdio.fp, 0, SEEK_END))
+	if (fseek(t->internal.stdio.fp, 0, SEEK_END))
 		return SLURP_OPEN_FAIL;
 
-	end = os_ftell(t->internal.stdio.fp);
+	end = ftell(t->internal.stdio.fp);
 	if (end < 0)
 		return SLURP_OPEN_FAIL;
 
 	/* return to monke */
-	if (os_fseek(t->internal.stdio.fp, 0, SEEK_SET))
+	if (fseek(t->internal.stdio.fp, 0, SEEK_SET))
 		return SLURP_OPEN_FAIL;
 
 	t->internal.stdio.length = MAX(0, end);
@@ -257,12 +243,12 @@ static int slurp_stdio_open_file_(slurp_t *t, FILE *fp)
 static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence)
 {
 	// XXX can we use _fseeki64 on Windows?
-	return os_fseek(t->internal.stdio.fp, offset, whence);
+	return fseek(t->internal.stdio.fp, offset, whence);
 }
 
 static int64_t slurp_stdio_tell_(slurp_t *t)
 {
-	return os_ftell(t->internal.stdio.fp);
+	return ftell(t->internal.stdio.fp);
 }
 
 static size_t slurp_stdio_length_(slurp_t *t)
@@ -343,11 +329,6 @@ static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count)
 		memcpy(ptr, t->internal.memory.data + t->internal.memory.pos, count);
 
 	return count;
-}
-
-static int slurp_memory_eof_(slurp_t *t)
-{
-	return t->internal.memory.pos >= t->internal.memory.length;
 }
 
 static int slurp_memory_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata)
@@ -502,13 +483,6 @@ static size_t sf2_slurp_read(slurp_t *s, void *data, size_t count)
 	return read;
 }
 
-static int sf2_slurp_eof(slurp_t *s)
-{
-	struct slurp_sf2_data *sf = (struct slurp_sf2_data *)s->internal.memory.data;
-
-	return (sf2_slurp_tell(s) >= sf2_slurp_length(s));
-}
-
 static void sf2_slurp_closure(slurp_t *s)
 {
 	slurp_seek(s->internal.sf2.src, s->internal.sf2.origpos, SEEK_SET);
@@ -531,7 +505,6 @@ void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
 	s->seek = sf2_slurp_seek;
 	s->tell = sf2_slurp_tell;
 	s->read = sf2_slurp_read;
-	s->eof = sf2_slurp_eof;
 	s->closure = sf2_slurp_closure;
 
 	slurp_rewind(s);
@@ -617,7 +590,11 @@ int slurp_getc(slurp_t *t)
 
 int slurp_eof(slurp_t *t)
 {
-	return t->eof(t);
+	if (t->eof) {
+		return t->eof(t);
+	} else {
+		return (t->tell(t) >= t->length(t));
+	}
 }
 
 int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata)

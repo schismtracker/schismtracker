@@ -37,7 +37,7 @@ enum {
 typedef struct slurp_struct_ slurp_t;
 struct slurp_struct_ {
 	/* stdio-style interfaces:
-	 * seek, tell, length, and eof are all required to be implemented.
+	 * seek, tell, and length are all required to be implemented.
 	 * peek can be NULL if read is implemented, and vice versa.
 	 *
 	 * peek is a custom schism construct that is like fread, but the
@@ -47,6 +47,9 @@ struct slurp_struct_ {
 	size_t (*peek)(slurp_t *, void *, size_t);
 	size_t (*read)(slurp_t *, void *, size_t);
 	size_t (*length)(slurp_t *);
+
+	/* this one is optional, and will use the default implementation
+	 * in slurp.c if it's NULL */
 	int (*eof)(slurp_t *);
 
 	/* clean up after ourselves (optional, can be NULL) */
@@ -102,6 +105,10 @@ struct slurp_struct_ {
 			/* original position from before we mutilated it */
 			int64_t origpos;
 		} sf2;
+
+		struct {
+			void *handle;
+		} win32;
 	} internal;
 };
 
@@ -130,7 +137,8 @@ void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
 void unslurp(slurp_t *t);
 
 #ifdef SCHISM_WIN32
-int slurp_win32(slurp_t *useme, const char *filename, size_t st);
+int slurp_win32_mmap(slurp_t *useme, const char *filename, size_t st);
+int slurp_win32(slurp_t *s, const char *filename);
 #endif
 
 #if HAVE_MMAP

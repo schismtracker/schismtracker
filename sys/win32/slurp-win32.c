@@ -93,33 +93,41 @@ static int win32_error_unmap_(slurp_t *slurp, const char *filename, const char *
 	return val;
 }
 
-int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
+static inline HANDLE CreateFileUTF8(const char *filename, DWORD a, DWORD b, LPSECURITY_ATTRIBUTES c, DWORD d, DWORD e, HANDLE f)
 {
+	HANDLE h;
+
 #ifdef SCHISM_WIN32_COMPILE_ANSI
 	if (GetVersion() & UINT32_C(0x80000000)) {
 		// Windows 9x
 		char *filename_a;
 		if (charset_iconv(filename, &filename_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
-			return win32_error_unmap_(slurp, filename, "charset_iconv", SLURP_OPEN_FAIL);
+			return INVALID_HANDLE_VALUE;
 
-		slurp->internal.memory.interfaces.win32.file = CreateFileA(filename_a, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		h = CreateFileA(filename_a, a, b, c, d, e, f);
 		free(filename_a);
 	} else
 #endif
 	{
 		wchar_t *filename_w;
 		if (charset_iconv(filename, &filename_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			return win32_error_unmap_(slurp, filename, "charset_iconv", SLURP_OPEN_FAIL);
+			return INVALID_HANDLE_VALUE;
 
-		slurp->internal.memory.interfaces.win32.file = CreateFileW(filename_w, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		h = CreateFileW(filename_w, a, b, c, d, e, f);
 		free(filename_w);
 	}
 
+	return h;
+}
+
+int slurp_win32_mmap(slurp_t *slurp, const char *filename, size_t st)
+{
+	slurp->internal.memory.interfaces.win32.file = CreateFileUTF8(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (slurp->internal.memory.interfaces.win32.file == INVALID_HANDLE_VALUE)
 		return win32_error_unmap_(slurp, filename, "CreateFile", SLURP_OPEN_FAIL);
 
 	// These functions are stubs on Windows 95 & 98, so simply ignore if
-	// they fail and fall back to the stdio implementation
+	// they fail and fall back to the win32 implementation
 	slurp->internal.memory.interfaces.win32.mapping = CreateFileMapping(slurp->internal.memory.interfaces.win32.file, NULL, PAGE_READONLY, 0, 0, NULL);
 
 	if (!slurp->internal.memory.interfaces.win32.mapping) {
@@ -135,6 +143,82 @@ int slurp_win32(slurp_t *slurp, const char *filename, size_t st)
 
 	slurp->internal.memory.length = st;
 	slurp->closure = win32_unmap_;
+
+	return SLURP_OPEN_SUCCESS;
+}
+
+/* --------------------------------------------------------------------- */
+
+static int slurp_win32_seek_(slurp_t *t, int64_t offset, int whence)
+{
+	union {
+		LONG l[2];
+		int64_t x;
+	} x;
+	DWORD move;
+
+	x.x = offset;
+
+	switch (whence) {
+	case SEEK_SET: move = FILE_BEGIN; break;
+	case SEEK_CUR: move = FILE_CURRENT; break;
+	case SEEK_END: move = FILE_END; break;
+	default: return -1;
+	}
+
+	return (SetFilePointer(t->internal.win32.handle, x.l[0], &x.l[1], move) == INVALID_SET_FILE_POINTER) ? -1 : 0;
+}
+
+static int64_t slurp_win32_tell_(slurp_t *t)
+{
+	LONG x = 0;
+	DWORD r;
+
+	r = SetFilePointer(t->internal.win32.handle, 0, &x, FILE_CURRENT);
+	if (r == INVALID_SET_FILE_POINTER)
+		return -1;
+
+	return (int64_t)x << 32 | r;
+}
+
+static size_t slurp_win32_length_(slurp_t *t)
+{
+	DWORD lo, hi;
+
+	lo = GetFileSize(t->internal.win32.handle, &hi);
+	if (lo == INVALID_FILE_SIZE && GetLastError() != NO_ERROR)
+		return 0; /* eh */
+
+	return (uint64_t)hi << 32 | lo;
+}
+
+static size_t slurp_win32_read_(slurp_t *t, void *ptr, size_t count)
+{
+	DWORD bytes_read;
+
+	if (!ReadFile(t->internal.win32.handle, ptr, count, &bytes_read, NULL))
+		return 0;
+
+	/* ok */
+	return bytes_read;
+}
+
+static void slurp_win32_closure_(slurp_t *t)
+{
+	CloseHandle(t->internal.win32.handle);
+}
+
+int slurp_win32(slurp_t *t, const char *filename)
+{
+	t->internal.win32.handle = CreateFileUTF8(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (t->internal.win32.handle == INVALID_HANDLE_VALUE)
+		return SLURP_OPEN_FAIL;
+
+	t->seek = slurp_win32_seek_;
+	t->tell = slurp_win32_tell_;
+	t->length = slurp_win32_length_;
+	t->read = slurp_win32_read_;
+	t->closure = slurp_win32_closure_;
 
 	return SLURP_OPEN_SUCCESS;
 }
