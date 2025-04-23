@@ -68,7 +68,7 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 	if (!size)
 		size = st.st_size;
 
-#if defined(SCHISM_WIN32) || defined(SCHISM_MMAP)
+#if defined(SCHISM_WIN32) || defined(HAVE_MMAP)
 	switch (
 #ifdef SCHISM_WIN32
 		slurp_win32_mmap(t, filename, size)
