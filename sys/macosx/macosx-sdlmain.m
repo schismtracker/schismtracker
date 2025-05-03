@@ -337,7 +337,7 @@ static void setApplicationMenu(void)
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Sample Library"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(3)];
-	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagCtrl];
+	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagControl];
 	[menuItem setRepresentedObject: @"sample_library"];
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Reload Soundcard"
 				action:@selector(_menu_callback:)
@@ -358,7 +358,7 @@ static void setApplicationMenu(void)
 	menuItem = (NSMenuItem*)[otherMenu addItemWithTitle:@"Instrument Library"
 				action:@selector(_menu_callback:)
 				keyEquivalent:KEQ_FN(4)];
-	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagCtrl];
+	[menuItem setKeyEquivalentModifierMask:NSEventModifierFlagControl];
 	[menuItem setRepresentedObject: @"inst_library"];
 	menuItem = (NSMenuItem*)[[NSMenuItem alloc] initWithTitle:@"" action:nil keyEquivalent:@""];
 	[menuItem setSubmenu:otherMenu];
