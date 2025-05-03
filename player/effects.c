@@ -2437,5 +2437,14 @@ void csf_process_effects(song_t *csf, int firsttick)
 
 		handle_voleffect(csf, chan, volcmd, vol, firsttick, start_note);
 		handle_effect(csf, nchan, cmd, param, porta, firsttick);
+
+		/* stupid hax: handling effect column after volume column breaks
+		 * handling when both columns have a vibrato effect.
+		 *
+		 * overwrite the memory after the fact with the correct parameters.
+		 *   --paper */
+		if (volcmd == VOLFX_VIBRATODEPTH
+			&& (cmd == FX_VIBRATO/* || cmd == FX_VIBRATOVOL -- do we also need this? */))
+			fx_vibrato(chan, vol);
 	}
 }
