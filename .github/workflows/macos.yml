@@ -53,7 +53,11 @@ jobs:
       - name: 'Prepare Universal Interfaces'
         if: steps.cache-universal-interfaces.outputs.cache-hit != 'true'
         run: |
-          curl -s "https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" -o "$RUNNER_TEMP/MPW-GM.img.bin"
+          # make sure we have plenty of mirrors so we don't get bogus build fails
+          curl "https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" > "$RUNNER_TEMP/MPW-GM.img.bin" \
+            || curl "https://web.archive.org/web/20131006071819if_/https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" > "$RUNNER_TEMP/MPW-GM.img.bin" \
+            || curl "http://old.mac.gdn/apps/mpw-gm.img__0.bin" > "$RUNNER_TEMP/MPW-GM.img.bin" \
+            || curl "ftp://mirror:mirror@ftp.macintosh.garden/apps/mpw-gm.img__0.bin" > "$RUNNER_TEMP/MPW-GM.img.bin"
           /Retro68-build/bin/install-universal-interfaces.sh "$RUNNER_TEMP" "MPW-GM.img.bin"
 
       - name: 'Link Universal Interfaces'
