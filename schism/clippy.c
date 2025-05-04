@@ -36,6 +36,10 @@
 // system backend
 static const schism_clippy_backend_t *backend = NULL;
 
+/* XXX: should each page have a separate selection?
+ * or maybe, we should replicate the windows behavior,
+ * and have a separate clipboard for each "type" of
+ * data (such as pattern data, text, etc) */
 static char* _current_selection = NULL;
 static char* _current_clipboard = NULL;
 static struct widget* _widget_owner[16] = {NULL};

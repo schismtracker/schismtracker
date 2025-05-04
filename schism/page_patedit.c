@@ -177,6 +177,8 @@ static struct pattern_snap fast_save = {
 /* static int fast_save_validity = -1; */
 
 static void snap_paste(struct pattern_snap *s, int x, int y, int xlate);
+static void snap_copy_from_pattern(song_note_t *pattern, int total_rows,
+	struct pattern_snap *s, int x, int y, int width, int height);
 
 static struct pattern_snap clipboard = {
 	NULL, 0, 0,
@@ -559,98 +561,134 @@ static int multichannel_get_previous(int cur_channel)
 	return i + 1;
 }
 
-
 /* --------------------------------------------------------------------------------------------------------- */
-static void copyin_addnote(song_note_t *note, int *copyin_x, int *copyin_y)
-{
-	song_note_t *pattern, *p_note;
-	int num_rows;
+/* this global state is stupid and dumb */
 
-	status.flags |= (SONG_NEEDS_SAVE|NEED_UPDATE);
-	num_rows = song_get_pattern(current_pattern, &pattern);
-	if ((*copyin_x + (current_channel-1)) >= 64) return;
-	if ((*copyin_y + current_row) >= num_rows) return;
-	p_note = pattern + 64 * (*copyin_y + current_row) + (*copyin_x + (current_channel-1));
-	*p_note = *note;
-	(*copyin_x) = (*copyin_x) + 1;
-}
+static void clipboard_paste_overwrite(int suppress, int grow);
+static void clipboard_paste_insert(void);
+static void clipboard_paste_mix_notes(int clip, int xlate);
+static void clipboard_paste_mix_fields(int prec, int xlate);
+static void clipboard_free(void);
 
-static void copyin_addrow(int *copyin_x, int *copyin_y)
-{
-	*copyin_x=0;
-	(*copyin_y) = (*copyin_y) + 1;
-}
+enum {
+	PATTERN_COPYIN_INVALID = 0, /* reset to this after we're done copying */
+	PATTERN_COPYIN_INSERT,
+	PATTERN_COPYIN_OVERWRITE,
+	PATTERN_COPYIN_OVERWRITE_GROW,
+	PATTERN_COPYIN_MIX_NOTES,
+	PATTERN_COPYIN_MIX_FIELDS
+};
 
-static int pattern_selection_system_paste(SCHISM_UNUSED int cb, const void *data)
+static int pattern_copyin_behavior = PATTERN_COPYIN_INVALID;
+
+/* ok, if this was meant to just be any "arbitrary" data, why the hell does it
+ * not pass the length as well? this is stupid! */
+static int pattern_selection_system_paste_modplug(const char *str, struct pattern_snap *snap)
 {
+	/* magic bytes and their respective effect mapping functions */
+	static const struct {
+		char magic[3];
+		int (*map)(char f);
+	} fx_maps[] = {
+		{" IT", get_effect_number},
+		{"S3M", get_effect_number},
+		{" XM", get_ptm_effect_number},
+		{"MOD", get_ptm_effect_number},
+		/* maybe more? */
+	};
+
 	int copyin_x, copyin_y;
+	int copyin_w, copyin_h;
 	int (*fx_map)(char f);
-	const char *str;
-	int x;
+	int x, i;
 	unsigned int scantmp;
+	disko_t ds;
 
-	if (!data) return 0;
-	str = (const char *)data;
-
+	/* WTF */
 	for (x = 0; str[x] && str[x] != '\n'; x++);
-	if (x <= 11) return 0;
-	if (!str[x] || str[x+1] != '|') return 0;
-	if (str[x-1] == '\r') x--;
-	if ((str[x-3] == ' ' && str[x-2] == 'I' && str[x-1] == 'T')
-	|| (str[x-3] == 'S' && str[x-2] == '3' && str[x-1] == 'M')) {
-		/* s3m effects */
-		fx_map = get_effect_number;
-	} else if ((str[x-3] == ' ' && str[x-2] == 'X' && str[x-1] == 'M')
-	|| (str[x-3] == 'M' && str[x-2] == 'O' && str[x-1] == 'D')) {
-		/* ptm effects */
-		fx_map = get_ptm_effect_number;
-	} else {
+	if (x <= 11)
 		return 0;
-	}
-	if (str[x] == '\r') x++;
-	str += x+2;
+
+	if (!str[x] || str[x+1] != '|')
+		return 0;
+
+	if (str[x-1] == '\r')
+		x--;
+
+	fx_map = NULL;
+
+	for (i = 0; i < (int)ARRAY_SIZE(fx_maps); i++)
+		if (!memcmp(&str[x - 3], fx_maps[i].magic, 3))
+			fx_map = fx_maps[i].map;
+
+	/* invalid or not implemented */
+	if (!fx_map)
+		return 0;
+
+	if (str[x] == '\r')
+		x++;
+
+	str += x + 2;
+	copyin_w = copyin_h = 0;
 	copyin_x = copyin_y = 0;
+
+	/* estimate for 100 rows of data. */
+	if (disko_memopen_estimate(&ds, sizeof(song_note_t) * MAX_CHANNELS * 100) < 0)
+		return 0;
+
 	/* okay, let's start parsing */
 	while (*str) {
 		song_note_t n = {0};
 
-		if (!str[0] || !str[1] || !str[2]) break;
+		if (!str[0] || !str[1] || !str[2])
+			break;
+
 		switch (*str) {
-		case 'C': case 'c': n.note = 1; break;
-		case 'D': case 'd': n.note = 3; break;
-		case 'E': case 'e': n.note = 5; break;
-		case 'F': case 'f': n.note = 6; break;
-		case 'G': case 'g': n.note = 8; break;
-		case 'A': case 'a': n.note = 10;break;
-		case 'B': case 'b': n.note = 12;break;
+		case 'C': case 'c': n.note = 1;  break;
+		case 'D': case 'd': n.note = 3;  break;
+		case 'E': case 'e': n.note = 5;  break;
+		case 'F': case 'f': n.note = 6;  break;
+		case 'G': case 'g': n.note = 8;  break;
+		case 'A': case 'a': n.note = 10; break;
+		case 'B': case 'b': n.note = 12; break;
 		default: n.note = 0;
 		};
-		/* XXX shouldn't this be note-- for flat? */
-		if (str[1] == '#' || str[1] == 'b') n.note++;
+
+		if (n.note) {
+			/* handle sharp/flat */
+			if (str[1] == '#') n.note++;
+			else if (str[1] == 'b') n.note--;
+		}
+
 		switch (*str) {
-		case '=': n.note = NOTE_OFF; break;
-		case '^': n.note = NOTE_CUT; break;
+		case '=': n.note = NOTE_OFF;  break;
+		case '^': n.note = NOTE_CUT;  break;
 		case '~': n.note = NOTE_FADE; break;
-		case ' ': case '.': n.note = 0; break;
+		case ' ': SCHISM_FALLTHROUGH;
+		case '.': n.note = 0;         break;
 		default:
 			n.note += ((str[2] - '0') * 12);
 			break;
 		};
+
 		str += 3;
+
 		/* instrument number */
-		if (sscanf(str, "%02u", &scantmp) == 1)
-			n.instrument = scantmp;
-		else
-			n.instrument = 0;
+		n.instrument = (sscanf(str, "%02u", &scantmp) == 1)
+			? scantmp
+			: 0;
+
 		str += 2;
+
 		while (*str) {
+			/* supposedly there can be multiple effects? */
 			if (*str == '|' || *str == '\r' || *str == '\n') break;
 			if (!str[0] || !str[1] || !str[2]) break;
 			if (*str >= 'a' && *str <= 'z') {
-				if (sscanf(str+1, "%02u", &scantmp) == 1)
-					n.volparam = scantmp;
-				else
-					n.volparam = 0;
+				n.volparam = (sscanf(str+1, "%02u", &scantmp) == 1)
+					? scantmp
+					: 0;
+
 				switch (*str) {
 					case 'v': n.voleffect = VOLFX_VOLUME; break;
 					case 'p': n.voleffect = VOLFX_PANNING; break;
@@ -669,23 +707,107 @@ static int pattern_selection_system_paste(SCHISM_UNUSED int cb, const void *data
 				};
 			} else {
 				n.effect = fx_map(*str);
-				if (sscanf(str+1, "%02X", &scantmp) == 1)
-					n.param = scantmp;
-				else
-					n.param = 0;
+				n.param = (sscanf(str+1, "%02X", &scantmp) == 1)
+					? scantmp
+					: 0;
 			}
 			str += 3;
 		}
-		copyin_addnote(&n, &copyin_x, &copyin_y);
-		if (str[0] == '\r' || str[0] == '\n') {
-			while (str[0] == '\r' || str[0] == '\n') str++;
-			copyin_addrow(&copyin_x, &copyin_y);
+
+		if (copyin_x < MAX_CHANNELS) {
+			disko_write(&ds, &n, sizeof(n));
+			copyin_x++;
 		}
+
+		/* FIXME: we shouldn't be getting carriage returns here anyway! */
+		if (*str == '\r' || *str == '\n') {
+			/* skip any extra newlines */
+			while (*str == '\r' || *str == '\n')
+				str++;
+
+			/* ok */
+			copyin_w = MAX(copyin_x, copyin_w);
+			copyin_h++;
+
+			for (; copyin_x < MAX_CHANNELS; copyin_x++) {
+				song_note_t none = {0};
+				disko_write(&ds, &n, sizeof(n));
+			}
+
+			/* reset */
+			copyin_x = 0;
+		}
+
 		if (str[0] != '|') break;
+
 		str++;
 	}
+
+	/* free anything currently in the clipboard */
+	clipboard_free();
+
+	/* now copy the data into the snap */
+	snap_copy_from_pattern((song_note_t *)ds.data, ds.length / (MAX_CHANNELS * sizeof(song_note_t)), snap, 0, 0, copyin_w, copyin_h);
+
+	disko_memclose(&ds, 0);
+
 	return 1;
 }
+
+static int pattern_selection_system_paste(SCHISM_UNUSED int cb, const void *data)
+{
+	/* this is a bug */
+	SCHISM_RUNTIME_ASSERT(pattern_copyin_behavior != PATTERN_COPYIN_INVALID,
+		"by this point we should have a copyin behavior set");
+
+	if (data) {
+		static int (*const impls[])(const char *str, struct pattern_snap *snap) = {
+			/* this is here so that we could possibly handle other clipboard formats. */
+			pattern_selection_system_paste_modplug,
+		};
+
+		/* if we actually got some data, send it to the parsers */
+		size_t i;
+
+		for (i = 0; i < ARRAY_SIZE(impls); i++)
+			if (impls[i]((const char *)data, &clipboard))
+				break;
+	}
+
+	/* now, based on the behavior previously chosen: */
+
+	switch (pattern_copyin_behavior) {
+	case PATTERN_COPYIN_INSERT:
+		/* Alt-P */
+		clipboard_paste_insert();
+		break;
+	case PATTERN_COPYIN_OVERWRITE:
+		/* Alt-O */
+		clipboard_paste_overwrite(0, 0);
+		break;
+	case PATTERN_COPYIN_OVERWRITE_GROW:
+		/* 2*Alt-O */
+		clipboard_paste_overwrite(0, 1);
+		break;
+	case PATTERN_COPYIN_MIX_NOTES:
+		/* ??? */
+		clipboard_paste_mix_notes(0, 0);
+		break;
+	case PATTERN_COPYIN_MIX_FIELDS:
+		clipboard_paste_mix_fields(0, 0);
+		break;
+	default:
+		/* SCHISM_UNREACHABLE; */
+		break;
+	}
+
+	/* reset */
+	pattern_copyin_behavior = PATTERN_COPYIN_INVALID;
+
+	return 1;
+}
+
+/* this always uses the modplug stuff */
 static void pattern_selection_system_copyout(void)
 {
 	char *str;
@@ -1990,21 +2112,19 @@ static void snap_paste(struct pattern_snap *s, int x, int y, int xlate)
 	pattern_selection_system_copyout();
 }
 
-static void snap_copy(struct pattern_snap *s, int x, int y, int width, int height)
+static void snap_copy_from_pattern(song_note_t *pattern, int total_rows,
+	struct pattern_snap *s, int x, int y, int width, int height)
 {
-	song_note_t *pattern;
-	int row, total_rows, len;
+	int row, len;
 
 	memused_songchanged();
 	s->channels = width;
 	s->rows = height;
 
-	total_rows = song_get_pattern(current_pattern, &pattern);
 	s->data = mem_alloc(len = (sizeof(song_note_t) * s->channels * s->rows));
 
-	if (s->rows > total_rows) {
-		memset(s->data, 0,  len);
-	}
+	if (s->rows > total_rows)
+		memset(s->data, 0, len);
 
 	s->x = x; s->y = y;
 	if (x == 0 && width == 64) {
@@ -2017,6 +2137,17 @@ static void snap_copy(struct pattern_snap *s, int x, int y, int width, int heigh
 			       s->channels * sizeof(song_note_t));
 		}
 	}
+}
+
+static void snap_copy(struct pattern_snap *s, int x, int y, int width, int height)
+{
+	song_note_t *pattern;
+	int total_rows;
+
+	total_rows = song_get_pattern(current_pattern, &pattern);
+
+	/* forward */
+	snap_copy_from_pattern(pattern, total_rows, s, x, y, width, height);
 }
 
 static int snap_honor_mute(struct pattern_snap *s, int base_channel)
@@ -3590,24 +3721,27 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (status.last_keysym == SCHISM_KEYSYM_o) {
-			clipboard_paste_overwrite(0, 1);
+			pattern_copyin_behavior = PATTERN_COPYIN_OVERWRITE_GROW;
 		} else {
-			clipboard_paste_overwrite(0, 0);
+			pattern_copyin_behavior = PATTERN_COPYIN_OVERWRITE;
 		}
+		status.flags |= CLIPPY_PASTE_BUFFER;
 		break;
 	case SCHISM_KEYSYM_p:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		clipboard_paste_insert();
+		pattern_copyin_behavior = PATTERN_COPYIN_INSERT;
+		status.flags |= CLIPPY_PASTE_BUFFER;
 		break;
 	case SCHISM_KEYSYM_m:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (status.last_keysym == SCHISM_KEYSYM_m) {
-			clipboard_paste_mix_fields(0, 0);
+			pattern_copyin_behavior = PATTERN_COPYIN_MIX_FIELDS;
 		} else {
-			clipboard_paste_mix_notes(0, 0);
+			pattern_copyin_behavior = PATTERN_COPYIN_MIX_NOTES;
 		}
+		status.flags |= CLIPPY_PASTE_BUFFER;
 		break;
 	case SCHISM_KEYSYM_f:
 		if (k->state == KEY_RELEASE)
