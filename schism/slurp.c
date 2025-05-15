@@ -311,7 +311,7 @@ static int64_t slurp_memory_tell_(slurp_t *t)
 	return t->internal.memory.pos;
 }
 
-static size_t slurp_memory_length_(slurp_t *t)
+static uint64_t slurp_memory_length_(slurp_t *t)
 {
 	return t->internal.memory.length;
 }

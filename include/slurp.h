@@ -159,6 +159,6 @@ int slurp_getc(slurp_t *t); /* returns unsigned char cast to int, or EOF */
 int slurp_eof(slurp_t *t);  /* 1 = end of file */
 int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
 
-size_t slurp_length(slurp_t *t);
+uint64_t slurp_length(slurp_t *t);
 
 #endif /* SCHISM_SLURP_H */
