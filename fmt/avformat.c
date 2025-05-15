@@ -30,6 +30,9 @@
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 
+/* avio buffer size, in bytes */
+#define SCHISM_AVFORMAT_BUFFER_SIZE 65536
+
 /* support for ffmpeg's libavformat. this gives us basically any file format
  * imaginable :) */
 
@@ -94,7 +97,11 @@ static void schism_av_vlog(void *ptr, int level, const char *fmt, va_list ap)
 	/* cut off any excess */
 	str_rtrim(s);
 
-	log_appendf(color, " FFMPEG: %s -- %s", avc->item_name(ptr), s);
+	if (ptr) {
+		log_appendf(color, " FFMPEG: %s -- %s", avc->item_name(ptr), s);
+	} else {
+		log_appendf(color, " FFMPEG: %s", s);
+	}
 
 	free(s);
 }
@@ -107,7 +114,7 @@ static int avfmt_read_packet(void *opaque, uint8_t *buf, int buf_size)
 	/* cast to int is safe here */
 	r = slurp_read(s, buf, buf_size);
 	if (!r)
-		return -1; /* thanks ffmpeg very cool */
+		return (slurp_eof(s) ? AVERROR_EOF : AVERROR(errno));
 
 	return r;
 }
@@ -117,7 +124,7 @@ static int64_t avfmt_seek(void *opaque, int64_t offset, int whence)
 	slurp_t *s = opaque;
 	int r;
 
-	if (whence & AVSEEK_SIZE)
+	if (whence == AVSEEK_SIZE)
 		return slurp_length(s);
 
 	/* ignore this stupid flag */
@@ -133,14 +140,10 @@ static int64_t avfmt_seek(void *opaque, int64_t offset, int whence)
 	}
 
 	r = slurp_seek(s, offset, whence);
-	if (r < 0)
-		return r;
 
-	/* WHY ? */
-	return slurp_tell(s);
+	/* do we even set errno ?? */
+	return (r < 0) ? AVERROR(errno) : r;
 }
-
-#define SCHISM_AVFORMAT_BUFFER_SIZE 8096
 
 static int sample_fmt_to_sfflags(enum AVSampleFormat fmt, int channels, uint32_t *flags)
 {
@@ -346,23 +349,32 @@ fail:
 
 static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 {
-	/* nope */
-	if (!avformat_wasinit)
-		return 0;
-
 	int success = 0;
 	unsigned char *buffer = NULL;
 	AVIOContext *ioctx = NULL;
 	AVFormatContext *fmtctx = NULL;
 	int astr;
+	int use_ioctx = !(file && file->path);
+
+	/* nope */
+	if (!avformat_wasinit)
+		return 0;
 
 	buffer = schism_av_malloc(SCHISM_AVFORMAT_BUFFER_SIZE);
 	if (!buffer)
 		goto fail;
 
-	ioctx = schism_avio_alloc_context(buffer, sizeof(buffer), 0, s, avfmt_read_packet, NULL, avfmt_seek);
-	if (!ioctx)
-		goto fail;
+	/* UGLY HACK: For whatever reason, when we use the slurp avio context,
+	 * schism completely hangs when reading some files. My workaround for
+	 * now is just to ignore the slurp context and use ffmpeg's builtin one,
+	 * which seems to get around it -- but ideally we would do something
+	 * other than this, because this is stupid.
+	 *   --paper */
+	if (use_ioctx) {
+		ioctx = schism_avio_alloc_context(buffer, sizeof(buffer), 0, s, avfmt_read_packet, NULL, avfmt_seek);
+		if (!ioctx)
+			goto fail;
+	}
 
 	fmtctx = schism_avformat_alloc_context();
 	if (!fmtctx)
@@ -370,12 +382,8 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 
 	fmtctx->pb = ioctx;
 
-	/* okay, we need to pass a dummy filepath that will not parse
-	 * correctly on 99% of systems, so it uses the pb struct */
-	if (schism_avformat_open_input(&fmtctx, NULL, NULL, NULL) < 0) {
-		log_appendf(1, "nope");
+	if (schism_avformat_open_input(&fmtctx, (file ? file->path : NULL), NULL, NULL) < 0)
 		goto fail;
-	}
 
 	if (schism_avformat_find_stream_info(fmtctx, NULL) < 0)
 		goto fail;
