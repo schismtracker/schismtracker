@@ -52,7 +52,7 @@ static int d00_header_read(struct d00_header *hdr, slurp_t *fp)
 	// we check if the length is larger than UINT16_MAX because
 	// the parapointers wouldn't be able to fit all of the bits
 	// otherwise. 119 is just the size of the header.
-	const size_t fplen = slurp_length(fp);
+	const uint64_t fplen = slurp_length(fp);
 	if (fplen <= 119 || fplen > UINT16_MAX)
 		return 0;
 

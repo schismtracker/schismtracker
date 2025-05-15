@@ -37,16 +37,16 @@ enum {
 typedef struct slurp_struct_ slurp_t;
 struct slurp_struct_ {
 	/* stdio-style interfaces:
-	 * seek, tell, and length are all required to be implemented.
-	 * peek can be NULL if read is implemented, and vice versa.
-	 *
-	 * peek is a custom schism construct that is like fread, but the
-	 * file position does not change after it is done. */
-	int (*seek)(slurp_t *, int64_t, int);
-	int64_t (*tell)(slurp_t *);
-	size_t (*peek)(slurp_t *, void *, size_t);
-	size_t (*read)(slurp_t *, void *, size_t);
-	size_t (*length)(slurp_t *);
+	 * - seek, tell, and length are all required to be implemented.
+	 * - peek can be NULL if read is implemented, and vice versa.
+	 *   (however, if you can implement both, that is preferred)
+	 * - peek is a custom schism construct that is like fread, but the
+	 *   file position does not change after it is done. */
+	int (*seek)(slurp_t *t, int64_t offset, int whence);
+	int64_t (*tell)(slurp_t *t);
+	size_t (*peek)(slurp_t *t, void *ptr, size_t count);
+	size_t (*read)(slurp_t *t, void *ptr, size_t count);
+	uint64_t (*length)(slurp_t *t);
 
 	/* this one is optional, and will use the default implementation
 	 * in slurp.c if it's NULL */
@@ -62,7 +62,7 @@ struct slurp_struct_ {
 	union {
 		struct {
 			unsigned char *data;
-			unsigned char *data2; /* for 2mem */
+			unsigned char *data2; /* for 2mem (this allows us to share tell,seek,length impl) */
 			size_t length;
 			size_t pos;
 
@@ -84,10 +84,10 @@ struct slurp_struct_ {
 			FILE *fp;
 
 			/* in lieu of a simple and fast way to get the
-			 * length of a stream (have to do gymnastics)
+			 * length of a stream (have to do gymnastics),
 			 * cache this on open. if it gets changed, we'll
 			 * probably fail anyway. */
-			size_t length;
+			uint64_t length; /* 64-bit for large file support */
 		} stdio;
 
 		struct {
@@ -98,7 +98,7 @@ struct slurp_struct_ {
 
 			struct {
 				int64_t off;
-				size_t len;
+				uint64_t len;
 			} data[2];
 			int current; /* which data is currently being used */
 

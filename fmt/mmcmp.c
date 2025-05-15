@@ -43,7 +43,7 @@ typedef struct mm_subblock {
 
 static int read_mmcmp_header(mm_header_t *hdr, slurp_t *fp)
 {
-	const size_t memsize = slurp_length(fp);
+	const uint64_t memsize = slurp_length(fp);
 
 #define READ_VALUE(name) \
 	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)

@@ -65,7 +65,7 @@ uint32_t it_decompress8(void *dest, uint32_t len, slurp_t *fp, int it215, int ch
 	if (startpos < 0)
 		return 0; // wat
 
-	const size_t filelen = slurp_length(fp);
+	const uint64_t filelen = slurp_length(fp);
 
 	destpos = (int8_t *) dest;
 
@@ -169,7 +169,7 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 	if (startpos < 0)
 		return 0; // wat
 
-	const size_t filelen = slurp_length(fp);
+	const uint64_t filelen = slurp_length(fp);
 
 	destpos = (int16_t *) dest;
 
@@ -279,7 +279,7 @@ uint32_t mdl_decompress8(void *dest, uint32_t len, slurp_t *fp)
 	if (startpos < 0)
 		return 0; // wat
 
-	const size_t filelen = slurp_length(fp);
+	const uint64_t filelen = slurp_length(fp);
 
 	uint32_t bitnum = 32;
 	uint8_t dlt = 0;
@@ -329,7 +329,7 @@ uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp)
 	if (startpos < 0)
 		return 0; // wat
 
-	const size_t filelen = slurp_length(fp);
+	const uint64_t filelen = slurp_length(fp);
 
 	// first 4 bytes indicate packed length
 	uint32_t bitnum = 32;

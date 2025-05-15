@@ -201,7 +201,7 @@ static int dsm_process_pattern(const void *data, size_t size, void *userdata)
 #define DSM_ASSERT_OFFSET() \
 	do { \
 		if (slurp_eof(&fp)) { \
-			log_appendf(4, " WARNING: Offset (%" PRId64 ") passed length (%" PRIuSZ ") while parsing pattern!", slurp_tell(&fp), slurp_length(&fp)); \
+			log_appendf(4, " WARNING: Offset (%" PRId64 ") passed length (%" PRIu64 ") while parsing pattern!", slurp_tell(&fp), slurp_length(&fp)); \
 			return 0; \
 		} \
 	} while (0)

@@ -33,14 +33,14 @@ static int slurp_stdio_open_(slurp_t *t, const char *filename);
 static int slurp_stdio_open_file_(slurp_t *t, FILE *fp);
 static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence);
 static int64_t slurp_stdio_tell_(slurp_t *t);
-static size_t slurp_stdio_length_(slurp_t *t);
+static uint64_t slurp_stdio_length_(slurp_t *t);
 static size_t slurp_stdio_read_(slurp_t *t, void *ptr, size_t count);
 static int slurp_stdio_eof_(slurp_t *t);
 static void slurp_stdio_closure_(slurp_t *t);
 
 static int slurp_memory_seek_(slurp_t *t, int64_t offset, int whence);
 static int64_t slurp_memory_tell_(slurp_t *t);
-static size_t slurp_memory_length_(slurp_t *t);
+static uint64_t slurp_memory_length_(slurp_t *t);
 static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count);
 static int slurp_memory_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
 static void slurp_memory_closure_free_(slurp_t *t);
@@ -251,7 +251,7 @@ static int64_t slurp_stdio_tell_(slurp_t *t)
 	return ftell(t->internal.stdio.fp);
 }
 
-static size_t slurp_stdio_length_(slurp_t *t)
+static uint64_t slurp_stdio_length_(slurp_t *t)
 {
 	return t->internal.stdio.length;
 }
@@ -404,7 +404,7 @@ static size_t slurp_2mem_peek_(slurp_t *t, void *ptr, size_t count)
  * were sequential, since sf2 allows for stereo samples to not be
  * in the split stereo format schism likes to have. */
 
-static inline size_t sf2_slurp_length(slurp_t *s)
+static inline uint64_t sf2_slurp_length(slurp_t *s)
 {
 	return s->internal.sf2.data[0].len + s->internal.sf2.data[1].len;
 }
@@ -523,6 +523,14 @@ int64_t slurp_tell(slurp_t *t)
 	return t->tell(t);
 }
 
+static inline SCHISM_ALWAYS_INLINE void slurp_fill_remaining(void *ptr, size_t read, size_t count)
+{
+	if (count > read) {
+		/* short read -- fill in any extra bytes with zeroes */
+		memset((unsigned char *)ptr + read, 0, count - read);
+	}
+}
+
 size_t slurp_peek(slurp_t *t, void *ptr, size_t count)
 {
 	size_t read_bytes;
@@ -543,9 +551,7 @@ size_t slurp_peek(slurp_t *t, void *ptr, size_t count)
 		slurp_seek(t, pos, SEEK_SET);
 	}
 
-	if (count > read_bytes)
-		/* short read -- fill in any extra bytes with zeroes */
-		memset((unsigned char *)ptr + read_bytes, 0, count - read_bytes);
+	slurp_fill_remaining(ptr, read_bytes, count);
 
 	return read_bytes;
 }
@@ -564,15 +570,12 @@ size_t slurp_read(slurp_t *t, void *ptr, size_t count)
 		slurp_seek(t, count, SEEK_CUR);
 	}
 
-	if (count > read_bytes) {
-		/* short read -- fill in any extra bytes with zeroes */
-		memset((unsigned char *)ptr + read_bytes, 0, count - read_bytes);
-	}
+	slurp_fill_remaining(ptr, read_bytes, count);
 
 	return read_bytes;
 }
 
-size_t slurp_length(slurp_t *t)
+uint64_t slurp_length(slurp_t *t)
 {
 	return t->length(t);
 }

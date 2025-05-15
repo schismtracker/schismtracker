@@ -61,7 +61,7 @@ static int read_mus_header(struct mus_header *hdr, slurp_t *fp)
 	hdr->scorelen   = bswapLE16(hdr->scorelen);
 	hdr->scorestart = bswapLE16(hdr->scorestart);
 
-	if (((size_t)hdr->scorestart + hdr->scorelen) > slurp_length(fp))
+	if (((uint64_t)hdr->scorestart + hdr->scorelen) > slurp_length(fp))
 		return 0;
 
 	slurp_seek(fp, 8, SEEK_CUR); // skip
@@ -126,7 +126,7 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lfla
 	uint8_t patch_samples[128] = {0};
 	uint8_t patch_percussion[128] = {0};
 	uint8_t nsmp = 1; // Next free sample
-	size_t len;
+	uint64_t len;
 
 	if (!read_mus_header(&hdr, fp))
 		return LOAD_UNSUPPORTED;

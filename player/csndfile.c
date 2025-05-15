@@ -614,6 +614,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 	// Please don't change them back to signed ;)
 	switch (flags) {
 
+/* should be WRITE_INTERLEAVED_SAMPLE */
 #define WRITE_FULL_SAMPLE(BITS, VARS, PRE, LOOPPRE, LOOPPOST) \
 	do { \
 		const uint##BITS##_t *data; \
@@ -635,9 +636,26 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 
 #define WRITE_MONO_SAMPLE_EX(BITS, VARS, LOOPPRE, LOOPPOST) WRITE_FULL_SAMPLE(BITS, VARS, /* none */, LOOPPRE, LOOPPOST)
 
-#define WRITE_MONO_SAMPLE_PCMS(BITS, LOOPPRE) WRITE_MONO_SAMPLE_EX(BITS, /* none */, /* none */, /* none */)
-#define WRITE_MONO_SAMPLE_PCMU(BITS, LOOPPRE) WRITE_MONO_SAMPLE_EX(BITS, /* none */, { x ^= (UINT##BITS##_C(1) << (BITS - 1)); LOOPPRE }, /* none */)
-#define WRITE_MONO_SAMPLE_PCMD(BITS, LOOPPRE) WRITE_MONO_SAMPLE_EX(BITS, uint##BITS##_t delta;, { x -= delta; LOOPPRE }, { delta = data[pos]; })
+#define WRITE_MONO_SAMPLE_PCMS(BITS, LOOPPRE) \
+	WRITE_MONO_SAMPLE_EX(BITS, /* none */, /* none */, /* none */)
+
+#define WRITE_MONO_SAMPLE_PCMU(BITS, LOOPPRE) \
+	WRITE_MONO_SAMPLE_EX(BITS, \
+		/* none */ \
+	, { \
+		x ^= (UINT##BITS##_C(1) << (BITS - 1)); \
+		LOOPPRE \
+	}, /* none */)
+
+#define WRITE_MONO_SAMPLE_PCMD(BITS, LOOPPRE) \
+	WRITE_MONO_SAMPLE_EX(BITS, \
+		uint##BITS##_t delta; \
+	, { \
+		x -= delta; \
+		LOOPPRE \
+	}, { \
+		delta = data[pos]; \
+	})
 
 #define WRITE_STEREO_SAMPLE_EX(BITS, VARS, LOOPPRE, LOOPPOST) \
 	do { \
@@ -662,14 +680,50 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 	} while (0)
 
 #define WRITE_STEREO_SAMPLE_PCMS(BITS, LOOPPRE) WRITE_STEREO_SAMPLE_EX(BITS, /* none */, /* none */, /* none */)
-#define WRITE_STEREO_SAMPLE_PCMU(BITS, LOOPPRE) WRITE_STEREO_SAMPLE_EX(BITS, /* none */, { x ^= (UINT##BITS##_C(1) << (BITS - 1)); LOOPPRE }, /* none */)
-#define WRITE_STEREO_SAMPLE_PCMD(BITS, LOOPPRE) WRITE_STEREO_SAMPLE_EX(BITS, uint##BITS##_t delta[2]; uint32_t deltapos;, { deltapos = (pos % 2); x -= delta[deltapos]; LOOPPRE }, { delta[deltapos] = data[pos]; })
+
+#define WRITE_STEREO_SAMPLE_PCMU(BITS, LOOPPRE) \
+	WRITE_STEREO_SAMPLE_EX(BITS, \
+		/* none */ \
+	, { \
+		x ^= (UINT##BITS##_C(1) << (BITS - 1)); \
+		LOOPPRE \
+	}, /* none */)
+
+#define WRITE_STEREO_SAMPLE_PCMD(BITS, LOOPPRE) \
+	WRITE_STEREO_SAMPLE_EX(BITS, \
+		uint##BITS##_t delta[2]; \
+		uint32_t deltapos;
+	, { \
+		deltapos = (pos % 2); \
+		x -= delta[deltapos]; \
+		LOOPPRE \
+	}, { \
+		delta[deltapos] = data[pos]; \
+	})
 
 #define WRITE_STEREO_INTERLEAVED_SAMPLE_EX(BITS, VARS, LOOPPRE, LOOPPOST) WRITE_FULL_SAMPLE(BITS, VARS, { len *= 2; }, LOOPPRE, LOOPPOST)
 
 #define WRITE_STEREO_INTERLEAVED_SAMPLE_PCMS(BITS, LOOPPRE) WRITE_STEREO_INTERLEAVED_SAMPLE_EX(BITS, /* none */, /* none */, /* none */)
-#define WRITE_STEREO_INTERLEAVED_SAMPLE_PCMU(BITS, LOOPPRE) WRITE_STEREO_INTERLEAVED_SAMPLE_EX(BITS, /* none */, { x ^= (UINT##BITS##_C(1) << (BITS - 1)); LOOPPRE }, /* none */)
-#define WRITE_STEREO_INTERLEAVED_SAMPLE_PCMD(BITS, LOOPPRE) WRITE_STEREO_INTERLEAVED_SAMPLE_EX(BITS, uint##BITS##_t delta[2]; uint32_t deltapos;, { deltapos = (pos % 2); x -= delta[deltapos]; LOOPPRE }, { delta[deltapos] = data[pos]; })
+
+#define WRITE_STEREO_INTERLEAVED_SAMPLE_PCMU(BITS, LOOPPRE) \
+	WRITE_STEREO_INTERLEAVED_SAMPLE_EX(BITS, \
+		/* none */ \
+	, { \
+		x ^= (UINT##BITS##_C(1) << (BITS - 1)); \
+		LOOPPRE \
+	}, /* none */)
+
+#define WRITE_STEREO_INTERLEAVED_SAMPLE_PCMD(BITS, LOOPPRE) \
+	WRITE_STEREO_INTERLEAVED_SAMPLE_EX(BITS, \
+		uint##BITS##_t delta[2];\
+		uint32_t deltapos; \
+	, { \
+		deltapos = (pos % 2); \
+		x -= delta[deltapos]; \
+		LOOPPRE \
+	}, { \
+		delta[deltapos] = data[pos]; \
+	})
 
 #define WRITE_SAMPLE_EX(BITS, ENDIAN, LOOPPRE, CHNS, NAME) \
 	case SF(BITS,CHNS,ENDIAN,PCMS): \
@@ -687,7 +741,9 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 	WRITE_SAMPLE_EX(BITS, ENDIAN, LOOPPRE, SS, STEREO) \
 	WRITE_SAMPLE_EX(BITS, ENDIAN, LOOPPRE, SI, STEREO_INTERLEAVED)
 
-	/* okay. */
+	/* TODO: for signed PCM stereo interleaved and mono, we can
+	 * simply write the entire buffer to disk, which will definitely
+	 * be faster than what we're doing right now :) */
 	WRITE_SAMPLE(8, LE, /* none */)
 	WRITE_SAMPLE(8, BE, /* none */)
 
@@ -720,7 +776,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 
 uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 {
-	const size_t memsize = slurp_length(fp);
+	const uint64_t memsize = slurp_length(fp);
 	uint32_t len = 0, mem;
 
 	if (sample->flags & CHN_ADLIB) return 0; // no sample data

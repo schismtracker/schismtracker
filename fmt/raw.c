@@ -32,7 +32,7 @@
 
 int fmt_raw_load_sample(slurp_t *fp, song_sample_t *smp)
 {
-	size_t len = slurp_length(fp);
+	uint64_t len = slurp_length(fp);
 
 	smp->c5speed = 8363;
 	smp->volume = 64 * 4;

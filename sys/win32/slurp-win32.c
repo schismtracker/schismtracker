@@ -181,7 +181,7 @@ static int64_t slurp_win32_tell_(slurp_t *t)
 	return (int64_t)x << 32 | r;
 }
 
-static size_t slurp_win32_length_(slurp_t *t)
+static uint64_t slurp_win32_length_(slurp_t *t)
 {
 	DWORD lo, hi;
 
