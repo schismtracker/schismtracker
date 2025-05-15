@@ -692,7 +692,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 #define WRITE_STEREO_SAMPLE_PCMD(BITS, LOOPPRE) \
 	WRITE_STEREO_SAMPLE_EX(BITS, \
 		uint##BITS##_t delta[2]; \
-		uint32_t deltapos;
+		uint32_t deltapos; \
 	, { \
 		deltapos = (pos % 2); \
 		x -= delta[deltapos]; \
