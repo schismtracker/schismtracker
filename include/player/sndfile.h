@@ -19,7 +19,10 @@
 
 
 #define MOD_AMIGAC2             0x1AB
-#define MAX_SAMPLE_LENGTH       16000000
+#define MAX_SAMPLE_LENGTH       0x3FFFFFFF /* maximum sample size, in units of samples.
+                                            * (0xFFFFFFFF / 2 (stereo) / 2 (16-bit))
+                                            * NOTE: OpenMPT uses 0x10000000, is there
+                                            * something I'm missing here? */
 #define MAX_SAMPLE_RATE         192000
 #define MAX_ORDERS              256
 #define MAX_PATTERNS            240
@@ -31,7 +34,7 @@
 #define MAX_EQ_BANDS            6
 #define MAX_MESSAGE             8000
 #define MAX_INTERPOLATION_LOOKAHEAD 4
-#define MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE 16 // Borrowed from OpenMPT
+#define MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE 16 /* Borrowed from OpenMPT */
 #define MAX_SAMPLING_POINT_SIZE 4
 
 #define MAX_MIDI_CHANNELS       16
