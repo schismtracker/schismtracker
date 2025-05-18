@@ -68,6 +68,52 @@ static void (*schism_avcodec_free_context)(AVCodecContext **avctx);
 
 static int avformat_wasinit = 0;
 
+static uint32_t schism_avfmt_get_length_estimate(AVFormatContext *fmtctx, int astr)
+{
+	uint64_t length;
+	double duration_secs;
+
+	/* Okay, some notes:
+	 *
+	 *  1. Most files get the stream duration filled in. At least pretty much
+	 *     everything in my media file server has it all filled in.
+	 *  2. There are some files that do not fill in stream durations, but DO fill
+	 *     in the duration in the format context. FFmpeg documentation states that
+	 *     this should always be the case; as in the stream duration and format
+	 *     duration are mutually exclusive members. I can only find one batch of
+	 *     files that fit this description, which is my copy of Azumanga Daioh
+	 *     (AVI vhsrip, MP3 audio codec).
+	 *  3. There are probably other cases that I have not handled here.
+	 *
+	 * That being said, obviously this duration is not exact, and only an estimate.
+	 * Exact results can only be obtained by decoding the entire file(!), which we
+	 * don't do for obvious reasons :)
+	 *   --paper */
+
+	if (fmtctx->streams[astr]->duration >= 0) {
+		/* log_appendf(1, "FFMPEG: using stream duration"); */
+
+		duration_secs = (double)fmtctx->streams[astr]->duration
+			* fmtctx->streams[astr]->time_base.num
+			/ fmtctx->streams[astr]->time_base.den;
+
+		length = duration_secs * fmtctx->streams[astr]->codecpar->sample_rate;
+	} else if (fmtctx->duration >= 0) {
+		/* log_appendf(1, "FFMPEG: using format duration"); */
+
+		duration_secs = (double)fmtctx->duration / AV_TIME_BASE;
+
+		length = duration_secs * fmtctx->streams[astr]->codecpar->sample_rate;
+	} else {
+		/* log_appendf(1, "FFMPEG: using frames * frame size"); */
+
+		/* last resort */
+		length = fmtctx->streams[astr]->nb_frames * fmtctx->streams[astr]->codecpar->frame_size;
+	}
+
+	return MIN(length, MAX_SAMPLE_LENGTH);
+}
+
 /* custom logging callback; we print stuff to the schism-log ;) */
 
 static void schism_av_vlog(void *ptr, int level, const char *fmt, va_list ap)
@@ -249,8 +295,7 @@ static int avfmt_read_to_sample(slurp_t *s, AVFormatContext *fmtctx, int astr, s
 		 * improves speeds quite a bit since we don't have to keep
 		 * reallocating */
 		if (fmtctx->streams[astr]->nb_frames > 0) {
-			uint32_t bpc = fmtctx->streams[astr]->nb_frames * fmtctx->streams[astr]->codecpar->frame_size;
-			bpc = MIN(bpc, MAX_SAMPLE_LENGTH);
+			uint64_t bpc = schism_avfmt_get_length_estimate(fmtctx, astr);
 			bpc *= bps;
 
 			switch (flags & SF_CHN_MASK) {
@@ -392,14 +437,15 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 	if (astr < 0)
 		goto fail;
 
-	/* this seems to be in static memory (not allocated);
-	 * so I think we're fine just pointing to it */
 	if (file) {
-		uint32_t length;
+		/* this seems to be in static memory (not allocated);
+		 * so I think we're fine just pointing to it, as long as
+		 * the library never gets unloaded, which should never
+		 * happen anyway  --paper */
 		file->description = fmtctx->iformat->long_name ? fmtctx->iformat->long_name : "FFMPEG";
-		length = fmtctx->streams[astr]->nb_frames * fmtctx->streams[astr]->codecpar->frame_size;
-		file->smp_length = MIN(length, MAX_SAMPLE_LENGTH);
+
 		file->smp_speed = fmtctx->streams[astr]->codecpar->sample_rate;
+		file->smp_length = schism_avfmt_get_length_estimate(fmtctx, astr);
 	}
 
 	if (smp && !avfmt_read_to_sample(s, fmtctx, astr, smp))
