@@ -165,7 +165,8 @@ File format changes:
                 and palette settings only.
 
         IT 1.03 - 521 bytes
-                Info page stuff appended to the end of the file.
+                Info page and pattern cruft appended to the end of the file
+                (row highlight, views setup, copy mask, etc.)
 
         IT 1.06 - 522 bytes
                 First flag byte (PF1) added.
