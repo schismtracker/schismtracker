@@ -160,9 +160,12 @@ xxxx: │ Type  │TCh│Row│Height │MemOff ║ Type  │TCh│Row│Height 
 
 File format changes:
 
-        IT <1.06 - original (?) data size is 521 bytes.
-                (Note: only tested with 1.05; information on other versions
-                would be appreciated!)
+        IT 1.01 - 259 bytes
+                Contains directories (70 bytes each), keyboard type,
+                and palette settings only.
+
+        IT 1.03 - 521 bytes
+                Info page stuff appended to the end of the file.
 
         IT 1.06 - 522 bytes
                 First flag byte (PF1) added.
