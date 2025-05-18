@@ -846,6 +846,7 @@ SCHISM_NORETURN static void event_loop(void)
 	schism_exit(0);
 }
 
+#ifndef NDEBUG
 /* schism equivalent to built-in C assert() macro.
  *
  * In general this mimics the Visual C++ assert() implementation, which
@@ -880,6 +881,7 @@ void schism_assert_fail(const char *msg, const char *exp, const char *file, int 
 	 * Especially if we're coming from mem.c or something. */
 	exit(1);
 }
+#endif
 
 void schism_exit(int x)
 {

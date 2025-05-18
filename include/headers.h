@@ -479,16 +479,27 @@ struct stat {
  * standard C. It essentially replicates the Visual C++ assertions, which
  * show a message box with the line, file, etc.
  * This version allows for custom messages to be printed as part of the
- * assertion. */
+ * assertion.
+ * We also differ from the C standard assert macro, as the condition
+ * always gets run. This allows for such programming practices as:
+ *   SCHISM_RUNTIME_ASSERT(!initialize(), "Failed to initialize!");
+ * With an optimizing compiler, if the condition does nothing, it will
+ * be removed from the resulting assembly code anyway, so there is
+ * little practical reason for not always running the condition. */
 
+#ifndef NDEBUG
 /* helper function, defined in main.c */
 SCHISM_NORETURN void schism_assert_fail(const char *msg, const char *exp, const char *file, int line);
-#define SCHISM_RUNTIME_ASSERT(x, msg) \
+
+# define SCHISM_RUNTIME_ASSERT(x, msg) \
 	do { \
 		/* Make sure the message is actually a string.. */ \
 		SCHISM_STATIC_ASSERT(sizeof((msg)[0]) == 1u, "Assertion message must be a string"); \
 		if (!(x)) schism_assert_fail((msg), #x, __FILE__, __LINE__); \
-	} while (0) \
+	} while (0)
+#else
+# define SCHISM_RUNTIME_ASSERT(x, msg) do { (x); } while (0)
+#endif
 
 /* Static assertion. DO NOT use this within structure definitions! */
 #if (__STDC_VERSION__ >= 201112L) \
