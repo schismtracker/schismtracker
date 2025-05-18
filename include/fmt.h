@@ -177,7 +177,7 @@ void tm_to_fat_date_time(const struct tm *tm, uint16_t *fat_date, uint16_t *fat_
 
 /* [R]IFF helper functions */
 
-typedef struct chunk {
+typedef struct iff_chunk {
 	uint32_t id; /* the ID, as a big endian integer. e.g. "wave" == 0x77617665 */
 	uint32_t size;
 	int64_t offset; /* where in the file the data actually starts */

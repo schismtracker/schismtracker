@@ -103,17 +103,18 @@ static int aiff_chunk_comm_read(const void *data, size_t size, void *void_comm)
 // It works great, but gcc doesn't think it's a constant, so it can't be used in a switch.
 // (although with -O, it definitely does optimize it into a constant...)
 
-#define ID_FORM 0x464F524D
-#define ID_8SVX 0x38535658
-#define ID_VHDR 0x56484452
-#define ID_BODY 0x424F4459
-#define ID_NAME 0x4E414D45
-#define ID_AUTH 0x41555448
-#define ID_ANNO 0x414E4E4F
-#define ID__C__ 0x28632920 /* "(c) " */
-#define ID_AIFF 0x41494646
-#define ID_COMM 0x434F4D4D
-#define ID_SSND 0x53534E44
+#define ID_FORM UINT32_C(0x464F524D)
+#define ID_8SVX UINT32_C(0x38535658)
+#define ID_16SV UINT32_C(0x31365356)
+#define ID_VHDR UINT32_C(0x56484452)
+#define ID_BODY UINT32_C(0x424F4459)
+#define ID_NAME UINT32_C(0x4E414D45)
+#define ID_AUTH UINT32_C(0x41555448)
+#define ID_ANNO UINT32_C(0x414E4E4F)
+#define ID__C__ UINT32_C(0x28632920) /* "(c) " */
+#define ID_AIFF UINT32_C(0x41494646)
+#define ID_COMM UINT32_C(0x434F4D4D)
+#define ID_SSND UINT32_C(0x53534E44)
 
 /* --------------------------------------------------------------------- */
 
@@ -135,7 +136,10 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 	// jump "into" the FORM chunk
 	slurp_seek(fp, chunk.offset + sizeof(filetype), SEEK_SET);
 
-	switch (bswapBE32(filetype)) {
+	filetype = bswapBE32(filetype);
+
+	switch (filetype) {
+	case ID_16SV: /* 16-bit */
 	case ID_8SVX: {
 		struct aiff_chunk_vhdr chunk_vhdr;
 
@@ -156,11 +160,11 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 			return 0;
 
 		if (chunk_vhdr.compression) {
-			log_appendf(4, "error: compressed 8SVX files are unsupported");
+			log_appendf(4, "error: compressed IFF files are unsupported");
 			return 0;
 		}
 		if (chunk_vhdr.num_octaves != 1) {
-			log_appendf(4, "warning: 8SVX file contains %d octaves",
+			log_appendf(4, "warning: IFF file contains %d octaves",
 				chunk_vhdr.num_octaves);
 		}
 
@@ -168,7 +172,9 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 			file->smp_speed = bswapBE16(chunk_vhdr.smp_per_sec);
 			file->smp_length = body.size;
 
-			file->description = "8SVX sample";
+			file->description = (filetype == ID_16SV)
+				? "16SV sample"
+				: "8SVX sample";
 			file->type = TYPE_SAMPLE_PLAIN;
 		}
 		if (!name.id) name = auth;
@@ -185,12 +191,19 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 		}
 
 		if (smp) {
+			uint32_t flags = SF_BE | SF_PCMS | SF_M;
+
 			smp->c5speed = bswapBE16(chunk_vhdr.smp_per_sec);
 			smp->length = body.size;
 
-			iff_read_sample(&body, fp, smp, SF_BE | SF_PCMS | SF_8 | SF_M, 0);
+			/* volume (should this be global volume, or just smp volume?) */
+			chunk_vhdr.volume = bswapBE32(chunk_vhdr.volume);
+			chunk_vhdr.volume = MIN(chunk_vhdr.volume, 0x10000);
 
-			smp->volume = 64*4;
+			/* round to 0..64 -- 1024 == (0x10000 / 64) */
+			chunk_vhdr.volume = (chunk_vhdr.volume + 512) / 1024;
+
+			smp->volume = chunk_vhdr.volume * 4; //mphack
 			smp->global_volume = 64;
 
 			// this is done kinda weird
@@ -205,6 +218,18 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 				if (smp->loop_start + 2 < smp->loop_end)
 					smp->flags |= CHN_LOOP;
 			}
+
+			if (filetype == ID_16SV) {
+				flags |= SF_16;
+
+				smp->length >>= 1;
+				smp->loop_start >>= 1;
+				smp->loop_end >>= 1;
+			} else {
+				flags |= SF_8;
+			}
+
+			iff_read_sample(&body, fp, smp, flags, 0);
 		}
 
 		return 1;
