@@ -370,11 +370,11 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 	 * which seems to get around it -- but ideally we would do something
 	 * other than this, because this is stupid.
 	 *   --paper */
-	//if (use_ioctx) {
+	if (use_ioctx) {
 		ioctx = schism_avio_alloc_context(buffer, sizeof(buffer), 0, s, avfmt_read_packet, NULL, avfmt_seek);
 		if (!ioctx)
 			goto fail;
-	//}
+	}
 
 	fmtctx = schism_avformat_alloc_context();
 	if (!fmtctx)
