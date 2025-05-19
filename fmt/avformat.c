@@ -90,7 +90,7 @@ static uint32_t schism_avfmt_get_length_estimate(AVFormatContext *fmtctx, int as
 	 * don't do for obvious reasons :)
 	 *   --paper */
 
-	if (fmtctx->streams[astr]->duration >= 0) {
+	if (fmtctx->streams[astr]->duration > 0) {
 		/* log_appendf(1, "FFMPEG: using stream duration"); */
 
 		duration_secs = (double)fmtctx->streams[astr]->duration
@@ -98,7 +98,7 @@ static uint32_t schism_avfmt_get_length_estimate(AVFormatContext *fmtctx, int as
 			/ fmtctx->streams[astr]->time_base.den;
 
 		length = duration_secs * fmtctx->streams[astr]->codecpar->sample_rate;
-	} else if (fmtctx->duration >= 0) {
+	} else if (fmtctx->duration > 0) {
 		/* log_appendf(1, "FFMPEG: using format duration"); */
 
 		duration_secs = (double)fmtctx->duration / AV_TIME_BASE;
