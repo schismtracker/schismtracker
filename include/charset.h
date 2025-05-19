@@ -82,8 +82,6 @@ typedef enum {
 	/* END SYSTEM-SPECIFIC HACKS */
 } charset_t;
 
-
-
 typedef enum {
 	CHARSET_ERROR_SUCCESS = 0,
 	CHARSET_ERROR_UNIMPLEMENTED = -1,

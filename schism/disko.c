@@ -342,6 +342,8 @@ int disko_memopen_estimate(disko_t *ds, size_t estimated_size)
 
 	memset(ds, 0, sizeof(*ds));
 
+	estimated_size = MAX(16, estimated_size);
+
 	ds->data = malloc(estimated_size * sizeof(uint8_t));
 	if (!ds->data)
 		return -1;

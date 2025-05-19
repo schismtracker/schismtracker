@@ -360,7 +360,7 @@ static void windows1252_to_ucs4(charset_decode_t *decoder)
 	decoder->state = c ? DECODER_STATE_NEED_MORE : DECODER_STATE_DONE;
 }
 
-/* ----------------------------------------------------- */
+/* ------------------------------------------------------------------------ */
 
 #define CHARSET_ENCODE_ERROR (-1)
 #define CHARSET_ENCODE_SUCCESS (0)
@@ -715,6 +715,30 @@ SCHISM_CONST const char* charset_iconv_error_lookup(charset_error_t err)
 #define CHARSET_VARIATION(name) \
 	static charset_error_t charset_iconv_##name##_(const void* in, void* out, charset_t inset, charset_t outset, size_t insize)
 
+static const size_t charset_size_estimate_divisor[] = {
+	[CHARSET_UCS4LE] = 4,
+	[CHARSET_UCS4BE] = 4,
+	[CHARSET_UTF16LE] = 4,
+	[CHARSET_UTF16BE] = 4,
+	[CHARSET_UCS2LE] = 2,
+	[CHARSET_UCS2BE] = 2,
+	[CHARSET_UTF8] = 4,
+	[CHARSET_ITF] = 1,
+	[CHARSET_CP437] = 1,
+	[CHARSET_WINDOWS1252] = 1,
+	[CHARSET_CHAR] = 4, /* UTF-8 ??? */
+	[CHARSET_WCHAR_T] = sizeof(wchar_t),
+#if defined(SCHISM_WIN32) || defined(SCHISM_XBOX)
+	[CHARSET_ANSI] = 1,
+#endif
+#ifdef SCHISM_OS2
+	[CHARSET_DOSCP] = 1,
+#endif
+#ifdef SCHISM_MACOS
+	[CHARSET_SYSTEMSCRIPT] = 1,
+#endif
+};
+
 /* our version of iconv; this has a much simpler API than the regular
  * iconv() because much of it isn't very necessary for our purposes
  *
@@ -746,7 +770,15 @@ CHARSET_VARIATION(internal)
 		return CHARSET_ERROR_UNIMPLEMENTED;
 
 	disko_t ds = {0};
-	disko_memopen(&ds);
+	if (insize != SIZE_MAX) {
+		/* if we know a size, give an estimate as to how
+		 * much space it'll take up. */
+		disko_memopen_estimate(&ds, (uint64_t)insize
+			* charset_size_estimate_divisor[outset]
+			/ charset_size_estimate_divisor[inset]);
+	} else {
+		disko_memopen(&ds);
+	}
 
 	do {
 		conv_to_ucs4_func(&decoder);
@@ -772,6 +804,36 @@ CHARSET_VARIATION(internal)
 
 	return CHARSET_ERROR_SUCCESS;
 }
+
+/* ----------------------------------------------------------------------- */
+
+static size_t charset_nulterm_string_size(const void *in, charset_t inset)
+{
+	/* ugly */
+	charset_decode_t decoder = {0};
+	charset_conv_to_ucs4_func   conv_to_ucs4_func;
+
+	decoder.in = in;
+	decoder.size = SIZE_MAX;
+
+	if (inset >= ARRAY_SIZE(conv_to_ucs4_funcs))
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	conv_to_ucs4_func   = conv_to_ucs4_funcs[inset];
+
+	if (!conv_to_ucs4_func)
+		return CHARSET_ERROR_UNIMPLEMENTED;
+
+	do {
+		conv_to_ucs4_func(&decoder);
+		if (decoder.state < 0)
+			return 0;
+	} while (decoder.state == DECODER_STATE_NEED_MORE);
+
+	return decoder.offset;
+}
+
+/* ----------------------------------------------------------------------- */
 
 #ifdef SCHISM_WIN32
 # include <windows.h> // MultiByteToWideChar
@@ -830,9 +892,6 @@ static inline SCHISM_ALWAYS_INLINE int charset_iconv_get_system_encoding_(TextEn
 
 static charset_error_t charset_iconv_macos_preprocess_(const void *in, size_t insize, TextEncoding inenc, TextEncoding outenc, void *out, size_t *outsize)
 {
-	if (insize == SIZE_MAX)
-		insize = strlen((char *)in) + 1; //ok
-
 	OSStatus err = noErr;
 
 	TECObjectRef tec = NULL;
@@ -844,7 +903,7 @@ static charset_error_t charset_iconv_macos_preprocess_(const void *in, size_t in
 	const unsigned char *srcptr = in;
 
 	disko_t ds = {0};
-	if (disko_memopen(&ds) < 0) {
+	if (disko_memopen_estimate(&ds, insize * 2) < 0) {
 		TECDisposeConverter(tec);
 		return CHARSET_ERROR_NOMEM;
 	}
@@ -948,12 +1007,14 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 			insetfake = inset = CHARSET_CP437;
 		} else {
 			// convert ANSI to Unicode so we can process it
-			int needed = MultiByteToWideChar(CP_ACP, 0, in, (insize == SIZE_MAX) ? -1 : insize, NULL, 0);
+			int len = (insize == SIZE_MAX) ? -1 : MIN(insize, INT_MAX);
+
+			int needed = MultiByteToWideChar(CP_ACP, 0, in, len, NULL, 0);
 			if (!needed)
 				return CHARSET_ERROR_DECODE;
 
 			wchar_t *unicode_in = mem_alloc((needed + 1) * sizeof(wchar_t));
-			MultiByteToWideChar(CP_ACP, 0, in, (insize == SIZE_MAX) ? -1 : insize, unicode_in, needed);
+			MultiByteToWideChar(CP_ACP, 0, in, len, unicode_in, needed);
 			unicode_in[needed] = 0;
 
 			infake = unicode_in;
@@ -1039,6 +1100,9 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 			return CHARSET_ERROR_UNIMPLEMENTED;
 
 		TextEncoding utf16enc = CreateTextEncoding(kTextEncodingUnicodeDefault, kTextEncodingDefaultVariant, kUnicode16BitFormat);
+
+		if (insize == SIZE_MAX)
+			insize = strlen(in) + 1;
 
 		state = charset_iconv_macos_preprocess_(in, insize, hfsenc, utf16enc, &infake, &insizefake);
 		if (state != CHARSET_ERROR_SUCCESS)
@@ -1213,7 +1277,7 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 #ifdef SCHISM_MACOS
 	case CHARSET_SYSTEMSCRIPT: {
 		/* can we return size so we don't have to do this? */
-		size_t len = (charset_strlen(outfake, CHARSET_UTF16) + 1) * sizeof(uint16_t);
+		size_t len = charset_nulterm_string_size(in, inset);
 
 		TextEncoding hfsenc;
 		if (!charset_iconv_get_system_encoding_(&hfsenc))
