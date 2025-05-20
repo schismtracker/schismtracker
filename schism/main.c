@@ -940,6 +940,7 @@ void schism_exit(int x)
 
 extern void vis_init(void);
 
+#ifndef SCHISM_TEST
 /* the real main function is called per-platform */
 int schism_main(int argc, char** argv)
 {
@@ -1128,6 +1129,34 @@ int schism_main(int argc, char** argv)
 
 	return 0; /* blah */
 }
+#else /* defined(SCHISM_TEST) */
+
+# include "bswap.h"
+# include "bshift.h"
+
+/* The main entry point for the test suite. */
+int schism_main(int argc, char **argv)
+{
+	static const struct {
+		const char *name;
+		int (*test)(void);
+	} tests[] = {
+		{"byteswap", test_bswap},
+		{"signed bitshift", test_bshift},
+		{"config", cfg_test},
+	};
+	size_t i;
+	int r;
+
+	for (i = 0; i < ARRAY_SIZE(tests); i++) {
+		int rr = tests[i].test();
+		printf("TESTS: %s test %s\n", tests[i].name, rr ? "FAILED" : "succeeded");
+		r |= rr;
+	}
+
+	return r;
+}
+#endif
 
 #if defined(SCHISM_MACOSX)
 // sys/macosx/macosx-sdlmain.m
