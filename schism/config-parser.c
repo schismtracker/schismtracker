@@ -307,25 +307,88 @@ static int cfg_read_receive_impl(const void *data, SCHISM_UNUSED size_t size, vo
 	return 1;
 }
 
+static int cfg_read_slurp(cfg_file_t *cfg, slurp_t *fp)
+{
+	slurp_receive(fp, cfg_read_receive_impl, slurp_length(fp) + 1, cfg);
+
+	cfg->dirty = 0;
+
+	return 0;
+}
+
 int cfg_read(cfg_file_t *cfg)
 {
 	slurp_t fp;
 	if (slurp(&fp, cfg->filename, NULL, 0) < 0)
 		return -1;
 
-	slurp_receive(&fp, cfg_read_receive_impl, slurp_length(&fp) + 1, cfg);
-
-	cfg->dirty = 0;
+	cfg_read_slurp(cfg, &fp);
 
 	unslurp(&fp);
 
 	return 0;
 }
 
-int cfg_write(cfg_file_t *cfg)
+static int cfg_write_disko(cfg_file_t *cfg, disko_t *fp)
 {
 	struct cfg_section *section;
 	struct cfg_key *key;
+
+	if (!cfg->dirty)
+		return 0;
+	cfg->dirty = 0;
+
+	/* I should be checking a lot more return values, but ... meh */
+	for (section = cfg->sections; section; section = section->next) {
+		if (section->comments)
+			disko_write(fp, section->comments, strlen(section->comments));
+
+		if (section->omit)
+			disko_putc(fp, '#');
+
+		disko_putc(fp, '[');
+		disko_write(fp, section->name, strlen(section->name));
+		disko_putc(fp, ']');
+		disko_putc(fp, '\n');
+
+		for (key = section->keys; key; key = key->next) {
+			/* NOTE: key names are intentionally not escaped in any way;
+			 * it is up to the program to choose names that aren't stupid.
+			 * (cfg_delete_key uses this to comment out a key name) */
+			if (key->comments)
+				disko_write(fp, key->comments, strlen(key->comments));
+
+			if (section->omit)
+				disko_putc(fp, '#');
+
+			/* TODO | if no keys in a section have defined values,
+			 * TODO | comment out the section header as well. (this
+			 * TODO | might be difficult since it's already been
+			 * TODO | written to the file) */
+			if (key->value) {
+				char *tmp = str_escape(key->value, 1);
+				disko_write(fp, key->name, strlen(key->name));
+				disko_putc(fp, '=');
+				disko_write(fp, tmp, strlen(tmp));
+				disko_putc(fp, '\n');
+				free(tmp);
+			} else {
+				disko_write(fp, "# ", ARRAY_SIZE("# ") - 1);
+				disko_write(fp, key->name, strlen(key->name));
+				disko_write(fp, "=(undefined)\n", ARRAY_SIZE("=(undefined)\n") - 1);
+			}
+		}
+	}
+
+	if (cfg->eof_comments)
+		disko_write(fp, cfg->eof_comments, strlen(cfg->eof_comments));
+
+	return 0;
+}
+
+int cfg_write(cfg_file_t *cfg)
+{
+	disko_t fp = {0};
 
 	if (!cfg->filename) {
 		/* FIXME | don't print a message here! this should be considered library code.
@@ -334,62 +397,13 @@ int cfg_write(cfg_file_t *cfg)
 		return -1;
 	}
 
-	if (!cfg->dirty)
-		return 0;
-	cfg->dirty = 0;
-
-	disko_t fp = {0};
 	if (disko_open(&fp, cfg->filename) < 0) {
 		/* FIXME: don't print a message here! */
 		perror(cfg->filename);
 		return -1;
 	}
 
-	/* I should be checking a lot more return values, but ... meh */
-
-	for (section = cfg->sections; section; section = section->next) {
-		if (section->comments)
-			disko_write(&fp, section->comments, strlen(section->comments));
-
-		if (section->omit)
-			disko_putc(&fp, '#');
-
-		disko_putc(&fp, '[');
-		disko_write(&fp, section->name, strlen(section->name));
-		disko_putc(&fp, ']');
-		disko_putc(&fp, '\n');
-
-		for (key = section->keys; key; key = key->next) {
-			/* NOTE: key names are intentionally not escaped in any way;
-			 * it is up to the program to choose names that aren't stupid.
-			 * (cfg_delete_key uses this to comment out a key name) */
-			if (key->comments)
-				disko_write(&fp, key->comments, strlen(key->comments));
-
-			if (section->omit)
-				disko_putc(&fp, '#');
-
-			/* TODO | if no keys in a section have defined values,
-			 * TODO | comment out the section header as well. (this
-			 * TODO | might be difficult since it's already been
-			 * TODO | written to the file) */
-			if (key->value) {
-				char *tmp = str_escape(key->value, 1);
-				disko_write(&fp, key->name, strlen(key->name));
-				disko_putc(&fp, '=');
-				disko_write(&fp, tmp, strlen(tmp));
-				disko_putc(&fp, '\n');
-				free(tmp);
-			} else {
-				disko_write(&fp, "# ", ARRAY_SIZE("# "));
-				disko_write(&fp, key->name, strlen(key->name));
-				disko_write(&fp, "=(undefined)\n", ARRAY_SIZE("=(undefined)\n"));
-			}
-		}
-	}
-
-	if (cfg->eof_comments)
-		disko_write(&fp, cfg->eof_comments, strlen(cfg->eof_comments));
+	cfg_write_disko(cfg, &fp);
 
 	disko_close(&fp, 1);
 
@@ -527,13 +541,54 @@ void cfg_free(cfg_file_t *cfg)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#ifdef TEST
-int main(int argc, char **argv)
-{
-	cfg_file_t cfg;
-	char buf[64];
+#ifdef SCHISM_TEST
 
-	cfg_init(&cfg, "config");
+static int cfg_test_vprintf(const char *fmt, va_list ap)
+{
+	int r = 0;
+
+	if ((r = printf("TESTS/config: ")) < 0) return r;
+	if ((r = vprintf(fmt, ap)) < 0) return r;
+	if ((r = puts("")) < 0) return r;
+
+	return r;
+}
+
+static int cfg_test_printf(const char *fmt, ...)
+{
+	int r;
+	va_list ap;
+
+	va_start(ap, fmt);
+	r = cfg_test_vprintf(fmt, ap);
+	va_end(ap);
+
+	return r;
+}
+
+int cfg_test(void)
+{
+	int r = 0;
+
+	cfg_file_t cfg = {0};
+	char buf[64];
+	char start_cfg[] =
+		"[ducks]\n"
+		"color = brown\n"
+		"count = 7\n"
+		"weight = 64 lb.\n";
+
+	cfg.sections = NULL;
+
+	{
+		slurp_t fp;
+
+		slurp_memstream(&fp, start_cfg, sizeof(start_cfg) - 1);
+
+		cfg_read_slurp(&cfg, &fp);
+
+		unslurp(&fp);
+	}
 
 	/*
 	- test these functions with defined and undefined section/key names
@@ -547,75 +602,103 @@ int main(int argc, char **argv)
 	void cfg_set_string(cfg_file_t *cfg, const char *section_name, const char *key_name, const char *value);
 	void cfg_set_number(cfg_file_t *cfg, const char *section_name, const char *key_name, int value);
 	*/
-/*
-[ducks]
-color = brown
-count = 7
-weight = 64 lb.
-*/
-	printf("testing cfg_get_ functions...\n");
-	printf("defined values\n");
-	printf("ducks:color = %s\n", cfg_get_string(&cfg, "ducks", "color", NULL, 0, "abcd"));
-	printf("ducks:count = %d\n", cfg_get_number(&cfg, "ducks", "count", 1234));
-	printf("ducks:weight = %d\n", cfg_get_number(&cfg, "ducks", "weight", 1234));
-	printf("\n");
-	printf("undefined values in a defined section\n");
-	printf("ducks:sauce = %s\n", cfg_get_string(&cfg, "ducks", "sauce", NULL, 0, "soy"));
-	printf("ducks:feathers = %d\n", cfg_get_number(&cfg, "ducks", "feathers", 94995));
-	printf("\n");
-	printf("undefined section\n");
-	printf("barbecue:weather = %s\n", cfg_get_string(&cfg, "barbecue", "weather", NULL, 0, "elf"));
-	printf("barbecue:dismal = %d\n", cfg_get_number(&cfg, "barbecue", "dismal", 758));
-	printf("\n");
-	printf("obviously broken values\n");
-	printf("string with null section: %s\n", cfg_get_string(&cfg, NULL, "shouldn't crash", NULL, 0, "ok"));
-	printf("string with null key: %s\n", cfg_get_string(&cfg, "shouldn't crash", NULL, NULL, 0, "ok"));
-	printf("number with null section: %d\n", cfg_get_number(&cfg, NULL, "shouldn't crash", 1));
-	printf("number with null key: %d\n", cfg_get_number(&cfg, "shouldn't crash", NULL, 1));
-	printf("string with null default value: %s\n", cfg_get_string(&cfg, "doesn't", "exist", NULL, 0, NULL));
+
+	puts("");
+	cfg_test_printf("testing cfg_get_ functions...");
+	cfg_test_printf("defined values");
+	cfg_test_printf("ducks:color = %s", cfg_get_string(&cfg, "ducks", "color", NULL, 0, "abcd"));
+	cfg_test_printf("ducks:count = %d", cfg_get_number(&cfg, "ducks", "count", 1234));
+	cfg_test_printf("ducks:weight = %d", cfg_get_number(&cfg, "ducks", "weight", 1234));
+	puts("");
+	cfg_test_printf("undefined values in a defined section");
+	cfg_test_printf("ducks:sauce = %s", cfg_get_string(&cfg, "ducks", "sauce", NULL, 0, "soy"));
+	cfg_test_printf("ducks:feathers = %d", cfg_get_number(&cfg, "ducks", "feathers", 94995));
+	puts("");
+	cfg_test_printf("undefined section");
+	cfg_test_printf("barbecue:weather = %s", cfg_get_string(&cfg, "barbecue", "weather", NULL, 0, "elf"));
+	cfg_test_printf("barbecue:dismal = %d", cfg_get_number(&cfg, "barbecue", "dismal", 758));
+	puts("");
+	cfg_test_printf("obviously broken values");
+	cfg_test_printf("string with null section: %s", cfg_get_string(&cfg, NULL, "shouldn't crash", NULL, 0, "ok"));
+	cfg_test_printf("string with null key: %s", cfg_get_string(&cfg, "shouldn't crash", NULL, NULL, 0, "ok"));
+	cfg_test_printf("number with null section: %d", cfg_get_number(&cfg, NULL, "shouldn't crash", 1));
+	cfg_test_printf("number with null key: %d", cfg_get_number(&cfg, "shouldn't crash", NULL, 1));
+	cfg_test_printf("string with null default value: %s", cfg_get_string(&cfg, "doesn't", "exist", NULL, 0, NULL));
 	strcpy(buf, "didn't change");
-	printf("null default value, with value return parameter set: %s\n",
+	cfg_test_printf("null default value, with value return parameter set: %s",
 	       cfg_get_string(&cfg, "still", "nonexistent", buf, 64, NULL));
-	printf("... and the buffer it returned: %s\n", buf);
+	cfg_test_printf("... and the buffer it returned: %s", buf);
 	strcpy(buf, "didn't change");
-	printf("null default value on defined key with return parameter: %s\n",
+	cfg_test_printf("null default value on defined key with return parameter: %s",
 	       cfg_get_string(&cfg, "ducks", "weight", buf, 64, NULL));
-	printf("... and the buffer it returned: %s\n", buf);
-	printf("\n");
-	printf("string boundary tests\n");
+	cfg_test_printf("... and the buffer it returned: %s", buf);
+	puts("");
+	cfg_test_printf("string boundary tests\n");
 	cfg_set_string(&cfg, "test", "test", "abcdefghijklmnopqrstuvwxyz???broken");
 	cfg_get_string(&cfg, "test", "test", buf, 26, "wtf");
-	printf("26 characters using defined value: %s\n", buf);
+	cfg_test_printf("26 characters using defined value: %s\n", buf);
 	cfg_get_string(&cfg, "fake section", "fake key", buf, 10, "1234567890???broken");
-	printf("10 characters using default value: %s\n", buf);
+	cfg_test_printf("10 characters using default value: %s\n", buf);
 	cfg_get_string(&cfg, "fake section", "fake key", buf, 0, "huh?");
-	printf("zero-length buffer (this should be an empty string) \"%s\"\n", buf);
-	printf("\n");
-	printf("testing cfg_set_ functions...\n");
-	printf("string in new section\n");
+	cfg_test_printf("zero-length buffer (this should be an empty string) \"%s\"", buf);
+	puts("");
+	cfg_test_printf("testing cfg_set_ functions...");
+	cfg_test_printf("string in new section");
 	cfg_set_string(&cfg, "toast", "is", "tasty");
-	printf("string with new key in existing section\n");
+	cfg_test_printf("string with new key in existing section");
 	cfg_set_string(&cfg, "toast", "tastes", "good");
-	printf("number in new section\n");
+	cfg_test_printf("number in new section");
 	cfg_set_number(&cfg, "cowboy", "hats", 3);
-	printf("number with new key in existing section\n");
+	cfg_test_printf("number with new key in existing section");
 	cfg_set_number(&cfg, "cowboy", "boots", 4);
-	printf("string with null section\n");
+	cfg_test_printf("string with null section");
 	cfg_set_string(&cfg, NULL, "shouldn't", "crash");
-	printf("string with null key\n");
+	cfg_test_printf("string with null key");
 	cfg_set_string(&cfg, "shouldn't", NULL, "crash");
-	printf("string with null value\n");
+	cfg_test_printf("string with null value");
 	cfg_set_string(&cfg, "shouldn't", "crash", NULL);
-	printf("re-reading that null string should return default value: %s\n",
-	       cfg_get_string(&cfg, "shouldn't", "crash", NULL, 0, "it does"));
-	printf("number with null section\n");
+	cfg_test_printf("re-reading that null string should return default value: %s",
+		cfg_get_string(&cfg, "shouldn't", "crash", NULL, 0, "it does"));
+	cfg_test_printf("number with null section");
 	cfg_set_number(&cfg, NULL, "don't segfault", 42);
-	printf("number with null key\n");
+	cfg_test_printf("number with null key");
 	cfg_set_number(&cfg, "don't segfault", NULL, 42);
 
-	cfg_dump(&cfg);
+	puts("");
+
+	{
+		static const char expected[] =
+			"[ducks]\n"
+			"color=brown\n"
+			"count=7\n"
+			"weight=64 lb.\n"
+			"[test]\n"
+			"test=abcdefghijklmnopqrstuvwxyz???broken\n"
+			"[toast]\n"
+			"is=tasty\n"
+			"tastes=good\n"
+			"[cowboy]\n"
+			"hats=3\n"
+			"boots=4\n"
+			"[shouldn't]\n"
+			"# crash=(undefined)\n";
+
+		disko_t fp;
+
+		disko_memopen(&fp);
+
+		cfg_write_disko(&cfg, &fp);
+
+		r |= (fp.length != (sizeof(expected) - 1));
+
+		if (!r)
+			r |= memcmp(fp.data, expected, fp.length);
+
+		disko_memclose(&fp, 0);
+	}
+
 	cfg_free(&cfg);
 
-	return 0;
+	return r;
 }
 #endif /* TEST */

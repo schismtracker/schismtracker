@@ -93,4 +93,21 @@ SCHISM_SIGNED_RSHIFT_VARIANT(max)
 #undef SCHISM_SIGNED_RSHIFT_VARIANT
 #undef SCHISM_SIGNED_SHIFT_VARIANT
 
+#ifdef SCHISM_TEST
+
+static inline int test_bshift(void)
+{
+	int r = 0;
+
+#ifdef HAVE_ARITHMETIC_RSHIFT
+	r |= (rshift_signed(-0xFFFF, 8) != (-0xFFFF >> 8));
+#endif
+	r |= (rshift_signed(INT32_C(-0xFFFF), 8) != INT32_C(-0x100));
+	r |= (lshift_signed((int32_t)0xFF000000, 4) != (int32_t)0xF0000000);
+
+	return r;
+}
+
+#endif
+
 #endif /* SCHISM_BSHIFT_H_ */
