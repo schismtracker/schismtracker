@@ -384,7 +384,7 @@ static bool read_recursive(DIR_ENTRY *parent) {
     return true;
 }
 
-static bool read_isfs() {
+static bool read_isfs(void) {
     root = malloc(sizeof(DIR_ENTRY));
     if (!root) return false;
     bzero(root, sizeof(DIR_ENTRY));
@@ -404,14 +404,14 @@ static void cleanup_recursive(DIR_ENTRY *entry) {
     if (entry->abspath) free(entry->abspath);
 }
 
-bool ISFS_Mount() {
+bool ISFS_Mount(void) {
     ISFS_Unmount();
     bool success = read_isfs() && (dotab_device = AddDevice(&dotab_isfs)) >= 0;
     if (!success) ISFS_Unmount();
     return success;
 }
 
-bool ISFS_Unmount() {
+bool ISFS_Unmount(void) {
     if (root) {
 	cleanup_recursive(root);
 	free(root);
@@ -429,7 +429,7 @@ bool ISFS_Unmount() {
 #include "su_tik_bin.h"
 #include "su_tmd_bin.h"
 
-s32 ISFS_SU() {
+s32 ISFS_SU(void) {
     u32 key = 0;
     return ES_Identify((signed_blob *) certs_bin, sizeof(certs_bin),
 		       (signed_blob *) su_tmd_bin, sizeof(su_tmd_bin),

@@ -42,7 +42,8 @@ static int (SDLCALL *sdl2_InitSubSystem)(Uint32 flags) = NULL;
 static void (SDLCALL *sdl2_QuitSubSystem)(Uint32 flags) = NULL;
 
 static SDL_Keymod (SDLCALL *sdl2_GetModState)(void);
-static int (SDLCALL *sdl2_PollEvent)(SDL_Event *event) = NULL;
+static void (SDLCALL *sdl2_PumpEvents)(void);
+static int (SDLCALL *sdl2_PeepEvents)(SDL_Event *events, int numevents, SDL_eventaction action, Uint32 min, Uint32 max);
 static SDL_bool (SDLCALL *sdl2_IsTextInputActive)(void) = NULL;
 
 static void (SDLCALL *sdl2_free)(void *) = NULL;
@@ -398,7 +399,9 @@ static void sdl2_pump_events(void)
 {
 	SDL_Event e;
 
-	while (sdl2_PollEvent(&e)) {
+	sdl2_PumpEvents();
+
+	while (sdl2_PeepEvents(&e, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT) == 1) {
 		schism_event_t schism_event = {0};
 
 #ifdef SCHISM_CONTROLLER
@@ -623,7 +626,8 @@ static int sdl2_events_load_syms(void)
 
 	SCHISM_SDL2_SYM(GetModState);
 	SCHISM_SDL2_SYM(IsTextInputActive);
-	SCHISM_SDL2_SYM(PollEvent);
+	SCHISM_SDL2_SYM(PumpEvents);
+	SCHISM_SDL2_SYM(PeepEvents);
 	SCHISM_SDL2_SYM(EventState);
 
 	SCHISM_SDL2_SYM(free);

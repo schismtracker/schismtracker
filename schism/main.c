@@ -201,12 +201,15 @@ static void parse_options(int argc, char **argv)
 	};
 	int opt;
 
+	optind = 1; /* Devkitppc bug ??? what the hell */
+
 	while ((opt = getopt_long(argc, argv, SHORT_OPTIONS, long_options, NULL)) != -1) {
 		switch (opt) {
 		case O_SDL_AUDIODRIVER:
 			audio_parse_driver_spec(optarg, (char**)&audio_driver, (char**)&audio_device);
 			break;
 		case O_SDL_VIDEODRIVER:
+			// XXX this has been broken for ages
 			video_driver = str_dup(optarg);
 			break;
 #if USE_NETWORK

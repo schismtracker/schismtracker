@@ -36,9 +36,14 @@
 #include <ogc/system.h>
 #include <ogc/es.h>
 #include <ogc/ios.h>
+#include <ogc/usbmouse.h>
+#include <ogcsys.h>
+#include <wiikeyboard/keyboard.h>
+#include <wiiuse/wpad.h>
 #include <sys/dir.h>
 #include <dirent.h>
 #include "isfs.h"
+#include <fat.h>
 #define CACHE_PAGES 8
 
 // cargopasta'd from libogc git __di_check_ahbprot
@@ -78,20 +83,86 @@ static u32 _check_ahbprot(void) {
 	return 0;
 }
 
+#ifdef SCHISM_SDL2
+/* UGH */
+extern bool OGC_ResetRequested;
+extern bool OGC_PowerOffRequested;
+
+static void ShutdownCB(void)
+{
+	OGC_PowerOffRequested = true;
+}
+
+static void ResetCB(SCHISM_UNUSED u32 irq, SCHISM_UNUSED void *ctx)
+{
+	OGC_ResetRequested = true;
+}
+#else
+static void ShutdownCB(void)
+{
+    schism_event_t e;
+   	e.type = SCHISM_QUIT;
+   	events_push_event(&e);
+}
+
+static void ResetCB(SCHISM_UNUSED u32 irq, SCHISM_UNUSED void *ctx)
+{
+	ShutdownCB();
+}
+#endif
+
+static void ShutdownWPADCB(SCHISM_UNUSED s32 chan)
+{
+	ShutdownCB();
+}
+
 void wii_sysinit(int *pargc, char ***pargv)
 {
 	char *ptr = NULL;
+
+	{
+		/* Even though this crap *should* be handled by SDL_Init, it is instead
+		 * handled by SDL_main, which breaks our stuff. Sigh. */
+		L2Enhance();
+
+		{
+			/* Reload into the preferred IOS */
+			u32 version;
+			s32 preferred;
+
+			version = IOS_GetVersion();
+			preferred = IOS_GetPreferredVersion();
+
+			if (preferred > 0 && version != (u32)preferred)
+				IOS_ReloadIOS(preferred);
+		}
+
+		WPAD_Init();
+		WPAD_SetPowerButtonCallback(ShutdownWPADCB);
+		SYS_SetPowerCallback(ShutdownCB);
+		SYS_SetResetCallback(ResetCB);
+
+		WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR);
+		WPAD_SetVRes(WPAD_CHAN_ALL, 640, 480);
+
+		MOUSE_Init();
+		KEYBOARD_Init(NULL);
+		fatInitDefault();
+	}
 
 	log_appendf(1, "[Wii] This is IOS%d v%X, and AHBPROT is %s",
 		IOS_GetVersion(), IOS_GetRevision(), _check_ahbprot() > 0 ? "enabled" : "disabled");
 	if (*pargc == 0 && *pargv == NULL) {
 		// I don't know if any other loaders provide similarly broken environments
 		log_appendf(1, "[Wii] Was I just bannerbombed? Prepare for crash at exit...");
-	} else if (memcmp((void *) 0x80001804, "STUBHAXX", 8) == 0) {
+	} else if (memcmp((const /*volatile ?*/ void *)0x80001804, "STUBHAXX", 8) == 0) {
 		log_appendf(1, "[Wii] Hello, HBC user!");
 	} else {
 		log_appendf(1, "[Wii] Where am I?!");
 	}
+
+	// redirect stdout/stderr to dolphin OSReport uart, for ease of debugging
+	SYS_STDIO_Report(true);
 
 	ISFS_SU();
 	if (ISFS_Initialize() == IPC_OK)
@@ -102,8 +173,9 @@ void wii_sysinit(int *pargc, char ***pargv)
 	if (!*pargc || !*pargv) {
 		// loader didn't bother setting these
 		*pargc = 1;
-		*pargv = mem_alloc(sizeof(char **));
+		*pargv = mem_alloc(sizeof(char **) * 2);
 		*pargv[0] = str_dup("?");
+		*pargv[1] = NULL;
 	} else if (strchr(*pargv[0], '/') != NULL) {
 		// presumably launched from hbc menu - put stuff in the boot dir
 		// (does get_parent_directory do what I want here?)

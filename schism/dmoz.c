@@ -1110,9 +1110,11 @@ char *dmoz_get_home_directory(void)
 		if (ptr) return str_dup(ptr);
 	}
 #else
-	char *ptr = getenv("HOME");
-	if (ptr)
-		return str_dup(ptr);
+	{
+		char *ptr = getenv("HOME");
+		if (ptr)
+			return str_dup(ptr);
+	}
 #endif
 
 	/* hmm. fall back to the current dir */
