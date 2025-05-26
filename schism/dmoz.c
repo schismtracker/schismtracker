@@ -86,7 +86,36 @@ static const char *devices[] = {
 };
 #elif defined(SCHISM_WIIU)
 static const char *devices[] = {
-	"fs:/vol/external01",
+	"sd:/",
+	/* There are a lot of possible USB devices. */
+	"usb1:/",  "usb2:/",  "usb3:/",  "usb4:/",
+	"usb5:/",  "usb6:/",  "usb7:/",  "usb8:/",
+	"usb9:/",  "usb10:/", "usb11:/", "usb12:/",
+	"usb13:/", "usb14:/", "usb15:/", "usb16:/",
+	"usb17:/", "usb18:/", "usb19:/", "usb20:/",
+	"usb21:/", "usb22:/", "usb23:/", "usb24:/",
+	"usb25:/", "usb26:/", "usb27:/", "usb28:/",
+	"usb29:/", "usb30:/", "usb31:/", "usb32:/",
+	"usb33:/", "usb34:/", "usb35:/", "usb36:/",
+	"usb37:/", "usb38:/", "usb39:/", "usb40:/",
+	"usb41:/", "usb42:/", "usb43:/", "usb44:/",
+	"usb45:/", "usb46:/", "usb47:/", "usb48:/",
+	"usb49:/", "usb50:/", "usb51:/", "usb52:/",
+	"usb53:/", "usb54:/", "usb55:/", "usb56:/",
+	"usb57:/", "usb58:/", "usb59:/", "usb60:/",
+	"usb61:/", "usb62:/", "usb63:/", "usb64:/",
+	"usb65:/", "usb66:/", "usb67:/", "usb68:/",
+	"usb69:/", "usb70:/", "usb71:/", "usb72:/",
+	"usb73:/", "usb74:/", "usb75:/", "usb76:/",
+	"usb77:/", "usb78:/", "usb79:/", "usb80:/",
+	"usb81:/", "usb82:/", "usb83:/", "usb84:/",
+	"usb85:/", "usb86:/", "usb87:/", "usb88:/",
+	"usb89:/", "usb90:/", "usb91:/", "usb92:/",
+	"usb93:/", "usb94:/", "usb95:/", "usb96:/",
+	"usb97:/", "usb98:/",
+	"slccmpt:/",
+	"slc:/",
+	"mlc:/",
 	NULL,
 };
 #endif
