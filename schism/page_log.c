@@ -66,33 +66,33 @@ static void log_draw_const(void)
 
 static int log_handle_key(struct key_event * k)
 {
-	switch (k->sym) {
-	case SCHISM_KEYSYM_UP:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_UP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line--;
 		break;
-	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_SCANCODE_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line -= 15;
 		break;
-	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_SCANCODE_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line++;
 		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_SCANCODE_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line += 15;
 		break;
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_HOME:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line = 0;
 		break;
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_END:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		top_line = last_line;

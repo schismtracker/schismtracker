@@ -476,38 +476,38 @@ static int message_handle_key_viewmode(struct key_event * k)
 		}
 	}
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_UP:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_UP:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line--;
 		break;
-	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_SCANCODE_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line++;
 		break;
-	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_SCANCODE_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line -= 35;
 		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_SCANCODE_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line += 35;
 		break;
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_HOME:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line = 0;
 		break;
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_END:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		top_line = str_get_num_lines(current_song->message) - 34;
 		break;
-	case SCHISM_KEYSYM_t:
+	case SCHISM_SCANCODE_T:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
@@ -515,7 +515,7 @@ static int message_handle_key_viewmode(struct key_event * k)
 			break;
 		}
 		return 1;
-	case SCHISM_KEYSYM_RETURN:
+	case SCHISM_SCANCODE_RETURN:
 		if (k->state == KEY_PRESS)
 			return 0;
 		message_set_editmode();
@@ -603,50 +603,50 @@ static int message_handle_key_editmode(struct key_event * k)
 	line_len = get_nth_line(current_song->message, cursor_line, &ptr);
 
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_UP:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_UP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_line--;
 		break;
-	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_SCANCODE_DOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_line++;
 		break;
-	case SCHISM_KEYSYM_LEFT:
+	case SCHISM_SCANCODE_LEFT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_char--;
 		break;
-	case SCHISM_KEYSYM_RIGHT:
+	case SCHISM_SCANCODE_RIGHT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_char++;
 		break;
-	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_SCANCODE_PAGEUP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_line -= 35;
 		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_SCANCODE_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_line += 35;
 		break;
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_HOME:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_CTRL)
@@ -654,7 +654,7 @@ static int message_handle_key_editmode(struct key_event * k)
 		else
 			new_cursor_char = 0;
 		break;
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_END:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
@@ -664,7 +664,7 @@ static int message_handle_key_editmode(struct key_event * k)
 			new_cursor_char = line_len;
 		}
 		break;
-	case SCHISM_KEYSYM_ESCAPE:
+	case SCHISM_SCANCODE_ESCAPE:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -672,7 +672,7 @@ static int message_handle_key_editmode(struct key_event * k)
 		message_set_viewmode();
 		memused_songchanged();
 		return 1;
-	case SCHISM_KEYSYM_BACKSPACE:
+	case SCHISM_SCANCODE_BACKSPACE:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -683,7 +683,7 @@ static int message_handle_key_editmode(struct key_event * k)
 			message_delete_char();
 		}
 		return 1;
-	case SCHISM_KEYSYM_DELETE:
+	case SCHISM_SCANCODE_DELETE:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -695,7 +695,7 @@ static int message_handle_key_editmode(struct key_event * k)
 			message_delete_next_char();
 
 		return 1;
-	case SCHISM_KEYSYM_RETURN:
+	case SCHISM_SCANCODE_RETURN:
 		if (NO_MODIFIER(k->mod)) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -714,10 +714,10 @@ static int message_handle_key_editmode(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 1;
 
-			if (k->sym == SCHISM_KEYSYM_t) {
+			if (k->scancode == SCHISM_SCANCODE_T) {
 				message_extfont = !message_extfont;
 				break;
-			} else if (k->sym == SCHISM_KEYSYM_y) {
+			} else if (k->scancode == SCHISM_SCANCODE_Y) {
 				clippy_select(NULL, NULL, 0);
 				message_delete_line();
 				break;
@@ -726,7 +726,7 @@ static int message_handle_key_editmode(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 1;
 
-			if (k->sym == SCHISM_KEYSYM_c) {
+			if (k->scancode == SCHISM_SCANCODE_C) {
 				prompt_message_clear();
 				return 1;
 			}

@@ -354,7 +354,7 @@ static int waterfall_handle_key(struct key_event *k)
 			}
 			if (k->state == KEY_RELEASE) {
 				song_keyup(KEYJAZZ_NOINST, ii, n);
-				status.last_keysym = 0;
+				status.last_scancode = 0;
 			} else if (!k->is_repeat) {
 				song_keydown(KEYJAZZ_NOINST, ii, n, v, KEYJAZZ_CHAN_CURRENT);
 			}
@@ -362,8 +362,8 @@ static int waterfall_handle_key(struct key_event *k)
 		}
 	}
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_s:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_S:
 		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -373,7 +373,7 @@ static int waterfall_handle_key(struct key_event *k)
 			return 1;
 		}
 		return 0;
-	case SCHISM_KEYSYM_m:
+	case SCHISM_SCANCODE_M:
 		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -381,21 +381,21 @@ static int waterfall_handle_key(struct key_event *k)
 			return 1;
 		}
 		return 0;
-	case SCHISM_KEYSYM_LEFT:
+	case SCHISM_SCANCODE_LEFT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		noisefloor-=4;
 		break;
-	case SCHISM_KEYSYM_RIGHT:
+	case SCHISM_SCANCODE_RIGHT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		noisefloor+=4;
 		break;
-	case SCHISM_KEYSYM_g:
+	case SCHISM_SCANCODE_G:
 		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_PRESS)
 				return 1;
@@ -415,7 +415,7 @@ static int waterfall_handle_key(struct key_event *k)
 			return 1;
 		}
 		return 0;
-	case SCHISM_KEYSYM_r:
+	case SCHISM_SCANCODE_R:
 		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -424,7 +424,7 @@ static int waterfall_handle_key(struct key_event *k)
 			return 1;
 		}
 		return 0;
-	case SCHISM_KEYSYM_PLUS:
+	case SCHISM_SCANCODE_KP_PLUS:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -433,7 +433,7 @@ static int waterfall_handle_key(struct key_event *k)
 			song_set_current_order(song_get_current_order() + 1);
 		}
 		return 1;
-	case SCHISM_KEYSYM_MINUS:
+	case SCHISM_SCANCODE_KP_MINUS:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -442,8 +442,7 @@ static int waterfall_handle_key(struct key_event *k)
 			song_set_current_order(song_get_current_order() - 1);
 		}
 		return 1;
-	case SCHISM_KEYSYM_SEMICOLON:
-	case SCHISM_KEYSYM_COLON:
+	case SCHISM_SCANCODE_SEMICOLON:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (song_is_instrument_mode()) {
@@ -452,8 +451,7 @@ static int waterfall_handle_key(struct key_event *k)
 			sample_set(sample_get_current() - 1);
 		}
 		return 1;
-	case SCHISM_KEYSYM_QUOTE:
-	case SCHISM_KEYSYM_QUOTEDBL:
+	case SCHISM_SCANCODE_APOSTROPHE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (song_is_instrument_mode()) {
@@ -462,14 +460,12 @@ static int waterfall_handle_key(struct key_event *k)
 			sample_set(sample_get_current() + 1);
 		}
 		return 1;
-	case SCHISM_KEYSYM_COMMA:
-	case SCHISM_KEYSYM_LESS:
+	case SCHISM_SCANCODE_COMMA:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_change_current_play_channel(-1, 0);
 		return 1;
-	case SCHISM_KEYSYM_PERIOD:
-	case SCHISM_KEYSYM_GREATER:
+	case SCHISM_SCANCODE_PERIOD:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_change_current_play_channel(1, 0);

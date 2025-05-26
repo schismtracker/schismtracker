@@ -53,8 +53,8 @@ static void timeinfo_draw_const(void)
 
 static int timeinfo_handle_key(struct key_event * k)
 {
-	switch (k->sym) {
-	case SCHISM_KEYSYM_BACKQUOTE:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_GRAVE:
 		if (k->state != KEY_RELEASE)
 			return 0;
 
@@ -64,7 +64,7 @@ static int timeinfo_handle_key(struct key_event * k)
 			return 1;
 		}
 		return 0;
-	case SCHISM_KEYSYM_s:
+	case SCHISM_SCANCODE_S:
 		if (k->state != KEY_RELEASE)
 			return 0;
 
@@ -79,33 +79,33 @@ static int timeinfo_handle_key(struct key_event * k)
 	}
 
 	if (display_session) {
-		switch (k->sym) {
-		case SCHISM_KEYSYM_UP:
+		switch (k->scancode) {
+		case SCHISM_SCANCODE_UP:
 			if (k->state == KEY_RELEASE)
 				return 1;
 			top_line--;
 			break;
-		case SCHISM_KEYSYM_PAGEUP:
+		case SCHISM_SCANCODE_PAGEUP:
 			if (k->state == KEY_RELEASE)
 				return 1;
 			top_line -= 15;
 			break;
-		case SCHISM_KEYSYM_DOWN:
+		case SCHISM_SCANCODE_DOWN:
 			if (k->state == KEY_RELEASE)
 				return 1;
 			top_line++;
 			break;
-		case SCHISM_KEYSYM_PAGEDOWN:
+		case SCHISM_SCANCODE_PAGEDOWN:
 			if (k->state == KEY_RELEASE)
 				return 1;
 			top_line += 15;
 			break;
-		case SCHISM_KEYSYM_HOME:
+		case SCHISM_SCANCODE_HOME:
 			if (k->state == KEY_RELEASE)
 				return 1;
 			top_line = 0;
 			break;
-		case SCHISM_KEYSYM_END:
+		case SCHISM_SCANCODE_END:
 			if (k->state == KEY_RELEASE)
 				return 1;
 			top_line = current_song->histlen;

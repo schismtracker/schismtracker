@@ -258,8 +258,8 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 			return 0;
 	}
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_UP:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_UP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (--new_device < 0) {
@@ -267,7 +267,7 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_SCANCODE_DOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (++new_device >= (int)audio_device_list_size + 1) {
@@ -275,12 +275,12 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_HOME:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_device = 0;
 		break;
-	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_SCANCODE_PAGEUP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 
@@ -289,28 +289,28 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 
 		new_device -= 16;
 		break;
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_END:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_device = audio_device_list_size;
 		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_SCANCODE_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_device += 16;
 		break;
-	case SCHISM_KEYSYM_RETURN:
+	case SCHISM_SCANCODE_RETURN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		load_selected_device = 1;
 		break;
-	case SCHISM_KEYSYM_TAB:
+	case SCHISM_SCANCODE_TAB:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT || NO_MODIFIER(k->mod)))
 			return 0;
 
 		widget_change_focus_to(focus_offsets[selected_audio_device]);
 		return 1;
-	case SCHISM_KEYSYM_LEFT: case SCHISM_KEYSYM_RIGHT:
+	case SCHISM_SCANCODE_LEFT: case SCHISM_SCANCODE_RIGHT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 
@@ -407,8 +407,8 @@ static int audio_driver_list_handle_key_on_list(struct key_event * k)
 			return 0;
 	}
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_UP:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_UP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (--new_driver < 0) {
@@ -416,7 +416,7 @@ static int audio_driver_list_handle_key_on_list(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_SCANCODE_DOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (++new_driver >= num_drivers + 1) {
@@ -424,12 +424,12 @@ static int audio_driver_list_handle_key_on_list(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_HOME:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_driver = 0;
 		break;
-	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_SCANCODE_PAGEUP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 
@@ -438,28 +438,28 @@ static int audio_driver_list_handle_key_on_list(struct key_event * k)
 
 		new_driver -= 16;
 		break;
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_END:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_driver = num_drivers;
 		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_SCANCODE_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_driver += 16;
 		break;
-	case SCHISM_KEYSYM_RETURN:
+	case SCHISM_SCANCODE_RETURN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		load_selected_driver = 1;
 		break;
-	case SCHISM_KEYSYM_TAB:
+	case SCHISM_SCANCODE_TAB:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT || NO_MODIFIER(k->mod)))
 			return 0;
 
 		widget_change_focus_to(focus_offsets[selected_audio_driver]);
 		return 1;
-	case SCHISM_KEYSYM_LEFT: case SCHISM_KEYSYM_RIGHT:
+	case SCHISM_SCANCODE_LEFT: case SCHISM_SCANCODE_RIGHT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 

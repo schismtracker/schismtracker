@@ -380,7 +380,7 @@ SCHISM_NORETURN static void event_loop(void)
 {
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
 	timer_ticks_t last_mouse_down, ticker, last_audio_poll;
-	schism_keysym_t last_key = 0;
+	schism_scancode_t last_scancode = 0;
 	time_t startdown;
 	int downtrip;
 	int fix_numlock_key;
@@ -396,7 +396,7 @@ SCHISM_NORETURN static void event_loop(void)
 	last_mouse_down = 0;
 	last_audio_poll = timer_ticks();
 	startdown = 0;
-	status.last_keysym = 0;
+	status.last_scancode = 0;
 
 	status.keymod = events_get_keymod_state();
 	os_get_modkey(&status.keymod);
@@ -512,14 +512,14 @@ SCHISM_NORETURN static void event_loop(void)
 
 				if (se.type == SCHISM_KEYUP) {
 					/* only empty the key repeat if
-					 * the last keydown is the same sym */
-					if (last_key == kk.sym)
+					 * the last keydown is the same scancode */
+					if (last_scancode == kk.scancode)
 						kbd_empty_key_repeat();
 				} else {
 					kbd_cache_key_repeat(&kk);
 
-					status.last_keysym = last_key;
-					last_key = kk.sym;
+					status.last_scancode = last_scancode;
+					last_scancode = kk.scancode;
 				}
 				break;
 			case SCHISM_MOUSEMOTION:

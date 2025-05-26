@@ -489,22 +489,22 @@ static int stereo_cvt_hk(struct key_event *k)
 		return 0;
 
 	/* trap the default dialog keys - we don't want to escape this dialog without running something */
-	switch (k->sym) {
-	case SCHISM_KEYSYM_RETURN:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_RETURN:
 		printf("why am I here\n");
 		SCHISM_FALLTHROUGH;
-	case SCHISM_KEYSYM_ESCAPE: case SCHISM_KEYSYM_o: case SCHISM_KEYSYM_c:
+	case SCHISM_SCANCODE_ESCAPE: case SCHISM_SCANCODE_O: case SCHISM_SCANCODE_C:
 		return 1;
-	case SCHISM_KEYSYM_l:
+	case SCHISM_SCANCODE_L:
 		if (k->state == KEY_RELEASE)
 			stereo_cvt_complete_left();
 		return 1;
-	case SCHISM_KEYSYM_r:
+	case SCHISM_SCANCODE_R:
 		if (k->state == KEY_RELEASE)
 			stereo_cvt_complete_right();
 		return 1;
-	case SCHISM_KEYSYM_s:
-	case SCHISM_KEYSYM_b:
+	case SCHISM_SCANCODE_S:
+	case SCHISM_SCANCODE_B:
 		if (k->state == KEY_RELEASE)
 			stereo_cvt_complete_both();
 		return 1;
@@ -669,7 +669,7 @@ static int file_list_handle_key(struct key_event * k)
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 
-	if (!(status.flags & CLASSIC_MODE) && k->sym == SCHISM_KEYSYM_n && (k->mod & SCHISM_KEYMOD_ALT)) {
+	if (!(status.flags & CLASSIC_MODE) && k->scancode == SCHISM_SCANCODE_N && (k->mod & SCHISM_KEYMOD_ALT)) {
 		if (k->state == KEY_RELEASE)
 			song_toggle_multichannel_mode();
 		return 1;
@@ -687,21 +687,21 @@ static int file_list_handle_key(struct key_event * k)
 			}
 		}
 	}
-	switch (k->sym) {
-	case SCHISM_KEYSYM_UP:           new_file--; search_pos = -1; break;
-	case SCHISM_KEYSYM_DOWN:         new_file++; search_pos = -1; break;
-	case SCHISM_KEYSYM_PAGEUP:       new_file -= 35; search_pos = -1; break;
-	case SCHISM_KEYSYM_PAGEDOWN:     new_file += 35; search_pos = -1; break;
-	case SCHISM_KEYSYM_HOME:         new_file = 0; search_pos = -1; break;
-	case SCHISM_KEYSYM_END:          new_file = flist.num_files - 1; search_pos = -1; break;
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_UP:           new_file--; search_pos = -1; break;
+	case SCHISM_SCANCODE_DOWN:         new_file++; search_pos = -1; break;
+	case SCHISM_SCANCODE_PAGEUP:       new_file -= 35; search_pos = -1; break;
+	case SCHISM_SCANCODE_PAGEDOWN:     new_file += 35; search_pos = -1; break;
+	case SCHISM_SCANCODE_HOME:         new_file = 0; search_pos = -1; break;
+	case SCHISM_SCANCODE_END:          new_file = flist.num_files - 1; search_pos = -1; break;
 
-	case SCHISM_KEYSYM_ESCAPE:
+	case SCHISM_SCANCODE_ESCAPE:
 		if (search_pos < 0) {
 			if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod))
 				set_page(PAGE_SAMPLE_LIST);
 			return 1;
 		} /* else fall through */
-	case SCHISM_KEYSYM_RETURN:
+	case SCHISM_SCANCODE_RETURN:
 		if (search_pos < 0) {
 			if (k->state == KEY_PRESS)
 				return 0;
@@ -715,14 +715,14 @@ static int file_list_handle_key(struct key_event * k)
 			return 1;
 		}
 		return 1;
-	case SCHISM_KEYSYM_DELETE:
+	case SCHISM_SCANCODE_DELETE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		search_pos = -1;
 		if (flist.num_files > 0)
 			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
 		return 1;
-	case SCHISM_KEYSYM_BACKSPACE:
+	case SCHISM_SCANCODE_BACKSPACE:
 		if (search_pos > -1) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -732,13 +732,15 @@ static int file_list_handle_key(struct key_event * k)
 			return 1;
 		}
 		SCHISM_FALLTHROUGH;
-	case SCHISM_KEYSYM_SLASH:
-		if (search_pos < 0) {
-			if (k->state == KEY_PRESS)
-				return 0;
-			search_pos = 0;
-			status.flags |= NEED_UPDATE;
-			return 1;
+	case SCHISM_SCANCODE_SLASH:
+		if (NO_MODIFIER(k->mod)) {
+			if (search_pos < 0) {
+				if (k->state == KEY_PRESS)
+					return 0;
+				search_pos = 0;
+				status.flags |= NEED_UPDATE;
+				return 1;
+			}
 		}
 		SCHISM_FALLTHROUGH;
 	default:
@@ -788,7 +790,7 @@ static void load_sample_handle_key(struct key_event * k)
 {
 	int n, v;
 
-	if (k->state == KEY_PRESS && k->sym == SCHISM_KEYSYM_ESCAPE && NO_MODIFIER(k->mod)) {
+	if (k->state == KEY_PRESS && k->scancode == SCHISM_SCANCODE_ESCAPE && NO_MODIFIER(k->mod)) {
 		set_page(PAGE_SAMPLE_LIST);
 		return;
 	}

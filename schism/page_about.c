@@ -55,23 +55,23 @@ static struct vgamem_overlay logo_image = {
 static int _fixup_ignore_globals(struct key_event *k)
 {
 	if (k->mouse && k->y > 20) return 0;
-	switch (k->sym) {
-	case SCHISM_KEYSYM_LEFT:
-	case SCHISM_KEYSYM_RIGHT:
-	case SCHISM_KEYSYM_DOWN:
-	case SCHISM_KEYSYM_UP:
-	case SCHISM_KEYSYM_TAB:
-	case SCHISM_KEYSYM_RETURN:
-	case SCHISM_KEYSYM_ESCAPE:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_LEFT:
+	case SCHISM_SCANCODE_RIGHT:
+	case SCHISM_SCANCODE_DOWN:
+	case SCHISM_SCANCODE_UP:
+	case SCHISM_SCANCODE_TAB:
+	case SCHISM_SCANCODE_RETURN:
+	case SCHISM_SCANCODE_ESCAPE:
 		/* use default handler */
 		return 0;
-	case SCHISM_KEYSYM_F2: case SCHISM_KEYSYM_F5: case SCHISM_KEYSYM_F9: case SCHISM_KEYSYM_F10:
+	case SCHISM_SCANCODE_F2: case SCHISM_SCANCODE_F5: case SCHISM_SCANCODE_F9: case SCHISM_SCANCODE_F10:
 		// Ctrl + these keys does not lead to a new screen
 		if (k->mod & SCHISM_KEYMOD_CTRL)
 			break;
 		// Fall through.
-	case SCHISM_KEYSYM_F1: case SCHISM_KEYSYM_F3: case SCHISM_KEYSYM_F4:
-	case SCHISM_KEYSYM_F11: case SCHISM_KEYSYM_F12:
+	case SCHISM_SCANCODE_F1: case SCHISM_SCANCODE_F3: case SCHISM_SCANCODE_F4:
+	case SCHISM_SCANCODE_F11: case SCHISM_SCANCODE_F12:
 		// Ignore Alt and so on.
 		if (k->mod & (SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_SHIFT))
 			break;

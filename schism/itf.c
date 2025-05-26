@@ -850,18 +850,18 @@ static int fontedit_handle_key(struct key_event * k)
 	}
 
 	/* kp is special */
-	switch (k->sym) {
-	case SCHISM_KEYSYM_KP_0:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_KP_0:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		k->sym += 10;
 		/* fall through */
-	case SCHISM_KEYSYM_KP_1: case SCHISM_KEYSYM_KP_2: case SCHISM_KEYSYM_KP_3:
-	case SCHISM_KEYSYM_KP_4: case SCHISM_KEYSYM_KP_5: case SCHISM_KEYSYM_KP_6:
-	case SCHISM_KEYSYM_KP_7: case SCHISM_KEYSYM_KP_8: case SCHISM_KEYSYM_KP_9:
+	case SCHISM_SCANCODE_KP_1: case SCHISM_SCANCODE_KP_2: case SCHISM_SCANCODE_KP_3:
+	case SCHISM_SCANCODE_KP_4: case SCHISM_SCANCODE_KP_5: case SCHISM_SCANCODE_KP_6:
+	case SCHISM_SCANCODE_KP_7: case SCHISM_SCANCODE_KP_8: case SCHISM_SCANCODE_KP_9:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		n = k->sym - SCHISM_KEYSYM_KP_1;
+		n = k->scancode - SCHISM_SCANCODE_KP_1;
 		if (k->mod & SCHISM_KEYMOD_SHIFT)
 			n += 10;
 		palette_load_preset(n);
@@ -872,43 +872,48 @@ static int fontedit_handle_key(struct key_event * k)
 		break;
 	};
 
-	switch (k->sym) {
-	case '0':
-		if (k->state == KEY_RELEASE)
+	if ((k->sym >= '0') && (k->sym <= '9')) {
+		switch (k->sym) {
+		case '0':
+			if (k->state == KEY_RELEASE)
+				return 1;
+			k->sym += 10;
+			/* fall through */
+		case '1': case '2': case '3':
+		case '4': case '5': case '6':
+		case '7': case '8': case '9':
+			if (k->state == KEY_RELEASE)
+				return 1;
+			n = k->sym - '1';
+			if (k->mod & SCHISM_KEYMOD_SHIFT)
+				n += 10;
+			palette_load_preset(n);
+			palette_apply();
+			status.flags |= NEED_UPDATE;
 			return 1;
-		k->sym += 10;
-		/* fall through */
-	case '1': case '2': case '3':
-	case '4': case '5': case '6':
-	case '7': case '8': case '9':
-		if (k->state == KEY_RELEASE)
-			return 1;
-		n = k->sym - '1';
-		if (k->mod & SCHISM_KEYMOD_SHIFT)
-			n += 10;
-		palette_load_preset(n);
-		palette_apply();
-		status.flags |= NEED_UPDATE;
-		return 1;
-	case SCHISM_KEYSYM_F2:
+		}
+	}
+
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_F2:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selected_item = EDITBOX;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_F3:
+	case SCHISM_SCANCODE_F3:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selected_item = CHARMAP;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_F4:
+	case SCHISM_SCANCODE_F4:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selected_item = ITFMAP;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_TAB:
+	case SCHISM_SCANCODE_TAB:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
@@ -921,7 +926,7 @@ static int fontedit_handle_key(struct key_event * k)
 		}
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_c:
+	case SCHISM_SCANCODE_C:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -929,7 +934,7 @@ static int fontedit_handle_key(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_p:
+	case SCHISM_SCANCODE_P:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -938,7 +943,7 @@ static int fontedit_handle_key(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_m:
+	case SCHISM_SCANCODE_M:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
@@ -951,7 +956,7 @@ static int fontedit_handle_key(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_z:
+	case SCHISM_SCANCODE_Z:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -960,7 +965,7 @@ static int fontedit_handle_key(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_h:
+	case SCHISM_SCANCODE_H:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -975,7 +980,7 @@ static int fontedit_handle_key(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_v:
+	case SCHISM_SCANCODE_V:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -988,7 +993,7 @@ static int fontedit_handle_key(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_i:
+	case SCHISM_SCANCODE_I:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -1001,13 +1006,13 @@ static int fontedit_handle_key(struct key_event * k)
 
 		/* ----------------------------------------------------- */
 
-	case SCHISM_KEYSYM_l:
-	case SCHISM_KEYSYM_r:
+	case SCHISM_SCANCODE_L:
+	case SCHISM_SCANCODE_R:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (!(k->mod & SCHISM_KEYMOD_CTRL)) break;
 		/* fall through */
-	case SCHISM_KEYSYM_F9:
+	case SCHISM_SCANCODE_F9:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		load_fontlist();
@@ -1015,12 +1020,12 @@ static int fontedit_handle_key(struct key_event * k)
 		selected_item = FONTLIST;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_s:
+	case SCHISM_SCANCODE_S:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (!(k->mod & SCHISM_KEYMOD_CTRL)) break;
 		/* fall through */
-	case SCHISM_KEYSYM_F10:
+	case SCHISM_SCANCODE_F10:
 		/* a bit weird, but this ensures that font.cfg
 		 * is always the default font to save to, but
 		 * without the annoyance of moving the cursor
@@ -1033,7 +1038,7 @@ static int fontedit_handle_key(struct key_event * k)
 		selected_item = FONTLIST;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_BACKSPACE:
+	case SCHISM_SCANCODE_BACKSPACE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
@@ -1045,9 +1050,9 @@ static int fontedit_handle_key(struct key_event * k)
 		}
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_RETURN:
+	case SCHISM_SCANCODE_RETURN:
 		return 0;
-	case SCHISM_KEYSYM_q:
+	case SCHISM_SCANCODE_Q:
 		if (k->mod & SCHISM_KEYMOD_CTRL)
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -1083,17 +1088,17 @@ static struct widget fontedit_widget_hack[1];
 
 static int fontedit_key_hack(struct key_event *k)
 {
-	switch (k->sym) {
-	case SCHISM_KEYSYM_r: case SCHISM_KEYSYM_l: case SCHISM_KEYSYM_s:
-	case SCHISM_KEYSYM_c: case SCHISM_KEYSYM_p: case SCHISM_KEYSYM_m:
-	case SCHISM_KEYSYM_z: case SCHISM_KEYSYM_v: case SCHISM_KEYSYM_h:
-	case SCHISM_KEYSYM_i: case SCHISM_KEYSYM_q: case SCHISM_KEYSYM_w:
-	case SCHISM_KEYSYM_F1: case SCHISM_KEYSYM_F2: case SCHISM_KEYSYM_F3:
-	case SCHISM_KEYSYM_F4: case SCHISM_KEYSYM_F5: case SCHISM_KEYSYM_F6:
-	case SCHISM_KEYSYM_F7: case SCHISM_KEYSYM_F8: case SCHISM_KEYSYM_F9:
-	case SCHISM_KEYSYM_F10: case SCHISM_KEYSYM_F11: case SCHISM_KEYSYM_F12:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_R: case SCHISM_SCANCODE_L: case SCHISM_SCANCODE_S:
+	case SCHISM_SCANCODE_C: case SCHISM_SCANCODE_P: case SCHISM_SCANCODE_M:
+	case SCHISM_SCANCODE_Z: case SCHISM_SCANCODE_V: case SCHISM_SCANCODE_H:
+	case SCHISM_SCANCODE_I: case SCHISM_SCANCODE_Q: case SCHISM_SCANCODE_W:
+	case SCHISM_SCANCODE_F1: case SCHISM_SCANCODE_F2: case SCHISM_SCANCODE_F3:
+	case SCHISM_SCANCODE_F4: case SCHISM_SCANCODE_F5: case SCHISM_SCANCODE_F6:
+	case SCHISM_SCANCODE_F7: case SCHISM_SCANCODE_F8: case SCHISM_SCANCODE_F9:
+	case SCHISM_SCANCODE_F10: case SCHISM_SCANCODE_F11: case SCHISM_SCANCODE_F12:
 		return fontedit_handle_key(k);
-	case SCHISM_KEYSYM_RETURN:
+	case SCHISM_SCANCODE_RETURN:
 		if (status.dialog_type & (DIALOG_MENU|DIALOG_BOX)) return 0;
 		if (selected_item == FONTLIST) {
 			handle_key_fontlist(k);

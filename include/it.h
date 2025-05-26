@@ -150,7 +150,7 @@ struct tracker_status {
 	int flags;
 	enum tracker_time_display time_display;
 	enum tracker_vis_style vis_style;
-	schism_keysym_t last_keysym;
+	schism_scancode_t last_scancode;
 
 	schism_keymod_t keymod;
 

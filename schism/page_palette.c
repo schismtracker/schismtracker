@@ -186,8 +186,8 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 			new_palette += MOUSE_SCROLL_LINES;
 	}
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_UP:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_UP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (--new_palette < 0) {
@@ -195,7 +195,7 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_SCANCODE_DOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		// new_palette++;
@@ -204,12 +204,12 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_HOME:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_palette = 0;
 		break;
-	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_SCANCODE_PAGEUP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (new_palette == 0) {
@@ -218,17 +218,17 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 		}
 		new_palette -= 16;
 		break;
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_END:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_palette = NUM_PALETTES - 1;
 		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_SCANCODE_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_palette += 16;
 		break;
-	case SCHISM_KEYSYM_RETURN:
+	case SCHISM_SCANCODE_RETURN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		// if (selected_palette == -1) return 1;
@@ -237,8 +237,8 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 		update_thumbbars();
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_RIGHT:
-	case SCHISM_KEYSYM_TAB:
+	case SCHISM_SCANCODE_RIGHT:
+	case SCHISM_SCANCODE_TAB:
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			widget_change_focus_to(focus_offsets[selected_palette+1] + 29);
 			return 1;
@@ -247,12 +247,12 @@ static int palette_list_handle_key_on_list(struct key_event * k)
 			return 0;
 		widget_change_focus_to(focus_offsets[selected_palette+1] + 8);
 		return 1;
-	case SCHISM_KEYSYM_LEFT:
+	case SCHISM_SCANCODE_LEFT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		widget_change_focus_to(focus_offsets[selected_palette+1] + 29);
 		return 1;
-	case SCHISM_KEYSYM_c:
+	case SCHISM_SCANCODE_C:
 		/* pasting is handled by the page */
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			palette_copy_palette_to_clipboard(selected_palette);
@@ -290,22 +290,22 @@ static void palette_list_handle_key(struct key_event * k)
 	if (k->state == KEY_RELEASE)
 		return;
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_PAGEUP:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_PAGEUP:
 		if (!NO_MODIFIER(k->mod))
 			n -= 3;
 		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_SCANCODE_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
 			n += 3;
 		break;
-	case SCHISM_KEYSYM_c:
+	case SCHISM_SCANCODE_C:
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			palette_copy_current_to_clipboard();
 			return;
 		}
 		break;
-	case SCHISM_KEYSYM_v:
+	case SCHISM_SCANCODE_V:
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			palette_paste_from_clipboard();
 			return;

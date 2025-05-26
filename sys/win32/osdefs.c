@@ -897,8 +897,9 @@ int win32_event(schism_event_t *event)
 		// We get bogus keydowns for Ctrl-Pause.
 		// As a workaround, we can check what Windows thinks, but only for Right Ctrl.
 		// Left Ctrl just gets completely ignored and there's nothing we can do about it.
-		if (event->key.sym == SCHISM_KEYSYM_SCROLLLOCK && (event->key.mod & SCHISM_KEYMOD_RCTRL) && !(GetKeyState(VK_SCROLL) & 0x80))
+		if (event->key.scancode == SCHISM_SCANCODE_SCROLLLOCK && (event->key.mod & SCHISM_KEYMOD_RCTRL) && !(GetKeyState(VK_SCROLL) & 0x80))
 			event->key.sym = SCHISM_KEYSYM_PAUSE;
+			event->key.scancode = SCHISM_SCANCODE_PAUSE;
 
 		return 1;
 	}

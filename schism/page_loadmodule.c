@@ -694,26 +694,26 @@ static int file_list_handle_key(struct key_event * k)
 {
 	int new_file = current_file;
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_UP:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_UP:
 		new_file--;
 		break;
-	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_SCANCODE_DOWN:
 		new_file++;
 		break;
-	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_SCANCODE_PAGEUP:
 		new_file -= 31;
 		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_SCANCODE_PAGEDOWN:
 		new_file += 31;
 		break;
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_HOME:
 		new_file = 0;
 		break;
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_END:
 		new_file = flist.num_files - 1;
 		break;
-	case SCHISM_KEYSYM_RETURN:
+	case SCHISM_SCANCODE_RETURN:
 		if (k->state == KEY_PRESS)
 			return 1;
 		if (current_file < flist.num_files) {
@@ -723,13 +723,13 @@ static int file_list_handle_key(struct key_event * k)
 		search_text_clear();
 
 		return 1;
-	case SCHISM_KEYSYM_DELETE:
+	case SCHISM_SCANCODE_DELETE:
 		if (k->state == KEY_RELEASE)
 		    return 1;
 		if (flist.num_files > 0)
 			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
 		return 1;
-	case SCHISM_KEYSYM_BACKSPACE:
+	case SCHISM_SCANCODE_BACKSPACE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_CTRL)
@@ -737,7 +737,7 @@ static int file_list_handle_key(struct key_event * k)
 		else
 			search_text_delete_char();
 		return 1;
-	case SCHISM_KEYSYM_p:
+	case SCHISM_SCANCODE_P:
 		if ((k->mod & SCHISM_KEYMOD_ALT) && k->state == KEY_PRESS) {
 			show_selected_song_length();
 			return 1;
@@ -886,26 +886,26 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 		}
 	}
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_UP:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_UP:
 		new_dir--;
 		break;
-	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_SCANCODE_DOWN:
 		new_dir++;
 		break;
-	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_SCANCODE_PAGEUP:
 		new_dir -= 21;
 		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_SCANCODE_PAGEDOWN:
 		new_dir += 21;
 		break;
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_HOME:
 		new_dir = 0;
 		break;
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_END:
 		new_dir = dlist.num_dirs - 1;
 		break;
-	case SCHISM_KEYSYM_RETURN:
+	case SCHISM_SCANCODE_RETURN:
 		if (k->state == KEY_PRESS)
 			return 0;
 		/* reset */
@@ -917,7 +917,7 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 			*selected_widget = 0;
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_BACKSPACE:
+	case SCHISM_SCANCODE_BACKSPACE:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (k->mod & SCHISM_KEYMOD_CTRL)
@@ -925,9 +925,9 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 		else
 			search_text_delete_char();
 		return 1;
-	case SCHISM_KEYSYM_SLASH:
+	case SCHISM_SCANCODE_SLASH:
 #ifdef SCHISM_WIN32
-	case SCHISM_KEYSYM_BACKSLASH:
+	case SCHISM_SCANCODE_BACKSLASH:
 #endif
 		if (k->state == KEY_RELEASE)
 			return 0;

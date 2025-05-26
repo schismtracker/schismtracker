@@ -440,36 +440,36 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			}
 		}
 	} else {
-		switch (k->sym) {
-		case SCHISM_KEYSYM_LEFT:
+		switch (k->scancode) {
+		case SCHISM_SCANCODE_LEFT:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			new_cursor_pos--;
 			break;
-		case SCHISM_KEYSYM_RIGHT:
+		case SCHISM_SCANCODE_RIGHT:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			new_cursor_pos++;
 			break;
-		case SCHISM_KEYSYM_HOME:
+		case SCHISM_SCANCODE_HOME:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			new_cursor_pos = 0;
 			break;
-		case SCHISM_KEYSYM_END:
+		case SCHISM_SCANCODE_END:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			new_cursor_pos = 25;
 			break;
-		case SCHISM_KEYSYM_UP:
+		case SCHISM_SCANCODE_UP:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -483,13 +483,13 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 				new_sample--;
 			}
 			break;
-		case SCHISM_KEYSYM_DOWN:
+		case SCHISM_SCANCODE_DOWN:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (k->mod & SCHISM_KEYMOD_ALT) {
 				// restrict position to the "old" value of _last_vis_sample()
 				// (this is entirely for aesthetic reasons)
-				if (status.last_keysym != SCHISM_KEYSYM_DOWN && !k->is_repeat)
+				if (status.last_scancode != SCHISM_SCANCODE_DOWN && !k->is_repeat)
 					_altswap_lastvis = _last_vis_sample();
 				if (current_sample < _altswap_lastvis) {
 					new_sample = current_sample + 1;
@@ -501,7 +501,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 				new_sample++;
 			}
 			break;
-		case SCHISM_KEYSYM_PAGEUP:
+		case SCHISM_SCANCODE_PAGEUP:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (k->mod & SCHISM_KEYMOD_CTRL) {
@@ -510,7 +510,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 				new_sample -= 16;
 			}
 			break;
-		case SCHISM_KEYSYM_PAGEDOWN:
+		case SCHISM_SCANCODE_PAGEDOWN:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (k->mod & SCHISM_KEYMOD_CTRL) {
@@ -519,12 +519,12 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 				new_sample += 16;
 			}
 			break;
-		case SCHISM_KEYSYM_RETURN:
+		case SCHISM_SCANCODE_RETURN:
 			if (k->state == KEY_PRESS)
 				return 0;
 			set_page(PAGE_LOAD_SAMPLE);
 			break;
-		case SCHISM_KEYSYM_BACKSPACE:
+		case SCHISM_SCANCODE_BACKSPACE:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if ((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT)) == 0) {
@@ -541,7 +541,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 				return 1;
 			}
 			return 0;
-		case SCHISM_KEYSYM_DELETE:
+		case SCHISM_SCANCODE_DELETE:
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if ((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT)) == 0) {
@@ -551,7 +551,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 				return 1;
 			}
 			return 0;
-		case SCHISM_KEYSYM_ESCAPE:
+		case SCHISM_SCANCODE_ESCAPE:
 			if (k->mod & SCHISM_KEYMOD_SHIFT) {
 				if (k->state == KEY_RELEASE)
 					return 1;
@@ -561,7 +561,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			return 0;
 		default:
 			if (k->mod & SCHISM_KEYMOD_ALT) {
-				if (k->sym == SCHISM_KEYSYM_c) {
+				if (k->scancode == SCHISM_SCANCODE_C) {
 					clear_sample_text();
 					return 1;
 				}
@@ -935,7 +935,7 @@ static void sample_adlibconfig_draw_const(void)
 
 static int do_adlib_handlekey(struct key_event *kk)
 {
-	if (kk->sym == SCHISM_KEYSYM_F1) {
+	if (kk->scancode == SCHISM_SCANCODE_F1) {
 		if (kk->state == KEY_PRESS)
 			return 1;
 		status.current_help_index = HELP_ADLIB_SAMPLE;
@@ -1160,37 +1160,37 @@ static int export_sample_list_handle_key(struct key_event * k)
 
 	if (k->state == KEY_RELEASE)
 		return 0;
-	switch (k->sym) {
-	case SCHISM_KEYSYM_UP:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_UP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_format--;
 		break;
-	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_SCANCODE_DOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_format++;
 		break;
-	case SCHISM_KEYSYM_PAGEUP:
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_PAGEUP:
+	case SCHISM_SCANCODE_HOME:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_format = 0;
 		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_PAGEDOWN:
+	case SCHISM_SCANCODE_END:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		new_format = num_save_formats - 1;
 		break;
-	case SCHISM_KEYSYM_TAB:
+	case SCHISM_SCANCODE_TAB:
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			widget_change_focus_to(0);
 			return 1;
 		}
 		/* fall through */
-	case SCHISM_KEYSYM_LEFT:
-	case SCHISM_KEYSYM_RIGHT:
+	case SCHISM_SCANCODE_LEFT:
+	case SCHISM_SCANCODE_RIGHT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		widget_change_focus_to(0); /* should focus 0/1/2 depending on what's closest */
@@ -1451,18 +1451,18 @@ static void sample_list_handle_alt_key(struct key_event * k)
 	if (k->state == KEY_RELEASE)
 		return;
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_a:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_A:
 		if (canmod)
 			dialog_create(DIALOG_OK_CANCEL, "Convert sample?", do_sign_convert, NULL, 0, NULL);
 		return;
-	case SCHISM_KEYSYM_b:
+	case SCHISM_SCANCODE_B:
 		if (canmod && (sample->loop_start > 0
 			       || ((sample->flags & CHN_SUSTAINLOOP) && sample->sustain_start > 0))) {
 			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_pre_loop_cut, NULL, 1, NULL);
 		}
 		return;
-	case SCHISM_KEYSYM_d:
+	case SCHISM_SCANCODE_D:
 		if ((k->mod & SCHISM_KEYMOD_SHIFT) && !(status.flags & CLASSIC_MODE)) {
 			if (canmod && sample->flags & CHN_STEREO) {
 				dialog_create(DIALOG_OK_CANCEL, "Downmix sample to mono?",
@@ -1473,7 +1473,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
 				NULL, 1, NULL);
 		}
 		return;
-	case SCHISM_KEYSYM_e:
+	case SCHISM_SCANCODE_E:
 		if (canmod) {
 			if ((k->mod & SCHISM_KEYMOD_SHIFT) && !(status.flags & CLASSIC_MODE))
 				resample_sample_dialog(1);
@@ -1481,7 +1481,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
 				resize_sample_dialog(1);
 		}
 		break;
-	case SCHISM_KEYSYM_f:
+	case SCHISM_SCANCODE_F:
 		if (canmod) {
 			if ((k->mod & SCHISM_KEYMOD_SHIFT) && !(status.flags & CLASSIC_MODE))
 				resample_sample_dialog(0);
@@ -1489,53 +1489,53 @@ static void sample_list_handle_alt_key(struct key_event * k)
 				resize_sample_dialog(0);
 		}
 		break;
-	case SCHISM_KEYSYM_g:
+	case SCHISM_SCANCODE_G:
 		if (canmod)
 			sample_reverse(sample);
 		break;
-	case SCHISM_KEYSYM_h:
+	case SCHISM_SCANCODE_H:
 		if (canmod)
 			dialog_create(DIALOG_YES_NO, "Centralise sample?", do_centralise, NULL, 0, NULL);
 		return;
-	case SCHISM_KEYSYM_i:
+	case SCHISM_SCANCODE_I:
 		if (canmod)
 			sample_invert(sample);
 		break;
-	case SCHISM_KEYSYM_l:
+	case SCHISM_SCANCODE_L:
 		if (canmod && (sample->loop_end > 0
 			       || ((sample->flags & CHN_SUSTAINLOOP) && sample->sustain_end > 0))) {
 			dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_post_loop_cut, NULL, 1, NULL);
 		}
 		return;
-	case SCHISM_KEYSYM_m:
+	case SCHISM_SCANCODE_M:
 		if (canmod)
 			sample_amplify_dialog();
 		return;
-	case SCHISM_KEYSYM_n:
+	case SCHISM_SCANCODE_N:
 		song_toggle_multichannel_mode();
 		return;
-	case SCHISM_KEYSYM_o:
+	case SCHISM_SCANCODE_O:
 		sample_save(NULL, "ITS");
 		return;
-	case SCHISM_KEYSYM_p:
+	case SCHISM_SCANCODE_P:
 		smpprompt_create("Copy sample:", "Sample", do_copy_sample);
 		return;
-	case SCHISM_KEYSYM_q:
+	case SCHISM_SCANCODE_Q:
 		if (canmod) {
 			dialog_create(DIALOG_YES_NO, "Convert sample?",
 			      do_quality_convert, do_quality_toggle, 0, NULL);
 		}
 		return;
-	case SCHISM_KEYSYM_r:
+	case SCHISM_SCANCODE_R:
 		smpprompt_create("Replace sample with:", "Sample", do_replace_sample);
 		return;
-	case SCHISM_KEYSYM_s:
+	case SCHISM_SCANCODE_S:
 		smpprompt_create("Swap sample with:", "Sample", do_swap_sample);
 		return;
-	case SCHISM_KEYSYM_t:
+	case SCHISM_SCANCODE_T:
 		export_sample_dialog();
 		return;
-	case SCHISM_KEYSYM_v:
+	case SCHISM_SCANCODE_V:
 		if (!canmod || (status.flags & CLASSIC_MODE))
 			return;
 
@@ -1551,17 +1551,17 @@ static void sample_list_handle_alt_key(struct key_event * k)
 
 		crossfade_sample_dialog();
 		return;
-	case SCHISM_KEYSYM_w:
+	case SCHISM_SCANCODE_W:
 		sample_save(NULL, "RAW");
 		return;
-	case SCHISM_KEYSYM_x:
+	case SCHISM_SCANCODE_X:
 		smpprompt_create("Exchange sample with:", "Sample", do_exchange_sample);
 		return;
-	case SCHISM_KEYSYM_y:
+	case SCHISM_SCANCODE_Y:
 		/* hi virt */
 		txtsynth_dialog();
 		return;
-	case SCHISM_KEYSYM_z:
+	case SCHISM_SCANCODE_Z:
 		{ // uguu~
 			void (*dlg)(void *) = (k->mod & SCHISM_KEYMOD_SHIFT)
 				? sample_adlibpatch_dialog
@@ -1574,16 +1574,16 @@ static void sample_list_handle_alt_key(struct key_event * k)
 			}
 		}
 		return;
-	case SCHISM_KEYSYM_INSERT:
+	case SCHISM_SCANCODE_INSERT:
 		song_insert_sample_slot(current_sample);
 		break;
-	case SCHISM_KEYSYM_DELETE:
+	case SCHISM_SCANCODE_DELETE:
 		song_remove_sample_slot(current_sample);
 		break;
-	case SCHISM_KEYSYM_F9:
+	case SCHISM_SCANCODE_F9:
 		sample_toggle_mute(current_sample);
 		break;
-	case SCHISM_KEYSYM_F10:
+	case SCHISM_SCANCODE_F10:
 		sample_toggle_solo(current_sample);
 		break;
 	default:
@@ -1598,19 +1598,19 @@ static void sample_list_handle_key(struct key_event * k)
 	int new_sample = current_sample;
 	song_sample_t *sample = song_get_sample(current_sample);
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_SPACE:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_SPACE:
 		if (k->state == KEY_RELEASE)
 			return;
 		if (selected_widget && *selected_widget == 0) {
 			status.flags |= NEED_UPDATE;
 		}
 		return;
-	case SCHISM_KEYSYM_EQUALS:
+	case SCHISM_SCANCODE_EQUALS:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
 			return;
 		SCHISM_FALLTHROUGH;
-	case SCHISM_KEYSYM_PLUS:
+	case SCHISM_SCANCODE_KP_PLUS:
 		if (k->state == KEY_RELEASE)
 			return;
 		if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -1622,7 +1622,8 @@ static void sample_list_handle_key(struct key_event * k)
 		}
 		status.flags |= NEED_UPDATE;
 		return;
-	case SCHISM_KEYSYM_MINUS:
+	case SCHISM_SCANCODE_MINUS:
+	case SCHISM_SCANCODE_KP_MINUS:
 		if (k->state == KEY_RELEASE)
 			return;
 		if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -1635,29 +1636,27 @@ static void sample_list_handle_key(struct key_event * k)
 		status.flags |= NEED_UPDATE;
 		return;
 
-	case SCHISM_KEYSYM_COMMA:
-	case SCHISM_KEYSYM_LESS:
+	case SCHISM_SCANCODE_COMMA:
 		if (k->state == KEY_RELEASE)
 			return;
 		song_change_current_play_channel(-1, 0);
 		return;
-	case SCHISM_KEYSYM_PERIOD:
-	case SCHISM_KEYSYM_GREATER:
+	case SCHISM_SCANCODE_PERIOD:
 		if (k->state == KEY_RELEASE)
 			return;
 		song_change_current_play_channel(1, 0);
 		return;
-	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_SCANCODE_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return;
 		new_sample--;
 		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_SCANCODE_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return;
 		new_sample++;
 		break;
-	case SCHISM_KEYSYM_ESCAPE:
+	case SCHISM_SCANCODE_ESCAPE:
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (k->state == KEY_RELEASE)
 				return;
@@ -1683,7 +1682,7 @@ static void sample_list_handle_key(struct key_event * k)
 					v = KEYJAZZ_DEFAULTVOL;
 				}
 			} else {
-				n = (k->sym == SCHISM_KEYSYM_SPACE)
+				n = (k->scancode == SCHISM_SCANCODE_SPACE)
 					? last_note
 					: kbd_get_note(k);
 				if (n <= 0 || n > 120)

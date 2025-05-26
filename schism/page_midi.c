@@ -154,31 +154,31 @@ static int midi_page_handle_key(struct key_event * k)
 		}
 	}
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_SPACE:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_SPACE:
 		if (k->state == KEY_PRESS)
 			return 1;
 		toggle_port();
 		return 1;
-	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_SCANCODE_PAGEUP:
 		new_port -= 13;
 		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_SCANCODE_PAGEDOWN:
 		new_port += 13;
 		break;
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_HOME:
 		new_port = 0;
 		break;
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_END:
 		new_port = midi_engine_port_count() - 1;
 		break;
-	case SCHISM_KEYSYM_UP:
+	case SCHISM_SCANCODE_UP:
 		new_port--;
 		break;
-	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_SCANCODE_DOWN:
 		new_port++;
 		break;
-	case SCHISM_KEYSYM_TAB:
+	case SCHISM_SCANCODE_TAB:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		widget_change_focus_to(1);

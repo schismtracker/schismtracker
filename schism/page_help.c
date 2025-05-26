@@ -161,38 +161,38 @@ static int help_handle_key(struct key_event * k)
 	} else if (k->mouse != MOUSE_NONE) {
 		return 0;
 	}
-	switch (k->sym) {
-	case SCHISM_KEYSYM_ESCAPE:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_ESCAPE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		set_page(status.previous_page);
 		return 1;
-	case SCHISM_KEYSYM_UP:
+	case SCHISM_SCANCODE_UP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line--;
 		break;
-	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_SCANCODE_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line++;
 		break;
-	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_SCANCODE_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line -= 32;
 		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_SCANCODE_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line += 32;
 		break;
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_HOME:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line = 0;
 		break;
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_END:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_line = num_lines - 32;

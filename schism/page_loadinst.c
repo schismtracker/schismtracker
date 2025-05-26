@@ -399,21 +399,21 @@ static int file_list_handle_key(struct key_event * k)
 			}
 		}
 	}
-	switch (k->sym) {
-	case SCHISM_KEYSYM_UP:           new_file--; slash_search_mode = -1; break;
-	case SCHISM_KEYSYM_DOWN:         new_file++; slash_search_mode = -1; break;
-	case SCHISM_KEYSYM_PAGEUP:       new_file -= 35; slash_search_mode = -1; break;
-	case SCHISM_KEYSYM_PAGEDOWN:     new_file += 35; slash_search_mode = -1; break;
-	case SCHISM_KEYSYM_HOME:         new_file = 0; slash_search_mode = -1; break;
-	case SCHISM_KEYSYM_END:          new_file = flist.num_files - 1; slash_search_mode = -1; break;
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_UP:           new_file--; slash_search_mode = -1; break;
+	case SCHISM_SCANCODE_DOWN:         new_file++; slash_search_mode = -1; break;
+	case SCHISM_SCANCODE_PAGEUP:       new_file -= 35; slash_search_mode = -1; break;
+	case SCHISM_SCANCODE_PAGEDOWN:     new_file += 35; slash_search_mode = -1; break;
+	case SCHISM_SCANCODE_HOME:         new_file = 0; slash_search_mode = -1; break;
+	case SCHISM_SCANCODE_END:          new_file = flist.num_files - 1; slash_search_mode = -1; break;
 
-	case SCHISM_KEYSYM_ESCAPE:
+	case SCHISM_SCANCODE_ESCAPE:
 		if (slash_search_mode < 0) {
 			if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod))
 				set_page(PAGE_SAMPLE_LIST);
 			return 1;
 		} /* else fall through */
-	case SCHISM_KEYSYM_RETURN:
+	case SCHISM_SCANCODE_RETURN:
 		if (slash_search_mode < 0) {
 			if (k->state == KEY_PRESS)
 				return 0;
@@ -427,14 +427,14 @@ static int file_list_handle_key(struct key_event * k)
 			return 1;
 		}
 		return 1;
-	case SCHISM_KEYSYM_DELETE:
+	case SCHISM_SCANCODE_DELETE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		slash_search_mode = -1;
 		if (flist.num_files > 0)
 			dialog_create(DIALOG_OK_CANCEL, "Delete file?", do_delete_file, NULL, 1, NULL);
 		return 1;
-	case SCHISM_KEYSYM_BACKSPACE:
+	case SCHISM_SCANCODE_BACKSPACE:
 		if (slash_search_mode > -1) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -444,13 +444,15 @@ static int file_list_handle_key(struct key_event * k)
 			return 1;
 		}
 		SCHISM_FALLTHROUGH;
-	case SCHISM_KEYSYM_SLASH:
-		if (slash_search_mode < 0) {
-			if (k->state == KEY_PRESS)
-				return 0;
-			slash_search_mode = 0;
-			status.flags |= NEED_UPDATE;
-			return 1;
+	case SCHISM_SCANCODE_SLASH:
+		if (NO_MODIFIER(k->mod)) {
+			if (slash_search_mode < 0) {
+				if (k->state == KEY_PRESS)
+					return 0;
+				slash_search_mode = 0;
+				status.flags |= NEED_UPDATE;
+				return 1;
+			}
 		}
 		SCHISM_FALLTHROUGH;
 	default:
@@ -485,7 +487,7 @@ static void load_instrument_handle_key(struct key_event * k)
 {
 	if (k->state == KEY_RELEASE)
 		return;
-	if (k->sym == SCHISM_KEYSYM_ESCAPE && NO_MODIFIER(k->mod))
+	if (k->scancode == SCHISM_SCANCODE_ESCAPE && NO_MODIFIER(k->mod))
 		set_page(PAGE_INSTRUMENT_LIST);
 }
 

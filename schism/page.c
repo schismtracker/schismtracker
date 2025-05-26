@@ -490,8 +490,8 @@ static int handle_key_global(struct key_event * k)
 
 	/* first, check the truly global keys (the ones that still work if
 	 * a dialog's open) */
-	switch (k->sym) {
-	case SCHISM_KEYSYM_RETURN:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_RETURN:
 		if ((k->mod & SCHISM_KEYMOD_CTRL) && k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_PRESS)
 				return 1;
@@ -499,7 +499,7 @@ static int handle_key_global(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_m:
+	case SCHISM_SCANCODE_M:
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -508,7 +508,7 @@ static int handle_key_global(struct key_event * k)
 		}
 		break;
 
-	case SCHISM_KEYSYM_d:
+	case SCHISM_SCANCODE_D:
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (k->state == KEY_RELEASE)
 				return 1; /* argh */
@@ -521,7 +521,7 @@ static int handle_key_global(struct key_event * k)
 		}
 		break;
 
-	case SCHISM_KEYSYM_i:
+	case SCHISM_SCANCODE_I:
 		/* reset audio stuff? */
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (k->state == KEY_RELEASE)
@@ -530,7 +530,7 @@ static int handle_key_global(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_e:
+	case SCHISM_SCANCODE_E:
 		/* This should reset everything display-related. */
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (k->state == KEY_RELEASE)
@@ -540,14 +540,14 @@ static int handle_key_global(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_HOME:
 		if (!(k->mod & SCHISM_KEYMOD_ALT)) break;
 		if (status.flags & DISKWRITER_ACTIVE) break;
 		if (k->state == KEY_RELEASE)
 			return 0;
 		kbd_set_current_octave(kbd_get_current_octave() - 1);
 		return 1;
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_END:
 		if (!(k->mod & SCHISM_KEYMOD_ALT)) break;
 		if (status.flags & DISKWRITER_ACTIVE) break;
 		if (k->state == KEY_RELEASE)
@@ -561,8 +561,8 @@ static int handle_key_global(struct key_event * k)
 	/* next, if there's no dialog, check the rest of the keys */
 	if (status.flags & DISKWRITER_ACTIVE) return 0;
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_q:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_Q:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
@@ -575,7 +575,7 @@ static int handle_key_global(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_n:
+	case SCHISM_SCANCODE_N:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
@@ -585,7 +585,7 @@ static int handle_key_global(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_g:
+	case SCHISM_SCANCODE_G:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
@@ -595,7 +595,7 @@ static int handle_key_global(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_p:
+	case SCHISM_SCANCODE_P:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
@@ -605,7 +605,7 @@ static int handle_key_global(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_F1:
+	case SCHISM_SCANCODE_F1:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
@@ -624,7 +624,7 @@ static int handle_key_global(struct key_event * k)
 			break;
 		}
 		return 1;
-	case SCHISM_KEYSYM_F2:
+	case SCHISM_SCANCODE_F2:
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (status.current_page == PAGE_PATTERN_EDITOR) {
 				_mp_finish(NULL);
@@ -658,7 +658,7 @@ static int handle_key_global(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_F3:
+	case SCHISM_SCANCODE_F3:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (NO_MODIFIER(k->mod)) {
@@ -671,7 +671,7 @@ static int handle_key_global(struct key_event * k)
 			break;
 		}
 		return 1;
-	case SCHISM_KEYSYM_F4:
+	case SCHISM_SCANCODE_F4:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (NO_MODIFIER(k->mod)) {
@@ -686,7 +686,7 @@ static int handle_key_global(struct key_event * k)
 			break;
 		}
 		return 1;
-	case SCHISM_KEYSYM_F5:
+	case SCHISM_SCANCODE_F5:
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
@@ -714,7 +714,7 @@ static int handle_key_global(struct key_event * k)
 			break;
 		}
 		return 1;
-	case SCHISM_KEYSYM_F6:
+	case SCHISM_SCANCODE_F6:
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
@@ -727,7 +727,7 @@ static int handle_key_global(struct key_event * k)
 			break;
 		}
 		return 1;
-	case SCHISM_KEYSYM_F7:
+	case SCHISM_SCANCODE_F7:
 		if (NO_MODIFIER(k->mod)) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
@@ -736,7 +736,7 @@ static int handle_key_global(struct key_event * k)
 			break;
 		}
 		return 1;
-	case SCHISM_KEYSYM_F8:
+	case SCHISM_SCANCODE_F8:
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (k->state == KEY_PRESS)
 				song_pause();
@@ -749,7 +749,7 @@ static int handle_key_global(struct key_event * k)
 			break;
 		}
 		return 1;
-	case SCHISM_KEYSYM_F9:
+	case SCHISM_SCANCODE_F9:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
@@ -764,8 +764,8 @@ static int handle_key_global(struct key_event * k)
 			break;
 		}
 		return 1;
-	case SCHISM_KEYSYM_l:
-	case SCHISM_KEYSYM_r:
+	case SCHISM_SCANCODE_L:
+	case SCHISM_SCANCODE_R:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
@@ -776,7 +776,7 @@ static int handle_key_global(struct key_event * k)
 			break;
 		}
 		return 1;
-	case SCHISM_KEYSYM_s:
+	case SCHISM_SCANCODE_S:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
@@ -787,7 +787,7 @@ static int handle_key_global(struct key_event * k)
 			break;
 		}
 		return 1;
-	case SCHISM_KEYSYM_w:
+	case SCHISM_SCANCODE_W:
 		/* Ctrl-W _IS_ in IT, and hands don't leave home row :) */
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
@@ -799,7 +799,7 @@ static int handle_key_global(struct key_event * k)
 			break;
 		}
 		return 1;
-	case SCHISM_KEYSYM_F10:
+	case SCHISM_SCANCODE_F10:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (k->mod & SCHISM_KEYMOD_ALT) break;
@@ -814,7 +814,7 @@ static int handle_key_global(struct key_event * k)
 				set_page(PAGE_SAVE_MODULE);
 		}
 		return 1;
-	case SCHISM_KEYSYM_F11:
+	case SCHISM_SCANCODE_F11:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (NO_MODIFIER(k->mod)) {
@@ -845,7 +845,7 @@ static int handle_key_global(struct key_event * k)
 			break;
 		}
 		return 1;
-	case SCHISM_KEYSYM_F12:
+	case SCHISM_SCANCODE_F12:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if ((k->mod & SCHISM_KEYMOD_ALT) && status.current_page == PAGE_INFO) {
@@ -872,11 +872,11 @@ static int handle_key_global(struct key_event * k)
 		}
 		return 1;
 	/* hack alert */
-	case SCHISM_KEYSYM_f:
+	case SCHISM_SCANCODE_F:
 		if (!(k->mod & SCHISM_KEYMOD_CTRL))
 			return 0;
 		/* fall through */
-	case SCHISM_KEYSYM_SCROLLLOCK:
+	case SCHISM_SCANCODE_SCROLLLOCK:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		_mp_finish(NULL);
@@ -900,7 +900,7 @@ static int handle_key_global(struct key_event * k)
 		}
 
 		return 1;
-	case SCHISM_KEYSYM_PAUSE:
+	case SCHISM_SCANCODE_PAUSE:
 		if ((k->mod & SCHISM_KEYMOD_LSHIFT) && (k->mod & SCHISM_KEYMOD_LALT) && (k->mod & SCHISM_KEYMOD_RALT) && (k->mod & SCHISM_KEYMOD_RCTRL)) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
@@ -909,7 +909,7 @@ static int handle_key_global(struct key_event * k)
 			return 1;
 		}
 		return 0;
-	case SCHISM_KEYSYM_t:
+	case SCHISM_SCANCODE_T:
 		if ((k->mod & SCHISM_KEYMOD_CTRL) && (k->mod & SCHISM_KEYMOD_ALT)) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
@@ -926,15 +926,15 @@ static int handle_key_global(struct key_event * k)
 
 	/* got a bit ugly here, sorry */
 	if (k->mod & SCHISM_KEYMOD_ALT) {
-		switch (k->sym) {
-		case SCHISM_KEYSYM_F1: i = 0; break;
-		case SCHISM_KEYSYM_F2: i = 1; break;
-		case SCHISM_KEYSYM_F3: i = 2; break;
-		case SCHISM_KEYSYM_F4: i = 3; break;
-		case SCHISM_KEYSYM_F5: i = 4; break;
-		case SCHISM_KEYSYM_F6: i = 5; break;
-		case SCHISM_KEYSYM_F7: i = 6; break;
-		case SCHISM_KEYSYM_F8: i = 7; break;
+		switch (k->scancode) {
+		case SCHISM_SCANCODE_F1: i = 0; break;
+		case SCHISM_SCANCODE_F2: i = 1; break;
+		case SCHISM_SCANCODE_F3: i = 2; break;
+		case SCHISM_SCANCODE_F4: i = 3; break;
+		case SCHISM_SCANCODE_F5: i = 4; break;
+		case SCHISM_SCANCODE_F6: i = 5; break;
+		case SCHISM_SCANCODE_F7: i = 6; break;
+		case SCHISM_SCANCODE_F8: i = 7; break;
 		default:
 			return 0;
 		};
@@ -965,13 +965,13 @@ static int _handle_ime(struct key_event *k)
 		if (digraph_n == -1 && k->state == KEY_RELEASE) {
 			digraph_n = 0;
 
-		} else if (!(status.flags & CLASSIC_MODE) && (k->sym == SCHISM_KEYSYM_LCTRL || k->sym == SCHISM_KEYSYM_RCTRL)) {
+		} else if (!(status.flags & CLASSIC_MODE) && (k->scancode == SCHISM_SCANCODE_LCTRL || k->scancode == SCHISM_SCANCODE_RCTRL)) {
 			if (k->state == KEY_RELEASE && digraph_n >= 0) {
 				digraph_n++;
 				if (digraph_n >= 2)
 					status_text_flash_bios("Enter digraph:");
 			}
-		} else if (k->sym == SCHISM_KEYSYM_LSHIFT || k->sym == SCHISM_KEYSYM_RSHIFT) {
+		} else if (k->scancode == SCHISM_SCANCODE_LSHIFT || k->scancode == SCHISM_SCANCODE_RSHIFT) {
 			/* do nothing */
 		} else if (!NO_MODIFIER((k->mod&~SCHISM_KEYMOD_SHIFT)) || (c=(k->text) ? ((uint8_t)*k->text) : k->sym) == 0 || digraph_n < 2) {
 			if (k->state == KEY_PRESS && k->mouse == MOUSE_NONE) {
@@ -1005,7 +1005,7 @@ static int _handle_ime(struct key_event *k)
 		}
 
 		/* ctrl+shift -> unicode character */
-		if (k->sym==SCHISM_KEYSYM_LCTRL || k->sym==SCHISM_KEYSYM_RCTRL || k->sym==SCHISM_KEYSYM_LSHIFT || k->sym==SCHISM_KEYSYM_RSHIFT) {
+		if (k->scancode==SCHISM_SCANCODE_LCTRL || k->scancode==SCHISM_SCANCODE_RCTRL || k->scancode==SCHISM_SCANCODE_LSHIFT || k->scancode==SCHISM_SCANCODE_RSHIFT) {
 			if (k->state == KEY_RELEASE) {
 				if (cs_unicode_c > 0) {
 					uint8_t unicode[2] = {0};
@@ -1045,15 +1045,15 @@ static int _handle_ime(struct key_event *k)
 				}
 			}
 		} else {
-			if (k->sym==SCHISM_KEYSYM_LCTRL || k->sym==SCHISM_KEYSYM_RCTRL || k->sym==SCHISM_KEYSYM_LSHIFT || k->sym==SCHISM_KEYSYM_RSHIFT) {
+			if (k->scancode==SCHISM_SCANCODE_LCTRL || k->scancode==SCHISM_SCANCODE_RCTRL || k->scancode==SCHISM_SCANCODE_LSHIFT || k->scancode==SCHISM_SCANCODE_RSHIFT) {
 				return 1;
 			}
 			cs_unicode = cs_unicode_c = 0;
 		}
 
 		/* alt+numpad -> char number */
-		if (k->sym == SCHISM_KEYSYM_LALT || k->sym == SCHISM_KEYSYM_RALT
-			|| k->sym == SCHISM_KEYSYM_LGUI || k->sym == SCHISM_KEYSYM_RGUI) {
+		if (k->scancode == SCHISM_SCANCODE_LALT || k->scancode == SCHISM_SCANCODE_RALT
+			|| k->scancode == SCHISM_SCANCODE_LGUI || k->scancode == SCHISM_SCANCODE_RGUI) {
 			if (k->state == KEY_RELEASE && alt_numpad_c > 0 && (alt_numpad & 255) > 0) {\
 				if (alt_numpad < 32)
 					return 0;
@@ -1114,8 +1114,8 @@ void handle_key(struct key_event *k)
 	if (widget_handle_key(k)) return;
 
 	/* now check a couple other keys. */
-	switch (k->sym) {
-	case SCHISM_KEYSYM_LEFT:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_LEFT:
 		if (k->state == KEY_RELEASE) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if ((k->mod & SCHISM_KEYMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
@@ -1125,7 +1125,7 @@ void handle_key(struct key_event *k)
 			return;
 		}
 		break;
-	case SCHISM_KEYSYM_RIGHT:
+	case SCHISM_SCANCODE_RIGHT:
 		if (k->state == KEY_RELEASE) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if ((k->mod & SCHISM_KEYMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
@@ -1135,7 +1135,7 @@ void handle_key(struct key_event *k)
 			return;
 		}
 		break;
-	case SCHISM_KEYSYM_ESCAPE:
+	case SCHISM_SCANCODE_ESCAPE:
 		/* TODO | Page key handlers should return true/false depending on if the key was handled
 		   TODO | (same as with other handlers), and the escape key check should go *after* the
 		   TODO | page gets a chance to grab it. This way, the load sample page can switch back
@@ -1153,17 +1153,21 @@ void handle_key(struct key_event *k)
 			return;
 		}
 		break;
-	case SCHISM_KEYSYM_SLASH:
+	case SCHISM_SCANCODE_SLASH:
 		if (k->state == KEY_RELEASE) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		kbd_set_current_octave(kbd_get_current_octave() - 1);
 		break;
-	case SCHISM_KEYSYM_ASTERISK:
+	case SCHISM_SCANCODE_8:
+		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
+			break;
+		SCHISM_FALLTHROUGH;
+	case SCHISM_SCANCODE_KP_MULTIPLY:
 		if (k->state == KEY_RELEASE) return;
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		kbd_set_current_octave(kbd_get_current_octave() + 1);
 		break;
-	case SCHISM_KEYSYM_LEFTBRACKET:
+	case SCHISM_SCANCODE_LEFTBRACKET:
 		if (k->state == KEY_RELEASE) break;
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
@@ -1186,7 +1190,7 @@ void handle_key(struct key_event *k)
 			}
 		}
 		return;
-	case SCHISM_KEYSYM_RIGHTBRACKET:
+	case SCHISM_SCANCODE_RIGHTBRACKET:
 		if (k->state == KEY_RELEASE) break;
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
@@ -1772,13 +1776,13 @@ static int _tj_num1 = 0, _tj_num2 = 0;
 
 static int _timejump_keyh(struct key_event *k)
 {
-	if (k->sym == SCHISM_KEYSYM_BACKSPACE) {
+	if (k->scancode == SCHISM_SCANCODE_BACKSPACE) {
 		if (*selected_widget == 1 && _timejump_widgets[1].d.numentry.value == 0) {
 			if (k->state == KEY_RELEASE) widget_change_focus_to(0);
 			return 1;
 		}
 	}
-	if (k->sym == SCHISM_KEYSYM_COLON || k->sym == SCHISM_KEYSYM_SEMICOLON) {
+	if (k->scancode == SCHISM_SCANCODE_SEMICOLON) {
 		if (k->state == KEY_RELEASE) {
 			if (*selected_widget == 0) {
 				widget_change_focus_to(1);

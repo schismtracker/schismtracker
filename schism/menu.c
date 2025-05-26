@@ -480,8 +480,8 @@ int menu_handle_key(struct key_event *k)
 		return 1;
 	}
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_ESCAPE:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_ESCAPE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		current_menu[1] = NULL;
@@ -492,7 +492,7 @@ int menu_handle_key(struct key_event *k)
 			menu_hide();
 		}
 		break;
-	case SCHISM_KEYSYM_UP:
+	case SCHISM_SCANCODE_UP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (menu->selected_item > 0) {
@@ -500,7 +500,7 @@ int menu_handle_key(struct key_event *k)
 			break;
 		}
 		return 1;
-	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_SCANCODE_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (menu->selected_item < menu->num_items - 1) {
@@ -509,17 +509,17 @@ int menu_handle_key(struct key_event *k)
 		}
 		return 1;
 		/* home/end are new here :) */
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_HOME:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		menu->selected_item = 0;
 		break;
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_END:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		menu->selected_item = menu->num_items - 1;
 		break;
-	case SCHISM_KEYSYM_RETURN:
+	case SCHISM_SCANCODE_RETURN:
 		if (k->state == KEY_PRESS) {
 			menu->active_item = menu->selected_item;
 			status.flags |= NEED_UPDATE;

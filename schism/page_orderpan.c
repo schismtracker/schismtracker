@@ -434,8 +434,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		}
 	}
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_BACKSPACE:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_BACKSPACE:
 		if (status.flags & CLASSIC_MODE) return 0;
 		if (!(k->mod & SCHISM_KEYMOD_ALT)) return 0;
 		if (k->state == KEY_PRESS)
@@ -445,8 +445,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		orderlist_restore();
 		return 1;
 
-	case SCHISM_KEYSYM_RETURN:
-	case SCHISM_KEYSYM_KP_ENTER:
+	case SCHISM_SCANCODE_RETURN:
+	case SCHISM_SCANCODE_KP_ENTER:
 		if (status.flags & CLASSIC_MODE) return 0;
 		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_PRESS)
@@ -457,7 +457,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		}
 		// else fall through
 
-	case SCHISM_KEYSYM_g:
+	case SCHISM_SCANCODE_G:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_PRESS)
@@ -471,7 +471,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		}
 		return 1;
 
-	case SCHISM_KEYSYM_TAB:
+	case SCHISM_SCANCODE_TAB:
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -483,28 +483,28 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			widget_change_focus_to(1);
 		}
 		return 1;
-	case SCHISM_KEYSYM_LEFT:
+	case SCHISM_SCANCODE_LEFT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_pos--;
 		break;
-	case SCHISM_KEYSYM_RIGHT:
+	case SCHISM_SCANCODE_RIGHT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_cursor_pos++;
 		break;
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_HOME:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_order = 0;
 		break;
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_END:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -513,7 +513,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		if (current_song->orderlist[new_order] != ORDER_LAST)
 			new_order++;
 		break;
-	case SCHISM_KEYSYM_UP:
+	case SCHISM_SCANCODE_UP:
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (status.flags & CLASSIC_MODE) return 0;
 			if (k->state == KEY_RELEASE)
@@ -528,7 +528,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			return 1;
 		new_order--;
 		break;
-	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_SCANCODE_DOWN:
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (status.flags & CLASSIC_MODE) return 0;
 			if (k->state == KEY_RELEASE)
@@ -543,44 +543,44 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			return 1;
 		new_order++;
 		break;
-	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_SCANCODE_PAGEUP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_order -= 16;
 		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_SCANCODE_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		new_order += 16;
 		break;
-	case SCHISM_KEYSYM_INSERT:
+	case SCHISM_SCANCODE_INSERT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		orderlist_insert_pos();
 		return 1;
-	case SCHISM_KEYSYM_DELETE:
+	case SCHISM_SCANCODE_DELETE:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		orderlist_delete_pos();
 		return 1;
-	case SCHISM_KEYSYM_F7:
+	case SCHISM_SCANCODE_F7:
 		if (!(k->mod & SCHISM_KEYMOD_CTRL)) return 0;
 		/* fall through */
-	case SCHISM_KEYSYM_SPACE:
+	case SCHISM_SCANCODE_SPACE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_set_next_order(current_order);
 		status_text_flash("Playing order %d next", current_order);
 		return 1;
-	case SCHISM_KEYSYM_F6:
+	case SCHISM_SCANCODE_F6:
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -589,7 +589,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		}
 		return 0;
 
-	case SCHISM_KEYSYM_n:
+	case SCHISM_SCANCODE_N:
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (k->state == KEY_PRESS)
 				return 1;
@@ -602,7 +602,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			return 1;
 		orderlist_insert_next();
 		return 1;
-	case SCHISM_KEYSYM_c:
+	case SCHISM_SCANCODE_C:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (status.flags & CLASSIC_MODE) return 0;
@@ -629,7 +629,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		}
 		break;
 
-	case SCHISM_KEYSYM_r:
+	case SCHISM_SCANCODE_R:
 		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_PRESS)
 				return 1;
@@ -637,7 +637,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			return 1;
 		}
 		return 0;
-	case SCHISM_KEYSYM_u:
+	case SCHISM_SCANCODE_U:
 		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -646,31 +646,27 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		}
 		return 0;
 
-	case SCHISM_KEYSYM_b:
+	case SCHISM_SCANCODE_B:
 		if (k->mod & SCHISM_KEYMOD_SHIFT)
 			return 0;
 		/* fall through */
-	case SCHISM_KEYSYM_o:
+	case SCHISM_SCANCODE_O:
 		if (!(k->mod & SCHISM_KEYMOD_CTRL))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_pattern_to_sample(current_song->orderlist[current_order],
-				!!(k->mod & SCHISM_KEYMOD_SHIFT), !!(k->sym == SCHISM_KEYSYM_b));
+				!!(k->mod & SCHISM_KEYMOD_SHIFT), !!(k->scancode == SCHISM_SCANCODE_B));
 		return 1;
 
-	case SCHISM_KEYSYM_LESS:
-	case SCHISM_KEYSYM_SEMICOLON:
-	case SCHISM_KEYSYM_COLON:
+	case SCHISM_SCANCODE_SEMICOLON:
 		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		sample_set(sample_get_current()-1);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_GREATER:
-	case SCHISM_KEYSYM_QUOTE:
-	case SCHISM_KEYSYM_QUOTEDBL:
+	case SCHISM_SCANCODE_APOSTROPHE:
 		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -845,11 +841,11 @@ static void order_pan_vol_handle_key(struct key_event * k)
 	if (!NO_MODIFIER(k->mod))
 		return;
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_PAGEDOWN:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_PAGEDOWN:
 		n += 8;
 		break;
-	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_SCANCODE_PAGEUP:
 		n -= 8;
 		break;
 	default:
@@ -870,7 +866,7 @@ static int order_pre_key(struct key_event *k)
 			= ACTIVE_PAGE.selected_widget;
 	}
 
-	if (k->sym == SCHISM_KEYSYM_F7) {
+	if (k->scancode == SCHISM_SCANCODE_F7) {
 		if (!NO_MODIFIER(k->mod)) return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;

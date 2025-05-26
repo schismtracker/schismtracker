@@ -1049,14 +1049,14 @@ static int info_page_handle_key(struct key_event * k)
 	}
 
 	/* hack to render this useful :) */
-	if (k->sym == SCHISM_KEYSYM_KP_9) {
-		k->sym = SCHISM_KEYSYM_F9;
-	} else if (k->sym == SCHISM_KEYSYM_KP_0) {
-		k->sym = SCHISM_KEYSYM_F10;
+	if (k->scancode == SCHISM_SCANCODE_KP_9) {
+		k->scancode = SCHISM_SCANCODE_F9;
+	} else if (k->scancode == SCHISM_SCANCODE_KP_0) {
+		k->scancode = SCHISM_SCANCODE_F10;
 	}
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_g:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_G:
 		if (k->state == KEY_PRESS)
 			return 1;
 
@@ -1075,7 +1075,7 @@ static int info_page_handle_key(struct key_event * k)
 			set_page(PAGE_PATTERN_EDITOR);
 		}
 	       return 1;
-	case SCHISM_KEYSYM_v:
+	case SCHISM_SCANCODE_V:
 		if (k->state == KEY_RELEASE)
 			return 1;
 
@@ -1083,7 +1083,7 @@ static int info_page_handle_key(struct key_event * k)
 		status_text_flash("Using %s bars", (velocity_mode ? "velocity" : "volume"));
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_i:
+	case SCHISM_SCANCODE_I:
 		if (k->state == KEY_RELEASE)
 			return 1;
 
@@ -1091,7 +1091,7 @@ static int info_page_handle_key(struct key_event * k)
 		status_text_flash("Using %s names", (instrument_names ? "instrument" : "sample"));
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_r:
+	case SCHISM_SCANCODE_R:
 		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
@@ -1101,32 +1101,33 @@ static int info_page_handle_key(struct key_event * k)
 			return 1;
 		}
 		return 0;
-	case SCHISM_KEYSYM_EQUALS:
+	case SCHISM_SCANCODE_EQUALS:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
 			return 0;
 		SCHISM_FALLTHROUGH;
-	case SCHISM_KEYSYM_PLUS:
+	case SCHISM_SCANCODE_KP_PLUS:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (song_get_mode() == MODE_PLAYING) {
 			song_set_current_order(song_get_current_order() + 1);
 		}
 		return 1;
-	case SCHISM_KEYSYM_MINUS:
+	case SCHISM_SCANCODE_MINUS:
+	case SCHISM_SCANCODE_KP_MINUS:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (song_get_mode() == MODE_PLAYING) {
 			song_set_current_order(song_get_current_order() - 1);
 		}
 		return 1;
-	case SCHISM_KEYSYM_q:
+	case SCHISM_SCANCODE_Q:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_toggle_channel_mute(selected_channel - 1);
 		orderpan_recheck_muted_channels();
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_s:
+	case SCHISM_SCANCODE_S:
 		if (k->state == KEY_RELEASE)
 			return 1;
 
@@ -1140,7 +1141,7 @@ static int info_page_handle_key(struct key_event * k)
 		}
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_SPACE:
+	case SCHISM_SCANCODE_SPACE:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 
@@ -1151,7 +1152,7 @@ static int info_page_handle_key(struct key_event * k)
 			selected_channel++;
 		orderpan_recheck_muted_channels();
 		break;
-	case SCHISM_KEYSYM_UP:
+	case SCHISM_SCANCODE_UP:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -1168,7 +1169,7 @@ static int info_page_handle_key(struct key_event * k)
 		if (selected_channel > 1)
 			selected_channel--;
 		break;
-	case SCHISM_KEYSYM_LEFT:
+	case SCHISM_SCANCODE_LEFT:
 		if (!NO_MODIFIER(k->mod) && !(k->mod & SCHISM_KEYMOD_ALT))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -1176,7 +1177,7 @@ static int info_page_handle_key(struct key_event * k)
 		if (selected_channel > 1)
 			selected_channel--;
 		break;
-	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_SCANCODE_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -1196,7 +1197,7 @@ static int info_page_handle_key(struct key_event * k)
 		if (selected_channel < 64)
 			selected_channel++;
 		break;
-	case SCHISM_KEYSYM_RIGHT:
+	case SCHISM_SCANCODE_RIGHT:
 		if (!NO_MODIFIER(k->mod) && !(k->mod & SCHISM_KEYMOD_ALT))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -1204,21 +1205,21 @@ static int info_page_handle_key(struct key_event * k)
 		if (selected_channel < 64)
 			selected_channel++;
 		break;
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_HOME:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selected_channel = 1;
 		break;
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_END:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		selected_channel = song_find_last_channel();
 		break;
-	case SCHISM_KEYSYM_INSERT:
+	case SCHISM_SCANCODE_INSERT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -1244,7 +1245,7 @@ static int info_page_handle_key(struct key_event * k)
 			windows[selected_window + 1].height++;
 		}
 		break;
-	case SCHISM_KEYSYM_DELETE:
+	case SCHISM_SCANCODE_DELETE:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -1267,7 +1268,7 @@ static int info_page_handle_key(struct key_event * k)
 		if (selected_window == num_windows)
 			selected_window--;
 		break;
-	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_SCANCODE_PAGEUP:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -1278,14 +1279,14 @@ static int info_page_handle_key(struct key_event * k)
 		n--;
 		windows[selected_window].type = n;
 		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_SCANCODE_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		windows[selected_window].type = (windows[selected_window].type + 1) % NUM_WINDOW_TYPES;
 		break;
-	case SCHISM_KEYSYM_TAB:
+	case SCHISM_SCANCODE_TAB:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
@@ -1297,7 +1298,7 @@ static int info_page_handle_key(struct key_event * k)
 		}
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_F9:
+	case SCHISM_SCANCODE_F9:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -1306,7 +1307,7 @@ static int info_page_handle_key(struct key_event * k)
 			return 1;
 		}
 		return 0;
-	case SCHISM_KEYSYM_F10:
+	case SCHISM_SCANCODE_F10:
 		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return 1;

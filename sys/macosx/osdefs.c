@@ -360,6 +360,7 @@ int macosx_event(schism_event_t *event)
 			 *
 			 *   - paper */
 			event->key.sym = SCHISM_KEYSYM_INSERT;
+			event->key.scancode = SCHISM_SCANCODE_INSERT;
 			break;
 		default:
 			break;

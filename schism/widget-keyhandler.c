@@ -284,9 +284,11 @@ int widget_handle_key(struct key_event * k)
 		case WIDGET_NUMENTRY:
 			if (k->mouse_button == MOUSE_BUTTON_LEFT) {
 				k->sym = SCHISM_KEYSYM_MINUS;
+				k->scancode = SCHISM_SCANCODE_KP_MINUS;
 				k->mouse = MOUSE_NONE;
 			} else if (k->mouse_button == MOUSE_BUTTON_RIGHT) {
 				k->sym = SCHISM_KEYSYM_PLUS;
+				k->scancode = SCHISM_SCANCODE_KP_PLUS;
 				k->mouse = MOUSE_NONE;
 			}
 			break;
@@ -333,7 +335,7 @@ int widget_handle_key(struct key_event * k)
 	}
 
 	if (k->mouse == MOUSE_CLICK
-	    || (k->mouse == MOUSE_NONE && k->sym == SCHISM_KEYSYM_RETURN)) {
+	    || (k->mouse == MOUSE_NONE && k->scancode == SCHISM_SCANCODE_RETURN)) {
 #if 0
 		if (k->mouse && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
 			if (status.flags & DISKWRITER_ACTIVE) return 0;
@@ -496,28 +498,30 @@ int widget_handle_key(struct key_event * k)
 
 	if (k->mouse == MOUSE_SCROLL_UP && current_type == WIDGET_NUMENTRY) {
 		k->sym = SCHISM_KEYSYM_MINUS;
+		k->scancode = SCHISM_SCANCODE_KP_MINUS;
 	} else if (k->mouse == MOUSE_SCROLL_DOWN && current_type == WIDGET_NUMENTRY) {
 		k->sym = SCHISM_KEYSYM_PLUS;
+		k->scancode = SCHISM_SCANCODE_KP_PLUS;
 	}
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_ESCAPE:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_ESCAPE:
 		/* this is to keep the text entries from taking the key hostage and inserting '<-'
 		characters instead of showing the menu */
 		return 0;
-	case SCHISM_KEYSYM_UP:
+	case SCHISM_SCANCODE_UP:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		widget_change_focus_to(widget->next.up);
 		return 1;
-	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_SCANCODE_DOWN:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		widget_change_focus_to(widget->next.down);
 		return 1;
-	case SCHISM_KEYSYM_TAB:
+	case SCHISM_SCANCODE_TAB:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			_backtab();
@@ -527,7 +531,7 @@ int widget_handle_key(struct key_event * k)
 			return 0;
 		widget_change_focus_to(widget->next.tab);
 		return 1;
-	case SCHISM_KEYSYM_LEFT:
+	case SCHISM_SCANCODE_LEFT:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		switch (current_type) {
 		case WIDGET_BITSET:
@@ -570,7 +574,7 @@ int widget_handle_key(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_RIGHT:
+	case SCHISM_SCANCODE_RIGHT:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		/* pretty much the same as left, but with a few small
 		 * changes here and there... */
@@ -613,7 +617,7 @@ int widget_handle_key(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_HOME:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		/* Impulse Tracker only does home/end for the thumbbars.
 		 * This stuff is all extra. */
@@ -642,7 +646,7 @@ int widget_handle_key(struct key_event * k)
 			break;
 		}
 		break;
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_END:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		switch (current_type) {
 		case WIDGET_NUMENTRY:
@@ -669,7 +673,7 @@ int widget_handle_key(struct key_event * k)
 			break;
 		}
 		break;
-	case SCHISM_KEYSYM_SPACE:
+	case SCHISM_SCANCODE_SPACE:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		switch (current_type) {
 		case WIDGET_BITSET:
@@ -706,7 +710,7 @@ int widget_handle_key(struct key_event * k)
 			break;
 		}
 		break;
-	case SCHISM_KEYSYM_BACKSPACE:
+	case SCHISM_SCANCODE_BACKSPACE:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_NUMENTRY) {
 			if (widget->d.numentry.reverse) {
@@ -744,7 +748,7 @@ int widget_handle_key(struct key_event * k)
 		if (widget->changed) widget->changed();
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_DELETE:
+	case SCHISM_SCANCODE_DELETE:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type != WIDGET_TEXTENTRY)
 			break;
@@ -757,21 +761,26 @@ int widget_handle_key(struct key_event * k)
 		if (widget->changed) widget->changed();
 		status.flags |= NEED_UPDATE;
 		return 1;
-	case SCHISM_KEYSYM_PLUS:
+	case SCHISM_SCANCODE_EQUALS:
+		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
+			break;
+		SCHISM_FALLTHROUGH;
+	case SCHISM_SCANCODE_KP_PLUS:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_NUMENTRY) {
 			widget_numentry_change_value(widget, widget->d.numentry.value + 1);
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_MINUS:
+	case SCHISM_SCANCODE_MINUS:
+	case SCHISM_SCANCODE_KP_MINUS:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_NUMENTRY && NO_MODIFIER(k->mod)) {
 			widget_numentry_change_value(widget, widget->d.numentry.value - 1);
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_l:
+	case SCHISM_SCANCODE_L:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_PANBAR) {
 			if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -785,7 +794,7 @@ int widget_handle_key(struct key_event * k)
 			}
 		}
 		break;
-	case SCHISM_KEYSYM_m:
+	case SCHISM_SCANCODE_M:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_PANBAR) {
 			if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -799,7 +808,7 @@ int widget_handle_key(struct key_event * k)
 			}
 		}
 		break;
-	case SCHISM_KEYSYM_r:
+	case SCHISM_SCANCODE_R:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_PANBAR) {
 			if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -813,7 +822,7 @@ int widget_handle_key(struct key_event * k)
 			}
 		}
 		break;
-	case SCHISM_KEYSYM_s:
+	case SCHISM_SCANCODE_S:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_PANBAR) {
 			if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -828,7 +837,7 @@ int widget_handle_key(struct key_event * k)
 			}
 		}
 		break;
-	case SCHISM_KEYSYM_a:
+	case SCHISM_SCANCODE_A:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_PANBAR && (k->mod & SCHISM_KEYMOD_ALT)) {
 			song_set_pan_scheme(PANS_AMIGA);
@@ -836,7 +845,7 @@ int widget_handle_key(struct key_event * k)
 		}
 		break;
 #if 0
-	case SCHISM_KEYSYM_x:
+	case SCHISM_SCANCODE_X:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_PANBAR && (k->mod & SCHISM_KEYMOD_ALT)) {
 			song_set_pan_scheme(PANS_CROSS);
@@ -844,15 +853,15 @@ int widget_handle_key(struct key_event * k)
 		}
 		break;
 #endif
-	case SCHISM_KEYSYM_SLASH:
-	case SCHISM_KEYSYM_KP_DIVIDE:
+	case SCHISM_SCANCODE_SLASH:
+	case SCHISM_SCANCODE_KP_DIVIDE:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_PANBAR && (k->mod & SCHISM_KEYMOD_ALT)) {
 			song_set_pan_scheme(PANS_SLASH);
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_BACKSLASH:
+	case SCHISM_SCANCODE_BACKSLASH:
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
 		if (current_type == WIDGET_PANBAR && (k->mod & SCHISM_KEYMOD_ALT)) {
 			song_set_pan_scheme(PANS_BACKSLASH);

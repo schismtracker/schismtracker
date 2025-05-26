@@ -136,28 +136,22 @@ int get_effect_number(char effect)
 int kbd_get_effect_number(struct key_event *k)
 {
 	if (!NO_CAM_MODS(k->mod)) return -1;
-	switch (k->sym) {
-#define QZA(n) case SCHISM_KEYSYM_ ## n : return get_effect_number(#n [0])
-QZA(a);QZA(b);QZA(c);QZA(d);QZA(e);QZA(f);QZA(g);QZA(h);QZA(i);QZA(j);QZA(k);
-QZA(l);QZA(m);QZA(n);QZA(o);QZA(p);QZA(q);QZA(r);QZA(s);QZA(t);QZA(u);QZA(v);
-QZA(w);QZA(x);QZA(y);QZA(z);
+	switch (k->scancode) {
+#define QZA(n) case SCHISM_SCANCODE_ ## n : return get_effect_number(#n [0])
+QZA(A);QZA(B);QZA(C);QZA(D);QZA(E);QZA(F);QZA(G);QZA(H);QZA(I);QZA(J);QZA(K);
+QZA(L);QZA(M);QZA(N);QZA(O);QZA(P);QZA(Q);QZA(R);QZA(S);QZA(T);QZA(U);QZA(V);
+QZA(W);QZA(X);QZA(Y);QZA(Z);
 #undef QZA
-	case SCHISM_KEYSYM_PERIOD: case SCHISM_KEYSYM_KP_PERIOD:
+	case SCHISM_SCANCODE_PERIOD: case SCHISM_SCANCODE_KP_PERIOD:
 		return get_effect_number('.');
-	case SCHISM_KEYSYM_1:
+	case SCHISM_SCANCODE_1:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT)) return -1;
-		SCHISM_FALLTHROUGH;
-	case SCHISM_KEYSYM_EXCLAIM:
 		return get_effect_number('!');
-	case SCHISM_KEYSYM_4:
+	case SCHISM_SCANCODE_4:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT)) return -1;
-		SCHISM_FALLTHROUGH;
-	case SCHISM_KEYSYM_DOLLAR:
 		return get_effect_number('$');
-	case SCHISM_KEYSYM_7:
+	case SCHISM_SCANCODE_7:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT)) return -1;
-		SCHISM_FALLTHROUGH;
-	case SCHISM_KEYSYM_AMPERSAND:
 		return get_effect_number('&');
 
 	default:
@@ -179,14 +173,22 @@ void kbd_key_translate(struct key_event *k)
 		/* TODO: k->text should be Unicode, not CP437. */
 		switch (*k->text) {
 		/* there are likely more cases than this...*/
-		case '<': k->sym = SCHISM_KEYSYM_LESS; break;
-		case '>': k->sym = SCHISM_KEYSYM_GREATER; break;
-		case '$': k->sym = SCHISM_KEYSYM_DOLLAR; break;
+		case '<':
+			k->sym = SCHISM_KEYSYM_LESS;
+			break;
+		case '>':
+			k->sym = SCHISM_KEYSYM_GREATER;
+			break;
+		case '$':
+			k->sym = SCHISM_KEYSYM_DOLLAR;
+			break;
 
 		case '+': k->sym = SCHISM_KEYSYM_PLUS; break;
 		case ':': k->sym = SCHISM_KEYSYM_COLON; break;
 
-		case '*': k->sym = SCHISM_KEYSYM_ASTERISK; break;
+		case '*':
+			k->sym = SCHISM_KEYSYM_ASTERISK;
+			break;
 
 		default: break;
 		}
@@ -202,48 +204,48 @@ void kbd_key_translate(struct key_event *k)
 	}
 	if (k->mod & SCHISM_KEYMOD_NUM) {
 		switch (k->sym) {
-		case SCHISM_KEYSYM_KP_0: k->sym = SCHISM_KEYSYM_0; k->mod &= ~SCHISM_KEYMOD_NUM; break;
-		case SCHISM_KEYSYM_KP_1: k->sym = SCHISM_KEYSYM_1; k->mod &= ~SCHISM_KEYMOD_NUM; break;
-		case SCHISM_KEYSYM_KP_2: k->sym = SCHISM_KEYSYM_2; k->mod &= ~SCHISM_KEYMOD_NUM; break;
-		case SCHISM_KEYSYM_KP_3: k->sym = SCHISM_KEYSYM_3; k->mod &= ~SCHISM_KEYMOD_NUM; break;
-		case SCHISM_KEYSYM_KP_4: k->sym = SCHISM_KEYSYM_4; k->mod &= ~SCHISM_KEYMOD_NUM; break;
-		case SCHISM_KEYSYM_KP_5: k->sym = SCHISM_KEYSYM_5; k->mod &= ~SCHISM_KEYMOD_NUM; break;
-		case SCHISM_KEYSYM_KP_6: k->sym = SCHISM_KEYSYM_6; k->mod &= ~SCHISM_KEYMOD_NUM; break;
-		case SCHISM_KEYSYM_KP_7: k->sym = SCHISM_KEYSYM_7; k->mod &= ~SCHISM_KEYMOD_NUM; break;
-		case SCHISM_KEYSYM_KP_8: k->sym = SCHISM_KEYSYM_8; k->mod &= ~SCHISM_KEYMOD_NUM; break;
-		case SCHISM_KEYSYM_KP_9: k->sym = SCHISM_KEYSYM_9; k->mod &= ~SCHISM_KEYMOD_NUM; break;
-		case SCHISM_KEYSYM_KP_PERIOD: k->sym = SCHISM_KEYSYM_PERIOD; k->mod &= ~SCHISM_KEYMOD_NUM; break;
-		case SCHISM_KEYSYM_KP_DIVIDE: k->sym = SCHISM_KEYSYM_SLASH; k->mod &= ~SCHISM_KEYMOD_NUM; break;
-		case SCHISM_KEYSYM_KP_MULTIPLY: k->sym = SCHISM_KEYSYM_ASTERISK; k->mod &= ~SCHISM_KEYMOD_NUM; break;
-		case SCHISM_KEYSYM_KP_MINUS: k->sym = SCHISM_KEYSYM_MINUS; k->mod &= ~SCHISM_KEYMOD_NUM; break;
-		case SCHISM_KEYSYM_KP_PLUS: k->sym = SCHISM_KEYSYM_PLUS; k->mod &= ~SCHISM_KEYMOD_NUM; break;
-		case SCHISM_KEYSYM_KP_ENTER: k->sym = SCHISM_KEYSYM_RETURN; k->mod &= ~SCHISM_KEYMOD_NUM; break;
-		case SCHISM_KEYSYM_KP_EQUALS: k->sym = SCHISM_KEYSYM_EQUALS; k->mod &= ~SCHISM_KEYMOD_NUM; break;
+		case SCHISM_KEYSYM_KP_0: k->sym = SCHISM_KEYSYM_0; k->scancode = SCHISM_SCANCODE_0; k->mod &= ~SCHISM_KEYMOD_NUM; break;
+		case SCHISM_KEYSYM_KP_1: k->sym = SCHISM_KEYSYM_1; k->scancode = SCHISM_SCANCODE_1; k->mod &= ~SCHISM_KEYMOD_NUM; break;
+		case SCHISM_KEYSYM_KP_2: k->sym = SCHISM_KEYSYM_2; k->scancode = SCHISM_SCANCODE_2; k->mod &= ~SCHISM_KEYMOD_NUM; break;
+		case SCHISM_KEYSYM_KP_3: k->sym = SCHISM_KEYSYM_3; k->scancode = SCHISM_SCANCODE_3; k->mod &= ~SCHISM_KEYMOD_NUM; break;
+		case SCHISM_KEYSYM_KP_4: k->sym = SCHISM_KEYSYM_4; k->scancode = SCHISM_SCANCODE_4; k->mod &= ~SCHISM_KEYMOD_NUM; break;
+		case SCHISM_KEYSYM_KP_5: k->sym = SCHISM_KEYSYM_5; k->scancode = SCHISM_SCANCODE_5; k->mod &= ~SCHISM_KEYMOD_NUM; break;
+		case SCHISM_KEYSYM_KP_6: k->sym = SCHISM_KEYSYM_6; k->scancode = SCHISM_SCANCODE_6; k->mod &= ~SCHISM_KEYMOD_NUM; break;
+		case SCHISM_KEYSYM_KP_7: k->sym = SCHISM_KEYSYM_7; k->scancode = SCHISM_SCANCODE_7; k->mod &= ~SCHISM_KEYMOD_NUM; break;
+		case SCHISM_KEYSYM_KP_8: k->sym = SCHISM_KEYSYM_8; k->scancode = SCHISM_SCANCODE_8; k->mod &= ~SCHISM_KEYMOD_NUM; break;
+		case SCHISM_KEYSYM_KP_9: k->sym = SCHISM_KEYSYM_9; k->scancode = SCHISM_SCANCODE_9; k->mod &= ~SCHISM_KEYMOD_NUM; break;
+		case SCHISM_KEYSYM_KP_PERIOD: k->sym = SCHISM_KEYSYM_PERIOD; k->scancode = SCHISM_SCANCODE_PERIOD; k->mod &= ~SCHISM_KEYMOD_NUM; break;
+		case SCHISM_KEYSYM_KP_DIVIDE: k->sym = SCHISM_KEYSYM_SLASH; k->scancode = SCHISM_SCANCODE_SLASH; k->mod &= ~SCHISM_KEYMOD_NUM; break;
+		case SCHISM_KEYSYM_KP_MULTIPLY: k->sym = SCHISM_KEYSYM_ASTERISK; k->scancode = SCHISM_SCANCODE_8; k->mod = (k->mod & ~SCHISM_KEYMOD_NUM) | SCHISM_KEYMOD_SHIFT; break;
+		case SCHISM_KEYSYM_KP_MINUS: k->sym = SCHISM_KEYSYM_MINUS; k->scancode = SCHISM_SCANCODE_MINUS; k->mod &= ~SCHISM_KEYMOD_NUM; break;
+		case SCHISM_KEYSYM_KP_PLUS: k->sym = SCHISM_KEYSYM_PLUS; k->scancode = SCHISM_SCANCODE_EQUALS; k->mod = (k->mod & ~SCHISM_KEYMOD_NUM) | SCHISM_KEYMOD_SHIFT; break;
+		case SCHISM_KEYSYM_KP_ENTER: k->sym = SCHISM_KEYSYM_RETURN; k->scancode = SCHISM_SCANCODE_RETURN; k->mod &= ~SCHISM_KEYMOD_NUM; break;
+		case SCHISM_KEYSYM_KP_EQUALS: k->sym = SCHISM_KEYSYM_EQUALS; k->scancode = SCHISM_SCANCODE_EQUALS; k->mod &= ~SCHISM_KEYMOD_NUM & ~SCHISM_KEYMOD_SHIFT; break;
 		default:
 			break;
 		};
 	} else {
 		switch (k->sym) {
-		case SCHISM_KEYSYM_KP_0: k->sym = SCHISM_KEYSYM_INSERT; break;
-		case SCHISM_KEYSYM_KP_4: k->sym = SCHISM_KEYSYM_LEFT; break;
-		case SCHISM_KEYSYM_KP_6: k->sym = SCHISM_KEYSYM_RIGHT; break;
-		case SCHISM_KEYSYM_KP_2: k->sym = SCHISM_KEYSYM_DOWN; break;
-		case SCHISM_KEYSYM_KP_8: k->sym = SCHISM_KEYSYM_UP; break;
+		case SCHISM_KEYSYM_KP_0: k->sym = SCHISM_KEYSYM_INSERT; k->scancode = SCHISM_SCANCODE_INSERT; break;
+		case SCHISM_KEYSYM_KP_4: k->sym = SCHISM_KEYSYM_LEFT; k->scancode = SCHISM_SCANCODE_LEFT; break;
+		case SCHISM_KEYSYM_KP_6: k->sym = SCHISM_KEYSYM_RIGHT; k->scancode = SCHISM_SCANCODE_RIGHT; break;
+		case SCHISM_KEYSYM_KP_2: k->sym = SCHISM_KEYSYM_DOWN; k->scancode = SCHISM_SCANCODE_DOWN; break;
+		case SCHISM_KEYSYM_KP_8: k->sym = SCHISM_KEYSYM_UP; k->scancode = SCHISM_SCANCODE_UP; break;
 
-		case SCHISM_KEYSYM_KP_9: k->sym = SCHISM_KEYSYM_PAGEUP; break;
-		case SCHISM_KEYSYM_KP_3: k->sym = SCHISM_KEYSYM_PAGEDOWN; break;
+		case SCHISM_KEYSYM_KP_9: k->sym = SCHISM_KEYSYM_PAGEUP; k->scancode = SCHISM_SCANCODE_PAGEUP; break;
+		case SCHISM_KEYSYM_KP_3: k->sym = SCHISM_KEYSYM_PAGEDOWN; k->scancode = SCHISM_SCANCODE_PAGEDOWN; break;
 
-		case SCHISM_KEYSYM_KP_7: k->sym = SCHISM_KEYSYM_HOME; break;
-		case SCHISM_KEYSYM_KP_1: k->sym = SCHISM_KEYSYM_END; break;
+		case SCHISM_KEYSYM_KP_7: k->sym = SCHISM_KEYSYM_HOME; k->scancode = SCHISM_SCANCODE_HOME; break;
+		case SCHISM_KEYSYM_KP_1: k->sym = SCHISM_KEYSYM_END; k->scancode = SCHISM_SCANCODE_END; break;
 
-		case SCHISM_KEYSYM_KP_PERIOD: k->sym = SCHISM_KEYSYM_DELETE; break;
+		case SCHISM_KEYSYM_KP_PERIOD: k->sym = SCHISM_KEYSYM_DELETE; k->scancode = SCHISM_SCANCODE_DELETE; break;
 
-		case SCHISM_KEYSYM_KP_DIVIDE: k->sym = SCHISM_KEYSYM_SLASH; break;
-		case SCHISM_KEYSYM_KP_MULTIPLY: k->sym = SCHISM_KEYSYM_ASTERISK; break;
-		case SCHISM_KEYSYM_KP_MINUS: k->sym = SCHISM_KEYSYM_MINUS; break;
-		case SCHISM_KEYSYM_KP_PLUS: k->sym = SCHISM_KEYSYM_PLUS; break;
-		case SCHISM_KEYSYM_KP_ENTER: k->sym = SCHISM_KEYSYM_RETURN; break;
-		case SCHISM_KEYSYM_KP_EQUALS: k->sym = SCHISM_KEYSYM_EQUALS; break;
+		case SCHISM_KEYSYM_KP_DIVIDE: k->sym = SCHISM_KEYSYM_SLASH; k->scancode = SCHISM_SCANCODE_SLASH; break;
+		case SCHISM_KEYSYM_KP_MULTIPLY: k->sym = SCHISM_KEYSYM_ASTERISK; k->scancode = SCHISM_SCANCODE_8; k->mod |= SCHISM_KEYMOD_SHIFT; break;
+		case SCHISM_KEYSYM_KP_MINUS: k->sym = SCHISM_KEYSYM_MINUS; k->scancode = SCHISM_SCANCODE_MINUS; break;
+		case SCHISM_KEYSYM_KP_PLUS: k->sym = SCHISM_KEYSYM_PLUS; k->scancode = SCHISM_SCANCODE_EQUALS; k->mod |= SCHISM_KEYMOD_SHIFT; break;
+		case SCHISM_KEYSYM_KP_ENTER: k->sym = SCHISM_KEYSYM_RETURN; k->scancode = SCHISM_SCANCODE_RETURN; break;
+		case SCHISM_KEYSYM_KP_EQUALS: k->sym = SCHISM_KEYSYM_EQUALS; k->scancode = SCHISM_SCANCODE_EQUALS; k->mod &= ~SCHISM_KEYMOD_SHIFT; break;
 
 		default:
 			break;
@@ -490,7 +492,7 @@ int kbd_get_note(struct key_event *k)
 
 	if (!NO_CAM_MODS(k->mod)) return -1;
 
-	if (k->sym == SCHISM_KEYSYM_KP_1 || k->sym == SCHISM_KEYSYM_KP_PERIOD)
+	if (k->scancode == SCHISM_SCANCODE_KP_1 || k->scancode == SCHISM_SCANCODE_KP_PERIOD)
 		if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1;
 
 	switch (k->scancode) {
