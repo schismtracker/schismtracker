@@ -384,7 +384,12 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				data.chn_doesnt_match = &chn_doesnt_match;
 				data.nchn = nchn;
 
-				/* hope this succeeds, i guess */
+				/* this is ultra-lame, and should be adapted to just
+				 * use slurp-functions :)
+				 *
+				 * on that note: it would be nice to have a slurp impl
+				 * that is literally just a range inside another slurp
+				 * hmmmm */
 				iff_chunk_receive(&chunk, fp, dsm_process_pattern, &data);
 			}
 

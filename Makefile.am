@@ -512,6 +512,7 @@ schismtracker_SOURCES = \
 	fmt/ntk.c			\
 	fmt/okt.c			\
 	fmt/pat.c			\
+	fmt/psm.c			\
 	fmt/raw.c			\
 	fmt/s3i.c			\
 	fmt/s3m.c			\
