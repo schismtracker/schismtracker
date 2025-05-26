@@ -4125,43 +4125,48 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	return 0;
 }
 
-static int mute_toggle_hack[64]; /* mrsbrisby: please explain this one, i don't get why it's necessary... */
+static int mute_toggle_hack[MAX_CHANNELS]; /* mrsbrisby: please explain this one, i don't get why it's necessary... */
 static int pattern_editor_handle_key_default(struct key_event * k)
 {
-	/* bleah */
-	if (k->sym == SCHISM_KEYSYM_LESS || k->sym == SCHISM_KEYSYM_COLON || k->sym == SCHISM_KEYSYM_SEMICOLON) {
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if ((status.flags & CLASSIC_MODE) || current_position != 4) {
-			set_previous_instrument();
+	int n = kbd_get_note(k);
+
+	/* stupid hack; if we have a note, that's definitely more important than this stuff */
+	if (n < 0 || current_position > 0) {
+		if (k->sym == SCHISM_KEYSYM_LESS || k->sym == SCHISM_KEYSYM_COLON || k->sym == SCHISM_KEYSYM_SEMICOLON) {
+			if (k->state == KEY_RELEASE)
+				return 0;
+			if ((status.flags & CLASSIC_MODE) || current_position != 4) {
+				set_previous_instrument();
+				status.flags |= NEED_UPDATE;
+				return 1;
+			}
+		} else if (k->sym == SCHISM_KEYSYM_GREATER || k->sym == SCHISM_KEYSYM_QUOTE || k->sym == SCHISM_KEYSYM_QUOTEDBL) {
+			if (k->state == KEY_RELEASE)
+				return 0;
+			if ((status.flags & CLASSIC_MODE) || current_position != 4) {
+				set_next_instrument();
+				status.flags |= NEED_UPDATE;
+				return 1;
+			}
+		} else if (k->sym == SCHISM_KEYSYM_COMMA) {
+			if (k->state == KEY_RELEASE)
+				return 0;
+			switch (current_position) {
+			case 2: case 3:
+				edit_copy_mask ^= MASK_INSTRUMENT;
+				break;
+			case 4: case 5:
+				edit_copy_mask ^= MASK_VOLUME;
+				break;
+			case 6: case 7: case 8:
+				edit_copy_mask ^= MASK_EFFECT;
+				break;
+			}
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
-	} else if (k->sym == SCHISM_KEYSYM_GREATER || k->sym == SCHISM_KEYSYM_QUOTE || k->sym == SCHISM_KEYSYM_QUOTEDBL) {
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if ((status.flags & CLASSIC_MODE) || current_position != 4) {
-			set_next_instrument();
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
-	} else if (k->sym == SCHISM_KEYSYM_COMMA) {
-		if (k->state == KEY_RELEASE)
-			return 0;
-		switch (current_position) {
-		case 2: case 3:
-			edit_copy_mask ^= MASK_INSTRUMENT;
-			break;
-		case 4: case 5:
-			edit_copy_mask ^= MASK_VOLUME;
-			break;
-		case 6: case 7: case 8:
-			edit_copy_mask ^= MASK_EFFECT;
-			break;
-		}
-		status.flags |= NEED_UPDATE;
-		return 1;
 	}
+
 	if (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing && k->is_repeat)
 		return 0;
 

@@ -184,7 +184,7 @@ void kbd_key_translate(struct key_event *k)
 		case '$': k->sym = SCHISM_KEYSYM_DOLLAR; break;
 
 		case '+': k->sym = SCHISM_KEYSYM_PLUS; break;
-		case ';': k->sym = SCHISM_KEYSYM_COLON; break;
+		case ':': k->sym = SCHISM_KEYSYM_COLON; break;
 
 		case '*': k->sym = SCHISM_KEYSYM_ASTERISK; break;
 
@@ -656,5 +656,3 @@ void kbd_set_key_repeat(int delay, int rate)
 		key_repeat_enabled = 1;
 	}
 }
-
-/* -------------------------------------------------- */
