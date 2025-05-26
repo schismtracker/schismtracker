@@ -732,11 +732,12 @@ int fmt_psm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					break;
 				}
 
-				case 0x08: /* Default Tempo */
+				case 0x08: { /* Default Tempo */
 					int tempo = slurp_getc(fp);
 					if (tempo != EOF)
 						song->initial_tempo = tempo;
 					break;
+				}
 
 				case 0x0C: { /* "Sample map table" */
 					uint8_t table[6];
