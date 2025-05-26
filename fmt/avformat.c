@@ -430,6 +430,12 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 	if (schism_avformat_open_input(&fmtctx, (file ? file->path : NULL), NULL, NULL) < 0)
 		goto fail;
 
+	/* tracker-ception! :) */
+	if (!strcmp(fmtctx->iformat->name, "libopenmpt")
+		|| !strcmp(fmtctx->iformat->name, "libmodplug")
+		|| !strcmp(fmtctx->iformat->name, "libmikmod"))
+		goto fail;
+
 	if (schism_avformat_find_stream_info(fmtctx, NULL) < 0)
 		goto fail;
 
