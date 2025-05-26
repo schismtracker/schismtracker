@@ -33,18 +33,19 @@
 
 /* --------------------------------------------------------------------- */
 
-#define ID_TITL UINT32_C(0x5449544C)
+/* NOTE: Apparently "ProTracker Studio" is a completely different format
+ * to the ones used in Epic games. None of the documentation lines up,
+ * so despite having the same file extension *and* both having "16"
+ * variants, they are NOT the same! */
+
 #define ID_DSMP UINT32_C(0x44534D50)
-#define ID_PBOD UINT32_C(0x50424F44)
-#define ID_OPLH UINT32_C(0x4F504C48)
-#define ID_PPAN UINT32_C(0x5050414E)
-
-#define ID_SONG UINT32_C(0x534F4E47)
 #define ID_INST UINT32_C(0x494E5354)
+#define ID_OPLH UINT32_C(0x4F504C48)
 #define ID_PATT UINT32_C(0x50415454)
-
-/* since this is a PC format, everything is little endian,
- * despite having "ProTracker" in the name... */
+#define ID_PBOD UINT32_C(0x50424F44)
+#define ID_PPAN UINT32_C(0x5050414E)
+#define ID_SONG UINT32_C(0x534F4E47)
+#define ID_TITL UINT32_C(0x5449544C)
 
 /* this ends the file pointer on the start of all the chunks */
 static int psm_verify_header(slurp_t *fp)
@@ -87,7 +88,7 @@ int fmt_psm_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	/* I had it all, and I looked at it and said:
 	 * 'This is a bigger jail than I just got out of.' */
-	file->description = "ProTracker Studio";
+	file->description = "Epic MegaGames MASI";
 	/*file->extension = str_dup("psm");*/
 	file->type = TYPE_MODULE_S3M;
 
