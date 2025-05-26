@@ -174,6 +174,11 @@ static int psm_import_effect(song_note_t *note, slurp_t *fp, int sinaria)
 		break;
 
 	case 0x0F: /* Tone portamento */
+		note->effect = FX_TONEPORTAMENTO;
+
+		note->param = (sinaria)
+			? (e[1])
+			: (e[1] >> 2);
 		break;
 	case 0x10: /* Tone portamento + volume slide up */
 		note->effect = FX_TONEPORTAVOL;
