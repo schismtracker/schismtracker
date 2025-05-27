@@ -32,6 +32,7 @@
 #include "timer.h"
 #include "mem.h"
 #include "str.h"
+#include "events.h"
 
 #include <ctype.h>
 
@@ -520,7 +521,11 @@ int kbd_get_note(struct key_event *k)
 	case SCHISM_SCANCODE_1:
 		return NOTE_CUT;
 	case SCHISM_SCANCODE_PERIOD:
-		return 0; /* clear */
+		/* clear, but only if not shifted */
+		if (k->mod & SCHISM_KEYMOD_SHIFT)
+			return -1; // do not match
+		else
+			return 0; // match
 	case SCHISM_SCANCODE_Z: note = 1; break;
 	case SCHISM_SCANCODE_S: note = 2; break;
 	case SCHISM_SCANCODE_X: note = 3; break;
