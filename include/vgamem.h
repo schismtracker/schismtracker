@@ -82,6 +82,7 @@ int draw_text_charset(const void *text, charset_t set, int x, int y, uint32_t fg
 /* return value is the length of text drawn
  * (so len - return is the number of spaces) */
 int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
+int draw_text_len_with_character_translation(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
 int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
 int draw_text_utf8_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
 int draw_text_charset_len(const void *text, charset_t set, int len, int x, int y, uint32_t fg, uint32_t bg);

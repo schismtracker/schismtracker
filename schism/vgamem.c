@@ -27,6 +27,7 @@
 #include "vgamem.h"
 #include "fonts.h"
 #include "song.h"
+#include "events.h"
 
 #define SAMPLE_DATA_COLOR 13 /* Sample data */
 #define SAMPLE_LOOP_COLOR 3 /* Sample loop marks */
@@ -553,6 +554,59 @@ int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_
 	}
 	draw_fill_chars(x + n, y, x + len - 1, y, fg, bg);
 	return n;
+}
+
+int draw_text_len_with_character_translation(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
+{
+	static char translation_buffer[100];
+
+	char *out = &translation_buffer[0];
+	int spaces_mismatch = 0;
+
+	char *safe = text + len - 1;
+
+	while (len > 0) {
+		// If a translation became wider, then eat spaces when we can.
+		while ((*text == ' ') && (spaces_mismatch > 0)) {
+			text++;
+			len--;
+			spaces_mismatch--;
+		}
+
+		// If a translation became shorter, then inject spaces next to other spaces.
+		while ((*text == ' ') && (spaces_mismatch < 0)) {
+			*out++ = ' ';
+			spaces_mismatch++;
+		}
+
+		if (*text != '$') {
+			*out++ = *text++;
+			len--;
+		}
+		else
+		{
+			char key_to_translate = text[1];
+
+			const char *translation = events_describe_physical_key_for_qwerty_key(key_to_translate);
+
+			int length_before_translation = 2;
+			int length_after_translation = strlen(translation);
+
+			strcpy(out, translation);
+
+			out += length_after_translation;
+
+			text += 2;
+			len -= 2;
+			spaces_mismatch += length_after_translation - length_before_translation;
+		}
+	}
+
+	*out = '\0';
+
+	len = out - translation_buffer;
+
+	return draw_text_len(translation_buffer, len, x, y, fg, bg);
 }
 
 int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)

@@ -45,6 +45,8 @@ enum {
 	LTYPE_CLASSIC = '!',
 	LTYPE_SEPARATOR = '%',
 	LTYPE_DISABLED = '#',
+	LTYPE_TRANSLATE_CHARACTERS = '$',
+	LTYPE_TRANSLATE_CHARACTERS_DISABLED = '@',
 	LTYPE_GRAPHIC = '=',
 };
 
@@ -118,6 +120,8 @@ static void help_redraw(void)
 			lp = strcspn(*ptr+1, "\015\012");
 			if (LINE_BIOS(*ptr)) {
 				draw_text_bios_len(*ptr + 1, lp, 2, pos, 6, 0);
+			} else if ((**ptr == LTYPE_TRANSLATE_CHARACTERS) || (**ptr == LTYPE_TRANSLATE_CHARACTERS_DISABLED)) {
+				draw_text_len_with_character_translation(*ptr + 1, lp, 2, pos, **ptr == LTYPE_TRANSLATE_CHARACTERS_DISABLED ? 7 : 6, 0);
 			} else {
 				draw_text_len(*ptr + 1, lp, 2, pos, **ptr == LTYPE_DISABLED ? 7 : 6, 0);
 			}
