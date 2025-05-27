@@ -42,6 +42,8 @@ static int (SDLCALL *sdl2_InitSubSystem)(Uint32 flags) = NULL;
 static void (SDLCALL *sdl2_QuitSubSystem)(Uint32 flags) = NULL;
 
 static SDL_Keymod (SDLCALL *sdl2_GetModState)(void);
+static SDL_Keycode (SDLCALL *sdl2_GetKeyFromScancode)(SDL_Scancode);
+static const char * (SDLCALL *sdl2_GetKeyName)(SDL_Keycode);
 static void (SDLCALL *sdl2_PumpEvents)(void);
 static int (SDLCALL *sdl2_PeepEvents)(SDL_Event *events, int numevents, SDL_eventaction action, Uint32 min, Uint32 max);
 static SDL_bool (SDLCALL *sdl2_IsTextInputActive)(void) = NULL;
@@ -618,6 +620,11 @@ static void sdl2_pump_events(void)
 	pop_pending_keydown(NULL);
 }
 
+static const char *sdl2_get_key_name_from_scancode(int scancode)
+{
+	return sdl2_GetKeyName(sdl2_GetKeyFromScancode(scancode));
+}
+
 //////////////////////////////////////////////////////////////////////////////
 // dynamic loading
 
@@ -627,6 +634,8 @@ static int sdl2_events_load_syms(void)
 	SCHISM_SDL2_SYM(QuitSubSystem);
 
 	SCHISM_SDL2_SYM(GetModState);
+	SCHISM_SDL2_SYM(GetKeyFromScancode);
+	SCHISM_SDL2_SYM(GetKeyName);
 	SCHISM_SDL2_SYM(IsTextInputActive);
 	SCHISM_SDL2_SYM(PumpEvents);
 	SCHISM_SDL2_SYM(PeepEvents);
@@ -693,4 +702,5 @@ const schism_events_backend_t schism_events_backend_sdl2 = {
 
 	.keymod_state = sdl2_event_mod_state,
 	.pump_events = sdl2_pump_events,
+	.get_key_name_from_scancode = sdl2_get_key_name_from_scancode,
 };

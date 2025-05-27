@@ -804,6 +804,207 @@ static void sdl12_pump_events(void)
 	}
 }
 
+static const char *sdl12_get_key_name_from_scancode(int scancode)
+{
+	switch (scancode)
+	{
+	/* USB keyboard page... */
+		case SCHISM_SCANCODE_A: return "A";
+		case SCHISM_SCANCODE_B: return "B";
+		case SCHISM_SCANCODE_C: return "C";
+		case SCHISM_SCANCODE_D: return "D";
+		case SCHISM_SCANCODE_E: return "E";
+		case SCHISM_SCANCODE_F: return "F";
+		case SCHISM_SCANCODE_G: return "G";
+		case SCHISM_SCANCODE_H: return "H";
+		case SCHISM_SCANCODE_I: return "I";
+		case SCHISM_SCANCODE_J: return "J";
+		case SCHISM_SCANCODE_K: return "K";
+		case SCHISM_SCANCODE_L: return "L";
+		case SCHISM_SCANCODE_M: return "M";
+		case SCHISM_SCANCODE_N: return "N";
+		case SCHISM_SCANCODE_O: return "O";
+		case SCHISM_SCANCODE_P: return "P";
+		case SCHISM_SCANCODE_Q: return "Q";
+		case SCHISM_SCANCODE_R: return "R";
+		case SCHISM_SCANCODE_S: return "S";
+		case SCHISM_SCANCODE_T: return "T";
+		case SCHISM_SCANCODE_U: return "U";
+		case SCHISM_SCANCODE_V: return "V";
+		case SCHISM_SCANCODE_W: return "W";
+		case SCHISM_SCANCODE_X: return "X";
+		case SCHISM_SCANCODE_Y: return "Y";
+		case SCHISM_SCANCODE_Z: return "Z";
+
+		case SCHISM_SCANCODE_1: return "1";
+		case SCHISM_SCANCODE_2: return "2";
+		case SCHISM_SCANCODE_3: return "3";
+		case SCHISM_SCANCODE_4: return "4";
+		case SCHISM_SCANCODE_5: return "5";
+		case SCHISM_SCANCODE_6: return "6";
+		case SCHISM_SCANCODE_7: return "7";
+		case SCHISM_SCANCODE_8: return "8";
+		case SCHISM_SCANCODE_9: return "9";
+		case SCHISM_SCANCODE_0: return "0";
+
+		case SCHISM_SCANCODE_RETURN: return "Enter";
+		case SCHISM_SCANCODE_ESCAPE: return "Esc";
+		case SCHISM_SCANCODE_BACKSPACE: return "Backspace";
+		case SCHISM_SCANCODE_TAB: return "Tab";
+		case SCHISM_SCANCODE_SPACE: return "Space";
+
+		case SCHISM_SCANCODE_MINUS: return "-";
+		case SCHISM_SCANCODE_EQUALS: return "=";
+		case SCHISM_SCANCODE_LEFTBRACKET: return "[";
+		case SCHISM_SCANCODE_RIGHTBRACKET: return "]";
+		case SCHISM_SCANCODE_BACKSLASH: return "\\";
+		case SCHISM_SCANCODE_NONUSHASH: return "#";
+		case SCHISM_SCANCODE_SEMICOLON: return ";";
+		case SCHISM_SCANCODE_APOSTROPHE: return "'";
+		case SCHISM_SCANCODE_GRAVE: return "`";
+		case SCHISM_SCANCODE_COMMA: return ",";
+		case SCHISM_SCANCODE_PERIOD: return ".";
+		case SCHISM_SCANCODE_SLASH: return "/";
+
+		case SCHISM_SCANCODE_CAPSLOCK: return "CapsLock";
+
+		case SCHISM_SCANCODE_F1: return "F1";
+		case SCHISM_SCANCODE_F2: return "F2";
+		case SCHISM_SCANCODE_F3: return "F3";
+		case SCHISM_SCANCODE_F4: return "F4";
+		case SCHISM_SCANCODE_F5: return "F5";
+		case SCHISM_SCANCODE_F6: return "F6";
+		case SCHISM_SCANCODE_F7: return "F7";
+		case SCHISM_SCANCODE_F8: return "F8";
+		case SCHISM_SCANCODE_F9: return "F9";
+		case SCHISM_SCANCODE_F10: return "F10";
+		case SCHISM_SCANCODE_F11: return "F11";
+		case SCHISM_SCANCODE_F12: return "F12";
+
+		case SCHISM_SCANCODE_PRINTSCREEN: return "PrScr";
+		case SCHISM_SCANCODE_SCROLLLOCK: return "ScrLk";
+		case SCHISM_SCANCODE_PAUSE: return "Pause";
+		case SCHISM_SCANCODE_INSERT: return "Ins";
+		case SCHISM_SCANCODE_HOME: return "Home";
+		case SCHISM_SCANCODE_PAGEUP: return "PgUp";
+		case SCHISM_SCANCODE_DELETE: return "Del";
+		case SCHISM_SCANCODE_END: return "End";
+		case SCHISM_SCANCODE_PAGEDOWN: return "PgDn";
+		case SCHISM_SCANCODE_RIGHT: return "Right";
+		case SCHISM_SCANCODE_LEFT: return "Left";
+		case SCHISM_SCANCODE_DOWN: return "Down";
+		case SCHISM_SCANCODE_UP: return "Up";
+
+		case SCHISM_SCANCODE_NUMLOCKCLEAR: return "NumLk";
+		case SCHISM_SCANCODE_KP_DIVIDE: return "/";
+		case SCHISM_SCANCODE_KP_MULTIPLY: return "*";
+		case SCHISM_SCANCODE_KP_MINUS: return "-";
+		case SCHISM_SCANCODE_KP_PLUS: return "+";
+		case SCHISM_SCANCODE_KP_ENTER: return "Enter";
+		case SCHISM_SCANCODE_KP_1: return "1";
+		case SCHISM_SCANCODE_KP_2: return "2";
+		case SCHISM_SCANCODE_KP_3: return "3";
+		case SCHISM_SCANCODE_KP_4: return "4";
+		case SCHISM_SCANCODE_KP_5: return "5";
+		case SCHISM_SCANCODE_KP_6: return "6";
+		case SCHISM_SCANCODE_KP_7: return "7";
+		case SCHISM_SCANCODE_KP_8: return "8";
+		case SCHISM_SCANCODE_KP_9: return "9";
+		case SCHISM_SCANCODE_KP_0: return "0";
+		case SCHISM_SCANCODE_KP_PERIOD: return ".";
+
+		case SCHISM_SCANCODE_NONUSBACKSLASH: return "\\";
+		case SCHISM_SCANCODE_APPLICATION: return "Win";
+		case SCHISM_SCANCODE_POWER: return "Power";
+		case SCHISM_SCANCODE_KP_EQUALS: return "=";
+		case SCHISM_SCANCODE_F13: return "F13";
+		case SCHISM_SCANCODE_F14: return "F14";
+		case SCHISM_SCANCODE_F15: return "F15";
+		case SCHISM_SCANCODE_F16: return "F16";
+		case SCHISM_SCANCODE_F17: return "F17";
+		case SCHISM_SCANCODE_F18: return "F18";
+		case SCHISM_SCANCODE_F19: return "F19";
+		case SCHISM_SCANCODE_F20: return "F20";
+		case SCHISM_SCANCODE_F21: return "F21";
+		case SCHISM_SCANCODE_F22: return "F22";
+		case SCHISM_SCANCODE_F23: return "F23";
+		case SCHISM_SCANCODE_F24: return "F24";
+		case SCHISM_SCANCODE_EXECUTE: return "Exe";
+		case SCHISM_SCANCODE_HELP: return "Help";
+		case SCHISM_SCANCODE_MENU: return "Menu";
+		case SCHISM_SCANCODE_SELECT: return "Sel";
+		case SCHISM_SCANCODE_STOP: return "Stop";
+		case SCHISM_SCANCODE_AGAIN: return "Redo";
+		case SCHISM_SCANCODE_UNDO: return "Undo";
+		case SCHISM_SCANCODE_CUT: return "Cut";
+		case SCHISM_SCANCODE_COPY: return "Copy";
+		case SCHISM_SCANCODE_PASTE: return "Paste";
+		case SCHISM_SCANCODE_FIND: return "Find";
+		case SCHISM_SCANCODE_MUTE: return "Mute";
+		case SCHISM_SCANCODE_VOLUMEUP: return "VolUp";
+		case SCHISM_SCANCODE_VOLUMEDOWN: return "VolDn";
+		case SCHISM_SCANCODE_KP_COMMA: return ",";
+		case SCHISM_SCANCODE_KP_EQUALSAS400: return "=";
+
+		case SCHISM_SCANCODE_ALTERASE: return "Erase";
+		case SCHISM_SCANCODE_SYSREQ: return "SysRq";
+		case SCHISM_SCANCODE_CANCEL: return "Cancel";
+		case SCHISM_SCANCODE_CLEAR: return "Clr";
+		case SCHISM_SCANCODE_PRIOR: return "Prior";
+		case SCHISM_SCANCODE_RETURN2: return "Return";
+		case SCHISM_SCANCODE_SEPARATOR: return "Sep";
+		case SCHISM_SCANCODE_OUT: return "Out";
+		case SCHISM_SCANCODE_OPER: return "Oper";
+		case SCHISM_SCANCODE_CLEARAGAIN: return "ClrAgain";
+		case SCHISM_SCANCODE_CRSEL: return "CrSel";
+		case SCHISM_SCANCODE_EXSEL: return "ExSel";
+
+		case SCHISM_SCANCODE_KP_00: return "00";
+		case SCHISM_SCANCODE_KP_000: return "000";
+		case SCHISM_SCANCODE_THOUSANDSSEPARATOR: return ",...";
+		case SCHISM_SCANCODE_DECIMALSEPARATOR: return ".__";
+		case SCHISM_SCANCODE_CURRENCYUNIT: return "$";
+		case SCHISM_SCANCODE_CURRENCYSUBUNIT: return "¢";
+		case SCHISM_SCANCODE_KP_LEFTPAREN: return "[";
+		case SCHISM_SCANCODE_KP_RIGHTPAREN: return "]";
+		case SCHISM_SCANCODE_KP_LEFTBRACE: return "{";
+		case SCHISM_SCANCODE_KP_RIGHTBRACE: return "}";
+		case SCHISM_SCANCODE_KP_TAB: return "Tab";
+		case SCHISM_SCANCODE_KP_BACKSPACE: return "Backspace";
+		case SCHISM_SCANCODE_KP_COLON: return ":";
+		case SCHISM_SCANCODE_KP_HASH: return "#";
+		case SCHISM_SCANCODE_KP_SPACE: return "Space";
+		case SCHISM_SCANCODE_KP_AT: return "@";
+		case SCHISM_SCANCODE_KP_EXCLAM: return "!";
+		case SCHISM_SCANCODE_KP_MEMSTORE: return "MemSt";
+		case SCHISM_SCANCODE_KP_MEMRECALL: return "MemRe";
+		case SCHISM_SCANCODE_KP_MEMCLEAR: return "MemCl";
+		case SCHISM_SCANCODE_KP_MEMADD: return "MemAdd";
+		case SCHISM_SCANCODE_KP_MEMSUBTRACT: return "MemSub";
+		case SCHISM_SCANCODE_KP_MEMMULTIPLY: return "MemMul";
+		case SCHISM_SCANCODE_KP_MEMDIVIDE: return "MemDiv";
+		case SCHISM_SCANCODE_KP_PLUSMINUS: return "+/-";
+		case SCHISM_SCANCODE_KP_CLEAR: return "Clr";
+		case SCHISM_SCANCODE_KP_CLEARENTRY: return "ClrEn";
+		case SCHISM_SCANCODE_KP_BINARY: return "Bin";
+		case SCHISM_SCANCODE_KP_OCTAL: return "Oct";
+		case SCHISM_SCANCODE_KP_DECIMAL: return "Dec";
+		case SCHISM_SCANCODE_KP_HEXADECIMAL: return "Hex";
+
+		case SCHISM_SCANCODE_LCTRL: return "Ctrl";
+		case SCHISM_SCANCODE_LSHIFT: return "Shift";
+		case SCHISM_SCANCODE_LALT: return "Alt";
+		case SCHISM_SCANCODE_LGUI: return "Win";
+		case SCHISM_SCANCODE_RCTRL: return "Ctrl";
+		case SCHISM_SCANCODE_RSHIFT: return "Shift";
+		case SCHISM_SCANCODE_RALT: return "Alt";
+		case SCHISM_SCANCODE_RGUI: return "Win";
+	}
+
+	// SCHISM_SCANCODE_UNKNOWN or actually unknown
+	return "<unknown>";
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 static int sdl12_events_load_syms(void)
@@ -846,4 +1047,5 @@ const schism_events_backend_t schism_events_backend_sdl12 = {
 
 	.keymod_state = sdl12_event_mod_state,
 	.pump_events = sdl12_pump_events,
+	.get_key_name_from_scancode = sdl12_get_key_name_from_scancode,
 };
