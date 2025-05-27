@@ -305,9 +305,16 @@ const char *events_describe_physical_key_for_qwerty_key(char qwerty_key)
 	if (!shifted)
 		return key_name;
 	else {
-		sprintf(description, "Shift-%s", key_name);
+		if (strcmp(key_name, ",") == 0)
+			return "<";
+		else if (strcmp(key_name, ".") == 0)
+			return ">";
+		else
+		{
+			sprintf(description, "Shift-%s", key_name);
 
-		return description;
+			return description;
+		}
 	}
 }
 
