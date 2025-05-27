@@ -42,6 +42,7 @@
 #include "midi.h"
 #include "dmoz.h"
 #include "charset.h"
+#include "keybinds.h"
 #include "keyboard.h"
 #include "palettes.h"
 #include "fonts.h"
@@ -507,6 +508,8 @@ SCHISM_NORETURN static void event_loop(void)
 					charset_iconv(se.key.text, &kk.text, CHARSET_UTF8, CHARSET_CP437, ARRAY_SIZE(se.key.text));
 
 				kbd_key_translate(&kk);
+
+				keybinds_event(&kk);
 
 				handle_key(&kk);
 
@@ -995,6 +998,11 @@ int schism_main(int argc, char** argv)
 	if (!clippy_init()) {
 		log_appendf(4, "Failed to initialize a clipboard backend!");
 		log_appendf(4, "Copying to the system clipboard will not work properly!");
+		log_nl();
+	}
+
+	if (keybinds_init() != 0) {
+		log_appendf(4, "Failed to load custom keybinds!");
 		log_nl();
 	}
 
