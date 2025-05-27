@@ -24,7 +24,7 @@ foreach my $i (@ARGV) {
 my $srcdir = shift(@ARGV);
 my @helptexts = @ARGV;
 
-my $typechars = "|+:;!\%#=";
+my $typechars = "|+:;!\%#=\$@";
 
 my @arrnames = ();
 
