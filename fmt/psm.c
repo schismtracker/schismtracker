@@ -28,15 +28,28 @@
 #include "fmt.h"
 #include "log.h"
 #include "mem.h"
+#include "str.h"
 
 #include "player/sndfile.h"
 
-/* --------------------------------------------------------------------- */
+/* There are four(!) different variations of the PSM format, all
+ * incompatible with one another. In order, from oldest to newest(-ish):
+ *   1. PS16: unused. I do not know of any files that actually use this
+ *      format. Documentation for it *does* exist on modland though.
+ *   2. PSM16: used in Silverball, and is closer in relation to Scream
+ *      Tracker modules than later versions[citation needed]. Documentation
+ *      for this format also exists on modland.
+ *   3. "New" PSM: used in Jazz Jackrabbit, Epic Pinball, Extreme Pinball,
+ *      and One Must Fall. This one is kind of a mess, probably to get
+ *      everything to play as intended.
+ *   4. Sinaria: a variation of the previous one, only used in the game
+ *      Sinaria. There are a couple subtle differences that make it easy
+ *      to detect, e.g. in pattern indexes. This format handles effects
+ *      slightly different than the "New" PSM format, which is adjusted
+ *      accordingly in the below code. */
 
-/* NOTE: Apparently "ProTracker Studio" is a completely different format
- * to the ones used in Epic games. None of the documentation lines up,
- * so despite having the same file extension *and* both having "16"
- * variants, they are NOT the same! */
+/* ------------------------------------------------------------------------ */
+/* "New" PSM support starts here */
 
 #define ID_DSMP UINT32_C(0x44534D50)
 #define ID_INST UINT32_C(0x494E5354)
@@ -834,6 +847,575 @@ int fmt_psm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		(sinaria)
 			? "Epic MegaGames MASI (New Version / Sinaria)"
 			: "Epic MegaGames MASI (New Version)");
+
+	return LOAD_SUCCESS;
+}
+
+/* ------------------------------------------------------------------------ */
+/* here comes PSM16...
+ *
+ * ...you know, I wrote this loader hoping that there would actually be some
+ * value in the songs that I'd actually be able to load, but the only one
+ * I really like is "snooker champ". also there's that one that uses samples
+ * from "beyond music", I guess. besides that there's not a whole lot of
+ * value to this format. :p */
+
+static int psm16_verify_header(slurp_t *fp)
+{
+	/* This is probably way more validation than necessary, but oh well :) */
+	int b, i;
+	uint16_t w;
+	unsigned char magic[4];
+
+	if (slurp_read(fp, magic, 4) != 4 || memcmp(magic, "PSM\xFE", 4))
+		return 0;
+
+	slurp_seek(fp, 59, SEEK_CUR);
+
+	/* "The final byte, 60, MUST have a ^Z in it." */
+	if (slurp_getc(fp) != 0x1A)
+		return 0;
+
+	b = slurp_getc(fp);
+	if (b == EOF || (b & 0x03))
+		return 0;
+
+	b = slurp_getc(fp);
+	if (b != 0x10 && b != 0x01 /* from OpenMPT: this is sometimes 0x01 !!! */)
+		return 0;
+
+	b = slurp_getc(fp);
+	if (b != 0 /* "255ch" format not documented, and I don't care */)
+		return 0;
+
+	/* skip speed */
+	slurp_seek(fp, 1, SEEK_CUR);
+
+	/* skip """BPM""", actually tempo, and yes, they are very different */
+	b = slurp_getc(fp);
+	if (!(b >= 32 && b <= 255))
+		return 0;
+
+	/* skip master volume */
+	slurp_seek(fp, 1, SEEK_CUR);
+
+	for (i = 0; i < 4; i++) {
+		/* next four values are all 16-bit values,
+		 * and all have the exact same limits */
+		if (slurp_read(fp, &w, 2) != 2)
+			return 0;
+
+		w = bswapLE16(w);
+
+		if (!(w >= 1 && w <= 255))
+			return 0;
+	}
+
+	/* "Number of Channels to Play" and "Number of Channels to Process"...
+	 * docs say that this varies from 1 to 32, so I suppose the 255
+	 * channel format is just completely meaningless. */
+	for (i = 0; i < 2; i++) {
+		if (slurp_read(fp, &w, 2) != 2)
+			return 0;
+
+		w = bswapLE16(w);
+
+		if (!(w >= 1 && w <= 32))
+			return 0;
+	}
+
+	return 1;
+}
+
+int fmt_psm16_read_info(dmoz_file_t *file, slurp_t *fp)
+{
+	if (!psm16_verify_header(fp))
+		return 0;
+
+	{
+		char title[60];
+		int i;
+
+		slurp_seek(fp, 4, SEEK_SET);
+
+		slurp_read(fp, title, 59);
+		title[59] = '\0';
+
+		/* discover never-before-seen secrets of the damned */
+		for (i = 0; i < 59; i++)
+			title[i] = title[i] ? title[i] : ' ';
+
+		/* trim it up! */
+		str_rtrim(title);
+
+		/* only put in a title if there's actually any data there */
+		if (*title)
+			file->title = str_dup(title);
+	}
+
+	file->description = "Epic MegaGames MASI";
+	/*file->extension = str_dup(".psm");*/
+	file->type = TYPE_MODULE_S3M;
+
+	return 1;
+}
+
+/* if this function succeeds, the file position is at the offset.
+ * otherwise, it is unknown, and needs manual readjustment :) */
+static int psm16_check_parapointer(slurp_t *fp, uint32_t paraptr,
+	const char magic[4])
+{
+	unsigned char x[4];
+
+	if (paraptr < 4)
+		return 0;
+
+	slurp_seek(fp, paraptr - 4, SEEK_SET);
+
+	if (slurp_read(fp, x, 4) != 4 || memcmp(x, magic, 4))
+		return 0;
+
+	return 1;
+}
+
+enum {
+	/* sample data flags */
+	PSM16_SAMPLE_FLAG_SYNTHESIZED = (0x01), /* unused, AFAIK */
+	PSM16_SAMPLE_FLAG_16BIT = (0x04),
+	PSM16_SAMPLE_FLAG_UNSIGNED = (0x08),
+	PSM16_SAMPLE_FLAG_DELTA = (0x10),
+	PSM16_SAMPLE_FLAG_BIDI_LOOP = (0x20),
+
+	/* loop flags */
+	PSM16_SAMPLE_FLAG_LOOP = (0x80),
+
+	PSM16_SAMPLE_FLAG_SAMPLE = (0xFF & ~PSM16_SAMPLE_FLAG_LOOP),
+};
+
+int fmt_psm16_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+{
+	int speed, tempo, master_volume;
+	uint16_t norders, npatterns, nsamples, nchnplay, nchnprocess, nchns;
+	uint32_t oorders, ochnpans, opatterns, osamples, omessage;
+	int n;
+
+	if (!psm16_verify_header(fp))
+		return LOAD_UNSUPPORTED;
+
+	slurp_seek(fp, 4, SEEK_SET);
+
+	/* something fun I discovered: by doing it this way, we actually
+	 * uncover mysterious hidden bits of the title (one of the songs
+	 * in silverball literally is titled "\0eyond_music", lol) */
+	slurp_read(fp, song->title, sizeof(song->title));
+	slurp_seek(fp, 60 - sizeof(song->title), SEEK_CUR);
+
+	/* skip stuff that has already been verified */
+	slurp_seek(fp, 3, SEEK_CUR);
+
+	speed = slurp_getc(fp);
+	if (speed == EOF)
+		return LOAD_UNSUPPORTED;
+
+	tempo = slurp_getc(fp);
+	if (tempo == EOF)
+		return LOAD_UNSUPPORTED;
+
+	master_volume = slurp_getc(fp);
+	if (master_volume == EOF)
+		return LOAD_UNSUPPORTED;
+
+	song->initial_speed = speed;
+	song->initial_tempo = tempo;
+
+	/* from openmpt:
+	 * Most of the time, the master volume value makes sense...
+	 * ...Just not when it's 255. */
+	song->mixing_volume = (master_volume == 255) ? 48 : master_volume;
+
+	/* skip "song length" ??? */
+	slurp_seek(fp, 2, SEEK_CUR);
+
+	slurp_read(fp, &norders, sizeof(norders));
+	slurp_read(fp, &npatterns, sizeof(npatterns));
+	slurp_read(fp, &nsamples, sizeof(nsamples));
+	slurp_read(fp, &nchnplay, sizeof(nchnplay));
+	slurp_read(fp, &nchnprocess, sizeof(nchnprocess));
+
+	norders = bswapLE16(norders);
+	npatterns = bswapLE16(npatterns);
+	nsamples = bswapLE16(nsamples);
+	nchnplay = bswapLE16(nchnplay);
+	nchnprocess = bswapLE16(nchnprocess);
+
+	nchns = CLAMP(nchnprocess, nchnplay, MAX_CHANNELS);
+	nsamples = MIN(nsamples, MAX_SAMPLES);
+
+	slurp_read(fp, &oorders, sizeof(oorders));
+	slurp_read(fp, &ochnpans, sizeof(ochnpans));
+	slurp_read(fp, &opatterns, sizeof(opatterns));
+	slurp_read(fp, &osamples, sizeof(osamples));
+	slurp_read(fp, &omessage, sizeof(omessage));
+
+	oorders = bswapLE32(oorders);
+	ochnpans = bswapLE32(ochnpans);
+	opatterns = bswapLE32(opatterns);
+	osamples = bswapLE32(osamples);
+	omessage = bswapLE32(omessage);
+
+	/* mcmeat deluxe special now available at mickey d's */
+
+	if (psm16_check_parapointer(fp, oorders, "PORD")) {
+		size_t x = slurp_read(fp, song->orderlist, MIN(norders, MAX_ORDERS - 1));
+
+		/* insert last order ... */
+		song->orderlist[x] = ORDER_LAST;
+	}
+
+	if (psm16_check_parapointer(fp, ochnpans, "PPAN")) {
+		uint8_t chnpans[MAX_CHANNELS];
+
+		slurp_read(fp, chnpans, nchns);
+
+		for (n = 0; n < nchns; n++)
+			/* panning is reversed in PSM16 (15 is full left, 0 is full right) */
+			song->channels[n].panning = (((15 - (chnpans[n] & 15)) * 256 + 8) / 15);
+	}
+
+	/* mute any extra channels */
+	for (n = nchns; n < MAX_CHANNELS; n++)
+		song->channels[n].flags |= CHN_MUTE;
+
+	if (psm16_check_parapointer(fp, osamples, "PSAH")) {
+		uint16_t i;
+
+		for (i = 0; i < nsamples; i++) {
+			song_sample_t *smp;
+			char filename[13];
+			char description[24];
+			uint32_t osmpdata, flags, dw;
+			uint16_t smpnum, c2freq;
+			int b, finetune;
+
+			slurp_seek(fp, osamples + i * 64, SEEK_SET);
+
+			slurp_read(fp, filename, 13);
+			slurp_read(fp, description, 24);
+			slurp_read(fp, &osmpdata, 4);
+			osmpdata = bswapLE32(osmpdata);
+			slurp_seek(fp, 4, SEEK_CUR); /* "Memory Location" */
+			slurp_read(fp, &smpnum, 2);
+			smpnum = bswapLE16(smpnum);
+
+			if (smpnum >= MAX_SAMPLES)
+				continue; /* uhh? */
+
+			/* finally... */
+			smp = &song->samples[smpnum];
+
+			memcpy(smp->filename, filename, 13);
+			smp->filename[13] = '\0';
+			memcpy(smp->name, description, 24);
+			smp->name[24] = '\0';
+
+			b = slurp_getc(fp);
+			if (b == EOF)
+				continue;
+
+			/* convert bit flags to internal bit flags */
+			flags = SF_M | SF_LE | ((b & PSM16_SAMPLE_FLAG_16BIT) ? SF_16 : SF_8);
+
+			if (b & PSM16_SAMPLE_FLAG_UNSIGNED) {
+				flags |= SF_PCMU;
+			} else if ((b & PSM16_SAMPLE_FLAG_DELTA) || !(b & PSM16_SAMPLE_FLAG_SAMPLE)) {
+				flags |= SF_PCMD;
+			} else {
+				flags |= SF_PCMS;
+			}
+
+			if (b & PSM16_SAMPLE_FLAG_BIDI_LOOP)
+				smp->flags |= CHN_PINGPONGLOOP;
+
+			if (b & PSM16_SAMPLE_FLAG_LOOP)
+				smp->flags |= CHN_LOOP;
+
+			slurp_read(fp, &dw, sizeof(dw));
+			smp->length = bswapLE32(dw);
+
+			if (b & PSM16_SAMPLE_FLAG_16BIT)
+				smp->length >>= 1;
+
+			slurp_read(fp, &dw, sizeof(dw));
+			smp->loop_start = bswapLE32(dw);
+
+			slurp_read(fp, &dw, sizeof(dw));
+			smp->loop_end = bswapLE32(dw);
+
+			finetune = slurp_getc(fp);
+			if (finetune == EOF)
+				continue;
+
+			b = slurp_getc(fp);
+			if (b == EOF)
+				continue;
+
+			smp->volume = b * 4; //mphack
+
+			slurp_read(fp, &c2freq, 2);
+			c2freq = bswapLE16(c2freq);
+
+			/* voodoo magic effortlessly copied from openmpt  :) */
+			smp->c5speed = c2freq * pow(2.0, ((finetune ^ 0x08) - 0x78) / (12.0 * 16.0));
+
+			if (!(lflags & LOAD_NOSAMPLES)) {
+				slurp_seek(fp, osmpdata, SEEK_SET);
+				csf_read_sample(smp, flags, fp);
+			}
+		}
+	}
+
+	if (!(lflags & LOAD_NOPATTERNS) && psm16_check_parapointer(fp, opatterns, "PPAT")) {
+		/* ok, let's do this */
+		uint16_t i;
+
+		for (i = 0; i < npatterns; i++) {
+			int64_t start = slurp_tell(fp);
+
+			uint16_t size;
+			int nrows, nchans;
+			int row = 0;
+
+			slurp_read(fp, &size, 2);
+			size = bswapLE16(size);
+
+			if (size < 4)
+				continue; /* WTF */
+
+			nrows = slurp_getc(fp);
+			nchans = slurp_getc(fp);
+
+			song->patterns[i] = csf_allocate_pattern(nrows);
+			song->pattern_size[i] = nrows;
+
+			while (slurp_tell(fp) <= start + size && row < nrows) {
+				int command = slurp_getc(fp);
+				int chan;
+				song_note_t *n;
+
+				if (command == 0 || command == EOF) {
+					row++;
+					continue;
+				}
+
+				chan = MIN(command & 31, nchans);
+
+				n = song->patterns[i] + (row * MAX_CHANNELS) + chan;
+
+				if (command & 0x80) {
+					int note, instr;
+
+					note = slurp_getc(fp);
+					if (note == EOF) break;
+
+					instr = slurp_getc(fp);
+					if (instr == EOF) break;
+
+					n->note = note + (3 * 12); /* 3 octaves up to adjust for c2freq */
+					n->instrument = instr;
+				}
+
+				if (command & 0x40) {
+					int volume;
+
+					volume = slurp_getc(fp);
+					if (volume == EOF) break;
+
+					n->voleffect = VOLFX_VOLUME;
+					n->volparam = MIN(volume, 64);
+				}
+
+				if (command & 0x20) {
+					int effect, param;
+
+					effect = slurp_getc(fp);
+					if (effect == EOF) break;
+
+					param = slurp_getc(fp);
+					if (param == EOF) break;
+
+					switch (effect) {
+					/* Volume Commands */
+					case 0x01: /* Fine Volume Slide Up */
+						n->effect = FX_VOLUMESLIDE;
+						n->param = (param << 4) | 0x0F;
+						break;
+					case 0x02: /* Volume Slide Up */
+						n->effect = FX_VOLUMESLIDE;
+						n->param = (param << 4) & 0xF0;
+						break;
+					case 0x03: /* Fine Volume Slide Down */
+						n->effect = FX_VOLUMESLIDE;
+						n->param = param | 0xF0;
+						break;
+					case 0x04: /* Volume Slide Down */
+						n->effect = FX_VOLUMESLIDE;
+						n->param = param & 0x0F;
+						break;
+
+					/* Portamento Commands */
+					case 0x0A: /* Fine Portamento Up */
+						n->effect = FX_PORTAMENTOUP;
+						n->param = param | 0xF0;
+						break;
+					case 0x0B: /* Portamento Down */
+						n->effect = FX_PORTAMENTOUP;
+						n->param = param;
+						break;
+					case 0x0C: /* Fine Portamento Down */
+						n->effect = FX_PORTAMENTODOWN;
+						n->param = param | 0xF0;
+						break;
+					case 0x0D: /* Portamento Down */
+						n->effect = FX_PORTAMENTODOWN;
+						n->param = param;
+						break;
+					case 0x0E: /* Tone Portamento */
+						n->effect = FX_TONEPORTAMENTO;
+						n->param = param;
+						break;
+					case 0x0F: /* Set Glissando Control */
+						n->effect = FX_SPECIAL;
+						n->param = 0x10 | (param & 0x0F);
+						break;
+					case 0x10: /* Tone Port+Vol Slide Up */
+						n->effect = FX_TONEPORTAVOL;
+						n->param = (param << 4);
+						break;
+					case 0x11: /* Tone Port+Vol Slide Down */
+						n->effect = FX_TONEPORTAVOL;
+						n->param = (param & 0x0F);
+						break;
+
+					/* Vibrato Commands */
+					case 0x14: /* Vibrato */
+						n->effect = FX_VIBRATO;
+						n->param = param;
+						break;
+					case 0x15: /* Set Vibrato Waveform */
+						n->effect = FX_SPECIAL;
+						n->param = (0x30 | (param & 0x0F));
+						break;
+					case 0x16: /* Vibrato+Vol Slide Up */
+						n->effect = FX_VIBRATOVOL;
+						n->param = (param << 4);
+						break;
+					case 0x17: /* Vibrato+Vol Slide Down */
+						n->effect = FX_VIBRATOVOL;
+						n->param = (param & 0x0F);
+						break;
+
+					/* Tremolo Commands */
+					case 0x1E: /* Tremolo */
+						n->effect = FX_TREMOLO;
+						n->param = param;
+						break;
+					case 0x1F: /* Set Tremolo Control */
+						n->effect = FX_SPECIAL;
+						n->param = 0x40 | (param & 0x0F);
+						break;
+
+					/* Sample Commands */
+					case 0x28: /* Sample Offset */
+						/* 3-byte offset, but we can only import the middle one */
+						n->effect = FX_OFFSET;
+						n->param = slurp_getc(fp);
+						slurp_seek(fp, 1, SEEK_CUR);
+						break;
+					case 0x29: /* Retrig Note */
+						n->effect = FX_RETRIG;
+						n->param = (param & 0x0F);
+						break;
+					case 0x2A: /* Note Cut */
+						n->effect = FX_SPECIAL;
+						n->param = 0xC0;
+						break;
+					case 0x2B: /* Note Delay */
+						n->effect = FX_SPECIAL;
+						n->param = (0xD0 | (param & 0x0F));
+						break;
+
+					/* Pos. Change Commands */
+					case 0x32: /* Position Jump */
+						n->effect = FX_POSITIONJUMP;
+						n->param = param;
+						break;
+					case 0x33: /* Pattern Break */
+						n->effect = FX_PATTERNBREAK;
+						n->param = param;
+						break;
+					case 0x34: /* Jump Loop */
+						n->effect = FX_SPECIAL;
+						n->param = (0xB0 | (param & 0x0F));
+						break;
+					case 0x35: /* Pattern Delay */
+						n->effect = FX_SPECIAL;
+						n->param = (0xE0 | (param & 0x0F));
+						break;
+
+					/* Speed Change Cmds */
+					case 0x3C: /* Set Regular Speed */
+						n->effect = FX_SPEED;
+						n->param = param;
+						break;
+					case 0x3D: /* Set BPM (Tempo) */
+						n->effect = FX_TEMPO;
+						n->param = param;
+						break;
+
+					/* Misc. Commands */
+					case 0x46: /* Arpeggio */
+						n->effect = FX_ARPEGGIO;
+						n->param = param;
+						break;
+					case 0x47: /* Set Finetune */
+						n->effect = FX_SPECIAL;
+						n->param = (0x20 | (param & 0x0F));
+						break;
+					case 0x48: /* Set Balance */
+						/* openmpt handles this as panning, so that's what
+						 * I'm doing here as well. */
+						n->effect = FX_SPECIAL;
+						n->param = (0x80 | (param & 0x0F));
+						break;
+
+					default:
+						n->effect = FX_NONE;
+						n->param = param;
+						break;
+					}
+				}
+			}
+
+			/* readjust file pointer, as the patterns are 16 bytes aligned */
+			slurp_seek(fp, start + ((size + 15) & ~15), SEEK_SET);
+		}
+	}
+
+#if 0 /* 100% untested, dunno if it even works :P */
+	if (psm16_check_parapointer(fp, omessage, "TEXT")) {
+		uint16_t size;
+
+		if (slurp_read(fp, &size, sizeof(size)) == sizeof(size))
+			slurp_read(fp, song->message, MIN(size, MAX_MESSAGE - 1));
+	}
+#endif
+
+	song->pan_separation = 128;
+	/* FIXME: should compat Gxx be here? */
+	song->flags = SONG_ITOLDEFFECTS | SONG_COMPATGXX;
+
+	snprintf(song->tracker_id, sizeof(song->tracker_id), "%s",
+		"Epic MegaGames MASI (Old Version)");
 
 	return LOAD_SUCCESS;
 }
