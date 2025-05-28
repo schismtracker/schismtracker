@@ -631,6 +631,8 @@ void song_clear_sample(int n)
 
 void song_copy_sample(int n, song_sample_t *src)
 {
+	song_lock_audio();
+
 	memcpy(current_song->samples + n, src, sizeof(song_sample_t));
 
 	if (src->data) {
@@ -644,6 +646,8 @@ void song_copy_sample(int n, song_sample_t *src)
 		memcpy(current_song->samples[n].data, src->data, bytelength);
 		csf_adjust_sample_loop(current_song->samples + n);
 	}
+
+	song_unlock_audio();
 }
 
 int song_load_instrument_ex(int target, const char *file, const char *libf, int n)
