@@ -116,4 +116,6 @@ SCHISM_CONST static inline SCHISM_ALWAYS_INLINE uint32_t i_sqrt(uint32_t r)
 
 FILE *mkfstemp(char *template);
 
+uint32_t crc32b(const unsigned char *message);
+
 #endif /* SCHISM_UTIL_H_ */

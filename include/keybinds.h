@@ -496,7 +496,8 @@ enum {
 	KEYBIND_BIND_GLOBAL_MESSAGE_EDITOR,
 	KEYBIND_BIND_GLOBAL_SAVE_MODULE,
 	KEYBIND_BIND_GLOBAL_EXPORT_MODULE,
-	KEYBIND_BIND_GLOBAL_ORDER_LIST,
+	KEYBIND_BIND_GLOBAL_ORDER_LIST_PANNING,
+	KEYBIND_BIND_GLOBAL_ORDER_LIST_VOLUME,
 	KEYBIND_BIND_GLOBAL_ORDER_LIST_LOCK,
 	KEYBIND_BIND_GLOBAL_SCHISM_LOGGING,
 	KEYBIND_BIND_GLOBAL_SONG_VARIABLES,
@@ -618,5 +619,46 @@ void keybinds_event(const struct key_event *kk);
 /* get state of a specific keybind. */
 int keybinds_pressed(int section, int bind);
 int keybinds_released(int section, int bind);
+
+/* was this keybind handled (pressed OR released?) */
+int keybinds_handled(int section, int bind);
+
+/* ------------------------------------------------------------------------ */
+/* these next defines should generally be considered private implementation
+ * details and shouldn't be messed with outside of keybinds.c and friends */
+
+enum {
+	KEYBIND_MOD_NONE = (0),
+
+	/* Low 8 bytes: LCTRL, RCTRL, etc */
+	KEYBIND_MOD_LCTRL = (0x01),
+	KEYBIND_MOD_RCTRL = (0x02),
+	KEYBIND_MOD_LSHIFT = (0x04),
+	KEYBIND_MOD_RSHIFT = (0x08),
+	KEYBIND_MOD_LALT = (0x10),
+	KEYBIND_MOD_RALT = (0x20),
+	/*
+	KEYBIND_MOD_LGUI = (0x40),
+	KEYBIND_MOD_RGUI = (0x80),
+	*/
+
+	/* Next 8 bytes: CTRL, SHIFT, ALT. Defined in a way to where mutual exclusion
+	 * is easily calculated:
+	 *
+	 *     uint16_t x = (keybind_mods & 0xFFFF);
+	 *
+	 *     SCHISM_RUNTIME_ASSERT(((x >> 8) & x) != 0,
+	 *       "left/right and full modifiers are mutually exclusive"); */
+	KEYBIND_MOD_CTRL = ((KEYBIND_MOD_LCTRL | KEYBIND_MOD_RCTRL) << 8),
+	KEYBIND_MOD_SHIFT = ((KEYBIND_MOD_LSHIFT | KEYBIND_MOD_RSHIFT) << 8),
+	KEYBIND_MOD_ALT = ((KEYBIND_MOD_LALT | KEYBIND_MOD_RALT) << 8),
+	/*
+	KEYBIND_MOD_GUI = ((KEYBIND_MOD_LGUI | KEYBIND_MOD_RGUI) << 8),
+	*/
+};
+
+int keybinds_parse_keycode(const char *name, schism_keysym_t *ret);
+int keybinds_parse_scancode(const char *name, schism_scancode_t *ret);
+int keybinds_parse_modkey(const char *name, uint16_t *ret);
 
 #endif /* SCHISM_KEYBINDS_H_ */

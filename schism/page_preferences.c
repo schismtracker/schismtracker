@@ -33,6 +33,7 @@
 #include "widget.h"
 #include "vgamem.h"
 #include "mem.h"
+#include "keybinds.h"
 
 #include "disko.h"
 
@@ -258,65 +259,37 @@ static int audio_device_list_handle_key_on_list(struct key_event * k)
 			return 0;
 	}
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_UP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (--new_device < 0) {
-			widget_change_focus_to(47);
-			return 1;
-		}
-		break;
-	case SCHISM_KEYSYM_DOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (++new_device >= (int)audio_device_list_size + 1) {
-			//widget_change_focus_to(49);
-			return 1;
-		}
-		break;
-	case SCHISM_KEYSYM_HOME:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		new_device = 0;
-		break;
-	case SCHISM_KEYSYM_PAGEUP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-
+	if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_PAGE_UP)) {
 		if (new_device == 0)
 			return 1;
 
 		new_device -= 16;
-		break;
-	case SCHISM_KEYSYM_END:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		new_device = audio_device_list_size;
-		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_PAGE_DOWN)) {
 		new_device += 16;
-		break;
-	case SCHISM_KEYSYM_RETURN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_DOWN)) {
+		if (++new_device >= (int)audio_device_list_size + 1) {
+			//widget_change_focus_to(49);
+			return 1;
+		}
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_UP)) {
+		if (--new_device < 0) {
+			widget_change_focus_to(47);
+			return 1;
+		}
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_HOME)) {
+		new_device = 0;
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_END)) {
+		new_device = audio_device_list_size;
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_ACCEPT)) {
 		load_selected_device = 1;
-		break;
-	case SCHISM_KEYSYM_TAB:
-		if (!(k->mod & SCHISM_KEYMOD_SHIFT || NO_MODIFIER(k->mod)))
-			return 0;
-
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_TAB)) {
 		widget_change_focus_to(focus_offsets[selected_audio_device]);
 		return 1;
-	case SCHISM_KEYSYM_LEFT: case SCHISM_KEYSYM_RIGHT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_LEFT)
+		|| keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_RIGHT)) {
 		widget_change_focus_to(focus_offsets[selected_audio_device]);
 		return 1;
-	default:
+	} else {
 		if (k->mouse == MOUSE_NONE)
 			return 0;
 	}
@@ -407,65 +380,37 @@ static int audio_driver_list_handle_key_on_list(struct key_event * k)
 			return 0;
 	}
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_UP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (--new_driver < 0) {
-			widget_change_focus_to(47);
-			return 1;
-		}
-		break;
-	case SCHISM_KEYSYM_DOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (++new_driver >= num_drivers + 1) {
-			//widget_change_focus_to(49);
-			return 1;
-		}
-		break;
-	case SCHISM_KEYSYM_HOME:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		new_driver = 0;
-		break;
-	case SCHISM_KEYSYM_PAGEUP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-
+	if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_PAGE_UP)) {
 		if (new_driver == 0)
 			return 1;
 
 		new_driver -= 16;
-		break;
-	case SCHISM_KEYSYM_END:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		new_driver = num_drivers;
-		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_PAGE_DOWN)) {
 		new_driver += 16;
-		break;
-	case SCHISM_KEYSYM_RETURN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_DOWN)) {
+		if (++new_driver >= (int)num_drivers + 1) {
+			//widget_change_focus_to(49);
+			return 1;
+		}
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_UP)) {
+		if (--new_driver < 0) {
+			widget_change_focus_to(47);
+			return 1;
+		}
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_HOME)) {
+		new_driver = 0;
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_END)) {
+		new_driver = num_drivers;
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_ACCEPT)) {
 		load_selected_driver = 1;
-		break;
-	case SCHISM_KEYSYM_TAB:
-		if (!(k->mod & SCHISM_KEYMOD_SHIFT || NO_MODIFIER(k->mod)))
-			return 0;
-
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_TAB)) {
 		widget_change_focus_to(focus_offsets[selected_audio_driver]);
 		return 1;
-	case SCHISM_KEYSYM_LEFT: case SCHISM_KEYSYM_RIGHT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_LEFT)
+		|| keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_RIGHT)) {
 		widget_change_focus_to(focus_offsets[selected_audio_driver]);
 		return 1;
-	default:
+	} else {
 		if (k->mouse == MOUSE_NONE)
 			return 0;
 	}
