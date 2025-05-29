@@ -103,7 +103,7 @@ READ_INFO(mf)
 READ_INFO(psm) LOAD_SONG(psm)
 READ_INFO(psm16) LOAD_SONG(psm16)
 READ_INFO(dsm) LOAD_SONG(dsm)
-READ_INFO(d00)
+READ_INFO(d00) LOAD_SONG(d00)
 READ_INFO(edl)
 
 /* Sample formats with magic at start of file */
