@@ -391,6 +391,7 @@ D00_readnote: /* this goto is kind of ugly... */
 								slurp_seek(fp, hdr.spfx_paraptr + fxop, SEEK_SET);
 
 								slurp_read(fp, &mem_instr, 2);
+								mem_instr = bswapLE32(mem_instr);
 
 								/* other values:
 								 *  - int8_t halfnote;
