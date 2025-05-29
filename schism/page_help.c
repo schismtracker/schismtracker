@@ -48,6 +48,7 @@ enum {
 	LTYPE_TRANSLATE_CHARACTERS = '$',
 	LTYPE_TRANSLATE_CHARACTERS_DISABLED = '@',
 	LTYPE_GRAPHIC = '=',
+	LTYPE_KEY = ']',
 };
 
 /* Types that should be hidden from view in classic/non-classic mode */
@@ -133,6 +134,33 @@ static void help_redraw(void)
 				if (ch >= '1' && ch <= '9')
 					ch = graphic_chars[ch - '0'];
 				draw_char(ch, x + 1, pos, 6, 0);
+			}
+			break;
+		case LTYPE_KEY:
+			lp = strcspn(*ptr + 1, "\015\012");
+			int on_black_key = 0;
+			for (x = 1; x <= lp; x++) {
+				ch = ptr[0][x];
+				if ((ch > 64) && (ch < 96))
+				{
+					draw_key_char(ch, x + 1, pos, 6, 0);
+					on_black_key = (ch >= 80) && (ch <= 82);
+				}
+				else if (ch != ' ')
+				{
+					char escape_sequence[3];
+
+					escape_sequence[0] = '$';
+					escape_sequence[1] = ch;
+					escape_sequence[2] = '\0';
+
+					int fg = 6, bg = 0;
+
+					if (on_black_key)
+						fg = 0, bg = 6;
+
+					draw_text_len_with_character_translation(escape_sequence, 2, x + 1, pos, fg, bg);
+				}
 			}
 			break;
 		case LTYPE_SEPARATOR:

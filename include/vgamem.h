@@ -72,6 +72,7 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs, int ys, int xe, int y
 void draw_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg);
 void draw_char_bios(uint8_t c, int x, int y, uint32_t fg, uint32_t bg);
 void draw_char_unicode(uint32_t c, int x, int y, uint32_t fg, uint32_t bg);
+void draw_key_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg);
 
 /* return value is the number of characters drawn */
 int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg);
