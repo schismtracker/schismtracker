@@ -512,6 +512,7 @@ void draw_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 	vgamem[x + (y*80)] = ((fg << VGAMEM_FG_BIT) | (bg << VGAMEM_BG_BIT) | c);
 }
 
+// See the declaration of this function in vgamem.h for an explanatory comment.
 void draw_key_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 {
 	SCHISM_RUNTIME_ASSERT(x >= 0 && y >= 0 && x < 80 && y < 50, "Coordinates should always be inbounds");
