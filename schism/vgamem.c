@@ -603,6 +603,7 @@ int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_
 	return n;
 }
 
+// See the declaration of this function in vgamem.h for an explanatory comment.
 int draw_text_len_with_character_translation(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
 {
 	static char translation_buffer[100];
