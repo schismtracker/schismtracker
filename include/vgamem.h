@@ -83,10 +83,44 @@ int draw_text_charset(const void *text, charset_t set, int x, int y, uint32_t fg
 /* return value is the length of text drawn
  * (so len - return is the number of spaces) */
 int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
-int draw_text_len_with_character_translation(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
 int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
 int draw_text_utf8_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
 int draw_text_charset_len(const void *text, charset_t set, int len, int x, int y, uint32_t fg, uint32_t bg);
+
+/*
+ * draw_text_len_with_character_translation: Draws a line of text with support for automatically
+ * translating keys according to the current keyboard layout.
+ * 
+ * Syntax:
+ * - $x:  Translates the key 'x' on the QWERTY keyboard to the current keyboard layout. Use lowercase
+ *        letters. Some keys may translate to up to 7 characters (e.g. $: renders as "Shift-;" with
+ *        the QWERTY layout or "Shift-S" with the Dvorak layout). By default, translation will attempt
+ *        to maintain column alignment by inserting or removing space characters as needed.
+ * - $ :  (escaped space character) Resets the column alignment so that translation can be used inline
+ *        in text instead of in a columnar arrangement.
+ * - ' ': (bare space character) When encountered, if there is a discrepancy in the width of the output
+ *        from the last translation, space characters are inserted or removed to try to maintain column
+ *        alignment for a second column with descriptive text. Consider this line from "pattern-editor":
+ * 
+ *        $   $.               Clear field(s)
+ *
+ *        The "$." sequence is two characters long, but it will typically translate to a single
+ *        character. Thus, an extra space character needs to be inserted to maintain the alignment of
+ *        "Clear field(s)". By comparison:abort
+ * 
+ *        $   $+,$-            Next/Previous pattern  (*)
+ *
+ *        On the Dvorak layout, "$+" will expand to "Shift-]", as that physical key location is ] in the
+ *        Dvorak layout. As a result, multiple spaces need to be skipped in order to maintain the
+ *        alignment of "Next/Previous".
+ * 
+ *        If the line does not need columnar processing, then "$ " can be used to cancel any alignment
+ *        correction from the preceding escape sequence.abort
+ * - any other character:
+ *        Copied as-is.
+ */
+
+int draw_text_len_with_character_translation(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
 
 void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t fg, uint32_t bg);
 
