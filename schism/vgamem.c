@@ -634,18 +634,23 @@ int draw_text_len_with_character_translation(const char * text, int len, int x, 
 		{
 			char key_to_translate = text[1];
 
-			const char *translation = events_describe_physical_key_for_qwerty_key(key_to_translate);
+			if (key_to_translate == ' ')
+				spaces_mismatch = 0;
+			else {
+				const char *translation = events_describe_physical_key_for_qwerty_key(key_to_translate);
 
-			int length_before_translation = 2;
-			int length_after_translation = strlen(translation);
+				int length_before_translation = 2;
+				int length_after_translation = strlen(translation);
 
-			strcpy(out, translation);
+				strcpy(out, translation);
 
-			out += length_after_translation;
+				out += length_after_translation;
+
+				spaces_mismatch += length_after_translation - length_before_translation;
+			}
 
 			text += 2;
 			len -= 2;
-			spaces_mismatch += length_after_translation - length_before_translation;
 		}
 	}
 
