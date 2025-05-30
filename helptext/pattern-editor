@@ -127,6 +127,8 @@
 ]   CzCxCcCvCbCnCmCqCwCeCrCtCyCuCiCoCpC
 ]   ILMLMLMLMLMLMLMLMLMLMLMLMLMLMLMLMLE
 |
+$   The '$z$ ' key inserts C in the currently-selected octave.
+|
 | Pattern Edit Keys.
 |   Number Pad
 |     +,-            Next/Previous pattern  (*)
@@ -134,9 +136,9 @@
 |     Ctrl +,-       Next/Previous order's pattern  (*)
 $   $+,$-            Next/Previous pattern  (*)
 $   Ctrl $+,$-       Next/Previous order's pattern  (*)
-|   0-9              Change octave/volume/instrument
-|   0-9, A-F         Change effect value
-|   A-Z              Change effect
+|   0-9              Change octave/volume/instrument (by column)
+|   0-9, A-F         Change effect value (effect value column)
+|   A-Z              Change effect (effect column)
 $   $.               Clear field(s)
 |   1                Note cut (^^^)
 $   $`               Note off (═══) / Panning Toggle
