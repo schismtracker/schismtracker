@@ -72,6 +72,44 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs, int ys, int xe, int y
 void draw_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg);
 void draw_char_bios(uint8_t c, int x, int y, uint32_t fg, uint32_t bg);
 void draw_char_unicode(uint32_t c, int x, int y, uint32_t fg, uint32_t bg);
+
+/*
+ * draw_key_char: Writes a character to the output buffer using the Piano Key pseudo-font.
+ *
+ * - Line drawing: character range 64 to 79
+ * 
+ *   In this range, which is in practice letter 'A' through 'O', the lower 4 bits are
+ *   used to determine which parts of box drawing are rendered:
+ * 
+ *      +--------+
+ *      |   11   |
+ *      |   11   |
+ *      |   11   |
+ *      |   11   |
+ *      |444xx888|
+ *      |   22   |
+ *      |   22   |
+ *      |   22   |
+ *      +--------+
+ * 
+ * - Box drawing: character range 80 to 83 'P' through 'S'
+ * 
+ *   This range is used to fill in black keys.
+ * 
+ *        80 = P      81 = Q      82 = R      83 = S
+ *      +--------+  +--------+  +--------+  +--------+
+ *      |     xxx|  |xxx  xxx|  |xxx     |  |xxxxxxxx|
+ *      |     xxx|  |xxx  xxx|  |xxx     |  |xxxxxxxx|
+ *      |     xxx|  |xxx  xxx|  |xxx     |  |xxxxxxxx|
+ *      |     xxx|  |xxx  xxx|  |xxx     |  |xxxxxxxx|
+ *      |     xxx|  |xxx  xxx|  |xxx     |  |xxxxxxxx|
+ *      |     xxx|  |xxx  xxx|  |xxx     |  |xxxxxxxx|
+ *      |     xxx|  |xxx  xxx|  |xxx     |  |xxxxxxxx|
+ *      |     xxx|  |xxx  xxx|  |xxx     |  |xxxxxxxx|
+ *      +--------+  +--------+  +--------+  +--------+
+ * 
+ * Other characters have no meaning and do not render anything.
+ */
 void draw_key_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg);
 
 /* return value is the number of characters drawn */
