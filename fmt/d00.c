@@ -69,6 +69,7 @@ static int d00_header_read(struct d00_header *hdr, slurp_t *fp)
 	if (hdr->type)
 		return 0;
 
+	/* TODO: handle other versions */
 	READ_VALUE(version);
 	if (hdr->version != 4)
 		return 0;
@@ -161,7 +162,29 @@ static int uint16_compare(const void *a, const void *b)
 	return CLAMP(r, INT_MIN, INT_MAX);
 }
 
+#define D00_PATTERN_ROWS 64
+
+static song_note_t *d00_get_note(song_t *song, uint32_t pattern, uint32_t row, uint32_t chn)
+{
+	if (!song->patterns[pattern]) {
+		/* allocate the pattern data, if it's not there already */
+		song->patterns[pattern] = csf_allocate_pattern(D00_PATTERN_ROWS);
+		song->pattern_size[pattern] = D00_PATTERN_ROWS;
+	}
+
+	return song->patterns[pattern] + (row * MAX_CHANNELS) + chn;
+}
+
+static void d00_fix_row(uint32_t *pattern, uint32_t *row)
+{
+	while (*row >= D00_PATTERN_ROWS) {
+		(*pattern)++;
+		(*row) -= D00_PATTERN_ROWS;
+	}
+}
+
 enum {
+	D00_WARN_EXPERIMENTAL,
 	D00_WARN_SPFX,
 	/* ... */
 
@@ -169,6 +192,7 @@ enum {
 };
 
 const char *d00_warn_names[D00_WARN_MAX_] = {
+	[D00_WARN_EXPERIMENTAL] = "D00 loader is experimental at best",
 	[D00_WARN_SPFX] = "SPFX effects not implemented",
 };
 
@@ -178,7 +202,7 @@ int fmt_d00_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	int ninst = 0;
 	uint16_t speeds[10];
 	uint16_t speed;
-	uint32_t warn = 0;
+	uint32_t warn = (1 << D00_WARN_EXPERIMENTAL);
 	struct d00_header hdr;
 
 	if (!d00_header_read(&hdr, fp))
@@ -202,8 +226,10 @@ int fmt_d00_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 		slurp_seek(fp, hdr.tpoin, SEEK_SET);
 
-		slurp_read(fp, ptrs, sizeof(ptrs));
-		slurp_read(fp, volume, sizeof(volume));
+		if (slurp_read(fp, ptrs, sizeof(ptrs)) != sizeof(ptrs))
+			return LOAD_UNSUPPORTED;
+		if (slurp_read(fp, volume, sizeof(volume)) != sizeof(volume))
+			return LOAD_UNSUPPORTED;
 
 		for (c = 0; c < 9; c++) {
 			/* ... sigh */
@@ -231,7 +257,9 @@ int fmt_d00_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 			slurp_seek(fp, ptrs[c], SEEK_SET);
 
-			slurp_read(fp, &speeds[c + 1], 2);
+			if (slurp_read(fp, &speeds[c + 1], 2) != 2)
+				continue;
+
 			speeds[c + 1] = bswapLE32(speeds[c + 1]);
 
 			for (nords = 0; nords < ARRAY_SIZE(ords); /* nothing */) {
@@ -278,7 +306,7 @@ int fmt_d00_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 				slurp_seek(fp, patt_paraptr, SEEK_SET);
 
-				for (; pattern < MAX_PATTERNS; pattern += (row >= 64 ? 1 : 0), row %= 64) {
+				for (; pattern < MAX_PATTERNS; d00_fix_row(&pattern, &row)) {
 					uint16_t event;
 					song_note_t *sn;
 
@@ -294,13 +322,7 @@ D00_readnote: /* this goto is kind of ugly... */
 						break;
 					}
 
-					if (!song->patterns[pattern]) {
-						/* allocate the pattern data, if it's not there already */
-						song->patterns[pattern] = csf_allocate_pattern(64);
-						song->pattern_size[pattern] = 64;
-					}
-
-					sn = song->patterns[pattern] + (row * MAX_CHANNELS) + c;
+					sn = d00_get_note(song, pattern, row, c);
 
 					if (event < 0x4000) {
 						int note = (event & 0xFF);
@@ -310,13 +332,14 @@ D00_readnote: /* this goto is kind of ugly... */
 						/* note event; data is stored in the low byte */
 						switch (note) {
 						case 0: /* "REST" */
-						case 0x80: /* ??? */
+						case 0x80: /* "REST" & 0x80 */
 							sn->note = NOTE_OFF;
 							row += count + 1;
 							break;
 						case 0x7E: /* "HOLD" */
-							for (r = 0; r <= count; r++, row++) {
-								sn = song->patterns[pattern] + (row * MAX_CHANNELS) + c;
+							/* copy the last effect... */
+							for (r = 0; pattern < MAX_PATTERNS && r <= count; r++, row++, d00_fix_row(&pattern, &row)) {
+								sn = d00_get_note(song, pattern, row, c);
 
 								sn->effect = mem_effect;
 								sn->param = mem_param;
@@ -324,7 +347,7 @@ D00_readnote: /* this goto is kind of ugly... */
 							break;
 						default:
 							/* 0x80 flag == ignore channel transpose */
-							if (note > 0x80) {
+							if (note & 0x80) {
 								note -= 0x80;
 							} else {
 								note += ord_transpose[n % nords];
@@ -340,8 +363,10 @@ D00_readnote: /* this goto is kind of ugly... */
 
 							if (count >= 0x20) {
 								/* "tied note" */
-								sn->effect = FX_TONEPORTAMENTO;
-								sn->param = 0xFF;
+								if (sn->effect == FX_NONE) {
+									sn->effect = FX_TONEPORTAMENTO;
+									sn->param = 0xFF;
+								}
 								count -= 0x20;
 							}
 
@@ -358,7 +383,7 @@ D00_readnote: /* this goto is kind of ugly... */
 						case 6: /* Cut/Stop Voice */
 							sn->note = NOTE_CUT;
 							continue;
-						case 7: /* Vibrato (FIXME: need to fill in bytes with H00) */
+						case 7: /* Vibrato */
 							mem_effect = FX_VIBRATO;
 							/* these are flipped in the fxop */
 							{
@@ -377,6 +402,7 @@ D00_readnote: /* this goto is kind of ugly... */
 							mem_volfx = VOLFX_VOLUME;
 							/* volume is backwards, WTF */
 							mem_volparam = (63 - (fxop & 63)) * 64 / 63;
+							break;
 						case 0xB: /* Set spfx (need to handle this appropriately...) */
 							{
 								/* SPFX is a linked list.
@@ -385,13 +411,16 @@ D00_readnote: /* this goto is kind of ugly... */
 								 * points to the next spfx structure to process. This is
 								 * terrible for us, but we can at least haphazardly
 								 * grab the instrument number from the first one, and
-								 * hope it fits... */
+								 * hope it fits...
+								 *
+								 * FIXME: The other things in */
 								int64_t oldpos = slurp_tell(fp);
 
 								slurp_seek(fp, hdr.spfx_paraptr + fxop, SEEK_SET);
 
 								slurp_read(fp, &mem_instr, 2);
 								mem_instr = bswapLE16(mem_instr);
+								ninst = MAX(ninst, mem_instr);
 
 								/* other values:
 								 *  - int8_t halfnote;
@@ -405,11 +434,8 @@ D00_readnote: /* this goto is kind of ugly... */
 							warn |= (1 << D00_WARN_SPFX);
 							break;
 						case 0xC: /* Set instrument */
-							/* For some reason this can come AFTER the note? WTF? */
-							//if (sn->note != NOTE_NONE)
-							//	sn->instrument = fxop + 1;
 							mem_instr = fxop + 1;
-							ninst = MAX(ninst, fxop);
+							ninst = MAX(ninst, fxop + 1);
 							break;
 						case 0xD: /* Pitch slide up */
 							mem_effect = FX_PORTAMENTOUP;
@@ -443,10 +469,12 @@ D00_readnote: /* this goto is kind of ugly... */
 		 *
 		 * FIXME: don't make a giant mess to begin with :) */
 
-		for (c = max_pattern + 1; c < MAX_PATTERNS; c++) {
-			csf_free_pattern(song->patterns[c]);
-			song->patterns[c] = NULL;
-			song->pattern_size[c] = 64;
+		if (max_pattern + 1 < MAX_PATTERNS) {
+			for (c = max_pattern + 1; c < MAX_PATTERNS; c++) {
+				csf_free_pattern(song->patterns[c]);
+				song->patterns[c] = NULL;
+				song->pattern_size[c] = 64;
+			}
 		}
 
 		if (song->pattern_size[max_pattern] != max_row) {
@@ -471,6 +499,8 @@ D00_readnote: /* this goto is kind of ugly... */
 	/* find the most common speed, and use it */
 
 	{
+		/* FIXME: this isn't very good, we should be doing per-channel
+		 * speed stuff or else we get broken modules */
 		int max_count = 1, count = 1;
 		uint16_t mode = speeds[0];
 
@@ -487,6 +517,11 @@ D00_readnote: /* this goto is kind of ugly... */
 			}
 		}
 
+		log_appendf(1, "mode: %u", mode);
+
+		for (c = 0; c < 10; c++)
+			log_appendf(1, "speeds[%d] = %u", c, speeds[c]);
+
 		hz_to_speed_tempo(mode, &song->initial_speed, &song->initial_tempo);
 	}
 
@@ -495,12 +530,12 @@ D00_readnote: /* this goto is kind of ugly... */
 	if (slurp_seek(fp, hdr.instrument_paraptr, SEEK_SET))
 		return LOAD_UNSUPPORTED;
 
-	for (c = 0; c <= ninst; c++) {
+	for (c = 0; c < ninst; c++) {
 		unsigned char bytes[11];
 		song_sample_t *smp = &song->samples[c + 1];
 
 		if (slurp_read(fp, bytes, 11) != 11)
-			return LOAD_UNSUPPORTED;
+			continue; /* wut? */
 
 		/* Internally, we expect a different order for the bytes than
 		 * what D00 files provide. Shift them around accordingly. */
@@ -533,6 +568,7 @@ D00_readnote: /* this goto is kind of ugly... */
 
 		smp->volume = 64 * 4; //mphack
 
+		/* It's probably safe to ignore these */
 #if 0
 		log_appendf(1, "timer: %d", slurp_getc(fp));
 		log_appendf(1, "sr: %d", slurp_getc(fp));
@@ -547,7 +583,8 @@ D00_readnote: /* this goto is kind of ugly... */
 	for (c = 9; c < MAX_CHANNELS; c++)
 		song->channels[c].flags |= CHN_MUTE;
 
-	snprintf(song->tracker_id, sizeof(song->tracker_id), "EdLib Tracker");
+	snprintf(song->tracker_id, sizeof(song->tracker_id),
+		(hdr.version < 4) ? "Unknown AdLib tracker" : "EdLib Tracker");
 
 	for (c = 0; c < D00_WARN_MAX_; c++)
 		if (warn & (1 << c))
