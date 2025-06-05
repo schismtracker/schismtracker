@@ -262,6 +262,137 @@ static int widget_bitset_handle_key(struct widget *w, struct key_event *k)
 	return 0;
 }
 
+static int widget_listbox_handle_key(struct widget *w, struct key_event *k)
+{
+	int32_t new_device = w->d.listbox.focus;
+	uint32_t size = w->d.listbox.size();
+	int load_selected_device = 0;
+
+	switch (k->mouse) {
+	case MOUSE_DBLCLICK:
+	case MOUSE_CLICK:
+		if (k->state == KEY_PRESS)
+			return 0;
+		if (k->x < w->x || k->y < w->y || k->y > (w->y + w->height - 1) || k->x > (w->x + w->width - 1)) return 0;
+		new_device = (int32_t)w->d.listbox.top + k->y - w->y;
+		if (k->mouse == MOUSE_DBLCLICK || new_device == w->d.listbox.focus)
+			load_selected_device = 1;
+		break;
+	case MOUSE_SCROLL_UP:
+		new_device -= MOUSE_SCROLL_LINES;
+		break;
+	case MOUSE_SCROLL_DOWN:
+		new_device += MOUSE_SCROLL_LINES;
+		break;
+	default:
+		if (k->state == KEY_RELEASE)
+			return 0;
+	}
+
+	switch (k->sym) {
+	case SCHISM_KEYSYM_UP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		if (--new_device < 0)
+			return 0;
+		break;
+	case SCHISM_KEYSYM_DOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		if (++new_device >= (int32_t)size)
+			return 0;
+		break;
+	case SCHISM_KEYSYM_HOME:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		new_device = 0;
+		break;
+	case SCHISM_KEYSYM_PAGEUP:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+
+		if (new_device == 0)
+			return 1;
+
+		new_device -= 16;
+		break;
+	case SCHISM_KEYSYM_END:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		new_device = (int32_t)size;
+		break;
+	case SCHISM_KEYSYM_PAGEDOWN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		new_device += 16;
+		break;
+	case SCHISM_KEYSYM_RETURN:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+		load_selected_device = 1;
+		break;
+	case SCHISM_KEYSYM_TAB: {
+		const int *f;
+
+		if (k->mod & SCHISM_KEYMOD_SHIFT) {
+			f = w->d.listbox.focus_offsets.left;
+		} else if (NO_MODIFIER(k->mod)) {
+			f = w->d.listbox.focus_offsets.right;
+		} else {
+			return 0;
+		}
+
+		widget_change_focus_to(f[w->d.listbox.focus]);
+		return 1;
+	}
+	case SCHISM_KEYSYM_LEFT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+
+		widget_change_focus_to(w->d.listbox.focus_offsets.left[w->d.listbox.focus]);
+		return 1;
+	case SCHISM_KEYSYM_RIGHT:
+		if (!NO_MODIFIER(k->mod))
+			return 0;
+
+		widget_change_focus_to(w->d.listbox.focus_offsets.right[w->d.listbox.focus]);
+		return 1;
+	default:
+		if (w->d.listbox.handle_key && w->d.listbox.handle_key(k))
+			return 1;
+
+		if (k->mouse == MOUSE_NONE)
+			return 0;
+	}
+
+	new_device = CLAMP(new_device, 0, (int32_t)size - 1);
+
+	if (new_device != w->d.listbox.focus) {
+		int32_t top = w->d.listbox.top;
+
+		w->d.listbox.focus = new_device;
+		status.flags |= NEED_UPDATE;
+
+		/* these HAVE to be done separately (and not as a CLAMP) because they aren't
+		 * really guaranteed to be ranges */
+		top = MIN(top, w->d.listbox.focus);
+		top = MAX(top, (int32_t)w->d.listbox.focus - w->height + 1);
+
+		top = MIN(top, (int32_t)size - w->height + 1);
+		top = MAX(top, 0);
+
+		w->d.listbox.top = top;
+
+		if (w->changed)
+			w->changed();
+	}
+
+	if (load_selected_device && w->activate)
+		w->activate();
+
+	return 1;
+}
+
 /* return: 1 = handled key, 0 = didn't */
 int widget_handle_key(struct key_event * k)
 {
@@ -274,8 +405,8 @@ int widget_handle_key(struct key_event * k)
 	enum widget_type current_type = widget->type;
 
 	if (!(status.flags & DISKWRITER_ACTIVE)
-	    && (current_type == WIDGET_OTHER)
-	    && widget->d.other.handle_key(k))
+	    && ((current_type == WIDGET_OTHER && widget->d.other.handle_key(k))
+			|| (current_type == WIDGET_LISTBOX && widget_listbox_handle_key(widget, k))))
 		return 1;
 
 	if (!(status.flags & DISKWRITER_ACTIVE) && k->mouse

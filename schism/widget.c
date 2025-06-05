@@ -248,6 +248,40 @@ void widget_create_panbar(struct widget *w, int x, int y, int next_up, int next_
 	w->activate = NULL;
 }
 
+void widget_create_listbox(struct widget *w, uint32_t (*i_size) (void),
+	int (*i_toggled) (uint32_t), const char * (*i_name) (uint32_t),
+	void (*i_changed) (void), void (*i_activate)(void),
+	int (*i_handle_key) (struct key_event *kk),
+	const int *focus_offsets_left, const int *focus_offsets_right,
+	int next_up, int next_down)
+{
+	w->type = WIDGET_LISTBOX;
+	w->accept_text = 0;
+	w->changed = i_changed;
+	w->activate = i_activate;
+	w->depressed = 0;
+
+	w->next.up = next_up;
+	w->next.down = next_down;
+	/* handled by focus_offsets */
+	w->next.left = w->next.right = 0;
+	w->next.tab = -1;
+	w->next.backtab = -1;
+
+	/* unfocusable unless set */
+	w->x = -1;
+	w->y = -1;
+	w->width = -1;
+	w->height = 1;
+
+	w->d.listbox.size = i_size;
+	w->d.listbox.toggled = i_toggled;
+	w->d.listbox.name = i_name;
+	w->d.listbox.handle_key = i_handle_key;
+	w->d.listbox.focus_offsets.left = focus_offsets_left;
+	w->d.listbox.focus_offsets.right = focus_offsets_right;
+}
+
 void widget_create_other(struct widget *w, int next_tab, int (*i_handle_key) (struct key_event *k),
 		  int (*i_handle_text_input) (const char* text), void (*i_redraw) (void))
 {
@@ -356,28 +390,35 @@ void widget_numentry_change_value(struct widget *w, int new_value)
 	status.flags |= NEED_UPDATE;
 }
 
-static inline int fast_pow10(int n) {
+static inline SCHISM_ALWAYS_INLINE int fast_pow10(int n)
+{
 	static const int tens[] = { 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000 };
 
 	/* use our cache if we can to avoid buffer overrun */
-	return (n < (int)ARRAY_SIZE(tens)) ? tens[n] : pow(10, n);
+	return (n < (int)ARRAY_SIZE(tens)) ? tens[n] : i_pow(10, n);
 }
 
-int widget_numentry_handle_text(struct widget *w, const char* text_input) {
-	if (text_input == NULL)
+int widget_numentry_handle_text(struct widget *w, const char *text)
+{
+	static const char *valid_digits = "0123456789";
+	size_t len;
+	int value;
+
+	if (!text)
 		return 0;
 
-	char valid_digits[] = "0123456789";
-	int len = strspn((const char*)text_input, valid_digits);
+	len = strspn(text, valid_digits);
 	if (len < 1)
 		return 1;
 
-	int value = w->d.numentry.value;
+	value = w->d.numentry.value;
 
 	if (w->d.numentry.reverse) {
-		for (int i = 0; i < len; i++) {
+		int i;
+
+		for (i = 0; i < len; i++) {
 			value *= 10;
-			value += text_input[0] - '0';
+			value += text[0] - '0';
 		}
 	} else {
 		int pos = *(w->d.numentry.cursor_pos), n = 0;
@@ -388,7 +429,7 @@ int widget_numentry_handle_text(struct widget *w, const char* text_input) {
 			/* isolate our digit and subtract it */
 			value -= value % (pow10_of_pos * 10) / pow10_of_pos * pow10_of_pos;
 			/* add our digit in its place */
-			value += (text_input[n] - '0') * pow10_of_pos;
+			value += (text[n] - '0') * pow10_of_pos;
 		}
 
 		*(w->d.numentry.cursor_pos) = CLAMP(pos, 0, w->width - 1);
@@ -572,6 +613,36 @@ void widget_draw_widget(struct widget *w, int selected)
 			draw_text(str_from_num(3, w->d.thumbbar.value, buf), w->x + 21, w->y, 1, 2);
 		}
 		break;
+	case WIDGET_LISTBOX: {
+		uint32_t i, o;
+		uint32_t size = w->d.listbox.size();
+
+		draw_fill_chars(w->x, w->y, w->x + w->width - 1, w->y + w->height - 1, DEFAULT_FG, 0);
+
+		if (w->d.listbox.top >= size)
+			break; /* wat */
+
+		for (o = w->d.listbox.top, i = 0; o < size && i < w->height; i++, o++) {
+			int fg, bg;
+
+			if (o == w->d.listbox.focus) {
+				if (w == &ACTIVE_WIDGET) {
+					fg = 0;
+					bg = 3;
+				} else {
+					fg = 6;
+					bg = 14;
+				}
+			} else {
+				fg = 6;
+				bg = 0;
+			}
+
+			draw_text_utf8_len(w->d.listbox.toggled(o) ? "*" : " ", 1, w->x, w->y + i, fg, bg);
+			draw_text_utf8_len(w->d.listbox.name(o), w->width - 1, w->x + 1, w->y + i, fg, bg);
+		}
+		break;
+	}
 	case WIDGET_OTHER:
 		if (w->d.other.redraw) w->d.other.redraw();
 		break;

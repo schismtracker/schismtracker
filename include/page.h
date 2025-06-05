@@ -63,6 +63,7 @@ enum widget_type {
 	WIDGET_BUTTON, WIDGET_TOGGLEBUTTON,
 	WIDGET_TEXTENTRY,
 	WIDGET_NUMENTRY, WIDGET_THUMBBAR, WIDGET_BITSET, WIDGET_PANBAR,
+	WIDGET_LISTBOX,
 	/* this last one is for anything that doesn't fit some standard
 	type, like the sample list, envelope editor, etc.; a widget of
 	this type is just a placeholder so page.c knows there's
@@ -180,6 +181,39 @@ struct widget_panbar {
 	unsigned int surround:1;
 };
 
+/* this was heavily inspired by Qt's "virtual" listbox API,
+ * where everything is basically done by virtual functions,
+ * hence the name.
+ * however, since we aren't C++, we just do everything
+ * through function pointers. :) */
+struct widget_listbox {
+	/* get the size of the listbox */
+	uint32_t (*size)(void);
+
+	/* get the name of an item */
+	const char *(*name)(uint32_t i);
+
+	/* get whether an item is toggled or not.
+	 * in the scope of the UI, this decides whether
+	 * the item is prefixed with a "*" or not.
+	 * in most cases there should only be ONE of
+	 * these at a time. */
+	int (*toggled)(uint32_t i);
+
+	/* custom key handler, for extra keybinds. :) */
+	int (*handle_key)(struct key_event *k);
+
+	struct {
+		/* left & backtab */
+		const int *left;
+		/* right & tab (would tab ever NOT mean right?) */
+		const int *right;
+	} focus_offsets;
+
+	uint32_t top;
+	uint32_t focus;
+};
+
 struct widget_other {
 	/* bah. can't do much of anything with this.
 	 *
@@ -191,7 +225,7 @@ struct widget_other {
 	 * this MUST be set to a valid function.
 	 * return value is 1 if the key was handled, 0 if not. */
 	int (*handle_key) (struct key_event * k);
-	int (*handle_text_input) (const char* text_input);
+	int (*handle_text_input) (const char *text_input);
 
 	/* also the widget drawing function can't possibly know how to
 	 * draw a custom widget, so it calls this instead.
@@ -202,7 +236,9 @@ struct widget_other {
 /* --------------------------------------------------------------------- */
 /* and all the widget structs go in the union in this struct... */
 
-union _widget_data_union {
+/* XXX why is this stuff here and not in widget.h ????????? */
+
+union widget_data_union_ {
 	struct widget_toggle toggle;
 	struct widget_menutoggle menutoggle;
 	struct widget_button button;
@@ -213,12 +249,13 @@ union _widget_data_union {
 	struct widget_panbar panbar;
 	struct widget_other other;
 	struct widget_bitset bitset;
+	struct widget_listbox listbox;
 };
 
 struct widget {
 	enum widget_type type;
 
-	union _widget_data_union d;
+	union widget_data_union_ d;
 
 	/* for redrawing */
 	int x, y, width, height, depressed;
