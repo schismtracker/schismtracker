@@ -58,6 +58,12 @@ void widget_create_bitset(struct widget *w, int x, int y, int width, int next_up
 void widget_create_panbar(struct widget *w, int x, int y, int next_up,
 		   int next_down, int next_tab, void (*changed) (void),
 		   int channel);
+void widget_create_listbox(struct widget *w,
+	uint32_t (*i_size) (void), int (*i_toggled) (uint32_t),
+	const char * (*i_name) (uint32_t), void (*i_changed) (void),
+	void (*i_activate)(void), int (*i_handle_key)(struct key_event *kk),
+	const int *focus_offsets_left, const int *focus_offsets_right,
+	int next_up, int next_down);
 void widget_create_other(struct widget *w, int next_tab,
 		  int (*w_handle_key) (struct key_event * k),
 		  int (*w_handle_text_input) (const char* text),

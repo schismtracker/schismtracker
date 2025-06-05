@@ -114,6 +114,15 @@ SCHISM_CONST static inline SCHISM_ALWAYS_INLINE uint32_t i_sqrt(uint32_t r)
 	return c;
 }
 
+/* integer pow(). subject to overflow :) */
+SCHISM_CONST static inline SCHISM_ALWAYS_INLINE uint32_t i_pow(uint32_t base, uint32_t exponent)
+{
+	uint32_t r = 1, i;
+	for (i = 0; i < exponent; i++)
+		r *= base;
+	return r;
+}
+
 FILE *mkfstemp(char *template);
 
 #endif /* SCHISM_UTIL_H_ */

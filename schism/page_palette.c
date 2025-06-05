@@ -38,7 +38,8 @@
 
 static struct widget widgets_palette[51];
 
-static int selected_palette;
+/* deprecated name */
+#define selected_palette widgets_palette[48].d.listbox.focus
 
 /* --------------------------------------------------------------------- */
 /*
@@ -132,153 +133,56 @@ static int palette_paste_callback(SCHISM_UNUSED int cb, const void *data)
 
 /* --------------------------------------------------------------------- */
 
-static void palette_list_draw(void)
+static const int palette_list_focus_offsets_left_[] = {
+	29, 30, 30, 31, 32, 32, 33, 33, 34, 35,
+	35, 36, 36, 37, 38, 39, 40, 40, 41, 42,
+};
+
+static const int palette_list_focus_offsets_right_[] = {
+	8,  9,  9,  10, 11, 11, 12, 12, 13, 14,
+	14, 15, 15, 16, 17, 18, 19, 19, 20, 21,
+};
+
+static uint32_t palette_list_size_(void)
 {
-	int n, focused = (ACTIVE_PAGE.selected_widget == 48);
-	int fg, bg;
-
-	draw_fill_chars(55, 26, 76, 40, DEFAULT_FG, 0);
-
-	for (n = 0; n < NUM_PALETTES; n++) {
-		fg = 6;
-		bg = 0;
-		if (focused && n == selected_palette) {
-			fg = 0;
-			bg = 3;
-		} else if (n == selected_palette) {
-			bg = 14;
-		}
-
-		if(n == current_palette_index)
-			draw_text_len("*", 1, 55, 26 + n, fg, bg);
-		else
-			draw_text_len(" ", 1, 55, 26 + n, fg, bg);
-
-		draw_text_len(palettes[n].name, 21, 56, 26 + n, fg, bg);
-	}
+	/* ok */
+	return NUM_PALETTES;
 }
 
-static int palette_list_handle_key_on_list(struct key_event * k)
+static const char *palette_list_name_(uint32_t i)
 {
-	int new_palette = selected_palette;
-	int load_selected_palette = 0;
-	const int focus_offsets[] = { 0, 1, 1, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7, 8, 9, 9, 10, 10, 11, 12 };
+	return palettes[i].name;
+}
 
-	if(k->mouse == MOUSE_DBLCLICK) {
-		if (k->state == KEY_PRESS)
-			return 0;
-		if (k->x < 55 || k->y < 26 || k->y > 40 || k->x > 76) return 0;
-		new_palette = (k->y - 26);
-		load_selected_palette = 1;
-	} else if (k->mouse == MOUSE_CLICK) {
-		if (k->state == KEY_PRESS)
-			return 0;
-		if (k->x < 55 || k->y < 26 || k->y > 40 || k->x > 76) return 0;
-		new_palette = (k->y - 26);
-		if(new_palette == selected_palette)
-			load_selected_palette = 1;
-	} else {
-		if (k->state == KEY_RELEASE)
-			return 0;
-		if (k->mouse == MOUSE_SCROLL_UP)
-			new_palette -= MOUSE_SCROLL_LINES;
-		else if (k->mouse == MOUSE_SCROLL_DOWN)
-			new_palette += MOUSE_SCROLL_LINES;
-	}
+static int palette_list_toggled_(uint32_t i)
+{
+	return (i == current_palette_index);
+}
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_UP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (--new_palette < 0) {
-			widget_change_focus_to(47);
-			return 1;
-		}
-		break;
-	case SCHISM_KEYSYM_DOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		// new_palette++;
-		if (++new_palette >= NUM_PALETTES) {
-			widget_change_focus_to(49);
-			return 1;
-		}
-		break;
-	case SCHISM_KEYSYM_HOME:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		new_palette = 0;
-		break;
-	case SCHISM_KEYSYM_PAGEUP:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		if (new_palette == 0) {
-			widget_change_focus_to(45);
-			return 1;
-		}
-		new_palette -= 16;
-		break;
-	case SCHISM_KEYSYM_END:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		new_palette = NUM_PALETTES - 1;
-		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		new_palette += 16;
-		break;
-	case SCHISM_KEYSYM_RETURN:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		// if (selected_palette == -1) return 1;
-		palette_load_preset(selected_palette);
-		palette_apply();
-		update_thumbbars();
-		status.flags |= NEED_UPDATE;
-		return 1;
-	case SCHISM_KEYSYM_RIGHT:
-	case SCHISM_KEYSYM_TAB:
-		if (k->mod & SCHISM_KEYMOD_SHIFT) {
-			widget_change_focus_to(focus_offsets[selected_palette+1] + 29);
-			return 1;
-		}
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		widget_change_focus_to(focus_offsets[selected_palette+1] + 8);
-		return 1;
-	case SCHISM_KEYSYM_LEFT:
-		if (!NO_MODIFIER(k->mod))
-			return 0;
-		widget_change_focus_to(focus_offsets[selected_palette+1] + 29);
-		return 1;
+static void palette_list_activate_(void)
+{
+	palette_load_preset(selected_palette);
+	palette_apply();
+	update_thumbbars();
+
+	status.flags |= NEED_UPDATE;
+}
+
+static int palette_list_handle_key_(struct key_event *kk)
+{
+	switch (kk->sym) {
 	case SCHISM_KEYSYM_c:
 		/* pasting is handled by the page */
-		if (k->mod & SCHISM_KEYMOD_CTRL) {
+		if (kk->mod & SCHISM_KEYMOD_CTRL) {
 			palette_copy_palette_to_clipboard(selected_palette);
 			return 1;
 		}
-		return 0;
+		break;
 	default:
-		if (k->mouse == MOUSE_NONE)
-			return 0;
+		break;
 	}
 
-	new_palette = CLAMP(new_palette, 0, NUM_PALETTES - 1);
-
-	if (new_palette != selected_palette || load_selected_palette) {
-		selected_palette = new_palette;
-
-		if(load_selected_palette) {
-			palette_load_preset(selected_palette);
-			palette_apply();
-			update_thumbbars();
-		}
-
-		status.flags |= NEED_UPDATE;
-	}
-
-	return 1;
+	return 0;
 }
 
 /* --------------------------------------------------------------------- */
@@ -353,6 +257,8 @@ static void update_palette(void)
 
 void palette_load_page(struct page *page)
 {
+	int n;
+
 	page->title = "Palette Configuration (Ctrl-F12)";
 	page->draw_const = palette_draw_const;
 	page->handle_key = palette_list_handle_key;
@@ -364,7 +270,7 @@ void palette_load_page(struct page *page)
 
 	selected_palette = current_palette_index;
 
-	for (int n = 0; n < 16; n++) {
+	for (n = 0; n < 16; n++) {
 		int tabs[3];
 		for (int x = 0; x < 3; x++)
 			tabs[x] = 3 * n + (21 + x);
@@ -384,15 +290,19 @@ void palette_load_page(struct page *page)
 	}
 	update_thumbbars();
 
-	widget_create_other(widgets_palette + 48, 0, palette_list_handle_key_on_list, NULL, palette_list_draw);
-	widgets_palette[48].x = 56;
+	widget_create_listbox(widgets_palette+48, palette_list_size_,
+		palette_list_toggled_, palette_list_name_, NULL,
+		palette_list_activate_, palette_list_handle_key_,
+		palette_list_focus_offsets_left_,
+		palette_list_focus_offsets_right_,
+		47, 49);
+	widgets_palette[48].x = 55;
 	widgets_palette[48].y = 26;
-	widgets_palette[48].width = 20;
+	widgets_palette[48].width = 22;
 	widgets_palette[48].height = 15;
 
-	for(int i = 6; i < 18; i++) {
-		widgets_palette[i].next.backtab = 48;
-	}
+	for (n = 6; n < 18; n++)
+		widgets_palette[n].next.backtab = 48;
 
 	widget_create_button(widgets_palette + 49, 55, 43, 20, 48, 50, 39, 18, 18, palette_copy_current_to_clipboard, "Copy To Clipboard", 3);
 	widget_create_button(widgets_palette + 50, 55, 46, 20, 49, 0, 39, 18, 18, palette_paste_from_clipboard, "Paste From Clipboard", 1);
