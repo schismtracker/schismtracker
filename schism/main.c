@@ -464,22 +464,6 @@ SCHISM_NORETURN static void event_loop(void)
 
 				SCHISM_FALLTHROUGH;
 			case SCHISM_KEYUP:
-				switch (se.key.sym) {
-				case SCHISM_KEYSYM_NUMLOCKCLEAR:
-					status.keymod ^= SCHISM_KEYMOD_NUM;
-					break;
-				case SCHISM_KEYSYM_CAPSLOCK:
-					if (se.type == SCHISM_KEYDOWN) {
-						status.keymod |= SCHISM_KEYMOD_CAPS_PRESSED;
-					} else {
-						status.keymod &= ~SCHISM_KEYMOD_CAPS_PRESSED;
-					}
-					status.keymod ^= SCHISM_KEYMOD_CAPS;
-					break;
-				default:
-					break;
-				};
-
 				// grab the keymod
 				status.keymod = se.key.mod;
 				// fix it
