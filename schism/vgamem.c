@@ -33,57 +33,114 @@
 #define SAMPLE_MARK_COLOR 6 /* Play mark color */
 #define SAMPLE_BGMARK_COLOR 7 /* Play mark color after note fade / NNA */
 
-/* internal vgamem data structures */
-enum vgamem_font {
-	VGAMEM_FONT_ITF,       // ASCII with weird cool box characters
-	VGAMEM_FONT_BIOS,      // codepage 437
-	VGAMEM_FONT_HALFWIDTH, // ASCII - half-width; used in the info page and pattern editor
-	VGAMEM_FONT_OVERLAY,   // none - draws from the overlay buffer
-	VGAMEM_FONT_UNICODE,   // UCS-4 - any unicode codepoint
-};
+/* ok, I'm making a hack to fit this all into 32-bits.
+ * these ABSOLUTELY MUST BE checked in this order !!!
+ * otherwise, nothing will work properly and we will all be sad. */
 
-struct vgamem_colors {
-	uint_fast8_t fg; /* 0...15 */
-	uint_fast8_t bg; /* 0...15 */
-};
+/* for halfwidth, we need all the bytes we can get, hence why it's first ;) */
+#define VGAMEM_FONT_HALFWIDTH (0x80000000)
+#define VGAMEM_FONT_OVERLAY (0x40000000)
+#define VGAMEM_FONT_UNICODE (0x20000000) /* byte 29; leaves literally just enough space */
+#define VGAMEM_FONT_BIOS (0x10000000)
 
-/* contains all the needed information to draw many
- * types of characters onto the screen. historically,
- * all of this information was stored in a single 32-bit
- * unsigned integer */
-struct vgamem_char {
-	/* which font method to use */
-	enum vgamem_font font;
+/* if none of those were filled, we're dealing with a normal character. */
 
-	union {
-		struct {
-			/* two chars here */
-			struct {
-				uint_fast8_t c; /* 0...255 */
+/* ------------------------------------------------------------------------ */
+/* defines for UNICODE; this is packed ultra-tight :) */
 
-				struct vgamem_colors colors;
-			} c1, c2;
-		} halfwidth;
+/* colors */
+#define VGAMEM_UNICODE_FG_BIT (25)
+#define VGAMEM_UNICODE_FG_MASK (0xF << VGAMEM_UNICODE_FG_BIT)
+#define VGAMEM_UNICODE_FG(x) (((x) & VGAMEM_UNICODE_FG_MASK) >> VGAMEM_UNICODE_FG_BIT)
 
-		struct {
-			uint_fast8_t c; /* 0...255 */
+#define VGAMEM_UNICODE_BG_BIT (21)
+#define VGAMEM_UNICODE_BG_MASK (0xF << VGAMEM_UNICODE_BG_BIT)
+#define VGAMEM_UNICODE_BG(x) (((x) & VGAMEM_UNICODE_BG_MASK) >> VGAMEM_UNICODE_BG_BIT)
 
-			struct vgamem_colors colors;
-		} cp437, itf; /* cp437 and itf have the same size */
+/* character mask; just enough to fit one codepoint */
+#define VGAMEM_UNICODE_CODEPOINT_MASK (0x001FFFFF)
+#define VGAMEM_UNICODE_CODEPOINT(x) ((x) & VGAMEM_UNICODE_CODEPOINT_MASK)
 
-		struct {
-			/* can be any Unicode codepoint; realistically
-			 * only a very small subset of characters can be
-			 * supported though */
-			uint_fast32_t c;
+/* ------------------------------------------------------------------------ */
+/* halfwidth defines; stores 2 characters and both fg/bg */
 
-			struct vgamem_colors colors;
-		} unicode;
-	} character;
-};
+#define VGAMEM_HW_FG1_BIT (26)
+#define VGAMEM_HW_FG1_MASK (0xF << VGAMEM_HW_FG1_BIT)
+#define VGAMEM_HW_FG1(x) (((x) & VGAMEM_HW_FG1_MASK) >> VGAMEM_HW_FG1_BIT)
 
-static struct vgamem_char vgamem[4000] = {0};
-static struct vgamem_char vgamem_read[4000] = {0};
+#define VGAMEM_HW_BG1_BIT (22)
+#define VGAMEM_HW_BG1_MASK (0xF << VGAMEM_HW_BG1_BIT)
+#define VGAMEM_HW_BG1(x) (((x) & VGAMEM_HW_BG1_MASK) >> VGAMEM_HW_BG1_BIT)
+
+#define VGAMEM_HW_CHAR1_BIT (15)
+#define VGAMEM_HW_CHAR1_MASK (0x7F << VGAMEM_HW_CHAR1_BIT)
+#define VGAMEM_HW_CHAR1(x) (((x) & VGAMEM_HW_CHAR1_MASK) >> VGAMEM_HW_CHAR1_BIT)
+
+#define VGAMEM_HW_FG2_BIT (11)
+#define VGAMEM_HW_FG2_MASK (0xF << VGAMEM_HW_FG2_BIT)
+#define VGAMEM_HW_FG2(x) (((x) & VGAMEM_HW_FG2_MASK) >> VGAMEM_HW_FG2_BIT)
+
+#define VGAMEM_HW_BG2_BIT (7)
+#define VGAMEM_HW_BG2_MASK (0xF << VGAMEM_HW_BG2_BIT)
+#define VGAMEM_HW_BG2(x) (((x) & VGAMEM_HW_BG2_MASK) >> VGAMEM_HW_BG2_BIT)
+
+#define VGAMEM_HW_CHAR2_BIT (0)
+#define VGAMEM_HW_CHAR2_MASK (0x7F << VGAMEM_HW_CHAR2_BIT)
+#define VGAMEM_HW_CHAR2(x) (((x) & VGAMEM_HW_CHAR2_MASK) >> VGAMEM_HW_CHAR2_BIT)
+
+/* ok i think i get this now, after inspecting it further.
+ * good thing no one bothered putting any comments in the code. <grumble>
+ * the fake vga buffer is pigeonholing the half-width characters into 14 bits.
+ * why 14, i don't know, but that means 7 bits per character, and these functions
+ * handle shifting stuff around to get them into that space. realistically, we
+ * only need to bother with chars 32 through 127, as well as 173 (middot) and
+ * 205 (the double-line used for noteoff). since 32->127 is 96 characters, there's
+ * plenty of room for the printable stuff... and guess what, 173->205 is another
+ * 32, which fits nice and clean into 7 bits! so if the character is within that
+ * range, we're fine. otherwise it'll just result in a broken glyph. (but it
+ * probably wasn't drawn in the font anyway) */
+
+static inline SCHISM_ALWAYS_INLINE int vgamem_pack_halfw(int c)
+{
+	if (c >= 32 && c <= 127)
+		return c - 32; /* 0 ... 95 */
+	else if (c >= 173 && c <= 205)
+		return 96 + c - 173; /* 96 ... 127 */
+
+	//SCHISM_UNREACHABLE;
+	return '?';
+}
+
+static inline SCHISM_ALWAYS_INLINE int vgamem_unpack_halfw(int c)
+{
+	if (c >= 0 && c <= 95)
+		return c + 32;
+	else if (c >= 96 && c <= 127)
+		return 96 - c + 173;
+
+	//SCHISM_UNREACHABLE;
+	return '?';
+}
+
+/* ------------------------------------------------------------------------ */
+/* BIOS and ITF defines; stores 1 character, and fg/bg */
+
+#define VGAMEM_FG_BIT (12)
+#define VGAMEM_FG_MASK (0xF << VGAMEM_FG_BIT)
+#define VGAMEM_FG(x) (((x) & VGAMEM_FG_MASK) >> VGAMEM_FG_BIT)
+
+#define VGAMEM_BG_BIT (8)
+#define VGAMEM_BG_MASK (0xF << VGAMEM_BG_BIT)
+#define VGAMEM_BG(x) (((x) & VGAMEM_BG_MASK) >> VGAMEM_BG_BIT)
+
+#define VGAMEM_CHAR_BIT (0)
+#define VGAMEM_CHAR_MASK (0xFF << VGAMEM_CHAR_BIT)
+#define VGAMEM_CHAR(x) (((x) & VGAMEM_CHAR_MASK) >> VGAMEM_CHAR_BIT)
+
+/* ------------------------------------------------------------------------ */
+
+static uint32_t vgamem[4000] = {0};
+static uint32_t vgamem_read[4000] = {0};
 
 static uint8_t ovl[640*400] = {0}; /* 256K */
 
@@ -120,7 +177,7 @@ void vgamem_ovl_apply(struct vgamem_overlay *n)
 
 	for (y = n->y1; y <= n->y2; y++)
 		for (x = n->x1; x <= n->x2; x++)
-			vgamem[x + (y*80)].font = VGAMEM_FONT_OVERLAY;
+			vgamem[x + (y*80)] = VGAMEM_FONT_OVERLAY;
 }
 
 void vgamem_ovl_clear(struct vgamem_overlay *n, int color)
@@ -142,7 +199,7 @@ void vgamem_ovl_drawpixel(struct vgamem_overlay *n, int x, int y, int color)
 }
 
 static inline void _draw_line_v(struct vgamem_overlay *n, int x,
-		int ys, int ye, int color)
+	int ys, int ye, int color)
 {
 	unsigned char *q = n->q + x;
 	int y;
@@ -163,7 +220,7 @@ static inline void _draw_line_v(struct vgamem_overlay *n, int x,
 }
 
 static inline void _draw_line_h(struct vgamem_overlay *n, int xs,
-		int xe, int y, int color)
+	int xe, int y, int color)
 {
 	unsigned char *q = n->q + (y * 640);
 	int x;
@@ -244,18 +301,20 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 
 /* generic scanner; BITS must be one of 8, 16, 32, 64
  *
- * I've tried to make this code as small and predictable
- * as possible in an effort to make it fast as I can.
+ * okay, so turns out, my "new" scanner was only really
+ * fast on newer systems. on older systems, it actually
+ * made speeds completely unbearable. SO, i went ahead
+ * and converted everything back to using a single 32-bit
+ * integer, where somehow I managed to get everything to fit.
  *
- * Older versions prioritized memory efficiency over speed,
- * as in every character was packed into a 32-bit integer.
- * Arguably this is a bad choice, especially considering
- * that this is the most taxing function to call in the
- * whole program (the audio crap doesn't even come close)
- * In a normal session, this function will probably amount
- * for ~80% of all processing that Schism does. */
+ * my hope is, that by reducing the size of the vgamem array
+ * (size 12 for each member -> 4 for each), it will allow for
+ * faster processing on older systems, who usually have smaller
+ * caches and slower memory accesses.  or that's the theory,
+ * anyway. I have yet to put it to the test :) */
 #define VGAMEM_SCANNER_VARIANT(BITS) \
-	void vgamem_scan##BITS(uint32_t ry, uint##BITS##_t *out, uint32_t tc[16], uint32_t mouseline[80], uint32_t mouseline_mask[80]) \
+	void vgamem_scan##BITS(uint32_t ry, uint##BITS##_t *out, uint32_t tc[16],\
+		uint32_t mouseline[80], uint32_t mouseline_mask[80]) \
 	{ \
 		/* constants */ \
 		const uint_fast32_t y = (ry >> 3), yl = (ry & 7); \
@@ -267,48 +326,28 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 			*const hiragana = font_hiragana + yl, \
 			*const extlatin = font_extended_latin + yl, \
 			*const greek = font_greek + yl; \
-		const struct vgamem_char *bp = &vgamem_read[y * 80]; \
+		const uint32_t *bp = &vgamem_read[y * 80]; \
 	\
 		uint_fast32_t x; \
 		for (x = 0; x < 80; x++, bp++, q += 8) { \
 			uint_fast8_t fg, bg, fg2, bg2, dg; \
 	\
-			switch (bp->font) { \
-			case VGAMEM_FONT_ITF: \
-				/* regular character */ \
-				fg = bp->character.itf.colors.fg; \
-				bg = bp->character.itf.colors.bg; \
-				fg2 = fg; \
-				bg2 = bg; \
-				dg = itf[bp->character.itf.c << 3]; \
-				break; \
-			case VGAMEM_FONT_BIOS: \
-				/* VGA BIOS character */ \
-				fg = bp->character.cp437.colors.fg; \
-				bg = bp->character.cp437.colors.bg; \
-				fg2 = fg; \
-				bg2 = bg; \
-				dg = (bp->character.cp437.c & 0x80) \
-					? bios[(bp->character.cp437.c & 0x7F) << 3] \
-					: bioslow[(bp->character.cp437.c & 0x7F) << 3]; \
-				break; \
-			case VGAMEM_FONT_HALFWIDTH: \
+			if (*bp & VGAMEM_FONT_HALFWIDTH) { \
 				/* halfwidth (used for patterns) */ \
 				{ \
-					const uint_fast8_t dg1 = hf[bp->character.halfwidth.c1.c << 2]; \
-					const uint_fast8_t dg2 = hf[bp->character.halfwidth.c2.c << 2]; \
+					const uint_fast8_t dg1 = hf[vgamem_unpack_halfw(VGAMEM_HW_CHAR1(*bp)) << 2]; \
+					const uint_fast8_t dg2 = hf[vgamem_unpack_halfw(VGAMEM_HW_CHAR2(*bp)) << 2]; \
 	\
 					dg = (!(ry & 1)) \
 						? ((dg1 & 0xF0) | dg2 >> 4) \
 						: (dg1 << 4 | (dg2 & 0xF)); \
 				} \
 	\
-				fg = bp->character.halfwidth.c1.colors.fg; \
-				bg = bp->character.halfwidth.c1.colors.bg; \
-				fg2 = bp->character.halfwidth.c2.colors.fg; \
-				bg2 = bp->character.halfwidth.c2.colors.bg; \
-				break; \
-			case VGAMEM_FONT_OVERLAY: \
+				fg = VGAMEM_HW_FG1(*bp); \
+				bg = VGAMEM_HW_BG1(*bp); \
+				fg2 = VGAMEM_HW_FG2(*bp); \
+				bg2 = VGAMEM_HW_BG2(*bp); \
+			} else if (*bp & VGAMEM_FONT_OVERLAY) { \
 				/* raw pixel data, needs special code ;) */ \
 				*out++ = tc[ (q[0]|((mouseline[x] & 0x80)?15:0)) & 0xFF]; \
 				*out++ = tc[ (q[1]|((mouseline[x] & 0x40)?15:0)) & 0xFF]; \
@@ -319,9 +358,9 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				*out++ = tc[ (q[6]|((mouseline[x] & 0x02)?15:0)) & 0xFF]; \
 				*out++ = tc[ (q[7]|((mouseline[x] & 0x01)?15:0)) & 0xFF]; \
 				continue; \
-			case VGAMEM_FONT_UNICODE: { \
+			} else if (*bp & VGAMEM_FONT_UNICODE) { \
 				/* Any unicode character. */ \
-				const uint_fast32_t c = bp->character.unicode.c; \
+				const uint_fast32_t c = VGAMEM_UNICODE_CODEPOINT(*bp); \
 	\
 				/* These are ordered by how often they will probably appear
 				 * for an average user of Schism (i.e., English speakers). */ \
@@ -342,14 +381,26 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 					dg = itf[char_unicode_to_cp437(c) << 3]; \
 				} \
 	\
-				fg = bp->character.unicode.colors.fg; \
-				bg = bp->character.unicode.colors.bg; \
+				fg = VGAMEM_UNICODE_FG(*bp); \
+				bg = VGAMEM_UNICODE_BG(*bp); \
 				fg2 = fg; \
 				bg2 = bg; \
-	\
-				break; \
-			} \
-			default: continue; \
+			} else if (*bp & VGAMEM_FONT_BIOS) { \
+				uint_fast8_t c = VGAMEM_CHAR(*bp); \
+				fg = VGAMEM_FG(*bp); \
+				bg = VGAMEM_BG(*bp); \
+				fg2 = fg; \
+				bg2 = bg; \
+				dg = (c & 0x80) \
+					? bios[(c & 0x7F) << 3] \
+					: bioslow[(c & 0x7F) << 3]; \
+			} else { \
+				/* none of the above, this is an ITF character */ \
+				fg = VGAMEM_FG(*bp); \
+				bg = VGAMEM_BG(*bp); \
+				fg2 = fg; \
+				bg2 = bg; \
+				dg = itf[VGAMEM_CHAR(*bp) << 3]; \
 			} \
 	\
 			dg |= mouseline[x]; \
@@ -376,40 +427,27 @@ void draw_char_unicode(uint32_t c, int x, int y, uint32_t fg, uint32_t bg)
 {
 	SCHISM_RUNTIME_ASSERT(x >= 0 && y >= 0 && x < 80 && y < 50, "Coordinates should always be inbounds");
 
-	struct vgamem_char ch;
-	ch.font = VGAMEM_FONT_UNICODE;
-	ch.character.unicode.c = c;
-	ch.character.unicode.colors.fg = fg;
-	ch.character.unicode.colors.bg = bg;
-
-	vgamem[x + (y*80)] = ch;
+	vgamem[x + (y*80)] = (VGAMEM_FONT_UNICODE
+		| (fg << VGAMEM_UNICODE_FG_BIT)
+		| (bg << VGAMEM_UNICODE_BG_BIT)
+		| c);
 }
 
 void draw_char_bios(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 {
 	SCHISM_RUNTIME_ASSERT(x >= 0 && y >= 0 && x < 80 && y < 50, "Coordinates should always be inbounds");
 
-	struct vgamem_char ch;
-	ch.font = VGAMEM_FONT_BIOS;
-	ch.character.cp437.c = c;
-	ch.character.cp437.colors.fg = fg;
-	ch.character.cp437.colors.bg = bg;
-
-	vgamem[x + (y*80)] = ch;
+	vgamem[x + (y*80)] = (VGAMEM_FONT_BIOS
+		| (fg << VGAMEM_FG_BIT)
+		| (bg << VGAMEM_BG_BIT)
+		| c);
 }
 
 void draw_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 {
 	SCHISM_RUNTIME_ASSERT(x >= 0 && y >= 0 && x < 80 && y < 50, "Coordinates should always be inbounds");
 
-	struct vgamem_char ch;
-
-	ch.font = VGAMEM_FONT_ITF,
-	ch.character.itf.c = c;
-	ch.character.itf.colors.fg = fg;
-	ch.character.itf.colors.bg = bg;
-
-	vgamem[x + (y*80)] = ch;
+	vgamem[x + (y*80)] = ((fg << VGAMEM_FG_BIT) | (bg << VGAMEM_BG_BIT) | c);
 }
 
 int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
@@ -458,18 +496,15 @@ int draw_text_utf8(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 
 void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t fg, uint32_t bg)
 {
-	struct vgamem_char *mm;
+	uint32_t *mm;
 	int x, len;
+
 	mm = &vgamem[(ys * 80) + xs];
 	len = (xe - xs)+1;
 	ye -= ys;
 	do {
-		for (x = 0; x < len; x++) {
-			mm[x].font = VGAMEM_FONT_ITF;
-			mm[x].character.itf.c = 0;
-			mm[x].character.itf.colors.fg = fg;
-			mm[x].character.itf.colors.bg = bg;
-		}
+		for (x = 0; x < len; x++)
+			mm[x] = (fg << VGAMEM_FG_BIT) | (bg << VGAMEM_BG_BIT);
 		mm += 80;
 		ye--;
 	} while (ye >= 0);
@@ -528,16 +563,14 @@ void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
 {
 	SCHISM_RUNTIME_ASSERT(x >= 0 && y >= 0 && x < 80 && y < 50, "Coordinates should always be inbounds");
 
-	struct vgamem_char ch;
-	ch.font = VGAMEM_FONT_HALFWIDTH,
-	ch.character.halfwidth.c1.c = c1;
-	ch.character.halfwidth.c1.colors.fg = fg1;
-	ch.character.halfwidth.c1.colors.bg = bg1;
-	ch.character.halfwidth.c2.c = c2;
-	ch.character.halfwidth.c2.colors.fg = fg2;
-	ch.character.halfwidth.c2.colors.bg = bg2;
 
-	vgamem[x + (y*80)] = ch;
+	vgamem[x + (y*80)] = (VGAMEM_FONT_HALFWIDTH
+		| (fg1 << VGAMEM_HW_FG1_BIT)
+		| (fg2 << VGAMEM_HW_FG2_BIT)
+		| (bg1 << VGAMEM_HW_BG1_BIT)
+		| (bg2 << VGAMEM_HW_BG2_BIT)
+		| (vgamem_pack_halfw(c1) << VGAMEM_HW_CHAR1_BIT)
+		| (vgamem_pack_halfw(c2) << VGAMEM_HW_CHAR2_BIT));
 }
 
 /* --------------------------------------------------------------------- */
@@ -698,7 +731,9 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
  * input channels = number of channels in data
 */
 
-/* somewhat heavily based on CViewSample::DrawSampleData2 in modplug */
+/* somewhat heavily based on CViewSample::DrawSampleData2 in modplug
+ *
+ * TODO: vectorized sample drawing. */
 #define DRAW_SAMPLE_DATA_VARIANT(bits, doublebits) \
 	static void _draw_sample_data_##bits(struct vgamem_overlay *r, \
 		int##bits##_t *data, uint32_t length, unsigned int inputchans, unsigned int outputchans) \
