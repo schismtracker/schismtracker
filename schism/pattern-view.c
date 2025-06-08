@@ -828,10 +828,6 @@ void draw_note_6(int x, int y, const song_note_t *note, int cursor_pos, SCHISM_U
 #ifdef USE_LOWERCASE_NOTES
 
 	get_note_string_short(note->note, note_buf);
-	if (note->instrument)
-		str_from_num99(note->instrument, ins_buf);
-	else
-		ins_buf[0] = ins_buf[1] = '\xAD';
 	/* note & instrument */
 	draw_text(note_buf, x, y, 6, bg);
 	fg1 = fg2 = (note->instrument ? 10 : 2);
