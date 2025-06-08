@@ -121,7 +121,7 @@ static void log_redraw(void)
 	int n, i;
 
 	i = top_line;
-	for (n = 0; n <= last_line && n < 33; n++, i++) {
+	for (n = 0; i <= last_line && n < 33; n++, i++) {
 		if (!lines[i].text) continue;
 		if (lines[i].bios_font) {
 			draw_text_bios_len(lines[i].text,
