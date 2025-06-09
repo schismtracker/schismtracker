@@ -185,14 +185,37 @@ void dialog_cancel_NULL(void)
 
 /* --------------------------------------------------------------------- */
 
+void dialog_notify_selected_widget_changed(void)
+{
+	if (num_dialogs == 0)
+		return;
+
+	struct dialog *d = dialogs + num_dialogs - 1;
+
+	if (selected_widget != &d->selected_widget)
+		return;
+
+	if (d->focus_changed)
+		d->focus_changed(d->selected_widget, d->data);
+}
+
+/* --------------------------------------------------------------------- */
+
 int dialog_handle_key(struct key_event * k)
 {
 	struct dialog *d = dialogs + num_dialogs - 1;
 
+	int initial_selected_widget = d->selected_widget;
+
 	ENSURE_DIALOG(return 0);
 
-	if (d->handle_key && d->handle_key(k))
+	if (d->handle_key && d->handle_key(k, d->data))
+	{
+		if (d->selected_widget != initial_selected_widget)
+			dialog_notify_selected_widget_changed();
+
 		return 1;
+	}
 
 	/* this SHOULD be handling on k->state press but the widget key handler is stealing that key. */
 	if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod)) {
@@ -357,6 +380,7 @@ struct dialog *dialog_create(int type, const char *text, void (*action_yes) (voi
 	dialogs[d].selected_widget = default_widget;
 	dialogs[d].draw_const = NULL;
 	dialogs[d].handle_key = NULL;
+	dialogs[d].focus_changed = NULL;
 
 	switch (type) {
 	case DIALOG_OK:
@@ -420,6 +444,7 @@ struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *d
 	d->action_no = NULL;
 	d->action_cancel = NULL;
 	d->handle_key = NULL;
+	d->focus_changed = NULL;
 
 	status.dialog_type = DIALOG_CUSTOM;
 	widgets = d->widgets;

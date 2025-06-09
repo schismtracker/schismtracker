@@ -485,7 +485,7 @@ static void stereo_cvt_dialog(void)
 	draw_text("Loading Stereo Sample", 30, 27, 0, 2);
 }
 
-static int stereo_cvt_hk(struct key_event *k)
+static int stereo_cvt_hk(struct key_event *k, void *data)
 {
 	if (!NO_MODIFIER(k->mod))
 		return 0;

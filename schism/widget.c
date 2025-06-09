@@ -27,6 +27,7 @@
 #include "it.h"
 #include "page.h"
 #include "widget.h"
+#include "dialog.h"
 #include "vgamem.h"
 #include "str.h"
 
@@ -669,6 +670,8 @@ void widget_change_focus_to(int new_widget_index)
 	if (ACTIVE_WIDGET.depressed) ACTIVE_WIDGET.depressed = 0;
 
 	*selected_widget = new_widget_index;
+
+	dialog_notify_selected_widget_changed();
 
 	ACTIVE_WIDGET.depressed = 0;
 
