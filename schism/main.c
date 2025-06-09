@@ -83,8 +83,6 @@ static int did_classic = 0;
 
 /* --------------------------------------------------------------------- */
 
-#define SDL_INIT_FLAGS SDL_INIT_TIMER | SDL_INIT_VIDEO
-
 static void check_update(void);
 
 void toggle_display_fullscreen(void)
