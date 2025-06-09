@@ -27,6 +27,7 @@
 #include "vgamem.h"
 #include "fonts.h"
 #include "song.h"
+#include "events.h"
 
 #define SAMPLE_DATA_COLOR 13 /* Sample data */
 #define SAMPLE_LOOP_COLOR 3 /* Sample loop marks */
@@ -40,6 +41,7 @@ enum vgamem_font {
 	VGAMEM_FONT_HALFWIDTH, // ASCII - half-width; used in the info page and pattern editor
 	VGAMEM_FONT_OVERLAY,   // none - draws from the overlay buffer
 	VGAMEM_FONT_UNICODE,   // UCS-4 - any unicode codepoint
+	VGAMEM_FONT_PIANOKEY,  // synthesized drawing for representing a piano
 };
 
 struct vgamem_colors {
@@ -349,6 +351,47 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 	\
 				break; \
 			} \
+			case VGAMEM_FONT_PIANOKEY: { \
+				char c = bp->character.itf.c; \
+				dg = 0; \
+				if ((c >= 64) && (c < 80)) { \
+					/* range: 64 to 79, outline border */ \
+					/* drawn by extending lines from the middle of the character */ \
+					/* low bits 0-3 indicate which directions to extend */ \
+					int _up = (c & 1) != 0; \
+					int _down = (c & 2) != 0; \
+					int _left = (c & 4) != 0; \
+					int _right = (c & 8) != 0; \
+					\
+					if (yl < 4) { \
+						if (_up) dg |= 0x18; \
+					} \
+					else if (yl > 4) { \
+						if (_down) dg |= 0x18; \
+					} \
+					else { /* yl == 4 */ \
+						dg |= 0x18; \
+						if (_left) dg |= 0xF8; \
+						if (_right) dg |= 0x1F; \
+					} \
+				} \
+				else if ((c >= 80) && (c <= 82)) { \
+					/* character 80: black key to the right */ \
+					/* character 81: black key to the left and to the right */ \
+					/* character 82: black key to the left */ \
+					if (c <= 81) dg |= 0x7; \
+					if (c >= 81) dg |= 0xE0; \
+				} \
+				else if (c == 83) { \
+					/* filled box */ \
+					dg = 0xFF; \
+				} \
+				fg = bp->character.itf.colors.fg; \
+				bg = bp->character.itf.colors.bg; \
+				fg2 = fg; \
+				bg2 = bg; \
+				break; \
+			} \
 			default: continue; \
 			} \
 	\
@@ -405,6 +448,21 @@ void draw_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 	struct vgamem_char ch;
 
 	ch.font = VGAMEM_FONT_ITF,
+	ch.character.itf.c = c;
+	ch.character.itf.colors.fg = fg;
+	ch.character.itf.colors.bg = bg;
+
+	vgamem[x + (y*80)] = ch;
+}
+
+// See the declaration of this function in vgamem.h for an explanatory comment.
+void draw_key_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
+{
+	SCHISM_RUNTIME_ASSERT(x >= 0 && y >= 0 && x < 80 && y < 50, "Coordinates should always be inbounds");
+
+	struct vgamem_char ch;
+
+	ch.font = VGAMEM_FONT_PIANOKEY,
 	ch.character.itf.c = c;
 	ch.character.itf.colors.fg = fg;
 	ch.character.itf.colors.bg = bg;
@@ -486,6 +544,65 @@ int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_
 	}
 	draw_fill_chars(x + n, y, x + len - 1, y, fg, bg);
 	return n;
+}
+
+// See the declaration of this function in vgamem.h for an explanatory comment.
+int draw_text_len_with_character_translation(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
+{
+	static char translation_buffer[100];
+
+	char *out = &translation_buffer[0];
+	int spaces_mismatch = 0;
+
+	char *safe = text + len - 1;
+
+	while (len > 0) {
+		// If a translation became wider, then eat spaces when we can.
+		while ((*text == ' ') && (spaces_mismatch > 0)) {
+			text++;
+			len--;
+			spaces_mismatch--;
+		}
+
+		// If a translation became shorter, then inject spaces next to other spaces.
+		while ((*text == ' ') && (spaces_mismatch < 0)) {
+			*out++ = ' ';
+			spaces_mismatch++;
+		}
+
+		if (*text != '$') {
+			*out++ = *text++;
+			len--;
+		}
+		else
+		{
+			char key_to_translate = text[1];
+
+			if (key_to_translate == ' ')
+				spaces_mismatch = 0;
+			else {
+				const char *translation = events_describe_physical_key_for_qwerty_key(key_to_translate);
+
+				int length_before_translation = 2;
+				int length_after_translation = strlen(translation);
+
+				strcpy(out, translation);
+
+				out += length_after_translation;
+
+				spaces_mismatch += length_after_translation - length_before_translation;
+			}
+
+			text += 2;
+			len -= 2;
+		}
+	}
+
+	*out = '\0';
+
+	len = out - translation_buffer;
+
+	return draw_text_len(translation_buffer, len, x, y, fg, bg);
 }
 
 int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
