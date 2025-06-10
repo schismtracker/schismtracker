@@ -88,4 +88,10 @@ void cfg_free(cfg_file_t *cfg);
 
 /* --------------------------------------------------------------------------------------------------------- */
 
+#ifdef SCHISM_TEST
+
+int cfg_test(void);
+
+#endif
+
 #endif /* SCHISM_CONFIG_PARSER_H_ */
