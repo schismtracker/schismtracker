@@ -91,7 +91,7 @@ void dialog_draw(void)
 
 /* --------------------------------------------------------------------- */
 
-void dialog_destroy(void)
+static void dialog_destroy_keep_final_data(void)
 {
 	int d;
 
@@ -121,6 +121,23 @@ void dialog_destroy(void)
 	/* it's up to the calling function to redraw the page */
 }
 
+void dialog_destroy(void)
+{
+	int d;
+
+	if (num_dialogs == 0)
+		return;
+
+	d = num_dialogs - 1;
+
+	if (dialogs[d].final_data)
+		free(dialogs[d].final_data);
+
+	dialog_destroy_keep_final_data();
+
+	/* it's up to the calling function to redraw the page */
+}
+
 void dialog_destroy_all(void)
 {
 	while (num_dialogs)
@@ -134,7 +151,7 @@ void dialog_yes(struct widget_context *this)
 {
 	struct dialog *dialog;
 	action_cb action;
-	void *data;
+	void *data, *final_data;
 
 	ENSURE_DIALOG(return);
 
@@ -143,14 +160,21 @@ void dialog_yes(struct widget_context *this)
 	if (!dialog)
 		dialog = &dialogs[num_dialogs - 1];
 
+	if (dialog->finalize)
+		dialog->finalize(dialog, DIALOG_BUTTON_YES);
+
 	action = dialog->action_yes;
 	data = dialog->data;
+	final_data = dialog->final_data;
 
 	/* must precede action, because action may create a new dialog */
-	dialog_destroy();
+	dialog_destroy_keep_final_data();
 
 	if (action)
-		action(data);
+		action(data, final_data);
+
+	if (final_data)
+		free(final_data);
 
 	status.flags |= NEED_UPDATE;
 }
@@ -159,7 +183,7 @@ void dialog_no(struct widget_context *this)
 {
 	struct dialog *dialog;
 	action_cb action;
-	void *data;
+	void *data, *final_data;
 
 	ENSURE_DIALOG(return);
 
@@ -168,14 +192,21 @@ void dialog_no(struct widget_context *this)
 	if (!dialog)
 		dialog = &dialogs[num_dialogs - 1];
 
+	if (dialog->finalize)
+		dialog->finalize(dialog, DIALOG_BUTTON_NO);
+
 	action = dialog->action_no;
 	data = dialog->data;
+	final_data = dialog->final_data;
 
 	/* must precede action, because action may create a new dialog */
-	dialog_destroy();
+	dialog_destroy_keep_final_data();
 
 	if (action)
-		action(data);
+		action(data, final_data);
+
+	if (final_data)
+		free(final_data);
 
 	status.flags |= NEED_UPDATE;
 }
@@ -184,7 +215,7 @@ void dialog_cancel(struct widget_context *this)
 {
 	struct dialog *dialog;
 	action_cb action;
-	void *data;
+	void *data, *final_data;
 
 	ENSURE_DIALOG(return);
 
@@ -193,21 +224,28 @@ void dialog_cancel(struct widget_context *this)
 	if (!dialog)
 		dialog = &dialogs[num_dialogs - 1];
 
+	if (dialog->finalize)
+		dialog->finalize(dialog, DIALOG_BUTTON_CANCEL);
+
 	action = dialog->action_cancel;
 	data = dialog->data;
+	final_data = dialog->final_data;
 
 	/* must precede action, because action may create a new dialog */
-	dialog_destroy();
+	dialog_destroy_keep_final_data();
 
 	if (action)
-		action(data);
+		action(data, final_data);
+
+	if (final_data)
+		free(final_data);
 
 	status.flags |= NEED_UPDATE;
 }
 
-void dialog_free_data(struct dialog *this)
+void dialog_free_data(void *data, void *final_data)
 {
-	free(this->data);
+	free(data);
 }
 
 /* --------------------------------------------------------------------- */
@@ -385,6 +423,8 @@ struct dialog *dialog_create(int type, const char *text, action_cb action_yes,
 
 	dialog->text = str_dup(text);
 	dialog->data = data;
+	dialog->final_data = NULL;
+	dialog->finalize = NULL;
 	dialog->action_yes = action_yes;
 	dialog->action_no = action_no;
 	dialog->action_cancel = NULL;        /* ??? */
@@ -428,7 +468,7 @@ struct dialog *dialog_create(int type, const char *text, action_cb action_yes,
 
 struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *dialog_widgets,
 				    int dialog_total_widgets, int dialog_selected_widget,
-				    dialog_cb draw_const, void *data)
+				    dialog_cb draw_const, void *data, dialog_finalize_cb finalize)
 {
 	struct dialog *d = dialogs + num_dialogs;
 	int i;
@@ -442,6 +482,8 @@ struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *d
 	d->context_type = WIDGET_CONTEXT_DIALOG;
 
 	d->type = DIALOG_CUSTOM;
+	d->finalize = finalize;
+	d->final_data = NULL;
 	d->x = x;
 	d->y = y;
 	d->w = w;
@@ -486,6 +528,7 @@ static int numprompt_titlelen; /* used by the number prompt */
 static char numprompt_buf[4];
 static struct widget numprompt_widgets[2];
 static void (*numprompt_finish)(int n);
+static void (*numprompt_finish_with_thumbbar)(struct widget *thumbbar, int n);
 
 /* this is bound to the textentry's activate callback.
 since this dialog might be called from another dialog as well as from a page, it can't use the
@@ -495,23 +538,36 @@ static void numprompt_value(SCHISM_UNUSED struct widget_context *dialog)
 {
 	char *eptr;
 	long n = strtol(numprompt_buf, &eptr, 10);
+	struct dialog *this = widget_context_as_dialog(dialog);
+	struct widget *numprompt_thumbbar = (struct widget *)this->data;
 
 	dialog_destroy();
 	if (eptr > numprompt_buf && eptr[0] == '\0')
-		numprompt_finish(n);
+	{
+		if (numprompt_finish_with_thumbbar)
+			numprompt_finish_with_thumbbar(numprompt_thumbbar, n);
+		else
+			numprompt_finish(n);
+	}
 }
 
 static void numprompt_draw_const(SCHISM_UNUSED struct dialog *this)
 {
-	int wx = numprompt_widgets[0].x;
-	int wy = numprompt_widgets[0].y;
-	int ww = numprompt_widgets[0].width;
+	int wx = this->widgets[0].x;
+	int wy = this->widgets[0].y;
+	int ww = this->widgets[0].width;
 
 	draw_text(numprompt_title, wx - numprompt_titlelen - 1, wy, 3, 2);
 	draw_box(wx - 1, wy - 1, wx + ww, wy + 1, BOX_THICK | BOX_INNER | BOX_INSET);
 }
 
 void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue)
+{
+	numprompt_create_for_thumbbar(prompt, NULL, NULL, initvalue);
+	numprompt_finish = finish;
+}
+
+void numprompt_create_for_thumbbar(const char *prompt, struct widget *thumbbar, void (*finish)(struct widget *thumbbar, int n), char initvalue)
 {
 	int y = 26; // an indisputable fact of life
 	int dlgwidth, dlgx, entryx;
@@ -531,8 +587,8 @@ void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue)
 	widget_create_textentry(numprompt_widgets + 0, entryx, y, 4, 0, 0, 0, NULL, numprompt_buf, 3);
 	numprompt_widgets[0].activate = numprompt_value;
 	numprompt_widgets[0].d.textentry.cursor_pos = initvalue ? 1 : 0;
-	numprompt_finish = finish;
-	dialog_create_custom(dlgx, y - 2, dlgwidth, 5, numprompt_widgets, 1, 0, numprompt_draw_const, NULL);
+	numprompt_finish_with_thumbbar = finish;
+	dialog_create_custom(dlgx, y - 2, dlgwidth, 5, numprompt_widgets, 1, 0, numprompt_draw_const, thumbbar, NULL);
 }
 
 
@@ -561,7 +617,7 @@ static int strtonum99(const char *s)
 	return *s >= '0' && *s <= '9' ? n + *s - '0' : -1;
 }
 
-static void smpprompt_value(SCHISM_UNUSED void *data)
+static void smpprompt_value(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	int n = strtonum99(numprompt_buf);
 	numprompt_finish(n);
@@ -591,6 +647,6 @@ void smpprompt_create(const char *title, const char *prompt, void (*finish)(int 
 	widget_create_textentry(numprompt_widgets + 0, 42, 27, 3, 1, 1, 1, NULL, numprompt_buf, 2);
 	widget_create_button(numprompt_widgets + 1, 36, 30, 6, 0, 0, 1, 1, 1, dialog_cancel, "Cancel", 1);
 	numprompt_finish = finish;
-	dialog = dialog_create_custom(26, 23, 29, 10, numprompt_widgets, 2, 0, smpprompt_draw_const, NULL);
+	dialog = dialog_create_custom(26, 23, 29, 10, numprompt_widgets, 2, 0, smpprompt_draw_const, NULL, NULL);
 	dialog->action_yes = smpprompt_value;
 }
