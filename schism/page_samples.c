@@ -1286,15 +1286,19 @@ static int resample_sample_cursor;
 static void do_resample_sample_aa(SCHISM_UNUSED void *data)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
-	uint32_t newlen = _muldiv(sample->length, resample_sample_widgets[0].d.numentry.value, sample->c5speed);
+	int new_c5_speed = resample_sample_widgets[0].d.numentry.value;
+	uint32_t newlen = _muldiv(sample->length, new_c5_speed, sample->c5speed);
 	sample_resize(sample, newlen, 1);
+	sample->c5speed = new_c5_speed;
 }
 
 static void do_resample_sample(SCHISM_UNUSED void *data)
 {
 	song_sample_t *sample = song_get_sample(current_sample);
-	uint32_t newlen = _muldiv(sample->length, resample_sample_widgets[0].d.numentry.value, sample->c5speed);
+	int new_c5_speed = resample_sample_widgets[0].d.numentry.value;
+	uint32_t newlen = _muldiv(sample->length, new_c5_speed, sample->c5speed);
 	sample_resize(sample, newlen, 0);
+	sample->c5speed = new_c5_speed;
 }
 
 static void resample_sample_draw_const(void)
