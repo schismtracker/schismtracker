@@ -77,37 +77,37 @@ static const int video_menu_bar_group[] = { 16, 17, -1 };
 static int video_group[] = { 11, 12, 13, -1 };
 static int video_renderer_group[] = { 14, 15, -1 };
 
-static void change_mixer_limits(void)
+static void change_mixer_limits(struct widget_context *this)
 {
-	audio_settings.channel_limit = widgets_config[0].d.thumbbar.value;
+	audio_settings.channel_limit = this->widgets[0].d.thumbbar.value;
 
-	audio_settings.sample_rate = widgets_config[1].d.numentry.value;
-	switch (widgets_config[2].d.menutoggle.state) {
+	audio_settings.sample_rate = this->widgets[1].d.numentry.value;
+	switch (this->widgets[2].d.menutoggle.state) {
 	case 0: audio_settings.bits = 8; break;
 	default:
 	case 1: audio_settings.bits = 16; break;
 	case 2: audio_settings.bits = 32; break;
 	}
-	audio_settings.channels = widgets_config[3].d.menutoggle.state+1;
+	audio_settings.channels = this->widgets[3].d.menutoggle.state+1;
 
 	song_init_modplug();
 	status_text_flash(SAVED_AT_EXIT);
 }
-static void change_ui_settings(void)
+static void change_ui_settings(struct widget_context *this)
 {
-	status.vis_style = widgets_config[4].d.menutoggle.state;
-	status.time_display = widgets_config[7].d.menutoggle.state;
-	if (widgets_config[5].d.toggle.state) {
+	status.vis_style = this->widgets[4].d.menutoggle.state;
+	status.time_display = this->widgets[7].d.menutoggle.state;
+	if (this->widgets[5].d.toggle.state) {
 		status.flags |= CLASSIC_MODE;
 	} else {
 		status.flags &= ~CLASSIC_MODE;
 	}
-	kbd_sharp_flat_toggle(widgets_config[6].d.menutoggle.state
+	kbd_sharp_flat_toggle(this->widgets[6].d.menutoggle.state
 		? KBD_SHARP_FLAT_FLATS
 		: KBD_SHARP_FLAT_SHARPS);
 
 	GM_Reset(current_song, 0);
-	if (widgets_config[8].d.toggle.state) {
+	if (this->widgets[8].d.toggle.state) {
 		status.flags |= MIDI_LIKE_TRACKER;
 	} else {
 		status.flags &= ~MIDI_LIKE_TRACKER;
@@ -142,7 +142,7 @@ static void video_mode_cancel(SCHISM_UNUSED void*ign)
 	status.flags |= NEED_UPDATE;
 }
 
-static void video_dialog_draw_const(void)
+static void video_dialog_draw_const(SCHISM_UNUSED struct dialog *ign)
 {
 	char buf[80];
 	time_t now;
@@ -181,9 +181,9 @@ static void video_change_dialog(void)
 	time(&started);
 
 	widget_create_button(video_dialog_widgets+0, 28,28,8, 0, 0, 0, 1, 1,
-					dialog_yes_NULL, "OK", 4);
+					dialog_yes, "OK", 4);
 	widget_create_button(video_dialog_widgets+1, 42,28,8, 1, 1, 0, 1, 0,
-					dialog_cancel_NULL, "Cancel", 2);
+					dialog_cancel, "Cancel", 2);
 	d = dialog_create_custom(20, 17, 40, 14,
 			video_dialog_widgets,
 			2, 1,
@@ -193,7 +193,7 @@ static void video_change_dialog(void)
 	d->action_cancel = video_mode_cancel;
 }
 
-static void change_video_settings(void)
+static void change_video_settings(struct widget_context *this)
 {
 	int new_video_interpolation;
 	int new_fs_flag;
@@ -202,13 +202,13 @@ static void change_video_settings(void)
 	int fs_changed;
 	int hw_changed;
 
-	new_video_interpolation = widgets_config[11].d.togglebutton.state ? VIDEO_INTERPOLATION_NEAREST :
-							  widgets_config[12].d.togglebutton.state ? VIDEO_INTERPOLATION_LINEAR  :
-							  widgets_config[13].d.togglebutton.state ? VIDEO_INTERPOLATION_BEST    :
+	new_video_interpolation = this->widgets[11].d.togglebutton.state ? VIDEO_INTERPOLATION_NEAREST :
+							  this->widgets[12].d.togglebutton.state ? VIDEO_INTERPOLATION_LINEAR  :
+							  this->widgets[13].d.togglebutton.state ? VIDEO_INTERPOLATION_BEST    :
 							  VIDEO_INTERPOLATION_NEAREST;
 
-	new_fs_flag = widgets_config[9].d.togglebutton.state;
-	hw = widgets_config[14].d.togglebutton.state;
+	new_fs_flag = this->widgets[9].d.togglebutton.state;
+	hw = this->widgets[14].d.togglebutton.state;
 
 	interp_changed = (new_video_interpolation != cfg_video_interpolation);
 	fs_changed = (new_fs_flag != video_is_fullscreen());
@@ -230,8 +230,8 @@ static void change_video_settings(void)
 	font_init();
 }
 
-static void change_menu_bar_settings(void) {
-	cfg_video_want_menu_bar = !!widgets_config[16].d.togglebutton.state;
+static void change_menu_bar_settings(struct widget_context *this) {
+	cfg_video_want_menu_bar = !!this->widgets[16].d.togglebutton.state;
 
 	video_toggle_menu(!video_is_fullscreen());
 }

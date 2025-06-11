@@ -28,35 +28,35 @@
 
 void widget_create_toggle(struct widget *w, int x, int y, int next_up,
 		   int next_down, int next_left, int next_right,
-		   int next_tab, void (*changed) (void));
+		   int next_tab, widget_cb changed);
 void widget_create_menutoggle(struct widget *w, int x, int y, int next_up,
 		       int next_down, int next_left, int next_right,
-		       int next_tab, void (*changed) (void),
+		       int next_tab, widget_cb changed,
 		       const char *const *choices);
 void widget_create_button(struct widget *w, int x, int y, int width, int next_up,
 		   int next_down, int next_left, int next_right,
-		   int next_tab, void (*changed) (void), const char *text,
+		   int next_tab, widget_cb changed, const char *text,
 		   int padding);
 void widget_create_togglebutton(struct widget *w, int x, int y, int width,
 			 int next_up, int next_down, int next_left,
 			 int next_right, int next_tab,
-			 void (*changed) (void), const char *text,
+			 widget_cb changed, const char *text,
 			 int padding, const int *group);
 void widget_create_textentry(struct widget *w, int x, int y, int width, int next_up,
-		      int next_down, int next_tab, void (*changed) (void),
+		      int next_down, int next_tab, widget_cb changed,
 		      char *text, int max_length);
 void widget_create_numentry(struct widget *w, int x, int y, int width, int next_up,
-		     int next_down, int next_tab, void (*changed) (void),
+		     int next_down, int next_tab, widget_cb changed,
 		     int min, int max, int *cursor_pos);
 void widget_create_thumbbar(struct widget *w, int x, int y, int width, int next_up,
-		     int next_down, int next_tab, void (*changed) (void),
+		     int next_down, int next_tab, widget_cb changed,
 		     int min, int max);
 void widget_create_bitset(struct widget *w, int x, int y, int width, int next_up,
-		   int next_down, int next_tab, void (*changed) (void),
+		   int next_down, int next_tab, widget_cb changed,
 		   int nbits, const char* bits_on, const char* bits_off,
 		   int *cursor_pos);
 void widget_create_panbar(struct widget *w, int x, int y, int next_up,
-		   int next_down, int next_tab, void (*changed) (void),
+		   int next_down, int next_tab, widget_cb changed,
 		   int channel);
 void widget_create_other(struct widget *w, int next_tab,
 		  int (*w_handle_key) (struct key_event * k),
