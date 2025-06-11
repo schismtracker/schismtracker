@@ -111,14 +111,10 @@ void dialog_destroy(void)
 	num_dialogs--;
 	if (num_dialogs) {
 		d--;
-		widgets = dialogs[d].widgets;
-		selected_widget = &(dialogs[d].selected_widget);
-		total_widgets = &(dialogs[d].total_widgets);
+		widget_context = (struct widget_context *)&dialogs[d];
 		status.dialog_type = dialogs[d].type;
 	} else {
-		widgets = ACTIVE_PAGE.widgets;
-		selected_widget = &(ACTIVE_PAGE.selected_widget);
-		total_widgets = &(ACTIVE_PAGE.total_widgets);
+		widget_context = (struct widget_context *)&ACTIVE_PAGE;
 		status.dialog_type = DIALOG_NONE;
 	}
 
@@ -418,9 +414,7 @@ struct dialog *dialog_create(int type, const char *text, action_cb action_yes,
 	widget_set_context((struct widget_context *)dialog);
 
 	dialog->type = type;
-	widgets = dialog->widgets;
-	selected_widget = &(dialog->selected_widget);
-	total_widgets = &(dialog->total_widgets);
+	widget_context = (struct widget_context *)dialog;
 
 	num_dialogs++;
 
@@ -467,9 +461,7 @@ struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *d
 	widget_set_context((struct widget_context *)d);
 
 	status.dialog_type = DIALOG_CUSTOM;
-	widgets = d->widgets;
-	selected_widget = &(d->selected_widget);
-	total_widgets = &(d->total_widgets);
+	widget_context = (struct widget_context *)d;
 
 	status.flags |= NEED_UPDATE;
 
