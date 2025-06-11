@@ -90,11 +90,12 @@ static int read_sample_ult(struct ult_sample *smp, slurp_t *fp, uint8_t ver)
 	READ_VALUE(flags);
 
 	// annoying: v4 added a field before the end of the struct
+	// (the speed is doubled to fit the note range)
 	if (ver >= 4) {
 		READ_VALUE(speed);
-		smp->speed = bswapLE16(smp->speed);
+		smp->speed = bswapLE16(smp->speed) * 2;
 	} else {
-		smp->speed = 8363;
+		smp->speed = 8363 * 2;
 	}
 
 	READ_VALUE(finetune);
@@ -230,7 +231,7 @@ static int read_ult_event(slurp_t *fp, song_note_t *note, int *lostfx)
 		repeat = slurp_getc(fp);
 		b = slurp_getc(fp);
 	}
-	note->note = (b > 0 && b < 61) ? b + 36 : NOTE_NONE;
+	note->note = (b > 0 && b < 97) ? b + 24 : NOTE_NONE;
 	note->instrument = slurp_getc(fp);
 	b = slurp_getc(fp);
 	note->voleffect = b & 0xf;
