@@ -122,13 +122,13 @@ static int video_revert_interpolation = 0;
 static int video_revert_fs = 0;
 static int video_revert_hw = 0;
 
-static void video_mode_keep(SCHISM_UNUSED void*ign)
+static void video_mode_keep(SCHISM_UNUSED void*ign, SCHISM_UNUSED void *final_data)
 {
 	status_text_flash(SAVED_AT_EXIT);
 	config_set_page();
 	status.flags |= NEED_UPDATE;
 }
-static void video_mode_cancel(SCHISM_UNUSED void*ign)
+static void video_mode_cancel(SCHISM_UNUSED void*ign, SCHISM_UNUSED void *final_data)
 {
 	if (cfg_video_interpolation != video_revert_interpolation)
 		video_setup(video_revert_interpolation);
@@ -154,7 +154,7 @@ static void video_dialog_draw_const(SCHISM_UNUSED struct dialog *ign)
 		status.flags |= NEED_UPDATE;
 		if (countdown == 0) {
 			dialog_destroy();
-			video_mode_cancel(NULL);
+			video_mode_cancel(NULL, NULL);
 			return;
 		}
 	}
@@ -187,7 +187,7 @@ static void video_change_dialog(void)
 	d = dialog_create_custom(20, 17, 40, 14,
 			video_dialog_widgets,
 			2, 1,
-			video_dialog_draw_const, NULL);
+			video_dialog_draw_const, NULL, NULL);
 	d->action_yes = video_mode_keep;
 	d->action_no = video_mode_cancel;
 	d->action_cancel = video_mode_cancel;
