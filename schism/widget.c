@@ -586,13 +586,13 @@ void widget_draw_widget(struct widget *w, int selected)
 
 void widget_change_focus_to(int new_widget_index)
 {
-	if(new_widget_index == *selected_widget || new_widget_index < 0 || new_widget_index >= *total_widgets) {
+	if(new_widget_index == widget_context->selected_widget || new_widget_index < 0 || new_widget_index >= widget_context->total_widgets) {
 		return;
 	}
 
 	if (ACTIVE_WIDGET.depressed) ACTIVE_WIDGET.depressed = 0;
 
-	*selected_widget = new_widget_index;
+	widget_context->selected_widget = new_widget_index;
 
 	ACTIVE_WIDGET.depressed = 0;
 
@@ -608,10 +608,10 @@ static int _find_widget_xy(int x, int y)
 	struct widget *w;
 	int i, pad;
 
-	if (!total_widgets)
+	if (!widget_context)
 		return -1;
-	for (i = 0; i < *total_widgets; i++) {
-		w = widgets + i;
+	for (i = 0; i < widget_context->total_widgets; i++) {
+		w = widget_context->widgets + i;
 		switch (w->type) {
 		case WIDGET_BUTTON:
 			pad = w->d.button.padding + 1;
