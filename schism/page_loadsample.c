@@ -348,7 +348,7 @@ static void _common_set_page(void)
 	fake_slot = KEYJAZZ_NOINST;
 	fake_slot_changed = 0;
 
-	*selected_widget = 0;
+	widget_context->selected_widget = 0;
 	search_pos = -1;
 }
 
