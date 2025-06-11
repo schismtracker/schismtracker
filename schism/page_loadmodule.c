@@ -435,7 +435,7 @@ static void search_update(void)
 
 	/* go through the file/dir list (whatever one is selected) and
 	 * find the first entry matching the text */
-	if (*selected_widget == 0) {
+	if (widget_context->selected_widget == 0) {
 		for (n = 0; n < flist.num_files; n++) {
 			if (charset_strncasecmp(flist.files[n]->base, CHARSET_CHAR,
 					search_text, CHARSET_UCS4, search_text_length) == 0) {
@@ -751,7 +751,7 @@ static int file_list_handle_key(struct key_event * k)
 		}
 	}
 
-	struct widget *w = &widgets[0];
+	struct widget *w = &widget_context->widgets[0];
 
 	if (k->mouse != MOUSE_NONE && !(k->x >= w->x && k->x <= w->x + w->width && k->y >= w->y && k->y <= w->y + w->height))
 		return 0;
@@ -859,7 +859,7 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 					change_dir(dlist.dirs[current_dir]->path);
 
 					if (flist.num_files > 0)
-							*selected_widget = 0;
+							widget_context->selected_widget = 0;
 					status.flags |= NEED_UPDATE;
 					return 1;
 					break;
@@ -908,7 +908,7 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 			change_dir(dlist.dirs[current_dir]->path);
 
 		if (flist.num_files > 0)
-			*selected_widget = 0;
+			widget_context->selected_widget = 0;
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SCHISM_KEYSYM_BACKSPACE:
@@ -994,7 +994,7 @@ static void dirname_entered(SCHISM_UNUSED struct widget_context *this)
 
 	free(out);
 
-	*selected_widget = (flist.num_files > 0) ? 0 : 1;
+	widget_context->selected_widget = (flist.num_files > 0) ? 0 : 1;
 	status.flags |= NEED_UPDATE;
 	/* reset */
 	top_file = current_file = 0;

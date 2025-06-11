@@ -189,7 +189,7 @@ static int palette_list_handle_key_(struct key_event *kk)
 
 static void palette_list_handle_key(struct key_event * k)
 {
-	int n = *selected_widget;
+	int n = widget_context->selected_widget;
 
 	if (k->state == KEY_RELEASE)
 		return;
@@ -227,7 +227,7 @@ static void palette_list_handle_key(struct key_event * k)
 	} else {
 		n = CLAMP(n, 0, 48);
 	}
-	if (n != *selected_widget)
+	if (n != widget_context->selected_widget)
 		widget_change_focus_to(n);
 }
 

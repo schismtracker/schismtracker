@@ -1149,7 +1149,7 @@ static void do_export_sample(SCHISM_UNUSED void *data)
 
 static void export_sample_list_draw(void)
 {
-	int n, focused = (*selected_widget == 3), c;
+	int n, focused = (widget_context->selected_widget == 3), c;
 
 	draw_fill_chars(53, 24, 56, 31, DEFAULT_FG, 0);
 	for (c = 0, n = 0; sample_save_formats[n].label; n++) {
@@ -1654,7 +1654,7 @@ static void sample_list_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_SPACE:
 		if (k->state == KEY_RELEASE)
 			return;
-		if (selected_widget && *selected_widget == 0) {
+		if (widget_context && widget_context->selected_widget == 0) {
 			status.flags |= NEED_UPDATE;
 		}
 		return;
