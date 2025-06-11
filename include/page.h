@@ -190,20 +190,20 @@ struct widget_panbar {
  * through function pointers. :) */
 struct widget_listbox {
 	/* get the size of the listbox */
-	uint32_t (*size)(void);
+	uint32_t (*size)(struct widget_context *this);
 
 	/* get the name of an item */
-	const char *(*name)(uint32_t i);
+	const char *(*name)(struct widget_context *this, uint32_t i);
 
 	/* get whether an item is toggled or not.
 	 * in the scope of the UI, this decides whether
 	 * the item is prefixed with a "*" or not.
 	 * in most cases there should only be ONE of
 	 * these at a time. */
-	int (*toggled)(uint32_t i);
+	int (*toggled)(struct widget_context *this, uint32_t i);
 
 	/* custom key handler, for extra keybinds. :) */
-	int (*handle_key)(struct key_event *k);
+	int (*handle_key)(struct widget_context *this, struct key_event *k);
 
 	struct {
 		/* left & backtab */
@@ -486,8 +486,13 @@ void message_reset_selection(void);
 /* --------------------------------------------------------------------- */
 /* Other UI prompt stuff. */
 
-/* Ask for a value, like the thumbbars. */
+/* XXX The code for these is in dialog.c, should these declarations be in dialog.h? */
+
+/* Ask for a value. */
 void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue);
+
+/* Ask for a value, specifically for thumbbars. */
+void numprompt_create_for_thumbbar(const char *prompt, struct widget *thumbbar, void (*finish)(struct widget *thumbbar, int n), char initvalue);
 
 /* Ask for a sample / instrument number, like the "swap sample" dialog. */
 void smpprompt_create(const char *title, const char *prompt, void (*finish)(int n));
