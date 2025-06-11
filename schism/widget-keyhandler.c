@@ -65,11 +65,11 @@ static void bitset_move_cursor(struct widget *widget, int n)
 /* --------------------------------------------------------------------- */
 /* thumbbar value prompt */
 
-static void thumbbar_prompt_finish(int n)
+static void thumbbar_prompt_finish(struct widget *thumbbar, int n)
 {
-	if (n >= ACTIVE_WIDGET.d.thumbbar.min && n <= ACTIVE_WIDGET.d.thumbbar.max) {
-		ACTIVE_WIDGET.d.thumbbar.value = n;
-		if (ACTIVE_WIDGET.changed) ACTIVE_WIDGET.changed(widget_get_context(&ACTIVE_WIDGET));
+	if (n >= thumbbar->d.thumbbar.min && n <= thumbbar->d.thumbbar.max) {
+		thumbbar->d.thumbbar.value = n;
+		if (thumbbar->changed) thumbbar->changed(widget_get_context(thumbbar));
 	}
 
 	status.flags |= NEED_UPDATE;
@@ -94,7 +94,7 @@ static int thumbbar_prompt_value(struct widget *widget, struct key_event *k)
 		c += '0';
 	}
 
-	numprompt_create("Enter Value", thumbbar_prompt_finish, c);
+	numprompt_create_for_thumbbar("Enter Value", widget, thumbbar_prompt_finish, c);
 
 	return 1;
 }
@@ -385,11 +385,11 @@ static int widget_listbox_handle_key(struct widget *w, struct key_event *k)
 		w->d.listbox.top = top;
 
 		if (w->changed)
-			w->changed();
+			w->changed(widget_get_context(w));
 	}
 
 	if (load_selected_device && w->activate)
-		w->activate();
+		w->activate(widget_get_context(w));
 
 	return 1;
 }
