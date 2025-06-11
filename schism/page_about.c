@@ -106,7 +106,7 @@ static void about_close(SCHISM_UNUSED void *data)
 	status.flags |= NEED_UPDATE;
 }
 
-static void about_draw_const(void)
+static void about_draw_const(SCHISM_UNUSED struct dialog *this)
 {
 	char buf[81];
 
@@ -192,7 +192,7 @@ void show_about(void)
 			33,32,
 			12,
 			0,0,0,0,0,
-			dialog_yes_NULL, "Continue", 3);
+			dialog_yes, "Continue", 3);
 	d = dialog_create_custom(11,16,
 			58, 19,
 			widgets_about, 1, 0,
