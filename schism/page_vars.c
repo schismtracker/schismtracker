@@ -116,7 +116,7 @@ static void update_values_in_song(struct widget_context *this)
 }
 
 
-static void init_instruments(SCHISM_UNUSED void *data)
+static void init_instruments(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	song_init_instruments(-1);
 }
