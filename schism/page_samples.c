@@ -1293,17 +1293,24 @@ static void resize_sample_dialog(int aa)
 static struct widget resample_sample_widgets[2];
 static int resample_sample_cursor;
 
+static void resample_sample_finalize(struct dialog *this, SCHISM_UNUSED dialog_button_t dialog_button)
+{
+	this->final_data = malloc_int(this->widgets[0].d.numentry.value);
+}
+
 static void do_resample_sample_aa(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
+	int new_c5_speed = *(int *)final_data;
 	song_sample_t *sample = song_get_sample(current_sample);
-	uint32_t newlen = _muldiv(sample->length, resample_sample_widgets[0].d.numentry.value, sample->c5speed);
+	uint32_t newlen = _muldiv(sample->length, new_c5_speed, sample->c5speed);
 	sample_resize(sample, newlen, 1);
 }
 
 static void do_resample_sample(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
+	int new_c5_speed = *(int *)final_data;
 	song_sample_t *sample = song_get_sample(current_sample);
-	uint32_t newlen = _muldiv(sample->length, resample_sample_widgets[0].d.numentry.value, sample->c5speed);
+	uint32_t newlen = _muldiv(sample->length, new_c5_speed, sample->c5speed);
 	sample_resize(sample, newlen, 0);
 }
 
@@ -1325,7 +1332,7 @@ static void resample_sample_dialog(int aa)
 	widget_create_button(resample_sample_widgets + 1, 37, 30, 6, 0, 1, 1, 1, 1,
 		dialog_cancel, "Cancel", 1);
 	dialog = dialog_create_custom(26, 22, 28, 11, resample_sample_widgets, 2, 0,
-		resample_sample_draw_const, NULL, NULL);
+		resample_sample_draw_const, NULL, resample_sample_finalize);
 	dialog->action_yes = aa ? do_resample_sample_aa : do_resample_sample;
 }
 
@@ -1349,6 +1356,8 @@ struct crossfade_sample_final_data
 static void crossfade_sample_finalize(struct dialog *this, SCHISM_UNUSED dialog_button_t button)
 {
 	struct crossfade_sample_final_data *final_data;
+
+	final_data = malloc(sizeof(*final_data));
 
 	final_data->fade_length = this->widgets[2].d.numentry.value;
 	final_data->law = this->widgets[3].d.thumbbar.value + 50;
