@@ -69,7 +69,7 @@ static void thumbbar_prompt_finish(int n)
 {
 	if (n >= ACTIVE_WIDGET.d.thumbbar.min && n <= ACTIVE_WIDGET.d.thumbbar.max) {
 		ACTIVE_WIDGET.d.thumbbar.value = n;
-		if (ACTIVE_WIDGET.changed) ACTIVE_WIDGET.changed();
+		if (ACTIVE_WIDGET.changed) ACTIVE_WIDGET.changed(widget_get_context(&ACTIVE_WIDGET));
 	}
 
 	status.flags |= NEED_UPDATE;
@@ -237,7 +237,7 @@ static int widget_menutoggle_handle_key(struct widget *w, struct key_event *k)
 		const char* p = strchr(m, (char)k->sym);
 		if (p && *p) {
 			w->d.menutoggle.state = p - m;
-			if(w->changed) w->changed();
+			if(w->changed) w->changed(widget_get_context(w));
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
@@ -254,7 +254,7 @@ static int widget_bitset_handle_key(struct widget *w, struct key_event *k)
 		if (p && *p) {
 			int bit_index = p-m;
 			w->d.bitset.value ^= (1 << bit_index);
-			if(w->changed) w->changed();
+			if(w->changed) w->changed(widget_get_context(w));
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
@@ -401,7 +401,7 @@ int widget_handle_key(struct key_event * k)
 		return 0;
 
 	int n, onw, wx, fmin, fmax, pad;
-	void (*changed)(void);
+	void (*changed)(struct widget_context *this);
 	enum widget_type current_type = widget->type;
 
 	if (!(status.flags & DISKWRITER_ACTIVE)
@@ -435,7 +435,7 @@ int widget_handle_key(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 1;
 			widget->d.toggle.state = !widget->d.toggle.state;
-			if (widget->changed) widget->changed();
+			if (widget->changed) widget->changed(widget_get_context(widget));
 			status.flags |= NEED_UPDATE;
 			return 1;
 		case WIDGET_MENUTOGGLE:
@@ -445,7 +445,7 @@ int widget_handle_key(struct key_event * k)
 				return 1;
 			widget->d.menutoggle.state = (widget->d.menutoggle.state + 1)
 				% widget->d.menutoggle.num_choices;
-			if (widget->changed) widget->changed();
+			if (widget->changed) widget->changed(widget_get_context(widget));
 			status.flags |= NEED_UPDATE;
 			return 1;
 		default:
@@ -458,7 +458,7 @@ int widget_handle_key(struct key_event * k)
 				return 0;
 			widget->d.panbar.muted = !widget->d.panbar.muted;
 			changed = widget->changed;
-			if (changed) changed();
+			if (changed) changed(widget_get_context(widget));
 			return 1;
 		}
 	}
@@ -549,12 +549,12 @@ int widget_handle_key(struct key_event * k)
 			case WIDGET_MENUTOGGLE:
 			case WIDGET_BUTTON:
 			case WIDGET_TOGGLEBUTTON:
-				if (k->on_target && widget->activate) widget->activate();
+				if (k->on_target && widget->activate) widget->activate(widget_get_context(widget));
 			default:
 				break;
 			};
 		} else if (current_type != WIDGET_OTHER) {
-			if (widget->activate) widget->activate();
+			if (widget->activate) widget->activate(widget_get_context(widget));
 		}
 
 		switch (current_type) {
@@ -611,7 +611,7 @@ int widget_handle_key(struct key_event * k)
 		case WIDGET_BUTTON:
 			/* maybe buttons should ignore the changed callback, and use activate instead...
 			(but still call the changed callback for togglebuttons if they *actually* changed) */
-			if (widget->changed) widget->changed();
+			if (widget->changed) widget->changed(widget_get_context(widget));
 			status.flags |= NEED_UPDATE;
 			return 1;
 		default:
@@ -807,14 +807,14 @@ int widget_handle_key(struct key_event * k)
 		    if (!NO_MODIFIER(k->mod))
 			return 0;
 		    widget->d.bitset.value ^= (1 << *widget->d.bitset.cursor_pos);
-			if (widget->changed) widget->changed();
+			if (widget->changed) widget->changed(widget_get_context(widget));
 		    status.flags |= NEED_UPDATE;
 		    return 1;
 		case WIDGET_TOGGLE:
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			widget->d.toggle.state = !widget->d.toggle.state;
-			if (widget->changed) widget->changed();
+			if (widget->changed) widget->changed(widget_get_context(widget));
 			status.flags |= NEED_UPDATE;
 			return 1;
 		case WIDGET_MENUTOGGLE:
@@ -822,7 +822,7 @@ int widget_handle_key(struct key_event * k)
 				return 0;
 			widget->d.menutoggle.state = (widget->d.menutoggle.state + 1)
 				% widget->d.menutoggle.num_choices;
-			if (widget->changed) widget->changed();
+			if (widget->changed) widget->changed(widget_get_context(widget));
 			status.flags |= NEED_UPDATE;
 			return 1;
 		case WIDGET_PANBAR:
@@ -831,7 +831,7 @@ int widget_handle_key(struct key_event * k)
 			widget->d.panbar.muted = !widget->d.panbar.muted;
 			changed = widget->changed;
 			widget_change_focus_to(widget->next.down);
-			if (changed) changed();
+			if (changed) changed(widget_get_context(widget));
 			return 1;
 		default:
 			break;
@@ -843,7 +843,7 @@ int widget_handle_key(struct key_event * k)
 			if (widget->d.numentry.reverse) {
 				/* woot! */
 				widget->d.numentry.value /= 10;
-				if (widget->changed) widget->changed();
+				if (widget->changed) widget->changed(widget_get_context(widget));
 				status.flags |= NEED_UPDATE;
 				return 1;
 			}
@@ -872,7 +872,7 @@ int widget_handle_key(struct key_event * k)
 						 widget->d.textentry.max_length);
 			}
 		}
-		if (widget->changed) widget->changed();
+		if (widget->changed) widget->changed(widget_get_context(widget));
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SCHISM_KEYSYM_DELETE:
@@ -885,7 +885,7 @@ int widget_handle_key(struct key_event * k)
 		}
 		text_delete_next_char(widget->d.textentry.text,
 				      &(widget->d.textentry.cursor_pos), widget->d.textentry.max_length);
-		if (widget->changed) widget->changed();
+		if (widget->changed) widget->changed(widget_get_context(widget));
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SCHISM_KEYSYM_PLUS:
@@ -953,7 +953,7 @@ int widget_handle_key(struct key_event * k)
 			} else if(NO_MODIFIER(k->mod)) {
 				widget->d.panbar.muted = 0;
 				widget->d.panbar.surround = 1;
-				if (widget->changed) widget->changed();
+				if (widget->changed) widget->changed(widget_get_context(widget));
 				status.flags |= NEED_UPDATE;
 				return 1;
 			}

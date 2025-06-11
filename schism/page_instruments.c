@@ -1247,9 +1247,9 @@ static int _env_node_remove(song_envelope_t *env, int current_node)
 	return current_node;
 }
 
-static void do_pre_loop_cut(void *ign)
+static void do_pre_loop_cut(void *data)
 {
-	song_envelope_t *env = (song_envelope_t *)ign;
+	song_envelope_t *env = (song_envelope_t *)data;
 	unsigned int bt;
 	int i;
 	bt = env->ticks[env->loop_start];
@@ -1281,9 +1281,9 @@ static void do_pre_loop_cut(void *ign)
 	status.flags |= NEED_UPDATE;
 }
 
-static void do_post_loop_cut(void *ign)
+static void do_post_loop_cut(void *data)
 {
-	song_envelope_t *env = (song_envelope_t *)ign;
+	song_envelope_t *env = (song_envelope_t *)data;
 	env->nodes = env->loop_end+1;
 }
 
@@ -1311,7 +1311,7 @@ static void do_env_resize(void *data)
 	env_resize((song_envelope_t *) data, env_resize_widgets[0].d.numentry.value);
 }
 
-static void env_resize_draw_const(void)
+static void env_resize_draw_const(SCHISM_UNUSED struct dialog *this)
 {
 	draw_text("Resize Envelope", 34, 24, 3, 2);
 	draw_text("New Length", 31, 27, 0, 2);
@@ -1325,7 +1325,7 @@ static void env_resize_dialog(song_envelope_t *env)
 	env_resize_cursor = 0;
 	widget_create_numentry(env_resize_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999, &env_resize_cursor);
 	env_resize_widgets[0].d.numentry.value = env->ticks[env->nodes - 1];
-	widget_create_button(env_resize_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_button(env_resize_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1, dialog_cancel, "Cancel", 1);
 	dialog = dialog_create_custom(26, 22, 29, 11, env_resize_widgets, 2, 0, env_resize_draw_const, env);
 	dialog->action_yes = do_env_resize;
 }
@@ -1370,7 +1370,7 @@ static void do_env_adsr(void *data)
 	ins->flags |= ENV_VOLSUSTAIN | ENV_VOLUME; // arghhhhh
 }
 
-static void env_adsr_draw_const(void)
+static void env_adsr_draw_const(SCHISM_UNUSED struct dialog *this)
 {
 	draw_text("Envelope Generator", 32, 22, 0, 2);
 	draw_text("Attack", 27, 24, 0, 2);
@@ -1391,7 +1391,7 @@ static void env_adsr_dialog(SCHISM_UNUSED song_envelope_t *env)
 	widget_create_thumbbar(env_adsr_widgets + 1, 34, 25, 17, 0, 2, 4, NULL, 0, 128);
 	widget_create_thumbbar(env_adsr_widgets + 2, 34, 26, 17, 1, 3, 4, NULL, 0, 128);
 	widget_create_thumbbar(env_adsr_widgets + 3, 34, 27, 17, 2, 4, 4, NULL, 0, 128);
-	widget_create_button(env_adsr_widgets + 4, 36, 30, 6, 3, 0, 4, 4, 0, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_button(env_adsr_widgets + 4, 36, 30, 6, 3, 0, 4, 4, 0, dialog_cancel, "Cancel", 1);
 
 	dialog = dialog_create_custom(25, 21, 31, 12, env_adsr_widgets, 5, 0, env_adsr_draw_const, ins);
 	dialog->action_yes = do_env_adsr;
@@ -2131,7 +2131,7 @@ static int export_instrument_list_handle_key(struct key_event * k)
 	return 1;
 }
 
-static void export_instrument_draw_const(void)
+static void export_instrument_draw_const(SCHISM_UNUSED struct dialog *this)
 {
 	draw_text("Export Instrument", 34, 21, 0, 2);
 
@@ -2148,8 +2148,8 @@ static void export_instrument_dialog(void)
 
 	widget_create_textentry(export_instrument_widgets + 0, 33, 24, 18, 0, 1, 3, NULL,
 			 export_instrument_filename, ARRAY_SIZE(export_instrument_filename) - 1);
-	widget_create_button(export_instrument_widgets + 1, 31, 35, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
-	widget_create_button(export_instrument_widgets + 2, 42, 35, 6, 3, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_button(export_instrument_widgets + 1, 31, 35, 6, 0, 1, 2, 2, 2, dialog_yes, "OK", 3);
+	widget_create_button(export_instrument_widgets + 2, 42, 35, 6, 3, 2, 1, 1, 1, dialog_cancel, "Cancel", 1);
 	widget_create_other(export_instrument_widgets + 3, 0, export_instrument_list_handle_key, NULL, export_instrument_list_draw);
 
 	strncpy(export_instrument_filename, instrument->filename, ARRAY_SIZE(export_instrument_filename) - 1);
@@ -2357,9 +2357,9 @@ static void set_subpage(int page)
 	status.flags |= NEED_UPDATE;
 }
 
-static void change_subpage(void)
+static void change_subpage(SCHISM_UNUSED struct widget_context *this)
 {
-	int widget = ACTIVE_PAGE.selected_widget;
+	int widget = this->selected_widget;
 	int p[] = {
 		PAGE_INSTRUMENT_LIST_GENERAL,
 		PAGE_INSTRUMENT_LIST_VOLUME,
@@ -2494,141 +2494,141 @@ static void instrument_list_pitch_predraw_hook(void)
 /* --------------------------------------------------------------------- */
 /* update values in song */
 
-static void instrument_list_general_update_values(void)
+static void instrument_list_general_update_values(struct widget_context *this)
 {
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 
 	status.flags |= SONG_NEEDS_SAVE;
 	for (ins->nna = 4; ins->nna--;)
-		if (widgets_general[ins->nna + 6].d.togglebutton.state)
+		if (this->widgets[ins->nna + 6].d.togglebutton.state)
 			break;
 	for (ins->dct = 4; ins->dct--;)
-		if (widgets_general[ins->dct + 10].d.togglebutton.state)
+		if (this->widgets[ins->dct + 10].d.togglebutton.state)
 			break;
 	for (ins->dca = 3; ins->dca--;)
-		if (widgets_general[ins->dca + 14].d.togglebutton.state)
+		if (this->widgets[ins->dca + 14].d.togglebutton.state)
 			break;
 }
 
-static void update_filename(void)
+static void update_filename(SCHISM_UNUSED struct widget_context *this)
 {
 	status.flags |= SONG_NEEDS_SAVE;
 }
 
 #define CHECK_SET(a,b,c) if (a != b) { a = b; c; }
 
-static void instrument_list_volume_update_values(void)
+static void instrument_list_volume_update_values(struct widget_context *this)
 {
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 
 	status.flags |= SONG_NEEDS_SAVE;
 	ins->flags &= ~(ENV_VOLUME | ENV_VOLCARRY | ENV_VOLLOOP | ENV_VOLSUSTAIN);
-	if (widgets_volume[6].d.toggle.state)
+	if (this->widgets[6].d.toggle.state)
 		ins->flags |= ENV_VOLUME;
-	if (widgets_volume[7].d.toggle.state)
+	if (this->widgets[7].d.toggle.state)
 		ins->flags |= ENV_VOLCARRY;
-	if (widgets_volume[8].d.toggle.state)
+	if (this->widgets[8].d.toggle.state)
 		ins->flags |= ENV_VOLLOOP;
-	if (widgets_volume[11].d.toggle.state)
+	if (this->widgets[11].d.toggle.state)
 		ins->flags |= ENV_VOLSUSTAIN;
 
-	CHECK_SET(ins->vol_env.loop_start, widgets_volume[9].d.numentry.value,
+	CHECK_SET(ins->vol_env.loop_start, this->widgets[9].d.numentry.value,
 		  ins->flags |= ENV_VOLLOOP);
-	CHECK_SET(ins->vol_env.loop_end, widgets_volume[10].d.numentry.value,
+	CHECK_SET(ins->vol_env.loop_end, this->widgets[10].d.numentry.value,
 		  ins->flags |= ENV_VOLLOOP);
-	CHECK_SET(ins->vol_env.sustain_start, widgets_volume[12].d.numentry.value,
+	CHECK_SET(ins->vol_env.sustain_start, this->widgets[12].d.numentry.value,
 		  ins->flags |= ENV_VOLSUSTAIN);
-	CHECK_SET(ins->vol_env.sustain_end, widgets_volume[13].d.numentry.value,
+	CHECK_SET(ins->vol_env.sustain_end, this->widgets[13].d.numentry.value,
 		  ins->flags |= ENV_VOLSUSTAIN);
 
 	/* more ugly shifts */
-	ins->global_volume = widgets_volume[14].d.thumbbar.value;
-	ins->fadeout = widgets_volume[15].d.thumbbar.value << 5;
-	ins->vol_swing = widgets_volume[16].d.thumbbar.value;
+	ins->global_volume = this->widgets[14].d.thumbbar.value;
+	ins->fadeout = this->widgets[15].d.thumbbar.value << 5;
+	ins->vol_swing = this->widgets[16].d.thumbbar.value;
 
 	song_update_playing_instrument(current_instrument);
 }
 
-static void instrument_list_panning_update_values(void)
+static void instrument_list_panning_update_values(struct widget_context *this)
 {
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 	int n;
 
 	status.flags |= SONG_NEEDS_SAVE;
 	ins->flags &= ~(ENV_PANNING | ENV_PANCARRY | ENV_PANLOOP | ENV_PANSUSTAIN | ENV_SETPANNING);
-	if (widgets_panning[6].d.toggle.state)
+	if (this->widgets[6].d.toggle.state)
 		ins->flags |= ENV_PANNING;
-	if (widgets_panning[7].d.toggle.state)
+	if (this->widgets[7].d.toggle.state)
 		ins->flags |= ENV_PANCARRY;
-	if (widgets_panning[8].d.toggle.state)
+	if (this->widgets[8].d.toggle.state)
 		ins->flags |= ENV_PANLOOP;
-	if (widgets_panning[11].d.toggle.state)
+	if (this->widgets[11].d.toggle.state)
 		ins->flags |= ENV_PANSUSTAIN;
-	if (widgets_panning[14].d.toggle.state)
+	if (this->widgets[14].d.toggle.state)
 		ins->flags |= ENV_SETPANNING;
 
-	CHECK_SET(ins->pan_env.loop_start, widgets_panning[9].d.numentry.value,
+	CHECK_SET(ins->pan_env.loop_start, this->widgets[9].d.numentry.value,
 		  ins->flags |= ENV_PANLOOP);
-	CHECK_SET(ins->pan_env.loop_end, widgets_panning[10].d.numentry.value,
+	CHECK_SET(ins->pan_env.loop_end, this->widgets[10].d.numentry.value,
 		  ins->flags |= ENV_PANLOOP);
-	CHECK_SET(ins->pan_env.sustain_start, widgets_panning[12].d.numentry.value,
+	CHECK_SET(ins->pan_env.sustain_start, this->widgets[12].d.numentry.value,
 		  ins->flags |= ENV_PANSUSTAIN);
-	CHECK_SET(ins->pan_env.sustain_end, widgets_panning[13].d.numentry.value,
+	CHECK_SET(ins->pan_env.sustain_end, this->widgets[13].d.numentry.value,
 		  ins->flags |= ENV_PANSUSTAIN);
 
-	n = widgets_panning[15].d.thumbbar.value << 2;
+	n = this->widgets[15].d.thumbbar.value << 2;
 	if (ins->panning != (unsigned int)n) {
 		ins->panning = (unsigned int)n;
 		ins->flags |= ENV_SETPANNING;
 	}
-	/* (widgets_panning[16] is the pitch-pan center) */
-	ins->pitch_pan_separation = widgets_panning[17].d.thumbbar.value;
-	ins->pan_swing = widgets_panning[18].d.thumbbar.value;
+	/* (widgets[16] is the pitch-pan center) */
+	ins->pitch_pan_separation = this->widgets[17].d.thumbbar.value;
+	ins->pan_swing = this->widgets[18].d.thumbbar.value;
 
 	song_update_playing_instrument(current_instrument);
 }
 
-static void instrument_list_pitch_update_values(void)
+static void instrument_list_pitch_update_values(struct widget_context *this)
 {
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 
 	status.flags |= SONG_NEEDS_SAVE;
 	ins->flags &= ~(ENV_PITCH | ENV_PITCHCARRY | ENV_PITCHLOOP | ENV_PITCHSUSTAIN | ENV_FILTER);
 
-	switch (widgets_pitch[6].d.menutoggle.state) {
+	switch (this->widgets[6].d.menutoggle.state) {
 	case 2: ins->flags |= ENV_FILTER; SCHISM_FALLTHROUGH;
 	case 1: ins->flags |= ENV_PITCH; break;
 	}
 
-	if (widgets_pitch[7].d.toggle.state)
+	if (this->widgets[7].d.toggle.state)
 		ins->flags |= ENV_PITCHCARRY;
-	if (widgets_pitch[8].d.toggle.state)
+	if (this->widgets[8].d.toggle.state)
 		ins->flags |= ENV_PITCHLOOP;
-	if (widgets_pitch[11].d.toggle.state)
+	if (this->widgets[11].d.toggle.state)
 		ins->flags |= ENV_PITCHSUSTAIN;
 
-	CHECK_SET(ins->pitch_env.loop_start, widgets_pitch[9].d.numentry.value,
+	CHECK_SET(ins->pitch_env.loop_start, this->widgets[9].d.numentry.value,
 		  ins->flags |= ENV_PITCHLOOP);
-	CHECK_SET(ins->pitch_env.loop_end, widgets_pitch[10].d.numentry.value,
+	CHECK_SET(ins->pitch_env.loop_end, this->widgets[10].d.numentry.value,
 		  ins->flags |= ENV_PITCHLOOP);
-	CHECK_SET(ins->pitch_env.sustain_start, widgets_pitch[12].d.numentry.value,
+	CHECK_SET(ins->pitch_env.sustain_start, this->widgets[12].d.numentry.value,
 		  ins->flags |= ENV_PITCHSUSTAIN);
-	CHECK_SET(ins->pitch_env.sustain_end, widgets_pitch[13].d.numentry.value,
+	CHECK_SET(ins->pitch_env.sustain_end, this->widgets[13].d.numentry.value,
 		  ins->flags |= ENV_PITCHSUSTAIN);
-	if (widgets_pitch[14].d.thumbbar.value > -1) {
-		ins->ifc = widgets_pitch[14].d.thumbbar.value | 0x80;
+	if (this->widgets[14].d.thumbbar.value > -1) {
+		ins->ifc = this->widgets[14].d.thumbbar.value | 0x80;
 	} else {
 		ins->ifc = 0x7f;
 	}
-	if (widgets_pitch[15].d.thumbbar.value > -1) {
-		ins->ifr = widgets_pitch[15].d.thumbbar.value | 0x80;
+	if (this->widgets[15].d.thumbbar.value > -1) {
+		ins->ifr = this->widgets[15].d.thumbbar.value | 0x80;
 	} else {
 		ins->ifr = 0x7f;
 	}
-	ins->midi_channel_mask = widgets_pitch[16].d.bitset.value;
-	ins->midi_program = widgets_pitch[17].d.thumbbar.value;
-	ins->midi_bank = ((widgets_pitch[19].d.thumbbar.value << 8)
-			  | (widgets_pitch[18].d.thumbbar.value & 0xff));
+	ins->midi_channel_mask = this->widgets[16].d.bitset.value;
+	ins->midi_program = this->widgets[17].d.thumbbar.value;
+	ins->midi_bank = ((this->widgets[19].d.thumbbar.value << 8)
+			  | (this->widgets[18].d.thumbbar.value & 0xff));
 
 	song_update_playing_instrument(current_instrument);
 }
