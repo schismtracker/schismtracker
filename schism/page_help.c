@@ -142,7 +142,7 @@ static void help_redraw(void)
 
 /* --------------------------------------------------------------------- */
 
-static void _help_close(void)
+static void _help_close(SCHISM_UNUSED struct widget_context *this)
 {
 	set_page(status.previous_page);
 }
