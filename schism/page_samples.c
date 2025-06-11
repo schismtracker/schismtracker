@@ -727,7 +727,7 @@ static void do_amplify(SCHISM_UNUSED void *data)
 	sample_amplify(song_get_sample(current_sample), sample_amplify_widgets[0].d.thumbbar.value);
 }
 
-static void sample_amplify_draw_const(void)
+static void sample_amplify_draw_const(SCHISM_UNUSED struct dialog *this)
 {
 	draw_text("Sample Amplification %", 29, 27, 0, 2);
 	draw_box(12, 29, 64, 31, BOX_THIN | BOX_INNER | BOX_INSET);
@@ -742,8 +742,8 @@ static void sample_amplify_dialog(void)
 
 	widget_create_thumbbar(sample_amplify_widgets + 0, 13, 30, 51, 0, 1, 1, NULL, 0, 400);
 	sample_amplify_widgets[0].d.thumbbar.value = percent;
-	widget_create_button(sample_amplify_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
-	widget_create_button(sample_amplify_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_button(sample_amplify_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes, "OK", 3);
+	widget_create_button(sample_amplify_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel, "Cancel", 1);
 
 	dialog = dialog_create_custom(9, 25, 61, 11, sample_amplify_widgets,
 				      3, 0, sample_amplify_draw_const, NULL);
@@ -779,7 +779,7 @@ static void do_txtsynth(SCHISM_UNUSED void *data)
 	status.flags |= SONG_NEEDS_SAVE;
 }
 
-static void txtsynth_draw_const(void)
+static void txtsynth_draw_const(SCHISM_UNUSED struct dialog *this)
 {
 	draw_text("Enter a text string (e.g. ABCDCB for a triangle-wave)", 13, 27, 0, 2);
 	draw_box(12, 29, 66, 31, BOX_THIN | BOX_INNER | BOX_INSET);
@@ -793,8 +793,8 @@ static void txtsynth_dialog(void)
 
 	txtsynth_entry[0] = 0;
 	widget_create_textentry(txtsynth_widgets + 0, 13, 30, 53, 0, 1, 1, NULL, txtsynth_entry, 65535);
-	widget_create_button(txtsynth_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
-	widget_create_button(txtsynth_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_button(txtsynth_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes, "OK", 3);
+	widget_create_button(txtsynth_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel, "Cancel", 1);
 
 	dialog = dialog_create_custom(9, 25, 61, 11, txtsynth_widgets, 3, 0, txtsynth_draw_const, NULL);
 	dialog->action_yes = do_txtsynth;
@@ -874,7 +874,7 @@ static void do_adlibconfig(SCHISM_UNUSED void *data)
 	status.flags |= SONG_NEEDS_SAVE;
 }
 
-static void adlibconfig_refresh(void)
+static void adlibconfig_refresh(SCHISM_UNUSED struct widget_context *this)
 {
 	size_t a;
 	song_sample_t *sample = song_get_sample(current_sample);
@@ -905,7 +905,7 @@ static void adlibconfig_refresh(void)
 	}
 }
 
-static void sample_adlibconfig_draw_const(void)
+static void sample_adlibconfig_draw_const(SCHISM_UNUSED struct dialog *this)
 {
 	struct {
 		int x, y;
@@ -947,7 +947,7 @@ static void sample_adlibconfig_draw_const(void)
 		draw_text(labels[a].label, labels[a].x, labels[a].y + 30, a ? 0 : 3, 2);
 }
 
-static int do_adlib_handlekey(struct key_event *kk)
+static int do_adlib_handlekey(struct dialog *this, struct key_event *kk)
 {
 	if (kk->sym == SCHISM_KEYSYM_F1) {
 		if (kk->state == KEY_PRESS)
@@ -1223,7 +1223,7 @@ static int export_sample_list_handle_key(struct key_event * k)
 	return 1;
 }
 
-static void export_sample_draw_const(void)
+static void export_sample_draw_const(SCHISM_UNUSED struct dialog *this)
 {
 	draw_text("Export Sample", 34, 21, 0, 2);
 
@@ -1240,8 +1240,8 @@ static void export_sample_dialog(void)
 
 	widget_create_textentry(export_sample_widgets + 0, 33, 24, 18, 0, 1, 3, NULL,
 			 export_sample_filename, ARRAY_SIZE(export_sample_filename) - 1);
-	widget_create_button(export_sample_widgets + 1, 31, 35, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
-	widget_create_button(export_sample_widgets + 2, 42, 35, 6, 3, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_button(export_sample_widgets + 1, 31, 35, 6, 0, 1, 2, 2, 2, dialog_yes, "OK", 3);
+	widget_create_button(export_sample_widgets + 2, 42, 35, 6, 3, 2, 1, 1, 1, dialog_cancel, "Cancel", 1);
 	widget_create_other(export_sample_widgets + 3, 0, export_sample_list_handle_key, NULL, export_sample_list_draw);
 
 	strncpy(export_sample_filename, sample->filename, ARRAY_SIZE(export_sample_filename) - 1);
@@ -1271,7 +1271,7 @@ static void do_resize_sample(SCHISM_UNUSED void *data)
 	sample_resize(sample, newlen, 0);
 }
 
-static void resize_sample_draw_const(void)
+static void resize_sample_draw_const(SCHISM_UNUSED struct dialog *this)
 {
 	draw_text("Resize Sample", 34, 24, 3, 2);
 	draw_text("New Length", 31, 27, 0, 2);
@@ -1287,7 +1287,7 @@ static void resize_sample_dialog(int aa)
 	widget_create_numentry(resize_sample_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999999, &resize_sample_cursor);
 	resize_sample_widgets[0].d.numentry.value = sample->length;
 	widget_create_button(resize_sample_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1,
-		dialog_cancel_NULL, "Cancel", 1);
+		dialog_cancel, "Cancel", 1);
 	dialog = dialog_create_custom(26, 22, 29, 11, resize_sample_widgets, 2, 0,
 		resize_sample_draw_const, NULL);
 	dialog->action_yes = aa ? do_resize_sample_aa : do_resize_sample;
@@ -1315,7 +1315,7 @@ static void do_resample_sample(SCHISM_UNUSED void *data)
 	sample->c5speed = new_c5_speed;
 }
 
-static void resample_sample_draw_const(void)
+static void resample_sample_draw_const(SCHISM_UNUSED struct dialog *this)
 {
 	draw_text("Resample Sample", 33, 24, 3, 2);
 	draw_text("New Sample Rate", 28, 27, 0, 2);
@@ -1331,7 +1331,7 @@ static void resample_sample_dialog(int aa)
 	widget_create_numentry(resample_sample_widgets + 0, 44, 27, 7, 0, 1, 1, NULL, 0, 9999999, &resample_sample_cursor);
 	resample_sample_widgets[0].d.numentry.value = sample->c5speed;
 	widget_create_button(resample_sample_widgets + 1, 37, 30, 6, 0, 1, 1, 1, 1,
-		dialog_cancel_NULL, "Cancel", 1);
+		dialog_cancel, "Cancel", 1);
 	dialog = dialog_create_custom(26, 22, 28, 11, resample_sample_widgets, 2, 0,
 		resample_sample_draw_const, NULL);
 	dialog->action_yes = aa ? do_resample_sample_aa : do_resample_sample;
@@ -1354,7 +1354,7 @@ static void do_crossfade_sample(SCHISM_UNUSED void *data)
 	sample_crossfade(smp, crossfade_sample_widgets[2].d.numentry.value, crossfade_sample_widgets[3].d.thumbbar.value + 50, 0, crossfade_sample_widgets[1].d.togglebutton.state);
 }
 
-static void crossfade_sample_draw_const(void)
+static void crossfade_sample_draw_const(SCHISM_UNUSED struct dialog *this)
 {
 	draw_text("Crossfade Sample", 32, 22, 3, 2);
 	draw_text("Samples To Fade", 28, 27, 0, 2);
@@ -1366,19 +1366,19 @@ static void crossfade_sample_draw_const(void)
 }
 
 // regenerate the sample loop widget based on loop/susloop data
-static void crossfade_sample_loop_changed(void)
+static void crossfade_sample_loop_changed(struct widget_context *this)
 {
 	song_sample_t *smp = song_get_sample(current_sample);
 
-	const int sustain = crossfade_sample_widgets[1].d.togglebutton.state;
+	const int sustain = this->widgets[1].d.togglebutton.state;
 
 	const uint32_t loop_start = (sustain) ? smp->sustain_start : smp->loop_start;
 	const uint32_t loop_end = (sustain) ? smp->sustain_end : smp->loop_end;
 
 	const uint32_t max = MIN(loop_end - loop_start, loop_start);
 
-	widget_create_numentry(crossfade_sample_widgets + 2, 45, 27, 7, 0, 3, 3, NULL, 0, max, &crossfade_sample_length_cursor);
-	crossfade_sample_widgets[2].d.numentry.value = max;
+	widget_create_numentry(this->widgets + 2, 45, 27, 7, 0, 3, 3, NULL, 0, max, &crossfade_sample_length_cursor);
+	this->widgets[2].d.numentry.value = max;
 }
 
 static void crossfade_sample_dialog(void)
@@ -1394,20 +1394,20 @@ static void crossfade_sample_dialog(void)
 	// Default to sustain loop if there is a sustain loop but no regular loop, or the regular loop is not valid
 	crossfade_sample_widgets[((smp->flags & CHN_SUSTAINLOOP) && !((smp->flags & CHN_LOOP) && smp->loop_start && smp->loop_end)) ? 1 : 0].d.togglebutton.state = 1;
 
-	// Samples To Fade; handled in other function to account for differences between
-	// sample loop and sustain loop
-	crossfade_sample_loop_changed();
-
 	// Priority
 	widget_create_thumbbar(crossfade_sample_widgets + 3, 28, 31, 20, 2, 4, 4, NULL, -50, 50);
 	crossfade_sample_widgets[3].d.thumbbar.value = 0;
 
 	// Cancel/OK
-	widget_create_button(crossfade_sample_widgets + 4, 31, 34, 6, 3, 4, 5, 5, 5, dialog_cancel_NULL, "Cancel", 1);
-	widget_create_button(crossfade_sample_widgets + 5, 41, 34, 6, 3, 5, 4, 4, 0, dialog_yes_NULL, "OK", 3);
+	widget_create_button(crossfade_sample_widgets + 4, 31, 34, 6, 3, 4, 5, 5, 5, dialog_cancel, "Cancel", 1);
+	widget_create_button(crossfade_sample_widgets + 5, 41, 34, 6, 3, 5, 4, 4, 0, dialog_yes, "OK", 3);
 
 	dialog = dialog_create_custom(26, 20, 28, 17, crossfade_sample_widgets, 6, 0, crossfade_sample_draw_const, NULL);
 	dialog->action_yes = do_crossfade_sample;
+
+	// Samples To Fade; handled in other function to account for differences between
+	// sample loop and sustain loop
+	crossfade_sample_loop_changed((struct widget_context *)dialog);
 }
 
 /* --------------------------------------------------------------------- */
@@ -1581,7 +1581,7 @@ static void sample_list_handle_alt_key(struct key_event * k)
 		return;
 	case SCHISM_KEYSYM_z:
 		{ // uguu~
-			void (*dlg)(void *) = (k->mod & SCHISM_KEYMOD_SHIFT)
+			action_cb dlg = (k->mod & SCHISM_KEYMOD_SHIFT)
 				? sample_adlibpatch_dialog
 				: sample_adlibconfig_dialog;
 			if (canmod) {
@@ -1781,7 +1781,7 @@ static void sample_list_draw_const(void)
 /* wow. this got ugly. */
 
 /* callback for the loop menu toggles */
-static void update_sample_loop_flags(void)
+static void update_sample_loop_flags(struct widget_context *this)
 {
 	song_sample_t *sample;
 
@@ -1791,12 +1791,12 @@ static void update_sample_loop_flags(void)
 
 	/* these switch statements fall through */
 	sample->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP | CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
-	switch (widgets_samplelist[9].d.menutoggle.state) {
+	switch (this->widgets[9].d.menutoggle.state) {
 	case 2: sample->flags |= CHN_PINGPONGLOOP; SCHISM_FALLTHROUGH;
 	case 1: sample->flags |= CHN_LOOP;
 	}
 
-	switch (widgets_samplelist[12].d.menutoggle.state) {
+	switch (this->widgets[12].d.menutoggle.state) {
 	case 2: sample->flags |= CHN_PINGPONGSUSTAIN; SCHISM_FALLTHROUGH;
 	case 1: sample->flags |= CHN_SUSTAINLOOP;
 	}
@@ -1850,7 +1850,7 @@ void update_sample_loop_points_impl(uint32_t *loop_start, uint32_t *loop_end,
 }
 
 /* callback for the loop numentries */
-static void update_sample_loop_points(void)
+static void update_sample_loop_points(struct widget_context *this)
 {
 	song_sample_t *sample;
 	int flags_changed = 0;
@@ -1861,15 +1861,15 @@ static void update_sample_loop_points(void)
 
 	update_sample_loop_points_impl(&sample->loop_start,
 		&sample->loop_end,
-		&widgets_samplelist[9].d.menutoggle.state,
-		&widgets_samplelist[10].d.numentry.value,
-		&widgets_samplelist[11].d.numentry.value,
+		&this->widgets[9].d.menutoggle.state,
+		&this->widgets[10].d.numentry.value,
+		&this->widgets[11].d.numentry.value,
 		&flags_changed, sample->length);
 	update_sample_loop_points_impl(&sample->sustain_start,
 		&sample->sustain_end,
-		&widgets_samplelist[12].d.menutoggle.state,
-		&widgets_samplelist[13].d.numentry.value,
-		&widgets_samplelist[14].d.numentry.value,
+		&this->widgets[12].d.menutoggle.state,
+		&this->widgets[13].d.numentry.value,
+		&this->widgets[14].d.numentry.value,
 		&flags_changed, sample->length);
 
 	if (flags_changed)
@@ -1884,7 +1884,7 @@ static void update_sample_loop_points(void)
 
 /* --------------------------------------------------------------------- */
 
-static void update_values_in_song(void)
+static void update_values_in_song(struct widget_context *this)
 {
 	song_sample_t *sample;
 
@@ -1893,30 +1893,30 @@ static void update_values_in_song(void)
 	sample = song_get_sample(current_sample);
 
 	/* a few more modplug hacks here... */
-	sample->volume = widgets_samplelist[1].d.thumbbar.value * 4;
-	sample->global_volume = widgets_samplelist[2].d.thumbbar.value;
+	sample->volume = this->widgets[1].d.thumbbar.value * 4;
+	sample->global_volume = this->widgets[2].d.thumbbar.value;
 
-	if (widgets_samplelist[3].d.toggle.state)
+	if (this->widgets[3].d.toggle.state)
 		sample->flags |= CHN_PANNING;
 	else
 		sample->flags &= ~CHN_PANNING;
-	sample->vib_speed = widgets_samplelist[5].d.thumbbar.value;
-	sample->vib_depth = widgets_samplelist[6].d.thumbbar.value;
+	sample->vib_speed = this->widgets[5].d.thumbbar.value;
+	sample->vib_depth = this->widgets[6].d.thumbbar.value;
 
 	sample->vib_type =
-		(widgets_samplelist[15].d.togglebutton.state) ? VIB_SINE
-		: (widgets_samplelist[16].d.togglebutton.state) ? VIB_RAMP_DOWN
-		: (widgets_samplelist[17].d.togglebutton.state) ? VIB_SQUARE
+		(this->widgets[15].d.togglebutton.state) ? VIB_SINE
+		: (this->widgets[16].d.togglebutton.state) ? VIB_RAMP_DOWN
+		: (this->widgets[17].d.togglebutton.state) ? VIB_SQUARE
 		: VIB_RANDOM;
 
-	sample->vib_rate = widgets_samplelist[19].d.thumbbar.value;
+	sample->vib_rate = this->widgets[19].d.thumbbar.value;
 
 	song_unlock_audio();
 
 	status.flags |= SONG_NEEDS_SAVE;
 }
 
-static void update_sample_speed(void)
+static void update_sample_speed(struct widget_context *this)
 {
 	song_sample_t *sample;
 
@@ -1924,14 +1924,14 @@ static void update_sample_speed(void)
 
 	song_lock_audio();
 
-	sample->c5speed = widgets_samplelist[8].d.numentry.value;
+	sample->c5speed = this->widgets[8].d.numentry.value;
 
 	song_unlock_audio();
 
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
-static void update_panning(void)
+static void update_panning(struct widget_context *this)
 {
 	song_sample_t *sample;
 
@@ -1940,16 +1940,16 @@ static void update_panning(void)
 	sample = song_get_sample(current_sample);
 
 	sample->flags |= CHN_PANNING;
-	sample->panning = widgets_samplelist[4].d.thumbbar.value * 4;
+	sample->panning = this->widgets[4].d.thumbbar.value * 4;
 
 	song_unlock_audio();
 
-	widgets_samplelist[3].d.toggle.state = 1;
+	this->widgets[3].d.toggle.state = 1;
 
 	status.flags |= SONG_NEEDS_SAVE;
 }
 
-static void update_filename(void)
+static void update_filename(SCHISM_UNUSED struct widget_context *this)
 {
 	status.flags |= SONG_NEEDS_SAVE;
 }

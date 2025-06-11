@@ -28,6 +28,8 @@
 #ifndef SCHISM_PAGE_H_
 #define SCHISM_PAGE_H_
 
+#include "widget_context.h"
+
 /* How much to scroll. */
 #define MOUSE_SCROLL_LINES       3
 
@@ -267,10 +269,13 @@ struct widget {
 	} next;
 
 	/* called whenever the value is changed... duh ;) */
-	void (*changed) (void);
+	void (*changed) (struct widget_context *this);
 
 	/* called when the enter key is pressed */
-	void (*activate) (void);
+	void (*activate) (struct widget_context *this);
+
+	/* the context this widget is participating in (page, dialog) */
+	struct widget_context *this;
 
 	/* called by the clipboard manager; really, only "other" widgets
 	should "override" this... */
@@ -289,6 +294,14 @@ struct widget {
  * everything in this struct MUST be set for each page.
  * functions that aren't implemented should be set to NULL. */
 struct page {
+	/************************************/
+	/* must match struct widget_context */
+	enum widget_context_type context_type;
+	struct widget *widgets;
+	int selected_widget;
+	int total_widgets;
+	/************************************/
+
 	/* the title of the page, eg "Sample List (F3)" */
 	const char *title;
 
@@ -323,10 +336,6 @@ struct page {
 	/* called by the clipboard manager */
 	int (*clipboard_paste)(int cb, const void *cptr);
 
-	struct widget *widgets;
-	int selected_widget;
-	int total_widgets;
-
 	/* 0 if no page-specific help */
 	int help_index;
 };
@@ -350,6 +359,9 @@ extern int *total_widgets;
 #define ACTIVE_PAGE        (pages[status.current_page])
 #define ACTIVE_WIDGET      (widgets[*selected_widget])
 #define ACTIVE_PAGE_WIDGET (ACTIVE_PAGE.widgets[ACTIVE_PAGE.selected_widget])
+
+/* dynamic cast to struct page * */
+struct page *widget_context_as_page(struct widget_context *this);
 
 extern int instrument_list_subpage;
 #define PAGE_INSTRUMENT_LIST instrument_list_subpage

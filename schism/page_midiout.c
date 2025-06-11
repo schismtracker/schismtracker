@@ -72,7 +72,7 @@ static void midiout_draw_const(void)
 	}
 }
 
-static void copy_out(void)
+static void copy_out(SCHISM_UNUSED struct widget_context *this)
 {
 	song_lock_audio();
 	memcpy(&current_song->midi_config, &editcfg, sizeof(midi_config_t));

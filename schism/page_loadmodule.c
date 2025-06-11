@@ -965,7 +965,7 @@ static int dir_list_handle_key_exportsave(struct key_event * k)
 /* --------------------------------------------------------------------- */
 /* these handle when enter is pressed on the file/directory textboxes at the bottom of the screen. */
 
-static void filename_entered(void)
+static void filename_entered(SCHISM_UNUSED struct widget_context *this)
 {
 	if (strpbrk(filename_entry, "?*")) {
 		set_glob(filename_entry);
@@ -979,7 +979,7 @@ static void filename_entered(void)
 }
 
 /* strangely similar to the dir list's code :) */
-static void dirname_entered(void)
+static void dirname_entered(SCHISM_UNUSED struct widget_context *this)
 {
 	void *out = charset_iconv_easy(dirname_entry, CHARSET_CP437, CHARSET_CHAR);
 	if (!out)
