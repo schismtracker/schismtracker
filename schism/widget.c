@@ -248,10 +248,10 @@ void widget_create_panbar(struct widget *w, int x, int y, int next_up, int next_
 	w->activate = NULL;
 }
 
-void widget_create_listbox(struct widget *w, uint32_t (*i_size) (void),
-	int (*i_toggled) (uint32_t), const char * (*i_name) (uint32_t),
-	void (*i_changed) (void), void (*i_activate)(void),
-	int (*i_handle_key) (struct key_event *kk),
+void widget_create_listbox(struct widget *w, uint32_t (*i_size) (struct widget_context *this),
+	int (*i_toggled) (struct widget_context *this, uint32_t), const char * (*i_name) (struct widget_context *this, uint32_t),
+	void (*i_changed) (struct widget_context *this), void (*i_activate)(struct widget_context *this),
+	int (*i_handle_key) (struct widget_context *this, struct key_event *kk),
 	const int *focus_offsets_left, const int *focus_offsets_right,
 	int next_up, int next_down)
 {
@@ -474,6 +474,7 @@ void widget_togglebutton_set(struct widget *p_widgets, int widget, int do_callba
 
 void widget_draw_widget(struct widget *w, int selected)
 {
+	struct widget_context *this = widget_get_context(w);
 	char buf[64] = "Channel 42";
 	const char *ptr, *endptr;       /* for the menutoggle */
 	char *str;
@@ -620,7 +621,7 @@ void widget_draw_widget(struct widget *w, int selected)
 		break;
 	case WIDGET_LISTBOX: {
 		uint32_t i, o;
-		uint32_t size = w->d.listbox.size();
+		uint32_t size = w->d.listbox.size(this);
 
 		draw_fill_chars(w->x, w->y, w->x + w->width - 1, w->y + w->height - 1, DEFAULT_FG, 0);
 
@@ -643,8 +644,8 @@ void widget_draw_widget(struct widget *w, int selected)
 				bg = 0;
 			}
 
-			draw_text_utf8_len(w->d.listbox.toggled(o) ? "*" : " ", 1, w->x, w->y + i, fg, bg);
-			draw_text_utf8_len(w->d.listbox.name(o), w->width - 1, w->x + 1, w->y + i, fg, bg);
+			draw_text_utf8_len(w->d.listbox.toggled(this, o) ? "*" : " ", 1, w->x, w->y + i, fg, bg);
+			draw_text_utf8_len(w->d.listbox.name(this, o), w->width - 1, w->x + 1, w->y + i, fg, bg);
 		}
 		break;
 	}

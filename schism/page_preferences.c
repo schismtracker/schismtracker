@@ -189,13 +189,13 @@ static void change_mixer(SCHISM_UNUSED struct widget_context *this)
 
 static const int audio_device_focus_offsets_[] = {1, 1, 2, 2, 2, 3};
 
-static uint32_t audio_device_list_size_(void)
+static uint32_t audio_device_list_size_(SCHISM_UNUSED struct widget_context *this)
 {
 	/* include default device... */
 	return audio_device_list_size + 1;
 }
 
-static const char *audio_device_list_name_(uint32_t i) {
+static const char *audio_device_list_name_(SCHISM_UNUSED struct widget_context *this, uint32_t i) {
 	if (i > 0) {
 		i--;
 
@@ -207,7 +207,7 @@ static const char *audio_device_list_name_(uint32_t i) {
 	return "default";
 }
 
-static int audio_device_list_toggled_(uint32_t i)
+static int audio_device_list_toggled_(SCHISM_UNUSED struct widget_context *this, uint32_t i)
 {
 	uint32_t ts = song_audio_device_id();
 
@@ -218,9 +218,9 @@ static int audio_device_list_toggled_(uint32_t i)
 	return (ts == AUDIO_BACKEND_DEFAULT);
 }
 
-static void audio_device_list_activate_(void)
+static void audio_device_list_activate_(struct widget_context *this)
 {
-	struct widget *w = &ACTIVE_WIDGET;
+	struct widget *w = &this->widgets[this->selected_widget];
 
 	uint32_t id = !w->d.listbox.focus
 		? AUDIO_BACKEND_DEFAULT
@@ -233,23 +233,23 @@ static void audio_device_list_activate_(void)
 
 static const int audio_driver_focus_offsets_[] = {4, 4, 4, 5, 5, 5};
 
-static uint32_t audio_driver_list_size_(void)
+static uint32_t audio_driver_list_size_(SCHISM_UNUSED struct widget_context *this)
 {
 	return audio_driver_count();
 }
 
-static const char *audio_driver_list_name_(uint32_t i) {
+static const char *audio_driver_list_name_(SCHISM_UNUSED struct widget_context *this, uint32_t i) {
 	return audio_driver_name(i);
 }
 
-static int audio_driver_list_toggled_(uint32_t i)
+static int audio_driver_list_toggled_(SCHISM_UNUSED struct widget_context *this, uint32_t i)
 {
 	return !strcmp(song_audio_driver(), audio_driver_name(i));
 }
 
-static void audio_driver_list_activate_(void)
+static void audio_driver_list_activate_(struct widget_context *this)
 {
-	const char *n = audio_driver_name(ACTIVE_WIDGET.d.listbox.focus);
+	const char *n = audio_driver_name(this->widgets[this->selected_widget].d.listbox.focus);
 
 	audio_flash_reinitialized_text(audio_init(n, NULL));
 

@@ -77,16 +77,16 @@ static void palette_draw_const(void)
 
 /* --------------------------------------------------------------------- */
 
-static void update_thumbbars(void)
+static void update_thumbbars(struct widget_context *this)
 {
 	int n;
 
 	for (n = 0; n < 16; n++) {
 		/* palettes[current_palette_index].colors[n] ?
 		 * or current_palette[n] ? */
-		widgets_palette[3 * n].d.thumbbar.value = current_palette[n][0];
-		widgets_palette[3 * n + 1].d.thumbbar.value = current_palette[n][1];
-		widgets_palette[3 * n + 2].d.thumbbar.value = current_palette[n][2];
+		this->widgets[3 * n].d.thumbbar.value = current_palette[n][0];
+		this->widgets[3 * n + 1].d.thumbbar.value = current_palette[n][1];
+		this->widgets[3 * n + 2].d.thumbbar.value = current_palette[n][2];
 	}
 }
 
@@ -123,7 +123,7 @@ static int palette_paste_callback(SCHISM_UNUSED int cb, const void *data)
 	selected_palette = 0;
 	palette_load_preset(selected_palette);
 	palette_apply();
-	update_thumbbars();
+	update_thumbbars(widget_context);
 	status.flags |= NEED_UPDATE;
 
 	status_text_flash("Palette pasted");
@@ -143,32 +143,32 @@ static const int palette_list_focus_offsets_right_[] = {
 	14, 15, 15, 16, 17, 18, 19, 19, 20, 21,
 };
 
-static uint32_t palette_list_size_(void)
+static uint32_t palette_list_size_(SCHISM_UNUSED struct widget_context *this)
 {
 	/* ok */
 	return NUM_PALETTES;
 }
 
-static const char *palette_list_name_(uint32_t i)
+static const char *palette_list_name_(SCHISM_UNUSED struct widget_context *this, uint32_t i)
 {
 	return palettes[i].name;
 }
 
-static int palette_list_toggled_(uint32_t i)
+static int palette_list_toggled_(SCHISM_UNUSED struct widget_context *this, uint32_t i)
 {
 	return (i == current_palette_index);
 }
 
-static void palette_list_activate_(void)
+static void palette_list_activate_(struct widget_context *this)
 {
 	palette_load_preset(selected_palette);
 	palette_apply();
-	update_thumbbars();
+	update_thumbbars(this);
 
 	status.flags |= NEED_UPDATE;
 }
 
-static int palette_list_handle_key_(struct key_event *kk)
+static int palette_list_handle_key_(SCHISM_UNUSED struct widget_context *this, struct key_event *kk)
 {
 	switch (kk->sym) {
 	case SCHISM_KEYSYM_c:
@@ -288,8 +288,6 @@ void palette_load_page(struct page *page)
 		widget_create_thumbbar(widgets_palette + (3 * n + 2), 10 + 27 * (n / 7), 5 * (n % 7) + 16, 9,
 				3 * n + 1, 3 * n + 3, tabs[2], update_palette, 0, 63);
 	}
-	update_thumbbars();
-
 	widget_create_listbox(widgets_palette+48, palette_list_size_,
 		palette_list_toggled_, palette_list_name_, NULL,
 		palette_list_activate_, palette_list_handle_key_,
@@ -311,4 +309,6 @@ void palette_load_page(struct page *page)
 	widgets_palette[39].next.tab = 49;
 	widgets_palette[40].next.tab = 49;
 	widgets_palette[41].next.tab = 49;
+
+	update_thumbbars((struct widget_context *)page);
 }
