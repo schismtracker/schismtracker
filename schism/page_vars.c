@@ -42,7 +42,7 @@ static char Amiga[6] = "Amiga";
 
 /* --------------------------------------------------------------------- */
 
-static void update_song_title(void)
+static void update_song_title(SCHISM_UNUSED struct widget_context *this)
 {
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
@@ -92,17 +92,17 @@ void song_vars_sync_stereo(void)
 		widget_togglebutton_set(widgets_vars, 11, 0);
 }
 
-static void update_values_in_song(void)
+static void update_values_in_song(struct widget_context *this)
 {
-	song_set_initial_tempo(widgets_vars[1].d.thumbbar.value);
-	song_set_initial_speed(widgets_vars[2].d.thumbbar.value);
-	song_set_initial_global_volume(widgets_vars[3].d.thumbbar.value);
-	song_set_mixing_volume(widgets_vars[4].d.thumbbar.value);
-	song_set_separation(widgets_vars[5].d.thumbbar.value);
-	song_set_old_effects(widgets_vars[6].d.toggle.state);
-	song_set_compatible_gxx(widgets_vars[7].d.toggle.state);
-	song_set_instrument_mode(widgets_vars[8].d.togglebutton.state);
-	if (widgets_vars[10].d.togglebutton.state) {
+	song_set_initial_tempo(this->widgets[1].d.thumbbar.value);
+	song_set_initial_speed(this->widgets[2].d.thumbbar.value);
+	song_set_initial_global_volume(this->widgets[3].d.thumbbar.value);
+	song_set_mixing_volume(this->widgets[4].d.thumbbar.value);
+	song_set_separation(this->widgets[5].d.thumbbar.value);
+	song_set_old_effects(this->widgets[6].d.toggle.state);
+	song_set_compatible_gxx(this->widgets[7].d.toggle.state);
+	song_set_instrument_mode(this->widgets[8].d.togglebutton.state);
+	if (this->widgets[10].d.togglebutton.state) {
 		if (!song_is_stereo()) {
 			song_set_stereo();
 		}
@@ -111,7 +111,7 @@ static void update_values_in_song(void)
 			song_set_mono();
 		}
 	}
-	song_set_linear_pitch_slides(widgets_vars[12].d.togglebutton.state);
+	song_set_linear_pitch_slides(this->widgets[12].d.togglebutton.state);
 	status.flags |= SONG_NEEDS_SAVE;
 }
 
@@ -121,7 +121,7 @@ static void init_instruments(SCHISM_UNUSED void *data)
 	song_init_instruments(-1);
 }
 
-static void maybe_init_instruments(void)
+static void maybe_init_instruments(SCHISM_UNUSED struct widget_context *this)
 {
 	/* XXX actually, in IT the buttons on this dialog say OK/No for whatever reason */
 	song_set_instrument_mode(1);
@@ -173,22 +173,27 @@ static void song_changed_cb(void)
 /* --------------------------------------------------------------------- */
 /* bleh */
 
-static void dir_modules_changed(void)
+static void dir_modules_changed(SCHISM_UNUSED struct widget_context *this)
 {
 	status.flags |= DIR_MODULES_CHANGED;
 }
 
-static void dir_samples_changed(void)
+static void dir_samples_changed(SCHISM_UNUSED struct widget_context *this)
 {
 	status.flags |= DIR_SAMPLES_CHANGED;
 }
 
-static void dir_instruments_changed(void)
+static void dir_instruments_changed(SCHISM_UNUSED struct widget_context *this)
 {
 	status.flags |= DIR_INSTRUMENTS_CHANGED;
 }
 
 /* --------------------------------------------------------------------- */
+
+void cfg_save_dialog(SCHISM_UNUSED struct widget_context *this)
+{
+	cfg_save();
+}
 
 void song_vars_load_page(struct page *page)
 {
@@ -237,7 +242,7 @@ void song_vars_load_page(struct page *page)
 	widget_create_textentry(widgets_vars + 16, 13, 44, 65, 15, 17, 17, dir_instruments_changed,
 			 cfg_dir_instruments, ARRAY_SIZE(cfg_dir_instruments) - 1);
 	/* 17 = save all preferences */
-	widget_create_button(widgets_vars + 17, 28, 47, 22, 16, 17, 17, 17, 17, cfg_save, "Save all Preferences", 2);
+	widget_create_button(widgets_vars + 17, 28, 47, 22, 16, 17, 17, 17, 17, cfg_save_dialog, "Save all Preferences", 2);
 	widgets_vars[17].next.backtab = 17;
 }
 
