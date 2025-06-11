@@ -2077,7 +2077,7 @@ static void do_export_instrument(SCHISM_UNUSED void *data)
 
 static void export_instrument_list_draw(void)
 {
-	int n, focused = (*selected_widget == 3);
+	int n, focused = (widget_context->selected_widget == 3);
 
 	draw_fill_chars(53, 24, 56, 31, DEFAULT_FG, 0);
 	for (n = 0; instrument_save_formats[n].label; n++) {
