@@ -83,23 +83,18 @@ uint32_t calc_halftone(uint32_t hz, int32_t rel)
 ////////////////////////////////////////////////////////////
 // Channels effects
 
-void fx_note_cut(song_t *csf, uint32_t nchan, int clear_note)
+void fx_note_cut(song_t *csf, uint32_t nchan, int /*clear_note*/)
 {
 	song_voice_t *chan = &csf->voices[nchan];
+	if (NOTE_IS_NOTE(chan->row_note) && chan->row_voleffect == VOLFX_TONEPORTAMENTO)
+		return;
 	// stop the current note:
 	chan->flags |= CHN_NOTEFADE | CHN_FASTVOLRAMP;
 	//if (chan->ptr_instrument) chan->volume = 0;
+	chan->frequency = 0;
 	chan->increment = 0;
 	chan->fadeout_volume = 0;
 	//chan->length = 0;
-	if (clear_note) {
-		// keep instrument numbers from picking up old notes
-		// (SCx doesn't do this)
-		// Apparently this isn't necessary at all anymore?
-		// Note cuts seem to work perfectly fine without it.
-		// SCx plays fine too.  -paper
-		//chan->frequency = 0;
-	}
 
 	if (chan->flags & CHN_ADLIB) {
 		//Do this only if really an adlib chan. Important!
