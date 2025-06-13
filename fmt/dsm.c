@@ -226,7 +226,7 @@ static int dsm_process_pattern(const void *data, size_t size, void *userdata)
 		if (chn > ppd->nchn) /* header doesn't match? warn. */
 			*ppd->chn_doesnt_match = MAX(chn, *ppd->chn_doesnt_match);
 
-		song_note_t *note = ppd->pattern + 64 * row + chn;
+		song_note_t *note = ppd->pattern + MAX_CHANNELS * row + chn;
 		if (mask & DSM_PAT_NOTE_PRESENT) {
 			DSM_ASSERT_OFFSET();
 
