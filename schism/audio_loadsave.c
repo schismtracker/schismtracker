@@ -155,7 +155,7 @@ void song_new(int flags)
 		memset(current_song->title, 0, sizeof(current_song->title));
 		memset(current_song->message, 0, MAX_MESSAGE);
 
-		for (i = 0; i < 64; i++) {
+		for (i = 0; i < MAX_CHANNELS; i++) {
 			current_song->channels[i].volume = 64;
 			current_song->channels[i].panning = 128;
 			current_song->channels[i].flags = 0;

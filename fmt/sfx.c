@@ -163,7 +163,7 @@ int fmt_sfx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		for (pat = 0; pat < npat; pat++) {
 			note = song->patterns[pat] = csf_allocate_pattern(64);
 			song->pattern_size[pat] = song->pattern_alloc_size[pat] = 64;
-			for (n = 0; n < 64; n++, note += 60) {
+			for (n = 0; n < 64; n++, note = note + MAX_CHANNELS - 4) {
 				for (chan = 0; chan < 4; chan++, note++) {
 					uint8_t p[4];
 					slurp_read(fp, p, 4);

@@ -36,6 +36,12 @@
 
 /* --------------------------------------------------------------------- */
 
+#define IT_CHANNELS 64
+
+#if IT_CHANNELS != MAX_CHANNELS
+# error The code currently assumes IT_CHANNELS == MAX_CHANNELS. If they need to differ, then many assumptions will need to be rewritten. IT files always have 64 channels.
+#endif
+
 struct it_file {
 	uint32_t id;                    // 0x4D504D49
 	int8_t songname[26];
@@ -58,8 +64,8 @@ struct it_file {
 	uint16_t msglength;
 	uint32_t msgoffset;
 	uint32_t reserved;
-	uint8_t chnpan[64];
-	uint8_t chnvol[64];
+	uint8_t chnpan[IT_CHANNELS];
+	uint8_t chnvol[IT_CHANNELS];
 };
 
 static int it_load_header(struct it_file *hdr, slurp_t *fp)
@@ -238,9 +244,9 @@ static void it_import_voleffect(song_note_t *note, uint8_t v)
 
 static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows, uint16_t cwtv)
 {
-	song_note_t last_note[64];
+	song_note_t last_note[IT_CHANNELS];
 	int chan, row = 0;
-	uint8_t last_mask[64] = { 0 };
+	uint8_t last_mask[IT_CHANNELS] = { 0 };
 	uint8_t chanvar, maskvar, c;
 
 	while (row < rows) {
@@ -256,7 +262,7 @@ static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows, uint16_t c
 			note += 64;
 			continue;
 		}
-		chan = (chanvar - 1) & 63;
+		chan = (chanvar - 1) % IT_CHANNELS;
 		if (chanvar & 128) {
 			maskvar = slurp_getc(fp);
 			last_mask[chan] = maskvar;
@@ -418,7 +424,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	song->initial_tempo = MAX(hdr.tempo, 31);
 	song->pan_separation = hdr.sep;
 
-	for (n = 0, channel = song->channels; n < 64; n++, channel++) {
+	for (n = 0, channel = song->channels; n < IT_CHANNELS; n++, channel++) {
 		int pan = hdr.chnpan[n];
 		if (pan & 128) {
 			channel->flags |= CHN_MUTE;
@@ -766,16 +772,16 @@ const char *it_warnings[] = {
 static void save_it_pattern(disko_t *fp, song_note_t *pat, int patsize)
 {
 	song_note_t *noteptr = pat;
-	song_note_t lastnote[64] = {0};
-	uint8_t initmask[64] = {0};
-	uint8_t lastmask[64];
+	song_note_t lastnote[IT_CHANNELS] = {0};
+	uint8_t initmask[IT_CHANNELS] = {0};
+	uint8_t lastmask[IT_CHANNELS];
 	uint16_t pos = 0;
 	uint8_t data[65536];
 
-	memset(lastmask, 0xff, 64);
+	memset(lastmask, 0xff, IT_CHANNELS);
 
 	for (int row = 0; row < patsize; row++) {
-		for (int chan = 0; chan < 64; chan++, noteptr++) {
+		for (int chan = 0; chan < IT_CHANNELS; chan++, noteptr++) {
 			uint8_t m = 0;  // current mask
 			int vol = -1;
 			unsigned int note = noteptr->note;
@@ -970,7 +976,7 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 	}
 	hdr.reserved = bswapLE32(ver_reserved);
 
-	for (n = 0; n < 64; n++) {
+	for (n = 0; n < IT_CHANNELS; n++) {
 		hdr.chnpan[n] = ((song->channels[n].flags & CHN_SURROUND)
 				 ? 100 : (song->channels[n].panning / 4));
 		hdr.chnvol[n] = song->channels[n].volume;
