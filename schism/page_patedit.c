@@ -2103,7 +2103,7 @@ static void snap_paste(struct pattern_snap *s, int x, int y, int xlate)
 		       s->data + s->channels * row, chan_width * sizeof(song_note_t));
 		if (!xlate) continue;
 		for (chan = 0; chan < chan_width; chan++) {
-			if (chan + x > 64) break; /* defensive */
+			if (chan + x >= 64) break; /* defensive */
 			set_note_note(p_note+chan,
 					p_note[chan].note,
 					xlate);
