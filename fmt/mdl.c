@@ -162,10 +162,16 @@ struct mdl_envelope {
 /* --------------------------------------------------------------------------------------------------------- */
 /* Internal definitions */
 
+#define MDL_CHANNELS 64
+
+#if MDL_CHANNELS != MAX_CHANNELS
+# error The code currently assumes MDL_CHANNELS == MAX_CHANNELS. If they need to differ, then many assumptions will need to be rewritten. MDL files always have 64 channels.
+#endif
+
 struct mdlpat {
 	int track; // which track to put here
 	int rows; // 1-256
-	song_note_t *note; // first note -- add 64 for next note, etc.
+	song_note_t *note; // first note -- add MDL_CHANNELS for next note, etc.
 	struct mdlpat *next;
 };
 
@@ -462,7 +468,7 @@ static int mdl_read_info(song_t *song, slurp_t *fp)
 		if (info.chanpan[n] & 128)
 			song->channels[n].flags |= CHN_MUTE;
 	}
-	for (; n < 64; n++) {
+	for (; n < MAX_CHANNELS; n++) {
 		song->channels[n].panning = 128;
 		song->channels[n].flags |= CHN_MUTE;
 	}

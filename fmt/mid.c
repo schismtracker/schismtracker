@@ -515,7 +515,7 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			pat++;
 			row -= MID_ROWS_PER_PATTERN;
 		}
-		rowdata = pattern + 64 * row;
+		rowdata = pattern + MAX_CHANNELS * row;
 		if (cur->note.note) {
 			rowdata[cur->chan].note = cur->note.note;
 			rowdata[cur->chan].instrument = cur->note.instrument;
