@@ -455,7 +455,7 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
 			row = total_rows - 1;
 		}
 		draw_text(str_from_num(3, row, buf), 1, row_pos, 0, 2);
-		note = pattern + 64 * row + first_channel - 1;
+		note = pattern + MAX_CHANNELS * row + first_channel - 1;
 		for (chan_pos = 0; chan_pos < num_channels - 1; chan_pos++) {
 			draw_note(5 + channel_width * chan_pos, row_pos, note, -1, 6, 0);
 			if (separator)
@@ -472,7 +472,7 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
 	total_rows = cur_pattern_rows;
 	row_pos = base + rows_before + 1;
 	draw_text(str_from_num(3, current_row, buf), 1, row_pos, 0, 2);
-	note = pattern + 64 * current_row + first_channel - 1;
+	note = pattern + MAX_CHANNELS * current_row + first_channel - 1;
 	for (chan_pos = 0; chan_pos < num_channels - 1; chan_pos++) {
 		draw_note(5 + channel_width * chan_pos, row_pos, note, -1, 6, 14);
 		if (separator)
@@ -496,7 +496,7 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
 			row = 0;
 		}
 		draw_text(str_from_num(3, row, buf), 1, row_pos, 0, 2);
-		note = pattern + 64 * row + first_channel - 1;
+		note = pattern + MAX_CHANNELS * row + first_channel - 1;
 		for (chan_pos = 0; chan_pos < num_channels - 1; chan_pos++) {
 			draw_note(5 + channel_width * chan_pos, row_pos, note, -1, 6, 0);
 			if (separator)
@@ -833,7 +833,7 @@ static void _fix_channels(int n)
 		w->first_channel = selected_channel;
 	else if (selected_channel >= (w->first_channel + channels))
 		w->first_channel = selected_channel - channels + 1;
-	w->first_channel = CLAMP(w->first_channel, 1, 65 - channels);
+	w->first_channel = CLAMP(w->first_channel, 1, MAX_CHANNELS - channels + 1);
 }
 
 static int info_handle_click(int x, int y)
@@ -1147,7 +1147,7 @@ static int info_page_handle_key(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		song_toggle_channel_mute(selected_channel - 1);
-		if (selected_channel < 64)
+		if (selected_channel < MAX_CHANNELS)
 			selected_channel++;
 		orderpan_recheck_muted_channels();
 		break;
@@ -1193,7 +1193,7 @@ static int info_page_handle_key(struct key_event * k)
 			windows[selected_window + 1].height--;
 			break;
 		}
-		if (selected_channel < 64)
+		if (selected_channel < MAX_CHANNELS)
 			selected_channel++;
 		break;
 	case SCHISM_KEYSYM_RIGHT:
@@ -1201,7 +1201,7 @@ static int info_page_handle_key(struct key_event * k)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (selected_channel < 64)
+		if (selected_channel < MAX_CHANNELS)
 			selected_channel++;
 		break;
 	case SCHISM_KEYSYM_HOME:

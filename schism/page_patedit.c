@@ -114,8 +114,7 @@ int playback_tracing = 0;       /* scroll lock */
 int midi_playback_tracing = 0;
 
 static int panning_mode = 0;            /* for the volume column */
-int midi_bend_hit[64];
-int midi_last_bend_hit[64];
+int midi_last_bend_hit[MAX_CHANNELS];
 
 /* blah; other forwards */
 static void pated_save(const char *descr);
@@ -266,9 +265,9 @@ static const struct track_view track_views[] = {
 
 #define NUM_TRACK_VIEWS (int)ARRAY_SIZE(track_views)
 
-static uint8_t track_view_scheme[64];
+static uint8_t track_view_scheme[MAX_CHANNELS];
 static int channel_multi_enabled = 0;
-static int channel_multi[64];
+static int channel_multi[MAX_CHANNELS];
 static int visible_channels, visible_width;
 
 static void recalculate_visible_area(void);
@@ -439,12 +438,12 @@ void pattern_editor_length_edit(void)
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* multichannel dialog */
-static struct widget multichannel_widgets[65];
+static struct widget multichannel_widgets[MAX_CHANNELS + 1];
 static void multichannel_close(SCHISM_UNUSED void *data)
 {
 	int i, m = 0;
 
-	for (i = 0; i < 64; i++) {
+	for (i = 0; i < MAX_CHANNELS; i++) {
 		channel_multi[i] = !!multichannel_widgets[i].d.toggle.state;
 		if (channel_multi[i])
 			m = 1;
@@ -468,7 +467,7 @@ static void multichannel_draw_const(void)
 	char sbuf[16];
 	int i;
 
-	for (i = 0; i < 64; i++) {
+	for (i = 0; i < MAX_CHANNELS; i++) {
 		sprintf(sbuf, "Channel %02d", i+1);
 		draw_text(sbuf,
 			9 + ((i / 16) * 16), /* X */
@@ -490,12 +489,16 @@ static void mp_advance_channel(void)
 	widget_change_focus_to(*selected_widget + 1);
 }
 
+#if MAX_CHANNELS != 64
+# error If MAX_CHANNELS changes to a value other than 64, then the multichannel dialog will need to be redesigned & rewritten.
+#endif
+
 static void pattern_editor_display_multichannel(void)
 {
 	struct dialog *dialog;
 	int i;
 
-	for (i = 0; i < 64; i++) {
+	for (i = 0; i < MAX_CHANNELS; i++) {
 		widget_create_toggle(multichannel_widgets+i,
 			20 + ((i / 16) * 16), /* X */
 			22 + (i % 16),  /* Y */
@@ -511,7 +514,7 @@ static void pattern_editor_display_multichannel(void)
 	}
 	widget_create_button(multichannel_widgets + 64, 36, 40, 6, 15, 0, 64, 64, 64, dialog_yes_NULL, "OK", 3);
 
-	dialog = dialog_create_custom(7, 18, 66, 25, multichannel_widgets, 65, 0,
+	dialog = dialog_create_custom(7, 18, 66, 25, multichannel_widgets, MAX_CHANNELS + 1, 0,
 				      multichannel_draw_const, NULL);
 	dialog->action_yes = multichannel_close;
 	dialog->action_cancel = multichannel_close;
@@ -532,7 +535,7 @@ static int multichannel_get_next(int cur_channel)
 	if (channel_multi[cur_channel]) {
 		/* we're in a multichan-enabled channel, so look for the next one */
 		do {
-			i = (i + 1) & 63; /* no? next channel, and loop back to zero if we hit 64 */
+			i = (i + 1) % MAX_CHANNELS; /* no? next channel, and loop back to zero if we hit MAX_CHANNELS */
 			if (channel_multi[i]) /* is this a multi-channel? */
 				break; /* it is! */
 		} while (i != cur_channel);
@@ -553,7 +556,7 @@ static int multichannel_get_previous(int cur_channel)
 
 	if (channel_multi[cur_channel]) {
 		do {
-			i = i ? (i - 1) : 63; /* loop backwards this time */
+			i = i ? (i - 1) : (MAX_CHANNELS - 1); /* loop backwards this time */
 			if (channel_multi[i])
 				break;
 		} while (i != cur_channel);
@@ -849,7 +852,7 @@ static void pattern_selection_system_copyout(void)
 	strcpy(str, "Pasted Pattern - IT\x0d\x0a");
 	len = 21;
 	for (y = selection.first_row; y <= selection.last_row && y < total_rows; y++) {
-		cur_note = pattern + 64 * y
+		cur_note = pattern + MAX_CHANNELS * y
 					+ selection.first_channel - 1;
 		for (x = selection.first_channel; x <= selection.last_channel; x++) {
 			str[len] = '|'; len++;
@@ -1153,7 +1156,7 @@ static int current_effect(void)
 	song_note_t *pattern, *cur_note;
 
 	song_get_pattern(current_pattern, &pattern);
-	cur_note = pattern + 64 * current_row + current_channel - 1;
+	cur_note = pattern + MAX_CHANNELS * current_row + current_channel - 1;
 
 	return cur_note->effect;
 }
@@ -1165,7 +1168,7 @@ static int current_effect(void)
 void cfg_save_patedit(cfg_file_t *cfg)
 {
 	int n;
-	char s[65];
+	char s[MAX_CHANNELS + 1];
 
 	CFG_SET_PE(link_effect_column);
 	CFG_SET_PE(draw_divisions);
@@ -1183,14 +1186,14 @@ void cfg_save_patedit(cfg_file_t *cfg)
 	CFG_SET_PE(invert_home_end);
 
 	cfg_set_number(cfg, "Pattern Editor", "crayola_mode", !!(status.flags & CRAYOLA_MODE));
-	for (n = 0; n < 64; n++)
+	for (n = 0; n < MAX_CHANNELS; n++)
 		s[n] = track_view_scheme[n] + 'a';
-	s[64] = 0;
+	s[MAX_CHANNELS] = 0;
 
 	cfg_set_string(cfg, "Pattern Editor", "track_view_scheme", s);
-	for (n = 0; n < 64; n++)
+	for (n = 0; n < MAX_CHANNELS; n++)
 		s[n] = (channel_multi[n]) ? 'M' : '-';
-	s[64] = 0;
+	s[MAX_CHANNELS] = 0;
 	cfg_set_string(cfg, "Pattern Editor", "channel_multi", s);
 }
 
@@ -1198,7 +1201,7 @@ void cfg_save_patedit(cfg_file_t *cfg)
 void cfg_load_patedit(cfg_file_t *cfg)
 {
 	int n, r = 0;
-	char s[65];
+	char s[MAX_CHANNELS + 1];
 
 	CFG_GET_PE(link_effect_column, 0);
 	CFG_GET_PE(draw_divisions, 1);
@@ -1220,10 +1223,10 @@ void cfg_load_patedit(cfg_file_t *cfg)
 	else
 		status.flags &= ~CRAYOLA_MODE;
 
-	cfg_get_string(cfg, "Pattern Editor", "track_view_scheme", s, 64, "a");
+	cfg_get_string(cfg, "Pattern Editor", "track_view_scheme", s, MAX_CHANNELS, "a");
 
 	/* "decode" the track view scheme */
-	for (n = 0; n < 64; n++) {
+	for (n = 0; n < MAX_CHANNELS; n++) {
 		if (s[n] == '\0') {
 			/* end of the string */
 			break;
@@ -1240,13 +1243,13 @@ void cfg_load_patedit(cfg_file_t *cfg)
 		r = s[n];
 	}
 	memcpy(track_view_scheme, s, n);
-	if (n < 64)
-		memset(track_view_scheme + n, r, 64 - n);
+	if (n < MAX_CHANNELS)
+		memset(track_view_scheme + n, r, MAX_CHANNELS - n);
 
-	cfg_get_string(cfg, "Pattern Editor", "channel_multi", s, 64, "");
+	cfg_get_string(cfg, "Pattern Editor", "channel_multi", s, MAX_CHANNELS, "");
 	memset(channel_multi, 0, sizeof(channel_multi));
 	channel_multi_enabled = 0;
-	for (n = 0; n < 64; n++) {
+	for (n = 0; n < MAX_CHANNELS; n++) {
 		if (!s[n])
 			break;
 		channel_multi[n] = ((s[n] >= 'A' && s[n] <= 'Z') || (s[n] >= 'a' && s[n] <= 'z')) ? 1 : 0;
@@ -1353,18 +1356,18 @@ static void block_length_double(void)
 	height = dest_end - selection.first_row;
 	src_end = selection.first_row + height / 2;
 
-	src = pattern + 64 * (src_end - 1);
-	dest = pattern + 64 * (dest_end - 1);
+	src = pattern + MAX_CHANNELS * (src_end - 1);
+	dest = pattern + MAX_CHANNELS * (dest_end - 1);
 
 	pated_history_add("Undo block length double       (Alt-F)",
 		offset, selection.first_row, width, height);
 
 	while (dest > src) {
 		memset(dest + offset, 0, width * sizeof(song_note_t));
-		dest -= 64;
+		dest -= MAX_CHANNELS;
 		memcpy(dest + offset, src + offset, width * sizeof(song_note_t));
-		dest -= 64;
-		src -= 64;
+		dest -= MAX_CHANNELS;
+		src -= MAX_CHANNELS;
 	}
 
 	pattern_selection_system_copyout();
@@ -1393,15 +1396,15 @@ static void block_length_halve(void)
 	width = selection.last_channel - offset;
 	src_end = MIN(selection.first_row + 2 * sel_rows, total_rows);
 	height = src_end - selection.first_row;
-	src = dest = pattern + 64 * selection.first_row;
+	src = dest = pattern + MAX_CHANNELS * selection.first_row;
 
 	pated_history_add("Undo block length halve        (Alt-G)",
 		offset, selection.first_row, width, height);
 
 	for (row = 0; row < height / 2; row++) {
 		memcpy(dest + offset, src + offset, width * sizeof(song_note_t));
-		src += 64 * 2;
-		dest += 64;
+		src += MAX_CHANNELS * 2;
+		dest += MAX_CHANNELS;
 	}
 
 	pattern_selection_system_copyout();
@@ -1429,13 +1432,13 @@ static void selection_erase(void)
 		(selection.last_channel - selection.first_channel) + 1,
 		(selection.last_row - selection.first_row) + 1);
 
-	if (selection.first_channel == 1 && selection.last_channel == 64) {
-		memset(pattern + 64 * selection.first_row, 0, (selection.last_row - selection.first_row + 1)
-		       * 64 * sizeof(song_note_t));
+	if (selection.first_channel == 1 && selection.last_channel == MAX_CHANNELS) {
+		memset(pattern + MAX_CHANNELS * selection.first_row, 0, (selection.last_row - selection.first_row + 1)
+		       * MAX_CHANNELS * sizeof(song_note_t));
 	} else {
 		chan_width = selection.last_channel - selection.first_channel + 1;
 		for (row = selection.first_row; row <= selection.last_row; row++) {
-			note = pattern + 64 * row + selection.first_channel - 1;
+			note = pattern + MAX_CHANNELS * row + selection.first_channel - 1;
 			memset(note, 0, chan_width * sizeof(song_note_t));
 		}
 	}
@@ -1460,7 +1463,7 @@ static void selection_set_sample(void)
 		(selection.last_row - selection.first_row) + 1);
 	if (SELECTION_EXISTS) {
 		for (row = selection.first_row; row <= selection.last_row; row++) {
-			note = pattern + 64 * row + selection.first_channel - 1;
+			note = pattern + MAX_CHANNELS * row + selection.first_channel - 1;
 			for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
 				if (note->instrument) {
 					note->instrument = song_get_current_instrument();
@@ -1468,7 +1471,7 @@ static void selection_set_sample(void)
 			}
 		}
 	} else {
-		note = pattern + 64 * current_row + current_channel - 1;
+		note = pattern + MAX_CHANNELS * current_row + current_channel - 1;
 		if (note->instrument) {
 			note->instrument = song_get_current_instrument();
 		}
@@ -1507,7 +1510,7 @@ static void selection_swap(void)
 		return;
 	}
 
-	if (current_row + sel_rows > total_rows || current_channel + sel_chans - 1 > 64) {
+	if (current_row + sel_rows > total_rows || current_channel + sel_chans - 1 > MAX_CHANNELS) {
 		dialog_create(DIALOG_OK, "   Out of pattern range   ", NULL, NULL, 0, NULL);
 		return;
 	}
@@ -1518,8 +1521,8 @@ static void selection_swap(void)
 		affected_width, affected_height);
 
 	for (row = 0; row < sel_rows; row++) {
-		s_note = pattern + 64 * (selection.first_row + row) + selection.first_channel - 1;
-		p_note = pattern + 64 * (current_row + row) + current_channel - 1;
+		s_note = pattern + MAX_CHANNELS * (selection.first_row + row) + selection.first_channel - 1;
+		p_note = pattern + MAX_CHANNELS * (current_row + row) + current_channel - 1;
 		for (chan = 0; chan < sel_chans; chan++, s_note++, p_note++) {
 			tmp = *s_note;
 			*s_note = *p_note;
@@ -1548,7 +1551,7 @@ static void selection_set_volume(void)
 		(selection.last_row - selection.first_row) + 1);
 
 	for (row = selection.first_row; row <= selection.last_row; row++) {
-		note = pattern + 64 * row + selection.first_channel - 1;
+		note = pattern + MAX_CHANNELS * row + selection.first_channel - 1;
 		for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
 			note->volparam = mask_note.volparam;
 			note->voleffect = mask_note.voleffect;
@@ -1586,8 +1589,8 @@ static void selection_slide_volume(void)
 
 	/* the channel loop has to go on the outside for this one */
 	for (chan = selection.first_channel; chan <= selection.last_channel; chan++) {
-		note = pattern + 64 * selection.first_row + chan - 1;
-		last_note = pattern + 64 * selection.last_row + chan - 1;
+		note = pattern + MAX_CHANNELS * selection.first_row + chan - 1;
+		last_note = pattern + MAX_CHANNELS * selection.last_row + chan - 1;
 
 		/* valid combinations:
 		 *     [ volume - volume ]
@@ -1627,7 +1630,7 @@ static void selection_slide_volume(void)
 			continue;
 		}
 
-		for (row = selection.first_row; row <= selection.last_row; row++, note += 64) {
+		for (row = selection.first_row; row <= selection.last_row; row++, note += MAX_CHANNELS) {
 			note->voleffect = ve;
 			note->volparam = (((last - first)
 					 * (row - selection.first_row)
@@ -1660,7 +1663,7 @@ static void selection_wipe_volume(int reckless)
 
 
 	for (row = selection.first_row; row <= selection.last_row; row++) {
-		note = pattern + 64 * row + selection.first_channel - 1;
+		note = pattern + MAX_CHANNELS * row + selection.first_channel - 1;
 		for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
 			if (reckless || (note->instrument == 0 && !NOTE_IS_NOTE(note->note))) {
 				note->volparam = 0;
@@ -1765,7 +1768,7 @@ static void selection_vary(int fast, int depth, int how)
 		(selection.last_row - selection.first_row) + 1);
 
 	for (row = selection.first_row; row <= selection.last_row; row++) {
-		note = pattern + 64 * row + selection.first_channel - 1;
+		note = pattern + MAX_CHANNELS * row + selection.first_channel - 1;
 		for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
 			if (how == FX_CHANNELVOLUME || how == FX_CHANNELVOLSLIDE) {
 				if (note->voleffect == VOLFX_VOLUME) {
@@ -1859,7 +1862,7 @@ static void selection_amplify(int percentage)
 		(selection.last_row - selection.first_row) + 1);
 
 	for (row = selection.first_row; row <= selection.last_row; row++) {
-		note = pattern + 64 * row + selection.first_channel - 1;
+		note = pattern + MAX_CHANNELS * row + selection.first_channel - 1;
 		for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
 			if (note->voleffect == VOLFX_NONE && note->instrument != 0) {
 				/* Modplug hack: volume bit shift */
@@ -1909,10 +1912,10 @@ static void selection_slide_effect(void)
 	/* the channel loop has to go on the outside for this one */
 	for (chan = selection.first_channel; chan <= selection.last_channel; chan++) {
 		note = pattern + chan - 1;
-		first = note[64 * selection.first_row].param;
-		last = note[64 * selection.last_row].param;
-		note += 64 * selection.first_row;
-		for (row = selection.first_row; row <= selection.last_row; row++, note += 64) {
+		first = note[MAX_CHANNELS * selection.first_row].param;
+		last = note[MAX_CHANNELS * selection.last_row].param;
+		note += MAX_CHANNELS * selection.first_row;
+		for (row = selection.first_row; row <= selection.last_row; row++, note += MAX_CHANNELS) {
 			note->param = (((last - first)
 					    * (row - selection.first_row)
 					    / (selection.last_row - selection.first_row)
@@ -1941,7 +1944,7 @@ static void selection_wipe_effect(void)
 		(selection.last_row - selection.first_row) + 1);
 
 	for (row = selection.first_row; row <= selection.last_row; row++) {
-		note = pattern + 64 * row + selection.first_channel - 1;
+		note = pattern + MAX_CHANNELS * row + selection.first_channel - 1;
 		for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
 			note->effect = 0;
 			note->param = 0;
@@ -1964,15 +1967,15 @@ static void selection_roll(enum roll_dir direction)
 	sel_rows = selection.last_row - selection.first_row + 1;
 	sel_chans = selection.last_channel - selection.first_channel + 1;
 	if (sel_rows < 2) { return; }
-	seldata = pattern + 64 * selection.first_row + selection.first_channel - 1;
+	seldata = pattern + MAX_CHANNELS * selection.first_row + selection.first_channel - 1;
 
 	SCHISM_VLA_ALLOC(song_note_t, temp, sel_chans);
 	copy_bytes = sizeof(temp);
 	row = (direction == ROLL_DOWN ? sel_rows - 1 : 0);
-	memcpy(temp, seldata + 64 * row, copy_bytes);
+	memcpy(temp, seldata + MAX_CHANNELS * row, copy_bytes);
 	for (n = 1; n < sel_rows; n++, row += direction)
-		memcpy(seldata + 64 * row, seldata + 64 * (row + direction), copy_bytes);
-	memcpy(seldata + 64 * row, temp, copy_bytes);
+		memcpy(seldata + MAX_CHANNELS * row, seldata + MAX_CHANNELS * (row + direction), copy_bytes);
+	memcpy(seldata + MAX_CHANNELS * row, temp, copy_bytes);
 	SCHISM_VLA_FREE(temp);
 
 	status.flags |= SONG_NEEDS_SAVE;
@@ -1992,25 +1995,25 @@ static void pattern_insert_rows(int what_row, int num_rows, int first_channel, i
 	status.flags |= SONG_NEEDS_SAVE;
 	if (first_channel < 1)
 		first_channel = 1;
-	if (chan_width + first_channel - 1 > 64)
-		chan_width = 64 - first_channel + 1;
+	if (chan_width + first_channel - 1 > MAX_CHANNELS)
+		chan_width = MAX_CHANNELS - first_channel + 1;
 
 	if (num_rows + what_row > total_rows)
 		num_rows = total_rows - what_row;
 
-	if (first_channel == 1 && chan_width == 64) {
-		memmove(pattern + 64 * (what_row + num_rows), pattern + 64 * what_row,
-			64 * sizeof(song_note_t) * (total_rows - what_row - num_rows));
-		memset(pattern + 64 * what_row, 0, num_rows * 64 * sizeof(song_note_t));
+	if (first_channel == 1 && chan_width == MAX_CHANNELS) {
+		memmove(pattern + MAX_CHANNELS * (what_row + num_rows), pattern + MAX_CHANNELS * what_row,
+			MAX_CHANNELS * sizeof(song_note_t) * (total_rows - what_row - num_rows));
+		memset(pattern + MAX_CHANNELS * what_row, 0, num_rows * MAX_CHANNELS * sizeof(song_note_t));
 	} else {
 		/* shift the area down */
 		for (row = total_rows - num_rows - 1; row >= what_row; row--) {
-			memmove(pattern + 64 * (row + num_rows) + first_channel - 1,
-				pattern + 64 * row + first_channel - 1, chan_width * sizeof(song_note_t));
+			memmove(pattern + MAX_CHANNELS * (row + num_rows) + first_channel - 1,
+				pattern + MAX_CHANNELS * row + first_channel - 1, chan_width * sizeof(song_note_t));
 		}
 		/* clear the inserted rows */
 		for (row = what_row; row < what_row + num_rows; row++) {
-			memset(pattern + 64 * row + first_channel - 1, 0, chan_width * sizeof(song_note_t));
+			memset(pattern + MAX_CHANNELS * row + first_channel - 1, 0, chan_width * sizeof(song_note_t));
 		}
 	}
 	pattern_selection_system_copyout();
@@ -2025,26 +2028,26 @@ static void pattern_delete_rows(int what_row, int num_rows, int first_channel, i
 	status.flags |= SONG_NEEDS_SAVE;
 	if (first_channel < 1)
 		first_channel = 1;
-	if (chan_width + first_channel - 1 > 64)
-		chan_width = 64 - first_channel + 1;
+	if (chan_width + first_channel - 1 > MAX_CHANNELS)
+		chan_width = MAX_CHANNELS - first_channel + 1;
 
 	if (num_rows + what_row > total_rows)
 		num_rows = total_rows - what_row;
 
-	if (first_channel == 1 && chan_width == 64) {
-		memmove(pattern + 64 * what_row, pattern + 64 * (what_row + num_rows),
-			64 * sizeof(song_note_t) * (total_rows - what_row - num_rows));
-		memset(pattern + 64 * (total_rows - num_rows), 0, num_rows * 64 * sizeof(song_note_t));
+	if (first_channel == 1 && chan_width == MAX_CHANNELS) {
+		memmove(pattern + MAX_CHANNELS * what_row, pattern + MAX_CHANNELS * (what_row + num_rows),
+			MAX_CHANNELS * sizeof(song_note_t) * (total_rows - what_row - num_rows));
+		memset(pattern + MAX_CHANNELS * (total_rows - num_rows), 0, num_rows * MAX_CHANNELS * sizeof(song_note_t));
 	} else {
 		/* shift the area up */
 		for (row = what_row; row <= total_rows - num_rows - 1; row++) {
-			memmove(pattern + 64 * row + first_channel - 1,
-				pattern + 64 * (row + num_rows) + first_channel - 1,
+			memmove(pattern + MAX_CHANNELS * row + first_channel - 1,
+				pattern + MAX_CHANNELS * (row + num_rows) + first_channel - 1,
 				chan_width * sizeof(song_note_t));
 		}
 		/* clear the last rows */
 		for (row = total_rows - num_rows; row < total_rows; row++) {
-			memset(pattern + 64 * row + first_channel - 1, 0, chan_width * sizeof(song_note_t));
+			memset(pattern + MAX_CHANNELS * row + first_channel - 1, 0, chan_width * sizeof(song_note_t));
 		}
 	}
 	pattern_selection_system_copyout();
@@ -2096,16 +2099,16 @@ static void snap_paste(struct pattern_snap *s, int x, int y, int xlate)
 	if (num_rows <= 0) return;
 
 	chan_width = s->channels;
-	if (chan_width + x >= 64)
-		chan_width = 64 - x;
+	if (chan_width + x >= MAX_CHANNELS)
+		chan_width = MAX_CHANNELS - x;
 
 	for (row = 0; row < num_rows; row++) {
-		p_note = pattern + 64 * (y + row) + x;
-		memcpy(pattern + 64 * (y + row) + x,
+		p_note = pattern + MAX_CHANNELS * (y + row) + x;
+		memcpy(pattern + MAX_CHANNELS * (y + row) + x,
 		       s->data + s->channels * row, chan_width * sizeof(song_note_t));
 		if (!xlate) continue;
 		for (chan = 0; chan < chan_width; chan++) {
-			if (chan + x >= 64) break; /* defensive */
+			if (chan + x >= MAX_CHANNELS) break; /* defensive */
 			set_note_note(p_note+chan,
 					p_note[chan].note,
 					xlate);
@@ -2129,13 +2132,13 @@ static void snap_copy_from_pattern(song_note_t *pattern, int total_rows,
 		memset(s->data, 0, len);
 
 	s->x = x; s->y = y;
-	if (x == 0 && width == 64) {
+	if (x == 0 && width == MAX_CHANNELS) {
 		if (height >total_rows) height = total_rows;
-		memcpy(s->data, pattern + 64 * y, (width*height*sizeof(song_note_t)));
+		memcpy(s->data, pattern + MAX_CHANNELS * y, (width*height*sizeof(song_note_t)));
 	} else {
 		for (row = 0; row < s->rows && row < total_rows; row++) {
 			memcpy(s->data + s->channels * row,
-			       pattern + 64 * (row + s->y) + s->x,
+			       pattern + MAX_CHANNELS * (row + s->y) + s->x,
 			       s->channels * sizeof(song_note_t));
 		}
 	}
@@ -2156,7 +2159,7 @@ static int snap_honor_mute(struct pattern_snap *s, int base_channel)
 {
 	int i,j;
 	song_note_t *n;
-	int mute[64];
+	int mute[MAX_CHANNELS];
 	int did_any;
 
 	for (i = 0; i < s->channels; i++) {
@@ -2190,7 +2193,7 @@ static void pated_save(const char *descr)
 	int total_rows;
 
 	total_rows = song_get_pattern(current_pattern, NULL);
-	pated_history_add(descr,0,0,64,total_rows);
+	pated_history_add(descr,0,0,MAX_CHANNELS,total_rows);
 }
 static void pated_history_add(const char *descr, int x, int y, int width, int height)
 {
@@ -2234,7 +2237,7 @@ static void fast_save_update(void)
 
 	total_rows = song_get_pattern(current_pattern, NULL);
 
-	snap_copy(&fast_save, 0, 0, 64, total_rows);
+	snap_copy(&fast_save, 0, 0, MAX_CHANNELS, total_rows);
 }
 
 /* clipboard */
@@ -2300,8 +2303,8 @@ static void clipboard_paste_overwrite(int suppress, int grow)
 	}
 
 	chan_width = clipboard.channels;
-	if (chan_width + current_channel > 64)
-		chan_width = 64 - current_channel + 1;
+	if (chan_width + current_channel > MAX_CHANNELS)
+		chan_width = MAX_CHANNELS - current_channel + 1;
 
 	if (!suppress) {
 		pated_history_add_grouped("Replace overwritten data       (Alt-O)",
@@ -2329,8 +2332,8 @@ static void clipboard_paste_insert(void)
 		num_rows = clipboard.rows;
 
 	chan_width = clipboard.channels;
-	if (chan_width + current_channel > 64)
-		chan_width = 64 - current_channel + 1;
+	if (chan_width + current_channel > MAX_CHANNELS)
+		chan_width = MAX_CHANNELS - current_channel + 1;
 
 	pattern_insert_rows(current_row, clipboard.rows, current_channel, chan_width);
 	clipboard_paste_overwrite(1, 0);
@@ -2354,8 +2357,8 @@ static void clipboard_paste_mix_notes(int clip, int xlate)
 		num_rows = clipboard.rows;
 
 	chan_width = clipboard.channels;
-	if (chan_width + current_channel > 64)
-		chan_width = 64 - current_channel + 1;
+	if (chan_width + current_channel > MAX_CHANNELS)
+		chan_width = MAX_CHANNELS - current_channel + 1;
 
 
 /* note that IT doesn't do this for "fields" either... */
@@ -2363,7 +2366,7 @@ static void clipboard_paste_mix_notes(int clip, int xlate)
 				current_channel-1, current_row,
 				chan_width, num_rows);
 
-	p_note = pattern + 64 * current_row + current_channel - 1;
+	p_note = pattern + MAX_CHANNELS * current_row + current_channel - 1;
 	c_note = clipboard.data;
 	for (row = 0; row < num_rows; row++) {
 		for (chan = 0; chan < chan_width; chan++) {
@@ -2389,7 +2392,7 @@ static void clipboard_paste_mix_notes(int clip, int xlate)
 				}
 			}
 		}
-		p_note += 64;
+		p_note += MAX_CHANNELS;
 		c_note += clipboard.channels;
 	}
 }
@@ -2412,10 +2415,10 @@ static void clipboard_paste_mix_fields(int prec, int xlate)
 		num_rows = clipboard.rows;
 
 	chan_width = clipboard.channels;
-	if (chan_width + current_channel > 64)
-		chan_width = 64 - current_channel + 1;
+	if (chan_width + current_channel > MAX_CHANNELS)
+		chan_width = MAX_CHANNELS - current_channel + 1;
 
-	p_note = pattern + 64 * current_row + current_channel - 1;
+	p_note = pattern + MAX_CHANNELS * current_row + current_channel - 1;
 	c_note = clipboard.data;
 	for (row = 0; row < num_rows; row++) {
 		for (chan = 0; chan < chan_width; chan++) {
@@ -2457,7 +2460,7 @@ static void clipboard_paste_mix_fields(int prec, int xlate)
 					p_note[chan].param = c_note[chan].param;
 			}
 		}
-		p_note += 64;
+		p_note += MAX_CHANNELS;
 		c_note += clipboard.channels;
 	}
 }
@@ -2506,7 +2509,7 @@ static void advance_cursor(int next_row, int multichannel)
 				pattern_editor_reposition();
 			}
 		} else {
-			if (current_channel < 64) {
+			if (current_channel < MAX_CHANNELS) {
 				current_channel++;
 			} else {
 				current_channel = 1;
@@ -2538,7 +2541,7 @@ int get_current_channel(void)
 
 void set_current_channel(int channel)
 {
-	current_channel = CLAMP(channel, 0, 64);
+	current_channel = CLAMP(channel, 0, MAX_CHANNELS);
 }
 
 int get_current_row(void)
@@ -2676,7 +2679,7 @@ static void recalculate_visible_area(void)
 	int n, last = 0, new_width;
 
 	visible_width = 0;
-	for (n = 0; n < 64; n++) {
+	for (n = 0; n < MAX_CHANNELS; n++) {
 		if (track_view_scheme[n] >= NUM_TRACK_VIEWS) {
 			/* shouldn't happen, but might (e.g. if someone was messing with the config file) */
 			track_view_scheme[n] = last;
@@ -2698,9 +2701,9 @@ static void recalculate_visible_area(void)
 	}
 	visible_channels = n;
 
-	/* don't allow anything past channel 64 */
-	if (top_display_channel > 64 - visible_channels + 1)
-		top_display_channel = 64 - visible_channels + 1;
+	/* don't allow anything past channel MAX_CHANNELS */
+	if (top_display_channel > MAX_CHANNELS - visible_channels + 1)
+		top_display_channel = MAX_CHANNELS - visible_channels + 1;
 }
 
 static void set_view_scheme(int scheme)
@@ -2710,7 +2713,7 @@ static void set_view_scheme(int scheme)
 		log_appendf(4, "View scheme %d out of range -- using default scheme", scheme);
 		scheme = 0;
 	}
-	memset(track_view_scheme, scheme, 64);
+	memset(track_view_scheme, scheme, MAX_CHANNELS);
 	recalculate_visible_area();
 }
 
@@ -2744,13 +2747,13 @@ static void pattern_editor_redraw(void)
 		/* maybe i'm retarded but the pattern editor should be dealing
 		   with the same concept of "channel" as the rest of the
 		   interface. the mixing channels really could be any arbitrary
-		   number -- modplug just happens to reserve the first 64 for
+		   number -- modplug just happens to reserve the first MAX_CHANNELS for
 		   "real" channels. i'd rather pm not replicate this cruft and
 		   more or less hide the mixer from the interface... */
 		track_view->draw_channel_header(chan, chan_drawpos, 14,
 						((song_get_channel(chan - 1)->flags & CHN_MUTE) ? 0 : 3));
 
-		note = pattern + 64 * top_display_row + chan - 1;
+		note = pattern + MAX_CHANNELS * top_display_row + chan - 1;
 		for (row = top_display_row, row_pos = 0; row_pos < 32 && row < total_rows; row++, row_pos++) {
 			if (chan_pos == 0) {
 				fg = pattern_is_playing && row == playing_row ? 3 : 0;
@@ -2806,7 +2809,7 @@ static void pattern_editor_redraw(void)
 			}
 
 			/* next row, same channel */
-			note += 64;
+			note += MAX_CHANNELS;
 		}
 		// hmm...?
 		for (; row_pos < 32; row++, row_pos++) {
@@ -2865,7 +2868,7 @@ static void transpose_notes(int amount)
 
 	if (SELECTION_EXISTS) {
 		for (row = selection.first_row; row <= selection.last_row; row++) {
-			note = pattern + 64 * row + selection.first_channel - 1;
+			note = pattern + MAX_CHANNELS * row + selection.first_channel - 1;
 			for (chan = selection.first_channel; chan <= selection.last_channel; chan++) {
 				if (note->note > 0 && note->note < 121)
 					note->note = CLAMP(note->note + amount, 1, 120);
@@ -2873,7 +2876,7 @@ static void transpose_notes(int amount)
 			}
 		}
 	} else {
-		note = pattern + 64 * current_row + current_channel - 1;
+		note = pattern + MAX_CHANNELS * current_row + current_channel - 1;
 		if (note->note > 0 && note->note < 121)
 			note->note = CLAMP(note->note + amount, 1, 120);
 	}
@@ -2889,22 +2892,22 @@ static void copy_note_to_mask(void)
 
 	num_rows = song_get_pattern(current_pattern, &pattern);
 
-	note = pattern + 64 * current_row + current_channel - 1;
+	note = pattern + MAX_CHANNELS * current_row + current_channel - 1;
 	row = current_row;
 
 	mask_note = *note;
 
 	if (mask_copy_search_mode != COPY_INST_OFF) {
 		while (!note->instrument && row > 0) {
-			note -= 64;
+			note -= MAX_CHANNELS;
 			row--;
 		}
 		if (mask_copy_search_mode == COPY_INST_UP_THEN_DOWN && !note->instrument) {
 			// Reset
-			note = pattern + 64 * current_row + current_channel - 1;
+			note = pattern + MAX_CHANNELS * current_row + current_channel - 1;
 			row = current_row;
 			while (!note->instrument && row < num_rows) {
-				note += 64;
+				note += MAX_CHANNELS;
 				row++;
 			}
 		}
@@ -3001,7 +3004,7 @@ static int seek_done(void)
 	song_note_t *pattern, *note;
 
 	song_get_pattern(current_pattern, &pattern);
-	note = pattern + 64 * current_row + current_channel - 1;
+	note = pattern + MAX_CHANNELS * current_row + current_channel - 1;
 
 	switch (current_position) {
 	case 0:
@@ -3080,7 +3083,7 @@ static int patedit_record_note(song_note_t *cur_note, int channel, SCHISM_UNUSED
 			? clipboard.channels
 			: 1;
 
-		for (i = 0; i < channels && i + channel <= 64; i++) {
+		for (i = 0; i < channels && i + channel <= MAX_CHANNELS; i++) {
 			/* I don't know what this whole 'force' thing is about, but okay */
 			if (!force && cur_note->note)
 				continue;
@@ -3168,7 +3171,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			return 0;
 		}
 
-		cur_note = pattern + 64 * r + (c-1);
+		cur_note = pattern + MAX_CHANNELS * r + (c-1);
 		/* never "overwrite" a note off */
 		patedit_record_note(cur_note, c, r, NOTE_OFF, 0);
 
@@ -3188,7 +3191,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			c = song_keydown(smp, ins, n, v, c);
 		}
 
-		cur_note = pattern + 64 * r + (c-1);
+		cur_note = pattern + MAX_CHANNELS * r + (c-1);
 		patedit_record_note(cur_note, c, r, n, 0);
 
 		if (!template_mode) {
@@ -3216,9 +3219,9 @@ static int pattern_editor_insert_midi(struct key_event *k)
 	}
 
 	/* pitch bend */
-	for (c = 0; c < 64; c++) {
+	for (c = 0; c < MAX_CHANNELS; c++) {
 		if ((channel_multi[c] & 1) && (channel_multi[c] & (~1))) {
-			cur_note = pattern + 64 * r + c;
+			cur_note = pattern + MAX_CHANNELS * r + c;
 
 			if (cur_note->effect) {
 				if (cur_note->effect != FX_PORTAMENTOUP
@@ -3273,7 +3276,7 @@ static int pattern_editor_insert(struct key_event *k)
 	if (k->state == KEY_RELEASE && current_position)
 		return 0;
 
-	cur_note = pattern + 64 * current_row + current_channel - 1;
+	cur_note = pattern + MAX_CHANNELS * current_row + current_channel - 1;
 
 	switch (current_position) {
 	case 0:                 /* note */
@@ -3354,7 +3357,7 @@ static int pattern_editor_insert(struct key_event *k)
 						song_get_rows_in_pattern(current_pattern)) {
 						return 1;
 					}
-					cur_note += 64;
+					cur_note += MAX_CHANNELS;
 					/* give up if the next row has a note too */
 					if (cur_note->note) {
 						return 1;
@@ -3414,9 +3417,9 @@ static int pattern_editor_insert(struct key_event *k)
 		if (NOTE_IS_NOTE(n) && cur_note->voleffect == VOLFX_VOLUME)
 			vol = cur_note->volparam;
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
-			// advance horizontally, stopping at channel 64
+			// advance horizontally, stopping at channel MAX_CHANNELS
 			// (I have no idea how IT does this, it might wrap)
-			if (current_channel < 64) {
+			if (current_channel < MAX_CHANNELS) {
 				shift_chord_channels++;
 				current_channel++;
 				pattern_editor_reposition();
@@ -3682,7 +3685,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			/* 3x alt-l re-selects the current channel */
 			if (selection.first_channel == selection.last_channel) {
 				selection.first_channel = 1;
-				selection.last_channel = 64;
+				selection.last_channel = MAX_CHANNELS;
 			} else {
 				selection.first_channel = selection.last_channel = current_channel;
 			}
@@ -3767,7 +3770,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			channel_multi_enabled = 1;
 		} else {
 			channel_multi_enabled = 0;
-			for (n = 0; n < 64; n++) {
+			for (n = 0; n < MAX_CHANNELS; n++) {
 				if (channel_multi[n]) {
 					channel_multi_enabled = 1;
 					break;
@@ -3901,13 +3904,13 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		pated_save("Remove inserted row(s)    (Alt-Insert)");
-		pattern_insert_rows(current_row, 1, 1, 64);
+		pattern_insert_rows(current_row, 1, 1, MAX_CHANNELS);
 		break;
 	case SCHISM_KEYSYM_DELETE:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		pated_save("Replace deleted row(s)    (Alt-Delete)");
-		pattern_delete_rows(current_row, 1, 1, 64);
+		pattern_delete_rows(current_row, 1, 1, MAX_CHANNELS);
 		break;
 	case SCHISM_KEYSYM_F9:
 		if (k->state == KEY_RELEASE)
@@ -4378,7 +4381,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			return 0;
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			current_channel++;
-		} else if (link_effect_column && current_position == 6 && current_channel < 64) {
+		} else if (link_effect_column && current_position == 6 && current_channel < MAX_CHANNELS) {
 			current_position = current_effect() ? 7 : 10;
 		} else {
 			current_position++;
@@ -4446,8 +4449,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 			return 0;
 		if (template_mode && clipboard.rows == 1) {
 			n = clipboard.channels;
-			if (n + current_channel > 64) {
-				n = 64 - current_channel;
+			if (n + current_channel > MAX_CHANNELS) {
+				n = MAX_CHANNELS - current_channel;
 			}
 			pattern_insert_rows(current_row, 1, current_channel, n);
 		} else {
@@ -4459,8 +4462,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 			return 0;
 		if (template_mode && clipboard.rows == 1) {
 			n = clipboard.channels;
-			if (n + current_channel > 64) {
-				n = 64 - current_channel;
+			if (n + current_channel > MAX_CHANNELS) {
+				n = MAX_CHANNELS - current_channel;
 			}
 			pattern_delete_rows(current_row, 1, current_channel, n);
 		} else {
@@ -4575,7 +4578,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		} else if (shift_chord_channels) {
 			current_channel -= shift_chord_channels;
 			while (current_channel < 1)
-				current_channel += 64;
+				current_channel += MAX_CHANNELS;
 			advance_cursor(1, 1);
 			shift_chord_channels = 0;
 		}
@@ -4630,7 +4633,7 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 
 	current_row = CLAMP(current_row, 0, total_rows);
 	if (current_position > 8) {
-		if (current_channel < 64) {
+		if (current_channel < MAX_CHANNELS) {
 			current_position = 0;
 			current_channel++;
 		} else {
@@ -4645,7 +4648,7 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 		}
 	}
 
-	current_channel = CLAMP(current_channel, 1, 64);
+	current_channel = CLAMP(current_channel, 1, MAX_CHANNELS);
 	pattern_editor_reposition();
 	if (k->mod & SCHISM_KEYMOD_SHIFT)
 		shift_selection_update();

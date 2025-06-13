@@ -33,7 +33,11 @@
 
 /* --------------------------------------------------------------------- */
 
-static struct widget widgets_orderpan[65], widgets_ordervol[65];
+#if MAX_CHANNELS != 64
+# error The code currently assumes MAX_CHANNELS is 64. The dialog will need to be redesigned and rewritten if this changes.
+#endif
+
+static struct widget widgets_orderpan[MAX_CHANNELS + 1], widgets_ordervol[MAX_CHANNELS + 1];
 
 static int top_order = 0;
 static int current_order = 0;
@@ -783,7 +787,7 @@ static void orderpan_update_values_in_song(void)
 	int n;
 
 	status.flags |= SONG_NEEDS_SAVE;
-	for (n = 0; n < 64; n++) {
+	for (n = 0; n < MAX_CHANNELS; n++) {
 		chn = song_get_channel(n);
 
 		/* yet another modplug hack here! */
@@ -803,7 +807,7 @@ static void ordervol_update_values_in_song(void)
 	int n;
 
 	status.flags |= SONG_NEEDS_SAVE;
-	for (n = 0; n < 64; n++)
+	for (n = 0; n < MAX_CHANNELS; n++)
 		song_get_channel(n)->volume = widgets_ordervol[n + 1].d.thumbbar.value;
 }
 
@@ -812,7 +816,7 @@ static void ordervol_update_values_in_song(void)
 void orderpan_recheck_muted_channels(void)
 {
 	int n;
-	for (n = 0; n < 64; n++)
+	for (n = 0; n < MAX_CHANNELS; n++)
 		widgets_orderpan[n + 1].d.panbar.muted = !!(song_get_channel(n)->flags & CHN_MUTE);
 
 	if (status.current_page == PAGE_ORDERLIST_PANNING)
@@ -824,7 +828,7 @@ static void order_pan_vol_song_changed_cb(void)
 	int n;
 	song_channel_t *chn;
 
-	for (n = 0; n < 64; n++) {
+	for (n = 0; n < MAX_CHANNELS; n++) {
 		chn = song_get_channel(n);
 		widgets_orderpan[n + 1].d.panbar.value = chn->panning / 4;
 		widgets_orderpan[n + 1].d.panbar.surround = !!(chn->flags & CHN_SURROUND);
@@ -856,7 +860,7 @@ static void order_pan_vol_handle_key(struct key_event * k)
 		return;
 	}
 
-	n = CLAMP(n, 1, 64);
+	n = CLAMP(n, 1, MAX_CHANNELS);
 	if (ACTIVE_PAGE.selected_widget != n)
 		widget_change_focus_to(n);
 }
@@ -899,7 +903,7 @@ void orderpan_load_page(struct page *page)
 	page->pre_handle_key = order_pre_key;
 	page->handle_key = order_pan_vol_handle_key;
 	page->set_page = order_pan_set_page;
-	page->total_widgets = 65;
+	page->total_widgets = MAX_CHANNELS + 1;
 	page->widgets = widgets_orderpan;
 	page->help_index = HELP_ORDERLIST_PANNING;
 
@@ -914,13 +918,13 @@ void orderpan_load_page(struct page *page)
 
 	/* 1-64 = panbars */
 	widget_create_panbar(widgets_orderpan + 1, 20, 15, 1, 2, 33, orderpan_update_values_in_song, 1);
-	for (n = 2; n <= 32; n++) {
+	for (n = 2; n <= (MAX_CHANNELS / 2); n++) {
 		widget_create_panbar(widgets_orderpan + n, 20, 14 + n, n - 1, n + 1, n + 32,
 			      orderpan_update_values_in_song, n);
 		widget_create_panbar(widgets_orderpan + n + 31, 54, 13 + n, n + 30, n + 32, 0,
 			      orderpan_update_values_in_song, n + 31);
 	}
-	widget_create_panbar(widgets_orderpan + 64, 54, 46, 63, 64, 0, orderpan_update_values_in_song, 64);
+	widget_create_panbar(widgets_orderpan + MAX_CHANNELS, 54, 46, 63, 64, 0, orderpan_update_values_in_song, 64);
 }
 
 void ordervol_load_page(struct page *page)
@@ -932,7 +936,7 @@ void ordervol_load_page(struct page *page)
 	page->playback_update = order_pan_vol_playback_update;
 	page->pre_handle_key = order_pre_key;
 	page->handle_key = order_pan_vol_handle_key;
-	page->total_widgets = 65;
+	page->total_widgets = MAX_CHANNELS + 1;
 	page->widgets = widgets_ordervol;
 	page->help_index = HELP_ORDERLIST_VOLUME;
 
@@ -947,19 +951,18 @@ void ordervol_load_page(struct page *page)
 
 	/* 1-64 = thumbbars */
 	widget_create_thumbbar(widgets_ordervol + 1, 31, 15, 9, 1, 2, 33, ordervol_update_values_in_song, 0, 64);
-	for (n = 2; n <= 32; n++) {
+	for (n = 2; n <= (MAX_CHANNELS / 2); n++) {
 		widget_create_thumbbar(widgets_ordervol + n, 31, 14 + n, 9, n - 1, n + 1, n + 32,
 				ordervol_update_values_in_song, 0, 64);
 		widget_create_thumbbar(widgets_ordervol + n + 31, 65, 13 + n, 9, n + 30, n + 32, 0,
 				ordervol_update_values_in_song, 0, 64);
 	}
-	widget_create_thumbbar(widgets_ordervol + 64, 65, 46, 9, 63, 64, 0, ordervol_update_values_in_song, 0, 64);
+	widget_create_thumbbar(widgets_ordervol + MAX_CHANNELS, 65, 46, 9, 63, 64, 0, ordervol_update_values_in_song, 0, 64);
 }
 
 /* --------------------------------------------------------------------- */
 /* this function is a lost little puppy */
 
-#define MAX_CHANNELS 64 // blah
 void song_set_pan_scheme(int scheme)
 {
 	int n, nc;

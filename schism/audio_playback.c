@@ -124,7 +124,7 @@ static const schism_audio_backend_t *backend = NULL;
 // playback
 
 // page_patedit.c
-extern int midi_bend_hit[64], midi_last_bend_hit[64];
+extern int midi_last_bend_hit[MAX_CHANNELS];
 
 // this gets called from the backend
 static void audio_callback(uint8_t *stream, int len)
@@ -364,11 +364,11 @@ void song_change_current_play_channel(int relative, int wraparound)
 	current_play_channel += relative;
 	if (wraparound) {
 		if (current_play_channel < 1)
-			current_play_channel = 64;
-		else if (current_play_channel > 64)
+			current_play_channel = MAX_CHANNELS;
+		else if (current_play_channel > MAX_CHANNELS)
 			current_play_channel = 1;
 	} else {
-		current_play_channel = CLAMP(current_play_channel, 1, 64);
+		current_play_channel = CLAMP(current_play_channel, 1, MAX_CHANNELS);
 	}
 	status_text_flash("Using channel %d for playback", current_play_channel);
 }
@@ -637,9 +637,9 @@ void song_single_step(int patno, int row)
 	total_rows = song_get_pattern(patno, &pattern);
 	if (!pattern || row >= total_rows) return;
 
-	cur_note = pattern + 64 * row;
+	cur_note = pattern + MAX_CHANNELS * row;
 	cx = song_get_mix_channel(0);
-	for (i = 1; i <= 64; i++, cx++, cur_note++) {
+	for (i = 1; i <= MAX_CHANNELS; i++, cx++, cur_note++) {
 		if (cx && (cx->flags & CHN_MUTE)) continue; /* ick */
 		if (cur_note->voleffect == VOLFX_VOLUME) {
 			vol = cur_note->volparam;
@@ -670,7 +670,6 @@ void song_single_step(int patno, int row)
 // this should be called with the audio LOCKED
 static void song_reset_play_state(void)
 {
-	memset(midi_bend_hit, 0, sizeof(midi_bend_hit));
 	memset(midi_last_bend_hit, 0, sizeof(midi_last_bend_hit));
 	memset(keyjazz_note_to_chan, 0, sizeof(keyjazz_note_to_chan));
 	memset(keyjazz_chan_to_note, 0, sizeof(keyjazz_chan_to_note));
@@ -747,7 +746,7 @@ void song_stop_unlocked(int quitting)
 		unsigned char moff[4];
 
 		/* shut off everything; not IT like, but less annoying */
-		for (int chan = 0; chan < 64; chan++) {
+		for (int chan = 0; chan < MAX_CHANNELS; chan++) {
 			if (current_song->midi_note_tracker[chan] != 0) {
 				for (int j = 0; j < MAX_MIDI_CHANNELS; j++) {
 					csf_process_midi_macro(current_song, chan,

@@ -236,7 +236,7 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		if (rows < 32) {
 			/* stick a pattern break on the first channel with an empty effect column
 			 * (XXX don't do this if there's already one in another column) */
-			note = song->patterns[pat] + 64 * (rows - 1);
+			note = song->patterns[pat] + MAX_CHANNELS * (rows - 1);
 			while (note->effect || note->param)
 				note++;
 			note->effect = FX_PATTERNBREAK;

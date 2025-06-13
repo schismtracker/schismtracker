@@ -121,7 +121,7 @@ int song_get_mix_state(uint32_t **channel_list)
 // For all of these, channel is ZERO BASED.
 // (whereas in the pattern editor etc. it's one based)
 
-static int channel_states[64];  // saved ("real") mute settings; nonzero = muted
+static int channel_states[MAX_CHANNELS];  // saved ("real") mute settings; nonzero = muted
 
 static inline void _save_state(int channel)
 {
@@ -130,7 +130,7 @@ static inline void _save_state(int channel)
 
 void song_save_channel_states(void)
 {
-	int n = 64;
+	int n = MAX_CHANNELS;
 
 	while (n-- > 0)
 		_save_state(n);
@@ -163,7 +163,7 @@ void song_set_channel_mute(int channel, int muted)
 // below), but I'm making it extern anyway for symmetry.
 void song_restore_channel_states(void)
 {
-	int n = 64;
+	int n = MAX_CHANNELS;
 
 	while (n-- > 0)
 		song_set_channel_mute(n, channel_states[n]);
@@ -178,7 +178,7 @@ void song_toggle_channel_mute(int channel)
 }
 
 static int _soloed(int channel) {
-	int n = 64;
+	int n = MAX_CHANNELS;
 	// if this channel is muted, it obviously isn't soloed
 	if (current_song->voices[channel].flags & CHN_MUTE)
 		return 0;
@@ -193,7 +193,7 @@ static int _soloed(int channel) {
 
 void song_handle_channel_solo(int channel)
 {
-	int n = 64;
+	int n = MAX_CHANNELS;
 
 	if (_soloed(channel)) {
 		song_restore_channel_states();
@@ -205,11 +205,11 @@ void song_handle_channel_solo(int channel)
 
 int song_find_last_channel(void)
 {
-	int n = 64;
+	int n = MAX_CHANNELS;
 
 	while (channel_states[--n])
 		if (n == 0)
-			return 63;
+			return MAX_CHANNELS - 1;
 	return n;
 }
 
@@ -270,7 +270,7 @@ song_note_t *song_pattern_allocate_copy(int patno, int *rows)
 	song_note_t *newdata = NULL;
 	if (olddata) {
 		newdata = csf_allocate_pattern(len);
-		memcpy(newdata, olddata, len * sizeof(song_note_t) * 64);
+		memcpy(newdata, olddata, len * sizeof(song_note_t) * MAX_CHANNELS);
 	}
 	if (rows)
 		*rows = len;
@@ -336,7 +336,7 @@ void song_pattern_resize(int pattern, int newsize)
 		song_note_t *olddata = current_song->patterns[pattern];
 		song_note_t *newdata = csf_allocate_pattern(newsize);
 		if (olddata) {
-			memcpy(newdata, olddata, 64 * sizeof(song_note_t) * MIN(newsize, oldsize));
+			memcpy(newdata, olddata, MAX_CHANNELS * sizeof(song_note_t) * MIN(newsize, oldsize));
 			csf_free_pattern(olddata);
 		}
 		current_song->patterns[pattern] = newdata;
@@ -514,7 +514,7 @@ static void _swap_instruments_in_patterns(int a, int b)
 		song_note_t *note = current_song->patterns[pat];
 		if (note == NULL)
 			continue;
-		for (int n = 0; n < 64 * current_song->pattern_size[pat]; n++, note++) {
+		for (int n = 0; n < MAX_CHANNELS * current_song->pattern_size[pat]; n++, note++) {
 			if (note->instrument == a)
 				note->instrument = b;
 			else if (note->instrument == b)
@@ -572,7 +572,7 @@ static void _adjust_instruments_in_patterns(int start, int delta)
 		song_note_t *note = current_song->patterns[pat];
 		if (note == NULL)
 			continue;
-		for (n = 0; n < 64 * current_song->pattern_size[pat]; n++, note++) {
+		for (n = 0; n < MAX_CHANNELS * current_song->pattern_size[pat]; n++, note++) {
 			if (note->instrument >= start)
 				note->instrument = CLAMP(note->instrument + delta, 0, MAX_SAMPLES - 1);
 		}
@@ -799,7 +799,7 @@ void song_replace_sample(int num, int with)
 			note = current_song->patterns[i];
 			if (!note)
 				continue;
-			for (j = 0; j < 64 * current_song->pattern_size[i]; j++, note++) {
+			for (j = 0; j < MAX_CHANNELS * current_song->pattern_size[i]; j++, note++) {
 				if (note->instrument == num)
 					note->instrument = with;
 			}
@@ -822,7 +822,7 @@ void song_replace_instrument(int num, int with)
 		note = current_song->patterns[i];
 		if (!note)
 			continue;
-		for (j = 0; j < 64 * current_song->pattern_size[i]; j++, note++) {
+		for (j = 0; j < MAX_CHANNELS * current_song->pattern_size[i]; j++, note++) {
 			if (note->instrument == num)
 				note->instrument = with;
 		}

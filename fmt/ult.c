@@ -364,12 +364,12 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		for (n = 0; n < nchn; n++)
 			song->channels[n].panning = (n & 1) ? 48 : 16;
 	}
-	for (; n < 64; n++) {
+	for (; n < MAX_CHANNELS; n++) {
 		song->channels[n].panning = 32;
 		song->channels[n].flags = CHN_MUTE;
 	}
 	//mphack - fix the pannings
-	for (n = 0; n < 64; n++)
+	for (n = 0; n < MAX_CHANNELS; n++)
 		song->channels[n].panning *= 4;
 
 	if ((lflags & (LOAD_NOSAMPLES | LOAD_NOPATTERNS)) == (LOAD_NOSAMPLES | LOAD_NOPATTERNS))
@@ -397,7 +397,7 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					repeat = 64 - row;
 				while (repeat--) {
 					*note = evnote;
-					note += 64;
+					note += MAX_CHANNELS;
 					row++;
 				}
 			}

@@ -201,7 +201,7 @@ int fmt_far_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		if (!fhdr.onoff[n])
 			song->channels[n].flags |= CHN_MUTE;
 	}
-	for (; n < 64; n++)
+	for (; n < MAX_CHANNELS; n++)
 		song->channels[n].flags |= CHN_MUTE;
 
 	song->initial_speed = fhdr.default_speed;
