@@ -67,7 +67,7 @@ static int fontedit_return_page = PAGE_PATTERN_EDITOR;
 /* dynamic cast to struct page * */
 struct page *widget_context_as_page(struct widget_context *this)
 {
-	if (this->context_type == WIDGET_CONTEXT_PAGE)
+	if (this && (this->context_type == WIDGET_CONTEXT_PAGE))
 		return (struct page *)this;
 	else
 		return NULL;

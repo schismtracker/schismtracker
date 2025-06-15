@@ -1352,7 +1352,7 @@ static void env_resize_dialog(song_envelope_t *env)
 	widget_create_numentry(env_resize_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999, &env_resize_cursor);
 	env_resize_widgets[0].d.numentry.value = env->ticks[env->nodes - 1];
 	widget_create_button(env_resize_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1, dialog_cancel, "Cancel", 1);
-	dialog = dialog_create_custom(26, 22, 29, 11, env_resize_widgets, 2, 0, env_resize_draw_const, env, NULL);
+	dialog = dialog_create_custom(26, 22, 29, 11, env_resize_widgets, 2, 0, env_resize_draw_const, env, env_resize_finalize);
 	dialog->action_yes = do_env_resize;
 }
 
@@ -1431,7 +1431,7 @@ static void env_adsr_dialog(SCHISM_UNUSED song_envelope_t *env)
 	widget_create_thumbbar(env_adsr_widgets + 3, 34, 27, 17, 2, 4, 4, NULL, 0, 128);
 	widget_create_button(env_adsr_widgets + 4, 36, 30, 6, 3, 0, 4, 4, 0, dialog_cancel, "Cancel", 1);
 
-	dialog = dialog_create_custom(25, 21, 31, 12, env_adsr_widgets, 5, 0, env_adsr_draw_const, ins, NULL);
+	dialog = dialog_create_custom(25, 21, 31, 12, env_adsr_widgets, 5, 0, env_adsr_draw_const, ins, env_adsr_finalize);
 	dialog->action_yes = do_env_adsr;
 }
 

@@ -1313,10 +1313,15 @@ static void resize_sample_dialog(int aa)
 static struct widget resample_sample_widgets[2];
 static int resample_sample_cursor;
 
+static void resample_sample_finalize(struct dialog *this, SCHISM_UNUSED dialog_button_t dialog_button)
+{
+	this->final_data = malloc_int(this->widgets[0].d.numentry.value);
+}
+
 static void do_resample_sample_aa(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
+	int new_c5_speed = *(int *)final_data;
 	song_sample_t *sample = song_get_sample(current_sample);
-	int new_c5_speed = resample_sample_widgets[0].d.numentry.value;
 	uint32_t newlen = _muldiv(sample->length, new_c5_speed, sample->c5speed);
 	sample_resize(sample, newlen, 1);
 	sample->c5speed = new_c5_speed;
@@ -1324,8 +1329,8 @@ static void do_resample_sample_aa(SCHISM_UNUSED void *data, SCHISM_UNUSED void *
 
 static void do_resample_sample(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
+	int new_c5_speed = *(int *)final_data;
 	song_sample_t *sample = song_get_sample(current_sample);
-	int new_c5_speed = resample_sample_widgets[0].d.numentry.value;
 	uint32_t newlen = _muldiv(sample->length, new_c5_speed, sample->c5speed);
 	sample_resize(sample, newlen, 0);
 	sample->c5speed = new_c5_speed;
