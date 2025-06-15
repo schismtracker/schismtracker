@@ -159,7 +159,7 @@ static int palette_list_toggled_(uint32_t i)
 	return (i == current_palette_index);
 }
 
-static void palette_list_activate_(void)
+static void palette_list_activate_(struct widget_context *this)
 {
 	palette_load_preset(selected_palette);
 	palette_apply();
