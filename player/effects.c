@@ -83,7 +83,7 @@ uint32_t calc_halftone(uint32_t hz, int32_t rel)
 ////////////////////////////////////////////////////////////
 // Channels effects
 
-void fx_note_cut(song_t *csf, uint32_t nchan, int /*clear_note*/)
+void fx_note_cut(song_t *csf, uint32_t nchan, SCHISM_UNUSED int clear_note)
 {
 	song_voice_t *chan = &csf->voices[nchan];
 	if (NOTE_IS_NOTE(chan->row_note) && chan->row_voleffect == VOLFX_TONEPORTAMENTO)
