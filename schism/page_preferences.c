@@ -218,9 +218,9 @@ static int audio_device_list_toggled_(uint32_t i)
 	return (ts == AUDIO_BACKEND_DEFAULT);
 }
 
-static void audio_device_list_activate_(void)
+static void audio_device_list_activate_(struct widget_context *this)
 {
-	struct widget *w = &ACTIVE_WIDGET;
+	struct widget *w = &this->widgets[this->selected_widget];
 
 	uint32_t id = !w->d.listbox.focus
 		? AUDIO_BACKEND_DEFAULT
@@ -247,7 +247,7 @@ static int audio_driver_list_toggled_(uint32_t i)
 	return !strcmp(song_audio_driver(), audio_driver_name(i));
 }
 
-static void audio_driver_list_activate_(void)
+static void audio_driver_list_activate_(struct widget_context *this)
 {
 	const char *n = audio_driver_name(ACTIVE_WIDGET.d.listbox.focus);
 
