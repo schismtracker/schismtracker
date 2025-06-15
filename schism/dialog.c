@@ -513,7 +513,7 @@ struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *d
 /* dynamic cast to struct dialog * */
 struct dialog *widget_context_as_dialog(struct widget_context *this)
 {
-	if (this->context_type == WIDGET_CONTEXT_DIALOG)
+	if (this && (this->context_type == WIDGET_CONTEXT_DIALOG))
 		return (struct dialog *)this;
 	else
 		return NULL;

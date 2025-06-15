@@ -308,7 +308,7 @@ static void options_close(void *data, SCHISM_UNUSED void *final_data)
 	int old_size, new_size;
 
 	old_size = song_get_pattern(current_pattern, NULL);
-	new_size = *(int *)data;
+	new_size = *(int *)final_data;
 	if (old_size != new_size) {
 		song_pattern_resize(current_pattern, new_size);
 		current_row = MIN(current_row, new_size - 1);
@@ -506,7 +506,7 @@ static void multichannel_close(SCHISM_UNUSED void *data, SCHISM_UNUSED void *fin
 	}
 }
 
-static int multichannel_handle_key(SCHISM_UNUSED struct dialog *this, struct key_event *k)
+static int multichannel_handle_key(struct dialog *this, struct key_event *k)
 {
 	if (k->sym == SCHISM_KEYSYM_n) {
 		if ((k->mod & SCHISM_KEYMOD_ALT) && k->state == KEY_PRESS)
@@ -570,8 +570,7 @@ static void pattern_editor_display_multichannel(void)
 	widget_create_button(multichannel_widgets + 64, 36, 40, 6, 15, 0, 64, 64, 64, dialog_yes, "OK", 3);
 
 	dialog = dialog_create_custom(7, 18, 66, 25, multichannel_widgets, MAX_CHANNELS + 1, 0,
-				      multichannel_draw_const, NULL, NULL);
-	dialog->finalize = multichannel_finalize;
+				      multichannel_draw_const, NULL, multichannel_finalize);
 	dialog->action_yes = multichannel_close;
 	dialog->handle_key = multichannel_handle_key;
 }
