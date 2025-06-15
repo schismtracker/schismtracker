@@ -240,7 +240,7 @@ int song_get_pattern_offset(int * n, song_note_t ** buf, int * row, int offset)
 		offset -= (tot + 1);
 		(*n)++;
 		tot = song_get_rows_in_pattern(*n);
-		if (tot < 0) {
+		if (tot < 0) { // n might eventually become out of range
 			return 0;
 		}
 	}
