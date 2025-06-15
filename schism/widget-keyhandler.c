@@ -384,11 +384,11 @@ static int widget_listbox_handle_key(struct widget *w, struct key_event *k)
 		w->d.listbox.top = top;
 
 		if (w->changed)
-			w->changed();
+			w->changed(widget_get_context(w));
 	}
 
 	if (load_selected_device && w->activate)
-		w->activate();
+		w->activate(widget_get_context(w));
 
 	return 1;
 }

@@ -309,7 +309,7 @@ static void options_close(void *data, SCHISM_UNUSED void *final_data)
 	int old_size, new_size;
 
 	old_size = song_get_pattern(current_pattern, NULL);
-	new_size = *(int *)data;
+	new_size = *(int *)final_data;
 	if (old_size != new_size) {
 		song_pattern_resize(current_pattern, new_size);
 		current_row = MIN(current_row, new_size - 1);
@@ -549,7 +549,7 @@ static void pattern_editor_display_multichannel(void)
 	widget_create_button(multichannel_widgets + 64, 36, 40, 6, 15, 0, 64, 64, 64, dialog_yes, "OK", 3);
 
 	dialog = dialog_create_custom(7, 18, 66, 25, multichannel_widgets, 65, 0,
-				      multichannel_draw_const, NULL, NULL);
+				      multichannel_draw_const, NULL, multichannel_finalize);
 	dialog->action_yes = multichannel_close;
 	dialog->action_cancel = multichannel_close;
 	dialog->handle_key = multichannel_handle_key;
