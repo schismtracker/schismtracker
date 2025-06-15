@@ -2882,11 +2882,13 @@ static void transpose_notes(int amount)
 
 static void copy_note_to_mask(void)
 {
-	int row = current_row, num_rows;
+	int row, num_rows;
 	song_note_t *pattern, *note;
 
 	num_rows = song_get_pattern(current_pattern, &pattern);
+
 	note = pattern + 64 * current_row + current_channel - 1;
+	row = current_row;
 
 	mask_note = *note;
 
@@ -2896,7 +2898,9 @@ static void copy_note_to_mask(void)
 			row--;
 		}
 		if (mask_copy_search_mode == COPY_INST_UP_THEN_DOWN && !note->instrument) {
-			note = pattern + 64 * current_row + current_channel - 1; // Reset
+			// Reset
+			note = pattern + 64 * current_row + current_channel - 1;
+			row = current_row;
 			while (!note->instrument && row < num_rows) {
 				note += 64;
 				row++;
