@@ -101,11 +101,11 @@ static void palette_copy_palette_to_clipboard(int which) {
 	clippy_yank();
 }
 
-static void palette_copy_current_to_clipboard(void) {
+static void palette_copy_current_to_clipboard(SCHISM_UNUSED struct widget_context *this) {
 	palette_copy_palette_to_clipboard(current_palette_index);
 }
 
-static void palette_paste_from_clipboard(void) {
+static void palette_paste_from_clipboard(SCHISM_UNUSED struct widget_context *this) {
 	clippy_paste(CLIPPY_BUFFER);
 }
 
@@ -189,7 +189,7 @@ static int palette_list_handle_key_(struct key_event *kk)
 
 static void palette_list_handle_key(struct key_event * k)
 {
-	int n = *selected_widget;
+	int n = widget_context->selected_widget;
 
 	if (k->state == KEY_RELEASE)
 		return;
@@ -205,13 +205,13 @@ static void palette_list_handle_key(struct key_event * k)
 		break;
 	case SCHISM_KEYSYM_c:
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
-			palette_copy_current_to_clipboard();
+			palette_copy_current_to_clipboard(NULL);
 			return;
 		}
 		break;
 	case SCHISM_KEYSYM_v:
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
-			palette_paste_from_clipboard();
+			palette_paste_from_clipboard(NULL);
 			return;
 		}
 		break;
@@ -227,7 +227,7 @@ static void palette_list_handle_key(struct key_event * k)
 	} else {
 		n = CLAMP(n, 0, 48);
 	}
-	if (n != *selected_widget)
+	if (n != widget_context->selected_widget)
 		widget_change_focus_to(n);
 }
 
@@ -237,14 +237,14 @@ static void palette_list_handle_key(struct key_event * k)
    TODO | of them. also, it should call ccache_destroy_color(n) instead of wiping out the whole character
    TODO | cache whenever a color value is changed. */
 
-static void update_palette(void)
+static void update_palette(struct widget_context *this)
 {
 	int n;
 
 	for (n = 0; n < 16; n++) {
-		current_palette[n][0] = widgets_palette[3 * n].d.thumbbar.value;
-		current_palette[n][1] = widgets_palette[3 * n + 1].d.thumbbar.value;
-		current_palette[n][2] = widgets_palette[3 * n + 2].d.thumbbar.value;
+		current_palette[n][0] = this->widgets[3 * n].d.thumbbar.value;
+		current_palette[n][1] = this->widgets[3 * n + 1].d.thumbbar.value;
+		current_palette[n][2] = this->widgets[3 * n + 2].d.thumbbar.value;
 	}
 	selected_palette = current_palette_index = 0;
 	memcpy(palettes[0].colors, current_palette, sizeof(current_palette));

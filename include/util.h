@@ -125,4 +125,10 @@ SCHISM_CONST static inline SCHISM_ALWAYS_INLINE uint32_t i_pow(uint32_t base, ui
 
 FILE *mkfstemp(char *template);
 
+/* This function takes an int and copies it into a malloc()ed buffer, for
+ * use with lifetime models like dialog.final_data where the pointer is
+ * always free()d.
+ */
+void *malloc_int(int value);
+
 #endif /* SCHISM_UTIL_H_ */
