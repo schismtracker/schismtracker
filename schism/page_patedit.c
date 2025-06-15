@@ -2551,6 +2551,8 @@ void set_current_row(int row)
 	int total_rows = song_get_rows_in_pattern(current_pattern);
 
 	current_row = CLAMP(row, 0, total_rows);
+	if (current_row < 0) // if for whatever reason current_pattern isn't valid, total_rows will be -1
+		current_row = 0;
 	pattern_editor_reposition();
 	status.flags |= NEED_UPDATE;
 }
@@ -3606,6 +3608,9 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	int n;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
 
+	if (total_rows < 0)
+		total_rows = 0;
+
 	/* hack to render this useful :) */
 	if (k->sym == SCHISM_KEYSYM_KP_9) {
 		k->sym = SCHISM_KEYSYM_F9;
@@ -3936,6 +3941,9 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	int n;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
 
+	if (total_rows < 0)
+		total_rows = 0;
+
 	n = numeric_key_event(k, 0);
 	if (n > -1) {
 		if (n < 0 || n >= NUM_TRACK_VIEWS)
@@ -4187,6 +4195,9 @@ static int pattern_editor_handle_key(struct key_event * k)
 	const struct track_view *track_view;
 	int np, nr, nc;
 	unsigned int basex;
+
+	if (total_rows < 0)
+		total_rows = 0;
 
 	if (k->mouse != MOUSE_NONE) {
 		if (k->state == KEY_RELEASE) {
@@ -4598,6 +4609,9 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 {
 	int ret;
 	int total_rows = song_get_rows_in_pattern(current_pattern);
+
+	if (total_rows < 0)
+		total_rows = 0;
 
 	if (k->mod & SCHISM_KEYMOD_SHIFT) {
 		switch (k->sym) {

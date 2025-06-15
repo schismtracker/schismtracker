@@ -225,16 +225,22 @@ int song_get_pattern_offset(int * n, song_note_t ** buf, int * row, int offset)
 	int tot;
 	if (song_get_mode() & MODE_PATTERN_LOOP) {
 		// just wrap around current rows
-		*row = (*row + offset) % song_get_rows_in_pattern(*n);
+		tot = song_get_rows_in_pattern(*n);
+
+		if (tot == 0) // pattern of length 1
+			*row = 0;
+		else
+			*row = (*row + offset) % tot;
+
 		return song_get_pattern(*n, buf);
 	}
 
 	tot = song_get_rows_in_pattern(*n);
 	while (offset + *row > tot) {
-		offset -= tot;
+		offset -= (tot + 1);
 		(*n)++;
 		tot = song_get_rows_in_pattern(*n);
-		if (!tot) {
+		if (tot < 0) {
 			return 0;
 		}
 	}
@@ -315,7 +321,7 @@ int song_next_order_for_pattern(int pat)
 int song_get_rows_in_pattern(int pattern)
 {
 	if (pattern > MAX_PATTERNS)
-		return 0;
+		return -1;
 	return (current_song->pattern_size[pattern] ? current_song->pattern_size[pattern] : 64) - 1;
 }
 
