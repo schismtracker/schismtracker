@@ -629,7 +629,7 @@ static inline int32_t rn_update_sample(song_t *csf, song_voice_t *chan, int32_t 
 
 // XXX Rename this
 //Ranges: 
-// chan_num = 0..63
+// chan_num = 0..MAX_CHANNELS-1
 // freq = frequency in Hertz
 // vol = 0..16384
 // chan->instrument_volume = 0..64  (corresponds to the sample global volume and instrument global volume)
@@ -806,7 +806,7 @@ uint32_t csf_read(song_t *csf, void * v_buffer, uint32_t bufsize)
 		if (csf->multi_write) {
 			/* multi doesn't actually write meaningful data into 'buffer', so we can use that
 			as temp space for converting */
-			for (uint32_t n = 0; n < 64; n++) {
+			for (uint32_t n = 0; n < MAX_CHANNELS; n++) {
 				if (csf->multi_write[n].used) {
 					if (csf->mix_channels < 2)
 						mono_from_stereo(csf->multi_write[n].buffer, count);

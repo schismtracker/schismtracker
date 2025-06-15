@@ -367,7 +367,7 @@ typedef struct song_instrument {
 
 // (TODO write decent descriptions of what the various volume
 // variables are used for - are all of them *really* necessary?)
-// (TODO also the majority of this is irrelevant outside of the "main" 64 channels;
+// (TODO also the majority of this is irrelevant outside of the "main" MAX_CHANNELS channels;
 // this struct should really only be holding the stuff actually needed for mixing)
 typedef struct song_voice {
 	// First 32-bytes: Most used mixing information: don't change it
@@ -537,7 +537,7 @@ typedef struct {
 // XXX why are these extern? moreover, why is default_midi_config NOT const?
 extern midi_config_t default_midi_config;
 
-extern const song_note_t blank_pattern[64 * 64];
+extern const song_note_t blank_pattern[64 * MAX_CHANNELS];
 extern const song_note_t *blank_note;
 
 
