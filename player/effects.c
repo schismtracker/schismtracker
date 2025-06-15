@@ -85,13 +85,20 @@ uint32_t calc_halftone(uint32_t hz, int32_t rel)
 
 void fx_note_cut(song_t *csf, uint32_t nchan, SCHISM_UNUSED int clear_note)
 {
+	/* FIXME: some weirdness in IT makes it so that SCx is not processed when there
+	 * a note delay, EXCEPT on the second loop. our counter is backwards, so we'll
+	 * have to save the delay parameter and subtract it to find out if we're on the
+	 * second loop. */
 	song_voice_t *chan = &csf->voices[nchan];
+
+	/* TODO: Does this also apply to note-column note cuts? */
 	if (NOTE_IS_NOTE(chan->row_note) && chan->row_voleffect == VOLFX_TONEPORTAMENTO)
 		return;
+
 	// stop the current note:
 	chan->flags |= CHN_NOTEFADE | CHN_FASTVOLRAMP;
 	//if (chan->ptr_instrument) chan->volume = 0;
-	chan->frequency = 0;
+	//chan->frequency = 0;
 	chan->increment = 0;
 	chan->fadeout_volume = 0;
 	//chan->length = 0;
