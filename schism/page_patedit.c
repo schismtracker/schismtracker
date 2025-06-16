@@ -4424,7 +4424,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_END:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		n = song_find_last_channel();
+		n = song_find_last_channel() + 1;
 		if (current_position == 8) {
 			if (invert_home_end ? (current_row != total_rows) : (current_channel == n)) {
 				current_row = total_rows;

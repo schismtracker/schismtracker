@@ -203,16 +203,14 @@ void song_handle_channel_solo(int channel)
 	}
 }
 
-// returned channel number is ONE-based
-// (to make it easier to work with in the pattern editor and info page)
 int song_find_last_channel(void)
 {
 	int n = 64;
 
 	while (channel_states[--n])
 		if (n == 0)
-			return 64;
-	return n + 1;
+			return 63;
+	return n;
 }
 
 // ------------------------------------------------------------------------
