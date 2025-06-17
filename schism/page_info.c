@@ -1216,7 +1216,7 @@ static int info_page_handle_key(struct key_event * k)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		selected_channel = song_find_last_channel();
+		selected_channel = song_find_last_channel() + 1;
 		break;
 	case SCHISM_KEYSYM_INSERT:
 		if (!NO_MODIFIER(k->mod))
