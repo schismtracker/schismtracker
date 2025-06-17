@@ -543,9 +543,14 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		c->channel_panning = (int16_t)(c->panning + 1);
 		if (c->flags & CHN_SURROUND)
 			c->channel_panning |= 0x8000;
-		c->panning = (s->flags & CHN_PANNING) ? s->panning : 128;
-		if (i)
-			c->panning = (i->flags & CHN_PANNING) ? i->panning : 128;
+
+		/* set panning */
+		c->panning = 128;
+		if (s->flags & CHN_PANNING)
+			c->panning = s->panning;
+		if (i && (i->flags & ENV_SETPANNING))
+			c->panning = i->panning;
+
 		c->flags &= ~CHN_SURROUND;
 		// gotta set these by hand, too
 		c->c5speed = s->c5speed;
