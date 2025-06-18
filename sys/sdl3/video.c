@@ -523,6 +523,9 @@ static void sdl3_video_get_logical_coordinates(int x, int y, int *trans_x, int *
 		float xx, yy;
 
 		sdl3_RenderCoordinatesFromWindow(video.renderer, x, y, &xx, &yy);
+
+		*trans_x = (int)xx;
+		*trans_y = (int)yy;
 	}
 }
 
