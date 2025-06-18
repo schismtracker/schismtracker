@@ -281,8 +281,8 @@ jobs:
       - name: 'Grab llvm-mingw'
         if: steps.cache-llvm-mingw.outputs.cache-hit != 'true'
         run: |
-          curl -L "https://github.com/mstorsjo/llvm-mingw/releases/download/$LLVM_MINGW_VERSION/llvm-mingw-$LLVM_MINGW_VERSION-$STDLIB-ubuntu-20.04-x86_64.tar.xz" | tar xJvf - -C "$HOME"
-          mv "$HOME/llvm-mingw-$LLVM_MINGW_VERSION-$STDLIB-ubuntu-20.04-x86_64" "$HOME/llvm-mingw"
+          curl -L "https://github.com/mstorsjo/llvm-mingw/releases/download/$LLVM_MINGW_VERSION/llvm-mingw-$LLVM_MINGW_VERSION-$STDLIB-ubuntu-22.04-x86_64.tar.xz" | tar xJvf - -C "$HOME"
+          mv "$HOME/llvm-mingw-$LLVM_MINGW_VERSION-$STDLIB-ubuntu-22.04-x86_64" "$HOME/llvm-mingw"
 
       - name: 'Download SDL2 sources'
         if: steps.cache-dependencies.outputs.cache-hit != 'true'
