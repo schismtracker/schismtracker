@@ -1,5 +1,8 @@
 name: OS/2 (i386)
 
+# TODO: we should be using the linux builds of OpenWatcom.
+# Building on Windows is extremely slow :)
+
 on:
   push:
   pull_request:
@@ -10,11 +13,11 @@ jobs:
     runs-on: windows-latest
     name: os2-i386
     env:
-      SEZERO_SDL_COMMIT: f08795af2c829dc10dce1270d02084f2b3769a80
+      SEZERO_SDL_COMMIT: 576b711308d421190c3f809f5b7054f78db52546
       UTF8PROC_VERSION: 2.10.0
       UTF8PROC_SHA256: 276a37dc4d1dd24d7896826a579f4439d1e5fe33603add786bb083cab802e23e
-      OPENWATCOM_VERSION: 2025-02-02
-      OPENWATCOM_SHA256: ee613f1ecd11b72de554a7d92236c4893c5edb1d80484656c152d720698beea8
+      OPENWATCOM_VERSION: 2025-06-01
+      OPENWATCOM_SHA256: 2b710b3c20110d88c5e99899ae21474af310ef0ee27cdb0961968101abcb9b28
       
     defaults:
       run:
@@ -61,7 +64,7 @@ jobs:
       - name: 'Setup OpenWatcom'
         if: steps.cache-openwatcom.outputs.cache-hit != 'true'
         run: |
-          wget -O openwatcom-install.exe "https://github.com/open-watcom/open-watcom-v2/releases/download/2025-02-02-Build/open-watcom-2_0-c-win-x86.exe"
+          wget -O openwatcom-install.exe "https://github.com/open-watcom/open-watcom-v2/releases/download/${OPENWATCOM_VERSION}-Build/open-watcom-2_0-c-win-x86.exe"
           echo "$OPENWATCOM_SHA256  openwatcom-install.exe" | sha256sum -c -
           7z x openwatcom-install.exe -o"/c/WATCOM"
 
