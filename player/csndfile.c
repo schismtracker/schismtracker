@@ -512,7 +512,7 @@ void csf_set_current_order(song_t *csf, uint32_t position)
 		v->cd_patloop = 0;
 		v->patloop_row = 0;
 		v->cd_tremor = 0;
-		// modplug sets vib pos to 16 in old effects mode for some reason *shrug*
+		/* modplug sets vib pos to 16 outside of old effects mode */
 		v->vibrato_position = (csf->flags & SONG_ITOLDEFFECTS) ? 0 : 0x10;
 		v->tremolo_position = 0;
 	}
