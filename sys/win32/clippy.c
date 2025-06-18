@@ -137,7 +137,7 @@ static char *win32_clippy_get_selection(void)
 
 static char *win32_clippy_get_clipboard(void)
 {
-	static const UINT formats[] = {CF_UNICODETEXT, CF_TEXT};
+	UINT formats[] = { CF_UNICODETEXT, CF_TEXT };
 	char *text = NULL;
 	int i;
 	int fmt;
