@@ -365,8 +365,8 @@ static void key_event_reset(struct key_event *kk, int start_x, int start_y)
 	kk->midi_volume = -1;
 	kk->midi_note = -1;
 	/* X/Y resolution */
-	kk->rx = NATIVE_SCREEN_WIDTH / 80;
-	kk->ry = NATIVE_SCREEN_HEIGHT / 50;
+	kk->rx = NATIVE_SCREEN_WIDTH / VGAMEM_COLUMNS;
+	kk->ry = NATIVE_SCREEN_HEIGHT / VGAMEM_ROWS;
 	/* preserve the start position */
 	kk->sx = start_x;
 	kk->sy = start_y;

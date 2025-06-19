@@ -77,7 +77,7 @@ static void song_vars_draw_const(void)
 	draw_text("Sample", 6, 43, 0, 2);
 	draw_text("Instrument", 2, 44, 0, 2);
 
-	for (n = 1; n < 79; n++)
+	for (n = 1; n < (VGAMEM_COLUMNS - 1); n++)
 		draw_char(129, n, 39, 1, 2);
 }
 

@@ -710,7 +710,7 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
 	}
 
 	for (c = first_channel, pos = 0; pos < height - 2; pos++, c++) {
-		for (n = 0; n < 73; n++) {
+		for (n = 0; n < (VGAMEM_COLUMNS - 7); n++) {
 			d = dot_field[n][pos] ? dot_field[n][pos] : 0x06;
 
 			fg = d & 0xf;
