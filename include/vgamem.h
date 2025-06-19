@@ -24,8 +24,11 @@
 #ifndef SCHISM_VGAMEM_H_
 #define SCHISM_VGAMEM_H_
 
-#define NATIVE_SCREEN_WIDTH     640
-#define NATIVE_SCREEN_HEIGHT    400
+#define VGA_CHAR_WIDTH          80
+#define VGA_CHAR_HEIGHT         50
+
+#define NATIVE_SCREEN_WIDTH     (VGA_CHAR_WIDTH * 8)
+#define NATIVE_SCREEN_HEIGHT    (VGA_CHAR_HEIGHT * 8)
 
 /* ---------------------------------------------------------------------------
  * standard crap */

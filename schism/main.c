@@ -363,8 +363,8 @@ static void key_event_reset(struct key_event *kk, int start_x, int start_y)
 	kk->midi_volume = -1;
 	kk->midi_note = -1;
 	/* X/Y resolution */
-	kk->rx = NATIVE_SCREEN_WIDTH / 80;
-	kk->ry = NATIVE_SCREEN_HEIGHT / 50;
+	kk->rx = NATIVE_SCREEN_WIDTH / VGA_CHAR_WIDTH;
+	kk->ry = NATIVE_SCREEN_HEIGHT / VGA_CHAR_HEIGHT;
 	/* preserve the start position */
 	kk->sx = start_x;
 	kk->sy = start_y;
@@ -841,7 +841,7 @@ SCHISM_NORETURN static void event_loop(void)
 		if (!events_have_event())
 			timer_msleep(5);
 	}
-	
+
 	schism_exit(0);
 }
 
