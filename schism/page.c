@@ -193,10 +193,10 @@ static void draw_page_title(void)
 		draw_char(0, tpos - 1, 11, 1, 2);
 		draw_text(ACTIVE_PAGE.title, tpos, 11, 0, 2);
 		draw_char(0, tpos + tlen, 11, 1, 2);
-		for (x = tpos + tlen + 1; x < 79; x++)
+		for (x = tpos + tlen + 1; x < (VGAMEM_COLUMNS - 1); x++)
 			draw_char(154, x, 11, 1, 2);
 	} else {
-		for (x = 1; x < 79; x++)
+		for (x = 1; x < (VGAMEM_COLUMNS - 1); x++)
 			draw_char(154, x, 11, 1, 2);
 	}
 }
