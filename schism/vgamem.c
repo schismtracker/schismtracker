@@ -142,7 +142,7 @@ static inline SCHISM_ALWAYS_INLINE int vgamem_unpack_halfw(int c)
 static uint32_t vgamem[4000] = {0};
 static uint32_t vgamem_read[4000] = {0};
 
-static uint8_t ovl[640*400] = {0}; /* 256K */
+static uint8_t ovl[NATIVE_SCREEN_WIDTH*NATIVE_SCREEN_HEIGHT] = {0}; /* 256K */
 
 #define CHECK_INVERT(tl,br,n) \
 do {                                            \
@@ -165,10 +165,10 @@ void vgamem_clear(void)
 
 void vgamem_ovl_alloc(struct vgamem_overlay *n)
 {
-	n->q = &ovl[ (n->x1*8) + (n->y1 * 5120) ];
+	n->q = &ovl[ (n->x1*8) + (n->y1 * 8 * NATIVE_SCREEN_WIDTH) ];
 	n->width = 8 * ((n->x2 - n->x1) + 1);
 	n->height = 8 * ((n->y2 - n->y1) + 1);
-	n->skip = (640 - n->width);
+	n->skip = (NATIVE_SCREEN_WIDTH - n->width);
 }
 
 void vgamem_ovl_apply(struct vgamem_overlay *n)
@@ -195,7 +195,7 @@ void vgamem_ovl_clear(struct vgamem_overlay *n, int color)
 
 void vgamem_ovl_drawpixel(struct vgamem_overlay *n, int x, int y, int color)
 {
-	n->q[ (640*y) + x ] = color;
+	n->q[ (NATIVE_SCREEN_WIDTH*y) + x ] = color;
 }
 
 static inline void _draw_line_v(struct vgamem_overlay *n, int x,
@@ -205,16 +205,16 @@ static inline void _draw_line_v(struct vgamem_overlay *n, int x,
 	int y;
 
 	if (ys < ye) {
-		q += (ys * 640);
+		q += (ys * NATIVE_SCREEN_WIDTH);
 		for (y = ys; y <= ye; y++) {
 			*q = color;
-			q += 640;
+			q += NATIVE_SCREEN_WIDTH;
 		}
 	} else {
-		q += (ye * 640);
+		q += (ye * NATIVE_SCREEN_WIDTH);
 		for (y = ye; y <= ys; y++) {
 			*q = color;
-			q += 640;
+			q += NATIVE_SCREEN_WIDTH;
 		}
 	}
 }
@@ -222,7 +222,7 @@ static inline void _draw_line_v(struct vgamem_overlay *n, int x,
 static inline void _draw_line_h(struct vgamem_overlay *n, int xs,
 	int xe, int y, int color)
 {
-	unsigned char *q = n->q + (y * 640);
+	unsigned char *q = n->q + (y * NATIVE_SCREEN_WIDTH);
 	int x;
 	if (xs < xe) {
 		q += xs;
@@ -330,7 +330,7 @@ static const uint8_t uFFFD[] = {
 	{ \
 		/* constants */ \
 		const uint_fast32_t y = (ry >> 3), yl = (ry & 7); \
-		const uint8_t *q = ovl + (ry * 640); \
+		const uint8_t *q = ovl + (ry * NATIVE_SCREEN_WIDTH); \
 		const uint8_t *const itf = font_data + yl, \
 			*const bios = font_default_upper_alt + yl, \
 			*const bioslow = font_default_lower + yl, \
@@ -768,7 +768,7 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 
 /* --------------------------------------------------------------------- */
 /* sample drawing
- * 
+ *
  * output channels = number of oscis
  * input channels = number of channels in data
 */

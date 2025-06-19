@@ -31,6 +31,7 @@
 #include "str.h"
 #include "palettes.h"
 #include "video.h"
+#include "vgamem.h"
 
 #include "config-parser.h"
 #include "dmoz.h"
@@ -180,14 +181,14 @@ void cfg_load(void)
 # define WIDTH_DEFAULT 640
 # define HEIGHT_DEFAULT 480
 # define WANT_FIXED_DEFAULT 1
-# define WANT_FIXED_WIDTH_DEFAULT 640
-# define WANT_FIXED_HEIGHT_DEFAULT 400
+# define WANT_FIXED_WIDTH_DEFAULT NATIVE_SCREEN_WIDTH
+# define WANT_FIXED_HEIGHT_DEFAULT NATIVE_SCREEN_HEIGHT
 #else
-# define WIDTH_DEFAULT 640
-# define HEIGHT_DEFAULT 400
+# define WIDTH_DEFAULT NATIVE_SCREEN_WIDTH
+# define HEIGHT_DEFAULT NATIVE_SCREEN_HEIGHT
 # define WANT_FIXED_DEFAULT 0
-# define WANT_FIXED_WIDTH_DEFAULT (640 * 5)
-# define WANT_FIXED_HEIGHT_DEFAULT (400 * 6)
+# define WANT_FIXED_WIDTH_DEFAULT (WIDTH_DEFAULT * 5)
+# define WANT_FIXED_HEIGHT_DEFAULT (HEIGHT_DEFAULT * 6)
 #endif
 
 	cfg_get_string(&cfg, "Video", "format", cfg_video_format, ARRAY_SIZE(cfg_video_format) - 1, "");

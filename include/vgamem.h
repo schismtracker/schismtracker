@@ -28,6 +28,9 @@
 
 #include "charset.h"
 
+#define NATIVE_SCREEN_WIDTH     640
+#define NATIVE_SCREEN_HEIGHT    400
+
 /* ---------------------------------------------------------------------------
  * standard crap */
 
@@ -53,7 +56,7 @@ struct vgamem_overlay {
 	/* these next ones are filled in with a call to vgamem_ovl_alloc,
 	 * (as in, they are READ ONLY) so don't edit them pl0x thx */
 	unsigned char *q; /* points inside ovl */
-	unsigned int skip; /* (640 - width) (this is stupid and needs to go away) */
+	unsigned int skip; /* (NATIVE_SCREEN_WIDTH - width) (this is stupid and needs to go away) */
 
 	int width, height; /* in pixels; signed to avoid bugs elsewhere */
 };

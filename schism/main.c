@@ -53,6 +53,7 @@
 #include "timer.h"
 #include "mt.h"
 #include "mem.h"
+#include "vgamem.h"
 
 #include "osdefs.h"
 
@@ -63,9 +64,6 @@
 #if !defined(__amigaos4__) && !defined(SCHISM_WII)
 # define ENABLE_HOOKS 1
 #endif
-
-#define NATIVE_SCREEN_WIDTH     640
-#define NATIVE_SCREEN_HEIGHT    400
 
 /* --------------------------------------------------------------------- */
 /* globals */
