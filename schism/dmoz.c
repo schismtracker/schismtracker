@@ -1624,7 +1624,7 @@ static int qsort_cmp_file(const void *_a, const void *_b)
 	const dmoz_file_t *b = *(const dmoz_file_t **) _b;
 
 	if ((b->type & TYPE_HIDDEN) && !(a->type & TYPE_HIDDEN))
-		return -1; /* b goes first */
+		return -1; /* a goes first */
 	if ((a->type & TYPE_HIDDEN) && !(b->type & TYPE_HIDDEN))
 		return 1; /* b goes first */
 	if (a->sort_order < b->sort_order)
