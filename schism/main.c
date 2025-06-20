@@ -541,6 +541,7 @@ SCHISM_NORETURN static void event_loop(void)
 					break;
 				case SCHISM_MOUSEMOTION:
 					video_translate(se.motion.x, se.motion.y, &kk.fx, &kk.fy);
+					button = se.motion.buttons;
 					break;
 				case SCHISM_MOUSEBUTTONDOWN:
 					video_translate(se.button.x, se.button.y, &kk.fx, &kk.fy);
