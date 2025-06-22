@@ -764,13 +764,13 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 		//   because otherwise we will add tons of branches.
 		// - Loop wraparound works pretty well in general, but not at the start of bidi samples.
 		// - The loop lookahead stuff might still fail for samples with backward loops.
-		int8_t *const smp_ptr = (int8_t *const)(channel->ptr_sample->data);
+		int8_t *const smp_ptr = channel->ptr_sample ? (int8_t *const)(channel->ptr_sample->data) : NULL;
 		int8_t *lookahead_ptr = NULL;
 		const uint32_t lookahead_start = (channel->loop_end < MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE) ? channel->loop_start : MAX(channel->loop_start, channel->loop_end - MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE);
 		// This shouldn't be necessary with interpolation disabled but with that conditional
 		// it causes weird precision loss within the sample, hence why I've removed it. This
 		// shouldn't be that heavy anyway :p
-		if (channel->flags & CHN_LOOP) {
+		if (channel->ptr_sample && (channel->flags & CHN_LOOP)) {
 			song_sample_t *pins = channel->ptr_sample;
 
 			uint32_t lookahead_offset = 3 * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE + pins->length - channel->loop_end;
