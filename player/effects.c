@@ -1163,8 +1163,8 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 ////////////////////////////////////////////////////////////
 // Length
 
-// XXX Is this still true?
-SCHISM_STATIC_ASSERT(MAX_CHANNELS == 64, "csf_get_length assumes 64 channels");
+// because the setloop bitmask only has 64 bits in it
+SCHISM_STATIC_ASSERT(MAX_CHANNELS <= 64, "csf_get_length assumes <=64 channels");
 
 uint32_t csf_get_length(song_t *csf)
 {
