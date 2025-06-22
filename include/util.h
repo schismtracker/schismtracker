@@ -125,4 +125,8 @@ SCHISM_CONST static inline SCHISM_ALWAYS_INLINE uint32_t i_pow(uint32_t base, ui
 
 FILE *mkfstemp(char *template);
 
+/* this is used for hacking around SDL's stupid envvar crap. */
+int util_call_func_with_envvar(int (*cb)(void *p), void *p, const char *name,
+	const char *val);
+
 #endif /* SCHISM_UTIL_H_ */

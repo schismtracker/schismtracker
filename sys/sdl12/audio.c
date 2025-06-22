@@ -52,36 +52,15 @@ static void (SDLCALL *sdl12_AudioQuit)(void);
 /* ---------------------------------------------------------- */
 /* drivers */
 
+static int sdl12_audio_init_driver_cb(SCHISM_UNUSED void *p)
+{
+	return sdl12_InitSubSystem(SDL_INIT_AUDIO);
+}
+
 static int sdl12_audio_init_driver(const char *name)
 {
-	char *orig_drv;
-	{
-		// Calling getenv() with a subsequent setenv() causes
-		// the original pointer to get lost, so we have to
-		// duplicate it.
-		const char *orig_drv_unsafe = getenv("SDL_AUDIODRIVER");
-		orig_drv = (orig_drv_unsafe) ? str_dup(orig_drv_unsafe) : NULL;
-	}
-
-	if (name)
-		setenv("SDL_AUDIODRIVER", name, 1);
-
-	int ret = sdl12_InitSubSystem(SDL_INIT_AUDIO);
-
-	/* clean up our dirty work, or unset the var */
-	if (name) {
-		if (orig_drv) {
-			setenv("SDL_AUDIODRIVER", orig_drv, 1);
-		} else {
-			unsetenv("SDL_AUDIODRIVER");
-		}
-	}
-
-	if (orig_drv)
-		free(orig_drv);
-
-	/* forward any error, if any */
-	return ret;
+	return util_call_func_with_envvar(sdl12_audio_init_driver_cb, NULL,
+		"SDL_AUDIODRIVER", name);
 }
 
 static void sdl12_audio_quit_driver(void)

@@ -58,6 +58,11 @@ static const char * (SDLCALL *sdl2_GetError)(void);
 static void (SDLCALL *sdl2_ClearError)(void);
 static int (SDLCALL *sdl2_SetError)(const char *fmt, ...);
 
+static int schism_init_audio_impl_cb(SCHISM_UNUSED void *p)
+{
+	return sdl2_InitSubSystem(SDL_INIT_AUDIO);
+}
+
 /* explanation for this:
  * in 2.0.18, the logic for SDL's audio initialization functions
  * changed, so that you can use SDL_AudioInit() directly without
@@ -68,24 +73,8 @@ static int (SDLCALL *sdl2_SetError)(const char *fmt, ...);
  * under SDL pre-2.0.18. */
 static int SDLCALL schism_init_audio_impl(const char *name)
 {
-	const char *orig_drv = getenv("SDL_AUDIODRIVER");
-
-	if (name)
-		setenv("SDL_AUDIODRIVER", name, 1);
-
-	int ret = sdl2_InitSubSystem(SDL_INIT_AUDIO);
-
-	/* clean up our dirty work, or empty the var */
-	if (name) {
-		if (orig_drv) {
-			setenv("SDL_AUDIODRIVER", orig_drv, 1);
-		} else {
-			unsetenv("SDL_AUDIODRIVER");
-		}
-	}
-
-	/* forward any error, if any */
-	return ret;
+	return util_call_func_with_envvar(schism_init_audio_impl_cb, NULL,
+		"SDL_AUDIODRIVER", name);
 }
 
 static void SDLCALL schism_quit_audio_impl(void)

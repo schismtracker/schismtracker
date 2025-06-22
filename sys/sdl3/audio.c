@@ -62,28 +62,20 @@ static bool (SDLCALL *sdl3_ResetHint)(const char *name);
 
 static void (SDLCALL *sdl3_free)(void *ptr) = NULL;
 
+/* ------------------------------------------------------------------------ */
+/* init/deinit audio subsystem */
+
+static int schism_init_audio_impl_cb(SCHISM_UNUSED void *p)
+{
+	return sdl3_InitSubSystem(SDL_INIT_AUDIO);
+}
+
 /* SDL_AudioInit and SDL_AudioQuit were completely removed
  * in SDL3, which means we have to do this always regardless. */
 static int schism_init_audio_impl(const char *name)
 {
-	const char *orig_drv = getenv("SDL_AUDIO_DRIVER");
-
-	if (name)
-		setenv("SDL_AUDIO_DRIVER", name, 1);
-
-	int ret = sdl3_InitSubSystem(SDL_INIT_AUDIO);
-
-	/* clean up our dirty work, or empty the var */
-	if (name) {
-		if (orig_drv) {
-			setenv("SDL_AUDIO_DRIVER", orig_drv, 1);
-		} else {
-			unsetenv("SDL_AUDIO_DRIVER");
-		}
-	}
-
-	/* forward any error, if any */
-	return ret;
+	return util_call_func_with_envvar(schism_init_audio_impl_cb, NULL,
+		"SDL_AUDIO_DRIVER", name);
 }
 
 static void schism_quit_audio_impl(void)
@@ -91,7 +83,7 @@ static void schism_quit_audio_impl(void)
 	sdl3_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
-/* ---------------------------------------------------------- */
+/* ------------------------------------------------------------------------ */
 /* drivers */
 
 static int sdl3_audio_driver_count(void)
@@ -104,7 +96,7 @@ static const char *sdl3_audio_driver_name(int i)
 	return sdl3_GetAudioDriver(i);
 }
 
-/* --------------------------------------------------------------- */
+/* ------------------------------------------------------------------------ */
 
 static SDL_AudioDeviceID *devices = NULL;
 static int device_count = 0;
