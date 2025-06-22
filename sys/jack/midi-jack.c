@@ -163,6 +163,7 @@ static int load_jack_syms(void) {
 	SCHISM_JACK_SYM(jack_time_to_frames);
 	SCHISM_JACK_SYM(jack_frames_to_time);
 	SCHISM_JACK_SYM(jack_free);
+	SCHISM_JACK_SYM(jack_port_unregister);
 
 	return 0;
 }
@@ -283,17 +284,17 @@ static int _jack_process(jack_nframes_t nframes, void *user_data) {
 
 static void _jack_disconnect(void)
 {
-	if (midi_in_port) {
-		JACK_jack_port_unregister(client, midi_in_port);
-		midi_out_port = NULL;
-	}
-
-	if (midi_out_port) {
-		JACK_jack_port_unregister(client, midi_out_port);
-		midi_out_port = NULL;
-	}
-
 	if (client) {
+		if (midi_in_port) {
+			JACK_jack_port_unregister(client, midi_in_port);
+			midi_out_port = NULL;
+		}
+
+		if (midi_out_port) {
+			JACK_jack_port_unregister(client, midi_out_port);
+			midi_out_port = NULL;
+		}
+
 		JACK_jack_client_close(client);
 		client = NULL;
 	}
