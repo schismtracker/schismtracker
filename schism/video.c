@@ -286,15 +286,15 @@ void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, s
 	unsigned char cv32backing[NATIVE_SCREEN_WIDTH * 8];
 
 	uint32_t *csp, *esp, *dp;
-	unsigned int c00, c01, c10, c11;
-	unsigned int outr, outg, outb;
-	unsigned int pad;
-	int fixedx, fixedy, scalex, scaley;
-	unsigned int y, x,ey,ex,t1,t2;
+	uint32_t c00, c01, c10, c11;
+	uint32_t outr, outg, outb;
+	uint32_t pad;
+	int32_t fixedx, fixedy, scalex, scaley;
+	uint32_t y, x,ey,ex,t1,t2;
 	uint32_t mouseline[80];
 	uint32_t mouseline_mask[80];
 	unsigned int mouseline_x, mouseline_v;
-	int iny, lasty;
+	int32_t iny, lasty;
 
 	unsigned int mouse_x, mouse_y;
 	video_get_mouse_coordinates(&mouse_x, &mouse_y);
@@ -409,6 +409,10 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 		uint16_t us[NATIVE_SCREEN_WIDTH];
 		uint32_t ui[NATIVE_SCREEN_WIDTH];
 	} pixels_u;
+	/* NOTE: we might be able to get away with 24.8 fixed point,
+	 * and reuse the stuff from the code above */
+	const uint64_t scaley = (((uint64_t)NATIVE_SCREEN_HEIGHT << 32) - 1) / height;
+	const uint64_t scalex = (((uint64_t)NATIVE_SCREEN_WIDTH << 32) - 1) / width;
 
 	unsigned int mouse_x, mouse_y;
 	video_get_mouse_coordinates(&mouse_x, &mouse_y);
@@ -416,13 +420,18 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 	const int width_div_2 = (width / 2);
 	const unsigned int mouseline_x = (mouse_x / 8);
 	const unsigned int mouseline_v = (mouse_x % 8);
-	const int pad = pitch - (width * bpp);
+	const int pad = (pitch - (width * bpp));
 	uint32_t mouseline[80];
 	uint32_t mouseline_mask[80];
-	int x, y, last_scaled_y;
+	uint32_t y, last_scaled_y;
+	uint64_t fixedy;
 
-	for (y = 0; y < height; y++) {
-		const int scaled_y = (y * NATIVE_SCREEN_HEIGHT / height);
+	for (y = 0, fixedy = 0; y < height; y++, fixedy += scaley) {
+		uint32_t x;
+		uint64_t fixedx;
+
+		/* add (1ul << 31) to round to nearest */
+		const uint32_t scaled_y = ((fixedy + (1ul << 31)) >> 32);
 
 		// only scan again if we have to or if this the first scan
 		if (scaled_y != last_scaled_y || y == 0) {
@@ -444,8 +453,8 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 			}
 		}
 
-		for (x = 0; x < width; x++) {
-			const int scaled_x = (((x * NATIVE_SCREEN_WIDTH) + width_div_2) / width);
+		for (x = 0, fixedx = 0; x < width; x++, fixedx += scalex) {
+			const uint32_t scaled_x = ((fixedx + (1ul << 31)) >> 32);
 
 			switch (bpp) {
 			case 1: *pixels = pixels_u.uc[scaled_x]; break;
