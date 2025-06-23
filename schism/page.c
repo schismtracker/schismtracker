@@ -458,7 +458,7 @@ static int handle_key_global(struct key_event * k)
 		} else if (k->x >= 12 && k->x <= 18) {
 			if (k->y == 7) {
 				minipop_slide(get_current_row(), "Row",
-					0, song_get_rows_in_pattern(get_current_pattern()),
+					0, song_get_max_row_number_in_pattern(get_current_pattern()),
 					set_current_row, NULL, 14, 7);
 				return 1;
 			} else if (k->y == 6) {
