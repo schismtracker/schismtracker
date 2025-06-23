@@ -19,7 +19,7 @@ On Arch Linux:
 
 	sudo pacman -Syu
 	sudo pacman -S base-devel git sdl2 alsa-lib libxv libxxf86vm flac perl \
-                   pkgconf
+                   pkgconf libutf8proc
 
 Git is not strictly required, but if you don't need it you'll need to download
 a tarball manually, and your build won't have a proper version string.
