@@ -391,6 +391,7 @@ uint32_t midi_engine_port_count(void)
 	if (!midi_port_mutex) return 0;
 
 	mt_mutex_lock(midi_port_mutex);
+	// if ports have been unregistered, some array entries might be NULL
 	for (i = 0, pc = 0; i < port_alloc; i++)
 		if (port_top[i])
 			pc++;

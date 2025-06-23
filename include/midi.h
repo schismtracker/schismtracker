@@ -120,6 +120,7 @@ int midi_need_flush(void);
 union schism_event;
 int midi_engine_handle_event(union schism_event *ev);
 
+/* index != midi_port.num */
 struct midi_port *midi_engine_port(uint32_t n, const char **name);
 uint32_t midi_engine_port_count(void);
 void midi_engine_port_lock(void);
