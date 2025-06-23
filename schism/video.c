@@ -417,7 +417,6 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 	unsigned int mouse_x, mouse_y;
 	video_get_mouse_coordinates(&mouse_x, &mouse_y);
 
-	const int width_div_2 = (width / 2);
 	const unsigned int mouseline_x = (mouse_x / 8);
 	const unsigned int mouseline_v = (mouse_x % 8);
 	const int pad = (pitch - (width * bpp));
