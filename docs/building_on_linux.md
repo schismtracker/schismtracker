@@ -13,7 +13,7 @@ On Ubuntu, run:
     sudo apt update
 	sudo apt install build-essential automake autoconf-archive \
                      libsdl2-dev git libtool libflac-dev perl \
-                     pkgconf
+                     pkgconf libutf8proc-dev
 
 On Arch Linux:
 
