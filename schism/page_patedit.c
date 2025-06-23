@@ -1069,7 +1069,9 @@ static void fast_volume_toggle(void)
 
 static void fast_volume_amplify(void)
 {
-	selection_amplify((100/fast_volume_percent)*100);
+	/* multiply before divide here, otherwise most of the time
+	 * (100 / percentage) is just always going to be 0 or 1 */
+	selection_amplify(100 * 100 / fast_volume_percent);
 }
 
 static void fast_volume_attenuate(void)
