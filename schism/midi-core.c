@@ -360,13 +360,12 @@ void midi_engine_stop(void)
  * that (midi_engine_port(port->num, NULL)) may not return
  * the same port as went in, so don't even try doing that! */
 static struct midi_port **port_top = NULL;
-static int port_alloc = 0;
+static uint32_t port_alloc = 0;
 
 /* NOTE: (n != port->num) !!
  * this function is mainly for the midi screen. */
-struct midi_port *midi_engine_port(int n, const char **name)
+struct midi_port *midi_engine_port(uint32_t n, const char **name)
 {
-	int i, c;
 	struct midi_port *q;
 
 	if (!midi_port_mutex) return NULL;
@@ -385,9 +384,9 @@ struct midi_port *midi_engine_port(int n, const char **name)
 
 /* NOTE: this does not necessarily equal port_alloc,
  * more specifically after the user hotplugs a midi device */
-int midi_engine_port_count(void)
+uint32_t midi_engine_port_count(void)
 {
-	int i, pc;
+	uint32_t i, pc;
 
 	if (!midi_port_mutex) return 0;
 
@@ -518,10 +517,10 @@ void midi_provider_remove_marked_ports(struct midi_provider *p)
  * an allocated (but not used) port.
  *
  * returns -1 if there is an error */
-static int midi_port_get_unused(void)
+static int64_t midi_port_get_unused(void)
 {
 	struct midi_port **pt;
-	int i;
+	uint32_t i;
 
 	mt_mutex_lock(midi_port_mutex);
 
@@ -533,7 +532,11 @@ static int midi_port_get_unused(void)
 		return i;
 	}
 
-	pt = realloc(port_top, sizeof(*port_top) * (port_alloc + 4));
+	/* no overflow */
+	if (port_alloc + 4u < port_alloc)
+		return -1;
+
+	pt = realloc(port_top, sizeof(*port_top) * (port_alloc + 4u));
 	if (!pt) {
 		mt_mutex_unlock(midi_port_mutex);
 		return -1;
@@ -551,11 +554,11 @@ static int midi_port_get_unused(void)
 }
 
 /* midi engines list ports this way */
-int midi_port_register(struct midi_provider *pv, int inout, const char *name,
+uint32_t midi_port_register(struct midi_provider *pv, uint8_t inout, const char *name,
 	void *userdata, int free_userdata)
 {
 	struct midi_port *p, **pt;
-	int i;
+	int64_t i;
 
 	if (!midi_port_mutex)
 		return -1;
@@ -596,7 +599,7 @@ int midi_port_register(struct midi_provider *pv, int inout, const char *name,
 	return p->num;
 }
 
-void midi_port_unregister(int num)
+void midi_port_unregister(uint32_t num)
 {
 	if (!midi_port_mutex) return;
 
@@ -620,7 +623,7 @@ void midi_port_unregister(int num)
 
 int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor)
 {
-	int i;
+	uint32_t i;
 	if (!midi_port_mutex || !port_top || !port_alloc) return 0;
 
 	if (!cursor)
@@ -873,6 +876,7 @@ void midi_send_buffer(const unsigned char *data, uint32_t len, uint32_t pos)
 }
 
 // Get the length of a MIDI event in bytes
+// FIXME: this needs to handle sysex and friends as well
 uint8_t midi_event_length(uint8_t first_byte)
 {
 	switch (first_byte & 0xF0) {
@@ -897,15 +901,15 @@ uint8_t midi_event_length(uint8_t first_byte)
 
 /*----------------------------------------------------------------------------------*/
 
-void midi_received_cb(struct midi_port *src, unsigned char *data, uint32_t len)
+void midi_received_cb(struct midi_port *src, const unsigned char *data, uint32_t len)
 {
 	unsigned char d4[4];
 	int cmd;
 
 	if (!len) return;
-	if (len < 4) {
-		memset(d4, 0, sizeof(d4));
+	if (len < sizeof(d4)) {
 		memcpy(d4, data, len);
+		memset(d4 + len, 0, sizeof(d4) - len);
 		data = d4;
 	}
 
@@ -944,7 +948,7 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, uint32_t len)
 		switch ((*data & 15)) {
 		case 0: /* sysex */
 			if (len <= 2) return;
-			midi_event_sysex(data+1, len-2);
+			midi_event_sysex(data + 1, len - 2);
 			break;
 		case 6: /* tick */
 			midi_event_tick();

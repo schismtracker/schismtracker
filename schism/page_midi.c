@@ -258,23 +258,24 @@ static void midi_page_draw_portlist(void)
 	 *      port is stored as an offset from the top and not the actual
 	 *      port number itself. sigh. */
 	struct midi_port *p;
-	int i, ct;
+	int i;
+	uint32_t ct;
 	time_t now = time(NULL);
 
 	draw_fill_chars(3, 15, 76, 28, DEFAULT_FG, 0);
 	draw_text("MIDI ports:", 2, 13, 0, 2);
 	draw_box(2,14,77,28, BOX_THIN|BOX_INNER|BOX_INSET);
 
-	if (difftime(now, last_midi_poll) > 10.0) {
-		last_midi_poll = now;
-		midi_engine_poll_ports();
-	}
-
 	for (i = 0; i < 13; i++)
 		draw_char(168, 12, i + 15, 2, 0);
 
 	/* --- LOCK */
-	//midi_engine_port_lock();
+	midi_engine_port_lock();
+
+	if (difftime(now, last_midi_poll) > 10.0) {
+		last_midi_poll = now;
+		midi_engine_poll_ports();
+	}
 
 	ct = midi_engine_port_count();
 
@@ -333,7 +334,7 @@ static void midi_page_draw_portlist(void)
 	}
 
 	/* --- UNLOCK */
-	//midi_engine_port_unlock();
+	midi_engine_port_unlock();
 }
 
 /* --------------------------------------------------------------------- */

@@ -34,6 +34,7 @@ struct midi_driver {
 	void (*poll)(struct midi_provider *m);
 	int (*thread)(struct midi_provider *m);
 
+	/* return: 1 on success, 0 on failure */
 	int (*enable)(struct midi_port *d);
 	int (*disable)(struct midi_port *d);
 
@@ -65,21 +66,25 @@ struct midi_provider {
 };
 
 enum {
-	MIDI_INPUT = 1,
-	MIDI_OUTPUT = 2,
+	MIDI_INPUT = 0x1,
+	MIDI_OUTPUT = 0x2,
 };
 
 struct midi_port {
-	/* TODO condense these to a uint8_t */
-	int io, iocap;
-	char *name;
-	/* TODO make this uint32_t or size_t */
-	int num;
+	/* io: MIDI_* bitflags of current I/O status
+	 * iocap: MIDI_* bitflags of supported I/O */
+	uint8_t io, iocap;
 
 	/* used for hotplug support; if it is nonzero, it will
 	 * be removed with the next call to midi_provider_remove_marked_ports
 	 * by the driver (usually in midi poll) */
-	int mark;
+	uint8_t mark;
+
+	/* UTF-8 string description of the port */
+	char *name;
+
+	/* index into the internal midi port array */
+	uint32_t num;
 
 	void *userdata;
 	int free_userdata;
@@ -115,8 +120,8 @@ int midi_need_flush(void);
 union schism_event;
 int midi_engine_handle_event(union schism_event *ev);
 
-struct midi_port *midi_engine_port(int n, const char **name);
-int midi_engine_port_count(void);
+struct midi_port *midi_engine_port(uint32_t n, const char **name);
+uint32_t midi_engine_port_count(void);
 void midi_engine_port_lock(void);
 void midi_engine_port_unlock(void);
 
@@ -124,11 +129,11 @@ void midi_engine_port_unlock(void);
 struct midi_provider *midi_provider_register(const char *name, const struct midi_driver *f);
 
 /* midi engines list ports this way */
-int midi_port_register(struct midi_provider *p,
-int inout, const char *name, void *userdata, int free_userdata);
+uint32_t midi_port_register(struct midi_provider *p,
+	uint8_t inout, const char *name, void *userdata, int free_userdata);
 
 int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor);
-void midi_port_unregister(int num);
+void midi_port_unregister(uint32_t num);
 
 /* ------------------------------------------------------------------------ */
 /* MIDI hotplug support */
@@ -163,7 +168,7 @@ void midi_event_sysex(const unsigned char *data, uint32_t len);
 void midi_event_system(int argv, int param);
 
 /* midi drivers call this when they received an event */
-void midi_received_cb(struct midi_port *src, unsigned char *data, uint32_t len);
+void midi_received_cb(struct midi_port *src, const unsigned char *data, uint32_t len);
 
 // lost child
 uint8_t midi_event_length(uint8_t first_byte);
