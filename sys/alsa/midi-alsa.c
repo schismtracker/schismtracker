@@ -51,7 +51,6 @@ struct alsa_midi {
 	const char *client;
 	const char *port;
 	snd_midi_event_t *dev;
-	int mark;
 };
 
 static size_t (*ALSA_snd_seq_port_info_sizeof)(void);
@@ -359,11 +358,7 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 	snd_seq_client_info_t *cinfo;
 	snd_seq_port_info_t *pinfo;
 
-	ptr = NULL;
-	while (midi_port_foreach(_alsa_provider, &ptr)) {
-		data = (struct alsa_midi *)ptr->userdata;
-		data->mark = 0;
-	}
+	midi_provider_mark_ports(_alsa_provider);
 
 	/* believe it or not this is the RIGHT way to do this */
 	ALSA_snd_seq_client_info_alloca(&cinfo);
@@ -400,7 +395,7 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 			while (midi_port_foreach(_alsa_provider, &ptr)) {
 				data = (struct alsa_midi *)ptr->userdata;
 				if (data->c == c && data->p == p) {
-					data->mark = 1;
+					ptr->mark = 0;
 					ok = 1;
 				}
 			}
@@ -416,7 +411,6 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 			data = mem_alloc(sizeof(struct alsa_midi));
 			data->c = c; data->p = p;
 			data->client = ctext;
-			data->mark = 1;
 			data->port = ptext;
 			buffer = NULL;
 
@@ -438,12 +432,7 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 	}
 
 	/* remove "disappeared" midi ports */
-	ptr = NULL;
-	while (midi_port_foreach(_alsa_provider, &ptr)) {
-		data = (struct alsa_midi *)ptr->userdata;
-		if (data->mark) continue;
-		midi_port_unregister(ptr->num);
-	}
+	midi_provider_remove_marked_ports(_alsa_provider);
 }
 
 int alsa_midi_setup(void)
