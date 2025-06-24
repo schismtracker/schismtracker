@@ -35,37 +35,34 @@
 
 #include <windows.h>
 #include <mmsystem.h>
-#include <stdio.h>
+
+union win32mm_icp {
+#ifdef SCHISM_WIN32_COMPILE_ANSI
+	MIDIINCAPSA a;
+#endif
+	MIDIINCAPSW w;
+};
+
+union win32mm_ocp {
+#ifdef SCHISM_WIN32_COMPILE_ANSI
+	MIDIOUTCAPSA a;
+#endif
+	MIDIOUTCAPSW w;
+};
 
 struct win32mm_midi {
 	DWORD id;
 
-	HMIDIOUT out;
 	HMIDIIN in;
+	HMIDIOUT out;
 
-	union {
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-		MIDIINCAPSA a;
-#endif
-		MIDIINCAPSW w;
-	} icp;
-	union {
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-		MIDIOUTCAPSA a;
-#endif
-		MIDIOUTCAPSW w;
-	} ocp;
+	union win32mm_icp icp;
+	union win32mm_ocp ocp;
 
 	MIDIHDR hh;
 	LPMIDIHDR obuf;
 	unsigned char sysx[1024];
 };
-
-// whether to use ANSI or Unicode versions of functions
-// (currently based on whether we're running on win9x or not)
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-static int use_ansi_funcs = 0;
-#endif
 
 static void _win32mm_sysex(LPMIDIHDR *q, const unsigned char *data, uint32_t len)
 {
@@ -92,15 +89,13 @@ static void _win32mm_send(struct midi_port *p, const unsigned char *data,
 		uint32_t len, SCHISM_UNUSED uint32_t delay)
 {
 	struct win32mm_midi *m;
-	DWORD q;
 
 	if (len == 0) return;
 
-	// FIXME this shouldn't be done here!
-	//if (!(p->io & MIDI_OUTPUT)) return;
-
 	m = p->userdata;
 	if (len <= 4) {
+		DWORD q;
+
 		q = data[0];
 		if (len > 1) q |= (data[1] << 8);
 		if (len > 2) q |= (data[2] << 16);
@@ -109,9 +104,8 @@ static void _win32mm_send(struct midi_port *p, const unsigned char *data,
 	} else {
 		/* SysEX */
 		_win32mm_sysex(&m->obuf, data, len);
-		if (midiOutPrepareHeader(m->out, m->obuf, sizeof(MIDIHDR)) == MMSYSERR_NOERROR) {
+		if (midiOutPrepareHeader(m->out, m->obuf, sizeof(MIDIHDR)) == MMSYSERR_NOERROR)
 			(void)midiOutLongMsg(m->out, m->obuf, sizeof(MIDIHDR));
-		}
 	}
 }
 
@@ -120,34 +114,34 @@ static CALLBACK void _win32mm_inputcb(HMIDIIN in, UINT wmsg, DWORD_PTR inst,
 					   DWORD_PTR param1, DWORD_PTR param2)
 {
 	struct midi_port *p = (struct midi_port *)inst;
-	struct win32mm_midi *m;
-	unsigned char c[4];
 
 	switch (wmsg) {
 	case MIM_OPEN:
 		timer_msleep(0); /* eh? */
 	case MIM_CLOSE:
 		break;
-	case MIM_DATA:
-		c[0] = param1 & 255;
-		c[1] = (param1 >> 8) & 255;
-		c[2] = (param1 >> 16) & 255;
+	case MIM_DATA: {
+		unsigned char c[4];
+
+		c[0] = param1 & 0xFF;
+		c[1] = (param1 >> 8) & 0xFF;
+		c[2] = (param1 >> 16) & 0xFF;
 		midi_received_cb(p, c, 3);
 		break;
-	case MIM_LONGDATA:
-		{
-			MIDIHDR* hdr = (MIDIHDR*) param1;
-			if (hdr->dwBytesRecorded > 0)
-			{
-				/* long data */
-				m = p->userdata;
-				midi_received_cb(p, (unsigned char *) m->hh.lpData, m->hh.dwBytesRecorded);
-				// I don't see any reason we can't do this here (midi_received_cb does not
-				// retain the pointer to the data after it returns)
-				midiInAddBuffer(in, &m->hh, sizeof(m->hh));
-			}
-			break;
+	}
+	case MIM_LONGDATA: {
+		MIDIHDR *hdr = (MIDIHDR *)param1;
+		if (hdr->dwBytesRecorded > 0) {
+			/* long data */
+			struct win32mm_midi *m = p->userdata;
+
+			midi_received_cb(p, (unsigned char *)m->hh.lpData, m->hh.dwBytesRecorded);
+			// I don't see any reason we can't do this here (midi_received_cb does not
+			// retain the pointer to the data after it returns)
+			midiInAddBuffer(in, &m->hh, sizeof(m->hh));
 		}
+		break;
+	}
 	}
 }
 
@@ -156,7 +150,7 @@ static int _win32mm_start(struct midi_port *p)
 {
 	struct win32mm_midi *m;
 	UINT id;
-	WORD r;
+	MMRESULT r;
 
 	m = p->userdata;
 	id = m->id;
@@ -177,15 +171,15 @@ static int _win32mm_start(struct midi_port *p)
 		r = midiInAddBuffer(m->in, &m->hh, sizeof(MIDIHDR));
 		if (r != MMSYSERR_NOERROR) return 0;
 		if (midiInStart(m->in) != MMSYSERR_NOERROR) return 0;
-
 	}
-	if (p->io & MIDI_OUTPUT) {
+	if (p->io == MIDI_OUTPUT) {
 		m->out = NULL;
 		if (midiOutOpen(&m->out,
 				(UINT_PTR)id,
 				0, 0,
 				CALLBACK_NULL) != MMSYSERR_NOERROR) return 0;
 	}
+
 	return 1;
 }
 static int _win32mm_stop(struct midi_port *p)
@@ -194,7 +188,7 @@ static int _win32mm_stop(struct midi_port *p)
 	LPMIDIHDR ptr;
 
 	m = p->userdata;
-	if (p->io & MIDI_INPUT) {
+	if (p->io == MIDI_INPUT) {
 		/* portmidi appears to (essentially) ignore the error codes
 		for these guys */
 		(void)midiInStop(m->in);
@@ -202,7 +196,7 @@ static int _win32mm_stop(struct midi_port *p)
 		(void)midiInUnprepareHeader(m->in,&m->hh,sizeof(m->hh));
 		(void)midiInClose(m->in);
 	}
-	if (p->io & MIDI_OUTPUT) {
+	if (p->io == MIDI_OUTPUT) {
 		(void)midiOutReset(m->out);
 		(void)midiOutClose(m->out);
 		/* free output chain */
@@ -219,80 +213,80 @@ static int _win32mm_stop(struct midi_port *p)
 
 static void _win32mm_poll(struct midi_provider *p)
 {
-	static uint32_t last_known_in_port = 0;
-	static uint32_t last_known_out_port = 0;
-
+	struct midi_port *q;
 	struct win32mm_midi *data;
+	UINT i, mmin, mmout;
+	MMRESULT r;
 
-	UINT i;
-	UINT mmin, mmout;
-	WORD r;
+	/* mark all ports for removal */
+	midi_provider_mark_ports(p);
 
 	mmin = midiInGetNumDevs();
-	for (i = last_known_in_port; i < mmin; i++) {
-		data = mem_calloc(1, sizeof(struct win32mm_midi));
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-		if (use_ansi_funcs) {
-			r = midiInGetDevCapsA(i, &data->icp.a, sizeof(data->icp.a));
-		} else
-#endif
-		{
-			r = midiInGetDevCapsW(i, &data->icp.w, sizeof(data->icp.w));
-		}
-		if (r != MMSYSERR_NOERROR) {
-			free(data);
-			continue;
-		}
-		data->id = i;
-
-		char *utf8;
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-		if (use_ansi_funcs) {
-			if (charset_iconv(data->ocp.a.szPname, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(data->ocp.a.szPname)))
-				continue;
-		} else
-#endif
-		{
-			if (charset_iconv(data->ocp.w.szPname, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(data->ocp.w.szPname)))
-				continue;
-		}
-
-		midi_port_register(p, MIDI_INPUT, utf8, data, 1);
-	}
-	last_known_in_port = mmin;
-
 	mmout = midiOutGetNumDevs();
-	for (i = last_known_out_port; i < mmout; i++) {
-		data = mem_calloc(1, sizeof(struct win32mm_midi));
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-		if (use_ansi_funcs) {
-			r = midiOutGetDevCapsA(i, &data->ocp.a, sizeof(data->ocp.a));
-		} else
-#endif
-		{
-			r = midiOutGetDevCapsW(i, &data->ocp.w, sizeof(data->ocp.w));
-		}
-		if (r != MMSYSERR_NOERROR) {
-			if (data) free(data);
-			continue;
-		}
-		data->id = i;
 
-		char *utf8;
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-		if (use_ansi_funcs) {
-			if (charset_iconv(data->ocp.a.szPname, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(data->ocp.a.szPname)))
-				continue;
-		} else
-#endif
-		{
-			if (charset_iconv(data->ocp.w.szPname, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(data->ocp.w.szPname)))
-				continue;
-		}
-		
-		midi_port_register(p, MIDI_OUTPUT, utf8, data, 1);
-	}
-	last_known_out_port = mmout;
+	log_appendf(1, "in: %u, out: %u", mmin, mmout);
+
+#define SCANPORTS(COUNT, GETCAPS, IOCAP, CP) \
+	do { \
+		for (i = 0; i < (COUNT); i++) { \
+			union win32mm_##CP cp; \
+			int ok; \
+			char *utf8; \
+		\
+			SCHISM_ANSI_UNICODE({ \
+				r = GETCAPS##A(i, &cp.a, sizeof(cp.a)); \
+			}, { \
+				r = GETCAPS##W(i, &cp.w, sizeof(cp.w)); \
+			}) \
+		\
+			if (r != MMSYSERR_NOERROR) \
+				continue; \
+		\
+			/* does this port already exist? */ \
+			q = NULL; \
+			ok = 0; \
+			while (midi_port_foreach(p, &q)) { \
+				if (!q->mark || !(q->iocap == IOCAP)) \
+					continue; \
+		\
+				data = q->userdata; \
+				if (!memcmp(&data->CP, &cp, sizeof(cp))) { \
+					q->mark = 0; \
+					/* fixup the ID, if any */ \
+					data->id = i; \
+					ok = 1; \
+					break; \
+				} \
+			} \
+		\
+			if (ok) \
+				continue; \
+		\
+			data = mem_calloc(1, sizeof(*data)); \
+			data->id = i; \
+			memcpy(&data->CP, &cp, sizeof(cp)); \
+		\
+			SCHISM_ANSI_UNICODE({ \
+				if (charset_iconv(data->CP.a.szPname, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(data->CP.a.szPname))) \
+					continue; \
+			}, { \
+				if (charset_iconv(data->CP.w.szPname, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(data->CP.w.szPname))) \
+					continue; \
+			}) \
+		\
+			midi_port_register(p, IOCAP, utf8, data, 1); \
+		\
+			free(utf8); \
+		} \
+	} while (0)
+
+	/* ~everybody wants prosthetic foreheads on their real heads~ ! */
+	SCANPORTS(mmin,  midiInGetDevCaps,  MIDI_INPUT,  icp);
+	SCANPORTS(mmout, midiOutGetDevCaps, MIDI_OUTPUT, ocp);
+
+#undef SCANPORTS
+
+	midi_provider_remove_marked_ports(p);
 }
 
 int win32mm_midi_setup(void)
@@ -305,10 +299,6 @@ int win32mm_midi_setup(void)
 		.disable = _win32mm_stop,
 		.send = _win32mm_send,
 	};
-
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-	use_ansi_funcs = (GetVersion() & UINT32_C(0x80000000));
-#endif
 
 	if (!midi_provider_register("Win32MM", &driver)) return 0;
 
