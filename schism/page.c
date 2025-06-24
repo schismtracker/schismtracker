@@ -1054,7 +1054,7 @@ static int _handle_ime(struct key_event *k)
 		/* alt+numpad -> char number */
 		if (k->sym == SCHISM_KEYSYM_LALT || k->sym == SCHISM_KEYSYM_RALT
 			|| k->sym == SCHISM_KEYSYM_LGUI || k->sym == SCHISM_KEYSYM_RGUI) {
-			if (k->state == KEY_RELEASE && alt_numpad_c > 0 && (alt_numpad & 255) > 0) {\
+			if (k->state == KEY_RELEASE && alt_numpad_c > 0 && (alt_numpad & 255) > 0) {
 				if (alt_numpad < 32)
 					return 0;
 				uint8_t unicode[2] = {0};
