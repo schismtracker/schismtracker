@@ -185,7 +185,6 @@ static size_t ringbuffer_out_max_write = 0;
 
 struct jack_midi {
 	jack_port_t* port;
-	int mark;
 };
 
 static void _jack_send(SCHISM_UNUSED struct midi_port *p, const unsigned char *data, uint32_t len, uint32_t delay) {
