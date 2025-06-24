@@ -1164,52 +1164,32 @@ void handle_key(struct key_event *k)
 		kbd_set_current_octave(kbd_get_current_octave() + 1);
 		break;
 	case SCHISM_KEYSYM_LEFTBRACKET:
+	case SCHISM_KEYSYM_RIGHTBRACKET: {
+		/* FIXME: this assumes a US keyboard layout */
+		int add = (k->sym == SCHISM_KEYSYM_LEFTBRACKET) ? -1 : 1;
 		if (k->state == KEY_RELEASE) break;
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
-			song_set_current_speed(song_get_current_speed() - 1);
+			song_set_current_speed(song_get_current_speed() + add);
 			status_text_flash("Speed set to %d frames per row", song_get_current_speed());
 			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
 				song_set_initial_speed(song_get_current_speed());
 			}
 		} else if ((k->mod & SCHISM_KEYMOD_CTRL) && !(status.flags & CLASSIC_MODE)) {
-			song_set_current_tempo(song_get_current_tempo() - 1);
-			status_text_flash("Tempo set to %d frames per row", song_get_current_tempo());
+			song_set_current_tempo(song_get_current_tempo() + add);
+			status_text_flash("Tempo set to %d beats per minute", song_get_current_tempo());
 			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
 				song_set_initial_tempo(song_get_current_tempo());
 			}
 		} else if (NO_MODIFIER(k->mod)) {
-			song_set_current_global_volume(song_get_current_global_volume() - 1);
+			song_set_current_global_volume(song_get_current_global_volume() + add);
 			status_text_flash("Global volume set to %d", song_get_current_global_volume());
 			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
 				song_set_initial_global_volume(song_get_current_global_volume());
 			}
 		}
 		return;
-	case SCHISM_KEYSYM_RIGHTBRACKET:
-		if (k->state == KEY_RELEASE) break;
-		if (status.flags & DISKWRITER_ACTIVE) return;
-		if (k->mod & SCHISM_KEYMOD_SHIFT) {
-			song_set_current_speed(song_get_current_speed() + 1);
-			status_text_flash("Speed set to %d frames per row", song_get_current_speed());
-			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
-				song_set_initial_speed(song_get_current_speed());
-			}
-		} else if ((k->mod & SCHISM_KEYMOD_CTRL) && !(status.flags & CLASSIC_MODE)) {
-			song_set_current_tempo(song_get_current_tempo() + 1);
-			status_text_flash("Tempo set to %d frames per row", song_get_current_tempo());
-			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
-				song_set_initial_tempo(song_get_current_tempo());
-			}
-		} else if (NO_MODIFIER(k->mod)) {
-			song_set_current_global_volume(song_get_current_global_volume() + 1);
-			status_text_flash("Global volume set to %d", song_get_current_global_volume());
-			if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
-				song_set_initial_global_volume(song_get_current_global_volume());
-			}
-		}
-		return;
-
+	}
 	default:
 		break;
 	}
