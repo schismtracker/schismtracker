@@ -40,8 +40,6 @@ struct macosx_midi {
 	unsigned char packet[1024];
 	MIDIPacketList *pl;
 	MIDIPacket *x;
-
-	int mark; /* used in polling */
 };
 
 static void readProc(const MIDIPacketList *np, SCHISM_UNUSED void *rc, void *crc)
@@ -118,10 +116,9 @@ static int _macosx_start(struct midi_port *p)
 	struct macosx_midi *m;
 	m = (struct macosx_midi *)p->userdata;
 
-	if (p->io & MIDI_INPUT
-	&& MIDIPortConnectSource(portIn, m->ep, (void*)p) != noErr) {
+	if ((p->io & MIDI_INPUT)
+		&& MIDIPortConnectSource(portIn, m->ep, (void*)p) != noErr)
 		return 0;
-	}
 
 	if (p->io & MIDI_OUTPUT) {
 		m->pl = (MIDIPacketList*)m->packet;
@@ -133,27 +130,16 @@ static int _macosx_stop(struct midi_port *p)
 {
 	struct macosx_midi *m;
 	m = (struct macosx_midi *)p->userdata;
-	if (p->io & MIDI_INPUT
-	&& MIDIPortDisconnectSource(portIn, m->ep) != noErr) {
+
+	if ((p->io & MIDI_INPUT)
+		&& MIDIPortDisconnectSource(portIn, m->ep) != noErr)
 		return 0;
-	}
+
 	return 1;
 }
 
-static struct midi_port* _macosx_find_port(struct midi_provider* p, MIDIEndpointRef ep, int inout) {
-	struct macosx_midi* m;
-	struct midi_port* ptr = NULL;
-
-	while (midi_port_foreach(p, &ptr)) {
-		m = (struct macosx_midi*)ptr->userdata;
-		if (m->ep == ep && ptr->iocap == inout)
-			return ptr;
-	}
-
-	return NULL;
-}
-
-static void _macosx_add_port(struct midi_provider *p, MIDIEndpointRef ep, int inout) {
+static void _macosx_add_port(struct midi_provider *p, MIDIEndpointRef ep, int inout)
+{
 	struct macosx_midi* m;
 	struct midi_port* ptr;
 
@@ -161,14 +147,13 @@ static void _macosx_add_port(struct midi_provider *p, MIDIEndpointRef ep, int in
 	while (midi_port_foreach(p, &ptr)) {
 		m = (struct macosx_midi*)ptr->userdata;
 		if (m->ep == ep && ptr->iocap == inout) {
-			m->mark = 1;
+			ptr->mark = 0;
 			return;
 		}
 	}
 
 	m = mem_alloc(sizeof(struct macosx_midi));
 	m->ep = ep;
-	m->mark = 1;
 
 	/* 55 is the maximum size for the MIDI page */
 	char name[55];
@@ -193,11 +178,7 @@ static void _macosx_poll(struct midi_provider *p)
 	if (!num_out || !num_in)
 		return;
 
-	ptr = NULL;
-	while (midi_port_foreach(p, &ptr)) {
-		m = (struct macosx_midi*)ptr->userdata;
-		m->mark = 0;
-	}
+	midi_provider_mark_ports(p);
 
 	for (i = 0; i < num_out; i++) {
 		ep = MIDIGetDestination(i);
@@ -215,11 +196,7 @@ static void _macosx_poll(struct midi_provider *p)
 		_macosx_add_port(p, ep, MIDI_INPUT);
 	}
 
-	ptr = NULL;
-	while (midi_port_foreach(p, &ptr)) {
-		m = (struct macosx_midi*)ptr->userdata;
-		if (!m->mark) midi_port_unregister(ptr->num);
-	}
+	midi_provider_remove_marked_ports(p);
 }
 
 int macosx_midi_setup(void)
