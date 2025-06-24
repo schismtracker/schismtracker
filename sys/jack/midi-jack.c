@@ -333,14 +333,13 @@ static int _jack_thread(struct midi_provider *p)
 /* inout for these functions should be EITHER MIDI_INPUT or MIDI_OUTPUT, never both.
  * jack has no concept of duplex ports */
 static void _jack_enumerate_ports(const char **port_names, struct midi_provider *p, int inout) {
-	struct midi_port *ptr;
-	struct jack_midi *m;
-	int ok;
-
 	/* search for new ports to insert */
 	const char **port_name;
 	for (port_name = port_names; *port_name; port_name++) {
+		struct midi_port *ptr;
+		struct jack_midi *m;
 		jack_port_t* port = JACK_jack_port_by_name(client, *port_name);
+		int ok;
 
 		if (JACK_jack_port_is_mine(client, port))
 			continue;
@@ -350,7 +349,7 @@ static void _jack_enumerate_ports(const char **port_names, struct midi_provider 
 		while (midi_port_foreach(p, &ptr)) {
 			m = (struct jack_midi *)ptr->userdata;
 			if (ptr->iocap == inout && m->port == port) {
-				m->mark = 1;
+				ptr->mark = 0;
 				ok = 1;
 			}
 		}
@@ -364,7 +363,6 @@ static void _jack_enumerate_ports(const char **port_names, struct midi_provider 
 
 		m = mem_alloc(sizeof(*m));
 		m->port = port;
-		m->mark = 1;
 
 		midi_port_register(p, inout, name, m, 1);
 	}
@@ -405,18 +403,12 @@ fail:
 
 static void _jack_poll(struct midi_provider* jack_provider_)
 {
-	struct midi_port* ptr;
-	struct jack_midi* m;
+	const char** ports;
+
 	if (!_jack_attempt_connect(jack_provider_))
 		return;
 
-	ptr = NULL;
-	while (midi_port_foreach(jack_provider_, &ptr)) {
-		m = (struct jack_midi*)ptr->userdata;
-		m->mark = 0;
-	}
-
-	const char** ports;
+	midi_provider_mark_ports(jack_provider_);
 
 	ports = JACK_jack_get_ports(client, NULL, JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput);
 	_jack_enumerate_ports(ports, jack_provider_, MIDI_INPUT);
@@ -426,10 +418,7 @@ static void _jack_poll(struct midi_provider* jack_provider_)
 	_jack_enumerate_ports(ports, jack_provider_, MIDI_OUTPUT);
 	JACK_jack_free(ports);
 
-	while (midi_port_foreach(jack_provider_, &ptr)) {
-		m = (struct jack_midi*)ptr->userdata;
-		if (!m->mark) midi_port_unregister(ptr->num);
-	}
+	midi_provider_remove_marked_ports(jack_provider_);
 }
 
 int jack_midi_setup(void)
