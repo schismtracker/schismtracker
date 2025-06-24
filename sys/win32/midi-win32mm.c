@@ -224,8 +224,6 @@ static void _win32mm_poll(struct midi_provider *p)
 	mmin = midiInGetNumDevs();
 	mmout = midiOutGetNumDevs();
 
-	log_appendf(1, "in: %u, out: %u", mmin, mmout);
-
 #define SCANPORTS(COUNT, GETCAPS, IOCAP, CP) \
 	do { \
 		for (i = 0; i < (COUNT); i++) { \
