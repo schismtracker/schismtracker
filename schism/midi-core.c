@@ -343,7 +343,23 @@ void midi_engine_stop(void)
 /* ------------------------------------------------------------- */
 /* PORT system */
 
+// port_top is a sparse array, because if it is not, then it is trickier
+// to find free port numbers, and port numbers must remain unique because
+// they are the key used in calls to midi_port_unregister.
+//
+// specifically, this is the situation to be avoided, if the array is kept packed:
+// - midi_port_register: puts port A into position n
+// - midi_port_register: puts port B into position n + 1
+// - midi_port_unregister(n): removes port A in position n and packs the array
+//                            => port B still has num == n + 1 but is now in array position n
+// - midi_port_register: puts port C into position n + 1
+//                       => ports B and C now both have num == n + 1
+//
+// now, if port C needs to be unregistered before port B, the call to
+// midi_port_unregister(portC->num) will unregister port B instead.
+
 static struct midi_port **port_top = NULL;
+// this is the number of array elements that have meaning, not the count of actual ports
 static int port_count = 0;
 static int port_alloc = 0;
 
@@ -356,17 +372,11 @@ struct midi_port *midi_engine_port(int n, const char **name)
 
 	if (!midi_port_mutex) return NULL;
 	mt_mutex_lock(midi_port_mutex);
-	for (i = 0, c = 0; i < port_count; i++) {
-		if (!port_top[i])
-			continue;
 
-		if (c == n) {
-			pv = port_top[i];
-			break;
-		}
+	while (midi_port_foreach(NULL, &pv) && (n > 0))
+		n--;
 
-		c++;
-	}
+	if (name && pv) *name = pv->name;
 	mt_mutex_unlock(midi_port_mutex);
 	return pv;
 }
@@ -380,6 +390,8 @@ int midi_engine_port_count(void)
 	if (!midi_port_mutex) return 0;
 
 	mt_mutex_lock(midi_port_mutex);
+
+	// if ports have been unregistered, some array entries might be NULL
 	for (i = 0, pc = 0; i < port_count; i++)
 		if (port_top[i])
 			pc++;
@@ -510,6 +522,8 @@ int midi_port_register(struct midi_provider *pv, int inout, const char *name,
 
 	if (!midi_port_mutex) return -1;
 
+	mt_mutex_lock(midi_port_mutex);
+
 	p = mem_alloc(sizeof(struct midi_port));
 	p->io = 0;
 	p->iocap = inout;
@@ -530,8 +544,6 @@ int midi_port_register(struct midi_provider *pv, int inout, const char *name,
 			continue;
 
 		/* found an unused midi port. */
-		mt_mutex_lock(midi_port_mutex);
-
 		port_top[i] = p;
 		p->num = i;
 		port_count = MAX(i + 1, port_count);
@@ -542,8 +554,6 @@ int midi_port_register(struct midi_provider *pv, int inout, const char *name,
 
 		return i;
 	}
-
-	mt_mutex_lock(midi_port_mutex);
 
 	port_alloc += 4;
 	pt = realloc(port_top, sizeof(*port_top) * port_alloc);
@@ -580,14 +590,23 @@ void midi_port_unregister(int num)
 	if (num >= 0 && num < port_count) {
 		struct midi_port *q = port_top[num];
 
-		if (q->disable) q->disable(q);
-		/* TODO: this should be a function pointer, e.g.
-		 *   if (q->destroy) q->destroy(q); */
-		if (q->free_userdata) free(q->userdata);
-		if (q->name) free(q->name);
-		free(q);
+		if (q) {
+			if (q->disable) q->disable(q);
+			/* TODO: this should be a function pointer, e.g.
+			 *   if (q->destroy) q->destroy(q); */
+			if (q->free_userdata) free(q->userdata);
+			if (q->name) free(q->name);
+			free(q);
 
-		port_top[num] = NULL;
+			// this NULL might be in the middle of the array, and that's by design
+			port_top[num] = NULL;
+
+			// trim NULLs from the end of the array
+			while ((port_count > 0) && (port_top[port_count - 1] == NULL))
+				port_count--;
+
+			// XXX: if (port_alloc - port_count > THRESHOLD) { reallocate... }
+		}
 	}
 
 	mt_mutex_unlock(midi_port_mutex);
@@ -609,9 +628,10 @@ int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor)
 			i = ((*cursor)->num) + 1;
 		}
 
-		while (i >= 0 && i < port_count && !port_top[i]) i++;
+		// skip over empty slots from deregistered ports
+		while (i < port_count && !port_top[i]) i++;
 
-		if (i < 0 || i >= port_count) {
+		if (i >= port_count) {
 			*cursor = NULL;
 			mt_mutex_unlock(midi_port_mutex);
 			return 0;
