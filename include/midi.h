@@ -110,6 +110,8 @@ int midi_engine_handle_event(union schism_event *ev);
 
 struct midi_port *midi_engine_port(int n, const char **name);
 int midi_engine_port_count(void);
+void midi_engine_port_lock(void);
+void midi_engine_port_unlock(void);
 
 /* midi engines register a provider (one each!) */
 struct midi_provider *midi_provider_register(const char *name, const struct midi_driver *f);

@@ -102,12 +102,15 @@ static void get_midi_config(void)
 static void toggle_port(void)
 {
 	struct midi_port *p;
+
+	midi_engine_port_lock();
+
 	p = midi_engine_port(current_port, NULL);
 	if (p) {
 		status.flags |= NEED_UPDATE;
 
 		if (p->disable && !midi_port_disable(p))
-			return;
+			goto MD_unlock;
 
 		switch (p->io) {
 		case 0:
@@ -129,10 +132,14 @@ static void toggle_port(void)
 
 		midi_port_enable(p);
 	}
+
+MD_unlock:
+	midi_engine_port_unlock();
 }
 
 static int midi_page_handle_key(struct key_event * k)
 {
+	int ct = midi_engine_port_count();
 	int new_port = current_port;
 	int pos;
 
@@ -170,7 +177,7 @@ static int midi_page_handle_key(struct key_event * k)
 		new_port = 0;
 		break;
 	case SCHISM_KEYSYM_END:
-		new_port = midi_engine_port_count() - 1;
+		new_port = ct - 1;
 		break;
 	case SCHISM_KEYSYM_UP:
 		new_port--;
@@ -192,8 +199,7 @@ static int midi_page_handle_key(struct key_event * k)
 		return 0;
 
 	if (new_port != current_port) {
-		int sz = midi_engine_port_count() - 1;
-		new_port = CLAMP(new_port, 0, sz);
+		new_port = CLAMP(new_port, 0, ct - 1);
 
 		current_port = new_port;
 		if (current_port < top_midi_port)
@@ -241,13 +247,18 @@ static void midi_page_redraw(void)
 
 static void midi_page_draw_portlist(void)
 {
-	/* XXX this can become outdated with the midi code; it can
-	 * and will overflow */
+	/* TODO: test hotplugging, and make sure everything actually
+	 * works as intended. for example:
+	 *   1. we should not crash (obviously)
+	 *   2. there should be no empty space between ports in the list
+	 *   3. if a midi port(s) is removed, and the cursor is beyond it,
+	 *      the cursor should stay on the midi port it was originally on,
+	 *      while shifting up to account for the missing port. obviously
+	 *      right now this will NOT be handled correctly, as the current
+	 *      port is stored as an offset from the top and not the actual
+	 *      port number itself. sigh. */
 	struct midi_port *p;
-	const char *name, *state;
-	char buffer[64];
-	int i, n, ct, fg, bg;
-	unsigned long j;
+	int i, ct;
 	time_t now = time(NULL);
 
 	draw_fill_chars(3, 15, 76, 28, DEFAULT_FG, 0);
@@ -259,6 +270,12 @@ static void midi_page_draw_portlist(void)
 		midi_engine_poll_ports();
 	}
 
+	for (i = 0; i < 13; i++)
+		draw_char(168, 12, i + 15, 2, 0);
+
+	/* --- LOCK */
+	midi_engine_port_lock();
+
 	ct = midi_engine_port_count();
 
 	/* make sure this stuff doesn't overflow! */
@@ -267,31 +284,37 @@ static void midi_page_draw_portlist(void)
 
 	current_port = MIN(current_port, ct - 1);
 
+	/* now, go through all the ports */
+	p = midi_engine_port(top_midi_port, NULL);
 	for (i = 0; i < 13; i++) {
-		draw_char(168, 12, i + 15, 2, 0);
+		const char *state;
+		int fg, bg;
 
-		if (top_midi_port + i >= ct)
-			continue; /* err */
+		if (!p)
+			break;
 
-		p = midi_engine_port(top_midi_port + i, &name);
+		/* Minecraft 2 wgat it is */
 		if (current_port == top_midi_port + i
-		    && ACTIVE_WIDGET.type == WIDGET_OTHER) {
+			&& ACTIVE_WIDGET.type == WIDGET_OTHER) {
 			fg = 0;
 			bg = 3;
 		} else {
 			fg = 5;
 			bg = 0;
 		}
-		draw_text_utf8_len(name, 64, 13, 15+i, 5, 0);
 
-		if (status.flags & MIDI_EVENT_CHANGED
-		    && (now - status.last_midi_tick) < 3000
-		    && ((!status.last_midi_port && p->io & MIDI_OUTPUT)
-		    || p == status.last_midi_port)) {
-			for (j = n = 0; j < 21 && j < status.last_midi_len; j++) { /* 21 is approx 64/3 */
-				sprintf(buffer + n, "%02X ", status.last_midi_event[j]);
-				n += 3;
-			}
+		draw_text_utf8_len(p->name, 64, 13, 15+i, 5, 0);
+
+		if ((status.flags & MIDI_EVENT_CHANGED)
+			&& ((now - status.last_midi_tick) < 3000)
+			&& ((!status.last_midi_port && (p->io & MIDI_OUTPUT))
+				|| (p == status.last_midi_port))) {
+			char buffer[(21 * 3) + 1];
+			uint32_t j;
+
+			for (j = 0; j < 21 && j < status.last_midi_len; j++)
+				sprintf(buffer + (j * 3), "%02X ", status.last_midi_event[j]);
+
 			draw_text(buffer, 77 - strlen(buffer), 15+i,
 				status.last_midi_port ? 4 : 10, 0);
 		}
@@ -304,7 +327,13 @@ static void midi_page_draw_portlist(void)
 			default:                        state = " Enabled?"; break;
 		}
 		draw_text(state, 3, 15 + i, fg, bg);
+
+		/* get the next midi port. */
+		midi_port_foreach(NULL, &p);
 	}
+
+	/* --- UNLOCK */
+	midi_engine_port_unlock();
 }
 
 /* --------------------------------------------------------------------- */
