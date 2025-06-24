@@ -70,9 +70,16 @@ enum {
 };
 
 struct midi_port {
+	/* TODO condense these to a uint8_t */
 	int io, iocap;
 	char *name;
+	/* TODO make this uint32_t or size_t */
 	int num;
+
+	/* used for hotplug support; if it is nonzero, it will
+	 * be removed with the next call to midi_provider_remove_marked_ports
+	 * by the driver (usually in midi poll) */
+	int mark;
 
 	void *userdata;
 	int free_userdata;
@@ -123,13 +130,23 @@ int inout, const char *name, void *userdata, int free_userdata);
 int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor);
 void midi_port_unregister(int num);
 
+/* ------------------------------------------------------------------------ */
+/* MIDI hotplug support */
+
+/* mark all ports for removal */
+void midi_provider_mark_ports(struct midi_provider *p);
+
+void midi_provider_remove_marked_ports(struct midi_provider *p);
+
+/* ------------------------------------------------------------------------ */
+
 int midi_port_enable(struct midi_port *p);
 int midi_port_disable(struct midi_port *p);
 
 /* only call these if the event isn't really MIDI but you want most of the system
    to act like it is...
 
-   midi drivers should never all these...
+   midi drivers should never call these...
 */
 enum midi_note {
 	MIDI_NOTEOFF,

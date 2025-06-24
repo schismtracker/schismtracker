@@ -274,7 +274,7 @@ static void midi_page_draw_portlist(void)
 		draw_char(168, 12, i + 15, 2, 0);
 
 	/* --- LOCK */
-	midi_engine_port_lock();
+	//midi_engine_port_lock();
 
 	ct = midi_engine_port_count();
 
@@ -293,7 +293,7 @@ static void midi_page_draw_portlist(void)
 		if (!p)
 			break;
 
-		/* Minecraft 2 wgat it is */
+		/* Time Traveler: Minecraft 2 wgat it is */
 		if (current_port == top_midi_port + i
 			&& ACTIVE_WIDGET.type == WIDGET_OTHER) {
 			fg = 0;
@@ -333,7 +333,7 @@ static void midi_page_draw_portlist(void)
 	}
 
 	/* --- UNLOCK */
-	midi_engine_port_unlock();
+	//midi_engine_port_unlock();
 }
 
 /* --------------------------------------------------------------------- */

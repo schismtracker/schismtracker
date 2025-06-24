@@ -201,6 +201,7 @@ void cfg_save_midi(cfg_file_t *cfg)
 	/* write out only enabled midi ports */
 	i = 1;
 	mt_mutex_lock(midi_mutex);
+	mt_mutex_lock(midi_port_mutex);
 	for (p = port_providers; p; p = p->next) {
 		q = NULL;
 		while (midi_port_foreach(p, &q)) {
@@ -226,6 +227,7 @@ void cfg_save_midi(cfg_file_t *cfg)
 	}
 	//TODO: Save number of MIDI-IP ports
 	mt_mutex_unlock(midi_mutex);
+	mt_mutex_unlock(midi_port_mutex);
 
 	/* delete other MIDI port sections */
 	for (c = cfg->sections; c; c = c->next) {
@@ -387,7 +389,7 @@ int midi_engine_port_count(void)
 }
 
 /* these are used for locking the ports, so that for example
- * the ports */
+ * the ports can be kept intact while drawing to the screen */
 void midi_engine_port_lock(void)
 {
 	mt_mutex_lock(midi_port_mutex);
@@ -456,6 +458,47 @@ struct midi_provider *midi_provider_register(const char *name,
 	return n;
 }
 
+void midi_provider_mark_ports(struct midi_provider *p)
+{
+	struct midi_port *q;
+
+	mt_mutex_lock(midi_port_mutex);
+
+	q = NULL;
+	while (midi_port_foreach(p, &q))
+		q->mark = 1;
+
+	mt_mutex_unlock(midi_port_mutex);
+}
+
+void midi_provider_remove_marked_ports(struct midi_provider *p)
+{
+	struct midi_port *q;
+
+	mt_mutex_lock(midi_port_mutex);
+
+	q = NULL;
+	for (;;) {
+		struct midi_port *g;
+		int ok;
+
+		g = q;
+		ok = midi_port_foreach(p, &q);
+		if (g) {
+			if (g->mark) {
+				/* log_appendf(1, "removing %d %s", g->num, g->name); */
+				midi_port_unregister(g->num);
+			} else {
+				/* log_appendf(1, "keeping %d %s", g->num, g->name); */
+			}
+		}
+		if (!ok)
+			break;
+	}
+
+	mt_mutex_unlock(midi_port_mutex);
+}
+
 /* ------------------------------------------------------------- */
 
 /* midi engines list ports this way */
@@ -476,6 +519,7 @@ int midi_port_register(struct midi_provider *pv, int inout, const char *name,
 	p->send_later = pv->send_later;
 	p->send_now = pv->send_now;
 	p->drain = pv->drain;
+	p->mark = 0;
 
 	p->free_userdata = free_userdata;
 	p->userdata = userdata;
@@ -510,14 +554,14 @@ int midi_port_register(struct midi_provider *pv, int inout, const char *name,
 		port_alloc -= 4;
 		return -1;
 	}
-	pt[port_count] = p;
-
-	for (i = (port_count + 1); i < port_alloc; i++)
-		pt[i] = NULL;
 
 	port_top = pt;
+	port_top[port_count] = p;
 	p->num = port_count;
 	port_count++;
+
+	for (i = port_count; i < port_alloc; i++)
+		port_top[i] = NULL;
 
 	/* finally, and just before unlocking, load any configuration for it... */
 	_cfg_load_midi_part_locked(p);
@@ -529,8 +573,6 @@ int midi_port_register(struct midi_provider *pv, int inout, const char *name,
 
 void midi_port_unregister(int num)
 {
-	int i;
-
 	if (!midi_port_mutex) return;
 
 	mt_mutex_lock(midi_port_mutex);
@@ -545,7 +587,7 @@ void midi_port_unregister(int num)
 		if (q->name) free(q->name);
 		free(q);
 
-		port_top[i] = NULL;
+		port_top[num] = NULL;
 	}
 
 	mt_mutex_unlock(midi_port_mutex);
@@ -556,16 +598,20 @@ int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor)
 	int i;
 	if (!midi_port_mutex || !port_top || !port_count) return 0;
 
+	if (!cursor)
+		return 0;
+
 	mt_mutex_lock(midi_port_mutex);
 	do {
 		if (!*cursor) {
 			i = 0;
 		} else {
 			i = ((*cursor)->num) + 1;
-			while (i >= 0 && i < port_count && !port_top[i]) i++;
 		}
 
-		if (i >= port_count) {
+		while (i >= 0 && i < port_count && !port_top[i]) i++;
+
+		if (i < 0 || i >= port_count) {
 			*cursor = NULL;
 			mt_mutex_unlock(midi_port_mutex);
 			return 0;
@@ -587,7 +633,7 @@ int midi_port_enable(struct midi_port *p)
 
 	r = (p->enable) ? (p->enable(p)) : 0;
 	if (!r)
-		p->io = 0; // why
+		p->io = 0;
 
 	mt_mutex_unlock(midi_port_mutex);
 	mt_mutex_unlock(midi_record_mutex);
@@ -677,7 +723,9 @@ void midi_send_now(const unsigned char *seq, uint32_t len)
 	if (!midi_record_mutex) return;
 
 	mt_mutex_lock(midi_record_mutex);
+	mt_mutex_lock(midi_port_mutex);
 	_midi_send_unlocked(seq, len, 0, MIDI_FROM_IMMEDIATE);
+	mt_mutex_unlock(midi_port_mutex);
 	mt_mutex_unlock(midi_record_mutex);
 }
 
@@ -698,28 +746,37 @@ void midi_queue_alloc(SCHISM_UNUSED int buffer_length, int sample_size, int samp
 
 int midi_need_flush(void)
 {
+	int r;
+
 	struct midi_port *ptr;
 
-	if (!midi_record_mutex) return 0;
+	if (!midi_port_mutex) return 0;
 
+	mt_mutex_lock(midi_port_mutex);
+
+	r = 0;
 	ptr = NULL;
 	while (midi_port_foreach(NULL, &ptr))
 		if ((ptr->io & MIDI_OUTPUT) && !ptr->drain && ptr->send_now)
-			return 1;
+			r = 1;
 
-	return 0;
+	mt_mutex_unlock(midi_port_mutex);
+
+	return r;
 }
 
 void midi_send_flush(void)
 {
 	struct midi_port *ptr = NULL;
 
-	if (!midi_record_mutex) return;
+	if (!midi_record_mutex || !midi_port_mutex) return;
 
 	mt_mutex_lock(midi_record_mutex);
+	mt_mutex_lock(midi_port_mutex);
 	while (midi_port_foreach(NULL, &ptr))
 		if ((ptr->io & MIDI_OUTPUT) && ptr->drain)
 			ptr->drain(ptr);
+	mt_mutex_unlock(midi_port_mutex);
 	mt_mutex_unlock(midi_record_mutex);
 }
 
@@ -736,15 +793,17 @@ struct _midi_send_timer_curry {
 static void _midi_send_timer_callback(void *param)
 {
 	// once more
-	struct _midi_send_timer_curry *curry = (struct _midi_send_timer_curry *)param;
+	struct _midi_send_timer_curry *curry = param;
 
 	// make sure the midi system is actually still running to prevent
 	// a crash on exit
-	if (!midi_record_mutex || !_connected) return;
-
-	mt_mutex_lock(midi_record_mutex);
-	_midi_send_unlocked(curry->msg, curry->len, 0, MIDI_FROM_NOW);
-	mt_mutex_unlock(midi_record_mutex);
+	if (midi_record_mutex && midi_port_mutex && _connected) {
+		mt_mutex_lock(midi_record_mutex);
+		mt_mutex_lock(midi_port_mutex);
+		_midi_send_unlocked(curry->msg, curry->len, 0, MIDI_FROM_NOW);
+		mt_mutex_unlock(midi_record_mutex);
+		mt_mutex_unlock(midi_port_mutex);
+	}
 
 	free(curry);
 }
@@ -758,11 +817,7 @@ void midi_send_buffer(const unsigned char *data, uint32_t len, uint32_t pos)
 	/* just for fun... */
 	if (status.current_page == PAGE_MIDI) {
 		status.last_midi_real_len = len;
-		if (len > sizeof(status.last_midi_event)) {
-			status.last_midi_len = sizeof(status.last_midi_event);
-		} else {
-			status.last_midi_len = len;
-		}
+		status.last_midi_len = MIN(sizeof(status.last_midi_event), len);
 		memcpy(status.last_midi_event, data, status.last_midi_len);
 		status.last_midi_port = NULL;
 		status.last_midi_tick = timer_ticks();
@@ -795,14 +850,12 @@ void midi_send_buffer(const unsigned char *data, uint32_t len, uint32_t pos)
 // Get the length of a MIDI event in bytes
 uint8_t midi_event_length(uint8_t first_byte)
 {
-	switch(first_byte & 0xF0)
-	{
+	switch (first_byte & 0xF0) {
 	case 0xC0:
 	case 0xD0:
 		return 2;
 	case 0xF0:
-		switch(first_byte)
-		{
+		switch (first_byte) {
 		case 0xF1:
 		case 0xF3:
 			return 2;
@@ -834,11 +887,7 @@ void midi_received_cb(struct midi_port *src, unsigned char *data, uint32_t len)
 	/* just for fun... */
 	mt_mutex_lock(midi_record_mutex);
 	status.last_midi_real_len = len;
-	if (len > sizeof(status.last_midi_event)) {
-		status.last_midi_len = sizeof(status.last_midi_event);
-	} else {
-		status.last_midi_len = len;
-	}
+	status.last_midi_len = MIN(sizeof(status.last_midi_event), len);
 	memcpy(status.last_midi_event, data, status.last_midi_len);
 	status.flags |= MIDI_EVENT_CHANGED;
 	status.last_midi_port = src;
