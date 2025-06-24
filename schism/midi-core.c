@@ -343,8 +343,23 @@ void midi_engine_stop(void)
 /* ------------------------------------------------------------- */
 /* PORT system */
 
+/* This port structure is somewhat convoluted.
+ *
+ * In order to support hotplugging, some items in the array will
+ * be NULL if they are unplugged after a poll.
+ *
+ * This means that the index in which they are displayed on the
+ * midi screen does not exactly reflect the index in which
+ * they are in memory.
+ *
+ * The midi_engine_port and midi_engine_port_count functions
+ * work on the array as if it were a simple array where all
+ * ports are in order. It was made this way to simplify the
+ * code for the midi screen, however it can be misleading
+ * if one is not aware of this. Most importantly, it means
+ * that (midi_engine_port(port->num, NULL)) may not return
+ * the same port as went in, so don't even try doing that! */
 static struct midi_port **port_top = NULL;
-static int port_count = 0;
 static int port_alloc = 0;
 
 /* NOTE: (n != port->num) !!
@@ -352,26 +367,23 @@ static int port_alloc = 0;
 struct midi_port *midi_engine_port(int n, const char **name)
 {
 	int i, c;
-	struct midi_port *pv = NULL;
+	struct midi_port *q;
 
 	if (!midi_port_mutex) return NULL;
+
 	mt_mutex_lock(midi_port_mutex);
-	for (i = 0, c = 0; i < port_count; i++) {
-		if (!port_top[i])
-			continue;
 
-		if (c == n) {
-			pv = port_top[i];
-			break;
-		}
+	q = NULL;
+	while (midi_port_foreach(NULL, &q) && (n > 0))
+		n--;
+	if (q && name) *name = q->name;
 
-		c++;
-	}
 	mt_mutex_unlock(midi_port_mutex);
-	return pv;
+
+	return q;
 }
 
-/* NOTE: this does not necessarily equal port_count,
+/* NOTE: this does not necessarily equal port_alloc,
  * more specifically after the user hotplugs a midi device */
 int midi_engine_port_count(void)
 {
@@ -380,7 +392,7 @@ int midi_engine_port_count(void)
 	if (!midi_port_mutex) return 0;
 
 	mt_mutex_lock(midi_port_mutex);
-	for (i = 0, pc = 0; i < port_count; i++)
+	for (i = 0, pc = 0; i < port_alloc; i++)
 		if (port_top[i])
 			pc++;
 	mt_mutex_unlock(midi_port_mutex);
@@ -501,6 +513,43 @@ void midi_provider_remove_marked_ports(struct midi_provider *p)
 
 /* ------------------------------------------------------------- */
 
+/* gets an unused port from the ports array.
+ * this may be an unregistered port (previously used), or
+ * an allocated (but not used) port.
+ *
+ * returns -1 if there is an error */
+static int midi_port_get_unused(void)
+{
+	struct midi_port **pt;
+	int i;
+
+	mt_mutex_lock(midi_port_mutex);
+
+	for (i = 0; i < port_alloc; i++) {
+		if (port_top[i])
+			continue;
+
+		mt_mutex_unlock(midi_port_mutex);
+		return i;
+	}
+
+	pt = realloc(port_top, sizeof(*port_top) * (port_alloc + 4));
+	if (!pt) {
+		mt_mutex_unlock(midi_port_mutex);
+		return -1;
+	}
+
+	port_top = pt;
+	for (i = 0; i < 4; i++)
+		port_top[port_alloc + i] = NULL;
+	i = port_alloc;
+	port_alloc += 4;
+
+	mt_mutex_unlock(midi_port_mutex);
+
+	return i;
+}
+
 /* midi engines list ports this way */
 int midi_port_register(struct midi_provider *pv, int inout, const char *name,
 	void *userdata, int free_userdata)
@@ -508,7 +557,8 @@ int midi_port_register(struct midi_provider *pv, int inout, const char *name,
 	struct midi_port *p, **pt;
 	int i;
 
-	if (!midi_port_mutex) return -1;
+	if (!midi_port_mutex)
+		return -1;
 
 	p = mem_alloc(sizeof(struct midi_port));
 	p->io = 0;
@@ -525,43 +575,18 @@ int midi_port_register(struct midi_provider *pv, int inout, const char *name,
 	p->userdata = userdata;
 	p->provider = pv;
 
-	for (i = 0; i < port_alloc; i++) {
-		if (port_top[i])
-			continue;
-
-		/* found an unused midi port. */
-		mt_mutex_lock(midi_port_mutex);
-
-		port_top[i] = p;
-		p->num = i;
-		port_count = MAX(i + 1, port_count);
-
-		_cfg_load_midi_part_locked(p);
-
-		mt_mutex_unlock(midi_port_mutex);
-
-		return i;
-	}
-
 	mt_mutex_lock(midi_port_mutex);
 
-	port_alloc += 4;
-	pt = realloc(port_top, sizeof(*port_top) * port_alloc);
-	if (!pt) {
-		free(p->name);
+	i = midi_port_get_unused();
+	if (i < 0) {
 		free(p);
+		free(p->name);
 		mt_mutex_unlock(midi_port_mutex);
-		port_alloc -= 4;
 		return -1;
 	}
 
-	port_top = pt;
-	port_top[port_count] = p;
-	p->num = port_count;
-	port_count++;
-
-	for (i = port_count; i < port_alloc; i++)
-		port_top[i] = NULL;
+	port_top[i] = p;
+	p->num = i;
 
 	/* finally, and just before unlocking, load any configuration for it... */
 	_cfg_load_midi_part_locked(p);
@@ -577,7 +602,7 @@ void midi_port_unregister(int num)
 
 	mt_mutex_lock(midi_port_mutex);
 
-	if (num >= 0 && num < port_count) {
+	if (num >= 0 && num < port_alloc) {
 		struct midi_port *q = port_top[num];
 
 		if (q->disable) q->disable(q);
@@ -596,7 +621,7 @@ void midi_port_unregister(int num)
 int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor)
 {
 	int i;
-	if (!midi_port_mutex || !port_top || !port_count) return 0;
+	if (!midi_port_mutex || !port_top || !port_alloc) return 0;
 
 	if (!cursor)
 		return 0;
@@ -609,9 +634,9 @@ int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor)
 			i = ((*cursor)->num) + 1;
 		}
 
-		while (i >= 0 && i < port_count && !port_top[i]) i++;
+		while (i >= 0 && i < port_alloc && !port_top[i]) i++;
 
-		if (i < 0 || i >= port_count) {
+		if (i < 0 || i >= port_alloc) {
 			*cursor = NULL;
 			mt_mutex_unlock(midi_port_mutex);
 			return 0;
