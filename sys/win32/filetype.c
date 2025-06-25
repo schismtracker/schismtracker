@@ -31,11 +31,13 @@
 void win32_filecreated_callback(const char *filename)
 {
 	/* let explorer know when we create a file. */
-	const charset_t explorer_charset =
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-		(GetVersion() & 0x80000000) ? CHARSET_ANSI :
-#endif
-		CHARSET_WCHAR_T;
+	charset_t explorer_charset;
+
+	SCHISM_ANSI_UNICODE({
+		explorer_charset = CHARSET_ANSI;
+	}, {
+		explorer_charset = CHARSET_WCHAR_T;
+	})
 
 	void *wc = charset_iconv_easy(filename, CHARSET_UTF8, explorer_charset);
 	if (wc) {

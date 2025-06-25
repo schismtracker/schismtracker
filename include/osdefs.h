@@ -190,6 +190,7 @@ int win32_get_key_repeat(int *pdelay, int *prate);
 void win32_show_message_box(const char *title, const char *text, int style);
 int win32_audio_lookup_device_name(const void *nameguid, const uint32_t *waveoutdevid, char **result);
 int win32_ntver_atleast(int major, int minor, int build);
+int win32_ver_unicode(void);
 int win32_access(const char *path, int amode);
 
 // audio-dsound.c
@@ -240,10 +241,10 @@ void xbox_sysinit(int *pargc, char ***pargv);
 #elif defined(SCHISM_WIN32)
 # ifdef SCHISM_WIN32_COMPILE_ANSI
 #  define SCHISM_ANSI_UNICODE(ansiblock, uniblock) \
-	if (GetVersion() & 0x80000000U) { \
-		ansiblock \
-	} else { \
+	if (win32_ver_unicode()) { \
 		uniblock \
+	} else { \
+		ansiblock \
 	}
 # else
 #  define SCHISM_ANSI_UNICODE(ansiblock, uniblock) \

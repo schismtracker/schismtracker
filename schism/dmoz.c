@@ -605,14 +605,11 @@ int dmoz_path_rename(const char *old, const char *new, int overwrite)
 	int ret = -1;
 	DWORD em = SetErrorMode(0);
 
-# ifdef SCHISM_WIN32_COMPILE_ANSI
-	if (GetVersion() & UINT32_C(0x80000000)) {
+	SCHISM_ANSI_UNICODE({
 		ret = dmoz_path_renameA(old, new, overwrite);
-	} else
-# endif
-	{
+	}, {
 		ret = dmoz_path_renameW(old, new, overwrite);
-	}
+	})
 
 	switch (GetLastError()) {
 	case ERROR_ALREADY_EXISTS:
@@ -629,20 +626,34 @@ int dmoz_path_rename(const char *old, const char *new, int overwrite)
 
 	return ret;
 #elif defined(SCHISM_XBOX)
-	wchar_t *old_w, *new_w;
-	int ret;
+	CHAR *old_a, *new_a;
+	int ret = -1;
+	DWORD attrib;
 
-	old_w = charset_iconv_easy(old, CHARSET_UTF8, CHARSET_WCHAR_T);
-	new_w = charset_iconv_easy(old, CHARSET_UTF8, CHARSET_WCHAR_T);
+	old_a = charset_iconv_easy(old, CHARSET_UTF8, CHARSET_ANSI);
+	new_a = charset_iconv_easy(old, CHARSET_UTF8, CHARSET_ANSI);
 
-	if (!old_w || !new_w) {
-		free(old_w);
-		free(new_w);
-		return -1;
+	if (!old_a || !new_a)
+		goto end;
+
+	attrib = GetFileAttributesA(new_a);
+	if (attrib == INVALID_FILE_ATTRIBUTES) {
+		/* nothing */
+	} else if (attrib & FILE_ATTRIBUTE_DIRECTORY) {
+		goto end;
+	} else if (overwrite) {
+		if (!DeleteFileA(new_a))
+			goto end;
+	} else {
+		/* we have an existing file, and we shouldn't overwrite. */
+		goto end;
 	}
-	
-	free(old_w);
-	free(new_w);
+
+	ret = (MoveFileA(old_a, new_a)) ? 0 : -1;
+
+end:
+	free(old_a);
+	free(new_a);
 
 	return ret;
 #elif defined(SCHISM_MACOS)
@@ -1029,28 +1040,29 @@ DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL(WCHAR, CHARSET_WCHAR_T, W, _wgetenv, L)
 // Don't use this function directly! see the macro defined below
 static char *dmoz_win32_get_csidl_directory(int csidl, const wchar_t *registryw, const char *registry, const wchar_t *envvarw, const char *envvar)
 {
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-	if (GetVersion() & UINT32_C(0x80000000)) {
-		char *utf8 = dmoz_win32_get_csidl_directoryA(csidl, registry, envvar);
+	char *utf8;
+
+	SCHISM_ANSI_UNICODE({
+		utf8 = dmoz_win32_get_csidl_directoryA(csidl, registry, envvar);
 		if (utf8)
 			return utf8;
-	} else
-#endif
-	{
+	}, {
 		// Windows NT.
 		{
 			// special case: SHGetFolderPathW
 			wchar_t bufw[MAX_PATH];
-			char *utf8;
 
-			if (WIN32_SHGetFolderPathW && WIN32_SHGetFolderPathW(NULL, csidl, NULL, 0, bufw) == S_OK && !charset_iconv(bufw, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, MAX_PATH))
+			if (WIN32_SHGetFolderPathW
+				&& WIN32_SHGetFolderPathW(NULL, csidl, NULL, 0, bufw) == S_OK
+				&& !charset_iconv(bufw, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8,
+					sizeof(bufw)))
 				return utf8;
 		}
 
-		char *utf8 = dmoz_win32_get_csidl_directoryW(csidl, registryw, envvarw);
+		utf8 = dmoz_win32_get_csidl_directoryW(csidl, registryw, envvarw);
 		if (utf8)
 			return utf8;
-	}
+	})
 
 	// we'll get em next time
 	return NULL;

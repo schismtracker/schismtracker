@@ -51,11 +51,7 @@ static void win32_clippy_set_selection(const char *text)
 static void win32_clippy_set_clipboard(const char *text)
 {
 	// Only use CF_UNICODETEXT on Windows NT machines
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-	const UINT fmt = (GetVersion() & UINT32_C(0x80000000)) ? CF_TEXT : CF_UNICODETEXT;
-#else
-	static const UINT fmt = CF_UNICODETEXT;
-#endif
+	UINT fmt;
 	union {
 		LPWSTR w;
 #ifdef SCHISM_WIN32_COMPILE_ANSI
@@ -64,8 +60,14 @@ static void win32_clippy_set_clipboard(const char *text)
 	} str;
 	size_t i;
 	size_t size = 0;
-
 	video_wm_data_t wm_data;
+
+	SCHISM_ANSI_UNICODE({
+		fmt = CF_TEXT;
+	}, {
+		fmt = CF_UNICODETEXT;
+	})
+
 	if (!video_get_wm_data(&wm_data) && wm_data.subsystem != VIDEO_WM_DATA_SUBSYSTEM_WINDOWS)
 		return;
 

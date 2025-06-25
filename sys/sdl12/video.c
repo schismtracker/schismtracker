@@ -351,19 +351,16 @@ static int sdl12_video_startup(void)
 		y = 480;
 	}
 
-	/*log_appendf(2, "Ideal desktop size: %dx%d", x, y); */
+	/* log_appendf(2, "Ideal desktop size: %dx%d", x, y); */
 	video.desktop.width = x;
 	video.desktop.height = y;
 
-	/* okay, i think we're ready */
-	sdl12_ShowCursor(SDL_DISABLE);
-
-	// This call actually creates the surface.
+	/* This call actually creates the surface. */
 	video_fullscreen(video.desktop.fullscreen);
 
-	// We have to unset this variable, because otherwise
-	// SDL will re-center the window every time it's
-	// resized.
+	/* We have to unset this variable, because otherwise
+	 * SDL will re-center the window every time it's
+	 * resized. */
 	if (center_enabled)
 		unsetenv("SDL_VIDEO_WINDOW_POS");
 
@@ -376,6 +373,9 @@ static int sdl12_video_startup(void)
 		SetWindowLongPtrA(wm_info.window, GWL_EXSTYLE, x | WS_EX_ACCEPTFILES);
 	}
 #endif
+
+	/* okay, i think we're ready */
+	//sdl12_ShowCursor(SDL_DISABLE);
 
 	return 1;
 }
@@ -674,10 +674,14 @@ static void sdl12_video_toggle_menu(SCHISM_UNUSED int on)
 static void sdl12_video_mousecursor_changed(void)
 {
 	const int vis = video_mousecursor_visible();
-	sdl12_ShowCursor(vis == MOUSE_SYSTEM);
+	int evstate;
+
+	/* FIXME: On Windows, this only seems to work after releasing
+	 * mouse focus, and then giving back mouse focus. */
+	sdl12_ShowCursor((vis == MOUSE_SYSTEM) ? SDL_ENABLE : SDL_DISABLE);
 
 	// Totally turn off mouse event sending when the mouse is disabled
-	int evstate = (vis == MOUSE_DISABLED) ? SDL_DISABLE : SDL_ENABLE;
+	evstate = (vis == MOUSE_DISABLED) ? SDL_DISABLE : SDL_ENABLE;
 	if (evstate != sdl12_EventState(SDL_MOUSEMOTION, SDL_QUERY)) {
 		sdl12_EventState(SDL_MOUSEMOTION, evstate);
 		sdl12_EventState(SDL_MOUSEBUTTONDOWN, evstate);

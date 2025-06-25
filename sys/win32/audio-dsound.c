@@ -794,12 +794,9 @@ int win32_dsound_audio_lookup_waveout_name(const uint32_t *waveoutdevid, char **
 	if (!waveoutdevid || !dsound_propset)
 		return 0;
 
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-	if (GetVersion() & 0x80000000U) { /* Win9x */
+	SCHISM_ANSI_UNICODE({
 		return win32_dsound_audio_lookup_waveout_name_A(*waveoutdevid, result);
-	} else
-#endif
-	{ /* WinNT */
+	}, {
 		return win32_dsound_audio_lookup_waveout_name_W(*waveoutdevid, result);
-	}
+	})
 }

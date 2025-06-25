@@ -25,6 +25,7 @@
 
 #include "charset.h"
 #include "loadso.h"
+#include "osdefs.h"
 #include "mem.h"
 
 #ifdef SCHISM_WIN32
@@ -46,7 +47,7 @@ void *loadso_object_load(const char *sofile)
 	DWORD em = SetErrorMode(0);
 	SetErrorMode(em | SEM_FAILCRITICALERRORS);
 
-	if (GetVersion() & 0x80000000) {
+	SCHISM_ANSI_UNICODE({
 		// Windows 9x
 		char *ansi;
 
@@ -54,7 +55,7 @@ void *loadso_object_load(const char *sofile)
 			module = LoadLibraryA(ansi);
 			free(ansi);
 		}
-	} else {
+	}, {
 		// Windows NT
 		wchar_t *unicode;
 
@@ -62,7 +63,7 @@ void *loadso_object_load(const char *sofile)
 			module = LoadLibraryW(unicode);
 			free(unicode);
 		}
-	}
+	})
 
 	if (!module)
 		module = LoadLibraryA(sofile);
