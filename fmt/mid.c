@@ -456,7 +456,7 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			prev = prev->next;
 		}
 		if (slurp_tell(fp) != nextpos) {
-			log_appendf(2, " Track %d ended %ld bytes from boundary",
+			log_appendf(2, " Track %d ended %" PRId64 " bytes from boundary",
 				trknum, slurp_tell(fp) - nextpos);
 			slurp_seek(fp, nextpos, SEEK_SET);
 		}
