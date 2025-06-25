@@ -84,7 +84,7 @@ static void _macosx_drain(struct midi_port *p)
 }
 
 /* lifted from portmidi */
-static void get_ep_name(MIDIEndpointRef ep, char* buf, size_t buf_len)
+static void get_ep_name(MIDIEndpointRef ep, char *buf, size_t buf_len)
 {
 	MIDIEntityRef entity;
 	MIDIDeviceRef device;
@@ -138,10 +138,14 @@ static int _macosx_stop(struct midi_port *p)
 	return 1;
 }
 
-static void _macosx_add_port(struct midi_provider *p, MIDIEndpointRef ep, int inout)
+static void _macosx_add_port(struct midi_provider *p, MIDIEndpointRef ep, uint8_t inout)
 {
 	struct macosx_midi* m;
 	struct midi_port* ptr;
+	char name[55];
+
+	if (!ep)
+		return;
 
 	ptr = NULL;
 	while (midi_port_foreach(p, &ptr)) {
@@ -156,7 +160,6 @@ static void _macosx_add_port(struct midi_provider *p, MIDIEndpointRef ep, int in
 	m->ep = ep;
 
 	/* 55 is the maximum size for the MIDI page */
-	char name[55];
 	get_ep_name(m->ep, name, 55);
 	name[54] = '\0';
 
@@ -175,26 +178,13 @@ static void _macosx_poll(struct midi_provider *p)
 	num_out = MIDIGetNumberOfDestinations();
 	num_in = MIDIGetNumberOfSources();
 
-	if (!num_out || !num_in)
-		return;
-
 	midi_provider_mark_ports(p);
 
-	for (i = 0; i < num_out; i++) {
-		ep = MIDIGetDestination(i);
-		if (!ep)
-			continue;
+	for (i = 0; i < num_out; i++)
+		_macosx_add_port(p, MIDIGetDestination(i), MIDI_OUTPUT);
 
-		_macosx_add_port(p, ep, MIDI_OUTPUT);
-	}
-
-	for (i = 0; i < num_in; i++) {
-		ep = MIDIGetSource(i);
-		if (!ep)
-			continue;
-
-		_macosx_add_port(p, ep, MIDI_INPUT);
-	}
+	for (i = 0; i < num_in; i++)
+		_macosx_add_port(p, MIDIGetSource(i), MIDI_INPUT);
 
 	midi_provider_remove_marked_ports(p);
 }
