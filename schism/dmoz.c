@@ -1772,7 +1772,7 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 		OSErr err = PBHGetVInfoSync(&hfsParams);
 		if (err != noErr)
 			break;
-	
+
 		// FIXME: Need conversion to & from UTF-8
 		dmoz_add_file_or_dir(flist, dlist, strn_dup(&ppath[1], ppath[0]), strn_dup(&ppath[1], ppath[0]), NULL, -(1024 - index + 1));
 	}
@@ -1996,6 +1996,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 				continue; /* better luck next time */
 			}
 			if (st.st_mtime < 0) st.st_mtime = 0;
+			log_appendf(1, "mode: %" PRIu32, st.st_mode);
 			if (S_ISDIR(st.st_mode))
 				dmoz_add_file_or_dir(flist, dlist, ptr, str_dup(ent->d_name), &st, 0);
 			else if (S_ISREG(st.st_mode))

@@ -31,6 +31,7 @@
 #include "charset.h"
 #include "util.h"
 #include "macos-dirent.h"
+#include "log.h"
 
 #include <Files.h>
 #include <TextUtils.h>
@@ -48,7 +49,7 @@ DIR *opendir(const char *path)
 {
 	DIR *dir;
 	OSErr err;
-	WDPBRec pb;
+	WDPBRec pb = {0};
 	unsigned char ppath[256];
 
 	err = noErr;
@@ -78,9 +79,6 @@ DIR *opendir(const char *path)
 		}
 
 		pb.ioNamePtr  = ppath;
-		pb.ioVRefNum  = 0;
-		pb.ioWDProcID = 0;
-		pb.ioWDDirID  = 0;
 	}
 
 	err = PBOpenWD(&pb, 0);

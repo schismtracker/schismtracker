@@ -57,7 +57,7 @@ static int display_native_y = -1;
 # include <linux/fb.h>
 #endif
 #include <sys/types.h>
-#include <sys/stat.h>
+/*#include <sys/stat.h>*/
 #if HAVE_SYS_IOCTL_H
 # include <sys/ioctl.h>
 #endif

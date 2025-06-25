@@ -33,6 +33,8 @@
 # include "osdefs.h"
 #endif
 
+#define SCHISM_CHARSET_DEBUG
+
 int char_digraph(int k1, int k2)
 {
 #define DG(ax, eq) \
@@ -544,7 +546,7 @@ unsigned char char_unicode_to_cp437(uint32_t ch)
 	case 0x00A0: return 255;
 	default:
 #ifdef SCHISM_CHARSET_DEBUG
-		log_appendf(1, " charset: unknown character U+%4x", c);
+		log_appendf(1, " charset: unknown character U+%04" PRIx32, ch);
 #endif
 		return '?';
 	};
@@ -846,6 +848,9 @@ static size_t charset_nulterm_string_size(const void *in, charset_t inset)
 # ifndef kTECOutputBufferFullStatus
 #  define kTECOutputBufferFullStatus (-8785)
 # endif
+# ifndef kTECPartialCharErr
+#  define kTECPartialCharErr (-8753)
+#endif
 #elif defined(SCHISM_OS2)
 # include <uconv.h>
 # define INCL_DOS
@@ -909,12 +914,12 @@ static charset_error_t charset_iconv_macos_preprocess_(const void *in, size_t in
 	}
 
 	do {
-		unsigned char buf[512];
+		unsigned char buf[2048];
 		ByteCount bytes_consumed; // I love consuming media!
 		ByteCount bytes_produced;
 
 		err = TECConvertText(tec, (ConstTextPtr)srcptr, insize, &bytes_consumed, (TextPtr)buf, sizeof(buf), &bytes_produced);
-		if (err != noErr && err != kTECOutputBufferFullStatus) {
+		if (err != noErr && err != kTECOutputBufferFullStatus && err != kTECPartialCharErr) {
 #ifdef SCHISM_CHARSET_DEBUG
 			log_appendf(4, "[MacOS] TECConvertText returned %d; giving up", (int)err);
 #endif
@@ -931,13 +936,13 @@ static charset_error_t charset_iconv_macos_preprocess_(const void *in, size_t in
 	} while (err == kTECOutputBufferFullStatus);
 
 	// force write a NUL terminator
-	uint16_t x = 0;
+	uint32_t x = 0;
 	disko_write(&ds, &x, sizeof(x));
 
 	disko_memclose(&ds, 1);
 
 	// put the fake stuff in
-	memcpy(out, &ds.data, sizeof(ds.data));
+	memcpy(out, &ds.data, sizeof(void *));
 	if (outsize)
 		*outsize = ds.length;
 

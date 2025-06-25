@@ -116,7 +116,7 @@
 # include <sys/types.h>
 #endif
 
-#if defined(HAVE_STAT) && !defined(SCHISM_WIN32)
+#if defined(HAVE_STAT) && !defined(SCHISM_WIN32) && !defined(SCHISM_MACOS)
 # include <sys/stat.h>
 #else
 /* This only defines the stuff we actually use.
@@ -166,14 +166,15 @@ struct stat {
 # define S_IRWXG (S_IRGRP | S_IWGRP | S_IXGRP)
 # define S_IRWXO (S_IROTH | S_IWOTH | S_IXOTH)
 
-/* Convenience macros as defined by POSIX */
-# define S_ISREG(x)  (!!((x) & S_IFREG))
-# define S_ISBLK(x)  (!!((x) & S_IFBLK))
-# define S_ISCHR(x)  (!!((x) & S_IFCHR))
-# define S_ISFIFO(x) (!!((x) & S_IFIFO))
-# define S_ISDIR(x)  (!!((x) & S_IFDIR))
-# define S_ISLNK(x)  (!!((x) & S_IFLNK))
-# define S_ISSOCK(x) (!!((x) & S_IFSOCK))
+# define S_ISTYPE(x, mask) (((x) & S_IFMT) == (mask))
+
+# define S_ISREG(x)  S_ISTYPE(x, S_IFREG)
+# define S_ISBLK(x)  S_ISTYPE(x, S_IFBLK)
+# define S_ISCHR(x)  S_ISTYPE(x, S_IFCHR)
+# define S_ISFIFO(x) S_ISTYPE(x, S_IFIFO)
+# define S_ISDIR(x)  S_ISTYPE(x, S_IFDIR)
+# define S_ISLNK(x)  S_ISTYPE(x, S_IFLNK)
+# define S_ISSOCK(x) S_ISTYPE(x, S_IFSOCK)
 
 # define S_TYPEISMQ(x)  (0)
 # define S_TYPEISSEM(x) (0)

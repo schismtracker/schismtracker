@@ -40,8 +40,6 @@
 #include <Folders.h>
 #include <Dialogs.h>
 
-#include <ctype.h>
-
 /* ------------------------------------------------------------------------ */
 
 static inline SCHISM_ALWAYS_INLINE time_t time_get_macintosh_epoch(void)
@@ -199,7 +197,6 @@ int macos_mkdir(const char *path, SCHISM_UNUSED uint32_t mode)
 
 int macos_stat(const char *file, struct stat *st)
 {
-	CInfoPBRec pb = {0};
 	unsigned char ppath[256];
 
 	{
@@ -228,26 +225,22 @@ int macos_stat(const char *file, struct stat *st)
 	}
 
 	if (!strcmp(file, ".")) {
-		*st = (struct stat){
-			.st_mode = S_IFDIR,
-			.st_ino = -1,
-		};
-	} else {		
+		memset(st, 0, sizeof(*st));
+		st->st_mode = S_IFDIR;
+	} else {
+		CInfoPBRec pb = {0};
+		OSErr err;
+
 		pb.hFileInfo.ioNamePtr = ppath;
 
-		OSErr err = PBGetCatInfoSync(&pb);
+		err = PBGetCatInfoSync(&pb);
 		switch (err) {
 		case noErr:
-			*st = (struct stat){
-				.st_mode = (pb.hFileInfo.ioFlAttrib & ioDirMask) ? S_IFDIR : S_IFREG,
-				.st_ino = pb.hFileInfo.ioFlStBlk,
-				.st_dev = pb.hFileInfo.ioVRefNum,
-				.st_nlink = 1,
-				.st_size = pb.hFileInfo.ioFlLgLen,
-				.st_atime = time_convert_from_macintosh(pb.hFileInfo.ioFlMdDat),
-				.st_mtime = time_convert_from_macintosh(pb.hFileInfo.ioFlMdDat),
-				.st_ctime = time_convert_from_macintosh(pb.hFileInfo.ioFlCrDat),
-			};
+			st->st_mode = (pb.hFileInfo.ioFlAttrib & ioDirMask) ? S_IFDIR : S_IFREG;
+			st->st_size = pb.hFileInfo.ioFlLgLen;
+			st->st_atime = time_convert_from_macintosh(pb.hFileInfo.ioFlMdDat);
+			st->st_mtime = time_convert_from_macintosh(pb.hFileInfo.ioFlMdDat);
+			st->st_ctime = time_convert_from_macintosh(pb.hFileInfo.ioFlCrDat);
 
 			return 0;
 		case nsvErr:
