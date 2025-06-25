@@ -21,10 +21,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/* Based off code by Guido van Rossum in Python. */
+/* Based off public-domain code written by Guido van Rossum for Python. */
 
 #include "headers.h"
 #include "str.h"
+#include "mem.h"
 #include "dmoz.h"
 #include "osdefs.h"
 #include "charset.h"
@@ -39,26 +40,18 @@ struct dir_ {
 	long dirid;
 	int nextfile;
 
-	// dynamically allocated
 	struct dirent dir;
 };
 
 /* Open a directory.  This means calling PBOpenWD. */
 DIR *opendir(const char *path)
 {
-	/* Schism never opens more than one directory at a time,
-	 * so we can just one static directory structure. */
-	static DIR dir = {0};
-
-	if (dir.nextfile) {
-		errno = ENFILE;
-		return NULL;
-	}
-
-	OSErr err = noErr;
+	DIR *dir;
+	OSErr err;
 	WDPBRec pb;
 	unsigned char ppath[256];
-	FSSpec spec;
+
+	err = noErr;
 
 	{
 		// We can just pass the full path to PBOpenWD
@@ -108,21 +101,23 @@ DIR *opendir(const char *path)
 		return NULL;
 	}
 
-	dir.dirid    = pb.ioVRefNum;
-	dir.nextfile = 1;
+	/* allocate and fill */
+	dir = mem_calloc(1, sizeof(*dir));
+	dir->dirid    = pb.ioVRefNum;
+	dir->nextfile = 1;
 
-	return &dir;
+	return dir;
 }
 
 /* Close an open directory. */
 void closedir(DIR *dirp)
 {
 	WDPBRec pb;
-	
+
 	pb.ioVRefNum = dirp->dirid;
-	(void) PBCloseWD(&pb, 0);
-	dirp->dirid = 0;
-	dirp->nextfile = 0;
+	(void)PBCloseWD(&pb, 0);
+
+	free(dirp);
 }
 
 /* Read the next directory entry. */
@@ -134,6 +129,8 @@ struct dirent *readdir(DIR *dp)
 		HFileInfo hf;
 	} pb;
 	unsigned char pname[256];
+	short err;
+
 	pname[0] = '\0';
 
 	pb.d.ioNamePtr = pname;
@@ -141,7 +138,7 @@ struct dirent *readdir(DIR *dp)
 	pb.d.ioDrDirID = 0;
 	pb.d.ioFDirIndex = dp->nextfile++;
 
-	short err = PBGetCatInfo((CInfoPBPtr)&pb, 0);
+	err = PBGetCatInfo((CInfoPBPtr)&pb, 0);
 	switch (err) {
 	case noErr:
 		break;
@@ -170,10 +167,11 @@ struct dirent *readdir(DIR *dp)
 	str_from_pascal(pname, dp->dir.d_name);
 
 	{
-		/* UGH. */
+		/* convert the path in-place */
 		char *npath = charset_iconv_easy(dp->dir.d_name, CHARSET_SYSTEMSCRIPT, CHARSET_UTF8);
 		strncpy(dp->dir.d_name, npath, SCHISM_NAME_MAX - 1);
 		dp->dir.d_name[SCHISM_NAME_MAX - 1] = '\0';
+		free(npath);
 	}
 
 	return &dp->dir;
