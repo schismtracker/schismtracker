@@ -1233,7 +1233,7 @@ void cfg_load_patedit(cfg_file_t *cfg)
 			s[n] -= 'A';
 		} else {
 			log_appendf(4, "Track view scheme corrupted; using default");
-			n = 64;
+			n = 0;
 			r = 0;
 			break;
 		}
