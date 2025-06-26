@@ -180,7 +180,7 @@ static void timeinfo_redraw(void)
 	draw_time(total_secs, 18, 16);
 
 	// draw the bar
-	for (int x = 1; x < 79; x++)
+	for (int x = 1; x < (VGAMEM_COLUMNS - 1); x++)
 		draw_char(154, x, 18, 0, 2);
 
 	if (display_session) {
