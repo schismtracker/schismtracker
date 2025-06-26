@@ -26,7 +26,16 @@
 #include "player/sndfile.h"
 #include "player/cmixer.h"
 
-// LUT for 2 * damping factor
+/*
+ * LUT for 2 * damping factor
+ *
+ * Formula for the table:
+ *
+ *    resonance_table[i] = pow(10.0, -((24.0 / 128.0) * i) / 20.0);
+ * or
+ *    resonance_table[i] = pow(10.0, -3.0 * i / 320.0);
+ *
+ */
 static const float resonance_table[128] = {
 	1.0000000000000000f, 0.9786446094512940f, 0.9577452540397644f, 0.9372922182083130f,
 	0.9172759056091309f, 0.8976871371269226f, 0.8785166740417481f, 0.8597555756568909f,
