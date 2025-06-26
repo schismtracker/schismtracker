@@ -178,6 +178,11 @@ AC_ARG_ENABLE(avformat-linking,
 	AVFORMAT_LINKING=$enableval,
 	AVFORMAT_LINKING=no)
 
+AC_ARG_ENABLE(test,
+	AS_HELP_STRING([--enable-test], [Override main function with test suite]),
+	TEST=$enableval,
+	TEST=no)
+
 dnl These are used in the Win32 build so that we can intermix mingw32 and mingw-w64 parts.
 dnl This is really a hack, and it would be nicer if we could avoid this, but unfortunately
 dnl there is no real windows toolchain available that allows to target super old windows
@@ -394,28 +399,27 @@ posix_fseek=unknown
 
 have_loadso=no
 
-case "$host_os" in
-darwin*)
+AS_CASE([$host_os],
+[darwin*], [
 	AC_MSG_RESULT([found Darwin host])
 
+	AC_MSG_CHECKING([for Mac OS X El Capitan SDK])
+	AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+		#include <AvailabilityMacros.h>
 
-		AC_MSG_CHECKING([for Mac OS X El Capitan SDK])
-		AC_COMPILE_IFELSE([
-			#include <AvailabilityMacros.h>
+		#if MAC_OS_X_VERSION_MAX_ALLOWED < 101100
+		# error "too old"
+		#endif
+	]])], [use_avfoundation=yes], [])
+	AC_MSG_RESULT([$use_avfoundation])
 
-			#if MAC_OS_X_VERSION_MAX_ALLOWED < 101100
-			# error "too old"
-			#endif
-		], [use_avfoundation=yes], [])
-		AC_MSG_RESULT([$use_avfoundation])
-
-		use_macosx=yes
-		posix_fseek=yes
-		AC_DEFINE([SCHISM_MACOSX], [1], [Mac OS X])
-		;;
-	macos*)
-		# Retro68 toolchain
-		AC_MSG_RESULT([found Classic Mac OS host])
+	use_macosx=yes
+	posix_fseek=yes
+	AC_DEFINE([SCHISM_MACOSX], [1], [Mac OS X])
+],
+[macos*], [
+	dnl Retro68 toolchain
+	AC_MSG_RESULT([found Classic Mac OS host])
 
 	use_macos=yes
 	AC_DEFINE([SCHISM_MACOS], [1], [Classic Mac OS])
@@ -433,16 +437,16 @@ darwin*)
 	fi
 
 	posix_fseek=no
-	;;
-os2*)
+],
+[os2*], [
 	AC_MSG_RESULT([found OS/2 host])
 
 	have_loadso=yes
 	use_os2=yes
 
 	AC_DEFINE([SCHISM_OS2], [1], [OS/2])
-	;;
-cygwin*|mingw*)
+],
+[cygwin*|mingw*], [
 	AC_MSG_RESULT([found Windows host])
 	WIN32_LIBS="-lwinmm"
 
@@ -462,8 +466,8 @@ cygwin*|mingw*)
 	use_win32=yes
 	posix_fseek=yes
 	AC_DEFINE([SCHISM_WIN32], [1], [Windows])
-	;;
-xbox*)
+],
+[xbox*], [
 	AC_MSG_RESULT([found XBOX host])
 	dnl For all intents and purposes, the Xbox is a completely different
 	dnl operating system to Windows, with a similar (but not identical)
@@ -479,8 +483,8 @@ xbox*)
 	use_controller=yes
 	AC_DEFINE([SCHISM_XBOX], [1], [Original Xbox])
 	AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
-	;;
-*)
+], [
+	dnl default case
 	AC_MSG_RESULT([nothing to do here])
 
 	dnl now check for other stuff
@@ -565,9 +569,7 @@ xbox*)
 		AC_DEFINE([USE_NETWORK], [1], [Networking])
 		use_network=yes
 	fi
-
-	;;
-esac
+])
 
 dnl Libs
 AC_SEARCH_LIBS([dlopen], [dl], [
@@ -623,6 +625,15 @@ AM_CONDITIONAL([USE_XBOX], [test "x$use_xbox" = "xyes"])
 
 dnl this ought to have something better
 AM_CONDITIONAL([USE_AVFOUNDATION], [test "x$use_avfoundation" = "xyes"])
+
+dnl ------------------------------------------------------------------------
+dnl test suite
+
+if test "x$TEST" = "xyes"; then
+	AC_DEFINE([SCHISM_TEST], [1], [Compile test suite])
+fi
+
+AM_CONDITIONAL([USE_TEST], [test "x$TEST" = "xyes"])
 
 dnl ------------------------------------------------------------------------
 

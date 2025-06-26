@@ -108,4 +108,32 @@ SCHISM_CONST SCHISM_ALWAYS_INLINE inline uint16_t bswap_16_schism_internal_(uint
 # define bswapLE64(x) (x)
 #endif
 
+#ifdef SCHISM_TEST
+
+static inline int test_bswap(void)
+{
+	int r = 0;
+
+#define BYTESWAP_TEST(BITS, TESTVAL, EXPECTEDLE, EXPECTEDBE) \
+	do { \
+		union { \
+			char x[BITS / 8]; \
+			uint##BITS##_t u; \
+		} x; \
+	\
+		memcpy(x.x, (TESTVAL), sizeof(x.x)); \
+	\
+		r |= (bswapLE##BITS(x.u) != (EXPECTEDLE)); \
+		r |= (bswapBE##BITS(x.u) != (EXPECTEDBE)); \
+	} while (0)
+
+	BYTESWAP_TEST(16, "\xAA\xBB", 0xBBAA, 0xAABB);
+	BYTESWAP_TEST(32, "\xAA\xBB\xCC\xDD", 0xDDCCBBAA, 0xAABBCCDD);
+	BYTESWAP_TEST(64, "\x11\x22\x33\x44\x55\x66\x77\x88", 0x8877665544332211, 0x1122334455667788);
+
+	return r;
+}
+
+#endif
+
 #endif /* SCHISM_BSWAP_H_ */
