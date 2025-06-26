@@ -154,8 +154,6 @@ int song_load_instrument_with_prompt(int n, const char *file);
 int song_load_instrument_ex(int n, const char *file, const char *libf, int nx);
 int song_save_instrument(const char *filename, const char *type, song_instrument_t *ins, int num);
 
-int song_sample_is_empty(int n);
-
 /* search the orderlist for a pattern, starting at the current order.
 return value of -1 means the pattern isn't on the list */
 int song_next_order_for_pattern(int pat);
@@ -398,7 +396,6 @@ void song_remove_instrument_slot(int n);
 void song_delete_instrument(int n, int preserve_samples);
 void song_wipe_instrument(int n);
 
-int song_instrument_is_empty(int n);
 void song_init_instruments(int n); /* -1 for all */
 void song_init_instrument_from_sample(int ins, int samp);
 
