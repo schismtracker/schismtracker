@@ -779,17 +779,15 @@ end:
 #endif
 }
 
-// recursive mkdir (equivalent to `mkdir -p`)
+/* recursive mkdir (equivalent to `mkdir -p`) */
 int dmoz_path_mkdir_recursive(const char *path, int mode)
 {
 	size_t i;
-	int first = 0; // ugly hack: skip the first separator
+	int first = 0; /* ugly hack: skip the first separator */
 
 	char *npath = dmoz_path_normal(path);
-	if (!npath) {
-		printf("nope\n");
+	if (!npath)
 		return -1;
-	}
 
 	for (i = 0; npath[i]; i++) {
 		struct stat st;
@@ -802,20 +800,18 @@ int dmoz_path_mkdir_recursive(const char *path, int mode)
 			continue;
 		}
 
-		// cut
+		/* cut */
 		npath[i] = '\0';
 
-		printf("%s\n", npath);
-
 		if (os_stat(npath, &st) < 0) {
-			// path doesn't exist
+			/* path doesn't exist */
 			if (os_mkdir(npath, mode)) {
 				free(npath);
-				// errno is already useful here
+				/* errno is already useful here */
 				return -1;
 			}
 		} else {
-			// path exists already, make sure it's a directory
+			/* path exists already, make sure it's a directory */
 			if (!S_ISDIR(st.st_mode)) {
 				free(npath);
 				errno = ENOTDIR;
@@ -823,13 +819,13 @@ int dmoz_path_mkdir_recursive(const char *path, int mode)
 			}
 		}
 
-		// paste
+		/* paste */
 		npath[i] = DIR_SEPARATOR;
 	}
 
 	if (os_mkdir(npath, mode)) {
 		free(npath);
-		// errno is already useful here
+		/* errno is already useful here */
 		return -1;
 	}
 
