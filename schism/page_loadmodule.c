@@ -234,7 +234,7 @@ void save_song_or_save_as(void)
 	}
 }
 
-static void do_save_song_overwrite(void *ptr)
+static void do_save_song_overwrite(void *ptr, SCHISM_UNUSED void *final_data)
 {
 	struct stat st;
 
@@ -273,7 +273,7 @@ static void handle_file_entered_S(const char *name)
 			log_appendf(4, "%s: Is a directory", name);
 		} else if (S_ISREG(buf.st_mode)) {
 			dialog_create(DIALOG_OK_CANCEL, "Overwrite file?",
-				      do_save_song_overwrite, free, 1, str_dup(name));
+				      do_save_song_overwrite, dialog_free_data, 1, str_dup(name));
 		} else {
 			/* log_appendf(4, "%s: Not overwriting non-regular file", ptr); */
 			dialog_create(DIALOG_OK, "Not a regular file", NULL, NULL, 0, NULL);
@@ -443,7 +443,7 @@ static void search_update(void)
 
 	/* go through the file/dir list (whatever one is selected) and
 	 * find the first entry matching the text */
-	if (*selected_widget == 0) {
+	if (widget_context->selected_widget == 0) {
 		for (n = 0; n < flist.num_files; n++) {
 			if (charset_strncasecmp(flist.files[n]->base, CHARSET_CHAR,
 					search_text, CHARSET_CP437, search_text_length) == 0) {
@@ -632,7 +632,7 @@ static void file_list_draw(void)
 	search_redraw();
 }
 
-static void do_delete_file(SCHISM_UNUSED void *data)
+static void do_delete_file(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	int old_top_file, old_current_file, old_top_dir, old_current_dir;
 	char *ptr;
@@ -865,7 +865,7 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 					change_dir(dlist.dirs[current_dir]->path);
 
 					if (flist.num_files > 0)
-							*selected_widget = 0;
+							widget_context->selected_widget = 0;
 					status.flags |= NEED_UPDATE;
 					return 1;
 					break;
@@ -914,7 +914,7 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 			change_dir(dlist.dirs[current_dir]->path);
 
 		if (flist.num_files > 0)
-			*selected_widget = 0;
+			widget_context->selected_widget = 0;
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SCHISM_KEYSYM_BACKSPACE:
@@ -978,7 +978,7 @@ static int dir_list_handle_key_exportsave(struct key_event * k)
 /* --------------------------------------------------------------------- */
 /* these handle when enter is pressed on the file/directory textboxes at the bottom of the screen. */
 
-static void filename_entered(void)
+static void filename_entered(SCHISM_UNUSED struct widget_context *this)
 {
 	if (strpbrk(filename_entry, "?*")) {
 		set_glob(filename_entry);
@@ -992,7 +992,7 @@ static void filename_entered(void)
 }
 
 /* strangely similar to the dir list's code :) */
-static void dirname_entered(void)
+static void dirname_entered(SCHISM_UNUSED struct widget_context *this)
 {
 	void *out = charset_iconv_easy(dirname_entry, CHARSET_CP437, CHARSET_CHAR);
 	if (!out)
@@ -1005,7 +1005,7 @@ static void dirname_entered(void)
 
 	free(out);
 
-	*selected_widget = (flist.num_files > 0) ? 0 : 1;
+	widget_context->selected_widget = (flist.num_files > 0) ? 0 : 1;
 	status.flags |= NEED_UPDATE;
 	/* reset */
 	top_file = current_file = 0;
