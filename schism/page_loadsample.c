@@ -854,10 +854,6 @@ static void handle_load_copy(song_sample_t *s)
 	handle_load_copy_uint(widgets_loadsample[7].d.numentry.value, &s->sustain_start);
 	handle_load_copy_uint(widgets_loadsample[8].d.numentry.value, &s->sustain_end);
 	handle_load_copy_uint(widgets_loadsample[9].d.thumbbar.value, &s->volume);
-	if ((unsigned int)widgets_loadsample[9].d.thumbbar.value == (s->volume>>2)) {
-		s->volume = (widgets_loadsample[9].d.thumbbar.value << 2);
-		fake_slot_changed=1;
-	}
 	handle_load_copy_uint(widgets_loadsample[10].d.thumbbar.value, &s->global_volume);
 	handle_load_copy_uint(widgets_loadsample[11].d.thumbbar.value, &s->vib_rate);
 	handle_load_copy_uint(widgets_loadsample[12].d.thumbbar.value, &s->vib_depth);
