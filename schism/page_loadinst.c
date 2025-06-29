@@ -169,7 +169,7 @@ static void _common_set_page(void)
 
 	/* if we have a list, the directory didn't change, and the mtime is the same, we're set */
 	if (flist.num_files > 0
-	    && (status.flags & DIR_SAMPLES_CHANGED) == 0
+	    && (status.flags & DIR_INSTRUMENTS_CHANGED) == 0
 		&& os_stat(inst_cwd, &st) == 0
 	    && st.st_mtime == directory_mtime) {
 		return;
