@@ -410,7 +410,7 @@ static int file_list_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_ESCAPE:
 		if (slash_search_mode < 0) {
 			if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod))
-				set_page(PAGE_SAMPLE_LIST);
+				set_page(PAGE_INSTRUMENT_LIST);
 			return 1;
 		} /* else fall through */
 	case SCHISM_KEYSYM_RETURN:
