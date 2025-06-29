@@ -159,7 +159,7 @@ static void file_list_reposition(void)
 
 		widgets_loadsample[7].d.numentry.value = f ? f->smp_sustain_start : 0;
 		widgets_loadsample[8].d.numentry.value = f ? f->smp_sustain_end : 0;
-		widgets_loadsample[9].d.thumbbar.value = f ? f->smp_defvol : 64;
+		widgets_loadsample[9].d.thumbbar.value = f ? CLAMP(f->smp_defvol >> 2, 0, 64) : 64;
 		widgets_loadsample[10].d.thumbbar.value = f ? f->smp_gblvol : 64;
 		widgets_loadsample[11].d.thumbbar.value = f ? f->smp_vibrato_speed : 0;
 		widgets_loadsample[12].d.thumbbar.value = f ? f->smp_vibrato_depth : 0;
@@ -853,11 +853,15 @@ static void handle_load_copy(song_sample_t *s)
 	handle_load_copy_uint(widgets_loadsample[5].d.numentry.value, &s->loop_end);
 	handle_load_copy_uint(widgets_loadsample[7].d.numentry.value, &s->sustain_start);
 	handle_load_copy_uint(widgets_loadsample[8].d.numentry.value, &s->sustain_end);
-	handle_load_copy_uint(widgets_loadsample[9].d.thumbbar.value, &s->volume);
-	if ((unsigned int)widgets_loadsample[9].d.thumbbar.value == (s->volume>>2)) {
+
+	// s->volume is 0..256, Impulse Tracker's UI is 0..64
+	// we only push the value back to the song_sample_t if
+	// it's not what the existing value would convert to
+	if ((s->volume >> 2) != widgets_loadsample[9].d.numentry.value) {
 		s->volume = (widgets_loadsample[9].d.thumbbar.value << 2);
 		fake_slot_changed=1;
 	}
+
 	handle_load_copy_uint(widgets_loadsample[10].d.thumbbar.value, &s->global_volume);
 	handle_load_copy_uint(widgets_loadsample[11].d.thumbbar.value, &s->vib_rate);
 	handle_load_copy_uint(widgets_loadsample[12].d.thumbbar.value, &s->vib_depth);
