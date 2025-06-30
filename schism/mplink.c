@@ -383,11 +383,6 @@ void song_toggle_stereo(void)
 	current_song->flags ^= SONG_NOSTEREO;
 	song_vars_sync_stereo();
 }
-void song_toggle_mono(void)
-{
-	current_song->flags ^= SONG_NOSTEREO;
-	song_vars_sync_stereo();
-}
 void song_set_mono(void)
 {
 	current_song->flags |= SONG_NOSTEREO;
