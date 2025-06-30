@@ -47,7 +47,7 @@ struct dir_ {
 DIR *opendir(const char *path)
 {
 	/* Schism never opens more than one directory at a time,
-	 * so we can just one static directory structure. */
+	 * so we can just use one static DIR structure. */
 	static DIR dir = {0};
 
 	if (dir.nextfile) {
@@ -174,6 +174,7 @@ struct dirent *readdir(DIR *dp)
 		char *npath = charset_iconv_easy(dp->dir.d_name, CHARSET_SYSTEMSCRIPT, CHARSET_UTF8);
 		strncpy(dp->dir.d_name, npath, SCHISM_NAME_MAX - 1);
 		dp->dir.d_name[SCHISM_NAME_MAX - 1] = '\0';
+		free(npath);
 	}
 
 	return &dp->dir;
