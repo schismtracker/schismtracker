@@ -1277,7 +1277,7 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 #ifdef SCHISM_MACOS
 	case CHARSET_SYSTEMSCRIPT: {
 		/* can we return size so we don't have to do this? */
-		size_t len = charset_nulterm_string_size(in, inset);
+		size_t len = charset_nulterm_string_size(outfake, CHARSET_UTF16) + 2;
 
 		TextEncoding hfsenc;
 		if (!charset_iconv_get_system_encoding_(&hfsenc))
