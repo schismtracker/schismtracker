@@ -1032,14 +1032,16 @@ static int info_page_handle_key(struct key_event * k)
 				set_current_channel(selected_channel);
 				order = song_get_current_order();
 
+				int currently_playing_pattern_number;
+
 				if (song_get_mode() == MODE_PLAYING) {
-					n = current_song->orderlist[order];
+					currently_playing_pattern_number = current_song->orderlist[order];
 				} else {
-					n = song_get_playing_pattern();
+					currently_playing_pattern_number = song_get_playing_pattern();
 				}
-				if (n < 200) {
+				if (currently_playing_pattern_number < 200) {
 					set_current_order(order);
-					set_current_pattern(n);
+					set_current_pattern(currently_playing_pattern_number);
 					set_current_row(song_get_current_row());
 					set_page(PAGE_PATTERN_EDITOR);
 				}
