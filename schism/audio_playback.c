@@ -900,7 +900,7 @@ void song_start_at_order(int order, int row)
 
 void song_start_at_pattern(int pattern, int row)
 {
-	if (pattern < 0 || pattern > 199)
+	if (pattern < 0 || pattern > MAX_PATTERNS - 1)
 		return;
 
 	int n = song_next_order_for_pattern(pattern);

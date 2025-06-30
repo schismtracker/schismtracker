@@ -422,8 +422,8 @@ void pattern_editor_length_edit(void)
 
 	widget_create_thumbbar(length_edit_widgets + 0, 34, 24, 22, 0, 1, 1, NULL, 32, 200);
 	length_edit_widgets[0].d.thumbbar.value = song_get_pattern(current_pattern, NULL );
-	widget_create_thumbbar(length_edit_widgets + 1, 34, 27, 26, 0, 2, 2, NULL, 0, 199);
-	widget_create_thumbbar(length_edit_widgets + 2, 34, 28, 26, 1, 3, 3, NULL, 0, 199);
+	widget_create_thumbbar(length_edit_widgets + 1, 34, 27, 26, 0, 2, 2, NULL, 0, MAX_PATTERNS - 1);
+	widget_create_thumbbar(length_edit_widgets + 2, 34, 28, 26, 1, 3, 3, NULL, 0, MAX_PATTERNS - 1);
 	length_edit_widgets[1].d.thumbbar.value
 		= length_edit_widgets[2].d.thumbbar.value
 		= current_pattern;
@@ -2607,7 +2607,7 @@ void set_current_pattern(int n)
 		_pattern_update_magic();
 	}
 
-	current_pattern = CLAMP(n, 0, 199);
+	current_pattern = CLAMP(n, 0, MAX_PATTERNS - 1);
 	max_row_number = song_get_max_row_number_in_pattern(current_pattern);
 
 	if (current_row > max_row_number)
