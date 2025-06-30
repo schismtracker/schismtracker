@@ -702,7 +702,7 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 		for (unsigned int j = 0; j < 128; j++) {
 			x = xl->instruments[n]->sample_map[j];
 			if (!sampmap[x]) {
-				if (x > 0 && x < MAX_INSTRUMENTS) {
+				if (x > 0 && x < MAX_SAMPLES) {
 					for (int k = 1; k < MAX_SAMPLES; k++) {
 						if (current_song->samples[k].length) continue;
 						sampmap[x] = k;
