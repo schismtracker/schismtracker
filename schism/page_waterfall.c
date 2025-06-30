@@ -406,7 +406,7 @@ static int waterfall_handle_key(struct key_event *k)
 			} else {
 				n = song_get_playing_pattern();
 			}
-			if (n < 200) {
+			if (n < MAX_PATTERNS) {
 				set_current_order(order);
 				set_current_pattern(n);
 				set_current_row(song_get_current_row());
