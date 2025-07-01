@@ -1029,15 +1029,16 @@ static int info_page_handle_key(struct key_event * k)
 		n = info_handle_click(k->x, k->y);
 		if (k->mouse == MOUSE_DBLCLICK) {
 			if (p == selected_channel) {
+				int playing_pattern;
+
 				set_current_channel(selected_channel);
 				order = song_get_current_order();
 
-				if (song_get_mode() == MODE_PLAYING) {
-					n = current_song->orderlist[order];
-				} else {
-					n = song_get_playing_pattern();
-				}
-				if (n < 200) {
+				playing_pattern = (song_get_mode() == MODE_PLAYING)
+					? current_song->orderlist[order]
+					: song_get_playing_pattern();
+
+				if (playing_pattern < 200) {
 					set_current_order(order);
 					set_current_pattern(n);
 					set_current_row(song_get_current_row());
