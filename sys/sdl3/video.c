@@ -84,8 +84,10 @@ static bool (SDLCALL *sdl3_SetWindowIcon)(SDL_Window * window, SDL_Surface * ico
 static void (SDLCALL *sdl3_DestroySurface)(SDL_Surface * surface);
 static bool (SDLCALL *sdl3_SetHint)(const char *name, const char *value);
 
+/* RENDERER */
 static bool (SDLCALL *sdl3_SetRenderLogicalPresentation)(SDL_Renderer *renderer, int w, int h, SDL_RendererLogicalPresentation mode);
 
+/* WINDOW GRAB */
 static bool (SDLCALL *sdl3_GetWindowMouseGrab)(SDL_Window * window);
 static bool (SDLCALL *sdl3_GetWindowKeyboardGrab)(SDL_Window * window);
 static bool (SDLCALL *sdl3_SetWindowMouseGrab)(SDL_Window * window, bool grabbed);
@@ -103,7 +105,15 @@ static SDL_PropertiesID (SDLCALL *sdl3_GetWindowProperties)(SDL_Window *window);
 static void *(SDLCALL *sdl3_GetPointerProperty)(SDL_PropertiesID props, const char *name, void *default_value);
 static Sint64 (SDLCALL *sdl3_GetNumberProperty)(SDL_PropertiesID props, const char *name, Sint64 default_value);
 
-static bool (SDLCALL *sdl3_StartTextInput)(SDL_Window *window) = NULL;
+/* WINDOW FRAMEBUFFER */
+static bool (SDLCALL *sdl3_WindowHasSurface)(SDL_Window *window);
+static SDL_Surface *(SDLCALL *sdl3_GetWindowSurface)(SDL_Window *window);
+static bool (SDLCALL *sdl3_DestroyWindowSurface)(SDL_Window *window);
+static bool (SDLCALL *sdl3_UpdateWindowSurface)(SDL_Window *window);
+static bool (SDLCALL *sdl3_LockSurface)(SDL_Surface *surface);
+static void (SDLCALL *sdl3_UnlockSurface)(SDL_Surface *surface);
+
+static bool (SDLCALL *sdl3_StartTextInput)(SDL_Window *window);
 
 // this is used in multiple places here.
 static int sdl3_video_get_wm_data(video_wm_data_t *wm_data);
@@ -116,9 +126,25 @@ static void sdl3_video_setup(int quality);
 static struct {
 	SDL_Window *window;
 
+	enum {
+		VIDEO_TYPE_UNINITIALIZED = 0,
+		VIDEO_TYPE_RENDERER = 1,
+		VIDEO_TYPE_SURFACE = 2,
+	} type;
+
 	/* renderer */
-	SDL_Renderer *renderer;
-	SDL_Texture *texture;
+	union {
+		struct {
+			SDL_Renderer *renderer;
+			SDL_Texture *texture;
+		} r;
+		struct {
+			SDL_Surface *surface;
+			struct {
+				int x, y, w, h;
+			} clip;
+		} s;
+	} u; /* "type data" */
 
 	const SDL_PixelFormatDetails *pixel_format; // may be NULL
 	SDL_PixelFormat format;
@@ -215,13 +241,23 @@ static void sdl3_video_report(void)
 		{0, NULL, NULL},
 	}, *layout = yuv_layouts;
 
-	{
-		const char *name = sdl3_GetRendererName(video.renderer);
+	log_appendf(5, " Using driver '%s'", sdl3_GetCurrentVideoDriver());
 
-		log_appendf(5, " Using driver '%s'", sdl3_GetCurrentVideoDriver());
+	switch (video.type) {
+	case VIDEO_TYPE_RENDERER: {
+		const char *name = sdl3_GetRendererName(video.u.r.renderer);
+
 		log_appendf(5, " %s renderer '%s'",
 			(!strcmp(name, SDL_SOFTWARE_RENDERER)) ? "Software" : "Hardware-accelerated",
 			name);
+		break;
+	}
+	case VIDEO_TYPE_SURFACE:
+		/* hm */
+		log_appendf(5, " Software video surface");
+		if (SDL_MUSTLOCK(video.u.s.surface))
+			log_append(4, 0, " Must lock surface");
+		break;
 	}
 
 	switch (video.format) {
@@ -275,41 +311,86 @@ static void set_icon(void)
 #endif
 }
 
+static inline void video_recalculate_fixed_width(void)
+{
+	/* Aspect ratio correction if it's wanted */
+	if (cfg_video_want_fixed) {
+		switch (video.type) {
+		case VIDEO_TYPE_RENDERER:
+			sdl3_SetRenderLogicalPresentation(video.u.r.renderer,
+				cfg_video_want_fixed_width, cfg_video_want_fixed_height,
+				SDL_LOGICAL_PRESENTATION_LETTERBOX);
+			break;
+		case VIDEO_TYPE_SURFACE: {
+			const double ratio_w = (double)video.width  / (double)cfg_video_want_fixed_width;
+			const double ratio_h = (double)video.height / (double)cfg_video_want_fixed_height;
+
+			if (ratio_w < ratio_h) {
+				video.u.s.clip.w = video.width;
+				video.u.s.clip.h = (double)cfg_video_want_fixed_height * ratio_w;
+			} else {
+				video.u.s.clip.h = video.height;
+				video.u.s.clip.w = (double)cfg_video_want_fixed_width  * ratio_h;
+			}
+
+			video.u.s.clip.x = (video.width  - video.u.s.clip.w) / 2;
+			video.u.s.clip.y = (video.height - video.u.s.clip.h) / 2;
+			break;
+		}
+		case VIDEO_TYPE_UNINITIALIZED:
+			/* WUT */
+			break;
+		}
+	} else if (video.type == VIDEO_TYPE_SURFACE) {
+		video.u.s.clip.x = video.u.s.clip.y = 0;
+		video.u.s.clip.w = video.width;
+		video.u.s.clip.h = video.height;
+	}
+}
+
 static void sdl3_video_redraw_texture(void)
 {
-	size_t pref_last = ARRAY_SIZE(native_formats);
-	uint32_t format = SDL_PIXELFORMAT_XRGB8888;
+	switch (video.type) {
+	case VIDEO_TYPE_RENDERER: {
+		size_t pref_last = ARRAY_SIZE(native_formats);
+		uint32_t format = SDL_PIXELFORMAT_XRGB8888;
 
-	if (video.texture)
-		sdl3_DestroyTexture(video.texture);
-
-	if (*cfg_video_format) {
-		for (size_t i = 0; i < ARRAY_SIZE(native_formats); i++) {
-			if (!charset_strcasecmp(cfg_video_format, CHARSET_UTF8, native_formats[i].name, CHARSET_UTF8)) {
-				format = native_formats[i].format;
-				goto got_format;
+		if (*cfg_video_format) {
+			for (size_t i = 0; i < ARRAY_SIZE(native_formats); i++) {
+				if (!charset_strcasecmp(cfg_video_format, CHARSET_UTF8, native_formats[i].name, CHARSET_UTF8)) {
+					format = native_formats[i].format;
+					goto got_format;
+				}
 			}
 		}
-	}
 
-	// We want to find the best format we can natively
-	// output to. If we can't, then we fall back to
-	// SDL_PIXELFORMAT_RGB888 and let SDL deal with the
-	// conversion.
-	SDL_PropertiesID rprop = sdl3_GetRendererProperties(video.renderer);
-	if (rprop) {
-		const SDL_PixelFormat *formats = sdl3_GetPointerProperty(rprop, SDL_PROP_RENDERER_TEXTURE_FORMATS_POINTER, NULL);
-		if (formats) {
-			for (uint32_t i = 0; formats[i] != SDL_PIXELFORMAT_UNKNOWN; i++)
-				for (size_t j = 0; j < ARRAY_SIZE(native_formats); j++)
-					if (formats[i] == native_formats[j].format && j < pref_last)
-						format = native_formats[pref_last = j].format;
+		// We want to find the best format we can natively
+		// output to. If we can't, then we fall back to
+		// SDL_PIXELFORMAT_RGB888 and let SDL deal with the
+		// conversion.
+		SDL_PropertiesID rprop = sdl3_GetRendererProperties(video.u.r.renderer);
+		if (rprop) {
+			const SDL_PixelFormat *formats = sdl3_GetPointerProperty(rprop, SDL_PROP_RENDERER_TEXTURE_FORMATS_POINTER, NULL);
+			if (formats) {
+				for (uint32_t i = 0; formats[i] != SDL_PIXELFORMAT_UNKNOWN; i++)
+					for (size_t j = 0; j < ARRAY_SIZE(native_formats); j++)
+						if (formats[i] == native_formats[j].format && j < pref_last)
+							format = native_formats[pref_last = j].format;
+			}
 		}
-	}
 
 got_format:
-	video.texture = sdl3_CreateTexture(video.renderer, format, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
-	video.format = format;
+		video.u.r.texture = sdl3_CreateTexture(video.u.r.renderer, format, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
+		video.format = format;
+		break;
+	}
+	case VIDEO_TYPE_SURFACE:
+		video.format = video.u.s.surface->format;
+		break;
+	case VIDEO_TYPE_UNINITIALIZED:
+		/* ? */
+		break;
+	}
 
 	video.pixel_format = sdl3_GetPixelFormatDetails(video.format);
 
@@ -317,15 +398,51 @@ got_format:
 	video.bpp = SDL_BYTESPERPIXEL(video.format);
 
 	sdl3_video_setup(cfg_video_interpolation); // ew
+
+	video_recalculate_fixed_width();
 }
 
 static void sdl3_video_set_hardware(int hardware)
 {
-	sdl3_DestroyTexture(video.texture);
+	/* do all the necessary cleanup HERE */
+	switch (video.type) {
+	case VIDEO_TYPE_RENDERER:
+		if (video.u.r.texture)
+			sdl3_DestroyTexture(video.u.r.texture);
+		if (video.u.r.renderer)
+			sdl3_DestroyRenderer(video.u.r.renderer);
+		break;
+	case VIDEO_TYPE_SURFACE:
+		SCHISM_RUNTIME_ASSERT(sdl3_WindowHasSurface(video.window),
+			"Internal video type says surface, but the window doesn't have one");
+		sdl3_DestroyWindowSurface(video.window);
+		break;
+	case VIDEO_TYPE_UNINITIALIZED:
+		break;
+	}
 
-	sdl3_DestroyRenderer(video.renderer);
+	/* If we're going to be using a software renderer anyway, then
+	 * just request a surface. Our built-in blit is plenty fast. */
+	video.type = (hardware) ? VIDEO_TYPE_RENDERER : VIDEO_TYPE_SURFACE;
 
-	video.renderer = sdl3_CreateRenderer(video.window, (hardware) ? (const char *)NULL : SDL_SOFTWARE_RENDERER);
+	switch (video.type) {
+	case VIDEO_TYPE_SURFACE:
+		video.u.s.surface = sdl3_GetWindowSurface(video.window);
+		if (video.u.s.surface)
+			break;
+		video.type = VIDEO_TYPE_RENDERER;
+		SCHISM_FALLTHROUGH;
+	case VIDEO_TYPE_RENDERER:
+		video.u.r.renderer = sdl3_CreateRenderer(video.window,
+			(hardware) ? (const char *)NULL : SDL_SOFTWARE_RENDERER);
+		SCHISM_RUNTIME_ASSERT(!!video.u.r.renderer,
+			"Failed to create a renderer!");
+
+		break;
+	case VIDEO_TYPE_UNINITIALIZED:
+		/* wut? */
+		break;
+	}
 
 	// hope that all worked!
 
@@ -336,8 +453,23 @@ static void sdl3_video_set_hardware(int hardware)
 
 static void sdl3_video_shutdown(void)
 {
-	sdl3_DestroyTexture(video.texture);
-	sdl3_DestroyRenderer(video.renderer);
+	/* do all the necessary cleanup HERE */
+	switch (video.type) {
+	case VIDEO_TYPE_RENDERER:
+		if (video.u.r.texture)
+			sdl3_DestroyTexture(video.u.r.texture);
+		if (video.u.r.renderer)
+			sdl3_DestroyRenderer(video.u.r.renderer);
+		break;
+	case VIDEO_TYPE_SURFACE:
+		SCHISM_RUNTIME_ASSERT(sdl3_WindowHasSurface(video.window),
+			"Internal video type says surface, but window doesn't have one");
+		sdl3_DestroyWindowSurface(video.window);
+		break;
+	case VIDEO_TYPE_UNINITIALIZED:
+		break;
+	}
+
 	sdl3_DestroyWindow(video.window);
 }
 
@@ -349,7 +481,8 @@ static void sdl3_video_setup(int interpolation)
 		[VIDEO_INTERPOLATION_BEST]    = SDL_SCALEMODE_LINEAR,
 	};
 
-	sdl3_SetTextureScaleMode(video.texture, modes[interpolation]);
+	if (video.type == VIDEO_TYPE_RENDERER)
+		sdl3_SetTextureScaleMode(video.u.r.texture, modes[interpolation]);
 }
 
 static int sdl3_video_startup(void)
@@ -371,10 +504,6 @@ static int sdl3_video_startup(void)
 
 	video_fullscreen(cfg_video_fullscreen);
 	video_set_hardware(cfg_video_hardware);
-
-	/* Aspect ratio correction if it's wanted */
-	if (cfg_video_want_fixed)
-		sdl3_SetRenderLogicalPresentation(video.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
 	if (video_have_menu() && !video.fullscreen) {
 		sdl3_SetWindowSize(video.window, video.width, video.height);
@@ -419,6 +548,9 @@ static void sdl3_video_resize(unsigned int width, unsigned int height)
 {
 	video.width = width;
 	video.height = height;
+	video_recalculate_fixed_width();
+	if (video.type == VIDEO_TYPE_SURFACE)
+		video.u.s.surface = sdl3_GetWindowSurface(video.window);
 	status.flags |= (NEED_UPDATE);
 }
 
@@ -475,9 +607,18 @@ static int sdl3_video_is_wm_available(void)
 
 static int sdl3_video_is_hardware(void)
 {
-	const char *name = sdl3_GetRendererName(video.renderer);
+	const char *name;
 
-	return strcmp(name, SDL_SOFTWARE_RENDERER);
+	switch (video.type) {
+	case VIDEO_TYPE_UNINITIALIZED:
+	case VIDEO_TYPE_SURFACE:
+		return 0;
+	case VIDEO_TYPE_RENDERER:
+		return strcmp(sdl3_GetRendererName(video.u.r.renderer), SDL_SOFTWARE_RENDERER);
+	}
+
+	/* should never happen */
+	return 0;
 }
 
 /* -------------------------------------------------------- */
@@ -489,16 +630,19 @@ static int sdl3_video_is_screensaver_enabled(void)
 
 static void sdl3_video_toggle_screensaver(int enabled)
 {
+	/* this API reeks */
 	if (enabled) sdl3_EnableScreenSaver();
 	else sdl3_DisableScreenSaver();
 }
 
-/* ---------------------------------------------------------- */
+/* ------------------------------------------------------------------------ */
 /* coordinate translation */
 
-static void sdl3_video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y)
+static void sdl3_video_translate(unsigned int vx, unsigned int vy,
+	unsigned int *x, unsigned int *y)
 {
-	if (video_mousecursor_visible() && (video.mouse.x != vx || video.mouse.y != vy))
+	if (video_mousecursor_visible()
+		&& (video.mouse.x != vx || video.mouse.y != vy))
 		status.flags |= SOFTWARE_MOUSE_MOVED;
 
 	vx *= NATIVE_SCREEN_WIDTH;
@@ -515,27 +659,29 @@ static void sdl3_video_translate(unsigned int vx, unsigned int vy, unsigned int 
 	if (y) *y = vy;
 }
 
-static void sdl3_video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
+static void sdl3_video_get_logical_coordinates(int x, int y, int *trans_x,
+	int *trans_y)
 {
-	if (!cfg_video_want_fixed) {
+	if (cfg_video_want_fixed && video.type == VIDEO_TYPE_RENDERER) {
+		float xf, yf;
+
+		sdl3_RenderCoordinatesFromWindow(video.u.r.renderer, x, y, &xf, &yf);
+
+		*trans_x = (int)xf;
+		*trans_y = (int)yf;
+	} else {
 		*trans_x = x;
 		*trans_y = y;
-	} else {
-		float xx, yy;
-
-		sdl3_RenderCoordinatesFromWindow(video.renderer, x, y, &xx, &yy);
-
-		*trans_x = (int)xx;
-		*trans_y = (int)yy;
 	}
 }
 
-/* -------------------------------------------------- */
+/* ------------------------------------------------------------------------ */
 /* input grab */
 
 static int sdl3_video_is_input_grabbed(void)
 {
-	return sdl3_GetWindowMouseGrab(video.window) && sdl3_GetWindowKeyboardGrab(video.window);
+	return sdl3_GetWindowMouseGrab(video.window)
+		&& sdl3_GetWindowKeyboardGrab(video.window);
 }
 
 static void sdl3_video_set_input_grabbed(int enabled)
@@ -544,7 +690,7 @@ static void sdl3_video_set_input_grabbed(int enabled)
 	sdl3_SetWindowKeyboardGrab(video.window, (bool)enabled);
 }
 
-/* -------------------------------------------------- */
+/* ------------------------------------------------------------------------ */
 /* warp mouse position */
 
 static void sdl3_video_warp_mouse(unsigned int x, unsigned int y)
@@ -597,54 +743,83 @@ static void sdl3_video_toggle_menu(SCHISM_UNUSED int on)
 		sdl3_SetWindowSize(video.window, width, height);
 }
 
-/* ------------------------------------------------------------ */
+/* ------------------------------------------------------------------------ */
+
+SCHISM_HOT static uint32_t sdl3_map_rgb_callback(void *data, uint8_t r,
+	uint8_t g, uint8_t b)
+{
+	const SDL_PixelFormatDetails *format = data;
+
+	return sdl3_MapRGB(format, NULL, r, g, b);
+}
 
 SCHISM_HOT static void sdl3_video_blit(void)
 {
-	SDL_FRect dstrect;
+	switch (video.type) {
+	case VIDEO_TYPE_RENDERER: {
+		unsigned char *pixels;
+		int pitch;
+		SDL_FRect dstrect;
 
-	if (cfg_video_want_fixed) {
-		dstrect = (SDL_FRect){
-			.x = 0,
-			.y = 0,
-			.w = cfg_video_want_fixed_width,
-			.h = cfg_video_want_fixed_height,
-		};
+		if (cfg_video_want_fixed) {
+			dstrect.x = 0;
+			dstrect.y = 0;
+			dstrect.w = cfg_video_want_fixed_width;
+			dstrect.h = cfg_video_want_fixed_height;
+		}
+
+		sdl3_RenderClear(video.u.r.renderer);
+
+		sdl3_LockTexture(video.u.r.texture, NULL, (void **)&pixels, &pitch);
+
+		switch (video.format) {
+		case SDL_PIXELFORMAT_IYUV: {
+			video_blitUV(pixels, pitch, video.yuv.pal_y);
+			pixels += (NATIVE_SCREEN_HEIGHT * pitch);
+			video_blitTV(pixels, pitch, video.yuv.pal_u);
+			pixels += (NATIVE_SCREEN_HEIGHT * pitch) / 4;
+			video_blitTV(pixels, pitch, video.yuv.pal_v);
+			break;
+		}
+		case SDL_PIXELFORMAT_YV12: {
+			video_blitUV(pixels, pitch, video.yuv.pal_y);
+			pixels += (NATIVE_SCREEN_HEIGHT * pitch);
+			video_blitTV(pixels, pitch, video.yuv.pal_v);
+			pixels += (NATIVE_SCREEN_HEIGHT * pitch) / 4;
+			video_blitTV(pixels, pitch, video.yuv.pal_u);
+			break;
+		}
+		default: {
+			video_blit11(video.bpp, pixels, pitch, video.pal);
+			break;
+		}
+		}
+		sdl3_UnlockTexture(video.u.r.texture);
+		sdl3_RenderTexture(video.u.r.renderer, video.u.r.texture, NULL, (cfg_video_want_fixed) ? &dstrect : NULL);
+		sdl3_RenderPresent(video.u.r.renderer);
 	}
+	case VIDEO_TYPE_SURFACE:
+		if (SDL_MUSTLOCK(video.u.s.surface))
+			while (sdl3_LockSurface(video.u.s.surface) < 0)
+				timer_msleep(10);
 
-	sdl3_RenderClear(video.renderer);
+		video_blitSC(SDL_BYTESPERPIXEL(video.format),
+			video.u.s.surface->pixels,
+			video.u.s.surface->pitch,
+			video.pal,
+			sdl3_map_rgb_callback,
+			(void *)video.pixel_format /* stupid cast */,
+			video.u.s.clip.x,
+			video.u.s.clip.y,
+			video.u.s.clip.w,
+			video.u.s.clip.h);
 
-	// regular format blitter
-	unsigned char *pixels;
-	int pitch;
+		if (SDL_MUSTLOCK(video.u.s.surface))
+			sdl3_UnlockSurface(video.u.s.surface);
 
-	sdl3_LockTexture(video.texture, NULL, (void **)&pixels, &pitch);
-
-	switch (video.format) {
-	case SDL_PIXELFORMAT_IYUV: {
-		video_blitUV(pixels, pitch, video.yuv.pal_y);
-		pixels += (NATIVE_SCREEN_HEIGHT * pitch);
-		video_blitTV(pixels, pitch, video.yuv.pal_u);
-		pixels += (NATIVE_SCREEN_HEIGHT * pitch) / 4;
-		video_blitTV(pixels, pitch, video.yuv.pal_v);
+		sdl3_UpdateWindowSurface(video.window);
 		break;
 	}
-	case SDL_PIXELFORMAT_YV12: {
-		video_blitUV(pixels, pitch, video.yuv.pal_y);
-		pixels += (NATIVE_SCREEN_HEIGHT * pitch);
-		video_blitTV(pixels, pitch, video.yuv.pal_v);
-		pixels += (NATIVE_SCREEN_HEIGHT * pitch) / 4;
-		video_blitTV(pixels, pitch, video.yuv.pal_u);
-		break;
-	}
-	default: {
-		video_blit11(video.bpp, pixels, pitch, video.pal);
-		break;
-	}
-	}
-	sdl3_UnlockTexture(video.texture);
-	sdl3_RenderTexture(video.renderer, video.texture, NULL, (cfg_video_want_fixed) ? &dstrect : NULL);
-	sdl3_RenderPresent(video.renderer);
 }
 
 /* ------------------------------------------------- */
@@ -765,6 +940,13 @@ static int sdl3_video_load_syms(void)
 	SCHISM_SDL3_SYM(GetWindowKeyboardGrab);
 	SCHISM_SDL3_SYM(SetWindowMouseGrab);
 	SCHISM_SDL3_SYM(GetWindowMouseGrab);
+
+	SCHISM_SDL3_SYM(WindowHasSurface);
+	SCHISM_SDL3_SYM(GetWindowSurface);
+	SCHISM_SDL3_SYM(DestroyWindowSurface);
+	SCHISM_SDL3_SYM(UpdateWindowSurface);
+	SCHISM_SDL3_SYM(LockSurface);
+	SCHISM_SDL3_SYM(UnlockSurface);
 
 	return 0;
 }
