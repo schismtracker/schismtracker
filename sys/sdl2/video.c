@@ -537,6 +537,7 @@ static int sdl2_video_startup(void)
 #define SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR "SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"
 #endif
 	sdl2_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
+	sdl2_SetHint("SDL_WINDOWS_NO_CLOSE_ON_ALT_F4", "1"); /* dunno if the hint is defined for old SDL, optional anyway */
 
 	video.width = cfg_video_width;
 	video.height = cfg_video_height;

@@ -359,6 +359,7 @@ static int sdl3_video_startup(void)
 
 	sdl3_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
 	sdl3_SetHint("SDL_WINDOWS_DPI_AWARENESS", "unaware");
+	sdl3_SetHint(SDL_HINT_WINDOWS_CLOSE_ON_ALT_F4, "0");
 
 	video.width = cfg_video_width;
 	video.height = cfg_video_height;
