@@ -437,7 +437,6 @@ static void sdl3_video_set_hardware(int hardware)
 			(hardware) ? (const char *)NULL : SDL_SOFTWARE_RENDERER);
 		SCHISM_RUNTIME_ASSERT(!!video.u.r.renderer,
 			"Failed to create a renderer!");
-
 		break;
 	case VIDEO_TYPE_UNINITIALIZED:
 		/* wut? */

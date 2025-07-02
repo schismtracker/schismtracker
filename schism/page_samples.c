@@ -1769,7 +1769,11 @@ static void sample_list_draw_const(void)
 /* callback for the loop menu toggles */
 static void update_sample_loop_flags(void)
 {
-	song_sample_t *sample = song_get_sample(current_sample);
+	song_sample_t *sample;
+
+	song_lock_audio();
+
+	sample = song_get_sample(current_sample);
 
 	/* these switch statements fall through */
 	sample->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP | CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
@@ -1802,52 +1806,64 @@ static void update_sample_loop_flags(void)
 	/* update any samples currently playing */
 	song_update_playing_sample(current_sample);
 
+	song_unlock_audio();
+
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
+}
+
+/* */
+static inline SCHISM_ALWAYS_INLINE
+void update_sample_loop_points_impl(uint32_t *loop_start, uint32_t *loop_end,
+	int *loop_toggle_entry, int *loop_start_entry, int *loop_end_entry,
+	int *flags_changed, uint32_t smp_length)
+{
+	if ((uint32_t)*loop_start_entry > smp_length - 1)
+		*loop_start_entry = smp_length - 1;
+
+	if (*loop_end_entry <= *loop_start_entry) {
+		*loop_toggle_entry = 0;
+		*flags_changed = 1;
+	} else if ((uint32_t) *loop_end_entry > smp_length) {
+		*loop_end_entry = smp_length;
+	}
+
+	if (*loop_start != (uint32_t)*loop_start_entry
+		|| *loop_end != (uint32_t)*loop_end_entry)
+		*flags_changed = 1;
+
+	*loop_start = *loop_start_entry;
+	*loop_end = *loop_end_entry;
 }
 
 /* callback for the loop numentries */
 static void update_sample_loop_points(void)
 {
-	song_sample_t *sample = song_get_sample(current_sample);
+	song_sample_t *sample;
 	int flags_changed = 0;
 
-	/* 9 = loop toggle, 10 = loop start, 11 = loop end */
-	if ((unsigned long) widgets_samplelist[10].d.numentry.value > sample->length - 1)
-		widgets_samplelist[10].d.numentry.value = sample->length - 1;
-	if (widgets_samplelist[11].d.numentry.value <= widgets_samplelist[10].d.numentry.value) {
-		widgets_samplelist[9].d.menutoggle.state = 0;
-		flags_changed = 1;
-	} else if ((unsigned long) widgets_samplelist[11].d.numentry.value > sample->length) {
-		widgets_samplelist[11].d.numentry.value = sample->length;
-	}
-	if (sample->loop_start != (unsigned long) widgets_samplelist[10].d.numentry.value
-	|| sample->loop_end != (unsigned long) widgets_samplelist[11].d.numentry.value) {
-		flags_changed = 1;
-	}
-	sample->loop_start = widgets_samplelist[10].d.numentry.value;
-	sample->loop_end = widgets_samplelist[11].d.numentry.value;
+	song_lock_audio();
 
-	/* 12 = sus toggle, 13 = sus start, 14 = sus end */
-	if ((unsigned long) widgets_samplelist[13].d.numentry.value > sample->length - 1)
-		widgets_samplelist[13].d.numentry.value = sample->length - 1;
-	if (widgets_samplelist[14].d.numentry.value <= widgets_samplelist[13].d.numentry.value) {
-		widgets_samplelist[12].d.menutoggle.state = 0;
-		flags_changed = 1;
-	} else if ((unsigned long) widgets_samplelist[14].d.numentry.value > sample->length) {
-		widgets_samplelist[14].d.numentry.value = sample->length;
-	}
-	if (sample->sustain_start != (unsigned long) widgets_samplelist[13].d.numentry.value
-	|| sample->sustain_end != (unsigned long) widgets_samplelist[14].d.numentry.value) {
-		flags_changed = 1;
-	}
-	sample->sustain_start = widgets_samplelist[13].d.numentry.value;
-	sample->sustain_end = widgets_samplelist[14].d.numentry.value;
+	sample = song_get_sample(current_sample);
 
-	if (flags_changed) {
+	update_sample_loop_points_impl(&sample->loop_start,
+		&sample->loop_end,
+		&widgets_samplelist[9].d.menutoggle.state,
+		&widgets_samplelist[10].d.numentry.value,
+		&widgets_samplelist[11].d.numentry.value,
+		&flags_changed, sample->length);
+	update_sample_loop_points_impl(&sample->sustain_start,
+		&sample->sustain_end,
+		&widgets_samplelist[12].d.menutoggle.state,
+		&widgets_samplelist[13].d.numentry.value,
+		&widgets_samplelist[14].d.numentry.value,
+		&flags_changed, sample->length);
+
+	if (flags_changed)
 		update_sample_loop_flags();
-	}
 
 	csf_adjust_sample_loop(sample);
+
+	song_unlock_audio();
 
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
@@ -1856,7 +1872,11 @@ static void update_sample_loop_points(void)
 
 static void update_values_in_song(void)
 {
-	song_sample_t *sample = song_get_sample(current_sample);
+	song_sample_t *sample;
+
+	song_lock_audio();
+
+	sample = song_get_sample(current_sample);
 
 	/* a few more modplug hacks here... */
 	sample->volume = widgets_samplelist[1].d.thumbbar.value * 4;
@@ -1869,34 +1889,46 @@ static void update_values_in_song(void)
 	sample->vib_speed = widgets_samplelist[5].d.thumbbar.value;
 	sample->vib_depth = widgets_samplelist[6].d.thumbbar.value;
 
-	if (widgets_samplelist[15].d.togglebutton.state)
-		sample->vib_type = VIB_SINE;
-	else if (widgets_samplelist[16].d.togglebutton.state)
-		sample->vib_type = VIB_RAMP_DOWN;
-	else if (widgets_samplelist[17].d.togglebutton.state)
-		sample->vib_type = VIB_SQUARE;
-	else
-		sample->vib_type = VIB_RANDOM;
+	sample->vib_type =
+		(widgets_samplelist[15].d.togglebutton.state) ? VIB_SINE
+		: (widgets_samplelist[16].d.togglebutton.state) ? VIB_RAMP_DOWN
+		: (widgets_samplelist[17].d.togglebutton.state) ? VIB_SQUARE
+		: VIB_RANDOM;
+
 	sample->vib_rate = widgets_samplelist[19].d.thumbbar.value;
+
+	song_unlock_audio();
 
 	status.flags |= SONG_NEEDS_SAVE;
 }
 
 static void update_sample_speed(void)
 {
-	song_sample_t *sample = song_get_sample(current_sample);
+	song_sample_t *sample;
+
+	sample = song_get_sample(current_sample);
+
+	song_lock_audio();
 
 	sample->c5speed = widgets_samplelist[8].d.numentry.value;
+
+	song_unlock_audio();
 
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
 static void update_panning(void)
 {
-	song_sample_t *sample = song_get_sample(current_sample);
+	song_sample_t *sample;
+
+	song_lock_audio();
+
+	sample = song_get_sample(current_sample);
 
 	sample->flags |= CHN_PANNING;
 	sample->panning = widgets_samplelist[4].d.thumbbar.value * 4;
+
+	song_unlock_audio();
 
 	widgets_samplelist[3].d.toggle.state = 1;
 

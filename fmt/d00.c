@@ -517,10 +517,9 @@ D00_readnote: /* this goto is kind of ugly... */
 			}
 		}
 
-		log_appendf(1, "mode: %u", mode);
-
-		for (c = 0; c < 10; c++)
-			log_appendf(1, "speeds[%d] = %u", c, speeds[c]);
+		//log_appendf(1, "mode: %u", mode);
+		//for (c = 0; c < 10; c++)
+		//	log_appendf(1, "speeds[%d] = %u", c, speeds[c]);
 
 		hz_to_speed_tempo(mode, &song->initial_speed, &song->initial_tempo);
 	}
