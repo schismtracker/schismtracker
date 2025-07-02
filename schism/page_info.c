@@ -89,7 +89,7 @@ static struct info_window windows[MAX_WINDOWS] = {
 static void info_draw_technical(int base, int height, int active, int first_channel)
 {
 	int smp, pos, fg, c = first_channel;
-	char buf[16];
+	char buf[64];
 	const char *ptr;
 
 	/*
@@ -221,7 +221,7 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 static void info_draw_samples(int base, int height, int active, int first_channel)
 {
 	int vu, smp, ins, n, pos, fg, fg2, c;
-	char buf[8];
+	char buf[11];
 	char *ptr;
 
 	draw_fill_chars(5, base + 1, 28, base + height - 2, DEFAULT_FG, 0);
@@ -384,7 +384,7 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
 	int cur_pattern_rows = 0, prev_pattern_rows = 0, next_pattern_rows = 0;
 	int total_rows; /* same as {cur,prev_next}_pattern_rows */
 	int chan_pos, row, row_pos, rows_before;
-	char buf[4];
+	char buf[64];
 
 	if (separator)
 		channel_width++;
@@ -527,7 +527,7 @@ static void info_draw_track_5(int base, int height, int active, int first_channe
 static void info_draw_track_8(int base, int height, int active, int first_channel)
 {
 	int chan, chan_pos, fg;
-	char buf[4];
+	char buf[11];
 
 	draw_box(4, base, 76, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 	for (chan = first_channel, chan_pos = 0; chan_pos < 8; chan++, chan_pos++) {
@@ -547,7 +547,7 @@ static void info_draw_track_8(int base, int height, int active, int first_channe
 static void info_draw_track_10(int base, int height, int active, int first_channel)
 {
 	int chan, chan_pos, fg;
-	char buf[4];
+	char buf[11];
 
 	draw_box(4, base, 75, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 	for (chan = first_channel, chan_pos = 0; chan_pos < 10; chan++, chan_pos++) {
@@ -567,7 +567,7 @@ static void info_draw_track_10(int base, int height, int active, int first_chann
 static void info_draw_track_12(int base, int height, int active, int first_channel)
 {
 	int chan, chan_pos, fg;
-	char buf[4];
+	char buf[11];
 
 	draw_box(4, base, 77, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 	for (chan = first_channel, chan_pos = 0; chan_pos < 12; chan++, chan_pos++) {
@@ -587,7 +587,7 @@ static void info_draw_track_12(int base, int height, int active, int first_chann
 static void info_draw_track_18(int base, int height, int active, int first_channel)
 {
 	int chan, chan_pos, fg;
-	char buf[4];
+	char buf[11];
 
 	draw_box(4, base, 76, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 	for (chan = first_channel, chan_pos = 0; chan_pos < 18; chan++, chan_pos++) {
@@ -603,7 +603,7 @@ static void info_draw_track_18(int base, int height, int active, int first_chann
 static void info_draw_track_24(int base, int height, int active, int first_channel)
 {
 	int chan, chan_pos, fg;
-	char buf[4];
+	char buf[11];
 
 	draw_box(4, base, 77, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 	for (chan = first_channel, chan_pos = 0; chan_pos < 24; chan++, chan_pos++) {
@@ -619,7 +619,7 @@ static void info_draw_track_24(int base, int height, int active, int first_chann
 static void info_draw_track_36(int base, int height, int active, int first_channel)
 {
 	int chan, chan_pos, fg;
-	char buf[4];
+	char buf[11];
 
 	draw_box(4, base, 77, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 	for (chan = first_channel, chan_pos = 0; chan_pos < 36; chan++, chan_pos++) {
@@ -674,7 +674,7 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
 	int c, pos;
 	uint32_t n;
 	song_voice_t *voice;
-	char buf[4];
+	char buf[11];
 	uint8_t d, dn;
 	uint8_t dot_field[73][36] = { {0} }; // f#2 -> f#8 = 73 columns
 

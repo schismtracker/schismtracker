@@ -154,7 +154,7 @@ void widget_create_textentry(struct widget *w, int x, int y, int width, int next
 }
 
 void widget_create_numentry(struct widget *w, int x, int y, int width, int next_up, int next_down,
-		     int next_tab, void (*changed) (void), int min, int max, int *cursor_pos)
+		     int next_tab, void (*changed) (void), int32_t min, int32_t max, int *cursor_pos)
 {
 	w->type = WIDGET_NUMENTRY;
 	w->accept_text = 1;
@@ -382,7 +382,7 @@ int widget_textentry_add_text(struct widget *w, const char* text) {
 /* --------------------------------------------------------------------- */
 /* numeric entries */
 
-void widget_numentry_change_value(struct widget *w, int new_value)
+void widget_numentry_change_value(struct widget *w, int32_t new_value)
 {
 	new_value = CLAMP(new_value, w->d.numentry.min, w->d.numentry.max);
 	w->d.numentry.value = new_value;
@@ -466,7 +466,7 @@ void widget_togglebutton_set(struct widget *p_widgets, int widget, int do_callba
 
 void widget_draw_widget(struct widget *w, int selected)
 {
-	char buf[16] = "Channel 42";
+	char buf[64] = "Channel 42";
 	const char *ptr, *endptr;       /* for the menutoggle */
 	char *str;
 	int n;
@@ -526,16 +526,13 @@ void widget_draw_widget(struct widget *w, int selected)
 			if (selected && !drew_cursor) {
 				while (str[0] && str[1]) str++;
 				if (!str[0]) str[0] = ' ';
-				draw_char(str[0], w->x + (w->width-1),
-						w->y, 0, 3);
+				draw_char(str[0], w->x + (w->width-1), w->y, 0, 3);
 			}
 		} else {
 			if (w->d.numentry.min < 0 || w->d.numentry.max < 0) {
-				str_from_num_signed(w->width, w->d.numentry.value,
-							buf);
+				str_from_num_signed(w->width, w->d.numentry.value, buf);
 			} else {
-				str_from_num(w->width, w->d.numentry.value,
-							buf);
+				str_from_num(w->width, w->d.numentry.value, buf);
 			}
 			draw_text_len(buf,
 					w->width, w->x, w->y, 2, 0);

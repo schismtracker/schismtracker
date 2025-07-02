@@ -2525,7 +2525,7 @@ static void advance_cursor(int next_row, int multichannel)
 
 void update_current_row(void)
 {
-	char buf[4];
+	char buf[11];
 
 	draw_text(str_from_num(3, current_row, buf), 12, 7, 5, 0);
 	draw_text(str_from_num(3, song_get_rows_in_pattern(current_pattern), buf), 16, 7, 5, 0);
@@ -2559,7 +2559,7 @@ void set_current_row(int row)
 
 void update_current_pattern(void)
 {
-	char buf[4];
+	char buf[11];
 
 	draw_text(str_from_num(3, current_pattern, buf), 12, 6, 5, 0);
 	draw_text(str_from_num(3, csf_get_num_patterns(current_song) - 1, buf), 16, 6, 5, 0);
@@ -2720,7 +2720,7 @@ static void pattern_editor_redraw(void)
 {
 	int chan, chan_pos, chan_drawpos = 5;
 	int row, row_pos;
-	char buf[4];
+	char buf[11];
 	song_note_t *pattern, *note;
 	const struct track_view *track_view;
 	int total_rows;

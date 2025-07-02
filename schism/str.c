@@ -122,7 +122,7 @@ char *str_from_time(time_t when, char buf[27], str_time_format_t format)
 	return str_time_from_tm(&tmr, buf, format);
 }
 
-char *str_from_num99(int n, char buf[3])
+char *str_from_num99(int32_t n, char buf[3])
 {
 	static const char *qv = "HIJKLMNOPQRSTUVWXYZ";
 	if (n < 0) {
@@ -137,32 +137,40 @@ char *str_from_num99(int n, char buf[3])
 	return buf;
 }
 
-char *str_from_num(int digits, unsigned int n, char *buf)
+/* _MAX_ULTOSTR_BASE10_COUNT == 11 (Win32) */
+char *str_from_num(int digits, uint32_t n, char buf[11])
 {
 	if (digits > 0) {
-		char fmt[] = "%03u";
+		char fmt[] = "%03" PRIu32;
 
+		SCHISM_RUNTIME_ASSERT(digits >= 0 && digits <= 9,
+			"# of digits must fit in one decimal digit");
 		digits %= 10;
+
 		fmt[2] = '0' + digits;
 		snprintf(buf, digits + 1, fmt, n);
 		buf[digits] = 0;
 	} else {
-		sprintf(buf, "%u", n);
+		sprintf(buf, "%" PRIu32, n);
 	}
 	return buf;
 }
 
-char *str_from_num_signed(int digits, int n, char *buf)
+/* _MAX_LTOSTR_BASE10_COUNT == 12 (Win32) */
+char *str_from_num_signed(int digits, int32_t n, char buf[12])
 {
 	if (digits > 0) {
-		char fmt[] = "%03d";
+		char fmt[] = "%03" PRId32;
 
+		SCHISM_RUNTIME_ASSERT(digits >= 0 && digits <= 9,
+			"# of digits must fit in one decimal digit");
 		digits %= 10;
+
 		fmt[2] = '0' + digits;
 		snprintf(buf, digits + 1, fmt, n);
 		buf[digits] = 0;
 	} else {
-		sprintf(buf, "%d", n);
+		sprintf(buf, "%" PRId32, n);
 	}
 	return buf;
 }

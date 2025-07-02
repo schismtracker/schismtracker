@@ -1337,7 +1337,7 @@ void update_current_instrument(void)
 
 static void redraw_top_info(void)
 {
-	char buf[8];
+	char buf[11];
 
 	update_current_instrument();
 
@@ -1505,7 +1505,7 @@ static inline void draw_vis(void)
 void redraw_screen(void)
 {
 	int n;
-	char buf[4];
+	char buf[11];
 
 	if (!ACTIVE_PAGE.draw_full) {
 		draw_fill_chars(0,0,79,49, DEFAULT_FG,2);

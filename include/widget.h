@@ -47,7 +47,7 @@ void widget_create_textentry(struct widget *w, int x, int y, int width, int next
 		      char *text, int max_length);
 void widget_create_numentry(struct widget *w, int x, int y, int width, int next_up,
 		     int next_down, int next_tab, void (*changed) (void),
-		     int min, int max, int *cursor_pos);
+		     int32_t min, int32_t max, int *cursor_pos);
 void widget_create_thumbbar(struct widget *w, int x, int y, int width, int next_up,
 		     int next_down, int next_tab, void (*changed) (void),
 		     int min, int max);
@@ -74,7 +74,7 @@ void widget_create_other(struct widget *w, int next_tab,
 
 int widget_textentry_add_char(struct widget *widget, unsigned char c);
 int widget_textentry_add_text(struct widget *widget, const char* text);
-void widget_numentry_change_value(struct widget *widget, int new_value);
+void widget_numentry_change_value(struct widget *widget, int32_t new_value);
 int widget_numentry_handle_text(struct widget *w, const char* text_input);
 
 int widget_change_focus_to_xy(int x, int y);

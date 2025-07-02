@@ -57,7 +57,7 @@ static void orderlist_reposition(void)
 
 void update_current_order(void)
 {
-	char buf[4];
+	char buf[11];
 
 	draw_text(str_from_num(3, current_order, buf), 12, 5, 5, 0);
 	draw_text(str_from_num(3, csf_last_order(current_song), buf), 16, 5, 5, 0);
@@ -177,7 +177,7 @@ static void get_pattern_string(unsigned char pattern, char *buf)
 
 static void orderlist_draw(void)
 {
-	char buf[4];
+	char buf[11];
 	int pos, n;
 	int playing_order = (song_get_mode() == MODE_PLAYING ? song_get_current_order() : -1);
 
@@ -729,7 +729,7 @@ static void orderpan_draw_const(void)
 static void ordervol_draw_const(void)
 {
 	int n;
-	char buf[16];
+	char buf[32];
 	int fg;
 
 	strcpy(buf, "Channel 42");

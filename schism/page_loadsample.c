@@ -368,7 +368,7 @@ static void library_sample_set_page(void)
 static void file_list_draw(void)
 {
 	int n, pos, fg, bg;
-	char buf[8];
+	char buf[11];
 	dmoz_file_t *file;
 
 	/* there's no need to have if (files) { ... } like in the load-module page,

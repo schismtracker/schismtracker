@@ -200,7 +200,7 @@ static void library_instrument_set_page(void)
 static void file_list_draw(void)
 {
 	int n, pos, fg, bg;
-	char buf[8];
+	char buf[11];
 	char sbuf[64];
 	dmoz_file_t *file;
 

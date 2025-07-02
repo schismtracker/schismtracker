@@ -1811,11 +1811,11 @@ static void update_sample_loop_flags(void)
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
-/* */
+/* genericized this for both loops */
 static inline SCHISM_ALWAYS_INLINE
 void update_sample_loop_points_impl(uint32_t *loop_start, uint32_t *loop_end,
-	int *loop_toggle_entry, int *loop_start_entry, int *loop_end_entry,
-	int *flags_changed, uint32_t smp_length)
+	int *loop_toggle_entry, int32_t *loop_start_entry,
+	int32_t *loop_end_entry, int *flags_changed, uint32_t smp_length)
 {
 	if ((uint32_t)*loop_start_entry > smp_length - 1)
 		*loop_start_entry = smp_length - 1;

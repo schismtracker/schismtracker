@@ -126,12 +126,12 @@ struct widget_textentry {
  * cursor_pos for this widget is a pointer so that multiple numbers that
  * are all lined up can share the same position. */
 struct widget_numentry {
-	int min;
-	int max;
-	int value;
-	int *cursor_pos;
+	int32_t min;
+	int32_t max;
+	int32_t value;
+	int *cursor_pos; /* XXX why is this a pointer */
 	int (*handle_unknown_key)(struct key_event *k);
-	int reverse;
+	int reverse; /* boolean */
 };
 
 /* left/right -> value changed; cb triggered
@@ -144,9 +144,9 @@ struct widget_thumbbar {
 	 * position field... (NOTE - don't rearrange the order of the
 	 * fields in either of these; some code depends on them being
 	 * the same) */
-	int min;
-	int max;
-	int value;
+	int32_t min;
+	int32_t max;
+	int32_t value;
 	/* this is currently only used with the midi thumbbars on the ins. list + pitch page. if
 	 * this is non-NULL, and value == {min,max}, the text is drawn instead of the thumbbar. */
 	const char *text_at_min, *text_at_max;
@@ -157,9 +157,9 @@ struct widget_bitset {
 	int nbits;
 	int value;
 	int *cursor_pos;
-	const char* bits_on;
-	const char* bits_off;
-	const char* activation_keys;
+	const char *bits_on;
+	const char *bits_off;
+	const char *activation_keys;
 };
 
 
@@ -173,9 +173,9 @@ struct widget_bitset {
  * note that, due to some weirdness with IT, these draw the channel text
  * as well as the actual bar. */
 struct widget_panbar {
-	int min;
-	int max;
-	int value;
+	int32_t min;
+	int32_t max;
+	int32_t value;
 	int channel;
 	unsigned int muted:1;
 	unsigned int surround:1;
