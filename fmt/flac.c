@@ -561,8 +561,15 @@ int fmt_flac_export_body(disko_t *fp, const uint8_t *data, size_t length)
 	struct flac_writedata *fwd = fp->userdata;
 	const int bytes_per_sample = (fwd->bits / 8);
 
+	if (length % bytes_per_sample) {
+		log_appendf(4, "FLAC export: received uneven length");
+		return DW_ERROR;
+	}
+
+	length /= bytes_per_sample;
+
 	if (bytes_per_sample == 4) {
-		if (!schism_FLAC_stream_encoder_process_interleaved(fwd->encoder, (FLAC__int32 *)data, length / (4 * fwd->channels)))
+		if (!schism_FLAC_stream_encoder_process_interleaved(fwd->encoder, (FLAC__int32 *)data, length / fwd->channels))
 			return DW_ERROR;
 	} else {
 		FLAC__int32 *pcm = mem_alloc(length * 4);
@@ -573,11 +580,30 @@ int fmt_flac_export_body(disko_t *fp, const uint8_t *data, size_t length)
 			switch (bytes_per_sample) {
 			case 1: pcm[i] = (FLAC__int32)(((const int8_t*)data)[i]); break;
 			case 2: pcm[i] = (FLAC__int32)(((const int16_t*)data)[i]); break;
+			case 3: {
+				union { int32_t s; uint32_t u; } x;
+
+				x.u = (
+#ifdef WORDS_BIGENDIAN
+					((uint32_t)data[i*3+0] << 24)
+					| ((uint32_t)data[i*3+1] << 16)
+					| ((uint32_t)data[i*3+2] << 8)
+#else
+					((uint32_t)data[i*3+2] << 24)
+					| ((uint32_t)data[i*3+1] << 16)
+					| ((uint32_t)data[i*3+0] << 8)
+#endif
+				);
+
+				/* sign extend */
+				pcm[i] = rshift_signed(x.s, 8);
+				break;
+			}
 			default: free(pcm); return DW_ERROR;
 			}
 		}
 
-		if (!schism_FLAC_stream_encoder_process_interleaved(fwd->encoder, pcm, length / (bytes_per_sample * fwd->channels))) {
+		if (!schism_FLAC_stream_encoder_process_interleaved(fwd->encoder, pcm, length / fwd->channels)) {
 			free(pcm);
 			return DW_ERROR;
 		}
