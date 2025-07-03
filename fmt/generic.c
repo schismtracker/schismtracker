@@ -24,6 +24,8 @@
 #include "headers.h"
 #include "fmt.h"
 #include "str.h"
+#include "bswap.h"
+#include "log.h"
 
 #include <math.h>
 
@@ -472,4 +474,56 @@ void fmt_fill_file_from_sample(dmoz_file_t *file, const song_sample_t *smp)
 	file->smp_vibrato_speed = smp->vib_speed;
 	file->smp_vibrato_depth = smp->vib_depth;
 	file->smp_vibrato_rate  = smp->vib_rate;
+}
+
+int fmt_write_pcm(disko_t *fp, const uint8_t *data, size_t length, int bpf,
+	int bps, int swap, const char *name)
+{
+	if (length % bpf) {
+		log_appendf(4, "%s export: received uneven length", name);
+		return -1;
+	}
+
+	if (swap && bps > 1) {
+#define PCM_BYTESWAP(BITS) \
+do { \
+	const uint##BITS##_t *ptr = (const int##BITS##_t *) data; \
+	length /= sizeof(*ptr); \
+\
+	while (length--) { \
+		uint##BITS##_t v; \
+\
+		v = bswap_##BITS(*ptr); \
+		disko_write(fp, &v, sizeof(v)); \
+		ptr++; \
+	} \
+} while (0)
+
+		switch (bps) {
+		case 4: PCM_BYTESWAP(32); break;
+		case 3: {
+			length /= 3;
+
+			while (length--) {
+				uint8_t x[3];
+
+				x[0] = data[2];
+				x[1] = data[1];
+				x[2] = data[0];
+
+				disko_write(fp, x, sizeof(x));
+
+				data += 3;
+			}
+			break;
+		}
+		case 2: PCM_BYTESWAP(16); break;
+		/* no support for 24-bit... sorry! */
+		default: DW_ERROR;
+		}
+	} else {
+		disko_write(fp, data, length);
+	}
+
+	return 0;
 }

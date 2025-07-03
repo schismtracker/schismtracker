@@ -236,6 +236,13 @@ int wav_chunk_fmt_read(const void *data, size_t size, void *void_fmt /* struct w
 /* fills a dmoz_file_t from a csndfile sample */
 void fmt_fill_file_from_sample(dmoz_file_t *file, const song_sample_t *smp);
 
+/* writes raw pcm to `fp`
+ * bpf: bytes per frame
+ * bps: bytes per sample
+ * swap: nonzero to byteswap */
+int fmt_write_pcm(disko_t *fp, const uint8_t *data, size_t length, int bpf,
+	int bps, int swap, const char *name);
+
 /* effect_weight[FX_something] => how "important" the effect is. */
 extern const uint8_t effect_weight[];
 

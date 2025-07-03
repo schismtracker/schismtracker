@@ -346,6 +346,7 @@ struct aiff_writedata {
 	size_t numbytes; // how many bytes have been written
 	int bps; // bytes per sample
 	int swap; // should be byteswapped?
+	int bpf; // bytes per frame
 };
 
 static int aiff_header(disko_t *fp, int bits, int channels, int rate,
@@ -355,6 +356,7 @@ static int aiff_header(disko_t *fp, int bits, int channels, int rate,
 	uint32_t ul;
 	int tlen, bps = 1;
 	uint8_t b[10];
+	int bpf; /* bytes per frame */
 
 	bps *= ((bits + 7) / 8);
 	/* note: channel multiply is done below -- need single-channel value for the COMM chunk */
@@ -398,7 +400,7 @@ static int aiff_header(disko_t *fp, int bits, int channels, int rate,
 	disko_write(fp, b, 10);
 
 	/* NOW do this (sample size in AIFF is indicated per channel, not per frame) */
-	bps *= channels; /* == number of bytes per (stereo) sample */
+	bpf = bps * channels; /* == number of bytes per (stereo) sample */
 
 	/* Sound Data Chunk
 		The Sound Data Chunk contains the actual sample frames.
@@ -410,15 +412,18 @@ static int aiff_header(disko_t *fp, int bits, int channels, int rate,
 		unsigned char   soundData[];
 	} SoundDataChunk; */
 	disko_write(fp, "SSND", 4);
-	if (awd)
+	if (awd) {
 		awd->ssnd_size = disko_tell(fp);
-	ul = bswapBE32(length * bps + 8);
+		awd->bps = bps;
+		awd->bpf = bpf;
+	}
+	ul = bswapBE32(length * bpf + 8);
 	disko_write(fp, &ul, 4);
 	ul = bswapBE32(0);
 	disko_write(fp, &ul, 4);
 	disko_write(fp, &ul, 4);
 
-	return bps;
+	return bpf;
 }
 
 /* --------------------------------------------------------------------- */
@@ -428,16 +433,16 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample_t *smp)
 	if (smp->flags & CHN_ADLIB)
 		return SAVE_UNSUPPORTED;
 
-	int bps;
+	int bpf;
 	uint32_t ul;
 	uint32_t flags = SF_BE | SF_PCMS;
 	flags |= (smp->flags & CHN_16BIT) ? SF_16 : SF_8;
 	flags |= (smp->flags & CHN_STEREO) ? SF_SI : SF_M;
 
-	bps = aiff_header(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1,
+	bpf = aiff_header(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1,
 		smp->c5speed, smp->name, smp->length, NULL);
 
-	if (csf_write_sample(fp, smp, flags, UINT32_MAX) != smp->length * bps) {
+	if (csf_write_sample(fp, smp, flags, UINT32_MAX) != smp->length * bpf) {
 		log_appendf(4, "AIFF: unexpected data size written");
 		return SAVE_INTERNAL_ERROR;
 	}
@@ -460,7 +465,7 @@ int fmt_aiff_export_head(disko_t *fp, int bits, int channels, int rate)
 	if (!awd)
 		return DW_ERROR;
 	fp->userdata = awd;
-	awd->bps = aiff_header(fp, bits, channels, rate, NULL, ~0, awd);
+	aiff_header(fp, bits, channels, rate, NULL, ~0, awd);
 	awd->numbytes = 0;
 #if WORDS_BIGENDIAN
 	awd->swap = 0;
@@ -475,27 +480,11 @@ int fmt_aiff_export_body(disko_t *fp, const uint8_t *data, size_t length)
 {
 	struct aiff_writedata *awd = fp->userdata;
 
-	if (length % awd->bps) {
-		log_appendf(4, "AIFF export: received uneven length");
+	if (fmt_write_pcm(fp, data, length, awd->bpf, awd->bps,
+			awd->swap, "AIFF") < 0)
 		return DW_ERROR;
-	}
 
 	awd->numbytes += length;
-
-	if (awd->swap) {
-		const int16_t *ptr = (const int16_t *) data;
-		uint16_t v;
-
-		length /= 2;
-		while (length--) {
-			v = *ptr;
-			v = bswapBE16(v);
-			disko_write(fp, &v, 2);
-			ptr++;
-		}
-	} else {
-		disko_write(fp, data, length);
-	}
 
 	return DW_OK;
 }

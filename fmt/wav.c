@@ -253,16 +253,25 @@ struct wav_writedata {
 	size_t numbytes; // how many bytes have been written
 	int bps; // bytes per sample
 	int swap; // should be byteswapped?
+	int bpf; // bytes per frame
 };
 
+/* returns bytes per frame */
 static int wav_header(disko_t *fp, int bits, int channels, int rate, size_t length,
 	struct wav_writedata *wwd /* out */)
 {
 	int16_t s;
 	uint32_t ul;
 	int bps = 1;
+	int bpf;
 
-	bps *= ((bits + 7) / 8) * channels;
+	bps *= ((bits + 7) / 8);
+	bpf = bps * channels;
+
+	if (wwd) {
+		wwd->bps = bps;
+		wwd->bpf = bpf;
+	}
 
 	/* write a very large size for now */
 	disko_write(fp, "RIFF\377\377\377\377WAVEfmt ", 16);
@@ -274,9 +283,9 @@ static int wav_header(disko_t *fp, int bits, int channels, int rate, size_t leng
 	disko_write(fp, &s, 2);
 	ul = bswapLE32(rate); // sample rate
 	disko_write(fp, &ul, 4);
-	ul = bswapLE32(bps * rate); // "byte rate" (why?! I have no idea)
+	ul = bswapLE32(bpf * rate); // "byte rate" (why?! I have no idea)
 	disko_write(fp, &ul, 4);
-	s = bswapLE16(bps); // (oh, come on! the format already stores everything needed to calculate this!)
+	s = bswapLE16(bpf); // (oh, come on! the format already stores everything needed to calculate this!)
 	disko_write(fp, &s, 2);
 	s = bswapLE16(bits); // bits per sample
 	disko_write(fp, &s, 2);
@@ -284,10 +293,10 @@ static int wav_header(disko_t *fp, int bits, int channels, int rate, size_t leng
 	disko_write(fp, "data", 4);
 	if (wwd)
 		wwd->data_size = disko_tell(fp);
-	ul = bswapLE32(bps * length);
+	ul = bswapLE32(bpf * length);
 	disko_write(fp, &ul, 4);
 
-	return bps;
+	return bpf;
 }
 
 /* len should not include a nul terminator */
@@ -394,7 +403,7 @@ int fmt_wav_export_head(disko_t *fp, int bits, int channels, int rate)
 	if (!wwd)
 		return DW_ERROR;
 	fp->userdata = wwd;
-	wwd->bps = wav_header(fp, bits, channels, rate, ~0, wwd);
+	wav_header(fp, bits, channels, rate, ~0, wwd);
 	wwd->numbytes = 0;
 #if WORDS_BIGENDIAN
 	wwd->swap = (bits > 8);
@@ -409,27 +418,11 @@ int fmt_wav_export_body(disko_t *fp, const uint8_t *data, size_t length)
 {
 	struct wav_writedata *wwd = fp->userdata;
 
-	if (length % wwd->bps) {
-		log_appendf(4, "WAV export: received uneven length");
+	if (fmt_write_pcm(fp, data, length, wwd->bpf, wwd->bps,
+			wwd->swap, "WAV") < 0)
 		return DW_ERROR;
-	}
 
 	wwd->numbytes += length;
-
-	if (wwd->swap) {
-		const int16_t *ptr = (const int16_t *) data;
-		uint16_t v;
-
-		length /= 2;
-		while (length--) {
-			v = *ptr;
-			v = bswapLE16(v);
-			disko_write(fp, &v, 2);
-			ptr++;
-		}
-	} else {
-		disko_write(fp, data, length);
-	}
 
 	return DW_OK;
 }
