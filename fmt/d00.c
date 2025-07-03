@@ -164,12 +164,14 @@ static int uint16_compare(const void *a, const void *b)
 
 #define D00_PATTERN_ROWS 64
 
-static song_note_t *d00_get_note(song_t *song, uint32_t pattern, uint32_t row, uint32_t chn)
+static song_note_t *d00_get_note(song_t *song, uint32_t pattern, uint32_t row,
+	uint32_t chn)
 {
 	if (!song->patterns[pattern]) {
 		/* allocate the pattern data, if it's not there already */
 		song->patterns[pattern] = csf_allocate_pattern(D00_PATTERN_ROWS);
-		song->pattern_size[pattern] = D00_PATTERN_ROWS;
+		song->pattern_size[pattern] = song->pattern_alloc_size[pattern]
+			= D00_PATTERN_ROWS;
 	}
 
 	return song->patterns[pattern] + (row * MAX_CHANNELS) + chn;
