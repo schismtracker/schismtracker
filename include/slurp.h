@@ -66,6 +66,8 @@ struct slurp_struct_ {
 			size_t length;
 			size_t pos;
 
+			int eof; /* need THIS to emulate the stupid EOF flag */
+
 			/* for specific interfaces that are all "memory-based" */
 			union {
 				struct {

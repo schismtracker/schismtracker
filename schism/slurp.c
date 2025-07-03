@@ -43,6 +43,7 @@ static int64_t slurp_memory_tell_(slurp_t *t);
 static uint64_t slurp_memory_length_(slurp_t *t);
 static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count);
 static int slurp_memory_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
+static int slurp_memory_eof_(slurp_t *t);
 static void slurp_memory_closure_free_(slurp_t *t);
 
 static size_t slurp_2mem_peek_(slurp_t *t, void *ptr, size_t count);
@@ -68,7 +69,7 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 	if (!size)
 		size = st.st_size;
 
-#if defined(SCHISM_WIN32) || defined(HAVE_MMAP)
+#if (defined(SCHISM_WIN32) || defined(HAVE_MMAP))
 	switch (
 #ifdef SCHISM_WIN32
 		slurp_win32_mmap(t, filename, size)
@@ -86,6 +87,7 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 		t->peek = slurp_memory_peek_;
 		t->receive = slurp_memory_receive_;
 		t->length = slurp_memory_length_;
+		t->eof = slurp_memory_eof_;
 		goto finished;
 	default:
 	case SLURP_OPEN_IGNORE:
@@ -109,6 +111,7 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 	case SLURP_OPEN_FAIL:
 		return -1;
 	case SLURP_OPEN_SUCCESS:
+		printf("using stdio\n");
 		t->seek = slurp_stdio_seek_;
 		t->tell = slurp_stdio_tell_;
 		t->eof  = slurp_stdio_eof_;
@@ -154,6 +157,7 @@ int slurp_memstream(slurp_t *t, uint8_t *mem, size_t memsize)
 	t->peek = slurp_memory_peek_;
 	t->receive = slurp_memory_receive_;
 	t->length = slurp_memory_length_;
+	t->eof = slurp_memory_eof_;
 
 	t->internal.memory.length = memsize;
 	t->internal.memory.data = mem;
@@ -179,6 +183,7 @@ int slurp_2memstream(slurp_t *t, uint8_t *mem1, uint8_t *mem2, size_t memsize)
 	t->tell = slurp_memory_tell_;
 	t->peek = slurp_2mem_peek_;
 	t->length = slurp_memory_length_;
+	t->eof = slurp_memory_eof_;
 
 	t->internal.memory.length = memsize * 2;
 	t->internal.memory.data = mem1;
@@ -263,13 +268,15 @@ static size_t slurp_stdio_read_(slurp_t *t, void *ptr, size_t count)
 
 static int slurp_stdio_eof_(slurp_t *t)
 {
-	long pos = slurp_stdio_tell_(t);
+	long pos, end;
+
+	pos = slurp_stdio_tell_(t);
 	if (pos < 0)
 		return -1; // what the hell?
 
 	slurp_stdio_seek_(t, 0, SEEK_END);
 
-	long end = slurp_stdio_tell_(t);
+	end = slurp_stdio_tell_(t);
 	if (end < 0)
 		return -1;
 
@@ -302,6 +309,7 @@ static int slurp_memory_seek_(slurp_t *t, int64_t offset, int whence)
 	if (offset < 0 || (size_t)offset > t->internal.memory.length)
 		return -1;
 
+	t->internal.memory.eof = 0;
 	t->internal.memory.pos = offset;
 	return 0;
 }
@@ -322,8 +330,10 @@ static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count)
 	if (bytesleft < 0)
 		return 0;
 
-	if (count > (size_t)bytesleft)
+	if (count > (size_t)bytesleft) {
 		count = bytesleft;
+		t->internal.memory.eof = 1;
+	}
 
 	if (count)
 		memcpy(ptr, t->internal.memory.data + t->internal.memory.pos, count);
@@ -344,6 +354,11 @@ static int slurp_memory_receive_(slurp_t *t, int (*callback)(const void *, size_
 static void slurp_memory_closure_free_(slurp_t *t)
 {
 	free(t->internal.memory.data);
+}
+
+static int slurp_memory_eof_(slurp_t *t)
+{
+	return t->internal.memory.eof;
 }
 
 /* --------------------------------------------------------------------- */
@@ -523,7 +538,8 @@ int64_t slurp_tell(slurp_t *t)
 	return t->tell(t);
 }
 
-static inline SCHISM_ALWAYS_INLINE void slurp_fill_remaining(void *ptr, size_t read, size_t count)
+static inline SCHISM_ALWAYS_INLINE
+void slurp_fill_remaining(void *ptr, size_t read, size_t count)
 {
 	if (count > read) {
 		/* short read -- fill in any extra bytes with zeroes */
