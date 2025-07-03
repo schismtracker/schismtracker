@@ -279,7 +279,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 	for (n = 0; n < 4; n++)
 		song->channels[n].panning = ((n & 1) ? 64 : 0) * 4; //mphack
-	for (; n < 64; n++)
+	for (; n < MAX_CHANNELS; n++)
 		song->channels[n].flags |= CHN_MUTE;
 	song->pan_separation = 64;
 	song->flags = SONG_ITOLDEFFECTS | SONG_COMPATGXX | SONG_NOSTEREO;

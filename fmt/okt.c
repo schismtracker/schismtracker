@@ -91,7 +91,7 @@ static int okt_read_cmod(song_t *song, slurp_t *fp)
 			cs[cn++].panning = PROTRACKER_PANNING(t);
 		cs[cn++].panning = PROTRACKER_PANNING(t);
 	}
-	for (t = cn; t < 64; t++)
+	for (t = cn; t < MAX_CHANNELS; t++)
 		cs[t].flags |= CHN_MUTE;
 	return cn;
 }

@@ -222,7 +222,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		}
 		song->channels[n].volume = 64;
 	}
-	for (; n < 64; n++) {
+	for (; n < MAX_CHANNELS; n++) {
 		song->channels[n].panning = 32;
 		song->channels[n].volume = 64;
 		song->channels[n].flags = CHN_MUTE;
@@ -251,7 +251,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	}
 
 	//mphack - fix the pannings
-	for (n = 0; n < 64; n++)
+	for (n = 0; n < MAX_CHANNELS; n++)
 		song->channels[n].panning *= 4;
 
 	/* samples */
@@ -371,7 +371,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					row++;
 					continue;
 				}
-				note = song->patterns[n] + 64 * row + chn;
+				note = song->patterns[n] + MAX_CHANNELS * row + chn;
 				if (mask & 32) {
 					/* note/instrument */
 					note->note = slurp_getc(fp);

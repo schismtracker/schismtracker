@@ -131,7 +131,7 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lfla
 	if (!read_mus_header(&hdr, fp))
 		return LOAD_UNSUPPORTED;
 
-	for (n = 16; n < 64; n++)
+	for (n = 16; n < MAX_CHANNELS; n++)
 		song->channels[n].flags |= CHN_MUTE;
 
 	slurp_seek(fp, hdr.scorestart, SEEK_SET);

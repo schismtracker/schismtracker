@@ -255,7 +255,7 @@ static int name_is_blank(char *name)
 	return 1;
 }
 
-const song_note_t blank_pattern[64 * 64] = {0};
+const song_note_t blank_pattern[64 * MAX_CHANNELS] = {0};
 const song_note_t *blank_note = blank_pattern; // Same thing, really.
 
 int csf_note_is_empty(song_note_t *note)
