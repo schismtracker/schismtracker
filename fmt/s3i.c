@@ -144,13 +144,8 @@ int fmt_s3i_read_info(dmoz_file_t *file, slurp_t *fp)
 	if (!load_s3i_sample(fp, &smp, 0))
 		return 0;
 
-	file->smp_length = smp.length;
-	file->smp_flags = smp.flags;
-	file->smp_defvol = smp.volume;
-	file->smp_gblvol = smp.global_volume;
-	file->smp_loop_start = smp.loop_start;
-	file->smp_loop_end = smp.loop_end;
-	file->smp_speed = smp.c5speed;
+	fmt_fill_file_from_sample(file, &smp);
+	/* generic func doesn't handle this */
 	file->smp_filename = strn_dup(smp.filename, 12);
 
 	file->description = "Scream Tracker Sample";

@@ -133,6 +133,8 @@ static void read_on_meta(SCHISM_UNUSED const FLAC__StreamDecoder *decoder, const
 
 		read_data->bits = ceil_pow2_32(read_data->stream_bits);
 
+		read_data->data = malloc(read_data->smp->length * read_data->channels * (read_data->bits / 8));
+
 		break;
 	}
 	case FLAC__METADATA_TYPE_VORBIS_COMMENT: {
@@ -276,35 +278,30 @@ static void read_on_error(SCHISM_UNUSED const FLAC__StreamDecoder *decoder, FLAC
 static FLAC__StreamDecoderWriteStatus read_on_write(const FLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 *const buffer[], void *client_data)
 {
 	struct flac_readdata* read_data = (struct flac_readdata*)client_data;
+	uint32_t block_size, offset;
 
 	/* invalid?; FIXME: this should probably make sure the total_samples
 	 * is less than the max sample constant thing */
 	if (!read_data->smp->length || read_data->smp->length > MAX_SAMPLE_LENGTH
 		|| read_data->channels > 2
-		|| read_data->bits > 32)
+		|| read_data->bits > 32
+		|| !read_data->data)
 		return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 
-	if (!frame->header.number.sample_number) {
-		read_data->data = malloc(read_data->smp->length * read_data->channels * (read_data->bits / 8));
-		if (!read_data->data)
-			return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
+	block_size = MIN(frame->header.blocksize, read_data->smp->length - frame->header.number.sample_number);
+	block_size = MIN(block_size, read_data->smp->length - read_data->offset);
 
-		read_data->offset = 0;
-	}
+	block_size *= read_data->channels;
 
-	uint32_t block_size = frame->header.blocksize * read_data->channels;
-
-	const uint32_t samples_allocated = read_data->smp->length * read_data->channels;
-	if (read_data->offset + block_size > samples_allocated)
-		block_size = samples_allocated - read_data->offset;
+	offset = frame->header.number.sample_number * read_data->channels;
 
 	/* this is stupid ugly */
 #define RESIZE_BUFFER(BITS) \
 	do { \
-		int##BITS##_t *buf_ptr = (int##BITS##_t*)read_data->data + read_data->offset; \
+		int##BITS##_t *buf_ptr = (int##BITS##_t*)read_data->data + offset; \
 		const uint32_t bit_shift = BITS - read_data->stream_bits; \
+		uint32_t i, j, c; \
 	\
-		size_t i, j, c; \
 		for (i = 0, j = 0; i < block_size; j++) \
 			for (c = 0; c < read_data->channels; c++) \
 				buf_ptr[i++] = lshift_signed(buffer[c][j], bit_shift); \
@@ -319,8 +316,6 @@ static FLAC__StreamDecoderWriteStatus read_on_write(const FLAC__StreamDecoder *d
 
 #undef RESIZE_BUFFER
 
-	read_data->offset += block_size;
-
 	return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
 
 	(void)decoder;
@@ -329,6 +324,8 @@ static FLAC__StreamDecoderWriteStatus read_on_write(const FLAC__StreamDecoder *d
 static int flac_load(struct flac_readdata* read_data, int meta_only)
 {
 	unsigned char magic[4];
+	FLAC__StreamDecoder *decoder;
+	FLAC__StreamDecoderInitStatus inits;
 
 	// err
 	if (!flac_wasinit)
@@ -340,27 +337,26 @@ static int flac_load(struct flac_readdata* read_data, int meta_only)
 		|| memcmp(magic, "fLaC", sizeof(magic)))
 		return 0;
 
-	FLAC__StreamDecoder *decoder = schism_FLAC_stream_decoder_new();
+	decoder = schism_FLAC_stream_decoder_new();
 	if (!decoder)
 		return 0;
 
 	schism_FLAC_stream_decoder_set_metadata_respond_all(decoder);
 
-	FLAC__StreamDecoderInitStatus xx =
-		schism_FLAC_stream_decoder_init_stream(
-			decoder,
-			read_on_read, read_on_seek,
-			read_on_tell, read_on_length,
-			read_on_eof,  read_on_write,
-			read_on_meta, read_on_error,
-			read_data
-		);
-	if (xx != FLAC__STREAM_DECODER_INIT_STATUS_OK)
+	inits = schism_FLAC_stream_decoder_init_stream(
+		decoder,
+		read_on_read, read_on_seek,
+		read_on_tell, read_on_length,
+		read_on_eof,  read_on_write,
+		read_on_meta, read_on_error,
+		read_data
+	);
+	if (inits != FLAC__STREAM_DECODER_INIT_STATUS_OK)
 		return 0;
 
 	/* flac function names are such a yapfest */
 	if (!(meta_only ? schism_FLAC_stream_decoder_process_until_end_of_metadata(decoder) : schism_FLAC_stream_decoder_process_until_end_of_stream(decoder))) {
-		log_appendf(4, " Failed to read FLAC file: %s", schism_FLAC_StreamDecoderStateString[schism_FLAC_stream_decoder_get_state(decoder)]);
+		log_appendf(4, " [FLAC] failed to read file: %s", schism_FLAC_StreamDecoderStateString[schism_FLAC_stream_decoder_get_state(decoder)]);
 		schism_FLAC_stream_decoder_delete(decoder);
 		return 0;
 	}
@@ -428,13 +424,7 @@ int fmt_flac_read_info(dmoz_file_t *file, slurp_t *fp)
 	if (!flac_load(&read_data, 1))
 		return 0;
 
-	file->smp_flags = smp.flags;
-	file->smp_speed = smp.c5speed;
-	file->smp_length = smp.length;
-	file->smp_loop_start = smp.loop_start;
-	file->smp_loop_end = smp.loop_end;
-	file->smp_sustain_start = smp.sustain_start;
-	file->smp_sustain_end = smp.sustain_end;
+	fmt_fill_file_from_sample(file, &smp);
 
 	file->description  = "FLAC Audio File";
 	file->type         = TYPE_SAMPLE_COMPR;
@@ -760,6 +750,8 @@ static void flac_dlend(void)
 
 static int flac_dlinit(void)
 {
+	int retval;
+
 	// already have it?
 	if (flac_dltrick_handle_)
 		return 0;
@@ -768,7 +760,7 @@ static int flac_dlinit(void)
 	if (!flac_dltrick_handle_)
 		return -1;
 
-	int retval = load_flac_syms();
+	retval = load_flac_syms();
 	if (retval < 0)
 		flac_dlend();
 
@@ -792,9 +784,13 @@ static int load_flac_sym(const char *fn, void *addr)
 #define SCHISM_FLAC_SYM(x) \
 	if (!load_flac_sym("FLAC__" #x, &schism_FLAC_##x)) return -1
 
+#define SCHISM_FLAC_SYM_ARR(x) SCHISM_FLAC_SYM(x)
+
 #else
 
-#define SCHISM_FLAC_SYM(x) schism_FLAC_##x = FLAC__##x
+/* need to do this differently because C is archaic */
+#define SCHISM_FLAC_SYM(x) schism_FLAC_##x = &FLAC__##x
+#define SCHISM_FLAC_SYM_ARR(x) schism_FLAC_##x = FLAC__##x
 
 static int flac_dlinit(void)
 {
@@ -814,8 +810,8 @@ static int load_flac_syms(void)
 	SCHISM_FLAC_SYM(stream_decoder_finish);
 	SCHISM_FLAC_SYM(stream_decoder_delete);
 	SCHISM_FLAC_SYM(stream_decoder_get_state);
-	SCHISM_FLAC_SYM(StreamDecoderStateString);
-	SCHISM_FLAC_SYM(StreamDecoderErrorStatusString);
+	SCHISM_FLAC_SYM_ARR(StreamDecoderStateString);
+	SCHISM_FLAC_SYM_ARR(StreamDecoderErrorStatusString);
 
 	SCHISM_FLAC_SYM(stream_encoder_new);
 	SCHISM_FLAC_SYM(stream_encoder_set_channels);
@@ -831,8 +827,8 @@ static int load_flac_syms(void)
 	SCHISM_FLAC_SYM(stream_encoder_delete);
 	SCHISM_FLAC_SYM(stream_encoder_set_metadata);
 	SCHISM_FLAC_SYM(stream_encoder_get_state);
-	SCHISM_FLAC_SYM(StreamEncoderInitStatusString);
-	SCHISM_FLAC_SYM(StreamEncoderStateString);
+	SCHISM_FLAC_SYM_ARR(StreamEncoderInitStatusString);
+	SCHISM_FLAC_SYM_ARR(StreamEncoderStateString);
 
 	SCHISM_FLAC_SYM(metadata_object_new);
 	SCHISM_FLAC_SYM(metadata_object_delete);

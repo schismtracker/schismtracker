@@ -433,7 +433,8 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 	/* tracker-ception! :) */
 	if (!strcmp(fmtctx->iformat->name, "libopenmpt")
 		|| !strcmp(fmtctx->iformat->name, "libmodplug")
-		|| !strcmp(fmtctx->iformat->name, "libmikmod"))
+		|| !strcmp(fmtctx->iformat->name, "libmikmod")
+		|| !strcmp(fmtctx->iformat->name, "flac") /* ignore flac, causes infinite loop */)
 		goto fail;
 
 	if (schism_avformat_find_stream_info(fmtctx, NULL) < 0)
@@ -626,7 +627,6 @@ int avformat_init(void)
 
 	schism_av_log_set_callback(schism_av_vlog);
 
-	audio_enable_flac(1);
 	avformat_wasinit = 1;
 	return 1;
 }

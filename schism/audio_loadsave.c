@@ -342,6 +342,8 @@ int song_load_unchecked(const char *file)
 
 /* ------------------------------------------------------------------------- */
 
+#ifdef USE_FLAC
+
 static int flac_enabled = 0;
 
 static int flac_enabled_cb(void)
@@ -353,6 +355,8 @@ void audio_enable_flac(int enabled)
 {
 	flac_enabled = !!enabled;
 }
+
+#endif
 
 const struct save_format song_save_formats[] = {
 	{"IT", "Impulse Tracker", ".it", {.save_song = fmt_it_save_song}, NULL},

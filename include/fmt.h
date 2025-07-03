@@ -233,6 +233,9 @@ int wav_chunk_fmt_read(const void *data, size_t size, void *void_fmt /* struct w
 /* --------------------------------------------------------------------------------------------------------- */
 // other misc functions...
 
+/* fills a dmoz_file_t from a csndfile sample */
+void fmt_fill_file_from_sample(dmoz_file_t *file, const song_sample_t *smp);
+
 /* effect_weight[FX_something] => how "important" the effect is. */
 extern const uint8_t effect_weight[];
 

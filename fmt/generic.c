@@ -455,3 +455,21 @@ void tm_to_fat_date_time(const struct tm *tm, uint16_t *fat_date, uint16_t *fat_
 	*fat_date = tm_n.tm_mday | ((tm_n.tm_mon + 1) << 5) | ((tm_n.tm_year - 80) << 9);
 	*fat_time = (tm_n.tm_sec >> 1) | (tm_n.tm_min << 5) | (tm_n.tm_hour << 11);
 }
+
+/* ------------------------------------------------------------------------ */
+
+void fmt_fill_file_from_sample(dmoz_file_t *file, const song_sample_t *smp)
+{
+	file->smp_flags         = smp->flags;
+	file->smp_speed         = smp->c5speed;
+	file->smp_length        = smp->length;
+	file->smp_loop_start    = smp->loop_start;
+	file->smp_loop_end      = smp->loop_end;
+	file->smp_sustain_start = smp->sustain_start;
+	file->smp_sustain_end   = smp->sustain_end;
+	file->smp_defvol        = smp->volume >> 2; //mphack
+	file->smp_gblvol        = smp->global_volume;
+	file->smp_vibrato_speed = smp->vib_speed;
+	file->smp_vibrato_depth = smp->vib_depth;
+	file->smp_vibrato_rate  = smp->vib_rate;
+}
