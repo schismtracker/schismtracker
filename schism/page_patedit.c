@@ -4572,15 +4572,17 @@ static int pattern_editor_handle_key(struct key_event * k)
 
 	case SCHISM_KEYSYM_LSHIFT:
 	case SCHISM_KEYSYM_RSHIFT:
-		if (k->state == KEY_PRESS) {
+		if (k->state == KEY_RELEASE) {
 			if (shift_selection.in_progress)
 				shift_selection_end();
-		} else if (shift_chord_channels) {
-			current_channel -= shift_chord_channels;
-			while (current_channel < 1)
-				current_channel += MAX_CHANNELS;
-			advance_cursor(1, 1);
-			shift_chord_channels = 0;
+
+			if (shift_chord_channels) {
+				current_channel -= shift_chord_channels;
+				while (current_channel < 1)
+					current_channel += MAX_CHANNELS;
+				advance_cursor(1, 1);
+				shift_chord_channels = 0;
+			}
 		}
 		return 1;
 
