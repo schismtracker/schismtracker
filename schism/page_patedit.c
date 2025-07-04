@@ -4134,7 +4134,12 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	return 0;
 }
 
-static int mute_toggle_hack[MAX_CHANNELS]; /* mrsbrisby: please explain this one, i don't get why it's necessary... */
+/* this hack is necessary because schism sends MOUSE_CLICK events
+ * while the mouseclick is down AND the mouse is dragged.
+ *
+ * really this behavior should be changed... */
+static int mute_toggle_hack[MAX_CHANNELS];
+
 static int pattern_editor_handle_key_default(struct key_event * k)
 {
 	int n = kbd_get_note(k);
