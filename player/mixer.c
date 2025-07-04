@@ -846,18 +846,19 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 
 					channel->current_sample_data = smp_ptr;
 					if (channel->position >= lookahead_start) {
-						int32_t samples_to_read = (channel->increment < 0)
-							? ((int32_t)channel->position - lookahead_start)
-							: (channel->loop_end - (int32_t)channel->position);
-						// this line causes sample 8 in BUTTERFL.XM to play incorrectly
-						//samples_to_read = MAX(samples_to_read, channel->loop_end - channel->loop_start);
-						smpcount = samples_to_buffer_length(samples_to_read, channel);
-
-						channel->current_sample_data = lookahead_ptr;
+						if (channel->increment < 0) {
+							smpcount = samples_to_buffer_length((int32_t)channel->position - lookahead_start, channel);
+							channel->current_sample_data = lookahead_ptr;
+						} else if (channel->position <= channel->loop_end) {
+							smpcount = samples_to_buffer_length(channel->loop_end - (int32_t)channel->position, channel);
+							channel->current_sample_data = lookahead_ptr;
+						} else {
+							smpcount = samples_to_buffer_length(channel->length - (int32_t)channel->position, channel);
+						}
 					} else if ((channel->flags & CHN_LOOP_WRAPPED) && at_loop_start) {
 						// Interpolate properly after looping
 						smpcount = samples_to_buffer_length(channel->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE - channel->position, channel);
-						channel->current_sample_data = lookahead_ptr + ((channel->loop_end - channel->loop_start) * ((channel->ptr_sample->flags & CHN_STEREO) ? 2 : 1) * ((channel->ptr_sample->flags & CHN_16BIT) ? 2 : 1));
+						channel->current_sample_data = lookahead_ptr + ((channel->length - channel->loop_start) * ((channel->ptr_sample->flags & CHN_STEREO) ? 2 : 1) * ((channel->ptr_sample->flags & CHN_16BIT) ? 2 : 1));
 					} else if (channel->increment >= 0 && pos_dest >= (int32_t)lookahead_start && smpcount > 1) {
 						smpcount = samples_to_buffer_length(lookahead_start - channel->position, channel);
 					}
