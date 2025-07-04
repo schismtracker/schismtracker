@@ -364,7 +364,8 @@ files_macosx = \
 	sys/macosx/osdefs.c \
 	sys/macosx/clippy.m \
 	sys/macosx/dmoz.m \
-	sys/macosx/audio.c
+	sys/macosx/audio.c \
+	sys/macosx/http.m
 cflags_macosx=
 libs_macosx=
 ldflags_macosx=-framework Cocoa -framework CoreAudio -framework CoreMIDI -framework IOKit -framework AudioUnit
