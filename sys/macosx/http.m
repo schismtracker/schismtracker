@@ -30,7 +30,6 @@
 
 /* Mac OS X HTTP backend (requires 10.3+) */
 
-
 static void http_macosx_destroy_(struct http *r)
 {
 	/* nothing */
@@ -42,7 +41,7 @@ static int http_macosx_send_request_(struct http *r, const char *domain,
 {
 	/* this API sucks */
 	NSURL *url;
-	NSURLRequest *req;
+	NSMutableURLRequest *req;
 	NSURLResponse *res;
 	NSError *err;
 	NSData *data;
@@ -55,7 +54,8 @@ static int http_macosx_send_request_(struct http *r, const char *domain,
 		(reqflags & HTTP_REQ_SSL) ? "https" : "http",
 		domain, path]];
 
-	req = [NSURLRequest requestWithURL: url];
+	req = [NSMutableURLRequest requestWithURL: url];
+	[req setValue: [NSString stringWithUTF8String: HTTP_USER_AGENT] forHTTPHeaderField: @"User-Agent"];
 
 	/* This API is deprecated but it's really old and I don't see it
 	 * TOTALLY going away any time soon... */
