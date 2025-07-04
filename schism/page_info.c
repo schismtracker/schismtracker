@@ -1028,6 +1028,8 @@ static int info_page_handle_key(struct key_event * k)
 		p = selected_channel;
 		n = info_handle_click(k->x, k->y);
 		if (k->mouse == MOUSE_DBLCLICK) {
+			/* TODO: should this only be handled if info_handle_click
+			 * actually returns 1 ? */
 			if (p == selected_channel) {
 				int playing_pattern;
 
@@ -1040,10 +1042,12 @@ static int info_page_handle_key(struct key_event * k)
 
 				if (playing_pattern < 200) {
 					set_current_order(order);
-					set_current_pattern(n);
+					set_current_pattern(playing_pattern);
 					set_current_row(song_get_current_row());
 					set_page(PAGE_PATTERN_EDITOR);
 				}
+
+				return 1;
 			}
 		}
 		return n;
