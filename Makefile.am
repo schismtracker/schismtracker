@@ -412,7 +412,8 @@ files_macosx = \
 	sys/macosx/clippy.m \
 	sys/macosx/dmoz.m \
 	sys/macosx/audio.c \
-	fmt/macosxca.c
+	fmt/macosxca.c \
+	sys/macosx/http.m
 cflags_macosx=
 libs_macosx=
 ldflags_macosx=-framework Cocoa \
