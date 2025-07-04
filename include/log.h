@@ -26,6 +26,9 @@
 #include "headers.h"
 #include "util.h"
 
+void log_init(void);
+void log_quit(void);
+
 void log_nl(void);
 void log_append(int color, int must_free, const char *text);
 void log_append2(int bios_font, int color, int must_free, const char *text);

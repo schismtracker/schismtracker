@@ -60,6 +60,9 @@ typedef struct cfg_file cfg_file_t;
 /* --------------------------------------------------------------------------------------------------------- */
 /* public functions */
 
+/* userdata == cfg_file_t (weird, i know, but it means this func can be used for slurp_receive) */
+int cfg_read_mem(const void *data, SCHISM_UNUSED size_t size, void *userdata);
+
 int cfg_read(cfg_file_t *cfg);
 
 /* write the structure back to disk. this will (try to) copy the current configuration to filename~ first.

@@ -115,6 +115,7 @@ noinst_HEADERS = \
 	include/fmt-types.h		\
 	include/fmt.h			\
 	include/headers.h		\
+	include/http.h			\
 	include/ieee-float.h    \
 	include/it.h			\
 	include/keyboard.h      \
@@ -134,6 +135,7 @@ noinst_HEADERS = \
 	include/timer.h         \
 	include/tree.h			\
 	include/util.h			\
+	include/update.h		\
 	include/version.h		\
 	include/vgamem.h      \
 	include/video.h			\
@@ -281,7 +283,8 @@ files_win32 = \
 	sys/win32/timer.c \
 	sys/win32/audio-waveout.c \
 	sys/win32/audio-dsound.c \
-	sys/win32/mt.c
+	sys/win32/mt.c \
+	sys/win32/http.c
 cflags_win32=-I$(srcdir)/sys/win32
 lib_win32=-lwinmm $(DSOUND_LIBS)
 
@@ -553,6 +556,7 @@ schismtracker_SOURCES = \
 	schism/events.c  		\
 	schism/fakemem.c		\
 	schism/fonts.c          \
+	schism/http.c			\
 	schism/ieee-float.c     \
 	schism/itf.c			\
 	schism/keyboard.c		\
@@ -593,6 +597,7 @@ schismtracker_SOURCES = \
 	schism/str.c             \
 	schism/mt.c        \
 	schism/timer.c          \
+	schism/update.c			\
 	schism/util.c			\
 	schism/version.c		\
 	schism/vgamem.c        \
