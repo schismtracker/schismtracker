@@ -51,6 +51,7 @@ enum {
 
 mt_thread_t *mt_thread_create(schism_thread_function_t func, const char *name, void *userdata);
 void mt_thread_wait(mt_thread_t *thread, int *status);
+void mt_thread_detach(mt_thread_t *thread);
 void mt_thread_set_priority(int priority);
 mt_thread_id_t mt_thread_id(void);
 

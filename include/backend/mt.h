@@ -35,6 +35,9 @@ typedef struct {
 	mt_thread_t *(*thread_create)(schism_thread_function_t func, const char *name, void *userdata);
 	// Waits for a thread to exit, then cleans it up.
 	void (*thread_wait)(mt_thread_t *thread, int *status);
+	// Detaches a thread; it will clean itself up.
+	// A detached thread must never be waited on.
+	void (*thread_detach)(mt_thread_t *thread);
 	// Sets the current threads priority.
 	void (*thread_set_priority)(int priority);
 	// Get the current thread's unique ID. (mostly unused)
