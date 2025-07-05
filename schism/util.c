@@ -106,6 +106,7 @@ int util_call_func_with_envvar(int (*cb)(void *p), void *p, const char *name,
 	const char *val)
 {
 	char *orig;
+	int ret;
 
 	SCHISM_RUNTIME_ASSERT(name != NULL, "need an envvar to set");
 
@@ -118,7 +119,7 @@ int util_call_func_with_envvar(int (*cb)(void *p), void *p, const char *name,
 	/* XXX: should `val` being NULL unset the envvar, or just do nothing ? */
 	util_envvar_helper(name, val);
 
-	int ret = cb(p);
+	ret = cb(p);
 
 	/* clean up our dirty work, or empty the var */
 	util_envvar_helper(name, orig);

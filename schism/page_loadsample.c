@@ -749,7 +749,7 @@ static int file_list_handle_key(struct key_event * k)
 	}
 
 	if (k->mouse == MOUSE_CLICK) {
-		if (k->state == KEY_PRESS)
+		if (k->state != KEY_PRESS)
 			return 0;
 	} else if (k->mouse == MOUSE_DBLCLICK) {
 		handle_enter_key();

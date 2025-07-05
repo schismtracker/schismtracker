@@ -751,7 +751,7 @@ static int file_list_handle_key(struct key_event * k)
 		return 0;
 	switch (k->mouse) {
 	case MOUSE_CLICK:
-		if (k->state == KEY_PRESS)
+		if (k->state != KEY_PRESS)
 			return 0;
 		new_file = (k->y - 13) + top_file;
 		break;
@@ -945,13 +945,8 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 		}
 	}
 
-	if (k->mouse == MOUSE_CLICK) {
-		if (k->state == KEY_PRESS)
-			return 0;
-	} else {
-		if (k->state == KEY_RELEASE)
-			return 0;
-	}
+	if (k->state != KEY_PRESS)
+		return 0;
 	new_dir = CLAMP(new_dir, 0, dlist.num_dirs - 1);
 	if (new_dir != current_dir) {
 		current_dir = new_dir;
