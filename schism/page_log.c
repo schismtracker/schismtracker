@@ -32,11 +32,12 @@
 #include "vgamem.h"
 #include "keyboard.h"
 #include "charset.h"
+#include "mem.h"
 
 struct log_line {
 	uint8_t color;
-	/* UTF-8 */
 	const char *text;
+	charset_t set;
 	/* Set this flag if the text should be free'd when it is scrolled offscreen.
 	DON'T set it if the text is going to be modified after it is added to the log (e.g. for displaying
 	status information for module loaders like IT); in that case, change the text pointer to some
@@ -126,9 +127,8 @@ static void log_redraw(void)
 		if (!lines[i].text)
 			continue;
 
-		draw_text_utf8_len(lines[i].text,
-					74, 3, 14 + n,
-					lines[i].color, 0);
+		draw_text_charset_len(lines[i].text, lines[i].set, 74, 3, 14 + n,
+			lines[i].color, 0);
 	}
 }
 
@@ -147,7 +147,7 @@ void log_load_page(struct page *page)
 
 /* --------------------------------------------------------------------- */
 
-void log_append_utf8(int color, int must_free, const char *text)
+void log_append3(charset_t set, int color, int must_free, const char *text)
 {
 	if (status.flags & STATUS_IS_HEADLESS) {
 		// XXX: Maybe stdout should always get all of the log messages,
@@ -167,8 +167,9 @@ void log_append_utf8(int color, int must_free, const char *text)
 			memmove(lines, lines + 1, last_line * sizeof(struct log_line));
 		}
 
-		lines[last_line].text = text;
-		lines[last_line].color = color;
+		lines[last_line].text      = text;
+		lines[last_line].set       = set;
+		lines[last_line].color     = color;
 		lines[last_line].must_free = must_free;
 
 		top_line = CLAMP(last_line - 32, 0, NUM_LINES - 32);
@@ -180,15 +181,7 @@ void log_append_utf8(int color, int must_free, const char *text)
 
 void log_append2(int bios_font, int color, int must_free, const char *text)
 {
-	char *conv = charset_iconv_easy(text, (bios_font) ? CHARSET_CP437 : CHARSET_ITF, CHARSET_UTF8);
-
-	if (must_free)
-		free((void *)text);
-
-	if (!conv)
-		return; /* wtf */
-
-	log_append_utf8(color, 1, conv);
+	log_append3((bios_font) ? CHARSET_CP437 : CHARSET_ITF, color, 1, text);
 }
 
 void log_append(int color, int must_free, const char *text)
@@ -218,7 +211,7 @@ void log_appendf(int color, const char *format, ...)
 		exit(255);
 	}
 
-	log_append_utf8(color, 1, ptr);
+	log_append3(CHARSET_UTF8, color, 1, ptr);
 }
 
 static inline SCHISM_ALWAYS_INLINE
@@ -232,12 +225,12 @@ void log_underline_impl(int chars)
 		buf[chars] = 0x81;
 	} while (chars--);
 
-	log_append(2, 0, buf);
+	log_append(2, 1, str_dup(buf));
 }
 
 void log_underline(void)
 {
-	log_underline_impl(charset_strlen(lines[last_line].text, CHARSET_UTF8));
+	log_underline_impl(charset_strlen(lines[last_line].text, lines[last_line].set));
 }
 
 void log_perror(const char *prefix)

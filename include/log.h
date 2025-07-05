@@ -25,10 +25,11 @@
 
 #include "headers.h"
 #include "util.h"
+#include "charset.h"
 
-/* appends a line to the log in UTF-8 (all functions are a
- * simple wrapper around this one in some form or another) */
-void log_append_utf8(int color, int must_free, const char *text);
+/* appends a line to the log in charset 'set' (all log functions are
+ * in essence a wrapper around this in some way or another) */
+void log_append3(charset_t set, int color, int must_free, const char *text);
 
 /* convenience function -- underlines the previous line */
 void log_underline(void);
