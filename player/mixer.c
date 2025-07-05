@@ -245,8 +245,7 @@ static inline SCHISM_ALWAYS_INLINE uint32_t avg_u32(uint32_t a, uint32_t b)
 
 #define SNDMIX_STOREVUMETER \
 	uint32_t vol_avg = avg_u32(safe_abs_32(vol_lx), safe_abs_32(vol_rx)); \
-	if (vol_avg > UINT32_C(0xFF0000)) vol_avg = UINT32_C(0xFF0000); \
-	if (vol_avg > max) max = vol_avg;
+	if (max < vol_avg) max = vol_avg;
 
 // FIXME why are these backwards? what?
 #define SNDMIX_STOREMONOVOL \
@@ -288,7 +287,8 @@ static inline SCHISM_ALWAYS_INLINE uint32_t avg_u32(uint32_t a, uint32_t b)
 ///////////////////////////////////////////////////
 // Resonant Filters
 
-#define MUL_32_TO_64(x, y) ((int64_t)(x) * (y))
+/* 32x32 -> 64 */
+#define MUL_32_TO_64(x, y) ((int64_t)(int32_t)(x) * (int32_t)(y))
 #define FILT_CLIP(i) CLAMP(i, -65536, 65534)
 
 #define MIX_BEGIN_FILTER(chn) \
@@ -899,6 +899,8 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 		} while (nsamples > 0);
 
 		channel->vu_meter >>= 16;
+		if (channel->vu_meter > 0xFF)
+			channel->vu_meter = 0xFF;
 
 		nchmixed += naddmix;
 	}
