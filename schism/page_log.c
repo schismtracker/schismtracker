@@ -181,7 +181,7 @@ void log_append3(charset_t set, int color, int must_free, const char *text)
 
 void log_append2(int bios_font, int color, int must_free, const char *text)
 {
-	log_append3((bios_font) ? CHARSET_CP437 : CHARSET_ITF, color, 1, text);
+	log_append3((bios_font) ? CHARSET_CP437 : CHARSET_ITF, color, must_free, text);
 }
 
 void log_append(int color, int must_free, const char *text)
