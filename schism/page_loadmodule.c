@@ -413,14 +413,14 @@ static void set_default_glob(int set_filename)
 
 /* --------------------------------------------------------------------- */
 
-static char search_text[SCHISM_NAME_MAX + 1] = "";
+static uint32_t search_text[SCHISM_NAME_MAX + 1] = {0};
 static int search_first_char = 0;       /* first visible character */
 static int search_text_length = 0;      /* same as strlen(search_text) */
 
 static void search_redraw(void)
 {
 	draw_fill_chars(51, 37, 76, 37, DEFAULT_FG, 0);
-	draw_text_bios_len(search_text + search_first_char, 25, 51, 37, 5, 0);
+	draw_text_charset_len(search_text + search_first_char, CHARSET_UCS4, 25, 51, 37, 5, 0);
 
 	/* draw the cursor if it's on the dir/file list */
 	if (ACTIVE_PAGE.selected_widget == 0 || ACTIVE_PAGE.selected_widget == 1) {
@@ -432,17 +432,16 @@ static void search_update(void)
 {
 	int n;
 
-	if (search_text_length > 25)
-		search_first_char = search_text_length - 25;
-	else
-		search_first_char = 0;
+	search_first_char = (search_text_length > 25)
+		? (search_text_length - 25)
+		: 0;
 
 	/* go through the file/dir list (whatever one is selected) and
 	 * find the first entry matching the text */
 	if (*selected_widget == 0) {
 		for (n = 0; n < flist.num_files; n++) {
 			if (charset_strncasecmp(flist.files[n]->base, CHARSET_CHAR,
-					search_text, CHARSET_CP437, search_text_length) == 0) {
+					search_text, CHARSET_UCS4, search_text_length) == 0) {
 				current_file = n;
 				file_list_reposition();
 				break;
@@ -451,7 +450,7 @@ static void search_update(void)
 	} else {
 		for (n = 0; n < dlist.num_dirs; n++) {
 			if (charset_strncasecmp(dlist.dirs[n]->base, CHARSET_CHAR,
-					search_text, CHARSET_CP437, search_text_length) == 0) {
+					search_text, CHARSET_UCS4, search_text_length) == 0) {
 				current_dir = n;
 				dir_list_reposition();
 				break;
@@ -462,7 +461,7 @@ static void search_update(void)
 	status.flags |= NEED_UPDATE;
 }
 
-static int search_text_add_char(uint8_t c)
+static int search_text_add_char(uint32_t c)
 {
 	if (c < 32)
 		return 0;
@@ -484,10 +483,9 @@ static void search_text_delete_char(void)
 
 	search_text[--search_text_length] = 0;
 
-	if (search_text_length > 25)
-		search_first_char = search_text_length - 25;
-	else
-		search_first_char = 0;
+	search_first_char = (search_text_length > 25)
+		? (search_text_length - 25)
+		: 0;
 
 	status.flags |= NEED_UPDATE;
 }
@@ -676,12 +674,21 @@ static void show_selected_song_length(void)
 	csf_free(song);
 }
 
-static int file_list_handle_text_input(const char *text) {
+static int file_list_handle_text_input(const char *text)
+{
 	int success = 0;
+	uint32_t *ucs4;
+	size_t i;
 
-	for (; *text; text++)
-		if (search_text_add_char(*(unsigned char *)text))
+	ucs4 = charset_iconv_easy(text, CHARSET_UTF8, CHARSET_UCS4);
+	if (!ucs4)
+		return 0;
+
+	for (i = 0; ucs4[i]; i++)
+		if (search_text_add_char(ucs4[i]))
 			success = 1;
+
+	free(ucs4);
 
 	return success;
 }
@@ -833,17 +840,9 @@ static void dir_list_draw_exportsave(void)
 	dir_list_draw(68 - 51);
 }
 
-static int dir_list_handle_text_input(const char *text) {
-	for (; *text && search_text_length < (int)ARRAY_SIZE(search_text) - 1; text++) {
-		if (*text < 32)
-			return 0;
-
-		search_text[search_text_length++] = *text;
-		search_text[search_text_length] = '\0';
-	}
-	search_update();
-
-	return 1;
+static int dir_list_handle_text_input(const char *text)
+{
+	return file_list_handle_text_input(text);
 }
 
 static inline int dir_list_handle_key(struct key_event * k, unsigned int width)

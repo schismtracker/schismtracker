@@ -62,7 +62,7 @@ static dmoz_filelist_t flist;
 #define current_file flist.selected
 
 static int slash_search_mode = -1;
-static char slash_search_str[SCHISM_PATH_MAX];
+static uint32_t slash_search_str[SCHISM_PATH_MAX]; /* UCS-4 */
 
 /* get a color index from a dmoz_file_t 'type' field */
 static inline int get_type_color(int type)
@@ -226,9 +226,9 @@ static void file_list_draw(void)
 		draw_text_utf8_len(file->base ? file->base : "", 18, 32, pos, fg, bg);
 		if (file->base && slash_search_mode > -1) {
 			if (charset_strncasecmp(file->base, CHARSET_CHAR,
-					slash_search_str, CHARSET_CP437, slash_search_mode) == 0) {
+					slash_search_str, CHARSET_UCS4, slash_search_mode) == 0) {
 				size_t len = charset_strncasecmplen(file->base, CHARSET_CHAR,
-					slash_search_str, CHARSET_CP437, slash_search_mode);
+					slash_search_str, CHARSET_UCS4, slash_search_mode);
 
 				draw_text_utf8_len(file->base, MIN(len, 18), 32, pos, 3, 1);
 			}
@@ -287,7 +287,7 @@ static void reposition_at_slash_search(void)
 		f = flist.files[i];
 		if (!f || !f->base) continue;
 
-		j = charset_strncasecmplen(f->base, CHARSET_CHAR, slash_search_str, CHARSET_CP437, slash_search_mode);
+		j = charset_strncasecmplen(f->base, CHARSET_CHAR, slash_search_str, CHARSET_UCS4, slash_search_mode);
 		if (bl < j) {
 			bl = j;
 			b = i;
@@ -366,19 +366,43 @@ static void do_delete_file(SCHISM_UNUSED void *data)
 static int file_list_handle_text_input(const char *text)
 {
 	dmoz_file_t* f = flist.files[current_file];
+	uint32_t *ucs4;
+	size_t i;
+	int success;
 
-	for (; *text; text++) {
-		if (*text >= 32 && (slash_search_mode > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
-			if (slash_search_mode < 0) slash_search_mode = 0;
-			if (slash_search_mode + 1 < (int)ARRAY_SIZE(slash_search_str)) {
-				slash_search_str[slash_search_mode++] = *text;
-				reposition_at_slash_search();
-				status.flags |= NEED_UPDATE;
-			}
-			return 1;
-		}
+	/* can't do anything? */
+	if (slash_search_mode + 1 >= (int)ARRAY_SIZE(slash_search_str))
+		return 0;
+
+	if (slash_search_mode < 0)
+		slash_search_mode = 0;
+
+	ucs4 = charset_iconv_easy(text, CHARSET_UTF8, CHARSET_UCS4);
+	if (!ucs4)
+		return 0;
+
+	success = 0;
+
+	for (i = 0; ucs4[i]; i++) {
+		if (ucs4[i] < 32)
+			continue;
+
+		if (!(slash_search_mode > -1 || (f && (f->type & TYPE_DIRECTORY))))
+			continue;
+
+		if (slash_search_mode + 1 >= (int)ARRAY_SIZE(slash_search_str))
+			break; /* can't do anything */
+
+		slash_search_str[slash_search_mode++] = ucs4[i];
+		reposition_at_slash_search();
+		status.flags |= NEED_UPDATE;
+
+		success = 1;
 	}
-	return 0;
+
+	free(ucs4);
+
+	return success;
 }
 
 static int file_list_handle_key(struct key_event * k)

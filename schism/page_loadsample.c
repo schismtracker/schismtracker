@@ -84,7 +84,7 @@ static dmoz_filelist_t flist;
 #define current_file (flist.selected)
 
 static int search_pos = -1;
-static char search_str[SCHISM_PATH_MAX];
+static uint32_t search_str[SCHISM_PATH_MAX]; /* UCS-4 */
 
 /* get a color index from a dmoz_file_t 'type' field */
 static inline int get_type_color(int type)
@@ -113,10 +113,11 @@ static void file_list_reposition(void)
 
 	current_file = CLAMP(current_file, 0, flist.num_files - 1);
 	// XXX use CLAMP() here too, I can't brain
-	if (current_file < top_file)
+	if (top_file > current_file)
 		top_file = current_file;
 	else if (current_file > top_file + 34)
 		top_file = current_file - 34;
+
 	if (current_file >= 0 && current_file < flist.num_files) {
 		f = flist.files[current_file];
 
@@ -393,9 +394,9 @@ static void file_list_draw(void)
 		/* this is stupid */
 		if (file->base && search_pos > -1) {
 			if (charset_strncasecmp(file->base, CHARSET_CHAR,
-					search_str, CHARSET_CP437, search_pos) == 0) {
+					search_str, CHARSET_UCS4, search_pos) == 0) {
 				size_t len = charset_strncasecmplen(file->base, CHARSET_CHAR,
-					search_str, CHARSET_CP437, search_pos);
+					search_str, CHARSET_UCS4, search_pos);
 
 				draw_text_utf8_len(file->base, MIN(len, 18), 32, pos, 3, 1);
 			}
@@ -555,7 +556,7 @@ static void reposition_at_slash_search(void)
 		f = flist.files[i];
 		if (!f || !f->base) continue;
 
-		j = charset_strncasecmplen(f->base, CHARSET_CHAR, search_str, CHARSET_CP437, search_pos);
+		j = charset_strncasecmplen(f->base, CHARSET_CHAR, search_str, CHARSET_UCS4, search_pos);
 		if (bl < j) {
 			bl = j;
 			b = i;
@@ -649,18 +650,39 @@ static void do_delete_file(SCHISM_UNUSED void *data)
 static int file_list_handle_text_input(const char *text)
 {
 	dmoz_file_t* f = flist.files[current_file];
-	for (; *text; text++) {
-		if (*text >= 32 && (search_pos > -1 || (f && (f->type & TYPE_DIRECTORY)))) {
-			if (search_pos < 0) search_pos = 0;
-			if (search_pos + 1 < (int)ARRAY_SIZE(search_str)) {
-				search_str[search_pos++] = *text;
-				reposition_at_slash_search();
-				status.flags |= NEED_UPDATE;
-			}
-			return 1;
+	uint32_t *ucs4;
+	size_t i;
+	int success;
+
+	/* can't do anything */
+	if (search_pos + 1 >= (int)ARRAY_SIZE(search_str))
+		return 0;
+
+	if (search_pos < 0) search_pos = 0;
+
+	ucs4 = charset_iconv_easy(text, CHARSET_UTF8, CHARSET_UCS4);
+	if (!ucs4)
+		return 0;
+
+	success = 1;
+
+	for (i = 0; ucs4[i]; i++) {
+		if (ucs4[i] < 32)
+			continue;
+
+		if (!(search_pos > 1 || (f && (f->type & TYPE_DIRECTORY))))
+			continue;
+
+		if (search_pos + 1 < (int)ARRAY_SIZE(search_str)) {
+			search_str[search_pos++] = ucs4[i];
+			reposition_at_slash_search();
+			status.flags |= NEED_UPDATE;
 		}
+
+		success = 1;
 	}
-	return 0;
+
+	return success;
 }
 
 static int file_list_handle_key(struct key_event * k)

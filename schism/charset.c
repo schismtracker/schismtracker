@@ -536,7 +536,7 @@ int char_unicode_to_cp437(uint32_t c)
 
 int char_unicode_to_itf(uint32_t c)
 {
-	if (c >= 32 && c <= 127) return c;
+	if (!c || (c >= 32 && c <= 127)) return c;
 
 	switch (c) {
 	case 0x263A: return 1;  // WHITE SMILING FACE
@@ -833,7 +833,7 @@ static const charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 	[CHARSET_UCS4BE] = ucs4_to_ucs4BE,
 
 	/* these two share the same impl: */
-	[CHARSET_ITF]   = ucs4_to_cp437,
+	[CHARSET_ITF]   = ucs4_to_itf,
 	[CHARSET_CP437] = ucs4_to_cp437,
 
 	[CHARSET_CHAR] = ucs4_to_utf8,
@@ -1477,5 +1477,7 @@ charset_error_t charset_decode_next(charset_decode_t *decoder, charset_t inset)
 
 	return CHARSET_ERROR_SUCCESS;
 }
+
+/* ------------------------------------------------------------------------ */
 
 extern inline void *charset_iconv_easy(const void *in, charset_t inset, charset_t outset);

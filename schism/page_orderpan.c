@@ -401,6 +401,7 @@ static int orderlist_handle_char(char sym)
 static int orderlist_handle_text_input_on_list(const char *text) {
 	int success = 0;
 
+	/* need proper UTF-8 handling but this is ok for now */
 	for (; *text; text++)
 		if (!orderlist_handle_char(*text))
 			success = 1;

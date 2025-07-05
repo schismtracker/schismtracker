@@ -385,12 +385,26 @@ static void do_replace_sample(int n)
 
 /* --------------------------------------------------------------------- */
 
-static int sample_list_handle_text_input_on_list(const char *text) {
-	int success = 0;
+static int sample_list_handle_text_input_on_list(const char *text)
+{
+	uint8_t *dos;
+	int success;
+	size_t i;
 
-	for (; *text; text++)
-		if (sample_list_cursor_pos < 25 && sample_list_add_char(*text))
+	if (sample_list_cursor_pos >= 25)
+		return 0;
+
+	success = 0;
+
+	dos = charset_iconv_easy(text, CHARSET_UTF8, CHARSET_ITF);
+	if (!dos)
+		return 0;
+
+	for (i = 0; dos[i]; i++)
+		if (sample_list_add_char(dos[i]))
 			success = 1;
+
+	free(dos);
 
 	return success;
 }

@@ -427,11 +427,27 @@ static void instrument_list_draw_list(void)
 	}
 }
 
-static int instrument_list_handle_text_input_on_list(const char* text) {
-	int success = 0;
-	for (; *text; text++)
-		if (instrument_cursor_pos < 25 && instrument_list_add_char(*(unsigned char *)text))
+static int instrument_list_handle_text_input_on_list(const char *text)
+{
+	int success;
+	size_t i;
+	unsigned char *str;
+
+	if (instrument_cursor_pos >= 25)
+		return 0;
+
+	str = charset_iconv_easy(text, CHARSET_UTF8, CHARSET_ITF);
+	if (!str)
+		return 0;
+
+	success = 0;
+
+	for (i = 0; str[i]; i++)
+		if (instrument_cursor_pos < 25 && instrument_list_add_char(str[i]))
 			success = 1;
+
+	free(str);
+
 	return success;
 }
 

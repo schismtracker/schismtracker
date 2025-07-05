@@ -24,6 +24,10 @@
 #ifndef SCHISM_VGAMEM_H_
 #define SCHISM_VGAMEM_H_
 
+#include "headers.h"
+
+#include "charset.h"
+
 /* ---------------------------------------------------------------------------
  * standard crap */
 
@@ -73,12 +77,14 @@ void draw_char_unicode(uint32_t c, int x, int y, uint32_t fg, uint32_t bg);
 int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg);
 int draw_text_bios(const char * text, int x, int y, uint32_t fg, uint32_t bg);
 int draw_text_utf8(const char * text, int x, int y, uint32_t fg, uint32_t bg);
+int draw_text_charset(const void *text, charset_t set, int x, int y, uint32_t fg, uint32_t bg);
 
 /* return value is the length of text drawn
  * (so len - return is the number of spaces) */
 int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
 int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
 int draw_text_utf8_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
+int draw_text_charset_len(const void *text, charset_t set, int len, int x, int y, uint32_t fg, uint32_t bg);
 
 void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t fg, uint32_t bg);
 

@@ -435,20 +435,7 @@ SCHISM_NORETURN static void event_loop(void)
 				status.flags |= NEED_UPDATE;
 				break;
 			case SCHISM_TEXTINPUT: {
-				char *input_text = NULL;
-
-				charset_error_t err = charset_iconv(se.text.text, &input_text, CHARSET_UTF8, CHARSET_CP437, ARRAY_SIZE(se.text.text));
-				if (err || !input_text) {
-					log_appendf(4, " [ERROR] failed to convert text input event");
-					log_appendf(4, "  %s", se.text.text);
-					log_appendf(4, " into CP437 with error %s.", charset_iconv_error_lookup(err));
-					log_appendf(4, " please report this on the github!");
-					break;
-				}
-
-				handle_text_input(input_text);
-
-				free(input_text);
+				handle_text_input(se.text.text);
 				break;
 			}
 			case SCHISM_KEYDOWN:
@@ -501,8 +488,8 @@ SCHISM_NORETURN static void event_loop(void)
 				kk.mod = status.keymod;
 				kk.mouse = MOUSE_NONE;
 
-				if (*se.key.text)
-					charset_iconv(se.key.text, &kk.text, CHARSET_UTF8, CHARSET_CP437, ARRAY_SIZE(se.key.text));
+				/* normalize the text for processing */
+				kk.text = charset_compose_to_set(se.key.text, CHARSET_UTF8, CHARSET_UTF8);
 
 				kbd_key_translate(&kk);
 

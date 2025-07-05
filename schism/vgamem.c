@@ -482,22 +482,33 @@ int draw_text_bios(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 	return n;
 }
 
-int draw_text_utf8(const char * text, int x, int y, uint32_t fg, uint32_t bg)
+int draw_text_charset(const void *text, charset_t set, int x, int y, uint32_t fg, uint32_t bg)
 {
-	uint8_t *composed = charset_compose_to_utf8(text, CHARSET_UTF8);
+	uint32_t *composed;
+	size_t i;
+
+	switch (set) {
+	case CHARSET_ITF: return draw_text(text, x, y, fg, bg);
+	case CHARSET_CP437: return draw_text_bios(text, x, y, fg, bg);
+	/* else do unicode */
+	default: break;
+	}
+
+	composed = charset_compose_to_set(text, set, CHARSET_UCS4);
 	if (!composed)
 		return draw_text_bios(text, x, y, fg, bg);
 
-	charset_decode_t decoder = {0};
-	decoder.in = composed;
-	decoder.offset = 0;
-	decoder.size = SIZE_MAX;
+	for (i = 0; composed[i]; i++)
+		draw_char_unicode(composed[i], x + i, y, fg, bg);
 
-	int n;
-	for (n = 0; decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_UTF8) && decoder.state != DECODER_STATE_DONE; n++)
-		draw_char_unicode(decoder.codepoint, x + n, y, fg, bg);
+	free(composed);
 
-	return n;
+	return i;
+}
+
+int draw_text_utf8(const char * text, int x, int y, uint32_t fg, uint32_t bg)
+{
+	return draw_text_charset(text, CHARSET_UTF8, x, y, fg, bg);
 }
 
 void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t fg, uint32_t bg)
@@ -542,24 +553,34 @@ int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, ui
 	return n;
 }
 
+int draw_text_charset_len(const void *text, charset_t set, int len, int x, int y, uint32_t fg, uint32_t bg)
+{
+	uint32_t *composed;
+	int i;
+
+	switch (set) {
+	case CHARSET_ITF: return draw_text_len(text, len, x, y, fg, bg);
+	case CHARSET_CP437: return draw_text_bios_len(text, len, x, y, fg, bg);
+	default: break;
+	}
+
+	composed = charset_compose_to_set(text, set, CHARSET_UCS4);
+	if (!composed)
+		return draw_text_bios(text, x, y, fg, bg);
+
+	for (i = 0; composed[i] && i < len; i++)
+		draw_char_unicode(composed[i], x + i, y, fg, bg);
+
+	free(composed);
+
+	draw_fill_chars(x + i, y, x + len - 1, y, fg, bg);
+
+	return i;
+}
+
 int draw_text_utf8_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
 {
-	uint8_t *composed = charset_compose_to_utf8(text, CHARSET_UTF8);
-	if (!composed)
-		return draw_text_bios_len(text, len, x, y, fg, bg);
-
-	charset_decode_t decoder = {0};
-	decoder.in = composed;
-	decoder.offset = 0;
-	decoder.size = SIZE_MAX;
-
-	int n;
-	for (n = 0; n < len && decoder.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&decoder, CHARSET_UTF8) && decoder.state != DECODER_STATE_DONE; n++)
-		draw_char_unicode(decoder.codepoint, x + n, y, fg, bg);
-
-	draw_fill_chars(x + n, y, x + len - 1, y, fg, bg);
-
-	return n;
+	return draw_text_charset_len(text, CHARSET_UTF8, len, x, y, fg, bg);
 }
 
 /* --------------------------------------------------------------------- */

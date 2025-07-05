@@ -368,12 +368,17 @@ int widget_textentry_add_char(struct widget *w, unsigned char c)
 	return 1;
 }
 
-int widget_textentry_add_text(struct widget *w, const char* text) {
-	if (!text)
+int widget_textentry_add_text(struct widget *w, const char *text)
+{
+	uint8_t *itf;
+	size_t i;
+
+	itf = charset_iconv_easy(text, CHARSET_UTF8, CHARSET_ITF);
+	if (!itf)
 		return 0;
 
-	for (; *text; text++)
-		if (!widget_textentry_add_char(w, *(unsigned char *)text))
+	for (i = 0; itf[i]; i++)
+		if (!widget_textentry_add_char(w, itf[i]))
 			return 0;
 
 	return 1;
@@ -390,12 +395,15 @@ void widget_numentry_change_value(struct widget *w, int32_t new_value)
 	status.flags |= NEED_UPDATE;
 }
 
-static inline SCHISM_ALWAYS_INLINE int fast_pow10(int n)
+static inline SCHISM_ALWAYS_INLINE int32_t fast_pow10(int32_t n)
 {
-	static const int tens[] = { 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000 };
+	static const int32_t tens[] = {
+		1,     10,     100,     1000,
+		10000, 100000, 1000000, 10000000
+	};
 
 	/* use our cache if we can to avoid buffer overrun */
-	return (n < (int)ARRAY_SIZE(tens)) ? tens[n] : i_pow(10, n);
+	return (n < (int32_t)ARRAY_SIZE(tens)) ? tens[n] : i_pow(10, n);
 }
 
 int widget_numentry_handle_text(struct widget *w, const char *text)
@@ -424,7 +432,7 @@ int widget_numentry_handle_text(struct widget *w, const char *text)
 		int pos = *(w->d.numentry.cursor_pos), n = 0;
 
 		for (; n < len && pos < w->width; n++, pos++) {
-			int pow10_of_pos = fast_pow10(w->width - 1 - pos);
+			int32_t pow10_of_pos = fast_pow10(w->width - 1 - pos);
 
 			/* isolate our digit and subtract it */
 			value -= value % (pow10_of_pos * 10) / pow10_of_pos * pow10_of_pos;

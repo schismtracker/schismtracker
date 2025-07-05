@@ -555,12 +555,22 @@ static void _delete_selection(void)
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
-static int message_handle_text_input_editmode(const char *text) {
+static int message_handle_text_input_editmode(const char *text)
+{
+	uint8_t *dos;
+	size_t i;
+
 	if (clippy_owner(CLIPPY_SELECT) == widgets_message)
 		_delete_selection();
 
-	for (; *text; text++)
-		message_insert_char(*text);
+	dos = charset_iconv_easy(text, CHARSET_UTF8, (message_extfont) ? CHARSET_CP437 : CHARSET_ITF);
+	if (!dos)
+		return 0;
+
+	for (i = 0; dos[i]; i++)
+		message_insert_char(dos[i]);
+
+	free(dos);
 
 	return 1;
 }
