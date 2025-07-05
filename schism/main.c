@@ -1118,7 +1118,8 @@ int schism_main(int argc, char** argv)
 	midi_engine_poll_ports();
 
 	/* now, launch the update thread. */
-	update_check();
+	if (cfg_check_for_updates)
+		update_check();
 
 	event_loop();
 
