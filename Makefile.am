@@ -31,7 +31,8 @@ fonts = \
 	font/half-width.fnt			\
 	font/hiragana.fnt			\
 	font/extended-latin.fnt		\
-	font/greek.fnt
+	font/greek.fnt \
+	font/cp866.fnt
 icons = \
 	icons/appIcon.icns		\
 	icons/it_logo.png		\

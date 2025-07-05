@@ -54,6 +54,10 @@ extern const uint8_t font_hiragana[];
 extern const uint8_t font_extended_latin[];
 extern const uint8_t font_greek[];
 
+/* ripped from KeyRus; the lower 128 chars have been
+ * snipped from it because they're just ASCII */
+extern const uint8_t font_cp866[];
+
 extern uint8_t font_half_data[1024];
 extern uint8_t *font_data; /* 2048 bytes */
 

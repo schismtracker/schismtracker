@@ -114,6 +114,7 @@ typedef struct {
 } charset_decode_t;
 
 SCHISM_CONST int char_digraph(int k1, int k2);
+SCHISM_CONST int char_unicode_to_cp866(uint32_t c);
 SCHISM_CONST int char_unicode_to_cp437(uint32_t c);
 SCHISM_CONST int char_unicode_to_itf(uint32_t c);
 

@@ -299,6 +299,18 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 	}
 }
 
+/* unknown character (basically an inverted '?') */
+static const uint8_t uFFFD[] = {
+	0x42, /* .X....X. */
+	0x99, /* X..XX..X */
+	0xF9, /* XXXXX..X */
+	0xF3, /* XXXX..XX */
+	0xE7, /* XXX..XXX */
+	0xFF, /* XXXXXXXX */
+	0xE7, /* XXX..XXX */
+	0x7E, /* .XXXXXX. */
+};
+
 /* generic scanner; BITS must be one of 8, 16, 32, 64
  *
  * okay, so turns out, my "new" scanner was only really
@@ -325,7 +337,8 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 			*const hf = font_half_data + (yl >> 1), \
 			*const hiragana = font_hiragana + yl, \
 			*const extlatin = font_extended_latin + yl, \
-			*const greek = font_greek + yl; \
+			*const greek = font_greek + yl, \
+			*const cp866 = font_cp866 + yl; \
 		const uint32_t *bp = &vgamem_read[y * 80]; \
 	\
 		uint_fast32_t x; \
@@ -383,8 +396,10 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 						: bioslow[(c8 & 0x7F) << 3]; \
 				} else if ((c8 = char_unicode_to_itf(c)) >= 0) { \
 					dg = itf[c8 << 3]; \
+				} else if ((c8 = char_unicode_to_cp866(c)) >= 0) { \
+					dg = cp866[(c8 & 0x7F) << 3]; \
 				} else { \
-					dg = itf['?' << 3]; \
+					dg = uFFFD[yl]; \
 				} \
 	\
 				fg = VGAMEM_UNICODE_FG(*bp); \
