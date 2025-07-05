@@ -62,20 +62,21 @@ static bool (SDLCALL *sdl3_ResetHint)(const char *name);
 
 static void (SDLCALL *sdl3_free)(void *ptr) = NULL;
 
+static bool (SDLCALL *sdl3_SetHintWithPriority)(const char *name, const char *value, SDL_HintPriority priority);
+static bool (SDLCALL *sdl3_ResetHint)(const char *name);
+
 /* ------------------------------------------------------------------------ */
 /* init/deinit audio subsystem */
-
-static int schism_init_audio_impl_cb(SCHISM_UNUSED void *p)
-{
-	return sdl3_InitSubSystem(SDL_INIT_AUDIO);
-}
 
 /* SDL_AudioInit and SDL_AudioQuit were completely removed
  * in SDL3, which means we have to do this always regardless. */
 static int schism_init_audio_impl(const char *name)
 {
-	return util_call_func_with_envvar(schism_init_audio_impl_cb, NULL,
-		"SDL_AUDIO_DRIVER", name);
+	int x;
+	sdl3_SetHintWithPriority(SDL_HINT_AUDIO_DRIVER, name, SDL_HINT_OVERRIDE);
+	x = sdl3_InitSubSystem(SDL_INIT_AUDIO);
+	sdl3_ResetHint(SDL_HINT_AUDIO_DRIVER);
+	return x;
 }
 
 static void schism_quit_audio_impl(void)
@@ -152,6 +153,8 @@ static void SDLCALL sdl3_audio_callback(void *userdata, SDL_AudioStream *stream,
 {
 	schism_audio_device_t *dev = (schism_audio_device_t *)userdata;
 
+	SCHISM_RUNTIME_ASSERT(dev->stream == stream, "streams should never differ");
+
 	if (additional_amount > 0) {
 		SCHISM_VLA_ALLOC(uint8_t, data, additional_amount);
 
@@ -200,7 +203,9 @@ static schism_audio_device_t *sdl3_audio_open_device(uint32_t id, const schism_a
 		sdl3_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, buf);
 	}
 
-	dev->stream = sdl3_OpenAudioDeviceStream((id == AUDIO_BACKEND_DEFAULT || id >= (uint32_t)device_count) ? SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK : devices[id], &sdl_desired, sdl3_audio_callback, dev);
+	dev->stream = sdl3_OpenAudioDeviceStream((id == AUDIO_BACKEND_DEFAULT || id >= (uint32_t)device_count)
+		? SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK
+		: devices[id], &sdl_desired, sdl3_audio_callback, dev);
 
 	// reset this before checking if opening succeeded
 	sdl3_ResetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES);
@@ -295,6 +300,9 @@ static int sdl3_audio_load_syms(void)
 	SCHISM_SDL3_SYM(ResetHint);
 
 	SCHISM_SDL3_SYM(free);
+
+	SCHISM_SDL3_SYM(SetHintWithPriority);
+	SCHISM_SDL3_SYM(ResetHint);
 
 	return 0;
 }

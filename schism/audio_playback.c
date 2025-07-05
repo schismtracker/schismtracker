@@ -1533,6 +1533,13 @@ int audio_init(const char *driver, const char *device)
 		: (!strcmp(driver, "directsound")) ? "dsound"
 		: driver;
 
+#ifdef SCHISM_SDL3
+	if (!*driver) {
+		const char *n = getenv("SDL_AUDIO_DRIVER");
+		if (n) driver = n;
+	}
+#endif
+
 #if defined(SCHISM_SDL12) || defined(SCHISM_SDL2) || defined(SCHISM_SDL3)
 	/* we ought to allow this envvar to work under SDL. */
 	if (!*driver) {
