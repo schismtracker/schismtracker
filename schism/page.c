@@ -1341,7 +1341,7 @@ static void redraw_top_info(void)
 
 	update_current_instrument();
 
-	draw_text_len(song_get_basename(), 18, 12, 4, 5, 0);
+	draw_text_utf8_len(song_get_basename(), 18, 12, 4, 5, 0);
 	draw_text_len(current_song->title, 25, 12, 3, 5, 0);
 
 	if ((status.flags & (CLASSIC_MODE | SONG_NEEDS_SAVE)) == SONG_NEEDS_SAVE)

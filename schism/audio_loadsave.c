@@ -94,10 +94,8 @@ static void _fix_names(song_t *qq)
 static void song_set_filename(const char *file)
 {
 	if (file && *file) {
-		void *out = charset_iconv_easy(file, CHARSET_CHAR, CHARSET_CP437);
-		strncpy(song_filename, out, ARRAY_SIZE(song_filename) - 1);
-		strncpy(song_basename, dmoz_path_get_basename(out), ARRAY_SIZE(song_basename) - 1);
-		free(out);
+		strncpy(song_filename, file, ARRAY_SIZE(song_filename) - 1);
+		strncpy(song_basename, dmoz_path_get_basename(file), ARRAY_SIZE(song_basename) - 1);
 		song_filename[ARRAY_SIZE(song_filename) - 1] = '\0';
 		song_basename[ARRAY_SIZE(song_basename) - 1] = '\0';
 	} else {
@@ -289,7 +287,7 @@ int song_load_unchecked(const char *file)
 
 	log_nl();
 	log_appendf(2, "Loading %s", base);
-	log_underline(strlen(base) + 8);
+	log_underline();
 
 	newsong = song_create_load(file);
 	if (!newsong) {
@@ -458,7 +456,7 @@ int song_export(const char *filename, const char *type)
 	log_nl();
 	log_nl();
 	log_appendf(2, "Exporting to %s", format->name);
-	log_underline(strlen(format->name) + 13);
+	log_underline();
 
 	/* disko does the rest of the log messages itself */
 	r = disko_export_song(mangle, format);
@@ -488,7 +486,7 @@ int song_save(const char *filename, const char *type)
 
 	log_nl();
 	log_appendf(2, "Saving %s module", format->name);
-	log_underline(strlen(format->name) + 14);
+	log_underline();
 
 /* TODO: add or replace file extension as appropriate
 
@@ -536,7 +534,7 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
 	switch (ret) {
 	case SAVE_SUCCESS:
 		status.flags &= ~SONG_NEEDS_SAVE;
-		if (strcasecmp(song_filename, mangle))
+		if (charset_strcasecmp(song_filename, CHARSET_UTF8, mangle, CHARSET_UTF8))
 			song_set_filename(mangle);
 		log_appendf(5, " Done");
 		break;

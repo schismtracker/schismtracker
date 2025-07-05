@@ -391,64 +391,202 @@ static int ucs4_to_utf8(uint32_t ch, disko_t* out)
 	return len;
 }
 
-/* this is useful elsewhere. */
-unsigned char char_unicode_to_cp437(uint32_t ch)
+int char_unicode_to_cp437(uint32_t c)
 {
-	/* not really correct, but whatever */
-	if (ch < 0x80)
-		return ch;
+	/* https://www.unicode.org/Public/MAPPINGS/VENDORS/MICSFT/PC/CP437.TXT */
+	if (c <= 127) return c;
 
-	switch (ch) {
+	switch (c) {
+	case 0x00c7: return 0x80; /* LATIN CAPITAL LETTER C WITH CEDILLA */
+	case 0x00fc: return 0x81; /* LATIN SMALL LETTER U WITH DIAERESIS */
+	case 0x00e9: return 0x82; /* LATIN SMALL LETTER E WITH ACUTE */
+	case 0x00e2: return 0x83; /* LATIN SMALL LETTER A WITH CIRCUMFLEX */
+	case 0x00e4: return 0x84; /* LATIN SMALL LETTER A WITH DIAERESIS */
+	case 0x00e0: return 0x85; /* LATIN SMALL LETTER A WITH GRAVE */
+	case 0x00e5: return 0x86; /* LATIN SMALL LETTER A WITH RING ABOVE */
+	case 0x00e7: return 0x87; /* LATIN SMALL LETTER C WITH CEDILLA */
+	case 0x00ea: return 0x88; /* LATIN SMALL LETTER E WITH CIRCUMFLEX */
+	case 0x00eb: return 0x89; /* LATIN SMALL LETTER E WITH DIAERESIS */
+	case 0x00e8: return 0x8a; /* LATIN SMALL LETTER E WITH GRAVE */
+	case 0x00ef: return 0x8b; /* LATIN SMALL LETTER I WITH DIAERESIS */
+	case 0x00ee: return 0x8c; /* LATIN SMALL LETTER I WITH CIRCUMFLEX */
+	case 0x00ec: return 0x8d; /* LATIN SMALL LETTER I WITH GRAVE */
+	case 0x00c4: return 0x8e; /* LATIN CAPITAL LETTER A WITH DIAERESIS */
+	case 0x00c5: return 0x8f; /* LATIN CAPITAL LETTER A WITH RING ABOVE */
+	case 0x00c9: return 0x90; /* LATIN CAPITAL LETTER E WITH ACUTE */
+	case 0x00e6: return 0x91; /* LATIN SMALL LIGATURE AE */
+	case 0x00c6: return 0x92; /* LATIN CAPITAL LIGATURE AE */
+	case 0x00f4: return 0x93; /* LATIN SMALL LETTER O WITH CIRCUMFLEX */
+	case 0x00f6: return 0x94; /* LATIN SMALL LETTER O WITH DIAERESIS */
+	case 0x00f2: return 0x95; /* LATIN SMALL LETTER O WITH GRAVE */
+	case 0x00fb: return 0x96; /* LATIN SMALL LETTER U WITH CIRCUMFLEX */
+	case 0x00f9: return 0x97; /* LATIN SMALL LETTER U WITH GRAVE */
+	case 0x00ff: return 0x98; /* LATIN SMALL LETTER Y WITH DIAERESIS */
+	case 0x00d6: return 0x99; /* LATIN CAPITAL LETTER O WITH DIAERESIS */
+	case 0x00dc: return 0x9a; /* LATIN CAPITAL LETTER U WITH DIAERESIS */
+	case 0x00a2: return 0x9b; /* CENT SIGN */
+	case 0x00a3: return 0x9c; /* POUND SIGN */
+	case 0x00a5: return 0x9d; /* YEN SIGN */
+	case 0x20a7: return 0x9e; /* PESETA SIGN */
+	case 0x0192: return 0x9f; /* LATIN SMALL LETTER F WITH HOOK */
+	case 0x00e1: return 0xa0; /* LATIN SMALL LETTER A WITH ACUTE */
+	case 0x00ed: return 0xa1; /* LATIN SMALL LETTER I WITH ACUTE */
+	case 0x00f3: return 0xa2; /* LATIN SMALL LETTER O WITH ACUTE */
+	case 0x00fa: return 0xa3; /* LATIN SMALL LETTER U WITH ACUTE */
+	case 0x00f1: return 0xa4; /* LATIN SMALL LETTER N WITH TILDE */
+	case 0x00d1: return 0xa5; /* LATIN CAPITAL LETTER N WITH TILDE */
+	case 0x00aa: return 0xa6; /* FEMININE ORDINAL INDICATOR */
+	case 0x00ba: return 0xa7; /* MASCULINE ORDINAL INDICATOR */
+	case 0x00bf: return 0xa8; /* INVERTED QUESTION MARK */
+	case 0x2310: return 0xa9; /* REVERSED NOT SIGN */
+	case 0x00ac: return 0xaa; /* NOT SIGN */
+	case 0x00bd: return 0xab; /* VULGAR FRACTION ONE HALF */
+	case 0x00bc: return 0xac; /* VULGAR FRACTION ONE QUARTER */
+	case 0x00a1: return 0xad; /* INVERTED EXCLAMATION MARK */
+	case 0x00ab: return 0xae; /* LEFT-POINTING DOUBLE ANGLE QUOTATION MARK */
+	case 0x00bb: return 0xaf; /* RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK */
+	case 0x2591: return 0xb0; /* LIGHT SHADE */
+	case 0x2592: return 0xb1; /* MEDIUM SHADE */
+	case 0x2593: return 0xb2; /* DARK SHADE */
+	case 0x2502: return 0xb3; /* BOX DRAWINGS LIGHT VERTICAL */
+	case 0x2524: return 0xb4; /* BOX DRAWINGS LIGHT VERTICAL AND LEFT */
+	case 0x2561: return 0xb5; /* BOX DRAWINGS VERTICAL SINGLE AND LEFT DOUBLE */
+	case 0x2562: return 0xb6; /* BOX DRAWINGS VERTICAL DOUBLE AND LEFT SINGLE */
+	case 0x2556: return 0xb7; /* BOX DRAWINGS DOWN DOUBLE AND LEFT SINGLE */
+	case 0x2555: return 0xb8; /* BOX DRAWINGS DOWN SINGLE AND LEFT DOUBLE */
+	case 0x2563: return 0xb9; /* BOX DRAWINGS DOUBLE VERTICAL AND LEFT */
+	case 0x2551: return 0xba; /* BOX DRAWINGS DOUBLE VERTICAL */
+	case 0x2557: return 0xbb; /* BOX DRAWINGS DOUBLE DOWN AND LEFT */
+	case 0x255d: return 0xbc; /* BOX DRAWINGS DOUBLE UP AND LEFT */
+	case 0x255c: return 0xbd; /* BOX DRAWINGS UP DOUBLE AND LEFT SINGLE */
+	case 0x255b: return 0xbe; /* BOX DRAWINGS UP SINGLE AND LEFT DOUBLE */
+	case 0x2510: return 0xbf; /* BOX DRAWINGS LIGHT DOWN AND LEFT */
+	case 0x2514: return 0xc0; /* BOX DRAWINGS LIGHT UP AND RIGHT */
+	case 0x2534: return 0xc1; /* BOX DRAWINGS LIGHT UP AND HORIZONTAL */
+	case 0x252c: return 0xc2; /* BOX DRAWINGS LIGHT DOWN AND HORIZONTAL */
+	case 0x251c: return 0xc3; /* BOX DRAWINGS LIGHT VERTICAL AND RIGHT */
+	case 0x2500: return 0xc4; /* BOX DRAWINGS LIGHT HORIZONTAL */
+	case 0x253c: return 0xc5; /* BOX DRAWINGS LIGHT VERTICAL AND HORIZONTAL */
+	case 0x255e: return 0xc6; /* BOX DRAWINGS VERTICAL SINGLE AND RIGHT DOUBLE */
+	case 0x255f: return 0xc7; /* BOX DRAWINGS VERTICAL DOUBLE AND RIGHT SINGLE */
+	case 0x255a: return 0xc8; /* BOX DRAWINGS DOUBLE UP AND RIGHT */
+	case 0x2554: return 0xc9; /* BOX DRAWINGS DOUBLE DOWN AND RIGHT */
+	case 0x2569: return 0xca; /* BOX DRAWINGS DOUBLE UP AND HORIZONTAL */
+	case 0x2566: return 0xcb; /* BOX DRAWINGS DOUBLE DOWN AND HORIZONTAL */
+	case 0x2560: return 0xcc; /* BOX DRAWINGS DOUBLE VERTICAL AND RIGHT */
+	case 0x2550: return 0xcd; /* BOX DRAWINGS DOUBLE HORIZONTAL */
+	case 0x256c: return 0xce; /* BOX DRAWINGS DOUBLE VERTICAL AND HORIZONTAL */
+	case 0x2567: return 0xcf; /* BOX DRAWINGS UP SINGLE AND HORIZONTAL DOUBLE */
+	case 0x2568: return 0xd0; /* BOX DRAWINGS UP DOUBLE AND HORIZONTAL SINGLE */
+	case 0x2564: return 0xd1; /* BOX DRAWINGS DOWN SINGLE AND HORIZONTAL DOUBLE */
+	case 0x2565: return 0xd2; /* BOX DRAWINGS DOWN DOUBLE AND HORIZONTAL SINGLE */
+	case 0x2559: return 0xd3; /* BOX DRAWINGS UP DOUBLE AND RIGHT SINGLE */
+	case 0x2558: return 0xd4; /* BOX DRAWINGS UP SINGLE AND RIGHT DOUBLE */
+	case 0x2552: return 0xd5; /* BOX DRAWINGS DOWN SINGLE AND RIGHT DOUBLE */
+	case 0x2553: return 0xd6; /* BOX DRAWINGS DOWN DOUBLE AND RIGHT SINGLE */
+	case 0x256b: return 0xd7; /* BOX DRAWINGS VERTICAL DOUBLE AND HORIZONTAL SINGLE */
+	case 0x256a: return 0xd8; /* BOX DRAWINGS VERTICAL SINGLE AND HORIZONTAL DOUBLE */
+	case 0x2518: return 0xd9; /* BOX DRAWINGS LIGHT UP AND LEFT */
+	case 0x250c: return 0xda; /* BOX DRAWINGS LIGHT DOWN AND RIGHT */
+	case 0x2588: return 0xdb; /* FULL BLOCK */
+	case 0x2584: return 0xdc; /* LOWER HALF BLOCK */
+	case 0x258c: return 0xdd; /* LEFT HALF BLOCK */
+	case 0x2590: return 0xde; /* RIGHT HALF BLOCK */
+	case 0x2580: return 0xdf; /* UPPER HALF BLOCK */
+	case 0x03b1: return 0xe0; /* GREEK SMALL LETTER ALPHA */
+	case 0x00df: return 0xe1; /* LATIN SMALL LETTER SHARP S */
+	case 0x0393: return 0xe2; /* GREEK CAPITAL LETTER GAMMA */
+	case 0x03c0: return 0xe3; /* GREEK SMALL LETTER PI */
+	case 0x03a3: return 0xe4; /* GREEK CAPITAL LETTER SIGMA */
+	case 0x03c3: return 0xe5; /* GREEK SMALL LETTER SIGMA */
+	case 0x00b5: return 0xe6; /* MICRO SIGN */
+	case 0x03c4: return 0xe7; /* GREEK SMALL LETTER TAU */
+	case 0x03a6: return 0xe8; /* GREEK CAPITAL LETTER PHI */
+	case 0x0398: return 0xe9; /* GREEK CAPITAL LETTER THETA */
+	case 0x03a9: return 0xea; /* GREEK CAPITAL LETTER OMEGA */
+	case 0x03b4: return 0xeb; /* GREEK SMALL LETTER DELTA */
+	case 0x221e: return 0xec; /* INFINITY */
+	case 0x03c6: return 0xed; /* GREEK SMALL LETTER PHI */
+	case 0x03b5: return 0xee; /* GREEK SMALL LETTER EPSILON */
+	case 0x2229: return 0xef; /* INTERSECTION */
+	case 0x2261: return 0xf0; /* IDENTICAL TO */
+	case 0x00b1: return 0xf1; /* PLUS-MINUS SIGN */
+	case 0x2265: return 0xf2; /* GREATER-THAN OR EQUAL TO */
+	case 0x2264: return 0xf3; /* LESS-THAN OR EQUAL TO */
+	case 0x2320: return 0xf4; /* TOP HALF INTEGRAL */
+	case 0x2321: return 0xf5; /* BOTTOM HALF INTEGRAL */
+	case 0x00f7: return 0xf6; /* DIVISION SIGN */
+	case 0x2248: return 0xf7; /* ALMOST EQUAL TO */
+	case 0x00b0: return 0xf8; /* DEGREE SIGN */
+	case 0x2219: return 0xf9; /* BULLET OPERATOR */
+	case 0x00b7: return 0xfa; /* MIDDLE DOT */
+	case 0x221a: return 0xfb; /* SQUARE ROOT */
+	case 0x207f: return 0xfc; /* SUPERSCRIPT LATIN SMALL LETTER N */
+	case 0x00b2: return 0xfd; /* SUPERSCRIPT TWO */
+	case 0x25a0: return 0xfe; /* BLACK SQUARE */
+	case 0x00a0: return 0xff; /* NO-BREAK SPACE */
+
+	/* -- CUSTOM CASES */
 	case 0x2019: return 39; // fancy apostrophe
 	case 0x00B3: return 51; // superscript three
+	}
+
+	return -1;
+}
+
+int char_unicode_to_itf(uint32_t c)
+{
+	if (c >= 32 && c <= 127) return c;
+
+	switch (c) {
+	case 0x263A: return 1;  // WHITE SMILING FACE
+	case 0x263B: return 2;  // BLACK SMILING FACE
+	case 0x2661:
+	case 0x2665: return 3;  // BLACK HEART
+	case 0x2662:
+	case 0x25C6:
+	case 0x2666: return 4;  // BLACK DIAMOND
+	case 0x2667:
+	case 0x2663: return 5;  // BLACK CLUBS
+	case 0x2664:
+	case 0x2660: return 6;  // BLACK SPADE
+	case 0x25CF: return 7;  // BLACK CIRCLE
+	case 0x25D8: return 8;  // INVERSE BULLET
+	case 0x25CB:
+	case 0x25E6:
+	case 0x25EF: return 9;  // LARGE CIRCLE
+	case 0x25D9: return 10; // INVERSE WHITE CIRCLE
+	case 0x2642: return 11; // MALE / MARS
+	case 0x2640: return 12; // FEMALE / VENUS
+	case 0x266A: return 13; // EIGHTH NOTE
+	case 0x266B: return 14; // BEAMED EIGHTH NOTES
+
+	case 0x2195: return 18; // UP DOWN ARROW
+	case 0x203C: return 19; // DOUBLE EXCLAMATION MARK
+	case 0x00B6: return 20; // PILCROW SIGN
+	case 0x00A7: return 21; // SECTION SIGN
+
+	case 0x21A8: return 23; // UP DOWN ARROW WITH BASE
+	case 0x2191: return 24; // UPWARD ARROW
+	case 0x2193: return 25; // DOWNWARD ARROW
+	case 0x2192: return 26; // RIGHTWARD ARROW
+	case 0x2190: return 27; // LEFTWARD ARROW
+
+	case 0x2194: return 29; // LEFT RIGHT ARROW
+
 	case 0x266F: return '#';// MUSIC SHARP SIGN
 	case 0x00A6: return 124;
 	case 0x0394:
 	case 0x2302: return 127;// HOUSE
-	// DIACRITICS
-	case 0x00C7: return 128;
-	case 0x00FC: return 129;
-	case 0x00E9: return 130;
-	case 0x00E2: return 131;
-	case 0x00E4: return 132;
-	case 0x00E0: return 133;
-	case 0x00E5: return 134;
-	case 0x00E7: return 135;
-	case 0x00EA: return 136;
-	case 0x00EB: return 137;
-	case 0x00E8: return 138;
-	case 0x00EF: return 139;
-	case 0x00EE: return 140;
-	case 0x00EC: return 141;
-	case 0x00C4: return 142;
-	case 0x00C5: return 143;
-	case 0x00C9: return 144;
-	case 0x00E6: return 145;
-	case 0x00C6: return 146;
-	case 0x00F4: return 147;
-	case 0x00F6: return 148;
-	case 0x00F2: return 149;
-	case 0x00FB: return 150;
-	case 0x00F9: return 151;
-	case 0x00FF: return 152;
-	case 0x00D6: return 153;
-	case 0x00DC: return 154;
+
+	case 0x203E: return 129;// UNDERLINE (???)
+
 	case 0x20B5:
 	case 0x20B2:
 	case 0x00A2: return 155;// CENT SIGN
 	case 0x00A3: return 156;// POUND SIGN
 	case 0x00A5: return 157;// YEN SIGN
-	case 0x20A7: return 158;
-	case 0x0192: return 159;
-	case 0x00E1: return 160;
-	case 0x00ED: return 161;
-	case 0x00F3: return 162;
-	case 0x00FA: return 163;
-	case 0x00F1: return 164;
-	case 0x00D1: return 165;
-	case 0x00AA: return 166;
-	case 0x00BA: return 167;
-	case 0x00BF: return 168;
+
 	case 0x2310: return 169;// REVERSED NOT SIGN
 	case 0x00AC: return 170;// NOT SIGN
 	case 0x00BD: return 171;// 1/2
@@ -456,9 +594,11 @@ unsigned char char_unicode_to_cp437(uint32_t ch)
 	case 0x00A1: return 173;// INVERTED EXCLAMATION MARK
 	case 0x00AB: return 174;// <<
 	case 0x00BB: return 175;// >>
+
 	case 0x2591: return 176;// LIGHT SHADE
 	case 0x2592: return 177;// MEDIUM SHADE
 	case 0x2593: return 178;// DARK SHADE
+
 	// BOX DRAWING
 	case 0x2502: return 179;
 	case 0x2524: return 180;
@@ -505,6 +645,7 @@ unsigned char char_unicode_to_cp437(uint32_t ch)
 	case 0x258C: return 221;// LEFT HALF BLOCK
 	case 0x2590: return 222;// RIGHT HALF BLOCK
 	case 0x2580: return 223;// UPPER HALF BLOCK
+
 	case 0x03B1: return 224;// GREEK SMALL LETTER ALPHA
 	case 0x03B2: return 225;// GREEK SMALL LETTER BETA
 	case 0x0393: return 226;// GREEK CAPITAL LETTER GAMMA
@@ -513,12 +654,14 @@ unsigned char char_unicode_to_cp437(uint32_t ch)
 	case 0x2211: return 228;// N-ARY SUMMATION / CAPITAL SIGMA
 	case 0x03C3: return 229;// GREEK SMALL LETTER SIGMA
 	case 0x03BC:
-	case 0x00B5: return 230;// GREEK SMALL LETTER MU
+	case 0x00b5: return 230;// GREEK SMALL LETTER MU
 	case 0x03C4:
 	case 0x03D2: return 231;// GREEK UPSILON+HOOK
+
 	case 0x03B8: return 233;// GREEK SMALL LETTER THETA
 	case 0x03A9: return 234;// GREEK CAPITAL LETTER OMEGA
 	case 0x03B4: return 235;// GREEK SMALL LETTER DELTA
+
 	case 0x221E: return 236;// INFINITY
 	case 0x00D8:
 	case 0x00F8: return 237;// LATIN ... LETTER O WITH STROKE
@@ -526,7 +669,7 @@ unsigned char char_unicode_to_cp437(uint32_t ch)
 	case 0x2229:
 	case 0x03A0: return 239;// GREEK CAPITAL LETTER PI
 	case 0x039E: return 240;// GREEK CAPITAL LETTER XI
-	case 0x00B1: return 241;// PLUS-MINUS SIGN
+	case 0x00b1: return 241;// PLUS-MINUS SIGN
 	case 0x2265: return 242;// GREATER-THAN OR EQUAL TO
 	case 0x2264: return 243;// LESS-THAN OR EQUAL TO
 	case 0x2320: return 244;// TOP HALF INTEGRAL
@@ -538,23 +681,40 @@ unsigned char char_unicode_to_cp437(uint32_t ch)
 	case 0x2219:
 	case 0x0387: return 250;// GREEK ANO TELEIA
 	case 0x221A: return 251;// SQUARE ROOT
-	case 0x207F: return 252;// SUPERSCRIPT SMALL LETTER N
+	// NO UNICODE ALLOCATION?
 	case 0x00B2: return 253;// SUPERSCRIPT TWO
 	case 0x220E: return 254;// QED
+
+	// No idea if this is right ;P
 	case 0x00A0: return 255;
-	default:
-#ifdef SCHISM_CHARSET_DEBUG
-		log_appendf(1, " charset: unknown character U+%4x", c);
-#endif
-		return '?';
-	};
+	}
+
+	/* nothing */
+	return -1;
 }
 
 static int ucs4_to_cp437(uint32_t ch, disko_t* out)
 {
-	uint8_t out_c = char_unicode_to_cp437(ch);
+	uint8_t out_c8;
+	int out_c;
 
-	disko_write(out, &out_c, sizeof(out_c));
+	out_c = char_unicode_to_cp437(ch);
+	out_c8 = (out_c < 0) ? '?' : out_c;
+
+	disko_write(out, &out_c8, sizeof(out_c8));
+
+	return CHARSET_ENCODE_SUCCESS;
+}
+
+static int ucs4_to_itf(uint32_t ch, disko_t *out)
+{
+	uint8_t out_c8;
+	int out_c;
+
+	out_c = char_unicode_to_itf(ch);
+	out_c8 = (out_c < 0) ? '?' : out_c;
+
+	disko_write(out, &out_c8, sizeof(out_c8));
 
 	return CHARSET_ENCODE_SUCCESS;
 }

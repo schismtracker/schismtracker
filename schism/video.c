@@ -643,7 +643,7 @@ void video_report(void)
 	log_nl();
 
 	log_append(2, 0, "Video initialised");
-	log_underline(17);
+	log_underline();
 
 	backend->report();
 }

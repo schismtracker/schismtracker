@@ -361,6 +361,7 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 			} else if (*bp & VGAMEM_FONT_UNICODE) { \
 				/* Any unicode character. */ \
 				const uint_fast32_t c = VGAMEM_UNICODE_CODEPOINT(*bp); \
+				int c8; \
 	\
 				/* These are ordered by how often they will probably appear
 				 * for an average user of Schism (i.e., English speakers). */ \
@@ -376,9 +377,14 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 				} else if (c >= 0x3040 && c <= 0x309F) { \
 					/* japanese hiragana */ \
 					dg = hiragana[(c - 0x3040) << 3]; \
+				} else if ((c8 = char_unicode_to_cp437(c)) >= 0) { \
+					dg = (c8 & 0x80) \
+						? bios[(c8 & 0x7F) << 3] \
+						: bioslow[(c8 & 0x7F) << 3]; \
+				} else if ((c8 = char_unicode_to_itf(c)) >= 0) { \
+					dg = itf[c8 << 3]; \
 				} else { \
-					/* will display a ? if no cp437 equivalent found */ \
-					dg = itf[char_unicode_to_cp437(c) << 3]; \
+					dg = itf['?' << 3]; \
 				} \
 	\
 				fg = VGAMEM_UNICODE_FG(*bp); \

@@ -26,13 +26,28 @@
 #include "headers.h"
 #include "util.h"
 
+/* appends a line to the log in UTF-8 (all functions are a
+ * simple wrapper around this one in some form or another) */
+void log_append_utf8(int color, int must_free, const char *text);
+
+/* convenience function -- underlines the previous line */
+void log_underline(void);
+
+/* newline */
 void log_nl(void);
+
+/* appends a line into the log in the ITF font */
 void log_append(int color, int must_free, const char *text);
+
+/* appends a line into the log in the ITF font if bios_font is zero, else
+ * appends in the BIOS font */
 void log_append2(int bios_font, int color, int must_free, const char *text);
+
+/* appends a line after being formatted with printf */
 void log_appendf(int color, const char *format, ...)
 	SCHISM_FORMAT_PRINTF(2, 3);
-void log_underline(int chars);
 
+/* like perror() but dumps into the log */
 void log_perror(const char *prefix);
 
 void status_text_flash(const char *format, ...)
