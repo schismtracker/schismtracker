@@ -362,13 +362,13 @@ static void message_insert_char(int c)
 				n--;
 			} while (n);
 		}
-	} else if (c < 32 && c != '\r') {
+	} else if (c < 32 && c != '\r' && c != '\n') {
 		return;
 	} else {
 		if (!message_add_char(c, cursor_pos))
 			return;
 		cursor_pos++;
-		if (c == '\r') {
+		if (c == '\r' || c == '\n') {
 			cursor_char = 0;
 			cursor_line++;
 		} else {
@@ -582,7 +582,9 @@ static int message_handle_key_editmode(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 0;
 		new_cursor_line += MOUSE_SCROLL_LINES;
-	} else if (k->mouse == MOUSE_CLICK && k->mouse_button == 2) {
+	} else if (k->mouse == MOUSE_CLICK && k->mouse_button == MOUSE_BUTTON_RIGHT) {
+		/* hm, why is this checking for the *right* mouse button?
+		 * at least in Xorg, it's always the MIDDLE mouse button that does this. */
 		if (k->state == KEY_RELEASE)
 			status.flags |= CLIPPY_PASTE_SELECTION;
 		return 1;
@@ -731,8 +733,13 @@ static int message_handle_key_editmode(struct key_event * k)
 				return 1;
 			}
 		} else if (k->mouse == MOUSE_NONE) {
-			if (k->text)
+			if (k->text) {
 				return message_handle_text_input_editmode(k->text);
+			} else if (k->sym == SCHISM_KEYSYM_TAB) {
+				if (k->state == KEY_PRESS)
+					message_insert_char('\t');
+				return 1;
+			}
 
 			return 0;
 		}
