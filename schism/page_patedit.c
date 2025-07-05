@@ -4134,12 +4134,6 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	return 0;
 }
 
-/* this hack is necessary because schism sends MOUSE_CLICK events
- * while the mouseclick is down AND the mouse is dragged.
- *
- * really this behavior should be changed... */
-static int mute_toggle_hack[MAX_CHANNELS];
-
 static int pattern_editor_handle_key_default(struct key_event * k)
 {
 	int n = kbd_get_note(k);
@@ -4197,11 +4191,6 @@ static int pattern_editor_handle_key(struct key_event * k)
 	unsigned int basex;
 
 	if (k->mouse != MOUSE_NONE) {
-		if (k->state == KEY_RELEASE) {
-			/* mouseup */
-			memset(mute_toggle_hack, 0, sizeof(mute_toggle_hack));
-		}
-
 		if ((k->mouse == MOUSE_CLICK || k->mouse == MOUSE_DBLCLICK) && k->state == KEY_RELEASE) {
 			shift_selection_end();
 		}
@@ -4246,11 +4235,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 				|| k->x < basex + track_view->width)) {
 				if (!shift_selection.in_progress && (k->y == 14 || k->y == 13)) {
 					if (k->state == KEY_PRESS) {
-						if (!mute_toggle_hack[n-1]) {
-							song_toggle_channel_mute(n-1);
-							status.flags |= NEED_UPDATE;
-							mute_toggle_hack[n-1]=1;
-						}
+						song_toggle_channel_mute(n-1);
+						status.flags |= NEED_UPDATE;
 					}
 					break;
 				}
@@ -4332,7 +4318,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		if (nr < 0) nr = 0;
 		current_position = np; current_channel = nc; current_row = nr;
 
-		if (k->state == KEY_PRESS && k->sy > 14) {
+		if ((k->state == KEY_PRESS || k->state == KEY_DRAG) && k->sy > 14) {
 			if (!shift_selection.in_progress) {
 				shift_selection_begin();
 			} else {

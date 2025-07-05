@@ -349,8 +349,8 @@ static void dir_list_reposition(void)
 
 	if (current_dir < top_dir)
 		top_dir = current_dir;
-	else if (current_dir > top_dir + 21)
-		top_dir = current_dir - 21;
+	else if (current_dir > top_dir + 22)
+		top_dir = current_dir - 22;
 
 	status.flags |= NEED_UPDATE;
 }
@@ -868,8 +868,8 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 				case MOUSE_SCROLL_UP:
 				case MOUSE_SCROLL_DOWN:
 					top_dir += (k->mouse == MOUSE_SCROLL_UP) ? -MOUSE_SCROLL_LINES : MOUSE_SCROLL_LINES;
-					if (top_dir > dlist.num_dirs - 21)
-							top_dir = dlist.num_dirs - 21;
+					if (top_dir > dlist.num_dirs - 22)
+							top_dir = dlist.num_dirs - 22;
 					if (top_dir < 0)
 							top_dir = 0;
 					status.flags |= NEED_UPDATE;
@@ -890,10 +890,10 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 		new_dir++;
 		break;
 	case SCHISM_KEYSYM_PAGEUP:
-		new_dir -= 21;
+		new_dir -= 22;
 		break;
 	case SCHISM_KEYSYM_PAGEDOWN:
-		new_dir += 21;
+		new_dir += 22;
 		break;
 	case SCHISM_KEYSYM_HOME:
 		new_dir = 0;
@@ -1074,7 +1074,7 @@ void load_module_load_page(struct page *page)
 	widgets_loadmodule[1].x = 50;
 	widgets_loadmodule[1].y = 13;
 	widgets_loadmodule[1].width = 27;
-	widgets_loadmodule[1].height = 21;
+	widgets_loadmodule[1].height = 22;
 
 	widget_create_textentry(widgets_loadmodule + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, ARRAY_SIZE(filename_entry) - 1);
 	widgets_loadmodule[2].activate = filename_entered;
@@ -1147,7 +1147,7 @@ void save_module_load_page(struct page *page, int do_export)
 	widgets_exportsave[1].x = 50;
 	widgets_exportsave[1].y = 13;
 	widgets_exportsave[1].width = 18;
-	widgets_exportsave[1].height = 21;
+	widgets_exportsave[1].height = 22;
 
 	widget_create_textentry(widgets_exportsave + 2, 13, 46, 64, 0, 3, 3, NULL, filename_entry, ARRAY_SIZE(filename_entry) - 1);
 	widgets_exportsave[2].activate = filename_entered;

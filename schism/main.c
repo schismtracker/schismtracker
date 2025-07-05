@@ -535,24 +535,24 @@ SCHISM_NORETURN static void event_loop(void)
 				// Handle the coordinate translation
 				switch (se.type) {
 				case SCHISM_MOUSEWHEEL:
-					kk.state = -1;  /* neither KEY_PRESS nor KEY_RELEASE (???) */
+					kk.state = KEY_DRAG; /* ummm */
 					video_translate(se.wheel.mouse_x, se.wheel.mouse_y, &kk.fx, &kk.fy);
 					kk.mouse = (se.wheel.y > 0) ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN;
 					break;
 				case SCHISM_MOUSEMOTION:
+					kk.state = KEY_DRAG;
 					video_translate(se.motion.x, se.motion.y, &kk.fx, &kk.fy);
 					break;
 				case SCHISM_MOUSEBUTTONDOWN:
 					video_translate(se.button.x, se.button.y, &kk.fx, &kk.fy);
 					// we also have to update the current button
-					if ((status.keymod & SCHISM_KEYMOD_CTRL)
-					|| se.button.button == MOUSE_BUTTON_RIGHT) {
-						button = MOUSE_BUTTON_RIGHT;
-					} else if ((status.keymod & (SCHISM_KEYMOD_ALT|SCHISM_KEYMOD_GUI))
-					|| se.button.button == MOUSE_BUTTON_MIDDLE) {
-						button = MOUSE_BUTTON_MIDDLE;
+					if (se.button.button == MOUSE_BUTTON_LEFT) {
+						/* macosx cruft: Ctrl-LeftClick = RightClick */
+						button = (status.keymod & SCHISM_KEYMOD_CTRL) ? (MOUSE_BUTTON_RIGHT)
+							: (status.keymod & (SCHISM_KEYMOD_ALT|SCHISM_KEYMOD_GUI)) ? (MOUSE_BUTTON_MIDDLE)
+							: MOUSE_BUTTON_LEFT;
 					} else {
-						button = MOUSE_BUTTON_LEFT;
+						button = se.button.button;
 					}
 					break;
 				case SCHISM_MOUSEBUTTONUP:
@@ -590,9 +590,7 @@ SCHISM_NORETURN static void event_loop(void)
 
 					if (kk.state == KEY_RELEASE) {
 						ticker = timer_ticks();
-						if (lx == kk.x
-						&& ly == kk.y
-						&& (ticker - last_mouse_down) < 300) {
+						if (lx == kk.x && ly == kk.y && (ticker - last_mouse_down) < 300) {
 							last_mouse_down = 0;
 							kk.mouse = MOUSE_DBLCLICK;
 						} else {
@@ -626,7 +624,8 @@ SCHISM_NORETURN static void event_loop(void)
 						downtrip = 0;
 						break;
 					}
-					handle_key(&kk);
+					//if (se.type != SCHISM_MOUSEMOTION)
+						handle_key(&kk);
 					break;
 				default:
 					break;

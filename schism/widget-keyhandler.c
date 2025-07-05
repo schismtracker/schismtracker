@@ -490,14 +490,11 @@ int widget_handle_key(struct key_event * k)
 				n = k->fx - (widget->x * k->rx);
 				wx = (widget->width-1) * k->rx;
 			}
-			if (n < 0) n = 0;
-			else if (n >= wx) n = wx;
-			n = fmin + ((n * (fmax - fmin)) / wx);
 
-			if (n < fmin)
-				n = fmin;
-			else if (n > fmax)
-				n = fmax;
+			n = CLAMP(n, 0, wx);
+			n = fmin + ((n * (fmax - fmin)) / wx);
+			n = CLAMP(n, fmin, fmax);
+
 			if (current_type == WIDGET_PANBAR) {
 				widget->d.panbar.muted = 0;
 				widget->d.panbar.surround = 0;
@@ -563,7 +560,9 @@ int widget_handle_key(struct key_event * k)
 		case WIDGET_TEXTENTRY:
 			if (status.flags & DISKWRITER_ACTIVE) return 0;
 			/* LOL WOW THIS SUCKS */
-			if (k->mouse == MOUSE_CLICK && k->on_target) {
+			if (/*k->state == KEY_PRESS && */k->mouse == MOUSE_CLICK && k->on_target) {
+				size_t len;
+
 				/* position cursor */
 				n = k->x - widget->x;
 				n = CLAMP(n, 0, widget->width - 1);
@@ -571,10 +570,13 @@ int widget_handle_key(struct key_event * k)
 				wx = CLAMP(wx, 0, widget->width - 1);
 				widget->d.textentry.cursor_pos = n+widget->d.textentry.firstchar;
 				wx  = wx+widget->d.textentry.firstchar;
-				if (widget->d.textentry.cursor_pos >= (signed) strlen(widget->d.textentry.text))
-					widget->d.textentry.cursor_pos = strlen(widget->d.textentry.text);
-				if (wx >= (signed) strlen(widget->d.textentry.text))
-					wx = strlen(widget->d.textentry.text);
+
+				len = strlen(widget->d.textentry.text);
+
+				if (widget->d.textentry.cursor_pos >= (signed)len)
+					widget->d.textentry.cursor_pos = len;
+				if (wx >= len)
+					wx = len;
 				status.flags |= NEED_UPDATE;
 			}
 
@@ -584,14 +586,14 @@ int widget_handle_key(struct key_event * k)
 
 		case WIDGET_NUMENTRY:
 			if (status.flags & DISKWRITER_ACTIVE) return 0;
-			if (k->mouse == MOUSE_CLICK && k->on_target) {
+			if (/*k->state == KEY_PRESS && */k->mouse == MOUSE_CLICK && k->on_target) {
 				/* position cursor */
 				n = k->x - widget->x;
 				n = CLAMP(n, 0, widget->width - 1);
 				wx = k->sx - widget->x;
 				wx = CLAMP(wx, 0, widget->width - 1);
 				if (n >= widget->width)
-					n = widget->width-1;
+					n = widget->width - 1;
 				*widget->d.numentry.cursor_pos = n;
 				status.flags |= NEED_UPDATE;
 			}

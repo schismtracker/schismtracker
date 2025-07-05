@@ -522,6 +522,7 @@ enum {
 typedef uint16_t schism_keymod_t;
 
 enum key_state {
+	KEY_DRAG = -1, /* only for mousecursor */
 	KEY_PRESS = 0,
 	KEY_RELEASE,
 };
