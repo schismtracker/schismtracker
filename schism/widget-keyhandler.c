@@ -271,7 +271,7 @@ static int widget_listbox_handle_key(struct widget *w, struct key_event *k)
 	switch (k->mouse) {
 	case MOUSE_DBLCLICK:
 	case MOUSE_CLICK:
-		if (k->state == KEY_PRESS)
+		if (k->state != KEY_PRESS)
 			return 0;
 		if (k->x < w->x || k->y < w->y || k->y > (w->y + w->height - 1) || k->x > (w->x + w->width - 1)) return 0;
 		new_device = (int32_t)w->d.listbox.top + k->y - w->y;
