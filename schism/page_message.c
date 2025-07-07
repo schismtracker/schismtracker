@@ -446,7 +446,7 @@ static void message_delete_line(void)
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
-static void message_clear(SCHISM_UNUSED void *data)
+static void message_clear(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	current_song->message[0] = 0;
 	memused_songchanged();
