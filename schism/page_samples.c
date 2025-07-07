@@ -503,7 +503,7 @@ static int sample_list_handle_key_on_list(struct key_event * k)
 			if (k->mod & SCHISM_KEYMOD_ALT) {
 				// restrict position to the "old" value of _last_vis_sample()
 				// (this is entirely for aesthetic reasons)
-				if (status.last_keysym != SCHISM_KEYSYM_DOWN && !k->is_repeat)
+				if (!LAST_KEY_IS(SCHISM_KEYSYM_DOWN, SCHISM_KEYMOD_ALT) && !k->is_repeat)
 					_altswap_lastvis = _last_vis_sample();
 				if (current_sample < _altswap_lastvis) {
 					new_sample = current_sample + 1;

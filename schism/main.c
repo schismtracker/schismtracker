@@ -374,6 +374,23 @@ static void key_event_reset(struct key_event *kk, int start_x, int start_y)
 
 /* -------------------------------------------- */
 
+static int is_modifier_key(schism_keysym_t sym)
+{
+	switch (sym) {
+	case SCHISM_KEYSYM_LCTRL:
+	case SCHISM_KEYSYM_LSHIFT:
+	case SCHISM_KEYSYM_LALT:
+	case SCHISM_KEYSYM_LGUI:
+	case SCHISM_KEYSYM_RCTRL:
+	case SCHISM_KEYSYM_RSHIFT:
+	case SCHISM_KEYSYM_RALT:
+	case SCHISM_KEYSYM_RGUI:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 SCHISM_NORETURN static void event_loop(void)
 {
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
@@ -503,8 +520,10 @@ SCHISM_NORETURN static void event_loop(void)
 				} else {
 					kbd_cache_key_repeat(&kk);
 
-					status.last_keysym = last_key;
-					last_key = kk.sym;
+					if (!is_modifier_key(kk.sym)) {
+						status.last_keysym = kk.sym;
+						status.last_keymod = kk.mod;
+					}
 				}
 				break;
 			case SCHISM_MOUSEMOTION:
@@ -829,7 +848,7 @@ SCHISM_NORETURN static void event_loop(void)
 		if (!events_have_event())
 			timer_msleep(5);
 	}
-	
+
 	schism_exit(0);
 }
 
