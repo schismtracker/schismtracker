@@ -78,8 +78,9 @@ extern size_t audio_device_list_size;
 /* 8-bit audio is always unsigned; everything else is signed. */
 typedef struct {
 	uint32_t freq; /* sample rate */
-	uint8_t bits; /* one of [8, 16, 32], always system byte order */
+	uint8_t bits; /* one of [8, 16, 24, 32, 64], always system byte order */
 	uint8_t channels; /* channels */
+	uint8_t fp; /* floating point boolean */
 	uint16_t samples; /* buffer size in samples */
 	void (*callback)(uint8_t *stream, int len);
 } schism_audio_spec_t;
@@ -264,6 +265,9 @@ int audio_init(const char *driver, const char *device);
 int audio_reinit(uint32_t *device);
 
 void audio_quit(void);
+
+int audio_has_control_panel(void);
+void audio_open_control_panel(void);
 
 /* eq */
 void song_init_eq(int do_reset, uint32_t mix_freq);

@@ -390,6 +390,7 @@ use_network=no
 use_controller=no
 use_xbox=no
 use_avfoundation=no
+use_asio=no
 posix_fseek=unknown
 
 have_loadso=no
@@ -399,23 +400,23 @@ darwin*)
 	AC_MSG_RESULT([found Darwin host])
 
 
-		AC_MSG_CHECKING([for Mac OS X El Capitan SDK])
-		AC_COMPILE_IFELSE([
-			#include <AvailabilityMacros.h>
+	AC_MSG_CHECKING([for Mac OS X El Capitan SDK])
+	AC_COMPILE_IFELSE([
+		#include <AvailabilityMacros.h>
 
-			#if MAC_OS_X_VERSION_MAX_ALLOWED < 101100
-			# error "too old"
-			#endif
-		], [use_avfoundation=yes], [])
-		AC_MSG_RESULT([$use_avfoundation])
+		#if MAC_OS_X_VERSION_MAX_ALLOWED < 101100
+		# error "too old"
+		#endif
+	], [use_avfoundation=yes], [])
+	AC_MSG_RESULT([$use_avfoundation])
 
-		use_macosx=yes
-		posix_fseek=yes
-		AC_DEFINE([SCHISM_MACOSX], [1], [Mac OS X])
-		;;
-	macos*)
-		# Retro68 toolchain
-		AC_MSG_RESULT([found Classic Mac OS host])
+	use_macosx=yes
+	posix_fseek=yes
+	AC_DEFINE([SCHISM_MACOSX], [1], [Mac OS X])
+	;;
+macos*)
+	# Retro68 toolchain
+	AC_MSG_RESULT([found Classic Mac OS host])
 
 	use_macos=yes
 	AC_DEFINE([SCHISM_MACOS], [1], [Classic Mac OS])
@@ -575,6 +576,22 @@ AC_SEARCH_LIBS([dlopen], [dl], [
 	have_loadso=yes
 ], [])
 
+AM_CONDITIONAL([USE_ASIO], [false])
+if test "x$use_win32" = "xyes"; then
+	dnl stupid ASIO
+	AC_COMPILE_IFELSE(
+		[AC_LANG_SOURCE(
+			[[extern int (*__fastcall f)(void *This);]],
+		)],
+		[use_asio=yes],
+		[]
+	)
+
+	if test "x$use_asio" = "xyes"; then
+		AC_DEFINE([USE_ASIO], [1], [Compile ASIO support on Windows])
+	fi
+fi
+
 if test "x$use_macosx" = "xyes"; then
 	AC_PROG_OBJC
 
@@ -620,9 +637,8 @@ AM_CONDITIONAL([USE_OS2], [test "x$use_os2" = "xyes"])
 AM_CONDITIONAL([am__fastdepOBJC], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([USE_NETWORK], [test "x$use_network" = "xyes"])
 AM_CONDITIONAL([USE_XBOX], [test "x$use_xbox" = "xyes"])
-
-dnl this ought to have something better
 AM_CONDITIONAL([USE_AVFOUNDATION], [test "x$use_avfoundation" = "xyes"])
+AM_CONDITIONAL([USE_ASIO], [test "x$use_asio" = "xyes"])
 
 dnl ------------------------------------------------------------------------
 

@@ -48,11 +48,18 @@ typedef struct {
 	void (*lock_device)(schism_audio_device_t *device);
 	void (*unlock_device)(schism_audio_device_t *device);
 	void (*pause_device)(schism_audio_device_t *device, int paused);
+
+	/* Specific to ASIO */
+	void (*control_panel)(schism_audio_device_t *device);
 } schism_audio_backend_t;
 
 #ifdef SCHISM_WIN32
 extern const schism_audio_backend_t schism_audio_backend_dsound;
 extern const schism_audio_backend_t schism_audio_backend_waveout;
+#endif
+
+#ifdef USE_ASIO
+extern const schism_audio_backend_t schism_audio_backend_asio;
 #endif
 
 #ifdef SCHISM_MACOSX

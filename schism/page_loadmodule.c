@@ -349,8 +349,8 @@ static void dir_list_reposition(void)
 
 	if (current_dir < top_dir)
 		top_dir = current_dir;
-	else if (current_dir > top_dir + 22)
-		top_dir = current_dir - 22;
+	else if (current_dir > top_dir + 21)
+		top_dir = current_dir - 21;
 
 	status.flags |= NEED_UPDATE;
 }
@@ -867,8 +867,8 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 				case MOUSE_SCROLL_UP:
 				case MOUSE_SCROLL_DOWN:
 					top_dir += (k->mouse == MOUSE_SCROLL_UP) ? -MOUSE_SCROLL_LINES : MOUSE_SCROLL_LINES;
-					if (top_dir > dlist.num_dirs - 22)
-							top_dir = dlist.num_dirs - 22;
+					if (top_dir > dlist.num_dirs - 21)
+							top_dir = dlist.num_dirs - 21;
 					if (top_dir < 0)
 							top_dir = 0;
 					status.flags |= NEED_UPDATE;
@@ -889,10 +889,10 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 		new_dir++;
 		break;
 	case SCHISM_KEYSYM_PAGEUP:
-		new_dir -= 22;
+		new_dir -= 21;
 		break;
 	case SCHISM_KEYSYM_PAGEDOWN:
-		new_dir += 22;
+		new_dir += 21;
 		break;
 	case SCHISM_KEYSYM_HOME:
 		new_dir = 0;

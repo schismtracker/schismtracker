@@ -66,6 +66,11 @@ unsigned int audio_buffer_samples = 0; /* multiply by audio_sample_size to get b
 unsigned int audio_output_channels = 2;
 unsigned int audio_output_bits = 16;
 
+/* ... these are an ugly hack to be able to get floating-point output
+ * don't try this at home */
+static unsigned int audio_output_bits_real = 16;
+static int audio_output_fp = 0;
+
 static unsigned int audio_sample_size;
 static int audio_buffers_per_second = 0;
 static int audio_writeout_count = 0;
@@ -112,7 +117,11 @@ static const schism_audio_backend_t *backends[] = {
 #ifdef SCHISM_SDL12
 	&schism_audio_backend_sdl12,
 #endif
-	NULL,
+#ifdef USE_ASIO
+	/* all the way at the bottom... */
+	&schism_audio_backend_asio,
+#endif
+	NULL
 };
 
 // A list of all currently initialized backends
@@ -126,6 +135,44 @@ static const schism_audio_backend_t *backend = NULL;
 // page_patedit.c
 extern int midi_last_bend_hit[MAX_CHANNELS];
 
+static inline SCHISM_ALWAYS_INLINE
+uint32_t s32_to_f32(void *ptr, const int32_t *buffer, uint32_t samples)
+{
+	float *p = (float *)ptr;
+	uint32_t i;
+
+	for (i = 0; i < samples; i++)
+		p[i] = buffer[i] * (1.0f / 2147483648.0f);
+
+	return samples * 4;
+}
+
+static inline SCHISM_ALWAYS_INLINE
+uint32_t s32_to_f64(void *ptr, const int32_t *buffer, uint32_t samples)
+{
+	double *p = (double *)ptr;
+	uint32_t i;
+
+	for (i = 0; i < samples; i++)
+		p[i] = buffer[i] * (1.0 / 2147483648.0);
+
+	return samples * 8;
+}
+
+static inline SCHISM_ALWAYS_INLINE
+uint32_t s32_to_s24(void *ptr, const int32_t *buffer, uint32_t samples)
+{
+	unsigned char *p = (unsigned char *)ptr;
+	uint32_t i;
+
+	for (i = 0; i < samples; i++) {
+		memcpy(p, (char *)(buffer + i) + 1, 3);
+		p += 3;
+	}
+
+	return samples * 3;
+}
+
 // this gets called from the backend
 static void audio_callback(uint8_t *stream, int len)
 {
@@ -136,9 +183,9 @@ static void audio_callback(uint8_t *stream, int len)
 	memset(stream, 0, len);
 
 	if (!stream || !len || !current_song) {
-		if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT) {
+		if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT)
 			vis_work_8m(NULL, 0);
-		}
+
 		song_stop_unlocked(0);
 		goto POST_EVENT;
 	}
@@ -152,7 +199,7 @@ static void audio_callback(uint8_t *stream, int len)
 	if (current_song->flags & SONG_ENDREACHED) {
 		n = 0;
 	} else {
-		n = csf_read(current_song, stream, len);
+		n = csf_read(current_song, audio_buffer, audio_buffer_samples * audio_sample_size);
 		if (!n) {
 			if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT)
 				vis_work_8m(NULL, 0);
@@ -163,12 +210,19 @@ static void audio_callback(uint8_t *stream, int len)
 		samples_played += n;
 	}
 
-	memcpy(audio_buffer, stream, n * audio_sample_size);
+	if (audio_output_bits_real == 24) {
+		s32_to_s24(stream, (int32_t *)audio_buffer, n * audio_output_channels);
+	} else if (audio_output_fp) {
+		((audio_output_bits_real == 64) ? s32_to_f64 : s32_to_f32)(stream,
+			(int32_t *)audio_buffer, n * audio_output_channels);
+	} else {
+		memcpy(stream, audio_buffer, n * audio_sample_size);
+	}
 
 	/* convert 8-bit unsigned to signed by XORing the high bit */
 	if (audio_output_bits == 8)
 		for (i = 0; i < n * 2; i++)
-			audio_buffer[i] ^= 0x80;
+			((char *)audio_buffer)[i] ^= 0x80;
 
 	if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT) {
 		// I don't really like this...
@@ -1291,7 +1345,6 @@ void song_stop_audio(void)
 	if (backend) backend->pause_device(current_audio_device, 1);
 }
 
-
 /* --------------------------------------------------------------------------------------------------------- */
 /* This is completely horrible! :) */
 
@@ -1316,8 +1369,9 @@ uint32_t song_audio_device_id(void)
 static int audio_lookup_device_name(const char *device, uint32_t *pdevid)
 {
 	const uint32_t devices_size = backend->device_count();
+	uint32_t i;
 
-	for (uint32_t i = 0; i < devices_size; i++) {
+	for (i = 0; i < devices_size; i++) {
 		const char *n = backend->device_name(i);
 		if (!n) continue; // should never happen, hopefully...
 
@@ -1408,20 +1462,32 @@ static int _audio_open_device(uint32_t device, int verbose)
 success:
 	song_lock_audio();
 
-	csf_set_wave_config(current_song, obtained.freq,
-		obtained.bits,
-		obtained.channels);
 	audio_output_channels = obtained.channels;
-	audio_output_bits = obtained.bits;
+
+	switch (obtained.bits) {
+	/* 24-bit int */
+	case 24: SCHISM_FALLTHROUGH;
+	/* float 64-bit */
+	case 64: audio_output_bits = 32; break;
+	default: audio_output_bits = obtained.bits; break;
+	}
+
+	audio_output_bits_real = obtained.bits;
+	audio_output_fp = obtained.fp;
 	audio_sample_size = audio_output_channels * (audio_output_bits / 8);
 	audio_buffer_samples = obtained.samples;
+
+	csf_set_wave_config(current_song, obtained.freq,
+		audio_output_bits,
+		obtained.channels);
 
 	if (verbose) {
 		log_nl();
 		log_append(2, 0, "Audio initialised");
 		log_underline();
 		log_appendf(5, " Using driver '%s'", driver_name);
-		log_appendf(5, " %d Hz, %d bit, %s", obtained.freq, obtained.bits,
+		log_appendf(5, " %d Hz, %d bit%s, %s", obtained.freq, obtained.bits,
+			obtained.fp ? " IEEE floating point" : "",
 			obtained.channels == 1 ? "mono" : "stereo");
 		log_appendf(5, " Buffer size: %d samples", obtained.samples);
 	}
@@ -1573,7 +1639,7 @@ int audio_init(const char *driver, const char *device)
 			if ((success = _audio_try_driver(full_drivers.list[i].backend, full_drivers.list[i].name, device, 1)))
 				goto agh;
 
-			if (!*device && (success = _audio_try_driver(full_drivers.list[i].backend, full_drivers.list[i].name, "", 1)))
+			if ((success = _audio_try_driver(full_drivers.list[i].backend, full_drivers.list[i].name, "", 1)))
 				goto agh;
 		}
 
@@ -1585,6 +1651,7 @@ agh:
 	if (success) {
 		_audio_init_tail();
 		refresh_audio_device_list();
+		preferences_audio_driver_changed(driver_name);
 		return success;
 	}
 
@@ -1628,6 +1695,18 @@ void audio_quit(void)
 			inited_backends[i] = NULL;
 		}
 	}
+}
+
+int audio_has_control_panel(void)
+{
+	return !!(backend->control_panel);
+}
+
+void audio_open_control_panel(void)
+{
+	SCHISM_RUNTIME_ASSERT(backend->control_panel, "call audio_has_control_panel");
+
+	backend->control_panel(current_audio_device);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

@@ -161,7 +161,9 @@ noinst_HEADERS = \
 	sys/sdl12/init.h \
 	sys/sdl2/init.h \
 	sys/x11/init.h \
-	sys/win32/win32-vista.h
+	sys/win32/win32-vista.h \
+	sys/win32/audio-asio-vtable.h \
+	sys/win32/audio-asio.h
 
 dist_man_MANS = sys/posix/schismtracker.1
 
@@ -284,13 +286,20 @@ files_win32 = \
 	sys/win32/audio-dsound.c \
 	sys/win32/mt.c
 cflags_win32=-I$(srcdir)/sys/win32
-lib_win32=-lwinmm $(DSOUND_LIBS)
+lib_win32=-lwinmm -lgdi32 $(DSOUND_LIBS)
 
 if USE_MEDIAFOUNDATION
 fmt/schismtracker-win32mf.$(OBJEXT): CFLAGS += $(MEDIAFOUNDATION_CFLAGS)
 
 files_mediafoundation=fmt/win32mf.c
 lib_mediafoundation=-luuid $(MEDIAFOUNDATION_LIBS)
+endif
+
+if USE_ASIO
+files_asio = \
+	sys/win32/audio-asio.c
+cflags_asio =
+lib_asio =
 endif
 
 cflags_win32 += -mwindows
@@ -623,7 +632,8 @@ schismtracker_SOURCES = \
 	$(files_os2)			\
 	$(files_xbox)			\
 	$(files_avfoundation)	\
-	$(files_avformat)
+	$(files_avformat)		\
+	$(files_asio)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
@@ -634,7 +644,7 @@ component_cflags = $(cflags_alsa) $(cflags_oss) \
 	$(cflags_macosx) $(cflags_flac) $(cflags_jack) \
 	$(cflags_wiiu) $(cflags_macos) $(cflags_os2) \
 	$(cflags_xbox) $(cflags_avfoundation) $(UTF8PROC_CFLAGS) \
-	$(cflags_avformat)
+	$(cflags_avformat) $(cflags_asio)
 schismtracker_CPPFLAGS = -I$(srcdir)/include -I. $(cppflags_wii) $(cppflags_wiiu)
 schismtracker_CFLAGS = $(AM_CFLAGS) $(component_cflags)
 schismtracker_OBJCFLAGS = $(AM_OBJCFLAGS) $(component_cflags)
@@ -647,6 +657,6 @@ schismtracker_LDADD = $(LIBM) $(libs_sdl3) \
 	$(lib_mediafoundation) $(UTF8PROC_LIBS) \
 	$(libs_sdl2) $(libs_sdl12) $(libs_macos) \
 	$(libs_os2) $(libs_xbox) $(libs_avfoundation) \
-	$(libs_avformat)
+	$(libs_avformat) $(libs_asio)
 schismtracker_LDFLAGS = $(ldflags_macosx) \
 	$(ldflags_avfoundation)

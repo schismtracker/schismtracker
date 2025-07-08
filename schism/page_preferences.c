@@ -43,12 +43,15 @@
 /* --------------------------------------------------------------------- */
 /* statics */
 
-static struct widget widgets_preferences[48];
+static struct page *page_ptr; /* ugh */
+
+static struct widget widgets_preferences[49];
 
 static const char *interpolation_modes[] = {
 	"Non-Interpolated", "Linear",
 	"Cubic Spline", "8-Tap FIR Filter", NULL
 };
+#define interp_modes ((int)ARRAY_SIZE(interpolation_modes) - 1)
 
 static const int interp_group[] = {
 	2,3,4,5,-1,
@@ -253,11 +256,17 @@ static int audio_driver_list_toggled_(uint32_t i)
 
 static void audio_driver_list_activate_(void)
 {
-	audio_flash_reinitialized_text(audio_init(audio_driver_name(ACTIVE_WIDGET.d.listbox.focus), NULL));
+	const char *n = audio_driver_name(ACTIVE_WIDGET.d.listbox.focus);
+
+	audio_flash_reinitialized_text(audio_init(n, NULL));
+
 	status.flags |= NEED_UPDATE;
 }
 
 /* --------------------------------------------------------------------- */
+
+/* this is a dirty hack */
+static int *page_total_widgets = NULL;
 
 static void save_config_now(void)
 {
@@ -268,19 +277,34 @@ static void save_config_now(void)
 	status_text_flash("Configuration saved");
 }
 
+void preferences_audio_driver_changed(const char *name)
+{
+	if (!page_total_widgets)
+		return;
+
+	*page_total_widgets = 15 + interp_modes + audio_has_control_panel();
+
+	status.flags |= NEED_UPDATE;
+}
+
+static void open_control_panel(void)
+{
+	audio_open_control_panel();
+}
+
 void preferences_load_page(struct page *page)
 {
 	char buf[64];
 	char *ptr;
 	int i, j;
-	int interp_modes;
 
-	for (interp_modes = 0; interpolation_modes[interp_modes]; interp_modes++);
+	/* initialize total num of widgets */
+	page_total_widgets = &page->total_widgets;
+	preferences_audio_driver_changed(song_audio_driver());
 
 	page->title = "Preferences (Shift-F5)";
 	page->draw_const = preferences_draw_const;
 	page->set_page = preferences_set_page;
-	page->total_widgets = 15 + interp_modes;
 	page->widgets = widgets_preferences;
 	page->help_index = HELP_GLOBAL;
 
@@ -374,4 +398,10 @@ void preferences_load_page(struct page *page)
 	widgets_preferences[i+14].y = AUDIO_DRIVER_BOX_Y;
 	widgets_preferences[i+14].width = AUDIO_DRIVER_BOX_WIDTH;
 	widgets_preferences[i+14].height = AUDIO_DRIVER_BOX_HEIGHT;
+
+	widget_create_button(widgets_preferences+i+15,
+		56, 44, 20,
+		i+10, i+12, i+12, i+13, i+13,
+		open_control_panel,
+		"Open Control Panel", 2);
 }
