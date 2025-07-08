@@ -285,7 +285,13 @@ struct stat {
 # define MIN(X,Y) (((X)<(Y))?(X):(Y))
 #endif
 #ifndef CLAMP
-# define CLAMP(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
+# define CLAMP_IMPL(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
+
+// GCC's analysis that feeds into -Wformat-truncation can't tell that CLAMP
+// constrains the range of the expression, except if L is 0. So, we slide
+// the range over to 0, and then slide it back after the CLAMP. Surprisingly,
+// this works and supresses warnings.
+# define CLAMP(N,L,H) (CLAMP_IMPL((N)-(L),0,(H)-(L))+(L))
 #endif
 #ifndef ABS
 # define ABS(x) ((x) < 0 ? -(x) : x)

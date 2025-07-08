@@ -154,12 +154,10 @@ static void hz_to_speed_tempo(uint32_t hz, uint32_t *pspeed, uint32_t *ptempo)
 
 static int uint16_compare(const void *a, const void *b)
 {
-	int32_t aa = *(uint16_t *)a;
-	int32_t bb = *(uint16_t *)b;
+	uint16_t aa = *(uint16_t *)a;
+	uint16_t bb = *(uint16_t *)b;
 
-	int32_t r = (aa - bb);
-
-	return CLAMP(r, INT_MIN, INT_MAX);
+	return (aa < bb) ? -1 : (aa > bb) ? +1 : 0;
 }
 
 #define D00_PATTERN_ROWS 64
