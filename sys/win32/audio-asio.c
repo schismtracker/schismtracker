@@ -69,7 +69,7 @@ static void asio_free_devices(void)
 static uint32_t asio_device_count(void)
 {
 	/* this function is one of the unholiest of spaghettis ive ever written */
-	LSTATUS lstatus;
+	LONG lstatus; /* LSTATUS isn't defined in older MinGW headers */
 	HKEY hkey;
 	DWORD i;
 	DWORD max_subkey_len, max_subkey;
