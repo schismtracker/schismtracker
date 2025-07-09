@@ -114,6 +114,7 @@ static uint32_t asio_device_count(void)
 	for (i = 0; i < max_subkey; i++) {
 		DWORD subkey_len;
 		DWORD desc_sz;
+		DWORD type;
 		union {
 #ifdef SCHISM_WIN32_COMPILE_ANSI
 			CHAR a[39];
@@ -121,6 +122,7 @@ static uint32_t asio_device_count(void)
 			WCHAR w[39];
 		} clsid_s;
 		CLSID clsid;
+		HKEY hsubkey;
 
 		/* MSDN: "This size should include the terminating [NUL] character." */
 		subkey_len = max_subkey_len + 1;
@@ -137,17 +139,32 @@ static uint32_t asio_device_count(void)
 			continue; /* ??? */
 
 		SCHISM_ANSI_UNICODE({
-			DWORD x = sizeof(clsid_s.a);
-			lstatus = RegGetValueA(hkey, subkey.a, "CLSID", RRF_RT_REG_SZ,
-				NULL, clsid_s.a, &x);
+			lstatus = RegOpenKeyExA(hkey, subkey.a, 0, KEY_READ, &hsubkey);
 		}, {
-			DWORD x = sizeof(clsid_s.w);
-			lstatus = RegGetValueW(hkey, subkey.w, L"CLSID", RRF_RT_REG_SZ,
-				NULL, clsid_s.w, &x);
+			lstatus = RegOpenKeyExW(hkey, subkey.w, 0, KEY_READ, &hsubkey);
 		})
 
 		if (lstatus != ERROR_SUCCESS)
 			continue;
+
+		SCHISM_ANSI_UNICODE({
+			DWORD x = sizeof(clsid_s.a);
+			lstatus = RegQueryValueExA(hsubkey, "CLSID", NULL, &type,
+				clsid_s.a, &x);
+			/* NUL terminate */
+			clsid_s.a[38] = 0;
+		}, {
+			DWORD x = sizeof(clsid_s.w);
+			lstatus = RegQueryValueExW(hsubkey, L"CLSID", NULL, &type,
+				(LPBYTE)clsid_s.w, &x);
+			/* NUL terminate */
+			clsid_s.w[38] = 0;
+		})
+
+		if (lstatus != ERROR_SUCCESS || type != REG_SZ) {
+			RegCloseKey(hsubkey);
+			continue;
+		}
 
 		/* before we grab the description, lets parse the CLSID */
 		{
@@ -168,32 +185,43 @@ static uint32_t asio_device_count(void)
 				free(s);
 			})
 
-			if (r != 11)
+			if (r != 11) {
+				RegCloseKey(hsubkey);
 				continue;
+			}
 		}
 
 		SCHISM_ANSI_UNICODE({
-			lstatus = RegGetValueA(hkey, subkey.a, "Description",
-				RRF_RT_REG_SZ, NULL, NULL, &desc_sz);
+			lstatus = RegQueryValueExA(hsubkey, "Description",
+				NULL, &type, NULL, &desc_sz);
+			desc_sz += 1; /* NUL terminator */
 		}, {
-			lstatus = RegGetValueW(hkey, subkey.w, L"Description",
-				RRF_RT_REG_SZ, NULL, NULL, &desc_sz);
+			lstatus = RegQueryValueExW(hsubkey, L"Description",
+				NULL, &type, NULL, &desc_sz);
+			desc_sz += 2; /* NUL terminator */
 		})
 
-		if (lstatus != ERROR_SUCCESS)
+		if (lstatus != ERROR_SUCCESS || type != REG_SZ) {
+			RegCloseKey(hsubkey);
 			continue;
+		}
 
 		dev_desc.v = mem_alloc(desc_sz);
 
 		SCHISM_ANSI_UNICODE({
-			lstatus = RegGetValueA(hkey, subkey.a, "Description",
-				RRF_RT_REG_SZ, NULL, dev_desc.a, &desc_sz);
+			lstatus = RegQueryValueExA(hsubkey, "Description",
+				NULL, &type, dev_desc.a, &desc_sz);
+			dev_desc.a[desc_sz - 1] = 0;
 		}, {
-			lstatus = RegGetValueW(hkey, subkey.w, L"Description",
-				RRF_RT_REG_SZ, NULL, dev_desc.w, &desc_sz);
+			lstatus = RegQueryValueExW(hsubkey, L"Description",
+				NULL, &type, (LPBYTE)dev_desc.w, &desc_sz);
+			dev_desc.w[(desc_sz >> 1) - 1] = 0;
 		})
 
-		if (lstatus != ERROR_SUCCESS) {
+		/* done with this */
+		RegCloseKey(hsubkey);
+
+		if (lstatus != ERROR_SUCCESS || type != REG_SZ) {
 			free(dev_desc.v);
 			continue;
 		}
