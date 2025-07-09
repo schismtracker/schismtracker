@@ -39,9 +39,12 @@
 
 /* ------------------------------------------------------------------------ */
 
-/* format for scanning GUIDs with (s)scanf */
 typedef HRESULT (WINAPI *OLE32_CLSIDFromStringSpec)(LPCOLESTR,LPCLSID);
+typedef BOOL (WINAPI *SHELL32_GUIDFromStringASpec)(LPCSTR,LPGUID);
+typedef BOOL (WINAPI *SHELL32_GUIDFromStringWSpec)(LPCWSTR,LPGUID);
 static OLE32_CLSIDFromStringSpec OLE32_CLSIDFromString;
+static SHELL32_GUIDFromStringASpec SHELL32_GUIDFromStringA;
+static SHELL32_GUIDFromStringWSpec SHELL32_GUIDFromStringW;
 
 /* this is actually drivers, but OH WELL */
 static struct {
@@ -164,19 +167,30 @@ static uint32_t asio_device_count(void)
 
 		/* before we grab the description, lets parse the CLSID */
 		{
-			HRESULT r;
+			int success;
 
-			SCHISM_ANSI_UNICODE({
-				WCHAR *s;
+			if (OLE32_CLSIDFromString) {
+				/* this function is actually supported past XP/Vista */
+				SCHISM_ANSI_UNICODE({
+					WCHAR *s;
 
-				s = charset_iconv_easy(clsid_s.a, CHARSET_ANSI, CHARSET_WCHAR_T);
-				r = OLE32_CLSIDFromString(s, &clsid);
-				free(s);
-			}, {
-				r = OLE32_CLSIDFromString(clsid_s.w, &clsid);
-			})
+					s = charset_iconv_easy(clsid_s.a, CHARSET_ANSI, CHARSET_WCHAR_T);
+					success = SUCCEEDED(OLE32_CLSIDFromString(s, &clsid));
+					free(s);
+				}, {
+					success = SUCCEEDED(OLE32_CLSIDFromString(clsid_s.w, &clsid));
+				})
+			} else {
+				/* these are only exported via ordinal and are unsupported,
+				 * but available since Win95 (supposedly...) */
+				SCHISM_ANSI_UNICODE({
+					success = SHELL32_GUIDFromStringA(clsid_s.a, &clsid);
+				}, {
+					success = SHELL32_GUIDFromStringW(clsid_s.w, &clsid);
+				})
+			}
 
-			if (FAILED(r)) {
+			if (!success) {
 				RegCloseKey(hsubkey);
 				continue;
 			}
@@ -291,8 +305,6 @@ static void asio_quit_driver(void)
 
 /* ---------------------------------------------------------------------------- */
 
-static void *lib_ole32;
-
 typedef HRESULT (WINAPI *OLE32_CoCreateInstanceSpec)(REFCLSID rclsid,
 	LPUNKNOWN pUnkOuter, DWORD dwClsContext, REFIID riid, LPVOID *ppv);
 typedef HRESULT (WINAPI *OLE32_CoInitializeExSpec)(LPVOID, DWORD);
@@ -332,7 +344,8 @@ struct schism_audio_device {
 /* butt-ugly global because ASIO has an API from the stone age */
 static schism_audio_device_t *current_device = NULL;
 
-static uint32_t __cdecl asio_msg(uint32_t class, uint32_t msg, void *unk3, void *unk4)
+static uint32_t __cdecl asio_msg(uint32_t class, uint32_t msg,
+	SCHISM_UNUSED void *unk3, SCHISM_UNUSED void *unk4)
 {
 	schism_audio_device_t *dev = current_device;
 
@@ -362,7 +375,8 @@ static void __cdecl asio_dummy2(void)
 	/* dunno what this is */
 }
 
-static void __cdecl asio_buffer_flip(uint32_t buf, uint32_t unk1)
+static void __cdecl asio_buffer_flip(uint32_t buf,
+	SCHISM_UNUSED uint32_t unk1)
 {
 	schism_audio_device_t *dev = current_device;
 
@@ -421,8 +435,8 @@ static void __cdecl asio_buffer_flip(uint32_t buf, uint32_t unk1)
 	IAsio_OutputReady(dev->asio);
 }
 
-static void *__cdecl asio_buffer_flip_ex(void *unk1, uint32_t buf,
-	uint32_t unk2)
+static void *__cdecl asio_buffer_flip_ex(SCHISM_UNUSED void *unk1,
+	uint32_t buf, SCHISM_UNUSED uint32_t unk2)
 {
 	/* BUG: Steinberg's "built-in" ASIO driver completely ignores the
 	 * return value for ASIO_CLASS_SUPPORTS_BUFFER_FLIP_EX, instead
@@ -657,11 +671,18 @@ static void asio_pause_device(schism_audio_device_t *dev, int paused)
 
 /* ------------------------------------------------------------------------ */
 
+static void *lib_ole32;
+static void *lib_shell32;
+
 static int asio_init(void)
 {
 	lib_ole32 = loadso_object_load("OLE32.DLL");
 	if (!lib_ole32)
-		return 0;
+		goto fail;
+
+	lib_shell32 = loadso_object_load("SHELL32.DLL");
+	if (!lib_shell32)
+		goto fail;
 
 	OLE32_CoCreateInstance = (OLE32_CoCreateInstanceSpec)
 		loadso_function_load(lib_ole32, "CoCreateInstance");
@@ -671,11 +692,16 @@ static int asio_init(void)
 		loadso_function_load(lib_ole32, "CoUninitialize");
 	OLE32_CLSIDFromString = (OLE32_CLSIDFromStringSpec)
 		loadso_function_load(lib_ole32, "CLSIDFromString");
+	SHELL32_GUIDFromStringA = (SHELL32_GUIDFromStringASpec)
+		loadso_function_load(lib_shell32, MAKEINTRESOURCEA(703));
+	SHELL32_GUIDFromStringW = (SHELL32_GUIDFromStringWSpec)
+		loadso_function_load(lib_shell32, MAKEINTRESOURCEA(704));
 
 	if (!OLE32_CoInitializeEx || !OLE32_CoUninitialize
-		|| !OLE32_CoCreateInstance || !OLE32_CLSIDFromString) {
-		loadso_object_unload(lib_ole32);
-		return 0;
+		|| !OLE32_CoCreateInstance
+		|| (!OLE32_CLSIDFromString
+			|| (!SHELL32_GUIDFromStringA && !SHELL32_GUIDFromStringW))) {
+		goto fail;
 	}
 
 	switch (OLE32_CoInitializeEx(NULL, COINIT_APARTMENTTHREADED)) {
@@ -684,11 +710,19 @@ static int asio_init(void)
 	case RPC_E_CHANGED_MODE:
 		break;
 	default:
-		loadso_object_unload(lib_ole32);
-		return 0;
+		goto fail;
 	}
 
 	return 1;
+
+fail:
+	if (lib_ole32)
+		loadso_object_unload(lib_ole32);
+
+	if (lib_shell32)
+		loadso_object_unload(lib_shell32);
+
+	return 0;
 }
 
 static void asio_quit(void)
@@ -697,6 +731,9 @@ static void asio_quit(void)
 
 	if (lib_ole32)
 		loadso_object_unload(lib_ole32);
+
+	if (lib_shell32)
+		loadso_object_unload(lib_shell32);
 }
 
 /* ---------------------------------------------------------------------------- */
