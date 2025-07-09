@@ -487,7 +487,7 @@ int fmt_write_pcm(disko_t *fp, const uint8_t *data, size_t length, int bpf,
 	if (swap && bps > 1) {
 #define PCM_BYTESWAP(BITS) \
 do { \
-	const uint##BITS##_t *ptr = (const int##BITS##_t *) data; \
+	const uint##BITS##_t *ptr = (const uint##BITS##_t *) data; \
 	length /= sizeof(*ptr); \
 \
 	while (length--) { \
@@ -518,8 +518,7 @@ do { \
 			break;
 		}
 		case 2: PCM_BYTESWAP(16); break;
-		/* no support for 24-bit... sorry! */
-		default: DW_ERROR;
+		default: return DW_ERROR;
 		}
 	} else {
 		disko_write(fp, data, length);

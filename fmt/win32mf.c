@@ -647,7 +647,6 @@ static const char* get_media_type_description(IMFMediaType* media_type)
 
 static int get_source_reader_information(IMFSourceReader *reader, dmoz_file_t *file) {
 	IMFMediaType *media_type = NULL;
-	uint64_t length = 0;
 	BOOL compressed = FALSE;
 
 	if (SUCCEEDED(IMFSourceReader_GetNativeMediaType(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, MF_SOURCE_READER_CURRENT_TYPE_INDEX, &media_type))) {
@@ -669,7 +668,6 @@ static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t
 	IMFMetadataProvider *provider = NULL;
 	IMFMetadata *metadata = NULL;
 	PROPVARIANT propnames = {0};
-	DWORD streams = 0;
 	int found = 0;
 	uint64_t duration = 0;
 

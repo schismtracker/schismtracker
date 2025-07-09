@@ -457,9 +457,28 @@ struct stat {
 # define SCHISM_UNLIKELY(x) (x)
 #endif
 
+/* Use this to annotate unreachable code segments.
+ * Used to shut gcc up when it's wrong. :) */
+#if SCHISM_GNUC_HAS_BUILTIN(__builtin_unreachable, 4, 5, 0)
+# define SCHISM_UNREACHABLE __builtin_unreachable()
+#elif SCHISM_MSVC_ATLEAST(19, 0, 0)
+# define SCHISM_UNREACHABLE __assume(0)
+#elif defined(unreachable) /* C23 */
+# define SCHISM_UNREACHABLE unreachable()
+#else
+# define SCHISM_UNREACHABLE /* no-op */
+#endif
+
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__nonstring__, 8, 0, 0)
+# define SCHISM_NONSTRING __attribute__((__nonstring__))
+#else
+# define SCHISM_NONSTRING
+#endif
+
 /* Win32, used for threads */
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__force_align_arg_pointer__, 4, 2, 0)
-# define SCHISM_FORCE_ALIGN_ARG_POINTER __attribute__((__force_align_arg_pointer__))
+# define SCHISM_FORCE_ALIGN_ARG_POINTER \
+	__attribute__((__force_align_arg_pointer__))
 #else
 # define SCHISM_FORCE_ALIGN_ARG_POINTER
 #endif

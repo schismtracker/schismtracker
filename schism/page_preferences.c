@@ -43,8 +43,6 @@
 /* --------------------------------------------------------------------- */
 /* statics */
 
-static struct page *page_ptr; /* ugh */
-
 static struct widget widgets_preferences[49];
 
 static const char *interpolation_modes[] = {
@@ -60,12 +58,6 @@ static const int interp_group[] = {
 static int ramp_group[] = { /* not const because it is modified */
 	-1,-1,-1,
 };
-
-static int selected_audio_device = 0;
-static int top_audio_device = 0;
-
-static int selected_audio_driver = 0;
-static int top_audio_driver = 0;
 
 #define AUDIO_DEVICE_BOX_X 37
 #define AUDIO_DEVICE_BOX_Y 16

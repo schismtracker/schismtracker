@@ -477,7 +477,6 @@ int fmt_psm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	            dsmp_chunks[MAX_SAMPLES] = {0},
 	            pbod_chunks[MAX_PATTERNS] = {0};
 	uint32_t nsubsongs = 0,
-	         nchn = 0,
 	         nsamples = 0,
 	         npatterns = 0,
 	         norders = 0,
@@ -813,7 +812,8 @@ int fmt_psm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			uint8_t xx[MAX_CHANNELS * 2];
 			uint32_t j;
 
-			SCHISM_RUNTIME_ASSERT(ppan_chunk.size >= subsong_channels * 2, "PSM: PPAN chunk is too small");
+			SCHISM_RUNTIME_ASSERT(ppan_chunk.size >= subsong_channels * 2,
+				"PSM: PPAN chunk is too small");
 
 			slurp_seek(fp, ppan_chunk.offset, SEEK_SET);
 
@@ -825,8 +825,7 @@ int fmt_psm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 				switch (x[0]) {
 				case 0: /* normal panning */
-					if (x[1] >= 0)
-						song->channels[j].panning = x[1];
+					song->channels[j].panning = x[1];
 					break;
 				case 1: /* surround */
 					song->channels[j].panning = 128;

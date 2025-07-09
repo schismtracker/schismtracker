@@ -734,7 +734,7 @@ static int pattern_selection_system_paste_modplug(const char *str, struct patter
 
 			for (; copyin_x < MAX_CHANNELS; copyin_x++) {
 				song_note_t none = {0};
-				disko_write(&ds, &n, sizeof(n));
+				disko_write(&ds, &none, sizeof(none));
 			}
 
 			/* reset */

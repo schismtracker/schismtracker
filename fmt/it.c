@@ -332,7 +332,7 @@ SCHISM_STATIC_ASSERT(MAX_MIDI_MACRO == 32, "MIDI config reading code assumes mac
 int it_read_midi_config(midi_config_t *midi, slurp_t *fp)
 {
 	/* preserving this just for compat with old behavior  --paper */
-	if ((slurp_tell(fp) + 4896) > slurp_length(fp))
+	if ((slurp_tell(fp) + 4896) > (int64_t)slurp_length(fp))
 		return 0;
 
 #define READ_VALUE(x) \

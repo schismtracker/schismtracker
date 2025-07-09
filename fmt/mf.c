@@ -42,7 +42,7 @@ int fmt_mf_read_info(dmoz_file_t *file, slurp_t *fp)
 	if (title_length == EOF)
 		return 0;
 
-	title_length = MIN(sizeof(title), title_length);
+	title_length = MIN((int)sizeof(title), title_length);
 
 	if (slurp_read(fp, title, title_length) != (size_t)title_length)
 		return 0;

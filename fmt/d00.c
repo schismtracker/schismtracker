@@ -198,12 +198,12 @@ const char *d00_warn_names[D00_WARN_MAX_] = {
 	[D00_WARN_SPFX] = "SPFX effects not implemented",
 };
 
-int fmt_d00_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_d00_load_song(song_t *song, slurp_t *fp,
+	SCHISM_UNUSED unsigned int lflags)
 {
 	int c;
 	int ninst = 0;
 	uint16_t speeds[10];
-	uint16_t speed;
 	uint32_t warn = (1 << D00_WARN_EXPERIMENTAL);
 	struct d00_header hdr;
 
@@ -492,7 +492,7 @@ D00_readnote: /* this goto is kind of ugly... */
 			}
 		}
 
-		for (c = 0; c < max_pattern; c++)
+		for (c = 0; c < (int)max_pattern; c++)
 			song->orderlist[c] = c;
 		song->orderlist[max_pattern] = ORDER_LAST;
 	}

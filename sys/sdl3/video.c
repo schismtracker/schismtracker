@@ -258,6 +258,9 @@ static void sdl3_video_report(void)
 		if (SDL_MUSTLOCK(video.u.s.surface))
 			log_append(4, 0, " Must lock surface");
 		break;
+	case VIDEO_TYPE_UNINITIALIZED:
+		SCHISM_UNREACHABLE;
+		break;
 	}
 
 	switch (video.format) {
@@ -339,6 +342,7 @@ static inline void video_recalculate_fixed_width(void)
 		}
 		case VIDEO_TYPE_UNINITIALIZED:
 			/* WUT */
+			SCHISM_UNREACHABLE;
 			break;
 		}
 	} else if (video.type == VIDEO_TYPE_SURFACE) {
@@ -606,14 +610,13 @@ static int sdl3_video_is_wm_available(void)
 
 static int sdl3_video_is_hardware(void)
 {
-	const char *name;
-
 	switch (video.type) {
 	case VIDEO_TYPE_UNINITIALIZED:
 	case VIDEO_TYPE_SURFACE:
 		return 0;
 	case VIDEO_TYPE_RENDERER:
-		return strcmp(sdl3_GetRendererName(video.u.r.renderer), SDL_SOFTWARE_RENDERER);
+		return strcmp(sdl3_GetRendererName(video.u.r.renderer),
+			SDL_SOFTWARE_RENDERER);
 	}
 
 	/* should never happen */
@@ -796,10 +799,11 @@ SCHISM_HOT static void sdl3_video_blit(void)
 		sdl3_UnlockTexture(video.u.r.texture);
 		sdl3_RenderTexture(video.u.r.renderer, video.u.r.texture, NULL, (cfg_video_want_fixed) ? &dstrect : NULL);
 		sdl3_RenderPresent(video.u.r.renderer);
+		break;
 	}
 	case VIDEO_TYPE_SURFACE:
 		if (SDL_MUSTLOCK(video.u.s.surface))
-			while (sdl3_LockSurface(video.u.s.surface) < 0)
+			while (!sdl3_LockSurface(video.u.s.surface))
 				timer_msleep(10);
 
 		video_blitSC(SDL_BYTESPERPIXEL(video.format),
@@ -817,6 +821,8 @@ SCHISM_HOT static void sdl3_video_blit(void)
 			sdl3_UnlockSurface(video.u.s.surface);
 
 		sdl3_UpdateWindowSurface(video.window);
+		break;
+	case VIDEO_TYPE_UNINITIALIZED:
 		break;
 	}
 }

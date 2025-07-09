@@ -161,14 +161,21 @@ void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char buf[11])
 
 		ver_date_decode((cwtv < 0xFFF) ? ((uint32_t)cwtv - 0x050) : reserved, &y, &m, &d);
 
+		y = CLAMP(y, EPOCH_YEAR, 9999);
+		/* these two don't necessarily need to be clamped,
+		 * but we're doing it for good measure */
+		m = CLAMP(m, 0, 11) + 1;
+		d = CLAMP(d, 1, 31);
+
+		/* make gcc shut up */
+		if (y < EPOCH_YEAR || y > 9999 || m < 1 || m > 12 || d < 1 || d > 31)
+			SCHISM_UNREACHABLE;
+
 		// Classic Mac OS's snprintf is not C99 compliant (duh) so we need
 		// to cast our integers to unsigned long first.
 		// We should probably have a replacement snprintf in case we don't
 		// actually have a standard one.
-		snprintf(buf, 11, "%04lu-%02lu-%02lu",
-			(unsigned long)CLAMP(y, EPOCH_YEAR, 9999),
-			(unsigned long)(CLAMP(m, 0, 11) + 1),
-			(unsigned long)CLAMP(d, 1, 31));
+		snprintf(buf, 11, "%04" PRIu32 "-%02" PRIu32 "-%02" PRIu32, y, m, d);
 	} else {
 		snprintf(buf, 11, "0.%x", cwtv);
 	}

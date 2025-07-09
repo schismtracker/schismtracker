@@ -875,8 +875,6 @@ static int win32_init_dark_window(void *window)
 
 	/* finally, enable Dark Mode support on Windows 10 >= 1809 */
 	if (win32_ntver_atleast(10, 0, 17763)) {
-		const BOOL unicode = IsWindowUnicode((HWND)window);
-
 		win32_toggle_dark_title_bar(window, 1);
 
 		old_wndproc = (WNDPROC)GetWindowLongPtrAW((HWND)window, GWLP_WNDPROC);

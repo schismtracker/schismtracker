@@ -686,7 +686,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 		break; \
 	case SF(BITS,CHNS,ENDIAN,PCMD): \
 		WRITE_##NAME##_SAMPLE_EX(BITS, \
-			uint##BITS##_t delta[NCHNS];\
+			uint##BITS##_t delta[NCHNS] = {0};\
 			uint32_t deltapos; \
 		, { \
 			deltapos = (pos % NCHNS); \
@@ -1051,7 +1051,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 				int32_t l;
 				slurp_read(fp, &l, sizeof(&l));
 
-				l = ((flags & SF_END_MASK) == SF_BE) ? bswapBE32(l) : bswapLE32(l);
+				l = ((flags & SF_END_MASK) == SF_BE) ? (int32_t)bswapBE32(l) : bswapLE32(l);
 				l += iadd;
 
 				if (l > max) max = l;
@@ -1068,7 +1068,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 				int32_t l;
 				slurp_read(fp, &l, sizeof(l));
 
-				l = ((flags & SF_END_MASK) == SF_BE) ? bswapBE32(l) : bswapLE32(l);
+				l = ((flags & SF_END_MASK) == SF_BE) ? (int32_t)bswapBE32(l) : bswapLE32(l);
 				l += iadd;
 
 				*dest++ = (int16_t)(l / max);

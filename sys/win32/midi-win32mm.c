@@ -111,7 +111,7 @@ static void _win32mm_send(struct midi_port *p, const unsigned char *data,
 
 
 static CALLBACK void _win32mm_inputcb(HMIDIIN in, UINT wmsg, DWORD_PTR inst,
-					   DWORD_PTR param1, DWORD_PTR param2)
+	DWORD_PTR param1, SCHISM_UNUSED DWORD_PTR param2)
 {
 	struct midi_port *p = (struct midi_port *)inst;
 

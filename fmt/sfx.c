@@ -37,7 +37,7 @@ However, there are a number of 31-instrument files with a different tag, under "
 
 static struct sfxfmt {
 	size_t tagpos;
-	const char tag[4];
+	SCHISM_NONSTRING const char tag[4];
 	int nsmp;
 	int dunno;
 	const char *id;

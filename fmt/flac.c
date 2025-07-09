@@ -186,7 +186,6 @@ static void read_on_meta(SCHISM_UNUSED const FLAC__StreamDecoder *decoder, const
 			break;
 
 		slurp_memstream(&app_fp, metadata->data.application.data, metadata->length - 4);
-		const uint8_t *data = (const uint8_t *)metadata->data.application.data;
 
 		if (slurp_read(&app_fp, &chunk_id, 4) != 4)
 			break;
@@ -472,7 +471,7 @@ static FLAC__StreamEncoderTellStatus write_on_tell(SCHISM_UNUSED const FLAC__Str
 	return FLAC__STREAM_ENCODER_TELL_STATUS_OK;
 }
 
-static inline int flac_save_init_head(disko_t *fp, int bits, int channels, int rate, int estimate_num_samples)
+static int flac_save_init_head(disko_t *fp, int bits, int channels, int rate, int estimate_num_samples)
 {
 	if (!flac_wasinit)
 		return -9;
@@ -661,7 +660,7 @@ static SCHISM_FORMAT_PRINTF(2, 3) int flac_append_vorbis_comment(FLAC__StreamMet
 		FLAC__StreamMetadata_VorbisComment_Entry e;
 
 		e.length = x;
-		e.entry = s;
+		e.entry = (FLAC__byte *)s;
 
 		schism_FLAC_metadata_object_vorbiscomment_append_comment(metadata, e, 1);
 

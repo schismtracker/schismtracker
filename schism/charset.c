@@ -37,7 +37,7 @@ int char_digraph(int k1, int k2)
 {
 #define DG(ax, eq) \
 	{ \
-		static const char c[2] = ax; \
+		SCHISM_NONSTRING static const char c[2] = ax; \
 		if ((k1 == c[0] && k2 == c[1]) || (k2 == c[0] && k1 == c[1])) \
 			return eq; \
 	}

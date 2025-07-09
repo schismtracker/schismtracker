@@ -40,12 +40,8 @@
 /* ------------------------------------------------------------------------ */
 
 /* format for scanning GUIDs with (s)scanf */
-#define GUIDF "%08" SCNx32 "-%04" SCNx16 "-%04" SCNx16 "-%02" SCNx8 "%02" \
-	SCNx8 "-%02" SCNx8 "%02" SCNx8 "%02" SCNx8 "%02" SCNx8 "%02" SCNx8 "%02" \
-	SCNx8
-#define GUIDX(x) &((x).Data1), &((x).Data2), &((x).Data3), &((x).Data4[0]), \
-	&((x).Data4[1]), &((x).Data4[2]), &((x).Data4[3]), &((x).Data4[4]), \
-	&((x).Data4[5]), &((x).Data4[6]), &((x).Data4[7])
+typedef HRESULT (WINAPI *OLE32_CLSIDFromStringSpec)(LPCOLESTR,LPCLSID);
+static OLE32_CLSIDFromStringSpec OLE32_CLSIDFromString;
 
 /* this is actually drivers, but OH WELL */
 static struct {
@@ -168,24 +164,19 @@ static uint32_t asio_device_count(void)
 
 		/* before we grab the description, lets parse the CLSID */
 		{
-			char *s;
-			int r;
+			HRESULT r;
 
 			SCHISM_ANSI_UNICODE({
-				s = clsid_s.a;
-			}, {
-				s = charset_iconv_easy(clsid_s.w, CHARSET_WCHAR_T, CHARSET_UTF8);
-			})
+				WCHAR *s;
 
-			r = sscanf(s, "{" GUIDF "}", GUIDX(clsid));
-
-			SCHISM_ANSI_UNICODE({
-				/* nothing */
-			}, {
+				s = charset_iconv_easy(clsid_s.a, CHARSET_ANSI, CHARSET_WCHAR_T);
+				r = OLE32_CLSIDFromString(s, &clsid);
 				free(s);
+			}, {
+				r = OLE32_CLSIDFromString(clsid_s.w, &clsid);
 			})
 
-			if (r != 11) {
+			if (FAILED(r)) {
 				RegCloseKey(hsubkey);
 				continue;
 			}
@@ -374,7 +365,6 @@ static void __cdecl asio_dummy2(void)
 static void __cdecl asio_buffer_flip(uint32_t buf, uint32_t unk1)
 {
 	schism_audio_device_t *dev = current_device;
-	uint32_t i;
 
 	if (dev->numbufs == 1) {
 		/* we can fill the buffer directly */
@@ -679,9 +669,11 @@ static int asio_init(void)
 		loadso_function_load(lib_ole32, "CoInitializeEx");
 	OLE32_CoUninitialize = (OLE32_CoUninitializeSpec)
 		loadso_function_load(lib_ole32, "CoUninitialize");
+	OLE32_CLSIDFromString = (OLE32_CLSIDFromStringSpec)
+		loadso_function_load(lib_ole32, "CLSIDFromString");
 
 	if (!OLE32_CoInitializeEx || !OLE32_CoUninitialize
-		|| !OLE32_CoCreateInstance) {
+		|| !OLE32_CoCreateInstance || !OLE32_CLSIDFromString) {
 		loadso_object_unload(lib_ole32);
 		return 0;
 	}
