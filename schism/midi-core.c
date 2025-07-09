@@ -557,7 +557,7 @@ static int64_t midi_port_get_unused(void)
 uint32_t midi_port_register(struct midi_provider *pv, uint8_t inout, const char *name,
 	void *userdata, int free_userdata)
 {
-	struct midi_port *p, **pt;
+	struct midi_port *p;
 	int64_t i;
 
 	if (!midi_port_mutex)
@@ -582,8 +582,8 @@ uint32_t midi_port_register(struct midi_provider *pv, uint8_t inout, const char 
 
 	i = midi_port_get_unused();
 	if (i < 0) {
-		free(p);
 		free(p->name);
+		free(p);
 		mt_mutex_unlock(midi_port_mutex);
 		return -1;
 	}
