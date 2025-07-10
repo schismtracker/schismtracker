@@ -320,5 +320,6 @@ int events_push_event(const schism_event_t *event);
 void events_pump_events(void);
 
 schism_keymod_t events_get_keymod_state(void);
+const char *events_describe_physical_key_for_qwerty_key(char qwerty_key);
 
 #endif /* SCHISM_EVENT_H_ */
