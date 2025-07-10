@@ -675,6 +675,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 #define WRITE_SAMPLE_EX(BITS, ENDIAN, LOOPPRE, CHNS, NAME, NCHNS) \
 	case SF(BITS,CHNS,ENDIAN,PCMS): \
 		WRITE_##NAME##_SAMPLE_EX(BITS, /* none */, /* none */, /* none */); \
+		len *= (BITS / 8); \
 		break; \
 	case SF(BITS,CHNS,ENDIAN,PCMU): \
 		WRITE_##NAME##_SAMPLE_EX(BITS, \
@@ -683,6 +684,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 			x ^= (UINT##BITS##_C(1) << (BITS - 1)); \
 			LOOPPRE \
 		}, /* none */); \
+		len *= (BITS / 8); \
 		break; \
 	case SF(BITS,CHNS,ENDIAN,PCMD): \
 		WRITE_##NAME##_SAMPLE_EX(BITS, \
@@ -695,6 +697,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 		}, { \
 			delta[deltapos] = data[pos]; \
 		}); \
+		len *= (BITS / 8); \
 		break;
 
 #define WRITE_SAMPLE(BITS, ENDIAN, LOOPPRE) \
