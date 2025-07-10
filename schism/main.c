@@ -378,7 +378,6 @@ SCHISM_NORETURN static void event_loop(void)
 {
 	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
 	timer_ticks_t last_mouse_down, ticker, last_audio_poll;
-	schism_keysym_t last_key = 0;
 	time_t startdown;
 	int downtrip;
 	int fix_numlock_key;
@@ -395,6 +394,7 @@ SCHISM_NORETURN static void event_loop(void)
 	last_audio_poll = timer_ticks();
 	startdown = 0;
 	status.last_keysym = 0;
+	status.last_orig_keysym = 0;
 
 	status.keymod = events_get_keymod_state();
 	os_get_modkey(&status.keymod);
@@ -449,30 +449,20 @@ SCHISM_NORETURN static void event_loop(void)
 
 				SCHISM_FALLTHROUGH;
 			case SCHISM_KEYUP:
-				switch (se.key.sym) {
-				case SCHISM_KEYSYM_NUMLOCKCLEAR:
-					status.keymod ^= SCHISM_KEYMOD_NUM;
-					break;
-				case SCHISM_KEYSYM_CAPSLOCK:
-					if (se.type == SCHISM_KEYDOWN) {
-						status.keymod |= SCHISM_KEYMOD_CAPS_PRESSED;
-					} else {
-						status.keymod &= ~SCHISM_KEYMOD_CAPS_PRESSED;
-					}
-					status.keymod ^= SCHISM_KEYMOD_CAPS;
-					break;
-				default:
-					break;
-				};
-
-				// grab the keymod
-				status.keymod = se.key.mod;
-				// fix it
-				os_get_modkey(&status.keymod);
-
 				kk.sym = se.key.sym;
 				kk.scancode = se.key.scancode;
 
+				kk.mouse = MOUSE_NONE;
+
+				/* normalize the text for processing */
+				kk.text = charset_compose_to_set(se.key.text, CHARSET_UTF8,
+					CHARSET_UTF8);
+
+				/* grab the keymod */
+				kk.mod = se.key.mod;
+				/* apply OS-specific fixups to account for bugs in SDL */
+				os_get_modkey(&kk.mod);
+				/* numlock hacks, mostly here because of macs */
 				switch (fix_numlock_key) {
 				case NUMLOCK_GUESS:
 					/* should be handled per OS */
@@ -484,27 +474,27 @@ SCHISM_NORETURN static void event_loop(void)
 					status.keymod |= SCHISM_KEYMOD_NUM;
 					break;
 				};
+				/* copy the keymod into the status global */
+				status.keymod = kk.mod;
 
-				kk.mod = status.keymod;
-				kk.mouse = MOUSE_NONE;
-
-				/* normalize the text for processing */
-				kk.text = charset_compose_to_set(se.key.text, CHARSET_UTF8, CHARSET_UTF8);
-
+				/* apply translations for different keyboard layouts,
+				 * e.g. shift-8 -> asterisk on standard U.S. */
 				kbd_key_translate(&kk);
-
+				/* airball */
 				handle_key(&kk);
 
 				if (se.type == SCHISM_KEYUP) {
 					/* only empty the key repeat if
 					 * the last keydown is the same sym */
-					if (last_key == kk.sym)
+					if ((status.last_orig_keysym == kk.orig_sym)
+						|| kbd_is_modifier_key(&kk))
 						kbd_empty_key_repeat();
 				} else {
 					kbd_cache_key_repeat(&kk);
 
 					if (!kbd_is_modifier_key(&kk)) {
 						status.last_keysym = kk.sym;
+						status.last_orig_keysym = kk.orig_sym;
 						status.last_keymod = kk.mod;
 					}
 				}

@@ -151,6 +151,7 @@ struct tracker_status {
 	enum tracker_time_display time_display;
 	enum tracker_vis_style vis_style;
 	schism_keysym_t last_keysym;
+	schism_keysym_t last_orig_keysym;
 	schism_keymod_t last_keymod;
 
 	schism_keymod_t keymod;
