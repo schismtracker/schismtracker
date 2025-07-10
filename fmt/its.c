@@ -268,7 +268,7 @@ void save_its_header(disko_t *fp, song_sample_t *smp)
 	if (smp->flags & CHN_PINGPONGSUSTAIN)
 		its.flags |= 128;
 	its.vol = smp->volume / 4;
-	memcpy(its.name, smp->name, MIN(sizeof(smp->filename), sizeof(its.filename)));
+	memcpy(its.name, smp->name, MIN(sizeof(smp->name), sizeof(its.name)));
 	its.name[25] = 0;
 	its.cvt = 1;                    // signed samples
 	its.dfp = smp->panning / 4;
