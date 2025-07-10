@@ -33,6 +33,9 @@ extern uint32_t ver_reserved; /* full version number in case 12 bits are not eno
 
 SCHISM_PURE extern const char *schism_banner(int classic);
 
+/* parse a schism-version YYYYMMDD, returns nonzero if successful */
+int ver_parse(const char *str, int *pyear, int *pmonth, int *pday);
+
 /* need to call this at startup */
 void ver_init(void);
 

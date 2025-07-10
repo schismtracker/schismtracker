@@ -125,16 +125,16 @@ into a twelve-bit number. Since anything < 0x50 already carries meaning (even th
 used), we have 0xfff - 0x50 = 4015 possible values. By encoding the date as an offset from a rather arbitrarily
 chosen epoch, there can be plenty of room for the foreseeable future.
 
-  < 0x020: a proper version (files saved by such versions are likely very rare)
-  = 0x020: any version between the 0.2a release (2005-04-29?) and 2007-04-17
-  = 0x050: anywhere from 2007-04-17 to 2009-10-31 (version was updated to 0x050 in hg changeset 2f6bd40c0b79)
-  > 0x050: the number of days since 2009-10-31, for example:
+	< 0x020: a proper version (files saved by such versions are likely very rare)
+	= 0x020: any version between the 0.2a release (2005-04-29?) and 2007-04-17
+	= 0x050: anywhere from 2007-04-17 to 2009-10-31 (version was updated to 0x050 in hg changeset 2f6bd40c0b79)
+	> 0x050: the number of days since 2009-10-31, for example:
 	0x051 = (0x051 - 0x050) + 2009-10-31 = 2009-11-01
 	0x052 = (0x052 - 0x050) + 2009-10-31 = 2009-11-02
 	0x14f = (0x14f - 0x050) + 2009-10-31 = 2010-07-13
 	0xffe = (0xfff - 0x050) + 2009-10-31 = 2020-10-27
-  = 0xfff: a non-value indicating a date after 2020-10-27. in this case, the full version number is stored in a reserved header field.
-		   this field follows the same format, using the same epoch, but without adding 0x50. */
+	= 0xfff: a non-value indicating a date after 2020-10-27. in this case, the full version number is stored in a reserved header field.
+			 this field follows the same format, using the same epoch, but without adding 0x50. */
 uint16_t ver_cwtv;
 uint32_t ver_reserved;
 
@@ -204,21 +204,24 @@ static inline SCHISM_ALWAYS_INLINE int lookup_short_month(char *name)
 	return -1;
 }
 
+/* parses a schism version YYYYMMDD */
+int ver_parse(const char *str, int *pyear, int *pmonth, int *pday)
+{
+	// by the time we reach the year 10000 nobody will care that this breaks
+	if (sscanf(str, "%04d%02d%02d", pyear, pmonth, pday) == 3) {
+		--*pmonth;
+		return 1;
+	}
+
+	return 0;
+}
+
 // Tries multiple methods to get a reasonable date to start with.
 static inline int get_version_date(int *pyear, int *pmonth, int *pday)
 {
 #if !defined(EMPTY_VERSION) && defined(VERSION)
-	{
-		int year, month, day;
-
-		// by the time we reach the year 10000 nobody will care that this breaks
-		if (sscanf(VERSION, "%04d%02d%02d", &year, &month, &day) == 3) {
-			*pyear = year;
-			*pmonth = month - 1;
-			*pday = day;
-			return 1;
-		}
-	}
+	if (ver_parse(VERSION, pyear, pmonth, pday))
+		return 1;
 #endif
 
 #ifdef __TIMESTAMP__

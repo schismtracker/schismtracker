@@ -33,6 +33,7 @@
 #include "keyboard.h"
 #include "charset.h"
 #include "mem.h"
+#include "mt.h" /* protect log */
 
 struct log_line {
 	uint8_t color;
@@ -56,6 +57,7 @@ static struct widget widgets_log[1];
 static struct log_line lines[NUM_LINES];
 static int top_line = 0;
 static int last_line = -1;
+static mt_mutex_t *log_mutex; /* protects the log */
 
 /* --------------------------------------------------------------------- */
 
@@ -134,6 +136,16 @@ static void log_redraw(void)
 
 /* --------------------------------------------------------------------- */
 
+void log_init(void)
+{
+	log_mutex = mt_mutex_create();
+}
+
+void log_quit(void)
+{
+	mt_mutex_delete(log_mutex);
+}
+
 void log_load_page(struct page *page)
 {
 	page->title = "Message Log Viewer (Ctrl-F11)";
@@ -157,6 +169,8 @@ void log_append3(charset_t set, int color, int must_free, const char *text)
 		if (must_free)
 			free((void *)text);
 	} else {
+		mt_mutex_lock(log_mutex);
+
 		if (last_line < NUM_LINES - 1) {
 			last_line++;
 		} else {
@@ -173,6 +187,8 @@ void log_append3(charset_t set, int color, int must_free, const char *text)
 		lines[last_line].must_free = must_free;
 
 		top_line = CLAMP(last_line - 32, 0, NUM_LINES - 32);
+
+		mt_mutex_unlock(log_mutex);
 
 		if (status.current_page == PAGE_LOG)
 			status.flags |= NEED_UPDATE;

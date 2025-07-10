@@ -29,10 +29,12 @@
 
 /* ------------------------------------ */
 
-static SDL_Thread *(SDLCALL *sdl3_CreateThreadRuntime)(SDL_ThreadFunction fn, const char *name, void *data, SDL_FunctionPointer begin, SDL_FunctionPointer end) = NULL;
-static void (SDLCALL *sdl3_WaitThread)(SDL_Thread * thread, int *status) = NULL;
-static bool (SDLCALL *sdl3_SetCurrentThreadPriority)(SDL_ThreadPriority priority) = NULL;
-static Uint64 (SDLCALL *sdl3_GetCurrentThreadID)(void) = NULL;
+static SDL_Thread *(SDLCALL *sdl3_CreateThreadRuntime)(SDL_ThreadFunction fn, const char *name, void *data, SDL_FunctionPointer begin, SDL_FunctionPointer end);
+static void (SDLCALL *sdl3_WaitThread)(SDL_Thread * thread, int *status);
+static bool (SDLCALL *sdl3_SetCurrentThreadPriority)(SDL_ThreadPriority priority);
+static Uint64 (SDLCALL *sdl3_GetCurrentThreadID)(void);
+static void (SDLCALL *sdl3_DetachThread)(SDL_Thread * thread);
+
 
 struct mt_thread {
 	SDL_Thread *thread;
@@ -71,6 +73,11 @@ static void sdl3_thread_wait(mt_thread_t *thread, int *status)
 {
 	sdl3_WaitThread(thread->thread, status);
 	free(thread);
+}
+
+static void sdl3_thread_detach(mt_thread_t *thread)
+{
+	sdl3_DetachThread(thread->thread);
 }
 
 static void sdl3_thread_set_priority(int priority)
@@ -181,6 +188,7 @@ static int sdl3_threads_load_syms(void)
 	SCHISM_SDL3_SYM(WaitThread);
 	SCHISM_SDL3_SYM(SetCurrentThreadPriority);
 	SCHISM_SDL3_SYM(GetCurrentThreadID);
+	SCHISM_SDL3_SYM(DetachThread);
 
 	SCHISM_SDL3_SYM(CreateMutex);
 	SCHISM_SDL3_SYM(DestroyMutex);
@@ -222,6 +230,7 @@ const schism_mt_backend_t schism_mt_backend_sdl3 = {
 	.thread_wait = sdl3_thread_wait,
 	.thread_set_priority = sdl3_thread_set_priority,
 	.thread_id = sdl3_thread_id,
+	.thread_detach = sdl3_thread_detach,
 
 	.mutex_create = sdl3_mutex_create,
 	.mutex_delete = sdl3_mutex_delete,

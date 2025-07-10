@@ -41,6 +41,7 @@ static SDL_Thread *(SDLCALL *sdl12_CreateThread)(int (SDLCALL *fn)(void *), void
 static void (SDLCALL *sdl12_WaitThread)(SDL_Thread *thread, int *status);
 static uint32_t (SDLCALL *sdl12_ThreadID)(void);
 
+
 struct mt_thread {
 	SDL_Thread *thread;
 
@@ -89,6 +90,12 @@ static void sdl12_thread_wait(mt_thread_t *thread, int *status)
 {
 	sdl12_WaitThread(thread->thread, status);
 
+	free(thread);
+}
+
+static void sdl12_thread_detach(mt_thread_t *thread)
+{
+	/* nothing? */
 	free(thread);
 }
 
@@ -255,6 +262,7 @@ const schism_mt_backend_t schism_mt_backend_sdl12 = {
 	.thread_wait = sdl12_thread_wait,
 	.thread_set_priority = sdl12_thread_set_priority,
 	.thread_id = sdl12_thread_id,
+	.thread_detach = sdl12_thread_detach,
 
 	.mutex_create = sdl12_mutex_create,
 	.mutex_delete = sdl12_mutex_delete,
