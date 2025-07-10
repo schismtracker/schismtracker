@@ -300,6 +300,7 @@ static inline void draw_itfmap(void)
 {
 	int n, fg, bg;
 	uint8_t *ptr;
+	uint8_t highlight_char = 0xFF;
 
 	if (itfmap_pos < 0 || itfmap_chars[itfmap_pos] != current_char) {
 		ptr = (unsigned char *) memchr((char *) itfmap_chars, current_char, sizeof(itfmap_chars));
@@ -309,10 +310,13 @@ static inline void draw_itfmap(void)
 			itfmap_pos = ptr - itfmap_chars;
 	}
 
+	if ((itfmap_pos >= 0) && (itfmap_pos < sizeof(itfmap_chars)) && (selected_item != ITFMAP))
+		highlight_char = current_char;
+
 	for (n = 0; n < 240; n++) {
 		fg = 1;
 		bg = 0;
-		if (n == itfmap_pos) {
+		if ((n == itfmap_pos) || (itfmap_chars[n] == highlight_char)) {
 			if (selected_item == ITFMAP) {
 				fg = 0;
 				bg = 3;
