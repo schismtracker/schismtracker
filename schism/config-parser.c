@@ -316,6 +316,20 @@ static int cfg_read_slurp(cfg_file_t *cfg, slurp_t *fp)
 	return 1;
 }
 
+int cfg_read_mem(const void *data, size_t size, cfg_file_t *cfg)
+{
+	slurp_t fp;
+
+	if (slurp_memstream(&fp, (const uint8_t *)data, size) < 0)
+		return -1;
+
+	cfg_read_slurp(cfg, &fp);
+
+	unslurp(&fp);
+
+	return 0;
+}
+
 int cfg_read(cfg_file_t *cfg)
 {
 	slurp_t fp;
