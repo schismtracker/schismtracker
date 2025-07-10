@@ -185,6 +185,11 @@ void win32_thread_wait(mt_thread_t *thread, int *status)
 	free(thread);
 }
 
+void win32_thread_detach(mt_thread_t *thread)
+{
+	CloseHandle(thread->thread);
+}
+
 void win32_thread_set_priority(int priority)
 {
 	// ok
@@ -677,6 +682,7 @@ const schism_mt_backend_t schism_mt_backend_win32 = {
 	.thread_wait = win32_thread_wait,
 	.thread_set_priority = win32_thread_set_priority,
 	.thread_id = win32_thread_id,
+	.thread_detach = win32_thread_detach,
 
 	.mutex_create = win32_mutex_create,
 	.mutex_delete = win32_mutex_delete,
