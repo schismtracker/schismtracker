@@ -1349,7 +1349,6 @@ static void env_resize_dialog(song_envelope_t *env)
 
 
 static struct widget env_adsr_widgets[4];
-static int env_adsr_cursor = 0;
 
 static void do_env_adsr(void *data)
 {
@@ -1402,7 +1401,6 @@ static void env_adsr_dialog(SCHISM_UNUSED song_envelope_t *env)
 	struct dialog *dialog;
 	song_instrument_t *ins = song_get_instrument(current_instrument); // ARGHHH
 
-	env_adsr_cursor = 0;
 	widget_create_thumbbar(env_adsr_widgets + 0, 34, 24, 17, 4, 1, 4, NULL, 0, 128);
 	widget_create_thumbbar(env_adsr_widgets + 1, 34, 25, 17, 0, 2, 4, NULL, 0, 128);
 	widget_create_thumbbar(env_adsr_widgets + 2, 34, 26, 17, 1, 3, 4, NULL, 0, 128);
