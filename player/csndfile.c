@@ -1504,9 +1504,7 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
 			effect = FX_VOLUME;
 		} else {
 			m->voleffect = VOLFX_VOLUME;
-			m->volparam = param;
-			if (m->voleffect > 64)
-				m->voleffect = 64;
+			m->volparam = CLAMP(param, 0, 64);
 			effect = param = 0;
 		}
 		break;
