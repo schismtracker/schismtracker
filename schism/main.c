@@ -503,8 +503,10 @@ SCHISM_NORETURN static void event_loop(void)
 				} else {
 					kbd_cache_key_repeat(&kk);
 
-					status.last_keysym = last_key;
-					last_key = kk.sym;
+					if (!kbd_is_modifier_key(&kk)) {
+						status.last_keysym = kk.sym;
+						status.last_keymod = kk.mod;
+					}
 				}
 				break;
 			case SCHISM_MOUSEMOTION:
@@ -829,7 +831,7 @@ SCHISM_NORETURN static void event_loop(void)
 		if (!events_have_event())
 			timer_msleep(5);
 	}
-	
+
 	schism_exit(0);
 }
 

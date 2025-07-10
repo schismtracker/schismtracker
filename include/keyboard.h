@@ -599,6 +599,8 @@ int kbd_get_alnum(struct key_event *k);
 
 void kbd_key_translate(struct key_event *k);
 
+int kbd_is_modifier_key(struct key_event *k);
+
 /* -------------------------------------------- */
 /* key repeat */
 

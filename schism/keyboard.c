@@ -252,6 +252,23 @@ void kbd_key_translate(struct key_event *k)
 	// do nothing
 }
 
+int kbd_is_modifier_key(struct key_event *k)
+{
+	switch (k->sym) {
+	case SCHISM_KEYSYM_LCTRL:
+	case SCHISM_KEYSYM_LSHIFT:
+	case SCHISM_KEYSYM_LALT:
+	case SCHISM_KEYSYM_LGUI:
+	case SCHISM_KEYSYM_RCTRL:
+	case SCHISM_KEYSYM_RSHIFT:
+	case SCHISM_KEYSYM_RALT:
+	case SCHISM_KEYSYM_RGUI:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 int numeric_key_event(struct key_event *k, int kponly)
 {
 	if (kponly) {
@@ -366,7 +383,7 @@ char *get_note_string(int note, char *buf)
 		note--;
 		buf[0] = note_names[note % 12][0];
 		buf[1] = note_names[note % 12][1];
-		buf[2] = note / 12 + '0'; 
+		buf[2] = note / 12 + '0';
 	}
 	buf[3] = 0;
 	return buf;

@@ -151,6 +151,7 @@ struct tracker_status {
 	enum tracker_time_display time_display;
 	enum tracker_vis_style vis_style;
 	schism_keysym_t last_keysym;
+	schism_keymod_t last_keymod;
 
 	schism_keymod_t keymod;
 
@@ -166,6 +167,8 @@ struct tracker_status {
 
 	int fix_numlock_setting;
 };
+
+#define LAST_KEY_IS(sym, mod) (((mod == 0) ? !status.last_keymod : (status.last_keymod & mod)) && (status.last_keysym == sym))
 
 /* numlock hackery */
 enum {

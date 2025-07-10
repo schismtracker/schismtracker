@@ -3669,7 +3669,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SCHISM_KEYSYM_d:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym == SCHISM_KEYSYM_d) {
+		if (LAST_KEY_IS(SCHISM_KEYSYM_d, SCHISM_KEYMOD_ALT)) {
 			if (max_row_number - (current_row - 1) > block_double_size)
 				block_double_size <<= 1;
 		} else {
@@ -3686,7 +3686,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SCHISM_KEYSYM_l:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym == SCHISM_KEYSYM_l) {
+		if (LAST_KEY_IS(SCHISM_KEYSYM_l, SCHISM_KEYMOD_ALT)) {
 			/* 3x alt-l re-selects the current channel */
 			if (selection.first_channel == selection.last_channel) {
 				selection.first_channel = 1;
@@ -3734,7 +3734,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SCHISM_KEYSYM_o:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym == SCHISM_KEYSYM_o) {
+		if (LAST_KEY_IS(SCHISM_KEYSYM_o, SCHISM_KEYMOD_ALT)) {
 			pattern_copyin_behavior = PATTERN_COPYIN_OVERWRITE_GROW;
 		} else {
 			pattern_copyin_behavior = PATTERN_COPYIN_OVERWRITE;
@@ -3750,7 +3750,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SCHISM_KEYSYM_m:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym == SCHISM_KEYSYM_m) {
+		if (LAST_KEY_IS(SCHISM_KEYSYM_m, SCHISM_KEYMOD_ALT)) {
 			pattern_copyin_behavior = PATTERN_COPYIN_MIX_FIELDS;
 		} else {
 			pattern_copyin_behavior = PATTERN_COPYIN_MIX_NOTES;
@@ -3783,7 +3783,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 			}
 		}
 
-		if (status.last_keysym == SCHISM_KEYSYM_n) {
+		if (LAST_KEY_IS(SCHISM_KEYSYM_n, SCHISM_KEYMOD_ALT)) {
 			pattern_editor_display_multichannel();
 		}
 		break;
@@ -3811,7 +3811,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SCHISM_KEYSYM_k:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym == SCHISM_KEYSYM_k) {
+		if (LAST_KEY_IS(SCHISM_KEYSYM_k, SCHISM_KEYMOD_ALT)) {
 			selection_wipe_volume(1);
 		} else {
 			selection_slide_volume();
@@ -3820,7 +3820,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SCHISM_KEYSYM_x:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (status.last_keysym == SCHISM_KEYSYM_x) {
+		if (LAST_KEY_IS(SCHISM_KEYSYM_x, SCHISM_KEYMOD_ALT)) {
 			selection_wipe_effect();
 		} else {
 			selection_slide_effect();
