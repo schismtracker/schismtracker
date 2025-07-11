@@ -138,6 +138,7 @@ typedef struct {
 	/* X and Y coordinates relative to the window */
 	int32_t x;
 	int32_t y;
+	enum mouse_button buttons;
 } schism_mouse_motion_event_t;
 
 typedef struct {
