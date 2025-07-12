@@ -25,6 +25,7 @@
 
 #include "fmt.h"
 #include "mem.h"
+#include "bswap.h"
 #include "osdefs.h"
 
 #include <AudioToolbox/AudioToolbox.h>
@@ -32,13 +33,63 @@
 #define MACOSXCA_BUFFER_SIZE (4096)
 #define MACOSXCA_TITLE_SIZE (128) /* this is more than we'll ever need */
 
-/* these aren't defined in older SDKs; define them here. */
+/* many of these aren't defined in old SDKs, and this fixes the build
+ * apple defines these in an enum so we're good to #define over them */
+#define kAudioFormat60958AC3 'cac3'
+#define kAudioFormatAC3 'ac-3'
+#define kAudioFormatAES3 'aes3'
+#define kAudioFormatALaw 'alaw'
+#define kAudioFormatAMR 'samr'
+#define kAudioFormatAMR_WB 'sawb'
+#define kAudioFormatAppleIMA4 'ima4'
+#define kAudioFormatAppleLossless 'alac'
+#define kAudioFormatAudible 'AUDB'
+#define kAudioFormatDVIIntelIMA 'ms'
+#define kAudioFormatEnhancedAC3 'ec-3'
 #define kAudioFormatFLAC 'flac'
+#define kAudioFormatLinearPCM 'lpcm'
+#define kAudioFormatMACE3 'MAC3'
+#define kAudioFormatMACE6 'MAC6'
+#define kAudioFormatMIDIStream 'midi'
+#define kAudioFormatMPEG4AAC 'aac '
+#define kAudioFormatMPEG4AAC_ELD_SBR 'aacf'
+#define kAudioFormatMPEG4AAC_ELD_V2 'aacg'
+#define kAudioFormatMPEG4AAC_ELD 'aace'
+#define kAudioFormatMPEG4AAC_HE 'aach'
+#define kAudioFormatMPEG4AAC_HE_V2 'aacp'
+#define kAudioFormatMPEG4AAC_LD 'aacl'
+#define kAudioFormatMPEG4AAC_Spatial 'aacs'
+#define kAudioFormatMPEG4CELP 'celp'
+#define kAudioFormatMPEG4HVXC 'hvxc'
+#define kAudioFormatMPEG4TwinVQ 'twvq'
 #define kAudioFormatMPEGD_USAC 'usac'
+#define kAudioFormatMPEGLayer1 '.mp1'
+#define kAudioFormatMPEGLayer2 '.mp2'
+#define kAudioFormatMPEGLayer3 '.mp3'
+#define kAudioFormatMicrosoftGSM 'ms1'
 #define kAudioFormatOpus 'opus'
+#define kAudioFormatParameterValueStream 'apvs'
+#define kAudioFormatQDesign 'QDMC'
+#define kAudioFormatQDesign2 'QDM2'
+#define kAudioFormatQUALCOMM 'Qclp'
+#define kAudioFormatTimeCode 'time'
+#define kAudioFormatULaw 'ulaw'
+#define kAudioFormatiLBC 'ilbc'
 
 static const char *ca_type_id_description(UInt32 format)
 {
+#if 0 /* uncomment this code to print out all the values for redefinition */
+#define PRINT_VALUE(x) \
+	do { \
+		uint32_t i = bswapBE32(x); \
+		char *s = (char *)&i; \
+	\
+		fprintf(stderr, "#define %s '%c%c%c%c'\n", #x, s[0], s[1], s[2], s[3]); \
+	} while (0)
+	PRINT_VALUE(kAudioFormatiLBC);
+#undef PRINT_VALUE
+#endif
+
 	switch (format) {
 	case kAudioFormat60958AC3:
 	case kAudioFormatAC3: return "AC-3";
