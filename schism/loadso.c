@@ -166,11 +166,18 @@ static const char *loadso_libtool_fmts[] = {
 	"lib%s-%d.dll",
 	"%s-%d.dll", /* avformat-61.dll */
 #elif defined(SCHISM_MACOSX)
+	/* ripped from sdl2-compat with minor changes; most notably,
+	 * we put the raw dylib within the Resources directory, while
+	 * sdl2-compat expects it to be in a framework (stupid Xcode) */
+	"@loader_path/lib%s.%d.dylib",
+	"@loader_path/../Resources/lib%s.%d.dylib",
+	"@executable_path/lib%s.%d.dylib",
+	"@executable_path/../Resources/lib%s.%d.dylib",
 	"lib%s.%d.dylib",
 #else
 	"lib%s.so.%d",
 #endif
-	NULL,
+	NULL
 };
 
 static void *library_load_revision(const char *name, int revision)
@@ -215,7 +222,7 @@ static const char *loadso_lib_fmts[] = {
 	"lib%s.dll",
 	"%s.dll",
 #elif defined(SCHISM_MACOSX)
-	//"lib%s.dylib",
+	"lib%s.dylib",
 #else
 	//"lib%s.so",
 #endif
