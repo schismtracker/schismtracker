@@ -389,7 +389,6 @@ use_wiiu=no
 use_network=no
 use_controller=no
 use_xbox=no
-use_avfoundation=no
 use_asio=no
 posix_fseek=unknown
 
@@ -398,17 +397,6 @@ have_loadso=no
 case "$host_os" in
 darwin*)
 	AC_MSG_RESULT([found Darwin host])
-
-
-	AC_MSG_CHECKING([for Mac OS X El Capitan SDK])
-	AC_COMPILE_IFELSE([
-		#include <AvailabilityMacros.h>
-
-		#if MAC_OS_X_VERSION_MAX_ALLOWED < 101100
-		# error "too old"
-		#endif
-	], [use_avfoundation=yes], [])
-	AC_MSG_RESULT([$use_avfoundation])
 
 	use_macosx=yes
 	posix_fseek=yes
@@ -617,10 +605,6 @@ if test "x$use_macosx" = "xyes"; then
 	if test "x$objc_hax_works" = "xno"; then
 		OBJC = "$old_OBJC"
 	fi
-
-	if test "x$use_avfoundation" = "xyes"; then
-		AC_DEFINE([SCHISM_AVFOUNDATION], [1], [AVFoundation support])
-	fi
 else
 	dnl stupid hack to make Objective-C optional
 	AM_CONDITIONAL([am__fastdepOBJC], [false])
@@ -637,7 +621,6 @@ AM_CONDITIONAL([USE_OS2], [test "x$use_os2" = "xyes"])
 AM_CONDITIONAL([am__fastdepOBJC], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([USE_NETWORK], [test "x$use_network" = "xyes"])
 AM_CONDITIONAL([USE_XBOX], [test "x$use_xbox" = "xyes"])
-AM_CONDITIONAL([USE_AVFOUNDATION], [test "x$use_avfoundation" = "xyes"])
 AM_CONDITIONAL([USE_ASIO], [test "x$use_asio" = "xyes"])
 
 dnl ------------------------------------------------------------------------

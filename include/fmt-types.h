@@ -161,8 +161,8 @@ READ_INFO(avformat) LOAD_SAMPLE(avformat)
 READ_INFO(win32mf) LOAD_SAMPLE(win32mf)
 #endif
 
-#ifdef SCHISM_AVFOUNDATION
-READ_INFO(macosxavf) LOAD_SAMPLE(macosxavf)
+#ifdef SCHISM_MACOSX
+READ_INFO(macosxca) LOAD_SAMPLE(macosxca)
 #endif
 
 /* 15-sample mods have literally no identifying information */
