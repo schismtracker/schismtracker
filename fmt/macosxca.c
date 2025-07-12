@@ -76,6 +76,8 @@
 #define kAudioFormatULaw 'ulaw'
 #define kAudioFormatiLBC 'ilbc'
 
+#define kAudioFilePropertyEstimatedDuration 'edur'
+
 static const char *ca_type_id_description(UInt32 format)
 {
 #if 0 /* uncomment this code to print out all the values for redefinition */
