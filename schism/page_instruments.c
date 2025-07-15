@@ -1116,13 +1116,15 @@ static void _env_draw(const song_envelope_t *env, int middle, int current_node,
 	song_voice_t *channel;
 	uint32_t *channel_list;
 	char buf[16];
-	unsigned int envpos[3];
-	int x, y, n, m, c;
-	int last_x = 0, last_y = 0;
-	int max_ticks = 50;
+	uint32_t envpos[3];
+	int32_t x, y, n, m, c;
+	int32_t last_x = 0, last_y = 0;
+	uint32_t max_ticks = 50;
 
 	while (env->ticks[env->nodes - 1] >= max_ticks)
 		max_ticks *= 2;
+
+	fprintf(stderr, "%u\n", max_ticks);
 
 	vgamem_ovl_clear(&env_overlay, 0);
 
@@ -1130,7 +1132,7 @@ static void _env_draw(const song_envelope_t *env, int middle, int current_node,
 	_env_draw_axes(middle);
 
 	for (n = 0; n < env->nodes; n++) {
-		x = 4 + env->ticks[n] * 256 / max_ticks;
+		x = 4 + _muldiv(env->ticks[n], 256, max_ticks);
 
 		/* 65 values are being crammed into 62 pixels => have to lose three pixels somewhere.
 		 * This is where IT compromises -- I don't quite get how the lines are drawn, though,
@@ -1152,11 +1154,11 @@ static void _env_draw(const song_envelope_t *env, int middle, int current_node,
 	}
 
 	if (sustain_on)
-		_env_draw_loop(4 + env->ticks[env->sustain_start] * 256 / max_ticks,
-			       4 + env->ticks[env->sustain_end] * 256 / max_ticks, 1);
+		_env_draw_loop(4 + _muldiv(env->ticks[env->sustain_start], 256, max_ticks),
+			       4 + _muldiv(env->ticks[env->sustain_end], 256, max_ticks), 1);
 	if (loop_on)
-		_env_draw_loop(4 + env->ticks[env->loop_start] * 256 / max_ticks,
-			       4 + env->ticks[env->loop_end] * 256 / max_ticks, 0);
+		_env_draw_loop(4 + _muldiv(env->ticks[env->loop_start], 256, max_ticks),
+			       4 + _muldiv(env->ticks[env->loop_end], 256, max_ticks), 0);
 
 	if (env_on) {
 		max_ticks = env->ticks[env->nodes-1];

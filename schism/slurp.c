@@ -546,6 +546,19 @@ void slurp_fill_remaining(void *ptr, size_t read, size_t count)
 	}
 }
 
+static inline SCHISM_ALWAYS_INLINE
+size_t slurp_limit_count(slurp_t *t, size_t count)
+{
+	int64_t pos;
+
+	if (!t->limit)
+		return count;
+
+	pos = slurp_tell(t);
+
+	return MIN(count, t->limit - pos);
+}
+
 size_t slurp_peek(slurp_t *t, void *ptr, size_t count)
 {
 	size_t read_bytes;
@@ -553,15 +566,17 @@ size_t slurp_peek(slurp_t *t, void *ptr, size_t count)
 	if (!count)
 		return 0;
 
+	read_bytes = slurp_limit_count(t, count);
+
 	if (t->peek) {
-		read_bytes = t->peek(t, ptr, count);
+		read_bytes = t->peek(t, ptr, read_bytes);
 	} else {
 		/* cache current position */
 		int64_t pos = slurp_tell(t);
 		if (pos < 0)
 			return 0;
 
-		read_bytes = t->read(t, ptr, count);
+		read_bytes = t->read(t, ptr, read_bytes);
 
 		slurp_seek(t, pos, SEEK_SET);
 	}
@@ -577,6 +592,8 @@ size_t slurp_read(slurp_t *t, void *ptr, size_t count)
 
 	if (!count)
 		return 0;
+
+	count = slurp_limit_count(t, count);
 
 	if (t->read) {
 		read_bytes = t->read(t, ptr, count);
@@ -621,15 +638,43 @@ int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), siz
 		return t->receive(t, callback, count, userdata);
 	} else {
 		unsigned char *buf = mem_alloc(count);
+		int r;
+
 		if (!buf)
 			return -1;
 
 		count = slurp_peek(t, buf, count);
 
-		int r = callback(buf, count, userdata);
+		r = callback(buf, count, userdata);
 
 		free(buf);
 
 		return r;
+	}
+}
+
+void slurp_limit(slurp_t *t, int64_t wall)
+{
+	/* creates a wall, relative to the current position
+	 * any reads that try to go after that point will fail */
+
+	if (t->limit)
+		slurp_unlimit(t);
+
+	t->limit = slurp_tell(t) + wall;
+}
+
+void slurp_unlimit(slurp_t *t)
+{
+	t->limit = 0;
+}
+
+/* */
+void slurp_unlimit_seek(slurp_t *t)
+{
+	if (t->limit) {
+		slurp_seek(t, t->limit, SEEK_SET);
+
+		t->limit = 0;
 	}
 }

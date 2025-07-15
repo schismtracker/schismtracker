@@ -129,7 +129,7 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 {
 	int pat, row, chan;
 	uint32_t patlen;
-	uint8_t b;
+	int b;
 	uint16_t rows;
 	uint16_t bytes;
 	uint64_t end; // should be same data type as slurp_t's length
@@ -496,7 +496,7 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 	int n, ni, ns;
 	int abssamp = 1; // "real" sample
 	int32_t ihdr, shdr; // instrument/sample header size (yes these should be signed)
-	uint8_t b;
+	int b;
 	uint16_t w;
 	uint32_t d;
 	int detected;
@@ -539,9 +539,13 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		slurp_read(fp, &ihdr, 4);
 		ihdr = bswapLE32(ihdr);
 
+		/* don't read past the instrument header length */
+		slurp_limit(fp, ihdr - 4);
+
 		if (ni >= MAX_INSTRUMENTS) {
 			// TODO: try harder
 			log_appendf(4, " Warning: Too many instruments in file");
+			slurp_unlimit(fp);
 			break;
 		}
 		song->instruments[ni] = ins = csf_allocate_instrument();
@@ -591,16 +595,28 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 					detected = ID_UNKNOWN;
 				}
 			}
-			// some adjustment hack from xmp.
-			slurp_seek(fp, ihdr - 33, SEEK_CUR);
+			slurp_unlimit_seek(fp);
 			continue;
 		}
 
 		for (n = 0; n < 12; n++)
 			ins->note_map[n] = n + 1;
 		for (; n < 96 + 12; n++) {
+			int x;
+
 			ins->note_map[n] = n + 1;
-			ins->sample_map[n] = slurp_getc(fp) + abssamp;
+
+			/* WEIRD: some XMs are weirdly corrupted. For example, try
+			 * loading "going nuts.xm" without this hack; there seems to be
+			 * a consistent (and completely wrong) offset in the sample map
+			 * for instruments 1 through 10. Some instruments are fine, but
+			 * it seems to grow worse. Maybe this is a bug in BoobieSqueezer? */
+			x = slurp_getc(fp);
+			if (x >= 0 && x < nsmp) {
+				ins->sample_map[n] = x + abssamp;
+			} else if (ins->sample_map[n - 1] != NOTE_NONE) {
+				ins->sample_map[n] = ins->sample_map[n - 1];
+			}
 		}
 		for (; n < 120; n++)
 			ins->note_map[n] = n + 1;
@@ -642,18 +658,23 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		}
 		for (i = 0; i < ARRAY_SIZE(envs); i++) {
 			b = slurp_getc(fp);
-			envs[i].env->nodes = CLAMP(b, 2, 12);
-		}
-		for (i = 0; i < ARRAY_SIZE(envs); i++) {
-			envs[i].env->sustain_start = envs[i].env->sustain_end = slurp_getc(fp);
-			envs[i].env->loop_start = slurp_getc(fp);
-			envs[i].env->loop_end = slurp_getc(fp);
+			if (b != EOF) envs[i].env->nodes = CLAMP(b, 0, 12);
 		}
 		for (i = 0; i < ARRAY_SIZE(envs); i++) {
 			b = slurp_getc(fp);
-			if ((b & 1) && envs[i].env->nodes > 0) ins->flags |= envs[i].envflag;
-			if (b & 2) ins->flags |= envs[i].envsusloopflag;
-			if (b & 4) ins->flags |= envs[i].envloopflag;
+			envs[i].env->sustain_start = envs[i].env->sustain_end = CLAMP(b, 0, envs[i].env->nodes);
+			b = slurp_getc(fp);
+			envs[i].env->loop_start = CLAMP(b, 0, envs[i].env->nodes);
+			b = slurp_getc(fp);
+			envs[i].env->loop_end = CLAMP(b, 0, envs[i].env->nodes);
+		}
+		for (i = 0; i < ARRAY_SIZE(envs); i++) {
+			b = slurp_getc(fp);
+			if (b != EOF) {
+				if ((b & 1) && envs[i].env->nodes > 0) ins->flags |= envs[i].envflag;
+				if (b & 2) ins->flags |= envs[i].envsusloopflag;
+				if (b & 4) ins->flags |= envs[i].envloopflag;
+			}
 		}
 
 		vtype = autovib_import[slurp_getc(fp) & 0x7];
@@ -666,7 +687,7 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		/* translate the sweep value */
 		if (vrate | vdepth) {
 			if (vsweep) {
-				int s = _muldivr(vdepth, 256, vsweep);
+				int32_t s = _muldivr(vdepth, 256, vsweep);
 				vsweep = CLAMP(s, 0, 255);
 			} else {
 				vsweep = 255;
@@ -738,7 +759,7 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		if (slurp_getc(fp) == 1)
 			ins->global_volume = 0; // mute computer = 0/1
 
-		slurp_seek(fp, ihdr - 248, SEEK_CUR);
+		slurp_unlimit_seek(fp);
 
 		for (ns = 0; ns < nsmp; ns++) {
 			int8_t relnote, finetune;
@@ -750,6 +771,8 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 				break;
 			}
 			smp = song->samples + abssamp + ns;
+
+			slurp_limit(fp, shdr);
 
 			slurp_read(fp, &d, 4);
 			smp->length = bswapLE32(d);
@@ -801,6 +824,8 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 			smp->vib_rate = vsweep;
 			smp->vib_depth = vdepth;
 			smp->vib_speed = vrate;
+
+			slurp_unlimit_seek(fp);
 		}
 		if (hdr->version == 0x0104)
 			load_xm_samples(song->samples + abssamp, ns, fp);
@@ -810,6 +835,9 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		if (ns != nsmp)
 			break;
 	}
+
+	/* remove a limit, if any */
+	slurp_unlimit(fp);
 
 	if (detected & ID_FT2CLONE) {
 		if (srsvd_or == 0) {

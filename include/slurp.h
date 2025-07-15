@@ -59,6 +59,8 @@ struct slurp_struct_ {
 	 * (optional, can be NULL) */
 	int (*receive)(slurp_t *, int (*callback)(const void *, size_t, void *), size_t length, void *userdata);
 
+	int64_t limit;
+
 	union {
 		struct {
 			unsigned char *data;
@@ -162,5 +164,12 @@ int slurp_eof(slurp_t *t);  /* 1 = end of file */
 int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
 
 uint64_t slurp_length(slurp_t *t);
+
+/* creates a wall, relative to the current position
+ * any reads that try to go after that point will be filled with zeroes */
+void slurp_limit(slurp_t *t, int64_t wall);
+void slurp_unlimit(slurp_t *t);
+/* does the same as slurp_unlimit, but seeks to the wall itself */
+void slurp_unlimit_seek(slurp_t *t);
 
 #endif /* SCHISM_SLURP_H */
