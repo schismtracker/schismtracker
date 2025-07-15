@@ -812,6 +812,15 @@ SCHISM_NORETURN static void event_loop(void)
 			}
 		}
 
+		{
+			/* completely arbitrary; I think this is a good amount of files
+			 * to let dmoz work through before trying to reload the page.
+			 *
+			 * Ideally dmoz would do this by itself, but it's stuck here for now. */
+			int i;
+			for (i = 0; i < 512 && dmoz_worker(); i++);
+		}
+
 		/* let dmoz build directory lists, etc
 		 *
 		 * as long as there's no user-event going on... */

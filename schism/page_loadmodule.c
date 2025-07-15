@@ -310,14 +310,14 @@ static void clear_directory(void)
 
 static int modgrep(dmoz_file_t *f)
 {
-	int i = 0;
+	int i;
 
 	if (!glob_list)
-		return 1;
+		return dmoz_fill_ext_data(f);
 
 	for (i = 0; glob_list[i]; i++)
 		if (charset_fnmatch(glob_list[i], CHARSET_CHAR, f->base, CHARSET_CHAR, CHARSET_FNM_PERIOD | CHARSET_FNM_CASEFOLD) == 0)
-			return 1;
+			return dmoz_fill_ext_data(f);
 
 	return 0;
 }
@@ -361,19 +361,16 @@ static void read_directory(void)
 
 	clear_directory();
 
-	if (os_stat(cfg_dir_modules, &st) < 0)
-		directory_mtime = 0;
-	else
-		directory_mtime = st.st_mtime;
+	directory_mtime = (os_stat(cfg_dir_modules, &st) < 0)
+		? 0
+		: st.st_mtime;
+
 	/* if the stat call failed, this will probably break as well, but
 	at the very least, it'll add an entry for the root directory. */
 	if (dmoz_read(cfg_dir_modules, &flist, &dlist, NULL) < 0)
 		log_perror(cfg_dir_modules);
 	dmoz_filter_filelist(&flist, modgrep, &current_file, file_list_reposition);
-	while (dmoz_worker()); /* don't do it asynchronously */
 	dmoz_cache_lookup(cfg_dir_modules, &flist, &dlist);
-	// background the title checker
-	dmoz_filter_filelist(&flist, dmoz_fill_ext_data, &current_file, file_list_reposition);
 	file_list_reposition();
 	dir_list_reposition();
 }

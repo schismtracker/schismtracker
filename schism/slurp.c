@@ -111,7 +111,6 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 	case SLURP_OPEN_FAIL:
 		return -1;
 	case SLURP_OPEN_SUCCESS:
-		printf("using stdio\n");
 		t->seek = slurp_stdio_seek_;
 		t->tell = slurp_stdio_tell_;
 		t->eof  = slurp_stdio_eof_;

@@ -242,7 +242,7 @@ void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl
 	if (fl) fl->selected = 0;
 	if (dl) dl->selected = 0;
 	for (p = cache_top; p; p = p->next) {
-		if (strcmp(p->path,path) == 0) {
+		if (strcmp(p->path, path) == 0) {
 			if (fl && p->cache_filen) {
 				for (i = 0; i < fl->num_files; i++) {
 					if (!fl->files[i]) continue;
@@ -1467,6 +1467,8 @@ void dmoz_free(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist)
 	}
 }
 
+/* ------------------------------------------------------------------------ */
+
 static int current_dmoz_file = 0;
 static dmoz_filelist_t *current_dmoz_filelist = NULL;
 static int (*current_dmoz_filter)(dmoz_file_t *) = NULL;
@@ -1479,6 +1481,7 @@ int dmoz_worker(void)
 
 	if (!current_dmoz_filelist || !current_dmoz_filter)
 		return 0;
+
 	if (current_dmoz_file >= current_dmoz_filelist->num_files) {
 		current_dmoz_filelist = NULL;
 		current_dmoz_filter = NULL;
