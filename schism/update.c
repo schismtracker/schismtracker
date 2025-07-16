@@ -30,6 +30,9 @@
 #include "config-parser.h"
 #include "log.h"
 
+static mt_thread_t *update_thread = NULL;
+static int update_thread_finished = 0;
+
 /* An example of the contents of phone_home.ini is below: */
 
 /*
@@ -67,18 +70,22 @@ static void update_thread_http_cb(const void *data, size_t len, void *userdata)
 	cfg_free(&cfg);
 }
 
-static int update_thread(void *userdata)
+static int update_thread_func(void *userdata)
 {
 	struct http r;
 	int ret;
 
-	if (http_init(&r) < 0)
+	if (http_init(&r) < 0) {
+		update_thread_finished = 1;
 		return 1;
+	}
 
 	ret = http_send_request(&r, "schismtracker.org", "/phone_home.ini",
 		HTTP_PORT_HTTPS, HTTP_REQ_SSL, update_thread_http_cb, NULL);
 
 	http_quit(&r);
+
+	update_thread_finished = 1;
 
 	return (ret < 0) ? 1 : 0;
 }
@@ -86,9 +93,17 @@ static int update_thread(void *userdata)
 /* this launches an HTTP thread that checks for a new update */
 void update_check(void)
 {
-	mt_thread_t *thread = mt_thread_create(update_thread, "http-update", NULL);
-	if (!thread)
-		return; /* DOH! */
+	if (update_thread)
+		return;
 
-	mt_thread_detach(thread);
+	update_thread = mt_thread_create(update_thread_func, "http-update", NULL);
+}
+
+void update_cleanup(void)
+{
+	if (update_thread_finished && update_thread) {
+		mt_thread_wait(update_thread, NULL);
+		update_thread_finished = 0;
+		update_thread = NULL;
+	}
 }

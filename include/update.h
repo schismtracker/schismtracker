@@ -25,3 +25,5 @@
 
 /* this launches an HTTP thread that checks for a new update */
 void update_check(void);
+/* cleans up the thread if it's finished running */
+void update_cleanup(void);

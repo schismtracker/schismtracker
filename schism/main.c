@@ -813,6 +813,9 @@ SCHISM_NORETURN static void event_loop(void)
 			}
 		}
 
+		/* check on the update thread and clean it up if needed */
+		update_cleanup();
+
 		{
 			/* completely arbitrary; I think this is a good amount of files
 			 * to let dmoz work through before trying to reload the page.
