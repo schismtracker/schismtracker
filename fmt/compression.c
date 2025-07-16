@@ -98,7 +98,7 @@ uint32_t it_decompress8(void *dest, uint32_t len, slurp_t *fp, int it215, int ch
 			if (width > 9) {
 				// illegal width, abort
 				printf("Illegal bit width %d for 8-bit sample\n", width);
-				return slurp_tell(fp);
+				return slurp_tell(fp) - startpos;
 			}
 			value = it_readbits(width, &bitbuf, &bitnum, fp);
 
@@ -187,7 +187,7 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 
 			if (c1 == EOF || c2 == EOF
 				|| pos + (c1 | (c2 << 8)) > (int64_t)filelen)
-				return pos;
+				return pos - startpos;
 		}
 
 		bitbuf = bitnum = 0;
@@ -203,7 +203,7 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 			if (width > 17) {
 				// illegal width, abort
 				printf("Illegal bit width %d for 16-bit sample\n", width);
-				return slurp_tell(fp);
+				return slurp_tell(fp) - startpos;
 			}
 			value = it_readbits(width, &bitbuf, &bitnum, fp);
 
