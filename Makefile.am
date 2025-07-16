@@ -375,7 +375,7 @@ files_macosx = \
 	sys/macosx/clippy.m \
 	sys/macosx/dmoz.m \
 	sys/macosx/audio.c \
-	sys/macosx/http.m \
+	sys/macosx/http.c \
 	fmt/macosxca.c
 cflags_macosx=
 libs_macosx=

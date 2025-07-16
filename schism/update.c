@@ -75,7 +75,7 @@ static int update_thread(void *userdata)
 	if (http_init(&r) < 0)
 		return 1;
 
-	ret = http_send_request(&r, "www.schismtracker.org", "/phone_home.ini",
+	ret = http_send_request(&r, "schismtracker.org", "/phone_home.ini",
 		HTTP_PORT_HTTPS, HTTP_REQ_SSL, update_thread_http_cb, NULL);
 
 	http_quit(&r);
