@@ -180,12 +180,6 @@ static void macos_thread_wait(mt_thread_t *thread, int *status)
 	free(thread);
 }
 
-static void macos_thread_detach(mt_thread_t *thread)
-{
-	/* nothing to do -- mac os cleans up automagically */
-	free(thread);
-}
-
 static void macos_thread_set_priority(int priority)
 {
 	MPTaskWeight weight;

@@ -93,12 +93,6 @@ static void sdl12_thread_wait(mt_thread_t *thread, int *status)
 	free(thread);
 }
 
-static void sdl12_thread_detach(mt_thread_t *thread)
-{
-	/* nothing? */
-	free(thread);
-}
-
 static void sdl12_thread_set_priority(SCHISM_UNUSED int priority)
 {
 #ifdef SCHISM_WIN32
@@ -262,7 +256,6 @@ const schism_mt_backend_t schism_mt_backend_sdl12 = {
 	.thread_wait = sdl12_thread_wait,
 	.thread_set_priority = sdl12_thread_set_priority,
 	.thread_id = sdl12_thread_id,
-	.thread_detach = sdl12_thread_detach,
 
 	.mutex_create = sdl12_mutex_create,
 	.mutex_delete = sdl12_mutex_delete,

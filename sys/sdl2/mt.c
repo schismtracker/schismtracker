@@ -88,11 +88,6 @@ static void sdl2_thread_wait(mt_thread_t *thread, int *status)
 	free(thread);
 }
 
-static void sdl2_thread_detach(mt_thread_t *thread)
-{
-	sdl2_DetachThread(thread->thread);
-}
-
 static void sdl2_thread_set_priority(int priority)
 {
 	// !!! FIXME this should use a switch statement,
@@ -243,7 +238,6 @@ const schism_mt_backend_t schism_mt_backend_sdl2 = {
 	.thread_wait = sdl2_thread_wait,
 	.thread_set_priority = sdl2_thread_set_priority,
 	.thread_id = sdl2_thread_id,
-	.thread_detach = sdl2_thread_detach,
 
 	.mutex_create = sdl2_mutex_create,
 	.mutex_delete = sdl2_mutex_delete,
