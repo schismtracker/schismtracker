@@ -55,10 +55,10 @@ void http_quit(struct http *r)
 }
 
 int http_send_request(struct http *r, const char *domain, const char *path,
-	uint32_t reqflags, http_request_cb_spec cb, void *userdata)
+	uint16_t port, uint32_t reqflags, http_request_cb_spec cb, void *userdata)
 {
 	if (r && r->send_request_)
-		return r->send_request_(r, domain, path, reqflags, cb, userdata);
+		return r->send_request_(r, domain, path, port, reqflags, cb, userdata);
 
 	return -1;
 }

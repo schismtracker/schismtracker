@@ -35,9 +35,9 @@ static void http_macosx_destroy_(struct http *r)
 	/* nothing */
 }
 
-static int http_macosx_send_request_(struct http *r, const char *domain,
-	const char *path, uint32_t reqflags, http_request_cb_spec cb,
-	void *userdata)
+static int http_macosx_send_request_(struct http *r, const char *host,
+	const char *path, uint16_t port, uint32_t reqflags,
+	http_request_cb_spec cb, void *userdata)
 {
 	/* this API sucks */
 	NSURL *url;
@@ -50,15 +50,22 @@ static int http_macosx_send_request_(struct http *r, const char *domain,
 	if (disko_memopen(&ds) < 0)
 		return -1; /* oops! */
 
-	url = [NSURL URLWithString: [NSString stringWithFormat: @"%s://%s%s",
+	/* build the URL */
+	url = [NSURL URLWithString: [NSString stringWithFormat: @"%s://%s:%u%s",
 		(reqflags & HTTP_REQ_SSL) ? "https" : "http",
-		domain, path]];
+		host, (unsigned int)port, path]];
 
 	req = [NSMutableURLRequest requestWithURL: url];
-	[req setValue: [NSString stringWithUTF8String: HTTP_USER_AGENT] forHTTPHeaderField: @"User-Agent"];
+	[req setValue: [NSString stringWithUTF8String: HTTP_USER_AGENT]
+	     forHTTPHeaderField: @"User-Agent"];
 
 	/* This API is deprecated but it's really old and I don't see it
-	 * TOTALLY going away any time soon... */
+	 * TOTALLY going away any time soon...
+	 *
+	 * NOTE: ideally we would send an asynchronous request, and slowly
+	 * build the resulting data, rather than copying the whole thing.
+	 * However I'm not sure if Mac OS X provides a good API to do this,
+	 * or at the very least it's not very simple to use. */
 	data = [NSURLConnection sendSynchronousRequest: req
 		returningResponse: &res error: &err];
 	if (!data) {

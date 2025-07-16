@@ -72,9 +72,9 @@ static void http_wininet_destroy_(struct http *r)
 		wi->WININET_InternetCloseHandle(wi->io);
 }
 
-static int http_wininet_send_request_(struct http *r, const char *domain,
-	const char *path, uint32_t reqflags, http_request_cb_spec cb,
-	void *userdata)
+static int http_wininet_send_request_(struct http *r, const char *host,
+	const char *path, uint16_t port, uint32_t reqflags,
+	http_request_cb_spec cb, void *userdata)
 {
 	HINTERNET ic;
 	HINTERNET hreq;
@@ -86,10 +86,8 @@ static int http_wininet_send_request_(struct http *r, const char *domain,
 	if (!wi)
 		return -5;
 
-	/* I'm not gonna bother handling UTF-8 correctly here.
-	 * HTTPS is on port 443, HTTP is on port 80 (usually...) */
-	ic = wi->WININET_InternetConnectA(wi->io, domain,
-		(reqflags & HTTP_REQ_SSL) ? 443 : 80, NULL, NULL,
+	/* I'm not gonna bother handling UTF-8 correctly here. */
+	ic = wi->WININET_InternetConnectA(wi->io, host, port, NULL, NULL,
 		INTERNET_SERVICE_HTTP, 0, 0);
 	if (!ic)
 		return -1;
