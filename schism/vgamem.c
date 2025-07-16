@@ -612,7 +612,7 @@ int draw_text_len_with_character_translation(const char * text, int len, int x, 
 	char *out = &translation_buffer[0];
 	int spaces_mismatch = 0;
 
-	char *safe = text + len - 1;
+	const char *safe = text + len - 1;
 
 	while (len > 0) {
 		// If a translation became wider, then eat spaces when we can.
