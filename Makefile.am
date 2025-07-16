@@ -384,7 +384,8 @@ ldflags_macosx=-framework Cocoa \
 	-framework CoreMIDI \
 	-framework IOKit \
 	-framework AudioUnit \
-	-framework AudioToolbox
+	-framework AudioToolbox \
+	-framework CoreServices
 endif
 
 if USE_MACOS
