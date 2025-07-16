@@ -510,7 +510,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			slurp_read(fp, &fat_time, sizeof(fat_time));
 			fat_time = bswapLE16(fat_time);
 
-			if (fat_date && fat_time) {
+			if (fat_date) { // fat_time is legitimately 0 at midnight
 				fat_date_time_to_tm(&song->history[i].time, fat_date, fat_time);
 				song->history[i].time_valid = 1;
 			}
