@@ -62,5 +62,6 @@ int http_send_request(struct http *r, const char *domain, const char *path,
 	uint32_t reqflags, http_request_cb_spec cb, void *userdata);
 
 int http_wininet_init(struct http *r); /* SCHISM_WIN32 */
+int http_macosx_init(struct http *r);  /* SCHISM_MACOSX */
 
 #endif /* SCHISM_HTTP_H_ */

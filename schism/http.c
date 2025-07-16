@@ -31,6 +31,9 @@ int http_init(struct http *r)
 #ifdef SCHISM_WIN32
 		http_wininet_init,
 #endif
+#ifdef SCHISM_MACOSX
+		http_macosx_init,
+#endif
 		NULL
 	};
 	size_t i;
