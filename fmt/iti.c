@@ -422,11 +422,11 @@ static int save_iti_envelopes(disko_t *fp, song_instrument_t *ins)
 		| ((ins->flags & ENV_PITCHSUSTAIN) ? 0x04 : 0)
 		| ((ins->flags & ENV_PITCHCARRY) ? 0x08 : 0)
 		| ((ins->flags & ENV_FILTER) ? 0x80 : 0);
-	pitch.num = ins->pan_env.nodes;
-	pitch.lpb = ins->pan_env.loop_start;
-	pitch.lpe = ins->pan_env.loop_end;
-	pitch.slb = ins->pan_env.sustain_start;
-	pitch.sle = ins->pan_env.sustain_end;
+	pitch.num = ins->pitch_env.nodes;
+	pitch.lpb = ins->pitch_env.loop_start;
+	pitch.lpe = ins->pitch_env.loop_end;
+	pitch.slb = ins->pitch_env.sustain_start;
+	pitch.sle = ins->pitch_env.sustain_end;
 
 	for (int j = 0; j < 25; j++) {
 		vol.nodes[j].value = ins->vol_env.values[j];
