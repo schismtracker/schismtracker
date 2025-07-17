@@ -103,11 +103,7 @@ int fmt_its_read_info(dmoz_file_t *file, slurp_t *fp)
 	file->description = "Impulse Tracker Sample";
 	file->type = TYPE_SAMPLE_EXTD;
 
-	slurp_seek(fp, 20, SEEK_SET);
-	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
-		return 0;
-
-	file->title = strn_dup((const char *)title, sizeof(title));
+	file->title = strn_dup((const char *)its.name, sizeof(its.name));
 
 	return 1;
 }
