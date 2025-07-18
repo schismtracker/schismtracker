@@ -852,13 +852,8 @@ void schism_assert_fail(const char *msg, const char *exp, const char *file, int 
 		"Expression: %s\n"
 		"\n"
 		"Schism Tracker will now terminate.";
-	char *s;
 
-	if (asprintf(&s, format, msg, file, line, exp) >= 0) {
-		/* Hopefully this doesn't fail */
-		os_show_message_box("Assertion triggered!", s, OS_MESSAGE_BOX_ERROR);
-		free(s);
-	} else {
+	if (msgbox(OS_MESSAGE_BOX_ERROR, "Assertion triggered!", format, msg, file, line, exp) < 0) {
 		/* fall back to printing to stderr, I guess */
 		fprintf(stderr, format, msg, file, line, exp);
 		fputc('\n', stderr);
@@ -870,6 +865,114 @@ void schism_assert_fail(const char *msg, const char *exp, const char *file, int 
 	exit(1);
 }
 #endif
+
+/* basic AF crash handler
+ * platform-specific stuff can be printed out into the logfile in the log
+ * callback. */
+void schism_crash(void (*log_cb)(FILE *f, void *userdata), void *userdata)
+{
+	char name_template[512]; /* should be plenty */
+	size_t name_template_len;
+
+	{
+		time_t thetime;
+		struct tm tm;
+
+		thetime = time(NULL);
+		localtime_r(&thetime, &tm);
+
+		/* TODO its more safe to shove it in LocalAppData or similar
+		 * make sure we have enough space to put in a file extension */
+		name_template_len = strftime(name_template, sizeof(name_template) - 16, "schism_crash_%Y-%m-%d_%H-%M-%S", &tm);
+	}
+
+	if (log_cb) {
+		FILE *log;
+
+		memcpy(name_template + name_template_len, ".log", 5);
+		log = fopen(name_template, "w");
+
+		log_cb(log, userdata);
+
+		fclose(log);
+	}
+
+	/* now that we've sufficiently dumped the stuff, at least try to
+	 * save the current song */
+	if (current_song && (status.flags & SONG_NEEDS_SAVE)) {
+		int i;
+		int try_again = 1;
+
+		const char *extension = dmoz_path_get_extension(song_get_filename());
+		if (extension && *extension) {
+			char type[4];
+			strncpy(type, extension + 1, 3);
+			type[3] = 0;
+
+			/* convert to uppercase */
+			for (i = 0; i < 3; i++)
+				type[i] = toupper(type[i]);
+
+			strncpy(name_template + name_template_len, extension, 15);
+			name_template[name_template_len + 15] = 0;
+
+			try_again = (song_save(name_template, type) != SAVE_SUCCESS);
+		}
+
+		if (try_again) {
+			/* welp, either we have no extension, or no big hints, so
+			 * at least attempt to save SOMETHING */
+			const char *type = "IT";
+			int len = 2;
+
+			/* Instrument data is probably more important? */
+			if (!(current_song->flags & SONG_INSTRUMENTMODE)) {
+				int i;
+
+				/* look for any possible adlib samples; if we do have some,
+				 * we have to save as S3M .. */
+				for (i = 1; i <= MAX_SAMPLES; i++) {
+					if (current_song->samples[i].flags & CHN_ADLIB) {
+						type = "S3M";
+						len = 3;
+						break;
+					}
+				}
+			}
+
+			name_template[name_template_len] = '.';
+			for (i = 0; i < len; i++)
+				name_template[name_template_len + 1 + i] = tolower(type[i]);
+			name_template[name_template_len + 1 + len] = 0;
+
+			try_again = (song_save(name_template, type) != SAVE_SUCCESS);
+		}
+	}
+
+	{
+		char *dir = dmoz_get_current_directory();
+		const char *thebox;
+
+		if (log_cb && current_song && (status.flags & SONG_NEEDS_SAVE)) {
+			thebox = "a crash log and a copy of the current song";
+		} else if (log_cb) {
+			thebox = "a crash log";
+		} else if (current_song && (status.flags & SONG_NEEDS_SAVE)) {
+			thebox = "a copy of the current song";
+		} else {
+			thebox = "absolutely nothing";
+		}
+
+		msgbox(OS_MESSAGE_BOX_ERROR, "Schism Tracker has crashed!",
+			"If all went well, there should be %s saved in %s.\n"
+			"\n"
+			"You should report this to the bug tracker at "
+			"https://github.com/schismtracker/schismtracker/issues",
+			thebox, dir);
+
+		free(dir);
+	}
+}
 
 void schism_exit(int x)
 {

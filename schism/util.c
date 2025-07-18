@@ -129,3 +129,31 @@ int util_call_func_with_envvar(int (*cb)(void *p), void *p, const char *name,
 	/* forward any error, if any */
 	return ret;
 }
+
+/* ------------------------------------------------------------------------ */
+
+/* uses os_show_message_box to show a formatted string */
+int msgboxv(int style, const char *title, const char *fmt, va_list ap)
+{
+	char *s;
+	if (vasprintf(&s, fmt, ap) < 0)
+		return -1;
+
+	os_show_message_box(title, s, style);
+
+	free(s);
+
+	return 0;
+}
+
+int msgbox(int style, const char *title, const char *fmt, ...)
+{
+	va_list ap;
+	int r;
+
+	va_start(ap, fmt);
+	r = msgboxv(style, title, fmt, ap);
+	va_end(ap);
+
+	return r;
+}

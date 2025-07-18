@@ -32,6 +32,7 @@
 #include "charset.h"
 #include "loadso.h"
 #include "mem.h"
+#include "song.h"
 
 #include <ws2tcpip.h>
 #include <windows.h>
@@ -945,6 +946,226 @@ static void win32_dark_quit(void)
 }
 
 /* ------------------------------------------------------------------------ */
+/* crash handler, only available on Windows NT (?) */
+
+static void *lib_dbghelp;
+static BOOL (WINAPI *DBGHELP_SymInitialize)(HANDLE,PCSTR,BOOL);
+static DWORD64 (WINAPI *DBGHELP_SymGetModuleBase64)(HANDLE,DWORD64);
+static BOOL (WINAPI *DBGHELP_SymFromAddr)(HANDLE,DWORD64,PDWORD64,PSYMBOL_INFO);
+static BOOL (WINAPI *DBGHELP_StackWalk64)(DWORD,HANDLE,HANDLE,LPSTACKFRAME64,
+	PVOID,PREAD_PROCESS_MEMORY_ROUTINE64,PFUNCTION_TABLE_ACCESS_ROUTINE64,
+	PGET_MODULE_BASE_ROUTINE64,PTRANSLATE_ADDRESS_ROUTINE64);
+static PVOID (WINAPI *DBGHELP_SymFunctionTableAccess64)(HANDLE,DWORD64);
+
+static void *lib_kernel32;
+static LPTOP_LEVEL_EXCEPTION_FILTER (WINAPI *KERNEL32_SetUnhandledExceptionFilter)(
+	LPTOP_LEVEL_EXCEPTION_FILTER
+);
+
+static void *lib_psapi;
+static DWORD (WINAPI *PSAPI_GetModuleBaseNameA)(HANDLE,HMODULE,LPSTR,DWORD);
+
+static void *lib_ntdll;
+static USHORT (WINAPI *NTDLL_RtlCaptureStackBackTrace)(ULONG,ULONG,PVOID,PULONG);
+
+static void win32_exception_log_cb(FILE *log, void *userdata)
+{
+	LPEXCEPTION_POINTERS p = userdata;
+	HANDLE process, thread;
+	char module_name[MAX_PATH]; /* can be schism itself or a dll */
+	DWORD64 addr;
+	int i;
+
+	module_name[0] = 0;
+
+	process = GetCurrentProcess();
+	thread = GetCurrentThread();
+
+	DBGHELP_SymInitialize(process, NULL, TRUE);
+
+	addr = DBGHELP_SymGetModuleBase64(process, (DWORD64)p->ExceptionRecord->ExceptionAddress);
+	PSAPI_GetModuleBaseNameA(process, (HMODULE)addr, module_name, sizeof(module_name));
+
+	fprintf(log, "Exception code: 0x%08X\n", 
+		p->ExceptionRecord->ExceptionCode);  
+	fprintf(log, "Exception address: 0x%p (%s+0x%llX)\n\n",
+		p->ExceptionRecord->ExceptionAddress, module_name,
+		(uint64_t)p->ExceptionRecord->ExceptionAddress - addr);  
+
+	fprintf(log, "General purpose and control registers:\n");
+#if defined(__i386__) || defined(_M_IX86)
+	fprintf(log, "EAX: 0x%08X, EBX: 0x%08X, ECX: 0x%08X\n",
+		p->ContextRecord->Eax, p->ContextRecord->Ebx, p->ContextRecord->Ecx);
+	fprintf(log, "EDX: 0x%08X, EBP: 0x%08X, EDI: 0x%08X\n",
+		p->ContextRecord->Edx, p->ContextRecord->Ebp, p->ContextRecord->Edi);
+	fprintf(log, "EIP: 0x%08X, ESI: 0x%08X, ESP: 0x%08X\n",
+		p->ContextRecord->Eip, p->ContextRecord->Esi, p->ContextRecord->Esp);
+#elif defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
+	/* same as i386, but this time with R prefix instead of E */
+	fprintf(log, "RAX: 0x%08llX, RBX: 0x%08llX, RCX: 0x%08llX\n",
+		p->ContextRecord->Rax, p->ContextRecord->Rbx, p->ContextRecord->Rcx);
+	fprintf(log, "RDX: 0x%08llX, RBP: 0x%08llX, RDI: 0x%08llX\n",
+		p->ContextRecord->Rdx, p->ContextRecord->Rbp, p->ContextRecord->Rdi);
+	fprintf(log, "RIP: 0x%08llX, RSI: 0x%08llX, RSP: 0x%08llX\n",
+		p->ContextRecord->Rip, p->ContextRecord->Rsi, p->ContextRecord->Rsp);
+#elif defined(__aarch64__) || defined(_M_ARM64)
+	fprintf(log, "?\n");
+#elif defined(__arm__) || defined(_M_ARM)
+	fprintf(log, "?\n");
+#else
+	fprintf(log, "?\n");
+#endif
+
+	fprintf(log, "\nSegment registers:\n");
+#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
+	fprintf(log, "CS: 0x%04X, DS: 0x%04X, ES: 0x%04X\n",
+		p->ContextRecord->SegCs, p->ContextRecord->SegDs, p->ContextRecord->SegEs);
+	fprintf(log, "FS: 0x%04X, GS: 0x%04X, SS: 0x%04X\n",
+		p->ContextRecord->SegFs, p->ContextRecord->SegGs, p->ContextRecord->SegSs);
+#else
+	fprintf(log, "?\n");
+#endif
+
+#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
+	/* stack trace is only implemented for x86-derivatives,
+	 * because I don't have a proper arm machine to test with */
+	STACKFRAME64 stack = {0};
+	CONTEXT context;
+
+	if (!DBGHELP_SymFromAddr || !DBGHELP_SymFunctionTableAccess64)
+		return;
+
+#if defined(__i386__) || defined(_M_IX86)
+	stack.AddrPC.Offset    = p->ContextRecord->Eip;
+	stack.AddrStack.Offset = p->ContextRecord->Esp;
+	stack.AddrFrame.Offset = p->ContextRecord->Ebp;
+#elif defined(__amd64__) || defined(_M_AMD64) || defined(_M_X64)
+	stack.AddrPC.Offset    = p->ContextRecord->Rip;
+	stack.AddrStack.Offset = p->ContextRecord->Rsp;
+	stack.AddrFrame.Offset = p->ContextRecord->Rbp;
+#endif
+	stack.AddrPC.Mode      = AddrModeFlat;
+	stack.AddrStack.Mode   = AddrModeFlat;
+	stack.AddrFrame.Mode   = AddrModeFlat;
+
+	fprintf(log, "\nStack trace:\n");
+
+	memcpy(&context, &p->ContextRecord, sizeof(CONTEXT));
+
+    for (i = 0; DBGHELP_StackWalk64(
+#if defined(__i386__) || defined(_M_IX86)
+		IMAGE_FILE_MACHINE_I386
+#elif defined(__amd64__) || defined(_M_AMD64) || defined(_M_X64)
+		IMAGE_FILE_MACHINE_AMD64
+#else
+# error whoops
+#endif
+		, process, thread, &stack, &context, NULL,
+		DBGHELP_SymFunctionTableAccess64, DBGHELP_SymGetModuleBase64, NULL);
+		i++) {
+		/* This seems backwards, but it's what MSDN does */
+		char symbol_buf[sizeof(SYMBOL_INFO) + 256] = {0};
+		SYMBOL_INFO *symbol;
+
+		symbol = (SYMBOL_INFO *)symbol_buf;
+		symbol->SizeOfStruct = sizeof(*symbol);
+		symbol->MaxNameLen = 256;
+
+		module_name[0] = 0;
+
+		/* stack trace wgat it is */
+		addr = DBGHELP_SymGetModuleBase64(process, stack.AddrPC.Offset);
+		PSAPI_GetModuleBaseNameA(process, (HMODULE)addr, module_name, sizeof(module_name));
+
+		DBGHELP_SymFromAddr(process, stack.AddrPC.Offset, NULL, symbol);
+
+		fprintf(log, "%d: [%s] ", i, module_name);
+
+		// with symbols
+		if (symbol->Address && (stack.AddrPC.Offset >= symbol->Address)) {
+			fprintf(log, "(%s+%llX) - 0x%llX\n", symbol->Name,
+				(DWORD64)stack.AddrPC.Offset - symbol->Address,
+				symbol->Address);
+		} else {
+			fprintf(log, "- 0x%llX\n", stack.AddrPC.Offset);
+		}
+	}
+#endif
+}
+
+static LONG WINAPI win32_exception_handler(LPEXCEPTION_POINTERS p)
+{
+	schism_crash(win32_exception_log_cb, p);
+
+	return EXCEPTION_EXECUTE_HANDLER;
+}
+
+static int win32_exception_init(void)
+{
+	lib_kernel32 = loadso_object_load("KERNEL32.DLL");
+	if (!lib_kernel32) {
+		return -1;
+	}
+
+	lib_dbghelp = loadso_object_load("DBGHELP.DLL");
+	if (!lib_dbghelp) {
+		loadso_object_unload(lib_kernel32);
+		return -1;
+	}
+
+	lib_psapi = loadso_object_load("PSAPI.DLL");
+	if (!lib_psapi) {
+		loadso_object_unload(lib_kernel32);
+		loadso_object_unload(lib_dbghelp);
+	}
+
+	lib_ntdll = loadso_object_load("NTDLL.DLL");
+
+	KERNEL32_SetUnhandledExceptionFilter = loadso_function_load(lib_kernel32, "SetUnhandledExceptionFilter");
+	DBGHELP_SymGetModuleBase64 = loadso_function_load(lib_dbghelp, "SymGetModuleBase64");
+	DBGHELP_SymInitialize = loadso_function_load(lib_dbghelp, "SymInitialize");
+	DBGHELP_SymFromAddr = loadso_function_load(lib_dbghelp, "SymFromAddr");
+	DBGHELP_StackWalk64 = loadso_function_load(lib_dbghelp, "StackWalk64");
+	DBGHELP_SymFunctionTableAccess64 = loadso_function_load(lib_dbghelp, "SymFunctionTableAccess64");
+	PSAPI_GetModuleBaseNameA = loadso_function_load(lib_psapi, "GetModuleBaseNameA");
+
+	if (lib_ntdll)
+		NTDLL_RtlCaptureStackBackTrace = loadso_function_load(lib_ntdll, "RtlCaptureStackBackTrace");
+
+	if (!KERNEL32_SetUnhandledExceptionFilter
+		|| !DBGHELP_SymGetModuleBase64
+		|| !DBGHELP_SymInitialize
+		|| !PSAPI_GetModuleBaseNameA) {
+		loadso_object_unload(lib_kernel32);
+		loadso_object_unload(lib_dbghelp);
+		loadso_object_unload(lib_psapi);
+		loadso_object_unload(lib_ntdll);
+		return -1;
+	}
+
+	KERNEL32_SetUnhandledExceptionFilter(win32_exception_handler);
+
+	return 0;
+}
+
+static void win32_exception_quit(void)
+{
+	KERNEL32_SetUnhandledExceptionFilter(NULL);
+
+	if (lib_kernel32)
+		loadso_object_unload(lib_kernel32);
+
+	if (lib_dbghelp)
+		loadso_object_unload(lib_dbghelp);
+
+	if (lib_psapi)
+		loadso_object_unload(lib_psapi);
+
+	if (lib_ntdll)
+		loadso_object_unload(lib_ntdll);
+}
+
+/* ------------------------------------------------------------------------ */
 /* okay, FINALLY, we're at the actual init functions */
 
 void win32_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv)
@@ -965,6 +1186,7 @@ void win32_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv)
 
 	win32_init_menu();
 	win32_dark_init();
+	win32_exception_init();
 
 	/* Convert command line arguments to UTF-8 */
 	{
@@ -1019,6 +1241,7 @@ void win32_sysexit(void)
 #endif
 
 	win32_dark_quit();
+	win32_exception_quit();
 
 	/* shutdown winsocks */
 	WSACleanup();

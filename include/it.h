@@ -323,6 +323,8 @@ int schism_main(int argc, char** argv);
 /* Shutdown the SDL2 system from anywhere without having to use atexit() */
 SCHISM_NORETURN void schism_exit(int status);
 
+void schism_crash(void (*log_cb)(FILE *, void *), void *userdata);
+
 /* --------------------------------------------------------------------- */
 /* page_waterfall.c */
 

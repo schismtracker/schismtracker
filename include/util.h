@@ -129,4 +129,8 @@ FILE *mkfstemp(char *template);
 int util_call_func_with_envvar(int (*cb)(void *p), void *p, const char *name,
 	const char *val);
 
+/* open a message box with printf formatted string. */
+int msgboxv(int style, const char *title, const char *fmt, va_list ap);
+int msgbox(int style, const char *title, const char *fmt, ...);
+
 #endif /* SCHISM_UTIL_H_ */
