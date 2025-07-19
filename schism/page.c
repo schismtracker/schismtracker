@@ -58,11 +58,20 @@ struct tracker_status status = {
 
 struct page pages[PAGE_MAX] = {0};
 
-struct widget *widgets = NULL;
-int *selected_widget = NULL;
-int *total_widgets = NULL;
+struct widget_context *widget_context = NULL;
 
 static int fontedit_return_page = PAGE_PATTERN_EDITOR;
+
+/* --------------------------------------------------------------------- */
+
+/* dynamic cast to struct page * */
+struct page *widget_context_as_page(struct widget_context *this)
+{
+	if (this && (this->context_type == WIDGET_CONTEXT_PAGE))
+		return (struct page *)this;
+	else
+		return NULL;
+}
 
 /* --------------------------------------------------------------------- */
 
@@ -250,7 +259,7 @@ int page_is_instrument_list(int page)
 static struct widget new_song_widgets[10] = {0};
 static const int new_song_groups[4][3] = { {0, 1, -1}, {2, 3, -1}, {4, 5, -1}, {6, 7, -1} };
 
-static void new_song_ok(SCHISM_UNUSED void *data)
+static void new_song_finalize(struct dialog *this, SCHISM_UNUSED dialog_button_t button)
 {
 	int flags = 0;
 	if (new_song_widgets[0].d.togglebutton.state)
@@ -261,10 +270,16 @@ static void new_song_ok(SCHISM_UNUSED void *data)
 		flags |= KEEP_INSTRUMENTS;
 	if (new_song_widgets[6].d.togglebutton.state)
 		flags |= KEEP_ORDERLIST;
+	this->final_data = malloc_int(flags);
+}
+
+static void new_song_ok(SCHISM_UNUSED void *data, void *final_data)
+{
+	int flags = *(int *)final_data;
 	song_new(flags);
 }
 
-static void new_song_draw_const(void)
+static void new_song_draw_const(SCHISM_UNUSED struct dialog *dialog)
 {
 	draw_text("New Song", 36, 21, 3, 2);
 	draw_text("Patterns", 26, 24, 0, 2);
@@ -295,15 +310,15 @@ void new_song_dialog(void)
 				    2, new_song_groups[3]);
 		widget_create_togglebutton(new_song_widgets + 7, 45, 33, 7, 5, 9, 6, 6, 6, NULL, "Clear",
 				    2, new_song_groups[3]);
-		widget_create_button(new_song_widgets + 8, 28, 36, 8, 6, 8, 9, 9, 9, dialog_yes_NULL, "OK", 4);
-		widget_create_button(new_song_widgets + 9, 41, 36, 8, 6, 9, 8, 8, 8, dialog_cancel_NULL, "Cancel", 2);
+		widget_create_button(new_song_widgets + 8, 28, 36, 8, 6, 8, 9, 9, 9, dialog_yes, "OK", 4);
+		widget_create_button(new_song_widgets + 9, 41, 36, 8, 6, 9, 8, 8, 8, dialog_cancel, "Cancel", 2);
 		widget_togglebutton_set(new_song_widgets, 1, 0);
 		widget_togglebutton_set(new_song_widgets, 3, 0);
 		widget_togglebutton_set(new_song_widgets, 5, 0);
 		widget_togglebutton_set(new_song_widgets, 7, 0);
 	}
 
-	dialog = dialog_create_custom(21, 20, 38, 19, new_song_widgets, 10, 8, new_song_draw_const, NULL);
+	dialog = dialog_create_custom(21, 20, 38, 19, new_song_widgets, 10, 8, new_song_draw_const, NULL, new_song_finalize);
 	dialog->action_yes = new_song_ok;
 }
 
@@ -318,7 +333,7 @@ static void (*_mp_setv_noplay)(int v) = NULL;
 static const char *_mp_text = "";
 static int _mp_text_x, _mp_text_y;
 
-static void _mp_draw(void)
+static void _mp_draw(SCHISM_UNUSED struct dialog *this)
 {
 	const char *name = NULL;
 	int n, i;
@@ -350,17 +365,17 @@ static void _mp_draw(void)
 		 BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
-static void _mp_change(void)
+static void _mp_change(struct widget_context *this)
 {
-	if (_mp_setv) _mp_setv(_mpw[0].d.thumbbar.value);
+	if (_mp_setv) _mp_setv(this->widgets[0].d.thumbbar.value);
 	if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
 		if (_mp_setv_noplay)
-			_mp_setv_noplay(_mpw[0].d.thumbbar.value);
+			_mp_setv_noplay(this->widgets[0].d.thumbbar.value);
 	}
 	_mp_active = 2;
 }
 
-static void _mp_finish(SCHISM_UNUSED void *ign)
+static void _mp_finish(SCHISM_UNUSED struct widget_context *ign)
 {
 	if (_mp_active) {
 		dialog_destroy_all();
@@ -383,7 +398,7 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 	widget_create_thumbbar(_mpw, midx - 8, midy, 13, 0, 0, 0, _mp_change, min, max);
 	_mpw[0].d.thumbbar.value = CLAMP(cv, min, max);
 	_mpw[0].depressed = 1; /* maybe it just needs some zoloft? */
-	dialog_create_custom(midx - 10, midy - 3,  20, 6, _mpw, 1, 0, _mp_draw, NULL);
+	dialog_create_custom(midx - 10, midy - 3,  20, 6, _mpw, 1, 0, _mp_draw, NULL, NULL);
 	/* warp mouse to position of slider knob */
 	if (max == 0) max = 1; /* prevent division by zero */
 	video_warp_mouse(
@@ -641,7 +656,7 @@ static int handle_key_global(struct key_event * k)
 					if (status.dialog_type & DIALOG_MENU) {
 						return 0;
 					} else if (status.dialog_type != DIALOG_NONE) {
-						dialog_yes_NULL();
+						dialog_yes(widget_context);
 						status.flags |= NEED_UPDATE;
 					} else {
 						_mp_finish(NULL);
@@ -1606,9 +1621,7 @@ void set_page(int new_page)
 	}
 
 	/* update the pointers */
-	widgets = ACTIVE_PAGE.widgets;
-	selected_widget = &(ACTIVE_PAGE.selected_widget);
-	total_widgets = &(ACTIVE_PAGE.total_widgets);
+	widget_context = (struct widget_context *)&ACTIVE_PAGE;
 
 	if (ACTIVE_PAGE.set_page) ACTIVE_PAGE.set_page();
 	status.flags |= NEED_UPDATE;
@@ -1618,6 +1631,8 @@ void set_page(int new_page)
 
 void load_pages(void)
 {
+	int i;
+
 	blank_load_page(pages + PAGE_BLANK);
 	help_load_page(pages + PAGE_HELP);
 	pattern_editor_load_page(pages + PAGE_PATTERN_EDITOR);
@@ -1649,9 +1664,14 @@ void load_pages(void)
 	save_module_load_page(pages + PAGE_EXPORT_MODULE, 1);
 	timeinfo_load_page(pages + PAGE_TIME_INFORMATION);
 
-	widgets = pages[PAGE_BLANK].widgets;
-	selected_widget = &(pages[PAGE_BLANK].selected_widget);
-	total_widgets = &(pages[PAGE_BLANK].total_widgets);
+	for (i = 0; i < ARRAY_SIZE(pages); ++i)
+	{
+		pages[i].context_type = WIDGET_CONTEXT_PAGE;
+
+		widget_set_context_use_active_page((struct widget_context *)&pages[i]);
+	}
+
+	widget_context = (struct widget_context *)&pages[PAGE_BLANK];
 }
 
 /* --------------------------------------------------------------------- */
@@ -1685,26 +1705,26 @@ void main_song_changed_cb(void)
 /* --------------------------------------------------------------------- */
 /* not sure where else to toss this crap */
 
-static void savecheck(void (*ok)(void *data), void (*cancel)(void *data), void *data)
+static void savecheck(action_cb ok, action_cb cancel, void *data)
 {
 	if (status.flags & SONG_NEEDS_SAVE) {
 		dialog_create(DIALOG_OK_CANCEL, "Current module not saved. Proceed?", ok, cancel, 1, data);
 	} else {
-		ok(data);
+		ok(data, NULL);
 	}
 }
 
-static void exit_ok_confirm(SCHISM_UNUSED void *data)
+static void exit_ok_confirm(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	schism_exit(0);
 }
 
-static void exit_ok(SCHISM_UNUSED void *data)
+static void exit_ok(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	savecheck(exit_ok_confirm, NULL, NULL);
 }
 
-static void real_load_ok(void *filename)
+static void real_load_ok(void *filename, void *final_data)
 {
 	if (song_load_unchecked(filename)) {
 		set_page((song_get_mode() == MODE_PLAYING) ? PAGE_INFO : PAGE_LOG);
@@ -1716,7 +1736,7 @@ static void real_load_ok(void *filename)
 
 void song_load(const char *filename)
 {
-	savecheck(real_load_ok, free, str_dup(filename));
+	savecheck(real_load_ok, dialog_free_data, str_dup(filename));
 }
 
 void show_exit_prompt(void)
@@ -1753,14 +1773,14 @@ static int _tj_num1 = 0, _tj_num2 = 0;
 static int _timejump_keyh(struct key_event *k)
 {
 	if (k->sym == SCHISM_KEYSYM_BACKSPACE) {
-		if (*selected_widget == 1 && _timejump_widgets[1].d.numentry.value == 0) {
+		if (widget_context->selected_widget == 1 && _timejump_widgets[1].d.numentry.value == 0) {
 			if (k->state == KEY_RELEASE) widget_change_focus_to(0);
 			return 1;
 		}
 	}
 	if (k->sym == SCHISM_KEYSYM_COLON || k->sym == SCHISM_KEYSYM_SEMICOLON) {
 		if (k->state == KEY_RELEASE) {
-			if (*selected_widget == 0) {
+			if (widget_context->selected_widget == 0) {
 				widget_change_focus_to(1);
 			}
 		}
@@ -1769,7 +1789,12 @@ static int _timejump_keyh(struct key_event *k)
 	return 0;
 }
 
-static void _timejump_draw(void)
+static int _timejump_keyh_dialog(SCHISM_UNUSED struct dialog *this, struct key_event *k)
+{
+	return _timejump_keyh(k);
+}
+
+static void _timejump_draw(SCHISM_UNUSED struct dialog *this)
 {
 	draw_text("Jump to time:", 30, 26, 0, 2);
 
@@ -1777,12 +1802,22 @@ static void _timejump_draw(void)
 	draw_box(43, 25, 49, 27, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
-static void _timejump_ok(void)
+static void _timejump_finalize(struct dialog *this, SCHISM_UNUSED dialog_button_t button)
 {
-	unsigned long sec;
+	unsigned int sec;
+
+	sec =
+		this->widgets[0].d.numentry.value * 60 +
+		this->widgets[1].d.numentry.value;
+
+	this->final_data = malloc_int((int)sec); // XXX: malloc_uint?
+}
+
+static void _timejump_ok_dialog(SCHISM_UNUSED void *data, void *final_data)
+{
+	unsigned int sec;
 	int no, np, nr;
-	sec = (_timejump_widgets[0].d.numentry.value * 60)
-		+ _timejump_widgets[1].d.numentry.value;
+	sec = *(unsigned int *)final_data;
 	song_get_at_time(sec, &no, &nr);
 	set_current_order(no);
 	np = current_song->orderlist[no];
@@ -1791,11 +1826,6 @@ static void _timejump_ok(void)
 		set_current_row(nr);
 		set_page(PAGE_PATTERN_EDITOR);
 	}
-}
-
-static void _timejump_ok_ptr(SCHISM_UNUSED void *ign)
-{
-	_timejump_ok();
 }
 
 void show_song_timejump(void)
@@ -1807,11 +1837,11 @@ void show_song_timejump(void)
 	_timejump_widgets[0].d.numentry.handle_unknown_key = _timejump_keyh;
 	_timejump_widgets[0].d.numentry.reverse = 1;
 	_timejump_widgets[1].d.numentry.reverse = 1;
-	widget_create_button(_timejump_widgets+2, 30, 29, 8, 0, 2, 2, 3, 3, _timejump_ok, "OK", 4);
-	widget_create_button(_timejump_widgets+3, 42, 29, 8, 1, 3, 3, 3, 0, dialog_cancel_NULL, "Cancel", 2);
-	d = dialog_create_custom(26, 24, 30, 8, _timejump_widgets, 4, 0, _timejump_draw, NULL);
-	d->handle_key = _timejump_keyh;
-	d->action_yes = _timejump_ok_ptr;
+	widget_create_button(_timejump_widgets+2, 30, 29, 8, 0, 2, 2, 3, 3, (widget_cb)_timejump_ok_dialog, "OK", 4);
+	widget_create_button(_timejump_widgets+3, 42, 29, 8, 1, 3, 3, 3, 0, dialog_cancel, "Cancel", 2);
+	d = dialog_create_custom(26, 24, 30, 8, _timejump_widgets, 4, 0, _timejump_draw, NULL, _timejump_finalize);
+	d->handle_key = _timejump_keyh_dialog;
+	d->action_yes = _timejump_ok_dialog;
 }
 
 void show_length_dialog(const char *label, unsigned int length)
@@ -1822,7 +1852,7 @@ void show_length_dialog(const char *label, unsigned int length)
 		perror("asprintf");
 		return;
 	}
-	dialog_create(DIALOG_OK, buf, free, free, 0, buf);
+	dialog_create(DIALOG_OK, buf, dialog_free_data, dialog_free_data, 0, buf);
 }
 
 void show_song_length(void)

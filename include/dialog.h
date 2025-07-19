@@ -27,7 +27,33 @@
 struct key_event;
 struct widget;
 
+#include "widget_context.h"
+
+struct dialog;
+
+typedef enum {
+	DIALOG_BUTTON_OK = 1,
+	DIALOG_BUTTON_YES = 1,
+
+	DIALOG_BUTTON_NO = 2,
+
+	DIALOG_BUTTON_CANCEL = 3,
+} dialog_button_t;
+
+typedef void (*dialog_cb)(struct dialog *this);
+typedef int (*dialog_key_event_cb)(struct dialog *this, struct key_event *k);
+typedef void (*dialog_finalize_cb)(struct dialog *this, dialog_button_t dialog_button);
+typedef void (*action_cb)(void *data, void *final_data);
+
 struct dialog {
+	/************************************/
+	/* must match struct widget_context */
+	enum widget_context_type context_type;
+	struct widget *widgets;     /* malloc'ed (type != DIALOG_CUSTOM) */
+	int selected_widget;
+	int total_widgets;
+	/************************************/
+
 	int type;
 	int x, y, w, h;
 
@@ -35,41 +61,41 @@ struct dialog {
 	char *text;     /* malloc'ed */
 	int text_x;
 
-	struct widget *widgets;     /* malloc'ed */
-	int selected_widget;
-	int total_widgets;
-
 	void *data; /* extra data pointer */
+	void *final_data; /* data passed to action after dialog_destroy -- always free()d */
 
 	/* maybe these should get the data pointer as well? */
-	void (*draw_const) (void);
-	int (*handle_key) (struct key_event * k);
+	dialog_cb draw_const;
+	dialog_key_event_cb handle_key;
+
+	/* notify the dialog that it's time to grab what it
+	 * wants from widgets and stash it in final_data */
+	dialog_finalize_cb finalize;
 
 	/* there's no action_ok, as yes and ok are fundamentally the same */
-	void (*action_yes) (void *data);
-	void (*action_no) (void *data); /* only useful for y/n dialogs? */
+	action_cb action_yes;
+	action_cb action_no; /* only useful for y/n dialogs? */
 	/* currently, this is only settable for custom dialogs.
 	 * it's only used in a couple of places (mostly on the pattern editor) */
-	void (*action_cancel) (void *data);
+	action_cb action_cancel;
 };
 
 /* dialog handlers
  * these are set by default for normal dialogs, and can be used with the custom dialogs.
  * they call the {yes, no, cancel} callback, destroy the dialog, and schedule a screen
  * update. (note: connect these to the BUTTONS, not the action_* callbacks!) */
-void dialog_yes(void *data);
-void dialog_no(void *data);
-void dialog_cancel(void *data);
-/* these are the same as dialog_yes(NULL) etc., and are used in button callbacks */
-void dialog_yes_NULL(void);
-void dialog_no_NULL(void);
-void dialog_cancel_NULL(void);
+void dialog_yes(struct widget_context *this);
+void dialog_no(struct widget_context *this);
+void dialog_cancel(struct widget_context *this);
+
+/* dialog handler that simply calls free() on data */
+void dialog_free_data(void *data, void *final_data);
 
 int dialog_handle_key(struct key_event * k);
 void dialog_draw(void);
 
-struct dialog *dialog_create(int type, const char *text, void (*action_yes) (void *data),
-		   void (*action_no) (void *data), int default_widget, void *data);
+struct dialog *dialog_create(int type, const char *text, action_cb action_yes,
+		   action_cb action_no, int default_widget, void *data);
 
 void dialog_destroy(void);
 void dialog_destroy_all(void);
@@ -79,6 +105,9 @@ void dialog_destroy_all(void);
  * the dialog has been displayed. */
 struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *dialog_widgets,
 				    int dialog_total_widgets, int dialog_selected_widget,
-				    void (*draw_const) (void), void *data);
+				    dialog_cb draw_const, void *data, dialog_finalize_cb finalize);
+
+/* dynamic cast to struct dialog * */
+struct dialog *widget_context_as_dialog(struct widget_context *this);
 
 #endif /* SCHISM_DIALOG_H_ */
