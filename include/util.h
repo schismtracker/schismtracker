@@ -133,4 +133,6 @@ int util_call_func_with_envvar(int (*cb)(void *p), void *p, const char *name,
 int msgboxv(int style, const char *title, const char *fmt, va_list ap);
 int msgbox(int style, const char *title, const char *fmt, ...);
 
+uint32_t crc32b(const unsigned char *message);
+
 #endif /* SCHISM_UTIL_H_ */

@@ -30,6 +30,7 @@
 #include "midi.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "keybinds.h"
 
 #include "song.h"
 
@@ -161,40 +162,37 @@ static int midi_page_handle_key(struct key_event * k)
 		}
 	}
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_SPACE:
-		if (k->state == KEY_PRESS)
-			return 1;
-		toggle_port();
+	if (keybinds_handled(KEYBIND_SECTION_MIDI, KEYBIND_BIND_MIDI_TOGGLE_PORT)) {
+		if (keybinds_released(KEYBIND_SECTION_MIDI, KEYBIND_BIND_MIDI_TOGGLE_PORT))
+			toggle_port();
 		return 1;
-	case SCHISM_KEYSYM_PAGEUP:
-		new_port -= 13;
-		break;
-	case SCHISM_KEYSYM_PAGEDOWN:
-		new_port += 13;
-		break;
-	case SCHISM_KEYSYM_HOME:
-		new_port = 0;
-		break;
-	case SCHISM_KEYSYM_END:
-		new_port = ct - 1;
-		break;
-	case SCHISM_KEYSYM_UP:
-		new_port--;
-		break;
-	case SCHISM_KEYSYM_DOWN:
-		new_port++;
-		break;
-	case SCHISM_KEYSYM_TAB:
-		if (k->state == KEY_RELEASE)
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_TAB)) {
+		if (keybinds_released(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_TAB))
 			return 1;
+
 		widget_change_focus_to(1);
 		status.flags |= NEED_UPDATE;
 		return 1;
-	default:
-		if (!k->mouse) return 0;
-		break;
-	};
+	}
+
+	/* now, to the navigation stuff. */
+	if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_PAGE_UP)) {
+		new_port -= 13;
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_PAGE_DOWN)) {
+		new_port += 13;
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_DOWN)) {
+		new_port++;
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_UP)) {
+		new_port--;
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_HOME)) {
+		new_port = 0;
+	} else if (keybinds_handled(KEYBIND_SECTION_GLOBAL, KEYBIND_BIND_GLOBAL_NAV_END)) {
+		new_port = midi_engine_port_count() - 1;
+	} else {
+		if (!k->mouse)
+			return 0;
+	}
+
 	if (k->state == KEY_RELEASE)
 		return 0;
 
