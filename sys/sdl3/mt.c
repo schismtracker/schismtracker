@@ -29,10 +29,12 @@
 
 /* ------------------------------------ */
 
-static SDL_Thread *(SDLCALL *sdl3_CreateThreadRuntime)(SDL_ThreadFunction fn, const char *name, void *data, SDL_FunctionPointer begin, SDL_FunctionPointer end) = NULL;
-static void (SDLCALL *sdl3_WaitThread)(SDL_Thread * thread, int *status) = NULL;
-static bool (SDLCALL *sdl3_SetCurrentThreadPriority)(SDL_ThreadPriority priority) = NULL;
-static Uint64 (SDLCALL *sdl3_GetCurrentThreadID)(void) = NULL;
+static SDL_Thread *(SDLCALL *sdl3_CreateThreadRuntime)(SDL_ThreadFunction fn, const char *name, void *data, SDL_FunctionPointer begin, SDL_FunctionPointer end);
+static void (SDLCALL *sdl3_WaitThread)(SDL_Thread * thread, int *status);
+static bool (SDLCALL *sdl3_SetCurrentThreadPriority)(SDL_ThreadPriority priority);
+static Uint64 (SDLCALL *sdl3_GetCurrentThreadID)(void);
+static void (SDLCALL *sdl3_DetachThread)(SDL_Thread * thread);
+
 
 struct mt_thread {
 	SDL_Thread *thread;
@@ -181,6 +183,7 @@ static int sdl3_threads_load_syms(void)
 	SCHISM_SDL3_SYM(WaitThread);
 	SCHISM_SDL3_SYM(SetCurrentThreadPriority);
 	SCHISM_SDL3_SYM(GetCurrentThreadID);
+	SCHISM_SDL3_SYM(DetachThread);
 
 	SCHISM_SDL3_SYM(CreateMutex);
 	SCHISM_SDL3_SYM(DestroyMutex);

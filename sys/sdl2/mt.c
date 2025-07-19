@@ -37,6 +37,7 @@ static SDL_Thread *(SDLCALL *sdl2_CreateThread)(SDL_ThreadFunction fn, const cha
 static void (SDLCALL *sdl2_WaitThread)(SDL_Thread * thread, int *status) = NULL;
 static int (SDLCALL *sdl2_SetThreadPriority)(SDL_ThreadPriority priority) = NULL;
 static SDL_threadID (SDLCALL *sdl2_ThreadID)(void) = NULL;
+static void (SDLCALL *sdl2_DetachThread)(SDL_Thread *thread);
 
 struct mt_thread {
 	SDL_Thread *thread;
@@ -195,6 +196,7 @@ static int sdl2_threads_load_syms(void)
 	SCHISM_SDL2_SYM(WaitThread);
 	SCHISM_SDL2_SYM(SetThreadPriority);
 	SCHISM_SDL2_SYM(ThreadID);
+	SCHISM_SDL2_SYM(DetachThread);
 
 	SCHISM_SDL2_SYM(CreateMutex);
 	SCHISM_SDL2_SYM(DestroyMutex);
