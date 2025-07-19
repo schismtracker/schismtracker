@@ -577,3 +577,20 @@ void minmax_32(const int32_t *buf, size_t len, int32_t *min, int32_t *max,
 	/* TODO: vectorized versions. */
 	minmax_32_c(buf, len, min, max, stride);
 }
+
+/* fairly fast crc32 hashing function; used for keybinds
+ * this could be even faster if we used a table */
+uint32_t crc32b(const unsigned char *message)
+{
+	uint32_t crc = UINT32_C(0xFFFFFFFF);
+	size_t i, j;
+
+	for (i = 0; message[i]; i++) {
+		crc ^= message[i];
+
+		for (j = 0; j < 8; j++)
+			crc = (crc >> 1) ^ (0xEDB88320 & -(crc & 1));
+	}
+
+	return ~crc;
+}

@@ -130,4 +130,6 @@ void minmax_16(const int16_t *buf, size_t len, int16_t *min, int16_t *max,
 void minmax_32(const int32_t *buf, size_t len, int32_t *min, int32_t *max,
 	size_t stride);
 
+uint32_t crc32b(const unsigned char *message);
+
 #endif /* SCHISM_UTIL_H_ */
