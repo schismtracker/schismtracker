@@ -416,7 +416,7 @@ static struct widget stereo_cvt_widgets[4];
 
 static void _create_host_ok(void *vpage)
 {
-	intptr_t page = (intptr_t) vpage;
+	intptr_t page = INT_SHAPED_PTR(vpage);
 	song_create_host_instrument(sample_get_current());
 	if (page >= 0)
 		set_page(page);
@@ -424,7 +424,7 @@ static void _create_host_ok(void *vpage)
 
 static void _create_host_cancel(void *vpage)
 {
-	intptr_t page = (intptr_t) vpage;
+	intptr_t page = INT_SHAPED_PTR(vpage);
 	if (page >= 0)
 		set_page(page);
 }
@@ -443,7 +443,7 @@ int sample_host_dialog(int newpage)
 	if (song_is_instrument_mode()) {
 		int used = sample_is_used_by_instrument(sample_get_current());
 		dialog_create(DIALOG_YES_NO, "Create host instrument?",
-			_create_host_ok, _create_host_cancel, used ? 1 : 0, (void *) (intptr_t) newpage);
+			_create_host_ok, _create_host_cancel, used ? 1 : 0, PTR_SHAPED_INT(newpage));
 		return 1;
 	}
 	if (newpage >= 0)
