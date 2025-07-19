@@ -162,7 +162,7 @@ static inline void msgbox_printf_impl(const char *title, const char *text, int s
 #else
 	printf
 #endif
-		("[%s] %s: %s", styles[style], title, text);
+		("[%s] %s: %s\n", styles[style], title, text);
 }
 # define os_show_message_box(title, text, style) (msgbox_printf_impl(title, text, style))
 #endif

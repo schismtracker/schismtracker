@@ -38,6 +38,7 @@
 #include "vgamem.h"
 #include "osdefs.h"
 #include "str.h"
+#include "keybinds.h"
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* the locals */
@@ -491,27 +492,34 @@ static int stereo_cvt_hk(struct key_event *k)
 
 	/* trap the default dialog keys - we don't want to escape this dialog without running something */
 	switch (k->sym) {
+	/* TODO dialog buttons "confirm" ? :) */
 	case SCHISM_KEYSYM_RETURN:
 		printf("why am I here\n");
 		SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_ESCAPE: case SCHISM_KEYSYM_o: case SCHISM_KEYSYM_c:
 		return 1;
-	case SCHISM_KEYSYM_l:
-		if (k->state == KEY_RELEASE)
-			stereo_cvt_complete_left();
-		return 1;
-	case SCHISM_KEYSYM_r:
-		if (k->state == KEY_RELEASE)
-			stereo_cvt_complete_right();
-		return 1;
-	case SCHISM_KEYSYM_s:
-	case SCHISM_KEYSYM_b:
-		if (k->state == KEY_RELEASE)
-			stereo_cvt_complete_both();
-		return 1;
 	default:
-		return 0;
+		break;
 	}
+
+	if (keybinds_handled(KEYBIND_SECTION_LOAD_STEREO_SAMPLE, KEYBIND_BIND_LOAD_STEREO_SAMPLE_LOAD_LEFT)) {
+		if (keybinds_released(KEYBIND_SECTION_LOAD_STEREO_SAMPLE, KEYBIND_BIND_LOAD_STEREO_SAMPLE_LOAD_LEFT))
+			stereo_cvt_complete_left();
+
+		return 1;
+	} else if (keybinds_handled(KEYBIND_SECTION_LOAD_STEREO_SAMPLE, KEYBIND_BIND_LOAD_STEREO_SAMPLE_LOAD_RIGHT)) {
+		if (keybinds_released(KEYBIND_SECTION_LOAD_STEREO_SAMPLE, KEYBIND_BIND_LOAD_STEREO_SAMPLE_LOAD_RIGHT))
+			stereo_cvt_complete_right();
+
+		return 1;
+	} else if (keybinds_handled(KEYBIND_SECTION_LOAD_STEREO_SAMPLE, KEYBIND_BIND_LOAD_STEREO_SAMPLE_LOAD_BOTH)) {
+		if (keybinds_released(KEYBIND_SECTION_LOAD_STEREO_SAMPLE, KEYBIND_BIND_LOAD_STEREO_SAMPLE_LOAD_BOTH))
+			stereo_cvt_complete_both();
+
+		return 1;
+	}
+
+	return 0;
 }
 
 static void finish_load(int cur)
@@ -691,11 +699,14 @@ static int file_list_handle_key(struct key_event * k)
 
 	new_file = CLAMP(new_file, 0, flist.num_files - 1);
 
-	if (!(status.flags & CLASSIC_MODE) && k->sym == SCHISM_KEYSYM_n && (k->mod & SCHISM_KEYMOD_ALT)) {
-		if (k->state == KEY_RELEASE)
-			song_toggle_multichannel_mode();
+	if (keybinds_released(KEYBIND_SECTION_LOAD_SAMPLE, KEYBIND_BIND_LOAD_SAMPLE_TOGGLE_MULTICHANNEL)) {
+		song_toggle_multichannel_mode();
 		return 1;
 	}
+
+	/* hmm. */
+	if (keybinds_pressed(KEYBIND_SECTION_LOAD_SAMPLE, KEYBIND_BIND_LOAD_SAMPLE_TOGGLE_MULTICHANNEL))
+		return 1;
 
 	if (k->mouse) {
 		if (k->x >= 6 && k->x <= 49 && k->y >= 13 && k->y <= 47) {
