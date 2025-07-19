@@ -1081,7 +1081,7 @@ static void sample_save(const char *filename, const char *format)
 	}
 
 	if (os_stat(cfg_dir_samples, &buf) == -1) {
-		status_text_flash("Sample directory \"%s\" unreachable", filename);
+		status_text_flash("Sample directory \"%s\" unreachable", cfg_dir_samples);
 		return;
 	}
 
