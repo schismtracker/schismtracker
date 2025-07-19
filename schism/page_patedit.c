@@ -282,6 +282,11 @@ static const int options_link_split[] = { 5, 6, -1 };
 static int options_selected_widget = 0;
 static int options_last_octave = 0;
 
+static void options_focus_changed(int new_selected_widget, void *data)
+{
+	options_selected_widget = new_selected_widget;
+}
+
 static void options_close_cancel(SCHISM_UNUSED void *data)
 {
 	kbd_set_current_octave(options_last_octave);
@@ -289,8 +294,6 @@ static void options_close_cancel(SCHISM_UNUSED void *data)
 static void options_close(void *data)
 {
 	int old_size, new_size;
-
-	options_selected_widget = ((struct dialog *) data)->selected_widget;
 
 	skip_value = options_widgets[1].d.thumbbar.value;
 	current_song->row_highlight_minor = options_widgets[2].d.thumbbar.value;
@@ -317,6 +320,9 @@ static void options_draw_const(void)
 	draw_text("Number of rows in pattern", 14, 35, 0, 2);
 	draw_text("Command/Value columns", 18, 38, 0, 2);
 
+	if (options_selected_widget == 4)
+		draw_text("Hold Ctrl for short patterns", 11, 36, 1, 2);
+
 	draw_box(39, 22, 42, 24, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(39, 25, 43, 27, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(39, 28, 45, 30, BOX_THIN | BOX_INNER | BOX_INSET);
@@ -327,6 +333,36 @@ static void options_draw_const(void)
 static void options_change_base_octave(void)
 {
 	kbd_set_current_octave(options_widgets[0].d.thumbbar.value);
+}
+
+static int options_handle_key(struct key_event *k, void *data)
+{
+	// Only gets called when pattern editor options dialog is visible.
+	struct dialog *d = (struct dialog *)data;
+
+	// Ignore Ctrl key releases in the middle of drag operations.
+	if ((k->mouse_button & MOUSE_BUTTON_LEFT)
+	 && !(k->mod & SCHISM_KEYMOD_CTRL))
+		return 0;
+
+	// If focus is on the pattern length widget, then holding Ctrl
+	// can extend its range. If the value is already in the extended
+	// range, then the range stays extended.
+	if (d->selected_widget == 4)
+	{
+		int new_range_start = (k->mod & SCHISM_KEYMOD_CTRL) ? 1 : 32;
+
+		if (d->widgets[4].d.thumbbar.value < 32)
+			new_range_start = 1;
+
+		if (new_range_start != d->widgets[4].d.thumbbar.min)
+		{
+			d->widgets[4].d.thumbbar.min = new_range_start;
+			status.flags |= NEED_UPDATE;
+		}
+	}
+
+	return 0;
 }
 
 /* the base octave is changed directly when the thumbbar is changed.
@@ -341,10 +377,6 @@ void pattern_editor_display_options(void)
 		widget_create_thumbbar(options_widgets + 1, 40, 26, 3, 0, 2, 2, NULL, 0, 16);
 		widget_create_thumbbar(options_widgets + 2, 40, 29, 5, 1, 3, 3, NULL, 0, 32);
 		widget_create_thumbbar(options_widgets + 3, 40, 32, 17, 2, 4, 4, NULL, 0, 128);
-		/* Although patterns as small as 1 row can be edited properly (as of c759f7a0166c), I have
-		discovered it's a bit annoying to hit 'home' here expecting to get 32 rows but end up with
-		just one row instead. so I'll allow editing these patterns, but not really provide a way to
-		set the size, at least until I decide how to present the option nonintrusively. */
 		widget_create_thumbbar(options_widgets + 4, 40, 35, 22, 3, 5, 5, NULL, 32, 200);
 		widget_create_togglebutton(options_widgets + 5, 40, 38, 8, 4, 7, 6, 6, 6,
 				    NULL, "Link", 3, options_link_split);
@@ -369,6 +401,8 @@ void pattern_editor_display_options(void)
 	} else {
 		dialog->action_cancel = options_close_cancel;
 	}
+	dialog->handle_key = options_handle_key;
+	dialog->focus_changed = options_focus_changed;
 	dialog->data = dialog;
 }
 
@@ -451,7 +485,7 @@ static void multichannel_close(SCHISM_UNUSED void *data)
 	if (m)
 		channel_multi_enabled = 1;
 }
-static int multichannel_handle_key(struct key_event *k)
+static int multichannel_handle_key(struct key_event *k, void *data)
 {
 	if (k->sym == SCHISM_KEYSYM_n) {
 		if ((k->mod & SCHISM_KEYMOD_ALT) && k->state == KEY_PRESS)
@@ -1005,6 +1039,11 @@ static int history_handle_key(struct key_event *k)
 	return 0;
 }
 
+static int history_handle_key_dialog(struct key_event *k, void *data)
+{
+	return history_handle_key(k);
+}
+
 static void pattern_editor_display_history(void)
 {
 	struct dialog *dialog;
@@ -1014,7 +1053,7 @@ static void pattern_editor_display_history(void)
 				      history_draw_const, NULL);
 	dialog->action_yes = history_close;
 	dialog->action_cancel = history_close;
-	dialog->handle_key = history_handle_key;
+	dialog->handle_key = history_handle_key_dialog;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -1097,7 +1136,7 @@ static void volume_amplify_ok(SCHISM_UNUSED void *data)
 	selection_amplify(volume_percent);
 }
 
-static int volume_amplify_jj(struct key_event *k)
+static int volume_amplify_jj(struct key_event *k, void *data)
 {
 	if (k->state == KEY_PRESS && (k->mod & SCHISM_KEYMOD_ALT) && (k->sym == SCHISM_KEYSYM_j)) {
 		dialog_yes(NULL);
