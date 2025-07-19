@@ -118,6 +118,7 @@ noinst_HEADERS = \
 	include/headers.h		\
 	include/ieee-float.h    \
 	include/it.h			\
+	include/keybinds.h      \
 	include/keyboard.h      \
 	include/log.h			\
 	include/loadso.h        \
@@ -563,6 +564,7 @@ schismtracker_SOURCES = \
 	schism/fonts.c          \
 	schism/ieee-float.c     \
 	schism/itf.c			\
+	schism/keybinds.c		\
 	schism/keyboard.c		\
 	schism/loadso.c         \
 	schism/main.c			\
