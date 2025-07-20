@@ -1365,7 +1365,7 @@ static void crossfade_sample_draw_const(void)
 	draw_box(44, 26, 52, 28, BOX_THICK | BOX_INNER | BOX_INSET);
 }
 
-// regenerate the sample loop widget based on loop/susloop data
+// update the sample loop widget range based on loop/susloop data
 static void crossfade_sample_loop_changed(void)
 {
 	song_sample_t *smp = song_get_sample(current_sample);
@@ -1377,7 +1377,7 @@ static void crossfade_sample_loop_changed(void)
 
 	const uint32_t max = MIN(loop_end - loop_start, loop_start);
 
-	widget_create_numentry(crossfade_sample_widgets + 2, 45, 27, 7, 0, 3, 3, NULL, 0, max, &crossfade_sample_length_cursor);
+	crossfade_sample_widgets[2].d.numentry.max = max;
 	crossfade_sample_widgets[2].d.numentry.value = max;
 }
 
@@ -1396,6 +1396,8 @@ static void crossfade_sample_dialog(void)
 
 	// Samples To Fade; handled in other function to account for differences between
 	// sample loop and sustain loop
+	widget_create_numentry(crossfade_sample_widgets + 2, 45, 27, 7, 0, 3, 3, NULL, 0, 1, &crossfade_sample_length_cursor);
+
 	crossfade_sample_loop_changed();
 
 	// Priority
