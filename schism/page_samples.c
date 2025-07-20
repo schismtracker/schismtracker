@@ -1392,6 +1392,7 @@ static void crossfade_sample_dialog(void)
 	widget_create_togglebutton(crossfade_sample_widgets + 1, 41, 24, 7, 2, 2, 0, 0, 2, crossfade_sample_loop_changed, "Sustain", 1, crossfade_sample_loop_group);
 
 	// Default to sustain loop if there is a sustain loop but no regular loop, or the regular loop is not valid
+	// (Note that a loop that starts at 0 is not valid, because crossfading requires data before the loop.)
 	crossfade_sample_widgets[((smp->flags & CHN_SUSTAINLOOP) && !((smp->flags & CHN_LOOP) && smp->loop_start && smp->loop_end)) ? 1 : 0].d.togglebutton.state = 1;
 
 	// Samples To Fade; handled in other function to account for differences between
