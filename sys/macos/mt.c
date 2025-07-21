@@ -31,6 +31,15 @@
 
 #include <Multiprocessing.h>
 
+static UInt32 mp_major, mp_minor, mp_revision;
+
+static inline SCHISM_ALWAYS_INLINE
+int mp_ver_atleast(UInt32 major, UInt32 minor, UInt32 rev)
+{
+	return SCHISM_SEMVER_ATLEAST(major, minor, rev,
+		mp_major, mp_minor, mp_revision);
+}
+
 /* -------------------------------------------------------------- */
 
 struct mt_mutex {
@@ -67,17 +76,35 @@ static void macos_mutex_unlock(mt_mutex_t *mutex)
 
 /* -------------------------------------------------------------- */
 
+/* XXX this is exactly the same as the win32 "fake" implementation,
+ * we could combine the two and put it in the toplevel mt.c
+ *
+ * (implementation stolen from BeOS code by Christopher Tate and
+ * Owen Smith) */
 struct mt_cond {
-	MPEventID event;
+	MPSemaphoreID sem;
+	MPSemaphoreID handshake_sem;
+	MPSemaphoreID signal_sem;
+	int32_t nw; // number waiting
+	int32_t ns; // number signaled
 };
+
+static void macos_cond_delete(mt_cond_t *cond);
 
 static mt_cond_t *macos_cond_create(void)
 {
-	mt_cond_t *cond = mem_alloc(sizeof(*cond));
+	mt_cond_t *cond = mem_calloc(1, sizeof(*cond));
+	OSErr err;
 
-	OSStatus err = MPCreateEvent(&cond->event);
-	if (err != noErr) {
-		free(cond);
+	err = 0;
+	err |= MPCreateSemaphore(ULONG_MAX, 0, &cond->sem);
+	err |= MPCreateSemaphore(ULONG_MAX, 0, &cond->handshake_sem);
+	err |= MPCreateSemaphore(ULONG_MAX, 1, &cond->signal_sem);
+	cond->ns = 0;
+	cond->nw = 0;
+
+	if (!cond->sem || !cond->handshake_sem || !cond->signal_sem) {
+		macos_cond_delete(cond);
 		return NULL;
 	}
 
@@ -86,42 +113,84 @@ static mt_cond_t *macos_cond_create(void)
 
 static void macos_cond_delete(mt_cond_t *cond)
 {
-	MPDeleteEvent(cond->event);
+	if (cond->sem) MPDeleteSemaphore(cond->sem);
+	if (cond->handshake_sem) MPDeleteSemaphore(cond->handshake_sem);
+	if (cond->signal_sem) MPDeleteSemaphore(cond->signal_sem);
 }
 
 static void macos_cond_signal(mt_cond_t *cond)
 {
-	MPSetEvent(cond->event, 1);
-}
+	// we need exclusive access to the waiter count while we figure out whether
+	// we need a handshake with an awakening waiter thread
+	MPWaitOnSemaphore(cond->signal_sem, kDurationForever);
 
-static void macos_cond_wait(mt_cond_t *cond, mt_mutex_t *mutex)
-{
-	/* FIXME This is not atomic! */
-	MPExitCriticalRegion(mutex->mutex);
-
-	MPWaitForEvent(cond->event, NULL, kDurationForever);
-
-	MPEnterCriticalRegion(mutex->mutex, kDurationForever);
+	// are there waiters to be awakened?
+	if (cond->nw > cond->ns) {
+		// inform the next awakening waiter that we need a handshake, then release
+		// all the locks and block until we get the handshake.  We need to go through the
+		// handshake process even if we're interrupted, to avoid breaking the CV, so we
+		// just set the eventual return code if we are interrupted in the middle.
+		cond->ns++;
+		MPSignalSemaphore(cond->sem);
+		MPSignalSemaphore(cond->signal_sem);
+		MPWaitOnSemaphore(cond->handshake_sem, kDurationForever);
+	} else {
+		// nobody is waiting, so the signal operation is a no-op
+		MPSignalSemaphore(cond->signal_sem);
+	}
 }
 
 static void macos_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout)
 {
-	/* FIXME This is not atomic! */
-	MPExitCriticalRegion(mutex->mutex);
+	// record the fact that we're waiting on the semaphore.  This action is
+	// protected by a mutex because exclusive access to the waiter count is
+	// needed by both waiting threads and signalling threads.  If someone interrupts
+	// us while we're waiting for the lock (e.g. by calling kill() or send_signal()), we
+	// abort and return the appropriate failure code.
+	MPWaitOnSemaphore(cond->signal_sem, kDurationForever);
+	cond->nw++;
+	MPSignalSemaphore(cond->signal_sem);
 
-	MPWaitForEvent(cond->event, NULL, timeout);
+	// actually wait for a signal -- we have to unlock the mutex before calling the
+	// underlying blocking primitive.  The potential preemption between unlocking
+	// the mutex and calling acquire_sem() is why we needed to record, prior to
+	// this point, that we're in the process of waiting on the condition variable.
+	mt_mutex_unlock(mutex);
 
-	MPEnterCriticalRegion(mutex->mutex, kDurationForever);
+	MPWaitOnSemaphore(cond->sem, kDurationForever);
+
+	// we just awoke, either via a signal or by being interrupted.  If there's
+	// a signaller running, he'll think he needs to handshake whether or not
+	// we actually awoke due to his signal.  So, we reacquire the signalSem
+	// mutex, and handshake if there's a positive signaller count.  It's critical
+	// that we continue with the handshake process even if we've been interrupted,
+	// so we just set the eventual error code and proceed with the CV state
+	// unwinding in that case.
+	MPWaitOnSemaphore(cond->signal_sem, kDurationForever);
+	if (cond->ns > 0) {
+		MPSignalSemaphore(cond->handshake_sem);
+		cond->ns--;
+	}
+	cond->nw--;
+	MPSignalSemaphore(cond->signal_sem);
+
+	// always reacquire the mutex before returning, even in error cases
+	mt_mutex_lock(mutex);
+}
+
+static void macos_cond_wait(mt_cond_t *cond, mt_mutex_t *mutex)
+{
+	macos_cond_wait_timeout(cond, mutex, kDurationForever);
 }
 
 /* -------------------------------------------------------------- */
 
-// what?
+/* not entirely sure wtf this is supposed to do */
 static MPQueueID notification_queue = NULL;
 
 struct mt_thread {
 	MPTaskID task;
-	MPEventID event; // for macos_thread_wait
+	MPSemaphoreID sem; /* for macos_thread_wait */
 	int status;
 
 	void *userdata;
@@ -135,8 +204,9 @@ static OSStatus macos_dummy_thread_func(void *userdata)
 
 	thread->status = thread->func(thread->userdata);
 
-	// Notify any waiting thread
-	MPSetEvent(thread->event, 1);
+	/* increment the semaphore so that any waiting thread will
+	 * know that we're done */
+	MPSignalSemaphore(thread->sem);
 
 	return 0;
 }
@@ -149,7 +219,8 @@ static mt_thread_t *macos_thread_create(schism_thread_function_t func, SCHISM_UN
 	thread->func = func;
 	thread->userdata = userdata;
 
-	err = MPCreateEvent(&thread->event);
+	/* create a locked binary semaphore */
+	err = MPCreateSemaphore(1, 0, &thread->sem);
 	if (err != noErr) {
 		free(thread);
 		log_appendf(4, "MPCreateEvent: %" PRId32, err);
@@ -159,7 +230,7 @@ static mt_thread_t *macos_thread_create(schism_thread_function_t func, SCHISM_UN
 	// use a 512 KiB stack size, which should be plenty for us
 	err = MPCreateTask(macos_dummy_thread_func, thread, UINT32_C(524288), notification_queue, NULL, NULL, 0, &thread->task);
 	if (err != noErr) {
-		MPDeleteEvent(thread->event);
+		MPDeleteSemaphore(thread->sem);
 		free(thread);
 		log_appendf(4, "MPCreateTask: %" PRId32, err);
 		return NULL;
@@ -170,9 +241,9 @@ static mt_thread_t *macos_thread_create(schism_thread_function_t func, SCHISM_UN
 
 static void macos_thread_wait(mt_thread_t *thread, int *status)
 {
-	// Wait until the dummy function calls us back
-	MPWaitForEvent(thread->event, NULL, kDurationForever);
-	MPDeleteEvent(thread->event);
+	/* the thread function increments the semaphore once it's finished */
+	MPWaitOnSemaphore(thread->sem, kDurationForever);
+	MPDeleteSemaphore(thread->sem);
 
 	if (status)
 		*status = thread->status;
@@ -183,6 +254,10 @@ static void macos_thread_wait(mt_thread_t *thread, int *status)
 static void macos_thread_set_priority(int priority)
 {
 	MPTaskWeight weight;
+
+	/* MPSetTaskWeight was added in Multiprocessing Services 2.0 */
+	if (!mp_ver_atleast(2, 0, 0))
+		return; /* no-op */
 
 	switch (priority) {
 	case MT_THREAD_PRIORITY_LOW:           weight = 10;    break;
@@ -204,11 +279,20 @@ static mt_thread_id_t macos_thread_id(void)
 
 static int macos_threads_init(void)
 {
+	const char *cstr;
+	UInt32 release;
+
 	if (!MPLibraryIsLoaded())
 		return 0;
 
 	if (MPCreateQueue(&notification_queue) != noErr)
 		return 0;
+
+	/* retrieve the library version.
+	 * as the leading underscore suggests, this function is undocumented;
+	 * however, it was still present in Multiprocessing Services 2.0, and
+	 * was even implemented in Carbon! */
+	_MPLibraryVersion(&cstr, &mp_major, &mp_minor, &release, &mp_revision);
 
 	return 1;
 }
