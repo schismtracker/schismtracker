@@ -31,6 +31,12 @@
 
 #include <SDL_syswm.h>
 
+#ifdef SCHISM_MACOS
+# include <Windows.h>
+# include <Quickdraw.h>
+# include <Events.h>
+#endif
+
 static schism_keymod_t sdl12_modkey_trans(uint16_t mod)
 {
 	schism_keymod_t res = 0;
@@ -575,9 +581,13 @@ static schism_keymod_t sdl12_event_mod_state(void)
 }
 
 static uint8_t app_state = 0;
+static uint8_t mouse_in_window = 0;
 
 static void sdl12_pump_events(void)
 {
+	/* Convert our events to Schism's internal representation */
+	SDL_Event e;
+
 	// SDL_ACTIVEEVENT is broken on Windows, and probably others too.
 	// This just brute forces the app state each time we pump events
 	// which fixes it (ugh)
@@ -606,8 +616,50 @@ static void sdl12_pump_events(void)
 		app_state = app_state_new;
 	}
 
-	/* Convert our events to Schism's internal representation */
-	SDL_Event e;
+#ifdef SCHISM_MACOS
+	if (app_state & SDL_APPINPUTFOCUS) {
+		/* Macintosh has no way of detecting whether the mouse has left the
+		 * window bounds. Manually detect it ourselves.
+		 *
+		 * This is hacky as FUCK... */
+		WindowPtr win;
+
+		win = FrontWindow();
+		if (win) {
+			GrafPtr saveport;
+			Boolean mouseinwin;
+			Rect bounds;
+			Point pos;
+
+			bounds = win->portRect;
+
+			/* this stuff was copied from SDL-1.2 */
+			GetPort(&saveport);
+
+			SetPort(win);
+
+			GetMouse(&pos);
+			LocalToGlobal(&pos);
+			LocalToGlobal((Point *)&bounds.top);
+			LocalToGlobal((Point *)&bounds.bottom);
+
+			SetPort(saveport);
+
+			mouseinwin = PtInRect(pos, &bounds);
+			if (mouse_in_window != mouseinwin) {
+				/* push the event */
+				schism_event_t e;
+
+				e.type = (mouseinwin)
+					? SCHISM_WINDOWEVENT_ENTER
+					: SCHISM_WINDOWEVENT_LEAVE;
+				events_push_event(&e);
+
+				mouse_in_window = mouseinwin;
+			}
+		}
+	}
+#endif
 
 	while (sdl12_PollEvent(&e)) {
 		schism_event_t schism_event = {0};
