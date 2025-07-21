@@ -58,6 +58,10 @@ extern const schism_audio_backend_t schism_audio_backend_dsound;
 extern const schism_audio_backend_t schism_audio_backend_waveout;
 #endif
 
+#ifdef SCHISM_MACOS
+extern const schism_audio_backend_t schism_audio_backend_sndmgr;
+#endif
+
 #ifdef USE_ASIO
 extern const schism_audio_backend_t schism_audio_backend_asio;
 #endif

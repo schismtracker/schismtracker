@@ -114,6 +114,9 @@ static const schism_audio_backend_t *backends[] = {
 	&schism_audio_backend_dsound,
 	&schism_audio_backend_waveout,
 #endif
+#ifdef SCHISM_MACOS
+	&schism_audio_backend_sndmgr,
+#endif
 #ifdef SCHISM_SDL12
 	&schism_audio_backend_sdl12,
 #endif
@@ -1439,7 +1442,7 @@ static int _audio_open_device(uint32_t device, int verbose)
 	desired.samples = size_pow2;
 	desired.callback = audio_callback;
 
-	schism_audio_spec_t obtained;
+	schism_audio_spec_t obtained = {0};
 
 	if (device != AUDIO_BACKEND_DEFAULT) {
 		if ((current_audio_device = backend->open_device(device, &desired, &obtained))) {

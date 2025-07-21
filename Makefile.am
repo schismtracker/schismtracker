@@ -385,9 +385,24 @@ endif
 
 if USE_MACOS
 files_macos = \
-	sys/macos/osdefs.c sys/macos/dirent/macos-dirent.c sys/macos/mt.c sys/macos/dmoz.c
+	sys/macos/audio-sndmgr.c \
+	sys/macos/osdefs.c \
+	sys/macos/dirent/macos-dirent.c \
+	sys/macos/mt.c \
+	sys/macos/dmoz.c
 cflags_macos=-I$(top_srcdir)/sys/macos/dirent
-libs_macos=-lAppearanceLib -lInputSprocketLib -lControlStripLib -lControlsLib -lCursorDevicesGlue -lMPLibrary -lTextEncodingConverter -lTextCommon -lContextualMenu -lDrawSprocketLib -lDialogsLib
+libs_macos= \
+	-lAppearanceLib \
+	-lInputSprocketLib \
+	-lControlStripLib \
+	-lControlsLib \
+	-lCursorDevicesGlue \
+	-lMPLibrary \
+	-lTextEncodingConverter \
+	-lTextCommon \
+	-lContextualMenu \
+	-lDrawSprocketLib \
+	-lDialogsLib
 
 # Specific to the Retro68 toolchain to create MacBinary files
 schismtracker.bin: schismtracker.pef $(top_srcdir)/sys/macos/resource.r
