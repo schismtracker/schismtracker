@@ -43,6 +43,9 @@ extern const schism_clippy_backend_t schism_clippy_backend_win32;
 #ifdef SCHISM_USE_X11
 extern const schism_clippy_backend_t schism_clippy_backend_x11;
 #endif
+#ifdef SCHISM_MACOS
+extern const schism_clippy_backend_t schism_clippy_backend_macos;
+#endif
 #ifdef SCHISM_MACOSX
 extern const schism_clippy_backend_t schism_clippy_backend_macosx;
 #endif

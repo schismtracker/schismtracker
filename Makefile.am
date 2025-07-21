@@ -389,7 +389,8 @@ files_macos = \
 	sys/macos/osdefs.c \
 	sys/macos/dirent/macos-dirent.c \
 	sys/macos/mt.c \
-	sys/macos/dmoz.c
+	sys/macos/dmoz.c \
+	sys/macos/clippy.c
 cflags_macos=-I$(top_srcdir)/sys/macos/dirent
 libs_macos= \
 	-lAppearanceLib \

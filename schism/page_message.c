@@ -567,8 +567,15 @@ static int message_handle_text_input_editmode(const char *text)
 	if (!dos)
 		return 0;
 
-	for (i = 0; dos[i]; i++)
-		message_insert_char(dos[i]);
+	for (i = 0; dos[i]; i++) {
+		if (dos[i] == '\r' && dos[i+1] == '\n') {
+			/* windows-style newline
+			 * FIXME this shouldn't be handled here */
+			message_insert_char('\r');
+		} else {
+			message_insert_char(dos[i]);
+		}
+	}
 
 	free(dos);
 
