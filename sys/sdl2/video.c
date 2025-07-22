@@ -567,7 +567,6 @@ static void sdl2_video_resize(unsigned int width, unsigned int height)
 	if (video.type == VIDEO_TYPE_SURFACE)
 		video.u.s.surface = sdl2_GetWindowSurface(video.window);
 	video_recalculate_fixed_width();
-	status.flags |= (NEED_UPDATE);
 }
 
 static void yuv_pal_(unsigned int i, unsigned char rgb[3])

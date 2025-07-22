@@ -33,6 +33,7 @@
 #include "video.h"
 #include "osdefs.h"
 #include "vgamem.h"
+#include "mem.h"
 
 #include "backend/video.h"
 
@@ -145,6 +146,7 @@ static struct {
 	} mouse;
 
 	uint32_t tc_bgr32[256];
+	uint32_t pal_opengl[256];
 } video = {
 	.mouse = {
 		.visible = MOUSE_EMULATED,
@@ -690,6 +692,7 @@ void video_fullscreen(int new_fs_flag)
 void video_resize(unsigned int width, unsigned int height)
 {
 	backend->resize(width, height);
+	status.flags |= NEED_UPDATE;
 }
 
 /* calls back to a function receiving all the colors :) */
@@ -731,9 +734,18 @@ static void bgr32_fun_(unsigned int i, unsigned char rgb[3])
 		| ((uint32_t)0xFF   << 24);
 }
 
+static void gl_fun_(unsigned int i, unsigned char rgb[3])
+{
+	video.pal_opengl[i] = rgb[2]
+		| (rgb[1] << 8)
+		| (rgb[0] << 16)
+		| (0xFF << 24);
+}
+
 void video_colors(unsigned char palette[16][3])
 {
 	video_colors_iterate(palette, bgr32_fun_);
+	video_colors_iterate(palette, gl_fun_);
 
 	backend->colors(palette);
 }
@@ -916,4 +928,497 @@ void video_calculate_clip(uint32_t w, uint32_t h,
 		*pw = w;
 		*ph = h;
 	}
+}
+
+
+/* ------------------------------------------------------------------------ */
+/* OpenGL crap
+ *
+ * NOTE: OpenGL 3.0 support is extremely limited, since we
+ * currently have no proper use for it. Maybe some day it will
+ * be implemented. I highly doubt it will. */
+
+#ifdef SCHISM_WIN32
+# define APIENTRY __stdcall
+#elif defined(SCHISM_OS2)
+# define APIENTRY _System
+#else
+# define APIENTRY
+#endif
+
+typedef unsigned char GLboolean;
+typedef int8_t GLbyte;
+typedef uint8_t GLubyte;
+typedef int16_t GLshort;
+typedef uint16_t GLushort;
+typedef int32_t GLint;
+typedef uint32_t GLuint;
+typedef int32_t GLfixed; /* 16.16 */
+typedef int64_t GLint64;
+typedef uint64_t GLuint64;
+typedef int32_t GLsizei;
+typedef uint32_t GLenum;
+typedef intptr_t GLintptr;
+typedef intptr_t GLsizeiptr;
+typedef /*u?*/intptr_t GLsync;
+typedef uint32_t GLbitfield;
+typedef uint16_t GLhalf; /* 16-bit floating point ??? */
+typedef float GLfloat;
+typedef float GLclampf;
+typedef double GLdouble;
+typedef double GLclampd;
+typedef void GLvoid;
+
+/* hm? */
+#define GL_BGRA_EXT                       0x80E1
+#define GL_UNSIGNED_INT_8_8_8_8_REV       0x8367
+#define GL_COLOR_BUFFER_BIT			0x00004000
+#define GL_UNSIGNED_BYTE			0x1401
+#define GL_RGBA8				0x8058
+#define GL_MAX_TEXTURE_SIZE         0x0D33
+#define GL_TEXTURE_2D               0x0DE1
+#define GL_TEXTURE_WRAP_S           0x2802
+#define GL_TEXTURE_WRAP_T           0x2803
+#define GL_TEXTURE_MAG_FILTER       0x2800
+#define GL_TEXTURE_MIN_FILTER       0x2801
+#define GL_NEAREST                  0x2600
+#define GL_TRIANGLES				0x0004
+#define GL_QUADS				0x0007
+#define GL_COMPILE				0x1300
+#define GL_MODELVIEW				0x1700
+#define GL_CULL_FACE				0x0B44
+#define GL_LIGHTING				0x0B50
+#define GL_DEPTH_TEST				0x0B71
+#define GL_FLAT					0x1D00
+#define GL_LINEAR				0x2601
+#define GL_PROJECTION				0x1701
+#define GL_CLAMP				0x2900
+#define GL_EXTENSIONS				0x1F03
+#define GL_INVALID_ENUM 0x0500
+#define GL_VERSION				0x1F02
+#define GL_MAJOR_VERSION                  0x821B
+#define GL_MINOR_VERSION                  0x821C
+#define GL_NUM_EXTENSIONS 0x821D
+#define GL_NO_ERROR 0
+
+#define SCHISM_NVIDIA_PIXELDATARANGE 1
+
+#ifdef SCHISM_NVIDIA_PIXELDATARANGE
+# define GL_WRITE_PIXEL_DATA_RANGE_NV      0x8878
+#endif
+
+#define VIDEO_GL_PITCH (NATIVE_SCREEN_WIDTH * 4) /* bruh */
+
+/* Dynamically loaded OpenGL functions */
+struct video_opengl_funcs {
+	/* TODO put these in a header so they don't get out of sync */
+	void (APIENTRY *glCallList)(GLuint);
+	void (APIENTRY *glTexSubImage2D)(GLenum,GLint,GLint,GLint,GLsizei,GLsizei,GLenum,GLenum,const GLvoid *);
+	void (APIENTRY *glDeleteLists)(GLuint,GLsizei);
+	void (APIENTRY *glTexParameteri)(GLenum,GLenum,GLint);
+	void (APIENTRY *glBegin)(GLenum);
+	void (APIENTRY *glEnd)(void);
+	void (APIENTRY *glEndList)(void);
+	void (APIENTRY *glTexCoord2f)(GLfloat,GLfloat);
+	void (APIENTRY *glVertex2f)(GLfloat,GLfloat);
+	void (APIENTRY *glNewList)(GLuint, GLenum);
+	GLboolean (APIENTRY *glIsList)(GLuint);
+	GLuint (APIENTRY *glGenLists)(GLsizei);
+	void (APIENTRY *glLoadIdentity)(void);
+	void (APIENTRY *glMatrixMode)(GLenum);
+	void (APIENTRY *glEnable)(GLenum);
+	void (APIENTRY *glDisable)(GLenum);
+	void (APIENTRY *glBindTexture)(GLenum,GLuint);
+	void (APIENTRY *glClear)(GLbitfield mask);
+	void (APIENTRY *glClearColor)(GLclampf,GLclampf,GLclampf,GLclampf);
+	const GLubyte* (APIENTRY *glGetString)(GLenum);
+	void (APIENTRY *glTexImage2D)(GLenum,GLint,GLint,GLsizei,GLsizei,GLint,GLenum,GLenum,const GLvoid *);
+	void (APIENTRY *glGetIntegerv)(GLenum, GLint *);
+	void (APIENTRY *glShadeModel)(GLenum);
+	void (APIENTRY *glGenTextures)(GLsizei,GLuint*);
+	void (APIENTRY *glDeleteTextures)(GLsizei, const GLuint *);
+	void (APIENTRY *glViewport)(GLint,GLint,GLsizei,GLsizei);
+	void (APIENTRY *glEnableClientState)(GLenum);
+	GLenum (APIENTRY *glGetError)(void);
+
+#ifdef SCHISM_NVIDIA_PIXELDATARANGE
+	/* I think these are Windows-specific? */
+	void *(APIENTRY *wglAllocateMemoryNV)(int, float, float, float);
+	void (APIENTRY *wglFreeMemoryNV)(void *);
+
+	void (APIENTRY *glPixelDataRangeNV)(GLenum, GLsizei, GLvoid *);
+	/* void (APIENTRY *glFlushPixelDataRangeNV)(GLenum); */
+#endif
+};
+
+static int video_opengl_reload_funcs(struct video_opengl_funcs *f,
+	video_opengl_function_load_spec function_load)
+{
+	/* Probably not really necessary */
+	memset(f, 0, sizeof(*f));
+
+#define Z(q) \
+	do { \
+		f->q = function_load(#q); \
+		if (!f->q) \
+			return -1; \
+	} while (0)
+
+	Z(glCallList);
+	Z(glTexSubImage2D);
+	Z(glDeleteLists);
+	Z(glTexParameteri);
+	Z(glBegin);
+	Z(glEnd);
+	Z(glEndList);
+	Z(glTexCoord2f);
+	Z(glVertex2f);
+	Z(glNewList);
+	Z(glIsList);
+	Z(glGenLists);
+	Z(glLoadIdentity);
+	Z(glMatrixMode);
+	Z(glEnable);
+	Z(glDisable);
+	Z(glBindTexture);
+	Z(glClear);
+	Z(glClearColor);
+	Z(glGetString);
+	Z(glTexImage2D);
+	Z(glGetIntegerv);
+	Z(glShadeModel);
+	Z(glGenTextures);
+	Z(glDeleteTextures);
+	Z(glViewport);
+	Z(glEnableClientState);
+	Z(glGetError);
+
+#undef Z
+
+		/* Optional OpenGL extensions */
+#define Z(q) \
+	f->q = function_load(#q)
+
+#ifdef SCHISM_NVIDIA_PIXELDATARANGE
+	Z(glPixelDataRangeNV);
+	Z(wglAllocateMemoryNV);
+	Z(wglFreeMemoryNV);
+#endif
+
+#undef Z
+
+	return 0;
+}
+
+/* ------------------------------------------------------------------------ */
+
+static struct {
+	video_opengl_object_unload_spec object_unload;
+	video_opengl_set_attribute_spec set_attribute;
+	video_opengl_swap_buffers_spec  swap_buffers;
+	video_opengl_extension_supported_spec extension_supported;
+	video_opengl_function_load_spec function_load;
+
+	/* function table */
+	struct video_opengl_funcs f;
+
+	int init;
+
+	void *framebuffer;
+	GLuint texture;
+	GLuint displaylist;
+	GLint max_texture_size;
+
+#ifdef SCHISM_NVIDIA_PIXELDATARANGE
+	int pixel_data_range;
+#endif
+} video_gl = {0};
+
+static int32_t int32_log2(int32_t val) {
+	int32_t l = 0;
+	while ((val >>= 1) != 0)
+		l++;
+	return l;
+}
+
+static int opengl_extension_supported_default(const char *extension)
+{
+	const char *start, *extensions;
+	const char *where, *terminator;
+
+	/* Extension names should not have spaces. */
+	where = strchr(extension, ' ');
+	if (where || *extension == '\0')
+		return 0;
+
+	extensions = (const char *)video_gl.f.glGetString(GL_EXTENSIONS);
+	if (!extensions)
+		return 0;
+
+	/* It takes a bit of care to be fool-proof about parsing the
+	 * OpenGL extensions string. Don't be fooled by sub-strings,
+	 * etc. */
+	start = extensions;
+
+	for (;;) {
+		where = strstr(start, extension);
+		if (!where)
+			break;
+
+		terminator = where + strlen(extension);
+		if (where == start || *(where - 1) == ' ')
+			if (*terminator == ' ' || *terminator == '\0')
+				return 1;
+
+		start = terminator;
+	}
+
+	return 0;
+}
+
+int video_opengl_init(video_opengl_object_load_spec object_load,
+	video_opengl_function_load_spec function_load,
+	video_opengl_extension_supported_spec extension_supported,
+	video_opengl_object_unload_spec object_unload,
+	video_opengl_set_attribute_spec set_attribute,
+	video_opengl_swap_buffers_spec swap_buffers)
+{
+	if (video_gl.init)
+		return 0; /* already init */
+
+	memset(&video_gl, 0, sizeof(video_gl));
+
+	if (extension_supported) {
+		video_gl.extension_supported = extension_supported;
+	} else {
+		video_gl.extension_supported = opengl_extension_supported_default;
+	}
+
+	if (object_load(NULL)
+#ifdef SCHISM_WIN32
+		|| object_load("opengl.dll") || object_load("opengl32.dll")
+#else
+		|| object_load("libGL.so") || object_load("GL")
+#endif
+	) {
+		video_gl.object_unload = object_unload;
+		video_gl.set_attribute = set_attribute;
+		video_gl.swap_buffers  = swap_buffers;
+		video_gl.function_load = function_load;
+
+		video_gl.init = 1;
+
+		return 1;
+	}
+
+	return 0;
+}
+
+void video_opengl_reset_interpolation(void)
+{
+	uint32_t x;
+
+	switch (cfg_video_interpolation) {
+	case VIDEO_INTERPOLATION_NEAREST:
+		x = GL_NEAREST;
+		break;
+	case VIDEO_INTERPOLATION_LINEAR:
+	case VIDEO_INTERPOLATION_BEST:
+	default:
+		x = GL_LINEAR;
+		break;
+	}
+
+	video_gl.f.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, x);
+	video_gl.f.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, x);
+}
+
+static void opengl_set_attributes(void)
+{
+	/*
+	SDL 1.2 code used to call this, but evidently it
+	breaks everything, especially on Windows. We just
+	get a black screen. Not sure why.
+
+	video_gl.set_attribute(VIDEO_GL_DEPTH_SIZE, 32);
+	*/
+
+	/* This is for vsync I think... */
+	video_gl.set_attribute(VIDEO_GL_SWAP_CONTROL, 0);
+}
+
+int video_opengl_setup(uint32_t w, uint32_t h,
+	int (*callback)(uint32_t *px, uint32_t *py, uint32_t *pw, uint32_t *ph))
+{
+	GLfloat tex_width, tex_height;
+	GLsizei texsize;
+	uint32_t x, y;
+
+#define GL_ASSERT(X) \
+do { \
+	GLenum err; \
+\
+	X; \
+\
+	err = video_gl.f.glGetError(); \
+	if (err != GL_NO_ERROR) { \
+		log_appendf(4, "OpenGL error: `" #X "`: %d", (int)err); \
+		return 0; \
+	} \
+} while (0)
+
+	if (!video_gl.init)
+		return 0;
+
+	opengl_set_attributes();
+
+	if (!callback(&x, &y, &w, &h))
+		return 0; /* ? */
+
+	if (video_opengl_reload_funcs(&video_gl.f, video_gl.function_load) < 0)
+		return 0;
+
+#ifdef SCHISM_NVIDIA_PIXELDATARANGE
+	/* check if nvidia pixel data crap is supported */
+	if (video_gl.extension_supported("GL_NV_pixel_data_range")) {
+		video_gl.pixel_data_range = (video_gl.f.glPixelDataRangeNV
+			&& video_gl.f.wglAllocateMemoryNV
+			&& video_gl.f.wglFreeMemoryNV);
+	}
+#endif
+
+	GL_ASSERT(video_gl.f.glViewport(x, y, w, h));
+
+	texsize = INT32_C(2) << int32_log2(NATIVE_SCREEN_WIDTH);
+
+	if (!video_gl.framebuffer) {
+#ifdef SCHISM_NVIDIA_PIXELDATARANGE
+		if (video_gl.pixel_data_range) {
+			video_gl.framebuffer = video_gl.f.wglAllocateMemoryNV(
+				NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT * 4,
+				0.0, 1.0, 1.0);
+			if (video_gl.framebuffer) {
+				video_gl.f.glPixelDataRangeNV(GL_WRITE_PIXEL_DATA_RANGE_NV,
+					NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT * 4,
+					video_gl.framebuffer);
+				video_gl.f.glEnableClientState(GL_WRITE_PIXEL_DATA_RANGE_NV);
+			} else {
+				video_gl.pixel_data_range = 0;
+			}
+		}
+#endif
+
+		if (!video_gl.framebuffer)
+			video_gl.framebuffer = mem_alloc(NATIVE_SCREEN_WIDTH
+				* NATIVE_SCREEN_HEIGHT * 4);
+
+		if (!video_gl.framebuffer)
+			return 0; /* okay */
+	}
+
+	GL_ASSERT(video_gl.f.glMatrixMode(GL_PROJECTION));
+	GL_ASSERT(video_gl.f.glDeleteTextures(1, &video_gl.texture));
+	GL_ASSERT(video_gl.f.glGenTextures(1, &video_gl.texture));
+	GL_ASSERT(video_gl.f.glBindTexture(GL_TEXTURE_2D, video_gl.texture));
+	GL_ASSERT(video_gl.f.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP));
+	GL_ASSERT(video_gl.f.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP));
+
+	video_opengl_reset_interpolation();
+
+	GL_ASSERT(video_gl.f.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texsize, texsize,
+		0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, 0));
+
+	GL_ASSERT(video_gl.f.glClearColor(0.0, 0.0, 0.0, 1.0));
+	GL_ASSERT(video_gl.f.glClear(GL_COLOR_BUFFER_BIT));
+	video_gl.swap_buffers();
+	GL_ASSERT(video_gl.f.glClear(GL_COLOR_BUFFER_BIT));
+	GL_ASSERT(video_gl.f.glShadeModel(GL_FLAT));
+	GL_ASSERT(video_gl.f.glDisable(GL_DEPTH_TEST));
+	GL_ASSERT(video_gl.f.glDisable(GL_LIGHTING));
+	GL_ASSERT(video_gl.f.glDisable(GL_CULL_FACE));
+	GL_ASSERT(video_gl.f.glEnable(GL_TEXTURE_2D));
+	GL_ASSERT(video_gl.f.glMatrixMode(GL_MODELVIEW));
+	GL_ASSERT(video_gl.f.glLoadIdentity());
+
+	tex_width = ((GLfloat)(NATIVE_SCREEN_WIDTH) / (GLfloat)texsize);
+	tex_height = ((GLfloat)(NATIVE_SCREEN_HEIGHT) / (GLfloat)texsize);
+
+	if (video_gl.f.glIsList(video_gl.displaylist))
+		video_gl.f.glDeleteLists(video_gl.displaylist, 1);
+
+	GL_ASSERT(video_gl.displaylist = video_gl.f.glGenLists(1));
+	video_gl.f.glNewList(video_gl.displaylist, GL_COMPILE);
+	video_gl.f.glBindTexture(GL_TEXTURE_2D, video_gl.texture);
+
+	/* use quads */
+	video_gl.f.glBegin(GL_QUADS);
+
+	video_gl.f.glTexCoord2f(0, tex_height);
+	video_gl.f.glVertex2f(-1.0f, -1.0f);
+	video_gl.f.glTexCoord2f(tex_width, tex_height);
+	video_gl.f.glVertex2f(1.0f, -1.0f);
+	video_gl.f.glTexCoord2f(tex_width, 0);
+	video_gl.f.glVertex2f(1.0f, 1.0f);
+	video_gl.f.glTexCoord2f(0, 0);
+	video_gl.f.glVertex2f(-1.0f, 1.0f);
+
+	video_gl.f.glEnd();
+	video_gl.f.glEndList();
+
+	return 1;
+}
+
+SCHISM_HOT void video_opengl_blit(void)
+{
+	if (!video_gl.init || !video_gl.framebuffer)
+		return;
+
+	/* we should probably be using RGBA and not BGRA */
+	video_blit11(4, video_gl.framebuffer, VIDEO_GL_PITCH, video.tc_bgr32);
+
+	video_gl.f.glBindTexture(GL_TEXTURE_2D, video_gl.texture);
+	video_gl.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+		NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
+		GL_BGRA_EXT,
+		GL_UNSIGNED_INT_8_8_8_8_REV,
+		video_gl.framebuffer);
+	video_gl.f.glCallList(video_gl.displaylist);
+
+	/* flip */
+	video_gl.swap_buffers();
+}
+
+void video_opengl_quit(void)
+{
+	if (!video_gl.init)
+		return;
+
+#ifdef SCHISM_NVIDIA_PIXELDATARANGE
+	if (video_gl.pixel_data_range) {
+		video_gl.f.wglFreeMemoryNV(video_gl.framebuffer);
+	} else
+#endif
+	{
+		free(video_gl.framebuffer);
+	}
+
+	video_gl.init = 0;
+	if (video_gl.object_unload) {
+		video_gl.object_unload();
+		video_gl.object_unload = NULL;
+	}
+
+	/* zero it out */
+	memset(&video_gl, 0, sizeof(video_gl));
+}
+
+void video_opengl_report(int hw, int accel)
+{
+	log_appendf(5, " %s%s OpenGL interface",
+		(hw) ? "Hardware" : "Software",
+		(accel) ? " accelerated" : "");
+#ifdef SCHISM_NVIDIA_PIXELDATARANGE
+	if (video_gl.pixel_data_range)
+		log_append(5,0, " NVidia pixel range extensions available");
+#endif
 }

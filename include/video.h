@@ -206,6 +206,45 @@ int video_get_wm_data(video_wm_data_t *wm_data);
 int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h);
 
 /* ------------------------------------------------------------------------ */
+/* opengl */
+
+/* enums for video_opengl_set_attribute callback
+ * NOTE: most of this isn't even used */
+enum {
+	VIDEO_GL_DOUBLEBUFFER,
+	VIDEO_GL_STENCIL_SIZE,
+	VIDEO_GL_DEPTH_SIZE,
+	VIDEO_GL_ACCUM_RED_SIZE,   /* the minimum number of bits for the red channel of the accumulation buffer; defaults to 0. */
+	VIDEO_GL_ACCUM_GREEN_SIZE, /* the minimum number of bits for the green channel of the accumulation buffer; defaults to 0. */
+	VIDEO_GL_ACCUM_BLUE_SIZE,  /* the minimum number of bits for the blue channel of the accumulation buffer; defaults to 0. */
+	VIDEO_GL_ACCUM_ALPHA_SIZE, /* the minimum number of bits for the alpha channel of the accumulation buffer; defaults to 0. */
+	VIDEO_GL_SWAP_CONTROL,
+};
+
+/* this closely mimics SDL's API. */
+typedef int (*video_opengl_object_load_spec)(const char *path); /* returns boolean (nonzero == success) */
+typedef void *(*video_opengl_function_load_spec)(const char *function);
+typedef int (*video_opengl_extension_supported_spec)(const char *extension);
+typedef void (*video_opengl_object_unload_spec)(void);
+typedef int (*video_opengl_set_attribute_spec)(int attr /* one of above enum */, int value);
+typedef void (*video_opengl_swap_buffers_spec)(void);
+
+/* initialize OpenGL */
+int video_opengl_init(video_opengl_object_load_spec object_load,
+	video_opengl_function_load_spec function_load,
+	video_opengl_extension_supported_spec extension_supported,
+	video_opengl_object_unload_spec object_unload,
+	video_opengl_set_attribute_spec set_attribute,
+	video_opengl_swap_buffers_spec swap_buffers);
+int video_opengl_setup(uint32_t w, uint32_t h,
+	int (*callback)(uint32_t *px, uint32_t *py, uint32_t *pw, uint32_t *ph));
+void video_opengl_blit(void);
+void video_opengl_quit(void);
+
+/* reports info to the log */
+void video_opengl_report(int hw, int accel);
+
+void video_opengl_reset_interpolation(void);
 
 void video_calculate_clip(uint32_t w, uint32_t h,
 	uint32_t *px, uint32_t *py, uint32_t *pw, uint32_t *ph);

@@ -212,6 +212,7 @@ int win32_audio_lookup_device_name(const void *nameguid, const uint32_t *waveout
 int win32_ntver_atleast(int major, int minor, int build);
 int win32_ver_unicode(void);
 int win32_access(const char *path, int amode);
+void win32_init_dark_theme(void *window);
 
 // audio-dsound.c
 int win32_dsound_audio_lookup_waveout_name(const uint32_t *waveoutnamev, char **result);
