@@ -1395,8 +1395,8 @@ static void crossfade_sample_dialog(void)
 	// (Note that a loop that starts at 0 is not valid, because crossfading requires data before the loop.)
 	crossfade_sample_widgets[((smp->flags & CHN_SUSTAINLOOP) && !((smp->flags & CHN_LOOP) && smp->loop_start && smp->loop_end)) ? 1 : 0].d.togglebutton.state = 1;
 
-	// Samples To Fade; handled in other function to account for differences between
-	// sample loop and sustain loop
+	/* Samples To Fade; the max and value are initialized separately, since these
+	 * can (and likely are) different between the regular and sustain loop. */
 	widget_create_numentry(crossfade_sample_widgets + 2, 45, 27, 7, 0, 3, 3, NULL, 0, 1, &crossfade_sample_length_cursor);
 
 	crossfade_sample_loop_changed();
