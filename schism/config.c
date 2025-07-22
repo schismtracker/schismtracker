@@ -318,7 +318,7 @@ void cfg_load(void)
 
 	kbd_sharp_flat_toggle(cfg_get_number(&cfg, "General", "accidentals_as_flats", 0) == 1);
 
-#ifdef SCHISM_MACOSX
+#if defined(SCHISM_MACOSX) || defined(SCHISM_MACOS)
 # define DEFAULT_META 1
 #else
 # define DEFAULT_META 0
