@@ -70,28 +70,6 @@ static inline SCHISM_ALWAYS_INLINE uint32_t time_convert_to_macintosh(time_t x)
 
 /* ------------------------------------------------------------------------ */
 
-void macos_get_modkey(schism_keymod_t *mk)
-{
-	// SDL 1.2 treats Command as Control, so switch the values.
-	schism_keymod_t mk_ = (*mk) & ~(SCHISM_KEYMOD_CTRL|SCHISM_KEYMOD_GUI);
-
-	if (*mk & SCHISM_KEYMOD_LCTRL)
-		mk_ |= SCHISM_KEYMOD_LGUI;
-
-	if (*mk & SCHISM_KEYMOD_RCTRL)
-		mk_ |= SCHISM_KEYMOD_RGUI;
-
-	if (*mk & SCHISM_KEYMOD_LGUI)
-		mk_ |= SCHISM_KEYMOD_LCTRL;
-
-	if (*mk & SCHISM_KEYMOD_RGUI)
-		mk_ |= SCHISM_KEYMOD_RCTRL;
-
-	*mk = mk_;
-}
-
-/* ------------------------------------------------------------------------ */
-
 void macos_show_message_box(const char *title, const char *text, int style)
 {
 	const AlertType types[] = {
