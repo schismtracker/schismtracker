@@ -1086,7 +1086,8 @@ int video_opengl_init(video_opengl_object_load_spec object_load,
 	video_opengl_extension_supported_spec extension_supported,
 	video_opengl_object_unload_spec object_unload,
 	video_opengl_set_attribute_spec set_attribute,
-	video_opengl_swap_buffers_spec swap_buffers)
+	video_opengl_swap_buffers_spec swap_buffers,
+	int (*setup_callback)(void))
 {
 	int loaded = 0;
 
@@ -1095,7 +1096,8 @@ int video_opengl_init(video_opengl_object_load_spec object_load,
 
 	memset(&video_gl, 0, sizeof(video_gl));
 
-	if (!extension_supported) extension_supported = opengl_extension_supported_default;
+	if (!extension_supported)
+		extension_supported = opengl_extension_supported_default;
 
 	if (object_load(NULL)
 #ifdef SCHISM_WIN32
@@ -1143,6 +1145,9 @@ int video_opengl_init(video_opengl_object_load_spec object_load,
 		Z(glGetError);
 
 #undef Z
+
+		if (!setup_callback())
+			goto fail;
 
 		if (extension_supported("GL_NV_pixel_data_range")) {
 			schism_glPixelDataRangeNV = function_load("glPixelDataRangeNV");
@@ -1210,7 +1215,7 @@ int video_opengl_setup(uint32_t w, uint32_t h,
 
 	if (!callback(&x, &y, &w, &h))
 		return 0; /* ? */
-
+	
 	/* is this really necessary? */
 	video_gl.set_attribute(VIDEO_GL_DOUBLEBUFFER, 1);
 	video_gl.set_attribute(VIDEO_GL_STENCIL_SIZE, 0);
@@ -1222,6 +1227,8 @@ int video_opengl_setup(uint32_t w, uint32_t h,
 	video_gl.set_attribute(VIDEO_GL_SWAP_CONTROL, 0);
 
 	schism_glViewport(x, y, w, h);
+
+	texsize = 2 << int32_log2(NATIVE_SCREEN_WIDTH);
 
 	if (!video_gl.framebuffer) {
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
@@ -1258,7 +1265,7 @@ int video_opengl_setup(uint32_t w, uint32_t h,
 	video_opengl_reset_interpolation();
 
 	schism_glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texsize, texsize,
-		0, GL_BGRA_EXT, GL_UNSIGNED_INT_8_8_8_8_REV, 0);
+		0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, 0);
 	if (schism_glGetError() != GL_NO_ERROR)
 		return 0; /* nope */
 
@@ -1343,11 +1350,13 @@ int video_opengl_used(void)
 	return video_gl.init;
 }
 
-void video_opengl_report(void)
+void video_opengl_report(int hw, int accel)
 {
-	log_append(2,0, " Using OpenGL interface");
+	log_appendf(5, " %s%s OpenGL interface",
+		(hw) ? "Hardware" : "Software",
+		(accel) ? " accelerated" : "");
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 	if (video_gl.pixel_data_range)
-		log_append(2,0, " Using NVidia pixel range extensions");
+		log_append(5,0, " NVidia pixel range extensions available");
 #endif
 }

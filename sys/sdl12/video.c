@@ -161,7 +161,8 @@ static void sdl12_video_report(void)
 	log_appendf(5, " Using driver '%s'", sdl12_video_driver_name());
 
 	if (video.surface->flags & SDL_OPENGL) {
-		video_opengl_report();
+		video_opengl_report(video.surface->flags & SDL_HWSURFACE,
+			video.surface->flags & SDL_HWACCEL);
 	} else {
 		log_appendf(5, " %s%s video surface",
 			(video.surface->flags & SDL_HWSURFACE) ? "Hardware" : "Software",
@@ -238,7 +239,8 @@ static void sdl12_video_fullscreen(int tri)
 
 static void sdl12_video_setup(SCHISM_UNUSED int interpolation)
 {
-	/* nothing */
+	if (video_opengl_used())
+		video_opengl_reset_interpolation();
 }
 
 /* defined lower in this file */
@@ -247,6 +249,7 @@ static void sdl12_opengl_object_unload(void);
 static void *sdl12_opengl_function_load(const char *function);
 static int sdl12_opengl_set_attribute(int attr, int value);
 static void sdl12_opengl_swap_buffers(void);
+static int sdl12_opengl_setup_callback(void);
 
 static int sdl12_video_startup(void)
 {
@@ -326,6 +329,16 @@ static int sdl12_video_startup(void)
 		}
 	}
 #endif
+
+	if (cfg_video_hardware) {
+		video_opengl_init(sdl12_opengl_object_load,
+			sdl12_opengl_function_load, NULL, NULL,
+			sdl12_opengl_set_attribute, sdl12_opengl_swap_buffers,
+			sdl12_opengl_setup_callback);
+		video.draw.width = cfg_video_width;
+		video.draw.height = cfg_video_height;
+	}
+
 	if (!video.surface) {
 		/* if we already got one... */
 		video.surface = sdl12_SetVideoMode(640, 400, 0, SDL_RESIZABLE);
@@ -655,6 +668,24 @@ static void sdl12_video_toggle_menu(SCHISM_UNUSED int on)
 	win32_toggle_menu(wm_info.window, on);
 #endif
 
+#ifdef SCHISM_WIN32
+	if (!cache_size && video_opengl_used()) {
+		/* stupid hack, menu bar behavior when opengl is used is the OPPOSITE
+		 * of when regular surfaces are used */
+		int a, b, h;
+		RECT w, c;
+
+		GetWindowRect(wm_info.window, &w);
+		GetClientRect(wm_info.window, &c);
+
+		h = GetSystemMetrics(SM_CYMENU);
+		if (!cfg_video_want_menu_bar)
+			h = -h;
+
+		SetWindowPos(wm_info.window, NULL, 0, 0, w.right - w.left, (w.bottom - w.top) + h, SWP_NOMOVE | SWP_NOZORDER);
+	}
+#endif
+
 	if (cache_size) {
 		video_resize(width, height);
 	}
@@ -726,6 +757,13 @@ static int sdl12_opengl_set_attribute(int attr, int value)
 static void sdl12_opengl_swap_buffers(void)
 {
 	sdl12_GL_SwapBuffers();
+}
+
+static int sdl12_opengl_setup_callback(void)
+{
+	video.surface = sdl12_SetVideoMode(640,400,0,SDL_OPENGL|SDL_RESIZABLE);
+
+	return !!video.surface;
 }
 
 /* ------------------------------------------------------------------------ */
