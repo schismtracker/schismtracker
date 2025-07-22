@@ -283,19 +283,12 @@ static schism_audio_device_t *sndmgr_audio_open_device(SCHISM_UNUSED uint32_t id
 			SndCommand cmd;
 
 			/* ugly */
-			if (err != noErr) {
-				for (i = 0; i < 2; i++)
-					free(dev->buf[i]);
-				free(dev->chn);
-				free(dev);
-				return NULL;
-			}
+			if (err != noErr)
+				goto err;
 
 			/* Since we couldn't pass any init flags to SndNewChannel,
 			 * we should send a reInitCmd command to the channel to
-			 * tell it to do mono sound.
-			 *
-			 * XXX test if this works */
+			 * tell it to do mono sound. */
 			cmd.cmd = reInitCmd;
 			cmd.param1 = 0; /* unused */
 			cmd.param2 = initMono;
