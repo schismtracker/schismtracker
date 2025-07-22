@@ -262,7 +262,7 @@ int fmt_d00_load_song(song_t *song, slurp_t *fp,
 			if (slurp_read(fp, &speeds[c + 1], 2) != 2)
 				continue;
 
-			speeds[c + 1] = bswapLE32(speeds[c + 1]);
+			speeds[c + 1] = bswapLE16(speeds[c + 1]);
 
 			for (nords = 0; nords < ARRAY_SIZE(ords); /* nothing */) {
 				if (slurp_read(fp, &ords[nords], 2) != 2)
