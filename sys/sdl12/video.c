@@ -382,12 +382,6 @@ static int sdl12_video_startup(void)
 	video.desktop.width = x;
 	video.desktop.height = y;
 
-	/* Initialize opengl funcs */
-	if (cfg_video_hardware)
-		video_opengl_init(sdl12_opengl_object_load,
-			sdl12_opengl_function_load, NULL, NULL,
-			sdl12_opengl_set_attribute, sdl12_opengl_swap_buffers);
-
 	/* this call builds the surface */
 	video_fullscreen(video.desktop.fullscreen);
 
@@ -848,9 +842,9 @@ static int sdl12_opengl_setup_callback(void)
 	if (!width) width = 640;
 	if (!height) height = 400;
 
-	video.surface = sdl12_SetVideoMode(width,height,0,SDL_OPENGL|SDL_RESIZABLE);
+	video.surface = sdl12_SetVideoMode(width, height, 0, SDL_OPENGL|SDL_RESIZABLE);
 	if (!video.surface)
-		fprintf(stderr, "SDL_SetVideoMode: %s", sdl12_get_error());
+		fprintf(stderr, "SDL_SetVideoMode: %s\n", sdl12_get_error());
 
 	return !!video.surface;
 }
