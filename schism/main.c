@@ -813,18 +813,19 @@ SCHISM_NORETURN static void event_loop(void)
 		}
 
 		{
-			/* completely arbitrary; I think this is a good amount of files
-			 * to let dmoz work through before trying to reload the page.
+			/* This takes a LOT of time if we just base it on files.
+			 * So here I've just based it on how LONG we've spent.
 			 *
-			 * Ideally dmoz would do this by itself, but it's stuck here for now. */
-			int i;
-			for (i = 0; i < 512 && dmoz_worker(); i++);
-		}
+			 * I'm just setting it to a maximum of 10ms, which I think
+			 * is an okay amount of time to spend on it.
+			 *
+			 * Ideally we would do this stuff in a different thread, so
+			 * that the main thread doesn't get hogged by it at all, but
+			 * that would mean guarding it all behind mutexes. :( */
+			timer_ticks_t start = timer_ticks();
 
-		/* let dmoz build directory lists, etc
-		 *
-		 * as long as there's no user-event going on... */
-		while (!(status.flags & NEED_UPDATE) && dmoz_worker() && !events_have_event());
+			while (start + 10 > timer_ticks() && dmoz_worker() && !events_have_event());
+		}
 
 		/* sleep for a little bit to not hog CPU time */
 		if (!events_have_event())
