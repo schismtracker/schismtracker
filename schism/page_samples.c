@@ -1343,15 +1343,36 @@ static void resample_sample_dialog(int aa)
 // internally, but it's never actually used or exposed
 // to the user.
 
-static struct widget crossfade_sample_widgets[6];
+enum {
+	DIALOG_CROSSFADE_WIDGET_LOOP_BUTTON,
+	DIALOG_CROSSFADE_WIDGET_SUSTAIN_BUTTON,
+	DIALOG_CROSSFADE_WIDGET_SAMPLES_NUMENTRY,
+	DIALOG_CROSSFADE_WIDGET_PRIORITY_THUMBBAR,
+	DIALOG_CROSSFADE_WIDGET_CANCEL_BUTTON,
+	DIALOG_CROSSFADE_WIDGET_OK_BUTTON,
+
+	DIALOG_CROSSFADE_WIDGET_MAX_ /* array bounds */
+};
+
+static struct widget crossfade_sample_widgets[DIALOG_CROSSFADE_WIDGET_MAX_];
+/* why the hell isn't this just in the widget structure? sigh */
 static int crossfade_sample_length_cursor;
-static const int crossfade_sample_loop_group[] = { 0, 1, -1 };
+static const int crossfade_sample_loop_group[] = {
+	DIALOG_CROSSFADE_WIDGET_LOOP_BUTTON,
+	DIALOG_CROSSFADE_WIDGET_SUSTAIN_BUTTON,
+	-1
+};
 
 static void do_crossfade_sample(SCHISM_UNUSED void *data)
 {
 	song_sample_t *smp = song_get_sample(current_sample);
 
-	sample_crossfade(smp, crossfade_sample_widgets[2].d.numentry.value, crossfade_sample_widgets[3].d.thumbbar.value + 50, 0, crossfade_sample_widgets[1].d.togglebutton.state);
+	sample_crossfade(smp,
+		crossfade_sample_widgets[DIALOG_CROSSFADE_WIDGET_SAMPLES_NUMENTRY].d.numentry.value,
+		crossfade_sample_widgets[DIALOG_CROSSFADE_WIDGET_PRIORITY_THUMBBAR].d.thumbbar.value + 50,
+		0,
+		crossfade_sample_widgets[DIALOG_CROSSFADE_WIDGET_SUSTAIN_BUTTON].d.togglebutton.state
+	);
 }
 
 static void crossfade_sample_draw_const(void)
@@ -1370,15 +1391,15 @@ static void crossfade_sample_loop_changed(void)
 {
 	song_sample_t *smp = song_get_sample(current_sample);
 
-	const int sustain = crossfade_sample_widgets[1].d.togglebutton.state;
+	const int sustain = crossfade_sample_widgets[DIALOG_CROSSFADE_WIDGET_SUSTAIN_BUTTON].d.togglebutton.state;
 
 	const uint32_t loop_start = (sustain) ? smp->sustain_start : smp->loop_start;
 	const uint32_t loop_end = (sustain) ? smp->sustain_end : smp->loop_end;
 
 	const uint32_t max = MIN(loop_end - loop_start, loop_start);
 
-	crossfade_sample_widgets[2].d.numentry.max = max;
-	crossfade_sample_widgets[2].d.numentry.value = max;
+	crossfade_sample_widgets[DIALOG_CROSSFADE_WIDGET_SAMPLES_NUMENTRY].d.numentry.max = max;
+	crossfade_sample_widgets[DIALOG_CROSSFADE_WIDGET_SAMPLES_NUMENTRY].d.numentry.value = max;
 }
 
 static void crossfade_sample_dialog(void)
@@ -1388,8 +1409,10 @@ static void crossfade_sample_dialog(void)
 
 	// Sample Loop/Sustain Loop
 	// FIXME the buttons for loop/sustain ought to be disabled when their respective loops are not valid
-	widget_create_togglebutton(crossfade_sample_widgets + 0, 31, 24, 6, 0, 2, 1, 1, 1, crossfade_sample_loop_changed, "Loop",    2, crossfade_sample_loop_group);
-	widget_create_togglebutton(crossfade_sample_widgets + 1, 41, 24, 7, 2, 2, 0, 0, 2, crossfade_sample_loop_changed, "Sustain", 1, crossfade_sample_loop_group);
+	widget_create_togglebutton(crossfade_sample_widgets + DIALOG_CROSSFADE_WIDGET_LOOP_BUTTON,
+		31, 24, 6, 0, 2, 1, 1, 1, crossfade_sample_loop_changed, "Loop",    2, crossfade_sample_loop_group);
+	widget_create_togglebutton(crossfade_sample_widgets + DIALOG_CROSSFADE_WIDGET_SUSTAIN_BUTTON,
+		41, 24, 7, 2, 2, 0, 0, 2, crossfade_sample_loop_changed, "Sustain", 1, crossfade_sample_loop_group);
 
 	// Default to sustain loop if there is a sustain loop but no regular loop, or the regular loop is not valid
 	// (Note that a loop that starts at 0 is not valid, because crossfading requires data before the loop.)
@@ -1397,17 +1420,21 @@ static void crossfade_sample_dialog(void)
 
 	/* Samples To Fade; the max and value are initialized separately, since these
 	 * can (and likely are) different between the regular and sustain loop. */
-	widget_create_numentry(crossfade_sample_widgets + 2, 45, 27, 7, 0, 3, 3, NULL, 0, 1, &crossfade_sample_length_cursor);
+	widget_create_numentry(crossfade_sample_widgets + DIALOG_CROSSFADE_WIDGET_SAMPLES_NUMENTRY,
+		45, 27, 7, 0, 3, 3, NULL, 0, 1, &crossfade_sample_length_cursor);
 
 	crossfade_sample_loop_changed();
 
 	// Priority
-	widget_create_thumbbar(crossfade_sample_widgets + 3, 28, 31, 20, 2, 4, 4, NULL, -50, 50);
-	crossfade_sample_widgets[3].d.thumbbar.value = 0;
+	widget_create_thumbbar(crossfade_sample_widgets + DIALOG_CROSSFADE_WIDGET_PRIORITY_THUMBBAR,
+		28, 31, 20, 2, 4, 4, NULL, -50, 50);
+	crossfade_sample_widgets[DIALOG_CROSSFADE_WIDGET_PRIORITY_THUMBBAR].d.thumbbar.value = 0;
 
 	// Cancel/OK
-	widget_create_button(crossfade_sample_widgets + 4, 31, 34, 6, 3, 4, 5, 5, 5, dialog_cancel_NULL, "Cancel", 1);
-	widget_create_button(crossfade_sample_widgets + 5, 41, 34, 6, 3, 5, 4, 4, 0, dialog_yes_NULL, "OK", 3);
+	widget_create_button(crossfade_sample_widgets + DIALOG_CROSSFADE_WIDGET_CANCEL_BUTTON,
+		31, 34, 6, 3, 4, 5, 5, 5, dialog_cancel_NULL, "Cancel", 1);
+	widget_create_button(crossfade_sample_widgets + DIALOG_CROSSFADE_WIDGET_OK_BUTTON,
+		41, 34, 6, 3, 5, 4, 4, 0, dialog_yes_NULL, "OK", 3);
 
 	dialog = dialog_create_custom(26, 20, 28, 17, crossfade_sample_widgets, 6, 0, crossfade_sample_draw_const, NULL);
 	dialog->action_yes = do_crossfade_sample;
