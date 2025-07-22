@@ -923,8 +923,13 @@ void video_calculate_clip(uint32_t w, uint32_t h,
 	}
 }
 
-/* ------------------------------------------------------------ */
-/* OpenGL crap */
+
+/* ------------------------------------------------------------------------ */
+/* OpenGL crap
+ *
+ * NOTE: OpenGL 3.0 support is extremely limited, since we
+ * currently have no proper use for it. Maybe some day it will
+ * be implemented. I highly doubt it will. */
 
 #ifdef SCHISM_WIN32
 # define APIENTRY __stdcall
@@ -989,7 +994,7 @@ typedef void GLvoid;
 #define GL_NUM_EXTENSIONS 0x821D
 #define GL_NO_ERROR 0
 
-/*#define SCHISM_NVIDIA_PIXELDATARANGE 1*/
+#define SCHISM_NVIDIA_PIXELDATARANGE 1
 
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 
@@ -1099,9 +1104,6 @@ static inline int opengl_ver_atleast(uint32_t major, uint32_t minor)
 
 static int opengl_extension_supported_default(const char *extension)
 {
-	const char *start, *extensions;
-	const char *where, *terminator;
-
 	if (opengl_ver_atleast(3, 0)) {
 		GLint i, count;
 
@@ -1115,41 +1117,42 @@ static int opengl_extension_supported_default(const char *extension)
 				if (!strcmp(ext, extension))
 					return 1;
 			}
-
-			return 0;
 		}
-
-		/* fallback */
 	}
+#if 0 /* we can use this as a fallback if the gl 3.0 impl is broken */
+	else
+#endif
+	{
 
-	/* version for opengl < 3.0 */
+		const char *start, *extensions;
+		const char *where, *terminator;
 
-	/* Extension names should not have spaces. */
-	where = strchr(extension, ' ');
-	if (where || *extension == '\0')
-		return 0;
+		/* Extension names should not have spaces. */
+		where = strchr(extension, ' ');
+		if (where || *extension == '\0')
+			return 0;
 
-	/* TODO: GL_EXTENSIONS was removed in OpenGL 3.1 */
-	extensions = (const char *)schism_glGetString(GL_EXTENSIONS);
-	if (!extensions)
-		return 0;
+		extensions = (const char *)schism_glGetString(GL_EXTENSIONS);
+		if (!extensions)
+			return 0;
 
-	/* It takes a bit of care to be fool-proof about parsing the
-	 * OpenGL extensions string. Don't be fooled by sub-strings,
-	 * etc. */
-	start = extensions;
+		/* It takes a bit of care to be fool-proof about parsing the
+		 * OpenGL extensions string. Don't be fooled by sub-strings,
+		 * etc. */
+		start = extensions;
 
-	for (;;) {
-		where = strstr(start, extension);
-		if (!where)
-			break;
+		for (;;) {
+			where = strstr(start, extension);
+			if (!where)
+				break;
 
-		terminator = where + strlen(extension);
-		if (where == start || *(where - 1) == ' ')
-			if (*terminator == ' ' || *terminator == '\0')
-				return 1;
+			terminator = where + strlen(extension);
+			if (where == start || *(where - 1) == ' ')
+				if (*terminator == ' ' || *terminator == '\0')
+					return 1;
 
-		start = terminator;
+			start = terminator;
+		}
 	}
 
 	return 0;
