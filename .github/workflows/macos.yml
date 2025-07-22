@@ -128,7 +128,8 @@ jobs:
           cd SDL-1.2.15
           mkdir build_powerpc
           cd build_powerpc
-          ../configure --host=powerpc-apple-macos --prefix="$RUNNER_TEMP/ppcprefix"
+          # XXX we could probably do --disable-file and --disable-loadso without too much trouble
+          ../configure --host=powerpc-apple-macos --prefix="$RUNNER_TEMP/ppcprefix" --disable-joystick --disable-cdrom
           make
           make install
           cd .. # build_powerpc
