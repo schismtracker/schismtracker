@@ -41,6 +41,103 @@ int mp_ver_atleast(UInt32 major, UInt32 minor, UInt32 rev)
 }
 
 /* -------------------------------------------------------------- */
+/* thread-safe implementations of memory management functions */
+
+static inline SCHISM_ALWAYS_INLINE
+void *macos_mt_allocate(size_t size)
+{
+#if 0
+	if (mp_ver_atleast(2, 0, 0)) {
+		return MPAllocate(size);
+	} else
+#endif
+	{
+		void *q;
+
+		q = MPAllocate(size + sizeof(size_t));
+		memcpy(q, &size, sizeof(size_t));
+
+		return ((char *)q + sizeof(size_t));
+	}
+}
+
+static inline SCHISM_ALWAYS_INLINE
+void macos_mt_free(void *q)
+{
+#if 0
+	if (mp_ver_atleast(2, 0, 0)) {
+		MPFree(q);
+	} else
+#endif
+	{
+		MPFree((char *)q - sizeof(size_t));
+	}
+}
+
+static inline SCHISM_ALWAYS_INLINE
+size_t macos_mt_asize(void *q)
+{
+#if 0
+	if (mp_ver_atleast(2, 0, 0)) {
+		return MPGetAllocatedBlockSize(q);
+	} else
+#endif
+	{
+		size_t r;
+		memcpy(&r, (char *)q - sizeof(size_t), sizeof(size_t));
+		return r;
+	}
+}
+
+void *macos_malloc(size_t size)
+{
+	return macos_mt_allocate(size);
+}
+
+void *macos_calloc(size_t count, size_t nmemb)
+{
+	size_t size;
+	void *q;
+
+	size = count * nmemb;
+#if 0 /* I don't think we'll need this */
+	if (size && size / count != nmemb)
+		return NULL; /* nope */
+#endif
+
+	q = macos_mt_allocate(size);
+	memset(q, 0, size);
+
+	return q;
+}
+
+void *macos_realloc(void *ptr, size_t newsize)
+{
+	void *q;
+
+	if (!ptr)
+		return macos_mt_allocate(newsize);
+
+	/* allocate new memory from the heap */
+	q = macos_mt_allocate(newsize);
+	if (!q)
+		return NULL;
+
+	/* copy everything
+	 * XXX can we do faster than memcpy ? :) */
+	memcpy(q, ptr, macos_mt_asize(q));
+
+	macos_mt_free(ptr);
+
+	return q;
+}
+
+void macos_free(void *ptr)
+{
+	macos_mt_free(ptr);
+}
+
+/* -------------------------------------------------------------- */
 
 struct mt_mutex {
 	MPCriticalRegionID mutex;
