@@ -87,7 +87,6 @@ enum {
 	// removed...
 	//VIDEO_DDRAW = 1,
 	//VIDEO_YUV = 2,
-	//VIDEO_GL = 3,
 };
 
 static struct video_cf {
@@ -104,10 +103,15 @@ static struct video_cf {
 
 		/* a buncha booleans */
 		unsigned int swsurface : 1;
+#ifdef HAVE_LINUX_FB_H
 		unsigned int fb_hacks : 1;
+#endif
 		unsigned int fullscreen : 1;
 		unsigned int doublebuf : 1;
 	} desktop;
+
+	SDL_Rect clip;
+
 	struct {
 		uint32_t x, y, w, h;
 	} clip;
@@ -156,15 +160,25 @@ static void sdl12_video_report(void)
 {
 	log_appendf(5, " Using driver '%s'", sdl12_video_driver_name());
 
-	log_appendf(5, " %s%s video surface",
-		(video.surface->flags & SDL_HWSURFACE) ? "Hardware" : "Software",
-		(video.surface->flags & SDL_HWACCEL) ? " accelerated" : "");
-	if (SDL_MUSTLOCK(video.surface))
-		log_append(4, 0, " Must lock surface");
+	if (video.surface->flags & SDL_OPENGL) {
+		video_opengl_report();
+	} else {
+		log_appendf(5, " %s%s video surface",
+			(video.surface->flags & SDL_HWSURFACE) ? "Hardware" : "Software",
+			(video.surface->flags & SDL_HWACCEL) ? " accelerated" : "");
+		if (SDL_MUSTLOCK(video.surface))
+			log_append(4, 0, " Must lock surface");
+	}
 	log_appendf(5, " Display format: %d bits/pixel", (int)video.surface->format->BitsPerPixel);
 
-	if (video.desktop.fullscreen || video.desktop.fb_hacks)
+
+	if (video.desktop.fullscreen
+#ifdef HAVE_LINUX_FB_H
+		|| video.desktop.fb_hacks
+#endif
+	) {
 		log_appendf(5, " Display dimensions: %dx%d", video.desktop.width, video.desktop.height);
+	}
 }
 
 // check if w and h are multiples of native res (and by the same multiplier)
@@ -200,7 +214,11 @@ static void sdl12_video_shutdown(void)
 
 static void sdl12_video_fullscreen(int tri)
 {
-	if (tri == 0 || video.desktop.fb_hacks) {
+	if (tri == 0
+#ifdef HAVE_LINUX_FB_H
+		|| video.desktop.fb_hacks
+#endif
+	) {
 		video.desktop.fullscreen = 0;
 	} else if (tri == 1) {
 		video.desktop.fullscreen = 1;
@@ -220,8 +238,15 @@ static void sdl12_video_fullscreen(int tri)
 
 static void sdl12_video_setup(SCHISM_UNUSED int interpolation)
 {
-	// nothing
+	/* nothing */
 }
+
+/* defined lower in this file */
+static int sdl12_opengl_object_load(const char *path);
+static void sdl12_opengl_object_unload(void);
+static void *sdl12_opengl_function_load(const char *function);
+static int sdl12_opengl_set_attribute(int attr, int value);
+static void sdl12_opengl_swap_buffers(void);
 
 static int sdl12_video_startup(void)
 {
@@ -264,7 +289,7 @@ static int sdl12_video_startup(void)
 	video.desktop.swsurface = !cfg_video_hardware;
 	video.desktop.fullscreen = cfg_video_fullscreen;
 
-#if HAVE_LINUX_FB_H
+#ifdef HAVE_LINUX_FB_H
 	if (!getenv("DISPLAY") && !video.desktop.fb_hacks) {
 		struct fb_var_screeninfo s;
 
@@ -305,8 +330,7 @@ static int sdl12_video_startup(void)
 		/* if we already got one... */
 		video.surface = sdl12_SetVideoMode(640, 400, 0, SDL_RESIZABLE);
 		if (!video.surface) {
-			// ok
-			perror("SDL_SetVideoMode");
+			fprintf(stderr, "SDL_SetVideoMode: %s\n", sdl12_get_error());
 			return 0;
 		}
 	}
@@ -341,7 +365,13 @@ static int sdl12_video_startup(void)
 	video.desktop.width = x;
 	video.desktop.height = y;
 
-	/* This call actually creates the surface. */
+	/* Initialize opengl funcs */
+	if (cfg_video_hardware)
+		video_opengl_init(sdl12_opengl_object_load,
+			sdl12_opengl_function_load, NULL, NULL,
+			sdl12_opengl_set_attribute, sdl12_opengl_swap_buffers);
+
+	/* this call builds the surface */
 	video_fullscreen(video.desktop.fullscreen);
 
 	if (!video.surface)
@@ -381,9 +411,12 @@ static SDL_Surface *setup_surface_(unsigned int w, unsigned int h, unsigned int 
 		sdlflags |= SDL_RESIZABLE;
 	}
 
+#ifdef HAVE_LINUX_FB_H
 	if (video.desktop.fb_hacks && video.surface) {
 		/* the original one will be _just fine_ */
-	} else {
+	} else
+#endif
+	{
 		if (video.desktop.fullscreen) {
 			sdlflags &= ~(SDL_RESIZABLE);
 			sdlflags |= (SDL_FULLSCREEN);
@@ -426,6 +459,21 @@ static SDL_Surface *setup_surface_(unsigned int w, unsigned int h, unsigned int 
 	return video.surface;
 }
 
+static int sdl12_video_opengl_setup_callback(uint32_t *x, uint32_t *y,
+	uint32_t *w, uint32_t *h)
+{
+	int r;
+
+	r = !!setup_surface_(*w, *h, SDL_OPENGL);
+
+	*x = video.clip.x;
+	*y = video.clip.y;
+	*w = video.clip.w;
+	*h = video.clip.h;
+
+	return r;
+}
+
 static void sdl12_video_resize(unsigned int width, unsigned int height)
 {
 	if (!width) width = cfg_video_width;
@@ -433,7 +481,17 @@ static void sdl12_video_resize(unsigned int width, unsigned int height)
 	video.draw.width = width;
 	video.draw.height = height;
 
-	setup_surface_(width, height, 0);
+	if (video_opengl_used() && video_opengl_setup(width, height,
+			sdl12_video_opengl_setup_callback)) {
+		/* nothing */
+	} else {
+		/* if an opengl init failed, it probably will fail again,
+		 * so don't try it again */
+		if (video_opengl_used())
+			video_opengl_quit();
+
+		setup_surface_(width, height, 0);
+	}
 
 	status.flags |= (NEED_UPDATE);
 }
@@ -462,11 +520,16 @@ SCHISM_HOT static void sdl12_video_blit(void)
 		while (sdl12_LockSurface(video.surface) < 0)
 			sdl12_Delay(10);
 
+#ifdef HAVE_LINUX_FB_H
 	if (video.desktop.fb_hacks) {
 		video_blit11(video.surface->format->BytesPerPixel,
 			video.surface->pixels,
 			video.surface->pitch,
 			video.pal);
+	} else
+#endif
+	if (video_opengl_used()) {
+		video_opengl_blit();
 	} else {
 		video_blitSC(video.surface->format->BytesPerPixel,
 			video.surface->pixels,
@@ -498,7 +561,7 @@ static void sdl12_video_translate(unsigned int vx, unsigned int vy, unsigned int
 }
 
 static int sdl12_video_is_hardware(void) {
-	return !!(video.surface->flags & SDL_HWSURFACE);
+	return !!(video.surface->flags & (SDL_HWSURFACE|SDL_OPENGL));
 }
 
 static int sdl12_video_is_input_grabbed(void)
@@ -613,7 +676,57 @@ static void sdl12_video_mousecursor_changed(void)
 	}
 }
 
-//////////////////////////////////////////////////////////////////////////////
+/* ------------------------------------------------------------------------ */
+
+static int (SDLCALL *sdl12_GL_LoadLibrary)(const char *path) = NULL;
+static int (SDLCALL *sdl12_GL_SetAttribute)(SDL_GLattr attr, int value) = NULL;
+static void *(SDLCALL *sdl12_GL_GetProcAddress)(const char* proc) = NULL;
+static void (SDLCALL *sdl12_GL_SwapBuffers)(void) = NULL;
+
+static int sdl12_opengl_object_load(const char *path)
+{
+	return !sdl12_GL_LoadLibrary(path);
+}
+
+static void *sdl12_opengl_function_load(const char *function)
+{
+	return sdl12_GL_GetProcAddress(function);
+}
+
+static int sdl12_opengl_set_attribute(int attr, int value)
+{
+	int sdlattr;
+
+	switch (attr) {
+	/*
+	case VIDEO_GL_RED_SIZE: sdlattr = SDL_GL_RED_SIZE; break;
+	case VIDEO_GL_GREEN_SIZE: sdlattr = SDL_GL_GREEN_SIZE; break;
+	case VIDEO_GL_BLUE_SIZE: sdlattr = SDL_GL_BLUE_SIZE; break;
+	case VIDEO_GL_ALPHA_SIZE: sdlattr = SDL_GL_ALPHA_SIZE; break;
+	case VIDEO_GL_BUFFER_SIZE: sdlattr = SDL_GL_BUFFER_SIZE; break;
+	*/
+	case VIDEO_GL_DOUBLEBUFFER: sdlattr = SDL_GL_DOUBLEBUFFER; break;
+	case VIDEO_GL_DEPTH_SIZE: sdlattr = SDL_GL_DEPTH_SIZE; break;
+	case VIDEO_GL_STENCIL_SIZE: sdlattr = SDL_GL_STENCIL_SIZE; break;
+	case VIDEO_GL_ACCUM_RED_SIZE: sdlattr = SDL_GL_ACCUM_RED_SIZE; break;
+	case VIDEO_GL_ACCUM_GREEN_SIZE: sdlattr = SDL_GL_ACCUM_GREEN_SIZE; break;
+	case VIDEO_GL_ACCUM_BLUE_SIZE: sdlattr = SDL_GL_ACCUM_BLUE_SIZE; break;
+	case VIDEO_GL_ACCUM_ALPHA_SIZE: sdlattr = SDL_GL_ACCUM_ALPHA_SIZE; break;
+#if SDL_VERSION_ATLEAST(1, 2, 11)
+	case VIDEO_GL_SWAP_CONTROL: sdlattr = SDL_GL_SWAP_CONTROL; break;
+#endif
+	default: return -1;
+	}
+
+	return sdl12_GL_SetAttribute(sdlattr, value);
+}
+
+static void sdl12_opengl_swap_buffers(void)
+{
+	sdl12_GL_SwapBuffers();
+}
+
+/* ------------------------------------------------------------------------ */
 
 static int sdl12_video_get_wm_data(video_wm_data_t *wm_data)
 {
@@ -642,14 +755,14 @@ static int sdl12_video_get_wm_data(video_wm_data_t *wm_data)
 	return 1;
 }
 
-//////////////////////////////////////////////////////////////////////////////
+/* ------------------------------------------------------------------------ */
 
 static void sdl12_video_show_cursor(int enabled)
 {
 	sdl12_ShowCursor(enabled ? SDL_ENABLE : SDL_DISABLE);
 }
 
-//////////////////////////////////////////////////////////////////////////////
+/* ------------------------------------------------------------------------ */
 
 static int sdl12_video_load_syms(void)
 {
@@ -680,6 +793,11 @@ static int sdl12_video_load_syms(void)
 #ifdef SCHISM_MACOS
 	SCHISM_SDL12_SYM(InitQuickDraw);
 #endif
+
+	SCHISM_SDL12_SYM(GL_LoadLibrary);
+	SCHISM_SDL12_SYM(GL_SetAttribute);
+	SCHISM_SDL12_SYM(GL_GetProcAddress);
+	SCHISM_SDL12_SYM(GL_SwapBuffers);
 
 	return 0;
 }
@@ -721,7 +839,7 @@ static void sdl12_video_quit(void)
 	sdl12_quit();
 }
 
-//////////////////////////////////////////////////////////////////////////////
+/* ------------------------------------------------------------------------ */
 
 const schism_video_backend_t schism_video_backend_sdl12 = {
 	.init = sdl12_video_init,
