@@ -29,6 +29,8 @@
 
 #include "headers.h"
 
+#include "automated-testing.h"
+
 #include "backend/events.h"
 #include "events.h"
 
@@ -1227,6 +1229,6 @@ int schism_main(int argc, char** argv)
 int main(int argc, char **argv)
 {
 	// do nothing special
-	return schism_main(argc, argv);
+	return ENTRYPOINT(argc, argv);
 }
 #endif

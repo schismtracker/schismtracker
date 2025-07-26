@@ -1502,6 +1502,48 @@ int win32_access(const char *path, int amode)
 }
 
 /* ------------------------------------------------------------------------------- */
+/* shell */
+
+#define WIN32_SHELL_VARIANT(name, charset, char_type, char_len_func, char_getcwd, char_chdir, char_getenv, char_spawnlp, char_stat, const_prefix) \
+	static inline SCHISM_ALWAYS_INLINE int _win32_shell_##name(const char *name, const char *arg) \
+	{ \
+		char_type *name_w; \
+		if (charset_iconv(name, &name_w, CHARSET_UTF8, charset, SIZE_MAX)) \
+			return 0; \
+	\
+		intptr_t r; \
+	\
+		{ \
+			char_type *arg_w = NULL; \
+			charset_iconv(arg, &arg_w, CHARSET_UTF8, charset, SIZE_MAX); \
+	\
+			r = char_spawnlp(_P_WAIT, name_w, name_w, arg_w, NULL); \
+	\
+			free(arg_w); \
+		} \
+	\
+		free(name_w); \
+	\
+		return r; \
+	}
+
+WIN32_SHELL_VARIANT(wide, CHARSET_WCHAR_T, WCHAR, wcslen, _wgetcwd, _wchdir, _wgetenv, _wspawnlp, _wstat, L)
+#ifdef SCHISM_WIN32_COMPILE_ANSI
+WIN32_SHELL_VARIANT(ansi, CHARSET_ANSI,    CHAR,  strlen, _getcwd,  _chdir,  getenv,   _spawnlp,  _stat, /* none */)
+#endif
+
+#undef WIN32_SHELL_VARIANT
+
+int win32_shell(const char *name, const char *arg)
+{
+	SCHISM_ANSI_UNICODE({
+		return _win32_shell_ansi(name, arg);
+	}, {
+		return _win32_shell_wide(name, arg);
+	});
+}
+
+/* ------------------------------------------------------------------------------- */
 /* run hook */
 
 #define WIN32_RUN_HOOK_VARIANT(name, charset, char_type, char_len_func, char_getcwd, char_chdir, char_getenv, char_spawnlp, char_stat, const_prefix) \

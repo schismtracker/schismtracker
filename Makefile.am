@@ -101,6 +101,8 @@ noinst_HEADERS = \
 	include/auto/logoit.h		\
 	include/auto/logoschism.h	\
 	include/auto/schismico_hires.h	\
+	include/automated-testing.h     \
+	include/test-assertions.h       \
 	include/bswap.h			\
 	include/bshift.h        \
 	include/charset.h		\
@@ -506,6 +508,11 @@ endif
 
 ## aaaaaaaaahhhhhhhhhhhhhhhhhhh!!!!!!!1
 schismtracker_SOURCES = \
+	automated-testing/harness.c        \
+	automated-testing/testresult.c     \
+	automated-testing/output.c         \
+	automated-testing/index.c          \
+	automated-testing/cases/bshift.c   \
 	auto/default-font.c		\
 	auto/helptext.c			\
 	fmt/669.c			\
@@ -672,3 +679,8 @@ schismtracker_LDADD = $(LIBM) $(libs_sdl3) \
 	$(libs_os2) $(libs_xbox) $(libs_avformat) \
 	$(libs_asio)
 schismtracker_LDFLAGS = $(ldflags_macosx)
+
+testbuild: CFLAGS += -DSCHISM_TEST_BUILD
+testbuild: all-am
+
+.PHONY: testbuild

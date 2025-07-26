@@ -21,63 +21,34 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "headers.h"
-#include "osdefs.h"
+#include "automated-testing.h"
 
-/* ugh */
-#if defined(HAVE_POSIX_SPAWN) && defined(HAVE_WAITPID)
-#include <spawn.h>
-#include <sys/wait.h>
+#include <stdlib.h>
+#include <string.h>
 
-int posix_shell(const char *name, const char *arg)
-{
-	pid_t pid;
-	char *local_name, *local_arg;
-	char *argv[3];
-	int r;
+testresult_t test_bshift_arithmetic();
+testresult_t test_bshift_right_shift_negative();
+testresult_t test_bshift_left_shift_overflow();
 
-	local_name = strdup(name);
-	local_arg = strdup(arg);
+#define CASE(test_case_name) { #test_case_name, test_case_name }
+#define END_OF_LIST { 0, 0 }
 
-	argv[0] = local_name;
-	argv[1] = local_arg;
-	argv[2] = NULL;
+test_index_entry automated_tests[] =
+	{
+		CASE(test_bshift_arithmetic),
+		CASE(test_bshift_right_shift_negative),
+		CASE(test_bshift_left_shift_overflow),
 
-	r = posix_spawn(&pid, name, 0, 0, argv, 0);
-
-	waitpid(pid, &r, WUNTRACED);
-
-	free(local_name);
-	free(local_arg);
-
-	return r;
-}
-#endif
-
-#if defined(HAVE_EXECL) && defined(HAVE_FORK) && !defined(SCHISM_WIN32)
-int posix_run_hook(const char *dir, const char *name, const char *maybe_arg)
-{
-	char *tmp;
-	int st;
-
-	switch (fork()) {
-	case -1:
-		return 0;
-	case 0:
-		if (chdir(dir) == -1)
-			_exit(255);
-		if (asprintf(&tmp, "./%s", name) < 0)
-			_exit(255);
-		execl(tmp, tmp, maybe_arg, (char *)NULL);
-		free(tmp);
-		_exit(255);
+		END_OF_LIST
 	};
 
-	while (wait(&st) == -1);
+test_index_entry *test_get_case(const char *name)
+{
+	int i;
 
-	if (WIFEXITED(st) && WEXITSTATUS(st) == 0)
-		return 1;
+	for (i = 0; automated_tests[i].name; i++)
+		if (!strcmp(automated_tests[i].name, name))
+			return &automated_tests[i];
 
-	return 0;
+	return NULL;
 }
-#endif
