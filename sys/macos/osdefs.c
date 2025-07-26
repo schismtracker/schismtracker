@@ -39,6 +39,7 @@
 #include <Files.h>
 #include <Folders.h>
 #include <Dialogs.h>
+#include <LowMem.h>
 
 #include <ctype.h>
 
@@ -104,6 +105,25 @@ void macos_show_message_box(const char *title, const char *text, int style)
 	}
 
 	StandardAlert(types[style], err, explanation, &rec, &hit);
+}
+
+/* ------------------------------------------------------------------------ */
+
+int macos_get_key_repeat(int *pdelay, int *prate)
+{
+	int delay, rate;
+
+	delay = LMGetKeyThresh();
+	rate  = LMGetKeyRepThresh();
+
+	/* convert ticks (1/60 sec) to milliseconds */
+	delay = (int32_t)delay * 1000 / 60;
+	rate  = (int32_t)rate  * 1000 / 60;
+
+	if (pdelay) *pdelay = delay;
+	if (prate)  *prate = rate;
+
+	return 1;
 }
 
 /* ------------------------------------------------------------------------ */

@@ -71,6 +71,7 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_stat macos_stat
 # define os_show_message_box macos_show_message_box
 # define os_sysinit macos_sysinit
+# define os_get_key_repeat macos_get_key_repeat
 #elif defined(SCHISM_OS2)
 # define os_mkdir os2_mkdir
 # define os_stat os2_stat
@@ -210,6 +211,7 @@ int macos_mkdir(const char *path, uint32_t mode);
 int macos_stat(const char *file, struct stat *st);
 void macos_show_message_box(const char *title, const char *text, int style);
 void macos_sysinit(int *pargc, char ***pargv);
+int macos_get_key_repeat(int *pdelay, int *prate);
 
 int x11_event(schism_event_t *event);
 
