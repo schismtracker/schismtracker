@@ -473,23 +473,29 @@ static size_t sf2_slurp_read(slurp_t *s, void *data, size_t count)
 {
 	size_t read = 0;
 
-	if (s->internal.sf2.current < (ARRAY_SIZE(s->internal.sf2.data) - 1)) {
-		int64_t left = sf2_slurp_tell(s) + count;
+	while (s->internal.sf2.current < (ARRAY_SIZE(s->internal.sf2.data) - 1)) {
+		int64_t off_current = slurp_tell(s->internal.sf2.src) - s->internal.sf2.data[s->internal.sf2.current].off;
+		int64_t left = s->internal.sf2.data[s->internal.sf2.current].len - off_current;
+
 		if (left < 0)
 			return 0; /* ??? */
 
-		if ((size_t)left < count) {
-			size_t tread = slurp_read(s->internal.sf2.src, data, left);
-			if (tread != left)
-				return tread;
+		if ((size_t)left >= count)
+			break;
 
-			read += tread;
-			count -= tread;
+		size_t tread = slurp_read(s->internal.sf2.src, (char *)data + read, left);
+		if (tread != left)
+			return tread;
 
-			/* start over at the new offset */
-			slurp_seek(s->internal.sf2.src, s->internal.sf2.data[++s->internal.sf2.current].off, SEEK_SET);
-		}
+		read += tread;
+		count -= tread;
+
+		/* start over at the new offset */
+		slurp_seek(s->internal.sf2.src, s->internal.sf2.data[++s->internal.sf2.current].off, SEEK_SET);
 	}
+
+	if (count > s->internal.sf2.data[s->internal.sf2.current].len)
+		count = s->internal.sf2.data[s->internal.sf2.current].len;
 
 	if (count)
 		read += slurp_read(s->internal.sf2.src, (char *)data + read, count);
