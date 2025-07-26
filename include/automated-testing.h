@@ -20,64 +20,43 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#ifndef SCHISM_AUTOMATED_TESTING_H_
+#define SCHISM_AUTOMATED_TESTING_H_
 
-#include "headers.h"
-#include "osdefs.h"
-
-/* ugh */
-#if defined(HAVE_POSIX_SPAWN) && defined(HAVE_WAITPID)
-#include <spawn.h>
-#include <sys/wait.h>
-
-int posix_shell(const char *name, const char *arg)
-{
-	pid_t pid;
-	char *local_name, *local_arg;
-	char *argv[3];
-	int r;
-
-	local_name = strdup(name);
-	local_arg = strdup(arg);
-
-	argv[0] = local_name;
-	argv[1] = local_arg;
-	argv[2] = NULL;
-
-	r = posix_spawn(&pid, name, 0, 0, argv, 0);
-
-	waitpid(pid, &r, WUNTRACED);
-
-	free(local_name);
-	free(local_arg);
-
-	return r;
-}
+#ifdef SCHISM_TEST_BUILD
+#define ENTRYPOINT schism_test_main
+#else
+#define ENTRYPOINT schism_main
 #endif
 
-#if defined(HAVE_EXECL) && defined(HAVE_FORK) && !defined(SCHISM_WIN32)
-int posix_run_hook(const char *dir, const char *name, const char *maybe_arg)
-{
-	char *tmp;
-	int st;
+/* numerically, FAIL == false and PASS == true */
+typedef enum {
+	SCHISM_TESTRESULT_FAIL,
+	SCHISM_TESTRESULT_PASS,
+	SCHISM_TESTRESULT_INCONCLUSIVE,
+	SCHISM_TESTRESULT_SKIP,
+	SCHISM_TESTRESULT_CRASH,
+	SCHISM_TESTRESULT_NOT_RUN,
+} testresult_t;
 
-	switch (fork()) {
-	case -1:
-		return 0;
-	case 0:
-		if (chdir(dir) == -1)
-			_exit(255);
-		if (asprintf(&tmp, "./%s", name) < 0)
-			_exit(255);
-		execl(tmp, tmp, maybe_arg, (char *)NULL);
-		free(tmp);
-		_exit(255);
-	};
+typedef testresult_t (*testfunctor_t)();
 
-	while (wait(&st) == -1);
+typedef struct {
+	const char *name;
+	testfunctor_t test;
+} test_index_entry;
 
-	if (WIFEXITED(st) && WEXITSTATUS(st) == 0)
-		return 1;
+extern test_index_entry automated_tests[];
 
-	return 0;
-}
-#endif
+test_index_entry *test_get_case(const char *name);
+
+const char *testresult_str(testresult_t result);
+
+void test_output_clear(void);
+void test_output(const char *str);
+void test_printf(const char *fmt, ...);
+void test_dump_output(void);
+
+int schism_test_main(int argc, char** argv);
+
+#endif /* SCHISM_AUTOMATED_TESTING_H_ */

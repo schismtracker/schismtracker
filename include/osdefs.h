@@ -87,6 +87,12 @@ A return value of 0 indicates that the event should NOT be processed by the main
 #endif
 
 #if defined(SCHISM_WIN32)
+# define os_shell win32_shell
+#elif defined(HAVE_POSIX_SPAWN)
+# define os_shell posix_shell
+#endif
+
+#if defined(SCHISM_WIN32)
 # define os_run_hook win32_run_hook
 #elif defined(HAVE_EXECL) && defined(HAVE_FORK)
 # define os_run_hook posix_run_hook
@@ -187,6 +193,7 @@ int win32_stat(const char *path, struct stat *st);
 int win32_mkdir(const char *path, uint32_t mode);
 FILE* win32_fopen(const char *path, const char *flags);
 int win32_run_hook(const char *dir, const char *name, const char *maybe_arg);
+int win32_shell(const char *name, const char *arg);
 int win32_get_key_repeat(int *pdelay, int *prate);
 void win32_show_message_box(const char *title, const char *text, int style);
 int win32_audio_lookup_device_name(const void *nameguid, const uint32_t *waveoutdevid, char **result);
@@ -198,6 +205,7 @@ int win32_access(const char *path, int amode);
 int win32_dsound_audio_lookup_waveout_name(const uint32_t *waveoutnamev, char **result);
 
 int posix_run_hook(const char *dir, const char *name, const char *maybe_arg);
+int posix_shell(const char *name, const char *arg);
 
 int macosx_event(schism_event_t *event);
 void macosx_sysexit(void);
