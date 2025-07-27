@@ -127,7 +127,9 @@ int os_shell(const char *name, const char *arg);
 
 # define F_OK 0x00 /* ok */
 #endif
-#ifndef os_exec
+#ifdef os_exec
+# define HAVE_OS_EXEC
+#else
 # define os_exec(a,b,c,d,e) 0
 #endif
 #ifndef os_get_key_repeat

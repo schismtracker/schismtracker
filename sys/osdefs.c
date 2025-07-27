@@ -25,7 +25,7 @@
 
 int os_run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
-#ifdef os_exec
+#ifdef HAVE_OS_EXEC
 	int st;
 
 	return os_exec(dir, 1, name, maybe_arg, &st) && (st == 0);
@@ -37,7 +37,7 @@ int os_run_hook(const char *dir, const char *name, const char *maybe_arg)
 
 int os_shell(const char *name, const char *arg)
 {
-#ifdef os_exec
+#ifdef HAVE_OS_EXEC
 	int st;
 
 	if (!os_exec(NULL, 0, name, arg, &st))
