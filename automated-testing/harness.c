@@ -67,7 +67,7 @@ static int run_test(test_index_entry *entry)
 	result = entry->test();
 	end_time = timer_ticks();
 
-	for (i = 6 + strlen(entry->name) + 1; i < 60; i++)
+	for (i = 6 + strlen(entry->name) + 1; i < 78 - TESTRESULT_STR_MAX_LEN; i++)
 		fputc('.', stdout);
 
 	printf(" %s (%" PRIu64 " ms)\n", testresult_str(result), end_time - start_time);
@@ -120,7 +120,7 @@ int schism_test_main(int argc, char** argv)
 				// up to the result.
 
 				if (result == SCHISM_TESTRESULT_CRASH) {
-					for (j = 6 + strlen(automated_tests[i].name) + 1; j < 60; j++)
+					for (j = 6 + strlen(automated_tests[i].name) + 1; j < 78 - TESTRESULT_STR_MAX_LEN; j++)
 						fputc('.', stdout);
 
 					puts(" CRASH");

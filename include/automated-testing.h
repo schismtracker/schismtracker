@@ -39,6 +39,9 @@ typedef enum {
 	SCHISM_TESTRESULT_NOT_RUN,
 } testresult_t;
 
+// See testresult.c / testresult_str
+#define TESTRESULT_STR_MAX_LEN 12
+
 typedef testresult_t (*testfunctor_t)();
 
 typedef struct {
