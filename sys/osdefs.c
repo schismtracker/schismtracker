@@ -23,6 +23,15 @@
 
 #include "osdefs.h"
 
+#ifndef ENOTSUP
+/* XXX hack for OS/2, which apparently doesn't have ENOTSUP in its POSIX layer */
+# ifdef ERROR_NOT_SUPPORTED
+#  define ENOTSUP ERROR_NOT_SUPPORTED
+# else
+#  define ENOTSUP 50
+# endif
+#endif /* ENOTSUP */
+
 int os_run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
 #ifdef HAVE_OS_EXEC
