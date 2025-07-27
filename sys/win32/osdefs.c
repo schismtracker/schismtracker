@@ -1150,7 +1150,10 @@ static int win32_exception_init(void)
 
 static void win32_exception_quit(void)
 {
-	KERNEL32_SetUnhandledExceptionFilter(NULL);
+	if (KERNEL32_SetUnhandledExceptionFilter) {
+		KERNEL32_SetUnhandledExceptionFilter(NULL);
+		KERNEL32_SetUnhandledExceptionFilter = NULL;
+	}
 
 	if (lib_kernel32)
 		loadso_object_unload(lib_kernel32);
