@@ -1561,122 +1561,114 @@ DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
 }
 
 /* ------------------------------------------------------------------------------- */
-/* shell */
+/* exec */
 
-int win32_shell(const char *name, const char *arg)
+int win32_exec(const char *dir, int is_shell_script, const char *name, const char *maybe_arg, int *exit_code)
 {
-	WCHAR *cmd_w;
-	WCHAR *arg_w;
-	int exit_code;
+	WCHAR *cmd_w = NULL;
+	WCHAR *batch_file_w = NULL;
+	WCHAR *arg_w = NULL;
+	WCHAR *dir_w = NULL;
+	int abort = 0;
+	int ret;
+	DWORD platform_exit_code = (DWORD)-4;
 
-	// We will execute the exact command/arguments supplied by the caller.
-	// Return value: process exit code
-	//               -1 if the process couldn't be launched
+	if (is_shell_script) {
+		// The caller has supplied the name of a batch file sans extension.
+		// We will execute CMD.EXE with arguments "/C file.bat " + maybe_arg
+		// Return value: boolean 1 == success (process launched, exit code 0)
+		//                       0 == anything else
 
-	if (charset_iconv(name, &cmd_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-		return -1;
+		const WCHAR *command_interpreter;
 
-	if (charset_iconv(arg, &arg_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-		free(cmd_w);
-		return -1;
-	}
+		command_interpreter = _wgetenv(L"COMSPEC");
+		if (!command_interpreter)
+			command_interpreter = L"cmd.exe";
 
-	exit_code = win32_create_process_wait(cmd_w, arg_w, NULL);
+		cmd_w = _wcsdup(command_interpreter); // will be passed to free() later
 
-	free(cmd_w);
-	free(arg_w);
+		{
+			WCHAR *name_w;
+			WCHAR *maybe_arg_w;
 
-	return exit_code;
-}
+			if (charset_iconv(name, &name_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+				return 0;
 
-/* ------------------------------------------------------------------------------- */
-/* run hook */
+			if (maybe_arg == NULL)
+				maybe_arg_w = NULL;
+			else {
+				if (charset_iconv(maybe_arg, &maybe_arg_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+					free(name_w);
+					return 0;
+				}
+			}
 
-int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
-{
-	const WCHAR *cmd_w;
-	WCHAR *batch_file_w;
-	WCHAR *arg_w;
-	WCHAR *dir_w;
-	int exit_code, ret;
+			size_t name_len = wcslen(name_w);
+			size_t maybe_arg_len = maybe_arg_w ? 1 + wcslen(maybe_arg_w) : 0;
 
-	// The caller has supplied the name of a batch file sans extension.
-	// We will execute CMD.EXE with arguments "/C file.bat " + maybe_arg
-	// Return value: boolean 1 == success (process launched, exit code 0)
-	//                       0 == anything else
+			size_t batch_file_chars = name_len + sizeof(".bat") + 1;
+			size_t arg_chars = sizeof("/C ") + name_len + sizeof(".bat") + maybe_arg_len + 1;
 
-	cmd_w = _wgetenv(L"COMSPEC");
-	if (!cmd_w)
-		cmd_w = L"cmd.exe";
+			batch_file_w = (WCHAR *)malloc(batch_file_chars * sizeof(WCHAR));
+			arg_w = (WCHAR *)malloc(arg_chars * sizeof(WCHAR));
 
-	{
-		WCHAR *name_w;
-		WCHAR *maybe_arg_w;
+			if (batch_file_w && arg_w) {
+				wcscpy(batch_file_w, name_w);
+				wcscat(batch_file_w, L".bat");
 
-		if (charset_iconv(name, &name_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			return 0;
+				wcscpy(arg_w, L"/C ");
+				wcscat(arg_w, batch_file_w);
+				if (maybe_arg_w)
+					wcscat(arg_w, maybe_arg_w);
+			}
 
-		if (maybe_arg == NULL)
-			maybe_arg_w = NULL;
-		else {
-			if (charset_iconv(maybe_arg, &maybe_arg_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-				free(name_w);
+			free(name_w);
+			free(maybe_arg_w);
+
+			if (!batch_file_w || !arg_w) {
+				free(batch_file_w);
+				free(arg_w);
+
 				return 0;
 			}
 		}
 
-		size_t name_len = wcslen(name_w);
-		size_t maybe_arg_len = maybe_arg_w ? 1 + wcslen(maybe_arg_w) : 0;
+		if (charset_iconv(dir, &dir_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+			abort = 1;
+		else {
+			struct _stat sb;
 
-		size_t batch_file_chars = name_len + sizeof(".bat") + 1;
-		size_t arg_chars = sizeof("/C ") + name_len + sizeof(".bat") + maybe_arg_len + 1;
-
-		batch_file_w = (WCHAR *)malloc(batch_file_chars * sizeof(WCHAR));
-		arg_w = (WCHAR *)malloc(arg_chars * sizeof(WCHAR));
-
-		if (batch_file_w && arg_w) {
-			wcscpy(batch_file_w, name_w);
-			wcscat(batch_file_w, L".bat");
-
-			wcscpy(arg_w, L"/C ");
-			wcscat(arg_w, batch_file_w);
-			if (maybe_arg_w)
-				wcscat(arg_w, maybe_arg_w);
-		}
-
-		free(name_w);
-		if (maybe_arg_w)
-			free(maybe_arg_w);
-
-		if (!batch_file_w || !arg_w) {
-			if (batch_file_w)
-				free(batch_file_w);
-			if (arg_w)
-				free(arg_w);
-
-			return 0;
+			if (_wstat(batch_file_w, &sb) < 0)
+				abort = 1;
 		}
 	}
-
-	if (charset_iconv(dir, &dir_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-		free(batch_file_w);
-		free(arg_w);
-		return 0;
-	}
-
-	struct _stat sb;
-
-	if (_wstat(batch_file_w, &sb) < 0)
-		ret = 0;
 	else {
-		exit_code = win32_create_process_wait(cmd_w, arg_w, dir_w);
+		// We will execute the exact command/arguments supplied by the caller.
+		// Return value: process exit code
+		//               -1 if the process couldn't be launched
 
-		ret = (exit_code == 0);
+		if (charset_iconv(name, &cmd_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+			return -1;
+
+		if (maybe_arg) {
+			if (charset_iconv(maybe_arg, &arg_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+				free(cmd_w);
+				return -1;
+			}
+		}
 	}
+
+	if (!abort)
+		platform_exit_code = win32_create_process_wait(cmd_w, arg_w, dir_w);
 
 	free(batch_file_w);
+	free(cmd_w);
 	free(arg_w);
 	free(dir_w);
 
-	return ret;
+	if (exit_code != NULL)
+		*exit_code = platform_exit_code;
+
+	// High bit will be set by win32_create_process_wait on error.
+	return !(platform_exit_code & 0x80000000);
 }

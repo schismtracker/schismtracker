@@ -81,13 +81,14 @@ static int inproc_warn = 0;
 
 static testresult_t run_test_child(const char *self, test_index_entry *entry)
 {
-#ifdef os_shell
+#ifdef os_exec
 	int exit_code = os_shell(self, entry->name);
 
 	return exit_code_to_result(exit_code);
 #else
 	if (!inproc_warn) {
-		fprintf(stderr, "warning: platform does not have a supported spawn function, running tests in-process\n");
+		fprintf(stderr, "warning: platform does not have a supported exec function, running tests in-process\n");
+		fflush(stderr);
 		inproc_warn = 1;
 	}
 

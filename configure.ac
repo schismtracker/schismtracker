@@ -275,7 +275,7 @@ AC_SUBST([UTF8PROC_CFLAGS])
 AC_SUBST([UTF8PROC_LIBS])
 
 dnl Functions
-AC_CHECK_FUNCS(alloca strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp _stricmp _strnicmp strcasestr asprintf vasprintf snprintf vsnprintf memcmp nice setenv unsetenv dup fnmatch mkstemp localtime_r umask execl fork posix_spawn waitpid nanosleep usleep access getopt_long fdopen tzset putenv)
+AC_CHECK_FUNCS(alloca strchr memmove strerror strtol strcasecmp strncasecmp strverscmp stricmp strnicmp _stricmp _strnicmp strcasestr asprintf vasprintf snprintf vsnprintf memcmp nice setenv unsetenv dup fnmatch mkstemp localtime_r umask execl fork waitid nanosleep usleep access getopt_long fdopen tzset putenv)
 AM_CONDITIONAL([NEED_ASPRINTF], [test "x$ac_cv_func_asprintf" = "xno"])
 AM_CONDITIONAL([NEED_VASPRINTF], [test "x$ac_cv_func_vasprintf" = "xno"])
 AM_CONDITIONAL([NEED_SNPRINTF], [test "x$ac_cv_func_snprintf" = "xno"])

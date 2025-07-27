@@ -627,6 +627,7 @@ schismtracker_SOURCES = \
 	schism/widget-keyhandler.c	\
 	schism/widget.c			\
 	schism/xpmdata.c		\
+	sys/osdefs.c       \
 	sys/posix/osdefs.c \
 	$(files_macosx)			\
 	$(files_alsa)			\

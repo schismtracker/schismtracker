@@ -25,41 +25,13 @@
 #include "osdefs.h"
 
 /* ugh */
-#if defined(HAVE_POSIX_SPAWN) && defined(HAVE_WAITPID)
-#include <spawn.h>
-#include <sys/wait.h>
-
-int posix_shell(const char *name, const char *arg)
-{
-	pid_t pid;
-	char *local_name, *local_arg;
-	char *argv[3];
-	int r;
-
-	local_name = strdup(name);
-	local_arg = strdup(arg);
-
-	argv[0] = local_name;
-	argv[1] = local_arg;
-	argv[2] = NULL;
-
-	r = posix_spawn(&pid, name, 0, 0, argv, 0);
-
-	waitpid(pid, &r, WUNTRACED);
-
-	free(local_name);
-	free(local_arg);
-
-	return r;
-}
-#endif
-
 #if defined(HAVE_EXECL) && defined(HAVE_FORK) && !defined(SCHISM_WIN32)
-int posix_run_hook(const char *dir, const char *name, const char *maybe_arg)
+int posix_exec(const char *dir, int is_shell_script, const char *name, const char *maybe_arg, int *exit_code)
 {
 	char *tmp;
 	int st;
 	pid_t fork_result_child_pid;
+	siginfo_t info;
 
 	fork_result_child_pid = fork();
 
@@ -67,20 +39,27 @@ int posix_run_hook(const char *dir, const char *name, const char *maybe_arg)
 	case -1:
 		return 0;
 	case 0:
-		if (chdir(dir) == -1)
+		if (dir && (chdir(dir) == -1))
 			_exit(255);
 		if (asprintf(&tmp, "./%s", name) < 0)
 			_exit(255);
 		execl(tmp, tmp, maybe_arg, (char *)NULL);
+		// oops, execl wasn't supposed to return! couldn't exec the specified command name
 		free(tmp);
 		_exit(255);
 	};
 
-	while (waitpid(fork_result_child_pid, &st, 0) == -1);
+	while (waitid(P_PID, fork_result_child_pid, &info, WEXITED) == -1)
+		;
 
-	if (WIFEXITED(st) && WEXITSTATUS(st) == 0)
-		return 1;
+	if (info.si_code == CLD_EXITED) {
+		if (exit_code)
+			*exit_code = info.si_status;
+		return info.si_status == 0;
+	}
 
+	if (exit_code)
+		*exit_code = 1;
 	return 0;
 }
 #endif
