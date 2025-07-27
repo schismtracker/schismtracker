@@ -24,6 +24,8 @@
 #include "headers.h"
 #include "osdefs.h"
 
+#include <sys/wait.h>
+
 /* ugh */
 #if defined(HAVE_EXECL) && defined(HAVE_FORK) && !defined(SCHISM_WIN32)
 int posix_exec(const char *dir, int is_shell_script, const char *name, const char *maybe_arg, int *exit_code)
