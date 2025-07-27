@@ -59,8 +59,11 @@ int posix_run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
 	char *tmp;
 	int st;
+	pid_t fork_result_child_pid;
 
-	switch (fork()) {
+	fork_result_child_pid = fork();
+
+	switch (fork_result_child_pid) {
 	case -1:
 		return 0;
 	case 0:
@@ -73,7 +76,7 @@ int posix_run_hook(const char *dir, const char *name, const char *maybe_arg)
 		_exit(255);
 	};
 
-	while (wait(&st) == -1);
+	while (waitpid(fork_result_child_pid, &st, 0) == -1);
 
 	if (WIFEXITED(st) && WEXITSTATUS(st) == 0)
 		return 1;
