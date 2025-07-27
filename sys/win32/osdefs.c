@@ -1502,127 +1502,181 @@ int win32_access(const char *path, int amode)
 }
 
 /* ------------------------------------------------------------------------------- */
-/* shell */
 
-#define WIN32_SHELL_VARIANT(name, charset, char_type, char_len_func, char_getcwd, char_chdir, char_getenv, char_spawnlp, char_stat, const_prefix) \
-	static inline SCHISM_ALWAYS_INLINE int _win32_shell_##name(const char *name, const char *arg) \
-	{ \
-		char_type *name_w; \
-		if (charset_iconv(name, &name_w, CHARSET_UTF8, charset, SIZE_MAX)) \
-			return 0; \
-	\
-		intptr_t r; \
-	\
-		{ \
-			char_type *arg_w = NULL; \
-			charset_iconv(arg, &arg_w, CHARSET_UTF8, charset, SIZE_MAX); \
-	\
-			r = char_spawnlp(_P_WAIT, name_w, name_w, arg_w, NULL); \
-	\
-			free(arg_w); \
-		} \
-	\
-		free(name_w); \
-	\
-		return r; \
+DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
+{
+	int full_arg_len;
+	WCHAR *full_arg;
+
+	BOOL status;
+	STARTUPINFOW startup_info;
+	PROCESS_INFORMATION process_information;
+	DWORD ret;
+
+	full_arg_len = wcslen(cmd) + 1 + wcslen(arg) + 1;
+
+	full_arg = malloc(full_arg_len * sizeof(WCHAR));
+
+	if (!full_arg)
+		return (DWORD)-3;
+
+	wcscpy(full_arg, cmd);
+	wcscat(full_arg, L" ");
+	wcscat(full_arg, arg);
+
+	memset(&startup_info, 0, sizeof(startup_info));
+
+	startup_info.cb = sizeof(startup_info);
+	startup_info.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+	startup_info.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+	startup_info.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+
+	status = CreateProcessW(
+		cmd,
+		full_arg,
+		NULL, /* process attributes */
+		NULL, /* thread attributes */
+		TRUE, /* inherit handles */
+		0, /* flags -- used only for fancy OS-specific stuff*/
+		NULL, /* environment */
+		cwd, /* current directory (or NULL) */
+		&startup_info,
+		&process_information);
+
+	if (!status) /* process creation failed */
+		ret = (DWORD)-1;
+	else {
+		CloseHandle(process_information.hThread);
+		WaitForSingleObject(process_information.hProcess, INFINITE);
+		status = GetExitCodeProcess(process_information.hProcess, &ret);
+		CloseHandle(process_information.hProcess);
+
+		if (!status)
+			ret = (DWORD)-2;
 	}
 
-WIN32_SHELL_VARIANT(wide, CHARSET_WCHAR_T, WCHAR, wcslen, _wgetcwd, _wchdir, _wgetenv, _wspawnlp, _wstat, L)
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-WIN32_SHELL_VARIANT(ansi, CHARSET_ANSI,    CHAR,  strlen, _getcwd,  _chdir,  getenv,   _spawnlp,  _stat, /* none */)
-#endif
+	free(full_arg);
 
-#undef WIN32_SHELL_VARIANT
+	return ret;
+}
+
+/* ------------------------------------------------------------------------------- */
+/* shell */
 
 int win32_shell(const char *name, const char *arg)
 {
-	SCHISM_ANSI_UNICODE({
-		return _win32_shell_ansi(name, arg);
-	}, {
-		return _win32_shell_wide(name, arg);
-	});
+	WCHAR *cmd_w;
+	WCHAR *arg_w;
+	int exit_code;
+
+	// We will execute the exact command/arguments supplied by the caller.
+	// Return value: process exit code
+	//               -1 if the process couldn't be launched
+
+	if (charset_iconv(name, &cmd_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+		return -1;
+
+	if (charset_iconv(arg, &arg_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+		free(cmd_w);
+		return -1;
+	}
+
+	exit_code = win32_create_process_wait(cmd_w, arg_w, NULL);
+
+	free(cmd_w);
+	free(arg_w);
+
+	return exit_code;
 }
 
 /* ------------------------------------------------------------------------------- */
 /* run hook */
 
-#define WIN32_RUN_HOOK_VARIANT(name, charset, char_type, char_len_func, char_getcwd, char_chdir, char_getenv, char_spawnlp, char_stat, const_prefix) \
-	static inline SCHISM_ALWAYS_INLINE int _win32_run_hook_##name(const char *dir, const char *name, const char *maybe_arg) \
-	{ \
-		char_type cwd[MAX_PATH] = {0}; \
-		if (!char_getcwd(cwd, MAX_PATH)) \
-			return 0; \
-	\
-		char_type batch_file[MAX_PATH] = {0}; \
-	\
-		{ \
-			char_type *name_w; \
-			if (charset_iconv(name, &name_w, CHARSET_UTF8, charset, SIZE_MAX)) \
-				return 0; \
-	\
-			size_t name_len = char_len_func(name_w); \
-			if ((name_len * sizeof(char_type)) + sizeof(const_prefix##".bat") >= sizeof(batch_file)) { \
-				free(name_w); \
-				return 0; \
-			} \
-	\
-			memcpy(batch_file, name_w, name_len * sizeof(char_type)); \
-			memcpy(batch_file + name_len, const_prefix##".bat", sizeof(const_prefix##".bat")); \
-	\
-			free(name_w); \
-		} \
-	\
-		{ \
-			char_type *dir_w; \
-			if (charset_iconv(dir, &dir_w, CHARSET_UTF8, charset, SIZE_MAX)) \
-				return 0; \
-	\
-			if (char_chdir(dir_w) == -1) { \
-				free(dir_w); \
-				return 0; \
-			} \
-	\
-			free(dir_w); \
-		} \
-	\
-		intptr_t r; \
-	\
-		{ \
-			char_type *maybe_arg_w = NULL; \
-			charset_iconv(maybe_arg, &maybe_arg_w, CHARSET_UTF8, charset, SIZE_MAX); \
-	\
-			struct _stat sb; \
-			if (char_stat(batch_file, &sb) < 0) { \
-				r = 0; \
-			} else { \
-				const char_type *cmd; \
-	\
-				cmd = char_getenv(const_prefix##"COMSPEC"); \
-				if (!cmd) \
-					cmd = const_prefix##"command.com"; \
-	\
-				r = char_spawnlp(_P_WAIT, cmd, cmd, const_prefix##"/c", batch_file, maybe_arg_w, NULL); \
-			} \
-	\
-			free(maybe_arg_w); \
-		} \
-	\
-		char_chdir(cwd); \
-		return (r == 0); \
-	}
-
-WIN32_RUN_HOOK_VARIANT(wide, CHARSET_WCHAR_T, WCHAR, wcslen, _wgetcwd, _wchdir, _wgetenv, _wspawnlp, _wstat, L)
-#ifdef SCHISM_WIN32_COMPILE_ANSI
-WIN32_RUN_HOOK_VARIANT(ansi, CHARSET_ANSI,    CHAR,  strlen, _getcwd,  _chdir,  getenv,   _spawnlp,  _stat, /* none */)
-#endif
-
-#undef WIN32_RUN_HOOK_VARIANT
-
 int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
-	SCHISM_ANSI_UNICODE({
-		return _win32_run_hook_ansi(dir, name, maybe_arg);
-	}, {
-		return _win32_run_hook_wide(dir, name, maybe_arg);
-	})
+	const WCHAR *cmd_w;
+	WCHAR *batch_file_w;
+	WCHAR *arg_w;
+	WCHAR *dir_w;
+	int exit_code, ret;
+
+	// The caller has supplied the name of a batch file sans extension.
+	// We will execute CMD.EXE with arguments "/C file.bat " + maybe_arg
+	// Return value: boolean 1 == success (process launched, exit code 0)
+	//                       0 == anything else
+
+	cmd_w = _wgetenv(L"COMSPEC");
+	if (!cmd_w)
+		cmd_w = L"cmd.exe";
+
+	{
+		WCHAR *name_w;
+		WCHAR *maybe_arg_w;
+
+		if (charset_iconv(name, &name_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+			return 0;
+
+		if (maybe_arg == NULL)
+			maybe_arg_w = NULL;
+		else {
+			if (charset_iconv(maybe_arg, &maybe_arg_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+				free(name_w);
+				return 0;
+			}
+		}
+
+		size_t name_len = wcslen(name_w);
+		size_t maybe_arg_len = maybe_arg_w ? 1 + wcslen(maybe_arg_w) : 0;
+
+		size_t batch_file_chars = name_len + sizeof(".bat") + 1;
+		size_t arg_chars = sizeof("/C ") + name_len + sizeof(".bat") + maybe_arg_len + 1;
+
+		batch_file_w = (WCHAR *)malloc(batch_file_chars * sizeof(WCHAR));
+		arg_w = (WCHAR *)malloc(arg_chars * sizeof(WCHAR));
+
+		if (batch_file_w && arg_w) {
+			wcscpy(batch_file_w, name_w);
+			wcscat(batch_file_w, L".bat");
+
+			wcscpy(arg_w, L"/C ");
+			wcscat(arg_w, batch_file_w);
+			if (maybe_arg_w)
+				wcscat(arg_w, maybe_arg_w);
+		}
+
+		free(name_w);
+		if (maybe_arg_w)
+			free(maybe_arg_w);
+
+		if (!batch_file_w || !arg_w) {
+			if (batch_file_w)
+				free(batch_file_w);
+			if (arg_w)
+				free(arg_w);
+
+			return 0;
+		}
+	}
+
+	if (charset_iconv(dir, &dir_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+		free(batch_file_w);
+		free(arg_w);
+		return 0;
+	}
+
+	struct _stat sb;
+
+	if (_wstat(batch_file_w, &sb) < 0)
+		ret = 0;
+	else {
+		exit_code = win32_create_process_wait(cmd_w, arg_w, dir_w);
+
+		ret = (exit_code == 0);
+	}
+
+	free(batch_file_w);
+	free(arg_w);
+	free(dir_w);
+
+	return ret;
 }
