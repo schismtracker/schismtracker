@@ -88,7 +88,7 @@ A return value of 0 indicates that the event should NOT be processed by the main
 
 #if defined(SCHISM_WIN32)
 # define os_exec win32_exec
-#elif defined(HAVE_POSIX_SPAWN)
+#elif defined(HAVE_EXECL) && defined(HAVE_FORK) && defined(HAVE_WAITID)
 # define os_exec posix_exec
 #endif
 
