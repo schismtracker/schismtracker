@@ -692,7 +692,7 @@ schismtrackertest_CFLAGS = $(schismtracker_CFLAGS) -DSCHISM_TEST_BUILD
 
 schismtrackertest_CPPFLAGS = $(schismtracker_CPPFLAGS)
 schismtrackertest_OBJCFLAGS = $(schimtracker_OBJCFLAGS)
-schismtrackertest_DEPENDENCIES = $(schismtracker_DEPENDENCIES)
+schismtrackertest_DEPENDENCIES = $(schismtracker_DEPENDENCIES) schismtracker$(EXEEXT)
 schismtrackertest_LDADD = $(filter-out automated-testing/schismtracker-entrypoint.o,$(schismtracker_OBJECTS)) $(schismtracker_LDADD)
 schismtrackertest_LDFLAGS = $(schismtracker_LDFLAGS)
 
