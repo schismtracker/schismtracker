@@ -189,7 +189,7 @@ static int macosx_launched = 0; // FIXME this sucks
 
 	/* If we launched from the Finder we have extra arguments that we
 	 * don't care about that will trip up the regular main function. */
-	exit(ENTRYPOINT(macosx_did_finderlaunch ? 1 : *_NSGetArgc(), *_NSGetArgv()));
+	exit(entrypoint_thunk(macosx_did_finderlaunch ? 1 : *_NSGetArgc(), *_NSGetArgv()));
 }
 
 @end /* @implementation SchismTrackerDelegate */

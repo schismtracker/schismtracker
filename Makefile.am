@@ -95,7 +95,7 @@ EXTRA_DIST = \
 	$(sysfiles)			\
 	$(scripts)
 
-bin_PROGRAMS = schismtracker
+bin_PROGRAMS = schismtracker schismtrackertest
 
 noinst_HEADERS = \
 	include/auto/logoit.h		\
@@ -508,11 +508,7 @@ endif
 
 ## aaaaaaaaahhhhhhhhhhhhhhhhhhh!!!!!!!1
 schismtracker_SOURCES = \
-	automated-testing/harness.c        \
-	automated-testing/testresult.c     \
-	automated-testing/output.c         \
-	automated-testing/index.c          \
-	automated-testing/cases/bshift.c   \
+	automated-testing/entrypoint.c \
 	auto/default-font.c		\
 	auto/helptext.c			\
 	fmt/669.c			\
@@ -656,7 +652,7 @@ schismtracker_SOURCES = \
 	$(files_asio)
 
 # have version.o rely on all files
-schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtracker_OBJECTS)) $(HEADERS)
+schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtrackertest_OBJECTS)) $(HEADERS)
 
 component_cflags = $(cflags_alsa) $(cflags_oss) \
 	$(cflags_network) $(cflags_x11) $(cflags_fmopl) \
@@ -680,7 +676,23 @@ schismtracker_LDADD = $(LIBM) $(libs_sdl3) \
 	$(libs_asio)
 schismtracker_LDFLAGS = $(ldflags_macosx)
 
-testbuild: CFLAGS += -DSCHISM_TEST_BUILD
-testbuild: all-am
+### Automated testing -- some additional files get compiled, but
+### these are only linked into schismtrackertest.
 
-.PHONY: testbuild
+schismtrackertest_SOURCES = \
+	automated-testing/entrypoint.c     \
+	automated-testing/harness.c        \
+	automated-testing/testresult.c     \
+	automated-testing/output.c         \
+	automated-testing/index.c          \
+	automated-testing/cases/bshift.c
+
+# Enable test paths -- overrides the entrypoint
+schismtrackertest_CFLAGS = $(schismtracker_CFLAGS) -DSCHISM_TEST_BUILD
+
+schismtrackertest_CPPFLAGS = $(schismtracker_CPPFLAGS)
+schismtrackertest_OBJCFLAGS = $(schimtracker_OBJCFLAGS)
+schismtrackertest_DEPENDENCIES = $(schismtracker_DEPENDENCIES)
+schismtrackertest_LDADD = $(schismtracker_LDADD) $(filter-out automated-testing/schismtracker-entrypoint.o,$(schismtracker_OBJECTS))
+schismtrackertest_LDFLAGS = $(schismtracker_LDFLAGS)
+

@@ -29,6 +29,8 @@
 #define ENTRYPOINT schism_main
 #endif
 
+int entrypoint_thunk(int argc, char *argv[]);
+
 /* numerically, FAIL == false and PASS == true */
 typedef enum {
 	SCHISM_TESTRESULT_FAIL,
