@@ -34,9 +34,9 @@ int result_to_exit_code(testresult_t result)
 	switch (result) {
 	case SCHISM_TESTRESULT_PASS: return 0;
 	default:
-	case SCHISM_TESTRESULT_FAIL: return 128;
-	case SCHISM_TESTRESULT_SKIP: return 256;
-	case SCHISM_TESTRESULT_INCONCLUSIVE: return 384;
+	case SCHISM_TESTRESULT_FAIL: return 32;
+	case SCHISM_TESTRESULT_SKIP: return 64;
+	case SCHISM_TESTRESULT_INCONCLUSIVE: return 96;
 	case SCHISM_TESTRESULT_CRASH: return 1;
 	}
 }
@@ -45,9 +45,9 @@ testresult_t exit_code_to_result(int exit_code)
 {
 	switch (exit_code) {
 	case 0: return SCHISM_TESTRESULT_PASS;
-	case 128: return SCHISM_TESTRESULT_FAIL;
-	case 256: return SCHISM_TESTRESULT_SKIP;
-	case 384: return SCHISM_TESTRESULT_INCONCLUSIVE;
+	case 32: return SCHISM_TESTRESULT_FAIL;
+	case 64: return SCHISM_TESTRESULT_SKIP;
+	case 96: return SCHISM_TESTRESULT_INCONCLUSIVE;
 	default: return SCHISM_TESTRESULT_CRASH;
 	}
 }
