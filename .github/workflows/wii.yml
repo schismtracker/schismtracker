@@ -21,9 +21,17 @@ jobs:
           path: schismtracker
 
       - name: 'Install build dependencies'
+#        run: |
+#          apt-get update
+#          apt-get install -y ninja-build autoconf automake libtool libsdl2-dev
+#
+# UGH! devkitPro docker images are broken.
+# (bullseye-backports got removed)
+# upstream PR: https://github.com/devkitPro/docker/pull/36
         run: |
-          apt-get update
-          apt-get install -y ninja-build autoconf automake libtool libsdl2-dev
+          wget https://archive.debian.org/debian/pool/main/a/automake-1.16/automake_1.16.3-2_all.deb
+          wget https://archive.debian.org/debian/pool/main/a/autoconf2.69/autoconf2.69_2.69-2_all.deb
+          apt-get install -y ./automake_1.16.3-2_all.deb ./autoconf2.69_2.69-2_all.deb
 
       - name: 'Cache dependencies'
         id: cache-dependencies
@@ -46,7 +54,7 @@ jobs:
           mkdir build
           cd build
           export PATH="${DEVKITPRO}/portlibs/wii/bin:${DEVKITPPC}/bin:$PATH"
-          powerpc-eabi-cmake -DCMAKE_INSTALL_PREFIX="$HOME/wiiprefix" ..
+          powerpc-eabi-cmake -G"Unix Makefiles" -DCMAKE_INSTALL_PREFIX="$HOME/wiiprefix" ..
           make
           make install
           cd ../..
