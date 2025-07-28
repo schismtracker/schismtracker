@@ -102,7 +102,6 @@ noinst_HEADERS = \
 	include/auto/logoschism.h	\
 	include/auto/schismico_hires.h	\
 	include/automated-testing.h     \
-	include/test-assertions.h       \
 	include/bswap.h			\
 	include/bshift.h        \
 	include/charset.h		\
@@ -135,6 +134,8 @@ noinst_HEADERS = \
 	include/str.h           \
 	include/mt.h       \
 	include/timer.h         \
+	include/test-assertions.h       \
+	include/test-funcs.h			\
 	include/tree.h			\
 	include/util.h			\
 	include/version.h		\
