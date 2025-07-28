@@ -27,7 +27,7 @@
 #include "timer.h"
 #include "mt.h"
 
-/* ok? */
+/* these are no-ops now  --paper */
 #define result_to_exit_code(x) (x)
 #define exit_code_to_result(x) (x)
 
