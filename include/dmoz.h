@@ -171,7 +171,7 @@ int song_preload_sample(dmoz_file_t *f);
 # define IS_DIR_SEPARATOR(c) ((c) == ':')
 #else
 # define DIR_SEPARATOR '/'
-# define DIR_SEPARATOR_STR "//"
+# define DIR_SEPARATOR_STR "/"
 # define IS_DIR_SEPARATOR(c) ((c) == '/')
 #endif
 

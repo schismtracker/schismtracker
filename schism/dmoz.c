@@ -1342,7 +1342,7 @@ char *dmoz_path_concat_len(const char *a, const char *b, int alen, int blen)
 			*(p++) = '/';
 #else
 		if (!IS_DIR_SEPARATOR(last)) {
-			memcpy(ret + alen, DIR_SEPARATOR_STR, ARRAY_SIZE(DIR_SEPARATOR_STR) - 1);
+			memcpy(p, DIR_SEPARATOR_STR, ARRAY_SIZE(DIR_SEPARATOR_STR) - 1);
 			p += ARRAY_SIZE(DIR_SEPARATOR_STR) - 1;
 		}
 #endif
