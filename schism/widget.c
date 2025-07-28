@@ -690,10 +690,8 @@ static int _find_widget_xy(int x, int y)
 		w = widgets + i;
 		switch (w->type) {
 		case WIDGET_BUTTON:
-			pad = w->d.button.padding + 1;
-			break;
 		case WIDGET_TOGGLEBUTTON:
-			pad = w->d.togglebutton.padding + 1;
+			pad = 2;
 			break;
 		default:
 			pad = 0;

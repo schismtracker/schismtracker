@@ -751,7 +751,9 @@ static int file_list_handle_key(struct key_event * k)
 		}
 	}
 
-	if (k->mouse != MOUSE_NONE && !(k->x >= 3 && k->x <= 51 && k->y >= 13 && k->y <= 43))
+	struct widget *w = &widgets[0];
+
+	if (k->mouse != MOUSE_NONE && !(k->x >= w->x && k->x <= w->x + w->width && k->y >= w->y && k->y <= w->y + w->height))
 		return 0;
 	switch (k->mouse) {
 	case MOUSE_CLICK:
@@ -1055,7 +1057,7 @@ void load_module_load_page(struct page *page)
 	widgets_loadmodule[0].accept_text = 1;
 	widgets_loadmodule[0].x = 3;
 	widgets_loadmodule[0].y = 13;
-	widgets_loadmodule[0].width = 44;
+	widgets_loadmodule[0].width = 45;
 	widgets_loadmodule[0].height = 30;
 	widgets_loadmodule[0].next.left = widgets_loadmodule[0].next.right = 1;
 
@@ -1127,7 +1129,7 @@ void save_module_load_page(struct page *page, int do_export)
 	widgets_exportsave[0].next.right = widgets_exportsave[0].next.tab = 1;
 	widgets_exportsave[0].x = 3;
 	widgets_exportsave[0].y = 13;
-	widgets_exportsave[0].width = 44;
+	widgets_exportsave[0].width = 45;
 	widgets_exportsave[0].height = 30;
 
 	widget_create_other(widgets_exportsave + 1, 2, dir_list_handle_key_exportsave,
