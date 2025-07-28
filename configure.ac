@@ -178,6 +178,13 @@ AC_ARG_ENABLE(avformat-linking,
 	AVFORMAT_LINKING=$enableval,
 	AVFORMAT_LINKING=no)
 
+dnl We disable the tests by default. This is primarily to aid package maintainers,
+dnl who would be surprised to find a whole new binary :)
+AC_ARG_ENABLE(tests,
+	AS_HELP_STRING([--enable-tests], [Build the test suite as 'schismtrackertest' @<:default=no@:>@]),
+	BUILD_TESTS=$enableval,
+	BUILD_TESTS=no)
+
 dnl These are used in the Win32 build so that we can intermix mingw32 and mingw-w64 parts.
 dnl This is really a hack, and it would be nicer if we could avoid this, but unfortunately
 dnl there is no real windows toolchain available that allows to target super old windows
@@ -1070,6 +1077,10 @@ SCHISM_CHECK_COMPILE_FLAG([-Werror=overlength-strings])
 
 dnl disable this for now, clang's implementation is incorrect  --paper
 dnl SCHISM_CHECK_COMPILE_FLAG([-Werror=cast-function-type])
+
+dnl --------------------------------------------------------------------------
+
+AM_CONDITIONAL([BUILD_TESTS], [test "x$BUILD_TESTS" = "xyes"])
 
 dnl --------------------------------------------------------------------------
 

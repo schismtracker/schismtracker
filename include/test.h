@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef SCHISM_AUTOMATED_TESTING_H_
-#define SCHISM_AUTOMATED_TESTING_H_
+#ifndef SCHISM_TEST_H_
+#define SCHISM_TEST_H_
 
 #include "headers.h"
 
@@ -73,4 +73,4 @@ int schism_test_main(int argc, char** argv);
 
 #include "test-funcs.h"
 
-#endif /* SCHISM_AUTOMATED_TESTING_H_ */
+#endif /* SCHISM_TEST_H_ */

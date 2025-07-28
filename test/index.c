@@ -21,11 +21,22 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "automated-testing.h"
+#include "test.h"
 
-int ENTRYPOINT(int argc, char *argv[]);
+test_index_entry automated_tests[] =
+	{
+#define TEST_FUNC(x) { #x, x },
+#include "test-funcs.h"
+		{0}
+	};
 
-int entrypoint_thunk(int argc, char *argv[])
+test_index_entry *test_get_case(const char *name)
 {
-	return ENTRYPOINT(argc, argv);
+	int i;
+
+	for (i = 0; automated_tests[i].name; i++)
+		if (!strcmp(automated_tests[i].name, name))
+			return &automated_tests[i];
+
+	return NULL;
 }

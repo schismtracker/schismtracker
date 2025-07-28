@@ -21,29 +21,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "automated-testing.h"
-#include "test-assertions.h"
+#include "test.h"
 
-#include "bshift.h"
+int ENTRYPOINT(int argc, char *argv[]);
 
-testresult_t test_bshift_arithmetic(void)
+int entrypoint_thunk(int argc, char *argv[])
 {
-#ifdef HAVE_ARITHMETIC_RSHIFT
-	ASSERT(rshift_signed(-0xFFFF, 8) == (-0xFFFF >> 8));
-	RETURN_PASS;
-#else
-	RETURN_SKIP;
-#endif
-}
-
-testresult_t test_bshift_right_shift_negative(void)
-{
-	ASSERT(rshift_signed(INT32_C(-0xFFFF), 8) == INT32_C(-0x100));
-	RETURN_PASS;
-}
-
-testresult_t test_bshift_left_shift_overflow(void)
-{
-	ASSERT(lshift_signed((int32_t)0xFF000000, 4) == (int32_t)0xF0000000);
-	RETURN_PASS;
+	return ENTRYPOINT(argc, argv);
 }
