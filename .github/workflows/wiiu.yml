@@ -22,16 +22,9 @@ jobs:
           path: schismtracker
 
       - name: 'Install build dependencies'
-#        run: |
-#          apt-get update
-#          apt-get install -y ninja-build autoconf automake libtool libsdl2-dev
-#
-# UGH! devkitPro docker images are broken.
-# (bullseye-backports got removed)
         run: |
-          wget https://archive.debian.org/debian/pool/main/a/automake-1.16/automake_1.16.3-2_all.deb
-          wget https://archive.debian.org/debian/pool/main/a/autoconf2.69/autoconf2.69_2.69-2_all.deb
-          apt-get install -y ./automake_1.16.3-2_all.deb ./autoconf2.69_2.69-2_all.deb
+          apt-get update
+          apt-get install -y ninja-build autoconf automake
 
       - name: 'Get date of latest commit'
         id: date
@@ -40,7 +33,7 @@ jobs:
           echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
           cd ..
 
-      # This uses my own fork of SDL until the keyboard patches get merged
+        # checkout latest git of devkitPro SDL 2.28
       - name: 'Checkout SDL2'
         id: checkout
         uses: actions/checkout@v4
