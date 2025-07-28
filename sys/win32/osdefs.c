@@ -1593,7 +1593,7 @@ DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
 				CHAR_TYPE *wdir; \
 	\
 				/* need to save this to chdir back */ \
-				old_wdir = GETCWD(old_wdir, MAX_PATH); \
+				GETCWD(old_wdir, MAX_PATH); \
 	\
 				wdir = charset_iconv_easy(dir, CHARSET_UTF8, CHARSET); \
 				if (!wdir) \
@@ -1608,7 +1608,7 @@ DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
 			} \
 	\
 			/* standard C is weird and needs an ugly cast */ \
-			st = SPAWNVP(_P_WAIT, name, (const CHAR_TYPE *const *)argv); \
+			st = SPAWNVP(_P_WAIT, argv[0], (const CHAR_TYPE *const *)argv); \
 			if (status) *status = st; \
 	\
 			if (dir) CHDIR(old_wdir); \
