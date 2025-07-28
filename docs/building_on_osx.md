@@ -67,6 +67,8 @@ The resulting `Makefile` will produce a second binary alongside
 In this build mode, if you make a change that requires corresponding changes
 to tests, you discover immediately on the next build.
 
+You should regularly run automated tests during development work.
+
 
 ## Baking Schism Tracker into an App ready to be put in /Applications
 
