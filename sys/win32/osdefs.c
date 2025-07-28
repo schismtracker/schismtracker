@@ -987,7 +987,7 @@ static void win32_exception_log_cb(FILE *log, void *userdata)
 	PSAPI_GetModuleBaseNameA(process, (HMODULE)addr, module_name, sizeof(module_name));
 
 	fprintf(log, "Exception code: 0x%08X\n", 
-		p->ExceptionRecord->ExceptionCode);  
+		(uint32_t)p->ExceptionRecord->ExceptionCode);  
 	fprintf(log, "Exception address: 0x%p (%s+0x%llX)\n\n",
 		p->ExceptionRecord->ExceptionAddress, module_name,
 		(uint64_t)p->ExceptionRecord->ExceptionAddress - addr);  
@@ -1587,13 +1587,13 @@ DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
 	\
 		{ \
 			intptr_t st; \
-			CHAR_TYPE *old_wdir; \
+			CHAR_TYPE old_wdir[MAX_PATH]; \
 	\
 			if (dir) { \
 				CHAR_TYPE *wdir; \
 	\
 				/* need to save this to chdir back */ \
-				old_wdir = STRDUP(GETCWD()); \
+				GETCWD(old_wdir, MAX_PATH); \
 	\
 				wdir = charset_iconv_easy(dir, CHARSET_UTF8, CHARSET); \
 				if (!wdir) \
@@ -1607,7 +1607,8 @@ DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
 				free(wdir); \
 			} \
 	\
-			st = SPAWNVP(_P_WAIT, name, argv); \
+			/* standard C is weird and needs an ugly cast */ \
+			st = SPAWNVP(_P_WAIT, argv[0], (const CHAR_TYPE *const *)argv); \
 			if (status) *status = st; \
 	\
 			if (dir) CHDIR(old_wdir); \
