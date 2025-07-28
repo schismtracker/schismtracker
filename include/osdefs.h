@@ -86,14 +86,19 @@ A return value of 0 indicates that the event should NOT be processed by the main
 # define os_fopen xbox_fopen
 #endif
 
+/* os_exec: runs a program, and optionally returns the status code.
+ * If you want to check for success, you MUST obtain the status code.
+ * The only thing os_exec returns, is that the program was ran. That's it.
+ *
+ * e.g.:
+ * os_exec(&st, "/usr/bin", "schismtracker", "--audio-driver", "alsa", (char *)NULL); */
 #if defined(SCHISM_WIN32)
 # define os_exec win32_exec
-#elif defined(HAVE_EXECL) && defined(HAVE_FORK) && defined(HAVE_WAITID)
+# define os_run_hook win32_run_hook
+#elif defined(HAVE_EXECL) && defined(HAVE_FORK) && (defined(HAVE_WAITID) || defined(HAVE_WAITPID))
 # define os_exec posix_exec
+# define os_run_hook posix_run_hook
 #endif
-
-int os_run_hook(const char *dir, const char *name, const char *maybe_arg);
-int os_shell(const char *name, const char *arg);
 
 #ifndef os_sysinit
 # define os_sysinit(pargc,argv)
@@ -130,7 +135,8 @@ int os_shell(const char *name, const char *arg);
 #ifdef os_exec
 # define HAVE_OS_EXEC
 #else
-# define os_exec(a,b,c,d,e) 0
+/* varargs in preprocessor are C99 extension */
+# define os_exec(pstatus, dir, name, ...) (0)
 #endif
 #ifndef os_get_key_repeat
 # define os_get_key_repeat(pdelay, prate) (0)
@@ -191,7 +197,8 @@ void win32_toggle_menu(void *window, int on); // window should be a pointer to t
 int win32_stat(const char *path, struct stat *st);
 int win32_mkdir(const char *path, uint32_t mode);
 FILE* win32_fopen(const char *path, const char *flags);
-int win32_exec(const char *dir, int shell_script, const char *name, const char *maybe_arg, int *exit_code);
+int win32_exec(int *status, const char *dir, const char *name, ...);
+int win32_run_hook(const char *dir, const char *exe, const char *maybe_arg);
 int win32_get_key_repeat(int *pdelay, int *prate);
 void win32_show_message_box(const char *title, const char *text, int style);
 int win32_audio_lookup_device_name(const void *nameguid, const uint32_t *waveoutdevid, char **result);
@@ -202,7 +209,8 @@ int win32_access(const char *path, int amode);
 // audio-dsound.c
 int win32_dsound_audio_lookup_waveout_name(const uint32_t *waveoutnamev, char **result);
 
-int posix_exec(const char *dir, int shell_script, const char *name, const char *maybe_arg, int *exit_code);
+int posix_exec(int *status, const char *dir, const char *name, ...);
+int posix_run_hook(const char *dir, const char *exe, const char *maybe_arg);
 
 int macosx_event(schism_event_t *event);
 void macosx_sysexit(void);
@@ -259,5 +267,25 @@ void xbox_sysinit(int *pargc, char ***pargv);
 	{ uniblock }
 # endif
 #endif
+
+/* ------------------------------------------------------------------------ */
+
+static inline SCHISM_ALWAYS_INLINE
+int os_shell(const char *name, const char *arg)
+{
+#ifdef HAVE_OS_EXEC
+	int st;
+
+	if (!os_exec(&st, NULL, name, arg, (char *)NULL))
+		return -1; /* ? */
+
+	return st;
+#else
+#ifdef ENOTSUP
+	errno = ENOTSUP;
+#endif
+	return -1;
+#endif
+}
 
 #endif /* SCHISM_OSDEFS_H_ */

@@ -27,30 +27,9 @@
 #include "timer.h"
 #include "mt.h"
 
-#define STRINGIZE(x) #x
-
-int result_to_exit_code(testresult_t result)
-{
-	switch (result) {
-	case SCHISM_TESTRESULT_PASS: return 0;
-	default:
-	case SCHISM_TESTRESULT_FAIL: return 32;
-	case SCHISM_TESTRESULT_SKIP: return 64;
-	case SCHISM_TESTRESULT_INCONCLUSIVE: return 96;
-	case SCHISM_TESTRESULT_CRASH: return 1;
-	}
-}
-
-testresult_t exit_code_to_result(int exit_code)
-{
-	switch (exit_code) {
-	case 0: return SCHISM_TESTRESULT_PASS;
-	case 32: return SCHISM_TESTRESULT_FAIL;
-	case 64: return SCHISM_TESTRESULT_SKIP;
-	case 96: return SCHISM_TESTRESULT_INCONCLUSIVE;
-	default: return SCHISM_TESTRESULT_CRASH;
-	}
-}
+/* ok? */
+#define result_to_exit_code(x) (x)
+#define exit_code_to_result(x) (x)
 
 static int run_test(test_index_entry *entry)
 {
@@ -81,27 +60,36 @@ static int inproc_warn = 0;
 
 static testresult_t run_test_child(const char *self, test_index_entry *entry)
 {
-#ifdef os_exec
-	int exit_code = os_shell(self, entry->name);
+#ifdef HAVE_OS_EXEC
+	int status;
 
-	return exit_code_to_result(exit_code);
-#else
+	if (os_exec(&status, NULL, self, entry->name, (char *)NULL))
+		return status;
+#endif
+
+	printf("%s %s\n", self, entry->name);
+
 	if (!inproc_warn) {
-		fprintf(stderr, "warning: platform does not have a supported exec function, running tests in-process\n");
+#ifdef HAVE_OS_EXEC
+		/* os_exec failed for some reason */
+		fprintf(stderr, "warning: exec function failed, running tests in-process\n");
+#else
+		fprintf(stderr, "warning: no exec function compiled, running tests in-process\n");
+#endif
+
 		fflush(stderr);
 		inproc_warn = 1;
 	}
 
 	return run_test(entry);
-#endif
 }
 
-int schism_test_main(int argc, char** argv)
+int schism_test_main(int argc, char **argv)
 {
 	int exit_code;
 
-	mt_init();
-	timer_init();
+	SCHISM_RUNTIME_ASSERT(mt_init(), "need multithreading");
+	SCHISM_RUNTIME_ASSERT(timer_init(), "need timers");
 
 	if (argc <= 1) {
 		int passed_tests = 0;

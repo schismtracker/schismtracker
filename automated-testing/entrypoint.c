@@ -27,5 +27,5 @@ int ENTRYPOINT(int argc, char *argv[]);
 
 int entrypoint_thunk(int argc, char *argv[])
 {
-  return ENTRYPOINT(argc, argv);
+	return ENTRYPOINT(argc, argv);
 }

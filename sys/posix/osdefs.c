@@ -23,45 +23,105 @@
 
 #include "headers.h"
 #include "osdefs.h"
+#include "mem.h"
 
-/* ugh */
-#if defined(HAVE_EXECL) && defined(HAVE_FORK) && defined(HAVE_WAITID) && !defined(SCHISM_WIN32)
+#if defined(HAVE_EXECL) && defined(HAVE_FORK) && (defined(HAVE_WAITID) || defined(HAVE_WAITPID)) && !defined(SCHISM_WIN32)
 #include <sys/wait.h>
 
-int posix_exec(const char *dir, int is_shell_script, const char *name, const char *maybe_arg, int *exit_code)
+int posix_exec(int *status, const char *dir, const char *name, ...)
 {
-	char *tmp;
-	int st;
-	pid_t fork_result_child_pid;
-	siginfo_t info;
+	pid_t pid;
+	char *argv[256]; /* more than enough */
+	int r = 0;
+	int i;
 
-	fork_result_child_pid = fork();
+	{
+		/* convert the variable args list */
+		va_list ap;
 
-	switch (fork_result_child_pid) {
+		va_start(ap, name);
+
+		argv[0] = str_dup(name);
+		for (i = 1; i < 255; i++) {
+			const char *arg = va_arg(ap, const char *);
+			if (!arg)
+				break;
+
+			argv[i] = str_dup(arg);
+		}
+		argv[i] = NULL;
+
+		va_end(ap);
+	}
+
+	pid = fork();
+	switch (pid) {
 	case -1:
 		return 0;
 	case 0:
+		/* running in the child process */
 		if (dir && (chdir(dir) == -1))
 			_exit(255);
-		if (asprintf(&tmp, "./%s", name) < 0)
-			_exit(255);
-		execl(tmp, tmp, maybe_arg, (char *)NULL);
-		// oops, execl wasn't supposed to return! couldn't exec the specified command name
-		free(tmp);
+		execv(name, argv);
+		/* oops, execl wasn't supposed to return!
+		 * couldn't exec the specified command name */
 		_exit(255);
 	};
 
-	while (waitid(P_PID, fork_result_child_pid, &info, WEXITED) == -1)
-		;
+	/* wait for the child process to finish */
+#if defined(HAVE_WAITID)
+	{
+		siginfo_t info;
 
-	if (info.si_code == CLD_EXITED) {
-		if (exit_code)
-			*exit_code = info.si_status;
-		return info.si_status == 0;
+		/* newer API; POSIX.1-2001 */
+		while (waitid(P_PID, pid, &info, WEXITED) == -1);
+
+		if (info.si_code == CLD_EXITED) {
+			if (status)
+				*status = info.si_status;
+			r = 1;
+		}
+	}
+#elif defined(HAVE_WAITPID)
+	{
+		int st;
+
+		/* older API; in virtually all POSIX versions */
+		while (waitpid(pid, &st, 0) == -1);
+
+		if (WIFEXITED(st)) {
+			if (status)
+				*status = WEXITSTATUS(st);
+			r = 1;
+		}
+	}
+#endif
+
+	/* clean up the mess we've made */
+	for (i = 0; argv[i]; i++)
+		free(argv[i]);
+
+	return r;
+}
+
+/* ------------------------------------------------------------------------------- */
+
+int posix_run_hook(const char *dir, const char *name, const char *maybe_arg)
+{
+	int st;
+	char *bat_name;
+
+	if (asprintf(&bat_name, "./%s", name) < 0)
+		return 0;
+
+	if (!os_exec(&st, dir, bat_name, maybe_arg, (char *)NULL)) {
+		free(bat_name);
+		return 0; /* what? */
 	}
 
-	if (exit_code)
-		*exit_code = 1;
-	return 0;
+	free(bat_name);
+
+	return (st == 0);
 }
+
 #endif

@@ -21,59 +21,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "automated-testing.h"
+#ifndef TEST_FUNC
+# define TEST_FUNC(x) testresult_t x(void);
+#endif
 
-#include "headers.h"
-#include "disko.h"
+TEST_FUNC(test_bshift_arithmetic)
+TEST_FUNC(test_bshift_right_shift_negative)
+TEST_FUNC(test_bshift_left_shift_overflow)
 
-/* global memory buffer for the test output */
-static disko_t ds;
-
-void test_output_clear(void)
-{
-	disko_memclose(&ds, 0);
-
-	SCHISM_RUNTIME_ASSERT(disko_memopen(&ds) >= 0, "disko can't fail");
-}
-
-void test_outputn(const char *str, int len)
-{
-	disko_write(&ds, str, len);
-}
-
-void test_output(const char *str)
-{
-	test_outputn(str, strlen(str));
-}
-
-void test_vprintf(const char *fmt, va_list ap)
-{
-	char *s;
-	int n;
-
-	n = vasprintf(&s, fmt, ap);
-	if (n < 0)
-		return;
-
-	test_outputn(s, n);
-
-	free(s);
-}
-
-void test_printf(const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	test_vprintf(fmt, ap);
-	va_end(ap);
-}
-
-void test_dump_output(void)
-{
-	if (!ds.length)
-		return;
-
-	printf("\nTEST OUTPUT: %.*s\n\n", (int)ds.length, ds.data);
-}
-
+#undef TEST_FUNC

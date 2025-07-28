@@ -23,23 +23,11 @@
 
 #include "automated-testing.h"
 
-#include <stdlib.h>
-#include <string.h>
-
-testresult_t test_bshift_arithmetic();
-testresult_t test_bshift_right_shift_negative();
-testresult_t test_bshift_left_shift_overflow();
-
-#define CASE(test_case_name) { #test_case_name, test_case_name }
-#define END_OF_LIST { 0, 0 }
-
 test_index_entry automated_tests[] =
 	{
-		CASE(test_bshift_arithmetic),
-		CASE(test_bshift_right_shift_negative),
-		CASE(test_bshift_left_shift_overflow),
-
-		END_OF_LIST
+#define TEST_FUNC(x) { #x, x },
+#include "test-funcs.h"
+		{0}
 	};
 
 test_index_entry *test_get_case(const char *name)

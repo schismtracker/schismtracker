@@ -20,8 +20,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
 #ifndef SCHISM_AUTOMATED_TESTING_H_
 #define SCHISM_AUTOMATED_TESTING_H_
+
+#include "headers.h"
 
 #ifdef SCHISM_TEST_BUILD
 #define ENTRYPOINT schism_test_main
@@ -33,6 +36,8 @@ int entrypoint_thunk(int argc, char *argv[]);
 
 /* numerically, FAIL == false and PASS == true */
 typedef enum {
+	/* weird, "pass" should usually be a 0 return value.
+	 * whatever, I guess it's fine for now? */
 	SCHISM_TESTRESULT_FAIL,
 	SCHISM_TESTRESULT_PASS,
 	SCHISM_TESTRESULT_INCONCLUSIVE,
@@ -44,7 +49,7 @@ typedef enum {
 // See testresult.c / testresult_str
 #define TESTRESULT_STR_MAX_LEN 12
 
-typedef testresult_t (*testfunctor_t)();
+typedef testresult_t (*testfunctor_t)(void);
 
 typedef struct {
 	const char *name;
@@ -58,10 +63,14 @@ test_index_entry *test_get_case(const char *name);
 const char *testresult_str(testresult_t result);
 
 void test_output_clear(void);
+void test_outputn(const char *str, int len);
 void test_output(const char *str);
+void test_vprintf(const char *fmt, va_list ap);
 void test_printf(const char *fmt, ...);
 void test_dump_output(void);
 
 int schism_test_main(int argc, char** argv);
+
+#include "test-funcs.h"
 
 #endif /* SCHISM_AUTOMATED_TESTING_H_ */

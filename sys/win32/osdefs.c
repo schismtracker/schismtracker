@@ -1561,114 +1561,119 @@ DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
 }
 
 /* ------------------------------------------------------------------------------- */
-/* exec */
+/* exec
+ *
+ * XXX this is completely untested :) */
 
-int win32_exec(const char *dir, int is_shell_script, const char *name, const char *maybe_arg, int *exit_code)
+#define WIN32_EXEC_IMPL(SUFFIX, CHARSET, CHAR_TYPE, SPAWNVP, CHDIR, STRDUP, GETCWD) \
+	static inline SCHISM_ALWAYS_INLINE \
+	int win32_exec_##SUFFIX(int *status, const char *dir, const char *name, va_list ap) \
+	{ \
+		CHAR_TYPE *argv[256]; \
+		int i, r; \
+	\
+		if (charset_iconv(name, &argv[0], CHARSET_UTF8, CHARSET, SIZE_MAX)) \
+			return 0; \
+	\
+		for (i = 1; i < 255; i++) { \
+			const char *arg = va_arg(ap, const char *); \
+			if (!arg) \
+				break; \
+	\
+			/* lol what */ \
+			if (charset_iconv(arg, &argv[i], CHARSET_UTF8, CHARSET, SIZE_MAX)) \
+				return 0; \
+		} \
+	\
+		{ \
+			intptr_t st; \
+			CHAR_TYPE *old_wdir; \
+	\
+			if (dir) { \
+				CHAR_TYPE *wdir; \
+	\
+				/* need to save this to chdir back */ \
+				old_wdir = STRDUP(GETCWD()); \
+	\
+				wdir = charset_iconv_easy(dir, CHARSET_UTF8, CHARSET); \
+				if (!wdir) \
+					/* oops.. memleak here */ \
+					return 0; \
+	\
+				if (CHDIR(wdir) == -1) \
+					/* and here too */ \
+					return 0; \
+	\
+				free(wdir); \
+			} \
+	\
+			st = SPAWNVP(_P_WAIT, name, argv); \
+			if (status) *status = st; \
+	\
+			if (dir) CHDIR(old_wdir); \
+		} \
+	\
+		for (i = 0; argv[i]; i++) \
+			free(argv[i]); \
+	\
+		return 1; \
+	}
+
+WIN32_EXEC_IMPL(A, CHARSET_ANSI, CHAR, _spawnvp, _chdir, _strdup, _getcwd);
+WIN32_EXEC_IMPL(W, CHARSET_WCHAR_T, WCHAR, _wspawnvp, _wchdir, _wcsdup, _wgetcwd);
+
+int win32_exec(int *status, const char *dir, const char *name, ...)
 {
-	WCHAR *cmd_w = NULL;
-	WCHAR *batch_file_w = NULL;
-	WCHAR *arg_w = NULL;
-	WCHAR *dir_w = NULL;
-	int abort = 0;
-	int ret;
-	DWORD platform_exit_code = (DWORD)-4;
+	int r;
+	va_list ap;
 
-	if (is_shell_script) {
-		// The caller has supplied the name of a batch file sans extension.
-		// We will execute CMD.EXE with arguments "/C file.bat " + maybe_arg
-		// Return value: boolean 1 == success (process launched, exit code 0)
-		//                       0 == anything else
+	va_start(ap, name);
 
-		const WCHAR *command_interpreter;
+	SCHISM_ANSI_UNICODE({
+		r = win32_exec_A(status, dir, name, ap);
+	}, {
+		r = win32_exec_W(status, dir, name, ap);
+	})
 
-		command_interpreter = _wgetenv(L"COMSPEC");
-		if (!command_interpreter)
-			command_interpreter = L"cmd.exe";
+	va_end(ap);
 
-		cmd_w = _wcsdup(command_interpreter); // will be passed to free() later
+	return r;
+}
 
-		{
-			WCHAR *name_w;
-			WCHAR *maybe_arg_w;
+/* ------------------------------------------------------------------------------- */
+/* hooks. in a perfect world we could implement this as the same thing everywhere,
+ * but we don't live in a perfect world :) */
 
-			if (charset_iconv(name, &name_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-				return 0;
+int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
+{
+	int st;
+	char *bat_name;
+	char *cmd;
 
-			if (maybe_arg == NULL)
-				maybe_arg_w = NULL;
-			else {
-				if (charset_iconv(maybe_arg, &maybe_arg_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-					free(name_w);
-					return 0;
-				}
-			}
+	/* obey COMSPEC */
+	SCHISM_ANSI_UNICODE({
+		char *x = getenv("COMSPEC");
+		if (charset_iconv(x ? x : "cmd", &cmd, CHARSET_ANSI, CHARSET_UTF8, SIZE_MAX))
+			return 0;
+	}, {
+		wchar_t *x = _wgetenv(L"COMSPEC");
+		if (charset_iconv(x ? x : L"cmd", &cmd, CHARSET_WCHAR_T, CHARSET_UTF8, SIZE_MAX))
+			return 0;
+	})
 
-			size_t name_len = wcslen(name_w);
-			size_t maybe_arg_len = maybe_arg_w ? 1 + wcslen(maybe_arg_w) : 0;
-
-			size_t batch_file_chars = name_len + sizeof(".bat") + 1;
-			size_t arg_chars = sizeof("/C ") + name_len + sizeof(".bat") + maybe_arg_len + 1;
-
-			batch_file_w = (WCHAR *)malloc(batch_file_chars * sizeof(WCHAR));
-			arg_w = (WCHAR *)malloc(arg_chars * sizeof(WCHAR));
-
-			if (batch_file_w && arg_w) {
-				wcscpy(batch_file_w, name_w);
-				wcscat(batch_file_w, L".bat");
-
-				wcscpy(arg_w, L"/C ");
-				wcscat(arg_w, batch_file_w);
-				if (maybe_arg_w)
-					wcscat(arg_w, maybe_arg_w);
-			}
-
-			free(name_w);
-			free(maybe_arg_w);
-
-			if (!batch_file_w || !arg_w) {
-				free(batch_file_w);
-				free(arg_w);
-
-				return 0;
-			}
-		}
-
-		if (charset_iconv(dir, &dir_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			abort = 1;
-		else {
-			struct _stat sb;
-
-			if (_wstat(batch_file_w, &sb) < 0)
-				abort = 1;
-		}
-	}
-	else {
-		// We will execute the exact command/arguments supplied by the caller.
-		// Return value: process exit code
-		//               -1 if the process couldn't be launched
-
-		if (charset_iconv(name, &cmd_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			return -1;
-
-		if (maybe_arg) {
-			if (charset_iconv(maybe_arg, &arg_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-				free(cmd_w);
-				return -1;
-			}
-		}
+	if (asprintf(&bat_name, "%s.bat", name) < 0) {
+		free(cmd);
+		return 0;
 	}
 
-	if (!abort)
-		platform_exit_code = win32_create_process_wait(cmd_w, arg_w, dir_w);
+	if (!win32_exec(&st, dir, cmd, "/c", bat_name, maybe_arg, (char *)NULL)) {
+		free(bat_name);
+		free(cmd);
+		return 0; /* what? */
+	}
 
-	free(batch_file_w);
-	free(cmd_w);
-	free(arg_w);
-	free(dir_w);
+	free(bat_name);
+	free(cmd);
 
-	if (exit_code != NULL)
-		*exit_code = platform_exit_code;
-
-	// High bit will be set by win32_create_process_wait on error.
-	return !(platform_exit_code & 0x80000000);
+	return (st == 0);
 }
