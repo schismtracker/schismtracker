@@ -42,13 +42,13 @@ To enable any of these, find the `[section]` in the config file, look for the
 
 #### Video
 
-    [Video]
-    lazy_redraw=1
-    width=640
-    height=400
-    want_fixed=0
-    want_fixed_width=3200
-    want_fixed_height=2400
+	[Video]
+	lazy_redraw=1
+	width=640
+	height=400
+	want_fixed=0
+	want_fixed_width=3200
+	want_fixed_height=2400
 
 `lazy_redraw` slows down the framerate when the program isn't focused. This
 used to be kind of useful when the GUI rendering sucked, and maybe it still is
@@ -62,18 +62,18 @@ If `want_fixed` is set to 1, Schism will be displayed with a constant width and 
 
 #### Backups
 
-    [General]
-    make_backups=1
-    numbered_backups=1
+	[General]
+	make_backups=1
+	numbered_backups=1
 
 When overwriting a `filename.it`, copy the existing file to `filename.it~`.
 With numbered_backups, write to `filename.it.1~`, `filename.it.2~`, etc.
 
 #### Key repeat
 
-    [General]
-    key_repeat_delay=125
-    key_repeat_rate=25
+	[General]
+	key_repeat_delay=125
+	key_repeat_rate=25
 
 Alter the key repeat. "Delay" is how long before keys begin to repeat, "rate"
 is how long between repeated keystrokes. (Both are in milliseconds.) Above are
@@ -85,8 +85,8 @@ than you do for the rest of your system.
 
 #### Alternate font
 
-    [General]
-    font=notch.itf
+	[General]
+	font=notch.itf
 
 Load some other font besides `font.cfg` at startup. This option doesn't really
 have much of a point, because the file listed is limited to those within the
@@ -95,17 +95,17 @@ and save to `font.cfg`.
 
 #### DJ mode
 
-    [General]
-    stop_on_load=0
+	[General]
+	stop_on_load=0
 
 If zero, loading a song when another one is playing will start playing the new
 song after it is loaded.
 
 #### Date and time formatting
 
-    [General]
-    time_format=12hr
-    date_format=mmmmdyyyy
+	[General]
+	time_format=12hr
+	date_format=mmmmdyyyy
 
 If `time_format` is set to `24hr`, all times will display in 24-hour time, i.e.
 as `01:20`, while with `12hr` the same time will be displayed as `1:20 am`.
@@ -127,8 +127,8 @@ The valid `date_format` values are as follows, using 2025-01-07 as an example:
 
 #### File browser
 
-    [Directories]
-    module_pattern=*.it\073 *.xm\073 *.s3m\073 *.mtm\073 *.669\073 *.mod
+	[Directories]
+	module_pattern=*.it\073 *.xm\073 *.s3m\073 *.mtm\073 *.669\073 *.mod
 
 Changes what files are presented in the load/save module lists. Use * for all
 files. For annoying compatibility reasons, semicolons are rewritten as `\x3b`
@@ -137,7 +137,7 @@ or `\073` when saving.
 This was formerly named `filename_pattern`; Schism Tracker ignores the old
 value and comments it out when saving to work around bugs in older versions.
 
-    sort_with=strcaseverscmp
+	sort_with=strcaseverscmp
 
 Alter the sort order. Possible values are `strcmp` (case-sensitive),
 `strcasecmp` (case-insensitive), `strverscmp` (case-sensitive, but handles
@@ -146,10 +146,10 @@ numbers smartly e.g. `5.it` will be listed above `10.it`), and
 
 #### Keyjazz
 
-    [Pattern Editor]
-    keyjazz_noteoff=1
-    keyjazz_write_noteoff=0
-    keyjazz_repeat=0
+	[Pattern Editor]
+	keyjazz_noteoff=1
+	keyjazz_write_noteoff=0
+	keyjazz_repeat=0
 	keyjazz_capslock=0
 
 If `keyjazz_noteoff` is 1, letting go of a key in the pattern editor will cause
@@ -166,9 +166,9 @@ send proper key events for the Caps Lock key, see issue #385.
 
 #### Pattern editor behavior tweaks
 
-    [Pattern Editor]
-    mask_copy_search_mode=1
-    invert_home_end=1
+	[Pattern Editor]
+	mask_copy_search_mode=1
+	invert_home_end=1
 
 When `mask_copy_search_mode` is set to 1, pressing Enter on a row with no
 instrument number will search backward in the channel for an instrument and
@@ -180,9 +180,9 @@ last channel. FT2 users might want to enable this.
 
 #### Key modifiers
 
-    [General]
-    meta_is_ctrl=1
-    altgr_is_alt=1
+	[General]
+	meta_is_ctrl=1
+	altgr_is_alt=1
 
 These alter how modifier keys are interpreted. Mac OS X users in particular
 might appreciate `meta_is_ctrl`, which allows using the Command/Apple key as
@@ -190,9 +190,9 @@ the Ctrl modifier within Schism Tracker. `altgr_is_alt` works similarly.
 
 #### Audio output
 
-    [Audio]
-    buffer_size=256
-    driver=dsp:/dev/dsp1
+	[Audio]
+	buffer_size=256
+	driver=dsp:/dev/dsp1
 
 These settings define the audio buffer size, and which audio device Schism
 Tracker uses. (The other settings in the `[Audio]` section are configurable
@@ -209,10 +209,10 @@ between pressing a note and hearing it, which is why Schism Tracker requests a
 the `SDL_AUDIODRIVER`, `AUDIODEV` and `SDL_PATH_DSP` environment variables can
 be used to configure Schism's audio output.
 
-    [Diskwriter]
-    rate=96000
-    bits=16
-    channels=2
+	[Diskwriter]
+	rate=96000
+	bits=16
+	channels=2
 
 This defines the sample format used by the disk writer – for exporting to
 .wav/.aiff *and* internal pattern-to-sample rendering.
@@ -234,15 +234,15 @@ For users with non-US keyboards, some keys may not work properly. This can be
 worked around by switching temporarily to a US keyboard layout on startup, and
 resetting the keyboard on exit. To define hooks to accomplish this:
 
-    cat >~/.schism/startup-hook <<EOF
-    #!/bin/sh
-    setxkbmap us
-    EOF
-    cat >~/.schism/exit-hook <<EOF
-    #!/bin/sh
-    setxkbmap fi
-    EOF
-    chmod +x ~/.schism/*-hook
+	cat >~/.schism/startup-hook <<EOF
+	#!/bin/sh
+	setxkbmap us
+	EOF
+	cat >~/.schism/exit-hook <<EOF
+	#!/bin/sh
+	setxkbmap fi
+	EOF
+	chmod +x ~/.schism/*-hook
 
 This is for a Finnish keyboard; replace the `fi` with the appropriate [ISO
 3166](http://www.wikipedia.org/wiki/ISO%203166-1%20alpha-2) country code or
