@@ -95,13 +95,16 @@ EXTRA_DIST = \
 	$(sysfiles)			\
 	$(scripts)
 
-bin_PROGRAMS = schismtracker schismtrackertest
+bin_PROGRAMS = schismtracker
+if BUILD_TESTS
+bin_PROGRAMS += schismtrackertest
+endif
 
 noinst_HEADERS = \
 	include/auto/logoit.h		\
 	include/auto/logoschism.h	\
 	include/auto/schismico_hires.h	\
-	include/automated-testing.h     \
+	include/test.h     \
 	include/bswap.h			\
 	include/bshift.h        \
 	include/charset.h		\
@@ -509,7 +512,7 @@ endif
 
 ## aaaaaaaaahhhhhhhhhhhhhhhhhhh!!!!!!!1
 schismtracker_SOURCES = \
-	automated-testing/entrypoint.c \
+	test/entrypoint.c \
 	auto/default-font.c		\
 	auto/helptext.c			\
 	fmt/669.c			\
@@ -681,12 +684,12 @@ schismtracker_LDFLAGS = $(ldflags_macosx)
 ### these are only linked into schismtrackertest.
 
 schismtrackertest_SOURCES = \
-	automated-testing/entrypoint.c     \
-	automated-testing/harness.c        \
-	automated-testing/testresult.c     \
-	automated-testing/output.c         \
-	automated-testing/index.c          \
-	automated-testing/cases/bshift.c
+	test/entrypoint.c     \
+	test/harness.c        \
+	test/testresult.c     \
+	test/output.c         \
+	test/index.c          \
+	test/cases/bshift.c
 
 # Enable test paths -- overrides the entrypoint
 schismtrackertest_CFLAGS = $(schismtracker_CFLAGS) -DSCHISM_TEST_BUILD
@@ -694,6 +697,6 @@ schismtrackertest_CFLAGS = $(schismtracker_CFLAGS) -DSCHISM_TEST_BUILD
 schismtrackertest_CPPFLAGS = $(schismtracker_CPPFLAGS)
 schismtrackertest_OBJCFLAGS = $(schimtracker_OBJCFLAGS)
 schismtrackertest_DEPENDENCIES = $(schismtracker_DEPENDENCIES) schismtracker$(EXEEXT)
-schismtrackertest_LDADD = $(filter-out automated-testing/schismtracker-entrypoint.o,$(schismtracker_OBJECTS)) $(schismtracker_LDADD)
+schismtrackertest_LDADD = $(filter-out test/schismtracker-entrypoint.o,$(schismtracker_OBJECTS)) $(schismtracker_LDADD)
 schismtrackertest_LDFLAGS = $(schismtracker_LDFLAGS)
 

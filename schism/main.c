@@ -29,7 +29,7 @@
 
 #include "headers.h"
 
-#include "automated-testing.h"
+#include "test.h"
 
 #include "backend/events.h"
 #include "events.h"

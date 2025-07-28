@@ -24,7 +24,7 @@
 #ifndef SCHISM_TEST_ASSERTIONS_H_
 #define SCHISM_TEST_ASSERTIONS_H_
 
-#include "automated-testing.h"
+#include "test.h"
 
 /* TODO prefix these with TEST_ */
 #define ASSERT(cond) do { if (!(cond)) { test_printf("assertion failed: %s\n", #cond); return SCHISM_TESTRESULT_FAIL; } } while (0)

@@ -21,17 +21,29 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "automated-testing.h"
+#include "test.h"
+#include "test-assertions.h"
 
-// Allow 12 characters
-const char *testresult_str(testresult_t result)
+#include "bshift.h"
+
+testresult_t test_bshift_arithmetic(void)
 {
-	switch (result) {
-	case SCHISM_TESTRESULT_NOT_RUN: return "NOT RUN";
-	case SCHISM_TESTRESULT_PASS: return "PASS";
-	case SCHISM_TESTRESULT_FAIL: return "FAIL";
-	case SCHISM_TESTRESULT_INCONCLUSIVE: return "INCONCLUSIVE";
-	case SCHISM_TESTRESULT_SKIP: return "SKIP";
-	default: return "#UNKNOWN";
-	}
+#ifdef HAVE_ARITHMETIC_RSHIFT
+	ASSERT(rshift_signed(-0xFFFF, 8) == (-0xFFFF >> 8));
+	RETURN_PASS;
+#else
+	RETURN_SKIP;
+#endif
+}
+
+testresult_t test_bshift_right_shift_negative(void)
+{
+	ASSERT(rshift_signed(INT32_C(-0xFFFF), 8) == INT32_C(-0x100));
+	RETURN_PASS;
+}
+
+testresult_t test_bshift_left_shift_overflow(void)
+{
+	ASSERT(lshift_signed((int32_t)0xFF000000, 4) == (int32_t)0xF0000000);
+	RETURN_PASS;
 }
