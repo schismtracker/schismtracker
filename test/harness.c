@@ -37,7 +37,9 @@ static int run_test(test_index_entry *entry)
 	testresult_t result;
 	int i;
 
-	test_output_clear();
+	/* clear any existing output (this also initializes the
+	 * global memory stream) */
+	test_log_clear();
 
 	printf("TEST: %s ", entry->name);
 	fflush(stdout); // in case the test crashes
@@ -51,23 +53,21 @@ static int run_test(test_index_entry *entry)
 
 	printf(" %s (%" PRIu64 " ms)\n", testresult_str(result), end_time - start_time);
 
-	test_dump_output();
+	test_log_dump();
 
 	return result;
 }
 
-static int inproc_warn = 0;
-
 static testresult_t run_test_child(const char *self, test_index_entry *entry)
 {
+	static int inproc_warn = 0;
+
 #ifdef HAVE_OS_EXEC
 	int status;
 
 	if (os_exec(&status, NULL, self, entry->name, (char *)NULL))
 		return status;
 #endif
-
-	printf("%s %s\n", self, entry->name);
 
 	if (!inproc_warn) {
 #ifdef HAVE_OS_EXEC
@@ -99,9 +99,9 @@ int schism_test_main(int argc, char **argv)
 		for (i = 0; automated_tests[i].name; i++) {
 			testresult_t result = run_test_child(argv[0], &automated_tests[i]);
 
-			if (result == SCHISM_TESTRESULT_PASS)
+			if (result == SCHISM_TESTRESULT_PASS) {
 				passed_tests++;
-			else {
+			} else {
 				failed_tests++;
 
 				// We assume the crash happened during the test case itself, which means

@@ -26,13 +26,7 @@
 
 #include "headers.h"
 
-#ifdef SCHISM_TEST_BUILD
-#define ENTRYPOINT schism_test_main
-#else
-#define ENTRYPOINT schism_main
-#endif
-
-int entrypoint_thunk(int argc, char *argv[]);
+/* ------------------------------------------------------------------------ */
 
 /* numerically, FAIL == false and PASS == true */
 typedef enum {
@@ -56,20 +50,38 @@ typedef struct {
 	testfunctor_t test;
 } test_index_entry;
 
+/* not sure if I like this being a global; whatever, it's fine for now */
 extern test_index_entry automated_tests[];
 
 test_index_entry *test_get_case(const char *name);
 
 const char *testresult_str(testresult_t result);
 
-void test_output_clear(void);
-void test_outputn(const char *str, int len);
-void test_output(const char *str);
-void test_vprintf(const char *fmt, va_list ap);
-void test_printf(const char *fmt, ...);
-void test_dump_output(void);
+/* ------------------------------------------------------------------------ */
+/* logging functions */
 
-int schism_test_main(int argc, char** argv);
+/* frees any existing buffer, and initializes a new one.
+ * this must be called before any logging is done. */
+void test_log_clear(void);
+
+/* prints a string of known length to the log */
+void test_logn(const char *str, int len);
+
+/* prints a string of unknown length to the log */
+void test_log(const char *str);
+
+/* snprintf() wrapper for the memory buffer */
+void test_log_vprintf(const char *fmt, va_list ap);
+void test_log_printf(const char *fmt, ...);
+
+void test_log_dump(void);
+
+/* ------------------------------------------------------------------------ */
+/* entrypoint takeover */
+
+int schism_test_main(int argc, char *argv[]);
+
+int entrypoint(int argc, char *argv[]);
 
 #include "test-funcs.h"
 

@@ -1229,6 +1229,6 @@ int schism_main(int argc, char** argv)
 int main(int argc, char **argv)
 {
 	// do nothing special
-	return entrypoint_thunk(argc, argv);
+	return entrypoint(argc, argv);
 }
 #endif

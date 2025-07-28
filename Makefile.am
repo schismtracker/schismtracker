@@ -687,7 +687,7 @@ schismtrackertest_SOURCES = \
 	test/entrypoint.c     \
 	test/harness.c        \
 	test/testresult.c     \
-	test/output.c         \
+	test/log.c         \
 	test/index.c          \
 	test/cases/bshift.c
 
@@ -697,6 +697,6 @@ schismtrackertest_CFLAGS = $(schismtracker_CFLAGS) -DSCHISM_TEST_BUILD
 schismtrackertest_CPPFLAGS = $(schismtracker_CPPFLAGS)
 schismtrackertest_OBJCFLAGS = $(schimtracker_OBJCFLAGS)
 schismtrackertest_DEPENDENCIES = $(schismtracker_DEPENDENCIES) schismtracker$(EXEEXT)
-schismtrackertest_LDADD = $(filter-out test/schismtracker-entrypoint.o,$(schismtracker_OBJECTS)) $(schismtracker_LDADD)
+schismtrackertest_LDADD = $(filter-out test/schismtracker-entrypoint.$(OBJEXT),$(schismtracker_OBJECTS)) $(schismtracker_LDADD)
 schismtrackertest_LDFLAGS = $(schismtracker_LDFLAGS)
 

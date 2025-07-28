@@ -27,7 +27,7 @@
 #include "test.h"
 
 /* TODO prefix these with TEST_ */
-#define ASSERT(cond) do { if (!(cond)) { test_printf("assertion failed: %s\n", #cond); return SCHISM_TESTRESULT_FAIL; } } while (0)
+#define ASSERT(cond) do { if (!(cond)) { test_log_printf("assertion failed: %s\n", #cond); return SCHISM_TESTRESULT_FAIL; } } while (0)
 #define RETURN_PASS return SCHISM_TESTRESULT_PASS
 #define RETURN_FAIL return SCHISM_TESTRESULT_FAIL
 #define RETURN_INCONCLUSIVE return SCHISM_TESTRESULT_INCONCLUSIVE
