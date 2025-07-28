@@ -1124,8 +1124,6 @@ static void _env_draw(const song_envelope_t *env, int middle, int current_node,
 	while (env->ticks[env->nodes - 1] >= max_ticks)
 		max_ticks *= 2;
 
-	fprintf(stderr, "%u\n", max_ticks);
-
 	vgamem_ovl_clear(&env_overlay, 0);
 
 	/* draw the axis lines */
