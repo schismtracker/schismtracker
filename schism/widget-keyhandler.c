@@ -427,40 +427,60 @@ int widget_handle_key(struct key_event * k)
 		};
 	}
 
+	if (k->mouse == MOUSE_NONE)
+		onw = 0;
+	else {
+		switch (widget->type) {
+		case WIDGET_BUTTON:
+		case WIDGET_TOGGLEBUTTON:
+			pad = 2;
+			break;
+		default:
+			pad = 0;
+		};
+		onw = ((signed) k->x < widget->x
+		       || (signed) k->x >= widget->x + widget->width + pad
+		       || (signed) k->y != widget->y) ? 0 : 1;
+	}
+
 	if (k->mouse == MOUSE_CLICK) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		switch (current_type) {
-		case WIDGET_TOGGLE:
-			if (!NO_MODIFIER(k->mod))
-				return 0;
-			if (k->state == KEY_RELEASE)
+		if (onw) {
+			switch (current_type) {
+			case WIDGET_TOGGLE:
+				if (!NO_MODIFIER(k->mod))
+					return 0;
+				if (k->state == KEY_RELEASE)
+					return 1;
+				widget->d.toggle.state = !widget->d.toggle.state;
+				if (widget->changed) widget->changed();
+				status.flags |= NEED_UPDATE;
 				return 1;
-			widget->d.toggle.state = !widget->d.toggle.state;
-			if (widget->changed) widget->changed();
-			status.flags |= NEED_UPDATE;
-			return 1;
-		case WIDGET_MENUTOGGLE:
-			if (!NO_MODIFIER(k->mod))
-				return 0;
-			if (k->state == KEY_RELEASE)
+			case WIDGET_MENUTOGGLE:
+				if (!NO_MODIFIER(k->mod))
+					return 0;
+				if (k->state == KEY_RELEASE)
+					return 1;
+				widget->d.menutoggle.state = (widget->d.menutoggle.state + 1)
+					% widget->d.menutoggle.num_choices;
+				if (widget->changed) widget->changed();
+				status.flags |= NEED_UPDATE;
 				return 1;
-			widget->d.menutoggle.state = (widget->d.menutoggle.state + 1)
-				% widget->d.menutoggle.num_choices;
-			if (widget->changed) widget->changed();
-			status.flags |= NEED_UPDATE;
-			return 1;
-		default:
-			break;
+			default:
+				break;
+			}
 		}
 	} else if (k->mouse == MOUSE_DBLCLICK) {
 		if (status.flags & DISKWRITER_ACTIVE) return 0;
-		if (current_type == WIDGET_PANBAR) {
-			if (!NO_MODIFIER(k->mod))
-				return 0;
-			widget->d.panbar.muted = !widget->d.panbar.muted;
-			changed = widget->changed;
-			if (changed) changed();
-			return 1;
+		if (onw) {
+			if (current_type == WIDGET_PANBAR) {
+				if (!NO_MODIFIER(k->mod))
+					return 0;
+				widget->d.panbar.muted = !widget->d.panbar.muted;
+				changed = widget->changed;
+				if (changed) changed();
+				return 1;
+			}
 		}
 	}
 
@@ -506,19 +526,6 @@ int widget_handle_key(struct key_event * k)
 			return 1;
 		}
 		if (k->mouse) {
-			switch (widget->type) {
-			case WIDGET_BUTTON:
-				pad = widget->d.button.padding+1;
-				break;
-			case WIDGET_TOGGLEBUTTON:
-				pad = widget->d.togglebutton.padding+1;
-				break;
-			default:
-				pad = 0;
-			};
-			onw = ((signed) k->x < widget->x
-			       || (signed) k->x >= widget->x + widget->width + pad
-			       || (signed) k->y != widget->y) ? 0 : 1;
 			n = (k->state == KEY_PRESS && onw) ? 1 : 0;
 			if (widget->depressed != n)
 				status.flags |= NEED_UPDATE;
