@@ -612,16 +612,21 @@ int widget_handle_key(struct key_event * k)
 			if (status.flags & DISKWRITER_ACTIVE) return 0;
 			if (widget->d.togglebutton.group) {
 				/* this also runs the changed callback and redraws the button(s) */
-				widget_togglebutton_set(widgets, *selected_widget, 1);
+				if (k->state == KEY_DRAG) {
+					/* k-on target */
+					widget->depressed = k->on_target;
+				} else {
+					widget_togglebutton_set(widgets, *selected_widget, 1);
+				}
 				return 1;
 			}
 			/* else... */
 			widget->d.togglebutton.state = !widget->d.togglebutton.state;
 			SCHISM_FALLTHROUGH;
 		case WIDGET_BUTTON:
-			if (k->state == KEY_DRAG)
+			if (k->state == KEY_DRAG) {
 				widget->depressed = k->on_target;
-			else {
+			} else {
 				/* maybe buttons should ignore the changed callback, and use activate instead...
 				(but still call the changed callback for togglebuttons if they *actually* changed) */
 				if (widget->changed) widget->changed();
