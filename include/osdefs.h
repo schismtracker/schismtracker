@@ -166,6 +166,9 @@ static inline void msgbox_printf_impl(const char *title, const char *text, int s
 }
 # define os_show_message_box(title, text, style) (msgbox_printf_impl(title, text, style))
 #endif
+#ifndef os_run_hook
+# define os_run_hook(dir,exe,maybe_arg) (0)
+#endif
 
 /* Whether or not to compile ANSI variants of functions; we only actually do
  * this on IA-32 because of Win9x, all other architectures are WinNT-only.
