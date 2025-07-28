@@ -373,3 +373,47 @@ jobs:
         with:
           name: schismtracker-${{ steps.date.outputs.date }}-macos
           path: schismtracker.zip
+
+# Run test suite; based off code written by manx for OpenMPT.
+# sidenote: we should probably (definitely) be using matrixes for the
+# code above as well. As is, it's really an unmaintainable mess.
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { host: macos-15, compiler: '16.4' }
+          - { host: macos-15, compiler: '16.3' }
+          - { host: macos-15, compiler: '16.2' }
+          - { host: macos-15, compiler: '16.1' }
+          - { host: macos-15, compiler: '16.0' }
+          - { host: macos-14, compiler: '15.4' }
+          - { host: macos-14, compiler: '15.3' }
+          - { host: macos-13, compiler: '15.2' }
+          - { host: macos-13, compiler: '14.2' }
+          - { host: macos-13, compiler: '14.1' }
+    concurrency:
+      group: ${{github.ref}}-${{github.workflow}}-${{matrix.host}}-${{matrix.compiler}}
+      cancel-in-progress: true
+    runs-on: ${{matrix.host}}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: 'Install dependencies'
+      run: brew install autoconf automake utf8proc sdl2
+
+    - name: 'Change current Xcode version'
+      run: sudo xcode-select --switch /Applications/Xcode_${{matrix.compiler}}.app
+
+    - name: 'Build Schism'
+      run: |
+        autoreconf -i
+        mkdir build
+        cd build
+        ../configure --enable-tests --enable-sdl2-linking
+        make
+
+    - name: 'Run test suite'
+      run: |
+        cd build
+        ./schismtrackertest
