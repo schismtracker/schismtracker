@@ -1223,12 +1223,17 @@ int schism_main(int argc, char** argv)
 	return 0; /* blah */
 }
 
-#if defined(SCHISM_MACOSX)
+#if defined(SCHISM_TEST_BUILD)
+int main(int argc, char *argv[])
+{
+	return schism_test_main(argc, argv);
+}
+#elif defined(SCHISM_MACOSX)
 // sys/macosx/macosx-sdlmain.m
 #else
 int main(int argc, char **argv)
 {
 	// do nothing special
-	return entrypoint(argc, argv);
+	return schism_main(argc, argv);
 }
 #endif

@@ -39,8 +39,6 @@ pruned up some here :) -mrsb
 
 #include "headers.h"
 
-#include "test.h"
-
 #include "it.h"
 #include "events.h"
 #include "osdefs.h"
@@ -189,7 +187,7 @@ static int macosx_launched = 0; // FIXME this sucks
 
 	/* If we launched from the Finder we have extra arguments that we
 	 * don't care about that will trip up the regular main function. */
-	exit(entrypoint(macosx_did_finderlaunch ? 1 : *_NSGetArgc(), *_NSGetArgv()));
+	exit(schism_main(macosx_did_finderlaunch ? 1 : *_NSGetArgc(), *_NSGetArgv()));
 }
 
 @end /* @implementation SchismTrackerDelegate */
@@ -447,56 +445,10 @@ static void setupWindowMenu(void)
 #  undef main
 #endif
 
-static int macosx_ver_major, macosx_ver_minor, macosx_ver_patch;
-
-static inline int macosx_ver_init(void)
-{
-	SInt32 maj, min, pat;
-
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= 101000 /* Mac OS X 10.10 */
-	if ([NSProcessInfo respondsToSelector:@selector(operatingSystemVersion)]) {
-		NSOperatingSystemVersion ver = [[NSProcessInfo processInfo] operatingSystemVersion];
-
-		macosx_ver_major = ver.majorVersion;
-		macosx_ver_minor = ver.minorVersion;
-		macosx_ver_patch = ver.patchVersion;
-	} else
-#endif
-	if (!Gestalt(gestaltSystemVersionMajor, &maj)
-		&& !Gestalt(gestaltSystemVersionMinor, &min)
-		&& !Gestalt(gestaltSystemVersionBugFix, &pat)) {
-		macosx_ver_major = maj;
-		macosx_ver_minor = min;
-		macosx_ver_patch = pat;
-	} else if (!Gestalt(gestaltSystemVersion, &maj)) {
-		/* Get the high bits, then convert the hex coding to
-		 * decimal */
-		macosx_ver_major = (maj >> 8);
-		if (macosx_ver_major >= 0x10)
-			macosx_ver_major -= (0x10 - 10);
-
-		macosx_ver_minor = (maj >> 4) & 0xF;
-		macosx_ver_patch = (maj) & 0xF;
-	} else {
-		/* We're screwed */
-		macosx_ver_major = 0;
-		macosx_ver_minor = 0;
-		macosx_ver_patch = 0;
-	}
-}
-
-int macosx_ver_atleast(int major, int minor, int patch)
-{
-	return SCHISM_SEMVER_ATLEAST(major, minor, patch,
-		macosx_ver_major, macosx_ver_minor, macosx_ver_patch);
-}
-
 /* Main entry point to executable - should *not* be SDL_main! */
-int main (int argc, char **argv)
+int main(int argc, char **argv)
 {
 	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
-	macosx_ver_init();
 
 	/* Copy the arguments into a global variable -- this
 	 * is passed if we are launched by double-clicking */
@@ -535,42 +487,4 @@ int main (int argc, char **argv)
 	[pool release];
 
 	return 0;
-}
-
-/* ---------------------------------------------------------------- */
-
-int macosx_get_key_repeat(int *pdelay, int *prate)
-{
-	NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-	if (!defaults)
-		return 0;
-
-	int delay = [defaults integerForKey:@"InitialKeyRepeat"];
-	int rate = [defaults integerForKey:@"KeyRepeat"];
-
-	// apparently these will never be zero.
-	if (!delay || delay < 0 || !rate || rate < 0)
-		return 0;
-
-	// According to this Apple Discussions thread, these
-	// values are milliseconds divided by 15:
-	//
-	// https://discussions.apple.com/thread/1316947
-	*pdelay = delay * 15;
-	*prate = rate * 15;
-
-	return 1;
-}
-
-char *macosx_get_application_support_dir(void)
-{
-	NSArray* strings = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, true);
-	if ([strings count] < 1)
-		return NULL;
-
-	NSString *path = [strings objectAtIndex: 0];
-	if (!path)
-		return NULL;
-
-	return str_dup([path UTF8String]);
 }

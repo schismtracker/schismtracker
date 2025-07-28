@@ -374,7 +374,7 @@ files_macosx = \
 	sys/macosx/macosx-sdlmain.m	\
 	sys/macosx/ibook-support.c	\
 	sys/macosx/midi-macosx.c	\
-	sys/macosx/osdefs.c \
+	sys/macosx/osdefs.m \
 	sys/macosx/clippy.m \
 	sys/macosx/dmoz.m \
 	sys/macosx/audio.c \
@@ -512,7 +512,6 @@ endif
 
 ## aaaaaaaaahhhhhhhhhhhhhhhhhhh!!!!!!!1
 schismtracker_SOURCES = \
-	test/entrypoint.c \
 	auto/default-font.c		\
 	auto/helptext.c			\
 	fmt/669.c			\
@@ -683,13 +682,18 @@ schismtracker_LDFLAGS = $(ldflags_macosx)
 ### Automated testing -- some additional files get compiled, but
 ### these are only linked into schismtrackertest.
 
-schismtrackertest_SOURCES = \
-	test/entrypoint.c     \
-	test/harness.c        \
-	test/testresult.c     \
-	test/log.c         \
-	test/index.c          \
+schismtrackertest_SOURCES =	\
+	schism/main.c			\
+	test/harness.c			\
+	test/testresult.c		\
+	test/log.c				\
+	test/index.c			\
 	test/cases/bshift.c
+
+# err, this is flaky, but okay for now i guess
+mains =									\
+	schism/schismtracker-main.$(OBJEXT)	\
+	sys/macosx/schismtracker-macosx-sdlmain.$(OBJEXT)
 
 # Enable test paths -- overrides the entrypoint
 schismtrackertest_CFLAGS = $(schismtracker_CFLAGS) -DSCHISM_TEST_BUILD
@@ -697,6 +701,6 @@ schismtrackertest_CFLAGS = $(schismtracker_CFLAGS) -DSCHISM_TEST_BUILD
 schismtrackertest_CPPFLAGS = $(schismtracker_CPPFLAGS)
 schismtrackertest_OBJCFLAGS = $(schimtracker_OBJCFLAGS)
 schismtrackertest_DEPENDENCIES = $(schismtracker_DEPENDENCIES) schismtracker$(EXEEXT)
-schismtrackertest_LDADD = $(filter-out test/schismtracker-entrypoint.$(OBJEXT),$(schismtracker_OBJECTS)) $(schismtracker_LDADD)
+schismtrackertest_LDADD = $(filter-out $(mains),$(schismtracker_OBJECTS)) $(schismtracker_LDADD)
 schismtrackertest_LDFLAGS = $(schismtracker_LDFLAGS)
 

@@ -36,7 +36,48 @@
 #include <IOKit/hid/IOHIDKeys.h>
 #include <IOKit/hid/IOHIDUsageTables.h>
 
-/* --------------------------------------------------------- */
+#import <Cocoa/Cocoa.h>
+
+/* ------------------------------------------------------------------------ */
+
+int macosx_get_key_repeat(int *pdelay, int *prate)
+{
+	NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+	if (!defaults)
+		return 0;
+
+	int delay = [defaults integerForKey:@"InitialKeyRepeat"];
+	int rate = [defaults integerForKey:@"KeyRepeat"];
+
+	// apparently these will never be zero.
+	if (!delay || delay < 0 || !rate || rate < 0)
+		return 0;
+
+	// According to this Apple Discussions thread, these
+	// values are milliseconds divided by 15:
+	//
+	// https://discussions.apple.com/thread/1316947
+	*pdelay = delay * 15;
+	*prate = rate * 15;
+
+	return 1;
+}
+
+char *macosx_get_application_support_dir(void)
+{
+	NSArray* strings = NSSearchPathForDirectoriesInDomains(
+		NSApplicationSupportDirectory, NSUserDomainMask, true);
+	if ([strings count] < 1)
+		return NULL;
+
+	NSString *path = [strings objectAtIndex: 0];
+	if (!path)
+		return NULL;
+
+	return str_dup([path UTF8String]);
+}
+
+/* ------------------------------------------------------------------------ */
 /* Handle Caps Lock and other oddities; Cocoa doesn't send very
  * specific key events so we have to do this manually through the
  * HID library. Annoying. */
@@ -81,7 +122,8 @@ static void hid_item_free(void)
 	}
 }
 
-static CFDictionaryRef create_hid_device(uint32_t page, uint32_t usage) {
+static CFDictionaryRef create_hid_device(uint32_t page, uint32_t usage)
+{
 	CFMutableDictionaryRef dict = IOServiceMatching(kIOHIDDeviceKey);
 	if (dict) {
 		CFNumberRef number = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &page);
@@ -101,7 +143,8 @@ static CFDictionaryRef create_hid_device(uint32_t page, uint32_t usage) {
 	return NULL;
 }
 
-static void quit_hid_callback(void) {
+static void quit_hid_callback(void)
+{
 	hid_item_free();
 }
 
@@ -290,7 +333,8 @@ end:
 		IOObjectRelease(hid_iterator);
 }
 
-static void init_hid_callback(void) {
+static void init_hid_callback(void)
+{
 	kern_return_t res;
 	mach_port_t master_port = MACH_PORT_NULL;
 
@@ -310,7 +354,53 @@ fail:
 	return;
 }
 
-/* --------------------------------------------------------- */
+/* ------------------------------------------------------------------------ */
+
+static int macosx_ver_major, macosx_ver_minor, macosx_ver_patch;
+
+static inline int macosx_ver_init(void)
+{
+	SInt32 maj, min, pat;
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 101000 /* Mac OS X 10.10 */
+	if ([NSProcessInfo respondsToSelector:@selector(operatingSystemVersion)]) {
+		NSOperatingSystemVersion ver = [[NSProcessInfo processInfo] operatingSystemVersion];
+
+		macosx_ver_major = ver.majorVersion;
+		macosx_ver_minor = ver.minorVersion;
+		macosx_ver_patch = ver.patchVersion;
+	} else
+#endif
+	if (!Gestalt(gestaltSystemVersionMajor, &maj)
+		&& !Gestalt(gestaltSystemVersionMinor, &min)
+		&& !Gestalt(gestaltSystemVersionBugFix, &pat)) {
+		macosx_ver_major = maj;
+		macosx_ver_minor = min;
+		macosx_ver_patch = pat;
+	} else if (!Gestalt(gestaltSystemVersion, &maj)) {
+		/* Get the high bits, then convert the hex coding to
+		 * decimal */
+		macosx_ver_major = (maj >> 8);
+		if (macosx_ver_major >= 0x10)
+			macosx_ver_major -= (0x10 - 10);
+
+		macosx_ver_minor = (maj >> 4) & 0xF;
+		macosx_ver_patch = (maj) & 0xF;
+	} else {
+		/* We're screwed */
+		macosx_ver_major = 0;
+		macosx_ver_minor = 0;
+		macosx_ver_patch = 0;
+	}
+}
+
+int macosx_ver_atleast(int major, int minor, int patch)
+{
+	return SCHISM_SEMVER_ATLEAST(major, minor, patch,
+		macosx_ver_major, macosx_ver_minor, macosx_ver_patch);
+}
+
+/* ------------------------------------------------------------------------ */
 
 /* this gets stored at startup as the initial value of fnswitch before
  * we tamper with it, so we can restore it on shutdown */
@@ -371,7 +461,8 @@ int macosx_event(schism_event_t *event)
 	return 1;
 }
 
-void macosx_sysexit(void) {
+void macosx_sysexit(void)
+{
 	/* return back to default */
 	if (ibook_helper != -1)
 		macosx_ibook_fnswitch(ibook_helper);
@@ -379,14 +470,18 @@ void macosx_sysexit(void) {
 	quit_hid_callback();
 }
 
-void macosx_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv) {
+void macosx_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv)
+{
+	macosx_ver_init();
+
 	/* macosx_ibook_fnswitch only sets the value if it's one of (0, 1) */
 	ibook_helper = macosx_ibook_fnswitch(-1);
 
 	init_hid_callback();
 }
 
-void macosx_get_modkey(schism_keymod_t *mk) {
+void macosx_get_modkey(schism_keymod_t *mk)
+{
 	int caps_pressed = 0;
 
 	struct hid_item_node *node;
@@ -417,6 +512,8 @@ void macosx_get_modkey(schism_keymod_t *mk) {
 	if (caps_pressed)
 		(*mk) |= SCHISM_KEYMOD_CAPS_PRESSED;
 }
+
+/* ------------------------------------------------------------------------ */
 
 void macosx_show_message_box(const char *title, const char *text, int style)
 {

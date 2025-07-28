@@ -81,7 +81,11 @@ void test_log_dump(void);
 
 int schism_test_main(int argc, char *argv[]);
 
-int entrypoint(int argc, char *argv[]);
+#ifdef SCHISM_TEST_BUILD
+# define ENTRYPOINT schism_test_main
+#else
+# define ENTRYPOINT schism_main
+#endif
 
 #include "test-funcs.h"
 
