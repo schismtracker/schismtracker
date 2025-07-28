@@ -393,3 +393,43 @@ jobs:
             COPYING.Xiph
             README.md
             configuration.md
+
+  test:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # MSYS2 doesn't make new 32-bit packages anymore. Now what?
+          - { sys: mingw64, env: x86_64 }
+          - { sys: ucrt64,  env: ucrt-x86_64 }
+    concurrency:
+      group: ${{github.ref}}-${{github.workflow}}-${{matrix.sys}}-${{matrix.env}}
+      cancel-in-progress: true
+    #name: ${{matrix.sys}}-${{matrix.env}} # the default name will work just fine
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v2
+
+      - name: 'Setup MSYS2'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.sys }}
+          update: true
+          install: mingw-w64-${{ matrix.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL2 mingw-w64-${{ matrix.env }}-libutf8proc zip dos2unix
+
+      - name: 'Build package'
+        run: |
+          autoreconf -i
+          mkdir build
+          cd build
+          ../configure --enable-tests
+          make
+
+      - name: 'Run test suite'
+        run: |
+          cd build
+          ./schismtrackertest.exe
