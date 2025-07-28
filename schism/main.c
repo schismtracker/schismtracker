@@ -596,10 +596,16 @@ SCHISM_NORETURN static void event_loop(void)
 							}
 						}
 					}
-					if (widget_change_focus_to_xy(kk.x, kk.y)) {
-						kk.on_target = 1;
-					} else {
-						kk.on_target = 0;
+					switch (kk.state) {
+					case KEY_PRESS:
+						if (widget_change_focus_to_xy(kk.x, kk.y)) {
+							kk.on_target = 1;
+						} else {
+							kk.on_target = 0;
+						}
+						break;
+					case KEY_DRAG:
+						kk.on_target = (widget_find_xy(kk.x, kk.y) == *selected_widget);
 					}
 					if (se.type == SCHISM_MOUSEBUTTONUP && downtrip) {
 						downtrip = 0;
