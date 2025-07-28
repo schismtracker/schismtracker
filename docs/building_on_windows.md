@@ -1,6 +1,6 @@
 # Building on Windows
 
-The easiest way to use Schism Tracker on Windows is to download one of the 
+The easiest way to use Schism Tracker on Windows is to download one of the
 pre-built binaries. However, if you want to build it yourself, it isn't too
 tricky.
 
@@ -12,7 +12,7 @@ Schism executable.
 We will be using an environment called MSYS2, which provides all the packages we
 need in one place.
 
-If you want correct version information to show, you must also 
+If you want correct version information to show, you must also
 have [git](https://git-scm.com/) installed and in your PATH.
 
 ### Get MSYS2 and install it
@@ -27,13 +27,13 @@ Run the MSYS2 shell (a start menu shortcut should have been created) and update
 the pacman package manager:
 
 	pacman -Sy pacman
-	
-Follow the onscreen options and choose "yes" where prompted. 
+
+Follow the onscreen options and choose "yes" where prompted.
 Close the MSYS2 window. Run it again from the Start menu and update the system:
 
 	pacman -Syu
-	
-Again follow the instructions, chose "yes" where prompted, and close the MSYS2 window. 
+
+Again follow the instructions, chose "yes" where prompted, and close the MSYS2 window.
 
 Run it again from the Start menu _(note: the update
 process can, in some cases, break the start menu shortcut - in which case you
@@ -58,8 +58,8 @@ Also, you need the following specific dependencies:
 For optional FLAC sample loading, you'll also need the following dependency:
 
 	pacman -S mingw-w64-x86_64-flac
-	
-Once you have installed these packages, close all your MSYS2 windows 
+
+Once you have installed these packages, close all your MSYS2 windows
 before continuing with the instructions.
 
 ## Compilation
@@ -82,11 +82,11 @@ schismtracker-master folder (the one that contains README.md) using `cd`
 Drive letters are mapped to /x , example C:/
 is /c/, D:/ is /d/ ..., and so on. For example:
 
-	cd /c/Users/YourUserName/Downloads/schismtracker-master/
+    cd /c/Users/YourUserName/Downloads/schismtracker-master/
 
 Reconfigure it:
 
-	autoreconf -i
+    autoreconf -i
 
 _(note: if you get a "possibly undefined macro: AM\_PATH\_SDL" error, you're
 probably using the standard msys2 shell - either use the mingw start menu
@@ -94,33 +94,58 @@ shortcuts, or start `msys2_shell.cmd` with `-mingw64` as mentioned above)_
 
 Make a folder to build the binary in:
 
-	mkdir build
-	
+    mkdir build
+
 Now move into the build subdir and run the configure script:
 
-	cd build
-	../configure
-	
+    cd build
+    ../configure
+
+### Automated testing
+
+If you are doing ongoing development, you should enable Schism Tracker's
+automated test suite. This is done by passing `--enable-tests` to
+`./configure`.
+
+    ../configure --enable-tests
+
+The resulting `Makefile` will produce a second binary alongside
+`schismtracker.exe` called `schismtrackertests.exe`:
+
+    $ make
+    (..)
+    $ ./schismtrackertest.exe
+    TEST: test_bshift_arithmetic ..................................... PASS (0 ms)
+    TEST: test_bshift_right_shift_negative ........................... PASS (0 ms)
+    TEST: test_bshift_left_shift_overflow ............................ PASS (0 ms)
+    Results: 3 passed, 0 failed
+    $
+
+In this build mode, if you make a change that requires corresponding changes
+to tests, you discover immediately on the next build.
+
 ### Build and rebuild
 
 In order to build Schism, from the build folder, run:
 
-	make
-	
-You should now have an executable in the build folder that you can run from
-Windows Explorer, or with 
-	
-	./schismtracker.exe
+    make
 
-After the first time, you can usually build Schism again without having to run 
+You should now have an executable in the build folder that you can run from
+Windows Explorer, or with
+
+    ./schismtracker.exe
+
+After the first time, you can usually build Schism again without having to run
 `autoreconf` or `../configure` again, but if you run into problems, follow the
 steps from "Configure schismtracker to build" onwards again.
+
+You should regularly run automated tests during development work.
 
 ### Compilation problems
 
 The configure script should give hints on what is missing to compile. If you've
-followed the steps, everything should already be in the right place, but in case 
-it doesn't work, see the config.log file, which reports a detailed output (more 
+followed the steps, everything should already be in the right place, but in case
+it doesn't work, see the config.log file, which reports a detailed output (more
 than what is seen on the screen) that could help identify what is missing, or which
 option is not working.
 
@@ -132,10 +157,10 @@ from the MSYS2 MINGW64 shell if you need to debug Schism.
 ## Preparing for distribution or sharing to other machines
 
 To distribute the application, it is important to bundle the correct version of
-the SDL.dll file with the executable. For a 64bit build, the file is located in 
+the SDL.dll file with the executable. For a 64bit build, the file is located in
 `/msys2_path/mingw64/bin/SDL.dll`
 
 If you want to reduce the exe size (removing the debugging information), use
 the following command from MSYS2 MINGW64:
 
-	strip -g schismtracker.exe
+    strip -g schismtracker.exe

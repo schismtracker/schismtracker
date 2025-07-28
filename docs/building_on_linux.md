@@ -11,14 +11,14 @@ on 64-bit Linux, you can also download a pre-built binary from the release page
 On Ubuntu, run:
 
     sudo apt update
-	sudo apt install build-essential automake autoconf-archive \
+    sudo apt install build-essential automake autoconf-archive \
                      libsdl2-dev git libtool libflac-dev perl \
                      pkgconf libutf8proc-dev
 
 On Arch Linux:
 
-	sudo pacman -Syu
-	sudo pacman -S base-devel git sdl2 alsa-lib libxv libxxf86vm flac perl \
+    sudo pacman -Syu
+    sudo pacman -S base-devel git sdl2 alsa-lib libxv libxxf86vm flac perl \
                    pkgconf libutf8proc
 
 Git is not strictly required, but if you don't need it you'll need to download
@@ -38,8 +38,8 @@ To get and set up the source directory for building:
 
     git clone https://github.com/schismtracker/schismtracker.git
     cd schismtracker
-	autoreconf -i
-	mkdir -p build
+    autoreconf -i
+    mkdir -p build
 
 You can then update your Schism Tracker source directory by going to the
 `schismtracker` directory and running:
@@ -55,12 +55,42 @@ From the `schismtracker` directory:
 The resulting binary `schismtracker` is completely self-contained and can be
 copied anywhere you like on the filesystem.
 
+## Building For Development
+
+Schism Tracker has an automated test suite. It is not built by default, to
+avoid accidentally including test build artifacts in packages. During
+development, it is recommended that you enable the automated testing in the
+build configuration. That way, if you make a change that requires a
+corresponding change to tests, you discover immediately when building.
+Otherwise, you might accidentally break a test and not realize it until later.
+
+To enable the automated testing components, add `--enable-tests` to the
+`./configure` command-line:
+
+    ./configure --enable-tests
+
+The resulting `Makefile` will produce two binaries on each build. The second
+binary, `schismtrackertest`, can be executed to run tests:
+
+    $ ./schismtrackertest
+    TEST: test_bshift_arithmetic ..................................... PASS (0 ms)
+    TEST: test_bshift_right_shift_negative ........................... PASS (0 ms)
+    TEST: test_bshift_left_shift_overflow ............................ PASS (0 ms)
+    Results: 3 passed, 0 failed
+    $
+
+You should regularly run automated tests during development work.
+
 ## Packaging Schism Tracker for Linux systems
 
 The `icons/` directory contains icons that you may find suitable for your
 desktop environment. The `sys/fd.org/schism.desktop` can be used to launch
 Schism Tracker from a desktop environment, and `sys/fd.org/itf.desktop` can be
 used to launch the built-in font-editor.
+
+Make sure that your build for packaging did not include `--enable-tests`,
+otherwise you might accidentally package the test suite binary
+`schismtrackertest`.
 
 ## ALSA problems
 

@@ -32,16 +32,40 @@ Enter the Schismtracker folder and run `autoreconf -i`:
 
 Now you will need to create the `build` folder, enter it and start the build:
 
-	mkdir -p build
-	cd build
+    mkdir -p build
+    cd build
     ../configure && make
 
 Test Schismtracker from the commandline by typing:
 
-	./schismtracker
+    ./schismtracker
 
 If it worked, you are ready to start the updating of the **Schism
 Tracker.app**.
+
+
+# Automated testing
+
+If you are doing ongoing development, you should enable Schism Tracker's
+automated test suite. This is done by passing `--enable-tests` to
+`./configure`.
+
+    ../configure --enable-tests
+
+The resulting `Makefile` will produce a second binary alongside
+`schismtracker` called `schismtrackertests`:
+
+    $ make
+    (..)
+    $ ./schismtrackertest
+    TEST: test_bshift_arithmetic ..................................... PASS (0 ms)
+    TEST: test_bshift_right_shift_negative ........................... PASS (0 ms)
+    TEST: test_bshift_left_shift_overflow ............................ PASS (0 ms)
+    Results: 3 passed, 0 failed
+    $
+
+In this build mode, if you make a change that requires corresponding changes
+to tests, you discover immediately on the next build.
 
 
 ## Baking Schism Tracker into an App ready to be put in /Applications
