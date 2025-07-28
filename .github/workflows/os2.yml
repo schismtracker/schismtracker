@@ -1,8 +1,5 @@
 name: OS/2 (i386)
 
-# TODO: we should be using the linux builds of OpenWatcom.
-# Building on Windows is extremely slow :)
-
 on:
   push:
   pull_request:
