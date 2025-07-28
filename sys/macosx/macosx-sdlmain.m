@@ -39,7 +39,7 @@ pruned up some here :) -mrsb
 
 #include "headers.h"
 
-#include "automated-testing.h"
+#include "test.h"
 
 #include "it.h"
 #include "events.h"
