@@ -450,7 +450,7 @@ int widget_handle_key(struct key_event * k)
 			case WIDGET_TOGGLE:
 				if (!NO_MODIFIER(k->mod))
 					return 0;
-				if (k->state == KEY_RELEASE)
+				if (k->state != KEY_PRESS)
 					return 1;
 				widget->d.toggle.state = !widget->d.toggle.state;
 				if (widget->changed) widget->changed();
@@ -459,7 +459,7 @@ int widget_handle_key(struct key_event * k)
 			case WIDGET_MENUTOGGLE:
 				if (!NO_MODIFIER(k->mod))
 					return 0;
-				if (k->state == KEY_RELEASE)
+				if (k->state != KEY_PRESS)
 					return 1;
 				widget->d.menutoggle.state = (widget->d.menutoggle.state + 1)
 					% widget->d.menutoggle.num_choices;
@@ -500,7 +500,7 @@ int widget_handle_key(struct key_event * k)
 			if (status.flags & DISKWRITER_ACTIVE) return 0;
 
 			/* swallow it */
-			if (!k->on_target) return 0;
+			if (!k->on_target && (k->state != KEY_DRAG)) return 0;
 
 			fmin = widget->d.thumbbar.min;
 			fmax = widget->d.thumbbar.max;
@@ -619,11 +619,15 @@ int widget_handle_key(struct key_event * k)
 			widget->d.togglebutton.state = !widget->d.togglebutton.state;
 			SCHISM_FALLTHROUGH;
 		case WIDGET_BUTTON:
-			/* maybe buttons should ignore the changed callback, and use activate instead...
-			(but still call the changed callback for togglebuttons if they *actually* changed) */
-			if (widget->changed) widget->changed();
-			status.flags |= NEED_UPDATE;
-			return 1;
+			if (k->state == KEY_DRAG)
+				widget->depressed = k->on_target;
+			else {
+				/* maybe buttons should ignore the changed callback, and use activate instead...
+				(but still call the changed callback for togglebuttons if they *actually* changed) */
+				if (widget->changed) widget->changed();
+				status.flags |= NEED_UPDATE;
+				return 1;
+			}
 		default:
 			break;
 		}

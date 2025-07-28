@@ -679,7 +679,7 @@ void widget_change_focus_to(int new_widget_index)
 	status.flags |= NEED_UPDATE;
 }
 
-static int _find_widget_xy(int x, int y)
+int widget_find_xy(int x, int y)
 {
 	struct widget *w;
 	int i, pad;
@@ -705,7 +705,7 @@ static int _find_widget_xy(int x, int y)
 
 int widget_change_focus_to_xy(int x, int y)
 {
-	int n = _find_widget_xy(x, y);
+	int n = widget_find_xy(x, y);
 	if (n >= 0) {
 		widget_change_focus_to(n);
 		return 1;
