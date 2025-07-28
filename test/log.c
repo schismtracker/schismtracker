@@ -26,27 +26,30 @@
 #include "headers.h"
 #include "disko.h"
 
-/* global memory buffer for the test output */
-static disko_t ds;
+/* global memory buffer for the test log */
+static disko_t ds = {0};
+static int ds_init = 0;
 
-void test_output_clear(void)
+void test_log_clear(void)
 {
-	disko_memclose(&ds, 0);
+	if (ds_init)
+		disko_memclose(&ds, 0);
 
 	SCHISM_RUNTIME_ASSERT(disko_memopen(&ds) >= 0, "disko can't fail");
+	ds_init = 1;
 }
 
-void test_outputn(const char *str, int len)
+void test_logn(const char *str, int len)
 {
 	disko_write(&ds, str, len);
 }
 
-void test_output(const char *str)
+void test_log(const char *str)
 {
-	test_outputn(str, strlen(str));
+	test_logn(str, strlen(str));
 }
 
-void test_vprintf(const char *fmt, va_list ap)
+void test_log_vprintf(const char *fmt, va_list ap)
 {
 	char *s;
 	int n;
@@ -55,25 +58,24 @@ void test_vprintf(const char *fmt, va_list ap)
 	if (n < 0)
 		return;
 
-	test_outputn(s, n);
+	test_logn(s, n);
 
 	free(s);
 }
 
-void test_printf(const char *fmt, ...)
+void test_log_printf(const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	test_vprintf(fmt, ap);
+	test_log_vprintf(fmt, ap);
 	va_end(ap);
 }
 
-void test_dump_output(void)
+void test_log_dump(void)
 {
 	if (!ds.length)
 		return;
 
-	printf("\nTEST OUTPUT: %.*s\n\n", (int)ds.length, ds.data);
+	printf("\nTEST LOG: %.*s\n\n", (int)ds.length, ds.data);
 }
-

@@ -21,11 +21,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "headers.h"
 #include "test.h"
+#include "it.h"
 
-int ENTRYPOINT(int argc, char *argv[]);
+#ifdef SCHISM_TEST_BUILD
+#define ENTRYPOINT schism_test_main
+#else
+#define ENTRYPOINT schism_main
+#endif
 
-int entrypoint_thunk(int argc, char *argv[])
+int entrypoint(int argc, char *argv[])
 {
 	return ENTRYPOINT(argc, argv);
 }
