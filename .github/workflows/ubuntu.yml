@@ -25,12 +25,24 @@ jobs:
       - name: 'autoreconf -i'
         run: autoreconf -i
 
-      - name: 'Build package'
+      - name: 'Build Schism binaries'
         run: |
           mkdir -p build
           cd build
-          ../configure --with-flac --with-alsa --with-jack
+          ../configure --with-flac --with-alsa --with-jack --enable-tests
           make
+          cd ..
+
+      - name: 'Run test suite'
+        run: |
+          # this should fail with an error code if any of the tests fail.
+          cd build
+          ./schismtrackertest
+          cd ..
+
+      - name: 'Create package'
+        run: |
+          cd build
           strip -S schismtracker
           cd ..
           cp build/schismtracker .
