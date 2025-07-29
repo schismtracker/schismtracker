@@ -971,6 +971,8 @@ int32_t csf_process_tick(song_t *csf)
 		song_voice_t *chan = csf->voices;
 		song_note_t *m = csf->patterns[csf->current_pattern] + csf->row * MAX_CHANNELS;
 
+		csf->last_global_volume = csf->current_global_volume;
+
 		for (uint32_t nchan=0; nchan<MAX_CHANNELS; chan++, nchan++, m++) {
 			// this is where we're going to spit out our midi
 			// commands... ALL WE DO is dump raw midi data to
@@ -993,6 +995,8 @@ int32_t csf_process_tick(song_t *csf)
 			chan->right_volume = chan->right_volume_new;
 			chan->flags &= ~(CHN_PORTAMENTO | CHN_VIBRATO | CHN_TREMOLO);
 			chan->n_command = 0;
+
+			chan->last_instrument_volume = chan->instrument_volume;
 		}
 
 		csf_process_effects(csf, 1);
@@ -1164,7 +1168,6 @@ int32_t csf_read_note(song_t *csf)
 			if (chan->n_command == FX_ARPEGGIO)
 				frequency = rn_arpeggio(csf, chan, frequency);
 
-			// MIDI macros (this is done here in OpenMPT, just take heed from them)
 			rn_process_midi_macro(csf, chan);
 
 			// Pitch/Filter Envelope
@@ -1209,6 +1212,9 @@ int32_t csf_read_note(song_t *csf)
 				ninc = (ninc * csf->freq_factor) >> 7;
 
 			chan->increment = MAX(1, ninc);
+		} else {
+			/* ... */
+			rn_process_midi_macro(csf, chan);
 		}
 
 		chan->final_panning = CLAMP(chan->final_panning, 0, 256);

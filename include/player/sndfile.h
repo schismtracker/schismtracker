@@ -419,6 +419,7 @@ typedef struct song_voice {
     // FIXME: Here instrument_volume means the value calculated from sample global volume and instrument global volume.
     //  And we miss a value for "running envelope volume" for the page_info
 	int32_t instrument_volume;
+	int32_t last_instrument_volume;
 	int32_t autovib_depth;
 	uint32_t autovib_position, vibrato_position, tremolo_position, panbrello_position;
 	// 16-bit members
@@ -466,8 +467,6 @@ typedef struct song_voice {
 	uint32_t row_voleffect, row_volparam;
 	uint32_t row_effect, row_param;
 	uint32_t active_macro, last_instrument;
-
-	int did_macro; /* stupid hack to get Zxx kinda working */
 } song_voice_t;
 
 typedef struct song_channel {
@@ -587,6 +586,7 @@ typedef struct song {
 	uint32_t current_order;
 	uint32_t process_order;
 	uint32_t current_global_volume;
+	uint32_t last_global_volume; /* aaaagh! */
 	uint32_t mixing_volume;
 	uint32_t freq_factor; // not used -- for tweaking the song speed LP-style (interesting!)
 	uint32_t tempo_factor; // ditto

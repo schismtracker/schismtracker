@@ -1048,7 +1048,27 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 			}
 			case 'u': {
 				/* Volume */
-				const int32_t vol = _muldiv(chan->calc_volume * csf->current_global_volume, chan->global_volume * chan->instrument_volume, INT32_C(1) << 26);
+
+				/* FIXME: This is still wrong.
+				 *
+				 * Notable suspects:
+				 *  flt-macro.it; second note doesn't play right
+				 *     (filter value is half than it should be)
+				 *  GlobalVolume-Macro.it; row 9's filter value should
+				 *     be much less than it actually is
+				 *
+				 * I have no idea about whats up with either of them.
+				 * I'm just saving that for another day though  ;) */
+				int32_t vol = _muldiv(chan->calc_volume * csf->last_global_volume,
+					chan->global_volume * chan->last_instrument_volume,
+					1l << 26);
+
+				/*
+				printf("%d = (%d * %d) * (%d * %d) / 1l << 26\n", vol,
+					chan->calc_volume, csf->last_global_volume,
+					chan->global_volume, chan->last_instrument_volume);
+				*/
+
 				data = (unsigned char)CLAMP(vol, 0x01, 0x7F);
 				//printf("%u\n", data);
 				break;
@@ -2109,13 +2129,6 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 	case FX_NOTESLIDEDOWN:
 		fx_note_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param, -1);
 		break;
-
-	case FX_MIDI: { // Zxx
-		/* note: we ignore this and process it later if there's a playing note. */
-		if ((csf->flags & SONG_FIRSTTICK) && !(chan->length && chan->frequency))
-			fx_midi_zxx(csf, chan);
-		break;
-	}
 	}
 }
 
@@ -2237,8 +2250,8 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
 void csf_process_effects(song_t *csf, int firsttick)
 {
 	song_voice_t *chan = csf->voices;
-	for (uint32_t nchan=0; nchan<MAX_CHANNELS; nchan++, chan++) {
-		chan->n_command=0;
+	for (uint32_t nchan = 0; nchan < MAX_CHANNELS; nchan++, chan++) {
+		chan->n_command = 0;
 
 		uint32_t instr = chan->row_instr;
 		uint32_t volcmd = chan->row_voleffect;
