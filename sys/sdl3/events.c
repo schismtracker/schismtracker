@@ -121,6 +121,8 @@ static void pop_pending_keydown(const char *text)
 		if (text) {
 			strncpy(pending_keydown.key.text, text, ARRAY_SIZE(pending_keydown.text.text));
 			pending_keydown.key.text[ARRAY_SIZE(pending_keydown.text.text)-1] = '\0';
+		} else {
+			memset(pending_keydown.key.text, 0, sizeof(pending_keydown.key.text));
 		}
 		events_push_event(&pending_keydown);
 		have_pending_keydown = 0;
