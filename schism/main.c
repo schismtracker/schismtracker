@@ -449,16 +449,16 @@ SCHISM_NORETURN static void event_loop(void)
 					kk.is_repeat = 1;
 				}
 
+				/* normalize the text for processing */
+				kk.text = charset_compose_to_set(se.key.text, CHARSET_UTF8,
+					CHARSET_UTF8);
+
 				SCHISM_FALLTHROUGH;
 			case SCHISM_KEYUP:
 				kk.sym = se.key.sym;
 				kk.scancode = se.key.scancode;
 
 				kk.mouse = MOUSE_NONE;
-
-				/* normalize the text for processing */
-				kk.text = charset_compose_to_set(se.key.text, CHARSET_UTF8,
-					CHARSET_UTF8);
 
 				/* grab the keymod */
 				kk.mod = se.key.mod;
