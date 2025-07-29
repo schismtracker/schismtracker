@@ -112,7 +112,7 @@ static void help_redraw(void)
 	draw_fill_chars(2, 13, 77, 44, DEFAULT_FG, 0);
 
 	ptr = lines + top_line;
-	for (pos = 13, n = top_line; pos < 45; pos++, n++) {
+	for (pos = 13, n = top_line; pos < (VGAMEM_ROWS - 5); pos++, n++) {
 		switch (**ptr) {
 		default:
 			lp = strcspn(*ptr+1, "\015\012");
@@ -132,7 +132,7 @@ static void help_redraw(void)
 			}
 			break;
 		case LTYPE_SEPARATOR:
-			for (x = 2; x < 78; x++)
+			for (x = 2; x < (VGAMEM_COLUMNS - 2); x++)
 				draw_char(154, x, pos, 6, 0);
 			break;
 		}
