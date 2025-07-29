@@ -397,6 +397,9 @@ typedef struct song_voice {
 	int32_t rofs, lofs; // ?
 	int32_t ramp_length;
 	uint32_t vu_meter; // moved this up -paper
+#ifdef ENABLE_WAVEFORMVIS
+	int oldest_recent_sample;
+#endif
 	// Information not used in the mixer
 	int32_t right_volume_new, left_volume_new; // ?
 	int32_t final_volume; // range 0-16384 (?), accounting for sample+channel+global+etc. volumes
@@ -677,6 +680,25 @@ typedef struct song {
 	// multi-write stuff -- NULL if no multi-write is in progress, else array of one struct per channel
 	struct multi_write *multi_write;
 } song_t;
+
+#ifndef NATIVE_SCREEN_WIDTH
+#define NATIVE_SCREEN_WIDTH 640
+#endif
+#ifndef NATIVE_SCREEN_HEIGHT
+#define NATIVE_SCREEN_HEIGHT 400
+#endif
+
+#ifdef ENABLE_WAVEFORMVIS
+#define RECENT_SAMPLE_BUFFER_SIZE NATIVE_SCREEN_WIDTH
+
+/* one for each voice, plus one for each output channel */
+extern int8_t recent_sample_buffer[(MAX_VOICES + 2) * RECENT_SAMPLE_BUFFER_SIZE];
+
+#define RECENT_SAMPLE_BUFFER(voice) (&recent_sample_buffer[(voice) * RECENT_SAMPLE_BUFFER_SIZE])
+
+int csf_get_oldest_recent_sample_output(void);
+void csf_set_oldest_recent_sample_output(int new_value);
+#endif
 
 song_note_t *csf_allocate_pattern(uint32_t rows);
 void csf_free_pattern(void *pat);

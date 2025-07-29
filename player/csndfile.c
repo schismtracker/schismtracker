@@ -34,6 +34,20 @@
 #include "fmt.h" // for it_decompress8 / it_decompress16
 #include "mem.h"
 
+#ifdef ENABLE_WAVEFORMVIS
+int8_t recent_sample_buffer[(MAX_VOICES + 2) * RECENT_SAMPLE_BUFFER_SIZE];
+static int oldest_recent_output_sample = 0;
+
+int csf_get_oldest_recent_sample_output(void)
+{
+	return oldest_recent_output_sample;
+}
+
+void csf_set_oldest_recent_sample_output(int new_value)
+{
+	oldest_recent_output_sample = new_value;
+}
+#endif
 
 static void _csf_reset(song_t *csf)
 {

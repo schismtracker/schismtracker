@@ -29,6 +29,9 @@
 #include "player/cmixer.h"
 #include "bshift.h"
 #include "util.h"   // for CLAMP
+#include "sndfile.h"
+
+#define NATIVE_SCREEN_WIDTH 640
 
 // For pingpong loops that work like most of Impulse Tracker's drivers
 // (including SB16, SBPro, and the disk writer) -- as well as XMPlay, use 1
@@ -114,6 +117,14 @@ static inline SCHISM_ALWAYS_INLINE uint32_t avg_u32(uint32_t a, uint32_t b)
 	return (a >> 1) + (b >> 1) + (a & b & 1);
 }
 
+#ifdef ENABLE_WAVEFORMVIS
+# define OLDEST_RECENT_SAMPLE_DECL register int oldest_recent_sample = channel->oldest_recent_sample;
+# define OLDEST_RECENT_SAMPLE_STORE channel->oldest_recent_sample = oldest_recent_sample;
+#else
+# define OLDEST_RECENT_SAMPLE_DECL
+# define OLDEST_RECENT_SAMPLE_STORE
+#endif
+
 #define SNDMIX_BEGINSAMPLELOOP(bits) \
 	register song_voice_t * const chan = channel; \
 	position = chan->position_frac; \
@@ -121,6 +132,7 @@ static inline SCHISM_ALWAYS_INLINE uint32_t avg_u32(uint32_t a, uint32_t b)
 	if (chan->flags & CHN_STEREO) p += chan->position; \
 	int32_t *pvol = pbuffer; \
 	uint32_t max = chan->vu_meter; \
+	OLDEST_RECENT_SAMPLE_DECL \
 	do {
 
 
@@ -128,6 +140,7 @@ static inline SCHISM_ALWAYS_INLINE uint32_t avg_u32(uint32_t a, uint32_t b)
 		position += chan->increment; \
 	} while (pvol < pbufmax); \
 	chan->vu_meter = max; \
+	OLDEST_RECENT_SAMPLE_STORE \
 	chan->position  += position >> 16; \
 	chan->position_frac = position & 0xFFFF;
 
@@ -243,15 +256,27 @@ static inline SCHISM_ALWAYS_INLINE uint32_t avg_u32(uint32_t a, uint32_t b)
 			, 1), \
 		WFIR_##bits##SHIFT - 1);
 
-#define SNDMIX_STOREVUMETER \
+#ifdef ENABLE_WAVEFORMVIS
+# define MERGE_SAMPLE(l, r) ((l >> 1) + (r >> 1))
+# define CONVERT_SAMPLE(s) ((int8_t)(((s) >> 18)) ^ 128);
+# define CAPTURE_RECENT_SAMPLE \
+	if (oldest_recent_sample >= NATIVE_SCREEN_WIDTH) \
+		oldest_recent_sample = 0; \
+	recent[oldest_recent_sample++] = CONVERT_SAMPLE(MERGE_SAMPLE(vol_lx, vol_rx));
+#else
+# define CAPTURE_RECENT_SAMPLE
+#endif
+
+#define SNDMIX_STOREVUMETER_AND_RECENT_SAMPLE \
 	uint32_t vol_avg = avg_u32(safe_abs_32(vol_lx), safe_abs_32(vol_rx)); \
-	if (max < vol_avg) max = vol_avg;
+	if (max < vol_avg) max = vol_avg; \
+	CAPTURE_RECENT_SAMPLE
 
 // FIXME why are these backwards? what?
 #define SNDMIX_STOREMONOVOL \
 	int32_t vol_lx = vol * chan->right_volume; \
 	int32_t vol_rx = vol * chan->left_volume; \
-	SNDMIX_STOREVUMETER \
+	SNDMIX_STOREVUMETER_AND_RECENT_SAMPLE \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
 	pvol += 2;
@@ -259,7 +284,7 @@ static inline SCHISM_ALWAYS_INLINE uint32_t avg_u32(uint32_t a, uint32_t b)
 #define SNDMIX_STORESTEREOVOL \
 	int32_t vol_lx = vol_l * chan->right_volume; \
 	int32_t vol_rx = vol_r * chan->left_volume; \
-	SNDMIX_STOREVUMETER \
+	SNDMIX_STOREVUMETER_AND_RECENT_SAMPLE \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
 	pvol += 2;
@@ -269,7 +294,7 @@ static inline SCHISM_ALWAYS_INLINE uint32_t avg_u32(uint32_t a, uint32_t b)
 	right_ramp_volume += chan->right_ramp; \
 	int32_t vol_lx = vol * rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
 	int32_t vol_rx = vol * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
-	SNDMIX_STOREVUMETER \
+	SNDMIX_STOREVUMETER_AND_RECENT_SAMPLE \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
 	pvol += 2;
@@ -279,7 +304,7 @@ static inline SCHISM_ALWAYS_INLINE uint32_t avg_u32(uint32_t a, uint32_t b)
 	right_ramp_volume += chan->right_ramp; \
 	int32_t vol_lx = vol_l * rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
 	int32_t vol_rx = vol_r * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
-	SNDMIX_STOREVUMETER \
+	SNDMIX_STOREVUMETER_AND_RECENT_SAMPLE \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
 	pvol += 2;
@@ -321,18 +346,30 @@ static inline SCHISM_ALWAYS_INLINE uint32_t avg_u32(uint32_t a, uint32_t b)
 //////////////////////////////////////////////////////////
 // Interfaces
 
-typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
+#ifdef ENABLE_WAVEFORMVIS
 
+typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *, uint8_t *);
+
+#define BEGIN_MIX_INTERFACE(func) \
+	static void func(song_voice_t *channel, int32_t *pbuffer, int32_t *pbufmax, uint8_t *recent) \
+	{ \
+		int32_t position;
+
+#else
+
+typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 
 #define BEGIN_MIX_INTERFACE(func) \
 	static void func(song_voice_t *channel, int32_t *pbuffer, int32_t *pbufmax) \
 	{ \
 		int32_t position;
 
+#endif /* ENABLE_WAVEFORMVIS */
 
 #define END_MIX_INTERFACE() \
 		SNDMIX_ENDSAMPLELOOP \
 	}
+
 
 // Volume Ramps
 #define BEGIN_RAMPMIX_INTERFACE(func) \
@@ -868,10 +905,33 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 				channel->rofs = -*(pbufmax - 2);
 				channel->lofs = -*(pbufmax - 1);
 
+#ifdef ENABLE_WAVEFORMVIS
+				mix_func(channel, pbuffer, pbufmax, RECENT_SAMPLE_BUFFER(nchan));
+#else
 				mix_func(channel, pbuffer, pbufmax);
+#endif
 				channel->rofs += *(pbufmax - 2);
 				channel->lofs += *(pbufmax - 1);
+
+#ifdef ENABLE_WAVEFORMVIS
+				int oldest_recent_output_sample = csf_get_oldest_recent_sample_output();
+
+				while (pbuffer < pbufmax) {
+					if (oldest_recent_output_sample >= RECENT_SAMPLE_BUFFER_SIZE) {
+						oldest_recent_output_sample = 0;
+					}
+					RECENT_SAMPLE_BUFFER(MAX_VOICES)[oldest_recent_output_sample] = CONVERT_SAMPLE(*pbuffer);
+					pbuffer++;
+					RECENT_SAMPLE_BUFFER(MAX_VOICES + 1)[oldest_recent_output_sample] = CONVERT_SAMPLE(*pbuffer);
+					pbuffer++;
+					oldest_recent_output_sample++;
+				}
+
+				csf_set_oldest_recent_sample_output(oldest_recent_output_sample);
+#else
 				pbuffer = pbufmax;
+#endif
+
 				naddmix = 1;
 			}
 
