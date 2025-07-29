@@ -153,7 +153,7 @@ typedef struct
 
 	/* waveform select */
 	uint8_t   waveform_number;
-	unsigned int wavetable;
+	uint32_t  wavetable;
 
 //unsigned char reserved[128-84];//speedup: pump up the struct size to power of 2
 unsigned char reserved[128-100];//speedup: pump up the struct size to power of 2
@@ -223,7 +223,7 @@ typedef struct
 
 	uint8_t   rhythm;                 /* Rhythm mode                  */
 
-	int     T[2];                   /* timer counters               */
+	int32_t   T[2];                   /* timer counters               */
 	uint8_t   st[2];                  /* timer enable                 */
 
 	uint32_t  address;                /* address register             */
@@ -446,13 +446,13 @@ static const uint8_t mul_tab[16]= {
 *   TL_RES_LEN - sinus resolution (X axis)
 */
 #define TL_TAB_LEN (13*2*TL_RES_LEN)
-static signed int tl_tab[TL_TAB_LEN];
+static int32_t tl_tab[TL_TAB_LEN];
 
 #define ENV_QUIET       (TL_TAB_LEN>>4)
 
 /* sin waveform table in 'decibel' scale */
 /* there are eight waveforms on OPL3 chips */
-static unsigned int sin_tab[SIN_LEN * 8];
+static uint32_t sin_tab[SIN_LEN * 8];
 
 
 /* LFO Amplitude Modulation table (verified on real YM3812)
@@ -574,7 +574,7 @@ static int num_lock = 0;
 
 
 
-static inline int limit( int val, int max, int min ) {
+static inline int32_t limit( int32_t val, int32_t max, int32_t min ) {
 	if ( val > max )
 		val = max;
 	else if ( val < min )
@@ -755,11 +755,11 @@ static inline void advance(OPL3 *chip)
 		if(op->vib)
 		{
 			uint8_t block;
-			unsigned int block_fnum = CH->block_fnum;
+			uint32_t block_fnum = CH->block_fnum;
 
-			unsigned int fnum_lfo   = (block_fnum&0x0380) >> 7;
+			uint32_t fnum_lfo   = (block_fnum&0x0380) >> 7;
 
-			signed int lfo_fn_table_index_offset = lfo_pm_table[chip->LFO_PM + 16*fnum_lfo ];
+			int32_t lfo_fn_table_index_offset = lfo_pm_table[chip->LFO_PM + 16*fnum_lfo ];
 
 			if (lfo_fn_table_index_offset)  /* LFO phase modulation active */
 			{
@@ -816,22 +816,22 @@ static inline void advance(OPL3 *chip)
 }
 
 
-static inline signed int op_calc(uint32_t phase, unsigned int env, signed int pm, unsigned int wave_tab)
+static inline int32_t op_calc(uint32_t phase, uint32_t env, int32_t pm, uint32_t wave_tab)
 {
 	uint32_t p;
 
-	p = (env<<4) + sin_tab[wave_tab + ((((signed int)((phase & ~FREQ_MASK) + (pm<<16))) >> FREQ_SH ) & SIN_MASK) ];
+	p = (env<<4) + sin_tab[wave_tab + ((((int32_t)((phase & ~FREQ_MASK) + (pm<<16))) >> FREQ_SH ) & SIN_MASK) ];
 
 	if (p >= TL_TAB_LEN)
 		return 0;
 	return tl_tab[p];
 }
 
-static inline signed int op_calc1(uint32_t phase, unsigned int env, signed int pm, unsigned int wave_tab)
+static inline int32_t op_calc1(uint32_t phase, uint32_t env, int32_t pm, uint32_t wave_tab)
 {
 	uint32_t p;
 
-	p = (env<<4) + sin_tab[wave_tab + ((((signed int)((phase & ~FREQ_MASK) + pm))>>FREQ_SH) & SIN_MASK)];
+	p = (env<<4) + sin_tab[wave_tab + ((((int32_t)((phase & ~FREQ_MASK) + pm))>>FREQ_SH) & SIN_MASK)];
 
 	if (p >= TL_TAB_LEN)
 		return 0;
@@ -846,8 +846,8 @@ static inline signed int op_calc1(uint32_t phase, unsigned int env, signed int p
 static inline void chan_calc( OPL3 *chip, OPL3_CH *CH )
 {
 	OPL3_SLOT *SLOT;
-	unsigned int env;
-	signed int out;
+	uint32_t env;
+	int32_t out;
 
 	chip->phase_modulation = 0;
 	chip->phase_modulation2= 0;
@@ -881,7 +881,7 @@ static inline void chan_calc( OPL3 *chip, OPL3_CH *CH )
 static inline void chan_calc_ext( OPL3 *chip, OPL3_CH *CH )
 {
 	OPL3_SLOT *SLOT;
-	unsigned int env;
+	uint32_t env;
 
 	chip->phase_modulation = 0;
 
@@ -1119,7 +1119,7 @@ static int init_tables(void)
 		/* we never reach (1<<16) here due to the (x+1) */
 		/* result fits within 16 bits at maximum */
 
-		n = (int)m;     /* 16 bits here */
+		n = (int32_t)m; /* 16 bits here */
 		n >>= 4;        /* 12 bits here */
 		if (n&1)        /* round to nearest */
 			n = (n>>1)+1;
@@ -1162,7 +1162,7 @@ static int init_tables(void)
 
 		o = o / (ENV_STEP/4);
 
-		n = (int)(2.0*o);
+		n = (int32_t)(2.0*o);
 		if (n&1)                        /* round to nearest */
 			n = (n>>1)+1;
 		else

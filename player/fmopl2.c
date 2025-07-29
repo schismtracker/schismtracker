@@ -453,13 +453,13 @@ static const uint8_t mul_tab[16]= {
 *   TL_RES_LEN - sinus resolution (X axis)
 */
 #define TL_TAB_LEN (12*2*TL_RES_LEN)
-static signed int tl_tab[TL_TAB_LEN];
+static int32_t tl_tab[TL_TAB_LEN];
 
 #define ENV_QUIET       (TL_TAB_LEN>>4)
 
 /* sin waveform table in 'decibel' scale */
 /* four waveforms on OPL2 type chips */
-static unsigned int sin_tab[SIN_LEN * 4];
+static uint32_t sin_tab[SIN_LEN * 4];
 
 
 /* LFO Amplitude Modulation table (verified on real YM3812)
@@ -758,9 +758,9 @@ static inline void advance(FM_OPL *OPL)
 			uint8_t block;
 			uint32_t block_fnum = CH->block_fnum;
 
-			unsigned int fnum_lfo   = (block_fnum&0x0380) >> 7;
+			uint32_t fnum_lfo   = (block_fnum&0x0380) >> 7;
 
-			signed int lfo_fn_table_index_offset = lfo_pm_table[OPL->LFO_PM + 16*fnum_lfo ];
+			int32_t lfo_fn_table_index_offset = lfo_pm_table[OPL->LFO_PM + 16*fnum_lfo ];
 
 			if (lfo_fn_table_index_offset)  /* LFO phase modulation active */
 			{
@@ -817,11 +817,11 @@ static inline void advance(FM_OPL *OPL)
 }
 
 
-static inline signed int op_calc(uint32_t phase, unsigned int env, signed int pm, unsigned int wave_tab)
+static inline int32_t op_calc(uint32_t phase, uint32_t env, int32_t pm, uint32_t wave_tab)
 {
 	uint32_t p;
 
-	p = (env<<4) + sin_tab[wave_tab + ((((signed int)((phase & ~FREQ_MASK) + (pm << 16)))
+	p = (env<<4) + sin_tab[wave_tab + ((((int32_t)((phase & ~FREQ_MASK) + (pm << 16)))
 					    >> FREQ_SH) & SIN_MASK)];
 
 	if (p >= TL_TAB_LEN)
@@ -829,11 +829,11 @@ static inline signed int op_calc(uint32_t phase, unsigned int env, signed int pm
 	return tl_tab[p];
 }
 
-static inline signed int op_calc1(uint32_t phase, unsigned int env, signed int pm, unsigned int wave_tab)
+static inline int32_t op_calc1(uint32_t phase, uint32_t env, int32_t pm, uint32_t wave_tab)
 {
 	uint32_t p;
 
-	p = (env<<4) + sin_tab[wave_tab + ((((signed int)((phase & ~FREQ_MASK) + pm))
+	p = (env<<4) + sin_tab[wave_tab + ((((int32_t)((phase & ~FREQ_MASK) + pm))
 					    >> FREQ_SH) & SIN_MASK)];
 
 	if (p >= TL_TAB_LEN)
@@ -848,8 +848,8 @@ static inline signed int op_calc1(uint32_t phase, unsigned int env, signed int p
 static inline void OPL_CALC_CH( FM_OPL *OPL, OPL_CH *CH)
 {
 	OPL_SLOT *SLOT;
-	unsigned int env;
-	signed int out;
+	uint32_t env;
+	int32_t out;
 
 	OPL->phase_modulation = 0;
 
@@ -911,11 +911,11 @@ number   number    BLK/FNUM2 FNUM    Drum  Hat   Drum  Tom  Cymbal
 
 /* calculate rhythm */
 
-static inline void OPL_CALC_RH( FM_OPL *OPL, OPL_CH *CH, unsigned int noise )
+static inline void OPL_CALC_RH( FM_OPL *OPL, OPL_CH *CH, uint32_t noise )
 {
 	OPL_SLOT *SLOT;
-	signed int out;
-	unsigned int env;
+	int32_t out;
+	uint32_t env;
 
 
 	/* Bass Drum (verified on real YM3812):
@@ -1080,8 +1080,8 @@ static inline void OPL_CALC_RH( FM_OPL *OPL, OPL_CH *CH, unsigned int noise )
 /* generic table initialize */
 static int init_tables(void)
 {
-	signed int i,x;
-	signed int n;
+	int32_t i,x;
+	int32_t n;
 	double o,m;
 
 
@@ -1093,7 +1093,7 @@ static int init_tables(void)
 		/* we never reach (1<<16) here due to the (x+1) */
 		/* result fits within 16 bits at maximum */
 
-		n = (int)m;     /* 16 bits here */
+		n = (int32_t)m; /* 16 bits here */
 		n >>= 4;        /* 12 bits here */
 		if (n&1)        /* round to nearest */
 			n = (n>>1)+1;
@@ -1133,7 +1133,7 @@ static int init_tables(void)
 
 		o = o / (ENV_STEP/4);
 
-		n = (int)(2.0*o);
+		n = (int32_t)(2.0*o);
 		if (n&1)                        /* round to nearest */
 			n = (n>>1)+1;
 		else
