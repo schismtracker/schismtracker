@@ -64,10 +64,10 @@
 #define SPLINE_LUTLEN (1L << SPLINE_FRACBITS)
 
 
-int16_t cubic_spline_lut[4 * SPLINE_LUTLEN];
+static int16_t cubic_spline_lut[4 * SPLINE_LUTLEN];
 
 
-void cubic_spline_init(void)
+static void cubic_spline_init(void)
 {
 	int i;
 	int len = SPLINE_LUTLEN;
@@ -111,6 +111,8 @@ void cubic_spline_init(void)
 	}
 }
 
+/* ------------------------------------------------------------------------ */
+/* FIR interpolation */
 
 /* fir interpolation doc,
  *  (derived from "an engineer's guide to fir digital filters", n.j. loy)
@@ -162,7 +164,7 @@ void cubic_spline_init(void)
 #define M_zBESSELEPS        1e-21
 
 
-float coef(int pc_nr, float p_ofs, float p_cut, int p_width, int p_type)
+static float coef(int pc_nr, float p_ofs, float p_cut, int p_width, int p_type)
 {
 	double width_m1      = p_width - 1;
 	double width_m1_half = 0.5 * width_m1;
@@ -226,9 +228,9 @@ float coef(int pc_nr, float p_ofs, float p_cut, int p_width, int p_type)
 
 
 
-int16_t windowed_fir_lut[WFIR_LUTLEN*WFIR_WIDTH];
+static int16_t windowed_fir_lut[WFIR_LUTLEN*WFIR_WIDTH];
 
-void windowed_fir_init(void)
+static void windowed_fir_init(void)
 {
 	int pcl;
 	// number of precalculated lines for 0..1 (-1..0)
@@ -251,15 +253,20 @@ void windowed_fir_init(void)
 
 		for (cc = 0; cc < WFIR_WIDTH; cc++) {
 			float coef = (float)floor( 0.5 + scale * coefs[cc] * gain);
-			windowed_fir_lut[indx + cc] = (int16_t)((coef < -scale) ? - scale :
-			((coef > scale) ? scale : coef));
+			windowed_fir_lut[indx + cc] =
+				(int16_t)((coef < -scale)
+					? (-scale)
+					: ((coef > scale)
+						? scale
+						: coef));
 		}
 	}
 }
 
+/* ------------------------------------------------------------------------ */
 
-#define LOOP(x, y) \
-	printf("static int16_t %s[%" PRId32 "] = {\n", #x, (int32_t)y); \
+#define LOOP(BITS, x, y) \
+	printf("static int" #BITS "_t %s[%" PRId32 "] = {\n", #x, (int32_t)y); \
 	\
 	for (int i = 0; i < y; i++) { \
 		if (i && !(i % 64)) \
@@ -275,8 +282,8 @@ int main(int argc, char **argv)
 	cubic_spline_init();
 	windowed_fir_init();
 
-	LOOP(cubic_spline_lut, (4 * SPLINE_LUTLEN));
-	LOOP(windowed_fir_lut, (WFIR_LUTLEN * WFIR_WIDTH));
+	LOOP(16, cubic_spline_lut, (4 * SPLINE_LUTLEN));
+	LOOP(16, windowed_fir_lut, (WFIR_LUTLEN * WFIR_WIDTH));
 
 	return 0;
 }

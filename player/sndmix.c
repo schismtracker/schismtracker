@@ -553,21 +553,20 @@ static inline int32_t rn_update_sample(song_t *csf, song_voice_t *chan, int32_t 
 		chan->left_volume_new  = 0xFFFF;
 
 	// Check IDO
-	if (csf->mix_flags & SNDMIX_NORESAMPLING) {
-		chan->flags &= ~(CHN_HQSRC);
+	chan->flags &= ~(CHN_NOIDO | CHN_HQSRC);
+	switch (csf->mix_interpolation) {
+	case SRCMODE_NEAREST:
 		chan->flags |= CHN_NOIDO;
-	} else {
-		chan->flags &= ~(CHN_NOIDO | CHN_HQSRC);
-
-		if (chan->increment == 0x10000) {
+		break;
+	case SRCMODE_LINEAR:
+		if (chan->increment >= 0xFF00) {
 			chan->flags |= CHN_NOIDO;
-		} else {
-			if (!(csf->mix_flags & SNDMIX_HQRESAMPLER) &&
-			    !(csf->mix_flags & SNDMIX_ULTRAHQSRCMODE)) {
-				if (chan->increment >= 0xFF00)
-					chan->flags |= CHN_NOIDO;
-			}
+			break;
 		}
+		SCHISM_FALLTHROUGH;
+	default:
+		if (chan->increment == 0x10000)
+			chan->flags |= CHN_NOIDO;
 	}
 
 	chan->right_volume_new >>= MIXING_ATTENUATION;
@@ -590,10 +589,13 @@ static inline int32_t rn_update_sample(song_t *csf, song_voice_t *chan, int32_t 
 		int32_t right_delta = lshift_signed(chan->right_volume_new - chan->right_volume, VOLUMERAMPPRECISION);
 		int32_t left_delta  = lshift_signed(chan->left_volume_new  - chan->left_volume,  VOLUMERAMPPRECISION);
 
-		if (csf->mix_flags & SNDMIX_HQRESAMPLER) {
-			if (chan->right_volume | chan->left_volume &&
-			    chan->right_volume_new | chan->left_volume_new &&
-			    !(chan->flags & CHN_FASTVOLRAMP)) {
+		switch (csf->mix_interpolation) {
+		case SRCMODE_SPLINE:
+		case SRCMODE_POLYPHASE:
+			/* XXX why only for spline/polyphase */
+			if (chan->right_volume | chan->left_volume
+				&& chan->right_volume_new | chan->left_volume_new
+				&& !(chan->flags & CHN_FASTVOLRAMP)) {
 				ramp_length = csf->buffer_count;
 
 				int32_t l = lshift_signed(INT32_C(1), VOLUMERAMPPRECISION - 1);

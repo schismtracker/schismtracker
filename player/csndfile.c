@@ -460,15 +460,10 @@ int csf_set_wave_config(song_t *csf, uint32_t rate,uint32_t bits,uint32_t channe
 
 int csf_set_resampling_mode(song_t *csf, uint32_t mode)
 {
-	uint32_t d = csf->mix_flags & ~(SNDMIX_NORESAMPLING|SNDMIX_HQRESAMPLER|SNDMIX_ULTRAHQSRCMODE);
-	switch(mode) {
-		case SRCMODE_NEAREST:   d |= SNDMIX_NORESAMPLING; break;
-		case SRCMODE_LINEAR:    break;
-		case SRCMODE_SPLINE:    d |= SNDMIX_HQRESAMPLER; break;
-		case SRCMODE_POLYPHASE: d |= (SNDMIX_HQRESAMPLER|SNDMIX_ULTRAHQSRCMODE); break;
-		default:                return 0;
-	}
-	csf->mix_flags = d;
+	SCHISM_RUNTIME_ASSERT(mode < NUM_SRC_MODES, "invalid value");
+
+	csf->mix_interpolation = mode;
+
 	return 1;
 }
 

@@ -60,7 +60,7 @@
 #define WFIR_QUANTBITS          15
 #define WFIR_QUANTSCALE         (1L << WFIR_QUANTBITS)
 #define WFIR_8SHIFT             (WFIR_QUANTBITS - 8)
-#define WFIR_16SHIFT         (WFIR_QUANTBITS)
+#define WFIR_16SHIFT            (WFIR_QUANTBITS)
 
 // log2(number)-1 of precalculated taps range is [4..12]
 #define WFIR_FRACBITS           10
@@ -499,7 +499,6 @@ DEFINE_STEREO_RESAMPLE_INTERFACE(16)
 //      [b2]    ramp
 //      [b3]    filter
 //      [b5-b4] src type
-//      [b6]    fast
 
 #define MIXNDX_16BIT        0x01
 #define MIXNDX_STEREO       0x02
@@ -727,16 +726,15 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 		if (channel->flags & CHN_FILTER)
 			flags |= MIXNDX_FILTER;
 
-		if (!(channel->flags & CHN_NOIDO) &&
-			!(csf->mix_flags & SNDMIX_NORESAMPLING)) {
-			// use hq-fir mixer?
-			if ((csf->mix_flags & (SNDMIX_HQRESAMPLER | SNDMIX_ULTRAHQSRCMODE))
-						== (SNDMIX_HQRESAMPLER | SNDMIX_ULTRAHQSRCMODE))
-				flags |= MIXNDX_FIRSRC;
-			else if (csf->mix_flags & SNDMIX_HQRESAMPLER)
-				flags |= MIXNDX_SPLINESRC;
-			else
-				flags |= MIXNDX_LINEARSRC;    // use
+		if (!(channel->flags & CHN_NOIDO)) {
+			uint32_t srcflags[NUM_SRC_MODES] = {
+				[SRCMODE_NEAREST] = 0,
+				[SRCMODE_LINEAR] = MIXNDX_LINEARSRC,
+				[SRCMODE_SPLINE] = MIXNDX_SPLINESRC,
+				[SRCMODE_POLYPHASE] = MIXNDX_FIRSRC,
+			};
+
+			flags |= srcflags[csf->mix_interpolation];
 		}
 
 		nsamples = count;

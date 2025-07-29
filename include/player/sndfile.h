@@ -226,14 +226,14 @@
 #define SNDMIX_REVERSESTEREO    0x0001 // swap L/R audio channels
 //#define SNDMIX_NOISEREDUCTION 0x0002 // reduce hiss (do not use, it's just a simple low-pass filter)
 //#define SNDMIX_AGC            0x0004 // automatic gain control
-#define SNDMIX_NORESAMPLING     0x0008 // force no resampling (uninterpolated)
-#define SNDMIX_HQRESAMPLER      0x0010 // cubic resampling
+//#define SNDMIX_NORESAMPLING     0x0008 // force no resampling (uninterpolated)
+//#define SNDMIX_HQRESAMPLER      0x0010 // cubic resampling
 //#define SNDMIX_MEGABASS       0x0020
 //#define SNDMIX_SURROUND       0x0040
 //#define SNDMIX_REVERB         0x0080
 //#define SNDMIX_EQ             0x0100 // apply EQ (always on)
 //#define SNDMIX_SOFTPANNING    0x0200
-#define SNDMIX_ULTRAHQSRCMODE   0x0400 // polyphase resampling (or FIR? I don't know)
+//#define SNDMIX_ULTRAHQSRCMODE   0x0400 // polyphase resampling (or FIR? I don't know)
 // Misc Flags (can safely be turned on or off)
 #define SNDMIX_DIRECTTODISK     0x10000 // disk writer mode
 #define SNDMIX_NOBACKWARDJUMPS  0x40000 // disallow Bxx jumps from going backward in the orderlist
@@ -611,6 +611,7 @@ typedef struct song {
 	// mixer stuff -----------------------------------------------------------
 	uint32_t mix_flags; // SNDMIX_*
 	uint32_t mix_frequency, mix_bits_per_sample, mix_channels;
+	uint32_t mix_interpolation; /* SRCMODE_* */
 	uint32_t ramping_samples; // default: 64
 	uint32_t max_voices;
 	uint32_t vu_left;

@@ -1239,7 +1239,7 @@ void cfg_load_audio(cfg_file_t *cfg)
 	}
 
 	audio_settings.channel_limit = CLAMP(audio_settings.channel_limit, 4, MAX_VOICES);
-	audio_settings.interpolation_mode = CLAMP(audio_settings.interpolation_mode, 0, 3);
+	audio_settings.interpolation_mode = CLAMP(audio_settings.interpolation_mode, 0, NUM_SRC_MODES - 1);
 
 	audio_settings.eq_freq[0] = cfg_get_number(cfg, "EQ Low Band", "freq", 0);
 	audio_settings.eq_freq[1] = cfg_get_number(cfg, "EQ Med Low Band", "freq", 16);
@@ -1736,10 +1736,11 @@ void song_init_modplug(void)
 
 	current_song->max_voices = audio_settings.channel_limit;
 	csf_set_resampling_mode(current_song, audio_settings.interpolation_mode);
-	if (audio_settings.no_ramping)
+	if (audio_settings.no_ramping) {
 		current_song->mix_flags |= SNDMIX_NORAMPING;
-	else
-		current_song->mix_flags &= ~SNDMIX_NORAMPING;
+	} else {
+		current_song->mix_flags &= ~(SNDMIX_NORAMPING);
+	}
 
 	// disable the S91 effect? (this doesn't make anything faster, it
 	// just sounds better with one woofer.)
