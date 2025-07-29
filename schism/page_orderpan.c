@@ -782,7 +782,7 @@ static void order_pan_vol_playback_update(void)
 
 /* --------------------------------------------------------------------- */
 
-static void orderpan_update_values_in_song(void)
+static void orderpan_update_values_in_song(struct widget_context *this)
 {
 	song_channel_t *chn;
 	int n;
@@ -792,24 +792,24 @@ static void orderpan_update_values_in_song(void)
 		chn = song_get_channel(n);
 
 		/* yet another modplug hack here! */
-		chn->panning = widgets_orderpan[n + 1].d.panbar.value * 4;
+		chn->panning = this->widgets[n + 1].d.panbar.value * 4;
 
-		if (widgets_orderpan[n + 1].d.panbar.surround)
+		if (this->widgets[n + 1].d.panbar.surround)
 			chn->flags |= CHN_SURROUND;
 		else
 			chn->flags &= ~CHN_SURROUND;
 
-		song_set_channel_mute(n, widgets_orderpan[n + 1].d.panbar.muted);
+		song_set_channel_mute(n, this->widgets[n + 1].d.panbar.muted);
 	}
 }
 
-static void ordervol_update_values_in_song(void)
+static void ordervol_update_values_in_song(struct widget_context *this)
 {
 	int n;
 
 	status.flags |= SONG_NEEDS_SAVE;
 	for (n = 0; n < MAX_CHANNELS; n++)
-		song_get_channel(n)->volume = widgets_ordervol[n + 1].d.thumbbar.value;
+		song_get_channel(n)->volume = this->widgets[n + 1].d.thumbbar.value;
 }
 
 /* called when a channel is muted/unmuted by means other than the panning

@@ -28,6 +28,8 @@
 #ifndef SCHISM_PAGE_H_
 #define SCHISM_PAGE_H_
 
+#include "widget_context.h"
+
 /* How much to scroll. */
 #define MOUSE_SCROLL_LINES       3
 
@@ -188,20 +190,20 @@ struct widget_panbar {
  * through function pointers. :) */
 struct widget_listbox {
 	/* get the size of the listbox */
-	uint32_t (*size)(void);
+	uint32_t (*size)(struct widget_context *this);
 
 	/* get the name of an item */
-	const char *(*name)(uint32_t i);
+	const char *(*name)(struct widget_context *this, uint32_t i);
 
 	/* get whether an item is toggled or not.
 	 * in the scope of the UI, this decides whether
 	 * the item is prefixed with a "*" or not.
 	 * in most cases there should only be ONE of
 	 * these at a time. */
-	int (*toggled)(uint32_t i);
+	int (*toggled)(struct widget_context *this, uint32_t i);
 
 	/* custom key handler, for extra keybinds. :) */
-	int (*handle_key)(struct key_event *k);
+	int (*handle_key)(struct widget_context *this, struct key_event *k);
 
 	struct {
 		/* left & backtab */
@@ -267,10 +269,13 @@ struct widget {
 	} next;
 
 	/* called whenever the value is changed... duh ;) */
-	void (*changed) (void);
+	void (*changed) (struct widget_context *this);
 
 	/* called when the enter key is pressed */
-	void (*activate) (void);
+	void (*activate) (struct widget_context *this);
+
+	/* the context this widget is participating in (page, dialog) */
+	struct widget_context *this;
 
 	/* called by the clipboard manager; really, only "other" widgets
 	should "override" this... */
@@ -289,6 +294,14 @@ struct widget {
  * everything in this struct MUST be set for each page.
  * functions that aren't implemented should be set to NULL. */
 struct page {
+	/************************************/
+	/* must match struct widget_context */
+	enum widget_context_type context_type;
+	struct widget *widgets;
+	int selected_widget;
+	int total_widgets;
+	/************************************/
+
 	/* the title of the page, eg "Sample List (F3)" */
 	const char *title;
 
@@ -323,10 +336,6 @@ struct page {
 	/* called by the clipboard manager */
 	int (*clipboard_paste)(int cb, const void *cptr);
 
-	struct widget *widgets;
-	int selected_widget;
-	int total_widgets;
-
 	/* 0 if no page-specific help */
 	int help_index;
 };
@@ -337,9 +346,7 @@ extern struct page pages[];
 
 /* these are updated to point to the relevant data in the selected page
  * (or the dialog, if one is active) */
-extern struct widget *widgets;
-extern int *selected_widget;
-extern int *total_widgets;
+extern struct widget_context *widget_context;
 
 /* to make it easier to deal with either the page's widgets or the
  * current dialog's:
@@ -348,8 +355,11 @@ extern int *total_widgets;
  * ACTIVE_PAGE_WIDGET references the *page's* idea of what's active.
  *     (these are different if there's a dialog) */
 #define ACTIVE_PAGE        (pages[status.current_page])
-#define ACTIVE_WIDGET      (widgets[*selected_widget])
+#define ACTIVE_WIDGET      (widget_context->widgets[widget_context->selected_widget])
 #define ACTIVE_PAGE_WIDGET (ACTIVE_PAGE.widgets[ACTIVE_PAGE.selected_widget])
+
+/* dynamic cast to struct page * */
+struct page *widget_context_as_page(struct widget_context *this);
 
 extern int instrument_list_subpage;
 #define PAGE_INSTRUMENT_LIST instrument_list_subpage
@@ -476,8 +486,13 @@ void message_reset_selection(void);
 /* --------------------------------------------------------------------- */
 /* Other UI prompt stuff. */
 
-/* Ask for a value, like the thumbbars. */
+/* XXX The code for these is in dialog.c, should these declarations be in dialog.h? */
+
+/* Ask for a value. */
 void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue);
+
+/* Ask for a value, specifically for thumbbars. */
+void numprompt_create_for_thumbbar(const char *prompt, struct widget *thumbbar, void (*finish)(struct widget *thumbbar, int n), char initvalue);
 
 /* Ask for a sample / instrument number, like the "swap sample" dialog. */
 void smpprompt_create(const char *title, const char *prompt, void (*finish)(int n));
