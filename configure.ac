@@ -185,6 +185,15 @@ AC_ARG_ENABLE(tests,
 	BUILD_TESTS=$enableval,
 	BUILD_TESTS=no)
 
+AC_ARG_ENABLE(waveformvis,
+	AS_HELP_STRING([--enable-waveformvis], [Enable waveform visualization (uses a little bit of RAM and CPU time) @<:default=yes@:>]),
+	,
+	[enable_waveformvis=yes])
+
+AM_CONDITIONAL(
+	[ENABLE_WAVEFORMVIS],
+	[test x"$enable_waveformvis" = x"yes"])
+
 dnl These are used in the Win32 build so that we can intermix mingw32 and mingw-w64 parts.
 dnl This is really a hack, and it would be nicer if we could avoid this, but unfortunately
 dnl there is no real windows toolchain available that allows to target super old windows
