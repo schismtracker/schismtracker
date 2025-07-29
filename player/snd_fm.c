@@ -36,7 +36,7 @@
 	#define OPLResetChip ym3812_reset_chip
 	#define OPLWrite     ym3812_write
 	#define OPLReadChip     ym3812_read
-	#define OPLUpdateOne ym3812_update_one
+	#define OPLUpdateMulti ym3812_update_multi
 	#define OPLCloseChip     ym3812_shutdown
 	// OPL2 = 3579552Hz
 	#define OPLRATEDIVISOR 72
@@ -45,13 +45,25 @@
 	#define OPLResetChip ymf262_reset_chip
 	#define OPLWrite     ymf262_write
 	#define OPLReadChip     ymf262_read
-	#define OPLUpdateOne ymf262_update_one
+	#define OPLUpdateMulti ymf262_update_multi
 	#define OPLCloseChip     ymf262_shutdown
 	// OPL3 = 14318208Hz
 	#define OPLRATEDIVISOR 288
 #else
 # error "The current value of OPLSOURCE isn't supported! Check build-config.h."
 #endif
+
+/* This just forwards to OPLUpdateMulti now */
+static inline void OPLUpdateOne(void *chip, int32_t *buffer, int length, uint32_t vu_max[9])
+{
+	int32_t *buffers[18];
+	int i;
+
+	for (i = 0; i < 18; i++)
+		buffers[i] = buffer;
+
+	OPLUpdateMulti(chip, buffers, length, vu_max);
+}
 
 /* Schismtracker output buffer works in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]
 fmopl works in 16bits, although tested output used to range +-10000 instead of 
@@ -225,19 +237,15 @@ void Fmdrv_Init(song_t *csf, int32_t mixfreq)
 // count, like csf_create_stereo_mix, is in samples
 void Fmdrv_Mix(song_t *csf, uint32_t count)
 {
+	uint32_t sz;
+	uint32_t vu_max[18];
+	uint32_t i;
+
 	if (!csf->opl_fm_active)
 		return;
 
-#if OPLSOURCE == 2
-	int32_t *const target = (csf->multi_write) ? (csf->multi_write[0].buffer) : (csf->mix_buffer);
+	sz = count * 2;
 
-	SCHISM_VLA_ALLOC(int16_t, buf, count);
-
-	memset(buf, 0, SCHISM_VLA_SIZEOF(buf));
-
-	// mono. Single buffer.
-
-	OPLUpdateOne(csf->opl, buf, ARRAY_SIZE(buf));
 	/*
 	static int counter = 0;
 
@@ -245,37 +253,30 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 		buf[a] = ((counter++) & 0x100) ? -10000 : 10000;
 	*/
 
-	for (size_t a = 0; a < count; ++a) {
-		target[a * 2 + 0] += buf[a] * OPL_VOLUME;
-		target[a * 2 + 1] += buf[a] * OPL_VOLUME;
+	/* first, fill in the VU meters */
+	for (i = 0; i < 9 /*18*/; i++) {
+		int32_t opl_v = csf->opl_to_chan[i];
+		if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
+			continue;
+
+		vu_max[i] = (csf->voices[opl_v].vu_meter << 16) / OPL_VOLUME;
 	}
-
-	SCHISM_VLA_FREE(buf);
-#else
-	/*
-	static int counter = 0;
-
-	for(int a = 0; a < count; ++a)
-		buf[a] = ((counter++) & 0x100) ? -10000 : 10000;
-	*/
 
 	// IF we wanted to do the stereo mix in software, we could setup the voices always in mono
 	// and do the panning here.
 	if (csf->multi_write) {
-		const uint32_t sz = count * 2;
-
-		uint32_t i, j;
+		uint32_t j;
 		int32_t *buffers[18] = {0};
 
-		for (i = 0; i < MAX_CHANNELS; i++) {
-			int32_t opl_v = csf->opl_from_chan[i];
-			if (opl_v < 0 || opl_v >= 18)
+		for (i = 0; i < 9; i++) {
+			int32_t opl_v = csf->opl_to_chan[i];
+			if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
 				continue;
 
-			buffers[opl_v] = csf->multi_write[i].buffer;
+			buffers[i] = csf->multi_write[opl_v].buffer;
 		}
 
-		ymf262_update_multi(csf->opl, buffers, count);
+		OPLUpdateMulti(csf->opl, buffers, count, vu_max);
 
 		for (i = 0; i < ARRAY_SIZE(buffers); i++) {
 			if (!buffers[i]) continue;
@@ -284,25 +285,21 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 				buffers[i][j] *= OPL_VOLUME;
 		}
 	} else {
-		SCHISM_VLA_ALLOC(int16_t, buf, count * 3);
+		/* updated this to be able to work with the mixing buffer
+		 * directly  --paper */
+		OPLUpdateOne(csf->opl, csf->mix_buffer, count, vu_max);
 
-		{
-			int16_t *bufs[4];
-			bufs[0] = buf;
-			bufs[1] = buf + count;
-			bufs[2] = bufs[3] = buf + (count * 2);
-
-			OPLUpdateOne(csf->opl, bufs, count);
-		}
-
-		for (size_t a = 0; a < count; ++a) {
-			csf->mix_buffer[a * 2 + 0] += buf[a] * OPL_VOLUME;
-			csf->mix_buffer[a * 2 + 1] += buf[count + a] * OPL_VOLUME;
-		}
-
-		SCHISM_VLA_FREE(buf);
+		for (i = 0; i < sz; i++)
+			csf->mix_buffer[i] *= OPL_VOLUME;
 	}
-#endif
+
+	for (i = 0; i < 9 /*18*/; i++) {
+		int32_t opl_v = csf->opl_to_chan[i];
+		if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
+			continue;
+
+		csf->voices[opl_v].vu_meter = (vu_max[i] * OPL_VOLUME) >> 16;
+	}
 }
 
 

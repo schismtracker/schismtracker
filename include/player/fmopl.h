@@ -20,7 +20,7 @@ void ym3812_reset_chip(void *chip);
 int  ym3812_write(void *chip, int a, int v);
 unsigned char ym3812_read(void *chip, int a);
 int  ym3812_timer_over(void *chip, int c);
-void ym3812_update_one(void *chip, OPLSAMPLE *buffer, int length);
+void ym3812_update_multi(void *chip, int32_t **buffers, int length, uint32_t vu_max[18]);
 
 void ym3812_set_timer_handler(void *chip, OPL_TIMERHANDLER TimerHandler, void *param);
 void ym3812_set_irq_handler(void *chip, OPL_IRQHANDLER IRQHandler, void *param);
@@ -33,8 +33,7 @@ void ymf262_reset_chip(void *chip);
 int  ymf262_write(void *chip, int a, int v);
 unsigned char ymf262_read(void *chip, int a);
 int  ymf262_timer_over(void *chip, int c);
-void ymf262_update_one(void *chip, OPLSAMPLE **buffers, int length);
-void ymf262_update_multi(void *_chip, int32_t **buffers, int length);
+void ymf262_update_multi(void *chip, int32_t **buffers, int length, uint32_t vu_max[18]);
 
 void ymf262_set_timer_handler(void *chip, OPL_TIMERHANDLER TimerHandler, void *param);
 void ymf262_set_irq_handler(void *chip, OPL_IRQHANDLER IRQHandler, void *param);

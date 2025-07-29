@@ -249,8 +249,8 @@ typedef struct
 	uint32_t rate;                    /* sampling rate (Hz)           */
 	double freqbase;                /* frequency base               */
 	double TimerBase;               /* Timer base time (==sampling time)*/
-	signed int phase_modulation;    /* phase modulation input (SLOT 2) */
-	signed int output[1];
+	int32_t phase_modulation;    /* phase modulation input (SLOT 2) */
+	int32_t output[1];
 #if BUILD_Y8950
 	int32_t output_deltat[4];         /* for Y8950 DELTA-T, chip is mono, that 4 here is just for safety */
 #endif
@@ -845,7 +845,7 @@ static inline signed int op_calc1(uint32_t phase, unsigned int env, signed int p
 #define volume_calc(OP) ((OP)->TLL + ((uint32_t)(OP)->volume) + (OPL->LFO_AM & (OP)->AMmask))
 
 /* calculate output */
-static inline void OPL_CALC_CH( FM_OPL *OPL, OPL_CH *CH )
+static inline void OPL_CALC_CH( FM_OPL *OPL, OPL_CH *CH)
 {
 	OPL_SLOT *SLOT;
 	unsigned int env;
@@ -2032,59 +2032,64 @@ void ym3812_set_update_handler(void *chip,OPL_UPDATEHANDLER UpdateHandler,void *
 	OPLSetUpdateHandler(YM3812, UpdateHandler, param);
 }
 
+/* Safe absolute value of a 32-bit signed integer.
+ * (this is copied elsewhere; it needs to be in a header) */
+static inline SCHISM_ALWAYS_INLINE uint32_t safe_abs_32(int32_t x)
+{
+	return (x < 0) ? (uint32_t)(~x + 1) : (uint32_t)x;
+}
 
-/*
-** Generate samples for one of the YM3812's
-**
-** 'which' is the virtual YM3812 number
-** '*buffer' is the output buffer pointer
-** 'length' is the number of samples that should be generated
-*/
-void ym3812_update_one(void *chip, OPLSAMPLE *buffer, int length)
+/* like update_one, but does it for each channel independently
+ * XXX: vu_max should be [static 9] but I don't know how many compilers support it */
+void ym3812_update_multi(void *chip, int32_t *buffers[9], int length, uint32_t vu_max[9])
 {
 	FM_OPL      *OPL = (FM_OPL *)chip;
 	uint8_t       rhythm = OPL->rhythm&0x20;
-	OPLSAMPLE   *buf = buffer;
 	int i;
 
 	for( i=0; i < length ; i++ )
 	{
-		int lt;
-
-		OPL->output[0] = 0;
+		int j;
 
 		advance_lfo(OPL);
 
-		/* FM part */
-		OPL_CALC_CH(OPL, &OPL->P_CH[0]);
-		OPL_CALC_CH(OPL, &OPL->P_CH[1]);
-		OPL_CALC_CH(OPL, &OPL->P_CH[2]);
-		OPL_CALC_CH(OPL, &OPL->P_CH[3]);
-		OPL_CALC_CH(OPL, &OPL->P_CH[4]);
-		OPL_CALC_CH(OPL, &OPL->P_CH[5]);
+#define CALC_CHANNEL(CHN, BLOCK) \
+do { \
+	uint32_t ab; \
+\
+	OPL->output[0] = 0; \
+	BLOCK \
+\
+	ab = safe_abs_32(OPL->output[0]); \
+\
+	vu_max[CHN] = MAX(vu_max[CHN], ab); \
+\
+	if (buffers[j]) { \
+		buffers[j][i*2+0] += OPL->output[0]; \
+		buffers[j][i*2+1] += OPL->output[0]; \
+	} \
+} while (0)
 
-		if(!rhythm)
-		{
-			OPL_CALC_CH(OPL, &OPL->P_CH[6]);
-			OPL_CALC_CH(OPL, &OPL->P_CH[7]);
-			OPL_CALC_CH(OPL, &OPL->P_CH[8]);
+		for (j = 0; j < 6; j++) {
+			CALC_CHANNEL(j, {
+				OPL_CALC_CH(OPL, &OPL->P_CH[j]);
+			});
 		}
-		else        /* Rhythm part */
-		{
-			OPL_CALC_RH(OPL, &OPL->P_CH[0], (OPL->noise_rng>>0)&1 );
+
+		if (!rhythm) {
+			for (j = 6; j < 9; j++) {
+				CALC_CHANNEL(j, {
+					OPL_CALC_CH(OPL, &OPL->P_CH[j]);
+				});
+			}
+		} else {
+			CALC_CHANNEL(0, {
+				OPL_CALC_RH(OPL, &OPL->P_CH[0], (OPL->noise_rng>>0)&1 );
+			});
 		}
-
-		lt = OPL->output[0];
-
-		lt >>= FINAL_SH;
-
-		/* limit check */
-		lt = limit( lt , MAXOUT, MINOUT );
-
-		/* store to sound buffer */
-		buf[i] = lt;
 
 		advance(OPL);
 	}
 
+#undef CALC_CHANNEL
 }

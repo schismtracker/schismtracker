@@ -2452,203 +2452,9 @@ void ymf262_set_update_handler(void *chip,OPL_UPDATEHANDLER UpdateHandler,void *
 	OPL3SetUpdateHandler((OPL3 *)chip, UpdateHandler, param);
 }
 
-
-/*
-** Generate samples for one of the YMF262's
-**
-** 'which' is the virtual YMF262 number
-** '**buffers' is table of 4 pointers to the buffers: CH.A, CH.B, CH.C and CH.D
-** 'length' is the number of samples that should be generated
-*/
-void ymf262_update_one(void *_chip, OPLSAMPLE **buffers, int length)
-{
-	int i;
-	OPL3        *chip  = (OPL3 *)_chip;
-	int32_t *chanout = chip->chanout;
-	uint8_t       rhythm = chip->rhythm&0x20;
-
-	OPLSAMPLE  *ch_a = buffers[0];
-	OPLSAMPLE  *ch_b = buffers[1];
-	OPLSAMPLE  *ch_c = buffers[2];
-	OPLSAMPLE  *ch_d = buffers[3];
-
-	for( i=0; i < length ; i++ )
-	{
-		int a,b,c,d;
-
-
-		advance_lfo(chip);
-
-		/* clear channel outputs */
-		memset(chip->chanout, 0, sizeof(chip->chanout));
-
-#if 1
-	/* register set #1 */
-		chan_calc(chip, &chip->P_CH[0]);            /* extended 4op ch#0 part 1 or 2op ch#0 */
-		if (chip->P_CH[0].extended)
-			chan_calc_ext(chip, &chip->P_CH[3]);    /* extended 4op ch#0 part 2 */
-		else
-			chan_calc(chip, &chip->P_CH[3]);        /* standard 2op ch#3 */
-
-
-		chan_calc(chip, &chip->P_CH[1]);            /* extended 4op ch#1 part 1 or 2op ch#1 */
-		if (chip->P_CH[1].extended)
-			chan_calc_ext(chip, &chip->P_CH[4]);    /* extended 4op ch#1 part 2 */
-		else
-			chan_calc(chip, &chip->P_CH[4]);        /* standard 2op ch#4 */
-
-
-		chan_calc(chip, &chip->P_CH[2]);            /* extended 4op ch#2 part 1 or 2op ch#2 */
-		if (chip->P_CH[2].extended)
-			chan_calc_ext(chip, &chip->P_CH[5]);    /* extended 4op ch#2 part 2 */
-		else
-			chan_calc(chip, &chip->P_CH[5]);        /* standard 2op ch#5 */
-
-
-		if(!rhythm)
-		{
-			chan_calc(chip, &chip->P_CH[6]);
-			chan_calc(chip, &chip->P_CH[7]);
-			chan_calc(chip, &chip->P_CH[8]);
-		}
-		else        /* Rhythm part */
-		{
-			chan_calc_rhythm(chip, &chip->P_CH[0], (chip->noise_rng>>0)&1 );
-		}
-
-	/* register set #2 */
-		chan_calc(chip, &chip->P_CH[ 9]);
-		if (chip->P_CH[9].extended)
-			chan_calc_ext(chip, &chip->P_CH[12]);
-		else
-			chan_calc(chip, &chip->P_CH[12]);
-
-
-		chan_calc(chip, &chip->P_CH[10]);
-		if (chip->P_CH[10].extended)
-			chan_calc_ext(chip, &chip->P_CH[13]);
-		else
-			chan_calc(chip, &chip->P_CH[13]);
-
-
-		chan_calc(chip, &chip->P_CH[11]);
-		if (chip->P_CH[11].extended)
-			chan_calc_ext(chip, &chip->P_CH[14]);
-		else
-			chan_calc(chip, &chip->P_CH[14]);
-
-
-		/* channels 15,16,17 are fixed 2-operator channels only */
-		chan_calc(chip, &chip->P_CH[15]);
-		chan_calc(chip, &chip->P_CH[16]);
-		chan_calc(chip, &chip->P_CH[17]);
-#endif
-
-		/* accumulator register set #1 */
-		a =  chanout[0] & chip->pan[0];
-		b =  chanout[0] & chip->pan[1];
-		c =  chanout[0] & chip->pan[2];
-		d =  chanout[0] & chip->pan[3];
-#if 1
-		a += chanout[1] & chip->pan[4];
-		b += chanout[1] & chip->pan[5];
-		c += chanout[1] & chip->pan[6];
-		d += chanout[1] & chip->pan[7];
-		a += chanout[2] & chip->pan[8];
-		b += chanout[2] & chip->pan[9];
-		c += chanout[2] & chip->pan[10];
-		d += chanout[2] & chip->pan[11];
-
-		a += chanout[3] & chip->pan[12];
-		b += chanout[3] & chip->pan[13];
-		c += chanout[3] & chip->pan[14];
-		d += chanout[3] & chip->pan[15];
-		a += chanout[4] & chip->pan[16];
-		b += chanout[4] & chip->pan[17];
-		c += chanout[4] & chip->pan[18];
-		d += chanout[4] & chip->pan[19];
-		a += chanout[5] & chip->pan[20];
-		b += chanout[5] & chip->pan[21];
-		c += chanout[5] & chip->pan[22];
-		d += chanout[5] & chip->pan[23];
-
-		a += chanout[6] & chip->pan[24];
-		b += chanout[6] & chip->pan[25];
-		c += chanout[6] & chip->pan[26];
-		d += chanout[6] & chip->pan[27];
-		a += chanout[7] & chip->pan[28];
-		b += chanout[7] & chip->pan[29];
-		c += chanout[7] & chip->pan[30];
-		d += chanout[7] & chip->pan[31];
-		a += chanout[8] & chip->pan[32];
-		b += chanout[8] & chip->pan[33];
-		c += chanout[8] & chip->pan[34];
-		d += chanout[8] & chip->pan[35];
-
-		/* accumulator register set #2 */
-		a += chanout[9] & chip->pan[36];
-		b += chanout[9] & chip->pan[37];
-		c += chanout[9] & chip->pan[38];
-		d += chanout[9] & chip->pan[39];
-		a += chanout[10] & chip->pan[40];
-		b += chanout[10] & chip->pan[41];
-		c += chanout[10] & chip->pan[42];
-		d += chanout[10] & chip->pan[43];
-		a += chanout[11] & chip->pan[44];
-		b += chanout[11] & chip->pan[45];
-		c += chanout[11] & chip->pan[46];
-		d += chanout[11] & chip->pan[47];
-
-		a += chanout[12] & chip->pan[48];
-		b += chanout[12] & chip->pan[49];
-		c += chanout[12] & chip->pan[50];
-		d += chanout[12] & chip->pan[51];
-		a += chanout[13] & chip->pan[52];
-		b += chanout[13] & chip->pan[53];
-		c += chanout[13] & chip->pan[54];
-		d += chanout[13] & chip->pan[55];
-		a += chanout[14] & chip->pan[56];
-		b += chanout[14] & chip->pan[57];
-		c += chanout[14] & chip->pan[58];
-		d += chanout[14] & chip->pan[59];
-
-		a += chanout[15] & chip->pan[60];
-		b += chanout[15] & chip->pan[61];
-		c += chanout[15] & chip->pan[62];
-		d += chanout[15] & chip->pan[63];
-		a += chanout[16] & chip->pan[64];
-		b += chanout[16] & chip->pan[65];
-		c += chanout[16] & chip->pan[66];
-		d += chanout[16] & chip->pan[67];
-		a += chanout[17] & chip->pan[68];
-		b += chanout[17] & chip->pan[69];
-		c += chanout[17] & chip->pan[70];
-		d += chanout[17] & chip->pan[71];
-#endif
-		a >>= FINAL_SH;
-		b >>= FINAL_SH;
-		c >>= FINAL_SH;
-		d >>= FINAL_SH;
-
-		/* limit check */
-		a = limit( a , MAXOUT, MINOUT );
-		b = limit( b , MAXOUT, MINOUT );
-		c = limit( c , MAXOUT, MINOUT );
-		d = limit( d , MAXOUT, MINOUT );
-
-		/* store to sound buffer */
-		ch_a[i] = a;
-		ch_b[i] = b;
-		ch_c[i] = c;
-		ch_d[i] = d;
-
-		advance(chip);
-	}
-}
-
 // `buffers` is an array of 18 pointers, all pointing to separate 32-bit interlaced stereo
 // buffers of `length` size in samples.
-void ymf262_update_multi(void *_chip, int32_t **buffers, int length)
+void ymf262_update_multi(void *_chip, int32_t **buffers, int length, uint32_t vu_max[18])
 {
 	int i;
 	OPL3        *chip  = (OPL3 *)_chip;
@@ -2721,11 +2527,17 @@ void ymf262_update_multi(void *_chip, int32_t **buffers, int length)
 		chan_calc(chip, &chip->P_CH[16]);
 		chan_calc(chip, &chip->P_CH[17]);
 
+		for (j = 0; j < 18; j++) {
+			int32_t xs = chanout[j];
+			uint32_t x = (xs < 0) ? (uint32_t)(~xs + 1) : (uint32_t)xs;
+			vu_max[j] = MAX(vu_max[j], x);
+		}
+
 		/* accumulator register set #1 */
 		for (j = 0, k = 0; j < 18; j++) {
 			if (buffers[j]) {
-				buffers[j][i * 2 + 0] += chanout[j] & chip->pan[k++];
-				buffers[j][i * 2 + 1] += chanout[j] & chip->pan[k++];
+				buffers[j][i*2+0] += chanout[j] & chip->pan[k++];
+				buffers[j][i*2+1] += chanout[j] & chip->pan[k++];
 				k += 2; // skip next two pans
 			} else {
 				k += 4;
