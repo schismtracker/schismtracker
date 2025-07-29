@@ -172,7 +172,6 @@ void widget_create_numentry(struct widget *w, int x, int y, int width, int next_
 	w->d.numentry.min = min;
 	w->d.numentry.max = max;
 	w->d.numentry.cursor_pos = cursor_pos;
-	w->d.numentry.handle_unknown_key = NULL;
 	w->d.numentry.reverse = 0;
 	w->activate = NULL;
 }

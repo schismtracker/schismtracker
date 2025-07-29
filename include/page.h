@@ -130,7 +130,6 @@ struct widget_numentry {
 	int32_t max;
 	int32_t value;
 	int *cursor_pos; /* XXX why is this a pointer */
-	int (*handle_unknown_key)(struct key_event *k);
 	int reverse; /* boolean */
 };
 

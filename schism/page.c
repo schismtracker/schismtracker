@@ -1804,7 +1804,6 @@ void show_song_timejump(void)
 	_tj_num1 = _tj_num2 = 0;
 	widget_create_numentry(_timejump_widgets+0, 44, 26, 2, 0, 2, 1, NULL, 0, 21, &_tj_num1);
 	widget_create_numentry(_timejump_widgets+1, 47, 26, 2, 1, 2, 2, NULL, 0, 59, &_tj_num2);
-	_timejump_widgets[0].d.numentry.handle_unknown_key = _timejump_keyh;
 	_timejump_widgets[0].d.numentry.reverse = 1;
 	_timejump_widgets[1].d.numentry.reverse = 1;
 	widget_create_button(_timejump_widgets+2, 30, 29, 8, 0, 2, 2, 3, 3, _timejump_ok, "OK", 4);
